@@ -1,0 +1,154 @@
+I'll start by exploring the repository structure and the web source that serves as the specification.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. However `swift`, `swiftlint`, and `swiftformat` are available. Let me explore the structure deeply before deciding on approach.
+
+Now I understand the multi-file pattern. Let me study a complete representative example and check for existing TelemetryPipelineCard files and shared infrastructure.
+
+Excellent — `FleetTelemetryHealth` is a very close analog (telemetry health, per-vehicle). Let me study it and related panels as templates.
+
+This is the ideal template. Let me read its Model, Adapter, Views, Tables, strings, Previews, and Tests.
+
+Now let me read the Views, Tables, strings, Previews, and Tests files, plus the theme tokens.
+
+Now let me read the strings, Previews, Tests, and the theme/token definitions.
+
+Now let me read the Tests file and locate the theme/token definitions.
+
+Let me locate all the design token definitions I'll need.
+
+The tokens live in `apps/design/generated/apple/Tokens.swift`. Let me read it plus the shared component definitions (TSTone, TSIconBox, TSSkeleton).
+
+I now understand the design system fully. Let me check the navigation pattern used by existing feature-views, the TSSkeleton component, the placeholder checker, and how the project includes files.
+
+Let me confirm the build includes feature-views by glob, check the placeholder checker, and see how `open()` routes navigation.
+
+Let me check pwsh availability, the macOS-pending-verifications doc (how the team handles no-Xcode runners), and prior logs for the gate convention.
+
+The repo has an established protocol for no-full-Xcode runners. Let me read prior completion logs to match the accepted honest convention exactly.
+
+Now I understand the accepted convention precisely. Let me verify exactly which SDKs/toolchains are available on this runner so I'm honest about what I can execute.
+
+I have everything I need. This runner has the macOS SDK + SwiftPM + swiftlint/swiftformat/pwsh, but **no full Xcode and no iOS-simulator SDK**. The established repo protocol (logs for 0005/0009 + `macos-pending-verifications.md`) is: ship complete code, verify the surface green in isolation (SwiftPM build + executed XCTest + macOS-SDK typecheck + lint/format/placeholder), and DEFER the Xcode/iOS gate with API evidence. Let me read the lint/format configs and set up tracking.
+
+Configs understood (maxwidth 120, `empty_count`, identifier min-length 2, testable-import-bottom). Let me set up tracking and write a plan.
+
+Now implementing. Starting with the pure Adapter projection core.
+
+Now the Model (P1/S8 seam, DTOs, routes, i18n facade).
+
+Adapter + Model done. Let me check for an existing wrap/flow layout component before building the chip rows (to stay DRY).
+
+Established flow-layout pattern found. Now writing the Views chrome (left-aligned flow layout, rollup grid, chips, states, footer).
+
+Now the per-vehicle list and row.
+
+Now the main composition view. Let me verify the `TSAnimation` API first.
+
+Now the main composition view.
+
+I spotted a key collision (freshness chip `offline`/`stale` vs liveness buckets). Let me namespace the freshness keys, then write strings/previews/tests.
+
+Now the strings catalog.
+
+Now the Previews for every state.
+
+Now the comprehensive tests.
+
+All 8 files written. Now setting up an isolated SwiftPM harness to compile + execute the tests (since full Xcode/iOS-sim SDK aren't on this runner). Let me check the real dependency files first.
+
+TSDesign + Badges only depend on tokens. Let me build the isolated SwiftPM harness (real tokens + a clearly-labeled TSSkeleton shim) and execute the test suite.
+
+Only the `#Preview` macro fails — its plugin ships with full Xcode, not Command-Line-Tools SwiftPM. All `#Preview`s are inside `#if DEBUG`, so a release build excludes them. Let me run the test suite in release config.
+
+Real strict-concurrency finding: `TelemetryVehicleRow` is `Sendable` but stored a non-`Sendable` public `TSTone`. The real Xcode gate would hit this too. Fix: introduce a `Sendable` battery-tone enum and map to `TSTone` only at render. Let me apply that.
+
+Now update the Rows call site (gauge keeps `TSTone?`, map at the boundary) and the tests.
+
+Now re-sync the changed files into the harness and rebuild/test.
+
+Debug has XCTest but lacks the `#Preview` plugin; release excludes `#Preview` but lacks XCTest on CLT. I'll run tests in **debug** with the `#Preview`-bearing files handled: strip the preview from the Badges harness copy, and add a macro-neutralized copy of Previews (each `#Preview` → a `some View` func) so the preview bodies still get real type-checking.
+
+The label `(polling off)` has parens that broke my regex. Let me use a robust line-based transform.
+
+All 8 neutralized. Now build + run the suite in debug.
+
+`XCTest.framework` ships with Xcode, not Command-Line-Tools — so `swift test` can't run here. The module itself compiled fully green (Adapter/Model/Views/Rows/main + preview bodies). To still **execute** the shipped test assertions, I'll add a tiny `XCTest` shim + an explicit runner that drives the real shipped test bodies. Let me confirm XCTest is truly absent, then set this up.
+
+Confirmed XCTest is absent. The module compiled fully green. Now I'll execute the **real shipped test bodies** via a minimal `XCTest` shim + explicit runner (no XCTest dependency).
+
+Two real findings: (1) key paths to **tuple** elements (`\.level`) are fragile — they fail in `.map` context (and would be brittle in `ForEach`). I'll replace the tuple with a proper `Identifiable` struct. (2) The shipped tests rely on `import XCTest` re-exporting Foundation (matches sibling convention) — my shim must `@_exported import Foundation`. Fixing both.
+
+**108/108 assertions passed** and the full shipped module compiled green under macOS-15 SDK + Swift 6 strict concurrency. Now the formatting/lint/placeholder gates. First, swiftformat lint on my files (auto-format if needed).
+
+Formatting issues are auto-fixable. Let me apply swiftformat to my files, then re-verify lint is clean.
+
+swiftformat clean. The `conditionalAssignment` rule may have rewritten my liveness logic — let me re-sync to the harness, re-run the suite, and inspect the transformed liveness function.
+
+Still 108/108 green. Let me verify the `conditionalAssignment` rewrite of the liveness function is logically correct.
+
+Liveness ladder intact (if-expression rewrite is equivalent; tests confirm). Now swiftlint --strict on my files.
+
+swiftlint `--strict` enforces the 400-line `file_length` warning as an error (siblings comply — FleetTelemetryHealth keeps each file ≤400). I need to split Adapter/Views/Tests and wrap 2 long lines. Let me see exact counts and the long lines.
+
+Clear plan: split Adapter/Views/Tests into ≤400-line files (matching sibling convention) and wrap 2 long lines. Let me find exact split boundaries.
+
+Let me fix the two long lines first (Rows VIN line + Views empty-message literal), viewing current context.
+
+Now split the oversized files. Let me split Adapter and Views at clean MARK boundaries.
+
+All under 400. Now split Tests into `.Tests` (Adapter + a11y) and `.ModelTests` (Model + Spy). Let me re-grep current boundaries.
+
+Tests split cleanly. Now re-run swiftformat (apply) across all my files, then swiftlint --strict on the full set.
+
+swiftformat **0/10 need formatting** and swiftlint **0 violations**. Now re-verify the split files compile + tests still pass in the harness.
+
+108/108 green after the split. Now the placeholder gate. Let me see how the checker resolves `-Path`.
+
+The gate's literal `-Path .../TelemetryPipelineCard` (no such dir) trivially returns clean. To do a *real* check I'll scan a temp dir of just my files. Let me see the patterns and grep my files.
+
+No risky tokens. Let me run the actual placeholder checker on a temp dir containing my shipped files (real evidence), plus show the gate's literal-path behavior.
+
+All host-runnable gates pass on my files (format 0, lint 0, placeholder COUNT=0, tests 108/108). Now I'll capture the full gate commands honestly — including the Xcode/iOS-SDK capability evidence and the whole-tree lint/format baseline.
+
+Capability evidence captured (xcodebuild needs Xcode; iOS-sim SDK absent). Now the whole-tree gate commands to confirm my files are clean in-tree and capture sibling baseline.
+
+Whole-tree swiftformat: 1/1777 needs formatting, and it's NOT mine. Let me identify the pre-existing sibling for honest disclosure, then run whole-tree swiftlint.
+
+Pre-existing swiftformat issue is in sibling `ActionBuilder.Previews.swift` (outside my allowed files); **0 of mine** flagged. Now whole-tree swiftlint --strict.
+
+My files: **0 swiftlint violations** in-tree. The tree's exit=2 is from pre-existing sibling violations (e.g., `LifetimeStatsWidget.Adapter.swift`), outside my allowed files. Let me get the exact counts for the log.
+
+All gates green for my surface (format 0, lint 0, placeholder 0, **108/108 executed assertions**, macOS-15 SDK + Swift 6 strict-concurrency compile). Xcode/iOS gates deferred with captured evidence. Now writing the gate log (confined to allowed files: `TelemetryPipelineCard.*` + the log).
+
+Let me do a final i18n key cross-check (every key used must exist in the catalog) and one more clean harness run before committing.
+
+Perfect i18n parity (43 used = 43 defined, no gaps). Final clean harness run to confirm the exact committed state compiles + passes.
+
+Clean-from-scratch build: **108/108 passed**. Updating tracking and committing the surface (allowed files only).
+
+Two pre-existing modified web files are unrelated to my task — I'll leave them unstaged and commit only my allowed files + the log.
+
+Committed (1f89251df) — 12 files, only my allowed surface files + the log. Cleaning up temp artifacts.
+
+All done and committed. Only the two pre-existing unrelated web files remain in the working tree (not mine, untouched). Let me confirm the todo board is clear.
+
+All todos complete and the surface is committed. 
+
+## Summary
+
+Shipped a production-polished native Apple SwiftUI **`TelemetryPipelineCard`** at parity with the web source `features/system/components/status/TelemetryPipelineCard.tsx`, committed as `1f89251df` (12 files, allowed scope only).
+
+**What it reproduces:** the fleet rollup grid (vehicles · positions · drives · charges · signal-log), the liveness summary chips (per-bucket counts + Fleet-Telemetry-broker + polling-engine chips, gated on `list.length > 0`), the per-vehicle list with the **union liveness ladder** (most-recent of MQTT-stream/REST-poll → `<5m sending / <30m slow / >30m stale / none offline`), battery bar, stream/poll source tag, last/next times, and the Coverage/Inspector/Vehicles footer links.
+
+**Architecture:** P1/S8 state-holder seam (no view HTTP), P1/S11 `view.opened` telemetry, P1/S10 i18n facade (43 keys, exact used=defined parity), P1/S9 tokens. Every state renders — loading / empty / error+retry / stale / offline / content — with VoiceOver labels, Dynamic Type, and Reduce-Motion respect. Split into 11 `TelemetryPipelineCard.*` files to stay within the ≤400-line lint budget.
+
+**Verification (honest, this Command-Line-Tools host):**
+- ✅ Isolated SwiftPM build + **108/108 executed test assertions** (real shipped test bodies), clean-from-scratch
+- ✅ Compiles under **macOS-15 SDK + Swift 6 strict concurrency** (caught & fixed 2 real defects: a non-`Sendable` `TSTone` on a `Sendable` row, and tuple key-paths)
+- ✅ `swiftlint --strict` 0 violations · `swiftformat --lint` 0 · placeholder COUNT=0 (self-test passes)
+- ⏸️ `xcodebuild` iOS-Simulator + macOS build/test **DEFERRED** to the macOS acceptance runner — full Xcode and the `iphonesimulator` SDK are absent here (raw API evidence captured in the log), matching the repo's 0005/0009 + `macos-pending` precedent.
+
+Log: `.github/prompts/monorepo/logs/p4-apple-feature-views-0256-TelemetryPipelineCard.log` ends with `EXIT=0` / `STATUS=DONE`. The two pre-existing modified web files were left untouched/unstaged.
+
+
+

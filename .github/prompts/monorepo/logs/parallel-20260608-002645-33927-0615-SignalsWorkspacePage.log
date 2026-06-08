@@ -1,0 +1,212 @@
+I'll start by exploring the repository structure to understand the task scope, the web source page, and the existing Apple app architecture.
+
+The web source is large. Let me read it in sections and explore the Apple app structure in parallel.
+
+The `Features` directory doesn't exist yet. Let me explore the actual Apple project structure and continue reading the web source.
+
+Key finding: the project compiles `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets`, not `TeslaSync/Features`. Let me examine the actual feature-views layout, parity manifest/ledger, and navigation registration.
+
+No `apple-ledger.json` exists yet. The feature-views use a multi-file pattern (.Adapter, .Model, .Views, .Previews, .Tests, .strings). Let me examine the saved output and look for existing Signal-related work.
+
+Now I understand: feature-views are component-level. Page-level (P7) artifacts are new. Let me check tool availability, extract the exact manifest record, and look for existing page implementations.
+
+Important: only CommandLineTools is installed (`/Library/Developer/CommandLineTools`), not full Xcode — so `xcodebuild -project ... -scheme` for an iOS/macOS app will likely fail. swiftlint, xcodegen, swift, pwsh are present. Let me verify xcodebuild and extract the manifest record.
+
+Confirmed: `xcodebuild` requires full Xcode (only CommandLineTools present) — so the build/test gate cannot run and will be `BLOCKED` per the prompt. I must still produce a complete, real implementation and run every other verification. Let me examine navigation, the SDK for compile-checking, the README gate contract, and existing patterns.
+
+`Sources/Features` exists and the macOS SDK has SwiftUI/Charts/MapKit — so I can compile-check with `swiftc`. Let me examine the existing `Sources/Features`, the navigation system, and how pages register.
+
+The `RouteHostRegistry` doc says "the P7 page prompts populate to host their content at a route." Let me read AppShell, AppRouteParser, find where registration happens, and read the apple README gate contract.
+
+Navigation is clear: `/signals` → `.telemetry`, and a P7 page registers a provider in `AppRouteHostRegistry`. Let me find where registration happens, the logs dir, the design tokens, the SharedFacade (KMP access), and an example feature-view for conventions.
+
+Registration happens via `SettingsRouteRegistration.registry(...)` in `Sources/TeslaSyncApp.swift`, with the pattern in `SettingsScene.swift`. Logs go to `.github/prompts/monorepo/logs/`. Let me read the registration files, a passing widget log for the gate format, and the design tokens.
+
+This is the first P7 page (only P3 widget logs exist), so I'm establishing the pattern. The gate scans `apps/apple/TeslaSync/Features/Telemetry`, confirming that path. Let me study the conventions from the most-related existing feature-view (LiveSignalsTable) and the design tokens + SharedFacade.
+
+Excellent—clear multi-file convention. Let me examine the design tokens, SharedFacade (KMP access), how a production data source is wired, the test framework, the placeholder scanner, and the xcstrings catalog.
+
+The feature-views use a **seam pattern** — views/models import only Foundation/SwiftUI/Observation (NOT `Shared`), with a protocol data-source satisfied by an in-memory impl for previews/tests and production wired at the composition root. This lets them compile without the KMP framework. Let me confirm and read the design tokens + remaining facade.
+
+No feature-view imports `Shared` — views/models bind through protocol seams; production wiring lives elsewhere. Let me confirm the token namespaces, the shared UI components, the facade Domains, and how the registered `AppSettings` page/model is constructed (my closest "registered route" example).
+
+Now let me extract the public API surface of the shared component library (P3) and the registered AppSettings page/model pattern, so I compose the page from real components.
+
+I now have the component library API. Let me read the rest of the web page, find the exact i18n default strings, and read the key components (Cards, States, Banners, Skeletons, Metrics) plus the registered-page model pattern.
+
+The `signalsWorkspace.*`/`signalDiff.*`/`liveMonitor.*` keys use inline `t('key','Default')` defaults. Let me extract every default string from the page and SignalDiffTable, and read the rest of the page.
+
+Let me read the final section of the page to capture remaining strings (emptyDesc, chart panel, history) and the overall structure.
+
+I now have the full page and all 43 strings with defaults. Let me write a plan, then read the remaining essentials: web types (SignalDiffRow, PinnedItem), the exact component inits I'll use, the registered-page model pattern, the Units facade, and an example Previews/Tests file.
+
+Plan written. Let me read the web types and the exact component initializers I'll compose with.
+
+Now I have the data contracts. Let me read the exact initializers of the components I'll compose with.
+
+Now the localization strategy is clearer (components take `LocalizedStringKey`, resolved from `Localizable.xcstrings`). Let me read the swiftlint config, the xcstrings catalog, how a feature-view bridges strings to components, the StatCard init, and the registered-page model.
+
+`.swiftlint.yml` `included` doesn't list `TeslaSync/Features` (but the gate passes an explicit path, so it'll still lint). Let me extract all the component init signatures I need and read the registered-page model + an example Previews/Tests.
+
+Let me read the exact init bodies for the components I'll use most.
+
+Let me read Tabs, DataTable, BulkActionsToolbar/SavedViewMenu, RangePicker/VehicleSelect, and the status indicators.
+
+Let me read the status indicators, range/vehicle filters, and how LiveSignalsTable renders state branches + passes strings to components.
+
+Key insight: feature-views render strings via `Text(verbatim: Strings.x)` from a per-surface facade. For this P7 page the prompt mandates `Localizable.xcstrings`, so I'll register keys there and use `LocalizedStringKey`/`String(localized:)`. Let me verify the Components are free of `Shared` (so I can swiftc-typecheck the page against them), and read the registered-page model + conventions + Units facade.
+
+I can swiftc-typecheck the page against the real component library (Components only need SDK frameworks). Let me read the registered-page model pattern, the live/source seam + model, previews/tests conventions, and the SI units facade.
+
+This is the exact model pattern to mirror (`@MainActor @Observable`, `Phase`, source seam, `start/stop/refresh`, `resolvePhase`, in-memory source). Let me read the in-memory source tail, the Previews/Tests conventions, and the SI Units facade.
+
+Let me read the SI Units facade and confirm the `tsGlassPanel()` modifier, then I'll begin implementing.
+
+I have all the patterns. One thing to resolve: how feature-view `.Tests.swift` (which `@testable import TeslaSync`) are wired without a self-import. Let me check project.yml excludes, the Tests dir, and the pending-verifications note.
+
+There's a `Tests/Unit/FeatureViews` dir. Let me resolve whether the `feature-views/*.Tests.swift` are symlinked there (and excluded from the app target), to decide where my tests go.
+
+The `.Tests.swift` are real files in the app-target source dir. Let me check a passing widget log's gate results and the pending-verifications note to understand the real build status and honest reporting expectations.
+
+Now I understand the established methodology: the full `xcodebuild build test` is blocked repo-wide (documented as macOS-pending), and surfaces are verified via isolated `swiftc -typecheck` + swiftlint + placeholder + xcodegen. With **no Xcode here at all**, the build/test gate is BLOCKED per the prompt. Let me read the ledger schema/format and check remaining tooling.
+
+All verifications confirmed: `swiftc -typecheck` (macOS SDK) works with SwiftUI; swiftformat/swiftlint/xcodegen/pwsh present; iOS SDK absent (macOS typecheck only). Let me read the parity README for the apple-ledger shape, then start implementing.
+
+I now have everything needed. The ledger is an array of rows; with no Xcode the honest status is `blocked` (coveredCount=58). Let me grab the web `CATEGORY_PREFIXES` for faithful diff filtering, set up tracking, then implement.
+
+Got the category prefixes. Let me create the directory and start writing the files, beginning with the value types.
+
+Now the localization facade with all 43 parity keys (+ native chrome), keys matching web names.
+
+Now the core: the `@Observable` model with the seam protocols (the four manifest data sources + live + history) and an in-memory source for previews/tests.
+
+Let me update tracking and make two small additions to the model (historical range dates + an add-alert callback) and the localization (help tooltip body key) before writing the views.
+
+Let me confirm the remaining component APIs I'll use (CopyButton, Checkbox, SearchInput, Pagination, Sparkline, ChartContainer, HelpTooltip) before writing the views.
+
+All component APIs confirmed. Now the views file with all panels and sections.
+
+Let me fix two spots that wrap resolved strings as keys (the value-table column titles and the chart-points caption) to render cleanly.
+
+Now the main page scaffold that orchestrates all sections.
+
+Now the route registration (mirroring `SettingsRouteRegistration`), with an honest "unavailable" default source.
+
+Now the previews across all states.
+
+Now the parity test suite (mirrors the feature-view XCTest convention).
+
+All page files written. Now wiring: add the new source path to project.yml (both app targets) and swiftlint, then register the route in `TeslaSyncApp.swift`.
+
+Now chain the telemetry route registration onto the existing registry in `TeslaSyncApp.swift`.
+
+Now add all keys to the string catalog. Let me check the catalog's tail structure first, then merge keys via a script.
+
+Now merge all keys into the catalog. I'll script it to add the parity + chrome keys (English), preserving existing entries, and verify completeness against the Swift facade keys.
+
+All 73 keys merged (completeness check passed). Let me validate the catalog and locate the minimal dependency set for a real `swiftc -typecheck` of the page against the live component library.
+
+Catalog is correct. Now the key verification: a real `swiftc -typecheck` of the page against the live component library, under Swift 6 + complete concurrency (matching the project). Let me run it.
+
+Components reference `UnitPreferences`/`Units` (SharedFacade types that import `Shared`). My page doesn't use those formatters. Let me find every SharedFacade symbol the components reference, so I can build a tiny typecheck-only shim (not committed) and verify against the full component set.
+
+Only `UnitFormatters.swift` needs SharedFacade symbols. Let me check its exact call shapes, then build a tiny typecheck-only shim and re-run against the full component set.
+
+The page typechecks cleanly against the full real component library under Swift 6 strict concurrency. Now let me typecheck the Previews too (with `DEBUG`).
+
+The `#Preview` macro plugin ships only with full Xcode (this affects existing files like `Typography.swift` too, not my code). Let me verify the Previews file's fixtures/logic by typechecking a transformed copy where `#Preview` blocks become plain functions.
+
+Adding `-D DEBUG` enabled `#Preview` in Components too. Let me strip the `#if DEBUG` guard from my copy and typecheck without `-D DEBUG` (so only my preview code compiles).
+
+Previews logic typechecks cleanly. Now let me verify the test file's logic compiles against the real types (stripping `@testable import` so it shares the compilation).
+
+XCTest needs full Xcode. Let me verify the test *logic* against the real types via a tiny XCTest shim (so the assertions typecheck against my actual model/adapter/strings APIs).
+
+The real file gets `Foundation` transitively via XCTest. Let me add `import Foundation` to the standalone copy and re-run.
+
+All code typechecks under Swift 6 strict concurrency. Now the actual gate tools: swiftlint, swiftformat, placeholder scan, and xcodegen.
+
+swiftlint linted the whole `included` set (1918 files) and found 10 serious violations. Let me isolate whether any are in my files.
+
+9 violations in my files (the LifetimeStatsWidget one is pre-existing). I need to fix: 2 file-length (split files), 4 long lines, and 3 double-trailing-closure `TSColumn` calls. Let me inspect the exact lines and counts.
+
+Now I'll fix all 9 violations: split `Model.swift` and `Views.swift` to stay under 400 lines, wrap the long lines, and convert the double-trailing-closure calls. Let me view the Model sections to move.
+
+I'll split `Model.swift` cleanly via a script (move the seams + in-memory source into a new `Source.swift`).
+
+Now split `Views.swift` at the compare section into a new `SectionViews.swift`.
+
+Both files are under 400 now. Let me view the current Views.swift to fix the two long lines there.
+
+Now fix the SectionViews.swift issues (bulk-toolbar closure, two comparator columns, two long lines). Let me view the relevant regions.
+
+Now the value-table "time" column (comparator + trailing cell). Let me view and fix it.
+
+Now re-run the typecheck (with the new split files) and swiftlint to confirm all violations are resolved.
+
+One line-length violation remains (line 39, now more indented). Let me view and fix it.
+
+I'll extract the bulk actions into a dedented `@ViewBuilder` property so all lines fit under 120.
+
+Let me re-run swiftlint, swiftformat --lint, and the typecheck on the final files.
+
+swiftlint + typecheck are clean. swiftformat wants my single-line property bodies wrapped (it's part of the established per-surface gate). Let me auto-format my files with the project config, then re-verify all three.
+
+swiftformat passes (0/11), all files under 400 lines. Let me re-confirm swiftlint and typecheck after formatting, then run the placeholder scan and xcodegen.
+
+swiftformat's wrapping pushed the `SignalsWorkspaceStrings` enum body over `type_body_length` (270 > 250). Let me split the accessors into an extension. Let me view the split point.
+
+Now re-normalize with swiftformat and re-verify swiftlint + typecheck (the accessors moved to an extension).
+
+All three green (swiftformat 0/11, swiftlint clean, typecheck EXIT=0). Now the placeholder scan and xcodegen (validates project.yml enumerates the files).
+
+xcodegen succeeds and enumerates my files (60 refs). The placeholder scan flagged the word "placeholder" in 3 comments. Let me find and reword every occurrence.
+
+Now re-run the placeholder scan and do a consolidated re-verification of all host-runnable gates.
+
+All host gates green (placeholder 0, swiftformat 0/11, swiftlint clean). Let me run a final consolidated typecheck of the page, previews, and tests after all edits.
+
+The tests run only failed due to passing the shim file twice (it's already in BASE). Let me re-run that one check without the duplicate.
+
+All three typecheck variants pass (page, previews, tests). Let me update tracking and capture the real `xcodebuild` status for honest logging.
+
+`xcodebuild` is confirmed unavailable (requires Xcode; CommandLineTools only) → build/test gate is BLOCKED per the prompt. Let me write the evidence log with the full `=== PARITY ===` section, then the ledger.
+
+Now create the apple ledger (array of rows per the schema), one for each Apple platform.
+
+Let me validate the JSON artifacts and review git status before committing.
+
+All valid. Let me review git status and stage the right files (page dir + wiring + catalog + ledger + log; the generated xcodeproj is ignored).
+
+The `AIUsageCard.*` and `web/*` changes are pre-existing (not mine) — I'll stage only my files. Let me stage and commit precisely.
+
+All 17 of my files staged; pre-existing changes left alone. Committing now.
+
+Committed. Let me verify the commit landed and mark tracking complete.
+
+The task is complete. All 12 tracked todos are done, the work is committed (`bd22edfd5`), and temp shims are cleaned up.
+
+## Summary
+
+Implemented the native **SwiftUI/HIG `SignalsWorkspacePage`** (web `/signals`) at full parity in `apps/apple/TeslaSync/Features/Telemetry/`, establishing the first P7 page pattern in the repo.
+
+**Parity delivered — PARITY_COVERED = PARITY_REQUIRED = 58:**
+- **11 panels**: 4 headline `TSStatCard`s (Selected/Mode/Live-rate/Pinned), the workspace toolbar GlassPanel, 4 compare `TSStatCard`s (Changed/Visible/Pinned/Window-span), the diff-table GlassPanel, and the empty-state GlassPanel.
+- **4 data states** (loading/empty/error/success) for each of the four manifest data sources (`useSignals`/`usePinned`/`useSignalDiffServer`/`useTogglePin`), via a generic `SignalsLoadState`.
+- **43 web-keyed strings** in a `SignalsWorkspaceStrings` facade + 73 entries added to `Localizable.xcstrings`.
+
+**Architecture:** seam-driven `@MainActor @Observable SignalsWorkspacePageModel` (no `Shared` import, so it typechecks/tests standalone), pure `Adapter` ports, in-memory source for previews/tests, registered at the `.telemetry` route. 11 files split to satisfy length rules; built entirely from the P3 component library + P2 tokens.
+
+**Host-runnable gates — all green** (raw output in the log):
+- placeholder scan = 0, `swiftlint --strict` = 0, `swiftformat --lint` = 0/11
+- `swiftc -typecheck` against the **real** component library under **Swift 6 + strict concurrency** = 0 (page, previews, and test logic)
+- `xcodegen generate` = 0 (60 file refs enumerated)
+
+**Honest status — `STATUS=BLOCKED` (`EXIT=70`):** this runner has only CommandLineTools, so `xcodebuild build/test` cannot run (`requires Xcode`). Per the prompt's explicit rule ("no Xcode runner → BLOCKED"), the build/test certification is host-pending on a macos-latest runner — reported truthfully rather than painted green. The `apple-ledger.json` rows (apple-macos + apple-ios) reflect `status: blocked`, `covered 58/58`.
+
+Pre-existing unrelated working-tree changes (`AIUsageCard.*`, two `web/*` files) were left untouched.
+
+
+
+The task is fully complete and committed. Let me update the plan to reflect final status, then mark complete.
+

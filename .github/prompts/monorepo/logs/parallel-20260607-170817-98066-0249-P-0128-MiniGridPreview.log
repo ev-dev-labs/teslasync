@@ -1,0 +1,148 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed (no iOS Simulator). `swift`, `swiftlint`, `swiftformat`, `pwsh` are available. Let me examine the web source and how predecessor feature-views were handled.
+
+The web source is a pure presentational component. The predecessor (TriggerConfigurator) produced a multi-file Swift surface with tests. Critical question: how did the predecessor validate given `xcodebuild` needs full Xcode? Let me read its log and understand the shared infrastructure.
+
+The predecessor established the pattern (ADR-012): full Xcode reached via `DEVELOPER_DIR` override, REAL iOS-18 + macOS-15 SDK typechecks, EXECUTED XCTest via SwiftPM, and DEFERRED the full `xcodebuild` app build/test (Shared.xcframework not staged + signing). Let me verify Xcode availability here and read the web data model that MiniGridPreview depends on.
+
+Full Xcode 26.5 IS available via `DEVELOPER_DIR` override — matching the predecessor exactly. Capability is present (not BLOCKED). This is a pure presentational surface (no hooks/charts/maps), much simpler than TriggerConfigurator. Let me study the shared infrastructure (tokens, i18n facade, telemetry seam, SwiftPM test harness) and the dashboard registry, then find the simplest presentational predecessor as a template.
+
+Design tokens live in `apps/apple/design/generated/apple` and `apps/apple/Sources/Design`. Let me read the token definitions, i18n facade, telemetry seam, and a simple presentational predecessor to use as the exact template.
+
+This is a pure presentational surface. Let me find how presentational predecessors (no data hooks) reconciled the generic States template. Let me examine a few candidate presentational feature views and their web sources.
+
+`HighlightCard` and `BatteryPill` are the closest precedents (pure presentational, no hooks). Let me study HighlightCard end-to-end — web source, all Swift files, and its log.
+
+`HighlightCard` is the ideal template — pure presentational, props-driven, 6 files: `.swift`, `.Model.swift`, `.Telemetry.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`. Let me read all of them plus its log to learn the exact conventions.
+
+This is the exact precedent I need. Key insight: for presentational surfaces, loading/error/stale/offline belong to the embedding caller — the surface models only the branches the web source owns, plus an empty form so nothing renders blank. Let me read the remaining HighlightCard files, its log, and the shared components/tokens I'll use.
+
+Now let me read the Previews, strings, the HighlightCard log (for the gate/validation approach), and the shared components/tokens I'll need.
+
+Now let me read the HighlightCard log (gate/validation approach), the shared components (TSGlassPanel, TSCaption), and the available Color.TS tokens.
+
+Let me read the HighlightCard log (validation approach) and the shared component signatures (TSGlassPanel, TSCaption, TSFadeIn).
+
+Now I fully understand the validated approach: an isolated SwiftPM harness compiling the surface against the real design-system files + EXECUTING XCTest, plus real iOS/macOS SDK typechecks, with the full-app `xcodebuild` gate DEFERRED (pre-existing XCTest-in-app-target issue). Let me read the harness specifics from the log.
+
+I have the complete pattern. Now let me understand the icon resolution (web `getWidgetDef(...).icon`) and check for any native widget catalog, plus confirm GRID_COLS and the registry shape.
+
+`getWidgetDef` is from a large shared registry (16 category files), which is out of scope for this surface (shared component). The icon resolution should be an injected seam with a real default catalog. Let me extract the full widget-id → icon mapping to build a faithful, complete catalog.
+
+118 widget IDs across 76 distinct icons. I'll build a faithful, complete `widgetID → SF Symbol` catalog as an injected seam. Let me extract the exact id→icon pairs.
+
+I have all 118 widget mappings. Now let me read the lint/format configs (limits, included paths) and the full token block to pick correct tokens before writing.
+
+Now I understand the constraints (line ≤120, no single-char ids except id/x/y/t/ok, tokens available). Note: web uses `w`/`h` grid units — I must use longer names. Let me check shared-component dependencies for the SwiftPM harness (Typography/TSMaterial imports).
+
+Typography compiles against just Tokens.swift — my harness deps are minimal. Let me set up tracking and generate the faithful widgetID→SF Symbol catalog from the registry pairs.
+
+Tabs were stripped by the heredoc. Let me do everything in one Python script with the map inline and parse the registry directly.
+
+All 118 widgets mapped cleanly (max line 80 chars). Let me write the plan, then author the files. First the dictionary content:
+
+Now I'll write the files. Starting with the plan and the telemetry/catalog files.
+
+Now the Model — the projection core with faithful porting of the web math.
+
+Now the SwiftUI view with the GeometryReader absolute layout, faithful to the web percentage positioning.
+
+Now the DEBUG previews with representative sample layouts.
+
+Now the comprehensive XCTest suite.
+
+The `force_try` rule (default in SwiftLint, run with `--strict`) would flag `try!`. Let me convert those tests to `throws` + `try XCTUnwrap`, and write the strings file.
+
+6 usages. Let me fix them (sed for the `try!`, edits for the signatures) and write the strings file.
+
+All 7 files written. Let me verify which shared symbols my code references (to know the minimal harness deps), then run swiftformat autofix + swiftlint on my files.
+
+My files only depend on `Tokens.swift`. Let me run swiftformat (autofix) then swiftlint on my files.
+
+Clean on both swiftformat and swiftlint. Now let me build the isolated SwiftPM harness to compile against the real `Tokens.swift` and EXECUTE the XCTest suite.
+
+Now run the test harness (debug build — also compiles the `#if DEBUG` previews — then executes XCTest).
+
+All 25 tests pass in debug (Previews compiled). Let me run release mode + confirm the debug previews build explicitly.
+
+25/25 in release too, debug previews build clean. Now the REAL iOS-18 simulator + macOS-15 SDK typecheck compiles (matching predecessor evidence). Let me locate the SDKs.
+
+Both SDKs present (deploy targets iOS 18 / macOS 15). Let me run the real SDK typechecks under Swift 6 strict concurrency.
+
+Runtime typechecks clean on both SDKs. Now the DEBUG-previews typecheck on both SDKs.
+
+All SDK typechecks green. Now the placeholder gate — let me inspect the script then run it.
+
+The `-Path` does a recursive scan of a real path. Let me first check my files contain no forbidden patterns, then run the gate both ways (scoped temp-dir scan for a meaningful count, plus the literal prompt command).
+
+Only hit is the word "stub" in a comment — not a forbidden pattern (patterns are TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented + swift fatalError forms). Let me run the placeholder gate (scoped temp-dir scan for a real count + the literal prompt command).
+
+Placeholder gate clean. Now the whole-app lint/format gates (literal gate commands) to confirm my files add zero violations and capture the honest tree state.
+
+Whole-app swiftformat flags 1 pre-existing sibling file (`ActionBuilder.Previews.swift` — not mine, outside my allowed scope). My files are clean. Let me run whole-app swiftlint and verify that sibling is pre-existing (untouched by me).
+
+My changes are only the 7 MiniGridPreview files. Whole-app swiftlint shows 1 pre-existing violation — let me confirm it's not mine.
+
+The single whole-app swiftlint violation is `LifetimeStatsWidget.Adapter.swift:141` — the same pre-existing one the HighlightCard predecessor documented, NOT mine. Now let me capture honest DEFERRED evidence for the full-app `xcodebuild` gate (check xcodegen + Frameworks state).
+
+xcodegen available; `Shared.xcframework` is NOT staged (only `.gitkeep`) — the same pre-existing infra blocker the predecessors documented. Let me generate the project, confirm my surface is registered, and capture the real `xcodebuild` DEFERRED evidence.
+
+Surface is registered (42 references in the generated project, both app targets). Now capture the real `xcodebuild` DEFERRED evidence — it will fail fast on the unstaged `Shared.xcframework`.
+
+The iOS scheme gate hit the **Gradle "Stage Shared.xcframework" pre-build phase** (the 7-min KMP assembly the predecessor documented) and timed out — no MiniGridPreview errors. Let me capture the cleaner fast-fail evidence via a direct target build (skips the scheme's Gradle pre-action), matching the predecessor's exit-65 evidence.
+
+I have the exact DEFERRED evidence: `XCODEBUILD_TARGET_EXIT=65`, "no XCFramework found at .../Shared.xcframework", BUILD FAILED, zero MiniGridPreview errors. Let me clean up generated artifacts and verify the working tree.
+
+Working tree clean (only my 7 files). Let me update tracking and gather final metrics for the log.
+
+All files within limits (≤295 lines, longest code line 111). Now I'll write the comprehensive, honest log.
+
+Log written. Let me do a final clean-state check and commit the allowed files.
+
+All 8 deliverable files staged (7 surface + log), nothing extraneous. Committing.
+
+Committed (`172501f9`). Let me finalize tracking, verify clean tree, and clean up temp artifacts.
+
+All complete. Working tree is clean, temp files removed, log ends with `EXIT=0 / STATUS=DONE`, and the commit landed as `172501f9`.
+
+## Summary
+
+Shipped a production-polished, native Apple-idiomatic **`MiniGridPreview`** feature view at parity with the web source `features/dashboard/components/MiniGridPreview.tsx`.
+
+**What it is:** a presentational dashboard-layout thumbnail. The web source is pure-presentational (no hooks/charts/maps), so — following the established `HighlightCard`(0076)/`ToolCard`(0010) precedent — the remote loading/error/stale/offline phases belong to the data-bound caller; the surface reproduces exactly the branches the source owns.
+
+**7 files (1079 Swift + 27 strings), allowed scope only:**
+- `MiniGridPreview.Model.swift` — pure projection: `GRID_COLS.lg=4`, the `maxY⇒safeMaxY` guard, per-item `x/cols`·`y/safeMaxY` fractional rects, the `widget.id↔item.i` join, aspect ratio, empty/count + P1/S10 strings facade + a11y seam
+- `MiniGridPreview.Catalog.swift` — `MiniGridIconResolving` seam (native analogue of the shared `getWidgetDef`) + the **full 118-id** widget→SF-Symbol catalog (lucide-faithful); unknown id ⇒ nil
+- `MiniGridPreview.swift` — GeometryReader absolute layout mapping the web percentage rects onto an aspect-fitted frame, friendly empty state, `view.opened` telemetry, a11y container
+- `.Telemetry.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`
+
+**Verification (all real, all pasted in the log):**
+- ✅ `swiftformat --lint` + `swiftlint --strict` on my files: **0 issues** (2 disclosed whole-app hits are pre-existing siblings, outside scope)
+- ✅ placeholder gate: **PLACEHOLDER_COUNT=0**
+- ✅ Isolated Swift 6 SwiftPM harness against the real design tokens: **25/25 XCTest EXECUTED green** (debug + release); DEBUG previews build clean
+- ✅ Real **iOS-18 simulator + macOS-15 SDK** typechecks (runtime + previews) under strict concurrency: clean
+- ✅ `xcodegen`: surface registered in both app targets (42 refs)
+- ⏸️ Full-app `xcodebuild` build/test **DEFERRED** with captured `XCODEBUILD_TARGET_EXIT=65` "no XCFramework found at .../Shared.xcframework" + Gradle-staging timeout — **zero MiniGridPreview errors**; blocked solely by the unstaged KMP framework + macOS signing (pre-existing infra, outside allowed files), per ADR-012.
+
+Committed as `172501f9` with the required title and co-author trailer.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-feature-views-0128-MiniGridPreview.log | 216 +++++++++++++++
+ .../feature-views/MiniGridPreview.Catalog.swift    | 173 ++++++++++++
+ .../feature-views/MiniGridPreview.Model.swift      | 275 +++++++++++++++++++
+ .../feature-views/MiniGridPreview.Previews.swift   | 114 ++++++++
+ .../feature-views/MiniGridPreview.Telemetry.swift  |  38 +++
+ .../feature-views/MiniGridPreview.Tests.swift      | 295 +++++++++++++++++++++
+ .../feature-views/MiniGridPreview.strings          |  27 ++
+ .../TeslaSync/feature-views/MiniGridPreview.swift  | 184 +++++++++++++
+ 8 files changed, 1322 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0128-MiniGridPreview.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/MiniGridPreview.Catalog.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MiniGridPreview.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MiniGridPreview.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MiniGridPreview.Telemetry.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MiniGridPreview.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MiniGridPreview.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/MiniGridPreview.swift

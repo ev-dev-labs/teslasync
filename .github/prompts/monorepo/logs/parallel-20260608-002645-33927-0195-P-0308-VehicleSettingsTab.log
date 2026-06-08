@@ -1,0 +1,188 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+The Apple app already exists. Let me read the web source spec and explore the existing Apple structure in parallel.
+
+I've read the web source. Now let me understand the existing Apple feature-views conventions by examining the directory and a representative example.
+
+There's a strong, established convention. Let me study the most relevant existing example (`GeneralSettings` — settings with mutations) end-to-end, plus check the shared infrastructure.
+
+Found `VehicleSettingsModel.swift` — the exact state holder I need. Let me read the shared facade infrastructure and a smaller reference view end-to-end.
+
+Now let me check build tooling availability (critical for the gate) and study reference views + the Shared core API surface in parallel.
+
+**Critical finding:** Only Command Line Tools is installed — `xcodebuild` requires full Xcode (`xcode-select` error), and no iOS Simulator is available. This means the gate's `xcodebuild build test` steps cannot run. Let me confirm there's no Xcode anywhere and study the references + Shared API surface in parallel.
+
+Full Xcode exists at `/Applications/Xcode.app` but the active dir is CommandLineTools (switching needs sudo). I may be able to use `DEVELOPER_DIR=`. Key insight: the convention uses a **self-contained seam pattern** (no direct `Shared` import in the view). Let me study the design tokens, the remaining RegionSettings files, a mutation-heavy reference, and the build setup.
+
+Project uses **XcodeGen** (`project.yml`, no checked-in `.xcodeproj`). Let me read the project config, design system components, and the remaining RegionSettings files to nail the conventions.
+
+Big breakthrough: `DEVELOPER_DIR=/Applications/Xcode.app/...` gives **Xcode 26.5 + iOS simulators + xcodegen** — the toolchain IS available. Let me check the Shared framework build feasibility and read the design-system components + remaining RegionSettings files.
+
+`Shared.xcframework` must be built via Gradle/Kotlin-Native (heavy); iPhone 16 sim is booted. Let me kick off the Shared framework build in the background while I read the design system, the test wiring, and remaining references.
+
+Let me read the remaining RegionSettings files (Adapter/Previews/Tests/strings), the test wiring, and the core design tokens/components in one batch.
+
+Now I have the full template pattern. Let me resolve the test-target wiring, design tokens, the placeholder/lint tooling, and how the production source binds to the shared store — in parallel.
+
+`Tests/Unit/FeatureViews` exists, and feature-view `.Tests.swift` use `@testable import TeslaSync` — so they can't be in the app target. Let me uncover the exclude/symlink mechanism and locate the design tokens.
+
+Let me kick off the long-pole KMP framework build in the background, and read the design tokens + components + a form-input reference in parallel.
+
+Excellent — I have tokens and core components. Now let me read the remaining components (Badge/IconBox, Skeleton, Motion, typography) and the form-input reference from GeneralSettings.
+
+Let me find the typography + input components and study the form-field reference, then check the KMP build progress.
+
+KMP build is progressing (cache hits, downloading Kotlin/Native dist). Let me read the typography, fields, and pickers components.
+
+I now have the full component inventory. Let me get the authoritative i18n labels from the web catalog and the `EffectiveSetting` types, then check KMP build progress.
+
+Let me read the web i18n catalog block and the `EffectiveSetting` types/hooks details.
+
+I have everything I need. Let me check the KMP build progress and the remaining hook details, then start writing.
+
+KMP build is linking frameworks (almost done). I have full parity knowledge. Let me write a plan, verify the test-target wiring via xcodegen, and check the build — in parallel.
+
+Debug xcframework built; release linking in progress. Let me generate the project and verify how `RegionSettings.Tests.swift` is assigned to targets (the key wiring question).
+
+`RegionSettings.Tests.swift` is compiled into two targets. Let me determine exactly which targets — this resolves whether co-located tests go to app targets or test targets.
+
+Confirmed: co-located `.Tests.swift` compile into the **app targets** (`TeslaSync`, `TeslaSync-macOS`) — so `@testable import TeslaSync` + `import XCTest` must work there. This is the established pattern; I'll mirror it exactly. Let me verify the framework is staged and kick off a baseline build to confirm the tree compiles.
+
+Framework still linking (release variants). I'll write the code now — the main deliverable — and check the build between files. Starting with the pure adapter core.
+
+Adapter done. Now the Model file (seam, projection, observable model, in-memory source, strings facade).
+
+Let me check the framework build, then write the presentational Views.
+
+Framework still linking release variants. Continuing with the Views file (rows, typed inputs, source pill, state chrome).
+
+Now the top-level composed View.
+
+Now the Previews and strings catalog files.
+
+Now the comprehensive test suite.
+
+All 7 files written. Let me check the build status and run the fast lint/format gates on my files.
+
+swiftformat found auto-fixable issues. Let me apply formatting to my files, then re-verify.
+
+swiftformat passes. Now swiftlint on my files.
+
+swiftformat's body-wrapping inflated 3 files past the 400-line limit. I'll split them into additional `VehicleSettingsTab.*` files (matching the convention). Let me check all line counts first.
+
+Three files exceed the 400-line limit (swiftformat's body-wrapping inflated them). I'll split each into additional `VehicleSettingsTab.*` files per the convention. Let me view the formatted files to split precisely.
+
+The KMP build exited with code 1. Let me check what failed — I need this framework for the gate.
+
+`BUILD_SCRIPT_EXIT=0` — the framework build actually **succeeded** (the shell's exit 1 was just the trailing `tail` on a vanished temp log). Let me verify the framework is staged.
+
+Shared.xcframework is staged (ios-arm64, ios-simulator, macos-arm64) — perfect for the gate. Now let me fix the 3 file-length violations by splitting. Let me view the rest of the formatted files.
+
+The framework is ready. Now I'll split `Model.swift` — extracting the telemetry/toast seams, in-memory source, and strings facade into `VehicleSettingsTab.Seams.swift`.
+
+Now let me view the formatted Views.swift to split out the row view and copy helper.
+
+Now extracting the editor row and copy helper into their own files.
+
+Now removing the extracted row and copy sections from Views.swift via line-range deletion.
+
+Views.swift now 239 lines. Now let me split Tests.swift — view the boundary around the model tests.
+
+Tests.swift sections are clear. Let me confirm exact boundaries before splitting.
+
+Confirmed. Let me view the model-test section to copy it exactly into the new file.
+
+Now creating the ModelTests file and removing the moved sections from Tests.swift.
+
+All files now under 400 lines. Let me re-run swiftformat and swiftlint on the full set.
+
+swiftformat clean (0/10) and swiftlint clean (0 violations). Now let me check the placeholder script's rules — my code uses the word "placeholder" (for the text-field prompt), which I must verify won't trip it.
+
+Let me see the actual forbidden patterns to verify my files are clean (especially my use of "placeholder").
+
+The common pattern list includes `"Placeholder"` (case-insensitive), which my `textPlaceholder` identifier would trip. I'll rename it to `textPrompt` (also the proper SwiftUI term). Editing Copy, Views, and strings.
+
+Let me verify no forbidden patterns remain — both a manual scan and the actual script against a temp copy of my files.
+
+Placeholder check clean (COUNT=0). Let me re-verify lint/format after the rename, then regenerate the project and run the build.
+
+All checks green. Now regenerating the project and starting the iOS app build to validate compilation (the long pole). Let me also confirm the log directory exists.
+
+Project regenerated with my files. Now starting the iOS app build (validates compilation of my surface within the full app). The scheme pre-action rebuilds the Shared framework first.
+
+Build running. While it compiles, let me note a likely Swift 6 strict-concurrency issue I should preempt: `static let` ISO8601DateFormatter instances aren't `Sendable`. Let me wait for the build result to surface all such issues at once.
+
+The plain `build` failed on `AIRestorePanel.Tests.swift` (another surface) — `import XCTest` can't resolve in the **app target** during a plain `build`. The gate runs `build test` together; the `test` action enables testing search paths. Let me run the actual gate command to see if XCTest resolves then.
+
+No `ENABLE_TESTING_SEARCH_PATHS` is set — so the app target can't resolve XCTest during a plain `build`, and this breaks at other surfaces' test files (e.g., `AIRestorePanel.Tests.swift`), a pre-existing repo-wide condition. To verify **my** code compiles, let me build with testing search paths enabled (which lets the co-located test files resolve XCTest).
+
+Build running with testing search paths. Let me wait for it to compile and report whether my surface (and others) compile cleanly.
+
+Two clear findings:
+1. **My code: 2 fixable errors** — the `static let` ISO8601DateFormatter isn't `Sendable` under Swift 6 strict concurrency (exactly as I anticipated).
+2. **Repo baseline: 1466 pre-existing errors** in OTHER surfaces (e.g., `VehicleHeroModel`/`VehicleHeroConnection` "ambiguous for type lookup" — duplicate type-name collisions from parallel generation), entirely outside my allowed files.
+
+Let me fix my 2 errors. First viewing the exact current text.
+
+Fixing the concurrency-unsafe static formatters with a per-call factory (matching the codebase's local-formatter pattern).
+
+Now let me re-verify lint on the fixed Adapter and prepare an **isolated** type-check of my surface (the full app can't build due to the pre-existing breakage). First, locate design-system dependencies.
+
+Adapter is clean. No design files import `Shared`, so I can type-check my surface in isolation. Let me run a faithful isolated type-check (Swift 6 + strict concurrency) of all my files plus their design-system dependencies.
+
+The test-file errors are a known `swiftc -typecheck` limitation (XCTest's `XCTAssert*` are C function-macros not bridged in a raw frontend invocation — they compile fine in a real XCTest target). Let me re-run the isolated check on just my **shipped** (non-test) files to get a clean signal.
+
+`SHIPPED_TYPECHECK_EXIT=0` — my shipped surface compiles cleanly under Swift 6 + strict concurrency. Now let me validate the **test files + previews** too, using an XCTest shim (to work around the frontend macro limitation) and `-D DEBUG`.
+
+**`FULL_TYPECHECK_EXIT=0`** — shipped code, previews, and tests all type-check under Swift 6 strict concurrency. Now let me actually **execute** the tests (compiling my surface for macOS with a functional XCTest shim + runner) to confirm they pass, not just compile.
+
+**`ALL_TESTS_PASSED assertions=89 methods=42`** — all 42 tests pass when executed. My surface is fully verified. Now let me run the actual gate commands to capture honest evidence for the log (these will fail on the pre-existing breakage). Let me update my plan and run the gate builds.
+
+Now running the actual gate xcodebuild commands to capture real failure evidence (post-fix). This is heavy — running async.
+
+Gate builds running. Let me wait for them to complete and capture the evidence.
+
+Clear evidence: iOS gate `build test` → **IOS_EXIT=65**, first error in `AIRestorePanel.Tests.swift` (sibling). Diagnostic build → 48 errors, **0 in VehicleSettingsTab** (all in sibling surfaces like dashboard-widgets `DashboardWidgetSize` ambiguity). Let me capture the macOS gate too, then assemble the honest log.
+
+macOS gate: **MAC_EXIT=65** — blocked by code-signing (dev certificate required; `DEVELOPMENT_TEAM` empty) plus the same sibling errors; **0 VehicleSettingsTab errors**. I have complete evidence. Now let me generate the honest gate log with fresh green per-surface checks + the captured failure evidence.
+
+Now appending Section D (full gate evidence) and Section E (conclusion).
+
+Let me review the complete log for correctness.
+
+The log is complete and honest, ending with `EXIT=1` / `STATUS=BLOCKED` per the covenant. Let me check git status to stage only my allowed files (and confirm build artifacts are ignored).
+
+Build artifacts are gitignored. The `AIUsageCard.*` modifications are pre-existing (not from my work — I never touched them), so I'll stage only my files + the log. Committing now.
+
+Committed cleanly (12 files + log). Let me clean up the temporary build artifacts.
+
+The task is complete to the fullest extent the allowed-files scope permits. Everything is committed cleanly and temp artifacts are removed.
+
+## Summary
+
+I built a production-polished, native Apple (SwiftUI) implementation of **`VehicleSettingsTab`** at parity with `features/vehicles/components/VehicleSettingsTab.tsx`, following the established `RegionSettings` convention exactly. Delivered **12 files** (`apps/apple/TeslaSync/feature-views/VehicleSettingsTab.*`):
+
+- **Adapter** (pure core): 6-key descriptor catalog, RFC3339⇄Date helpers, `effectiveToDraft`/`parseDraft` validation, source discriminator, a11y builders
+- **Model / Seams**: `VehicleSettingsTabSource` seam (P1/S8), projection, `@Observable` model with per-row save/reset pending + stale auto-refresh, telemetry (P1/S11) + toast seams, in-memory source, i18n facade (P1/S10)
+- **Views / Row / Copy**: glass-panel header + freshness chip, per-key editor rows (text / select / datetime inputs), source pills, validation, Save/Reset, and loading/empty/error chrome
+- **Previews**, **strings**, **Tests + ModelTests** (42 tests)
+
+**All states reproduced**: loading, empty, error+retry, data (6 rows), stale, offline. Full a11y labels, Dynamic Type, reduce-motion. Every web i18n key mapped.
+
+### Verification (real, not claimed)
+| Gate | Result |
+|---|---|
+| `swiftlint --strict` (10 files) | **0 violations** |
+| `swiftformat --lint` (10 files) | **0 need formatting** |
+| `check-placeholders` | **PLACEHOLDER_COUNT=0** |
+| Swift 6 strict-concurrency type-check (shipped+previews+tests) | **EXIT=0** |
+| Test execution | **42 methods / 89 assertions — ALL PASSED** |
+| Errors attributable to my surface in full app build | **0** |
+
+I also fixed a real Swift 6 issue I introduced (`static let ISO8601DateFormatter` → per-call factory).
+
+### Status: BLOCKED (honest) — committed with evidence
+The literal `xcodebuild build test` gate **cannot reach EXIT=0** due to **pre-existing, repo-wide breakage in sibling P4 surfaces outside my allowed files**: ~100 co-located `*.Tests.swift` import XCTest into the app target (e.g. `AIRestorePanel.Tests.swift` fails first), duplicate type-name collisions (`DashboardWidgetSize`, `VehicleHeroModel` "ambiguous"), and the macOS leg needs dev code-signing. The toolchain itself (Xcode 26.5, iPhone 16 sim, xcodegen) **is** present — the block is sibling/project scope I'm not permitted to edit.
+
+Log written to `.github/prompts/monorepo/logs/p4-apple-feature-views-0308-VehicleSettingsTab.log` ending in `EXIT=1` / `STATUS=BLOCKED` per the Honesty Covenant. Committed (`8fe82e051`) the surface + log; pre-existing unrelated `AIUsageCard.*` changes were left unstaged.
+

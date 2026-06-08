@@ -1,0 +1,134 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me read the web source and explore the Apple app structure.
+
+Let me explore the existing Apple dashboard-widgets directory and related web sources in parallel.
+
+Let me examine a representative existing widget (MileageStatsWidget — also driving-related) to learn the established patterns, plus the project config.
+
+Let me read the rest of the MileageStatsWidget files to fully understand the architecture.
+
+Let me read the tests/previews and find the shared primitives and theme tokens.
+
+Now let me find the shared primitives, theme tokens, and the web data model (useTrips/Trip type).
+
+I need to find where the shared primitives and theme tokens are defined. Let me search more thoroughly and read the project config.
+
+Each widget Model file appears to redeclare `DashboardWidgetSize`. Let me understand how duplicates are reconciled — read project.yml and one duplicate definition.
+
+I see each "first" widget redeclares shared primitives. Let me check the toolchain availability (critical for the gate) and how duplicate primitive definitions are handled.
+
+Key findings: **`xcodebuild` requires full Xcode but only Command Line Tools is installed** — so the simulator/macOS build+test gate steps cannot run (platform-capability limit). However `swiftc` 6.3.2, `swiftlint`, `swiftformat`, `xcodegen`, and `pwsh` ARE available. Also, 3 existing widgets redeclare the shared primitive (a pre-existing parallel-slot condition); the clean reference (MileageStats) relies on it instead. Let me gather the remaining data-model details.
+
+Let me locate the design token definitions to use only valid tokens, plus check the badge/StatCard shared components and a Builder/Projection example for a list widget.
+
+Let me read the TSSkeleton component and the LocationFavorites list-widget Model/Projection/main view to finalize the pattern for a list-based widget.
+
+Let me read the list-widget Model + Projection, the lint/format configs, and the placeholder checker.
+
+Let me check the `TSTone` type, lint/format configs, the placeholder checker, and mirror the list-widget test structure.
+
+I now have a thorough understanding. Let me verify the exact registry metadata and i18n keys against the web source, then set up my plan.
+
+Registry metadata confirmed (matches prompt exactly). Now let me set up tracking and verify whether `swiftc` can typecheck SwiftUI + `@Observable` against the CLT SDK (critical for how I verify my work, given no Xcode).
+
+SwiftUI + `@Observable` typecheck cleanly with `swiftc` against the CLT SDK. So I can do real typecheck verification (only the full `xcodebuild` simulator/macOS app build+test can't run). Let me write the plan, then build all files.
+
+Now I'll build the files. Starting with the pure domain types.
+
+Let me create the Models file (pure domain types).
+
+Let me check the shared Badge/Card components to align styling before writing the leaf views.
+
+Now the leaf views (Rows). Let me create them styled to match the established widgets.
+
+Now the main surface view with header and all states.
+
+Now the Previews file.
+
+Now the Tests file.
+
+Now the strings catalog.
+
+All 8 files created. Now the critical verification — typecheck with `swiftc`. Let me set up a verification bundle (my sources + real design tokens + real Badges + a faithful shim for the shared grid primitives defined in sibling files).
+
+The only error is the `#Preview` macro plugin (`PreviewsMacros`) which raw `swiftc` lacks outside Xcode — an environmental limitation, not a code error (it fired in the shared Badges.swift preview). Let me typecheck production code without `-D DEBUG` (excludes all `#Preview` blocks).
+
+Production code typechecks cleanly under Swift 6 + strict concurrency. Now let me syntax-check the Previews (macro can't expand under raw swiftc) and typecheck the Tests file (XCTest, with the self-module import stripped since it compiles in-module here).
+
+Previews parse cleanly. XCTest isn't in the CLT toolchain (Xcode-only, same limitation as xcodebuild). To still type-verify the test logic against my real symbols, I'll compile the tests in-module with a minimal XCTest shim.
+
+The stripped file lost Foundation (the real file gets it transitively via `import XCTest`). Let me swap in `import Foundation` instead of removing the import line.
+
+Tests typecheck passes (EXIT=0) with only Swift 6 main-actor warnings where the non-isolated registry test touches the `@MainActor` View's statics. The sibling widgets share that pattern, but I'll improve it by marking that test class `@MainActor` (already used elsewhere in the file) to keep it warning-free.
+
+Tests typecheck is now warning-free. Now the lint, format, and placeholder gates on my files.
+
+swiftlint: 0 violations. Now swiftformat lint and the placeholder gate.
+
+Two auto-fixable swiftformat issues (numeric grouping + a doc-comment). Let me inspect the exact lines, then use swiftformat's autofix (the ecosystem tool).
+
+Let me apply swiftformat's autofix to my files, then review the diff and re-verify.
+
+New files are untracked so git diff is empty. Let me view the changed regions directly to confirm the autofix is correct.
+
+swiftformat normalized the numeric grouping (its `3,6` rule keeps 5-digit ungrouped, 6-digit grouped) and made the helper comment a doc comment — both consistent now. Let me confirm both linters pass and re-run the typechecks (file contents changed).
+
+Both linters clean. Now re-verify typechecks (contents changed) and run the placeholder gate.
+
+All green: production + tests typecheck (Swift 6, strict concurrency), previews parse, swiftlint 0, swiftformat 0, placeholders 0. Now I'll capture the gate honestly into the log. First, gather the platform-capability evidence.
+
+`/Applications/Xcode.app` exists but isn't the active dir (CLT is). I can override per-process via `DEVELOPER_DIR` without sudo. Let me test if Xcode is actually usable.
+
+Xcode 26.5 + iOS 26.5 simulator (incl. iPhone 16) ARE available via `DEVELOPER_DIR`. This means the real gate might run. But the full app target compiles ~120 sibling widget files — I noted 3 of them each redeclare `DashboardWidgetSize`/`DashboardWidgetRegistration`. Let me assess buildability (KMP framework + duplicate definitions) before committing to a long build.
+
+Decisive finding: `DashboardWidgetSize` is defined in **5** sibling files and `DashboardWidgetRegistration` in **3**, all compiled into the single `TeslaSync` target — plus the app depends on a `Shared.xcframework` (KMP) that's absent (`Frameworks/` has only `.gitkeep`). These are pre-existing, cross-surface conditions explicitly out of my allowed scope (`TripSummaryWidget.*` only). My widget correctly relies on the shared primitive rather than redefining it. Let me capture authentic evidence by attempting the real gate.
+
+Definitive: the app needs a KMP `Shared.xcframework` (absent; built via Gradle) and has 5×/3× duplicate primitive definitions across **other** surfaces' files — all pre-existing and outside my allowed `TripSummaryWidget.*` scope. Let me generate the project and capture authentic build evidence (building the target directly skips the heavy Gradle scheme pre-action).
+
+Project generates and all 8 TripSummary files are registered; the 5 duplicate-defining sibling files are also in the target. Now let me capture authentic compiler evidence by building the target directly (skips the Gradle pre-action).
+
+Build failed (exit 65) with zero TripSummary errors, but my grep didn't match the failure reason. Let me see the actual errors.
+
+The whole-app build stops immediately at the missing KMP `Shared.xcframework` (ADR-004) — before Swift compilation. The legitimate next gate step is to stage it via Gradle. Let me attempt that (time-boxed), since if it succeeds I can run the real iOS+macOS gate.
+
+Java 17 + the KMP module are present. Let me stage `Shared.xcframework` via the project's own script (time-boxed) — if it succeeds I can run the real iOS+macOS gate.
+
+KMP build still running at 5 min (Kotlin/Native first-build downloads + compiles are slow). Let me check progress.
+
+Good progress — Kotlin compiled (cache hits), debug XCFramework written, now assembling release. Let me wait for completion.
+
+KMP `Shared.xcframework` built successfully (7m15s) and staged. Let me stop that lingering session and now build the target — this will reach Swift compilation where the pre-existing duplicate definitions surface.
+
+Still failing but no redeclaration match — let me see the actual errors now (the framework is staged, so it's reaching a different stage).
+
+Critical finding: with `Shared.xcframework` now staged, the build reaches Swift compilation and fails on **`DigitalTwinWidget.Tests.swift:17: error: unable to resolve module dependency: 'XCTest'`** — a *sibling* file. The `*.Tests.swift` files (every widget colocates one) are in the app target's source path, but XCTest only links in test bundles. Zero errors are in TripSummary files. This is a third pre-existing, systemic, out-of-scope blocker. Let me run the exact gate commands for authentic exit codes (Gradle is now cached).
+
+iOS gate: `IOS_EXIT=65`, blocked on the same pre-existing sibling `XCTest` issue, 0 TripSummary errors. Let me capture the macOS gate plus the lint/format/placeholder gate steps.
+
+Both gate builds: `EXIT=65`, blocked on the same pre-existing sibling `XCTest` issue, 0 TripSummary errors. Now the lint/format/placeholder gate steps (whole-tree, as the gate runs them) plus my-files-scoped results.
+
+swiftformat whole-tree: `FORMAT_EXIT=0` (my files included). Placeholder: 0. swiftlint shows 1 serious violation across 389 files — my targeted run was 0, so let me confirm it's not mine.
+
+Confirmed: the single swiftlint violation is in a **sibling** file (`LifetimeStatsWidget.Adapter.swift`), not mine. Full gate picture is now established. Let me check what's git-tracked vs generated, then write the honest log.
+
+Everything is clear: the 8 TripSummary files are my untracked deliverables; generated artifacts (xcodeproj/build/xcframework) are git-ignored; the 2 modified `web/*` files pre-date my work (out of scope). Now I'll write the honest gate log.
+
+The honest log is written. Now, to strengthen the evidence beyond typechecking, let me actually *run* the surface's unit tests using a throwaway SwiftPM package with the real Xcode toolchain (which has XCTest + the preview macro plugin). This would behaviorally verify the adapter/model/registry/a11y logic.
+
+The shim was missing from `/tmp/tsverify` (cleared). Let me recreate it and finish the package layout.
+
+Package.swift didn't get written earlier. Let me create it and run the tests with the Xcode toolchain.
+
+**All 27 surface unit tests PASS** under the real Xcode 26.5 toolchain (XCTest, Swift 6) — and the full package (production + previews + tests) compiled cleanly, including the `#Preview` macros. This is behavioral proof, not just typechecking. Let me add this to the log.
+
+Log updated with the behavioral test evidence. Now let me clean up generated/temp artifacts and verify only my intended files are staged.
+
+Clean: only my 8 files + the log are untracked; the 2 `web/*` edits pre-date my work (excluded); no sibling files touched. Let me commit exactly my deliverables.
+
+Exactly the 8 surface files + log staged (pre-existing `web/*` edits excluded). Committing.
+
+Committed cleanly (HEAD `dcc17a57`, 9 files, 1774 insertions). Let me do a final verification of the log trailer and working-tree state.
+
+All work is complete and committed. Final state verified: log ends `EXIT=1 / STATUS=BLOCKED` (covenant rule 10), working tree clean except the two pre-existing `web/*` edits.
+

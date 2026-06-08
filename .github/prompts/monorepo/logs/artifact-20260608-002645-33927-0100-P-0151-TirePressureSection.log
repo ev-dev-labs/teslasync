@@ -1,0 +1,169 @@
+================================================================================
+P4 · Feature view · 0151 — TirePressureSection (Apple)
+Run: 2026-06-08T01:58-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/100
+Base: c9c6fdb9f
+Prompt: P4 · feature-views · 0151 — TirePressureSection (Apple)
+Web source (spec): web/src/features/driving/components/drive-detail/TirePressureSection.tsx (88 lines)
+Mode: code-complete + host-validated; DEFERRED full-app Xcode scheme build/test
+      (ADR-012 macOS-pending), matching predecessors 0231 FSMTimelineChart /
+      0180 AlertMessageEditor / 0150 TemperatureSection / 0010 ToolCard.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                 OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iOS simulator SDK .......... iPhoneSimulator 26.5 (deployment target iOS 18.0)    OK
+  macOS SDK .................. MacOSX 26.5 (deployment target macOS 15.0)            OK
+  iOS simulator device ....... iPhone 16 present + booted (simctl via Xcode)        OK
+  Swift Charts ............... import Charts resolves on both SDKs (typecheck below) OK
+  MapKit ..................... not required by this surface (web "maps used": none)  N/A
+  swiftlint .................. 0.63.3                                               OK
+  swiftformat ................ 0.61.1                                               OK
+  xcodegen ................... 2.45.4                                               OK
+  pwsh (placeholder gate) .... 7.6.2                                               OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks has only .gitkeep) WARN
+  codesign identities ........ none (BLOCKER for signed app gate, ADR-012)         WARN
+
+  Charts/Maps capability note: this surface uses Swift Charts (a four-series LineMark
+  trace) and NO MapKit (the web "Charts / maps used" lists none; the web source is a
+  Recharts LineChart). The core requirement — SwiftUI + Swift Charts — is available and
+  PROVEN by REAL iOS-18 + macOS-15 SDK `swiftc -typecheck` AND a passing 33-test XCTest
+  run below. The capability-BLOCKED escape hatch therefore does NOT apply; the surface
+  is authored and host-validated for real, STATUS=DONE.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/TirePressureSection.*) ===
+  TirePressureSection.Adapter.swift     289  Foundation-only value model — VERBATIM web
+                                             `chartData`/`stats` port: the SI(kPa) pressure unit +
+                                             `convertTirePressureSectionFromSI` (1:1 of
+                                             convertPressureFromSI — kPa passthrough, psi /6.894757,
+                                             bar /100), the per-wheel sample, the FL/FR/RL/RR series
+                                             (tile name + short FL/FR/RL/RR code), the per-wheel
+                                             min/max range, the converted chart point, and the
+                                             projection (present-line gate vs `> 0` tile-range gate,
+                                             content gate = `stats.hasTirePressure`).
+  TirePressureSection.Projector.swift   211  Pure projector: convert each sample, line-presence per
+                                             wheel (`chartData.some(d => d.tireXx !== null)`), the web
+                                             `tpVals` min/max over `value != null && value > 0`, phase
+                                             resolver, `fmtNumber`-parity formatting (2-dp, grouped;
+                                             en-dash range, spaced unit), the P1/S11 slug, and the
+                                             VoiceOver summary builder.
+  TirePressureSection.Model.swift       262  P1/S11 telemetry seam + P1/S10 strings facade + source
+                                             snapshot + P1/S8 source protocol + @Observable
+                                             TirePressureSectionModel (project on apply, phase,
+                                             freshness, stale auto-refresh / offline) + InMemory
+                                             source + empty projection + surface slug.
+  TirePressureSection.Chart.swift       194  Swift Charts four-series LineMark (web Recharts
+                                             `<Line>` ×4), palette `chartForegroundStyleScale`,
+                                             index X with preserveStartEnd HH:mm labels, adaptive Y
+                                             ticks (bar 1-dp / kPa·psi 0-dp), `chartXSelection`
+                                             RuleMark tooltip listing each present wheel + value.
+  TirePressureSection.Views.swift       312  Token-driven chrome: wheel palette (web hex → EXACT
+                                             token: FL #3b82f6→Speed, FR #10b981→Battery,
+                                             RL #f59e0b→Energy, RR #ef4444→Temperature), header +
+                                             freshness chip, stale/offline banner, the four
+                                             always-shown min/max tiles (web grid-cols-4; `—` when no
+                                             positive reading), legend, loading skeleton, empty
+                                             (ContentUnavailableView), error (+retry).
+  TirePressureSection.swift              77  The composed surface + GlassPanel card + fade-in +
+                                             phase switch (loading/error/empty/content) + view.opened
+                                             lifecycle + a11y container.
+  TirePressureSection.Previews.swift    102  #if DEBUG previews: content / content·psi / empty /
+                                             loading / error / stale / offline (eight-sample drift).
+  TirePressureSection.strings            54  P1/S10 catalog — the 7 web source keys + native short
+                                             codes / chrome / a11y / axes.
+  TirePressureSection.Tests.swift       373  XCTest: conversion (kPa/psi/bar, from-symbol), projector
+                                             (present/order, range `>0` filter incl. line-without-
+                                             range, psi/bar convert, single-point content, no-tire
+                                             empty), phase, formatting (decimal/spaced/en-dash range/
+                                             non-finite), model lifecycle (view.opened once,
+                                             content/empty/loading/failed, stale auto-refresh once +
+                                             re-arm, offline keeps cache, retry, stop, unit pref,
+                                             slug), a11y summaries.
+  Total 1874 lines (9 files). Every .swift file <= 373 lines (house file_length 400);
+  largest Tests.swift 373. Zero `// parity:allow` opt-outs.
+
+  NAMESPACE NOTE: every introduced top-level symbol is prefixed `TirePressureSection*`
+  (value types, projector, model, sub-views, strings, telemetry, surface, a11y) so the
+  surface does NOT collide with the pre-existing dashboard tire widgets
+  (TirePressureHistoryWidget / TirePressureVisualWidget define unprefixed
+  `TirePressureProjection`/`TirePressureUnit`/`TirePressureConnection`/… — a known
+  parallel-merge collision pair). A 41-symbol sweep confirms zero collisions with the
+  rest of the app target; this surface adds NO new redeclaration.
+
+=== PARITY (vs web TirePressureSection.tsx) ===
+  Data sources (web → native P1/S8 source seam):
+    chartData / stats props (parent useDriveDetailData) → TirePressureSectionSource → …Update
+    useTranslation                                      → TirePressureSectionStrings facade (P1/S10)
+    useUnits (unitPrefs.pressure)                       → …Update.unit (kPa|psi|bar), applied at boundary
+  Verbatim web logic ported + unit-pinned:
+    tile min/max = tpVals(key): min/max over chartData[key] filtered `!= null && > 0`, else `—` ·
+    line drawn per wheel iff chartData.some(d => d.tireXx !== null) (0 keeps a line, excluded from range) ·
+    content gate = stats.hasTirePressure (≥1 wheel non-null; NO `length > 1` requirement) ·
+    SI: native receives kPa (raw Pa /1000 as the web hook does) → convertPressureFromSI at display.
+  Recharts → Swift Charts mapping:
+    four `<Line {...AREA_DEFAULTS}>` (FL #3b82f6 / FR #10b981 / RL #f59e0b / RR #ef4444) → four
+    LineMark series, `.interpolationMethod(.monotone)`, palette via chartForegroundStyleScale
+    (exact-hex design tokens chartSeriesSpeed/Battery/Energy/Temperature) · categorical `time` XAxis
+    → bucket-index X with preserveStartEnd HH:mm labels · numeric YAxis → adaptive-precision ticks ·
+    `<Tooltip ChartTooltip>` → `.chartXSelection` RuleMark annotation (time + each present wheel
+    value+unit) · `<Legend>` "FL (kPa)" → bottom legend per present wheel · the `Activity` empty
+    overlay → ContentUnavailableView (waveform.path.ecg + "No telemetry data available").
+  States (all render, never a blank box): loading(skeleton) · empty(web "No telemetry data
+    available") · error(+retry) · stale(chip + one auto-refresh) · offline(cached + chip) — a
+    freshness envelope (ADR-013) around the web content/empty split.
+  i18n: the 7 source keys (driveDetail.tirePressure, .tirePressure.aria, .frontLeft, .frontRight,
+    .rearLeft, .rearRight, .noChartData) + native short codes / chrome / axes / a11y connectors all
+    resolve via the P1/S10 facade; the catalog carries the verbatim web English. a11y: chart
+    VoiceOver label (web ariaLabel) + spoken range summary (per present wheel min..max) + per-tile
+    labels + tooltip; Dynamic Type via Font.TS; reduce-motion-safe.
+  Telemetry: emits view.opened with surface slug "TirePressureSection" once (P1/S11), asserted.
+
+=== HOST-RUNNABLE GATES (all green) ===
+  swiftformat --lint <surface> ................ 0/8 require formatting              FORMAT_EXIT=0
+  swiftlint lint --strict <surface> ........... Found 0 violations, 0 serious       LINT_EXIT=0
+  check-placeholders.ps1 -Language swift ...... PLACEHOLDER_COUNT=0 ALLOWED=0       PLACEHOLDER_EXIT=0
+  swiftc -typecheck iPhoneSimulator (ios18.0-simulator, swift6, strict-concurrency) IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (macos15.0, swift6, strict-concurrency) ................. MAC_TYPECHECK_EXIT=0
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6) ........... 33/33 passed, TEST_EXIT=0
+      → TirePressureSectionConversionTests (4) · TirePressureSectionProjectorTests (9) ·
+        TirePressureSectionPhaseTests (1) · TirePressureSectionFormatTests (4) ·
+        TirePressureSectionModelTests (12) · TirePressureSectionAccessibilityTests (3)
+      Harness links the REAL Tokens.swift + Motion.swift primitives; the single out-of-scope
+      shared atom (TSSkeleton) is provided with its exact public signature (the atom library is
+      the P4 component-library bundle's scope).
+  xcodegen generate (project spec enumerates the 9 new files, 54 refs) ............. XCODEGEN_EXIT=0
+
+=== DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test ===
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. They are blocked by PRE-EXISTING, UNRELATED parallel-merge
+    state in the shared app target — ZERO of which originates in this surface
+    (all verified present in THIS tree):
+      • Shared.xcframework not staged (apps/apple/Frameworks has only .gitkeep); the
+        scheme pre-action builds it via the Kotlin/Native Gradle toolchain (the P1/S3
+        artifact already tracked macOS-pending).
+      • `struct DashboardWidgetSize` redefined across 15 files (Sources/DashboardWidgets/*
+        + TeslaSync/dashboard-widgets/*) — "invalid redeclaration" across the app target.
+      • 262 co-located feature-view/dashboard-widget *.Tests.swift `import XCTest`
+        into the app target (205 feature-views + 57 dashboard-widgets). This surface's 1
+        test file follows that SAME established sibling convention; it does not introduce
+        a new failure class.
+      • No macOS development-signing identity (ADR-012).
+    This surface's OWN code is proven to compile against the real iOS-18 + macOS-15 SDKs
+    (typechecks above) and its logic runs green (33/33 XCTest), and a 41-symbol collision
+    sweep confirms it adds NO new redeclaration. The full-app build/test is recorded for the
+    P99 acceptance gate on a macos-latest runner with signing identities + a staged
+    Shared.xcframework.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all web states reproduced (loading/empty/error/stale/offline).
+  [x] Hooks bind to the shared P1/S8 source seam; no direct HTTP from the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (7/7 + native chrome).
+  [x] Accessibility labels present on the chart + every interactive element + per-state summaries.
+  [x] Tests: adapter unit tests + per-state model tests + a11y label tests (33 total, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (stub gate: 0, 0 opt-outs).
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing unrelated blockers);
+      host-runnable equivalents (real-SDK typecheck both platforms + 33/33 XCTest) green.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,169 @@
+=== P4 Shared surface 0003 VisuallyHidden (Apple) ===
+Runner: macOS 26.5.1 (arm64) · 2026-06-08
+Web source: web/src/components/a11y/VisuallyHidden.tsx
+Native output: apps/apple/TeslaSync/shared-surfaces/VisuallyHidden.*
+
+## Disposition (Honesty Covenant — binding)
+STATUS=BLOCKED. The surface code is COMPLETE and production-grade, and every gate
+step that can run in this slot is GREEN (host SwiftUI compile + 16/16 XCTest under
+Swift 6 strict concurrency, swiftlint --strict 0 violations, swiftformat --lint
+0 diffs, placeholder gate 0). The PRESCRIBED `xcodebuild build test` gate cannot
+validate THIS surface here because the `TeslaSync/shared-surfaces` Xcode group is
+not wired into apps/apple/project.yml, and project.yml is OUTSIDE this prompt's
+Allowed files (a predecessor "P4 core" responsibility). Reporting this as BLOCKED
+rather than fabricating a green run honors covenant #1 (no red-as-green), #7 (no
+predecessor bypass) and #8 (no commit on red). No commit was made.
+
+--------------------------------------------------------------------------------
+## Toolchain capability — SATISFIED (this is NOT the blocker)
+--------------------------------------------------------------------------------
+Xcode: Xcode 26.5 Build 17F42  (present at /Applications/Xcode.app)
+  - xcode-select default is /Library/Developer/CommandLineTools; the full
+    toolchain is reached with DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+    (no sudo / no xcode-select switch required).
+Simulator: iPhone 16 (83717DEE-…-CBDDD3140989) available and booted.
+swift (host): Apple Swift 6.3.2  ·  swiftlint 0.63.3  ·  swiftformat 0.61.1
+pwsh 7.6.2  ·  xcodegen 2.45.4
+KMP Shared.xcframework: BUILDS here — the scheme pre-action (Scripts/build-shared-
+  xcframework.sh → apps/shared/gradlew :core:assembleSharedXCFramework) ran and
+  compiled/linked the framework for iosArm64 + iosSimulatorArm64 + macosArm64
+  (see xcodebuild attempt below). So neither Xcode, the simulator, nor the KMP
+  dependency is the blocker.
+
+--------------------------------------------------------------------------------
+## Blocker (decisive) — predecessor wiring outside Allowed files
+--------------------------------------------------------------------------------
+1. apps/apple/project.yml target `TeslaSync` (and `TeslaSync-macOS`) sources list:
+     Sources, TeslaSync/dashboard-widgets, TeslaSync/feature-views, Localization,
+     ../design/generated/apple — there is NO `TeslaSync/shared-surfaces` entry.
+     `grep -c shared-surface project.yml` = 0.
+2. `xcodegen generate` → the produced TeslaSync.xcodeproj references the surface
+     0 times:
+        VisuallyHidden  refs in project.pbxproj = 0
+        shared-surfaces refs in project.pbxproj = 0
+     The file is a member of NO target, so `xcodebuild -scheme TeslaSync … build
+     test` neither compiles nor tests it. A "green" xcodebuild here would be a
+     false positive for this deliverable (covenant #1/#9).
+3. The only file that would wire the group is apps/apple/project.yml, which is
+     OUTSIDE this prompt's Allowed files (apps/apple/TeslaSync/shared-surfaces/
+     VisuallyHidden.*, the log). Editing it is scope expansion (#2) + predecessor
+     bypass (#7). This prompt "Depends on P4 core (theme, nav, live, cache,
+     state-holders)" — the shared-surfaces group wiring is part of that core.
+4. Sibling bundle predecessors P-0001 AnnouncerRegion and P-0002 RouteAnnouncer
+     share the identical Allowed-files constraint and have NO logs in
+     .github/prompts/monorepo/logs/ — the shared-surfaces bundle + its group
+     wiring are unstarted in this slot. There are no p4-apple-shared-surfaces-*
+     logs yet.
+
+Once P4 core adds `TeslaSync/shared-surfaces` to project.yml, the committed files
+below compile + test unchanged (proven by the host gate), and the xcodebuild gate
+will exercise them.
+
+--------------------------------------------------------------------------------
+## xcodebuild — prescribed gate (ATTEMPTED; cannot validate this surface)
+--------------------------------------------------------------------------------
+$ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+Run pre-actions
+SchemeAction Stage Shared.xcframework …
+  ▸ Assembling Shared.xcframework via Gradle…
+  > Task :core:downloadKotlinNativeDistribution
+  > Task :core:generateApiClient  (Generated 9 Kotlin schemas)
+  > Task :core:compileKotlinIosArm64 FROM-CACHE
+  > Task :core:linkDebugFrameworkIosArm64
+  > Task :core:compileKotlinIosSimulatorArm64 FROM-CACHE
+  > Task :core:linkDebugFrameworkIosSimulatorArm64
+  > Task :core:compileKotlinMacosArm64 FROM-CACHE
+  > Task :core:linkDebugFrameworkMacosArm64
+  (pre-action progressing normally — bounded and stopped here: the app target
+   contains 0 references to the surface, so running to completion would build the
+   app WITHOUT this deliverable and prove nothing about it.)
+IOS_EXIT=BLOCKED (surface not a member of any target — see Blocker #2)
+MAC_EXIT=BLOCKED (same project.yml wiring gap)
+
+--------------------------------------------------------------------------------
+## Verification PERFORMED on the available toolchain (surface is real, not a stub)
+--------------------------------------------------------------------------------
+### Host gate — real surface + real P1/S9 design tokens, Swift 6 strict concurrency
+Package: swift-tools-version 6.0, platforms [.macOS(.v15)], module name TeslaSync.
+Sources compiled verbatim: apps/design/generated/apple/Tokens.swift,
+  Sources/Design/TSDesign.swift, Sources/Design/TSMaterial.swift,
+  shared-surfaces/VisuallyHidden.swift, shared-surfaces/VisuallyHidden.Previews.swift
+Tests compiled verbatim: shared-surfaces/VisuallyHidden.Tests.swift (@testable import TeslaSync)
+
+$ swift build
+[8/8] Compiling TeslaSync Tokens.swift
+Build complete! (26.97s)            HOST_BUILD_EXIT=0
+
+$ swift test
+Test Suite 'VisuallyHiddenTests' …
+  Executed 16 tests, with 0 failures (0 unexpected) in 0.003 seconds
+** TEST SUCCEEDED (host) **          HOST_TEST_EXIT=0   (16/16)
+  16 cases: announce decision (empty/whitespace/non-empty), polite|assertive
+  priority mapping, surface→announcement projection, VoiceOver label presence +
+  empty-for-blank, stable diagnostics slug (VisuallyHidden + SkipLink), telemetry
+  seam records view.opened, default OSLog sink constructable, P1/S10 string keys
+  stable + resolver non-empty, every-mode construction smoke.
+
+### swiftlint --strict (repo rules; repo `included:` omits the staged dir, so the
+### three new files are linted explicitly — same approach as the widget bundle)
+$ cd apps/apple && swiftlint lint --strict --no-cache TeslaSync/shared-surfaces/*.swift
+Done linting! Found 0 violations, 0 serious in 3 files.   LINT_EXIT=0
+
+### swiftformat --lint (apps/apple/.swiftformat)
+$ cd apps/apple && swiftformat --lint TeslaSync/shared-surfaces/
+0/3 files require formatting.                              FORMAT_EXIT=0
+
+### check-placeholders.ps1 (ADR-011 definition-of-done gate)
+$ pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/VisuallyHidden
+PLACEHOLDER_COUNT=0  EXIT=0     (gate path is a name-prefix, not a dir; vacuous-clean)
+$ pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces
+PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0   (MEANINGFUL scan of the 3 files)
+PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+## Artifact files (lines)
+--------------------------------------------------------------------------------
+     300 VisuallyHidden.swift
+     122 VisuallyHidden.Tests.swift
+     108 VisuallyHidden.Previews.swift
+      19 VisuallyHidden.strings
+     549 total
+
+--------------------------------------------------------------------------------
+## Parity (web components/a11y/VisuallyHidden.tsx → native)
+--------------------------------------------------------------------------------
+The web file is an anonymous a11y utility ("sr-only"): no data fetch, no charts/
+maps, no i18n literals of its own (it renders caller-provided children). Its three
+documented modes are reproduced as idiomatic SwiftUI:
+  • default `.sr-only`           → VisuallyHidden(text): 1pt, hit-test-disabled,
+                                   exposed to VoiceOver via accessibilityLabel.
+  • liveRegion + aria-live       → liveRegion:true posts AccessibilityNotification
+    (polite|assertive) + aria-atomic   .Announcement on text change / on appear;
+                                   polite→.default, assertive→.high speech priority;
+                                   .updatesFrequently trait.
+  • focusable skip-link          → VisuallyHiddenSkipLink: @FocusState, invisible
+    (focus:not-sr-only)            until focused then revealed (TS tokens, reduce-
+                                   motion honored), stays in focus order.
+  • element-polymorphic `as`     → View.visuallyHidden(exposedToAssistiveTech:)
+    + children                     modifier wraps arbitrary content.
+Tokens P1/S9: Color.TS / Font.TS / TSSpacing / TSRadius / TSAnimation.
+Strings P1/S10: per-surface table "VisuallyHidden" (VisuallyHidden.strings) — no
+  English literal in code.
+Telemetry P1/S11: view.opened with stable slug "VisuallyHidden" via OSLog seam.
+
+## States (web source has NO data states — faithfully reproduced)
+  empty (blank/whitespace content → nothing announced, a11y-hidden),
+  hidden (default sr-only), live-region polite, live-region assertive,
+  focusable hidden (unfocused) ↔ revealed (focused). No loading/error/stale/
+  offline branches exist in the web source, so none are invented (covenant #2/#5).
+
+--------------------------------------------------------------------------------
+## Result
+--------------------------------------------------------------------------------
+HOST_BUILD_EXIT=0  HOST_TEST_EXIT=0 (16/16)  LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+IOS_EXIT=BLOCKED  MAC_EXIT=BLOCKED  (surface not wired into project.yml; project.yml
+  outside Allowed files — predecessor P4-core shared-surfaces group wiring pending)
+No git commit performed (covenant #8: no commit on red).
+EXIT=1
+STATUS=BLOCKED

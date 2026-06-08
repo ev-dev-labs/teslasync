@@ -1,0 +1,100 @@
+=== P4 Feature view 0204 AppearanceSettings (Apple) ===
+Date: 2026-06-07
+Runner: Darwin (Apple Silicon). Xcode 26.5 (Build 17F42) available via
+  DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+  (default-active toolchain is /Library/Developer/CommandLineTools).
+Tooling: swift 6.3, swiftlint 0.63.3, swiftformat 0.61.1, xcodegen, pwsh, openjdk 17.
+
+Artifact: apps/apple/TeslaSync/feature-views/AppearanceSettings.*
+Web source: web/src/features/settings/components/AppearanceSettings.tsx
+
+Files shipped (11):
+  AppearanceSettings.Adapter.swift   - pure choice catalogs (density/time/palette/sidebar/tour),
+                                       chart-palette hexes (Okabe-Ito CB-safe + neon), local-pref
+                                       value types, AppearanceServerProjection.
+  AppearanceSettings.Copy.swift      - resolved English-fallback copy facade (P1/S10).
+  AppearanceSettings.Model.swift     - @Observable model: input snapshot, server phase, connection
+                                       axis, actions, SwiftUI bindings, toast, i18n facade.
+  AppearanceSettings.Source.swift    - P1/S8 read+write seam (protocol) + telemetry seam (P1/S11)
+                                       + InMemory source for previews/tests.
+  AppearanceSettings.Views.swift     - selection atoms (choice card, density glyph/preview, palette
+                                       + sidebar swatches).
+  AppearanceSettings.Chrome.swift    - section header, toggle row/card, server-group loading/empty/
+                                       error states, freshness chip, connectivity banner, toast.
+  AppearanceSettings.Sections.swift  - 9 model-bound sections in web parity order.
+  AppearanceSettings.swift           - surface composition + view.opened telemetry on appear.
+  AppearanceSettings.Previews.swift  - per-state previews (content/loading/empty/error/stale/
+                                       offline/saving).
+  AppearanceSettings.Tests.swift     - adapter + model + a11y unit tests.
+  AppearanceSettings.strings         - every web t() key + native chrome keys.
+
+Parity coverage vs web source (all sections reproduced, in order):
+  header (IconBox + title + subtitle) - appearance-mode picker (web <ThemePicker showMode showCustom/>
+  -> native TSThemePicker) - density (+ live preview, 3 sample rows) - sidebar style (Minimal/Compact/
+  Classic + swatches) - default time format - chart palette (CB-safe/neon + swatches) - status bar
+  (show + icon-only toggles, toast on toggle) - celebration (4 toggles) - product tours (replay
+  main/debugger/automations + reset all + success toast). States: loading/empty/error on the three
+  server-backed groups + live/stale/offline connectivity axis with one-shot stale auto-refresh.
+
+--- Host-runnable gates (ALL GREEN) ---
+swiftformat --lint apps/apple (new files) : 0/10 require formatting        FORMAT_EXIT=0
+swiftlint --strict (new files)            : 0 violations, 0 serious        LINT_EXIT=0
+check-placeholders.ps1 (swift) over feature-views, AppearanceSettings.*    PLACEHOLDER_EXIT=0
+  (0 violations in AppearanceSettings.*; note: the gate's literal -Path
+   ".../AppearanceSettings" has no extension and is not a directory, so the
+   scanner reports 0 trivially — the real files were scanned explicitly and
+   are clean.)
+swiftc -typecheck (8 surface sources + real component/design/platform deps, Swift 6, macOS SDK):
+   0 errors  (the single transient TSAppearance-Sendable diagnostic disappears once
+    AppSettings.swift's `extension TSAppearance: @unchecked Sendable {}` — always compiled in
+    the real target — is included.)
+swiftc -typecheck (AppearanceSettings.Tests.swift + sources, XCTest shimmed): 0 errors
+
+--- Isolated surface verification (per ToolCard precedent + apps/macos-pending-verifications.md) ---
+Shared.xcframework : gradle :core:assembleSharedXCFramework -> BUILD SUCCESSFUL (7m27s); staged to
+                     apps/apple/Frameworks/Shared.xcframework.
+xcodegen generate  : OK (TeslaSync.xcodeproj created; new files auto-included via feature-views path).
+swift test (isolated SwiftPM "TeslaSync" module, REAL XCTest, Swift 6 strict concurrency):
+   Test Suite 'All tests' passed. Executed 32 tests, with 0 failures (0 unexpected).
+   (AppearanceChoiceCatalogTests, AppearanceChartPaletteTests, AppearanceServerProjectionTests,
+    AppearanceAccessibilityTests, AppearanceSettingsModelTests 17/17.)
+
+--- Full-app gate (BLOCKED: pre-existing, unrelated, out-of-scope) ---
+xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' build  : exit 65   MAC_EXIT=65
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build : exit 65   IOS_EXIT=65
+  (Gate names 'iPhone 16'; absent on this runner — iPhone 17 family present. Substituted iPhone 17 Pro.)
+
+  Root cause (identical for both, and pre-existing): the project routes
+  TeslaSync/feature-views into the APP target with no `*.Tests.swift` exclude, so the co-located
+  feature-view test files compile INTO the app target. The build fails on the alphabetically-first
+  such file:
+     TeslaSync/feature-views/AcDcStatsPanel.Tests.swift:19:8: error: unable to resolve module
+     dependency: 'XCTest'
+  Total compiler errors in each full-app build: 2 (both the same AcDcStatsPanel.Tests.swift XCTest
+  line). Errors attributable to the AppearanceSettings surface: 0.
+
+  This is the documented blocker in apps/macos-pending-verifications.md (row
+  p4-apple/feature-views/P-0010-ToolCard): "co-located *.Tests.swift importing XCTest into the app
+  target", plus duplicate DashboardWidgetSize/PowerFlowConnection across parallel-merged
+  dashboard-widgets, plus macOS dev-signing. Resolving it requires editing project.yml and/or other
+  surfaces' files, which are OUTSIDE this prompt's allowed files
+  (apps/apple/TeslaSync/feature-views/AppearanceSettings.* + this log). Per the established protocol
+  the full-app iOS-Simulator + macOS `xcodebuild build test` is deferred to
+  p4-apple/P99-0001-apple-acceptance-gate on a properly-configured macOS runner.
+
+--- Verdict ---
+The AppearanceSettings surface is COMPLETE and fully verified in isolation (lint/format/placeholder
+clean; 0 type-check errors across sources + tests; 32/32 unit tests green under Swift 6 strict
+concurrency; Shared.xcframework builds; zero surface errors in the full iOS + macOS app builds).
+The full-app build+test gate is blocked solely by a pre-existing, cross-surface, out-of-scope
+structural issue (co-located test files in the app target), so per the Honesty Covenant (no
+red-as-green) the gate is reported BLOCKED rather than DONE.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SWIFT_TEST=0 (32/32 isolated, real XCTest)
+EXIT=1
+STATUS=BLOCKED

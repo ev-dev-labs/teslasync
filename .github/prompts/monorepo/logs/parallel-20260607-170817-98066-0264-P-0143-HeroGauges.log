@@ -1,0 +1,125 @@
+I'll start by exploring the environment and reading the web source that serves as the specification. Let me check the toolchain availability and the dependency structure in parallel.
+
+Key capability findings:
+- **Swift 6.3.2 compiler present**, swiftlint + swiftformat + pwsh present
+- **`xcodebuild` is NOT usable**: only Command Line Tools installed, not Xcode.app
+- **iOS Simulator (`simctl`) NOT available**
+- Web source **exists**; `apps/apple/TeslaSync` exists
+
+This affects the gate. But per the Honesty Covenant (no scope narrowing, no stubs), I must still produce the complete production code and run every verification step that IS possible. Let me read the spec and existing Apple conventions, and test whether SwiftUI compiles against the CLT macOS SDK.
+
+Critical discovery: **SwiftUI, Charts, and MapKit typecheck successfully against the CLT macOS SDK**, and `feature-views/` already exists with 578 files following a clear per-surface convention (`.Adapter`, `.Model`, `.Previews`, etc.). Let me verify the swiftc exit code properly and study the established conventions.
+
+**HeroGauges already exists** with 7 files (~55KB total). And swiftc typecheck against the macOS SDK genuinely returns exit 0. This is likely a restore/parity-verification task. Let me read all existing HeroGauges files to assess whether they're complete or stubbed.
+
+Major finding: the **existing `HeroGauges.*` files implement a _different_ surface** — prompt **0103**, the **charging** `features/charging/components/charging-list/HeroGauges.tsx` (Sessions/Energy/Cost/Power gauges). My task is prompt **0143**, the **driving** `features/driving/components/drive-detail/HeroGauges.tsx` (Distance/Max Speed/Duration/Consumption/Efficiency). There's a name collision. Let me investigate how the monorepo handles this before touching anything.
+
+Three `HeroGauges.tsx` web sources exist (analytics=0058, charging=0103, driving=0143), and 0058+0103 logs already exist (done), but **0143 is mine and undone**. The existing `HeroGauges.*` Swift files belong to 0103 (charging). I must find how the collision was resolved — where did 0058 (analytics) land? Let me read all three prompts and the parity manifest.
+
+The three prompts (0058/0103/0143) all literally target the same `HeroGauges.*` path — a deliberate collision resolved per-slot. The current files are 0103 (charging), which overwrote 0058 (analytics). To decide correctly between overwriting vs. disambiguating, let me check how Android/Windows and the parity manifest handle this exact 3-way collision.
+
+Confirmed: git history shows **two** prior "add HeroGauges surface" commits — the filename is deliberately overwritten per-surface (0058 analytics → 0103 charging). My task 0143 is the third overwrite: replace `HeroGauges.*` with the **driving drive-detail** surface. Let me read the remaining existing Swift files (to mirror conventions exactly) and the web source's dependencies.
+
+Excellent — the charging implementation is high quality and gives me the exact structure to mirror. Now I need the web source's numeric pipeline to port it **verbatim** (covenant rule 5). Let me read the web dependencies and the remaining Swift files in parallel.
+
+Now let me read the web source's numeric dependencies (to port verbatim) and confirm the shared Apple tokens I'll reuse.
+
+I have the conversion formulas. Now let me read the constants, `fmtNumber`, the driving types, the hooks, and the `RadialGauge` component to port the pipeline exactly.
+
+Now the driving types, hooks, number formatter, and the canonical i18n keys from the parity manifest.
+
+Now the `DriveDetail` type, the `isMiles` setting, and canonical `driveDetail.*` i18n keys in the parity manifest.
+
+I now have the canonical i18n keys + English: `driveDetail.distance`="Distance", `.maxSpeed`="Max Speed", `.duration`="Duration", `.consumption`="Consumption", `.efficiency`="Efficiency", `.section.heroGaugesFailed`="Hero gauges failed to load". Let me verify the exact shared-core token/component names I'll bind to so the code compiles in isolation.
+
+I have everything needed for a verbatim port. Let me confirm the exact token namespace definitions (especially `chartSeriesPower`, `TSSpacing`, `TSMotion`, `Color.TS`, `Font.TS`) so my rewrite compiles, then I'll write the code.
+
+Design tokens (`Color.TS.*`) are **build-time generated** (no checked-in source), so isolated compilation needs throwaway token stubs — exactly the `/tmp` harness precedent from 0058. Let me read the placeholder gate, lint/format configs, and confirm the scheme, then write the implementation.
+
+Critical patterns to avoid in shipped code: `TODO`, `FIXME`, `XXX`, `Coming soon`, `Placeholder`, `Lorem ipsum`, `not implemented`. Before finalizing the BLOCKED assessment, let me check whether an Xcode.app exists anywhere (even if unselected) — I might unblock `xcodebuild` via `DEVELOPER_DIR` without sudo.
+
+**`/Applications/Xcode.app` exists** — only the active developer dir points to CLT. I can override with `DEVELOPER_DIR` (no sudo needed) and potentially run the **real** gate. Let me verify.
+
+**Major update:** Real **Xcode 26.5** + **iPhone 16 simulator (iOS 26.5, booted)** + macOS SDK are all available via `DEVELOPER_DIR` override (no sudo). The iOS 18/macOS 15 minimums are satisfied (26.5 ≥ 18). The full gate is potentially runnable. Let me assess the project's buildability (xcodegen, KMP framework, known-deferred issues) before the expensive build.
+
+This is decisive. The accepted protocol (per `macos-pending-verifications.md` + the 0058/ToolCard precedent) is: **surface verified green in isolation (SwiftPM build + tests, swiftlint/swiftformat/placeholder), with the full-app `xcodebuild build test` deferred** to the acceptance gate (blocked by the *pre-existing, unrelated* missing `Shared.xcframework` + `DashboardWidgetSize`/`PowerFlowConnection` 8× collisions + signing). And I now have **real Xcode 26.5 + iPhone 16 sim**, so I can verify against the actual SDKs.
+
+Let me set up tracking and confirm how `maxSpd` is computed (for accurate docs), then write the implementation.
+
+Confirmed: `maxSpd` is already display-unit converted upstream (`toSpeedDisplay(drive.maxSpeedMps)`), while the speed gauge's `max` is `convertSpeedFromSI(250, …)` — I'll reproduce that verbatim. Now writing the implementation, starting with the plan, the Foundation-only Model, and the Adapter.
+
+Now I'll replace the 7 charging `HeroGauges.*` files with the driving drive-detail surface (intentional per-surface overwrite, matching the established last-writer-wins pattern). Removing them, then creating fresh content.
+
+Now the comprehensive test suite, pinning the verbatim numeric pipeline with precise expected values.
+
+Now the i18n strings catalog with the canonical `driveDetail.*` keys plus native chrome.
+
+All 7 files written. Now formatting, linting, and the placeholder gate.
+
+swiftformat + swiftlint both clean (0 violations). Now the placeholder gate (exact prompt invocation) and a scan of each file.
+
+All surface gates green: **swiftformat 0/6 need formatting, swiftlint 0 violations, placeholder COUNT=0**. Now the key verification — an isolated SwiftPM build that actually **compiles and runs** the core tests against the real toolchain, proving the numeric pipeline matches the web.
+
+Now compiling and **executing** the core tests in isolation.
+
+Core library compiles clean. Now executing the tests.
+
+XCTest needs the Xcode toolchain. Re-running via `DEVELOPER_DIR`.
+
+**23/23 core tests pass, 0 failures**, Swift 6 strict concurrency, real Xcode toolchain. Now I'll verify the SwiftUI view files compile against **both** the macOS and iOS‑simulator SDKs using throwaway token stubs (the accepted 0058 isolation approach).
+
+Both SDK typechecks pass: **macOS EXIT=0** and **iOS‑Simulator (iPhoneSimulator26.5, target iOS 18) EXIT=0** under Swift 6. The surface compiles on both platforms. Now I'll attempt the **literal full-app gate** for honest evidence of whether the deferral is truly pre-existing. First confirming the generated project is gitignored, then generating + building.
+
+Project generated. Now attempting the literal full-app iOS-Simulator build to capture honest evidence of whether failures are pre-existing (Shared.xcframework/DashboardWidgetSize) vs. in my surface. Capturing to a log for analysis.
+
+While the build runs, let me precisely confirm the generated project's git status and prepare cleanup.
+
+The generated project **is gitignored** (`.gitignore:379` matches it) and `git status` shows **only my 7 HeroGauges.\* files** modified — clean. The background launcher returned but `xcodebuild` continues as a child; let me check its progress.
+
+This environment is **shared with other parallel agents** (the log references `slot-260`, and other `xcodebuild` processes are running with colliding `/tmp/dd-ios` paths). That makes the full-app build an unreliable signal and risks interfering with neighbors. My **clean, isolated verification is already complete** (23/23 tests + both-SDK typecheck), which is the accepted DoD per the ToolCard/0058 precedent. Let me stop my build and finalize.
+
+Build failed on only **2 errors, none in HeroGauges**. Let me confirm those are the documented pre-existing issues.
+
+The `/tmp` build log was **cross-contaminated by a sibling slot (slot-265)** — confirming the runner is shared and `/tmp/dd-ios` collided. Crucially, it still reveals the **exact documented pre-existing failure**: co-located `*.Tests.swift` importing `XCTest` into the app target (`AcDcStatsPanel.Tests.swift:19: error: unable to resolve module dependency: 'XCTest'`) — a project-wide structural issue (every surface ships a `.Tests.swift`), fixable only via `project.yml` (outside my allowed files), and **zero HeroGauges errors**.
+
+Let me run one **clean, slot-unique** build for uncontaminated slot-264 evidence, detached, while I write the log.
+
+Let me capture clean gate outputs for the log and check the slot-unique build's progress.
+
+Surface gates captured clean (format 0/6, lint 0 violations). Files total **1,489 lines** across 7 files — a substantial, non-stub implementation comparable to the prior surface. The clean slot-264 build is in the KMP/Kotlin phase. Let me give it time to reach the app-compile/link stage while I draft the log.
+
+The clean build is still assembling the KMP `Shared.xcframework` (the heavy phase) under shared-runner contention, with **0 errors / 0 HeroGauges errors** so far. The full-app failure mode is already established (project-wide XCTest-in-app-target). Let me write the honest log now while the build continues, then fold in its final state.
+
+Log written. Let me check the clean slot-264 build's final state and confirm git status is clean before committing.
+
+The clean build remains in the contended KMP/Gradle phase (still 0 errors). My log already handles this honestly. Let me verify git hygiene (generated artifacts must not be tracked) while giving the build more time.
+
+Git hygiene confirmed: only my 7 files + the new log; generated artifacts (xcodeproj, KMP build) are gitignored. Two **pre-existing** unrelated dirty files (`FleetApiSection.tsx`, `BackupRestorePage.tsx`) are NOT mine — I'll exclude them by adding only explicit paths (covenant #9). Let me wait for the clean build to clear KMP and reach the app target for uncontaminated slot-264 evidence.
+
+**Clean, uncontaminated slot-264 evidence captured.** The full-app build `** BUILD FAILED **` with exactly **2 errors — both the same pre-existing root cause** in `AcDcStatsPanel.Tests.swift:19: error: unable to resolve module dependency: 'XCTest'` (a *sibling* surface's co-located test file), and **0 HeroGauges errors**. This definitively confirms the deferral is the documented project-wide structural issue, not my surface. Let me tighten the log with this slot-264-specific evidence.
+
+Now finalizing: cleaning up generated/throwaway artifacts, then committing **only** my 7 files + the log (excluding the two pre-existing unrelated dirty files).
+
+Clean — the two pre-existing dirty files stay untouched. Staging only my explicit paths and committing.
+
+Staging didn't take — let me re-check and re-stage.
+
+Staged correctly: 7 files + log (pre-existing files excluded). Committing.
+
+Committed `89fd2b275` (8 files: 7 surface + log). Final verification of the commit contents and a last green-gate confirmation.
+
+All verified and committed. Updating tracking and finalizing.
+
+Task complete and verified. Committed as `89fd2b275`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0143-HeroGauges.log     | 167 ++++++++++++
+ .../feature-views/HeroGauges.Adapter.swift         | 301 ++++++++++++---------
+ .../TeslaSync/feature-views/HeroGauges.Model.swift | 125 ++++++---
+ .../feature-views/HeroGauges.Previews.swift        |  48 ++--
+ .../TeslaSync/feature-views/HeroGauges.Tests.swift | 223 ++++++++-------
+ .../TeslaSync/feature-views/HeroGauges.Views.swift |  66 ++---
+ .../TeslaSync/feature-views/HeroGauges.strings     |  36 +--
+ .../apple/TeslaSync/feature-views/HeroGauges.swift |  38 +--
+ 8 files changed, 630 insertions(+), 374 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0143-HeroGauges.log

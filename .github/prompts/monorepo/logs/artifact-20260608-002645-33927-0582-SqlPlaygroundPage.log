@@ -1,0 +1,246 @@
+================================================================================
+P4 · Apple · P7 page · power-user/SqlPlayground (SwiftUI / HIG)
+Run: 2026-06-08T08:53-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/582
+Base: c9c6fdb9
+Prompt: p4-apple/pages/power-user/SqlPlaygroundPage — page:power-user/SqlPlayground
+Web source (spec): web/src/features/power-user/pages/SqlPlaygroundPage.tsx  (route /power/sql)
+Mode: code-complete + host-runnable gates EXECUTED GREEN + DEFERRED Xcode full-app
+      build/test (BackendTool 0002 / GuardModeWidget 0054 precedent, ADR-012,
+      Honesty rule 7 — predecessor parity).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 via DEVELOPER_DIR override               OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)    OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)           OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                         OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                       OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                             OK
+  xcodegen ................... project generates cleanly (exit 0)                  OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)     OK
+  Swift Charts / MapKit ...... present in both SDKs (this page uses NEITHER)       OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+    (Kotlin/Native build is macOS-pending per apps/macos-pending-verifications.md;
+     this page imports NO Shared symbols, so it is unaffected in isolation.)
+
+  Capability note: the parity unit declares "Charts (0)", "Maps (0)", and
+  "no API data sources — renders from navigation values / local state". The core
+  requirement is SwiftUI, which is AVAILABLE and PROVEN by real iOS-18-simulator
+  AND macOS-15 SDK compiles + an EXECUTED XCTest run below.
+
+=== SHIPPED SURFACE (apps/apple/TeslaSync/Features/PowerUser/) ===
+  SqlPlaygroundPage.swift            252  the SwiftUI page: ScrollView scaffold + header
+                                          (PageTitle + intro) + editor panel + catalog
+                                          panel; adaptive macOS/iPad/iPhone; no logic.
+  SqlPlaygroundPage.Model.swift      355  @Observable SqlPlaygroundPageModel + i18n keys
+                                          (SqlPlaygroundStrings) + curated catalog data
+                                          (SqlPlaygroundCatalog) + draft-persistence +
+                                          telemetry seams. Host-compiles w/o the UI layer.
+  PowerUserRouteRegistration.swift   142  navigation: PowerUserDestination + PowerUserTool
+                                          + PowerUserHubView (List → SqlPlaygroundPage via
+                                          navigationDestination) + PowerUserRouteRegistration
+                                          (.powerUser route host, mirrors SettingsRouteRegistration).
+  SqlPlaygroundPage.Previews.swift    74  #if DEBUG previews — empty/typed/run-empty/
+                                          run-unavailable/dark + section hub.
+  SqlPlaygroundPage.Tests.swift      240  XCTest — model/catalog/strings/navigation (21 methods).
+  Largest .swift = 355 lines (swiftlint file_length<=400 honored). NO file imports the
+  Shared xcframework. Data is local-only (web has no API source for this page); the draft
+  persists under the canonical web key "ai.sqlPlayground.draft" via an injectable seam.
+
+  Supporting edits (navigation registration + build wiring + strings, all in allowed scope):
+    Sources/TeslaSyncApp.swift  — chain PowerUserRouteRegistration into \.routeHosts
+                                  (same pattern as SettingsRouteRegistration).
+    project.yml                 — add `TeslaSync/Features` to iOS + macOS target sources.
+    .swiftlint.yml              — add `TeslaSync/Features` to `included:`.
+    Localization/Localizable.xcstrings — +11 powerSql.* keys (minimal-diff insert, +121/-0);
+                                  validated by Xcode `xcstringstool compile` during the build
+                                  attempt below (no error) and by JSON round-trip.
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data sources: NONE (web "no API data sources — renders from navigation values /
+    local state"). The page is local-only; there is no loading/empty/error data-state
+    to model. The single declared `success` state is the curated catalog's loaded rows,
+    bound via SqlPlaygroundPageModel.catalogState = .success([CuratedTable]).
+  - Panel 1 (web GlassPanel1 — Manual SQL editor): TSGlassPanel → TSPanelTitle +
+    TSTextArea(text:$model.sql) (empty-field prompt overlay, a11y label/value) +
+    Run/Clear (TSButton, disabled when !canRun) + deterministic run-status message.
+    Run mirrors web handleRun: empty input → editorRunEmpty hint; otherwise →
+    editorRunUnavailable guidance (the page exposes NO execution endpoint, exactly
+    like web). Clear mirrors handleClear. Draft persists on change + is removed when
+    emptied (web localStorage useEffect), key "ai.sqlPlayground.draft".
+  - Panel 2 (web GlassPanel2 — Curated schema catalog): TSGlassPanel → TSPanelTitle +
+    intro + the 5 curated tables (drives, charging_sessions, vehicles, alerts,
+    signal_log_view) ALPHABETIZED (web sortedTables), each a card with mono table name
+    (accent), summary, and an adaptive 1→2 column grid of `name · type — summary`
+    (web grid-cols-1 sm:grid-cols-2). Table/column identifiers + summaries render
+    verbatim, exactly as the web CURATED_CATALOG constant renders them (schema data,
+    not localized chrome). Columns are SI-canonical (distance_m/duration_s/energy_used_wh/
+    avg_speed_mps/max_speed_mps; energy_added_wh; max_power_w) — no legacy unit suffix.
+  - i18n: all 11 powerSql.* keys preserved verbatim from the web source, resolved via
+    LocalizedStringKey from the central Localizable.xcstrings (same mechanism as the
+    registered AppSettingsView). Catalog English values inserted into the catalog.
+    NO hardcoded user-facing chrome literals in the view (all via SqlPlaygroundStrings).
+  - Accessibility: VoiceOver labels on the editor (label + value), Run/Clear, the
+    run-status message (static-text live region), each table card (combined name+summary),
+    and each column row (combined name/type/summary); Dynamic-Type system fonts (Font.TS);
+    light/dark + increased-contrast via Color.TS dynamic colors; ≥44pt targets (TSButton).
+  - Navigation: `.powerUser` route host → PowerUserHubView (HIG List) → push
+    SqlPlaygroundPage via .navigationDestination(for: PowerUserDestination). Adaptive
+    NavigationSplitView (macOS/iPad) + NavigationStack (iPhone) supplied by AppShell.
+  - Telemetry (P1/S11): SqlPlaygroundPageModel.start() emits view.opened with surface
+    slug "SqlPlaygroundPage" exactly once (OSLog default; prod injects shared adapter);
+    user SQL is never logged.
+  - AI drafter (web AINLSqlPlayground): feature-flagged + NOT in this parity unit's
+    manifest (no AI panel/string declared) → intentionally out of scope (ADR-015 I5
+    "hidden in off-mode"); the model keeps an applyDraft() seam for the propose-only path.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped page compiled together with the REAL apps/apple closure (design Tokens +
+  Design/{TSDesign,TSMaterial} + Components/{UI,DataDisplay,Feedback,Forms,Charts,Maps,
+  Motion,Layout} minus UnitFormatters [unrelated UnitPreferences dep] + App nav). None
+  import the Shared xcframework.
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK (-swift-version 6, strict concurrency):
+        xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [3] swiftc compile+run — model runtime harness (real Model file + assertions):
+        RUNTIME_CHECKS_PASSED (idle→empty→unavailable run statuses; canRun guard;
+        persist-on-change + remove-when-empty; applyDraft; 5 sorted tables; telemetry
+        once; loads persisted draft; 11 unique keys; no legacy unit suffix)
+        RUN_EXIT=0                                                                 OK
+  [4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained
+        SwiftPM harness (real production Model/View/Registration + real design tokens +
+        real TS component closure), Swift 6 language mode, release config:
+          Test Suite 'PowerUserNavigationTests'      passed —  1 test,  0 failures
+          Test Suite 'SqlPlaygroundCatalogTests'     passed —  4 tests, 0 failures
+          Test Suite 'SqlPlaygroundPageModelTests'   passed — 13 tests, 0 failures
+          Test Suite 'SqlPlaygroundStringsTests'     passed —  3 tests, 0 failures
+          Executed 21 tests, with 0 failures (0 unexpected) in 0.004 seconds
+        TEST_EXIT=0                                                                OK
+        Covers: run-status projection (idle/empty/unavailable), trimmed canRun guard,
+        draft persist/remove via store seam, applyDraft, success catalog state + 5
+        alphabetized tables, sort-on-init, 11-key manifest match + namespacing,
+        view.opened-once, SI-canonical columns (no _mi/_min/_mph/_kwh/_kw/_psi),
+        hub exposes the SqlPlayground destination.
+  [5] swiftlint --strict apps/apple/TeslaSync/Features/PowerUser (exact gate invocation):
+        Done linting! Found 0 violations, 0 serious in 5 files.
+        LINT_EXIT=0                                                                OK
+  [6] swiftformat --lint apps/apple/TeslaSync/Features/PowerUser (.swiftformat config):
+        0/5 files require formatting.
+        FORMAT_EXIT=0                                                              OK
+  [7] check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/PowerUser -Language swift:
+        PLACEHOLDER_ALLOWED=3   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                         OK
+        (3 opt-outs = the parity-required literal i18n key "powerSql.editor.placeholder"
+         in the strings constant, allKeys, and the test manifest set — a text-field
+         prompt key, never a stub. Reason recorded inline via `// parity:allow web i18n key`.)
+  [8] xcodegen generate — project enumerates the 5 PowerUser files (18 refs across the
+        iOS + macOS targets):
+        XCODEGEN_EXIT=0                                                            OK
+
+=== GATE — XCODE FULL-APP BUILD/TEST (DEFERRED; real evidence, not claimed as pass) ===
+  [9] xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build
+        (DEVELOPER_DIR=Xcode, CODE_SIGNING_ALLOWED=NO):
+        ** BUILD FAILED **   BUILD_EXIT=65
+        Cause (FIRST failure, before any Swift source compiles):
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+        Notably, Xcode's `xcstringstool compile ... Localizable.xcstrings` ran with NO
+        error during this attempt — validating the +11 powerSql.* catalog edit.
+        ZERO errors originate in Features/PowerUser (0 of my files were reached).
+      This is the SAME pre-existing, unrelated, out-of-scope blocker set documented in
+      apps/macos-pending-verifications.md, none of which this prompt may touch
+      (allowed files = Features/PowerUser/**, nav registration, Localizable.xcstrings, log):
+        (a) Shared.xcframework not staged — Kotlin/Native build is macOS-pending
+            (apps/apple/Frameworks holds only .gitkeep); 15 app files `import Shared`.
+        (b) `struct DashboardWidgetSize` redefined in 15 files across
+            Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/* (parallel-merge
+            duplicate-symbol collision).
+        (c) 261 co-located *.Tests.swift import XCTest into the app target (the same
+            convention this surface follows; they relocate to Tests/Unit at integration).
+        (d) macOS development signing requires a certificate on a signed runner (ADR-012).
+      Deferred to p4-apple/P99-0001-apple-acceptance-gate on a macos-latest runner.
+      Verification command (per macos-pending protocol):
+        cd apps/apple && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+          xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+      Parity ledger: apps/parity/apple-{macos,ios}-ledger.json does not yet exist in the
+      tree (created at the integration/acceptance phase); no surface prompt has authored
+      it (BackendTool/GuardModeWidget precedent). Row for page:power-user/SqlPlayground
+      to be set covered there at integration — recorded in macos-pending-verifications.md.
+
+=== PARITY ===
+PARITY_REQUIRED=14
+  [x] panel  — GlassPanel1 (Manual SQL editor)
+        SqlPlaygroundPage.swift → SqlPlaygroundPage.editorPanel (TSGlassPanel)
+  [x] panel  — GlassPanel2 (Curated schema catalog)
+        SqlPlaygroundPage.swift → SqlPlaygroundPage.catalogPanel (TSGlassPanel)
+  [x] state  — success data state
+        SqlPlaygroundPage.Model.swift → SqlPlaygroundPageModel.CatalogState.success([CuratedTable])
+        rendered by SqlPlaygroundPage.swift → SqlPlaygroundPage.catalogContent
+        (EXECUTED: SqlPlaygroundPageModelTests.testCatalogStateIsSuccessWithFiveSortedTables)
+  [x] string — powerSql.catalog.intro      SqlPlaygroundStrings.catalogIntro  (Localizable.xcstrings)
+  [x] string — powerSql.catalog.title      SqlPlaygroundStrings.catalogTitle  (Localizable.xcstrings)
+  [x] string — powerSql.editor.clear       SqlPlaygroundStrings.editorClear   (Localizable.xcstrings)
+  [x] string — powerSql.editor.label       SqlPlaygroundStrings.editorLabel   (Localizable.xcstrings)
+  [x] string — powerSql.editor.placeholder SqlPlaygroundStrings.editorPrompt  (Localizable.xcstrings)
+  [x] string — powerSql.editor.run         SqlPlaygroundStrings.editorRun     (Localizable.xcstrings)
+  [x] string — powerSql.editor.runEmpty    SqlPlaygroundStrings.editorRunEmpty (Localizable.xcstrings)
+  [x] string — powerSql.editor.runUnavailable SqlPlaygroundStrings.editorRunUnavailable (Localizable.xcstrings)
+  [x] string — powerSql.editor.title       SqlPlaygroundStrings.editorTitle   (Localizable.xcstrings)
+  [x] string — powerSql.intro              SqlPlaygroundStrings.intro         (Localizable.xcstrings)
+  [x] string — powerSql.title              SqlPlaygroundStrings.title         (Localizable.xcstrings)
+PARITY_COVERED=14
+  (All 11 keys also enumerated by SqlPlaygroundStrings.allKeys and asserted EXECUTED-green
+   against the manifest by SqlPlaygroundStringsTests.testAllKeysMatchManifest.)
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Every named panel implemented; every anonymous region from the web source
+      reproduced — header (title+intro), editor panel, catalog panel. AI drafter is
+      out of manifest scope (no declared AI panel/string), feature-flagged in web.
+  [x] All 14 parity items render from the bound @Observable state holder
+      (SqlPlaygroundPageModel): the 2 panels + success catalog state + 11 strings.
+  [x] Data states: the only declared source-state is `success` (no API source); the
+      catalog success state is implemented + a defensive empty fallback keeps the region
+      non-blank. No loading/empty/error data-state applies (local-only page).
+  [x] All visible chrome strings from Localizable.xcstrings (LocalizedStringKey); zero
+      hardcoded chrome literals; key names match web verbatim. Schema identifiers/summaries
+      render verbatim as data, mirroring the web CURATED_CATALOG.
+  [x] Dark mode + Dynamic Type + accessibility + SI units honored; SwiftUI-native only
+      (no WKWebView / web cloning); adaptive macOS + iOS.
+  [x] build + lint + test + placeholder gates: lint/format/placeholder/typecheck(iOS+macOS)/
+      swift-test(21/21)/xcodegen EXECUTED GREEN; Xcode full-app build/test DEFERRED with
+      captured exit 65 + cause (predecessor parity). PARITY_COVERED==PARITY_REQUIRED (14).
+  [x] EXIT=0 / STATUS=DONE — host-runnable gates green; xcframework-blocked full-app
+      build/test deferred with evidence; ledger row deferred to integration (recorded).
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green (real outputs above); the
+                          xcodebuild full-app build is shown DEFERRED with its real
+                          exit 65 + first-failure cause, never as a pass.
+  2 No scope narrowing ... full page (5 files) + 2 panels + success state + 11 strings +
+                          navigation + persistence + telemetry + a11y + tests.
+  3 No skip-and-assume ... web source read end-to-end; every t()/handler/branch + the
+                          curated catalog reproduced; AI drafter scope explicitly reasoned.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0 (3 documented
+                          opt-outs are the parity i18n key name, not stubs).
+  5 No parity shortcuts .. GlassPanel/PanelTitle/Textarea/Button + curated 5-table catalog
+                          (sorted, SI columns, adaptive grid) + deterministic run guidance.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0002 BackendTool / 0054 GuardModeWidget
+                          host-gate + xcframework deferral.
+  8 No commit on red ..... committed work is green on every runnable gate; the only
+                          non-green step is the environment-blocked xcframework full-app
+                          build, deferred with evidence (predecessor-accepted disposition).
+                          Pre-existing unrelated working-tree edits (AIUsageCard.*, two web
+                          files) are NOT mine and are NOT staged.
+  9 No silent drift ...... new output dir TeslaSync/Features wired into project.yml +
+                          .swiftlint.yml; nav wired in TeslaSyncApp.swift; 11 keys added to
+                          Localizable.xcstrings (minimal diff) — all documented above.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

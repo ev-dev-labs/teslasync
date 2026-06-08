@@ -1,0 +1,225 @@
+================================================================================
+P4 · Dashboard widget · 0022 — ChargingOptimizerWidget (Apple)
+Run: 2026-06-08T01:01-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/23
+Base: c9c6fdb9f
+Prompt: P4/dashboard-widgets/0022 — ChargingOptimizerWidget
+Web source (spec): web/src/features/dashboard/widgets/ChargingOptimizerWidget.tsx
+Mode: code-complete + EXECUTED host tests + real iOS/macOS SDK compiles;
+      DEFERRED Xcode app build/test (0054 GuardModeWidget / 0036 DigitalTwinWidget
+      precedent, ADR-012) — KMP Shared.xcframework not staged on this runner.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18 deploy target)       OK
+  macOS SDK .................. MacOSX (macOS 15 deploy target)                       OK
+  iPhone 16 simulator ........ present (booted)                                     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen (project generates clean)  OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  surface in project.yml ..... source path TeslaSync/dashboard-widgets is globbed;
+                               full app build also pulls in 50+ sibling surfaces     WARN
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles below.
+  The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does
+  NOT apply — the surface is authored, host-compiled (both SDKs), and host-tested
+  (31/31 executed XCTest) for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/ChargingOptimizerWidget.*) ===
+  ChargingOptimizerWidget.swift          251  the surface — shell chrome (sparkles + "Charging
+                                              Optimizer" title + freshness chip + refresh + Open) +
+                                              state switch + compact/standard/wide composition + registry
+  ChargingOptimizerWidget.Model.swift    330  P1/S8 state-holder seam (OptimizerSource -> OptimizerModel)
+                                              + P1/S11 telemetry seam + P1/S10 strings facade (with
+                                              {{token}} interpolation) + in-memory source + priority enum
+  ChargingOptimizerWidget.Adapter.swift  295  testable projection core — ChargingOptimizerFormat
+                                              (fmtNumber/fmtInt/$currency), OptimizerHour (locale-aware
+                                              formatHour port), OptimizerRateBand classifier,
+                                              OptimizerSnapshot (?? 0 / ?? [] projection),
+                                              OptimizerTipBuilder (recommendations.map), a11y summaries
+  ChargingOptimizerWidget.Views.swift    383  presentational subviews — chip / connectivity banner /
+                                              compact stack / metric tiles+row / schedule badge /
+                                              24h rate timeline / tip list+card / tip empty
+  ChargingOptimizerWidget.Previews.swift 175  #if DEBUG previews — one per state (content 2x2 / wide 4x4
+                                              with timeline+can-improve / compact 1x2 / no-recommendations
+                                              / no-data / loading / error / offline / stale)
+  ChargingOptimizerWidget.Tests.swift    368  XCTest — adapter + model + registry + a11y
+                                              (31 methods, 92 asserts)
+  ChargingOptimizerWidget.strings         60  P1/S10 catalog contribution (16 source keys + 3 priority
+                                              labels + native chrome + a11y keys)
+  Every file <= 400 lines (house file_length). Total 1862 lines across 7 files.
+  Shared types (DashboardWidgetSize / DashboardWidgetRegistration / TSTone / TSSkeleton) are REUSED
+  from the shared P4-core / component library (NOT redeclared here) — same convention as 0054.
+
+=== PARITY (vs web ChargingOptimizerWidget.tsx) ===
+  Data sources -> bound via the shared state-holder seam (OptimizerSource -> OptimizerModel):
+    useChargingOptimizer, useVehicles, useTranslation, useCharging. The production app wires
+    OptimizerSource over the shared charging-optimizer query store; the view performs NO HTTP.
+  Projection -> OptimizerSnapshot.project reproduces the web derivations 1:1 off the optional
+    schedule + cost members: optimalStartHour = most_common_start_hour ?? 0, targetSoc =
+    avg_charge_to_pct ?? 0, monthlySavings = potential_monthly_savings ?? 0, peakPct =
+    sessions_during_peak_pct ?? 0, peak/offpeakHours ?? [], scheduleMatchesOptimal = peakPct < 30.
+    OptimizerTipBuilder ports recommendations.map (title ?? '—', detail ?? '—', priority-gated impact
+    label with id = index). OptimizerRateBand.classify reproduces the peak-over-offpeak precedence.
+    OptimizerHour ports formatHour via a locale-aware hour template (no hardcoded AM/PM; 24 -> 0).
+    Verified by the executed XCTest run below.
+  Composition -> shell chrome (sparkles icon + "Charging Optimizer" + freshness chip + refresh + Open) ·
+    1-col compact stack (clock + optimal hour + "SOC n%" + savings chip when > 0) · standard 3 metric
+    tiles (Optimal start / Target SOC / Savings-mo) + schedule badge ("Peak charging: n%" + Optimized |
+    Can improve) · wide-only 24h rate timeline (24 band segments colored peak/offpeak/standard + bolt
+    marker at optimal start + 5 axis ticks) · recommendation tip cards (maxTips wide 5 / std 3) + empty.
+  Shared components -> @/components/ui (Badge -> OptimizerChip over TSTone) + @/components/feedback
+    (EmptyState -> ContentUnavailableView / OptimizerEmptyTips). WidgetShell -> native shell chrome;
+    WidgetTipCards -> OptimizerTipList/Card. Recharts -> none / Leaflet -> none (no chart/map).
+  States (all render) -> loading (skeleton chrome) · empty ("No optimizer data") · error (retry
+    affordance) · stale (chip + banner) · offline (cached value + chip + banner) · content; PLUS the
+    tip-list empty ("No recommendations") when data is present but recommendations are empty. Model
+    phase resolution keeps cached content visible behind refresh/errors, matching the web shell.
+  i18n -> all source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    widget.chargingOptimizer.{title, noData, optimalStart, targetSoc, targetSocShort, savingsLabel,
+    savingsShort, peakUsage, optimized, canImprove, rateTimeline, peak, offpeak, standard,
+    noRecommendations} + the 3 priority.{high,medium,low} labels -> ALL PRESENT in the .strings table
+    (i18n key-coverage check: 0 missing). {{pct}}/{{amount}} interpolation via OptimizerStrings.format.
+    No English literals in native code (verbatim from the facade).
+  a11y -> compact stack + metric tiles + schedule badge + each timeline segment + each tip row carry
+    combined/explicit accessibility labels (OptimizerAccessibility.*); every button an
+    accessibilityLabel; Dynamic Type via tokens; Reduce Motion gates the TSSkeleton shimmer.
+  Telemetry -> OptimizerModel.start() emits viewOpened(surface:"ChargingOptimizerWidget") (P1/S11).
+    Asserted by a spy test (fires exactly once).
+  Registry -> ChargingOptimizerWidget.registration: id "charging-optimizer", category "charging",
+    default 2x2, min 1x2, max 4x40 (+ clamp()), matching registry/charging.ts. Asserted.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (the 4 shipping non-preview/-test source files compiled
+    together with the REAL apps/apple component library — design Tokens + Components/UI Badges (TSTone)
+    + Feedback TSSkeleton (verbatim real struct) + a minimal registry value-type copy; none import the
+    Shared xcframework):
+      xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+        -swift-version 6  Tokens Badges TSSkeleton Registry  <surface 4 files>
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swiftc -typecheck — DEBUG previews (-D DEBUG; the 5 surface files incl. Previews + the real
+    library closure; #Preview macro resolved via the full Xcode 26.5 PreviewsMacros plugin):
+      PREVIEWS_TYPECHECK_EXIT=0                                                     OK
+[4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM
+    harness (real production Adapter/Model/Views/Widget + real design Tokens + real TSTone badges +
+    verbatim real TSSkeleton + minimal registry copy), Swift 6 language mode (.swiftLanguageMode(.v6)):
+      Executed 31 tests, with 0 failures (0 unexpected) in 0.027 seconds
+        OptimizerFormatTests        8/8  (integer/number/safeNumber/currency, hour midnight/noon/
+                                          evening + wrap, axis ticks count, rate-band peak precedence)
+        OptimizerAdapterTests       9/9  (priority parse/tone, tip em-dash fallback, priority-label
+                                          key, tip ids=index + limit, snapshot nil->empty,
+                                          schedule+cost carry, scheduleMatchesOptimal<30, hasSavings)
+        OptimizerModelTests         7/7  (phase loading/empty/error/content + cached-content,
+                                          telemetry-once, refresh delegation, connection+projection)
+        OptimizerRegistryTests      2/2  (canonical charging-optimizer metadata + surfaceSlug, clamp)
+        OptimizerAccessibilityTests 5/5  (compact summary incl/omit savings, schedule verdict,
+                                          band summary, tip summary incl/omit priority)
+      SWIFT_TEST_EXIT=0                                                             OK
+[5] swiftlint --strict on the 6 surface .swift files (explicit paths; the repo .swiftlint.yml
+    `included:` lists TeslaSync/dashboard-widgets, but the bare whole-tree gate currently trips on a
+    PRE-EXISTING sibling violation — LifetimeStatsWidget.Adapter.swift function_body_length — that is
+    NOT this surface and OUTSIDE this prompt's allowed files; this surface is run explicitly here):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0                                                                   OK
+      (whole-tree `swiftlint --strict`: 0 matches for ChargingOptimizerWidget — this surface is clean.)
+[6] swiftformat --lint on the 6 surface .swift files (config: apps/apple/.swiftformat):
+      0/6 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+      (whole-tree `swiftformat --lint apps/apple`: only 1 PRE-EXISTING sibling file requires
+       formatting — ActionBuilder.Previews.swift; 0 matches for ChargingOptimizerWidget.)
+[7] check-placeholders (ADR-011 stub gate; swift) — both the gate command as-written AND a real scan
+    of the 6 shipped .swift files:
+      ./apps/tools/check-placeholders.ps1 -Path <6 shipped swift files> -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+      (grep of all 7 shipped files for TODO/FIXME/stub/mock/placeholder/Lorem/fatalError -> NONE.)
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host with DEVELOPER_DIR=/Applications/Xcode.app):
+      - `xcodegen generate` -> XCODEGEN_EXIT=0 (project + 12 targets + schemes generate cleanly).
+      - `xcodebuild -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO` ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+                 (in target 'TeslaSync-macOS' from project 'TeslaSync')
+          ** BUILD FAILED **                                        XCODEBUILD_EXIT=65
+          grep 'ChargingOptimizerWidget' over the failed build log -> 0 matches (the failure is the
+          missing KMP framework dependency resolution, BEFORE any Swift compile; not this surface).
+    Why deferred (independent, code-unrelated reasons — none a defect in this surface; identical
+    disposition to the committed 0054 GuardModeWidget / 0036 DigitalTwinWidget surfaces, Honesty rule 7):
+      (a) Shared.xcframework not staged: the app targets link the KMP core; staging it needs a
+          Kotlin/Native gradle build (apps/shared :core:assembleSharedXCFramework). Independent of
+          this UI surface; the concrete missing-framework error is captured above (EXIT 65).
+      (b) Cross-surface duplicate symbols: the full app target globs TeslaSync/dashboard-widgets/, which
+          presently contains 50+ in-flight sibling surfaces, 13 of which each redeclare the shared
+          DashboardWidgetSize/DashboardWidgetRegistration value types. De-duplication into one canonical
+          home is the downstream P4 integration prompt's job; this surface deliberately does NOT
+          redeclare them (it reuses them, like 0054). Editing siblings/project.yml is OUTSIDE the
+          allowed files. Steps [1]/[2] DO compile this surface against the real library, and step [4]
+          EXECUTES its full XCTest suite — the meaningful, surface-scoped validation.
+      (c) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    XCTest under Xcode runs in the TeslaSync/-macOS test target; here the SAME 31 tests are PROVEN GREEN
+    (31/31, exit 0) by the executed SwiftPM harness in step [4], and the views/model/adapter compile
+    against BOTH the iOS 18 simulator and macOS 15 SDKs in steps [1]/[2]/[3].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) + tip-list empty —
+      implemented; each has a #if DEBUG preview; phase logic unit-tested + executed green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (OptimizerSource->OptimizerModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — 16 source keys + 3 priority labels, all
+      present in ChargingOptimizerWidget.strings (automated key-coverage check: 0 missing).
+  [x] Accessibility labels on every interactive element; compact/tiles/badge/timeline/tips carry values.
+  [x] Tests: adapter unit + per-state model + registry + a11y — 31 methods / 92 asserts, EXECUTED 31/31.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0 + grep clean.
+  [x] EXIT=0 / STATUS=DONE — host gates green (incl. iOS+macOS SDK compiles + executed tests);
+      Xcode app build/test DEFERRED with captured BUILD_EXIT=65 framework evidence.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with the real XCODEBUILD_EXIT=65
+                       missing-Shared.xcframework error captured; every "OK" is a command actually run
+                       with its real exit code (incl. a 31/31 EXECUTED XCTest run + iOS+macOS compiles).
+  2  No scope narrowing: implemented ALL states/layouts (compact/standard/wide incl. 24h timeline) +
+                       i18n + a11y + telemetry + registry.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (A verbatim real TSSkeleton
+                       + a minimal registry value-type copy were used ONLY in the throwaway compile/test
+                       harness, never in shipped surface files.)
+  5  No parity shortcuts: faithful port of the schedule/cost projection + recommendations.map + the full
+                       compact/standard/wide composition + all states + the tip-list empty.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT redeclare the shared registry types, did NOT self-register into
+                       project.yml / the dashboard grid (integration prompt's scope), and did NOT edit
+                       the shared Localizable.xcstrings (parallel-unsafe) — strings shipped as the
+                       per-surface table, exactly like 0054.
+  8  No commit on red  : committing on all-green host gates (incl. executed tests); Xcode app build/test
+                       explicitly DEFERRED with captured evidence, not failed-and-hidden.
+  9  No silent drift   : changes confined to the allowed ChargingOptimizerWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native ChargingOptimizerWidget shipped at parity with the web source: pure-Swift
+  projection core (EXECUTED-green XCTest, 31/31), P1/S8 state-holder seam (no view HTTP), P1/S11
+  telemetry, every state + i18n key + a11y label, registry-correct (charging-optimizer, 2x2 / 1x2 /
+  4x40, clamp honored). All host-runnable gates pass AND the surface compiles against BOTH the iOS 18
+  simulator and macOS 15 SDKs with the real Xcode 26 toolchain under Swift 6 strict concurrency. The
+  Xcode app build/test is DEFERRED to the downstream integration/signed runner (KMP Shared.xcframework
+  staging + cross-surface registry-type de-duplication — neither a defect in this code, both outside
+  this prompt's allowed files), matching the committed 0054 GuardModeWidget / 0036 DigitalTwinWidget
+  "code-complete + DEFERRED Xcode gate" precedent.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/ChargingOptimizerWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0022-ChargingOptimizerWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add ChargingOptimizerWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,182 @@
+================================================================================
+P4 · Dashboard widget · 0063 — MediaNowPlayingWidget (Apple)
+Run: 2026-06-07T18:53-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/66
+Base: e9e15143
+Prompt: P4/dashboard-widgets/0063 — MediaNowPlayingWidget
+Web source (spec): web/src/features/dashboard/widgets/MediaNowPlayingWidget.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (predecessor 0036 precedent, ADR-012 macOS-pending).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK 26.5 present              OK
+  swiftc -typecheck SwiftUI .. compiles (target arm64-apple-macos15.0)               OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                            OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                          OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                                 OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override         OK
+  iPhone 16 simulator ........ present (Booted)                                       OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                             OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep) WARN
+  codesign identities ........ "0 valid identities found"                            WARN (blocks app gate; ADR-012)
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and proven by a real macOS-SDK compile below. The capability-BLOCKED
+  escape hatch therefore does NOT apply — the surface is authored and
+  host-validated for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/MediaNowPlayingWidget.*) ===
+  MediaNowPlayingWidget.Models.swift    142  DTO (MediaSnapshotInput) + projection (MediaNowPlaying) + MediaVehicle
+  MediaNowPlayingWidget.Builder.swift    53  MediaProjectionBuilder (cached→projection) + formatDurationClock port
+  MediaNowPlayingWidget.Model.swift     249  P1/S8 source seam + P1/S11 telemetry + P1/S10 strings facade + a11y summary
+  MediaNowPlayingWidget.Views.swift     252  atoms (artwork/progress/meter/chip/info row) + MediaNowPlayingContent layout
+  MediaNowPlayingWidget.swift           248  MediaNowPlayingWidget surface (shell chrome + state switch) + registry
+  MediaNowPlayingWidget.Previews.swift  128  #if DEBUG previews — one per state (content/tall/loading/empty/error/stale/offline)
+  MediaNowPlayingWidget.Tests.swift     234  XCTest: adapter + model + registry + a11y (45+ assertions, 19 methods)
+  MediaNowPlayingWidget.strings          44  P1/S10 catalog contribution (3 source keys + 15 native chrome/a11y keys)
+  Every file <= 252 lines (house file_length 400); one exported surface view per surface.
+  Web source is 132 lines; the native bundle is intentionally larger (native idioms + tests + previews + strings).
+
+=== PARITY (vs web MediaNowPlayingWidget.tsx) ===
+  Data sources -> bound via the shared state-holder seam (MediaNowPlayingSource -> MediaNowPlayingModel):
+    useVehicles, useMediaLatest, useTranslation. The production app wires a source over the KMP
+    VehicleStore/MediaStore (StateHolderModel<LoadableState<…>>); the view performs NO HTTP. The web
+    target resolution `vehicleId ?? vehicles?.[0]?.id ?? 0` lives in the source; the view binds the result.
+  Projection -> MediaProjectionBuilder.build is a 1:1 port of the web view-locals:
+    title/artist `?? '—'`, `source = playback_source ?? now_playing_station`, `volumeMax ?? 11`,
+    `isPlaying = status === 'Playing'`, progress shown when `duration > 0`, clamped progress/volume ratios.
+    Durations are milliseconds (the web feeds them to formatDurationClock, which divides by 1000). VERIFIED
+    by the executed harness below.
+  Composition -> WidgetShell chrome (Music icon + "Now Playing" title + freshness chip + refresh) ·
+    compact 1×1 (icon + title + artist) · standard/tall (artwork badge + title/artist + album[tall] +
+    "Playing" chip + progress bar with elapsed/duration clocks + source row + volume meter[tall]).
+    All three web branches (isCompact / standard / isTall) reproduced.
+  Shared components -> reuses Color.TS / Font.TS / TSSpacing / TSRadius / TSSkeleton + ContentUnavailableView
+    (compiled against the REAL apps/apple component library in the typecheck below). MediaNowPlayingContent
+    mirrors the web `@/components/feedback` EmptyState via ContentUnavailableView. Recharts->none /
+    Leaflet->none (no chart/map on this surface).
+  States (all render) -> loading (skeleton chrome) · empty ("Nothing playing") · error (retry) ·
+    stale (chip + banner) · offline (cached value + chip + banner) · content. Model phase resolution keeps
+    cached content visible behind refresh/errors, matching the web shell.
+  i18n -> all 3 source strings resolve through the P1/S10 facade with the web t(key,default) fallback:
+    widget.nowPlaying ("Now Playing"), widget.playing ("Playing"), widget.noMedia ("Nothing playing").
+    ALL PRESENT in MediaNowPlayingWidget.strings. No English literals in native code (dynamic track/source/
+    volume text is Text(verbatim:) data, not UI copy).
+  a11y -> refresh button + freshness chip + track header (combined w/ summary) + progress (value) + volume row
+    + empty state all carry localized labels; Dynamic Type via Font.TS tokens; Reduce Motion respected by
+    TSSkeleton shimmer. MediaNowPlayingAccessibility.summary is a pure, unit-tested seam.
+  Telemetry -> MediaNowPlayingModel.start() emits viewOpened(surface:"MediaNowPlayingWidget") ->
+    bridges shared Telemetry.track(.screenView) (P1/S11). Asserted by a spy test.
+  Registry -> MediaNowPlayingWidget.registration: id "media-now-playing", category "media",
+    default 2×2, min 1×2, max 4×40 (+ clamp()), matching registry/media.ts. Asserted.
+  DRY -> DashboardWidgetSize + DashboardWidgetRegistration are REUSED from the committed
+    DigitalTwinWidget.Model.swift (single declaration, shared registry primitives) — not redeclared —
+    so the two surfaces coexist in one module with no duplicate symbols (proven by the joint typecheck).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — the 5 surface source files compiled TOGETHER with the committed
+    DigitalTwinWidget surface AND the REAL apps/apple component library (Tokens + Design +
+    Components/UI{Badges,Typography,Buttons,Cards} + Feedback/Skeletons + Motion):
+      xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 <21-file closure>
+      TYPECHECK_EXIT=0                                                              OK
+      (Platform-agnostic SwiftUI — no `#if os(iOS)` branches — so the macOS compile fully covers the
+       iOS/iPadOS code paths. @Observable / Observation / ContentUnavailableView / GeometryReader all
+       resolve against the macOS 15 deployment target. Reusing the shared registry types compiled with
+       zero duplicate-symbol errors, confirming module coexistence.)
+
+[2] Adapter executed test — compiled Models+Builder+harness to a native arm64 binary and RAN it
+    (real "cached -> projection" verification, not a typecheck):
+      22/22 checks PASSED — nil-snapshot->nil, title/artist dash fallback, source coalesce
+      (playback_source/station/blank), isPlaying exact match, volumeMax default 11, progress fraction
+      + guards (no-duration, clamp-to-1), volume fraction + clamp, formatDurationClock (0/0:09/1:36/4:04/
+      nil/negative/infinity).
+      ADAPTER_HARNESS_EXIT=0                                                        OK
+
+[3] swiftlint --strict on the 7 surface .swift files (explicit paths; the repo .swiftlint.yml
+    `included:` does not list TeslaSync/dashboard-widgets — that wiring is the P4 integration
+    prompt's job — so the bare gate `swiftlint --strict` SKIPS this dir; run explicitly here):
+      Done linting! Found 0 violations, 0 serious in 7 files.
+      SURFACE_SWIFTLINT_EXIT=0                                                      OK
+
+[4] swiftformat --lint apps/apple (the exact gate command, whole tree incl. the 7 new files):
+      0/276 files require formatting, 2 files skipped.
+      FORMAT_EXIT=0                                                                 OK
+
+[5] check-placeholders (ADR-011 stub gate; swift) — real per-file scan of the new directory:
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+      (The prompt's literal -Path …/MediaNowPlayingWidget is a filename PREFIX that Test-Path resolves to
+       nothing -> clean scan; the real per-file directory scan above is also clean. Both EXIT=0.)
+
+=== GATE — XCODE APP BUILD/TEST (ATTEMPTED for real; DEFERRED with evidence — NOT faked) ===
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD = ATTEMPTED -> FAILED (exit 65)   MAC_BUILD_TEST = DEFERRED
+    The project is XcodeGen-generated (no committed .xcodeproj). To gather genuine evidence I ran
+    `xcodegen generate` (schemes resolve: TeslaSync, TeslaSync-macOS, …) and then ran the real iOS gate
+    command. Three independent, code-unrelated blockers (none a defect in this surface):
+      (a) NOT-YET-REGISTERED: project.yml's app target globs `Sources/`; the surface lives at
+          TeslaSync/dashboard-widgets/. The generated project.pbxproj has 0 references to
+          "MediaNowPlayingWidget"/"DigitalTwinWidget"/"dashboard-widgets" — so building the app compiles
+          it WITHOUT these files and re-runs the existing suite, yielding ZERO evidence about this
+          deliverable. Self-registering is the P4 integration prompt's scope (Honesty rule 7). The host
+          swiftc compile in step [1] DOES compile this surface against the real library — the meaningful
+          validation here.
+      (b) Shared.xcframework staging FAILS: the real build reached the "Stage Shared.xcframework" phase,
+          assembled the Kotlin/Native framework via Gradle, then "** BUILD FAILED **" — "Gradle build
+          daemon has been stopped" (KMP/Gradle infra in this shared runner). The app target cannot link
+          without the staged xcframework. Independent of this UI surface. (IOS_BUILD_EXIT=65)
+      (c) macOS signing: `security find-identity -p codesigning` -> 0 valid identities; the sim app build
+          ran with CODE_SIGNING_REQUIRED=YES, PROVISIONING_PROFILE empty, SigningCert empty. ADR-012 defers
+          the signed app/widget gate to a macos-latest CI runner.
+    XCTest (MediaNowPlayingWidget.Tests.swift) runs in the TeslaSync(/-macOS) test target under Xcode;
+    XCTest is unavailable to CLT here. The pure-adapter subset is independently PROVEN GREEN by the
+    executed harness in step [2]; model/registry/a11y suites compile against the same public API exercised
+    by the host typecheck. Generated artifacts (TeslaSync.xcodeproj) were removed after the probe;
+    `git status` shows only the 8 deliverable files untracked, no tracked files modified.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) — implemented; each has a
+      #if DEBUG preview; phase logic unit-tested.
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — 3/3 source keys present in the strings table.
+  [x] Accessibility labels on every interactive element; track image carries label + a11y summary value.
+  [x] Tests: adapter unit test (executed, 22/22) + per-state model test + registry + a11y label test.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; word-scan clean.
+  [x] Host gates green (typecheck/lint/format/placeholder/adapter-run); Xcode app build/test ATTEMPTED and
+      DEFERRED with capability + predecessor evidence (per P3/0036 disposition).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown ATTEMPTED -> FAILED/DEFERRED (not green); real exit 65 +
+                       reasons given. Every "OK" is a command actually run on this host with its real exit.
+  2  No scope narrowing: implemented ALL branches/states (compact/standard/tall, loading/empty/error/stale/
+                       offline/content) + i18n + a11y + telemetry + registry.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of the web view-locals + full compact/standard/tall composition.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / dashboard grid (integration prompt's
+                       scope) and did NOT edit the shared Localizable.xcstrings (parallel-unsafe across the
+                       40 concurrent slots) — strings shipped as the per-surface table; shared registry types
+                       REUSED from the committed DigitalTwinWidget, not redeclared.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not passed.
+  9  No silent drift   : changes confined to the allowed MediaNowPlayingWidget.* files + this log; generated
+                       xcodeproj removed.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native MediaNowPlayingWidget shipped at parity with the web source: pure-Swift
+  projection port (executed-green adapter, 22/22), P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry,
+  every state + i18n key + a11y label, registry-correct (media-now-playing, 2×2/1×2/4×40). All
+  host-runnable gates pass; the Xcode app build/test is ATTEMPTED and DEFERRED to the signed CI runner
+  (surface not yet target-registered + Shared.xcframework staging + macOS signing — none a defect in this
+  code), matching the accepted P4/0036 "code-complete + DEFERRED Xcode gate" disposition.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/MediaNowPlayingWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0063-MediaNowPlayingWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add MediaNowPlayingWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,101 @@
+=== P4 Shared surface 0167 Breadcrumbs (Apple) ===
+date: 2026-06-08T13:21:07Z  host: Darwin 25.5.0 arm64
+
+## Honesty covenant: no red-as-green. The xcodebuild build+test gate is reported
+## exactly as observed. Every IN-SCOPE check for the Breadcrumbs surface is shown
+## with raw output. Out-of-scope blockers are evidenced, not hand-waved.
+
+### [capability] Apple toolchain present (NOT a platform-capability block)
+Xcode 26.5
+Build version 17F42
+iPhone 16 simulator:
+    iPhone 16 (83717DEE-70A3-4325-AA61-CBDDD3140989) (Booted) 
+SDKs:
+	Simulator - iOS 26.5          	-sdk iphonesimulator26.5
+	macOS 26.5                    	-sdk macosx26.5
+
+### [scope] Allowed files = apps/apple/TeslaSync/shared-surfaces/Breadcrumbs.* + this log.
+### project.yml and .swiftlint.yml (which must register the shared-surfaces source
+### group) are owned by the P4-core predecessor and are OUTSIDE the allowed files.
+
+### [build-graph] xcodebuild gate steps 1-2 (iOS + macOS build/test) — BLOCKED
+# (b1) The surface is not in the generated build graph because project.yml omits
+#      the shared-surfaces source group (out-of-scope predecessor wiring):
+xcodegen generate: OK (exit 0)
+occurrences of 'shared-surfaces' in generated pbxproj: 0
+occurrences of 'Breadcrumbs' in generated pbxproj:     0
+#      => Breadcrumbs.* would NOT be compiled or tested by 'xcodebuild ... build test'.
+# (b2) The app targets hard-depend on Frameworks/Shared.xcframework (KMP, ADR-004),
+#      built by a pre-build 'Stage Shared.xcframework' Gradle/Kotlin-Native script.
+#      It is absent here (only .gitkeep); a bounded 'xcodebuild -scheme TeslaSync
+#      ... build test' attempt stalled inside that pre-action. Frameworks/ holds:
+IOS_EXIT=BLOCKED (build graph excludes surface; KMP xcframework pre-action unavailable)
+MAC_EXIT=BLOCKED (same project.yml wiring + KMP dependency as iOS)
+
+### [in-scope · GREEN] Per-surface checks that DO run for Breadcrumbs.*
+
+--- swiftlint --strict (scoped to shared-surfaces; repo .swiftlint.yml 'included' omits it) ---
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_SURFACE_EXIT=0
+# note: repo-wide 'swiftlint --strict' is PRE-EXISTING red on an untouched file
+#       (TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift function_body_length).
+
+--- swiftformat --lint TeslaSync/shared-surfaces ---
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+SwiftFormat completed in 2.52s.
+0/6 files require formatting.
+FORMAT_SURFACE_EXIT=0
+
+--- swiftc -typecheck (shipped files + generated Tokens.swift) ---
+    Swift 6 · -strict-concurrency=complete · arm64-apple-ios18.0-simulator · SDK iphonesimulator26.5
+TYPECHECK_SHIPPED_EXIT=0 (0 = type-correct against the real SDK)
+    macOS variant: arm64-apple-macos15.0 · SDK macosx26.5 · Swift 6 · strict-concurrency=complete
+TYPECHECK_SHIPPED_MACOS_EXIT=0 (0 = cross-platform correct, incl. horizontalSizeClass on macOS)
+
+--- swiftc -typecheck (Breadcrumbs.Tests.swift bodies vs real types; XCTest harness shimmed) ---
+    (raw 'swiftc -typecheck' cannot import XCTest's C assertion macros standalone — shim is harness-only)
+TYPECHECK_TESTS_EXIT=0 (0 = every assertion references the surface API correctly)
+
+--- check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/Breadcrumbs ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+### [acceptance criteria]
+[x] Surface renders all web states: trail render + the web `items.length<=1 -> return null`
+    collapse + per-crumb link/plain/current + compact `…` middle-collapse — all reproduced
+    by BreadcrumbsPresentation and the crumb views; covered by Breadcrumbs.Tests.swift.
+    (Breadcrumbs owns no data source — its data is caller-supplied props, exactly like the
+    web component — so loading/error/stale/offline belong to the host, per the BatteryPill
+    precedent; documented verbatim in the file headers. Not a scope shortcut.)
+[x] Binds via shared state-holder layer: the only web hook is useTranslation (no HTTP);
+    crumb data arrives as props; navigation is delegated to the host via onNavigate
+    (dependency inversion, like QuickNav.onSelect). No direct HTTP in the view.
+[x] Every i18n key from source has a matching catalog key: a11y.breadcrumb ("Breadcrumb"),
+    a11y.breadcrumbHome ("Dashboard") in Breadcrumbs.strings (table "Breadcrumbs"); they
+    also already exist in the master Localizable.xcstrings. No English literals in code.
+[x] Accessibility labels on every interactive element: nav landmark label, Home link label
+    (+ homeAriaLabel override), link crumbs labeled as links, separators/ellipsis hidden;
+    Dynamic Type + Reduce-Motion respected; asserted in tests + shown in previews.
+[x] Tests: adapter projection unit tests + per-state (link/plain/current/collapsed/hidden)
+    coverage + telemetry slug + a11y-label tests (host-free, sibling-surface precedent).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (check-placeholders EXIT=0).
+[ ] xcodebuild build+test EXIT=0 — BLOCKED: see [build-graph]. The gate cannot go green on
+    this runner WITHIN the allowed files because (b1) project.yml (P4-core predecessor,
+    out-of-scope) does not register the shared-surfaces group, so the surface is absent from
+    the build graph, and (b2) the app links the KMP Shared.xcframework whose Gradle/
+    Kotlin-Native pre-build staging is unavailable here. Apple platform capability itself
+    (Xcode 26.5, iPhone 16 sim, iOS/macOS 26.5 SDK) IS present — see [capability].
+
+### [summary]
+Breadcrumbs surface implemented at full parity (7 files). All IN-SCOPE gates GREEN:
+  LINT_SURFACE_EXIT=0  FORMAT_SURFACE_EXIT=0  TYPECHECK_SHIPPED_EXIT=0
+  TYPECHECK_TESTS_EXIT=0  PLACEHOLDER_EXIT=0
+The xcodebuild build+test gate is BLOCKED by out-of-scope P4-core wiring (project.yml /
+.swiftlint.yml) + the KMP Shared.xcframework infra — not by this surface's code, and not by
+a platform-capability gap. Reported honestly rather than as red-as-green.
+
+EXIT=1
+STATUS=BLOCKED

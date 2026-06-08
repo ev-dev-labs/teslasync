@@ -1,0 +1,102 @@
+I'll start by exploring the repository structure to understand the task context, then check the toolchain availability.
+
+The Apple app exists and toolchain is present. Let me read the web source and explore the Apple app conventions.
+
+Key finding: only Command Line Tools are installed (`/Library/Developer/CommandLineTools`), not full Xcode — so `xcodebuild` and iOS simulators are unavailable. The `swift` compiler, `swiftlint`, and `swiftformat` ARE available. Per the prompt, the xcodebuild gate steps will be BLOCKED with capability evidence, but I must still produce the complete, verified implementation. Let me explore the existing Apple conventions thoroughly.
+
+Paths are at `apps/apple/` level. Let me correct my exploration and read the conventions properly.
+
+Now I understand the multi-file convention. Let me examine the project config, a representative widget, and locate the native equivalents of the web components (ToolCard, Button, CopyButton), plus P1 dependencies (tokens, i18n, diagnostics).
+
+`project.yml` only includes `TeslaSync/dashboard-widgets`, not `feature-views` — but project.yml is NOT in my allowed files, and `xcodebuild` can't run anyway. I'll follow conventions precisely. Let me study a representative widget end-to-end plus the P1 facades (i18n, diagnostics, tokens, state holders) and shared components.
+
+Let me read the i18n facade definition, diagnostics emitter, design tokens, and key shared components (CopyButton, Button, Card, States).
+
+i18n is via SwiftUI `LocalizedStringKey` (e.g. `Text("action.copy")`), `pwsh` is available, and `TSCopyButton` exists. Let me read the design tokens, Button, Card, States components, and the telemetry/`view.opened` pattern.
+
+Let me read the Card, States, Typography components, the telemetry pattern (BatteryCellsWidget + Registry), and check for any existing devtools/ToolCard native analog.
+
+No native ToolCard yet — I'll compose it from `TSCard`. Let me read the generated tokens, Typography, the web ToolCard source, a widget's `.strings` usage pattern, and a Previews/Tests example to nail conventions.
+
+Now I have the full token vocabulary and the web ToolCard shape. Let me study the telemetry `view.opened` seam, the localization `.strings` convention, and Previews/Tests examples from existing widgets.
+
+Let me see how widgets resolve their per-surface `.strings` table and read a full widget + its Previews/Tests for the exact conventions.
+
+Now I understand the localization seam (`<Surface>Strings` enum wrapping `NSLocalizedString(tableName:)`). Let me read that helper's definition, the Previews/Tests conventions, and the telemetry injection pattern.
+
+The Previews comment mentions a "swiftc host gate" — that's a way to actually compile/test without xcodebuild. Let me find it, read the Tests convention, and the telemetry seam.
+
+Let me find the actual swiftc host-gate script (for real compile verification) and read the model/telemetry definition plus Badge/Skeleton APIs.
+
+I have a thorough understanding of conventions. Let me check the templates (for the exact feature-view scaffold), the web `safeUUID` + devtools constants, and the Skeleton API before writing.
+
+I now have everything needed. Let me verify the component files' imports (to enable a real swiftc type-check of the view) and check how the project documents macOS/Xcode capability gaps.
+
+All shared UI components import only SwiftUI — I can run a real curated `swiftc -typecheck` of my view against them. Let me read an existing surface log to mirror the house log format, then set up my task tracker and plan.
+
+This is the key precedent — same P4 batch, same branch family. It achieved **EXIT=0/STATUS=DONE** via: real host gates (swiftc -typecheck against real components, executed adapter harness, swiftlint, swiftformat, placeholder) + Xcode app build/test **DEFERRED** (not faked) for three documented code-unrelated reasons. Let me probe MY actual environment capabilities (not assume) before mirroring.
+
+Environment confirmed — matches the precedent exactly: Xcode 26.5 present (via `DEVELOPER_DIR`), **0 codesigning identities**, **no Shared.xcframework**, and `feature-views` is **not** in project.yml or swiftlint `included:`. Disposition = mirror precedent: real host gates green + Xcode app build/test DEFERRED. Let me grab the exact English i18n strings from the web catalog, then set up tracking and write the files.
+
+`"Generate"` exists in en.json; `"Uuid Generator"`/`"Uuid Generator Desc"` aren't translated (web shows the raw key) — I'll keep the exact web keys with polished English fallbacks in the per-surface `.strings` table (the S10 catalog contribution), mirroring the precedent. Let me read the lint/format configs to match house rules, then set up tracking and write.
+
+I have all conventions and the exact house style. Let me set up tracking and write the plan, then implement.
+
+Let me confirm the `tsGlassPanel()` modifier location/imports (needed for the type-check closure), then write all five files.
+
+All dependencies import only SwiftUI. Now writing the five surface files.
+
+All five files written. Now let me run the real host gates, starting with the curated `swiftc -typecheck` against the actual component library. First, confirm no component file pulls in the Shared framework.
+
+Clean — components only use system frameworks. Running the curated macOS type-check of my view + model against the **real** component library.
+
+The errors are entirely in an unrelated component (`DataDisplay/UnitFormatters.swift` needs a `Units` facade type) — not my code. Let me narrow the closure to exactly the components my surface uses (UI + Design + Tokens).
+
+macOS type-check passes (EXIT=0) against the real components under Swift 6 strict concurrency. Now the iOS-simulator type-check, then the executed adapter harness.
+
+Both type-checks pass. Now the **executed** adapter harness — compiling the real `Model.swift` into a native binary and running it to prove the generation/model/telemetry/a11y logic (not just a type-check).
+
+Swift 6 top-level code is main-actor isolated; I need `check` on the main actor too. Let me fix the harness.
+
+Top-level vars can't carry a global actor. Let me use a reference-type counter so `check` stays nonisolated.
+
+**17/17 executed checks pass** against the real shipped `Model.swift`. Now swiftlint (explicit + bare gate), swiftformat, and the placeholder gate.
+
+swiftlint merged my path with the config's `included:` (557 files) and found 1 serious violation. Let me locate exactly where it is.
+
+That violation is **pre-existing** in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` — not my code. Let me lint only my four files in isolation to prove they're clean, plus run the bare gate.
+
+A real violation in my code: `multiple_closures_with_trailing_closure` on the `TSButton`. Let me pass `label:` explicitly instead of as a trailing closure.
+
+swiftlint on my files: **0 violations**; type-check still passes. Now swiftformat — both on my files (to isolate) and the exact whole-tree gate command.
+
+swiftformat flags one issue in my Tests file: a blank line between imports (`blankLinesBetweenImports`). Let me remove it.
+
+All host-runnable gates green: swiftformat **0/565**, surface swiftlint **0 violations**, placeholder **COUNT=0**, both type-checks **0**, executed harness **17/17**. The bare swiftlint gate is red from a **pre-existing** violation in a sibling surface (`LifetimeStatsWidget.Adapter.swift`) I'm barred from editing. Let me gather final facts (line counts, git state, Xcode-gate blockers) for an honest log.
+
+Every surface-scoped gate is green; the only repo red is a pre-existing sibling violation outside my allowed files. Line counts are healthy (Model 171 / View 159 / Tests 118 / Previews 54 / strings 26). Now writing the honest, evidence-based log mirroring the precedent.
+
+Log written. Let me do a final consolidated verification of all gates and review the edited view, then commit only my allowed paths.
+
+All gates green. Committing only my allowed paths (the feature-views dir + the log), explicitly excluding the two pre-existing web edits.
+
+Staging is exactly correct — only my 5 surface files + the log; the 2 pre-existing web edits remain unstaged. Committing now.
+
+Committed cleanly as `a54bccfb` (6 files, 733 insertions). Let me clean up temp artifacts and confirm final state.
+
+Task complete. The UuidGenerator Apple feature view is shipped, verified, and committed.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0024-UuidGenerator.log  | 205 +++++++++++++++++++++
+ .../feature-views/UuidGenerator.Model.swift        | 171 +++++++++++++++++
+ .../feature-views/UuidGenerator.Previews.swift     |  54 ++++++
+ .../feature-views/UuidGenerator.Tests.swift        | 118 ++++++++++++
+ .../TeslaSync/feature-views/UuidGenerator.strings  |  26 +++
+ .../TeslaSync/feature-views/UuidGenerator.swift    | 159 ++++++++++++++++
+ 6 files changed, 733 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0024-UuidGenerator.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/UuidGenerator.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/UuidGenerator.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/UuidGenerator.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/UuidGenerator.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/UuidGenerator.swift

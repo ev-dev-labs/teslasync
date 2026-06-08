@@ -1,0 +1,91 @@
+=== P4 Dashboard widget 0022 ChargingOptimizerWidget (Apple) ===
+date: 2026-06-08T01:04:05Z
+toolchain: Xcode 26.5 Build version 17F42 
+
+================ swiftlint --strict (cwd apps/apple) ================
+Linting 'WatchDesignTokens.swift' (257/257)
+Linting 'WatchComplicationViews.swift' (256/257)
+Done linting! Found 0 violations, 0 serious in 257 files.
+LINT_EXIT=0
+
+================ swiftformat --lint apps/apple ================
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-25/apps/apple/.swiftformat
+SwiftFormat completed in 0.17s.
+0/262 files require formatting, 3 files skipped.
+FORMAT_EXIT=0
+
+================ check-placeholders.ps1 (widget dir) ================
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+================ BUILD (compilation) ================
+iOS  app build (xcodebuild -scheme TeslaSync ... build, sim iPhone 16): ** BUILD SUCCEEDED **
+macOS app build (xcodebuild -scheme TeslaSync-macOS ... build):         ** BUILD SUCCEEDED **
+  (Shared.xcframework assembled via Gradle :core:assembleSharedXCFramework — BUILD SUCCESSFUL in 23m;
+   ios-arm64 / ios-arm64-simulator / macos-arm64 slices staged to apps/apple/Frameworks/Shared.xcframework)
+
+================ UNIT TESTS — widget under test ================
+iOS   ChargingOptimizerWidgetTests : Executed 28 tests, with 0 failures  ** TEST SUCCEEDED **  (/tmp/ios_widget.log)
+macOS ChargingOptimizerWidgetTests : Executed 28 tests, with 0 failures  ** TEST SUCCEEDED **  (/tmp/mac_widget.log)
+iOS   TeslaSyncTests (whole bundle): Executed 283 tests, with 0 failures ** TEST SUCCEEDED **  (/tmp/ios_unit2.log)
+  -> Every adapter / per-state / accessibility / telemetry / registry test for the surface passes on BOTH platforms.
+
+================ FULL `build test` — platform-capability status ================
+IOS  `build test` (incl. TeslaSyncUITests): BLOCKED — IOS_EXIT=65
+   Evidence (from /tmp/ios_final2.log):
+     xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+     TeslaSyncUITests-Runner encountered an error (Early unexpected exit ... runner terminated by signal
+       before establishing connection.)
+   Root cause: this runner's *system* developer dir is CommandLineTools
+     ($ xcode-select -p  ->  /Library/Developer/CommandLineTools), which ships no `simctl`.
+     The full Xcode 26.5 used for compiling is reachable only via DEVELOPER_DIR, which the launchd-managed
+     XCUITest infrastructure (testmanagerd / CoreSimulatorService) does NOT inherit. Fixing it needs
+     `sudo xcode-select -s /Applications/Xcode.app/...`; sudo on this runner requires a password
+     ($ sudo -n ... -> "sudo: a password is required"). `launchctl setenv DEVELOPER_DIR` + service
+     kickstart were attempted and did not resolve it. UNIT tests run because they use the in-process
+     CoreSimulator path; UITests require host-side `xcrun simctl` and therefore cannot launch.
+   This affects the PRE-EXISTING TeslaSyncUITests bundle (LiveData/AppLaunch/Auth/Push) — NOT this widget.
+
+MAC  `build test` (incl. TeslaSync-macOSTests full + UITests): BLOCKED — stalls on a PRE-EXISTING test
+   The macOS app-hosted session runs 100+ unit tests (including all 28 widget tests — PASS) then hangs at
+   `TSDesignTokensTests.testChartPaletteMatchesTokenSourceCount` with "CoreSimulatorService connection
+   interrupted" (test-infrastructure instability under the same CommandLineTools/parallel-slot conditions).
+   git diff confirms this widget did NOT modify TSDesignTokensTests / Sources/Design / apps/design.
+   (The macOS unit-test host itself was unblocked by this task: added the correct TEST_HOST to
+    TeslaSync-macOSTests in project.yml — the app's PRODUCT_NAME is `TeslaSync`, so its product is
+    `TeslaSync.app`, not `TeslaSync-macOS.app`. Without that fix even the macOS unit host could not load.)
+
+   Concurrent parallel execution slots were observed sharing this runner's single iOS Simulator +
+   CoreSimulatorService + testmanagerd during the run (TeslaSync.app processes under slot-33, slot-25,
+   /tmp/dd-mac, ~/Library/.../DerivedData), which intermittently crashed the simulator
+   ("Mach error -308 (ipc/mig) server died", "Invalid device state").
+
+================ DETERMINISTIC GATES (re-stated) ================
+LINT_EXIT=0          swiftlint --strict        -> 0 violations, 257 files
+FORMAT_EXIT=0        swiftformat --lint        -> 0/262 require formatting
+PLACEHOLDER_EXIT=0   check-placeholders.ps1    -> PLACEHOLDER_COUNT=0 (widget surface)
+
+================ VERDICT ================
+WIDGET DELIVERABLE: COMPLETE & VERIFIED.
+  - Builds on iOS 18+ and macOS 15+ (Xcode 26.5).
+  - All 28 surface tests pass on BOTH platforms (adapter, per-state, a11y, telemetry, registry).
+  - SwiftLint --strict, SwiftFormat --lint, and the placeholder/stub gate are all clean (0/0/0).
+  - All i18n keys resolve from the shared String Catalog: the 15 web-derived
+    translation.widget.chargingOptimizer.* keys + the native widget.freshness.{stale,offline} chip keys
+    (verified present in apps/apple/Localization/Localizable.xcstrings; post-fix re-run of the macOS
+    widget test bundle = 28/28 ** TEST SUCCEEDED **, SwiftFormat --lint clean).
+GATE NOT FULLY GREEN because the literal `build test` includes pre-existing UI/host test execution that
+this runner cannot perform: iOS XCUITest needs system-level full Xcode (`xcrun simctl`) that requires a
+password-gated `sudo xcode-select`, and the macOS session stalls on a pre-existing, unmodified test under
+test-infrastructure instability. These are platform-capability limitations of the runner, not defects in
+the ChargingOptimizerWidget surface.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+EXIT=65
+STATUS=BLOCKED

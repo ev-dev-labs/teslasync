@@ -1,0 +1,163 @@
+=== p4-apple · P7 · page:analytics/Statistics — SwiftUI / HIG parity gate ===
+DATE=2026-06-08T07:33:44-07:00
+PROMPT=.github/prompts/monorepo/p4-apple/pages/P7-analytics-Statistics.prompt.md
+UNIT=page:analytics/Statistics
+WEB_SOURCE=web/src/features/analytics/pages/StatisticsPage.tsx
+OUTPUT_DIR=apps/apple/TeslaSync/Features/Analytics
+ADAPTIVE=macOS(regular) + iOS(compact/regular)  # ADR-002, ADR-006
+
+--- toolchain detection (ADR-010/012 runner availability) ---
+HOST=Darwin 26.5.1 (arm64)
+xcode-select -p => /Library/Developer/CommandLineTools   # Command Line Tools only, NO full Xcode
+swiftlint => /opt/homebrew/bin/swiftlint  (present)
+xcodegen  => /opt/homebrew/bin/xcodegen   (present)
+pwsh      => /opt/homebrew/bin/pwsh        (present)
+swiftc    => /usr/bin/swift (CommandLineTools; macOS SDK present)  (present)
+xcodebuild => requires Xcode.app — UNAVAILABLE on this host
+RUNNER_AVAILABLE=false  => build + test gates are BLOCKED, not red-as-green (Honesty Covenant #1, #10)
+
+--- standalone compile verification (best-effort, since xcodebuild is BLOCKED) ---
+# Direct swiftc -typecheck against the macOS SDK + the real (Shared-free) P2 tokens + P3 components.
+TYPECHECK_LOGIC=0   # swiftc -typecheck Models+Builder+Model+Strings  => 0 errors (data/projection/seam/i18n layer)
+TYPECHECK_VIEWS=0   # swiftc -typecheck Page+Sections+Models+Builder+Model+Strings+Registration+Previews
+                    #   + 43 Shared-free component/design/token/app-route sources => 0 errors, 0 warnings
+# Only StatisticsPage.Tests.swift (XCTest) and the Shared.xcframework link are left to the full xcodebuild gate.
+
+--- files created (apps/apple/TeslaSync/Features/Analytics/**) ---
+StatisticsPage.swift            # SwiftUI View shell: header + loading/empty/error/content branches
+StatisticsPage.Sections.swift   # 20 panels + 5 charts (TS* P3 Swift Charts wrappers) + value formatting
+StatisticsPage.Models.swift     # Foundation-only DTO inputs, projection, units, load/phase enums
+StatisticsPage.Builder.swift    # pure SI projection (convertDistanceFromSI / whPerKmToDisplay ports)
+StatisticsPage.Model.swift      # @Observable StatisticsPageModel + StatisticsSource seam (P1/S8) + telemetry (P1/S11)
+StatisticsPage.Strings.swift    # 32 web-parity i18n keys + 7 native-chrome keys (LocalizedStringKey)
+StatisticsPage.Registration.swift # route-host registration for .analytics (web /statistics alias)
+StatisticsPage.Previews.swift   # DEBUG previews across content/empty/loading (InMemoryStatisticsSource)
+StatisticsPage.Tests.swift      # XCTest parity coverage for StatisticsPageBuilder + model wiring
+
+--- navigation registration / build wiring ---
+project.yml: added "TeslaSync/Features" source path to the TeslaSync (iOS) + TeslaSync-macOS targets
+.swiftlint.yml: added "TeslaSync/Features" to included
+Sources/TeslaSyncApp.swift: created statisticsModel once (UnconnectedStatisticsSource honest default,
+  mirrors UnavailableVehicleCommanding) and chained StatisticsRouteRegistration.registry(model:base:)
+  onto SettingsRouteRegistration — registers AppRoute.analytics (AppRouteParser aliases /statistics → .analytics)
+XCODEGEN: `xcodegen generate` EXIT=0 — project.yml valid; all 9 Statistics files are members of the
+  TeslaSync + TeslaSync-macOS targets (54 pbxproj refs). Generated .xcodeproj is git-ignored; removed after check.
+
+--- strings (P1/S5 / S10, ADR-014) ---
+Localization/Localizable.xcstrings: +39 keys, 0 deletions (clean pure-add diff: 429 insertions)
+  32 web-parity keys (verbatim defaults from StatisticsPage.tsx) + 7 native page-chrome keys
+  (statistics.refresh/retry/errorTitle/loading/live/stale/offline). CO₂ preserved as raw UTF-8.
+
+============================================================
+=== GATE ===
+PLACEHOLDER_EXIT=0      # pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Analytics -Language swift  (PLACEHOLDER_COUNT=0)
+BUILD_EXIT=BLOCKED      # xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync build  => xcode-select error: requires Xcode (CommandLineTools only)
+LINT_EXIT=0            # swiftlint --strict apps/apple/TeslaSync/Features/Analytics  => Found 0 violations, 0 serious in 9 files
+TEST_EXIT=BLOCKED      # xcodebuild ... test  => same: requires Xcode.app, unavailable on this host
+============================================================
+
+=== PARITY ===
+PARITY_REQUIRED=61
+# Each item: [COVERED] kind/name -> file:symbol (evidence)
+
+# --- panels (20) ---
+[COVERED] panel/Total-Distance       -> StatisticsPage.Sections.swift:StatisticsPeriodSection (TSMetricCard key=statistics.totalDistance, value=int(fromKm)+unit)
+[COVERED] panel/Total-Drives         -> StatisticsPage.Sections.swift:StatisticsPeriodSection (TSMetricCard key=statistics.totalDrives)
+[COVERED] panel/Total-Energy         -> StatisticsPage.Sections.swift:StatisticsPeriodSection (TSMetricCard key=statistics.totalEnergy, value=number+kWh)
+[COVERED] panel/Total-Cost           -> StatisticsPage.Sections.swift:StatisticsPeriodSection (TSMetricCard key=statistics.totalCost, value=currency(.,0))
+[COVERED] panel/CO-Saved             -> StatisticsPage.Sections.swift:StatisticsPeriodSection (TSMetricCard key=statistics.co2Saved, value=number+kg)
+[COVERED] panel/Avg-Drive-Distance   -> StatisticsPage.Sections.swift:StatisticsAveragesSection (TSMetricCard key=statistics.avgDriveDistance)
+[COVERED] panel/Avg-Efficiency       -> StatisticsPage.Sections.swift:StatisticsAveragesSection (TSMetricCard key=statistics.avgEfficiency, unit=Wh/km|Wh/mi)
+[COVERED] panel/Cost-per-km          -> StatisticsPage.Sections.swift:StatisticsAveragesSection (TSMetricCard key=statistics.costPerKm, em-dash when distance=0)
+[COVERED] panel/GlassPanel9          -> StatisticsPage.Sections.swift:StatisticsBatterySection (TSGlassPanel title=statistics.batteryHealth)
+[COVERED] panel/Capacity             -> StatisticsPage.Sections.swift:StatisticsBatterySection.tiles (TSMetricCard key=statistics.capacity)
+[COVERED] panel/Degradation          -> StatisticsPage.Sections.swift:StatisticsBatterySection.tiles (TSMetricCard key=statistics.degradation, %/yr)
+[COVERED] panel/Cycles               -> StatisticsPage.Sections.swift:StatisticsBatterySection.tiles (TSMetricCard key=statistics.cycles)
+[COVERED] panel/Age                  -> StatisticsPage.Sections.swift:StatisticsBatterySection.tiles (TSMetricCard key=statistics.age, mo)
+[COVERED] panel/State-Distribution   -> StatisticsPage.Sections.swift:StatisticsStateDistributionPanel (TSChartContainer title=statistics.stateDistribution)
+[COVERED] panel/GlassPanel15         -> StatisticsPage.Sections.swift:StatisticsMileagePanel (TSGlassPanel title=statistics.mileage)
+[COVERED] panel/Total-Distance-2     -> StatisticsPage.Sections.swift:StatisticsMileagePanel.tiles (TSMetricCard key=statistics.totalMileage)
+[COVERED] panel/Daily-Average-30d    -> StatisticsPage.Sections.swift:StatisticsMileagePanel.tiles (TSMetricCard key=statistics.dailyAvg)
+[COVERED] panel/Total-Drives-2       -> StatisticsPage.Sections.swift:StatisticsMileagePanel.tiles (TSMetricCard key=statistics.totalDrives)
+[COVERED] panel/Yearly-Projection    -> StatisticsPage.Sections.swift:StatisticsMileagePanel.tiles (TSMetricCard key=statistics.yearlyProjection)
+[COVERED] panel/Vehicle-Comparison   -> StatisticsPage.Sections.swift:StatisticsComparisonSection (TSChartContainer title=statistics.vehicleComparison)
+
+# --- charts (5) — P3 native Swift Charts wrappers (no WKWebView) ---
+[COVERED] chart/RadialGauge          -> StatisticsPage.Sections.swift:StatisticsBatterySection.gauge (TSRadialGauge value=sohFraction)
+[COVERED] chart/ChartContainer#1     -> StatisticsPage.Sections.swift:StatisticsStateDistributionPanel (TSChartContainer)
+[COVERED] chart/PieChart             -> StatisticsPage.Sections.swift:StatisticsStateDistributionPanel (TSPieChart slices=stateSlices)
+[COVERED] chart/ChartContainer#2     -> StatisticsPage.Sections.swift:StatisticsComparisonSection (TSChartContainer)
+[COVERED] chart/BarChart             -> StatisticsPage.Sections.swift:StatisticsComparisonSection (TSBarChart series=[distance,energy] + TSChartLegend)
+
+# --- data states (4) — implemented for every data source ---
+[COVERED] state/loading              -> StatisticsPage.swift:StatisticsLoadingState (phase .loading; TSStatGridSkeleton + TSChartBlockSkeleton)
+[COVERED] state/empty                -> StatisticsPage.swift:StatisticsEmptyState (phase .empty; TSEmptyState noData/noDataMsg) + per-panel TSEmptyState (noBattery/noStates/noMileage/singleVehicle)
+[COVERED] state/error                -> StatisticsPage.swift:StatisticsErrorState (phase .error; TSButton retry -> model.refresh())
+[COVERED] state/success              -> StatisticsPage.swift:StatisticsPage.sections(_:) (phase .content; TSFadeIn x5)
+
+# --- strings (32) — Localizable.xcstrings keys, resolved via LocalizedStringKey/String(localized:) ---
+[COVERED] string/statistics.age                       -> StatisticsPage.Strings.swift:StatisticsStrings.age
+[COVERED] string/statistics.avgDriveDistance          -> StatisticsPage.Strings.swift:StatisticsStrings.avgDriveDistance
+[COVERED] string/statistics.avgEfficiency             -> StatisticsPage.Strings.swift:StatisticsStrings.avgEfficiency
+[COVERED] string/statistics.batteryHealth             -> StatisticsPage.Strings.swift:StatisticsStrings.batteryHealth
+[COVERED] string/statistics.capacity                  -> StatisticsPage.Strings.swift:StatisticsStrings.capacity
+[COVERED] string/statistics.co2Saved                  -> StatisticsPage.Strings.swift:StatisticsStrings.co2Saved
+[COVERED] string/statistics.costPerKm                 -> StatisticsPage.Strings.swift:StatisticsStrings.costPerKm
+[COVERED] string/statistics.cycles                    -> StatisticsPage.Strings.swift:StatisticsStrings.cycles
+[COVERED] string/statistics.dailyAvg                  -> StatisticsPage.Strings.swift:StatisticsStrings.dailyAvg
+[COVERED] string/statistics.degradation               -> StatisticsPage.Strings.swift:StatisticsStrings.degradation
+[COVERED] string/statistics.distance                  -> StatisticsPage.Sections.swift:StatisticsComparisonSection.distanceName (StatisticsStrings.string("statistics.distance"))
+[COVERED] string/statistics.energy                    -> StatisticsPage.Sections.swift:StatisticsComparisonSection.energyName (StatisticsStrings.string("statistics.energy"))
+[COVERED] string/statistics.health                    -> StatisticsPage.Strings.swift:StatisticsStrings.health
+[COVERED] string/statistics.mileage                   -> StatisticsPage.Strings.swift:StatisticsStrings.mileage
+[COVERED] string/statistics.noBattery                 -> StatisticsPage.Strings.swift:StatisticsStrings.noBattery
+[COVERED] string/statistics.noData                    -> StatisticsPage.Strings.swift:StatisticsStrings.noData
+[COVERED] string/statistics.noDataMsg                 -> StatisticsPage.Strings.swift:StatisticsStrings.noDataMsg
+[COVERED] string/statistics.noMileage                 -> StatisticsPage.Strings.swift:StatisticsStrings.noMileage
+[COVERED] string/statistics.noStates                  -> StatisticsPage.Strings.swift:StatisticsStrings.noStates
+[COVERED] string/statistics.singleVehicle             -> StatisticsPage.Strings.swift:StatisticsStrings.singleVehicle
+[COVERED] string/statistics.stateDistribution         -> StatisticsPage.Strings.swift:StatisticsStrings.stateDistribution
+[COVERED] string/statistics.stateDistribution.aria    -> StatisticsPage.Strings.swift:StatisticsStrings.stateDistributionAria
+[COVERED] string/statistics.subtitle                  -> StatisticsPage.Strings.swift:StatisticsStrings.subtitle
+[COVERED] string/statistics.title                     -> StatisticsPage.Strings.swift:StatisticsStrings.title
+[COVERED] string/statistics.totalCost                 -> StatisticsPage.Strings.swift:StatisticsStrings.totalCost
+[COVERED] string/statistics.totalDistance             -> StatisticsPage.Strings.swift:StatisticsStrings.totalDistance
+[COVERED] string/statistics.totalDrives               -> StatisticsPage.Strings.swift:StatisticsStrings.totalDrives
+[COVERED] string/statistics.totalEnergy               -> StatisticsPage.Strings.swift:StatisticsStrings.totalEnergy
+[COVERED] string/statistics.totalMileage              -> StatisticsPage.Strings.swift:StatisticsStrings.totalMileage
+[COVERED] string/statistics.vehicleComparison         -> StatisticsPage.Strings.swift:StatisticsStrings.vehicleComparison
+[COVERED] string/statistics.vehicleComparison.aria    -> StatisticsPage.Strings.swift:StatisticsStrings.vehicleComparisonAria
+[COVERED] string/statistics.yearlyProjection          -> StatisticsPage.Strings.swift:StatisticsStrings.yearlyProjection
+
+PARITY_COVERED=61
+PARITY_OK=true   # PARITY_COVERED == PARITY_REQUIRED (61)
+
+--- ported web hooks (kept by name at the Swift seam: StatisticsPage.Model.swift:StatisticsHooks + StatisticsSource doc) ---
+useBatteryHealthAnalytics (GET /analytics/battery-health) ; useMileageStats (GET /mileage/stats)
+useStateSummary (GET /vehicle-states/summary) ; useFleetAnalytics ; primary period-stats (GET /analytics/period-stats)
+
+--- data-source binding (P1/S8) ---
+Every section binds through @Observable StatisticsPageModel <- StatisticsSource (start/stop/refresh/selectVehicle).
+Models/Builder are Shared-free + unit-tested (StatisticsPage.Tests.swift): SI conversion, projections, phase
+resolution, model wiring. Production source binds the shared KMP analytics/energy holders at AppContainer.bootstrap
+(ADR-004); the live default is the honest UnconnectedStatisticsSource (renders the real empty state, never fake data).
+
+--- a11y / units / theming (ADR-013/014/015) ---
+Charts carry .accessibilityLabel from statistics.*.aria; ≥44pt refresh target; TSFadeIn honors Reduce Motion;
+SI converted only at the display boundary (StatisticsPageBuilder, m/km/Wh-per-km in, user unit out).
+
+============================================================
+NOTES (Honesty Covenant — no red-as-green, no scope narrowing):
+- PLACEHOLDER + LINT gates PASS (real, executed). PARITY_COVERED==61 (evidenced above).
+- BUILD + TEST gates are BLOCKED: this host has Command Line Tools only; `xcodebuild` cannot run
+  (ADR-010/012: a prompt that cannot run its full gate is BLOCKED, not DONE). The full app build also links
+  Shared.xcframework (built by a script under xcodebuild). As best-effort evidence the code is correct, every
+  non-test file was compile-verified with `swiftc -typecheck` against the macOS SDK + the real Shared-free P2/P3
+  sources: the logic layer AND the full view layer both type-check with 0 errors / 0 warnings. `xcodegen generate`
+  EXIT=0 confirms target membership. swiftlint --strict: 0 violations on all 9 files.
+- Page header reproduces title/subtitle/refresh/freshness; the web vehicle-picker + date-range + saved-view
+  controls (URL/vehicle-directory state-holders) are out of the 61 parity items and deferred to those P1 seams.
+- Per Honesty Covenant #8 (no commit on red) the change set was NOT committed (BUILD/TEST BLOCKED).
+
+EXIT=2
+STATUS=BLOCKED

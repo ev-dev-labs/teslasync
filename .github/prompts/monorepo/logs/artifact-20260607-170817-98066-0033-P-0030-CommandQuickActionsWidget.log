@@ -1,0 +1,146 @@
+=== P4 Dashboard widget 0030 CommandQuickActionsWidget (Apple) ===
+Date: 2026-06-07
+Host: Darwin (Apple Silicon), Xcode 26.5 (17F42) via DEVELOPER_DIR=/Applications/Xcode.app
+Gate adapted from the prompt's PowerShell to bash (no pwsh-only steps); every
+command + raw exit code is recorded below. Honesty covenant honored: green is
+green, the one environmentally-blocked item is labelled as such with evidence.
+
+------------------------------------------------------------------------------
+PLATFORM / PATH ADAPTATIONS (covenant rule 9 — declared, not silent)
+------------------------------------------------------------------------------
+* Native source path: the prompt's `apps/apple/TeslaSync/dashboard-widgets/` is
+  NOT a compiled XcodeGen source root in this repo (the iOS/macOS app targets
+  compile `apps/apple/Sources/`, `Localization/`, and the generated DesignTokens
+  — see apps/apple/project.yml). To make the surface actually compile, render and
+  test (covenant rule 4 "no stubs as final"), it ships under the real compiled
+  root, split to satisfy SwiftLint file_length (<=400) with a shared filename
+  prefix so a prefix placeholder-scan still catches all of it:
+    - apps/apple/Sources/Dashboard/Widgets/CommandQuickActionsWidget.swift       (view + previews)
+    - apps/apple/Sources/Dashboard/Widgets/CommandQuickActionsWidgetLogic.swift  (pure logic/catalog/diagnostics)
+    - apps/apple/Sources/Dashboard/Widgets/CommandQuickActionsWidgetModel.swift  (P1/S8 data-source + KMP-bound model)
+    - apps/apple/Tests/Unit/Dashboard/CommandQuickActionsWidgetTests.swift        (compiled by TeslaSyncTests + TeslaSync-macOSTests)
+* i18n (P1/S10): keys added to apps/apple/Localization/Localizable.xcstrings
+  (the Apple string catalog the build consumes). `widget.quickActions.title` and
+  `.noVehicle` pre-existed; 15 keys added (8 command labels + refresh/refreshing/
+  stale/offline/offlineMessage/errorMessage/commandHint) — en `translated`,
+  ar/he `needs_review` (matching the file's existing convention). +345 lines,
+  no existing line modified.
+* Simulator: the prompt names `iPhone 16` (present + booted). It is SHARED by
+  the sibling parallel slots all running the same gate, so their concurrent
+  test runs SIGKILL each other's hosts. The authoritative clean iOS run used a
+  private device to avoid cross-slot contention; both are recorded below.
+* KMP `Shared.xcframework` is git-ignored and rebuilt by the scheme pre-action
+  (Scripts/build-shared-xcframework.sh → Gradle :core:assembleSharedXCFramework).
+  Staged successfully on this host.
+
+------------------------------------------------------------------------------
+STEP 1 — iOS build test    (xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test)
+------------------------------------------------------------------------------
+** BUILD SUCCEEDED **   (CommandQuickActionsWidget.swift, CommandQuickActionsWidgetLogic.swift,
+                         CommandQuickActionsWidgetModel.swift all compiled for the iOS SDK)
+Test Suite 'TeslaSyncTests.xctest'  : Executed 284 tests, with 1 test skipped and 0 failures
+   (the 1 skip is pre-existing: KeychainTokenStoreTests.testKeychainRoundTrip — keychain unavailable in CI)
+Test Suite 'CommandQuickActionsWidgetTests' passed — 29/29 cases, 0 failures
+Test Suite 'TeslaSyncUITests.xctest' passed — 10/10 UI cases, 0 failures
+Test Suite 'All tests' passed
+** TEST SUCCEEDED **
+IOS_EXIT=0
+   (full clean run captured in /tmp/ios-build-test.log; a second run on a private
+    device confirmed the unit suite again — 284 tests, 0 failures — before the
+    shared host's load spike SIGKILLed the long UI re-run mid-test, all UI cases
+    passing up to the kill. The clean IOS_EXIT=0 above is the authoritative result.)
+
+------------------------------------------------------------------------------
+STEP 2 — macOS build test  (xcodebuild -scheme TeslaSync-macOS build test)
+------------------------------------------------------------------------------
+2a. macOS app BUILD (this surface's code on the macOS SDK):
+    ** BUILD SUCCEEDED **
+    CommandQuickActionsWidget.swift / ...Logic.swift / ...Model.swift compiled for macOS.
+    MAC_BUILD_EXIT=0
+
+2b. macOS THIS-SURFACE unit tests (incl. the AppKit NSHostingView per-state test):
+    Test Suite 'CommandQuickActionsWidgetTests' passed — 29/29 cases, 0 failures
+    Broader TeslaSync-macOSTests run: 0 failures across all executed suites.
+    MAC_UNIT_TESTS=PASS
+
+2c. Literal full `xcodebuild -scheme TeslaSync-macOS build test` (all test targets, default signing):
+    MAC_FULL_SUITE_EXIT=70  — BLOCKED (environment / pre-existing, NOT this surface). Three causes:
+      (i)  Pre-existing pbxproj bug: TeslaSync-macOS sets PRODUCT_NAME=TeslaSync, so the product is
+           `TeslaSync.app`, but the TeslaSync-macOSTests TEST_HOST still points at `TeslaSync-macOS.app`
+           → "Could not find test host". (Generated .xcodeproj is git-ignored; not from this surface.)
+      (ii) macOS app + widget entitlements require a development certificate
+           (com.apple.developer.aps-environment, com.apple.developer.associated-domains); no signing
+           team is available on this runner. The repo itself defers macOS artifact verification to a
+           signed `macos-latest` CI runner — see apps/macos-pending-verifications.md.
+      (iii)Shared host load average 500–600 (many sibling parallel agents) SIGKILLs/hangs long
+           UI-test harness runs (CoreSimulatorService XPC drops during teardown).
+    WORKAROUND used ONLY to verify THIS surface on macOS (no committed files touched): ad-hoc signing
+    with entitlements stripped + a local edit to the git-ignored pbxproj TEST_HOST → macOS app builds
+    and TeslaSync-macOSTests (incl. CommandQuickActionsWidgetTests 29/29) run green (2a/2b above).
+
+------------------------------------------------------------------------------
+STEP 3 — swiftlint --strict
+------------------------------------------------------------------------------
+Done linting! Found 0 violations, 0 serious in 260 files.
+LINT_EXIT=0
+
+------------------------------------------------------------------------------
+STEP 4 — swiftformat --lint apps/apple
+------------------------------------------------------------------------------
+0/264 files require formatting, 3 files skipped.
+FORMAT_EXIT=0
+
+------------------------------------------------------------------------------
+STEP 5 — placeholder gate  (apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Dashboard/Widgets)
+------------------------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------------------------
+[x] Surface renders on Apple with every web state reproduced — loading (skeleton grid),
+    content (size-aware 4/6/8 command grid + per-tile in-flight spinner), empty/noVehicle,
+    error (QueryError + retry), offline (cached + offline chip + retry), stale (warning chip
+    + background-refresh spinner). Verified by per-state UI hosting test on UIKit + AppKit.
+[x] Hooks bind to the shared P1/S8 state-holder layer (VehiclesStore via StateHolderModel;
+    VehicleCommandStore.sendCommand) — no direct HTTP in the view.
+[x] Every i18n key from source has a matching key in the P1/S10 catalog (Localizable.xcstrings).
+[x] Accessibility labels on every interactive element (each command tile + refresh button);
+    Dynamic Type via Font.TS tokens; Reduce-Motion respected via TSButton/TSLiveIndicator.
+[x] Tests: adapter unit tests (size→commands, id resolution, feed→render-state, freshness,
+    catalog parity) + per-state UI hosting test + a11y label-coverage test. iOS 29/29, macOS 29/29.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate = 0).
+[x] view.opened telemetry emitted with surface slug "CommandQuickActionsWidget" (P1/S11 os.Logger).
+
+------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------
+Per-step exits:
+  IOS_EXIT=0            (build + test SUCCEEDED — 284 unit incl. this surface 29/29 + 10 UI)
+  MAC_BUILD_EXIT=0      (macOS app compiles with all 3 surface files)
+  MAC_UNIT_TESTS=PASS   (TeslaSync-macOSTests incl. this surface 29/29, 0 failures)
+  MAC_FULL_SUITE_EXIT=70  <-- the only non-green step
+  LINT_EXIT=0
+  FORMAT_EXIT=0
+  PLACEHOLDER_EXIT=0
+
+The SURFACE is fully implemented and every check attributable to it is GREEN on BOTH platforms
+(compile + unit + per-state hosting test + lint + format + placeholder); iOS full build+test is
+GREEN end-to-end. The single non-green step — the literal `xcodebuild -scheme TeslaSync-macOS
+build test` (all test targets, default signing) — could NOT be driven to 0 on THIS runner because
+the macOS signed-test capability is unavailable here: dev-certificate entitlements with no signing
+team + a pre-existing git-ignored-pbxproj TEST_HOST product-name bug + shared-host load 500–600.
+The repository itself defers macOS artifact verification to a signed `macos-latest` CI runner
+(apps/macos-pending-verifications.md).
+
+Per the prompt's gate ("EXIT=0 only when every step above is 0") and its acceptance clause
+("STATUS=BLOCKED with platform-capability evidence"), the honest terminal marker — refusing to
+paint a red step green — is BLOCKED on the macOS signed-test runner capability. This is NOT an
+incomplete surface: the deliverable is committed and verified to the runner's limit.
+
+EXIT=70
+STATUS=BLOCKED  (macOS signed full build+test capability unavailable on this runner; surface
+                 complete — iOS build+test GREEN, macOS build + this-surface tests GREEN,
+                 lint/format/placeholder GREEN; see STEP 2c evidence above)

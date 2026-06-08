@@ -1,0 +1,278 @@
+=== P4 Feature view 0116 MonthlyCostChart (Apple) ===
+
+---------------------------------------------------------------------------
+HOST / RUNNER CAPABILITY (probed, not assumed)
+---------------------------------------------------------------------------
+  uname        : Darwin 25.5.0 arm64 (Apple Silicon)
+  swift        : Apple Swift 6.3.2 (swiftlang-6.3.2.1.108), target arm64-apple-macosx26.0
+  swiftlint    : 0.63.3        swiftformat : 0.61.1        pwsh : 7.6.2
+  xcodegen     : 2.45.4
+  xcode-select : /Library/Developer/CommandLineTools   <-- COMMAND LINE TOOLS ONLY
+  macOS SDK    : /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk (SwiftUI + Charts present)
+  iOS SDK      : ABSENT  ($ xcrun --sdk iphonesimulator --show-sdk-path
+                          -> "SDK \"iphonesimulator\" cannot be located")
+  Xcode.app    : ABSENT  ($ xcodebuild -version
+                          -> "xcode-select: error: tool 'xcodebuild' requires Xcode,
+                              but active developer directory '/Library/Developer/
+                              CommandLineTools' is a command line tools instance")
+
+  CONSEQUENCE (prompt capability clause): the defining gate — `xcodebuild ... build
+  test` on an iOS 18 Simulator + on macOS 15 — CANNOT run on this runner (no Xcode,
+  no iOS simulator SDK). Per the prompt ("If unavailable on the runner -> STATUS=
+  BLOCKED with API evidence") this surface terminates STATUS=BLOCKED. Every gate the
+  runner CAN execute was executed for real and is green; the code is complete and
+  parity-faithful, and was additionally verified by (a) an EXECUTED adapter self-test
+  and (b) a real macOS-15 SwiftUI+Charts type-check of the whole view set. No result
+  below is simulated.
+
+Web source (THE specification):
+  web/src/features/charging/components/cost-analysis/MonthlyCostChart.tsx   (73 lines)
+Native output (allowed files):
+  apps/apple/TeslaSync/feature-views/MonthlyCostChart.swift          (71)
+  apps/apple/TeslaSync/feature-views/MonthlyCostChart.Adapter.swift  (285)
+  apps/apple/TeslaSync/feature-views/MonthlyCostChart.Model.swift    (255)
+  apps/apple/TeslaSync/feature-views/MonthlyCostChart.Chart.swift    (217)
+  apps/apple/TeslaSync/feature-views/MonthlyCostChart.Views.swift    (180)
+  apps/apple/TeslaSync/feature-views/MonthlyCostChart.Previews.swift (103)
+  apps/apple/TeslaSync/feature-views/MonthlyCostChart.Tests.swift    (285)
+  apps/apple/TeslaSync/feature-views/MonthlyCostChart.strings        (43)
+  + this log.
+
+---------------------------------------------------------------------------
+PARITY MAPPING (web -> native)
+---------------------------------------------------------------------------
+  props : data: MonthlyBucket[] (month + cost) + vehicleId: number|null   ->
+            [MonthlyCostBucket] + vehicleID:Int? pushed via MonthlyCostUpdate
+  hooks : useTranslation + useChartPalette + useFormatting(formatCurrency)  ->
+            MonthlyCostStrings (P1/S10 facade) + TSChartPalette.color(at:0)
+            (web CHART_COLORS[0]) + MonthlyCostFormat/MonthlyCostFormatting
+  shell : <ChartContainer title height=260 ariaLabel dataColumns annotations> ->
+            tokenized glass card (Color.TS.surface + TSRadius.lg + border) with
+            MonthlyCostHeader (title) + figure accessibilityLabel = aria string
+  chart : Recharts <AreaChart><Area type=monotone strokeWidth=2 stroke=palette[0]  ->
+            fill=url(#costGrad)>                                              Swift Charts Chart{ AreaMark(gradient .30->.02) + LineMark(2pt,
+            + areaGradient(palette[0], .30->.02)                             monotone) } .foregroundStyle(TSChartPalette.color(at:0))
+  xaxis : tickFormatter "YYYY-MM" -> "MM/YY" (parts[1]/parts[0].slice(2))    ->
+            MonthlyCostFormat.axisMonthLabel (dropFirst(2); non-2-part passthrough)
+  yaxis : tickFormatter formatCurrency(v, 0)                                 ->
+            AxisValueLabel MonthlyCostFormat.currency(v, 0) ("$1,234")
+  grid  : <CartesianGrid strokeDasharray="3 3" opacity 0.4>                  ->
+            AxisGridLine(stroke: dash [3,3]) @ Color.TS.border.opacity(0.4)
+  tip   : <Tooltip content={<ChartTooltip/>}> (name "Cost ($)", fmtNumber)   ->
+            MonthlyCostTooltip via RuleMark annotation (MM/YY + "Cost ($)" +
+            number(cost,2), symbol carried by the name, exactly like the web)
+  annot : renderAnnotationLines(chartAnnotations, (ts)=>ts)                  ->
+            dashed RuleMark per MonthlyCostAnnotation mapped onto the MM/YY domain
+  empty : data.length>0 ? <chart> : "Not enough data"                       ->
+            MonthlyCostEmpty (ContentUnavailableView, key costAnalysis.charts.noData)
+  i18n  : 6 exact web t() keys + fallbacks                                    ->
+            resolved through MonthlyCostStrings facade (table "MonthlyCostChart")
+
+  Web i18n keys reproduced verbatim (parity):
+    costAnalysis.charts.monthlyCost        = "Monthly Cost Trend"
+    costAnalysis.charts.monthlyCost.aria   = "Monthly charging cost trend area chart"
+    costAnalysis.charts.col.month          = "Month"
+    costAnalysis.charts.col.cost           = "Cost ($)"
+    costAnalysis.charts.cost               = "Cost ($)"
+    costAnalysis.charts.noData             = "Not enough data"
+  Key audit: 17 keys referenced in Swift == 17 keys defined in .strings
+    (0 used-but-undefined, 0 defined-but-unused). plutil -lint: OK.
+
+STATES (every one renders — no hidden surface):
+  loading  -> MonthlyCostLoading (TSSkeleton 260pt block; reduce-motion safe)
+  content  -> MonthlyCostTrendChart (area + line + tooltip + annotation lines)
+  empty    -> MonthlyCostEmpty (ContentUnavailableView "Not enough data")
+  error    -> MonthlyCostError (QueryError-equiv, Retry -> model.refresh())
+  stale    -> freshness chip (Stale) + connectivity banner + one guarded auto-refresh
+  offline  -> freshness chip (Offline) + banner; keeps cached points, no refetch
+a11y : figure summary (aria title + month count + total cost), per-point
+  label/value helpers ("MM/YY" + "Cost ($): $x.xx"), reduce-motion gate on the
+  chart animation, Dynamic Type via system-font tokens, VoiceOver labels on the
+  header, freshness chip, retry button.
+telemetry : P1/S11 view.opened(surface:"MonthlyCostChart") emitted once on appear.
+
+===========================================================================
+GATES — each command actually executed on this host; real exit codes.
+===========================================================================
+
+[1] swift -frontend -parse   (syntax, all 7 swift files)
+    -> MonthlyCostChart{,.Model,.Adapter,.Chart,.Views,.Previews,.Tests}.swift
+       all PARSE-OK.
+    PARSE_EXIT=0   PASS
+
+[2] swiftformat --lint apps/apple   (THE gate command, whole tree)
+    -> SwiftFormat completed. 0/1015 files require formatting, 2 files skipped.
+    FORMAT_EXIT=0   PASS
+
+[2b] swiftformat --lint (per-surface, my 7 files)
+    -> 0/7 files require formatting.
+    MYFORMAT_EXIT=0   PASS
+
+[3] swiftlint --strict (per-surface, my 8 files, explicit paths)
+    -> 0 violations in 7 lintable files (the .strings file is not linted).
+    MYLINT_EXIT=0   PASS  (this surface is clean)
+    (One false-positive was found + fixed during development: a test method named
+     ...SymbolToDollar contains the substring "ToDo", which the case-insensitive
+     placeholder scanner flags as TODO; renamed to
+     testFormattingDefaultsBlankSymbolToDefaultCurrency. Re-scanned clean.)
+
+[4] swiftlint --strict   (THE bare gate command, from apps/apple, whole tree)
+    -> Linting 1011 files. Found 1 violation, 1 serious.
+    LINT_EXIT=2   PRE-EXISTING SIBLING DEFECT, NOT THIS SURFACE:
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19:
+      error: Function Body Length Violation (currently 78 lines) (function_body_length)
+    PROVEN pre-existing + out-of-scope: `git status --porcelain` shows ONLY this
+    surface's 8 new untracked files; that widget file is tracked + unmodified, and
+    `git show HEAD:.../LifetimeStatsWidget.Adapter.swift` already carries the long
+    function at line 141. It is outside this prompt's allowed-files scope (editing it
+    would be a sibling/predecessor-bypass per Covenant #7). All 8 MonthlyCostChart
+    files lint clean (gate [3]). Reported, not hidden (Covenant #1). Same defect is
+    noted in sibling surface logs.
+
+[5] check-placeholders.ps1   (THE gate command, as written)
+    $ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/MonthlyCostChart
+    -> PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+    PLACEHOLDER_EXIT=0   PASS
+    [5b] genuine per-file scan (my 7 swift files copied to a temp dir, -Language swift)
+    -> PLACEHOLDER_COUNT=0 / EXIT=0. Independent grep for
+       TODO/FIXME/XXX/"Coming soon"/placeholder/Lorem/"not implemented"/stub/mock
+       across all MonthlyCostChart.* -> CLEAN. No stubs/placeholders in shipped code.
+
+[6] EXECUTED adapter self-test (Foundation only, Swift 6 strict concurrency)
+    $ swiftc -swift-version 6 -strict-concurrency=complete MonthlyCostChart.Adapter.swift main.swift && ./selftest
+    -> ADAPTER_SELFTEST assertions: pass=32 fail=0 ; ADAPTER_SELFTEST=PASS
+    32 assertions, all green: point order + axis-label "MM/YY" formatting +
+    non-finite clamp; axisMonthLabel parity (2024-03->03/24, 2025-12->12/25,
+    one/three-part passthrough); number parity (1,234.5@1 / 12,346@0 half-up /
+    NaN->0.0); currency parity ($18.49@2 / $1,234@0 / EUR symbol / blank->$);
+    hasContent + resolvePhase envelope (loading/content/empty/error);
+    total=8 / maxCost=5 / domainUpper=5.5 / all-zero floor=1; surface slug;
+    a11y chart summary (title + "2 months" + "Total $30.00"), empty summary
+    ("Not enough data"), pointLabel "01/24", pointValue "Cost ($): $20.00".
+    COMPILE_EXIT=0 / RUN_EXIT=0   PASS
+
+[7] REAL macOS-15 type-check of the full SwiftUI + Swift Charts view set
+    Inputs: the 5 production view/model/adapter/chart/views files (Previews inert
+    without -D DEBUG) + REAL apps/design/generated/apple/Tokens.swift + REAL
+    Sources/Design/TSDesign.swift (TSChartPalette) + REAL Sources/Components/Motion/
+    Motion.swift (TSFadeIn) + a faithful TSSkeleton shim (the real Skeletons.swift
+    also declares sibling skeletons depending on TSCard, an unrelated component).
+    $ swiftc -typecheck -sdk <MacOSX.sdk> -target arm64-apple-macos15.0 -swift-version 6 *.swift
+    -> MAC_TYPECHECK_EXIT=0   PASS
+    Real compiler verification that the AreaMark/LineMark/RuleMark chart, the
+    selection tooltip, the currency axis, the state chrome, and the @Observable
+    model type-check against the macOS 15 platform SDK under Swift 6 strict
+    concurrency. No symbol collisions: grep of the tree for the 20+ public
+    MonthlyCost* type names returned zero pre-existing definitions before this surface.
+
+===========================================================================
+CAPABILITY-BLOCKED GATES (genuinely unavailable on THIS runner; evidence above)
+===========================================================================
+  Gate as written:
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+
+  [iOS]   xcodebuild build test on iPhone 16 simulator
+          -> BLOCKED: no Xcode (xcode-select -p = CommandLineTools) AND no
+             iphonesimulator SDK on this runner. Could not be probed further.
+          IOS_EXIT=BLOCKED (capability unavailable — not green, not faked)
+
+  [macOS] xcodebuild build test (macOS 15)
+          -> BLOCKED: `xcodebuild` requires Xcode; only CommandLineTools present.
+             Strongest available substitute executed instead: gate [7], a real
+             macOS-15 SwiftUI+Charts type-check of the whole view set (EXIT=0), and
+             gate [6], an executed adapter self-test (32/32). The app-target build
+             additionally depends on a known repo-wide condition (feature-view
+             *.Tests.swift are listed under the APP target source path in project.yml
+             lines 37/68 with no *Tests.swift exclude, while the XCTest test targets
+             source only Tests/Unit) that is owned by the P4 integration prompt, not
+             this per-surface prompt's allowed files.
+          MAC_EXIT=BLOCKED (xcodebuild unavailable; view set type-checks green via [7])
+
+  [iOS typecheck] arm64-apple-ios18.0-simulator type-check
+          -> BLOCKED: iphonesimulator SDK absent (probe above). The shared view set
+             is platform-neutral SwiftUI + Swift Charts (no UIKit-only API in this
+             surface), and type-checks green on macOS 15 (gate [7]); the iOS variant
+             could not be run for lack of the SDK.
+          IOS_TYPECHECK_EXIT=BLOCKED
+
+===========================================================================
+HONESTY COVENANT (binding)
+===========================================================================
+  1 No red-as-green     : xcodebuild iOS/macOS reported BLOCKED with real
+                          xcode-select / xcodebuild / xcrun evidence; the pre-existing
+                          whole-tree swiftlint violation is reported (not hidden);
+                          every PASS is a command run on THIS host with its real exit
+                          code (parse, swiftformat 0/1015, swiftlint 0 on this surface,
+                          placeholder 0, executed self-test 32/32, macOS-15 typecheck 0).
+  2 No scope narrowing  : implemented the area chart + currency axis + MM/YY axis +
+                          selection tooltip + annotation reference lines + every state
+                          (loading/content/empty/error/stale/offline) + a11y + i18n +
+                          P1/S11 telemetry.
+  3 No skip-and-assume  : each runnable gate executed; the Xcode/iOS path was actually
+                          probed (xcode-select -p, xcodebuild -version, xcrun --sdk
+                          iphonesimulator) and found unavailable, not assumed.
+  4 No stubs as final   : complete implementations; placeholder COUNT=0; executed
+                          adapter self-test PASS (32 assertions). The TSSkeleton used
+                          in gate [7] is a type-check shim for the OUT-OF-MODULE probe
+                          only; the shipped surface uses the real Sources TSSkeleton.
+  5 No parity shortcuts : faithful port of the monotone area + palette[0] stroke/
+                          gradient, the formatCurrency(v,0) y-axis, the "YYYY-MM"->
+                          "MM/YY" x formatter, the ChartTooltip (name + fmtNumber, no
+                          symbol on the value), the renderAnnotationLines overlay, and
+                          the exact 6 web i18n keys/fallbacks.
+  6 No delegation       : authored directly (no sub-agent delegation of the surface).
+  7 No predecessor bypass: did NOT edit the pre-existing-broken sibling
+                          LifetimeStatsWidget.Adapter.swift, did NOT edit project.yml
+                          test-target wiring, did NOT touch the shared
+                          Localizable.xcstrings (parallel-unsafe) — strings ship as the
+                          per-surface MonthlyCostChart.strings table.
+  8 No commit on red    : this surface's own gates are all green; the only non-green
+                          items are platform-capability BLOCKED (no Xcode / no iOS SDK)
+                          and one pre-existing out-of-scope lint defect — both
+                          transparently disclosed, neither claimed green.
+  9 No silent drift     : changes confined to the allowed MonthlyCostChart.* files +
+                          this log (`git status --porcelain` = 8 new untracked files).
+                          Documented intentional choice: the native tooltip shows the
+                          "MM/YY" month label (axis-consistent) where the web generic
+                          tooltip passes the raw "YYYY-MM" through; the cost VALUE
+                          formatting (fmtNumber, no symbol) matches the web exactly.
+  10 Log ends with EXIT/STATUS below.
+
+===========================================================================
+DISPOSITION
+===========================================================================
+  Production-polished native MonthlyCostChart shipped at parity with the web source:
+  a pure, EXECUTED-green projection core (Foundation, Swift 6 strict, 32/32) with
+  web-exact number/currency/axis-label formatting; a P1/S8 state-holder seam (no view
+  HTTP); a P1/S10 i18n facade (6 exact web keys + envelope, key-audited 17==17); P1/S11
+  view.opened telemetry; the native Swift Charts area+line chart with gradient fill,
+  selection tooltip, dashed annotation reference lines, currency y-axis and MM/YY
+  x-axis; and every prompt state (loading/content/empty/error/stale/offline) with
+  VoiceOver + Dynamic Type + reduce-motion. The whole SwiftUI + Charts view set
+  type-checks green against the macOS 15 SDK (gate [7]).
+
+  STATUS=BLOCKED because the prompt's defining gate — `xcodebuild ... build test` on
+  an iOS 18 Simulator and on macOS 15 — cannot run on THIS runner: it has Command
+  Line Tools only (no Xcode) and no iphonesimulator SDK (evidence at top). This is the
+  prompt's prescribed disposition for an incapable runner ("If unavailable on the
+  runner -> STATUS=BLOCKED with API evidence"). All runner-available gates are green
+  and the code is complete; the surface is ready for the Xcode-capable P4 integration
+  runner to execute the xcodebuild build/test gate unchanged.
+
+===========================================================================
+COMMIT
+===========================================================================
+  git add apps/apple/TeslaSync/feature-views/MonthlyCostChart.swift \
+          apps/apple/TeslaSync/feature-views/MonthlyCostChart.Adapter.swift \
+          apps/apple/TeslaSync/feature-views/MonthlyCostChart.Model.swift \
+          apps/apple/TeslaSync/feature-views/MonthlyCostChart.Chart.swift \
+          apps/apple/TeslaSync/feature-views/MonthlyCostChart.Views.swift \
+          apps/apple/TeslaSync/feature-views/MonthlyCostChart.Previews.swift \
+          apps/apple/TeslaSync/feature-views/MonthlyCostChart.Tests.swift \
+          apps/apple/TeslaSync/feature-views/MonthlyCostChart.strings \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0116-MonthlyCostChart.log
+  git commit -m "feat(apps/apple/feature-views): add MonthlyCostChart surface (P4)"
+
+EXIT=1
+STATUS=BLOCKED

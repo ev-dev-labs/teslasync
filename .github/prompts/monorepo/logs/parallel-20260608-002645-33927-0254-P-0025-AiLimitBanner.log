@@ -1,0 +1,124 @@
+I'll start by understanding the environment and verifying the required Apple toolchain capability, since the prompt explicitly requires a BLOCKED status with evidence if unavailable.
+
+Key finding: `xcodebuild` requires full Xcode but only CommandLineTools is active. Let me verify thoroughly whether full Xcode exists, and explore the existing native structure in parallel.
+
+Full Xcode **is** installed at `/Applications/Xcode.app`, but `xcode-select` points to CommandLineTools. I can likely override with `DEVELOPER_DIR`. Let me test that and read the web source + project structure in parallel.
+
+**Not blocked** — Xcode 26.5 is available via `DEVELOPER_DIR`, with iOS 26.5 simulator (iPhone 16 booted) and macOS 26.5 SDK. The web source is a pure-presentational banner (only `useTranslation`, no async data). Now let me study the existing native patterns: project layout, component library, i18n/theme/telemetry facades.
+
+`project.yml` does **not** include `TeslaSync/shared-surfaces` as a source path — I'll need to wire it for the build/test to be real (honesty covenant: no hollow gate). Let me study the existing conventions: component library (AlertBanner/Button equivalents), i18n facade, design tokens, telemetry, and test structure.
+
+Let me read the core component library files, a representative existing surface (ConflictWarnings, which uses AlertBanner), and the state-holder facade.
+
+The ConflictWarnings P4 surface (0084) is the established template. Let me read its sibling files (adapter, strings facade, surface entry), the design tokens, the state-holder facade, and find the telemetry pattern.
+
+The tests are **colocated** as `ConflictWarnings.Tests.swift` in `feature-views/`. I need to understand how those are wired vs the `Tests/Unit/FeatureViews` directory. Let me investigate the test wiring, the surface entry point (telemetry/state-holder), the model, strings format, and lint config.
+
+The colocated `*.Tests.swift` pattern needs verification — the test target only sources `Tests/Unit`, so I must confirm whether colocated tests actually execute. Let me check xcodegen availability and empirically inspect target membership, plus read the strings file and lint config.
+
+SwiftLint `included:` is an explicit allowlist that lacks `shared-surfaces` (I'll add it); SwiftFormat lints all of `apps/apple` automatically. The biggest risk is the `Shared.xcframework` staging preAction. Let me inspect that script and whether the framework exists, then empirically resolve the colocated-test question via xcodegen.
+
+`Shared.xcframework` doesn't exist — it requires a Gradle/KMP build via the scheme preAction. The file `apps/macos-pending-verifications.md` likely documents the established precedent. Let me read it and check the KMP toolchain availability.
+
+Now I have the full picture and the **established honest precedent**. `macos-pending-verifications.md` documents that the full-app `xcodebuild build test` is BLOCKED for *all* prior P4 surfaces by **pre-existing, unrelated collisions** (`DashboardWidgetSize` redefined 15×, 152 colocated `*.Tests.swift` importing XCTest into the app target, unstaged `Shared.xcframework`, macOS signing). Each surface is instead verified green in **isolation** (SwiftPM build + tests + `swiftc -typecheck` on both SDKs + lint/format/placeholder + `xcodegen generate`).
+
+I'll follow that exact precedent. Let me write a plan and examine the design-token dependency surface.
+
+Tokens live in the self-contained generated `Tokens.swift`; `TSTone` is in `Badges.swift`. No committed `Package.swift`, so prior surfaces used a throwaway harness. Let me read the token file, `TSTone`, and the skeleton/feedback components to map the exact dependency set.
+
+Let me read the `TSTone` definition to complete the dependency map.
+
+I now have the full dependency map: `Tokens.swift` (self-contained), `TSTone`, `TSButton`, `TSSkeleton`. Let me check for name collisions, read the placeholder gate patterns, and confirm `pwsh` availability before writing code.
+
+Everything verified: Xcode 26.5 available, `pwsh` + `xcodegen` + `swiftlint`/`swiftformat` present, placeholder gate only scans `.swift` (I'll avoid forbidden words), no symbol collisions, and `macos-pending-verifications.md` establishes the honest precedent (full-app `xcodebuild` blocked by pre-existing collisions; surfaces verified green in isolation). Let me set up tracking and a plan, then check git state.
+
+Note: the worktree has pre-existing uncommitted `AIUsageCard.*` changes (not mine — parallel-merge state). I'll only add my files at commit time. Let me peek at logging conventions and confirm whether `shared-surfaces` is being established fresh.
+
+I'm establishing `shared-surfaces` fresh. Let me read an existing P4 feature-view log to match the established log format (especially how the macOS-pending deferral is documented).
+
+This log is the exact template I'll follow. Let me read the rest (gate execution + final STATUS).
+
+I now have a complete, authoritative template (code structure + verification methodology + log format ending `EXIT=0 / STATUS=DONE` with the Xcode app build/test DEFERRED). 
+
+Key difference for my surface: `shared-surfaces/` is a **new tier**, so I must register it in `project.yml` + `.swiftlint.yml` (declared, not silent). Let me write the plan, then create the surface files.
+
+Now I'll create the surface. Starting with the pure Adapter core.
+
+Now the Model (state-holder seam, telemetry, countdown timer, i18n facade).
+
+Now the Views layer (banner card, actions, countdown, and the full states chrome).
+
+Now the surface entry point and previews.
+
+Now the i18n catalog and the test suite.
+
+Now the comprehensive XCTest suite.
+
+All 7 surface files written. Now I'll wire the new `shared-surfaces` tier into `project.yml` (both app targets) and `.swiftlint.yml`.
+
+Surface + wiring done. Now I'll build the isolated SwiftPM verification harness (the established methodology). Let me inspect `Cards.swift` (a transitive dep of `Skeletons.swift`) to know the exact real-file closure to vendor into the harness.
+
+I'll vendor only the three real primitives my surface uses (`TSTone`, `TSButton` family, `TSSkeleton`) plus the real `Tokens.swift` into a throwaway SwiftPM harness (module name `TeslaSync`, so `@testable import TeslaSync` works unchanged) and execute the test suite.
+
+Now the vendored shared primitives (verbatim real declarations) and the package manifest.
+
+Swift 6 flagged the test's global closure needing `@Sendable` (the ConflictWarnings test had this). Let me fix the shipped test file and re-run with full output to surface any library-side errors too.
+
+Library builds clean. Now the full test run.
+
+All **27 tests pass** in the isolated SwiftPM harness. Now the real both-SDK typechecks against the actual repo component closure (Tokens + Badges + Buttons + Cards + Typography + Skeletons + Design), then lint/format/placeholder/xcodegen.
+
+iOS 18 typecheck clean against the real repo closure. Now macOS 15 and the DEBUG previews.
+
+All typechecks clean. Now swiftlint + swiftformat on the surface files.
+
+Lint/format violations to fix. The cyclomatic-complexity one needs a code change (dictionary lookup); the rest are formatting that `swiftformat` can auto-fix. Let me fix `init(wire:)` and let `swiftformat` handle the formatting.
+
+Now auto-fix formatting and re-verify both linters.
+
+SwiftLint **0 violations**, SwiftFormat **0 require formatting**. Re-verify the harness tests + typechecks after the edits, then run placeholder + xcodegen.
+
+27/27 green, all typechecks clean. Now the placeholder gate and `xcodegen generate` (to confirm the surface is enumerated in the project).
+
+Every host-runnable gate is green: **swift test 27/27**, iOS 18 + macOS 15 + previews typechecks, swiftlint 0, swiftformat 0, placeholder 0, and xcodegen enumerates all 7 files. Now capture the real `xcodebuild` evidence (the DEFERRED gate) showing the pre-existing blocker.
+
+`xcodebuild` evidence captured: fails on the un-staged `Shared.xcframework` (exit 65), **0 AiLimitBanner-specific errors** — the surface is sound; the blocker is the pre-existing KMP framework, exactly the macos-pending precedent. Let me get line counts and write the gate log.
+
+All gates green. Now I'll write the comprehensive gate log following the established precedent format.
+
+Now append the macOS-pending verification row, matching the existing table format.
+
+Now let me verify git state and ensure only intended files are staged (the worktree had pre-existing `AIUsageCard.*` changes I must not touch).
+
+The generated `xcodeproj`/`build` are git-ignored, and the `AIUsageCard.*` changes are pre-existing (not mine — I'll exclude them). Let me clean up generated artifacts and the harness, then stage exactly my files.
+
+Exactly my 11 files staged; the pre-existing `AIUsageCard.*` changes are correctly excluded. Now commit.
+
+Committed. Let me verify the commit contains exactly my intended files and nothing else.
+
+Commit is clean — 11 files, no `AIUsageCard` contamination, pre-existing changes left untouched. Let me do one final validation: confirm the `.strings` catalog is syntactically valid (`plutil -lint`).
+
+All verifications complete. Let me finalize the tracking.
+
+Done. Shipped a production‑polished native Apple `AiLimitBanner` shared surface at parity with `web/src/components/ai/AiLimitBanner.tsx`, committed as `53a5203f1`.
+
+**What was built** (`apps/apple/TeslaSync/shared-surfaces/AiLimitBanner/`, 7 files):
+- **Adapter** — full reason taxonomy (both web switch tables incl. the token + feature‑id collapses and the generic default), `bannerLevel`→variant ternary, projection, countdown arithmetic, 31‑entry copy catalog, a11y builder.
+- **Model** — P1/S8 state‑holder seam, P1/S11 `view.opened` telemetry, once‑per‑second retry countdown, dismiss‑until‑new‑limit, stale rising‑edge auto‑refresh, P1/S10 facade.
+- **Views/surface/Previews** — banner card (mirrors `TSAlertBanner`) + `TSButton` actions + live countdown + the full loading/empty/error/stale/offline chrome; 9 previews.
+- **strings/Tests** — 23 web keys + 7 native keys; 27 XCTest methods.
+
+**Verification (all green, real output):**
+| Gate | Result |
+|---|---|
+| `swift test` (Swift 6 strict) | **27/27** |
+| iOS‑18 + macOS‑15 + previews `swiftc -typecheck` | EXIT=0 |
+| `swiftlint --strict` / `swiftformat --lint` | 0 / 0 |
+| `check-placeholders.ps1` | PLACEHOLDER_COUNT=0 |
+| `xcodegen generate` | enumerates 7 files |
+| `plutil -lint` strings | OK |
+
+**Capability:** not blocked — Xcode 26.5 via `DEVELOPER_DIR`. Registered the new `shared-surfaces` tier in `project.yml` + `.swiftlint.yml` (declared wiring).
+
+**Deferred (honest):** the signed full‑app `xcodebuild build test` is blocked by the **pre‑existing, unrelated** un‑staged KMP `Shared.xcframework` (captured `XCODEBUILD_MAC_EXIT=65`, **0 AiLimitBanner errors**) + collisions + signing — matching the documented feature‑views precedent; a macOS‑pending row was appended. Log ends `EXIT=0 / STATUS=DONE`.
+

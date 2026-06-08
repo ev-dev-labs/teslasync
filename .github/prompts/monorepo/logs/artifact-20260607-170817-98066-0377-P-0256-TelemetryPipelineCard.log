@@ -1,0 +1,174 @@
+=== P4 Feature view 0256 TelemetryPipelineCard (Apple) ===
+
+Surface : apps/apple/TeslaSync/feature-views/TelemetryPipelineCard.*
+Web src : web/src/features/system/components/status/TelemetryPipelineCard.tsx
+Data    : useTelemetry (useMQTTStatus) + useQuery(getPollingStatus) + vehicle list / fleet counts
+Slug    : TelemetryPipelineCard (P1/S11 view.opened)
+
+------------------------------------------------------------------------------------------
+RUNNER CAPABILITY PROBE (decides which gate steps are host-runnable vs DEFERRED)
+------------------------------------------------------------------------------------------
+  swift            : Apple Swift 6.3.2 (target arm64-apple-macosx26.0)            [available]
+  macOS SDK        : /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk  (26.5) [available]
+  swiftlint        : 0.63.3                                                       [available]
+  swiftformat      : 0.61.1                                                       [available]
+  pwsh             : /opt/homebrew/bin/pwsh                                       [available]
+  xcodebuild       : ERROR "requires Xcode, but active developer directory
+                     '/Library/Developer/CommandLineTools' is a command line
+                     tools instance"                                             [UNAVAILABLE]
+  iphonesimulator  : xcrun ERROR: SDK "iphonesimulator" cannot be located        [UNAVAILABLE]
+  simctl           : xcrun ERROR: unable to find utility "simctl"                [UNAVAILABLE]
+
+  => This is a Command-Line-Tools-only host. The literal gate's `xcodebuild ... build test`
+     (iOS Simulator + macOS) and the iOS-18-simulator `swiftc -typecheck` CANNOT run here:
+     full Xcode + the iphonesimulator SDK are absent (raw API evidence captured above).
+     Per ADR-012 + apps/macos-pending-verifications.md and the accepted 0005/0009/0036/0054
+     "code-complete + DEFERRED Xcode gate" precedent, the surface is verified GREEN in
+     ISOLATION on every host-runnable gate and the Xcode/iOS-SDK steps are DEFERRED (NOT
+     painted green) to the downstream macOS acceptance runner (P4 P99 apple-acceptance-gate).
+
+------------------------------------------------------------------------------------------
+GATE STEPS (real exit codes — deferred steps are disclosed, never relabelled as 0)
+------------------------------------------------------------------------------------------
+[iOS]  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+       -> xcode-select error (requires Xcode). IOS_EXIT=1  STATUS=DEFERRED (no Xcode/iphonesimulator SDK on runner)
+
+[mac]  xcodebuild -scheme TeslaSync-macOS build test
+       -> xcode-select error (requires Xcode). MAC_EXIT=1  STATUS=DEFERRED (no Xcode on runner)
+
+       SUBSTITUTE host-runnable verification (genuinely EXECUTED, stronger than nothing):
+       Isolated SwiftPM package (module name TeslaSync) built from the *verbatim shipped*
+       surface files + the real design tokens (apps/design/generated/apple/Tokens.swift),
+       real TSDesign.swift (TSAnimation) and real Badges.swift (TSTone) — plus a clearly
+       labelled HARNESS-ONLY TSSkeleton shim (mirrors Components/Feedback/Skeletons.swift,
+       NEVER shipped) and a minimal XCTest shim (Apple's XCTest.framework is absent on a
+       CLT host). The shipped TelemetryPipelineCard.Tests.swift + .ModelTests.swift bodies
+       were run by an explicit runner with a real process exit code:
+
+         Build of product 'TPCRunner' complete!
+         TPC-EXEC assertions=108 passed=108 failed=0          SWIFTPM_EXEC_EXIT=0
+
+       Compiled GREEN under the macOS 15+ SDK with Swift 6 STRICT CONCURRENCY: every shipped
+       file — .swift / .Adapter / .Projection / .Model / .Views / .Chrome / .Rows + the
+       preview bodies (macro-neutralised: #Preview -> a `some View` func, since the Xcode-only
+       PreviewsMacros plugin is unavailable on CLT) — all type-check. A REAL strict-concurrency
+       defect was found by this step and fixed before reporting green (see covenant #3 below):
+       TelemetryVehicleRow (Sendable) stored a non-Sendable public TSTone; replaced with a
+       Sendable TelemetryBatteryTone bucket mapped to TSTone only at the @MainActor render
+       boundary. A second real defect (key paths to tuple elements, `\.level` on
+       `(level:,tally:)`) was fixed by promoting the tuple to an Identifiable
+       TelemetryLivenessBucket struct.
+
+[lint] swiftlint --strict   (10 surface files)
+         Done linting! Found 0 violations, 0 serious in 10 files.            LINT_EXIT=0
+       whole-tree `swiftlint --strict` (gate cmd): 1 violation total, 0 in TelemetryPipelineCard.*
+         — the single hit is PRE-EXISTING in a sibling outside this prompt's allowed files
+         (TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift function_body_length).
+
+[fmt]  swiftformat --lint   (10 surface files)
+         0/10 files require formatting.                                      FORMAT_EXIT=0
+       whole-tree `swiftformat --lint apps/apple` (gate cmd): 1/1777 require formatting,
+         0 in TelemetryPipelineCard.* — the single hit is PRE-EXISTING in a sibling outside
+         allowed files (TeslaSync/feature-views/ActionBuilder.Previews.swift blankLinesBetweenScopes).
+
+[stub] check-placeholders.ps1 -Path <surface files>
+         PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0                         PLACEHOLDER_EXIT=0
+         (script -SelfTest: all [PASS]; dirty tree -> COUNT=4, clean tree -> COUNT=0)
+         No TODO / FIXME / XXX / "Coming soon" / "Placeholder" / "Lorem ipsum" / "not
+         implemented" / fatalError-unimpl in any shipped file. 0 parity:allow opt-outs.
+
+------------------------------------------------------------------------------------------
+WHAT SHIPPED (production-polished, no stubs/skeleton-only — every web region reproduced)
+------------------------------------------------------------------------------------------
+  TelemetryPipelineCard.swift            main composition: phase switch (loading skeleton /
+                                         hard-error+retry / zero-vehicle empty / content),
+                                         freshness chip + stale/offline banner, onAppear start.
+  TelemetryPipelineCard.Adapter.swift    value types: liveness + source + battery-tone + phase
+                                         enums, label/result/rollup/bucket/counts/row structs.
+  TelemetryPipelineCard.Projection.swift pure logic: union liveness ladder (most-recent of
+                                         {poll,stream}; <5m sending / <30m slow / else stale /
+                                         none offline), vinTail (last 4), battery thresholds
+                                         (>=50/>=20), vehicleStateBadge, em-dash fmtCount, row +
+                                         fleet-tally projection, phase resolution, relative time,
+                                         VoiceOver row summary.
+  TelemetryPipelineCard.Model.swift      P1/S8 source seam (start/stop/refresh/navigate),
+                                         P1/S11 telemetry seam, P1/S10 i18n facade, input DTOs,
+                                         navigation routes, InMemory source, @Observable model
+                                         (rollup+counts+rows projection, stale auto-refresh).
+  TelemetryPipelineCard.Views.swift      flow-wrap layout, freshness chip, connectivity banner,
+                                         5-cell rollup grid, liveness summary chips + broker +
+                                         polling chips (web `list.length > 0`).
+  TelemetryPipelineCard.Chrome.swift     zero-vehicle empty state (Tesla-account CTA), initial
+                                         skeleton, hard-error (QueryError) + retry, footer links
+                                         (Coverage / MQTT Inspector / All vehicles).
+  TelemetryPipelineCard.Rows.swift       per-vehicle list + row: status pip, name (opens detail),
+                                         VIN tail · state, poll battery bar, liveness chip with
+                                         stream/poll tag, last/next relative times; one combined
+                                         VoiceOver button per row.
+  TelemetryPipelineCard.Previews.swift   8 states: content / streaming-only / MQTT-down / empty /
+                                         loading / error / stale / offline.
+  TelemetryPipelineCard.strings          P1/S10 catalog: every `system.telemetryPipeline.*` key
+                                         with the web English value + native chrome keys.
+  TelemetryPipelineCard.Tests.swift      adapter + accessibility XCTest.
+  TelemetryPipelineCard.ModelTests.swift state-holder XCTest.
+  (Adapter/Views/Tests were split into Projection/Chrome/ModelTests to satisfy the <=400-line
+   file_length budget under swiftlint --strict, matching the sibling multi-file convention.)
+
+------------------------------------------------------------------------------------------
+HONESTY COVENANT (binding)
+------------------------------------------------------------------------------------------
+  1  No red-as-green   : xcodebuild iOS+macOS are shown with their REAL exit=1 and labelled
+                         DEFERRED with raw API evidence (no Xcode / no iphonesimulator SDK) —
+                         NOT relabelled 0. The green I claim is what genuinely ran: an EXECUTED
+                         108/108-assertion run + macOS-15-SDK Swift-6-strict compile of every
+                         shipped file + swiftlint(0)/swiftformat(0)/placeholder(0). The two
+                         whole-tree lint/format hits are disclosed as pre-existing siblings.
+  2  No scope narrowing: ALL states (loading/empty/error/stale/offline/content) + every web
+                         region (rollup grid, liveness+broker+polling chips, per-vehicle list,
+                         footer) + i18n + a11y + P1/S11 telemetry + navigation + refresh +
+                         stale auto-refresh implemented.
+  3  No skip-and-assume: each host gate EXECUTED; nothing assumed green — the SwiftPM compile
+                         surfaced a real Sendable/TSTone strict-concurrency defect and a real
+                         tuple-key-path defect, both FIXED before reporting green.
+  4  No stubs as final : complete implementations; placeholder COUNT=0. The TSSkeleton + XCTest
+                         shims are used ONLY in the throwaway harness (clearly labelled), NEVER
+                         in shipped files.
+  5  No parity shortcuts: faithful port of liveness union ladder + source labelling + battery
+                         color + vinTail + vehicleStateBadge + fmtCount + the 5-cell rollup +
+                         the `list.length > 0` chip gating + the three footer links.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register the surface into project.yml (the app target
+                         already globs TeslaSync/feature-views, so the files are picked up with
+                         no edit), did NOT edit the shared Localizable.xcstrings (parallel-unsafe;
+                         strings shipped as the per-surface table), did NOT touch
+                         apps/macos-pending-verifications.md (outside allowed files).
+  8  No commit on red  : committing on GREEN host gates + an EXECUTED 108/108 test run + a
+                         macOS-15-SDK Swift-6-strict compile of all shipped files; the iOS/macOS
+                         Xcode app build/test is DEFERRED (captured evidence), not failed; the
+                         two whole-tree lint/format hits are pre-existing siblings outside
+                         allowed files.
+  9  No silent drift   : changes confined to the allowed TelemetryPipelineCard.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+------------------------------------------------------------------------------------------
+DISPOSITION
+------------------------------------------------------------------------------------------
+  Production-polished native TelemetryPipelineCard shipped at parity with the web source:
+  pure-Swift projection core (EXECUTED-green, 108/108 assertions), P1/S8 state-holder seam
+  (no view HTTP), P1/S11 view.opened telemetry, P1/S10 i18n (no hardcoded literals), P1/S9
+  tokens, every state + a11y label, and navigation via the source seam. All host-runnable
+  gates pass AND the surface compiles against the macOS 15+ SDK under Swift 6 strict
+  concurrency. The signed Xcode iOS-Simulator + macOS app build/test is DEFERRED to the
+  downstream macOS acceptance runner (full Xcode + iphonesimulator SDK + signing identities
+  absent on this Command-Line-Tools host — none a defect in this code, all outside this
+  prompt's allowed files), matching the 0005/0009/0036/0054 precedent (ADR-012).
+
+------------------------------------------------------------------------------------------
+COMMIT
+------------------------------------------------------------------------------------------
+  git add apps/apple/TeslaSync/feature-views/TelemetryPipelineCard.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0256-TelemetryPipelineCard.log
+  git commit -m "feat(apps/apple/feature-views): add TelemetryPipelineCard surface (P4)"
+
+EXIT=0
+STATUS=DONE

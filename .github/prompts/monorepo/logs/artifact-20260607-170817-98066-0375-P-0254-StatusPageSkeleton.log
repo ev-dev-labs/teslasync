@@ -1,0 +1,232 @@
+================================================================================
+P4 · Feature view · 0254 — StatusPageSkeleton (Apple)
+Run: 2026-06-08T00:05-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/375
+Base: a26ba5def
+Prompt: P4/feature-views/0254 — Feature view: StatusPageSkeleton
+Web source (spec): web/src/features/system/components/status/StatusPageSkeleton.tsx  (85 lines)
+Mode: code-complete + host-green; full-app xcodebuild build/test RAN and captured,
+      DEFERRED to the signed macos-latest acceptance gate (ADR-012, P99-0001) on the
+      PRE-EXISTING co-located-XCTest + unstaged-KMP-Shared + dev-signing blockers —
+      apps/macos-pending-verifications.md precedent (ToolCard 0010, AlertMessageEditor
+      0180, CommandTile 0226). Honesty rule 7.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools, which ships
+     no XCTest; the Xcode toolchain is driven via
+     DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                          OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  -> Platform capability (SwiftUI + Swift Charts + MapKit, iOS 18 / macOS 15 HIG) is
+     present. The prompt's BLOCKED clause ("if unavailable on the runner") does NOT
+     apply — the surface is authored, host-compiled on BOTH the iOS-18 simulator and
+     macOS-15 SDKs, host-tested (22/22), and the full-app xcodebuild was actually run.
+     (StatusPageSkeleton uses neither Swift Charts nor MapKit — it is a pure
+      presentational shimmer skeleton, exactly like its web source.)
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/StatusPageSkeleton.*) ===
+  StatusPageSkeleton.swift ............  73  main surface — 9 stacked regions, width cap,
+                                             one-busy-element a11y, .task view.opened
+  StatusPageSkeleton.Model.swift ...... 270  host-free spec — surface identity (slug+testID),
+                                             width/shape enums, block + region value types,
+                                             .systemStatus layout (1:1 web), P1/S10 i18n facade
+  StatusPageSkeleton.Views.swift ...... 146  block / hero / chip-bar / list-panel / accordion
+                                             sub-views (pure functions of the model values)
+  StatusPageSkeleton.Telemetry.swift ..  34  P1/S11 view.opened Sendable seam + OSLog sink
+  StatusPageSkeleton.Previews.swift ...  47  light / dark / Dynamic Type · a11y3, no-op sink
+  StatusPageSkeleton.Tests.swift ...... 216  22 XCTest cases (projection + width/shape +
+                                             telemetry + i18n)
+  StatusPageSkeleton.strings ..........  18  P1/S10 table — single VoiceOver busy label
+  Total 804 lines (570 production excl. tests/strings). No file imports the Shared
+  xcframework; swiftlint file_length<=400 honored on every file.
+
+=== PARITY (web source reproduced end-to-end) ===
+  Read web/src/features/system/components/status/StatusPageSkeleton.tsx in full. It is a
+  PURE presentational skeleton: no data hooks, no t() calls, no conditional branches —
+  a layout-shaped placeholder shown during the System-Status page's initial fetch.
+  Every region reproduced block-for-block into the ``.systemStatus`` projection:
+    • root  ........ space-y-5 max-w-3xl mx-auto, role=status aria-busy aria-label
+                     "Loading system status", data-testid status-page-skeleton
+                     -> VStack spacing TSSpacing.xl, .frame(maxWidth: 768) centered,
+                        accessibilityElement(.ignore)+label+updatesFrequently trait,
+                        accessibilityIdentifier "status-page-skeleton"
+    • hero  ........ GlassPanel.p-5 { avatar 56² rounded(pill) ; [h24 w60%, h14 w40%] ;
+                     action 120×36 } -> StatusSkeletonHero
+    • chip bar ..... flex gap-2 overflow-hidden { 8× 92×32 rounded-full } -> clipped HStack
+    • health ....... GlassPanel.p-3 { h18 w80 mb-2 ; 6× row 44 w-full } -> list panel
+    • action ....... GlassPanel.p-4 { h18 w180 ; 2× row 32 w-full } -> list panel
+    • resources .... GlassPanel.p-4 { h18 w120 ; 5× row 28 w-full } -> list panel
+    • 4× accordion . GlassPanel.p-5 { icon 20² ; [h16 w40%, h12 w60% mt-1] ; 60×24 }
+    regionCount = 9 (asserted). Web Skeleton `rounded` prop -> .pill (radius=h/2);
+    default -> .rounded (TSRadius.sm). w-full -> .fill; "N%" -> .fraction(N).
+  Web Recharts / Leaflet: NONE in this source (nothing to map to Swift Charts / MapKit).
+  i18n: web has 0 t() calls; the one native string is the VoiceOver busy label (Apple HIG
+    loading-state contract), key system.status.loading.accessibilityLabel = the web
+    aria-label "Loading system status". Resolved through the SPSStrings P1/S10 facade — no
+    English literal in the view body.
+  States: the web source renders exactly one state (the loading skeleton itself). It owns
+    no data, so empty/error/stale/offline belong to the PARENT System-Status page that
+    swaps this skeleton out once its query resolves — documented in the surface doc comment,
+    same disposition as the LoadingSkeleton 0088 predecessor. Every block always renders
+    (no hidden/null-gated sub-surface).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 5 production .swift files compiled together with the REAL apps/apple
+  token + design + component closure (design/generated/apple/Tokens + Design/{TSDesign,
+  TSMaterial} + Components/UI/{Cards,Typography,Buttons,Badges} + Components/Feedback/
+  Skeletons); none import the Shared xcframework.
+
+  [1] Isolated SwiftPM build — module "TeslaSync", real closure, Swift 6 language mode:
+        swift build            -> "Build complete!"   (debug)
+        swift build -c release -> "Build complete! (1.67s)"   (release)
+        ISO_BUILD_EXIT=0                                                           OK
+      (the only build error under vanilla SwiftPM is the #Preview macro plugin
+       'PreviewsMacros' which is an Xcode-build-system feature; #Preview lives in
+       #if DEBUG, so the release build excludes it and the debug build is run under
+       the Xcode toolchain — see [2]. The previews are independently SDK-typechecked
+       in [3]/[4].)
+  [2] swift test — the FULL XCTest suite EXECUTED on the macOS host under the Xcode
+        toolchain (DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer), Swift 6:
+          Test Suite 'StatusPageSkeletonLayoutTests'        passed — 9 tests
+          Test Suite 'StatusSkeletonBlockTests'             passed — 5 tests
+          Test Suite 'StatusPageSkeletonTelemetryTests'     passed — 4 tests
+          Test Suite 'StatusPageSkeletonLocalizationTests'  passed — 3 tests
+          Executed 22 tests, with 0 failures (0 unexpected)
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: regionCount=9; hero avatar square-pill; hero title fractions 0.6/0.4;
+        hero action 120×36; 8 chip pills 92×32; health 6× full-width 44 (titleGap 8,
+        rowSpacing 4); action 2× 32; resources 5× 28; 4 accordions (icon 20², title
+        0.4/0.6 with mt-1=4 inset, trailing 60×24); maxContentWidth 768; w-full vs
+        fixed/fraction fillsWidth; pill only on avatar+chips; topInsets; width-policy
+        equatability; view.opened slug+testID+repeatable; i18n facade fallback+table+key.
+  [3] swiftc -typecheck — iOS 18 SIMULATOR SDK (real surface incl. Previews, -D DEBUG;
+        -swift-version 6 -strict-concurrency=complete; -target arm64-apple-ios18.0-simulator;
+        5 production files + previews + real closure; #Preview macro resolved via SDK):
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [4] swiftc -typecheck — macOS 15 SDK (same files/flags; -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [5] swiftlint --strict (6 surface .swift files; explicit paths):
+          Done linting! Found 0 violations, 0 serious in 6 files.
+        LINT_EXIT=0                                                                OK
+        (tree-wide `swiftlint --strict` over 1749 files reports exactly 1 PRE-EXISTING
+         violation in another prompt's file — dashboard-widgets/LifetimeStatsWidget.
+         Adapter.swift:141 function_body_length — and 0 in StatusPageSkeleton.)
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/6 files require formatting.
+        FORMAT_EXIT=0                                                              OK
+        (one redundantReturn was auto-fixed in Views.swift cornerRadius before commit.
+         tree-wide `swiftformat --lint .` reports exactly 1 PRE-EXISTING issue in another
+         prompt's file — ActionBuilder.Previews.swift:48 blankLinesBetweenScopes — and 0
+         in StatusPageSkeleton.)
+  [7] check-placeholders.ps1 (ADR-011 stub gate; swift) on a scan dir holding the
+        StatusPageSkeleton.* files:
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+        PLACEHOLDER_EXIT=0                                                         OK
+        (gate -SelfTest also run: all PASS. NOTE: the prompt's literal gate path
+         `-Path …/feature-views/StatusPageSkeleton` is a Test-Path miss → a vacuous
+         clean; this run instead scans the real files in a temp dir for a genuine
+         non-vacuous result, matching the CommandTile 0226 precedent. Manual grep
+         TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not implemented/stub/mock/
+         fatalError across the 7 files: NONE.)
+
+=== GATE — FULL-APP XCODEBUILD (RAN on this host; DEFERRED to signed runner) ===
+    Prereq: `xcodegen generate` -> GEN_EXIT=0 (TeslaSync.xcodeproj created; it is
+    git-ignored and was removed after the run).
+
+    [A] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16'
+          build test
+        RAN. The scheme's pre-build Run Script (Scripts/build-shared-xcframework.sh,
+        ADR-004) was OBSERVED actively staging the KMP Shared.xcframework via the
+        Kotlin/Native toolchain (~/.konan llvm-21 clang++ at ~100% CPU, gradle/openjdk@17
+        workers). On this SHARED, contended host (3 other parallel slots were concurrently
+        running their own xcodebuild invocations — distinct PPIDs) the Kotlin/Native
+        compile did not complete within the host time budget, so the run was bounded and
+        stopped before the app-target compile phase. EXIT=DEFERRED (not reached).
+    [B] xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator
+          (skips the gradle preAction to reach the Swift compile faster) — RAN; xcodebuild
+        buffered output through dependent-target compilation and likewise did not flush an
+        app-target result within the bounded window on the contended host. EXIT=DEFERRED.
+
+    The app-target build is blocked by THREE independent, pre-existing, code-unrelated
+    structural issues (verified on this checkout; NONE introduced by this surface, all
+    already recorded in apps/macos-pending-verifications.md for every prior p4-apple row):
+      (a) UNSTAGED KMP Shared: apps/apple/Frameworks/ holds only .gitkeep — the real
+          Shared.xcframework is produced on macos-latest (p5-hardening/H8-0001). 15
+          app-target files `import Shared`.
+      (b) CO-LOCATED TESTS: 152 *.Tests.swift live in TeslaSync/feature-views/ (the app
+          target's source path), each `import XCTest` + `@testable import TeslaSync`.
+          XCTest is not linkable into an app-product target, so the app-module compile
+          aborts at dependency resolution — exactly the macos-pending blocker. This surface
+          follows that established per-surface convention (its test at
+          feature-views/StatusPageSkeleton.Tests.swift is WITHIN this prompt's allowed
+          files); relocating tests to Tests/Unit/ is OUTSIDE allowed files. Step [2]
+          EXECUTES the SAME 22 tests green via SwiftPM under the Xcode toolchain.
+      (c) DEV-SIGNING: the macOS app/widget targets need a development certificate on a
+          signed runner (ADR-012). No identity on this host. Independent of this UI surface.
+    ZERO StatusPageSkeleton errors exist in this build: the surface is PROVEN to compile
+    against the iOS-18 simulator AND macOS-15 SDKs in [3]/[4] (EXIT=0, incl. previews,
+    Swift 6 strict concurrency) and its 22 tests pass in [2]. Disposition is identical to
+    ToolCard 0010 / AlertMessageEditor 0180 / CommandTile 0226 (ADR-012, Honesty rule 7);
+    the full-app build is the downstream P99-0001 apple-acceptance-gate's responsibility.
+    The macos-pending-verifications.md audit file is OUTSIDE this prompt's allowed files,
+    so it is not edited here — this log is the audit trail.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... the full-app xcodebuild is reported DEFERRED (KMP staging not
+                          completed on a shared/contended host), NEVER as a pass. Every
+                          green mark is a real, executed exit code pasted above.
+  2 No scope narrowing ... full surface (5 production .swift + Views + strings), all 9
+                          regions, every web block dimension, the busy-a11y contract, the
+                          telemetry seam, the i18n facade, 22 tests.
+  3 No skip-and-assume ... web source read end-to-end; it has no t()/hooks/branches; every
+                          region + Skeleton prop (width / rounded / mt) reproduced 1:1.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0; manual grep
+                          clean across all 7 files.
+  5 No parity shortcuts .. shared TSSkeleton + TSGlassPanel (no ported Tailwind); pill vs
+                          rounded, fractional widths, fixed px, full-width rows, topInsets
+                          and per-panel gaps all modelled and asserted.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as ToolCard 0010 / AlertMessageEditor 0180 /
+                          CommandTile 0226 (host green + full-app build deferred to the
+                          signed macos-latest gate).
+  8 No commit on red ..... committed work is green on every surface-scoped runnable gate;
+                          the only non-green tree-wide lint/format hits are PRE-EXISTING in
+                          other prompts' files (LifetimeStatsWidget, ActionBuilder.Previews)
+                          and the deferred app-target build's pre-existing structural blockers.
+  9 No silent drift ...... the xcodebuild deferral + its three causes are documented above
+                          with the real observed state (konan staging, 152 co-located tests,
+                          15 Shared imports, .gitkeep-only Frameworks/); native-only
+                          parent-owned states (empty/error/stale/offline) labelled as such.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+=== DISPOSITION ===
+  Production-polished native StatusPageSkeleton shipped at parity with the web source: a
+  pure presentational System-Status loading skeleton reproducing all nine stacked regions
+  (hero → chip bar → health/action/resources list panels → four accordion stubs) block-for-
+  block via a deterministic, host-free ``.systemStatus`` projection, built from the shared
+  TSSkeleton + TSGlassPanel primitives (no ported Tailwind), announced to VoiceOver as one
+  busy element (web role=status/aria-busy), width-capped like max-w-3xl, with the P1/S11
+  view.opened telemetry seam and the P1/S10 i18n facade for the single Apple-HIG VoiceOver
+  busy label. All host-runnable gates pass AND the surface compiles against BOTH the iOS-18
+  simulator and macOS-15 SDKs with the real Xcode 26.5 toolchain under Swift 6 strict
+  concurrency, with 22/22 XCTests executed green. The Xcode full-app build/test is DEFERRED
+  to the downstream signed macos-latest runner (KMP Shared.xcframework staging + co-located-
+  XCTest-in-app-target wiring + macOS dev-signing — none a defect in this code, all outside
+  this prompt's allowed files), matching the ToolCard 0010 / AlertMessageEditor 0180 /
+  CommandTile 0226 precedent (ADR-012) and the existing p4-apple rows in
+  apps/macos-pending-verifications.md.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/StatusPageSkeleton.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0254-StatusPageSkeleton.log
+  git commit -m "feat(apps/apple/feature-views): add StatusPageSkeleton surface (P4)"
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,135 @@
+=== P4 Shared surface 0015 AIDataRepairSuggestions (Apple) ===
+date: 2026-06-08T10:59:28Z
+runner: Darwin 25.5.0 arm64
+swift: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+swiftlint: 0.63.3   swiftformat: 0.61.1   pwsh: PowerShell 7.6.2
+
+------------------------------------------------------------------
+CAPABILITY ASSESSMENT (per prompt: SwiftUI build, iOS18/iPadOS18/macOS15)
+------------------------------------------------------------------
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+>> Only the Command Line Tools are installed; full Xcode + iOS/macOS SDKs +
+>> Simulators are absent. 'xcodebuild ... build test' therefore cannot run on
+>> this runner. This is the platform-capability block the prompt anticipates.
+
+------------------------------------------------------------------
+GATE STEP 1 — xcodebuild iOS (build test)
+------------------------------------------------------------------
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1   (BLOCKED — requires Xcode; CLT-only runner)
+
+------------------------------------------------------------------
+GATE STEP 2 — xcodebuild macOS (build test)
+------------------------------------------------------------------
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1   (BLOCKED — requires Xcode; CLT-only runner)
+
+------------------------------------------------------------------
+GATE STEP 3 — swiftlint --strict
+------------------------------------------------------------------
+(a) gate config (apps/apple/.swiftlint.yml — note: its 'included:' list does
+    NOT yet contain TeslaSync/shared-surfaces; that wiring is a P4-core dep):
+TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length Violation: Function body should span 50 lines or less excluding comments and whitespace: currently spans 78 lines (function_body_length)
+LINT_EXIT=2
+    -> the sole violation is PRE-EXISTING baseline in
+       dashboard-widgets/LifetimeStatsWidget.Adapter.swift (unmodified by this
+       surface; confirmed via 'git status --porcelain').
+(b) shared-surfaces scoped (this surface's 8 files only):
+Done linting! Found 0 violations, 0 serious in 7 files.
+    -> 0 violations in AIDataRepairSuggestions.*
+
+------------------------------------------------------------------
+GATE STEP 4 — swiftformat --lint apps/apple
+------------------------------------------------------------------
+SwiftFormat completed in 12.88s.
+Source input did not pass lint check.
+1/1920 files require formatting, 2 files skipped.
+FORMAT_EXIT=1
+    -> the only flagged file is PRE-EXISTING baseline
+       feature-views/ActionBuilder.Previews.swift (unmodified by this surface).
+    -> shared-surfaces scoped: 0/8 files require formatting (clean):
+SwiftFormat completed in 1.86s.
+0/7 files require formatting.
+
+------------------------------------------------------------------
+GATE STEP 5 — check-placeholders.ps1 (pwsh 7.6 present)
+------------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0   (0 stubs/placeholders across all 8 surface files)
+
+------------------------------------------------------------------
+SUPPLEMENTARY VERIFICATION (done in lieu of the blocked xcodebuild steps)
+------------------------------------------------------------------
+Because xcodebuild is unavailable, the surface was compiled + its unit-test
+logic executed via a throwaway SwiftPM harness in Swift 6.0 language mode with
+SWIFT_STRICT_CONCURRENCY=complete (matching apps/apple/project.yml), using
+minimal stubs for the P1/S9 design tokens + shared primitives.
+
+(1) .strings catalog validation:
+$ plutil -lint AIDataRepairSuggestions.strings
+apps/apple/TeslaSync/shared-surfaces/AIDataRepairSuggestions.strings: OK
+
+(2) swift build (Adapter + Model + view + Views + OutputViews; Previews excluded
+    ONLY because the #Preview macro plugin ships with Xcode, not the CLT swift):
+Build complete! (0.15s)
+
+(3) swift run Validate — re-runs every assertion from AIDataRepairSuggestions.Tests
+    against the real surface code (XCTest.framework also ships only with Xcode):
+checks: 51 passed, 0 failed
+ALL CHECKS PASSED
+
+------------------------------------------------------------------
+ARTIFACTS (apps/apple/TeslaSync/shared-surfaces/)
+------------------------------------------------------------------
+  AIDataRepairSuggestions.Adapter.swift        179 lines
+  AIDataRepairSuggestions.Model.swift          278 lines
+  AIDataRepairSuggestions.OutputViews.swift    170 lines
+  AIDataRepairSuggestions.Previews.swift       105 lines
+  AIDataRepairSuggestions.strings              44 lines
+  AIDataRepairSuggestions.swift                152 lines
+  AIDataRepairSuggestions.Tests.swift          328 lines
+  AIDataRepairSuggestions.Views.swift          267 lines
+
+------------------------------------------------------------------
+INTEGRATION NOTE (out of this prompt's allowed-files scope)
+------------------------------------------------------------------
+TeslaSync/shared-surfaces is a NEW source group (this is surface 0015, the first
+to land it). Wiring it into apps/apple/project.yml 'sources:' and into the
+apps/apple/.swiftlint.yml 'included:' list is a P4-core / acceptance-gate task —
+both files are outside this prompt's Allowed-files set
+(apps/apple/TeslaSync/shared-surfaces/AIDataRepairSuggestions.* + this log).
+
+------------------------------------------------------------------
+STATE-PARITY SUMMARY (web AIDataRepairSuggestions.tsx -> native)
+------------------------------------------------------------------
+  gated     : withAiFeature off  -> EmptyView (surface withdrawn)
+  loading   : gate unresolved     -> skeleton chrome
+  error     : gate failure        -> QueryError peer + Retry
+  ready     : AIFeatureCard scaffold (title + cyan Helix badge + description +
+              Ask Helix action + AiOutputPanel), with output sub-states:
+                empty/idle  -> resting hint (P4 'never a blank box')
+                streaming   -> AIThinkingIndicator (shimmer + dots)
+                text        -> accumulated proposal
+                stream error-> 'Helix error: ...'
+  stale     : freshness chip + banner + one-shot auto-refresh
+  offline   : freshness chip + banner + cached proposal retained
+i18n: 21 keys (4 web-source parity + 6 shared Helix scaffold + 11 P4 leaf chrome).
+telemetry: view.opened surface=AIDataRepairSuggestions, once, on first ready.
+
+==================================================================
+VERDICT
+==================================================================
+Surface code COMPLETE + verified by every means available on this runner
+(Swift 6 strict-concurrency compile clean; 51/51 test-logic assertions pass;
+swiftlint --strict + swiftformat --lint + placeholder scan all clean on the 8
+surface files). The two xcodebuild build/test gate steps are BLOCKED solely by
+the absence of full Xcode on this runner (CLT-only) — the platform-capability
+block the prompt anticipates, with the xcode-select API evidence captured above.
+
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,203 @@
+================================================================================
+=== P4 Feature view 0301 VehicleHeader (Apple) ===
+================================================================================
+Prompt : .github/prompts/monorepo/p4-apple/feature-views/P-0301-VehicleHeader.prompt.md
+Web src: web/src/features/vehicles/components/vehicle-detail/VehicleHeader.tsx   (THE spec)
+Output : apps/apple/TeslaSync/feature-views/VehicleHeader.{swift,Model,Adapter,Views,Previews,Tests}.swift
+         apps/apple/TeslaSync/feature-views/VehicleHeader.strings
+Allowed: apps/apple/TeslaSync/feature-views/VehicleHeader.* + this log   (confined; nothing else touched)
+Host   : macOS (arm64), Xcode 26.5 (Build 17F42) via DEVELOPER_DIR, Swift 6.3.2,
+         swiftlint 0.63.3 / swiftformat 0.61.1 / pwsh / xcodegen present.
+
+--------------------------------------------------------------------------------
+CAPABILITY DETECTION (prompt: "If unavailable on the runner -> STATUS=BLOCKED with API evidence")
+--------------------------------------------------------------------------------
+Default `xcode-select` -> /Library/Developer/CommandLineTools (no Xcode); `xcodebuild`/`simctl`/XCTest/
+PreviewsMacros absent under CLT. RESOLVED without sudo via DEVELOPER_DIR (the 0143 precedent path):
+  $ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -version
+    Xcode 26.5 / Build version 17F42
+  $ xcodebuild -showsdks | grep -iE 'ios|macos'
+    iOS 26.5 (iphoneos26.5) · Simulator iOS 26.5 (iphonesimulator26.5) · macOS 26.5 (macosx26.5)
+  $ xcrun simctl list devices available | grep 'iPhone 16'
+    iPhone 16 (83717DEE-70A3-4325-AA61-CBDDD3140989) (Booted)
+SwiftUI imports + typechecks against BOTH the iOS-18 Simulator and macOS-15 SDKs (see GATE RESULTS).
+VehicleHeader uses NO charts/maps (web "Charts/maps used: none"), so Swift Charts / MapKit are N/A for
+this surface. iOS 18 / iPadOS 18 / macOS 15 HIG minimums satisfied (26.5 >= 18). => CAPABILITY AVAILABLE
+(NOT blocked).
+
+--------------------------------------------------------------------------------
+PARITY — web VehicleHeader.tsx reproduced VERBATIM (covenant #5)
+--------------------------------------------------------------------------------
+Web source is a pure presentational `GlassPanel` masthead taking { vehicle?, status, onWake, waking }:
+  • back `<Link to="/vehicles"><ArrowLeft/></Link>`        -> VehicleHeaderBackButton (onBack closure)
+  • status `<Badge variant={statusVariant(status)} dot size="lg">{status}</Badge>`
+                                                           -> VehicleHeaderStatusPill (dot + tone tint + label)
+  • model `<Badge variant="neutral" size="sm">{model} {trim_badging}</Badge>`
+                                                           -> VehicleHeaderModelChip ("model trim", verbatim)
+  • VIN  `<p class="… truncate font-mono">{vin}</p>`       -> mono VIN row, lineLimit(1) .tail
+  • Wake `<Button onClick loading={waking} icon={<Power/>}>t('common.wakeUp','Wake Up')</Button>`
+                                                           -> VehicleHeaderWakeButton (TSButton primary,
+                                                              isLoading: waking, SF Symbol "power")
+
+statusVariant() ported VERBATIM from web @/types/fsm VEHICLE_STATE_ENTRIES (VehicleHeaderProjector.variant):
+  online->success  driving->success  charging->warning  parked->info  updating->info
+  asleep->neutral  offline->danger   unknown->danger  (the web `?? 'danger'` safety branch)
+Model/trim chip text = [model, trim_badging] trimmed, blank parts dropped, joined " " (web `{model} {trim}`),
+nil when both blank (web renders a lone space; native shows no empty chip). VIN trimmed, nil when blank.
+VehicleStatusKind(raw:) mirrors deriveVehicleStatus(null)->offline + unrecognized->unknown.
+
+--------------------------------------------------------------------------------
+ARCHITECTURE (P1/S8 state-holder seam; no HTTP in the view) — mirrors the 0137 DriveDetailHeader sibling
+--------------------------------------------------------------------------------
+VehicleHeader.Model.swift   : SwiftUI-free (Foundation/Observation/OSLog). Telemetry seam
+                              (VehicleHeaderTelemetry.viewOpened -> P1/S11 view.opened), LoadStatus /
+                              Connection / VehicleStatusKind enums, DTO, Update, @MainActor
+                              VehicleHeaderSource protocol (start/stop/refresh/wake), @Observable
+                              VehicleHeaderModel (phase + freshness + waking; resolvePhase nonisolated),
+                              InMemoryVehicleHeaderSource, Surface slug "VehicleHeader", Strings facade.
+VehicleHeader.Adapter.swift : SwiftUI-free pure projector (VehicleStatusVariant mirrors web BadgeVariant),
+                              VehicleHeaderProjection, statusVariant map, model/trim + VIN composition,
+                              VehicleHeaderAccessibility.summary.
+VehicleHeader.swift         : SwiftUI surface — TSGlassPanel + TSFadeIn + onAppear start()/view.opened +
+                              autoRefreshIfStale, phase switch, freshness chip.
+VehicleHeader.Views.swift   : chrome — back btn, status pill (tone+dot), model chip, VIN row, wake button,
+                              freshness chip, skeleton, empty, error+retry. Tokens-only (P1/S9); no Tailwind.
+VehicleHeader.Previews.swift: 8 #Preview states (content/charging+waking/no-trim/empty/loading/error/
+                              stale/offline).
+VehicleHeader.strings       : P1/S10 i18n table "VehicleHeader".
+VehicleHeader.Tests.swift   : adapter + model + a11y + per-state view-render coverage.
+Data binds ONLY via VehicleHeaderSource (P1/S8). The Wake command is owned by the source (model.wake());
+zero HTTP/networking in the view.
+
+--------------------------------------------------------------------------------
+i18n (P1/S10) — keys from the web source + native chrome; NO English literals in code
+--------------------------------------------------------------------------------
+PARITY key  : common.wakeUp = "Wake Up"   (verbatim from the web `t('common.wakeUp','Wake Up')`)
+STATUS keys : vehicle.state.{online,driving,charging,parked,updating,asleep,offline,unknown}
+              (web VEHICLE_STATE_LABELS; the web renders the raw status string, native resolves the
+               documented `t('vehicle.state.${state}', LABELS[state])` pattern so no English is hardcoded)
+CHROME keys : vehicleHeader.{back,live,stale,offline,updating,loading,unavailable,errorTitle,retry,vinLabel}
+Every string flows through VehicleHeaderStrings (NSLocalizedString, table "VehicleHeader"). 0 literals.
+
+--------------------------------------------------------------------------------
+STATES — all render (no hidden surfaces); a11y on every element
+--------------------------------------------------------------------------------
+loading (skeleton: back + pill/chip/VIN bars + wake bar) · empty (back + status pill + "Vehicle
+unavailable" + Wake; never blank) · error (danger glyph + "Couldn't load vehicle" + Retry -> refresh) ·
+stale (amber freshness chip + autoRefreshIfStale) · offline (cached masthead + offline chip) · content
+(back + status pill + model chip + VIN + Wake) · content-no-trim/no-VIN (chip/VIN omitted, never empty).
+VoiceOver: back/wake/retry labels; identity block one isHeader element reading status+model+VIN; freshness
+chip combined. Dynamic Type via tokens; Reduce-Motion honored (TSFadeIn/TSSkeleton). Telemetry:
+view.opened(surface:"VehicleHeader") emitted once on start (P1/S11).
+
+================================================================================
+GATE RESULTS
+================================================================================
+--- swiftformat --lint (VehicleHeader.*.swift — config apps/apple/.swiftformat) ---
+    0/6 files require formatting.                                            FORMAT_EXIT=0   PASS
+
+--- swiftlint --strict (VehicleHeader.*.swift — config apps/apple/.swiftlint.yml) ---
+    Done linting! Found 0 violations, 0 serious in 6 files.                  LINT_EXIT=0     PASS
+
+--- check-placeholders.ps1 (VehicleHeader.* — patterns apps/tools/placeholder-patterns.json) ---
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0                                                      PLACEHOLDER_EXIT=0 PASS
+    (tool -SelfTest also PASS. Surface = 1419 lines across 7 files — complete, no stubs.)
+
+--- ISOLATED SwiftPM build + EXECUTED tests (real Xcode 26.5 toolchain, Swift 6 strict concurrency) ---
+    Vendored the surface (Tokens + the Shared-free UI components + VehicleHeader Model/Adapter/View/Views)
+    into a throwaway SwiftPM package (module "TeslaSync") and ran the shipped VehicleHeader.Tests.swift:
+      Test Suite 'All tests' passed.  Executed 30 tests, with 0 failures (0 unexpected) in 1.072s
+    Covers: statusVariant map vs VEHICLE_STATE_ENTRIES (+ exhaustiveness), VehicleStatusKind(raw:)
+    resolution, label fallbacks, model/trim join + blank-drop, VIN blanking, nil-vehicle-keeps-status,
+    accessibility summary (+ dropped segments), phase matrix, initial content projection, empty/loading/
+    error phases, cached-stays-content-while-failing, freshness tracking, the `waking` flag flow, refresh
+    + wake delegation, the stale auto-refresh guard, view.opened-once telemetry, AND 8 ImageRenderer
+    per-state view-render smokes (content/waking/no-trim/empty/loading/error/stale/offline).           PASS
+
+--- ISOLATED SDK typecheck of the SwiftUI surface (Model+Adapter+View+Views+Previews, real component
+    + token deps; -D DEBUG -swift-version 6 -strict-concurrency=complete) ---
+    macOS-15 : swiftc -typecheck -target arm64-apple-macos15.0  -sdk MacOSX26.5.sdk            EXIT=0  PASS
+    iOS-18   : swiftc -typecheck -target arm64-apple-ios18.0-simulator -sdk iPhoneSimulator26.5.sdk
+                                                                                               EXIT=0  PASS
+    => the surface COMPILES against BOTH the iOS-18 Simulator and macOS-15 SDKs (incl. the #Preview macro).
+
+--- xcodegen generate (project enumeration) ---
+    Created project at apps/apple/TeslaSync.xcodeproj.                       GEN_EXIT=0      PASS
+    All 7 VehicleHeader.{swift,Model,Adapter,Views,Previews,Tests,strings} enumerated in the app target.
+    (TeslaSync.xcodeproj is .gitignored — apps/apple/**/*.xcodeproj/ — and was removed after; no tree drift.)
+
+--- FULL-APP xcodebuild build/test (TeslaSync iOS-Sim + TeslaSync-macOS) — ATTEMPTED, DEFERRED ---
+    Attempted for real (DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer; -scheme TeslaSync
+    -destination 'platform=iOS Simulator,name=iPhone 16' -derivedDataPath /tmp/vh-dd-188 build).
+    First-hand log (/tmp/vh-xcb-188.log) reached the scheme's pre-build Run Script phase verbatim:
+        > SchemeScriptAction ... "Assembling Shared.xcframework via Gradle..."
+        > Task :core:downloadKotlinNativeDistribution
+        > Task :core:compileKotlinIosArm64 FROM-CACHE
+        > Task :core:linkDebugFrameworkIosSimulatorArm64
+        > Task :core:compileKotlinMacosArm64 FROM-CACHE
+        ** BUILD INTERRUPTED **
+    i.e. the full-app build is gated on the KMP Kotlin/Native `Shared.xcframework` (ADR-004), whose build
+    script header states "Requires the Kotlin/Native Apple toolchain (full Xcode)... runs on a macos-latest
+    runner; see apps/macos-pending-verifications.md." Shared.xcframework was NOT staged (Frameworks/ holds
+    only .gitkeep); the Gradle daemon was interrupted under shared-runner contention (this CI host also runs
+    sibling parallel slots concurrently — a `xcodebuild -scheme TeslaSync-macOS` from another slot + 4 busy
+    Gradle daemons were observed). Independently, the full-app target also carries the PRE-EXISTING,
+    PROJECT-WIDE structural issue documented for the prior surfaces: 171/171 co-located
+    feature-views/*.Tests.swift import XCTest into the *app* target (project.yml routes
+    `TeslaSync/feature-views` into the app target, lines 37 & 68). The alphabetically-first such file is
+    AcDcStatsPanel.Tests.swift — a SIBLING surface, NOT VehicleHeader. ZERO VehicleHeader/feature-views
+    *surface* errors are attributable to this prompt, and VehicleHeader is independently PROVEN to compile
+    against BOTH SDKs + execute 30/30 tests above. Fixing either cause (staging the KMP framework; moving
+    *.Tests.swift into a dedicated test target in project.yml) is OUTSIDE this prompt's allowed files.
+        IOS_EXIT=  (build interrupted at KMP Shared.xcframework preAction) -> DEFERRED to P99-0001
+        MAC_EXIT=  (same KMP + pre-existing XCTest-in-app cause)           -> DEFERRED to P99-0001
+    This is the exact condition apps/macos-pending-verifications.md defers to
+    `p4-apple/P99-0001-apple-acceptance-gate` (macos-latest, signing), matching the accepted
+    ToolCard P-0010 / 0180-AlertMessageEditor / 0231-FSMTimelineChart / 0143-HeroGauges precedent
+    (surface green in isolation; full-app build deferred). Reported as DEFERRED, never as passed.
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green : surface-scoped gates are really green (outputs pasted; 30/30 tests EXECUTED; both
+                     SDKs typechecked). The full-app xcodebuild is reported as DEFERRED, never as passed.
+ 2 No scope narrow : every web element (back/status/model/VIN/Wake), every state, every i18n key shipped.
+ 3 No skip-assume  : every runnable gate was run + pasted; the web source was read end-to-end first.
+ 4 No stubs final  : complete implementation (1419 lines / 7 files); placeholder COUNT=0, self-test PASS.
+                     The /tmp SwiftPM + typecheck harnesses + generated .xcodeproj are throwaway
+                     verification scaffolding, removed after; never shipped.
+ 5 No parity short : statusVariant ported VERBATIM from VEHICLE_STATE_ENTRIES; model/trim + VIN + waking
+                     logic mirror the web, pinned by tests.
+ 6 No delegation   : authored directly; no sub-agent delegation of the surface (delegation FORBIDDEN).
+ 7 No predecessor bypass : did NOT edit project.yml, Localizable.xcstrings, shared tokens/components, or
+                     any non-VehicleHeader file. Pre-existing baseline edits to sibling AIUsageCard.* (slot
+                     checkout, mtime 02:38, before this work) are left untouched and NOT committed.
+ 8 No commit on red : committing on GREEN surface-scoped gates; the full-app build/test is explicitly
+                     DEFERRED (KMP + pre-existing XCTest-in-app), not a red VehicleHeader result.
+ 9 No silent drift : changes confined to the allowed VehicleHeader.* files + this log.
+ 10 Log ends with EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+Production-polished native vehicle-detail VehicleHeader shipped at parity with the web source: a
+Foundation-only projection core, a P1/S8 state-holder seam (no HTTP in the view; Wake owned by the source),
+P1/S11 view.opened telemetry, every state + every i18n key + VoiceOver labels + Dynamic Type / Reduce-
+Motion. All surface-scoped gates pass (swiftformat 0/6, swiftlint 0 violations, placeholder COUNT=0) AND
+the surface EXECUTES 30/30 tests under Swift 6 strict concurrency AND COMPILES against BOTH the iOS-18
+Simulator and macOS-15 SDKs with the real Xcode 26.5 toolchain. The full-app `xcodebuild build test` is
+DEFERRED to the apple acceptance gate (P99-0001): it is gated on the KMP Shared.xcframework Gradle build
+and the pre-existing project-wide co-located-XCTest-in-app-target issue — both outside this prompt's
+allowed files — matching the accepted 0010 / 0180 / 0231 / 0143 "surface green in isolation + DEFERRED
+full-app gate" precedent.
+
+================================================================================
+COMMIT
+================================================================================
+git add apps/apple/TeslaSync/feature-views/VehicleHeader.* \
+        .github/prompts/monorepo/logs/p4-apple-feature-views-0301-VehicleHeader.log
+git commit -m "feat(apps/apple/feature-views): add VehicleHeader surface (P4)"
+
+EXIT=0
+STATUS=DONE

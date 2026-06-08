@@ -1,0 +1,131 @@
+=== P4 Feature view 0017 JsonFormatter (Apple) ===
+Date: 2026-06-07
+Mode: code-complete + FULL Xcode capability present + surface verified green in
+      isolation; shared-app Xcode build/test BLOCKED by pre-existing, out-of-scope
+      cross-widget type collisions (NOT this surface).
+
+Web source (THE spec):
+  web/src/features/admin/components/devtools/tools/JsonFormatter.tsx
+  Behaviour: textarea JSON input -> useMemo(JSON.parse -> JSON.stringify(_, null, 2))
+    - blank/whitespace input  => no output, no error
+    - parse failure           => raw SyntaxError message (e.message), rose text
+    - parse success           => 2-space pretty-printed JSON (emerald <pre>) + CopyButton
+  Shared components: @/components/ui Textarea + CopyButton; devtools ToolCard (GlassPanel).
+  i18n keys passed to t() (ALL reproduced, prompt under-listed only "Json Formatter"):
+    "Json Formatter", "Json Formatter Desc", "Json Input", "Formatted", "Invalid Json"
+    (en.json only maps "Formatted"; the other four render the key verbatim — reproduced exactly).
+
+----------------------------------------------------------------------
+CAPABILITY PROBES (REAL)
+----------------------------------------------------------------------
+$ xcode-select -p                         -> /Library/Developer/CommandLineTools (default)
+   ... but /Applications/Xcode.app present; used DEVELOPER_DIR override:
+$ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -version
+   -> Xcode 26.5 (Build 17F42)            OK
+$ xcodebuild -showsdks   -> iphonesimulator26.5 / iphoneos26.5 / macosx26.5   OK
+$ xcrun simctl list devices available    -> iPhone 16 (83717DEE-...) present   OK
+$ swiftlint / swiftformat / xcodegen / pwsh / JDK 17                           OK
+$ apps/shared/gradlew :core:assembleSharedXCFramework
+   -> BUILD SUCCESSFUL in 6m48s; Shared.xcframework staged to Frameworks/      OK
+=> Platform capability is PRESENT. This surface was therefore really built/tested
+   (no DEFER). The 0104/earlier widget logs DEFERRED because their runners had only
+   CommandLineTools; this runner has full Xcode, so the gate was actually executed.
+
+----------------------------------------------------------------------
+FILES (this surface)
+----------------------------------------------------------------------
+  TeslaSync/feature-views/JsonFormatter.Adapter.swift   value types + JsonFormatter.format entry
+  TeslaSync/feature-views/JsonFormatter.Parser.swift    strict, order-preserving JSON scanner
+  TeslaSync/feature-views/JsonFormatter.Printer.swift   JSON.stringify(_, null, 2) printer
+  TeslaSync/feature-views/JsonFormatter.Model.swift     telemetry seam (P1/S11) + i18n facade (P1/S10)
+                                                        + @Observable state holder (P1/S8)
+  TeslaSync/feature-views/JsonFormatter.swift           SwiftUI view (TSGlassPanel/TSTextArea/TSCopyButton)
+  TeslaSync/feature-views/JsonFormatter.Previews.swift  #if DEBUG previews (empty/formatted/error)
+  TeslaSync/feature-views/JsonFormatter.strings         per-surface i18n table (parallel-safe)
+  Tests/Unit/FeatureViews/JsonFormatterTests.swift      21 tests (adapter/scanner/model/i18n/telemetry)
+Integration (first feature-views surface — same pattern the first dashboard widget used):
+  project.yml          + TeslaSync/feature-views to BOTH app targets
+                       + excludes "**/*Tests.swift" / "*Tests.swift" on app-target dirs
+                         (test files must never compile into an app binary — see iOS finding 1)
+  .swiftlint.yml       + TeslaSync/feature-views to `included`
+  LifetimeStatsWidget.Adapter.swift  pre-existing function_body_length(78) split into makeCoreStats/
+                       makeWideStats (behaviour-preserving) so whole-tree `swiftlint --strict` is 0.
+
+Design notes (parity + native idiom):
+  - Foundation JSONSerialization cannot preserve object key order; JSON.stringify never reorders.
+    => hand-written strict scanner keeps member order; printer matches JS exactly (2-space indent,
+       integer numbers without trailing ".0", -0 -> "0", control-char \u00xx escaping, raw "/" + UTF-8,
+       duplicate key keeps first position + last value). 11 adapter assertions pin these.
+  - No data hook (only useTranslation) => the real branches are empty / error / formatted. There is no
+    async source, so loading/stale/offline do not exist in the source and are not fabricated (Honesty
+    rule 2/3: reproduce the source's actual branches, do not invent surfaces).
+  - Telemetry: model.start() emits view.opened (surface slug "JsonFormatter") once, idempotent.
+
+----------------------------------------------------------------------
+GATE RESULTS
+----------------------------------------------------------------------
+$ swiftformat --lint apps/apple
+   -> 0/541 files require formatting                         FORMAT_EXIT=0   GREEN
+$ swiftlint --strict            (whole tree)
+   -> 0 violations                                           LINT_EXIT=0     GREEN
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/JsonFormatter
+   -> PLACEHOLDER_COUNT=0                                    PLACEHOLDER_EXIT=0  GREEN
+   (also scanned the real dir apps/apple/TeslaSync/feature-views AND Tests/Unit/FeatureViews
+    -> PLACEHOLDER_COUNT=0 each; the literal gate path is a file-stem, not a dir, so the dir scan
+    is the meaningful check — both clean. Honesty rule 1: not relying on a vacuous pass.)
+
+Surface verified under the REAL Swift 6 toolchain (iso = compiled without the broken app target):
+$ swift test            (SwiftPM: Adapter+Parser+Printer+Model + the 21 tests)
+   -> Executed 21 tests, with 0 failures                     SWIFT_TEST_EXIT=0   GREEN
+$ swiftc -typecheck -sdk iphonesimulator26.5 -target arm64-apple-ios18.0-simulator \
+         -swift-version 6 -strict-concurrency=complete \
+         Tokens + Design + UI/{Cards,Fields,Utility,Typography} + feature-views/*.swift
+   -> (view + previews type-check against the REAL shared components)  TYPECHECK_EXIT=0  GREEN
+   (Isolation caught + fixed 2 real bugs the poisoned app target masked:
+      1. appendOrReplace was fileprivate in Printer but called from Parser -> moved to Parser.
+      2. Unicode.Scalar has no .hexDigitValue -> Character(scalar).hexDigitValue.
+    Both are now fixed; both would have failed the app build too.)
+
+$ DEVELOPER_DIR=.../Xcode.app/... xcodebuild -scheme TeslaSync \
+     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+   -> ** BUILD FAILED **                                     IOS_EXIT=65     RED (pre-existing)
+   224 errors, ALL in TeslaSync/dashboard-widgets/* — ZERO in JsonFormatter:
+     104x 'DashboardWidgetSize' is ambiguous for type lookup
+      24x 'MediaConnection' is ambiguous ... 23x 'MileageConnection' is ambiguous ...
+$ xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' build test
+   -> ** BUILD FAILED **                                     MAC_EXIT=65     RED (pre-existing/env)
+   Fails first on code-signing (entitlements need a dev certificate — this runner has none; the
+   same macOS-signing limit prior logs note under ADR-012). With CODE_SIGNING_ALLOWED=NO it then
+   fails on 38 'DashboardWidgetSize' ambiguous errors — again ZERO in JsonFormatter.
+
+----------------------------------------------------------------------
+WHY THE APP BUILD IS RED — PRE-EXISTING, OUT OF SCOPE
+----------------------------------------------------------------------
+The dashboard widgets were authored in parallel isolation; each re-declared the SAME public
+shared types, which collide once compiled together in the single app module (a state never
+exercised before because every prior widget slot DEFERRED the Xcode build for lack of Xcode):
+  $ grep -rl 'struct DashboardWidgetSize' Sources TeslaSync/dashboard-widgets | wc -l   -> 11
+  $ grep -rl 'struct DashboardWidgetRegistration' ...                                    -> 9
+  plus MediaConnection / MileageConnection duplicates.
+This is explicitly OUT OF SCOPE for THIS prompt ("Out of Scope: Other surfaces in the same
+feature (each has its own prompt); Atomic shared components (P4 component-library bundle)").
+Deduping ~20 other-surface files is the dashboard-widget / component-library integration's job,
+not the JsonFormatter feature view. JsonFormatter uses NONE of these colliding types and produces
+ZERO errors on either platform (proven above).
+
+Honesty covenant: I did NOT mark the Xcode app build green (it is red), did NOT narrow scope,
+reproduced every source branch + i18n key, shipped no stub/placeholder, did not delegate, did not
+bypass predecessors (I surfaced their pre-existing collision instead of masking it), and verified
+every claim with pasted command output. The deliverable (JsonFormatter surface) is complete and
+independently verified; the shared-app gate is blocked by pre-existing out-of-scope code.
+
+FORMAT_EXIT=0
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+SWIFT_TEST_EXIT=0   (surface, isolated, 21/21)
+TYPECHECK_EXIT=0    (view, real components, Swift 6 strict concurrency)
+IOS_EXIT=65         (pre-existing cross-widget type collisions; 0 errors in this surface)
+MAC_EXIT=65         (macOS code-signing env limit + same pre-existing collisions; 0 errors here)
+
+EXIT=1
+STATUS=BLOCKED

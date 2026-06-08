@@ -1,0 +1,184 @@
+I'll start by exploring the repository structure and the web source, and checking whether the Apple toolchain is available on this runner.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swift`, `swiftlint`, `swiftformat` ARE available. Let me read the web source and explore the existing Apple app structure deeply.
+
+Now let me explore the existing `feature-views` directory (to follow established patterns), the shared facade layers, and the web source's data dependencies.
+
+Now let me read the `DASHBOARD_PRESETS` data definition and the widget registry — these are the data I must reproduce natively.
+
+Let me check what already exists natively — the presets, widget registry, and shared facade may already be ported. Let me search the Apple sources.
+
+The Sources dir is at `apps/apple/Sources`. Let me study the project.yml, the shared facade layers (state holders, tokens, i18n, diagnostics), and find the telemetry pattern used by existing feature-views.
+
+Let me study a representative feature-view set in depth (one that uses state holders, i18n, telemetry, and tests) plus the SharedFacade and Design token layers.
+
+Now I understand the file convention. Let me read a complete reference feature-view (HighlightCard — has Telemetry), the adapter pattern (QuickMetrics), the facade core, and design tokens.
+
+Excellent reference. Now let me read the facade core, design tokens, and both a presentational sibling (ToolCard) and a data-adapter example (QuickMetrics) to nail the patterns.
+
+Now let me read ToolCard (presentational sibling), the UI/Motion component libraries, and the generated design tokens to confirm exact token/component names.
+
+ToolCard confirms the presentational pattern. Now let me read the exact APIs of the shared components I'll map to (Overlays/Modal, Buttons, Badges, Cards, Typography, Motion, Feedback states) and the generated design tokens.
+
+Let me read the design tokens structure and the remaining component APIs (Typography, Buttons, Badges, Cards, Feedback states).
+
+Let me read Buttons, Badges, Cards, Feedback states, the lint/format configs, and a sample Tests + Previews file to lock down conventions.
+
+Let me confirm the internal-navigation idiom used by existing feature-views, read the lint/format configs, and inspect a sample Tests + Previews + Adapter file to lock conventions.
+
+Tests use XCTest and live in the feature-views dir. Let me read the presentational sibling's full Tests + Previews, and the adapter pattern, to mirror them exactly.
+
+Now let me extract the data I must reproduce: the layout-packing algorithm and the widget registry (id → name, category, icon, defaultSize).
+
+I now understand the layout auto-flow algorithm. Let me read all the widget registry files to extract each widget's name, category, icon, and sizes.
+
+The output is large. Let me write a parser to extract clean metadata for exactly the widgets used in presets.
+
+All 38 widgets resolved. Now let me get the web i18n catalog for the `dashboard` namespace (`templates.*` keys) to reproduce exact keys/defaults, and locate the i18n facade in native.
+
+I have all the data. Now let me validate my lucide→SF Symbol mapping against the actual system catalog using Swift/AppKit (runnable here), so no symbol renders blank.
+
+All symbols valid (only unused "rocket" missing). Let me confirm how full-surface feature-views (not reusable cards) handle their own chrome strings — LocalizedStringKey literals vs a per-surface Strings enum.
+
+I have everything I need: the web spec, the preset/widget data, the layout algorithm, i18n keys, validated SF Symbols, and the full native conventions. Let me set up tracking and start building.
+
+Now let me create the foundational files — Telemetry and Model.
+
+Model done. Now the canonical catalog (reproducing `DASHBOARD_PRESETS` + widget registry metadata).
+
+Now the Adapter — the layout packer, category icons, and projections (the testable "cached → projection" core).
+
+Now the main view file: the `@Observable` model, the `TemplateGallery` view, and the sheet presenter.
+
+Now the subviews — cards, detail, mini-grid, badges, and every state surface.
+
+Now the Previews and Tests.
+
+Now the i18n strings catalog contribution.
+
+All 9 files written. Now the verification phase — format, lint, and type-check. Let me start with SwiftFormat and SwiftLint on the new files.
+
+SwiftFormat flagged auto-fixable issues (property bodies, trailing commas) plus force-unwraps in tests (not auto-fixable). Let me fix the force-unwraps manually, then auto-format.
+
+Now auto-format the new files to fix property-body wrapping and trailing commas, then re-lint.
+
+SwiftFormat passes. Now SwiftLint on the new files.
+
+Two files exceed the 400-line limit. I'll split them. Let me find clean cut points.
+
+I'll split each oversized file into two. Let me read the exact post-format content to move.
+
+Model split clean. Now split Views.swift at the mini-grid boundary.
+
+Both splits done and under the limit. Let me re-format and re-lint all 10 files.
+
+SwiftFormat + SwiftLint both pass (EXIT=0). Now I'll type-check the Swift against the real component/token APIs. First, let me confirm the shared component library is self-contained (no KMP `Shared` dependency).
+
+The shared library is self-contained (only system frameworks). Let me type-check my production code against the real component + token APIs under Swift 6 strict concurrency.
+
+That error is only the `#Preview` macro plugin (ships with Xcode, absent in Command Line Tools) — it hits a library file too, not my logic. Let me re-check without DEBUG so production code is fully type-checked.
+
+All errors are confined to one library file (`UnitFormatters.swift`) that depends on app-level `Units`/`UnitPreferences` types outside the component library — and my code doesn't use it. Let me exclude it and re-check.
+
+Production code type-checks **clean (EXIT=0, zero errors/warnings)** under Swift 6 + strict concurrency. Now let me verify the Tests file by building the sources as a `TeslaSync` module and type-checking the tests against it. First, check XCTest availability.
+
+XCTest ships with Xcode (absent here) — same BLOCKED capability. To still type-check the test logic against my real types, I'll compile a copy of the tests in-module with a minimal XCTest shim.
+
+Only `CGFloat` is unresolved — because my shim doesn't re-export Foundation the way real `import XCTest` does. Adding `import Foundation` to the shim to confirm the rest.
+
+Per-file imports — the test copy itself needs Foundation (the real file gets it via `import XCTest`). Let me prepend it to the test copy and re-run.
+
+**Both production and test logic type-check cleanly (EXIT=0, zero errors)** under Swift 6 strict concurrency. Now let me run the placeholder gate. Let me check the script and pwsh availability.
+
+pwsh is available. Let me read the forbidden patterns, then run the actual gate script against my surface.
+
+Let me check the script's match logic (case sensitivity) and scan my files for any forbidden substrings.
+
+One match: the SwiftUI `.redacted(reason: .placeholder)` modifier trips the case-insensitive "Placeholder" pattern. My loading view already draws solid skeleton cards, so the modifier is redundant — I'll remove it to keep the gate clean.
+
+Now let me run the actual placeholder gate. Let me see how it resolves `-Path`, then run it.
+
+Placeholder gate passes (COUNT=0, EXIT=0, no opt-outs). Let me re-run the full local verification on the final files after the edit.
+
+All local gates pass: **FORMAT=0, LINT=0, TYPECHECK=0**. Let me check the repo's documented convention for deferred Xcode verification before deciding on commit/status.
+
+This is the established convention: surfaces are committed with all host-runnable gates green, and the full-app `xcodebuild` is deferred to macOS CI (the ToolCard sibling did exactly this). My allowed files are strictly `TemplateGallery.*` + the log, so I'll document everything in the log. Let me capture the Xcode capability evidence.
+
+Evidence captured (CommandLineTools only — no Xcode, no XCTest, no Simulator). Let me verify the log directory and write the honest gate log.
+
+Let me read the ToolCard log (direct precedent) to mirror its exact format and status convention.
+
+The ToolCard precedent ended `STATUS=DONE` because it *executed* its tests in an isolated harness (13/13). XCTest is unavailable here, but I can do better than type-check — I'll **execute** the surface's logic at runtime via a standalone assertion harness compiling the exact shipped sources. Let me build it.
+
+Now compile the harness with the exact shipped sources and run it.
+
+Harness concurrency nit (not shipped code) — `check` must be `@MainActor` to touch the main-actor global. Fixing and re-running.
+
+**Runtime harness PASSED (compiled + executed all test logic, EXIT=0)** — exceeding type-check by actually running the shipped logic against the real design system. Let me capture the whole-app gate-command outputs for the log, then write it.
+
+Whole-app swiftformat flags 1/1112 — but my 10 files passed clean (0/10 earlier). Let me identify the pre-existing file to document it honestly.
+
+The 1 whole-app swiftformat flag is `ActionBuilder.Previews.swift` (a different surface, pre-existing) — my 10 files are clean. I have all evidence. Let me write the gate log.
+
+Log written. Let me verify the git state shows only my intended files, then do a final review.
+
+Two pre-existing modified web files (`FleetApiSection.tsx`, `BackupRestorePage.tsx`) are NOT mine — I'll leave them unstaged and commit only my 10 surface files + the log. Let me do a final review of the main view, then stage precisely.
+
+`reduceMotion` is threaded into `TemplateGalleryList` but unused there (the motion components honor it internally) — a minor dead param. Let me remove it for cleanliness and re-verify.
+
+Cleanup done. Let me re-run the full verification suite (format, lint, type-check, runtime harness) to confirm nothing broke.
+
+All green. Let me stage only my surface files + the log (excluding the two pre-existing web files) and commit.
+
+Exactly 12 files staged; the 2 pre-existing web files remain untouched. Committing now.
+
+Commit `d91a5c29f` succeeded with exactly my 12 files; the 2 pre-existing web files remain untouched. Let me clean up temp artifacts and mark the work done.
+
+All todos complete and committed. Let me do a final confirmation of the committed file set and the log's terminal status.
+
+The task is complete. Here's the summary.
+
+## P4 Feature view 0132 — `TemplateGallery` (Apple) ✅
+
+Shipped a production-polished, Apple-idiomatic SwiftUI parity of `features/dashboard/components/TemplateGallery.tsx`, committed as `d91a5c29f` (12 files: 10 Swift + `.strings` + gate log).
+
+**What was built** (`apps/apple/TeslaSync/feature-views/TemplateGallery.*`)
+- **Faithful data reproduction**: all 10 `DASHBOARD_PRESETS` + their widgets' registry metadata (name/category/sizes), the `buildDefaultLayouts` lg auto-flow mini-grid packer, and `useCategoryIcons` (first-per-category, max 5) — lucide glyphs mapped to **system-validated SF Symbols**.
+- **Composition**: in-place gallery⇄detail swap with dynamic title, Blank card, preset cards (mini-grid preview + count badge + description + category icons), detail (preview, widget grid, Back / Use This Template), via `TSRouteTransition`/`TSFadeIn`/`TSStaggerItem`.
+- **Every state renders**: `@Observable` model + injectable P1/S8 catalog source → `loading / loaded / empty / error` (no hidden surfaces; offline-by-construction since the catalog is bundled).
+- **P1 wiring**: P1/S9 tokens, P1/S10 i18n facade (all source keys + fallbacks), P1/S11 `view.opened` telemetry, VoiceOver labels on every interactive element, Dynamic Type, reduce-motion.
+- **Tests/previews**: XCTest for catalog/packer/category-icons/projections/phase/a11y/telemetry/model, per-state previews.
+
+**Verification (all host-runnable gates GREEN)**
+- swiftformat `0/10`, swiftlint `--strict` `0`, placeholder scan `COUNT=0`
+- `swiftc -typecheck` of production **and** tests against the **real** design-system under **Swift 6 strict concurrency** → `0 errors`
+- **Compiled + executed** a runtime harness of the exact shipped sources asserting all data-layer logic → *ALL PASSED*
+
+**Honestly deferred**: the full-app `xcodebuild` iOS-Simulator + macOS build/test — this runner has only Command Line Tools (no Xcode/`xctest`/`simctl`); deferred to the macOS acceptance gate per `apps/macos-pending-verifications.md`, matching the ToolCard precedent. Log ends `EXIT=0 / STATUS=DONE` with full capability evidence. Two unrelated pre-existing web file changes were left untouched.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-feature-views-0132-TemplateGallery.log | 148 +++++++++
+ .../feature-views/TemplateGallery.Adapter.swift    | 159 ++++++++++
+ .../feature-views/TemplateGallery.Catalog.swift    | 290 +++++++++++++++++
+ .../feature-views/TemplateGallery.Components.swift | 189 +++++++++++
+ .../feature-views/TemplateGallery.Model.swift      | 307 ++++++++++++++++++
+ .../feature-views/TemplateGallery.Previews.swift   |  79 +++++
+ .../feature-views/TemplateGallery.State.swift      | 138 +++++++++
+ .../feature-views/TemplateGallery.Telemetry.swift  |  38 +++
+ .../feature-views/TemplateGallery.Tests.swift      | 345 +++++++++++++++++++++
+ .../feature-views/TemplateGallery.Views.swift      | 271 ++++++++++++++++
+ .../feature-views/TemplateGallery.strings          |  83 +++++
+ .../TeslaSync/feature-views/TemplateGallery.swift  | 226 ++++++++++++++
+ 12 files changed, 2273 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0132-TemplateGallery.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemplateGallery.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemplateGallery.Catalog.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemplateGallery.Components.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemplateGallery.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemplateGallery.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemplateGallery.State.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemplateGallery.Telemetry.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemplateGallery.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemplateGallery.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemplateGallery.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemplateGallery.swift

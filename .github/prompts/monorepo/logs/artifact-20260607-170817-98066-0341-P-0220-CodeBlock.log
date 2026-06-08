@@ -1,0 +1,158 @@
+=== P4 Feature view 0220 CodeBlock (Apple) ===
+Surface : CodeBlock  (apps/apple/TeslaSync/feature-views/CodeBlock.*)
+Web src : web/src/features/system/components/chatbot/CodeBlock.tsx
+Runner  : macOS 26.5.1 · Xcode 26.5 (17F42) · Swift 6.3.2 · iPhone 16 simulator (booted)
+Tools   : swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen · pwsh 7
+Note    : xcodebuild steps are run with the repo's canonical CI flags
+          (ENABLE_TESTING_SEARCH_PATHS=YES CODE_SIGNING_ALLOWED=NO) because every
+          feature-view `*.Tests.swift` is co-compiled into the TeslaSync /
+          TeslaSync-macOS application targets by project.yml (verified in the
+          generated .pbxproj). Without the testing search paths the app target
+          cannot resolve XCTest. A dedicated -derivedDataPath is used to avoid
+          colliding with the concurrently-running CI harness in this slot.
+
+================================================================================
+PART A — THIS SURFACE (CodeBlock) — all scoped checks PASS
+================================================================================
+
+Files shipped (7):
+  CodeBlock.swift            main view (state switch: code panel / empty)
+  CodeBlock.Views.swift      header (language tag + TSCopyButton), body, empty
+  CodeBlock.Model.swift      @Observable state holder + P1/S10 i18n + P1/S11 telemetry
+  CodeBlock.Adapter.swift    pure projection (langLabel, children??text, a11y, slug)
+  CodeBlock.Previews.swift   #Preview per state (5)
+  CodeBlock.Tests.swift      adapter + model + a11y + per-state coverage tests
+  CodeBlock.strings          i18n catalog (table "CodeBlock")
+
+A1. swiftc -typecheck (production files + REAL design tokens + REAL TSCopyButton),
+    -sdk iphonesimulator26.5 -target arm64-apple-ios18.0-simulator:
+        Tokens.swift TSMaterial.swift Utility.swift
+        CodeBlock.Adapter/Model/Views/swift/Previews
+    => 0 errors, 0 warnings.  TYPECHECK_EXIT=0   PASS
+
+A2. swiftc -typecheck (CodeBlock.Tests.swift + production, XCTest overlay on path):
+    => 0 errors.  TESTS_TYPECHECK_EXIT=0   PASS
+
+A3. swiftlint --strict (the 6 CodeBlock .swift files, --no-cache):
+    "Found 0 violations, 0 serious in 6 files."   PASS
+
+A4. swiftformat --lint (the 6 CodeBlock .swift files):
+    "0/6 files require formatting."   PASS
+
+A5. check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/CodeBlock:
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    EXIT=0   PASS
+
+A6. CodeBlock errors inside the FULL iOS app build .............. 0
+    CodeBlock errors inside the FULL macOS app build ............ 0
+    (the only CodeBlock line emitted by xcodebuild is the benign
+     "file 'CodeBlock.Tests.swift' is part of module 'TeslaSync'; ignoring import"
+     self-import warning — identical to every other feature-view surface — plus
+     "CopyStringsFile … TeslaSync.app/CodeBlock.strings", i.e. the surface is
+     compiled and its strings are bundled successfully.)
+
+Acceptance criteria for THIS surface:
+  [x] All states from the web source reproduced (content / empty; language-hint
+      fallback "text"; children-override branch). The web source is a pure
+      presentational component with NO data source, so the data-driven states
+      (loading/error/stale/offline) have nothing to bind to and collapse to the
+      props-driven content/empty states — same treatment as the sibling
+      pure-presentational Base64Tool surface.
+  [x] No direct HTTP from the view (pure presentational; model owns props only).
+  [x] Every string resolves through the P1/S10 facade (CodeBlock.strings); no
+      English literals in code.
+  [x] Accessibility labels on the interactive element (TSCopyButton) and a
+      VoiceOver summary on the surface; Dynamic Type via relative monospaced
+      fonts; reduce-motion safe (no animations introduced).
+  [x] Tests: adapter unit test + model test + a11y label test + per-state
+      coverage test.
+  [x] No TODO / stub / mock / placeholder / Lorem in shipped code (A5).
+
+================================================================================
+PART B — WHOLE-APP GATE COMMANDS (as specified) — verbatim results
+================================================================================
+
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' \
+      ENABLE_TESTING_SEARCH_PATHS=YES CODE_SIGNING_ALLOWED=NO build test
+  ** TEST FAILED **  (Testing cancelled because the build failed.)
+  Total compile errors: 2600   |   errors in feature-views/CodeBlock.*: 0
+IOS_EXIT=65
+
+$ xcodebuild -scheme TeslaSync-macOS \
+      ENABLE_TESTING_SEARCH_PATHS=YES CODE_SIGNING_ALLOWED=NO build test
+  ** TEST FAILED **  (Testing cancelled because the build failed.)
+  Total compile errors: 2647   |   errors in feature-views/CodeBlock.*: 0
+MAC_EXIT=65
+
+$ swiftlint --strict            (whole app, --no-cache)
+  1 violation, 0 serious-in-CodeBlock:
+    dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: Function Body Length
+  errors in feature-views/CodeBlock.*: 0
+LINT_EXIT=2
+
+$ swiftformat --lint apps/apple  (whole app)
+  1/1564 files require formatting, 0 of them CodeBlock:
+    feature-views/ActionBuilder.Previews.swift:48:1: (blankLinesBetweenScopes)
+FORMAT_EXIT=1
+
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/CodeBlock
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+================================================================================
+PART C — ROOT CAUSE of the red build/lint/format (PRE-EXISTING, OUT OF SCOPE)
+================================================================================
+
+The TeslaSync / TeslaSync-macOS application targets do not compile in this slot
+because of PRE-EXISTING duplicate top-level type declarations committed by other
+P4 dashboard-widget / feature surfaces — NOT by this CodeBlock surface and NOT in
+any file this prompt is allowed to touch (allowed files: CodeBlock.*).
+
+  * `DashboardWidgetSize` is declared in 15 files:
+      Sources/DashboardWidgets/DrivetrainHealthWidgetModel.swift
+      Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift
+      TeslaSync/dashboard-widgets/{WallConnector,VehicleHero,MQTTStatus,Uptime
+        Monitor,TelemetryErrors,TirePressureHistory,MotorPerformance,MotorHistory,
+        DigitalTwin,OdometerCounter,OnboardingChecklist,WeeklyDigest,
+        WeeklySummaryCard}Widget.*.swift
+    => "Invalid redeclaration of 'DashboardWidgetSize'" + 189 "is ambiguous" uses.
+
+  * 35+ further types are likewise multiply-declared by the TelemetryErrorsPanel /
+    VehicleHeroWidget / SystemHealth* surfaces, e.g.:
+      DashboardWidgetRegistration, TelemetryErrorsModel, TelemetryErrorRow,
+      TelemetryErrorsProjection/Adapter/Format/Accessibility(+Tests),
+      VehicleHeroModel/Projection/Connection/Update/Source/Strings/StatusBadge,
+      InMemory{TelemetryErrors,VehicleHero}Source, OSLog*Telemetry,
+      DrivetrainHealthStatus, DrivetrainTemperatureUnit, SystemHealthData, …
+
+  Every one of the 2600 (iOS) / 2647 (macOS) compile errors traces to these
+  duplicate declarations and their ambiguous references (the only feature-views
+  files implicated are TelemetryErrorsPanel.* and TemperatureMetricCards.*, which
+  REFERENCE the ambiguous widget types). CodeBlock contributes 0 errors.
+
+  The 1 swiftlint and 1 swiftformat violations are likewise pre-existing and in
+  unrelated files (LifetimeStatsWidget.Adapter.swift, ActionBuilder.Previews.swift).
+
+These blockers are committed baseline defects of this slot, outside the
+allowed-files scope of this prompt, and cannot be repaired from within
+CodeBlock.* without violating the prompt's scope and the engineering guideline
+"don't fix unrelated pre-existing issues". They affect every surface's whole-app
+gate in this slot equally.
+
+================================================================================
+VERDICT
+================================================================================
+This surface (CodeBlock) is COMPLETE and CORRECT: it type-checks against the real
+iOS SDK + real shared sources, passes swiftlint --strict / swiftformat --lint /
+the placeholder gate, contributes zero errors to the full iOS and macOS app
+builds, and ships full parity (states, i18n, a11y, tests, previews).
+
+The whole-app build/test/lint/format gate is RED due solely to pre-existing,
+out-of-scope duplicate-declaration breakage in the dashboard-widgets surfaces
+(IOS_EXIT=65, MAC_EXIT=65, LINT_EXIT=2, FORMAT_EXIT=1, PLACEHOLDER_EXIT=0). Per
+the Honesty Covenant (no red-as-green), the gate is therefore reported BLOCKED
+rather than DONE.
+
+EXIT=1
+STATUS=BLOCKED

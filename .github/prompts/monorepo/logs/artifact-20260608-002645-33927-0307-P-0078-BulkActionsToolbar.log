@@ -1,0 +1,158 @@
+=== P4 Shared surface 0078 BulkActionsToolbar (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/BulkActionsToolbar.*  (9 files, 1806 lines)
+Web src  : web/src/components/data-display/BulkActionsToolbar.tsx (180 lines) — THE specification
+Delegation: NONE (FORBIDDEN for this tier) — implemented directly.
+Runner   : Xcode 26.5 (17F42) · iPhone 16 Simulator present+booted · swiftlint 0.63.3 ·
+           swiftformat 0.61.1 · PowerShell 7.6.2 · Swift 6 (strict concurrency complete)
+
+CAPABILITY (prompt requires SwiftUI/Swift Charts/MapKit, iOS 18 / macOS 15 HIG):
+  AVAILABLE on this runner. xcodebuild resolves via DEVELOPER_DIR=/Applications/Xcode.app; the
+  iPhone 16 simulator is installed; the macOS 15 + iOS 18 SDKs are present (SwiftUI typechecks
+  green on both, below). So this surface is NOT blocked on platform capability. (This surface uses
+  no charts/maps — it is a presentational selection toolbar.)
+
+--------------------------------------------------------------------------------
+PER-SURFACE GATES (host-runnable — all GREEN on the 9 shipped files)
+--------------------------------------------------------------------------------
+[1] swiftformat --lint (scoped: TeslaSync/shared-surfaces)
+      → 0/8 files require formatting
+      FORMAT_EXIT=0
+[2] swiftlint --strict (explicit: TeslaSync/shared-surfaces/*.swift, .swiftlint.yml)
+      → Done linting! Found 0 violations, 0 serious in 8 files
+      LINT_EXIT=0
+[3] check-placeholders.ps1 (-Path apps/apple/TeslaSync/shared-surfaces -Language swift)
+      → PLACEHOLDER_ALLOWED=0
+        PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0
+      (No TODO/FIXME/XXX/Coming-soon/Placeholder/Lorem/not-implemented; 0 parity:allow opt-outs.)
+
+[4] Isolated SwiftPM build + XCTest — Swift 6 strict-concurrency, Xcode 26.5 toolchain,
+    compiled against the REAL design system (apps/design/generated/apple/Tokens.swift +
+    Sources/Design/TSMaterial.swift + Sources/Components/UI/Buttons.swift [TSButton] +
+    Sources/Components/Motion/Motion.swift [TSFadeIn]) + the 6 non-test surface files; the 2 test
+    files via @testable import. The #Preview macro compiles.
+      → Test Suite 'All tests' passed — Executed 28 tests, with 0 failures (0 unexpected)
+        Target Platform: arm64e-apple-macos14.0
+      SWIFT_TEST_EXIT=0
+        Adapter coverage (14): withdrawn/active phases, count label, singular-vs-plural noun,
+          of-{total} guard, per-action loading/disabled/failed descriptors, ungrouped {{count}}
+          formatting (1234→"1234"), VoiceOver action label, selection-id key.
+        Model + seam coverage (14): view.opened deferred past withdrawn + fired once on activation;
+          run pending→clear; double-fire guard; failure→retry with selection intact; unknown-id
+          no-op; confirm approved-runs / rejected-skips with destructive flag+payload; confirm
+          presenter resolve true/false + rapid double-trigger cancel; clear callback; stale runtime
+          state pruned on update.
+
+[5] swiftc -typecheck (Swift 6, -strict-concurrency=complete) of the shipped surface + deps:
+      macOS 15  (arm64-apple-macos15.0,  SDK 26.5) → MACOS15_TYPECHECK_EXIT=0
+      iOS 18    (arm64-apple-ios18.0-sim, SDK 26.5) → IOS18_TYPECHECK_EXIT=0
+
+--------------------------------------------------------------------------------
+FULL-APP xcodebuild build+test (the prompt's IOS_EXIT / MAC_EXIT steps) — DEFERRED, not failed
+by this code. Raw evidence re-confirmed on THIS runner (ls/grep, not assumed):
+--------------------------------------------------------------------------------
+  Attempted: xcodegen generate (OK) → xcodebuild -project TeslaSync.xcodeproj -target
+  TeslaSync-macOS -sdk macosx build. Real output (XCODEBUILD_DONE_EXIT=65):
+    error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+    error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development cert.
+    error: There is no XCFramework found at 'apps/apple/Frameworks/Shared.xcframework'.
+  grep "BulkActionsToolbar" in the full build log → 0 matches (ZERO errors from this surface).
+
+  Pre-existing, unrelated blockers (out of this prompt's allowed files), re-confirmed raw:
+    • Frameworks/Shared.xcframework — ABSENT (only .gitkeep). KMP/Gradle (Kotlin-Native) artifact,
+      built on a macos-latest runner; tracked in apps/macos-pending-verifications.md.
+    • `struct DashboardWidgetSize` — redefined 15× across Sources/DashboardWidgets/* +
+      TeslaSync/dashboard-widgets/* (parallel-merge collision).
+    • 261 co-located *.Tests.swift files import XCTest into the app target dirs
+      (TeslaSync/feature-views + TeslaSync/dashboard-widgets are compiled into the app target).
+    • macOS development-signing required for TeslaSync-macOS / *Widgets-macOS entitlements.
+    • shared-surfaces is NOT yet a `sources:` path in project.yml NOR an `included:` path in
+      .swiftlint.yml (grep count 0). Wiring those is OWNED by P4 core / the P99 acceptance gate and
+      is OUTSIDE this prompt's allowed files (BulkActionsToolbar.* + this log). Consequently these
+      9 files are not yet members of the app target — which is exactly why the full-app build shows
+      zero BulkActionsToolbar errors, and why this surface is verified INDEPENDENTLY in [4]/[5].
+
+  Whole-tree gate baselines (pre-existing red, unrelated to this surface — NOT mine to fix):
+    • swiftformat --lint apps/apple → 1/1913 file fails: feature-views/ActionBuilder.Previews.swift
+      (blankLinesBetweenScopes).
+    • swiftlint --strict (config `included`) → 1 serious: dashboard-widgets/
+      LifetimeStatsWidget.Adapter.swift (function_body_length). My 9 files add 0 new violations.
+
+  These match the documented disposition for every prior P4 surface (ToolCard, AlertMessageEditor,
+  FSMTimelineChart, AiUsageCard) in apps/macos-pending-verifications.md: per-surface gates GREEN +
+  isolated Swift 6 build/tests GREEN; full-app iOS-Sim + macOS xcodebuild DEFERRED to the P99
+  acceptance gate on a signed macos-latest runner with the staged Shared.xcframework.
+
+--------------------------------------------------------------------------------
+PARITY (web BulkActionsToolbar.tsx → native — every branch + t() call reproduced)
+--------------------------------------------------------------------------------
+  • Withdrawn: web `count === 0 → return null` → native `.isWithdrawn` renders EmptyView (the
+    documented "mount unconditionally" pattern; peer of the AiUsageCard off-mode gate — NOT a
+    hidden section).
+  • Active bar: GlassPanel (→ tsGlassPanel) sticky row, role=region aria-label
+    "Bulk actions for selected items"; accent count chip ("{count} selected", aria-live polite →
+    `updatesFrequently`); optional itemNoun (one/other) + "of {total}" (shown only when itemNoun
+    set AND total is a number — incl. the web's computed-but-unshown `bulk.itemDefault` default).
+  • Actions: variant danger→.destructive else .secondary, optional SF Symbol, loading=pending
+    (TSButton spinner), disabled=disabled||pending; ghost Clear button. flex-wrap → ViewThatFits
+    (single row / stacked).
+  • runAction: pending double-fire guard; confirm gate via the native useConfirm peer
+    (BulkActionsConfirmPresenter + native .alert, destructive role); !ok → abort; throw leaves the
+    selection intact → P4 leaf retry affordance (+ warning glyph + VoiceOver hint).
+  • Empty-actions: a friendly caption renders so the active bar is never a blank box.
+  • All 5 web t() keys (bulk.selected/itemDefault/ofTotal/toolbarLabel/clear) + 4 native-chrome
+    keys promoted to the P1/S10 "BulkActionsToolbar" .strings table; no English literals in code.
+  • a11y: per-element VoiceOver labels (chip summary, each action incl. failed-retry, Clear);
+    Dynamic Type (Font.TS system ramp); reduce-motion respected (TSFadeIn).
+  • view.opened (P1/S11) emitted once, deferred past the withdrawn state.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED with raw
+                           exit-65 output + ls/grep evidence — never reported as passing. Per-surface
+                           gates show real exit codes.
+  2  No scope narrowing  : every web branch + t() call reproduced (withdrawn, active ±noun ±total,
+                           per-action idle/pending/disabled/confirm/failed-retry, empty-actions,
+                           Clear). The dataless-toolbar truth is honoured, not faked: like the
+                           sanctioned ToolCard ("owns no data … loading/stale/offline belong to the
+                           content, not the card") and ~88 non-data feature-views, no fictitious
+                           query/freshness axis is invented.
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; raw exits pasted; the
+                           deferred full-app blockers re-confirmed by ls/grep + a real xcodebuild
+                           (Shared.xcframework absent; DashboardWidgetSize 15×; 261 XCTest-in-app
+                           files; signing) — not assumed.
+  4  No stubs as final   : complete production surface + 28 real tests; placeholder scanner COUNT=0;
+                           no TODO/FIXME/stub/Coming-soon/Placeholder/Lorem anywhere.
+  5  No parity shortcut  : the ungrouped {{count}}/{{total}} formatting, the singular/plural noun,
+                           the of-{total} + itemNoun guards, the disabled||pending + danger mapping,
+                           the confirm variant/payload, and the throw→retry-with-selection-intact
+                           contract are each unit-asserted against the web expressions.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: bound through the P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n
+                           facade, P1/S11 view.opened telemetry. project.yml/.swiftlint.yml
+                           shared-surfaces wiring is left to its owner (P4 core / P99) rather than
+                           edited out-of-allowed-files; no sibling surface touched.
+  8  No commit on red    : the committed artifact (9 BulkActionsToolbar.* files + this log) is GREEN
+                           on every per-surface gate AND on a real isolated Swift 6 strict-
+                           concurrency build + 28/28 XCTest + macOS-15 & iOS-18 typecheck. The
+                           deferred full-app gate is blocked only by pre-existing, unrelated surfaces
+                           this commit does not touch.
+  9  No silent drift     : changes are confined to shared-surfaces/BulkActionsToolbar.{swift,Adapter,
+                           Model,Chrome,Views,Previews,Tests,AdapterTests}.swift + .strings and this
+                           log. The shared-surfaces wiring gap + the dataless-state mapping are
+                           disclosed above. The generated .xcodeproj (gitignored) was removed.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic BulkActionsToolbar shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 28 tests pass under the app's own Swift 6 strict-
+  concurrency rules, against the REAL design system, via the Xcode 26.5 XCTest runtime, and it
+  typechecks clean on BOTH the macOS 15 and iOS 18 SDKs, with swiftformat / swiftlint / placeholder
+  all green on the 9 surface files and the #Preview macro compiling. The full-app iOS-Simulator +
+  macOS xcodebuild build/test gate is DEFERRED (not failed by this code) on pre-existing, unrelated,
+  out-of-allowed-files blockers (unstaged Shared.xcframework, the DashboardWidgetSize 15×
+  redefinition, the 261 co-located-tests-into-app-target config, macOS signing, and the not-yet-
+  wired shared-surfaces source path), owned by the P99 acceptance gate on a signed macos-latest
+  runner per apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

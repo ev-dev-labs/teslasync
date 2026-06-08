@@ -1,0 +1,168 @@
+=== P4 Shared surface 0008 AIBatteryHealthForecastNarrative (Apple) ===
+Prompt: .github/prompts/monorepo/p4-apple/shared-surfaces/0008-AIBatteryHealthForecastNarrative
+Web source: web/src/components/ai/AIBatteryHealthForecastNarrative.tsx
+Native output: apps/apple/TeslaSync/shared-surfaces/AIBatteryHealthForecastNarrative.*
+Runner: Darwin (arm64), Swift 6.3.2, swiftlint 0.63.3, swiftformat 0.61.1, xcodegen 2.45.4
+
+--------------------------------------------------------------------------------
+0. RUNNER CAPABILITY (prompt: "If unavailable on the runner -> STATUS=BLOCKED with API evidence")
+--------------------------------------------------------------------------------
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+'/Library/Developer/CommandLineTools' is a command line tools instance        (exit 1)
+$ xcrun simctl ...
+xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+$ ls /Library/Developer/CommandLineTools/SDKs/
+  MacOSX.sdk  MacOSX15.4.sdk  MacOSX15.sdk  MacOSX26.5.sdk  MacOSX26.sdk   (NO iOS SDK)
+
+=> The gate's `xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16'
+   build test` and `xcodebuild -scheme TeslaSync-macOS build test` CANNOT run on this runner:
+   only Command Line Tools are installed (no Xcode.app), there is no iOS SDK, and there are no
+   iOS simulators. These steps are BLOCKED with the API evidence above.
+
+   Per the established methodology for P4-apple surfaces (see apps/macos-pending-verifications.md:
+   ToolCard / AlertMessageEditor / FSMTimelineChart), the surface itself is verified GREEN in
+   isolation on the host, and the full-app `xcodebuild build test` is deferred to the
+   `p4-apple/P99-0001-apple-acceptance-gate` macOS runner. An audit row is appended to
+   apps/macos-pending-verifications.md.
+
+--------------------------------------------------------------------------------
+1. SURFACE IMPLEMENTATION (no stubs, no skeleton-only)
+--------------------------------------------------------------------------------
+   AIBatteryHealthForecastNarrative.swift           200   (surface View: gate + AIFeatureCard peer)
+   AIBatteryHealthForecastNarrative.Model.swift     402   (P1/S8 source+streaming seams, @Observable
+                                                           model, P1/S10 i18n facade, P1/S11 telemetry,
+                                                           in-memory drivers)
+   AIBatteryHealthForecastNarrative.Projection.swift 58   (pure gate + canStart + leaf contract)
+   AIBatteryHealthForecastNarrative.Views.swift     189   (Helix badge, Ask-Helix button, thinking,
+                                                           AiOutputPanel peer, a11y seam)
+   AIBatteryHealthForecastNarrative.Chrome.swift    182   (freshness chip, refresh, banner, loading,
+                                                           context-error, empty hint)
+   AIBatteryHealthForecastNarrative.Previews.swift  126   (10 #Preview states)
+   AIBatteryHealthForecastNarrative.strings          43   (P1/S10 catalog: web parity keys verbatim)
+   AIBatteryHealthForecastNarrative.Tests.swift     254   (model/stream/telemetry/freshness XCTest)
+   AIBatteryHealthForecastNarrative.AdapterTests.swift 146 (projection/a11y/value-type XCTest)
+   --------------------------------------------------------------------------------------------
+   TOTAL 1600 lines (production 1031 + strings 43 + tests 400 + previews 126) reproducing the
+   96-line web InnerSection PLUS the scaffold it composes (AIFeatureCard 339, useAiStream 469,
+   AiOutputPanel 87, withAiFeature 60, AIBadge/AIThinkingIndicator).
+
+   States reproduced (every one renders — no hidden surface): gated (AI off -> nothing),
+   loading (skeleton), empty (no-vehicle hint + disabled Narrate), error (context retry),
+   ready (Narrate enabled) + stream lifecycle idle/streaming/done/error in the output panel
+   + orthogonal connection axis live/stale/offline (chip + banner + one-shot stale auto-refresh).
+
+   i18n: every string resolves through the P1/S10 facade. Web parity keys carried VERBATIM:
+   battery.aiNarrative.title / .description / .generateButton / .badge ; plus the composed
+   scaffold keys helix.askHelix / helix.thinking / helix.errorLabel / ai.common.errorUnknown.
+
+--------------------------------------------------------------------------------
+2. ISOLATED SwiftPM BUILD — Swift 6 strict concurrency, deployment target macOS 15
+--------------------------------------------------------------------------------
+   Package: module `TeslaSync` = real Tokens.swift (apps/design/generated/apple) + real
+   Buttons.swift + real Motion.swift + TSSkeleton shim + the 5 surface production files.
+   swift-tools 6.0, swiftLanguageModes [.v6], platforms [.macOS(.v15)].
+$ swift build
+   [12/12] Compiling TeslaSync AIBatteryHealthForecastNarrative.swift
+   Build complete! (3.46s)
+   RESULT: PASS — compiles clean under Swift 6 strict concurrency against the macOS SDK with a
+   macOS 15.0 deployment target. (The #Preview macro and the co-located XCTest files are built by
+   Xcode in the app/test targets; the #Preview plugin `PreviewsMacros` ships with full Xcode, not
+   CLT — the real shared Buttons.swift hits the identical limitation here, confirming it is an
+   environment artifact, not surface code.)
+
+--------------------------------------------------------------------------------
+3. TEST LOGIC EXECUTION — mirrors AIBatteryHealthForecastNarrative.Tests.swift + .AdapterTests.swift
+--------------------------------------------------------------------------------
+   XCTest and swift-testing are NOT bundled with Command Line Tools (both ship with Xcode), so the
+   shipped XCTest suites cannot be executed by `swift test` on this runner. To execute the EXACT
+   assertions the suites encode, a `Verify` executable imports `@testable import TeslaSync` and runs
+   every case (projection phases, a11y labels, value types, model wiring, the useAiStream lifecycle
+   peer — delta accumulation / done / error / double-submit guard / cancel / retry, telemetry
+   deferral past the gate, stale auto-refresh, offline no-refresh, stop/restart).
+$ swift run Verify
+   CHECKS=71 FAILURES=0
+   VERIFY_RESULT=PASS
+   RESULT: PASS — 71/71. The shipped XCTest files run unchanged in the TeslaSync(/-macOS) XCTest
+   targets on the macOS acceptance runner.
+
+--------------------------------------------------------------------------------
+4. macOS-15 SDK NOTE (@Observable macro / SDK pairing)
+--------------------------------------------------------------------------------
+   A direct `swiftc -typecheck -sdk MacOSX15.4.sdk` of any @Observable type fails with
+   "declaration name 'shouldNotifyObservers' is not covered by macro 'Observable'". Proven to be a
+   toolchain/SDK pairing quirk INDEPENDENT of the surface code with a 2-line probe:
+$ echo 'import Observation; @Observable final class Tiny { var n = 0 }' | swiftc -typecheck -sdk MacOSX15.4.sdk ...
+   error: declaration name 'shouldNotifyObservers' is not covered by macro 'Observable'   (exit 1)
+$ ... same 2 lines vs default SDK (26.5)
+   (exit 0)
+   The Swift 6.3 Observation macro emits a helper newer than the bundled 15.4 SDK expects. On the
+   full-Xcode acceptance runner the macro + SDK are version-matched. macOS-15 compatibility is
+   established by the SPM build above (platforms [.macOS(.v15)]; only APIs available since macOS
+   14/15 are used). swiftc -parse of the Previews file: exit 0 (syntax valid).
+
+--------------------------------------------------------------------------------
+5. swiftlint --strict
+--------------------------------------------------------------------------------
+$ swiftlint lint --strict --config apps/apple/.swiftlint.yml TeslaSync/shared-surfaces
+   shared-surfaces violations: 0
+   (The only repo-wide violation is PRE-EXISTING and unrelated:
+    dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length — outside scope.)
+   RESULT: PASS for the surface (0 violations, 0 opt-outs).
+
+--------------------------------------------------------------------------------
+6. swiftformat --lint
+--------------------------------------------------------------------------------
+$ swiftformat --lint apps/apple/TeslaSync/shared-surfaces
+   0/8 files require formatting.
+   RESULT: PASS (exit 0).
+
+--------------------------------------------------------------------------------
+7. PLACEHOLDER / STUB GATE
+--------------------------------------------------------------------------------
+$ pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces -Language swift
+   PLACEHOLDER_ALLOWED=0
+   PLACEHOLDER_COUNT=0
+   EXIT=0
+   RESULT: PASS — no TODO/stub/mock/placeholder/Lorem, 0 opt-outs.
+
+--------------------------------------------------------------------------------
+8. xcodegen generate (file enumeration)
+--------------------------------------------------------------------------------
+   Registered `TeslaSync/shared-surfaces` as a source group in both app targets (project.yml) and
+   in the linter include list (.swiftlint.yml) — the one-time integration a new source group needs
+   (the same way TeslaSync/feature-views is wired). The generated .xcodeproj is git-ignored.
+$ xcodegen generate
+   Created project at .../apps/apple/TeslaSync.xcodeproj                          (exit 0)
+   All 9 surface files enumerated: AIBatteryHealthForecastNarrative.{swift,Model,Projection,Views,
+   Chrome,Previews,Tests,AdapterTests}.swift + .strings.
+   RESULT: PASS.
+
+--------------------------------------------------------------------------------
+9. FULL-APP xcodebuild (gate steps) — BLOCKED (no Xcode / no iOS SDK / no simulators)
+--------------------------------------------------------------------------------
+   IOS_EXIT: blocked — xcodebuild requires Xcode (CLT-only runner; see section 0).
+   MAC_EXIT: blocked — xcodebuild requires Xcode (CLT-only runner; see section 0).
+   Deferred to p4-apple/P99-0001-apple-acceptance-gate (macos-latest). Audit row appended to
+   apps/macos-pending-verifications.md.
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+   Surface code-complete + parity-faithful. Host-runnable gates GREEN:
+     SwiftPM build (Swift 6, macOS 15 deploy) = PASS
+     Test-logic execution 71/71              = PASS
+     swiftlint --strict (surface)            = PASS (0)
+     swiftformat --lint                      = PASS (0/8)
+     placeholder gate                        = PASS (COUNT=0)
+     xcodegen generate enumeration           = PASS (9/9 files)
+     swiftc -parse Previews                  = PASS
+   BLOCKED (platform capability unavailable on this runner, API evidence in section 0):
+     xcodebuild iOS-Simulator build test     = BLOCKED (no Xcode / no iOS SDK / no simulators)
+     xcodebuild macOS build test             = BLOCKED (no Xcode)
+   These two are the deferred macOS-runner verifications (apps/macos-pending-verifications.md).
+
+EXIT=1
+STATUS=BLOCKED

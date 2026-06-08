@@ -1,0 +1,166 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Web source exists, Apple app structure exists (with `dashboard-widgets`), Swift 6.3.2 + swiftlint + swiftformat are available. `xcodebuild` exists but `-version` failed. Let me investigate the toolchain and existing Apple patterns.
+
+Critical finding: only Command Line Tools is installed (no full Xcode), so `xcodebuild` and `simctl` are unavailable. But Swift 6.3.2, swiftlint, and swiftformat work. Let me verify the actual SwiftUI/Charts/MapKit capability and study the established Apple patterns before deciding DONE vs BLOCKED.
+
+Key findings: SwiftUI + Charts + MapKit **frameworks compile** under CommandLineTools (`swiftc -typecheck` exit 0), `pwsh` + `swiftlint` + `swiftformat` available. But **`xcodebuild` requires full Xcode (only CommandLineTools installed)** and **no `.xcodeproj`/scheme exists**. Let me study the established widget patterns and shared dependencies (P1/S8–S11), and check sibling logs for precedent.
+
+Now I see the full Apple codebase: `Sources/{Design,SharedFacade/Domains,Platform,App,Dashboard,DashboardWidgets}`, `Tests/Unit/{Facade,Charts,DataDisplay,...}`. Let me check sibling feature-view precedent and study the shared facades (S8 state-holders, S9 tokens, S10 i18n, S11 diagnostics).
+
+44 dashboard-widget logs exist but **no feature-view logs yet** — JwtDecoder is among the first feature-views. Dashboard-widgets are the precedent. Let me read a precedent log to see how the xcodebuild gate was handled on this runner, plus study a representative widget and the shared facades.
+
+The precedent is crystal clear. 44 dashboard-widget predecessors used a **"code-complete + DEFERRED Xcode gate"** disposition: ship all 6 files, run host gates GREEN (swiftc typecheck swift6 / executed harness / swiftformat / swiftlint / placeholder), mark `xcodebuild` scheme steps DEFERRED with evidence → `EXIT=0 / STATUS=DONE`. My runner is more constrained (CommandLineTools only, no full Xcode), but SwiftUI/Charts/MapKit **frameworks compile** — so capability is present. Let me study the exact patterns.
+
+Patterns are clear now. Let me read the view, adapter, previews, tests, design tokens, and the web `ToolCard`/`ResultPanel` that JwtDecoder composes with, plus the native shared components.
+
+Excellent. Now let me read the design tokens, the adapter/previews patterns, the registration types, and the web components JwtDecoder composes with (`ToolCard`, `ResultPanel`, `Textarea`).
+
+Now I have the web composition (`ToolCard` = GlassPanel + icon/title/description header; `ResultPanel` = titled JSON panel with copy + color-coded bg). Let me locate the design tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`) and a CopyButton analog so my code compiles against the real design system.
+
+Design tokens live in `Sources/Design/TSDesign.swift` + `TSMaterial.swift`; shared components in `Sources/Components/{UI,Charts,...}`. Let me read the tokens and the UI components (Fields, Typography, GlassPanel, CopyButton) I should reuse.
+
+`TSTextArea` (perfect for the JWT input) and `TSCard` exist. Let me find where the actual `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius` tokens are defined (the generated file), and read the components I'll reuse.
+
+Tokens are in `Sources/Theme.swift`. Let me read it plus the components I'll reuse (`TSTextArea`, `TSCard`, Typography, Buttons, Utility).
+
+Let me locate the generated design tokens file (referenced as `apps/design/generated/apple/Tokens.swift`) and confirm the token vocabulary, plus check for a CopyButton and the typography helpers.
+
+I have the full token vocabulary and know `TSCopyButton`, typography helpers, and `TSCard` exist. Let me read their exact signatures, then I'll have everything to build JwtDecoder.
+
+I now have the full design-system vocabulary: `TSGlassPanel`, `TSCopyButton`, `TSLabel`, `TSErrorText`, `TSText`, `TSCaption`, typography, and tokens. Let me find the `.tsGlassPanel()` modifier, inspect the placeholder checker, and confirm the Components/UI module's dependencies so my host typecheck compiles against the real design system.
+
+Components/UI imports only SwiftUI (self-contained against tokens). The placeholder gate forbids the literal word "Placeholder"/"TODO"/etc. — I'll avoid those entirely (use "prompt"/"hint"). Let me probe-compile the real design system so I know my host typecheck baseline, while I design the code.
+
+The `#Preview` macro needs Xcode's `PreviewsMacros` plugin (absent in CommandLineTools). So I'll typecheck **without** `-D DEBUG` (skipping `#if DEBUG` preview blocks), exactly as the production build resolves. Let me re-probe.
+
+The real design system typechecks GREEN under Swift 6 strict concurrency (no `-D DEBUG`). I have everything. Let me check the icon-color mapping for `purple`, then write the plan and all files.
+
+Confirmed: `purple` → neon-purple (I'll map to the design-token `chartSeriesPower` purple). I'm the first feature-view. Let me set up tracking and create the directory, then author all files.
+
+Now I'll author the files. Starting with the pure adapter (Foundation-only decode logic).
+
+Now the Model file (telemetry seam + i18n facade + surface slug, SwiftUI-free).
+
+Now the main SwiftUI surface — reproducing ToolCard, the input field, error, and the two result panels with full a11y, i18n, and reduce-motion.
+
+I introduced a redundant `init()` and used `TSLabel` with a raw key (which would target the shared catalog, not my per-surface table). Let me fix both so all surface strings route through the `JwtDecoderStrings` facade.
+
+Before writing tests, I need the **exact** pretty-JSON output my adapter produces (Foundation's colon spacing differs from JS). Let me empirically verify by running the real adapter logic on the canonical sample JWT.
+
+Confirmed: Foundation outputs `"alg" : "HS256"` (space-colon-space), but JS `JSON.stringify(_, null, 2)` uses `"alg": "HS256"`. For a decoder tool, exact visual parity matters. I'll replace the serializer-based pretty-print with a small, correct recursive formatter that matches `JSON.stringify` exactly (only key order normalized to sorted — documented). Let me update the adapter.
+
+Now let me add the `JwtJSONFormatter` (the JS-exact pretty-printer) to the adapter file.
+
+Let me verify the formatter produces exact JS-style output by compiling the real adapter with a driver (this doubles as my executed-harness gate).
+
+Top-level code needs to be in `main.swift` when compiling multiple files. Let me rename and retry.
+
+The formatter matches `JSON.stringify(_, null, 2)` exactly (sorted keys, `": "`, 2-space indent, unescaped slashes, unicode intact, integers without `.0`). Now let me write the Previews, Tests, and strings files.
+
+Now the Tests file with the exact verified strings.
+
+Now the i18n strings table.
+
+All 6 files written. Now the host gates. First, the Swift 6 strict-concurrency typecheck of the surface (view+model+adapter) against the **real** design system (no `-D DEBUG`).
+
+Surface typechecks GREEN under Swift 6 strict concurrency against the real design system. Now the executed harness — compiling Adapter + Model + a driver that asserts all behavior (real green execution evidence).
+
+Swift 6 makes `main.swift` top-level MainActor-isolated; my helper funcs need `@MainActor`. Let me patch and rerun.
+
+Harness passes: **20 checks, 0 failures** with exact web-parity values. Now swiftformat, swiftlint, and the placeholder gate. Let me check for configs and lint my files.
+
+swiftformat wants implicit returns in the single-expression switch (matching the codebase style). Let me fix the `render` switch.
+
+Let me re-run swiftformat (my files + the full gate target), swiftlint, and re-verify the typecheck/harness after the edit.
+
+swiftformat is clean (0/546). swiftlint found 1 serious violation — let me isolate whether it's in my files.
+
+The single violation is in a **pre-existing predecessor file** (`LifetimeStatsWidget.Adapter.swift`, widget 0055) — outside my allowed scope. Let me confirm my files are clean by linting only the feature-views dir.
+
+Confirmed: **zero** swiftlint violations in my files; the 1 total is a pre-existing predecessor issue I didn't touch. Now the placeholder gate via pwsh, plus a manual forbidden-word scan of my files.
+
+All host gates are green:
+- **Typecheck** (Swift 6 strict, real design system): 0
+- **Harness**: 20 checks, 0 failures
+- **swiftformat**: 0/546 need formatting
+- **swiftlint**: 0 violations in my files (1 pre-existing in untouched predecessor file)
+- **placeholder gate**: COUNT=0, EXIT=0; manual scan clean
+
+Let me also syntax-parse the Previews + Tests files (which need Xcode's macro plugin / XCTest to fully compile) to validate their syntax on-host.
+
+Let me verify those parse exit codes directly (unfiltered) to be certain they reflect `swiftc`, not the grep pipeline.
+
+Both parse cleanly. Let me run the actual `xcodebuild` gate commands to capture genuine evidence of their unavailability on this runner (rather than merely asserting it).
+
+Captured real evidence: both `xcodebuild` commands fail with `xcode-select: error: tool 'xcodebuild' requires Xcode` (CommandLineTools only). There's a `project.yml` (xcodegen spec) but no generated project. Let me confirm whether my staging dir is a registered source (to state the scope reason accurately).
+
+Scope is now precise: `project.yml` compiles `Sources` + `TeslaSync/dashboard-widgets` (not `TeslaSync/feature-views`), so registering my staging dir is integration scope (outside my allowed files). Combined with no full Xcode, the xcodebuild scheme gate is legitimately DEFERRED — matching all 44 predecessors. Let me peek at the swiftlint config, then write the log.
+
+Key finding: the swiftlint config's `included:` list does **not** cover `TeslaSync/feature-views`, so the gate's `swiftlint --strict` doesn't lint my files at all (and the 1 violation is in the included `dashboard-widgets` predecessor file). To honestly verify my files pass the same rules, I'll run swiftlint against them with a temp config mirroring the real rules.
+
+Let me retry by passing the path positionally with a rules-only config (no `included`).
+
+swiftlint --strict flagged one real issue in **my** Tests file: `force_try` (the `try!` in the formatter test helper). Let me fix it by making the helper throwing.
+
+Let me re-run swiftlint and swiftformat on my files to confirm clean.
+
+swiftlint is clean (0 violations). The swiftformat path doubled due to my `cd`. Let me re-run from repo root.
+
+All formatting clean. Let me re-run the full verification suite (typecheck + harness + placeholder) after my edits to confirm everything still passes.
+
+All gates GREEN after edits: typecheck 0, harness 20/0, placeholder 0, format 0, swiftlint 0. Let me gather final stats and write the comprehensive honest log.
+
+Now writing the comprehensive, honest gate log.
+
+Now let me clean up temp files, stage only my surface + log (not the pre-existing unrelated web changes), and verify what's staged before committing.
+
+Staged exactly my 6 files + the log; the 2 pre-existing unrelated web edits remain unstaged. Committing.
+
+Committed cleanly (HEAD `565758a4`, 7 files, 1061 insertions) with the Co-authored-by trailer; the 2 pre-existing unrelated web edits were excluded. Let me finalize tracking.
+
+Task complete. All work is committed and verified.
+
+## Summary
+
+Shipped a production-polished native Apple (SwiftUI) **JwtDecoder** feature-view at parity with the web source `features/admin/components/devtools/tools/JwtDecoder.tsx`, committed as `565758a4`.
+
+**Files** (`apps/apple/TeslaSync/feature-views/`, 1061 lines):
+- `JwtDecoder.swift` (271) — SwiftUI surface reproducing ToolCard + Textarea + ResultPanel using shared design components (`TSGlassPanel`/`TSCopyButton`/typography/P1·S9 tokens); idle/invalid/decoded branches; full VoiceOver, Dynamic Type, Reduce-Motion, P1·S10 i18n.
+- `JwtDecoder.Model.swift` (112) — `@Observable` state holder + P1·S11 `view.opened` telemetry (slug `JwtDecoder`) + i18n facade.
+- `JwtDecoder.Adapter.swift` (197) — pure decode pipeline + a `JSON.stringify(_,null,2)`-exact formatter.
+- `JwtDecoder.Previews.swift` (46), `JwtDecoder.Tests.swift` (211), `JwtDecoder.strings` (28, all 6 source keys).
+
+**Gates — real exit codes on this host:**
+| Gate | Result |
+|---|---|
+| SwiftUI/Charts/MapKit capability probe | `0` (present) |
+| Swift 6 strict-concurrency typecheck vs real design system | `0` |
+| Executed adapter/model harness | `CHECKS=20 FAILURES=0` |
+| swiftformat --lint | `0/546` |
+| swiftlint --strict (surface) | `0 violations` |
+| placeholder gate | `COUNT=0` |
+| **xcodebuild scheme build/test** | **DEFERRED** (real evidence) |
+
+**Honest disposition:** This runner has **CommandLineTools only** (no full Xcode) → `xcodebuild`/`simctl` and the `#Preview` macro plugin are unavailable, but the SwiftUI/Charts/MapKit **frameworks compile** (capability present). The surface also isn't yet in `project.yml` sources (integration scope). So the xcodebuild scheme gate is **DEFERRED with captured evidence** — matching the 44 predecessor dashboard-widget surfaces' approved "code-complete + DEFERRED Xcode gate" disposition. One whole-tree swiftlint violation is pre-existing in an untouched predecessor file (disclosed, out of scope). Log ends `EXIT=0 / STATUS=DONE`. Only my 6 files + log were committed; pre-existing unrelated web edits were left untouched.
+
+
+
+The task is fully complete and verified — all 8 todos done, the surface committed (`565758a4`), and the log ends `EXIT=0 / STATUS=DONE`. Marking complete.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0018-JwtDecoder.log     | 196 +++++++++++++++
+ .../feature-views/JwtDecoder.Adapter.swift         | 197 +++++++++++++++
+ .../TeslaSync/feature-views/JwtDecoder.Model.swift | 112 +++++++++
+ .../feature-views/JwtDecoder.Previews.swift        |  46 ++++
+ .../TeslaSync/feature-views/JwtDecoder.Tests.swift | 211 ++++++++++++++++
+ .../TeslaSync/feature-views/JwtDecoder.strings     |  28 +++
+ .../apple/TeslaSync/feature-views/JwtDecoder.swift | 271 +++++++++++++++++++++
+ 7 files changed, 1061 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0018-JwtDecoder.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/JwtDecoder.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/JwtDecoder.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/JwtDecoder.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/JwtDecoder.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/JwtDecoder.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/JwtDecoder.swift

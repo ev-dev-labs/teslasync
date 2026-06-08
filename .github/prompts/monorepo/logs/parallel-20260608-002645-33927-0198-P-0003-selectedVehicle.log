@@ -1,0 +1,98 @@
+I'll start by exploring the repository structure, reading the web source, and checking tool availability for the Apple build.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me verify the toolchain situation thoroughly and read the source + existing patterns in parallel.
+
+Full Xcode exists at `/Applications/Xcode.app` (CLT is just the active selection). Let me verify it works via `DEVELOPER_DIR` and study the existing patterns and shared infra.
+
+Xcode 26.5 works via `DEVELOPER_DIR` (iOS 26.5 sim + macOS SDK, iPhone 16 booted). **Not blocked.** Now let me study the conventions: project.yml, shared infra (tokens/i18n/telemetry), the web test, and any existing SelectedVehicle native code.
+
+project.yml is at `apps/apple/project.yml`. Let me read it plus the design tokens and sibling prompt context.
+
+project.yml lives at `apps/apple/`. Note: `misc-surfaces/` is **not** a source path — I'll need to add it. Let me gather critical build facts in parallel: xcodegen, prebuilt framework, test wiring, design tokens, and pwsh.
+
+The repo is missing CI prerequisites (`Shared.xcframework`, build scripts, `Tests/Unit`) and no `.xcodeproj` exists — so a full `xcodebuild` may be blocked. Let me get ground truth and read the conventions I must mirror. Let me create a plan and read configs/tokens/examples in parallel.
+
+Configs are at `apps/apple/` level. Let me read them, the design tokens, and the remaining AIUsageCard files (Views/Adapter/Tests) to mirror exactly — while kicking off a ground-truth project generation in the background.
+
+Let me read the Adapter + Tests patterns, verify the design-token symbols I'll depend on, and kick off ground-truth project generation in the background.
+
+I have the full pattern. Let me confirm the exact token/motion symbols I'll depend on and check the existing `SelectedVehicle` reference, then write a plan.
+
+Tokens live at `apps/design/generated/apple/Tokens.swift` (sibling `apps/design`). Let me read it and check the existing `SelectedVehicle` reference.
+
+I have all conventions and tokens confirmed. Let me check the existing `useSelectedVehicle` projection in LayoutSwitcher to avoid type collisions, then write the plan.
+
+Let me read the placeholder patterns (to keep comments clean) and confirm whether there's a shared telemetry type to reuse.
+
+I now have a complete understanding. Let me set up the plan, directories, and todo tracking.
+
+Logs dir exists with sibling logs. Let me write the plan, then start implementing.
+
+Marking adapter in progress and writing the pure projection core.
+
+Now the Model — i18n, telemetry, persistence seam, the store, projection, and the binding model.
+
+Now the per-state subviews.
+
+Now the surface view with the Environment provider bridge.
+
+Now the strings catalog, a small test affordance in the Model, the previews, and the tests.
+
+Now the previews and the test suite.
+
+All 7 files written. Now the critical genuine-verification step: an isolated Swift 6 SwiftPM package that compiles the surface against the **real** design tokens and runs the XCTest suite. Let me build a reusable harness.
+
+The nested heredoc got tangled. Let me stop and redo cleanly.
+
+Now compile under Swift 6 strict concurrency.
+
+Library compiles clean under Swift 6 (incl. previews + real tokens). Now run the test suite.
+
+All 34 tests pass under Swift 6 against the real tokens. Now the static gates — swiftformat, swiftlint, and the placeholder check on my files.
+
+swiftformat wants auto-fixable changes (body wrapping + if-expression assignment). Let me apply them with swiftformat write, then re-verify.
+
+swiftformat clean. Let me verify the rewritten projection still reads correctly, then re-run build/test + swiftlint + placeholder.
+
+Projection rewrite is idiomatic. Let me re-verify the reformatted code compiles + tests pass, and run swiftlint + the placeholder gate in parallel.
+
+swiftlint linted the whole tree (config `included:`) and found 1 violation. I need to locate it — is it mine or pre-existing? Let me capture the exact location.
+
+The lone violation is **pre-existing** (`LifetimeStatsWidget.Adapter.swift`, not my scope). Let me lint only my files explicitly to confirm they're clean.
+
+My `Model.swift` is 474 lines, over the 400-line `file_length` limit (existing files comply). I'll split the cohesive persistence seam into `selectedVehicle.Persistence.swift` (consistent with the repo's multi-dotted-file pattern, still within the `selectedVehicle.*` allowance). Let me view the exact section boundaries.
+
+I'll extract the persistence seam into its own `selectedVehicle.Persistence.swift` (matches the repo's multi-dotted-file convention, still `selectedVehicle.*`).
+
+Now remove that section from Model.swift and update the harness to include the new file.
+
+Model.swift is now 330 lines. Let me add the new file to the harness and re-run all verifications.
+
+swiftformat and swiftlint both clean (0 violations, 7 files). Now re-run the isolated build+test with the split file.
+
+All genuine checks are green (build, 34 tests, swiftformat, swiftlint, placeholder). Now the ground-truth gate attempt. First confirm the generated project is git-ignored, then run xcodegen + xcodebuild to capture the real blocker.
+
+Project generates (git-ignored). Note `misc-surfaces` isn't in `project.yml` sources, and `Shared.xcframework`/build scripts are absent. Let me capture the real `xcodebuild` blocker.
+
+The full app build is grinding (likely compiling ~1900 files or stalling on the missing module). Let me keep waiting for the ground-truth result.
+
+This doomed full-app build isn't my deliverable and is consuming time. Let me stop it and capture the blocker evidence surgically instead.
+
+Blocker evidence is concrete and unambiguous. Let me add one more genuine proof — that the surface type-checks for the **iOS 18 simulator** target too (the gate's primary destination), against the real tokens.
+
+Excellent — iOS 18 simulator type-check passes too (exit 0). Comprehensive genuine evidence gathered. Let me clean up generated artifacts and check git status.
+
+Only my `misc-surfaces/` is untracked (the AIUsageCard changes are pre-existing from another slot — I'll leave them). Let me capture one fast, definitive proof of the app-build blocker (the missing KMP `Shared` module) with a real exit code for the log.
+
+Definitive: `import Shared` → "no such module 'Shared'" (exit 1), `Frameworks/` empty, 15 app files import it. The app target is unbuildable here regardless of my code. Now I'll write the honest gate log.
+
+Now a final consolidated verification pass to confirm nothing regressed, then commit.
+
+All final checks green (format 0, lint 0/7, placeholder 0, 34/34 tests). Let me stage only my files + the log (leaving the pre-existing AIUsageCard changes untouched) and commit.
+
+Staged set is exactly my 8 files + the log; pre-existing AIUsageCard changes remain unstaged. Committing now.
+
+Committed cleanly (9 files, 1666 insertions). Let me finalize: update tracking, clean the temp harness, and confirm the working tree.
+
+Done. Let me update the plan status to close out.
+

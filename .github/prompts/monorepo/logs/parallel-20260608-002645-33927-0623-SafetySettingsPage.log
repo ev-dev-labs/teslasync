@@ -1,0 +1,136 @@
+I'll start by exploring the repository structure and reading the key files to understand the task.
+
+Now let me understand the Apple app conventions. Let me look at existing pages, the project structure, and parity files.
+
+Let me investigate the build tooling, conventions, and find a representative existing feature-view to understand patterns.
+
+Let me study the closest analog (SecurityStatusCards) in full to learn the conventions.
+
+Now let me read the Views, Adapter, Previews of SecurityStatusCards and investigate navigation, localization, and design tokens.
+
+Let me check the build feasibility, localization setup, design tokens, and navigation.
+
+Key insight: full-app builds are a known macOS-pending item (pre-existing collisions); the established protocol verifies each surface in isolation. Let me find the shared components, charts, navigation, and isolated-build harness.
+
+Let me read the design tokens, key components, and navigation files in parallel.
+
+Let me find the SI converters, chart palette, DataTable, and navigation registration.
+
+The DriveStatCards surface is the ideal template (stat cards + SI units + pure math). Let me read its remaining files plus the unit math, palette, and DataTable.
+
+I have a thorough understanding of the conventions now. Let me read the lint configs, DataTable API, and placeholder patterns before writing code.
+
+I now have enough understanding. Let me set up a plan, todos, and check the component dependency closure for the isolated build harness.
+
+`xcodebuild` needs full Xcode but only Command Line Tools are active. Let me check whether a full Xcode exists anywhere before concluding.
+
+A full Xcode exists at `/Applications/Xcode.app` (just not selected) — matching the macos-pending verification commands. Let me read the web helper libs I must port faithfully (safetyEnum, numberFormat, dateFormat) and the security/safety data shapes.
+
+I have a complete understanding of the architecture and the web source. Let me set up the plan and todos, then build the surface.
+
+Now I'll write the surface files. Starting with the pure formatting/enum logic.
+
+Now the charts (radial gauge + safety-states line chart) using Swift Charts.
+
+Now the largest file — the subviews and chrome.
+
+Now the history table panel using `TSDataTable`.
+
+Now the main page view with the scaffold and phase switch. First, let me add `locale` to the model for the history table.
+
+Now the navigation registration shim (collision-free deep-link + NavigationDestination).
+
+Now the localization table with all 59 parity keys plus native chrome.
+
+Now let me check the test file import convention before writing tests and previews.
+
+Tests use `import XCTest` + `@testable import TeslaSync`. Now the previews and tests.
+
+All 11 surface files are written. Now register the `Features` path in the build + lint config.
+
+Now let me run the host-runnable gates on the surface directory.
+
+swiftformat will auto-fix these to the repo's config. Let me apply it.
+
+swiftformat clean. Now swiftlint --strict and the placeholder gate.
+
+swiftformat clean. swiftlint found 7 violations in my files (1 unrelated pre-existing in `dashboard-widgets`). Let me fix mine: split oversized files, reduce param counts/body length, and fix the trailing-closure. First I'll extract data types into a Models file.
+
+Now fix History's trailing-closure violation and split Views.swift. Let me check current Views.swift structure.
+
+Now fix the History.swift trailing-closure violation on the Time column.
+
+Now re-run swiftformat and swiftlint on my files.
+
+My files are lint/format clean. Now the placeholder gate and a full swiftlint summary.
+
+Surface is lint/format/placeholder clean. Now I'll build + test it in isolation via SwiftPM (the established protocol). First, let me map the component dependency closure.
+
+All dependencies are SwiftUI-only. Let me build the isolated SwiftPM harness.
+
+Only `#Preview` macro errors (a Command-Line-Tools limitation — the macro plugin ships with Xcode). The surface code compiled. Let me rebuild + test using the full Xcode toolchain via `DEVELOPER_DIR`.
+
+Everything compiles except a type-checker timeout in a preview helper. Let me simplify that expression in the real file.
+
+Build succeeds under Swift 6. Now run the tests.
+
+All 20 tests pass. Now let me verify dual-SDK typecheck (iOS 18 + macOS 15), as the precedent surfaces did.
+
+Both SDKs typecheck clean. Now confirm `xcodegen` enumerates the new files into the project.
+
+xcodegen enumerates all 14 files across both targets. Now let me gather honest evidence on the full-app build blockers (pre-existing) and attempt a bounded `xcodebuild`.
+
+Confirmed: the full-app build blockers are pre-existing and unrelated to my surface (missing `Shared.xcframework`, `DashboardWidgetSize` redefined 15×, 261 co-located XCTest files). Let me do a bounded `xcodebuild` attempt to capture the real failure.
+
+While that runs, let me check its progress.
+
+This is a shared environment with other parallel `xcodebuild` runs. My background attempt didn't persist its log. Let me stop it and inspect an existing full-build log to confirm the failure signature, then conclude per precedent.
+
+Confirmed: the existing full-app build fails on the pre-existing `XCTest`-in-app-target breakage (261 files, repo-wide) — unrelated to my surface, exactly as documented in `macos-pending-verifications.md`. My surface is fully verified in isolation. Let me capture final gate output and check git/ledger state.
+
+`TeslaSync.xcodeproj` is gitignored (good). I see pre-existing dirty `AIUsageCard.*` files (not mine — I'll stage only my paths). Let me confirm those aren't my doing, then write the log, ledger, and macos-pending entry.
+
+Confirmed `AIUsageCard.*` changes are pre-existing (from the HEAD merge commit, not my work). Now I'll write the comprehensive gate log with the full PARITY enumeration.
+
+Now let me check the parity README for ledger format, then create the apple ledger.
+
+The README confirms two per-platform ledgers (`apple-macos-ledger.json`, `apple-ios-ledger.json`, arrays of rows). Status must be `blocked` (not `done`) since the full-app gate is deferred. Let me create them.
+
+Now add a `macos-pending-verifications.md` row for the deferred full-app build, following the established format.
+
+Let me do a final self-review of a couple of correctness details, then commit. First, verify the isolated tests still pass post-edits and review the rendered surface once more via a quick sanity build.
+
+20/20 tests pass. Let me update tracking and commit only my files (excluding pre-existing dirty files and the gitignored project).
+
+Staging is clean (14 surface files + config + ledgers + log; no stray files). Now commit.
+
+Committed: 20 files, 2735 insertions. Let me clean up the generated project artifact and verify final repo state.
+
+Working tree clean (only pre-existing `AIUsageCard.*` remains — not mine). Let me finalize tracking.
+
+All todos complete. Let me update the plan with the final status.
+
+The plan file location differs from where I wrote it — not critical, the work is committed. Let me do a final confirmation of the committed state and the gate summary.
+
+Implementation complete and committed (`bfa718de5`). Here's the summary.
+
+## SafetySettingsPage — native SwiftUI parity (P7 · vehicle-systems)
+
+Implemented the full native SwiftUI/HIG port of `SafetySettingsPage.tsx` at `apps/apple/TeslaSync/Features/VehicleSystems/` — **14 files, 2,394 lines**, decomposed cleanly (every file ≤ 286 lines), following the established feature-view architecture (pure projection + `@Observable` model + source seam + design tokens + P3 components + Swift Charts + per-surface `.strings` + previews + tests).
+
+**Parity: 79/79 items** — 14 panels, 2 charts (threshold radial gauge + 3-series step `LineChart`), 4 data states (loading/empty/error/success), 59 strings. Faithfully ports the web helpers: inverted-AEB logic, `enabledCount`/score thresholds, `buildFeatureCards`, `cleanSafetyEnum`/`isSafetyEnumActive` (prefix-stripping + `SpeedAssistLevelNone→Off`), `convertDistanceFromSI`, `toChartData`, live security-signal cards, and the sortable history `TSDataTable`.
+
+**Verified green on every host-runnable gate** (real output):
+- `check-placeholders` = 0 · `swiftformat --lint` = clean · `swiftlint --strict` = 0 violations in surface
+- Isolated SwiftPM **build + 20/20 XCTest** under Swift 6 complete concurrency (full Xcode toolchain)
+- `swiftc -typecheck` against **iOS-18 and macOS-15** SDKs (both EXIT=0)
+- `xcodegen generate` enumerates all 14 files into both app targets
+
+**Status: BLOCKED (honest).** The mandatory full-app `xcodebuild build test` cannot reach green on this runner due to **pre-existing, repo-wide** breakage outside this prompt's scope — unstaged `Shared.xcframework` (KMP), `struct DashboardWidgetSize` redefined ×15, and 261 co-located `*.Tests.swift` importing `XCTest` into the app target (a current full-app build in this monorepo state already fails on the same `XCTest` error). This is the same deferral pattern as ToolCard/AlertMessageEditor/FSMTimelineChart; I recorded it in `apps/macos-pending-verifications.md` and set the new `apple-macos`/`apple-ios` ledger rows to `status=blocked` (covered 79/79). I did **not** fabricate a green build — `EXIT=65 / STATUS=BLOCKED` in the gate log, deferred to the P99 macOS CI gate.
+
+Committed only my files (surface + `project.yml`/`.swiftlint.yml` registration + 2 ledgers + macos-pending row + log); left the unrelated pre-existing `AIUsageCard.*` dirty files and the git-ignored generated `.xcodeproj` untouched.
+
+
+
+The task is fully complete. All 14 todos are done, the implementation is finished and committed, and every runnable gate passed. The only deferred item (full-app `xcodebuild`) is environmentally blocked by pre-existing repo-wide breakage outside my allowed scope (261 `XCTest`-in-app files, `DashboardWidgetSize` ×15, unstaged KMP framework) — unfixable within `Features/VehicleSystems/**` and honestly documented rather than faked.
+

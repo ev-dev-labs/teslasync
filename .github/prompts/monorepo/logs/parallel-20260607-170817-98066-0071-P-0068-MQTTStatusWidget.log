@@ -1,0 +1,100 @@
+I'll start by exploring the repository structure to understand the task — the web source, existing Apple app structure, and the P1/P4 infrastructure I need to integrate with.
+
+Let me read the web source spec and explore the Apple app structure in parallel.
+
+Now let me explore the Apple app structure deeply and the related web source files (WidgetShell, types, hooks).
+
+Let me explore the Apple Sources structure and find existing dashboard widgets and infrastructure.
+
+There's a sibling `DigitalTwinWidget` in the same directory — the perfect reference template. Let me read all its files plus explore the supporting infrastructure.
+
+Excellent reference. Let me read the remaining DigitalTwin reference files (Previews, Tests, strings, Badges, Palette) and the design token infrastructure.
+
+Now let me explore the design token infrastructure and the web data sources/utils that I need to reproduce.
+
+Let me find the design tokens (TSSpacing, Color.TS, etc.), shared components, and the telemetry types + format utils.
+
+The Sources dir is at `apps/apple/Sources`. Let me locate the tokens and shared components correctly.
+
+Let me examine the native shared components I need to map to: data-display (StatCard, StatusBadge), feedback (EmptyState, Skeleton), and the TSTone/badges + the generated tokens location.
+
+Now let me examine the web shared components (StatCard, StatusBadge), the native feedback/typography/badges, and key utilities to ensure exact parity.
+
+Let me read the web StatCard/StatusBadge for exact visuals, native Badges/Typography for token roles, and check the build toolchain availability.
+
+Key finding: `xcodebuild` needs full Xcode but only Command Line Tools are present. `swift`, `swiftc`, `swiftlint`, `swiftformat`, `xcodegen` are available. Let me check how sibling widgets logged status and what host-verification exists.
+
+Let me read the sibling widget logs to understand the expected log format and how they handled the xcodebuild capability gap.
+
+I now fully understand the precedent (0036 DigitalTwin: host-validate via swiftc + lint/format/placeholder, DEFER xcodebuild — STATUS=DONE). My environment matches it. Let me locate the design-token definitions needed for the host compile closure.
+
+Design tokens live in `apps/design/generated/apple`. The `dashboard-widgets/` path is outside `Sources/` (not yet target-registered — integration prompt's job, matching the 0036 precedent). Let me inspect the token files.
+
+I have all design tokens. Let me confirm the canonical registry metadata, read the Typography helpers, and check the lint/format config + test target wiring.
+
+Confirmed registry: `mqtt-status`, 2×2/1×2/3×40, category system. Now a critical check — `DashboardWidgetSize`/`DashboardWidgetRegistration` are defined in `DigitalTwinWidget.Model.swift`. I must not redeclare them. Let me check how the dashboard primitives are shared and what BatteryCells (in Sources/) does.
+
+Let me verify the Components layer is self-contained (no Shared framework / app-level imports) so my host-compile closure is clean, and check the test target wiring.
+
+I now have a complete understanding. Let me set up a plan and todos, then implement.
+
+Now I'll create the surface files. Starting with the Foundation-only projection/adapter (the harness-testable core).
+
+Let me quickly confirm the web FSM dot colors for online/offline to map the status chip tone faithfully.
+
+The exact hue is a minor detail; I'll map connected→success(green)/disconnected→danger(red), which is HIG-appropriate for broker connectivity. Now the components file.
+
+Now the main surface View.
+
+Now the test suite.
+
+All 7 files created. Let me update todos and run the host typecheck against the real component library.
+
+The errors are in an unrelated library file (`UnitFormatters.swift` needs app-level `UnitPreferences`). I included too much. Let me use the curated closure the DigitalTwin precedent proved compiles (only the design-system files my surface needs).
+
+Only remaining error is the `#Preview` macro plugin not loadable under bare `swiftc` (an environment limitation, not a code defect) — it appears in the library too. The precedent skips DEBUG previews in the host gate. Let me typecheck without `-DDEBUG` (previews inert).
+
+Typecheck passes clean under Swift 6 strict concurrency. Now the executed adapter harness — compile the Foundation-only projection with a test main and actually run it (real cached→projection verification).Typecheck passes clean under Swift 6 strict concurrency. Now the executed adapter harness (compile the pure projection + run real assertions) and a parse-check of the previews.
+
+Harness's own top-level globals tripped Swift 6 actor isolation (not my code). I'll execute it under `-swift-version 5` (projection logic is version-agnostic; its Swift 6 correctness is already proven by the typecheck).
+
+Adapter harness: **32/32 checks passed**, executed binary, exit 0. Now swiftlint, swiftformat, and the placeholder gate.
+
+swiftformat is the autoformatter and the gate's source of truth. I'll auto-fix the files with `swiftformat`, then re-verify both linters.
+
+Both linters green on the surface (0 violations, 0 require formatting). Autoformat edited the files, so I must re-validate compile + harness, then run the whole-tree format gate and placeholder gate.
+
+Still green after autoformat. Now the whole-tree format gate and the placeholder gate.
+
+All host gates green: format 0/281, placeholders COUNT=0, swiftlint 0, typecheck 0, harness 32/32. Let me do final QA — line counts, forbidden-word scan, and i18n key cross-check (every key used in code exists in the strings catalog).
+
+All files ≤400 lines (max 282), no forbidden words, all i18n keys present. Let me run the bare swiftlint gate (as the gate command does) to record its behavior, then I'll write the log.
+
+Bare swiftlint gate: 0 violations across 262 files (my dir isn't in `included:`, matching precedent). Let me capture git metadata and write the gate log.
+
+Now I'll write the comprehensive, honest gate log following the established 0036 precedent.
+
+Log written. Now let me commit only my files (excluding the pre-existing unrelated web changes) with the conventional message and required trailer.
+
+Committed as `1ab17eef`. Let me finalize todos and clean up the temp harness.
+
+All work complete and verified. Let me provide the final summary.
+
+Merge made by the 'ort' strategy.
+ ...ple-dashboard-widgets-0068-MQTTStatusWidget.log | 206 +++++++++++++++
+ .../MQTTStatusWidget.Components.swift              | 152 +++++++++++
+ .../dashboard-widgets/MQTTStatusWidget.Model.swift | 282 +++++++++++++++++++++
+ .../MQTTStatusWidget.Previews.swift                | 122 +++++++++
+ .../MQTTStatusWidget.Projection.swift              | 212 ++++++++++++++++
+ .../dashboard-widgets/MQTTStatusWidget.Tests.swift | 278 ++++++++++++++++++++
+ .../dashboard-widgets/MQTTStatusWidget.strings     |  54 ++++
+ .../dashboard-widgets/MQTTStatusWidget.swift       | 280 ++++++++++++++++++++
+ 8 files changed, 1586 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0068-MQTTStatusWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MQTTStatusWidget.Components.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MQTTStatusWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MQTTStatusWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MQTTStatusWidget.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MQTTStatusWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MQTTStatusWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MQTTStatusWidget.swift

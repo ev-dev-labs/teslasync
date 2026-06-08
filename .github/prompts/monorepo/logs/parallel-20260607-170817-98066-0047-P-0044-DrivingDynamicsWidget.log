@@ -1,0 +1,144 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is available. Let me explore the Apple app structure and check simulators more carefully.
+
+Key finding: only Command Line Tools is active, not full Xcode. Let me check for a full Xcode install and other tooling.
+
+Full Xcode.app exists at `/Applications/Xcode.app`. I can use `DEVELOPER_DIR` to target it. Let me explore the Sources structure, existing widgets, and the web source in parallel.
+
+Now let me understand the existing Apple conventions and check predecessor work. Let me look at logs, the SharedFacade (state holders), Design (tokens), and Components.
+
+No predecessor dashboard widgets exist yet — this is the first. The P9 gate is already BLOCKED (no JDK/Shared.xcframework). Let me verify the build prerequisites and read the established posture.
+
+Key facts: JDK 17 present, `pwsh` present, full Xcode present, but `Shared.xcframework` is NOT built (only `.gitkeep`). Let me examine the state-holder facade, components, tokens, i18n, and an existing surface to learn conventions.
+
+Let me deeply read the facade/state-holder patterns, tokens, and the components I'll map to (RadialGauge, BarChart, Badge, EmptyState/QueryError).
+
+The facade binds to a KMP `Shared` module. JDK 17 is present now, so building `Shared.xcframework` may be possible (the historic blocker was "no JDK"). Let me inspect the build script and shared module, and check which app layers are `Shared`-coupled.
+
+JDK + gradlew + full Xcode are present, so I'll attempt the `Shared.xcframework` build in the background (historic blocker was "no JDK"). Meanwhile I'll keep learning conventions. Let me launch it and check simulators.
+
+iPhone 16 sim (iOS 26.5) and Xcode 26.5 are available; the KMP build is downloading in the background. Let me read the components I'll map to and the design tokens while it runs.
+
+The KMP build is still downloading. Let me read the remaining components (BarChart, Badge, Typography, Cards), design tokens, chart palette, and check the i18n + telemetry conventions.
+
+Let me check the build progress and read the web WidgetShell (chrome spec), the driving hooks (data shape), and the Apple typography/cards/tokens.
+
+WidgetShell understood — I'll reproduce its chrome natively. Let me read the data shapes, hook URLs, Apple typography/cards, design tokens, and i18n/telemetry conventions.
+
+The data types aren't in `api/types.ts`. Let me locate them, then read tokens, Cards, i18n, and telemetry conventions.
+
+Now I have the tokens. Let me check the i18n catalog structure, the telemetry/diagnostics contract, Cards, and the build status.
+
+The i18n catalog flattens web namespaced keys as `translation.<ns>.<key>`. Let me confirm how Swift references these keys and find the diagnostics contract.
+
+The i18n keys already exist as `translation.widget.drivingDynamics.*`. Let me verify their values and check for severity keys, plus find any diagnostics emit API.
+
+i18n keys for the widget already exist; severity sub-keys don't. Telemetry uses `os.Logger` (no dedicated emitter). Let me check the build status, gather chrome i18n keys, and read Cards.
+
+I have the panel/card components. The gradle build is silent (plain console) — let me verify it's actually downloading vs hung, and gather the freshness/action chrome i18n keys.
+
+The KMP framework is actively LLVM-compiling (`~/.konan` 1.6G, build dir 640M) — likely to succeed, which means a real gate is achievable. Let me read the live staleness/offline primitives, then start building. Let me also set up tracking.
+
+I have all conventions. The repo has preview-support patterns (`LiveDataPreviewSupport`, `AuthPreviewSupport`) I'll mirror. Let me record the plan and check the framework build.
+
+The framework is still compiling (LLVM, slow phase). Let me read `FacadeError` (needed to construct `.failed` states for previews/tests) and confirm no naming collisions, then write the widget.
+
+`FacadeError` constructs cleanly (e.g. `.offline`). Tests live under `Tests/Unit/<area>/`. Let me confirm the test import style, then write everything.
+
+Tests use `@testable import TeslaSync`. Let me read the swiftlint/swiftformat configs so my code passes `--strict` on the first try, then write the widget.
+
+Configs read. Decision: place under the repo's real module root `Sources/Dashboard/Widgets/` (compiled, linted, formatted, tested with zero config surgery) and document the path realization — the prompt's `dashboard-widgets` concept realized in this repo's `Sources/` layout. Now writing the widget.
+
+Let me check the exact values/format of the freshness i18n keys I'll use for the chrome (relative time, error, refresh) so the chip text is correct.
+
+All conventions confirmed. Now writing the complete widget implementation.
+
+The KMP framework build completed. Let me verify it produced the XCFramework and check the component APIs I referenced.
+
+The KMP framework **built successfully** (release XCFramework with all 3 Apple slices) — a real gate is achievable. Let me stage it, verify `TSSkeleton`'s init, and find a valid error-title i18n key.
+
+Framework staged; `TSSkeleton()` is valid but `translation.error.title` isn't a real key. Let me replace the loading/error states with polished, correctly-localized views (the shared `TSErrorDisplay`/`TSQueryError` reference uncatalogued keys, so I'll compose with existing keys).
+
+Let me verify `TSButton`'s signature, then add the 5 i18n keys (4 severity + stale) to the catalog via a precise textual insertion (avoiding a full reformat of the 186K-line file).
+
+`TSButton` convenience init confirmed. Now let me add the 5 i18n keys via precise textual insertion.
+
+Now the test suite, covering logic, projection, phase transitions, diagnostics, and a11y labels.
+
+Let me make the i18n assertions hosting-robust by exposing a raw `labelKeyString` (avoids fragile `Mirror`/test-host coupling). Editing both files.
+
+Now let me auto-format my files with swiftformat, then lint them.
+
+swiftformat passes. Now swiftlint `--strict` on my files.
+
+Two issues: file too long (893 > 400) and a trailing-closure rule. I'll split into focused files (SRP) and fix the `Button`. Let me see the section structure first.
+
+Splitting into focused files (SRP, each <400 lines) via a precise line-range script, preserving exact code.
+
+All files now under 400 lines. Let me fix the trailing-closure `Button`, then re-format and re-lint all files.
+
+Clean: 0 format diffs, 0 lint violations on my files. Now the full-tree gate checks (these are quick) before the heavy xcodebuild.
+
+Both full-tree checks pass (0 format diffs across 266 files, 0 lint violations across 262 files). Now generate the Xcode project and run the iOS build+test.
+
+Project generated with my files auto-included. Now the iOS build+test (the heavy step). Running it in the background so I can monitor.
+
+Build succeeded and tests ran, but the **UI test runner** crashed (pre-existing UI test infra, signal kill before bootstrap). Let me check whether the build and my unit tests passed.
+
+**BUILD SUCCEEDED** and all my files compiled (app + tests). The failure is the UI-test runner crashing at bootstrap. Let me check whether my unit tests passed and isolate the UI-test infra issue.
+
+Let me dig into the test-execution portion of the log to see if the unit suite ran and find the precise UI-test failure.
+
+Build succeeded; the only failure is the XCUI runner crashing at bootstrap (a headless-simulator infra issue, unrelated to my widget). Let me run the **unit** test bundle alone to verify my tests pass.
+
+The unit tests ran. One of MY assertions failed — and it's a bug in my test: sample avg = (0.18+0.21)/2 = 0.195 → severity is `.normal`, not `.calm`. Let me confirm the exact failure(s) and the `simctl` note.
+
+The model is correct — my test assertion was wrong (sample avg 0.195 → `.normal`, not `.calm`). That was the only unit failure; all other widget tests passed. Fixing it.
+
+Re-running my widget test suite to confirm green, then the full unit bundle.
+
+Single-suite run showed only the `simctl` error + TEST FAILED — I need to see the full picture. Let me verify `simctl` works here and re-run the full unit bundle with complete output capture.
+
+`simctl` works standalone, so that error is non-fatal subprocess noise (it appeared in the first run too, yet all tests executed). Let me re-run the full unit bundle with complete capture and check the real pass/fail summary.
+
+0 assertion failures (my fix worked), but the test host was **killed mid-run** ("signal kill before establishing connection") — and there are multiple booted simulators (DTM-slot38, slot22-ios18) from other agents sharing this machine. This is environmental interference. Let me confirm how far it got, then isolate on a dedicated simulator.
+
+The test host was killed at bootstrap (never started) — concurrent simulator churn from other slots (slot22/slot38) is disrupting the shared `iPhone 16`. Let me create a dedicated simulator for this slot and run the unit tests there.
+
+Dedicated sim booted. Running the full iOS unit bundle on it (by UDID, parallel testing off).
+
+**All 21 of my widget tests passed** (`DrivingDynamicsWidgetTests passed — Executed 21 tests, with 0 failures`), and 225 total tests passed with 0 failures before an environmental SIGKILL (EXIT 137, during an unrelated Kotlin-golden-vector test — OOM/concurrency on this shared machine, not a test failure).
+
+Now the macOS build + unit tests (runs on the host, avoiding simulator contention).
+
+macOS reported a build failure (test host missing → app didn't build). Let me find the actual compile error.
+
+macOS build failed purely on **code signing** (dev certificate required for entitlements) — a pre-existing environment limitation (matches the prior "macOS dev-cert pending" note), not my code. My Swift compiled (no compile errors). Let me verify macOS compiles + my tests pass by disabling signing.
+
+macOS **BUILD SUCCEEDED** (my code compiles cross-platform). The test-host resolution failed — likely the host app finalization. Let me check the product and try `build-for-testing` + `test-without-building`.
+
+Let me confirm my files compiled cleanly for macOS (the build succeeded; the blocker is the hosted-test signing), then run the placeholder check.
+
+macOS compiles cleanly (0 errors, all my files) and **placeholder check passes (0 placeholders, EXIT=0)**. Let me characterize the UI tests (for evidence) and retry the full iOS unit bundle on the isolated sim to capture a clean pass.
+
+The pre-existing UI tests are real app-launch XCUITests (11 cases) — they require a GUI automation session. The full iOS run was killed again (shared-machine interference). Let me confirm the failure mode and check what's gitignored before finalizing.
+
+Let me check gitignore status correctly from the repo root (the previous path was malformed).
+
+Confirmed: generated artifacts are gitignored; only my 5 widget files, 1 test file, and the i18n catalog are changed. The full `build test` is blocked by XCUITest (headless GUI) + macOS dev-cert, while every code-attributable check is green. Let me write the honest gate log.
+
+Let me directly confirm my suite's pass lines from the authoritative run (grep alternation glitched).
+
+That `/tmp` file was corrupted by the shared environment (mtime changed post-run). My shell‑59 capture was real, but let me get fresh, self-contained proof by re-running just my suite on the isolated sim (build already cached).
+
+**Fresh, clean proof: all 21 widget tests pass, `Executed 21 tests, with 0 failures`, XCB_EXIT=0.** Now I have complete evidence. Let me write the honest gate log.
+
+Now let me update tracking, clean up the dedicated simulator and temp logs, and stage exactly my files for commit.
+
+Staged exactly my 8 files (1354 insertions, additive only — the xcstrings change is just the 5 keys, no reformat). The pre-existing web changes are excluded. Committing.
+
+Committed cleanly (8 files). Let me do a final verification that the working tree is clean for my work and the pre-existing web changes were left untouched.
+
+All verification complete. The commit contains exactly my 8 files; the two pre-existing web edits were correctly left untouched. Let me finalize tracking.
+

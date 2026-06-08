@@ -1,0 +1,113 @@
+I'll start by exploring the environment and understanding the task requirements.
+
+Key findings: `apps/apple/` already exists with established patterns. Critically, **xcodebuild requires full Xcode but only Command Line Tools is installed**, and `simctl` is unavailable. Let me explore the existing structure, the web source, and prior completed surfaces to understand patterns.
+
+I now understand the web source — `Popover` is a lightweight positioning/overlay primitive (no data hooks, anonymous, no charts). Note `modals-dialogs/` doesn't exist yet, so this is the first surface in that tier. Let me study the established native patterns and shared infrastructure.
+
+`apps/apple/TeslaSync/` holds per-surface multi-file artifacts (`feature-views`, `dashboard-widgets`); my output goes in a new `modals-dialogs/` sibling. Let me read a complete reference surface (AIUsageCard) and discover the shared facade APIs (state holders, tokens, i18n, telemetry, project structure).
+
+KioskOverlay is the closest analog (an overlay surface). The AIUsageCard is a data-heavy card. Let me read KioskOverlay's full file set, the project.yml, and discover the shared facade (tokens, i18n, telemetry, state-holders).
+
+Excellent — this reveals the full pattern. Let me read the saved KioskOverlay swift/Model/Telemetry content.
+
+This KioskOverlay is the ideal template (also a pure presentational overlay). Now I need the exact design-token APIs (P1/S9) and how `project.yml` maps source dirs. Let me find these.
+
+`project.yml` registers `feature-views`/`dashboard-widgets` but **not** `modals-dialogs` — and project.yml is outside my allowed-files scope (editing it would break parallel slots). That registration is an integration step, consistent with the `.strings` "integration time" model. Let me locate the design tokens (in generated design path) so my code compiles against the real APIs.
+
+Now I have the token API. Let me read the Button component conventions, the placeholder-check script, the localization setup, and confirm tooling (pwsh) availability.
+
+`pwsh`, `swiftlint`, `swiftformat` are all available — I can run 3 of the 5 gate steps. Only the two `xcodebuild` steps are blocked (Command Line Tools only). Let me read the lint configs and placeholder patterns so my code passes cleanly.
+
+Let me verify two key capabilities: (1) whether I can type-check SwiftUI code with the Command Line Tools toolchain (my best available compile verification), and (2) how swiftlint behaves with explicit paths.
+
+SwiftUI type-checking works under Command Line Tools (`EXIT=0`) — so I can genuinely compile-verify my code even though full `xcodebuild` is unavailable. Let me learn the house idiom for full-screen overlay/popover presentation from sibling surfaces before writing.
+
+I have everything I need: the design tokens, the house popover idiom (`.popover()` + `.presentationCompactAdaptation(.popover)`, used by `LayoutSwitcher`/`SettingField`/`AlertMessageEditor`), the KioskOverlay multi-file precedent, the lint/format/placeholder constraints, and a working SwiftUI type-check harness. Let me record a plan and todos, then build the surface.
+
+Now I'll write the surface files, starting with the Model (the pure projection), Telemetry, then the views.
+
+I referenced `popover.dismiss` in strings — I must actually use it (no silent drift). Let me wire a VoiceOver dismiss action into the content and pass a `dismiss` closure from the modifier.
+
+Now the Previews (DEBUG) — rendering the surface chrome directly for canvas visibility plus an interactive trigger stage, across placements/appearance/Dynamic Type.
+
+Now the Tests — covering the placement projection (adapter), strings facade, telemetry, and the a11y label policy.
+
+Let me fix a couple of SwiftUI overload-ambiguity risks in the previews (bare `Color` in `.overlay`, and use the modern `.background(_:in:)` form to match house style), then run the real type-check.
+
+Now the key verification — type-checking the production SwiftUI code against the real design tokens and `TSButton`:
+
+The `#Preview` macro needs Xcode's macro plugin (absent in Command Line Tools) — same Xcode-capability gap as `xcodebuild`. I'll type-check the shipping code without `-D DEBUG` (previews are all `#if DEBUG`), then separately verify the preview *helper views* with the macro lines stripped.
+
+Shipping code type-checks clean (`EXIT=0`). Now verify the preview *helper views* compile (stripping only the `#Preview` macro wrappers):
+
+The remaining error is from `Buttons.swift`'s own `#Preview` (a dependency I included). Let me strip that one too and re-run:
+
+Preview helpers also type-check clean (`EXIT=0`). Now the Tests file needs `@testable import TeslaSync` + XCTest. Let me check XCTest availability and attempt a module-based type-check of the tests:
+
+XCTest also ships only with Xcode. To still verify my test *logic* compiles against the real API, I'll build my files as a `TeslaSync` testing module plus a tiny `XCTest` shim, then type-check the test file against them:
+
+All Swift type-checks pass (shipping `EXIT=0`, preview helpers `EXIT=0`, tests `EXIT=0`). Now the three runnable gate tools. Let me auto-format my files, then run the lint gates:
+
+swiftformat clean (`0/6 require formatting`, `EXIT=0`). Now swiftlint `--strict` and a re-typecheck to confirm formatting didn't alter anything:
+
+swiftlint ignored my path and used the config's `included` set (which omits `modals-dialogs`), linting 1909 other files — so my files weren't actually checked, and that "1 serious" is pre-existing elsewhere. Let me lint **only my files** with a temp config that mirrors the project rules but targets my dir:
+
+swiftlint `--strict` on my 6 files: **0 violations, `EXIT=0`**. Now the placeholder gate. Let me run it exactly as the gate specifies, plus against the directory:
+
+Let me confirm the checker actually scans my files (not just matching zero) by pointing at the real directory, and verify its detector works via self-test:
+
+Let me definitively confirm the scanner actually covers my directory (guard against a false-green) by planting a temporary violation, scanning, then removing it:
+
+Confirmed: scanner covers my dir (planted `TODO` → `EXIT=1`); real files clean. **All runnable checks are green.** Only the two `xcodebuild` steps remain — they need full Xcode. Let me capture the capability evidence and confirm the logs directory:
+
+345 logs already exist. Let me inspect the format/status of sibling logs (especially KioskOverlay, my closest analog) to match conventions:
+
+Critical finding: sibling logs were produced with Xcode at `/Applications/Xcode.app` driven via `DEVELOPER_DIR` override (even though `xcode-select -p` defaults to CommandLineTools). Let me check whether Xcode.app exists on **this** machine — that would let me follow the established precedent (dual-SDK compiles + host tests).
+
+**Xcode 26.5 IS present** at `/Applications/Xcode.app` (just not the default `xcode-select` target) — drivable via `DEVELOPER_DIR`, exactly like the sibling logs. This means the capability is available, and the established precedent (e.g. BackendTool 0002) is: real dual-SDK compiles + host XCTest run + lint/format/placeholder, with the full app `xcodebuild` DEFERRED (surface not registered in the shared `project.yml` — parallel-safe). Let me follow that precedent. First, capability probe + real iOS-18 simulator SDK compile (now `#Preview` can expand):
+
+Full real-Xcode capability confirmed: **Xcode 26.5, iPhoneSimulator SDK (iOS 18), macOS SDK (macOS 15), iPhone 16 sim booted**, and the **real iOS-18 SDK compile of shipping + previews passed (`EXIT=0`)** with `#Preview` expanded. Now the macOS-15 SDK compile, then actually running the unit tests on the host with real XCTest:
+
+macOS-15 SDK compile: `EXIT=0`. Both platforms compile cleanly. Now let me actually **run** the unit tests on the host with real XCTest via a throwaway SwiftPM package (the sibling precedent's approach):
+
+**All 17 unit tests passed on the real XCTest host (0 failures, `EXIT=0`).** Comprehensive real-Xcode verification is complete on both target SDKs. Let me check exactly how the sibling precedent recorded the gate-variable lines (IOS_EXIT/MAC_EXIT, DEFERRED wording, final EXIT/STATUS) so my log matches convention:
+
+The convention is clear from both siblings (KioskOverlay 0124 — my exact analog — and BackendTool 0002): host gates green + dual-SDK compiles + executed host tests, with the Xcode **app** build/test marked `DEFERRED` (surface not registered in shared `project.yml`/`.swiftlint.yml`; `Shared.xcframework` unstaged), ending `EXIT=0 / STATUS=DONE`. Let me verify the `#if canImport(XCTest)` guard keeps the test file harmless in an app-target compile (real evidence, not assumed), and gather log metadata:
+
+XCTest guard verified harmless in app-target (`EXIT=0`). Surface is **727 lines across 7 files**, all verified. Let me clean up temp artifacts and update progress:
+
+Now I'll write the comprehensive, honest gate log following the established sibling format:
+
+Now a consolidated final verification pass on the exact on-disk files (verify, don't assume), then commit:
+
+swiftlint step needs its config recreated (I cleaned `/tmp`). Let me re-run that one:
+
+All final gate checks green on-disk: **iOS-18 compile=0, macOS-15 compile=0, swiftformat=0/6, swiftlint=0 violations, placeholder=0, host tests 17/17.** Let me commit exactly my 7 surface files + the log (leaving the pre-existing AIUsageCard changes untouched):
+
+Exactly 8 files staged (7 surface + log); pre-existing AIUsageCard changes left untouched. Committing with the prompt's message:
+
+Committed: `1ac75a64e`, 8 files, 919 insertions. Let me verify the working tree is clean except the pre-existing (untouched) AIUsageCard changes:
+
+All work is complete and verified. 
+
+## Summary
+
+Shipped the native Apple **`Popover`** surface (P4 · modals-dialogs · 0015) at parity with web `components/ui/Popover.tsx`, committed as `1ac75a64e`.
+
+**Artifact** — `apps/apple/TeslaSync/modals-dialogs/Popover.*` (7 files, 727 lines), following the sibling `KioskOverlay` multi-file convention:
+- `.Model.swift` — pure host-free projection: `PopoverSide`/`PopoverAlign` (web unions), `PopoverPlacement` (side×align → `arrowEdge`/`attachmentUnitPoint`), `PopoverMetrics`, P1/S10 strings facade, P1/S11 surface slug, a11y-label policy
+- `.swift` / `.Views.swift` — `View.tsPopover(...)` over the native `.popover()` HIG primitive (the house idiom) + token surface chrome
+- `.Telemetry.swift` — P1/S11 `view.opened` seam · `.Previews.swift` · `.Tests.swift` (17 tests) · `.strings`
+
+**Web contract reproduced** — `side`→arrowEdge, `align`→attachment unit point, `sideOffset`, auto-flip/clamp/Esc/outside-dismiss/focus-restore via the system popover, `aria-modal="false"`→non-modal (children reachable), `ariaLabel`→accessibility label. Data-lifecycle states belong to hosted content (pure primitive — KioskOverlay precedent).
+
+**Verification (real Xcode 26.5 via `DEVELOPER_DIR`):**
+- iOS-18 simulator SDK compile (incl. previews) = **0**
+- macOS-15 SDK compile = **0**
+- Host XCTest: **17/17 passed, 0 failures**
+- swiftlint --strict = **0 violations** · swiftformat --lint = **0/6** · placeholder gate = **0** (scanner coverage proven via planted probe)
+
+**Log** ends `EXIT=0 / STATUS=DONE`. The full `xcodebuild -scheme TeslaSync build test` is honestly recorded as **DEFERRED** (the `modals-dialogs/` dir isn't yet registered in the shared `project.yml`/`.swiftlint.yml` — a parallel-unsafe integration step outside the allowed-files scope; `Shared.xcframework` unstaged) — capability is present and exercised, matching the merged sibling precedent (KioskOverlay 0124, BackendTool 0002). Pre-existing `AIUsageCard` changes were left untouched.
+
+
+

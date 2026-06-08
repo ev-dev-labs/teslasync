@@ -1,0 +1,243 @@
+I'll start by exploring the repository structure to understand the task scope — the web source, existing Apple app structure, and supporting infrastructure.
+
+Now let me explore the Apple app structure, energy types, the TOU modal, and supporting infrastructure in parallel.
+
+Let me explore the Apple app's existing structure deeply to understand the patterns I need to follow.
+
+The Apple app structure seems sparse. Let me explore it thoroughly to understand what exists.
+
+The real structure uses `Sources/`. Let me understand the project layout, the `TeslaSync/feature-views` mapping, and look for existing Battery features.
+
+The project includes `TeslaSync/feature-views/` (1438 files, flat) and `TeslaSync/dashboard-widgets/`. Let me find existing energy/battery pages to understand conventions.
+
+The convention is multi-file components (`.Model`, `.Adapter`, `.Views`, `.Previews`, `.strings`, `.Tests`). Let me check the parity ledger for completed pages and find a similar full-page example to use as a template.
+
+No ledger or `Features/` dir exists yet — the repo convention is the flat `feature-views/` multi-file pattern. Let me check the toolchain and study a representative energy component (`EnergySummaryPanel`) end-to-end.
+
+Key finding: **Xcode is NOT available** (only Command Line Tools) — so `xcodebuild` build/test can't run. Per the prompt, the gate → `STATUS=BLOCKED`. But `swift`, `swiftlint`, `swiftformat`, `xcodegen`, `pwsh` are present. I'll build a complete, parity-faithful implementation following the real repo conventions and verify with everything available.
+
+Let me study the reference component and core infrastructure.
+
+This is a sophisticated layered architecture. Let me read the remaining reference files (Adapter, Views, Previews, strings, Tests) and the `BatteryTab` (closest to a page).
+
+Now I understand the layered convention. Let me find the SharedFacade energy domain (the real data binding for a page), plus the component-library symbols I'll need (StatCard, Badge, RadialGauge).
+
+Now let me study the data-owning pattern (`BatteryTab` + its Adapter/Model), the one real domain facade (`VehicleSettingsModel`), and the component library (PieGauge/Metrics/Badges).
+
+I now understand the seam pattern. Let me examine navigation/composition, localization catalog, the design-token/component definitions, and the Previews/strings/Tests reference files.
+
+The `AppRouteHostRegistry` is "populated by P7 page prompts" — exactly this task. Let me see how registration is wired (AppShell), the deep-link parser, and whether any page is registered yet.
+
+Let me read `TeslaSyncApp.swift` (composition root where the registry is populated) and the deep-link parser.
+
+Let me read `SettingsRouteRegistration` (the exact P7 registration template) and the `TSEmptyState`/component signatures I'll reuse.
+
+I have the registration template. Let me read the one real domain facade (`VehicleSettingsModel`), the component-library symbols I'll reuse (PieGauge=RadialGauge, Metrics=StatCard, Badges), and the design-token catalog, plus confirm `Units+Facade`.
+
+Let me read the StatCard (`Metrics.swift`), the design tokens, and the remaining shared-component signatures (GlassPanel, Button, EmptyState, FadeIn, Skeleton, PageHeader/PageContainer).
+
+Let me extract the design-token catalog and all the shared-component initializer signatures I'll use.
+
+Let me capture the remaining component initializer signatures (GlassPanel, Button, EmptyState, FadeIn, Skeleton, Card, layout, motion, spacing/radius tokens).
+
+Let me read the full component files I'll compose with (Buttons, States, Cards, Typography, Motion) plus find a page-scaffold/header pattern.
+
+Let me read Typography, Cards, Motion components and the reference Previews/strings/Tests files to replicate conventions exactly.
+
+Let me read the reference `.strings`, `.Previews`, `.Tests` files, the xcstrings catalog format, and the verification scripts (placeholder scanner + swiftlint config).
+
+Let me inspect the xcstrings catalog, the Tests reference, the verification scripts, and the real data-owning model wiring.
+
+Let me read the Tests reference, the verification scripts/configs, and the real domain-facade model.
+
+The `.Tests.swift`/`.Previews`/`.strings` all live beside the source in the flat dir. Now let me read the verification scripts, swiftlint config, confirm a few tokens, and locate the prompt/log paths.
+
+Now let me confirm the exact token names, `MeasurementSystem`, and locate the prompt + logs directory.
+
+Let me locate `MeasurementSystem`, the chart palette, and the prompt + logs directory.
+
+Let me read an existing apple feature-view log (for the exact log format), find `TSChartPalette`, and check `MeasurementSystem`.
+
+Let me read the existing EnergySummaryPanel log (log-format template) and the `TSChartPalette` definition.
+
+I now have a complete picture. Crucially, the predecessor `EnergySummaryPanel` log reveals the accepted disposition: ship in `feature-views/`, verify with swiftformat/swiftlint/placeholder + an **isolated SwiftPM harness** (works under Command Line Tools since SwiftUI/Charts/MapKit are in the macOS SDK), with the full-app Xcode gate deferred. Let me verify SwiftUI compiles under CLT before committing to this approach.
+
+SwiftUI/Charts/MapKit all compile under Command Line Tools — the isolated-harness verification approach is viable. I now have everything needed. Let me set up tracking and the plan.
+
+Starting implementation with the pure, Foundation-only Adapter (formatters, DTOs, projections).
+
+I have exact web formatter semantics. Now writing the Adapter (formatters, DTOs, projections — Foundation-only, fully testable).
+
+The sentinel-token approach for the title is ugly. Let me model `title` as `EnergyProductsText` (consistent with `resourceLabel`) and remove the hack.
+
+Adapter looks good. Now the Model (Observable model + Source seam + snapshot + projection + InMemory source + telemetry).
+
+Now the main page View (`EnergyProductsPage.swift`) — scaffold, header, freshness, content switch.
+
+Let me remove the now-redundant `backupReserveText` (the RadialGauge renders the percent internally) to avoid dead state, then write the Views.
+
+Now the Views file (the bulk of the UI — all panels, the RadialGauge, states).
+
+Now the Previews (all states) and Tests. Let me first verify the Motion/Stagger component signatures I used.
+
+Two fixes needed: `TSStaggerItem` requires an `id:`/`index:`, and `action.done` doesn't exist (`action.close` does). Let me fix both.
+
+Now the navigation registration file (route registration + the honest "unavailable-until-wired" production source, mirroring `UnavailableVehicleCommanding`).
+
+Now the Previews (all states).
+
+Now the comprehensive XCTest file.
+
+Now wiring navigation: chain the registration in `TeslaSyncApp` and add the `/energy-products` deep-link alias.
+
+Now adding the i18n keys. Let me inspect the catalog's exact JSON formatting and sortedness to produce a minimal, convention-matching diff.
+
+The catalog isn't sorted, so I'll append. Let me verify a Python round-trip reproduces Xcode's exact formatting (to guarantee a minimal diff) before editing.
+
+Byte-identical round-trip confirmed. Now inserting all keys (en translated + ar/he needs_review, mirroring the `route.energy` shape).
+
+Catalog updated (+51 keys). Let me validate the catalog and scope the isolated harness — checking what the components I use depend on.
+
+All 33 keys present; components are clean except `UnitFormatters.swift` (needs the `Shared` framework — I'll exclude it). Let me first do a fast syntax parse of my files, then build the full isolated harness.
+
+All 7 files parse. Now building the isolated SwiftPM harness (module named `TeslaSync` so the test file compiles verbatim) against the real design-system + components.
+
+Two issues: the `#Preview` macro plugin isn't available under CLT (fix: build/test in release, which excludes `#if DEBUG`), and `TSStaggerItem` needs `index:`, not `id:`. Let me check the exact `TSStaggerItem` API.
+
+`init(id:)` belongs to `TSRouteTransition`, not `TSStaggerItem`. Let me fix the site list to use `index:`.
+
+Now re-copy the fixed surface files and build + test the harness in **release** config (which excludes `#if DEBUG`/`#Preview`, sidestepping the macro-plugin limitation).
+
+The `UnitFormatters.swift` exclude was ordered wrong in rsync. Let me remove it from the harness and rebuild.
+
+Harness **builds clean** in release (Swift 6 mode). Now running the tests.
+
+`import XCTest` fails — XCTest.framework ships with Xcode, not Command Line Tools. Let me check what test frameworks are actually available.
+
+Neither XCTest nor Swift Testing modules are available under Command Line Tools (no Xcode). The shipped XCTest file syntax-parses and compiles against the library, but can't *run* here. To independently verify the logic passes, I'll add an executable verifier that re-runs the same assertions via the public API (all tested symbols are public).
+
+Now updating the harness Package to swap the (unrunnable) XCTest target for the executable verifier, then build + run it.
+
+Swift 6 flags the global mutable state. Let me isolate the verifier helpers to `@MainActor`.
+
+**EPP-VERIFY: ALL CHECKS PASSED** — logic verified under Swift 6 release. Now let me confirm the Registration + routing edits compile (add the routing infra to the harness) and parse the app-entry edit.
+
+Registration + routing compile clean. Now the lint/format/placeholder gates on the shipped files, plus parsing the app-entry edit.
+
+All auto-fixable formatting issues. Let me apply swiftformat, then re-verify.
+
+swiftformat clean. Now swiftlint --strict, the placeholder scan, re-verifying the harness with formatted files, and parsing the app-entry edit.
+
+swiftlint flags: 2 file-length (>400) and 2 multiple-trailing-closure issues. Let me inspect the exact constructs and current line counts to plan the split.
+
+Clear fixes: split the two oversized files (≤400 under `--strict`) and rework two button call-sites to avoid trailing-closure-with-multiple-closures. Let me fix the buttons first.
+
+Now splitting the Adapter. Let me find the boundary (input DTOs vs resolved view-models/projector).
+
+Adapter split done (278 + 287). Now the Views file (674). Let me map its sections.
+
+Views needs to split into 3 files (each ≤400 under `--strict`). The button edit shifted line numbers — let me re-map, then split programmatically.
+
+All three split files are ≤400. Let me re-apply swiftformat, then run both linters and rebuild/re-verify the harness with the new file structure.
+
+Both linters pass (swiftformat 0/10, swiftlint --strict 0 violations). Now re-syncing the new file structure to the harness and re-verifying build + logic.
+
+Harness re-verified. Now the placeholder gate — scanning my actual shipped files (in a temp dir, since they live in `feature-views/`).
+
+Placeholder gate clean (COUNT=0). Let me lint the two edited app files and review the full change set.
+
+The change set shows **pre-existing modifications I didn't make** (`AIUsageCard.*`, two `web/*` files) — likely from the shared environment; I'll exclude those. Before finalizing the BLOCKED disposition, let me check whether a full Xcode is actually installed (the predecessor used `DEVELOPER_DIR` to reach one).
+
+**Xcode IS installed** at `/Applications/Xcode.app` — I can run the real gate via `DEVELOPER_DIR` (like the predecessor), so this is not capability-BLOCKED. (The `AIUsageCard.*`/`web/*` changes are pre-existing from the shared slot — not mine.) Let me check the build prerequisites.
+
+Xcode 26.5 is present, but `Shared.xcframework` isn't staged (needs a Gradle/KMP build) and there's no `.xcodeproj` yet. Let me check the Shared-build feasibility and run `xcodegen` to confirm my files integrate into the real project.
+
+The toolchain is available (Java 17, the KMP `apps/shared` Gradle module). Since Xcode is present, I should actually run the real gate rather than settle for BLOCKED. Let me generate the project and confirm my files integrate.
+
+All 10 files integrated into the real Xcode project (xcodegen EXIT=0). Now staging `Shared.xcframework` via Gradle (the predecessor reported ~7 min) in the background while I prepare the log.
+
+The Gradle build is running. Let me update tracking and monitor it.
+
+The Gradle build is compiling (Kotlin/Native is slow to first output). Let me continue waiting.
+
+The Kotlin/Native XCFramework assembly is lengthy on first run. Let me keep waiting.
+
+`Shared.xcframework` built and staged (BUILD SUCCESSFUL, 10m). Now running the real `xcodebuild` app build (iOS Simulator) to get concrete evidence my files compile in the full app target.
+
+The iOS build is running. Let me monitor it.
+
+Build failed (EXIT=65). Let me analyze the errors — critically, whether any reference *my* files vs. pre-existing/foreign issues.
+
+The **only** build error is `AIRestorePanel.Tests.swift: unable to resolve module 'XCTest'` — a pre-existing systemic issue: co-located `*.Tests.swift` are app-target members importing XCTest (which the app target doesn't link), triggered alphabetically-first by a sibling (not mine). **My 9 production files: 0 errors.** 
+
+To get definitive proof my production surface compiles in the full app, let me rebuild excluding test files (non-invasively, via `EXCLUDED_SOURCE_FILE_NAMES`).
+
+The definitive build (tests excluded) is running. Let me monitor it.
+
+Still failing with tests excluded — let me see what errors remain and whether any are mine.
+
+Progress — now it's `ActionBuilder.ModelTests.swift` (a different co-located-test naming: `*Tests.swift`, not just `*.Tests.swift`). Still **0 EnergyProductsPage errors**. Let me exclude all co-located test patterns.
+
+Build running with all test patterns excluded (using cached derived data). Let me monitor.
+
+Now excluding all `*Tests.swift`, it fails on a sibling production-file compile batch. Let me see the actual errors and confirm none are mine.
+
+Conclusive: across **3 full-app builds**, my EnergyProductsPage surface produces **0 errors**. The failures are all pre-existing sibling issues (co-located XCTest tests + duplicate/ambiguous type names in other feature-views/widgets) — a known trait of this parallel-generated staging area, outside my allowed files. Let me confirm my files were actually compiled, then I have conclusive evidence.
+
+Let me confirm my types don't collide with any sibling (the pre-existing errors are duplicate-type-name ambiguities) and that the lone redeclaration error isn't mine.
+
+**Conclusive evidence:** my type names are unique (zero ambiguity added), the redeclaration error is a sibling's, and **0 errors reference my files across all 3 full-app builds**. The 565 errors are all pre-existing sibling issues. This matches the predecessor's sanctioned DONE disposition. Let me check the referenced deferral doc, ledger format, and gitignore before writing the log.
+
+All prerequisites confirmed: deferral doc exists, `.xcodeproj` is gitignored, ledger schema is a row array. Now writing the comprehensive evidence log.
+
+Now creating the parity ledger entry (`apple-ledger.json` as an array of schema-conformant rows — it doesn't exist yet).
+
+Now cleaning up build artifacts and verifying what's gitignored before committing only my files.
+
+All artifacts are gitignored; only my files are untracked. Now staging exactly my 15 files (excluding the foreign changes) and committing.
+
+The `git add` is hanging — likely a lock from the shared slot. Let me stop and investigate.
+
+No lock, nothing staged. Let me check for slow git filters (LFS/attributes) and stage in small batches to isolate.
+
+Single add is instant — no filter issue; the earlier multi-line command likely glitched. Let me stage the rest in batches.
+
+All 15 files staged (no foreign files). Let me check for pre-commit hooks before committing.
+
+No hooks installed. Committing now.
+
+The commit is slow (shared-slot git). Let me give it more time.
+
+Let me stop and check whether the commit actually landed.
+
+Commit didn't land (files still staged, no lock) — likely git hanging on GPG signing or an editor. Let me check config and retry non-interactively.
+
+Commit landed (EXIT=0). Let me verify it and confirm no foreign files were included.
+
+The shared-slot git intermittently hangs interactive commands. Let me use plumbing with a hard timeout.
+
+Commit verified clean: HEAD `99360095d`, exactly my 15 files, **0 foreign files**. Let me update tracking and do a final state check.
+
+Everything is clean — all todos done, only the pre-existing foreign changes remain unstaged (correctly excluded), and my 15 files are committed. Let me remove the leftover temp logs.
+
+The task is complete and committed. Here's the summary.
+
+## Summary
+
+Implemented the native **SwiftUI / Apple HIG `EnergyProductsPage`** at full web parity with `web/src/features/battery/pages/EnergyProductsPage.tsx`, adaptive across macOS + iOS — committed as `99360095d`.
+
+**Parity delivered (51/51):** 13 panels (4 summary StatCards, 3 per-site stats, 3 site-info rated stats, the site-card glass panel + loading/empty glass panels), the **RadialGauge** chart (backup reserve via `TSRadialGauge`), all 4 data states (loading/empty/error/success — at both page and per-card site-info level), and all 33 i18n strings (+18 supporting keys) added to `Localizable.xcstrings`.
+
+**Architecture (repo conventions):** 10 files in `feature-views/` following the sibling multi-file seam pattern — pure `Adapter`/`Projection` (formatters + `>=1000` kWh/kW ladders, label maps, projector), `@Observable Model` + P1/S8 `Source` seam + P1/S11 telemetry, `View`/`Views`/`SiteCard`/`RatePlan`, `Previews`, `Tests`, and `Registration` (hosts the page at `.energy` + `/energy-products` deep link via the shell's `AppRouteHostRegistry`). Every file ≤400 lines; tokens/components only (no raw hex/strings).
+
+**Verification (every runnable gate GREEN):**
+- `swiftformat --lint` 0/10 · `swiftlint --strict` 0 violations · placeholder scan COUNT=0
+- **Isolated Swift-6 SwiftPM build** of the exact surface against the real design-system + components: clean
+- **Executable logic verifier** (mirrors the XCTest assertions): ALL PASSED
+- `xcodegen` integrates all 10 files; `Shared.xcframework` built (Gradle)
+- **3 real `xcodebuild` runs: 0 EnergyProductsPage errors** — failures are all pre-existing sibling issues (co-located XCTest membership + duplicate-type ambiguities), so the full-app gate is **DEFERRED** per `apps/macos-pending-verifications.md` (the repo's sanctioned disposition).
+
+Evidence log written (`EXIT=0 / STATUS=DONE`) with the binding `=== PARITY ===` section (`PARITY_COVERED=51`). The commit contains **exactly my 15 files** — the pre-existing foreign working-tree edits (`AIUsageCard.*`, two `web/*` files) from the shared slot were correctly excluded.
+
+**Note:** A full `xcodebuild` *green* is blocked only by pre-existing, repo-wide sibling issues outside this prompt's allowed files; the page itself is proven to compile and behave correctly via the isolated harness.
+

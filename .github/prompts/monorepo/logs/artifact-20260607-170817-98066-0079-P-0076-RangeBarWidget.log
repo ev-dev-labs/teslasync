@@ -1,0 +1,142 @@
+=== P4 Dashboard widget 0076 RangeBarWidget (Apple) ===
+Surface  : RangeBarWidget  (registry id "range-bar", category battery, 2x2 / 1x2 / 4x40)
+Web src  : web/src/features/dashboard/widgets/RangeBarWidget.tsx  (THE specification)
+Output   : apps/apple/TeslaSync/dashboard-widgets/RangeBarWidget.{swift,Model,Adapter,Views,Previews,Tests}.swift + .strings
+Allowed  : apps/apple/TeslaSync/dashboard-widgets/RangeBarWidget.* + this log
+ADR refs : ADR-002 (shared SwiftUI source), ADR-004 (KMP core), ADR-009, ADR-013 (live freshness), ADR-016 (SI floor / display-boundary units)
+
+------------------------------------------------------------
+RUNNER CAPABILITY PROBE (binding — drives the disposition)
+------------------------------------------------------------
+This prompt's Capability clause: "requires SwiftUI + Swift Charts + MapKit, iOS 18 /
+iPadOS 18 / macOS 15 HIG. If unavailable on the runner -> STATUS=BLOCKED with API evidence."
+
+  $ xcode-select -p
+    /Library/Developer/CommandLineTools                 <- Command Line Tools only; NO Xcode.app
+  $ xcodebuild -version
+    xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+    '/Library/Developer/CommandLineTools' is a command line tools instance        (exit 1)
+  $ xcrun simctl list devices
+    xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+  => The iOS 18 / iPadOS 18 simulators + the macOS 15 app build/test toolchain (full Xcode)
+     are UNAVAILABLE on this runner. Per the Capability clause this is a STATUS=BLOCKED
+     condition for the xcodebuild build+test gate steps (steps [1]/[2] below).
+
+Tools that ARE present (all statically-runnable gates executed for real, below):
+  $ swift --version       -> Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108)
+  $ swiftlint version     -> 0.63.3
+  $ swiftformat --version -> 0.61.1
+  $ xcodegen --version    -> 2.45.4
+  $ pwsh --version        -> PowerShell 7.6.2
+  $ xcrun --show-sdk-path -> /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+
+------------------------------------------------------------
+WHAT WAS BUILT  (production-polished, no stubs/skeleton-only — every web branch reproduced)
+------------------------------------------------------------
+Native-Apple-idiomatic SwiftUI parity of RangeBarWidget.tsx, decomposed exactly like the
+shipped neighbours 0036 DigitalTwinWidget / 0054 GuardModeWidget:
+
+  RangeBarWidget.Model.swift    P1/S8 state-holder seam (RangeSource protocol + RangeModel
+                                @Observable @MainActor, InMemoryRangeSource for previews/tests),
+                                P1/S11 telemetry seam (RangeTelemetry + OSLogRangeTelemetry emits
+                                view.opened with surface slug "RangeBarWidget"), P1/S10 i18n facade
+                                (RangeStrings, table "RangeBarWidget"). No HTTP in the view.
+  RangeBarWidget.Adapter.swift  Pure, dependency-free projection core (unit-tested without a store/
+                                bundle/view): RangeUnits.convertDistanceFromSI (km=/1000, mi=/1609.344
+                                — byte-for-byte the web lib factors), RangeNumber.format (locale-aware,
+                                fixed fraction digits — fmtNumber parity), RangeProjection (rated/ideal
+                                coalesced to 0, max(rated,ideal,1), converted+formatted values, clamped
+                                bar fractions, EPA variance with web sign convention, hasData), RangeLayout
+                                .isCompact (web cols==1 && rows==1), RangeAccessibility summaries.
+  RangeBarWidget.swift          The View: glass widget shell, header (gauge icon + "Range" title hidden
+                                when compact, exactly as web title={isCompact?undefined:...}), freshness
+                                chip + refresh + optional open, and the full state switch.
+  RangeBarWidget.Views.swift    Subviews: RangeMetricBar (web <MetricBar> parity — label + colored mono
+                                readout + animated gradient fill #22d3ee/#a78bfa, Reduce-Motion aware),
+                                RangeCompactValue (#67e8f9 cyan-300 value + "<unit> rated"),
+                                RangeEpaVarianceLine, RangeBarContent, RangeConnectivityBanner.
+  RangeBarWidget.Previews.swift DEBUG previews for content/standard/compact/empty/loading/error/offline/
+                                stale/imperial.
+  RangeBarWidget.strings        Every i18n key with its web English fallback (per-surface table; the
+                                shared Localizable.xcstrings is parallel-unsafe and out of scope).
+  RangeBarWidget.Tests.swift    Adapter unit tests (convert/format/projection/fractions/EPA/layout),
+                                model phase+telemetry+wiring tests, registry metadata+clamp tests,
+                                accessibility-summary tests. Driven by InMemoryRangeSource (no network).
+
+States reproduced (all render — no hidden surfaces): loading (skeleton chrome), empty
+("No range data" ContentUnavailableView), error (retry affordance), stale (chip+banner),
+offline (cached value + banner), content (compact + standard), plus the web-source branches:
+isCompact value vs. two-bar layout, and the EPA-variance line gated on rated>0 && ideal>0.
+
+i18n keys from source (all resolved via P1/S10 facade, no English literals in code):
+  widget.rangeBar ("Range"), widget.rated ("rated"), widget.ratedRange ("Rated Range"),
+  widget.idealRange ("Ideal Range"), widget.epaComparison ("EPA variance"), widget.noRange
+  ("No range data") + widget.rangeBar.name/.description (registry) + native chrome/a11y keys.
+
+Data sources bound via shared state holders (web hook -> native seam):
+  useVehicles + useVehicleState -> RangeSource/RangeStateInput (cached rated_range/ideal_range, SI m)
+  useUnits                      -> MeasurementSystem on the update (display-boundary conversion, ADR-016)
+  useTranslation                -> RangeStrings (P1/S10)
+Charts/maps used by the web source: NONE (so no Swift Charts / MapKit needed for this surface).
+
+------------------------------------------------------------
+GATE RESULTS  (raw, this runner)
+------------------------------------------------------------
+[1] iOS   : xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+            xcode-select: error: tool 'xcodebuild' requires Xcode ... command line tools instance
+            -> IOS_EXIT=1   *** BLOCKED: no full Xcode / no iOS 18 simulator on this runner ***
+[2] macOS : xcodebuild -scheme TeslaSync-macOS build test
+            xcode-select: error: tool 'xcodebuild' requires Xcode ... command line tools instance
+            -> MAC_EXIT=1   *** BLOCKED: no full Xcode / no macOS 15 app toolchain on this runner ***
+[3] swiftlint --strict   (run explicitly on the 6 RangeBarWidget.*.swift files; the repo
+    .swiftlint.yml `included:` list does not yet cover the TeslaSync/ staging dir — file
+    registration is the downstream integration prompt's scope, not this prompt's allowed files)
+            Done linting! Found 0 violations, 0 serious in 6 files.            -> LINT_EXIT=0
+[4] swiftformat --lint   (RangeBarWidget.*.swift, repo .swiftformat config)
+            0/6 files require formatting.                                      -> FORMAT_EXIT=0
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets -Language swift
+    (scanned the whole staging dir — verifies these files AND that the neighbours stay clean)
+            PLACEHOLDER_ALLOWED=0
+            PLACEHOLDER_COUNT=0                                               -> PLACEHOLDER_EXIT=0
+[+] swiftc -parse -sdk MacOSX.sdk -target arm64-apple-macos15.0  (supplementary syntax gate
+    — the strongest compile this CLT-only runner allows; full type-check needs the closed module
+    graph + Shared.xcframework that only the Xcode app build assembles)
+            (no diagnostics)                                                  -> PARSE_EXIT=0
+
+------------------------------------------------------------
+HONESTY COVENANT
+------------------------------------------------------------
+  1  No red-as-green   : xcodebuild [1]/[2] are reported BLOCKED (not green); their raw
+                         xcode-select error + exit 1 are pasted above. Nothing un-run is claimed green.
+  2  No scope narrowing: every web section/state/branch + i18n + a11y + telemetry + registry implemented.
+  3  No skip-and-assume: each statically-runnable gate executed; the unrunnable ones are evidenced, not assumed.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; no mock/stub/TODO in shipped code.
+  5  No parity shortcuts: faithful port of the .tsx (convert/format/maxRange/EPA-sign/compact-vs-standard).
+  6  No delegation     : authored directly (no sub-agent delegated the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / the dashboard grid and did NOT edit the
+                         shared Localizable.xcstrings (both out of this prompt's allowed files), matching 0036/0054.
+  8  No commit on red  : the SHIPPED CODE is green on every gate this runner can execute (lint/format/
+                         placeholder/parse); the xcodebuild step is BLOCKED by a missing platform capability,
+                         not by a defect in this code. Disposition is BLOCKED (not DONE) precisely so the
+                         xcodebuild gate is recorded as outstanding, to be completed on an Xcode-capable runner.
+  9  No silent drift   : changes confined to the allowed RangeBarWidget.* files + this log.
+  10 Log ends with EXIT=<int> and STATUS=<...> below.
+
+------------------------------------------------------------
+DISPOSITION
+------------------------------------------------------------
+RangeBarWidget is CODE-COMPLETE and parity-faithful to the web source, and passes every gate
+that is executable on this Command-Line-Tools-only runner (swiftlint --strict = 0 violations,
+swiftformat --lint = clean, placeholder gate = 0, swiftc -parse = clean). The required iOS 18 /
+macOS 15 xcodebuild BUILD+TEST capability is UNAVAILABLE here (no Xcode.app; xcode-select points
+at CommandLineTools; simctl absent), so — per this prompt's explicit Capability clause — steps
+[1] and [2] are BLOCKED with the API evidence pasted above, and the surface's XCTest bundle
+(RangeBarWidget.Tests.swift) could not be executed on this host. The implementation deliberately
+mirrors the already-shipped, Xcode-verified neighbours 0036 DigitalTwinWidget and 0054
+GuardModeWidget symbol-for-symbol (same tokens, @Observable/@MainActor state holder, registration
+API, string facade, skeleton/ContentUnavailableView usage) to maximise confidence ahead of the
+deferred Xcode build. Re-run the gate's xcodebuild + XCTest steps on an Xcode-26 / iOS-18-simulator
+runner to close [1]/[2].
+
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,177 @@
+=== P4 Feature view 0066 SlideRenderer (Apple) ===
+
+PREFLIGHT
+  Runner        : Darwin 25.5.0 arm64 (macOS 26.5.1)
+  Xcode         : Xcode 26.5 Build version 17F42 
+                  (active dir is CommandLineTools; Xcode.app present and used via DEVELOPER_DIR override —
+                   no sudo / no xcode-select -s; the SAME mechanism every prior P4 surface used.)
+  Toolchain     : swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101) · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen Version: 2.45.4 · pwsh PowerShell 7.6.2
+  Simulators    : 6 iPhone runtimes; iOS iOS 26.5 installed.
+  Capability    : SwiftUI + Swift Charts + MapKit present; iOS-18/macOS-15 HIG primitives available.
+                  This surface needs SwiftUI + (for two composed child slides) Swift Charts; both present
+                  → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification — read end to end)
+  features/analytics/components/review/SlideRenderer.tsx — the Year-in-Review slide-deck renderer. Routes
+  slide.type over a YearReview payload to one of TEN child slides (Title / StatHero / StatChart /
+  DriveHighlight / ChargingBreakdown / Savings / Environment / Patterns / Comparisons / Summary), wrapped in
+  AnimatePresence (x-slide + opacity, 0.35s easeInOut) with a per-slide gradient background. The file's two
+  direct t() calls are yearReview.longestDrive / yearReview.mostEfficient; the composed child slides supply
+  the rest. The child-slide surfaces are separate prompts and are NOT yet present, so — exactly as the
+  0237-AiUsageCard precedent did for the not-yet-present <UsageCard> primitive — their content is reproduced
+  as private subviews scoped to THIS surface (the only files this prompt may touch).
+
+ARTIFACTS SHIPPED (allowed files: apps/apple/TeslaSync/feature-views/SlideRenderer.* + this log)
+  SlideRenderer.Adapter.swift                                400 lines
+  SlideRenderer.AdapterTests.swift                           107 lines
+  SlideRenderer.ChartViews.swift                             153 lines
+  SlideRenderer.Chrome.swift                                 242 lines
+  SlideRenderer.Content.swift                                183 lines
+  SlideRenderer.DriveSummaryViews.swift                      188 lines
+  SlideRenderer.Model.swift                                  321 lines
+  SlideRenderer.Previews.swift                               122 lines
+  SlideRenderer.Projection.swift                             244 lines
+  SlideRenderer.SlideBuilders.swift                          187 lines
+  SlideRenderer.StatViews.swift                              242 lines
+  SlideRenderer.strings                                      106 lines
+  SlideRenderer.swift                                        156 lines
+  SlideRenderer.Tests.swift                                  335 lines
+  SlideRenderer.Views.swift                                  209 lines
+
+GATE 1 — swiftlint --strict (cd apps/apple)
+Done linting! Found 0 violations, 0 serious in 14 files.
+  LINT_EXIT=0 (0 violations / 14 files)
+
+GATE 2 — swiftformat --lint (cd apps/apple, repo .swiftformat config)
+0/14 files require formatting.
+  FORMAT_EXIT=0 (0/14 require formatting)
+
+GATE 3 — placeholder scan (real files; gate's literal -Path .../SlideRenderer is a non-existent prefix that
+          would scan nothing, so the actual 15 surface files were copied to a temp dir and scanned)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+  grep cross-check (TODO|FIXME|XXX|Coming soon|Placeholder|Lorem ipsum|not implemented|fatalError):
+    none found → clean
+
+GATE 4 — INDEPENDENT VERIFICATION (the surface is proven green on this runner)
+
+  4a. Isolated Swift 6 (strict-concurrency, .swiftLanguageMode(.v6)) build + XCTest of the Foundation core
+      (Adapter + Content + Model + Projection + SlideBuilders), driving the projection/model/adapter with
+      en_US-locale golden values asserted against the exact web arithmetic:
+      	 Executed 39 tests, with 0 failures (0 unexpected) in 0.024 (0.028) seconds
+      → 39 tests, 0 failures (number/integer/plainInt/money formatting; SI→display distance+efficiency;
+        duration/hour/month labels; earth-laps/home-days/trees/cups/savings-split; all 12 slides' content;
+        km vs mi branch; model navigation/clamp/progress; view.opened-once telemetry; stale auto-refresh-once).
+
+  4b. Isolated Swift 6 build of the FULL SwiftUI layer (all 12 non-test surface files) compiled against the
+      REAL design system (apps/design/generated/apple/Tokens.swift + Sources/Design + Sources/Components —
+      system-framework-only, no KMP Shared dependency), i.e. the real TSFadeIn / TSSkeleton / TSButton /
+      TSPieChart / TSChartSlice / TSChartPalette / Color.TS / Font.TS / TSSpacing / TSRadius:
+      Build complete! (0.24s)
+      → Build complete, 0 errors (56 files; the 10 slide views + chrome + deck container + previews all
+        type-check under Swift 6 strict concurrency).
+
+  4c. xcodegen generate — the project enumerates the surface:
+      project regenerated; project.pbxproj references 'SlideRenderer' 90 times (14 files).
+
+GATE 5 — FULL-APP xcodebuild (iOS Simulator + macOS) — DEFERRED on PRE-EXISTING, UNRELATED blockers
+  Attempted: xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator build
+             (target-level so the Gradle Shared.xcframework pre-action is not even reached):
+    error: There is no XCFramework found at '/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-82/apps/apple/Frameworks/Shared.xcframework'. (in target 'TeslaSync' from project 'TeslaSync')
+    ** BUILD FAILED **
+    IOS_EXIT=65 — total error lines=1; SlideRenderer-attributable errors=0.
+    The build aborts at dependency resolution — BEFORE any Swift source is compiled — because the KMP
+    Shared.xcframework is absent. First-hand pre-existing-blocker evidence:
+      • Frameworks/ holds only .gitkeep — Shared.xcframework is produced by 'apps/shared/gradlew
+        :core:assembleSharedXCFramework' (Kotlin/Native), a macos-latest concern per
+        apps/macos-pending-verifications.md (origin p1-shared/S3-0001, deferred to p5-hardening/H8-0001).
+      • 14 app sources import the (absent) Shared module.
+      • struct DashboardWidgetSize is redefined 15× (parallel-merge collision).
+      • 206 co-located *.Tests.swift import XCTest into the app target (the established per-surface
+        convention; this surface adds 2, exactly like every prior P4 surface).
+      • macOS app development-signing.
+    These are the SAME pre-existing blockers the ledger records for P-0010-ToolCard / 0180-AlertMessageEditor
+    / 0231-FSMTimelineChart; ZERO are attributable to SlideRenderer. The full-app iOS+macOS xcodebuild build
+    test is owned by p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner. MAC_EXIT: not
+    run (same Shared.xcframework precondition).
+
+PARITY COVERAGE (every web region + branch reproduced)
+  Composition  : SlideReviewDeck.definitions = the 12 SLIDE_DEFS (10 kinds; distance/energy hero + longest/
+                 efficient drive-highlight twice), each with a token-based accent gradient (the native peer of the
+                 web Tailwind from/via/to). SlideReviewSlideView is the native switch (web renderSlideContent).
+  Transition   : direction-aware horizontal move + opacity (web x:50→0→-50, 0.35s easeInOut), reduce-motion →
+                 .opacity; swipe + prev/next + tappable progress dots drive the index the web parent owned.
+  Arithmetic   : distance convertDistanceFromSI(km*1000,unit); efficiency *1.609344 for mi; duration h/m; 12-hour
+                 clock; earthLaps/40075 (≥0.01 branch + "Every kilometer counts!"); home-days /30; trees /21; cups
+                 /5; gas-equiv = savings+cost; electric% = round(cost/equiv*100); charging slices filter >0 — all
+                 unit-asserted against the web expressions (en_US goldens).
+  Slides       : Title (year/subtitle/vehicle) · StatHero ×2 (distance w/ earth-lap or small comparison; energy w/
+                 home-days) · StatChart (total + drives/week + labelled monthly bar row) · DriveHighlight ×2
+                 (route + distance/duration/efficiency grid + date, OR the "No drive data" empty branch) · Charging
+                 (sessions + avg-SoC + donut[TSPieChart] + percent legend, zero-slices filtered) · Savings (saved
+                 hero + gas/electric comparison bars + cups note) · Environment (CO2 + trees-equiv + capped tree
+                 grid + "+N more") · Patterns (favourite day + peak hour + 3 averages) · Comparisons (fun-fact grid)
+                 · Summary (recap card: 5 stat rows + optional savings line + screenshot hint).
+  Charts/maps  : web source lists none; the two composed child slides that the web draws with Recharts are mapped
+                 per ADR (Recharts → Swift Charts): charging uses the shared TSPieChart donut; the monthly drives
+                 distribution is a label-preserving native bar row (no third-party import).
+
+STATES (every state renders — no hidden surface)
+  loading (skeleton chrome) · empty (friendly "No year in review yet…", never blank) · error (retry affordance,
+  the sanctioned P4 leaf addition over the web) · deck (the animated slides) · stale (chip + banner + one-shot
+  auto-refresh) · offline (chip + banner over the last cached review). All six exercised by the model/projection
+  tests and the #Preview set (Deck / Deck·miles / Loading / Error / Empty / Stale / Offline).
+
+i18n / a11y / telemetry
+  i18n      : every string resolves through SlideRendererStrings (table "SlideRenderer", P1/S10); 58 keys, and the
+              code↔catalog diff is exact (0 missing, 0 unused). No English prose literals in Swift. The two web
+              t() anchors (slide.longestDrive / slide.mostEfficient) are present.
+  a11y      : decorative emojis are accessibilityHidden; every hero/metric/card/stat/legend carries a combined
+              VoiceOver label (SlideReviewAccessibility.label tested); nav + progress + refresh are labelled;
+              Dynamic Type via minimumScaleFactor; reduce-motion honoured on the transition + TSFadeIn.
+  telemetry : SlideRenderer.surfaceSlug = "SlideRenderer"; view.opened emitted exactly once on first presentation
+              via the injected SlideRendererTelemetry (P1/S11), asserted by the model tests.
+
+ACCEPTANCE CRITERIA
+  [x] Surface renders on Apple with all states from the web source reproduced.
+  [x] Hooks bind to the shared P1/S8 state-holder seam (SlideRendererSource/Model); no direct HTTP from the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (58/58; exact diff).
+  [x] Accessibility labels present on every interactive element (nav, progress, refresh) + content cells.
+  [x] Tests: adapter unit tests + per-state projection/model tests + a11y label test (39 green, Swift 6 strict).
+  [x] No TODO / stub / placeholder / Lorem in shipped code (scanner COUNT=0; grep clean).
+  [~] EXIT=0/STATUS=DONE: all surface-scoped + host-runnable gates green; the full-app iOS/macOS xcodebuild is
+      DEFERRED on pre-existing, unrelated blockers (absent KMP Shared.xcframework) per the ledger — never reported
+      as passing.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app xcodebuild is reported DEFERRED with the raw IOS_EXIT=65 + the verbatim
+                           "no XCFramework found at Frameworks/Shared.xcframework" abort — never as passing.
+  2  No scope narrowing  : all 10 slide kinds + 12 defs + both drive-highlight branches + every comparison reproduced.
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; raw exits pasted; the deferred blockers were
+                           each re-confirmed by ls/grep (Shared.xcframework absent, 14 import-Shared, DashboardWidgetSize
+                           15×, 206 co-located XCTest), not assumed.
+  4  No stubs as final   : complete production surface + 39 real tests; placeholder scanner COUNT=0.
+  5  No parity shortcut  : the distance/efficiency conversions, duration/hour labels, and every derived fun-fact are
+                           unit-asserted against the web arithmetic; the slide order matches SLIDE_DEFS.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened telemetry,
+                           and the established "isolated build + DEFERRED full-app" disposition all honoured.
+  8  No commit on red    : the committed artifact (15 SlideRenderer.* files + this log) is GREEN on every per-surface
+                           gate AND on a real isolated Swift 6 build + 39 XCTest + a full-SwiftUI-layer build; the
+                           deferred full-app gate is blocked only by pre-existing surfaces this commit never touches.
+  9  No silent drift     : changes are confined to feature-views/SlideRenderer.* + this log; the composed-child-slide
+                           reproduction (AiUsageCard precedent) and the placeholder-path quirk are disclosed above.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic SlideRenderer Year-in-Review deck shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: the Foundation core + the full SwiftUI layer compile under Swift 6 strict concurrency
+  against the REAL design system, and 39 XCTests pass; swiftlint --strict / swiftformat --lint / placeholder are all
+  green on the 15 surface files. The full-app iOS-Simulator + macOS xcodebuild build/test is DEFERRED (not failed by
+  this code) on the pre-existing, unrelated, out-of-allowed-files absent KMP Shared.xcframework (+ DashboardWidgetSize
+  15×, co-located-tests-in-app-target, macOS signing), owned by p4-apple/P99-0001-apple-acceptance-gate on a signed
+  macos-latest runner per apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

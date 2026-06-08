@@ -1,0 +1,186 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is available (xcodebuild, swift 6.3.2, swiftlint, swiftformat). Let me examine the existing Apple app structure and the reference pattern from the modified `AIUsageCard.*` files.
+
+The pattern uses multi-file components. Let me study the recently-modified `AIUsageCard.*` files as the canonical reference, plus the project configuration.
+
+Note: the reference files are `AiUsageCard.*` (lowercase i). Let me read the rest of that reference set plus the project config, in parallel.
+
+Excellent pattern. Now the remaining reference files plus the shared infrastructure (tokens, motion, freshness facades).
+
+Some referenced subviews (`AiUsageProjection`, `AiUsageLoadingView`, etc.) aren't in the files I've read. Let me locate all AiUsageCard files and the shared token/motion infrastructure.
+
+The full reference surface is 10 files using `<Surface>.<Aspect>.swift`. Let me read the Chrome (freshness/loading/error), Projection, Tests files and the project config to understand build inclusion and tokens.
+
+Key finding: `project.yml` lists explicit source paths (`Sources`, `TeslaSync/dashboard-widgets`, `TeslaSync/feature-views`) but **not** `TeslaSync/shared-surfaces`. Let me verify the full toolchain capability (xcodegen, simulators, the Shared.xcframework, existing xcodeproj) since that determines build feasibility.
+
+`xcode-select` points to CommandLineTools (no SDKs, no simulators), but there's an `/Applications/Xcode.app`. The `Shared.xcframework` is only a `.gitkeep`. Let me probe whether Xcode.app is usable and what the xcframework script needs.
+
+Xcode 26.5 is fully available (iOS 26.5 SDK + simulator runtime) via `DEVELOPER_DIR`. The decisive risks now are (1) the `Shared.xcframework` Gradle/KMP build and (2) whether `shared-surfaces` is wired into `project.yml`. Let me probe the Gradle feasibility and locate the design tokens.
+
+Design tokens live in `apps/design/generated/apple/Tokens.swift`. Java 17 + gradlew are present. Let me read the tokens, motion, and survey the shared atomic components I can reuse.
+
+Now the web dependency contracts and the reusable native component signatures. Reading in parallel.
+
+Let me read the rest of `DataFreshness.tsx` (the `FreshnessQuery` type + `DataFreshnessAuto`) and the native component signatures I'll reuse.
+
+There are ready-made shared components (`TSSpinner`, `TSEmptyState`, `TSPageErrorBoundary`, `TSErrorDisplay`) that map directly to the web deps. Let me read their exact signatures plus typography and the Apple conventions docs.
+
+The shared library already provides `TSSpinner`, `TSEmptyState`, `TSPageErrorBoundary`, `TSPageTitle`, `TSSubhead`, `TSButton` — direct native counterparts to the web deps. Let me read the test conventions, the projection pattern, lint configs, and the placeholder checker before implementing.
+
+Now the lint configs, placeholder checker, pwsh availability, and whether a native freshness component already exists.
+
+Comprehensive understanding achieved. Key facts:
+- `swiftformat --lint apps/apple` (whole-tree) **will** cover my new files; `check-placeholders.ps1` (pwsh available) targets my files directly. Both are satisfiable.
+- `project.yml` and `.swiftlint.yml` do **not** register `shared-surfaces` (predecessor wiring gap, outside my allowed files), and `Shared.xcframework` is absent (KMP build).
+
+Let me start the KMP framework build probe in the background while I implement, and set up tracking.
+
+The KMP `core` contains only golden JSON specs and a `build.gradle.kts` — no Kotlin sources, and building needs network (mavenCentral/google). Let me start a bounded Gradle probe in the background and begin implementing the surface (the core deliverable regardless of build feasibility).
+
+Gradle 8.14.5 + JVM 17 work (distribution cached). Let me read the core build script and kick off the actual xcframework assembly in the background.
+
+There are Kotlin sources; the xcframework build needs the Kotlin/Native toolchain (large download) + a pwsh codegen step. Let me launch it in the background and proceed to implement the surface.
+
+Now I'll write the plan and implement. Creating the session plan first.
+
+The KMP build finished quickly — let me check its result, then continue implementing.
+
+The KMP build is **progressing** (downloaded Kotlin/Native, compiled iosArm64, now linking) — the environment is pre-warmed for Apple builds. It's still running detached. Let me continue implementing while it builds.
+
+Creating the i18n catalog and the model layer:
+
+Now the model layer (i18n facade, telemetry seam, breadcrumb-overrides state-holder, freshness query types, observable model):
+
+Let me fix the surface-slug reference to avoid an awkward generic-static call — I'll introduce a non-generic slug holder.
+
+Now the pure projection layer (worst-query selection, body phase, freshness status, relative-time):
+
+Let me verify the exact `TSButton` initializer signatures before writing the chrome that uses it.
+
+`TSButton(variant:size:isLoading:action:label:)` confirmed. Now the chrome (freshness chip + copy-link button):
+
+Now the views (header + body state subviews):
+
+Now the main view, with @MainActor inits and a no-actions convenience overload:
+
+Let me check the exact forbidden placeholder patterns before writing previews/tests (to avoid tripping the gate).
+
+Clean. Now the previews (one per state, deterministic `now`):
+
+Now the comprehensive XCTest coverage (projection + model + a11y), mirroring the established test conventions:
+
+All 8 source files created. Let me update tracking, auto-format my files, and check the KMP build progress.
+
+swiftformat formatted 5/7 files. The KMP xcframework build **FAILED** after 3m. Let me capture the exact failure (BLOCKED evidence) and verify formatting + lint on my files.
+
+swiftformat lint passes (0/7 require formatting). Let me see the exact KMP linker error, then run swiftlint + the placeholder check on my files.
+
+KMP fails at the iOS link step (a pre-existing shared-core Kotlin/Native error, not my code). The swiftlint run linted the whole tree and found 1 violation — I must determine whether it's in **my** files. Let me isolate both.
+
+Real swiftlint violations in my files: 4 trailing-closure issues in Previews (where `onRefresh:` + trailing content = two closures) and Tests is 407 lines (>400 under `--strict`). Let me view and fix the previews, and split the test file.
+
+Let me fix the 4 preview trailing-closure violations, then split the oversized test file.
+
+Now split the test file. Let me view the boundaries to move the projection tests into their own file.
+
+Splitting the projection tests into their own file (mechanical split + new header):
+
+Both files now under 400 lines. Let me update the Tests.swift header to reflect the split and verify both files' structure.
+
+Now re-format and re-verify swiftformat + swiftlint on all 8 files:
+
+One trailing-newline issue from the split. Let me fix it.
+
+That was a race (swiftformat + swiftlint ran in parallel). The file now ends with a single newline. Let me re-verify swiftlint alone.
+
+Both swiftformat and swiftlint are clean on all 8 files. Now the placeholder gate and dependency analysis for a standalone compile.
+
+Placeholder gate passes (COUNT=0, EXIT=0). Components/Design are Shared-free, so I can do a real standalone typecheck of my surface against its actual dependencies. Let me attempt it against the iOS simulator SDK with Swift 6 strict concurrency.
+
+Those errors are from `Maps/MapView.swift` (referencing `TSChartPalette` defined outside Components) — unrelated to my surface, which doesn't use Maps. Let me narrow the typecheck to my actual transitive dependencies.
+
+`TSChartPalette` is in `Sources/Design/TSDesign.swift`. Let me narrow to my actual dependency closure (UI primitives + design) and exclude the unrelated Maps/Charts.
+
+`Cards.swift` (a speculative dep) needs `.tsGlassPanel()`. My surface doesn't use Cards. Let me check what States/Banners actually need and trim.
+
+States/Banners don't need Cards; Banners needs `TSTone` (in Badges.swift). Let me drop Cards and re-run.
+
+Skeletons.swift needs TSCard, but my surface uses `TSSpinner` (not skeletons) — so I don't need it. Dropping it.
+
+**Production surface typechecks cleanly (EXIT=0)** against its real dependencies under the iOS 26.5 SDK with Swift 6 strict concurrency. Now let me verify the test files compile by building the surface into a testable module and typechecking the tests against it.
+
+Step A succeeded (`EMIT_EXIT=0`) — the surface builds as a **testable module**, and every reference to *my* symbols in the tests resolved. The only failures are `XCTAssertEqual` (XCTest's C macro overlay not bridged in bare `swiftc`). Let me add the platform Swift overlay path to fix the XCTest import.
+
+The overlay path fixed XCTest. Now a **genuine bug surfaced**: `PageContainer.Tests.swift` uses `EmptyView` (SwiftUI) without `import SwiftUI`. Let me fix that.
+
+Now re-format, re-lint, and re-typecheck the tests (sequentially to avoid races):
+
+swiftformat + swiftlint both clean (0/8, 0 violations). Now re-verify the test typecheck with the import fix (re-emitting the module fresh):
+
+Both test files typecheck clean against the testable module (`EMIT_EXIT=0`, `TESTS_TYPECHECK_EXIT=0`). Now the macOS target (ADR-002: shared sources) — verifying the `#if os(iOS)`/AppKit branches compile:
+
+All compile checks pass: **iOS surface, iOS tests, and macOS surface all typecheck clean (EXIT=0)** under Swift 6 strict concurrency. Let me update tracking and now run the prescribed gate honestly to capture the platform/wiring evidence.
+
+`xcodegen` succeeds but confirms **`shared-surfaces`/`PageContainer` is absent from the generated project** (0 matches vs 3 for the wired `feature-views`) — project.yml doesn't list it. Now let me run the actual `xcodebuild` gate to capture the xcframework blocker. First ensure the iPhone 16 simulator exists.
+
+An iPhone 16 simulator already exists (booted). Let me remove my duplicate and run the actual `xcodebuild` gate step to capture the xcframework pre-action failure.
+
+The xcodebuild gate is running in the background (gradle pre-action takes ~3min). Let me verify the log directory exists and monitor the build.
+
+The xcodebuild pre-action completed. Let me read the full outcome.
+
+The xcodebuild's gradle pre-action is still progressing (now linking the simulator framework — further than my earlier standalone run). Let me wait for it to resolve.
+
+Significant update: the `Shared.xcframework` **did build successfully** ("xcframework successfully written out") — my earlier standalone failure was a transient concurrent-build conflict (the env is shared; other agents' xcodebuilds are running too). So the xcframework is **not** the real blocker. The binding blocker is the `project.yml`/`.swiftlint.yml` wiring gap. Let me capture the real gate-step exit codes (steps 3-5 run against the whole tree) and the xcframework state.
+
+`swiftformat --lint apps/apple` (gate step 4) reports **1/1921 files** need formatting — but my 8 files are clean. Let me identify the offending file (it's likely outside my scope, given the shared environment).
+
+The 8 "shared-surfaces" lines are just passing progress for my files. The 1 failing file is elsewhere (shared/in-flux tree). Let me pinpoint it for transparency.
+
+Confirmed: the swiftformat gate failure is in `feature-views/ActionBuilder.Previews.swift:48` (another surface's file, **not mine**, not editable under allowed-files). The xcframework builds fine, so the real blocker is purely the `project.yml`/`.swiftlint.yml` wiring gap. Let me capture the remaining real gate-step exit codes (swiftlint full, xcodebuild state) for an honest log.
+
+Both `swiftlint --strict` (step 3, EXIT=2) and `swiftformat --lint apps/apple` (step 4, EXIT=1) fail on files **outside my scope** in this shared/in-flux tree; my files aren't even in swiftlint's `included` set. Let me identify the swiftlint violation for transparency, then write the honest gate log.
+
+Confirmed: the swiftlint violation is in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141` — another surface's file, not mine. I now have complete evidence. Let me write the honest gate log.
+
+Gate log written. Now let me finalize: check git scoping (ensure my generated `.xcodeproj` is ignored), update tracking, and stop my now-unneeded background build to free the shared runner.
+
+Good — my files are cleanly scoped and the generated `.xcodeproj` is git-ignored. Let me find my xcodebuild's numeric PID to stop it (the safety layer needs a literal PID).
+
+My xcodebuild finished on its own. Let me capture its final outcome to make the log accurate.
+
+My xcodebuild reached the app-compile stage (past the xcframework pre-action) before the shared runner interrupted it — confirming the xcframework is not the blocker. Let me refine that line in the log, clean up temp files, and update tracking.
+
+All 9 deliverable files are in place (1626 lines of Swift). Let me finalize the plan status, then verify my files one final time as a clean check.
+
+All in-scope checks confirmed green one final time. Let me confirm todo status and wrap up.
+
+All 14 todos complete. The task is finished as far as it can legitimately go within the artifact's allowed-files scope.
+
+## Summary
+
+I shipped a complete, production-polished native (SwiftUI) parity of `components/layout/PageContainer.tsx` at `apps/apple/TeslaSync/shared-surfaces/PageContainer.*` — **9 files, 1626 lines of Swift** — following the established `<Surface>.<Aspect>.swift` pattern (no stubs, no placeholders):
+
+- **PageContainer.swift** — generic surface view, `view.opened` telemetry, no-actions convenience init
+- **PageContainer.Model.swift** — P1/S10 i18n facade, P1/S11 telemetry seam, P1/S8 breadcrumb‑overrides sink (native peer of `BreadcrumbOverridesContext`), link‑sharer seam, `@Observable` model
+- **PageContainer.Projection.swift** — pure logic: body‑phase ladder, `pickWorst` worst‑of‑N, freshness status (+`forceStaleAfter`), relative‑time buckets, default empty message
+- **PageContainer.Chrome.swift / .Views.swift** — DataFreshness chip + CopyLink button, header + 4 body branches (reusing `TSSpinner`/`TSPageErrorBoundary`)
+- **Previews** (10 states), **Tests + ProjectionTests** (XCTest), **.strings** catalog
+
+**Every in‑scope check is GREEN** (real exit codes, not claimed): swiftformat `--lint` 0/8 · swiftlint `--strict` 0 violations · placeholder COUNT=0 · iOS typecheck EXIT=0 · testable‑module emit + both test files typecheck EXIT=0 · macOS typecheck EXIT=0 (all under Swift 6 complete concurrency against the real shared token/component sources). This process even caught + fixed a real bug (missing `import SwiftUI` in the tests).
+
+**Gate STATUS=BLOCKED** (logged at `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0171-PageContainer.log`, EXIT=1). The blockers are entirely **outside this artifact's allowed files**:
+- `project.yml` + `.swiftlint.yml` don't register `TeslaSync/shared-surfaces` (xcodegen = 0 refs vs `feature-views` = 3) → the gate's `xcodebuild build test` and `swiftlint --strict` don't compile/lint/test this surface. Wiring them is P4‑core predecessor work (covenant #7).
+- The gate's `swiftlint --strict` and `swiftformat --lint apps/apple` already fail on **other surfaces'** files (`feature-views/ActionBuilder.Previews.swift:48`, `dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141`).
+- `Shared.xcframework` **does** build — not a blocker.
+
+Per covenant #8 ("no commit on red") I did **not** commit; the complete, verified work and log persist in the working tree. The log's section 5 lists the exact 3 predecessor edits that turn the full gate green with zero further changes to this surface.
+
+
+
+The task is at its legitimate terminal state. I've re-confirmed every in-scope check passes, the gate is genuinely BLOCKED on factors outside this surface's allowed files, and — having re-examined it — there is **no in-scope action** that can move the gate toward green:
+
+- Wiring `shared-surfaces` into `project.yml`/`.swiftlint.yml` is outside allowed files (covenant #7), **and** even if wired, gate steps 3–4 would still fail on *other surfaces'* pre-existing lint debts that I also cannot touch. So green is unreachable within scope — BLOCKED is correct, not a shortcut.
+- Per covenant #8 ("no commit on red"), I did not commit; the complete, verified deliverable and the `EXIT=1 / STATUS=BLOCKED` log persist in the working tree.
+

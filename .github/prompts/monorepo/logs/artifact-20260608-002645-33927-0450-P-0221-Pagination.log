@@ -1,0 +1,137 @@
+=== P4 Shared surface 0221 Pagination (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon)
+  Active dev dir     : /Library/Developer/CommandLineTools  (Command Line Tools — NOT a full Xcode)
+  Toolchain present  : swift 6.3.2 · swiftlint · swiftformat · xcodegen · pwsh
+  Toolchain ABSENT   : xcodebuild (`xcode-select: error: tool 'xcodebuild' requires Xcode, but active
+                       developer directory '/Library/Developer/CommandLineTools' is a command line
+                       tools instance`), xcrun simctl (`unable to find utility "simctl"`), iOS SDK
+                       (CLT SDKs dir holds only MacOSX*.sdk — no iPhoneOS/iPhoneSimulator SDK), and
+                       the XCTest module (`no such module 'XCTest'` under SwiftPM; absent from the
+                       CLT swift libdir).
+  Capability verdict : SwiftUI compiles + runs against the macOS-15 SDK on this runner (proven below
+                       by the isolated SwiftPM build of the exact shipped sources). The prompt's
+                       mandated build/test gate — `xcodebuild -scheme TeslaSync -destination
+                       'platform=iOS Simulator,name=iPhone 16' build test` and `xcodebuild -scheme
+                       TeslaSync-macOS build test` — is UNAVAILABLE on this Command-Line-Tools-only
+                       runner. Per the prompt capability clause ("If unavailable on the runner →
+                       STATUS=BLOCKED with API evidence"), the Xcode-hosted gate is BLOCKED and
+                       deferred to the ADR-012 macos-latest CI runner. The surface itself is
+                       code-complete and independently verified on every host-runnable gate.
+
+WEB SOURCE (the specification)
+  web/src/components/ui/Pagination.tsx — a CONTROLLED table pagination control (parent owns
+  page/pageSize, child emits onPageChange/onPageSizeChange). Render:
+    <nav aria-label=t('a11y.pagination','Pagination') flex-col sm:flex-row justify-between>
+      <div> "Showing {start}–{end} of {total}" [aria-live polite]
+            {onPageSizeChange && <select aria-label=t('pagination.pageSize','Rows per page')>
+                                   option t('pagination.perPage','{{count}} / page')> }
+      <div> [First page]  [Previous page]  "{page} / {totalPages}" [aria-current,
+            aria-label t('pagination.currentPage','Page {{page}} of {{total}}')]
+            [Next page]  [Last page] </div>
+    </nav>
+  totalPages = max(1, ceil(total/pageSize)) · start = (page-1)*pageSize+1 (shown 0 when total==0) ·
+  end = min(page*pageSize, total) · prev/first disabled page<=1 · next/last disabled page>=totalPages.
+  i18next interpolation (escapeValue:false, no number formatter) ⇒ numbers stringify with NO
+  grouping separator. Data sources: useTranslation only (no hooks, no HTTP).
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/shared-surfaces/)
+  Pagination.Model.swift     — PaginationStrings facade (P1/S10), PaginationConnection axis,
+                               PaginationTelemetry seam + OSLog sink (P1/S11), PaginationInput,
+                               PaginationResolved+Phase, PaginationSource seam (P1/S8),
+                               @Observable PaginationModel (controlled intents + stale auto-refresh),
+                               InMemoryPaginationSource.
+  Pagination.Adapter.swift   — pure PaginationProjection.resolve (web page-window arithmetic +
+                               phase contract), PaginationNumber (un-grouped ints), PaginationAccessibility.
+  Pagination.Chrome.swift    — inline freshness chip + stale/offline connectivity banner.
+  Pagination.Views.swift     — nav buttons, rows-per-page Picker (web <select>), responsive controls
+                               row (ViewThatFits = flex-col sm:flex-row), loading skeleton, error+retry,
+                               friendly empty.
+  Pagination.swift           — Pagination View, surfaceSlug="Pagination", phase switch, nav landmark.
+  Pagination.Previews.swift  — #if DEBUG #Preview per state (data/last-page/rows-per-page/empty/
+                               loading/error/stale/offline).
+  Pagination.Tests.swift     — XCTest: projection phases + web arithmetic, model intents/telemetry/
+                               freshness, accessibility labels.
+  Pagination.strings         — per-surface "Pagination" i18n table (every web key + P4 chrome keys).
+  Necessary shared wiring (same pattern ToolCard used to establish feature-views):
+    project.yml   — + "TeslaSync/shared-surfaces" to the TeslaSync (iOS) and TeslaSync-macOS sources.
+    .swiftlint.yml — + "TeslaSync/shared-surfaces" to included.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported, no raw hex)
+  <nav aria-label>         → VStack .accessibilityElement(.contain) + .accessibilityLabel (navLabel).
+  "Showing X–Y of Z"       → PaginationResolved.showingText (en-dash U+2013), aria-live → labeled Text.
+  <select> rows-per-page   → SwiftUI Picker(.menu) with Text(verbatim: perPageLabel(size)).
+  lucide Chevrons(Left/Right) → SF Symbols chevron.backward(.2)/chevron.forward(.2) (RTL-mirroring).
+  "{page} / {totalPages}"  → pageIndicatorText; aria-label → pageIndicatorLabel (Page X of Y).
+  disabled:opacity-30      → PaginationNavButton .opacity(0.3) + .disabled when at boundary.
+  flex-col sm:flex-row     → ViewThatFits(in: .horizontal) { HStack ; VStack }.
+  i18n   : every string via the P1/S10 "Pagination" table facade; zero English literals in code.
+  a11y   : every interactive element labeled; nav landmark; indicator carries the web aria-label.
+  states : loading skeleton · empty (web zero chrome + "No results") · error+retry (P4 leaf) · data ·
+           stale/offline inline chip + banner + one-shot auto-refresh.
+  telemetry: view.opened surface="Pagination" (P1/S11), OSLog default sink, emitted once.
+
+GATES
+  [GREEN]    swiftformat --lint apps/apple/TeslaSync/shared-surfaces : 0/7 files require formatting   (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict  (shared-surfaces scope)             : 0 violations in the 8 shipped files (LINT_EXIT=0)
+             swiftlint --strict  (whole app, FYI)                    : 1 PRE-EXISTING violation — function_body_length
+                                                                       in TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+                                                                       (NOT a Pagination file; not modified here — git status clean for it).
+  [GREEN]    check-placeholders.ps1 -Path …/shared-surfaces          : PLACEHOLDER_COUNT=0, PLACEHOLDER_ALLOWED=0  (PLACEHOLDER_EXIT=0)
+  [GREEN]    xcodegen generate                                       : project written; all 8 Pagination.* files enumerated in the
+                                                                       iOS + macOS app targets (XCODEGEN_EXIT=0).
+  [GREEN]    Pagination build + run — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode,
+             strict-concurrency complete = same as the app), compiling the EXACT shipped Pagination
+             Model/Adapter/Chrome/Views/swift sources against the REAL repo design system
+             (Tokens + Components: Buttons/Cards/Badges/Typography/Skeletons/Motion + TSDesign/TSMaterial):
+                 Build complete!  ·  PAGINATION HARNESS: 63 passed, 0 failed                          (SWIFT_EXIT=0)
+             (The shipped Pagination.Tests.swift is XCTest; XCTest is absent on this CLT-only runner, so its
+              63 assertions were executed verbatim via an executable harness against the exact library sources.
+              The XCTest file itself parses clean: `swiftc -parse Pagination.Tests.swift` → PARSE_EXIT=0.
+              Pagination.Previews.swift is excluded from the harness because `#Preview` requires Xcode's
+              PreviewsMacros plugin, absent under Command Line Tools; it is DEBUG-only tooling code.)
+
+  [BLOCKED]  xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=BLOCKED
+  [BLOCKED]  xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=BLOCKED
+
+  WHY BLOCKED (runner-capability, NOT a Pagination defect):
+    • `xcodebuild` is unavailable — this runner's active developer dir is the Command Line Tools,
+      not a full Xcode (`xcode-select: error: tool 'xcodebuild' requires Xcode …`).
+    • No iOS-Simulator capability — `xcrun simctl` is absent and the CLT ships no iPhoneSimulator SDK,
+      so the `platform=iOS Simulator,name=iPhone 16` destination cannot be resolved.
+    • No XCTest module under SwiftPM on CLT, so the shipped XCTest target cannot be executed here.
+    Per the prompt capability clause, this is recorded as STATUS=BLOCKED with the API evidence above
+    and DEFERRED to the ADR-012 `macos-latest` CI runner (which has Xcode + simulators + signing).
+    A row is recorded in apps/macos-pending-verifications.md. The Pagination surface introduces ZERO
+    errors on every gate that this runner CAN execute.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the xcodebuild iOS/macOS gate is reported BLOCKED (not run, capability absent) with API
+                           evidence — never reported as passing. Host-runnable gates show real, pasted results.
+  2  No scope narrowing  : every web region + branch reproduced (showing line, rows-per-page select, First/Prev/
+                           indicator/Next/Last, boundary disable, aria labels, RTL chevrons) + the P4 leaf states.
+  3  No skip-and-assume  : every host-runnable gate executed on THIS runner; raw exits pasted; the xcodebuild
+                           absence is confirmed via xcode-select/simctl/SDK probes, not assumed.
+  4  No stubs as final   : complete production control + 63 executed assertions; placeholder scanner = 0 / 0 opt-outs.
+  5  No parity shortcut  : arithmetic, copy, disable flags, a11y labels, i18n, telemetry all mapped + verified.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry consumed.
+  8  No commit on red    : the committed artifact is GREEN on every runnable gate AND on a real isolated Swift 6
+                           strict-concurrency build+run; the only non-green gate is BLOCKED by missing Xcode, not
+                           by failing Pagination code.
+  9  No silent drift     : changes confined to shared-surfaces/Pagination.* (8 files), project.yml + .swiftlint.yml
+                           wiring, this log, and one macos-pending-verifications row — all enumerated above.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic Pagination shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED to the maximum this runner allows: the exact shipped sources compile under
+  the app's own Swift 6 strict-concurrency settings against the real design system, and 63 runtime
+  assertions (the shipped XCTest suite's logic) all pass, with lint/format/placeholder/xcodegen green.
+  The prompt's iOS-Simulator + macOS `xcodebuild build test` gate cannot be executed on this
+  Command-Line-Tools-only runner (no Xcode, no simulators, no iOS SDK, no XCTest) and is therefore
+  BLOCKED + deferred to the macos-latest CI runner per apps/macos-pending-verifications.md.
+
+EXIT=1
+STATUS=BLOCKED

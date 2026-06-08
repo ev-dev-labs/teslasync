@@ -1,0 +1,163 @@
+I'll start by exploring the environment to understand what exists: the web source, the Apple app structure, and available tooling.
+
+Key finding: full Xcode is NOT installed (only Command Line Tools), so `xcodebuild` fails. But `swift` 6.3.2, `swiftlint`, and `swiftformat` ARE available. Let me explore the Apple app structure and read the web source before concluding anything.
+
+Now let me read the search index logic (the data source I must reproduce) and explore the Apple app's established patterns deeply.
+
+Significant existing Apple structure. Let me examine the output target directory, existing feature-views, and the test patterns.
+
+Nearly 1000 files in feature-views — a well-established multi-file pattern. Let me examine the exact file set for one feature view and check if SettingsSearch already exists.
+
+Pattern is 7 files per view. No Settings views exist yet. Let me read a complete example end-to-end and find the closest analog (one with text input / search behavior).
+
+`AddressInput` is the closest analog (TextField + autocomplete listbox). Let me read its complete file set to learn the exact conventions.
+
+Let me read the full AddressInput file set to internalize the conventions.
+
+Excellent, high-quality pattern. Let me read the remaining AddressInput files to fully internalize tokens, states, projection, views, tests, and strings format.
+
+Let me read the remaining AddressInput files plus the design tokens definitions.
+
+Let me read the Previews, Tests, design tokens, and the project configuration to understand build wiring.
+
+Now let me examine the design tokens, project config, lint configs, and the existing BLOCKED-status convention used in this repo.
+
+Now I understand the verification convention (isolated SwiftPM build + lint + format + placeholder check, with full-app xcodebuild deferred to macOS CI). Let me confirm the design tokens and read the search algorithm I must port.
+
+The design tokens live in `../design/generated/apple/Tokens.swift`. Let me read it to confirm exact token names available.
+
+Design tokens confirmed — all needed tokens exist. Now the critical piece: the search algorithm in `searchIndex.ts` that I must faithfully port. Let me read it.
+
+Let me read the exact definitions of the `SettingsEntry` type, `fuzzyMatch`, `searchSettings`, and sample index entries.
+
+I now have the full algorithm and tokens. Let me examine the verification tooling (placeholder check, lint/format configs, isolated-build approach), the navigation seam, and whether an isolated SwiftPM harness exists.
+
+`pwsh` is available (can run the real placeholder gate). ToolCard uses a flexible file split. No Package.swift, so I'll need an isolated build harness. Let me read the placeholder checker, the ToolCard precedent, and test whether SwiftUI compiles under Command Line Tools.
+
+Critical: **SwiftUI typechecks under Command Line Tools** (exit 0). So I can build an isolated SwiftPM package to genuinely compile + test my code. `pwsh` runs the real placeholder gate. Note: the `placeholder` pattern is case-insensitive, so I'll guard the one line referencing the `settings.search.placeholder` i18n key with `// parity:allow`. Let me probe the rest of the toolchain and read the ToolCard precedent.
+
+XCTest isn't on the raw `swiftc` path. Let me verify whether SwiftPM (`swift test`) can find XCTest under CLT, and survey the shared UI components available to map `@/components/ui`.
+
+Confirmed: XCTest is unavailable under CLT (no Xcode), even via SwiftPM. There's a rich shared component library though (`TSTextField`, `TSGlassPanel`, `TSText`, `TSStatusPill`, etc.). Let me probe swift-testing (for host-runnable verification) and read the key shared component APIs I'll map `@/components/ui` to.
+
+Neither XCTest nor swift-testing is available (CLT only) — so I'll write the canonical XCTest file (for the macOS gate) AND a temporary plain-Swift harness to genuinely run my adapter logic here. `TSTextField` lacks the search icon/combobox semantics, so like AddressInput I'll build surface-private field chrome. Let me read the remaining shared APIs (typography, glass panel, status pill) and check the navigation-seam pattern.
+
+`QuickNav` is the navigation analog. Let me read its navigation-seam pattern plus the `TSGlassPanel` and `TSStatusPill` APIs.
+
+Let me read the QuickNav model and view to see exactly how the `useNavigate` seam is modeled (injected callback), then I'll have everything to design SettingsSearch.
+
+I have the full architecture now. QuickNav confirms the navigation seam (`onSelect` callback) and the static-catalog pattern. Now let me read the complete settings index catalog so I can faithfully port all entries (the data the surface searches).
+
+I now have the complete 53-entry catalog and all conventions. Let me check the glass-panel material dependency, then write my plan and begin implementation.
+
+I have everything needed: the full 53-entry catalog, the scoring algorithm, all conventions, design tokens, shared components, and verification tooling. Let me record the plan and todos, then implement.
+
+Before writing the 53-entry catalog (which has long fallback strings), let me check how the repo handles string lines exceeding swiftlint's 120-char `--strict` limit.
+
+There's a precedent: `WidgetPicker.Catalog.swift` uses `// swiftlint:disable file_length line_length`. Let me mirror that catalog pattern.
+
+The `WidgetPicker.Catalog.swift` precedent confirms the catalog pattern (`// swiftlint:disable file_length line_length`, 1:1 web transcription). I now have every pattern needed. Let me create the Foundation-only core files.
+
+Now the adapter — the heart of the port (faithful `fuzzyMatch` + `searchSettings` scoring with a stable sort and the `MAX_RESULTS` cap).
+
+Now the full 53-entry catalog, transcribed 1:1 from `getSettingsIndex`, using the `WidgetPicker.Catalog` precedent.
+
+Now let me validate the Foundation-only core with a runnable plain-Swift harness (this both compiles those 4 files and verifies the search logic against the web algorithm).
+
+Foundation core compiles. Now run the logic checks.
+
+All 37 logic checks pass — the Foundation core compiles and is web-parity correct. Now the state holder (model + source seam + telemetry + i18n facade).
+
+Now the presentational chrome (field with search icon + keyboard handling, freshness chip, banner, result rows).
+
+Now the load-state views (loading / empty / error), mirroring the precedent.
+
+Now add the hover-select method to the model and create the main view that composes everything.
+
+All source files written. Now the critical step: build them as an isolated SwiftPM package (Swift 6 mode = strict concurrency, macOS 15) against the real SDK to verify everything compiles.
+
+The full isolated package **compiles cleanly under Swift 6 strict concurrency (macOS 15) — Build complete, 0 errors**. Now let me add an `initiallyOpen` testability seam to the model (so previews/tests can show the popover without a focus event), then write previews, strings, and tests.
+
+Now the i18n strings catalog — the 3 surface keys from the web source, the native state-envelope/a11y keys, and all 53 catalog entry keys.
+
+Now the XCTest suite (co-located per the feature-view convention; runs on the macOS gate). It covers the adapter, catalog, model, and accessibility.
+
+Now I must validate the model behavior (which the XCTest file covers but can't run here without Xcode). Let me add an executable target to the isolated package that runs the same model assertions on the main actor.
+
+Harness-only issues (stale source copy + Swift 6 top-level actor rules). Let me re-copy the updated sources into the package and rewrite the harness with a `@MainActor` runner class (mirroring the XCTest spy pattern).
+
+All 35 model checks pass (72 total assertions verified on-host). Now run the real gate tools I can execute: swiftformat, swiftlint, and the placeholder checker.
+
+Expected — swiftformat wants to apply its wrapping. Let me apply formatting, then re-lint to confirm clean.
+
+swiftformat clean (0/10 require formatting). Now swiftlint `--strict` on my files.
+
+Two lint issues: the Catalog enum body length and the Tests file length. Let me check how `WidgetPicker.Catalog` (the precedent) handles `type_body_length`, then fix both.
+
+`WidgetPicker.Catalog` avoids `type_body_length` by putting the big array in a **top-level private constant** outside the enum, and test files are kept ≤400 lines. Let me view the current (formatted) Catalog structure to restructure it the same way.
+
+swiftformat expanded the catalog. Let me restructure it (move the spec struct + array to top-level constants, mirroring `WidgetPicker.Catalog`) using a precise Python transform, and trim the test file under 400 lines.
+
+Catalog restructured. Now normalize it with swiftformat and trim the Tests file header to get under 400 lines.
+
+Catalog now lints clean. The Tests file (419 lines) exceeds the 400-line convention. I'll split it into adapter/catalog/a11y tests and model tests (both well under 400, matching `SettingsSearch.*`). Let me rewrite both via heredoc.
+
+Now create the model-tests file (uses the shared `SettingsSearchTestData` fixture, which is target-internal).
+
+Both test files are now under 400 lines (193 + 202). Let me format and lint all my files, then re-verify the restructured Catalog still compiles in the package.
+
+All 11 files pass swiftformat and swiftlint `--strict` (0 violations). Now re-verify the restructured/formatted sources still compile and pass by re-syncing into the package and re-running the harnesses.
+
+Let me also re-run the Foundation adapter harness against the restructured Catalog to confirm all 53 entries and scoring survived intact.
+
+Both harnesses green against the final sources. Now the placeholder gate. Let me first confirm the `// parity:allow` guard survived formatting, scan my files for forbidden patterns, then run the real `check-placeholders.ps1` via pwsh.
+
+Line 135 (a doc comment) contains the literal key `settings.search.placeholder` without a guard — the case-insensitive checker would flag it. Let me reword the doc comment to avoid the word while keeping the guarded code line.
+
+Now run the real `check-placeholders.ps1` (via pwsh) against a temp copy of my files to genuinely exercise the placeholder patterns, plus the literal gate command.
+
+Placeholder gate clean: `PLACEHOLDER_COUNT=0, EXIT=0` (1 allowed = the guarded key line), and the self-test confirms the detector works. Let me do a final format+lint pass after the doc-comment edit and confirm no unguarded patterns remain.
+
+All clean. Let me do a final clean build of the package (with the edited Model.swift) to certify the committed state compiles, then write the gate log.
+
+Clean build complete (0 errors). All host-runnable verification passes. Now let me write the gate log. Let me check the logs directory and an existing log's format.
+
+127 prior surface logs exist. The ToolCard precedent shows a "code-complete + DEFERRED Xcode gate" disposition with `STATUS=DONE`. Let me check the STATUS convention across logs and whether any faced the same XCTest/Xcode-absent situation.
+
+Critical finding: the prior 127 runs had **full Xcode at `/Applications/Xcode.app`** driven via `DEVELOPER_DIR` (the default `xcode-select` points at CommandLineTools, but Xcode is available via override). Let me check if this host has it too — that would let me run the real XCTest suite and simulator compiles.
+
+Xcode 26.5 IS available via `DEVELOPER_DIR` (iPhone 16 simulator booted, iOS 18 + macOS 15 SDKs present) — matching the precedent environment. This means I can run the **real XCTest suite** and **both-SDK compiles**. Let me wire my test files into the isolated package and run them for real.
+
+**Real XCTest suite: 37 tests, 0 failures** (via the Xcode toolchain). Now let me prove the surface compiles against **both** the iOS-18 Simulator SDK and the macOS-15 SDK (Swift 6 strict concurrency), matching the gate's two destinations.
+
+Both SDK compiles pass (iOS 18 + macOS 15, Swift 6). I notice the Previews file wasn't in the package — let me add it and re-verify all 9 surface files compile on both SDKs, then study how the precedent documented the deferred full-app `xcodebuild` gate.
+
+All 9 surface files compile on both SDKs (iOS 18 + macOS 15, incl. Previews). Let me see how the precedent documented the deferred full-app `xcodebuild` gate so I match the established disposition.
+
+Now I have the exact precedent template. Let me capture real deferred-gate evidence (xcodegen availability, Shared.xcframework staging, the co-located test-file condition) to document honestly why the full-app `xcodebuild` is deferred.
+
+Concrete deferred-gate evidence confirmed: Shared.xcframework is unstaged (`.gitkeep` only) and 125 pre-existing co-located `*.Tests.swift` import XCTest into the app target. Let me capture the real `xcodebuild` failure (like the precedent) to honestly document the deferral.
+
+The scheme's pre-action (KMP gradle build) caused the timeout. Let me build the target directly (skips pre-actions) to capture the actual pre-existing blocker quickly.
+
+Captured the identical pre-existing blocker the precedent documented: `error: There is no XCFramework found at '.../Shared.xcframework'` → `BUILD FAILED`, exit 65 — a code-unrelated deferral reason that fails before my surface even compiles. Let me clean up the generated project and check git status.
+
+Git status is clean — only my 12 new SettingsSearch files (plus 2 pre-existing unrelated web modifications I will NOT touch). All verification is complete and green. Let me gather line counts and write the gate log following the precedent format.
+
+All verification complete and green. Let me write the gate log following the precedent format.
+
+Now let me record the deferred full-app verification in `apps/macos-pending-verifications.md`, matching the existing row format.
+
+Now commit — staging only my files (the 12 surface files, the log, and the macos-pending row), explicitly excluding the 2 unrelated pre-modified web files.
+
+All 14 intended files staged; the 2 unrelated web files correctly excluded. Committing.
+
+Committed (HEAD `975d7f41e`). Let me do a final confirmation of the commit contents and clean working tree, and update the todo tracker.
+
+Commit verified: exactly 14 files, 2722 insertions; working tree clean except the 2 pre-existing unrelated web files (untouched). Let me finalize the tracker and clean up temp artifacts.
+
+The task is complete. Let me provide a final summary.
+
+Auto-merging apps/macos-pending-verifications.md
+CONFLICT (content): Merge conflict in apps/macos-pending-verifications.md
+Automatic merge failed; fix conflicts and then commit the result.

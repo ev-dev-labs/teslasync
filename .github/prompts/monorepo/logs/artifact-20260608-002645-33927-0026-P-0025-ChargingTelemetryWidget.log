@@ -1,0 +1,109 @@
+=== P4 Dashboard widget 0025 ChargingTelemetryWidget (Apple) ===
+Runner: Darwin 25.5.0 arm64
+Swift:  swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+Date:   2026-06-08T07:52:42Z
+
+--- Capability probe (prompt requires: SwiftUI + Swift Charts + MapKit, iOS18/iPadOS18/macOS15 via xcodebuild + iOS Simulator) ---
+xcode-select -p => /Library/Developer/CommandLineTools  [CommandLineTools only; full Xcode NOT installed]
+xcrun simctl    => unavailable (no iOS Simulator runtime on this runner)
+Consequence: the two 'xcodebuild ... build test' gate steps are PLATFORM-BLOCKED (evidence below).
+
+--- [GATE 1/6] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+
+--- [GATE 2/6] xcodebuild -scheme TeslaSync-macOS build test ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+
+--- [GATE 3/6] swiftlint --strict ---
+(a) whole apps/apple tree:
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-26/apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length Violation: Function body should span 50 lines or less excluding comments and whitespace: currently spans 78 lines (function_body_length)
+Done linting! Found 1 violation, 1 serious in 1915 files.
+LINT_EXIT=2  [1 PRE-EXISTING violation in LifetimeStatsWidget.Adapter.swift — a sibling surface outside this prompt's allowed files; not introduced here]
+(b) scoped to THIS surface's 6 files:
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_THIS_SURFACE_EXIT=0
+
+--- [GATE 4/6] swiftformat --lint apps/apple ---
+(a) whole apps/apple tree:
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-26/apps/apple/TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1: error: (blankLinesBetweenScopes) Insert blank line before class, struct, enum, extension, protocol or function declarations.
+1/1919 files require formatting, 2 files skipped.
+FORMAT_EXIT=1  [1 PRE-EXISTING violation in feature-views/ActionBuilder.Previews.swift — a sibling surface outside this prompt's allowed files; not introduced here]
+(b) scoped to THIS surface's 6 files:
+0/6 files require formatting.
+FORMAT_THIS_SURFACE_EXIT=0  [0/6 require formatting]
+
+--- [GATE 5/6] check-placeholders.ps1 ---
+(a) literal gate path arg ('...ChargingTelemetryWidget' prefix, resolves to no directory -> clean):
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+(b) real scan of THIS surface's 6 swift files (copied to a temp dir so the recursive scanner sees them):
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- [SUPPLEMENTARY] verifications runnable without Xcode (substitute evidence for the blocked xcodebuild build+test) ---
+[A] swiftc -typecheck of the 4 production files (Adapter/Model/Views/Widget) + design Tokens.swift,
+    Swift 6 language mode, -strict-concurrency=complete, -target arm64-apple-macos15.0:
+TYPECHECK_EXIT=0  [0 = clean; the shipped widget view + model + adapter typecheck under Swift 6 strict concurrency]
+    (note: SwiftUI #Preview macro plugin ships with full Xcode, not CommandLineTools, so Previews.swift
+     is excluded from this isolated typecheck; its bodies are structurally identical to the verified surface.)
+
+[B] Adapter projection harness — compiles the REAL ChargingTelemetryWidget.Adapter.swift with an
+    assertion main and EXECUTES it (cached snapshot -> projection parity with the web memos):
+PASS isCharging
+PASS chargerType nil when idle
+PASS chargerType DC >300
+PASS chargerType AC at 300
+PASS chargerType AC <300
+PASS efficiency 75
+PASS efficiency 50 (3-phase)
+PASS efficiency clamp 100
+PASS efficiency 0-phase as 1
+PASS efficiency nil idle
+PASS efficiency nil pilot<=0
+PASS efficiency nil volt<=0
+PASS metrics nil -> idle
+PASS metrics null coalesce
+PASS history append on ts change
+PASS history dedup same ts
+PASS history nil no-op
+PASS history null power -> 0
+PASS history caps at last 30
+PASS fmt 402
+PASS fmt 7.2
+PASS fmt 11.3
+PASS fmt 1,234.5
+PASS fmt int 1,234
+PASS fmt phases
+PASS fmt non-finite -> dash
+PASS a11y summary charging
+PASS a11y summary idle
+PASS a11y statLabel no unit
+---
+ADAPTER_HARNESS=PASS
+ADAPTER_HARNESS_RUN_EXIT=0
+
+--- Summary ---
+THIS SURFACE (apps/apple/TeslaSync/dashboard-widgets/ChargingTelemetryWidget.*) passes EVERY check
+runnable on this CommandLineTools-only runner:
+  swiftformat --lint .......... 0 issues (0/6 files)
+  swiftlint --strict .......... 0 violations (6 files)
+  check-placeholders .......... PLACEHOLDER_COUNT=0
+  swiftc Swift6 strict typecheck 0 errors
+  adapter projection harness .. 29/29 assertions PASS
+
+BLOCKED on (platform capability, per prompt's BLOCKED clause):
+  full Xcode + iOS Simulator are required for the two 'xcodebuild build test' gate steps;
+  this runner has only CommandLineTools (xcode-select -p => /Library/Developer/CommandLineTools)
+  and no simulator runtime (xcrun simctl unavailable). IOS_EXIT=1, MAC_EXIT=1 above are this block.
+
+Pre-existing whole-tree lint debt in OTHER surfaces (outside this prompt's allowed files; not touched):
+  - TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift  (swiftlint function_body_length)
+  - TeslaSync/feature-views/ActionBuilder.Previews.swift           (swiftformat blankLinesBetweenScopes)
+
+EXIT=1
+STATUS=BLOCKED

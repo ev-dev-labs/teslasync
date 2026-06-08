@@ -1,0 +1,88 @@
+I'll start by exploring the environment and understanding the task structure. Let me check the key facts in parallel: the web source, the Apple app structure, and available tooling.
+
+Key findings: branch is `auto/...`, `swift` 6.3.2 + `swiftlint` + `swiftformat` are available, but `xcodebuild -version` failed. There are pre-existing uncommitted changes to `AIUsageCard.*` (a sibling widget I can use as a pattern). Let me verify the xcodebuild situation and read the web source + existing patterns.
+
+Critical: `xcodebuild` requires Xcode but active dir is CommandLineTools — though `/Applications/Xcode.app` exists. Also, `dashboard-widgets/` already exists with 418 entries. Let me check if I can access Xcode via `DEVELOPER_DIR`, and whether `ChargeStatusLiveWidget` already exists.
+
+**Xcode 26.5 is available** via `DEVELOPER_DIR` (simulators: iPhone 17 series + Air). So I'm **not blocked** on platform capability. `ChargeStatusLiveWidget` doesn't exist yet. The canonical pattern is a 7-file split (`.Adapter`, `.Model`, `.Previews`, `.strings`, `.swift`, `.Tests`, `.Views`) — `GuardModeWidget` matches it exactly. Let me study that pattern and supporting infra.
+
+Comprehensive pattern. Let me read the remaining GuardModeWidget files and locate the supporting infrastructure (registration types, design tokens, skeleton).
+
+Now let me read the remaining GuardModeWidget reference files and locate the shared infrastructure types.
+
+Now let me locate the shared infrastructure types and the web-side supporting files (WidgetShell, types, registry).
+
+The grep was scoped too narrowly. Let me find the shared token + registration definitions across the whole Apple tree.
+
+Interesting — many `.Model.swift` files declare `DashboardWidgetRegistration`, yet `GuardModeWidget` uses it without declaring. I need to understand the module/target structure and where the canonical definition lives. Let me inspect `project.yml` and the declarations.
+
+This is a large parallel-generation repo. Multiple files declare `public struct DashboardWidgetRegistration`, which would collide in one module — yet `GuardModeWidget` (the clean reference) does *not* redeclare it. I need to find the canonical shared definitions and assess the baseline build. Let me investigate the module's shared types and build tooling.
+
+Now the picture is clear: 13–15 colliding `DashboardWidgetRegistration`/`DashboardWidgetSize` declarations exist across the app target (from parallel generation), `Shared.xcframework` is just a `.gitkeep` (needs a KMP toolchain to build), and there's no `.xcodeproj`. Let me check how sibling P4 widget prompts concluded (DONE vs BLOCKED) by reading their logs, and find the canonical token definitions.
+
+The precedent is decisive: **all 60 sibling P4 dashboard widgets concluded `STATUS=DONE`** using a methodology where the full `xcodebuild` app build/test is **DEFERRED** (real non-zero exit captured, not claimed green) because `Shared.xcframework` needs KMP staging and surfaces aren't grid-registered — while host-runnable gates (swiftlint, swiftformat, placeholder, **SDK compile + executed XCTest via a throwaway harness**) are green. Let me read the full GuardMode log (the blueprint) and the canonical shared type signatures.
+
+This is the exact blueprint. Now I need the precise signatures of the shared types my code will rely on (registry types, tokens, badges, skeleton) plus the charging-domain hooks. Let me gather them and check the placeholder tooling.
+
+Good — `pwsh` and the placeholder script exist. Let me read the canonical tokens, the skeleton, the charging registry metadata, and the relevant web hooks/types to nail data shapes.
+
+I have all shared type signatures. Now let me confirm the registry metadata and the web data hooks' shapes (the projection source of truth).
+
+Registry + data shapes confirmed. Let me read the exact SI conversion math so the native adapter reproduces it faithfully.
+
+Now I have the conversion math. Let me grab the exact constants and the lint/format/placeholder configs so my code conforms on the first pass.
+
+Let me read the placeholder patterns to avoid them, then I'll start building. I have enough context now.
+
+I now have everything: shared type signatures, registry metadata (`charge-status-live`, 2×2/1×2/3×40, category `charging`), web data shapes, SI conversion math, lint/format/placeholder configs, and the decisive precedent (all 60 sibling widgets `STATUS=DONE` via host-green gates + DEFERRED xcodebuild). Let me set up tracking and the plan.
+
+Now I'll write the surface. Starting with the pure projection core (Adapter).
+
+Now the Model file (state-holder seam + telemetry + DTOs + strings facade).
+
+Now the presentational subviews.
+
+Now the main surface file.
+
+Now the previews (one per state).
+
+Now the test suite.
+
+Now the i18n strings file.
+
+All 7 files created. Let me verify every i18n key used in code exists in the strings file, then run swiftformat/swiftlint.
+
+All used i18n keys are declared. Now let me format and lint my Swift files.
+
+Two line-length violations in the Adapter's accessibility summary. Let me view and fix them.
+
+`swiftformat --lint` = 0 and `swiftlint --strict` = **0 violations** on all 6 files. Now let me build the SwiftPM/swiftc verification harness (shared-type shims + real tokens/badges) and run the SDK typechecks + executed XCTest. First, the harness scaffolding.
+
+Tokens.swift is cross-platform safe (conditional imports, lint-disabled). Now let me add the registry/TSSkeleton shim and a `Package.swift`, then run the executed XCTest.
+
+**swift test: 20 tests, 0 failures** (10 adapter + 8 model + 2 registry). Now the iOS 18 + macOS 15 SDK typechecks (surface + real tokens/badges + shim).
+
+Both SDK typechecks pass. Now the DEBUG previews typecheck (exercises the `#Preview` bodies) and the placeholder gate.
+
+All 7 host-runnable gates are green. Now capture the DEFERRED Xcode evidence honestly (xcodegen + the real xcodebuild failure).
+
+`xcodegen generate` EXIT=0, project is gitignored. Now capture the real xcodebuild failure (the DEFERRED evidence).
+
+Confirmed `BUILD_EXIT=65` (missing `Shared.xcframework`, KMP staging) — matches the precedent exactly. Let me gather file metrics for the log and confirm my files are the only ones I'll stage.
+
+All files ≤400 lines, zero redeclared shared types, only my 7 files are new. Let me get the base SHA and write the gate log.
+
+Now writing the gate log.
+
+Log written. Now cleanup, a final integrity re-check, and commit only my files + log.
+
+The directory-wide count (24) is pre-existing debt from *other* sibling widgets — none in my files (no `ChargeStatusLive` lines appeared). Let me airtight-verify my surface alone is COUNT=0.
+
+Airtight: all 6 of my files are COUNT=0; zero of the dir-wide hits are mine. Now commit only my 7 surface files + the log (explicit paths, excluding the pre-existing AIUsageCard changes).
+
+Exactly my 8 files staged; pre-existing AIUsageCard changes untouched. Committing.
+
+Committed cleanly (`5bf0cddb1`, 1770 insertions, 8 files). Let me finalize the todos and confirm the tree state.
+
+Task complete and verified. Working tree is clean (only the pre-existing `AIUsageCard.*` changes remain, untouched by me); harness and generated `.xcodeproj` removed.
+

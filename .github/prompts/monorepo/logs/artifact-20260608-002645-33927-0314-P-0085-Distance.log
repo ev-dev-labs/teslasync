@@ -1,0 +1,77 @@
+=== P4 Shared surface 0085 Distance (Apple) ===
+date: 2026-06-08T11:59:44Z
+host: Darwin 25.5.0 arm64
+swift: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+
+### Honesty covenant: this runner has Command Line Tools only (no Xcode.app),
+### so the two xcodebuild steps CANNOT run. They are reported BLOCKED with the
+### platform-capability evidence the prompt's capability clause requires. Every
+### other gate step (swiftlint/swiftformat/placeholder) plus extra standalone
+### verification was run for real and is recorded verbatim below.
+
+----- platform capability evidence -----
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+$ xcrun simctl list devices (iPhone 16)
+xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+
+----- [1/2] xcodebuild iOS Simulator build test -----
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1  (BLOCKED: requires Xcode.app; only CommandLineTools present)
+
+----- [2/2] xcodebuild macOS build test -----
+$ xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1  (BLOCKED: requires Xcode.app; only CommandLineTools present)
+
+----- [swiftlint --strict] -----
+# Note: .swiftlint.yml 'included:' does not yet list TeslaSync/shared-surfaces
+# (that is a P4-core project-wiring step, outside this surface's allowed files:
+# Distance.* + the log). The surface is therefore linted by explicit path so the
+# strict result is recorded; it is clean.
+$ swiftlint lint --strict --config .swiftlint.yml TeslaSync/shared-surfaces/Distance.swift TeslaSync/shared-surfaces/Distance.Adapter.swift TeslaSync/shared-surfaces/Distance.Model.swift TeslaSync/shared-surfaces/Distance.Views.swift TeslaSync/shared-surfaces/Distance.Previews.swift TeslaSync/shared-surfaces/Distance.Tests.swift
+Linting 'Distance.Previews.swift' (5/6)
+Linting 'Distance.Tests.swift' (6/6)
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+
+----- [swiftformat --lint] -----
+$ swiftformat --lint <Distance.* surface files>
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-314/apps/apple/.swiftformat
+SwiftFormat completed in 6.76s.
+0/6 files require formatting.
+FORMAT_EXIT=0  (surface clean)
+# Whole-tree 'swiftformat --lint apps/apple' has ONE pre-existing failure in
+# TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (a different surface,
+# NOT in this prompt's allowed files) — unrelated to Distance and left untouched.
+
+----- [placeholder gate] -----
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces (real dir scan)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+----- [extra standalone verification — not in the gate, run for honest evidence] -----
+# The XCTest target + xcodebuild are Xcode-gated, so the pure core + view layer were
+# verified directly with the Command Line Tools 'swiftc' against the macOS SDK:
+(a) pure Adapter typecheck:        swiftc -typecheck Distance.Adapter.swift            -> EXIT=0
+(b) core logic compiled+executed:  swiftc Distance.Adapter.swift harness && run        -> EXIT=0  [CORE_CHECKS=33 FAILURES=0]
+    (33 assertions mirroring Distance.Tests.swift: SI convert, fmtNumber port,
+     metric/imperial display, precision, title, projection across all phases)
+(c) shipping view layer typecheck: swiftc -typecheck Tokens + Distance.{Adapter,Model,swift,Views} + api-shim -> EXIT=0
+    (Distance.Previews.swift uses the #Preview macro, whose PreviewsMacros plugin
+     ships only with Xcode.app; its usage matches the SDK macro signature verbatim.)
+
+----- summary -----
+IOS_EXIT=BLOCKED   MAC_EXIT=BLOCKED   (no Xcode.app on runner — evidence above)
+LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0  (surface scope)
+ADAPTER_TYPECHECK=0  CORE_LOGIC=0  VIEW_TYPECHECK=0
+
+# EXIT is non-zero ONLY because xcodebuild build/test cannot run without Xcode.app.
+# Every code-quality + correctness step that CAN run on this runner passed.
+EXIT=1
+STATUS=BLOCKED

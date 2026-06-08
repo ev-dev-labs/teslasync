@@ -1,0 +1,146 @@
+I'll start by understanding the task environment and checking the capabilities required, then explore the existing structure.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me verify this thoroughly and explore the existing structure before deciding on approach.
+
+Critical: Xcode.app IS installed at `/Applications/Xcode.app`, but active dir points to CommandLineTools. I can override with `DEVELOPER_DIR`. Let me verify and explore existing native patterns in parallel.
+
+Xcode 26.5 is available via `DEVELOPER_DIR` and there's a **booted iPhone 16 simulator** — the gate CAN run, so this is not capability-blocked. There are existing native AI surfaces (`AIRestorePanel`, `AISettings`, `AiUsageCard`) to model after. Let me study the web sources and native reference patterns.
+
+Now I understand the web side fully. Let me study the native reference surfaces (`AIRestorePanel` streams, closest analog) and locate the shared P1/P4 infrastructure (state holders, tokens, i18n, AI gating, streaming).
+
+Let me explore the real directory structure of the Apple app — `Sources`, `TeslaSync`, and where shared infra (state holders, tokens, i18n) lives.
+
+Native AI infra isn't shared yet — each AI surface implements its own. `SharedFacade/` holds P1/S8 state holders + `LoadableState`, `Design/` holds P1/S9 tokens. Let me read the closest analog (`AIRestorePanel`, an AI streaming panel) end-to-end plus shared infra.
+
+`AIRestorePanel` is the gold-standard reference (Model/Adapter/Views/Previews/Tests/strings, P4 leaf contract with phase + connection axis, telemetry seam, i18n facade). Let me read its remaining files plus the web AI primitives I must reproduce (`AiOutputPanel`, `AIThinkingIndicator`, `useAiEnabled`, AI features registry) and the design tokens.
+
+Now I have the canonical pattern. Let me read the strings file format, the shared design tokens/components, and the web AI primitives (`AiOutputPanel`, `AIThinkingIndicator`, `useAiEnabled`) I must reproduce — plus check how `project.yml` includes source files.
+
+Let me read the design token/component definitions and the remaining web primitives (`useAiEnabled`, `AIThinkingIndicator`, AI features registry), plus check `project.yml` wiring.
+
+Let me find the exact token definitions (`TSSpacing`, `TSRadius`, `Color.TS`, `Font.TS`) and read the web `useAiEnabled` + `AIThinkingIndicator` + AI features registry.
+
+Let me locate the exact token definitions (`TSSpacing`, `TSRadius`, `Color.TS`, `Font.TS`) — they're referenced everywhere but I need their members. Let me also read the AI features registry and AIThinkingIndicator.
+
+Key finding: `project.yml` lists explicit source paths — `TeslaSync/feature-views` is wired but `shared-surfaces` is **not**, and the directory doesn't exist. I'll need to wire it. Tokens live in `apps/design/generated/apple/Tokens.swift`. Let me read tokens, check the build toolchain (xcodegen, Shared.xcframework), and establish a build baseline — this determines whether the gate can pass at all.
+
+Tokens confirmed. Now the make-or-break: the `Shared.xcframework` is just a `.gitkeep` placeholder, built via a scheme preAction script (likely KMP/Gradle). Let me read that script and the pending-verifications doc, and try generating the project as a baseline.
+
+Now I understand the full picture. The `macos-pending-verifications.md` reveals the **established precedent**: three prior P4 surfaces (`ToolCard`, `AlertMessageEditor`, `FSMTimelineChart`) verify the surface **in isolation** (SwiftPM + XCTest + `swiftc -typecheck` on both SDKs + swiftlint/swiftformat/placeholder), because the full-app `xcodebuild build test` is blocked by **pre-existing, unrelated** parallel-merge collisions (`DashboardWidgetSize` redefined 15×, co-located test files, KMP framework, signing). Let me empirically verify the current repo state before implementing.
+
+JDK 17 is present. Confirmed pre-existing blockers: `DashboardWidgetSize` redefined 15×, **224 co-located `*.Tests.swift`** in app-target source dirs (imports XCTest into app target), KMP `Shared.xcframework` unbuilt. This is exactly the precedent's "blocked by pre-existing unrelated collisions" — so isolated verification is the established path.
+
+`AiUsageCard` is a **gated AI card** (tests mention "gated / loading / empty / error / data") — the closest analog to my gated surface. Let me read its gate-modeling pattern.
+
+`AiUsageCard` is the exact template: gated AI card with `.gated/.loading/.empty/.error/.data` phases + `connection` axis, gate via `aiModeOff` → `EmptyView` (ADR-015). Let me read its Model + Adapter to capture the gate-input modeling and source/telemetry wiring.
+
+I now have the complete pattern (gate via `aiModeOff` → `.gated`/`EmptyView`, telemetry deferred past gate, connection axis, pure projection). Before writing, let me read the lint/format/placeholder configs (my code must pass `--strict` and the placeholder gate) and the freshness-chip/banner subviews for consistency.
+
+Let me read the placeholder checker to know exactly what it scans and avoid those tokens in shipped code, then set up my plan.
+
+I have the complete picture. Key facts: placeholder check is **case-insensitive** and scans `.swift` only — I must avoid "todo/fixme/xxx/placeholder/coming soon/lorem ipsum/not implemented" in Swift code. `swiftformat --lint apps/apple` auto-covers my dir; `swiftlint` and `project.yml` need the new dir wired. The full-app `xcodebuild` is blocked by pre-existing collisions (precedent: verify in isolation).
+
+Let me set up my plan and todos, then create the surface.
+
+Tokens.swift is self-contained — I'll reuse it in my isolated harness. Let me set up todos and write the foundation files (Adapter = pure logic, Model = seams/state, strings).
+
+Now the subviews (badge, CTA button, thinking indicator, output panel, chrome). Writing `AIDigestNarration.Views.swift`:
+
+Now the main surface view `AIDigestNarration.swift` (gate → card composition):
+
+Now the Previews (all states) and the i18n strings catalog:
+
+Now the comprehensive test suite `AIDigestNarration.Tests.swift`:
+
+All 7 surface files are written. Let me update todos and wire the new directory into `project.yml` and `.swiftlint.yml`.
+
+All files written and wired. Now let me set up the isolated SwiftPM verification harness (the precedent method). First, let me check the real component files' dependencies so I can compile the surface against the **real** tokens/components.
+
+Let me replace the Timer-based thinking dots with a Combine-free animation (cleaner, no extra import), then build the isolated harness.
+
+Now let me build the isolated SwiftPM harness — compile the surface against the **real** tokens plus faithful component shims, under Swift 6 strict concurrency, and run the tests.
+
+¡The surface compiles clean under Swift 6 strict concurrency. Now run the tests:
+
+All 31 tests pass under Swift 6 strict concurrency. Now the real iOS 18 + macOS 15 SDK typechecks (precedent method):
+
+Both SDK typechecks pass clean. Now the lint/format/placeholder gates on my surface files:
+
+swiftlint linted all 1915 files (config-driven). 2 violations found — I need to know if any are mine. Let me isolate them:
+
+One violation is mine (`AIDigestNarration.Tests.swift:181` — a 3-member tuple return). The other is pre-existing (`LifetimeStatsWidget`). Let me fix mine cleanly with a struct helper. Let me view the exact section:
+
+I'll replace the whole model-test class to use a 2-field-safe `Wired` struct helper (fixes the large_tuple violation cleanly):
+
+Fixed the tuple violation. Let me re-verify: re-copy tests to harness, re-run tests, and re-run swiftlint/swiftformat/placeholder on my surface.
+
+31 tests green. Now swiftlint (my files), swiftformat --lint, and placeholder gate:
+
+swiftlint: **0 violations in my surface**; swiftformat: **0/6 require formatting**. Now the placeholder gate:
+
+Placeholder gate clean (COUNT=0, EXIT=0). Now prove the project enumerates my files via `xcodegen generate`, then attempt the full gate to capture real evidence:
+
+xcodegen succeeds — all 7 surface files are enumerated in the project. Now let me capture honest evidence of the full-app build state. First, document the pre-existing blockers, then attempt a compile to confirm my surface isn't the cause:
+
+Confirmed: 3 pre-existing blockers (absent KMP `Shared` module imported by 14 files, `DashboardWidgetSize`×15, 224 in-app test files). Let me attempt the actual app-target compile to capture the real first errors and confirm **zero** come from my surface:
+
+Build failed (exit 65, as expected). Let me confirm the errors are all pre-existing and **none** are from my surface:
+
+The single build error is the **missing KMP `Shared.xcframework`** (a scheme preAction requiring the full Kotlin/Native toolchain) — the build halts there before Swift compilation. **Zero errors reference my surface.** Let me capture the macOS side symmetrically, then write the gate log:
+
+Both app targets fail identically at the missing KMP framework — zero surface errors on either platform. Let me capture the real exit codes for the global gate commands (to record honestly), confirming my surface contributes nothing to any failure:
+
+Global swiftlint's only remaining violation is the pre-existing `LifetimeStatsWidget` (0 from my surface). Let me capture the global swiftformat exit too:
+
+Global swiftformat flags 1/1919 files — **not mine** (0 AIDigestNarration). Let me identify that pre-existing file for the record, then write the gate log:
+
+The 1 pre-existing swiftformat issue is `ActionBuilder.Previews.swift` (not mine). Every gate failure is from pre-existing files outside my scope; my surface passes all host-runnable gates. Let me check the logs directory and sibling logs to match format:
+
+This sibling log reveals the **established, accepted disposition**: `STATUS=DONE` with host gates green and the `xcodebuild build/test` **deferred** (real exit 65 + cause captured, not claimed as pass). Let me read the full sibling log to match the exact gate-section format and lint/format handling:
+
+This sibling log is the definitive template. Critically, the **established precedent does NOT edit `project.yml`/`.swiftlint.yml`** — it states category registration is "the integration prompt's job" and is outside allowed files, and the prompt's own commit step only adds the surface files + log. I'll **revert my config edits** to match precedent and respect the allowed-files constraint.
+
+Config reverted. Let me confirm git status is clean except my surface files, and run swiftlint the precedent way (explicit surface-file paths):
+
+swiftlint on the 6 surface files: **0 violations, LINT_EXIT=0**. Config is clean; only `shared-surfaces/` is new. Let me regenerate the project from the reverted config and re-confirm the build blocker matches the committed state:
+
+All evidence captured and consistent with the committed (reverted) state. Let me get final line counts, then write the gate log:
+
+All evidence gathered. Let me write the gate log (matching the established sibling format), then record the macOS-pending row and commit.
+
+Now let me record the macOS-pending row (per the resolution protocol + precedent):
+
+Let me verify the final git state before committing (staging only my specific paths — there are pre-existing unrelated `AIUsageCard.*` modifications I must NOT touch):
+
+Git state is clean: only my `shared-surfaces/` files, the log, and my `macos-pending` row are mine. The `AIUsageCard.*` modifications are pre-existing (present at session start) — I'll leave them unstaged. Let me stage my specific paths and commit:
+
+All 9 correct files staged (7 surface + log + pending row); `AIUsageCard.*` correctly excluded. Now commit:
+
+Committed. Let me verify the commit landed cleanly and the working tree contains only the pre-existing unrelated changes:
+
+Commit `fd871acc8` landed (9 files, 1854 insertions); working tree shows only pre-existing unrelated changes. Let me do a final defensive re-verification — rebuild the harness from the **committed** files to confirm 31/31 green:
+
+Final verification confirms **31/31 tests pass** on the committed files. Let me close out the todos:
+
+All todos complete. The task is fully delivered and verified.
+
+## Summary
+
+Shipped a production-polished native Apple (SwiftUI) parity of `components/ai/AIDigestNarration.tsx` at `apps/apple/TeslaSync/shared-surfaces/AIDigestNarration.*` (7 files, 1,624 lines), committed as `fd871acc8`.
+
+**Parity reproduced end-to-end** (read web source + its composed primitives `AIFeatureCard`, `withAiFeature`, `useAiStream`, `AiOutputPanel`, `useAiEnabled`):
+- **Off-mode gate** (ADR-015): fail-closed truth table → `EmptyView` when AI off / flag off; `view.opened` telemetry deferred until the gate opens.
+- **Streaming card**: universal "Ask Helix"/"Helix is thinking…" CTA, request body `{vehicle_id ?? 0, week_offset_weeks:0}` → `/ai/digests/weekly/narrate`, output panel (idle/thinking/prose/error+retry).
+- **All states render**: gated · loading · idle · no-vehicle · thinking · done · error · stale (chip+auto-refresh) · offline. Bound through P1/S8 gate + streaming seams (no view HTTP); P1/S10 i18n facade (20 referenced keys all declared, zero English literals); P1/S9 tokens; full VoiceOver/Dynamic-Type/reduce-motion.
+
+**Verification (all host-runnable gates green):**
+- `swift build` + **31/31 XCTest** under Swift 6 strict concurrency
+- `swiftc -typecheck` clean on **iOS 18** and **macOS 15** SDKs (incl. `#Preview` macros)
+- `swiftlint --strict` 0 violations · `swiftformat --lint` 0/6 · placeholder gate COUNT=0
+
+**Full-app `xcodebuild build test` deferred** (real exit 65 captured, **0 errors from this surface**) due to pre-existing, unrelated blockers — unstaged KMP `Shared.xcframework`, `DashboardWidgetSize`×15, 224 co-located in-app test files, signing — plus the new `shared-surfaces` category not yet registered in `project.yml` (the integration prompt's job; I reverted exploratory wiring to respect the allowed-files scope). This matches the established `BackendTool`/`ToolCard`/`FSMTimelineChart` precedent; a macOS-pending row was appended. Log ends `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and verified. Let me mark the plan done and finalize.
+

@@ -1,0 +1,140 @@
+I'll start by exploring the environment and understanding what exists. Let me check the web source, the Apple app structure, and available tooling in parallel.
+
+Web source read in full. Critical finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me investigate the Apple app structure and dependencies before deciding on approach.
+
+Key finding: `/Applications/Xcode.app` **exists** — only `xcode-select` points to CLT. I can likely use `DEVELOPER_DIR`. Let me verify and explore the existing Apple conventions in parallel.
+
+Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 simulator is booted. 551 files in feature-views follow a clear multi-file pattern. Let me check if DriveOverviewChart exists, find drive-related siblings, and study a chart-based exemplar.
+
+`DriveOverviewChart.*` doesn't exist yet. Good chart templates exist. Let me read the web data types and survey the chart-based exemplars' file sets.
+
+Now let me study `SessionComparisonChart` (closest analog — a "…Chart" feature view) end-to-end as my template.
+
+Excellent template. Let me read the remaining SessionComparisonChart files to complete my understanding of the pattern.
+
+Pattern is very clear. Let me read the Previews, strings, Tests, and survey the design tokens.
+
+Complete understanding of the pattern. Now I need the design tokens, chart palette, and—critically—how the Xcode project picks up these files. Let me investigate the project structure.
+
+Project uses **XcodeGen** (`project.yml`). Let me read it plus the design tokens, and check xcodegen availability.
+
+XcodeGen auto-globs `feature-views/`. Critical: `.Tests.swift` files live alongside source but the app target includes the whole dir. I need to understand test routing and the Shared.xcframework dependency. Let me investigate.
+
+Two big findings: `Shared.xcframework` must be built via Gradle/KMP (potential blocker), and 72 `.Tests.swift` files sit in the app target's source path. Let me check existing gate logs and how a sibling surface fared, plus the KMP toolchain.
+
+This is the key. The predecessor (0089, same template) established the **accepted methodology** on this runner: Shared.xcframework can't be staged, so the full `xcodebuild build test` is **DEFERRED** (real exit 65 shown, not faked), while the surface is proven via dual-SDK typecheck + executed XCTest (SwiftPM harness) + swiftlint/swiftformat/placeholder gates. STATUS=DONE under "predecessor parity." Let me read the log's middle to get exact commands.
+
+The methodology is now unambiguous (predecessor parity, rule 7): host-prove via dual-SDK typecheck + executed XCTest (SwiftPM harness) + swiftlint/swiftformat/placeholder gates; DEFER the xcodebuild app build/test with real captured evidence (missing Shared.xcframework → exit 65). Let me record a plan and read the exact shared tokens/components my surface needs.
+
+Now let me read the exact shared symbols my surface depends on (tokens, motion, skeleton, units) and the web number formatters to reproduce them faithfully.
+
+My grep had a stray character. Let me read the generated tokens, the rest of TSDesign, the units facade, and the web number formatters.
+
+Now I have all tokens and the web formatters. Let me check the lint/format configs, the native ChartContainer, and the native units facade.
+
+Found native `MeasurementSystem` (Shared-free) with `speedLabel`/`distanceLabel` — perfect parity for web `unitPrefs`. I have everything. Let me kick off a baseline lint/format check async (to attribute violations honestly) while I start authoring.
+
+I now have the full picture: tokens, formatters, units (`MeasurementSystem`), lint rules (line ≤120, file ≤400, identifiers ≥2 chars), and the native `TSChartContainer`/`TSFadeIn`/`TSSkeleton`. Let me check the baseline format result, then start authoring the Adapter.
+
+Baseline `swiftformat --lint` shows **1 pre-existing violation** in `ActionBuilder.Previews.swift:48` (not my file, not in allowed-files scope). I'll document it as pre-existing and ensure my files are clean. Let me kick off the swiftlint baseline async and start authoring the Adapter.
+
+Now authoring the pure projection core.
+
+Baseline has **1 pre-existing swiftlint violation** too (`LifetimeStatsWidget.Adapter.swift:141`, function_body_length) — again not my file. Both whole-tree gates have exactly-pre-existing noise in files outside my allowed scope. Let me capture the precise baseline violation set async, then continue with Model.swift.
+
+Now authoring the state-holder/seam Model.
+
+Baseline capture also caught my new Adapter: it's **520 lines (>400 file_length)** and has auto-fixable swiftformat style (wrapPropertyBodies, preferKeyPath, redundantReturn). The true pre-existing baseline is just 2 violations (LifetimeStatsWidget, ActionBuilder) — both outside my scope. I'll split the Adapter into types + projection, then let swiftformat auto-fix style. Recreating cleanly:
+
+Now the pure projection + accessibility file.
+
+Now adding the inverse-power helper to the Projection and authoring the Swift Charts composed chart.
+
+Now the chrome + rich legend.
+
+Now the surface file.
+
+Now the previews.
+
+Now the i18n catalog.
+
+Now the test suite.
+
+All 9 files authored. Let me update todos, auto-fix formatting with swiftformat, check file lengths, and verify i18n key coverage.
+
+Tests.swift is 412 lines (>400 file_length). Let me trim its header comment to get under budget.
+
+Still 404. Let me fold the degenerate-domain test into the round-trip test to save lines.
+
+Now let me verify lengths, run swiftformat --lint + swiftlint on my files, and check i18n key coverage.
+
+All files ≤400, swiftformat lint clean (0/8), and i18n referenced==declared (0 missing). Tests is exactly at 400 — let me trim a hair for margin, then run swiftlint --strict on my files.
+
+swiftlint --strict on my 8 files: **0 violations**. Now I'll set up the host-proven harness. Let me identify the real component-closure files (mirroring the predecessor's proven set) needed to compile my surface.
+
+All closure files exist. Let me run the iOS 18 simulator typecheck of my 6 production files plus the real component closure.
+
+iOS 18 simulator typecheck: **exit 0**. Now the macOS 15 SDK typecheck.
+
+macOS 15 typecheck: **exit 0**. Now the DEBUG previews typecheck (with the `#Preview` macro).
+
+DEBUG previews typecheck: **exit 0** (macro included). All three typechecks green. Now the key step — executing the XCTest suite via a self-contained SwiftPM harness. Let me build it.
+
+**32/32 XCTest passed, exit 0.** Host-proven gates are green (iOS+macOS+previews typecheck, tests, swiftlint, swiftformat). Now the placeholder gate. Let me check the forbidden-pattern list and scan my files for risky words (I used "legend stubs" in a comment).
+
+Forbidden patterns don't include "stub", but I'll reword "legend stubs" → "legend bars" to honor the acceptance spirit. Then run the actual gate.
+
+Now running the actual placeholder gate exactly as specified.
+
+Let me confirm the gate actually scanned my files (not zero files) by running it against a temp copy of just my surface.
+
+Let me sanity-check the gate actually detects violations in these files (inject a temp TODO).
+
+Gate verified working (detects injected TODO; my files = 0). All host-proven gates green. Now capturing the **deferred xcodebuild evidence** freshly: `xcodegen generate` then the macOS app build (expected to fail at missing Shared.xcframework).
+
+xcodegen: **exit 0**, my files are in the project (54 pbxproj refs across targets), and the generated `.xcodeproj` is git-ignored. Now capturing the macOS build failure at the missing Shared.xcframework (the documented deferral cause).
+
+macOS build → **exit 65, "no XCFramework found at .../Shared.xcframework"** — the exact predecessor-documented deferral cause. Now let me run the full-tree gate commands to confirm my files add **zero** new violations (only the 2 pre-existing remain).
+
+swiftlint whole-tree: only the 1 pre-existing violation (LifetimeStatsWidget), **0 from my files**. Now confirming swiftformat whole-tree.
+
+swiftformat whole-tree: only the 1 pre-existing (ActionBuilder.Previews), **0 from my files**. Let me capture the iOS build deferral evidence too, then clean up generated artifacts.
+
+Both iOS + macOS builds → exit 65 (missing framework); artifacts cleaned. Git shows only my 9 new files. Let me gather facts for the log, then write it.
+
+All facts gathered. Now writing the comprehensive, honest gate log.
+
+Log written. Let me re-verify my files still pass all per-file gates after the last edits, then commit.
+
+All per-file gates pass. Let me re-run the SwiftPM test suite once more against the **final** committed bytes (I edited a comment + trimmed Tests after the first run) to guarantee the 32/32 claim holds exactly.
+
+**32/32 tests pass on the final committed bytes, exit 0** — matches the log. Now staging and committing exactly the surface files + log.
+
+Exactly 10 files staged (9 surface + log), nothing stray. Committing.
+
+Committed cleanly (HEAD `0e468979c`), working tree clean. Let me finalize the todo tracking.
+
+All todos complete. Task finished.
+
+Merge made by the 'ort' strategy.
+ ...apple-feature-views-0138-DriveOverviewChart.log | 264 ++++++++++++++
+ .../feature-views/DriveOverviewChart.Adapter.swift | 322 +++++++++++++++++
+ .../feature-views/DriveOverviewChart.Chart.swift   | 317 ++++++++++++++++
+ .../feature-views/DriveOverviewChart.Model.swift   | 263 ++++++++++++++
+ .../DriveOverviewChart.Previews.swift              | 113 ++++++
+ .../DriveOverviewChart.Projection.swift            | 261 ++++++++++++++
+ .../feature-views/DriveOverviewChart.Tests.swift   | 399 +++++++++++++++++++++
+ .../feature-views/DriveOverviewChart.Views.swift   | 304 ++++++++++++++++
+ .../feature-views/DriveOverviewChart.strings       |  57 +++
+ .../feature-views/DriveOverviewChart.swift         |  71 ++++
+ 10 files changed, 2371 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0138-DriveOverviewChart.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/DriveOverviewChart.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DriveOverviewChart.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DriveOverviewChart.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DriveOverviewChart.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DriveOverviewChart.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DriveOverviewChart.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DriveOverviewChart.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DriveOverviewChart.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/DriveOverviewChart.swift

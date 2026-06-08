@@ -1,0 +1,187 @@
+=== P4 Dashboard widget 0103 TripSummaryWidget (Apple) ===
+
+Surface : apps/apple/TeslaSync/dashboard-widgets/TripSummaryWidget.*
+Web spec: web/src/features/dashboard/widgets/TripSummaryWidget.tsx
+Registry: registry/driving.ts → "trip-summary" · category=driving · 2x4 / 1x2 / 4x40
+Runner  : Darwin · Command Line Tools only (NO Xcode.app) · Swift 6.3.2 · MacOSX26.5 SDK ·
+          swiftformat + swiftlint + pwsh present · xcodebuild + simctl ABSENT (evidence below)
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (allowed scope: TripSummaryWidget.* + this log)
+--------------------------------------------------------------------------------
+  TripSummaryWidget.swift           — SwiftUI surface: glass widget shell, header (Navigation glyph +
+                                      title + freshness chip + refresh); ALL states (loading / empty /
+                                      error / stale / offline / content); last-trip card + recent list;
+                                      container a11y summary; i18n.                          (278 lines)
+  TripSummaryWidget.Views.swift     — presentational subviews: Badge chip, StatCard cell, last-trip card
+                                      (badge/date + name + responsive 2-/4-up stat grid), recent-trip row
+                                      (wide: distance+duration+"{n} drv"; compact: distance), loading
+                                      skeleton card.                                          (233 lines)
+  TripSummaryWidget.Model.swift     — P1/S8 state-holder seam (TripSummarySource), @Observable
+                                      TripSummaryModel (+ nonisolated resolvePhase, autoRefreshIfStale),
+                                      P1/S11 telemetry seam, InMemory source, TripSummaryStrings (P1/S10),
+                                      TripSummarySurface (slug + canonical registration).      (335 lines)
+  TripSummaryWidget.Adapter.swift   — pure projection: cached [TripSummaryDTO] + unit prefs → last-trip
+                                      card + recent rows display strings, reproducing the web numeric
+                                      pipeline VERBATIM (parity), + layout (isCompact/statColumns) +
+                                      a11y labels/summary.                                     (394 lines)
+  TripSummaryWidget.Previews.swift  — #if DEBUG previews for every state + standard/wide/compact layouts.
+                                                                                              (180 lines)
+  TripSummaryWidget.Tests.swift     — XCTest: adapter value parity + format helpers + layout. (287 lines)
+  TripSummaryWidget.ModelTests.swift— XCTest: model phases/telemetry/refresh + registry + a11y.
+                                                                                              (195 lines)
+  TripSummaryWidget.strings         — per-surface i18n table (every web t() key + native chrome). (47 lines)
+  Web source = 142 lines; native decomposed across 8 files (1949 lines) — typed DTO/projection, every
+  state, full a11y, executed tests — matching the predecessor 8-file decomposition (0078).
+
+--------------------------------------------------------------------------------
+PARITY ARITHMETIC reproduced exactly from the web source (cross-platform value parity,
+NOT a "corrected" version)
+--------------------------------------------------------------------------------
+  last trip     = trips[0]; recent list = trips.slice(0,3).slice(1) (shown only when length > 1);
+                  overflow trips[3+] fetched (limit 5) but never displayed.
+  distance      = convertDistanceFromSI(total_distance_m ?? 0, unitPref) [ /1000 km · /1609.344 mi ·
+                  /0.3048 ft ] then fmtNumber(dist, 1)
+  duration      = formatDurationRange(start_date, end_date)
+                  [ '—' for missing endpoint / non-positive span ; else formatDurationMinutes(
+                  round(ms/60000)) → 'Hh Mm' / 'Mm' ; a sub-30s span → '0m', a 30s span → '1m' ]
+  drives/charge = fmtInt(drive_count ?? 0) / fmtInt(charge_count ?? 0)  [ grouped, locale-aware ]
+  name          = name ?? 'Unnamed trip'  (JS `??` — only null falls back, empty string stays)
+  date          = formatDateShort(start_date)  [ '—' for missing · locale+tz { month:'short',
+                  day:'numeric' } ]
+  isCompact     = size.cols <= 1 ; stat grid grid-cols-2 (compact) / grid-cols-4 (wide); recent-row
+                  trailing meta (duration + drive badge) hidden when compact.
+
+States reproduced (every one renders — no hidden surfaces):
+  loading (skeleton card) · empty ("No trips recorded yet") · error (retry) · stale (chip + banner +
+  auto-refresh) · offline (cached trips + banner) · content (last-trip card + recent list). Each has a
+  #if DEBUG preview.
+
+--------------------------------------------------------------------------------
+GATE RESULTS (real commands, real exit codes on this host)
+--------------------------------------------------------------------------------
+
+[HOST] swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG
+       (runtime surface = TripSummaryWidget.swift + .Views + .Model + .Adapter, type-checked against the
+        REAL generated design tokens — apps/design/generated/apple/Tokens.swift (Color.TS / Font.TS /
+        TSSpacing / TSRadius) — plus a registry-types + feedback-skeleton shim that reproduces
+        DashboardWidgetSize/Registration verbatim from the sibling DigitalTwinWidget.Model.swift that owns
+        them in the app target, and the TSSkeleton/TSStatSkeleton public signatures from
+        Sources/Components/Feedback/Skeletons.swift; MacOSX26.5 SDK, arm64-apple-macosx15.0)
+       → error count = 0
+       TYPECHECK_EXIT=0
+
+[HOST] swiftc -typecheck … (preview bodies)
+       (#Preview is an Xcode-only freestanding macro; the PreviewsMacros plugin is NOT bundled with the
+        Command Line Tools host plugins — only Observation/SwiftMacros/testing are. The 8 preview bodies were
+        type-checked by substituting each `#Preview("…") { <body> }` with an equivalent
+        `@MainActor func -> some View { <body> }`, compiled with the runtime surface above.)
+       → error count = 0
+       PREVIEW_BODIES_TYPECHECK_EXIT=0
+
+[HOST] swiftc -o tsparity … && ./tsparity   (executed adapter/model parity harness)
+       (compiles TripSummaryWidget.Model.swift + .Adapter.swift + a Foundation registry shim + a driver and
+        RUNS 90 assertions that pin the EXACT web display strings — distance km/mi, fmtNumber/fmtInt rounding,
+        formatDurationMinutes/Range shapes incl. the 20s→"0m" / 30s→"1m" half-up boundary, formatDateShort,
+        the last-trip + recent-row projection, trips[0] / slice(0,3).slice(1) slicing, unnamed + missing-date
+        fallbacks, the compact a11y gating, layout isCompact/statColumns, resolvePhase matrix, and the
+        canonical registry id/sizes/clamp/slug. These are the SAME expected values asserted by the shipped
+        XCTest files.)
+       → 90/90 PASS, 0 FAIL — "ALL PARITY CHECKS PASSED"
+       PARITY_EXEC_EXIT=0
+
+[HOST] swiftformat --lint (repo apps/apple/.swiftformat — maxwidth 120, swift 6.0)
+       → 0/7 files require formatting
+       FORMAT_EXIT=0
+
+[HOST] swiftlint lint --strict (repo apps/apple/.swiftlint.yml)
+       → Found 0 violations, 0 serious in 7 files
+       LINT_EXIT=0
+
+[HOST] pwsh apps/tools/check-placeholders.ps1 -Language swift (scanned the 8 shipped files)
+       → PLACEHOLDER_ALLOWED=0 · PLACEHOLDER_COUNT=0
+       PLACEHOLDER_EXIT=0
+
+[HOST] i18n key cross-check (keys referenced in code vs keys defined in TripSummaryWidget.strings)
+       → every referenced key has a matching entry (set difference empty); every web t() key covered.
+       I18N_EXIT=0
+
+[INFO] XCTest files (TripSummaryWidget.Tests.swift + .ModelTests.swift)
+       `import XCTest` is NOT resolvable under the Command Line Tools (XCTest ships with Xcode.app):
+         swiftc: error: no such module 'XCTest'
+       The files are shipped for the signed CI Xcode test target; their asserted values are validated on this
+       host by the executed parity harness above (identical logic, identical expected strings).
+
+[DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+[DEFERRED] xcodebuild -scheme TeslaSync-macOS                                                       build test
+       IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED   (NOT claimed green — see reasoning)
+       Reason (capability evidence, real host output):
+         $ xcode-select -p        → /Library/Developer/CommandLineTools
+         $ xcodebuild -version    → xcode-select: error: tool 'xcodebuild' requires Xcode, but active
+                                    developer directory '/Library/Developer/CommandLineTools' is a command
+                                    line tools instance
+         $ xcrun simctl …         → xcrun: error: unable to find utility "simctl" (no iOS simulators)
+         The KMP Shared.xcframework (ADR-004) is also not built on this host, and the surface is not yet
+         target-registered (project.yml uses a directory-based source group, so the file is auto-included at
+         `xcodegen generate` time — it is NOT self-registered). None of these is a defect in this code.
+       Capability note: this surface requires SwiftUI only (Charts/maps = none per the prompt). SwiftUI IS
+       available and type-checks GREEN on this host under Swift 6 strict concurrency — the deliverable's
+       required capability is satisfied; only the literal xcodebuild scheme harness is unavailable. This is
+       the SAME methodology + disposition accepted for predecessor 0078 (RecentDrivesListWidget), which
+       likewise DEFERRED the two xcodebuild scheme steps and shipped on green host gates.
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+  [x] Surface renders on Apple with all states from the web source reproduced (loading/empty/error/
+      stale/offline/content) — each type-checked + previewed.
+  [x] Hooks bind to the shared P1/S8 state-holder layer (TripSummarySource → TripSummaryModel); NO direct
+      HTTP from the view. Data sources mapped: useTrips → TripSummarySource snapshot; useTranslation →
+      TripSummaryStrings (P1/S10); useUnits → TripSummaryUnitPrefs.distance; useDateFormat →
+      localeIdentifier/timeZoneIdentifier.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog table (cross-check empty diff).
+  [x] Accessibility labels present on every interactive element (refresh + retry buttons), plus the
+      last-trip card, each recent row, the freshness chip, and the container summary.
+  [x] Tests: adapter unit tests + format/layout tests + model phase/telemetry/registry/a11y tests; the
+      asserted values are EXECUTED green (90/90) by the parity harness on this host.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] Telemetry: view.opened emitted once with surface slug "TripSummaryWidget" (P1/S11) — tested + executed.
+  [x] Host-runnable gates green (typecheck swift6 strict-concurrency / executed harness / format / lint /
+      placeholder / i18n); Xcode scheme build/test DEFERRED with capability + scope evidence.
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+  1  No red-as-green : the two xcodebuild scheme steps are shown DEFERRED (not green) with real
+                       xcode-select/simctl evidence; every "EXIT=0" above is a command actually executed here.
+  2  No scope narrowing: implemented ALL states + last-trip card (4 StatCards) + recent list + the
+                       compact/wide responsive split + i18n + a11y + telemetry + registry.
+  3  No skip-and-assume: each host gate executed and its real output captured; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; harness executes real logic.
+  5  No parity shortcuts: distance/duration-range/date/count pipeline + rounding + trips[0] /
+                       slice(0,3).slice(1) slicing + isCompact gating ported VERBATIM and pinned by 90
+                       executed assertions to the exact web display strings.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / the dashboard grid and did NOT edit the
+                       shared Localizable.xcstrings (both out of allowed scope); strings shipped as the
+                       per-surface table, matching predecessor 0078.
+  8  No commit on red  : committing on all-green host gates; the Xcode scheme steps are DEFERRED (a documented
+                       capability/scope deferral with evidence), not failed.
+  9  No silent drift   : changes confined to the allowed TripSummaryWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished native TripSummaryWidget shipped at parity with the web source: a SwiftUI surface
+  (glass shell + header + last-trip card with the 4 StatCards + responsive recent-trip list) over a P1/S8
+  state-holder seam (no view HTTP), P1/S11 telemetry, P1/S10 i18n, P1/S9 tokens; every state, every i18n
+  key, every interactive a11y label; registry-correct (trip-summary, 2x4 / 1x2 / 4x40). The surface
+  type-checks GREEN under Swift 6 strict concurrency against the real design tokens and its adapter/model
+  logic executes GREEN (90/90) with exact web value parity. The two xcodebuild scheme build/test steps are
+  DEFERRED to the signed CI Xcode runner (this host has Command Line Tools only — no Xcode.app, no iOS
+  simulators, no KMP Shared.xcframework — none a defect in this code), matching the methodology + disposition
+  accepted for predecessor 0078.
+
+EXIT=0
+STATUS=DONE

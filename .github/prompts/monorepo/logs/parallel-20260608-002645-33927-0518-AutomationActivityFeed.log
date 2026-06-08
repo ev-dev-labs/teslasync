@@ -1,0 +1,130 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure and relevant instruction files.
+
+Let me examine the parity manifest, ledger, existing patterns, and instruction files.
+
+There's an existing feature-views log for AutomationActivityFeed. Let me check for existing Swift implementations and read the relevant logs.
+
+A feature-views version already exists. This task is the **page** variant in a different location. Let me examine the parity manifest to understand the exact requirements.
+
+Let me check how other completed **page** tasks were handled and look at the navigation structure.
+
+This is the first **page** task. Let me study the navigation structure and the existing feature-view implementation to understand patterns.
+
+Let me see how the route registry is wired up and find where pages would register.
+
+Let me read the existing feature-view implementation files to understand declared types and shared components I must reuse (and avoid name collisions).
+
+I now understand the architecture. Let me probe tool capabilities and read the supporting files (adapter, views, rows) plus the gate contract.
+
+Xcode 26.5 is available via DEVELOPER_DIR. Let me read the remaining reference files and infrastructure in parallel.
+
+Let me read the remaining reference files: Views, strings, swiftlint config, localization catalog, and the shared-framework build script.
+
+Let me check the shared-framework build script, the pending-verifications doc, and the xcstrings format.
+
+I have a thorough understanding. Let me verify the design tokens/components APIs and confirm my page-scoped type names won't collide.
+
+I now have a complete picture of the shared infrastructure. Let me check which automation strings already exist in the catalog, then set up my plan.
+
+I have a complete understanding of the infrastructure. Let me verify the exact web formatter behavior, then set up my plan and todos.
+
+I have everything needed. Let me set up the plan, todos, and create the directory structure.
+
+Now let me write the data/projection layer (Foundation-only, so it's unit-testable).
+
+Now the `@Observable` model with the source seam, staleness logic, and async load/refresh.
+
+Now the chrome subviews (symbol/tint maps, pulse, connection chip, stats row, badge) plus the string facade.
+
+Now the row and state subviews (live row, history row, loading/empty/error/banner).
+
+Now the main page View and navigation registration.
+
+Now the DEBUG previews covering all states.
+
+Now the XCTest suite (will be executed via a SwiftPM harness).
+
+All 6 Swift files written. Let me verify the existing test file's import pattern to match precedent, and check line counts.
+
+All line counts are within limits, and my co-located test file matches the established precedent (201 existing feature-view test files use the same pattern). Now let me add the 27 string keys to the catalog via a precise insertion that preserves the rest of the file.
+
+Let me inspect the exact raw style of a complete existing entry to match formatting precisely.
+
+The catalog uses no-space-before-colon style; my entries used spaces. Let me fix them to match exactly.
+
+Catalog now matches style. Let me verify, then register the source path and route.
+
+Catalog is correct (8148 keys, all 27 present). Now register the new source path in both app targets in `project.yml`.
+
+Now wire the route registration in `TeslaSyncApp.swift`.
+
+Source path and route registered. Now let me run the formatting and lint gates on my files.
+
+Let me auto-fix the formatting in place.
+
+Formatting passes. Now swiftlint --strict on the new files.
+
+Swiftlint linted the whole project. Let me isolate the single violation.
+
+The only violation is **pre-existing** in `dashboard-widgets` (not my code). Let me confirm my files are clean by linting them explicitly.
+
+My files are clean; the lone violation is pre-existing in `dashboard-widgets`. Let me run the placeholder gate, then build the SDK typecheck + test harness.
+
+The placeholder gate flagged the literal word "placeholder" in a comment. Let me check it and the gate's pattern.
+
+The gate matches the word "Placeholder". Let me reword that comment and scan my files for any other forbidden markers.
+
+Placeholder gate passes. Now the critical proof: real iOS-18 + macOS-15 SDK typecheck of my view files. Let me build an isolated harness with a primitives shim.
+
+Now run the iOS-18 and macOS-15 SDK typechecks under Swift 6 strict concurrency.
+
+Shim type needs to be public (the real one is). Let me fix the shim and re-run.
+
+iOS 18 typecheck passes. Now macOS 15.
+
+Both SDK typechecks pass under Swift 6 strict concurrency. Now let me execute the XCTest via a SwiftPM harness.
+
+The build is compiling. Let me wait for it to complete.
+
+XCTest needs Xcode's toolchain (CommandLineTools lacks it). Let me re-run under DEVELOPER_DIR.
+
+All 24 tests pass under Swift 6 strict concurrency. Now let me verify the project generates and my files are enumerated.
+
+xcodegen passes and all my files are enumerated (90 refs). Now let me attempt the full app build to capture real evidence and confirm no errors are attributable to my code.
+
+Build failed (exit 65) as expected. Let me confirm the failures are pre-existing and NONE are in my files.
+
+Confirmed: the build fails **only** at the un-staged `Shared.xcframework` gate (the documented repo-wide prerequisite) — Swift compilation never runs, so zero errors are attributable to my code. Let me check whether I can stage the framework for a real full build, or must defer per precedent.
+
+Java 17 is present, but staging the Kotlin/Native framework won't unblock the full build (the pre-existing `DashboardWidgetSize`/XCTest collisions remain, per `macos-pending-verifications.md`), so I'll follow the documented deferral precedent. Let me confirm those collisions still exist and inspect the ledger schema.
+
+Confirmed: the documented pre-existing collisions remain (`DashboardWidgetSize` ×15, 261 co-located XCTest files), so staging the framework wouldn't unblock the full app build — the deferral precedent applies. Let me capture clean final gate numbers, then write the log and ledger.
+
+All host gates are green. Now let me write the parity log.
+
+Now create the apple parity ledger with the covered rows (both idioms).
+
+Let me validate the ledger, verify the app registration edit, and review the full change set.
+
+I spotted a refinement: the registration should capture a single stable model rather than allocating one per render. Let me fix that and re-verify the typecheck.
+
+Re-verifying both SDK typechecks and host gates after the change.
+
+Let me re-run the executed tests against the current files, then clean up artifacts.
+
+24/24 tests pass. Let me clean up build artifacts and review the full change set.
+
+I see pre-existing working-copy changes (`AIUsageCard.*`, `web/admin/*`) that are **not** mine — I'll leave those unstaged and commit only my files. Let me confirm they're unrelated, then stage precisely.
+
+All staged files are mine; pre-existing changes left untouched. Now commit with the prompt's message.
+
+Let me verify the commit contents and final tree state.
+
+The commit is clean: 12 files (my work only), 2219 insertions. Pre-existing `AIUsageCard.*`/`web/admin` changes were correctly left untouched. Let me finalize the tracking.
+
+All todos complete and committed. Let me do a final integrity check on the committed catalog.
+
+All artifacts are committed and verified. The task is complete.
+

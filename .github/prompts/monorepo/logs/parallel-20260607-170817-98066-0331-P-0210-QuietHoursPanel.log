@@ -1,0 +1,138 @@
+I'll start by understanding the repository structure and verifying platform capabilities, since this task requires the Apple toolchain.
+
+
+
+Key finding: **Xcode is not installed** (only Command Line Tools), and `simctl` is unavailable. `swift`, `swiftlint`, `swiftformat`, `pwsh` ARE available. Let me explore the existing Apple app structure before deciding on approach.
+
+Let me examine the full Apple structure and check the discrepancy between the prompt's stated path (`apps/apple/TeslaSync/feature-views/`) and the actual structure (`apps/apple/Sources/`).
+
+The `apps/apple/TeslaSync/feature-views/` directory exists with ~970 files following a multi-file pattern (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`). Let me read the web source, check for existing QuietHoursPanel files, and test the Swift SDK.
+
+Excellent — **critical finding**: `swiftc -typecheck` with `SwiftUI + Charts + MapKit` **succeeds (PROBE_EXIT=0)** against the Command Line Tools macOS SDK. So the frameworks ARE available for type-check compilation, even though the full `xcodebuild` IDE/simulator harness is not. This means I can do real verification. Let me read the web source (the spec) and study native conventions.
+
+Now I have the complete web spec. Let me read the API hook to understand the data types, and study the native conventions (shared facade/state-holders, design tokens, i18n, diagnostics) plus find the best template feature-view.
+
+I have the full data model. Now let me study the native infrastructure (shared facade/state-holders, design tokens, i18n, diagnostics) and find the best template feature-view.
+
+Let me study the canonical conventions by reading a complete template feature-view (AlertsSection — notifications domain) and searching for telemetry/toast/state-holder patterns.
+
+Let me read a complete template feature-view set (AlertsSection) to learn all conventions precisely.
+
+Now let me read the Model (state-holder binding), Views, strings, Previews, and Tests for AlertsSection.
+
+Let me read AlertsSection's Views/Previews/Tests and find a CRUD-with-form template (since AlertsSection is read-only but QuietHoursPanel has create/edit/delete).
+
+Let me read the design tokens and key shared component APIs to learn the exact native vocabulary.
+
+TSDesign doesn't hold the core tokens — they're generated. Let me locate token definitions and read the shared component APIs I'll need.
+
+The tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read that plus the shared component APIs I'll use.
+
+Now let me read the exact APIs of components I'll use heavily, plus AlertsSection's Tests/Previews for structure.
+
+Let me study a CRUD-with-form template (AutomationCard) and the Tests/Previews structure.
+
+Let me find how CRUD feature-views handle mutations + toast feedback (web `useToast`).
+
+Let me check the Tests/Previews structure and how feature-views feed per-surface localized strings into shared components (TSToggle/TSSelect need `LocalizedStringKey`).
+
+I have a thorough grasp of the architecture. Let me confirm a few idioms (native Toggle with verbatim label, form controls) and read the placeholder checker to avoid tripping it.
+
+Forbidden literals in `.swift` (case-insensitive): `TODO`, `FIXME`, `XXX`, `Coming soon`, `Placeholder`, `Lorem ipsum`, `not implemented`. I must avoid all of these in code/comments (`.strings` files aren't scanned). Now let me check how the Apple project is built (no `.xcodeproj`/`Package.swift` found earlier) to design my verification strategy.
+
+Now I understand the build: XcodeGen generates the project from `project.yml`; the app target globs `TeslaSync/feature-views`. Let me resolve how `*.Tests.swift` get routed to the test target, and find the lint configs.
+
+No exclude mechanism — `.Tests.swift` colocation is the established convention across all ~130 surfaces; I'll mirror it exactly. Let me read the lint configs so `swiftlint --strict` and `swiftformat --lint` pass (both runnable here).
+
+I now have a complete understanding of the architecture, conventions, tokens, components, lint rules, and the placeholder gate. Let me set up a plan and start implementing.
+
+Starting with the pure Adapter core. Let me write it faithfully porting the web logic.
+
+Adapter written. Let me typecheck it immediately (Foundation-only) to catch errors early before building on it.
+
+Adapter typechecks clean under Swift 6 + strict concurrency. Now the Model (state holder + seams).
+
+Model written (it references the `QuietHoursPanel` View, so I'll typecheck the set together after writing the views). Let me check for a glass-panel component and material before writing the views.
+
+`TSGlassPanel` is the direct `GlassPanel` counterpart (already pads + glass). Let me check for an existing wrap/flow layout to reuse for the weekday/severity chips before writing the views.
+
+I have everything needed. Let me write the main view and then the sub-views (with a per-surface flow layout, matching the established pattern).
+
+Now the sub-views file — the largest piece. Writing all presentational components plus a per-surface flow layout (matching the established pattern).
+
+Production view files written. Now the critical verification — let me typecheck the whole production set together with its component/token dependencies against the macOS SDK.
+
+Good — the only error is in an unrelated dependency file (`FeedbackOverlays.swift` needs `TSMetricBar` from DataDisplay, which I didn't use/include). Let me scope the dependency set precisely to what my files actually reference.
+
+Dependencies are interlinked. Let me include the full Components tree (the broad first attempt showed only `TSMetricBar` from DataDisplay was missing) plus Design + Tokens.
+
+Remaining errors are all in `DataDisplay/UnitFormatters.swift` (needs `UnitPreferences` from the facade) — not my code. Let me locate `UnitPreferences` and include the minimal facade deps so the full set compiles cleanly.
+
+`UnitPreferences` lives in the facade (which pulls heavier deps). Since my files don't use `UnitFormatters`/`FeedbackOverlays`, I'll exclude just those two unused dependency files — that cannot mask any error in my code.
+
+**`TYPECHECK_EXIT=0`** — all four production files typecheck cleanly against the real components/tokens under Swift 6 + strict concurrency (macOS 15). Now the i18n catalog, previews, and tests.
+
+Now the test suite — adapter (pure, clock-pinned), model (CRUD + toast + lifecycle), and accessibility.
+
+All 7 files written. Let me update progress and verify — first re-typecheck the production set including the new Previews file.
+
+Production + Previews typecheck clean. Now let me attempt a real compile of the Tests file by building my sources into a testable `TeslaSync` module. First, check XCTest availability under CLT.
+
+XCTest isn't available under CLT (it ships with Xcode) — so the full `xcodebuild test` harness is genuinely blocked. But I can still verify the **test file type-checks against my real API** by building my sources into a testable `TeslaSync` module + a small XCTest shim. Let me set that up.
+
+Shim built. Now build my sources into a testable `TeslaSync` module, then type-check the Tests file against it.
+
+The errors are only because my **shim** doesn't re-export Foundation — but the real XCTest framework does `@_exported import Foundation` (which is why sibling test files like `AlertsSection.Tests.swift` use `Date`/`Locale` without importing Foundation). My test file correctly follows that established convention. Let me make the shim match real XCTest behavior and re-verify.
+
+**`TESTS_TYPECHECK_EXIT=0`** — the test file type-checks against my real module API. There's one strict-concurrency warning (referencing the `@MainActor` View's `surfaceSlug` from a nonisolated test — same pattern as the sibling `AlertsSection`). I'll eliminate it by marking the accessor `nonisolated`, which is cleaner.
+
+Now let me run the actual formatter on my files (per repo `.swiftformat`), then re-verify compilation, then run the strict linters and placeholder gate.
+
+Formatter applied changes to 5 files. Let me re-verify the full compile chain (production + module + tests) after formatting, then run the strict linters.
+
+Module + tests both clean (no warnings). Now the strict linters and placeholder gate on my files.
+
+swiftlint enforces a 400-line file limit (the established surfaces split files to comply) and flags one 3-member tuple. I need to split my long files and convert the tuple to a struct. Let me get exact line counts to plan the splits.
+
+Let me check how the 1210-line `WidgetPicker.Catalog.swift` passes (disable directive?), and map my files' section boundaries to plan clean splits.
+
+The convention is to split (only 1 data-catalog file uses a disable directive). Clean splits map to MARK boundaries. Let me get the Model and Tests section boundaries to plan their splits.
+
+Only one data-catalog file uses a disable directive — splitting is the established convention. Let me view the exact cut boundaries (blank lines between sections) so I slice cleanly.
+
+Clean boundaries confirmed. Let me execute the splits. Starting with Adapter → Adapter + Logic (and I'll fix the 3-tuple in Logic).
+
+Adapter 378, Logic 326 — both under 400. Now fix the large-tuple in Logic.swift (convert the 3-member tuple to a named struct).
+
+Now split Model → Model (the `@Observable` class) + Seams (telemetry/i18n/toast/source/in-memory source).
+
+Model 286, Seams 234 — good. Now Views → Views + Form.
+
+Views 357, Form 382 — good. Now Tests → Tests (pure) + ModelTests (model + a11y).
+
+All files now under 400 lines. Let me reformat all 10 files, then run the full verification chain again.
+
+All 10 files under 400 lines (max 382). Now re-run the full verification chain with the new structure — production typecheck first.
+
+Module + both test files typecheck clean. Now the strict linters on all 10 files.
+
+swiftlint `--strict` passes (0 violations). Now swiftformat `--lint` and the placeholder gate.
+
+All runnable checks pass: **swiftlint --strict = 0, swiftformat --lint = 0, placeholder gate = 0**. Now let me capture the real capability evidence for the xcodebuild steps (for an honest log), and confirm no stray artifacts in the repo.
+
+Capability confirmed: `xcodebuild` requires full Xcode (runner has CLT only), `simctl` is absent — so the iOS/macOS build+test gate steps are genuinely BLOCKED. Git shows only my 11 new files plus two pre-existing unrelated modifications (which I won't touch). Let me generate the honest gate log capturing real outputs.
+
+Now append the compensating verification (the real type-check evidence) and the final status.
+
+Log complete — all compensating checks green (V1=V2=V3=0). Before committing, let me verify the i18n acceptance criterion: every key referenced in the Swift code must exist in the `.strings` catalog.
+
+The i18n cross-check is clean: **all 55 referenced keys are defined**; the single "unused" key (`quietHours.error.bypassRequired`) is intentionally included for parity with the web source's extracted strings. Let me do a final visual scan of the form (most complex view) and confirm the whole feature-views tree still passes swiftlint repo-style, then commit.
+
+Form is clean and correct. Now let me stage only my new files plus the log (excluding the two pre-existing unrelated modifications) and commit.
+
+All 12 of my files staged; the two pre-existing web modifications are correctly excluded. Committing now.
+
+Committed as `d9e1f4792` (12 files, excludes the unrelated pre-existing web changes). Let me finalize todos and clean up temp artifacts.
+
+Task complete. Cleaned up all temp artifacts; the working tree is clean except for two pre-existing web modifications I correctly left untouched.
+

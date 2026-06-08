@@ -1,0 +1,145 @@
+=== P4 Dashboard widget 0039 DriveScoreGaugeWidget (Apple) ===
+Run host: Darwin arm64 (macOS), shared CI-class runner
+Date: 2026-06-07
+
+--------------------------------------------------------------------------------
+ARTIFACT (native parity port of features/dashboard/widgets/DriveScoreGaugeWidget.tsx)
+--------------------------------------------------------------------------------
+New files (compiled into the iOS + macOS app targets via project.yml `Sources` glob):
+  apps/apple/Sources/DashboardWidgets/DriveScoreGaugeWidget.swift       (container + pure DriveScoreGaugeContent presentation, all states)
+  apps/apple/Sources/DashboardWidgets/DriveScoreGaugeWidgetViews.swift  (gauge hero, radial gauge, sub-score bars, 7 #Previews)
+  apps/apple/Sources/DashboardWidgets/DriveScoreGaugeWidgetModel.swift  (state-holder-bound @Observable model + P1/S11 telemetry seam + ViewOpenRecorder)
+  apps/apple/Sources/DashboardWidgets/DriveScoreGaugeWidgetData.swift   (DriveScoreProjection adapter, score tone, render-state derivation, registry/size)
+  apps/apple/Tests/Unit/DashboardWidgets/DriveScoreGaugeWidgetTests.swift (29 tests: adapter + per-state + registry + telemetry + a11y)
+
+Parity notes:
+- Data sources: binds shared P1/S8 `DrivingStore.driveScore(vehicleId:)` (web `useDriveScore`)
+  through `StateHolderModel` + `LoadableState` (mirrors the representative VehicleSettingsModel).
+  No direct HTTP from the view. `useVehicles`/vehicle selection handled by the injected vehicleID.
+- Shared components mapped: @/components/data-display -> TSMetricBar/TSMetricLabel; @/components/feedback
+  -> TSEmptyState/TSQueryError/TSSkeleton/TSFreshnessIndicator. Web RadialGauge/WidgetGaugeHero ->
+  native DriveScoreGauge + DriveScoreGaugeHero (SwiftUI Shape arc; no third-party chart needed; prompt lists charts=none).
+- States reproduced: loading (skeleton chrome), loaded, empty ("No score yet"), error (QueryError + retry),
+  stale (Stale chip), offline (cached value + Offline chip). Compact (1x1) and tall (>=2 rows) variants.
+- i18n: every source string resolves through the P1/S10 catalog (apps/apple/Localization/Localizable.xcstrings,
+  generated from apps/shared/i18n/catalog). Keys: translation.widget.driveScoreGauge.{title,weekly,efficiency,
+  smoothness,speed,noData} (+ chrome: widget.freshness.stale/offline, translation.common.refresh). A unit test
+  asserts each key resolves (does NOT fall back to the raw key). No English literals in native code.
+- a11y: VoiceOver labels/values on the gauge, refresh control, freshness chips; Dynamic Type via tokens;
+  reduce-motion respected on the gauge animation.
+- Telemetry (P1/S11): emits view.opened as the typed TelemetryEvent.ScreenView(screen:"DriveScoreGaugeWidget")
+  via the shared consent-gated Telemetry, exactly once per appearance (ViewOpenRecorder; spy-tested).
+- Registry: DriveScoreGaugeRegistry mirrors registry/driving.ts `drive-score-gauge` — default 1x2, min 1x2,
+  max 2x40, category driving; clamp() enforces the min..max box (tested).
+Change surface is purely ADDITIVE (git status: only the two new dirs; zero existing files modified) ->
+existing behavior cannot regress.
+
+--------------------------------------------------------------------------------
+RUNNER CAPABILITY (probed, not assumed)
+--------------------------------------------------------------------------------
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer  -> Xcode 26.5 (17F42)  [present]
+iOS Simulator runtime iOS 26.5; device "iPhone 16" (83717DEE-...-CBDDD3140989)   [present]
+Android SDK (platform-36, build-tools-36) via Homebrew + local.properties        [present -> KMP android target configures]
+Kotlin/Native 2.4.0 (~/.konan) + Gradle 8.14.5 cached                             [present]
+pwsh 7 (OpenAPI codegen + placeholder gate)                                       [present]
+NOTE: global `xcode-select -p` = CommandLineTools (no simctl); overridden per-invocation via DEVELOPER_DIR/PATH.
+NOTE: no Apple developer signing certificate on this host (macOS app entitlements require one).
+
+--------------------------------------------------------------------------------
+KMP Shared.xcframework (prerequisite for the Apple build; ADR-004)
+--------------------------------------------------------------------------------
+$ ANDROID_HOME=... ./gradlew :core:assembleSharedXCFramework
+> Task :core:assembleSharedReleaseXCFramework
+xcframework successfully written out to: apps/shared/core/build/XCFrameworks/release/Shared.xcframework
+BUILD SUCCESSFUL in 16m 58s
+ASSEMBLE_EXIT=0
+Staged -> apps/apple/Frameworks/Shared.xcframework (git-ignored, per ADR-004).
+Confirmed exported Swift symbols my code binds: driveScore(vehicleId:) -> StateFlow; Resource; Telemetry.track(event:);
+TelemetryEventScreenView(screen:platform:appVersion:); Platform.shared.name.
+
+--------------------------------------------------------------------------------
+GATE STEP RESULTS
+--------------------------------------------------------------------------------
+$ xcodegen generate
+XCODEGEN_EXIT=0   (TeslaSync.xcodeproj generated; git-ignored)
+
+[iOS] $ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+  ** BUILD SUCCEEDED **
+  IOS_BUILD_EXIT=0   <-- widget compiles for iOS against the real Shared.xcframework
+
+[iOS] $ xcodebuild ... -only-testing:TeslaSyncTests/DriveScore* test-without-building   (booted iPhone 16)
+  Test Suite 'DriveScoreProjectionTests'        Executed 11 tests, 0 failures
+  Test Suite 'DriveScoreToneTests'              Executed  1 test,  0 failures
+  Test Suite 'DriveScoreRenderStateTests'       Executed 10 tests, 0 failures
+  Test Suite 'DriveScoreGaugeRegistryTests'     Executed  3 tests, 0 failures
+  Test Suite 'DriveScoreGaugeTelemetryTests'    Executed  2 tests, 0 failures
+  Test Suite 'DriveScoreGaugeAccessibilityTests'Executed  2 tests, 0 failures
+  TOTAL: Executed 29 tests, with 0 failures (0 unexpected)
+  MYTESTS_EXIT=0   <-- adapter + per-state + registry + telemetry(view.opened) + a11y all PASS on-device
+
+[iOS] $ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  ** BUILD SUCCEEDED ** then test execution aborted:
+  "TeslaSync encountered an error (Early unexpected exit ... Test crashed with signal kill before establishing connection.)"
+  "Invalid device state ... server died (Mach error -308)"  -- CoreSimulator service OOM-killed during test-runner install.
+  Host load average during the window: 213 - 570 (≈40 parallel slots on this shared runner saturating CPU/RAM).
+  IOS_EXIT=65   <-- BLOCKED: simulator/test-host OOM-kill (infrastructure), NOT a test or code failure.
+                    The isolated 29-test run above proves the suite passes when the sim survives install.
+
+[macOS] $ xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS,arch=arm64' CODE_SIGNING_ALLOWED=NO build
+  ** BUILD SUCCEEDED **
+  MAC_BUILD_EXIT=0   <-- widget compiles for macOS against the real Shared.xcframework
+  (Signing disabled because the macOS app entitlements require a dev certificate that is absent on this host;
+   the un-disabled build fails only at the signing step: "entitlements require signing with a development certificate".)
+
+[macOS] $ xcodebuild -scheme TeslaSync-macOS ... build test
+  xcodebuild: error: Could not find test host for TeslaSync-macOSTests:
+  TEST_HOST evaluates to ".../TeslaSync-macOS.app/Contents/MacOS/TeslaSync-macOS"
+  Root cause = PRE-EXISTING project config: target `TeslaSync-macOS` sets PRODUCT_NAME=TeslaSync, so the real
+  product is `TeslaSync.app`, but the generated TEST_HOST references `TeslaSync-macOS.app`. This breaks macOS
+  hosted-test execution for ANY test, independent of this widget; project.yml is outside this prompt's allowed files.
+  (A command-line `TEST_HOST=$(BUILT_PRODUCTS_DIR)/TeslaSync.app/...` override was attempted; it is rejected
+   because it then applies to the sibling UI target: "TeslaSync-macOSUITests sets both USES_XCTRUNNER and
+   either TEST_HOST or RUNTIME_TEST_HOST" — a per-target fix in project.yml is required, out of scope here.)
+  MAC_EXIT=70   <-- BLOCKED: pre-existing macOS hosted-test TEST_HOST misconfiguration + absent dev-signing.
+
+$ cd apps/apple && swiftlint --strict
+  Done linting! Found 0 violations, 0 serious in 261 files.
+  LINT_EXIT=0
+
+$ swiftformat --lint apps/apple
+  0/265 files require formatting, 2 files skipped (generated, swiftformat:disable all).
+  FORMAT_EXIT=0
+
+$ pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/DashboardWidgets
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  (Tests dir also checked: PLACEHOLDER_COUNT=0.)
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+GREEN (verified on this host):
+  - XCFRAMEWORK_EXIT=0   (real KMP Shared.xcframework built + linked)
+  - IOS_BUILD_EXIT=0     (iOS app compiles with the widget)
+  - MAC_BUILD_EXIT=0     (macOS app compiles with the widget)
+  - MYTESTS_EXIT=0       (29/29 widget unit tests pass on iPhone 16 simulator)
+  - LINT_EXIT=0          (swiftlint --strict, whole project)
+  - FORMAT_EXIT=0        (swiftformat --lint apps/apple)
+  - PLACEHOLDER_EXIT=0   (no TODO/stub/mock/placeholder/Lorem)
+  - Additive-only change set (no regression risk to existing tests)
+
+BLOCKED (shared-host platform capability / pre-existing config — NOT this artifact):
+  - IOS_EXIT=65   full `build test`: CoreSimulator/test-host OOM-killed under load avg 213-570
+                  (signal kill before connection; Mach -308 "server died"). Intermittent: the
+                  isolated 29-test run completed green when the sim survived install.
+  - MAC_EXIT=70   full `build test`: pre-existing TEST_HOST=TeslaSync-macOS.app vs PRODUCT_NAME=TeslaSync
+                  mismatch + no dev-signing certificate. Affects all macOS hosted tests, not this widget.
+
+These two execution legs are exactly the Apple-native test-EXECUTION items the repo defers to dedicated
+macos-latest CI runners (CONTRACT_FROZEN.md "Apple native test tasks SKIPPED on non-dedicated hosts";
+apps/macos-pending-verifications.md; ADR-012 CI matrix). All host-runnable gates are green and the artifact
+is complete (every state, i18n key, a11y label, and the view.opened telemetry verified).
+
+EXIT=65
+STATUS=BLOCKED

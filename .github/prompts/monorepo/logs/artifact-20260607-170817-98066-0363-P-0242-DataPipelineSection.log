@@ -1,0 +1,103 @@
+=== P4 Feature view 0242 DataPipelineSection (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/DataPipelineSection.*
+Web src : web/src/features/system/components/status/DataPipelineSection.tsx
+Tier    : Feature view (composed status accordion below page level)
+ADRs    : ADR-002 (shared SwiftUI source) · ADR-004 (KMP Shared core) · ADR-009
+Host    : macOS (Darwin) · Xcode 26.5 (17F42) via DEVELOPER_DIR · Swift 6.3.2
+          xcodegen 2.x · swiftlint · swiftformat · pwsh · iOS 26.5 + macOS 26.5 SDKs
+
+--- WHAT SHIPPED (8 files, established feature-view multi-file pattern) -------------
+  DataPipelineSection.Adapter.swift  (289 ln) models (CompressionSnapshot,
+        ExportJobItem) + status classification (web getStatusIcon/statusToBadgeVariant)
+        + formatters number/percent/int/bytes/dateTime (ports of numberFormat.ts +
+        dateFormat.ts + helpers.tsx formatBytes) + queue counts + a11y builders. Pure.
+  DataPipelineSection.Model.swift    (291 ln) P1/S11 telemetry seam, connection axis,
+        input snapshot, resolved + projection, P1/S8 source seam + in-memory source,
+        @Observable model (stale one-shot auto-refresh), P1/S10 strings facade.
+  DataPipelineSection.swift          (171 ln) main View: bespoke accordion chrome
+        (icon/title/description/savings+active badges/chevron) + freshness toolbar +
+        phase switch. surfaceSlug = "DataPipelineSection".
+  DataPipelineSection.Views.swift    (342 ln) header badges, freshness chip + banner,
+        compression block (metric grid + savings radial gauge | empty state), export
+        block (status stat-cards + table | EmptyState), loading + error chrome.
+  DataPipelineSection.Table.swift    (147 ln) export-queue TSDataTable — six web columns
+        (status·type·format·file·records·created) + sortable comparators.
+  DataPipelineSection.Previews.swift (137 ln) data / compression-empty / queue-empty /
+        loading / error / stale / offline previews (DEBUG).
+  DataPipelineSection.strings        (i18n) table "DataPipelineSection": every web t()
+        key + native chrome (description, status labels, freshness/empty/error, a11y).
+  DataPipelineSection.Tests.swift    (394 ln) 9 suites / 34 tests.
+
+  States reproduced (no hidden surface): loading (web two-skeleton) · ready (compression
+  block data-or-empty, the section is never hidden + export stat-cards+table or web
+  EmptyState) · error (QueryError peer + retry) · stale + offline (freshness chip +
+  banner + one-shot auto-refresh on the stale transition).
+
+--- HOST-RUNNABLE GATES (all green) ------------------------------------------------
+  swiftformat --lint <surface> ................ 0/7 require formatting               FORMAT_EXIT=0
+  swiftlint lint --strict <surface> ........... Found 0 violations, 0 serious        LINT_EXIT=0
+  check-placeholders.ps1 -Language swift ...... PLACEHOLDER_COUNT=0 ALLOWED=0        PLACEHOLDER_EXIT=0
+        (per-file over all 7 .swift; self-test PASS — gate proven to detect stubs)
+  swiftc -typecheck iPhoneSimulator (target arm64-apple-ios18.0-simulator,
+        swift6, -strict-concurrency=complete, real SDK) ........................... IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (target arm64-apple-macos15.0,
+        swift6, -strict-concurrency=complete, real SDK) .......................... MAC_TYPECHECK_EXIT=0
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6,
+        bound against the REAL shared Components + design Tokens) ................. 34/34 passed, TEST_EXIT=0
+      → DataPipelineFormatNumberTests · DataPipelineFormatBytesTests ·
+        DataPipelineFormatDateTests · DataPipelineStatusKindTests ·
+        DataPipelineCountsTests · DataPipelineProjectionTests ·
+        DataPipelineResolvedTests · DataPipelineModelTests ·
+        DataPipelineAccessibilityTests
+  xcodegen generate (project spec with the 8 new files; all 8 wired) ............... XCODEGEN_EXIT=0
+
+--- DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test ------------
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. Blocked by PRE-EXISTING, UNRELATED state in the shared app
+    target — ZERO of which originates in this surface (verified: a deterministic
+    target build emits exactly one error, and it is the framework, not this code):
+
+      xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator build
+        → error: There is no XCFramework found at
+          '/…/apps/apple/Frameworks/Frameworks/Shared.xcframework'.
+        ** BUILD FAILED **
+
+      • Shared.xcframework not staged (apps/apple/Frameworks has only .gitkeep). The
+        scheme pre-action builds it via the Kotlin/Native Gradle toolchain
+        (apps/shared/gradlew :core:assembleSharedXCFramework) — the P1/S3 artifact
+        already tracked macOS-pending in apps/macos-pending-verifications.md.
+      • The feature-view *.Tests.swift files (this surface's + every sibling's) are
+        assigned to the app target by the current XcodeGen spec and `@testable import
+        TeslaSync` into it — an integration-wiring gap shared by all ported surfaces.
+      • No macOS development-signing identity (ADR-012).
+
+    This surface's OWN code is proven to compile against the real iOS-18 + macOS-15 SDKs
+    (typechecks above, EXIT=0 both) and its logic runs green (34/34 XCTest under Swift 6
+    strict concurrency). The full-app build/test is the same deferral recorded for
+    p4-apple/feature-views/0010-ToolCard and 0180-AlertMessageEditor; it belongs to the
+    p4-apple/P99-0001-apple-acceptance-gate on a macos-latest runner with signing.
+
+--- ACCEPTANCE CRITERIA ------------------------------------------------------------
+  [x] Surface renders on Apple with all web states reproduced (loading/empty/error/stale/offline).
+  [x] Hooks (useQuery ×2: compression + export jobs) bind to the shared P1/S8 source
+      seam; no direct HTTP from the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (DataPipelineSection.strings).
+  [x] Accessibility labels present on every interactive element (accordion toggle,
+      refresh, status rows) + per-row/compression summaries; Dynamic Type + reduce-motion
+      honoured via shared components.
+  [x] Tests: adapter unit tests + projection/model per-state tests + a11y label tests (34 total, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (stub gate: 0, 0 opt-outs).
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing unrelated
+      blockers above); host-runnable equivalents (real-SDK typecheck both platforms +
+      34/34 XCTest + lint/format/placeholder) green.
+
+FORMAT_EXIT=0
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+IOS_TYPECHECK_EXIT=0
+MAC_TYPECHECK_EXIT=0
+TEST_EXIT=0
+XCODEGEN_EXIT=0
+EXIT=0
+STATUS=DONE

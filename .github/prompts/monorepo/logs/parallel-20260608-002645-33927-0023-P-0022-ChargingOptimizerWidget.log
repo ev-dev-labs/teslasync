@@ -1,0 +1,128 @@
+I'll start by exploring the repository structure to understand what exists and what tooling is available.
+
+Key finding: full Xcode is NOT installed (only Command Line Tools), so `xcodebuild` and `simctl` are unavailable. However `swift` 6.3.2, `swiftlint`, `swiftformat`, and `pwsh` ARE available. Let me explore the existing native patterns and the web source before deciding on approach.
+
+Now I understand the structure. There are many existing dashboard widgets following a consistent multi-file pattern. Let me study the closest analog and the shared infrastructure (WidgetShell, WidgetTipCards) the web source depends on.
+
+ChargingOptimizerWidget native doesn't exist yet. There's a native `WidgetShell` shared component used widely. Let me locate the shared infrastructure (WidgetShell, size model, registry, i18n facade, diagnostics) and study a clean template widget (GuardModeWidget — 7-file set).
+
+Let me study a complete template widget (GuardModeWidget) and the charging-category sibling (SuperchargerHistoryWidget), plus find how WidgetShell and diagnostics are actually invoked.
+
+Excellent — GuardModeWidget is a clean 7-file template. Let me read its remaining files and locate the shared token/registration definitions.
+
+Let me read the remaining GuardModeWidget template files and locate all the shared token/registration definitions.
+
+I have the full 7-file template pattern. Now let me locate the shared token/registration definitions and read the web data hook + registry + shared web components.
+
+Registry metadata confirmed (2×2, 1×2, 4×40). Now let me find the canonical definitions of the shared types and tokens.
+
+There are many per-widget copies of `DashboardWidgetSize`/`DashboardWidgetRegistration`, but GuardModeWidget doesn't define its own. I need to understand the module/target structure. Let me examine project.yml and how GuardModeWidget resolves these shared types.
+
+13 widgets define their own copy while others rely on a shared definition — these loose files aren't all co-compiled. Let me read project.yml to understand target source membership and find where the shared tokens/types actually live.
+
+Now I understand the target structure: `TeslaSync/dashboard-widgets` is compiled into both iOS and macOS app targets. Let me find the canonical token definitions and the web data hook/shared components.
+
+Now let me read the web data hook + types and confirm the canonical native token definitions.
+
+I now have the full data model and confirmed tokens. Let me verify the toolchain can typecheck SwiftUI, check the placeholder script, lint configs, and peek at number-formatting conventions.
+
+SwiftUI typechecks against the macOS SDK (EXIT=0) — I can do real verification. Let me confirm the `TSTone`/`TSSkeleton` APIs and the number-formatting convention.
+
+I have all the APIs. Let me read the canonical `DashboardWidgetRegistration`/`DashboardWidgetSize` shape (for faithful stubs) and then start building.
+
+I now have everything needed. Let me set up tracking and create the implementation. First the plan and todos.
+
+XCTest needs Xcode (not in CLT) — I'll typecheck the 5 production files against the macOS SDK and lint the tests. Now creating the implementation. Starting with the Model (state-holder + telemetry + i18n facade).
+
+Now the Adapter (pure projection core: formatters, snapshot, hour/rate-band logic, tip builder, accessibility).
+
+Now the Views (presentational subviews).
+
+Now the main widget view that composes everything.
+
+Let me typecheck the production files early against the macOS SDK using a scratch harness with the real tokens plus faithful stubs of the 4 shared seams.
+
+Production files typecheck clean under Swift 6. Let me refine the tip id to match the web (index-based) and then write Previews and Tests.
+
+Now the Previews.
+
+Now the comprehensive test suite.
+
+Now the i18n strings catalog.
+
+All 7 files created. Now the verification phase — formatting, linting, placeholder check, key coverage, and re-typecheck.
+
+Minor format issues — let me auto-fix with swiftformat (ecosystem tool) then re-verify.
+
+swiftformat passes. Let me review the auto-format changes and run swiftlint --strict on the new files.
+
+swiftlint --strict: 0 violations; swiftformat: clean. Let me re-typecheck the formatted production files and confirm the auto-format didn't break the `tileStack` helper.
+
+The `tileStack` helper looks correct. The harness lost Stubs.swift — let me check and re-typecheck.
+
+The shared `/tmp` is being used by another parallel slot (collision). Let me use a session-private scratch dir.
+
+Production files typecheck clean (Swift 6, macOS 15). Now let me typecheck the Previews (with DEBUG) and the Tests file (via a small XCTest shim, since XCTest isn't in CLT) to verify those against the real production API.
+
+The only Previews errors are the `#Preview` macro plugin being unavailable in CLT (no Xcode) — not a code error. Let me verify the preview *bodies* are type-correct by transforming `#Preview` into plain functions.
+
+All 9 preview bodies typecheck. Now the Tests file via an XCTest shim.
+
+Two issues surfaced: `Date` (a shim artifact — real `import XCTest` re-exports Foundation) and a Swift 6 actor-isolation warning on the MainActor-isolated `registration`/`surfaceSlug` statics accessed from the non-isolated registry test class. The latter is a real concern under strict concurrency — let me mark that test class `@MainActor` and re-verify with a faithful probe.
+
+Tests typecheck clean with `-warnings-as-errors`. Let me run a comprehensive combined check (production + preview bodies + tests, warnings-as-errors), then the placeholder scan and i18n key-coverage check.
+
+Everything passes: combined warnings-as-errors typecheck exit 0, and all 33 i18n keys covered (0 missing). Let me run the placeholder check — first inspecting the script's `-Path` semantics.
+
+The gate's placeholder `-Path` is a filename prefix (not a real dir), so it scans nothing and trivially returns 0. Let me run the gate command as-written AND a real scan of my actual files for meaningful verification.
+
+Both placeholder scans pass (COUNT=0). Let me grep all shipped files for the acceptance-criteria forbidden tokens, then run the whole-tree gate lints to capture baseline.
+
+Confirmed: my shipped files contain zero forbidden tokens. The whole-tree swiftlint failure is a **pre-existing sibling violation** (`LifetimeStatsWidget.Adapter.swift`, outside my allowed scope) — my own files passed `--strict` with 0 violations. Let me capture the whole-tree swiftformat baseline and confirm none of my files appear.
+
+Whole-tree swiftformat: only 1 sibling file (`ActionBuilder.Previews.swift`) needs formatting — **0 matches for my files**. Waiting for the swiftlint check to confirm my files are absent there too.
+
+Confirmed: **0 matches for my files** in both whole-tree swiftlint and swiftformat. The whole-tree failures are pre-existing sibling files outside my allowed scope. My surface passes every runnable check. Now let me check the log directory and write the honest gate log.
+
+The sibling logs reference a runner that could at least *build* with Xcode. Let me double-check whether a full Xcode.app exists anywhere on this machine (perhaps just not selected) before concluding BLOCKED — and read my closest template log (GuardModeWidget 0054).
+
+`/Applications/Xcode.app` **exists** — it's just not selected. The established convention (GuardMode 0054) uses a `DEVELOPER_DIR` override and real iOS/macOS SDK compiles. Let me read the rest of that log to match the exact methodology, and probe the real Xcode toolchain.
+
+**Full Xcode 26.5 is available** via `DEVELOPER_DIR` override, iPhone 16 simulator is booted, and `xcodegen` is installed. The GuardModeWidget (0054) precedent is "code-complete + executed host tests + real iOS/macOS SDK compiles, with the full xcodebuild app build/test DEFERRED" (Shared.xcframework/KMP not staged + cross-surface duplicate symbols). I should follow that exact, stronger methodology — including **actually executing my tests** via SwiftPM. Let me inspect the real shared component files first.
+
+Both real `Badges.swift` (TSTone) and `Skeletons.swift` (TSSkeleton) depend only on SwiftUI + tokens — self-contained. I'll follow the GuardMode methodology exactly: compile against the **real** component library on both the iOS 18 simulator SDK and macOS 15 SDK, and **execute** the test suite via SwiftPM. Let me set up the harness and run the real SDK compiles.
+
+The errors are in the **real** `Skeletons.swift` (sibling skeleton types use `TSCard` from `Cards.swift`) — not my surface. I need the fuller real component closure, exactly as GuardMode did (Badges + Cards + Typography + Skeletons). Let me add those real files.
+
+The real `Skeletons.swift` bundles sibling skeleton types that pull in `TSCard` → a large closure. Cleaner and still faithful: use the real `Badges.swift` (compiles standalone) + the **verbatim** real `TSSkeleton` struct in isolation. Let me extract just that struct.
+
+All three real-SDK compiles pass under Xcode 26.5 (iOS 18 sim, macOS 15, and previews — the `#Preview` macro now resolves with the full toolchain). Now the key step: **execute** the full XCTest suite via SwiftPM on the macOS host.
+
+**All 31 tests executed and passed** (0 failures) on the macOS host under Swift 6, against the real design tokens. Now let me capture the honest xcodebuild deferral evidence (the documented precedent): verify the Shared.xcframework staging gap and run `xcodegen`/`xcodebuild`.
+
+Confirmed: `Frameworks/` has only `.gitkeep` (Shared.xcframework not staged), `.xcodeproj` is gitignored, 31 test methods. Let me capture the xcodebuild deferral evidence: generate the project and attempt a build.
+
+The sandbox blocks `kill` with variable PIDs. Let me run xcodebuild in async mode with a bounded wait instead, then stop it.
+
+`xcodegen generate` succeeded (EXIT 0). Now let me attempt the build via async mode to capture the deferral evidence.
+
+Build running in the background. Let me wait and check the captured output.
+
+Build failed with exit 65 (as the precedent documents). Let me extract the specific blocking errors.
+
+Deferral evidence captured exactly like the precedent: `error: There is no XCFramework found at '.../Frameworks/Shared.xcframework'`, `** BUILD FAILED **` (exit 65), with **0 mentions of my surface** — the blocker is the unstaged KMP framework, not my code. Let me clean up generated artifacts and verify git status.
+
+My 7 files are untracked and ready; generated artifacts removed. The `M` files (AIUsageCard, web) are pre-existing checkout modifications, not mine — my commit will add only my 7 files + the log. Let me gather line counts and write the gate log.
+
+All host-runnable gates are green (real iOS+macOS SDK compiles + 31/31 executed tests + lint/format/placeholder), with the Xcode app build/test deferred on captured evidence — matching the committed 0054/0036 precedents. Let me write the comprehensive gate log.
+
+Before committing, let me re-verify lint/format on the final file state (the `@MainActor` test edit came after the earlier lint run) to ensure the log's claims hold.
+
+Final lint/format pass (0/6 format, 0 lint violations). Now committing exactly my 7 surface files + the log (excluding the pre-existing unrelated `M` files).
+
+Exactly 8 files staged (7 surface + log); no unrelated files. Committing.
+
+Commit `d6c9b6992` created with exactly 8 files (2087 insertions). Let me finalize: update tracking, clean session scratch, and confirm a clean tree.
+
+Task complete. The working tree is clean (only pre-existing unrelated checkout modifications remain, correctly excluded from my commit), generated artifacts removed, scratch cleaned, all todos done.
+

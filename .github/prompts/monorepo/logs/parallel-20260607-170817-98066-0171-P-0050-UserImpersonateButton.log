@@ -1,0 +1,120 @@
+I'll start by exploring the repository structure, the web source file, and the existing Apple app structure.
+
+Got the web source. Now let me examine the existing Apple `feature-views`, the shared facade (P1/S8), tokens (P1/S9), i18n (P1/S10), and native UI components.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. Let me verify the toolchain situation and study the established patterns in depth.
+
+Found `/Applications/Xcode.app` and `project.yml` (XcodeGen). Let me test whether I can activate the full Xcode toolchain via `DEVELOPER_DIR`, check for xcodegen/pwsh, and read the core facade + a data-driven template in parallel.Xcode.app exists but `xcode-select` points to CommandLineTools. Let me check if I can target the full Xcode, and whether xcodegen/pwsh are available, plus read the project config.
+
+Full Xcode 26.5 is available via `DEVELOPER_DIR`, plus xcodegen, pwsh, swiftlint, swiftformat. Now let me study the established patterns deeply. Reading core facade, a representative feature-view, and shared components.
+
+Sophisticated KMP-bridged facade. Let me read a complete backend-calling feature-view as the template, plus the native Button/dialog components and locate the i18n + telemetry contracts.
+
+The pattern is clear: views bind through a `@Observable` model + a protocol seam (no direct HTTP); previews/tests inject in-memory implementations. Let me read the rest of BackendTool plus the design tokens, Button, and dialog components.
+
+Now reading the test structure and the shared design/UI components I'll need (TSButton, dialog/overlay, tones, spacing).
+
+Let me check how `feature-views` is wired into the build (project.yml lists `dashboard-widgets` but not `feature-views`), and locate the native ConfirmDialog + design tokens.
+
+`feature-views` isn't wired into project.yml (affects all 7 existing surfaces equally — a pre-existing integration gap), and there's no `TSConfirmDialog` (I'll map to a native confirmation). Let me read the design tokens and check whether the full app build is even feasible (KMP framework).
+
+The full build needs a Gradle/Kotlin-built `Shared.xcframework`. Let me check whether a prebuilt framework exists and locate the exact token/component symbol definitions I'll depend on.
+
+No prebuilt framework (full gate needs a heavy Kotlin/Native Gradle build). Let me read the exact token + component definitions so my code compiles against the real symbols.
+
+I have the tokens and tones. Let me confirm the shared panel/typography/feedback components I'll reuse (TSGlassPanel, TSText/titles, empty/error states, skeleton).
+
+Let me confirm `TSGlassPanel`/`TSInlineCallout` signatures and see how the codebase handles native confirmation dialogs and string interpolation, to match house style.
+
+I have what I need. Let me quickly check the existing `.confirmationDialog`/`.alert` house style and the localized-format interpolation pattern, then set up my plan.
+
+I now understand the full architecture and house style. Let me set up tracking and verify which shared layers are `Shared`-free (so I can do a focused typecheck without the heavy KMP framework).
+
+All Components/Design layers are `Shared`-free, so I can do a focused `swiftc -typecheck` against the real components without the KMP framework. Let me check the inline callout/banner component, then write the plan and implement.
+
+I have a complete understanding of the architecture, house style, and available components. Let me record a plan and todos, then implement.
+
+Now implementing. Starting with the pure adapter (projections), then the model.
+
+Now the model (seams + `@Observable` view-model + telemetry + i18n facade).
+
+Now the surface view and the per-state subviews.
+
+Now the strings catalog (parity keys verbatim + native-chrome keys) and the previews.
+
+Now the test suite (adapter projections + model transitions + a11y + i18n).
+
+All 7 files written. Now verifying — focused `swiftc -typecheck` of my production files against the real shared component/design sources (all `Shared`-free) using the iOS simulator SDK.
+
+Expected: unrelated component files (`UnitFormatters`, a `tsUnits` env key) reference symbols outside Components/Design (`Units` from SharedFacade) — not my code. Let me narrow to the minimal real dependency set my surface actually touches.
+
+Clean minimal dep set (SwiftUI-only). Typechecking my 5 production files against these real dependencies.
+
+My production + preview files typecheck cleanly under Swift 6 / iOS 18. Now let me actually **execute** the unit tests via a temporary SwiftPM package (host/macOS) that compiles my surface against the real shared components.
+
+**All 30 unit tests passed** (13 adapter + 17 model, 0 failures) under Swift 6.3.2 against the real shared components. Now the remaining gate steps: swiftlint, swiftformat, placeholder check. Let me read the configs/script first.
+
+Now running the lint/format/placeholder gate steps on my files.
+
+swiftlint --strict found 6 fixable violations (line lengths, a trailing-closure rule, and tests file length). Let me view the exact lines and fix them.
+
+Let me check how the already-linted `dashboard-widgets` call `TSButton` with a custom label (to satisfy both swiftlint --strict and swiftformat), then fix all violations.
+
+No precedent in linted code. I'll pass both closures explicitly (no trailing) and verify swiftformat agreement. Applying all fixes:
+
+Now the tests: wrap the long line and trim the header to get under the 400-line file limit.
+
+The wrap added lines; I need to trim the header comment to get under 400. Let me condense it.
+
+Still 407; need to cut 7 more. Let me remove a few inline section comments inside the adapter tests.
+
+Re-running swiftlint --strict and swiftformat --lint after the fixes.
+
+swiftlint passes. swiftformat wants 6 auto-fixable formatting tweaks. Let me apply swiftformat in write mode to my files, then re-verify both.
+
+Both lint and format pass cleanly now. Since swiftformat modified Adapter + Previews, let me re-run the typecheck and re-execute the tests to confirm correctness held.
+
+Typecheck + all 30 tests pass after formatting. Now the placeholder gate — running both the literal gate invocation and a real scoped scan of my actual files.
+
+Placeholder check passes (count=0). Let me substantiate the project.yml integration-gap claim with concrete evidence by generating the Xcode project and checking feature-view membership.
+
+My grep matched by path-with-slash, which XcodeGen doesn't store. Let me re-check by file basename (with a dashboard-widget control that IS in project.yml).
+
+Definitive evidence: `DigitalTwinWidget.swift`/`Buttons.swift`/`Tokens.swift` are compiled (6/6/22 refs) but **all** `feature-views/*` (mine + the 7 existing surfaces like `BackendTool.swift`) have 0 refs — confirming the pre-existing project.yml gap. Let me clean up the generated project and check the logs dir + an existing log's format.
+
+Let me read the existing BackendTool log to match the established reporting convention (especially how the xcodebuild gate was handled).
+
+This matches the established predecessor convention exactly (host-runnable gates green + deferred xcodebuild with captured evidence). Let me complete the parallel evidence: a macOS-SDK typecheck and capture the real `xcodebuild` deferral evidence (missing `Shared.xcframework`).
+
+Surface compiles cleanly on **both** iOS 18 and macOS 15 SDKs. Now capturing the real `xcodebuild` deferral evidence (missing KMP framework), then cleaning up.
+
+Captured the deferral evidence (MAC_BUILD_EXIT=65: missing `Shared.xcframework` + signing). Let me get final line counts and write the gate log.
+
+Now writing the comprehensive, honest gate log.
+
+Log written. Let me verify the working tree, clean up temp artifacts, and stage only my files + the log.
+
+Working tree is clean (the 2 pre-existing unrelated `web/` modifications are not mine — leaving them unstaged). Staging only my surface files + the log, then committing.
+
+Committed cleanly (`f58a0c2`) — exactly my 7 surface files + the log; the 2 pre-existing unrelated `web/` edits were left untouched. Final bookkeeping and a clean-tree confirmation.
+
+All todos complete and the tree is clean (only the two pre-existing, unrelated `web/` edits remain — not mine, correctly left untouched).
+
+Merge made by the 'ort' strategy.
+ ...le-feature-views-0050-UserImpersonateButton.log | 227 ++++++++++++
+ .../UserImpersonateButton.Adapter.swift            | 264 ++++++++++++++
+ .../UserImpersonateButton.Model.swift              | 376 +++++++++++++++++++
+ .../UserImpersonateButton.Previews.swift           | 134 +++++++
+ .../UserImpersonateButton.Tests.swift              | 399 +++++++++++++++++++++
+ .../UserImpersonateButton.Views.swift              | 312 ++++++++++++++++
+ .../feature-views/UserImpersonateButton.strings    |  51 +++
+ .../feature-views/UserImpersonateButton.swift      | 127 +++++++
+ 8 files changed, 1890 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0050-UserImpersonateButton.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/UserImpersonateButton.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/UserImpersonateButton.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/UserImpersonateButton.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/UserImpersonateButton.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/UserImpersonateButton.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/UserImpersonateButton.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/UserImpersonateButton.swift

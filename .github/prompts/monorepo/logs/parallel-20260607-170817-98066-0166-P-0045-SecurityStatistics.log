@@ -1,0 +1,132 @@
+I'll start by exploring the repository structure and checking runner capabilities for this Apple/SwiftUI task.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed, and `simctl` is unavailable. But `swift` 6.3.2, `swiftlint`, and `swiftformat` are present. Let me explore deeper before deciding on capability status.
+
+Critical: the macOS SDK in CLT **includes SwiftUI, Charts, MapKit, Combine**. So I can compile SwiftUI via `swiftc` even without full Xcode. There's also an existing `BackendTool.*` feature-view as a reference pattern. Let me read the web source spec and the reference implementation.
+
+Now let me read the full BackendTool reference set and the web helpers to understand data shapes and native patterns.
+
+Now let me read the remaining reference files (Views, Previews, Tests, strings) and the native shared components I'll need (GlassPanel, tokens, MetricCard, Skeleton, EmptyState, FadeIn).
+
+Let me read the Tests reference and explore the native shared component library and design tokens.
+
+Let me read the native design tokens and the specific shared components I'll compose (Metrics/MetricCard, Skeletons, States/EmptyState, Motion/FadeIn, Cards/GlassPanel).
+
+I have `TSMetricCard`/`TSStatCard`, but the web `MetricCard` has a distinct `label/value/icon/color` API. Let me read the web MetricCard to reproduce it faithfully, plus the native atoms (Cards/GlassPanel/IconBox, Skeletons, States/EmptyState, Motion/FadeIn) and locate the core tokens.
+
+Let me read the native Cards/Skeletons atoms and locate the core token definitions (TSTone, TSSpacing, Color.TS, Font.TS, TSIconBox).
+
+Let me read Badges.swift (TSTone, TSIconBox) and locate where TSSpacing/TSRadius/Color.TS/Font.TS live (P1/S9 tokens).
+
+I found tokens at `design/generated/apple/Tokens.swift` (P1/S9). Now let me verify how `feature-views` is wired into the build and read the token API.
+
+Now I have the full token API. Critical: `feature-views/` is **not** wired into `project.yml` (only `Sources`, `dashboard-widgets`, `Localization`, tokens) — and my allowed-files scope forbids editing `project.yml`, consistent with the sibling `BackendTool` precedent. Let me read the web color/number tokens and remaining native atoms (Motion/FadeIn, Typography, Buttons) to map parity faithfully.
+
+I now have a complete picture. Let me read `fmtInt`, the `TSButton` API, the `tsGlassPanel()` modifier, and verify the `Components/` tree is self-contained (no `import Shared`) so I can compile-verify a focused subset with `swiftc`.
+
+Let me gather the final context: lint/format configs, the placeholder checker, the logs dir, and any prior BLOCKED evidence — then I'll start writing.
+
+`pwsh` is available (placeholder gate runnable). Note: `feature-views/` is outside swiftlint's `included` list but inside swiftformat's `apps/apple` scope — matching the BackendTool precedent. Let me read the BackendTool log to mirror its format and capability handling.
+
+The BackendTool log is the binding predecessor precedent (Honesty rule 7). It deferred `xcodebuild` for environment reasons but achieved DONE via real `swiftc -typecheck` (iOS+macOS SDKs), an executed SwiftPM XCTest harness, swiftlint, swiftformat, and the placeholder gate. Crucially, that run had Xcode available via `DEVELOPER_DIR`. Let me check whether Xcode.app exists here and probe the full toolchain.
+
+`/Applications/Xcode.app` **exists** — I can use the full toolchain via `DEVELOPER_DIR`, exactly like the BackendTool predecessor. Let me verify the Xcode toolchain, SDKs, and simulators.
+
+I have complete context now. `/Applications/Xcode.app` exists, so I can replicate the BackendTool predecessor's full verification (cross-SDK typecheck + executed XCTest harness + lint/format/placeholder gates), with `xcodebuild` app build/test DEFERRED for the same 3 environment reasons. Let me set up tracking and write the plan.
+
+Confirmed deferral evidence: `feature-views` has 0 refs in project.yml, `Frameworks/` holds only `.gitkeep`. Let me write the plan, then author the surface.
+
+Now I'll author the surface. Starting with the pure projection core (Adapter).
+
+Adapter done. Now the Model (state-holder seam + telemetry + strings facade).
+
+Now the subviews (header, metric grid/tile, skeleton grid, banners, error).Now the Views (subviews): header, freshness chip, metric grid + tile, skeleton grid, banners, error view.
+
+Now the main surface, previews, tests, and strings.
+
+Now the test suite (adapter projections + model lifecycle + a11y).
+
+Now the i18n catalog contribution.
+
+All 7 files written. Now verification. First, normalize with swiftformat and lint my files.
+
+swiftformat normalized 3 files; now 0/6 require formatting. Let me review what it changed and run swiftlint.
+
+swiftlint flags one issue: `project` exceeds the 50-line function-body limit (the 7 inline tile inits). Let me check file sizes, then refactor the tile construction into a static descriptor table (not counted as a function body) while keeping the file under the 400-line limit.
+
+Let me view the current (post-format) tile-projection block to refactor it precisely.
+
+Re-running format + lint after the refactor.
+
+swiftlint: **0 violations**, swiftformat clean, Adapter 324 lines (<400). Now let me verify i18n keys (referenced == declared), then build a SwiftPM harness to execute the tests.
+
+i18n keys: **referenced == declared exactly** (19 keys, no orphans). Now let me build a self-contained SwiftPM harness to execute the XCTest suite against the real component closure (mirroring BackendTool's step [4]).
+
+Now executing the test suite via the harness (Xcode toolchain, Swift 6 mode). Compiling the full component library + tests may take a couple minutes.
+
+The harness caught a genuine Swift 6 strict-concurrency error: the static `specs` table isn't concurrency-safe because `Spec` (holding a closure) isn't `Sendable`. Real finding — let me fix it properly by making `Spec` and its closure `Sendable`.
+
+Fixed. Re-syncing to harness and re-running tests.
+
+Concurrency fix worked (compiled past Adapter). New error is **not in my code** — a sibling component `UnitFormatters.swift` references a `Units` helper defined outside the `Components/` tree (app-module symbol). My surface doesn't use it. Let me locate `Units` and decide whether to include it or trim the harness to my actual closure.
+
+`Units` lives in `SharedFacade` (KMP-backed) and only `UnitFormatters.swift` references it — and my surface doesn't use it. I'll trim that one file from the harness closure (it's outside my surface's transitive dependency set) and re-run.
+
+**All 20 tests pass** (10 adapter + 10 model), Swift 6 mode, 0 failures. Now the cross-SDK typechecks (iOS 18 + macOS 15) against the real repo files, plus the previews typecheck.
+
+Both SDK typechecks: **exit 0**. Now the previews typecheck (`-D DEBUG`, includes my Previews file + activates all inline `#Preview` macros).
+
+Previews typecheck: **exit 0**. Now the placeholder/stub gate (ADR-011) via `pwsh`.
+
+Placeholder gate: **COUNT=0, EXIT=0** (both the exact gate path and the whole dir). Now let me capture the honest `xcodebuild` DEFERRED evidence (the environment block), mirroring the BackendTool predecessor.
+
+Project generated (exit 0). Now capturing the `xcodebuild` failure evidence and confirming my files aren't in the generated project (deferral reason a).
+
+The pbxproj confirms **0 references to SecurityStatistics** (reason a). The xcodebuild is still running (likely the xcframework-staging pre-action). Let me wait for the failure.
+
+The `xcodebuild` is hanging on the scheme's "Stage Shared.xcframework" pre-action (which triggers a Kotlin/Native gradle build — precisely the environment dependency that blocks this path). The deferral is already proven by 3 independent facts. Let me stop it and capture the state directly.
+
+Let me capture the fast-fail evidence by building the `-target` directly (bypasses the scheme's Kotlin pre-action), with a hard timeout.
+
+The environment restricts `kill` usage. Let me run the `-target` build directly — its "Check dependencies" phase should fail fast on the missing xcframework (no Kotlin pre-action involved).
+
+Captured: **MAC_BUILD_EXIT=65**. The real causes are environment/pre-existing and unrelated to my surface: the scheme pre-action staged an incomplete `Shared.xcframework` (missing x86_64 arch) and the dashboard-widgets `DigitalTwinWidget.Tests.swift` can't resolve `XCTest` in the app target — plus my files aren't even in the project (0 refs). Let me check git status and clean up build artifacts.
+
+Build artifacts are git-ignored and cleaned. Two pre-existing `web/*` modifications exist in the worktree that I did **not** touch — I'll exclude them and commit only my files. Let me get final line counts and write the gate log.
+
+Now writing the comprehensive gate log.
+
+Final re-verification of the actual repo files (the Adapter changed after the Sendable fix), then commit only my files + the log.
+
+swiftformat needs to re-normalize the Adapter after my Sendable edit. Let me fix and re-verify.
+
+Both linters green. Let me confirm swiftformat's reformat didn't alter the `Sendable` semantics, and re-run the macOS typecheck on the final files before committing.
+
+swiftformat removed the now-redundant explicit `: Sendable` (a `private` struct with all-`Sendable` members is implicitly `Sendable` — confirmed by the clean typecheck). To keep the log's "20/20 executed" claim bulletproof on the *final* files, let me rebuild the harness with them and re-run the suite.
+
+**Final harness run on the committed files: 20/20 tests pass, exit 0.** All host-runnable gates green. Now staging only my 7 files + the log (excluding the two pre-existing `web/*` edits) and committing.
+
+Staged set is exactly my 8 files; the two pre-existing `web/*` edits are correctly excluded. Committing now.
+
+Committed as `42ea240d` with exactly my 8 files (the pre-existing `web/*` edits excluded). Let me finalize tracking and confirm a clean tree.
+
+All complete. The working tree contains only the two pre-existing `web/*` modifications (untouched, not mine); no build artifacts remain; the log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...apple-feature-views-0045-SecurityStatistics.log | 233 +++++++++++++++
+ .../feature-views/SecurityStatistics.Adapter.swift | 324 +++++++++++++++++++++
+ .../feature-views/SecurityStatistics.Model.swift   | 242 +++++++++++++++
+ .../SecurityStatistics.Previews.swift              | 119 ++++++++
+ .../feature-views/SecurityStatistics.Tests.swift   | 287 ++++++++++++++++++
+ .../feature-views/SecurityStatistics.Views.swift   | 263 +++++++++++++++++
+ .../feature-views/SecurityStatistics.strings       |  46 +++
+ .../feature-views/SecurityStatistics.swift         |  69 +++++
+ 8 files changed, 1583 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0045-SecurityStatistics.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecurityStatistics.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecurityStatistics.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecurityStatistics.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecurityStatistics.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecurityStatistics.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecurityStatistics.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecurityStatistics.swift

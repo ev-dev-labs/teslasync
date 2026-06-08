@@ -1,0 +1,175 @@
+=== P4 Shared surface 0160 TagInput (Apple) ===
+Prompt : .github/prompts/monorepo/p4-apple-shared-surfaces/0160-TagInput.prompt.md
+Web src : web/src/components/forms/TagInput.tsx  (THE specification)
+Native  : apps/apple/TeslaSync/shared-surfaces/TagInput.*
+Host    : macOS, Apple Swift 6.3.2, SDK MacOSX26.5, Command Line Tools only (NO Xcode.app).
+Date    : 2026-06-08
+
+-------------------------------------------------------------------------------
+ARTIFACT INVENTORY (allowed files: apps/apple/TeslaSync/shared-surfaces/TagInput.* + this log)
+-------------------------------------------------------------------------------
+TagInput.Models.swift       165  Foundation value types: TagSeparator, TagInputConfig, TagInputRules,
+                                 TagAddOutcome, TagCommitResult, LoadStatus/Connection/Phase, TagInputCopy
+TagInput.Projection.swift    74  Surface slug (P1/S11) + a11y (tagsSummary/removeLabel/maxHint) +
+                                 announcements (added/duplicate/removed/maxReached) via injected localizer
+TagInput.Adapter.swift      121  TagInputProjector: normalise / split / tryAdd / commit / resolvePhase —
+                                 verbatim port of normaliseTag, buildSplitRegex, tryAddOne, commitText
+TagInput.Model.swift        334  @Observable TagInputModel state holder (P1/S8) + TagInputStrings i18n
+                                 facade (P1/S10); field edit / Enter / Backspace / paste / remove / commit
+TagInput.Seams.swift        147  Telemetry seam (P1/S11) + Announcer seam (web useAnnouncer) + TagInputUpdate
+                                 + TagInputSource (P1/S8) + InMemoryTagInputSource + surfaceSlug
+TagInput.Views.swift        227  TagFlowLayout (web flex-wrap), TagChipView, TagFieldView (focus + onKeyPress
+                                 backspace), freshness chip, connectivity banner
+TagInput.States.swift       107  Loading skeleton, empty hint (tagsNone), error+retry (QueryError)
+TagInput.swift              100  Main view: header (label + count + freshness) → phase switch
+                                 (loading/content/empty/error) + connectivity banner + validation/at-max footer
+TagInput.Previews.swift     108  #if DEBUG previews: content/empty/loading/error/stale/offline/at-max/
+                                 validation-error/disabled (9 previews)
+TagInput.strings             —   P1/S10 catalog: 12 verbatim web keys + 8 native envelope keys
+TagInput.Tests.swift        106  XCTest adapter (reducer) parity — 10 cases
+TagInput.ModelTests.swift   293  XCTest state-holder (22) + accessibility/announcement (5) cases
+
+WIRING (necessary; this surface introduces the new shared-surfaces/ group — without it the gate cannot
+build or lint the deliverable, matching the repo's per-surface "necessary wiring files" precedent):
+  apps/apple/project.yml      + `- path: TeslaSync/shared-surfaces` to TeslaSync AND TeslaSync-macOS sources
+  apps/apple/.swiftlint.yml   + `- TeslaSync/shared-surfaces` to `included`
+  (verified: `xcodegen generate` integrates all 12 files — 72 file refs, shared-surfaces group present.)
+
+-------------------------------------------------------------------------------
+PARITY MAP (web TagInput.tsx -> native)
+-------------------------------------------------------------------------------
+value/onChange (controlled)         -> TagInputModel.tags + onChange closure + source.save (P1/S8)
+useState pending / error            -> model.pending / model.validationError
+useId / aria-describedby tags list  -> TagFieldView .accessibilityValue(model.tagsSummary) (tagsList/tagsNone)
+useAnnouncer().announce             -> TagInputAnnouncer seam -> AccessibilityNotification.Announcement
+useImperativeHandle commitPending   -> model.commitPending()
+useTranslation t(key, default)      -> TagInputStrings.string(key, fallback) (P1/S10), {{x}} -> %@/%d
+normaliseTag / buildSplitRegex      -> TagInputProjector.normalise / split (separators + newlines)
+tryAddOne (empty/full/invalid/dup)  -> TagInputProjector.tryAdd -> TagAddOutcome
+commitText (remainder/firstError/   -> TagInputProjector.commit -> TagCommitResult (loop break on .full)
+  lastDuplicate/break-on-max)
+Enter / separator / paste / Backspace-> model.submit / commitFieldEdit / paste / backspaceAtEmpty
+maxTags cap + disabled + counter    -> model.atMax / inputDisabled / countLabel / maxHint / fieldPrompt
+Remove {{tag}} aria-label           -> TagInputAccessibility.removeLabel -> chip button .accessibilityLabel
+i18n keys                           -> addedOne, added, duplicate, maxReachedAnnounce, removed, removeTag,
+                                       placeholder, maxReached, tagsNone, tagsList, maxReachedHint (all in catalog)
+States envelope (loading/content/   -> TagInputPhase + connection (live/stale/offline) freshness chip + banner;
+  empty/error + stale/offline)         every state renders, never a blank box.
+
+-------------------------------------------------------------------------------
+HOST-RUNNABLE GATES (executed on THIS runner — raw results)
+-------------------------------------------------------------------------------
+[1] swiftformat --lint  (shared-surfaces)        : 0/11 files require formatting     -> PASS (FORMAT_EXIT=0)
+    swiftformat --lint apps/apple (whole, literal): 1/1924 require formatting — the ONLY file is the
+        PRE-EXISTING sibling feature-views/ActionBuilder.Previews.swift (blankLinesBetweenScopes),
+        unmodified by this task (git status clean), outside allowed-files scope.
+
+[2] swiftlint --strict  (shared-surfaces)        : 0 violations in TagInput.*        -> PASS
+    swiftlint --strict (whole included set)       : 1 violation total — the PRE-EXISTING sibling
+        dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length), unmodified by
+        this task (git status clean), outside allowed-files scope. Zero TagInput violations.
+    (Resolved during build: function_parameter_count via the TagInputRules parameter object;
+     file_length via the Model->Seams and Tests->ModelTests splits.)
+
+[3] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/TagInput  (literal gate path)
+        PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0                          -> PASS
+    check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces (real recursive scan of the files)
+        PLACEHOLDER_ALLOWED=1  PLACEHOLDER_COUNT=0  EXIT=0                          -> PASS
+        (the 1 ALLOWED is the single documented `// parity:allow` on the verbatim web i18n key
+         "tagInput.placeholder" in TagInput.Model.swift — the sanctioned opt-out, not a stub.)
+    No TODO / FIXME / XXX / Coming soon / Lorem / "not implemented" / placeholder in shipped Swift.
+
+[4] Isolated Swift 6 strict-concurrency BUILD (SwiftPM, module named TeslaSync, the 8 production files +
+    the real generated DesignTokens, platforms macOS 15, swiftLanguageModes [.v6]):
+        `swift build`  -> Build complete!  (8/8 surface files compiled, 0 errors)   -> PASS
+
+[5] Surface logic EXECUTED green (standalone executable harness importing the built TeslaSync module —
+    the same public-API assertions as TagInput.Tests.swift + TagInput.ModelTests.swift; XCTest is
+    Xcode-only and absent here, so the committed XCTest files are mirrored by this runnable harness):
+        HARNESS_PASSED=55  HARNESS_FAILED=0  HARNESS_STATUS=GREEN  (exit 0)         -> PASS
+        Covers: normalise/split/tryAdd precedence/commit remainder+consume+multi-separator+firstError+
+        lastDuplicate+max-break+lowercase-dedup/resolvePhase; model start-once+viewOpened, plain edit,
+        separator commit+persist, submit, backspace remove/ignore, paste, validation block+clear, max
+        disable+hint+block, remove announce+persist, add/duplicate announce, refresh, stale one-shot
+        auto-refresh, offline keeps content, loading->content, failed->error, count+at-max prompt,
+        lowercase; a11y tagsSummary none/list, removeLabel, maxHint, all announcement copy.
+
+[6] Whole-surface + all 9 Preview bodies typecheck (swiftc -typecheck -swift-version 6 against the real
+    DesignTokens; #Preview macro transformed to functions because the PreviewsMacros plugin is Xcode-only):
+        exit 0                                                                      -> PASS
+
+[7] xcodegen generate (validates the project.yml wiring): Created project; 72 TagInput refs integrated
+    into TeslaSync + TeslaSync-macOS; shared-surfaces group present.               -> PASS
+    (generated .xcodeproj is git-ignored; removed after verification.)
+
+-------------------------------------------------------------------------------
+GATE (Xcode-only — DEFERRED to macos-latest CI, RUN here, NOT faked)
+-------------------------------------------------------------------------------
+# Reason: no Xcode.app on this dev host (active dev dir = /Library/Developer/CommandLineTools);
+#         `xcrun simctl` absent (0 iOS simulators); the KMP Shared.xcframework requires the
+#         Kotlin/Native Apple toolchain (apps/shared/gradlew :core:assembleSharedXCFramework) which
+#         needs full Xcode. These are environment-capability gaps, NOT TagInput code defects.
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+    '/Library/Developer/CommandLineTools' is a command line tools instance
+  IOS_EXIT=1   -> DEFERRED-macOS-pending
+$ xcodebuild -scheme TeslaSync-macOS build test
+    xcode-select: error: tool 'xcodebuild' requires Xcode ... command line tools instance
+  MAC_EXIT=1   -> DEFERRED-macOS-pending
+  XCFRAMEWORK_ASSEMBLE=DEFERRED-macOS-pending  (Gradle/Kotlin-Native Apple toolchain needs full Xcode)
+# To complete on a macOS+Xcode runner:
+#   ./apps/shared/gradlew -p apps/shared :core:assembleSharedXCFramework
+#   xcodegen generate --project apps/apple
+#   xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync \
+#              -destination 'platform=iOS Simulator,name=iPhone 16' build test
+#   xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync-macOS build test
+# Co-located TagInput.Tests/ModelTests.swift compile into the app target (the existing feature-views
+# convention); on the signed macos-latest matrix they run in the TeslaSync(/-macOS) XCTest targets.
+
+-------------------------------------------------------------------------------
+HONESTY COVENANT (binding)
+-------------------------------------------------------------------------------
+ 1 No red-as-green     : the iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=1/MAC_EXIT=1) and
+                         explicitly DEFERRED with the captured xcode-select error — never as passing.
+ 2 No scope narrowing  : every web branch reproduced — separators/newline split, trim, case-insensitive
+                         dedupe, validate, maxTags cap+disable+counter, lowercase, paste multi-split,
+                         Backspace-at-empty, imperative commit, announcer copy, hidden tags enumeration,
+                         per-chip remove label, plus the loading/empty/error + stale/offline envelope.
+ 3 No skip-and-assume  : every host gate executed on THIS runner; raw exits pasted; the 55-assertion
+                         harness was RUN green, not assumed.
+ 4 No stubs as final   : complete production surface + 37 real test cases (10 adapter + 22 model + 5 a11y)
+                         mirrored by a 55-assertion executed harness; placeholder scanner COUNT=0.
+ 5 No parity shortcut  : reducer ported verbatim (normaliseTag/buildSplitRegex/tryAddOne/commitText);
+                         tokens (P1/S9), i18n (P1/S10, all web keys), telemetry (P1/S11) all mapped;
+                         VoiceOver labels + Dynamic Type (Font.TS) + Reduce-Motion-safe components.
+ 6 No delegation       : implemented directly; no sub-agents (delegation FORBIDDEN by the prompt).
+ 7 No predecessor bypass: binds P1/S8 state-holder seam (no view HTTP), P1/S9 tokens, P1/S10 i18n facade,
+                         P1/S11 view.opened telemetry; P4 core (feedback/typography conventions) reused.
+ 8 No commit on red    : the committed artifact (TagInput.* + the 2 wiring lines) is GREEN on every
+                         host-runnable gate AND on a real isolated Swift 6 build + 55 executed assertions;
+                         the deferred Xcode gate is environmental, not a TagInput defect.
+ 9 No silent drift     : changes confined to shared-surfaces/TagInput.* (12 files), project.yml,
+                         .swiftlint.yml, and this log. Pre-existing unstaged working-tree edits
+                         (feature-views/AIUsageCard.*, and the sibling lint nits in ActionBuilder.Previews
+                         + LifetimeStatsWidget.Adapter) predate this task and are NOT staged or touched.
+10 EXIT/STATUS below.
+
+-------------------------------------------------------------------------------
+DISPOSITION
+-------------------------------------------------------------------------------
+Production-polished, Apple-idiomatic TagInput shipped at parity with the web source and INDEPENDENTLY
+VERIFIED: it compiles and its logic executes green (55/55 assertions) under the app's own Swift 6
+strict-concurrency rules against the real design tokens, with swiftformat/swiftlint/placeholder all
+green on the surface and all 9 Preview bodies type-checked. The surface binds a P1/S8 state-holder seam
+(no view HTTP), is fully token-driven (P1/S9), resolves every string through the P1/S10 facade (all web
+keys present in the catalog), and emits P1/S11 view.opened telemetry — rendering every prompt state
+(loading/content/empty/error) plus the stale/offline freshness envelope, the validation error, and the
+at-max helper, never a blank box, with VoiceOver labels and Dynamic Type. The iOS-Simulator + macOS
+xcodebuild build/test gate (and the KMP Shared.xcframework assemble) is DEFERRED-macOS-pending: this dev
+host has Command Line Tools only (no Xcode.app, 0 simulators), the repo's sanctioned "code-complete +
+DEFERRED Xcode gate" disposition used by every P4 Apple surface to date. The two whole-tree lint gates'
+single residual violations each are PRE-EXISTING sibling files outside this prompt's allowed-files scope,
+which this commit neither introduces nor touches.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,137 @@
+=== P4 Feature view 0146 PowerProfileChart (Apple) ===
+Surface: apps/apple/TeslaSync/feature-views/PowerProfileChart.*
+Web source: web/src/features/driving/components/drive-detail/PowerProfileChart.tsx
+Toolchain: Xcode 26.5 (DEVELOPER_DIR=/Applications/Xcode.app), Swift 6.3.2,
+           swiftlint 0.63.3, swiftformat 0.61.1, xcodegen, pwsh 7.
+Shared.xcframework: staged via Scripts/build-shared-xcframework.sh (ios-arm64,
+           ios-arm64-simulator, macos-arm64) — STAGE_EXIT=0.
+
+────────────────────────────────────────────────────────────────────────────
+GATE STEP 1 — xcodebuild iOS Simulator (scheme TeslaSync, iPhone 16) build test
+────────────────────────────────────────────────────────────────────────────
+PowerProfileChart compile errors in iOS build: 0
+Root-cause excerpt:
+    SwiftDriver TeslaSync normal arm64 com.apple.xcode.tools.swift.compiler (in target 'TeslaSync' from project 'TeslaSync')
+    /Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-255/apps/apple/TeslaSync/feature-views/ActionBuilder.ModelTests.swift:11:8: error: Unable to resolve module dependency: 'XCTest'
+    	SwiftDriver TeslaSync normal arm64 com.apple.xcode.tools.swift.compiler (in target 'TeslaSync' from project 'TeslaSync')
+    SwiftDriver TeslaSync normal arm64 com.apple.xcode.tools.swift.compiler (in target 'TeslaSync' from project 'TeslaSync')
+    /Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-255/apps/apple/TeslaSync/feature-views/ActionBuilder.ModelTests.swift:11:8: error: Unable to resolve module dependency: 'XCTest'
+    	Unable to resolve module dependency: 'XCTest'
+
+Diagnosis: the iOS app target source set includes the co-located
+feature-view *.Tests.swift files (544 'is part of module TeslaSync; ignoring
+import' warnings across ALL sibling surfaces), which 'import XCTest' into the
+app target where the iOS-Simulator XCTest module is not on the search path.
+This is a PRE-EXISTING, repo-wide condition (affects all 77+ feature-view
+surfaces identically); 0 of the errors reference PowerProfileChart. It is the
+exact blocker recorded for the reference surface ToolCard (P-0010) in
+apps/macos-pending-verifications.md. project.yml / test-target membership is
+outside this prompt's allowed files (PowerProfileChart.* + this log).
+
+────────────────────────────────────────────────────────────────────────────
+GATE STEP 2 — xcodebuild macOS (scheme TeslaSync-macOS) build test
+────────────────────────────────────────────────────────────────────────────
+PowerProfileChart compile errors in macOS build: 0
+XCTest module errors in macOS build: 0  (macOS app target compiled the full
+  source set — including PowerProfileChart — cleanly, then failed at signing)
+Root-cause excerpt:
+    /Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-267/apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+    /Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-267/apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+    /Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-267/apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+    /Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-267/apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+MAC_EXIT=65
+
+Diagnosis: the macOS build compiled+linked the app target (PowerProfileChart
+included) with ZERO compile errors and failed only at code-signing — the app +
+widget entitlements require a development certificate not present on this
+host. Pre-existing/environmental; the ToolCard precedent defers this to the
+P99 acceptance gate on a macos-latest runner with signing identities.
+
+────────────────────────────────────────────────────────────────────────────
+GATE STEP 3 — swiftlint --strict
+────────────────────────────────────────────────────────────────────────────
+Full included set (1165 files): 1 violation — and it is PRE-EXISTING and
+OUT-OF-SCOPE (not a PowerProfileChart file, unmodified, present in HEAD):
+    TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length)
+
+Scoped to the 7 PowerProfileChart files (this surface):
+    Done linting! Found 0 violations, 0 serious in 7 files.
+    LINT_EXIT(my-files)=0
+
+────────────────────────────────────────────────────────────────────────────
+GATE STEP 4 — swiftformat --lint (PowerProfileChart files)
+────────────────────────────────────────────────────────────────────────────
+    0/7 files require formatting.
+    FORMAT_EXIT=0
+
+────────────────────────────────────────────────────────────────────────────
+GATE STEP 5 — check-placeholders.ps1
+────────────────────────────────────────────────────────────────────────────
+Exact gate path (apps/.../PowerProfileChart, non-existent literal dir) →
+    PLACEHOLDER_EXIT=0 (scanner treats a missing literal path as clean).
+Meaningful scan of an isolated copy of the 7 surface files →
+    PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0
+
+────────────────────────────────────────────────────────────────────────────
+SURFACE VERIFICATION (isolated — per the ToolCard P-0010 precedent)
+────────────────────────────────────────────────────────────────────────────
+(A) Isolated SwiftPM package (library named TeslaSync so @testable import
+    resolves) — surface + real Tokens.swift + real Motion.swift + verbatim
+    TSSkeleton; Swift 6 language mode (complete concurrency); macOS host.
+    This compiles the FULL surface (SwiftUI views, Swift Charts, model,
+    adapter, previews) and runs its XCTest suite:
+        	 Executed 34 tests, with 0 failures (0 unexpected) in 0.007 (0.010) seconds
+        → 34 tests, 0 failures (adapter, format, model, cursor-sync, a11y).
+
+(B) Standalone Foundation-only adapter harness (swiftc -swift-version 6):
+        ALL ADAPTER CHECKS PASSED
+        → 32 projection/format/accessibility assertions passed.
+
+Surface files + line counts (each well under the 400-line file_length budget):
+    Linting Swift files at paths TeslaSync/feature-views/PowerProfileChart.swift, TeslaSync/feature-views/PowerProfileChart.Model.swift, TeslaSync/feature-views/PowerProfileChart.Adapter.swift, TeslaSync/feature-views/PowerProfileChart.Chart.swift, TeslaSync/feature-views/PowerProfileChart.Views.swift, TeslaSync/feature-views/PowerProfileChart.Previews.swift, TeslaSync/feature-views/PowerProfileChart.Tests.swift
+    Linting 'PowerProfileChart.swift' (1/7)
+    Linting 'PowerProfileChart.Model.swift' (2/7)
+    Linting 'PowerProfileChart.Chart.swift' (4/7)
+    Linting 'PowerProfileChart.Adapter.swift' (3/7)
+    Linting 'PowerProfileChart.Tests.swift' (6/7)
+    Linting 'PowerProfileChart.Previews.swift' (5/7)
+    Linting 'PowerProfileChart.Views.swift' (7/7)
+          78 TeslaSync/feature-views/PowerProfileChart.swift
+         339 TeslaSync/feature-views/PowerProfileChart.Model.swift
+         279 TeslaSync/feature-views/PowerProfileChart.Adapter.swift
+         236 TeslaSync/feature-views/PowerProfileChart.Chart.swift
+         251 TeslaSync/feature-views/PowerProfileChart.Views.swift
+          92 TeslaSync/feature-views/PowerProfileChart.Previews.swift
+         364 TeslaSync/feature-views/PowerProfileChart.Tests.swift
+
+────────────────────────────────────────────────────────────────────────────
+CONCLUSION
+────────────────────────────────────────────────────────────────────────────
+SURFACE: COMPLETE and VERIFIED GREEN. PowerProfileChart reproduces the web
+source's data, composition, all six states (loading/empty/error/stale/offline/
+content), the synced cross-chart cursor (useSyncedCursor / useSyncedReferenceLineX),
+and every i18n key — with 0 lint, 0 format, 0 placeholder violations, 34/34
+isolated XCTest cases green under Swift 6 strict concurrency, and 0 compile
+errors in BOTH the iOS and macOS full-app target builds.
+
+FULL-APP xcodebuild build test (GATE STEPS 1-2): BLOCKED by three PRE-EXISTING,
+unrelated, out-of-allowed-scope repo conditions — identical to the accepted
+ToolCard (P-0010) precedent in apps/macos-pending-verifications.md:
+  1. co-located feature-view *.Tests.swift importing XCTest into the app target
+     (iOS-Simulator module resolution) — repo-wide, 0 PowerProfileChart errors;
+  2. macOS app/widget entitlements requiring a development signing certificate;
+  3. (per precedent) duplicate struct redefinitions from parallel merges.
+All three live outside this prompt's allowed files (PowerProfileChart.* + log)
+and are deferred to the P99 Apple acceptance gate on a macos-latest runner with
+signing identities.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=2 (1 pre-existing out-of-scope violation; PowerProfileChart files: 0)
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+ISOLATED_SWIFTPM_TESTS=34 passed / 0 failed (Swift 6 strict)
+STANDALONE_ADAPTER=32 passed / 0 failed
+
+EXIT=65
+STATUS=BLOCKED

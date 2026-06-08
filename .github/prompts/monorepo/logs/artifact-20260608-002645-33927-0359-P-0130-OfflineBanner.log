@@ -1,0 +1,151 @@
+=== P4 Shared surface 0130 OfflineBanner (Apple) ===
+Date: 2026-06-08
+Runner: Darwin (arm64), Apple Swift 6.3.2, target arm64-apple-macosx26
+Web source: web/src/components/feedback/OfflineBanner.tsx
+Native output: apps/apple/TeslaSync/shared-surfaces/OfflineBanner.*
+
+------------------------------------------------------------------
+CAPABILITY PRE-CHECK (per prompt: requires SwiftUI + Swift Charts +
+MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG; if unavailable -> BLOCKED
+with evidence)
+------------------------------------------------------------------
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active
+developer directory '/Library/Developer/CommandLineTools' is a command
+line tools instance
+=> EVIDENCE: full Xcode is NOT installed on this runner (Command Line
+   Tools only). xcodebuild cannot build/test the iOS Simulator or macOS
+   app targets, and no iOS 18 Simulator runtime is available. This is a
+   runner-capability limitation, exactly the BLOCKED case the prompt
+   anticipates. swiftc/swiftlint/swiftformat/pwsh ARE available, so every
+   non-xcodebuild gate step was executed for real (below), plus extra
+   on-runner compile+run verification to compensate for xcodebuild.
+
+------------------------------------------------------------------
+GATE STEP 1 — iOS build+test
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1   (BLOCKED — no Xcode / no iOS 18 Simulator on runner)
+
+GATE STEP 2 — macOS build+test
+$ xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1   (BLOCKED — no Xcode on runner)
+
+GATE STEP 3 — swiftlint --strict
+Repo .swiftlint.yml `included:` does not yet list TeslaSync/shared-surfaces
+(the directory is new; registering it in project.yml `sources` and
+.swiftlint.yml `included` is owned by the P4-core/integration step and is
+OUTSIDE this prompt's allowed-files list). The new surface files were
+therefore linted explicitly with the repo's rule set (line_length 120/160,
+type_name<=50, identifier_name>=2, opt_in: closure_spacing, empty_count,
+explicit_init, first_where, sorted_first_last, toggle_bool,
+unneeded_parentheses_in_closure_argument):
+$ swiftlint lint --strict OfflineBanner.{Adapter,Model,,Views,Previews,Tests}.swift
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0   (surface files clean)
+NOTE: the repo-wide `swiftlint --strict` is currently red on a PRE-EXISTING,
+unrelated file outside this prompt's scope:
+  TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19:
+  error: Function Body Length Violation (function_body_length)
+Not introduced by and not in scope for this surface; left untouched.
+
+GATE STEP 4 — swiftformat --lint
+$ swiftformat --lint OfflineBanner.{Adapter,Model,,Views,Previews,Tests}.swift
+0/6 files require formatting.
+FORMAT_EXIT=0   (surface files clean)
+NOTE: the repo-wide `swiftformat --lint apps/apple` is currently red on a
+PRE-EXISTING, unrelated file outside this prompt's scope:
+  TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1:
+  error: (blankLinesBetweenScopes)
+Not introduced by and not in scope for this surface; left untouched.
+
+GATE STEP 5 — placeholder / stub gate
+$ pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------
+ADDITIONAL ON-RUNNER VERIFICATION (compensating for unavailable
+xcodebuild — these are NOT in the prompt's gate but prove the surface
+compiles and the test logic is correct without Xcode)
+------------------------------------------------------------------
+A) Swift 6 typecheck of the SHIPPING surface against its real design-token +
+   shared-component dependencies, strict concurrency = complete:
+   $ xcrun --sdk macosx swiftc -typecheck -swift-version 6 \
+       -strict-concurrency=complete -target arm64-apple-macos15 \
+       Tokens.swift Badges.swift TSDesign.swift \
+       OfflineBanner.{Adapter,Model,,Views}.swift
+   => exit 0 (no diagnostics)
+
+B) Swift 6 typecheck of the preview bodies (#Preview macro plugin is the only
+   thing CLT lacks; bodies transformed to functions and type-checked):
+   => exit 0 (no diagnostics)
+
+C) Executable logic harness — the Tests' assertions were compiled AND RUN
+   against the real surface sources (Swift 6, strict concurrency = complete):
+     - projection: online->hidden, determining->determining, offline flags preserved
+     - connectivity isOffline/isStale/isDegraded
+     - copy catalog non-empty + contains web source keys pwa.offline.title/banner
+     - OBCopy.webSourceKeys == ["pwa.offline.title","pwa.offline.banner"]
+     - accessibility bannerSummary composition (+ optional/empty stale note)
+     - OfflineBanner.surfaceSlug == "OfflineBanner"
+     - model.start() applies initial + emits view.opened ONCE (idempotent)
+     - online -> .hidden via model
+     - stale rising-edge auto-refresh once per edge
+     - refresh()/stop() delegate to source
+   $ ./ob_harness
+   ALL_HARNESS_CHECKS_PASSED   (process exit 0)
+
+------------------------------------------------------------------
+PARITY / DELIVERABLE SUMMARY
+------------------------------------------------------------------
+Web source data bindings reproduced:
+  useTranslation  -> OBStrings P1/S10 facade (table "OfflineBanner")
+  useOnlineStatus -> OfflineBannerConnectivitySource P1/S8 seam (no HTTP in view)
+i18n keys from source, present in OfflineBanner.strings AND OBCopy catalog:
+  pwa.offline.title  = "You're offline"
+  pwa.offline.banner = "Showing cached data. New requests will retry when you reconnect."
+States rendered (every branch reproduced):
+  loading      -> OfflineBannerChecking (determining; neutral, no false-offline)
+  online/empty -> .hidden (faithful port of web `if (online) return null`)
+  offline      -> OfflineBannerCard (warning tone, wifi.slash, both i18n strings)
+  stale        -> offline + OfflineStatusChip + stale rising-edge auto-refresh
+  error        -> degraded connectivity note + OfflineRetryButton (re-check)
+Telemetry: view.opened emitted once with surface slug "OfflineBanner" (P1/S11).
+Accessibility: VoiceOver labels on every element; combined title+message;
+  polite announcement on entering offline (role=status / aria-live=polite parity);
+  Dynamic Type via tokens; Reduce Motion honored via TSAnimation.
+Files (902 lines, decomposed like sibling surfaces):
+  OfflineBanner.swift (87)  .Model.swift (168)  .Adapter.swift (164)
+  .Views.swift (178)  .Previews.swift (63)  .Tests.swift (212)  .strings (30)
+
+------------------------------------------------------------------
+INTEGRATION NOTE (out of this prompt's allowed files)
+------------------------------------------------------------------
+For the gate's xcodebuild + repo-wide swiftlint to cover these files, the
+P4-core/integration step must add `- path: TeslaSync/shared-surfaces` to the
+TeslaSync and TeslaSync-macOS target `sources` in apps/apple/project.yml, and
+`- TeslaSync/shared-surfaces` to `included:` in apps/apple/.swiftlint.yml.
+Both files are outside this prompt's allowed-files list and were not modified.
+
+------------------------------------------------------------------
+RESULT
+------------------------------------------------------------------
+Surface is production-complete and passes every gate step executable on this
+runner (swiftlint, swiftformat, placeholder) plus Swift-6 typecheck and a
+run-the-logic harness. The two xcodebuild steps cannot run because the runner
+has Command Line Tools only (no full Xcode / no iOS 18 Simulator), so per the
+prompt's capability clause the overall status is BLOCKED on platform tooling,
+with the evidence captured above.
+
+IOS_EXIT=1
+MAC_EXIT=1
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+EXIT=1
+STATUS=BLOCKED

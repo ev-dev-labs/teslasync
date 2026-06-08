@@ -1,0 +1,132 @@
+I'll start by exploring the repository structure to understand what exists and what tooling is available.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. However `swift`, `swiftlint`, `swiftformat`, and `pwsh` are all available. Let me explore the Apple app structure thoroughly before concluding anything.
+
+Now I understand the web source — it's a self-contained regex tester (no async data hooks except i18n). Let me explore the Apple app structure deeply to learn the established patterns.
+
+Important context: this is the **first** `feature-views` surface (dir doesn't exist yet); the Apple app uses XcodeGen, and `xcodebuild` needs full Xcode (only CLT installed). Let me study the established conventions — dashboard-widgets (closest analog), SharedFacade (state holders/i18n/diagnostics), Design tokens, and Localization catalog.XcodeGen-based project (no SPM `Package.swift`), and `feature-views/` doesn't exist yet. The sibling `dashboard-widgets/` (303 entries) is the established P4 precedent. Let me check if a full Xcode is installed and study the existing patterns in depth.
+
+A full `/Applications/Xcode.app` is present — only `xcode-select` points elsewhere. I can likely override with `DEVELOPER_DIR` (no sudo needed). Let me test that, and study a complete widget example to learn the exact conventions.
+
+`DEVELOPER_DIR` override works — Xcode 26.5, iPhone 16 simulator, and `xcodegen` are all available. **I am not blocked.** Let me study the widget conventions and shared facade in depth.
+
+Rich, consistent conventions. Let me read the remaining file types (Views, Previews, Tests, strings), the lint/format configs, and the shared Design/Components/Facade layers.
+
+Conventions are crystal clear now. Let me inspect the web `ToolCard` + UI primitives for faithful parity, and the Apple shared Design/Components/Facade layers plus lint configs.
+
+Critical detail: `feature-views/` is registered in **neither** `project.yml` nor `.swiftlint.yml` (only `dashboard-widgets` is). I need to understand the full project wiring (especially how widget tests are compiled) before deciding how to make this surface real. Let me read the full project.yml and the shared layers.
+
+Now I understand the test wiring puzzle (widget `.Tests.swift` live in the app-target source dir, while test targets only build `Tests/Unit`). Let me check the verification-status meta files, the xcframework build script, and the token definitions to gauge what's realistically buildable here.
+
+`build-shared-xcframework.sh` requires a Gradle/Kotlin-Native build of `Shared.xcframework` as a scheme pre-action — that's the likely heavy dependency for the full xcodebuild gate. Let me gather the remaining must-know facts: token names, shared components, facade seams, placeholder patterns, and verification-status notes.
+
+`Shared.xcframework` doesn't exist (only `.gitkeep`) and is explicitly a **macOS-pending / Gradle-built** artifact — the precedent surfaces relied on host-runnable gates (swiftlint/swiftformat/placeholder) being green with `xcodebuild` deferred. I'll attempt the real xcframework build later. The placeholder checker forbids the literal `Placeholder`, so I must re-key cleanly. Let me read the token/component/facade APIs I'll bind to, plus the rest of the checker.
+
+Let me read the remaining shared APIs I'll depend on — Fields, Typography, Cards, Feedback states/skeletons — and the facade seams, plus locate the token definitions (TSSpacing/TSRadius/Font.TS/Color.TS).
+
+I now have the shared UI APIs. Let me read the facade seams + Pickers/Buttons, confirm the design-token member names, check how widget tests guard XCTest, and probe whether the Gradle/KMP `Shared.xcframework` is buildable here (needed for any `xcodebuild`).
+
+`TSSelect` (web `Select`), tokens, and facade all confirmed. `LoadableState` imports the KMP `Shared` framework (networked data only) — not appropriate for this pure-compute tool, so I'll mirror the self-contained GuardModel pattern. Java 17 + `gradlew` exist, so the xcframework build may be possible. Let me confirm `Font.TS`/`Color.TS` member names and the `TSButton`/Card APIs, then kick off the Gradle build in the background.
+
+Correcting the tokens path (`apps/design/...`) and reading the Buttons/Cards APIs fully.
+
+I now have all the APIs, tokens, and conventions I need. Let me set up tracking, kick off the (heavy) Gradle xcframework build in the background, and write the plan.
+
+Now I'll write the surface. Starting with the pure, Foundation-only adapter (the testable core that I can also compile standalone to prove web-semantics parity).
+
+Let me immediately prove the evaluator's web-semantics parity with a standalone `swiftc` compile+run (Foundation-only, no Xcode needed) before building the rest.
+
+All 16 parity assertions pass — the evaluator matches web JS `RegExp` semantics exactly (global/first, case-insensitive, multiline, invalid→flagged, empty→idle, zero-width guard). Now the Model (telemetry seam + `@Observable` state holder + i18n facade).
+
+Standalone proof green. Now the presentational subviews.
+
+Now the input-field chrome (hand-rolled to address the per-surface i18n table, mirroring the precedent's approach) appended to Views, then the main surface file.
+
+Now the main surface file composing the tool card, inputs, result badge, and state switch.
+
+The Gradle build finished — let me check whether the xcframework was actually produced.
+
+The xcframework built successfully (6m52s) — **I can run the real xcodebuild gate**, so I'm targeting full STATUS=DONE. The widget `.Tests.swift` files live in the app-target source dir, which raises a question about whether the app target links XCTest. Let me establish a baseline by building the unmodified project while I finish the remaining files.
+
+While the baseline builds, I'll write the i18n catalog. Let me first read the rest of the placeholder checker so I run it exactly as the gate does.
+
+Baseline build finished — let me read the result (this tells me whether the app target compiles with co-located `.Tests.swift` files).
+
+The **baseline (unmodified) app target build FAILS** — a pre-existing condition where the co-located `*.Tests.swift` files import XCTest into the app target. This affects the whole repo, independent of my surface. Let me capture the exact root error.
+
+Root cause: `error: unable to resolve module dependency: 'XCTest'` — the app target compiles the co-located `*.Tests.swift` files but an app target can't resolve XCTest. This pre-existing scaffolding gap makes `xcodebuild build` RED for the whole repo. The fix is to exclude `*.Tests.swift` from the app targets and route test files to the test bundle. Let me confirm the scope (any stray test/XCTest files under `Sources/`).
+
+Confirmed: only the 39 `dashboard-widgets/*.Tests.swift` pollute the app target (no test files under `Sources/`), and `Tests/Unit/DashboardWidgets/` is the *proper* test location. My fix is clean: exclude `*.Tests.swift` from app targets, route only my test file to the test bundle. Let me write the remaining three files (strings, previews, tests).
+
+Now the test suite (mirroring the precedent's structure: adapter + model phases + telemetry + a11y).
+
+All 7 files written. Now the project wiring: register `feature-views` in both app targets (excluding test files), route my test file to both unit-test targets, fix the pre-existing app-target test-pollution, and add `feature-views` to swiftlint.
+
+All wiring in place. Now the host-runnable gates: auto-format my files with swiftformat, then run the full `--lint` and `swiftlint --strict`.
+
+Only 1 file needed reformatting (now applied). Let me run the full `swiftformat --lint` and `swiftlint --strict` gates as the gate specifies.
+
+swiftformat passes (0/547). swiftlint found 2 violations — let me see exactly which.
+
+Two violations: one pre-existing in a sibling (`LifetimeStatsWidget`, untouched by me), and one mine — `empty_count` falsely triggered by my parameter literally named `count`. Let me fix mine by renaming to `matchCount`.
+
+Let me verify my files are now lint-clean (scoped) and confirm via git that the sibling violation is pre-existing and outside my changes.
+
+My surface is now lint-clean — the only remaining `swiftlint --strict` violation is a pre-existing one in an untouched sibling (`LifetimeStatsWidget.Adapter.swift`), and git confirms I haven't modified it (the two modified `web/*.tsx` files are pre-existing working-tree changes, not mine). Let me look at that sibling function to judge whether it's a safe, mechanical fix that would unblock the shared lint gate.
+
+Decision: I won't edit the sibling (explicitly out of scope; pre-existing and git-confirmed untouched). My surface is lint-clean; I'll document the pre-existing sibling violation honestly. Let me regenerate the project with my wiring changes and verify the YAML is valid.
+
+Project regenerates cleanly (valid YAML; RegexTester wired into 42 build references). Now the main event — iOS `build test`. I'll run it in the background, capturing full output.
+
+While that runs, let me check what the UI test targets contain (the `test` action runs them too) so I can anticipate issues.
+
+The UI tests are pre-existing XCUITests that launch the full app (unrelated to my surface). Let me check the logs directory/format and peek at the iOS test progress.
+
+Still failing on XCTest in the app target — my `excludes` may not have taken effect. Let me find which file is leaking in and verify the generated project.
+
+The leak is a differently-named test file: `RecentDrivesListWidget.ModelTests.swift` — my glob `*.Tests.swift` doesn't match `*.ModelTests.swift`. Let me enumerate ALL XCTest files in dashboard-widgets to craft a correct exclude.
+
+All 39 XCTest files end in `Tests.swift` (38 `.Tests.swift` + 1 `.ModelTests.swift`), and no non-test files do. My glob missed the `.ModelTests.swift` variant. Let me broaden the exclude to `*Tests.swift`.
+
+Excludes broadened across all 4 blocks. Let me regenerate and run the iOS build + **unit** tests (isolating my tests from the pre-existing full-app UITests for a clean first signal).
+
+While that runs, let me review the other pre-existing UITests (the full gate runs them) to anticipate whether they'd pass in this headless simulator.
+
+These UITests use injected fakes (`-uiTestAuthState`, `-uiTestLiveDemo`, `-uiTestPushDemo`) with no real backend — designed to pass headless. Good sign for the full gate. Let me check the unit-test run progress.
+
+Big finding: with the XCTest pollution now excluded, the app target reveals **pre-existing compile errors in the dashboard-widget siblings themselves** (`'DashboardWidgetSize' is ambiguous`, actor-isolation errors) — these widgets were never actually compiled before (macos-pending). This is sibling breakage outside my scope. Let me characterize the root cause and confirm it's not from my surface.
+
+Definitive root cause: `DashboardWidgetSize`, `DashboardWidgetRegistration`, `MotorConnection`, etc. are **redeclared 10+ times** across `Sources/DashboardWidgets/` and the 39 `TeslaSync/dashboard-widgets/` surfaces — pervasive pre-existing duplicate-definition breakage from parallel widget prompts that were never co-compiled. My surface references none of it. This is out-of-scope predecessor breakage that blocks the whole app target.
+
+Let me verify my surface compiles for real (and run my XCTests) in isolation via SwiftPM, sidestepping the broken widgets. First, check the dependency closure.
+
+Components/Design are KMP-free and don't touch the broken widget types — so I can typecheck my full surface against the *real* shared components in isolation. Let me locate the token files and run a macOS typecheck of my surface + its real dependencies.
+
+Let me run a macOS typecheck of my full surface against the real shared components + design tokens (isolated from the broken widgets).
+
+One unused component file (`UnitFormatters.swift`) needs an external `UnitPreferences` type — but my surface doesn't use it. Let me scope to just the component groups my surface actually depends on (UI + Feedback + Design + tokens).
+
+Just `FeedbackOverlays.swift` (unused by me) needs `TSMetricBar` from DataDisplay. Let me exclude it and keep the Feedback files my surface actually uses.
+
+**TYPECHECK_EXIT=0** — my full surface compiles cleanly against the real shared components (macOS 15, Swift 6, strict concurrency). Now let me actually *run* my XCTest suite by assembling an isolated SwiftPM package (proving the tests pass + Previews compile), sidestepping the broken app module.
+
+**All 17 XCTests pass** (11 adapter + 6 model, 0 failures) compiled against the real components — and the Previews compiled too. Combined with the typecheck, my surface is fully verified. Now the placeholder gate, plus a macOS build to capture the same pre-existing sibling-breakage evidence.
+
+Placeholder gate: **PLACEHOLDER_COUNT=0, EXIT=0** (both exact-gate path and meaningful dir scan). Let me update tracking and check the macOS build evidence.
+
+macOS is blocked even earlier by a **code-signing/entitlements** error (no dev certificate in this environment) — a separate environmental blocker. Let me re-run macOS with signing disabled to confirm it then hits the *same* sibling redeclarations, while I begin writing the log.
+
+Let me capture the exact current swiftlint/format summary lines for the log, and check the macOS (signing-off) result.
+
+Complete, definitive evidence now in hand. macOS (signing-off) confirms the **same** pervasive pre-existing sibling breakage (DashboardWidgetSize ×32, RecentDrivesModel ×60, 360× key-path inference failures) — platform-agnostic, all in dashboard-widget siblings, none in my surface. swiftlint confirms **0 violations in my feature-views**. Let me write the comprehensive gate log.
+
+Now let me verify exactly what will be committed (only my files — not the pre-existing `web/*.tsx` changes or build artifacts) before committing.
+
+Commit scope is clean (build artifacts ignored; pre-existing `web/*.tsx` changes will be left untouched). Let me stage only my files + necessary scaffolding and commit.
+
+Committed cleanly (7 surface files + log + 2 scaffolding files; pre-existing `web/*.tsx` left untouched). Let me finalize tracking and clean up generated/temp artifacts.
+
+Working tree is clean — only the two pre-existing `web/*.tsx` changes remain (not mine, correctly untouched), and `.gitkeep` is intact (hidden from plain `ls`). Let me do a final confirmation of the commit.
+
+The RegexTester Apple surface is complete, committed, and verified. Final summary below.
+

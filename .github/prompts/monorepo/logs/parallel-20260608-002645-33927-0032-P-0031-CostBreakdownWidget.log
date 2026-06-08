@@ -1,0 +1,114 @@
+I'll start by exploring the environment and the web source to understand the task scope.
+
+Key finding: **Xcode is not installed** (only Command Line Tools), `xcodebuild` and `simctl` are unavailable. Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me investigate the existing Apple app structure thoroughly before deciding how to proceed, and verify framework availability.
+
+Existing sibling widgets live in my exact target directory (`TeslaSync/dashboard-widgets/`): `MotorHistoryWidget.swift`, `WallConnectorWidget.*`, `NotificationStatsWidget.Projection.swift`. These are the canonical templates. Let me read them in full along with the directory listing.
+
+The directory has 418 entries (many widgets). Let me find the full MotorHistory family and other key reference files to learn the complete pattern (Model, Strings, Projection, Tests, registration types).
+
+Clear pattern: each widget is a family (`.swift` view, `.Model`, `.Projection`, `.Chart`/`.Views`, `.Previews`, `.strings`, `.Tests`). MotorHistory is the closest analog (chart-based). Let me read its full family plus locate the shared types (registration, state holders, telemetry, tokens).
+
+Now reading the rest of the MotorHistory family (strings, Tests, Previews, Chart) and the design tokens to fully internalize conventions.
+
+The Previews note a "swiftc host gate" that compiles these files without Xcode — critical for my verification. Let me find that harness and read the Chart file, MeasurementSystem, and design tokens.
+
+Let me locate the actual swiftc host-gate harness/script and read the design tokens + MeasurementSystem.
+
+The established methodology here (documented across sibling logs + `macos-pending-verifications.md`) is: full `xcodebuild` is deferred to the P99 acceptance runner (needs Xcode+signing), while each surface is proven via **host `swiftc -typecheck` against the real library + an executed adapter harness + swiftlint/swiftformat/placeholder gates**. Let me decisively test this runner's capability.
+
+Decisive: macOS SDK 26.5 present, `pwsh`/`xcodegen`/`swiftlint`/`swiftformat` all available, and **SwiftUI + Swift Charts (`SectorMark`) + MapKit typecheck PASSED** (`PROBE_EXIT=0`) targeting `arm64-apple-macos15.0 -swift-version 6`. So I can implement and verify via the established host-gate methodology; only the full `xcodebuild` (needs Xcode/sim) is deferred to the P99 runner. Now reading tokens, configs, and web data shape.
+
+13 older widgets redefine `DashboardWidgetSize` (the documented collision); newer ones (LifetimeStats, DigitalTwinMini, GuardMode) reference a shared definition instead. I'll follow the cleaner newer pattern. Let me find the canonical shared types + token definitions, and read LifetimeStats (a close stat-card analog).
+
+Let me pin down exactly how non-redefiner widgets (like LifetimeStats) resolve these shared types, by checking the registration-type definitions and a sibling gate log.
+
+The non-redefiner pattern (MileageStats/LifetimeStats — both "analytics" like mine) reuses shared types provided by `DigitalTwinWidget.*` and proves co-existence by co-compiling. I'll follow that. Let me read the shared-type provider, the closest structural template (LifetimeStats), the generated tokens, and the web data/shared contracts.
+
+DigitalTwinWidget provides the canonical shared types (`DashboardWidgetSize`, `DashboardWidgetRegistration` with `clamp`). Now reading the structural template (LifetimeStats), the donut component option (PieGauge), token names, and the web data/shared contracts.
+
+LifetimeStats is the ideal template (analytics, compact/standard/wide, stat tiles, big number, stale/offline handling). Now reading its Model/Adapter/Tests/strings, the web data contract, and remaining token/component definitions.
+
+Excellent — LifetimeStats is a near-perfect template (currency, distance units, compact/standard/wide, stale auto-refresh, telemetry, registration, a11y). Now reading the web data contract for CostBreakdown + the web shared components I must reproduce, plus the LifetimeStats tests/strings and remaining native tokens/components.
+
+Now I have the full data contract (`/analytics/tco` → TCOAnalytics). Let me read the web StatCard + formatting/units/palette hooks, plus the native token/component definitions (Font.TS, TSSpacing/TSRadius, TSAnimatedNumber, TSStatGridSkeleton, PieGauge), and the LifetimeStats tests/strings format.
+
+Let me confirm the remaining component signatures and read the LifetimeStats tests/strings/previews to mirror exactly.
+
+I have the full pattern. Let me confirm the web `AnimatedNumber` default formatting (for the compact big-number parity) and the registry metadata for cost-breakdown, then I'll write all files.
+
+`AnimatedNumber` defaults to 0 decimals → compact big number = `currentMonthCost` at 0 decimals. Let me confirm the registry block, then write the implementation.
+
+Confirmed all metadata. I now have complete context. Let me set up tracking and begin writing the 8-file widget family.
+
+Now writing the widget family. Starting with the Model (state-holder seam, telemetry, registration, strings facade).
+
+Model done. Now the Foundation adapter (Projection) — the testable core that ports the web derivations verbatim.
+
+Now the donut chart (Swift Charts `SectorMark`).
+
+Now the shared sub-views (stat card, ranked list, big number, saving badge).
+
+Now the main View (header, all states, compact/standard layouts).
+
+Now Previews, strings, and Tests.
+
+Now the test suite (adapter parity, model phases/telemetry, registry, accessibility).
+
+All 8 files written. Now the verification phase. First, auto-format with the repo's swiftformat config and probe whether `@Observable` compiles under this toolchain (decides harness composition).
+
+`@Observable` compiles+runs here, and swiftformat reports my files already conform. Now running swiftlint and building the host-gate typecheck closure (surface + real component library + a registry-types shim, the repo's established host-gate technique).
+
+One swiftlint issue: `project` function body exceeds 50 lines. Let me refactor it into focused helpers.
+
+Refactored. Re-running swiftformat (auto-wrap) then swiftlint to confirm clean.
+
+swiftlint --strict: **0 violations**. Now the host-gate typecheck: compiling my surface against the real component library + a registry-types shim. Let me build the closure and run it.
+
+The errors are in an unrelated library file (`UnitFormatters.swift` needs `UnitPreferences`) that my surface doesn't use — I over-included. Let me trim to the minimal dependency-closed set my files actually reference.
+
+The component library is internally cross-referenced. Let me locate the few app-level types it needs (`UnitPreferences`, etc.) and include the full component set plus those.
+
+`UnitFormatters` isn't needed by my surface — staying minimal. Adding `Typography.swift` (needed by `Cards`) and retrying the closed set.
+
+The library files are interconnected units. Let me include the full UI/Feedback/DataDisplay/Charts/Motion component set (excluding only the `UnitFormatters` file that needs an unrelated app type) + Design + Tokens.
+
+Now the only error is in my file — the shim types must be `public` (matching the real `DigitalTwinWidget` declarations). Fixing the shim and re-running.
+
+**Surface typecheck PASSED (`TYPECHECK_EXIT=0`)** against the real component library, macOS 15 SDK, Swift 6. Now the DEBUG previews typecheck and an **executed** adapter/model harness that actually runs the parity assertions.
+
+Expected: the `#Preview` macro plugin ships with Xcode, not Command Line Tools — so the host gate skips preview macro-expansion (as the sibling widgets note: "DEBUG-only; skipped by the swiftc host gate"). The non-preview surface already passed. Now the **executed** harness that runs the real parity assertions.
+
+Need to drop `-parse-as-library` so `main.swift` allows top-level statements.
+
+Swift 6 makes `main.swift` top-level `@MainActor`; the helper funcs need matching isolation. Adding `@MainActor` to them.
+
+**Executed harness: CHECKS=54 FAILURES=0 (`HARNESS_RUN_EXIT=0`)** — the adapter, phase matrix, a11y, and registry parity all produce the exact expected values when run natively. Let me check whether `XCTest` is importable under CLT (to typecheck the test file) and parse-check the previews.
+
+XCTest isn't in CLT (tests compile in the XCTest target on the P99 runner; the 54-check executed harness covers the same logic here). Previews parse cleanly. Now the swiftformat lint and the placeholder gate.
+
+All gates green: **swiftformat --lint 0/7 need formatting**, **placeholder gate EXIT=0 (count 0)**. Let me independently confirm no forbidden tokens in the shipped files and verify the placeholder script actually scanned them.
+
+Only match is the word "placeholders" in a `.strings` comment describing `%@` format specifiers — not stub content (the official gate correctly returns 0). I'll reword it to remove any ambiguity, and verify the placeholder script's path/glob logic actually scans my files.
+
+Let me confirm the script actually scanned my files (the gate passes a path *prefix*, not a directory) — I need to be sure the 0 count isn't a trivial "no files matched".
+
+Important honesty check: the script treats a non-existent `-Path` as "nothing to scan" (trivial 0). The gate's `-Path …/CostBreakdownWidget` is a *prefix*, not a real path — so it scans nothing. To genuinely verify my files, I'll run the official scanner against a temp dir containing copies of my files.
+
+Official scanner on the real files: **PLACEHOLDER_COUNT=0, EXIT=0** (genuine — it scanned all 7 swift files). Let me check how sibling logs recorded the deferred `xcodebuild` step and their final STATUS, to match the established honest convention.
+
+The sibling convention is unambiguous: all host-runnable gates green, the `xcodebuild` scheme steps explicitly **DEFERRED** (not failed/passed) to the signed P99 runner with capability evidence, ending `EXIT=0 / STATUS=DONE`. My results match (even stronger: 54 executed checks). Let me capture tool versions and write the honest log.
+
+Production Swift surface is 1,257 lines across 5 files (+ 336 tests, 113 previews, 50 strings) vs the 250-line web source — a complete, decomposed implementation. Now writing the honest gate log.
+
+Let me do one consolidated final verification of the committed state (typecheck + executed harness + swiftlint + swiftformat + placeholder), then commit.
+
+All gates green: typecheck=0, **harness 54/54**, swiftlint 0, swiftformat 0/7, placeholder 0. Committing the allowed files.
+
+My 9 files are new/untracked; the `AIUsageCard.*` modifications are pre-existing (not mine) and I'll leave them untouched. Staging only my files + log and committing.
+
+Exactly the 9 allowed files are staged. Committing.
+
+Committed cleanly — 9 files, 1975 insertions, no stray changes. Cleaning up temp artifacts and finalizing tracking.
+
+All work is complete, verified, and committed. Temp artifacts cleaned; working tree clean for my files.
+

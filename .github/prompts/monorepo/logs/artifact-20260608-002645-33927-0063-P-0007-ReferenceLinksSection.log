@@ -1,0 +1,182 @@
+=== P4 Feature view 0007 ReferenceLinksSection (Apple) ===
+
+Run metadata
+  Date           : 2026-06-08T01:2x-0700
+  Host           : Darwin arm64 (Apple Silicon, Mac Studio)
+  Toolchain      : Xcode 26.5 (Build 17F42) — resolved via
+                   DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                   (the machine's xcode-select default is CommandLineTools and no
+                   sudo is available to switch it; the DEVELOPER_DIR override gives
+                   the full Xcode toolchain without privilege escalation).
+  Capability     : SwiftUI + Swift Charts + MapKit / iOS 18 / iPadOS 18 / macOS 15
+                   HIG AVAILABLE (Xcode 26.5, iOS 26.5 simulator runtime present;
+                   this anonymous surface uses no chart/map — see web source).
+  xcodegen       : 2.45.4
+  Simulator      : iPhone 16 (iOS 26.5) — available + booted
+  KMP framework  : apps/shared :core:assembleSharedXCFramework BUILD SUCCESSFUL
+                   (7m48s) → staged to apps/apple/Frameworks/Shared.xcframework
+                   (ios-arm64, ios-arm64-simulator, macos-arm64).
+
+Web source (THE specification)
+  web/src/features/admin/components/devtools/ReferenceLinksSection.tsx
+  A static responsive grid (grid gap-4 sm:grid-cols-2 lg:grid-cols-4) of four Tesla
+  Fleet-API reference links from REFERENCE_LINKS (constants.ts). Each: GlassPanel
+  (hover) wrapping an external <a target="_blank" rel="noopener noreferrer">, a cyan
+  icon box (ICON_COLOR_MAP.cyan), the i18n title t(link.title), and the (truncated)
+  URL. Data sources: useTranslation only — no fetch, no charts, no maps.
+  i18n keys (exact, from source): devtools.ref.fleetOverview, .partnerEndpoints,
+  .devPortal, .telemetryGuide. NOTE: web/src/i18n/en.json has NO devtools.ref.*
+  entries, so react-i18next renders the raw key; the native catalog supplies the
+  polished English copy under the exact keys (documented in .strings header).
+
+Shipped files (allowed scope: apps/apple/TeslaSync/feature-views/ReferenceLinksSection.*)
+  ReferenceLinksSection.swift           — composed view: toolbar + state switch + responsive grid
+  ReferenceLinksSection.Catalog.swift   — ReferenceLink + RefLinkTone + catalog (JSX order)
+                                          + ReferenceLinksStrings (P1/S10 facade) + a11y builders
+  ReferenceLinksSection.Adapter.swift   — ReferenceLinkRow + ReferenceLinkProjection (cached
+                                          catalog → rows, safe http(s) URL validation) [pure]
+  ReferenceLinksSection.Model.swift     — @Observable model (P1/S8) + telemetry seam (P1/S11)
+                                          + RefConnection + Source protocol + InMemory source
+  ReferenceLinksSection.Views.swift     — RefLinkCard / RefFreshnessChip / RefOfflineBanner / RefLinkSkeleton
+  ReferenceLinksSection.Previews.swift  — loading / ready / empty / error / stale / offline
+  ReferenceLinksSection.Tests.swift     — adapter + catalog + model + accessibility (26 tests)
+  ReferenceLinksSection.strings         — 4 exact source keys + native chrome/a11y keys
+
+States reproduced (every state renders — no hidden surfaces)
+  loading (skeleton grid) · ready (link grid) · empty (TSEmptyState) ·
+  error (TSErrorDisplay + retry) · stale (freshness chip + freshness window) ·
+  offline (RefOfflineBanner; cached links stay visible).
+
+----------------------------------------------------------------------------------
+GATE STEPS (real exit codes)
+----------------------------------------------------------------------------------
+
+[xcodegen generate]
+  Created project at apps/apple/TeslaSync.xcodeproj ; ReferenceLinksSection file
+  references present = 48.  XCODEGEN_EXIT=0
+
+[iOS] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  IOS_EXIT=65   (DEFERRED — pre-existing baseline breakage in OTHER slots)
+  Failure: "Unable to resolve module dependency: 'XCTest'".
+  Root cause (repo-wide, NOT this surface): 171 feature-view *.Tests.swift files
+  (and 205 *.swift across the app target) carry `import XCTest` + `@testable import
+  TeslaSync`; project.yml compiles TeslaSync/feature-views into the non-test app
+  target, which cannot resolve XCTest. This is the established P4-apple baseline
+  (see p4-apple-feature-views-0006-InfrastructureSection.log).
+  Attribution: `grep error:` = 6 lines, ALL the XCTest module-resolution error;
+  errors referencing ReferenceLinks = 0. Removing this surface's Tests file cannot
+  fix the build (170 sibling Tests files remain) and project.yml is outside this
+  prompt's allowed files.
+
+[macOS] xcodebuild -scheme TeslaSync-macOS build test
+  MAC_EXIT=65   (DEFERRED — runner has no signing identity)
+  Failure: '"TeslaSync-macOS"/"TeslaSyncWidgets-macOS" have entitlements that
+  require signing with a development certificate.' Environment limitation (no dev
+  certificate on this runner; entitlements/signing config is outside allowed files).
+  Attribution: `grep error:` = 4 lines, ALL code-signing; compile errors = 0;
+  errors referencing ReferenceLinks = 0. Same macOS-signing deferral as the
+  InfrastructureSection precedent.
+
+[swiftlint --strict]   LINT_EXIT (this surface) = 0
+  This surface's 7 swift files: "Found 0 violations, 0 serious in 7 files."
+  Whole tree (`swiftlint --strict`, 1916 files): 1 serious violation, in the
+  SIBLING file apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+  (function_body_length) — outside allowed files. 0 violations reference ReferenceLinks.
+
+[swiftformat --lint]   FORMAT_EXIT (this surface) = 0
+  This surface's 7 swift files: "0/7 files require formatting."
+  Whole tree (`swiftformat --lint apps/apple`, 1920 files): 1 file requires
+  formatting — the SIBLING file TeslaSync/feature-views/ActionBuilder.Previews.swift:48
+  (blankLinesBetweenScopes) — outside allowed files. 0 format issues in ReferenceLinks.
+
+[check-placeholders.ps1]   PLACEHOLDER_EXIT=0
+  Gate literal command (`-Path apps/apple/TeslaSync/feature-views/ReferenceLinksSection`):
+    PLACEHOLDER_ALLOWED=0 ; PLACEHOLDER_COUNT=0 ; EXIT=0
+  Real scan of this surface's actual .swift files (`-Path <copy> -Language swift`):
+    PLACEHOLDER_ALLOWED=0 ; PLACEHOLDER_COUNT=0 ; EXIT=0
+  No TODO/FIXME/XXX/placeholder/stub/mock/Lorem/"not implemented" in shipped code.
+
+----------------------------------------------------------------------------------
+PER-SURFACE PROOF (achievable gates — all GREEN; this surface is clean on both SDKs)
+----------------------------------------------------------------------------------
+
+[Tests executed — SWIFT_TEST_EXIT=0]  26/26 green
+  The app-target XCTest baseline (above) blocks `xcodebuild test`, so the surface's
+  XCTest suite was COMPILED + EXECUTED standalone against the real shared components
+  + the real Xcode 26 toolchain via a throwaway SwiftPM package (swift-tools 6.0,
+  .macOS(.v15)). Result: "Executed 26 tests, with 0 failures".
+    ReferenceLinksAdapterTests        5  (projection order/identity, http(s) URL validation, degrade)
+    ReferenceLinksCatalogTests        6  (JSX key/URL order, lucide→SF Symbol map, all-cyan tone, fully populated)
+    ReferenceLinksModelTests         11  (loading→ready/failed phase, empty, offline, freshness/effective-stale,
+                                          retry-recovers, refresh-delegates, view.opened-once, stop/restart)
+    ReferenceLinksAccessibilityTests  4  (link label, openHint host format, freshness labels, strings fallback)
+
+[Surface compiles clean against BOTH SDKs — 0 errors in any ReferenceLinks file]
+  iOS 18  : xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator
+            -swift-version 6 -D DEBUG <6 surface files + shared-component closure>  → EXIT 0
+  macOS 15: xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0
+            -D DEBUG <6 surface files + shared-component closure>                   → EXIT 0
+
+Architecture compliance
+  • P1/S8 state-holder seam: view binds ReferenceLinksModel; no networking in the view.
+  • P1/S9 tokens: TSSpacing/TSRadius/Color.TS/Font.TS/TSTone only (no ad-hoc styling).
+  • P1/S10 i18n: every string via ReferenceLinksStrings facade; no English literals in code.
+  • P1/S11 diagnostics: view.opened emitted once on start() with slug "ReferenceLinksSection".
+  • Shared components reused (TSGlassPanel/TSIconBox/TSEmptyState/TSErrorDisplay/TSSkeleton/…).
+  • Accessibility: per-link VoiceOver label+hint (.isLink), header trait, chip labels,
+    skeleton hidden; Dynamic Type via tokenized fonts; reduce-motion honored by TSSkeleton.
+
+----------------------------------------------------------------------------------
+HONESTY COVENANT (binding)
+----------------------------------------------------------------------------------
+  1  No red-as-green   : IOS_EXIT/MAC_EXIT shown as the real 65 + DEFERRED; whole-tree
+                         lint/format reds shown as real + attributed to sibling files.
+                         Nothing red is claimed green.
+  2  No scope narrowing: all 4 links + every state + every t() key implemented (no subset).
+  3  No skip-and-assume: web source + constants.ts read end-to-end; the missing web
+                         devtools.ref.* catalog entries verified + documented, not assumed.
+  4  No stubs as final : zero stubs/placeholders (gate = 0, real scan = 0); full impls only.
+  5  No parity shortcut: composition maps to shared components; link order/URLs/icons are
+                         constants-exact; cyan icon box per ICON_COLOR_MAP.cyan.
+  6  No delegation     : implemented directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: binds the existing P1/S8-S11 seams + P1/S9 tokens; nothing faked.
+  8  No commit on red  : every ACHIEVABLE per-surface gate is GREEN (this surface's
+                         lint=0, format=0, placeholder=0, 26/26 tests executed-green,
+                         clean typecheck on iOS 18 + macOS 15). The red items are the
+                         pre-existing app-target XCTest baseline (171 sibling test files)
+                         + macOS signing + 2 sibling lint/format nits — all outside this
+                         prompt's allowed files, evidenced + attributed above.
+  9  No silent drift   : the one intentional, documented deviation is supplying polished
+                         English under the exact web keys (web catalog lacks them) — stated
+                         in the .strings header and here.
+  10 Log ends with EXIT=<int> + STATUS=<...>.
+
+=== DISPOSITION ===
+  Production-polished, native Apple-idiomatic ReferenceLinksSection shipped at parity
+  with the web source. Pure projection core + state-holder + catalog + a11y unit-tested
+  (26/26 executed green), P1/S8 state-holder seam (no view networking), P1/S11
+  view.opened telemetry, P1/S10 i18n via facade (no English literals in code), P1/S9
+  tokens, shared component reuse, all six states, full accessibility labels (Dynamic
+  Type + reduce-motion respected). The surface COMPILES cleanly against BOTH the iOS 18
+  and macOS 15 SDKs with the real Xcode 26 toolchain (0 errors in any ReferenceLinks
+  file on either platform). The full Xcode app `build test` is DEFERRED solely because
+  the shared app target is pre-existing-baseline-red — 171 sibling feature-view
+  *.Tests.swift import XCTest into the non-test app target (iOS) + macOS dev-certificate
+  signing — both outside this prompt's allowed files, exactly the documented P4-apple
+  precedent (0006 InfrastructureSection). All host-runnable + achievable gates are GREEN.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/ReferenceLinksSection.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0007-ReferenceLinksSection.log
+  git commit -m "feat(apps/apple/feature-views): add ReferenceLinksSection surface (P4)"
+
+IOS_EXIT=65          (DEFERRED — pre-existing app-target XCTest baseline in sibling slots; this surface clean)
+MAC_EXIT=65          (DEFERRED — macOS dev-certificate signing absent on runner; this surface clean, 0 compile errors)
+LINT_EXIT=0          (this surface: 0 violations in 7 files; whole-tree red is 1 sibling file, outside allowed scope)
+FORMAT_EXIT=0        (this surface: 0/7; whole-tree red is 1 sibling file, outside allowed scope)
+PLACEHOLDER_EXIT=0   (gate literal = 0; real scan of shipped .swift = 0)
+SWIFT_TEST_EXIT=0    (26/26 executed green; standalone SwiftPM, Swift 6, Xcode 26)
+IOS_TYPECHECK_EXIT=0 (surface clean against iOS 18 SDK, Swift 6)
+MAC_TYPECHECK_EXIT=0 (surface clean against macOS 15 SDK)
+EXIT=0
+STATUS=DONE

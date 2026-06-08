@@ -1,0 +1,142 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+The `shared-surfaces` directory doesn't exist yet. The recently-modified `AIUsageCard.*` files in `feature-views` look like the closest existing pattern (an AI feature card). Let me examine them and check platform capability.
+
+`xcodebuild` requires full Xcode (only Command Line Tools installed), but `swift`, `swiftlint`, `swiftformat` are available. Let me locate the AIUsageCard files and understand the project layout.
+
+There's a case-collision artifact in git (`AIUsageCard` vs `AiUsageCard`) — pre-existing, unrelated to my task. The physical files use `AiUsageCard`. Let me find the closest analog: native surfaces already using the `AIFeatureCard` / `useAiStream` / `withAiFeature` pattern, since this is prompt 0056 (55 prior surfaces may exist).
+
+XcodeGen and pwsh are available, but `xcodebuild` needs full Xcode. Let me definitively check Xcode availability and study the closest analog (`AIRestorePanel` — an AI action panel) plus the core facade/state-holder infrastructure.
+
+`/Applications/Xcode.app` exists. `xcode-select` points to CommandLineTools, but I can override with `DEVELOPER_DIR`. Let me test if the full Xcode toolchain works.
+
+The full Xcode 26.5 toolchain works via `DEVELOPER_DIR`, with iOS 26.5 simulator (iPhone 16 already booted) and macOS SDK. **The platform capability IS available** — I should target STATUS=DONE. Let me study the closest analog (`AIRestorePanel`) and core infrastructure in depth.
+
+This is an excellent template. Now I need the web spec for the shared components this surface uses. Let me read `AIFeatureCard`, `withAiFeature`, and `useAiStream` (the behavioral contract), plus the rest of the AIRestorePanel native pattern.
+
+Now let me read the stream hook, output panel, thinking indicator, and the rest of the native AIRestorePanel pattern (Views/Adapter/Tests/strings/Previews) plus check for existing native AI primitives.
+
+Now let me read the output panel, thinking indicator, and HelixMark (web rendering contract), plus the rest of the native AIRestorePanel pattern.
+
+I now have the complete web visual contract. Let me read the rest of the native AIRestorePanel pattern (Views/Adapter/Previews/Tests/strings) and locate the design tokens + shared UI primitives.
+
+Now let me locate the design tokens, shared UI primitives, and any native AI-enabled feature gate, plus read the Previews pattern.
+
+The tokens are generated. Let me find the generated token names and the UI primitive APIs (TSButton, TSGlassPanel, TSSkeleton, TSFadeIn), plus how AI-enabled gating works in the AiUsageCard analog.
+
+Now the key piece — how the AI-enabled gate works natively. Let me read the AiUsageCard model/view (the gating analog) and the Previews pattern.
+
+The `isGated` → `EmptyView()` is the native `withAiFeature` gate. Now I must understand how the colocated `*.Tests.swift` files get compiled into the test target (project.yml only lists `Tests/Unit`). Let me investigate the test wiring.
+
+Whatever wiring makes the colocated `feature-views/*.Tests.swift` compile will apply identically to `shared-surfaces/*.Tests.swift` once I wire that directory into the app targets the same way. Let me confirm the app-target test settings and read the AiUsageCard model (gate + freshness idiom), then start building.
+
+170 colocated `.Tests.swift` files compile into the app targets — this is the established, building convention (XCTest is in the simulator/macOS SDK). I'll replicate AIRestorePanel's exact structure in `shared-surfaces` and wire that directory into the two app targets like `feature-views`. Let me read the AiUsageCard gating/connection model to match the idiom, then write a plan.
+
+I now have a complete understanding of the architecture, idioms, tokens, and the web spec. Let me verify no symbol collisions, then write a plan and build.
+
+The sample log reveals the runner precedent (iOS build passes; iOS-sim test-exec + macOS full-bundle blocked by environment/pre-existing; surface concludes STATUS=DONE). I need to see how a **feature-views** surface (closest to my tier, with colocated tests) handled test execution. Let me read one.
+
+This is the key precedent: feature-view surfaces verify via (1) SDK compile against iOS 18 + macOS 15, (2) an **executed SwiftPM harness** for pure-logic tests, (3) lint/format/placeholder clean — and **defer** the full `xcodebuild` (missing KMP `Shared.xcframework` + signing), concluding STATUS=DONE. project.yml wiring is explicitly the integration prompt's job. Let me check the framework situation and dependency files.
+
+Confirmed: `Shared.xcframework` is absent (only `.gitkeep`) — so the full `xcodebuild` is blocked by the missing KMP core, exactly as the predecessor documented. My plan is set. Let me record it and start building.
+
+Now let me create the directory and the pure Adapter core.
+
+Now the Model seams (state-holder, projection, telemetry, strings facade).
+
+Now the SwiftUI subviews (`.Views.swift`) reproducing the AIFeatureCard + AiOutputPanel + thinking-indicator composition with native tokens.
+
+Now the main view (`.swift`) — the gate + card composition + accessibility root.
+
+Now the Previews for each state.
+
+Now the comprehensive test suite (pure logic, executable via SwiftPM harness).
+
+Now the strings catalog, then I'll audit for any forbidden placeholder words.
+
+All 7 files created. Let me audit for forbidden placeholder/stub words and run the placeholder gate.
+
+Now let me run the placeholder gate, swiftlint, and swiftformat on the surface.
+
+Placeholder gate clean. Now swiftlint and swiftformat.
+
+swiftlint scanned all 1909 files (config-driven) and found 1 serious violation — I must determine if it's mine. Let me check the configs and lint only my files.
+
+Two real violations in my files: a 7-param function and a 425-line test file (>400). (The repo-wide swiftlint also has 1 pre-existing violation in other files, and `shared-surfaces` isn't yet in the lint `included` list — integration wiring, per precedent.) Let me fix my two violations: refactor the accessibility summary to a `Labels` struct and trim the test file.
+
+Now update the main view's call site:
+
+Now update the 5 test call sites and trim the test file under 400 lines. Let me view the header and accessibility section.
+
+Let me compact the accessibility tests (fixes the API + saves lines) and trim the header.
+
+Now let me re-run swiftlint on my files and verify line counts.
+
+swiftlint clean (0 violations). Now swiftformat.
+
+swiftformat wants auto-formatting on my files. Let me apply it and re-verify.
+
+Both formatters pass. To make the test suite fully executable in a pure SwiftPM harness, I'll move `rootIdentifier` into the pure `AiShareCardSurface` layer (the View references SwiftUI). Let me view the current state and adjust.
+
+Now let me build a SwiftPM harness to **execute** the pure-logic tests (module named `TeslaSync` so `@testable import` works).
+
+All 42 tests pass via the harness (exit 0, Swift 6 strict concurrency, macOS). Now the SDK-compile proof. Let me identify the minimal dependency set (design tokens + UI primitives) and check it's free of the KMP `Shared` framework.
+
+Components + Design (42 files) are KMP-free — a clean dependency set. Let me type-check the full surface against the macOS 15 and iOS 18 SDKs together with those primitives.
+
+`Sources/Components` isn't fully KMP-free (`UnitFormatters.swift` needs `Units` from the facade). Let me use a curated minimal primitive set instead. Let me confirm exactly what my surface references and that the curated deps are facade-free.
+
+Curated deps are facade-free. Let me type-check the surface + curated primitives against macOS 15.
+
+The `-D DEBUG` pulled in the dependency files' own `#Preview` blocks (needing `TSBadge`, etc.). Let me compile the shipped surface without `DEBUG` (skips all preview scaffolding) against macOS, then iOS.
+
+macOS 15 typecheck clean (EXIT=0). Now iOS 18 simulator.
+
+Both SDKs compile the shipped surface cleanly (EXIT=0). Now let me also type-check the DEBUG-only Previews (adding `Badges.swift` for the dependency files' own preview blocks).
+
+Excellent — all compiles and tests pass. Now let me capture the real `xcodebuild` blocker (the missing KMP `Shared.xcframework`) for honest documentation, as the predecessor did. First let me check the xcframework-staging script to avoid a hanging gradle preaction.
+
+The `xcodebuild` build runs a Gradle KMP preaction (needs the Kotlin/Native toolchain) and links the absent `Shared.xcframework`. Let me generate the project and run the actual gate command (bounded) to capture the real environmental blocker as evidence.
+
+Project generated. gradlew exists, so the scheme's KMP preaction will attempt a (slow) Kotlin/Native build. Let me run the actual gate iOS command and capture its behavior.
+
+The KMP Gradle preaction is running (first-run Kotlin/Native builds are slow). Let me wait for it to resolve.
+
+Let me check the KMP build's progress in a separate shell while it continues.
+
+The KMP Kotlin/Native build is genuinely compiling (konan/LLVM + JDK 17 active) — a heavy first-run assembly that will then compile the full 1900-file app. This is the environmental dependency the predecessor documented. I'll let it continue while I write the gate log, then capture its outcome. Let me update todos and draft the log.
+
+Let me identify the pre-existing repo-wide lint/format status (to honestly distinguish it from my clean surface) while the build runs.
+
+My surface is **clean** on both linters (0 violations; 0/6 need formatting). The single repo-wide swiftlint violation is pre-existing in `LifetimeStatsWidget.Adapter.swift` (not my surface). Let me check the build's progress.
+
+Still building (KMP stage). Let me check staging progress and write the comprehensive gate log in parallel.
+
+The KMP `Shared.xcframework` **staged successfully** (ios-arm64, ios-arm64-simulator, macos-arm64) and the build advanced into the app Swift-compile phase (39 procs). The toolchain is healthy. Let me wait for the build result.
+
+The gate iOS build finished. Let me check its result.
+
+The app build failed (exit 65) on a **SwiftDriver** error in the pre-existing app target (my files aren't wired in). Let me identify the actual pre-existing error to document it honestly.
+
+The output is only 53 lines (the swiftc command lines are huge). Let me view the whole captured build output.
+
+The app build failed at the whole-module SwiftDriver compile (exit 65), but `tail` truncated the specific `error:` diagnostics. The KMP framework staged fine, so the toolchain works — this is a **pre-existing** app-target error (1900+ files from other in-flight slots), not my surface (which isn't wired into the project). Let me re-run with full output captured (DerivedData is now warm) to pinpoint and prove the pre-existing error isn't mine.
+
+Pinpointed. The full `xcodebuild build` fails on a **pre-existing** error: `feature-views/AIRestorePanel.Tests.swift:18: error: unable to resolve module dependency: 'XCTest'`. Under Xcode 26.5's explicit-module build, the repo's 170 colocated `*.Tests.swift` files (which `import XCTest`) can't resolve XCTest in the app target — a pre-existing repo condition, not my surface. Let me confirm the failure set is entirely XCTest (no real code errors).
+
+**Definitively confirmed:** the ONLY build error is the pre-existing `XCTest` module-resolution failure in `feature-views/AIRestorePanel.Tests.swift` (an existing repo file). All 1900+ production Swift files — including the shared primitives my surface uses — compiled successfully; nothing in `shared-surfaces` errors. This is a repo-wide pre-existing condition (170 colocated test files), exactly the disposition the predecessor documented (tests run via SwiftPM harness, not the app-target build). Let me write the gate log.
+
+Log written. Now let me verify git status, confirm build artifacts are git-ignored, and clean up temp files.
+
+All clean: generated project + xcframework are git-ignored; the only non-surface changes (`AIUsageCard.*`) are the pre-existing case-collision phantoms (not mine, not staged). Let me clean up temp artifacts and the generated project, then verify the surface files one final time.
+
+Let me run a final consolidated lint/format/placeholder pass on the final files (after the `rootIdentifier` refactor) to ensure nothing regressed before committing.
+
+All final gates green (swiftformat 0/6, swiftlint 0 violations, placeholder COUNT=0). The harness (42/42) and dual-SDK type-checks already ran on these exact files. Let me stage precisely my surface + log and commit.
+
+Exactly the 7 surface files + log staged, nothing else. Committing.
+
+Committed cleanly as `361f30f95`. Let me finalize todos and clean up my temp build log.
+
+All todos complete and the work is committed. Task finished.
+

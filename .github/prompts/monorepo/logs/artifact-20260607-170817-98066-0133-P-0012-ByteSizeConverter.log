@@ -1,0 +1,138 @@
+=== P4 Feature view 0012 ByteSizeConverter (Apple) ===
+date_utc: 2026-06-08T02:50:02Z
+runner: macOS 26.5.1 (arm64)
+
+################################################################
+## 0. CAPABILITY PROBE (ADR-002 requires SwiftUI/SwiftCharts/MapKit, iOS18/macOS15)
+################################################################
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+$ swift --version
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+Target: arm64-apple-macosx26.0
+$ swiftlint version
+0.63.3
+$ swiftformat --version
+0.61.1
+FINDING: full Xcode is NOT installed (active dir = CommandLineTools); no iOS/macOS SDKs or Simulators.
+         => the xcodebuild build+test gate CANNOT run on this runner. Per the prompt's capability
+         clause this is a BLOCKED outcome. Per the Honesty Covenant the production code is still
+         shipped complete and every runnable gate + a toolchain compile/run is executed below.
+
+################################################################
+## 1. GATE: xcodebuild iOS (scheme TeslaSync) build test
+################################################################
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+
+################################################################
+## 2. GATE: xcodebuild macOS (scheme TeslaSync-macOS) build test
+################################################################
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+
+################################################################
+## 3. GATE: swiftlint --strict   (cwd apps/apple, where .swiftlint.yml + project live)
+################################################################
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-133/apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length Violation: Function body should span 50 lines or less excluding comments and whitespace: currently spans 78 lines (function_body_length)
+LINT_EXIT=2
+NOTE: the single violation above (TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141,
+      function_body_length) is PRE-EXISTING in a dashboard-widget file outside this surface's
+      allowed-files scope (apps/apple/TeslaSync/feature-views/ByteSizeConverter.*). It is not mine to
+      fix here. The ByteSizeConverter files are independently clean — see step 3b.
+
+## 3b. swiftlint --strict on THIS surface's files only
+Linting 'ByteSizeConverter.Tests.swift' (4/4)
+Done linting! Found 0 violations, 0 serious in 4 files.
+LINT_SURFACE_EXIT=0
+NOTE: .swiftlint.yml 'included:' does not yet list TeslaSync/feature-views — wiring that path (and the
+      project.yml source group + Localizable.xcstrings fold-in) is the P4 integration step, outside the
+      allowed-files scope of this per-surface prompt.
+
+################################################################
+## 4. GATE: swiftformat --lint apps/apple   (whole tree, includes this surface)
+################################################################
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-133/apps/apple/.swiftformat
+SwiftFormat completed in 0.24s.
+0/508 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+################################################################
+## 5. GATE: check-placeholders.ps1
+################################################################
+## 5a. exact gate path:
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+## 5b. real directory scan (swift) — the meaningful check of the shipped .swift files:
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_REALDIR_EXIT=0
+
+################################################################
+## 6. SUPPLEMENTARY VERIFICATION (no Xcode required)
+##    The shipped ByteSizeConverter.Model.swift depends only on Foundation/Observation/OSLog
+##    (no SwiftUI/KMP), so it is compiled + run with the standalone Swift 6 toolchain.
+################################################################
+$ swiftc <shipped Model.swift> harness.swift -o verifybin && ./verifybin
+adapter parity (shipped source):
+  PASS 1024 B
+  PASS 1 KB
+  PASS 1 MB
+  PASS 0.5 GB
+  PASS 1536 B
+  PASS 2 KB
+  PASS empty -> nil
+  PASS abc -> nil
+  PASS bad unit -> nil
+  PASS a11y label
+  PASS model empty-state
+  PASS model populated-state
+  PASS view.opened once
+ALL_GREEN
+MODEL_COMPILE_RUN_EXIT=0
+
+## 6b. Web (JS) parity ground-truth via node — the pinned test strings match Intl.NumberFormat:
+  web 1024 B -> ["1,024","1.0000","0.0010","0.0000","0.0000"]
+  web 1 KB -> ["1,024","1.0000","0.0010","0.0000","0.0000"]
+  web 1 MB -> ["1,048,576","1,024.0000","1.0000","0.0010","0.0000"]
+  web 0.5 GB -> ["536,870,912","524,288.0000","512.0000","0.5000","0.0005"]
+  web 1536 B -> ["1,536","1.5000","0.0015","0.0000","0.0000"]
+  web 2 KB -> ["2,048","2.0000","0.0020","0.0000","0.0000"]
+JS_PARITY_EXIT=0
+
+################################################################
+## 7. SUMMARY
+################################################################
+IOS_EXIT=1         BLOCKED  — xcodebuild requires full Xcode; runner has CommandLineTools only.
+MAC_EXIT=1         BLOCKED  — same.
+LINT_EXIT=2        pre-existing function_body_length in LifetimeStatsWidget.Adapter.swift (NOT this surface).
+LINT_SURFACE_EXIT=0  PASS   — ByteSizeConverter.{swift,Model,Previews,Tests}.swift: 0 violations, 0 serious.
+FORMAT_EXIT=0      PASS     — swiftformat --lint apps/apple: 0/508 files require formatting.
+PLACEHOLDER_EXIT=0 PASS     — no TODO/stub/mock/placeholder/Lorem in the shipped .swift files.
+MODEL_COMPILE_RUN  PASS     — shipped model compiles on Swift 6 toolchain; 13/13 parity+state+telemetry checks green.
+JS_PARITY          PASS     — pinned conversion strings equal the web Intl.NumberFormat output.
+
+Acceptance mapping:
+  [BLOCKED] Renders on Apple with all web-source states — code complete (content + empty, the surface's
+            only two branches; loading/error/stale/offline are N/A: the web source has no async data
+            source, its sole dependency is useTranslation). Cannot render-verify without Xcode.
+  [PASS]    No direct HTTP from the view (surface has no data feed; only the i18n facade). No S8 binding
+            required because the web source binds no data hook.
+  [PASS]    i18n: every source key (Byte Size, Byte Size Desc, Value, Unit) carried in the per-surface
+            P1/S10 table ByteSizeConverter.strings; view resolves via LocalizedStringKey.
+  [PASS]    Accessibility labels on every interactive element (value field, unit picker) + result cells.
+  [PASS]    Tests: adapter parity (pinned) + per-state (empty/populated) + telemetry-once + a11y builder.
+  [PASS]    No TODO/stub/mock/placeholder/Lorem in shipped code.
+
+DETERMINATION: the production surface is shipped complete and every gate that CAN run on this runner is
+green; the build+test gate is BLOCKED solely by the absence of full Xcode (capability evidence in step 0).
+
+EXIT=1
+STATUS=BLOCKED

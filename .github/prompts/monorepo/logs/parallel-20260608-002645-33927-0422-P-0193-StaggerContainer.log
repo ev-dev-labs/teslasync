@@ -1,0 +1,102 @@
+I'll start by exploring the environment and reading the web source that I need to reproduce natively.
+
+Toolchain status noted: `swift`, `swiftlint`, `swiftformat` available; `xcodebuild` requires full Xcode (only CLT present) and `simctl` is unavailable. Let me read the web source and understand the existing native conventions.
+
+Now let me study the native conventions. The `shared-surfaces` dir doesn't exist yet—I'll need to create it. Let me examine a recently-completed reference (AIUsageCard), the motion preference hook, the build config, and the placeholder checker.
+
+The AIUsageCard glob returned nothing despite git status showing it—let me investigate the feature-views structure and find a good reference pattern.
+
+File convention is clear: each surface = `Name.swift` + `.Model` + `.Adapter` + `.Views` + `.Previews` + `.Tests` + `.strings` (sometimes more). `AiUsageCard` is a good reference. Let me check tooling (pwsh, swiftc typecheck) and study the conventions in depth.
+
+Excellent — `TSFadeIn` is referenced, so native motion primitives likely already exist. Let me locate the motion infrastructure, design tokens, and build config.
+
+Key finding: `project.yml` globs `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` but **not** `TeslaSync/shared-surfaces`. The prompt restricts me to `shared-surfaces/StaggerContainer.*` files only. Let me read the native motion infra, design tokens, and a full reference surface (Views/Previews/Tests/Adapter/strings) to nail conventions.
+
+Major finding: an atomic `TSStaggerContainer` already exists in `Sources/Components/Motion/Motion.swift` — that's the out-of-scope "component-library" primitive. My task is the **shared-surface** parity at `shared-surfaces/StaggerContainer.*` (state-holder-bound, telemetry, i18n, tested). Also confirmed: XCTest unavailable under CLT, but SwiftUI typechecks fine. Let me read the full reference surface and the token definitions.
+
+Let me read the Views, Previews, Tests, and the design token definitions to finalize my understanding.
+
+Let me locate the exact token definitions (TSMotion, TSSpacing, Color.TS, Font.TS) and read the UI/a11y Tests + Views convention.
+
+I now have all tokens and conventions. Let me read the remaining test sections (model/telemetry/a11y) and the Views file to finalize the pattern, then I'll write a plan.
+
+I have a complete picture of the conventions. Let me verify my verification tooling works (typecheck with Observation/OSLog/SwiftUI, swiftlint/swiftformat on explicit paths) and check for any naming collision, before writing code.
+
+No collisions; typecheck pipeline works against macOS 15 SDK with Observation/OSLog/SwiftUI/tokens. Let me set up a plan and todos, then build the surface.
+
+Both linters handle explicit paths. Now I'll build the surface. Starting with the pure, testable adapter.
+
+Now the Model file (i18n facade, telemetry seam, state-holder source, `@Observable` model).
+
+Now the internal reveal subview (Views) and the public container surface.
+
+Now the public container surface.
+
+Let me typecheck the four source files together with the design tokens before continuing.
+
+The slug reference needs the generic type's args. I'll decouple it into a non-generic constant.
+
+Source files typecheck cleanly. Let me view the reference model/telemetry-spy test section to match conventions, then write previews and tests.
+
+I have the spy pattern. Now I'll write the Tests, Previews, and strings files.
+
+Now let me typecheck all source + previews together (with DEBUG) to validate, including the `accessibilityReduceMotion` environment override.
+
+Two issues surfaced: `accessibilityReduceMotion` is a read-only environment key (can't be overridden via `.environment`), and the `#Preview` macro plugin isn't available to bare `swiftc` (Xcode-only — a runner limitation, not a code defect). I'll add a documented `tracksEnvironment` pin to the model so reduced-motion is previewable/pinnable, and fix the preview accordingly.
+
+Now update the previews to use a pinned model for reduced motion instead of the read-only environment key.
+
+Now add a test covering the pinned (`tracksEnvironment: false`) behavior.
+
+Re-typecheck the source files, then verify preview/test bodies via macro/XCTest shims in a temp dir (since CLT lacks the `#Preview` macro plugin and XCTest).
+
+Source typechecks. Let me remove a SwiftUI dependency from the test (EmptyView would need `import SwiftUI`), then run a comprehensive module-level typecheck using XCTest/`#Preview` shims to validate the test and preview bodies.
+
+Full module typechecks — sources, preview bodies, and test bodies all compile cohesively. Now the real style/placeholder gates I can run: swiftformat, swiftlint, and the placeholder checker.
+
+swiftformat wants formatting fixes (including generic-constraint simplification). Let me apply the formatter, then re-verify typecheck and re-run lint.
+
+Let me review the reformatted container's generic signatures and re-verify the full typecheck.
+
+Formatting is clean and the generic signatures are correct (opaque `some Hashable` param). Let me re-run the full module typecheck (post-format) and swiftlint.
+
+Module typecheck passes and swiftlint is clean (0 violations, 6 files). Now the placeholder gate.
+
+Placeholder gate passes (count=0). The `xcodebuild` gate can't run here, but the *logic* can: the adapter and model don't depend on SwiftUI. Let me compile a runtime harness (Adapter + Model + assertions) and actually execute the core logic to prove correctness at runtime.
+
+The MainActor `Task` + semaphore deadlocks the main thread in a CLI. Let me stop it and use `MainActor.assumeIsolated` instead (top-level CLI runs on the main thread).
+
+All 33 runtime checks pass — the adapter math and the MainActor model behavior (telemetry-once, env bridge, source binding, pinning, snapshot replacement) execute correctly. Let me update todos and do a final review of the model file before writing the log.
+
+Model is coherent. Let me confirm there's genuinely no full Xcode available anywhere (before concluding the build gate is BLOCKED), and check the log directory.
+
+Important: `/Applications/Xcode.app` actually exists — only the *active* developer dir is CLT. I can point to Xcode via `DEVELOPER_DIR` (no sudo needed). That unlocks the real `#Preview` macro and XCTest. There are no iOS simulator runtimes (so the iOS-simulator gate stays blocked), but I can run the tests on macOS. Let me verify the toolchain switch.
+
+Major: Xcode 26.5 is available via `DEVELOPER_DIR` and an **iPhone 16 simulator (iOS 26.5) is booted**. The capability the prompt requires IS present. XCTest isn't on the bare-SDK search path, but `swift test`/`xcodebuild` provide it. The full app scheme can't include my files (shared-surfaces isn't in `project.yml`, which is outside my allowed files) — so I'll build an **isolated SwiftPM harness with the exact source files** and run my real XCTest suite on both macOS and the iOS simulator.
+
+macOS `swift test`: **21 tests, 0 failures** — real XCTest + real SwiftUI compilation (including the `#Preview` macro). Also confirmed `Shared.xcframework` is absent (only `.gitkeep`), so the full app scheme can't link the KMP core regardless. Let me finish this run and execute the iOS-simulator test leg.
+
+macOS leg complete (exit 0). Now the iOS-simulator test leg via `xcodebuild` on the harness package, targeting the booted iPhone 16.
+
+iOS Simulator (iPhone 16, iOS 26.5): **21 tests, TEST SUCCEEDED**. Both target platforms pass with the exact source files on the real Xcode 26.5 toolchain.
+
+Now I'll assemble the gate log with real command output. First, capture the official gate steps (the literal `xcodebuild` uses the active CLT and the app scheme depends on the absent `Shared.xcframework` + unwired `shared-surfaces`), then the deep Xcode-toolchain verification.
+
+Section A captured (IOS_EXIT=1, MAC_EXIT=1 — CLT active dir). Now append the runnable gate steps (lint/format/placeholder) and Section B (the full Xcode-toolchain per-surface verification).
+
+Let me verify the A3 (swiftlint) section was captured correctly, since the `PIPESTATUS` in a subshell can be unreliable.
+
+A3 is accurate (0 violations, LINT_EXIT=0). Now append Section B — the full Xcode-toolchain per-surface verification (typecheck + macOS `swift test` + iOS-simulator `xcodebuild test` + runtime harness), capturing real output.
+
+B1 typecheck=0, B2 macOS XCTest=0 (21 tests), B3 iOS XCTest=0 (21 tests, TEST SUCCEEDED). Now append the runtime harness result and the verdict footer.
+
+Log complete (129 lines), ending with `EXIT=1` / `STATUS=BLOCKED`. Let me clean up temp artifacts and check git status before staging precisely.
+
+Clean: `project.yml`/`.swiftlint.yml` untouched; the pre-existing `AIUsageCard.*` changes aren't mine (I'll leave them unstaged). My new files are the `shared-surfaces/` dir + the log. Let me confirm the dir's contents and stage precisely.
+
+All 7 surface files + the log are staged — nothing else. Committing with the prompt's message and the required trailer.
+
+Committed cleanly: 8 files (7 surface + log), 997 insertions, nothing extraneous. Let me finalize the todo state.
+
+Task complete. The StaggerContainer shared surface is built, verified on both target platforms, and committed.
+

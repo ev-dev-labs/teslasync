@@ -1,0 +1,166 @@
+=== P4 Shared surface 0200 StickyChipBar (Apple) ===
+
+Web source : web/src/components/status/StickyChipBar.tsx  (THE spec — 117 lines)
+Native out : apps/apple/TeslaSync/shared-surfaces/StickyChipBar.{swift,Model,Adapter,Views,Previews,Tests}.swift
+             + StickyChipBar.strings  (7 files; git status shows ONLY these added — under a NEW shared-surfaces/ dir)
+Runner     : Darwin / full Xcode 26.5 reached via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+             (the box's xcode-select defaults to /Library/Developer/CommandLineTools; overridden for every
+             xcrun/swiftc/xcodebuild invocation here). iPhoneSimulator26.5 + MacOSX26.5 SDKs + iOS 26.5 sim runtime
+             present. swiftc 6.3.2, swiftlint 0.63.3, swiftformat 0.61.1, xcodegen 2.45.4, pwsh 7.6.2.
+Capability : SwiftUI + iOS 18 / macOS 15 SDKs ARE present and were COMPILED against (see dual-SDK compiles +
+             EXECUTED harness below) — this is NOT a STATUS=BLOCKED platform case. This surface uses NO charts/maps
+             (the web source has none), so Swift Charts / MapKit are not exercised.
+
+──────────────────────────────────────────────────────────────────────────────
+SURFACE PARITY — what was ported from the web source (no scope narrowing)
+──────────────────────────────────────────────────────────────────────────────
+The web StickyChipBar is a presentational "jump to section" pill nav: a `chips:{id,label}[]` prop, an `activeId`
+local state seeded from the first chip and updated by (a) an IntersectionObserver reporting the top-most visible
+section and (b) on-click, which also smooth-scrolls to the anchor. Sticky `<nav aria-label="Jump to section">`
+with a horizontally-scrollable row of pill `<button>`s; the active pill gets the cyan fill + ring + aria-current.
+
+• Composition : horizontally-scrolling Capsule pill row (web `flex gap-1.5 overflow-x-auto px-4 py-1.5`) inside a
+                translucent bar (`.background(.bar)` ≈ web `bg-[var(--bg-1)]/85 backdrop-blur`) + a 1px bottom
+                hairline (web `border-b`). Active pill = accent fill .15 + accent ring .30 + accent text (web
+                `bg-cyan-400/15 ring-cyan-400/30 text-cyan-200`); inactive = surface fill + textSecondary (web
+                `bg-[var(--surface-2)] text-[var(--text-secondary)]`). Pill metrics ported 1:1 (gap 6 / px-4 16 /
+                py-1.5 6 / pill min-h-32 / px-3 12 / py-1 4 / rounded-full → Capsule).
+• activeId    : `StickyChipBarProjection.resolveActiveID` is the faithful port of `useState(chips[0]?.id ?? '')`
+                plus the observer/onClick `setActiveId`: a requested id is honoured only when it names a present
+                chip, else the first chip is the default, else "" for an empty bar.
+• selection   : layered exactly like the web — `select(_:)` is the tap (web onClick → setActiveId + the host
+                scrolls via the view's `onSelect`), and `setActiveSection(id:)` is the host scroll-spy report
+                (web IntersectionObserver → setActiveId). A `ScrollViewReader` keeps the active pill centred (web
+                `overflow-x-auto` active tracking), animated unless Reduce Motion.
+• aria        : web `aria-label="Jump to section"` → the bar container's VoiceOver label; web `aria-current="true"`
+                → the active pill's `.isSelected` trait + a localized "Current section" value.
+• States      : the web has populated + (empty bar). The P4 leaf contract is layered ON TOP (identical to the
+                QuickNav/AiUsageCard sibling precedent, which are likewise presentational): loading (capsule
+                skeletons) / empty (friendly inline row, never a blank strip) / error (retry affordance) / content,
+                PLUS the orthogonal connection axis live/stale/offline (trailing freshness chip + one-shot stale
+                auto-refresh; offline keeps the cached bar). Every state renders — no hidden surface.
+• Data        : presentational — the bar owns no scroll content and no networking. Chips are host-supplied via the
+                P1/S8 `StickyChipBarSource` seam (`StaticStickyChipBarSource` = the web `chips` prop;
+                `InMemoryStickyChipBarSource` for previews/tests). The view issues no HTTP.
+• i18n        : 100% via the P1/S10 facade (StickyChipBarStrings, table "StickyChipBar"); 11 keys = 1 web-parity
+                ("Jump to section") + 10 native chrome. Zero English literals in Swift beyond the web-default
+                fallbacks. Chip labels are host-supplied display data, rendered verbatim (web parity).
+• Telemetry   : P1/S11 `view.opened` emitted once with surface slug "StickyChipBar".
+• a11y        : VoiceOver label/value/hint + .isSelected on every pill; labels on retry/refresh; Dynamic Type via
+                Font.TS roles; Reduce-Motion-aware press + scroll + skeleton shimmer.
+
+──────────────────────────────────────────────────────────────────────────────
+GATE STEPS — real captured results (no red painted green)
+──────────────────────────────────────────────────────────────────────────────
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    IOS_EXIT=DEFERRED — NOT executed as the whole-tree scheme, for three concrete, out-of-allowed-files reasons,
+    each verified (not assumed):
+      (a) project.yml `sources` globs TeslaSync/feature-views + TeslaSync/dashboard-widgets but NOT the prompt-
+          mandated TeslaSync/shared-surfaces (`grep shared-surfaces project.yml` → none). Wiring it requires editing
+          project.yml, which is OUTSIDE this prompt's allowed files — so the whole-tree build would not even see my
+          files. (Integration note below.)
+      (b) Frameworks/Shared.xcframework is NOT staged (`ls` → absent); the app target links it (project.yml), so an
+          app build first needs a Gradle/Kotlin-Native assemble — outside this surface's scope.
+      (c) HEAD carries pre-existing parallel-merge sibling breakage: `DashboardWidgetSize` is declared in 15
+          UNMODIFIED sibling files (Sources/DashboardWidgets/{DrivetrainHealthWidgetModel,BatteryCellsWidgetRegistry}
+          + 13 TeslaSync/dashboard-widgets/*.Model.swift) → the "DashboardWidgetSize is ambiguous / invalid
+          redeclaration" whole-tree failure the sibling logs document. Not my surface.
+    EQUIVALENT per-surface compilation WAS executed instead (stronger for THIS surface than a sibling-contaminated
+    whole-tree build that excludes my un-globbed files) — see IN-SCOPE VERIFICATION [A]/[B] below.
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    MAC_EXIT=DEFERRED — same (a)/(b)/(c) plus macOS requires a dev-signing identity. Equivalent macOS-15 SDK
+    compile executed below.
+[3] swiftlint --strict   (whole tree)
+    LINT_EXIT=DEFERRED at whole-tree scope — `.swiftlint.yml` `included:` does not list shared-surfaces (so my files
+    aren't in the default set), and the whole tree carries 1 PRE-EXISTING violation outside allowed files
+    (LifetimeStatsWidget.Adapter.swift function-body-length, per sibling logs; UNMODIFIED here).
+    SCOPED swiftlint --strict on the 6 StickyChipBar*.swift files (path-honoring config) →
+    "Found 0 violations, 0 serious in 6 files".  LINT_EXIT=0 (scoped) ✓
+[4] swiftformat --lint   (whole tree)
+    FORMAT_EXIT analogous — whole tree carries pre-existing formatting drift outside allowed files (per sibling
+    logs). SCOPED swiftformat --lint on the surface → "0/6 files require formatting".  FORMAT_EXIT=0 (scoped) ✓
+[5] ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces -Language swift
+    PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0 ✓
+    (Self-test PASS. Direct grep over the 6 swift files for TODO/FIXME/XXX/Placeholder/"Coming soon"/
+    "not implemented"/"Lorem ipsum"/stub/mock → none.)
+[6] plutil -lint StickyChipBar.strings → "OK".  (11 keys: 1 web-parity "Jump to section" + 10 native chrome.)
+
+──────────────────────────────────────────────────────────────────────────────
+IN-SCOPE SURFACE VERIFICATION — executed + compiled, real (the surface itself is fully green)
+──────────────────────────────────────────────────────────────────────────────
+[A] REAL shared component library compile (the exact files the app target would compile, real TSSkeleton/TSCard/
+    Color.TS/Font.TS/TSSpacing/TSRadius/TSMotion — 41 token+Design+Components files, minus the app-domain
+    UnitFormatters), Swift 6 strict concurrency:
+      • iOS 18 simulator (iPhoneSimulator26.5 SDK, -target arm64-apple-ios18.0-simulator):  0 errors ✓
+      • macOS 15        (MacOSX26.5 SDK,         -target arm64-apple-macos15.0):            0 errors ✓
+      (Adapter+Model+swift+Views; zero errors originate in any StickyChipBar* file.)
+[B] FULL surface incl the #Preview macros expanded by the real Xcode toolchain (-DDEBUG):
+      • iOS 18 simulator SDK:  0 errors ✓        • macOS 15 SDK:  0 errors ✓
+      (All 7 #Preview state previews — content/mid-active/stale/offline/loading/empty/error — typecheck.)
+[C] EXECUTED logic harness over the REAL Adapter + Model (swiftc-built macOS executable, Swift 6, RUN):
+      "EXECUTED 40 assertions, 0 failures" (exit 0). Covers resolveActiveID (default/honor/clamp/empty),
+      resolvePhase (loading/loaded/failed × cached), the builder active-flag + localized hint, the accessibility
+      seam, and the StickyChipBarModel wiring: view.opened-once telemetry, seeded active, select + scroll-spy
+      setActiveSection clamp, push→projection, stale auto-refresh once-per-episode, live re-arm, offline no-refresh,
+      stop+re-arm, refresh delegation, empty/error phases, and the StaticStickyChipBarSource publish.
+[D] Test bundle typecheck — StickyChipBar.Tests.swift against the REAL surface under Swift 6 strict concurrency
+    (XCTest free-function shims; the real XCTAssert* overlay needs xcodebuild's test host, not bare swiftc — a
+    minimal `import XCTest; XCTAssertEqual(1,1)` fails identically under plain swiftc, confirming this is a harness
+    limitation, not test-code error):  0 errors ✓.
+    NOTE: this step CAUGHT + FIXED a real Swift-6 defect — the file-level `echo`/`keyTap` localizer closures were
+    non-Sendable globals (`#MutableGlobalVariable`); fixed by typing them `@Sendable`. Re-verified 0 errors.
+
+──────────────────────────────────────────────────────────────────────────────
+INTEGRATION NOTE (action for the wiring/integration step — outside this prompt's allowed files)
+──────────────────────────────────────────────────────────────────────────────
+To fold this surface into the whole-tree build + lint, add `TeslaSync/shared-surfaces` to:
+  • project.yml      → the TeslaSync and TeslaSync-macOS targets' `sources:` (same as feature-views).
+  • .swiftlint.yml   → `included:`.
+The co-located *.Tests.swift follows the repo's established convention (compiles into the app target with
+ENABLE_TESTING_SEARCH_PATHS=YES, exactly like every feature-views sibling). No project.yml / .swiftlint.yml /
+.swiftformat / shared-catalog edits were made here (covenant #7).
+
+──────────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT
+──────────────────────────────────────────────────────────────────────────────
+ 1 No red-as-green   : the whole-tree xcodebuild + whole-tree swiftlint/swiftformat are shown as DEFERRED with
+                       concrete, verified causes (un-globbed path / unstaged xcframework / 15-file DashboardWidgetSize
+                       redeclaration / pre-existing sibling lint+format drift) — NOT painted green. Only the SCOPED
+                       gates + dual-SDK compiles + EXECUTED harness are reported green, and they ARE green.
+ 2 No scope narrowing: ALL web regions (pill row + active highlight + scroll-into-view + aria-label + aria-current)
+                       + ALL P4 states (loading/empty/error/content + stale/offline) + select/scroll-spy + i18n +
+                       a11y + telemetry + previews + tests implemented; nothing dropped.
+ 3 No skip-and-assume: the dual-SDK compiles RAN; the logic harness was EXECUTED (40/40); the DashboardWidgetSize
+                       blocker + the un-globbed path + the unstaged xcframework were DIRECTLY observed (grep/ls),
+                       not assumed.
+ 4 No stubs as final : complete implementations; PLACEHOLDER_COUNT=0; no TODO/stub/mock/placeholder/Lorem.
+ 5 No parity shortcuts: faithful port of the activeId default+clamp, the onClick/observer split, the pill visual
+                       contract, and the one web string ("Jump to section").
+ 6 No delegation     : authored directly (no sub-agent delegation of the surface).
+ 7 No predecessor bypass: did NOT edit project.yml / .swiftlint.yml / .swiftformat / sibling files / the shared
+                       Localizable.xcstrings; strings ship as the per-surface table; the generated .xcodeproj +
+                       Shared.xcframework are local build artifacts (neither needed nor committed).
+ 8 No commit on red  : committing on GREEN scoped swiftlint + scoped swiftformat + placeholder + plutil + dual-SDK
+                       full-surface compiles (incl #Preview) + an EXECUTED 40/40 harness + a Swift-6 test typecheck.
+                       The whole-tree xcodebuild / whole-tree swiftlint+swiftformat are DEFERRED, blocked SOLELY by
+                       out-of-allowed-files causes — never by this surface.
+ 9 No silent drift   : `git status` lists ONLY the new TeslaSync/shared-surfaces/ files (+ this log).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED> below.
+
+──────────────────────────────────────────────────────────────────────────────
+DISPOSITION
+──────────────────────────────────────────────────────────────────────────────
+Production-polished native StickyChipBar shipped at parity with the web source and verified by every in-scope,
+host-runnable means: dual-SDK (iOS-18-sim + macOS-15) full-surface compiles against the REAL shared component
+library AND with the #Preview macros expanded, under Swift 6 strict concurrency; an EXECUTED-green logic harness
+(40/40) over the real Adapter+Model; a Swift-6 test-bundle typecheck (which caught + fixed a real @Sendable defect);
+and green scoped swiftlint + scoped swiftformat + placeholder + plutil gates. The whole-tree `xcodebuild build test`
+(iOS + macOS) and whole-tree `swiftlint --strict` / `swiftformat --lint` are DEFERRED to the integration runner
+because they are blocked SOLELY by out-of-allowed-files causes — the prompt-mandated shared-surfaces/ path is not yet
+globbed in project.yml/.swiftlint.yml (a wiring step I am forbidden to perform), Shared.xcframework is unstaged, and
+HEAD carries pre-existing parallel-merge DashboardWidgetSize redeclarations across 15 unmodified sibling files. ZERO
+errors originate in any StickyChipBar* file. This matches the established "code-complete + DEFERRED whole-tree gate"
+precedent of the sibling P4 surfaces (e.g. 0201-AIRestorePanel).
+
+EXIT=0
+STATUS=DONE

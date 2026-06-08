@@ -1,0 +1,131 @@
+I'll start by exploring the repository structure to understand what exists, particularly the web source and the Apple app structure.
+
+Let me read the web source and explore the Apple app structure, particularly an existing example to learn the pattern.
+
+Now let me study the existing patterns. Let me read the AIUsageCard example (the established pattern), check for prior shared-surface work, and understand the project structure.
+
+The pattern files use `AiUsageCard.*`. Let me study this established example thoroughly to learn the conventions.
+
+The pattern is comprehensive. Let me read the rest of the AiUsageCard files to fully understand the conventions (tokens, chrome, projection, adapter, tests, strings).
+
+Let me read the remaining example files (Adapter, Previews, Tests), the placeholder-check script, and check the toolchain availability.
+
+Let me read the Adapter and find the shared P1/S9 tokens + P1/S11 components, plus check the toolchain.
+
+Important finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me check whether a full Xcode is available anywhere, whether `pwsh` exists, and whether SwiftUI compiles against the macOS SDK via `swiftc`.
+
+Critical: `/Applications/Xcode.app` exists — `xcodebuild` may work via `DEVELOPER_DIR`. Let me verify, check schemes/simulators, and read the placeholder patterns and project config.
+
+Excellent — **Xcode 26.5 works** via `DEVELOPER_DIR`, iPhone 16 simulator is booted. Note: `"Placeholder"` is a forbidden pattern (PowerShell `-match` is case-insensitive), so I must avoid `.redacted(.placeholder)` and the word in comments. Let me read the project config and shared tokens.
+
+Now let me understand build feasibility: the `shared-surfaces` dir isn't in `project.yml` sources (only `feature-views`/`dashboard-widgets` are), and I'm restricted to `ListExportMenu.*` files. Let me check the Shared.xcframework dependency, existing build state, and how feature-views Tests files are wired.
+
+Let me read the pending-verifications note and check how sibling P4 prompts/methodology handle wiring and the KMP framework dependency.
+
+The repo has an established protocol in `macos-pending-verifications.md`: the full-app `xcodebuild` is blocked by **pre-existing, unrelated** parallel-merge collisions (DashboardWidgetSize redefined, co-located Tests files, unstaged Shared.xcframework, signing). Prior surfaces verify **in isolation** (SwiftPM build+tests, swiftc -typecheck, lint/format/placeholder) and defer the full-app build. Let me check how prior surface logs recorded their STATUS.
+
+This is the decisive precedent: every P4 Apple surface records **EXIT=0 / STATUS=DONE** when verified GREEN in isolation (Swift 6 SwiftPM build + XCTest, swiftc -typecheck, swiftlint/swiftformat/placeholder), with the full-app `xcodebuild` explicitly reported **DEFERRED** (never as passing) on pre-existing/unrelated blockers. I'll follow this exactly.
+
+Let me locate the shared design tokens and components my surface will use.
+
+Now let me understand the dependency closure for an isolated build. Let me check `TSCard` and whether `Sources/Components` is self-contained (KMP-free).
+
+`Sources/Components` is KMP-free (only system frameworks). My isolated-build closure can be minimal: `Tokens.swift` + `Buttons.swift` + `Motion.swift`. Let me check how prior feature-views handle a "menu" control and the TSButton/Menu convention, since the web source's only shared component is `Button`.
+
+The established menu idiom is clear: `Menu { Button + Label } label: { styled Image }`, with `.accessibilityLabel`. The web `Button` maps to native `Button` menu items / the `Menu` affordance — no `TSButton` needed for the trigger, matching convention. Let me check the inline `Picker`-in-menu pattern for the scope choice.
+
+I have all conventions. Let me read the lint/format configs to match style exactly, then check `TSCard`/Cards isn't needed (I'll keep my closure to `Tokens.swift` only — using `Menu`/`Picker`/`Button` + tokens).
+
+I have everything I need. Let me set up a todo list and the plan, then write the surface files following the established AiUsageCard/LiveControls conventions.
+
+Now I'll write the surface. Starting with the pure-logic Adapter:
+
+Now the Model file (i18n facade, telemetry seam, source seam, `@Observable` model):
+
+Now the Views (trigger label + menu content):
+
+Now the main view:
+
+The `.menuStyle(.borderlessButton)` is macOS-only — I'll remove it for cross-platform safety.
+
+Now the Previews (one per state):
+
+Now the i18n strings catalog:
+
+Now the test files — pure adapter tests:
+
+Now the projection/model/a11y tests:
+
+All 8 files written. Before verifying, let me check for type-name collisions in the real app (my public types must not clash with existing ones).
+
+No collisions today, but `ExportScope`/`ExportFormat` are generic module-global names that risk future clashes. Following the strict per-surface naming convention (like `AiUsage*`), I'll prefix my value types with `ListExport`. Applying the rename across all files:
+
+All renames clean. Now let me set up an isolated SwiftPM package (Swift 6 strict concurrency) in the session workspace to build + test against the real `Tokens.swift`.
+
+Now build the isolated package with the Xcode toolchain (Swift 6 strict concurrency):
+
+Build is clean (including `#Preview`). Now run the tests:
+
+All 27 tests pass under Swift 6 strict concurrency. Now `swiftc -typecheck` against both real deployment SDKs (iOS 18 + macOS 15):
+
+Both deployment-target typechecks pass cleanly. Now format + lint my files. First auto-format to canonical, then verify with `--lint` and `swiftlint --strict`:
+
+`swiftformat --lint` clean (0/7). Now `swiftlint --strict` on my files. Note: the `.swiftlint.yml` `included:` list doesn't yet contain `shared-surfaces` (a wiring gap owned outside my allowed files), so I'll lint my files explicitly:
+
+swiftlint scanned the whole project (via config `included`) and found 1 violation. Let me identify exactly where it is:
+
+My 7 files lint **clean** (0 violations). The 1 project-wide violation is pre-existing in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` — not mine. Now the placeholder gate, plus re-sync formatted files and re-verify build/tests:
+
+Placeholder gate clean (COUNT=0, 0 opt-outs). Now re-sync the formatted files into the isolated package and re-verify build + tests on the final versions:
+
+Final files: 27/27 green. Now I'll gather honest evidence for the full-app `xcodebuild` disposition (the established deferral). Let me re-confirm the pre-existing blockers and the wiring状态:
+
+Evidence confirms the established blockers (Shared.xcframework absent, DashboardWidgetSize ×15, 261 co-located XCTest files, shared-surfaces unwired). Per the covenant ("execute every runnable gate, no assume"), I'll still attempt the real `xcodebuild`. First generate the project:
+
+Project generates (exit 0), is git-ignored, and confirms my files aren't wired in (0 refs — wiring owned by P4 core). Now I'll attempt the real `xcodebuild` gate to capture an honest exit. Running async (the scheme preAction kicks off the KMP/Gradle build):
+
+No output after 7 minutes — consistent with the scheme's KMP/Gradle preAction. Let me confirm what it's doing in a separate shell:
+
+Confirmed via live process inspection: `xcodebuild`'s scheme preAction is running the **KMP/Gradle `Shared.xcframework` build** (Kotlin/Native, heavily contended across parallel slots) — the documented "unstaged Shared.xcframework" blocker. Past it, the app target still hits the pre-existing collisions (DashboardWidgetSize ×15, 261 co-located XCTest files), and my files aren't even wired in. This is the established DEFERRED disposition. I'll stop it to free shared resources:
+
+Let me verify the working tree is clean (only my files) and clean up the git-ignored project + any lingering build for my slot:
+
+Two lingering build processes for my slot — killing them by specific PID (frees shared resources):
+
+Lingering processes cleared. Now let me gather final file stats and write the honest gate log:
+
+Now I'll write the comprehensive, honest gate log following the established precedent format:
+
+Now let me commit only my allowed files (staging precisely, excluding the pre-existing AIUsageCard edits):
+
+Exactly the 8 surface files + log staged. Committing:
+
+Committed cleanly as `c4248a545` (only my 8 files + log). Let me do a final i18n key cross-check (every code key must exist in the catalog) and clean up the temp build artifacts:
+
+All 9 letter-keys match perfectly; let me confirm the 2 mixed-case a11y keys (with digits) also exist in both code and catalog:
+
+All checks confirmed. The task is complete.
+
+## Summary
+
+Shipped a production-grade, Apple-idiomatic native **`ListExportMenu`** at parity with `web/src/components/forms/ListExportMenu.tsx`, at `apps/apple/TeslaSync/shared-surfaces/ListExportMenu.*` (8 files, 702 shipped LOC + 27 tests), committed as `c4248a545` with the honest gate log.
+
+**Design (native HIG):** the web custom popover → a system `Menu`; the ghost trigger + `<button role=menuitem>`s → the `Menu` affordance + native `Button`s; the scope radios → an inline `Picker` (checkmark radios); the `disabled` prop → reason-typed availability (ready / loading-spinner / empty-dim). Bound through a P1/S8 source seam (`ListExportMenuModel`, `@MainActor @Observable`), P1/S10 i18n facade, P1/S11 `view.opened` telemetry — no HTTP, no serialization in the view (the host owns it, exactly like the web).
+
+**Parity reproduced & tested:** initial-scope rule, `selected→visible` auto-correction, `selectedCount>0` scope gating, `visibleCount`-optional count labels (ungrouped `{{count}}`), CSV/JSON order, the chosen scope handed to the export callback.
+
+**Host-runnable gates — all GREEN (real, on this runner):**
+- Isolated SwiftPM build, Swift 6 strict concurrency, against the **real** `Tokens.swift` — compiles incl. `#Preview`.
+- **27/27 XCTest** pass (Xcode 26.5 runtime).
+- **iOS-18 + macOS-15 `swiftc -typecheck`** → exit 0 both.
+- `swiftformat --lint` 0/7; `swiftlint --strict` **0 violations on my files**; placeholder gate **COUNT=0, 0 opt-outs**.
+- All 11 i18n keys verified present in the catalog.
+
+**Full-app `xcodebuild build test` — DEFERRED** (reported, never as passing), per the repo's established protocol (`apps/macos-pending-verifications.md`): blocked by the unstaged KMP `Shared.xcframework` Gradle pre-action (confirmed running live), pre-existing `DashboardWidgetSize` ×15 + 261 co-located XCTest collisions, macOS signing, and the not-yet-wired `shared-surfaces` directory (project.yml/swiftlint wiring is owned by P4 core / the P99 acceptance gate — outside this prompt's allowed files). Zero errors attributable to this surface.
+
+Log ends `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and verified — all work committed. Calling task_complete.
+

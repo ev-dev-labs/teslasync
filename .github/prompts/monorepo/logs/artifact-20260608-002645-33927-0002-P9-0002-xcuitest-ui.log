@@ -1,0 +1,329 @@
+================================================================================
+P4 · P9 · 0002 — Apple XCUITest UI coverage
+Run: 2026-06-08T00:52-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/2
+HEAD: c9c6fdb9f
+Prompt: .github/prompts/monorepo/p4-apple/P9-0002-xcuitest-ui.prompt.md
+Delegation: FORBIDDEN (performed directly; no sub-agents/background/parallel agents)
+================================================================================
+
+================================================================================
+=== PREFLIGHT ===
+================================================================================
+TOOLCHAIN / CAPABILITY PROBE (run for real — Honesty Covenant rule 3, no skip-and-assume):
+  xcode-select -p ............ /Library/Developer/CommandLineTools (CLT)
+  /Applications/Xcode.app .... PRESENT → DEVELOPER_DIR override (no sudo):
+    export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+  xcodebuild -version ........ Xcode 26.5 (Build 17F42)                     ✅
+  SDKs ....................... iphonesimulator26.5, macosx26.5              ✅
+  simctl iPhone 16 ........... present + Booted (iOS 26.5 runtime 23F77)    ✅
+  simctl iPads ............... iPad Pro 13" (M5), iPad Air 11"/13", iPad mini, iPad (A16) ✅
+  swiftlint .................. 0.63.3                                       ✅
+  swiftformat ................ 0.61.1                                       ✅
+  xcodegen ................... 2.45.4                                       ✅
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                       ✅
+  java ....................... OpenJDK 17.0.19 (Homebrew) → Kotlin/Native   ✅
+  security find-identity -v -p codesigning → "0 valid identities found"     ❌ (B2)
+
+  → macOS + Xcode + iOS/iPad simulators ARE available; the "no macOS/Xcode
+    runner / missing simulator" capability escape hatch does NOT apply to the
+    iOS/iPad idioms. The gate is RUN FOR REAL below. The macOS *signing*
+    capability gap (0 identities) is a distinct, documented blocker (B2).
+
+SHARED CORE (ADR-004): Frameworks/Shared.xcframework was unstaged (only .gitkeep).
+  Built + staged via Scripts/build-shared-xcframework.sh (Gradle :core:assembleSharedXCFramework):
+    BUILD SUCCESSFUL in 7m12s → {ios-arm64, ios-arm64-simulator, macos-arm64}  ✅
+  xcodegen generate → TeslaSync.xcodeproj regenerated (git-ignored, ADR-002).  ✅
+
+PREDECESSOR CHECK (Honesty Covenant rule 7 — "No predecessor bypass"):
+  "Depends on: P9-0001 XCTest unit coverage, P4/P7 page implementations."
+  • P9-0001 (logs/p4-p9-0001-xctest-unit.log) ........ STATUS=BLOCKED, EXIT=70  ❌
+      Its two blockers (macOS dev-cert signing; P7 page view-models absent) are
+      UNCHANGED here, and a THIRD has since appeared (the iOS app-target build
+      has regressed green→broken; see B1). Rule 7 is therefore not satisfied:
+      the direct predecessor is not DONE.
+  • P4/P7 page implementations .......... ABSENT. 153 page prompts exist under
+      p4-apple/pages/**; 0 are generated into Swift (no Sources/Pages or
+      Sources/Features page module; only AppRoute `.settings` is registered in
+      AppRouteHostRegistry — Sources/Platform/Settings/SettingsScene.swift:36).
+
+CLEAN-TREE CHECK (Honesty Covenant rule 9 — "No silent drift"):
+  git status --porcelain at start (NOT produced by this prompt):
+    M apps/apple/TeslaSync/feature-views/AIUsageCard.{Adapter,Model,Previews,Tests,Views,strings,swift}.swift
+    M web/src/features/admin/components/devtools/FleetApiSection.tsx
+    M web/src/features/admin/pages/BackupRestorePage.tsx
+  These pre-existing, uncommitted edits (an AIUsageCard refactor + 2 web files)
+  are from other work sharing this non-sandboxed workspace. This prompt creates
+  ZERO source changes and stages ONLY this log file (see COMMIT), so none of the
+  above is committed and no drift is introduced by P9-0002.
+
+================================================================================
+=== SURVEY (implementation step 1 — inventory) ===
+================================================================================
+SOURCE OF TRUTH (web): web/src/App.tsx route groups → mirrored by AppRoute (22 routes)
+  + AppRouteParser aliases (11 redirects, e.g. /battery/health→energy).
+
+XCUITEST TARGETS (project.yml): TeslaSyncUITests (iOS) + TeslaSync-macOSUITests
+  (macOS) both compile the SHARED Tests/UI/** group and depend on the app target.
+  → A UI-test bundle cannot build unless its app target builds.
+
+EXISTING UI SUITE (Tests/UI/**, the P9-0002 baseline to extend): 4 files / 13 methods
+    AppLaunchUITests (1)         — foreground launch on both idioms
+    AuthOnboardingUITests (3)    — signedOut shell, cancelled sign-in, locked/biometric
+    LiveDataUITests (3)          — live indicator, go-stale→reconnect, push-keeps-live
+    PushNotificationsUITests (6) — authz, foreground banner→deep-link, command tap→route,
+                                   token registration, Live Activity, settings status
+  Deterministic harness already present (no real network/auth):
+    -uiTestAuthState <signedOut|locked|authenticated>  (Auth/AuthPreviewSupport.swift)
+    -uiTestLiveDemo   → LiveDemoView   (Live/UI/LiveDemoView.swift)
+    -uiTestPushDemo   → PushDemoView   (Notifications/UI/PushDemoView.swift)
+  accessibilityIdentifier inventory (38 IDs): concentrated in Auth (auth.signIn/unlock/
+    reauth.button), Live (live.indicator/freshness/staleBanner/reconnect/loading/error/
+    empty + live.demo.*), Push (push.banner.* / push.demo.* / push.settings.*).
+  GAP: components (Components/{UI,Charts,DataDisplay,Feedback,Forms,Maps,Motion}) and the
+    navigation shell (AppShell sidebar/tabs/RouteHost/command-palette/search) carry NO
+    accessibility identifiers yet (0 in Sources/Components, Sources/App).
+
+ROUTE REGISTRY: AppRoute (22) + AppRouteGroup (7) + AppRouteParser (11 aliases) +
+  AppRouteHostRegistry. AppShell renders split-nav (macOS/iPad regular) vs tab-nav
+  (iPhone compact); RouteHost shows the registered page or a TSEmptyState
+  ("route.pagePending"). Only `.settings` is registered → 21/22 routes render the
+  pending empty-state; the 153 detailed P7 parity-unit pages do not exist.
+
+PAGE PARITY LEDGERS: p4-apple/pages/** = 153 prompt units; 0 generated. The Apple
+  per-idiom ledgers consumed by P99 (apps/parity/apple-*-ledger.json) are the
+  acceptance surface; page-state UI tests require the rendered P7 pages to exist.
+
+AGGREGATE APP-TARGET HEALTH (changed since P9-0001): project.yml compiles the dirs
+  TeslaSync/feature-views and TeslaSync/dashboard-widgets directly INTO the app
+  target. Those dirs now contain 256 co-located test files
+  (170 *.Tests.swift + 29 *.ModelTests.swift in feature-views; 54 *.Tests.swift +
+  3 *.ModelTests in dashboard-widgets) that `import XCTest`, plus 15 redefinitions
+  of `struct DashboardWidgetSize` and 2 of `PowerFlowConnection`. P9-0001 ran before
+  these accumulated (256 files then; 1909 now) and saw a GREEN iOS build; that build
+  has since regressed (B1). This is the parallel-merge collision recorded in
+  apps/macos-pending-verifications.md, deferred to P99.
+
+================================================================================
+=== REASONING (chosen approach + rejected alternatives) ===
+================================================================================
+GOAL: add XCUITest coverage for component states + every page parity state on both
+Apple idioms, then run the full Apple gate (iOS + macOS).
+
+CONSTRAINTS THAT DECIDE THE DISPOSITION:
+  • The full Apple gate (the prompt's exact command set) requires the app target to
+    BUILD on iOS Simulator AND macOS. On this tree the app target does NOT build
+    (B1 iOS; B2 macOS), so the TeslaSyncUITests / TeslaSync-macOSUITests bundles
+    cannot build or run — NEITHER the 13 existing UI tests NOR any new ones can
+    execute. Authoring UI tests that cannot compile/run would be unverifiable and
+    would violate rules 1/3/4 (no red-as-green, no skip-and-assume, no stubs).
+  • "Each P7 parity unit has UI tests for loading/empty/error/success/stale/deep-link"
+    is unsatisfiable: 0/153 P7 pages are rendered in the app (only `.settings`
+    registered). Fabricating pages to self-unblock = rules 4/5/7 violation.
+  • B1–B5 are PRE-EXISTING violations owned by OTHER prompts' surfaces
+    (feature-views, dashboard-widgets); B2/B6 are capability/predecessor gaps.
+    None are within P9-0002's purpose (add UITests).
+
+REJECTED — "fix the app-target build here so UI tests can run":
+  Excluding **/*.Tests.swift + **/*.ModelTests.swift from the app target in
+  project.yml is within Allowed-files, but (a) it does NOT yield a buildable app
+  target — 15× `DashboardWidgetSize` + 2× `PowerFlowConnection` redefinitions still
+  fail compilation, cascading into dozens of dashboard-widget files owned by other
+  prompts; (b) those files are being edited by other agents in this shared
+  workspace (see the live uncommitted AIUsageCard refactor) → high conflict/drift
+  risk (rule 9); (c) apps/macos-pending-verifications.md + the P99 prompt assign
+  this exact aggregate-build collision to the P99 acceptance gate on a signed
+  macos-latest runner — it is explicitly NOT P9-0002's job; (d) it is moot for the
+  verdict: B2 (macOS signing) independently forces STATUS=BLOCKED regardless, and
+  rule 8 then forbids committing any code. → Out of scope; not attempted.
+
+REJECTED — "fix the lint/format/placeholder violations (B3/B4/B5)":
+  They live in LifetimeStatsWidget / ActionBuilder / WatchSummaryWidget / etc.
+  (other prompts' surfaces). Fixing them is scope-creep into other deliverables,
+  risks parallel-agent conflicts, and does not change the verdict (B1/B2/B6 remain).
+  → Not attempted; documented instead.
+
+REJECTED — "narrow the gate to iOS-only / a single test bundle to get a green run":
+  Rule 2 (no scope narrowing): the exact prompt gate (iOS + macOS + lint + format +
+  placeholder) was run unmodified. No --filter, no -only-testing, no signing-disable
+  flags, no destination substitution.
+
+CHOSEN — run the EXACT gate for real, record precise evidence for every blocker,
+  reach the honest STATUS=BLOCKED, and (rule 8 + commit discipline) commit ONLY this
+  log. This mirrors the sanctioned disposition of the direct predecessor P9-0001 on
+  the same blocker family, with broader evidence (the iOS regression is new).
+
+================================================================================
+=== CHANGES (files touched by this prompt) ===
+================================================================================
+NONE. P9-0002 produces zero source changes:
+  • New/authored UI tests cannot be compiled or run on this tree (B1/B2), so per
+    rules 1/3/4 none were shipped as "done"/green.
+  • The blockers are pre-existing and owned by other prompts / are capability gaps;
+    fixing them is out of scope (see REASONING) and uncommittable under rule 8.
+  • Generated TeslaSync.xcodeproj is git-ignored (ADR-002); Shared.xcframework under
+    Frameworks/ is git-ignored. Neither is a tracked change.
+git diff --stat (apps/apple, excluding pre-existing AIUsageCard refactor): 0 files.
+
+================================================================================
+=== PARITY (per-state coverage vs the manifest unit) ===
+================================================================================
+PARITY_UNIT = p4-apple UI test coverage (components + 153 page parity-state units, both idioms)
+
+COMPONENTS (UI/Charts/DataDisplay/Feedback/Forms/Maps/Motion):
+  Renderable via existing demo surfaces, but UI-test execution is BLOCKED by B1
+  (app/UITest bundle will not build). New component-state UI tests + the
+  accessibility identifiers they need cannot be authored-and-verified. COVERED=0.
+
+PAGES (loading/empty/error+retry/success/stale-offline/deep-link per P7 unit):
+  P7 parity units enumerated under p4-apple/pages/**: 153
+    (admin 29, system 18, driving 11, analytics/automations/battery/charging/
+     notifications 10 each, telemetry 7, vehicle-systems 7, settings 6, maps 5,
+     vehicles 4, dashboard/power-user/trips 3, sharing 2, diagnostics/explore/
+     exports/onboarding/watch 1).
+  Pages rendered in the app: 1/22 routes registered (`.settings`); 0/153 detailed
+  P7 parity-unit pages exist. Page-state UI suites authorable: 0/153.
+  PARITY_COVERED = 0   PARITY_REQUIRED = 153  → PARITY_COVERED < PARITY_REQUIRED
+  → STATUS=BLOCKED (methodology Parity-gate rule).
+
+FLOWS (auth/onboarding, route aliases, search/command-palette, notification deep
+  links, settings, widget/deep-link handoff): harness + real shell EXIST and 13
+  baseline UI tests already exercise auth/live/push flows, but execution is BLOCKED
+  by B1 (cannot build the UITest bundle). COVERED(verified)=0 on this tree.
+
+ACTIONABLE COVERAGE PLAN (ready for the unblocked re-run on P99's signed runner once
+  B1/B2/B6 clear — captured so the design work is not lost):
+  Harness: extend launch args — -uiTestRoute <path> (seed AppShell selection /
+    deep link), -uiTestLocale, -uiTestAppearance, -uiTestDynamicType, -uiTestReduceMotion,
+    -uiTestSizeClass (compact|regular), -uiTestFixture <dataset> — all parsed in
+    TeslaSyncApp/AppShell, no real network/auth (mirrors the existing -uiTest* pattern).
+  Add accessibilityIdentifiers to AppShell (shell.sidebar, shell.tab.<route>,
+    shell.routeHost, shell.search, command.palette, palette.row.<route>) and to the
+    Components galleries; assert VoiceOver labels + Dynamic Type resilience + hit targets.
+  Suites: NavigationShellUITests (split vs tab idiom), DeepLinkRoutingUITests (22 routes
+    + 11 aliases), CommandPaletteSearchUITests, ComponentStatesUITests (loading/empty/
+    error+retry/success/stale per component), PageParityUITests (the 153 P7 units once
+    rendered), AccessibilityUITests (labels/focus/Dynamic Type/Reduce Motion), each run
+    on iPhone-compact, iPad-regular, and macOS destinations.
+
+================================================================================
+=== GATE (exact prompt commands; implementation step 5) ===
+================================================================================
+Gate formula: EXIT=0 only if IOS/MAC/LINT/FORMAT/PLACEHOLDER all 0.
+
+[iOS] xcodebuild -scheme TeslaSync \
+        -destination 'platform=iOS Simulator,name=iPhone 16' build test
+   ** TEST FAILED ** — "Testing cancelled because the build failed."
+   Root cause (B1, pre-existing parallel-merge collision; NOT P9-0002 code):
+     apps/apple/TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8:
+       error: unable to resolve module dependency: 'XCTest'   (import XCTest)
+     The app target (TeslaSync) compiles TeslaSync/feature-views +
+     TeslaSync/dashboard-widgets, which contain 256 co-located *.Tests.swift /
+     *.ModelTests.swift that `import XCTest` (the app target does not link XCTest).
+     Latent behind it: `struct DashboardWidgetSize` redefined 15×, `PowerFlowConnection` 2×.
+   iOS Simulator does not enforce entitlement signing, so the build proceeds to the
+   app-target compile and fails there. (P9-0001 saw iOS GREEN before these 256 test
+   files accumulated; the iOS app target has since REGRESSED.)
+   IOS_EXIT=65                                                            ❌ (B1)
+
+[macOS] xcodebuild -scheme TeslaSync-macOS build test
+   ** BUILD FAILED ** → "Testing cancelled because the build failed."
+     TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require
+       signing with a development certificate. (target 'TeslaSync-macOS')
+     TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that
+       require signing with a development certificate. (target 'TeslaSyncWidgets-macOS')
+   Root cause (B2, capability gap; NOT P9-0002 code): security find-identity -v -p
+   codesigning = "0 valid identities found". macOS 'My Mac' enforces entitlement-cert
+   signing early (app-sandbox + application-groups + aps-environment), so it fails at
+   the signing phase before the app-target test-file compile. ADR-012 / apps/macos-
+   pending-verifications.md defer this to the P99 acceptance gate on a signed
+   macos-latest runner.
+   MAC_EXIT=65                                                            ❌ (B2)
+
+[swiftlint --strict]   (cd apps/apple; 1909 files)
+   Found 1 violation, 1 serious:
+     TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19:
+       error: Function Body Length Violation: 78 lines (> 50) (function_body_length)
+   Pre-existing; owned by the dashboard-widgets prompt, not P9-0002.
+   LINT_EXIT=2                                                            ❌ (B3)
+
+[swiftformat --lint apps/apple]   (1913 files, 2 skipped)
+     TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1:
+       error: (blankLinesBetweenScopes) Insert blank line before declarations.
+   Pre-existing; owned by the feature-views prompt, not P9-0002.
+   FORMAT_EXIT=1                                                          ❌ (B4)
+
+[check-placeholders.ps1 -Path apps/apple -Language swift]   (pwsh)
+   PLACEHOLDER_ALLOWED=22   PLACEHOLDER_COUNT=43   → 43 hits across 7 surfaces
+   (WatchSummaryWidget, YearReviewWidget, ChargingSection, CommandSearch,
+    ConditionBuilder, InfrastructureSection, TemperatureSection). Pre-existing;
+   owned by those surfaces' prompts, not P9-0002.
+   PLACEHOLDER_EXIT=1                                                     ❌ (B5)
+
+GATE TALLY: IOS_EXIT=65  MAC_EXIT=65  LINT_EXIT=2  FORMAT_EXIT=1  PLACEHOLDER_EXIT=1
+  → not all 0 ⇒ gate EXIT is NON-ZERO ⇒ STATUS=BLOCKED.
+
+================================================================================
+=== ACCEPTANCE CRITERIA ===
+================================================================================
+[ ] XCUITest covers component states + every page parity state on iPhone + macOS —
+    NOT met. App/UITest bundles do not build (B1 iOS / B2 macOS); 0/153 P7 pages
+    exist (B6). No UI test (existing 13 or new) can execute on this tree.
+[ ] Deep links/aliases/auth-onboarding/settings/notification routing/error-retry
+    tested — harness + 13 baseline flow tests exist but cannot run (B1). NOT verified.
+[ ] Accessibility + Dynamic Type checks; fixture mode no real network/auth —
+    harness is real-network/auth-free; new a11y/Dynamic-Type assertions cannot be
+    authored-and-verified (B1). NOT met.
+[ ] SwiftLint/SwiftFormat + placeholder clean; iOS + macOS green — ALL red
+    (B1–B5), every failure pre-existing/capability and outside P9-0002 scope.
+[x] EXIT/STATUS recorded below = BLOCKED.
+
+================================================================================
+=== HONESTY COVENANT ===
+================================================================================
+1  No red-as-green : every gate shown with its real non-zero exit + root cause;
+                     no test claimed to pass (none could run). 0/153 pages shown.
+2  No scope narrowing: ran the EXACT prompt gate (iOS+macOS+lint+format+placeholder),
+                     unmodified — no --filter, -only-testing, signing-disable, or
+                     destination substitution.
+3  No skip-and-assume: every gate executed for real this run; signing identities,
+                     P7 page count, and collision counts measured, not assumed.
+4  No stubs as final: shipped no fake/unbuildable tests, pages, or placeholders.
+5  No parity shortcuts: made NO page-parity claim (0/153 P7 pages render).
+6  No delegation: performed directly; no sub-agents/background/parallel agents.
+7  No predecessor bypass: P9-0001 is BLOCKED and P7 pages are absent — respected;
+                     not fabricated to self-unblock.
+8  No commit on red: BLOCKED ⇒ committing ONLY this log; zero code committed. The
+                     pre-existing AIUsageCard/web working-tree edits are NOT staged.
+9  No silent drift: P9-0002 changed no tracked files; pre-existing edits disclosed
+                     in PREFLIGHT and left untouched.
+10 Log ends with EXIT=<int> and STATUS=<...> each on its own line, below.
+
+================================================================================
+=== DISPOSITION ===
+================================================================================
+STATUS=BLOCKED by independent, evidence-backed blockers, NONE within P9-0002's
+scope (which is: add XCUITest UI coverage):
+  B1 iOS app-target build broken (IOS_EXIT=65) — 256 co-located *.Tests/*.ModelTests
+     import XCTest into the app target (+15× DashboardWidgetSize) ⇒ UITest bundle
+     cannot build/run. Pre-existing parallel-merge collision (macos-pending → P99).
+  B2 macOS build broken (MAC_EXIT=65) — entitlements need a dev cert; 0 valid signing
+     identities. Capability gap (ADR-012 → P99 signed macos-latest runner).
+  B3 swiftlint red (LINT_EXIT=2) — pre-existing LifetimeStatsWidget.Adapter.swift:141.
+  B4 swiftformat red (FORMAT_EXIT=1) — pre-existing ActionBuilder.Previews.swift:48.
+  B5 placeholder red (PLACEHOLDER_EXIT=1) — 43>22 across 7 other surfaces.
+  B6 P7 pages absent — 153 prompts, 0 generated ⇒ "every page parity state"
+     unsatisfiable. Predecessor gap (rule 7) + parity (rule 5).
+  + predecessor P9-0001 itself STATUS=BLOCKED (rule 7).
+Net vs P9-0001: harness/route/component inventory + a concrete UI-test coverage plan
+recorded; and the iOS app-target REGRESSION (green→broken via post-P9-0001 merge
+accumulation) is newly diagnosed with exact evidence for P99.
+
+================================================================================
+=== COMMIT ===
+================================================================================
+Per methodology commit discipline (BLOCKED → `git add <log>` only, never code):
+  git add .github/prompts/monorepo/logs/p4-p9-0002-xcuitest-ui.log
+  git commit -m "chore(monorepo): BLOCKED p4-p9-0002 — UITest gate red (iOS app-target XCTest collision, macOS dev-cert signing, P7 pages absent)"
+
+EXIT=65
+STATUS=BLOCKED

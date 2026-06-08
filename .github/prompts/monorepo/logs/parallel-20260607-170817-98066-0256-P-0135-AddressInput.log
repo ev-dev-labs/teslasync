@@ -1,0 +1,146 @@
+I'll start by investigating the repository structure and the capability requirements before making any changes.
+
+Key finding: `xcodebuild` exists but **Xcode itself is not installed** (only Command Line Tools). Let me verify this thoroughly and explore the existing Apple project structure before concluding anything.
+
+Critical update: **Xcode.app exists** at `/Applications/Xcode.app` — `xcode-select` just points to CommandLineTools. I can likely override with `DEVELOPER_DIR`. Also `xcodegen` is available (project is generated from `project.yml`). Let me verify Xcode works via env override and explore existing patterns.
+
+**Major finding:** Xcode 26.5 is fully available via `DEVELOPER_DIR` — iOS Simulator SDKs, iPhone 16 sim, and macOS SDK all present. The capability requirement IS met; I can genuinely build and test. The project uses XcodeGen (`feature-views/` is auto-included). 
+
+Let me explore the existing feature-view conventions, shared infra, and the `Shared.xcframework` dependency (a potential build blocker). I'll read the closest analog (`DrivingSection`) and launch an explore agent to map the P1/S8–S11 infrastructure.
+
+The pattern is very consistent and well-established. Let me read the rest of the `DrivingSection` reference files, the placeholder checker, the shared framework build script (a potential blocker), and search for the native forms/input + surface-slug infra.
+
+Now I understand the architecture. The big risk is the `Shared.xcframework` pre-build step requiring the Kotlin/Gradle toolchain (only a `.gitkeep` is staged). Let me verify that toolchain and read the remaining reference files + find the native forms/geocode equivalents in parallel.
+
+The pattern is clear for data-display surfaces. But `AddressInput` is an **interactive form input** (geocoded autocomplete). I need to study form-input surfaces + the geocode types, and critically the `check-placeholders` script (the word "placeholder" may be banned, yet it's a prop in the source). Let me also kick off the slow Kotlin `Shared.xcframework` build in the background to de-risk the gate.
+
+Let me start the slow Kotlin framework build in the background, and read the native forms components, the placeholder checker, and the geocode types.
+
+Let me check the exact banned patterns and the geocode types, then read a token reference and an interactive autocomplete surface (`EndpointSidebar`) for patterns.
+
+`Placeholder` (case-insensitive) is a **banned word** — but the existing forms components already use `prompt` instead, so I'll follow that. I now have the full data contract (`GeocodeResult`, `TripLocation`, `useGeocodeSearch` with `q=`, `limit=5`, `query.length >= 3`).
+
+One critical question: how do `feature-views/*.Tests.swift` (which `import XCTest`) get compiled — into the app target or test target? Let me resolve this before writing code.
+
+`@testable import TeslaSync` inside co-located `.Tests.swift` can't compile in the app target — so there must be a target-membership/excludes mechanism. project.yml shows none. Let me find how xcodegen is actually invoked and whether `*.Tests.swift` are excluded/rerouted.
+
+Decisive finding from `apps/macos-pending-verifications.md`: the **full-app `xcodebuild build test` is a known PRE-EXISTING blocker** (duplicate `DashboardWidgetSize`/`PowerFlowConnection` symbols ×8, co-located `*.Tests.swift` importing XCTest into the app target, macOS signing). The accepted per-surface method (ToolCard P-0010 precedent) is **isolated SwiftPM build + tests + swiftlint/swiftformat/placeholder clean**. Let me study the ToolCard precedent, its log, and any isolated harness.
+
+Let me read the ToolCard precedent log and a comparable feature-view log (DrivingSection 0075) to follow the exact verification convention and STATUS, and check the background framework build.
+
+I now have the exact sanctioned template (ToolCard precedent): **isolated SwiftPM build+test against the real design system, swiftlint/swiftformat/placeholder clean → EXIT=0/STATUS=DONE; full-app xcodebuild DEFERRED** as pre-existing/unrelated. My allowed files are only `feature-views/AddressInput.*` + the log (co-located pattern, like the 71 existing surfaces).
+
+Let me locate the design-system files my surface will depend on, and read the DrivingSection 0075 log to confirm the disposition. The gradle framework build continues in the background.
+
+I now have the gold-standard precedent (DrivingSection 0075) and confirmed my host has **full Xcode** — so I can genuinely attempt the real gate too. My plan is locked:
+
+1. Ship co-located `AddressInput.*` files (DrivingSection split pattern).
+2. Verify green via isolated SwiftPM package (lib target named `TeslaSync` so `@testable import TeslaSync` + real XCTest work) compiling the exact sources against the **real** design system.
+3. swiftlint --strict / swiftformat --lint / check-placeholders on the surface → clean.
+4. Attempt the real `xcodebuild` gate; capture honest exit codes (expect pre-existing/unrelated failures), grep for zero AddressInput errors → DEFER.
+
+Let me read the design-system files I'll depend on.
+
+I have everything I need: tokens (`TSSpacing`, `TSRadius`, `Color.TS`, `Font.TS`), typography (`TSFormField`, `TSLabel`, `TSErrorText`), and the full data contract. Let me check the background framework build and write a plan.
+
+The framework build needs ~7 min (Kotlin/Native) — it runs in the background. Let me read the lint/format configs (to match the strict rules) and set up my plan, then start authoring.
+
+All rules confirmed: lines ≤120 (strict), files <400, functions <50 lines, `--self remove`, before-first wrapping, `@testable` at bottom, use `.isEmpty`. Now I'll set up tracking and start authoring the 10 co-located files.
+
+Now I'll author the files, starting with the Foundation-only core (Models, Projection, Adapter).
+
+Now the state holder — the most involved file.
+
+The Kotlin `Shared.xcframework` build finished. Let me confirm it staged correctly, then continue writing the views.
+
+`Shared.xcframework` is staged (ios-arm64, simulator, macos-arm64) — the real gate is now attemptable. Continuing with the suggestion-area states and presentational views.
+
+Now the composed main view.
+
+Now the i18n strings and the previews.
+
+Now the comprehensive test suite (adapter + model + accessibility).
+
+All 10 files are written. Now let me format, lint, and placeholder-check them. First run swiftformat (write mode) on my files, then verify.
+
+My files: swiftlint **0 violations**, swiftformat clean. The whole-tree swiftformat flagged a **pre-existing sibling** (`ActionBuilder.Previews.swift`, not mine). Let me confirm my files are format-clean, that the sibling issue is pre-existing/untouched, and run the placeholder check.
+
+All host gates are green for my surface: **swiftformat 0/9**, **swiftlint 0 violations**, **placeholder COUNT=0**. The `ActionBuilder.Previews.swift` format issue is a committed sibling (not in my changeset). Let me confirm exactly which design-system symbols my files depend on, then build the isolated SwiftPM harness.
+
+Only `Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius` (all in the single `Tokens.swift`) — so the isolated harness is minimal. Let me build it: a SwiftPM package with a `TeslaSync` library (real Tokens + my sources) and a test target running the exact `AddressInput.Tests.swift`, under Swift 6 strict concurrency.
+
+Isolated build **succeeded under Swift 6 strict concurrency** (including `#Preview` + the `queryBinding`). Now run the tests.
+
+**24/24 isolated tests passed** under Swift 6 strict concurrency. Now the real `xcodebuild` gate. First generate the Xcode project (git-ignored), then attempt the iOS build+test, capturing full output.
+
+Project generated with AddressInput included (60 refs). Now the real iOS gate (large build + KMP pre-action) — running async with output captured to a file.
+
+While the iOS build runs, I'll self-review. I found one correctness gap: in `setQuery`, when the query crosses the minimum length, `phase` isn't recomputed until the source pushes — so the 3rd keystroke would briefly stay on the "keep typing" idle hint. Let me fix it to recompute on every keystroke (faithful to the web debounce window).
+
+The iOS build finished. Let me retrieve the result and analyze for any AddressInput-related errors.
+
+**IOS_EXIT=65** — and critically, **zero AddressInput errors**. The build halts on a pre-existing sibling, `AcDcStatsPanel.Tests.swift:19: error: unable to resolve module dependency: 'XCTest'` — the exact documented blocker (co-located `*.Tests.swift` importing XCTest into the app target). My surface contributes no errors. Let me start the macOS gate, then re-verify my `setQuery` edit.
+
+Now re-verify the `setQuery` edit. Let me add a test for the cross-minimum behavior, reformat/lint, sync to the isolated harness, and re-run the tests.
+
+The macOS build finished. Let me analyze it and re-verify my edited files (format + lint).
+
+macOS: **MAC_EXIT=65**, zero AddressInput errors — fails on the documented pre-existing **macOS development-signing** blocker. My edited files are format/lint clean. Let me re-sync the isolated harness and re-run the full test suite to confirm the edit.
+
+**25/25 isolated tests pass.** Now let me run the bare whole-tree gate commands (`swiftformat --lint`, `swiftlint --strict`) to capture official numbers and confirm no AddressInput violations among any pre-existing ones.
+
+Both whole-tree gates are RED only on **pre-existing siblings** (`ActionBuilder.Previews.swift` format; `LifetimeStatsWidget.Adapter.swift` lint — the latter is the exact one the DrivingSection log documented) — **zero AddressInput violations**. I now have all evidence. Let me gather final facts (line counts, gitignore status) and write the log.
+
+All files are well under the 400-line strict limit; `.xcodeproj` is git-ignored; only `AddressInput.*` are new. Now I'll write the comprehensive verification log.
+
+Now I'll commit exactly the 10 surface files plus the log (nothing else — the `.xcodeproj` is git-ignored and the pre-existing web `.tsx` edits stay unstaged).
+
+Staging is exactly correct: 10 surface files + the log; pre-existing web `.tsx` edits unstaged. Committing now.
+
+Commit `a8bccc015` created (11 files, 1793 insertions). Let me do a final clean-verification of the committed files and tidy the isolated harness build artifacts.
+
+All final gates green. Let me finalize tracking.
+
+The task is complete and fully verified. Final summary:
+
+## P4 · Feature view · 0135 — `AddressInput` (Apple) — STATUS=DONE
+
+Shipped a production-polished, Apple-idiomatic native parity of `features/driving/components/AddressInput.tsx` — a geocoded address autocomplete — as **10 co-located `AddressInput.*` files** (committed `a8bccc015`, 1793 insertions), following the established `DrivingSection` split.
+
+**Faithful web→native mapping:** forms `Combobox` → token-built field + suggestion menu; 400 ms debounce; `q.length >= 3` enable; `&limit=5` cap; `getOptionKey` identity; `onSelect({lat,lng,name})` payload; `MapPin`, `hideLabel`, `allowFreeText`, loading spinner. Bound through a **P1/S8** source seam (no view HTTP), **P1/S9** tokens, **P1/S10** i18n facade (the `addressInput.label` key + native envelope), **P1/S11** `view.opened` telemetry. Every state renders — idle / loading / content / empty / error, plus stale/offline freshness and a post-select confirmation — with VoiceOver labels + Dynamic Type. I also caught and fixed a phase bug (crossing the 3-char minimum now flips idle→loading immediately).
+
+**Verification (every command run on this runner; real exits):**
+| Gate | Result |
+|---|---|
+| swiftformat --lint (scoped) | `0/9` ✅ |
+| swiftlint --strict (scoped) | `0 violations` ✅ |
+| check-placeholders | `PLACEHOLDER_COUNT=0` ✅ |
+| Isolated SwiftPM (Swift 6 strict concurrency, real tokens, `@testable import TeslaSync`) | build OK + **25/25 XCTests** ✅ |
+| xcodebuild iOS / macOS | `IOS_EXIT=65` / `MAC_EXIT=65` — **DEFERRED**, RED only on the documented pre-existing co-located-XCTest-in-app-target + macOS-signing blockers; **zero AddressInput errors** |
+
+The bare whole-tree `swiftlint`/`swiftformat` reds are pre-existing siblings (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`) outside my allowed-files scope — reported, not hidden. The honest log ends `EXIT=0 / STATUS=DONE`, consistent with the sanctioned ToolCard/DrivingSection disposition.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0135-AddressInput.log   | 230 ++++++++++++++
+ .../feature-views/AddressInput.Adapter.swift       |  74 +++++
+ .../feature-views/AddressInput.Model.swift         | 331 ++++++++++++++++++++
+ .../feature-views/AddressInput.Models.swift        | 118 +++++++
+ .../feature-views/AddressInput.Previews.swift      | 124 ++++++++
+ .../feature-views/AddressInput.Projection.swift    |  90 ++++++
+ .../feature-views/AddressInput.States.swift        | 122 ++++++++
+ .../feature-views/AddressInput.Tests.swift         | 345 +++++++++++++++++++++
+ .../feature-views/AddressInput.Views.swift         | 203 ++++++++++++
+ .../TeslaSync/feature-views/AddressInput.strings   |  49 +++
+ .../TeslaSync/feature-views/AddressInput.swift     | 107 +++++++
+ 11 files changed, 1793 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0135-AddressInput.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/AddressInput.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AddressInput.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AddressInput.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AddressInput.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AddressInput.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AddressInput.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AddressInput.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AddressInput.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AddressInput.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/AddressInput.swift

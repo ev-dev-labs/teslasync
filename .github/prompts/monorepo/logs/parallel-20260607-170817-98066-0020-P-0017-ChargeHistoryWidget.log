@@ -1,0 +1,172 @@
+I'll start by exploring the repository structure, the web source specification, and the Apple toolchain availability.
+
+There's an existing Apple app at `apps/apple/`. Let me examine the existing widget structure, dependencies, and check for already-completed dashboard widgets to follow established patterns.
+
+No dashboard widgets completed yet — this is greenfield. Let me understand the project build system, the dashboard feature location, and the shared dependencies (state holders, tokens, i18n, diagnostics).
+
+The project uses **XcodeGen** (`project.yml`). Let me read the build config and the key dependency layers (state holders, design tokens, charts, i18n, diagnostics) to understand the established patterns.
+
+The prompt's stated path `apps/apple/TeslaSync/dashboard-widgets/` doesn't exist — the real source root is `Sources/`. Let me check the parity manifest and prompt generator to find the canonical native path mapping, and look at sibling prompts for convention.
+
+Let me verify build capabilities (xcodegen, Swift SDK frameworks) and read the foundational shared-facade files in parallel.
+
+Key finding: `xcodegen` is installed and **SwiftUI + Charts + MapKit type-check successfully against the macOS SDK** (`TYPECHECK_EXIT=0`) — so the capability is NOT blocked. Full `xcodebuild` iOS Simulator gate needs Xcode (only CLT installed), but I can type-check, lint, and format. Let me study the established patterns: the facade container, an example domain model, charts components, and diagnostics.
+
+The `Shared.xcframework` is not built and Xcode isn't installed, so I need to understand exactly what compiles standalone. Let me examine the charts API, i18n facade, diagnostics contract, widget-primitives expectations, and which sources depend on `Shared`.
+
+Charts are pure SwiftUI (no `Shared` dep). Let me read the area-chart API, an existing feature view for the state-handling pattern, feedback components, and find the diagnostics + i18n facade.
+
+Let me verify the final unknowns: the i18n catalog keys, generated design tokens, the `Shared`-importing files to exclude from a standalone typecheck, and the typography/spacing token symbols.
+
+The i18n catalog (P1/S10) already contains widget keys generated from the web sources. Let me confirm the ChargeHistory keys exist, and check the design tokens + typography symbols.
+
+ChargeHistory keys aren't in the catalog yet (siblings are), so I'll add them. Let me read the generated tokens, metrics, badges, and banners to use exact symbols, then I'll start implementing.
+
+I now have all building blocks confirmed. Let me do a final check on chrome/feedback i18n keys, then set up my plan and todos.
+
+I have everything needed. Let me set up the plan and todos, then implement.
+
+Let me confirm the `TSButton` API and the chart energy color/palette before writing.
+
+I have a complete design. Let me check the placeholder-gate patterns (to avoid banned tokens) and whether `pwsh` is available.
+
+All clear. Banned tokens: TODO/FIXME/XXX/"Placeholder"/"Lorem ipsum"/"not implemented" + swift stubs; I'll also avoid "mock"/"stub". `pwsh`, `swiftlint`, `swiftformat`, `xcodegen` all available. Now writing the production widget.
+
+Now the XCTest suite mirroring the acceptance criteria (adapter, state model, registry, telemetry, a11y constants).
+
+Now I'll add the i18n keys to the catalog. Let me verify the exact JSON formatting and a safe unique anchor first.
+
+The anchor `  "strings": {` is unique with no space before the colon. I'll insert the 13 keys via a Python script that matches the exact format and validates JSON.
+
+13 keys inserted and JSON validated (8088→8101). Let me verify the inserted block's formatting matches surrounding entries.
+
+Formatting matches perfectly. Let me update todos and run the verification tooling (swiftformat, swiftlint, placeholder gate).
+
+Configs read. Let me auto-format my new files with swiftformat (write), then lint-check and run swiftlint.
+
+swiftformat passes. swiftlint flags one violation: `file_length` (759 > 400 under `--strict`). Let me check how the repo handles file length and find the longest existing files.
+
+The repo caps files at ~400 lines (longest existing is 390; no disable directives). My 759-line file must be decomposed — which the guidelines prefer anyway. I'll split into three cohesive files in the same `Dashboard/Widgets/` group.
+
+Now let me re-format, lint, and check line counts on the decomposed files.
+
+All four files are now under 400 lines, swiftformat `--lint` clean, and **swiftlint `--strict` passes with 0 violations across all 520 project files**. Now the placeholder gate.
+
+Placeholder gate passes (0/0). Now let me confirm the files wire into the build via `xcodegen generate`, then attempt a standalone macOS typecheck of the widget against its real component dependencies.
+
+`xcodegen generate` succeeds and my files are referenced 24× in the project (iOS/macOS/test targets). Now the strongest local verification: a standalone macOS typecheck of the widget against its real component dependencies, under the project's Swift 6 + strict-concurrency settings.
+
+Only a non-related component (`UnitFormatters.swift`) fails — it references `UnitPreferences` from the `Shared` facade. My widget doesn't use it. Let me exclude component files that depend on `Shared`-provided types and re-run.
+
+Only one unrelated component is `Shared`-coupled, and my widget doesn't use it. Excluding it for the standalone typecheck:
+
+Two real errors in my code: `static let` of `LocalizedStringKey` isn't concurrency-safe under Swift 6 strict concurrency. Easy fix — make them computed `static var`. Let me wait for the full count first.
+
+Confirmed: exactly 2 errors (4 lines = 2 errors ×2), 0 warnings — both the `static let LocalizedStringKey` concurrency issue in my code. Fixing by making them computed `static var`.
+
+**Production code typechecks cleanly under Swift 6 + complete strict concurrency (0 errors)** against its real component dependencies. The `-D DEBUG` failure is only the `#Preview` macro plugin being unavailable to raw `swiftc` (affects an existing file too) — an Xcode-only tooling limitation, not a code defect.
+
+Let me verify the test file's logic typechecks against my real API (stripping the `@testable` import and compiling alongside the widget sources).
+
+XCTest ships only with Xcode (not CLT), so the XCTest bundle can't be compiled here — same root cause as the `xcodebuild` limitation. To still machine-verify my **test logic and API**, I'll run the pure-logic + async-model assertions as a standalone executable compiled against the real widget sources.
+
+Now compiling and running the harness against the real widget sources:
+
+Compilation in progress (linking SwiftUI takes time). Let me wait.
+
+**All 32 logic checks pass** — compiled under Swift 6 + complete strict concurrency against real SwiftUI + the actual component library. This is the same logic the XCTest suite asserts (XCTest itself needs Xcode to run). Now let me re-verify lint after my edit, confirm the generated project is git-ignored, and clean up temp files.
+
+My edit reintroduced a formatting nit (swiftlint still clean). Re-formatting:
+
+swiftformat passes. Let me confirm the reformatted region is correct and re-run the production typecheck to be certain it's still clean.
+
+displayNameKey/descriptionKey are now computed vars, production typecheck is clean (0 errors), all files < 400 lines. Before finalizing the log, let me check whether a full Xcode.app exists anywhere (which would let me run the real `xcodebuild` gate rather than declaring it blocked).
+
+`/Applications/Xcode.app` **is installed** — `xcode-select` just points to CLT. I can use `DEVELOPER_DIR` to run the real `xcodebuild` gate. Let me verify and inspect the Shared.xcframework build dependency.
+
+Xcode 26.5 + iPhone 16 simulator are available. The full build needs the KMP `Shared.xcframework` (Gradle). Let me check the pending-verifications doc and toolchain (JDK/Gradle) before committing to a long build.
+
+The repo's own `macos-pending-verifications.md` documents that the KMP `Shared.xcframework` + Apple builds are **deferred to `macos-latest` CI** — host-runnable gates are the dev "definition of done." But since Xcode 26.5 + JDK 17 + gradlew are present here, I'll attempt the real build. Let me kick off the KMP `Shared.xcframework` build in the background while I prepare the log.
+
+Let me check the Gradle build's initial progress.
+
+My build (slot-20, PID 9838) survived and is in the final Kotlin/Native link phase (konan `clang++` producing `Shared.framework.o`) — the konan toolchain is already cached. Note: ~10 sibling slots are building in parallel, so there's heavy contention. Let me monitor progress.
+
+The DEBUG xcframework completed; it's now linking the RELEASE slices (the staged one). Let me wait for it to finish.
+
+Still linking release slices under heavy parallel contention. Let me continue waiting.
+
+Steadily progressing through release links (now iOS simulator slice). Let me wait for the macOS slice + final assembly.
+
+At the final macOS release link. Let me wait for assembly to complete.
+
+**BUILD SUCCESSFUL** — the release `Shared.xcframework` is produced (14m 37s). Let me stage it to `Frameworks/` and start the real Xcode build of the macOS app target (which includes my widget + the Shared framework).
+
+Framework just needs copying. Let me stage it and launch the real macOS app build (compiles the whole app including my widget + Shared).
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now launching the real macOS app build (whole app + my widget + Shared). This compiles ~520 files, so I'll background it.
+
+The macOS build is running detached. Let me monitor its progress.
+
+A real Xcode build failure pointing at `ChargeHistoryWidget.swift`. Let me see the actual compiler diagnostic.
+
+Both errors are in the **`#if DEBUG` preview block only** (production code compiled fine) — my standalone typecheck skipped DEBUG so missed them:
+1. L285: `sample` array expression too complex for the type-checker.
+2. L302: calling `@MainActor`-isolated inits from the nonisolated `previewWidget` helper.
+
+Also I spotted cross-slot DerivedData contamination (`AutomationStatusWidget` stale files in shared `/tmp/dd-mac`). I'll fix the previews and rebuild with a slot-unique derived-data path. Let me view the exact block.
+
+Fixing the preview block: mark the helper `@MainActor` and break up the over-complex `sample` expression.
+
+Now reformat, re-lint, then rebuild on a slot-unique derived-data path to avoid the cross-slot contamination I observed.
+
+Format + lint clean. Now rebuilding the macOS app on a slot-unique derived-data path.
+
+The macOS rebuild is running. Let me prepare the gate log while monitoring, then check the build.
+
+**macOS BUILD SUCCEEDED (exit 0, 0 errors)** — the full production app module, including my widget + the real `Shared.xcframework`, compiles and links. Now running my XCTest class on the macOS destination for real test-pass evidence.
+
+Test run launched (compiles test bundles + runs my class). Let me monitor.
+
+The macOS **build** passed; the **test** failed only on a project-config quirk (the macOS unit-test `TEST_HOST` expects `TeslaSync-macOS.app` but the target's `PRODUCT_NAME` is `TeslaSync` — a pre-existing xcodegen naming mismatch, not my code). The iOS target has no such mismatch (target name == product name), so I'll run my tests on the iPhone 16 simulator — which is the gate's primary destination anyway.
+
+The iOS build+test is running (full simulator build + boot + my tests). This takes several minutes. Let me monitor.
+
+TEST FAILED — but the cause is environmental: `xcrun: error: unable to find utility "simctl"` (the detached shell lost `DEVELOPER_DIR` when launching the simulator). That's a sim-launch issue, not my code. Let me confirm the compilation succeeded and check the simctl context.
+
+Crucial finding: the iOS **build compiled cleanly** (app + my test bundle — `ChargeHistoryWidgetTests.swift` compiled, zero `error:` lines). The failure was only `xcrun: error: unable to find utility "simctl"` at the *sim-launch* phase — the detached shell lost `DEVELOPER_DIR`. The products are already built, so I'll boot the simulator and run `test-without-building` attached with the env set.
+
+simctl works, iPhone 16 is booted, products are built. Running `test-without-building` (attached, env set) to execute my tests.
+
+Still blocked by `simctl`/CoreSimulator — "Mach error -308 server died": the shared single iPhone 16 simulator is being thrashed by ~10 parallel slots (CoreSimulator service dying). That's environmental contention, not my code.
+
+Better path: **macOS unit tests run natively (no simulator)**, avoiding that contention. The only blocker was the `TEST_HOST` name mismatch, which I can override on the command line. Let me verify the built app and run.
+
+The TEST_HOST override broke the UI-test target (`USES_XCTRUNNER` conflict). The cleaner fix for `simctl` not being found is pointing `xcode-select` at Xcode (env-var override isn't inherited by xcodebuild's test runner). Let me check if non-interactive sudo is available.
+
+No sudo, so I can't repoint `xcode-select`. The macOS unit-test target has a pre-existing `TEST_HOST`/`PRODUCT_NAME` mismatch in `project.yml` (not mine, not editable). Let me make one clean retry of the iOS test with Xcode's toolchain prepended to PATH (the booted sim may now be stable).
+
+Even with Xcode's `simctl` on PATH, xcodebuild's test runner uses the system `xcrun` (bound to CommandLineTools via `xcode-select`, which needs sudo to change) **and** the shared iPhone 16 simulator's CoreSimulator service is dying under ~10-slot contention ("server died"). Both are environmental — not my code. My code's **build passed on both platforms**; only test *execution* is blocked.
+
+Let me verify what's git-ignored so I commit only the right files, then write the log.
+
+Artifacts (`Shared.xcframework`, `.xcodeproj`) are git-ignored. Two pre-existing modified web files are unrelated — I'll stage only my files. Now writing the honest gate log.
+
+STATUS=BLOCKED is weaker than ideal. The iOS failure mixes shared-simulator contention with the CoreSimulator service dying. Let me try once more on a **private, slot-exclusive simulator device** (avoids the shared-device contention) — if the service stays alive, the test may actually run.
+
+Private device booted. Running my tests against it (products already built):
+
+Identical failure even on a private, exclusive device — confirming the root cause is `xcode-select` pointing to CommandLineTools (xcodebuild's test runner can't resolve `simctl`), unfixable without sudo. Not contention alone, not my code. Let me refine the log evidence, clean up the private device, and finalize.
+
+Cleanup done. Now committing only my allowed files (excluding the pre-existing modified web files and git-ignored artifacts).
+
+Exactly my 6 files staged — no web files, no `.xcodeproj`. Committing:
+
+Committed cleanly as `2bfbc733`. Let me run a final consolidated verification of the committed state to confirm all host-runnable gates still pass.
+
+All final gates green: swiftformat clean, swiftlint `--strict` 0 violations (520 files), placeholder 0/0, i18n keys present, working tree clean. Let me finalize the plan and todos.
+
+Let me do a final cleanup of the large temporary build artifacts in `/tmp` and confirm the final committed state.
+
+Complete. The commit `2bfbc733` contains exactly the 6 intended files (1440 insertions); all temp artifacts cleaned.
+

@@ -1,0 +1,142 @@
+I'll start by exploring the repository structure to understand what exists and find the web source spec.
+
+Toolchain is present (Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the Apple app structure.
+
+Critical finding: only Command Line Tools are installed, not full Xcode — so `xcodebuild` cannot run. Swift 6.3.2, swiftlint, swiftformat ARE available. Let me explore the Apple app structure deeply to find existing feature-views patterns and the P1 infrastructure (state holders, tokens, i18n, diagnostics).
+
+Feature-views directory has 1438 entries — there's an established pattern. Let me find existing similar views to model after and check what PedalUsage files may exist.
+
+Each feature view is a multi-file bundle (`.swift`, `.Adapter`, `.Model`, `.States`, `.Views`, `.Previews`, `.Tests`, `.ViewTests`, `.strings`). `HealthGaugeGrid` and `HeroGauges` use gauges — ideal templates. Let me read the full HealthGaugeGrid bundle.
+
+Excellent — clear, rich pattern. Let me read the remaining HealthGaugeGrid bundle files and HeroGauges (for RadialGauge usage) to fully internalize the conventions.
+
+Now let me read the remaining template files (Previews, Tests, ViewTests, strings) and HeroGauges, plus find the shared tokens/components.
+
+I have the full pattern. Now let me verify the shared tokens/components exist (TSSpacing, Color.TS, Font.TS, TSTone, TSEmptyState, TSFadeIn, etc.) and find a Badge equivalent for the brake active/inactive status.
+
+Shared tokens aren't in the TeslaSync dir — they must be in a shared module. Let me search the whole Apple tree.
+
+Shared components live in `Sources/Components/` and tokens in `Sources/Design/`. Let me read the Badge component (for brake status), design tokens, and feedback/motion components.
+
+Now let me read the design tokens, the shared RadialGauge/PieGauge chart, EmptyState, Motion, and Skeleton components.
+
+Found `TSRadialGauge` (shared) but it's percent-only with palette color — `HealthGaugeGrid` built its own gauge for custom color/value/unit, setting precedent. Let me confirm the design token member names and how feature-views get compiled (project.yml).
+
+Design tokens are generated in `apps/design/generated/apple`. Feature-views dir is a source path (directory glob) so new files compile automatically. Let me read the generated tokens and the test target config.
+
+Let me read the full test target config to see how feature-view `.Tests.swift` files are included.
+
+`Tests/Unit/FeatureViews/` only has `ToolCardTests.swift` — the 170 `*.Tests.swift` live in `feature-views/` itself (compiled per the established convention). I'll follow the exact pattern. Let me confirm token names and read Motion/Skeleton + another gauge surface for FadeIn usage.
+
+Let me read the web `RadialGauge` to replicate its center readout exactly, plus confirm `tsGlassPanel`/`TSSkeleton` signatures and the placeholder-check tool.
+
+The web `RadialGauge` center = `fmtNumber(clamped, d)` + optional unit. Now let me read the glass panel modifier, skeleton, and the placeholder-check patterns (to ensure my code won't trip the gate), plus a peek at the log naming convention.
+
+Now let me check for symbol collisions (all 170 surfaces compile into one `TeslaSync` module) and whether `pwsh` is available for the placeholder gate.
+
+No collisions, `pwsh` is available. `GForcePanel` is a sibling using the same `useDriveDynamicsLatest` hook — let me check if it's been ported to align conventions, and confirm the iOS SDK availability for compilation.
+
+macOS SDK + swiftc can see SwiftUI/Charts — so I can type-check my code even without full Xcode (no iOS SDK → the xcodebuild gate steps will be legitimately BLOCKED). Let me determine a compilable dependency closure by checking which `Sources` subtrees import the KMP `Shared` framework.
+
+`Sources/Components` and `Sources/Design` don't import the KMP `Shared` framework — only SwiftUI/Charts/Foundation/MapKit/CoreLocation (all in the macOS SDK). So I can type-check my bundle against that closure. Let me run a baseline compile to confirm the harness works.
+
+Baseline mostly works — only `UnitFormatters.swift` references an external `Units` symbol (which I don't use). Let me locate `Units` and decide whether to include it or exclude that one file from my verification closure.
+
+`Units` lives in `SharedFacade` (imports KMP `Shared`). Only `UnitFormatters.swift` uses it, and I don't need it. Let me exclude it and confirm a clean baseline.
+
+Clean baseline (RC=0, 41 files). My verification harness works. Let me check the lint/format configs to match style, then write the bundle.
+
+Baseline harness works (RC=0). I now have a complete understanding of the established pattern. Let me set up a todo list and start writing the 9-file `PedalUsage` bundle.
+
+Model + Adapter written. Let me type-check the pure-logic core before adding SwiftUI files.
+
+Core compiles clean with strict concurrency. Now the SwiftUI files.
+
+Now let me type-check the full production bundle (5 files) against the shared component closure.
+
+Full production bundle type-checks clean (RC=0) with strict concurrency. Now the previews, strings, and tests.
+
+Let me fix a convoluted assertion in the tests.
+
+All 9 files created. Now let me verify: type-check production + DEBUG previews, and probe whether XCTest is importable under Command Line Tools.
+
+The `#Preview` macro plugin and `XCTest` both require full Xcode (only Command Line Tools are present) — the baseline shared `Typography.swift` hits the same `#Preview` macro limit. Let me check whether a full Xcode.app exists anywhere so I could run the real gate.
+
+A full `/Applications/Xcode.app` exists and `xcodegen` is installed — so the real gate may be runnable. Let me probe Xcode via `DEVELOPER_DIR`, check simulators, and inspect the KMP `Shared.xcframework`.
+
+Decisive finding: `Frameworks/Shared.xcframework` is **absent** (only a `.gitkeep`) — the KMP shared core is a build artifact not present in this checkout, so the app target literally cannot link. That's a repo-wide pre-existing condition, independent of my surface. But full Xcode 26.5 + iOS 26.5 sim + iPhone 16 ARE available.
+
+Since the toolchain (with XCTest) exists, I'll build a scratch SwiftPM harness to actually **compile and run my tests** under the real toolchain. First, confirm the `Shared` absence is expected and check for filename collisions.
+
+Confirmed: `Shared.xcframework` is a git-ignored artifact staged by `Scripts/build-shared-xcframework.sh`, absent here — so the full-scheme `xcodebuild` gate is genuinely blocked by a missing external artifact. No filename collisions. Let me build a scratch SwiftPM harness to actually compile and **run** my tests under the real Xcode toolchain.
+
+Harness assembled (51 files). Now let me build the library target under the full Xcode toolchain, then run the tests.
+
+UnitFormatters.swift slipped through (wrong rm path). Let me find and remove it, then rebuild.
+
+Library (including the `#Preview` macro) compiles clean under full Xcode (RC=0). Now let me run the actual tests.
+
+All **33 tests pass (0 failures)** under the real Xcode toolchain — including the 8 per-state ImageRenderer view tests and the adapter/model/a11y logic tests. My parity math is verified by execution. Now the repo lint/format/placeholder gates.
+
+Three fixes: (1) `gauge()` has 7 params (max 5) — I'll derive the labels from the channel; (2) auto-wrap long lines in the test files. Let me refactor the Adapter and re-run formatting.
+
+Now auto-format my files (write mode) to wrap long lines, then re-verify lint + format.
+
+Format clean (0/8) and lint clean (0 violations). I refactored the Adapter, so let me re-sync the harness and re-run the tests to confirm still green.
+
+Tests still 33/33 green after refactor. Now the placeholder gate — let me read how `check-placeholders.ps1` resolves its `-Path` (the gate passes a prefix `.../PedalUsage`).
+
+The gate's `-Path .../PedalUsage` (a prefix, not a real path) makes `Test-Path` false → it scans nothing and trivially passes. For honest evidence I'll scan my actual files. Let me run the script per-file plus a manual grep for forbidden patterns.
+
+Placeholder gate clean (0 everywhere). Let me check whether the feature-view test files are routed to the app or test target in the real project (this clarifies whether a full `xcodebuild` is even structurally viable), and whether `Shared.xcframework` can be built.
+
+The KMP `Shared.xcframework` requires a full Kotlin/Gradle build (heavy) — confirming the scheme gate is environment-blocked. Let me generate the Xcode project (git-ignored workflow) to confirm my files wire into the targets correctly and see how feature-view test files are handled.
+
+My 8 files are correctly wired into both app targets (xcodegen RC=0, 54 refs). Let me read the repo's own macOS verification note (it may document this exact environment constraint), then capture the precise `xcodebuild` failure as BLOCKED evidence.
+
+This is the established convention — three prior surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) hit the identical blocker and resolved it as "surface verified green via isolated SwiftPM + tests; full-app `xcodebuild` deferred to the P99 acceptance gate (macOS-pending)". I've already done that exact verification. Let me capture the concise blocker evidence and attempt a bounded `xcodebuild` for an authentic failure signature.
+
+All three documented blockers confirmed (Shared.xcframework absent; `DashboardWidgetSize` redefined 15×; 173 co-located `*.Tests.swift` compiled into app targets — `PedalUsage.Tests.swift` among them). Let me make one bounded `xcodebuild` attempt to capture an authentic failure signature.
+
+The bounded attempt confirmed the authentic blocker: `xcodebuild` triggers the pre-build Run Script that runs a **KMP Gradle `:core:assembleSharedXCFramework` build** (to produce the absent `Shared.xcframework`). I also see many *other* parallel slots running the same Gradle build — a shared, contended environment. Let me find and stop **only my slot-108** processes.
+
+I need to confirm whether PID 79388 is mine (slot-108) before touching it — it has flags I didn't pass, suggesting it may be another slot. Let me check its working directory.
+
+Confirmed: none of the running `xcodebuild`/Gradle processes are slot-108 — they're all other parallel slots. My slot-108 `xcodebuild` already terminated with its session. Let me do a final citizenship check for any lingering slot-108 build processes, then clean up the generated project.
+
+No lingering slot-108 processes — clean. Now that I have full Xcode, let me strengthen evidence by type-checking my bundle against **both** the iOS-18 simulator SDK and the macOS-15 SDK (matching the precedent surfaces' verification), then I'll write the gate log.
+
+iOS-18 type-check passed (RC=0). Waiting for the macOS-15 type-check to finish.
+
+Both SDK type-checks pass (iOS-18 RC=0, macOS-15 RC=0). Verification is comprehensive. Let me clean up temp artifacts and the generated project, then write the gate log.
+
+My 9 `PedalUsage.*` files are present (untracked). There are also pre-existing modifications to unrelated `AIUsageCard.*` files (not mine — likely another slot/agent in this shared environment); I'll scope my commit precisely to my files and leave those untouched. Now let me write the gate log.
+
+Let me do a final lint/format confirmation on the repo files, then stage only my files and commit.
+
+Final gates clean (lint 0, format 0/8). Let me stage only my files (excluding the unrelated AIUsageCard changes) and verify the staged set before committing.
+
+Exactly my 10 files staged; the unrelated AIUsageCard changes remain unstaged. Let me commit.
+
+Committed (`cf0635caf`). Task complete.
+
+## Summary
+
+I shipped a production-polished, native Apple (SwiftUI) parity of the web `PedalUsage` surface, following the repo's established 9-file feature-view pattern (modeled on `HealthGaugeGrid`/`HeroGauges`).
+
+**Files added** (`apps/apple/TeslaSync/feature-views/`, 1540 lines):
+`PedalUsage.Model.swift` (P1/S8 source seam, P1/S11 `view.opened` telemetry, P1/S10 strings facade) · `.Adapter.swift` (web-parity formatting + projector + a11y) · `.swift` (view) · `.Views.swift` (gauges/brake-status/layout) · `.States.swift` (freshness chip, connectivity banner, loading, empty, error) · `.Previews.swift` · `.Tests.swift` · `.ViewTests.swift` · `.strings`.
+
+**Parity reproduced:** throttle/brake `RadialGauge` (centre `fmtNumber(clamp(0..100),d)`, `%`/`—` unit, theme-aware tints for web `#06b6d4`/`#ef4444`), brake `Badge` danger/success (nil→Inactive), the `hasAny`→EmptyState branch ("No pedal telemetry received yet"), all 9 extracted i18n keys, plus native loading/error/stale/offline states, VoiceOver labels, Dynamic Type, and Reduce-Motion.
+
+**Verification — every host-runnable gate GREEN:**
+- swiftc `-typecheck` **iOS-18 sim + macOS-15**, Swift 6 `-strict-concurrency=complete` → RC=0 both
+- Isolated SwiftPM build + **`swift test` 33/33 PASS** (adapter + model + a11y + 8 per-state ImageRenderer view tests) under full Xcode 26.5
+- `swiftlint --strict` → 0 violations · `swiftformat --lint` → 0/8 · placeholder gate → 0 (per-file) · `xcodegen generate` → my 8 files wired into both app targets
+
+**BLOCKED (macOS-pending):** the full-app `xcodebuild build test` can't complete here — pre-existing, repo-wide, unrelated blockers identical to the already-tracked ToolCard/AlertMessageEditor/FSMTimelineChart rows: absent KMP `Shared.xcframework` (a Gradle-built artifact — observed xcodebuild launching `:core:assembleSharedXCFramework`), 173 co-located `*.Tests.swift` compiled into the app target, `DashboardWidgetSize` redefined 15×, and unprovisioned signing. Zero PedalUsage/feature-views errors. Deferred to the P99 acceptance gate on `macos-latest`. Log ends `EXIT=1 / STATUS=BLOCKED` with full evidence.
+
+I scoped the commit to only my 10 files (the unrelated `AIUsageCard.*` modifications already present in this shared worktree were left untouched), cleaned up the generated `.xcodeproj` and temp harness, and confirmed no slot-108 build processes were left running.
+
+
+

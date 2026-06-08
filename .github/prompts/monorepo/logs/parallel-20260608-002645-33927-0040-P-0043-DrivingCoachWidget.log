@@ -1,0 +1,96 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is available (xcodebuild, swift, swiftlint, swiftformat). The Apple app exists. Let me explore the existing conventions and the web source's dependencies.
+
+There's already a `dashboard-widgets` directory with 418 entries. Let me find an existing widget to use as the canonical template and examine the web dependencies.
+
+The dashboard-widgets use a different file-split convention than feature-views. Let me find a complete representative widget and the native shared infrastructure (WidgetShell equivalent, state holders, tip cards).
+
+Found the canonical 7-file pattern. `RouteEfficiencyWidget` (driving category, efficiency-related) is the closest semantic match. Let me study it completely along with the most-complete `RecentDrivesListWidget`.
+
+Excellent, comprehensive template. Let me read the remaining template files and the shared infrastructure.
+
+Now let me read the Previews/Tests/strings template files, the shared infrastructure types, and the web data hook.
+
+Now let me examine the web data hook, the registry entry, and locate the shared native infrastructure types.
+
+Let me find the canonical definitions of the shared infrastructure types and the web data type `DrivingCoachData`.
+
+The shared types appear defined in multiple widget Model files. I need to understand the build configuration before writing code. Let me examine how this is wired.
+
+Key finding: 13 files each define `public struct DashboardWidgetRegistration`. This is a parallel-slot workspace, so these widgets may be pending integration. I must understand the actual build setup.
+
+Now I understand the build setup: XcodeGen spec, app targets glob `TeslaSync/dashboard-widgets`. The closest sibling (RouteEfficiencyWidget) **consumes** shared types rather than redefining them. Let me check tooling and establish a build baseline — critical given 13 duplicate type definitions exist.
+
+Critical: `xcodebuild -version` and `simctl` returned nothing. Let me definitively establish Xcode/simulator/pwsh availability — this determines whether the gate can run at all.
+
+Definitive evidence captured: **Xcode is NOT installed** (only Command Line Tools) — `xcodebuild` and `simctl` are unavailable. `swiftlint`, `swiftformat`, `pwsh`, and `swift` 6.3.2 ARE available. Per the prompt's capability clause, the xcodebuild gate steps will be BLOCKED, but I must still ship the complete production artifact and pass every locally-runnable check.
+
+Let me read the shared tokens/components and the web data type before writing code.
+
+`TSTone` has `.success/.warning/.danger/.neutral` — perfect for the impact mapping (high→success, medium→warning, low→neutral). Now let me get the exact `DrivingCoachData` shape and the `Font.TS`/`Color.TS` token members.
+
+Font tokens found: `display`(30/bold), `title`(24/bold) — ideal for the score. Now let me locate the `DrivingCoachData` type definition and verify `Color.TS` members + the placeholder-check patterns.
+
+Let me read the `CoachRecommendation` type, the placeholder-check patterns, and an existing widget log for convention.
+
+Confirmed `CoachRecommendation = { category, impact: 'high'|'medium'|'low', tip }`. Let me read a sibling log for format/STATUS convention and the placeholder script's matching semantics.
+
+The sibling log is highly informative: it confirms the 7-file pattern, the `view.opened` telemetry seam, registry parity tests, and that `TeslaSync/dashboard-widgets` is the correct location (current project.yml globs it). It also shows even Xcode-equipped runners deferred the full `xcodebuild`. My runner has **no Xcode at all**, so I'll verify as much as possible locally. Let me empirically test whether the CLT `swift` toolchain can typecheck SwiftUI + XCTest — this determines how much real compile verification I can provide.
+
+The CLT `swiftc` typechecks SwiftUI cleanly (exit 0). Let me probe the other frameworks my files use: `Observation` (`@Observable`), `OSLog`, and `XCTest`.
+
+Outstanding — CLT `swiftc` typechecks **SwiftUI + Observation + OSLog** cleanly (exit 0). Only **XCTest** is unavailable. So I can do a real macOS-SDK typecheck of the production code and even execute the adapter/model logic via a harness. Let me read the lint/format configs and `fmtInt` to match style exactly, then write the files.
+
+I now have everything needed. Let me set up tracking and write a concise plan, then build the 7 files.
+
+Now I'll build the 7 files, starting with the pure projection core. Let me write the Adapter, Model, Views, and main surface.
+
+Now the Views (subviews) and the main surface.
+
+Now the main surface file.
+
+Now the Previews, Tests, and strings catalog.
+
+Now the comprehensive test suite, mirroring the template's structure.
+
+Now the i18n strings catalog.
+
+All 7 files written. Now let me verify with a real macOS-SDK typecheck using a faithful shim of the shared design-system symbols.
+
+The only errors are the `#Preview` macro needing Xcode's `PreviewsMacros` plugin (a CLT limitation, not a code defect). My actual view/model/adapter code typechecks. Let me confirm the 4 shipped runtime files are clean, then validate the Previews' non-macro expressions separately.
+
+Shipped runtime surface typechecks **clean (exit 0)** against the macOS SDK. Now let me validate the Previews' actual Swift expressions by transforming the `#Preview` macros into functions (the macro itself only expands under Xcode).
+
+All 9 preview expressions typecheck clean. Now, since XCTest isn't in the CLT, let me **execute** the real adapter+model logic via a harness (compiling the actual shipped `Adapter.swift` + `Model.swift`) to get genuine pass/fail evidence equivalent to the XCTest suite.
+
+The harness needs the main surface file (which defines `DrivingCoachWidget.surfaceSlug`). Let me include all 4 production files.
+
+Those errors are harness-scaffolding concurrency issues (my test globals), not shipped-code issues. Let me make them local to the `@MainActor` function.
+
+**51/51 asserts pass** — the real shipped Adapter + Model + registration logic executes correctly against the macOS SDK. Now let me run the lint/format gates on my files and parse-check the Tests file.
+
+swiftformat: **0/6 files require formatting**. Now swiftlint --strict on my files.
+
+swiftlint --strict: **0 violations in 6 files**. Now the placeholder gate (pwsh) plus a forbidden-word grep and a Tests-file parse check.
+
+Placeholder gate **EXIT=0** (both the meaningful scan and the literal gate command), forbidden words: none. Let me parse-check the Tests file (XCTest module is absent, so I expect only import-resolution errors, confirming syntax is valid).
+
+`swiftc -parse` on the Tests file: **0 errors** — syntactically valid. All my-file verifications are green. Let me characterize the whole-project swiftlint baseline (honesty) and confirm my files integrate cleanly.
+
+Whole-project lint shows 1 violation in 1915 files. My 6 files already passed clean, so it's pre-existing. Let me confirm which file.
+
+The single lint violation is pre-existing in `LifetimeStatsWidget.Adapter.swift` (a sibling, out of my allowed scope). My 6 files are clean. Let me gather header metadata and write the honest gate log.
+
+All evidence gathered. Now I'll write the comprehensive, honest gate log.
+
+Let me verify the exact test-method and string-key counts I cited in the log, and correct them.
+
+Let me correct the counts in the log (4 groups, 25 methods, 22 keys).
+
+Counts corrected. Now let me commit exactly my files (scoped — the working tree has unrelated pre-existing modifications I must not touch).
+
+Exactly my 8 files staged; pre-existing unrelated changes left untouched. Committing.
+
+Committed (8 files). Let me clean up temp verification artifacts and finalize tracking.
+

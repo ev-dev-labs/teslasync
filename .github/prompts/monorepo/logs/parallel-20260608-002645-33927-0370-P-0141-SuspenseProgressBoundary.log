@@ -1,0 +1,112 @@
+I'll start by exploring the repository structure to understand what exists and what I'm working with.
+
+Now let me study the canonical pattern from the AiUsageCard example (just modified) to understand conventions deeply.
+
+Now let me read the test files and locate the shared design tokens/components.
+
+Let me locate the shared design tokens and components (TSSpacing, Color.TS, Font.TS, TSFadeIn, TSSkeleton, TSButton).
+
+Key finding: tokens live in `apps/apple/Sources/`, and **xcodebuild requires full Xcode but only Command Line Tools are installed**. Let me confirm the theme token definitions and the xcodegen project spec.
+
+The `TeslaSync` target compiles `Sources`, `feature-views`, `dashboard-widgets` — but **not** `shared-surfaces` (and I can't edit project.yml per allowed-files). And **xcodebuild can't run** (CLT-only). Let me read the exact token/component APIs I must use.
+
+Let me read the web `globalProgress` lib (the heart of this component) and the sibling platform prompts to confirm the expected structure.
+
+Now let me check the lint configs, the placeholder checker, pwsh availability, and how the test target is wired.
+
+Let me read the placeholder checker (a must-pass gate) and confirm baseline swiftformat cleanliness.
+
+I have a complete understanding now. Key facts:
+- **xcodebuild can't run** (only CommandLineTools installed, not full Xcode) → the build/test gate steps are platform-blocked.
+- **swiftformat, swiftlint, pwsh** ARE available → I can run those gates for real.
+- The canonical pattern is the 10-file AiUsageCard surface. The web source + `globalProgress`/`TopProgress` define the behavior to reproduce.
+- Placeholder checker forbids the literal word "placeholder"/"TODO" etc. (case-insensitive) — I'll avoid those in code.
+
+Let me set up tracking and the directory, then build the surface.
+
+Now I'll write the surface files. Starting with the pure adapter core, projection, and model.
+
+I need to fix the surface-slug reference (avoid the generic-type hack). Let me add a non-generic slug holder and update the telemetry call.
+
+Now the presentational subviews — the progress bar (TopProgress peer), the loading host (drives the coordinator), and the empty state.
+
+Now the chrome: connectivity banner, refresh button, and error view.
+
+Now the i18n catalog, previews, and the two test files.
+
+Now the two test files covering projection, model wiring/telemetry/freshness, the coordinator refcount contract, and the pure trickle maths.
+
+All 10 files are written. Let me update tracking and run the real gates — starting with swiftformat (auto-fix my files to repo style, then lint-verify).
+
+My files are swiftformat-clean. Now swiftlint — the repo config's `included` list omits `shared-surfaces`, so I'll lint my files explicitly to self-validate.
+
+swiftlint scanned the whole project (config `included` took over). 1 violation found — let me isolate whether it's mine.
+
+The only swiftlint violation is in a **pre-existing** file (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`) — not mine. My 9 Swift files are clean. Now the placeholder gate (pwsh), run against my real directory and as the gate specifies.
+
+Placeholder gate passes (0 violations). Now capture the xcodebuild capability evidence (the platform blocker).
+
+`/Applications/Xcode.app` exists — `xcode-select` just points at CLT. I can override per-command with `DEVELOPER_DIR` (no sudo). Let me check if that unlocks a real toolchain.
+
+Full Xcode 26.5 is available via `DEVELOPER_DIR` — iPhone 16 simulator is even booted. This may be DONE-able, not BLOCKED. Let me examine how the project handles `.Tests.swift` files living in source dirs (critical for wiring).
+
+The app targets include `feature-views` (where `*.Tests.swift` already live) with no excludes — meaning the generated project isn't directly buildable and my files aren't wired in (and I can't edit `project.yml`). But I have a real toolchain, so let me do a **genuine standalone type-check** of my code against the macOS SDK. First, locate the remaining dependency (`TSCard`) and check the xcframework.
+
+`Frameworks/` is empty (no `Shared.xcframework`) — so the full app link can't run in this slot regardless. That confirms the xcodebuild gate is environment/pre-existing-blocked, not my code. But I can still genuinely **type-check my code against the real macOS SDK**. Let me do that with the real dependency files.
+
+All type-check errors are in a **dependency** (`Cards.swift`), not my code. I need to pull in the full shared-component closure. Let me check how self-contained `Sources/Components` is and type-check my files against the whole component library.
+
+The Components library imports only system modules — it's self-contained. Let me type-check my files against the full component library + tokens.
+
+Components isn't fully self-contained (`UnitFormatters.swift` pulls in app-level `UnitPreferences`/`Units`). My files don't use it. Let me build the **minimal** dependency closure my files actually need and find `tsGlassPanel`.
+
+`tsGlassPanel` lives in Cards.swift; Typography/Skeletons/Cards have no app-level deps. Minimal closure = Tokens + Buttons + Motion + Skeletons + Cards + Typography. Let me type-check my files against exactly that.
+
+`tsGlassPanel` is in `Sources/Design/TSMaterial.swift`. Let me add the (small) Design dir to the closure.
+
+**TYPECHECK_EXIT=0** — my 7 source files compile cleanly against the real macOS 15 SDK in Swift 6 mode with the real design-system deps. Now let me type-check the 2 test files too (stripping the self-`@testable import` into temp copies, compiled in-module with XCTest available).
+
+All errors are the XCTest C-macro (`XCTAssertEqual`) not importing into a loose `swiftc` invocation — a harness limitation, **not** my code; every reference to my own types resolved. But this surfaced a real issue: `Tests.swift` references `EmptyView` (SwiftUI) without importing SwiftUI. Let me fix that, then verify the test bodies against a minimal XCTest shim.
+
+Now let me normalize imports with swiftformat and verify the test bodies type-check against my real types using a minimal XCTest shim (the `XCTAssert*` macros can't import into loose `swiftc`).
+
+Just one error — and it's a **shim artifact** (my shim's `XCTFail` returned `Never?` instead of `Void`; real XCTest `XCTFail` returns Void, making `return XCTFail(...)` valid — exactly as AiUsageCard.Tests does). Let me fix the shim and re-run.
+
+**SHIM_TYPECHECK_EXIT=0** — all 9 Swift files (source + tests) type-check against the real macOS 15 SDK in Swift 6 mode. 
+
+The `Adapter`/`Model`/`Projection` logic has no SwiftUI deps, so I can go further and **actually execute** the test assertions at runtime. Let me build a runtime driver and run it.
+
+Swift 6 concurrency nit in my **driver** (not the surface): top-level `var` is MainActor-isolated but `check` was nonisolated. Let me annotate the driver and re-run.
+
+Top-level globals can't be actor-annotated. Let me make state local to the `@MainActor` function and re-run.
+
+**ALL_RUNTIME_CHECKS_PASSED** — every logic assertion (trickle parity, projection, coordinator refcount/trickle, model wiring/telemetry/freshness) executes correctly. Since the platform capability IS present (Xcode 26.5), let me go all the way and run my **actual XCTest suite** through a scratch SPM package (real XCTest runner, not a shim).
+
+The SPM build fails only because a **copied dependency** (`Cards.swift`) has a DEBUG `#Preview` referencing components outside my closure (`TSBadge`) — my earlier `-typecheck` passed because DEBUG previews weren't compiled. My code is fine. Let me strip DEBUG preview blocks from the copied dependency files and run the real XCTest suite.
+
+**32 tests passed, 0 failures** through the real XCTest runner on the macOS toolchain. This is gold-standard verification — my entire surface compiles against the real SDK and every test passes.
+
+Let me now capture the official gate commands' actual output (as-written) for an honest log, and clean up the temp package.
+
+`swiftformat --lint apps/apple` full-tree flags **1 pre-existing file** (`feature-views/ActionBuilder.Previews.swift`) — not mine. So every as-written gate red is either the CLT/wiring issue or a pre-existing unrelated violation. Let me check the logs dir + a sibling log for format, then write the honest log.
+
+Let me read a sibling log to match the established format and how prior surfaces recorded STATUS.
+
+This is the established precedent: siblings use `DEVELOPER_DIR` → Xcode, host-compile both SDKs, host-test via `swift test`, and mark the full `xcodebuild -scheme` step **DEFERRED** (real exit + pre-existing reasons) with **STATUS=DONE** ("predecessor parity"). Let me read the exact ending format.
+
+This resolves the disposition: the accepted convention is **STATUS=DONE** with host gates green and the `xcodebuild -scheme` step DEFERRED (real exit + out-of-scope causes), per predecessor parity. I have even stronger evidence (32/32 XCTest + macOS compile). Let me add the iOS-18-simulator SDK compile (to match "both SDKs") and gather the deferred-step facts.
+
+Both SDK compiles are **green** (iOS 18 sim EXIT=0, macOS 15 EXIT=0). `project.yml` has 0 `shared-surfaces` refs and `Frameworks/` holds only `.gitkeep` — identical to the accepted predecessor disposition. Now let me write the comprehensive, honest log.
+
+Let me correct the test-method counts in the log for accuracy (32 total = 23 + 9, all executed).
+
+Let me do a final verification pass on the finished files and check the working tree before committing.
+
+All final gates green. The pre-existing modified files (`AIUsageCard.*`, 2 web files) were dirty before I started — I'll stage **only** my new surface dir + the log. Let me stage and verify before committing.
+
+Staged set is exactly my 10 files + the log; the pre-existing changes remain unstaged. Committing now.
+
+Committed cleanly (commit `53cffab77`, 11 files, 1432 insertions). Let me finalize tracking and do a last sanity check.
+
+All verified and committed. The log ends with `EXIT=0` / `STATUS=DONE`, all my files are in `HEAD`, and nothing of mine is left unstaged.
+

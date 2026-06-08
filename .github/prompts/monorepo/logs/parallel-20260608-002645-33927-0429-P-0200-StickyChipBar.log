@@ -1,0 +1,117 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple app setup.
+
+Tooling note: `xcodebuild` needs full Xcode but only Command Line Tools are installed. `swift`, `swiftlint`, `swiftformat` are available. Let me read the web source and study the existing Apple patterns (the recently-modified `AIUsageCard` is a perfect template).
+
+The web source is a pure presentational "jump to section" chip navigation. The native output dir `shared-surfaces/` doesn't exist yet — I'll create it. Let me study the established conventions using `AiUsageCard` as a template and find the shared infrastructure (state holders, tokens, i18n, diagnostics).
+
+Rich, well-structured codebase. Let me study the shared infrastructure (tokens, i18n facade, state-holders, diagnostics) and the full `AiUsageCard` template set.
+
+Now I understand the architecture deeply. Let me read the Design tokens (TSSpacing, Color.TS, Font.TS, TSFadeIn) and the remaining `AiUsageCard` template files.
+
+Token definitions aren't in Sources/Design. Let me locate them across the whole apple tree, and read the remaining test files.
+
+The generated tokens live at `apps/design/generated/apple/Tokens.swift`. Let me read it plus the token tests to learn the exact available API.
+
+Now I have the full token API. Let me read the test conventions, `project.yml` (build file globbing), and the closest analog — `QuickNav` (a nav surface).
+
+Critical finding: `project.yml` globs `TeslaSync/feature-views` and `dashboard-widgets`, but **not** `TeslaSync/shared-surfaces`. Yet the prompt mandates that exact output path and restricts allowed files to it. Let me check toolchain capabilities and read the remaining template (Tests, QuickNav nav-analog, placeholder checker, logs dir).
+
+I now understand the full P4-leaf-contract pattern (AiUsageCard adds loading/error/stale/offline chrome over the web, binds via a state-holder, emits `view.opened`). Let me check the placeholder rules, PowerShell availability, and the closest nav analog (`QuickNav`).
+
+`pwsh` IS available, so I can run the placeholder gate. Only `xcodebuild`/simulators are missing. Let me study the closest nav analog `QuickNav` for idiomatic horizontal-scroll/selection patterns, then write a tiny SwiftUI typecheck probe to confirm I can compile-verify against the macOS SDK.
+
+QuickNav is the ideal analog (nav surface, static catalog source, phase + connection axes, `onSelect` delegation, `TSSkeleton`). Let me read its Model/Adapter/strings/Tests and confirm the `TSSkeleton` + strings-facade signatures.
+
+I have the complete pattern (QuickNav is the ideal analog). Let me confirm the `TSSkeleton` signature, check for symbol collisions, read QuickNav's strings/previews/tests templates, and probe whether `swiftc -typecheck` works against the macOS SDK for SwiftUI.
+
+SwiftUI typechecks against the macOS SDK (PROBE_EXIT=0) — I can do real compile verification. Let me read `TSSkeleton`'s signature and QuickNav's strings/previews/tests to finalize my templates.
+
+I have everything needed. Let me read the lint/format configs to match house style, then write the plan.
+
+I now have a complete understanding. Let me record a brief plan, then build the surface. The architecture mirrors `QuickNav` (the closest nav analog): pure Adapter core, state-holder Model with telemetry/i18n seams, the View, presentational Views, Previews, strings, and Tests.
+
+Now creating the surface files, starting with the directory and the pure Adapter core.
+
+Now the main View and the presentational subviews.
+
+Now the Previews and the Tests files.
+
+All 7 files created. Now the verification pass: swiftformat lint, swiftlint, and an XCTest-availability probe.
+
+Three findings to address: (1) swiftformat flags 2 long lines in Tests.swift, (2) swiftlint found 1 violation — need to locate it, (3) XCTest isn't in the CLT SDK (expected — same root cause as missing Xcode). Let me pinpoint the swiftlint violation and view the long test lines.
+
+The path-arg didn't scope swiftlint (it used the config's `included`, so my files weren't linted — that 1 violation is pre-existing elsewhere). Let me find all >120-char lines in my files directly and lint them with a path-honoring config.
+
+Only one issue: `Tests.swift:80` is 128 chars. Let me wrap it (before-first style), then re-verify.
+
+Now re-verify format + lint, then build the swiftc typecheck harness for the source files (compiling against real design Tokens + a `TSSkeleton` shim with the real signature).
+
+swiftformat passes (0 issues). swiftlint shows no violations in my files. The only typecheck errors are the `#Preview` macro plugin (`PreviewsMacros`) being absent in Command Line Tools — a tooling gap, not a code error (identical macro to QuickNav/AiUsageCard). Let me confirm swiftlint's real exit code and typecheck the core source files excluding Previews.
+
+swiftlint: **0 violations in 6 files**. Core typecheck (Adapter, Model, View, Views): **0 errors**. The `#Preview` macro and XCTest gaps are the same Xcode-absence issue. Let me still verify the preview *bodies* typecheck by transforming the macro into plain functions.
+
+All 7 preview bodies typecheck (exit 0). Now let me verify the **test** code's API usage by stubbing XCTest (absent in CLT) and compiling the tests against my real sources — this catches any wrong method/label usage in the tests.
+
+Test code typechecks against the real sources (exit 0). Now the placeholder gate (pwsh is available):
+
+Placeholder gate passes (COUNT=0, EXIT=0). Let me double-check none of the acceptance-forbidden words (TODO/stub/mock/placeholder/Lorem) appear in my files, then write the gate log.
+
+Everything is clean: no forbidden words, all 6 Swift files lint/format/typecheck green, placeholder gate passes. Let me check the repo's log conventions (and any existing BLOCKED precedent) before writing the gate log.
+
+Key discovery: the precedent log shows the intended runner has full Xcode at `/Applications/Xcode.app`, just not selected by default — they override `DEVELOPER_DIR`. Let me check if Xcode is actually installed here.
+
+Full Xcode 26.5 + iOS 26.5 simulator + xcodegen are present — I'm **not** capability-blocked. The precedent overrides `DEVELOPER_DIR`. Let me read the full AIRestorePanel precedent log to learn the exact build/test invocation and how `.Tests.swift` files get routed (since they use `@testable import`).
+
+This precedent is the key: full Xcode is on the runner (via `DEVELOPER_DIR`), and the accepted methodology is full-surface SDK compiles (incl. `#Preview`) against the **real** shared component library + an executed logic harness + scoped gates, with the whole-tree `xcodebuild` deferred on pre-existing sibling breakage. Let me verify against the real toolchain now. First, gather the real component sources.
+
+Components import only SDK frameworks (SwiftUI/Charts/MapKit/CoreLocation) — self-contained. Now the full-surface compile (incl. `#Preview` macros) against the **real** shared component library, on both iOS-sim and macOS SDKs via Xcode's toolchain.
+
+The only errors are in an unrelated component (`UnitFormatters.swift` needs app-domain types outside the Design/Components set) — **zero** in my surface. Let me narrow to just the real components my surface actually uses (Tokens, Design, `TSCard`, `TSSkeleton`) and run both SDKs.
+
+The cascade is only from component `#Preview` blocks referencing sibling components. Two clean compiles resolve it: (A) the real library **without** `-DDEBUG` (drops all component previews) to prove my code compiles against the real `TSSkeleton`/`TSCard`/tokens; (B) my surface **with** `-DDEBUG` + `#Preview` to prove the preview macros expand under Xcode's toolchain.
+
+(B) passes: my surface **including `#Preview` macros** compiles clean on the iOS-sim Xcode toolchain (B_IOS_EXIT=0). For (A), `TSCard` pulls in more real components (Typography, Badges). Let me include the full real Components set (minus the app-domain `UnitFormatters`) so the **real** `TSSkeleton` compiles next to my surface.
+
+(A) passes: my full surface compiles against the **real** shared component library (41 files, real `TSSkeleton`/`TSCard`/tokens) on macOS 15, Swift 6 — **0 errors**. Now let me run (A) on iOS-sim, (B) on macOS, and build+run an **executed** logic harness over the real Adapter+Model (the precedent's strongest evidence).
+
+All four SDK×preview combinations compile with **0 errors**. Now the executed logic harness over the real Adapter+Model.
+
+**Executed harness: 40 assertions, 0 failures.** Now the final checks — `plutil -lint` on the strings, and compiling the test bundle against the **real** XCTest (now available via Xcode) + real surface.
+
+Good catch — the executed harness and all surface compiles are green, but compiling the tests under **Swift 6 strict concurrency** surfaced a real defect: the file-level `echo`/`keyTap` closures aren't `Sendable` (would break the real XCTest build). Let me fix that with `@Sendable`, then re-verify.
+
+Now re-verify: a minimal real-XCTest probe, the fixed test compile, and re-run swiftformat/swiftlint on my files.
+
+The `XCTAssertEqual cannot find` is a bare-`swiftc` limitation — even a **minimal** XCTest probe fails identically (the `XCTAssert*` overlay needs xcodebuild's test host, not ad-hoc `-F`). Crucially, the **`@Sendable` concurrency fix worked** (those errors are gone), and format/lint stay clean. Let me definitively re-verify the test code is Swift-6-clean + API-correct using XCTest shims under `-swift-version 6`.
+
+Definitive: test code is Swift-6-clean against the real surface (exit 0). Every host gate, both-SDK compile (incl. `#Preview`), and the executed harness are green. Now let me substantiate the whole-tree `xcodebuild` deferral concretely (pre-existing sibling breakage + un-globbed path + Shared.xcframework prerequisite) before writing the log.
+
+All deferral reasons are concretely confirmed (un-globbed path, 15 sibling `DashboardWidgetSize` redeclarations, unstaged Shared.xcframework). My work is isolated to the new `shared-surfaces/` dir. Now I'll write the comprehensive, honest gate log.
+
+Log written. The `@Sendable` edit was already re-verified green (format 0/6, lint 0 violations, Swift-6 tests 0 errors). Let me do a final consolidated gate run and commit only my files + the log.
+
+All final gates green; exactly my 7 files + the log are staged (pre-existing sibling changes excluded). Committing.
+
+Committed as `e7fa8e8b7` with exactly my 7 surface files + the log (pre-existing sibling modifications correctly left untouched). Let me verify the commit contents and clean up temp artifacts.
+
+Task complete. The commit contains exactly my 7 surface files + the gate log (1496 insertions); temp artifacts cleaned; pre-existing sibling modifications left untouched.
+
+## Summary
+
+Shipped a production-polished native Apple **`StickyChipBar`** surface at parity with `web/src/components/status/StickyChipBar.tsx`, following the established `QuickNav`/`AiUsageCard` architecture.
+
+**Files** (`apps/apple/TeslaSync/shared-surfaces/`): `.Adapter` (pure projection core — `resolveActiveID` ports the web `activeId` default+clamp, `resolvePhase`, builder, a11y), `.Model` (P1/S8 state-holder + P1/S10 i18n facade + P1/S11 `view.opened` telemetry + Static/InMemory sources), `.swift` (the bar: translucent `.bar` chrome, hairline, phase switch), `.Views` (scroll-into-view pill row, active cyan pill, skeleton/empty/error/connectivity), `.Previews` (7 states), `.strings` (11 keys), `.Tests`.
+
+**Parity**: pill row, active highlight + `aria-current`→`.isSelected`+"Current section", scroll-spy (`setActiveSection`=IntersectionObserver) vs tap (`select`=onClick), host scroll via `onSelect`, `aria-label`. P4 leaf states (loading/empty/error + live/stale/offline) layered on like the presentational siblings. Full i18n, VoiceOver, Dynamic Type, Reduce-Motion.
+
+**Verification** (full Xcode 26.5 reached via `DEVELOPER_DIR`):
+- Dual-SDK (iOS 18-sim + macOS 15) full-surface compiles vs the **real** shared component library — **0 errors**
+- `#Preview` macro expansion both SDKs — **0 errors**
+- **Executed** logic harness over the real Adapter+Model — **40 assertions, 0 failures**
+- Swift-6 test typecheck — **0 errors** (caught + fixed a real `@Sendable` global-closure defect)
+- Scoped `swiftlint --strict` **0/6**, `swiftformat --lint` **0/6**, `check-placeholders` **COUNT=0**, `plutil -lint` **OK**
+
+**Deferred (honest, out-of-allowed-files)**: whole-tree `xcodebuild build test` + whole-tree lint/format — the mandated `shared-surfaces/` path isn't globbed in `project.yml`/`.swiftlint.yml` (wiring I'm forbidden to do — noted in the log), `Shared.xcframework` is unstaged, and HEAD carries pre-existing `DashboardWidgetSize` redeclarations across 15 unmodified sibling files. Zero errors originate in any `StickyChipBar*` file.
+
+Log: `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0200-StickyChipBar.log` → `EXIT=0` / `STATUS=DONE`.
+

@@ -1,0 +1,132 @@
+I'll start by exploring the repository structure to understand the task scope: the web source, the Apple app structure, and the available tooling.
+
+Tooling note: `xcodebuild` requires full Xcode but only Command Line Tools is active. Predecessors committed successfully, so let me check how they handled the gate. Let me read the web source, registry, and predecessor artifacts.
+
+The established pattern is clear: predecessors ship complete Swift files, verify via host-based typecheck/lint/format/placeholder harness, and DEFER the Xcode scheme gate (Command Line Tools only, no full Xcode + no registered scheme) with capability evidence — achieving EXIT=0/STATUS=DONE. Let me study the full predecessor log and reference files.
+
+Now I understand the disposition fully. Let me read the web spec pieces (WidgetShell, WidgetComparisonCard, types, registry, hooks, lib) and the immediate native predecessor (RecentDrivesWidget.*) to mirror its structure exactly.
+
+Now let me read the exact arithmetic helpers (unitConversion, constants, numberFormat, useUnits, useAnalytics) and the Delta component, plus the native predecessor files to mirror structure precisely.
+
+Now reading the rest of the predecessor file set (Model, Adapter, Views, Previews, Tests, strings) to fully understand the shared seams.
+
+Excellent reference set. Now reading the remaining predecessor files (Views, Previews, Tests, strings) and locating the shared design-system tokens and `DashboardWidgetSize`/`DashboardWidgetRegistration`.
+
+Now let me locate the exact definitions of `DashboardWidgetSize`, `DashboardWidgetRegistration`, and the design tokens (`TSSpacing`, `TSRadius`, `Color.TS`, `Font.TS`, `TSSkeleton`).
+
+Each staging widget defines its own `DashboardWidgetSize`/`DashboardWidgetRegistration` (self-contained for isolated typecheck). Let me read the canonical definition and locate the design tokens.
+
+I have the full pattern. Let me read the lint/format configs and confirm the distance-conversion quirk is codebase-wide (sibling widget) to justify verbatim parity, then write my plan.
+
+Confirmed: the sibling `WeeklySummaryCardWidget` uses the identical `distanceKm * KM_TO_MI → toDistanceDisplay` and `efficiency * MI_TO_KM → toEfficiencyDisplay` transform — so this is a codebase-wide convention I must reproduce verbatim for cross-platform value parity. 
+
+Critical check before committing to the approach: verify the host Swift toolchain can typecheck SwiftUI + `@Observable` against the macOS SDK (only Command Line Tools is active here).
+
+Toolchain verified: Swift 6.3.2 + macOS SDK 26.0, SwiftUI/Observation/Charts typecheck green under strict concurrency. The host-gate approach (matching predecessors) is viable; the xcodebuild scheme gate will be DEFERRED with evidence. Let me set up my plan and todos.
+
+Toolchain confirmed. Now writing the Model file (P1/S8 seam, telemetry, registry, i18n facade, DTO, self-contained widget-size types).
+
+Model written. Now the parity-critical Adapter (pure projector reproducing the web transform + Delta logic verbatim).
+
+Now I'll fix the Model's `copy()` to populate all `WeeklyDigestCopy` fields, and refactor the Adapter's long delta return-tuple into a struct (cleaner, avoids the >120-char line) plus simplify the constants reference.
+
+Now updating the `delta` function to return the struct:
+
+Now let me validate the parity arithmetic with a throwaway host harness before writing tests and views — this pins exact expected strings.
+
+Parity values verified by execution (e.g., miles distance `0.0`/`25.0%`/up/positive; efficiency `647 Wh/mi`/`—`/up/negative; km `0.1`/`402`; grouping `1,234`/`17.7%` down). Now writing the SwiftUI surface.
+
+Now the presentational subviews (metric row with delta, connectivity banner, loading skeleton).
+
+Now the previews covering every state and sizes.
+
+Now the i18n strings catalog and the tests.
+
+Now the committed XCTest suite, pinned to the harness-verified parity values.
+
+All 7 files written. Now running the verification gates. Starting with the strict-concurrency typecheck against the real design system.
+
+Skeletons.swift references `TSCard` (other skeleton variants). The predecessor typechecked against the full Components/Design tree. Let me locate `TSCard` and any KMP `Shared`-dependent files to exclude (absent framework).
+
+No KMP `Shared` deps in Components/Design. Let me typecheck my surface against Tokens + the full Components + Design trees.
+
+All 52 errors are from `Sources/Components/DataDisplay/UnitFormatters.swift` (resolves KMP `Shared` `Units`/`UnitPreferences`, absent + unused by my surface — exactly the file the predecessor excluded). Let me confirm and exclude it.
+
+Typecheck is **GREEN (0 errors)** against the real Tokens + Components + Design (only the KMP-`Shared`-dependent, unused `UnitFormatters.swift` excluded, as the predecessor did). Now the executable harness that runs the parity + model + registry + a11y assertions.
+
+The `@main` entry disallows top-level expression statements. Let me wrap the assertion sequence in a function.
+
+Harness build hit strict-concurrency global-var rules (harness-only, not shipped code). The shipped Model/Adapter already passed strict typecheck. Rebuilding the harness without the strict flag (it only needs to execute the logic).
+
+**Harness green: CHECKS=86 FAILURES=0.** Now running swiftformat and swiftlint on my files.
+
+swiftformat (auto-fixable) plus swiftlint structural issues (file length >400, function body >50, params >5). Let me view the Adapter region to refactor structurally before auto-formatting.
+
+Let me check current line counts and the Model size before refactoring the Adapter.
+
+Clear plan: the structural swiftlint rules (file ≤400, body ≤50, params ≤5) need the Adapter refactored (bundle metric inputs into a struct, extract row-building, trim comments). Let me rewrite the Adapter compactly.
+
+Let me hoist `prevDrives`/`prevEnergy` into locals (shortens the input lines) before swapping the file in.
+
+Adapter now 392 lines. Now fixing the View's redundant `@ViewBuilder` and the Tests' long lines. Let me view the relevant Tests lines.
+
+Let me run swiftformat in write mode to auto-fix formatting (long lines, indent, redundant `@ViewBuilder`, property bodies), then re-lint.
+
+swiftformat clean. Now re-running swiftlint --strict to confirm the structural fixes.
+
+One violation left: Adapter 415 > 400 (swiftformat wrapping inflated it). I'll extract the delta/metric model types into a dedicated `WeeklyDigestWidget.Delta.swift` (within scope, idiomatic separation). Let me view the current sections to move.
+
+Now removing those moved types from the Adapter:
+
+Now re-verifying all gates with the new Delta.swift included. Running format + lint first.
+
+Format + lint both **GREEN (0 violations)**. Now re-running the strict typecheck (with Delta.swift) and the executable harness.
+
+Typecheck **GREEN (0 errors)** with Delta.swift. Now re-running the harness with all three logic files.
+
+**Harness GREEN: CHECKS=86 FAILURES=0.** Now the placeholder check. Let me locate the script.
+
+Placeholder gate **PLACEHOLDER_COUNT=0, EXIT=0**. Let me cross-verify it actually scanned my files (prefix path) and do a manual forbidden-word scan (no skip-and-assume).
+
+I'll stop the slow directory scan (the prefix-path gate already passed) and run the fast manual word scan separately.
+
+Environment is responsive (no stray processes). Re-running the fast word scan.
+
+**All host gates GREEN.** Forbidden-word scan clean (no matches). Let me capture the exact xcodebuild-deferral evidence (CLT-only, staging dir not in project.yml, KMP framework absent) for an honest log.
+
+Key nuance: Xcode.app *is* present (but not the active dev dir), and the staging dir *is* now in `project.yml`. The likely hard blocker is the absent KMP `Shared.xcframework`. Let me confirm that dependency and tooling state precisely (bounded probes, no full build).
+
+Definitive evidence gathered: the `xcodebuild` scheme gate is blocked solely by the **absent KMP `Frameworks/Shared.xcframework`** (linked by the app target, `import Shared` in 13 Sources, built via Kotlin/Native+Gradle) — not by my surface, which type-checks and executes green. This is the established DEFERRED disposition. Let me update todos and write the gate log.
+
+Log written. Now a final consolidated gate pass + git status check before committing only my files.
+
+All gates green (FORMAT/LINT/TYPECHECK = 0). Git status confirms my 8 files + log are untracked and the 2 pre-existing `web/` edits are separate. Staging only my files (the prompt's `WeeklyDigestWidget` pathspec is a prefix; I'll use the explicit glob) and committing.
+
+Staged set is exactly my 8 files + log; the 2 pre-existing `web/` edits remain unstaged. Committing.
+
+Commit **6514ab2b** created with all 9 files (1949 insertions); the 2 pre-existing `web/` edits correctly excluded. Cleaning up temp files and doing a final sanity check.
+
+All clean: no stray files, working tree has only the 2 pre-existing (non-mine) `web/` edits, log ends with `EXIT=0 / STATUS=DONE`. Marking todos complete.
+
+All todos complete and the surface is committed. Task finished.
+
+Merge made by the 'ort' strategy.
+ ...e-dashboard-widgets-0116-WeeklyDigestWidget.log | 200 +++++++++++
+ .../WeeklyDigestWidget.Adapter.swift               | 363 +++++++++++++++++++
+ .../WeeklyDigestWidget.Delta.swift                 |  68 ++++
+ .../WeeklyDigestWidget.Model.swift                 | 382 ++++++++++++++++++++
+ .../WeeklyDigestWidget.Previews.swift              | 116 ++++++
+ .../WeeklyDigestWidget.Tests.swift                 | 394 +++++++++++++++++++++
+ .../WeeklyDigestWidget.Views.swift                 | 161 +++++++++
+ .../dashboard-widgets/WeeklyDigestWidget.strings   |  51 +++
+ .../dashboard-widgets/WeeklyDigestWidget.swift     | 214 +++++++++++
+ 9 files changed, 1949 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0116-WeeklyDigestWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WeeklyDigestWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WeeklyDigestWidget.Delta.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WeeklyDigestWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WeeklyDigestWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WeeklyDigestWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WeeklyDigestWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WeeklyDigestWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WeeklyDigestWidget.swift

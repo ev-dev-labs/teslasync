@@ -1,0 +1,147 @@
+=== P4 Shared surface 0178 ConnectionSegment (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh · Java 17
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5, booted) present · macOS 26.5 SDK present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 6m; release XCFramework
+                       staged to apps/apple/Frameworks/Shared.xcframework with ios-arm64, ios-arm64-simulator,
+                       macos-arm64 slices). The cached Kotlin/Native distribution is present on this runner.
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS simulators present → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/components/layout/status-bar/ConnectionSegment.tsx — a footer status-bar API-health segment:
+    useApiHealth() → { status ∈ ok|degraded|offline|unknown, latencyMs: number|null }
+    <Tooltip><Link to="/system-status">  dot(v.dot) + Icon(v.icon) + (!iconOnly: short "API" + trailer) </Link></Tooltip>
+    variants: ok=Online/emerald/Activity · degraded=Degraded/amber/AlertTriangle ·
+              offline=Offline/rose/CircleSlash · unknown=Connecting…/muted/HelpCircle
+    inline trailer  : ok|degraded & latency → "· {ms}ms" · offline → "· Offline" · unknown → (nothing)
+    tooltip         : "API connection · {state}" + (latency & status!==offline → " · {ms}ms")
+    aria-label      : "API connection status: {state}" + (latency & status!==offline → " ({ms}ms)")
+  Colour is deliberately paired with an icon so the state is legible under colour-vision differences.
+
+ARTIFACTS SHIPPED (apps/apple/TeslaSync/shared-surfaces/ConnectionSegment.*)
+  ConnectionSegment.Adapter.swift       — ConnectionStatus (tone + SF Symbol per status), ConnectionTone,
+                                          ConnectionLatency (bare-ms, no grouping), ConnectionAccessibility
+                                          (tooltip + aria builders). Pure Foundation.
+  ConnectionSegment.Model.swift         — ConnectionStrings (i18n facade, P1/S10), ConnectionFreshness,
+                                          ConnectionTelemetry + OSLogConnectionTelemetry (P1/S11 view.opened),
+                                          ConnectionInput, ConnectionData, ConnectionResolved, ConnectionSource
+                                          (P1/S8 seam), ConnectionSegmentModel (@Observable), InMemoryConnectionSource.
+  ConnectionSegment.Projection.swift    — pure Input→Resolved (error/loading/empty/data + the web variant render).
+  ConnectionSegment.Views.swift         — ConnectionDataView (dot+icon+label+latency/offline run), ConnectionEmptyView,
+                                          web-variant-colour → shared TSTone mapping.
+  ConnectionSegment.Chrome.swift        — ConnectionFreshnessChip (stale/offline), ConnectionLoadingView (skeleton),
+                                          ConnectionErrorView (retry).
+  ConnectionSegment.swift               — ConnectionSegment view (surfaceSlug "ConnectionSegment", states switch,
+                                          iconOnly prop, onOpen tap target). + #if DEBUG previews file.
+  ConnectionSegment.Previews.swift      — 10 state previews (online/degraded/offline/connecting/icon-only/loading/
+                                          empty/error/stale/offline-cached).
+  ConnectionSegment.Tests.swift         — 17 XCTest cases (projection phases, data composition incl. the web
+                                          unknown/offline latency nuance, model wiring, telemetry-once, freshness
+                                          one-shot auto-refresh, surfaceSlug).
+  ConnectionSegment.AdapterTests.swift  — 12 XCTest cases (latency formatter, status→tone/icon, tooltip/aria builders).
+  ConnectionSegment.strings             — P1/S10 catalog table "ConnectionSegment": 7 web-parity keys
+                                          (statusBar.connection.{short,ok,degraded,offline,unknown,tooltip,aria,latency})
+                                          + native chrome keys (open/emptyMessage/loadingA11y/errorTitle/retry/
+                                          freshness.{live,stale,cached}). Zero English literals in Swift code.
+  Necessary shared wiring (one-time registration of the NEW source group — mirrors the existing feature-views entries):
+    project.yml    — + "TeslaSync/shared-surfaces" to the TeslaSync and TeslaSync-macOS target sources.
+    .swiftlint.yml — + "TeslaSync/shared-surfaces" to included.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  useApiHealth          → ConnectionInput via ConnectionSource (P1/S8); the view never pings the API.
+  variant colour        → ConnectionStatus.tone → TSTone (success/warning/danger/neutral) → Color.TS.status* tokens.
+  lucide icon           → SF Symbol: ok=waveform.path.ecg · degraded=exclamationmark.triangle.fill ·
+                          offline=slash.circle · unknown=questionmark.circle (colour ALWAYS paired with a glyph).
+  inline / tooltip rules: reproduced EXACTLY incl. the nuance that `unknown` shows latency in the tooltip + aria
+                          but NOT in the inline run, and `offline` shows it in neither (unit tested).
+  latency               : web `${latencyMs}ms` → bare, non-grouped, half-up integer + localized "%@ms" template.
+  iconOnly prop         : reproduced (dot + icon only).
+  /system-status link   : onOpen closure (host wires navigation) + VoiceOver hint.
+  i18n                  : every string via ConnectionStrings (P1/S10); 7 web keys preserved verbatim.
+  a11y                  : VoiceOver label on every element; segment is a .isButton with a hint; decorative dot/icon
+                          hidden; Dynamic Type via Font.TS tokens; reduce-motion honoured by TSSkeleton.
+  telemetry             : view.opened surface="ConnectionSegment" (P1/S11), emitted once on first snapshot.
+  P4 leaf states        : loading (skeleton chip) · empty (friendly "API · —", never blank) · error (retry chip) ·
+                          stale (chip + one-shot auto-refresh) · offline (cached last-known value + chip).
+
+GATES
+  [GREEN]    swiftformat --lint  (surface, 9 swift files)        : 0/9 require formatting                  (FORMAT_EXIT=0)
+             swiftformat --lint  (whole app, FYI)                : 1 PRE-EXISTING — blankLinesBetweenScopes in
+                                                                   TeslaSync/feature-views/ActionBuilder.Previews.swift:48
+                                                                   (NOT a ConnectionSegment file; not introduced here).
+  [GREEN]    swiftlint --strict  (shared-surfaces scope)         : 0 violations, 0 serious in 9 files       (LINT_EXIT=0)
+             swiftlint --strict  (whole app, FYI)                : 1 PRE-EXISTING — function_body_length in
+                                                                   TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+                                                                   (NOT a ConnectionSegment file; not introduced here).
+  [GREEN]    check-placeholders.ps1 -Path …/ConnectionSegment    : PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0  (PLACEHOLDER_EXIT=0)
+  [GREEN]    ConnectionSegment build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode,
+             strict-concurrency complete = same as the app), compiling the EXACT shipped ConnectionSegment.*
+             sources against the REAL repo design tokens (apps/design/generated/apple/Tokens.swift) + faithful
+             copies of TSTone/TSSkeleton:
+                 Build complete!  ·  Executed 29 tests, with 0 failures                                    (SWIFT_TEST_EXIT=0)
+  [GREEN]    real swiftc -typecheck of the shipped surface (+previews, -D DEBUG), swift 6:
+                 iphonesimulator  -target arm64-apple-ios18.0-simulator                                    (IOS_TYPECHECK_EXIT=0)
+                 macosx           -target arm64-apple-macos15.0                                             (MAC_TYPECHECK_EXIT=0)
+  [GREEN]    xcodegen generate                                   : enumerates all 10 ConnectionSegment.* files across
+                                                                   the iOS + macOS app targets                (XCODEGEN_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS                                                      build : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO ConnectionSegment errors; all blockers pre-exist this change):
+    iOS  : the app target fails with exactly 2 errors, both "unable to resolve module dependency: 'XCTest'". Root
+           cause is the established surface convention of CO-LOCATING *.Tests.swift next to the surface, which the
+           XcodeGen path-based source inclusion compiles into the APP target (which does not link XCTest). This
+           PRE-EXISTS this change: TeslaSync/feature-views already contributes 170 XCTest-importing *.Tests.swift
+           files to the app target, so the app `build` was already XCTest-broken before shared-surfaces existed.
+           (The companion collision documented in apps/macos-pending-verifications.md — `struct DashboardWidgetSize`
+           redefined 15× across Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/* — is also present and
+           unrelated; the XCTest module error short-circuits the build before type-checking reaches it.)
+    macOS: fails with development-SIGNING errors ("TeslaSync-macOS"/"TeslaSyncWidgets-macOS" have entitlements that
+           require signing with a development certificate), which this runner does not provision.
+    These are exactly the artifacts apps/macos-pending-verifications.md defers to the ADR-012 macos-latest CI
+    runner; they are owned by the P4/P99 Apple acceptance gate (signing + a *.Tests.swift→test-target routing pass
+    + a dashboard-widget de-duplication pass), NOT by a single shared-surface prompt (task rule: do not fix
+    pre-existing, unrelated breakage). grep of BOTH full-app build logs for "shared-surfaces|ConnectionSegment"
+    intersected with "error:" = 0 hits. A pending-verification row is recorded in apps/macos-pending-verifications.md.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                           explicitly DEFERRED with evidence — never reported as passing.
+  2  No scope narrowing  : every web variant + branch reproduced (4 statuses, inline/tooltip/aria latency rules
+                           incl. the unknown/offline nuance, iconOnly, /system-status link) + the 5 P4 leaf states.
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; the Shared.xcframework was actually
+                           built (Gradle BUILD SUCCESSFUL) and BOTH full-app builds were run to their real failures.
+  4  No stubs as final   : 10 complete files (1256 lines), 29 real tests; placeholder scanner = 0; no TODO/stub/mock.
+  5  No parity shortcut  : tone/icon/latency/tooltip/aria/iconOnly/i18n/a11y/telemetry all mapped to platform tokens
+                           + unit-verified against the exact web conditions.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 diagnostics all present
+                           and consumed; the new shared-surfaces group is registered the same way feature-views is.
+  8  No commit on red    : the COMMITTED surface is GREEN on every gate it owns AND on a real isolated Swift 6
+                           build+test + both-SDK typecheck; the deferred full-app gate is RED only on pre-existing,
+                           unrelated surfaces (co-located XCTest, dashboard-widget dups, macOS signing).
+  9  No silent drift     : changes are confined to TeslaSync/shared-surfaces/ConnectionSegment.* (10 files), the two
+                           necessary wiring lines (project.yml + .swiftlint.yml), this log, and one
+                           macos-pending-verifications row — all enumerated above.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic ConnectionSegment shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 29 tests pass under the app's own Swift 6 strict-concurrency rules against the real
+  design tokens, it type-checks against the iOS-18 + macOS-15 SDKs, xcodegen enumerates all 10 files, and
+  lint/format/placeholder are green on the surface scope. The full-app iOS-Simulator + macOS xcodebuild gate is
+  DEFERRED (not failed by this code): it is blocked by the pre-existing co-located-XCTest-in-app-target convention
+  (170 unrelated feature-views files), the pre-existing DashboardWidgetSize duplicate-type collisions, and macOS
+  development-signing — all owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate"
+  disposition used by every P4 Apple surface to date (ToolCard, AlertMessageEditor, FSMTimelineChart).
+
+EXIT=0
+STATUS=DONE

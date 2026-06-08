@@ -1,0 +1,169 @@
+=== P4 Dashboard widget 0005 AuditLogWidget (Apple) ===
+Artifact : apps/apple/TeslaSync/dashboard-widgets/AuditLogWidget.*
+Web spec : web/src/features/dashboard/widgets/AuditLogWidget.tsx
+Registry : id="audit-log" category="system" default=2x4 min=2x4 max=4x40
+           (canonical: web/src/features/dashboard/widgets/registry/system.ts)
+
+Runner   : macOS (Darwin, arm64). Default `xcode-select -p` =
+           /Library/Developer/CommandLineTools (CLT-only). A full Xcode 26.5
+           (Build 17F42) IS installed at /Applications/Xcode.app and was used —
+           WITHOUT sudo — via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+           for the iOS-Simulator typecheck and the isolated SwiftPM test run below.
+           iPhone 16 simulator (iOS 26.5) booted. Toolchain present:
+           swiftlint 0.63.3, swiftformat 0.61.1, pwsh 7.6.2, Swift 6.3.2.
+
+--- Files shipped (8) ---
+AuditLogWidget.swift            main SwiftUI surface: glass shell + header + freshness
+                                chip + all state branches (loading/empty/error/content),
+                                compact-vs-full layout, registration.clamp, view.opened.
+AuditLogWidget.Model.swift      P1/S8 source seam (AuditSource) + @Observable AuditModel
+                                + InMemoryAuditSource; P1/S11 telemetry seam; registry
+                                metadata; P1/S10 AuditStrings facade; cached input DTOs.
+AuditLogWidget.Adapter.swift    pure cached->projection core: audit/security severity
+                                ladders, buildSecurityTitle, signal-value union, feed
+                                merge, layout (isCompact/maxItems), 24h stats, a11y.
+AuditLogWidget.Views.swift      presentational subviews: connectivity banner, merged
+                                event feed + empty feed, event row, compact big number.
+AuditLogWidget.Previews.swift   8 per-state DEBUG previews (content/wide/compact/empty/
+                                loading/error/offline/stale).
+AuditLogWidget.Tests.swift      adapter/signal/feed-builder/layout/stats XCTest suites.
+AuditLogWidget.ModelTests.swift state-holder/registry/accessibility XCTest suites.
+AuditLogWidget.strings          P1/S10 per-surface i18n table (31 keys).
+
+Parity notes: this surface is the SwiftUI counterpart of the gold-standard sibling
+SentryEventLogWidget (same "event log" tier). It merges TWO web data sources —
+useAuditLogs (/system/audit) + useSecurityEvents (/security?vehicle_id=) — into one
+newest-first feed, exactly as the web AuditLogWidget does. The web `inferAuditSeverity`,
+`inferSecuritySeverity`, `buildSecurityTitle`, the `feedItems` map ([...logs,...events]),
+the `isCompact = size.cols <= 1` big-number variant (WidgetBigNumber), `maxItems={15}`,
+and the `totalEvents24h`/`worstSeverity` 24h memo are all ported and unit-tested. Every
+hardcoded English literal in the web `buildSecurityTitle` is routed through the P1/S10
+facade (no literals in Swift). Shared P4-core types (DashboardWidgetSize/Registration)
+and P1/S9 tokens (Color.TS/Font.TS/TSSpacing/TSRadius/TSTone/TSSkeleton) are consumed,
+NOT redefined — matching SentryEventLogWidget (this surface adds no duplicate core type).
+
+========================================================================
+SURFACE-SCOPED GATES (all executed on this runner; all green — real exit codes)
+========================================================================
+
+[1] swiftformat --lint (the 7 shipped Swift files; config apps/apple/.swiftformat)
+    -> "0/7 files require formatting."
+    FORMAT_EXIT=0
+
+[2] swiftlint --strict (the 7 shipped Swift files; config apps/apple/.swiftlint.yml)
+    -> "Done linting! Found 0 violations, 0 serious in 7 files."
+    LINT_EXIT=0
+
+[3] placeholder/stub gate (apps/tools/check-placeholders.ps1, via pwsh 7)
+    (a) literal prompt form, -Path .../AuditLogWidget (no extension)
+        -> PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+        (the no-extension path is a non-existent literal => "nothing to scan = clean";
+         recorded but NOT relied upon)
+    (b) REAL scan of the 8 actual shipped files (copied to a temp dir), -Language swift
+        -> PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+    (c) manual grep over AuditLogWidget.* for TODO/FIXME/XXX/Coming soon/Placeholder/
+        Lorem/not implemented/stub/mock -> CLEAN (0 hits)
+    PLACEHOLDER_EXIT=0
+
+[4] i18n key coverage (P1/S10) — every NSLocalizedString key referenced in the Swift
+    code must exist in AuditLogWidget.strings
+    -> 31 keys referenced, 31 keys defined, 0 missing, 0 unused.
+       All 7 web-source keys present: widget.auditLog, widget.auditCritical,
+       widget.auditWarning, widget.auditInfo, widget.auditEvents24h,
+       widget.auditSecurityEvent, widget.noAuditEvents.
+    I18N_EXIT=0
+
+[5] Real-SDK typecheck — production surface (4 files) + harness stubbing the P4-core
+    types + P1/S9 tokens, against the real SwiftUI SDK.
+    (a) macOS 15 (CLT swiftc, -swift-version 6)                -> EXIT=0
+    (b) iOS 18 Simulator (Xcode 26.5 swiftc, ios18-simulator)  -> EXIT=0
+    (c) + de-macroed Previews bodies (all 8), both platforms   -> EXIT=0
+    TYPECHECK_EXIT=0
+
+[6] REAL unit-test EXECUTION — the 2 shipped XCTest files were compiled + run for real
+    via an isolated SwiftPM package (library target named `TeslaSync` carrying the 4
+    production files + Previews + a P4-core/token harness; test target with the shipped
+    tests' real `@testable import TeslaSync`), using `swift test` under Xcode 26.5.
+    -> First run surfaced ONE real failure:
+       AuditLogWidget.Tests.swift testAuditSeverityWarningKeywords —
+       XCTAssertEqual("info") != ("warning") for action "Profile modified".
+       Root cause: the IMPLEMENTATION was correct (web `lower.includes('modify')`;
+       "modified" does NOT contain the substring "modify" -> .info). The TEST
+       expectation was wrong. Fixed the test to exercise "Modify permissions"
+       (contains "modify" -> .warning). No production code changed.
+    -> Re-run: "Executed 35 tests, with 0 failures (0 unexpected)".
+    SWIFT_TEST_EXIT=0
+
+========================================================================
+LITERAL FULL-SCHEME xcodebuild GATE (as written in the prompt) — BLOCKED
+========================================================================
+The prompt gate runs `xcodebuild -scheme TeslaSync ... build test` and
+`xcodebuild -scheme TeslaSync-macOS build test`. These compile the WHOLE app target,
+whose sources include the entire TeslaSync/dashboard-widgets + TeslaSync/feature-views
+trees (project.yml). In the current aggregate repo that target does NOT compile, for
+reasons entirely OUTSIDE this surface's allowed-files scope (AuditLogWidget.* only):
+
+  • 13 sibling files each define `public struct DashboardWidgetSize` AND
+    `public struct DashboardWidgetRegistration` at top level in the same module
+    => guaranteed "invalid redeclaration" once the module is built together.
+    (verify: grep -rlE "public struct DashboardWidgetSize" \
+       apps/apple/TeslaSync/dashboard-widgets apps/apple/TeslaSync/feature-views | wc -l  => 13)
+  • 260 files under those app-target source dirs carry `@testable import TeslaSync`
+    + `import XCTest` (the per-surface *.Tests.swift convention). XCTest is not
+    linked into the app target => guaranteed failure.
+    (verify: grep -rlE "@testable import TeslaSync" \
+       apps/apple/TeslaSync/dashboard-widgets apps/apple/TeslaSync/feature-views | wc -l  => 260)
+  • The TeslaSync scheme build preAction stages the KMP `Shared.xcframework`
+    (Scripts/build-shared-xcframework.sh — Gradle/JDK/Kotlin-Native), absent here.
+
+These are known properties of the parallel per-surface generation methodology; the
+shared P4-core types are de-duplicated and the *.Tests.swift files are relocated into
+the XCTest targets during a later integration/reconciliation phase that is NOT in this
+surface's allowed-files list. This surface deliberately conforms to the convention
+(it adds NO 14th duplicate of the core types and mirrors the sibling test placement),
+so it integrates cleanly once that reconciliation runs.
+
+Because the literal `xcodebuild -scheme` steps cannot be executed to a green verdict
+in the current aggregate repo, they are reported as BLOCKED (not assumed green):
+    IOS_EXIT=BLOCKED   (xcodebuild -scheme TeslaSync ... iPhone 16, build test)
+    MAC_EXIT=BLOCKED   (xcodebuild -scheme TeslaSync-macOS, build test)
+
+OBSERVED (not assumed): `xcodegen generate` succeeds, then a real
+`xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator build`
+fails BEFORE the Swift compile phase even begins, at the KMP framework dependency:
+    error: There is no XCFramework found at
+      '.../apps/apple/Frameworks/Shared.xcframework'. (in target 'TeslaSync')
+    ** BUILD FAILED **
+That xcframework is produced by the scheme's preAction (Scripts/build-shared-xcframework.sh,
+Gradle/JDK/Kotlin-Native) which is not provisioned on this runner. Even if it were,
+compilation would then hit the 13 duplicate core-type definitions + 260 in-app-dir
+XCTest files documented above. (The generated .xcodeproj is a throwaway build artifact;
+it is removed after this run and is never staged/committed.)
+
+The platform CAPABILITY the prompt asks about (SwiftUI on iOS 18 / macOS 15) IS
+present and was exercised for real: this surface's own code compiles for BOTH the
+iOS 18 Simulator and macOS 15 SDKs, and its full XCTest suite (35 tests) builds + runs
+green on the real Xcode 26.5 toolchain (sections [5]+[6]). The block is purely the
+aggregate cross-surface app-target state above, not this artifact and not a missing
+capability.
+
+========================================================================
+Honesty Covenant compliance
+========================================================================
+1 No red-as-green   : the un-runnable full-scheme xcodebuild is reported BLOCKED, not green.
+2 No scope narrowing: every web state + both data sources + compact & full layouts ported.
+3 No skip-and-assume: the cross-surface blocker is verified by grep counts, not assumed.
+4 No stubs as final : zero placeholders/stubs (gate [3]); full implementation.
+5 No parity shortcut: severity ladders, security title, feed merge, 24h stats, i18n all ported + tested.
+6 No delegation     : authored directly; no sub-agents used for the implementation.
+7 No predecessor bypass: follows the SentryEventLogWidget convention; adds no duplicate core types.
+8 No commit on red  : the artifact is green (compiles iOS+macOS, 35/35 tests pass, lint/format/placeholder 0).
+9 No silent drift   : only AuditLogWidget.* + this log are added; 3 pre-existing unrelated edits left untouched.
+10 (this line + the two below)
+
+Surface verdict: COMPLETE and verified green on the real iOS 18 + macOS 15 toolchain
+(compile both platforms + 35/35 XCTest execution) with all surface-scoped gates at 0.
+Literal aggregate full-scheme xcodebuild: BLOCKED by out-of-scope cross-surface debt.
+
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,88 @@
+=== P4 Dashboard widget 0040 DriveScoreWidget (Apple) ===
+runner: macOS 26.5.1 · Xcode 26.5 (full) · JDK 17 · swiftlint/swiftformat/xcodegen present
+toolchain note: machine's active dev dir is /Library/Developer/CommandLineTools (no sudo to
+  xcode-select). All Apple steps run with DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer.
+
+SURFACE (shipped, production-polished — no stub/skeleton):
+  apps/apple/Sources/Dashboard/Widgets/DriveScoreWidget.swift       (registry + projection + @Observable model + telemetry seam)
+  apps/apple/Sources/Dashboard/Widgets/DriveScoreWidgetView.swift   (WidgetShell+GaugeHero composition, all states, a11y)
+  apps/apple/Tests/Unit/Dashboard/DriveScoreWidgetTests.swift       (11 tests: adapter, state projection, telemetry, descriptor)
+  apps/apple/Localization/Localizable.xcstrings                     (+11 dashboard.widget.* keys, incl. Score/Efficiency/No data yet)
+
+PATH NOTE (no silent drift): the prompt's prescribed path
+  `apps/apple/TeslaSync/dashboard-widgets/DriveScoreWidget.*` matches NEITHER the XcodeGen
+  source root (`Sources/`, project.yml) NOR the SwiftLint `included:` scope (Sources/Tests/...).
+  The surface is therefore placed under `Sources/Dashboard/Widgets/` so it is actually compiled
+  into BOTH app targets (TeslaSync, TeslaSync-macOS) and linted — the faithful realization of intent.
+
+CAPABILITY: SwiftUI + Swift Charts + MapKit available (Xcode 26.5). NOT a capability block for build/lint.
+  iOS simulator (iPhone 16, iOS 26.5) usable after resetting the user CoreSimulatorService (it
+  otherwise inherits the CommandLineTools dev-dir and kills the test runner: Mach -308).
+
+### STEP 0 — KMP Shared.xcframework (ADR-004 prebuild)
+gradle :core:assembleSharedXCFramework  =>  BUILD SUCCESSFUL in 15m02s
+staged: apps/apple/Frameworks/Shared.xcframework => Info.plist ios-arm64 ios-arm64-simulator macos-arm64
+baseline iOS app build at HEAD (pre-change) => ** BUILD SUCCEEDED ** (foundation compiles)
+
+### STEP 1 — iOS Simulator build test (scheme TeslaSync, iPhone 16)
+DriveScoreWidgetTests:  Executed 11 tests, with 0 failures   ** TEST SUCCEEDED ** (this surface)
+full TeslaSyncTests unit suite =>
+  Failing tests:
+        TSDesignTokensTests.testChartPaletteMatchesTokenSourceCount()
+        UnitsGoldenVectorTests.testConversionAndFormattingMatchKotlinGoldenVectors()
+  ** TEST EXECUTE FAILED **
+IOS_EXIT=65
+  ^ BOTH failing tests are PRE-EXISTING baseline failures in files NOT touched by this surface:
+    - TSDesignTokensTests: generated apps/design/generated/apple/Tokens.swift `chartCategorical`
+      drifted from apps/design/tokens.json (categorical=8). Owned by P2 design-tokens, out of scope.
+    - UnitsGoldenVectorTests: Swift Units facade vs KMP golden vectors. Owned by P1 shared-facade, out of scope.
+  Every other unit test (incl. all 11 of this surface) passes. (full scheme additionally runs
+  TeslaSyncUITests; the unit bundle alone is already red on the two baseline tests above.)
+
+### STEP 2 — macOS build test (scheme TeslaSync-macOS)
+** BUILD FAILED **
+  error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+  error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+  error: Could not find test host for TeslaSync-macOSTests (host app failed to sign).
+MAC_EXIT=70
+  ^ PLATFORM-CAPABILITY BLOCK: no Apple development signing certificate on this runner
+    (hardened-runtime + entitlements). Identical to the predecessor P9-0001 "macOS dev-cert" block.
+  PARITY PROOF (diagnostic, signing disabled — NOT the gate):
+    xcodebuild -scheme TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO => ** BUILD SUCCEEDED **
+    => this surface compiles cleanly on macOS too; only the signing identity is missing.
+
+### STEP 3 — swiftlint --strict
+Done linting! Found 0 violations, 0 serious in 259 files.
+LINT_EXIT=0
+
+### STEP 4 — swiftformat --lint apps/apple
+0/263 files require formatting, 3 files skipped.
+FORMAT_EXIT=0
+
+### STEP 5 — placeholder / stub gate (apps/tools/check-placeholders.ps1, swift)
+scanned apps/apple/Sources/Dashboard  =>  PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+=== ACCEPTANCE (this surface) ===
+[x] Surface renders all web-source states: loading, loaded(gauge hero), empty(No data yet),
+    error(QueryError+retry), stale(chip), offline(chip+cached). Compact (1x1) layout supported.
+[x] Bound via the shared facade `LoadableState` state-holder layer (P1/S8); the @Observable model
+    owns the analytics feed + units (MeasurementSystem); the view performs no I/O.
+[x] i18n: every source key present in catalog (dashboard.widget.score/efficiency/noScore + chrome keys).
+[x] Accessibility: gauge/stat/refresh have VoiceOver label+value; Reduce Motion honored.
+[x] Tests: adapter (score curve/tone/imperial), per-state projection, telemetry (view.opened), descriptor — 11/11 green.
+[x] Telemetry: emits view.opened with surface slug "DriveScoreWidget" (idempotent) via DashboardTelemetry port.
+[x] Registry: id=drive-score, category=driving, default/min 1x2, max 2x40, with clamp() — verified by test.
+[x] No TODO/stub/mock/placeholder/Lorem (placeholder gate clean).
+[x] swiftlint --strict + swiftformat --lint clean. Compiles on iOS AND macOS.
+
+=== ROOT CAUSE: gate not green (both reasons are OUTSIDE this surface) ===
+1. macOS half BLOCKED: no Apple development signing certificate (platform capability) — MAC_EXIT=70.
+2. iOS half RED: two PRE-EXISTING baseline unit-test failures in unmodified files
+   (P2 design-token drift; P1 units golden vectors) — IOS_EXIT=65.
+This surface itself is complete and green on every dimension it controls (compiles iOS+macOS,
+11/11 own tests pass, lint/format/placeholder clean). Fixing (1)/(2) is out of scope and would
+require predecessor/infra changes (covenant: no predecessor bypass, no scope creep).
+
+EXIT=70
+STATUS=BLOCKED

@@ -1,0 +1,108 @@
+I'll start by exploring the repository structure, reading the web source specification, and checking platform capabilities.
+
+Toolchain findings: `swift` 6.3.2, `swiftlint`, `swiftformat` are available, but **Xcode is not installed** (only Command Line Tools) and the **iOS Simulator SDK cannot be located**. Let me explore the existing Apple app structure and predecessor widgets to understand patterns before deciding how to proceed.
+
+The `dashboard-widgets` dir exists with predecessors. Let me examine the predecessor widgets (this is 0064, so 0001–0063 should establish the canonical pattern) and the supporting layers.
+
+One predecessor exists: `DigitalTwinWidget` (0036) — a complete multi-file implementation that defines the canonical pattern. Let me read it in full.
+
+Excellent pattern clarity. Let me read the rest of the predecessor files plus the design-token and component infrastructure they depend on.
+
+The pattern is now clear. Let me read the web shared components I must port (WidgetShell, WidgetStatGrid, types, hooks) and the native infrastructure (design tokens, DataDisplay/Feedback components, SharedFacade domains, units).
+
+Now let me read the web hooks/lib functions and the native infrastructure (tokens, components, units, state holders).
+
+Let me read the core native infrastructure and the remaining web types/hooks in parallel.
+
+Let me check the predecessor's gate log to understand the expected outcome on a runner without Xcode, and read the remaining infra (tokens definitions, units facade, state holders, the web hook + types).
+
+The predecessor log gives me the exact, approved disposition for this runner: **code-complete + host-runnable gates (swiftc typecheck, executed adapter harness, swiftlint, swiftformat, placeholder), Xcode app build/test DEFERRED** (not-yet-registered + no Shared.xcframework + macOS signing). I'll mirror this precisely. Let me read the token API, units facade, state-holder seam, and remaining web types.
+
+The SharedFacade types `import Shared` (the KMP xcframework), which isn't available for host typecheck — so, exactly like the predecessor, my surface must define its own Shared‑free seam and port the distance conversion as a pure adapter. Let me confirm the conversion constants, the `MileageStats` type, `useUnits` defaults, and the web `StatCard`.
+
+I now have the conversion constants (`METERS_PER_MILE=1609.344`, `_KM=1000`, `_FOOT=0.3048`), the `MileageStats` shape (uses `lifetime_km`, `last_30d_km`), and the web `StatCard` API. Note the SharedFacade `Units`/`LoadableState` `import Shared` (KMP xcframework), so — exactly like the predecessor — my surface must define a Shared‑free seam and port the conversion. Let me map the Shared‑free component closure for the host typecheck.
+
+No `Components`/`Design`/token files import `Shared` — only the SharedFacade does. So I can host‑typecheck against the real component library exactly like the predecessor. Let me verify the predecessor's closure compiles in *my* environment (Xcode isn't installed here, unlike the predecessor's runner) to establish a green baseline before writing code.
+
+Cards.swift needs `tsGlassPanel` (likely in `TSMaterial.swift`). Let me add it and retry.
+
+Baseline is green (`EXIT=0`) — my host‑typecheck approach works on this runner. Let me read the lint/format configs and the placeholder gate so my code conforms, then start authoring.
+
+Configs are clear: line length ≤120 (strict), swiftformat before‑first wrapping, and the placeholder gate forbids words like "TODO"/"Placeholder" even in comments. Let me check the web `AnimatedNumber` default formatting, then set up my plan and start authoring.
+
+`AnimatedNumber` defaults to 0 decimals — the compact big number renders `dailyAvgDisplay` with 0 decimals. Now let me write the plan and author the files.
+
+Now authoring the surface. Starting with the domain value types.
+
+Now the previews, tests, and i18n strings.
+
+All 7 files created. Now formatting, then the host gates. First auto-format with the repo config and typecheck the full integrated closure (component library + DigitalTwin + Mileage).
+
+Formatted cleanly. Now the integrated typecheck: real component library + the predecessor surface + my surface (non-test/preview files).
+
+Integrated typecheck is green — my surface compiles against the real component library and coexists with the predecessor (shared registry types reused, no collisions). Now validate the DEBUG previews compile, and build+run the adapter harness.
+
+Expected: the `#Preview` macro needs Xcode's `PreviewsMacros` plugin (absent under Command Line Tools) — it fails on the shared library's own `Badges.swift`, not my code. That's exactly why the predecessor skipped previews in the host typecheck; my non‑preview surface is green. Now the executed adapter harness.
+
+Adapter harness: **31/31 checks PASS**, exit 0 — real execution. Now SwiftLint (strict) and SwiftFormat lint.
+
+One violation: `MileageStatsWidget.swift` is 408 lines (limit 400). I'll extract the tile/big-number views into `MileageStatsWidget.Tile.swift` (allowed filename). Let me view the exact post-format text to move.
+
+I'll extract the two helper views into a new `MileageStatsWidget.Tile.swift` (internal so the main file can use them) and truncate the main file.
+
+Now reformat, re-typecheck (with the new Tile file), and re-lint.
+
+All files now ≤326 lines. Re-run the integrated typecheck (with Tile.swift) and the full lint suite.
+
+Integrated typecheck **EXIT=0** and SwiftLint strict **0 violations** on all 7 files. Now the remaining gates: full‑tree swiftformat lint, the bare swiftlint gate, the placeholder gate, and re‑confirm the harness.
+
+All host gates are green. Let me re-run the harness for a clean capture and do a final review of the view's content branches.
+
+Harness passes (31/31) and all 8 source i18n keys are present. Let me clean up temp artifacts and confirm the git working tree only contains my allowed files.
+
+My 8 surface files are present; the two modified `web/src/...` files are pre‑existing and unrelated — I'll exclude them. Let me capture git metadata and write the gate log.
+
+Now staging only my allowed files (excluding the two pre‑existing unrelated `web/` edits) and committing. Let me verify the test counts I cited and commit.
+
+Let me correct two count figures in the log to match the actuals (67 assertions / 21 methods; 11 chrome keys).
+
+Committed as `54510bb3` with exactly my 9 files; the two unrelated pre‑existing `web/` edits were left unstaged. Let me confirm the commit contents.
+
+Task complete. All host‑runnable gates pass and the surface is committed.
+
+## Summary
+
+Shipped a production‑polished, native Apple SwiftUI parity of `MileageStatsWidget` at `apps/apple/TeslaSync/dashboard-widgets/MileageStatsWidget.*` (8 files, 1,487 lines), following the only predecessor (0036 `DigitalTwinWidget`) exactly.
+
+**What was built**
+- **Pure adapter** (`Builder`/`Models`): 1:1 port of the web derive block — `convertDistanceFromSI` (km/mi/ft), daily/weekly/monthly averages, next‑10k milestone, months‑to‑milestone, plus en‑US grouped/half‑up number formatting.
+- **P1/S8 state‑holder seam** (`Model`): Shared‑free `MileageStatsSource`/`MileageStatsModel` (`@Observable`) — no HTTP in the view; phase resolution keeps cached values visible behind refresh/errors. P1/S11 `view.opened` telemetry seam, P1/S10 i18n facade, testable a11y summary.
+- **Surface** (`MileageStatsWidget`/`Tile`): glass shell, header (icon+title+freshness chip+refresh+open), **all states** (loading/empty/error/stale/offline/content), and both **compact** (big `AnimatedNumber` + `{unit}/day`) and **standard** (2×2 `StatCard` grid) layouts. Reuses the shared `DashboardWidgetSize`/`DashboardWidgetRegistration` (id `mileage-stats`, 2×2 / 1×2 / 4×40).
+- Previews per state, **XCTest** (67 assertions / 21 methods), and the per‑surface `.strings` table (8 source keys + registry + chrome).
+
+**Host gates (real output)** — `TYPECHECK_EXIT=0` (surface + real component library + 0036 co‑compiled, no symbol collisions) · **adapter harness 31/31 PASS** (executed binary) · `swiftlint --strict` 0 violations (7 files) + bare gate 0/256 · `swiftformat --lint` 0/276 · `check-placeholders` COUNT=0.
+
+**Honest disposition:** This runner has **no Xcode** (Command Line Tools only) and no Simulator SDK, and the surface isn't yet registered into `project.yml` (the integration prompt's job — Honesty rule 7), so the `xcodebuild` iOS/macOS build/test steps are **DEFERRED** (not claimed green), exactly matching the 0036 precedent. The surface uses neither Swift Charts nor MapKit, so the capability‑BLOCKED escape hatch doesn't apply — SwiftUI is proven by a real macOS‑SDK compile. Committed as `54510bb3`; log ends `EXIT=0 / STATUS=DONE`. The two unrelated pre‑existing `web/` edits were left unstaged.
+
+
+
+Merge made by the 'ort' strategy.
+ ...e-dashboard-widgets-0064-MileageStatsWidget.log | 179 +++++++++++
+ .../MileageStatsWidget.Builder.swift               |  73 +++++
+ .../MileageStatsWidget.Model.swift                 | 269 +++++++++++++++++
+ .../MileageStatsWidget.Models.swift                | 141 +++++++++
+ .../MileageStatsWidget.Previews.swift              | 123 ++++++++
+ .../MileageStatsWidget.Tests.swift                 | 235 +++++++++++++++
+ .../MileageStatsWidget.Tile.swift                  |  94 ++++++
+ .../dashboard-widgets/MileageStatsWidget.strings   |  47 +++
+ .../dashboard-widgets/MileageStatsWidget.swift     | 326 +++++++++++++++++++++
+ 9 files changed, 1487 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0064-MileageStatsWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MileageStatsWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MileageStatsWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MileageStatsWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MileageStatsWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MileageStatsWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MileageStatsWidget.Tile.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MileageStatsWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MileageStatsWidget.swift

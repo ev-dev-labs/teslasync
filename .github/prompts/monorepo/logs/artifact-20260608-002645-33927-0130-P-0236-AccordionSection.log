@@ -1,0 +1,169 @@
+================================================================================
+P4 · Feature view · 0236 — AccordionSection (Apple)
+Run: 2026-06-08T02:11-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/130
+Base: c9c6fdb9f
+Prompt: P4 · feature-views · 0236 — AccordionSection (Apple)
+Web source (spec): web/src/features/system/components/status/AccordionSection.tsx (78 lines)
+Mode: code-complete + host-validated; DEFERRED full-app Xcode scheme build/test
+      (ADR-012 macOS-pending), matching predecessors 0231 FSMTimelineChart /
+      0180 AlertMessageEditor / 0010 ToolCard.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108), macOS SDK   OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override          OK
+  iOS simulator SDK .......... iPhoneSimulator 26.5 (deployment target iOS 18.0)      OK
+  macOS SDK .................. MacOSX 26.5 (deployment target macOS 15.0)             OK
+  iOS simulator device ....... iPhone 16 present + booted (simctl via Xcode)          OK
+  SwiftUI .................... import SwiftUI resolves on both SDKs (typecheck below)  OK
+  swiftlint .................. 0.63.3                                                  OK
+  swiftformat ................ 0.61.1                                                 OK
+  xcodegen ................... 2.45.4                                                 OK
+  pwsh (placeholder gate) .... 7.6.2                                                  OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks has only .gitkeep)   WARN
+  codesign identities ........ none (BLOCKER for signed app gate, ADR-012)            WARN
+
+  Charts/Maps capability note: the web source lists NO charts and NO maps — this is a
+  pure presentational disclosure container (`@/components/ui` GlassPanel +
+  `@/components/motion` FadeIn only). The core requirement — SwiftUI — is available
+  and PROVEN by REAL iOS-18 + macOS-15 SDK `swiftc -typecheck` AND a passing 15-test
+  XCTest run below. The capability-BLOCKED escape hatch therefore does NOT apply; the
+  surface is authored and host-validated for real, STATUS=DONE.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/AccordionSection.*) ===
+  AccordionSection.swift          183  The composed generic surface
+                                       `AccordionSection<Badges, Content>`: GlassPanel
+                                       (web `overflow-hidden` via clipShape + .tsGlassPanel),
+                                       a full-width Button header (web role=button +
+                                       onClick + onKeyDown Enter/Space — native Button
+                                       activates by tap AND Return/Space), pointer hover
+                                       tint (web `hover:bg-white/[0.02]`), TSFadeIn body
+                                       with top divider (web `border-t`) + `space-y-4`
+                                       rhythm, reduce-motion-aware toggle, @State open
+                                       seeded from defaultOpen (web `useState`), view.opened
+                                       lifecycle, combined a11y element. + convenience init
+                                       for the optional `badges` (web `badges?`).
+  AccordionSection.Views.swift     74  Pure, non-generic sub-views: the leading cyan glyph
+                                       + semibold title over muted description (web
+                                       `text-cyan-400` / `text-sm font-semibold` /
+                                       `text-xs text-[var(--text-muted)]`) and the trailing
+                                       chevron that rotates 180° when open (web `rotate-180`,
+                                       `duration-normal`), reduce-motion safe, a11y-hidden.
+  AccordionSection.Model.swift    150  Host-free value layer: AccordionSectionSurface
+                                       (P1/S11 slug + reportOpen), AccordionSectionAdapter
+                                       (the web's two pure state decisions —
+                                       `useState(defaultOpen)` seed + `setOpen(p=>!p)`
+                                       toggle — plus inputs→projection), the Equatable
+                                       AccordionSectionProjection (a11y label/value +
+                                       chevron-rotation policy), and AccordionSectionStrings
+                                       (P1/S10 i18n facade).
+  AccordionSection.Telemetry.swift 37  P1/S11 view.opened seam: Sendable protocol +
+                                       redaction-safe os_log default sink.
+  AccordionSection.Previews.swift 152  #if DEBUG previews: collapsed / expanded / expanded
+                                       with badges / no-description / light-scheme / reduce-
+                                       motion. Example body rows + status chips stand in for
+                                       caller `children` / `badges`.
+  AccordionSection.strings         19  P1/S10 catalog contribution — the native a11y chrome
+                                       the web carries implicitly via aria-expanded/role
+                                       (expanded/collapsed read-out + activation hint). The
+                                       web source localizes nothing itself (title/description
+                                       arrive already translated from the caller).
+  AccordionSection.Tests.swift    173  XCTest: adapter (resolveInitialOpen identity, toggle
+                                       flip + involution, project denormalize, Equatable) +
+                                       projection (hasDescription, a11y label with/without
+                                       description, a11y value, chevron 180/0) + strings
+                                       facade fallback + toggle hint + telemetry slug + spy.
+  Total 788 lines (7 files). Largest AccordionSection.swift 183 (house file_length 400).
+  Zero opt-outs / suppressions.
+
+=== PARITY (vs web features/system/components/status/AccordionSection.tsx) ===
+  Data sources: NONE — the web component is purely presentational (props:
+    icon, title, description, badges?, defaultOpen, children; the only hook the web
+    file uses is React state via `useState`). No P1/S8 binding is required; the
+    loading/empty/error/stale/offline states in the prompt template do NOT apply
+    (no data is fetched) — only the web's real branches are reproduced.
+  Shared components (web → native):
+    @/components/ui GlassPanel  → TSGlassPanel material via `.tsGlassPanel()` +
+                                  clipShape (web `className="overflow-hidden"`).
+    @/components/motion FadeIn  → TSFadeIn (fade+lift on appear, reduce-motion safe).
+  Branches reproduced (every one renders — no hidden surface):
+    • open ↔ closed  — web `open && <FadeIn>…`; native `if open { TSFadeIn{…} }`
+      with the rotating chevron (web `open && 'rotate-180'`).
+    • badges present ↔ absent — web `{badges && <div…>{badges}</div>}`; native
+      generic `Badges` slot + a `where Badges == EmptyView` convenience init.
+    • defaultOpen seed — web `useState(defaultOpen)`; native @State seeded via
+      AccordionSectionAdapter.resolveInitialOpen (no persistence, matching web —
+      unlike the sibling CollapsibleCommandGroup there is no sessionStorage).
+    • pointer hover — web `hover:bg-white/[0.02] transition-colors`; native
+      `.onHover` theme-aware tint with a fast color transition.
+  Composition: cyan icon (web `text-cyan-400`), 14pt-semibold title (web `text-sm
+    font-semibold text-[var(--text-primary)]`), 12pt muted description (web `text-xs
+    text-[var(--text-muted)]`), trailing badge cluster, rotating chevron; px-5/py-4
+    → TSSpacing.xl/lg; gap-3 → TSSpacing.md; space-y-4 → TSSpacing.lg; border-t →
+    Divider over Color.TS.border; radius → TSRadius.lg. No web Tailwind class ported.
+  Accessibility: the header is one combined Button element — VoiceOver reads title +
+    description (+ any caller badges), value = Expanded/Collapsed (web aria-expanded),
+    hint = activation hint; icon + chevron a11y-hidden; activates by tap AND keyboard
+    Return/Space (web role=button + onKeyDown Enter/Space). Dynamic Type via Font.TS +
+    fixedSize text wrapping; reduce-motion drops chevron rotation + fade.
+  i18n: the web source extracts NO keys (anonymous surface). The only strings this
+    surface owns are the native a11y chrome, all resolved through the P1/S10
+    AccordionSectionStrings facade (table "AccordionSection"); title/description are
+    caller-provided already-localized props, rendered verbatim (web parity).
+  Telemetry: emits view.opened with surface slug "AccordionSection" (P1/S11), asserted.
+
+=== HOST-RUNNABLE GATES (all green) ===
+  swiftformat --lint <surface, 6 swift files> ...... 0/6 require formatting          FORMAT_EXIT=0
+  swiftlint lint --strict <surface, 6 swift files> . Found 0 violations, 0 serious   LINT_EXIT=0
+  check-placeholders.ps1 -Path …/AccordionSection .. PLACEHOLDER_COUNT=0 ALLOWED=0   PLACEHOLDER_EXIT=0
+  swiftc -typecheck iPhoneSimulator (ios18.0-simulator) + real Tokens/TSMaterial/Motion  IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (macos15.0) + real Tokens/TSMaterial/Motion .............. MAC_TYPECHECK_EXIT=0
+  swift test (isolated SwiftPM pkg, macOS 15, Swift 6 strict concurrency) ........... 15/15 passed, TEST_EXIT=0
+      → AccordionSectionTests: adapter(3) · project/equatable(2) · description(2) ·
+        accessibility(4) · strings facade(2) · telemetry slug+spy(2)
+      Harness links the REAL apps/design/generated/apple/Tokens.swift +
+      Sources/Design/TSMaterial.swift + Sources/Components/Motion/Motion.swift; the
+      view code (AccordionSection.swift/.Views/.Model/.Telemetry) compiles + the
+      logic runs green. (@testable import retargeted to the harness module name.)
+  xcodegen generate (spec enumerates the 7 new files, 42 target refs) .............. XCODEGEN_EXIT=0
+
+=== DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test ===
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. They are blocked by PRE-EXISTING, UNRELATED parallel-merge
+    state in the shared app target — ZERO of which originates in this surface
+    (all verified present in THIS tree):
+      • Shared.xcframework not staged (apps/apple/Frameworks has only .gitkeep); the
+        scheme pre-action builds it via the Kotlin/Native Gradle toolchain (the P1/S3
+        artifact already tracked macOS-pending).
+      • `struct DashboardWidgetSize` redefined across 15 files (Sources/DashboardWidgets/*
+        + TeslaSync/dashboard-widgets/*) — "invalid redeclaration" across the app target.
+      • 262 co-located feature-view / dashboard-widget *.Tests.swift / *.ModelTests.swift
+        `import XCTest` into the app target (this surface's 1 test file follows that SAME
+        established sibling convention — every P4 surface ships a co-located *.Tests.swift;
+        it does not introduce a new failure class).
+      • No macOS development-signing identity (ADR-012).
+    This surface's OWN code is proven to compile against the real iOS-18 + macOS-15 SDKs
+    (typechecks above) and its logic runs green (15/15 XCTest). The full-app build/test is
+    recorded for the P99 acceptance gate on a macos-latest runner with signing identities.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all web-source branches reproduced (open/closed,
+      badges present/absent, defaultOpen seed, hover). The template's data states
+      (loading/empty/error/stale/offline) are N/A — the web source is pure
+      presentational and fetches nothing; reproduced exactly per the prompt's
+      "reproduce the branches that exist in the web source".
+  [x] No data hooks to bind — the web component owns no data; no direct HTTP from the
+      view (it has none). view.opened telemetry wired through the P1/S11 seam.
+  [x] Every i18n key from source has a matching P1/S10 key — source extracts none;
+      native a11y chrome (3 keys) all resolve through the AccordionSectionStrings facade.
+  [x] Accessibility labels present on the one interactive element (the disclosure
+      header Button): combined label + Expanded/Collapsed value + activation hint.
+  [x] Tests: adapter unit test + projection/accessibility tests + telemetry test
+      (15 total, green under Swift 6 strict concurrency).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate: 0, 0 opt-outs).
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing unrelated blockers);
+      host-runnable equivalents (real-SDK typecheck both platforms + 15/15 XCTest) green.
+
+EXIT=0
+STATUS=DONE

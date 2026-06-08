@@ -1,0 +1,122 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+The build tooling is available (xcodebuild, swiftlint, swiftformat, swift 6.3.2). The web source is a controlled FSM debugger toolbar. Let me study the existing native conventions — there are many feature views already. Let me find the closest analog and understand the architecture.
+
+Excellent — `Stepper.*` is a controlled component (closest analog to `LiveControls`), and there are `Live*` components showing live/stale/offline handling. Let me study these conventions in depth.
+
+Now let me read the remaining Stepper files, the project wiring, and the shared design tokens/components I'll need to map web `Button`/`Select`/`Tooltip`/`Caption`.
+
+Now I understand the file pattern. Critical question: how do `.Tests.swift` files in `feature-views/` (an app-target source path) avoid being compiled into the app? Let me investigate the build mechanism and available design tokens/components.
+
+`xcodegen` is available, and there are 137 `.Tests.swift` files already in `feature-views/`. Let me resolve how those avoid the app target, probe whether the heavy build can run here, and read the design tokens + shared UI components I need to map.
+
+Key finding: no iPhone 16 simulator showed up, and `Shared.xcframework` requires a Kotlin/Native Gradle build. Let me confirm the gate's runnability and read the shared components I must map.
+
+Definitive finding: this runner has **only Command Line Tools, no full Xcode, no iOS runtimes, no simulators** — so `xcodebuild build test` cannot run. Per the prompt's capability clause that means the build/test gate is BLOCKED, but I must still ship complete, lint-clean, production code and run every achievable check. Let me read the remaining shared components I'll map (Select/dropdown precedent, Typography, Badges, Skeletons, Overlays) and the generated tokens.
+
+`NotificationFilterBar.Controls.swift` gives me the exact precedent for a facade-resolved menu picker (web `Select` → native `Menu`). Now let me confirm token names and resolve the critical question of how `.Tests.swift` files in `feature-views/` are kept out of the app target — by generating the project and inspecting membership.
+
+Confirmed: `feature-views/*.Tests.swift` files are compiled into the app targets (both iOS and macOS get their own copy) — the established pattern, which I'll replicate exactly. The prompt's `LiveControls.*` allowed-files glob confirms tests live alongside as `LiveControls.Tests.swift`. Now let me read the lint/format configs and the placeholder checker so my code conforms, and check `pwsh`.
+
+`pwsh` is available, so I can run the placeholder check + lint/format gate steps (only `xcodebuild` is blocked). Let me read the configs and placeholder checker.
+
+Now let me read the forbidden-pattern list so my code avoids flagged words, then I'll write all files.
+
+I have everything I need. Let me set up a lightweight plan and todos, then write all the source files following the established `Stepper` pattern adapted to `LiveControls`' controlled-toolbar semantics.
+
+Now I'll write the source files, starting with the pure projection core (Adapter).
+
+Now the i18n strings catalog:
+
+Now the test suite — covering the counter math (the heart of the web component), window options, projection, render resolution, format/a11y strings, copy catalog, and the full model command-delegation + stale auto-refresh:
+
+All 7 files written. Now let me run the achievable verification — format, lint, and the placeholder gate — on the new files and fix any issues.
+
+`0/6 files formatted` — already format-clean. Now swiftlint and the lint check, plus the placeholder gate:
+
+One swiftlint violation: `LiveControls.Views.swift` exceeds the 400-line `file_length` limit (449). I'll split the P4 states chrome into a separate `LiveControls.States.swift` — matching the established multi-file pattern. Let me view the boundary and extract.
+
+I'll extract the three P4-state chrome views into a new `LiveControls.States.swift` and trim `Views.swift`.
+
+Now re-run format + lint on all the Swift files (including the new States file):
+
+Clean: `0/7` need formatting and `0 violations` from swiftlint strict. Now let me run the placeholder gate (both the literal gate path and a true scan of my files) and the whole-tree format/lint checks that the gate performs.
+
+Placeholder gate clean. Now the whole-tree format + lint as the gate runs them, to confirm I haven't disturbed the broader tree:
+
+The whole-tree `swiftformat --lint` surfaced **one pre-existing, unrelated** violation in `ActionBuilder.Previews.swift` (not my file, not in my allowed-files scope). My 7 files pass cleanly. Let me confirm it's pre-existing and capture the whole-tree swiftlint baseline.
+
+Whole-tree swiftlint found **1 pre-existing violation** (my 7 files already passed the scoped strict lint with 0). Let me identify it to document honestly, using `--quiet` to show only violations:
+
+Both whole-tree violations are **pre-existing and unrelated** (`LifetimeStatsWidget.Adapter.swift` function length; `ActionBuilder.Previews.swift` formatting) — neither is a LiveControls file, and both are outside my allowed-files scope, so I must not touch them. My 7 files are clean.
+
+I can't run `xcodebuild` (no full Xcode), but the `String(format:)` counter/tooltip logic is pure Foundation — I can verify it on the available `swift` toolchain to de-risk those tests:
+
+All 9 core-logic assertions **PASS** on the real Swift toolchain — this empirically de-risks the counter/format/render tests. Now let me write the honest gate log and commit. First, confirm the logs directory:
+
+Let me check how the sibling `Stepper` log handled this same runner (DONE vs BLOCKED) to match the established convention:
+
+This is pivotal. The sibling `Stepper` log (STATUS=DONE) reveals the established methodology: a full Xcode exists at `/Applications/Xcode.app` (invoked via `DEVELOPER_DIR`, not the active CLT), the full-app `xcodebuild` gate is **DEFERRED** (red only from pre-existing unrelated issues — the app-target glob sweeping 111 `*.Tests.swift` files that import XCTest, plus macOS signing), and the surface is independently verified GREEN via an **isolated SwiftPM harness** compiling the real shipped files + real design system + running the XCTest suite. 140 siblings are DONE vs 9 BLOCKED. Let me probe for the full Xcode and SwiftUI availability.
+
+Full Xcode **is** present at `/Applications/Xcode.app` — the active dir was just CLT. I'm not capability-blocked. Let me verify the toolchain, SDKs, and simulators via a non-destructive `DEVELOPER_DIR` override (no sudo, per the sibling precedent):
+
+Full Xcode 26.5 with iOS 26.5 SDK, macOS SDK, and a **booted iPhone 16 simulator** are all present. I'm not capability-blocked. Following the proven sibling methodology, I'll first build the authoritative GREEN proof: an isolated SwiftPM harness (Swift 6 strict-concurrency, matching the app) that compiles my real shipped files against the real design system and runs the XCTest suite.
+
+**Authoritative GREEN proof achieved**: the isolated SwiftPM harness compiled the exact shipped `LiveControls.*` source files against the **real** design system under **Swift 6 strict-concurrency / macOS 15** and ran **all 31 XCTest cases → 0 failures**. This proves the surface is type-correct and behaviorally correct under the app's own rules.
+
+Now, to honor "no skip-and-assume", let me run the actual full-app `xcodebuild` gate to capture raw exit codes. First generate the project and kick off the iOS build (with the Gradle `Shared.xcframework` pre-step) in the background:
+
+Project generated. Confirmed the pre-existing membership glob: **138** `*.Tests.swift` files (all importing XCTest) are swept into the app target by the source glob — the exact issue the sibling log documented (mine is one, following the dominant convention). Now let me run the real iOS `xcodebuild build test` in the background (it triggers the Gradle `Shared.xcframework` pre-step), using a slot-unique DerivedData path to avoid parallel-slot contamination:
+
+Let me check the build progress:
+
+The background build was killed when the sync session ended (Gradle was just starting). I need a truly detached process. Let me relaunch the iOS build properly with `detach: true` so it survives, then poll:
+
+The iOS build is running detached (Gradle + Xcode). It'll take several minutes. Let me wait and monitor the log:
+
+Gradle is linking the Kotlin/Native frameworks (good progress). Let me keep monitoring:
+
+Kotlin/Native release linking is in progress (the slow phase). Let me continue waiting:
+
+The iOS build failed **exactly** as the sibling log documented: `error: unable to resolve module dependency: 'XCTest'` in `AIUsageCard.Tests.swift` (the first alphabetical co-located test file swept into the app target) — the pre-existing membership glob, **not my code**. Let me capture the raw exit and prove zero LiveControls source-file errors:
+
+Confirmed: the iOS failure is **100% pre-existing** — 4 `error:` lines, all `XCTest` module-resolution across 135 cited co-located test files; the `Shared.xcframework` was staged successfully; and **zero** errors reference any LiveControls source file or even my test file. Let me capture the exact `IOS_EXIT` integer and start the macOS gate:
+
+`IOS_EXIT=65` — identical to the sibling precedent. The macOS gate is running (Gradle now cached). Let me monitor it:
+
+`MAC_EXIT=65` — the macOS failure is the **pre-existing development-signing requirement** (entitlements need a dev certificate this runner lacks), exactly as the sibling documented. Both gate failures are pre-existing and unrelated. Let me confirm zero LiveControls errors in the macOS log, then write the log:
+
+Both gate failures are pre-existing (iOS: XCTest membership glob; macOS: dev-signing), with **zero** LiveControls references. I have complete evidence. Let me update todos and write the comprehensive, honest gate log:
+
+Log written. Now let me clean up generated artifacts and verify exactly what will be committed:
+
+Clean — only my 8 LiveControls files + the log are new. Let me confirm no stray project artifact and commit with explicit paths (the prompt's commit message already includes the required trailer):
+
+Exactly 9 files staged (8 surface files + log), nothing else. Committing:
+
+Committed cleanly (`e34d1a920`, 9 files, 1774 insertions). Let me do a final verification:
+
+All verifications pass. Let me finalize the todos:
+
+The task is complete and verified.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0233-LiveControls.log   | 184 +++++++++++
+ .../feature-views/LiveControls.Adapter.swift       | 282 ++++++++++++++++
+ .../feature-views/LiveControls.Model.swift         | 273 ++++++++++++++++
+ .../feature-views/LiveControls.Previews.swift      |  97 ++++++
+ .../feature-views/LiveControls.States.swift        | 114 +++++++
+ .../feature-views/LiveControls.Tests.swift         | 358 +++++++++++++++++++++
+ .../feature-views/LiveControls.Views.swift         | 348 ++++++++++++++++++++
+ .../TeslaSync/feature-views/LiveControls.strings   |  51 +++
+ .../TeslaSync/feature-views/LiveControls.swift     |  67 ++++
+ 9 files changed, 1774 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0233-LiveControls.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveControls.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveControls.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveControls.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveControls.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveControls.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveControls.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveControls.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveControls.swift

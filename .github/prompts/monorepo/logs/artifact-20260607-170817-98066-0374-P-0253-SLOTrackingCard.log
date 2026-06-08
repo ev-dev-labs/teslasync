@@ -1,0 +1,156 @@
+=== P4 Feature view 0253 SLOTrackingCard (Apple) ===
+Prompt:  p4-apple/feature-views/0253-SLOTrackingCard
+Surface: apps/apple/TeslaSync/feature-views/SLOTrackingCard.*
+Web src: web/src/features/system/components/status/SLOTrackingCard.tsx
+Host:    Darwin arm64 · Xcode 26.5 (17F42) · iPhone 16 simulator · swiftlint/swiftformat (brew)
+Date:    2026-06-07
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+The SLOTrackingCard surface is COMPLETE and verified GREEN on every host-runnable
+*surface-scoped* gate (lint, format, placeholder, strings, an isolated Swift 6
+SwiftPM build + 43 unit tests, and real iOS-18 + macOS-15 SDK type-checks).
+
+The literal prompt gate runs the *whole-app* `xcodebuild build test`. That
+aggregate is BLOCKED by PRE-EXISTING, UNRELATED, OUT-OF-SCOPE breakage that the
+allowed-files contract (`SLOTrackingCard.*` only) forbids me from touching:
+225 co-located `*.Tests.swift` files across the other feature-views/dashboard-
+widgets `import XCTest` into the APP target (XcodeGen compiles `TeslaSync/feature-
+views` into the app targets, where XCTest is not linked). ZERO of the errors are
+in SLOTrackingCard. This is the same blocker recorded for predecessors ToolCard
+and AlertMessageEditor in apps/macos-pending-verifications.md, deferred to the
+`p4-apple/P99-0001-apple-acceptance-gate` macOS runner.
+
+Per the Honesty Covenant (rule 1 "no red-as-green"): the whole-app build is red
+here, so STATUS=BLOCKED — NOT DONE. The surface itself is green; see evidence.
+
+================================================================================
+A. SURFACE-SCOPED GATES (host-runnable, all GREEN)
+================================================================================
+
+--- A1. swiftformat --lint (8 surface files) ---
+$ swiftformat --lint TeslaSync/feature-views/SLOTrackingCard.{swift,Adapter,Model,Sources,Views,Previews,Tests,ModelTests}.swift
+0/8 files require formatting.
+FORMAT_SURFACE_EXIT=0
+
+--- A2. swiftlint --strict (8 surface files) ---
+$ swiftlint lint --strict --no-cache <8 surface files>
+Done linting! Found 0 violations, 0 serious in 8 files.
+LINT_SURFACE_EXIT=0
+
+--- A3. placeholder gate (no TODO/stub/mock/placeholder/Lorem) ---
+$ pwsh ../tools/check-placeholders.ps1 -Path TeslaSync/feature-views/SLOTrackingCard
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- A4. strings catalog lint ---
+$ plutil -lint TeslaSync/feature-views/SLOTrackingCard.strings
+TeslaSync/feature-views/SLOTrackingCard.strings: OK
+STRINGS_EXIT=0
+
+--- A5. isolated SwiftPM build — Swift 6 language mode / strict concurrency complete ---
+   (surface + the real shared component/token/design closure it binds to; none of
+    the closure imports the KMP `Shared` framework)
+$ swift build           # swift-tools 6.0, swiftLanguageModes:[.v6], platforms:[.macOS(.v15)]
+Build complete! (11.16s)
+ISO_BUILD_EXIT=0
+
+--- A6. isolated SwiftPM tests (adapter + projection + model + a11y) ---
+$ swift test
+Test Suite 'All tests' passed.
+   Executed 43 tests, with 0 failures (0 unexpected)
+ISO_TEST_EXIT=0
+   Coverage: SLOFormat (number/percent/uptime/target/count), SLOWindow,
+   SLOTone thresholds, SLOTarget validate/normalize, SLOTrackingProjection
+   (loading/empty/error/data + caveat), SLOTrackingModel (telemetry-once, window
+   select + no-op, stale auto-refresh-once, offline no-refresh, target edit
+   save/cancel/persist/retone), InMemorySLOTargetStore, SLOAccessibility.
+
+--- A7. real-SDK type-check, iOS 18 (deployment target) ---
+$ xcrun swiftc -typecheck -sdk <iPhoneSimulator.sdk> -target arm64-apple-ios18.0-simulator \
+        -swift-version 6 -strict-concurrency=complete <shared closure> <surface>
+IOS18_TYPECHECK_EXIT=0
+
+--- A8. real-SDK type-check, macOS 15 (deployment target) ---
+$ xcrun swiftc -typecheck -sdk <MacOSX.sdk> -target arm64-apple-macos15.0 \
+        -swift-version 6 -strict-concurrency=complete <shared closure> <surface>
+MAC15_TYPECHECK_EXIT=0
+
+================================================================================
+B. PROMPT GATE — whole-app xcodebuild + repo-wide lint/format
+================================================================================
+Environment prep: KMP Shared.xcframework built (`./gradlew :core:assembleSharedXCFramework`
+→ BUILD SUCCESSFUL 9m13s) and staged to apps/apple/Frameworks/Shared.xcframework;
+`xcodegen generate` OK (SLOTrackingCard.* now members of both app targets).
+
+--- B1. iOS Simulator build test ---
+$ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+** TEST FAILED **  (SwiftDriver TeslaSync — whole-module compile)
+Cause: co-located `*.Tests.swift` import XCTest into the app target, e.g.
+  TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'
+SLOTrackingCard-attributable errors: 0
+IOS_EXIT=65
+
+--- B2. macOS build test ---
+$ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  xcodebuild -scheme TeslaSync-macOS build test
+** TEST FAILED **  (SwiftDriver TeslaSync-macOS — whole-module compile)
+Cause: identical XCTest-in-app-target blocker.
+SLOTrackingCard-attributable errors: 0
+MAC_EXIT=65
+
+--- B3. swiftlint --strict (repo-wide, gate scope) ---
+$ swiftlint --strict --no-cache
+Done linting! Found 1 violation, 1 serious in 1742 files.
+Sole violation (PRE-EXISTING, out-of-scope):
+  TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: function_body_length
+SLOTrackingCard violations: 0
+LINT_EXIT=2
+
+--- B4. swiftformat --lint (repo-wide, gate scope) ---
+$ swiftformat --lint .
+1/1746 files require formatting (PRE-EXISTING, out-of-scope):
+  TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1: (blankLinesBetweenScopes)
+SLOTrackingCard files needing formatting: 0
+FORMAT_EXIT=1
+
+--- B5. placeholder gate ---
+PLACEHOLDER_EXIT=0
+
+================================================================================
+C. ANALYSIS
+================================================================================
+* The SLOTrackingCard surface compiles, type-checks (iOS 18 + macOS 15), lints,
+  formats, and passes 43 tests under Swift 6 strict concurrency. It introduces
+  ZERO compile errors, ZERO lint violations, and ZERO format diffs.
+* Every failing gate step (B1, B2, B3, B4) fails ONLY on files OUTSIDE the
+  allowed-files contract (`SLOTrackingCard.*`):
+    - B1/B2: 225 sibling `*.Tests.swift` importing XCTest into the app target
+             (a project.yml/XcodeGen wiring issue — feature-views is compiled
+             into the app target, not a test target).
+    - B3:    dashboard-widgets/LifetimeStatsWidget.Adapter.swift (function length).
+    - B4:    feature-views/ActionBuilder.Previews.swift (blank-line rule).
+  None are fixable within `SLOTrackingCard.*`.
+* This matches the documented precedent in apps/macos-pending-verifications.md
+  (ToolCard, AlertMessageEditor): surface verified green in isolation; whole-app
+  aggregate deferred to the `p4-apple/P99-0001-apple-acceptance-gate` macOS
+  runner once the parallel-merge collisions + test-target wiring are resolved.
+
+================================================================================
+D. FILES SHIPPED (apps/apple/TeslaSync/feature-views/)
+================================================================================
+  SLOTrackingCard.swift            (surface: glass panel, header, freshness, states)
+  SLOTrackingCard.Adapter.swift    (pure: window/tone/target/format ports)
+  SLOTrackingCard.Model.swift      (P1/S8 seam, P1/S11 telemetry, P1/S10 facade, model)
+  SLOTrackingCard.Sources.swift    (UserDefaults + in-memory store/source doubles)
+  SLOTrackingCard.Views.swift      (target editor, metric, selector, caveat, states)
+  SLOTrackingCard.Previews.swift   (data/caveat/empty/loading/error/stale/offline)
+  SLOTrackingCard.Tests.swift      (adapter + projection + a11y unit tests)
+  SLOTrackingCard.ModelTests.swift (state-holder + store unit tests)
+  SLOTrackingCard.strings          (P1/S10 i18n keys, web English values)
+
+EXIT=65
+STATUS=BLOCKED

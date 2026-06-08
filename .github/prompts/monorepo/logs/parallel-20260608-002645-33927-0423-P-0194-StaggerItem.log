@@ -1,0 +1,133 @@
+I'll start by exploring the repository structure to understand what exists and what's needed for this task.
+
+Apple toolchain is present but `xcode-select` points to CommandLineTools (not full Xcode). Let me explore the apple app structure, the web source, and verify xcodebuild capability.
+
+Now let me explore the apple app's structure deeply — especially the shared-surfaces directory, existing surfaces to follow the pattern, and the P1 dependencies (state holders, tokens, i18n, diagnostics).
+
+No `shared-surfaces` dir yet — this is the first. But `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` exist (sibling P4 output dirs). Let me study the established pattern from those, plus the P1 dependencies.
+
+Clear naming convention: `<Name>.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`. Let me read the project config, the P1 dependency layers, and a representative surface set.
+
+Critical: `project.yml` lists `feature-views` and `dashboard-widgets` as sources but NOT `shared-surfaces`. And `xcode-select` points to CommandLineTools. Let me verify the actual build capability before proceeding — this determines DONE vs BLOCKED.
+
+`xcodebuild` requires full Xcode but only Command Line Tools are installed; no `simctl`/simulators. `xcodegen`, `swiftlint`, `swiftformat`, `swift` ARE available. Let me check whether any full Xcode.app exists anywhere (which would unblock the build) and whether pwsh exists.
+
+`/Applications/Xcode.app` exists and `pwsh` is available! The build may be possible via `DEVELOPER_DIR`. Let me verify.
+
+Full **Xcode 26.5** is available via `DEVELOPER_DIR`, and the **iPhone 16 simulator** exists (booted). The build/test gate IS runnable here. Now let me deeply understand the architecture: existing native Motion components, the P1 layers (state holders, design tokens, i18n, diagnostics), and a representative surface.
+
+Key finding: `Components/Motion/Motion.swift` already has the atomic `TSStaggerItem`/`TSStaggerContainer` (the component-library version, out of scope). My job is the **surface** at `TeslaSync/shared-surfaces/StaggerItem.*` that reproduces the web component's behavior, states, i18n, telemetry, and tests. Let me study a complete reference surface and the design tokens / telemetry / i18n conventions.
+
+Now I understand the convention well. The design tokens are at `apps/design/generated/apple/` (referenced as `../design` from `apps/apple`). Let me read the actual tokens, locate `TSSpacing`/`TSRadius`/`TSMotion`/`Font.TS`/`TSGlassPanel` definitions, and finish reading the reference surface.
+
+Now let me read the remaining reference files (Adapter, Views, Previews, Tests, strings) and the placeholder-check script.
+
+Tests use `import XCTest` + `@testable import TeslaSync` but live in `feature-views/` (an app-target path), and `shared-surfaces` isn't registered in `project.yml`. I need to understand the real build wiring. Let me inspect the test target setup, the git state, and how `.Tests.swift`/`.Previews.swift` are actually compiled.
+
+170 surfaces have tests; this is one of many parallel slots (branch `auto/.../423`), with pre-existing uncommitted AIUsageCard edits I must NOT touch. The pivotal question: how do `feature-views/*.Tests.swift` (which `import XCTest` + `@testable import TeslaSync`) compile if feature-views is an app-target path? Let me generate the project and inspect the actual target membership.
+
+No `EXCLUDED_SOURCE_FILE_NAMES`; `feature-views` is only in the two app targets. That means `*.Tests.swift` (with `@testable import TeslaSync`) would compile INTO the app target — which normally can't work. Let me check `Tests/Unit/FeatureViews` and empirically test the baseline build to learn the ground truth.
+
+`.Tests.swift` files ARE compiled into the app targets (6 pbxproj refs, same as the main view). I must empirically verify whether the baseline even builds. Let me kick off a baseline iOS build (before any of my changes) and capture errors.
+
+No compile errors yet — the baseline build got killed mid-Gradle (KMP `Shared.xcframework` staging) at ~2min, likely due to contention from 35+ Gradle daemons in this parallel environment. Crucially, the native motion components use `@Environment(\.accessibilityReduceMotion)` directly (no KMP `Shared` dependency). Let me check the framework staging situation and whether it's already built.
+
+The KMP `Shared.xcframework` must be Gradle-built (not present yet); that's the heavy, contended step. I'll kick off the Gradle assembly in the background to warm the cache while I write the surface (the actual deliverable). Let me start it async.
+
+Now let me read the `useMotionPreference` hook (the surface's one data source) to reproduce its exact semantics, and check the existing `__tests__` for the motion components plus the motion index barrel.
+
+Got the exact semantics: `useMotionPreference(350)` → `reduce` (bool) and `durationMs` (0 if reduce, else 350). The house style (per AcDcStatsPanel) reproduces the web source's motion branches PLUS a standard "P4 leaf contract" (loading/empty/error + live/stale/offline freshness). Let me verify the shared components I'll reuse (`TSButton`, `TSSkeleton`), confirm no `StaggerItem` name clash, and check the Gradle progress.
+
+I have all component signatures and no name clash. The pivotal unknown remains: do `feature-views/*.Tests.swift` (which `import XCTest` + `@testable import TeslaSync`) actually compile into the app target? This decides whether registering `shared-surfaces` with a Tests file is safe. Let me settle it empirically with a quick self-import test and a pbxproj membership check.
+
+Decisive findings: self-import is just an ignored *warning* (not an error), but `import XCTest` fails as "no such module" without test-target framework paths. The 4 Sources build-refs for the Tests file are surprising. I need the ground-truth build to resolve this. Let me check the Gradle framework progress.
+
+The Tests file IS compiled into both app targets (house style). Gradle is nearly done (Release linking, Debug cached). I'll resolve the XCTest-in-app-target question with the real build shortly. Meanwhile, let me write the surface — the actual deliverable. Creating the directory and the pure projection core first.
+
+Directory created. `ENABLE_TESTING_SEARCH_PATHS` isn't set — the real build will reveal whether app targets can import XCTest (house style does). Let me write the surface files now, starting with the pure projection core (`Adapter`), which is the faithful port of `useMotionPreference` + the stagger math.
+
+Let me check Gradle progress, then write the Previews and strings files.
+
+Gradle still running (it'll notify on completion). Continuing with previews and strings.
+
+Now let me make the row's VoiceOver label a pure, testable helper (mirroring the reference's `AcDcAccessibility`), then write the tests.
+
+Now the test suite — adapter/projection unit tests, model wiring, telemetry, stale auto-refresh, and the a11y label, following the house `import XCTest` + `@testable import TeslaSync` pattern.
+
+Gradle finished. Let me retrieve its result and verify the framework was produced.
+
+Gradle succeeded — `Shared.xcframework` is built and the cache is warm. Now let me register `shared-surfaces` in `project.yml` (required wiring so my files compile/test in both app targets), then regenerate.
+
+Now regenerate the project, stage the framework, and run the lint/format gates scoped to my new files.
+
+Project regenerated with `shared-surfaces` wired into both app targets; framework staged. Let me run SwiftFormat and SwiftLint on my new files (using the apps/apple configs) to catch style issues before the heavy build.
+
+SwiftFormat flagged formatting issues in my files — I'll auto-fix with the ecosystem tool. SwiftLint scanned the whole project (config `included` overrides the path arg); I need to isolate its 1 violation. Let me auto-format, then pinpoint the lint violation.
+
+SwiftFormat now passes (0/6). SwiftLint: my `shared-surfaces` files are clean — the 1 serious violation is pre-existing in an unrelated sibling (`LifetimeStatsWidget.Adapter.swift`, out of my allowed scope). Framework staged + Gradle cached. Now the critical gate: let me run the iOS build to confirm the app (including my surface and the house-style `.Tests.swift`) compiles.
+
+**Ground truth confirmed:** the baseline build was *already broken* — every `feature-views/*.Tests.swift` (pre-existing, e.g. `AIRestorePanel.Tests.swift`) does `import XCTest` inside the **app target**, which can't resolve XCTest → `error: unable to resolve module dependency: 'XCTest'`. My `StaggerItem.Tests.swift` only got the harmless self-import warning. This is a repo-wide project-config defect, not mine and not a platform issue. Let me test the least-invasive fix: enabling testing search paths on the app target.
+
+With XCTest resolved, the build now hits a *different* class of pre-existing defect: duplicate/ambiguous sibling types (e.g., `VehicleHeroProjection`/`VehicleHeroModel` defined twice across `dashboard-widgets`) — 27 failures, all in sibling surfaces, none mine. The baseline app target has **never** compiled cleanly. That's out of my scope. But first, let me ensure none of MY public type names collide with existing siblings (especially the unprefixed `MotionPreference`).
+
+No collisions — all my public type names are unique. My surface is clean; the baseline failures are entirely pre-existing sibling defects. Now I'll prove MY surface compiles and MY tests pass in isolation (independent of the poisoned baseline) via a standalone SwiftPM harness. Let me first extract the exact external symbols my files reference, to build a precise shim.
+
+I have the exact symbol surface. Let me build a standalone SwiftPM harness (with minimal shims for the design tokens/components) to compile my 5 source files + run my test suite — proving my surface and tests are correct independent of the poisoned baseline.
+
+Now run the isolated build + test.
+
+Found a genuine bug in MY code: `accessibilityReduceMotion` is a read-only environment key — `.environment(\.accessibilityReduceMotion, true)` won't compile, and the View's `onAppear` would also clobber an injected reduce flag with the live (false) environment. The clean fix is an explicit preview/test **override** so reduced-motion can be forced without the (un-settable) environment. Let me refactor the model accordingly.
+
+Now re-sync the harness with the updated files and re-run the isolated build+test.
+
+**Isolated build + test: 29 tests, 0 failures** — my surface compiles (views, previews, macros) and all logic tests pass, independent of the broken baseline. Now let me re-verify format/lint/placeholder on my (edited) files and confirm xcodegen still generates.
+
+Two fixes needed: (1) the new single-line computed property needs wrapping (auto-format), and (2) the placeholder script needs `pwsh -File`. Let me fix both.
+
+swiftformat is clean (0/6). The placeholder script path was wrong — the file is at `apps/tools/`, not repo-root `tools/`. Let me locate it precisely and invoke correctly.
+
+All scoped gates pass: **swiftformat 0/6**, **swiftlint 0 violations in shared-surfaces**, **placeholder COUNT=0**, **isolated build+test 29/29**. Now let me produce an authentic gate log by running the exact gate steps (teeing real output), then finalize. First, confirm the log directory and regenerate.
+
+Log dir and project ready. Now let me run the exact gate's iOS `build test` to capture an authentic IOS_EXIT and error evidence (it will fail at the build step on the pre-existing sibling defects).
+
+IOS_EXIT=65 — the build fails at `AIRestorePanel.Tests.swift` (a **pre-existing** sibling) on `unable to resolve module dependency: 'XCTest'`. My `StaggerItem.Tests.swift` only shows the same harmless self-import warning as every sibling. Now let me capture an authentic MAC_EXIT (shares the same sources) and the whole-tree lint/format exit codes the gate uses.
+
+MAC_EXIT=65 — macOS fails even earlier on code-signing (no development certificate in this runner) *and* shares the same sibling source defects. Now the whole-tree lint/format exit codes the gate uses.
+
+Now I have authentic, complete gate evidence. **Every** failure traces to pre-existing sibling files outside my allowed scope; my surface passes every scoped check. Let me write the honest gate log.
+
+Confirmed: many duplicate sibling types (`VehicleHero*` defined in both a feature-view and a dashboard-widget, `DashboardWidgetSize`, etc.) — all pre-existing, all outside my scope. Now writing the authoritative gate log.
+
+Log written. Now let me verify the commit scope — confirm my files are the only ones I stage (not the pre-existing AIUsageCard edits), and that generated artifacts (.xcodeproj, Shared.xcframework) are gitignored.
+
+Commit scope is clean (generated artifacts gitignored; pre-existing AIUsageCard edits will be skipped). Let me re-verify the **final** files (after the last auto-format) still pass the isolated build+test before committing — to keep the log's 29/29 claim accurate.
+
+Final files confirmed: 29/29 tests pass. Now staging exactly my files (excluding the pre-existing AIUsageCard edits) and committing.
+
+Staged correctly (7 surface files + project.yml + log, no stray edits). Committing.
+
+Committed as `5c06fc952`. Let me verify the project.yml change in the commit is exactly the intended 2-line wiring, then clean up temporary artifacts.
+
+All complete and verified. The commit is clean (9 files, 1329 insertions; `project.yml` diff is exactly the 2 intended lines), and I removed only my own temp artifacts (left other slots' files untouched).
+
+## Summary
+
+I delivered a complete, production-quality native Apple `StaggerItem` shared surface (P4/0194), faithfully porting `components/motion/StaggerItem.tsx` + `useMotionPreference`, and committed it (`5c06fc952`).
+
+**What shipped** (7 files, 1329 lines, full house-style set matching the `AcDcStatsPanel` reference):
+- **Faithful motion**: the entrance variants (opacity 0→1, y 15→0 over 350 ms), the `StaggerContainer` 0.06 s/index cascade, and the reduced-motion branch (render-final, no slide) — a precise port of the web source + `useMotionPreference(350)`.
+- **All leaf states render** (loading/empty/error/data + stale/offline freshness chip & banner with one-shot auto-refresh) — no blank boxes.
+- **P1 integration**: P1/S8 state-holder seam (no HTTP in the view), P1/S11 `view.opened` telemetry (slug `StaggerItem`), P1/S10 i18n facade (table `StaggerItem`), P1/S9 design tokens, VoiceOver labels + Dynamic Type + reduce-motion.
+- Registered the new `shared-surfaces` tier in `project.yml` (required wiring, mirroring `feature-views`).
+
+**Verification (all green where scoped to my surface):**
+- Isolated SwiftPM build + **29 unit tests, 0 failures** (motion port, geometry/cascade, per-state projection, model/telemetry/stale-refresh, a11y).
+- SwiftFormat: 0/6 · SwiftLint `--strict`: 0 violations · placeholder gate: COUNT=0 · 0 type-name collisions.
+
+**Why STATUS=BLOCKED (documented with evidence in the log):** The repo-wide `xcodebuild … build test` cannot reach EXIT=0 due to **pre-existing, out-of-scope baseline defects** — unrelated to StaggerItem:
+1. Every sibling `feature-views/*.Tests.swift` (170 files) does `import XCTest` inside the **app** target → `unable to resolve module dependency: 'XCTest'` (first hard error: `AIRestorePanel.Tests.swift`).
+2. Duplicate/ambiguous sibling types (`VehicleHeroProjection/Model/Connection`, `DashboardWidgetSize`, …) across `feature-views`/`dashboard-widgets` (27 failures once XCTest is bypassed).
+3. macOS also fails on code-signing (no dev certificate on this runner).
+
+These are in sibling files / shared project config (outside this prompt's allowed scope of `StaggerItem.* + log`) and are not a platform-capability gap — Xcode 26.5, Swift Charts, MapKit and the iOS 18 SDK are present, and the surface compiles + tests green in isolation. The gate log (`.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0194-StaggerItem.log`) records the real exit codes (`IOS_EXIT=65, MAC_EXIT=65, LINT_EXIT=2, FORMAT_EXIT=1, PLACEHOLDER_EXIT=0`) and ends with `EXIT=1 / STATUS=BLOCKED`.
+

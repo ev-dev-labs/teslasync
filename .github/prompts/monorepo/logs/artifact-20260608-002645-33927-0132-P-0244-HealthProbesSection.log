@@ -1,0 +1,177 @@
+================================================================================
+P4 · Feature view · 0244 — HealthProbesSection (Apple)
+Run: 2026-06-08T02:22-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/132
+Base: c9c6fdb9f
+Prompt: P4 · feature-views · 0244 — HealthProbesSection (Apple)
+Web source (spec): web/src/features/system/components/status/HealthProbesSection.tsx (98 lines)
+Mode: code-complete + host-validated; DEFERRED full-app Xcode scheme build/test
+      (ADR-012 macOS-pending), matching predecessors 0231 FSMTimelineChart /
+      0180 AlertMessageEditor / 0010 ToolCard.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                 OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iOS simulator SDK .......... iPhoneSimulator 26.5 (deployment target iOS 18.0)    OK
+  macOS SDK .................. MacOSX 26.5 (deployment target macOS 15.0)            OK
+  iOS simulator device ....... iPhone 16 present + booted (simctl via Xcode)        OK
+  Swift Charts / MapKit ...... NOT required by this surface (web "Charts/maps used"
+                               lists none — HealthProbesSection is pure SwiftUI)    N/A
+  swiftlint .................. 0.63.3                                               OK
+  swiftformat ................ 0.61.1                                               OK
+  xcodegen ................... 2.45.4                                               OK
+  pwsh (placeholder gate) .... 7.6.2                                               OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks has only .gitkeep) WARN
+  codesign identities ........ none (BLOCKER for signed app gate, ADR-012)         WARN
+
+  Capability note: the surface's core requirement — SwiftUI, iOS 18 / iPadOS 18 /
+  macOS 15 HIG — is AVAILABLE and PROVEN by REAL iOS-18 + macOS-15 SDK
+  `swiftc -typecheck` AND a passing 28-test XCTest run below. No Swift Charts and no
+  MapKit are needed (the web source uses neither — it composes Card / KVList / Badge
+  only). The capability-BLOCKED escape hatch therefore does NOT apply; the surface is
+  authored and host-validated for real, STATUS=DONE.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/HealthProbesSection.*) ===
+  HealthProbesSection.Adapter.swift     211  Foundation-only pure core: the em-dash / "unknown"
+                                             sentinels, the `statusToBadgeVariant` tone classifier
+                                             (web helpers.tsx case lists — note the intentional
+                                             omission of "connected" from success), the source-seam
+                                             DTOs (ExtendedHealthDTO + database / system /
+                                             database_pool blocks), the probe-kind title/icon, and the
+                                             projected HealthProbeCard / HealthProbeKV view types.
+  HealthProbesSection.Projection.swift  204  Foundation-only projection + formatting + a11y: the
+                                             load-status/connection/phase enums, the liveness (/healthz)
+                                             & readiness (/readyz) card projections (status + tone +
+                                             KV rows with the web `?? 'unknown'` / `?? 0` / latency
+                                             `'—'` fallbacks), the header live/ready tones, phase
+                                             resolution, the fmtInt/fmtNumber(_,1)/formatUptime
+                                             formatters, the P1/S11 surface slug, and the VoiceOver
+                                             section + per-card summaries.
+  HealthProbesSection.Model.swift       279  P1/S11 telemetry seam + P1/S10 strings facade + source
+                                             snapshot (HealthProbesUpdate) + P1/S8 source protocol +
+                                             @Observable HealthProbesModel (project on apply, phase,
+                                             freshness, live/ready tones, view.opened once, silent
+                                             retry, one-shot stale auto-refresh / offline keep-cache) +
+                                             InMemory source.
+  HealthProbesSection.Views.swift       351  Token-driven chrome: the collapsible AccordionSection
+                                             shell (HeartPulse IconBox + title/subtitle + trailing +
+                                             chevron, reduce-motion-safe), the Live/Ready dot badges
+                                             (web `<Badge dot>`), one probe Card (header title +
+                                             raw-status pill + KV rows), the card status pill, the KV
+                                             row, and the stale/offline freshness chip + connectivity
+                                             banner (ADR-013).
+  HealthProbesSection.States.swift      102  The adaptive two-up grid + the loading skeleton (web two
+                                             `<Skeleton h-36>`), the resolved-empty
+                                             ContentUnavailableView (never a blank box), and the
+                                             error (+retry) state (web `QueryError`).
+  HealthProbesSection.swift              94  The composed surface: fade-in + AccordionSection
+                                             (defaultOpen) + header trailing (badges + freshness chip)
+                                             + phase switch (loading/content/empty/error) over the
+                                             two-card grid + view.opened lifecycle.
+  HealthProbesSection.Previews.swift     99  #if DEBUG previews: content / degraded / empty / loading /
+                                             error / stale / offline.
+  HealthProbesSection.strings            50  P1/S10 catalog — the 12 web source keys (English label IS
+                                             the key) + native chrome/a11y (accordion, freshness,
+                                             loading/empty/error).
+  HealthProbesSection.Tests.swift       208  XCTest: badge-variant classification (success/warning/
+                                             danger lists + "connected"→neutral + case-insensitive),
+                                             card projection + sentinels, header tones, phase, format
+                                             (int/latency-em-dash/uptime/slug), a11y summaries.
+  HealthProbesSection.ModelTests.swift  131  XCTest: model lifecycle (view.opened once, content/empty/
+                                             loading/failed phases, live/ready tones), retry, stale
+                                             auto-refresh once + re-arm, offline keeps cache, a11y
+                                             summary, stop.
+  Total 1729 lines (10 files). Every .swift file <= 351 lines (house file_length 400);
+  largest Views.swift 351. Zero `// parity:allow` opt-outs.
+
+=== PARITY (vs web HealthProbesSection.tsx) ===
+  Data sources (web -> native P1/S8 source seam):
+    useQuery(getExtendedHealth, 30s)  ->  HealthProbesSource -> HealthProbesUpdate (ExtendedHealthDTO)
+    useTranslation                    ->  HealthProbesStrings facade (P1/S10)
+  Verbatim web logic ported + unit-pinned:
+    livenessStatus = data?.status ?? 'unknown' · dbStatus = data?.database?.status ?? 'unknown' ·
+    dbLatency = data?.database?.latency_ms (nullable -> "X.X ms" else '—') ·
+    Liveness card KV: Status / Goroutines fmtInt(system.goroutines ?? 0) / Uptime
+      formatUptime(system.uptime_seconds ?? 0) ·
+    Readiness card KV: Database / Latency / Pool Connections fmtInt(database_pool.total_conns ?? 0) ·
+    header badges: <Badge dot variant=statusToBadgeVariant(livenessStatus)>Live</Badge>
+      + <Badge dot variant=statusToBadgeVariant(dbStatus)>Ready</Badge> ·
+    statusToBadgeVariant success list omits "connected" (verified by a dedicated test).
+  Web shared components -> native counterparts:
+    @/components/layout Grid 1/2          -> LazyVGrid adaptive(min 240) two-up
+    @/components/ui Card / CardHeader      -> TSCard + inline header (title + status pill)
+    @/components/ui Badge (dot / action)   -> HealthProbeDotBadge / HealthProbeStatusPill (tone-tinted)
+    @/components/data-display KVList        -> HealthProbeKVRow (label / value)
+    @/components/feedback Skeleton          -> TSSkeleton (reduce-motion-safe)
+    @/components/feedback QueryError        -> HealthProbesError (+retry)
+    ./AccordionSection (HeartPulse, defaultOpen) -> HealthProbesAccordion (TSIconBox + chevron)
+  States (all render, never a blank box): loading(2 skeletons) · content(Liveness + Readiness
+    cards) · empty(resolved, no health payload -> ContentUnavailableView) · error(+retry) ·
+    stale(chip + one auto-refresh) · offline(cached + chip) — a freshness envelope (ADR-013)
+    widening the web isLoading/error/content split.
+  i18n: the 12 source keys (Health Probes, Liveness and readiness checks, Live, Ready,
+    Liveness — /healthz, Status, Goroutines, Uptime, Readiness — /readyz, Database, Latency,
+    Pool Connections) + native chrome/a11y all resolve via the P1/S10 facade; catalog carries
+    the verbatim web English. The 3 prompt-required titles/labels (Health Probes /
+    Liveness — /healthz / Readiness — /readyz) are present.
+  a11y: section VoiceOver summary (title + Live/Ready status, friendly empty message) +
+    per-card combined label (title + status + each KV) + accordion expand/collapse value/hint;
+    Dynamic Type via Font.TS; reduce-motion respected (accordion reveal, skeleton shimmer).
+  Telemetry: emits view.opened with surface slug "HealthProbesSection" once (P1/S11), asserted.
+
+=== HOST-RUNNABLE GATES (all green) ===
+  swiftformat --lint <surface> ................ 0/9 require formatting              FORMAT_EXIT=0
+  swiftlint lint --strict <surface> ........... Found 0 violations, 0 serious       LINT_EXIT=0
+  check-placeholders.ps1 -Language swift ...... PLACEHOLDER_COUNT=0 ALLOWED=0       PLACEHOLDER_EXIT=0
+      (run both over the real shipped files and over the literal prompt path; both 0)
+  swiftc -typecheck iPhoneSimulator (arm64-apple-ios18.0-simulator, swift6, -D DEBUG) IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (arm64-apple-macos15.0, swift6, -D DEBUG) ............... MAC_TYPECHECK_EXIT=0
+  swift build (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6 strict) ... Build complete, BUILD_EXIT=0
+  swift test  (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6 strict) ... 28/28 passed, TEST_EXIT=0
+      -> HealthProbeStatusTests (5) · HealthProbesProjectionTests (5) ·
+         HealthProbesFormatTests (4) · HealthProbesAccessibilityTests (3) ·
+         HealthProbesModelTests (11)
+      Harness links the REAL Tokens.swift + TSDesign.swift + TSMaterial.swift + Typography /
+      Buttons / Badges / Cards / Motion / Skeletons component primitives (each SwiftUI-only,
+      self-contained); the surface binds them exactly as the app target does.
+  xcodegen generate (project spec enumerates the 10 new files, 60 refs) ............ XCODEGEN_EXIT=0
+
+=== DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test ===
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. REAL bounded attempts WERE executed (this run):
+      • The TeslaSync scheme's "Stage Shared.xcframework" pre-build action runs the
+        Kotlin/Native Gradle assembly (debug + RELEASE fat frameworks for ios / ios-sim /
+        macos / tvos / watchos). It dominates the wall time and did not finish inside a
+        420s bound (last task: linkReleaseFrameworkIosSimulatorArm64). This is the P1/S3
+        `Shared.xcframework` artifact ALREADY tracked macOS-pending in
+        apps/macos-pending-verifications.md — it is the gate's first long pole, before
+        Xcode compiles a single app source.
+      • Captured xcodebuild output: HEALTHPROBES_ERROR_COUNT=0 — ZERO errors originate from
+        this surface across the bounded attempts.
+    Beyond the framework prerequisite, the full-app target is also blocked by PRE-EXISTING,
+    UNRELATED parallel-merge state (all verified present in THIS tree, none from this surface):
+      • `struct DashboardWidgetSize` redefined across 15 files (Sources/DashboardWidgets/*
+        + TeslaSync/dashboard-widgets/*) — "invalid redeclaration" across the app target.
+      • 206 co-located feature-view *.Tests.swift / *.ModelTests.swift `import XCTest`
+        into the app target (this surface's 2 test files follow that SAME established
+        sibling convention; they do not introduce a new failure class).
+      • No macOS development-signing identity (ADR-012).
+    This surface's OWN code is proven to compile against the real iOS-18 + macOS-15 SDKs
+    (typechecks above) and its logic runs green (28/28 XCTest). The full-app build/test is the
+    macOS-pending P99 acceptance gate on a macos-latest runner with signing identities
+    (apps/macos-pending-verifications.md), exactly as for 0231 / 0180 / 0010.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all web states reproduced (loading/content/empty/error/stale/offline).
+  [x] Hooks bind to the shared P1/S8 source seam; no direct HTTP from the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (12/12 + native chrome).
+  [x] Accessibility labels present on the accordion + every interactive element + per-state summaries.
+  [x] Tests: adapter unit tests + per-state model tests + a11y label tests (28 total, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (stub gate: 0, 0 opt-outs).
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing unrelated blockers +
+      the macOS-pending KMP framework prerequisite); host-runnable equivalents (real-SDK
+      typecheck both platforms + 28/28 XCTest + lint/format/placeholder/xcodegen) all green.
+
+EXIT=0
+STATUS=DONE

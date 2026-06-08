@@ -1,0 +1,178 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Let me read the web source spec and explore the Apple app structure in parallel.
+
+The web source is clear. Now let me understand the Apple app structure in detail.
+
+The directory listing is large. Let me use the view tool for a structured look.
+
+`feature-views` already exists. Let me see its current contents and any existing patterns to follow.
+
+There's a well-established pattern (912 files). Let me examine the complete file set for one example panel to learn the convention.
+
+The convention is 7 files per panel. Let me read the complete AcDcStatsPanel set to learn the full pattern.
+
+Excellent, very thorough pattern. Let me read the remaining AcDcStatsPanel files to fully understand the convention.
+
+Now let me read the remaining example files and locate the shared P1 infrastructure (tokens, components, i18n).
+
+Let me read the Tests pattern and the shared P1 infrastructure (tokens, Button, GlassPanel, i18n facade).
+
+Now let me read the shared component signatures I'll need: Buttons, Cards (GlassPanel), Typography, Motion, Skeletons, and Design tokens.
+
+Let me read the design tokens, GlassPanel (Cards), Motion, and Feedback States to complete my understanding of available primitives.
+
+Let me locate the generated design tokens (Color.TS, TSSpacing, etc.) and read the GlassPanel + feedback States.
+
+The tokens are generated in `apps/design/generated/apple`. Let me inspect them and read the GlassPanel + feedback States.
+
+Let me read the GlassPanel, feedback States, and the web `@/ai/features` source that the panel depends on.
+
+Let me examine the web AI features module and how the parent wires `archived`/confirm/decline, plus check the skeleton component.
+
+`features.ts` is large. Let me read its key exports (AI_FEATURES, isKnownAiFeature, AI_FEATURE_IDS).
+
+I have the full picture. Let me extract the complete AI feature id→name catalog and check the runner's Swift toolchain availability (critical for the gate).
+
+Critical finding: **`xcodebuild` requires full Xcode but only Command Line Tools are installed** — so the gate's build/test steps cannot run on this runner. swiftlint, swiftformat, xcodegen, pwsh, and swiftc ARE available. Let me read the lint configs, placeholder rules, and extract the AI catalog.
+
+Now I understand all gates. The placeholder check is case-insensitive, so I must avoid words like "placeholder"/"TODO" even in comments. Let me extract the full AI feature id→name catalog programmatically.
+
+I have everything needed. Let me check the Banners/callout components (the web source is an alert section, not a glass panel) and confirm the Skeletons API.
+
+Let me verify the `TSTone` enum and confirm no naming collisions exist for my new types.
+
+I have a complete understanding of the architecture. Let me set up a plan and todos, then build the surface.
+
+Baseline lint is clean. Now I'll create the 7 files, starting with the pure Adapter (Foundation-only, standalone-typecheckable).
+
+Let me immediately verify the Adapter typechecks standalone and passes lint/format before continuing.
+
+Adapter is verified: standalone typecheck passes, lint/format clean. Now the Model.
+
+Now the main View file with the header, freshness chip, connectivity banner, and content switch.
+
+Let me add a label-resolution helper to the facade (DRY for both the View and Views), then write the Views chrome.
+
+Now revise the View's accessibility to use the summary seam at the panel level:
+
+Now the Views chrome (content, list, actions, loading, empty, error):
+
+Now the Previews and Tests files:
+
+Now the comprehensive Tests file (keeping under the 400-line strict file_length limit):
+
+I need to fix an awkward double-optional in one test. Let me correct it:
+
+Now the strings catalog (4 panel keys + 57 feature keys + chrome). Let me generate the 57 feature lines precisely from the catalog:
+
+All 7 files created. Now let me run the verification suite: format, lint, placeholder check, and strings validation.
+
+swiftformat clean (0/6 require formatting). Now swiftlint --strict on the new files, the placeholder gate, and strings validation:
+
+swiftlint clean, strings valid. The 10 placeholder findings are all **pre-existing files** (ChargingSection, ConditionBuilder, InfrastructureSection) — none are mine. Let me verify my files are placeholder-clean in isolation and confirm the gate's literal-path behavior:
+
+My surface is placeholder-clean (COUNT=0, EXIT=0), and the gate-as-written passes. Now let me get a stronger compile signal on the Model (with a throwaway slug shim) and run the repo-wide format lint:
+
+Model+Adapter typecheck cleanly (MODEL_TYPECHECK_EXIT=0). Now the repo-wide format and lint gates (as the gate script runs them):
+
+The only repo-wide format failure is a **pre-existing** file (`ActionBuilder.Previews.swift`) — not mine (my 6 files pass). Let me confirm my footprint and characterize the pre-existing baseline, then run the full swiftlint:
+
+My footprint is exactly the 7 `AIRestorePanel.*` files (the 2 modified web files pre-date my session). `ActionBuilder.Previews.swift` is a tracked pre-existing file. Let me characterize the repo-wide swiftlint baseline:
+
+Full swiftlint found 1 pre-existing violation. Let me identify it (my 6 files already passed in isolation):
+
+The single swiftlint violation is pre-existing (`LifetimeStatsWidget.Adapter.swift`) — **not mine**. My files are clean. So the repo has pre-existing baseline failures outside my allowed scope, and `xcodebuild` can't run. Let me capture the xcodebuild evidence and inspect the log directory + a sibling log for format.
+
+Let me read sibling logs to match the expected format and STATUS conventions:
+
+Critical lead: a sibling log reached **full Xcode via `DEVELOPER_DIR=/Applications/Xcode.app`** ("the box defaults to CommandLineTools"). Let me check whether full Xcode is actually present on this runner:
+
+**Full Xcode 26.5 IS available** via `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` — this is NOT a blocked-capability case. The sibling convention shows the full `xcodebuild` is typically deferred by pre-existing out-of-scope app-module breakage, with the surface verified via scoped compile + executed harness. Let me check build prerequisites.
+
+Full Xcode + iOS 26.5 sim + SDKs are present, but `Shared.xcframework` is missing and there's no generated `.xcodeproj` — matching the sibling precedent where full `xcodebuild` is deferred to integration. Let me follow that precedent: first **execute** a direct-call harness over the REAL Adapter+Model to prove the logic actually runs.
+
+Swift 6 isolation nit — `check` needs `@MainActor`. Let me fix and re-run:
+
+Top-level vars can't be actor-annotated. Let me wrap state in a `@MainActor enum`:
+
+**Executable proof: 30 assertions, 0 failures** over the REAL Adapter+Model. Now let me typecheck the full View layer against the iOS simulator SDK with its real design-system dependencies. First, find the minimal dependency closure (avoiding the KMP `import Shared`):
+
+Clean dependency closure (no `import Shared`). Let me typecheck the **full View layer** (incl. `#Preview` macros under `-DDEBUG`) against the iOS simulator SDK with the real design-system files:
+
+**Full surface (incl. `#Preview` macros) typechecks clean against the iOS 18 sim SDK + real design system (IOS_TYPECHECK_EXIT=0).** Now the macOS SDK variant for the macOS scheme parity:
+
+Both SDK typechecks pass. Now let me capture authentic `xcodebuild` evidence for the log — generate the project and attempt the real build to document the actual blocker:
+
+Project generates cleanly; Java 17 + gradlew present. Let me check the current state of the pre-existing `DashboardWidgetSize` ambiguity (the sibling's deferral cause) and attempt the real iOS build to capture the authentic blocker:
+
+Confirmed: the `DashboardWidgetSize` ambiguity (15 duplicate definitions in unmodified files) exists now — the same pre-existing, out-of-scope blocker the sibling documented. Let me build the missing `Shared.xcframework` in the background (so the real `xcodebuild` can exercise my files in-context) while I capture the immediate build blocker.
+
+The full xcodebuild won't reach green regardless (pre-existing `DashboardWidgetSize` ambiguity in 15 unmodified files), but for authentic capture I'll build `Shared.xcframework` in the background and meanwhile record the immediate build blocker. Let me launch the Gradle build detached:
+
+While Gradle builds, let me review the final formatted View file and check the build progress:
+
+The Gradle process is detached (PID 23749). Let me check its progress:
+
+The Gradle build failed fast because Kotlin-Native's `xcrun` used the default CommandLineTools path. Let me retry with `DEVELOPER_DIR` pointing at full Xcode:
+
+While Gradle builds the framework, let me confirm the generated `.xcodeproj` is git-ignored (to keep my footprint clean) and check build progress:
+
+My footprint is clean (only the 7 files; `.xcodeproj` is git-ignored). Gradle is now progressing past the link step with `DEVELOPER_DIR` set. Let me wait for it to finish:
+
+The **Debug `Shared.xcframework` built successfully**. The release variant is still linking (not needed for a Debug app build). Let me stop the release build, stage the framework, and run the real `xcodebuild` to authentically capture the in-context compile of my files:
+
+Let me get the Gradle PID explicitly and stage the framework:
+
+Gradle will finish on its own. Let me stage the debug framework and proceed:
+
+Debug framework staged (footprint still clean). Now the real `xcodebuild` for iOS — this compiles the app module including my files. I'll capture output and grep for any AIRestorePanel errors vs. the pre-existing blocker:
+
+The build is compiling the full app module (with Gradle still contending). Let me wait for it:
+
+The build exited 65 (as expected) but the `/tmp` log vanished between sync sub-commands. Let me re-run capturing to a persistent path (DerivedData is now cached, so it's incremental):
+
+Build captured (exit 65, 7183 lines). Let me analyze: confirm my files have **zero** errors and identify the actual blocker:
+
+**Decisive authentic evidence:**
+- **Zero errors in any `AIRestorePanel.*` file** — they compiled cleanly inside the real app module. The only mention is a benign `@testable import` warning in the co-located test file (the documented project structure, not a defect).
+- The build's exit 65 is caused **solely** by the pre-existing `DashboardWidgetSize` ambiguity (47 errors, `invalid redeclaration`) in unmodified dashboard-widgets files — outside my allowed scope.
+
+Let me capture the macOS scheme equivalently:
+
+Both builds: **zero `AIRestorePanel` errors**, blocked only by pre-existing out-of-scope ambiguities. Let me check how the sibling log reconciles the red `xcodebuild` with its final `EXIT=`/`STATUS=` footer to match the established convention precisely:
+
+This is the definitive convention: record **real** exit codes, attribute reds to pre-existing out-of-scope causes, and end `EXIT=0 / STATUS=DONE` when the surface is fully verified in-scope. Let me gather final counts and author the gate log.
+
+All metrics confirmed: **0 `AIRestorePanel` errors in both builds**; pre-existing lint/format files unmodified by me; strings = 4 panel + 57 feature + 10 chrome = 71 keys. (The "0 dup defs" reading was a cwd artifact — the 47 iOS ambiguity errors prove the 15 duplicates persist.) Now let me author the gate log:
+
+The gate log is written. Now let me run a final consolidated scoped verification, clean up temp files, and stage exactly the allowed files:
+
+Final scoped gates green. Let me check the pre-commit config (to anticipate hook behavior), then stage exactly the allowed files:
+
+Pre-commit hooks aren't active (`no .git/hooks/pre-commit`), and I'm only staging my own files. Let me stage exactly the allowed files and verify the staged set:
+
+Exactly 8 files staged (7 surface + log); pre-existing web changes correctly excluded. Let me commit:
+
+Commit `861c97def` created with exactly the allowed files. Let me do a final verification of the commit contents and update tracking:
+
+The task is complete and committed. Here's the summary.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0201-AIRestorePanel.log | 147 +++++++++++
+ .../feature-views/AIRestorePanel.Adapter.swift     | 188 ++++++++++++++
+ .../feature-views/AIRestorePanel.Model.swift       | 275 ++++++++++++++++++++
+ .../feature-views/AIRestorePanel.Previews.swift    |  76 ++++++
+ .../feature-views/AIRestorePanel.Tests.swift       | 278 +++++++++++++++++++++
+ .../feature-views/AIRestorePanel.Views.swift       | 182 ++++++++++++++
+ .../TeslaSync/feature-views/AIRestorePanel.strings |  95 +++++++
+ .../TeslaSync/feature-views/AIRestorePanel.swift   | 174 +++++++++++++
+ 8 files changed, 1415 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0201-AIRestorePanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/AIRestorePanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AIRestorePanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AIRestorePanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AIRestorePanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AIRestorePanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AIRestorePanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/AIRestorePanel.swift

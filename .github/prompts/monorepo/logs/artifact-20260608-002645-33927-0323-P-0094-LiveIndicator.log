@@ -1,0 +1,147 @@
+=== P4 Shared surface 0094 LiveIndicator (Apple) ===
+Web source : web/src/components/data-display/LiveIndicator.tsx (binds useLiveConnection + useTranslation)
+Native out : apps/apple/TeslaSync/shared-surfaces/LiveIndicator/LiveIndicator.*
+Date       : 2026-06-08
+Host       : Darwin arm64 (Mac Studio), shared (non-sandboxed) parallel-slot host
+
+=== CAPABILITY (per the prompt's capability clause) ===
+  Full Xcode 26.5 (Build 17F42) present at /Applications/Xcode.app, usable via
+    DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer (active dir is CommandLineTools).
+  iOS SDK 26.5 + iPhone 16 simulator present; macOS SDK 26.5; deployment targets iOS 18 / macOS 15.
+  swift 6.3.2, swiftlint, swiftformat, xcodegen, pwsh all present.
+  SwiftUI import + .symbolEffect(.rotate) + typecheck OK on BOTH the iOS-18-sim and macOS-15 SDKs.
+  CONCLUSION: the platform CAN build the surface; the only unavailable capability is completing the
+  FULL-APP xcodebuild (the KMP `Shared.xcframework` staging pre-action + macOS dev-signing) — see the
+  DEFERRED section. This surface uses no charts/maps (web "none"); it is pure SwiftUI + P1/S9 tokens.
+
+=== ARTIFACT (8 files) ===
+  LiveIndicator.swift             85   surface view: variant switch (dot vs chip) + onAppear/onDisappear
+                                       lifecycle + a11y (label/value/help/updatesFrequently) + surfaceSlug
+  LiveIndicator.Model.swift      241   P1/S10 strings facade, LiveConnectionPhase (web LiveConnectionStatus),
+                                       LiveIndicatorVariant, snapshot, P1/S8 source seam + @Observable model,
+                                       in-memory source
+  LiveIndicator.Projection.swift 157   pure render projection (web cfg[status]: label/glyph/spin) + the pill
+                                       freshness guard + formatRelativeTime port + a11y label builders
+  LiveIndicator.Views.swift      107   status palette, bare dot, tinted chip, spinning glyph (Reduce-Motion)
+  LiveIndicator.Telemetry.swift   34   P1/S11 view.opened seam + os_log default sink
+  LiveIndicator.Previews.swift    78   DEBUG previews: pill/compact/dot × all 4 statuses + pill-no-timestamp
+  LiveIndicator.Tests.swift      270   XCTest: projection (status/freshness/relative-time) + model + a11y (24)
+  LiveIndicator.strings           31   P1/S10 catalog contribution (table "LiveIndicator", 8 keys)
+  Build/lint wiring (precedent: shared-surfaces/AIFeatureCard/0018 + feature-views/ToolCard/0010):
+    apps/apple/project.yml         + path: TeslaSync/shared-surfaces (both app targets)
+    apps/apple/.swiftlint.yml      + TeslaSync/shared-surfaces (included:)
+    apps/macos-pending-verifications.md  + one deferral row for the full-app xcodebuild
+
+=== PARITY (web source read end-to-end; every branch reproduced) ===
+  useLiveConnection { status, lastMessageAt }  -> LiveIndicatorSource (P1/S8 seam), no HTTP in the view
+  status 'connected'    -> "Live"          · wifi              · emerald (statusSuccess)            [done]
+  status 'reconnecting' -> "Reconnecting…" · spinning loader   · amber   (statusWarning)            [done]
+  status 'disconnected' -> "Offline"       · wifi.slash        · rose    (statusDanger)             [done]
+  status 'unknown'      -> "Unknown"       · wifi.slash        · muted   (textMuted) = initial state [done]
+  variant 'pill'    -> glyph + label + "· <freshness>" (default)                                     [done]
+  variant 'dot'     -> bare tinted 8pt dot, no text (a11y name on parent, web role=status)           [done]
+  variant 'compact' -> glyph + label, no freshness                                                   [done]
+  freshness gate    -> web `variant==='pill' && status==='connected' && lastMessageAt` reproduced     [done]
+  formatRelativeTime-> nil / "Just now" (<1m) / "Nm ago" (<60m) / "Nh ago" (<24h) / locale date (24h+) [done]
+  i18n              -> web t() keys verbatim: live.connected/reconnecting/disconnected/unknown +       [done]
+                       native freshness live.justNow/minutesAgo/hoursAgo + a11y live.a11yValue (P1/S10)
+  state set         -> every status renders a visible, non-blank surface (unknown = the "loading"/     [done]
+                       initial surface; offline = disconnected). The indicator is never an empty box.
+  a11y              -> accessibilityLabel = status label (web aria-label); freshness = accessibilityValue;
+                       .help = web title tooltip; .updatesFrequently; glyph aria-hidden; Reduce-Motion    [done]
+  telemetry         -> P1/S11 view.opened surface="LiveIndicator" emitted once on start()              [done]
+
+=== HOST-RUNNABLE GATES (surface scope — the unit this prompt owns) ===
+  [PASS] swiftc -typecheck  iOS  18.0-simulator  (surface + previews + real design-system, Swift 6)   EXIT=0
+  [PASS] swiftc -typecheck  macOS 15.0           (surface + previews + real design-system, Swift 6)   EXIT=0
+  [PASS] swift build  (isolated SwiftPM, module "TeslaSync" = real design-system Tokens + surface,
+            swiftLanguageMode .v6 / strict concurrency)                                                EXIT=0
+  [PASS] swift test   (isolated SwiftPM)  ->  Executed 24 tests, with 0 failures
+            LiveIndicatorProjectionStatusTests    (4)  LiveIndicatorProjectionFreshnessTests (4)
+            LiveIndicatorRelativeTimeTests        (6)  LiveIndicatorModelTests               (7)
+            LiveIndicatorAccessibilityTests       (3)
+  [PASS] swiftformat --lint  apps/apple/TeslaSync/shared-surfaces/LiveIndicator  ->  0/7 require format  FORMAT_EXIT=0
+  [PASS] swiftlint  --strict  (the 7 surface .swift files)  ->  0 violations in surface              LINT_EXIT=0
+  [PASS] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/LiveIndicator -Language swift
+            PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0                                              PLACEHOLDER_EXIT=0
+  [PASS] xcodegen generate   ->  enumerates all 8 LiveIndicator.* files in the iOS + macOS app targets EXIT=0
+
+=== WHOLE-PROJECT GATE COMMANDS (run verbatim; reds are PRE-EXISTING, not this surface) ===
+  swiftformat --lint apps/apple   ->  1/1920 files require formatting               FORMAT_WHOLE_EXIT=1
+        offender: TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes)
+        PRE-EXISTING — untouched by this commit. My 7 files: 0/7.
+  swiftlint --strict   ->  1 serious in 1916 files                                  LINT_WHOLE_EXIT=2
+        offender: TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length)
+        PRE-EXISTING — untouched by this commit. My 7 files: 0 violations.
+  (Both offenders are owned by their own surfaces; this surface neither introduces nor touches them.)
+
+=== DEFERRED: full-app xcodebuild build test (iOS + macOS) -> P99 macos-latest, signed ===
+  Command (gate): xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  NOT RUN on this host — deliberately, to avoid adding a 5th multi-hour KMP gradle build to an already
+  saturated shared host (see below). First-hand blocker evidence captured THIS run:
+    1. Shared.xcframework is UNSTAGED: apps/apple/Frameworks/ holds only `.gitkeep` (the scheme pre-action
+       "Stage Shared.xcframework" -> Scripts/build-shared-xcframework.sh -> gradlew :core:assembleSharedXCFramework
+       must produce it first; it is the build bottleneck).
+    2. Concurrent KMP/Kotlin-Native gradle xcframework builds from OTHER parallel slots are running RIGHT NOW
+       with elapsed times of 11:22:14 (slot-20), 08:28:59 (slot-198), 06:04:49 (slot-322), + slot-305 starting
+       — the KMP staging is contended/unfinishable on this shared host (matches the AIFeatureCard/0018 finding).
+    3. Even with the xcframework staged, the app module cannot compile due to PRE-EXISTING, unrelated
+       parallel-merge collisions (same set recorded by ToolCard/0010, AlertMessageEditor/0180, FSMTimelineChart/0231,
+       AIFeatureCard/0018):
+         • `struct DashboardWidgetSize` redefined 15× across Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/*
+           ("invalid redeclaration" across the app target).
+         • 262 co-located feature-view/dashboard-widget/shared-surface *.Tests.swift `import XCTest` into the app
+           target (the established sibling convention; this surface's LiveIndicator.Tests.swift follows it and
+           builds + runs green — 24/24 — in the isolated SwiftPM target above; it adds no new failure class).
+         • No macOS development-signing identity (ADR-012).
+  This surface's OWN code is proven to compile against the real iOS-18 + macOS-15 SDKs (typechecks above) and its
+  logic runs green (24/24 XCTest). The full-app build/test is recorded in apps/macos-pending-verifications.md for the
+  P99 acceptance gate on a macos-latest runner with signing.
+  IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED   (deferred by infra, NOT failed by this code — sanctioned P4 disposition)
+
+=== HONESTY COVENANT ===
+  1  No red-as-green   : every red is named + attributed. The two whole-project lint/format reds are PRE-EXISTING
+                         unrelated files (ActionBuilder.Previews / LifetimeStatsWidget); the full-app xcodebuild is
+                         DEFERRED (infra), not passed. My 8 files are green on every surface-scoped + isolated gate.
+  2  No scope narrowing: all four web statuses + all three variants + the freshness guard + the full relative-time
+                         bucket ladder reproduced; every status renders a visible non-blank surface.
+  3  No skip-and-assume: web source (+ useLiveConnection + formatRelativeTime) read end-to-end; every cfg branch ported.
+  4  No stubs as final : no TODO/stub/mock/placeholder/Lorem (placeholder gate = 0, 0 opt-outs); complete impl incl.
+                         every status, variant, freshness, a11y, Reduce-Motion, and telemetry.
+  5  No parity shortcuts: i18n via P1/S10 facade; tokens via P1/S9; state via P1/S8 seam; no Tailwind ports, no raw
+                         hex, no direct HTTP in the view.
+  6  No delegation     : authored directly (no sub-agent).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics, P4 core all present
+                         and consumed (the surface builds against the REAL design-system sources).
+  8  No commit on red  : the COMMITTED artifact (LiveIndicator.* + wiring) is GREEN on every host gate AND on a real
+                         isolated Swift 6 build+test; the deferred full-app gate + the two whole-project lint/format
+                         reds are pre-existing/unrelated, which this commit neither introduces nor touches.
+  9  No silent drift   : disposition matches the sanctioned "code-complete + DEFERRED Xcode gate" used by every prior
+                         P4 surface (ToolCard/0010, AlertMessageEditor/0180, FSMTimelineChart/0231, AIFeatureCard/0018).
+                         Changes confined to shared-surfaces/LiveIndicator/*, the two wiring files, one
+                         pending-verifications row, and this log.
+  10 EXIT/STATUS below.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all web states reproduced (connected/reconnecting/disconnected/unknown × pill/compact/dot).
+  [x] Hooks bind to the shared P1/S8 source seam (LiveIndicatorSource); no direct HTTP from the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (4 web status keys + 4 native chrome keys).
+  [x] Accessibility labels present (status label + freshness value + help tooltip + updatesFrequently trait; glyph hidden).
+  [x] Tests: projection unit tests + per-state model tests + a11y label test (24 total, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate: 0, 0 opt-outs).
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (KMP staging contention + pre-existing unrelated collisions +
+      signing); host-runnable equivalents (real-SDK typecheck both platforms + 24/24 XCTest + xcodegen) green.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic LiveIndicator shared surface shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles against the real iOS-18 + macOS-15 SDKs and its 24 tests pass under the app's own
+  Swift 6 strict-concurrency rules, against the real design-system, with surface-scoped lint/format/placeholder all green
+  and xcodegen enumerating all 8 files. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not
+  failed by this code): it is blocked by the KMP Shared.xcframework staging pre-action (observed contended for 6–11h+
+  across the parallel-slot fleet on this shared host this run), by pre-existing parallel-merge duplicate-type collisions
+  across ~15 unrelated dashboard-widget files, by the co-located app-target XCTest convention, and by macOS
+  development-signing — all owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

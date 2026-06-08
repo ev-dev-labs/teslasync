@@ -1,0 +1,147 @@
+=== P4 Feature view 0085 PresetGallery (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/PresetGallery.*
+Web src : web/src/features/automations/pages/PresetGallery.tsx
+Runner  : Darwin arm64, Apple Swift 6.3.2, Command Line Tools (NO Xcode.app)
+Date    : 2026-06-07
+
+----------------------------------------------------------------------
+SHIPPED FILES (no stubs / no skeleton-only — every state implemented)
+----------------------------------------------------------------------
+  PresetGallery.swift            — composed view, phase switch, fade-in staggered grid
+  PresetGallery.Model.swift      — P1/S8 source seam, @Observable model, P1/S11 telemetry,
+                                   navigation seam (web useNavigate), P1/S10 facade
+  PresetGallery.Adapter.swift    — pure projection: icon map, first-trigger label,
+                                   action-count + a11y text, builder deep-link (web parity)
+  PresetGallery.Views.swift      — PresetCard, skeleton card, empty, error+retry,
+                                   stale/offline freshness banner
+  PresetGallery.Previews.swift   — 6 previews: loading / content / empty / error / stale / offline
+  PresetGallery.Tests.swift      — XCTest: adapter + phase + model wiring + telemetry +
+                                   navigation + a11y (29 cases)
+  PresetGallery.strings          — P1/S10 catalog (parity keys + native chrome)
+
+States rendered: loading · empty · error(retry) · content · stale · offline   (all 6)
+i18n keys (parity, web source): automations.builder.triggerSchedule / triggerEvent /
+  triggerGeofence / triggerSignal / noTrigger; automations.presets.actionCount / install /
+  empty  — all resolved through the P1/S10 facade; zero hardcoded literals in code.
+Telemetry: view.opened surface="PresetGallery" (P1/S11), emitted once per start().
+Navigation: install -> onInstall seam; PresetGalleryRoute.builderPath(presetID:) ==
+  "/automations/new?preset=<id>"  (exact web navigate() parity, unit-tested).
+
+======================================================================
+CAPABILITY PROBE  (gate requires full Xcode toolchain + iOS Simulator)
+======================================================================
+$ xcode-select -p
+  /Library/Developer/CommandLineTools
+$ xcodebuild -version
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+  directory '/Library/Developer/CommandLineTools' is a command line tools instance
+$ xcrun simctl list devices iPhone
+  xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+
+=> The mandated `xcodebuild build test` harness CANNOT execute on this runner:
+   no Xcode.app (only Command Line Tools) and no iOS Simulator runtime.
+   Per the prompt capability clause this is a STATUS=BLOCKED condition.
+
+   NOTE: the required frameworks themselves ARE present in the CLT macOS SDK
+   (SwiftUI.framework, Charts.framework, MapKit.framework), so the surface was
+   compile-verified with `swiftc -typecheck` against the SDK under the project's
+   Swift-6 / complete-concurrency settings (see RUNNABLE GATES below). The block
+   is solely the xcodebuild build/test driver, not the SwiftUI/Charts/MapKit API.
+
+======================================================================
+GATE STEPS  (as specified)
+======================================================================
+--- xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcode-select: error: tool 'xcodebuild' requires Xcode, ... command line tools instance
+IOS_EXIT=1            (BLOCKED — no Xcode.app / no iOS Simulator)
+
+--- xcodebuild -scheme TeslaSync-macOS build test
+  xcode-select: error: tool 'xcodebuild' requires Xcode, ... command line tools instance
+MAC_EXIT=1            (BLOCKED — no Xcode.app)
+
+--- swiftlint --strict   (gate runs whole-tree apps/apple)
+  apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19:
+    error: Function Body Length Violation (function_body_length)   <-- PRE-EXISTING, OUT OF SCOPE
+  Total whole-tree violations: 1   (in a dashboard-widget; NOT in Allowed files)
+  PresetGallery files implicated: 0
+LINT_EXIT=2           (single pre-existing violation in a file this prompt may not edit;
+                       Allowed files = apps/apple/TeslaSync/feature-views/PresetGallery.*)
+
+--- swiftformat --lint apps/apple   (whole tree)
+  0/839 files require formatting, 2 files skipped
+FORMAT_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/PresetGallery
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+======================================================================
+RUNNABLE SUB-GATES  (what CAN be verified on this runner — all GREEN)
+======================================================================
+Baseline: the real shared P1/S9 tokens + P4 components (Components/UI, /Motion,
+/Feedback, Design, design/generated/apple/Tokens.swift — 20 files) type-check clean
+standalone under -swift-version 6 -strict-concurrency=complete. Any error after adding
+the surface is therefore isolated to the surface.
+
+[1] swiftc -typecheck  (PROD: Adapter+Model+Views+swift, Swift6, strict concurrency,
+    against real shared components)
+    => PROD_TYPECHECK_EXIT=0   (clean, 0 errors / 0 warnings)
+    NB: a real defect was caught + fixed here — Previews.swift used Logger without
+        `import OSLog`; added. Re-verified clean.
+
+[2] swiftc -typecheck  (Previews body, #Preview macros expanded to funcs since the
+    Xcode PreviewsMacros plugin is Xcode-only)
+    => PREVIEWS_TYPECHECK_EXIT=0   (clean)
+
+[3] Logic harness (plain-Swift mirror of every XCTest assertion — XCTest.framework is
+    absent from the CLT SDK, so the tested logic is exercised directly and run):
+      Adapter icon map (known + fallback) ......... ok
+      first-trigger label (recognised/unknown/none) ok
+      buildProjection order + hasData ............. ok
+      builder deep link == web path ............... ok
+      resolvePhase x7 branches .................... ok
+      trigger/actionCount/install/empty/a11y text . ok
+      model: start->content, view.opened once,
+        idempotent, empty, offline passthrough,
+        refresh delegates, push updates,
+        install forwards card to nav seam, no-op .. ok
+    => 40/40 assertions PASS — HARNESS_RESULT=PASS (exit 0)
+
+[4] swiftlint --strict  (scoped to the 6 shipped files)
+    => Found 0 violations, 0 serious in 6 files — SWIFTLINT_EXIT=0
+
+[5] swiftformat --lint  (scoped to the 6 shipped files)
+    => 0/6 files require formatting — SWIFTFORMAT_EXIT=0
+
+[6] check-placeholders.ps1  (each shipped .swift file explicitly)
+    => PLACEHOLDER_COUNT=0 for all 6 files — no TODO/FIXME/stub/placeholder/Lorem
+
+======================================================================
+ACCEPTANCE CRITERIA
+======================================================================
+[x] All web-source states reproduced (loading/empty/data) + native error/stale/offline.
+[x] Hooks bind via shared P1/S8 state-holder seam (PresetGallerySource); no HTTP in view.
+[x] Every i18n key from source present in P1/S10 catalog (PresetGallery.strings).
+[x] Accessibility labels on every interactive element (install button labelled+hinted;
+    cards as VoiceOver containers; loading/error elements labelled).
+[x] Tests: adapter unit + per-phase + model/telemetry/nav + a11y (XCTest authored;
+    logic proven green via harness [3]).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (gate [6]).
+[ ] EXIT=0 / STATUS=DONE — NOT claimable: the xcodebuild iOS+macOS build/test harness
+    cannot run on a Command Line Tools runner (no Xcode.app, no iOS Simulator).
+
+======================================================================
+VERDICT
+======================================================================
+The PresetGallery Apple surface is COMPLETE and production-polished: every web state +
+native states-contract chrome implemented, bound through the shared seams, fully
+localized, accessible, and tested. Every verification that CAN run on this Command Line
+Tools runner is GREEN (typecheck, logic, swiftlint, swiftformat, placeholder). The only
+unmet gate steps are the two `xcodebuild build test` invocations, which require a full
+Xcode + iOS Simulator install that is not present here — a platform-capability block, not
+a code failure. The lone whole-tree swiftlint error is a pre-existing violation in
+dashboard-widgets/LifetimeStatsWidget.Adapter.swift, outside this prompt's Allowed files.
+
+EXIT=1
+STATUS=BLOCKED

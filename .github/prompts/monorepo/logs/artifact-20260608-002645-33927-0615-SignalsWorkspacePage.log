@@ -1,0 +1,156 @@
+================================================================================
+p4-apple · P7 · page:telemetry/SignalsWorkspace — SwiftUI / HIG parity
+Target: apple (adaptive macOS + iOS, ADR-002)
+Web source: web/src/features/telemetry/pages/SignalsWorkspacePage.tsx  (route /signals)
+Output: apps/apple/TeslaSync/Features/Telemetry/**
+================================================================================
+
+ENVIRONMENT
+  Darwin arm64 (Mac Studio). Toolchain: Apple Swift 6.3.2 (swiftlang-6.3.2),
+  swiftc / swiftlint 0.x / swiftformat / xcodegen / pwsh present.
+  xcode-select -p  => /Library/Developer/CommandLineTools   (NO full Xcode.app)
+  => `xcodebuild` is unavailable: "tool 'xcodebuild' requires Xcode, but active
+     developer directory '/Library/Developer/CommandLineTools' is a command line
+     tools instance". The literal build/test gate therefore CANNOT run on this
+     runner. Per this prompt's contract ("If no Xcode runner is available, the
+     gate → STATUS=BLOCKED"), the surface is implemented in full and verified by
+     every host-runnable gate; the build/test certification is host-pending.
+  macOS SDK (CommandLineTools) DOES ship SwiftUI/Charts/MapKit, so a real
+  `swiftc -typecheck` of the surface against the live P3 component library is
+  used as the isolated build proof (same methodology recorded in
+  apps/macos-pending-verifications.md for prior p4-apple surfaces).
+
+--------------------------------------------------------------------------------
+FILES CREATED (apps/apple/TeslaSync/Features/Telemetry/)
+--------------------------------------------------------------------------------
+  SignalsWorkspacePage.swift              — View scaffold (header/actions/error/no-vehicle/footer)
+  SignalsWorkspacePage.Model.swift        — @MainActor @Observable SignalsWorkspacePageModel
+  SignalsWorkspacePage.Source.swift       — telemetry + source seams + InMemory source
+  SignalsWorkspacePage.Models.swift       — value types (SignalDiffRow, PinnedSignal, …)
+  SignalsWorkspacePage.Adapter.swift      — pure web-parity logic ports
+  SignalsWorkspacePage.Localization.swift — SignalsWorkspaceStrings facade (43 keys + chrome)
+  SignalsWorkspacePage.Views.swift        — headline strip / toolbar / add-signals
+  SignalsWorkspacePage.SectionViews.swift — compare + historical + live + value-table
+  SignalsWorkspacePage.Previews.swift     — 7 previews (success/loading/empty/error/compare/live/no-vehicle)
+  SignalsWorkspacePage.Tests.swift        — XCTest parity suite (adapter + model + strings)
+  SignalsWorkspaceRouteRegistration.swift — .telemetry route registration + Unavailable source
+WIRING
+  apps/apple/project.yml          — added `TeslaSync/Features` to TeslaSync + TeslaSync-macOS targets
+  apps/apple/.swiftlint.yml       — added `TeslaSync/Features` to included
+  apps/apple/Sources/TeslaSyncApp.swift — chained SignalsWorkspaceRouteRegistration onto routeHosts
+  apps/apple/Localization/Localizable.xcstrings — +73 keys (43 parity + 30 chrome), en
+
+--------------------------------------------------------------------------------
+HOST-RUNNABLE GATES
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Telemetry -Language swift
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ swiftlint --strict   (config apps/apple/.swiftlint.yml; Features/Telemetry)
+  0 violations in TeslaSync/Features/Telemetry/** (the only repo-wide violation,
+  TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift function_body_length,
+  is pre-existing and unrelated to this surface).
+LINT_EXIT=0
+
+$ swiftformat --lint apps/apple/TeslaSync/Features/Telemetry
+  0/11 files require formatting.
+FORMAT_EXIT=0
+
+$ swiftc -typecheck -sdk <MacOSX.sdk> -target arm64-apple-macos15.0 \
+        -swift-version 6 -strict-concurrency=complete \
+        <Sources/Components/** + Sources/Design/** + Tokens + AppRoute + RouteHostRegistry>
+        <TeslaSync/Features/Telemetry/*.swift>
+  (1) page + 39-file live component library .................. EXIT=0
+  (2) + Previews (#Preview macro elided; CommandLineTools lacks
+      the PreviewsMacros plugin — affects existing files too) ... EXIT=0
+  (3) + Tests (XCTest/Foundation shimmed; CommandLineTools lacks
+      the XCTest framework) ..................................... EXIT=0
+  Note: a 13-line typecheck-only shim stood in for the KMP-backed
+  SharedFacade `UnitPreferences`/`Units` that the shared component
+  UnitFormatters.swift references; it is NOT committed.
+TYPECHECK_EXIT=0   (real macOS-15 SwiftUI typecheck, Swift 6 strict concurrency)
+
+$ cd apps/apple && xcodegen generate
+  Created project at apps/apple/TeslaSync.xcodeproj
+  (60 SignalsWorkspace* file references enumerated into the targets)
+XCODEGEN_EXIT=0
+
+--------------------------------------------------------------------------------
+BUILD / TEST GATE — BLOCKED (no Xcode runner)
+--------------------------------------------------------------------------------
+$ xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync build
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+  directory '/Library/Developer/CommandLineTools' is a command line tools instance
+BUILD_EXIT=70   (host-pending: requires a macos-latest runner with Xcode + signing)
+TEST_EXIT=70    (host-pending: same blocker; the XCTest suite is written + typecheck-verified)
+  Deferred to the p4-apple acceptance gate on macos-latest (see
+  apps/macos-pending-verifications.md methodology). The surface itself is green
+  on every gate this runner can execute.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=58
+--------------------------------------------------------------------------------
+PANELS (11)
+[x] panel  Selected             -> SignalsHeadlineStrip / TSStatCard(title: .selected)            [Views.swift]
+[x] panel  Mode                 -> SignalsHeadlineStrip / TSStatCard(title: .mode, value: modeText)[Views.swift]
+[x] panel  Live-rate            -> SignalsHeadlineStrip / TSStatCard(title: .liveRate)             [Views.swift]
+[x] panel  Pinned-signals       -> SignalsHeadlineStrip / TSStatCard(title: .pinned)              [Views.swift]
+[x] panel  GlassPanel5          -> SignalsWorkspaceToolbar / TSGlassPanel (range/perPage/Run/Live/Compare/help) [Views.swift]
+[x] panel  Changed-signals      -> SignalsDiffStatGrid / TSStatCard(.diffTotalChanged)            [SectionViews.swift]
+[x] panel  Visible-after-filter -> SignalsDiffStatGrid / TSStatCard(.diffVisible)                 [SectionViews.swift]
+[x] panel  Pinned               -> SignalsDiffStatGrid / TSStatCard(.diffPinnedCount)             [SectionViews.swift]
+[x] panel  Window-span          -> SignalsDiffStatGrid / TSStatCard(.diffWindowSpan)              [SectionViews.swift]
+[x] panel  GlassPanel10         -> SignalsDiffTablePanel / TSGlassPanel (diff table + pinned chips)[SectionViews.swift]
+[x] panel  GlassPanel11         -> SignalsHistoricalSection.emptyPanel / TSGlassPanel (empty state)[SectionViews.swift]
+STATES (4)  — implemented for each of the 4 data sources (useSignals/usePinned/useSignalDiffServer/useTogglePin)
+[x] state  loading -> SignalsLoadState.loading -> TSTableSkeleton (catalogBody/diff/history) + isLoading guards
+[x] state  empty   -> SignalsLoadState.empty   -> TSEmptyState (catalog empty / diff.noChanges / GlassPanel11)
+[x] state  error   -> SignalsLoadState.failed  -> TSErrorDisplay (catalog/diff retry) + TSAlertBanner(error.loadFailed)
+[x] state  success -> SignalsLoadState.loaded  -> TSDataTable (diff/history) + catalog multi-select + live tail
+STRINGS (43) — SignalsWorkspaceStrings.parityDefaults (Localization.swift) + Localizable.xcstrings, keys = web keys
+[x] string  Per Page                          [x] string  signalsWorkspace.addSignals
+[x] string  Time Range                        [x] string  signalsWorkspace.chartAuto
+[x] string  error.loadFailed                  [x] string  signalsWorkspace.chartGrid
+[x] string  help.signal.live.aria             [x] string  signalsWorkspace.chartMode
+[x] string  liveMonitor.connected             [x] string  signalsWorkspace.chartOverlay
+[x] string  liveMonitor.disconnected          [x] string  signalsWorkspace.compare
+[x] string  liveMonitor.title                 [x] string  signalsWorkspace.emptyDesc
+[x] string  signalDiff.bulk.addAlert          [x] string  signalsWorkspace.emptyTitle
+[x] string  signalDiff.bulk.csv               [x] string  signalsWorkspace.exitCompare
+[x] string  signalDiff.bulk.pin               [x] string  signalsWorkspace.historical
+[x] string  signalDiff.bulk.unpin             [x] string  signalsWorkspace.historyTitle
+[x] string  signalDiff.noChanges              [x] string  signalsWorkspace.live
+[x] string  signalDiff.pinnedCount            [x] string  signalsWorkspace.liveRate
+[x] string  signalDiff.pinnedLabel            [x] string  signalsWorkspace.mode
+[x] string  signalDiff.totalChanged           [x] string  signalsWorkspace.noVehicle
+[x] string  signalDiff.visible                [x] string  signalsWorkspace.noVehicleDesc
+[x] string  signalDiff.windowSpan             [x] string  signalsWorkspace.noneSelected
+[x] string  signalGap.refreshInterval         [x] string  signalsWorkspace.pinned
+[x] string  signalsWorkspace.run              [x] string  signalsWorkspace.selected
+[x] string  signalsWorkspace.share            [x] string  signalsWorkspace.signalsSelected
+[x] string  signalsWorkspace.stopLive         [x] string  signalsWorkspace.subtitle
+[x] string  signalsWorkspace.title
+--------------------------------------------------------------------------------
+PARITY_COVERED=58
+=== END PARITY ===
+================================================================================
+
+SUMMARY
+  - Native SwiftUI/HIG surface implemented in full: 11 panels, 4 data states for
+    every data source, 43 web-keyed strings — all rendered from the bound
+    @Observable SignalsWorkspacePageModel through the P3 component library + P2
+    tokens. Adaptive macOS + iOS; dark mode / Dynamic Type / VoiceOver / SI-at-
+    -the-boundary honored; registered at the .telemetry route (web /signals).
+  - Host-runnable gates GREEN: placeholder=0, swiftlint --strict=0,
+    swiftformat --lint=0, swiftc -typecheck (page+previews+tests)=0, xcodegen=0.
+  - PARITY_COVERED == PARITY_REQUIRED == 58.
+  - The ONLY un-runnable step is the literal `xcodebuild build/test`, blocked by
+    the absence of Xcode on this runner (CommandLineTools only). Per the prompt's
+    explicit rule, that makes the gate STATUS=BLOCKED (host-pending on macos-latest),
+    not DONE — reported honestly rather than as red-painted-green.
+
+EXIT=70
+STATUS=BLOCKED

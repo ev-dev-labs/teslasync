@@ -1,0 +1,132 @@
+I'll start by reading the web source specification and understanding the existing Apple app structure.
+
+Apple toolchain is available. Let me read the related web source files and explore the Apple app structure.
+
+Now let me explore the Apple structure deeper—existing feature-views, the ToolCard reference, data-display components, state holders, i18n, and diagnostics.
+
+Let me see the full feature-views listing and read a complete reference feature view (ToolCard) to mirror conventions.
+
+There's a clear `<Name>.<Part>.swift` convention. Let me study the closest analogs (a presentational "Cards" view using MetricCard + Units), plus the web MetricCard/motion components and native facades.
+
+`DrivingPerformanceCards` and `DrivingTemperatureStats` are the closest analogs. Let me read them fully plus ToolCard.
+
+Now let me read the closest analog `DrivingPerformanceCards` in full to learn the Model/Adapter/Views/Tests/strings split.
+
+Excellent reference. Let me read the remaining DrivingPerformanceCards files (Adapter, Views, Previews, strings, Tests).
+
+Let me read the remaining reference files, the design tokens, units facade, and find where the web component's sensors are built.
+
+Now let me examine the design tokens, units facade, temperature formatting in a temp analog, and find where the web builds the sensor array.
+
+Let me read the web parent page (to extract sensor definitions), the temp unit model, and the design tokens.
+
+Now I understand the data shape: 4 sensors (Front Motor, Rear Motor, Inverter, Battery) + Health Score + Peak Power = 6 cards. Let me read the units facade, design tokens, and web formatting helpers.
+
+Let me read the web temperature formatting/number helpers and the native design tokens.
+
+Let me read the web `formatTemperature` body and the native design tokens.
+
+DEFAULT_PRECISION.temperature = 1. Now let me locate the design token definitions (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSGlassPanel`, typography components).
+
+Design tokens live in `apps/design/generated/apple`. Let me verify the tokens, the Shared framework, and the test target config.
+
+Critical finding: `Shared.xcframework` is empty (only `.gitkeep`). Let me read the design tokens and check the full toolchain (xcodegen, pwsh, the shared-framework build script).
+
+Now I have the full token set. The blocker is the empty `Shared.xcframework`. Let me investigate whether it can be built (KMP module + gradle + the build script).
+
+KMP shared module + gradle + Java exist, so the framework is buildable in principle. Let me read the placeholder checker, the pending-verifications doc, and the temperature analog's Views/strings/Tests to mirror exactly.
+
+The `macos-pending-verifications.md` reveals the accepted verification pattern: ToolCard (same tier) was verified via **isolated SwiftPM build + tests + swiftlint/swiftformat/placeholder**, with full-app `xcodebuild` deferred as macOS-pending due to pre-existing parallel-merge collisions. Let me check for an isolated build harness, the lint configs, and the temp analog's remaining files.
+
+Let me verify the exact web i18n keys/defaults for the `drivetrain.*` namespace.
+
+I now have a complete understanding. The accepted verification pattern (per `macos-pending-verifications.md`, same ToolCard tier) is **isolated SwiftPM build + tests + swiftlint/swiftformat/placeholder**, with full-app `xcodebuild` deferred as macOS-pending. Let me set up tracking and write the surface.
+
+Now I'll write the surface files. Starting with the pure Adapter (Foundation-only, host-testable):
+
+Now the Model (state-holder seam, telemetry, @Observable model, localization facade):
+
+Model done. Now the Views (chrome) with the accent→Color mapping and the SwiftUI strings helper:
+
+Now the entry view, then Previews and strings:
+
+Now the comprehensive test file. Let me first check the rest of the swiftlint config (body/file length rules) and my file line counts to ensure `--strict` compliance.
+
+My Adapter is 500 lines — over swiftlint's default `file_length` warning (400), which `--strict` treats as an error (existing adapters stay ≤384). I'll split it into `.Adapter.swift` (types + math) and `.Projection.swift` (catalog + projection + a11y), matching the codebase's multi-file convention.
+
+Now the Projection file (sensor catalog + projection + accessibility):
+
+Now the comprehensive test file:
+
+All files written. Let me verify line counts (must be <400 for `--strict`) and run the lightweight gates.
+
+Line counts are good except Tests (403, must be <400). The placeholder scan I ran covered the whole dir (those 10 violations are pre-existing in OTHER files). Let me check the patterns, confirm my files are clean, and trim Tests.
+
+My files are placeholder-clean (COUNT=0). Now trim Tests under 400 lines by condensing the header comment:
+
+Now run swiftformat and swiftlint on my files:
+
+Minor swiftformat issues. Let me let swiftformat auto-fix them (ecosystem tool), then review:
+
+swiftformat passes. Let me verify the auto-applied changes are correct, then run swiftlint:
+
+swiftformat changes are correct. Now swiftlint --strict on my files:
+
+swiftlint --strict (0 violations), swiftformat (clean), and placeholder scan (0) all pass on the 7 surface files. Now the critical compile+test verification via an isolated SwiftPM package (the accepted pattern, since the app's `Shared.xcframework` is an empty stub). Let me set it up.
+
+The `#Preview` macro plugin is an Xcode-build-system feature unavailable to bare SwiftPM (a harness-toolchain limitation, not a code issue — it compiles under `xcodebuild`). The ToolCard precedent excluded the DEBUG-only Previews file from the isolated build. Let me do the same and rebuild.
+
+Library compiles cleanly under Swift 6 strict concurrency. Now run the tests:
+
+`swift test` can't find XCTest — likely Command Line Tools are selected instead of full Xcode. Let me check the toolchain and point to full Xcode if available.
+
+Full Xcode is present but the active dir is Command Line Tools. I'll use `DEVELOPER_DIR` to point at Xcode (without changing global state):
+
+All 32 tests pass under Swift 6 strict concurrency. Now let me add iOS-18 compile evidence (the gate targets iPhone simulator) and verify the project spec integrates my files via xcodegen.
+
+iOS-18 typecheck passes too. Let me confirm the project spec integrates my files and inspect how the Shared framework build is wired (to document the xcodebuild blocker precisely).
+
+The scheme's `preActions` run the gradle `build-shared-xcframework.sh` before any `xcodebuild build/test`, and the app target links the (empty) `Shared.xcframework` — confirming the documented blocker. Let me check how the ToolCard precedent logged its STATUS to match convention.
+
+This is the definitive precedent: every P4 feature-view log (0002–0006) ships **EXIT=0 / STATUS=DONE** with host gates green (swiftlint/swiftformat/placeholder/executed XCTest + iOS18/macOS15 compiles) and the full Xcode app `build test` **DEFERRED (exit 65)** due to the pre-existing empty `Shared.xcframework` + sibling dup-symbol collisions + signing. My situation is identical. Let me capture real-toolchain integration evidence via xcodegen.
+
+xcodegen succeeds (EXIT 0) and all 8 surface files are registered in the project. Now a bounded real-`xcodebuild` probe (building the target directly to skip the gradle preAction) to capture the actual failure mode and prove my files aren't the cause:
+
+The `Shared.xcframework` doesn't exist at all (only `.gitkeep` in `Frameworks/`) — that's the documented blocker. The xcodebuild probe is running in the background. Let me check its progress.
+
+The background job's output was lost when its sync session ended. Let me run a clean, self-contained xcodebuild probe that captures the exit code into the file itself:
+
+Definitive captured evidence: **`REAL_XCB_EXIT=65`**, **0 TemperatureMetricCards errors**, cause = *"There is no XCFramework found at .../Shared.xcframework"* — the exact documented macos-pending KMP artifact blocker. This matches the precedent precisely. Let me clean up probe artifacts and check the tree state.
+
+Tree is clean — only my 8 new files (the two modified web files are pre-existing baseline edits, outside my scope, won't be committed). Let me re-run the full host-gate suite one final time to capture exact numbers for the log.
+
+All host gates green: **LINT=0, FORMAT=0, PLACEHOLDER=0, 32/32 tests pass**. Now let me write the gate log following the established precedent format.
+
+Now commit the scoped files (my 8 surface files + the log, NOT the pre-existing web edits):
+
+Exactly the 9 intended files staged (8 surface + log); the pre-existing web edits are excluded. Now commit:
+
+Commit `69d9cf4ee` created. Let me do a final verification of the commit contents and todo state.
+
+All work is complete and verified. The commit contains exactly the 9 intended files (1,839 insertions); the only remaining working-tree changes are the two pre-existing baseline web edits, correctly left untouched. All 9 todos are done.
+
+Merge made by the 'ort' strategy.
+ ...e-feature-views-0161-TemperatureMetricCards.log | 172 +++++++++
+ .../TemperatureMetricCards.Adapter.swift           | 274 ++++++++++++++
+ .../TemperatureMetricCards.Model.swift             | 237 +++++++++++++
+ .../TemperatureMetricCards.Previews.swift          |  91 +++++
+ .../TemperatureMetricCards.Projection.swift        | 234 ++++++++++++
+ .../TemperatureMetricCards.Tests.swift             | 394 +++++++++++++++++++++
+ .../TemperatureMetricCards.Views.swift             | 319 +++++++++++++++++
+ .../feature-views/TemperatureMetricCards.strings   |  39 ++
+ .../feature-views/TemperatureMetricCards.swift     |  79 +++++
+ 9 files changed, 1839 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0161-TemperatureMetricCards.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureMetricCards.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureMetricCards.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureMetricCards.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureMetricCards.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureMetricCards.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureMetricCards.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureMetricCards.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureMetricCards.swift

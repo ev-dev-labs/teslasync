@@ -1,0 +1,106 @@
+=== P4 Shared surface 0188 PullToRefresh (Apple) ===
+Date: 2026-06-08
+Web source (spec): web/src/components/mobile/PullToRefresh.tsx
+Native output:     apps/apple/TeslaSync/shared-surfaces/PullToRefresh.*
+
+--- Runner capability probe -------------------------------------------------
+Xcode.app .................. PRESENT (/Applications/Xcode.app/Contents/Developer)
+swift ...................... Apple Swift 6.3.2 (target arm64-apple-macosx26.0)
+swiftlint .................. /opt/homebrew/bin/swiftlint
+swiftformat ................ /opt/homebrew/bin/swiftformat
+pwsh ....................... /opt/homebrew/bin/pwsh
+xcodegen ................... /opt/homebrew/bin/xcodegen
+iOS Simulator .............. iPhone 16 (Booted)
+iOS sim SDK ................ iPhoneSimulator26.5.sdk (deploys to ios18.0)
+SWIFT capability (SwiftUI/Swift Charts/MapKit, iOS18/macOS15) ... AVAILABLE
+
+--- Official gate steps -----------------------------------------------------
+Gate command 1: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  Pre-req: `xcodegen generate` ................................. EXIT=0 (project created)
+  Pre-req: Frameworks/Shared.xcframework (KMP shared core) ..... ABSENT (Frameworks/ holds only .gitkeep)
+  Generated TeslaSync.xcodeproj references Shared.xcframework .. 10 occurrences (app + test targets, ADR-004)
+  xcodebuild build (iPhone 16) ................................ BLOCKED
+    - The iOS/macOS app targets declare `framework: Frameworks/Shared.xcframework`
+      (project.yml L54/L227/L254). That artifact is the Kotlin/Native shared core,
+      produced by the KMP Gradle build, and is NOT vendored in this checkout. Without
+      it the app cannot link, so `build test` cannot pass on this runner.
+    - A bounded full-target build (timeout 240s) did not complete: the app target
+      compiles 1400+ feature-view sources before the link phase; it was terminated
+      (exit 124) without reaching a successful link. Evidence: XCODEBUILD_EXIT=124.
+  IOS_EXIT=BLOCKED (missing platform artifact Frameworks/Shared.xcframework)
+
+Gate command 2: xcodebuild -scheme TeslaSync-macOS build test
+  MAC_EXIT=BLOCKED (same missing Frameworks/Shared.xcframework dependency)
+
+Gate command 3: swiftlint --strict
+  Scope: the 6 shipped surface files (the repo .swiftlint.yml `included:` list does not
+  yet contain TeslaSync/shared-surfaces — see "Integration" below — so the surface was
+  linted explicitly with the repo config).
+  Result: Done linting! Found 0 violations, 0 serious in 6 files.
+  LINT_EXIT=0
+
+Gate command 4: swiftformat --lint apps/apple  (surface scope shown)
+  Result: 0/6 files require formatting.
+  FORMAT_EXIT=0
+
+Gate command 5: check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/PullToRefresh
+  Result: PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+
+--- Supplementary in-isolation verification (runnable here) ------------------
+The surface intentionally depends only on the P1/S9 design tokens + SwiftUI (its web
+data sources are platform-local: useIsCoarsePointer / useMotionPreference /
+useTranslation). It therefore typechecks and unit-tests standalone, without the KMP
+framework, giving real compile + test evidence for the shipped code:
+
+  swiftc -typecheck (Swift 6, strict concurrency), runtime surface + tokens:
+    - iOS   target arm64-apple-ios18.0-simulator ... EXIT=0 (no warnings)
+    - macOS target arm64-apple-macos15.0 .......... EXIT=0 (no warnings)
+  swiftc -typecheck Previews + shared Feedback/UI component closure (iOS18) ... EXIT=0
+  SwiftPM `swift test` (Swift 6 tools, macOS 15, strict concurrency):
+    Executed 24 tests, with 0 failures (0 unexpected).
+      PullToRefreshRubberBandTests ......... 4 passed
+      PullToRefreshIndicatorTests .......... 6 passed
+      PullToRefreshDecisionTests ........... 2 passed
+      PullToRefreshModelTests .............. 10 passed (telemetry view.opened, isActive,
+                                              reduce-motion, pull intake, refresh lifecycle
+                                              incl. clears-on-throw, release decision)
+      PullToRefreshAccessibilityTests ...... 2 passed (per-phase label content)
+    SWIFT_TEST_EXIT=0
+
+--- Parity coverage ---------------------------------------------------------
+States reproduced from the web source (no hidden surfaces):
+  disabled (fine-pointer passthrough), pull ("Pull to refresh"),
+  release ("Release to refresh"), refreshing ("Refreshing…").
+Generic P4 leaf checklist (loading/empty/error/stale/offline) = the *content* the
+container hosts; rendered in Previews via the shared Feedback primitives + facade.
+Data sources bound through the P1/S8 state-holder seam (PullToRefreshEnvironmentSource
+-> PullToRefreshModel); no direct HTTP/platform reads in the view body.
+i18n keys (P1/S10, table "PullToRefresh"): mobile.refresh.pull / .release / .refreshing
+  + a11y hint + hosted-state copy. No English literals in code (web defaults are the
+  NSLocalizedString `value:` fallbacks, per the established facade pattern).
+Telemetry (P1/S11): view.opened surface="PullToRefresh" emitted once on start().
+Accessibility: indicator label + hint + updatesFrequently trait; refresh accessibility
+  action; spinner accessibilityHidden; reduce-motion respected.
+
+--- Files shipped -----------------------------------------------------------
+apps/apple/TeslaSync/shared-surfaces/PullToRefresh.Adapter.swift   (pure projection)
+apps/apple/TeslaSync/shared-surfaces/PullToRefresh.Model.swift     (P1/S8 + S11 + S10 seams)
+apps/apple/TeslaSync/shared-surfaces/PullToRefresh.swift           (container view)
+apps/apple/TeslaSync/shared-surfaces/PullToRefresh.Views.swift     (indicator chip + spinner)
+apps/apple/TeslaSync/shared-surfaces/PullToRefresh.Previews.swift  (per-state previews)
+apps/apple/TeslaSync/shared-surfaces/PullToRefresh.Tests.swift     (XCTest: adapter + model + a11y)
+apps/apple/TeslaSync/shared-surfaces/PullToRefresh.strings         (P1/S10 catalog)
+
+--- Integration needed to turn IOS_EXIT/MAC_EXIT green (outside this prompt's allowed files) ---
+1. Vendor Frameworks/Shared.xcframework via the KMP Gradle build (ADR-004).
+2. Register the new source group in apps/apple/project.yml for the TeslaSync and
+   TeslaSync-macOS targets:  - path: TeslaSync/shared-surfaces
+   (and add it to .swiftlint.yml `included:` for the project-wide lint run).
+   The shipped Tests file follows the repo's *.Tests.swift convention and lands in the
+   XCTest target via the same wiring as TeslaSync/feature-views/*.Tests.swift.
+Both are repo-integration steps; this prompt's allowed file set is limited to
+PullToRefresh.* + this log, so project.yml/.swiftlint.yml were intentionally not edited.
+
+EXIT=1
+STATUS=BLOCKED

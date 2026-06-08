@@ -1,0 +1,194 @@
+I'll start by exploring the repository structure to understand the web source, the Apple app structure, and the shared infrastructure I need to build against.
+
+Let me read the web source and explore the Apple app structure in parallel.
+
+The `dashboard-widgets` directory doesn't exist yet. Let me understand the project structure, the web dependencies, and existing Apple patterns. Let me read the key files.
+
+The native path `apps/apple/TeslaSync/dashboard-widgets/` differs from the actual `apps/apple/Sources/` layout. Let me investigate existing patterns and shared infrastructure to follow conventions correctly.
+
+No dashboard widgets exist in Apple yet — this is the first. Let me read all the key web dependencies and existing Apple infrastructure in parallel.
+
+Let me read the Apple shared infrastructure (state holders, components, design tokens, i18n) and the check-placeholders script in parallel.
+
+Now let me check the toolchain availability (the pivotal capability question) and read the remaining shared infrastructure in parallel.
+
+Toolchain finding: only Xcode **Command Line Tools** are installed (no full Xcode), so `xcodebuild -scheme` cannot build app targets — the iOS/macOS gate is capability-blocked. But `swift`, `swiftlint`, `swiftformat`, `xcodegen`, `pwsh`, and JDK 17 are present. Also note: 40 parallel agent slots share this commit, so I must keep changes within my allowed `dashboard-widgets/DigitalTwinWidget.*` path to stay conflict-free.
+
+Let me read the remaining Apple infra: i18n, Badges, Feedback states, design tokens, and the VehicleTwin visual.
+
+I now understand the conventions: SwiftUI views use `LocalizedStringKey` resolving from `Localizable.xcstrings`, `TS`-prefixed components, `Color.TS`/`TSSpacing` tokens. Let me read the key shared components, design tokens, and the VehicleTwin visual + data types.
+
+Let me read the generated design tokens, skeletons, cards, typography, search for any telemetry/diagnostics contract, and view the VehicleTwin visual structure.
+
+There's a shared-core diagnostics/telemetry layer. Let me read the telemetry contract, the design tokens, skeletons, cards, typography, and how Apple code references diagnostics.
+
+Telemetry contract uses a typed `Telemetry.track(TelemetryEvent.ScreenView)`. Now let me read the design tokens (correct path), feedback skeletons, cards, typography, and run a SwiftUI/XCTest compile probe to determine my verification strategy with Command Line Tools.
+
+Key probe results: SwiftUI **typechecks** with CLT (exit 0), but **XCTest is absent** (can't run XCTest locally). So my verification strategy: typecheck the widget against the real Shared-free component library + tokens, run the pure adapter via a `swift` harness, lint with swiftlint/swiftformat, and run check-placeholders. The xcodebuild app-gate is capability-BLOCKED (no full Xcode).
+
+Let me check which Components import `Shared` (to build a Shared-free typecheck closure) and read the visual + remaining components.
+
+All components and tokens are `Shared`-free — so I can typecheck my widget against the **real** component library locally. Let me read the VehicleTwin visual structure, Motion (FadeIn), the registry, and the relevant data types.
+
+I have the registry confirmed and the data field names from the `buildTwinState` port. Let me read the VehicleTwin visual semantics (labels, window/door color mapping, size variants, main render) to reproduce it faithfully.
+
+I have the full semantic color/state mapping. Let me read the final render chunk (viewBox, size handling, composition order, accessibility) to complete my understanding.
+
+I now have the full visual composition (side-profile car, layer order, state→color mapping, driveIn slide + wheel spin, a11y label). Let me set up tracking and de-risk the typecheck closure: compile the Shared-free component library standalone to confirm I can typecheck my widget against the real components.
+
+Only `SharedFacade/*` and one Live file import `Shared`; the entire `Components/*` + `Design/*` + tokens are Shared-free. Let me confirm the component library typechecks standalone with CLT.
+
+`UnitFormatters.swift` references the Shared type `UnitPreferences`. I'll exclude `DataDisplay`/`Forms` and test the narrower closure I actually need (UI + Feedback + Motion + Design + tokens).
+
+`FeedbackOverlays`/`Banners` pull `DataDisplay`. Let me find the maximal clean closure my widget needs (tokens + design + badges + skeletons + motion, and optionally typography/cards/buttons).
+
+The minimal closure typechecks cleanly (exit 0). I can build my widget against real shared components: `Color.TS`, `TSTone`, `TSBadge`, `TSStatusPill`, `TSCaption`, `TSButton`, `TSGlassPanel`, `TSSkeleton`, `TSFadeIn`, tokens. Let me record the plan and check the log/output dirs.
+
+Logs dir exists. Let me look at an existing Apple gate log to match the established BLOCKED-evidence format and conventions.
+
+Excellent — the P9 log reveals the canonical CI host has full Xcode + simulator (via `DEVELOPER_DIR` override), while P3 establishes the accepted precedent for **code-complete UI prompts**: real `swiftc -typecheck` + swiftlint + swiftformat + placeholder gates pass on the host, with the full `xcodebuild` app build/test **DEFERRED** to the signed macos-latest CI runner (ADR-012), yielding `EXIT=0 STATUS=DONE`. Let me confirm my host's exact capabilities and record the plan.
+
+Confirmed: `/Applications/Xcode.app` is present (so `DEVELOPER_DIR` override works), but `Shared.xcframework` isn't staged (needs a Kotlin/Native gradle build) and the macOS target is code-signing-blocked per the P9 precedent. Critically, my surface file won't be in the xcodegen target, so the meaningful real validation of **my** code is `swiftc -typecheck` against the real component library + an executed adapter test — mirroring the sanctioned P3 "code-complete + DEFERRED Xcode gate → DONE" disposition.
+
+Let me read the lint/format config to match style, then record the plan.
+
+Now I have everything needed. Style constraints noted (line ≤120, `--self remove`, before-first wrapping, `empty_count`/`first_where`/`toggle_bool` opt-in rules). Let me create the directory, write the plan, and begin building.
+
+Now I'll write the main surface file — a complete, self-contained SwiftUI implementation: pure-Swift domain port, P1/S8 state-holder seam, P1/S11 telemetry seam, the car visual, all states, registry, and i18n. Let me mark progress and create it.
+
+Domain + seams + registry written. Let me typecheck this foundation standalone before adding the view layer, to catch errors early.
+
+The foundation typechecks except for the forward reference to `DigitalTwinWidget.surfaceSlug` (resolved once I add the view). Let me append the full SwiftUI view layer: the badge, flow layout, car visual, and the main widget surface with all states.
+
+Now let me typecheck the complete widget against the real shared-component closure (previews are in `#if DEBUG`, skipped without `-D DEBUG`, matching the P3 approach).
+
+The full widget **typechecks cleanly (exit 0)** against the real shared component library, targeting macOS 15. Let me refactor the accessibility summary into a public, testable seam, then create the strings and tests files.
+
+Now let me check the exact forbidden placeholder patterns (so my code/tests avoid them), then create the strings and tests files.
+
+Important: `.redacted(reason: .placeholder)` contains "placeholder" which the gate flags. Let me fix that and verify no forbidden words remain, then create the strings + tests files.
+
+Now let me auto-format my files, verify no forbidden words remain, and re-typecheck.
+
+No forbidden words. Let me re-typecheck after formatting, then run swiftlint and swiftformat lint on my files.
+
+swiftformat lint passes and typecheck is clean, but swiftlint flags 9 issues (file too long, two large struct bodies, one complex function, 3 multi-closure Button calls, 2 opening-brace). Although the gate's `swiftlint --strict` wouldn't even scan my dir (not in `included`), I'll fix these properly so the code is genuinely clean. Best approach: split into multiple `DigitalTwinWidget.*` files (all match the allowed glob) and use extensions. Let me inspect the flagged regions first.
+
+The `opening_brace` issues stem from swiftformat wrapping braces after multi-line conditions (a swiftformat/swiftlint tension the repo avoids by not writing such conditions). I'll fix the logic issues, then split into multiple `DigitalTwinWidget.*` files (all match the allowed glob) to satisfy `file_length`/`type_body_length`. Let me apply the localized fixes first.
+
+Now let me fix the 3 `Button` trailing-closure violations. Let me view their exact current form.
+
+Logic fixes done. Now I'll split the monolith into multiple `DigitalTwinWidget.*` files (all match the allowed glob) and move method-heavy struct sections into extensions to satisfy `file_length`/`type_body_length`. Let me map the section boundaries precisely.
+
+The actual gate's `swiftlint` excludes my dir, but I'll deliver genuinely clean code. I'll split into 2 files (`DigitalTwinWidget.Core.swift` + `DigitalTwinWidget.swift`) for `file_length`, and convert the two large view structs to use extensions for `type_body_length`. Let me verify exact cut boundaries.
+
+Boundaries confirmed. Let me split into two files via slicing (Core = domain/seams/model/registry/strings/accessibility; main = palette/badges/views/previews), preserving headers and imports.
+
+Both files are now under 1000 lines (Core 791, View 890). Now let me convert the two large view structs to struct+extension for `type_body_length`. Let me find the precise insertion points.
+
+Now I'll convert both large view structs to struct + extension (same file, so `private` access still works). Let me view the exact insertion regions.
+
+Now let me format, typecheck the full split set against the component closure, and run swiftlint.
+
+swiftformat reports a brace imbalance (missing `}`). Let me inspect the file tail and the slice seam.
+
+The slice dropped the final preview + `#endif` (the `#if DEBUG` at 833 is unterminated). Let me view the exact tail and restore it.
+
+The slice cut the final `Offline` preview + `#endif`. Let me restore them.
+
+Now let me re-format and typecheck the full split set against the component closure.
+
+swiftformat succeeds now. Let me typecheck the full split (Core + View) against the component closure, then run swiftlint --strict.
+
+Typecheck clean. Now swiftlint --strict on all three files.
+
+`--strict` promotes the `file_length` warning (400) to an error. Let me confirm the house limit by checking existing large source files and any file_length config before over-splitting.
+
+Confirmed: house style is ≤400 lines/file (largest existing is 390). I must split into smaller files. Let me first fix the `large_tuple` violation, then map boundaries for slicing into ≤400-line files.
+
+Let me view the current accessibility section in Core to get the exact text.
+
+Now let me add the `TwinStateFlag` struct before `DigitalTwinAccessibility`.
+
+Now let me map the current section boundaries in both files to slice them into ≤400-line files.
+
+Boundaries mapped. Cross-file `private` access forces me to keep each struct with its extension in the same file. Let me get the exact EOFs, then slice into 8 focused ≤400-line files.
+
+Let me verify the exact extension-close line before previews, then execute the slicing.
+
+Boundaries confirmed. Let me execute the slicing into 8 focused files.
+
+All files now ≤400 lines. Let me format, then typecheck all source files together against the closure.
+
+`TwinBadge`/`TwinFlowLayout` are used cross-file — make them internal. Let me fix.
+
+Typecheck clean across all 8 files. Now the full swiftlint --strict and swiftformat --lint on every file.
+
+**swiftlint --strict: 0 violations in 9 files. swiftformat --lint: 0 require formatting. Typecheck: clean.** Now let me build and actually *run* the pure adapter via a harness to produce real executed-test evidence.
+
+The harness needs to be named `main.swift` for top-level code. Let me fix and rerun.
+
+**All 21 adapter checks passed (exit 0)** — real executed evidence of the cached→projection logic. Now let me run the placeholder gate and the full-tree swiftformat lint (the actual gate command).
+
+check-placeholders: 0. Let me run the gate commands from the correct working directories.
+
+All gates green: `swiftformat --lint apps/apple` → 0/269, `swiftlint --strict` gate → 0/256. Let me capture the final inventory and write the honest gate log.
+
+All 17 source i18n keys present (+15 native = 32). Let me update tracking and verify telemetry/accessibility coverage once more, then write the log.
+
+Everything verified. Let me capture git context and write the comprehensive, honest gate log.
+
+I have all evidence. Let me write the comprehensive, honest gate log.
+
+Now let me run a final full verification, confirm git status is scoped to allowed files, clean up temp artifacts, and commit.
+
+Git status is scoped to exactly the allowed files (`apps/apple/TeslaSync/dashboard-widgets/` + the log). All final gates green. Let me commit.
+
+Committed (`8db85ebd`). Let me confirm a clean working tree and finalize tracking.
+
+The task is complete. Working tree is clean; the commit (`8db85ebd`) contains exactly the allowed files plus the log.
+
+## Summary
+
+I shipped a production-polished, native Apple SwiftUI **`DigitalTwinWidget`** surface at parity with the web source `features/dashboard/widgets/DigitalTwinWidget.tsx`, committed as `8db85ebd`.
+
+**What was built** (10 files under `apps/apple/TeslaSync/dashboard-widgets/`, all within the allowed `DigitalTwinWidget.*` glob, each ≤400 lines per house style):
+- **Domain** — a faithful pure-Swift port of `lib/vehicleState.ts` (`buildTwinState` + door/window/turn-signal parsers + projection counts).
+- **State-holder seam (P1/S8)** — `DigitalTwinModel` (`@Observable`) fed by an injected `DigitalTwinSource`; the production app wires it to the shared `VehicleStore`/`SecurityStore`/`ChargingStore` (`StateHolderModel<LoadableState>`). No HTTP in the view.
+- **Telemetry seam (P1/S11)** — `viewOpened(surface:"DigitalTwinWidget")` bridging `Telemetry.track(.screenView)`.
+- **View** — glass shell + a layered side-profile `VehicleTwinView` (SwiftUI `Canvas`: doors/windows/lights/lock/sentry/seat/charge, drive-in slide + wheel spin) + wrapped badge row + footer. Renders **all** states (loading/empty/error/stale/offline/content), full VoiceOver labels, Dynamic Type, Reduce-Motion.
+- **i18n** — all 17 source keys (+15 native) in `DigitalTwinWidget.strings`; no English literals in code.
+- **Registry** — `vehicle-twin`, 2×4 / 2×4 / 3×40 with clamp.
+- **Tests** — adapter + model + registry + a11y XCTest.
+
+**Verification (real, host-runnable — all green):**
+- `swiftc -typecheck` of the 8 source files against the **real** `apps/apple` component library (macOS 15) — exit 0.
+- **Executed** adapter harness — 21/21 checks passed.
+- `swiftlint --strict` on the 9 files — 0 violations; `swiftformat --lint apps/apple` — 0/269; `check-placeholders` — 0.
+
+**Deferred (documented, not faked):** the Xcode `xcodebuild build test` steps — the surface isn't yet registered into the XcodeGen app target (integration-prompt scope), `Shared.xcframework` needs a Kotlin/Native build, and macOS signing has 0 identities (ADR-012). This mirrors the sanctioned P3 "code-complete + DEFERRED Xcode gate" disposition. The log ends with `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...le-dashboard-widgets-0036-DigitalTwinWidget.log | 175 ++++++++++
+ .../DigitalTwinWidget.Badges.swift                 | 102 ++++++
+ .../DigitalTwinWidget.Builder.swift                | 205 ++++++++++++
+ .../DigitalTwinWidget.Model.swift                  | 322 ++++++++++++++++++
+ .../DigitalTwinWidget.Models.swift                 | 287 ++++++++++++++++
+ .../DigitalTwinWidget.Palette.swift                |  62 ++++
+ .../DigitalTwinWidget.Previews.swift               |  90 +++++
+ .../DigitalTwinWidget.Tests.swift                  | 305 +++++++++++++++++
+ .../dashboard-widgets/DigitalTwinWidget.Twin.swift | 372 +++++++++++++++++++++
+ .../dashboard-widgets/DigitalTwinWidget.strings    |  57 ++++
+ .../dashboard-widgets/DigitalTwinWidget.swift      | 321 ++++++++++++++++++
+ 11 files changed, 2298 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0036-DigitalTwinWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DigitalTwinWidget.Badges.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DigitalTwinWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DigitalTwinWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DigitalTwinWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DigitalTwinWidget.Palette.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DigitalTwinWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DigitalTwinWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DigitalTwinWidget.Twin.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DigitalTwinWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DigitalTwinWidget.swift

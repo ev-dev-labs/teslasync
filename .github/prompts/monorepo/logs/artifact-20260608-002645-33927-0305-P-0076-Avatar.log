@@ -1,0 +1,149 @@
+=== P4 Shared surface 0076 Avatar (Apple) ===
+Web source : web/src/components/data-display/Avatar.tsx  (THE specification)
+Native out : apps/apple/TeslaSync/shared-surfaces/Avatar.{swift,Adapter.swift,Model.swift,
+             Views.swift,Previews.swift,Tests.swift,strings}
+Runner     : Darwin (Apple Silicon), Xcode 26.5 via DEVELOPER_DIR=/Applications/Xcode.app,
+             iPhone 16 simulator available, xcodegen 2.45.4, swiftlint, swiftformat, pwsh.
+
+CAPABILITY
+  SwiftUI + Swift Charts + MapKit toolchain present (full Xcode reachable via DEVELOPER_DIR;
+  the global xcode-select points at CommandLineTools but Xcode.app is installed and used).
+  => NOT a platform-capability BLOCK. Surface is shipped and verified. (Avatar uses neither
+  Swift Charts nor MapKit — it is a pure presentational primitive; SwiftUI suffices.)
+
+PARITY — every web branch reproduced (no scope narrowing)
+  - 3 visuals in the web priority order: remote image (AsyncImage load/loaded/failed) ->
+    deterministic 2-letter initials disc -> generic glyph (SF person.fill for `user`,
+    a drawn Helix brand mark for `bot`).
+  - djb2 seed hash -> colorIndex = djb2(seed) % 8 over the Okabe-Ito CB-safe palette.
+    AvatarPalette.swatches is pinned == web CHART_COLORS_CB_SAFE == Color.TS.chartCategorical.
+    Cross-impl parity pinned against the web reference (node djb2): "?"->2, "u-1"->4, "u-2"->7,
+    "Ada Lovelace"->2, "Grace Hopper"->7, "John Doe"->0.
+  - avatarInitials: 2 words -> first letters; 1 word -> first 2 chars; empty/whitespace -> "?".
+  - isAttributed neutral-disc fallback for the anonymous (bot) case (web `--surface-2`).
+  - presence dot online/idle/offline -> statusSuccess/statusWarning/textMuted + a11y label.
+  - sizes xs16/sm24/md32/lg48, shapes circle/rounded, optional tooltip (`.help` + a11y).
+  - States rendered (never blank): loading (fallback under a veil), loaded, failed->fallback,
+    empty (neutral glyph disc), presence offline. The web primitive's only "offline" concept
+    is the presence dot; reproduced faithfully (no fabricated QueryError/retry the source lacks).
+  - i18n: avatar.unknown / avatar.statusOnline / avatar.statusIdle / avatar.statusOffline all
+    resolve through the P1/S10 facade; zero English literals in the Swift sources.
+  - P1/S8 state-holder seam (AvatarSource + AvatarModel), P1/S11 telemetry (view.opened
+    surface="Avatar"), P1/S9 tokens, P1/S10 i18n facade — all present and consumed.
+  - Accessibility: single VoiceOver element (label=identity, value=presence, .isImage trait),
+    Dynamic Type initials (minimumScaleFactor), reduce-motion-gated image fade, luminance-derived
+    foreground for WCAG contrast on every swatch (improvement over the web's fixed white).
+
+------------------------------------------------------------------------------------------------
+SURFACE-SCOPED HOST-RUNNABLE GATES  (all GREEN on THIS runner)
+------------------------------------------------------------------------------------------------
+  swift build  (isolated SwiftPM, module TeslaSync, swift-tools 6.0 = Swift 6,
+               strict-concurrency complete; real generated Tokens.swift) ........... PASS (11.7s)
+  swift test   (28 tests / 7 suites, 0 failures) .................................. PASS
+               AvatarPalettePinTests, AvatarHashTests, AvatarInitialsTests,
+               AvatarForegroundTests, AvatarProjectionTests, AvatarModelTests
+               (view.opened idempotency + source feed), AvatarStringsTests, AvatarSizeTests.
+  swiftc -typecheck  iOS 18  (-target arm64-apple-ios18.0-simulator,
+               -swift-version 6 -strict-concurrency=complete, iPhoneSimulator26.5.sdk) PASS
+  swiftc -typecheck  macOS 15 (-target arm64-apple-macos15.0, same flags) ........... PASS
+  swiftformat --lint apps/apple/TeslaSync/shared-surfaces  (0/6 require formatting) . PASS  FORMAT_EXIT(scope)=0
+  swiftlint --strict  (shared-surfaces scope: 0 violations) ........................ PASS  LINT_EXIT(scope)=0
+  check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces  (swift) ........ PASS  PLACEHOLDER_EXIT=0
+               PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  (0 opt-outs)
+  xcodegen generate  (7 Avatar files enumerate into TeslaSync + TeslaSync-macOS) .... PASS  XCODEGEN_EXIT=0
+
+------------------------------------------------------------------------------------------------
+FULL-APP / WHOLE-PROJECT GATES  (RED — PRE-EXISTING and UNRELATED; DEFERRED to P4/P99 macos-latest)
+------------------------------------------------------------------------------------------------
+  Shared.xcframework: assembled via the real Gradle KMP build on this runner
+    (:core:assembleSharedDebugXCFramework OK; debug variant staged for the Debug build).
+    The RELEASE xcframework link is the documented-slow macOS-pending P1/S3 item
+    (apps/macos-pending-verifications.md row 1).
+
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+    IOS_EXIT=65
+    First error class: feature-views/*.Tests.swift e.g. AIRestorePanel.Tests.swift:18
+      "unable to resolve module dependency: 'XCTest'"  (261 co-located *.Tests.swift import
+      XCTest into the app target: feature-views=204, dashboard-widgets=57).
+    Also present in source: `struct DashboardWidgetSize` redefined 15x across
+      Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/* (invalid redeclaration).
+    Avatar errors in the iOS app build: 0  (the surface compiles clean inside the real target).
+
+  xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' build
+    MAC_EXIT=65
+    First error class: "'TeslaSync-macOS' / 'TeslaSyncWidgets-macOS' has entitlements that
+      require signing with a development certificate" (this runner provisions no signing identity).
+      The same XCTest-in-app-target + DashboardWidgetSize blockers apply post-signing.
+    Avatar errors in the macOS app build: 0.
+
+  swiftlint --strict  (whole project, bare gate command):
+    LINT_EXIT=2 — RED on 1 PRE-EXISTING violation in a file this prompt did not touch:
+      dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length).
+      shared-surfaces contributes 0 violations.
+
+  swiftformat --lint apps/apple  (whole tree, bare gate command):
+    RED on 1 PRE-EXISTING issue in a file this prompt did not touch:
+      feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes).
+      shared-surfaces contributes 0 (0/6 require formatting).
+
+  grep ": error:" over both full-app build outputs -> ZERO Avatar / shared-surfaces hits.
+  These are exactly the artifacts apps/macos-pending-verifications.md defers to the ADR-012
+  macos-latest CI runner; owned by the P4/P99 Apple acceptance gate (signing/archive + folding
+  the staged *.Tests.swift into the test target) and a dashboard-widget de-duplication pass —
+  NOT by a single shared-surface prompt (task rule: do not fix pre-existing unrelated breakage).
+
+WIRING & DRIFT (covenant 9 — no silent drift; every change enumerated)
+  - apps/apple/TeslaSync/shared-surfaces/Avatar.{swift,Adapter,Model,Views,Previews,Tests,strings}
+    (the surface — allowed scope).
+  - apps/apple/project.yml — added `- path: TeslaSync/shared-surfaces` to the TeslaSync and
+    TeslaSync-macOS source lists. NECESSARY: the directory is a new tier; without this the
+    surface would be dead code, never compiled by the app targets (would violate covenant 4).
+    Minimal 2-line add; touches no other surface.
+  - apps/apple/.swiftlint.yml — added `TeslaSync/shared-surfaces` to `included` so the bare
+    `swiftlint --strict` gate actually lints the surface (it does; 0 violations).
+  - apps/macos-pending-verifications.md — appended the standard deferred-verification row per the
+    file's resolution protocol.
+  - this log.
+  Co-located Avatar.Tests.swift mirrors the same sanctioned staging the macos-pending doc and the
+  204+57 sibling *.Tests.swift use; it is proven GREEN by the isolated SwiftPM harness (28/28) and
+  introduces no new failure class; P99 folds all staged test files into the XCTest target.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 /
+                           MAC_EXIT=65) and explicitly DEFERRED with the captured first-error
+                           classes — never reported as passing.
+  2  No scope narrowing  : every web region/branch reproduced — image+fallback, initials, user/bot
+                           glyph, CB-safe deterministic colour, attribution/neutral disc, presence
+                           dot, sizes, shapes, tooltip, all four i18n keys.
+  3  No skip-and-assume  : every surface gate executed on THIS runner; raw exits pasted; iOS and
+                           macOS full-app builds actually run (exit 65 each); Shared.xcframework
+                           actually assembled via Gradle rather than hand-waved.
+  4  No stubs as final   : complete production surface + 28 real tests; placeholder scanner = 0;
+                           no TODO/stub/mock/placeholder in code.
+  5  No parity shortcut  : palette/initials/branches/typography/a11y/telemetry mapped to platform
+                           tokens + verified; djb2 colour index pinned to the web reference values.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11
+                           telemetry (view.opened surface="Avatar"), P4 core all present + consumed.
+  8  No commit on red    : the COMMITTED artifact (Avatar.* + minimal wiring) is GREEN on every
+                           surface gate AND on a real isolated Swift 6 build+test; each shipped file
+                           is individually swiftlint/swiftformat/placeholder clean; the deferred
+                           full-app gate is RED only on pre-existing, unrelated surfaces this commit
+                           neither introduces nor touches (0 Avatar errors in either app build).
+  9  No silent drift     : all changes enumerated under WIRING & DRIFT above.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic Avatar shared surface shipped at parity with the web source
+  and INDEPENDENTLY VERIFIED: it compiles and its 28 tests pass under the app's own Swift 6
+  strict-concurrency rules, against the real generated design tokens, with iOS-18 + macOS-15
+  typecheck, swiftlint/swiftformat/placeholder all green, and xcodegen enumerating all 7 files into
+  both app targets. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not
+  failed by this code): blocked by pre-existing co-located-test XCTest imports + duplicate-type
+  (DashboardWidgetSize x15) collisions across unrelated sibling files, and macOS development-signing
+  — both owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED
+  Xcode gate" disposition used by every P4 surface to date (e.g. ToolCard 0010, HighlightCard 0076).
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,104 @@
+I'll start by exploring the repository structure, reading the web source, and assessing the Apple toolchain availability.
+
+Let me find the web source and explore the Apple app structure.
+
+Found it. Web source is at `web/src/components/feedback/DraftRestorePrompt.tsx`. The Apple app uses a multi-file pattern (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`) — I'll use the recently-modified `AIUsageCard.*` as the reference. Let me read the web source, its test, and the reference files.
+
+Now let me read the full reference pattern (all `AIUsageCard.*` files), the project config, and assess Xcode availability.
+
+Xcode.app **is** installed — `xcode-select` just points at CommandLineTools. I can override with `DEVELOPER_DIR`. Let me verify the full toolchain works and re-list the reference files.
+
+Full Xcode 26.5 toolchain is available (iOS 26.5 simulator booted, macOS SDK present) via `DEVELOPER_DIR`. **Not blocked.** Now let me deeply study the reference pattern — all `AiUsageCard.*` files plus the project config.
+
+Let me read the remaining reference files and locate the shared token/motion infrastructure.
+
+Let me read the test/preview/strings references and locate the shared design-system primitives (`Color.TS`, `Font.TS`, `TSSpacing`, `TSButton`, `TSFadeIn`, etc.).
+
+Let me locate the exact design-system APIs (tokens, Button, Modal peers) and read the build config.
+
+project.yml is at `apps/apple/project.yml`. Let me read it plus the design tokens, Button, Overlays (Modal peer), Motion, and Skeletons.
+
+Important finding: `project.yml` lists `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` as target sources but **not** `TeslaSync/shared-surfaces`. I need to understand the build wiring, the `Shared.xcframework` preAction (potential blocker), and the remaining design-system APIs. Let me gather these in parallel.
+
+Two potential hard blockers surfaced: (1) `Frameworks/Shared.xcframework` is absent — the build's preAction builds it from a KMP/Gradle shared core; (2) `shared-surfaces` isn't in `project.yml` sources. Let me check the KMP toolchain, the generated design tokens, and the remaining primitives.
+
+KMP toolchain exists (JDK 17, `apps/shared/gradlew`) and tokens are in `apps/design/generated/apple/Tokens.swift`. Let me resolve how tests are wired (symlinks?), read the token + primitive APIs, and check the placeholder tool + lint configs.
+
+Key facts: tests are co-located in the app target (sibling `AiUsageCard.Tests.swift` proves this), `check-placeholders.ps1` exists, swiftformat lints all of `apps/apple`, and the `.xcodeproj` is generated (git-ignored). Let me read the remaining primitive APIs, the pattern's Previews/Projection, the placeholder checker, and the web data libs.
+
+Excellent — I now have the tokens and full projection pattern. Let me read the web data libs (the real data model), the Previews pattern, motion/skeleton/typography primitives, the placeholder checker, and the native nav route.
+
+I have the `DraftEntry` shape and the exact `formatRelativeTime` semantics. Let me read the typography/cards/motion/skeleton primitives, the placeholder checker, and the native navigation route.
+
+Let me read the card/feedback primitives, the placeholder checker, and the native route model to ground the navigation seam.
+
+Let me read the forbidden-pattern list, the native route model, and the feedback (EmptyState/QueryError) peers.
+
+I now have everything needed. Let me do final pre-write checks: confirm the Components/Design layer is KMP-`Shared`-free (for standalone compile verification), check for symbol collisions, and confirm `tsGlassPanel`.
+
+Some existing files reference draft-related names. Let me check for exact symbol collisions before naming my types.
+
+There's an existing atomic `TSDraftRestorePrompt` (and `TSDraftRecoveryBanner`) in the shared component library. My surface must be named `DraftRestorePrompt` (no `TS`), mirroring how `AiUsageCard` differs from atomic `TS…` primitives. Let me read those atomics to avoid collisions and potentially compose with them.
+
+No collisions — the existing `TSDraftRestorePrompt` is the atomic primitive; my shared surface will be `DraftRestorePrompt` (mirroring how `AiUsageCard` differs from `TS…` atomics). I have a complete picture. Let me set up the plan, todos, and directory.
+
+Now I'll write the surface files. Starting with the pure-logic core (Adapter, Model, Projection).
+
+Updating progress and writing the Chrome subviews (freshness chip, refresh, connectivity banner, loading, error).
+
+Now the presentational Views (banner, review sheet, row, empty).
+
+Now the main surface view that composes everything.
+
+Now the strings catalog, previews, and tests.
+
+Now the comprehensive XCTest suite.
+
+I spotted a bug in one test (leftover confusing lines). Let me fix it.
+
+All 9 files written. Now the verification phase. Let me run swiftformat, swiftlint, and the placeholder check on the new surface.
+
+swiftformat flagged 2 fixable issues (ifdef indent, blank line between imports). Let me wait for swiftlint, then auto-fix formatting with the tool.
+
+swiftlint ran against the whole project (config `included:`) and found 1 serious violation — I need to see which. Let me auto-fix the formatting and capture the exact swiftlint violation.
+
+Formatting passes now. Let me verify the auto-fixed sections preserved semantics, and run swiftlint to capture the exact violation.
+
+The only swiftlint violation is pre-existing in an out-of-scope file (`LifetimeStatsWidget.Adapter.swift`) — my surface adds **zero**. Now the placeholder check (note: the gate's `-Path …/DraftRestorePrompt` is a prefix, so I'll also scan the real directory) and a forbidden-word grep.
+
+All quality gates on my files pass: swiftformat ✅, swiftlint ✅ (0 violations from my surface; the 1 repo violation is pre-existing in an out-of-scope file), placeholder ✅, forbidden-words ✅.
+
+Now the critical compile + test verification. I'll build a standalone SwiftPM package (module `TeslaSync`) that compiles my surface against the **real** design-system sources and runs the XCTest suite — matching the app's Swift 6 / macOS 15 settings.
+
+The copy loop used wrong filenames. Let me redo it correctly.
+
+Now the `Package.swift` and run the build + tests.
+
+Surface compiles cleanly under Swift 6 / macOS 15 against the real design system (including previews). Now run the tests.
+
+Compilation and **all 28 tests pass** under Swift 6 / macOS 15. Now let me gather evidence for the remaining gate steps: whole-tree format/lint state and whether the unmodified `project.yml` includes my new directory.
+
+`xcodegen generate` succeeded. Whole-tree format/lint each show exactly one **pre-existing** violation in unrelated files (`ActionBuilder.Previews.swift`, `LifetimeStatsWidget.Adapter.swift`) — my files are clean on both. Let me confirm whether the generated project includes my surface, then probe the KMP framework dependency.
+
+Definitively confirmed: my surface is **excluded** from the generated Xcode target (`DraftRestorePrompt` = 0 refs vs `AiUsageCard` = 60) because `project.yml` (not editable per allowed-files) doesn't list `shared-surfaces`. Let me probe the second `xcodebuild` dependency — the KMP `Shared.xcframework` build — to fully document the gate's environment needs.
+
+The KMP `Shared.xcframework` build is actually **progressing** (cached Kotlin/Native, real compile+link tasks) — so it's feasible here. Let me check its status, then finalize my decision.
+
+The KMP framework build is feasible here (cached Kotlin/Native, real compile+link). I have all the evidence I need. Both `xcodebuild` prerequisites (Xcode capability + `Shared.xcframework`) are achievable; the sole remaining blocker is that my surface dir isn't wired into the harness-owned `project.yml` (which I'm not allowed to edit). Let me stop the probe and verify there are no symbol collisions in the full app module.
+
+My grep used `-h` (strips paths) so the `grep -v shared-surfaces` filter didn't apply — the "1" is my own definition. Let me re-check correctly.
+
+No collisions. Let me check the working-tree state (KMP/xcodegen artifacts) and clean up generated files.
+
+Let me confirm the KMP probe didn't dirty tracked files and that my 9 surface files are present.
+
+Working tree is clean (KMP outputs are git-ignored; only my 9 untracked surface files + pre-existing modifications). No symbol collisions. Now I'll write the honest, evidence-rich gate log.
+
+The log is written. Let me update my plan, finalize todos, then commit exactly the allowed files (surface + log), scoped so the pre-existing unrelated modifications stay out.
+
+Exactly the 10 allowed files staged (9 surface + log); pre-existing unrelated changes excluded. Committing.
+
+Committed cleanly as `ba3d0c94a` with exactly the 10 allowed files; the pre-existing unrelated changes remain untouched. Let me clean up the temporary verification harness and do a final repo sanity check.
+
+Task complete. Final state verified: commit `ba3d0c94a` contains exactly the 10 allowed files (9 surface + log); temp artifacts removed; pre-existing unrelated changes untouched.
+

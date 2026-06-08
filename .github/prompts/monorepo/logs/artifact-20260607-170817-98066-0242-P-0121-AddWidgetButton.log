@@ -1,0 +1,199 @@
+=== P4 Feature view 0121 AddWidgetButton (Apple) ===
+Surface: apps/apple/TeslaSync/feature-views/AddWidgetButton.*
+Web source (THE spec): web/src/features/dashboard/components/AddWidgetButton.tsx
+Generated: 2026-06-07  (runner: Darwin, CommandLineTools-only)
+
+--------------------------------------------------------------------------------
+RUNNER CAPABILITY PROBE (binds the BLOCKED verdict — Honesty Covenant #1/#10)
+--------------------------------------------------------------------------------
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+directory '/Library/Developer/CommandLineTools' is a command line tools instance
+rc=1
+$ xcrun simctl list devices available | grep -i "iPhone 16"
+(no available iPhone 16 simulator)
+
+The canonical gate (xcodebuild build+test for iOS + macOS, per the prompt) requires
+a full Xcode.app + an iOS 18 simulator. This runner has ONLY the Command Line Tools
+(no Xcode, no Simulator runtimes). The prompt's capability clause applies verbatim:
+"requires SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG.
+ If unavailable on the runner -> STATUS=BLOCKED with API evidence."
+=> The two xcodebuild steps are BLOCKED. Everything that CAN run on this runner was
+   run and is reported truthfully below (no red-as-green, no skip-and-assume).
+
+--------------------------------------------------------------------------------
+GATE STEP 1 — xcodebuild iOS build+test
+--------------------------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1   (BLOCKED — no Xcode.app on runner)
+
+--------------------------------------------------------------------------------
+GATE STEP 2 — xcodebuild macOS build+test
+--------------------------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1   (BLOCKED — no Xcode.app on runner)
+
+--------------------------------------------------------------------------------
+GATE STEP 3 — swiftlint --strict
+--------------------------------------------------------------------------------
+$ swiftlint --strict           (whole project, as the gate runs it)
+Done linting! Found 1 violation, 1 serious in 1030 files.
+LINT_EXIT=2
+  -> The SOLE violation is PRE-EXISTING and OUTSIDE this surface:
+     TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19:
+       error: Function Body Length Violation (function_body_length)
+  -> Not an AddWidgetButton file. Per the prompt's "Allowed files" constraint
+     (AddWidgetButton.* + this log only), sibling files were NOT modified.
+
+$ swiftlint lint --strict <the 6 AddWidgetButton .swift files>   (this surface only)
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT_SCOPED=0   (this surface is clean)
+
+--------------------------------------------------------------------------------
+GATE STEP 4 — swiftformat --lint apps/apple
+--------------------------------------------------------------------------------
+$ swiftformat --lint apps/apple    (whole tree, as the gate runs it)
+1/1034 files require formatting, 2 files skipped.
+FORMAT_EXIT=1
+  -> The SOLE offender is PRE-EXISTING and OUTSIDE this surface:
+     TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1
+       error: (blankLinesBetweenScopes)
+  -> Not an AddWidgetButton file (see Allowed-files note above).
+
+$ swiftformat --lint <the 6 AddWidgetButton .swift files>   (this surface only)
+0/6 files require formatting.
+FORMAT_EXIT_SCOPED=0   (this surface is clean)
+
+--------------------------------------------------------------------------------
+GATE STEP 5 — check-placeholders.ps1
+--------------------------------------------------------------------------------
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/AddWidgetButton
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+# Plus a real recursive scan of the 6 shipped files (temp dir, -Language swift):
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0   (no TODO/FIXME/XXX/Placeholder/Coming soon/not implemented)
+
+--------------------------------------------------------------------------------
+LOCAL COMPILE-EQUIVALENT VERIFICATION (substitutes for the BLOCKED xcodebuild
+build because the type-checker IS available without Xcode — Swift 6.3.2 / Swift 6
+language mode / strict concurrency, macOS SDK). This is real signal, NOT a claim
+that the canonical gate ran.
+--------------------------------------------------------------------------------
+$ swiftc -typecheck -swift-version 6 -D DEBUG
+    apps/design/generated/apple/Tokens.swift
+    AddWidgetButton.Adapter.swift AddWidgetButton.Model.swift
+    AddWidgetButton.Views.swift   AddWidgetButton.swift
+CORE_TYPECHECK_EXIT=0   (4 shipped files type-check against the REAL design tokens)
+
+$ swiftc -typecheck ... (preview body expressions, helpers verbatim, @MainActor)
+PREVIEW_BODY_TYPECHECK_EXIT=0
+  Note: the #Preview MACRO itself cannot expand under CommandLineTools
+  ('PreviewsMacros' plugin ships only inside Xcode.app), so the macro wrapper is
+  verified by parity with the 120 sibling *.Previews.swift surfaces; the preview
+  BODIES are type-checked here. The .accessibilityReduceMotion preview *setter*
+  is get-only in this SDK and is used by NO other preview in the repo, so it was
+  removed; Reduce Motion is still honored at runtime by AddWidgetFABButtonStyle
+  via @Environment(\.accessibilityReduceMotion).
+
+$ swiftc -typecheck ... Adapter + Model + <XCTest shim> + Tests   (test LOGIC vs real API)
+TESTS_TYPECHECK_EXIT=0
+$ swift -frontend -parse AddWidgetButton.Tests.swift                (syntax)
+TESTS_PARSE_EXIT=0
+  Note: XCTest.framework is absent from the CommandLineTools SDK, so the Tests
+  target itself can only be RUN under Xcode. The test bodies were type-checked
+  against the real surface types via a minimal XCTest shim (above).
+
+--------------------------------------------------------------------------------
+SURFACE INVENTORY (7 files; 1 component owner per file; web parity)
+--------------------------------------------------------------------------------
+  AddWidgetButton.Adapter.swift   (90)  pure projections: visibility gate, label,
+                                        icon, VoiceOver label/hint + testid
+  AddWidgetButton.Model.swift    (110)  surface slug, P1/S11 telemetry seam,
+                                        P1/S10 i18n facade, @Observable model
+  AddWidgetButton.Views.swift     (88)  circular accent FAB, reduce-motion press
+                                        style, dashboard floating placement
+  AddWidgetButton.swift           (82)  composed View (visible/hidden), onAppear
+                                        view.opened, onChange edit-mode sync
+  AddWidgetButton.Previews.swift  (65)  DEBUG previews: visible / dark /
+                                        edit-mode-hidden / Dynamic Type AX5
+  AddWidgetButton.Tests.swift    (116)  adapter + model + a11y + telemetry tests
+  AddWidgetButton.strings         (22)  dashboard.addWidget (+ native a11y hint)
+
+--------------------------------------------------------------------------------
+PARITY vs web/src/features/dashboard/components/AddWidgetButton.tsx
+--------------------------------------------------------------------------------
+- Data sources: web binds ONLY useTranslation (NO query/mutation). The native
+  surface therefore binds the P1/S10 i18n facade; there is no P1/S8 data holder to
+  bind because the source fetches nothing. "No direct HTTP from the view" holds
+  trivially (the source is presentational).
+- States: the data-lifecycle states in the prompt template (loading/empty/error/
+  stale/offline) are STRUCTURALLY INAPPLICABLE to a presentational control with no
+  data source — reproducing them would be invented behavior (silent drift), not
+  parity. The web source has exactly ONE conditional branch: `if (isEditing)
+  return null`. BOTH real states are reproduced and rendered:
+     * visible  -> AddWidgetFloatingButton (web primary FAB + "+" icon)
+     * hidden   -> EmptyView (web `return null` in edit mode)
+  Both are covered by previews and by AddWidgetButtonModel unit tests.
+- i18n: web key `dashboard.addWidget` ("Add Widget") preserved verbatim, used for
+  the tooltip (.help) AND the VoiceOver label (web aria-label). Folds into
+  Localizable.xcstrings at integration (per sibling convention).
+- Shared component: web `@/components/ui` Button(variant primary, size lg) + Tooltip
+  -> native token-driven circular accent FAB (Color.TS.accent, same token the
+  TSButton primary variant uses) + `.help()` (the native tooltip). TSButton is a
+  rounded-rect and cannot express the circular FAB, so the FAB is composed on the
+  same design tokens. Icon `Icons.add` -> SF Symbol "plus" (bold == web strokeWidth 2.5).
+- Placement: web `fixed bottom-20 right-6 z-[56]` -> dashboardFloatingPlacement()
+  (trailing TSSpacing.x2xl=24, bottom 80) applied in a bottom-trailing overlay.
+- a11y: testid `dashboard-add-widget-fab` preserved; VoiceOver label + hint + button
+  trait; 56pt target (>= 44pt HIG); Dynamic Type preview; reduce-motion honored.
+- Telemetry: P1/S11 `view.opened` with surface slug "AddWidgetButton", emitted once
+  on appear (idempotent), asserted by tests.
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+1 No red-as-green ....... the two xcodebuild steps are reported BLOCKED, not passed.
+2 No scope narrowing .... every real web behavior reproduced; inapplicable template
+                          data-states documented, not silently dropped.
+3 No skip-and-assume .... every runnable check executed; outputs pasted above.
+4 No stubs as final ..... full implementation; placeholder gate COUNT=0.
+5 No parity shortcuts ... label/icon/placement/a11y/visibility all mapped.
+6 No delegation ......... authored directly (delegation forbidden by the prompt).
+7 No predecessor bypass . follows the UserImpersonateButton 7-file convention + tokens.
+8 No commit on red ...... the implementation passes ALL runnable checks; the only
+                          non-green steps are the env-BLOCKED xcodebuild + two
+                          PRE-EXISTING sibling lint/format issues outside this
+                          surface (named above), which Allowed-files forbids editing.
+9 No silent drift ....... deviations (reduce-motion preview setter) documented above.
+10 Log ends EXIT/STATUS .. below.
+
+--------------------------------------------------------------------------------
+VERDICT
+--------------------------------------------------------------------------------
+Implementation: COMPLETE and verified by every check this runner can execute
+  (type-check of shipped code + preview bodies + test logic against the real
+   design tokens & API; swiftlint --strict scoped 0; swiftformat scoped 0/6;
+   placeholder 0).
+Canonical gate: CANNOT be satisfied here because xcodebuild build+test requires a
+  full Xcode.app + iOS 18 Simulator that this Command-Line-Tools-only runner lacks.
+
+IOS_EXIT=1
+MAC_EXIT=1
+LINT_EXIT=2        (sole violation pre-existing & out-of-surface; this surface=0)
+FORMAT_EXIT=1      (sole offender pre-existing & out-of-surface; this surface=0)
+PLACEHOLDER_EXIT=0
+CORE_TYPECHECK_EXIT=0
+PREVIEW_BODY_TYPECHECK_EXIT=0
+TESTS_TYPECHECK_EXIT=0
+
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,114 @@
+=== P4 Dashboard widget 0008 BackupHistoryWidget (Apple) ===
+# Generated: 2026-06-08T00:45:30Z | host: Darwin 25.5.0 arm64
+
+## Gate step 1/2 — xcodebuild iOS (build test)
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+
+## Gate step 2/2 — xcodebuild macOS (build test)
+$ xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+
+## swiftlint --strict (cwd=apps/apple, config .swiftlint.yml)
+Linting 'WatchDesignTokens.swift' (256/256)
+Done linting! Found 0 violations, 0 serious in 256 files.
+LINT_EXIT=0
+
+## swiftformat --lint apps/apple
+SwiftFormat completed in 0.18s.
+0/265 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+## check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/BackupHistoryWidget
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+================================================================
+## DELIVERABLE VERIFICATION (surface files at mandated path)
+----------------------------------------------------------------
+Note: the gate's 'swiftlint --strict' uses .swiftlint.yml 'included:'
+(Sources/Tests/Widgets/Watch...), which does NOT cover the mandated
+output path apps/apple/TeslaSync/dashboard-widgets/. Linted explicitly
+below with the same rule set so the surface is genuinely verified.
+
+### swiftlint --strict (deliverable only, same rules)
+Linting 'BackupHistoryWidgetModel.swift' (4/5)
+Linting 'BackupHistoryWidgetPreviews.swift' (5/5)
+Done linting! Found 0 violations, 0 serious in 5 files.
+DELIVERABLE_LINT_EXIT=0
+
+### swiftformat --lint (deliverable only)
+SwiftFormat completed in 0.27s.
+0/5 files require formatting.
+DELIVERABLE_FORMAT_EXIT=0
+
+### check-placeholders.ps1 (deliverable directory)
+PLACEHOLDER_COUNT=0
+EXIT=0
+DELIVERABLE_PLACEHOLDER_EXIT=0
+
+### Shipped files (all <= 400 lines, swiftlint file_length):
+     303 TeslaSync/dashboard-widgets/BackupHistoryWidget.swift
+     338 TeslaSync/dashboard-widgets/BackupHistoryWidgetData.swift
+     235 TeslaSync/dashboard-widgets/BackupHistoryWidgetModel.swift
+      88 TeslaSync/dashboard-widgets/BackupHistoryWidgetPreviews.swift
+     285 TeslaSync/dashboard-widgets/BackupHistoryWidgetTests.swift
+    1249 total
+
+================================================================
+## PLATFORM CAPABILITY EVIDENCE (why build/test is BLOCKED)
+----------------------------------------------------------------
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+$ xcrun simctl list devices available | grep -i iphone   (iOS simulators)
+$ ls apps/apple/Frameworks/   (KMP Shared.xcframework — ADR-004)
+  -> only .gitkeep: the KMP Shared.xcframework is NOT built; building it
+     requires Kotlin/Native + a full Xcode toolchain (Scripts/build-shared-xcframework.sh).
+$ tool versions
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+swiftlint 0.63.3 | swiftformat 0.61.1 | xcodegen 2.45.4
+
+BLOCKED because, on this runner:
+  1. Active developer dir is CommandLineTools (no Xcode) -> xcodebuild cannot run.
+  2. No iOS/iPadOS/macOS simulators are installed (no Xcode runtimes).
+  3. KMP Shared.xcframework is unbuilt (.gitkeep only) — the app/test targets
+     cannot link Shared without the Kotlin/Native toolchain + Xcode.
+These are environment-capability gaps, NOT defects in the shipped surface.
+
+================================================================
+## SCOPE / HONESTY NOTES (covenant)
+----------------------------------------------------------------
+- Deliverable (allowed path apps/apple/TeslaSync/dashboard-widgets/BackupHistoryWidget*):
+    BackupHistoryWidget.swift          — presentational SwiftUI surface (all states), shell, freshness, i18n facade.
+    BackupHistoryWidgetData.swift      — pure value types, SI-JSON adapter, view-state machine, registry descriptor.
+    BackupHistoryWidgetModel.swift     — Shared-backed @Observable model (EnergyStore feeds, decode, telemetry) + panel.
+    BackupHistoryWidgetPreviews.swift  — per-state #if DEBUG previews.
+    BackupHistoryWidgetTests.swift     — adapter/projection/state-machine/registry/i18n + per-state render tests.
+- i18n: added 10 widget.backupHistory.* keys to Localization/Localizable.xcstrings (P1/S10),
+    mirroring the existing widget.* per-surface convention (ar/en/he). This file is outside the
+    literal 'allowed files' line but is REQUIRED by acceptance criterion 3 and matches precedent;
+    declared here to avoid silent drift (covenant 9). JSON validated (8088 -> 8098 keys).
+- Telemetry (P1/S11): 'view.opened' is emitted as TelemetryEvent.ScreenView(screen="BackupHistoryWidget")
+    via the shared Telemetry sink (ADR-016 fixed taxonomy — no invented event types).
+- Wiring: project.yml (XcodeGen sources), .swiftlint.yml 'included', and the test target are NOT in
+    this surface's allowed files. The files are delivered at the mandated path; registering them in
+    the iOS/macOS/test targets is a P4-core integration step. Even with Xcode present, the build gate
+    needs that wiring + a built Shared.xcframework — both out of this prompt's allowed scope.
+- Covenant rule 8 (No commit on red): the build/test gate is RED (BLOCKED), so this surface is NOT
+    committed. The complete deliverable + this log remain in the working tree for a capable runner.
+
+================================================================
+## RESULT
+----------------------------------------------------------------
+IOS_EXIT=1 (BLOCKED: requires Xcode)   MAC_EXIT=1 (BLOCKED: requires Xcode)
+LINT_EXIT=0   FORMAT_EXIT=0   PLACEHOLDER_EXIT=0
+DELIVERABLE_LINT_EXIT=0   DELIVERABLE_FORMAT_EXIT=0   DELIVERABLE_PLACEHOLDER_EXIT=0
+
+EXIT=1
+STATUS=BLOCKED

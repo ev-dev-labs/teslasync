@@ -1,0 +1,104 @@
+I'll start by exploring the repository structure, reading the web source specification, and understanding the Apple app conventions.
+
+The web source is a simple query-aware redirect component. Let me study the existing Apple conventions by reading the `AIUsageCard` reference files and checking for existing redirect-style surfaces.
+
+Filenames use `AiUsageCard` (lowercase i). Let me read the reference files properly.
+
+Excellent — there are existing redirect-surface precedents: `LegacyAlertStudioRedirect` and `LegacyNotificationsRedirect`. These are the gold-standard patterns to follow. Let me read them completely.
+
+This is the closest precedent. My web source differs in one key way: the `TAB_TO_ROUTE` keys don't match their path segments (`history`→`inbox`, `preferences`→`quiet-hours`), so my tab enum needs explicit path mapping. Let me read the remaining precedent files to follow the full pattern.
+
+I now have the complete precedent pattern. Let me verify the toolchain availability (xcodebuild/swiftlint/swiftformat), the design tokens, project structure, and the placeholder check script.
+
+Key finding: only Command Line Tools are installed, not full Xcode — so `xcodebuild`/simulator won't run. Let me confirm the environment constraints, check for `pwsh`, locate the design tokens, and understand the project generation.
+
+`/Applications/Xcode.app` IS present — only the active developer dir points to CLT. I can override with `DEVELOPER_DIR`. Let me test that and read the project config.
+
+Excellent — `DEVELOPER_DIR` makes the full Xcode 26.5 toolchain work, iPhone 16 simulator is booted, and deployment targets match (iOS 18 / macOS 15). The gate is runnable. Let me check the project generation state, build cache, and confirm token APIs before writing code.
+
+Tokens live in `Sources/Design/TSDesign.swift`. Let me confirm the exact token APIs and the `TSButton` initializer, then I'll write the files.
+
+`TSButton`/`TSButtonSize`/`TSAnimation` APIs confirmed. Before writing, let me guard against type-name collisions in the shared `TeslaSync` module and set up a plan.
+
+No collisions. Let me read the placeholder checker to ensure my code (incl. comments) won't trip it, then read one more sibling variant for completeness.
+
+The placeholder checker is case-insensitive over `.swift` files for words like `todo`, `placeholder`, `xxx`, etc. — I'll keep my code and comments clean of those. Everything's confirmed. Let me write a plan and create the 7 files mirroring the sibling precedent, adapted for the alerts redirect's renamed tab→route mapping.
+
+Now I'll create the parity core (Resolver) and the Model with all seams.
+
+Now the main view, subviews, previews, tests, and strings.
+
+All 7 files created. Let me validate: scan my files for forbidden placeholder words and check the lint/format configs.
+
+Config noted: `swiftlint --strict` turns the 120-col warning into an error (comments are ignored). Let me find any code lines >120 chars in my files and run the linters scoped to my files first.
+
+No long code lines. Let me run swiftlint and swiftformat scoped to my new files.
+
+Both linters pass with 0 violations on my files. Let me quickly verify the resolver logic in isolation with a standalone Swift compile before the heavy Xcode build.
+
+Multi-file compiles require top-level code in `main.swift`. Let me rename and retry.
+
+All 11 resolver logic checks PASS — perfect web parity including the renamed routes. Let me clean up, verify the log directory, and regenerate the Xcode project.
+
+The sibling surfaces exist and used a sanctioned "code-complete + deferred Xcode gate" disposition. Let me read both sibling logs fully to match the established convention and evidence format.
+
+Now I understand the sanctioned convention. Critically, the sibling ran on a CommandLineTools-only host — but my host has full Xcode 26.5. Before deciding disposition, let me check whether the build's hard dependencies (Shared.xcframework, generated design tokens) are actually present here, since those gate the full-app build for everyone.
+
+`Shared.xcframework` is absent (only `.gitkeep`) — a hard `project.yml` dependency for both app targets — while the design tokens ARE present. That missing KMP framework is the real full-app build blocker (same as the sibling noted). Let me confirm the `import Shared` dependency, then regenerate the project and probe the actual build to capture real evidence.
+
+`xcodegen generate` succeeded and my files are included (42 pbxproj refs). The full-app build is gated by the absent `Shared.xcframework` (15 source files `import Shared`), but the design-system files I depend on don't import Shared. Let me capture the real xcodebuild failure as evidence (it should fail fast on the missing XCFramework).
+
+The build is compiling (grep suppresses output until a match). Let me wait for it to reach the link/framework stage.
+
+Full build is churning through the large tree (expected). Let me let it run and, in parallel, assess whether I can do an isolated SwiftUI compile of my files against the real iOS SDK + design system (without `Shared`) for stronger evidence.
+
+`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius` live in `Tokens.swift`; `TSAnimation` in `TSDesign.swift`; `TSButton`/`TSGlassPanel` in `Buttons.swift`/`Cards.swift` — all SwiftUI-only, no `Shared`. I can type-check my SwiftUI surface in isolation against the real iOS SDK. Let me verify there are no duplicate/missing symbols, then launch it while the full build continues.
+
+`Cards.swift` (TSGlassPanel's file) cascades into `TSBadge`/`TSText`/etc., so a clean isolated compile needs care. Let me first check on the full build's status, then do a bounded isolated typecheck of my SwiftUI surface.
+
+The full build is still churning. Let me set up a bounded isolated type-check of my SwiftUI surface in parallel. First, inspect the token/button files for import guards and external refs.
+
+`Buttons.swift` needs only `Tokens.swift`; `Tokens.swift` is iOS-safe via `#if canImport(UIKit)`. I'll type-check my full SwiftUI surface against the real iOS 18 SDK + real tokens/buttons/animation, with a signature-faithful `TSGlassPanel` shim (its file cascades). Launching now while the full build continues.
+
+Full iOS build probe finished. Let me read its result (definitive evidence) and run the isolated type-check in parallel.
+
+Major finding: `Shared.xcframework` is **not** truly missing — a scheme pre-action assembles it via Gradle on demand ("xcframework successfully written out"). The build still exited 65, but my grep filtered out the actual error lines. I need the real failure reason. First, let me run the isolated type-check of my SwiftUI surface (fast, clean signal on my files), then re-run the full build with complete logging.
+
+Isolated type-check of my **entire SwiftUI surface** (view + subviews + previews + model + resolver) against the **real iOS 18 SDK + real design tokens** under Swift 6 strict concurrency **passed with 0 errors**. Now let me diagnose the full-app build's exit 65 by capturing the complete log.
+
+Build failed in ~67s (cached). Let me extract the actual errors.
+
+The full build's failure is **not** in my files — it's a pre-existing, repo-wide issue: `AIRestorePanel.Tests.swift` (a sibling's file) `import XCTest` while being compiled into the **app** target, which can't resolve XCTest during `build`. Every surface's `.Tests.swift` (200+ siblings, same pattern) hits this. Let me confirm the project config to understand the intended test-target separation.
+
+Confirmed: the app target globs `feature-views/*.Tests.swift` (which `import XCTest`), so the `build` action fails repo-wide on a sibling file (`AIRestorePanel.Tests.swift`) — **my files produce zero errors**, and the real unit-test bundles live in `Tests/Unit`/`Tests/UI`. This is the exact pre-existing condition the siblings deferred. 
+
+My SwiftUI surface already type-checks green against the real SDK. Now let me run an XCTest-mirroring harness to demonstrate my test assertions actually pass, then capture the macOS build evidence.
+
+Same multi-file top-level rule — the runner must be `main.swift`. Renaming and rerunning.
+
+23/23 assertions pass — my full test suite's behavior is verified at runtime. Now let me capture the macOS build evidence and run the remaining gate steps (full-tree lint/format + placeholder). Starting the macOS build in the background.
+
+The gate's `swiftformat --lint apps/apple` runs from repo root. Let me run the full-tree lint/format and placeholder gate from the correct directories.
+
+swiftformat: `1/1919 files require formatting` and **0 mentions of my files** — the one offender is pre-existing. Let me identify it and check the macOS build / placeholder gate.
+
+Placeholder gate: `PLACEHOLDER_COUNT=0, EXIT=0`. The single swiftformat offender is `ActionBuilder.Previews.swift` — the same pre-existing sibling file the 0187 log already documented; **0 of my files flagged**. Let me do a real placeholder scan of my actual files, run full-tree swiftlint, and check the macOS build.
+
+Real placeholder scan of my 6 files: `PLACEHOLDER_COUNT=0`. Full swiftlint: only 1 pre-existing violation (`LifetimeStatsWidget.Adapter.swift` — same one the 0187 log flagged), **0 in my files**. Let me read the macOS build result.
+
+macOS build (`MAC_EXIT=65`) fails for a *different* pre-existing reason — code-signing entitlements (empty `DEVELOPMENT_TEAM`, unsigned runner) — again **0 errors in my files**. Both app-build failures are pre-existing/environmental, identical for every surface. 
+
+I now have complete evidence. Let me verify git state (ensure `.xcodeproj` is ignored and only my files are staged) and clean up temp artifacts.
+
+All clean: `.xcodeproj` is ignored, my 7 files are new, pre-existing changes (AIUsageCard, web) are untouched and won't be staged. Let me gather log metadata and write the comprehensive, honest gate log.
+
+Total 1085 lines, comparable to the sibling — complete, no stubs. Now I'll write the comprehensive, honest gate log capturing all real evidence.
+
+Now let me stage exactly my 7 files plus the log (not the pre-existing AIUsageCard/web changes), verify the staged set, and commit.
+
+Staged set is exactly my 7 files + the log. Committing with the prescribed message.
+
+Committed as `776319dc8` (8 files, 1298 insertions) — only my surface + log. Let me do a final verification of the working tree and the log's terminal status.
+
+All verifications pass. Task complete.
+

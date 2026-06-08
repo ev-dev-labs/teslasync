@@ -1,0 +1,137 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is available. Let me explore the existing Apple app structure and the web source.
+
+The `modals-dialogs` directory doesn't exist yet. Let me study the established pattern from the recently-modified `AIUsageCard` files and the project structure.
+
+The pattern is a multi-file component set (note casing `AiUsageCard`). Let me read these files and the project config to learn the conventions.
+
+Excellent pattern. Let me read the rest of the AiUsageCard files and the shared infrastructure (tokens, components, project config).
+
+Now the Tests file, project config, and shared infrastructure (tokens + components).
+
+Now let me examine the shared design tokens, shared components, and check the build toolchain. Let me look at the Sources directory structure and design tokens.
+
+Key finding: only **CommandLineTools** is installed (`xcode-select -p` → `/Library/Developer/CommandLineTools`), so `simctl` and iOS simulators are unavailable. The `xcodebuild` simulator gate likely can't run. I'll write complete, parity-correct code following the proven pattern, verify everything I can (swiftlint, swiftformat, runnable logic core), and document the platform gate honestly. Let me study the shared tokens and components.
+
+Let me read the design tokens, motion/skeleton components, and the web hooks to ensure faithful mapping.
+
+Let me check the web hooks for faithful data shapes, plus the lint configs and feedback states.
+
+Let me check whether a full Xcode.app exists anywhere (which would unblock the real gate), and confirm a couple more types.
+
+Big finding: **full `/Applications/Xcode.app` exists** (xcode-select just points to CLT), and `pwsh` is available. Let me verify I can drive full Xcode via `DEVELOPER_DIR` and check simulators + the KMP framework build dependency.
+
+Outstanding news: full **Xcode 26.5** with an iOS 26.5 simulator (**iPhone 16, already booted**) is available via `DEVELOPER_DIR`, and `pwsh` exists. The KMP `Shared.xcframework` requires a Gradle build and `modals-dialogs` isn't wired into `project.yml`/`.swiftlint.yml` (that's P4-core infra, absent here). I'll deliver the complete surface following the proven `AiUsageCard` pattern, verify rigorously within my control (real-SDK compile + executable logic core + lint), then run the gate honestly.
+
+Let me set up tracking and the plan.
+
+Now I'll create the surface files, starting with the pure-Foundation Adapter (the testable core). I'll mirror the `AiUsageCard` conventions exactly.
+
+Now the strings catalog with every web `sudo.*` key plus the native chrome keys:
+
+Now the Model — the state-holder seam, i18n facade, value types, and `@Observable` model with submit/cancel routing.
+
+Now the pure Projection:
+
+Now the presentational Views (form, scoped tab bar, field rows, inline error, actions, empty):
+
+Now the Chrome — freshness chip, refresh, banner, loading, error, and the sheet presentation host:
+
+Now the top-level surface composing header, banner, and content states:
+
+Now the previews for every state, plus the sheet-host:
+
+Now the test suites — AdapterTests (pure logic) and Tests (projection + model + a11y):
+
+All 10 files are written. Now let me verify — first swiftformat and swiftlint on the new files.
+
+swiftformat clean. Now swiftlint on the new files:
+
+swiftformat clean. Two `file_length` violations (>400 lines under `--strict`). The `AiUsageCard` set keeps files small via more splits — I'll do the same. Let me check line counts and split boundaries.
+
+Two files exceed the 400-line `file_length` limit. I'll split `Model.swift` (state-holder → new file) and `Tests.swift` (model tests → new file). Let me view the exact content to move.
+
+I'll split both files. Creating the new `StateHolder.swift` and `ModelTests.swift` headers, then moving the bodies via `sed`, and trimming the originals.
+
+Now split the test file. Let me verify the boundary lines in `Tests.swift`.
+
+Both files are now under 400 lines. Let me update the `Tests.swift` header to reflect its now projection-only scope, then re-lint everything.
+
+Both linters pass on all 11 files. Now the high-value verification: compile and **actually run** the pure-Foundation logic core (Adapter + Model value types + Projection) against the real toolchain to prove the projection/validation/error-mapping logic is correct. Let me build a runnable harness.
+
+Components only import system frameworks (no KMP) — good for the type-check. Now the runnable logic harness:
+
+All 38 logic-core checks pass against the real toolchain. Now type-check the full SwiftUI surface against the real iOS 18 simulator SDK (with strict concurrency, matching the project), compiling the shared component library alongside it.
+
+The errors are in an unrelated shared file (`UnitFormatters.swift` depends on `UnitPreferences` from outside Components) — not my surface. Let me narrow to the minimal shared closure my surface actually uses. Let me check the dependencies of those shared files.
+
+Cards pulls in Badges + Typography. Let me compile my surface against just the minimal shared closure it needs:
+
+The full SwiftUI surface type-checks cleanly against the real iOS 18 SDK with Swift 6 + strict concurrency. Now verify the macOS target too (the gate builds both, and I used `#if os(iOS)` guards):
+
+Both platforms type-check cleanly. Now let me verify the **test files** compile against the real APIs + XCTest (single-module compile with the `@testable` self-import stripped):
+
+Only the XCTest assertion *macros* are unavailable in a manual `swiftc` invocation (a known tooling limitation — `XCTestCase` itself resolved, and crucially **none** of my surface API references errored). Let me add a tiny shim for the assertion functions to confirm every test reference to the surface APIs is valid:
+
+That error is purely my shim's `Never` return type (real `XCTFail` returns `Void`, making `return XCTFail(...)` valid). Fixing the shim:
+
+All surface + test files type-check cleanly against the real SDK. Now the placeholder check — let me find and inspect the gate's script:
+
+Let me check the exact forbidden patterns, then run the script against my surface:
+
+The common pattern list includes **"Placeholder"** (case-insensitive) — I used "placeholder" in several comments. Let me find every forbidden-pattern hit in my shipped files:
+
+The script only scans `.swift` files, but I'll clean all 6 Swift comment hits (and the "stub" wording per the acceptance bullet). Let me also check for "stub"/"mock":
+
+Let me clean up all "placeholder"/"stub" wording in the shipped Swift files:
+
+Now the remaining "placeholder"/"stub" occurrences:
+
+Now run the real placeholder gate (pwsh) plus re-lint to confirm everything is still clean after the comment edits:
+
+All gates clean: placeholder `EXIT=0`, swiftformat `0/11`, swiftlint `0 violations`. Let me re-verify the iOS type-check (insurance after comment edits) and generate the Xcode project to probe the real gate:
+
+iOS type-check still clean. Now let me probe the actual gate to capture genuine evidence of its state. First, generate the project and see whether `modals-dialogs` is wired:
+
+Confirmed the infra gap: the generated project has **0 references to `modals-dialogs`** (the P4-core directory wiring is absent in this slot), so the scheme can't compile my files. Let me confirm the project is git-ignored, check the KMP toolchain, and run a bounded attempt at the real gate for the log evidence.
+
+The generated project is git-ignored (won't be committed), and Java 17 is present. Let me make a genuine, time-boxed attempt at the real gate to capture an authentic transcript. First confirm the scheme exists, then start the build:
+
+Scheme `TeslaSync` exists. Now a time-boxed real build attempt (it runs the KMP Gradle pre-action, then compiles the app — without my unwired files):
+
+The gate is genuinely running — the KMP `Shared.xcframework` Gradle pre-action is compiling Kotlin/Native for iOS. This confirms the toolchain works but the build is heavy. Since my files aren't wired into the project (0 refs), this build can't test my surface regardless. Let me wait a bit more to capture the app-compile phase, then stop it.
+
+The KMP framework builds successfully and the app compile is proceeding — but the definitive blocker is already proven: **the generated project has 0 references to `modals-dialogs`**, so the scheme cannot compile my surface (the P4-core directory wiring is absent in this slot). Letting the heavy app build finish won't validate my files. Let me stop it and record evidence.
+
+Let me capture the final pieces of evidence — confirm the pre-existing `feature-views` test-file situation and gather the gate transcript highlights — before writing the log.
+
+All evidence gathered and confirmed. Now let me write the honest gate log:
+
+The log is written. Now let me clean up temporary artifacts and verify the git working tree shows only my intended changes.
+
+The 7 modified `AIUsageCard.*` files are **pre-existing changes** (present at session start, from a sibling process) — not mine. I must stage only my surface + the log. Let me verify my file set and stage precisely.
+
+Exactly my 12 surface files + the log are staged; the pre-existing `AIUsageCard` changes are correctly left unstaged. Now commit:
+
+Committed. Let me verify the commit contains exactly my files and nothing else:
+
+The commit is clean: 13 files (12 surface + log), 2496 insertions, and the pre-existing `AIUsageCard` changes are untouched. Let me finalize tracking.
+
+The task is complete. All todos are done, the surface is committed, and the plan reflects final status.
+
+## Summary
+
+I delivered a production-grade native Apple SwiftUI **`ReauthDialog`** surface at parity with `web/src/components/feedback/ReauthDialog.tsx`, following the repo's canonical `AiUsageCard` multi-file pattern — **12 files** under `apps/apple/TeslaSync/modals-dialogs/` (committed as `b052e893a`).
+
+**What it reproduces (full parity):** credential mode (password + optional authenticator tabs) and confirm mode (typed `CONFIRM`); mode derivation from session auth-mode; the exact `totpTabAvailable` rule; TOTP sanitisation; all `sudo.*` i18n keys (1:1, `{{token}}`→`%@`); the full coded-error ladder (`REAUTH_NOT_CONFIGURED`, `INVALID_CREDENTIAL`→password/totp variants, raw/unknown); form reset on re-present; TOTP-tab fallback; cancel-guard while submitting. Plus the P4 leaf states (loading / empty / error / stale / offline), `view.opened` telemetry (slug `ReauthDialog`), a11y labels on every interactive element, and a `.reauthDialog(model)` sheet host. It binds only through the P1/S8 state-holder seam — no HTTP in the view.
+
+**Verification (all green within scope):**
+- swiftformat `0/11` · swiftlint `--strict` `0 violations` · placeholder gate `COUNT=0`
+- Logic core **compiled and executed** against Xcode 26.5 → **38/38** checks pass
+- Real-SDK type-check clean on **iOS 18 + macOS 15** (Swift 6, `-strict-concurrency=complete`), including the test files
+
+**Honest blocker (`STATUS=BLOCKED`, logged with evidence):** the end-to-end `xcodebuild … build test` gate can't go green here because `modals-dialogs` isn't yet registered in `project.yml`/`.swiftlint.yml` (P4-core infra, **outside this prompt's allowed-files scope**) → the generated project has 0 references to my files; additionally the runner's `xcode-select` points at CommandLineTools and pre-existing `feature-views/*Tests.swift` break the app-target compile. The KMP `Shared.xcframework` pre-action did build successfully, confirming the toolchain works. None of these are defects in the surface, which is complete and independently verified to compile/run.
+
+I staged only my files — the pre-existing uncommitted `AIUsageCard.*` changes were left untouched.
+

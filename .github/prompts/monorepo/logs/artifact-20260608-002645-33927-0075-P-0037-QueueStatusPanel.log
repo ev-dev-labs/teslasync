@@ -1,0 +1,133 @@
+=== P4 Feature view 0037 QueueStatusPanel (Apple) ===
+date: 2026-06-08T08:48:34Z
+host: macOS 26.5.1 | Xcode 26.5 | swiftlint 0.63.3 | swiftformat 0.61.1
+scope: apps/apple/TeslaSync/feature-views/QueueStatusPanel.* (9 files) + this log
+
+################################################################
+# SECTION A — Official gate steps (verbatim commands, real exit codes)
+################################################################
+
+---- [1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+(full transcript: /tmp/ios_build_test.log) — key result lines:
+** BUILD FAILED **
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-75/apps/apple/TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-75/apps/apple/TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: Unable to resolve module dependency: 'XCTest'
+IOS_EXIT=65
+
+---- [2] xcodebuild -scheme TeslaSync-macOS build test
+(full transcript: /tmp/mac_build_test.log) — key result lines:
+** BUILD FAILED **
+MAC_EXIT=65
+
+---- [3] swiftlint --strict   (cd apps/apple; whole included tree)
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-75/apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length Violation: Function body should span 50 lines or less excluding comments and whitespace: currently spans 78 lines (function_body_length)
+Done linting! Found 1 violation, 1 serious in 1917 files.
+LINT_EXIT=1
+
+---- [4] swiftformat --lint apps/apple
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-75/apps/apple/TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1: error: (blankLinesBetweenScopes) Insert blank line before class, struct, enum, extension, protocol or function declarations.
+1/1921 files require formatting, 2 files skipped.
+FORMAT_EXIT=1
+
+---- [5] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/QueueStatusPanel
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+(note: the literal path matches no directory — the checker treats 'nothing to scan' as clean;
+ SECTION C re-runs it against copies of the 9 shipped files for a real, non-vacuous result.)
+
+    macOS signing error (from /tmp/mac_build_test.log):
+	"TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor.
+	"TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor.
+
+################################################################
+# SECTION B — Blocked analysis: every red step is PRE-EXISTING and OUT-OF-SCOPE
+################################################################
+
+Allowed files for this prompt: QueueStatusPanel.* + this log. None of the four blockers
+below live in QueueStatusPanel.* ; all are predecessor / P4-core infrastructure (project.yml,
+other surfaces' files, macOS signing config) that this prompt must NOT modify.
+
+[1] iOS build — the TeslaSync APP target cannot compile, for two seed reasons, neither mine:
+    (a) project.yml routes ALL feature-view + dashboard-widget *Tests.swift into the APP target;
+        those files 'import XCTest', which an app target cannot resolve. First failure is
+        AIRestorePanel.Tests.swift (not mine). Every such file's header even states 'These run
+        in the TeslaSync(/-macOS) XCTest targets' — i.e. the seed project.yml mis-targets them.
+    (b) 'DashboardWidgetSize'/'DashboardWidgetRegistration' are redeclared across 10+ committed
+        dashboard-widget files → invalid redeclaration / ambiguous. Declarations found in:
+        apps/apple/Sources/DashboardWidgets/DrivetrainHealthWidgetModel.swift
+        apps/apple/Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift
+        apps/apple/TeslaSync/dashboard-widgets/UptimeMonitorWidget.Model.swift
+        apps/apple/TeslaSync/dashboard-widgets/TelemetryErrorsWidget.Model.swift
+        apps/apple/TeslaSync/dashboard-widgets/MQTTStatusWidget.Model.swift
+        apps/apple/TeslaSync/dashboard-widgets/TirePressureHistoryWidget.Model.swift
+    Pre-existing proof — none of these are modified in the working tree:
+        git status --porcelain (dashboard-widgets + AIRestorePanel.Tests): 0
+        -> 0 lines = unmodified / committed seed state.
+
+[2] macOS build — TeslaSync-macOS / TeslaSyncWidgets-macOS require a development signing
+    certificate absent on this runner (DEVELOPMENT_TEAM empty in project.yml). Environment
+    capability blocker; fails before compilation. Not a QueueStatusPanel concern.
+
+[3] swiftlint --strict — 1 pre-existing violation, NOT mine:
+        dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length)
+[4] swiftformat --lint — 1 pre-existing violation, NOT mine:
+        feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes)
+    Both files are unmodified seed state (git status --porcelain shows them clean).
+
+################################################################
+# SECTION C — Surface verification: the 9 shipped QueueStatusPanel files are GREEN
+################################################################
+
+Shipped files:
+  apps/apple/TeslaSync/feature-views/QueueStatusPanel.Adapter.swift
+  apps/apple/TeslaSync/feature-views/QueueStatusPanel.Model.swift
+  apps/apple/TeslaSync/feature-views/QueueStatusPanel.ModelTests.swift
+  apps/apple/TeslaSync/feature-views/QueueStatusPanel.Previews.swift
+  apps/apple/TeslaSync/feature-views/QueueStatusPanel.Projection.swift
+  apps/apple/TeslaSync/feature-views/QueueStatusPanel.strings
+  apps/apple/TeslaSync/feature-views/QueueStatusPanel.swift
+  apps/apple/TeslaSync/feature-views/QueueStatusPanel.Tests.swift
+  apps/apple/TeslaSync/feature-views/QueueStatusPanel.Views.swift
+
+---- C1: swiftformat --lint (9 swift files)
+0/8 files require formatting.
+---- C2: swiftlint --strict (9 swift files)
+Done linting! Found 0 violations, 0 serious in 8 files.
+---- C3: check-placeholders.ps1 on copies of the 9 shipped files (real, non-vacuous)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+---- C4: logic compile + run — real Adapter+Model+Projection via swiftc, 42 parity assertions
+    swiftc compile exit: 0 (0 = the @Observable model + pure cores type-check)
+    assertions passed: 42
+    harness run exit: 0 (0 = ALL PASS)
+---- C5: swiftc -parse (syntax) on the SwiftUI view files
+    QueueStatusPanel.swift -> parse exit 0
+    QueueStatusPanel.Views.swift -> parse exit 0
+    QueueStatusPanel.Previews.swift -> parse exit 0
+
+API conformance: the SwiftUI files use only shared tokens/components verified to exist —
+  Color.TS.*, Font.TS.*, TSSpacing/TSRadius, TSTone, TSButton, TSMetricBar, TSGlassPanel,
+  TSFadeIn, ContentUnavailableView — the same primitives as the canonical AcDcStatsPanel(0096)
+  and AiUsageCard(0237) surfaces. Full module type-check is blocked only by the SECTION B
+  dashboard-widgets duplicate-declaration defect, which is unrelated to this surface.
+
+################################################################
+# SUMMARY
+################################################################
+Official gate: IOS_EXIT=65  MAC_EXIT=65  LINT_EXIT=1  FORMAT_EXIT=1  PLACEHOLDER_EXIT=0
+  -> not all steps 0, so the aggregate gate is RED.
+  -> ALL four red steps are pre-existing seed/infra defects in files OUTSIDE this prompt's
+     allowed set (project.yml test-target routing; 10+ duplicate DashboardWidgetSize decls;
+     macOS dev-signing certificate; two unrelated lint nits in ActionBuilder.Previews.swift
+     and LifetimeStatsWidget.Adapter.swift). They block EVERY surface equally, not just 0037.
+Surface 0037 (QueueStatusPanel.*, 9 files): GREEN on every applicable per-file check —
+  swiftformat 0, swiftlint --strict 0, placeholder COUNT 0, logic 42/42, SwiftUI parse 0.
+  Production-polished parity of features/admin/components/QueueStatusPanel.tsx: all web states
+  (loading/error/empty/data) + per-card heartbeat/depth/24h-counts, P4 leaf freshness axis,
+  shared state-holder binding, full i18n catalog, VoiceOver labels, view.opened telemetry, tests.
+
+EXIT=1
+STATUS=BLOCKED

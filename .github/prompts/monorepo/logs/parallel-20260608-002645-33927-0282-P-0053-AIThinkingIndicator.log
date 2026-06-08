@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure and the web source component that I need to reproduce natively.
+
+Toolchain mostly present. `xcodebuild -version` failed though — let me investigate that and read the web source plus existing Apple app structure.
+
+Key findings: `/Applications/Xcode.app` exists but `xcode-select` points to CommandLineTools — I can use `DEVELOPER_DIR` to target the full Xcode. The web source is clear. Now let me understand existing conventions in the Apple app (state holders, tokens, i18n, telemetry, project structure).
+
+No `.xcodeproj` — it's generated via **XcodeGen** (`project.yml`). Let me read the project config, the i18n/tokens/telemetry infrastructure, and a representative existing feature-view to learn the established file conventions.
+
+The app targets don't yet include `TeslaSync/shared-surfaces` — I'll need to add that path. Let me study a representative feature-view's full file set, the telemetry/i18n/token infrastructure, and how tests are wired.
+
+Let me read a complete feature-view exemplar (all its files) to learn the established pattern, plus the telemetry registry and how `.Tests.swift` files are built.
+
+Now let me understand the i18n facade helper, the test framework, and how feature-view `.Tests.swift` files get compiled into the test target.
+
+Let me verify the actual build capability — XcodeGen availability, whether full Xcode is usable via `DEVELOPER_DIR`, and what the `Shared.xcframework` prebuild script requires (KMP/Gradle).
+
+Full Xcode 26.5 works via `DEVELOPER_DIR`, xcodegen + iPhone 16 sim are present. The blocker risk is the `Shared.xcframework` KMP/Gradle pre-build. Let me check that toolchain.
+
+Java 17 + gradlew exist (KMP build *may* work but likely needs network). 170 `.Tests.swift` files live in the app source path — I need to confirm how XcodeGen targets them. Let me read the Model (i18n facade + telemetry pattern), design tokens, shared components, and the AISettings Helix reference.
+
+Let me confirm exact APIs for the shared components/tokens I'll use, and find any native Helix/AI glyph reference.
+
+Let me read the GlassPanel API and the Helix glyph rendering, check the pending-verifications doc, and definitively settle test-target membership by generating the project and inspecting it.
+
+The `macos-pending-verifications.md` doc confirms the exact established methodology: the full-app `xcodebuild` gate is **pre-existing-blocked** (DashboardWidgetSize redefined 15×, co-located XCTest files, unstaged KMP framework, signing), and each surface is verified **in isolation** (SwiftPM build + tests, swiftc typecheck on both SDKs, swiftlint/swiftformat/placeholder, xcodegen enumeration), then recorded as macOS-pending. AISettings uses `Image(systemName: "sparkles")` as the native Helix/AI mark. Let me check the logs dir, pwsh availability, and an existing precedent log's closing format.
+
+Decisive precedent found: **ToolCard** is the sanctioned model. Its real test went in `Tests/Unit/FeatureViews/ToolCardTests.swift` (test target — NOT co-located XCTest in the app target, which is explicitly the *broken* pattern). Full-app gate is reported RED+DEFERRED with evidence; the surface is verified GREEN in isolation. Let me read the placeholder checker, ToolCard's test + main file, and the sparkles badge styling.
+
+`pwsh` is available — I can run the real placeholder gate. ToolCard's tests are pure-logic projection + a11y-policy + telemetry-slug (no snapshot lib). I now have full clarity. Let me read the forbidden-pattern list, then write the plan and implementation.
+
+All clarity gathered. This is a **presentational** surface (like the sanctioned ToolCard precedent — "the web source fetches nothing"). The full-app `xcodebuild` gate is pre-existing-blocked (DashboardWidgetSize ×15, co-located XCTest, unstaged KMP framework, signing) and is deferred per `macos-pending-verifications.md`; each surface is verified GREEN in isolation. Let me write the plan and track todos.
+
+Now I'll create the surface files. Starting with the Model (telemetry seam + i18n facade + adapter + motion constants).
+
+Now the Views file (glyph, dots, skeleton lines, compact dots).
+
+Now the main indicator view.
+
+Now the previews and strings files.
+
+Now the unit test in the test target (`Tests/Unit/SharedSurfaces/`), modeled on ToolCardTests.
+
+Now wire `TeslaSync/shared-surfaces` into both app targets in `project.yml`.
+
+Let me set up todos and inspect `Cards.swift` fully so I can assemble a faithful isolated SwiftPM harness (vendoring the real design-system files my surface depends on).
+
+`Cards.swift` pulls in many more components (TSBadge, TSText, TSButton…), so I'll vendor only the self-contained real `TSSkeleton` excerpt plus the real `Tokens.swift` for the isolated harness. Let me build and run it (Swift 6 strict-concurrency, iOS18/macOS15 platforms).
+
+Two strict-concurrency issues in the previews. Let me check how the repo handles reduce-motion previews and MainActor preview helpers.
+
+No existing repo idiom for that override — it's a Swift 6 Sendable-keypath inference issue. Let me fix the previews: mark the helper `@MainActor` and use an explicitly-typed writable keypath.
+
+`accessibilityReduceMotion` exposes only a read-only KeyPath in this SDK (Swift 6 `KeyPath & Sendable`) — it genuinely can't be set via `.environment`, which is why no one in the repo does it. I'll remove the forced override (Reduce Motion is honored at runtime + unit-tested + togglable in Xcode's preview inspector) and rewrite the previews cleanly.
+
+Isolated SwiftPM build + **16/16 tests pass under Swift 6 strict concurrency**. Let me confirm a warning-free build, then type-check against both the real iOS 18 and macOS 15 SDKs.
+
+Both SDKs type-check cleanly. Now swiftlint/swiftformat/placeholder gates. Let me locate the configs and run them on the new files.
+
+swiftlint is clean on the surface files; only 2 long lines in the test file (the `LifetimeStatsWidget` error is pre-existing/unrelated). Let me fix the two long lines.
+
+Let me check the lint config scoping and re-run swiftlint on the new files only.
+
+The `.swiftlint.yml` `included:` list doesn't cover `TeslaSync/shared-surfaces` — the gate would skip my surface files. I must add it (necessary wiring). Let me add it and check `.swiftformat`.
+
+`.swiftformat` covers `shared-surfaces` via the dir arg (only Frameworks/build/DerivedData excluded). Let me run swiftformat --lint on the new files and re-run swiftlint scoped to them.
+
+swiftformat wants the single-line computed property body wrapped. Let me auto-apply swiftformat to the new files, then re-verify both linters.
+
+swiftformat passes (0/5). Let me view the change, re-run swiftlint on the new files, and re-run the isolated tests to confirm the formatted code still passes.
+
+The property is now wrapped correctly. Let me re-run swiftlint on the new files and re-run the isolated tests with the formatted code (in parallel).
+
+swiftlint clean (EXIT=0) and 16/16 tests still pass after formatting. Now the placeholder gate and xcodegen enumeration.
+
+All per-surface gates GREEN: placeholder COUNT=0, xcodegen enumerates all 6 files. Now let me capture real evidence for the full-app gate (expected RED + deferred, per the established precedent). I'll run it time-boxed, capturing output.
+
+Network is up, so the KMP/Gradle pre-action could run for a very long time (heavy Kotlin/Native download) — but the app-target build is **deterministically** blocked regardless by the documented pre-existing collisions (DashboardWidgetSize ×15, 224 co-located XCTest files). Let me start the real gate async (capturing genuine output) and, in parallel, produce a fast authentic repro of the duplicate-type collision.
+
+The gate is in the "Stage Shared.xcframework" KMP/Gradle pre-action. Let me capture concrete evidence of the duplicate declarations while it runs, then poll the build.
+
+The KMP `Shared.xcframework` actually built successfully (warm cache). The build is now proceeding to compile the app target — where the pre-existing duplicate-type collisions will surface. Let me find the process and keep polling for the real compile errors and final exit.
+
+KMP framework cached/staged fine; the app-target Swift compile is starting. Let me wait for the compile collisions to surface and capture the final exit.
+
+Build graph for ~2000 files is resolving silently. Let me confirm active compilation (swift-frontend running) and wait longer for the emit-module collision to surface.
+
+The background build got torn down with the launching session before flushing its result. Let me inspect the log's true end, then run a clean, bounded, self-contained capture of the real outcome.
+
+The background runs keep getting torn down mid-pre-action. Let me (1) capture a fast, authentic repro of the exact duplicate-type collision, and (2) run the real gate as a long sync job (which auto-backgrounds and notifies on completion, surviving teardown).
+
+**Conclusive evidence captured.** The authentic repro shows `invalid redeclaration of 'DashboardWidgetSize'`, and the **real iOS gate failed with IOS_EXIT=65** — the first errors being the documented pre-existing blocker (`AIRestorePanel.Tests.swift` importing XCTest into the app target), **not my surface**. Let me verify zero errors are attributable to my files, and run the macOS gate.
+
+Decisive: **IOS_EXIT=65, MAC_EXIT=65, with 0 errors attributable to my surface.** Notably the iOS log shows my `AIThinkingIndicator.strings` was successfully compiled+validated into the app (`CopyStringsFile … in target 'TeslaSync'`) before the build failed on the unrelated pre-existing `AIRestorePanel.Tests.swift` XCTest collision. Let me capture the macOS first-error wording for the log.
+
+Complete, honest evidence gathered. iOS fails on pre-existing `AIRestorePanel.Tests.swift` (XCTest-into-app-target); macOS fails on pre-existing dev-signing — **both with 0 errors from my surface**, which even gets its `.strings` bundled. Let me update todos and write the gate log.
+
+Now append the deferred-verification row to `macos-pending-verifications.md` per the repo's resolution protocol.
+
+Let me check git status to confirm only intended files are staged-worthy (xcodeproj/Frameworks should be git-ignored), and clean up temp artifacts.
+
+Cleanup done, no lock. The full-tree `git status` is just slow on this huge repo. Let me scope it to my paths.
+
+My intended changes are correct and build outputs are ignored. Let me confirm no other tracked files were modified by the build.
+
+There are pre-existing modifications to `AIUsageCard.*` (feature-views) that I never touched. Let me confirm these are unrelated/pre-existing and not something my tooling caused, then commit only my files.
+
+These `AIUsageCard.*` changes are a substantial pre-existing rework (a *different* surface, renamed `AIUsageCard`→`AiUsageCard`, prompt 0237) — unrelated WIP already in the slot. I'll commit **only my intended files** explicitly, leaving those untouched.
+
+Exactly my 10 intended files are staged; `AIUsageCard` is excluded. Now commit.
+
+Committed cleanly (`845c8c804`, 10 files, 855 insertions). Let me do a final sanity check: my paths are fully committed and the pre-existing `AIUsageCard` WIP remains untouched.
+
+All changes committed; pre-existing `AIUsageCard` WIP preserved untouched. Let me finalize the todo state.
+
+All todos complete. Task finished.
+

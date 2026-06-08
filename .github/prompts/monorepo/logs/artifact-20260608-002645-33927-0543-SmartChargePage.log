@@ -1,0 +1,168 @@
+================================================================================
+ p4-apple · P7 · page:charging/SmartCharge — SwiftUI / Apple HIG parity
+ log: .github/prompts/monorepo/logs/apple-page-charging-SmartChargePage.log
+================================================================================
+artifact     : page:charging/SmartCharge   (kind=page)
+web source   : web/src/features/charging/pages/SmartChargePage.tsx
+web route    : /charging/schedule
+target       : apple (macOS regular + iOS compact/regular, one adaptive SwiftUI view layer)
+output       : apps/apple/TeslaSync/Features/Charging/SmartChargePage.swift (+ decomposed files)
+date         : 2026-06-08
+host         : Darwin arm64 · Swift 6.3.2 · SwiftLint · SwiftFormat 0.61.1 · xcodegen 2.x
+               Xcode: ABSENT (active dir = /Library/Developer/CommandLineTools)
+
+--------------------------------------------------------------------------------
+ ENVIRONMENT — why the build/test gate is BLOCKED (honesty covenant #1, #10)
+--------------------------------------------------------------------------------
+`xcodebuild` requires a full Xcode install; this runner has only the Command Line
+Tools, so `xcodebuild build` / `xcodebuild test` cannot run (verified: exit 1,
+"tool 'xcodebuild' requires Xcode"). Per the prompt — "If no Xcode runner is
+available, the gate → STATUS=BLOCKED" — the artifact is reported BLOCKED, NOT DONE.
+No red is painted green: the implementation is complete and non-placeholder
+(ADR-011), and every gate that CAN run on this host was run and passed, plus a
+real `swiftc` type-check of the page against the actual design tokens + component
+library.
+
+--------------------------------------------------------------------------------
+ FILES — created (apps/apple/TeslaSync/Features/Charging/**)
+--------------------------------------------------------------------------------
+SmartChargePage.swift              — adaptive scaffold + panel composition (View)
+SmartChargePage.Model.swift        — @MainActor @Observable SmartChargePageModel (P1/S8)
+SmartChargePage.Adapter.swift      — pure Foundation projection core + value types
+SmartChargePage.Seams.swift        — SmartChargeSource seam + InMemorySmartChargeSource + telemetry/date seams
+SmartChargePage.Views.swift        — settings / schedule / history panels + header + pickers
+SmartChargePage.Timeline.swift     — 24-hour rate timeline (native bars) + 3 cost cards + tier palette
+SmartChargePage.States.swift       — loading / empty / error / inline-error sub-views
+SmartChargePage.Registration.swift — ChargingRouteRegistration (navigation registration)
+SmartChargePage.Previews.swift     — 5 #Preview states (default/result/loading/empty/error)
+
+--------------------------------------------------------------------------------
+ FILES — edited (navigation registration + build wiring + string catalog)
+--------------------------------------------------------------------------------
+Sources/App/AppRouteParser.swift   — `/charging/schedule` deep-link alias → .charging
+Sources/TeslaSyncApp.swift         — chain ChargingRouteRegistration onto the routeHosts registry
+project.yml                        — `+ - path: TeslaSync/Features` on the iOS AND macOS app targets
+                                     (necessary build wiring so the page compiles into both targets;
+                                      validated by `xcodegen generate` EXIT=0 below)
+Localization/Localizable.xcstrings — add `translation.chargePlanner.cost_decimal` (the only one of the
+                                     33 parity strings absent from the catalog; the other 32 already present)
+
+--------------------------------------------------------------------------------
+ VERIFICATION — every runnable gate (raw results)
+--------------------------------------------------------------------------------
+[typecheck] swiftc -typecheck -target arm64-apple-macos15.0 of the 8 page sources +
+            Registration vs. the REAL apps/design/generated/apple/Tokens.swift +
+            Sources/Design/* + Sources/Components/** (all, minus the Shared-facade
+            UnitFormatters the page does not use) + Sources/App routing:
+              EXIT=0  errors=0
+[typecheck] preview-support code (SmartChargePreviewData + SmartChargePreviewHost,
+            #Preview macro bodies transformed since the macro plugin needs Xcode):
+              EXIT=0  errors=0
+[format]    swiftformat --lint apps/apple/TeslaSync/Features/Charging :
+              0/9 files require formatting  (clean)
+[lint]      swiftlint --strict (explicit file list, my 9 sources) :
+              0 violations
+            NOTE: the directory-arg form expands the repo `.swiftlint.yml` `included:`
+            set and surfaces ONE pre-existing violation OUTSIDE my scope —
+            TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+            (function_body_length). It is not my code and not in scope; my files are clean.
+[xcodegen]  xcodegen generate : EXIT=0  (project.yml valid; the generated pbxproj
+            contains 54 SmartChargePage references → the page is wired into BOTH app targets)
+[placeholder] check-placeholders.ps1 -Path .../Charging -Language swift :
+              PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+[strings]   all 33 required `translation.chargePlanner.*` keys referenced in Charging/*.swift
+            (0 missing; 39 distinct chargePlanner keys referenced incl. timeline-legend extras);
+            Localizable.xcstrings re-validated as JSON (8122 keys; cost_decimal present, en="Cost")
+
+--------------------------------------------------------------------------------
+ GATE (apple triad: build + lint + test + placeholder scan)
+--------------------------------------------------------------------------------
+PLACEHOLDER_EXIT=0
+BUILD_EXIT=1     # xcodebuild requires Xcode (CLT-only runner) — BLOCKED
+LINT_EXIT=0      # my files clean (pre-existing repo-wide violation excluded; see VERIFICATION)
+TEST_EXIT=1      # xcodebuild test requires Xcode (CLT-only runner) — BLOCKED
+
+=== PARITY ===
+PARITY_REQUIRED=44
+
+# ---- panels (7) — file : symbol ----------------------------------------------
+[panel ] GlassPanel1       COVERED  SmartChargePage.Views.swift:SmartChargeSettingsPanel        (SmartChargePage.swift:settingsSection → TSGlassPanel)
+[panel ] GlassPanel2       COVERED  SmartChargePage.Timeline.swift:SmartChargeRateTimelinePanel  (SmartChargePage.swift:timelineSection → TSGlassPanel)
+[panel ] Charge-Now        COVERED  SmartChargePage.Timeline.swift:SmartChargeCostComparisonGrid.chargeNowCard / SmartChargeCostCard
+[panel ] Optimized-Cost    COVERED  SmartChargePage.Timeline.swift:SmartChargeCostComparisonGrid.optimizedCard
+[panel ] Savings           COVERED  SmartChargePage.Timeline.swift:SmartChargeCostComparisonGrid.savingsCard (TSDelta savings trend)
+[panel ] GlassPanel6       COVERED  SmartChargePage.Views.swift:SmartChargeSchedulePanel         (SmartChargePage.swift:scheduleSection → TSGlassPanel)
+[panel ] GlassPanel7       COVERED  SmartChargePage.Views.swift:SmartChargeHistoryPanel          (SmartChargePage.swift:historySection → TSGlassPanel)
+
+# ---- data states (4) — implemented for the rate-plan + history + mutation sources
+[state ] loading           COVERED  SmartChargePage.States.swift:SmartChargeHistoryLoadingState ; TSButton(isLoading:) on optimize/apply
+[state ] empty             COVERED  SmartChargePage.States.swift:SmartChargeHistoryEmptyState (ContentUnavailableView, "noHistory")
+[state ] error             COVERED  SmartChargePage.States.swift:SmartChargeHistoryErrorState (Retry) + SmartChargeInlineError (optimize/apply)
+[state ] success           COVERED  SmartChargePage.swift result-gated panels + SmartChargePage.Views.swift:SmartChargeHistoryTable
+
+# ---- strings (33) — translation.chargePlanner.<key> : referenced at file:symbol --
+[string] alternatives      COVERED  SmartChargePage.Views.swift:SmartChargeSchedulePanel.alternatives
+[string] applied           COVERED  SmartChargePage.Views.swift:SmartChargeSchedulePanel.applyControl
+[string] applyError        COVERED  SmartChargePage.Views.swift:SmartChargeSchedulePanel (SmartChargeInlineError defaultKey)
+[string] applySchedule     COVERED  SmartChargePage.Views.swift:SmartChargeSchedulePanel.applyControl
+[string] batteryCapacity   COVERED  SmartChargePage.Views.swift:SmartChargeSettingsPanel (TSLabel)
+[string] chargeNowCost     COVERED  SmartChargePage.Timeline.swift:SmartChargeCostComparisonGrid.chargeNowCard
+[string] cost_decimal      COVERED  SmartChargePage.Views.swift:SmartChargeHistoryTable.headerCell (+ catalog key added)
+[string] currentRate       COVERED  SmartChargePage.Timeline.swift:SmartChargeCostComparisonGrid.chargeNowCard (sublabel)
+[string] currentSoc        COVERED  SmartChargePage.Views.swift:SmartChargeSchedulePanel (SmartChargeScheduleDetail)
+[string] date              COVERED  SmartChargePage.Views.swift:SmartChargeHistoryTable.headerCell
+[string] departBy          COVERED  SmartChargePage.Views.swift:SmartChargeSettingsPanel (TSDatePickerBridge)
+[string] endTime           COVERED  SmartChargePage.Views.swift:SmartChargeSchedulePanel (SmartChargeScheduleDetail)
+[string] history           COVERED  SmartChargePage.Views.swift:SmartChargeHistoryPanel header (+ States empty title)
+[string] maxAmps           COVERED  SmartChargePage.Views.swift:SmartChargeSettingsPanel (TSStepper)
+[string] noHistory         COVERED  SmartChargePage.States.swift:SmartChargeHistoryEmptyState (message)
+[string] optimize          COVERED  SmartChargePage.Views.swift:SmartChargeSettingsPanel.optimizeButton
+[string] optimizeError     COVERED  SmartChargePage.Views.swift:SmartChargeSettingsPanel (SmartChargeInlineError defaultKey)
+[string] optimizedCost     COVERED  SmartChargePage.Timeline.swift:SmartChargeCostComparisonGrid.optimizedCard
+[string] plan              COVERED  SmartChargePage.Views.swift:SmartChargeHistoryTable.headerCell
+[string] ratePlan          COVERED  SmartChargePage.Views.swift:SmartChargeRatePlanPicker (TSLabel)
+[string] rateTimeline      COVERED  SmartChargePage.Timeline.swift:SmartChargeRateTimelinePanel header
+[string] savedAmount       COVERED  SmartChargePage.Views.swift:SmartChargeHistoryTable.headerCell
+[string] savings           COVERED  SmartChargePage.Timeline.swift:SmartChargeCostComparisonGrid.savingsCard
+[string] schedule          COVERED  SmartChargePage.Views.swift:SmartChargeSchedulePanel header
+[string] settings          COVERED  SmartChargePage.Views.swift:SmartChargeSettingsPanel header
+[string] startTime         COVERED  SmartChargePage.Views.swift:SmartChargeSchedulePanel (SmartChargeScheduleDetail)
+[string] status            COVERED  SmartChargePage.Views.swift:SmartChargeHistoryTable.headerCell
+[string] subtitle          COVERED  SmartChargePage.swift:header
+[string] targetSoc         COVERED  SmartChargePage.Views.swift:SmartChargeSettingsPanel (TSSlider)
+[string] targetSocLabel    COVERED  SmartChargePage.Views.swift:SmartChargeSchedulePanel (SmartChargeScheduleDetail)
+[string] title             COVERED  SmartChargePage.swift:header (+ navigation route)
+[string] window            COVERED  SmartChargePage.Views.swift:SmartChargeHistoryTable.headerCell
+[string] windowInfo        COVERED  SmartChargePage.Timeline.swift:SmartChargeRateTimelinePanel.windowInfoText (%1$@ %2$@)
+
+PARITY_COVERED=44
+=== /PARITY ===
+
+--------------------------------------------------------------------------------
+ NOTES
+--------------------------------------------------------------------------------
+• Decomposition (page + 8 sub-files) is preferred over a monolith; the page is driven
+  entirely by the @Observable SmartChargePageModel via the SmartChargeSource seam — the
+  production binding to the KMP charge-planner repositories (useRatePlans / useChargePlans
+  / useOptimizeCharge / useApplySchedule) attaches at that seam (ADR-004), exactly as every
+  other P4 surface defers its live wiring. The navigation registration injects an in-memory
+  source seeded with the static rate-plan fallback + an empty resolved history so the page
+  renders its real pre-data state (no placeholder screen, ADR-011).
+• Charts/maps: none required by the manifest. The 24-hour rate timeline is a native SwiftUI
+  bar visualization (NOT a chart library, NOT a WKWebView) with pointer tooltips (.help) +
+  VoiceOver labels.
+• Units: the charge-planner DTO predates SI canonicalization and is rendered at web parity
+  (currency, ¢/kWh, kWh, %, h) via the shared TSCurrency/TSFormattedNumber formatters; no
+  non-SI value is stored or computed.
+• Tests: per-surface XCTest belongs in the `Tests/Unit/` TEST target (which links XCTest +
+  Shared), outside this prompt's allowed-files scope and parity set (P9 is the dedicated test
+  phase; the `xcodebuild test` gate runs that suite). XCTest is unavailable under the Command
+  Line Tools, so writing unverifiable XCTest here would risk a false green; the model + adapter
+  logic is instead verified by the `swiftc -typecheck` (EXIT=0) and exercised by the 5 #Preview
+  states. NOT a scope reduction of the 44 parity items.
+• Out-of-scope working-tree changes observed on this shared runner (AIUsageCard.*, two web/*
+  files) were NOT made by this prompt and were left untouched.
+
+EXIT=1
+STATUS=BLOCKED
+================================================================================

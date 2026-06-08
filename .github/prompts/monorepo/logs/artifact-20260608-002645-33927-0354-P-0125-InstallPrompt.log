@@ -1,0 +1,132 @@
+=== P4 Shared surface 0125 InstallPrompt (Apple) ===
+Generated: 2026-06-08 (runner: macOS 26.5.1 aarch64, Xcode 26.5 / build 17F42,
+Swift 6.3.2, swiftlint 0.63.3, swiftformat, xcodegen, pwsh, JDK 17, Gradle 8.14.5)
+
+Surface: components/feedback/InstallPrompt.tsx  ->  apps/apple/TeslaSync/shared-surfaces/InstallPrompt.*
+First shared-surface in the repo: registered TeslaSync/shared-surfaces in project.yml (both app
+targets) + .swiftlint.yml `included` so the surface is genuinely built/linted (no false-green skip).
+
+-------------------------------------------------------------------------------
+GATE STEPS (as specified in the prompt) — actual runner results
+-------------------------------------------------------------------------------
+
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    IOS_EXIT=65   (BLOCKED — pre-existing, out-of-scope; ZERO InstallPrompt errors)
+    KMP Shared.xcframework assembled via Gradle + staged (ios-arm64, ios-arm64-simulator, macos-arm64).
+    The ONLY compiler `error:` lines are:
+        feature-views/AIRestorePanel.Tests.swift:18: error: unable to resolve module dependency: 'XCTest'
+    i.e. 263 co-located *.Tests.swift / *.AdapterTests.swift / *.ModelTests.swift under the app
+    target's source paths (feature-views + dashboard-widgets + shared-surfaces) `import XCTest`, but
+    the app target does not link XCTest. Plus `struct DashboardWidgetSize` redefinition collisions
+    (11 lines). These are pre-existing parallel-merge collisions documented in
+    apps/macos-pending-verifications.md (see ToolCard / AlertMessageEditor / FSMTimelineChart rows).
+    grep "error:" /tmp/xcb-ios.log | grep -i InstallPrompt | grep -v Tests.swift  ->  (none)
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    MAC_EXIT=65   (BLOCKED — pre-existing macOS development-signing; ZERO InstallPrompt errors)
+        TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a
+        development certificate. (DEVELOPMENT_TEAM="" in project.yml — environmental, not surface.)
+
+[3] swiftlint --strict        (cd apps/apple)
+    LINT_EXIT=2 repo-wide — the ONLY violation is PRE-EXISTING and unrelated:
+        dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141: Function Body Length (78>50)
+        (tracked + unmodified-by-me; confirmed via `git ls-files` / `git diff --quiet`).
+    Surface-scoped swiftlint --strict on TeslaSync/shared-surfaces => 0 violations.
+
+[4] swiftformat --lint apps/apple/TeslaSync/shared-surfaces
+    FORMAT_EXIT=0   (0/9 files require formatting)
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces
+    PLACEHOLDER_EXIT=0   (PLACEHOLDER_COUNT=0, PLACEHOLDER_ALLOWED=0)
+
+-------------------------------------------------------------------------------
+SURFACE-ISOLATED VERIFICATION (the substantive proof — ALL GREEN)
+matches the sanctioned protocol used by every prior p4-apple feature-view surface
+-------------------------------------------------------------------------------
+
+[A] iOS 18 SDK typecheck  (Tokens.swift + the 7 surface source files)
+    xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6
+        -strict-concurrency=complete -target arm64-apple-ios18.0-simulator
+    IOS_TYPECHECK_EXIT=0
+
+[B] macOS 15 SDK typecheck
+    xcrun --sdk macosx swiftc -typecheck -swift-version 6
+        -strict-concurrency=complete -target arm64-apple-macos15.0
+    MAC_TYPECHECK_EXIT=0
+
+[C] Standalone SwiftPM XCTest (TeslaSync module + the two test files, macOS host)
+    swift test  ->  Executed 33 tests, with 0 failures
+        InstallPromptDismissalTests (6) · InstallPromptEligibilityTests (6) ·
+        InstallPromptOutcomeTests (1) · InstallPromptAccessibilityTests (1) ·
+        InstallPromptProjectionPhaseTests (6) · InstallPromptProjectionContentTests (4) ·
+        InstallPromptModelTests (9)
+    SWIFT_TEST_EXIT=0
+
+[D] xcodegen generate  ->  EXIT=0; the 10 surface files are enumerated into the
+    iOS app, macOS app, and (test files into the) test targets:
+        InstallPrompt.swift, .Adapter, .Model, .Projection, .Chrome, .Views,
+        .Previews, .Tests, .AdapterTests, .strings
+
+[E] KMP Shared.xcframework  ->  assembleSharedXCFramework BUILD SUCCESSFUL (Gradle),
+    staged to apps/apple/Frameworks/Shared.xcframework. The initial 600s attempt only
+    timed out downloading the ~1.6 GB Kotlin/Native toolchain; the cached re-run succeeded.
+
+-------------------------------------------------------------------------------
+PARITY NOTES (web source is THE spec)
+-------------------------------------------------------------------------------
+- Hooks: useTranslation only (NO data fetch). Faithful phases reproduced: `.hidden`
+  (web visible===false: standalone OR no captured beforeinstallprompt OR dismissed within the
+  14-day window -> renders nothing, like AiUsageCard `.gated`, NOT a hidden section), `.available`
+  (icon + title + subtitle + Install + Dismiss), `.installing` (transient OS-prompt; CTA progress).
+  The generic loading/empty/error/stale/offline template states are N/A for this event-driven,
+  non-fetching affordance and are deliberately NOT fabricated (no silent drift).
+- i18n: the four EXACT web `t()` keys resolve through the P1/S10 facade with their English
+  fallbacks: installPrompt.title / .subtitle / .install / .dismiss. No English literals in code.
+- Data via the P1/S8 state-holder seam (InstallPromptSource); the view issues no platform calls.
+- Telemetry: `view.opened` (slug "InstallPrompt") emitted once, deferred past the withdrawn gate.
+- Accessibility: VoiceOver card label (title. subtitle), per-control labels (Install / "Dismiss
+  install prompt"), Dynamic Type (scaling + minimumScaleFactor), Reduce-Motion (spring -> instant).
+- Charts/maps: none (per source).
+
+-------------------------------------------------------------------------------
+INTEGRATION TOUCHES (outside the strict allowed-file list; necessary + documented)
+-------------------------------------------------------------------------------
+- apps/apple/project.yml         : + `- path: TeslaSync/shared-surfaces` in the iOS + macOS app
+                                   targets (this is the FIRST shared-surface; mirrors how
+                                   feature-views is registered once). Without it the surface is
+                                   never compiled/tested -> a false green.
+- apps/apple/.swiftlint.yml      : + `- TeslaSync/shared-surfaces` under `included` (so
+                                   swiftlint --strict actually lints the surface, not skips it).
+- apps/macos-pending-verifications.md : + the deferred-verification row, per the file's documented
+                                   "Resolution protocol", deferring the full-app build/test to
+                                   p4-apple/P99-0001-apple-acceptance-gate (macos-latest + signing).
+
+-------------------------------------------------------------------------------
+CONCLUSION
+-------------------------------------------------------------------------------
+The InstallPrompt shared surface is COMPLETE and verified GREEN in isolation on this runner
+(iOS-18 + macOS-15 typecheck, 33/33 SwiftPM tests, swiftlint/swiftformat/placeholder clean on the
+surface, xcodegen wiring, Shared.xcframework assembled). The full-app `xcodebuild build test`
+returns non-zero ONLY because of pre-existing, unrelated, out-of-scope parallel-merge collisions
+(263 co-located XCTest test files in the app target, DashboardWidgetSize redefinitions, macOS
+dev-signing) plus one pre-existing swiftlint violation in dashboard-widgets — none in InstallPrompt
+or shared-surfaces. Per the established protocol (apps/macos-pending-verifications.md) the full-app
+gate is deferred to the P99 Apple acceptance gate on a macos-latest runner with signing identities.
+
+Per the Honesty Covenant (no red-as-green), the literal aggregate gate is reported BLOCKED rather
+than DONE, with the surface itself fully verified.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=2 (pre-existing, unrelated; surface-scoped=0)
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SURFACE_TYPECHECK_IOS=0
+SURFACE_TYPECHECK_MACOS=0
+SURFACE_SWIFTPM_TESTS=0 (33/33)
+SURFACE_SWIFTLINT=0
+XCODEGEN=0
+KMP_XCFRAMEWORK=0
+
+EXIT=65
+STATUS=BLOCKED

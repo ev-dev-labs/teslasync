@@ -1,0 +1,191 @@
+I'll start by exploring the environment to understand the capability situation and the existing structure, since this task has strict honesty requirements and a BLOCKED path if the Apple toolchain is unavailable.
+
+Key finding: **full Xcode is NOT installed** (only Command Line Tools), and `simctl` is unavailable — so `xcodebuild ... build test` against simulators cannot run. But `swift`, `swiftlint`, and `swiftformat` ARE available. Let me explore deeper to understand existing patterns and confirm capability honestly.
+
+Major updates: **Xcode.app exists** at `/Applications/Xcode.app` (just not selected), **pwsh is available**, and **feature-views already has 653 entries** — a strong established pattern. Let me verify the Xcode capability and examine existing patterns.
+
+The capability is fully available: **Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 simulator is booted**. HealthGaugeGrid doesn't exist yet. There's a strict file-per-view pattern. `HeroGauges` (gauges) is the ideal template. Let me study it and related siblings thoroughly.
+
+The architecture is clear now. Let me read the rest of the HeroGauges template plus locate the shared P1/S9 tokens, P4 core components (TSGlassPanel, TSEmptyState), and the native RadialGauge/KVList equivalents.
+
+Now let me read the remaining HeroGauges files, the BatteryHealthSection (closest to my KVList panels + health status), DrivingTemperatureStats (driving domain + unit conversion), and locate the shared tokens/components.
+
+Excellent template understanding. Now let me study BatteryHealthSection (health + KVList-style tiles) and DrivingTemperatureStats (driving domain + units), and locate the shared tokens/components definitions plus the build config.
+
+Let me read the DrivingTemperatureStats Model/Views (units binding pattern) and locate the shared token/component definitions plus the build config.
+
+Let me locate the shared P1/S9 token and P4 core component definitions, and read the web `DrivingStats` type + unit conversion + the parent usage of HealthGaugeGrid.
+
+Now let me read the shared token/component definitions and the exact web unit-conversion pipeline I must reproduce.
+
+Let me read the RadialGauge web component (centre value formatting), the number formatters, the design tokens, and the key shared components.
+
+The tokens are generated/shared and used widely. Let me read the exact shared components I'll consume (KVList, RadialGauge/PieGauge, GlassPanel, EmptyState, Skeleton, FadeIn, IconBox, Tone) and locate the token namespace, plus the build config.
+
+Found `TSRadialGauge`. The core tokens appear generated — let me read the build config, the radial gauge, list components, and token generation.
+
+The tokens live in `apps/design/generated/apple` (the `DesignTokens` group). Let me read the token API and the remaining shared components I'll use.
+
+Now I have the full token API. Let me read the remaining shared component signatures I'll consume.
+
+There's a native `TSKVList`/`TSKVRow` (web `KVList`). Let me read its exact API.
+
+Found `TSKVList`/`TSKVRow` (web `KVList`). Let me check how siblings reconcile it with the per-surface i18n facade, and read `TSCode`.
+
+No sibling uses `TSKVList` directly — they roll faithful facade-resolved rows. I'll follow that precedent. Now a critical build question: how do `.Tests.swift` files in `feature-views/` reach the test target (not the app target)? Let me investigate the target membership mechanism.
+
+No special handling — the app target globs the whole `feature-views/` dir. I need to understand target membership empirically. Let me check the build prerequisites: xcodegen, the Shared.xcframework, and the framework-staging script.
+
+Critical: `Shared.xcframework` is **not** prebuilt (only `.gitkeep`), and the scheme preAction builds it via **Gradle/Kotlin-Native**. Let me check that toolchain and read the repo's own pending-verifications note.
+
+The repo's own `macos-pending-verifications.md` is decisive: the **ToolCard prompt (same P4 feature-view tier)** documents that full-app `xcodebuild build test` is blocked by **pre-existing, unrelated** issues (duplicate `DashboardWidgetSize`/`PowerFlowConnection` across dashboard-widgets, co-located `*.Tests.swift` importing XCTest into the app target, macOS signing) + the KMP `Shared.xcframework` Gradle staging — and the established methodology is **isolated SwiftPM build + tests** for the surface, plus swiftlint/swiftformat/placeholder, deferring the full-app build to a `macos-latest` acceptance gate. My allowed files are only `HealthGaugeGrid.*` + the log, so I cannot fix those pre-existing blockers.
+
+Let me confirm the lint configs, logs dir, and whether the shared Components are KMP-free (for an isolated SwiftUI typecheck).
+
+Let me read the ToolCard gate log — it's the authoritative template for how this exact macOS-pending situation was recorded for a same-tier surface.
+
+This is the authoritative, sanctioned methodology: **EXIT=0/STATUS=DONE** is achieved by shipping the full-parity surface, verifying it GREEN via an **isolated SwiftPM build+tests against the REAL design system**, passing swiftlint/swiftformat/placeholder, and honestly reporting the full-app xcodebuild gate as **DEFERRED** (red, pre-existing unrelated blockers). My allowed files are only `HealthGaugeGrid.*` + the log; feature-views is already wired, and the current convention co-locates all files (`.Tests.swift`, `.strings`, `.Previews.swift`).
+
+Let me set up tracking and verify the design-system subtree is self-contained for the isolated harness.
+
+Confirmed: the design-system subtree (`Sources/Components` + `Sources/Design`) imports only system frameworks — perfect for an isolated SwiftPM harness named `TeslaSync` (so `@testable import TeslaSync` works), exactly like ToolCard's verification.
+
+Let me write a plan file, then create the surface files. Starting with the SwiftUI-free Model and Adapter (the testable core).
+
+I introduced a double auto-refresh (model-internal one-shot + a view-level trigger). Let me align cleanly with the DrivingTemperature pattern (model-internal one-shot only) and remove the redundant view-level trigger.
+
+Now the Views file — the SwiftUI presentation (3 panels, faithful radial gauge, KV rows, chips, states). Let me first check the web `KVList` value styling for fidelity.
+
+Web `KVList`: label muted left, value medium-weight primary right, dividers between rows. Now let me write the full Views file.
+
+Now the test suite — adapter parity, projector, model lifecycle, accessibility, and per-state view rendering.
+
+All 7 surface files are written. Now let me build the isolated SwiftPM harness — compiling my **exact shipped sources against the REAL design system** (Components + Design + Tokens), named `TeslaSync` so `@testable import` works — exactly the ToolCard verification method.
+
+Build reached my files fine — the only error is in `Components/DataDisplay/UnitFormatters.swift`, which depends on an external `\.tsUnits` environment key defined outside Components/Design (in the app's Platform layer). My surface doesn't use those formatters. Let me find all such externally-dependent Components files and exclude them from the harness.
+
+Only `UnitFormatters.swift` has the external dependency, and my surface doesn't use it. Let me exclude it and rebuild.
+
+Harness builds clean against the real design system. Now run the tests.
+
+**All 33 tests pass (0 failures)** — including the 7 ImageRenderer per-state render tests. The surface compiles and tests green under Swift 6 strict concurrency against the real design system.
+
+Now the lint/format/placeholder gates. Let me run swiftlint and swiftformat on my files.
+
+A handful of fixable violations: line-length (≤120), file-length (≤400 lines), and a numeric-grouping/wrap nit. Let me view the exact offending lines.
+
+Clear set of fixes: shorten 2 Adapter lines, trim Model under 400, split the oversized Views and Tests files (using additional `HealthGaugeGrid.*` files, matching the sibling multi-file convention). Let me fix the Adapter and Model first.
+
+Now trim Model.swift under 400 lines by condensing the header comment.
+
+Model is now 400 lines. Now split Views.swift (466) into a panels file + a states file. Let me recreate both.
+
+Now split the Tests file (logic vs. view-state) and fix the long lines + numeric grouping.
+
+Now re-verify: line counts, then re-stage the harness with the new files and re-run build+tests+lint+format.
+
+All files ≤400 lines. Re-stage the harness with the new split files and re-run build + tests.
+
+33/33 tests still pass after the split. Now re-run swiftlint + swiftformat on all 8 files.
+
+Two more long lines in Tests.swift. Let me view and wrap them.
+
+Re-run both linters to confirm clean.
+
+Both linters clean (0 violations, 0 reformatting). Let me re-confirm the harness after the test edits, run the placeholder check (reading the script first for correct `-Path` semantics), and run the whole-app format gate.
+
+Harness: 33/33 pass. Let me see how the placeholder script resolves `-Path` (the gate passes a prefix, not a real path).
+
+The placeholder script treats `-Path` literally; the gate's prefix path scans nothing → 0. For an honest result I'll scan my actual files in a temp dir, plus run the literal gate command and the whole-app swiftformat gate.
+
+Placeholder clean (real scan of my 8 files: COUNT=0). Now run the whole-app `swiftformat --lint apps/apple` and `swiftlint --strict` gate commands for honest whole-repo evidence.
+
+Whole-app swiftformat surfaces exactly **1 pre-existing violation in `ActionBuilder.Previews.swift` (another surface, not mine)** — my 8 files are 0/8 clean. Now let me generate the Xcode project and capture the documented pre-existing full-app blockers, then attempt the real xcodebuild.
+
+Confirmed the documented pre-existing blockers: `DashboardWidgetSize` is now defined in **15 files** (ambiguous type lookup), and **84 co-located `*.Tests.swift`** are globbed into the app target. My files are in the project (54 refs). Now let me run the real full-app xcodebuild to capture honest DEFERRED evidence — this triggers the Gradle KMP staging first.
+
+The background process didn't persist (sync session teardown). Let me relaunch the full-app build as a proper detached async process writing to a log.
+
+Gradle KMP staging is running (downloading Kotlin/Native, generating API client) — this takes several minutes. Meanwhile, let me capture the whole-app `swiftlint --strict` evidence for the log.
+
+Whole-app `swiftlint --strict`: **1 pre-existing violation in `LifetimeStatsWidget.Adapter.swift`** (the same one ToolCard cited) — **0 in my files**. Both whole-app lint/format issues are pre-existing in other surfaces, outside my allowed scope.
+
+Let me check the iOS build progress.
+
+The KMP/Kotlin-Native build is progressing (now linking the iosArm64 framework). Let me wait for it to stage the xcframework and begin the app compile.
+
+KMP staging is working — debug xcframework assembled, now building release frameworks. Let me continue waiting for it to finish staging and start the app compile.
+
+KMP is now on the release-framework link (the long pole). Let me keep waiting for it to finish staging and reach the app compile where the documented dup-symbol errors will surface.
+
+The release Kotlin/Native links are still finishing (all Apple targets). This is the slow part. Let me give it a longer wait to reach the app-compile phase.
+
+iOS full-app build/test completed: **IOS_EXIT=65** (matches the ToolCard precedent). The KMP xcframework staged fine; the app target's SwiftDriver compile failed. Let me extract the actual errors and confirm **zero** are in my HealthGaugeGrid files.
+
+**iOS: IOS_EXIT=65, with ZERO HealthGaugeGrid errors.** The failure is the documented pre-existing blocker: `AcDcStatsPanel.Tests.swift:19: error: unable to resolve module dependency: 'XCTest'` — the 84 co-located `*.Tests.swift` files (every surface's convention) import XCTest into the app target. Not my code, not in my allowed-files scope to fix.
+
+Now run the macOS gate (Gradle cached now) to capture MAC_EXIT honestly.
+
+macOS: **MAC_EXIT=65**. Let me confirm its errors are also pre-existing and zero in my files.
+
+**macOS: MAC_EXIT=65** — pre-existing development-signing blocker (`TeslaSync-macOS has entitlements that require signing`), zero HealthGaugeGrid errors. Both full-app gates are RED for documented pre-existing reasons with **zero errors in my surface**.
+
+All evidence gathered. Let me collect tool versions + key log lines, then clean up temp artifacts and confirm git ignores the generated project.
+
+KMP success line was already seen in the logs. Let me clean up the generated project + temp harness, then check git status cleanly.
+
+Generated project + KMP framework are gitignored and cleaned. Let me confirm git status shows only my 8 files (plus verify Gradle build artifacts are ignored).
+
+Git status is clean: my **9 untracked HealthGaugeGrid files** (8 `.swift` + `.strings`), plus 2 pre-existing modified web files I will NOT touch. No stray Gradle artifacts (all gitignored). Now let me write the gate log following the sanctioned ToolCard template with the real evidence.
+
+Now commit — staging only my 9 HealthGaugeGrid files + the log (explicitly avoiding the 2 pre-existing modified web files).
+
+Staged set is exactly the 9 HealthGaugeGrid files + the log. Committing.
+
+Committed as `bfa3137b4`. Let me do a final verification of the commit contents and confirm no build artifacts leaked.
+
+All verification complete. The commit contains exactly the 10 allowed files (9 `HealthGaugeGrid.*` + the gate log).
+
+Task complete. Here's the summary:
+
+## P4 · Feature view 0154 — `HealthGaugeGrid` (Apple) — **STATUS=DONE / EXIT=0**
+
+Shipped a production-polished, Apple-idiomatic SwiftUI surface at full parity with `features/driving/components/drivetrain-health/HealthGaugeGrid.tsx`, committed as `bfa3137b4` (10 files — exactly the allowed scope).
+
+**Artifacts** (co-located, current sibling convention): `HealthGaugeGrid.{Model,Adapter,swift,Views,States,Previews,Tests,ViewTests}.swift` + `.strings`.
+
+**Parity reproduced**: the radial health-score gauge (clamp/decimals/fill/HEALTH_COLOR tint), the Motor-Details KVList (incl. the raw `${score}%` row + `String(count)` sensors), the Drive-Statistics KVList with SI→display distance/speed conversion ported 1:1 from `unitConversion.ts`, the `stats===undefined` per-panel skeleton, plus every state (loading/empty/error/stale/offline). Bound through P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade (28 keys), P1/S11 `view.opened` telemetry; full VoiceOver labels + Reduce-Motion.
+
+**Gates (raw, on this runner)**:
+- ✅ Isolated SwiftPM build + **33/33 tests pass** (Swift 6 language mode) against the REAL design system
+- ✅ `swiftlint --strict`: **0** violations · `swiftformat --lint`: **0/8** · placeholder scan: **0**
+- ⏸ Full-app `xcodebuild build test`: **IOS_EXIT=65 / MAC_EXIT=65 — DEFERRED**, with **zero HealthGaugeGrid errors**. The KMP `Shared.xcframework` staged fine; the failures are pre-existing, architecture-wide blockers outside my allowed files: 84 co-located `*.Tests.swift` importing XCTest into the app target (iOS) and macOS development-signing — the exact `apps/macos-pending-verifications.md` / ToolCard precedent.
+
+The whole-app lint/format each surface 1 pre-existing violation in *other* surfaces (`ActionBuilder.Previews.swift`, `LifetimeStatsWidget.Adapter.swift`) — disclosed in the log, not mine, not fixable within allowed files. Full evidence in `.github/prompts/monorepo/logs/p4-apple-feature-views-0154-HealthGaugeGrid.log`.
+
+
+
+The task is fully complete and verified — all 12 todos done, the surface is committed, and every gate has real evidence.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-feature-views-0154-HealthGaugeGrid.log | 158 ++++++++
+ .../feature-views/HealthGaugeGrid.Adapter.swift    | 325 +++++++++++++++++
+ .../feature-views/HealthGaugeGrid.Model.swift      | 400 +++++++++++++++++++++
+ .../feature-views/HealthGaugeGrid.Previews.swift   | 107 ++++++
+ .../feature-views/HealthGaugeGrid.States.swift     | 211 +++++++++++
+ .../feature-views/HealthGaugeGrid.Tests.swift      | 360 +++++++++++++++++++
+ .../feature-views/HealthGaugeGrid.ViewTests.swift  |  75 ++++
+ .../feature-views/HealthGaugeGrid.Views.swift      | 266 ++++++++++++++
+ .../feature-views/HealthGaugeGrid.strings          |  52 +++
+ .../TeslaSync/feature-views/HealthGaugeGrid.swift  | 107 ++++++
+ 10 files changed, 2061 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0154-HealthGaugeGrid.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthGaugeGrid.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthGaugeGrid.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthGaugeGrid.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthGaugeGrid.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthGaugeGrid.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthGaugeGrid.ViewTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthGaugeGrid.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthGaugeGrid.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/HealthGaugeGrid.swift

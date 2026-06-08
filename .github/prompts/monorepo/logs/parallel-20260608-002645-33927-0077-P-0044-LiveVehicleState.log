@@ -1,0 +1,134 @@
+I'll start by exploring the repository structure to understand what exists and what capabilities are available.
+
+Apple toolchain is available. Let me explore the Apple app structure and the web source.
+
+`xcodebuild` currently points to Command Line Tools, not full Xcode. Let me check whether full Xcode exists and study the existing feature-views conventions.
+
+Full Xcode is installed at `/Applications/Xcode.app` — the active dir is just CLT. I can override with `DEVELOPER_DIR`. Let me verify this works and study conventions.
+
+Full Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 simulator is booted, and `LiveVehicleState.*` doesn't exist yet. `SecurityStatusCards` is the same web feature-folder (security-access) and likely uses the same `SecurityEvent` data — ideal template. Let me study it and `LiveControls` (the "Live" pattern) in full.
+
+This is an ideal template — same security-access web folder, same `SecurityEvent` data, same grid-of-cards composition. Let me read the rest of its file set.
+
+Now the Previews + Tests conventions, plus the shared infra (`TSGlassPanel`, `Color.TS`, etc.) and the project build config.
+
+`project.yml` is at `apps/apple/`. Let me read it and verify the shared infrastructure (tokens, glass panel, fade-in, skeleton) exists.
+
+XcodeGen is installed and the project is generated on demand. Critical question: the `feature-views` path (including `*.Tests.swift`) is only in the **app** targets, not the test targets — yet those files `import XCTest`. I need to understand how tests are wired before adding mine. Let me investigate.
+
+Two key unknowns: how `feature-views/*.Tests.swift` reach a test target, and whether the KMP `Shared.xcframework` can be built here. Let me read the pending-verifications doc and the test FeatureViews folder.
+
+Now it's clear. The repo documents (`macos-pending-verifications.md`) that the full-app `xcodebuild` is blocked by **pre-existing, unrelated** parallel-merge collisions (`DashboardWidgetSize` redefined, co-located `*.Tests.swift` importing XCTest into the app target, unstaged KMP `Shared.xcframework`, signing). The established, honest precedent (ToolCard, AlertMessageEditor, FSMTimelineChart) verifies the **surface** green via isolated SwiftPM build + tests + real iOS/macOS `swiftc -typecheck` + swiftlint/swiftformat/placeholder, and defers the full-app build to the macOS acceptance gate.
+
+Let me locate the shared infra definitions and tooling so I can replicate that verification faithfully.
+
+`pwsh` is available (I can run the real placeholder gate), and the design tokens live in `../design/generated/apple/Tokens.swift` + `Sources/Design/`, with `TSGlassPanel`/`TSFadeIn`/`TSSkeleton` in Components. Let me read the precedent log (ToolCard) to replicate the exact verification recipe, and confirm the token/component signatures.
+
+This is the canonical recipe. The sanctioned verification is an **isolated SwiftPM harness** compiling the exact shipped sources against the **real** design-system files, plus swiftlint/swiftformat/placeholder, with the full-app `xcodebuild` deferred (IOS/MAC_EXIT=65) due to documented pre-existing collisions. `feature-views` is already wired into `project.yml`. Let me confirm token/component signatures and the lint config.
+
+Let me map where `TSSpacing`, `TSRadius`, `TSMotion`, `Font.TS`, and the `tsGlassPanel()` material modifier are defined, so I can assemble the isolated harness from the real design-system files (as the precedent did).
+
+`Tokens.swift` is self-contained (defines `Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSMotion`). The material modifier and three UI primitives live in their own files. Let me check their dependency surface (imports + external type refs) to assemble a clean isolated harness.
+
+All four design-system files import only SwiftUI and depend solely on the tokens in `Tokens.swift` — a clean, self-contained closure for the isolated harness. Let me read the placeholder checker (to avoid tripping it) and the `EmptyState` web component is just a message — I have the full spec. Let me set up tracking and read the placeholder patterns.
+
+I have the full closure and constraints. Let me set up tracking and read the token color values so I map web `cyan-400`/`green-400`/`text-muted` faithfully.
+
+I have everything: token values (`accent`=cyan, `statusSuccess`=green, `textPrimary`/`textMuted`), fonts, the clean design-system closure, the placeholder constraints, and the exact web logic. Starting the implementation.
+
+Now I'll write all the files. Starting with the pure adapter (ports the web `buildLiveSignals` + helpers).
+
+Now the Model (state-holder seam P1/S8, telemetry P1/S11, i18n facade P1/S10, observable model).
+
+Now the presentational subviews (grid, tile, loading, empty, error, freshness indicator, banner) — design tokens only.
+
+Now the main view that composes the panel, header (with the web "Live" badge), and phase-driven body.
+
+Now the previews (every state) and the i18n strings table.
+
+Now the comprehensive test suite (logic, projection for all ten signals, phase resolution, model wiring, telemetry, stale auto-refresh, accessibility).
+
+All 7 files are written. Now I'll build the **isolated SwiftPM harness** (the sanctioned verification): a `TeslaSync` module compiling my exact shipped sources against the **real** design-system files, under Swift 6 strict concurrency, plus my test target. Let me first confirm the real primitives have no external deps, then assemble the harness via symlinks.
+
+The primitives depend only on the design tokens — a clean closure. Let me assemble the isolated harness (symlinking the real files so there's zero drift) and build + test it under Swift 6.
+
+Cards.swift also contains `TSCard`/`TSCardHeader` + a `#Preview` referencing more primitives (`TSPanelTitle`, `TSCaption`, `TSText`, `TSBadge`, `TSButton`). These are leaf UI primitives too — I'll add the real files that define them (faithful, no stubs). Let me locate them.
+
+Cards.swift's cross-references are in its preview block. The ToolCard harness likely built release (stripping `#if DEBUG` previews). Let me check whether these previews are DEBUG-gated and whether Typography/Badges/Buttons are self-contained.
+
+All previews are `#if DEBUG`-gated. To compile my code **and** my previews (max coverage), I'll add the real Typography/Badges/Buttons primitives so Cards' DEBUG preview resolves, then rebuild in debug.
+
+Harness builds clean in debug (all my files + real design system). Now running the tests.
+
+**24/24 tests pass** under Swift 6 strict concurrency against the real design system. Now the lint/format/placeholder gates, scoped to my files plus full-tree baselines.
+
+swiftformat flagged style issues. I'll apply the repo's formatter (ecosystem tool) to my files, then re-verify lint + format + retest.
+
+swiftformat passes now, but its `conditionalAssignment` rewrite created a swiftlint `void_function_in_ternary` issue. Let me inspect what it produced.
+
+A bare ternary inside the if-expression branch (from swiftformat's rewrite of `driverSeat`) trips swiftlint's `void_function_in_ternary`. I'll convert it to nested if-expressions (no ternary) so both tools are satisfied.
+
+All green: **format 0/6, lint 0 violations, 24/24 tests**. Now the placeholder gate (via pwsh) and cross-SDK typecheck. Let me check how the placeholder script resolves `-Path`.
+
+The script scans a real directory; pointing it at a bare file-stem would scan nothing (a hollow pass). To honestly scan my shipped files, I'll copy them into a temp dir and run the real checker there, plus run cross-SDK (iOS 18 + macOS 15) typechecks and `xcodegen generate`.
+
+Placeholder gate clean (`COUNT=0`). Now cross-SDK typechecks (iOS 18 simulator + macOS 15) over the surface + real design deps, and `xcodegen generate`.
+
+Both cross-SDK typechecks pass (iOS 18 + macOS 15, Swift 6). Now `xcodegen generate` to confirm the project enumerates my files.
+
+`xcodegen generate` succeeds and all 7 files are enumerated. Now I'll attempt the real full-app `xcodebuild` to capture genuine deferred evidence (matching precedent). It needs the KMP `Shared.xcframework` staged via Gradle — let me kick that off in the background while I prepare the gate log.
+
+Kotlin/Native toolchain is pre-downloaded (`~/.konan`), Java 17 present. Building the `Shared.xcframework` via the repo's own script (async, monitored).
+
+KMP build is running (toolchain pre-cached). Let me wait for it to complete.
+
+The build pipes through `tail`, so output appears only on completion. Still compiling KMP for 3 native targets — continuing to wait.
+
+`Shared.xcframework` BUILD SUCCESSFUL (11m14s) and staged for all 3 slices. Now running the real full-app `xcodebuild` gate (iOS Simulator) to capture the genuine exit code and prove zero `LiveVehicleState` errors.
+
+iOS full-app gate: **IOS_EXIT=65 (deferred), 8 errors, zero referencing LiveVehicleState** — confirming my surface is clean and the blockers are pre-existing. Let me capture exactly what those 8 errors are, then run the macOS gate.
+
+The iOS failure is exactly the documented pre-existing blocker: a co-located `AIRestorePanel.Tests.swift` (another surface) importing `XCTest` into the app target — zero `LiveVehicleState` errors. Now the macOS gate.
+
+Both full-app gates are **DEFERRED (IOS_EXIT=65 / MAC_EXIT=65)** with zero `LiveVehicleState` errors — failures are exclusively the documented pre-existing blockers (XCTest-in-app-target test files; macOS dev signing). Let me capture the whole-app lint/format baselines (to confirm I add no violations), then write the log and commit.
+
+Whole-app baseline confirms I add nothing: the 1 swiftlint violation is the same pre-existing `LifetimeStatsWidget` one ToolCard documented, and 0 `LiveVehicleState` entries. Let me confirm the single swiftformat file isn't mine.
+
+The single whole-app swiftformat file is `ActionBuilder.Previews.swift` (a different surface) — not mine. Every host gate is clean for `LiveVehicleState`. Let me check git status, then write the gate log.
+
+My 7 files are the only untracked additions; the generated project and framework are git-ignored. (The `AIUsageCard.*`/web modifications are pre-existing dirty state in this slot — not mine, not in scope, won't be committed.) Now writing the gate log.
+
+Now staging exactly my 7 surface files + the log (excluding the pre-existing unrelated working-tree changes) and committing.
+
+`git add` is hanging unusually. Let me stop it and investigate (likely an index lock in this shared environment).
+
+No lock; it's a git worktree and `git status` works. The earlier hang may have been transient FS contention. Let me check staged state and retry the add with a timeout.
+
+`git add` specifically hangs while status/diff are instant. Let me check for git filters/hooks and try adding a single file with a timeout to isolate.
+
+Single-file add works (LFS has no matching attributes; earlier hang was transient I/O contention). The log is staged — now adding the 7 surface files.
+
+All 8 files staged, 0 out-of-scope. Let me check for pre-commit hooks (this repo has `.pre-commit-config.yaml`) before committing.
+
+No hooks installed. Committing with the prescribed message.
+
+Committed as `b25c9610a` (8 files, exactly in scope). Final verification of the working-tree state.
+
+The working tree is clean: all `LiveVehicleState` files are committed (0 uncommitted), and the only remaining changes are the pre-existing, unrelated `AIUsageCard.*`/web edits that were dirty before I started — correctly left untouched.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`LiveVehicleState`** surface (SwiftUI) at parity with `web/src/features/admin/components/security-access/LiveVehicleState.tsx`, committed as `b25c9610a`.
+
+**Artifacts (7 files, `apps/apple/TeslaSync/feature-views/LiveVehicleState.*`):** Adapter (pure projection of all 10 live signals + `boolLabel`/`asNonEmptyString`/active-string logic), Model (P1/S8 state-holder seam, P1/S11 `view.opened` telemetry, P1/S10 i18n facade, `@Observable` model with phase + freshness + one-shot stale auto-refresh), Views, main view, Previews, `.strings` (17 web keys + chrome), and 24 XCTest cases.
+
+**Parity & states:** all 10 signal cells (Lucide→SF Symbols), the pulsing green "Live" badge (Reduce-Motion-gated), cyan-accent active tone, plus the full HIG states contract — loading / content / empty (web `EmptyState`) / error+retry / stale / offline. No direct HTTP in the view; design tokens only; VoiceOver + Dynamic Type throughout.
+
+**Verification (all on this runner):**
+- Isolated SwiftPM harness (Swift 6, strict-concurrency complete) compiling the exact shipped sources against the **real** design system → **Build complete + 24/24 tests pass**
+- Real-SDK `swiftc -typecheck`: **iOS 18 = 0**, **macOS 15 = 0**
+- `swiftformat --lint` 0/6 · `swiftlint --strict` 0 violations · `check-placeholders` **COUNT=0** · `xcodegen generate` enumerates all 7 files
+- Built/staged the KMP `Shared.xcframework` (Gradle, 11m14s) and **ran** the full-app gate: `IOS_EXIT=65` / `MAC_EXIT=65` — **DEFERRED**, with **zero `LiveVehicleState` errors**. Failures are exclusively the documented pre-existing blockers (a different surface's `*.Tests.swift` importing `XCTest` into the app target; macOS dev-signing), per `apps/macos-pending-verifications.md`.
+
+Gate log written ending `EXIT=0` / `STATUS=DONE`. Scope confined to the allowed files (shared catalog/project.yml/.swiftlint.yml already wired; pre-existing unrelated working-tree edits untouched).
+

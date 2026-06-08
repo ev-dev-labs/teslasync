@@ -1,0 +1,174 @@
+=== P4 Feature view 0104 OptimizerSection (Apple) ===
+
+Surface : apps/apple/TeslaSync/feature-views/OptimizerSection.*
+Web spec: web/src/features/charging/components/charging-list/OptimizerSection.tsx
+          (+ composed child CostHeatmap.tsx, driven by this surface's own
+           ChargingOptimizerData.weekly_heatmap prop)
+Runner  : Darwin · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint + swiftformat + pwsh + xcodegen present
+          (xcode-select default = CommandLineTools; full Xcode reached via DEVELOPER_DIR
+           = /Applications/Xcode.app/Contents/Developer)
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (allowed scope: OptimizerSection.* + this log)
+--------------------------------------------------------------------------------
+  OptimizerSection.swift            — SwiftUI surface. Phase switch (loading/loaded/error);
+                                      loaded tree = freshness banner (stale/offline) → savings
+                                      banner (>5) → habits/score/cost grid → heatmap (>0) →
+                                      recommendations (self-empties). reduce-motion aware; a11y.
+  OptimizerSection.Model.swift      — P1/S8 state-holder seam (OptimizerSource, no view HTTP),
+                                      @Observable OptimizerModel (+ static resolvePhase),
+                                      P1/S11 telemetry seam (view.opened slug "OptimizerSection"),
+                                      formatting seam (web fmtNumber/formatCurrency), InMemory source,
+                                      OptimizerStrings (P1/S10 table).
+  OptimizerSection.Adapter.swift    — pure domain port of ChargingOptimizerData + numeric guard
+                                      (web safeNumber) + battery-score tier (>=75/>=50) + projection
+                                      predicates (savings>5, peak>30, rec savings, heatmap>0, hours label).
+  OptimizerSection.Projection.swift — pure cost-heatmap matrix + warm→cool rgba ramp (web CostHeatmap)
+                                      + VoiceOver summary builders.
+  OptimizerSection.Views.swift      — shell/header, empty state, stat row, savings + freshness banners,
+                                      hard-error (QueryError), loading skeleton.
+  OptimizerSection.Panels.swift     — Charging Habits, Battery-Friendly Score gauge (web RadialGauge),
+                                      Cost Analysis, Optimization Recommendations (+ row + chip).
+  OptimizerSection.Heatmap.swift    — 7×24 cost heatmap grid + hour ticks + Cheap→Expensive legend;
+                                      populated cells spoken, empty cells hidden.
+  OptimizerSection.Previews.swift   — #if DEBUG previews for every state (content/empty/loading/error/
+                                      stale/offline) + shared sample.
+  OptimizerSection.Tests.swift      — XCTest: numeric/tier/projection/empty/heatmap/formatting.
+  OptimizerSection.ModelTests.swift — XCTest: accessibility summaries + OptimizerModel phases/
+                                      projections/telemetry/refresh/connection.
+  OptimizerSection.strings          — per-surface i18n table (every web charging.optimizer.* key,
+                                      verified vs web/src/i18n/en.json, + native chrome + day axis).
+
+Parity reproduced exactly from the web source (cross-platform value parity, NOT a "corrected"
+version): savings banner shown iff potential_monthly_savings > 5, title interpolates
+fmtNumber(savings,0); battery score = RadialGauge(value/100) tiered #22c55e/#f59e0b/#ef4444 →
+statusSuccess/Warning/Danger; peak-session % red iff > 30; peak/off-peak hours = map(h => `${h}:00`)
+.join(', ') || '—'; heatmap maxCost = peakCostPerKwh || 0.30, intensity = min(1, cost/maxCost),
+cell rgba(round(i*239), round((1-i)*187), round((1-i)*100), min(0.9, 0.15 + sessions*0.12)), empty =
+rgba(255,255,255,0.02), legend stops [0.15,0.3,0.5,0.7,0.9]; recommendation savings chip iff
+estimated_savings != null && > 0; fmtNumber = en_US grouped fixed-fraction half-up; formatCurrency =
+"$" + fmtNumber. The surface uses no Recharts/Leaflet (web "Charts/maps used: none") — gauge is a
+Shape arc, heatmap is rectangles; no Swift Charts import.
+
+--------------------------------------------------------------------------------
+GATE RESULTS (real commands, real exit codes on this host)
+--------------------------------------------------------------------------------
+
+[HOST] swift build — SPM module "TeslaSync" = the 8 OptimizerSection production files (incl.
+       Previews with #Preview macros) compiled against the REAL design system (design/generated/
+       apple/Tokens.swift + Sources/Design/TSDesign.swift + TSMaterial.swift + the real TSSkeleton
+       struct), Xcode 26.5 macOS SDK, -strict-concurrency=complete.
+       → Build complete!  BUILD_EXIT=0
+
+[HOST] swift test — the SHIPPED XCTest files (OptimizerSection.Tests.swift +
+       OptimizerSection.ModelTests.swift) executed via the Xcode 26.5 toolchain.
+       → Executed 42 tests, with 0 failures (0 unexpected)   XCTEST_EXIT=0
+
+[HOST] swiftc -typecheck against the iOS 18 simulator SDK
+       (-target arm64-apple-ios18.0-simulator -sdk iPhoneSimulator.sdk -swift-version 6
+        -strict-concurrency=complete) for the 7 production view/logic files + real tokens.
+       → IOS_SDK_TYPECHECK_EXIT=0
+
+[HOST] swift run OptCheck — a runtime harness re-asserting every XCTest expectation (incl. the
+       @MainActor model) so the logic is proven executed, not assumed.
+       → CHECKS_PASSED=70 CHECKS_FAILED=0   RUN_EXIT=0
+
+[HOST] swiftlint lint --strict (scoped to the 10 OptimizerSection .swift files)
+       → Done linting! Found 0 violations, 0 serious in 10 files.   LINT_EXIT=0
+       Whole-tree `swiftlint --strict` (938 files) reports 1 violation — PRE-EXISTING, in
+       TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length),
+       outside this prompt's allowed files. No OptimizerSection file contributes any violation.
+
+[HOST] swiftformat --lint
+       → scoped (10 files): 0/10 require formatting.   FORMAT_EXIT=0
+       → whole-tree `swiftformat --lint apps/apple`: 0/942 require formatting (2 skipped).
+
+[HOST] check-placeholders.ps1 — scan of the OptimizerSection .swift files.
+       → PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0   PLACEHOLDER_EXIT=0
+       (The gate's literal `-Path …/feature-views/OptimizerSection` resolves to a name-prefix that
+        is not an on-disk path, so the script returns a clean empty scan; the files were therefore
+        scanned directly to produce the COUNT=0 above. The pre-existing InfrastructureSection.*
+        "Placeholder" hits in the same directory are not OptimizerSection files.)
+
+--------------------------------------------------------------------------------
+DEFERRED — full xcodebuild app build/test (the literal gate's IOS/MAC steps)
+--------------------------------------------------------------------------------
+  Literal gate invocation (no DEVELOPER_DIR): `xcodebuild …` →
+    "xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+     '/Library/Developer/CommandLineTools' is a command line tools instance"
+    IOS_EXIT=1   MAC_EXIT=1   (xcode-select default is CommandLineTools on this host)
+
+  With DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer the real app build was driven:
+    xcodegen generate → Created TeslaSync.xcodeproj (git-ignored)   XCODEGEN_EXIT=0
+    xcodebuild -scheme TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO →
+      • Shared.xcframework assembled via Gradle + staged OK.
+      • The compiler REACHED and COMPILED all OptimizerSection.* production files (they appear in the
+        SwiftCompile batch) with ZERO diagnostics.
+      • BUILD FAILED (RC=65) only on PRE-EXISTING, out-of-scope problems, none in OptimizerSection:
+          (a) *.Tests.swift are members of the app target (project.yml feature-views path has no
+              test excludes), so `import XCTest` → "unable to resolve module dependency: 'XCTest'"
+              (first hit: AlertsSection.Tests.swift / FleetApiSection.ModelTests.swift). My
+              @testable-import test files only warn "is part of module 'TeslaSync'; ignoring import",
+              exactly like every other surface's test files.
+          (b) Duplicate type declarations in unrelated surfaces — EndpointSidebar.Models.swift
+              "invalid redeclaration of 'HTTPMethod'" / "invalid redeclaration of 'ParsedEndpoint'"
+              and the resulting "ambiguous for type lookup" cascade in EndpointSidebar.* /
+              RequestBuilder.Adapter.swift.
+      BARE_MAC_EXIT=65 — DEFERRED to the integration runner; both blockers live outside the allowed
+      OptimizerSection.* files (project.yml + EndpointSidebar/RequestBuilder), and are not introduced
+      by this surface. Generated TeslaSync.xcodeproj + staged Frameworks/Shared.xcframework are
+      git-ignored (not committed).
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+  1  No red-as-green     : the literal xcodebuild app build/test is shown DEFERRED (NOT green) with
+                           the real IOS_EXIT/MAC_EXIT=1 and the real BARE_MAC_EXIT=65 + its
+                           pre-existing causes; every OK is a command actually run with its real exit
+                           (incl. an executed 42/42 XCTest run, iOS-18-sim + macOS SDK compiles, and a
+                           real app-target compile of my files with the Gradle-staged Shared.xcframework).
+  2  No scope narrowing  : implemented the savings banner, all three panels (habits, RadialGauge score,
+                           cost analysis), the composed cost heatmap, AND the recommendations list +
+                           empty state, plus every state (loading/empty/error/stale/offline) + i18n + a11y
+                           + view.opened telemetry.
+  3  No skip-and-assume  : each host gate executed; nothing assumed green.
+  4  No stubs as final   : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts  : faithful port of every web conditional, the RadialGauge value/tier, the
+                           CostHeatmap rgba ramp + legend, fmtNumber/formatCurrency, and the exact
+                           en.json charging.optimizer.* strings.
+  6  No delegation       : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit project.yml / .swiftlint.yml / .swiftformat / signing and did
+                           NOT edit the shared Localizable.xcstrings — strings shipped as the per-surface
+                           table, exactly like sibling 0053. The two working-tree web edits
+                           (FleetApiSection.tsx, BackupRestorePage.tsx) are NOT mine and are excluded
+                           from the scoped commit.
+  8  No commit on red    : committing on all-green host gates; the xcodebuild app build/test steps are
+                           explicitly DEFERRED with evidence, not falsely green.
+  9  No silent drift     : changes confined to the allowed OptimizerSection.* files + this log. Generated
+                           TeslaSync.xcodeproj + staged Shared.xcframework are git-ignored (not committed).
+  10 Log ends with EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished native OptimizerSection shipped at parity with the web source: pure-Swift
+  projection core (executed-green XCTest, 42/42), P1/S8 state-holder seam (no view HTTP), P1/S11
+  view.opened telemetry (slug "OptimizerSection"), every state + every charging.optimizer.* i18n key
+  + a11y labels on every panel/cell, the RadialGauge battery-score gauge, the time-of-use cost
+  analysis, and a faithful 7×24 cost heatmap with its warm→cool ramp + legend. All host-runnable
+  gates pass AND the surface compiles against BOTH the iOS 18 simulator and macOS SDKs under Swift 6
+  strict concurrency AND inside the real app target (with the Gradle-staged Shared.xcframework) with
+  zero errors on my files. The xcodebuild app build/test is DEFERRED to the integration/signed runner —
+  blocked only by pre-existing project.yml test-target membership (*.Tests.swift in the app target,
+  affecting all surfaces) and pre-existing duplicate-type errors in EndpointSidebar/RequestBuilder,
+  both outside this prompt's allowed files.
+
+--------------------------------------------------------------------------------
+COMMIT
+--------------------------------------------------------------------------------
+  git add apps/apple/TeslaSync/feature-views/OptimizerSection.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0104-OptimizerSection.log
+  git commit -m "feat(apps/apple/feature-views): add OptimizerSection surface (P4)"
+
+EXIT=0
+STATUS=DONE

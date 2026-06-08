@@ -1,0 +1,114 @@
+I'll start by exploring the repository structure to understand the task scope and verify platform capabilities.
+
+Xcode full toolchain isn't installed (only Command Line Tools), and no iOS simulators. But Swift 6.3.2, swiftlint, and swiftformat are available. Let me explore the existing Apple app structure and the web source before deciding on approach.
+
+No DrivingDynamicsWidget exists in the Apple app yet — I need to create it. Let me study the web data hooks and an existing Apple widget pattern that's structurally similar (gauges + chart).
+
+Now let me understand the established Apple widget architecture. Let me find how existing widgets use Swift Charts, gauges, and the shared state-holder layer.
+
+SpeedProfileWidget (driving category, BarMark chart) is the closest model. Let me read its complete file set to learn the exact architecture conventions.
+
+This is a sophisticated, well-established pattern. Let me read the remaining SpeedProfileWidget files and locate the shared primitives (tokens, registration, skeleton).
+
+Let me read the Chart, Previews, Tests, strings files, plus locate the shared design primitives.
+
+The shared primitives are referenced widely. I need to find where they're defined and understand the build/test tooling — there's mention of a "swiftc host gate". Let me investigate.
+
+Multiple Model files appear to define `DashboardWidgetSize`. I need to understand whether these widgets compile independently or share one definition. Let me find the canonical token/primitive definitions.
+
+Key finding: shared primitives like `TSSpacing`, `Color.TS.chartSeriesSpeed` are referenced by the gold-standard sibling (SpeedProfileWidget, prompt 0095) but defined nowhere in this slot — they come from P4 core / P1 bundles (my declared dependencies), integrated later. This is a parallel pre-integration slot. Let me confirm the build capability situation and test harness.
+
+Xcode.app IS present (just not selected — I can override with `DEVELOPER_DIR`). But no iOS simulators, and shared primitives may be missing. Let me decisively check whether the shared tokens exist anywhere in the slot and inspect the project structure.
+
+iOS 17 simulators exist (not iPhone 16, but iPhone 17 series). `TSSkeleton` is in `Sources/`. But `TSSpacing`/`TSRadius` are only in the Watch target, and main-app `Color.TS` tokens aren't located yet. Let me determine whether the main target's design tokens (P1/S9) exist in this slot.
+
+Found the design system: `Sources/Theme.swift` (Color.TS) and `Sources/Design/TSDesign.swift`. Let me inspect these define-sites, the project target config, and the canonical dashboard primitives to determine if the main target actually compiles in this slot.
+
+`TSSpacing` is used throughout `Sources/` — the tokens exist in the main target. Let me pin down the exact public APIs I must match (design tokens, skeleton, dashboard registration) by reading the canonical define-sites.
+
+Critical check: `DashboardWidgetRegistration` is "defined" in both `Sources/DashboardWidgets/` and 13 `TeslaSync/dashboard-widgets/` files — and the project includes both in one target. Let me confirm this duplication and check what frameworks/imports the widgets rely on, to determine ground truth on compilability.
+
+Decisive: `DashboardWidgetSize` is defined as `public struct` in 14+ files within one target (both `Sources/DashboardWidgets/` and 13 `TeslaSync/dashboard-widgets/` files), and `Frameworks/` is empty. The slot is mid-integration and **cannot compile as-is, independent of my widget** — this is the documented capability/dependency gap. I'll still deliver the complete parity widget and verify everything verifiable. Let me gather the final reference details.
+
+I now have the full pattern. Let me confirm `Font.TS` tokens, `TSSkeleton` initializers, and peek at a native radial gauge for house-style fidelity, then I'll build the widget.
+
+I have the complete pattern. Let me read the lint/format configs to ensure compliance, then set up my plan.
+
+I have everything needed. Let me set up a plan and todos, then build the 8 widget files.
+
+Now I'll build the 8 files, starting with the two pure (Foundation-only) files I can independently compile-verify. First, the domain models.
+
+Now the pure adapter (Builder) — a faithful port of the web derive block.
+
+Before writing the SwiftUI layers, let me independently compile and run the pure adapter to prove parity — this is high-value verification that doesn't depend on the absent shared core.
+
+Adapter compiles and **all parity checks pass**. Let me update progress and write the state-holder model.
+
+Now the leaf views (radial gauge, severity/status chip, histogram chart).
+
+Now the main SwiftUI surface with all states and layouts.
+
+Now the i18n strings catalog with all source keys plus chrome.
+
+Now the previews for every state and layout.
+
+Now the test suite (adapter + model + registry + accessibility).
+
+All 8 files written. Let me verify: re-compile the adapter, then run swiftformat and swiftlint scoped to my files.
+
+swiftformat and swiftlint both pass (0 issues). Let me re-verify the adapter still compiles after formatting, and check the placeholder tooling.
+
+pwsh is available, so I can run the real placeholder check. Let me read the script and patterns, then run it.
+
+Let me verify my files contain no placeholder patterns, then run the real placeholder gate both as-written and scoped to my files.
+
+Both placeholder checks pass (PLACEHOLDER_COUNT=0). Now I'll capture authentic evidence for the xcodebuild gate. Let me generate the Xcode project and attempt the iOS build to document the real blocker.
+
+Project generates and both schemes exist. Let me run the macOS build to capture the authentic compile blocker (fastest path — no simulator boot needed; same sources as iOS).
+
+The build is compiling a Kotlin Multiplatform `Shared.xcframework` first (slow, multi-arch) — this is the P1/S8 shared core. No errors yet; the Swift app compile hasn't started. Let me keep waiting and monitor the raw log.
+
+The full build is compiling the multi-arch KMP `Shared.xcframework` (very slow) and pulling it from another slot's path — confirming this isn't a self-contained slot. I have decisive structural evidence of the blocker. Let me stop the slow build and capture fast, deterministic compiler proof of the pre-existing duplicate-definition that blocks the app target.
+
+Deterministic proof captured: the Swift compiler emits **`error: invalid redeclaration of 'DashboardWidgetSize'`** from 15 pre-existing files in the single app target — the exact blocker the gate's xcodebuild hits, entirely outside my allowed scope. My files add zero redefinitions. Let me also syntax-validate my full SwiftUI files with `swiftc -parse`.
+
+All 7 files parse cleanly. To deepen confidence in the view/model/chart layers (which `-parse` doesn't type-check), let me verify the exact shared-API shapes I depend on, then do a shim-backed type-check. First, confirm the real `TSSkeleton` initializers, `DashboardWidgetRegistration` API, and that `Font.TS.display`/`TSMotion.slowDuration` exist.
+
+All shared APIs I depend on are confirmed real (`TSSkeleton` init, `DashboardWidgetRegistration` + `clamp`, `TSMotion.slowDuration`, `Font.TS.display`). Let me do a shim-backed full type-check of my SwiftUI layers — this catches type-level bugs that `-parse` can't.
+
+Only a shim-fidelity issue: the real `DashboardWidgetSize` is `public` but my shim declared it `internal`. Let me fix the shim to match reality and re-check.
+
+Still only shim-visibility issues (my widget files produce zero errors). Let me rewrite the shim fully public and re-check.
+
+Now I'm getting real signal — but these are MainActor-isolation errors in the preview helper, identical to the gold-standard SpeedProfileWidget.Previews pattern. This suggests the project sets a default-actor-isolation or Swift-version build setting my bare `swiftc` lacks. Let me check the project's concurrency settings.
+
+The project uses `SWIFT_VERSION 6.0` + `SWIFT_STRICT_CONCURRENCY: complete`. The preview-helper isolation errors are real under that contract (the gold-standard sibling shares the same latent issue, masked by the target's pre-existing non-compilation). Per the covenant I'll make my code strictly correct: annotate the preview helper `@MainActor`.
+
+The full surface **type-checks cleanly under the project's exact Swift 6 + strict-concurrency-complete settings**. Let me re-verify format/lint after the edit, and additionally type-check the Tests file (stripping `@testable import` so it compiles with the local sources + XCTest).
+
+Format/lint pass on the edited file. The Tests typecheck just needs the surface + chart sources included (they define `DrivingDynamicsWidget.surfaceSlug`). Let me include them.
+
+The only remaining errors are XCTest's C-macro assertions (`XCTAssertEqual`) which aren't resolvable via bare `swiftc` — a host harness limitation, not a code defect (the inner expressions all resolved, e.g. `.calm`, builder calls). The asserted parity values are independently proven by my standalone harness. Let me check the log directory and existing log format.
+
+I found the precedent: sibling P4 widget logs declare DONE only when iOS+macOS **builds** actually succeed (with documented environmental gaps for test execution). Those siblings live in the older stable `Sources/DashboardWidgets/`. My surface is in `TeslaSync/dashboard-widgets/`, where the current tree has **pre-existing duplicate `DashboardWidgetSize` definitions across 15 files** (from parallel sibling slots) that make a full `xcodebuild build` fail — proven deterministically. Per the covenant ("no red-as-green"), I cannot claim a green build, so the honest status is **BLOCKED** with evidence, while my surface itself is verified green by every check the runner permits.
+
+Let me check git/ignore state and run the final verification sweep.
+
+`TeslaSync.xcodeproj` is gitignored; my 8 files are untracked and ready. Let me run the final verification sweep to capture clean numbers for the log.
+
+All final checks are green: swiftlint 0 violations, swiftformat 0 issues, surface typecheck 0 errors (Swift 6 strict concurrency), adapter parity passes, placeholder count 0. Let me capture the simulator evidence and write the gate log.
+
+Important correction: with the Xcode toolchain, **iPhone 16 simulator IS available** — so neither Xcode nor the simulator is a blocker. The *sole* blocker is the pre-existing duplicate `DashboardWidgetSize` definitions across 15 committed sibling files in the shared target (outside my allowed scope; my files add zero). Let me write an accurate, honest gate log.
+
+Let me refine the log wording to precisely reflect what I observed in the full build versus the deterministic compiler proof (I stopped the full build after the shared framework phase rather than waiting for it to reach the app-compile error).
+
+STATUS=BLOCKED is the honest classification (sole blocker is pre-existing cross-slot duplicates; my surface is green on every isolated check). Now let me clean up build artifacts, then commit only my 8 surface files + the log.
+
+Exactly my 8 files + the log are untracked; the `AIUsageCard.*` modifications are pre-existing (not mine) and I'll leave them. Let me stage only my files and commit.
+
+Committed: 9 files, 1887 insertions. Let me clean up temp artifacts and finalize tracking.
+
+All todos complete, tree clean for my scope, temp artifacts removed. Let me update the plan's final status and wrap up.
+
+The task is complete. Here's my summary.
+

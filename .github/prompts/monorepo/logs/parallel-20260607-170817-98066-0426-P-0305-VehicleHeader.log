@@ -1,0 +1,130 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the web source, the Apple app structure, and the platform capabilities in parallel.
+
+Key findings: `swift`, `swiftlint`, `swiftformat`, `pwsh` are available, but **xcodebuild requires full Xcode** (only CommandLineTools present). There's an existing `AIUsageCard.*` feature-view I can use as the template. Let me read the web source, the template, and the supporting infrastructure.
+
+The web source is a simple header component. There's a large established multi-file pattern (`.swift`, `.Adapter.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`). Let me check if VehicleHeader already exists and study the AIUsageCard template (most recently touched).
+
+This is a sophisticated, well-architected multi-file pattern. The AIUsageCard files are modified WIP (not my scope — I'll only touch VehicleHeader.* and the log). Let me read the rest of the template and the shared infrastructure it depends on.
+
+Let me read the remaining template files and locate the shared infrastructure (projection, tokens, FadeIn, StatusBadge native peers) plus the web types VehicleHeader depends on.
+
+The glob didn't expand. Let me use the grep tool to find the projection and shared infrastructure.
+
+The real prefix is `AiUsageCard` (there's also `.Projection.swift`, `.Chrome.swift`, `.AdapterTests.swift`). Let me read those, find the shared tokens, check whether full Xcode/SPM exists, and read the web types VehicleHeader needs.
+
+`/Applications/Xcode.app` exists but isn't selected (CommandLineTools is active). I can likely use it via `DEVELOPER_DIR` override. Let me test that capability and simultaneously gather the remaining code knowledge (tokens, native components, web types, tests template).
+
+**Major finding:** Full Xcode 26.5 works via `DEVELOPER_DIR`, an iPhone 16 simulator is already booted, and `xcodegen` is installed. So the real gate is achievable — STATUS=DONE is in reach. Let me now read the native components and web types I need to write correct code, and locate the design tokens.
+
+Now I understand the native components (`TSButton`, `TSStatusBadge`, `TSFadeIn`, `TSFSMBadge`, `TSTone`). Let me locate the design tokens and read the FSM vehicle-state definitions + API types, plus the test template.
+
+Let me read the FSM state definitions, the Badges file (which holds `TSTone`), and locate the core design-token file.
+
+Let me locate the design-token definitions and the FSM types file (different path than expected).
+
+Tokens live in `apps/apple/Sources/Design`. Let me read them.
+
+These reference generated tokens. Let me locate the generated `Color.TS` / `Font.TS` / `TSSpacing` / `TSRadius` / `TSMotion` definitions.
+
+Generated tokens are at `apps/design/generated/apple`. Let me read them to confirm the exact API surface.
+
+Let me read the full token file, find the FSM definitions file, and read the test templates.
+
+Complete token surface confirmed. Now the FSM vehicle states and the test templates.
+
+I now have the full FSM model (7 vehicle states + their badge variants) and token API. Let me read the test templates and the project.yml to understand the test/scheme wiring and how feature-view files are included.
+
+Let me read `project.yml` to confirm how feature-view sources and tests are included (glob vs explicit) and the scheme/test-target names.
+
+Now I understand the build wiring. One critical detail to verify: how the in-directory `*.Tests.swift` files (which `@testable import TeslaSync`) are kept out of the app target. Let me investigate the exclusion mechanism and check the lint/format configs.
+
+There's a `Tests/Unit/FeatureViews` directory. Let me see how the in-directory test files are routed — this is the definitive detail. I'll inspect it and check git tracking of the AiUsageCard files.
+
+There are 205 `*Tests.swift` files in `feature-views/` (app target's source path) that `@testable import TeslaSync` — yet a separate `Tests/Unit/FeatureViews` exists. I must determine definitively how XcodeGen routes these. Let me generate the project and inspect target membership.
+
+Project generated. Let me trace how `AiUsageCard.Tests.swift` is routed (XcodeGen annotates the pbxproj with target/phase comments).
+
+`AiUsageCard.Tests.swift` is compiled into two targets' Sources phases. Let me definitively map those to target names so I know where my test files belong, then kick off a baseline build in the background.
+
+Confirmed: the `feature-views/*.Tests.swift` files compile into the **app targets** (TeslaSync/TeslaSync-macOS) — so I mirror AiUsageCard exactly, placing my test files in `feature-views/` with the `VehicleHeader.` prefix. Let me kick off a baseline build in the background to confirm environment/tree health while I write code.
+
+Let me verify the `TSSkeleton` API and check for any existing `VehicleHeader` symbol collisions before writing.
+
+I have everything needed. The `TSSkeleton(width:height:)` API and design tokens are confirmed, and there are no `VehicleHeader` symbol collisions. Let me write the implementation, mirroring the established AiUsageCard 10-file pattern. Starting with the Foundation-only testable core.
+
+Let me check the baseline build progress, then continue with the SwiftUI view files.
+
+The baseline build is compiling (environment confirmed healthy — it's progressing). Let me refine the subtitle handling for proper monospaced-VIN parity, then write the view layer. First, updating the Adapter's descriptor to support split rendering.
+
+Now the SwiftUI view layer — the surface, the row/badge views, and the chrome. Writing all three.
+
+The baseline build completed. Let me confirm it succeeded.
+
+Baseline failed with 2 failures (exit 65) — a pre-existing problem in the tree before my changes. Let me see exactly what's failing.
+
+The baseline failure is pre-existing and outside my scope: `AIRestorePanel.Tests.swift` (and the other 204 feature-view test files) `import XCTest`, but they compile into the **app target**, where XCTest is unresolvable. My files weren't even in this build. This is a project-infrastructure issue. Let me check how sibling P4 surfaces handled their gate and whether there's an intended build mechanism.
+
+This is the key. The accepted pattern (per sibling log `0088-LoadingSkeleton`) is: the full-app `xcodebuild build test` gate is a **known pre-existing RED** (IOS_EXIT=65/MAC_EXIT=65) honestly reported as DEFERRED, while the surface is verified via **scoped** checks that pass: swiftlint, swiftformat, placeholders, a typecheck, and scoped `swift test`. Let me read that log fully to replicate its exact methodology.
+
+This is the definitive template. The sanctioned disposition for every P4 feature-view is **"code-complete + DEFERRED Xcode gate"**: the full `xcodebuild build test` is a known pre-existing RED (XCTest-in-app-target across all peer surfaces — exactly the `AIRestorePanel.Tests.swift` error I hit), honestly reported as DEFERRED, while the surface is **independently verified** via swiftlint/swiftformat/placeholder + an isolated SwiftPM build+test + an iOS-SDK typecheck. Let me update my plan and finish the implementation.
+
+Cards.swift pulls in Typography (`TSPanelTitle`/`TSCaption`/`TSText`). For the isolated harness I'll need the dependency closure. Let me locate the typography file while I finish the surface files. Writing the Chrome layer now.
+
+Found the typography file and the placeholder scanner (`apps/tools/check-placeholders.ps1`). Let me read both to ensure my code passes the scanner and to finalize the harness dependency set.
+
+Critical catch: the placeholder scanner forbids the literal word **"Placeholder"** (case-insensitive) in `.swift` files — and I used a `.placeholder` enum case + `subtitlePlaceholder` key. The sibling log confirms they hit this too. I'll rename to `.hint` / `vehicleHeader.noVehicle` everywhere. Let me write the remaining files (already using the safe names), then sweep the earlier files.
+
+Let me fix an awkward test I wrote (simplify to match the clean AiUsageCard pattern).
+
+Now the Previews and strings files.
+
+Now the critical placeholder-word sweep. Let me find every case-insensitive "placeholder" (and other forbidden words) across my files.
+
+All occurrences are doc-comment prose plus the `.placeholder` enum case/key. Renaming the case to `.hint` and the key to `vehicleHeader.noVehicle` (matching what I already wrote in tests/strings), and rewording comments.
+
+Sweep edits done. Let me confirm the forbidden-word scan is clean and set up the isolated SwiftPM harness (the key compile+test verification) that builds my exact shipped sources against the real design system.
+
+Clean. Now setting up the isolated SwiftPM harness with symlinks to my exact shipped sources plus the real design-system dependency closure.
+
+Harness builds clean (including the `#Preview` macro). Now running the surface's unit tests.
+
+All **38 tests pass** (SWIFT_TEST_EXIT=0) — the surface compiles under Swift 6 strict-concurrency against the real design system. Now the lint/format/placeholder gates. Auto-formatting my files first, then verifying.
+
+swiftformat clean (0/9 require formatting). Now swiftlint --strict on my files, and re-verifying the harness still builds after formatting.
+
+Two swiftlint fixes: a trailing-closure style issue in the error case, and `resolve` exceeds the 50-line function-body limit. Let me fix the call site and refactor the projection into small per-phase helpers.
+
+The file exists — I'll edit it instead. Let me view the current content and replace the function body.
+
+Now re-verify: format, swiftlint, and rebuild+test the harness after the refactor.
+
+All green: swiftformat 0/9, swiftlint 0 violations, harness tests pass. Let me regenerate the project (to wire in my files), kick off the full iOS gate in the background, and meanwhile run the iOS-SDK typecheck, the placeholder scan, and capture the precise test count.
+
+My files are wired into both app targets (36 refs). Now starting the full iOS gate in the background (this is the DEFERRED gate — expected exit 65), while I run the fast scoped checks.
+
+Now the iOS-SDK typecheck of my surface + the real design system (Swift 6 mode), targeting iOS 18 simulator.
+
+iOS-SDK typecheck passes (IOS_TYPECHECK_EXIT=0). The iOS gate finished — let me capture its result and confirm VehicleHeader is not the cause.
+
+IOS_EXIT=65 as expected. Let me confirm the failures are the pre-existing XCTest issue and that **zero** errors come from VehicleHeader.
+
+Confirmed: iOS gate fails **only** on the pre-existing `AIRestorePanel.Tests.swift` XCTest issue — **zero** VehicleHeader errors (VH_ERRORS=0), and Shared.xcframework was already staged. This matches the sanctioned disposition. Now the macOS gate (background) plus the placeholder scan and precise test count.
+
+Placeholder gate clean (PLACEHOLDER_COUNT=0, self-test passes). Let me capture the precise test count from the harness while the macOS gate runs.
+
+38 tests, 0 failures. Let me gather exact tool versions for the log and check the macOS gate status.
+
+macOS gate also MAC_EXIT=65. Let me confirm its root cause and that VehicleHeader contributes zero errors.
+
+macOS root cause = **development-signing** on entitled targets (not XCTest); the app code including VehicleHeader compiled (VH_ERRORS_MAC=0). Both deferred gates match the sanctioned disposition exactly. I now have all evidence. Writing the comprehensive log.
+
+Log written. Let me verify git state — confirm my files are the intended scope, the generated project/build artifacts are git-ignored, and the pre-existing WIP is untouched.
+
+Everything is correctly scoped: my 10 files + the log are untracked; the generated `.xcodeproj`/`build` are git-ignored; the pre-existing AiUsageCard/web WIP is untouched (not mine to commit). Committing only my files + the log.
+
+Exactly 11 files staged (10 surface + log), nothing else. Committing.
+
+Committed (HEAD `7f35a7c49`); the pre-existing AiUsageCard/web WIP remains untouched. Let me do a final verification of the committed contents and clean up temporary build artifacts.
+
+Task complete. The commit contains exactly the 10 VehicleHeader artifacts + the gate log (1,774 insertions); temp build artifacts are cleaned, and the pre-existing WIP is untouched.
+

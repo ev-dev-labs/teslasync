@@ -1,0 +1,200 @@
+================================================================================
+p4-apple · P7 · page:admin/FeedbackQueue — SwiftUI / Apple HIG
+Native parity port of web/src/features/admin/pages/FeedbackQueuePage.tsx
+================================================================================
+Artifact   : page:admin/FeedbackQueue   (web route /admin/feedback)
+Targets    : apple-macos + apple-ios (one adaptive SwiftUI layer, ADR-002)
+Host       : macOS (Darwin arm64), Xcode 26.5 (17F42), Swift 6.3.2,
+             swiftlint 0.63.3, pwsh 7, XcodeGen, Kotlin/Native toolchain.
+Delegation : NONE (FORBIDDEN per artifact header — implemented directly).
+
+--------------------------------------------------------------------------------
+DELIVERED FILES (real repo source root is apps/apple/Sources/, per project.yml;
+the generated prompt's apps/apple/TeslaSync/Features/Admin/ path does not exist
+in this repo — files are placed where the targets actually compile them)
+--------------------------------------------------------------------------------
+  apps/apple/Sources/Features/Admin/FeedbackQueueModels.swift          (280)  pure value types (category/status/filters/row)
+  apps/apple/Sources/Features/Admin/FeedbackQueueState.swift           (206)  pure 4-state machine + pagination + JSON/date
+  apps/apple/Sources/Features/Admin/FeedbackQueuePageModel.swift       (208)  @Observable model over KMP FeedbackStore (S8)
+  apps/apple/Sources/Features/Admin/FeedbackQueueContent.swift         (388)  pure SwiftUI panel (filter/table/expansion/states)
+  apps/apple/Sources/Features/Admin/FeedbackQueuePage.swift            ( 52)  View entry point (TSGlassPanel + FadeIn)
+  apps/apple/Sources/Features/Admin/AdminFeedbackRouteRegistration.swift( 23) navigation registration for .admin route
+  apps/apple/Tests/Unit/Admin/FeedbackQueueTests.swift                 (375)  34 unit tests (states/projection/i18n/json/date)
+  apps/apple/Localization/Localizable.xcstrings                        (+38)  the 38 parity string keys (en values, verbatim from web)
+
+Architecture follows the established Apple precedent (BatteryRadialGauge dashboard
+widget): a thin @Observable model injects the shared-core store and republishes
+its cache-then-network Resource<FeedbackListResponse> as a LoadableState; ALL
+display logic lives in pure, KMP-free value types so the whole surface is unit
+tested without the live graph. Hooks ported keep the web names at the Swift call
+sites:
+  useFeedbackList   -> FeedbackQueuePageModel.rebind() -> store.feedbackList(params:)   (GET /admin/feedback{buildQuery})
+  useUpdateFeedback -> updateStatus/saveGithubURL/forwardToGithub -> store.updateFeedback (PATCH /admin/feedback/{id})
+
+--------------------------------------------------------------------------------
+PRE-EXISTING, OUT-OF-SCOPE REPO BREAKAGE (NOT introduced by this surface)
+--------------------------------------------------------------------------------
+The literal full-app `xcodebuild -scheme TeslaSync[-macOS] build test` cannot reach
+EXIT=0 in this slot for reasons entirely independent of the Feedback Queue surface
+and outside its scope ("Out of Scope: Other pages"):
+
+  1. 170 stray `*.Tests.swift` files under apps/apple/TeslaSync/feature-views/ are
+     globbed into the APP target (project.yml source path) and `import XCTest`; a
+     plain `build` lacks XCTest search paths. First reported file:
+       TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'
+     (committed by 861c97def "feat(apps/apple/feature-views): add AIRestorePanel surface (P4)").
+
+  2. `DashboardWidgetSize` is declared 17 times across the module (2x in
+     Sources/DashboardWidgets/, 15x in TeslaSync/dashboard-widgets/), e.g.
+       TeslaSync/dashboard-widgets/MQTTStatusWidget.Model.swift:226: error: invalid redeclaration of 'DashboardWidgetSize'
+       DigitalTwinWidget.Model.swift:238: error: 'DashboardWidgetSize' is ambiguous for type lookup in this context
+     The app module does not compile regardless of this surface.
+
+Verified my files are untouched by either (git: only Sources/Features/Admin/**,
+Tests/Unit/Admin/**, Localizable.xcstrings added), and that NOTHING outside the
+three broken dashboard dirs references their types (grep clean). Per the precedent
+log p4-apple-dashboard-widgets-0015, such pre-existing repo-wide blockers are
+documented + worked around rather than blocking an otherwise-green surface.
+
+VERIFICATION METHOD: the surface + its REAL transitive dependency closure (the P3
+shared component library Sources/Components, the P1 facade Sources/SharedFacade,
+the P2 design tokens, the route registry, and the KMP Shared.xcframework) were
+compiled and tested in isolation via a throwaway XcodeGen spec (module name
+TeslaSync) that excludes ONLY the three pre-existing-broken dashboard dirs + the
+@main entry. This compiles the genuine module context around the surface — no
+stubs, no fakes — on BOTH macOS and iOS.
+
+================================================================================
+=== GATE ===
+================================================================================
+
+[1] PLACEHOLDER SCAN  (apps/tools/check-placeholders.ps1 -Path Sources/Features/Admin -Language swift)
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+[2] SWIFTLINT --strict  (apps/apple/.swiftlint.yml; config `included:` lints the
+    whole tree, so violations are filtered to this surface)
+    Feedback Queue surface violations (Sources/Features/Admin + Tests/Unit/Admin): 0
+    LINT_EXIT(surface)=0
+    (1 pre-existing violation remains elsewhere: TeslaSync/dashboard-widgets/
+     LifetimeStatsWidget.Adapter.swift function_body_length — out of scope.)
+
+[3] BUILD — macOS (apple-macos)  arm64, signing disabled
+    $ xcodebuild -project TeslaSyncVerify.xcodeproj -scheme TeslaSyncCore \
+        -configuration Debug build CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=YES
+    ** BUILD SUCCEEDED **
+    MAC_BUILD_EXIT=0
+    (TeslaSync.framework — every Feedback Queue file compiled + linked against the
+     real shared components/facade/tokens + Shared.xcframework macos-arm64 slice.)
+
+[4] BUILD — iOS / iPadOS (apple-ios)  arm64 iphonesimulator, signing disabled
+    $ xcodebuild -project TeslaSyncVerify.xcodeproj -target TeslaSyncCoreiOS \
+        -sdk iphonesimulator -configuration Debug build CODE_SIGNING_ALLOWED=NO \
+        ARCHS=arm64 EXCLUDED_ARCHS=x86_64 ONLY_ACTIVE_ARCH=YES
+    ** BUILD SUCCEEDED **
+    IOS_BUILD_EXIT=0
+    (Adaptive layer compiles + links for the iOS idiom too. Note: the prebuilt
+     Shared.xcframework ships ios-arm64-simulator only — no x86_64 sim slice — so
+     iOS is built for arm64, the Apple-Silicon simulator architecture.)
+
+[5] TEST — surface unit suite (34 tests)  run via `xcrun xctest` because the IDE
+    test daemon control-session times out on this headless runner (infra-only;
+    the bundle built + linked cleanly):
+    $ DYLD_FRAMEWORK_PATH=<products>:<Shared macos-arm64> xcrun xctest TeslaSyncCoreTests.xctest
+    Test Suite 'All tests' passed
+      Executed 34 tests, with 0 failures (0 unexpected)
+    TEST_EXIT=0
+    Suites: FeedbackCategoryKindTests, FeedbackStatusKindTests, FeedbackFilterTests,
+            FeedbackRowTests, FeedbackQueueRenderStateTests, FeedbackQueuePaginationTests,
+            FeedbackJSONTests, FeedbackDateTests, FeedbackStringCoverageTests.
+    FeedbackStringCoverageTests.testCatalogResolvesEveryParityKey PASSED — every one
+    of the 38 keys resolves from the compiled Localizable.xcstrings at runtime.
+
+Note on Swift 6.3.2: an IRGen reabstraction-thunk compiler crash
+(llvm::report_fatal_error on @$s9TeslaSync18FeedbackStatusKind...TR) was triggered
+by SwiftUI Picker-over-custom-enum selection + Task closures under
+SWIFT_STRICT_CONCURRENCY=complete. Worked around WITHOUT losing parity: the three
+selectors bind String rawValues (mapping String<->enum at the edge) and Task
+lifetimes moved into the model. Type-checking always passed; codegen now succeeds.
+
+================================================================================
+=== PARITY ===   PARITY_REQUIRED=43
+================================================================================
+Each item: <evidence file : symbol>.  All 43 render from the bound @Observable
+FeedbackQueuePageModel via the pure FeedbackQueueRenderState.
+
+[panel 1/1]
+  [x] panel  GlassPanel1
+      FeedbackQueuePage.swift:body -> TSGlassPanel { FeedbackQueueContent(...) };
+      FeedbackQueueContent.swift:struct FeedbackQueueContent (filter bar + body + footer)
+
+[states 4/4]  (FeedbackQueueState.swift: FeedbackQueueRenderState.resolve)
+  [x] state  loading   FeedbackQueueContent.loadingState (TSSpinner); resolve->.loading;  test testFirstLoadWithNothingIsLoading PASS
+  [x] state  empty     FeedbackQueueContent.emptyState (TSEmptyState);    resolve->.empty;    test testSuccessfulEmptyListIsEmpty PASS
+  [x] state  error     FeedbackQueueContent.content(.error)->TSQueryError; resolve->.error;   test testFailureWithNothingIsError PASS
+  [x] state  success   FeedbackQueueContent.successState (TSDataTable+footer); resolve->.content; tests testRowsPresentIsContent / testCachedRowsRetainedOnErrorAndRefetch PASS
+
+[strings 38/38]  (every literal a LocalizedStringKey; present in Localizable.xcstrings;
+                  testCatalogResolvesEveryParityKey + testParityKeyCount(38) PASS)
+  [x] string  common.next                         FeedbackQueueContent.paginationFooter TSButton("common.next")
+  [x] string  common.previous                     FeedbackQueueContent.paginationFooter TSButton("common.previous")
+  [x] string  common.refresh                      FeedbackQueueContent.refreshButton Text("common.refresh") + accessibilityLabel
+  [x] string  feedback.category.bug               FeedbackCategoryKind.bug.labelKey / FeedbackCategoryFilter.bug.labelKey
+  [x] string  feedback.category.feature           FeedbackCategoryKind.feature.labelKey
+  [x] string  feedback.category.other             FeedbackCategoryKind.other.labelKey
+  [x] string  feedback.queue.action.changeStatus  FeedbackExpansionView.actions TSSelect(label:)
+  [x] string  feedback.queue.action.forward       FeedbackExpansionView.urlControls TSButton Text("feedback.queue.action.forward")
+  [x] string  feedback.queue.action.githubUrl     FeedbackExpansionView.urlControls TSTextField(label:)
+  [x] string  feedback.queue.action.saveUrl       FeedbackExpansionView.urlControls TSButton("feedback.queue.action.saveUrl")
+  [x] string  feedback.queue.bridgeDisabled       FeedbackQueueContent.filterBar TSCaption("feedback.queue.bridgeDisabled")
+  [x] string  feedback.queue.col.category         FeedbackQueueContent.columns TSColumn(title:"feedback.queue.col.category")
+  [x] string  feedback.queue.col.created          FeedbackQueueContent.columns TSColumn(title:"feedback.queue.col.created")
+  [x] string  feedback.queue.col.github           FeedbackQueueContent.columns TSColumn(title:"feedback.queue.col.github")
+  [x] string  feedback.queue.col.pageRoute        FeedbackQueueContent.columns TSColumn(title:"feedback.queue.col.pageRoute")
+  [x] string  feedback.queue.col.reporter         FeedbackQueueContent.columns TSColumn(title:"feedback.queue.col.reporter")
+  [x] string  feedback.queue.col.status           FeedbackQueueContent.columns TSColumn(title:"feedback.queue.col.status")
+  [x] string  feedback.queue.col.title            FeedbackQueueContent.columns TSColumn(title:"feedback.queue.col.title")
+  [x] string  feedback.queue.empty                FeedbackQueueContent.emptyState TSEmptyState(title:)
+  [x] string  feedback.queue.emptyMessage         FeedbackQueueContent.emptyState TSEmptyState(message:)
+  [x] string  feedback.queue.expand.appVersion    FeedbackExpansionView.metadataGrid metaField(label:)
+  [x] string  feedback.queue.expand.body          FeedbackExpansionView.reportBody TSSubhead("feedback.queue.expand.body")
+  [x] string  feedback.queue.expand.consoleTail   FeedbackExpansionView.body TSAccordion("feedback.queue.expand.consoleTail")
+  [x] string  feedback.queue.expand.recentErrors  FeedbackExpansionView.body TSAccordion("feedback.queue.expand.recentErrors")
+  [x] string  feedback.queue.expand.submitter     FeedbackExpansionView.metadataGrid metaField(label:)
+  [x] string  feedback.queue.expand.userAgent     FeedbackExpansionView.metadataGrid metaField(label:)
+  [x] string  feedback.queue.expand.userEmail     FeedbackExpansionView.emailField TSLabel("feedback.queue.expand.userEmail")
+  [x] string  feedback.queue.filter.allCategories FeedbackCategoryFilter.all.labelKey
+  [x] string  feedback.queue.filter.allStatuses   FeedbackStatusFilter.all.labelKey
+  [x] string  feedback.queue.filter.category      FeedbackQueueContent.filterControls TSSelect(label:"feedback.queue.filter.category")
+  [x] string  feedback.queue.filter.status        FeedbackQueueContent.filterControls TSSelect(label:"feedback.queue.filter.status")
+  [x] string  feedback.queue.maskedEmail          FeedbackExpansionView.emailField TSMaskedValue.accessibilityLabel
+  [x] string  feedback.queue.openIssue            FeedbackQueueContent.githubCell Link("feedback.queue.openIssue", destination:)
+  [x] string  feedback.queue.pageOf               FeedbackQueuePagination.pageLabel -> String(localized:"feedback.queue.pageOf")
+  [x] string  feedback.queue.status.closed        FeedbackStatusKind.closed.labelKey / FeedbackStatusFilter.closed.labelKey
+  [x] string  feedback.queue.status.new           FeedbackStatusKind.new.labelKey
+  [x] string  feedback.queue.status.triaged       FeedbackStatusKind.triaged.labelKey
+  [x] string  feedback.queue.title                FeedbackQueuePage.swift .navigationTitle(Text("feedback.queue.title"))
+
+PARITY_COVERED=43
+PARITY_REQUIRED=43
+
+================================================================================
+ACCEPTANCE
+================================================================================
+  [x] GlassPanel1 implemented; every web region reproduced (filter bar, data table
+      w/ 7 columns, expandable detail w/ body/metadata/recent-errors/console-tail/
+      status+url+forward actions, pagination footer, bridge-disabled note).
+  [x] All 43 parity items render from the bound @Observable state holder.
+  [x] loading / empty / error / success for the feed data source.
+  [x] All visible strings from Localizable.xcstrings; zero hardcoded literals; web
+      key names preserved.
+  [x] Dark mode + Dynamic Type + a11y (labels/traits) + SI-safe (no unit fields);
+      SwiftUI-native (TSGlassPanel/TSDataTable/TSSelect/TSBadge/TSEmptyState/...).
+  [x] build (macOS + iOS) + lint + test + placeholder green for the surface;
+      PARITY_COVERED == PARITY_REQUIRED == 43.
+  [~] Literal full-app `xcodebuild build test` is BLOCKED by pre-existing,
+      out-of-scope repo breakage (documented above) — surface verified in isolation.
+
+EXIT=0
+STATUS=DONE

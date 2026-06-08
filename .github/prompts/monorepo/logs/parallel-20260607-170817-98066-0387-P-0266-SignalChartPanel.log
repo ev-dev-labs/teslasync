@@ -1,0 +1,110 @@
+I'll start by exploring the repository structure, the web source specification, and checking platform capabilities.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me check how predecessors handled this and look at the existing structure.
+
+`/Applications/Xcode.app` exists (root-owned) but `xcode-select` points to CommandLineTools. Let me test whether `DEVELOPER_DIR` env var works without sudo, read the web source, and examine a predecessor's pattern.
+
+`DEVELOPER_DIR` override works — Xcode 26.5 is available. Platform IS capable, so I must build (not BLOCKED). I've read the web source. Now let me study the predecessor pattern thoroughly and locate shared infrastructure.
+
+Now I understand the architecture. Let me study a chart-based predecessor (closest analog) and the remaining InputCommandTile files, plus a predecessor log and project.yml.
+
+Excellent — I have the full pattern. Now let me study a chart-based predecessor (multi-series line chart, closest analog), a predecessor log for format, project.yml, and locate the shared P1/S9 tokens and components.
+
+The predecessor pattern is clear: surface built + independently verified via isolated Swift build/test + swiftlint/swiftformat/placeholder, with the full-app xcodebuild gate documented as deferred (baseline-RED, unrelated). Let me locate the design tokens, chart infra, and build scripts.
+
+Now I understand the structure. Tests live co-located in feature-views (compiled into app target — the pre-existing baseline-RED condition). Let me read the shared component/token APIs and the chart infrastructure I'll consume.
+
+Let me read the design tokens, chart infrastructure, glass material, and the web data types in parallel.
+
+Found the chart infra (`TSLineChart`, `TSChartSeries`, `TSChartPoint`, `TSChartContainer`, `TSChartFormat`, `TSChartPalette`). Let me read the tokens (correct path), glass material, chart interaction, and the web data types.
+
+I now have the full native toolkit. Let me verify the exact signatures of the UI/typography components and chart palette I'll use, check lint/format rules, and read the web data types for fidelity.
+
+Let me read the exact signatures of the typography/button/card components, find TSChartPalette, and the precise SignalStat shape.
+
+Let me read TSChartPalette and the predecessor's pure-core Adapter file, and confirm the build tooling available for verification.
+
+Let me read the placeholder checker (to avoid flagged tokens) and the shared-framework build script, and check whether a baseline build is feasible.
+
+Critical: `Shared.xcframework` is NOT staged (needs KMP/Gradle Kotlin-Native toolchain) — confirming the full xcodebuild gate is baseline-blocked, exactly as the predecessor documented. My plan: build the surface, then independently verify via an isolated SwiftPM compile/test against the real design system + lint/format/placeholder. Let me confirm the shared components are KMP-free so isolated compile is feasible.
+
+Shared components are KMP-free (system frameworks only). Isolated compile is feasible. Let me confirm the dependency closure (e.g., `TSClipboard`) stays within `Sources/Components`/`Sources/Design`, then I'll write the surface.
+
+Everything is confirmed self-contained. Let me set up tracking and write a plan, then build the surface.
+
+Now I'll write the surface. Starting with the pure projection core (Adapter).
+
+Now the Model file (P1/S8 state holder, P1/S10 facade, P1/S11 telemetry, connection axis).
+
+Main view file:
+
+Views file (header, counter, freshness chip, loading/empty/error chrome):
+
+Now the Chart file — the bespoke Swift Charts overlay (dual-axis + cursor + tooltip + time axis), grid via the shared small-multiples, and interactive legend:
+
+Previews file (every state):
+
+Tests file (adapter/projection unit tests + model wiring + a11y):
+
+Strings file (i18n catalog):
+
+All 8 files written. Now verification — format, lint, placeholder check. Let me auto-format the new files then lint.
+
+swiftformat clean. swiftlint flags only file_length on the Tests file (462 > 400 under `--strict`). I'll split it into `.Tests.swift` (adapter) + `.ModelTests.swift` (projection + model), matching the predecessor's `.ModelTests.swift` convention. Let me find the split boundary.
+
+I'll split out the projection + model tests into a new `.ModelTests.swift`, then trim the original.
+
+Now I'll truncate the original Tests file to keep only the adapter tests, then re-lint both test files.
+
+Both test files now under 400 lines. Let me re-run format + lint on all 9 files plus the placeholder gate.
+
+Lint + format are clean (0 violations). The placeholder scan hit the whole directory (pre-existing violations in other surfaces). Let me scope it strictly to my surface to prove it's clean.
+
+Surface is placeholder-clean (0 when scoped; no `SignalChartPanel` matches in the directory scan — the 19 are pre-existing in other surfaces). Format + strict-lint are green.
+
+Now the key independent verification: compile + run the surface's tests against the **real** design system via an isolated SwiftPM package (the predecessor-established method, since the full app needs the unstaged KMP `Shared.xcframework`).
+
+My surface files all compiled cleanly. The only errors are in a shared component (`UnitFormatters.swift`) referencing a `Units` helper I didn't copy into the isolated package. Let me locate it and add it.
+
+`Units` lives in `SharedFacade` which `import Shared` (the KMP module) — so `Components/DataDisplay/UnitFormatters.swift` transitively needs KMP. My surface doesn't use it. Let me find all KMP-touching Component files and exclude them from the isolated package (they're unrelated siblings).
+
+Only `UnitFormatters.swift` is KMP-dependent, and my surface doesn't use it. Let me exclude it and run the isolated build + tests.
+
+Isolated build is GREEN — the surface compiles against the real design system. Now run the tests:
+
+A test arg-order error (`samples` must precede `isLive`). Let me fix it in the repo file, re-sync, and re-run.
+
+42 tests ran, 2 failures. Let me see which assertions failed.
+
+Test-data bug, not a logic bug: my fixture gave a range ratio of exactly 10 (`20/2`), but the rule is strictly `> 10` (matching web). Let me fix the fixture to a clearly >10× ratio.
+
+All 42 tests pass against the real design system under Swift 6. Let me re-lint the edited file, then probe the full xcodebuild gate to capture honest baseline evidence for the log.
+
+This `macos-pending-verifications.md` confirms my approach matches two merged precedents (ToolCard, AlertMessageEditor): per-surface isolated SwiftPM build+tests is the accepted proof; the full-app `xcodebuild` gate is deferred to the `macos-latest` acceptance gate due to the unstaged `Shared.xcframework` (KMP), co-located XCTest, `DashboardWidgetSize` collisions, and signing. Note: that doc is outside my allowed files, so I'll document the deferral in my log only.
+
+Let me gather concrete baseline evidence and attempt the real gate (bounded).
+
+Project generates cleanly. Baseline blockers confirmed (all pre-existing, unrelated to my surface): `Shared.xcframework` unstaged, **184** co-located `*.Tests.swift` compiled into the app target, `DashboardWidgetSize` redefined 15×. Let me attempt the literal full-app gate (bounded) to capture where it blocks.
+
+The KMP/Gradle toolchain is actually working on this runner — it's staging `Shared.xcframework` (debug done, release linking). The build is genuinely progressing, so it'll reach the app compile where the pre-existing baseline blockers live. Let me keep waiting and capture the real failure point.
+
+Definitive baseline evidence captured. The full-app build failed with **`Unable to resolve module dependency: 'XCTest'`** — the pre-existing co-located-XCTest condition (184 `*.Tests.swift` files compiled into the app target). Crucially, **zero `SignalChartPanel` errors**. The KMP `Shared.xcframework` built + staged fine on this runner. Let me confirm the xcodebuild exit and capture clean summary lines.
+
+The xcodebuild reached a terminal `** TEST FAILED **` (baseline XCTest condition). Let me stop the lingering process and extract the key evidence lines for the log.
+
+**Definitive, honest result:** the full-app gate is baseline-RED for a pre-existing, unrelated reason — the first error is `AIRestorePanel.Tests.swift: Unable to resolve module dependency: 'XCTest'` (another surface's co-located test), and there are **0 `SignalChartPanel` occurrences** in the entire 11,512-line log. The KMP `Shared.xcframework` built + staged fine. This matches the documented precedents exactly.
+
+Let me verify the generated project is git-ignored and clean up, then mark verify done.
+
+Everything checks out: `.xcodeproj` is git-ignored, only my 9 files are new. Now let me write the gate log and clean up temp artifacts.
+
+All gates green; line counts confirmed. Now I'll write the comprehensive, honest gate log.
+
+Log written. Now clean up temp artifacts and commit only my files.
+
+Exactly 10 files staged (9 surface + log), nothing else. Committing:
+
+Committed as `0078ab98a`. Working tree shows only the pre-existing unrelated dirty files (correctly untouched). Let me verify the commit contents and finalize todos.
+
+Complete. The commit contains exactly the 10 intended files (9 surface + log, 2240 insertions), no generated project, and all todos are done.
+

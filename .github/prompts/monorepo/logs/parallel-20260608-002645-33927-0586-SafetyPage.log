@@ -1,0 +1,162 @@
+I'll start by exploring the task context: the web source page, the existing Apple app structure, and reference materials.
+
+Let me explore the Apple app structure more deeply, especially existing Settings features, navigation, and an existing reference page.
+
+The `Features` directory doesn't exist yet. Let me explore the actual TeslaSync app structure to understand conventions.
+
+The app uses `dashboard-widgets` and `feature-views` directories — `Features/` is new. Let me examine the project config, existing feature-views, design tokens, and a reference page pattern.
+
+Critical: `Features/` isn't in `project.yml` sources, and I need to confirm the Xcode toolchain. Let me check tooling availability and key reference files.
+
+`xcodebuild` requires full Xcode but only CommandLineTools is present — so the build/test gate cannot run. Let me confirm there's no Xcode anywhere, and study navigation + an existing settings view + design tokens.
+
+Xcode.app exists in /Applications but isn't selected. I can override with `DEVELOPER_DIR`. Let me test whether it's functional.
+
+Xcode 26.5 is fully functional via `DEVELOPER_DIR` override — so I can run the real gate and aim for `STATUS=DONE`. Let me study navigation, an example settings view, design tokens, and the placeholder checker.
+
+Let me understand how settings sub-routes and page hosting work, and find an existing parity-page example to mirror.
+
+Let me find the p4-apple README/gate contract, the apple-ledger, and how AppShell renders routes — to nail the navigation-registration convention.
+
+The `apple-ledger.json` doesn't exist yet. Let me locate the ledger and read the p4-apple README for the gate contract and conventions.
+
+Now let me study the P3 component library and P2 design tokens to know which native components/tokens to use (GlassPanel, Badge, page scaffold, EmptyState, FadeIn equivalents).
+
+Let me check the forbidden placeholder patterns and look at how an existing page-style view (AppSettingsView) structures its scaffold + model.
+
+Let me check the web `useSettings` defaults (for faithful values) and whether Apple already has a settings store holding these notification fields.
+
+The web safety defaults are clear. Now let me understand the app's navigation shell structure (NavigationStack/SplitView) to wire the sub-route cleanly.
+
+Now let me verify the build feasibility: whether `Shared.xcframework` exists or must be built (KMP/Gradle), and check the settings tests + xcstrings format.
+
+`Shared.xcframework` isn't prebuilt — the Xcode build's pre-action compiles it via Gradle/Kotlin-Native (the long pole). Let me probe Java/Gradle feasibility and kick off the framework build in the background while I implement.
+
+Excellent — Java 17 + Kotlin/Native 2.4.0 toolchain are already cached. The `Shared.xcframework` build is feasible. Let me kick it off in the background (the long pole) while I implement the page.
+
+While the framework builds, let me study the string catalog format, the `@Observable` model pattern, and `TSFormSection`/theme helpers.
+
+24 `safetySettings` strings already exist. Let me see exactly which keys are present so I don't duplicate, and check the framework build log.
+
+The framework build is nearly done (linking release frameworks). Let me see what those 24 `safetySettings` matches actually are.
+
+The existing keys are web-catalog imports under a `translation.` prefix; native Swift uses un-prefixed keys (e.g., `settings.section.privacy`). I'll add un-prefixed `safetySettings.*` keys matching the web names. Let me grab the exact English values already in the catalog to stay consistent, and check the build.
+
+I have all the English values. Let me verify the native key structure (en-only vs multi-locale) and check the framework build completion.
+
+Native keys use ar/en/he. I have everything needed. Let me set up a plan and todos, and check the framework build.
+
+The framework build FAILED. Let me see the error — this is critical for the build gate.
+
+Root cause: Kotlin/Native's linker calls `xcrun` which resolves to CommandLineTools. A stale Gradle daemon didn't inherit my `DEVELOPER_DIR`. Fix: stop daemons and rebuild with `DEVELOPER_DIR` set + `--no-daemon`.
+
+xcrun now resolves to Xcode 26.5. Let me rebuild the framework (compiles are cached; only link tasks remain) with `DEVELOPER_DIR` set.
+
+Framework rebuilding. Let me check the app's base-URL config (to resolve the docs links properly) before writing the page.
+
+Framework rebuilding. Let me confirm the exact `@Observable` + `.task` + model-ownership patterns already proven in this codebase before writing, to satisfy Swift 6 strict concurrency.
+
+Excellent reference. The codebase uses a `XxxStrings.string(key, fallback)` helper (mirroring web's `t(key, fallback)`). Let me find its canonical implementation to reuse the pattern.
+
+I now have all proven patterns (the `XxxStrings.string(key, fallback)` localization facade mirrors web's `t()`). Let me check the framework build, then write the page.
+
+The framework is linking successfully now (xcrun fixed). Let me write the complete `SafetyPage.swift` while it finishes.
+
+Let me fix the misleading "empty" preview and verify the model-construction concurrency pattern against the codebase before building.
+
+Key insight: the codebase always injects models at MainActor call sites and never default-constructs; my `nonisolated init` is the correct enabler for the nonisolated `navigationDestination` closure. Let me fix the misleading preview.
+
+Framework build completed. Let me verify it's staged, then wire navigation into AppSettingsView.
+
+Framework staged ✓. Now let me wire `SafetyPage` into the settings navigation (the destination + a link row) in `AppSettingsView.swift`.
+
+Framework staged and navigation wired. Now let me add the `safetySettings.*` and `settings.*` keys to the string catalog via a surgical insertion script (preserves the rest of the 187K-line file).
+
+37 keys added, JSON valid. Now add `TeslaSync/Features` to the two app targets in `project.yml`.
+
+Now regenerate the Xcode project and update my todos.
+
+Project generated. Let me run the placeholder scan and SwiftLint on the new files (quick gates) first.
+
+Placeholder scan clean (COUNT=0). SwiftLint found 1 serious violation across the tree — let me isolate whether it's in my files.
+
+The file exceeds the 400-line `file_length` rule. The codebase convention (and the project guidelines) prefer decomposition. Let me split it into logical files under `Features/Settings/`. First, view it to get exact boundaries.
+
+The file needs decomposition (400-line limit; guidelines prefer page + sub-components). Let me split it into `SafetyPage.swift` (view), `SafetyPage.Model.swift`, `SafetyPage.Navigation.swift`, and `SafetyPage.Previews.swift`.
+
+All files now under 400 lines. Let me re-lint the directory and regenerate the project (new files added).
+
+All 4 files lint clean; project regenerated. Now the main event — the `xcodebuild build` gate (compiles the whole app + links the framework). Running for iOS Simulator.
+
+The big build is running in the background. Let me monitor it.
+
+Build failed fast (EXIT=65 in 25s) — likely an early configuration/preAction error. Let me check the log.
+
+The Gradle preAction succeeded but — critically — it staged the framework into a **different parallel slot (slot-583)**, and the build failed (EXIT=65) right after. This is parallel-slot Gradle-daemon contamination. Let me inspect the true end of the log and the framework state.
+
+Root cause found: **cross-slot DerivedData contamination** — Xcode reused a shared DerivedData (`TeslaSync-fvcviwfpjbhbancxoyjlypukjnmb`) from a concurrent parallel slot (slot-583), so it compiled *slot-583's* sources (not my changes) and that slot's code failed. The fix is an isolated `-derivedDataPath`. slot-586's framework is intact. Let me rebuild with isolated DerivedData.
+
+Isolated build running. Let me verify early that it's now compiling slot-586 sources (not slot-583).
+
+Now with isolated DerivedData it compiled longer — let me find the actual Swift compiler error.
+
+Now it correctly compiles slot-586. The error is in a pre-existing file I didn't touch (`AIRestorePanel.Tests.swift` importing `XCTest` in the app target). Let me determine if this is pre-existing and how sibling test files handle it.
+
+170 test files live in the app-target source dir; 166 import `XCTest` unconditionally. They're meant for the XCTest target. This is a pre-existing layout issue (I didn't touch feature-views). The canonical build must enable XCTest search paths or exclude tests. Let me check the project config.
+
+The app target colocates 166 XCTest-importing test files, so it only compiles with testing search paths enabled (the `test`/`build-for-testing` path). This is a pre-existing repo layout, unrelated to my page. Let me build with `ENABLE_TESTING_SEARCH_PATHS=YES` (how this app target is meant to compile).
+
+Build running (full app compile). Let me monitor it.
+
+XCTest errors dropped to 5, but a new dominant pre-existing error appeared: `'DashboardWidgetSize' is ambiguous for type lookup` across many untouched `dashboard-widgets` files. Let me find where `DashboardWidgetSize` is defined (duplicate definitions cause this).
+
+`DashboardWidgetSize` is redefined in **15+ committed widget files** (app target) — a massive pre-existing duplication in code I'm forbidden to touch. Let me confirm the repo's baseline state via git to separate pre-existing breakage from my changes.
+
+Key evidence: my changes are isolated (only `Localizable.xcstrings`, `AppSettingsView.swift`, `project.yml`, `Features/`). The `DashboardWidgetSize` duplication (×15) is in **committed HEAD** — pre-existing breakage from the parallel-merge, in widget files I'm forbidden to touch. Let me confirm none of the 57 build errors are in my files, and categorize them.
+
+Confirmed: **all 57 build errors are in `dashboard-widgets/*` (pre-existing `DashboardWidgetSize` duplication); zero in my files.** To decisively prove my page compiles, let me type-check my 4 files against their real dependency layer (tokens + components), isolated from the broken widgets and the Shared framework.
+
+TMaterial/Skeletons only import SwiftUI. Let me type-check my 4 files against their real dependency layer (tokens + the specific components), isolated from the broken widgets — proving my page is sound.
+
+Good — the isolated typecheck caught a real concurrency bug in my `nonisolated init` (the `@Observable`/`@MainActor` properties can't be set from a nonisolated init). Let me see how the repo handles `@Observable @MainActor` model construction in views/destinations to copy the proven idiom.
+
+The isolated typecheck found a real bug in my model's concurrency design. The clean fix: make the class non-isolated `@Observable` (so the `init` can set properties), but isolate the *mutating async methods* to `@MainActor` (correct for UI). Let me apply that.
+
+Now let me re-run the isolated typecheck to verify the concurrency fix.
+
+PASS 1 clean — **my shipping page code type-checks under Swift 6 strict concurrency**. Let me also validate the previews (DEBUG) compile, isolating any errors to my files.
+
+Both passes clean — **my page (incl. previews) type-checks under Swift 6 strict concurrency**. The model change is sound. Let me re-lint/re-scan my files (model changed) and update todos.
+
+All gates on my unit are green (placeholder=0, lint=0, Swift 6 strict typecheck=0). The full-app build is blocked by pre-existing committed breakage outside my scope. Let me write the honest parity log and the ledger.
+
+Now the ledger. It doesn't exist yet — I'll create `apps/parity/apple-ledger.json` with rows for both apple platforms (status reflects the blocked triad honestly).
+
+Now let me commit — staging only my files (excluding the parallel-slot contamination: `AiUsageCard.*` and `web/*` which aren't mine). First, verify exactly what will be staged.
+
+Exactly my 9 files staged; the parallel-slot contamination is correctly excluded. Let me commit with an honest message.
+
+Committed (9 files, contamination excluded). Let me finalize tracking and verify the committed state is honest.
+
+Verified: the `DashboardWidgetSize` ×15 duplication is in the **parent** commit (pre-existing), my commit touches only my 9 files, and the log ends with the required `EXIT=1` / `STATUS=BLOCKED`. Let me clean up temp build artifacts and finalize the plan.
+
+All work is finalized and committed; the working tree now shows only the pre-existing parallel-slot contamination (not mine), correctly left untouched.
+
+## Summary
+
+I implemented the **`page:settings/Safety`** parity unit — a native SwiftUI/Apple-HIG port of the web `SafetyPage` (`/settings/safety`).
+
+**Delivered (committed `a189c78bb`, 9 files only):**
+- `apps/apple/TeslaSync/Features/Settings/SafetyPage.{swift,Model,Navigation,Previews}.swift` — `GlassPanel1` deterministic listing of all 7 safety settings (each with an info value-badge + Docs link), an `@Observable SafetyPageModel` with a provider seam, and `loading/empty/error/success` states.
+- Navigation wired in `AppSettingsView.swift` (`SafetyPageRoute` + `View.safetyPageDestination()` + `SafetyPageLinkRow`).
+- 37 `safetySettings.*`/`settings.*` keys added to `Localizable.xcstrings` (web key names; `t(key, default)` parity via an `NSLocalizedString` facade).
+- `project.yml` registers `TeslaSync/Features`; `apple-ledger.json` + parity log created.
+
+**Self-verified GREEN:** `check-placeholders=0`, `swiftlint --strict=0`, and a **Swift 6 complete-concurrency `swiftc -typecheck=0`** (with and without DEBUG). `PARITY_COVERED=8/8`. I also built + staged `Shared.xcframework` from the KMP core.
+
+**Honest gate status — `STATUS=BLOCKED`:** the full-app `xcodebuild build/test` triad cannot go green in this repo slot due to **pre-existing, committed, out-of-scope breakage** at HEAD `c9c6fdb9f`: `DashboardWidgetSize` is redefined **×15** across `Sources/DashboardWidgets/*` + `TeslaSync/dashboard-widgets/*` (a parallel-merge duplicate-symbol artifact), plus colocated `XCTest` in `feature-views/*.Tests.swift`. **All 57 compiler errors are in those widget files; zero in my unit.** Per the Honesty Covenant (no red-as-green, no predecessor bypass, those files are out of scope), I reported `BLOCKED` rather than falsely claiming `DONE`. Along the way I also fixed two environment traps: the active `xcode-select` pointed at CommandLineTools (overridden via `DEVELOPER_DIR` → Xcode 26.5), and a shared cross-slot DerivedData was compiling another slot's sources (fixed with an isolated `-derivedDataPath`).
+
+
+
+I've completed all in-scope work and exhausted the legitimate paths to a green full-app build. The remaining blocker is pre-existing, committed, out-of-scope breakage I'm forbidden to modify. My unit is implemented, verified (placeholder=0, swiftlint --strict=0, Swift 6 strict-concurrency typecheck=0), and committed. This is genuinely as complete as the task can be without violating scope/honesty rules.
+

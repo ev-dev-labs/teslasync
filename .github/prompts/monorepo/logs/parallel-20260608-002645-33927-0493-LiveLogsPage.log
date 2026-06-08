@@ -1,0 +1,207 @@
+I'll start by exploring the repository structure to understand the task fully.
+
+Let me continue reading the web source and explore the Apple app structure.
+
+The Apple structure differs from what the prompt suggests. Let me explore it thoroughly with bash and finish reading the web source.
+
+The actual Swift sources live under `apps/apple/Sources`. Let me understand the project layout, existing patterns, and what `TeslaSync/feature-views` is.
+
+Now I understand the layout. Let me examine the parity manifest/ledger, an existing feature-view page, and the Live SSE infrastructure.
+
+The page requires 37 parity items (4 panels + 2 states + 31 strings). Let me check the Apple toolchain availability since the gate depends on it, and examine existing patterns.
+
+Key finding: **Xcode is not installed** (only Command Line Tools), so `xcodebuild build/test` cannot run → per the prompt the gate is `STATUS=BLOCKED`. But `swift`, `swiftlint`, `xcodegen`, `pwsh`, and the placeholder scanner ARE available. I'll implement the page **completely** (no stubs — the covenant forbids that regardless), run every gate I can, and write an honest log.
+
+Let me study the closest existing patterns: the live SSE infra, a comparable live feature view, components, navigation, and lint config.
+
+`.swiftlint.yml` and `project.yml` don't yet include `TeslaSync/Features` — I'll need to wire that in. Let me study the navigation system, live SSE infra, and a comparable live feature view in parallel.
+
+`AppRoute` has an `.admin` case and pages register via `AppRouteHostRegistry`. LiveLogs is `(unrouted)`. Let me find where registrations happen and how existing pages are built/registered.
+
+No pages or route registrations exist yet — this is among the first. Let me read how the app wires the registry and look at the closest live feature-view analog.
+
+The registration pattern is clear (`SettingsRouteRegistration.registry`). Let me check what other admin page units exist in the manifest to avoid hijacking the `.admin` route, and look at the closest live feature-view analog plus key components.
+
+The web page IS reachable via sidebar `/live-logs` (manifest just didn't capture it from `App.tsx`). Now let me study the Live SSE infrastructure, the SharedFacade (KMP core access), and the closest analog feature view in detail.
+
+The Live infra targets the fleet `/events` pipe, not the admin `/admin/logs/stream`. Let me examine the SharedFacade (KMP access), the closest analog feature-view (`LiveSignalsTable`), and the live data store to establish the right pattern.
+
+No log-stream facade exists in the shared core, so I'll build a native SSE log-stream provider seam (mirroring the web's bespoke `useLogStream`). Let me study the closest analog feature-view set and the SharedFacade core to match conventions.
+
+This is an excellent, high-quality template. Let me read the localization facade, the adapter/builder, the design tokens, and the key UI components I'll reuse.
+
+Now let me examine the design tokens, the `Localizable.xcstrings` catalog format, and confirm how strings/routes are localized.
+
+Catalog has en/ar/he. Now let me read the design tokens and the core UI components I'll use.
+
+Now let me read the UI components I'll compose with: Typography, Badges, Buttons, Fields, Cards, and the Feedback States.
+
+Let me check the Pickers, Banners, the live staleness UI, and the layout components.
+
+Let me check the remaining helpers (live indicators, banners, motion), how co-located tests are guarded, and the placeholder scanner.
+
+Let me verify how co-located `.Tests.swift` files are wired (they import XCTest but live in an app source path).
+
+170 co-located `.Tests.swift` files follow this convention. Let me read the placeholder scanner (must pass), the p4-apple gate README, and check for the "host harness" pattern + existing logs.
+
+I have nearly everything. Let me read the table styling pattern and the exact banner/indicator signatures, then check a sample existing log for format.
+
+I have a complete picture. Let me read an existing log to match the format, then write a plan and start implementing.
+
+This is exactly the pattern I need. The LiveSignalsTable precedent shows the proven approach: **token-only surface** (only depends on generated `Tokens.swift` + SwiftUI/Foundation) so a real `swiftc -typecheck` gate passes without full Xcode, plus an executed adapter harness. Let me probe the toolchain capability first.
+
+`swiftc -typecheck` against SwiftUI + tokens works on this CLT-only host — that's my real verification gate. Let me set up a plan and todos, then implement.
+
+Now I'll write the Foundation-only core (Models + Adapter) — the harness-verifiable logic.
+
+Let me typecheck the two Foundation-only files immediately to catch errors early.
+
+Models + Adapter typecheck clean. Let me write and run the parity harness now to validate the pure logic.
+
+The harness helpers need `@MainActor` (top-level code is main-actor isolated). Fixing the harness (not my sources):
+
+Good — the harness caught my **test** assertion error, not a code bug: web's `extractFields` only skips `level/time/message/msg`, so `vehicle_id` IS a field (3 fields, sorted: attempt, ok, vehicle_id). The code correctly mirrors web. Fixing the assertion:
+
+43/43 parity assertions pass. Let me save the harness for the record and update progress.
+
+Pure logic verified. Now the localization facade. I'll name members without the substring "Placeholder" so only the key-definition lines need the `// parity:allow` opt-out.
+
+Now the `@Observable` model with the source seam and in-memory source.
+
+The production SSE source needs `LiveLogsSSEParser.frame(from:)` public. Let me make that change and write the streaming source.
+
+`@ObservationIgnored` is only valid inside `@Observable` types — that class isn't one. Removing those attributes:
+
+Let me typecheck the model/stream/localization layer (with tokens) before writing the views.
+
+`static let` of non-Sendable `LocalizedStringKey` trips strict concurrency. The fix (matching the repo's computed-property convention): make them computed `var`s. Let me transform them.
+
+Clean. Let me verify the `// parity:allow` markers survived and update progress.
+
+Core layer typechecks under strict concurrency. Now the view layer. I'll split it into three files (panels chrome+filters+error, controls, table) to respect file/function length limits. First, the shared chrome + filters + error panels + status badge:
+
+Now the controls panel (GlassPanel2) with the freshness clock, stats, and control buttons:
+
+Now the table panel (GlassPanel4) with adaptive table, autoscroll, grep highlight, level badges, and field chips:
+
+Now the page scaffold composing the 4 panels:
+
+Let me typecheck the full view surface (all files written so far + tokens) to catch SwiftUI errors.
+
+Full surface typechecks clean under strict concurrency. Now the route registration, previews, and tests.
+
+Let me typecheck the registration against the real navigation types.
+
+Now the previews and the XCTest suite.
+
+Let me typecheck the previews with the surface (DEBUG on).
+
+Previews fail only on the `#Preview` macro (Xcode-only plugin, not available to bare `swiftc`) — exactly why the precedent excludes previews from the host typecheck. The canonical surface island (shell 40) is green. Now the integration edits.
+
+Let me inspect the exact `Localizable.xcstrings` formatting before editing it, so I match Xcode's style and minimize diff churn.
+
+File stores literal UTF-8 (no `\u` escapes), 2-space indent, single trailing newline. Let me add all keys (en translated + ar/he needs_review placeholders, matching the existing pattern) and verify only additions occur.
+
+Let me verify the re-dump only added lines and didn't reformat existing entries.
+
+Diff is purely additive (874 insertions, 0 deletions) — existing entries untouched, JSON re-validated. Now let me run the lint, format, and placeholder gates on the new code.
+
+Swiftlint linted the whole tree (config `included` overrides the path). Let me see the 7 violations and whether any are in my files.
+
+6 line-length violations in my files (1 pre-existing elsewhere, noted in the precedent). Let me view and fix them.
+
+Let me fix all 6 line-length violations (converting long JSON literals to raw strings, wrapping long calls, multi-lining the `// parity:allow` lines).
+
+Now re-run swiftlint and confirm my files are clean (the 1 pre-existing violation is out of scope).
+
+My files: **0 swiftlint violations** (the 1 remaining is pre-existing, out of scope). Now swiftformat lint, placeholder scan, and a re-typecheck.
+
+Placeholder scan passes (ALLOWED=2, COUNT=0). swiftformat flags formatting — but my local swiftformat may be newer/stricter than the repo's pinned one. Let me check whether it also flags the *existing* repo files (which the precedent passed).
+
+My swiftformat is the same version (0.61.1) — so these are genuine formatting issues in my code. Let me run swiftformat's autocorrect, but first manually remove test force-unwraps (which autocorrect can't safely fix). Let me view the current test sites.
+
+swiftformat autocorrected 8 files. Let me re-verify all gates: format lint, swiftlint, placeholder scan, and typecheck (autocorrect could have changed code).
+
+swiftformat is clean now, but autocorrect introduced 1 swiftlint violation. Let me find and fix it.
+
+swiftformat moved the brace of a multi-line `if` to its own line, conflicting with swiftlint's `opening_brace`. Let me refactor that to a clean guard-based helper (which formats correctly).
+
+Now let me run the full gate suite: swiftformat lint, swiftlint, placeholder scan, the canonical typecheck island, and re-run the adapter harness (Adapter changed).
+
+Let me view the current formatting of that guard — swiftformat wants a specific style.
+
+The repo style puts `else` on its own line for multi-line guards. Let me re-run autocorrect (fixes my hand-added guard), then verify all gates together.
+
+All three green (format 0, lint 0, typecheck 0). Let me re-run the adapter harness (Adapter changed) and the placeholder scan to confirm.
+
+All host-runnable gates pass. Let me validate the `project.yml` change by generating the Xcode project (gitignored) to confirm the spec is valid and includes the new path.
+
+xcodegen validates (EXIT=0); my files are wired into both app targets (72 refs), and the `.xcodeproj` is gitignored. Let me clean up generated artifacts and check git status.
+
+Unexpected: `AIUsageCard.*` files in feature-views show as modified, but I never touched them. Let me investigate.
+
+The `AIUsageCard.*` changes are **pre-existing/external** (a different prompt's rename 0203→0237) — not mine. I'll exclude them from my commit. The precedent's host had `/Applications/Xcode.app` via DEVELOPER_DIR override — let me check if this host does too, which could unblock the build/test gate.
+
+`/Applications/Xcode.app` exists (Xcode 26.5) — same as the precedent. But the precedent deferred the app build for environmental reasons (missing KMP `Shared.xcframework`, no signing). Let me verify those blockers on this host to classify honestly.
+
+Confirmed identical blockers to the precedent: `Shared.xcframework` absent (only `.gitkeep`), 0 signing identities, and the KMP framework build is explicitly deferred to a macOS CI runner. So the Xcode app build/test is genuinely BLOCKED on this host.
+
+One parity gap I spotted: I must actually *use* the `liveLogs.filename` string. Let me switch the download to a proper named `.txt` export via `fileExporter` (which consumes the filename) and drop the now-unused `shareSubject`.
+
+Now re-run all host gates after the download/export change:
+
+swiftlint prefers the failable `String(bytes:encoding:)`. Fixing:
+
+All host gates green. Let me verify every required string facade member is actually rendered in a view (no dead keys).
+
+Only `tableNoLevel` (the `LocalizedStringKey` variant) is unused — the key `liveLogs.table.noLevel` is still rendered via `noLevelText`. Let me remove the dead member.
+
+Final consolidated gate run after all parity fixes:
+
+All host gates green (typecheck 0, swiftlint mine 0, swiftformat 0/12, harness 43/43, xcodegen OK, placeholder 0). Let me update progress and write the evidence log.
+
+Excellent — **2,204 lines** across 12 files vs. the web source's 1,051 (≈210%, well above the 70% floor), largest file 282 lines. Now let me write the evidence log with the binding `=== PARITY ===` section.
+
+Now the apple ledger. Let me check if other platform ledgers exist to match their structure.
+
+No platform ledgers exist yet — `apple-ledger.json` is the first. Let me create it as an array of rows (per the README), schema-conformant, with honest blocked status.
+
+Let me validate the ledger and xcstrings JSON, then review exactly what I'll stage (excluding the pre-existing `AIUsageCard` changes).
+
+All validated. Let me stage exactly my files (excluding the pre-existing `AIUsageCard` changes) and commit.
+
+Staged set is exactly correct (18 files, no `AIUsageCard`). Committing with an honest message:
+
+Committed cleanly (18 files, `AIUsageCard` excluded). Let me do a final end-to-end verification on the committed state and clean up temp artifacts.
+
+All final gates green; working tree contains only the pre-existing (non-mine) `AIUsageCard` changes, left untouched. Let me close out the todos.
+
+The task is complete. All work is committed and verified.
+
+## Summary
+
+Implemented the native **SwiftUI `LiveLogsPage`** at full web parity for the TeslaSync Apple app (`apps/apple/TeslaSync/Features/Admin/`), adaptive across macOS + iOS.
+
+**Parity: 37/37** (manifest `page:admin/LiveLogs`)
+- **4 panels** — filters (level/grep/vehicle), controls (status badge + buffered/received/drops + autoscroll/pause/clear/download/reconnect), error, and the live log table.
+- **2 states** — empty (`ContentUnavailableView`) + success (auto-scrolling `LazyVStack` table), plus loading/error/idle-freshness for HIG completeness.
+- **31 strings** — every web `liveLogs.*` key, added to `Localizable.xcstrings` (en/ar/he) and resolved by web key name; zero hardcoded literals.
+
+**Architecture** — `@Observable LiveLogsPageModel` (P1/S8) behind a `LiveLogsSource` seam; production `URLSessionLiveLogsSource` streams `/admin/logs/stream` via line-SSE (the native analogue of the web's hand-rolled `useLogStream`); token-only surface; registered at the `.admin` route host. 12 files, **2,204 lines** (≈210% of the 1,051-line web source).
+
+**Host gates — all GREEN (real output):**
+- `swiftc -typecheck` (Swift 6 strict concurrency) — EXIT 0
+- Executed adapter parity harness — **43/43**
+- `swiftlint --strict` — 0 violations (mine)
+- `swiftformat --lint` — 0/12
+- `check-placeholders.ps1` — COUNT 0, ALLOWED 2
+- `xcodegen generate` — valid
+
+**STATUS=BLOCKED (honest).** The full `xcodebuild` app build/test can't certify here: the KMP `Shared.xcframework` isn't staged (deferred to a macos-latest runner per `apps/macos-pending-verifications.md`) and there are 0 signing identities — verified with real command output, matching the established P4-Apple precedent. It resolves on a configured runner with **no code change**.
+
+Committed 18 files (`e98a03c`); evidence log + `apple-ledger.json` written. The pre-existing, unrelated `AIUsageCard.*` working-tree changes were correctly left unstaged.
+
+
+
+Everything is committed and verified. The task is complete.
+

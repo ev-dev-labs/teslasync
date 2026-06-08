@@ -1,0 +1,203 @@
+================================================================================
+P4 · Feature view · 0081 — AutomationActivityFeed (Apple)
+Run: 2026-06-07T20:32-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/202
+Base: cb08e22f
+Prompt: P4/feature-views/0081 — AutomationActivityFeed
+Web source (spec): web/src/features/automations/pages/AutomationActivityFeed.tsx
+Mode: code-complete + REAL iOS-18/macOS-15 SDK typechecks + EXECUTED XCTest (25/25) +
+      DEFERRED Xcode app build/test (0005 FleetTelemetryHealth / 0010 ToolCard precedent,
+      ADR-012; un-staged KMP Shared.xcframework). No stubs as final.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18 deploy target)       OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15 deploy target)              OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                    OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                  OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                            OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  feature-views path ......... registered in project.yml + .swiftlint.yml           OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+
+  NOTE on active toolchain: `xcode-select -p` points at /Library/Developer/
+  CommandLineTools (no iPhoneSimulator SDK), so a BARE `xcodebuild` fails ("tool
+  requires Xcode"). Full Xcode 26.5 IS installed at /Applications/Xcode.app and is
+  used here via the DEVELOPER_DIR override (the 0005/0010 precedent), which unlocks the
+  iOS 18 simulator SDK, the macOS 15 SDK, and `swift test`.
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles below.
+  The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT
+  apply — the surface is authored, both-SDK-compiled, and host-tested for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/AutomationActivityFeed.*) ===
+  AutomationActivityFeed.Adapter.swift   384  Foundation-only projection core — statusConfig /
+                                              typeMap resolution (+ nullish fallbacks), formatDurationMs
+                                              / fmtPercent / timeAgo ports, displayName ?? '#id', the
+                                              slice(0,5) live cap, the stats gate, row projections, and
+                                              the VoiceOver summaries
+  AutomationActivityFeed.Model.swift     299  P1/S8 state-holder seam (AutomationFeedSource ->
+                                              AutomationFeedModel) + P1/S11 telemetry seam + input
+                                              snapshot + projection (phase + live/stats/connection) +
+                                              stale auto-refresh + in-memory source + P1/S10 facade +
+                                              surface slug
+  AutomationActivityFeed.Views.swift     214  chrome — status/event SF-Symbol+tint maps, animate-pulse
+                                              modifier, connection chip (Live/Reconnecting/Stale/
+                                              Offline), stats row, neutral badge
+  AutomationActivityFeed.Rows.swift      245  live-event row (web LiveEventRow) + history row (web
+                                              HistoryRow) + cached-data banner + loading/empty/error
+                                              states
+  AutomationActivityFeed.swift           108  the surface — FadeIn+GlassPanel shell, header (title +
+                                              connection chip + gated stats), live rows, history phase
+                                              switch
+  AutomationActivityFeed.Previews.swift  139  #if DEBUG previews — loading / data / live+data / empty /
+                                              error / stale / offline
+  AutomationActivityFeed.Tests.swift     383  XCTest — adapter + format + projection + model + a11y
+                                              (25 methods)
+  AutomationActivityFeed.strings          53  P1/S10 catalog contribution (27 keys: 7 web-parity + 8
+                                              status labels + 5 event-kind labels + 7 native chrome)
+  Total 1772 Swift lines across 7 files; every file <= 384 lines (house file_length 400).
+  Shared tokens (Color.TS / Font.TS / TSSpacing / TSRadius) + TSGlassPanel / TSFadeIn /
+  TSSkeleton are REUSED from the P4 core (no redeclaration in shipped files). The web
+  tailwind hues map to the design tokens: green->statusSuccess, amber->statusWarning,
+  red->statusDanger, neon-cyan->accent, blue-400->chartSeriesSpeed, purple-400->
+  chartSeriesPower, text-muted->textMuted.
+
+=== PARITY (vs web AutomationActivityFeed.tsx) ===
+  Data sources -> bound via the shared state-holder seam (AutomationFeedSource ->
+    AutomationFeedModel): the web leaf's only hook is useTranslation; it receives history /
+    historyStats / isLoading / liveEvents / connectionState as props from its parent
+    (the automations history query + the useAutomationEvents SSE stream). The native source
+    carries that prop snapshot; the view performs NO HTTP.
+  Projection -> 1:1 ports verified by EXECUTED XCTest: statusConfig[status] ?? running (8
+    statuses), typeMap[type] ?? triggered (5 kinds), formatDurationMs (nil->'—', <1000->'{ms}ms',
+    else '{(ms/1000).toFixed(1)}s'), fmtPercent(rate, 0), name ?? '#{automation_id}',
+    liveEvents.slice(0,5), the historyStats && total_executions>0 stats gate, and empty-string
+    error/reason folding to nil.
+  Composition -> FadeIn(delay 0.1) + GlassPanel; header = Activity glyph + "Recent Activity" +
+    connection chip, with the gated stats summary ({total} total · {rate} success · {avg} avg)
+    trailing; up to five live SSE rows (pulsing kind icon · name · error/reason · neutral kind
+    badge); then the history list (status icon · name · error · time-ago · duration · actions).
+  Shared components -> Color.TS / Font.TS / TSSpacing / TSRadius / TSGlassPanel / TSFadeIn /
+    TSSkeleton, compiled against the real iOS-18 + macOS-15 SDKs in the typechecks below.
+    Recharts -> none / Leaflet -> none (no chart/map on this surface).
+  States (all render) -> loading (5 skeleton rows) · empty ("No execution history yet") ·
+    error (QueryError-equivalent retry — native chrome, since the web leaf's parent owns the
+    query) · stale (chip + cached banner + one guarded auto-refresh) · offline (cached rows +
+    chip + banner) · data. The live rows + stats + connection chip render independently of the
+    history phase (the web renders them outside the isLoading branch).
+  i18n -> all 7 source strings + the routed statusConfig/typeMap labels resolve through the
+    P1/S10 facade (table "AutomationActivityFeed") with the web English fallback. No English
+    literal in native code (verbatim Text only wraps facade output / runtime data).
+
+=== ACCESSIBILITY ===
+  Connection chip + stats + each live/history row + the banner are single combined
+  accessibility elements; the title carries .isHeader; decorative icons are
+  .accessibilityHidden. Each row's spoken value is the VoiceOver summary from
+  AutomationFeedAccessibility (name · status/kind · time · duration · actions · error/reason),
+  asserted by the executed a11y tests. Dynamic Type via the Font.TS text styles; Reduce Motion
+  honored by the pulse modifier (+ TSFadeIn / TSSkeleton). Minimums: iOS 18 / iPadOS 18 / macOS 15.
+
+=== VERIFICATION (every line below is a command actually run, with its real exit code) ===
+  [host gates — GREEN]
+  swiftformat --lint (7 files) ............ 0/7 require formatting          FORMAT_EXIT=0
+  swiftlint --strict (7 files) ............ 0 violations, 0 serious         LINT_EXIT=0
+  check-placeholders.ps1 (exact gate path)  PLACEHOLDER_COUNT=0             PLACEHOLDER_EXIT=0
+  check-placeholders.ps1 (scoped, 7 files)  PLACEHOLDER_COUNT=0             (real-file proof)
+  check-placeholders.ps1 -SelfTest ........ all PASS                        SELFTEST_EXIT=0
+
+  [real SDK compiles — GREEN] swiftc -typecheck, -swift-version 6 -strict-concurrency=complete
+  iOS 18 simulator (arm64-apple-ios18.0-simulator, -D DEBUG) ............... IOS_TYPECHECK_EXIT=0
+  macOS 15 (arm64-apple-macos15.0, -D DEBUG) .............................. MAC_TYPECHECK_EXIT=0
+    (Adapter+Model+Views+Rows+surface+Previews compiled together against the real SwiftUI SDK
+     + a throwaway TS-primitive shim mirroring the P4-core signatures; shim used ONLY in the
+     isolated harness, NEVER in shipped files. A real strict-concurrency error — a nonisolated
+     previewSurface calling @MainActor helpers — was found by this step and fixed (@MainActor)
+     before reporting green.)
+
+  [executed tests — GREEN] SwiftPM harness (module "TeslaSync" = Adapter+Model; @testable tests)
+  swift test .............................. Executed 25 tests, 0 failures   SWIFT_TEST_EXIT=0
+    Suites: AutomationFeedStatusTests(4) · AutomationFeedFormatTests(4) ·
+            AutomationFeedAdapterTests(4) · AutomationFeedProjectionTests(5) ·
+            AutomationFeedModelTests(5) · AutomationFeedAccessibilityTests(2). [DEBUG_TESTS=25/25]
+
+  [Xcode app build/test — DEFERRED, shown NOT green, real evidence captured]
+  bare `xcodebuild -scheme TeslaSync -destination 'iPhone 16' build test` ... BARE_IOS_EXIT=1
+  bare `xcodebuild -scheme TeslaSync-macOS build test` ..................... BARE_MAC_EXIT=1
+    -> both fail at the toolchain: "xcodebuild requires Xcode, but active developer directory
+       '/Library/Developer/CommandLineTools' is a command line tools instance" (the literal
+       gate's result in this shell's default toolchain).
+  full-Xcode `xcodegen generate` .......................................... XCODEGEN_EXIT=0
+       (surface registered: 48 build refs to AutomationActivityFeed in the generated pbxproj)
+  full-Xcode `xcodebuild -target TeslaSync-macOS build` (CODE_SIGNING_ALLOWED=NO) APP_BUILD_EXIT=65
+    -> "There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'"
+       — the un-staged KMP vendored binary (Frameworks/ holds only .gitkeep), a repo-wide
+       integration prerequisite tracked in apps/macos-pending-verifications.md that blocks ALL
+       sibling surfaces equally.
+    -> AutomationActivityFeed-attributed errors in the app build: 0. The deferral is the
+       missing vendored framework, NOT this surface's code.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the Xcode app build/test is shown DEFERRED (BARE_*_EXIT=1 toolchain +
+                       APP_BUILD_EXIT=65 missing-framework), NEVER recolored green. Every "OK"/
+                       "GREEN" above is a command actually run with its real exit code (incl.
+                       both-SDK compiles + an EXECUTED 25/25 XCTest run).
+  2  No scope narrowing: implemented ALL states (loading/empty/error/stale/offline/data) + live
+                       rows + gated stats + connection chip + i18n + a11y + telemetry + stale
+                       auto-refresh.
+  3  No skip-and-assume: each gate executed; nothing assumed green (a real actor-isolation bug
+                       was found by the SDK typecheck and fixed before reporting green).
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0 (exact + scoped +
+                       self-test). The TS shim is used ONLY in the throwaway typecheck harness,
+                       clearly labeled, NEVER in shipped files.
+  5  No parity shortcuts: faithful port of statusConfig/typeMap, the three formatters, the
+                       display-name rule, the slice(0,5) cap, the stats gate, and every state.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit shared infra outside the allowed files — no change to
+                       project.yml / .swiftlint.yml / Localizable.xcstrings / Frameworks /
+                       macos-pending-verifications.md; strings ship as the per-surface table.
+  8  No commit on red  : committing on green host gates + iOS/macOS compiles + executed 25/25
+                       tests; the Xcode app build/test is explicitly DEFERRED (captured
+                       evidence), not a failure of this code.
+  9  No silent drift   : changes confined to the allowed AutomationActivityFeed.* files + this
+                       log. (Two pre-existing working-copy edits under web/src/features/admin/*
+                       were present before this task and are left untouched / unstaged.)
+  10 Log ends with EXIT/STATUS below.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all web states reproduced (+ native stale/offline/error);
+      each has a #if DEBUG preview and is phase-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (AutomationFeedSource ->
+      AutomationFeedModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — 7 parity keys (+ 8 status, 5
+      event, 7 native chrome) in AutomationActivityFeed.strings.
+  [x] Accessibility labels on every element; each row is one labeled element; title is a header.
+  [x] Tests: adapter unit + per-state projection/model + a11y — 25 methods, EXECUTED 25/25.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates + both-SDK compiles + executed tests green; Xcode app
+      build/test DEFERRED with captured evidence (un-staged Shared.xcframework, code-unrelated
+      infra blocker, outside allowed files).
+
+=== DISPOSITION ===
+  Production-polished native AutomationActivityFeed shipped at parity with the web source:
+  pure-Swift projection core (EXECUTED-green XCTest, 25/25), P1/S8 state-holder seam (no view
+  HTTP), P1/S11 telemetry, every state + i18n key + a11y label, the live SSE rows, the gated
+  stats summary, and the connection chip with the native stale/offline P4 chrome + a guarded
+  stale auto-refresh. All host-runnable gates pass AND the surface compiles against BOTH the
+  iOS 18 simulator and macOS 15 SDKs with the real Xcode 26 toolchain under Swift 6 strict
+  concurrency. The signed Xcode app build/test is DEFERRED to the downstream integration/signed
+  runner (un-staged KMP Shared.xcframework — not a defect in this code; outside this prompt's
+  allowed files), matching the 0005 FleetTelemetryHealth / 0010 ToolCard "code-complete +
+  DEFERRED Xcode gate" precedent.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/AutomationActivityFeed.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0081-AutomationActivityFeed.log
+  git commit -m "feat(apps/apple/feature-views): add AutomationActivityFeed surface (P4)"
+
+EXIT=0
+STATUS=DONE

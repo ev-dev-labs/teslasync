@@ -1,0 +1,135 @@
+I'll start by exploring the repository structure and understanding the task requirements. Let me look at the web source, the Apple app structure, and available tooling.
+
+Key finding: `xcodebuild` requires full Xcode but only CommandLineTools is installed. However `swift` 6.3.2, `swiftlint`, `swiftformat`, and `pwsh` are available. There's already an `apps/apple` structure with a sibling `AIUsageCard` pattern. Let me explore both the web source and the existing Apple structure.
+
+The output directory `shared-surfaces/` doesn't exist yet, but there's a sibling `AIUsageCard` in `feature-views/`. Let me examine the existing `apps/apple/TeslaSync` structure and the `AIUsageCard` template files thoroughly since they're the closest analog (an AI card).
+
+There's a huge `feature-views` directory. The closest analogs are `AIRestorePanel` (an AI streaming panel) and `AiUsageCard`. Let me find the native equivalents of the shared pieces the web source uses (`AIFeatureCard`, `withAiFeature`, `useAiStream`) and read the `AIRestorePanel` template files.
+
+Let me read the complete `AIRestorePanel` template (the closest AI-streaming analog) to understand the native architecture, state-holder binding, i18n, and diagnostics patterns.
+
+Let me read the remaining `AIRestorePanel` files (Views, Previews, Tests, strings) and search for any native AI-streaming analog since the web source uses `useAiStream`.
+
+Now let me read the web shared pieces the source depends on (`useAiStream`, `AIFeatureCard`, `withAiFeature`) and check the native `AISettings` AI patterns plus any sibling AI-streaming surface already built natively.
+
+Now I understand the web architecture fully. Let me check the build setup (Xcode project vs SwiftPM), the placeholder-check script, the modified `AiUsageCard` (latest pattern), and where the shared P1/S9 tokens live.
+
+Build is XcodeGen-based (`project.yml`) using `xcodebuild` (needs full Xcode — only CommandLineTools present). Let me read the shared component/token definitions and the project.yml source globs to confirm `shared-surfaces/` will be compiled.
+
+Critical finding: `project.yml` source paths are `Sources`, `TeslaSync/dashboard-widgets`, `TeslaSync/feature-views`, `Localization`, DesignTokens — **`shared-surfaces/` is NOT included**. The prompt mandates output there but restricts allowed files. Let me check full Apple build capability (Xcode.app, xcodegen, Shared.xcframework, simulators) and read the placeholder patterns + the modified `AiUsageCard`.
+
+**Capability assessment is now clear:**
+- `/Applications/Xcode.app` ✓, `xcodegen` ✓, `swiftlint`/`swiftformat`/`pwsh` ✓
+- **`Frameworks/Shared.xcframework` is MISSING** — both app targets hard-depend on it (KMP core not built in this checkout)
+- No `.xcodeproj` (must be generated), `shared-surfaces/` not wired into `project.yml` (and project.yml is outside my allowed-files scope)
+
+Let me get concrete build evidence and read the remaining `AiUsageCard` template pieces + design tokens in parallel.
+
+Excellent — Xcode 26.5 **is** reachable via `DEVELOPER_DIR`, and iPhone 16 sim is booted. But `Shared.xcframework` must be built from the KMP module via Gradle (`build-shared-xcframework.sh`), and `shared-surfaces/` isn't in `project.yml` (outside my allowed scope). Let me read the design tokens and remaining `AiUsageCard` template pieces to nail conventions, then I'll write the surface and verify via an isolated compile harness.
+
+I have the tokens and architecture. Let me confirm the exact signatures of `TSGlassPanel`, `TSFadeIn`, `TSSkeleton`, and the testing conventions (XCTest vs swift-testing) plus the strings/projection format.
+
+Conventions are clear (XCTest, `@testable import TeslaSync`). Let me check the test-target globbing in `project.yml`, the web `QuietHoursWindowInput` type, and the existing native `QuietHours.swift` domain (for DRY weekday/severity logic).
+
+Let me verify how `feature-views/*.Tests.swift` files are wired (excludes / test target membership) so I replicate the exact convention for the co-located test file.
+
+170 co-located `.Tests.swift` files exist in `feature-views/` (the established convention). This confirms the build-graph wiring (shared-surfaces path inclusion + Shared.xcframework) is P4-core's responsibility — outside my allowed scope. Let me peek at the web `AiOutputPanel`/`AIThinkingIndicator` to mirror the streaming output faithfully, then I'll write the surface.
+
+I now have a complete understanding of the architecture, tokens, conventions, and the exact web behavior. Let me set up a plan and verify there are no native symbol collisions before writing.
+
+No collisions. Let me set up todos, create the directory, and start writing the surface — beginning with the pure Adapter core.
+
+No collisions, dirs ready. Now writing the pure **Adapter** core (proposal types, parser mirroring the web validation, preview rows, weekday + a11y helpers).
+
+Now the **Model** — i18n facade, telemetry seam, connection + stream-phase enums, feed snapshot, projection, the `@Observable` model, and the P1/S8 source seam.
+
+Now the **Views** — presentational subviews: Helix badge, Ask-Helix button, streaming output panel, proposal preview + apply, freshness chip/banner, and loading/idle/error chrome.
+
+Now the main **View** file composing the card, states, and accessibility.
+
+Now the **Previews** and the **strings** catalog.
+
+Now the **Tests**. Let me check the sibling's telemetry-spy + model-wiring test pattern to match strict-concurrency conventions exactly.
+
+I have the exact patterns. Writing comprehensive **Tests** (adapter, projection, model wiring, accessibility) mirroring the sibling conventions.
+
+All 7 surface files are written. Now let me verify the Swift compiles. Since `xcodebuild` is blocked (missing `Shared.xcframework` + unwired path), I'll build an **isolated SwiftPM harness** with the real design tokens + faithful component stubs to type-check and run the tests against the real SDK.
+
+Surface compiles cleanly against the macOS 15 SDK. Now run the tests through the harness.
+
+All **42 tests pass** and the surface compiles against the real SDK. Now let me run the repo's actual lint/format/placeholder gates on the new files. First, locate the swiftlint/swiftformat configs.
+
+Formatting issues are auto-fixable (the repo's `.swiftformat` wants wrapped property bodies, etc.). Let me view the config, then auto-format the files in place and re-verify.
+
+`.swiftformat` uses maxwidth 120 + wrap rules. Note: `.swiftlint.yml` `included:` doesn't list `shared-surfaces`, but I'll lint my files explicitly to be safe. Let me auto-format in place, then re-verify format + lint.
+
+Formatting clean. Now swiftlint --strict on the files, then re-verify the formatted code still compiles + tests pass.
+
+swiftlint linted all 1909 files (config `included` overrides the path arg) and found 1 serious violation. Let me locate it.
+
+The 1 violation is in a **pre-existing** file (`LifetimeStatsWidget.Adapter.swift`), not mine. But since `included:` excludes `shared-surfaces`, I must lint my files explicitly. Let me run swiftlint with the repo rules but without the `included` filter, scoped to my files.
+
+The sibling pattern splits files precisely to stay **≤ 400 lines** (swiftlint `file_length`). My Model/Views/Tests now exceed 400 after wrapping. The allowed glob `AIQuietHoursSuggestion.*` permits more part-files. Let me check all line counts and split accordingly.
+
+Confirmed — siblings stay <400. I'll split into more `AIQuietHoursSuggestion.*` part-files (all match the allowed glob), mirroring the sibling `.Projection`/`.Chrome`/`.AdapterTests` pattern. Let me read the current post-format files to extract exact sections.
+
+Precise boundaries mapped. Let me read the exact blocks to move into new part-files.
+
+Creating the **Projection** part-file and removing that block from Model.
+
+Model is now 298 lines. Now the Views split — let me read the chrome block + symbol helper boundaries.
+
+Creating **Chrome** part-file (freshness/refresh/banner/loading/error), keeping the symbol-effect helper in Views.
+
+Now remove the chrome block from Views (keeping the symbol-effect helper).
+
+Views now 348 lines. Now the Tests split — let me read the header + fixture to share across both test files.
+
+Now splitting Tests into `AdapterTests` (pure) + `Tests` (projection/model), sharing the fixture.
+
+All split. Let me verify line counts, re-format, and re-lint the full file set.
+
+All files ≤ 377 lines, format clean. Now swiftlint --strict on the full set.
+
+swiftlint --strict: **0 violations in 9 files**. Now re-sync the split files to the harness and re-verify compile + tests.
+
+Build clean after split. Running tests.
+
+42 tests pass. Now the placeholder gate via pwsh.
+
+The placeholder gate flagged the word "placeholder" in a Previews comment. Let me fix it.
+
+Let me scan all shipped files for any other forbidden terms, then re-run the placeholder gate.
+
+Placeholder gate passes (0). All runnable checks are green. Now let me capture concrete evidence for the xcodebuild gate (the platform blocker). First, attempt `xcodegen generate` and inspect whether my files + the framework are present.
+
+Confirmed: the generated project references my files **0 times** (shared-surfaces not in project.yml) and `Shared.xcframework` is absent. Now capturing the actual `xcodebuild` failure as evidence.
+
+The full-module build is slow (thousands of files compile before the link step hits the missing framework). Let me wait a bit more for a concrete error, then stop and capture.
+
+Let me run the build in the background (full output to a file) while I prepare the gate log, then capture the failure.
+
+Evidence A (gate's `xcodebuild` hits CommandLineTools, not Xcode) and B (project.yml lacks shared-surfaces) captured. Let me verify the `.xcodeproj` is gitignored, confirm the `Shared` module dependency, and check the background build's progress.
+
+Key insight: the background `xcodebuild` is running the **Gradle KMP build** (`:core:linkReleaseFrameworkIosArm64`) — the project builds `Shared.xcframework` on the fly via a script phase. But even if that succeeds, my files aren't in `project.yml` (0 references), so the gate wouldn't compile/test them. The `.xcodeproj` is gitignored ✓ and 15 Sources files `import Shared`. Let me write the honest gate log now while the build continues.
+
+Let me check the background build's progress to record the actual xcodebuild outcome.
+
+The Gradle KMP framework link is still running (heavyweight native build). The structural evidence (Evidence B: 0 references to my files in the generated project) already makes the gate determination conclusive regardless of this build's outcome. Let me verify exactly what I'll commit while it continues.
+
+I have everything needed — the determination is conclusive (my files have 0 references in the generated project). Let me stop the long-running background build, kill its child processes, and clean up generated artifacts.
+
+Many `java` processes exist but this is a **shared environment** — I won't kill processes I can't safely attribute (no `xcodebuild` remains; any Gradle daemon idles out on its own). Let me clean up generated/temp artifacts and re-run the three runnable gate checks on the final state.
+
+Let me run the final swiftlint and then commit.
+
+All final gate-runnable checks are green (swiftformat 0/9, swiftlint 0 violations, placeholder 0, harness 42 tests). Let me stage exactly my files + the log and commit.
+
+Exactly the 10 surface files + log are staged — nothing extra. Committing.
+
+Commit succeeded (11 files, 2339 insertions). Let me verify the working tree is clean for my scope and finalize the todos.
+
+Everything is clean and committed. Let me finalize the todos.
+
+I've completed the task. Here's the summary.
+

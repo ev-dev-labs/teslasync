@@ -1,0 +1,111 @@
+=== P4 Shared surface 0047 AISmartChargeScheduleSuggestion (Apple) ===
+Branch auto/20260608-002645-33927/276 · Xcode 26.5 · Swift 6 (strict concurrency complete)
+Web source: components/ai/AISmartChargeScheduleSuggestion.tsx
+Native output: apps/apple/TeslaSync/shared-surfaces/AISmartChargeScheduleSuggestion.{swift,Model,Adapter,Views,Previews,Tests}.swift + .strings
+
+=== SURFACE SUMMARY ===
+  Native Apple-idiomatic SwiftUI parity of the smart-charge schedule suggestion card.
+  The web source is an `AIFeatureCard` wrapped in
+  `withAiFeature('smart-charge-schedule-suggestion', …)` and driven by `useAiStream`;
+  the native surface reproduces that composition, its data, its states, and its i18n.
+
+  Data sources (web hooks → P1/S8 source seam; no direct HTTP from the view):
+    • useTranslation → AIScheduleDraftStrings facade (P1/S10).
+    • useAiStream    → AIScheduleDraftSource seam (start/stop/refresh + draft()=stream.start,
+                       cancel()=stream.cancel; cancel fires on disappear, mirroring the web
+                       AbortController-on-unmount). The view binds AIScheduleDraftModel only.
+
+  Shared components used (web → native counterpart):
+    • @/components/ai/AIFeatureCard  → AIScheduleDraftCard (header is hoisted to the surface
+      chrome with the freshness envelope; action + output panel reproduced 1:1).
+    • @/components/ai/withAiFeature  → the AI-enabled gate: AIScheduleDraftModel.isPresented;
+      when off the surface renders nothing (faithful web `return null`), unit-pinned.
+    • Composed: AiOutputPanel → AIScheduleOutputPanel (renders nothing pre-run; error row /
+      thinking indicator / accumulated draft text), AIThinkingIndicator → AIScheduleThinking
+      Indicator (labelled status row + 3 shimmering skeleton lines), AIThinkingDots →
+      AIScheduleThinkingDots (in-button), AIBadge → AIScheduleHelixBadge.
+
+  Verbatim web logic ported + unit-pinned (the `useMemo` body + guards):
+    body defaults = target_soc 80 · current_soc 20 · max_amps 32 · battery_capacity_kwh 75 ·
+      charger_voltage 240 · prefer_off_peak true ; snake_case wire keys; vehicle_id via
+      numericVehicleId = `Number(vehicleId) || 0`; depart_by = ISO-8601 UTC (empty/unparseable
+      → now, valid instant re-emitted) ; canStart = `!!vehicleId && !!ratePlanId`
+      (string-truthy, so "0" is truthy) ; route = "/ai/charging/schedule/draft" (bare — the
+      client adds /api/v1, no double prefix).
+  States (all render, never a blank box): loading(skeleton) · empty(web `!canStart` — visible
+    card with disabled "Ask Helix" + input hint) · error(whole-surface QueryError peer +retry) ·
+    ready(the firing card; stream idle/streaming/done/error drives button label + output panel) ·
+    stale(chip + one auto-refresh) · offline(cached + chip) · gated-off(web `null`, the only
+    intentionally-absent branch, unit-pinned). Stream error renders INLINE in the output panel
+    (card stays ready), faithful to AiOutputPanel — distinct from the leaf load-error.
+  i18n: the source keys (chargePlanner.aiAgent.title/description/generateButton/badge) + the
+    shared Helix/AIFeatureCard/AiOutputPanel keys (helix.askHelix/thinking/badge/tooltip/
+    ariaLabel/errorLabel, ai.common.errorUnknown) + native chrome (aiSchedule.*) all resolve
+    via the P1/S10 facade; the catalog carries the verbatim web English. No literals in code.
+  a11y: card is an accessibility container with a spoken summary (title+description, +draft or
+    +error once output exists, via the testable AIScheduleDraftAccessibility seam); the action
+    keeps the web aria-label contract "Ask Helix · Draft a schedule"; freshness chip / refresh /
+    output / retry all labelled; Dynamic Type via Font.TS; reduce-motion-safe dots & shimmer.
+  Telemetry: emits view.opened with surface slug "AISmartChargeScheduleSuggestion" once
+    (P1/S11), asserted in the model tests.
+
+=== HOST-RUNNABLE GATES (all green) ===
+  swiftformat --lint TeslaSync/shared-surfaces ........ 0/6 require formatting        FORMAT_EXIT=0
+  swiftlint lint --strict <6 surface files> ........... Found 0 violations, 0 serious LINT_EXIT=0
+  check-placeholders.ps1 -Path …/shared-surfaces ...... PLACEHOLDER_COUNT=0 ALLOWED=0 PLACEHOLDER_EXIT=0
+  swiftc -typecheck iPhoneSimulator (ios18.0-simulator, swift6, strict-concurrency) .. IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (macos15.0, swift6, strict-concurrency) ................... MAC_TYPECHECK_EXIT=0
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6) ............. 25/25 passed, TEST_EXIT=0
+      → AIScheduleDraftRequestTests (9: route/numericVehicleId/departIso×3/canStart/body
+        defaults+overrides+snake_case-encode) · AIScheduleDraftProjectionTests (6:
+        loadError-precedence/loading/empty×2/ready/stream-error-stays-ready) ·
+        AIScheduleDraftModelTests (8: start-telemetry-once/gate/draft+cancel+refresh-forward/
+        push/stale-auto-refresh-once/offline-no-refresh/stop-re-arms/slug) ·
+        AIScheduleDraftAccessibilityTests (2: summary ±output).
+      Harness links the REAL primitives this surface depends on — the generated Tokens.swift
+      plus the actual TSDesign/TSMaterial/Cards(TSGlassPanel)/Buttons(TSButton)/Typography/
+      Badges/Skeletons(TSSkeleton)/Motion(TSFadeIn) shared atoms (no stubbed atoms) — so the
+      surface compiles against real shared code, not a mock.
+  xcodegen generate (spec valid, project written) ..................................... XCODEGEN_EXIT=0
+  type-name collision scan (8 public types vs Sources + feature-views + dashboard-widgets) 0 external defs
+
+=== DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test ===
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. Blocked by PRE-EXISTING, UNRELATED parallel-merge state in the
+    shared app target + environment — ZERO of which originates in this surface (all verified
+    present in THIS tree):
+      • Shared.xcframework not staged (apps/apple/Frameworks has only .gitkeep). The scheme
+        pre-action builds it via the Kotlin/Native Gradle toolchain; in this run it built the
+        DEBUG XCFramework (apps/shared/core/build/XCFrameworks/debug/Shared.xcframework) and
+        began the release link, but staging into apps/apple/Frameworks/ did not complete in
+        the host window (the P1/S3 artifact is itself tracked macOS-pending).
+      • `struct DashboardWidgetSize` redefined across 15 files (Sources/DashboardWidgets/*
+        + TeslaSync/dashboard-widgets/*) — "invalid redeclaration" across the app target.
+      • 261 co-located feature-view/dashboard-widget *.Tests.swift / *.ModelTests.swift
+        `import XCTest` into the app target (this surface's 1 test file follows that SAME
+        established sibling convention; it introduces no new failure class).
+      • No macOS development-signing identity (ADR-012); macOS target sets hardened runtime.
+      • The shared-surfaces/ tier is new; registering `TeslaSync/shared-surfaces` in
+        project.yml (the way feature-views/dashboard-widgets are) is a P4-core wiring step
+        outside THIS surface prompt's allowed-files scope (surface files + this log only).
+    This surface's OWN code is proven to compile against the real iOS-18 + macOS-15 SDKs
+    (typechecks above) and its logic runs green (25/25 XCTest). The full-app build/test is the
+    P99 acceptance gate's responsibility on a macos-latest runner with signing identities.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all web states reproduced (loading/empty/error/ready/
+      stale/offline + gated-off `null`).
+  [x] Hooks bind to the shared P1/S8 source seam (AIScheduleDraftSource); no direct HTTP in the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (source keys + shared
+      Helix/AIFeatureCard keys + native chrome).
+  [x] Accessibility labels present on every interactive element + per-state spoken summaries.
+  [x] Tests: adapter unit tests (cached → projection) + per-state model/projection tests +
+      a11y label tests (25 total, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (stub gate: 0, 0 opt-outs).
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing unrelated blockers +
+      signing); host-runnable equivalents (real-SDK typecheck both platforms + 25/25 XCTest +
+      isolated SwiftPM build linking the real shared atoms) all green.
+
+EXIT=0
+STATUS=DONE

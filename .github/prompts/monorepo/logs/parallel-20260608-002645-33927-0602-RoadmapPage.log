@@ -1,0 +1,128 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure and parity infrastructure.
+
+Let me look at the existing System feature pages and parity infrastructure.
+
+The task's stated output path `TeslaSync/Features/System/` isn't in `project.yml` sources. Let me understand the real structure where pages live.
+
+Let me check the environment for Xcode tooling and find where pages register in navigation.
+
+Xcode is **not** available (only Command Line Tools) — `xcodebuild` won't run, but `swiftlint`, `swift`, and `xcodegen` are. Let me understand the real conventions by reading the parity README and checking the web route grouping.
+
+`pwsh`, `swiftlint`, and `swift` are available; `xcodebuild` is not. Let me study the existing patterns: a sample log, the app entry, settings registration, and a representative feature-view.
+
+The BatteryCellsWidget log gives me the precedent: templated path maps to `Sources/...` (the actually-compiled location), documented as "PATH MAPPING — no silent drift". Let me examine the web nav grouping and AppRoute tests to decide how to surface `/roadmap`.
+
+The catalog already has `translation.roadmap.subtitle` and `translation.roadmap.title`. Let me verify the web's actual i18n scope (does it localize the roadmap *data* or just title/subtitle/phases?) and read those existing catalog entries plus a representative feature-view for patterns.
+
+The web only truly localizes `roadmap.title` + `roadmap.subtitle` (phase labels use inline `t()` fallbacks; item content is hardcoded data). This confirms the manifest's 2 strings. Now let me learn the design system, components, and i18n code patterns.
+
+swiftlint `--strict`: lines ≤120, files ≤400 (so I'll split into multiple files). `Sources` is linted, so `Sources/Features/System/` is the right home. Let me read the core building blocks: design tokens, cards, badges, typography, states, motion.
+
+Now let me read the motion component, design tokens, material, and the LoadableState/model patterns.
+
+Now the generated design tokens to confirm exact token names available.
+
+I have the full token vocabulary. The purple phase color maps to `Color.TS.chartSeriesPower` (#A855F7). Let me check for an existing icon-mapping helper and find a simple complete feature-view to mirror conventions.
+
+Let me see the content-catalog precedent (TemplateGallery) and how the `translation.` prefix keys are resolved in views, plus the ToolCard card pattern.
+
+Now I understand the localization pattern (`Text("translation.roadmap.title")`). Let me verify the route-title key convention and check RootView for navigation wiring.
+
+Let me confirm the `group.system`/pending keys situation and study a test + a card-view/model pattern to mirror.
+
+I have all the patterns I need. Let me read the placeholder-scan gate script (I must run it) and set up my plan/todos.
+
+Forbidden words to avoid in code: TODO, FIXME, XXX, "Coming soon", "Placeholder", "Lorem ipsum", "not implemented". Now let me read the ledger schema and extract the manifest record for this unit.
+
+I have the exact manifest record (`page:system/Roadmap`, requiredCount=6). Let me definitively verify whether any full Xcode exists before concluding the build gate is blocked.
+
+`/Applications/Xcode.app` exists! Let me verify it's functional via `DEVELOPER_DIR` (the precedent's approach).
+
+Xcode 26.5 is fully functional via `DEVELOPER_DIR` — the build gate is **achievable**, not blocked. Let me set up tracking and check the KMP framework build dependency.
+
+Shared.xcframework isn't staged yet (build script will produce it; konan 2.4.0 + Java 17 present). Let me read the build script, then start implementing while I kick off a framework pre-build.
+
+Let me kick off the Shared.xcframework build in the background (it's slow the first time) while I implement the page.
+
+Xcode 26.5 works. Framework build is running in the background. Now I'll implement. Let me update todos and create the data model + catalog.
+
+Now wire navigation. Let me add the `.roadmap` route and compose its registration.
+
+Now the catalog strings. Let me view the exact insertion boundaries for the roadmap and route keys.
+
+Now insert the catalog strings — phase labels + empty key, and the `route.roadmap` nav label.
+
+Let me validate the catalog JSON and write the tests.
+
+Now the model tests.
+
+Let me update todos and check the framework build progress while running swiftlint + placeholder scan on my new files.
+
+Framework is linking (progressing). Let me run swiftlint and the placeholder scan on my new files (these don't need the framework).
+
+Placeholder scan passes. swiftlint linted the whole repo (3830 files) and reported 40 violations — I need to isolate whether any are mine. Let me capture and filter.
+
+The baseline is clean — all 20 violations are mine, both in `RoadmapCatalog.swift`: trailing commas (18×) and `type_body_length` (enum body >250 lines). I'll fix both by removing trailing commas and moving the dataset to a file-scope constant. Let me recreate the file.
+
+Let me re-run swiftlint to confirm `RoadmapCatalog.swift` is now clean, plus swiftformat-lint my files.
+
+The 1 remaining violation is **pre-existing** in `LifetimeStatsWidget.Adapter.swift` (a dashboard widget I never touched). Let me verify it's pre-existing and test how swiftlint scopes paths (the gate lints only my dir).
+
+Path scoping works (1 file → 1 file). The `LifetimeStatsWidget` violation is pre-existing and outside the gate's scope. Let me lint exactly my changed paths to confirm they're all clean.
+
+Path-scoping works for file args but a dir arg expands to the full `included` set. The `LifetimeStatsWidget` violation is pre-existing (likely swiftlint 0.63.3 counts `function_body_length` differently). Let me confirm it's pre-existing at HEAD and check the framework build status.
+
+Shared.xcframework is built and staged; the lint violation is confirmed pre-existing. Now let me generate the Xcode project and build the macOS target (validates my code compiles).
+
+Project generated. Now let me build the macOS target (this compiles my page into the app). Running async since it takes a few minutes.
+
+Build failed (exit 65). Let me find the compile errors.
+
+The failure is **code signing** (no dev certificate), not a compile error — my code compiled and linked. Let me rebuild with signing disabled (standard for CI validation).
+
+A pre-existing `feature-views/*.Tests.swift` file fails XCTest resolution in the app target. Let me check whether the first build (which reached the signing phase = compiled+linked) had this issue, and inspect the test file.
+
+The first build reached the **signing** phase (so everything compiled+linked); the XCTest error in attempt 2 is a signing-flag/incremental artifact in a pre-existing file. The iOS Simulator build (the precedent's proven path) needs no signing. Let me check simulators and build there.
+
+iPhone 16 simulator is available. Let me build the iOS target there (no signing needed for simulator).
+
+The XCTest error is pre-existing: feature-views `.Tests.swift` files are compiled into the app target and need `ENABLE_TESTING_SEARCH_PATHS=YES`. Let me add that build setting.
+
+`ENABLE_TESTING_SEARCH_PATHS=YES` fixed XCTest but exposed another pre-existing ambiguity. Importantly, **macOS attempt 1 compiled the entire app and only failed at signing** — strong evidence my code compiles. Let me confirm my files are in the project and were compiled.
+
+Attempt 1 actually failed at entitlements validation *before* compiling (0 SwiftCompile lines) — so I don't yet have a real compile. The feature-views `.Tests.swift`-in-app-target issue is the crux. Let me investigate target membership and xcodegen version.
+
+170 feature-view `.Tests.swift` files (self `@testable import`) are in the app target — that's why `ENABLE_TESTING_SEARCH_PATHS` causes ambiguity. The precedent built before these existed. Let me find the documented gate contract (p4-apple/README.md).
+
+The full-app build is blocked by **pre-existing** breakage: 170 feature-view `*.Tests.swift`/`*.ModelTests.swift` files (self `@testable import`) are wrongly in the app target. Let me enumerate the exact test-file patterns so I can exclude them at build time without touching my own test file.
+
+All app-target test files use a `.{Type}Tests.swift` dotted pattern; my `RoadmapModelTests.swift` doesn't match. I'll exclude the pre-existing co-located tests at build time (no file changes) to validate compilation. Building the macOS target now.
+
+1260 errors are stale-incremental-state corruption (4 builds with different file sets into shared DerivedData) — all in macro-generated files, none mine. The first clean iOS build showed only the XCTest blocker. Let me do a **clean** build with a fresh DerivedData path, signing off, and the pre-existing tests excluded.
+
+Down to 1 error (none in my files) on a clean build. Let me see it.
+
+`-derivedDataPath` requires `-scheme`. Let me switch to the scheme (gradle is cached now).
+
+Even clean, the `TelemetryErrorsModel` ambiguity persists with exclusions — so it's a genuine duplicate-type condition masked by the earlier XCTest failure, not incremental corruption. Let me check for duplicate definitions.
+
+**Confirmed pre-existing duplicate public types** in the repo at HEAD: `TelemetryErrorsModel` (dashboard-widgets **and** feature-views) and `TelemetryErrorRow` (two feature-view files). The full app can't compile at HEAD in this environment — unrelated to my change. Let me check whether `Sources/` (my page's real dependencies) is independent of those two broken dirs so I can validate my page cleanly.
+
+This is an extensively broken baseline: **dozens** of duplicate public types collide between `dashboard-widgets` and `feature-views` (both compiled into one module). The full app can't compile at HEAD — entirely unrelated to my page. `Sources/` (my real deps) appears independent. Let me validate my page via a **temporary, restored-after** project config that excludes the two broken sibling dirs.
+
+Config isolated cleanly. Let me regenerate and do a clean macOS build to validate my page compiles.
+
+The duplicates also exist **within** `Sources/` (multiple widget dirs: `Sources/DashboardWidgets`, `Sources/Dashboard/Widgets`). The whole module is collision-laden at HEAD. Let me pinpoint exactly which dirs define the colliding types so I can isolate my page precisely.
+
+I've now definitively proven the baseline is pervasively broken (`DashboardWidgetSize` alone is defined 16+ times). My page's non-widget dependency dirs have **no** real collisions. Let me restore `project.yml` and add a temporary isolated framework+test target (module name `TeslaSync`) to validate my page compiles and my tests pass.
+
+Let me check whether any non-widget code references widget types (to know if I can exclude the widget dirs cleanly), then build an isolated framework.
+
+No widget references leak into non-widget code, and `@main` is only in `TeslaSyncApp.swift`. Let me add an isolated framework+test target (module `TeslaSync`) with just my page's real dependencies, then build it.
+
+Targets added. Now let me build the isolated framework (validates my page + real deps compile).
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: F540:2E3F13:1117D19:120F769:6A26F53F)

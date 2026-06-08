@@ -1,0 +1,172 @@
+I'll start by assessing the environment capability (the critical gate) and exploring the existing structure.
+
+Key finding: `xcodebuild` requires full Xcode, but only Command Line Tools are installed. Let me verify thoroughly whether Xcode exists anywhere before concluding, and explore the existing structure in parallel.
+
+Critical discovery: `/Applications/Xcode.app` **exists** — `xcode-select` is just pointed at CommandLineTools. I can override with `DEVELOPER_DIR` (no sudo needed). Let me verify Xcode works and check the watchOS SDK.
+
+Full Xcode 26.5 with watchOS 26.5 SDK and simulators is available — the gate **can** run. This is real work, not BLOCKED. Let me deeply explore the existing patterns. Reading many files in parallel.
+
+Now I understand the watch intent. Let me study the SharedFacade, widgets, settings, and live data layers that the watch app will reuse.
+
+Now let me check tooling (pwsh), design tokens, routing, and git state in parallel.
+
+`.watch` route already exists. Let me read the route parser, design tokens, timeline planner, and an existing test to match patterns.
+
+I have deep understanding now. Let me check the critical dependency: the `Shared.xcframework` (KMP) that iOS/macOS targets need, and how prior prompts handled the build gate.
+
+Critical: the watch target can be **Shared-framework-free** (like the widgets), so its build/test can genuinely pass. iOS/macOS apps need the KMP `Shared.xcframework`. Let me check JDK/Gradle availability to see if a true full build is feasible.
+
+Confirmed: **no JDK/Android SDK** — the KMP `Shared.xcframework` can't be built here (pre-existing, predecessor-tracked in `macos-pending-verifications.md`). Strategy: make the watch target **Shared-free** (like widgets) so `TeslaSyncWatch` builds/tests genuinely green; iOS/macOS full app build remains macOS-pending (KMP). Let me confirm the baseline generates and study a few more patterns.
+
+Baseline generates cleanly. Let me inspect the i18n string catalog format and confirm the watch simulator destination, then write my plan.
+
+I now have a complete picture. Let me set up my plan and todos, then build. Let me first read the remaining shared pieces the watch will reuse and confirm they're `Shared`-free.
+
+Design is locked. Let me write the plan and todos, then implement.
+
+Let me read the existing vehicle command types so the watch quick actions align with the phone's command layer.
+
+Let me confirm `TSAppearance` definition before writing the bridge, then create the WatchBridge files.
+
+`TSAppearance` lives in Components/UI (would pull heavy deps). Refinement: the watch stays free of `AppSettings`/`TSAppearance` — it consumes a lean `WatchSyncSettings` over WCSession and the already-formatted snapshot strings (no SI conversion on-watch). Let me create the WatchBridge layer.
+
+Now the phone-side coordinator (iOS-only, drives the real sync end-to-end).
+
+Watch transport layer done. Let me check the widget snapshot tests for fragility before deciding how to add climate/security data to the glance.
+
+I'll add an optional `ClimateSecuritySummary` to the shared snapshot (climate/security for the glance) — low-ripple, all existing call sites use labels + defaults. Let me make these shared-model edits.
+
+The shared model now carries climate/security. Let me build the watch app's data layer.
+
+Now the watch UI. Let me create the formatting helpers, battery ring, and state views.
+
+Now the main glance view binding to the model.
+
+I referenced two views I need to create — the offline content and the climate/security status row.
+
+Now the quick actions view with confirmation + auth gating.
+
+Now the watch settings view (synced prefs + watch-local data controls + diagnostics).
+
+Now the root view and app entry point.
+
+Now the watchOS complications (widget extension). Provider first, reusing the shared snapshot/timeline layer.
+
+Now the complication views and widget definitions.
+
+Now resources. Let me check the iOS Info plist + entitlements conventions to mirror them for the watch.
+
+Now the watch plists and entitlements.
+
+Now wire the watch targets and scheme into `project.yml`.
+
+Now add the watch scheme.
+
+Now the watch test suite. Let me create the test support and tests.
+
+Now the central behavioral tests for the model.
+
+Now let me generate the project and build the watch app to catch compile errors.
+
+Project generates with the watch scheme. Now let me build the watch app (build-only first) on the watch simulator.
+
+Build failed — but on **pre-existing** malformed plural entries in the shared `Localizable.xcstrings` (`translation.bulk.*`), not my code. My watch build is the first real `xcodebuild` to compile the catalog (iOS/macOS were KMP-deferred). Let me inspect these entries.
+
+These are pre-existing malformed plural-noun entries that block any real catalog compile. Let me see how they're used before fixing.
+
+These 5 `translation.bulk.*` keys are **dead** (zero references) but block every real catalog compile. I'll fix them (reference the number, per Apple's guidance) plus add my watch keys via one script. First, verify JSON round-trip fidelity to keep the diff minimal.
+
+Round-trip is byte-identical — safe to script edits. Let me verify which referenced keys already exist before generating the new ones.
+
+All reused keys exist. Now let me fix the 5 dead plural keys and add all watch i18n keys in one script.
+
+52 watch keys added, 30 plural values fixed. Let me rebuild the watch app.
+
+Two real issues: (1) a method-name shadowing bug in the complication view, and (2) the **generated** `Tokens.swift` uses UIKit dynamic-color APIs unavailable on watchOS — and `apps/design/**` is outside my allowed scope. I'll add a watchOS-safe token shim under `apps/apple/**` and drop DesignTokens from the watch targets. Let me enumerate exactly which tokens my watch code uses.
+
+I'll add a watchOS-safe token shim (dark values copied from the canonical generated source) and swap it in for DesignTokens on the watch targets only. Let me create it and fix the shadowing bug.
+
+Now update `project.yml` to use the watch token shim (not DesignTokens) and fix the complication shadowing bug.
+
+Now fix the complication method shadowing bug.
+
+Regenerate and rebuild.
+
+One Sendable issue (same pattern the existing settings store solved with `@unchecked Sendable`). Let me fix it.
+
+Watch app + complications build clean. Now run the full **build test** (unit tests on the watch simulator).
+
+Build succeeds; test failed at **install** because a standalone watch app must declare `WKWatchOnly`. Let me fix the plist (the embedded-companion packaging belongs to the KMP-deferred iOS app).
+
+Now rebuild and re-run tests (plist fix). Ensuring the Xcode toolchain is fully on PATH for the test runner.
+
+Tests are running (simulator boot + execution). Let me wait for completion.
+
+Tests are passing (WatchModelTests 12/12, etc.). Let me wait for the final result.
+
+All suites passing (0 failures). Let me wait for the final `TEST SUCCEEDED`.
+
+35 tests total; 29 passed with 0 failures, last suite (WatchSyncPayloadTests) finishing. Let me wait for final completion.
+
+Tests pass (29 confirmed, 0 failures), but xcodebuild is hung in post-test teardown (a known watchOS-sim/CommandLineTools-default issue). Let me stop it and re-run more controlled with a result bundle as evidence.
+
+Test runner is still preparing (slow watch-sim install). Let me wait longer.
+
+The background invocation got messy. Let me stop it and run in async mode so I can monitor cleanly and extract the result bundle.
+
+All 35 tests ran this time: 34 passed, **1 failed** in `WatchSyncPayloadTests`. Let me find it.
+
+Real bug — in my **test**: `WatchCommandRequest(action:)` defaults `requestedAt` to `Date()` (sub-second precision), but the coder uses ISO-8601 (whole-second), so the round-trip loses the fraction. Production is fine; the test was over-precise. Let me fix it to use a whole-second date.
+
+Re-running the watch tests (incremental).
+
+`** TEST SUCCEEDED **` — **35/35 watch tests pass**. Let me update todos, then improve verification of the phone-side coordinator (make it platform-agnostic so the watch build verifies it) before running the lint gates.
+
+Let me refactor the phone coordinator to be closure-based and `canImport(WatchConnectivity)`-guarded so the watch build verifies it, with the tiny iOS-specific mappings split out.
+
+Now the tiny iOS-only mappings (AppSettings + command kind) that the app uses to wire the service.
+
+PhoneWatchSyncService is now platform-agnostic (verified by the watch build). Let me add tests for it, then rebuild + retest.
+
+Regenerate and re-run the full watch build+test (now including the phone coordinator + its tests).
+
+**40/40 watch tests pass.** Now let me add the watch dirs to the SwiftLint config and run the lint/format/placeholder gates.
+
+5 SwiftLint violations to fix. Let me inspect the function-length one and the trailing newline.
+
+Now fix the function length (extract the climate/security sample helper) and the `TS` type-name rule.
+
+One line too long (126 > 120). Let me fix it.
+
+Now run all three host gates: swiftlint, swiftformat, placeholder check.
+
+SwiftLint clean. SwiftFormat found auto-fixable issues in my 6 files. Let me auto-format (only rewrites files that differ) and re-verify.
+
+SwiftLint + SwiftFormat both clean. Let me run the placeholder gate and confirm the formatter changes didn't break the build.
+
+Placeholder gate clean (0 violations). Let me re-run the watch build+test to confirm the formatter changes are still green (authoritative WATCH gate).
+
+While the final watch test runs, let me capture the **real** iOS build result (expected to fail at the KMP `Shared.xcframework` prebuild — no JDK).
+
+Watch test6 completed. Let me check its result, and note the iOS build needs a valid simulator name.
+
+**Watch gate fully green: 40/40 tests, TEST SUCCEEDED.** Now capture the real iOS build result (env has iPhone 17, not 16) — expecting the KMP prebuild failure.
+
+As expected: iOS build fails on the missing **KMP `Shared.xcframework`** (no JDK/Kotlin-Native toolchain — predecessor S3-0001, macOS-pending). Let me capture the macOS build (same cause) for the honest log.
+
+All gates are green except iOS/macOS (KMP-deferred, predecessor S3-0001). Let me verify my changes are all in-scope, clean build artifacts, and review the git status.
+
+All changes are correctly scoped to `apps/apple/**`. The `done.txt`/`run-prompts.sh` changes are pre-existing (not mine) and I'll exclude them. Now let me write the honest gate log.
+
+Let me run one final authoritative watch build+test to confirm the exact committed state is green (I edited a test file after the last full run), plus re-confirm the host gates.
+
+Host gates re-confirmed green. Let me wait for the final watch test result.
+
+**Final watch gate: TEST SUCCEEDED, 40/40, WATCH_EXIT=0.** All gates confirmed. Let me clean build artifacts, stage only in-scope files, and verify what will be committed.
+
+All staged files are in-scope. Let me commit with the prescribed message.
+
+Committed (`38b3c27e`). Let me verify the working tree and finalize todos.
+
+The task is complete and verified. Let me clean up the temporary logs and finalize.
+

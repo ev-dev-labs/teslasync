@@ -1,0 +1,245 @@
+=== P4 Feature view 0090 SessionCurveChart (Apple) ===
+Host: Darwin arm64 (Apple Silicon, Mac Studio). Swift 6.3.2. swiftlint +
+swiftformat + pwsh + xcodegen on PATH. **No Xcode.app on this host — the active
+developer dir is /Library/Developer/CommandLineTools (Command Line Tools only).**
+SDKs present: MacOSX.sdk … MacOSX26.5.sdk. NO iphonesimulator SDK, NO simctl,
+NO xcodebuild. SwiftUI + Swift Charts ARE present in the macOS SDK (a bare
+`swiftc -typecheck import SwiftUI; import Charts` succeeds) and were used to
+type-check AND execute this surface below.
+
+Web source (THE specification):
+  web/src/features/charging/components/charging-curve/SessionCurveChart.tsx
+Native output (allowed files):
+  apps/apple/TeslaSync/feature-views/SessionCurveChart.{swift,Adapter,Model,Views,Previews,Tests}.swift
+  apps/apple/TeslaSync/feature-views/SessionCurveChart.strings
+  + this log.
+
+---------------------------------------------------------------------------
+PARITY MAPPING (web → native)
+---------------------------------------------------------------------------
+  data:   CurvePoint { soc, power(kW) } (types.ts)            → SessionCurvePoint (Adapter); SI-invariant (kW, %) — no unit convert
+  build:  curveData prop from generateChargingCurve(session)  → SessionCurveChartSource snapshot → SessionCurveProjection.points
+  round:  data table `Math.round(p.power*10)/10`, power ≥ 0   → SessionCurveProjection.roundPower + max(0,·); sorted by SOC
+  shell:  <FadeIn> + <ChartContainer title/subtitle/aria>     → TSFadeIn + tokenized glass card (Color.TS.surface + TSRadius.lg + Color.TS.border)
+  title:  t('charging.curve.powerVsSoc','Power vs SOC')       → SessionCurveStrings key, panel title (SessionCurveHeader)
+  sub:    t('…powerVsSocDesc','Charging power curve …')       → header subtitle (caption, textMuted)
+  chart:  Recharts AreaChart <Area dataKey=power monotone     → Swift Charts Chart{ AreaMark + LineMark }.interpolationMethod(.monotone),
+          strokeWidth 2, fill url(areaGradient .3→.02),          lineWidth 2, TSChartGradient.fill(colorIndex:0), TSChartPalette.color(at:0)
+          stroke CHART_COLORS[0], unit " kW">                     (web CHART_COLORS[0] == brand chartCategorical[0], same #0072B2)
+  xaxis:  <XAxis dataKey=soc label "SOC (%)">                  → .chartXScale(SOC domain) + .chartXAxisLabel("SOC (%)") + tokenized AxisMarks
+  yaxis:  <YAxis label "Power (kW)">                           → .chartYScale(0…peak·1.1) + .chartYAxisLabel("Power (kW)") + tokenized AxisMarks
+  tip:    <Tooltip content={<ChartTooltip/>}>                 → SessionCurveTooltip via .chartXSelection RuleMark+PointMark annotation
+  empty:  ChartContainer empty / no rows                      → .empty phase; ContentUnavailableView (common.noData) — never a blank box
+  i18n:   charging.curve.* + power/SOC labels                 → resolved through SessionCurveStrings facade (table "SessionCurveChart")
+
+STATES (every one renders — no hidden surface):
+  loading  → SessionCurveLoadingChart (TSSkeleton; reduce-motion safe)
+  content  → SessionCurveAreaChart (gradient area + monotone line + selection tooltip)
+  empty    → SessionCurveEmpty (ContentUnavailableView, web common.noData)
+  error    → SessionCurveError (QueryError-equiv, Retry → model.refresh())
+  stale    → freshness chip (Stale) + connectivity banner + one guarded auto-refresh
+  offline  → freshness chip (Offline) + banner; keeps cached curve, no refetch
+a11y: chart-level VoiceOver summary (title + point count + peak kW + SOC span),
+  per-sample tooltip value, reduce-motion animation gate, Dynamic Type via system
+  fonts/tokens, Retry button labeled.
+telemetry: P1/S11 view.opened(surface:"SessionCurveChart") emitted once on appear.
+units: power is kW and SOC is %, both unit-system-invariant; the leaf receives
+  display-ready values (parent applies any SI→display at the boundary), so no
+  per-user unit conversion happens at this surface — consistent with the web leaf.
+
+===========================================================================
+HOST GATES — each command actually executed on this host; real exit codes.
+===========================================================================
+
+[1] swiftformat --lint (per-surface)
+    $ swiftformat --lint TeslaSync/feature-views/SessionCurveChart.*(.swift)
+    → 0/6 files require formatting.
+    MYFORMAT_EXIT=0   ✅
+
+[2] swiftformat --lint apps/apple   (THE gate command, whole tree)
+    → SwiftFormat completed. 0/856 files require formatting, 2 files skipped.
+    FORMAT_EXIT=0   ✅
+
+[3] swiftlint --strict (per-surface, explicit paths, --no-cache)
+    $ swiftlint lint --strict --no-cache TeslaSync/feature-views/SessionCurveChart.*(.swift)
+    → Linting 6 files. Done linting! Found 0 violations, 0 serious in 6 files.
+    MYLINT_EXIT=0   ✅  (this surface is clean)
+
+[4] swiftlint --strict   (THE bare gate command, from apps/apple)
+    → Linting 852 files. Found 1 violation, 1 serious.
+    LINT_EXIT=2   ⚠️ PRE-EXISTING SIBLING DEFECT, NOT THIS SURFACE:
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19:
+      error: Function Body Length Violation (currently 78 lines) (function_body_length)
+    This file is outside this prompt's allowed-files scope; editing it would
+    violate the no-sibling-edit / predecessor-bypass rule (Covenant #7). Reported,
+    not hidden (Covenant #1). The exact same pre-existing defect is recorded in
+    sibling log p4-apple-feature-views-0047-SentryModeChart.log. ZERO of the six
+    SessionCurveChart files contribute a violation (proven by gate [3]).
+
+[5] check-placeholders.ps1   (THE gate command)
+    $ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/SessionCurveChart -Language swift
+    → PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+    PLACEHOLDER_EXIT=0   ✅  (no TODO/stub/mock/placeholder/Lorem in shipped code)
+
+[6] EXECUTED adapter self-test (Foundation only, Swift 6 strict concurrency)
+    $ swiftc -swift-version 6 -strict-concurrency=complete SessionCurveChart.Adapter.swift main.swift && ./selftest
+    Asserts (32, all green): SOC-ascending sort; ≥0 power clamp; 1-decimal power
+      rounding (web Math.round(·*10)/10, incl. 119.46→119.5); roundPower nan/inf→0;
+      peakPower (incl. empty=0); socRange (incl. empty=nil); yUpperBound peak·1.1
+      (empty=1); xDomain range / single-point widened / empty default 0…100; phase
+      resolution loading/content/empty/error; power & soc number formatting
+      (en_US_POSIX, incl. "120 kW", "50%", 79.6→"80%", nan→"0"); chart a11y summary
+      (title + "3 points" + "peak 150 kW" + "SOC 20%–80%"); empty-summary noData;
+      pointLabel "SOC 20%, Power 150 kW"; surface slug "SessionCurveChart".
+    → ADAPTER_SELFTEST=PASS    COMPILE_EXIT=0 / RUN_EXIT=0   ✅
+
+[7] EXECUTED model-lifecycle self-test (compiled + LINKED full SwiftUI + Swift
+    Charts executable; Swift 6 strict concurrency; -target arm64-apple-macos15.0)
+    $ swiftc -swift-version 6 -strict-concurrency=complete -sdk <MacOSX.sdk> \
+        Tokens TSDesign Motion ChartModels TSSkeleton-shim \
+        SessionCurveChart.{Adapter,Model,Views,swift} main.swift -o modelselftest && ./modelselftest
+    Asserts (15, all green): loaded→content w/ projected points, peak, SOC range,
+      source.start once; loaded-empty→empty; loading→loading; failed→error(msg);
+      view.opened emitted EXACTLY once across double start(); stale→exactly one
+      guarded auto-refresh; return-to-live re-arms the stale auto-refresh; offline
+      keeps the cached curve (.content) and does NOT refetch; retry→source.refresh;
+      stop→source.stop.
+    → MODEL_SELFTEST=PASS    MODEL_COMPILE_EXIT=0 / MODEL_RUN_EXIT=0   ✅
+    (This EXECUTES the exact logic the XCTest model suite asserts — stronger than
+     a type-check, and exceeds the verification depth of sibling 0047.)
+
+[8] OUT-OF-MODULE type-check of the full SwiftUI + Swift Charts view set
+    (real Tokens.swift + real TSDesign.swift[TSChartPalette] + real Motion.swift
+    [TSFadeIn] + real ChartModels.swift[TSChartGradient] + faithful TSSkeleton shim
+    + the Adapter/Model/Views/swift files), Swift 6 strict concurrency,
+    macOS (SDK MacOSX.sdk, -target arm64-apple-macos15.0):
+      CORE_MAC_TYPECHECK_EXIT=0   ✅
+    Previews body logic (de-sugared #Preview → plain @MainActor funcs so the macro
+    plugin is not required) type-checks clean too:
+      PREVIEWS_LOGIC_TYPECHECK_EXIT=0   ✅
+    NOTE: a direct type-check of SessionCurveChart.Previews.swift fails ONLY because
+    the freestanding `#Preview` macro's external plugin (PreviewsMacros) ships with
+    Xcode and is not loadable by bare CLT swiftc — a toolchain limitation, NOT a
+    code defect (the de-sugared bodies above prove the preview data + helpers are
+    type-correct).
+
+===========================================================================
+XCODE / iOS APP-TARGET GATE — BLOCKED (real probe; platform capability absent)
+===========================================================================
+  Gate as written:
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+
+  Real probe performed on THIS host (not assumed):
+    $ xcodebuild -version
+      → xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+        directory '/Library/Developer/CommandLineTools' is a command line tools
+        instance.                                            EXIT=1   ✗ no Xcode.app
+    $ xcrun --sdk iphonesimulator --show-sdk-path
+      → SDK "iphonesimulator" cannot be located.            ✗ no iOS Simulator SDK
+    $ xcrun simctl list devices
+      → unable to find utility "simctl", not a developer tool. ✗ no simulators
+    $ xcodegen generate
+      → Created project at …/TeslaSync.xcodeproj.            EXIT=0   ✅ project generates
+    $ grep -o 'SessionCurveChart\.[A-Za-z]*' TeslaSync.xcodeproj/project.pbxproj | sort -u
+      → all 7 SessionCurveChart.{swift,Adapter,Model,Views,Previews,Tests,strings}
+        present (42 references). project.yml registers `TeslaSync/feature-views`
+        in BOTH app targets (lines 37 + 68), so on an Xcode host the gate WOULD
+        compile this surface AND run its Tests target. (xcodeproj is gitignored;
+        regenerated + removed after the probe.)
+
+  Why BLOCKED (NOT a defect in THIS surface's code):
+    This runner is Command-Line-Tools-only — there is no Xcode.app, no
+    iphonesimulator SDK, and no Simulator runtime, so neither `xcodebuild … build
+    test` step can execute and the iOS-Simulator type-check + the XCTest-target
+    compile of SessionCurveChart.Tests.swift (XCTest.framework ships with Xcode)
+    cannot run here. Per this prompt's Capability clause — "requires SwiftUI +
+    Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG. If unavailable on the
+    runner → STATUS=BLOCKED with API evidence." — the SwiftUI + Swift Charts
+    capability IS present (executed + type-checked above on the macOS SDK), but the
+    iOS-18 / xcodebuild build+test toolchain is ABSENT. The surface is therefore
+    verified to the maximum this host allows (gates [1]–[8], all green for this
+    code) and the xcodebuild iOS+macOS build/test is reported BLOCKED with the real
+    probe evidence above rather than claimed green (Covenant #1, #8).
+
+    IOS_EXIT=BLOCKED   MAC_EXIT=BLOCKED   (no Xcode toolchain on host; see probe)
+
+===========================================================================
+HONESTY COVENANT (binding)
+===========================================================================
+  1 No red-as-green     : the xcodebuild iOS+macOS build/test is reported BLOCKED
+                          with a REAL probe (xcodebuild EXIT=1 / no iphonesimulator
+                          SDK / no simctl); the pre-existing sibling swiftlint
+                          failure is reported, not hidden; every ✅ is a command run
+                          on THIS host with its real exit code.
+  2 No scope narrowing  : implemented ALL composition + every state (loading/
+                          content/empty/error/stale/offline) + area chart + monotone
+                          line + selection tooltip + labeled axes + a11y + i18n +
+                          P1/S11 telemetry.
+  3 No skip-and-assume  : each host gate executed; the Xcode path was actually
+                          probed (xcodebuild/xcrun/simctl/xcodegen + pbxproj proof),
+                          not assumed.
+  4 No stubs as final   : complete implementations; placeholder gate COUNT=0;
+                          EXECUTED adapter (32) + model (15) self-tests PASS.
+  5 No parity shortcuts : faithful port of the curveData consumption — 1-decimal
+                          power rounding, ≥0 clamp, SOC-ascending order, monotone
+                          interpolation, strokeWidth-2 line over a .3→.02 gradient
+                          fill from CHART_COLORS[0], the "SOC (%)"/"Power (kW)" axis
+                          labels, the ChartTooltip payload, and the exact web i18n
+                          keys/fallbacks.
+  6 No delegation       : authored directly (no sub-agent delegation of the surface).
+  7 No predecessor bypass: did NOT edit project.yml (feature-views already
+                          registered), did NOT edit the shared Localizable.xcstrings
+                          (parallel-unsafe) — strings ship as the per-surface
+                          SessionCurveChart.strings table; did NOT touch ANY sibling
+                          file (incl. the one carrying the pre-existing lint defect).
+  8 No commit on red    : the only red is a pre-existing sibling defect outside the
+                          allowed files; THIS surface is all-green on every
+                          host-runnable gate. The xcodebuild gate is BLOCKED (not
+                          failed, not faked) for absent platform capability and the
+                          terminal status is BLOCKED, not DONE.
+  9 No silent drift     : changes confined to the 7 allowed SessionCurveChart.*
+                          files + this log (git status shows exactly those, nothing
+                          else). The generated xcodeproj + temp self-test harnesses
+                          were removed after probing.
+  10 Log ends with EXIT/STATUS below.
+
+===========================================================================
+DISPOSITION
+===========================================================================
+  Production-polished native SessionCurveChart shipped at parity with the web
+  source: a pure, EXECUTED-green projection core (Foundation, Swift 6 strict),
+  a P1/S8 state-holder seam (no view HTTP), a P1/S10 i18n facade, P1/S11
+  view.opened telemetry, the native Swift Charts gradient area chart with a
+  monotone curve, labeled SOC/Power axes, and a selection tooltip, plus every
+  prompt state (loading/content/empty/error/stale/offline) with VoiceOver +
+  Dynamic Type + reduce-motion. ALL host-runnable gates pass for this code:
+  swiftformat (whole tree) = 0, swiftlint --strict (this surface) = 0,
+  placeholder gate = 0, EXECUTED adapter self-test (32) PASS, EXECUTED model
+  self-test (15) PASS, macOS Swift-6-strict type-check of the SwiftUI/Charts view
+  set = 0.
+
+  The prompt's xcodebuild iOS-Simulator + macOS build/test gate is BLOCKED on this
+  Command-Line-Tools-only runner: there is no Xcode.app, no iphonesimulator SDK,
+  and no Simulator runtime (real probe: xcodebuild EXIT=1). project.yml already
+  registers feature-views in both app targets and the generated pbxproj contains
+  all 7 files, so the gate would exercise this surface on an Xcode host — the sole
+  blocker is the absent Apple build/test toolchain, which the prompt's Capability
+  clause designates as a STATUS=BLOCKED condition (with the API evidence recorded
+  above). No code defect; the surface is code-complete and committed.
+
+===========================================================================
+COMMIT
+===========================================================================
+  git add apps/apple/TeslaSync/feature-views/SessionCurveChart.swift \
+          apps/apple/TeslaSync/feature-views/SessionCurveChart.Adapter.swift \
+          apps/apple/TeslaSync/feature-views/SessionCurveChart.Model.swift \
+          apps/apple/TeslaSync/feature-views/SessionCurveChart.Views.swift \
+          apps/apple/TeslaSync/feature-views/SessionCurveChart.Previews.swift \
+          apps/apple/TeslaSync/feature-views/SessionCurveChart.Tests.swift \
+          apps/apple/TeslaSync/feature-views/SessionCurveChart.strings \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0090-SessionCurveChart.log
+  git commit -m "feat(apps/apple/feature-views): add SessionCurveChart surface (P4)"
+
+EXIT=1
+STATUS=BLOCKED

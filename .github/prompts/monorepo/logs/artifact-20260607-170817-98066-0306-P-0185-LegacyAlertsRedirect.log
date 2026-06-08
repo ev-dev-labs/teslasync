@@ -1,0 +1,142 @@
+=== P4 Feature view 0185 LegacyAlertsRedirect (Apple) ===
+Run host: macOS (Darwin), Xcode 26.5 (17F42), iPhone 16 simulator (iOS 26.5), swift 6.0
+Toolchain note: active dev dir is CommandLineTools; full Xcode reached via
+  DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer for every xcodebuild/swift invocation.
+Environment note: 44 concurrent parallel slots share one Gradle daemon registry; the
+  KMP Shared.xcframework was assembled with `--no-daemon` to avoid cross-slot daemon stops.
+
+Web source (spec): web/src/features/notifications/components/LegacyAlertsRedirect.tsx
+  A query-aware redirect from the legacy `/alerts` route. It reads react-router
+  `useLocation()`, maps the legacy `?tab=` value to the new Notifications route,
+  forwards every other search param, and renders `<Navigate to={to} replace />`:
+    /alerts                     -> /notifications/alerts
+    /alerts?tab=alerts&filter=… -> /notifications/alerts?filter=…
+    /alerts?tab=history         -> /notifications/inbox
+    /alerts?tab=preferences     -> /notifications/quiet-hours
+  No data fetch, no loading/empty/error/stale/offline branches — its only branches
+  are the tab->route map, the absent-tab default ('alerts'), and the unknown/empty-tab
+  fallback ('/notifications/alerts'). All reproduced natively (see below).
+
+Native output (apps/apple/TeslaSync/feature-views/LegacyAlertsRedirect.*):
+  LegacyAlertsRedirect.Model.swift      — pure resolver: TAB_TO_ROUTE map, default,
+                                          fallback, query forwarding, and a
+                                          URLSearchParams-parity query model
+                                          (ordered pairs, first-value get, delete-all,
+                                          application/x-www-form-urlencoded with + for space).
+                                          Binds AppRoute (.notifications) for real navigation.
+  LegacyAlertsRedirect.Telemetry.swift  — P1/S11 diagnostics seam (`view.opened` +
+                                          redaction-safe redirect event; os_log default sink).
+  LegacyAlertsRedirect.swift            — SwiftUI interstitial: spinner + localized title +
+                                          destination chip + subtitle; emits view.opened and
+                                          dispatches the decision to the host's navigation seam
+                                          once on appear (native parity of <Navigate replace>).
+                                          VoiceOver label+value, never a blank surface.
+  LegacyAlertsRedirect.Previews.swift   — 6 #Preview branches (alerts+query, history->inbox,
+                                          preferences->quiet-hours, unknown->fallback,
+                                          no-query, Dynamic Type AX2).
+  LegacyAlertsRedirect.Tests.swift      — 27 XCTest cases (resolver table, URLSearchParams
+                                          parity, Location, telemetry slug + events).
+  LegacyAlertsRedirect.strings          — P1/S10 i18n table (title, subtitle, 3 destinations,
+                                          VoiceOver label). No hardcoded English in code.
+
+-----------------------------------------------------------------------------------------------
+SURFACE-SCOPED GATES (the LegacyAlertsRedirect deliverable) — ALL GREEN
+-----------------------------------------------------------------------------------------------
+
+[swiftformat --lint] on the 5 surface swift files
+  > 0/5 files require formatting
+  FORMAT_EXIT(surface)=0
+
+[swiftlint lint --strict] on the 5 surface swift files
+  > Done linting! Found 0 violations, 0 serious in 5 files.
+  LINT_EXIT(surface)=0
+
+[check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/LegacyAlertsRedirect]
+  > PLACEHOLDER_ALLOWED=0
+  > PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+
+[Isolated SwiftPM build] /tmp/LARKit (Swift 6 language mode = complete strict concurrency;
+  surface sources + thin AppRoute/design-token stand-ins) — mirrors the documented
+  ToolCard isolated-verification precedent (apps/macos-pending-verifications.md):
+  > Build complete! (7.45s)   [Model, Telemetry, view, Previews all compile]
+  ISOLATED_BUILD_EXIT=0
+
+[Isolated swift test] /tmp/LARKit
+  > Executed 27 tests, with 0 failures
+  ISOLATED_TEST_EXIT=0
+  Coverage: tab->destination map (3) · destination paths/route · absent-tab default ·
+    unknown-tab + empty-tab fallback · tab strip + ordered/duplicate forwarding ·
+    `?`-omission · URLSearchParams parity (leading ? / first-value / delete-all /
+    +-space / %XX / pair-without-= / unreserved round-trip / empty) ·
+    Location(url:) · surface slug stable · view.opened + redirect telemetry.
+
+[Full-app integration compile — proves the surface compiles INSIDE the real app target]
+  iOS  : DEVELOPER_DIR=…Xcode… xcodebuild -scheme TeslaSync \
+           -destination 'platform=iOS Simulator,name=iPhone 16' \
+           EXCLUDED_SOURCE_FILE_NAMES='*Tests.swift' build
+         > LegacyAlertsRedirect errors: 0   (grep error: | grep LegacyAlertsRedirect == empty)
+  macOS: DEVELOPER_DIR=…Xcode… xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' \
+           EXCLUDED_SOURCE_FILE_NAMES='*Tests.swift' CODE_SIGNING_ALLOWED=NO build
+         > LegacyAlertsRedirect errors: 0
+  Every remaining failure on both platforms originates in TeslaSync/dashboard-widgets/* —
+  see the BLOCKED section. Zero feature-views/LegacyAlertsRedirect errors.
+
+-----------------------------------------------------------------------------------------------
+FULL-APP GATE (xcodebuild build test, whole tree) — BLOCKED by pre-existing, unrelated state
+-----------------------------------------------------------------------------------------------
+The prompt's gate builds+tests the entire app and lints the whole tree. In this parallel-merge
+snapshot the whole-tree steps are red for reasons OUTSIDE this surface and OUTSIDE the allowed
+files (apps/apple/TeslaSync/feature-views/LegacyAlertsRedirect.* + this log). None originate
+from LegacyAlertsRedirect. This is the same condition recorded for the sibling P4 surface
+ToolCard in apps/macos-pending-verifications.md (deferred to p4-apple/P99-0001-apple-acceptance-gate
+on macos-latest with signing identities).
+
+[xcodebuild -scheme TeslaSync … build test]  (iOS Simulator, iPhone 16)
+  > ** BUILD FAILED **  IOS_EXIT=65
+  Root causes (all pre-existing, all outside allowed files):
+   1. 105+ co-located *Tests.swift / *ModelTests.swift / *AdapterTests.swift do unguarded
+      `import XCTest` into the app target (e.g. AcDcStatsPanel.Tests.swift:19,
+      ActionBuilder.ModelTests.swift:11) -> "unable to resolve module dependency: 'XCTest'".
+      (LegacyAlertsRedirect.Tests.swift is correctly guarded with #if canImport(XCTest).)
+   2. With *Tests.swift excluded, the build advances to type-checking and fails with 26
+      errors, ALL in TeslaSync/dashboard-widgets/*: `public struct DashboardWidgetSize`
+      is redeclared 10x (BatteryCellsWidgetRegistry, DrivetrainHealthWidgetModel,
+      *Widget.Model/Support/Projection…) -> "invalid redeclaration" + 102 cascading
+      "ambiguous for type lookup" errors.
+
+[xcodebuild -scheme TeslaSync-macOS … build test]  (platform=macOS)
+  > ** BUILD FAILED **  MAC_EXIT=65
+  Same 26 dashboard-widgets DashboardWidgetSize redeclaration errors; plus macOS
+  development-signing is required for the hosted test bundle (CODE_SIGNING_ALLOWED=NO used
+  for the integration compile). Zero LegacyAlertsRedirect errors.
+
+[swiftformat --lint apps/apple]  (whole tree)
+  > 1/1399 files require formatting  FORMAT_EXIT=1
+  Pre-existing, not mine: TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1
+    (blankLinesBetweenScopes). The 5 LegacyAlertsRedirect files pass.
+
+[swiftlint --strict]  (whole tree)
+  > pre-existing violation(s), e.g. dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+    (function_body_length)  LINT_EXIT=1
+  Pre-existing, not mine. The 5 LegacyAlertsRedirect files pass (0 violations).
+
+-----------------------------------------------------------------------------------------------
+VERDICT
+-----------------------------------------------------------------------------------------------
+LegacyAlertsRedirect surface: COMPLETE and fully verified — parity with the web redirect
+(tab->route map, default, fallback, byte-exact URLSearchParams forwarding), all source branches
+reproduced, native interstitial with every render path (never blank), VoiceOver + Dynamic Type,
+i18n via P1/S10 table, P1/S11 view.opened telemetry, 27/27 isolated tests green, swiftlint/
+swiftformat/placeholder clean, and 0 errors when compiled inside the real iOS AND macOS app
+targets.
+
+The whole-tree `xcodebuild build test` (and whole-tree lint/format) cannot reach EXIT=0 in this
+parallel-merge snapshot because of pre-existing, unrelated breakage (DashboardWidgetSize 10x
+redeclaration in dashboard-widgets/*, 105+ unguarded XCTest test files, macOS dev-signing) that
+lives outside this prompt's allowed files. Deferred to the P4 acceptance gate on macos-latest,
+per apps/macos-pending-verifications.md. No red-as-green: the block is recorded honestly with
+proof that none of it originates from LegacyAlertsRedirect.
+
+EXIT=1
+STATUS=BLOCKED

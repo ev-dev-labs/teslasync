@@ -1,0 +1,108 @@
+I'll start by exploring the task. Let me read the web source and understand the existing structure.
+
+Key finding: **Xcode is unavailable** (only Command Line Tools), and `simctl` is missing — so the `xcodebuild` gate steps can't run. But `swift` 6.3.2, `swiftlint`, and `swiftformat` are available. Let me read the web source and explore the Apple infrastructure deeply.
+
+Let me read the supporting web files and registry to fully understand the spec.
+
+Now let me read the `WidgetGaugeHero` web component and dig into the Apple infrastructure (state holders, feedback components, charts/PieGauge, tokens, i18n, diagnostics).
+
+Now let me understand the state-holder layer (P1/S8), tokens (P1/S9), and diagnostics (P1/S11).
+
+Let me examine the domain state-holder pattern, live data store, project config, and design tokens.
+
+Excellent context. Now let me examine the diagnostics/telemetry contract (P1/S11), design tokens (P1/S9), i18n catalog (P1/S10), and existing patterns (WidgetKit widget, test style, feedback chips).
+
+Let me find the diagnostics/telemetry contract, the `LivePresentation` enum, design tokens, and check the i18n catalog and test style.
+
+The i18n keys already exist (`translation.widget.battery`, `translation.widget.noBattery`). Let me confirm the charging key, find the diagnostics contract, and read the design tokens + test style + skeleton.
+
+Let me read the logging pattern, generated design tokens, typography, cards, and a sample test for style.
+
+Let me verify the three i18n key values, and read the badge/chip components + an existing widget for battery-state rendering patterns.
+
+pwsh is available — so I can run the placeholder gate. Let me read the final pieces: `LivePresentation`, `TSButton`, the placeholder checker, and the glass material modifier.
+
+I now have a complete understanding. Let me read the lint configs to match the required style, then write the implementation.
+
+All design pieces are clear. Let me verify the exact i18n keys I'll reference all exist in the catalog before writing.
+
+All keys verified. The three source strings map to confirmed catalog keys (`translation.widget.battery/charging/noBattery`); auxiliary chrome reuses keys already owned by shipped shared components (`TSQueryError`, `TSFreshnessIndicator`, `TSRadialGauge`). 
+
+Xcode is unavailable (CLT only, no `simctl`), so the two `xcodebuild` gate steps are genuinely BLOCKED — but `swift`, `swiftlint`, `swiftformat`, and `pwsh` (placeholder gate) all work. I'll write the full production implementation + tests, run every runnable gate, and document the platform-capability block honestly.
+
+Let me write a brief plan and create the implementation.
+
+Now I'll write the production implementation.
+
+Now the test file covering the adapter, per-state view construction, accessibility, and telemetry.
+
+Now let me run the verification tools. Starting with swiftformat and swiftlint on the new files.
+
+swiftformat found 2 fixable issues. Let me auto-format and re-check.
+
+swiftformat passes. Let me verify the auto-wrapped lines look right and run swiftlint on the new files.
+
+`file_length` (400) is exceeded — the surface should be decomposed (which the guidelines prefer). I'll split into focused `BatteryGaugeWidget.*` sibling files. Let me check current sizes and restructure.
+
+Splitting into focused sibling files (all matching `BatteryGaugeWidget.*`). Let me restructure.
+
+Now the views file:
+
+Now the entry file (descriptor, size, telemetry, model, surface):
+
+Now recreate the test file with the dotted name:
+
+Now let me run all verifications: swiftformat, swiftlint, and check line counts.
+
+All files under 400 lines, swiftformat passes. Now swiftlint --strict:
+
+swiftlint --strict passes (0 violations). Now the placeholder gate (pwsh) and a best-effort syntax parse:
+
+Both placeholder scans pass (0 placeholders) — the directory scan gives real coverage of all 4 files. Now a best-effort syntax parse:
+
+Syntax parses clean. Let me run the gate's exact whole-tree commands to capture real FORMAT/LINT exit codes and confirm my files don't regress the baseline.
+
+Whole-tree swiftformat passes (0/264 need formatting, includes my files). Now the gate's swiftlint:
+
+Gate swiftlint passes (0 violations, 256 files); my files separately verified clean with explicit paths. Now let me capture the xcodebuild capability evidence by actually running the gate's build commands:
+
+Capturing the exact gate `xcodebuild` exit codes as BLOCKED evidence, plus a probe of SDK availability under CLT:
+
+SwiftUI **is** available under CLT (probe passed). This lets me do a deeper standalone typecheck of the production files against the real SDK using faithful stubs of the ~15 in-module symbols. Let me attempt that bonus verification.
+
+Deep typecheck **passed** against the real SDK — strong evidence the SwiftUI/Swift 6/concurrency usage is correct. Let me also try to typecheck the test logic (probe XCTest availability under CLT):
+
+XCTest isn't in CLT (expected — needs full Xcode), so the XCTest harness can't run standalone, but the test's references to my symbols are sound (production typechecked) and it passes parse/format/lint. 
+
+Now let me generate the gate log authentically by running each runnable step and teeing output:
+
+Now appending capability evidence, the deep typecheck verification, parity summary, and final status:
+
+Now the parity summary, acceptance checklist, and final status block:
+
+The log is complete and ends with `EXIT=1` / `STATUS=BLOCKED` (honesty covenant rule 10). Let me review git status before committing (the prompt's Commit step, adapted to the actual file paths).
+
+Only my files are in scope — the `web/...` modifications are pre-existing and must be left alone. Let me stage only my files and commit:
+
+Only in-scope files staged. Committing with an honest message:
+
+Committed. Let me do a final post-commit verification that the runnable gates are still green and the committed files are intact:
+
+All green and committed cleanly. The task is complete to the extent the runner allows.
+
+## Summary
+
+I implemented the native Apple `BatteryGaugeWidget` dashboard surface at parity with `web/src/features/dashboard/widgets/BatteryGaugeWidget.tsx`, committed as `82f53a5c`.
+
+**Deliverable** (`apps/apple/TeslaSync/dashboard-widgets/`, decomposed to satisfy `file_length`):
+- `BatteryGaugeWidget.swift` — registry descriptor (`battery-gauge`, 1×2…2×40), P1/S11 telemetry seam, the `@Observable` model binding the shared **P1/S8** `StateHolderModel<LoadableState<…>>` for `useVehicles`/`useVehicleState` (no HTTP in the view), and the draggable surface.
+- `BatteryGaugeWidget.Adapter.swift` — pure, tested projection: colour ramp (green/amber/red/grey → semantic tokens), `vehicleId ?? vehicles[0].id ?? 0`, and cache-then-network `LoadableState → projection`.
+- `BatteryGaugeWidget.Views.swift` — semantic radial gauge, reduce-motion charging pulse, freshness chip, and the per-state view (loading/empty/error/content + stale/offline).
+- `BatteryGaugeWidget.Tests.swift` — 22 cases (adapter, thresholds, clamp, a11y, telemetry slug).
+
+**i18n**: the three source strings map to confirmed catalog keys (`translation.widget.battery/charging/noBattery`); chrome reuses keys already owned by shipped shared components.
+
+**Verification** (honest): `swiftformat --lint`, `swiftlint --strict`, and the placeholder gate all **pass (0 violations)**; the 3 production files **deep-type-check against the real SwiftUI/Observation/os SDK**.
+
+**Status = BLOCKED**: the two `xcodebuild` iOS/macOS build+test gate steps cannot run — this runner has Command Line Tools only (no Xcode, no iOS Simulator). Per the prompt's Capability clause this is reported as BLOCKED with API evidence rather than a false green; the gate log ends with `EXIT=1` / `STATUS=BLOCKED`. Re-run the two `xcodebuild` steps on an Xcode runner to close the gate.
+

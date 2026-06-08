@@ -1,0 +1,193 @@
+=== P4 Feature view 0021 TimestampTool (Apple) ===
+Date: 2026-06-07
+Host: macOS (Darwin arm64), Xcode 26.5 (Build 17F42) via DEVELOPER_DIR override
+Prompt: .github/prompts/monorepo/p4-apple/feature-views/P-0021-TimestampTool.prompt.md
+Web source (THE spec): web/src/features/admin/components/devtools/tools/TimestampTool.tsx
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+The TimestampTool Apple surface is IMPLEMENTED IN FULL (no stubs) and verified by
+every tool available in-scope (Swift 6 strict-concurrency type-check against the
+REAL shared components, previews type-check, XCTest type-check against an emitted
+TeslaSync module, swiftformat, swiftlint, placeholder gate — all green for the
+shipped files).
+
+The literal xcodebuild build+test gate cannot go green on this runner for reasons
+ENTIRELY OUTSIDE this surface prompt's allowed files (which are limited to
+apps/apple/TeslaSync/feature-views/TimestampTool.* and this log):
+
+  B1. project.yml (NOT an allowed file here) does not list TeslaSync/feature-views
+      in the app target `sources:`, so the generated .xcodeproj contains 0 refs to
+      the new files — the gate never compiles them. Wiring feature-views into the
+      build is an aggregate/predecessor (P4 core / acceptance) responsibility.
+
+  B2. The app target build is already RED before this change, independent of it:
+      project.yml line 36 compiles the whole `TeslaSync/dashboard-widgets` directory
+      — including 41 pre-existing *.Tests.swift files that `import XCTest` — into the
+      iOS/macOS APP target, which does not link XCTest:
+        dashboard-widgets/DigitalTwinWidget.Tests.swift:17:8: error:
+          unable to resolve module dependency: 'XCTest'
+      The macOS app target additionally fails on code-signing
+      ("entitlements require signing with a development certificate") in this
+      unsigned CI-less environment. Neither failure references the new files.
+
+Per Honesty Covenant rule 1 (no red-as-green) and rule 8 (no commit on red), this
+is reported as STATUS=BLOCKED with platform/predecessor evidence (explicitly
+permitted by the prompt's Acceptance Criteria), and NO commit is made.
+
+--------------------------------------------------------------------------------
+CAPABILITY DETECTION
+--------------------------------------------------------------------------------
+xcode-select -p .................. /Library/Developer/CommandLineTools (CLT only)
+/Applications/Xcode.app .......... present  -> used via
+                                   DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+xcodebuild -version .............. Xcode 26.5 (17F42)   [with DEVELOPER_DIR]
+SDKs ............................. iphoneos26.5, iphonesimulator26.5, macosx26.5
+iPhone 16 simulator .............. 83717DEE-70A3-4325-AA61-CBDDD3140989  (present)
+swift ............................ Apple Swift 6.3.2
+swiftlint ........................ /opt/homebrew/bin/swiftlint   (present)
+swiftformat ...................... /opt/homebrew/bin/swiftformat (present)
+xcodegen ......................... /opt/homebrew/bin/xcodegen    (present)
+pwsh ............................. /opt/homebrew/bin/pwsh        (present)
+Frameworks/Shared.xcframework .... built on demand by the scheme's
+                                   "Stage Shared.xcframework" Gradle pre-action
+                                   (Java 17 + apps/shared/gradlew); produced OK:
+                                   "xcframework successfully written out to:
+                                    apps/shared/core/build/XCFrameworks/debug/Shared.xcframework"
+
+SwiftUI + Swift Charts + MapKit + iOS 18 / macOS 15 SDKs are AVAILABLE. (This
+surface uses SwiftUI only; per the web source it has no charts and no maps.)
+
+--------------------------------------------------------------------------------
+DELIVERABLES (apps/apple/TeslaSync/feature-views/, no stubs)
+--------------------------------------------------------------------------------
+TimestampTool.Adapter.swift   pure Foundation: parseUnix/parseISO (length>10 ms vs
+                              s, parseInt leniency, ECMA time-clip), isoString
+                              (toISOString), unixSeconds (floor), relativeSpan
+                              (s/m/h/d), local (medium date + short time),
+                              TimestampProjector -> readout lines, a11y summaries.
+TimestampTool.Model.swift     @Observable @MainActor TimestampToolModel; clock seam
+                              (TimestampNowSource: System/InMemory); telemetry seam
+                              (TimestampToolTelemetry -> view.opened, OSLog default);
+                              TimestampDisplayPrefs; TimestampFieldState; i18n facade
+                              (table "TimestampTool"); DevToolRegistration +
+                              TimestampToolSurface (slug "TimestampTool", id "timestamp").
+TimestampTool.swift           SwiftUI surface: TSGlassPanel ToolCard header (green
+                              clock icon + title + desc), live now row (mono unix | ISO
+                              + numericText tick, reduce-motion gated) + "Now" TSButton,
+                              responsive ViewThatFits 2-col grid of Unix/ISO TSTextFields
+                              with empty / invalid / valid readout states; full
+                              VoiceOver labels; selectable mono values.
+TimestampTool.Previews.swift  DEBUG previews: empty / valid-unix / valid-iso / invalid /
+                              both-filled (fixed-clock InMemory source).
+TimestampTool.Tests.swift     XCTest: parse+format parity, projector lines, i18n
+                              relative suffixes, a11y summaries, field-state matrix,
+                              clock tick, fillNow, view.opened-once, registration.
+TimestampTool.strings         per-surface i18n table (parity keys + native chrome).
+
+i18n keys extracted from source (ALL reproduced, not only the one in the prompt's
+templated list): Timestamp, Timestamp Desc, Now, Unix Timestamp, Iso, Local,
+Relative, Iso Timestamp, Unix. ("Timestamp Desc"/"Unix Timestamp"/"Iso Timestamp"
+are absent from web/src/i18n/en.json -> i18next renders the key verbatim; the
+native .strings reproduce that exact rendering.)
+
+STATES — faithful to the web source (which has NO async data; the only hook is
+useTranslation): live clock (always), per-field empty hint (never a blank box),
+per-field invalid hint, per-field valid readout. The generic templated states
+loading/error/stale/offline are NOT APPLICABLE to this synchronous, networkless
+client utility and are intentionally NOT fabricated (rule 5 no parity shortcuts,
+rule 9 no silent drift, in both directions).
+
+--------------------------------------------------------------------------------
+IN-SCOPE VERIFICATION (the shipped files) — ALL GREEN
+--------------------------------------------------------------------------------
+[1] Swift 6 strict-concurrency TYPE-CHECK of Adapter+Model+View compiled against the
+    REAL shared components + design tokens (Tokens.swift, TSMaterial, TSDesign,
+    Components/UI {Typography,Buttons,Fields,Cards,Badges}); target macos15, -swift-version 6:
+      RESULT: clean — 0 errors, 0 warnings.   SURFACE_TYPECHECK_EXIT=0
+
+[2] Previews TYPE-CHECK (same closure, -D DEBUG):
+      RESULT: clean — 0 errors, 0 warnings.   PREVIEWS_TYPECHECK_EXIT=0
+
+[3] Emit `TeslaSync` module (-enable-testing) from the closure+surface, then TYPE-CHECK
+    TimestampTool.Tests.swift (@testable import TeslaSync + XCTest from the macOS
+    platform usr/lib):
+      RESULT: clean — 0 errors, 0 warnings.   TESTS_TYPECHECK_EXIT=0
+    (registration/surfaceSlug were marked `nonisolated static let` so registry/diagnostics
+     code — and the nonisolated registry test — can read the metadata without a MainActor hop.)
+
+[4] swiftformat --lint TeslaSync/feature-views (config apps/apple/.swiftformat):
+      RESULT: pass.   SWIFTFORMAT_FEATUREVIEWS_EXIT=0
+
+[5] swiftlint --strict (explicit feature-views files, config apps/apple/.swiftlint.yml):
+      RESULT: "Found 0 violations, 0 serious in 5 files".   SWIFTLINT_FEATUREVIEWS_EXIT=0
+
+[6] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views -Language swift:
+      RESULT: PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+
+--------------------------------------------------------------------------------
+LITERAL GATE STEPS (as written in the prompt) — real exits + evidence
+--------------------------------------------------------------------------------
+xcodegen generate ................ XCODEGEN_EXIT=0
+  -> generated .xcodeproj contains: TimestampTool refs = 0, feature-views refs = 0
+     (dashboard-widgets refs = 3). Confirms B1: the new files are not wired in.
+
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  Gradle pre-action built Shared.xcframework OK, then the APP target failed:
+    dashboard-widgets/DigitalTwinWidget.Tests.swift:17:8: error:
+      unable to resolve module dependency: 'XCTest'   (pre-existing; see B2)
+  ** BUILD FAILED **
+  IOS_EXIT=65
+
+xcodebuild -scheme TeslaSync-macOS build test
+    TeslaSync-macOS: error: entitlements require signing with a development
+      certificate (unsigned environment) + same dashboard-widgets XCTest issue.
+  ** BUILD FAILED **
+  MAC_EXIT=65
+
+swiftlint --strict   (bare; config `included:` does NOT list feature-views, so this
+  does not even scan the new files):
+    "Found 1 violation, 1 serious in 543 files"
+    -> the single violation is PRE-EXISTING in a sibling:
+       dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length).
+       feature-views violations in this run: 0.
+  LINT_EXIT=2   (pre-existing; not caused by and not located in the new files)
+
+swiftformat --lint apps/apple   (whole tree, includes the new files):
+    "0/552 files require formatting, 2 files skipped"
+  FORMAT_EXIT=0
+
+check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/TimestampTool   (literal
+  gate path; flat files mean this exact path is a non-existent dir -> vacuous clean):
+  PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0
+  (The meaningful scan of the feature-views directory — step [6] above — is also 0.)
+
+--------------------------------------------------------------------------------
+GIT STATE
+--------------------------------------------------------------------------------
+git status --porcelain: only `?? apps/apple/TeslaSync/feature-views/` is untracked.
+Generated artifacts (TeslaSync.xcodeproj, Frameworks/Shared.xcframework,
+apps/shared/core/build, generated Kotlin schema) are all git-ignored. No commit is
+made (Honesty Covenant rule 8 — no commit on red).
+
+--------------------------------------------------------------------------------
+CONCLUSION
+--------------------------------------------------------------------------------
+The surface is production-complete and passes every verification within this
+prompt's allowed-file scope. The full xcodebuild gate is blocked solely by
+predecessor/aggregate wiring (project.yml — out of allowed files) and a
+pre-existing app-target XCTest/signing breakage unrelated to the new files. Once
+the aggregate P4-core prompt routes TeslaSync/feature-views into the app target and
+the per-surface *.Tests.swift into the XCTest target (the same wiring the existing
+dashboard-widgets bundle needs), this surface is expected to build + test green —
+its source, previews and tests already type-check under Swift 6 strict concurrency
+against the real components and the emitted module.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=2
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+EXIT=1
+STATUS=BLOCKED

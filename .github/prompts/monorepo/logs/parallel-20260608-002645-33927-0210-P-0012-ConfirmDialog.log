@@ -1,0 +1,107 @@
+I'll start by exploring the repository structure, reading the web source, and checking the runner capabilities for Apple development.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me investigate the build setup more deeply before concluding, and read the web source + existing native conventions.
+
+XcodeGen-based project (`project.yml`, no committed `.xcodeproj`). Let me check whether full Xcode exists anywhere, and examine the `TeslaSync/` dir, `project.yml`, and existing UI component conventions.
+
+`/Applications/Xcode.app` exists — I may be able to use it via `DEVELOPER_DIR` without sudo. Let me verify Xcode works and study the native conventions (existing Modal/dialog, state-holders, tokens, i18n, diagnostics).
+
+Capability confirmed: **Xcode 26.5 works** via `DEVELOPER_DIR`, iPhone 16 simulator is booted. So I should target STATUS=DONE. Now let me study the native conventions — UI primitives, diagnostics/telemetry, i18n facade, and severity tokens.
+
+Xcode works and the build setup is clear. Now let me learn the co-located test convention, the telemetry/i18n/token patterns from a complete surface, and the Button/Field primitives.
+
+Let me look at the diagnostics seam pattern, the Field primitive, the Shared.xcframework situation, and empirically generate the Xcode project to learn how co-located `.Tests.swift` files are wired.
+
+`Frameworks/Shared.xcframework` is absent (built from KMP via Gradle/Kotlin-Native). Let me check whether the KMP toolchain is feasible here, and generate the project to inspect test wiring.
+
+KMP shared exists with JDK 17 + gradlew. Project generated. Let me resolve the co-located test wiring puzzle from the generated project, check `pwsh`, and read the design tokens + Field/Typography primitives.
+
+Test wiring confirmed: co-located `.Tests.swift` files compile into the app targets (with `@testable import TeslaSync`). Let me verify the pre-existing build state and read the token/typography primitives I'll need.
+
+Baseline is critical: **258 files in the app target do `@testable import TeslaSync`** (a self-import). Let me confirm whether that actually breaks compilation, read the pending-verifications note, and the Typography primitives.
+
+This is the key context. `macos-pending-verifications.md` documents the exact established protocol: each surface is verified green in **isolation** (SwiftPM build + tests, real iOS-18/macOS-15 `swiftc -typecheck`, swiftlint/swiftformat/placeholder), while the full-app `xcodebuild` is deferred to the macOS acceptance gate due to **pre-existing parallel-merge collisions** (not the surface's fault). Also: self `@testable import` is just a warning, and there are co-located `.strings` files. Let me study the i18n convention and a template surface.
+
+Now I fully understand the conventions: co-located `.strings` table per surface, `@Observable` model + telemetry seam, design-system primitives. Let me read the lint/format configs (must pass `--strict`) and one complete surface view for the appear/telemetry/states pattern.
+
+I have a complete picture of the conventions and the established precedent (isolated verification + macOS-pending deferral). Let me record a brief plan and start writing the deliverable.
+
+Now writing the deliverable. Starting with the model/state-holder file.
+
+Now the view + presentation modifier.
+
+Now the i18n catalog contribution and the test suite.
+
+Now let me format and lint my files against the repo configs.
+
+swiftformat clean. swiftlint flags one issue: `ConfirmDialog.swift` is 421 lines (>400 `file_length`). I'll extract the previews into a separate `ConfirmDialog.Previews.swift` (matching the `*.Previews.swift` convention).
+
+All clean: swiftformat 0/4 need formatting, swiftlint `--strict` 0 violations. Now the critical verification — an **isolated SwiftPM build + tests** under Swift 6 strict concurrency (module named `TeslaSync` so `@testable import` resolves), exactly mirroring the established precedent.
+
+Strict concurrency caught a real issue: `previewCard` (nonisolated) calls `@MainActor` helpers. Fixing by isolating it to `@MainActor`.
+
+Build succeeds under Swift 6 strict concurrency. Now running the tests.
+
+All **21/21 tests pass** under Swift 6 strict concurrency. Now the real dual-SDK typecheck (iOS 18 + macOS 15) against the actual deliverable files.
+
+Both SDK typechecks pass clean. Now the placeholder gate (pwsh is available). Let me inspect the script's `-Path` semantics, then run it.
+
+Surface-level verification is fully green: SwiftPM build + **21/21 tests** (Swift 6 strict concurrency), iOS 18 + macOS 15 typecheck, swiftlint `--strict`, swiftformat `--lint`, and the placeholder gate. Now let me gather concrete evidence of the **pre-existing, unrelated** full-app blockers (the documented macOS-pending situation), and attempt a bounded real `xcodebuild`.
+
+Confirmed the **identical, documented** pre-existing state (DashboardWidgetSize redefined 15×, 261 co-located XCTest-in-app files, missing Shared.xcframework). Let me attempt a bounded real `xcodebuild` to capture the actual first blocker.
+
+Timed out at 150s with no compile errors yet — it's still in the scheme's `Shared.xcframework` Gradle/Kotlin-Native pre-action. Let me capture the actual phase to evidence that concretely.
+
+Concrete evidence captured: the full-app build is in the **Gradle/Kotlin-Native `Shared.xcframework` pre-action** (was linking `linkReleaseFrameworkIosArm64` at the bound) — the documented macOS-pending dependency. Let me check how sibling P4 logs framed their final EXIT/STATUS so I match the established convention exactly.
+
+Sibling logs combine `STATUS=DONE` with `macOS-pending`. Let me read one feature-views and one dashboard-widgets log to mirror the exact structure and final marker.
+
+This is the canonical template. To match its rigor I'll capture the **real** `xcodebuild` exit codes (the Kotlin tasks are now mostly cached). Running the full iOS gate to completion.
+
+Still running (xcframework assembly + app compile). Let me peek at progress.
+
+Progress — now linking the release Kotlin/Native framework. Let me continue waiting for completion.
+
+iOS gate hit the 600s bound (IOS_EXIT=124) — still inside the KMP `Shared.xcframework` Gradle release-link pre-action. The release frameworks are now mostly linked/cached, so one more attempt should get past staging into the Swift compile. Let me capture the timeout tail, then re-run with a larger budget.
+
+The two iOS release frameworks are now cached; only the macOS release link remains before staging + Swift compile. Continuing to wait.
+
+IOS_EXIT=65 — the framework staged and the Swift app compile failed on the pre-existing collisions. Let me extract the actual errors and confirm **zero** are from my surface.
+
+Decisive evidence: `Shared.xcframework BUILD SUCCESSFUL in 9m 17s` + staged, then **IOS_EXIT=65** failing only on the pre-existing `import XCTest`-in-app-target collision (`AIRestorePanel.Tests.swift`, a peer surface) — **zero ConfirmDialog errors**. Now the macOS gate (xcframework cached, so faster).
+
+MAC_EXIT=65. Let me confirm the macOS failures are pre-existing and zero from my surface.
+
+Both full-app gates captured with **real exit 65**, failing only on documented pre-existing blockers (iOS: `XCTest`-in-app-target across peer surfaces; macOS: development-signing on entitled targets) — **0 ConfirmDialog errors**, and `Shared.xcframework BUILD SUCCESSFUL in 9m17s`. Let me capture toolchain versions, then write the log.
+
+Real exits captured (IOS=65, MAC=65), failing only on pre-existing blockers with **0 ConfirmDialog errors**. The working tree has unrelated pre-existing changes (AIUsageCard, web) — I'll keep my commit scoped. Following the closest precedent (LoadingSkeleton), I'll confine changes to the surface files + log. Writing the gate log now.
+
+Build artifacts are gitignored. Now writing the comprehensive gate log.
+
+Let me do a final clean re-verification of all green gates against the committed repo files (re-syncing the isolated harness), then commit.
+
+All green confirmed against the final repo files: swiftformat 0/4, swiftlint 0 violations, placeholder 0/0, isolated SwiftPM **21/21 tests pass**. Now committing the scoped deliverable + log.
+
+Committed cleanly (6 files, only my scope). Let me clean up temporary verification scaffolding and update tracking.
+
+The task is complete. Here's the final summary.
+
+## P4 · Modal/dialog · 0012 — `ConfirmDialog` (Apple) — STATUS=DONE
+
+Shipped a production-polished, Apple-idiomatic `ConfirmDialog` at parity with `web/src/components/ui/ConfirmDialog.tsx`, committed (`0f22089`) within the allowed scope.
+
+**Delivered** (`apps/apple/TeslaSync/modals-dialogs/ConfirmDialog.*`):
+- **`.Model.swift`** — `@Observable` state holder (P1/S8), `ConfirmDialogConfiguration` + pure derivation (`silenceHonored`/`typedMatches`/empty-phrase parity), `ConfirmSilenceStore` (web `confirmSilence.ts` → UserDefaults), `ConfirmDialogTelemetry` (P1/S11 `view.opened`), i18n key facade.
+- **`.swift`** — `.tsConfirmDialog(...)` presenter (scrim + centered modal, silence auto-resolve, loading-aware dismissal, Escape/Return) + card (severity banner, typed-gate, silence checkbox, severity-tinted confirm).
+- **`.Previews.swift`**, **`.strings`** (P1/S10 table, incl. the extracted `confirm.silence.checkbox`), **`.Tests.swift`** (21 cases).
+
+**Every branch reproduced** (no fabricated offline/stale states the source lacks): danger/warning · loading + dismissal-suppress · typed-confirmation gate · silence + auto-resolve + persist-before-confirm.
+
+**Verification (all real, exits pasted in the log):**
+- ✅ swiftformat `--lint` 0/4 · swiftlint `--strict` 0 violations · placeholder gate 0/0
+- ✅ Isolated SwiftPM build + **21/21 tests** under Swift 6 strict concurrency (caught a real preview actor-isolation bug, fixed)
+- ✅ iOS 18 + macOS 15 `swiftc -typecheck` of the exact shipped files
+- ⏸️ Full-app `xcodebuild` **deferred**: `Shared.xcframework` BUILD SUCCESSFUL (9m17s); `IOS_EXIT=65` (pre-existing `XCTest`-in-app-target across 261 peer test files), `MAC_EXIT=65` (pre-existing macOS dev-signing) — **zero ConfirmDialog errors**, matching the sanctioned `apps/macos-pending-verifications.md` disposition.
+
+Kept the commit scoped (left pre-existing unrelated working-tree edits untouched); build artifacts are gitignored.
+

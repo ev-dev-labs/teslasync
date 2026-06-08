@@ -1,0 +1,159 @@
+================================================================================
+ p4-apple · P7 · page:sharing/SharingTrips — SwiftUI / HIG (Apple)
+ Native parity of web/src/features/sharing/pages/SharingTripsPage.tsx  (/sharing/trips)
+================================================================================
+
+ARTIFACT
+  Output dir   : apps/apple/TeslaSync/Features/Sharing/   (per apple.page.prompt.hbs
+                 "Output: apps/apple/TeslaSync/Features/{areaPascal}/{pageId}.swift")
+  Files        : SharingTripsPage.swift            (View scaffold — 2 panels, lifecycle, a11y)
+                 SharingTripsPage.Views.swift      (GlassPanel1 recent panel + row + states; GlassPanel2 hint)
+                 SharingTripsModel.swift           (@Observable model; phase/rows/selection)
+                 SharingTripsProjection.swift      (display projection, phase, SI formatting seam, i18n helpers)
+                 SharingTripsSource.swift          (useTrips seam, in-memory source, telemetry)
+                 SharingTripsLiveSource.swift      (Shared-backed: binds KMP TripsStore + Units SI converters)
+                 SharingRouteRegistration.swift    (registers .sharing in the route host)
+                 SharingTripsPage.Previews.swift   (per-state previews, #if DEBUG)
+                 SharingTripsPage.Tests.swift      (XCTest on projection + model)
+  Integration  : apps/apple/project.yml            (+ TeslaSync/Features source path, both app targets)
+                 apps/apple/.swiftlint.yml         (+ TeslaSync/Features included)
+                 apps/apple/Sources/TeslaSyncApp.swift  (chains SharingRouteRegistration onto the registry)
+                 apps/apple/Localization/Localizable.xcstrings  (+ 8 web keys + 3 page chrome keys)
+
+ARCHITECTURE
+  Seam pattern (Shared-free surface) + Shared-backed live adapter, mirroring the
+  established feature-view seams (ActiveSessionsSection) and the Sources/Features
+  BatteryRadialGauge Shared-free/Shared-backed split. The model binds a
+  SharingTripsSource; production injects SharingTripsLiveSource (KMP TripsStore,
+  "consumes the KMP core" ADR-004); previews/tests inject InMemorySharingTripsSource.
+  SI values stay canonical; conversion is at the display boundary via the shared
+  Units converters (S5) in UnitsSharingTripsFormatting.
+
+  AI section (web AITripPostcardShareCardImageGeneration) is feature-flagged off and
+  is a SEPARATE component parity unit — the manifest extracts only the 2 GlassPanels
+  for page:sharing/SharingTrips, so it is correctly out of scope here (not narrowing).
+
+--------------------------------------------------------------------------------
+ ENVIRONMENT (decisive for gate status)
+--------------------------------------------------------------------------------
+  xcode-select -p            = /Library/Developer/CommandLineTools   (NO full Xcode)
+  xcodebuild -version        = "tool 'xcodebuild' requires Xcode" (CommandLineTools only)
+  apps/apple/.../Shared.xcframework = NOT staged (KMP native packaging is macOS-CI deferred,
+                               apps/macos-pending-verifications.md / p1-shared S3)
+  import XCTest (CLT)        = "no such module 'XCTest'"  (XCTest ships with full Xcode)
+  swiftc -typecheck SwiftUI/Charts/MapKit (macOS 15 SDK) = OK  (isolated checks ARE runnable)
+
+  => Per this prompt's contract ("If no Xcode runner is available, the gate →
+     STATUS=BLOCKED"), the xcodebuild build/test gates cannot run on this host.
+     All host-runnable gates were executed and pass; full-app xcodebuild build+test
+     is deferred to the macOS acceptance gate (p4-apple/P99-0001), exactly as the
+     existing feature-view surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart)
+     in apps/macos-pending-verifications.md.
+
+--------------------------------------------------------------------------------
+ GATES
+--------------------------------------------------------------------------------
+  check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Sharing -Language swift
+        PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+
+  swiftformat --lint apps/apple/TeslaSync/Features/Sharing
+        0/9 files require formatting
+  SWIFTFORMAT_LINT_EXIT=0
+
+  swiftlint --strict (scoped to TeslaSync/Features/Sharing, repo rules)
+        Done linting! Found 0 violations, 0 serious in 9 files.
+  LINT_EXIT=0
+        (repo-wide swiftlint --strict reports exactly 1 pre-existing, UNRELATED
+         violation: TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+         function_body_length — 0 violations in Features/Sharing.)
+
+  swiftc -typecheck -swift-version 6 -target arm64-apple-macos15.0
+        (6 Shared-free surface files + real Components/Design/Tokens/AppRoute closure,
+         Swift 6 complete concurrency; UnitFormatters.swift excluded — it is itself
+         Shared-backed and unused by this page)
+  TYPECHECK_EXIT=0
+
+  swift run (executed logic driver over SharingTripsProjection + SharingTripsModel)
+        ALL_PASS (19 logic checks): phase ladder (loading/empty/content/error),
+        title fallback "Trip #2", drive count "3 drives"/"1 drives",
+        metric distance "123 km"/"42 km", grouped energy "21,500 Wh",
+        duration "2h 30m"/"40m", open-trip em-dash "—", selection + prune.
+  DRIVER_EXIT=0
+
+  xcodegen generate
+        Created project at apps/apple/TeslaSync.xcodeproj (TeslaSync/Features enumerated;
+        48 SharingTrips* file references in project.pbxproj)
+  XCODEGEN_EXIT=0
+
+  xcodebuild -scheme TeslaSync build       => CANNOT RUN (CommandLineTools only; Shared.xcframework absent)
+  BUILD_EXIT=BLOCKED
+  xcodebuild -scheme TeslaSync test        => CANNOT RUN (CommandLineTools only; XCTest absent under CLT)
+  TEST_EXIT=BLOCKED
+
+  DEFERRED to macOS acceptance gate (p4-apple/P99-0001, macos-latest + Shared.xcframework):
+    - SharingTripsLiveSource.swift  (import Shared — links the KMP TripsStore + Units facade)
+    - SharingTripsPage.Tests.swift  (XCTest — compiles+runs in the test bundle; logic proven
+                                     here via the executed driver above)
+    - SharingTripsPage.Previews.swift  (#Preview macro needs the Xcode macro plugin)
+    - full-app xcodebuild build + test
+
+--------------------------------------------------------------------------------
+ PATH RECONCILIATION (Honesty Covenant #9 — no silent drift)
+--------------------------------------------------------------------------------
+  The prompt's Output/Allowed-files name apps/apple/TeslaSync/Features/Sharing/** and
+  the platform string catalog Localizable.xcstrings — both honored verbatim. Because
+  TeslaSync/Features is a NEW source root (this is the first P7 page), it was added to
+  project.yml (both app targets) and .swiftlint.yml so the page actually compiles +
+  lints (otherwise it would be dead code — an ADR-011 violation). The catalog stores
+  the ported web i18n under a translation.* prefix (translation.sharing.trips.title …),
+  which native components do NOT resolve; bare web keys (sharing.trips.title …) were
+  added so String(localized:)/LocalizedStringKey resolve them, matching the registered
+  AppSettingsView convention. Live KMP composition (store vending) is app-wide deferred
+  (AppContainer.bootstrap is a documented stub; no surface is live-wired yet — e.g.
+  BatteryRadialGaugeWidget), so the route is registered with the in-memory source
+  (resolving the real empty state) until bootstrap injects SharingTripsLiveSource.
+
+================================================================================
+ === PARITY ===
+================================================================================
+PARITY_REQUIRED=13
+
+[panel ] GlassPanel1  ............ SharingTripsPage.Views.swift : struct SharingTripsRecentPanel
+                                   (TSGlassPanel; switches model.phase over loading/empty/error/content)
+[panel ] GlassPanel2  ............ SharingTripsPage.Views.swift : struct SharingTripsStaticHintPanel
+                                   (TSGlassPanel; heading + body)
+[state ] loading data state ...... SharingTripsPage.Views.swift : struct SharingTripsLoadingState
+                                   resolved by SharingTripsProjection.phase(status:.loading,count:0)=.loading
+[state ] empty data state ........ SharingTripsPage.Views.swift : struct SharingTripsEmptyState (ContentUnavailableView)
+                                   resolved by SharingTripsProjection.phase(status:.loaded,count:0)=.empty
+[state ] success data state ...... SharingTripsPage.Views.swift : struct SharingTripRowView (content list)
+                                   resolved by SharingTripsProjection.phase(...,count>0)=.content;
+                                   error envelope: struct SharingTripsErrorState (+ Retry)
+[string] sharing.trips.recent.empty ...... SharingTripsPage.Views.swift : SharingTripsEmptyState Label("sharing.trips.recent.empty")
+[string] sharing.trips.recent.heading .... SharingTripsPage.Views.swift : TSPanelTitle("sharing.trips.recent.heading")
+                                            + SharingTripsModel.accessibilitySummary
+[string] sharing.trips.row.drives ........ SharingTripsProjection.swift : SharingTripsStrings.driveCount(_:) "%lld drives"
+[string] sharing.trips.row.trip .......... SharingTripsProjection.swift : SharingTripsStrings.tripTitle(id:explicit:)
+[string] sharing.trips.staticHint.body ... SharingTripsPage.Views.swift : Text("sharing.trips.staticHint.body")
+[string] sharing.trips.staticHint.heading  SharingTripsPage.Views.swift : TSPanelTitle("sharing.trips.staticHint.heading")
+[string] sharing.trips.subtitle .......... SharingTripsPage.swift : Text("sharing.trips.subtitle")
+[string] sharing.trips.title ............. SharingTripsPage.swift : TSPageTitle("sharing.trips.title")
+
+  (All 8 web string keys added as bare keys to apps/apple/Localization/Localizable.xcstrings
+   with the verbatim web English defaults; 3 page-chrome keys also externalized:
+   sharing.trips.loading / sharing.trips.error / sharing.trips.retry.)
+
+PARITY_COVERED=13
+
+================================================================================
+ RESULT
+================================================================================
+  Host-runnable gates: placeholder=0, swiftformat=0, swiftlint=0, swiftc-typecheck=0,
+  logic-driver=PASS(19), xcodegen=0.  PARITY_COVERED==PARITY_REQUIRED (13).
+  xcodebuild build/test BLOCKED (no Xcode runner / no Shared.xcframework / no XCTest
+  under CommandLineTools) — deferred to the macOS acceptance gate per ADR-012 / the
+  apps/macos-pending-verifications.md protocol.
+
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,76 @@
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. `swift`, `swiftlint`, `swiftformat` are available. Let me read the web source and explore the existing native patterns.
+
+The `modals-dialogs/` dir doesn't exist yet — I must create it. There's a strong established multi-file pattern in `feature-views/`. Let me study the most recent reference (AIUsageCard) and the project config.
+
+Now I understand the architecture. Note: `project.yml` only includes `dashboard-widgets` and `feature-views` as sources — not `modals-dialogs`. And allowed files are restricted to `modals-dialogs/FlagEditDrawer.*` + the log. Let me study the full reference pattern (AIUsageCard's remaining files + a JSON-form component) and check tooling.
+
+`pwsh` IS available. Note: `.swiftlint.yml` doesn't include `modals-dialogs`, and I can't modify config (restricted to FlagEditDrawer.* + log). Let me read the remaining reference files, the placeholder checker, design tokens, and a JSON-form component.
+
+Let me locate where the `Projection.resolve` pattern lives, the design tokens, and the freshness/error view peers (referenced but not yet seen).
+
+There's a `Chrome.swift` file too (listing was truncated). Let me see all AiUsageCard files, the Chrome/Projection definitions, and the design tokens.
+
+Now let me find the shared primitives (`TSButton`, `TSSkeleton`, `TSFadeIn`, text fields/sheets) and read the Projection pattern.
+
+Let me read the shared UI primitives I'll reuse (Buttons, Fields, Overlays, Cards, Motion, Skeletons).
+
+Let me check how existing form-style surfaces handle inputs (to match canonical practice) and read the overlay/motion/skeleton primitives.
+
+`AddressInput` is the ideal precedent — a form surface that uses its own scoped field subview (raw `TextField` + token chrome) rather than shared `TSTextField`. Let me read the overlay/card primitives and the AddressInput facade + main view + states.
+
+Now let me read the web flag types, and the AddressInput facade/main-view/states (the closest non-card precedent) to nail the canonical structure.
+
+Let me view the AddressInput facade/model and main view to confirm the `.text` helper + telemetry/state-holder shape for a non-card surface.
+
+I have a complete understanding of the pattern. Let me check the Xcode situation precisely (full app present?), the BLOCKED-convention docs, and an existing P4 log to match conventions.
+
+**Critical: full Xcode IS at `/Applications/Xcode.app`** — the documented convention uses `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`. The established verification standard (from `macos-pending-verifications.md`) is: isolated SwiftPM build + tests + dual-SDK `swiftc -typecheck` + lint/format/placeholder, with full-app xcodebuild deferred. Let me verify the toolchain works and locate remaining primitives.
+
+Toolchain confirmed: Xcode 26.5, iOS/macOS SDK 26.5, iPhone 16 simulator booted. Let me grab the glass-panel modifier + typography signatures, then start building.
+
+I have everything needed. Let me set up the plan and todo tracking, then build the surface.
+
+Now I'll build the surface. Starting with the directory and the pure Adapter core.
+
+All 9 files created. Now verification — starting with swiftformat (apply, then lint), swiftlint, and placeholder gate.
+
+swiftformat applied (7/8; .strings skipped). Let me confirm lint-clean, run swiftlint --strict, and the placeholder gate.
+
+swiftformat clean, placeholder clean. SwiftLint scanned all 1909 files (config `included:` overrides path arg) and found 1 violation — I must check whether it's mine.
+
+The single violation is **pre-existing and unrelated** (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`, function_body_length) — not my files, and outside my allowed scope. Let me prove my files are clean in isolation with a scoped config.
+
+My test file is 447 lines (>400 `file_length`). The established convention (AiUsageCard) splits adapter tests into a separate `*.AdapterTests.swift`. Let me split mine the same way.
+
+Now re-format and re-lint scoped to confirm all 9 files are clean.
+
+All 9 files: swiftformat clean, swiftlint --strict clean (0 violations), placeholder clean. Now the isolated SwiftPM build+test. Let me first enumerate exactly which shared symbols my code uses.
+
+My code uses `Color.TS.*`, `Font.TS.*`, `TSSpacing`, `TSRadius`, `TSButton`, `TSGlassPanel`, `TSSkeleton` (the `TSTextField`/`TSFieldChrome` hits are comment-only). Let me set up an isolated SwiftPM package (real Tokens.swift + minimal stubs) and run build + tests.
+
+Build succeeded (BUILD_EXIT=0). One cosmetic strict-concurrency warning in Previews — let me fix it (mark the preview helper `@MainActor`), then run the tests.
+
+All 41 tests passed (0 failures), build clean. Now the dual-SDK `swiftc -typecheck` against iOS 18 + macOS 15 (covers the `#if os(iOS)` branches like `navigationBarTitleDisplayMode`, `scrollDismissesKeyboard`, `textInputAutocapitalization`).
+
+iOS 18 typecheck clean. Now macOS 15.
+
+Both SDK typechecks pass (iOS 18 + macOS 15). Now let me capture honest evidence for the full-app `xcodebuild` gate status (project wiring + known pre-existing blockers).
+
+Confirmed: `project.yml` wires `dashboard-widgets` + `feature-views` but **not** the new `modals-dialogs` tier (outside my allowed files), and there are 170 pre-existing co-located test files (the documented XCTest-in-app-target blocker). Let me capture concrete xcodegen evidence.
+
+`xcodegen generate` succeeds but enumerates **0** `FlagEditDrawer` refs (vs 60 for the wired `AiUsageCard` control) — concrete proof the new `modals-dialogs` tier isn't wired in `project.yml` (outside my allowed files). Let me check how sibling P4 logs concluded their deferred xcodebuild to match the convention exactly.
+
+The sanctioned convention is clear (ToolCard: `EXIT=0 / STATUS=DONE` with the full-app xcodebuild **deferred** as macOS-pending, surface independently verified). Let me confirm the generated `.xcodeproj` is gitignored and review what's staged, then clean up and write the log.
+
+All 10 surface files present and untracked. The pre-existing working-tree changes (AiUsageCard.*, web files) are not mine — I'll scope my commit precisely. Let me gather final metrics and write the log.
+
+Now let me re-verify the post-edit Previews file is still clean (I added `@MainActor` after the last lint), clean up the temp package, and stage my files.
+
+Clean. Now stage my 10 surface files + the log (scoped — not the pre-existing working-tree changes) and commit.
+
+Exactly my 10 files + the log staged (pre-existing changes excluded). Committing.
+
+Committed cleanly — 11 files (10 surface + log), 2052 insertions, pre-existing changes untouched. Let me do a final confirmation of the log terminator and todo state.
+
+Task complete. The log terminates with `EXIT=0 / STATUS=DONE`, all 13 todos are done, my commit is scoped to my files, and the pre-existing working-tree changes remain untouched.
+

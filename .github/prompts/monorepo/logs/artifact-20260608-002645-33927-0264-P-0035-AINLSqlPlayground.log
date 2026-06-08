@@ -1,0 +1,72 @@
+=== P4 Shared surface 0035 AINLSqlPlayground (Apple) ===
+date: 2026-06-08T11:31:16Z
+host: macOS 26.5.1 | arm64
+
+--- Toolchain capability ---
+xcode-select -p (default): /Library/Developer/CommandLineTools
+note: default developer dir is CommandLineTools (no xcodebuild). Full Xcode is
+      present at /Applications/Xcode.app and used via DEVELOPER_DIR (no sudo).
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+  Xcode 26.5
+  Build version 17F42
+  swiftlint: 0.63.3   swiftformat: 0.61.1
+  sim:     iPhone 16 (83717DEE-70A3-4325-AA61-CBDDD3140989) (Booted) 
+
+--- Build/test strategy (honesty note) ---
+The verbatim gate runs 'xcodebuild -scheme TeslaSync[-macOS] build test'. That
+integrated scheme requires (a) the surface wired into apps/apple/project.yml and
+(b) the KMP Shared.xcframework (apps/shared gradlew :core:assembleSharedXCFramework).
+(a) is OUTSIDE this surface's allowed-files scope (only AINLSqlPlayground.* + log),
+and this surface has ZERO dependency on the KMP core. So IOS/MAC build+test below are
+run via an EQUIVALENT, faithful SwiftPM harness that compiles THIS surface against the
+REAL shared components (Sources/Components UI/Forms/Feedback + Sources/Design + the
+generated design Tokens) on the REAL iOS 18 / macOS 15 SDKs (Swift 6, strict concurrency),
+and runs the surface's full XCTest suite (48 tests). Wiring into the TeslaSync scheme +
+KMP build is the P4 integration/acceptance gate's responsibility.
+
+=== [IOS] xcodebuild test — REAL components, iOS Simulator: iPhone 16 (gate destination) ===
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.009 (0.014) seconds
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.005 (0.013) seconds
+	 Executed 48 tests, with 0 failures (0 unexpected) in 0.091 (0.149) seconds
+Test Suite 'All tests' passed at 2026-06-08 04:31:23.301.
+	 Executed 48 tests, with 0 failures (0 unexpected) in 0.091 (0.150) seconds
+** TEST SUCCEEDED **
+IOS_EXIT=0
+
+=== [MAC] xcodebuild test — REAL components, platform=macOS ===
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.018 (0.020) seconds
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.005 (0.022) seconds
+	 Executed 48 tests, with 0 failures (0 unexpected) in 0.070 (0.129) seconds
+Test Suite 'All tests' passed at 2026-06-08 04:31:29.816.
+	 Executed 48 tests, with 0 failures (0 unexpected) in 0.070 (0.134) seconds
+** TEST SUCCEEDED **
+MAC_EXIT=0
+
+=== [LINT] swiftlint --strict (surface files; shared-surfaces not yet in .swiftlint.yml included:) ===
+Linting 'AINLSqlPlayground.ModelTests.swift' (7/7)
+Done linting! Found 0 violations, 0 serious in 7 files.
+LINT_EXIT=0
+
+=== [FORMAT] swiftformat --lint (surface files) ===
+SwiftFormat completed in 2.83s.
+0/7 files require formatting.
+FORMAT_EXIT=0
+
+=== [PLACEHOLDER] check-placeholders.ps1 (surface directory) ===
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- Supplementary verification ---
+  swift test (macOS host, real XCTest): 48 passed (see CI/local).
+  real-component typecheck on iPhoneSimulator26.5 SDK (Swift 6): PASS.
+  standalone Adapter+Model behavioral harness (SSE parse/split, draft capture,
+    streaming reducer, telemetry-once, apply, cancel, connection axis): ALL PASS.
+  strings catalog plutil -lint: OK (22 keys; web-parity keys + native chrome).
+
+--- Result ---
+All executed gate steps are green: IOS_EXIT=0 MAC_EXIT=0 LINT_EXIT=0 FORMAT_EXIT=0 PLACEHOLDER_EXIT=0.
+Surface shipped: 7 files (swift/Adapter/Model/Views/Previews/Tests/ModelTests) + strings.
+EXIT=0
+STATUS=DONE

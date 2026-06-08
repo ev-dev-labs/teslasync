@@ -1,0 +1,220 @@
+================================================================================
+p4-apple · P7 · page:dashboard/Glance — SwiftUI / HIG parity
+Log: .github/prompts/monorepo/logs/apple-page-dashboard-GlancePage.log
+================================================================================
+
+Parity unit : page:dashboard/Glance   (kind=page, web route /glance)
+Web source  : web/src/features/dashboard/pages/GlancePage.tsx
+Target(s)   : apple (apple-macos + apple-ios, adaptive — ADR-002/006)
+PARITY_REQUIRED = 30
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT — compliance
+--------------------------------------------------------------------------------
+1 No red-as-green ....... the full-app `xcodebuild build/test` did NOT run on this
+                          host (no Xcode); it is reported BLOCKED, never green.
+2 No scope narrowing .... every panel/chart/state/string of the web page is built.
+3 No skip-and-assume .... the KMP-free core + the whole view layer were COMPILED and
+                          the logic unit-checked (67/67) in isolation, not assumed.
+4 No stubs as final ..... zero stubs/placeholders (check-placeholders EXIT=0).
+5 No parity shortcuts ... all 30 items implemented with file+symbol evidence below.
+6 No delegation ......... implemented directly (delegation FORBIDDEN for this unit).
+7 No predecessor bypass . binds shared core (P1/S8) via the OverviewTab source-seam
+                          pattern; design tokens (P2) + components (P3) reused.
+8 No commit on red ...... nothing is red; build/test is BLOCKED (cannot run), not
+                          failing — committed per the macos-pending precedent.
+9 No silent drift ....... project.yml/.swiftlint.yml registered the new source tree;
+                          xcodegen enumerates all 7 files.
+10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+--------------------------------------------------------------------------------
+ENVIRONMENT — Xcode runner availability (decisive for STATUS)
+--------------------------------------------------------------------------------
+$ xcode-select -p            -> /Library/Developer/CommandLineTools
+$ xcodebuild -version        -> error: requires Xcode (active dir is CommandLineTools)
+$ xcrun simctl list ...      -> (no iOS Simulator runtimes)
+
+=> There is NO full Xcode on this host, only CommandLineTools. Therefore:
+   - `xcodebuild -scheme TeslaSync build`  CANNOT run            (BUILD_EXIT=BLOCKED)
+   - `xcodebuild -scheme TeslaSync test`   CANNOT run            (TEST_EXIT=BLOCKED)
+   - the KMP `Shared.xcframework` CANNOT link (Kotlin/Native uses xcrun xcodebuild):
+       $ cd apps/shared && ./gradlew :core:assembleSharedXCFramework
+         > Task :core:generateApiClient                          (generated 9 models OK)
+         > Task :core:linkDebugFrameworkIosArm64 FAILED
+           e: xcrun xcodebuild -version — requires Xcode.
+   Per this prompt's gate contract ("If no Xcode runner is available, the gate →
+   STATUS=BLOCKED"), the build+test triad is BLOCKED on this host and deferred to the
+   P99 macOS acceptance gate (macos-latest). This is the SAME documented blocker that
+   every other shared-core-bound Apple surface carries (apps/macos-pending-verifications.md).
+
+   To not "skip-and-assume", everything that CAN be verified here WAS verified
+   (placeholder + swiftlint + swiftformat + xcodegen + isolated compile + logic tests
+   + isolated view-layer type-check). See below.
+
+--------------------------------------------------------------------------------
+PATH RECONCILIATION
+--------------------------------------------------------------------------------
+The generated output path `apps/apple/TeslaSync/Features/Dashboard/` was a NEW source
+tree (the existing page tree is `TeslaSync/feature-views/`, the shared group is
+`Sources/`). It was registered as a compiled source path in `project.yml` for BOTH
+app targets (TeslaSync, TeslaSync-macOS) and added to `.swiftlint.yml included`, so
+the page actually compiles into the app (validated by `xcodegen generate`).
+
+--------------------------------------------------------------------------------
+FILES (7 new + 4 edits, all within allowed scope)
+--------------------------------------------------------------------------------
+NEW  apps/apple/TeslaSync/Features/Dashboard/GlancePage.Projection.swift   (pure logic, Foundation)
+NEW  apps/apple/TeslaSync/Features/Dashboard/GlancePage.Model.swift        (@Observable + GlanceSource seam)
+NEW  apps/apple/TeslaSync/Features/Dashboard/GlancePage.Views.swift        (pure SwiftUI subviews)
+NEW  apps/apple/TeslaSync/Features/Dashboard/GlancePage.swift              (adaptive scaffold + sections)
+NEW  apps/apple/TeslaSync/Features/Dashboard/GlancePage.SharedSource.swift (production KMP binding)
+NEW  apps/apple/TeslaSync/Features/Dashboard/GlancePage.Previews.swift     (every state, #if DEBUG)
+NEW  apps/apple/TeslaSync/Features/Dashboard/GlanceRouteRegistration.swift (nav registration factory)
+EDIT apps/apple/Sources/App/AppRoute.swift          (+ `glance` case → /glance deep link + .overview group)
+EDIT apps/apple/Localization/Localizable.xcstrings  (+ `route.glance`; all 20 `translation.glance.*` pre-exist)
+EDIT apps/apple/project.yml                          (+ `TeslaSync/Features` source path, both app targets)
+EDIT apps/apple/.swiftlint.yml                       (+ `TeslaSync/Features` included)
+
+Architecture: the view binds an `@Observable GlanceModel` through a Shared-free
+`GlanceSource` seam (the OverviewTab pattern). The production `GlanceSharedSource`
+folds the four web data sources through the KMP core; previews/tests use
+`InMemoryGlanceSource`. SI→display conversion happens at the source boundary via the
+shared `Units` facade (P1/S5); the view is unit-free.
+
+--------------------------------------------------------------------------------
+=== GATES ===
+--------------------------------------------------------------------------------
+[placeholder] check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Dashboard -Language swift
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+[swiftformat]  swiftformat --lint TeslaSync/Features/Dashboard
+    0/7 files require formatting
+    FORMAT_EXIT=0
+
+[swiftlint]    swiftlint --strict TeslaSync/Features/Dashboard
+    violations in TeslaSync/Features/Dashboard : 0
+    SWIFTLINT_SURFACE_EXIT=0
+    NOTE: the repo-wide run reports 1 PRE-EXISTING violation in a file this prompt did
+    NOT touch — TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+    (function_body_length). Confirmed pre-existing via `git status --porcelain`
+    (LifetimeStatsWidget is unmodified). Out of scope; not fixed.
+
+[xcodegen]     xcodegen generate
+    Created project at apps/apple/TeslaSync.xcodeproj
+    GlancePage.{Projection,Model,Views,SharedSource,Previews}.swift, GlancePage.swift,
+    GlanceRouteRegistration.swift  — all enumerated in the TeslaSync + TeslaSync-macOS targets
+    XCODEGEN_EXIT=0
+
+[xcstrings]    python3 json.load(Localizable.xcstrings)  -> OK (valid JSON)
+    all 20 translation.glance.* keys present (verified) + route.glance added.
+
+[isolated compile + logic, KMP-free core]   swift run GlanceCheck  (Projection.swift + Model.swift, the REAL files)
+    Build complete!  (Swift 6.3, strict concurrency, macOS SDK)
+    PASSED=67 FAILED=0
+    ALL CHECKS PASSED
+    CORE_BUILD_EXIT=0   CORE_CHECKS_EXIT=0
+    (covers: phase resolution, battery bands/accents/clamp, lock+climate labels/commands,
+     command resolution+gating, online derivation, vehicle-title precedence, location-label
+     precedence/keys, model lifecycle, optimistic pending + clear, offline command blocking,
+     source-reported pending, refresh/stop forwarding, openApp routing to "/")
+
+[isolated type-check, full view layer]   swift build  (real Tokens.swift + TSMaterial.swift + Motion.swift
+                                                        + Projection + Model + Views + Page)
+    Build complete!  (Views.swift, Page.swift type-check against the real P2 tokens + P3
+    components under Swift 6 strict concurrency)
+    VIEWLAYER_BUILD_EXIT=0
+    (only `#Preview` macro expansion is unavailable on CommandLineTools — Xcode-only plugin;
+     the preview closures themselves parse clean.)
+
+[syntax parse, SwiftUI/Shared files]   swiftc -parse (macOS SDK)
+    GlancePage.swift OK · GlancePage.Views.swift OK · GlancePage.Previews.swift OK ·
+    GlanceRouteRegistration.swift OK · GlancePage.SharedSource.swift OK
+    PARSE_EXIT=0
+
+[xcodebuild build]  xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync build
+    BUILD_EXIT=BLOCKED  (no full Xcode on host; Shared.xcframework cannot link — see ENVIRONMENT)
+
+[xcodebuild test]   xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync test
+    TEST_EXIT=BLOCKED   (no full Xcode on host — see ENVIRONMENT)
+
+--------------------------------------------------------------------------------
+=== PARITY ===   (PARITY_REQUIRED=30)
+--------------------------------------------------------------------------------
+PANELS (5)
+[x] panel  · GlassPanel1 .... GlancePage.Views.swift → `GlanceEmptyPanel` (ContentUnavailableView + `.tsGlassPanel()`),
+                              shown for the no-vehicle `.empty` phase in GlancePage.swift → `content`.
+[x] panel  · Range ......... GlancePage.swift → `metrics` → `GlanceMetricTile(labelKey:"translation.glance.range")`
+                              value = model.rangeText ?? "—"; tile = GlancePage.Views.swift `GlanceMetricTile`.
+[x] panel  · Interior ...... GlancePage.swift → `metrics` → `GlanceMetricTile(labelKey:"translation.glance.temp")`
+                              value = model.interiorText ?? "—".
+[x] panel  · Security ...... GlancePage.swift → `metrics` → `GlanceMetricTile(labelKey:"translation.glance.security")`
+                              value = localized(model.lockLabelKey), accent = model.lockAccent.
+[x] panel  · Location ...... GlancePage.swift → `metrics` → `GlanceMetricTile(labelKey:"translation.glance.locationLabel")`
+                              value = locationValue (GlanceProjection / GlanceLocationLabel).
+
+CHART (1)
+[x] chart  · RadialGauge .... GlancePage.Views.swift → `GlanceBatteryGauge` (native SwiftUI Circle-trim ring, NOT a
+                              WKWebView), used in GlancePage.swift → `loadedContent`; fraction/percent/accent from model.
+
+STATES (4)
+[x] state  · loading ....... GlancePage.swift `content` case .loading → `GlanceLoadingState`;
+                              GlanceProjection.resolvePhase(.loading,hasVehicle:false) → .loading.
+[x] state  · empty ......... GlancePage.swift case .empty → `GlanceEmptyPanel`;
+                              resolvePhase(.loaded,hasVehicle:false) → .empty (web `!vehicle`).
+[x] state  · error ......... GlancePage.swift case .error → `GlanceErrorState(onRetry: model.refresh)`;
+                              resolvePhase(.failed,hasVehicle:false) → .error.
+[x] state  · success ....... GlancePage.swift case .content → `loadedContent` (header+gauge+metrics+actions+freshness+link).
+
+STRINGS (20) — all via LocalizedStringKey("translation.glance.*"); web key names preserved under the i18n `translation` namespace.
+[x] string · glance.action.climateOff . GlanceProjection.climateActionKey (isClimateOn=true) → GlancePage.swift quickActions.
+[x] string · glance.action.climateOn .. GlanceProjection.climateActionKey (isClimateOn=false).
+[x] string · glance.action.horn ....... GlancePage.swift `quickActions` titleKey "translation.glance.action.horn".
+[x] string · glance.action.lock ....... GlanceProjection.lockActionKey (isLocked=false).
+[x] string · glance.action.unlock ..... GlanceProjection.lockActionKey (isLocked=true).
+[x] string · glance.battery ........... GlancePage.Views.swift `GlanceBatteryGauge` label + a11y.
+[x] string · glance.defaultName ....... GlancePage.swift `vehicleTitle` fallback Text.
+[x] string · glance.location.favorite . GlanceLocationLabel.favorite.localizationKey.
+[x] string · glance.location.home ..... GlanceLocationLabel.home.localizationKey.
+[x] string · glance.location.work ..... GlanceLocationLabel.work.localizationKey.
+[x] string · glance.locationLabel ..... GlancePage.swift Location tile labelKey.
+[x] string · glance.locked ............ GlanceProjection.lockLabelKey (isLocked=true).
+[x] string · glance.noVehicle ......... GlancePage.Views.swift `GlanceEmptyPanel`.
+[x] string · glance.openApp ........... GlancePage.swift `openAppLink`.
+[x] string · glance.range ............. GlancePage.swift Range tile labelKey.
+[x] string · glance.security .......... GlancePage.swift Security tile labelKey.
+[x] string · glance.temp .............. GlancePage.swift Interior tile labelKey.
+[x] string · glance.title ............. GlancePage.Views.swift `GlanceLoadingState` + `GlanceFreshnessChip` a11y; route.glance.
+[x] string · glance.unknown ........... GlancePage.Views.swift `GlanceStatusBadge` (absent state).
+[x] string · glance.unlocked .......... GlanceProjection.lockLabelKey (isLocked=false).
+
+DATA SOURCES (bound through @Observable GlanceModel ← GlanceSource; production = GlancePage.SharedSource.swift)
+  · useVehicles            → VehiclesStore.vehicles()                       (resolve vehicle, web ?vehicle_id= / first)
+  · useVehicleState        → VehiclesStore.vehicleState(id)                 (battery/range/interior/lock/climate/state)
+  · useLocationSnapshotLatest → VehiclesStore.locationSnapshotLatest(id)    (DestinationETASnapshot.fromSharedJSON)
+  · useVehicleCommand      → VehicleCommanding seam → POST /vehicles/{id}/command (lock/unlock/climate_on/off/honk_horn)
+
+A11Y / HIG: design-token colors (light/dark/high-contrast via tsDynamicColor), Dynamic Type fonts (Font.TS),
+  accessibilityLabel/Value/traits on gauge+tiles+badge+actions, ≥44pt action targets, Reduce-Motion-aware gauge fill,
+  ContentUnavailableView for empty. SI honored — view holds no non-SI math.
+
+PARITY_COVERED=30
+PARITY_REQUIRED=30
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+Implementation COMPLETE — all 30 parity items built with file+symbol evidence, zero
+placeholders, all 20 strings from the catalog, adaptive macOS/iOS, full a11y + SI.
+Host-runnable verification ALL GREEN: placeholder=0, swiftformat=0, swiftlint(surface)=0,
+xcodegen=0, isolated core compile + 67/67 logic checks=0, isolated view-layer type-check=0,
+syntax parse=0.
+
+The ONLY non-green steps are `xcodebuild build` + `xcodebuild test` (both platforms),
+which cannot run on this host (CommandLineTools only — no full Xcode; the KMP
+Shared.xcframework cannot link). Per the gate contract this is BLOCKED, deferred to the
+P99 macOS acceptance runner (row added to apps/macos-pending-verifications.md).
+
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,146 @@
+I'll start by exploring the environment, the web source, and checking Apple toolchain availability.
+
+
+
+Apple tooling is present, but `xcode-select` points to **CommandLineTools**, not a full Xcode. Let me verify whether `xcodebuild` can actually run, and explore the existing Apple app structure in parallel.
+
+Critical finding: `xcodebuild` is blocked (active dir is CommandLineTools), but `/Applications/Xcode.app` exists. Let me test whether `DEVELOPER_DIR` can activate it, and examine the existing feature-view file conventions.
+
+`DEVELOPER_DIR` activates full Xcode 26.5 and iPhone 16 simulator is already booted — the gate **can** run. No existing StatorTempChart files. Each surface follows a 7-file convention (`.swift`, `.Adapter`, `.Model`, `.Views`, `.Previews`, `.strings`, `.Tests`).
+
+Let me examine the web source siblings (to understand the data model) and find an existing line-chart surface as the closest template.
+
+Sibling `DrivingTemperatureStats` is ported, and there's a `BatteryLevelChart`. Let me find which drivetrain-health chart siblings are already ported natively (they'd share the `MotorChartDataPoint` model — the ideal template).
+
+`DrivingTemperatureStats` is the ideal template — ported (7 files), same driving+temperature domain. Let me read it fully along with the native Charts and Motion infrastructure.
+
+Excellent template. Now let me read the test/preview/strings files plus the native chart infrastructure to understand the LineChart components and design tokens.
+
+Now let me understand the chart models, container, Motion, and how existing chart surfaces handle reference lines and direct `Charts` imports.
+
+Feature-views import `Charts` directly when they need `RuleMark` reference lines. `SpeedTrendChart` (driving domain, multi-series line + reference lines) is the ideal structural analog. Let me read its full set plus locate the design tokens.
+
+Now the adapter, model, design tokens, and a horizontal reference-line example (BatteryLevelChart).
+
+Now the design tokens, a horizontal reference-line example, the project config, and the web unit-conversion source for parity.
+
+Let me locate the generated design tokens and read the web temperature conversion plus the reference-line annotation pattern.
+
+Complete token map confirmed — web stroke colors map cleanly to semantic tokens (`chartSeriesTemperature`/red, `chartSeriesPower`/purple, `chartSeriesRegen`/cyan, `statusSuccess`/green, `statusWarning`/amber). Now I must understand the data semantics: the web plots `stator` raw but converts the reference lines. Let me trace where `MotorChartDataPoint.stator` is built.
+
+The parent page (`DrivetrainHealthPage.tsx:128`) converts SI `motor_temp_c_front` → display units *before* passing data in, which is why the chart plots raw but converts the 60/80 thresholds. Let me read that construction to reproduce field semantics exactly.
+
+Now let me confirm the web `AREA_DEFAULTS` line style and `formatTime` format to reproduce faithfully, then check the test target wiring in project.yml.
+
+Let me read the rest of project.yml to find the test target wiring and schemes.
+
+Critical: test targets glob `Tests/Unit`, but `.Tests.swift` files live in `feature-views`. Let me resolve how test files are wired (symlinks? excludes? generated project).
+
+Let me determine the build workflow: check for XcodeGen, an existing `.xcodeproj`, the Shared.xcframework, and the preAction script.
+
+XcodeGen is available; no `.xcodeproj` exists (must generate); `Shared.xcframework` is built from KMP via Gradle in a scheme preAction. Let me verify the `formatTime` format for parity and confirm the KMP shared build is feasible.
+
+Crucial context from `macos-pending-verifications.md`: the **ToolCard precedent** (same `p4-apple/feature-views` category) established that the full-app `xcodebuild` is blocked by **pre-existing, unrelated** issues (`DashboardWidgetSize` redefined 8×, co-located `*.Tests.swift` importing XCTest into the app target, signing), and the accepted verification is **isolated SwiftPM build + tests + swiftlint/swiftformat/placeholder**. Let me confirm those pre-existing collisions still exist and look for an existing isolated harness.
+
+Confirmed: the full-app build is genuinely blocked by **pre-existing** collisions (`DashboardWidgetSize` ×10, 88 co-located `*.Tests.swift` importing XCTest into the app target) — identical to the documented ToolCard precedent. The accepted methodology is isolated SwiftPM verification + swiftlint/swiftformat/placeholder. Let me map the dependency surface for an isolated harness.
+
+`Sources/Components` and `Sources/Design` don't import the KMP `Shared` framework — they're self-contained. Let me confirm what frameworks `Components` imports (to scope the isolated harness) and check the Skeleton/IconBox/Tone signatures.
+
+Dependencies are clean (Components imports only system frameworks). I have everything needed. Let me set up tracking and read the Skeleton component, then write the surface.
+
+All dependencies confirmed self-contained. Let me write the plan, then create the surface files.
+
+All 7 files written. Now let me verify via an isolated SwiftPM harness (the ToolCard precedent), building against the real tokens + component dependencies under Swift 6.
+
+My surface files all compiled cleanly — the only error is in the `Skeletons.swift` dependency referencing `TSCard` (other skeleton variants I don't use). Let me add `Cards.swift` to the harness.
+
+Chasing individual files is inefficient. Let me restructure the harness to include the whole self-contained `Components` + `Design` directories (they import only system frameworks).
+
+My surface files compiled again — the failure is `Components/DataDisplay/UnitFormatters.swift` using a `\.tsUnits` environment key defined **outside** Components. My surface doesn't use DataDisplay/Maps. Let me scope the harness to only the clean subdirs I need and find any other external env-key deps.
+
+Only `DataDisplay/UnitFormatters.swift` has the issue; `UI`/`Feedback`/`Charts`/`Motion` are clean. Let me scope the harness to the subdirs my surface needs (UI + Feedback + Motion + Charts + Design), excluding DataDisplay/Maps.
+
+All my surface files compiled — the error is again an unused component file (`FeedbackOverlays.swift` needs `TSMetricBar`). My surface only needs `TSFadeIn` + `TSSkeleton` + tokens. Let me enumerate exactly which shared symbols my files reference, then build a minimal clean harness.
+
+Confirmed: my surface uses only tokens + `TSFadeIn` + `TSSkeleton`. Let me build a minimal clean harness (real Tokens + real Motion + a verbatim extract of the `TSSkeleton` struct) and run the full test suite.
+
+All 31 tests passed under Swift 6, and the full surface (Views + main, using `import Charts`/`RuleMark`/`chartXSelection`/`ContentUnavailableView`) compiled. Now let me run the remaining gate checks — swiftformat, swiftlint, and placeholder — on the real repo files.
+
+swiftformat flagged wrapping/try-hoisting/force-unwrap issues. Let me auto-fix with swiftformat, then re-verify lint and tests.
+
+swiftformat passes now. Let me run swiftlint --strict and re-run the harness tests to confirm the auto-format didn't break anything.
+
+swiftlint flagged 4 issues: two `i` identifiers and two files exceeding 400 lines. Let me check the swiftlint config and how existing surfaces stay under the limit.
+
+Existing surfaces cap files at ≤399 lines (file_length warning=400). I need to split my Adapter (560) and Views (474), and rename `i`. Let me view the current post-format files to partition them precisely.
+
+I'll split the Adapter and Views into `.Catalog`/`.Chart` companion files (matching house convention). Let me view the current content to partition cleanly.
+
+Let me confirm the exact split boundaries in Views before mechanically splitting.
+
+Boundaries confirmed. Let me first fix the `i` identifiers, then mechanically split both files with sed.
+
+Now let me mechanically split both oversized files into house-style companion files (`.Catalog`, `.Chart`).
+
+All four files are under 400 lines. Let me normalize formatting, wire the new files into the harness, and re-run all checks.
+
+swiftformat and swiftlint both clean (0 violations). Let me re-run the isolated harness to confirm the split + format didn't break compilation or tests.
+
+All 7 files compiled and all 31 tests passed after the split. Now the placeholder check. Let me inspect the check script and run it (or an equivalent).
+
+Let me see how the script resolves `-Path` so I invoke it like the gate does.
+
+The script uses `-LiteralPath` recursively. I'll run the real script against a temp dir containing only my surface files (the gate's intent), scoped to Swift.
+
+All host-runnable gates pass: **swiftformat** ✓, **swiftlint --strict** ✓, **placeholder** (COUNT=0) ✓, **isolated build + 31 tests** ✓. Now let me attempt the full-app `xcodebuild` to capture honest evidence of the documented pre-existing blocker. First generate the project.
+
+Project generated. Now let me attempt the iOS Simulator build to capture honest evidence of where it's blocked. I'll run it async and monitor.
+
+The iOS build reached the KMP `Shared.xcframework` Gradle step (a documented macos-pending prerequisite) and failed there with "Gradle build daemon stopped" (exit 65) — before reaching app Swift compilation. Let me retry the framework build directly with `--no-daemon` to get cleaner evidence.
+
+The KMP `Shared.xcframework` release link is repeatedly killed on this runner ("Gradle build daemon stopped") even with `--no-daemon` — the debug variant built but the release one (which the Apple build links) cannot complete. This is the documented macos-pending prerequisite. I now have complete, honest evidence. Let me clean up build artifacts and check git state.
+
+My 9 surface files are the only new files (the two modified `web/...` files are pre-existing, not mine). Let me check the logs directory and an existing P4 log to match conventions.
+
+This is the exact precedent: host gates green + `xcodebuild` deferred with real exit-65 evidence → `EXIT=0 / STATUS=DONE` (predecessor-accepted disposition). Let me view the full BackendTool log structure to match it.
+
+This is the exact accepted disposition (host gates green + `xcodebuild` deferred with real evidence → `EXIT=0/STATUS=DONE`, predecessor parity). Let me capture one clean fast macOS missing-framework evidence (like the precedent) before writing the log.
+
+Clean evidence captured: macOS build fails (exit 65) on **dev-signing** + **missing Shared.xcframework**. Combined with the iOS Gradle-step failure and pre-existing source collisions, all three documented blockers are confirmed. Let me clean up and gather line counts for the log.
+
+All files ≤359 lines; i18n keys: 25 referenced == 25 declared, zero undeclared. Let me gather metadata for the log header.
+
+All evidence gathered. Let me write the gate log following the established precedent format.
+
+Now let me do a final consolidated verification on the committed file set (including the new Catalog/Chart files) before committing.
+
+All final gates green. Let me commit only my surface files + the log (excluding the pre-existing modified `web/` files).
+
+Exactly 10 files staged (9 surface + log), no unrelated files. Let me commit.
+
+Committed as `e333fddd2`. Let me clean up temporary artifacts and finalize.
+
+All work is complete and committed. Let me provide the final summary.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-feature-views-0159-StatorTempChart.log | 236 ++++++++++++++
+ .../feature-views/StatorTempChart.Adapter.swift    | 251 ++++++++++++++
+ .../feature-views/StatorTempChart.Catalog.swift    | 324 +++++++++++++++++++
+ .../feature-views/StatorTempChart.Chart.swift      | 248 ++++++++++++++
+ .../feature-views/StatorTempChart.Model.swift      | 273 ++++++++++++++++
+ .../feature-views/StatorTempChart.Previews.swift   | 102 ++++++
+ .../feature-views/StatorTempChart.Tests.swift      | 359 +++++++++++++++++++++
+ .../feature-views/StatorTempChart.Views.swift      | 238 ++++++++++++++
+ .../feature-views/StatorTempChart.strings          |  47 +++
+ .../TeslaSync/feature-views/StatorTempChart.swift  |  74 +++++
+ 10 files changed, 2152 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0159-StatorTempChart.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatorTempChart.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatorTempChart.Catalog.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatorTempChart.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatorTempChart.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatorTempChart.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatorTempChart.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatorTempChart.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatorTempChart.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatorTempChart.swift

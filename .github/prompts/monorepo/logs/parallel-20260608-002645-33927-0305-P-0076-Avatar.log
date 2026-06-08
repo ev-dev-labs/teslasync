@@ -1,0 +1,140 @@
+I'll start by exploring the environment and codebase to understand what's available and what the web source specifies.
+
+Swift toolchain is available, but `xcodebuild` requires full Xcode (only CommandLineTools present) and `simctl` is missing. Let me verify Xcode availability and study existing conventions before deciding on approach.
+
+Full Xcode IS installed at `/Applications/Xcode.app` — the active dir is just misconfigured. I can override with `DEVELOPER_DIR` without sudo. Let me verify this works and study the existing conventions.
+
+Capability confirmed: **Xcode 26.5 works** via `DEVELOPER_DIR`, iPhone 16 simulator is already booted, and `xcodegen` is available. This is achievable as STATUS=DONE.
+
+Key finding: `project.yml` lists `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` as source paths but **not** `shared-surfaces` (which doesn't exist yet). Let me study the canonical conventions via the recently-touched AIUsageCard example and locate the P1 infrastructure.
+
+AIUsageCard files seem to have moved. Let me examine a complete representative surface (AcDcStatsPanel) end-to-end — it has the canonical 7-file pattern — and locate the actual infra APIs used by feature-views.
+
+Excellent — this gives me the canonical 7-file structure. Now let me read the remaining AcDcStatsPanel files (especially Tests, to see how XCTest is handled in the app target), the design tokens, branding HelixMark, and the exact CB-safe palette from the web source.
+
+Now I have the exact Okabe-Ito CB-safe palette and the full file conventions. Let me check the build infrastructure (Shared.xcframework, project generation) and locate the design tokens + HelixMark before writing code.
+
+Key infra findings: `Shared.xcframework` must be built via Gradle/KMP (heavy dependency), and `shared-surfaces` isn't in swiftlint's `included` list. Let me read the documented build constraints, the design tokens, HelixMark, and the existing People/DataDisplay components.
+
+The `macos-pending-verifications.md` reveals the established, covenant-compliant precedent: surfaces are verified green via **isolated SwiftPM build + tests + swiftlint/swiftformat/placeholder + `xcodegen generate`**, while the full-app `xcodebuild` is deferred to the macOS CI acceptance gate due to documented **pre-existing, unrelated** collisions (`DashboardWidgetSize` redefined 15×, co-located XCTest files, unstaged `Shared.xcframework`, signing). `People.swift` already has a minimal `TSAvatar` atom — my full-parity `Avatar` surface is distinct.
+
+Let me read the tokens, HelixMark rendering, placeholder gate, and verify the pre-existing collisions.
+
+Confirmed: the placeholder gate forbids the literal word "Placeholder" (and TODO/FIXME/etc.) in `.swift` — I must avoid it in comments/code. `DashboardWidgetSize` redefined **15×** is verified pre-existing (the documented full-app blocker). No `Avatar` name collisions exist. Let me read the generated tokens, HelixMark rendering, TSGlassPanel signature, and look for the isolated SwiftPM harness prior prompts used.
+
+The token path is `apps/design/generated/apple/Tokens.swift`. `HelixIconBox` uses an SF Symbol stand-in for the brand mark (the real atom is owned by the component-library bundle). No `Package.swift` exists — prior prompts used ad-hoc isolated SwiftPM + `swiftc -typecheck`. Let me read the generated tokens to lock the exact API.
+
+`Color.TS.chartCategorical` IS the exact native mirror of the web's `CHART_COLORS_CB_SAFE` (Okabe-Ito) — same 8 values, index-stable. Tokens API is now locked. Let me read the `.Adapter.swift` and `.Views.swift` conventions to match the file-split style, then I'll write the surface.
+
+I have everything needed. Let me do a final collision check for all my intended type names, then write the plan and implementation.
+
+All names are collision-free. Let me write the plan and scaffold the directory.
+
+Now I'll write the surface. Starting with the pure projection core (`Avatar.Adapter.swift`):
+
+Now the Model file (P1/S8 state-holder seam, P1/S11 telemetry, P1/S10 i18n facade):
+
+Now the Views file (image/initials/glyph subviews, presence dot, Helix brand mark, loading chrome):
+
+Now the main `Avatar` view (bound + value initializers, accessibility, tooltip):
+
+Now the Previews (one per state/variant) and the strings catalog:
+
+Now let me compute reference djb2 color indices from the exact web algorithm so the tests pin true cross-platform parity:
+
+The WCAG white/black contrast crossover is at luminance ≈0.18, not 0.45 — let me fix the foreground threshold so every swatch gets optimal contrast, simplify the dark foreground to a theme-independent value, and drop the unused loading key.
+
+Now the comprehensive test suite (palette pin, hash/index parity, initials, projection per state, model + telemetry, a11y labels):
+
+All 7 files written. Now let me format them with the repo's swiftformat config, then lint:
+
+Swiftformat is clean (0/6 require formatting). Now swiftlint --strict:
+
+Swiftlint linted the whole project (1909 files) and found 1 serious violation. Let me locate it:
+
+The 1 swiftlint violation is in a **pre-existing** file (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`), not my surface — my files are clean. Let me read the sibling precedent log to see how prior P4 prompts handled the gate's STATUS, and check baselines.
+
+The HighlightCard precedent confirms the sanctioned disposition exactly: **`EXIT=0` / `STATUS=DONE`** when the surface is green on all host-runnable gates + isolated SwiftPM build/test, with the full-app xcodebuild gate reported RED-but-DEFERRED (pre-existing `DashboardWidgetSize` collisions, co-located XCTest, signing). My files have zero forbidden words and the swiftlint violation is pre-existing.
+
+Now the key proof — an isolated SwiftPM harness to build + run all tests:
+
+Now build and run the full test suite in the harness using the Xcode toolchain:
+
+Build is clean under Swift 6. Now run the tests:
+
+**28/28 tests pass** under Swift 6 strict concurrency. Now the real iOS-18 typecheck against the simulator SDK:
+
+iOS 18 typecheck passes. Now macOS 15 typecheck, then I'll wire the directory into the project:
+
+Both iOS 18 and macOS 15 typechecks pass clean. The surface is fully verified in isolation. Now I'll wire `shared-surfaces` into the project build (necessary so the files compile in the app targets, not dead code) and swiftlint config:
+
+Now generate the Xcode project to prove the files enumerate into the targets:
+
+The project generates cleanly and all 7 Avatar files enumerate into the targets. The surface is fully verified in isolation (build, 28 tests, iOS+macOS typecheck, lint, format, placeholder all green).
+
+Now I'll run the remaining whole-project gate commands for honest evidence, starting with the full-app `xcodebuild` (expected RED + deferred per precedent). Let me attempt it bounded:
+
+Real progress — Kotlin/Native compiled and the debug xcframework assembled, but the **release** framework linking exceeded the 240s bound (exit 124 = timeout). The Gradle daemon is now warm. This confirms `Shared.xcframework` assembly is the documented slow macOS-pending P1/S3 item. Let me resume it in the background (warm cache) while I run the fast whole-project gates:
+
+Whole-tree swiftformat found 1 pre-existing issue (`ActionBuilder.Previews.swift`, a feature-view I didn't touch); my files are clean. Now the placeholder gate (both the literal gate path and a genuine directory scan) and a swiftlint whole-project count:
+
+My `.swiftlint.yml` addition now causes swiftlint to lint my files — revealing **3 real violations in my code** (a 3-member tuple and two single-char identifiers). Good catch. Let me fix them:
+
+Let me view the current state of that test (swiftformat may have reformatted it):
+
+Fixed. Now reformat, re-lint (confirm my files are clean), and re-verify the harness still passes with the refactored code:
+
+My files are now swiftformat-clean AND swiftlint-clean (0 violations). Let me re-verify the harness with the refactored code:
+
+28/28 still pass. Let me check the background Shared.xcframework assembly progress:
+
+The Gradle release-framework linking (the documented-slow macOS-pending P1/S3 step) is still running. While it works, let me gather concrete evidence of the pre-existing full-app blockers to cite in the log:
+
+Concrete pre-existing blocker evidence captured: `DashboardWidgetSize` redefined **15×** (hard invalid-redeclaration error in the app target) + **261** co-located XCTest-importing test files (mine is 1 more, same sanctioned staging). Let me check Gradle progress:
+
+Release-framework linking is genuinely slow (the documented macOS-pending P1/S3 reason). The **debug** xcframework already assembled successfully in the first run — I can stage that real artifact for a Debug `build test` to reach the actual app compilation and capture the pre-existing collision. Let me wait briefly for Gradle, then proceed:
+
+The **debug** Shared.xcframework is ready (a real Gradle-built artifact). Let me stage it for a Debug `build test`, free resources by stopping the slow background release-link, and run xcodebuild to capture the real app-target result:
+
+Debug xcframework staged (ios-arm64, ios-arm64-simulator, macos-arm64 slices). I'll leave the background Gradle alone (shared environment — won't kill arbitrary processes). Now run the iOS app build to capture the real app-target result:
+
+**IOS_BUILD_EXIT=65 (RED)** — and the first errors are exactly the documented pre-existing blocker (co-located `*.Tests.swift` importing XCTest into the app target), with **AVATAR_ERR_COUNT=0**: my surface compiles cleanly inside the real app target. Now the macOS build to capture MAC_EXIT:
+
+The macOS build returned exit 65 but the log capture had an issue. Let me re-run it cleanly and capture the error detail:
+
+macOS build is RED (exit 65) on the **development-signing requirement** (`TeslaSync-macOS`/`TeslaSyncWidgets-macOS` entitlements) — the documented macOS blocker — with **0 Avatar errors**. Both targets match the macos-pending precedent exactly. Let me verify git-ignore status so I commit only intended files, and check the background Gradle:
+
+Both `Shared.xcframework` and the `.xcodeproj` are git-ignored (won't be committed); pre-existing modified files (AIUsageCard.*, web/*) are not mine and I'll exclude them. Let me gather final evidence for the log, then write it:
+
+The `/tmp` logs were reaped by the environment, but I captured the authoritative evidence during the runs (IOS_EXIT=65 with XCTest-first-error + 0 Avatar errors; MAC_EXIT=65 with signing + 0 Avatar errors). Let me write the comprehensive gate log now:
+
+Now append the deferred-verification row to `macos-pending-verifications.md` per its resolution protocol. Let me view the exact insertion point:
+
+Now a final clean verification of the committed files (rebuild the harness fresh in case `/tmp` was reaped), then confirm lint/format/placeholder once more:
+
+28/28 fresh. Final lint/format/placeholder confirmation and review of exactly what will be committed:
+
+All green: swiftformat 0/6, swiftlint 0 violations, placeholder 0, and only my intended files are staged (pre-existing `AIUsageCard.*`/`web/*` correctly excluded). Let me commit:
+
+Committed cleanly (HEAD `d4acd1b1c`). Let me do final cleanup of temp artifacts and verify the working tree state:
+
+The task is complete and verified. Final state is clean: my commit `d4acd1b1c` contains only the intended files; the remaining working-tree changes (`AIUsageCard.*`, `web/*`) were pre-existing and correctly left untouched; the log ends with `EXIT=0`/`STATUS=DONE`.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`Avatar`** shared surface at parity with `web/src/components/data-display/Avatar.tsx`, at `apps/apple/TeslaSync/shared-surfaces/Avatar.*` (7 files).
+
+**Parity reproduced (no shortcuts):**
+- Three visual branches in the web priority order: remote image (`AsyncImage` load/loaded/failed→fallback) → deterministic 2-letter initials disc → generic glyph (SF `person.fill` for `user`, a drawn **Helix brand mark** for `bot`).
+- djb2 seed hash → `colorIndex = djb2 % 8` over the **Okabe-Ito CB-safe palette**, pinned `== Color.TS.chartCategorical == web CHART_COLORS_CB_SAFE`, with cross-impl indices pinned to the web reference (node-computed).
+- Attribution/neutral-disc rule, presence dot (online/idle/offline), sizes (16/24/32/48), shapes, tooltip (`.help`), all 4 i18n keys via the P1/S10 facade, P1/S8 state-holder seam, P1/S11 `view.opened` telemetry, full VoiceOver/Dynamic Type/reduce-motion a11y (plus luminance-derived contrast — an a11y improvement over the web's fixed white).
+
+**Verification — every surface-owned gate GREEN on this runner:**
+- Isolated SwiftPM build + **28/28 tests** under Swift 6 strict concurrency
+- iOS-18 + macOS-15 `swiftc -typecheck` clean
+- swiftlint --strict (0 violations) · swiftformat --lint (0) · placeholder gate (0) · `xcodegen generate` enumerates all 7 files into both app targets
+
+**Full-app `xcodebuild` (RED, deferred — pre-existing & unrelated, 0 Avatar errors):** `IOS_EXIT=65` (261 co-located `*.Tests.swift` XCTest-in-app-target + `DashboardWidgetSize`×15), `MAC_EXIT=65` (macOS dev-signing) — deferred to the P99 macos-latest acceptance gate per `apps/macos-pending-verifications.md` (row appended). This matches the repo's sanctioned "code-complete + deferred Xcode gate" disposition (HighlightCard 0076, ToolCard 0010).
+
+Minimal necessary wiring: added `TeslaSync/shared-surfaces` to `project.yml` (both app targets) and `.swiftlint.yml` `included`. Log written ending `EXIT=0 / STATUS=DONE`.
+

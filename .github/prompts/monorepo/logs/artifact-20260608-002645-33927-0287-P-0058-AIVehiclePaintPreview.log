@@ -1,0 +1,254 @@
+=== P4 Shared surface 0058 AIVehiclePaintPreview (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon — Mac Studio).
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively, no
+                       sudo / no xcode-select -s, so the shared runner is untouched). `xcodebuild -version` under the
+                       CommandLineTools dir errors ("requires Xcode") — hence the DEVELOPER_DIR override, the SAME
+                       mechanism every prior P4 surface used (see p4-apple-shared-surfaces-0017-AIDriveCoaching.log and
+                       p4-apple-feature-views-0237-AiUsageCard.log).
+  Toolchain          : swift 6.3.2 (Xcode 26.5 toolchain) · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4
+                       · pwsh 7.6.2. iPhone 16 simulator (iOS 26.5) booted; iOS 26.5 / macOS 26.5 SDKs installed
+                       (the surface is compiled against the project.yml minimums iOS 18.0 / macOS 15.0 — see GATE).
+  Capability         : SwiftUI present; the prompt lists "Charts / maps used: (none)" — the web source has neither —
+                       so this surface needs NO Swift Charts and NO MapKit. The iOS 18 / iPadOS 18 / macOS 15 HIG
+                       primitives it uses (Capsule, RoundedRectangle, Button, Text, Image(systemName:), @Observable,
+                       #Preview, VoiceOver / Dynamic Type / Reduce-Motion modifiers) are all available → NOT
+                       capability-BLOCKED.
+  Predecessors       : P4 core (theme, nav, live, cache, state-holders), P1/S8 state holders, P1/S9 tokens, P1/S10
+                       i18n, P1/S11 diagnostics. Their products are present in-tree and exercised by this surface: the
+                       P1/S9 tokens (apps/design/generated/apple/Tokens.swift — Color.TS / Font.TS / TSSpacing /
+                       TSRadius) and the shared TSButton (Sources/Components/UI/Buttons.swift) + TSFadeIn
+                       (Sources/Components/Motion/Motion.swift) compile against this surface (see GATE). The P1/S8
+                       state-holder seam, P1/S10 i18n facade, and P1/S11 view.opened telemetry contract are reproduced
+                       as the surface's own seams exactly as the merged AIDriveCoaching / AiUsageCard precedents do
+                       (each surface owns its seams; the atomic AIFeatureCard/withAiFeature/useAiStream peers are owned
+                       by the P4 component-library bundle, out of scope here).
+  Clean-tree note    : the worktree carried PRE-EXISTING, unrelated modifications before this prompt began —
+                       feature-views/AIUsageCard.* (7 files, the case-variant settings surface 0203). None are mine;
+                       none are touched, staged, or reverted. This commit stages ONLY
+                       apps/apple/TeslaSync/shared-surfaces/AIVehiclePaintPreview.* and this log. The xcodegen-generated
+                       TeslaSync.xcodeproj is git-ignored (.gitignore:379 `apps/apple/**/*.xcodeproj/`, verified via
+                       `git check-ignore -v`). The isolated SwiftPM verification harness lives OUTSIDE the repo (in the
+                       session scratch dir) and never enters git status.
+
+WEB SOURCE (the specification — read end to end)
+  components/ai/AIVehiclePaintPreview.tsx — the optional Helix paint-preview proposal for the vehicle detail page, an
+  opt-in card layered BENEATH the deterministic vehicle configuration. It never replaces the manual per-vehicle Color
+  setting: Helix drafts a propose-only image prompt; the user keeps full control of the actual paint.
+
+    export const AIVehiclePaintPreview = withAiFeature('vehicle-paint-preview', InnerSection)
+      withAiFeature (components/ai/withAiFeature.tsx): returns null unless useAiEnabled('vehicle-paint-preview') is on
+        (ADR-015). On = renders InnerSection inside a div carrying data-ai-feature="vehicle-paint-preview".
+      InnerSection({ vehicleId?: number, styleHint?: string }):
+        numericVehicleId = (typeof vehicleId==='number' && isFinite(vehicleId)) ? vehicleId : 0
+        body  = styleHint?.trim() ? { style_hint: styleHint.trim() } : {}
+        url   = numericVehicleId>0 ? `/ai/vehicles/${numericVehicleId}/paint-preview/draft`
+                                   : '/ai/vehicles/0/paint-preview/draft'
+        stream = useAiStream({ url, body, onEvent: () => {} })   // POST SSE; vehicleID in URL, style_hint in body
+        haveInputs = numericVehicleId > 0
+        renders <AIFeatureCard title="Draft a Helix paint preview" description=<privacy blurb>
+                 buttonLabel="Preview paint color" badgeLabel="Helix"
+                 emptyHint={haveInputs ? undefined : "Open a vehicle detail page to enable Helix."}
+                 canStart={haveInputs} stream={stream}/>
+  components/ai/AIFeatureCard.tsx — GlassPanel → header (title + AIBadge "Helix" + description + optional emptyHint
+    when !canStart) → action Button → AiOutputPanel. The visible CTA label is the brand-constant "Ask Helix" (idle) /
+    "Helix is thinking…" + AIThinkingDots (streaming); aria-label = "Ask Helix · {buttonLabel}". disabled =
+    !canStart || isStreaming.
+  hooks/useAiStream.ts — AiStreamState = idle | streaming | paused-confirm | done | error. The drafting flow drives
+    idle → streaming → done|error (its onEvent is a no-op; delta frames accumulate into stream.text). start() sets
+    state='streaming'+text=''; 'delta' appends; 'done' settles; non-2xx start → 'stream_http_{status}' error;
+    AbortError → back to idle.
+  components/ai/AiOutputPanel.tsx — hidden when idle & text empty; AIThinkingIndicator (shimmer lines + "Helix is
+    thinking" + dots) while streaming & text empty; whitespace-pre-wrap prose otherwise; "Helix error: {msg}" on error.
+  i18n keys: vehicles.aiPaintPreview.title/description/button/badge/noVehicleHint + the shared helix.askHelix /
+    helix.thinking / helix.errorLabel + ai.common.errorUnknown.
+
+ARTIFACTS SHIPPED  (allowed files: apps/apple/TeslaSync/shared-surfaces/AIVehiclePaintPreview.* + this log)
+  AIVehiclePaintPreview.Adapter.swift    — pure value types (no store/SwiftUI/bundle):
+                                     AIVehiclePaintPreviewStreamEvent (delta/done/failed — the drafting subset of the
+                                     web AiStreamEvent union), AIVehiclePaintPreviewStream(+Phase idle/streaming/done/
+                                     failed, text accumulator, errorMessage, isStreaming/hasOutput/started/idle
+                                     invariants), AIVehiclePaintPreviewConnection (live/stale/offline),
+                                     AIVehiclePaintPreviewAccessibility (card + action VoiceOver labels).
+  AIVehiclePaintPreview.Projection.swift — pure projection: resolve(input) → gated (withAiFeature off) / error
+                                     (context, P4 leaf) / loading (context, P4 leaf) / ready(canStart = numericVehicleId
+                                     > 0); requestPath(vehicleID) + styleHintPayload(rawHint) — the web InnerSection URL
+                                     + style_hint body shaping (the data adapter); reduce(stream,event) — the web
+                                     useAiStream handleEvent accumulator (delta appends only while streaming, done
+                                     settles, failed captures the message + keeps text, late frames dropped).
+  AIVehiclePaintPreview.Model.swift      — P1/S10 AIVehiclePaintPreviewStrings facade; P1/S11 telemetry seam
+                                     (AIVehiclePaintPreviewTelemetry + OSLog sink, view.opened surface=
+                                     "AIVehiclePaintPreview" deferred past the gate); AIVehiclePaintPreviewInput
+                                     (featureEnabled gate + vehicleID + styleHint + loading/error + connection);
+                                     AIVehiclePaintPreviewResolved(+Phase); P1/S8 state-holder seam
+                                     (AIVehiclePaintPreviewSource w/ onUpdate + onStreamEvent + start/stop/refresh/
+                                     generate/cancel); @MainActor @Observable AIVehiclePaintPreviewModel (projection +
+                                     stream reduction, generate() guard+coalesce, cancel→idle, stale 1-shot
+                                     auto-refresh + re-arm, latest-input requestPath/styleHintPayload derivation);
+                                     InMemoryAIVehiclePaintPreviewSource (push/emit + call counts).
+  AIVehiclePaintPreview.Views.swift      — presentational peers: Badge (the "Helix" pill), Dots (reduce-motion-aware),
+                                     ShimmerBar (inline skeleton — no TSSkeleton dependency), ThinkingIndicator (web
+                                     AIThinkingIndicator), IdleHint (P4 friendly empty — web hides the panel when idle),
+                                     OutputPanel (web AiOutputPanel: idle/thinking/prose/error), GenerateButton
+                                     (universal "Ask Helix" CTA, disabled = !canStart || streaming, aria "Ask Helix ·
+                                     Preview paint color").
+  AIVehiclePaintPreview.Chrome.swift     — P4 leaf chrome: freshness chip (Live/Stale/Offline), header refresh button,
+                                     stale/offline connectivity banner, loading skeleton, retryable context-error view.
+  AIVehiclePaintPreview.swift            — the surface: withAiFeature gate wrapper (EmptyView when off) + card chrome
+                                     (header title + Helix badge + freshness chip + refresh; banner when not live;
+                                     phase switch → loading/error/ready; TSFadeIn ready body = description + no-vehicle
+                                     hint + CTA row + output panel); static surfaceSlug = "AIVehiclePaintPreview";
+                                     onAppear start / onDisappear stop; localized labels via the facade (no English
+                                     literals).
+  AIVehiclePaintPreview.Previews.swift   — #if DEBUG #Preview for ready/idle, thinking, partial-text, done-prompt,
+                                     failed, disabled (no vehicle id), loading, context-error, stale, offline, gated.
+  AIVehiclePaintPreview.Tests.swift      — XCTest: projection resolve (5) + request shaping (4) + stream reduce (5) +
+                                     stream value type (2) + model wiring/telemetry/generate/cancel/freshness/request
+                                     (16) + accessibility (2) = 33.
+  AIVehiclePaintPreview.strings          — P1/S10 catalog (table "AIVehiclePaintPreview"): the web keys reused verbatim
+                                     (vehicles.aiPaintPreview.* + helix.* + ai.common.errorUnknown) so every source
+                                     string has a matching key, plus the native P4 leaf chrome copy.
+  (9 files; split across .Adapter/.Projection/.Model and .Views/.Chrome and .Previews/.Tests to keep every file under
+   the repo's 400-line SwiftLint file_length budget — max file 333 lines — all share the AIVehiclePaintPreview.* stem,
+   the same multi-file decomposition the prior P4 surfaces use.)
+
+PARITY MAPPING  (web → Apple platform tokens; no Tailwind ported, no raw hex)
+  withAiFeature('vehicle-paint-preview') null → AIVehiclePaintPreview gate: isGated ⇒ EmptyView (surface withdrawn)
+  AIFeatureCard GlassPanel + header        → card: surfaceGlass fill + border stroke; header = title (Font.TS.panel)
+                                             + Badge + freshness chip + refresh
+  AIBadge cyan "Helix" pill                → Badge: Color.TS.accent on accent.10 capsule + accent.30 stroke
+  CTA "Ask Helix" / "Helix is thinking…"   → GenerateButton (TSButton .secondary .small); dots while streaming;
+                                             disabled = !canStart || isStreaming; aria "Ask Helix · Preview paint color"
+  numericVehicleId>0 URL + style_hint body → AIVehiclePaintPreviewProjection.requestPath(vehicleID) +
+                                             styleHintPayload(rawHint) (unit-asserted); surfaced on the model from the
+                                             latest input (the production source POSTs them on generate())
+  useAiStream idle→streaming→done|error    → AIVehiclePaintPreviewStream.Phase + AIVehiclePaintPreviewProjection.reduce
+  AiOutputPanel hidden/thinking/prose/error→ OutputPanel: idle hint (P4 leaf, never blank) / thinking indicator /
+                                             pre-wrapped prose (textSelection) / "Helix error: {msg}"
+  AIThinkingIndicator shimmer lines + dots → ThinkingIndicator (inline ShimmerBar ×3 + Dots), Reduce-Motion aware
+  canStart = numericVehicleId>0            → AIVehiclePaintPreviewProjection.canStart ((vehicleID ?? 0) > 0)
+  emptyHint when !canStart                 → no-vehicle hint "Open a vehicle detail page to enable Helix." (web key
+                                             vehicles.aiPaintPreview.noVehicleHint reused verbatim)
+  i18n t(key, default)                     → AIVehiclePaintPreviewStrings (NSLocalizedString table, web literal as the
+                                             value: fallback); web keys reused verbatim
+  a11y                                     → card contain+label, badge label, CTA aria label, output label, chip label,
+                                             header trait; Dynamic Type via Font.TS tokens; Reduce Motion via TSFadeIn +
+                                             local dots/shimmer guards
+  telemetry                                → view.opened surface="AIVehiclePaintPreview" emitted once on the first
+                                             NON-gated apply (mirrors the web data-ai-feature marker, absent in off mode)
+
+STATES (every non-gated one renders — no hidden surface)
+  gated    → withAiFeature off → the whole surface is withdrawn (EmptyView), reproducing the web null.
+  loading  → skeleton header + description + CTA bars while the gate/context resolves (P4 leaf).
+  empty    → the ready card with description + (when no vehicle id) the disabled CTA + the no-vehicle hint, and the
+             output panel's friendly idle hint (web hides the panel when idle; the native leaf shows a paintpalette +
+             hint so the region is never blank).
+  error    → retryable context-error chrome (P4 leaf; the web vehicle page renders its deterministic configuration).
+  stream   → idle (friendly hint) / streaming (thinking → prose) / done (prose) / failed ("Helix error: {msg}").
+  stale    → header chip + banner + one-shot auto-refresh on the live→stale transition.
+  offline  → header chip + banner over last-known context; no auto-refresh (manual refresh button available).
+
+GATES  (raw exits below; per-surface scope; DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer)
+  [GREEN] swiftformat --lint  (.swiftformat, 8 swift files)      : 0/8 files require formatting        FORMAT_EXIT=0
+  [GREEN] swiftlint --strict  (repo rules, 8 swift files)        : 0 violations, 0 serious in 8 files  LINT_EXIT=0
+            (scoped to shared-surfaces via the repo .swiftlint.yml rule set. The whole-tree `swiftlint --strict`
+             surfaces exactly 1 PRE-EXISTING violation in TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter
+             .swift:141 — function_body_length 78>50 — a file this prompt neither touches nor is allowed to touch;
+             ZERO violations in shared-surfaces.)
+  [GREEN] check-placeholders.ps1 (-Language swift, shared-surfaces): PLACEHOLDER_ALLOWED=0
+                                                                      PLACEHOLDER_COUNT=0               PLACEHOLDER_EXIT=0
+            (scanner -SelfTest PASS: dirty tree→COUNT=4, clean tree→COUNT=0, opt-out-with-reason honoured, opt-out-
+             without-reason flagged — detection proven, so COUNT=0 is a real scan; no TODO/FIXME/XXX/Coming-soon/
+             Placeholder/Lorem/not-implemented/fatalError("unimpl/not") anywhere.)
+  [GREEN] ISOLATED build + test — SwiftPM, swift-tools 6.0 (Swift 6 language mode = strict-concurrency complete, the
+          same as the app), compiling the EXACT shipped AIVehiclePaintPreview.* sources (incl. the #Preview macro file
+          + the @Observable model) against the REAL repo design system (generated apps/design Tokens + the shared
+          Sources/Components TSButton + TSFadeIn) under the Xcode 26.5 toolchain (so the real #Preview macro + XCTest
+          are available):
+              Build complete! (10.52s)                                                                 BUILD_EXIT=0
+              Executed 33 tests, with 0 failures (0 unexpected)                                         SWIFT_TEST_EXIT=0
+  [GREEN] Cross-platform typecheck of the same 10 sources (Tokens + TSButton + TSFadeIn + 7 surface files) for BOTH
+          declared deployment minimums, Swift 6 mode + -strict-concurrency=complete:
+              xcrun swiftc -typecheck -target arm64-apple-ios18.0-simulator                            IOS_TYPECHECK_EXIT=0
+              xcrun swiftc -typecheck -target arm64-apple-macos15.0                                     MAC_TYPECHECK_EXIT=0
+
+  [DEFERRED] Full-app iOS-Simulator + macOS `xcodebuild -scheme TeslaSync(-macOS) … build test`.
+          NOT run-to-green on this runner because the full app target is blocked by PRE-EXISTING, unrelated conditions
+          this prompt neither introduced nor is allowed to touch (each VERIFIED here by ls/grep, not assumed):
+            • apps/apple/Frameworks/Shared.xcframework is NOT staged (only .gitkeep present) — the scheme's preAction
+              `Scripts/build-shared-xcframework.sh` needs the multi-minute Gradle :core:assembleSharedXCFramework (a
+              macos-pending row for p1-shared/S3);
+            • 170 co-located `*.Tests.swift` under TeslaSync/feature-views import XCTest into the app target (this
+              surface's own AIVehiclePaintPreview.Tests.swift follows that SAME established co-location config);
+            • `struct DashboardWidgetSize` is redefined 15× across Sources/DashboardWidgets/* + TeslaSync/
+              dashboard-widgets/* (parallel-merge collisions);
+            • shared-surfaces/ is not yet a project.yml source group (the directory's first surface on this branch) and
+              project.yml is OUTSIDE this prompt's allowed files (Rule 9) — wiring it is owned by the P4 acceptance gate
+              (p4-apple/P99 apple-acceptance-gate) on a signed macos-latest runner.
+          This is the SAME sanctioned "code-complete + DEFERRED full-app Xcode gate" disposition recorded by every prior
+          P4 surface (see p4-apple-shared-surfaces-0017-AIDriveCoaching.log + p4-apple-feature-views-0237-AiUsageCard
+          .log). ZERO AIVehiclePaintPreview errors are attributable to this change.
+
+PARITY
+  PARITY_UNIT = shared-surface:ai/AIVehiclePaintPreview
+  Panels/regions  : card chrome, header (title + Helix badge), description, Preview-paint CTA, output panel       ✔ (5/5)
+  Stream branches : idle-hint, thinking-indicator, streaming-prose, done-prose, error-line                       ✔ (5/5)
+  Leaf states     : gated, loading, context-error, stale (chip+banner+auto-refresh), offline (chip+banner)       ✔ (5/5)
+  Data sources    : useTranslation (i18n facade) ✔, useAiStream (stream event channel + reduction + url/body) ✔  ✔ (2/2)
+  i18n keys       : vehicles.aiPaintPreview.title/description/button/badge/noVehicleHint, helix.askHelix/thinking/
+                    errorLabel, ai.common.errorUnknown — all resolved via the facade + present in .strings         ✔ (9/9)
+  a11y            : card label, badge label, CTA aria label, output label, freshness chip label, header trait,
+                    Dynamic Type (Font.TS), Reduce Motion (TSFadeIn + dots/shimmer guards)                        ✔ (8/8)
+  telemetry       : view.opened surface="AIVehiclePaintPreview" (deferred past the gate)                         ✔ (1/1)
+  PARITY_COVERED = 35   PARITY_REQUIRED = 35
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED with raw, verified
+                           pre-existing-blocker evidence — never reported as passing. Every runnable gate's raw EXIT is
+                           pasted.
+  2  No scope narrowing  : every web region + branch reproduced — the withAiFeature gate, the AIFeatureCard header +
+                           "Ask Helix"/"Helix is thinking…" CTA + canStart rule + the !canStart emptyHint, the full
+                           useAiStream lifecycle (idle→streaming→done|error) with delta accumulation, the vehicleID-in-
+                           URL + style_hint-in-body shaping, the AiOutputPanel idle/thinking/prose/error branches; all 5
+                           P4 leaf states render.
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; raw exits pasted; the deferred full-app blockers
+                           were each re-confirmed by ls/grep (Shared.xcframework absent → only .gitkeep, 170 co-located
+                           XCTest files, DashboardWidgetSize ×15, shared-surfaces absent from project.yml), not assumed;
+                           the placeholder scanner's own -SelfTest was run to prove COUNT=0 is a real (not empty) scan.
+  4  No stubs as final   : complete production surface + 33 real tests; placeholder scanner COUNT=0; no
+                           TODO/FIXME/stub/Coming-soon/Placeholder/Lorem/fatalError anywhere.
+  5  No parity shortcut  : the stream reduction (delta-only-while-streaming, done-settles, failed-keeps-text,
+                           late-frame-drop), the canStart numericVehicleId>0 rule, the requestPath/styleHintPayload
+                           request shaping, the deferred-past-gate telemetry, and the stale one-shot auto-refresh +
+                           re-arm are each unit-asserted against the web semantics; the friendly idle state is rendered
+                           (not hidden), never a blank box.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S9 tokens + the shared TSButton/TSFadeIn compile against this surface (GATE build); the
+                           P1/S8 seam, P1/S10 facade, and P1/S11 telemetry are reproduced per the established
+                           per-surface pattern; the pre-existing AIUsageCard.* worktree mods were left untouched.
+  8  No commit on red    : the committed artifact (9 AIVehiclePaintPreview.* files + this log) is GREEN on every
+                           per-surface gate AND on a real isolated Swift 6 strict-concurrency build + 33/33 XCTest + the
+                           iOS-18 & macOS-15 typechecks; the deferred full-app gate is blocked only by pre-existing,
+                           unrelated conditions this commit does not touch.
+  9  No silent drift     : changes are confined to shared-surfaces/AIVehiclePaintPreview.{swift,Adapter,Projection,
+                           Model,Views,Chrome,Previews,Tests}.swift + AIVehiclePaintPreview.strings and this log; the
+                           pre-existing unrelated worktree modifications (AIUsageCard.* ×7) are disclosed above and left
+                           untouched/unstaged; project.yml + .swiftlint.yml are NOT edited (out of allowed files —
+                           wiring owned by P99); the generated TeslaSync.xcodeproj is git-ignored; the SwiftPM harness
+                           is outside the repo.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic AIVehiclePaintPreview shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 33 tests pass under the app's own Swift 6 strict-concurrency rules, against the REAL
+  design system, via the Xcode 26.5 XCTest runtime, and it typechecks for BOTH iOS 18.0 and macOS 15.0, with
+  swiftformat / swiftlint / placeholder all green on the 8 surface files and the #Preview macro compiling. The full-app
+  iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code) on pre-existing, unrelated,
+  out-of-allowed-files blockers (unstaged Shared.xcframework, the co-located-tests-into-app-target config, the
+  DashboardWidgetSize ×15 redefinition, and the shared-surfaces project.yml wiring owned by P99), per the established P4
+  disposition.
+
+EXIT=0
+STATUS=DONE

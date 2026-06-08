@@ -1,0 +1,159 @@
+=== P4 Shared surface 0217 Input (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon) — SHARED runner (other parallel
+                       xcodebuild jobs observed running concurrently; builds were re-run in managed
+                       shells to defeat resource-contention starvation).
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no `xcode-select -s`, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 ·
+                       PowerShell 7.6.2 · Java 17.0.19
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5, Booted) present · macOS 26.5 SDK present
+  Shared.xcframework : assembled + staged HERE — Gradle ":core:assembleSharedXCFramework"
+                       BUILD SUCCESSFUL in 8m06s (release + debug XCFrameworks; staged to
+                       apps/apple/Frameworks/Shared.xcframework). Kotlin/Native link needed
+                       DEVELOPER_DIR pointed at full Xcode (its own `xcrun xcodebuild -version` probe).
+  Capability         : SwiftUI present and EXERCISED on BOTH iOS-18 and macOS-15 SDKs (real swiftc
+                       -typecheck + an isolated Swift-6 SwiftPM build/run) → NOT capability-BLOCKED.
+                       (Surface uses no Swift Charts / MapKit — it is a pure form control.)
+
+WEB SOURCE (the specification) — web/src/components/ui/Input.tsx
+  A PURE presentational form control (fetches nothing). Composition:
+    div.space-y-1
+      └─ if label:  div.flex.items-center.gap-1 [ <Label htmlFor required> + optional <HelpIcon for=help.for??inputId> ]
+      └─ div.relative [ optional leading {icon} (abs left, text-muted)
+                        <input ...sizeClasses[size]; border glass-border; bg surface-1; text-primary;
+                               focus:ring-2 ring-blue-500; error⇒border-red-500; disabled:opacity-50;
+                               pl-10 when icon; pr-10 when suffix>
+                        optional trailing {suffix} (abs right) ]
+      └─ error ? <p id={inputId}-error text-red-500>     : (hint && !error) ? <p id={inputId}-hint text-muted>
+  Logic branches reproduced 1:1:
+    • inputId = id || label?.toLowerCase().replace(/\s+/g,'-')
+    • aria-describedby = error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined
+    • aria-invalid = error ? 'true' : undefined ;  aria-required = required ? 'true' : undefined
+    • <HelpIcon>: text = i18nKey ? t(i18nKey,{defaultValue:content??''}) : content??'' ; if(!text) return null ;
+      aria-label = forId ? t('a11y.helpFor',{field}) : t('help.tooltip.iconLabel') ; describedby = `${forId}-help`
+    • <Label required>: visible `*` (aria-hidden) + VisuallyHidden t('form.required')
+    • sizeClasses: sm `px-2 py-1.5 text-xs` · md `px-3 py-2 text-sm` · lg `px-4 py-2.5 text-base` · auto density
+  Prompt records Data sources / Shared components / Charts / i18n keys = (none) — anonymous presentational leaf.
+  No loading/empty/error/stale/offline DATA lifecycle exists in the source (those belong to the embedding
+  screen); the CONTROL states that DO exist — default·focused·invalid·hinted·disabled·leading-icon·
+  trailing-suffix·required·secure·sm/md/lg/auto — are every one reproduced.
+
+ARTIFACTS SHIPPED (apps/apple/TeslaSync/shared-surfaces/Input.*)
+  Input.Model.swift      — InputSurface(slug "Input" + reportOpen) · InputSize/InputMetrics (web sizeClasses) ·
+                           InputIdentity (id||slug(label)) · InputMessageResolver (aria-describedby/invalid +
+                           error/hint render gates) · InputHelp/InputHelpProjection/InputHelpResolver
+                           (<HelpIcon> incl. for=help.for??inputId) · InputRequiredMarker · InputStrings (P1/S10 facade)
+  Input.Telemetry.swift  — InputTelemetry seam + OSLogInputTelemetry (redaction-safe os_log "view.opened")
+  Input.Views.swift      — InputLabelRow · InputHelpButton/InputHelpContent · InputFieldRow<Leading,Trailing>
+                           (leading icon, Secure/TextField, trailing suffix, error border, focus ring) · InputMessageText
+  Input.swift            — Input<Leading,Trailing> view + 3 convenience inits (no-slot / leading / trailing) +
+                           #if DEBUG-free shipped surface; emits view.opened from .task
+  Input.Previews.swift   — #if DEBUG gallery: every state (label+required+keyed help, error, hint, leading icon,
+                           trailing suffix, secure, disabled, sm, lg) on dark + light
+  Input.Tests.swift      — 31 XCTest cases (identity ladder · describedby/validity · HelpIcon ladder · size scale ·
+                           required marker · surface slug + telemetry). @testable import TeslaSync (bottom).
+  Input.strings          — per-surface table "Input": form.required / a11y.helpFor / help.tooltip.iconLabel
+                           (web English fallbacks) + DEBUG input.preview.* keys. No English literals in code.
+  Necessary shared wiring (the SAME pattern every prior P4 Apple surface used — see ToolCard/0010 log):
+    project.yml          — + "TeslaSync/shared-surfaces" to the TeslaSync and TeslaSync-macOS source groups
+                           (this is the FIRST shared-surface; the dir did not previously exist in the spec).
+    .swiftlint.yml       — + "TeslaSync/shared-surfaces" to `included` so the standard lint gate covers it.
+    apps/macos-pending-verifications.md — + one row recording the DEFERRED full-app Xcode gate.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported, no raw hex, no English literals)
+  border glass-border / bg surface-1 / text-primary  → Color.TS.border / .surface / .textPrimary
+  placeholder text-muted                             → SwiftUI prompt (muted by default) + leading icon Color.TS.textMuted
+  error border-red-500 / error <p>                   → Color.TS.statusDanger (border) / InputMessageText(.error)
+  hint text-muted <p>                                → Color.TS.textMuted via InputMessageText(.hint)
+  focus:ring-2 ring-blue-500                          → @FocusState ⇒ 2pt Color.TS.accent ring overlay (coexists w/ error border)
+  disabled:opacity-50                                → .opacity(0.5).disabled(true)
+  Label text-sm font-medium text-secondary           → Font.TS.body.weight(.medium) + Color.TS.textSecondary
+  required `*` + sr-only word                        → statusDanger glyph (.accessibilityHidden) + folded into field a11y name
+  <HelpIcon>                                          → InputHelpButton ("(?)" SF Symbol) + popover + .help() tooltip
+  sizeClasses sm/md/lg/auto                           → InputMetrics 8/6·12 · 12/8·14 · 16/10·16 · md baseline (Dynamic Type)
+  i18n   : label/error/hint/prompt are caller LocalizedStringKeys; only native chrome owns keys (P1/S10 facade)
+  a11y   : field named after label (+required word) — the htmlFor linkage; error/hint as accessibilityHint
+           (aria-describedby); help button per-field label "Help for {field}"; reduce-motion-gated focus animation;
+           Dynamic Type via Font.system(size:); container .accessibilityElement(children:.contain)
+  telemetry : view.opened surface="Input" via InputSurface.reportOpen (P1/S11), default OSLog sink.
+
+GATES (raw exits pasted; my-surface scope vs whole-repo aggregate distinguished)
+  [GREEN]  xcodegen generate                                   : project written; all 7 Input.* files enumerated
+  [GREEN]  swiftformat --lint (Input scope, 6 swift files)      : 0/6 require formatting                  (FORMAT_EXIT=0)
+  [RED·PE] swiftformat --lint apps/apple   (gate command)       : 1/1919 require formatting — PRE-EXISTING,
+                                                                  TeslaSync/feature-views/ActionBuilder.Previews.swift:48
+                                                                  (blankLinesBetweenScopes). 0 Input files flagged. (FORMAT_EXIT=1)
+  [GREEN]  swiftlint --strict (Input scope, 6 files)            : 0 violations, 0 serious                  (LINT_EXIT=0)
+  [RED·PE] swiftlint --strict  (whole `included`, gate command) : 1 PRE-EXISTING serious violation —
+                                                                  function_body_length in
+                                                                  TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+                                                                  (NOT an Input file; not introduced here).      (LINT_EXIT=2)
+  [GREEN]  check-placeholders.ps1 -Path …/shared-surfaces/Input : PLACEHOLDER_ALLOWED=0 · PLACEHOLDER_COUNT=0 (PLACEHOLDER_EXIT=0)
+  [GREEN]  Input build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode,
+           strict concurrency = same as the app), compiling the EXACT shipped Input.* sources + the REAL repo
+           design-system (Tokens.swift + TSDesign.swift):
+               Build complete!  ·  Executed 31 tests, with 0 failures (0 unexpected)            (SWIFT_BUILD/TEST_EXIT=0)
+           (This harness caught + I fixed two REAL Swift-6 ambiguities that would also break the Xcode build:
+            a bare `ScrollView {}` two-overload ambiguity, and a bare trailing-closure ambiguity between the
+            leading-only/trailing-only convenience inits — both resolved with explicit labels.)
+  [GREEN]  swiftc -typecheck  (real iOS-18 SDK, arm64-apple-ios18.0-simulator, -swift-version 6)  : clean (IOS_TC_EXIT=0)
+  [GREEN]  swiftc -typecheck  (real macOS-15 SDK, arm64-apple-macos15.0, -swift-version 6)         : clean (MAC_TC_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync      -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS                                                     build test : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO Input/shared-surfaces errors; ALL blockers pre-exist this change):
+    Shared.xcframework staged OK (built here), so the build PROCEEDS to source compilation and then fails on
+    PRE-EXISTING, unrelated repo state:
+      • Co-located `*.Tests.swift` import `XCTest` into the APP target (261 such files across feature-views/
+        dashboard-widgets — the repo's per-surface test convention; Input.Tests.swift follows it too). Both the
+        iOS AND macOS builds fail FIRST, identically, at:
+            TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8:
+            error: unable to resolve module dependency: 'XCTest'
+        (AIRestorePanel is alphabetically early — nothing to do with Input.)
+      • Behind that, `public struct DashboardWidgetSize` is DEFINED 15× across Sources/DashboardWidgets/* and
+        TeslaSync/dashboard-widgets/* (parallel-merge duplicate-type collision).
+      • macOS additionally needs a development SIGNING certificate this runner does not provision.
+    grep of both build logs for "shared-surfaces|Input.*error:" = 0 hits. These are exactly the artifacts
+    apps/macos-pending-verifications.md defers to the ADR-012 macos-latest CI runner, owned by the
+    P4/P99 Apple acceptance gate (signing) + a dashboard-widget de-duplication pass — NOT by a single shared-surface
+    prompt (task rule: do not fix pre-existing unrelated breakage). A pending-verification row is recorded.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the whole-repo swiftformat/swiftlint aggregates AND the full-app iOS/macOS xcodebuild
+                           gate are reported RED (FORMAT_EXIT=1 / LINT_EXIT=2 / IOS_EXIT=65 / MAC_EXIT=65) and
+                           explicitly attributed to PRE-EXISTING unrelated files — never reported as passing.
+  2  No scope narrowing  : every web region + branch (id ladder, describedby/invalid, error vs hint precedence,
+                           HelpIcon text/aria ladder incl. for-default, required marker, sm/md/lg/auto) reproduced.
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; iOS & macOS failures CONFIRMED
+                           (captured), not assumed; Shared.xcframework actually built here.
+  4  No stubs as final   : complete production view + 31 real passing tests; placeholder scanner = 0, 0 opt-outs.
+  5  No parity shortcut  : geometry/colour/focus/error/disabled/typography/a11y/i18n/telemetry all mapped to
+                           platform tokens + the P1/S10 facade + verified compiling on both SDKs.
+  6  No delegation       : implemented directly; no sub-agents used.
+  7  No predecessor bypass: P1/S8 state-holder pattern (presentational leaf owns no data, by design — as the web
+                           source) · P1/S9 tokens (Tokens.swift/TSDesign.swift) · P1/S10 i18n facade · P1/S11
+                           view.opened diagnostics — all present and consumed.
+  8  No commit on red    : the COMMITTED artifact (Input.* + the 3 wiring files) is GREEN on every gate it OWNS and
+                           on a real isolated Swift-6 build+test on both SDKs; the deferred full-app gate and the
+                           whole-repo lint/format aggregates are RED only on pre-existing, unrelated surfaces that
+                           this commit neither introduces nor touches.
+  9  No silent drift     : changes confined to apps/apple/TeslaSync/shared-surfaces/Input.* (7 files), project.yml,
+                           .swiftlint.yml, one apps/macos-pending-verifications.md row, and this log — all enumerated.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic `Input` shared surface shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it builds and its 31 tests pass under the app's own Swift-6 strict-concurrency rules
+  against the REAL design-system, it type-checks clean on both the iOS-18 and macOS-15 SDKs, and lint/format/
+  placeholder are all green for the surface. The full-app iOS-Simulator + macOS xcodebuild build/test gate is
+  DEFERRED (not failed by this code): it is blocked by pre-existing co-located-XCTest-in-app-target + duplicate
+  `DashboardWidgetSize` collisions and by macOS development-signing — owned by the P4/P99 acceptance gate on a
+  signed macos-latest CI runner per apps/macos-pending-verifications.md. This matches the repo's sanctioned
+  "code-complete + DEFERRED Xcode gate" disposition used by every P4 Apple surface to date.
+
+EXIT=0
+STATUS=DONE

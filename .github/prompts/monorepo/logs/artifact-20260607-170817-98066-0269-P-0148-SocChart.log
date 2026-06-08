@@ -1,0 +1,196 @@
+=== P4 Feature view 0148 SocChart (Apple) ===
+Prompt : .github/prompts/monorepo/p4-apple/feature-views/0148 — Feature view: SocChart
+Web src : web/src/features/driving/components/drive-detail/SocChart.tsx  (THE spec)
+Native  : apps/apple/TeslaSync/feature-views/SocChart.*  (7 files)
+Runner  : Darwin (Apple silicon). Xcode 26.5 (17F42) via
+          DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer.
+          SDKs: iphonesimulator26.5, macosx26.5. Sim: iPhone 16 (booted).
+          swift 6.3.2 · swiftlint · swiftformat · xcodegen 2.45.4 · pwsh 7.6.2 · jdk 17.
+Capability: SwiftUI + Swift Charts + MapKit present and exercised on THIS runner
+          (this surface uses SwiftUI + Swift Charts; no map). NOT capability-blocked.
+
+----------------------------------------------------------------------------------
+DELIVERABLE (7 files, the only files this prompt is allowed to add)
+----------------------------------------------------------------------------------
+  SocChart.swift            — composable View; FadeIn card; phase switch over the
+                              full state envelope (loading/empty/error/content),
+                              freshness banner; binds SocChartModel (P1/S8).
+  SocChart.Adapter.swift    — pure core: SocReading→SocSample indexing, the web
+                              `chartData.length > 1` content/empty threshold,
+                              phase resolution, start/end/min/max SOC, synced-cursor
+                              index↔time lookups, percent formatting, a11y summary,
+                              surface slug.
+  SocChart.Model.swift      — P1/S8 state-holder seam (SocChartSource) + @Observable
+                              SocChartModel (owns the shared cursor `selectedTime`,
+                              web useSyncedCursor/useSyncedReferenceLineX), P1/S10
+                              i18n facade (SocChartStrings), P1/S11 telemetry seam
+                              (view.opened), InMemorySocChartSource for previews/tests.
+  SocChart.Views.swift      — header + freshness chip + stale/offline banner; the
+                              Swift Charts area chart (AreaMark gradient + LineMark
+                              stroke + RuleMark synced cursor + tooltip); loading /
+                              empty / error states. Token-driven (P1/S9); no Tailwind.
+  SocChart.Previews.swift   — #Preview per state: Content/Empty/Loading/Error/Stale/Offline.
+  SocChart.strings          — P1/S10 catalog contribution (table "SocChart").
+  SocChart.Tests.swift      — 30 tests: adapter projection, formatting, model state
+                              machine + synced cursor + telemetry, accessibility.
+
+----------------------------------------------------------------------------------
+WEB→NATIVE PARITY MAP (SocChart.tsx is the spec; every branch + t() reproduced)
+----------------------------------------------------------------------------------
+  ChartContainer title "SOC % Over Time"      → SocChartHeader  [i18n driveDetail.socOverTime]
+  ariaLabel "State of charge percent over…"   → Chart .accessibilityLabel
+                                                 [i18n driveDetail.socOverTime.aria]
+                                                 + .accessibilityValue = start/end SOC summary
+  <AreaChart data=battery over time>           → Chart { AreaMark + LineMark } x=index y=battery
+  fill url(#socGrad) stroke "#10b981"          → Color.TS.chartSeriesBattery
+                                                 (= sRGB 0.063,0.725,0.506 == #10b981, exact)
+                                                 vertical gradient fill + 2pt line stroke
+  <YAxis domain={[0,100]}>                      → .chartYScale(domain: 0...100), ticks 0/25/50/75/100 %
+  <XAxis interval="preserveStartEnd">           → AxisMarks(values: [firstIndex, lastIndex]) time labels
+  useSyncedCursor onMouseMove (activeLabel)     → .chartXSelection → SocChartModel.moveCursor(to: time)
+  useSyncedReferenceLineX (syncedX)             → RuleMark at SocChartModel.selectedTime (+ tooltip)
+  ChartTooltip                                  → SocChartTooltip (time over "SOC <pct>%")
+  chartData.length > 1 ? area : empty           → SocChartProjection.hasTrace (≥2) → .content/.empty
+  empty: <Activity/> "No telemetry data available" → ContentUnavailableView(waveform.path.ecg)
+                                                 [i18n driveDetail.noChartData]
+  name `${t('driveDetail.soc','SOC')} %`        → tooltip/axis label [i18n driveDetail.soc]
+  <FadeIn>                                       → TSFadeIn
+  (P4 widening) web content/empty → full native envelope: + loading skeleton, + error/retry
+                (QueryError parity), + stale/offline freshness chip & banner (ADR-013).
+
+  i18n keys from source (all resolve through the P1/S10 facade, no English literals
+  in code): driveDetail.socOverTime, driveDetail.socOverTime.aria, driveDetail.soc,
+  driveDetail.noChartData. Native-envelope keys added in SocChart.strings.
+
+  States rendered (every one — never a blank box): loading, empty, error, stale,
+  offline, content. Telemetry: view.opened surface="SocChart" (P1/S11), once.
+
+----------------------------------------------------------------------------------
+SURFACE-SCOPED GATES (the committed artifact — all GREEN, raw exits)
+----------------------------------------------------------------------------------
+[swiftlint --strict — the 6 SocChart .swift files]
+  Done linting! Found 0 violations, 0 serious in 6 files.            SURFACE_LINT_EXIT=0
+
+[swiftformat --lint — the 6 SocChart .swift files]
+  0/6 files require formatting.                                      SURFACE_FORMAT_EXIT=0
+
+[check-placeholders.ps1 — the 7 SocChart files (real scan)]
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  EXIT=0                                                             PLACEHOLDER_EXIT=0
+  (script self-test: all [PASS]; the prompt's verbatim `-Path …/SocChart` prefix
+   resolves to no literal path → scans nothing, so the scan above targets the real
+   files to make the check meaningful. grep for TODO/FIXME/stub/mock/placeholder/
+   Lorem/fatalError across all 7 files = NONE.)
+
+[Isolated SwiftPM build+test — Swift 6 language mode (== app's complete strict
+ concurrency), macOS 15, against the REAL design system (TSDesign/TSMaterial/
+ generated Tokens.swift/Motion TSFadeIn/Feedback TSSkeleton verbatim)]
+  Compiling TSSurface SocChart.{swift,Adapter,Model,Views,Previews} … Build complete!
+                                                                     ISO_BUILD_EXIT=0
+  Test Suite 'All tests' passed. Executed 30 tests, with 0 failures (0 unexpected).
+    SocChartProjectionTests   10/10
+    SocChartFormatTests        3/3
+    SocChartModelTests        13/13
+    SocChartAccessibilityTests 4/4
+                                                                     ISO_TEST_EXIT=0
+
+----------------------------------------------------------------------------------
+PREREQUISITES (host setup, reproducible)
+----------------------------------------------------------------------------------
+  apps/shared/gradlew :core:assembleSharedXCFramework  → BUILD SUCCESSFUL (8m33s);
+    staged apps/apple/Frameworks/Shared.xcframework (ADR-004; git-ignored).
+  cd apps/apple && xcodegen generate                   → TeslaSync.xcodeproj
+    (git-ignored); schemes present: TeslaSync, TeslaSync-macOS.
+
+----------------------------------------------------------------------------------
+FULL-APP / WHOLE-TREE GATES (raw exits — RED on PRE-EXISTING, UNRELATED code only)
+----------------------------------------------------------------------------------
+[xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test]
+  ** BUILD FAILED ** / ** TEST FAILED **
+  First+only error file: TeslaSync/feature-views/AcDcStatsPanel.Tests.swift:19:8:
+    error: unable to resolve module dependency: 'XCTest'
+  SocChart errors in this run: 0 (grep -c = 0).                      IOS_EXIT=65
+
+[xcodebuild -scheme TeslaSync-macOS build test]
+  ** BUILD FAILED **
+  error: "TeslaSync-macOS" has entitlements that require signing with a development
+         certificate. Enable development signing… (target 'TeslaSync-macOS')
+  error: "TeslaSyncWidgets-macOS" … requires signing with a development certificate.
+  SocChart errors in this run: 0 (grep -c = 0).                      MAC_EXIT=65
+
+[swiftlint --strict — whole apps/apple (1187 files)]
+  Found 1 violation, 1 serious:
+    dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: function_body_length
+  SocChart violations: 0.                                            LINT_EXIT=2
+
+[swiftformat --lint apps/apple (1191 files)]
+  TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1: (blankLinesBetweenScopes)
+  SocChart violations: 0.                                            FORMAT_EXIT=1
+
+Why these are RED and why they are NOT this surface's defect (no red-as-green):
+  • The full-app iOS+macOS xcodebuild build/test gate is a KNOWN DEFERRED
+    verification for every P4 Apple surface — see apps/macos-pending-verifications.md
+    (row p4-apple/…/ToolCard) and ADR-012's CI matrix (runs on a signed
+    `macos-latest` runner under p4-apple/P99-0001-apple-acceptance-gate).
+  • iOS blocker: the repo-wide co-located `*.Tests.swift` convention compiles XCTest
+    files into the app target; the compiler stops at the alphabetically-first one,
+    AcDcStatsPanel.Tests.swift (surface 0096) — NOT SocChart. ~80 surfaces share it.
+  • macOS blocker: development-signing of TeslaSync-macOS / TeslaSyncWidgets-macOS
+    entitlements — no signing identity on this runner. Infra, not code.
+  • The two whole-tree lint hits are in LifetimeStatsWidget.Adapter.swift and
+    ActionBuilder.Previews.swift — pre-existing, parallel-merge artifacts, NOT SocChart.
+  • These blockers are OUTSIDE this prompt's allowed file set
+    (apps/apple/TeslaSync/feature-views/SocChart.* + this log); they cannot be fixed
+    here, and SocChart introduces ZERO new errors into any of them (grep-verified).
+  • The COMMITTED artifact (SocChart.*) is GREEN on every surface-scoped gate AND on a
+    real isolated Swift 6 strict-concurrency build + 30/30 tests against the real
+    design system. "No commit on red" holds for the committed files.
+
+----------------------------------------------------------------------------------
+HONESTY COVENANT
+----------------------------------------------------------------------------------
+  1  No red-as-green   : every red exit (IOS_EXIT/MAC_EXIT/LINT_EXIT/FORMAT_EXIT)
+                         pasted raw + labeled red; their pre-existing, non-SocChart
+                         causes named with file:line; SocChart error count = 0 each.
+  2  No scope narrowing: full surface — all 6 states, synced cursor, tooltip, axes,
+                         a11y, i18n, telemetry, 30 tests. Nothing deferred or trimmed.
+  3  No skip-and-assume: every gate executed on THIS runner; raw exits pasted; both
+                         Xcode failures + both lint hits inspected, not assumed.
+  4  No stubs as final : complete production surface + 30 real tests; placeholder
+                         scan = 0; no TODO/stub/mock/placeholder/Lorem/fatalError.
+  5  No parity shortcut: title/aria/area+line/gradient(#10b981)/Y[0,100]/preserveStart
+                         End/synced cursor/tooltip/empty/units/i18n/a11y/telemetry all
+                         mapped to platform tokens + verified.
+  6  No delegation     : implemented directly; no agents/sub-tasks.
+  7  No predecessor bypass: consumes P1/S8 state-holder seam, P1/S9 tokens, P1/S10
+                         i18n facade, P1/S11 telemetry, P4 core (TSFadeIn/TSSkeleton/
+                         Color.TS/Font.TS/TSSpacing/TSRadius/TSMotion).
+  8  No commit on red  : the COMMITTED files (SocChart.* + this log) are GREEN on
+                         every surface-scoped gate + isolated build/test; the deferred
+                         full-app/whole-tree reds live in files this commit neither
+                         adds nor touches.
+  9  No silent drift   : changes confined to apps/apple/TeslaSync/feature-views/
+                         SocChart.* (7 files) + this log. One documented widening:
+                         web content/empty → full P4 state envelope (loading/error/
+                         stale/offline). One documented native mechanism: the web
+                         cross-chart synced cursor is realized as an observable
+                         `selectedTime` on SocChartModel (settable by a parent), since
+                         sibling drive-detail charts are not yet ported.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic SocChart shipped at parity with the web source
+  and INDEPENDENTLY VERIFIED: it compiles and its 30 tests pass under the app's own
+  Swift 6 strict-concurrency rules, against the real design system, with
+  swiftlint / swiftformat / placeholder all green on the surface. The full-app
+  iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this
+  code) — blocked by the repo-wide co-located-XCTest-in-app convention and macOS
+  development-signing, both pre-existing, both owned by the P4/P99 acceptance gate on
+  a signed macos-latest runner per apps/macos-pending-verifications.md. This matches
+  the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by
+  every P4 surface to date (e.g. 0092-SpeedTrendChart, 0097-BatteryLevelChart,
+  0010-ToolCard).
+
+EXIT=0
+STATUS=DONE

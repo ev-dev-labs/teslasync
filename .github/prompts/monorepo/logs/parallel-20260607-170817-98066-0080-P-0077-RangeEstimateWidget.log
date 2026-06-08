@@ -1,0 +1,87 @@
+I'll start by exploring the repository structure to understand the web source, the existing Apple app patterns, and the shared infrastructure.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. `swift`, `swiftlint`, `swiftformat` ARE available. Let me explore the web source, existing widget patterns, and shared infrastructure.
+
+Now I understand the web source. Let me read the existing reference widgets thoroughly to learn the established pattern. `LifetimeStatsWidget` (stats + units, no charts) and `GuardModeWidget` (adapter + states) are the closest analogs.
+
+The pattern is very clear and comprehensive. Let me read the remaining reference files (Previews, Tests, strings) and locate the shared infrastructure definitions (`DashboardWidgetRegistration`, `Color.TS`, `Font.TS`, `TSSpacing`, etc.).
+
+Now let me locate the shared infrastructure definitions (`DashboardWidgetRegistration`, `DashboardWidgetSize`, `Color.TS`, `Font.TS`, `TSSpacing`, `TSSkeleton`, etc.) and understand how the Xcode project is wired.
+
+Project uses XcodeGen (`project.yml`). Note `DashboardWidgetSize`/`Registration` are defined in BOTH `Sources/DashboardWidgets/` and `TeslaSync/dashboard-widgets/DigitalTwinWidget.Model.swift`. Let me understand the target structure and the shared token/registry definitions.
+
+The `dashboard-widgets/` folder is a parallel-safe staging area: `DigitalTwinWidget.Model.swift` defines the shared `DashboardWidgetSize`/`Registration` types that siblings consume, while design tokens come from `Sources/`. Let me confirm the shared token APIs and the registry definitions.
+
+Now let me read the web-side helpers I must port exactly (`convertDistanceFromSI`, `fmtNumber`, `useUnits`, `useVehicleState`, and `WidgetShell`) to guarantee value + state parity.
+
+Now let me confirm the `useVehicleState` hook shape and the `rated_range`/`ideal_range` field types, plus check the GuardMode adapter/model for the connection-mapping convention.
+
+I have the full picture. Let me check the lint/format configs and the placeholder-check script before writing code.
+
+`pwsh` is available and SwiftUI parses. Let me run baseline lint/format on the existing siblings and confirm whether any full Xcode exists.
+
+Full Xcode exists at `/Applications/Xcode.app` (I can use `DEVELOPER_DIR` override without sudo). swiftformat baseline passes. Let me verify xcodebuild access, xcodegen, simulators, and whether the staging dir is wired into the project.
+
+Xcode 26.5, xcodegen, and the iPhone 16 sim are all available. Critically, the `dashboard-widgets/` staging dir is NOT in `project.yml` sources — so `xcodebuild -scheme TeslaSync` won't compile these files (project integration is outside my allowed files). Let me check how sibling widget prompts recorded their gate status.
+
+This is a well-established pattern. The sibling precedent (0054/0055) is clear: ship production-complete code, run all host-runnable gates green (swiftformat, swiftlint, placeholder check, **executed** XCTest of pure logic, swiftc compile against real iOS+macOS SDKs), and document the `xcodebuild -scheme` step as DEFERRED (staging dir not yet in `project.yml` + Shared.xcframework KMP dep — both outside allowed files). Let me set up tracking and write the 6 files.
+
+Now writing the files. Starting with the pure adapter and the model (the Foundation-only seams):
+
+Now the Previews and strings files:
+
+Now let me build a host harness to (a) verify the pure logic compiles+runs and (b) capture exact output strings for the test assertions. I'll compile the Adapter+Model with a registry shim and a probe.
+
+Host probe compiles under Swift 6 strict and runs green. I have exact output strings. Now the Tests file with pinned assertions:
+
+All 6 files created. Let me update tracking and run the fast gates (swiftformat, swiftlint, placeholder check) in parallel.
+
+Excellent — all three fast gates are green:
+- **swiftformat**: 0/291 files require formatting (FORMAT_EXIT=0)
+- **swiftlint --strict**: 0 violations in 5 files (LINT_EXIT=0)
+- **check-placeholders**: COUNT=0 (EXIT=0)
+
+Now Tier A: actually execute the shipped XCTest via a temporary SPM package. Let me check the dependency files' own requirements first.
+
+`tsDynamicColor` is self-contained in Tokens.swift; Skeletons only needs TS tokens. Let me check `tsDynamicColor`'s platform handling (UIColor vs NSColor), then assemble the SPM harness.
+
+`tsDynamicColor` supports AppKit (macOS). Let me assemble the SPM package and execute the shipped XCTest under Swift 6 strict concurrency with the Xcode toolchain.
+
+The harness's full `Skeletons.swift` references `TSCard` (another file). My widget only uses `TSSkeleton`, so I'll trim the harness copy to just that struct (the real build includes the full file). Let me extract only `TSSkeleton`:
+
+**20/20 shipped XCTest cases passed** under Swift 6 strict concurrency — the SwiftUI surface + @Observable model compiled against the real design tokens, and all pure logic executed green. Now Tier B: typecheck the full surface (incl. Previews) against the **iOS 18 simulator** and **macOS 15** SDKs — the gate's two platforms.
+
+Both SDK typechecks pass (incl. Previews, Swift 6 strict). Now let me capture hard evidence for the DEFERRED `xcodebuild` step: prove the staging dir isn't target-registered by generating the project and grepping the pbxproj (it's git-ignored, so no working-tree impact).
+
+Confirmed: the generated `project.pbxproj` has **0** references to any staging widget files — so `xcodebuild -scheme` cannot compile them (DEFERRED reason), and `Frameworks/` lacks the `Shared.xcframework` (KMP preAction dependency). Let me verify git ignore status and clean up the generated project so only my allowed files are staged.
+
+The `.xcodeproj` and `Frameworks/*.xcframework/` are git-ignored (lines 379/381), and git status shows only my 6 files. Let me peek at the Shared.xcframework preAction script to decide whether a bounded `xcodebuild` attempt yields clean evidence, then finalize.
+
+The `xcodebuild -scheme` preAction requires a full KMP/Gradle build of `Shared.xcframework`, and the staging files have 0 pbxproj members regardless — both outside my allowed files. This is the documented DEFERRAL (precedent 0036/0054/0055). I've already proven stronger evidence (dual-SDK compile + executed tests). Let me write the gate log.
+
+Log written. Let me do a final consolidated re-verification, clean up temp harnesses, and confirm exactly which files will be committed.
+
+All gates green and temp files cleaned. Note: two pre-existing unrelated `web/` modifications exist in the worktree (not mine) — I'll commit **only** my allowed files explicitly.
+
+Committed — only my 7 allowed files; the two unrelated pre-existing `web/` edits were left untouched. Let me verify the commit message is clean (the oneline render showed an odd space).
+
+Commit subject is clean (the earlier space was just a `--oneline` rendering artifact), and the Co-authored-by trailer is present.
+
+All todos complete. Task finished.
+
+Merge made by the 'ort' strategy.
+ ...-dashboard-widgets-0077-RangeEstimateWidget.log | 189 +++++++++++
+ .../RangeEstimateWidget.Adapter.swift              | 155 +++++++++
+ .../RangeEstimateWidget.Model.swift                | 311 ++++++++++++++++++
+ .../RangeEstimateWidget.Previews.swift             | 115 +++++++
+ .../RangeEstimateWidget.Tests.swift                | 261 +++++++++++++++
+ .../dashboard-widgets/RangeEstimateWidget.strings  |  43 +++
+ .../dashboard-widgets/RangeEstimateWidget.swift    | 349 +++++++++++++++++++++
+ 7 files changed, 1423 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0077-RangeEstimateWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RangeEstimateWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RangeEstimateWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RangeEstimateWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RangeEstimateWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RangeEstimateWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RangeEstimateWidget.swift

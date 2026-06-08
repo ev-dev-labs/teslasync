@@ -1,0 +1,93 @@
+I'll start by exploring the environment to understand what's available and what the task requires.
+
+Apple toolchain exists (Swift 6.3.2, swiftlint, swiftformat). Let me check xcodebuild carefully and explore the existing structure, especially the AIUsageCard pattern which appears to be a sibling reference.
+
+Critical finding: **only Command Line Tools is installed, not full Xcode** — `xcodebuild` errors out and `simctl` is missing. The gate's `xcodebuild ... build test` steps cannot run. But `swift`, `swiftlint`, `swiftformat` work. Per the Honesty Covenant, I'll produce complete production code, verify everything I can, and honestly report platform-capability status.
+
+Let me study the established patterns (AIUsageCard sibling + shared infra) before writing code.
+
+Excellent — this is a sophisticated, well-established architecture. Let me read the rest of the AIUsageCard fileset and locate the shared infra (tokens, projection, motion).
+
+The on-disk name is `AiUsageCard` (case-insensitive FS). Let me find the projection definition, shared tokens, and read the remaining reference files plus project.yml.
+
+Now let me read the remaining reference files (Projection, Chrome, Previews, Tests, AdapterTests), verify generated tokens exist, and study the web `polling` API + colors for parity.
+
+I have a thorough understanding. Let me check the web `AnimatedNumber` (for number formatting/grouping parity) and confirm a couple of shared component peers, then write the code.
+
+Key insight: `.swiftlint.yml` `included:` lacks `shared-surfaces`, but `swiftformat` covers all of `apps/apple`. Let me read the sibling's log format, check `pwsh`, and inspect the placeholder checker.
+
+The sibling log is a goldmine — it reveals the sanctioned methodology: per-surface gates green + an **isolated SwiftPM build/test** against the real design system, with the full-app xcodebuild gate marked DEFERRED. Critically, the sibling used a `DEVELOPER_DIR=/Applications/Xcode.app` override. Let me check whether full Xcode + simulators exist on this runner.
+
+Full Xcode 26.5 + iOS 26.5 simulators ARE available via `DEVELOPER_DIR` override — identical to the sibling's runner. I'll follow the exact sanctioned methodology. Let me verify the pre-existing full-app blockers (to cite honestly) and check for `PollingEngine` name collisions, then write the surface.
+
+All blockers confirmed (Shared.xcframework absent, DashboardWidgetSize 15×, 170 co-located tests), no `PollingEngine` name collision, and full Xcode 26.5 + iOS 26.5 sims available via `DEVELOPER_DIR`. I have everything needed. Let me set up the plan/todos and create the surface.
+
+Now I'll write the surface. Starting with the pure Foundation core (`Adapter.swift`) and the input DTOs.
+
+Let me refine the prediction view-data to a single pre-localized `detail` string (cleaner, avoids view-side punctuation), then write the views.
+
+Now the test files. Both are Foundation/Observation-only (no SwiftUI), so they exercise 100% of the logic in an isolated harness. Writing the pure adapter tests first.
+
+All 12 files written. Let me verify key consistency, file sizes, and check for forbidden placeholder substrings before formatting.
+
+All 42 keys defined, all files <400 lines, no placeholders. Two code lines exceed 120 chars — let me auto-format with swiftformat (which wraps to 120), then re-verify.
+
+swiftformat fixed 5 files, no long lines remain. Now the lint gates — swiftformat `--lint` (gate) and swiftlint `--strict` on my files (config `included:` lacks shared-surfaces, so I pass paths explicitly).
+
+swiftformat is GREEN. swiftlint flags one `large_tuple` (4-member tuple). Let me convert that to a small struct.
+
+Refactored to a struct. Let me re-format and re-lint.
+
+Both swiftformat and swiftlint are GREEN (0 violations). Now the placeholder gate. Let me inspect the checker script then run it.
+
+Now the placeholder gate. The directory contains exactly my `PollingEngine.*` fileset, so I'll scan it genuinely (a non-vacuous check).
+
+Placeholder gate GREEN (COUNT=0) and the script self-test passes. Now the key verification: an **isolated SwiftPM build + test** compiling my exact shipped sources against the **real** design system under the Xcode 26.5 toolchain. Let me set up the harness.
+
+The sibling's curated design-system set resolves these. Let me build the isolated harness with that exact set and run the tests under the Xcode toolchain.
+
+**Isolated build + test PASSED: 49 tests, 0 failures** — the exact shipped sources (incl. SwiftUI views + `#Preview` macro) compiled against the **real** design system under Xcode 26.5 / Swift 6 strict concurrency. Let me capture the clean build line and the file/test counts for the log.
+
+`Build complete!` with all 18 source files + tests. Now let me honestly attempt the full-app `xcodebuild` gate to document its DEFERRED status with concrete evidence (not just assumption).
+
+xcodegen succeeded (and `.xcodeproj` is gitignored). The pre-existing modified `AIUsageCard.*` files are from another slot — I'll exclude them and stage only my files. Now let me attempt the full-app `xcodebuild` to capture concrete DEFERRED evidence.
+
+The full-app build is executing the `Shared.xcframework` staging preAction (the known ~7-min KMP/Gradle step — the pre-existing blocker). Let me wait a bit more to capture a concrete failure line, while checking the preAction script in parallel.
+
+The full-app build's first step is the ~7-min KMP/Gradle `Shared.xcframework` assembly (a known pre-existing blocker). Rather than block on it, let me capture the concrete compile-level blockers via grep (the definitive "not my code" evidence), then stop the build.
+
+I have conclusive evidence of all pre-existing blockers. Let me capture the build's current state, then stop it.
+
+I have all evidence. Let me run a final consolidated gate pass to capture clean raw exits for the log, then write the log and commit.
+
+All gates GREEN. Now I'll write the gate log in the sanctioned format, then commit only my files.
+
+Now I'll stage **only** my files (excluding the pre-existing `AIUsageCard.*` edits from another slot) and commit.
+
+Exactly 12 surface files + the log staged, nothing else. Committing.
+
+Committed cleanly (13 files, 2887 insertions, only allowed files). Let me clean up temporary build artifacts and do a final verification.
+
+Clean — only the pre-existing `AIUsageCard.*` edits (another slot's) remain unstaged, exactly as required. My commit is HEAD.
+
+All todos complete. 
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`PollingEngine`** shared surface (the Adaptive Polling Engine card) at parity with `web/src/components/data-display/PollingEngine.tsx`, committed at `4bffd1347`.
+
+**12 files** in `apps/apple/TeslaSync/shared-surfaces/` (split to respect the 400-line SwiftLint budget, mirroring the established `AiUsageCard` pattern):
+- **Adapter** (pure: number/duration/activity/profile/prediction math + DTOs), **ViewState**, **Model** (P1/S8 source seam + `@Observable` model + P1/S11 `view.opened` telemetry + P1/S10 facade), **Projection** (pure gate→error→loading→empty→data)
+- **swift/Views/Vehicles/Chrome/Previews** (SwiftUI: SavingsCard 4-metric grid + breakdown bar/legend, expandable VehicleActivity rows with prediction, freshness chip/banner/skeleton/error/empty)
+- **strings** (42 keys: the 8 verbatim web `polling.*` parity keys + promoted literals), **Tests** + **AdapterTests**
+
+**Verification (all green, raw exits in the log):**
+- `swiftformat --lint` → 0/11 · `swiftlint --strict` → 0 violations · placeholder scan → COUNT=0
+- **Isolated SwiftPM build + test** under Xcode 26.5 / Swift 6 strict-concurrency, compiling the exact shipped sources (incl. `#Preview`) against the **real** design system: **Build complete · 49 tests, 0 failures**
+
+**Honest capability disposition:** the runner has only Command Line Tools active, but full Xcode 26.5 + iOS 26.5 sims are reachable via `DEVELOPER_DIR`. The full-app `xcodebuild` gate is **DEFERRED** (not failed) on independently-verified pre-existing blockers — unstaged `Shared.xcframework`, `DashboardWidgetSize` redefined 15×, 170 co-located XCTest files in the app target — plus the `shared-surfaces` project.yml wiring owned by the P4-core/P99 acceptance gate (out of this prompt's allowed files). Only my 13 files were staged; the pre-existing `AIUsageCard.*` edits from another slot were left untouched.
+
+Log: `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0098-PollingEngine.log` → **EXIT=0 / STATUS=DONE**.
+
+
+

@@ -1,0 +1,344 @@
+================================================================================
+P4 · P99 · 0001 — APPLE macOS + iOS/iPadOS ACCEPTANCE GATE
+================================================================================
+Prompt:   .github/prompts/monorepo/p4-apple/P99-0001-apple-acceptance-gate.prompt.md
+Log:      .github/prompts/monorepo/logs/p4-p99-0001-apple-acceptance-gate.log
+Date:     2026-06-08T07:34:39Z
+Host:     Atuls-Mac-Studio.local / Darwin 25.5.0 arm64
+Mode:     ACCEPTANCE GATE — RUN ONLY. No code fixes. No scope change. No delegation.
+Covenant: 1 no red-as-green | 2 no scope narrowing | 3 no skip-and-assume |
+          4 no stubs-as-final | 5 no parity shortcuts | 6 no delegation |
+          7 no predecessor bypass | 8 no commit on red | 9 no silent drift |
+          10 log ends with EXIT=<int> + STATUS=<DONE|BLOCKED>
+
+================================================================================
+=== PREFLIGHT ===
+================================================================================
+
+-- Host / OS --
+ProductName:		macOS
+ProductVersion:		26.5.1
+BuildVersion:		25F80
+Darwin Atuls-Mac-Studio.local 25.5.0 Darwin Kernel Version 25.5.0: Mon Apr 27 20:38:56 PDT 2026; root:xnu-12377.121.6~2/RELEASE_ARM64_T6000 arm64
+
+-- Toolchain --
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+  (xcodebuild probe exit=1)
+$ xcrun simctl list devices available | head
+xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+$ swiftlint version
+0.63.3
+$ swiftformat --version
+0.61.1
+$ pwsh --version
+PowerShell 7.6.2
+$ swift --version
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+Target: arm64-apple-macosx26.0
+
+CAP: XCODEBUILD_AVAILABLE=NO   (active dir is CommandLineTools; full Xcode required)
+CAP: IOS_SIMULATORS_AVAILABLE=NO (xcrun simctl unavailable without Xcode)
+
+-- Code-signing identities --
+$ security find-identity -v -p codesigning
+     0 valid identities found
+CAP: SIGNING_IDENTITIES=0      (iOS/macOS archives cannot be signed)
+
+-- Working tree cleanliness --
+$ git status --porcelain
+ M apps/apple/TeslaSync/feature-views/AIUsageCard.Adapter.swift
+ M apps/apple/TeslaSync/feature-views/AIUsageCard.Model.swift
+ M apps/apple/TeslaSync/feature-views/AIUsageCard.Previews.swift
+ M apps/apple/TeslaSync/feature-views/AIUsageCard.Tests.swift
+ M apps/apple/TeslaSync/feature-views/AIUsageCard.Views.swift
+ M apps/apple/TeslaSync/feature-views/AIUsageCard.strings
+ M apps/apple/TeslaSync/feature-views/AIUsageCard.swift
+ M web/src/features/admin/pages/BackupRestorePage.tsx
+?? .github/prompts/monorepo/logs/p4-p99-0001-apple-acceptance-gate.log
+TREE_CLEAN=NO (pre-existing uncommitted changes; NOT touched by this gate)
+
+-- Predecessors: P4/P0..P9 + all generated P7 page prompts must be STATUS=DONE --
+Logs scanned: 345 | with STATUS=DONE: 343
+Logs NOT STATUS=DONE:
+  - p1-s3-0001-kmp-scaffold.log -> STATUS=BLOCKED
+  - p4-p9-0001-xctest-unit.log -> STATUS=BLOCKED
+
+Direct P4/P9 predecessor detail (p4-p9-0001-xctest-unit.log), verbatim tail markers:
+      Shared.xcframework", IOS_EXIT=65/MAC_EXIT=70) is RESOLVED. Java 17 present;
+          IOS_EXIT=0                                                            ✅
+          MAC_EXIT=70                                                ❌ (BLOCKER A')
+          LINT_EXIT=0                                                           ✅
+          FORMAT_EXIT=0                                                         ✅
+          PLACEHOLDER_EXIT=0                                                    ✅
+    Gate formula: EXIT=0 only if IOS/MAC/LINT/FORMAT/PLACEHOLDER all 0.
+      IOS_EXIT=0  MAC_EXIT=70  LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+      → MAC_EXIT=70 ⇒ gate EXIT is NON-ZERO.
+        PAGE_COVERAGE_EXIT=1   →  required parity-unit state tests are absent.
+    1  No red-as-green : MAC_EXIT=70 shown FAILED with cause; pages 0/153 shown.
+    Two independent, evidence-backed blockers force STATUS=BLOCKED:
+      A'. macOS gate cannot run on this host — 0 valid code-signing identities; the
+          (MAC_EXIT=70). Capability gap → ADR-012 macos-latest signed runner.
+      B.  P7 pages predecessor absent — per-parity-unit page view-model state tests
+    EXIT=70
+    STATUS=BLOCKED
+PREDECESSORS_ALL_DONE=NO
+
+-- Required gate artifacts --
+  MISSING : apps/parity/apple-macos-ledger.json
+  MISSING : apps/parity/apple-ios-ledger.json
+  MISSING : apps/tools/check-parity-ledger.ps1
+  (present for reference: apps/parity/shared-ledger.json, apps/tools/check-placeholders.ps1)
+
+PREFLIGHT VERDICT: capability gaps (no Xcode / no simulators / 0 signing identities)
+  + a BLOCKED direct P4/P9 predecessor + missing Apple macOS/iOS parity ledgers
+  + missing check-parity-ledger.ps1. The gate cannot pass. Per Covenant rule 3
+  (no skip-and-assume) every host-runnable gate step is executed below for
+  firsthand evidence.
+
+================================================================================
+=== GATE ===
+================================================================================
+
+----- [1/9] iOS Simulator build+test -----
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+
+----- [2/9] macOS build+test -----
+$ xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+
+----- [3/9] SwiftLint (strict) over apps/apple -----
+$ (cd apps/apple && swiftlint --strict)
+Linting 'PushTestSupport.swift' (1861/1909)
+Linting 'DeviceRegistrarTests.swift' (1862/1909)
+Linting 'WidgetTestSupport.swift' (1863/1909)
+Linting 'WidgetSnapshotCodableTests.swift' (1864/1909)
+Linting 'WidgetPublisherTests.swift' (1865/1909)
+Linting 'WidgetSnapshotStoreTests.swift' (1866/1909)
+Linting 'WidgetRedactionTests.swift' (1867/1909)
+Linting 'WidgetTimelinePlannerTests.swift' (1868/1909)
+Linting 'WidgetDeepLinkTests.swift' (1869/1909)
+Linting 'WidgetFreshnessTests.swift' (1870/1909)
+Linting 'WatchDeepLinkTests.swift' (1871/1909)
+Linting 'WatchTestSupport.swift' (1872/1909)
+Linting 'WatchCacheStoreTests.swift' (1874/1909)
+Linting 'WatchSyncServiceTests.swift' (1873/1909)
+Linting 'WatchSyncPayloadTests.swift' (1875/1909)
+Linting 'WatchModelTests.swift' (1876/1909)
+Linting 'WatchQuickActionTests.swift' (1877/1909)
+Linting 'WatchGlanceDataTests.swift' (1878/1909)
+Linting 'TeslaSyncWidgetsBundle.swift' (1879/1909)
+Linting 'TeslaSyncTimelineProvider.swift' (1880/1909)
+Linting 'WidgetPreviews.swift' (1881/1909)
+Linting 'WidgetKind.swift' (1882/1909)
+Linting 'WidgetFamilies.swift' (1883/1909)
+Linting 'WidgetChrome.swift' (1884/1909)
+Linting 'WidgetAccessory.swift' (1885/1909)
+Linting 'WidgetComponents.swift' (1886/1909)
+Linting 'AlertCountWidget.swift' (1887/1909)
+Linting 'VehicleStatusWidget.swift' (1888/1909)
+Linting 'TeslaSyncWidgets/Widgets/SystemHealthWidget.swift' (1889/1909)
+Linting 'ChargingProgressWidget.swift' (1890/1909)
+Linting 'RecentDriveWidget.swift' (1891/1909)
+Linting 'EnergySnapshotWidget.swift' (1892/1909)
+Linting 'TeslaSyncWatchApp.swift' (1893/1909)
+Linting 'WatchRootView.swift' (1894/1909)
+Linting 'WatchFormat.swift' (1895/1909)
+Linting 'WatchGlanceData.swift' (1896/1909)
+Linting 'WatchModel.swift' (1897/1909)
+Linting 'WatchCacheStore.swift' (1898/1909)
+Linting 'WatchActionsView.swift' (1899/1909)
+Linting 'WatchGlanceView.swift' (1901/1909)
+Linting 'WatchSettingsView.swift' (1900/1909)
+Linting 'WatchBatteryRing.swift' (1902/1909)
+Linting 'WatchStatusRow.swift' (1903/1909)
+Linting 'WatchStateViews.swift' (1904/1909)
+Linting 'TeslaSyncWatchWidgetsBundle.swift' (1905/1909)
+Linting 'WatchComplications.swift' (1906/1909)
+Linting 'WatchComplicationViews.swift' (1908/1909)
+Linting 'WatchDesignTokens.swift' (1909/1909)
+Linting 'WatchComplicationProvider.swift' (1907/1909)
+Done linting! Found 1 violation, 1 serious in 1909 files.
+[swiftlint summary] Done linting! Found 1 violation, 1 serious in 1909 files.
+LINT_EXIT=2
+
+----- [4/9] SwiftFormat (lint) over apps/apple -----
+$ swiftformat --lint apps/apple
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/.swiftformat
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1: error: (blankLinesBetweenScopes) Insert blank line before class, struct, enum, extension, protocol or function declarations.
+SwiftFormat completed in 8.1s.
+Source input did not pass lint check.
+1/1913 files require formatting, 2 files skipped.
+FORMAT_EXIT=1
+
+----- [5/9] Placeholder scan -----
+$ pwsh -File apps/tools/check-placeholders.ps1 -Path apps/apple -Language swift
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Adapter.swift:112: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Adapter.swift:190: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Adapter.swift:225: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Adapter.swift:233: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Adapter.swift:237: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Adapter.swift:278: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Adapter.swift:279: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Adapter.swift:299: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Adapter.swift:307: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Adapter.swift:315: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Tests.swift:138: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Views.swift:12: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Views.swift:184: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Views.swift:197: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Views.swift:238: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Views.swift:259: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Views.swift:295: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Views.swift:316: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/dashboard-widgets/YearReviewWidget.Adapter.swift:92: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/dashboard-widgets/YearReviewWidget.Adapter.swift:93: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/dashboard-widgets/YearReviewWidget.Adapter.swift:96: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/dashboard-widgets/YearReviewWidget.Adapter.swift:103: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/dashboard-widgets/YearReviewWidget.Model.swift:366: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/dashboard-widgets/YearReviewWidget.Tests.swift:108: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/feature-views/ChargingSection.Chart.swift:18: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/feature-views/ChargingSection.Chart.swift:44: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/feature-views/ChargingSection.Chart.swift:46: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/feature-views/CommandSearch.Model.swift:159: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/feature-views/CommandSearch.Models.swift:57: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/feature-views/CommandSearch.Models.swift:61: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/feature-views/CommandSearch.swift:9: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/feature-views/CommandSearch.Views.swift:6: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/feature-views/CommandSearch.Views.swift:15: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/feature-views/CommandSearch.Views.swift:18: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/feature-views/CommandSearch.Views.swift:47: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/feature-views/ConditionBuilder.Fields.swift:129: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/feature-views/ConditionBuilder.Model.swift:144: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/feature-views/ConditionBuilder.Views.swift:197: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/feature-views/ConditionBuilder.Views.swift:276: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/feature-views/ConditionBuilder.Views.swift:279: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/feature-views/InfrastructureSection.Previews.swift:7: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/feature-views/InfrastructureSection.Views.swift:289: Placeholder
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-3/apps/apple/TeslaSync/feature-views/TemperatureSection.Views.swift:281: Placeholder
+PLACEHOLDER_ALLOWED=22
+PLACEHOLDER_COUNT=43
+EXIT=1
+PLACEHOLDER_EXIT=1
+
+----- [6/9] macOS parity ledger check (100%) -----
+$ pwsh -File apps/tools/check-parity-ledger.ps1 -Path apps/parity/apple-macos-ledger.json -RequiredPercent 100
+The argument 'apps/tools/check-parity-ledger.ps1' is not recognized as the name of a script file. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+
+Usage: pwsh[.exe] [-Login] [[-File] <filePath> [args]]
+                  [-Command { - | <script-block> [-args <arg-array>]
+                                | <string> [<CommandParameters>] } ]
+                  [-CommandWithArgs <string> [<CommandParameters>]
+                  [-ConfigurationName <string>] [-ConfigurationFile <filePath>]
+                  [-CustomPipeName <string>] [-EncodedCommand <Base64EncodedCommand>]
+                  [-ExecutionPolicy <ExecutionPolicy>] [-InputFormat {Text | XML}]
+                  [-Interactive] [-MTA] [-NoExit] [-NoLogo] [-NonInteractive] [-NoProfile]
+                  [-NoProfileLoadTime] [-OutputFormat {Text | XML}]
+                  [-SettingsFile <filePath>] [-SSHServerMode] [-STA]
+                  [-Version] [-WindowStyle <style>]
+                  [-WorkingDirectory <directoryPath>]
+
+       pwsh[.exe] -h | -Help | -? | /?
+
+PowerShell Online Help https://aka.ms/powershell-docs
+
+All parameters are case-insensitive.
+MAC_LEDGER_EXIT=64
+
+----- [7/9] iOS parity ledger check (100%) -----
+$ pwsh -File apps/tools/check-parity-ledger.ps1 -Path apps/parity/apple-ios-ledger.json -RequiredPercent 100
+The argument 'apps/tools/check-parity-ledger.ps1' is not recognized as the name of a script file. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+
+Usage: pwsh[.exe] [-Login] [[-File] <filePath> [args]]
+                  [-Command { - | <script-block> [-args <arg-array>]
+                                | <string> [<CommandParameters>] } ]
+                  [-CommandWithArgs <string> [<CommandParameters>]
+                  [-ConfigurationName <string>] [-ConfigurationFile <filePath>]
+                  [-CustomPipeName <string>] [-EncodedCommand <Base64EncodedCommand>]
+                  [-ExecutionPolicy <ExecutionPolicy>] [-InputFormat {Text | XML}]
+                  [-Interactive] [-MTA] [-NoExit] [-NoLogo] [-NonInteractive] [-NoProfile]
+                  [-NoProfileLoadTime] [-OutputFormat {Text | XML}]
+                  [-SettingsFile <filePath>] [-SSHServerMode] [-STA]
+                  [-Version] [-WindowStyle <style>]
+                  [-WorkingDirectory <directoryPath>]
+
+       pwsh[.exe] -h | -Help | -? | /?
+
+PowerShell Online Help https://aka.ms/powershell-docs
+
+All parameters are case-insensitive.
+IOS_LEDGER_EXIT=64
+
+----- [8/9] iOS/iPadOS archive (sign) -----
+$ xcodebuild -scheme TeslaSync -destination 'generic/platform=iOS' archive
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_ARCHIVE_EXIT=1
+
+----- [9/9] macOS archive (sign) -----
+$ xcodebuild -scheme TeslaSync-macOS archive
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_ARCHIVE_EXIT=1
+
+================================================================================
+=== GATE RESULT TABLE ===
+================================================================================
+  IOS_EXIT               1
+  MAC_EXIT               1
+  LINT_EXIT              2
+  FORMAT_EXIT            1
+  PLACEHOLDER_EXIT       1
+  MAC_LEDGER_EXIT        64
+  IOS_LEDGER_EXIT        64
+  IOS_ARCHIVE_EXIT       1
+  MAC_ARCHIVE_EXIT       1
+  EXIT=0 requires ALL nine == 0.
+
+================================================================================
+=== DISPOSITION ===
+================================================================================
+STATUS=BLOCKED on four independent, evidence-backed grounds:
+
+A. CAPABILITY (prompt mandate: 'requires macOS + Xcode, simulators, signing
+   identities, and archive credentials; if the gate can't run -> STATUS=BLOCKED'):
+   - Full Xcode absent: xcode-select -p = /Library/Developer/CommandLineTools;
+     'xcodebuild' errors out -> iOS/macOS build/test + both archive steps unrunnable.
+   - No iOS Simulators: 'xcrun simctl' is not present without Xcode.
+   - 0 valid code-signing identities -> signed archives are impossible.
+
+B. PREDECESSOR (Covenant rule 7: no predecessor bypass):
+   - p4-p9-0001-xctest-unit.log (DIRECT P4/P9 dependency) = STATUS=BLOCKED EXIT=70
+     (macOS dev-cert absent + P7 page state-tests 0/153). 'P4/P0..P9 all DONE'
+     is therefore FALSE.
+   - p1-s3-0001-kmp-scaffold.log (transitive shared dep) = STATUS=BLOCKED
+     (Shared.xcframework packaging requires a macOS runner).
+
+C. REQUIRED ARTIFACTS (acceptance criteria unsatisfiable):
+   - apps/parity/apple-macos-ledger.json : MISSING (cannot prove macOS parity 100%).
+   - apps/parity/apple-ios-ledger.json   : MISSING (cannot prove iOS parity 100%).
+   - apps/tools/check-parity-ledger.ps1  : MISSING (the ledger verifier the Gate
+     invokes does not exist).
+
+D. PREFLIGHT HYGIENE:
+   - Working tree is NOT clean at gate entry (pre-existing uncommitted edits).
+
+Per scope ('Do NOT fix code... creating missing pages/components, modifying parity
+definitions, or changing signing configuration' is Out of Scope) none of the above
+were remediated. This log records evidence only.
+
+Promotion path to STATUS=DONE: run on a macOS CI runner WITH full Xcode + iOS
+simulators + a valid signing identity & archive credentials (ADR-012 macos-latest),
+AFTER p4-p9-0001 (and p1-s3-0001) reach STATUS=DONE and the Apple macOS/iOS parity
+ledgers + check-parity-ledger.ps1 are produced by their owning prompts.
+
+Per Covenant rule 8 (BLOCKED -> commit ONLY this log file, never code), as
+established by sibling gate p4-p9-0001-xctest-unit.log.
+
+EXIT=1
+STATUS=BLOCKED

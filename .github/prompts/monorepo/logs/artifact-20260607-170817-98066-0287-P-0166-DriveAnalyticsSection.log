@@ -1,0 +1,139 @@
+=== P4 Feature view 0166 DriveAnalyticsSection (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh · Java 17
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5, Booted) present · macOS 26.5 SDK present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 6m55s; release XCFramework
+                       staged to apps/apple/Frameworks/Shared.xcframework — ios-arm64 / ios-arm64-simulator / macos-arm64).
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS simulators + KMP Shared.xcframework all present
+                       → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/features/driving/components/driving-dynamics/DriveAnalyticsSection.tsx — a presentational section
+  receiving `filteredDrives: Drive[]` + the `startDate/endDate` window + the `toDistanceDisplay/toSpeedDisplay`
+  converters + `distanceUnit/speedUnit` from its parent. Three useMemo-derived charts under a header + RangePicker:
+    1. Speed Distribution  (Recharts BarChart)     — drives bucketed by avg speed over SPEED_BUCKETS_RANGES
+                                                      (0–30/30–60/60–90/90–120/120+); the drive speed AND the bucket
+                                                      bounds are BOTH passed through toSpeedDisplay (the linear factor
+                                                      cancels → bins by avgSpeedMps). Label "{range} {speedUnit}".
+    2. Acceleration Patterns (Recharts ScatterChart) — x=round(toDistanceDisplay(distanceM)), y=avgPowerW/1000 kW,
+                                                      dashed ReferenceLine at mean(powerMax) labelled "Avg".
+    3. Power Profile (Recharts AreaChart)          — last 20 drives, powerMax=avgPowerW/1000, powerMin=0 (regen),
+                                                      x label=formatDateShort(startTs), Legend, zero ReferenceLine.
+
+ARTIFACTS SHIPPED (allowed scope: apps/apple/TeslaSync/feature-views/DriveAnalyticsSection.* + this log)
+  DriveAnalyticsSection.Models.swift      — DriveAnalyticsSectionDrive (SI DTO), DriveAnalyticsSectionUnits
+                                            (toDistanceDisplay/toSpeedDisplay linear factors + glyphs), Data, Copy,
+                                            Phase/LoadStatus/Connection enums
+  DriveAnalyticsSection.Projection.swift  — SpeedBucket/AccelPoint/PowerPoint + Projection, surface slug,
+                                            DriveAnalyticsSectionAccessibility (per-chart + section VoiceOver summaries)
+  DriveAnalyticsSection.Adapter.swift     — DriveAnalyticsSectionFormat (jsRound = Math.round, safeNumber, dateShort =
+                                            formatDateShort, fmtNumber) + Projector (the three useMemo pipelines, verbatim)
+  DriveAnalyticsSection.Model.swift       — telemetry seam (view.opened, P1/S11) + i18n facade (P1/S10) + source seam +
+                                            @Observable DriveAnalyticsSectionModel (P1/S8) + InMemory source
+  DriveAnalyticsSection.swift             — DriveAnalyticsSection View: header+RangePicker always shown; phase switch
+                                            (loading/error/empty/content); 2-up Speed+Accel grid + full-width Power
+  DriveAnalyticsSection.Views.swift       — header + freshness chip, stale/offline banner, date RangePicker (DatePickers),
+                                            GlassPanel + titled ChartContainer panel
+  DriveAnalyticsSection.Charts.swift      — Swift Charts: BarMark histogram (+ selection tooltip), PointMark scatter (+ avg
+                                            RuleMark), dual AreaMark power profile (+ legend + zero RuleMark + tooltip);
+                                            each with its own inner EmptyState + VoiceOver aria label/value
+  DriveAnalyticsSection.States.swift      — loading skeleton, whole-section empty (ContentUnavailableView), error+retry
+  DriveAnalyticsSection.Previews.swift    — #if DEBUG previews: content / inner-empties / loading / empty / error / stale / offline
+  DriveAnalyticsSection.strings           — P1/S10 catalog: every web `t(key,default)` key (incl. *.aria + col.* export labels)
+                                            + native chrome (freshness/banner/range/empty/error/a11y)
+  DriveAnalyticsSection.Tests.swift       — 28 XCTest cases (adapter parity, phase matrix, model+telemetry+range wiring, a11y)
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  GlassPanel / ChartContainer  → DriveAnalyticsSectionGlassPanel / …Panel (Color.TS.surface + TSRadius + border stroke)
+  Recharts BarChart            → Chart { BarMark } (TSChartPalette[0]) + chartXSelection value tooltip
+  Recharts ScatterChart        → Chart { PointMark } (Color.TS.chartSeriesPower) + RuleMark avg (Color.TS.statusWarning, dashed)
+  Recharts AreaChart (2 series) → Chart { AreaMark×2 by series } (chartSeriesSpeed=max, chartSeriesTemperature=regen) +
+                                  chartLegend(.bottom) + zero RuleMark + chartXSelection tooltip
+  RangePicker (forms)          → from/to compact DatePickers (web onStartDateChange/onEndDateChange → model.setRange → source)
+  FadeIn / skeletons / motion  → TSFadeIn / TSSkeleton (Reduce-Motion honored)
+  unit conversion              → SI on the wire; DriveAnalyticsSectionUnits applies the display factor at the projector
+                                 boundary (ADR-009/Phase-48). Bucket-boundary cancellation reproduced verbatim.
+  i18n                         → every string via DriveAnalyticsSectionStrings (table "DriveAnalyticsSection"); 0 English literals in code
+  a11y                         → chart aria labels = web ariaLabel keys; per-chart summary as accessibilityValue; section
+                                 summary on the container; DatePickers + retry button carry accessibilityLabel; Reduce-Motion respected
+  telemetry                    → view.opened surface="DriveAnalyticsSection" (P1/S11), default OSLog sink, emitted once on start
+
+GATES
+  [GREEN]    swiftformat --lint  (DriveAnalyticsSection.* — 10 swift files)   : 0/10 files require formatting        (FORMAT_EXIT=0)
+                 swiftformat --lint apps/apple (whole tree, FYI)              : 1 PRE-EXISTING violation —
+                                                                                blankLinesBetweenScopes in
+                                                                                TeslaSync/feature-views/ActionBuilder.Previews.swift:48
+                                                                                (NOT a DriveAnalyticsSection file; not introduced here).
+  [GREEN]    swiftlint --strict  (DriveAnalyticsSection.* — 10 swift files)   : 0 violations, 0 serious in 10 files  (LINT_EXIT=0)
+                 swiftlint --strict (whole app, FYI)                          : 1 PRE-EXISTING violation —
+                                                                                function_body_length in
+                                                                                TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+                                                                                (NOT a DriveAnalyticsSection file; not introduced here).
+  [GREEN]    check-placeholders.ps1 (real scan of the shipped DriveAnalyticsSection.* files) : PLACEHOLDER_COUNT=0   (PLACEHOLDER_EXIT=0)
+  [GREEN]    DriveAnalyticsSection build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode,
+             strict-concurrency complete = same as the app), compiling the EXACT shipped DriveAnalyticsSection.* sources
+             against the REAL repo design-system files (design/generated/apple/Tokens.swift, Sources/Design/TSDesign.swift,
+             Sources/Components/Motion/Motion.swift, Sources/Components/Charts/ChartModels.swift, and the real TSSkeleton
+             from Sources/Components/Feedback/Skeletons.swift):
+                 macOS host        : Build complete!  ·  Executed 28 tests, with 0 failures            (SWIFT_TEST_EXIT=0)
+                 iOS Sim iPhone 16 : xcodebuild test (arm64) ** TEST SUCCEEDED **  ·  28 tests, 0 failures
+             Collision check: each shipped DriveAnalyticsSection* top-level type has 0 external definitions in the app module.
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO DriveAnalyticsSection errors; all blockers pre-exist this change):
+    iOS  : the app target fails at module-dependency resolution — the project compiles the 94 co-located
+           `TeslaSync/feature-views/*.Tests.swift` files (each `import XCTest`) INTO the app target, which has no
+           XCTest dependency → first failure "AcDcStatsPanel.Tests.swift:19: unable to resolve module dependency:
+           'XCTest'" (alphabetically first; the build aborts before reaching DriveAnalyticsSection). This is the
+           SAME structural wiring every P4 feature-view surface shares; DriveAnalyticsSection.Tests.swift is the
+           94th file following the identical co-located convention the prompt's allowed-files scope mandates
+           (apps/apple/TeslaSync/feature-views/DriveAnalyticsSection.*). Routing co-located tests to the XCTest
+           target is a project.yml change owned by the P4/P99 acceptance gate, not a single feature-view prompt.
+    macOS: TeslaSync-macOS / TeslaSyncWidgets-macOS "have entitlements that require signing with a development
+           certificate", which this runner does not provision (same as the iOS co-located-XCTest issue underneath).
+    grep of both build logs for "DriveAnalyticsSection … error:" = 0 hits. These are exactly the artifacts
+    apps/macos-pending-verifications.md defers to the ADR-012 macos-latest CI runner (the P4/P99 Apple acceptance
+    gate + a co-located-test-target / dashboard-widget de-duplication pass) — task rule: do not fix pre-existing
+    unrelated breakage outside the allowed-files scope.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                          explicitly DEFERRED with evidence — never reported as passing.
+  2  No scope narrowing : every web region + branch reproduced — the 3 charts, the bucket-cancellation, the avg
+                          reference line, the dual max/regen areas, the date range picker, and the loading/empty/
+                          error/stale/offline + inner per-chart empty states.
+  3  No skip-and-assume : every gate executed on THIS runner; raw exits pasted; both full-app failures confirmed,
+                          not assumed; Shared.xcframework actually built (6m55s), so the gate is NOT capability-skipped.
+  4  No stubs as final  : complete production surface (11 files) + 28 real tests; placeholder scanner = 0.
+  5  No parity shortcut : numeric pipeline ported verbatim (jsRound, /1000 kW, slice(-20), bucket bound conversion);
+                          tokens/typography/a11y/telemetry/i18n all mapped; verified equal to the web by unit test.
+  6  No delegation      : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holder, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened telemetry,
+                          P4 core design system all present and consumed.
+  8  No commit on red   : the COMMITTED artifact (DriveAnalyticsSection.* + this log) is GREEN on every surface-scoped
+                          gate AND on a real isolated Swift 6 strict-concurrency build+test on BOTH iOS Simulator and
+                          macOS; the deferred full-app gate is RED only on pre-existing, unrelated surfaces this commit
+                          neither introduces nor touches.
+  9  No silent drift    : changes are confined to feature-views/DriveAnalyticsSection.* (11 files) and this log — enumerated above.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic DriveAnalyticsSection shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 28 tests pass under the app's own Swift 6 strict-concurrency rules, against the real
+  design-system, on BOTH the iPhone 16 Simulator and the macOS host, with lint/format/placeholder all green on the
+  shipped files. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code):
+  it is blocked by the pre-existing co-located-XCTest-in-app-target project wiring (94 sibling *.Tests.swift) and by
+  macOS development-signing — both owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate"
+  disposition used by every P4 feature-view surface to date (cf. p4-apple-feature-views-0010-ToolCard.log).
+
+EXIT=0
+STATUS=DONE

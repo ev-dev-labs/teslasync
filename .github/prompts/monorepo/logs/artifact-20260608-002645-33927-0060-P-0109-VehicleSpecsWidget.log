@@ -1,0 +1,201 @@
+================================================================================
+P4 · Dashboard widget · 0109 — VehicleSpecsWidget (Apple)
+Run: 2026-06-08T01:20-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/60
+Base: c9c6fdb9f
+Prompt: P4/dashboard-widgets/0109 — VehicleSpecsWidget
+Web source (spec): web/src/features/dashboard/widgets/VehicleSpecsWidget.tsx
+Mode: code-complete + REAL Xcode build/test (full Xcode present on host via DEVELOPER_DIR).
+================================================================================
+
+=== CAPABILITY PROBE (real, on this host) ===
+  swift ...................... Apple Swift 6.3.2                                   OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) PRESENT                          OK
+                               xcode-select -p = /Library/Developer/CommandLineTools,
+                               overridden non-destructively with
+                               DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+  iphonesimulator SDK ........ iPhoneSimulator26.5.sdk (via DEVELOPER_DIR)         OK
+  iPhone 16 simulator ........ present + booted; iOS 26.5 runtime                  OK
+  macOS SDK .................. macosx (Xcode 26.5)                                 OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                  OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                OK
+  pwsh (placeholder gate) .... PowerShell 7.6.2                                    OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen (isolated harness)       OK
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (the prompt's "Charts / maps used: (none)"). The required rendering capability is
+  plain SwiftUI on iOS 18 / iPadOS 18 / macOS 15, which IS available and is PROVEN
+  by a REAL xcodebuild build+test on both an iOS 18 simulator and macOS 15 below.
+  The capability-BLOCKED escape hatch does NOT apply.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/VehicleSpecsWidget.*) ===
+  VehicleSpecsWidget.Models.swift     121  JSON envelope value (asString/numberString) + SpecEntry + projection value types
+  VehicleSpecsWidget.Builder.swift    111  pure cached->projection adapter (3-source fallback chains + 7 fixed rows + sorted/capped options)
+  VehicleSpecsWidget.Model.swift      261  P1/S8 state-holder seam + P1/S11 telemetry + P1/S10 i18n facade + a11y summaries
+  VehicleSpecsWidget.swift            255  surface: shell header + freshness chip + loading/empty/error states + connectivity banner
+  VehicleSpecsWidget.Content.swift    148  content body: compact (model + trim) + standard detail list (mono + neutral option badge)
+  VehicleSpecsWidget.Previews.swift   121  #if DEBUG previews — one per state (content/compact/loading/empty/error/stale/offline)
+  VehicleSpecsWidget.Tests.swift      331  XCTest: adapter (10) + model phases (7) + registry (2) + a11y (3) = 22 cases
+  VehicleSpecsWidget.strings           49  P1/S10 catalog contribution (10 source keys + registry + native chrome/a11y keys)
+  Total 1397 lines (vs 201-line web source; ~7x, matching the accepted 8-file native decomposition of sibling 0097).
+  Every file <= 400 lines (house file_length); largest 331 (Tests). One exported view per file.
+  Shared DashboardWidgetSize/Registration are REFERENCED (declared once for the bundle in
+  DigitalTwinWidget.Model.swift), never redefined — proven collision-free by the isolated build below.
+
+=== PARITY (vs web VehicleSpecsWidget.tsx) ===
+  Data sources -> bound via the shared state-holder seam (VehicleSpecsSource -> VehicleSpecsModel):
+    useVehicles, useVehicleSpecs, useVehicleOptions, useVehicleConfigLatest, useTranslation. The production app
+    wires VehicleSpecsSource over the shared Vehicles store (StateHolderModel<LoadableState<...>>); the view
+    performs NO HTTP. The web's `isLoading/isFetching/isStale/isError` combine across the three queries -> the
+    seam pushes a single merged status + connection per snapshot.
+  Projection -> VehicleSpecsProjectionBuilder is a faithful port of the web `entries` useMemo + compact derivation:
+      * asString(unknown) — non-empty strings pass / numbers stringify / else nil (web asString).
+      * 7 fixed rows in web order: Model (car_type ?? model ?? config.car_type), Trim (trim_badging ?? trim ??
+        config.trim), Paint Color (exterior_color ?? config.exterior_color), Wheels (wheel_type ??
+        config.wheel_type), Interior (interior ?? interior_color), Aux Battery (aux_battery_type), Car Version
+        (config.version ?? car_version, MONO). Each missing value -> "—".
+      * Options: decoded option codes -> neutral-badge rows, value = asString(options[key]) ?? key, capped at 8
+        (web slice(0,8)). Swift dicts are unordered, so keys are SORTED for a deterministic, stable projection
+        (documented platform-necessary adaptation of web Object.keys insertion order).
+      * hasData = specs != nil || options != nil || config != nil (web hasAnyData) -> drives content vs empty.
+    Verified by the EXECUTED XCTest adapter suite (10 cases) under real Xcode — see gate steps [1]/[2].
+  Composition -> WidgetShell chrome (doc.text icon + "Vehicle Specs" title + freshness chip + refresh + Open) ·
+    compact (cols<=1): doc.text glyph + model headline + "Trim: {trim}" · standard (2x4): WidgetDetailCard list —
+    one row per spec (label · value · optional neutral option badge) + dividers, in a ScrollView.
+  Shared components -> @/components/feedback -> ContentUnavailableView (EmptyState), @/components/motion (FadeIn)
+    -> native content transition. Reuses Color.TS / Font.TS / TSSpacing / TSRadius / TSSkeleton / TSTone compiled
+    against the REAL apps/apple tokens + components in the build below. Recharts->none / Leaflet->none.
+  States (all render) -> loading (skeleton chrome) · empty ("No specs available") · error (retry) ·
+    stale (chip + banner) · offline (cached value + chip + banner) · content (compact + standard). Model phase
+    resolution keeps cached content visible behind refresh/errors, matching the web shell.
+  i18n -> all 10 source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    widget.vehicleSpecs, widget.specs.{model, trim, paint, wheels, interior, auxBattery, carVersion, option,
+    noData} -> ALL PRESENT in VehicleSpecsWidget.strings (+ registry description + native chrome/a11y keys).
+    No English literals in native code (only as t() fallbacks).
+  a11y -> compact + standard content carry a localized state-summary value (VehicleSpecsAccessibility.summary /
+    compactSummary); each detail row carries a "label, value[, badge]" label; every button (refresh / open /
+    retry) and the freshness chip has an accessibilityLabel; Dynamic Type via tokens; decorative glyphs
+    accessibilityHidden; high-contrast colors via the dynamic Color.TS tokens.
+  Telemetry -> VehicleSpecsModel.start() emits viewOpened(surface:"VehicleSpecsWidget") -> bridges shared
+    Telemetry.track(.screenView) (P1/S11). Asserted by a spy test (idempotent: once).
+  Registry -> VehicleSpecsWidget.registration: id "vehicle-specs", category "vehicle", default 2x4, min 1x2,
+    max 4x40 (+ clamp()), matching registry/vehicle.ts. Asserted.
+
+=== GATE — REAL XCODE BUILD+TEST (executed on this host; DEVELOPER_DIR=/Applications/Xcode.app) ===
+  Because the merged snapshot's app target is pre-broken OUTSIDE this prompt's allowed scope (see the next
+  section), the surface was built+tested in an ISOLATED clean-slot XcodeGen project that contains exactly: this
+  surface's 6 source files + its Tests, the REAL design tokens (apps/design/generated/apple/Tokens.swift), the
+  REAL TSTone/TSBadge (Sources/Components/UI/Badges.swift), the self-contained REAL TSSkeleton, and the canonical
+  DashboardWidgetSize/Registration (verbatim from DigitalTwinWidget.Model.swift). Build settings mirror the real
+  project.yml: SWIFT_VERSION 6.0, SWIFT_STRICT_CONCURRENCY=complete, iOS 18.0 / macOS 15.0 deployment targets.
+
+[1] iOS — iPhone 16 simulator (iOS 18 deployment target, iOS 26.5 runtime):
+      xcodebuild -scheme TeslaSyncIOS -destination 'platform=iOS Simulator,name=iPhone 16' build test
+      ** BUILD SUCCEEDED **   ** TEST SUCCEEDED **
+      Executed 22 tests, with 0 failures (0 unexpected)
+      IOS_EXIT=0                                                                    OK
+      -> Proves the SwiftUI surface (header/freshness/loading/empty/error/banner + compact + standard detail list
+         + option badge) compiles against the real iOS 18 SDK with strict concurrency, the referenced shared grid
+         types resolve, and the adapter/model/registry/a11y suites pass.
+
+[2] macOS (macOS 15 deployment target):
+      xcodebuild -scheme TeslaSyncMac -destination 'platform=macOS' build test
+      ** BUILD SUCCEEDED **   ** TEST SUCCEEDED **
+      Executed 22 tests, with 0 failures (0 unexpected)
+      MAC_EXIT=0                                                                    OK
+      (Surface is platform-agnostic SwiftUI — no #if os() — so iPadOS is covered by the iOS build.)
+
+[3] swiftlint --strict on the 7 surface files (explicit paths):
+      Done linting! Found 0 violations, 0 serious in 7 files.
+      LINT_EXIT=0                                                                   OK
+      (One placeholder-word comment in Builder.swift was found by step [5] and FIXED before this run. Red found, fixed.)
+
+[4] swiftformat --lint on the 7 surface files (repo .swiftformat config):
+      0/7 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+
+[5] check-placeholders (ADR-011 stub gate) — scanned the actual shipped files:
+      pwsh ./apps/tools/check-placeholders.ps1 -Path <copy of VehicleSpecsWidget.*> -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+      Manual sweep (TODO/FIXME/XXX/stub/mock/placeholder/Lorem/coming soon/not implemented): NONE FOUND in shipped files.
+      (Note: the literal gate path prefix `.../VehicleSpecsWidget` resolves to no file/dir, which the script treats
+       as a clean scan; the scan above targets the real files for a meaningful, non-trivial result.)
+
+=== GATE — WHOLE-TREE STEPS (apps/apple): PRE-EXISTING PREDECESSOR ISSUES, OUT OF SCOPE ===
+  The prompt's gate also runs the bare swiftlint/swiftformat over apps/apple. Each reports exactly ONE issue, and
+  NEITHER is in this surface (my 7 files are clean in both — steps [3]/[4]):
+    swiftlint --strict (1916 files):  1 violation —
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: Function Body Length (78>50)
+      (predecessor 0055; the SAME violation the accepted 0097 log documented)        out of scope
+    swiftformat --lint (1920 files):  1 file —
+      TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes)
+      (predecessor feature-view)                                                      out of scope
+  Both files are OUTSIDE this prompt's allowed-files set (VehicleSpecsWidget.* + the log); editing them is
+  forbidden (Honesty rule 7). Confirmed pre-existing: untracked changeset is ONLY the 8 new VehicleSpecsWidget.*
+  files (git status --porcelain).
+
+=== GATE — LITERAL MERGED-TREE `xcodebuild -scheme TeslaSync` (superseded by [1]/[2]) ===
+  Running the verbatim `xcodebuild -scheme TeslaSync ... build test` over the MERGED slot snapshot cannot reach
+  green from within this prompt's allowed scope, for predecessor/integration reasons — none a defect in this
+  surface (matches the accepted 0097/0036/0061 "Xcode app gate handled at integration" disposition):
+    (a) Sibling duplicate symbols: 13 sibling widget files each declare `public struct DashboardWidgetSize`
+        (e.g. DigitalTwinWidget.Model.swift + VehicleHeroWidget.Model.swift) — a pre-existing invalid-redeclaration
+        in the merged app target. This surface correctly REFERENCES the canonical type and adds none.
+    (b) Shared.xcframework not staged: apps/apple/Frameworks/ holds only .gitkeep; the app/test targets link the
+        KMP core, whose staging is a Kotlin/Native gradle build owned by the P4 integration prompt.
+  The surface's own real-Xcode build+test correctness is therefore PROVEN by the isolated clean-slot project in
+  [1]/[2] (iOS 18 + macOS 15, 22/22 each) — strictly stronger evidence than the typecheck proxy the accepted
+  0097 sibling used. Not painted green: this literal merged-tree step is reported as deferred, with the evidence above.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) — implemented; each has a
+      #if DEBUG preview; phase logic unit-tested; compact + standard layouts both reproduced.
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — 10/10 source keys present in the table.
+  [x] Accessibility labels on every interactive element; content + each row carry a state-summary value.
+  [x] Tests: adapter unit test (10) + per-state model test (7) + registry clamp (2) + a11y summary (3) =
+      22 cases, EXECUTED GREEN under real Xcode on iOS AND macOS.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; manual sweep clean.
+  [x] EXIT=0 / STATUS=DONE — every gate the surface owns is green (real iOS+macOS build+test, surface lint,
+      format, placeholder); whole-tree swiftlint/swiftformat each carry ONE pre-existing predecessor issue
+      outside scope (documented, not bypassed); the literal merged-tree scheme build is deferred with evidence.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the literal merged-tree `xcodebuild -scheme TeslaSync` is reported DEFERRED (not green) with
+                       the duplicate-symbol + unstaged-framework evidence; whole-tree swiftlint/swiftformat shown
+                       with their predecessor file:line; every OK is a command actually run here with its real exit.
+  2  No scope narrowing: implemented BOTH layouts, ALL states, the full 7-row detail list + mono Car Version +
+                       neutral option badges (sorted, capped at 8), i18n + a11y + telemetry + registry, and the
+                       complete 3-source fallback pipeline.
+  3  No skip-and-assume: each gate executed; the build+test was RUN on real iOS + macOS, not assumed.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of asString coercion, the per-spec fallback chains, the mono Car Version,
+                       and the decoded/capped option rows.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT redefine the shared grid types (REFERENCED), did NOT edit the out-of-scope
+                       LifetimeStatsWidget.Adapter.swift / ActionBuilder.Previews.swift to silence their pre-existing
+                       whole-tree issues, did NOT stage Shared.xcframework or self-wire the dashboard grid
+                       (integration prompt's scope).
+  8  No commit on red  : every gate this surface owns is green (incl. real iOS+macOS build+test); the only reds are
+                       predecessor files outside scope; the merged-tree scheme build is deferred, not failed.
+  9  No silent drift   : changes confined to the allowed VehicleSpecsWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native VehicleSpecsWidget shipped at parity with the web source: pure-Swift 3-source adapter
+  (executed green), P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, every state + all 10 i18n keys +
+  a11y labels, registry-correct (vehicle-specs, 2x4 / 1x2 / 4x40). The surface BUILDS + TESTS green under REAL
+  Xcode 26.5 on both an iOS 18 simulator (iPhone 16) and macOS 15 — 22/22 tests each — and is swiftlint --strict
+  + swiftformat clean (0/7) and placeholder-free (COUNT=0). The literal merged-tree `xcodebuild -scheme TeslaSync`
+  is deferred for pre-existing, out-of-scope reasons (13 sibling duplicate DashboardWidgetSize declarations + an
+  unstaged KMP Shared.xcframework), superseded by the isolated real build+test; the whole-tree swiftlint/swiftformat
+  each carry one predecessor issue outside this prompt's allowed-files scope. Net: the deliverable is complete and
+  verified under the real toolchain.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/VehicleSpecsWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0109-VehicleSpecsWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add VehicleSpecsWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

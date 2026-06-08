@@ -1,0 +1,152 @@
+I'll start by exploring the repository structure, reading the web source spec, and checking the Apple toolchain availability.
+
+Toolchain note: `swift` 6.3.2, `swiftlint`, `swiftformat`, `pwsh` are available, but `xcodebuild` requires full Xcode (only Command Line Tools installed). Let me explore the Apple app structure and the web source.
+
+Now let me explore the Apple app structure to understand the established patterns (P4 core, P1/S8 state holders, P1/S9 tokens, P1/S10 i18n).
+
+There's a clear multi-file pattern per surface. Let me examine the shared infrastructure (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics) and look at map-based and charging-based reference implementations.
+
+The architecture uses a KMP shared core. Let me study an existing charging feature-view and the map components in detail to learn the actual established pattern.
+
+The pattern is clear: each surface is self-contained with `.Adapter` (pure projection), `.Model` (seams + observable model), `.swift` (view), `.Views`, `.Previews`, `.Tests`, `.strings`. Let me study the map primitives, design tokens, motion, and the remaining ChargingSection files.
+
+Now let me study the map-based widgets, design tokens, motion components, and the remaining ChargingSection files (Views, Tests, Previews, strings) to fully match conventions.
+
+`LocationMapWidget` is the closest analog (map surface, same pattern). Let me read its Tests/Previews/strings, the design tokens, motion, and the web `useCharging`/`useFormatting` hooks plus `MarkerCluster`/`MapTileLayer`.
+
+I have a strong grasp of the pattern. Now let me read the design tokens, motion, feedback primitives, the web hooks, and build configuration.
+
+Now let me read the design tokens, motion, feedback states, and the web-side hooks/components to ensure exact parity.
+
+Now let me examine the web data layer: the `useCharging` hook (`TeslaChargingSession` type), `useFormatting`, the `MarkerCluster`/`MapTileLayer` web components, and where the i18n keys live.
+
+Let me read the parent page (for lifecycle/states context), `useFormatting`, the web integration test, and the formatting helpers used.
+
+Now let me read the exact formatting helpers to reproduce parity precisely, plus `useFormatting`.
+
+I now have full parity context. Let me check the gate tooling (placeholder script, xcodegen, Shared framework), locate `TSTone`, and inspect an existing gate log for format.
+
+`xcodegen` is present, but `Shared.xcframework` and the `.xcodeproj` don't exist, and `xcodebuild` needs full Xcode — so the app build/test gate steps can't run here. Let me read the placeholder patterns, confirm `TSTone`, and inspect existing logs to match conventions.
+
+Let me check for existing P4 logs to match the EXIT/STATUS convention and confirm the placeholder script's path handling.
+
+Let me inspect the tail of existing P4 logs to match the EXIT/STATUS house style.
+
+I now understand the sanctioned house disposition: ship complete code + tests, independently verify by compiling the surface + tests in an isolated Swift 6 SwiftPM package against the real design system, run swiftlint/swiftformat/placeholder green, and report the full-app `xcodebuild` gate as DEFERRED with environment evidence. Let me map the dependency surface to design an isolated build.
+
+The entire `Components`+`Design` subtree is `Shared`-free (only SwiftUI/Charts/MapKit/CoreLocation/Foundation) and is compiled by the macOS app target — so it's guaranteed macOS-buildable. That makes an isolated Swift 6 SwiftPM verification viable. Let me confirm the dependency closure of the few primitives my surface needs.
+
+Dependency closure confirmed minimal and clean. Let me set up the plan, todos, then implement. I'll write a plan file and create the todo list.
+
+Now I'll implement the surface. Starting with the pure projection core (Adapter).
+
+Now the Model (seams + observable state holder).
+
+Now the main View entry.
+
+Now the largest file — the sub-views (chrome, states, MapKit canvas with clustering + selection callout).
+
+Now the previews (DEBUG, all states + dense clustering).
+
+Now the comprehensive XCTest suite.
+
+Now the `.strings` catalog.
+
+All 7 files created. Let me verify every i18n key referenced in code is defined in the `.strings` catalog (no typos/missing keys).
+
+All 25 keys match exactly. Let me simplify one test helper, then set up an isolated Swift 6 SwiftPM package to compile + test the surface against the **real** design system.
+
+Now let me build the isolated Swift 6 SwiftPM verification harness against the real design system + shared components.
+
+Package assembled with the real design system. Now compile it (Swift 6 language mode, macOS).
+
+The source compiles; two issues are isolated to the Previews file: (1) the `#Preview` macro plugin is Xcode-only (unavailable in plain SwiftPM), and (2) a Swift type-inference timeout on the sample-data `.map` — which **would** also bite the real Xcode build. Let me fix the type-check timeout in the shipped Previews (explicit typed locals + a loop), and exclude only the Xcode-macro Previews file from the isolated harness.
+
+Let me exclude the Xcode-macro Previews file from the isolated target and add a compile probe proving the sample-data builder type-checks, then run the full test suite.
+
+Two fixes: (1) a real bug in my Views — `.annotationTitles(.hidden)` isn't a valid modifier (the empty `""` annotation title already hides labels), so I'll remove it; (2) the vendored design-system copies carry Xcode-only `#Preview` blocks that can't compile in plain SwiftPM — I'll strip those trailing DEBUG blocks from the harness copies only.
+
+The library target (my surface + the **real** design system) compiled cleanly under Swift 6 strict concurrency — the only failure is `no such module 'XCTest'`, which the CommandLineTools `swift` toolchain doesn't bundle. Let me confirm the library builds green on its own and check XCTest availability.
+
+The library compiles **green** under Swift 6 strict concurrency. XCTest proper isn't in CommandLineTools, so I'll add an executable probe that actually **runs** the full test logic (adapter, clusterer, model, accessibility) at runtime — real executed verification independent of XCTest.
+
+96 checks run, only 2 failures — both the cluster-centroid case: a hard grid leaves adjacent-cell points unmerged. Leaflet clusters by distance, not a fixed grid, so I'll upgrade the clusterer to deterministic greedy distance-merging (more faithful parity, and it merges nearby points across cell boundaries). Let me update the shipped Adapter.
+
+All 96 executed assertions pass under Swift 6. Let me do a final clean library build and inspect the lint/format configs.
+
+Library builds clean (exit 0). Now let me auto-format my files to the repo's SwiftFormat rules, then lint — using the ecosystem tools rather than hand-tuning.
+
+SwiftFormat is clean. SwiftLint `--strict` flags 6 issues in my files (file length >400, large 3-tuples, one brace spacing). Let me check how existing surfaces handle large files before deciding to split.
+
+Confirmed: the house rule is ≤400 lines/file (largest existing is exactly 400, no `swiftlint:disable` anywhere). My 3 oversized files must be split into more `TeslaChargingSessionsMap.*` files (the sanctioned approach). Let me view the post-format Adapter to extract precisely.
+
+Let me view the Format and Units sections to extract them cleanly.
+
+The house limit is 400 lines/file. I'll split the 3 oversized files into additional `TeslaChargingSessionsMap.*` files (the sanctioned pattern) and fix the large-tuple + brace issues. Starting with the Adapter: extract Format and Clusterer sections.
+
+Adapter is now 362 lines. Let me verify the seams are clean, then create the Format and Clusterer files.
+
+Seams are clean. Now creating the extracted Format and Clusterer files (with the large-tuple and brace fixes in the clusterer).
+
+Now split Views (472 lines) — extract the overlay chip + callout views into a Callout file. Let me find the boundary.
+
+Views: I'll move the overlay chip + callout views + presentation modifier (lines 331–472) into a Callout file. Let me read that block.
+
+Now delete the moved block from Views and split the Tests file.
+
+Views is 330 lines. Now split the Tests file — move the model + accessibility tests into a separate ModelTests file. Let me find the boundaries.
+
+Tests structure is clear. Let me read the model/accessibility/test-double block to move into a ModelTests file.
+
+Creating the ModelTests file (model + accessibility + test double, with its own fixtures).
+
+Now delete the moved block from Tests and fix the large-tuple in the clusterer test helper.
+
+Let me fix the large-tuple by nesting the coordinate as a 2-tuple (keeps call sites concise and lint-clean).
+
+Split complete — now 10 `.swift` files. Let me re-format all of them and re-run both linters.
+
+SwiftFormat clean, all files ≤362 lines. Now SwiftLint `--strict` on all files.
+
+SwiftLint `--strict`: **0 violations**. Now re-verify the isolated build + executed probe with the split files.
+
+All 96 checks pass with the split files. Now the placeholder gate — I'll run the official scanner against my files (in a temp dir so it actually scans them, since the gate's bare path is a no-op) plus a direct grep.
+
+pwsh is hanging (>2 min, no output). Let me stop it and run the checks separately — grep first, then the scanner with explicit handling.
+
+Bash sessions are hanging on trivial commands. Let me stop and use the dedicated grep tool instead.
+
+Let me identify which term matched (the line is just a test method name) by checking each suspicious term individually.
+
+Found a subtle trap: the test name `testFormattingDefaultsBlankSymbol**ToDo**llar` contains the case-insensitive substring "todo", which the scanner flags. Let me find all such accidental substrings.
+
+Only one occurrence. Let me rename that test method to avoid the "todo" substring.
+
+Let me confirm no forbidden substrings remain, then run the official scanner in a fresh shell with a timeout guard.
+
+No forbidden substrings remain. Now run the official placeholder scanner in a fresh shell with a timeout guard.
+
+Bash is responsive — the earlier hang was pwsh-specific. Let me run the scanner with a longer wait.
+
+Scanner reports `PLACEHOLDER_COUNT=0, EXIT=0` (the `-NoProfile` flag fixed the pwsh hang). Let me re-run both linters on the final files (after the rename) to capture clean output for the log.
+
+All runnable gates are green. Now let me capture the real `xcodebuild` exit codes (gate evidence) and the Swift toolchain version for the log.
+
+Gate evidence captured: `xcodebuild` fails immediately (no Xcode.app; `Frameworks/` empty — no `Shared.xcframework`). Let me check the pending-verifications ledger format, then write the log.
+
+All evidence gathered. Now I'll write the gate log honestly (the `xcodebuild` gate is genuinely un-runnable here — the prompt's "STATUS=BLOCKED with platform-capability evidence" case), recording all green runnable gates + the isolated build/probe verification.
+
+Now append my row to the macOS-pending ledger (matching the ToolCard precedent).
+
+Now let me review git status and do a final consistency check before committing.
+
+My 11 surface files + log + ledger are present. There are 2 pre-existing dirty web files (not mine) — I'll explicitly stage only my files. Let me do a final review of the Views↔Callout cross-references, then commit.
+
+Everything resolves. Now I'll stage only my files (excluding the 2 pre-existing dirty web files) and commit.
+
+All my files staged; the 2 pre-existing web files left untouched. Now commit.
+
+Committed (`0dfc36752`). Let me finalize todos, clean up temp artifacts, and confirm the tree.
+
+All todos done, temp artifacts cleaned, working tree contains only the 2 pre-existing (non-mine) dirty web files. The surface is committed.
+

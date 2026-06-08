@@ -1,0 +1,100 @@
+I'll start by exploring the repository structure and understanding what exists for this task.
+
+Let me read the web source and explore the existing Apple app structure in parallel.
+
+The convention is a 7-file bundle per feature-view. Let me study the canonical `AcDcStatsPanel` reference in full.
+
+Excellent — clear conventions. Let me read the remaining reference files and the MetricBar/InlineMetric usage pattern.
+
+Now let me locate the shared tokens/components and how MetricBar/InlineMetric are handled natively.
+
+Found native `TSMetricBar`/`TSInlineMetric` and unit formatters. Let me read the web data-display components, the unit formatters, and the closely-related DrivetrainHealthWidget (same domain).
+
+Now let me find the design tokens (Color.TS palette, Font.TS, TSSpacing, TSRadius), TSTone cases, and the units-binding pattern used by DrivingTab.
+
+Tokens are generated under `apps/design/generated/apple`. Let me inspect them.
+
+Now let me find the parent that feeds `ThermalLoadPanel` and the `DrivingStats` type to understand the data shape and states.
+
+Let me study the same-domain `DrivetrainHealthWidget`, the units-binding pattern in `DrivingTab`, and verify the Shared framework presence.
+
+Key finding: `Shared.xcframework` is absent (only `.gitkeep`), and `xcodebuild` requires full Xcode (only CLT installed). Let me confirm the pure unit-conversion pattern used by adapters and the same-domain widget's severity logic.
+
+Adapters use a pure Swift unit-conversion port (no `Shared` import). Let me read the exact temperature formatter and severity/tone patterns to mirror them faithfully.
+
+Let me read the web `useUnits` hook and `formatTemperature` to reproduce the exact sublabel format.
+
+I have the full parity spec. Now let me read the lint/format/placeholder gate configs so my code passes them.
+
+I have everything I need. Let me set up a plan and todos, then write the 7-file surface bundle.
+
+Now writing the surface bundle, starting with the pure adapter.
+
+Let me verify the shared component signatures I depend on, to ensure my view calls compile.
+
+Component signatures all verified. Now the Previews and Tests.
+
+All 7 files written. Now verifying — format, lint, placeholder check, and a standalone compile+logic harness of the pure adapter.
+
+Formatting is clean (0/6 need changes). Now SwiftLint strict on my files.
+
+SwiftLint strict: 0 violations. Now the placeholder gate — the exact gate command plus an honest real scan of my files.
+
+SwiftLint + format + placeholder all clean. Now the strongest on-machine check: compile and execute the pure adapter logic with assertions mirroring the test suite.
+
+Adapter core: **all 41 assertions pass on-machine.** Now exercising the projection + model wiring (Observation) via an isolation harness.
+
+Projection + model wiring: **all 25 assertions pass on-machine** (including the @Observable model). Now capturing the real platform-capability evidence for the blocked steps.
+
+Definitive evidence captured: `xcodebuild` requires full Xcode (only CommandLineTools active) and `Shared.xcframework` is absent. Let me check the logs dir and any sibling surface log for the exact format/convention.
+
+This is the key precedent. Let me read the full sibling log to mirror the exact disposition and format (predecessor parity).
+
+The precedent uses a `DEVELOPER_DIR` override to reach Xcode without `sudo`. Let me check whether full Xcode is actually present on this runner — that changes how much I can verify.
+
+Full Xcode 26.5 **is** installed (reachable via `DEVELOPER_DIR`), exactly like the precedent. I can compile against both SDKs and execute the suite. Let me gather SDK info and the component closure (no `Shared` imports allowed).
+
+Xcode toolchain + both SDKs + a booted iPhone 16 are available. Components/Design are `Shared`-free, but some (e.g., `UnitFormatters.swift`) reference `SharedFacade` types. Let me map those so I can assemble a clean compile closure.
+
+Clean closure = Components + Design + Tokens minus `UnitFormatters.swift`. Let me run the macOS-15 SDK typecheck of the surface against the real component closure.
+
+macOS 15 SDK typecheck: **clean (exit 0)**. Now the iOS 18 simulator SDK, then the DEBUG previews step.
+
+iOS 18 + macOS 15 + DEBUG-previews typechecks: **all exit 0**. Now executing the actual XCTest suite via a SwiftPM harness (module named `TeslaSync` so `@testable import` resolves).
+
+Full XCTest suite: **38/38 passed (exit 0)** via SwiftPM, including the SwiftUI-dependent `ThermalToneMapTests`. Now let me verify the current `project.yml` registration state and capture the deferred-xcodebuild evidence honestly.
+
+`feature-views` is registered in both app targets. Let me check how `*.Tests.swift`/`*.Previews.swift` in that path are handled (excludes/buildPhase) so the app target doesn't choke on XCTest.
+
+Confirmed: 92 predecessor surfaces use the identical layout; the app target sources `feature-views` with no `*.Tests.swift` excludes and the test targets source only `Tests/Unit` — so app `xcodebuild` is gated on `Shared.xcframework` + project-wiring owned by the integration prompt. Let me capture the real deferred-build evidence.
+
+Deferred-build evidence captured (missing `Shared.xcframework` + signing → exit 65), exactly matching the predecessor disposition. Let me get line counts, confirm the generated project is git-ignored, and clean up.
+
+Clean — only my 7 files are new, generated project removed. Now writing the gate log with the real evidence, following the predecessor format.
+
+Log written. Let me run a final consolidated verification of the host gates, then commit.
+
+All final host gates green and i18n keys fully resolved. Committing.
+
+Commit succeeded — exactly my 8 files (the two `M` web files are pre-existing working-tree changes from the shared environment, untouched by me). Let me do a final confirmation of the log's terminal status lines and todo state.
+
+All complete and verified. The log terminates with `EXIT=0 / STATUS=DONE`, the commit contains exactly the 7-file surface bundle + log, and the working tree is clean for my files.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-feature-views-0163-ThermalLoadPanel.log | 218 ++++++++++++
+ .../feature-views/ThermalLoadPanel.Adapter.swift   | 281 ++++++++++++++++
+ .../feature-views/ThermalLoadPanel.Model.swift     | 296 ++++++++++++++++
+ .../feature-views/ThermalLoadPanel.Previews.swift  | 141 ++++++++
+ .../feature-views/ThermalLoadPanel.Tests.swift     | 372 +++++++++++++++++++++
+ .../feature-views/ThermalLoadPanel.Views.swift     | 276 +++++++++++++++
+ .../feature-views/ThermalLoadPanel.strings         |  40 +++
+ .../TeslaSync/feature-views/ThermalLoadPanel.swift | 154 +++++++++
+ 8 files changed, 1778 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0163-ThermalLoadPanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/ThermalLoadPanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ThermalLoadPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ThermalLoadPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ThermalLoadPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ThermalLoadPanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ThermalLoadPanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/ThermalLoadPanel.swift

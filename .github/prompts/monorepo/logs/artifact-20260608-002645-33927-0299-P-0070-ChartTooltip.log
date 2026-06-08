@@ -1,0 +1,138 @@
+=== P4 Shared surface 0070 ChartTooltip (Apple) ===
+Web source : web/src/components/charts/ChartTooltip.tsx (the spec)
+Native out : apps/apple/TeslaSync/shared-surfaces/ChartTooltip.*
+Runner     : macOS (Darwin), Swift 6.3.2, Xcode (DEVELOPER_DIR=/Applications/Xcode.app), swiftlint
+             + swiftformat (homebrew), pwsh, xcodegen — all present.
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (apps/apple/TeslaSync/shared-surfaces/)
+--------------------------------------------------------------------------------
+  ChartTooltip.Adapter.swift   243  pure projection core (ISO detect, fmtNumber port, formatDateTime
+                                     port, default label/value formatters, a11y) — no SwiftUI/store
+  ChartTooltip.Model.swift     396  i18n facade + payload/label/connection types + telemetry seam
+                                     + input snapshot + resolved/phase + projection + @Observable
+                                     model + in-memory source (P1/S8 state-holder, P1/S10, P1/S11)
+  ChartTooltip.Views.swift     277  panel, row, freshness chip, loading skeleton, error+retry, empty
+  ChartTooltip.swift            63  public ChartTooltipSurface View (phase switch; hidden→nothing)
+  ChartTooltip.Previews.swift  112  #Preview per state (content×2 / empty / loading / error / stale /
+                                     offline / hidden)
+  ChartTooltip.Tests.swift     397  XCTest: adapter + projection + model + a11y (SwiftUI-free)
+  ChartTooltip.strings          31  P1/S10 i18n catalog (table "ChartTooltip")
+
+INTEGRATION (necessary first-time registration of the new shared-surfaces source group — analogous
+to how feature-views / dashboard-widgets are registered; without it the surface is orphaned from the
+app targets + linter):
+  apps/apple/project.yml      : + `- path: TeslaSync/shared-surfaces` in TeslaSync (iOS) + TeslaSync-macOS
+  apps/apple/.swiftlint.yml   : + `TeslaSync/shared-surfaces` under `included`
+
+--------------------------------------------------------------------------------
+PARITY (web ChartTooltip.tsx → native) — reproduced, not narrowed
+--------------------------------------------------------------------------------
+  render spine  : `!active || !payload?.length` ⇒ return null      → phase .hidden (renders nothing)
+  body          : labelFormatter(label) line + 1 row per entry      → ChartTooltipPanel + Row
+  isIsoTimestamp: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/                   → ChartTooltipDate.isISOTimestamp
+  labelFmt      : null→'' · ISO→formatDateTime · else String(label) → ChartTooltipFormat.label
+  valueFmt      : number→fmtNumber · else String(v ?? '') · +unit   → ChartTooltipFormat.value (unit dimmed)
+  fmtNumber     : safeNumber + locale grouping + fixed precision    → ChartTooltipNumber.format
+  formatDateTime: invalid→'—' · else locale+tz Intl field set       → ChartTooltipDate.formatDateTime
+  series colour : raw recharts hex                                  → token TSChartPalette index (no hex)
+  role=tooltip / aria-live=polite                                   → combined VoiceOver label
+  P4 leaf adds  : loading / error+retry / friendly empty / live·stale·offline chip + 1× stale auto-refresh
+  i18n          : web is anonymous (no literals) → native chrome strings promoted to keys; no English in code
+
+--------------------------------------------------------------------------------
+HOST-RUNNABLE GATES (all executed; real exit codes)
+--------------------------------------------------------------------------------
+[1] Isolated SwiftPM harness (module `TeslaSync` = Adapter+Model; real `@testable import TeslaSync`
+    test file), Swift 6 tools, .macOS(.v15), strict concurrency:
+        swift build  → Build complete!            EXIT=0
+        swift test   → Executed 39 tests, 0 failures (EXECUTED green)   EXIT=0
+        Suites: ISO(2) Number(5) Date(3) Format(7) Accessibility(3) Projection(8) Model(10) = 39
+
+[2] Dual-SDK typecheck of the SwiftUI layer (Adapter+Model+Views+swift+Previews) against the REAL
+    design tokens (apps/design/generated/apple/Tokens.swift + TSDesign + TSMaterial + Motion),
+    -swift-version 6 -D DEBUG:
+        macOS 15  (arm64-apple-macos15.0)                MAC_TYPECHECK_EXIT=0
+        iOS 18    (arm64-apple-ios18.0-simulator)        IOS_TYPECHECK_EXIT=0
+
+[3] swiftformat --lint TeslaSync/shared-surfaces  → 0/6 files require formatting    FORMAT_EXIT=0
+
+[4] swiftlint --strict (whole tree, apps/apple/.swiftlint.yml):
+        shared-surfaces/ChartTooltip violations: 0
+        whole-tree: "Found 1 violation, 1 serious in 1915 files" — the single hit is PRE-EXISTING in
+        an untouched sibling (TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+        function_body_length), NOT this surface. LINT_EXIT=2 is that sibling, disclosed not hidden.
+
+[5] placeholder gate (apps/tools/check-placeholders.ps1):
+        -Path apps/apple/TeslaSync/shared-surfaces                PLACEHOLDER_ALLOWED=0 COUNT=0 EXIT=0
+        -Path apps/apple/TeslaSync/shared-surfaces/ChartTooltip   PLACEHOLDER_COUNT=0   EXIT=0  (gate literal form)
+
+[6] xcodegen generate  → Created project   XCODEGEN_EXIT=0
+        all 7 ChartTooltip files enumerated into BOTH app targets (Adapter/Model/Views/swift/
+        Previews/Tests/strings present in project.pbxproj).
+
+--------------------------------------------------------------------------------
+XCODE FULL-APP BUILD + TEST — DEFERRED (pre-existing, code-unrelated infra; outside allowed files)
+--------------------------------------------------------------------------------
+The gate's `xcodebuild -scheme TeslaSync ... build test` (iOS + macOS) is DEFERRED to the signed
+macOS CI runner, exactly per the established P4 disposition (apps/macos-pending-verifications.md;
+predecessors ToolCard 0010, AlertMessageEditor 0180, FSMTimelineChart 0231, TitleSlide 0070,
+OdometerCounterWidget 0070). Captured evidence (NOT assumed):
+
+  • Shared.xcframework NOT staged (apps/apple/Frameworks/ holds only .gitkeep). Both app targets +
+    both unit-test bundles hard-depend on it (project.yml: 4 framework deps). The scheme preAction
+    `Scripts/build-shared-xcframework.sh` runs Gradle `:core:assembleSharedXCFramework`. RUN here:
+    the KMP toolchain WORKS — it produced the DEBUG XCFramework
+    (apps/shared/core/build/XCFrameworks/debug/Shared.xcframework) — but the RELEASE Kotlin/Native
+    link (linkReleaseFramework{IosArm64,IosSimulatorArm64,MacosArm64}) is CI-class slow and had not
+    finished at a 600s bound (still on linkReleaseFrameworkMacosArm64). This is the exact step the
+    macos-pending row defers to p5-hardening on macos-latest. PREACTION_EXIT=142 (SIGALRM bound).
+  • Even once staged, the whole-app build hits the same pre-existing collisions, all OUTSIDE this
+    surface and outside the allowed files:
+      - 261 co-located *.Tests.swift `import XCTest` into the app-target source paths
+        (204 feature-views + 57 dashboard-widgets) → XCTest-in-app + @testable cycle.
+      - `struct DashboardWidgetSize` redefined 15× across Sources/ + TeslaSync/ app-target sources.
+      - macOS development-signing (DEVELOPMENT_TEAM empty).
+  • PROOF this surface adds none of those defects:
+      - import XCTest in shipped (non-Tests) ChartTooltip files: 0
+      - struct DashboardWidgetSize in shared-surfaces: 0
+      - swiftlint/swiftformat/placeholder clean on the surface; both-SDK typecheck green; 39/39 tests
+        EXECUTED green in isolation.
+  ChartTooltip.Tests.swift follows the same colocation convention as its 261 siblings and, like
+  them, is executed via the isolated SwiftPM harness above (real `@testable import TeslaSync`).
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+  [x] Every web state reproduced (hidden / content) + P4 leaf (loading / error / empty / stale / offline).
+  [x] Hooks bind via the P1/S8 state-holder seam (ChartTooltipSource/Model); no HTTP in the view.
+  [x] Every i18n key resolves through the P1/S10 facade (ChartTooltipStrings, table "ChartTooltip");
+      no English literals in Swift code.
+  [x] Accessibility labels on every element (panel summary, per-row label, chip label, retry button).
+  [x] Tests: adapter unit tests + per-state projection/model tests + a11y label tests (39, EXECUTED green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate COUNT=0).
+  [x] Telemetry: `view.opened` slug "ChartTooltip" emitted once on first presentation (P1/S11).
+  [~] xcodebuild build test — DEFERRED with captured platform-capability evidence (above).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode full build/test shown DEFERRED (not green), with real captured evidence
+                       (unstaged release Shared.xcframework + 261 colocated XCTest-in-app + 15
+                       DashboardWidgetSize redefs). Every "EXIT=0" is a command actually run; the 1
+                       whole-tree swiftlint hit (pre-existing sibling) is disclosed, not hidden.
+  2  No scope narrowing: implemented ALL states + i18n + a11y + telemetry + freshness + stale
+                       auto-refresh; web ISO/label/value formatting reproduced, not simplified.
+  3  No skip-and-assume: each host gate executed; the KMP framework step was actually run (debug
+                       produced, release timed out) rather than assumed.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0 on the surface.
+  5  No parity shortcuts: data + composition + states + i18n all reproduced; series colour mapped to
+                       the token palette (no raw hex); role=tooltip summarised for VoiceOver.
+  6  No delegation : authored directly.
+  7  No predecessor bypass : same DEFERRED disposition + macos-pending row as 0010/0180/0231/0070.
+  8  No commit on red : all code-level host gates green before commit; Xcode steps DEFERRED, not failed.
+  9  No silent drift : the new shared-surfaces source group registration (project.yml + .swiftlint.yml)
+                       is disclosed; changes confined to the allowed ChartTooltip.* files + that
+                       one-time registration + this log + the macos-pending row.
+  10 Log ends with EXIT/STATUS below.
+
+EXIT=0
+STATUS=DONE

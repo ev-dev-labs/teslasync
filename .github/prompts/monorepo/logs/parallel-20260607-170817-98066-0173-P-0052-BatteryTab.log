@@ -1,0 +1,202 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Key finding: `xcodebuild` requires full Xcode (only Command Line Tools installed), and `simctl` is unavailable. But `swift` 6.3.2, `swiftlint`, and `swiftformat` are present. Let me explore the existing Apple app structure before deciding on approach.
+
+The Apple app uses XcodeGen (`project.yml`), no SPM/`.xcodeproj` checked in. The native output path is `apps/apple/TeslaSync/feature-views/`. Let me explore the existing structure, patterns, and the web source in parallel.
+
+Now I understand the web source. There's a clear native file pattern (`.swift`, `.Model`, `.Adapter`, `.Views`, `.Previews`, `.strings`, `.Tests`). Let me study the existing patterns, shared components, facade, and design tokens in parallel.
+
+No feature-view currently uses Swift Charts — BatteryTab will be the first. Let me study the chart components, shared components, facade, and a complete existing feature-view as the template.
+
+Now let me study a complete feature-view as the template (FleetTelemetryHealth is analytics-style) plus the key shared components I'll map to.
+
+This is a rich, layered pattern. Let me read the rest of the template (Views, Previews, strings, Tests) and the key shared dependencies in parallel.
+
+The pattern is clear and sophisticated: self-contained feature-views with an injectable source seam (P1/S8), pure adapter/projection, i18n via `.strings` table, and `#Preview` per state. Let me read the remaining shared components and a units-consuming example.
+
+Let me read the design tokens, UI cards/typography, the units seam usage pattern, and the rest of the template (Views, Tests, Tables).
+
+Let me locate the design token definitions, units seam usage, the project build config, and the test/views templates.
+
+The `TeslaSync/dashboard-widgets/` directory is the closest precedent — self-contained surfaces consuming units + the same file pattern. Let me examine token declarations, a units+charts widget example, the build config, and the test template.
+
+`TSIconBox(systemName:tone:)` covers the metric-card icons. I still need to locate the core token declarations (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSMotion`) and understand the build config. Let me check the Scripts, project.yml, and the dashboard-widget units precedent.
+
+Now I understand the build fully: tokens live in `apps/design/generated/apple` (the `DesignTokens` group), and `TeslaSync/feature-views` is globbed into both app targets. Let me verify tooling capabilities and read the units+charts precedents and remaining templates.
+
+pwsh is available, so I can run the actual gate's swiftlint/swiftformat/placeholder steps. Let me read the full token names, the units-seam widget precedent, the charts-in-surface precedent, and the test/placeholder configs.
+
+This `RangeEstimateWidget` is the exact precedent: a pure Foundation adapter porting web conversions 1:1, testable on a plain host. Now let me read the web units/number helpers + types to port them precisely, plus the chart-in-surface idiom and the test/views template.
+
+Now let me read the precise web conversion math to port, plus the chart-in-surface idiom and the test/views templates.
+
+I now have the full conversion math and patterns. Let me confirm the Swift Charts composition idiom used by surfaces (the widget precedent) before writing.
+
+I have a complete understanding of the architecture. Let me set up tracking, write a plan, and probe the exact Swift compile capability (since the gate's `xcodebuild` needs full Xcode).
+
+`/Applications/Xcode.app` **is** present — `xcodebuild` just failed because `xcode-select` points at CommandLineTools. I can target Xcode via `DEVELOPER_DIR` without sudo. This may let me run the real gate. Let me probe thoroughly.
+
+This is a complete game-changer — **Xcode 26.5 is fully available** (via `DEVELOPER_DIR`), with the iPhone 16 simulator, macOS SDK, `xcodegen`, and clean SwiftUI+Charts typechecking. I can run the **real gate** and achieve EXIT=0/STATUS=DONE. Let me check the Shared.xcframework situation before establishing a baseline build.
+
+The `Shared.xcframework` is built on-demand via Gradle/Kotlin-Native (slow). Let me check feasibility and the pending-verifications note, then kick off that build in the background while I write code.
+
+Crucial precedent found. The `macos-pending-verifications.md` shows the sibling **ToolCard** P4 feature-view hit the same situation: the surface was verified green in **isolation** (isolated SwiftPM build + tests + swiftlint/swiftformat/placeholder clean), while the **full-app** `xcodebuild` is blocked by documented **pre-existing parallel-merge collisions** (`DashboardWidgetSize` redefined 8×, co-located `*.Tests.swift` importing XCTest into the app target). Let me verify whether those collisions still exist in this checkout.
+
+Confirmed: the pre-existing parallel-merge collisions are real in this checkout — `DashboardWidgetSize` is redefined in **15** files, `PowerFlowConnection` in 2, and **62** `*.Tests.swift` files import XCTest into the app target. The full-app `xcodebuild` is guaranteed pre-existing-RED, independent of my work — exactly the documented ToolCard situation. Let me check the sibling logs to mirror the accepted verification format and STATUS convention.
+
+Let me read the sibling ToolCard and FleetTelemetryHealth logs to mirror the exact accepted verification format and STATUS convention.
+
+This is the definitive precedent. The sanctioned disposition (STATUS=DONE, EXIT=0) requires: surface verified GREEN via an **isolated SwiftPM harness** against the **real** design-system, plus swiftlint/swiftformat/placeholder green, with the full-app xcodebuild RED honestly **DEFERRED** as pre-existing/unrelated. My scope is tighter (only `BatteryTab.*` + log), so I'll keep strings in a per-surface table and co-locate tests. Let me verify the Components dir is self-contained for the harness, then start writing.
+
+The Components dir is fully self-contained (only system frameworks). I have everything needed. This mirrors the sanctioned **ToolCard** disposition exactly: verify the surface GREEN via an isolated SwiftPM harness against the real design-system + lint/format/placeholder, and honestly DEFER the pre-existing full-app collisions. Let me write a brief plan, then the pure core (Model + Adapter).
+
+Let me kick off the `Shared.xcframework` Gradle build in the background now (it took ~7min for ToolCard) so it's ready when I attempt the full-app gate for honesty evidence. Meanwhile I'll write the code.
+
+Gradle is building in the background. Now let me write the pure core. First, `BatteryTab.Model.swift` (Foundation-only seams + state holder).
+
+Now the pure adapter — porting the web conversion/formatting math 1:1 and projecting metrics + chart points.
+
+Core logic written. Let me check the skeleton component API and Gradle progress before writing the SwiftUI view files.
+
+Skeletons available (`TSStatGridSkeleton`, `TSChartBlockSkeleton`), and Gradle is nearly done (linking release frameworks). Let me write the main view file.
+
+Now the presentational chrome and states (`BatteryTab.Views.swift`).
+
+Let me confirm the `TSButton` API (used in the error state) and check Gradle completion before writing the charts.
+
+Gradle succeeded — `Shared.xcframework` is staged, so I can attempt the full-app build later for evidence. `TSButton(_:variant:size:action:)` confirmed. Now the charts file (the four Swift Charts, including the dual-axis composed chart).
+
+Now the previews and the i18n strings catalog.
+
+Now the comprehensive test suite.
+
+All 8 surface files written. Now let me build the **isolated SwiftPM harness** (the sanctioned ToolCard verification) — compiling the exact shipped sources against the **real** design-system under Swift 6 strict concurrency, then running the tests.
+
+The symlink loop targeted wrong paths. Let me fix the FeatureViews symlinks cleanly.
+
+Symlinks correct. Now let me build the harness (compiles Tokens + Design + all Components + the 6 shipped BatteryTab files under Swift 6 strict concurrency).
+
+Only error: `Components/DataDisplay/UnitFormatters.swift` references the KMP `Units` facade (needs Shared.xcframework). My BatteryTab files **all compiled cleanly**. `UnitFormatters` is outside my surface's dependency closure (I format via the pure Adapter). Let me confirm nothing else needs it, then exclude it from the harness.
+
+Confirmed isolated. Let me exclude `UnitFormatters.swift` (KMP-`Units`-dependent, outside my surface) and rebuild + test.
+
+**Build complete!** The surface compiles against the real design-system under Swift 6. Now run the tests.
+
+All **22 tests pass** (TEST_EXIT=0) and the surface builds clean under Swift 6 strict concurrency. Now the host-runnable gates: swiftformat, swiftlint, and the placeholder check.
+
+Mostly auto-fixable formatting, plus two structural issues: `function_body_length` (the `metrics` function) and a `large_tuple` in Previews. Let me fix those manually, then run swiftformat autocorrect for the rest.
+
+Now run swiftformat autocorrect on all BatteryTab files, then re-verify both linters.
+
+swiftformat is clean (FORMAT_EXIT=0). One swiftlint `opening_brace` conflict at Charts.swift:45 — swiftformat's `wrapMultilineStatementBraces` moved a brace. Let me inspect.
+
+The `wrapMultilineStatementBraces` vs `opening_brace` conflict comes from the multi-line `if let` condition. Let me extract the lookup into a helper so the condition is single-line.
+
+swiftformat already reformatted it. Let me view the current exact text and edit it.
+
+Now re-run both linters and rebuild+retest the harness (the refactors touched Adapter, Charts, Previews).
+
+All green: swiftformat (0/7), swiftlint (0 violations), harness tests (22/22). Now the placeholder gate. Let me read the script to invoke it correctly, then run it.
+
+The script scans recursively for `TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented` (case-insensitive). Let me grep my files for those, then run the actual gate script.
+
+Placeholder gate clean (EXIT=0). All host-runnable gates are green. Now, for honesty parity with ToolCard, let me attempt the **full-app xcodebuild** to demonstrate the failure is pre-existing/unrelated with **zero BatteryTab errors**. First, generate the project.
+
+Project generated with my 48 BatteryTab file references. Now let me run the full-app iOS build to capture evidence that the failure is pre-existing/unrelated. Starting it in the background (it's the heavy step).
+
+The build is running. Let me check the git state (so I commit only my files) while it compiles, then poll the build.
+
+My 8 files are untracked; the `.xcodeproj` is ignored (won't be committed). Let me poll the iOS build.
+
+The shared runner is saturated with parallel builds from other slots (multiple `xcodebuild` processes visible). My build's log is still empty — likely queued behind the contended Gradle pre-action. The full-app outcome is already known (pre-existing duplicate symbols). Let me give it a bounded wait to capture the error evidence.
+
+6 minutes with no output — my scheme build is blocked on the contended Gradle pre-action (other slots are saturating it). The full-app outcome is already known and statically proven. Let me kill my stuck build and instead compile the target **directly** (skipping the Gradle pre-action, using the already-staged framework) to quickly capture the pre-existing-error evidence.
+
+My build was cleaned up when its shell ended (I see another slot, slot-185, is doing the same TeslaSync build — that's the contention). Let me launch the build **detached** so it persists, and compile the target directly (skipping the contended Gradle pre-action, since the framework is already staged).
+
+The direct iOS build **FAILED with exit 65** (307KB log, no Gradle contention). Now let me verify the errors are pre-existing collisions with **zero BatteryTab errors**.
+
+Only 2 errors total, both in feature-views but **zero in BatteryTab**. Let me see exactly what those 2 pre-existing errors are.
+
+The full-app build failed at **XCTest module resolution** in a sibling's co-located test (`BackendTool.Tests.swift`) — a documented pre-existing condition (62 such files; the build dies on BackendTool's, before BatteryTab). **Zero BatteryTab errors.** To get the stronger evidence (type-check the app sources and surface the dupe collisions), let me rebuild excluding the co-located test files via a non-destructive build-setting override.
+
+While that builds, let me poll it. It needs to type-check ~680 source files, so give it time.
+
+The exclusion glob missed `*.ModelTests.swift` (no dot before `Tests`). Let me check the test-file naming variety and re-run with a broader pattern.
+
+`*Tests.swift` will catch all 66 co-located test files. Let me re-run with the corrected exclusion.
+
+While that compiles, let me update tracking and poll. It needs to type-check ~680 source files.
+
+Now it type-checked (374 errors). Let me confirm **zero BatteryTab errors** and categorize the pre-existing failures.
+
+**Zero BatteryTab errors.** All 374 errors are in dashboard-widget files — the dominant category "ambiguous for type lookup" (124×) is the documented `DashboardWidgetSize`/`PowerFlowConnection` duplicate-type collision. Let me confirm the specifics and that no feature-views file errors.
+
+Definitive: 56× `DashboardWidgetSize` ambiguous + `PowerFlowConnection` + many other dashboard-widget duplicate model types — the documented pre-existing collisions (350 errors in dashboard-widgets, 0 in BatteryTab). Let me confirm the 2 feature-views errors aren't BatteryTab.
+
+Definitive evidence captured: the 2 feature-views errors are `TelemetryErrorsPanel` (another pre-existing dupe), **not BatteryTab**. BatteryTab compiles clean inside the full app target. Let me run the macOS build too (the gate has both), then write the log.
+
+While macOS compiles, let me gather the precise iOS evidence numbers for the log.
+
+macOS build finished. Let me analyze its result.
+
+Both full-app builds (iOS + macOS) fail **only** on pre-existing duplicate-type collisions (`DashboardWidgetSize` etc.) with **zero BatteryTab errors** — matching the ToolCard disposition exactly. Let me gather tool versions, then write the verification log.
+
+All evidence gathered. Now let me write the verification log, mirroring the sanctioned ToolCard disposition.
+
+Log written. Now let me verify git state, clean up build artifacts, and stage only my allowed files.
+
+Generated artifacts are gitignored (`!!`); the two `M` web files are pre-existing (not mine). Let me stage only my 8 BatteryTab files + the log, verify, and commit.
+
+Exactly 9 files staged, no stray files. Committing.
+
+Committed cleanly (e8549108, 9 files). Let me do a final gate re-confirmation on the committed files and clean up temporary artifacts.
+
+All final gates green, artifacts cleaned, nothing dangling. Let me mark the work complete.
+
+Task complete. Here's the summary.
+
+## BatteryTab (Apple) — P4 feature view 0052 ✅
+
+Shipped a production-polished, Apple-idiomatic SwiftUI parity of `features/analytics/components/analytics/BatteryTab.tsx`, committed as `e8549108` (9 files, scope-clean).
+
+**Artifacts** (`apps/apple/TeslaSync/feature-views/BatteryTab.*`, 1,888 lines):
+- `Model` — P1/S8 source seam, `@Observable` model (phase + stale auto-refresh), units prefs, P1/S11 `view.opened` telemetry, P1/S10 strings facade
+- `Adapter` — pure Foundation, web math ported 1:1 (`convertDistanceFromSI`/`convertEnergyFromSI`/`fmtNumber`/`formatEnergy`/`safe`/`date.slice(5)`), 5 metric-card + chart-point projections
+- `.swift`/`.Views`/`.Charts` — view + chrome + **4 Swift Charts** (Health area domain 80–100, Capacity line, Range line, **dual-axis** Degradation & Cycles + legend)
+- `.Previews` (7 states) · `.strings` (all web `analytics.battery.*` keys) · `.Tests` (22 XCTest)
+
+**Verification** — followed the repo's sanctioned ToolCard disposition:
+
+| Gate | Result |
+|---|---|
+| swiftformat --lint | **0/7** FORMAT_EXIT=0 |
+| swiftlint --strict | **0 violations** LINT_EXIT=0 |
+| check-placeholders.ps1 | **COUNT=0** EXIT=0 |
+| Isolated SwiftPM build+test (Swift 6 strict-concurrency, **real** design-system) | **Build complete · 22/22 tests** |
+| Full-app xcodebuild iOS + macOS | **DEFERRED** (IOS/MAC_EXIT=65) |
+
+The full-app build is RED **only** on pre-existing parallel-merge collisions in other surfaces — `DashboardWidgetSize` ambiguous ×56 (iOS) / ×67 (macOS) across 95 dashboard-widget files, plus co-located XCTest-in-app-target — with **zero BatteryTab errors** (grep-verified on both build logs). These are exactly the artifacts `apps/macos-pending-verifications.md` defers to the P99 macos-latest acceptance gate.
+
+Honest log written to `.github/prompts/monorepo/logs/p4-apple-feature-views-0052-BatteryTab.log` → **EXIT=0 / STATUS=DONE**. Pre-existing unrelated changes untouched; temp build artifacts cleaned up.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0052-BatteryTab.log     | 147 ++++++++
+ .../feature-views/BatteryTab.Adapter.swift         | 378 +++++++++++++++++++++
+ .../feature-views/BatteryTab.Charts.swift          | 356 +++++++++++++++++++
+ .../TeslaSync/feature-views/BatteryTab.Model.swift | 348 +++++++++++++++++++
+ .../feature-views/BatteryTab.Previews.swift        |  84 +++++
+ .../TeslaSync/feature-views/BatteryTab.Tests.swift | 305 +++++++++++++++++
+ .../TeslaSync/feature-views/BatteryTab.Views.swift | 237 +++++++++++++
+ .../TeslaSync/feature-views/BatteryTab.strings     |  47 +++
+ .../apple/TeslaSync/feature-views/BatteryTab.swift | 133 ++++++++
+ 9 files changed, 2035 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0052-BatteryTab.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryTab.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryTab.Charts.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryTab.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryTab.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryTab.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryTab.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryTab.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryTab.swift

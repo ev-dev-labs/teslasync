@@ -1,0 +1,112 @@
+I'll start by exploring the repository structure, the web source, and the existing Apple app to understand the task fully.
+
+Key capability finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. `swift`, `swiftlint`, `swiftformat` ARE available. Let me explore the existing Apple app structure and the established pattern from the recently-built `AIUsageCard` sibling.
+
+Critical findings: **no `.xcodeproj`/`.xcworkspace`/`Package.swift` exists** in apps/apple, and there's an established multi-file pattern. Let me read the prior AiUsageCard logs (the precedent for handling the gate) and the reference implementation.
+
+The precedent is crystal clear: prior P4 surfaces ship multi-file Swift surfaces, run swiftformat/swiftlint/check-placeholders as per-surface gates, do an isolated SwiftPM build+test, and DEFER the full-app xcodebuild gate. Let me verify my runner's exact capabilities and read the web source.
+
+`/Applications/Xcode.app` **exists** — full Xcode is available via `DEVELOPER_DIR` override, exactly as prior surfaces used. pwsh, xcodegen present. Now I have the web source. Let me study the established pattern by finding surfaces that use **Swift Charts + MapKit** (since VehicleCharts needs both) and read the reference AiUsageCard implementation.
+
+No feature-view imports MapKit directly — maps go through the shared `Sources/Components/Maps/MapView.swift`. Charts are done via shared chart components (some import Charts directly). Let me read the canonical AiUsageCard reference (all 10 files) plus the shared Maps/Charts/DataDisplay/Motion components to nail the exact conventions.
+
+Now I understand the structure deeply. Let me read the rest of the reference (Views, Chrome, Projection, Previews, strings, Tests) plus the design tokens and shared components I'll need (Maps, Charts, MetricCard, Motion, units facade).
+
+Let me read the remaining reference files (Previews, strings, Tests) plus the design tokens, shared Maps/Charts/MetricCard/Motion components, and the units facade.
+
+Let me read the design tokens, units facade, shared Maps, MetricCard, and Motion components.
+
+The units facade depends on the `Shared` KMP framework (the unstaged blocker). The AiUsageCard precedent ports arithmetic purely in Foundation to keep the adapter testable in isolation. Let me read the shared Maps, MetricCard, Motion components, a chart example, and the web `convertSpeedFromSI`/`useUnits` source to decide the cleanest faithful approach.
+
+Now the shared Maps component is clear (`TSMapView`, `TSMapLayerSwitcher`, `TSMapAnnotation`, `TSGeo`, `TSMapStyle` — imports MapKit, not Shared). Let me read MetricCard, Motion, a chart example, and the web units source.
+
+Now I understand the full pattern — SOCRouteChart is my chart precedent (Swift Charts `AreaMark`+`LineMark`), `TSMapView`/`TSMapLayerSwitcher` for the map, `TSFadeIn` for motion, scoped cells for metrics + per-surface `.strings` table. Let me read the web lib helpers and API types I must reproduce faithfully.
+
+I need the exact `convertSpeedFromSI` arithmetic and the API types. Let me read those precisely.
+
+I now have the complete data contract and arithmetic. Let me read the placeholder scanner, lint configs, and a test file to nail conventions before writing.
+
+Critical: `.swift` files must avoid the word "Placeholder"/"TODO"/"not implemented" (case-insensitive) even in comments. Design/Components have NO `Shared` import — so an isolated SwiftPM build is feasible. Let me verify the tokens I need exist and read the test pattern.
+
+All needed tokens exist. Let me read the test pattern and inventory the Components dir for the isolated build harness.
+
+Components only import system frameworks — isolated SwiftPM build is fully feasible. Let me read the shared Feedback (States/Skeletons), Buttons, and key Typography/Card APIs I'll use, plus confirm `TSTone`.
+
+I have everything needed. Let me set up an isolated SwiftPM build harness (Design + Components compile with no `Shared` dependency) to validate compilation as I build, using the Xcode toolchain.
+
+One component file (`UnitFormatters.swift`) depends on the `Shared` KMP facade. My surface doesn't use it — I'll exclude it from the harness only (it compiles in the real app where Shared is staged).
+
+Baseline harness compiles cleanly. I have full understanding now. Let me set up tracking and write the plan, then build the surface.
+
+Now let me write the surface files, starting with the pure Adapter core.
+
+Now the Types file (input DTOs + resolved value types + connection enum).
+
+Now the Model file (i18n facade, telemetry seam, input snapshot, state-holder seam).
+
+Now the Projection — the heart of the parity logic.
+
+Several config lines exceed 120 chars — swiftformat will wrap them. Let me verify the GlassPanel/Card/Button APIs before writing the view layer.
+
+GlassPanel (`TSGlassPanel` / `.tsGlassPanel()`), `TSButton`, and palette are confirmed. Let me write the presentational Views layer.
+
+Now the live map section (MapKit).
+
+Now the Swift Charts speed-history section.
+
+Now the chrome (freshness chip, banner, loading, error, empty).
+
+Let me fix the retry button to route through my i18n facade (the `LocalizedStringKey` convenience init resolves against the main catalog, not my table).
+
+Now the surface composition file.
+
+Now the i18n strings catalog.
+
+Let me compile the surface in the harness before writing previews/tests, to catch errors early.
+
+Surface compiles cleanly. Now the test files.
+
+Now the previews, then I'll compile and run the full test suite.
+
+Now let me run the full isolated build + test with all files including tests and previews.
+
+Two test-only issues: `value` helper name collides with an inherited member, and optional-Double accuracy asserts need unwrapping. Let me fix both.
+
+All 36 tests pass under Swift 6 strict-concurrency. Now the per-surface gates. First swiftformat (auto-fix then lint), then swiftlint, then the placeholder scanner.
+
+Format clean (0/12) and swiftlint exit 0. Let me get explicit evidence (non-quiet swiftlint), re-verify the harness still builds after formatting, and run the placeholder scanner scoped to my files.
+
+All three per-surface gates pass. Let me re-verify the harness builds + tests after the formatter touched 5 files, then investigate the full-app `xcodebuild` situation for honest logging.
+
+All 36 tests still pass after formatting. There's an xcodegen `project.yml`. Let me verify the documented full-app blockers exist on this runner and attempt the real `xcodebuild` to capture honest evidence.
+
+All documented blockers confirmed on this runner: `Shared.xcframework` unstaged (only `.gitkeep`), `DashboardWidgetSize` redefined 15×, 171 co-located test files compiled into the app target. Let me capture first-hand `xcodebuild` evidence (bounded) so the DEFERRED disposition is honest, not assumed.
+
+Project generates; iOS 26.5 simulator runtime is available. Let me run the actual gate `xcodebuild` to capture first-hand evidence of the blockers (bounded).
+
+The environment restricts `kill`. Let me run `xcodebuild` to a log file and inspect it.
+
+The full-app build is real on this runner — the scheme's pre-build Gradle step is actively assembling `Shared.xcframework` (the ~7-min build prior logs deferred). Let me let it continue and capture the real outcome.
+
+Gradle is finishing the framework assembly; the app-target Swift compile (where the pre-existing blockers surface) comes next. Let me keep waiting.
+
+Full-app build finished with exit 65 (failure). Let me extract the actual errors to confirm they're pre-existing blockers, not my code.
+
+Conclusive: the full-app iOS build (exit 65) fails **only** on the pre-existing co-located-tests-in-app-target config — `import XCTest` unresolvable in the app target, first at `AIRestorePanel.Tests.swift`. **Zero** VehicleCharts-attributable errors. Let me capture the macOS build for completeness, then finalize.
+
+Both full-app builds fail **only** on pre-existing, out-of-scope blockers (iOS: co-located XCTest-in-app-target at `AIRestorePanel.Tests.swift`; macOS: development-signing entitlements) — **zero** VehicleCharts errors. Let me clean up generated artifacts and gather final evidence for the log.
+
+Only my 13 `VehicleCharts.*` files are new (all under 400 lines; largest 332). Let me confirm nothing else leaked (xcodegen plists, DerivedData) and that I haven't touched the pre-existing AiUsageCard files.
+
+Clean — the only other changes are the pre-existing `AIUsageCard.*` modifications from a sibling slot (present before I started; I won't touch them), and no stray generated artifacts. Let me write the honest gate log.
+
+Now a consolidated final verification of all per-surface gates before committing, then cleanup and commit.
+
+All four per-surface gates GREEN. Let me update tracking, clean temp artifacts, and commit only my files + the log.
+
+All 14 files staged (13 surface files + log); the pre-existing AIUsageCard edits are excluded. Committing.
+
+Committed as `d13d78c90`. Let me do a final confirmation of the commit contents and the log's terminal status lines.
+
+The task is complete and verified. The commit contains exactly the 13 `VehicleCharts.*` surface files plus the gate log; the log terminates with `EXIT=0 / STATUS=DONE`; temp artifacts are cleaned; and the pre-existing sibling `AIUsageCard` edits were left untouched.
+

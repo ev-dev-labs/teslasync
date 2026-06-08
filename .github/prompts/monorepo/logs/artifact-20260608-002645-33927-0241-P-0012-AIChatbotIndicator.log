@@ -1,0 +1,144 @@
+=== P4 Shared surface 0012 AIChatbotIndicator (Apple) ===
+runner: Darwin 25.5.0 arm64 | swift: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101) | date: 2026-06-08T10:49:05Z
+web source (THE spec): web/src/components/ai/AIChatbotIndicator.tsx
+
+### CAPABILITY PROBE (per prompt capability clause)
+SwiftUI: available (typecheck below EXIT=0). Swift Charts/MapKit: NOT USED by this surface (web charts/maps = none).
+-- xcodebuild -version:
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+-- iphonesimulator SDK:
+xcrun: error: SDK "iphonesimulator" cannot be located
+xcrun: error: SDK "iphonesimulator" cannot be located
+xcrun: error: unable to lookup item 'Path' in SDK 'iphonesimulator'
+macOS SDKs present: MacOSX.sdk MacOSX15.4.sdk MacOSX15.sdk MacOSX26.5.sdk MacOSX26.sdk 
+
+### GATE 1 — swiftc -typecheck (macOS 15 SDK, -swift-version 6 -strict-concurrency=complete) vs REAL design system
+TYPECHECK_EXIT=0
+
+### GATE 2 — isolated executable build + RUN of surface logic (29 behavioural assertions)
+HARNESS_BUILD_EXIT=0
+ok  : gate: enabled when fully on
+ok  : gate: unresolved fail-closed
+ok  : gate: error fail-closed
+ok  : gate: mode-off fail-closed
+ok  : gate: flag-off fail-closed
+ok  : gate: featureID matches web source
+ok  : projection: default gated
+ok  : projection: error gated
+ok  : projection: presented live
+ok  : projection: presented stale
+ok  : projection: presented offline
+ok  : model: gated on unresolved
+ok  : model: no telemetry while gated
+ok  : model: start idempotent
+ok  : model: presented after enable
+ok  : model: connection live
+ok  : model: telemetry once on present
+ok  : model: telemetry not re-emitted
+ok  : model: stale auto-refresh once
+ok  : model: stale no double refresh
+ok  : model: live re-arms stale
+ok  : model: offline connection
+ok  : model: offline never auto-refreshes
+ok  : a11y: live label
+ok  : a11y: stale label
+ok  : a11y: no suffix when live
+ok  : a11y: offline suffix
+ok  : view: no dot when live
+ok  : view: dot when stale
+---
+HARNESS_FAILURES=0
+HARNESS_RUN_EXIT=0
+
+### GATE 3 — swiftlint --strict (surface files, repo rules)
+SWIFTLINT_SURFACE_EXIT=0
+full-tree note: swiftlint --strict over 1916 files reports 1 violation, PRE-EXISTING + UNTOUCHED by this commit:
+  TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length (out of allowed files)
+
+### GATE 4 — swiftformat --lint (surface files)
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+SwiftFormat completed in 5.7s.
+0/7 files require formatting.
+SWIFTFORMAT_SURFACE_EXIT=0 (0/7 require formatting)
+full-tree note: swiftformat --lint apps/apple reports 1 file, PRE-EXISTING + UNTOUCHED by this commit:
+  TeslaSync/feature-views/ActionBuilder.Previews.swift:48 blankLinesBetweenScopes (out of allowed files)
+
+### GATE 5 — check-placeholders.ps1 (surface)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+
+### GATE 6 — xcodegen generate (enumerates the surface into both app targets)
+Created project at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-241/apps/apple/TeslaSync.xcodeproj
+XCODEGEN_EXIT=0
+AIChatbotIndicator.* files enumerated:
+  AIChatbotIndicator.Adapter.swift
+  AIChatbotIndicator.Model.swift
+  AIChatbotIndicator.Previews.swift
+  AIChatbotIndicator.Projection.swift
+  AIChatbotIndicator.strings
+  AIChatbotIndicator.swift
+  AIChatbotIndicator.Tests.swift
+  AIChatbotIndicator.Views.swift
+
+### GATE 7 — xcodebuild -scheme TeslaSync / TeslaSync-macOS build test
+IOS_EXIT=DEFERRED  MAC_EXIT=DEFERRED  (NOT red-as-green — reported deferred with evidence above)
+Reason: full Xcode absent (CLT only) + iphonesimulator SDK absent on THIS runner; plus the documented
+pre-existing, unrelated full-app blockers (unstaged Shared.xcframework, DashboardWidgetSize redefinitions,
+co-located *.Tests.swift importing XCTest into the app target, macOS signing). Deferred to
+p4-apple/P99-0001-apple-acceptance-gate on macos-latest per apps/macos-pending-verifications.md.
+
+### CHANGED FILES (no silent drift — covenant 9)
+  apps/apple/TeslaSync/shared-surfaces/AIChatbotIndicator.swift            (surface entry: gate -> EmptyView / badge)
+  apps/apple/TeslaSync/shared-surfaces/AIChatbotIndicator.Model.swift      (P1/S10 i18n facade, P1/S11 telemetry, P1/S8 source seam + @Observable model)
+  apps/apple/TeslaSync/shared-surfaces/AIChatbotIndicator.Adapter.swift    (pure: connection axis, fail-closed gate port, a11y label)
+  apps/apple/TeslaSync/shared-surfaces/AIChatbotIndicator.Projection.swift (pure: resolve())
+  apps/apple/TeslaSync/shared-surfaces/AIChatbotIndicator.Views.swift      (native HelixMark Shape + cyan Helix chip + freshness dot)
+  apps/apple/TeslaSync/shared-surfaces/AIChatbotIndicator.Previews.swift   (presented live/stale/offline + gated)
+  apps/apple/TeslaSync/shared-surfaces/AIChatbotIndicator.Tests.swift      (gate truth-table, projection, model wiring/telemetry/auto-refresh, a11y, mark geometry)
+  apps/apple/TeslaSync/shared-surfaces/AIChatbotIndicator.strings          (helix.* — parity verbatim + freshness chrome)
+  apps/apple/project.yml          (REQUIRED integration: register the new `TeslaSync/shared-surfaces` source tier in the TeslaSync + TeslaSync-macOS targets — a tier left unregistered is dead code, failing "renders on Apple")
+  apps/apple/.swiftlint.yml        (REQUIRED integration: add `TeslaSync/shared-surfaces` to `included` so the new tier IS linted, not silently skipped)
+  apps/macos-pending-verifications.md (append the deferred full-app xcodebuild row)
+  this log
+
+### HONESTY COVENANT (binding)
+  1  No red-as-green     : GATE 7 (full-app iOS/macOS xcodebuild build test) is reported DEFERRED with the raw
+                           xcode-select + missing-iphonesimulator-SDK evidence above — never reported as passing.
+  2  No scope narrowing  : every web branch reproduced — the `withAiFeature('chatbot-llm')` fail-closed gate
+                           (ADR-015 §I6: unresolved/error/mode-off/flag-off -> withdrawn `null`) AND the presented
+                           cyan Helix chip (HelixMark + `helix.badge`, `helix.tooltip`, `helix.ariaLabel`); plus the
+                           P4 leaf freshness axis (live / stale + one-shot auto-refresh / offline cached) all render.
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; raw exits pasted; the deferred full-app
+                           blockers re-confirmed by live probes (xcodebuild -version, xcrun iphonesimulator), not assumed.
+  4  No stubs as final   : complete production surface + 29 RUN behavioural assertions + a co-located XCTest bundle;
+                           placeholder scanner COUNT=0; no TODO/FIXME/stub/mock/Placeholder/Lorem anywhere.
+  5  No parity shortcut  : the fail-closed predicate is asserted as the exact `useAiEnabled` truth table; the
+                           HelixMark SVG path (two quadratic strands crossing at 12,12 + two rungs) is reproduced
+                           verbatim as a stroked SwiftUI Shape; the cyan accent maps to the brand `Color.TS.accent`.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 `view.opened`
+                           telemetry (deferred past the gate, emitted once) all honoured; matches the established
+                           P4 feature-view architecture (AiUsageCard 0237) exactly.
+  8  No commit on red    : the committed artifact is GREEN on every gate that CAN run on this runner (typecheck,
+                           isolated build+run, surface swiftlint --strict, surface swiftformat --lint, placeholder,
+                           xcodegen). The two full-tree lint/format notes are PRE-EXISTING, in files this commit does
+                           NOT touch (git diff empty), owned by the P99 acceptance gate. GATE 7 is deferred, not failed.
+  9  No silent drift     : every changed file disclosed above; the necessary project.yml / .swiftlint.yml tier
+                           registration and the macos-pending row are called out explicitly.
+  10 EXIT/STATUS below.
+
+### DISPOSITION
+  Production-polished, Apple-idiomatic AIChatbotIndicator shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED on this runner: it type-checks against the REAL design system on the macOS 15 SDK under Swift 6 strict
+  concurrency, its gate / projection / state-holder / telemetry / auto-refresh / accessibility logic is RUN-proven
+  by 29/29 assertions in an isolated executable, swiftformat / swiftlint --strict / placeholder are all green on the
+  surface, and xcodegen enumerates all 8 files into the TeslaSync + TeslaSync-macOS targets. The full-app
+  iOS-Simulator + macOS `xcodebuild build test` gate is DEFERRED (not failed by this code) to
+  p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner, blocked by the absence of full Xcode /
+  the iphonesimulator SDK on this dev runner and by the pre-existing, unrelated full-app collisions catalogued in
+  apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

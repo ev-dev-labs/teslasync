@@ -1,0 +1,120 @@
+=== P4 Feature view 0173 PedalUsage (Apple) ===
+Surface : PedalUsage  (features/driving/components/driving-dynamics/PedalUsage.tsx → SwiftUI parity)
+Output  : apps/apple/TeslaSync/feature-views/PedalUsage.{Model,Adapter,swift,Views,States,Previews,Tests,ViewTests}.swift + PedalUsage.strings
+Host    : macOS (Darwin, arm64). Full Xcode 26.5 (Build 17F42) present at /Applications/Xcode.app;
+          active `xcode-select -p` was /Library/Developer/CommandLineTools, overridden for builds
+          via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer.
+
+--------------------------------------------------------------------------------
+SURFACE SCOPE (the 9 files this prompt owns) — all host-runnable gates GREEN
+--------------------------------------------------------------------------------
+
+[1] swiftc -typecheck — iOS 18 simulator SDK, Swift 6 -strict-concurrency=complete
+    cmd: swiftc -typecheck -sdk $(xcrun --sdk iphonesimulator --show-sdk-path) \
+         -target arm64-apple-ios18.0-simulator -strict-concurrency=complete \
+         <Sources/Components+Design closure> <Tokens.swift> <PedalUsage production files>
+    IOS_TYPECHECK_RC=0
+
+[2] swiftc -typecheck — macOS 15 SDK, Swift 6 -strict-concurrency=complete
+    cmd: swiftc -typecheck -sdk $(xcrun --sdk macosx --show-sdk-path) \
+         -target arm64-apple-macos15.0 -strict-concurrency=complete <same inputs>
+    MACOS_TYPECHECK_RC=0
+
+[3] Isolated SwiftPM build (production library, swift-tools 6.0 / Swift 6 language mode)
+    A scratch package named "TeslaSync" containing the shared component closure
+    (Sources/Components + Sources/Design, minus UnitFormatters.swift which needs the
+    KMP `Units` facade) + the generated design Tokens + the 6 PedalUsage production
+    files (incl. Previews with the #Preview macro, which expands under full Xcode).
+    cmd: DEVELOPER_DIR=…/Xcode swift build --target TeslaSync
+    Build of target: 'TeslaSync' complete!
+    SPM_BUILD_RC=0
+
+[4] Isolated SwiftPM tests — adapter unit + state-holder + accessibility + per-state view render
+    PedalUsage.Tests.swift     : PedalFormat (web fmtNumber parity), PedalUsageProjector
+                                 (gauge clamp/decimals/unit %/—/fill/channel, brake active/
+                                 inactive/nil), PedalTelemetryInput.hasAny, PedalUsageModel
+                                 phase matrix incl. web `hasAny`-false→empty, refresh delegation,
+                                 stale one-shot auto-refresh, offline no-refresh, view.opened once,
+                                 PedalUsageAccessibility summaries.
+    PedalUsage.ViewTests.swift : ImageRenderer materializes every state — content / content-active /
+                                 content-partial / empty / loading / error / stale / offline.
+    cmd: DEVELOPER_DIR=…/Xcode swift test
+    Executed 33 tests, with 0 failures (0 unexpected)
+    SPM_TEST_RC=0   (33/33 PASS)
+
+[5] swiftlint --strict  (repo apps/apple/.swiftlint.yml)
+    cmd: swiftlint lint --strict --no-cache <8 PedalUsage swift files>
+    Done linting! Found 0 violations, 0 serious in 8 files.
+    LINT_EXIT=0
+
+[6] swiftformat --lint  (repo apps/apple/.swiftformat)
+    cmd: swiftformat --lint <8 PedalUsage swift files>
+    0/8 files require formatting.
+    FORMAT_EXIT=0
+
+[7] placeholder / stub gate  (apps/tools/check-placeholders.ps1, ADR-011)
+    Literal gate path `apps/apple/TeslaSync/feature-views/PedalUsage` is a name PREFIX (not a
+    real file/dir) → the script's `Test-Path` is false → it scans nothing and returns clean.
+    Ran a REAL per-file scan of all 8 swift files instead for honest evidence:
+      PLACEHOLDER_COUNT=0 / PLACEHOLDER_ALLOWED=0 for every file (0 opt-out markers).
+    Manual grep for TODO|FIXME|XXX|coming soon|placeholder|lorem ipsum|not implemented|stub|mock: NONE.
+    PLACEHOLDER_EXIT=0
+
+[8] xcodegen generate (project wiring)
+    cmd: DEVELOPER_DIR=…/Xcode xcodegen generate --spec project.yml  → Created project (RC=0)
+    All 8 PedalUsage swift files enumerated into the TeslaSync (iOS) and TeslaSync-macOS
+    source build phases (the `TeslaSync/feature-views` directory glob). Generated .xcodeproj
+    removed afterwards (it is a build artifact, not committed).
+    XCODEGEN_RC=0
+
+--------------------------------------------------------------------------------
+FULL-APP GATE (xcodebuild build test) — BLOCKED (macOS-pending, pre-existing/unrelated)
+--------------------------------------------------------------------------------
+The prompt gate's `xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,
+name=iPhone 16' build test` (and the macOS scheme) cannot complete in this checkout. The
+blockers are pre-existing, repo-wide, and UNRELATED to the PedalUsage surface — identical to
+the already-tracked ToolCard (P-0010), AlertMessageEditor (0180) and FSMTimelineChart (0231)
+rows in apps/macos-pending-verifications.md:
+
+  B1. KMP `Shared.xcframework` is absent — `apps/apple/Frameworks/` holds only `.gitkeep`.
+      It is a git-ignored binary staged by `Scripts/build-shared-xcframework.sh`, wired as an
+      Xcode pre-build Run Script that runs `cd apps/shared && ./gradlew :core:assembleSharedXCFramework`.
+      Invoking xcodebuild here was OBSERVED launching that Gradle/Kotlin-Native build
+      (:core:assembleSharedXCFramework) — i.e. the gate requires the full KMP toolchain + a
+      multi-minute Gradle build, deferred to a macos-latest runner. (Attempt was bounded and
+      stopped; no Shared.xcframework was produced; no slot-108 build processes left running.)
+  B2. Co-located `*.Tests.swift` / `*.ViewTests.swift` (173 files, incl. PedalUsage.Tests.swift)
+      live under `TeslaSync/feature-views/`, which project.yml lists as an APP-target source path.
+      They `import XCTest` + `@testable import TeslaSync` into the app target — a pre-existing
+      parallel-merge wiring collision affecting every surface, not just this one.
+  B3. `struct DashboardWidgetSize` is redefined 15× across Sources/DashboardWidgets/* +
+      TeslaSync/dashboard-widgets/* (pre-existing parallel-merge duplicate-symbol collision).
+  B4. macOS development code-signing identities are not provisioned on this host.
+
+Per apps/macos-pending-verifications.md these are "deferred artifact verifications", NOT
+unfinished work: the surface code is complete and every host-runnable gate above is green.
+The full-app build+test is deferred to `p4-apple/P99-0001-apple-acceptance-gate` (macos-latest,
+with signing identities + a staged Shared.xcframework).
+    IOS_EXIT=BLOCKED   (B1–B4; surface scope shows zero PedalUsage/feature-views errors)
+    MAC_EXIT=BLOCKED   (B1–B4)
+
+--------------------------------------------------------------------------------
+PARITY NOTES (web → native)
+--------------------------------------------------------------------------------
+- Data: useDriveDynamicsLatest → PedalUsageSource (P1/S8 seam). pedal_position→throttlePercent,
+  brake_pedal_position→brakePercent, brake_pedal_active→brakeActive (all optional, web
+  `typeof === 'number'|'boolean' ? … : null`).
+- Gauges: web RadialGauge → native PedalRadialGaugeView. centre = fmtNumber(clamp(0..100), d)
+  with d = integer?0:globalPrecision(2); unit = present?"%":"—"; arc = clamp/100. Throttle tint
+  #06b6d4→token .accent, brake #ef4444→token .danger (theme-aware).
+- Brake status: web Badge danger/success → TSBadge; nil brake_pedal_active → web falsy → Inactive.
+- Empty: web `hasAny ? <Grid/> : <EmptyState/>` → model derives hasContent=data.hasAny; the
+  "No pedal telemetry received yet" empty state renders when no signal resolved.
+- States: loading / empty / error(+retry) / stale(chip+1-shot auto-refresh) / offline(cached+chip).
+- i18n: every web string + native chrome key resolved through PedalUsageStrings (table
+  "PedalUsage", P1/S10) — no English literals in code. Telemetry: view.opened "PedalUsage" (P1/S11).
+- a11y: VoiceOver labels/values on each gauge + brake status + surface summary; Dynamic Type via
+  tokens; Reduce-Motion honored in the ring fill.
+
+EXIT=1
+STATUS=BLOCKED

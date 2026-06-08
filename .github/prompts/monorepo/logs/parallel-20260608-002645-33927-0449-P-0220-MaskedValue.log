@@ -1,0 +1,108 @@
+I'll start by exploring the repository structure and the web source to understand what I'm reproducing, plus check tool availability.
+
+Key findings: Web source is a privacy primitive (mask + reveal + copy + audit + auto-hide). Xcode is **not** installed (only CommandLineTools) — `xcodebuild` errors, but `swift`, `swiftlint`, `swiftformat` are available. There's an existing `apps/apple` Swift codebase. Let me explore its conventions.
+
+Structure clear: I need to create `apps/apple/TeslaSync/shared-surfaces/` (doesn't exist yet). Let me study the infrastructure (tokens P1/S9, i18n P1/S10, state holders P1/S8, diagnostics P1/S11) and existing patterns.
+
+The feature-views use a multi-file convention (`.swift`, `.Model`, `.Adapter`, `.Views`, `.Previews`, `.Tests`, `.strings`). Let me study a representative one plus the core infrastructure (tokens, i18n, diagnostics, state holders) and the project config.
+
+Now I deeply understand the multi-file convention. `AcDcStatsPanel` is my template. MaskedValue is presentational but I'll follow the same leaf contract (input snapshot carrying value + parent lifecycle). Let me read the masking logic to port, the design tokens, the remaining file-type templates, and project config.
+
+I have the masking algorithm to port. Now let me read the design tokens and the remaining template files (Views, Previews, Tests, strings) plus the project config to understand file inclusion and test wiring.
+
+Important findings: project.yml's app targets source `TeslaSync/dashboard-widgets` and `TeslaSync/feature-views` but **not** `TeslaSync/shared-surfaces`. Allowed-files restricts me to `shared-surfaces/MaskedValue.*` + the log, so build wiring is owned by the P4-core dependency. Let me check git state, the design tokens, and how co-located `.Tests.swift` files are structured.
+
+Now I understand the full convention. Critical note: `shared-surfaces/` is **not** wired into project.yml, and my allowed-files are restricted to `MaskedValue.*` + log — so build-wiring is owned by the P4-core dependency. And Xcode isn't installed, so `xcodebuild` can't run regardless. Let me inventory the available design tokens and shared components I must reuse, and check tooling.
+
+`pwsh`, `xcodegen`, `swiftlint`, `swiftformat`, `swift` all available; only `xcodebuild` is blocked (no Xcode). Let me read the full token API and locate the shared components I'll reuse (`TSGlassPanel`, `TSButton`, `TSFadeIn`, `TSSkeleton`, copy affordance).
+
+There's already a shared `TSCopyButton` (web `CopyButton` parity) and a clipboard helper — I must reuse those. Let me read the exact APIs for `TSCopyButton`, `TSButton`, `TSGlassPanel`, the feedback states, and motion, so I compose correctly.
+
+Key discovery: there's already an atomic `TSMaskedValue` in `Components/UI/Utility.swift` — that's the **component-library** version the prompt's "Out of Scope" excludes. My P4 *shared surface* is the richer `MaskedValue` (all variants, reveal+audit+auto-hide, copy, full leaf-state contract). I'll name my public type `MaskedValue` to avoid collision. Let me confirm no name clash and read the remaining component/config APIs.
+
+I now have nearly everything. Let me read the motion + typography APIs and the previews format, then I'll start building.
+
+I now have everything I need: the masking algorithm, all token APIs, shared components (`TSGlassPanel`, `TSButton`, `TSCopyButton`, `TSSkeleton`, `TSQueryError`, `TSFadeIn`), the multi-file convention, lint/format rules, and the gate. Let me record the plan and todos, then build.
+
+Before writing the Swift, let me cross-check the masking algorithm against the **real TS** `maskFor` to capture exact ground-truth vectors for my tests.
+
+tsx works; the relative path was wrong. Let me use an absolute import path.
+
+Confirmed — my derivation matches the real TS `maskFor` byte-for-byte across all 21 vectors. Now I'll build the surface. Starting with the pure, testable adapter (the masking port).
+
+Adapter written. Let me immediately validate it compiles and produces output identical to the TS reference by building a tiny harness with `swiftc`.
+
+Let me diff the Swift output against the TS reference programmatically to confirm exact parity.
+
+Adapter is byte-identical to the TS source and compiles cleanly. Now the Model (state-holder, telemetry, audit, reveal scheduler, projection, i18n facade).
+
+Model written. Let me typecheck Adapter + Model together (with strict Swift 6 concurrency, matching the project) using a temporary slug stub for the View symbol.
+
+Model typechecks cleanly under Swift 6 strict concurrency. Now the main surface view and its subviews.
+
+Let me wire the source key `mask.copy` to the copy button's accessibility label (genuine parity), then write the strings catalog.
+
+Now the previews and the comprehensive test suite. Let me write both.
+
+All 7 files written. Now verification — swiftformat lint, swiftlint --strict, line-length, and placeholder check on the new files.
+
+swiftformat wants my computed property bodies wrapped. Let me auto-format the new files (swiftformat is the canonical formatter), then review the diff and re-lint.
+
+swiftformat passes (0/6 need formatting). Now swiftlint `--strict` on the new files.
+
+swiftlint scanned the whole project and found 1 violation. Let me isolate which file/line it's in.
+
+The only violation is a **pre-existing** one in `LifetimeStatsWidget.Adapter.swift` (unrelated to my task, outside my allowed files). My files show zero. Let me confirm by linting only my dir with a scoped config.
+
+My Model file is 448 lines, exceeding swiftlint's default `file_length` (400). The clean fix that fits the multi-file convention and my allowed-files glob (`MaskedValue.*`): extract the infrastructure seams into `MaskedValue.Seams.swift`. Let me view the reformatted sections to move.
+
+I'll extract the seams into `MaskedValue.Seams.swift` (matches my allowed `MaskedValue.*` glob) to bring the Model under 400 lines.
+
+Now remove those four sections (and the now-unused `OSLog` import) from the Model via a precise content deletion.
+
+Model is now 358 lines. Let me re-run both linters on all 7 files.
+
+The scoped config didn't restrict (swiftlint re-scanned all). The single violation is the same pre-existing `LifetimeStatsWidget.Adapter.swift` one. Let me lint **only** my 7 files explicitly with a config that has no `included`.
+
+All 7 files: **0 swiftlint violations**, **0 swiftformat issues**. Let me re-typecheck the logic (Adapter+Model+Seams) after the refactor, and run the placeholder gate.
+
+Logic typecheck and placeholder gate both pass (EXIT=0). The SwiftUI view files were syntax-validated by swiftlint/swiftformat. Let me attempt a deeper SwiftUI typecheck of the view layer against the real tokens + shared components for extra confidence.
+
+Only `TSCard` is missing (used by sibling skeletons). Let me add `Cards` + its deps (`Typography`, `Badges`, `Buttons`) and re-run.
+
+Just `tsGlassPanel` now (from `TSMaterial`). Adding it.
+
+The **entire view layer typechecks cleanly** under Swift 6 strict concurrency against the real design tokens and shared components (macOS 15 target). Let me also typecheck the test file against the real types.
+
+Duplicate filename — `*.swift` already includes it. Re-run without the explicit arg.
+
+The only error is `no such module 'XCTest'` — XCTest isn't shipped with CommandLineTools (same root cause as the xcodebuild blocker). Let me confirm XCTest's absence, then I've maximized verification.
+
+Confirmed: only `XCTestSupport` private framework exists — full `XCTest.framework` requires Xcode. The XCTest target and `xcodebuild` are both blocked by the same missing-Xcode condition. 
+
+I've maximized runner-capable verification. Now let me generate the gate log honestly by running the real gate commands and capturing actual output + exit codes.
+
+`$?` captured `head`'s exit, not xcodebuild's. Let me regenerate the full log using `PIPESTATUS` to capture real exit codes for every step.
+
+Gate steps captured with real exit codes. Now append the supplementary runner-capable verification evidence and the BLOCKED rationale + final status.
+
+The `/tmp/*_out.txt` files were cleared. Let me regenerate both mask outputs, re-diff, and patch section [A] of the log.
+
+Parity is identical. Let me patch section [A] of the log with the correct PASS result and sample vectors.
+
+Now append the final BLOCKED summary with the acceptance-criteria mapping and the required `EXIT=`/`STATUS=` trailer.
+
+Log finalized (ends with `EXIT=1` / `STATUS=BLOCKED`). Let me clean up temp artifacts, do a final review of the delivered files, and verify git state before committing.
+
+There are pre-existing modifications to `AIUsageCard.*` (feature-views) that I did **not** touch — those were already dirty in the working tree. Let me confirm their nature and ensure I scope my commit to only my files.
+
+Those are a pre-existing, unrelated rewrite (0203→0237 AiUsageCard) already dirty in the tree — not mine. I'll scope my commit strictly to the MaskedValue artifact + the log.
+
+Exactly the 8 artifact files + log are staged (no unrelated files). Committing.
+
+Committed as `eb7b82c4f`, scoped to only my artifact + log. Let me finalize tracking and do a last sanity check on the committed tree.
+
+Let me update the plan status and wrap up.
+
+Task complete. Here's the summary.
+

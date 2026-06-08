@@ -1,0 +1,166 @@
+I'll start by understanding the repository structure and verifying both the web source and the Apple app infrastructure exist, plus checking whether Apple toolchain is available on this runner.
+
+Key findings: web source exists (18KB), `apps/apple` exists, **Xcode is NOT installed** (only CommandLineTools) so `xcodebuild` cannot run, but Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me explore the Apple app structure deeply to understand conventions and the build system.
+
+Well-established XcodeGen-based monorepo with a clear per-surface file convention (`.swift`, `.Adapter.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`). Let me read the web source spec, check for any existing LiveTelemetry files, and inspect the build config + tooling.
+
+Now I have the full web spec. Let me examine the web types for exact field shapes, the build/lint config, the placeholder checker, and find a representative sibling feature-view to match conventions exactly.
+
+Now let me understand the shared infrastructure (GlassPanel/Badge/Skeleton equivalents, P1/S8 state holders, S9 tokens, S10 i18n, S11 diagnostics), the build config, and the placeholder patterns.
+
+Now let me read the shared component equivalents (GlassPanel, Badge, Skeleton), the state-holder facade, design tokens, i18n facade, diagnostics, and pick a complete sibling feature-view as a template.
+
+Excellent — clear component mapping. Now let me read the state-holder facade (P1/S8), units facade, typography, diagnostics (P1/S11), and the i18n approach. Let me also find the dashboard parent that consumes these data shapes.
+
+Let me read a complete sibling (AlertsSection — has the full file set) and locate the diagnostics `view.opened` contract.
+
+The AlertsSection template is exactly the right model. Let me read its Model (state holder + `view.opened` emission), Views, Previews, strings, Tests, plus the StateHolderModel base to capture the full convention.
+
+The template is crystal clear. Let me read the remaining template files (strings, Previews, Tests) plus the design tokens and typography to capture exact token/font names.
+
+Now I have the full convention. Let me read the design tokens, motion/typography components, the web formatting helpers (`fmtNumber`/`fmtInt`/`cleanNil`), and find a sibling that uses the units facade so I match the conversion idiom.
+
+Let me read the generated design tokens (colors/spacing/radius/fonts), the units idiom from ChargingSection.Adapter, the motion `TSFadeIn` signature, and the typography components.
+
+I now have the full token vocabulary (`Color.TS.*`, `TSSpacing.{xs,sm,md,lg,xl,x2xl…}`, `TSRadius`, `Font.TS.{caption,body,bodySm,panel,section,title…}`) and `TSFadeIn(delay:)`. Let me confirm the units idiom in a Model and the typography components, then I'll have everything.
+
+Key insight: adapters implement **local, deterministic SI converters** (pinned canonical factors) rather than routing through Shared — perfect for a pure, testable adapter. Let me read DrivingTab's converter block and find the `UnitPreferences.metric` definition plus any pressure-conversion precedent.
+
+I now have everything needed. Before building, let me thoroughly verify whether Xcode is truly unavailable (the Honesty Covenant requires real evidence), and set up tracking.
+
+`/Applications/Xcode.app` exists but isn't selected. I can point tools at it via `DEVELOPER_DIR` without sudo. Let me verify Xcode is usable and whether the required `Shared.xcframework` dependency is present (the app target needs it to build).
+
+Critical: Xcode 26.5 is usable and an "iPhone 16" simulator exists — but `Shared.xcframework` (the KMP core the app links) is **missing** (only `.gitkeep`). The app target can't build/link without it. Let me check whether it can be produced (KMP/Gradle) or if that's an environment gap.
+
+A build script and Gradle wrapper exist, and Java is present. Building the KMP framework could unblock the full gate. Let me check the script and whether Java actually works, then I'll kick the framework build off in the background while I write code.
+
+JDK 17 + Xcode 26.5 are both present, and the build script just runs Gradle. I'll kick off the KMP `Shared.xcframework` build in the background now and write all the LiveTelemetry code while it compiles. Let me set up tracking and launch the build.
+
+Build launched. Let me check it started cleanly, then begin writing the Adapter (the file I can verify standalone).
+
+Gradle is compiling Kotlin/Native for iOS — promising. Let me read the lint/format configs so my code passes `swiftlint --strict` and `swiftformat --lint` on the first try, then I'll write the Adapter.
+
+Clear style rules (≤120 code width, before-first wrapping, no explicit `self`, `isEmpty` over `count==0`, no 1-char identifiers, 4-space indent). Let me establish the lint/format baseline on the current tree, then write the Adapter.
+
+Noted: there's 1 **pre-existing, out-of-scope** format issue (`ActionBuilder.Previews.swift`) unrelated to my task — I'll keep my own files clean and document that honestly. Framework build continues in the background. Now writing the Adapter (pure, standalone-verifiable core).
+
+Adapter written. Let me verify it compiles standalone (Foundation-only) with `swiftc`, and check the framework build progress.
+
+Framework build is nearly done (debug XCFramework written, linking release). One adapter fix needed — the `switch` needs to be a returned expression. Let me fix `cleanNil` more cleanly.
+
+Adapter typechecks cleanly under Swift 6. Let me write a standalone harness to actually exercise the projection logic (proving "cached → projection" correctness) before building the rest on top.
+
+Top-level expressions need `main.swift` when compiling multiple files. Let me rename and rerun.
+
+Swift 6 isolation on the global counter. Let me mark it `nonisolated(unsafe)` (single-threaded harness) and rerun.
+
+All 73 projection assertions pass — the adapter's web-parity logic is verified. Let me check the framework build, then write the Model.
+
+Framework still linking (good progress). Now writing the Model (state holder + diagnostics + i18n facade + source).
+
+Model written. Now the Views file — all panel subviews, state chrome, and the tone→token palette. This is the largest UI file.
+
+Now the main view that composes everything and switches over phase.
+
+Now the Previews (one per state) and the strings catalog.
+
+Now the Tests file — adapter projection tests, model state/telemetry tests, and accessibility tests.
+
+All 7 files written. Let me update tracking, check the framework build, and format/lint my new Swift files.
+
+The `Shared.xcframework` build **succeeded and is staged** — the full xcodebuild gate is now possible! swiftformat reformatted 3 files. Let me confirm lint passes on my files, re-verify the adapter still compiles, and confirm the framework.
+
+swiftformat passes; framework staged. swiftlint flags `file_length` (>400 lines, escalated by `--strict`) on 3 files. Siblings split large files to stay under 400 — let me confirm that's the convention, then split mine the same way.
+
+Confirmed — all siblings stay ≤400 lines; only my 3 files exceed it. I'll split them along `// MARK:` boundaries (the sibling convention). Let me get the exact section boundaries in the current formatted files.
+
+I have precise boundaries. Let me write a robust Python splitter (brace-balanced, MARK-aware) to carve each oversized file into sibling-style sub-files by declaration name.
+
+All files now ≤369 lines. Let me format, lint, and re-verify the (now multi-file) adapter logic still compiles and passes the harness.
+
+0 swiftlint violations across all 12 files. Let me confirm swiftformat --lint is clean and re-run the projection harness against the now-split adapter files.
+
+Format-lint clean, strict-lint clean, and all 73 projection assertions still pass post-split. Before the expensive full build, let me check for type-name collisions with the rest of the module (I used some generic `Telemetry*` names).
+
+One collision: `TireReading` already exists in `dashboard-widgets`. Let me rename mine to `TelemetryTireReading`.
+
+Rename done. Let me re-verify lint/harness on the edited files and generate the Xcode project (the framework is staged, so the app can now link).
+
+Project generated; harness + lint still clean after rename. Now the critical step — the full iOS `build test` gate. Let me launch it in the background (trial run first to catch any integration errors cheaply).
+
+Build launched. While it runs, let me verify `check-placeholders.ps1` passes on my files and ensure the gate log directory exists.
+
+check-placeholders passes (0 placeholders). Let me monitor the iOS build progress.
+
+Build failed on `import XCTest` — the `*.Tests.swift` files (including pre-existing siblings like `ActionBuilder.ModelTests.swift`) are being compiled into the **app** target, which can't import XCTest. This is a project-configuration concern, not my code. Let me read the full `project.yml` to see how test files are meant to be separated.
+
+The unit-test target sources from `Tests/Unit`, but the `*.Tests.swift` files live in `feature-views/` (compiled into the **app** target) with no `excludes` — a pre-existing project-config gap affecting all surfaces. Let me read the documented status and confirm.
+
+This is the decisive finding. The predecessor `p4-apple/feature-views/P-0010-ToolCard` documents **exactly** this: the full-app `xcodebuild build test` is blocked by *pre-existing, unrelated* issues (co-located `*.Tests.swift` importing XCTest into the app target, duplicate `DashboardWidgetSize`/`PowerFlowConnection`, macOS signing), and the established protocol is **isolated surface verification + defer the full-app gate to the macOS acceptance gate**. Let me enumerate every error to confirm none originate from my files.
+
+The full build aborts early on the first sibling test file (`ActionBuilder.ModelTests.swift`) — the documented pre-existing blocker — before reaching my files. To prove my implementation compiles in the real app context, let me build the app target with the co-located test files excluded (a non-destructive diagnostic).
+
+While the diagnostic build runs, let me set up an isolated SwiftPM package to actually **run my XCTest suite** for the logic + model + accessibility (matching the ToolCard precedent's "isolated SwiftPM build + tests"). The views are covered by the diagnostic xcodebuild.
+
+Now let me run the isolated test suite with the Xcode toolchain.
+
+The package needs the `LiveTelemetry` view type (which the Model extends with `surfaceSlug`); I deliberately excluded the View file. Let me add a minimal stand-in to the shim so the logic/model tests can run.
+
+**46 isolated tests pass, 0 failures** under Swift 6 — adapter, model, and accessibility all green. Now let me check the diagnostic app build (verifying my view files compile against the real design system).
+
+Diagnostic build finished with errors **only** in `dashboard-widgets` (the documented pre-existing `DashboardWidgetSize`/`PowerFlowConnection` duplicates) — **zero from LiveTelemetry**. Let me rigorously confirm: every error file and whether my files typechecked.
+
+Confirmed: the only feature-views error file is the sibling `WindowStatusDetail.Adapter.swift` (ambiguous-type errors from the duplicates) — **zero `LiveTelemetry.*` errors**. Let me tie these to the documented duplicates and run the macOS leg diagnostic to confirm cross-platform cleanliness of my files.
+
+Conclusive: the redeclaration errors are `DashboardWidgetSize` (named verbatim in the predecessor doc), `DashboardWidgetRegistration`, `WindowState`, `WeeklyDigestDTO` — all pre-existing parallel-merge duplicates — and **0 LiveTelemetry errors** in the iOS app build. Let me wait for the macOS diagnostic and capture whole-tree lint/format exits for the official log.
+
+check-placeholders on the gate path = EXIT 0; my files independently scanned clean. Whole-tree swiftformat flags only the pre-existing `ActionBuilder.Previews.swift`. Let me get the whole-tree swiftlint exit and check the macOS diagnostic.
+
+Whole-tree swiftlint: only 1 pre-existing violation (`LifetimeStatsWidget`, not mine); **0 LiveTelemetry violations**. The macOS diagnostic log is missing (launch didn't take). Let me re-launch it cleanly.
+
+macOS diagnostic launched. Let me wait for it to compile and check for any LiveTelemetry errors.
+
+The macOS build log is still empty after ~2.5 min — let me check if the process is alive and what it's doing (possibly stuck on the Gradle pre-build phase).
+
+The macOS `xcodebuild` (PID 50659) is running but block-buffering output to the file (no TTY), still in the Gradle pre-build phase. Let me wait for it to complete.
+
+The macOS build output is fully buffered (0 lines) and slow — likely Gradle-daemon contention from the parallel builds. My logic already compiles on macOS (the isolated `swift test` ran on `arm64-apple-macos`), and the iOS diagnostic conclusively proved the views compile against the shared design system (used identically by both targets). Let me stop this wait and check the macOS build's real state.
+
+The macOS build is stuck in the Gradle pre-build phase (0 object files, 0 output) — Gradle-daemon contention from the parallel builds. Let me kill it and retry once with a PTY wrapper (to defeat output buffering) and a bounded window.
+
+Retry launched via PTY. Let me poll it.
+
+The macOS app-level `xcodebuild` consistently hangs in the **Gradle pre-build Run-Script phase** (an environment/daemon-contention issue the build script itself warns about) — not a code issue. I already have conclusive macOS evidence: the isolated SwiftPM suite compiled + ran my logic on `arm64-apple-macos` (46 tests), and the iOS diagnostic proved the views compile against the shared design-system sources (identical for both targets). Let me stop the hung build and clean up.
+
+Let me list the PIDs explicitly, then kill each.
+
+Processes cleaned up. Now I'll generate the **official gate log** honestly. Let me re-run the literal iOS `build test` (timeout-bounded) to capture a genuine exit code and fresh output, while I assemble the rest.
+
+While the iOS gate runs, let me capture fresh surface-scoped verification outputs for the log.
+
+All surface checks green (lint 0, format 0, placeholder 0, 46 isolated tests pass). Let me check the iOS gate re-run.
+
+Literal iOS `build test` re-run: **IOS_EXIT=65**, same pre-existing XCTest-in-app-target failure. Let me confirm zero LiveTelemetry errors in this fresh run, then assemble the official log.
+
+Confirmed: fresh iOS gate fails only on the pre-existing `ActionBuilder.ModelTests.swift` XCTest import — **0 LiveTelemetry errors**. Let me capture the real whole-tree lint/format exit codes and attempt a bounded macOS run for a genuine `MAC_EXIT`.
+
+Both whole-tree host gates are red **only** from pre-existing non-LiveTelemetry files (`LifetimeStatsWidget` function length; `ActionBuilder.Previews` blank line). Let me make one bounded macOS `build test` attempt with a watchdog to capture a real `MAC_EXIT`.
+
+The kill-policy blocks variable PIDs for a watchdog, and I've already conclusively demonstrated the macOS Gradle pre-build hang three times — re-running risks more hangs without new information. I have all evidence. Let me write the authoritative gate log.
+
+I have all evidence. Let me write the authoritative, honest gate log.
+
+The gate log is written. Before committing, let me verify git status — ensuring only my surface files + the log are staged, and that the build artifacts (Shared.xcframework, generated .xcodeproj, Gradle output) are gitignored.
+
+Git state is clean: my 13 files + the log are untracked; build artifacts (`Shared.xcframework`, `.xcodeproj`, Gradle output) are properly gitignored. There are two **pre-existing** `web/*` modifications (not mine) and a stray `nohup.out` — I'll exclude those and stage only my surface files + the log.
+
+All in-scope host-runnable gates are green, matching the predecessor ToolCard's committed macOS-pending workflow. Let me clean up and commit exactly the allowed files.
+
+14 files staged (13 surface + log); pre-existing `web/*` changes excluded. Let me commit with the conventional message plus a transparent note about the deferred full-app gate.
+
+Committed cleanly: **14 files, 2757 insertions** (`3b00aa8cc`), with only my surface files + log — pre-existing `web/*` changes excluded. Let me finalize tracking and clean up temp artifacts.
+
+Final state is clean: my commit `3b00aa8cc` is HEAD; only the two pre-existing `web/*` modifications remain (untouched, not mine); temp artifacts cleaned. Let me confirm all todos are complete.
+
+All 10 todos complete. Here's my honest final summary.
+

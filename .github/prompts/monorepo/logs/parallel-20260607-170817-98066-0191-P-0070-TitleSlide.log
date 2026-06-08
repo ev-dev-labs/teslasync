@@ -1,0 +1,98 @@
+I'll start by exploring the repository structure to understand the context — the web source, the Apple app structure, and the shared infrastructure referenced (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics).
+
+Now let me study existing feature-view patterns and the shared infrastructure. Let me read several files in parallel.
+
+Let me study a complete existing feature-view set (FleetTelemetryHealth) plus the shared infrastructure it depends on.
+
+A `YearReviewWidget` already exists and binds `YearReview` data. Let me study that full set plus the shared facade — it's the most relevant prior art.
+
+The `YearReviewWidget` gives me the exact pattern. Let me read its adapter, tests, previews, strings, plus the shared facade types and the web AnimatedNumber + i18n key.
+
+Tooling check: `xcodebuild` requires full Xcode but only Command Line Tools are present, so the build/test gate can't run here. `swiftlint`/`swiftformat` ARE available. Let me read the shared facade types, project.yml wiring, the placeholder script, and verify SwiftUI importability.
+
+No excludes — feature-views compiles wholesale into the app target, and tests are colocated as `<Name>.Tests.swift` (matching the siblings). Let me check the lint/format/placeholder tooling config and the native feedback components.
+
+I have a complete picture of the patterns, tokens, shared components, i18n facade, telemetry seam, and tooling. Let me record a brief plan and todos, then build the surface.
+
+Now I'll build the surface. Starting with the model (state-holder + telemetry + i18n seams).
+
+Now the presentational sub-views.
+
+Now the main view that wires it together.
+
+Now the previews (per-state, DEBUG-only) and the strings catalog.
+
+Now the test suite (adapter projection, model phases/telemetry, accessibility).
+
+All 7 files created. Now let me normalize formatting with the project's swiftformat (write mode, only my files), then verify with the gate's lint tools.
+
+No changes needed — files already conform. Now the lint gates (swiftformat --lint + swiftlint --strict) on my files.
+
+Both lint gates pass clean (0 violations). Now let me verify the placeholder gate and capture the platform-capability evidence (xcodebuild/SwiftUI availability).
+
+SwiftUI **is** importable under the CLT macOS SDK. That means I can attempt a real standalone `swiftc -typecheck` of the production code (my files + their design/component dependency closure), which is far stronger than lint alone. Let me map the dependency closure's imports first.
+
+None of the dependency files import the KMP `Shared` framework, and my code avoids the heavier tokens. Let me check whether the whole Components/Design layer is `Shared`-free so I can compile a self-contained module for a real typecheck.
+
+The entire Components/Design layer is `Shared`-free (system frameworks only). I can compile a self-contained module for a genuine typecheck. Let me attempt it.
+
+The only failure is the `#Preview` macro plugin (`PreviewsMacros`), which ships with Xcode, not CLT — a tooling limitation, not a code error. Excluding DEBUG-only preview blocks gives a clean production typecheck.
+
+The Components layer has a few files depending on app-level types (`UnitPreferences`). My files don't use those. Let me find the exact minimal closure my code needs and exclude unrelated files.
+
+Only `UnitFormatters.swift` depends on an external type. Let me compile the whole Components/Design/tokens layer minus that one file, plus my production files.
+
+**Production code typechecks cleanly (EXIT=0)** against the real design tokens + shared Components on the macOS SDK. Now let me verify the test code compiles too (via a temp copy with the module import folded in, since XCTest is available under CLT).
+
+Clean. XCTest is confirmed Xcode-only (absent under CLT), and the placeholder self-test passes. Let me verify my files pass the placeholder scan directly, and inspect the logs directory + a sibling log to match conventions.
+
+The sibling log reveals the established pattern: full Xcode 26.5 **is** installed at `/Applications/Xcode.app` (accessed via `DEVELOPER_DIR` override), the full app build is *deferred* (Shared.xcframework unstaged), and verification is done via **real iOS-18 + macOS-15 SDK typechecks + executed XCTest via SwiftPM**. Let me verify Xcode is on this runner and read the rest of the sibling log to match conventions.
+
+Full Xcode 26.5 + iPhone 16 simulator + iOS 18 SDK **are** present on this runner. The accepted sibling pattern (0005) achieves **STATUS=DONE** via real iOS-18 + macOS-15 SDK typechecks + executed XCTest (SwiftPM), with only the full Xcode app build deferred (Shared.xcframework unstaged). I'll reproduce that rigor. First, the iOS-18 simulator SDK typecheck of the real shipping code.
+
+iOS-18 simulator SDK typecheck passes under Swift 6. Now macOS-15 SDK (Swift 6), plus the DEBUG/preview-macro compile under Xcode.
+
+Both macOS-15 SDK (Swift 6) and the `#Preview` macro compile pass. Now the strongest evidence — **executing** the XCTest suite via a self-contained SwiftPM harness (real production Model/Adapter + Tokens + minimal real-interface shims for the 3 SwiftUI components, never shipped).
+
+**All 14 XCTest methods executed green** (6 adapter + 7 model + 1 a11y, 0 failures). Now the remaining host gates: swiftlint, swiftformat, placeholder scan, xcodegen.
+
+Surface lint is clean (0). The whole-tree run reports 1 violation — let me confirm it's a pre-existing sibling, not mine.
+
+Confirmed: the lone whole-tree violation is the pre-existing sibling `LifetimeStatsWidget.Adapter.swift:141` (same one disclosed in sibling 0005's log) — outside my allowed files. My surface contributes **0** violations. Now swiftformat, placeholder scan, and xcodegen.
+
+swiftformat clean (0/780); literal placeholder command EXIT=0. The directory scan shows 2 hits — let me confirm they're siblings, not mine (my temp-copy scan earlier was COUNT=0).
+
+The 2 placeholder hits are pre-existing siblings (`InfrastructureSection.*`), not mine — my files are clean (literal gate command EXIT=0). Now xcodegen generation and the deferred Xcode app-build evidence (capturing the real Shared.xcframework blocker honestly).
+
+xcodegen clean (EXIT=0); my 42 TitleSlide refs are registered. Shared.xcframework is unstaged (`.gitkeep` only) — the known infra blocker. Now capturing the real deferred-build evidence (not faking green).
+
+Confirmed: the full app build fails **only** due to the unstaged `Shared.xcframework` (KMP core) — `BUILD FAILED`, EXIT=65 — identical to the documented sibling disposition (ADR-012, code-unrelated infra). Every code-level gate is green. Let me gather metadata and write the comprehensive gate log.
+
+My 7 TitleSlide files are the only additions (the 2 modified web files are pre-existing, untouched by me — I'll leave them out of the commit). Let me grab tool versions, then write the gate log.
+
+All evidence gathered. The feature-views path is already registered in both `project.yml` and `.swiftlint.yml`, so the only app-build blocker is the unstaged `Shared.xcframework`. Now writing the comprehensive gate log.
+
+Log written. Now updating todos and committing only my surface files + the log (leaving the pre-existing unrelated web modifications untouched).
+
+Committed as `8b7a69ab` with exactly my 7 surface files + the log; the unrelated pre-existing web modifications were left unstaged. Final verification of the commit contents:
+
+The task is complete. The commit contains exactly the 7 surface files + log (1242 insertions), generated artifacts are cleaned, and the log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0070-TitleSlide.log     | 213 +++++++++++++++++
+ .../feature-views/TitleSlide.Adapter.swift         |  93 +++++++
+ .../TeslaSync/feature-views/TitleSlide.Model.swift | 266 +++++++++++++++++++++
+ .../feature-views/TitleSlide.Previews.swift        |  65 +++++
+ .../TeslaSync/feature-views/TitleSlide.Tests.swift | 204 ++++++++++++++++
+ .../TeslaSync/feature-views/TitleSlide.Views.swift | 250 +++++++++++++++++++
+ .../TeslaSync/feature-views/TitleSlide.strings     |  35 +++
+ .../apple/TeslaSync/feature-views/TitleSlide.swift | 116 +++++++++
+ 8 files changed, 1242 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0070-TitleSlide.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/TitleSlide.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TitleSlide.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TitleSlide.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TitleSlide.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TitleSlide.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TitleSlide.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/TitleSlide.swift

@@ -1,0 +1,73 @@
+=== P4 Dashboard widget 0047 EnergySiteInfoWidget (Apple) ===
+date: 2026-06-08T01:24:23Z
+repo: ev-dev-labs/teslasync   branch: auto/20260607-170817-98066/50
+
+## Runner capability probe
+xcode-select -p: /Library/Developer/CommandLineTools
+swift: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+macOS SDKs: MacOSX.sdk MacOSX15.4.sdk MacOSX15.sdk MacOSX26.5.sdk MacOSX26.sdk 
+iphonesimulator SDK: xcrun: error: SDK "iphonesimulator" cannot be located
+swiftlint: 0.63.3   swiftformat: 0.61.1   xcodegen: Version: 2.45.4
+
+## GATE STEP 1/2 — xcodebuild iOS build+test  (REQUIRED CAPABILITY)
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1   (BLOCKED: requires full Xcode; only CommandLineTools present + no iphonesimulator SDK)
+
+## GATE STEP 2/2 — xcodebuild macOS build+test (REQUIRED CAPABILITY)
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1   (BLOCKED: same — and Shared.xcframework is built by xcodebuild, see apps/macos-pending-verifications.md)
+
+## GATE STEP — swiftlint --strict (host-runnable)
+Done linting! Found 0 violations, 0 serious in 262 files.
+LINT_EXIT=0
+
+## GATE STEP — swiftformat --lint apps/apple (host-runnable)
+0/266 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+## GATE STEP — check-placeholders.ps1 (host-runnable)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+## SUPPLEMENTARY host-runnable verification (proves implementation completeness)
+[1] swiftc -typecheck Shared-free core (view-state+adapter+content) vs real components, macOS SDK -> RC=0
+[2] swiftc -typecheck unit-test logic vs real adapter/view APIs (XCTest shims)        -> RC=0
+[3] swiftc -parse  Shared-coupled model+widget (syntax)                               -> RC=0
+[4] xcodegen generate + target-membership grep: gen RC=0, source refs=36, test refs=6
+    (source files compiled into TeslaSync iOS + TeslaSync-macOS; test into both test bundles)
+
+## IMPLEMENTATION SUMMARY
+Surface: EnergySiteInfoWidget (registry id 'energy-site-info', 2x4 / 1x2 / 4x40).
+Files (apps/apple/Sources/Dashboard/Widgets/):
+  - EnergySiteInfoViewState.swift  : Shared-free value types + view state + registry descriptor
+  - EnergySiteInfoAdapter.swift     : Shared-free JSON decode + projection + state resolution (web fmtNumber/fmtInt parity)
+  - EnergySiteInfoContent.swift     : Shared-free SwiftUI surface — all states + a11y + reduce-motion + previews
+  - EnergySiteInfoWidgetModel.swift : Shared — binds EnergyStore feeds (P1/S8), LoadableState->state, ScreenView telemetry (P1/S11)
+  - EnergySiteInfoWidget.swift      : Shared — top-level surface, .task lifecycle, view.opened telemetry, renders Content
+Tests: Tests/Unit/Dashboard/EnergySiteInfoWidgetTests.swift (22 cases: adapter cached->projection, per-state, descriptor, a11y keys, view smoke).
+States rendered: loading, loaded, empty(noSite/noData), error(retry), stale(chip), offline(chip+cache).
+Data: useEnergy / useTeslaEnergySites / useTeslaEnergySiteInfo via shared EnergyStore — no HTTP in view.
+i18n: 13 widget.energySiteInfo.* keys added to Localization/Localizable.xcstrings (7 source-derived + 6 native chrome); no English literals in code.
+Telemetry: TelemetryEvent.ScreenView(screen='EnergySiteInfoWidget') emitted once on appear (P1/S11).
+
+## BLOCKED rationale (per prompt capability clause)
+The two REQUIRED gate steps (xcodebuild iOS + macOS build/test) cannot execute on this runner:
+  'xcode-select: error: tool xcodebuild requires Xcode, but active developer directory
+   /Library/Developer/CommandLineTools is a command line tools instance'
+No full Xcode, no iphonesimulator SDK, and Shared.xcframework (built by xcodebuild) is absent.
+Per the prompt: 'requires SwiftUI + Swift Charts + MapKit ... If unavailable on the runner -> STATUS=BLOCKED with API evidence.'
+Implementation is COMPLETE and every host-runnable gate is GREEN (LINT/FORMAT/PLACEHOLDER=0) plus the
+supplementary swiftc compile + xcodegen membership proofs above. The xcodebuild build+test is recorded as a
+deferred macOS-pending verification (apps/macos-pending-verifications.md), consistent with ADR-012's macos-latest CI matrix.
+
+IOS_EXIT=1
+MAC_EXIT=1
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+EXIT=1
+STATUS=BLOCKED

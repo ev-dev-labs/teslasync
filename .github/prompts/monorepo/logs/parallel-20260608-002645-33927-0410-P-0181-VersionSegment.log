@@ -1,0 +1,143 @@
+I'll start by exploring the repository structure to understand what exists and what tooling is available.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. `swift`, `swiftlint`, `swiftformat` are available. Let me explore the web source, the existing Apple patterns, and the build setup before deciding anything.
+
+Now let me study the canonical Apple pattern via the recently-modified `AIUsageCard.*` files and the web data dependencies.
+
+The AIUsageCard files are nested. Let me locate them and read the type definitions and changelog hook exports.
+
+The canonical template is the `AiUsageCard.*` family (10 files). Let me read them thoroughly to learn the conventions for state-holders, tokens, i18n, and diagnostics.
+
+Excellent template. Let me read the rest of the family to learn the adapter, projection, chrome, views, tests, and the shared tokens.
+
+Let me read the test files, strings, and locate the shared P1/S9 token definitions (TSSpacing, Color.TS, Font.TS, TSButton, TSSkeleton, TSFadeIn).
+
+Let me read the Previews, AdapterTests, project config, and locate the shared token/component definitions.
+
+Now let me locate the shared P1/S9 tokens/components and understand the build config.
+
+`project.yml` is at `apps/apple/project.yml`. Let me read it plus the design tokens and key shared components.
+
+Let me examine the generated design tokens and the shared components I'll use (Buttons, Motion, Skeleton, and any sheet/modal pattern).
+
+Let me read the Motion/Skeleton components, a sheet-using feature-view for the modal idiom, and the placeholder check script.
+
+Let me look at the sheet/modal idiom in an existing feature-view plus the lint/format/placeholder configs.
+
+Critical config findings: `project.yml` and `.swiftlint.yml` only include `dashboard-widgets` and `feature-views` — NOT `shared-surfaces`. And the prompt's allowed-files restricts me to `shared-surfaces/VersionSegment.*` + the log. Let me rigorously verify the toolchain (Xcode presence, pwsh, whether swiftc can compile SwiftUI against the macOS SDK).
+
+`/Applications/Xcode.app` **IS present** — `xcode-select` just points to CommandLineTools. I can override with `DEVELOPER_DIR` (no sudo needed). And `pwsh` is available. Let me verify the full toolchain works.
+
+Major update: **Xcode 26.5 is fully available**, iPhone 16 simulator is **booted**, `xcodegen` and `pwsh` are present. But the `Shared.xcframework` dependency is missing (only `.gitkeep`) and my target dir `shared-surfaces` isn't wired into `project.yml`/`.swiftlint.yml`. Let me check for any existing `shared-surfaces` references and assess the xcframework build cost.
+
+Let me quickly assess whether the full app build path (KMP `Shared.xcframework` via Gradle) is even feasible here, which determines how the gate can run.
+
+I now have a complete understanding. Summary of the environment:
+- **Xcode 26.5 fully available** via `DEVELOPER_DIR` (iPhone 16 sim booted), `xcodegen`, `pwsh`, `swiftlint`, `swiftformat`, Java 17 all present.
+- **Blockers for the *full* app gate**: `Shared.xcframework` (KMP) is unbuilt, `shared-surfaces/` isn't wired into `project.yml`/`.swiftlint.yml` (predecessor P4-core wiring), and the target is ~1266 files in a parallel-mutated tree.
+- **Template**: the 10-file `AiUsageCard.*` family with shared P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry, P1/S8 state-holder seam.
+
+Let me set up a plan and todos, then implement.
+
+Now I'll implement the surface. Starting with the i18n catalog and the pure-logic Adapter.
+
+Now the Model — the state-holder seam, telemetry, connection axis, and observable view-model.
+
+Now the pure Projection (input → resolved):
+
+Logic files written. Now the SwiftUI chrome (freshness chip, refresh, connectivity banner, loading, error).
+
+I named that file inconsistently with the template. Let me rename it to match the `AiUsageCard.Chrome.swift` convention.
+
+Now let me add a top-level `hasUnseen` flag to `VersionResolved` (the footer "What's new" dot uses raw `hasUnseen`, unlike the chip's gated dot), then write the Views and entry files.
+
+Now update the Projection returns to carry `hasUnseen`:
+
+Now the presentational Views (segment chip, detail sheet, rows, banner, empty, footer):
+
+Now the surface entry file, and fix the sheet to use a plain observed `model`:
+
+Now the Previews (DEBUG-only, per-state):
+
+Now the two test files — adapter (pure) and surface (projection/model/a11y):
+
+Now the surface tests (projection / model / telemetry / a11y):
+
+All 10 files written. Let me update todos and begin verification — first checking which shared components I reference, then type-checking against the real Apple SDK.
+
+The shared-component graph has deep transitive deps, so for honest verification I'll (1) run the surface's unit tests via an isolated SPM harness (proves the logic), and (2) type-check the UI files against the real Apple SDK. Let me set up the logic harness first — this is the highest-value proof.
+
+**All 37 unit tests pass** — the logic faithfully matches the web source. Now the UI type-check against the real Apple SDK. Let me see how self-contained the shared UI kit is.
+
+All token members I use are core (no chart/map deps). Let me type-check the full surface against the real Apple SDK + shared UI kit (macOS first):
+
+The broad UI kit has files with external deps (e.g. `UnitFormatters` → `UnitPreferences`) unrelated to my surface. Let me narrow to my actual deps: real `Tokens.swift` + real `Buttons.swift` + a verbatim-signature `TSSkeleton` shim (avoids the Cards/Typography/Material chain), and type-check all 7 surface files on **both** macOS and iOS SDKs.
+
+macOS type-check is clean (EXIT=0). Now the iOS 18 SDK pass to cover the `#if os(iOS)` branch:
+
+Both SDK type-checks pass (EXIT=0). The surface is real and correct: **37 unit tests pass + macOS 15 + iOS 18 type-check clean**. Now the lint/format/placeholder gates on the actual repo files.
+
+swiftformat wants house-style number grouping and `_`-marking the unused `locale` param. Let me auto-apply the formatter, then re-lint to confirm clean.
+
+swiftformat is clean now. Let me verify the auto-format didn't change semantics — check the unused-arg rewrite and re-run type-check + tests on the formatted files.
+
+swiftformat normalized literals (values unchanged) and marked `locale` unused while keeping the call-site label. Let me re-verify the formatted files still type-check and pass tests by refreshing the harness.
+
+37/37 still pass post-format. Now swiftlint `--strict` on the surface files, and re-confirm the UI type-check on the formatted sources:
+
+swiftlint used the repo `included:` list (which excludes `shared-surfaces`), so it linted the existing 1909 files and found 1 pre-existing violation — not mine. Let me (1) identify that pre-existing violation, and (2) lint my files specifically via a temp config scoped to `shared-surfaces`.
+
+Pre-existing violation is in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (not mine, out of scope). Let me lint **only** my surface files with a scoped config:
+
+Two real violations in my files: a 6-param function (Projection) and Model.swift at 409 lines (>400). Let me fix both — refactor the tooltip helper to fewer params, and trim Model's verbose comments.
+
+Let me refactor the Projection helpers to ≤5 params, and split the action/link seam out of Model into a new `VersionSegment.Actions.swift` to get Model under 400 lines.
+
+Now let me create the Actions file and remove those blocks from Model:
+
+Now let me re-format, verify Model is under 400 lines, and re-lint the surface only:
+
+swiftlint `--strict` on the surface: **0 violations**, Model now 377 lines. Let me re-verify compile + tests after the refactor (8 source files now; harness needs the new Actions file).
+
+37/37 tests pass and both SDK type-checks are clean after the refactor. Now the placeholder gate:
+
+Placeholder gate clean (EXIT=0). Let me run the exact gate path, grep for forbidden markers, and do a **full compile** (codegen, not just type-check) to strengthen the evidence:
+
+**Full codegen compiles cleanly on both macOS 15 and iOS 18** (real ~1MB object files), placeholder gate EXIT=0, zero forbidden markers. Now let me gather the definitive evidence for the full-app `xcodebuild` gate status — generate the project and check whether my surface is wired in and whether the KMP framework exists.
+
+Definitive blocker evidence captured: my surface has **0 references in the generated target** (P4-core wiring absent), `.swiftlint.yml` doesn't include `shared-surfaces`, and `Shared.xcframework` is missing. Let me make a bounded, honest attempt at the actual `xcodebuild` gate to capture its real outcome.
+
+Let me wait and observe what the xcodebuild attempt does (Gradle pre-action / missing framework).
+
+Confirmed: the `xcodebuild` scheme pre-action is running the **Gradle KMP `Shared.xcframework` assembly** (multiple `java`/Gradle processes, some from other parallel slots). This is the heavy predecessor build — and even once done, the target has 0 references to my surface. I have definitive blocker evidence. Let me stop my xcodebuild attempt (it won't validate my surface anyway) and record its state.
+
+Let me stop the async shell and clean up any orphaned child of my attempt (without touching other slots' processes):
+
+PID 62711 is **slot-431's** process, not mine — my xcodebuild's children already terminated cleanly (no slot-410 orphans). The bounded attempt confirmed the gate enters the heavy Gradle KMP `Shared.xcframework` pre-action. Let me clean up the generated project artifact and check git state.
+
+Clean: my work added **only** `shared-surfaces/` (the other modified files pre-existed before I started — not mine, won't touch them). The xcodeproj is gitignored and removed. Now let me write the honest gate log.
+
+Now let me commit only the allowed files (the surface + the log), verifying the staged set excludes the pre-existing unrelated changes.
+
+Git is hanging unusually long — likely index-lock contention in this shared parallel environment. Let me investigate from a separate shell.
+
+This slot is a **git worktree** sharing a common object store with the other parallel slots. The `git add` is likely contending on the shared store. Let me check system-wide git activity and locks.
+
+A `git` process is alive (no locks) — just slow under heavy parallel load (many workers compiling concurrently). Let me keep waiting on the staging command.
+
+~4 minutes is abnormal for staging 11 files. Let me check the git process state and whether it's making progress or wedged.
+
+PID 38496 (the `git add`) already exited — staging likely completed; shell 56 is now on the `git diff` verification steps, crawling under a load average of **65**. Let me wait it out.
+
+6 minutes with no output — the load-65 saturation is making git crawl. The `git add` already completed (its PID exited). Let me stop the wedged verification chain and check the staged state directly.
+
+Nothing is staged — the earlier `git add` got interrupted under load. `git diff` ran fast just now, so let me retry staging with patience.
+
+All 11 surface files + the log are staged — exactly the allowed scope, nothing else. Now the commit:
+
+Commit succeeded. Let me verify the commit contents and confirm the pre-existing unrelated changes were not included.
+
+The commit is correct: **12 files (11 surface + log), 2006 insertions**, and the pre-existing unrelated changes remain untouched in the tree (not committed). Let me finalize todos/plan and confirm no stray repo artifacts.
+
+Done. Here's the final summary.
+

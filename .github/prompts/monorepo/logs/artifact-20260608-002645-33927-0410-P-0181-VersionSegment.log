@@ -1,0 +1,138 @@
+=== P4 Shared surface 0181 VersionSegment (Apple) ===
+Date: 2026-06-08
+Slot: 20260608-002645-33927/slot-410   Branch: auto/20260608-002645-33927/410
+Web source (spec): web/src/components/layout/status-bar/VersionSegment.tsx
+Native output:      apps/apple/TeslaSync/shared-surfaces/VersionSegment.*
+
+--------------------------------------------------------------------------------
+DELIVERABLE — shipped, production-polished, no stubs (11 files, all VersionSegment.*)
+--------------------------------------------------------------------------------
+  VersionSegment.swift            surface entry: always-visible status-bar chip + "About this
+                                  build" detail sheet (.sheet/NavigationStack, HIG), lifecycle,
+                                  view.opened telemetry, macOS hover tooltip.
+  VersionSegment.Model.swift      P1/S8 state-holder seam (VersionSource), i18n facade (P1/S10),
+                                  telemetry seam (P1/S11), connection axis, @Observable VersionModel,
+                                  InMemoryVersionSource. (377 lines, < 400 file_length limit)
+  VersionSegment.Actions.swift    outbound link + "What's new" action seam (web openChangelogModal).
+  VersionSegment.Adapter.swift    pure Foundation: VersionInfo/UpdateCheck/Changelog DTOs,
+                                  version/SHA resolution precedence, uptime bucketing, a11y helper.
+  VersionSegment.Projection.swift pure input->resolved: segment label/tooltip/aria, provenance rows,
+                                  update banner, phase (loading/empty/error/data).
+  VersionSegment.Chrome.swift     freshness chip, refresh, stale/offline banner, loading, error.
+  VersionSegment.Views.swift      segment chip, detail sheet, provenance grid, update banner,
+                                  empty state, footer actions (What's new / Release notes / Close).
+  VersionSegment.Previews.swift   8 #Preview states (chip default/iconOnly; sheet data/empty/
+                                  loading/error/stale/offline).
+  VersionSegment.Tests.swift      projection phases, segment label/tooltip/aria, rows, banner,
+                                  uptime, model wiring/telemetry/auto-refresh/action (XCTest).
+  VersionSegment.AdapterTests.swift  resolution precedence, uptime bucket, a11y (XCTest).
+  VersionSegment.strings          i18n catalog (table "VersionSegment"): every web t() key +
+                                  native chrome copy. No English literals in Swift code.
+
+Parity reproduced from the web source:
+  - version label resolution: info.app_version (!= 'unknown') -> BUILD_VERSION -> 'dev'.
+  - sha = BUILD_SHA -> 'dev'; chip shows sha only when != 'dev'; Commit row always shows it.
+  - tooltip + aria-label composition; update dot (amber) / unseen dot (cyan, gated by !update).
+  - provenance rows: App version, Commit, Helm chart?, Go runtime?, Platform (os/arch)?, Server
+    uptime? ; update banner ": v{latest}" + message; footer What's new(+unseen dot)/Release notes/Close.
+  - uptimeLabel: d>0 "Dd Hh" / h>0 "Hh Mm" / else "Mm"; null/<=0/!finite -> omitted.
+  States (all render): loading(skeleton) / empty(friendly) / error(retry) / data ; connection axis
+  live/stale/offline -> freshness chip + banner + one-shot stale auto-refresh. view.opened telemetry
+  slug "VersionSegment". Every interactive element carries an accessibility label.
+
+--------------------------------------------------------------------------------
+RUNNER CAPABILITY
+--------------------------------------------------------------------------------
+  Xcode 26.5 (Build 17F42) present at /Applications/Xcode.app — usable via
+    DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+    (xcode-select default is /Library/Developer/CommandLineTools).
+  SDKs: iphonesimulator26.5, iphoneos26.5, macosx26.5.  Simulator: iPhone 16 (Booted).
+  Tools: xcodegen, swiftlint, swiftformat, pwsh 7.6.2, swift 6.3.2, OpenJDK 17 — all present.
+
+--------------------------------------------------------------------------------
+GATE STEPS (as specified) — actual results in THIS slot
+--------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    ATTEMPTED (DEVELOPER_DIR set). The scheme build pre-action 'Stage Shared.xcframework' launched
+    apps/apple/Scripts/build-shared-xcframework.sh, which began the Gradle Kotlin/Native assembly
+    of the KMP core (:core:assembleSharedXCFramework). apps/apple/Frameworks/Shared.xcframework is
+    NOT present (only .gitkeep) and is a hard link dependency of the app target. Additionally,
+    `xcodegen generate` + `grep VersionSegment TeslaSync.xcodeproj/project.pbxproj` => 0 references:
+    the surface dir TeslaSync/shared-surfaces is NOT in project.yml target sources, so the app target
+    would not compile/test the surface even after the xcframework is built. Attempt terminated (the
+    build cannot validate this surface in-slot and the KMP assembly is a heavy shared prerequisite).
+    IOS_EXIT=BLOCKED (predecessor wiring + KMP Shared.xcframework absent)
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    BLOCKED for the same two reasons (shared-surfaces not in project.yml; Shared.xcframework absent).
+    MAC_EXIT=BLOCKED
+
+[3] swiftlint --strict
+    Repo-wide run is RED on a PRE-EXISTING violation OUTSIDE this prompt's allowed files:
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19 function_body_length
+      (Found 1 violation, 1 serious in 1909 files).
+    .swiftlint.yml `included:` does not list TeslaSync/shared-surfaces, so the surface is out of the
+    repo-wide scope. Surface-scoped strict lint (config included: -> shared-surfaces only):
+      Done linting! Found 0 violations, 0 serious in 10 files.    SURFACE_LINT_EXIT=0
+    LINT_EXIT=BLOCKED (pre-existing repo violation, not in allowed scope) / surface=0
+
+[4] swiftformat --lint apps/apple
+    Surface-scoped: 0/10 files require formatting (clean) after `swiftformat`.   FORMAT_SURFACE_EXIT=0
+    (Repo-wide apps/apple result not asserted here — out of allowed scope.)
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/VersionSegment
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+    Direct grep (TODO|FIXME|stub|mock|placeholder|lorem|coming soon|not implemented): NONE FOUND.
+
+--------------------------------------------------------------------------------
+SURFACE-LEVEL VERIFICATION (executed against the real Apple SDKs — this surface in isolation)
+--------------------------------------------------------------------------------
+  Unit tests (SPM harness, module TeslaSync, Xcode 26.5 toolchain, `swift test`):
+      Executed 37 tests, with 0 failures (0 unexpected).   TESTS=PASS
+      Coverage: VersionResolve precedence, VersionUptime bucket, VersionAccessibility,
+      VersionProjection phases/segment/tooltip/aria/rows/banner/uptime, VersionModel
+      wiring/telemetry(view.opened once)/stale auto-refresh/offline/action delegation/surfaceSlug.
+  Full codegen compile (-c -wmo, swift 6 mode, -D DEBUG, real SDKs):
+      macOS 15  (arm64-apple-macos15.0):           MACOS_OBJ_EXIT=0  -> vs_macos.o (1,025,832 B)
+      iOS 18 sim(arm64-apple-ios18.0-simulator):   IOS_OBJ_EXIT=0    -> vs_ios.o   (1,010,128 B)
+      All 8 source files (incl. #if os(iOS) / #if os(macOS) branches and #Preview/@Observable macro
+      expansion) compile against the real frameworks. Token deps: real Tokens.swift + Buttons.swift;
+      TSSkeleton via a verbatim-signature shim (the real component drags the Cards/Typography/Material
+      chain and is independently owned/tested).
+  swiftlint --strict (surface): 0 violations.   swiftformat --lint (surface): clean.
+
+--------------------------------------------------------------------------------
+BLOCKER SUMMARY (why the full xcodebuild build+test gate is not green IN THIS SLOT)
+--------------------------------------------------------------------------------
+  B1. Predecessor wiring absent (owned by P4 core, outside this prompt's allowed files):
+      TeslaSync/shared-surfaces is not in project.yml target sources nor in .swiftlint.yml
+      `included:`. The generated Xcode target therefore contains 0 references to the surface.
+      Allowed files for 0181 are VersionSegment.* + this log only, so wiring project.yml /
+      .swiftlint.yml is out of scope (and merge-unsafe in the parallel slots).
+  B2. KMP Shared.xcframework not built: the TeslaSync/TeslaSync-macOS schemes require a Gradle
+      Kotlin/Native assembly (build-shared-xcframework.sh) as a build pre-action; the framework is
+      absent in-slot and the assembly is a heavy, shared prerequisite (observed running across
+      sibling slots).
+  B3. Repo-wide swiftlint --strict is already red on a pre-existing violation in
+      dashboard-widgets/LifetimeStatsWidget.Adapter.swift (not in allowed files).
+  None of B1-B3 are within the deliverable's allowed scope; all are predecessor/infra prerequisites.
+  The surface itself is complete and independently verified (tests + dual-SDK codegen + lint +
+  format + placeholder all green), so it will pass the gate once B1+B2 are present on a CI macOS
+  runner with the staged xcframework and the P4-core source/lint wiring.
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+  [x] Surface renders all web states (loading/empty/error/data) + stale/offline (chip+banner+auto-refresh).
+  [x] Hooks bind via the shared state-holder seam (VersionSource, P1/S8); no direct HTTP in the view.
+  [x] Every web i18n key has a matching key in the surface catalog (table "VersionSegment"); no English literals.
+  [x] Accessibility labels present on every interactive element (chip + each footer button + retry).
+  [x] Tests: adapter unit tests + projection/state per-branch tests + a11y label test (37 pass).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate=0, grep=none).
+  [~] EXIT=0/STATUS=DONE: the full iOS+macOS xcodebuild build+test gate is BLOCKED in-slot on the
+      predecessor wiring (B1) + KMP Shared.xcframework (B2), with platform-capability evidence above.
+
+EXIT=1
+STATUS=BLOCKED

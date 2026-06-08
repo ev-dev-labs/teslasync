@@ -1,0 +1,144 @@
+I'll start by exploring the repository structure to understand what exists and what's required for this task.
+
+Apple toolchain is available (xcodebuild, swift, swiftlint, swiftformat). Let me explore the web source and the Apple app structure.
+
+Now let me explore the Apple app's TeslaSync structure, particularly the dashboard-widgets directory and existing widget patterns.
+
+The `dashboard-widgets/` directory already exists with many sibling widgets. Let me examine the established pattern by looking at a representative widget set and checking for any existing ChargePlansWidget files.
+
+55 sibling widgets establish a clear pattern: `.swift`, `.Model.swift`, `.Tests.swift`, `.strings`, `.Previews.swift`, often `.Adapter.swift`. Let me study a charging-domain exemplar (WallConnectorWidget) in full to learn the conventions.
+
+Let me read the complete WallConnectorWidget set to learn all conventions (model, adapter, view, sub-views, previews, tests, strings).
+
+Excellent, very detailed conventions. Now let me read the view, sub-views, previews, tests, and strings files.
+
+Now let me read the tests, previews, and strings, plus locate the shared design tokens (TSSpacing, Color.TS, Font.TS, TSSkeleton).
+
+Now let me locate the shared design tokens (P1/S9), the project config, and the placeholder check script.
+
+Let me find the core token definitions and review the placeholder patterns list.
+
+Let me read the Theme definitions and confirm where TSSpacing/TSRadius/Color.TS/Font.TS live for the main target.
+
+The tokens come from generated `Tokens.swift` (P2). Let me verify that file and the project build config.
+
+Now let me check the project.yml build config (to confirm file globbing) and the TSSkeleton component.
+
+Now I understand the architecture. Critical question: can the gate (xcodebuild) actually run here? Let me check build feasibility — xcodegen, the Shared.xcframework preAction, and how `.Tests.swift` files in the widgets dir are routed.
+
+xcodegen exists but the build needs a KMP-built `Shared.xcframework` (Gradle/Kotlin Native). And 54 co-located `.Tests.swift` files glob into the app target. Let me check the documented build status and KMP toolchain availability.
+
+The documented protocol is now clear: predecessor prompts (ToolCard, AlertMessageEditor, FSMTimelineChart) verify the **surface in isolation** (SwiftPM + `swiftc -typecheck` both SDKs + lint/format/placeholder) and mark the full-app `xcodebuild` as macOS-pending/BLOCKED due to **pre-existing, out-of-scope** collisions (`DashboardWidgetSize` redefined N×, co-located `*.Tests.swift` importing XCTest into the app target, KMP `Shared.xcframework`, signing). Let me confirm these collision facts and look for an isolation harness.
+
+Key facts confirmed: `DashboardWidgetSize` is already redefined **15×** and **57** co-located `*.Tests.swift` import XCTest into the app target — both pre-existing, out-of-scope collisions that block the full-app build (exactly as documented for predecessor prompts). My protocol: implement the surface faithfully, verify it **in isolation** (SwiftPM + `swiftc -typecheck` + lint/format/placeholder), and honestly record the full-app `xcodebuild` as BLOCKED with evidence.
+
+Now let me read the web data hooks/types and shared components to port the data model faithfully, plus the placeholder script's path handling.
+
+Let me read the exact `ChargePlan`/`RatePlanInfo` types, the hook implementations, formatting helpers, and shared widget components.
+
+Now the date/number formatting and the shared widget components (WidgetShell, WidgetDetailCard/DetailEntry, StatCard, Badge, EmptyState, WidgetProps).
+
+Now the shared widget composition components and types.
+
+I have the full web spec. Let me verify the placeholder script's path-prefix handling (the gate passes a file *prefix*, not a directory) and quickly confirm Badge/StatCard/EmptyState parity details.
+
+`pwsh` is available, and the script treats a non-existent literal path as a vacuous clean pass — so I'll run the gate as-written AND a real per-file scan for honest evidence. Let me capture environment facts (macOS/Swift versions, SDKs) before writing.
+
+Decisive capability finding: the active developer dir is **Command Line Tools, not Xcode** — so `xcodebuild` cannot run and there's **no iOS Simulator SDK**. That makes the two `xcodebuild build test` gate steps impossible on this runner (the prompt's BLOCKED condition). But the CLT `swift` toolchain (Swift 6.3.2) lets me fully verify the surface in isolation via SwiftPM + swiftc + lint/format/placeholder. Let me confirm SwiftUI is importable under CLT, then set up tracking.
+
+SwiftUI, Charts, and MapKit all compile under the CLT macOS SDK. I can fully verify the surface in isolation; only the Xcode-specific `xcodebuild` steps are blocked. Let me set up tracking and a plan.
+
+Let me read the swiftlint and swiftformat configs to match all lint rules before writing code.
+
+All rules captured (line ≤120, `--self remove`, before-first wrapping, testable-bottom imports). I'll write the files then auto-format + lint. Starting with the pure Adapter.
+
+Now the Model (state-holder seam, registry, strings facade, telemetry).
+
+Now the presentational subviews (`.Views.swift`).
+
+Now the main surface view (`.swift`).
+
+Now the strings catalog and the previews.
+
+Now the comprehensive test suite.
+
+All 7 files written. Now I'll verify in isolation with a SwiftPM harness (module named `TeslaSync` so the test file compiles unchanged). Let me set it up.
+
+Now build and test the isolated harness under Swift 6 strict concurrency.
+
+The only errors are the `#Preview` macro — its `PreviewsMacros` plugin ships with **Xcode, not CLT**, so previews can't expand in a CLT SwiftPM build (a harness limitation, not a code issue). Previews are DEBUG-only and out of the gate's shipped-surface scope. Let me build+test the harness without that file, then parse-check the previews separately.
+
+The shipped surface compiles clean under Swift 6 strict concurrency. Now run the tests.
+
+XCTest also ships with Xcode, not CLT. Let me check whether XCTest or the swift-testing `Testing` library is available so I can actually execute the test logic.
+
+Neither XCTest nor swift-testing is available under CLT (both ship with Xcode). The shipped XCTest file's *execution* is therefore in the same Xcode-deferred bucket — but I can still **prove every assertion** on this runner via an executable that drives the exact same public API. Let me build that.
+
+Two issues in the **runner harness** (not the shipped code): the `eq` helper's double-`some Equatable` broke enum literal inference, and `echo` needs `@Sendable`. Let me fix the harness.
+
+101 checks, 1 failure — and it caught a real bug: `percent`/`kilowattHours` append their suffix even for non-finite input (`"—%"` instead of `"—"`), which also contradicts my XCTest contract. Let me fix the shipped formatter to guard before appending.
+
+Now re-sync the fixed Adapter to the harness, add the kWh-nan check to the runner for completeness, and re-run.
+
+All 102 checks pass and it surfaced a real bug now fixed. Now let me format and lint my files (autofix first, then strict lint), then re-verify the harness.
+
+swiftformat clean (0/6). Now swiftlint --strict on my files.
+
+Two `file_length` violations (>400 lines, strict): Adapter at 403 and Tests at 427. Let me check counts and trim verbose comments/blank lines to get under 400.
+
+I'll split the formatters + accessibility out of the Adapter into `ChargePlansWidget.Format.swift` (clean separation + margin under 400), and trim the Tests header. Let me view the sections to move.
+
+I'll move the formatters + accessibility into a new `ChargePlansWidget.Format.swift`, then remove them from the Adapter.
+
+Now remove the moved sections from the Adapter (lines 310–403).
+
+Adapter is now 309 lines. Now trim the Tests file header (427 → ≤400). Let me view it.
+
+I'll split the tests into `.Tests.swift` (adapter+format) and `.ModelTests.swift` (model+registry+a11y) — cleaner than gutting comments, and matches the sibling `.ModelTests.swift` convention. Let me find the split boundaries.
+
+All files now ≤324 lines. Re-sync the harness (new Format file + trimmed Adapter) and re-run verification.
+
+102/102 still pass. Now run swiftformat + swiftlint --strict across all 8 swift files.
+
+swiftformat and swiftlint --strict both clean (0 violations). Now belt-and-suspenders: a direct `swiftc -typecheck` of the shipped source files against the real macOS SDK, plus `-parse` on the Xcode-only test/preview files.
+
+Typecheck against the real macOS SDK is clean, and the Xcode-only files parse cleanly. Now the placeholder gate (pwsh) — both the literal gate command and a real scan of my files.
+
+Both placeholder scans are clean (0 violations in the real files). Now capture the genuine `xcodebuild` BLOCKED evidence and confirm my files wire into the target via `xcodegen`. Let me also confirm the logs dir.
+
+`xcodebuild` requires Xcode (CLT only), iOS Simulator SDK cannot be located, and `xcodegen` succeeds. Let me confirm my files are wired into the target, then capture the exact gate `xcodebuild` failures.
+
+All 9 files are wired into the target; both `xcodebuild` steps fail with the CLT error (no Xcode). Let me clean up the generated project and gather the exact pre-existing-collision counts for honest documentation.
+
+Everything captured. Only my 9 files are new; nothing else modified. Now let me write the comprehensive, honest gate log.
+
+Log written. Let me do a final parity review of the surface view and confirm the repo is clean (only my files + log changed).
+
+The `AIUsageCard.*` and `web/*` modifications are **pre-existing** in this worktree (I never touched them) — I'll stage only my 9 files + the log, per the allowed-files scope. Let me do a final parity look at the composed content, then commit.
+
+Composition is faithful to the web source. Let me stage only my files and commit.
+
+Exactly my 10 files staged (9 surface + log), no pre-existing changes included. Committing.
+
+Committed `c71eb4ee4` with exactly the 10 files. Let me finalize tracking and clean up the temp harness.
+
+Task complete. Here's the summary.
+
+## ChargePlansWidget (Apple) — P4 dashboard widget 0018
+
+Shipped a production, Apple-idiomatic SwiftUI parity of `features/dashboard/widgets/ChargePlansWidget.tsx` — committed as `c71eb4ee4` (10 files, allowed-scope only).
+
+**Surface (9 files):** `.swift` (glass shell, header, freshness chip, compact vs standard composition), `.Views.swift` (badge, stat cards, detail list/rows, section header, compact tile, empty state), `.Model.swift` (`@Observable` state holder via P1/S8 source seam, phase resolution, card projection, `charge-plans` registry, P1/S10 strings facade, P1/S11 `view.opened` telemetry), `.Adapter.swift` (pure DTOs + projection), `.Format.swift` (pure formatters + a11y), `.Previews.swift` (9 states), `.Tests.swift` + `.ModelTests.swift` (XCTest coverage), `.strings` (all 15 source i18n keys + chrome). No HTTP in the view; every web state reproduced (loading/content/empty/error/stale/offline); no English literals.
+
+**Verification — all host-runnable checks GREEN:**
+- SwiftPM build under Swift 6 strict concurrency ✅
+- 102/102 logic assertions via executable runner ✅ (caught + fixed a real `percent`/`kWh` non-finite suffix bug)
+- `swiftc -typecheck` vs real macOS SDK ✅ · swiftlint --strict 0 ✅ · swiftformat --lint 0/8 ✅ · placeholder gate 0 ✅
+- `xcodegen` wires all 9 files into both app targets ✅
+
+**Honest gate status — `STATUS=BLOCKED` (`EXIT=1`):** The two `xcodebuild build test` steps cannot run — this runner has **Command Line Tools, not Xcode** (`xcodebuild` unavailable, no iOS Simulator SDK). The full-app build is additionally gated by **pre-existing, out-of-scope** collisions (`DashboardWidgetSize` defined 16×, 263 co-located XCTest files in the app target, unstaged KMP `Shared.xcframework`, macOS signing). These are environment/predecessor blockers, not surface defects — deferred to `p4-apple/P99-0001-apple-acceptance-gate` on macos-latest, mirroring the documented protocol for ToolCard/AlertMessageEditor/FSMTimelineChart. Full evidence in `.github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0018-ChargePlansWidget.log`.
+
+
+
+All work is complete and committed; all 10 todos are done. Calling task_complete.
+

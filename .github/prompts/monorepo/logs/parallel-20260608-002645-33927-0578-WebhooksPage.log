@@ -1,0 +1,132 @@
+I'll start by exploring the repository structure to understand the task, the web source page, and the existing Apple app architecture.
+
+The page wraps `WebhookChannelsSection`. Per the parity rules, I must reproduce every region from the web source. Let me examine that component and the Apple app structure.
+
+Let me read the full `WebhookChannelsSection` and explore the Apple app structure in detail.
+
+The web page wraps a full `WebhookChannelsSection` CRUD component. Let me understand the Apple app structure and existing conventions before deciding scope. Let me explore in parallel.
+
+The structure differs from the prompt template. Let me explore the actual `feature-views` and `dashboard-widgets` directories which contain the real code.
+
+The Apple app uses a `feature-views/` flat structure with multi-file components (`.swift`, `.Model.swift`, `.Views.swift`, `.strings`, `.Tests.swift`, etc.), and there's already a `WebhookChannelsSection` set. Let me understand the parity manifest, ledger, routing, and the existing WebhookChannelsSection implementation.
+
+Let me check the parity manifest record, project structure, build tooling availability, and an existing comparable page implementation.
+
+Full toolchain available (xcodebuild, swiftlint, swift, xcodegen, pwsh). Let me read the exact manifest record and the parity README/gate contract.
+
+Now I understand the parity model: this page is a thin wrapper that embeds the already-implemented `WebhookChannelsSection`, plus 2 strings. Let me examine the project build config, the existing WebhookChannelsSection Apple implementation, and how pages/navigation are registered.
+
+The build only compiles `Sources`, `TeslaSync/dashboard-widgets`, `TeslaSync/feature-views`, and `Localization` — NOT a `Features/Notifications/` path. There are zero existing `*Page.swift` files. Let me understand how pages/routes are registered and how other page-level parity work was done.
+
+There's a full app structure at `apps/apple/Sources/` with `App/` (routing), `Features/`, and `Notifications/`. Let me understand the routing system and existing page/feature wiring.
+
+The `RouteHostRegistry` is explicitly the P7 page-hosting mechanism (`AppRoute → AnyView`). All parity views live in `feature-views/` (which is compiled), including `WebhookChannelsSection`. Let me examine the string mechanism, the model constructor, and how routes get registered.
+
+Let me examine the seams (dependency wiring + `WebhookStrings`), the previews (how to instantiate the section), the route registration pattern (Settings), and the app shell/route parser.
+
+Let me read the app shell, the route registration pattern (Settings is the reference), the web PageContainer, and check for an existing Apple page-scaffold component.
+
+Let me read the Settings registration pattern (the reference for P7 page hosting) and the deep-link route parser.
+
+The deep-link parser already maps `/notifications/webhooks` → `.notifications`. Let me check how the web structures notifications routes (hub vs. standalone) and whether a notifications hub page exists, to decide navigation registration correctly.
+
+The notifications section has 10 sub-pages (each a separate unit); `/notifications` is just a legacy redirect. WebhooksPage is a standalone sub-page. Let me verify whether any production `WebhookChannelsSource` / S8 wiring exists and how feature-views connect to the production app.
+
+Key findings: NO production `WebhookChannelsSource` exists, and NO feature-view is wired into `Sources/` production yet — parity feature-views are standalone (in-memory source + previews + tests). Only `.settings` is registered. This clarifies scope. Let me examine the test convention, shared page/typography components, the web PageContainer, and the placeholder scanner.
+
+Critical: the placeholder scanner returns clean (EXIT=0) for a non-existent path. Let me check the forbidden patterns (to avoid tripping the scanner — e.g. "placeholder"), the swiftlint rules, an existing feature-view test file, and the available design tokens/components.
+
+I now have the conventions. Critical: "Placeholder" is a forbidden pattern (case-insensitive), so I must avoid that word. Note `.Tests.swift` files live in `feature-views/` yet `import XCTest` — I need to understand the real build setup. Let me check the Shared.xcframework situation and whether the project builds at baseline.
+
+Let me check how the existing WebhookChannelsSection unit's gate was actually run (its log is the template), the test target structure, and whether the KMP shared build is feasible here.
+
+This is the key template. The completed WebhookChannelsSection unit shows the accepted disposition in this environment: `xcodegen generate` passes, `xcodebuild build` fails with exit 65 (missing KMP `Shared.xcframework` — no Kotlin toolchain), so they prove green via a SwiftPM harness + swiftlint + swiftformat + placeholder gate, document the deferral, and end EXIT=0/STATUS=DONE. Let me read the full log template and ledger schema.
+
+I now have the gold-standard template (the WebhookChannelsSection log). My approach is clear: implement WebhooksPage in `feature-views/` (multi-file convention), prove green via swiftc typecheck (iOS+macOS SDKs) + SwiftPM test harness + swiftlint + swiftformat + placeholder gate, and document the xcframework-staging deferral. Let me write a plan file and explore the design-token/component closure I'll compile against.
+
+Rich component library exists (`TSPageTitle`, `TSText`, `TSSubhead`, `TSButton`, `TSFadeIn`, etc.). Let me read the exact APIs I'll use and the existing copy/clipboard pattern.
+
+Let me read the generated design tokens, the Button/Motion APIs, and the existing clipboard/copy pattern.
+
+Let me read the exact `TSButton` init and the existing clipboard/copy implementation to mirror for the copy-link button.
+
+I have the full component/token API surface. Let me check the swiftformat config, then write a plan and start implementing.
+
+I have the full picture. Let me set up todos, write a plan, and inspect the xcstrings format before implementing.
+
+I have everything needed. Let me write the plan and create all the implementation files.
+
+Now let me add the parity + chrome keys to `Localizable.xcstrings`, preserving the file's formatting, and update todos.
+
+Keys inserted and JSON validated (+4). Let me verify the xcstrings diff is clean, then run swiftlint and swiftformat on the new files.
+
+swiftlint strict: 0 violations; xcstrings diff is purely additive. Now swiftformat lint:
+
+swiftformat: 0/6 require formatting. Now the placeholder gate on an isolated copy of my files:
+
+Placeholder gate clean (COUNT=0). Now the compile verification. Let me locate the Xcode toolchain and SDKs for the swiftc typecheck harness.
+
+Xcode 26.5 available via DEVELOPER_DIR. Let me resolve SDK paths and build the typecheck harness with a targeted dependency closure.
+
+Both SDKs resolved. Let me build the typecheck harness with a targeted closure and iterate on missing symbols (macOS first).
+
+The closure has transitive deps. Let me check exactly which shared components my files + WebhookChannelsSection actually reference, so I include only what's needed.
+
+Only `TSButton`, `TSFadeIn`, `TSSkeleton` are used (plus token enums). Let me retry with a minimal closure.
+
+`TSSkeleton`'s sibling views need `TSCard` → transitive chain. Let me check imports across the component/design/app layers to include a safe, complete closure without pulling in heavy deps.
+
+The whole component/design/app-routing layer is SwiftUI+Foundation only (self-contained). Let me create a reusable harness script using the full component closure.
+
+Closure resolves now — only an access-control issue: the public `copyLink` default arg references internal `WebhooksPageClipboard`. Let me make the clipboard helper public.
+
+All three typecheck steps pass (iOS 18, macOS 15, DEBUG previews — all EXIT=0). Now the SwiftPM harness to actually execute the XCTest:
+
+All 12 tests pass (SWIFT_TEST_EXIT=0). Now the Xcode project-generation + build step to capture the documented deferral evidence:
+
+XCODEGEN_EXIT=0 — all 6 WebhooksPage files are in the app target (36 pbxproj refs). Now capture the `xcodebuild` deferral evidence (KMP xcframework staging). I'll guard with a timeout:
+
+The KMP toolchain actually works here (the Shared xcframework began assembling) — my 150s guard fired (exit 142) mid-assembly. A full app build also compiles all ~170 feature-view `*.Tests.swift` files. Let me verify whether those test files are app-target members (which would make a full app build fail on a pre-existing, repo-wide condition) before deciding how to document the xcodebuild step.
+
+Decisive evidence captured: (1) the KMP `Shared.xcframework` staging actually runs in this environment (unlike the predecessor's exit-65), and (2) feature-view `*.Tests.swift` files are app-target members that **cannot** compile in-module (`import XCTest` → "no such module 'XCTest'") — a pre-existing, repo-wide condition (~170 files) that blocks a full app-target build regardless of my change. So the host-gate methodology + xcodebuild deferral (matching the DONE predecessor) is correct. Let me verify no build artifacts will be committed.
+
+There are pre-existing `AIUsageCard.*` modifications I didn't make. Let me confirm they're unrelated to my work (so I scope my commit correctly) and check the xcframework didn't dirty tracked files.
+
+Confirmed: the `AIUsageCard.*` changes are pre-existing (mtime 08:45:58, before my session) — a different unit left in the worktree. I'll scope my commit to only my files. Build artifacts (`TeslaSync.xcodeproj`, `apps/shared/core/build`) are git-ignored; `Frameworks/` is clean.
+
+Let me kick off a bounded full `xcodebuild` in the background to capture a real exit code, while I prepare the ledger and log.
+
+Build running in background. Let me create the `apple-ledger.json` while it runs.
+
+Let me check the background build's progress before finalizing the log.
+
+The background build was killed when the async session ended (needs `detach: true`). Let me relaunch it as a fully detached process so it persists, then continue preparing the log.
+
+The detached build is past pre-actions (xcframework staged) and compiling. Let me run the i18n coverage cross-check, then write the log while the build runs.
+
+i18n is clean (2 web keys verbatim; 4 swift-referenced; all 4 defined; none missing/undefined). Let me check build progress, then write the log.
+
+Build still staging the xcframework via Gradle. Let me write the comprehensive gate log while it runs.
+
+Log written. Let me check the background build's status to record a real xcodebuild exit code.
+
+Staging is still running (Gradle rebuilding the multi-arch xcframework). Let me re-verify lint/format after my access-modifier edit and validate JSON while the build continues.
+
+All final host gates green (lint 0, format 0/6, JSON valid). Let me wait for the background build to reach a terminal state.
+
+Build reached terminal state: **BUILD FAILED, REAL_BUILD_EXIT=65**. Let me extract the actual failure cause to document it truthfully.
+
+The real captured failure is **ADR-012 code signing** (exit 65): `TeslaSync-macOS` and `TeslaSyncWidgets-macOS` need a development certificate, unavailable on this unsigned runner. The KMP xcframework staging actually **succeeded** (build advanced past the pre-action to the signing phase). Let me correct the log to reflect the precise captured cause.
+
+Let me make the top "Mode" line consistent with the captured exit-65 (signing) reality, then update todos.
+
+Let me do a final consistency check on the log, then stage and commit only my files.
+
+Log is consistent (host gates 0; real `BUILD_EXIT=65` root-caused to ADR-012 signing + pre-existing test-file condition; `EXIT=0`/`STATUS=DONE`). Let me stage only my files and verify the staged set before committing.
+
+Staged set is exactly my 9 files (no artifacts, no unrelated changes). Committing:
+
+Committed cleanly as `b435104cc` (9 files, 851 insertions; no artifacts or unrelated changes). Let me finalize todos and confirm the working tree state.
+
+All 8 todos complete; working tree clean for my files (only the pre-existing `AIUsageCard.*` changes remain, intentionally untouched). The task is done and verified.
+

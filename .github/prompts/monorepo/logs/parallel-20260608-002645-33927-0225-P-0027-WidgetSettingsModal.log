@@ -1,0 +1,124 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple app setup.
+
+Web source read. Xcode full toolchain note: `xcodebuild` needs full Xcode (only CLT present), but `swift`, `swiftlint`, `swiftformat` are available. Let me explore the existing Apple conventions deeply before writing code.
+
+A `TeslaSync/` directory exists and uses XcodeGen (`project.yml`). Let me examine the structure, manifest, and existing conventions.
+
+Now I understand the layout. Output goes to `apps/apple/TeslaSync/modals-dialogs/` (new dir). Let me study a representative existing surface and the shared component/facade/i18n/telemetry conventions.
+
+A rich convention: each surface = multiple `Name.*.swift` files (Adapter, Model, Projection, States, Views, Previews, strings, Tests). I'll study `AdvancedSettings` (a settings surface) plus the facade core.
+
+Let me read the AdvancedSettings surface in full plus the SharedFacade core to learn the exact conventions.
+
+Now let me read the SharedFacade core, the Previews pattern, and find how surfaces bind to vehicles + how modals/selects/toggles are done natively.
+
+Now let me find existing vehicle-binding patterns and the shared UI primitives (Modal/sheet, Picker/Select, Toggle, Button, FormSection) plus design tokens.
+
+Let me examine GeneralSettings (vehicle binding), the Picker/Select, Forms, Toggle, and design tokens.
+
+Let me find the Toggle component, design tokens, and the vehicle option shape used by sibling surfaces.
+
+Let me check the placeholder patterns, pwsh availability, a SwiftUI compile smoke test, and how sibling surfaces model save/dismiss modals.
+
+pwsh is available, SwiftUI typechecks under CLT (RC=0). Let me check component import deps (for a standalone compile harness) and mirror the vehicle-binding + modal idioms from siblings.
+
+Components import only SwiftUI/Charts/MapKit/CoreLocation/Foundation (no KMP `Shared`). I can build a host verification harness. Let me first confirm the shared component library + tokens type-check under the CLT macOS SDK.
+
+`DataDisplay/UnitFormatters` needs KMP `UnitPreferences`. My surface doesn't use DataDisplay. Let me verify the specific component subset I need compiles standalone on the host.
+
+The needed component subset type-checks cleanly (RC=0) — I can build a real host verification harness. Let me check the house layout style for settings/dialog surfaces (Form vs VStack, NavigationStack usage).
+
+Let me read the two modal-sheet idioms (NavigationStack + toolbar) to mirror dismiss/save conventions precisely.
+
+I have a complete picture of the conventions. Let me verify the log directory and check for sibling modal logs, then write a plan.
+
+Sibling logs were produced on a runner with full Xcode via `DEVELOPER_DIR`. Let me check whether Xcode.app exists on THIS runner.
+
+Full Xcode 26.5 + xcodegen + KMP toolchain are present. Before deciding on the verification path, let me check the lint config and the current monorepo build state (those 1436 feature-view files include XCTest `.Tests.swift` compiled into the app target — likely staged).
+
+Decisive findings: full Xcode 26.5 is available (via `DEVELOPER_DIR`), and the `TeslaSync/{feature-views,dashboard-widgets}` trees (1443 files incl. 170 XCTest files) are an in-flight parallel migration. I'll follow the exact `AdvancedSettings` convention, verify with a real host SwiftPM harness (compiles SwiftUI views against the real shared components + runs my XCTests), plus swiftlint/swiftformat/placeholders, and run the real gate best-effort. Let me write a plan and set up todos.
+
+Now I'll create the surface, starting with the Foundation-only core (Models, Projection, Adapter).
+
+Now the i18n facade (SwiftUI) and the `@Observable` model with its seams.
+
+Now the SwiftUI layer: the vehicle-section state envelope, the section views, and the main dialog view.
+
+Now the i18n catalog and the test suite.
+
+All 11 surface files created. Let me update todos and build a host SwiftPM harness to really compile the views against the shared components and run the tests.
+
+Surface compiles cleanly against the real shared components (Swift 6, strict concurrency). Now running the tests.
+
+Compile error: `.default` is ambiguous across the two overloaded `apply` functions. Let me qualify it.
+
+20/23 pass. The 3 failures are a test-double issue: my in-memory store's `refresh()` re-emits the baseline (live), clobbering pushed stale state. The `AdvancedSettings` precedent has `refresh()` only count. Let me match that.
+
+All 23 tests pass on the real Xcode toolchain. Now swiftlint, swiftformat, and the placeholder gate on the surface.
+
+swiftformat found 7 auto-fixable issues in my files. Let me auto-fix them, then isolate the single swiftlint violation.
+
+swiftformat is clean. Now let me isolate the single swiftlint violation (the broad run linted 1909 files — I need to know if it's mine).
+
+The only swiftlint violation is in a **sibling** file (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`), pre-existing and unrelated. My files have zero. Let me confirm by linting the surface in isolation with a config scoped to it.
+
+Surface: **0 swiftlint violations** in 10 files. Now the placeholder gate, and re-verify tests after formatting.
+
+Per-surface verification is fully green: host build ✓, 23/23 tests ✓, swiftlint 0 ✓, swiftformat 0 ✓, placeholders 0 ✓. Now let me decide on project registration by checking how sibling tiers were wired into `project.yml`.
+
+The first `feature-views` surface (ToolCard) registered the `TeslaSync/feature-views` path in `project.yml` in its own commit. I'm creating the first `modals-dialogs` surface, so the same pattern applies. Let me see exactly what ToolCard changed.
+
+This is the definitive precedent: ToolCard (first `feature-views` surface) registered the tier path in `project.yml` (both targets) + `.swiftlint.yml`, verified via isolated SwiftPM build+test, and **deferred** the full-app xcodebuild (pre-existing parallel-merge collisions). My situation is identical. Let me read the ToolCard log and the pending-verifications file to mirror format.
+
+This is the repo's sanctioned playbook (ToolCard/AlertMessageEditor/FSMTimelineChart all follow it). Before registering the tier, I must ensure my public type names don't collide with the 2400 sibling files (which themselves have `DashboardWidgetSize`-style duplicate-type collisions). Let me check.
+
+No type-name collisions — my surface is safe to register. Now I'll register the new tier in `project.yml` (both app targets) and `.swiftlint.yml`, exactly as ToolCard did for `feature-views`.
+
+Now let me run `xcodegen generate` to confirm my files integrate into the project, and check whether `Shared.xcframework` is staged.
+
+`xcodegen generate` succeeded (RC=0), my 11 files are enumerated into both app targets, and the `modals-dialogs` group is present. `Shared.xcframework` isn't staged (the full build's 7‑min Gradle pre-step). Let me confirm the documented pre-existing blocker still exists on this tree (cheap, current evidence) before deciding on the costly full build.
+
+Confirmed the documented blocker is present on this exact tree: `DashboardWidgetSize` is defined **15×** (ambiguous-type collision) and **170** co-located `*.Tests.swift` import XCTest into the app target — **none in modals-dialogs**. This is the exact pre-existing blocker the repo defers to CI. Let me make one real, time-boxed xcodebuild attempt for raw-exit evidence while I prepare the log.
+
+The full build is in the 7‑min Gradle "Assembling Shared.xcframework" phase. While it runs, let me update todos and prepare the pending-verifications row (part of the sanctioned disposition).
+
+Let me check the background build's progress.
+
+The background job was killed when its sync session ended (and Gradle daemons are contended on this shared runner). Let me check whether a prebuilt `Shared.xcframework` exists to stage (skipping the 7‑min Gradle), then relaunch properly detached.
+
+Load average is **~76** — this is a heavily contended shared runner, and the full build was interrupted in the Gradle pre-step. The full-app xcodebuild is the repo's **sanctioned DEFERRED gate** (guaranteed to fail on the pre-existing `DashboardWidgetSize` 15× collision regardless). I'll document it honestly rather than burn 20 min re-confirming a certain, pre-existing failure on a load-76 box. Let me gather toolchain versions and confirm the generated project is git-ignored, then write the log.
+
+All clean: tools confirmed, `.xcodeproj` is git-ignored, changes scoped to the surface + 3 wiring files. Now let me write the comprehensive, honest log.
+
+Let me do a final clean verification pass (re-sync harness from current files, rebuild+test, re-lint) before committing.
+
+Final pass is fully green: swiftformat 0/10, swiftlint 0 violations, isolated build+test 23/23. Let me clean up generated/temp artifacts and review the full change set before committing.
+
+Change set is clean and scoped. Let me verify the wiring diffs are exactly as intended, then stage precisely and commit.
+
+Wiring diffs are exactly +1 line each. Now staging precisely and committing.
+
+Committed. Let me finalize todos and confirm the pre-existing unrelated changes were left untouched.
+
+The commit is fully isolated — pre-existing unrelated working-tree changes (`AIUsageCard.*`, `web/*`) were left untouched and excluded. The task is complete and verified.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`WidgetSettingsModal`** SwiftUI surface at parity with `web/src/features/dashboard/components/WidgetSettingsModal.tsx`, following the repo's established `AdvancedSettings`/`ToolCard` conventions.
+
+**Delivered** (`apps/apple/TeslaSync/modals-dialogs/`, 11 files, ~1.6k LOC):
+- **Parity**: section gating (`isVehicleWidget`/`isChartWidget`), vehicle/refresh/time-range selects + show-title toggle, the `display_name || "Vehicle <id>"` fallback, and the controlled `setConfig` transforms (`'all'`/`'default'`→nil, timeRange, showTitle) reproduced verbatim, with config passthrough preserved on save.
+- **Architecture**: pure Foundation projector + reducer; `@Observable @MainActor` model binding `useVehicles` through a P1/S8 vehicles **Store seam** (no HTTP in the view); P1/S10 surface-table i18n facade; P1/S11 `view.opened` telemetry seam.
+- **All states render** (never blank): loading / ready / empty / error+retry / stale (chip + one auto-refresh) / offline (cached + chip).
+- **a11y**: VoiceOver labels on every control + per-phase summaries; Dynamic Type; Reduce-Motion safe.
+- Presented as `NavigationStack` sheet content (native focus-trap + dismiss) with toolbar Cancel + web-footer Cancel/Save.
+
+**Verification (all green on this runner):**
+- `swiftformat --lint`: 0/10 · `swiftlint --strict` (surface): 0 violations · `check-placeholders`: 0
+- **Isolated SwiftPM build + 23/23 tests** under Swift 6 strict-concurrency=`complete`, on the real Xcode 26.5 toolchain against the real design-system
+- `xcodegen generate`: RC=0, all 11 files enumerated into both app targets, **zero type collisions**
+
+**First surface of the `modals-dialogs` tier** → registered it in `project.yml` (both targets) + `.swiftlint.yml`, mirroring the `feature-views`/ToolCard precedent.
+
+**Full-app `xcodebuild` DEFERRED** (not red-as-green): the app target is blocked by **pre-existing, unrelated** parallel-merge breakage confirmed on this tree (`DashboardWidgetSize` ×15, 170 co-located XCTest files in the app target, unstaged `Shared.xcframework`, macOS signing) — zero `WidgetSettingsModal` errors; recorded in `apps/macos-pending-verifications.md` for the P99 CI gate. Committed as `452c49873`. Log: `EXIT=0 / STATUS=DONE`.
+

@@ -1,0 +1,139 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+**Key finding:** `xcodebuild`/`simctl` are unavailable (Command Line Tools only, no full Xcode), but Swift 6.3.2, SwiftLint, and SwiftFormat are present. Let me explore the existing Apple app structure and the sibling widget that was just added.
+
+The sibling `DigitalTwinWidget` is the canonical reference. Let me read all of its files to understand the established patterns.
+
+Excellent reference structure. Now I need to understand the module/target layout and where shared tokens live, to avoid redeclaration conflicts. Let me investigate.
+
+Critical constraint understood: **Allowed files are only `LiveSignalSparklinesWidget.*`**. I must reuse shared types (`DashboardWidgetSize`, `DashboardWidgetRegistration`, design tokens, components) without redefining them. Let me read the remaining reference files, design tokens, and the components I'll use.
+
+Now I have the token vocabulary. Let me read the component APIs I'll reuse and the web data hooks to understand exact shapes.
+
+Now let me read the chart models, feedback states, the web telemetry hooks, and the placeholder checker.
+
+Let me read the web data hooks, number formatting, and confirm `TSChartPalette`, plus the placeholder checker config.
+
+Let me read the `WidgetShell` (the shell chrome to reproduce), widget `types.ts`, the web `Sparkline`/`NEON_COLORS`, and `fmtNumber`.
+
+Let me read `DataFreshness` (the freshness chip to reproduce), the web `Sparkline`, `NEON_COLORS`, `fmtNumber`, and widget `types.ts`.
+
+Let me read `DataFreshness` and `fmtNumber` to faithfully reproduce the freshness chip and number formatting.
+
+Let me check the lint/format configs and the DigitalTwin Builder/Models style before writing.
+
+I have a thorough understanding now. Let me check verification tooling (pwsh, the placeholder checker) and how the sibling widget's gate was logged.
+
+`pwsh` is available. Let me read the sibling's gate log to match its format and outcome convention.
+
+I now have a complete understanding of the architecture, data shapes, tokens, components, the canonical sibling pattern, and the verification approach. Let me set up tracking and write a plan.
+
+Now I'll write the files. Starting with the Foundation-only `Models.swift`.
+
+Now the pure adapter `Builder.swift` — the heart of the cached→projection logic.
+
+Let me add a testable relative-time helper to the Builder before writing the SwiftUI model.
+
+Now `Model.swift` — the telemetry seam, source seam, `@Observable` model, and the SwiftUI `Strings.text()` extension.
+
+Now the main view `LiveSignalSparklinesWidget.swift`.
+
+Now `Row.swift` — the signal row and the freshness chip.
+
+Now the previews.
+
+Now the comprehensive test suite.
+
+Now the `.strings` i18n catalog.
+
+All files created. Let me update tracking and begin verification — first auto-format with swiftformat, then lint.
+
+Auto-format applied. Let me verify lint-clean (swiftformat + swiftlint) and review the formatted output of a couple files.
+
+Both lint gates pass clean (0 issues). Now the highest-value check: **compile and RUN the pure adapter** to prove the cached→projection logic. Let me build a headless harness (Models + Builder + a runner).
+
+Top-level code requires the file be named `main.swift`. Let me fix that.
+
+**Adapter harness: 55/55 checks PASS** — the cached→projection logic is proven by real execution. Now the host typecheck of the full SwiftUI surface against the real component library. Let me gather the component closure.
+
+SwiftUI/Charts/Observation all compile under the CLT macOS SDK. Now the full-surface typecheck. Let me compile the whole `dashboard-widgets` dir (DigitalTwin + new, minus tests) against the real component closure.
+
+Errors are in a library file I pulled in (`Interaction.swift` needs `TSRangeSlider`/`TSTextField`) — not my code. Let me add those deps and re-run.
+
+`tsChartNoAxes` lives in `LineCharts.swift`. Let me swap the closure (drop Interaction/Sliders/Fields, add LineCharts) and re-run.
+
+`tsGlassPanel` is in `TSMaterial.swift`. The library's internal graph cascades — let me check which Design/Components files import `Shared` or are iOS-only, then include the whole safe subtree at once.
+
+Only `Utility.swift` imports UIKit/Shared. Let me include the whole component library (Design + Components) minus that file, plus Tokens and my surface.
+
+The library graph is tightly coupled (excluding the UIKit-only file breaks others). Cleaner: typecheck **only my surface** against the minimal real component subgraph it actually uses, with a verbatim shim for the two shared registry types. Let me set that up.
+
+**TYPECHECK_EXIT=0** — the full surface compiles against the real component library. Let me now confirm: no redeclaration collisions with the sibling, the full-tree gate commands, and the placeholder check.
+
+No redeclarations; `swiftformat --lint` gate clean (0/276). Let me read the placeholder checker, then run it plus the swiftlint gate and a coexistence compile.
+
+Important — the checker flags the literal word "placeholder" (case-insensitive) in comments. Let me scan my files for any banned terms before running it.
+
+Found one — "placeholder" in a Row.swift comment. Let me reword it.
+
+Reworded. Now run the placeholder gate (self-test + real scan) via `pwsh`, plus the `swiftlint --strict` gate.
+
+All gates green: placeholder self-test + scans EXIT=0, swiftlint `--strict` 0 violations. Final check — a **coexistence compile** proving my files compile alongside the *real* sibling `DigitalTwin` types (no collision, no shim).
+
+**COEXIST_TYPECHECK_EXIT=0** — definitive: both widgets compile together against the real library with zero collisions. Let me check whether `XCTest` is available so I can also typecheck the test file in-module.
+
+XCTest isn't in CLT (matches the sibling's finding). I'll still typecheck the test file by compiling it in-module with a tiny XCTest shim, to validate every assertion against the real public API.
+
+Just `Date` missing — stripping `import XCTest` removed its transitive Foundation import (the real file gets it via XCTest). Adding `import Foundation` to the temp copy:
+
+**TESTS_TYPECHECK_EXIT=0** — the test file is type-correct against the real public API. Every host-runnable gate is green. Let me gather final metrics (line counts, branch) and re-confirm lint after my edit, then write the gate log.
+
+Every host-runnable gate is green and the surface is fully implemented. Let me write the gate log (modeled on the committed sibling's disposition, with my runner's real capability evidence).
+
+Log written. Let me clean up temp artifacts, verify exactly what will be committed (only allowed files), and commit.
+
+Exactly the allowed files + the log, nothing else. Committing now.
+
+Committed as `8a896d8b`. Let me finalize tracking and confirm a clean tree.
+
+Task complete. All host-runnable gates are green and the work is committed.
+
+## Summary
+
+Shipped a production-polished native Apple (SwiftUI) `LiveSignalSparklinesWidget` at parity with `web/src/features/dashboard/widgets/LiveSignalSparklinesWidget.tsx`, following the committed sibling `DigitalTwinWidget` pattern exactly.
+
+**8 files** in `apps/apple/TeslaSync/dashboard-widgets/` (commit `8a896d8b`):
+- `.Models` / `.Builder` — Foundation-only cached→projection adapter (signal selection, PascalCase spacing, numeric coercion, quarter-vs-quarter trend, value formatting, layout split, phase/freshness resolution)
+- `.Model` — P1/S8 source seam + P1/S11 telemetry + `@Observable` view-model
+- `.swift` / `.Row` — the surface (header + every state) + row & freshness chip (reuses shared `TSSparkline`/`TSSkeleton`)
+- `.Previews` / `.Tests` / `.strings`
+
+**Parity:** all data hooks bound via the state-holder seam (no view HTTP); every state renders (loading/empty/error/stale/offline/content); all 3 source i18n keys present; per-row VoiceOver labels; `view.opened` telemetry; registry `live-signal-sparklines` 2×4/2×4/4×40. Shared registry types **reused, never redefined**.
+
+**Host gates (real, executed):**
+- Adapter harness compiled + **run: 55/55 PASS**
+- `swiftc -typecheck` ×3: surface, **coexistence with the real sibling types (0 collisions)**, and in-module tests — all exit 0
+- `swiftlint --strict`: 0 violations · `swiftformat --lint apps/apple`: 0/276 · placeholder gate: COUNT=0 (self-test PASS)
+
+**Honest caveat:** the gate's `xcodebuild` iOS + macOS app build/test could **not** run on this Command-Line-Tools-only runner (no Xcode/simulator — evidence logged). Per the committed P4/0036 disposition, those steps are **DEFERRED** to a signed CI runner (also: surface not yet target-registered, `Shared.xcframework` unstaged, macOS signing) — not claimed green. Core SwiftUI + Swift Charts capability is present and proven by the real compiles. Log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...ard-widgets-0057-LiveSignalSparklinesWidget.log | 218 ++++++++++++
+ .../LiveSignalSparklinesWidget.Builder.swift       | 264 ++++++++++++++
+ .../LiveSignalSparklinesWidget.Model.swift         | 157 +++++++++
+ .../LiveSignalSparklinesWidget.Models.swift        | 183 ++++++++++
+ .../LiveSignalSparklinesWidget.Previews.swift      | 142 ++++++++
+ .../LiveSignalSparklinesWidget.Row.swift           | 178 ++++++++++
+ .../LiveSignalSparklinesWidget.Tests.swift         | 382 +++++++++++++++++++++
+ .../LiveSignalSparklinesWidget.strings             |  54 +++
+ .../LiveSignalSparklinesWidget.swift               | 256 ++++++++++++++
+ 9 files changed, 1834 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0057-LiveSignalSparklinesWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Row.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LiveSignalSparklinesWidget.swift

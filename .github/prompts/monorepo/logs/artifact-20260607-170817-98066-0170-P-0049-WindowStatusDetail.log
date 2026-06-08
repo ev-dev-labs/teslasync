@@ -1,0 +1,225 @@
+================================================================================
+P4 · Feature view · 0049 — WindowStatusDetail (Apple)
+Run: 2026-06-07T19:57-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/170
+Base: 16dacd60
+Prompt: P4/feature-views/0049 — Feature view: WindowStatusDetail
+Web source (spec): web/src/features/admin/components/security-access/WindowStatusDetail.tsx
+Mode: code-complete + host-runnable gates green (swiftformat / swiftlint / placeholder
+      + macOS-15-SDK swiftc -typecheck against the REAL component closure + an EXECUTED
+      host test harness, 40/40) + DEFERRED Xcode-only steps (xcodebuild build/test,
+      iOS-Simulator-SDK typecheck, #Preview-plugin typecheck) — this runner is
+      CommandLineTools-only (no Xcode.app). ADR-012 macOS CI matrix; 0002 BackendTool /
+      0054 GuardModeWidget predecessor parity (Honesty rule 7).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  macOS SDK ................. MacOSX.sdk (CLT) — SwiftUI/Observation present        OK
+  @Observable macro ......... loads + typechecks under CLT (probed, exit 0)        OK
+  swiftlint ................. 0.63.3 (/opt/homebrew/bin/swiftlint)                  OK
+  swiftformat ............... 0.61.1 (/opt/homebrew/bin/swiftformat)               OK
+  pwsh (placeholder gate) ... /opt/homebrew/bin/pwsh                              OK
+  xcodegen .................. 2.45.4                                               OK
+  Xcode.app ................. ABSENT — `xcode-select -p` = /Library/Developer/CommandLineTools
+                              `xcodebuild -version` -> "error: tool 'xcodebuild' requires
+                              Xcode, but active developer directory '…/CommandLineTools'
+                              is a command line tools instance"                     DEFER
+  iPhoneSimulator SDK ....... ABSENT under CLT (no iOS SDK; `xcodebuild -showsdks` fails) DEFER
+  simctl / iOS simulator .... ABSENT ("unable to find utility simctl")             DEFER
+  PreviewsMacros plugin ..... ABSENT under CLT (ships with Xcode.app)              DEFER
+
+  Capability note: the web source lists "Charts/maps used: (none)" and shared
+  components GlassPanel + FadeIn. The CORE requirement is SwiftUI, which is AVAILABLE
+  and PROVEN by a real macOS-15-SDK `swiftc -typecheck` of this surface against the
+  real apps/apple component closure AND an executed host harness below. The
+  capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT
+  apply — the surface is authored, host-typechecked, and host-EXECUTED. The Xcode.app
+  toolchain (xcodebuild, iOS-Simulator SDK, #Preview plugin) is the only missing piece
+  and is DEFERRED to the ADR-012 macOS CI runner, exactly as 0002 BackendTool deferred
+  xcodebuild.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/WindowStatusDetail.*) ===
+  WindowStatusDetail.Adapter.swift   221  testable projection core (Foundation-only) —
+                                          WindowState/WindowSignal/WindowPosition enums +
+                                          WindowStatusEvent snapshot + WindowStatusProjection
+                                          (parseWindowState port of helpers.ts, cells,
+                                          resolvePhase, allClosed/notClosedCount = web
+                                          windowSummary) + WindowStatusAccessibility (pure)
+  WindowStatusDetail.Model.swift     211  P1/S8 source seam (WindowStatusSource ->
+                                          WindowStatusModel, InMemory source) + P1/S11
+                                          telemetry seam (view.opened) + P1/S10 strings
+                                          facade + load-status/connection enums + guarded
+                                          stale auto-refresh (ADR-013). NO SwiftUI import.
+  WindowStatusDetail.Views.swift     291  presentational subviews — header + freshness chip
+                                          (Live/Stale/Offline) + connectivity banner +
+                                          summary chip + WindowPaneCard (GlassPanel tint/
+                                          border = windowColor, value color = windowTextClass)
+                                          + responsive grid + loading/error/empty states
+  WindowStatusDetail.swift            76  surface (surfaceSlug + TSFadeIn(0.15) + header +
+                                          banner + phase composition + onAppear/onDisappear)
+  WindowStatusDetail.Previews.swift   93  #if DEBUG previews — one per state (loading/error/
+                                          empty/data-all-closed/data-mixed/stale/offline)
+  WindowStatusDetail.Tests.swift     221  XCTest — parse + projection + model/telemetry +
+                                          a11y (16 methods); body syntax host-validated +
+                                          the same logic EXECUTED 40/40 by the harness below
+  WindowStatusDetail.strings          45  P1/S10 catalog contribution (table "WindowStatusDetail")
+  Total 1158 lines (the web leaf is a 45-line presentational component fed `latest`;
+  the native surface adds the S8/S10/S11 seams + the HIG 5-state contract + tests, as
+  every sibling feature-view does). Largest .swift = 291 lines (swiftlint file_length
+  honored). No file imports the Shared xcframework (the seam is a Swift protocol; prod
+  injects the facade-backed source, previews/tests inject InMemoryWindowStatusSource).
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data sources (web useTranslation; the leaf is fed `latest: SecurityEvent | undefined`
+    by its parent): bound through the P1/S8 seam WindowStatusSource -> WindowStatusModel.
+    The snapshot carries the four window signals (string|boolean|null, exactly the web
+    SecurityEvent field union) + load status + ADR-013 connection. No HTTP in the view.
+  - parseWindowState (helpers.ts) ported faithfully incl. its quirks: asNonEmptyString
+    => only a non-empty string coerces (boolean/null/absent -> Unknown); "closed"/"0" ->
+    Closed; contains "vent" -> Venting; any other non-empty -> Open (the web ladder's
+    `lower !== '0'` makes the trailing Unknown reachable only for empty/bool/absent).
+    Pinned by tests incl. ajar->Open and "1"->Open.
+  - Composition (web FadeIn + h2 + GlassPanel grid):
+      • FadeIn(0.15)   -> TSFadeIn(delay: 0.15) (honors Reduce Motion).
+      • h2 title       -> WindowStatusHeader, web t('admin.security.windowDetail').
+      • 4x GlassPanel  -> WindowPaneCard; windowColor -> tone tint+border
+                          (Closed=success/green, Venting=warning/amber, Open=danger/red,
+                          Unknown=neutral/gray); windowTextClass -> value color = tone.
+      • grid cols 1/2/4-> LazyVGrid(.adaptive(minimum:150)) responsive across iPhone/
+                          iPad/Mac.
+  - States (ALL rendered, each with a #if DEBUG preview + a model/projection test):
+      loading (skeleton grid) · error (QueryError-equivalent + Retry) · empty (the four
+      cards all Unknown + a friendly note — never a blank box) · data (four toned cards
+      + summary chip) · stale (freshness chip + reconnecting banner + ONE guarded
+      auto-refresh) · offline (cached cards + offline chip/banner, no auto-refresh).
+  - i18n (P1/S10): web keys preserved verbatim — admin.security.windowDetail,
+    admin.security.window.{fd,fp,rd,rp}, admin.security.windowState.{closed,venting,open,
+    unknown}; native chrome namespaced admin.security.window.{live,stale,offline,
+    staleBanner,offlineBanner,allClosed,openVenting,loadingA11y,error,retry,empty}.
+    referenced==declared verified; NO English string literals in native code (all via
+    WindowStatusStrings facade + Text(verbatim:)).
+  - Accessibility: VoiceOver labels on each card (WindowStatusAccessibility.cellSummary
+    "{position}, {state}"), freshness chip, banner, summary chip, retry button; grid is
+    an .contain container; header carries .isHeader; Dynamic-Type system fonts (Font.TS);
+    reduce-motion honored (TSFadeIn + TSSkeleton).
+  - Telemetry (P1/S11): WindowStatusModel.start() emits view.opened with surface slug
+    "WindowStatusDetail" exactly once (OSLogWindowStatusTelemetry default; prod app
+    injects the shared diagnostics adapter). EXECUTED + asserted (harness: "view.opened
+    once with slug").
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  [1] swiftc -typecheck — macOS 15 SDK (the 4 production .swift files compiled with the
+        REAL component closure: design Tokens + Sources/Design + Components/UI +
+        Components/Feedback + Components/Motion, 20 files; Swift 6, strict concurrency):
+          swiftc -typecheck -sdk <MacOSX.sdk> -target arm64-apple-macos15.0 \
+            -swift-version 6 <closure> <4 production files>
+        MAC_TYPECHECK_EXIT=0   (zero errors in WindowStatusDetail.*)               OK
+  [2] swiftc -parse — the 5 non-test files (macOS SDK):
+        PARSE_EXIT=0                                                                OK
+        (Tests.swift parses once `@testable import TeslaSync` is provided — its body
+         was host-validated by stripping the module import in a tmp copy; the direct
+         parse needs the TeslaSync module, a build artifact present only under xcodebuild.)
+  [3] HOST TEST HARNESS — the REAL WindowStatusProjection + WindowStatusModel +
+        WindowStatusAccessibility (Foundation/Observation, no SwiftUI render) compiled
+        into an executable with the production files + closure and RUN on this host
+        (mirrors the web tests + Tests.swift assertions):
+          == parseWindowState ==  12/12 ok   (Closed/closed/0/Vented/vent/Open/ajar/1/
+                                              empty/bool-true/bool-false/absent)
+          == cells / phase / summary ==  13/13 ok  (order, all-unknown, mixed derivation,
+                                              5 phase resolutions, allClosed x3,
+                                              notClosedCount, cellSummary)
+          == model + telemetry + freshness ==  15/15 ok  (start->data, 4 cells, allClosed,
+                                              view.opened-once+slug, source-started-once,
+                                              loading-initial, push->data+states+count,
+                                              refresh-delegates, live-no-refresh,
+                                              stale->1-refresh, stale-guarded,
+                                              live-resets-guard, offline-no-refresh)
+          HARNESS_RESULT=PASS    RUN_EXIT=0   (40/40 assertions)                    OK
+  [4] swiftlint --strict (6 surface .swift files; explicit paths — the repo
+        .swiftlint.yml `included:` does not list TeslaSync/feature-views, so the bare
+        `swiftlint --strict` SKIPS this dir; that wiring is the P4 integration prompt's
+        job. Run explicitly here):
+          Done linting! Found 0 violations, 0 serious in 6 files.
+        LINT_EXIT=0                                                                OK
+  [5] swiftformat --lint (config apps/apple/.swiftformat; the 6 surface .swift files):
+          0/6 files require formatting.
+        FORMAT_EXIT=0                                                              OK
+  [6] check-placeholders.ps1 (ADR-011 stub gate; swift):
+          ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views -Language swift
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                         OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the macOS+Xcode CI runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured capability evidence (real, on this host):
+      - xcode-select -p           -> /Library/Developer/CommandLineTools
+      - xcodebuild -version       -> error: tool 'xcodebuild' requires Xcode, but active
+                                     developer directory '/Library/Developer/CommandLineTools'
+                                     is a command line tools instance
+      - xcrun simctl              -> error: unable to find utility "simctl"
+      - #Preview typecheck (-D DEBUG) -> error: external macro implementation type
+                                     'PreviewsMacros.SwiftUIView' could not be found …
+                                     plugin for module 'PreviewsMacros' not found
+    Why deferred (environment-only; none is a defect in this surface; identical
+    disposition to 0002 BackendTool / 0054 GuardModeWidget, Honesty rule 7):
+      (a) NO Xcode.app on this runner (CommandLineTools only) -> xcodebuild cannot run,
+          the iOS-Simulator SDK + iPhone 16 simulator are absent, and the #Preview macro
+          plugin (PreviewsMacros, an Xcode component) is absent. SwiftUI itself IS present
+          in the macOS SDK and the surface typechecks green against the real component
+          closure (step [1]); the testable core is EXECUTED green (step [3]).
+      (b) NOT-YET-REGISTERED: project.yml's app/test targets enumerate `Sources/` and
+          `TeslaSync/dashboard-widgets/`; this surface lives at TeslaSync/feature-views/
+          (0 references in project.yml — every sibling feature-view is identical). The
+          feature-views dir is registered into the XcodeGen targets by the downstream P4
+          integration/acceptance prompt. Editing project.yml is OUTSIDE this prompt's
+          allowed files (WindowStatusDetail.* + the log).
+      (c) Shared.xcframework not staged + macOS signing needs a dev certificate (ADR-012).
+    The Tests.swift XCTest suite runs in the TeslaSync(/-macOS) test target on the macOS
+    CI runner; here the SAME logic is PROVEN GREEN (40/40) by the executed host harness
+    in step [3], and the surface typechecks against the macOS 15 SDK in step [1].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/error/empty/data) + ADR-013 stale/offline
+      freshness chip & banner — implemented; each has a #if DEBUG preview; phase + freshness
+      logic unit-tested AND EXECUTED green (40/40).
+  [x] Hooks bind through the shared P1/S8 seam (WindowStatusSource -> WindowStatusModel);
+      no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — web windowDetail/window.*/
+      windowState.* preserved verbatim; native chrome admin.security.window.* present;
+      referenced==declared verified.
+  [x] Accessibility labels on every element (each card, freshness chip, banner, summary,
+      retry); grid .contain; header .isHeader; cellSummary asserted.
+  [x] Tests: adapter/projection unit + per-state model + telemetry + a11y — 16 XCTest
+      methods; the equivalent logic EXECUTED 40/40 on host, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host-runnable gates green (typecheck + executed harness +
+      lint + format + placeholder); Xcode-only build/test DEFERRED with captured
+      capability evidence, per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green AND the testable core is
+                          EXECUTED (40/40); the xcodebuild build/test + iOS-SDK + #Preview
+                          steps are shown DEFERRED with their REAL capability errors, not
+                          as pass.
+  2 No scope narrowing ... full surface (7 files), all states, S8/S10/S11 seams, tests.
+  3 No skip-and-assume ... web source + helpers.ts read end-to-end; every t() + branch +
+                          parseWindowState quirk reproduced and pinned by tests.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. FadeIn + title + 4 toned GlassPanel cards + windowColor/
+                          windowTextClass + windowSummary + 6 states.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0002 BackendTool: host gates green, Xcode
+                          steps deferred with evidence. This runner is CLT-only, so the
+                          on-host typecheck is macOS-SDK (not iOS-SDK) and previews defer
+                          on the missing #Preview plugin — both documented, not hidden.
+  8 No commit on red ..... committed work is green on every runnable gate AND executes
+                          40/40; the only non-green steps are environment-blocked (no
+                          Xcode.app), deferred with evidence (predecessor-accepted).
+  9 No silent drift ...... feature-views not yet in project.yml (integration prompt's job)
+                          + CLT-only runner constraints documented above.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

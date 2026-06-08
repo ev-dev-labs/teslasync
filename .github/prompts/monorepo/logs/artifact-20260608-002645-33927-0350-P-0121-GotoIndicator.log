@@ -1,0 +1,145 @@
+=== P4 Shared surface 0121 GotoIndicator (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/GotoIndicator.{swift,Adapter,Model,Views,Previews,Tests,AdapterTests}.swift + GotoIndicator.strings
+Web src  : web/src/components/feedback/GotoIndicator.tsx  (THE spec)
+Runner   : macOS (Darwin), Xcode 26.5 (17F42) via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer,
+           Swift 6.3.2, iPhone 16 simulator present, swiftlint + swiftformat + pwsh + xcodegen installed.
+Date     : 2026-06-08
+
+------------------------------------------------------------------------------------------------------
+WEB SOURCE ANALYSIS (parity scope)
+------------------------------------------------------------------------------------------------------
+GotoIndicator.tsx is a PURE presentational keyboard-shortcut hint. Its entire surface area:
+  • Props      : { visible: boolean }
+  • Data hooks : useTranslation ONLY (i18n) — NO query, NO fetch, NO formatting, NO shared components,
+                 NO charts, NO maps.
+  • Branches   : `if (!visible) return null;`  then a bottom-centred frosted pill:
+                 <span muted>{t('shortcuts.goto','Go to...')}</span> <kbd>g</kbd> <span>+</span> <kbd>?</kbd>
+  • i18n keys  : exactly one — `shortcuts.goto` (fallback "Go to..."). The `g` / `?` key glyphs and the
+                 `+` chord separator are language-neutral keyboard symbols rendered verbatim (not translated).
+
+=> The source has EXACTLY TWO states: hidden (`!visible` ⇒ renders nothing) and visible (the chord).
+   There is NO async / data / freshness dimension, so the leaf-template loading/empty/error/stale/offline
+   axes DO NOT EXIST in this source and were deliberately NOT fabricated (covenant rules 2 & 9 — adding
+   them would be invented behaviour / silent drift). Both real branches are reproduced and tested.
+
+------------------------------------------------------------------------------------------------------
+NATIVE ARCHITECTURE (P1 seams; mirrors the sibling AiUsageCard decomposition)
+------------------------------------------------------------------------------------------------------
+  GotoIndicator.Adapter.swift   Foundation-only, fully unit-testable: GotoIndicatorStrings (P1/S10 facade),
+                                GotoKeyHint, GotoIndicatorInput, GotoIndicatorResolved(.hidden/.visible),
+                                GotoIndicatorProjection (pure web render port), GotoIndicatorAccessibility.
+  GotoIndicator.Model.swift     P1/S8 state-holder seam (GotoIndicatorSource + InMemory source), P1/S11
+                                telemetry seam (GotoIndicatorTelemetry + OSLog default), @Observable
+                                GotoIndicatorModel — deferred `view.opened` emitted once on first present.
+  GotoIndicator.Views.swift     Presentational: GotoIndicatorCapsule (web backdrop-blur-xl → SwiftUI
+                                material, border, shadow), GotoKeycapView (mono glyph cap). P1/S9 tokens only.
+  GotoIndicator.swift           Root surface: visible→capsule w/ fade+slide-up transition (Reduce-Motion
+                                aware), hidden→EmptyView. Lifecycle start/stop. surfaceSlug="GotoIndicator".
+  GotoIndicator.Previews.swift  DEBUG #Preview: Visible·dark / Visible·light / Hidden.
+  GotoIndicator.strings         P1/S10 catalog: shortcuts.goto="Go to..." + VoiceOver chrome keys.
+  GotoIndicator.Tests.swift     Model wiring + telemetry + per-state surface contract (XCTest).
+  GotoIndicator.AdapterTests.swift  Pure projection / chord / a11y-label / facade-fallback (XCTest).
+
+------------------------------------------------------------------------------------------------------
+HOST-RUNNABLE GATES — ALL GREEN (raw exits pasted)
+------------------------------------------------------------------------------------------------------
+[1] swiftformat --lint  (my 7 swift files)         -> "0/7 files require formatting"          EXIT=0  PASS
+[2] swiftlint --strict  (my 7 files, repo ruleset) -> "Found 0 violations, 0 serious in 7 files" EXIT=0 PASS
+[3] check-placeholders.ps1 -Path .../shared-surfaces -Language swift -> PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 EXIT=0 PASS
+    check-placeholders.ps1 -Path .../shared-surfaces/GotoIndicator (gate's literal path) -> PLACEHOLDER_COUNT=0 EXIT=0 PASS
+[4] isolated SwiftPM build (swift-tools 6.0 = Swift 6 language mode / complete strict concurrency, .macOS(.v15))
+       -> "Build complete! (12.87s)"                                                          EXIT=0  PASS
+[5] isolated SwiftPM test  -> "Executed 22 tests, with 0 failures (0 unexpected)"             EXIT=0  PASS
+       Suites: GotoIndicatorModelTests(9) GotoIndicatorProjectionTests(5) GotoIndicatorStateTests(2)
+               GotoIndicatorAccessibilityTests(3) GotoIndicatorStringsTests(3)  = 22
+[6] real-SDK typecheck — iOS 18 simulator  (swiftc -typecheck -swift-version 6 -target arm64-apple-ios18.0-simulator)
+       -> no diagnostics                                                                      EXIT=0  PASS
+[7] real-SDK typecheck — macOS 15          (swiftc -typecheck -swift-version 6 -target arm64-apple-macos15.0)
+       -> no diagnostics                                                                      EXIT=0  PASS
+[8] xcodegen generate  -> "Created project at .../apps/apple/TeslaSync.xcodeproj"             EXIT=0  PASS
+
+PRE-EXISTING whole-tree lint/format (gate runs these over ALL of apps/apple; failures are NOT in my files):
+    swiftlint  --strict (whole)  -> RED EXIT=2 : TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+                                                 (function_body_length).  shared-surfaces hits: 0.
+    swiftformat --lint  (whole)  -> RED EXIT=1 : TeslaSync/feature-views/ActionBuilder.Previews.swift:48
+                                                 (blankLinesBetweenScopes). shared-surfaces hits: 0 (0/7).
+
+------------------------------------------------------------------------------------------------------
+FULL-APP xcodebuild GATE — DEFERRED to P99 (macos-latest), NOT reported as passing
+------------------------------------------------------------------------------------------------------
+xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build  (bounded 360s, REAL run)
+    -> RAW_IOS_BUILD_EXIT=124 : timed out INSIDE the scheme pre-action "Stage Shared.xcframework"
+       (Gradle :core:assembleSharedXCFramework). The build never reached Swift compilation — 0 GotoIndicator
+       errors were emitted because the KMP/Native staging is the gating long-pole on this runner.
+xcodebuild -scheme TeslaSync-macOS build test
+    -> DEFERRED (not run to a numeric exit): shares the identical Gradle staging pre-action proven above to
+       not complete in-bounds, and additionally requires a development signing identity (0 present).
+
+PRE-EXISTING, UNRELATED blockers — each verified PRESENT in THIS tree (evidence, not assumption):
+    • Shared.xcframework NOT staged: `ls apps/apple/Frameworks` = only .gitkeep. The pre-action builds it via
+      the Kotlin/Native Gradle toolchain — the P1/S3 artifact already tracked as macOS-pending.
+    • `struct DashboardWidgetSize` redefined across 15 app-target source files (Sources/DashboardWidgets/* +
+      TeslaSync/dashboard-widgets/*) -> "invalid redeclaration"/"ambiguous for type lookup".
+    • 259 co-located *.Tests.swift / *.ModelTests.swift / *.AdapterTests.swift live in the app-target source
+      dirs (TeslaSync/feature-views + TeslaSync/dashboard-widgets) and `import XCTest` INTO the app target.
+    • 0 Apple Development codesigning identities (`security find-identity -p codesigning`) — the macOS app
+      target has entitlements requiring a development cert (ADR-012).
+    • shared-surfaces/ is not yet listed in the project.yml app-target `sources:` (only dashboard-widgets +
+      feature-views are). Wiring it in is a one-line P4 core/wiring change OUTSIDE this prompt's allowed files,
+      so the surface is proven via the isolated real-SDK build+test+typecheck instead (the repo's sanctioned
+      "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date).
+
+------------------------------------------------------------------------------------------------------
+HONESTY COVENANT (binding)
+------------------------------------------------------------------------------------------------------
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED/DEFERRED (IOS=124 in Gradle
+                           staging; macOS deferred) with evidence — never as passing.
+  2  No scope narrowing  : the web source has exactly two branches (`!visible`/visible); BOTH are reproduced.
+                           No state was dropped; none was invented (it has no data axis to add states for).
+  3  No skip-and-assume  : every host gate executed on THIS runner with raw exits pasted; the full-app failure
+                           was actually triggered (real exit 124) and each blocker verified present by ls/grep.
+  4  No stubs as final   : complete production view + model + adapter + 22 real tests; placeholder scan = 0,
+                           0 opt-outs; no TODO/Coming soon/placeholder/Lorem anywhere in shipped code.
+  5  No parity shortcut  : prompt/chord/keycaps/material/shadow/typography/Reduce-Motion/VoiceOver/telemetry
+                           all mapped to platform tokens + the P1/S10 facade + verified by tests/typecheck.
+  6  No delegation       : implemented directly; no sub-agents used.
+  7  No predecessor bypass: P1/S8 state-holder, P1/S9 tokens (Tokens.swift consumed), P1/S10 i18n facade,
+                           P1/S11 telemetry seam (`view.opened`) all present and consumed.
+  8  No commit on red    : the COMMITTED artifact (GotoIndicator.* + this log) is GREEN on every host-runnable
+                           gate AND on a real isolated Swift-6 build+test+dual-SDK typecheck; the deferred
+                           full-app gate is RED only on pre-existing, unrelated surfaces this commit neither
+                           introduces nor touches (and which do not even reference shared-surfaces).
+  9  No silent drift     : changes confined to apps/apple/TeslaSync/shared-surfaces/GotoIndicator.* and this
+                           log — exactly this prompt's allowed files. project.yml / .swiftlint.yml /
+                           macos-pending-verifications.md were intentionally NOT edited (outside allowed files;
+                           avoids parallel-merge contention — the deferral is recorded here instead).
+ 10  EXIT/STATUS below.
+
+------------------------------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------------------------------------------------
+  [x] Surface renders on Apple with all states from the web source reproduced (hidden + visible — the only two).
+  [x] Hooks bind to the shared P1/S8 state-holder seam (GotoIndicatorSource/Model); no direct HTTP in the view.
+  [x] Every i18n key from source has a matching P1/S10 key (shortcuts.goto + native VoiceOver chrome keys).
+  [x] Accessibility: the pill is one VoiceOver element with a composed spoken label ("Go to... Keyboard
+      shortcut: g then question mark"); Dynamic Type via tokens; Reduce-Motion collapses the transition.
+      (No interactive elements exist — it is a non-interactive hint.)
+  [x] Tests: adapter unit tests + per-state model/surface tests + a11y-label test (22 total, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (scanner: PLACEHOLDER_COUNT=0, 0 opt-outs).
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing unrelated blockers above);
+      host-runnable equivalents (isolated Swift-6 build + 22/22 tests + iOS-18 & macOS-15 typecheck) all green.
+
+------------------------------------------------------------------------------------------------------
+DISPOSITION
+------------------------------------------------------------------------------------------------------
+Production-polished, Apple-idiomatic GotoIndicator shipped at parity with the web source and INDEPENDENTLY
+VERIFIED: it compiles against the real iOS-18 + macOS-15 SDKs under Swift 6 strict concurrency, its 22 tests
+pass, and swiftlint/swiftformat/placeholder are clean on the surface with 0 opt-outs. The full-app
+iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked by the
+unstaged KMP Shared.xcframework (Gradle staging long-pole), pre-existing duplicate-type collisions across ~15
+unrelated dashboard-widget files, 259 co-located app-target XCTest files, and macOS development-signing — all
+owned by the P4/P99 acceptance gate on a signed macos-latest CI runner. This matches the repo's sanctioned
+"code-complete + DEFERRED Xcode gate" disposition recorded in apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

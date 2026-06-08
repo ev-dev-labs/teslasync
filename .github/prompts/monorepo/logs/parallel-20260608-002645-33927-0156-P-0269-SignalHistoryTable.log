@@ -1,0 +1,193 @@
+I'll start by exploring the codebase to understand the task, then verify the Apple toolchain availability.
+
+Key finding: **Xcode is not installed** (only Command Line Tools), so `xcodebuild` and `simctl` are unavailable. But `swift`, `swiftlint`, and `swiftformat` work. Let me explore deeply before deciding on capability status — I need to do the full implementation regardless.
+
+Now let me examine the existing feature-views (to match patterns), the SignalQueryControls web source (for the data model), and the native component library.
+
+The feature-views directory has 1438 entries with a consistent multi-file pattern. Let me examine the SignalQueryControls data model and pick a reference feature-view to match the exact file structure and conventions.
+
+I now fully understand the `SignalLogEntry` data model. Let me find the most relevant reference feature-views — ideally Signal-related ones that share the same data model — to match conventions exactly.
+
+`EventHistoryTable` is the ideal reference — a history table with timestamps and the full file set. Let me read its complete implementation plus `LiveSignalsTable` (signal-related) to learn all conventions.
+
+Now let me examine the `.strings` format and the shared component library (TSDataTable, TSPagination, TSBadge, tokens) to understand what native primitives are available.
+
+Let me examine the key shared components I'll compose — DataTable (for expandable rows), Badges, and search for Pagination + chart colors.
+
+Let me find Pagination, Badge/Tone, design tokens, and the chart color palette.
+
+Let me read the design tokens (critical for colors/spacing/fonts and chart palette) plus the remaining shared components.
+
+The design tokens are generated elsewhere. Let me locate the definitions of `Color.TS`, `TSSpacing`, `Font.TS`, and `chartCategorical`.
+
+Found the generated tokens. Let me read them plus the remaining shared components I'll compose with.
+
+Now I have the full token system. Let me read the remaining shared components (Cards, Motion, Skeletons, Typography) and the web `useDateFormat` + `colors` for parity.
+
+Let me read Typography (for mono/code helpers), the LiveSignalsTable reference (signal table), and the web `useDateFormat` + `colors` for parity.
+
+The web `CHART_COLORS` (Okabe-Ito) exactly matches native `chartCategorical`. Now let me check verification tooling and the lint/placeholder configs.
+
+Excellent — macOS SDK, `pwsh`, and `swiftc -parse` all work. Only `xcodebuild`/simulator are missing. Let me establish a type-check baseline by compiling the existing `EventHistoryTable` against Components + Design tokens — if that works, I can verify my new code the same way.
+
+Components have broader dependencies (e.g. `UnitPreferences`). Let me read `project.yml` to get the exact source set the app target compiles, so I can assemble a faithful type-check.
+
+The full app build requires the absent `Shared.xcframework` (KMP core, only `.gitkeep`) — confirming `xcodebuild` is genuinely blocked. But I can faithfully type-check my view against its real component dependencies. Let me confirm the minimal dependency set compiles standalone and check conventions.
+
+Minimal dep set type-checks cleanly (exit 0) — I can verify my view against it. Let me read the placeholder patterns (to avoid tripping the gate) and glance at the LiveSignalsTable signal pattern.
+
+`LiveSignalsTable` (0036) confirms the precedent: signal tables implement **error / stale / offline** surfaces. Let me see how it models and renders stale/offline so I reproduce that capability faithfully.
+
+I now have a complete picture: `LiveSignalsTable` models freshness as a separate `connection` axis (live/stale/offline) alongside the load phase. I'll follow the proven `EventHistoryTable` (0042) file structure + add the connection axis. Let me read the lint/format configs so my code passes `swiftlint --strict` and `swiftformat --lint`.
+
+Let me check for a shared connection/stale indicator component to reuse, and confirm swiftformat is happy with the existing reference file (sanity check my formatting approach).
+
+swiftformat passes cleanly on reference files. Let me check the shared `StatusIndicators` for a reusable connection/status chip.
+
+I now have everything I need. Let me set up a plan and todos, then implement the full surface.
+
+Now I'll write the Adapter (pure logic core).
+
+Now the Model (state-holder seam, projection, telemetry, localization facade).
+
+Now the Views (presentational subviews).
+
+Now the composed surface view.
+
+Let me type-check the non-test files against their real dependencies before writing previews/tests.
+
+Non-test files type-check cleanly under Swift 6 strict mode. Now the Previews.
+
+Non-test files verified. Now the comprehensive test suite.
+
+Now the i18n strings catalog.
+
+All 7 files created. Now the verification phase. Let me run swiftformat (in-place to conform), then verify lint, type-check, and parse.
+
+swiftformat confirms my files are clean. Now swiftlint --strict on the new files.
+
+swiftlint --strict: **0 violations**. Now the full type-check including DEBUG previews, plus a parse-check of the test file.
+
+The only error is the `#Preview` macro plugin (`PreviewsMacros`) being unavailable to bare `swiftc` — a known Xcode-toolchain limitation that affects every `#Preview` in the repo (including the reference `Cards.swift`), not my code. Compiling without `-D DEBUG` strips all `#if DEBUG` preview blocks. Let me confirm the clean type-check and parse-check the preview file separately.
+
+Production type-check is clean (exit 0) and previews parse clean. Now let me understand how `check-placeholders.ps1` resolves its `-Path` (the gate passes a file prefix, not a directory) and run it.
+
+The script treats a non-existent literal path as a vacuous clean pass. To do a *meaningful* placeholder check (per the honesty covenant), I'll run it against my actual files and also grep for forbidden patterns. Let me first check how patterns match (case sensitivity) and scan my files directly.
+
+The script matches **case-insensitively**. Let me re-grep case-insensitively to be certain, then run the actual placeholder script on each of my files.
+
+All placeholder checks pass (0 count, exit 0) and forbidden-pattern grep is clean. Before finalizing status, let me definitively confirm whether full Xcode / xcodegen / the KMP framework exist anywhere — to be certain the `xcodebuild` gate steps are genuinely blocked.
+
+Full **Xcode.app IS present** — just not selected. With `DEVELOPER_DIR` I may be able to run `xcodebuild`. The honesty covenant requires me to actually try rather than prematurely declare BLOCKED. Let me check the full toolchain and whether the KMP `Shared.xcframework` can be produced.
+
+Xcode 26.5 + iPhone 16 simulator are available. The build needs the KMP `Shared.xcframework` via Gradle. Let me check whether `apps/shared` (the KMP core) is actually present and buildable in this work-tree.
+
+KMP core is present but the framework isn't prebuilt — capability **is** available (Xcode 26.5 + iPhone 16 sim). Per the honesty covenant I must actually attempt the real gate, not prematurely claim BLOCKED. Let me build the `Shared.xcframework` via Gradle first (the critical dependency), time-boxed in the background.
+
+Java 17 + Gradle 8.14.5 + KMP XCFramework task are all present. Let me start the framework build in the background and monitor it.
+
+Build started. Let me monitor progress.
+
+Gradle is downloading its distribution/dependencies (no output yet). Let me continue waiting.
+
+While the framework builds, let me generate the Xcode project (independent step) and verify scheme names match the gate.
+
+Project generated and schemes match. I need to verify how `.Tests.swift` files are assigned (app vs test target). Let me check the project.yml test-target config and the gradle progress.
+
+Key detail: the test target uses `Tests/Unit`, but feature-views `.Tests.swift` live in the app target's path. Let me see how they're routed (excludes/buildRules) so the app target doesn't break on XCTest.
+
+The test targets only include `Tests/Unit` — feature-views `*.Tests.swift` fall under the **app** target's path. Let me verify how the generated project assigns them (this determines whether the whole-app build is even structurally possible), and keep monitoring gradle.
+
+`.Tests.swift` files are compiled into the app targets, and the full gate requires building 171 surfaces + the KMP framework — all outside my **Allowed files** scope (`SignalHistoryTable.*` + log only). Still, I'll gather real build evidence. Let me keep monitoring the framework build, which is the objective prerequisite.
+
+~8 minutes with no output — the `tail` pipe is buffering live progress. Let me inspect the actual download/build state directly without disturbing the run.
+
+The framework build is **actively compiling** — Gradle dist + Kotlin/Native toolchain (1.6G `.konan`) are cached, network works, and multiple JVM workers are at high CPU compiling for `iosSimulatorArm64` + `macosArm64`. Let me wait for it to finish and watch for the artifact.
+
+The `Shared.xcframework` built successfully (ios-arm64, ios-arm64-simulator, macos-arm64). Let me confirm the gradle result and stage the framework where the app target expects it.
+
+**BUILD SUCCESSFUL** (12m41s). Now let me stage the framework where the app target expects it, then start the iOS Simulator build+test (the real gate). This is a large build, so I'll run it in the background.
+
+Framework staged successfully. Now the real gate — iOS Simulator build+test. This is a large build (171 surfaces + extensions), so I'll run it in the background and capture full output.
+
+iOS build+test started. Let me monitor progress.
+
+The **app itself built, linked, and codesigned successfully** (including my files — note it compiled `Localizable.xcstrings` with my strings and reached codesigning `TeslaSync.app`). The failure is isolated to the **test-bundle** phase: `Unable to resolve module dependency: 'XCTest'`. Let me analyze the full log to confirm my surface compiled cleanly and pinpoint the XCTest failure's origin.
+
+Critical finding: **zero errors reference my surface.** The failure is `import XCTest` + `@testable import TeslaSync` in feature-views `*.Tests.swift` files being compiled into the **app target** — and it first trips on `AIRestorePanel.Tests.swift` (a *different* surface). This is a repo-wide structural condition under Xcode 26, outside my allowed files. Let me confirm the failing target and whether a plain `build` (no test) succeeds.
+
+Definitive: the app-target build fails **only** on feature-views `*.Tests.swift` importing `XCTest` (first tripping on `AIRestorePanel.Tests.swift` — a *different* surface). My production code compiled with **zero errors** and my strings folded into `Localizable.xcstrings`. This is a pre-existing, repo-wide test-routing condition outside my Allowed files.
+
+To still genuinely verify my surface's logic, let me build my Adapter+Model as a testable `TeslaSync` module and actually **run my unit tests** via `xctest` on macOS.
+
+Testable module built. Now compile the test file into an `.xctest` bundle and run it.
+
+The `-bundle` flag needs `-Xlinker`. Let me fix and rerun.
+
+Raw `swiftc` can't load the XCTest Swift overlay macros. The reliable way to run XCTest from CLI is SwiftPM. Let me create a throwaway package with my Adapter+Model as the `TeslaSync` library and my test file as the test target, then `swift test`.
+
+`swift test` used the CommandLineTools toolchain (no XCTest). Let me rerun with the Xcode toolchain via `DEVELOPER_DIR`, which has XCTest.
+
+Real test-file bug found (argument order): `SignalHistoryInput` declares `pageSize` before `totalRows`. Let me fix it in my test file.
+
+Let me re-copy the fixed test file and rerun.
+
+**The tests actually ran: 25 executed, 23 passed, 2 failures** — both genuine and both in my *test* code: `en_US_POSIX` is an invariant locale that does **not** group digits, so `formattedInt(1234)` → "1234" not "1,234". The production grouping logic is correct; the tests picked the wrong locale. Let me fix both to use a grouping locale.
+
+Re-copy and rerun to confirm all tests pass.
+
+**All 25 unit tests pass** (0 failures) via the Xcode toolchain — adapter, format, projection, model, and accessibility suites all green. I fixed 2 real test bugs (arg order + non-grouping locale). Let me re-verify lint/format on the edited test file, and run an evidence build with explicit modules disabled to isolate the blocker.
+
+Lint and format pass on the edited test file. The evidence build is running. Let me check the log directory exists while I wait.
+
+Let me check an existing feature-views log to match format and see how prior surfaces recorded their status.
+
+This resolves the status question definitively. The **established repo precedent (ADR-012)** — including my reference surface EventHistoryTable (0042), plus 0086/0088/0201 — records the full-app `xcodebuild build test` as **RED/DEFERRED (exit 65)** for out-of-scope integration reasons, while ending `EXIT=0 STATUS=DONE` because all *surface-scoped* gates pass. My situation matches exactly, and I've gone further (built the real KMP framework + full app). Let me complete the "both-SDK compile" evidence with an iOS-simulator typecheck and check the evidence build.
+
+**Both-SDK compile confirmed**: iOS 18 simulator-target typecheck EXIT=0 (macOS 15 already EXIT=0). The evidence build (explicit-modules off) is running. Let me wait for it to determine whether the whole app builds once the explicit-modules quirk is bypassed.
+
+Definitive root-cause confirmation: **even with explicit modules disabled, the app build fails identically** with `no such module 'XCTest'` on `AIRestorePanel.Tests.swift` — proving the feature-views `*.Tests.swift` files are structurally compiled into the app (non-test) target across **all ~171 surfaces** (a project.yml routing issue outside my Allowed files, not caused by my surface).
+
+This matches the documented ADR-012 precedent exactly. Let me run final consolidated gates and check git state.
+
+Final surface gates: **swiftformat 0/6, swiftlint --strict 0 violations**. The generated xcodeproj + staged framework are gitignored; only my 7 `SignalHistoryTable.*` files are untracked. Let me write the comprehensive gate log.
+
+Now let me clean up build artifacts (all gitignored/temp) and verify the working tree shows only my intended files.
+
+The working tree has **pre-existing** modifications (`AIUsageCard.*`, `FleetApiSection.tsx`, `BackupRestorePage.tsx`) that are **not mine** — I only created `SignalHistoryTable.*` + the log. Per "no silent drift," I'll stage **only** my files explicitly and commit just those.
+
+Exactly 8 files staged (my 7 + the log); pre-existing modifications excluded. Committing now.
+
+Commit succeeded — **8 files, 1669 insertions**, pre-existing modifications excluded. Let me do a final verification and confirm no stray processes remain.
+
+All verification passes:
+- **HEAD commit = exactly my 8 files** (7 surface + log); pre-existing `AIUsageCard.*`/web modifications correctly left uncommitted and untouched.
+- My surface is fully committed; nothing of mine left untracked.
+- All background shells completed (no stray processes).
+
+All 9 todos complete. The task is finished.
+
+## Summary
+
+Shipped a production-polished, native Apple-idiomatic **SignalHistoryTable** SwiftUI surface at parity with `features/telemetry/components/SignalHistoryTable.tsx`, committed as `0856f4eb4` (8 files, 1669 insertions).
+
+**Files (all within allowed scope `SignalHistoryTable.*` + log):**
+- `.Adapter.swift` — `SignalLogEntry` model, `valueType`, JS-faithful `formatValue`/`jsNumber`, `JSON.stringify(r,null,2)` raw-payload, `selectedSignals` color slot, ISO/epoch timestamp fmt, a11y + header meta
+- `.Model.swift` — P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, Input/Resolved/Projection, `@Observable @MainActor` model (paging + connection + stale auto-refresh), SHStrings P1/S10 facade
+- `.Views.swift` — cells (time/color-coded signal/value/Type badge), raw-payload expansion, stale/offline chip, header meta, `TSDataTable`+`TSPagination`, loading/empty/error
+- `.swift`, `.Previews.swift` (6 states), `.Tests.swift` (25 cases), `.strings`
+
+**Parity:** all 4 columns, CHART_COLORS-matched signal dots, header meta, pagination, raw-JSON expansion, every web `t()` key, full a11y/Dynamic Type/reduce-motion, plus the P4 error/stale/offline states.
+
+**Verification (all green):**
+- swiftlint --strict: **0 violations** · swiftformat --lint: **0/6** · check-placeholders: **0**
+- typecheck against real deps on **iOS 18-sim + macOS 15** SDKs (Xcode 26, Swift 6 strict): **EXIT 0**
+- **Unit tests executed: 25/25 pass** (fixed 2 real test-file bugs found during the run)
+- Went beyond scope: Gradle-built the real KMP `Shared.xcframework` and compiled the full app — my surface builds with **zero errors**, strings fold into `Localizable.xcstrings`
+
+**Honest gate disposition:** the full-app `xcodebuild build test` is **RED (exit 65)** due to a pre-existing, repo-wide project.yml condition — every surface's `feature-views/*.Tests.swift` imports `XCTest` into the app (non-test) target, failing first on the unrelated `AIRestorePanel.Tests.swift`. The fix lives in `project.yml`, outside this prompt's allowed files. **DEFERRED per ADR-012**, matching sibling surfaces 0042/0086/0088/0201 → **EXIT=0 STATUS=DONE**.
+
+
+
+The task is fully complete — all 9 todos done, surface implemented and committed (`0856f4eb4`), with all surface-scoped gates green and the full-app Xcode gate honestly documented as deferred per ADR-012.
+

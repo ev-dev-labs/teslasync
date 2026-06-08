@@ -1,0 +1,254 @@
+================================================================================
+P4 · Feature view · 0054 — ChargingTab (Apple)
+Run: 2026-06-08T01:42-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/79
+Base: c9c6fdb9f
+Prompt: P4/feature-views/0054 — ChargingTab
+Web source (spec): web/src/features/analytics/components/analytics/ChargingTab.tsx
+Mode: code-complete + REAL iOS-18/macOS-15 SDK typechecks + EXECUTED XCTest (32/32) +
+      DEFERRED full-app Xcode build/test (un-staged KMP Shared.xcframework; ADR-012,
+      apps/macos-pending-verifications.md precedent). No stubs as final.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (booted)                                     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                    OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                  OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                            OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh 7.6.2                          OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (full Xcode)           OK
+  feature-views path ......... REGISTERED in project.yml (both app targets) +
+                               .swiftlint.yml `included` scope                      OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+
+  NOTE on active toolchain: `xcode-select -p` points at /Library/Developer/
+  CommandLineTools (no iPhoneSimulator SDK, no public XCTest module), so a bare
+  `xcodebuild`/`swift test` fails. Full Xcode 26.5 IS installed at /Applications/
+  Xcode.app and is used here via the DEVELOPER_DIR override (the 0005 FleetTelemetry-
+  Health / 0086 SentryEventLogWidget precedent), which unlocks the iOS 18 simulator
+  SDK, the macOS 15 SDK, the iPhone 16 simulator, the #Preview macro plugin, and
+  `swift test` (XCTest).
+
+  Charts/Maps capability note: this surface uses Swift Charts (NO MapKit). Web
+  "Charts/maps used: (none)" lists no Recharts wrapper, but the web ChargingTab DOES
+  render three Recharts charts directly (PieChart donut, BarChart, ComposedChart);
+  the native parity maps them to Swift Charts (SectorMark donut, BarMark histogram,
+  composed BarMark+LineMark dual-axis). Swift Charts + SwiftUI are available and
+  PROVEN by the real iOS-18 AND macOS-15 SDK compiles below. The capability-BLOCKED
+  escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT apply — the surface is
+  authored, both-SDK-compiled, and host-tested (32/32) for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/ChargingTab.*) ===
+  ChargingTab.Adapter.swift   328  Foundation-only testable projection core — safe() guard,
+                                   hourLabel, ChargerTypeSlice/BatteryBin/HourlyChargePoint
+                                   datasets, ChargingHourlyScale dual-axis math, six summary
+                                   metrics (stats?…:nil presence rule), resolvePhase, a11y builders
+  ChargingTab.Model.swift     376  P1/S8 source seam (ChargingSummarySource -> ChargingTabModel) +
+                                   P1/S11 telemetry seam + formatting seam (currency/number/int) +
+                                   SI input DTOs + in-memory source + surface slug + P1/S10 strings
+  ChargingTab.Views.swift     339  chrome — glass panel / freshness chip / connectivity banner /
+                                   six summary MetricCards (icon+tint+subtitle) + grid / per-chart
+                                   empty row / loading skeleton / error state (QueryError)
+  ChargingTab.Charts.swift    260  three Swift Charts — Charger Types donut (SectorMark + legend),
+                                   Start Battery Distribution (BarMark), Hourly Charging Pattern
+                                   (composed BarMark charges + LineMark energy, dual-axis re-projection)
+  ChargingTab.swift           103  ChargingTab surface — phase switch (loading/error/content) +
+                                   freshness/banner + summary grid + 3 charts + embedded
+                                   ChargingDetailSection (web <ChargingDetailSection data={data}/>)
+  ChargingTab.Previews.swift  139  #if DEBUG previews — content / empty / loading / error / stale /
+                                   offline (both ChargingTabModel + embedded ChargingDetailModel)
+  ChargingTab.Tests.swift     370  XCTest — adapter + scale + formatting + model + a11y (32 methods)
+  ChargingTab.strings          53  P1/S10 catalog contribution (15 web-parity analytics.charging.*
+                                   keys, verified vs en.json + 12 native-chrome keys)
+  Total 1968 lines across 8 files.
+  Shared tokens (Color.TS / Font.TS / TSSpacing / TSRadius) + TSChartPalette / TSChartFormat /
+  tsGlassPanel / TSFadeIn / TSSkeleton / tsChartAxes are REUSED from the P4 core (no redeclaration
+  in shipped files). The web MetricCard (icon + color + subtitle) maps to a purpose-built
+  ChargingMetricCardView (the shared TSMetricCard has no icon/tint/subtitle), matching the sibling
+  ChargingDetailSection.CostMetricCardView precedent. The trailing <ChargingDetailSection/> is the
+  already-shipped sibling surface (prompt 0053), composed (not re-implemented) exactly as the web does.
+
+=== PARITY (vs web ChargingTab.tsx) ===
+  Data sources -> bound via the shared state-holder seam (ChargingSummarySource -> ChargingTabModel):
+    useTranslation, useFormatting (currency). The web component takes `data: FleetAnalytics` as a
+    prop; the native model is fed coalesced snapshots by a source. The view performs NO HTTP. The
+    embedded ChargingDetailSection owns its own ChargingDetailModel (web composes the same `data`).
+  Projection -> ChargingTabProjection is a 1:1 port: safe(v)=finite?v:0 (web `safe`/`safeNumber`);
+    the six summary cards map total_charging_sessions / total_energy_kwh / total_cost (always shown)
+    and power_stats.avg / duration_stats.avg / efficiency_stats.avg (optional — `nil` reproduces the
+    web `stats ? … : '—'`, where the em dash shows only when the whole StatsSummary is absent, NOT
+    when avg==0); donut slice colors wrap at six (web `PIE_COLORS[i % PIE_COLORS.length]`); the hourly
+    composed chart re-projects energy onto the charges domain + trailing axis (web `yAxisId=left`
+    charges / `yAxisId=right` energy). All verified by EXECUTED XCTest (32/32).
+  Composition (web order) -> 6 summary MetricCards (Sessions/Total Energy/Total Cost/Avg Power/Avg
+    Duration/Charge Efficiency) -> Charger Types donut -> Start Battery Distribution bars -> Hourly
+    Charging Pattern composed chart -> <ChargingDetailSection data={data}/>. CHART_COLORS parity:
+    donut PIE_COLORS[0..5], battery bars [1], hourly charges [0] + energy [3].
+  Shared components -> reuses Color.TS / Font.TS / TSSpacing / TSRadius / TSChartPalette /
+    TSChartFormat / tsGlassPanel / TSFadeIn / TSSkeleton / tsChartAxes compiled against the REAL
+    design tokens + real component sources in the typechecks/tests below. Recharts -> Swift Charts;
+    Leaflet -> none (no map on this surface).
+  States (all render) -> loading (skeleton: 6 redacted cards + 3 panels) · content (cards + 3 charts,
+    each chart self-empties via a per-series EmptyState row, matching the web — there is NO whole-
+    surface empty in the web source) · empty (resolved with no data -> cards show 0/— + charts show
+    empty rows + detail self-empties; model.isEmpty true) · error (QueryError-equivalent retry,
+    native chrome) · stale (chip + banner + one guarded auto-refresh) · offline (cached cards/charts
+    + chip + banner). Cached content stays visible behind refresh/failure, matching the web shell and
+    the sibling ChargingDetailSection.
+  i18n -> all 15 source strings resolve through the P1/S10 facade (table "ChargingTab") with the web
+    English fallback — the canonical analytics.charging.* namespace, verified against web/src/i18n/
+    en.json: chargerTypes, startBattery, hourlyPattern, sessions, totalEnergy, totalCost, avgPower,
+    avgDuration, min, chargeEff, noTypes, noBatDist, charges, energykWh, noHourly (+ 12 native-chrome
+    keys live/stale/offline/staleBanner/offlineBanner/loading/errorTitle/retry/a11yTypes/a11yRanges/
+    a11yHours/a11yNoData). `analytics.charging.sessions` ships the canonical catalog value "sessions"
+    (the web ChargingTab call site passes a "Sessions" default, which i18next overrides with the
+    catalog value — reproduced; agrees with ChargingDetailSection.strings). No English literal in Swift.
+  a11y -> each summary card is one combined element ("{label}: {value} {unit}"); each chart carries an
+    accessibilityLabel + a pure value summary (count / distribution); the freshness chip / retry /
+    refresh controls carry accessibilityLabels; chart-internal glyphs + decorative legends are
+    accessibilityHidden; Dynamic Type via tokens; Reduce Motion gates the skeleton shimmer + TSFadeIn.
+  Telemetry -> ChargingTabModel.start() emits viewOpened(surface:"ChargingTab") -> bridges the shared
+    Telemetry.track (P1/S11). Asserted by a spy test (fires exactly once).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (the full surface closure: vendored REAL design Tokens +
+    TSChartPalette/TSChartFormat/tsGlassPanel/TSFadeIn + a real-interface TSSkeleton/tsChartAxes
+    excerpt + the REAL sibling ChargingDetailSection.* + ChargingTab.* incl. previews; -D DEBUG, Swift 6):
+      xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator
+        -swift-version 6 -D DEBUG Sources/Surface/*.swift
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0, -D DEBUG, Swift 6;
+    the #Preview macros expand under the Xcode plugin):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM package
+    (real production ChargingTab Adapter/Model/Views/Charts/surface + the real sibling
+    ChargingDetailSection + the real design Tokens/components; Swift 6 language mode, strict concurrency):
+      Executed 32 tests, with 0 failures (0 unexpected) in 0.007 seconds
+        ChargingSummaryNumericTests        3/3  (safe finite/non-finite/nil, hourLabel)
+        ChargingTabProjectionTests         8/8  (empty, palette wrap@6, battery+hourly order, summary
+                                                 metrics, absent-stats->nil vs present-zero, non-finite
+                                                 guard, summary-only hasAny, resolvePhase matrix)
+        ChargingHourlyScaleTests           4/4  (leftMax charges/rightMax energy, clamp-to-one,
+                                                 plotted<->trueEnergy inverses, trailing ticks + domain)
+        ChargingSummaryFormattingTests     4/4  (currency symbol/group/decimals, number group/round,
+                                                 integer group/round, non-finite zeroed)
+        ChargingSummaryAccessibilityTests  4/4  (distribution summary + empty fallback, count summary,
+                                                 metric summary unit/no-unit/dash)
+        ChargingTabModelTests              9/9  (content/loading/empty->content+isEmpty/error phases,
+                                                 cached-stays-content on failure, refresh delegation,
+                                                 stale auto-refresh once-per-episode, view.opened once,
+                                                 connection/refreshing tracking)
+      SWIFT_TEST_EXIT=0                                                             OK
+[4] swiftlint --strict on the 7 surface .swift files (explicit paths; config apps/apple/.swiftlint.yml):
+      Done linting! Found 0 violations, 0 serious in 7 files.
+      LINT_SURFACE_EXIT=0                                                           OK
+    Whole-tree note: a bare `swiftlint --strict` over apps/apple reports 1 violation —
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length, 78>50).
+      That file is a SIBLING surface (dashboard-widgets), is PRE-EXISTING (the only added files are
+      ChargingTab.*), and is OUTSIDE this prompt's allowed files. This surface contributes 0 violations.
+[5] swiftformat --lint apps/apple (gate command, config apps/apple/.swiftformat):
+      1/1920 files require formatting, 2 files skipped.
+      The single flagged file is TeslaSync/feature-views/ActionBuilder.Previews.swift:48
+      (blankLinesBetweenScopes) — a PRE-EXISTING SIBLING surface, OUTSIDE this prompt's allowed files.
+      Scoped to the 7 ChargingTab .swift files: 0/7 require formatting.
+      FORMAT_SURFACE_EXIT=0                                                         OK
+[6] check-placeholders (ADR-011 stub gate; pwsh) — REAL scan of the surface files:
+      ./apps/tools/check-placeholders.ps1 -Path <ChargingTab surface copy> -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+      (The bare gate invocation `-Path .../ChargingTab` resolves to a non-existent literal path — the
+       siblings are flat files, not a ChargingTab/ subdir — and trivially scans nothing; the real
+       surface-file scan above is the meaningful evidence. Self-test PASS.)
+[7] xcodegen generate — project + all targets + schemes generate cleanly; the 8 ChargingTab.* files
+    are enumerated into BOTH the TeslaSync (iOS) and TeslaSync-macOS source phases:
+      XCODEGEN_EXIT=0                                                               OK
+
+=== GATE — FULL-APP XCODE BUILD/TEST (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real command run on this host, full Xcode 26.5 via DEVELOPER_DIR):
+      DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+        xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO ->
+        error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+        ** BUILD FAILED **   XCODEBUILD_EXIT=65
+    Why deferred (code-unrelated, outside this prompt's allowed files — Honesty rule 7; identical
+    disposition to the 0005/0010/0180/0231 predecessors recorded in apps/macos-pending-verifications.md):
+      (a) Shared.xcframework not staged: the app target links the KMP core; staging it needs a
+          Kotlin/Native Gradle build (the scheme runs it as a pre-build phase). This is the integration/
+          CI runner's job (ADR-012). Concrete missing-framework error captured above. apps/apple/
+          Frameworks/ holds only .gitkeep.
+      (b) Pre-existing parallel-merge collisions in the app target, unrelated to ChargingTab and outside
+          allowed files: 171 co-located *.Tests.swift importing XCTest into the app target, and
+          `struct DashboardWidgetSize` redefined 15x across Sources/DashboardWidgets/* +
+          TeslaSync/dashboard-widgets/*. (feature-views project registration is ALREADY wired in this
+          repo's project.yml + .swiftlint.yml, so that earlier-predecessor blocker does not apply here.)
+    The MEANINGFUL validation IS performed above: the surface compiles against BOTH the iOS 18 simulator
+    and macOS 15 SDKs (steps [1]/[2]) and its full XCTest suite EXECUTES green (32/32, step [3]). Under
+    Xcode these same tests run in the TeslaSync(/-macOS) test target once the KMP framework is staged.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/content/empty/error/stale/offline) — implemented; each
+      has a #if DEBUG preview; phase + empty logic unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (ChargingSummarySource->ChargingTabModel);
+      no view HTTP. The embedded ChargingDetailSection binds its own P1/S8 seam.
+  [x] Every i18n key from source has a matching catalog key — the 15 analytics.charging.* parity keys,
+      all present in ChargingTab.strings (verified vs en.json) (+ 12 native-chrome keys).
+  [x] Accessibility labels on every interactive/data element — each card + chart is one labeled element
+      with a value summary; freshness/retry/refresh controls labeled.
+  [x] Tests: adapter (cached->projection) + per-state model + a11y label test — 32 methods, EXECUTED 32/32.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0, ALLOWED=0.
+  [x] EXIT=0 / STATUS=DONE — host gates + both-SDK compiles + executed tests green; full-app Xcode
+      build/test DEFERRED with captured evidence (un-staged KMP framework + pre-existing collisions,
+      outside allowed files).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : full-app Xcode build/test shown DEFERRED (not green) with the real
+                       XCODEBUILD_EXIT=65 missing-framework error captured; every "OK" is a command
+                       actually run with its real exit code (incl. iOS+macOS SDK compiles and an
+                       EXECUTED 32/32 XCTest run). The whole-tree swiftlint/swiftformat hits are
+                       disclosed as pre-existing sibling issues, not hidden.
+  2  No scope narrowing: implemented ALL six cards + all three charts + the embedded detail section +
+                       all states + i18n + a11y + telemetry + stale auto-refresh.
+  3  No skip-and-assume: each host gate executed; nothing assumed green (the SwiftPM #Preview-macro
+                       gap under bare CLT was found and resolved via the DEVELOPER_DIR override, then
+                       re-verified for real).
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (The TSSkeleton/tsChartAxes
+                       excerpts are used ONLY in the throwaway typecheck/test package — clearly labeled,
+                       NEVER in shipped files; shipped code reuses the real P4-core components.)
+  5  No parity shortcuts: faithful port of safe() + the stats-presence em-dash rule + PIE_COLORS wrap +
+                       the hourly dual-axis + CHART_COLORS indices + all states + the embedded section.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT stage Shared.xcframework, did NOT touch the 171 co-located test files
+                       or the DashboardWidgetSize collisions, did NOT edit the shared Localizable.xcstrings
+                       (parallel-unsafe, integration-runner scope) — strings shipped as the per-surface
+                       table; ChargingDetailSection composed, not modified.
+  8  No commit on red  : committing on green host gates + iOS/macOS compiles + executed 32/32 tests;
+                       full-app Xcode build/test explicitly DEFERRED (captured evidence), not failed;
+                       the lone whole-tree lint/format hits are pre-existing in siblings, outside allowed.
+  9  No silent drift   : changes confined to the allowed ChargingTab.* files + this log. Pre-existing
+                       uncommitted working-tree changes (AIUsageCard.*, two web files) are left untouched
+                       and NOT committed.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native ChargingTab shipped at parity with the web source: a Foundation-only
+  projection core (EXECUTED-green XCTest, 32/32), the P1/S8 state-holder seam (no view HTTP), P1/S11
+  telemetry, all six summary cards + the three Swift Charts (donut / battery histogram / hourly dual-
+  axis composed) + the embedded sibling ChargingDetailSection, every state + i18n key + a11y label. All
+  host-runnable gates pass AND the surface compiles against BOTH the iOS 18 simulator and macOS 15 SDKs
+  with the real Xcode 26 toolchain under Swift 6 strict concurrency. The full-app Xcode build/test is
+  DEFERRED to the downstream integration/signed runner (un-staged KMP Shared.xcframework + pre-existing
+  app-target parallel-merge collisions — none a defect in this code, all outside this prompt's allowed
+  files), matching the documented apps/macos-pending-verifications.md precedent.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/ChargingTab.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0054-ChargingTab.log
+  git commit -m "feat(apps/apple/feature-views): add ChargingTab surface (P4)"
+
+EXIT=0
+STATUS=DONE

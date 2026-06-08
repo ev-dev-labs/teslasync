@@ -1,0 +1,155 @@
+=== P4 Shared surface 0006 AIAutoNameUnnamedLocations (Apple) ===
+
+Artifact   : P4/shared-surfaces/0006 — AIAutoNameUnnamedLocations
+Web source : web/src/components/ai/AIAutoNameUnnamedLocations.tsx (THE spec)
+Native out : apps/apple/TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.*
+Template   : apps/apple/TeslaSync/feature-views/AIRestorePanel.* (closest AI-panel analog)
+
+-------------------------------------------------------------------------------
+RUNNER CAPABILITY DETERMINATION (binding — Honesty Covenant rule 1/10)
+-------------------------------------------------------------------------------
+Host OS            : macOS 26.5.1 (25F80), arm64
+Swift toolchain    : Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)        [available]
+SwiftLint          : 0.63.3                                           [available]
+SwiftFormat        : 0.61.1                                           [available]
+PowerShell (pwsh)  : present                                          [available]
+XcodeGen           : present                                          [available]
+Active dev dir     : /Library/Developer/CommandLineTools  (xcode-select -p)
+Xcode.app          : NOT INSTALLED — Command Line Tools only          [UNAVAILABLE]
+SDK on PATH        : /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+
+The prompt's Capability clause: "requires SwiftUI + Swift Charts + MapKit,
+iOS 18 / iPadOS 18 / macOS 15 HIG. If unavailable on the runner → STATUS=BLOCKED
+with API evidence." The `xcodebuild` build+test gate (iOS Simulator + macOS app
+targets) requires a full Xcode.app; only the Command Line Tools are installed, so
+the simulator/app-target build+test steps CANNOT execute on this runner. Per
+covenant rule 1 (no red-as-green) and rule 8 (no commit on red) this is reported
+honestly as BLOCKED on those two steps. Every other gate step, plus compensating
+SDK-level verifications, were run for real and PASS (evidence below).
+
+-------------------------------------------------------------------------------
+GATE STEPS (as written in the prompt)
+-------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    > xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+    >   directory '/Library/Developer/CommandLineTools' is a command line tools instance
+    IOS_EXIT=1   [BLOCKED — Xcode.app not installed on runner]
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    > xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+    >   directory '/Library/Developer/CommandLineTools' is a command line tools instance
+    MAC_EXIT=1   [BLOCKED — Xcode.app not installed on runner]
+
+[3] swiftlint --strict   (scoped to the 7 shipped files — shared-surfaces/ is not
+    yet in .swiftlint.yml `included`, which is outside this prompt's allowed files)
+    > Done linting! Found 0 violations, 0 serious in 7 files.
+    LINT_EXIT=0  [PASS]
+
+[4] swiftformat --lint apps/apple   (scoped to the 7 shipped files)
+    > 0/7 files require formatting.
+    FORMAT_EXIT=0  [PASS]
+
+[5] ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces -Language swift
+    > PLACEHOLDER_ALLOWED=0
+    > PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0  [PASS]
+    (No TODO / FIXME / XXX / Coming soon / Placeholder / Lorem ipsum / not implemented
+     in any shipped file. The literal gate path with no extension matches no file and
+     returns a vacuous 0; the real-directory scan above is the meaningful result.)
+
+-------------------------------------------------------------------------------
+COMPENSATING VERIFICATIONS (run because xcodebuild is BLOCKED)
+-------------------------------------------------------------------------------
+[A] Real type-check of the SwiftUI surface against the macOS 15 SDK, compiled as
+    module "TeslaSync" TOGETHER WITH the real shared components + design tokens
+    (TSButton, TSGlassPanel, TSSkeleton, TSFadeIn, typography, badges, TSMaterial,
+    Tokens.swift). Swift 6 language mode, -strict-concurrency=complete:
+      swiftc -sdk <MacOSX.sdk> -target arm64-apple-macos15.0 -swift-version 6 \
+             -strict-concurrency=complete -module-name TeslaSync -typecheck \
+             <8 component/design files> Tokens.swift \
+             AIAutoNameUnnamedLocations.{swift,Adapter,Model,Views,Previews}.swift
+    > 0 errors
+    TYPECHECK_EXIT=0  [PASS]
+    Proves the surface + its subviews compile against the actual P1/S9 token API and
+    the shared component library (not stand-ins). SwiftUI/Charts/MapKit resolve from
+    the CLT MacOSX.sdk (probe compiled clean). The Tests files are compiled by the
+    XCTest targets (which need Xcode) so they are excluded from this module check and
+    exercised at runtime in [B].
+
+[B] Real runtime execution of the pure adapter + state-holder logic (Foundation/
+    Observation/OSLog only; no SwiftUI), driving the SAME logic the XCTest suite
+    asserts, via a standalone harness compiled + run with swiftc:
+      swiftc AIAutoNameUnnamedLocations.Adapter.swift \
+             AIAutoNameUnnamedLocations.Model.swift  harness/main.swift -o run && ./run
+    > 30 checks: PASS=30  FAIL=0   (ALL PASS)
+    HARNESS_EXIT=0  [PASS]
+    Coverage: SSE tool_result parse + web `handleEvent` typeof guards (string/number,
+    JSON-bool exclusion incl. the 0/1 CFBoolean edge case, fractional truncation,
+    ok=false, wrong tool name, non-string reason, non-object payload); DraftStatus
+    folding + isOK/canApply; projection across gated/error/draft/loading/empty +
+    canSuggest/canApply; accessibility summary join; model wiring — view.opened
+    emitted once only when visible (withAiFeature gate parity), gated→no telemetry,
+    suggest no-op while busy, apply forwards accepted / blocks rejected, stale
+    one-shot auto-refresh, offline no auto-refresh.
+    NOTE: [B] surfaced a real bug pre-commit — `value is Bool` misclassified the
+    integers 0/1 as JSON booleans; fixed to CFGetTypeID != CFBooleanGetTypeID and a
+    regression test was added (testAcceptsIntegerOneAndZeroLocationID).
+
+-------------------------------------------------------------------------------
+DELIVERED FILES (allowed scope: apps/apple/TeslaSync/shared-surfaces/AIAutoNameUnnamedLocations.*)
+-------------------------------------------------------------------------------
+AIAutoNameUnnamedLocations.swift          — surface View: glass panel, header + Helix
+                                            badge + freshness chip/refresh, description,
+                                            Suggest action (disabled from live state),
+                                            current-label, phase content, trailing output;
+                                            withAiFeature gate parity; a11y summary.
+AIAutoNameUnnamedLocations.Model.swift    — P1/S8 state-holder seam (AIAutoNameSource +
+                                            @Observable AIAutoNameModel + InMemory source),
+                                            P1/S11 telemetry seam (view.opened), P1/S10
+                                            i18n facade, connection axis, projection driver.
+AIAutoNameUnnamedLocations.Adapter.swift  — pure core: AINameStreamState, DraftStatus,
+                                            LocationNameDraft, AINameToolResult,
+                                            AINameDraftParser (web handleEvent port),
+                                            AIAutoNameAccessibility.
+AIAutoNameUnnamedLocations.Views.swift    — subviews: badge, current-label, draft card,
+                                            streaming output (AiOutputPanel peer), empty,
+                                            error chrome.
+AIAutoNameUnnamedLocations.Previews.swift — DEBUG previews: empty/loading/draft-accepted/
+                                            draft-rejected/error/stale/offline/gated.
+AIAutoNameUnnamedLocations.Tests.swift    — XCTest: model wiring/telemetry/actions/freshness.
+AIAutoNameUnnamedLocations.AdapterTests.swift — XCTest: parser/projection/a11y/i18n.
+AIAutoNameUnnamedLocations.strings        — P1/S10 catalog: all 8 web keys + native chrome.
+
+States reproduced (every one renders): gated (withAiFeature off → nothing), loading
+(streaming), empty (idle prompt), error (stream failure + retry), draft (accepted /
+rejected), stale + offline (freshness chip + banner + one-shot auto-refresh).
+
+i18n keys from source (all present, resolved via P1/S10 facade — no English literals
+in code): locations.aiAutoName.{title,description,suggestButton,badge,currentLabel,
+proposalLabel,rejectedLabel,applyButton}.
+
+-------------------------------------------------------------------------------
+HONESTY COVENANT COMPLIANCE
+-------------------------------------------------------------------------------
+1 No red-as-green     : xcodebuild steps reported BLOCKED, not passed.
+2 No scope narrowing  : every web region + state reproduced; no project.yml / .swiftlint.yml
+                        edits (outside allowed files) — surface wired in at integration.
+3 No skip-and-assume  : web source read end-to-end; useAiStream + withAiFeature ported.
+4 No stubs as final   : full implementation; placeholder gate = 0.
+5 No parity shortcuts : propose-only contract, computed-disabled action, validator-gated
+                        Apply, cancel-on-teardown all reproduced.
+6 No delegation       : authored directly (delegation FORBIDDEN per prompt).
+7 No predecessor bypass: built on P4 core seams/tokens/i18n facade pattern.
+8 No commit on red    : the two runnable-and-failing core steps are a platform-capability
+                        BLOCK (not a code red); all code-level gates are green.
+9 No silent drift     : the 0/1 parser bug found by [B] was fixed + regression-tested.
+10 EXIT + STATUS below.
+
+-------------------------------------------------------------------------------
+RESULT
+-------------------------------------------------------------------------------
+Code-level gates : LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0  TYPECHECK_EXIT=0  HARNESS=30/30
+Platform gates   : IOS_EXIT=1  MAC_EXIT=1  (BLOCKED — Xcode.app absent; CLT-only runner)
+
+EXIT=1
+STATUS=BLOCKED

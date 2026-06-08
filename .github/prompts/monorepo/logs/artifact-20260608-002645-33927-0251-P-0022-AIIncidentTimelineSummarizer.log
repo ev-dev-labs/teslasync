@@ -1,0 +1,127 @@
+=== P4 Shared surface 0022 AIIncidentTimelineSummarizer (Apple) ===
+generated-utc : 2026-06-08T11:00:37Z
+runner        : Darwin 25.5.0 arm64
+git-HEAD      : c9c6fdb9f
+swift         : swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+swiftlint     : 0.63.3
+swiftformat   : 0.61.1
+pwsh          : PowerShell 7.6.2
+
+Surface files shipped (apps/apple/TeslaSync/shared-surfaces/):
+    174L  AIIncidentTimelineSummarizer.Adapter.swift
+    335L  AIIncidentTimelineSummarizer.Model.swift
+    187L  AIIncidentTimelineSummarizer.Output.swift
+    112L  AIIncidentTimelineSummarizer.Previews.swift
+    173L  AIIncidentTimelineSummarizer.swift
+    208L  AIIncidentTimelineSummarizer.Views.swift
+    312L  AIIncidentTimelineSummarizer.Tests.swift
+     44L  AIIncidentTimelineSummarizer.strings
+
+########################################################################
+## CAPABILITY PROBE — gate needs full Xcode (SwiftUI+Swift Charts+MapKit,
+## iOS 18 / iPadOS 18 / macOS 15) + the KMP Shared.xcframework
+## (Scripts/build-shared-xcframework.sh; Kotlin/Native + Xcode toolchain).
+########################################################################
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+probe_exit=1
+$ xcrun simctl list ...
+xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+FINDING: active developer dir = Command Line Tools (no /Applications/Xcode.app).
+  => xcodebuild, iOS/macOS simulators, and the Shared.xcframework build are
+     UNAVAILABLE here. Prompt rule: capability unavailable => STATUS=BLOCKED
+     with API evidence (this block + the two xcodebuild steps below).
+
+########################################################################
+## GATE 1/5 — xcodebuild iOS
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+########################################################################
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+
+########################################################################
+## GATE 2/5 — xcodebuild macOS
+$ xcodebuild -scheme TeslaSync-macOS build test
+########################################################################
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+
+########################################################################
+## GATE 3/5 — swiftlint --strict   (config comment: run from apps/apple)
+########################################################################
+# (a) project-wide (.swiftlint.yml 'included:' set; excludes shared-surfaces):
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-251/apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length Violation: Function body should span 50 lines or less excluding comments and whitespace: currently spans 78 lines (function_body_length)
+Done linting! Found 1 violation, 1 serious in 1909 files.
+LINT_EXIT(project)=2   <-- pre-existing violation is in
+   dashboard-widgets/LifetimeStatsWidget.Adapter.swift (NOT this surface;
+   outside this prompt's allowed-files scope, cannot be fixed here).
+
+# (b) THIS surface in isolation (7 shared-surfaces files; rules copied from
+#     .swiftlint.yml, 'included' repointed so the files are actually linted):
+Linting Swift files at paths TeslaSync/shared-surfaces/AIIncidentTimelineSummarizer.Adapter.swift, TeslaSync/shared-surfaces/AIIncidentTimelineSummarizer.Model.swift, TeslaSync/shared-surfaces/AIIncidentTimelineSummarizer.Output.swift, TeslaSync/shared-surfaces/AIIncidentTimelineSummarizer.Previews.swift, TeslaSync/shared-surfaces/AIIncidentTimelineSummarizer.swift, TeslaSync/shared-surfaces/AIIncidentTimelineSummarizer.Tests.swift, TeslaSync/shared-surfaces/AIIncidentTimelineSummarizer.Views.swift
+Done linting! Found 0 violations, 0 serious in 7 files.
+LINT_EXIT(this-surface)=0
+
+########################################################################
+## GATE 4/5 — swiftformat --lint
+########################################################################
+# (a) project-wide: $ swiftformat --lint apps/apple
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-251/apps/apple/TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1: error: (blankLinesBetweenScopes) Insert blank line before class, struct, enum, extension, protocol or function declarations.
+SwiftFormat completed in 2.4s.
+Source input did not pass lint check.
+1/1920 files require formatting, 2 files skipped.
+FORMAT_EXIT(project)=1   <-- pre-existing format drift is in
+   feature-views/ActionBuilder.Previews.swift (NOT this surface).
+
+# (b) THIS surface: $ swiftformat --lint apps/apple/TeslaSync/shared-surfaces
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-251/apps/apple/.swiftformat
+SwiftFormat completed in 1.71s.
+0/7 files require formatting.
+FORMAT_EXIT(this-surface)=0
+
+########################################################################
+## GATE 5/5 — check-placeholders.ps1
+########################################################################
+# (a) exactly as prompt: -Path apps/apple/TeslaSync/shared-surfaces/AIIncidentTimelineSummarizer
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT(prompt-path)=0
+# (b) REAL recursive scan of the surface dir (proves the 7 files are scanned):
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT(real-dir)=0
+
+########################################################################
+## SUPPLEMENTARY — best-effort 'swiftc -parse' syntax check
+## (parse-only: no SDK semantic/type resolution, which needs Xcode + the
+##  Shared.xcframework; this still catches pure syntax errors in the 7 files)
+########################################################################
+PARSE_EXIT=0
+
+########################################################################
+## VERDICT
+########################################################################
+IOS_EXIT=1
+MAC_EXIT=1
+LINT_EXIT(this-surface)=0   LINT_EXIT(project,pre-existing)=2
+FORMAT_EXIT(this-surface)=0   FORMAT_EXIT(project,pre-existing)=1
+PLACEHOLDER_EXIT(prompt-path)=0   PLACEHOLDER_EXIT(real-dir)=0
+PARSE_EXIT(this-surface)=0
+
+Runnable-here checks for THIS surface: swiftformat=0, swiftlint=0,
+placeholders=0, swiftc-parse=0 — all green for the 7 shipped files.
+Non-runnable here: xcodebuild build+test (iOS & macOS) — REQUIRES full
+Xcode + Shared.xcframework, absent on this Command-Line-Tools-only runner.
+
+The gate's EXIT=0 requires every step (incl. IOS_EXIT & MAC_EXIT) == 0.
+Because the iOS/macOS build+test capability is unavailable, the compiled
+gate cannot be satisfied here. Reported honestly per the Honesty Covenant
+(no red-as-green): the surface is implemented to parity and passes every
+check that CAN run; the xcodebuild steps are blocked on platform capability.
+
+EXIT=1
+STATUS=BLOCKED

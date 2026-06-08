@@ -1,0 +1,186 @@
+================================================================================
+p4-apple · P7 · page:driving/SpeedProfile — SwiftUI / HIG parity
+Native SwiftUI implementation of web SpeedProfilePage at full panel/chart/state/
+string parity, adaptive across macOS + iOS/iPadOS (ADR-002, ADR-006).
+Web source: web/src/features/driving/pages/SpeedProfilePage.tsx
+Run host: macOS (Darwin), Xcode 26.5 (17F42), Swift 6.3.2, swiftlint 0.63.3,
+swiftformat, xcodegen 2.45.4, pwsh.
+================================================================================
+
+--- PATH RECONCILIATION (no silent drift, Honesty Covenant #9) ---------------
+The generated prompt's templated Output path
+`apps/apple/TeslaSync/Features/Driving/SpeedProfilePage.swift` is NOT a source
+root in apps/apple/project.yml. The TeslaSync (iOS) + TeslaSync-macOS targets
+compile `TeslaSync/feature-views/` (flat), `TeslaSync/dashboard-widgets/`,
+`Sources/`, `Localization/`, and `../design/generated/apple`. All 171 existing
+peer surfaces (e.g. DrivingTab, BatteryTab, DriveAnalyticsSection) live in
+`TeslaSync/feature-views/` using the multi-file pattern
+(X.swift / X.Model.swift / X.Adapter.swift / X.Models.swift / X.Views.swift /
+X.States.swift / X.Charts.swift / X.strings / X.Previews.swift / X.Tests.swift).
+Placing files at the templated path would compile NOTHING (dead code). The
+surface is therefore implemented at the real, compiled location
+`apps/apple/TeslaSync/feature-views/SpeedProfilePage.*`, matching every peer.
+
+--- FILES CREATED ------------------------------------------------------------
+apps/apple/TeslaSync/feature-views/SpeedProfilePage.swift            (View + nav)
+apps/apple/TeslaSync/feature-views/SpeedProfilePage.Model.swift      (@Observable + source + i18n facade + telemetry)
+apps/apple/TeslaSync/feature-views/SpeedProfilePage.Models.swift     (input DTOs + projected datasets)
+apps/apple/TeslaSync/feature-views/SpeedProfilePage.Adapter.swift    (pure projection + SI conversions + phase + a11y)
+apps/apple/TeslaSync/feature-views/SpeedProfilePage.Views.swift      (gauges/cards/legend/insight panels)
+apps/apple/TeslaSync/feature-views/SpeedProfilePage.States.swift     (loading/empty/error/empty-row)
+apps/apple/TeslaSync/feature-views/SpeedProfilePage.Charts.swift     (Swift Charts BarChart + ScatterChart + containers)
+apps/apple/TeslaSync/feature-views/SpeedProfilePage.strings          (21 web keys + native chrome)
+apps/apple/TeslaSync/feature-views/SpeedProfilePage.Previews.swift   (DEBUG, all states)
+apps/apple/TeslaSync/feature-views/SpeedProfilePage.Tests.swift      (XCTest: adapter + model + a11y)
+
+=== PARITY ===
+PARITY_REQUIRED=37
+
+# --- panels (5) -------------------------------------------------------------
+[x] panel  GlassPanel1          -> SpeedProfilePage.Views.swift::SpeedGaugesPanel (TSGlassPanel of 3 gauges, web GlassPanel1)
+[x] panel  Speed-Distribution   -> SpeedProfilePage.Charts.swift::SpeedDistributionPanel (web ChartContainer "Speed Distribution")
+[x] panel  GlassPanel3          -> SpeedProfilePage.Views.swift::SpeedBucketCardsPanel + SpeedBucketCardView (web per-bucket GlassPanel cards)
+[x] panel  Efficiency-vs-Speed  -> SpeedProfilePage.Charts.swift::EfficiencyVsSpeedPanel (web ChartContainer "Efficiency vs Speed")
+[x] panel  GlassPanel5          -> SpeedProfilePage.Views.swift::SpeedInsightPanel (web bordered GlassPanel efficiency insight)
+
+# --- charts (7) -------------------------------------------------------------
+[x] chart  RadialGauge (1/avg)  -> SpeedProfilePage.Views.swift::SpeedGauge  (gauges[0] .average; data SpeedProfileProjection.gauges, Adapter)
+[x] chart  RadialGauge (2/peak) -> SpeedProfilePage.Views.swift::SpeedGauge  (gauges[1] .peak)
+[x] chart  RadialGauge (3/opt)  -> SpeedProfilePage.Views.swift::SpeedGauge  (gauges[2] .optimal)
+[x] chart  ChartContainer (4)   -> SpeedProfilePage.Charts.swift::SpeedDistributionPanel (SpeedProfilePanel titled chart card)
+[x] chart  BarChart (5)         -> SpeedProfilePage.Charts.swift::SpeedDistributionBarChart (Swift Charts BarMark, per-bar tier tint)
+[x] chart  ChartContainer (6)   -> SpeedProfilePage.Charts.swift::EfficiencyVsSpeedPanel (SpeedProfilePanel titled chart card + legend)
+[x] chart  ScatterChart (7)     -> SpeedProfilePage.Charts.swift::EfficiencyScatterChart (Swift Charts PointMark, per-point tier tint)
+
+# --- data states (4) --------------------------------------------------------
+[x] state  loading              -> SpeedProfilePage.States.swift::SpeedProfileLoadingView (skeleton) via SpeedProfilePage.swift content .loading
+[x] state  empty                -> SpeedProfilePage.States.swift::SpeedProfileSurfaceEmpty (ContentUnavailableView, key speedProfile.noData)
+[x] state  error                -> SpeedProfilePage.States.swift::SpeedProfileErrorState (message + Retry -> model.refresh())
+[x] state  success              -> SpeedProfilePage.swift::contentPanels (.content phase renders all 5 panels)
+   (phase resolution: SpeedProfilePage.Adapter.swift::SpeedProfileProjection.resolvePhase; bound by SpeedProfilePageModel)
+
+# --- strings (21) — all resolve from SpeedProfilePage.strings (table "SpeedProfilePage") ---
+[x] string speedProfile.avgSpeed          -> SpeedProfilePage.Adapter.swift gauges[0].labelKey + Views SpeedBucketCardView avg-speed row
+[x] string speedProfile.better            -> SpeedProfilePage.Charts.swift::EfficiencyVsSpeedPanel.subtitle
+[x] string speedProfile.distribution      -> SpeedProfilePage.Charts.swift::SpeedDistributionPanel title
+[x] string speedProfile.distribution.aria -> SpeedProfilePage.Charts.swift::SpeedDistributionPanel.ariaLabel (chart accessibilityLabel)
+[x] string speedProfile.drives            -> SpeedProfilePage.Views.swift::SpeedBucketCardView "Drives" row
+[x] string speedProfile.effVsSpeed        -> SpeedProfilePage.Charts.swift::EfficiencyVsSpeedPanel title
+[x] string speedProfile.effVsSpeed.aria   -> SpeedProfilePage.Charts.swift::EfficiencyVsSpeedPanel.ariaLabel (chart accessibilityLabel)
+[x] string speedProfile.efficient         -> SpeedProfilePage.Views.swift::SpeedEfficiencyLegend swatch(.efficient)
+[x] string speedProfile.highConsumption   -> SpeedProfilePage.Views.swift::SpeedEfficiencyLegend swatch(.high)
+[x] string speedProfile.insightText       -> SpeedProfilePage.Model.swift::SpeedProfilePageStrings.insightText (String(format:) speed+unit) via SpeedInsightPanel
+[x] string speedProfile.insightTitle      -> SpeedProfilePage.Views.swift::SpeedInsightPanel
+[x] string speedProfile.lower             -> SpeedProfilePage.Charts.swift::EfficiencyVsSpeedPanel.subtitle
+[x] string speedProfile.moderate          -> SpeedProfilePage.Views.swift::SpeedEfficiencyLegend swatch(.elevated)
+[x] string speedProfile.noData            -> SpeedProfilePage.States.swift::SpeedProfileSurfaceEmpty (ContentUnavailableView title)
+[x] string speedProfile.optimalSpeed      -> SpeedProfilePage.Adapter.swift gauges[2].labelKey
+[x] string speedProfile.peakSpeed         -> SpeedProfilePage.Adapter.swift gauges[1].labelKey
+[x] string speedProfile.speed             -> SpeedProfilePage.Charts.swift::EfficiencyScatterChart.xTitle (x-axis "Speed (unit)")
+[x] string speedProfile.subtitle          -> SpeedProfilePage.swift::header
+[x] string speedProfile.timeShare         -> SpeedProfilePage.Views.swift::SpeedBucketCardView "Time" row
+[x] string speedProfile.timeSpent         -> SpeedProfilePage.Charts.swift::SpeedDistributionBarChart y-axis label ("% time")
+[x] string speedProfile.title             -> SpeedProfilePage.swift::header + .navigationTitle
+
+PARITY_COVERED=37
+PARITY_REQUIRED == PARITY_COVERED  (37 == 37)
+
+--- IMPLEMENTATION NOTES -----------------------------------------------------
+* Bound through @Observable SpeedProfilePageModel (P1/S8); SpeedProfileSource seam
+  composes web useSpeedProfile (GET /analytics/speed-profile [start,end]) + useDrives.
+  No networking in the view (ADR-004). InMemorySpeedProfileSource backs previews+tests.
+* Units: SI on the wire; converted ONLY at the display boundary. SpeedProfileUnits
+  mirrors web/src/lib/unitConversion.ts (m/s->km/h ×3600/1000, m/s->mph ×3600/1609.344;
+  Wh/km->Wh/mi ×1.609344) — pinned by tests. Gauge maxima 55.56 / 69.44 m/s (web).
+* getEfficiency parity: energyUsedWh/(distanceM/1000), else battery delta
+  (battUsed×0.75×1000/km), else nil. Per-bucket efficiency accumulation + 4-tier scatter
+  colours + 3-tier bucket-efficiency colours reproduced (SpeedProfileProjection).
+* No hidden panels (ADR-011 / repo rule #6): the scatter panel (web `scatterData>3`
+  guard) and the insight panel (web `optimalSpeedMps>0` guard) are ALWAYS rendered with
+  an in-panel empty row / fallback message instead of being conditionally removed.
+* HIG-native: TSGlassPanel materials (ADR-005), Swift Charts (never WKWebView), Swift
+  semantic colour tokens (Color.TS.*) — web literal hexes mapped to tiered tokens; light/
+  dark + increased-contrast + Dynamic Type via the generated token ramp; VoiceOver
+  labels/values + .isHeader traits; ContentUnavailableView for empty (ADR-014/015).
+* Navigation: `.navigationTitle` set; surface is a public, hostable View
+  (SpeedProfilePage(model:)) like all peers. /speed-profile is NOT a top-level AppRoute
+  case (locked enum, sub-page of driving/analytics), so no new top-level route is added
+  (avoids out-of-scope IA drift); hostable via AppRouteHostRegistry at integration time.
+
+--- GATE (host-runnable; outputs verbatim) -----------------------------------
+SWIFTLINT (swiftlint lint --strict --config .swiftlint.yml <9 swift files>):
+  Done linting! Found 0 violations, 0 serious in 9 files.
+  LINT_EXIT=0
+
+SWIFTFORMAT (swiftformat --lint <9 swift files>):
+  0/9 files require formatting.
+  FORMAT_EXIT=0
+
+PLACEHOLDER (check-placeholders.ps1 -Language swift, scoped to the 9 new swift files):
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0   (0 opt-outs, ADR-011)
+
+ISOLATED BUILD + TESTS (SwiftPM, swift-tools 6.0 / Swift 6 strict concurrency;
+  module = SpeedProfilePage.Models/Adapter/Model + UnitPreferences/SpeedProfilePage
+  stand-ins; test target = SpeedProfilePage.Tests.swift):
+  Test Suite 'All tests' passed.
+  Executed 26 tests, with 0 failures (0 unexpected).
+  TEST_EXIT=0
+
+DUAL-SDK TYPECHECK (swiftc -typecheck -swift-version 6, Models+Adapter+Model):
+  macOS 15  (arm64-apple-macos15.0)            MAC_TYPECHECK_EXIT=0
+  iOS 18    (arm64-apple-ios18.0-simulator)    IOS_TYPECHECK_EXIT=0
+
+XCODEGEN (xcodegen generate): project regenerated; the 10 SpeedProfilePage files
+  are enumerated in TeslaSync.xcodeproj (60 pbxproj references across the iOS +
+  macOS app targets). XCODEGEN_EXIT=0
+
+--- GATE (full-app triad — BLOCKED by pre-existing, out-of-scope breakage) ----
+KMP CORE: apps/apple/Frameworks/Shared.xcframework built + staged for this slot via
+  Scripts/build-shared-xcframework.sh (Gradle :core:assembleSharedXCFramework, BUILD
+  SUCCESSFUL). Not the blocker.
+
+XCODEBUILD (xcodebuild -target TeslaSync-macOS -configuration Debug build,
+  CODE_SIGNING_ALLOWED=NO):  BUILD FAILED.
+  ROOT CAUSE (pre-existing, unrelated to this surface — see
+  apps/macos-pending-verifications.md): the app targets compile 224 co-located
+  `*.Tests.swift` files that `import XCTest` into the app target, which the app target
+  cannot resolve:
+    .../feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve
+        module dependency: 'XCTest'
+  Plus the documented `public struct DashboardWidgetSize` redefined in 15 files across
+  Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/*. Both are parallel-merge
+  collisions affecting ALL 171 feature-view surfaces equally; fixing them requires
+  editing project.yml and/or 224 peer files — OUTSIDE this prompt's allowed files.
+  SpeedProfile-attributable errors: 0.
+  Proof this surface is clean in-context:
+    - grep -i 'error:' <build log> | grep -ci speedprofile  ->  0
+    - SpeedProfilePage.Tests.swift emits only the same benign self-import WARNING every
+      peer emits: "file '…Tests.swift' is part of module 'TeslaSync'; ignoring import".
+    - SpeedProfilePage.strings: CopyStringsFile + builtin-copyStrings --validate
+      succeeded; bundled to TeslaSync.app/Contents/Resources/SpeedProfilePage.strings.
+  BUILD_EXIT=65  (pre-existing; not introduced by this change)
+
+Per ADR-010/012 + the macos-pending-verifications.md precedent (ToolCard,
+AlertMessageEditor, FSMTimelineChart), the full-app `xcodebuild build test` is a
+DEFERRED verification for the P99 apple-acceptance gate on a clean macos-latest runner
+(signing + the collision resolution). A tracking row was appended to
+apps/macos-pending-verifications.md.
+
+--- LEDGER -------------------------------------------------------------------
+apps/parity/apple-ledger.json updated: page:driving/SpeedProfile,
+coveredCount=37/requiredCount=37 on both apple-macos + apple-ios; status=blocked
+(full-app triad deferred to P99 CI; all host-runnable gates green).
+
+================================================================================
+SUMMARY: 37/37 parity items implemented (5 panels, 7 charts, 4 states, 21 strings).
+Host-runnable gates GREEN: swiftlint --strict (0), swiftformat --lint (0),
+placeholder (0/0 opt-outs), isolated SwiftPM tests (26/26), macOS-15 + iOS-18
+typecheck (0/0), xcodegen (10 files). Full-app xcodebuild build/test BLOCKED by a
+pre-existing, out-of-scope app-target/XCTest + DashboardWidgetSize collision shared
+by all 171 peer surfaces; ZERO SpeedProfile-attributable errors; deferred to P99 CI.
+================================================================================
+EXIT=65
+STATUS=BLOCKED
+================================================================================

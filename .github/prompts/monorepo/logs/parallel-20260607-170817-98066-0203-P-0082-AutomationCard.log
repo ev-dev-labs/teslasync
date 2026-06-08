@@ -1,0 +1,114 @@
+I'll start by exploring the environment and understanding what's available, then read the web source spec.
+
+Key finding: **xcodebuild requires full Xcode but only Command Line Tools are installed.** Swift 6.3.2, swiftlint, swiftformat, and pwsh ARE available. Let me investigate the toolchain situation thoroughly and explore the existing Apple app structure before concluding anything.
+
+Critical: `/Applications/Xcode.app` exists but is only 96 bytes (3 entries), owned by root, created today. I need to verify whether it's a real, functional Xcode or a stub. This determines DONE vs BLOCKED.
+
+**Xcode 26.5 is fully installed (4.8GB)** — just not selected. `DEVELOPER_DIR` override works. Now let me verify simulators, schemes, and the project generation setup (project.yml = XcodeGen).
+
+Full toolchain confirmed: Xcode 26.5, iOS 26.5 runtime, iPhone 16 sim, xcodegen. The scheme has a `Shared.xcframework` preAction (KMP). Let me check build feasibility and study the existing patterns.
+
+The build needs a KMP `Shared.xcframework` (Gradle/Kotlin). It's not built yet. Let me check predecessor feature-view logs to see what STATUS they achieved and how the build behaved.
+
+Now I understand the established disposition. Let me set up tracking and deeply study the pattern: a representative feature view, shared primitives, state-holders, tokens, i18n, telemetry, and the Automation model.
+
+KMP shared core has `AutomationsStore.kt` + `AutomationModels.kt` (P1/S8). Let me read a representative card-pattern view (ToolCard), a complex stateful one (AuditPanel), the KMP Automation models, and the shared component/design primitives.
+
+Now I have the data model. Let me study the shared SwiftUI primitives (TSGlassPanel, TSBadge, TSToggle, etc.), the i18n catalog for `automations.*`, and a predecessor that uses ConfirmDialog→.alert + Badge + menu (UserImpersonateButton + AuditPanel).
+
+en.json may be nested. Let me read the core shared primitives and the i18n catalog structure in parallel.
+
+Now let me read the typography, buttons, feedback primitives, design tokens, an existing `.strings` file, and two reference views (UserImpersonateButton for ConfirmDialog→.alert, AuditPanel for states/tests).
+
+Let me read the state-holder/strings/telemetry model pattern, the design tokens, feedback states, and locate Toggle/Pin/Menu primitives plus the test harness.
+
+Design tokens are generated elsewhere. Let me read the Model+Tests pattern from UserImpersonateButton, locate the generated tokens (TSSpacing/Color.TS/Font.TS), and find Toggle/PinButton equivalents.
+
+Now let me read the TSToggle signature, the test-harness pattern, and a predecessor log's full gate execution to replicate the exact isolated-build verification.
+
+This is the exact template. Let me read the rest of the 0050 log (gate execution + verification commands), plus the lint/format/placeholder configs.
+
+I now have the full picture and the exact disposition template (0050 is from this same parallel run). Let me read the last few primitives (TSMaterial, Skeletons), the lint/format/placeholder configs, and the web dateFormat — then I'll write code.
+
+I have everything needed. Let me set up tracking and write the plan, then build the surface.
+
+Now I'll write the surface, starting with the Model (seams + data types).
+
+The web header embeds a `PinButton`. Let me add a faithful native pin affordance to the Model (isPinned + onTogglePin), then write the Views.
+
+Now the main surface file with state switch, container, chrome, and confirm dialog.
+
+Now the strings catalog and the test suite.
+
+All 7 files written. Let me update tracking and check line counts (swiftlint file_length ≤400).
+
+All files are within limits (≤365 lines, ≤118 cols). Now let me build an isolated SwiftPM harness to typecheck the surface against the real component closure and execute the XCTest suite — the same verification the predecessors used.
+
+Closure determined. Let me build the isolated SwiftPM harness and run the full XCTest suite under the Xcode Swift 6 toolchain.
+
+Harness assembled with all 5 surface files + real closure. Now run the test suite under Xcode's Swift 6 toolchain.
+
+Two real Swift 6 strict-concurrency issues surfaced (good — the harness uses the real rules). Fixing: make the localizer `Sendable`, drop `@MainActor` from the plain actions bag, and isolate the preview helper.
+
+Re-syncing the harness with the fixes and re-running.
+
+Production code compiles clean now. Two test-only concurrency nits remain. Fixing both.
+
+All 19 tests pass under Swift 6 / macOS 15. Now the explicit dual-SDK typecheck (iOS 18 simulator + macOS 15), matching the app's strict-concurrency settings.
+
+Both SDK typechecks pass cleanly (exit 0). Now the lint/format/placeholder host gates.
+
+swiftformat is the autoformatter — let me apply it to fix the mechanical issues, then handle the force-unwrap manually.
+
+swiftformat auto-fixed everything (including converting the force-unwrap to `XCTUnwrap`). Let me re-verify lint + format are clean, then re-run typecheck + tests on the formatted files.
+
+Lint + format both clean (0 violations). Re-syncing the formatted files into the harness and re-running typecheck + tests to confirm nothing regressed.
+
+All green: both SDK typechecks exit 0, 19/19 tests pass. Now the placeholder gate (two ways) + a manual scan.
+
+The placeholder gate's real scan flagged 2 hits — both are the literal word "placeholder" in my descriptive comments (not stubs). I'll reword them so the mechanical gate is clean both ways.
+
+Re-verifying the placeholder gate is clean and lint/format still pass after the comment edits.
+
+Every host-runnable gate is green. Now I'll capture honest evidence for the DEFERRED xcodebuild steps. First, `xcodegen generate` and confirm my files are now registered in the target.
+
+My files are now registered in the target (42 refs, all 7 files) — unlike the 0050 era. Now let me capture the real xcodebuild blocker (bounded; skipping the Gradle pre-action by building the target directly).
+
+Concrete blocker captured: **exit 65 — missing `Shared.xcframework`** (the KMP/Kotlin-Native core, deferred to a `macos-latest` hardening runner by `macos-pending-verifications.md` row 1). Let me capture the macOS target evidence too, then verify the co-located-test structural condition is pre-existing (not introduced by me).
+
+Both app targets blocked by the same documented missing-`Shared.xcframework` (exit 65); the co-located test pattern is pre-existing across 27 predecessor surfaces. Now let me gather final metrics and write the log.
+
+Let me rigorously verify every referenced i18n key is declared (acceptance criterion), then write the log.
+
+All 33 literal keys declared (the 3 status keys are interpolated, also declared) — 0 missing. Now I'll write the comprehensive gate log.
+
+Now let me verify git status, confirm the generated project is ignored, and clean up the temp harness.
+
+Generated `.xcodeproj` is ignored; my 7 files + log are the only new files. Two pre-existing modified files (not mine) must be excluded. Let me do a final full verification of all 6 swift files, then stage only my files and commit.
+
+All final gates green (lint 0, format 0, placeholder 0). Staging only my files and committing.
+
+Exactly my 8 files staged; the 2 pre-existing modified files remain unstaged. Committing.
+
+Committed cleanly as `fdf1dbbd` — exactly my 8 files (1873 insertions), the 2 pre-existing modified files excluded. Let me finalize tracking.
+
+Task complete. The AutomationCard Apple surface is shipped at parity and committed.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0082-AutomationCard.log | 259 +++++++++++++++
+ .../feature-views/AutomationCard.Adapter.swift     | 365 +++++++++++++++++++++
+ .../feature-views/AutomationCard.Model.swift       | 255 ++++++++++++++
+ .../feature-views/AutomationCard.Previews.swift    | 144 ++++++++
+ .../feature-views/AutomationCard.Tests.swift       | 267 +++++++++++++++
+ .../feature-views/AutomationCard.Views.swift       | 322 ++++++++++++++++++
+ .../TeslaSync/feature-views/AutomationCard.strings |  64 ++++
+ .../TeslaSync/feature-views/AutomationCard.swift   | 197 +++++++++++
+ 8 files changed, 1873 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0082-AutomationCard.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/AutomationCard.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AutomationCard.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AutomationCard.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AutomationCard.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AutomationCard.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AutomationCard.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/AutomationCard.swift

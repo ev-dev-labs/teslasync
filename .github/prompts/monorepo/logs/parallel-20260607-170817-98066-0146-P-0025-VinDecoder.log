@@ -1,0 +1,108 @@
+I'll start by exploring the repository structure and the web source file, while checking the Apple toolchain availability.
+
+Key findings: `xcodebuild` requires full Xcode (only Command Line Tools installed), and `simctl` is unavailable — so the simulator build/test gate cannot run. But `swift`, `swiftlint`, and `swiftformat` ARE available. Let me explore the web source and existing Apple structure in depth.
+
+Now let me read the constants, the ToolCard, and study existing widget conventions plus the shared infrastructure (state holders, tokens, i18n, diagnostics).
+
+Now let me study the ToolCard (web), the shared infrastructure (state holders, design tokens, i18n, diagnostics), and a representative existing widget set to learn the native conventions.
+
+This is a sophisticated KMP shared-core architecture. The VinDecoder is a pure local-compute tool (only i18n dependency). Let me study the i18n facade, diagnostics contract, design tokens, native UI components, and a reference widget that renders all states.
+
+Let me study a complete widget set, the telemetry contract, design tokens, typography, and project.yml.
+
+The token definitions (Color.TS, TSSpacing, etc.) aren't in Sources/Design — let me find them, and study the DrivetrainHealth and DestinationETA widgets which demonstrate the telemetry seam and state binding.
+
+Now I understand the telemetry seam and state patterns. Let me check the token definitions, project.yml wiring, typography components, and verify tooling (placeholder script, pwsh, swiftc parse capability).
+
+`pwsh`, `xcodegen`, `swiftc` (with macOS SDK SwiftUI/Charts/MapKit) are available; `xcodebuild` is not. Crucial: project.yml's app targets include `Sources`, `dashboard-widgets`, `Localization` — but NOT `TeslaSync/feature-views`. Let me study the existing widget conventions in detail (Tests, strings, Previews, telemetry binding).
+
+The convention is clear: each surface authors a self-contained bundle (view, model, adapter, content, previews, tests, strings) in its own directory; wiring into project.yml happens at integration time. Let me study the full SubscriptionsWidget set, Typography, and Badges to nail conventions.
+
+Excellent reference. Now let me find the model + strings-facade pattern, the typography components, and the web i18n locale values for the VIN keys.
+
+Now I have the full model/strings/telemetry pattern. Let me read the typography, badges, a complete Previews + Tests example, and locate the generated design tokens.
+
+Now let me read the Previews, Tests, and Content conventions plus the lint/format configs to ensure compliance.
+
+I have the full conventions. Let me check the lint/format configs and placeholder patterns to ensure compliance, plus confirm the en.json values.
+
+Let me read the placeholder checker to ensure my code and i18n keys won't trip it (e.g., avoid the literal word "placeholder").
+
+I now have everything needed: design tokens, component conventions, model/telemetry/i18n-facade patterns, lint/format/placeholder rules. Key constraints noted: placeholder checker is **case-insensitive** on `.swift` files (so I must avoid the literal word "placeholder"/"stub"/"mock"/"TODO" in Swift code), swiftformat will lint my files, and this is a **pure synchronous compute tool** (only `useTranslation`; no network → no loading/error/stale/offline states exist in the source).
+
+Let me write a plan file, then create the surface.
+
+Prior surfaces logged "iOS/macOS build SUCCEEDED" — they ran on an Xcode-equipped runner. Let me check whether Xcode.app exists here (I could point to it via `DEVELOPER_DIR` without sudo).
+
+Xcode 26.5 is installed at `/Applications/Xcode.app` — I can use it via `DEVELOPER_DIR` (no sudo). This lets me genuinely compile/typecheck the surface against the real iOS 18 + macOS SDKs. Let me verify SDKs and a trivial SwiftUI compile, and check how `.Tests.swift` co-located files get target membership.
+
+Both iOS 18 and macOS SwiftUI typechecks pass with the real Xcode SDKs — I can genuinely verify compilation. Let me check the P4 prompt structure to understand the feature-views wiring/test-target convention and confirm whether `.Tests.swift` co-location is expected.
+
+This is a **pure synchronous compute tool** and, crucially, **Xcode 26.5 is available** via `DEVELOPER_DIR` — so I can genuinely compile the real shipped Swift against both the iOS 18 and macOS 15 SDKs (the surface is KMP-`Shared`-free, using only design tokens + raw SwiftUI). I'll design it self-contained, then verify by real dual-SDK compilation + executed adapter/model tests + lint/format/placeholder.
+
+Let me write the surface files.
+
+Now the comprehensive XCTest file.
+
+Now let me verify the work. First, scan my Swift files for forbidden placeholder words, then run swiftformat.
+
+No forbidden words; all 7 files present. Now let me run swiftformat (lint), then auto-format if needed.
+
+swiftformat flagged force-unwraps in the test file (`noForceUnwrapInTests`). Let me fix them with `try XCTUnwrap` and `throws`.
+
+swiftformat is clean. Now swiftlint `--strict` on the new files.
+
+swiftlint used the config's `included` (ignoring my path arg), so it linted the existing 563 files (not mine) and found 1 pre-existing violation. Let me identify that violation and lint my files via a temp config scoped to feature-views.
+
+The pre-existing violation is in `LifetimeStatsWidget.Adapter.swift` (not mine). Now let me lint my files with the scoped config.
+
+Let me write a clean scoped config instead of the sed-mangled one.
+
+swiftlint `--strict`: **0 violations** in my 6 files. Now the key verification — compiling the real shipped Swift against the actual **iOS 18 + macOS 15 SDKs** under Swift 6 / complete concurrency (matching project.yml settings).
+
+Both **iOS 18 and macOS 15** typechecks pass under Swift 6 + complete concurrency (including Previews). Now let me compile and **execute** the adapter/model/telemetry/a11y logic for real green-test evidence.
+
+The runner failed only because I compiled it in the default language mode — the real project uses **Swift 6**, under which SwiftUI's `View` is `@MainActor`-isolated (which is exactly why the Swift 6 typecheck passed). Let me compile the runner in Swift 6 mode too.
+
+**23/23 checks PASS** — real Swift 6 execution of the adapter, model, telemetry, i18n facade, and accessibility logic. Now the placeholder gate, then I'll verify the XCTest file itself typechecks.
+
+Placeholder gate passes (count=0). Now let me verify the XCTest file itself typechecks against XCTest.
+
+All surface-level verifications pass. Let me honestly attempt the official `xcodebuild` gate (via `DEVELOPER_DIR`) to document its exact blocking point — checking whether the KMP `Shared.xcframework` staging is feasible.
+
+My surface is **KMP-`Shared`-free**, so it doesn't need the heavy `Shared.xcframework` (which the *rest* of the app requires). Building that wouldn't validate my unwired files anyway. Instead, let me do a full **`-c` codegen compile** (stronger than typecheck) for iOS 18 to complement the macOS executable build I already ran.
+
+Full **iOS 18 codegen compile succeeded** (484KB object). Let me run the literal gate's `swiftformat --lint apps/apple` step to capture the real repo-wide result for the log.
+
+`swiftformat --lint apps/apple`: **0/573 files require formatting** — the real gate step 4 passes including my files. Let me validate the `.strings` file parses correctly, then write the log.
+
+Everything verifies green. The `.strings` file is valid (15 keys). Now I'll write the gate log honestly, documenting that the surface is fully compile-verified on **both iOS 18 and macOS 15** with passing tests, while the official `xcodebuild -scheme` gate is blocked by integration concerns (KMP framework staging + simulator daemon + the `feature-views` directory not yet registered in `project.yml`, which is outside this surface's allowed files).
+
+I need to fix an inconsistency: `STATUS=BLOCKED` must pair with a non-zero `EXIT` (the gate defines `EXIT=0` only when every step passes). Let me correct the final lines.
+
+Both new artifacts are untracked. Let me do a final review of the directory contents and commit with the prescribed message.
+
+All 7 surface files + the log are staged (exactly the allowed files). Committing with the prescribed message.
+
+Committed cleanly as `35ffea9d`. Let me update the plan status and do a final sanity check that the committed files match what I verified.
+
+The VinDecoder feature view is complete, verified, and committed. Final summary:
+
+## P4 · Feature view · 0025 — VinDecoder (Apple) ✅ shipped
+
+**Delivered** a production-polished, native SwiftUI parity of `VinDecoder.tsx`, decomposed one-responsibility-per-file (mirrors the `dashboard-widgets` convention) — 7 files, 969 lines, committed as `35ffea9d` (exactly the allowed files):
+
+- **`VinDecoder.Adapter.swift`** — pure Foundation decode core + the 5 VIN_* lookup tables (parity with the web `useMemo` + `constants.ts`)
+- **`VinDecoder.Model.swift`** — `view.opened`/`VinDecoder` telemetry seam (P1/S11), `@Observable` model, i18n facade (P1/S10, table `VinDecoder`), testable a11y summary
+- **`VinDecoder.swift` / `.Content.swift`** — ToolCard chrome, bindable input, responsive 2-col decoded grid, `ContentUnavailableView` empty state
+- **`.Previews.swift` / `.Tests.swift` / `.strings`** — per-state previews, XCTest suite, 15-key catalog
+
+**Honesty note on states:** VinDecoder is a pure synchronous tool (only `useTranslation`; no network). Its two real source states — *empty* and *decoded* — are fully implemented; loading/error/stale/offline are not reachable for a dependency-free compute surface, so they're intentionally **not fabricated** (documented in the log).
+
+**Verification (Xcode 26.5 via `DEVELOPER_DIR`):**
+- iOS 18 sim: typecheck + full `-wmo` codegen compile → exit 0
+- macOS 15: typecheck + executable compile + **23/23 tests executed PASS**
+- `swiftlint --strict` (my files): 0 · `swiftformat --lint apps/apple`: 0/573 · placeholders: 0 · `.strings` plutil OK
+
+**`EXIT=1 / STATUS=BLOCKED`** — the only step that can't reach a clean exit here is the literal `xcodebuild -scheme TeslaSync build test`, blocked by integration/env factors outside this surface's allowed files (KMP `Shared.xcframework` Gradle staging, the privileged iOS Simulator daemon, and registering the new `feature-views/` dir in `project.yml`). The surface itself is compile-verified on both target SDKs with green tests — nothing is red or fabricated.
+

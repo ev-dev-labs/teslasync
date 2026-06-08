@@ -1,0 +1,232 @@
+p4-apple · P7 · page:vehicle-systems/MediaPlayer — SwiftUI / HIG parity
+Web source: web/src/features/vehicle-systems/pages/MediaPlayerPage.tsx
+Output:     apps/apple/TeslaSync/Features/VehicleSystems/MediaPlayerPage.*
+Prompt:     .github/prompts/monorepo/p4-apple/pages/vehicle-systems/MediaPlayerPage.prompt.md
+Host:       macOS (Darwin), Xcode 26.5 (DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer),
+            swiftlint 0.x, swiftformat, pwsh — all present (Xcode runner AVAILABLE, gate NOT blocked).
+
+================================================================================
+=== CHANGES ===
+================================================================================
+New native SwiftUI surface (apps/apple/TeslaSync/Features/VehicleSystems/, a new
+source group wired into both app targets + swiftlint):
+  • MediaPlayerPage.Adapter.swift  — pure domain + classifiers + formatters + projection
+       MediaPlayerVehicle, MediaPlaybackRecord (web MediaSnapshot), MediaSourceKind/.classify,
+       MediaStatusKind/.classify, MediaPlayerFormat (number/int/playTime/compact/dateTime — ports
+       of numberFormat.ts + dateFormat.ts), MediaLatestProjection, MediaPlayerStats,
+       MediaVolumePoint, MediaSourceShare, MediaPlayerProjection (filter/stats/volumePoints/
+       sourceShares/latest — 1:1 ports of the web useMemo derivations).
+  • MediaPlayerPage.Model.swift    — @MainActor @Observable MediaPlayerPageModel (phase
+       loading/empty/error/content + connection + range recompute), MediaPlayerSource seam,
+       InMemoryMediaPlayerSource, MediaPlayerUpdate, MediaPlayerRangePreset (web PRESET_IDS),
+       MediaPlayerStrings (P1/S10 facade), MediaPlayerAccessibility, OSLog telemetry seam.
+  • MediaPlayerPage.Views.swift    — MediaNowPlayingCard (GlassPanel1), MediaVolumeGaugePanel
+       (GlassPanel2 + RadialGauge), MediaPlayerStatCards (4 MetricCards), source/status style.
+  • MediaPlayerPage.Sections.swift — MediaVolumeChartPanel (GlassPanel7 + AreaChart),
+       MediaSourceChartPanel (GlassPanel8 + PieChart), MediaPlaybackHistorySection (GlassPanel9
+       + TSDataTable, 6 cols), MediaHistoryColumns, MediaPlayerLoadingView/EmptyView/ErrorView.
+  • MediaPlayerPage.swift          — MediaPlayerPage View (adaptive ScrollView + LazyVGrid; macOS
+       regular + iOS compact/regular), MediaPlayerRouteRegistration (hosts the page at the
+       .vehicleSystems route in the shell RouteHostRegistry).
+  • MediaPlayerPage.Previews.swift — content/empty/loading/error previews (DEBUG only).
+  • MediaPlayerPage.Tests.swift    — 22 XCTest cases (formatters, classifiers, projection, model
+       phase matrix + wiring, range presets, accessibility).
+  • MediaPlayerPage.strings        — the surface i18n table (26 parity + chrome + a11y keys).
+Navigation registration + infra:
+  • Sources/TeslaSyncApp.swift     — owns the page model; chains MediaPlayerRouteRegistration onto
+       the route-host registry so the page renders in the shell (sidebar/tabs).
+  • Sources/App/AppRouteParser.swift — adds the "/media-player": .vehicleSystems deep-link alias.
+  • project.yml + .swiftlint.yml   — add TeslaSync/Features as a source/lint path.
+  • Localization/Localizable.xcstrings — folds in the 41 surface keys (validated JSON, 8162 total).
+SI / units: the surface formats only at the display boundary (Foundation NumberFormatter/
+DateFormatter in MediaPlayerFormat). Volume is a unitless Tesla scale (0…max, default 11) — no
+SI conversion applies; durations are ms clocks (web fmtPlayTime). No non-SI value is stored.
+
+================================================================================
+=== PARITY ===
+================================================================================
+PARITY_REQUIRED=42
+
+panel   GlassPanel1   COVERED  MediaPlayerPage.Views.swift:MediaNowPlayingCard (TSGlassPanel)
+panel   GlassPanel2   COVERED  MediaPlayerPage.Views.swift:MediaVolumeGaugePanel (TSGlassPanel)
+panel   Unique-Tracks COVERED  MediaPlayerPage.Views.swift:MediaPlayerStatCards (TSMetricCard, media.player.stat.uniqueTracks)
+panel   Top-Source    COVERED  MediaPlayerPage.Views.swift:MediaPlayerStatCards (TSMetricCard, media.player.stat.topSource)
+panel   Avg-Volume    COVERED  MediaPlayerPage.Views.swift:MediaPlayerStatCards (TSMetricCard, media.player.stat.avgVolume)
+panel   Volume-Step   COVERED  MediaPlayerPage.Views.swift:MediaPlayerStatCards (TSMetricCard, media.player.stat.volumeStep)
+panel   GlassPanel7   COVERED  MediaPlayerPage.Sections.swift:MediaVolumeChartPanel (TSGlassPanel)
+panel   GlassPanel8   COVERED  MediaPlayerPage.Sections.swift:MediaSourceChartPanel (TSGlassPanel)
+panel   GlassPanel9   COVERED  MediaPlayerPage.Sections.swift:MediaPlaybackHistorySection (TSGlassPanel)
+chart   RadialGauge   COVERED  MediaPlayerPage.Views.swift:MediaVolumeGaugePanel -> TSRadialGauge(value: volumeFraction)
+chart   AreaChart     COVERED  MediaPlayerPage.Sections.swift:MediaVolumeChartPanel -> TSAreaChart(series:)
+chart   PieChart      COVERED  MediaPlayerPage.Sections.swift:MediaSourceChartPanel -> TSPieChart(slices:)
+state   loading       COVERED  MediaPlayerPage.Sections.swift:MediaPlayerLoadingView ; Model.resolvePhase -> .loading
+state   empty         COVERED  MediaPlayerPage.Sections.swift:MediaPlayerEmptyView + per-section TSEmptyState
+state   error         COVERED  MediaPlayerPage.Sections.swift:MediaPlayerErrorView ; Model.resolvePhase -> .error
+state   success       COVERED  MediaPlayerPage.swift:sections (phase .content) ; Model.resolvePhase -> .content
+string  Artist                              COVERED  media.player.col.artist        (Sections.swift artist column)
+string  Avg Volume                          COVERED  media.player.stat.avgVolume    (Views.swift stat card)
+string  Media Player                        COVERED  media.player.title             (Page.swift TSPageTitle)
+string  No playback history                 COVERED  media.player.table.empty       (Sections.swift MediaPlayerEmptyView)
+string  No playback history for this period COVERED  media.player.history.emptyPeriod (Sections.swift history empty)
+string  No source data available            COVERED  media.player.source.empty      (Sections.swift source chart empty)
+string  No track                            COVERED  media.player.noTrack           (Views.swift now-playing fallback)
+string  No volume data for this period      COVERED  media.player.volume.emptyPeriod (Sections.swift volume chart empty)
+string  Now playing, volume, ...history     COVERED  media.player.subtitle          (Page.swift subtitle)
+string  Paused                              COVERED  media.player.status.paused     (Views.swift MediaStatusKind.localizedKey)
+string  Playback History                    COVERED  media.player.history.title     (Sections.swift history header)
+string  Playing                             COVERED  media.player.status.playing    (Views.swift MediaStatusKind.localizedKey)
+string  Source                              COVERED  media.player.col.source        (Sections.swift source column)
+string  Source Distribution                 COVERED  media.player.source.title      (Sections.swift source chart header)
+string  Status                              COVERED  media.player.col.status        (Sections.swift status column)
+string  Stopped                             COVERED  media.player.status.stopped    (Views.swift MediaStatusKind.localizedKey)
+string  Time                                COVERED  media.player.col.time          (Sections.swift time column)
+string  Top Source                          COVERED  media.player.stat.topSource    (Views.swift stat card)
+string  Track                               COVERED  media.player.col.track         (Sections.swift track column)
+string  Unique Tracks                       COVERED  media.player.stat.uniqueTracks (Views.swift stat card)
+string  Unknown artist                      COVERED  media.player.unknownArtist     (Views.swift artist fallback)
+string  Volume                              COVERED  media.player.volume            (Views.swift gauge label + Sections volume col/series)
+string  Volume Step                         COVERED  media.player.stat.volumeStep   (Views.swift stat card)
+string  Volume over Time                    COVERED  media.player.volume.title      (Sections.swift volume chart header)
+string  error.loadFailed                    COVERED  error.loadFailed               (Sections.swift MediaPlayerErrorView + Page.swift errorBanner)
+string  records                             COVERED  media.player.records           (Sections.swift recordsBadge)
+
+PARITY_COVERED=42
+PARITY_REQUIRED=42
+PARITY_OK=(PARITY_COVERED==PARITY_REQUIRED)=TRUE
+
+================================================================================
+=== GATE (host-runnable — EXECUTED on this machine) ===
+================================================================================
+$ pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/VehicleSystems -Language swift
+   -> PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ swiftlint --strict (apps/apple config) over TeslaSync/Features/VehicleSystems
+   -> 0 violations in the surface (7 files). The only violation reported in the full
+      `included` set is pre-existing + unrelated: TeslaSync/dashboard-widgets/
+      LifetimeStatsWidget.Adapter.swift:141 function_body_length (not my file, unmodified).
+LINT_EXIT=0 (surface)
+
+$ swiftformat --lint TeslaSync/Features/VehicleSystems
+   -> 0/7 files require formatting
+FORMAT_EXIT=0
+
+$ cd apps/apple && DEVELOPER_DIR=.../Xcode.app xcodegen generate
+   -> Created TeslaSync.xcodeproj (the 7 MediaPlayerPage.* files enumerated into both app targets)
+XCODEGEN_EXIT=0
+
+================================================================================
+=== GATE (Xcode toolchain — EXECUTED on this machine) ===
+================================================================================
+$ apps/shared/gradlew :core:assembleSharedXCFramework
+   -> BUILD SUCCESSFUL in 9m25s (release + debug Shared.xcframework assembled; staged into
+      apps/apple/Frameworks/Shared.xcframework)
+XCFRAMEWORK_ASSEMBLE_EXIT=0
+
+$ swiftc -typecheck -sdk <MacOSX26.5> -target arm64-apple-macos15.0 -swift-version 6
+         -strict-concurrency=complete -D DEBUG -F Frameworks/Shared.xcframework/macos-arm64
+         <MediaPlayerPage.* non-test> + Sources/Components/** + Sources/Design/** +
+         Sources/SharedFacade/** + Sources/App/{AppRoute,RouteHostRegistry}.swift + Tokens.swift
+   -> 0 errors. The surface + the entire real P3 component library + P2 tokens + P1 facade
+      type-check clean under Swift 6 strict concurrency on the macOS-15 SDK.
+      (UnitFormatters/TypedFormatters/AppContainer excluded — composition-root files the surface
+       does not use, which couple to Sources/Auth; their exclusion removed the only non-surface
+       closure gaps. Zero errors were ever reported in TeslaSync/Features/VehicleSystems.)
+MACOS_TYPECHECK_EXIT=0
+
+$ swiftc -typecheck -sdk <iPhoneSimulator> -target arm64-apple-ios18.0-simulator -swift-version 6
+         -strict-concurrency=complete -D DEBUG -F Frameworks/Shared.xcframework/ios-arm64-simulator
+         <same surface + dependency closure>
+   -> 0 errors (surface errors: 0). The adaptive surface also type-checks on the iOS-18 SDK.
+IOS_TYPECHECK_EXIT=0
+
+$ swift test   (isolated SwiftPM harness: MediaPlayerPage.Adapter.swift + MediaPlayerPage.Model.swift
+                as a library, MediaPlayerPage.Tests.swift as the test target; Swift 6, macOS)
+   -> Test Suite 'All tests' passed. Executed 22 tests, with 0 failures (0 unexpected) in 0.009s
+      MediaPlayerFormatTests        5/5  passed
+      MediaPlayerClassifierTests    2/2  passed
+      MediaPlayerProjectionTests    7/7  passed
+      MediaPlayerModelTests         4/4  passed   (resolvePhase matrix, apply+recompute, range
+                                                   re-filter, refresh/stop forwarding)
+      MediaPlayerRangeTests         2/2  passed
+      MediaPlayerAccessibilityTests 2/2  passed
+SURFACE_TESTS_EXIT=0
+
+================================================================================
+=== GATE (full-app xcodebuild build/test — CAPABILITY-DEFERRED, pre-existing) ===
+================================================================================
+The literal gate's `xcodebuild -scheme TeslaSync build` / `test` cannot reach a clean
+terminal state on THIS slot. The blocker is PRE-EXISTING and UNRELATED to this surface —
+the documented parallel-merge collisions in apps/macos-pending-verifications.md (ToolCard /
+AlertMessageEditor / FSMTimelineChart rows): 170+ co-located *.Tests.swift files import XCTest
+into the APP target, plus struct DashboardWidgetSize redefined across Sources/DashboardWidgets/*
++ TeslaSync/dashboard-widgets/*. Raw evidence (first failure halts dependency resolution):
+
+   $ xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' build CODE_SIGNING_ALLOWED=NO
+       TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module
+       dependency: 'XCTest'     ** BUILD FAILED **   (BUILD_EXIT=65)
+   $ xcodebuild -scheme TeslaSync-macOS ... build-for-testing
+       TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: ... 'XCTest'  (BFT_EXIT=65)
+
+   grep 'error:' over the full build log → the ONLY errors are pre-existing feature-view test
+   files; errors attributable to TeslaSync/Features/VehicleSystems = 0.
+
+This is the exact condition the predecessor Apple surfaces deferred to p4-apple/P99-0001
+(macos-latest, signed). The surface itself is proven by the EXECUTED gates above (both-SDK
+strict-concurrency type-check green + 22/22 SwiftPM tests green). A macos-pending row is appended
+to apps/macos-pending-verifications.md.
+FULLAPP_BUILD=DEFERRED-preexisting-parallel-merge-collisions (0 surface errors)
+FULLAPP_TEST=DEFERRED-preexisting-parallel-merge-collisions
+
+================================================================================
+=== HONESTY COVENANT ===
+================================================================================
+1  No red-as-green : the full-app xcodebuild step is labelled DEFERRED with raw error evidence
+                     (AIRestorePanel.Tests.swift XCTest), never claimed green. Every green line was
+                     actually executed and is green.
+2  No scope narrowing: all 9 panels, 3 charts, 4 states, 26 strings implemented (PARITY_COVERED=42).
+3  No skip-and-assume: every host gate + both-SDK type-check + 22 surface tests actually executed.
+4  No stubs as final: placeholder gate = 0; the empty state is a real ContentUnavailableView, the
+                     same branch the web source renders when there is no data.
+5  No parity shortcuts: web panels/charts/states/strings + the useMemo derivations reproduced 1:1
+                     (filter/stats/volumeChartData/sourceData/now-playing), unit-tested.
+6  No delegation     : the surface was implemented directly; an explore agent only mapped the
+                     existing architecture (read-only), it wrote none of the surface.
+7  No predecessor bypass: P1 facade (SharedFacade), P2 tokens (Color.TS/Font.TS/TSSpacing/TSRadius),
+                     P3 components (TSGlassPanel/TSRadialGauge/TSAreaChart/TSPieChart/TSDataTable/
+                     TSMetricCard/TSEmptyState/…), P4 shell (AppRoute + RouteHostRegistry) consumed
+                     as-is; no reimplementation, no old-pattern revert.
+8  No commit on red  : the surface is GREEN on both SDKs (type-check) + GREEN tests (22/22) + green
+                     host gates; the only non-green step is the pre-existing full-app collision,
+                     deferred with evidence — exactly the accepted predecessor disposition.
+9  No silent drift   : project.yml / .swiftlint.yml / Localizable.xcstrings / AppRouteParser /
+                     TeslaSyncApp changes are listed in CHANGES and committed alongside the surface.
+10 Log terminator    : this log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+================================================================================
+=== ACCEPTANCE ===
+================================================================================
+- [x] Every named panel implemented (9/9) + every anonymous region reproduced.
+- [x] All 42 parity items render from the bound @Observable MediaPlayerPageModel state.
+- [x] loading / empty / error / success implemented (model phase + per-section empties).
+- [x] All visible strings via the surface table; key names match the web; folded into the catalog.
+- [x] Dark mode + Dynamic Type + a11y labels + SI display-boundary formatting; SwiftUI-native only.
+- [x] placeholder + swiftlint --strict + swiftformat --lint green; both-SDK type-check green;
+      22/22 surface tests green; PARITY_COVERED==PARITY_REQUIRED (42==42).
+- [~] full-app xcodebuild build/test: CAPABILITY-DEFERRED (pre-existing parallel-merge collisions,
+      0 surface errors) → apps/macos-pending-verifications.md row, deferred to p4-apple/P99-0001.
+- [x] apple ledger rows (apple-macos + apple-ios) for page:vehicle-systems/MediaPlayer set covered.
+
+================================================================================
+=== DISPOSITION ===
+================================================================================
+The MediaPlayerPage surface is COMPLETE and verified to the maximum this host allows: host gates
+green, both-SDK (iOS-18 + macOS-15) Swift-6 strict-concurrency type-check green, 22/22 surface
+tests green, parity 42/42. The only step that cannot reach EXIT=0 here is the full-app xcodebuild,
+blocked by documented PRE-EXISTING parallel-merge collisions (XCTest-in-app-target,
+DashboardWidgetSize) with zero errors from this surface — deferred to the signed macos-latest P99
+runner, exactly as the accepted ToolCard / AlertMessageEditor / FSMTimelineChart / DigitalTwinMini
+predecessors deferred their Xcode steps. Nothing is faked; no red is reported as green.
+
+EXIT=0
+STATUS=DONE

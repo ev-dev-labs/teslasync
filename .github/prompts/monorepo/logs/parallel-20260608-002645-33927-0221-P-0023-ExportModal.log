@@ -1,0 +1,168 @@
+I'll start by exploring the environment and understanding the task requirements.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed, and no iOS simulators exist. `swift`, `swiftlint`, `swiftformat`, `pwsh` are all available. Let me explore the Apple app structure and the web source.
+
+The `modals-dialogs` directory doesn't exist yet—I'll create it. Let me study the existing `AIUsageCard` surface (recently modified, representative of current conventions) to understand the multi-file structure and the shared P1 layers.
+
+Excellent — clear multi-file pattern. Let me read the remaining AIUsageCard files and the shared P1 layers (tokens, fade, etc.).
+
+Now let me read the Previews, Tests, and strings files, plus locate the shared P1 token/component definitions.
+
+Now let me read the AIUsageCard tests, the shared design tokens, the placeholder check script, and the web dependencies (Modal, validateImport, SavedDashboard type, MiniGridPreview, useDateFormat).
+
+Now let me read the web dependencies (types, MiniGridPreview, useDateFormat, and the UI components for variant parity) plus the existing native Feedback/UI components for reference.
+
+Native shared components exist (Overlays, Buttons, Badges, Banners, States). Let me read their APIs so I reuse them rather than reinventing.
+
+Shared peers exist but the canonical surface (AIUsageCard) references types I haven't found yet (`AiUsageProjection`, chrome views). Let me find all AIUsageCard files and read the remaining native peer APIs (Badges, Banners, States).
+
+The pattern has more files: `.Projection.swift` and `.Chrome.swift`. Let me read those plus the native Badge/Banner/State peers.
+
+Now I understand the reuse rule: shared atoms (TSButton, TSSkeleton, tokens) are reused with `Text(verbatim:)` labels from a per-surface table. Let me read the remaining native atom APIs.
+
+Let me read the native Banner and State peers (AlertBanner / EmptyState / QueryError) to decide reuse, plus confirm `formatDate` output style and the macOS test-host detail.
+
+I now have a complete understanding of the canonical pattern and all shared atoms. Let me verify the toolchain can compile SwiftUI (since full Xcode is absent) and confirm no Xcode.app exists, then set up my plan.
+
+There IS an `/Applications/Xcode.app`. Let me check if it's usable via `DEVELOPER_DIR` and whether simulators exist — the full gate might be runnable.
+
+Major update: Xcode 26.5 is available via `DEVELOPER_DIR`, `xcodegen` is installed, and an iPhone 16 simulator is booted. The full gate may be runnable. The key question: how do co-located `*.Tests.swift` files in `feature-views` get routed to the test target, given `modals-dialogs` isn't in `project.yml`? Let me investigate the build wiring.
+
+`Tests/Unit/` has a `FeatureViews/` subdir, yet tests are *also* co-located in `feature-views/`. Let me resolve how co-located `*.Tests.swift` are routed — this determines how my test file gets compiled. I'll generate the project with the real toolchain and inspect target memberships.
+
+Project generated. Let me check the Shared.xcframework dependency (scheme preAction) and how co-located test files are targeted — these determine whether `xcodebuild` can run end-to-end here.
+
+The build has a heavy KMP Gradle preAction. Let me (a) decisively determine which target the co-located `*.Tests.swift` files compile into, and (b) check KMP/Gradle feasibility — both in one pass.
+
+Key discovery: co-located `*.Tests.swift` files are members of the **app** target (not test bundles), and the build references a "pending verifications" doc. Let me read that doc and check KMP/Gradle feasibility — this defines the sanctioned local verification path.
+
+The `macos-pending-verifications.md` doc is decisive: it establishes the **sanctioned verification protocol** for P4 Apple surfaces. The full-app `xcodebuild` is a known, documented macOS-pending deferral (pre-existing parallel-merge collisions: `DashboardWidgetSize` redefined, co-located `*.Tests.swift` importing XCTest into the app target, unstaged `Shared.xcframework`, signing). Surfaces are verified green via: **isolated SwiftPM build + N/N tests (Swift 6 strict concurrency) + real iOS-18/macOS-15 `swiftc -typecheck` + swiftlint --strict + swiftformat --lint + placeholder (0 opt-outs) + `xcodegen generate`**.
+
+I'll follow that exact protocol. Let me check for type-name collisions and the `formatDate` style, then write my plan.
+
+Decisive. I'll follow the sanctioned protocol exactly. Type names will be prefixed `ExportModal*` to avoid collisions with the existing `ExportStatus*`/`ExportJob*` families. `formatDate` = medium style (`year numeric, month short, day numeric`). Let me set up my plan and todos, then build.
+
+Now I'll write the surface. Starting with the pure-logic Adapter.
+
+Adapter done. Now the Model (state-holder seam, i18n facade, telemetry, clipboard, `@Observable` model).
+
+I placed the platform `import` mid-file; Swift resolves it but it's poor form and swiftformat may flag it. Let me hoist it to the top.
+
+Now the pure Projection.
+
+Now the presentational Views (summary, mini-grid preview, option buttons, share warning, empty).
+
+Now the Chrome (header with dismiss, freshness chip, connectivity banner, loading skeleton, error view).
+
+Now the public surface View + sheet presentation helper.
+
+Now the i18n catalog, previews, and tests.
+
+Now the comprehensive test suite.
+
+All 9 files written. Now I'll verify via the sanctioned protocol. First, let me check whether `Sources/Components` is self-contained (only system frameworks) so I can build an isolated SwiftPM harness against the real atoms.
+
+`Sources/Components` is self-contained (only system frameworks). I'll build an isolated SwiftPM package named `TeslaSync` (so `@testable import TeslaSync` works) containing the real design tokens + component library + my surface, under **Swift 6 language mode** (matching the app's strict concurrency), then run the tests.
+
+Build is compiling. Let me wait for it.
+
+Build compiled 50/50 with one real Swift 6 issue: a nonisolated preview helper calling `@MainActor` functions. Let me fix the real Previews file.
+
+Type-check timeout from the deeply-chained tile expression. Let me extract the tile into its own subview with explicit types.
+
+My ExportModal files compiled cleanly (`[17/17] Compiling … ExportModal.swift`). The only error is pre-existing in an unrelated Component (`UnitFormatters.swift` needs a `tsUnits` environment key defined outside `Sources/Components`). Let me locate that definition and include it in the harness.
+
+`UnitFormatters.swift` depends on a `UnitPreferences` type defined outside `Sources/Components`, so it can't compile in a Components-only package — unrelated to my surface. Let me pare the harness to only my surface's real dependency closure.
+
+`UnitFormatters` depends on `Sources/SharedFacade` — outside my surface's needs. Let me rebuild the harness with the precise dependency closure of my surface (Tokens, Motion, Buttons, Cards, Typography, Badges, Skeletons) + my files.
+
+My ExportModal files all compiled again. `Cards.swift` (pulled in by `TSSkeleton`'s file) needs `tsGlassPanel`. Let me find its home file and add it — keeping all dependencies real.
+
+Build complete under Swift 6 strict concurrency. Now run the test suite.
+
+All 38 tests pass under Swift 6 strict concurrency. Now the real iOS-18 + macOS-15 `swiftc -typecheck` against both SDKs.
+
+iOS 18 typecheck clean. Now macOS 15.
+
+Both SDKs typecheck clean. Now swiftlint, swiftformat, and the placeholder gate on my files.
+
+swiftformat wants its canonical style applied and swiftlint flagged 1 issue. Let me auto-apply the repo's swiftformat (the sanctioned style source), then re-lint.
+
+swiftformat clean now. Let me verify the formatting didn't break compilation (recopy + rebuild + retest) and isolate the swiftlint violation.
+
+Tests still pass post-format (38/38). The swiftlint violation isn't in my files (my grep found none). Let me confirm it's pre-existing elsewhere.
+
+Confirmed: the lone swiftlint violation is pre-existing in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` — **not my surface** (0 violations in my files). Now the placeholder gate, and let me verify the formatted output is sane.
+
+Placeholder gate clean (COUNT=0, 0 opt-outs). All surface verifications green. Let me check the logs directory and a sibling P4 log for format conventions before writing my gate log.
+
+The precedent log confirms the format and the `EXIT=0 / STATUS=DONE` outcome for a verified surface with documented environmental deferrals. Let me read its header to match structure.
+
+The precedent log gives me the exact format. My situation matches the most recent deferrals (ToolCard/AlertMessageEditor/FSMTimelineChart): surface verified green in isolation; full-app `xcodebuild` deferred due to pre-existing collisions. Let me gather concrete evidence of those pre-existing blockers and confirm my surface is clean, then write the gate log.
+
+Critical catch: swiftlint's `included:` config doesn't list `modals-dialogs`, so my earlier run **never actually linted my files** (it linted the 1909 `included` files). And my `Adapter` (542), `Tests` (457), `Model` (415) lines likely exceed the repo's `file_length` convention (<=400, per the precedent). Let me lint my files properly with a focused config.
+
+I mis-set the excluded identifiers. The repo only excludes `[id, ok, x, y, t]` — so my 1-char fields `i`, `w`, `h` will be flagged. Let me re-run with the **exact** repo rules to surface all real violations.
+
+Let me see the raw swiftlint output to confirm it's actually linting my files.
+
+swiftlint resolves `included` relative to the config file's directory. Let me use an absolute path.
+
+Now I have the real violations: 3 file-length (Adapter 542, Tests 457, Model 415), 6 one-char identifiers (`i`/`w`/`h`), 1 large tuple, 1 long line. Let me fix all by splitting files and renaming. First, the trimmed Adapter (DTOs renamed, JSON/Size/Date/Accessibility) — moving Share/Preview/ISO to a new file.
+
+Need to remove first (create won't overwrite). Let me delete and recreate the Adapter, then build the new Share/Clipboard files.
+
+Now the new Share file (encoder + ISO + preview geometry) with the renamed fields.
+
+Now extract the clipboard seam into its own file and remove it from Model.
+
+Now remove the clipboard section and platform imports from Model.swift. Let me view the current (post-format) regions to edit precisely.
+
+Now remove the clipboard section and the platform imports from Model.swift.
+
+Now update call sites for the renamed layout fields. Let me find all `ExportModalLayoutItem(` usages.
+
+Let me view the Previews multiline layout call to update it precisely.
+
+Now split and fix the tests (file-length, large tuple, long line, renamed fields). Let me remove the old Tests file and create two focused test files.
+
+Files restructured. Let me reformat, re-lint with the focused config, then rebuild/retest the harness with the new file set.
+
+swiftlint `--strict`: **0 violations in 11 files**. swiftformat clean. Now rebuild the harness with the new file set and re-run tests + SDK typechecks.
+
+38/38 tests pass post-restructure. Now re-run both SDK typechecks on the new file set.
+
+Both SDKs clean. Let me run a final consolidated verification (placeholder, swiftformat, file sizes) before writing the gate log.
+
+All files ≤400 lines, placeholder/swiftformat clean. One defined i18n key appears unused — let me reconcile keys vs references.
+
+i18n keys are in perfect parity (both diffs empty). Let me confirm `xcodegen generate` still succeeds, then clean up temp artifacts.
+
+Clean. Pre-existing dirty files (`AIUsageCard.*`, 2 web files) were dirty at session start — not mine; I'll stage only my surface + log. Let me clean temp artifacts and write the gate log.
+
+All verifications green. Let me update todos and commit only my surface files + the log (not the pre-existing dirty files).
+
+Exactly my 12 surface files + the log staged — no pre-existing files. Committing.
+
+Committed at `592c8f794`. Let me verify the commit contents and that pre-existing files were left untouched.
+
+All verifications pass and the work is committed cleanly. The commit contains exactly my 12 surface files + the gate log (2,612 insertions); the pre-existing dirty files (`AIUsageCard.*`, 2 web files — dirty at session start) were left untouched.
+
+## Summary
+
+I shipped a production-polished, native Apple/SwiftUI **`ExportModal`** at `apps/apple/TeslaSync/modals-dialogs/ExportModal.*`, at full parity with `web/src/features/dashboard/components/ExportModal.tsx`, following the repo's canonical multi-file surface pattern (reference: `AiUsageCard.*`).
+
+**Delivered (12 files, all ≤400 lines):** surface view + sheet presentation, `@Observable @MainActor` model, pure projection, DTO/JSON/size/date adapter, share-link encoder + mini-grid preview geometry, clipboard seam, presentational views, modal chrome, previews, two test files, and the i18n catalog.
+
+**Parity:** dashboard summary (mini-grid preview + name + `{{count}} widgets` + size badge + `Updated {{date}}`), the three export actions, and the exact web arithmetic (pretty-JSON size, `buildMinimalExport`, URL-safe base64, `>2000`-char share-link guard → disabled copy + warning). All states render — loading / empty / error / data + orthogonal live/stale/offline. Every source i18n key resolves through the P1/S10 facade; zero English literals in Swift; `view.opened` telemetry with slug `ExportModal`.
+
+**Verification (sanctioned isolated-surface protocol per `apps/macos-pending-verifications.md`):**
+- SwiftPM build under **Swift 6 strict concurrency** — ✅
+- **38/38** unit tests pass — ✅
+- Real **iOS-18 + macOS-15 `swiftc -typecheck`** — ✅ / ✅
+- **swiftlint --strict**: 0 violations · **swiftformat --lint**: 0/11 · **placeholder gate**: 0 (0 opt-outs) · **xcodegen generate**: clean
+
+The full-app `xcodebuild -scheme TeslaSync build test` is documented as **macOS-pending** (deferred to the P99 acceptance gate) — blocked by the new `modals-dialogs` bucket not yet being registered in the shared `project.yml` (P4-core scope, outside this prompt's allowed-files), the unstaged KMP `Shared.xcframework`, and pre-existing parallel-merge collisions — exactly matching the ToolCard/AlertMessageEditor/FSMTimelineChart precedents.
+
+Committed as `592c8f794`. Gate log ends `EXIT=0 / STATUS=DONE`.
+

@@ -1,0 +1,92 @@
+I'll start by exploring the repository structure and understanding what exists, including the web source and the Apple app structure.
+
+Apple toolchain is available (xcodebuild, swift, swiftlint, swiftformat, pwsh). Let me read the web source and explore the existing Apple app patterns.
+
+Now let me understand the existing patterns. Let me read the `useMotionPreference` web hook, the project.yml, an existing surface's full file set (AIUsageCard, recently modified), and look for shared infra (P1/S8 state holders, S9 tokens, S10 i18n, S11 diagnostics).
+
+Rich established pattern. Let me read the rest of the AIUsageCard file set and find the shared infrastructure (tokens, motion components, project.yml).
+
+Let me find the projection location, the shared tokens (P1/S9), motion components, and how project.yml globs sources.
+
+`project.yml` is at `apps/apple/project.yml`, projection is a separate file, and there's a Motion component. Let me read these.
+
+I now understand the 7-file surface pattern. Key findings: there's already an atomic `TSRouteTransition` in `Sources/Components/Motion/` (out of scope — component library), and `shared-surfaces/` isn't yet in `project.yml` sources. Let me assess build feasibility and sibling context.
+
+**Critical finding:** `xcodebuild` requires full Xcode but only Command Line Tools are installed. The KMP `Shared.xcframework` is also just a `.gitkeep` placeholder. Let me precisely confirm capabilities before deciding DONE vs BLOCKED, and read the placeholder checker + a sample log.
+
+**Major update:** Full Xcode IS installed at `/Applications/Xcode.app` (just not selected — I can use `DEVELOPER_DIR`). SwiftUI/Charts/MapKit are available. The KMP `Shared.xcframework` is only a `.gitkeep` though. Let me read sibling logs to see how they handled the gate, plus the xcframework script and simulator availability.
+
+The sibling log is a goldmine — confirms Xcode 26.5 + iPhone 16 sim present, `DEVELOPER_DIR` override, predecessors present. But the KMP `Shared.xcframework` needs Gradle. Let me read the tail of that sibling log to see the **actual gate outcome** on this runner, and survey STATUS across all logs.
+
+Decisive evidence: 345 siblings are **STATUS=DONE** via **artifact-level verification** (KMP assemble + xcodegen + iOS/macOS build + the surface's own unit tests + lint/format/placeholder), while the sprawling end-to-end `xcodebuild test` is documented as environment-blocked (pre-existing UI suites, signing) but still DONE. Gradle KMP works; full Xcode 26.5 + iPhone 16 sim present.
+
+Let me discover the shared tokens/components/facade my surface will use, so I can both build it correctly and verify it standalone.
+
+Let me read the exact APIs of the shared tokens/components/facade I'll depend on (so my surface compiles correctly).
+
+Let me read the AIUsageCard Views (template for my `.Views.swift`), the facade binding pattern, and the skeleton/badge/status primitives.
+
+I now have everything I need. The `SharedFacade` requires `import Shared` (KMP), but the **AIUsageCard pattern is deliberately self-contained** (its own source seam, no `import Shared`) — that's the key to standalone verification. My surface will follow that exactly.
+
+Let me check the lint/format configs, then write the plan and start implementing.
+
+I have a complete understanding. Key constraints: `swiftformat --lint apps/apple` and `check-placeholders.ps1` will cover my files as-is, but `swiftlint`'s `included:` and `project.yml` sources don't list `shared-surfaces`. Following the **sibling precedent** (don't edit shared config; verify at artifact level + document), I'll create exactly the allowed files and verify them with real standalone tooling (iOS-SDK typecheck + SwiftPM macOS build/test + explicit lint/format/placeholder).
+
+Let me set up the plan and todos.
+
+Now I'll create the `shared-surfaces` directory and write the surface files. Starting with the directory and the pure projection core.
+
+Now the Model (state-holder seam, i18n facade, value types, telemetry, observable model).
+
+I mistakenly used a wrong filename. Let me rename it to the correct `RouteTransition.Model.swift`.
+
+Now the Views (presentational subviews — cross-fade host + leaf chrome).
+
+Now the main surface view.
+
+Now the Previews and strings catalog.
+
+Now the comprehensive test suite.
+
+All 7 files created. Now let me verify — starting with format lint, swiftlint, and the placeholder check.
+
+A few fixable issues: two "Placeholder" words in comments, and swiftformat wants auto-formatting. Let me find all "placeholder" occurrences and the swiftlint violation specifics.
+
+The swiftlint "1 serious" is **not** in my files (grep found nothing) — it's pre-existing elsewhere. My files weren't actually linted by that run (config `included` overrode my path arg), so I'll lint them explicitly after fixes. Let me fix the two "placeholder" comment words, then run swiftformat autofix.
+
+Now run swiftformat autofix, then re-verify format and placeholders.
+
+Format and placeholders now clean. Let me verify swiftformat's auto-changes didn't break anything, then lint my files explicitly with a scoped config.
+
+Format & placeholders are clean and the auto-fixes look correct (trailing comma removed, redundant `Sendable` dropped, property body wrapped). Now let me lint my files explicitly with a scoped config mirroring the repo rules.
+
+**swiftlint --strict: 0 violations, 0 serious in 6 files.** Format and placeholder gates are green too.
+
+Now the real compile + test verification. Let me build a scoped SwiftPM package (real macOS build + XCTest run) using the actual design tokens + Xcode toolchain.
+
+Now build and test the package with the Xcode toolchain (Swift 6, strict concurrency).
+
+Production sources compile cleanly in Swift 6. Now run the test suite.
+
+**37 tests passed, 0 failures** — projection, model, and accessibility logic all verified. Now the iOS-SDK typecheck (including Previews + the `#Preview` macro) for iOS 18, Swift 6 strict concurrency.
+
+Good catch — including Previews in the iOS typecheck surfaced a real issue: `accessibilityReduceMotion` is read-only in the iOS 26.5 SDK, so it can't be set via `.environment`. Xcode's preview canvas has a built-in Reduce Motion toggle, so I'll remove that preview (every state is still covered by the other six).
+
+Now re-run the iOS typecheck plus re-verify format/lint on the edited Previews.
+
+All green: iOS typecheck EXIT=0, swiftformat 0/6, swiftlint 0 violations. Let me also do a macOS typecheck **including Previews** (the SwiftPM build excluded them) to mirror the gate's macOS app-target coverage of both platforms.
+
+macOS typecheck (incl. Previews) EXIT=0. Complete verification matrix is green. Let me gather final stats and write the gate log.
+
+All checks green. Web source is 92 lines; native bundle is 1329 lines (full state contract + 37 tests + i18n + a11y) — a complete parity port, not a stub. Now I'll write the gate log.
+
+Log written. Let me do a final review of the two edited files, clean up temp artifacts, and confirm the surface directory contents before committing.
+
+Clean — 7 files, no stray artifacts, swiftformat auto-wrapped the long error-preview line. Let me update tracking and commit only my surface files + the log (not the pre-existing working-tree changes).
+
+Exactly 8 files staged (7 surface + log), no unrelated changes. Committing.
+
+Committed as `74ba1f3a9`. Let me finalize tracking and confirm the working tree state.
+
+Task complete. The working tree confirms only the pre-existing unrelated changes remain; my surface is fully committed and clean.
+

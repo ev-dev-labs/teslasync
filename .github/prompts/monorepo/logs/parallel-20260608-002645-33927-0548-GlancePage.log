@@ -1,0 +1,177 @@
+I'll start by exploring the repository structure to understand the task, the web source page, and the existing Apple app architecture.
+
+Now let me explore the Apple app structure, parity manifest, and existing reference implementations.
+
+Let me look at the Features directory structure, an existing reference page, and the parity manifest.
+
+There's a path discrepancy (`TeslaSync/` vs `Sources/`). Let me examine the project structure, routing, and the parity manifest record for Glance.
+
+Key finding: `project.yml` compiles `Sources/`, not `TeslaSync/Features/`. Let me check the full manifest record, the logs dir, the `feature-views` layout, and whether Xcode tooling is available.
+
+Full toolchain is available (xcodebuild, swiftlint, xcodegen, pwsh) — the gate is runnable, not BLOCKED. Note: `Sources/` is the compiled group (not `TeslaSync/Features/`); existing convention is `Sources/Features/Dashboard/`. Let me study reference implementations and shared infrastructure.
+
+Excellent reference. Now let me study the shared facade, localization, navigation, and the KMP `Shared` API surface (VehiclesStore, location snapshot, commands).
+
+Now let me find the KMP `Shared` API surface — `VehiclesStore`, location snapshot, vehicle commands, and the Units facade — plus the localization catalog.
+
+All 20 `translation.glance.*` keys already exist in the catalog. Let me verify their values and study the `VehiclesStore` API, models, command path, and Units facade.
+
+Strings match web defaults exactly. `VehiclesStore` has reads but no command mutation. Let me find the command path, the model fields, the Units facade, navigation, and the RadialGauge component.
+
+Now let me examine the command models, the generated `Vehicle`/`VehicleState` types, the Units facade, the RadialGauge component, and navigation.
+
+Web command names are `lock`/`unlock`/`climate_on`/`climate_off`/`honk_horn`. Now let me read the state envelope, generated models, Units facade, RadialGauge, and navigation.
+
+Generated models come from the OpenAPI spec at build time. Let me read the spec for `VehicleState`/`Vehicle` fields, plus the Units facade, RadialGauge, projection, and navigation.
+
+Now I have the model fields. Let me read the Units facade, RadialGauge component, design tokens, the projection (for Swift field access), navigation, and how JSON feeds are read in Swift.
+
+Now let me study the navigation wiring, design tokens, and how JSON feeds (location snapshot) are consumed in Swift.
+
+Let me examine the app shell, route parser, and how/where pages register, plus design tokens.
+
+Let me read the settings route registration pattern, the app root wiring, and the route tests to choose the least-disruptive navigation approach.
+
+Let me check how invasive an `AppRoute` addition is (exhaustive switches) and read the design tokens, feedback/data-display components, and a JSON-feed consumption example.
+
+Let me read the design tokens, feedback/card/badge/button components, a JSON-feed consumption example, and confirm the WatchDeepLink switch is non-exhaustive.
+
+WatchDeepLink switches over its own cases — safe. Let me locate the design token definitions and read the card/badge/button/feedback components plus a JSON-reading example.
+
+Let me read the typography component, a JSON-decoding example, and confirm the design token names.
+
+The `DestinationETASnapshot.fromSharedJSON` is the exact pattern for decoding the location snapshot — and it's reusable (same module). Let me confirm the design tokens, staleness helper, layout components, the placeholder script, and an existing log's format.
+
+Let me confirm the exact `Color.TS`/`Font.TS` member names, the staleness policy, the placeholder patterns to avoid, and an existing log's PARITY format.
+
+I now have all the infrastructure context. Let me read the gate contract (p4-apple README), the ledger schema, and the macOS verification notes to nail the exact gate invocation.
+
+Now let me assess the biggest build risk: the KMP `Shared.xcframework` staging. Let me check the build script, whether a prebuilt framework exists, and the macOS verification notes.
+
+I have full context now. Critical findings: `Shared.xcframework` isn't prebuilt (needs Kotlin/Native via Gradle), and prior P4 surfaces followed an **isolated-verification** methodology (swiftc typecheck + swiftlint + swiftformat + placeholder + xcodegen enumerate), deferring the full-app `xcodebuild` to the macOS acceptance gate due to pre-existing blockers. Let me kick off the framework build in the background and check route-key conventions.
+
+The API client generation succeeded (generated models now on disk!), but the xcframework link failed because `xcrun xcodebuild` isn't configured. Let me check the Xcode situation and read the now-generated models.
+
+Decisive finding: only **CommandLineTools** is installed — no full Xcode, so `xcodebuild` and the KMP `Shared.xcframework` link cannot run on this host. Per the prompt's gate contract ("If no Xcode runner is available, the gate → STATUS=BLOCKED"), the build/test gate is genuinely blocked. I'll still implement the page completely and run every host-runnable gate. First, let me read the now-generated Kotlin models to confirm exact field names.
+
+I now have exact generated field names (`batteryLevel: Int64`, `ratedRange: Double`, `insideTemp: Double`, `isLocked`, `isClimateOn`, `state`, `displayName`, `model: String?`). Let me check how stores are obtained/injected in the live app (to wire registration correctly).
+
+Confirmed: no non-test code instantiates stores (live wiring is deferred to `AppContainer.bootstrap`, which is pending) — so the established DI pattern is "accept store via init; previews/tests use fakes." I'll follow it. Let me do a final safety check for exhaustive `AppRoute` switches, then write the plan.
+
+All clear — no other exhaustive `AppRoute` switch. Tools confirmed. Let me read the lint/format configs and the closest existing "page" reference (`OverviewTab` in feature-views) to match conventions, then write the plan.
+
+The `feature-views` directory reveals the established page convention: `Name.swift` + `Name.Model.swift` + `Name.Adapter.swift` + `Name.Views.swift` + `Name.Previews.swift` + `Name.strings`. Let me study the `OverviewTab` page as the gold-standard reference.
+
+This is the gold-standard page pattern: a Shared-free **source seam** (`OverviewSource`) keeps the view/model/projection testable without the KMP framework; a production source (wired at bootstrap) implements it over the stores. Let me confirm the motion wrapper, the preview/adapter conventions, and the `.strings` format, then write the plan.
+
+I now have the complete pattern. Let me set up the plan and todos, create the feature directory, and read the two unit-conversion/frontend instruction files that govern this work.
+
+I have everything needed. Let me write the plan, set up todos, and begin implementation.
+
+Now let me create the files. Starting with the pure projection (the testable foundation):
+
+Now the model with the source seam, telemetry/navigation seams, and the in-memory source for previews/tests:
+
+Now the pure SwiftUI subviews (gauge, metric tiles, quick actions, badge, freshness, states):
+
+Let me fix the empty-state icon to a known-safe SF Symbol, then write the main adaptive page:
+
+Now let me verify how KMP `suspend` + `Result` functions bridge to Swift (the command path), and confirm the non-glance localization keys I referenced exist in the catalog.
+
+All referenced catalog keys exist. The only Swift-native command path is the `VehicleCommanding` seam (the KMP `suspend`+`Result` doesn't bridge cleanly), so the production source will route commands through it. Now let me write the production KMP-bound source (mirrors the proven `BatteryRadialGaugeModel` read pattern):
+
+Let me fix a redundant ternary in the source (both branches identical) — the error detail should be empty so the view shows the localized title, not a raw key:
+
+Now the previews (every state) and the route registration factory:
+
+Now let me wire navigation: add the `glance` case to `AppRoute`, and inspect the `route.dashboard` catalog entry to add `route.glance` in the same shape.
+
+The edits need the `path` parameter — let me redo them and add the `route.glance` catalog entry after `route.dashboard`:
+
+Now wire the new source tree into the build (`project.yml`, both app targets) and the lint whitelist (`.swiftlint.yml`):
+
+Files are in place. Let me update todos and run the host-runnable gates: validate the catalog JSON, generate the Xcode project (proves enumeration), and run swiftformat/swiftlint/placeholder on the page dir.
+
+swiftformat wants multi-line property bodies (the repo convention). Let me auto-format my files with the ecosystem tool, then re-lint:
+
+swiftformat clean. Now swiftlint --strict, the placeholder gate, and xcodegen enumeration:
+
+swiftlint linted the whole repo (via config `included`) and found 2 serious violations. Let me locate them:
+
+Two violations: one pre-existing in `LifetimeStatsWidget.Adapter.swift` (not my file), one mine in `GlancePage.swift:168`. Let me inspect mine:
+
+Line 168 passes two closure literals (action + trailing label). The repo pattern is a method reference for `action:`. Let me fix it:
+
+Now let me confirm the `LifetimeStatsWidget` violation is pre-existing (not in my changes), verify my files are clean, and run the placeholder gate + xcodegen:
+
+Confirmed: the `LifetimeStatsWidget` violation and the `AIUsageCard.*`/`web/*` modifications are all **pre-existing** (not mine). My scoped commit won't touch them. Let me re-run swiftlint to confirm my dir is clean, then the placeholder gate + xcodegen:
+
+My dir is swiftlint-clean; the only repo violation is the pre-existing `LifetimeStatsWidget`. Placeholder gate is 0. Now let me prove the project enumerates my files via `xcodegen`:
+
+`xcodegen` succeeded and all 7 files are enumerated in the project. Now let me set up an isolated SwiftPM harness to actually compile + unit-test the KMP-free core (Projection + Model). First, check whether the Model needs its SwiftUI import:
+
+Model's SwiftUI import is unused — let me remove it, then build an isolated SwiftPM harness that compiles the **real** Projection + Model files and unit-tests the parity logic:
+
+The KMP-free core (Projection + Model) **compiles cleanly** under Swift 6. Now run the tests:
+
+`XCTest` isn't available with CommandLineTools-only. Let me convert the harness to a self-contained executable (no test framework needed) that compiles the real files and runs the assertions:
+
+Access-control mismatch — let me make the check methods `private` to match the private `Checker` type:
+
+**All 67 checks passed** — the real Projection + Model compile under Swift 6 and the parity logic is verified correct. Now let me syntax-check the SwiftUI/Shared files (full type-check needs the framework, deferred to macOS) and re-confirm lint after the Model edit:
+
+All 5 files parse cleanly. Let me check whether the design tokens + the two components I use are self-contained enough to build a focused type-check harness for the SwiftUI views, and re-confirm lint after the Model edit:
+
+Tokens/Motion/Material are all SwiftUI-only (no Shared). Let me locate the `tsDynamicColor` helper and build a focused harness that type-checks the entire view layer against the **real** tokens + components:
+
+`tsDynamicColor` and `tsGlassPanel` are self-contained. Let me build a focused harness that type-checks the **entire view layer** (Views + Page + Previews) against the real tokens + components in a single module:
+
+The only errors are the `#Preview` macro (its plugin ships with Xcode, not CommandLineTools) — unrelated to my code's correctness. Let me exclude the previews file and rebuild to type-check the full production view layer:
+
+The **entire production view layer compiles cleanly** against the real tokens + components (only the Xcode-only `#Preview` macro is unavailable). Let me verify all 20 glance string keys are actually referenced in my code before writing the log:
+
+All 20 keys referenced. Now let me write the evidence log, then create the ledger and macOS-pending row.
+
+Now the parity ledger and the macOS-pending row. Let me check the existing ledger format first:
+
+Now let me add the macOS-pending verification row. Let me view the exact end of that table:
+
+Now let me verify the `AppRoute` edits are coherent, validate the new JSON files, and do a final lint pass:
+
+Everything validates. Let me confirm the generated `.xcodeproj` is git-ignored, check the complete set of my changes, clean up the temp harnesses, and update todos:
+
+Generated project is git-ignored; temp harnesses cleaned. Let me update todos and commit exactly my files (excluding the pre-existing `AIUsageCard`/`web` changes):
+
+Staging is correct — all 14 of my files staged; the pre-existing `AIUsageCard`/`web` changes are excluded. Now commit:
+
+The implementation is committed. Let me refine one a11y detail I noticed: the freshness chip's VoiceOver label for the live state reused `glance.title` ("Quick Glance"), which is semantically wrong for a freshness clock. Let me fix it to read the timestamp with a hint for degraded feeds:
+
+Let me re-verify the view layer still type-checks, re-lint, and confirm the 20-key count holds:
+
+All green. Let me re-run the placeholder gate and amend the commit with the a11y refinement, then clean up:
+
+Let me finalize the todos and do a last verification that the working tree is clean of my changes (only pre-existing files remain):
+
+The task is complete. Here's a summary of what was accomplished.
+
+## P4-APPLE · P7 · `page:dashboard/Glance` — delivered
+
+Native SwiftUI/HIG parity of the web `GlancePage` (`/glance`), adaptive macOS + iOS, committed as `859798e55` (14 files, ~1,750 lines).
+
+**Implementation (all 30 PARITY items):** decomposed into 7 files following the repo's `feature-views` convention:
+- `GlancePage.Projection.swift` — pure, KMP-free parity logic
+- `GlancePage.Model.swift` — `@Observable GlanceModel` + Shared-free `GlanceSource` seam + `InMemoryGlanceSource`
+- `GlancePage.Views.swift` — radial battery gauge (native `Circle`-trim, no WKWebView), 4 metric tiles, quick actions, status badge, freshness chip, loading/empty/error scaffolds
+- `GlancePage.swift` — adaptive scaffold (5 panels + chart + header/actions/freshness/link)
+- `GlancePage.SharedSource.swift` — production KMP binding (VehiclesStore + VehicleCommanding + `Units` SI→display)
+- `GlancePage.Previews.swift` + `GlanceRouteRegistration.swift`
+- Plus: `glance` `AppRoute` case (→ `/glance` deep link), `route.glance` string (all 20 `translation.glance.*` already existed), `project.yml`/`.swiftlint.yml` source registration.
+
+**Verified — every host-runnable gate GREEN:** check-placeholders=0, swiftformat=0, swiftlint(surface)=0, xcodegen=0 (all 7 files enumerated), isolated SwiftPM **compile + 67/67 logic checks** of the real Projection+Model, isolated **type-check of the full view layer** against the real P2 tokens/P3 components, `swiftc -parse`=0 on all files.
+
+**Honest status — `STATUS=BLOCKED`:** this host has **only CommandLineTools (no full Xcode)**, so `xcodebuild build/test` cannot run and the KMP `Shared.xcframework` cannot link. Per the prompt's gate contract ("no Xcode runner → STATUS=BLOCKED"), the build/test triad is deferred to the P99 macOS acceptance runner — recorded in the log (`EXIT=1`, `PARITY_COVERED=30/30`), the new `apps/parity/apple-ledger.json`, and a new `apps/macos-pending-verifications.md` row. The pre-existing `AIUsageCard`/`web` working-tree changes and the unrelated `LifetimeStatsWidget` lint violation were left untouched.
+
+
+
+The implementation is complete, committed (`859798e55`), and verified to the maximum extent possible on this host. All 10 todos are done.
+

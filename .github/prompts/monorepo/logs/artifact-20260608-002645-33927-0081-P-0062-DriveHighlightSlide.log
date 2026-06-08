@@ -1,0 +1,173 @@
+=== P4 Feature view 0062 DriveHighlightSlide (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/DriveHighlightSlide.{swift,Model,Adapter,Views,Previews,Tests}.swift
+          + DriveHighlightSlide.strings
+Web spec: web/src/features/analytics/components/review/DriveHighlightSlide.tsx
+Runner  : Darwin / arm64. Apple Swift 6.3.2, swiftlint 0.63.3, swiftformat 0.61.1, PowerShell 7.6.2.
+          Toolchain = COMMAND LINE TOOLS ONLY (no full Xcode.app). macOS SDK present
+          (/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk) WITH SwiftUI + Charts + MapKit;
+          iphonesimulator SDK + xcodebuild + XCTest(SwiftPM) are NOT present (ship with Xcode.app).
+
+--------------------------------------------------------------------------------
+SCOPE NOTE (honesty)
+--------------------------------------------------------------------------------
+DriveHighlightSlide is a Charts/maps-FREE SwiftUI surface (prompt "Charts / maps used: (none)").
+The capability it actually needs — SwiftUI on the macOS 15 SDK — IS available on this runner and was
+exercised: the surface compiled clean against the real macOS SDK + the real P1/S9 tokens + P1/S8/S9
+shared components under Swift 6 strict concurrency, and its COMPLETE logic + EVERY render state were
+executed green (88/88 assertions, incl. per-state ImageRenderer renders).
+
+The literal gate's `xcodebuild` steps (iOS-18 Simulator build/test + the TeslaSync-macOS scheme) and
+the shipped XCTest suite's EXECUTION cannot run here because this runner has only the Command Line
+Tools (no `xcodebuild`, no iphonesimulator SDK, no SwiftPM XCTest). They are reported below DEFERRED
+/ UNAVAILABLE with their real error evidence — NEVER claimed green. This is the documented
+"code-complete surface + deferred full-app acceptance gate" disposition (apps/macos-pending →
+p4-apple/P99-0001-apple-acceptance-gate), the same precedent accepted for HeroGauges / ToolCard /
+VehicleHeroWidget. Every "0" below is a command actually run with that real exit code.
+
+================================================================================
+A. SURFACE-SCOPED GATES (the prompt's swiftformat / swiftlint / placeholder steps)
+================================================================================
+
+--- swiftformat --lint (config apps/apple/.swiftformat) over the 6 shipped .swift files ---
+$ cd apps/apple && swiftformat --lint TeslaSync/feature-views/DriveHighlightSlide.swift \
+    DriveHighlightSlide.Model.swift DriveHighlightSlide.Adapter.swift DriveHighlightSlide.Views.swift \
+    DriveHighlightSlide.Previews.swift DriveHighlightSlide.Tests.swift
+0/6 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (config apps/apple/.swiftlint.yml) over the 6 shipped .swift files ---
+$ cd apps/apple && swiftlint lint --strict --no-cache TeslaSync/feature-views/DriveHighlightSlide.swift \
+    DriveHighlightSlide.Model.swift DriveHighlightSlide.Adapter.swift DriveHighlightSlide.Views.swift \
+    DriveHighlightSlide.Previews.swift DriveHighlightSlide.Tests.swift
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+
+--- placeholder gate (real scoped scan over copies of the 6 shipped .swift files) ---
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path <copies of DriveHighlightSlide.*.swift> -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+(No TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not implemented across the shipped files. Note: the
+ prompt's literal `-Path .../DriveHighlightSlide` (no extension) is a LiteralPath prefix that resolves
+ to "nothing to scan" → a trivial PLACEHOLDER_COUNT=0; the scoped scan above is the real verification.)
+
+--- i18n key parity (P1/S10) ---
+All 10 keys the surface resolves (grep `"yearReview…"`) exist in DriveHighlightSlide.strings; the two
+web-source keys `yearReview.noDriveData` + `yearReview.duration` are present verbatim. `plutil -lint
+DriveHighlightSlide.strings` → OK.
+
+================================================================================
+B. SURFACE COMPILE + EXECUTE against the real macOS SDK (exceeds the gate; the parity proof)
+================================================================================
+Throwaway, never-shipped SwiftPM scaffolding (under /tmp/dhs-harness) that compiles the shipped
+surface files VERBATIM (module name TeslaSync) against the REAL P1/S9 tokens
+(apps/design/generated/apple/Tokens.swift) + the REAL shared components (apps/apple/Sources/Design +
+Sources/Components, both KMP-free except the one excluded file UnitFormatters.swift, which this
+surface does not use). Built `-c release` so the `#if DEBUG #Preview` blocks (whose PreviewsMacros
+plugin ships only with Xcode) are excluded; all non-preview surface code is compiled.
+
+--- B1. swift build (surface + real shared components, macOS SDK, Swift 6 strict concurrency) ---
+$ swift build -c release
+[3/3] Compiling TeslaSync Badges.swift
+Build complete! (99.44s)
+BUILD_MAC_EXIT=0
+
+--- B2. Execute the shipped XCTest cases via an equivalent assertion harness (Sources/Verify) ---
+  Rationale: SwiftPM XCTest is unavailable on the Command Line Tools (probe below), so the shipped
+  DriveHighlightSlide.Tests.swift cannot be RUN here. The Verify executable re-runs every one of its
+  cases 1:1 through the surface's public API and ACTUALLY EXECUTES them on this runner.
+    $ printf 'import XCTest\n' | swiftc -sdk $(xcrun --sdk macosx --show-sdk-path) -   → error: no such module 'XCTest'
+$ swift run -c release Verify
+VERIFY passed=88 failed=0
+VERIFY_EXIT=0
+  Coverage (mirrors DriveHighlightSlide.Tests.swift): DriveHighlightFormat — convertDistanceFromSI
+  (km/mi/ft divisors), Math.round half-up, safeNumber, ungrouped `roundedString` (1234.5→"1235", no
+  comma), JS `${number}` stringification; DriveHighlightProjector — metric/imperial distance +
+  efficiency (×KM_PER_MILE 1.609344), the `Hh Mm`/`Mm` duration breakdown (0/45/60/125 min),
+  `|| '—'` address fallback, `efficiency_wh_km > 0 ? … : '—'` branch, non-finite collapse;
+  DriveHighlightSlideModel — full phase matrix, projection + label/emoji passthrough, cached-stays-
+  content, units/freshness tracking, refresh delegation, stale auto-refresh guard, P1/S11
+  `view.opened` once; DriveHighlightAccessibility — summary present/omitted; View — every render
+  state (content / no-efficiency / empty / loading / error / stale / offline) materializes via
+  ImageRenderer (macOS nsImage != nil).
+
+================================================================================
+C. FULL-APP + iOS-SIMULATOR xcodebuild GATE (DEFERRED / UNAVAILABLE — NOT claimed green)
+================================================================================
+--- xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test ---
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+'/Library/Developer/CommandLineTools' is a command line tools instance
+$ xcrun --sdk iphonesimulator --show-sdk-path
+xcrun: error: SDK "iphonesimulator" cannot be located
+IOS_EXIT=UNAVAILABLE (no xcodebuild + no iphonesimulator SDK on a Command-Line-Tools-only runner)
+
+--- xcodebuild -scheme TeslaSync-macOS build test ---
+DEFERRED — same root cause (no `xcodebuild`), and additionally the scheme stages the KMP
+Shared.xcframework via Gradle and shares the app-target source graph with pre-existing collisions
+(e.g. `struct DashboardWidgetSize` redeclared across Sources/DashboardWidgets, and the co-located
+`*.Tests.swift` app-target convention) documented in apps/macos-pending-verifications.md. None of
+that is a DriveHighlightSlide defect, and none of it is inside this prompt's allowed files.
+MAC_EXIT=DEFERRED
+
+Why this is a runner/integration limitation, not a surface defect:
+  • The surface compiles clean against a real Apple SDK (macOS 15) and links the real shared P1/S9
+    tokens + P1/S8 components (B1), and its full logic + every render state execute green (B2).
+  • The blocked steps require Xcode.app (xcodebuild + iphonesimulator SDK + SwiftPM XCTest), which is
+    absent here — an environment capability gap, with the exact error evidence shown above.
+  • Allowed files for THIS prompt are DriveHighlightSlide.* + this log only; installing Xcode or
+    editing the shared project / de-duplicating shared app-target types would violate
+    "no predecessor bypass / no silent drift".
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : The xcodebuild steps are shown UNAVAILABLE/DEFERRED with their real
+                       xcode-select / xcrun errors — never claimed as a pass. Every "0" (FORMAT,
+                       LINT, PLACEHOLDER, BUILD_MAC, VERIFY 88/88) is a real command exit code.
+ 2 No scope narrowing: All web states reproduced (content / "no drive" empty / error / stale /
+                       offline / loading) plus the full route + distance + duration + efficiency +
+                       date composition; both web i18n keys + native chrome keys shipped.
+ 3 No skip-and-assume: Read the web source end-to-end; ported convertDistanceFromSI, the `*1000`
+                       km→m scale, KM_PER_MILE 1.609344, Math.round, the `% 60` / `Math.floor`
+                       duration split, the `|| '—'` and `> 0 ? … : '—'` branches VERBATIM — pinned
+                       by executed assertions.
+ 4 No stubs as final : Complete implementation; placeholder COUNT=0. The /tmp SwiftPM + Verify
+                       harnesses are throwaway verification scaffolding, never shipped files.
+ 5 No parity shortcuts: Figures computed with the exact web arithmetic + ungrouped React `${number}`
+                       stringification (asserted: 1234.5 → "1235", no separator).
+ 6 No delegation     : Authored directly; no sub-agent delegation of the surface.
+ 7 No predecessor bypass: Did NOT edit the shared Localizable.xcstrings, project.yml, the shared
+                       components, or any sibling surface. Per-surface .strings table only.
+ 8 No commit on red  : Committing on green surface-scoped gates + a green macOS SDK compile + 88/88
+                       executed assertions. The xcodebuild full-app/iOS-sim gate is DEFERRED
+                       (runner lacks Xcode), NOT a red surface result.
+ 9 No silent drift   : Changes confined to the allowed DriveHighlightSlide.* files + this log.
+                       Pre-existing unrelated working-tree edits (AIUsageCard.*, two web files) were
+                       NOT touched and are NOT staged. The /tmp harnesses were cleaned up.
+ 10 Log ends with EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+Production-polished native DriveHighlightSlide shipped at parity with the web source: a Foundation-
+only projection core (executed-green), a P1/S8 state-holder seam (no HTTP in the view), P1/S11
+`view.opened` telemetry, every state + every web i18n key + VoiceOver summary + Dynamic Type /
+Reduce-Motion support, and motion mapped from `@/components/motion` (TSFadeIn + a spring pop-in).
+All surface-scoped gates pass (swiftformat / swiftlint --strict / placeholder), the surface COMPILES
+clean against the real macOS 15 SDK with the real shared P1/S9 tokens + P1/S8 components under Swift 6
+strict concurrency, and its complete logic + every render state EXECUTE green (88/88). The full-app +
+iOS-18-Simulator `xcodebuild` gate and the SwiftPM XCTest run are DEFERRED/UNAVAILABLE because this
+runner is Command-Line-Tools-only (no Xcode.app) — documented with API evidence, matching the
+accepted "code-complete + DEFERRED full-app gate" precedent and tracked by
+p4-apple/P99-0001-apple-acceptance-gate. No xcodebuild step is claimed green.
+
+================================================================================
+COMMIT
+================================================================================
+git add apps/apple/TeslaSync/feature-views/DriveHighlightSlide.* \
+        .github/prompts/monorepo/logs/p4-apple-feature-views-0062-DriveHighlightSlide.log
+git commit -m "feat(apps/apple/feature-views): add DriveHighlightSlide surface (P4)"
+
+EXIT=0
+STATUS=DONE

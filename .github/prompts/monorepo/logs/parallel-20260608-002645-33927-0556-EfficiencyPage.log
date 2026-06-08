@@ -1,0 +1,94 @@
+I'll start by exploring the repository structure to understand the task scope.
+
+The inner `TeslaSync` listing seems incomplete. Let me explore the actual Apple app structure more concretely.
+
+Key finding: only Command Line Tools are installed (no full Xcode), so `xcodebuild` cannot run. Let me confirm and explore the existing conventions.
+
+Xcode.app exists but isn't selected. Let me verify it works via `DEVELOPER_DIR`, and find the web i18n source for the efficiency strings.
+
+Xcode 26.5 is available via `DEVELOPER_DIR` — building is feasible. Let me extract the web i18n strings and study the existing Swift conventions.
+
+I have all 42 string defaults. Now let me study the Swift conventions — component library, design tokens, shared data facade, and navigation.
+
+Rich component library exists. Let me read the key chart, card, state, and design-token components.
+
+The component library is comprehensive. Let me read the states, metrics, typography, design tokens, formatters, and the web RadialGauge for parity reference.
+
+Now let me study navigation, the shared data facade, design tokens, and formatters.
+
+Now the critical data layer. Let me study the SharedFacade and find the KMP APIs for drives/driving stats.
+
+Let me look at how existing P3 feature-views bind data (Model/Adapter pattern) and find drive/stats APIs in the shared core.
+
+The DrivingSection is the gold-standard template. Let me read its core files.
+
+This is a rich, well-architected pattern. Let me read the Adapter, Models, States, Views, strings, and check real KMP `Shared` usage.
+
+Now let me read the web data types/hooks and the Swift SI unit facade to mirror field semantics exactly.
+
+Let me read the web SI converters/useUnits and the Swift unit facade to mirror conversions correctly.
+
+Let me check whether feature-views import `Shared`, the KMP framework build feasibility, and the swiftlint config.
+
+Confirmed: feature-views use Foundation/SwiftUI-only seams (no `Shared` import). Let me kick off the KMP framework build in the background and read remaining references.
+
+Both `pwsh` and `gradlew` are available. Let me start the long-pole KMP framework build in the background, then continue reading references.
+
+Build launched in background. Let me read the design tokens, motion, datatable, and the remaining DrivingSection reference files.
+
+Good — the KMP build is actively compiling (Kotlin/Native for iOS/macOS). Let me read the remaining references while it runs.
+
+Let me read the design tokens, strings format, DataTable, placeholder rules, and xcstrings structure.
+
+Let me read the xcstrings structure, DataTable, placeholder rules, and check remaining symbol signatures.
+
+Let me read the placeholder rules and projection types, and check build progress.
+
+Let me check the exact placeholder patterns and the build progress.
+
+Build is nearly done (linking release frameworks). Critical: I must avoid the word "Placeholder"/"TODO" etc. Let me verify how co-located `.Tests.swift` files are compiled.
+
+The co-located `.Tests.swift` files raise a question about target membership. Let me check the verification state and how tests are wired.
+
+Key insight: precedent shows full-app `xcodebuild` is known-blocked by pre-existing unrelated collisions; surfaces reach STATUS=DONE via isolated verification + host gates. Let me study a prior log's exact methodology and confirm tooling.
+
+This precedent is the exact methodology to follow. Let me confirm the build finished, check swiftformat, and look for any drives/stats domain facade.
+
+Build still linking release frameworks. Let me read the formatter config and chart palette, then begin implementation.
+
+I have full context. Let me quickly confirm the web RadialGauge's display, then begin implementation.
+
+I have complete context. Let me set up tracking and start implementing the pure-Foundation core.
+
+Now let me create the directory and write the Foundation core files.
+
+Let me check the exact web number/date formatters to reproduce them faithfully.
+
+Now the pure projector. Let me write the Adapter reproducing the web pipeline verbatim.
+
+Let me check the web `useUnits` formatDuration/formatEnergy to reproduce the summary/insights values.
+
+I have all the formatting semantics. Let me add the duration/energy formatters to the Adapter, then write the projector.
+
+Now the projector core. Let me write it in a focused file.
+
+Now the series/table/summary/insights projector. Let me write it carefully reproducing each web `useMemo`.
+
+The pure core is done. Let me typecheck the Foundation files early before building the SwiftUI layer.
+
+Foundation core typechecks clean under Swift 6. Let me update progress and write the Model (Observable + seam + strings facade).
+
+Now the SwiftUI layer. Let me write the style mappings and the views.
+
+Now the charts file (Area/Bar/Scatter in TSChartContainer).
+
+Now the state chrome (loading/empty/error + inline empties).
+
+Now the top-level page that composes everything.
+
+Now the route registration and navigation wiring.
+
+Now wire navigation: add the `/efficiency` deep-link alias and compose the registration in the app root.
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: EEBE:300C0E:2C2A31F:2E66044:6A26E6DD)

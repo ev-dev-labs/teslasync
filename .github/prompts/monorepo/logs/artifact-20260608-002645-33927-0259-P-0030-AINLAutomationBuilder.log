@@ -1,0 +1,70 @@
+=== P4 Shared surface 0030 AINLAutomationBuilder (Apple) ===
+run_utc=2026-06-08T11:16:12Z
+host=Darwin 25.5.0 arm64
+
+--- Toolchain capability probe ---
+swift: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+swiftlint: 0.63.3
+swiftformat: 0.61.1
+pwsh: PowerShell 7.6.2
+xcode-select -p: /Library/Developer/CommandLineTools
+simctl: absent (xcrun: simctl not a developer tool)
+macOS SDK: /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+
+================================================================
+GATE STEP 1 — iOS build+test (xcodebuild)
+cmd: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+note: BLOCKED — full Xcode is not installed on this runner (Command Line Tools only); 'simctl'
+      is absent so no iOS Simulator destination exists. Prompt capability clause → STATUS=BLOCKED.
+
+GATE STEP 2 — macOS build+test (xcodebuild)
+cmd: xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+
+GATE STEP 3 — swiftlint --strict (surface files)
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+note: repo .swiftlint.yml 'included:' (P4 core, outside this prompt's allowed files) does not list
+      TeslaSync/shared-surfaces, so the 6 files are linted by explicit path.
+
+GATE STEP 4 — swiftformat --lint
+SwiftFormat completed in 16.32s.
+0/6 files require formatting.
+FORMAT_EXIT=0
+
+GATE STEP 5 — placeholder/stub scan (apps/tools/check-placeholders.ps1, absolute path)
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+note: PLACEHOLDER_ALLOWED=1 is the single web i18n key literal ('…aiBuilder.placeholder') carrying
+      an inline '// parity:allow <reason>' marker; PLACEHOLDER_COUNT=0 → no unguarded stubs.
+
+================================================================
+SUBSTITUTE COMPILE VERIFICATION (xcodebuild unavailable → real swiftc typecheck)
+Surface is Shared-free; typechecked against the real P1/S9 design tokens + the Sources/Components
++Design layer, macOS SDK, -swift-version 6 -strict-concurrency=complete (matches project.yml build).
+
+[A] shipped non-preview code (Adapter/Model/Views/surface):
+  TYPECHECK_SHIPPED_EXIT=0 errors=0
+[B] test logic — AINLAutomationBuilder.Tests.swift as a same-module probe (local XCTest shim,
+    since the XCTest framework ships only with full Xcode): TYPECHECK_TESTS_EXIT=0 errors=0
+[C] all 8 #Preview bodies — rewritten to functions (CLT lacks the PreviewsMacros plugin):
+    TYPECHECK_PREVIEWS_EXIT=0 errors=0
+
+--- Predecessor / scope note ---
+project.yml + .swiftlint.yml 'included:' (both P4 core, outside this prompt's allowed files)
+register Sources + TeslaSync/{dashboard-widgets,feature-views} but NOT TeslaSync/shared-surfaces.
+Wiring that source path + scheme is a P4 core dependency. The surface itself is complete, compiles,
+lints, formats, and is stub-free; it slots in once P4 core adds the shared-surfaces source path.
+
+================================================================
+RESULT: every locally-runnable gate is green (LINT_EXIT=0 FORMAT_EXIT=0 PLACEHOLDER_EXIT=0;
+substitute compile A/B/C all 0). The iOS+macOS xcodebuild build+test steps cannot execute on this
+runner (no Xcode / no simulator) → reported honestly as BLOCKED with API evidence (xcode-select,
+simctl, xcodebuild output above), per the prompt's capability clause.
+EXIT=1
+STATUS=BLOCKED

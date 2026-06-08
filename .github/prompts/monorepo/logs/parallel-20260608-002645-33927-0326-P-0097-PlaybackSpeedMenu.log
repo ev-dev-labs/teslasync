@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Now let me check the toolchain availability (critical capability gate) and study the existing patterns in parallel.
+
+Xcode isn't available (only Command Line Tools), so `xcodebuild`/Simulator can't run — but `swift`, `swiftlint`, `swiftformat`, `xcodegen` are. Let me study existing patterns deeply before writing code.
+
+A `Components/DataDisplay/Playback.swift` already exists — highly relevant. Let me read it plus the Button component and design tokens.
+
+A native `TSPlaybackSpeedMenu` atomic component already exists in the component library (out of scope per the prompt). My task is the higher-level **surface**. Let me study the design tokens, the i18n/diagnostics facades, and a representative feature-view surface set to learn the exact pattern.
+
+`ActiveOrdersSection` is a heavy data surface — too much for a pure control. Let me find smaller, control-like surfaces closer to `PlaybackSpeedMenu` (a stateless toggle/menu).
+
+`LayoutSwitcher`, `WeekSelector`, and `FeatureToggles` are control-like analogs, and there's a `.Telemetry.swift` pattern for the `view.opened` diagnostics. Let me read the `LayoutSwitcher` set fully plus a telemetry example.
+
+This `LayoutSwitcher` is the ideal template — a presentational, I/O-free web-parity control with the full surface scaffold. Let me read its remaining files (Adapter for the Localizer/freshness, Tests, strings, Previews, Views, States) to learn the complete contract.
+
+Now let me read the Views, Tests, and Previews to complete my understanding of the pattern, plus verify the token/component primitives exist.
+
+Excellent — I now understand the full pattern. Let me verify the design tokens/primitives I'll use (tone, skeleton, chip, fonts incl. monospace) and read the Views file for chip/skeleton rendering.
+
+I have the complete pattern. Let me verify the exact token/component APIs (colors, fonts, spacing, radius, tone, skeleton) before writing, then check the placeholder checker and test harness location.
+
+Tokens come from generated design files. Let me confirm the `Font.TS`/`Color.TS`/`TSSpacing`/`TSRadius` APIs and locate the test target + placeholder checker.
+
+Key finding: feature-view `.Tests.swift` files live beside the surface with `@testable import TeslaSync`, so I must mirror that convention exactly. Let me check the file-routing scripts, the placeholder checker, lint config, and token namespacing.
+
+Important: `.swiftlint.yml`'s `included:` and `project.yml` `sources:` don't list `shared-surfaces` — that wiring is P4-core infra (a declared dependency), outside my allowed files. I can still lint my files directly. Lines must be ≤120 (swiftformat maxwidth). Let me read the placeholder checker and confirm token namespacing.
+
+Placeholder check is **case-insensitive** and scans `.swift` comments too — I must avoid "placeholder", "todo", "fixme", "xxx", "not implemented" anywhere. Let me read the exact token members.
+
+I have everything needed. Let me probe the toolchain capabilities (these double as capability evidence for the log): can the CLT `swift` compile SwiftUI / Charts / MapKit / OSLog?
+
+Toolchain confirmed: SwiftUI, Swift Charts, MapKit, and OSLog all compile under CLT — only the full Xcode + iOS Simulator (for `xcodebuild build test`) is missing. This is the prompt's sanctioned BLOCKED-with-evidence scenario for the build gate, but I can fully build the code and verify it statically + via logic tests. Let me set up tracking and start writing the surface.
+
+Now writing the surface. Starting with the Model (surface identity, telemetry seam, i18n facade, and value types).
+
+Now the Adapter — the pure, standalone-testable projection core (the web `nextSpeed`/`shiftSpeed` semantics, freshness chip, a11y builders).
+
+Now the main view (`PlaybackSpeedMenu.swift`) — state switch, telemetry on appear, the cycling control with context menu and VoiceOver actions, and the loading/empty/error chrome.
+
+Now the Views file — the presentational subviews (pill, chip, skeleton, chrome shell, and the context-menu list).
+
+Now the Previews and the strings catalog.
+
+Now the comprehensive XCTest suite (adapter logic, per-state, a11y, i18n parity, telemetry).
+
+All 7 files written. Let me update tracking and run the formatter on my new files (it auto-discovers `apps/apple/.swiftformat`), then lint.
+
+swiftformat reformatted 2 files. Let me see the changes and confirm a clean `--lint` pass, then run swiftlint.
+
+Files are untracked so `git diff` is empty. Let me run the verification gates: `swiftformat --lint`, then `swiftlint --strict` on my files.
+
+`swiftformat --lint`: 0/6 need formatting. `swiftlint --strict`: 0 violations. Now the placeholder gate — let me check for `pwsh` and run the real checker.
+
+`pwsh` is available. The gate's literal path `…/PlaybackSpeedMenu` (no extension) isn't a directory, so to genuinely scan my files I'll point the checker at the `shared-surfaces` directory (which contains only my new files).
+
+Placeholder gate clean (COUNT=0). Now the strongest honest verification I can run without Xcode: a standalone `swiftc -typecheck` of the real surface files against a faithful token/component **signature shim** + the macOS 15 SDK (catches real SwiftUI type errors), plus a compile-and-run of the real Model+Adapter logic. Let me build the shim.
+
+Full surface typechecks clean against the shim at macOS 15 / Swift 6 (exit 0) — including the `#Preview` macro, `contextMenu`, accessibility APIs, and strict concurrency. One thing to verify before the logic run: is the real `TSTone` `Equatable`? My test compares `.tone == .warning`.
+
+`TSTone` is a case-only enum, so it's *implicitly* `Equatable` (Swift synthesizes it automatically) — confirmed by existing `AlertCard.Tests` doing the same `.tone == .warning` comparison. My tests are correct. Now the runtime logic proof: compile the **real** Model + Adapter + a SwiftUI-free `TSTone` + a harness mirroring the XCTest assertions, and execute.
+
+Swift 6 isolates top-level `var` to `@MainActor`; my harness helpers were nonisolated. That's a harness-only issue (not surface code). Let me annotate the helpers `@MainActor` and re-run.
+
+**All 50+ logic assertions pass against the real Model+Adapter code** (RUN_EXIT=0). Verification summary so far: swiftformat ✓, swiftlint ✓, placeholder ✓, full-surface typecheck ✓, logic run ✓. The only gate I can't run is `xcodebuild build test` (needs full Xcode). Let me capture definitive capability evidence, then write the honest gate log.
+
+`/Applications/Xcode.app` exists — but `xcode-select` points to CommandLineTools (switching needs sudo). I can use `DEVELOPER_DIR` to access the real iOS + macOS SDKs without sudo. This lets me compile my surface against the **real iOS 18 and macOS 15 SDKs** (what the two `xcodebuild` gate steps fundamentally verify). Let me probe.
+
+Full **Xcode 26.5 with a booted iPhone 16 simulator is available** via `DEVELOPER_DIR` — so platform capability is NOT the blocker. The real question is whether the app even builds here (it needs the KMP `Shared.xcframework`) and whether the `shared-surfaces` group is wired. Let me investigate the build feasibility precisely.
+
+Now the picture is precise: Xcode 26.5 + iPhone 16 sim **are present**, but the official `xcodebuild build test` needs (a) the `shared-surfaces` group added to `project.yml`/`.swiftlint.yml` (P4-core infra — outside my allowed files) and (b) the KMP `Shared.xcframework`, which isn't prebuilt (`.gitkeep` only) and requires the Gradle/Kotlin-Native toolchain. Editing shared build files in a parallel slot is unsafe. So instead I'll use the **real Xcode iOS 18 + macOS 15 SDKs** to compile my surface (and the test target against a real module) — the essence of what the two gate steps verify for my code.
+
+Both **iOS 18 and macOS 15 SDKs** (real Xcode 26.5) typecheck the surface cleanly. Now let me prove the XCTest file itself compiles by building my surface into a `-enable-testing` module named `TeslaSync` and typechecking `…Tests.swift` (`@testable import TeslaSync`) against it.
+
+The module built cleanly; the Tests typecheck just needs the XCTest framework search path (it lives in the platform Developer dir, not the base SDK). Let me add `-F` for it.
+
+The Tests file typechecks against the real `-enable-testing` module (exit 0). To get the strongest possible evidence, let me actually **execute** the XCTest suite via a throwaway SwiftPM package that symlinks the real files (zero drift) and run `swift test` with the real Xcode toolchain.
+
+**The real XCTest suite executed and passed: 21 tests, 0 failures** — via the actual Xcode 26.5 toolchain, including the `@MainActor` every-state view-construction test and the telemetry test. Verification is now comprehensive. Let me update tracking and write the honest gate log capturing real command outputs.
+
+Now appending the runnable gate steps (swiftlint, swiftformat, placeholder) with real output, plus the supplementary real-SDK evidence.
+
+Finally, appending the supplementary real-SDK evidence (dual-platform typecheck, executed XCTest, logic harness) and the closing EXIT/STATUS.
+
+The log is complete and honest. Let me verify git status shows only my intended additions, clean up temp artifacts, and commit.
+
+There are **pre-existing unrelated modifications to `AIUsageCard.*`** in the working tree (not mine). The prompt scopes the commit to my surface files + log only, so I'll stage exactly those and leave the unrelated changes untouched. Let me clean temp artifacts and stage precisely.
+
+Exactly my 7 surface files + the log are staged; the unrelated `AIUsageCard` changes are excluded. Committing with the prompt's message.
+
+Committed cleanly (8 files, 1165 insertions); unrelated `AIUsageCard` changes left untouched. Let me finalize tracking.
+
+Done. Here's the outcome.
+
+## Summary
+
+I shipped the production native Apple surface for **`PlaybackSpeedMenu`** (P4 · 0097), a faithful SwiftUI port of `web/src/components/data-display/PlaybackSpeedMenu.tsx`, following the established I/O-free presentational-surface pattern (the `LayoutSwitcher` precedent).
+
+**Files added** (`apps/apple/TeslaSync/shared-surfaces/`, committed as `3de11f6b4`):
+- `PlaybackSpeedMenu.Model.swift` — surface slug + P1/S11 `view.opened` telemetry seam, P1/S10 i18n facade, `ReplaySpeed` (1/10/25/50/100), state/connection/actions value types
+- `PlaybackSpeedMenu.Adapter.swift` — pure `nextSpeed` (cycle/wrap) and `shiftSpeed` (clamp) reproduced slot-for-slot from the web, options, edge rules, freshness chip, a11y builders
+- `PlaybackSpeedMenu.swift` — state switch, telemetry on appear, the cycling control (tap = next; context menu + VoiceOver adjustable/named actions = pick/slower/faster), loading/empty/error chrome
+- `PlaybackSpeedMenu.Views.swift` — pill, chip, skeleton, chrome shell, menu list
+- `PlaybackSpeedMenu.Previews.swift`, `PlaybackSpeedMenu.Tests.swift`, `PlaybackSpeedMenu.strings`
+
+**Every web state reproduced** plus stale/offline freshness; web i18n key `replay.controls.speed` preserved; full VoiceOver coverage.
+
+**Verification (all real, all green):**
+- swiftlint --strict: 0 violations · swiftformat --lint: 0/6 · placeholder gate: COUNT=0
+- Typecheck against **real iOS 18 + macOS 15 SDKs** (Xcode 26.5): exit 0/0
+- **XCTest suite executed via `swift test`: 21 tests, 0 failures**
+
+**STATUS=BLOCKED (honest)** on one item only: the literal `xcodebuild -scheme TeslaSync build test` couldn't run end-to-end because (a) the `shared-surfaces` group isn't yet registered in `project.yml`/`.swiftlint.yml` — P4-core infra, outside this prompt's allowed files and unsafe to edit in a parallel slot — and (b) the app links the KMP `Shared.xcframework`, which isn't prebuilt here. Both are infra dependencies, not surface concerns; the surface itself compiles on both platforms and its tests pass. Full evidence is in `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0097-PlaybackSpeedMenu.log`.
+
+
+

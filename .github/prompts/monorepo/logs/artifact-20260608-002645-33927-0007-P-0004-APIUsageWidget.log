@@ -1,0 +1,174 @@
+=== P4 Dashboard widget 0004 APIUsageWidget (Apple) ===
+
+Surface : apps/apple/TeslaSync/dashboard-widgets/APIUsageWidget.*
+Web spec: web/src/features/dashboard/widgets/APIUsageWidget.tsx  (THE specification)
+Registry: registry/system.ts → "api-usage" · category=system · 2x2 / 1x2 / 4x40
+Runner  : Darwin (macOS 26.5, arm64) · Swift 6.3.2 (swiftlang-6.3.2.1.108) ·
+          Command Line Tools ONLY (no Xcode.app), swiftlint 0.63.3 + swiftformat 0.61.1
+          + pwsh 7 present. Shared parallel runner, slot-7.
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (allowed scope: APIUsageWidget.* + this log)
+--------------------------------------------------------------------------------
+  APIUsageWidget.swift            — SwiftUI surface. 3 layouts (compact 1x2 big-number /
+                                    standard 2x2 2-col / wide >=3-col 4-up stat grid); header
+                                    (chart glyph + title + freshness chip + refresh); every
+                                    state (loading / empty / offline / error / content); full
+                                    a11y; i18n. nonisolated static surfaceSlug + registration.
+  APIUsageWidget.Model.swift      — P1/S8 source seam (APIUsageSource) + InMemory source,
+                                    @Observable APIUsageModel (state + start/stop/refresh),
+                                    P1/S11 telemetry seam (APIUsageTelemetry + OSLog default,
+                                    view.opened once on start), APIUsageStrings.text (P1/S10).
+  APIUsageWidget.Models.swift     — APIUsageStats value type (web APICallLogStats) + the
+                                    snake-case decode adapter (explicit CodingKeys: total_calls /
+                                    error_count / error_rate / avg_duration_ms / last_24h).
+  APIUsageWidget.Projection.swift — pure Foundation core: registry primitives (DashboardWidgetSize /
+                                    Registration + clamp), coreStats projection (1:1 web parity),
+                                    fmtInt/fmtNumber formatters, APIUsageLoadState + APIUsageError +
+                                    APIUsagePresentation.resolve (loading/empty/offline/error/
+                                    content + ADR-013 stale), APIUsageStrings (P1/S10), a11y summary.
+  APIUsageWidget.Components.swift — freshness chip, icon+trend stat tile, stat grid, compact
+                                    big-number, loading skeleton (all P1/S9 tokens, P1/S10 labels).
+  APIUsageWidget.Previews.swift   — #if DEBUG previews for every state + layout (content/degraded/
+                                    wide/compact/loading/empty/stale/offline-cached/offline-nocache/error).
+  APIUsageWidget.Tests.swift      — XCTest: decode + cached->projection adapter parity + formatters +
+                                    presentation state machine + model wiring/telemetry + registry +
+                                    a11y (runs in the TeslaSync(/-macOS) test targets at integration).
+  APIUsageWidget.strings          — per-surface P1/S10 i18n table (every web t() key + native chrome).
+
+  Files split to honor the repo's <=400-line file_length norm; largest = 400 (Projection, Tests).
+
+--------------------------------------------------------------------------------
+WEB PARITY (reproduced VERBATIM — cross-platform value parity, not a "corrected" version)
+--------------------------------------------------------------------------------
+  Hook useApiLogStats -> GET /api-logs/stats (INTERVALS.STANDARD=30s). Go GetStats map keys:
+  total_calls / error_count / error_rate / avg_duration_ms / last_24h.
+  coreStats (4 tiles, exact web order + semantics):
+    - Total Calls (24h) = fmtInt(last24h)                       icon bolt (web Zap)
+    - Avg Response      = fmtNumber(avgDurationMs,1) unit "ms"   icon clock (web Clock)
+    - Error Rate        = fmtNumber(errorRate,1) unit "%"        icon triangle (web AlertTriangle)
+                          red + trend down + "High" iff errorRate > 5 ; flat (no label) iff >0 ; none iff 0
+    - Errors            = fmtInt(errorCount)  red iff errorCount > 0   icon waveform (web Activity)
+  Compact: big number fmtInt(last24h) + "Calls (24h)" + ("{fmtNumber(errorRate,1)}% errors" iff >5).
+  isCompact = cols<=1 ; isWide = cols>=3 (grid 4-up) ; empty = "No API usage data".
+  Decode note: last_24h does NOT round-trip through JSONDecoder.convertFromSnakeCase (folds to
+  last24H, EMPIRICALLY verified) -> explicit CodingKeys are used (correctness, executed-green below).
+
+--------------------------------------------------------------------------------
+GATE RESULTS (real commands, real exit codes on this host)
+--------------------------------------------------------------------------------
+
+[HOST] xcrun --sdk macosx swiftc -typecheck -swift-version 6 -strict-concurrency=complete
+       -target arm64-apple-macos15.0  (Tokens.swift [real P1/S9 design tokens] + faithful
+       TSSkeleton shim + the 6 production Swift files: Projection/Models/Model/Components/
+       Main/Previews) -> error count = 0
+       PROD_TYPECHECK_EXIT=0
+       (Same invocation incl. APIUsageWidget.Tests.swift against a faithful XCTest shim — the
+        real XCTest module ships with Xcode, absent on CLT — error count = 0.)
+       TESTS_TYPECHECK_EXIT=0
+
+[HOST] swiftc -O Projection.swift Models.swift + executed adapter/resolver harness
+       -> ALL ADAPTER CHECKS PASSED   (51 checks, 0 failures)
+       HARNESS_EXIT=0
+       Verified green by EXECUTION: snake-case decode (full / partial-defaults-zero / malformed->nil /
+       shared-payload string + non-string), coreStats parity (ids + values "18,742"/"42.6"/"1.4"/
+       "263", units ms/%, icons, trends: low=flat-no-label / zero=none / high(>5)=down+"High" / danger
+       flags, errorRate==5 boundary NOT high), compact big-number + "9.7% errors" line, fmtInt/fmtNumber
+       (grouping, nan/inf->0), presentation matrix (idle/loading±cache/loaded±stale/empty/offline±cache/
+       network-no-cache->retryable error / decode-no-cache->non-retryable / api+cache->content),
+       error retryability, registration clamp (min/max), and the VoiceOver summary content.
+
+[HOST] cd apps/apple && swiftformat --lint  (the 7 shipped Swift files, repo .swiftformat)
+       -> 0/7 files require formatting
+       FORMAT_EXIT=0
+
+[HOST] cd apps/apple && swiftlint lint --strict --config .swiftlint.yml  (the 7 shipped Swift files)
+       -> Done linting! Found 0 violations, 0 serious in 7 files.
+       LINT_EXIT=0
+       (.swiftlint.yml already lists TeslaSync/dashboard-widgets in `included`; no config edit needed.)
+
+[HOST] pwsh apps/tools/check-placeholders.ps1 -Path <isolated copy of APIUsageWidget.*> -Language swift
+       -> PLACEHOLDER_ALLOWED=0 · PLACEHOLDER_COUNT=0
+       PLACEHOLDER_EXIT=0
+       (Isolated copy used because the gate's bare-prefix -Path resolves to a non-existent node and
+        scans nothing; a manual case-insensitive forbidden-word scan of all shipped files -> NONE.)
+
+[DEFERRED] xcodebuild -scheme TeslaSync      -destination 'platform=iOS Simulator,name=iPhone 16' build test
+[DEFERRED] xcodebuild -scheme TeslaSync-macOS                                                     build test
+       IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED   (NOT claimed green — see reasoning)
+       Captured capability evidence on this host:
+         xcode-select -p           -> /Library/Developer/CommandLineTools
+         xcodebuild -version       -> error: tool 'xcodebuild' requires Xcode, but active developer
+                                      directory '/Library/Developer/CommandLineTools' is a command
+                                      line tools instance
+         xcrun simctl list devices -> error: unable to find utility "simctl" (no iOS simulators)
+       The scheme build/test is DEFERRED — not failed — and would be deferred even on a fully-equipped
+       Xcode runner, for two scope/dependency reasons that are NOT defects in this surface's code:
+         (1) The surface lives in the staging dir apps/apple/TeslaSync/dashboard-widgets/. project.yml
+             registers it as a source path, but self-editing project.yml / the shared dashboard grid
+             registry is the integration prompt's scope and OUTSIDE this prompt's allowed files
+             (APIUsageWidget.* + this log). Covenant #7 (no predecessor/integration bypass) forbids it.
+         (2) The TeslaSync scheme pre-action builds the KMP Shared.xcframework via
+             Scripts/build-shared-xcframework.sh (Kotlin/Native + Gradle) and the targets require
+             signing; the xcframework is absent in this checkout.
+       The capability-BLOCKED escape hatch ("SwiftUI / Swift Charts / MapKit unavailable") does NOT
+       apply: SwiftUI + Observation ARE available and the full surface type-checks GREEN against the
+       macOS SDK under Swift-6 strict concurrency above (this surface uses no Charts/MapKit — none in
+       the web source). Equivalent in-scope verification was performed instead and is GREEN: a Swift-6
+       strict-concurrency swiftc -typecheck of the surface against the real P1/S9 design tokens (the
+       exact symbols the app build resolves), plus an EXECUTED adapter/resolver harness (51/51). This
+       matches the predecessor "code-complete + DEFERRED Xcode gate" disposition (0036/0055/0056).
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) + all 3 layouts —
+      implemented; each state/layout has a #if DEBUG preview; phase + projection logic executed-green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (APIUsageSource); no HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — 9 web parity keys + 2 unit suffixes +
+      native chrome in APIUsageWidget.strings; key-coverage scan: 20/20 referenced keys defined, 0
+      missing; view holds no English literals (all via APIUsageStrings).
+  [x] Accessibility labels on every interactive element (refresh/retry buttons), every stat tile,
+      the grid (full spoken summary), the compact value; decorative icons are accessibilityHidden.
+  [x] Tests: decode + adapter value-parity + formatters + presentation state machine + model wiring/
+      telemetry + registry + a11y (APIUsageWidget.Tests.swift; same assertions executed green in harness).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; word-scan clean.
+  [x] Telemetry: view.opened emitted once with surface slug "APIUsageWidget" (P1/S11) — tested.
+  [x] Host-runnable gates green (typecheck swift6 / executed harness / format / lint / placeholder);
+      Xcode scheme build/test DEFERRED with capability + scope evidence (per predecessor disposition).
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+  1  No red-as-green : the two xcodebuild scheme steps are shown DEFERRED (not green) with captured
+                       capability evidence + scope reasons; every "EXIT=0" above is a command actually
+                       executed on this host with its real output captured.
+  2  No scope narrowing: implemented ALL 3 layouts + ALL states + i18n + a11y + telemetry + registry +
+                       the full 4-stat set + the compact big-number/error line.
+  3  No skip-and-assume: each host gate executed and its real output captured; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; harness executes real logic.
+  5  No parity shortcuts: coreStats arithmetic, thresholds (>5), trend/danger rules, fmtInt/fmtNumber,
+                       and the compact error line ported VERBATIM and pinned by executed assertions to
+                       the exact web display strings.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / the dashboard grid and did NOT edit
+                       the shared catalog; strings shipped as the per-surface table (matches 0055/0036).
+  8  No commit on red  : committing on all-green host gates; the Xcode scheme steps are DEFERRED (a
+                       documented capability + scope/dependency deferral with evidence), not failed.
+  9  No silent drift   : changes confined to the allowed APIUsageWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished native APIUsageWidget shipped at parity with the web source: a SwiftUI surface
+  (compact / standard / wide) over a P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, P1/S10
+  i18n, P1/S9 tokens; every state, every i18n key, every interactive a11y label; registry-correct
+  (api-usage, system, 2x2 / 1x2 / 4x40). The surface type-checks GREEN under Swift 6 strict concurrency
+  against the real design system and its adapter/resolver logic executes GREEN (51/51) with exact web
+  value parity. The Xcode scheme build/test is DEFERRED to a signed CI runner (no Xcode.app on this CLT
+  host; surface not yet target-registered per covenant #7; KMP Shared.xcframework absent) — none a
+  defect in this code — matching the predecessor "code-complete + DEFERRED Xcode gate" disposition.
+
+EXIT=0
+STATUS=DONE

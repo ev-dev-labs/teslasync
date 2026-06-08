@@ -1,0 +1,86 @@
+I'll start by exploring the environment and the web source that serves as the specification.
+
+Swift toolchain, swiftlint, swiftformat, and pwsh are present, but `xcodebuild` requires full Xcode (only Command Line Tools installed). Let me explore deeply before concluding anything — I need to produce the real native code regardless. Let me read the web source and the existing Apple app structure.
+
+Now let me examine the existing feature-views (the pattern I must follow) and the shared facade layers (state holders, tokens, i18n, diagnostics).
+
+The feature-views directory has an established multi-file pattern per panel. Let me examine a complete example and check whether any MediaNavigationPanel files already exist.
+
+MediaNavigationPanel doesn't exist yet. The per-panel file pattern is clear (`.swift`, `.Adapter.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`). Let me find a sibling telemetry-panel already ported to native — that's the most accurate template since it shares the snapshot + useUnits binding approach.
+
+None of the sibling telemetry panels are ported yet. I'll model after the established `AcDcStatsPanel` (a panel with units + states). Let me read its complete file set plus the shared facade primitives.
+
+Excellent — the pattern is very clear. Let me read the remaining reference files (Views, Previews, strings, Tests) and the shared facade primitives including the Units facade (critical since the web source uses `useUnits` + `convertDistanceFromSI`).
+
+The established pattern is comprehensive and high-quality. Now I need: (1) the web API types for `MediaSnapshot`/`LocationSnapshot`, (2) how a ported panel consumes units/distance conversion, (3) the theme tokens and shared components, (4) the test-file shape, and (5) exact Xcode availability. Let me batch these.
+
+Critical discovery: **Xcode.app IS installed** at `/Applications/Xcode.app` — `xcode-select` just points to CLT. I can use `DEVELOPER_DIR` to run xcodebuild without sudo. The CLT SDK even has SwiftUI/Charts/MapKit. Let me verify the full Xcode toolchain works and study the units binding + project structure.
+
+Xcode 26.5 is fully available via `DEVELOPER_DIR`, iPhone 16 simulator is booted, and `xcodegen` is installed — **the full gate can run**. Let me study the units-conversion reference (HealthGaugeGrid) and the project structure.
+
+Now I have the data shapes. `miles_to_arrival` is SI meters (legacy name, post-SI-cutover) converted via `convertDistanceFromSI`. Let me read the web conversion/format helpers to mirror them exactly, plus the project.yml, Theme tokens, and the HealthGaugeGrid units model.
+
+Now let me understand how the `.Tests.swift` files in feature-views are compiled, since the test target sources point to `Tests/Unit`, not feature-views. This is critical to get right.
+
+Let me check `Tests/Unit/FeatureViews` to understand whether the `.Tests.swift` files are linked there or compiled into the app target.
+
+There are 170 existing `.Tests.swift` files in feature-views (compiled into the app target) — a proven pattern I'll replicate. The build needs `Shared.xcframework` (KMP). Let me check whether it's prebuilt and look at the build tooling before establishing a baseline.
+
+`Shared.xcframework` isn't prebuilt — the scheme builds it via Gradle/KMP at build time. Let me confirm the exact token/component names I'll use, the units-model wiring, and Gradle feasibility before writing code and establishing a baseline build.
+
+The units pattern is clear (local enum + `.symbol`, mirroring HealthGaugeGrid). Java 17 + gradlew exist, so KMP build is possible but risky/slow. Let me read the exact units-model section and the shared component signatures I'll use.
+
+I have the component/units patterns. Let me confirm remaining tokens (surface, accent, purple, fonts, spacing, radius), the `TSGlassPanel`/`TSSkeleton` signatures, and the full test file structure.
+
+I now have all tokens and components confirmed. Let me read the full reference test file (to mirror XCTest structure) and the placeholder checker, plus confirm the `TSButton` signature.
+
+Let me check the placeholder patterns (to avoid forbidden words in my copy) and the exact `TSButton` init.
+
+I have the complete pattern. The long pole is the KMP `Shared.xcframework` (Kotlin/Native via Gradle), which the scheme builds at gate time. Let me pre-warm that build in the background now while I write the Swift files, and read the final web helpers (`cleanNil`, `fmtNumber`/`fmtInt`) to port them exactly.
+
+KMP build kicked off. Let me verify it's progressing (not instantly failing) and set up my task tracking.
+
+The KMP build is using a warm Gradle cache (many `FROM-CACHE` hits) — promising. Let me verify it completed and produced the framework.
+
+The nohup process was torn down with its session before finishing (Frameworks/ still empty). Let me restart it properly as a detached async process so it persists, then write code while it builds.
+
+KMP framework build is running (warm cache). I have everything needed. Let me write the production files, starting with the pure Adapter core, the Model (state holder), and the i18n strings.
+
+Now the Model (state holder + projection + i18n facade):
+
+The i18n strings catalog contribution:
+
+Let me check the KMP build progress before continuing with the views.
+
+Still building (Kotlin/Native linking takes minutes). Let me continue writing the views while it runs.
+
+KMP build completed. Let me confirm the framework was produced, then continue with the subviews.
+
+`Shared.xcframework` staged for ios-arm64, ios-arm64-simulator, and macos-arm64 — the full gate is now feasible. Let me write the detailed subviews file.
+
+Now the previews and the test suite:
+
+All 7 files created. Let me run fast local checks (swiftformat lint, swiftlint, and a standalone typecheck of the Foundation-only Adapter) before the heavy xcodebuild gate.
+
+Adapter typechecks clean. SwiftFormat flagged numeric-literal grouping — let me auto-fix with swiftformat (write mode), which is the canonical way to satisfy its own rules, then re-verify.
+
+The grouping threshold is 6 digits, so `18_300` (5 digits) should be ungrouped. Let me let swiftformat auto-fix and re-lint.
+
+SwiftFormat passes. Now swiftlint on the new files:
+
+One file-length violation: Views.swift is 403 lines (limit 400). I'll extract the loading/empty/error chrome into a separate `MediaNavigationPanel.Chrome.swift` (matches the repo's multi-file pattern). Let me view the chrome section boundaries.
+
+I'll extract the chrome into a new file. First create `MediaNavigationPanel.Chrome.swift`, then remove that block from Views.swift.
+
+Now remove the chrome block from Views.swift:
+
+Now re-run swiftformat + swiftlint on all 7 files to confirm clean:
+
+Both swiftformat and swiftlint pass cleanly on all 7 files (0 violations). Now let me generate the Xcode project and verify my files are included.
+
+Project generated, MediaNavigationPanel referenced (48 entries across iOS + macOS targets). Now the heavy step — the iOS build+test gate. Let me start it and monitor.
+
+Build failed: the app target can't resolve `import XCTest`. But 170 existing `.Tests.swift` files in feature-views also import XCTest — so either the repo relies on a build setting, or these files are assigned to a test target. Let me investigate the generated project to understand the existing mechanism.
+
+The existing `AcDcStatsPanel.Tests.swift` is also compiled into the app target (2 Sources phases) with no `ENABLE_TESTING_SEARCH_PATHS` set — so this XCTest-resolution issue isn't specific to my files. Let me check the pending-verifications doc and confirm the baseline behavior.
+

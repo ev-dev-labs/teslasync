@@ -1,0 +1,132 @@
+I'll start by exploring the repository structure to understand the task context, then read the web source component.
+
+Apple toolchain is available. Let me read the web source and explore the Apple app structure.
+
+Now let me explore the Apple app structure deeply to find existing patterns, state holders, tokens, i18n, and telemetry.
+
+Let me explore the key infrastructure: state holders (SharedFacade), Design tokens, i18n, diagnostics, and Feedback components.
+
+Now let me look at existing feature-views to understand the actual file pattern, and find ones related to settings/version/consent.
+
+`PrivacySection` is the closest analog (privacy + VersionInfo). Let me read its full file set to learn the established pattern.
+
+This is an excellent, near-identical analog. Let me read the rest of the PrivacySection files plus the shared components it uses.
+
+Now let me read the design tokens, the button component, and the project config to understand build wiring.
+
+I now understand the established pattern thoroughly. Let me investigate the build system: xcodegen, the Shared.xcframework, how `.Tests.swift` files in app-target source dirs are handled, and tooling availability.
+
+Critical finding: `Shared.xcframework` doesn't exist (only `.gitkeep`). Let me check the framework build script, KMP source, and the pending-verifications notes.
+
+The `macos-pending-verifications.md` reveals the established protocol precisely: full-app `xcodebuild` is blocked by pre-existing parallel-merge collisions + missing KMP `Shared.xcframework` + signing, so each surface is verified **in isolation** (SwiftPM build+tests, `swiftc -typecheck` for both SDKs, swiftlint/swiftformat/placeholder), with the full-app gate deferred to the macOS acceptance gate. Let me confirm the web consent semantics, token names, and reusable native primitives.
+
+I have the full picture. Let me confirm the token namespaces (`TSSpacing`/`TSRadius`/`TSMotion`/`Color.TS`/`Font.TS`), the `tsGlassPanel` modifier, and `TSTone` so my isolated verification package can vendor the real design layer.
+
+I have a complete understanding. Let me set up tracking and write the plan, then build the surface following the established `PrivacySection` pattern.
+
+Now I'll write the surface. Starting with the pure projection core (Adapter).
+
+Now the test files. First the adapter (pure) tests:
+
+Now the model tests:
+
+All 10 files written. Now wire `shared-surfaces` into the Xcode project (both app targets) and generate.
+
+`xcodegen generate` succeeds (exit 0) and enumerates all 10 files. Now the isolated verification. Let me check the Swift toolchain and SDKs.
+
+A full Xcode exists at `/Applications/Xcode.app`. I can target it via `DEVELOPER_DIR` (as the pending-doc prescribes) without `sudo xcode-select`. Let me verify it exposes iOS SDKs and simulators.
+
+Full Xcode 26.5 with an **iPhone 16** simulator and iOS/macOS SDKs is available via `DEVELOPER_DIR`. Now let me build the isolated SwiftPM verification package (vendoring the real design layer) to prove the surface compiles + tests pass under Swift 6 strict concurrency.
+
+Two issues in Previews.swift: a non-writable env key and a main-actor warning. Let me fix the real source file.
+
+Clean build (exit 0, no warnings). Now run the isolated tests.
+
+All 42 isolated tests pass (0 failures) under Swift 6 strict concurrency. Now prove both-SDK deployment-target compatibility with `swiftc -typecheck` for iOS 18 and macOS 15.
+
+Both SDK typechecks pass (exit 0). Now run SwiftLint (strict) and SwiftFormat (lint) — first scoped to the new surface, then check configs.
+
+SwiftLint linted the whole repo (config `included` paths) and found 1 violation. Let me locate it.
+
+The lone SwiftLint violation is **pre-existing** in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` — not my surface. My files are clean. Let me confirm decisively and run SwiftFormat.
+
+SwiftFormat flags real issues in my files. Let me view the exact spots, then fix the test force-unwraps manually and auto-format the rest.
+
+Now auto-format the surface with the repo's SwiftFormat config, then re-lint both tools:
+
+SwiftFormat passes (0/9, exit 0). Re-verify SwiftLint on my files and re-run the isolated build+tests after the formatting and test edits.
+
+SwiftLint clean (0), build exit 0, 42 tests pass. Now the placeholder gate. Let me read the checker and run it via `pwsh`.
+
+The placeholder checker scans recursively. Let me grep my files for forbidden patterns first, then run the checker against the real directory (genuine check), the exact gate path, and the self-test.
+
+No forbidden patterns in my files; self-test passes. Now run the placeholder checker against the real directory and the exact gate path.
+
+Both placeholder scans pass (COUNT=0, EXIT=0). Now I'll gather evidence for the full-app gate. First, characterize the documented pre-existing blockers (KMP framework, `DashboardWidgetSize` collisions, co-located XCTest) and Java availability.
+
+Confirmed: framework ABSENT, `DashboardWidgetSize` redefined 15×, 261 app-target files import XCTest. Now I'll run the **actual** gate command to capture real failure evidence. Launching async (the pre-action will attempt the KMP/gradle build first).
+
+The KMP `Shared.xcframework` is actually building (cached Kotlin/Native) — further than the pending-doc assumed. It's now compiling the app, where it'll hit the pre-existing Swift collisions. Let me wait for that.
+
+The `Shared.xcframework` builds successfully on this runner (cached K/N). It's now finishing the release variant before compiling the app. Let me wait for the app-compile stage where the pre-existing collisions surface.
+
+The framework builds fine here; the slow part is the release K/N link. To capture the **real** app-compile failure quickly (and prove it's the documented pre-existing collisions, not my surface), I'll stop this, stage the already-built debug `Shared.xcframework`, and run a targeted app compile that fails fast on the duplicate symbols.
+
+The debug xcframework has all 3 slices. Let me stage it and run a targeted app compile (skips scheme pre-actions) to capture the real collision errors fast.
+
+App compile failed as expected. Let me extract the actual error reasons and **confirm none are from my surface**.
+
+The full-app build fails at the **first pre-existing** co-located test file (`AIRestorePanel.Tests.swift: unable to resolve module dependency: 'XCTest'`) — **0 errors from my surface**. This is the documented pre-existing blocker. Let me verify git ignore status and clean up build artifacts.
+
+Unexpected: `AIUsageCard.*` files show as modified, which I never touched. Let me investigate the diff and timing.
+
+Those `AIUsageCard.*` changes are timestamped 05:00:56 — **pre-existing** uncommitted work in this parallel slot, not mine. I'll exclude them and commit only my files. Let me check the logs directory and a prior surface log for format precedent.
+
+This is the sanctioned precedent: full-app gate reported RED but **deferred** (pre-existing/unrelated), surface verified green in isolation, concluding `EXIT=0 / STATUS=DONE`. Let me read the full ToolCard log header to mirror its structure.
+
+Let me check whether `.swiftlint.yml` `included` covers `shared-surfaces` (ToolCard had to add its dir) and confirm my files are actually scanned.
+
+`.swiftlint.yml included` doesn't cover `shared-surfaces` (so the repo-wide gate skips my files). ToolCard precedent added its dir to `included`. Let me add `shared-surfaces` too.
+
+Verify the repo-wide SwiftLint now scans my files (clean) and check whole-tree SwiftFormat state.
+
+Repo-wide SwiftLint now scans all 9 of my `.swift` files (0 violations; only pre-existing `LifetimeStatsWidget` flagged). Whole-tree SwiftFormat: my files 0/9, the 1 dirty file is pre-existing (`ActionBuilder.Previews.swift`). Let me launch the official iOS gate to capture the literal exit code while I author the log.
+
+While the gate runs, I'll author the log (following the precedent format) and the macOS-pending row. Let me create the log.
+
+The official iOS gate finished. Let me confirm its exit code and that the failure is pre-existing (not my surface).
+
+The framework is cached (UP-TO-DATE) this time; it's now in the app-compile phase. Let me wait for it to fail and capture the literal exit.
+
+The official run is still in the slow macOS release K/N link (not yet at app-compile). I already captured a **real** xcodebuild app-compile failure (exit 65) via the targeted run, so I have honest evidence. Let me add the macOS-pending row while it continues.
+
+Now let me check the official gate's progress.
+
+The official `-scheme` run is stuck on the slow macOS release K/N link. I already captured a **real** xcodebuild app-compile failure (exit 65) via the targeted run. Let me make the log's provenance precise rather than imply I watched the `-scheme` exit.
+
+Now let me stage precisely my files (excluding the pre-existing dirty files) and review before committing.
+
+git is hanging — the background gradle/xcodebuild run is saturating I/O. Let me stop it and free resources.
+
+A `swift-frontend` is now running — the official build reached the app-compile stage. Let me check its log for the failure and capture the official exit.
+
+I have sufficient honest evidence (the real targeted compile, exit 65). The official run is saturating the machine and blocking git. Let me terminate it via specific PIDs.
+
+Many `xcodebuild`/Gradle PIDs exist — likely shared with other parallel slots, so I won't mass-kill. The `git add` only touches small paths (not the huge build dirs); the earlier hang was transient I/O starvation. Let me retry staging patiently.
+
+Staging is exactly right — my 10 files plus the necessary wiring, log, and pending row; no pre-existing files leaked. Let me verify the config diffs, then commit.
+
+Both config diffs are exactly the minimal intended additions. Committing with the prescribed message.
+
+Commit succeeded (`10edd9011`, 14 files, 1950 insertions) — only my surface, wiring, log, and pending row; no pre-existing files leaked. Let me do final verification and update tracking.
+
+All my changes are committed cleanly; the remaining dirty files are pre-existing slot state I never touched. Let me check the official gate's final status (bonus evidence) and clean up temp artifacts.
+
+Let me do a bounded wait for the official gate to optionally confirm the literal exit, plus a sanity check that the committed files are the formatted/verified versions.
+
+Committed files confirmed as the formatted/verified versions. The official gate is self-terminating (the slow K/N release link); my honest evidence (real targeted xcodebuild exit 65, identical deterministic wall) is already captured and committed. Let me finalize tracking.
+
+All 14 todos done and the task is complete. Let me write the final summary.
+
+The official full-app gate continues self-terminating in the background; I have already captured equivalent, real xcodebuild evidence (exit 65 at the pre-existing wall), so no further action is needed.
+

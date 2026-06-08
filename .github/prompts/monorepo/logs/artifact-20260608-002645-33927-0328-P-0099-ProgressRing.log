@@ -1,0 +1,146 @@
+=== P4 Shared surface 0099 ProgressRing (Apple) ===
+date: 2026-06-08T12:15:14Z
+web source: web/src/components/data-display/ProgressRing.tsx (pure presentational; no hooks/fetch/charts/maps/i18n)
+native output: apps/apple/TeslaSync/shared-surfaces/ProgressRing.{Model,Adapter,Projection,Views,swift,Previews,strings,Tests,AdapterTests}
+
+--- runner capability probe (SwiftUI/SwiftCharts/MapKit + toolchain) ---
+xcodebuild: Xcode 26.5 Build version 17F42 
+swift:      swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+swiftlint:  0.63.3
+swiftformat:0.61.1
+xcodegen:   Version: 2.45.4
+pwsh:       PowerShell 7.6.2
+iOS sim:        iPhone 16 (83717DEE-70A3-4325-AA61-CBDDD3140989) (Booted) 
+
+================================================================================
+GATE STEP 1+2 — xcodebuild -scheme TeslaSync / TeslaSync-macOS build test
+STATUS: BLOCKED (downstream integration outside this prompt's allowed files)
+--------------------------------------------------------------------------------
+The literal app build/test cannot run-to-green in this runner for two independent
+reasons, BOTH owned by downstream prompts (allowed files here = ProgressRing.* + this log):
+
+[B1] KMP Shared.xcframework is absent — the app targets depend on it and the scheme
+     pre-action builds it from the Kotlin/Native core via Gradle:
+       total 8
+       drwxr-xr-x@  3 atulgupta  staff   96 Jun  8 04:46 .
+       drwxr-xr-x@ 18 atulgupta  staff  576 Jun  8 05:14 ..
+       -rw-r--r--@  1 atulgupta  staff  159 Jun  8 04:46 .gitkeep
+     project.yml dependency + pre-action:
+       6:# both consume the KMP shared core as the static `Shared.xcframework` (ADR-004).
+       54:      - framework: Frameworks/Shared.xcframework
+       83:      - framework: Frameworks/Shared.xcframework
+       227:      - framework: Frameworks/Shared.xcframework
+       254:      - framework: Frameworks/Shared.xcframework
+       272:        - name: Stage Shared.xcframework
+       274:            "${PROJECT_DIR}/Scripts/build-shared-xcframework.sh"
+       281:        - name: Stage Shared.xcframework
+       283:            "${PROJECT_DIR}/Scripts/build-shared-xcframework.sh"
+       299:        - name: Stage Shared.xcframework
+       301:            "${PROJECT_DIR}/Scripts/build-shared-xcframework.sh"
+       308:        - name: Stage Shared.xcframework
+       310:            "${PROJECT_DIR}/Scripts/build-shared-xcframework.sh"
+
+[B2] The new shared-surfaces/ tier is NOT wired into project.yml app sources
+     (project.yml is owned by the P4 acceptance gate; not an allowed file here):
+       36:      - path: TeslaSync/dashboard-widgets
+       37:      - path: TeslaSync/feature-views
+       67:      - path: TeslaSync/dashboard-widgets
+       68:      - path: TeslaSync/feature-views
+     => generated project compiles 0 ProgressRing files (vs the wired AiUsageCard):
+       ProgressRing refs in pbxproj: 0
+       AiUsageCard  refs in pbxproj: 60
+
+Consequence: 'xcodebuild -scheme TeslaSync build test' would (a) trigger a heavy Gradle
+KMP build for the missing framework and (b) still not compile/test ProgressRing. Both are
+resolved downstream by the P4 acceptance gate. The surface is therefore verified directly
+against the iOS 18 + macOS 15 SDKs below.
+IOS_EXIT=BLOCKED
+MAC_EXIT=BLOCKED
+
+================================================================================
+SURFACE-LEVEL VERIFICATION (direct against the required SDKs — what the runner CAN run)
+================================================================================
+--- V1: iOS 18 typecheck (production + previews) ---
+V1_IOS18_TYPECHECK_EXIT=0
+--- V2: macOS 15 typecheck (production + previews) ---
+V2_MACOS15_TYPECHECK_EXIT=0
+--- V3: runtime logic harness (executes ported math/projection/telemetry) ---
+ok  : clamp over-max
+ok  : clamp negative
+ok  : fraction guards max<=0
+ok  : fraction guards NaN
+ok  : fraction 4.2/5
+ok  : percent 84
+ok  : font sizes 48
+ok  : main font floor
+ok  : center+circumference
+ok  : metrics partial
+ok  : metrics complete
+ok  : non-finite size sanitized
+ok  : determinate 75%
+ok  : empty 0%
+ok  : indeterminate nil
+ok  : indeterminate non-finite
+ok  : label/trim/empty/hasCenter
+ok  : custom max 84%
+ok  : telemetry view.opened emits exactly once
+---
+ALL PASS (22 checks)
+V3_LOGIC_HARNESS_EXIT=0
+--- V4: XCTest test-body typecheck vs real API (XCTAssert shim; real macros live in the test target) ---
+V4_TEST_BODY_TYPECHECK_EXIT=0
+--- V5 / LINT_EXIT: swiftlint --strict (8 ProgressRing swift files) ---
+Done linting! Found 0 violations, 0 serious in 8 files.
+LINT_EXIT=0
+--- V6 / FORMAT_EXIT: swiftformat --lint (shared-surfaces) ---
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-328/apps/apple/.swiftformat
+SwiftFormat completed in 5.39s.
+0/8 files require formatting.
+FORMAT_EXIT=0
+--- V7 / PLACEHOLDER_EXIT: check-placeholders.ps1 ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+================================================================================
+GATE VARIABLE SUMMARY
+--------------------------------------------------------------------------------
+IOS_EXIT=BLOCKED      (xcodebuild app build/test — see [B1]+[B2]; downstream-owned)
+MAC_EXIT=BLOCKED      (xcodebuild app build/test — see [B1]+[B2]; downstream-owned)
+LINT_EXIT=0           (swiftlint --strict: 0 violations in 8 files)
+FORMAT_EXIT=0         (swiftformat --lint: 0/8 require formatting)
+PLACEHOLDER_EXIT=0    (check-placeholders.ps1: PLACEHOLDER_COUNT=0)
+
+Direct per-platform surface verification (the runner CAN build SwiftUI for both targets):
+  V1 iOS 18  swiftc -typecheck (production + previews) = 0
+  V2 macOS15 swiftc -typecheck (production + previews) = 0
+  V3 runtime logic harness (22 assertions)            = 0  (ALL PASS)
+  V4 XCTest test-body typecheck vs real API           = 0
+
+================================================================================
+OUTCOME
+--------------------------------------------------------------------------------
+The ProgressRing shared surface is IMPLEMENTED COMPLETE and VERIFIED to compile on
+BOTH iOS 18 and macOS 15, with its ported geometry/projection/telemetry executed green
+and swiftlint/swiftformat/placeholder all clean. No stubs, no TODO/mock/placeholder.
+
+Parity with web/src/components/data-display/ProgressRing.tsx (pure presentational):
+  - track + rounded progress arc, -90deg start, slow-grow animation (web transition-all).
+  - centered main/sub labels (proportional mainSize/subSize), optional bottom caption.
+  - exact web math: radius/center/circumference/clamp/offset/percent (R3 audit in V3).
+  - value-driven states reproduced (empty/partial/complete) + indeterminate null-safety
+    spinner; network-axis loading/error/stale/offline are N/A (the web surface does no fetch).
+  - i18n via P1/S10 facade (table ProgressRing); a11y element label+value, Dynamic Type,
+    Reduce Motion; P1/S11 view.opened emitted once.
+
+BLOCKED strictly on the literal 'xcodebuild build test' integration, for reasons OUTSIDE
+this prompt's allowed files (ProgressRing.* + this log): the git-ignored KMP Shared.xcframework
+[B1] and the shared-surfaces project.yml wiring [B2], both delivered by the P4 acceptance gate.
+Per the prompt capability clause ('If unavailable on the runner -> STATUS=BLOCKED with API
+evidence') the evidence is recorded above.
+
+EXIT=1
+STATUS=BLOCKED

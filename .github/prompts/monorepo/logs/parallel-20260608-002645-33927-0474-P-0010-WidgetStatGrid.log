@@ -1,0 +1,68 @@
+I'll start by exploring the repository structure and verifying the platform capabilities required for this task.
+
+Swift compiler, swiftlint, and swiftformat are available, but full Xcode is not (`xcodebuild` requires Xcode, only Command Line Tools present) and there's no iOS Simulator (`simctl` missing). Let me investigate the apps/apple structure and SDK capabilities thoroughly before deciding on approach.
+
+Key finding: the macOS SDK (Command Line Tools) **does** include SwiftUI, Charts, and MapKit frameworks, so I can compile/type-check SwiftUI code targeting macOS. But `xcodebuild` (needs full Xcode) and the iOS Simulator (`simctl`) are unavailable, and there's no `.xcodeproj`/`Package.swift`. Let me understand the existing conventions before writing code.
+
+Two parallel structures exist. The output target `TeslaSync/widget-primitives/` follows the multi-file-per-widget convention seen in `TeslaSync/dashboard-widgets/`. Let me study a representative existing widget end-to-end plus the design tokens, native StatCard/EmptyState counterparts, and state-holder/telemetry conventions.
+
+Large output — let me read these files individually with the view tool.
+
+Excellent — I now understand the architecture clearly. This is a high-quality codebase with a consistent widget pattern (Model/View/Adapter/Previews/Tests/strings). `WidgetStatGrid` is a **pure presentational primitive** per its web source. Let me study the design tokens, native StatCard/EmptyState counterparts, the supporting types, and the test/strings conventions.
+
+`TSDesign.swift` is small (just palette/animation); the core tokens (`TSSpacing`, `Color.TS`, `Font.TS`, `TSRadius`) live elsewhere. I also need to confirm the target/module structure since there's no `Package.swift`/`xcodeproj`. Let me locate the tokens, the shared widget scaffold types, and any project-generation config.
+
+Critical discovery: there's a **`project.yml`** (XcodeGen) and `DashboardWidgetSize` is redefined in 10+ widget files — suggesting per-surface self-contained authoring across parallel slots. Let me confirm the target structure and token-sharing model, and check the placeholder checker + pwsh availability.
+
+Now I understand the architecture fully. The `TeslaSync`/`TeslaSync-macOS` targets compile `Sources/` + `TeslaSync/dashboard-widgets/` + `TeslaSync/feature-views/` + generated DesignTokens (`../design/generated/apple`). Key tools check: `pwsh` ✓, `xcodegen` ✓, but `xcodebuild` needs full Xcode. Let me check whether a full Xcode.app exists anywhere, and read the generated design tokens for exact names.
+
+**Full Xcode IS installed at `/Applications/Xcode.app`** (just not selected). I can use `DEVELOPER_DIR=` to invoke it without changing global state. Let me verify xcodebuild/simctl work via that path, check the KMP framework dependency situation, and read the full tokens + test/preview conventions.
+
+Path correction noted (tokens are at `apps/design/...`). Decisive findings: **Full Xcode 26.5 works** via `DEVELOPER_DIR` (iPhone 16 sim booted, iOS/macOS SDKs present), but the **KMP `Shared.xcframework` is absent** (needs Kotlin/Gradle) and the app target has parallel-authored duplicate symbols. Let me check how completed sibling surfaces documented their gate/STATUS in the logs, and read the real tokens + test conventions.
+
+Now let me read a completed sibling's log to match the gate-documentation/STATUS convention, plus the Previews convention and lint/format configs.
+
+I now have the authoritative pattern — including the sibling's **"code-complete + host gates green, xcodebuild DEFERRED → STATUS=DONE"** disposition (Covenant #7: not allowed to self-register into `project.yml`, and the KMP `Shared.xcframework` is absent). I'll replicate that honestly, but go further: build my files as a real SwiftPM package against the actual Xcode macOS SDK + real tokens, and run the XCTest file via `swift test`. Let me read the lint/format configs and placeholder script first.
+
+I have the complete convention now. Key constraints noted: SwiftLint `empty_count` (use `.isEmpty`), maxwidth 120, before-first wrapping, forbidden placeholder words. Note my target dir `TeslaSync/widget-primitives` is **not** in `.swiftlint.yml`'s `included` list (I can't edit that file), so I'll lint my files explicitly. Let me confirm a couple of details and set up tracking.
+
+All confirmed: placeholder matching is case-insensitive (I'll avoid those words), and SwiftLint accepts explicit file paths. No existing primitives to conflict with. I'll now scaffold tracking and write the six `WidgetStatGrid.*` files.
+
+Now I'll write the six files. Starting with the SwiftUI-free Model and Adapter (the pure, testable seams).
+
+All six files written. Now I'll verify them with the **real Xcode toolchain**: a throwaway SwiftPM package that compiles my sources + the real design tokens against the macOS SDK and runs the XCTest file via `swift test`.
+
+Harness ready. Now compiling against the real Xcode macOS SDK + real design tokens.
+
+Clean build (0 errors/warnings) under Swift 6 strict concurrency against the real SDK + tokens. Now running the tests.
+
+All 17 tests pass on the real Xcode toolchain. Now formatting + linting. First, auto-format my files with the repo config, then run the gate checks.
+
+swiftformat applied two safe changes (implicit returns in the `switch`, digit-separator normalization). I must re-verify the formatted code still compiles/tests. Re-syncing the harness and rebuilding.
+
+Formatted code still passes all 17 tests. Now the lint/format gate commands.
+
+My files are clean (0/5 format). The whole-tree gate flags one **pre-existing** file in another surface's dir (`feature-views/ActionBuilder.Previews.swift`) — outside my allowed scope, not mine. Let me confirm that and run SwiftLint.
+
+Confirmed: that file is a pre-existing unrelated surface (committed in `87160b08`), untouched by me. My 5 files: **0 SwiftLint violations**. Now the placeholder gate and the whole-tree swiftlint.
+
+Placeholder gate: **COUNT=0, EXIT=0**. The whole-tree swiftlint shows 1 pre-existing violation — but my dir isn't in `.swiftlint.yml`'s `included`, so it's another surface's file. Let me identify it to document honestly.
+
+Placeholder **COUNT=0**. The 1 whole-tree swiftlint violation is in the **sibling** `LifetimeStatsWidget.Adapter.swift` (surface 0055), not mine — my 5 files are lint-clean. Let me gather concrete deferral evidence and verify my public symbols don't collide with existing app types (clean integration).
+
+All deferral evidence is concrete, and **all 14 of my public symbols have zero collisions** with the existing app target (clean integration). Let me capture tool versions and clean up the temp harness, then write the gate log.
+
+Now writing the gate log with all real evidence.
+
+Log written. Let me do a final consolidated green-run of the per-surface gates (post-format) and a quick review of the formatted adapter, then commit.
+
+All final per-surface gates green (format 0/5, lint 0 violations, placeholder COUNT=0). Let me confirm the git working tree contains only my intended changes, then commit.
+
+There are **pre-existing unrelated working-tree changes** (AIUsageCard.* and two web `.tsx` files) that I did not touch — they were dirty before my session. I'll stage **only** my six files plus the log, leaving those untouched.
+
+Staged set is exactly my 6 files + the log. Committing.
+
+Committed cleanly as `b6e9f136b` — exactly my 6 surface files + the log (1156 insertions), with the pre-existing unrelated changes left untouched. Final integrity check and todo close-out.
+
+Task complete. The commit contains exactly my 6 `WidgetStatGrid.*` files + the gate log; the pre-existing unrelated working-tree changes were left untouched.
+

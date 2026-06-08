@@ -1,0 +1,116 @@
+I'll start by exploring the environment and the codebase to understand what I'm working with.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. However `swift`, `swiftlint`, `swiftformat`, and `pwsh` ARE available. Let me explore the web source and existing Apple patterns before deciding on approach.
+
+I have the web source. Now let me study the existing Apple feature-view patterns. There's a clear naming convention (`.Adapter`, `.Model`, `.Previews`). Let me find a map-based reference and check for existing TripReplayMap files.
+
+No existing TripReplayMap and no MapKit usage yet in feature-views. Let me look at the broader Apple sources for map components, state holders, tokens, i18n, and diagnostics, plus study a complete reference feature-view.
+
+`Sources` is at `apps/apple/Sources`. MapKit is used in dashboard-widgets. Let me explore the shared layers and the MapKit reference patterns.
+
+Excellent reference. Now I understand the token/i18n/model patterns. `LocationMapWidget` is a dashboard widget, but `TripReplayMap` is a feature-view (different file convention). Let me study a complete feature-view file set and the shared Maps/Feedback components.
+
+Now I clearly understand the canonical feature-view structure. Let me read the rest of the reference set and the shared Maps/Feedback components in parallel.
+
+Let me read the shared Maps/Feedback components, the remaining reference files, and the web geo lib + DrivePosition type.
+
+Now let me read the test/preview/strings reference files, the web geo lib, the DrivePosition type, and project.yml to understand build inclusion.
+
+I now have the full feature-view pattern. Critical detail: the web component is presentational (props: positions, currentIndex, onSeekToIndex). Let me verify the SDK/toolchain capability and read the remaining tokens/feedback references plus check for existing `replay.map.*` i18n usage.
+
+Major finding: **SwiftUI, MapKit, Charts all compile against the CommandLineTools SDK (probe passed, EXIT=0)** — so I can do real `swiftc -typecheck` verification and run pure-logic tests via SPM, even though full `xcodebuild` (needs Xcode + simulators) is unavailable. Let me read the design tokens, Feedback states, placeholder checker, and project.yml.
+
+Let me read the design token definitions, the placeholder checker, project.yml build inclusion, and the LocationMapWidget supporting files (closest MapKit reference).
+
+The feature-views dir is wholly included in both app targets. I must not edit any registry (only `TripReplayMap.*` allowed). Let me read the full project.yml (especially how `.Tests.swift` files route to the test target vs app target) and locate the design tokens.
+
+The test wiring (`*.Tests.swift` in feature-views) is an "integration-time" concern handled the same way for the accepted `DriveOverviewChart`. Let me confirm the xcodegen exclude mechanism and read the design tokens, then start building.
+
+Let me grab the remaining type definitions I'll reference: `TSTone`, `TSSkeleton`, and `MeasurementSystem`.
+
+I have everything needed. Let me check the lint/format configs to ensure compliance, then start building.
+
+I now have a complete understanding of the conventions, tokens, shared components, and constraints. Let me set up a plan and record it, then build the pure logic layers first (TDD-style), verify them, then the view layers.
+
+Now let me create the pure value types (Adapter).
+
+Now the pure projection core (geo helpers + segment building + phase + accessibility).
+
+Now the Model (P1/S8 source seam + `@Observable` state holder + P1/S10 strings facade + P1/S11 telemetry).
+
+Let me move the `surfaceSlug` extension out of the Model (so the model stays view-independent and pure-testable) — I'll place it in the main view file instead.
+
+Now the test suite (projection + model + accessibility) — written to run headless in an SPM harness.
+
+Now let me verify the pure logic + model + tests actually compile and pass by running them in a throwaway SwiftPM harness (library module named `TeslaSync` so `@testable import TeslaSync` resolves), before writing the view layer.
+
+The compile is running (first build resolves the toolchain). Let me wait for it.
+
+Two issues: XCTest isn't available under CommandLineTools SwiftPM, and the library module emit failed (a real source error hidden by the truncation). Let me build just the library to surface the real error, and check XCTest availability.
+
+The library (Adapter + Projection + Model) **compiles cleanly**. XCTest is unavailable under CommandLineTools SwiftPM, so I'll add a standalone executable harness that imports the compiled module and executes the same assertions to get real green evidence.
+
+Those are type-inference issues in the throwaway harness only (generic helper + array/enum literals) — my library compiled fine. Let me fix the harness annotations.
+
+Generic inference with bare enum/keypath literals is fragile in the harness. Let me rewrite it with fully explicit types.
+
+Need a telemetry spy in the harness. Let me add one and re-run.
+
+All **64 harness checks pass (FAILS=0)** — the projection + model + accessibility logic is verified by real execution. Now the view layer. Let me write the chrome sub-views.
+
+Now the MapKit canvas (speed-coloured polyline, pins, heading playhead, tap-to-seek, camera fit).
+
+Now the entrypoint view (phase switch + overlay composition) and the `surfaceSlug`.
+
+Now the per-state previews.
+
+Now the i18n strings catalog (table `TripReplayMap`).
+
+Let me fix the tap gesture API (it needs the coordinate-space overload to receive the tap location), then verify all view files typecheck by extending the harness with the minimal shared-dependency closure.
+
+The Tokens path was wrong and `Skeletons.swift` drags in more components. Let me include the whole shared component + design library (the leaf UI closure the app compiles) with the correct token path.
+
+No collisions. Let me copy the 42 shared component/design files into the harness and typecheck everything together.
+
+Most of the library compiled, but two blockers are **environmental, not mine**: the `#Preview` macro needs Xcode's `PreviewsMacros` plugin (unavailable under CLT), and an unrelated shared file (`UnitFormatters.swift`) has a pre-existing quirk. This confirms why the gate needs xcodebuild. Let me typecheck my view files cleanly against the **real** design tokens plus faithful shims (exact signatures) of the two helper symbols, excluding the macro-only Previews file.
+
+The view layer compiles cleanly. Now let me verify the Previews file's content (transforming the Xcode-only `#Preview` macro into equivalent functions so the bodies still typecheck).
+
+The transformed previews need to `import TeslaSync` (now a separate module). Let me add it and rebuild.
+
+Previews content typechecks. Let me re-run the execution harness to confirm the logic still passes with the full module compiled, then move to the formatting/lint/placeholder gates on the real files.
+
+Harness still green (64/64). swiftformat flagged 2 redundant `@ViewBuilder` attributes. Let me auto-format all my files, then re-lint to confirm clean.
+
+swiftformat clean (0/8). Now swiftlint `--strict` on my files, and re-verify compilation after formatting (re-sync into harness + rebuild).
+
+swiftlint: **0 violations in 8 files**. Harness recompiles clean after formatting. Now the placeholder gate — let me inspect how it resolves the path prefix, then run it as the gate specifies.
+
+The gate's `-Path .../TripReplayMap` is a path *prefix*, not a real file — `Test-Path` would treat it as empty (a false clean). To verify honestly, I'll (a) run the literal gate command, (b) run a meaningful scan over a staging dir holding exactly my files, and (c) grep directly for forbidden patterns.
+
+All placeholder checks: **0 violations**. Now let me verify i18n key parity — every `replay.map.*` key referenced in Swift must exist in the `.strings` catalog (and vice-versa).
+
+**i18n parity: perfect** — 31 keys referenced, 31 defined, zero missing/unused (including the 3 web-source keys). Let me check the log directory and gather final line counts for the log.
+
+Let me look at a sibling completed feature-view log to match the expected log structure.
+
+The accepted sibling `DriveOverviewChart` log shows the reference host **had Xcode at /Applications/Xcode.app** (driven via `DEVELOPER_DIR`), ran **executed XCTest via `swift test`**, typechecked **both SDKs**, and only *deferred* the full xcodebuild app build (Shared.xcframework unstaged). Predecessor parity (Honesty rule 7) means I must match that. Let me check if Xcode is actually available here.
+
+**Xcode 26.5 IS available** (via `DEVELOPER_DIR`), with a booted iPhone 16 simulator — I just needed the override, exactly as the accepted predecessor did. This unlocks real XCTest execution + both-SDK typecheck. Let me build a faithful package with the **real** shared component library + my files and run my actual XCTest suite under the Xcode toolchain.
+
+`UnitFormatters.swift` (a chart component I don't use) depends on an app-level `Units` facade outside the component closure. My views don't need it. Let me include only the **real** shared files my views transitively require, then run the real XCTest suite.
+
+The component library is densely interconnected; curating piecemeal is the rabbit hole. Let me instead include the **entire** Components+Design library and add just the missing app-level facade files (`Units`) that a couple of chart files need. Let me inspect those facade deps.
+
+Only `UnitFormatters.swift` reaches the unstaged `Shared.xcframework` (KMP) — the exact dependency the predecessor deferred (ADR-004). My views don't use it. Let me include the whole real library **minus** that one file, then build + run the real XCTest suite.
+
+The **full real shared library + my views compiles cleanly** on the macOS SDK under the Xcode toolchain. Now let me run my **actual XCTest suite** via `swift test`.
+
+**Real XCTest suite: 36 tests, 0 failures** under the Xcode toolchain (macOS host) — matching the predecessor methodology. The library build also compiled my `#Preview` file via the real macro plugin. Now the **iOS-18 Simulator SDK** typecheck (the second SDK the predecessor proved).
+
+**Both SDKs verified**: macOS-15 (`swift build` + `swift test` 36/36) and iOS-18 simulator (whole-module typecheck clean). Now let me check the full-app `xcodebuild` gate — specifically the `Shared.xcframework` dependency the predecessor deferred — and attempt it honestly.
+
+`Shared.xcframework` is unstaged and requires a heavy KMP/Gradle build — the exact infra dependency the predecessor deferred (out of my allowed file scope too). My surface uses none of it. Let me read the documented pending-verifications record, then prove project integrity via `xcodegen generate` and make an honest bounded `xcodebuild` attempt.
+
+This is the established, accepted pattern: the `macos-pending-verifications.md` shows sibling surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) all defer the full-app `xcodebuild build test` for the **same pre-existing, unrelated** reasons (unstaged `Shared.xcframework`, `DashboardWidgetSize` redefined 15×, 100+ co-located `*.Tests.swift` importing XCTest into the app target, dev-signing) — while verifying the surface green via SwiftPM + executed XCTest + both-SDK typecheck + lint/format/placeholder. Let me prove project integration via `xcodegen generate` and independently confirm the pre-existing blockers (without the out-of-scope KMP build).
+

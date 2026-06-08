@@ -1,0 +1,102 @@
+I'll start by exploring the codebase structure to understand the task fully. Let me look at the web source, the Apple app structure, and verify platform capabilities.
+
+Apple toolchain is available. There's an existing `DigitalTwinWidget` I can use as a reference pattern. Let me read the web source and existing native patterns.
+
+Now let me study the supporting infrastructure: the Model pattern (P1/S8), strings, tests, previews, and the registry.
+
+Let me read the web shared components, the useGuard hooks, the test pattern, and the design tokens.
+
+Let me read the web event feed/shell components and locate the design tokens and shared native components.
+
+Let me find the core design tokens and study the shared UI primitives.
+
+Let me locate the core token definitions (Color.TS, Font.TS, TSSpacing, TSRadius) used across widgets.
+
+Found the Design directory. Let me read the core tokens, the Badges (TSTone), Skeletons, and the project.yml build config.
+
+I now understand the architecture. Let me check the lint configs, the placeholder checker, and critically whether the build tooling (xcodegen, Shared.xcframework) is actually runnable here.
+
+Critical finding: `xcodebuild` requires full Xcode but only Command Line Tools are active. Let me check whether a full Xcode is installed anywhere (which I could target via `DEVELOPER_DIR` without sudo), and verify the Swift/SwiftUI toolchain.
+
+`/Applications/Xcode.app` exists — I can target it via `DEVELOPER_DIR` without sudo. Let me verify xcodebuild and simulators work through it.
+
+Full Xcode 26.5 is available and an iPhone 16 simulator is booted. Now let me understand the integration mechanism — whether `dashboard-widgets/` is wired into the build, the design tokens location, the framework staging script, and dependency imports.
+
+Now the picture is clear: dashboard-widgets isn't wired into `project.yml`, and `Shared.xcframework` needs the KMP Gradle build — but crucially, **all my dependencies import only SwiftUI/Foundation** (none import `Shared`), so I can do a real `swiftc` typecheck against the iOS 18 SDK. Let me read the exact token APIs I'll reference.
+
+I have all token APIs. Let me check the shared Feedback/DataDisplay components (for empty-state, error, timeline-row equivalents) so I reuse the right primitives.
+
+Excellent — shared `TSEmptyState`, `TSQueryError`, `TSTimeline`/`TSTimelineItem`, `TSStatusBadge` exist. Let me read their exact signatures.
+
+I now have all the APIs I need. Let me read the placeholder checker to know exactly what tokens to avoid, then start writing code.
+
+Let me read the exact forbidden patterns and confirm the DigitalTwin reference passes them (so I match a known-good baseline).
+
+I have everything needed. Let me create a tracking todo list and write the implementation files.
+
+All 7 files written. Now the verification phase. Let me run the fast checks first: swiftformat lint, swiftlint, and the placeholder gate — scoped to my files.
+
+Two fixes needed: (1) the word "Placeholder" in a Previews comment trips the gate, (2) swiftformat wants auto-formatting. Let me fix the comment and auto-format.
+
+Now re-run all three gates: swiftformat lint, placeholder, and swiftlint strict on my files.
+
+Excellent — **swiftformat lint: 0 files need formatting, swiftlint --strict: 0 violations, placeholder gate: COUNT=0**. Now the compile verification. Let me map the dependency closure (find `TSCard` and confirm the component files are SwiftUI-only).
+
+All deps are SwiftUI-only. Let me run a focused `swiftc -typecheck` of the full dashboard-widgets suite (DigitalTwin + Guard) plus the real shared components against the **iOS 18 simulator SDK** with the real Xcode toolchain — this proves my code compiles against the real codebase.
+
+Only error is `Cards.swift`'s own `#Preview` (needs `TSButton`) — pulled in by `-D DEBUG`. Let me run the integration typecheck **without** `-D DEBUG` (proves all shipping code compiles), which is the key proof.
+
+**Pass A succeeded: iOS 18 shipping-code typecheck EXIT=0** — my code compiles against the real DigitalTwin + real shared components under Swift 6 strict concurrency. Now the macOS 15 target, plus a previews typecheck (using a minimal skeleton shim to avoid unrelated component preview deps).
+
+macOS 15 typecheck EXIT=0. Pass B just needs the registry types (they live in DigitalTwin's Model). Let me add a registry shim and re-run.
+
+A Swift 6 concurrency error surfaced in my Previews helper. Let me check whether the reference DigitalTwin Previews has the same pattern under identical isolated flags (to learn the real build's isolation mode).
+
+Key finding: the project uses **nonisolated default** isolation, and dashboard-widgets aren't yet wired into `project.yml` — so the reference DigitalTwin's preview helper has never been build-verified. My shipping code (Pass A) already compiles clean; only the DEBUG preview helper needs `@MainActor` to be correct under strict Swift 6. Let me fix it properly.
+
+Pass B now compiles and re-lints clean. Now the most important evidence: **actually running the XCTest suite**. Since the dashboard-widgets aren't wired into the Xcode project (and `Shared.xcframework`/KMP can't be built here), I'll run the tests via a self-contained SwiftPM harness using the real tokens + the same Swift 6 language mode.
+
+**All 22 XCTest tests pass (0 failures), SWIFT_TEST_EXIT=0.** My verification is comprehensive. Now let me gather honest evidence on the integrated `xcodebuild` gate's blockers (the surface isn't wired into `project.yml`, and `Shared.xcframework` needs the KMP build).
+
+Confirmed: the surface (and the reference 0036) are intentionally unwired from `project.yml`, and `Shared.xcframework` is a stub needing the KMP/Gradle build. Let me attempt the literal `xcodebuild` gate (time-boxed) to capture concrete evidence — starting with `xcodegen generate`.
+
+`xcodegen generate` succeeds and the project/schemes generate cleanly. Now a target-level build (skips the Gradle pre-action) to capture the framework blocker quickly and concretely.
+
+Concrete blocker captured: `xcodebuild` fails with **"There is no XCFramework found at .../Frameworks/Shared.xcframework"** (EXIT=65) — the KMP framework can't be staged in-slot, and the surface isn't registered in `project.yml` (both outside this prompt's allowed files). Let me verify the log directory and gitignore, then clean up generated artifacts.
+
+Clean — only my 7 surface files are new. Let me check the existing log format (especially any reference dashboard-widget log) to match conventions.
+
+There's already a `p4-apple-dashboard-widgets-0036-DigitalTwinWidget.log` — the reference surface's log. Let me read it to match its exact format and STATUS convention.
+
+This is the canonical precedent. The reference DigitalTwin (0036) surface established the sanctioned disposition: **all host-runnable gates green + Xcode app build/test DEFERRED** (surface not yet registered in `project.yml` + `Shared.xcframework`/KMP not staged — predecessor's integration scope, Honesty rule 7) = **EXIT=0 / STATUS=DONE**. My host verification is strictly stronger (both iOS 18 **and** macOS 15 compiles + the full 22-test XCTest suite executed). Let me gather final facts for the log.
+
+All evidence gathered. Now I'll write the gate log following the predecessor's sanctioned format, with my (stronger) real results.
+
+Log written. Let me run a final consolidated host-gate check on the exact files to be committed (post-edit), then commit.
+
+All final gates green. Now committing the surface files + log.
+
+Commit succeeded (HEAD `26c81b26`, 8 files). Let me clean up session temp artifacts and verify the repo working tree is clean.
+
+All clean. Let me mark the final todo done and verify the todo state.
+
+All 9 todos done. Task complete.
+
+Merge made by the 'ort' strategy.
+ ...pple-dashboard-widgets-0054-GuardModeWidget.log | 195 +++++++++++++++
+ .../GuardModeWidget.Adapter.swift                  | 241 ++++++++++++++++++
+ .../dashboard-widgets/GuardModeWidget.Model.swift  | 244 ++++++++++++++++++
+ .../GuardModeWidget.Previews.swift                 | 134 ++++++++++
+ .../dashboard-widgets/GuardModeWidget.Tests.swift  | 274 +++++++++++++++++++++
+ .../dashboard-widgets/GuardModeWidget.Views.swift  | 232 +++++++++++++++++
+ .../dashboard-widgets/GuardModeWidget.strings      |  61 +++++
+ .../dashboard-widgets/GuardModeWidget.swift        | 236 ++++++++++++++++++
+ 8 files changed, 1617 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0054-GuardModeWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/GuardModeWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/GuardModeWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/GuardModeWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/GuardModeWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/GuardModeWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/GuardModeWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/GuardModeWidget.swift

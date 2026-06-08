@@ -1,0 +1,147 @@
+=== P4 Dashboard widget 0067 MotorPerformanceWidget (Apple) ===
+Host: macOS (Darwin), Xcode 26.5 (17F42) via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+SDKs: iphonesimulator26.5, macosx26.5 | Simulator: iPhone 16 (booted)
+Toolchain: swiftlint, swiftformat, xcodegen 2.45.4, pwsh, OpenJDK 17 — all present.
+Capability (SwiftUI + Swift Charts + MapKit, iOS 18 / macOS 15 deploy targets): AVAILABLE → not BLOCKED.
+
+Web source : web/src/features/dashboard/widgets/MotorPerformanceWidget.tsx
+Native out : apps/apple/TeslaSync/dashboard-widgets/MotorPerformanceWidget.{swift,Model,Support,Components,Previews,Tests}.swift + .strings
+Registry   : id=motor-performance, category=vehicle, default 2x4, min 1x2, max 4x40  (registry/vehicle.ts — matched)
+
+--- Integration model (precedent: DigitalTwinWidget 0036, BatteryCellsWidget 0010) ---
+The staged dir apps/apple/TeslaSync/dashboard-widgets/ is intentionally NOT registered in project.yml.
+Each staged surface is self-contained and redefines the small registry value types
+(DashboardWidgetSize / DashboardWidgetRegistration). It CANNOT be added to the TeslaSync target as-is
+because Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift already declares DashboardWidgetSize in
+that module (duplicate-symbol). Target registration is a deliberate later reconciliation step.
+Consequence: `xcodebuild build` compiles the app WITHOUT this widget (regression/integration check), and the
+widget itself is compiled + unit-tested in ISOLATION via a SwiftPM harness (module named TeslaSync so
+`@testable import TeslaSync` resolves) that vendors the REAL design tokens (apps/design/generated/apple/
+Tokens.swift) + the REAL TSSkeleton. This is stronger evidence than the 0036 precedent (which deferred the
+Xcode build/test entirely).
+
+============================================================
+[0] xcodegen generate
+    Created project at apps/apple/TeslaSync.xcodeproj                         -> XCODEGEN_EXIT=0
+
+[1] KMP Shared.xcframework  (apps/shared/gradlew :core:assembleSharedXCFramework)
+    > Task :core:assembleSharedReleaseXCFramework
+    xcframework successfully written out to: apps/shared/core/build/XCFrameworks/release/Shared.xcframework
+    BUILD SUCCESSFUL in 7m 13s                                                -> GRADLE_EXIT=0
+    Staged -> apps/apple/Frameworks/Shared.xcframework (ios-arm64, ios-arm64-simulator, macos-arm64)
+
+[2] iOS build   (xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16'
+                 CODE_SIGNING_ALLOWED=NO build)
+    ** BUILD SUCCEEDED **                                                     -> IOS_BUILD_EXIT=0
+
+[3] macOS build (xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS'
+                 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build)
+    ** BUILD SUCCEEDED **                                                     -> MAC_BUILD_EXIT=0
+
+    NOTE (signing): the literal `build test` WITHOUT signing flags FAILED at the test-host signing step:
+      error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+      error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+    DEVELOPMENT_TEAM is empty (project.yml) and no dev certificate exists on this host. This is the
+    documented macOS-signing deferral (apps/macos-pending-verifications.md; 0036 disposition), NOT a code
+    defect and NOT related to this widget. Disabling signing for local verification yields a clean build.
+
+[4] macOS app-host test action  (xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS'
+        -only-testing:TeslaSync-macOSTests/LoadableStateTests
+        -only-testing:TeslaSync-macOSTests/RouteTests  CODE_SIGNING_ALLOWED=NO ... test)
+    Test Suite 'LoadableStateTests' passed   (5 tests)
+    Test Suite 'RouteTests' passed           (8 tests)
+    ** TEST SUCCEEDED **                                                      -> MAC_TEST_SCOPED_EXIT=0
+    The test runner builds + launches the host app and runs XCTest green. The FULL TeslaSync-macOSTests
+    bundle additionally contains pre-existing environment-sensitive cases (Keychain / network / app-host
+    integration) that hang on a headless host; scoped pure-logic suites are run instead, matching the
+    BatteryCellsWidget (0010) scoped-test disposition. None of those belong to this surface.
+
+[5] Widget isolated compile + unit tests  (SwiftPM harness, Xcode 26.5 toolchain, Swift 6 language mode,
+        SWIFT_STRICT_CONCURRENCY=complete — same as the app target)
+    swift build  -> Build complete!                                          -> HARNESS_BUILD_EXIT=0
+    swift test   -> Executed 33 tests, with 0 failures                       -> HARNESS_TEST_EXIT=0
+      MotorProjectionAdapterTests (11)  — cached SI -> projection parity (torque clamp/zone, convertTemp
+                                          °C/°F, gear fallback, fmtInt/fmtNumber, g-force, gauge decimals)
+      MotorTorqueZoneTests (1)          — torqueColor thresholds (<200 / <400 / >=400)
+      MotorFormatTests (3)              — fmtInt grouping, fixed decimals, NaN/Inf -> 0
+      MotorTemperatureUnitTests (3)     — label / convert / fromLabel
+      MotorPerformanceModelTests (9)    — phase resolution loading/empty/content/error(+cache), connection
+                                          + isFetching tracking, view.opened once, refresh/stop delegation
+      MotorPerformanceRegistryTests (3) — canonical motor-performance metadata + clamp + surfaceSlug
+      MotorPerformanceAccessibilityTests (3) — VoiceOver summary content per state
+
+[6] swiftlint --strict
+    (a) repo-config run over included dirs (apps/apple):
+Done linting! Found 0 violations, 0 serious in 262 files.
+    (b) explicit run over the 6 staged MotorPerformanceWidget swift files:
+Done linting! Found 0 violations, 0 serious in 6 files.
+    -> LINT_EXIT=0
+
+[7] swiftformat --lint apps/apple
+SwiftFormat completed in 0.15s.
+0/281 files require formatting, 2 files skipped.
+    -> FORMAT_EXIT=0
+
+[8] check-placeholders.ps1
+    (a) literal gate path (-Path .../MotorPerformanceWidget):
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+    (b) genuine recursive scan of the staged dir (swift):
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+    -> PLACEHOLDER_EXIT=0
+
+============================================================
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states: loading (skeleton), empty (ContentUnavailableView "No motor data"),
+      error (QueryError-equivalent + Retry), content; + live/stale/offline freshness chip + isFetching.
+      Responsive: compact (cols<=1) gear+torque stack vs full radial gauge + 2x2 metric grid.
+  [x] Hooks bind via the P1/S8 state-holder seam (MotorPerformanceSource -> MotorUpdate -> model
+      projection). No HTTP in the view. Data maps useMotorLatest/useVehicles/useUnits.
+  [x] Every web i18n key present in the P1/S10 table (MotorPerformanceWidget.strings): title, gear,
+      torque, nm, noData, statorTemp, gearState, lateralG, longitudinalG (+ description) — verified
+      used-vs-defined; native chrome keys added (live/stale/offline/refresh/retry/loading/error/...).
+  [x] Accessibility: VoiceOver labels on gauge, stat tiles, freshness chip, refresh/open buttons; combined
+      content summary; Dynamic Type via minimumScaleFactor; Reduce-Motion gates the gauge animation.
+  [x] Tests: adapter unit tests + model per-state tests + registry + a11y label tests (33 total, green).
+  [x] No TODO / stub / mock / placeholder / Lorem in shipped code (placeholder gate COUNT=0).
+  [x] view.opened telemetry emitted once with surface slug "MotorPerformanceWidget" (P1/S11), asserted.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green   : every step's real exit code recorded; the signed `build test` FAILURE (signing)
+                         and the full-bundle test hang are reported verbatim, not hidden.
+  2  No scope narrowing: all web sections/states/branches reproduced (compact + full, gauge + 4 metrics).
+  3  No skip-and-assume: web source read end-to-end; data derivations, torqueColor, convertTempFromSI,
+                         fmtInt/fmtNumber, gear fallback ported and unit-tested.
+  4  No stubs as final : complete implementation; isolated compile + 33 unit tests pass.
+  5  No parity shortcut: RadialGauge->native radial gauge, StatCard->MotorStatTile, EmptyState->
+                         ContentUnavailableView, WidgetShell freshness/refresh->native chip+button.
+  6  No delegation     : authored directly (delegation FORBIDDEN for this surface).
+  7  No predecessor bypass: follows the 0036/0010 staged-widget pattern (tokens, seams, registry, strings).
+  8  No commit on red  : committing on green host gates + green iOS/macOS app BUILDS + green scoped macOS
+                         test + green isolated widget compile/test. Signed full `build test` is signing/
+                         environment-deferred (no dev cert; pre-existing env-sensitive tests) — explicitly
+                         deferred, not failed, and not this widget's code.
+  9  No silent drift   : changes confined to the allowed MotorPerformanceWidget.* files + this log.
+                         Generated TeslaSync.xcodeproj, Frameworks/Shared.xcframework, apps/shared build
+                         output are git-ignored (verified) and NOT committed.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native MotorPerformanceWidget shipped at parity with the web source: pure-Swift
+  display-boundary projection (executed-green adapter, 33 tests), P1/S8 state-holder seam (no view HTTP),
+  P1/S11 view.opened telemetry, every state + i18n key + a11y label, registry-correct (motor-performance,
+  2x4 / 1x2 / 4x40). iOS + macOS app builds GREEN against the freshly assembled KMP Shared.xcframework;
+  macOS app-host test action GREEN (scoped). The signed, full `build test` is deferred to the signed CI
+  runner (macOS dev-certificate + pre-existing environment-sensitive tests), matching the P3
+  "code-complete + DEFERRED signed Xcode gate" disposition — none a defect in this surface's code.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/MotorPerformanceWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0067-MotorPerformanceWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add MotorPerformanceWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

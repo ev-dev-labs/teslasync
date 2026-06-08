@@ -1,0 +1,119 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is largely present (swift 6.3.2, swiftlint, swiftformat). Let me verify xcodebuild and explore the existing structure.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed — so `xcodebuild build test` cannot run. However, `swift`, `swiftlint`, and `swiftformat` are available. There's an existing `dashboard-widgets/` dir with 146 entries. Let me explore the existing patterns thoroughly.
+
+`VersionInfoWidget` does not exist yet. The pattern is multi-file per widget (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`). Let me see the full list and find the best sibling template — a system-category, no-chart widget.
+
+`MQTTStatusWidget` is the ideal sibling: same `system` category, same 2×2/min-1×2 sizing, status+stats based. Let me read it completely as my template.
+
+Excellent, comprehensive pattern. Let me read the remaining template files plus the design tokens.
+
+I have the full pattern. Now let me locate the design token definitions and the test harness setup, since `xcodebuild` is unavailable and the comments mention a "swiftc host gate".
+
+Now let me read the web hooks for exact data shapes, the TSSkeleton component, and the web shared widget components I need to map.
+
+Let me read the exact web type definitions for `VersionInfo` and `CaptureStats`, plus the hooks.
+
+Now let me read the web `WidgetShell` and `shared` (WidgetStatGrid) for parity, and check how tests run without a simulator (host harness / Package.swift).
+
+Let me verify how shared types like `DashboardWidgetSize`/`DashboardWidgetRegistration` are handled across widgets (to avoid duplicate symbol conflicts), and confirm the i18n/telemetry seam conventions.
+
+Four files each define `DashboardWidgetSize`/`DashboardWidgetRegistration`. Let me inspect how they avoid clashing (likely `private`/namespaced), since my allowed-files scope is `VersionInfoWidget.*` only.
+
+Four widgets re-declare the registry primitives — this is the established per-surface self-contained convention (my template MQTT is one of them, and my allowed-files scope forbids shared files). I'll follow the MQTT template exactly. Let me check the lint/format configs and deployment targets to match style precisely.
+
+Let me confirm the exact `version-info` registry entry and check for `pwsh` (the placeholder gate is a `.ps1`).
+
+`pwsh` is available and the registry entry matches exactly. `xcodebuild` needs full Xcode (only CLT present) so the build/test gate cannot run — but let me probe whether I can at least `swiftc -typecheck` SwiftUI against the CLT SDK, to verify my code compiles for real.
+
+SwiftUI type-checking works against the CLT SDK (targeting macOS 15)! So I can verify my surface compiles for real even without full Xcode. Let me map the minimal real dependency closure (TSSkeleton → TSCard, etc.) for an isolated typecheck.
+
+Dependency closure is shallow (TSCard depends only on tokens). I have everything needed. Let me set up tracking and verify the log directory exists.
+
+Log dir exists. Let me write the plan and create the foundation files (Projection, Model, strings).
+
+Now the Model file (state-holder seam + registry primitives + SwiftUI i18n half).
+
+Now the strings catalog.
+
+Now let me quickly check the web `KVList` and `Badge` components to map their styling faithfully, then write the Components file.
+
+KVList = divided label/value rows; neutral Badge = subtle gray pill. Now the Components file.
+
+Now the main SwiftUI view.
+
+Now the Previews and Tests files.
+
+Now the comprehensive XCTest suite.
+
+All 7 files created. Now let me verify they compile. First, the SwiftUI surface typecheck against the real token dependency closure.
+
+Cards.swift cascades into Typography components. Let me add the real Typography file and retry (keeping the closure real rather than shimming).
+
+SwiftUI surface type-checks cleanly (EXIT=0). Now let me build a host harness that compiles and **executes** the Foundation-only adapter (cached → projection) to prove it works at runtime without a simulator.
+
+Adapter compiles and **executes green** — all 19 runtime checks pass. Now let me run the style gates: swiftformat and swiftlint on my files.
+
+Let me auto-format my files (write mode) to fix these, then re-verify.
+
+Format passes now. Let me re-typecheck (ensure formatting didn't break anything) and run swiftlint.
+
+Typecheck clean, swiftlint **0 violations**. Now the placeholder gate via `pwsh`. Let me inspect how it resolves `-Path` then run it.
+
+The gate passes a path *prefix* (no extension). Let me run it exactly as specified, then independently verify my files are placeholder-free.
+
+Let me independently verify my files are genuinely placeholder-free (the gate's prefix path may scan vacuously) by grepping for every forbidden pattern.
+
+My files are clean. Let me confirm the gate non-vacuously scans my files by running a directory scan from the repo root.
+
+Placeholder gate is non-vacuously clean. Now let me capture the **real** `xcodebuild` failure evidence (for an honest BLOCKED record), and check whether the xcodeproj even exists (it's xcodegen-generated).
+
+`xcodebuild` is genuinely unavailable (CLT-only, no Xcode, no `simctl`) — that's the platform-capability evidence. My code passes every runnable check. Let me capture what the full-tree lint/format gates actually produce (the gate runs them tree-wide), to report honestly.
+
+Full-tree swiftformat passes (0/411). Now the full-tree `swiftlint --strict` (gate command).
+
+Full-tree swiftlint found 1 violation — my scoped run was clean, so it's pre-existing. Let me confirm it's not in my files.
+
+Confirmed: the lone tree-wide lint violation is in `LifetimeStatsWidget.Adapter.swift` (a different surface, **0** in my files) — pre-existing and outside my allowed-files scope. 
+
+Summary of verification on this runner:
+- **xcodebuild build+test**: BLOCKED — CLT-only, no Xcode, no `simctl` (platform capability).
+- **swiftc -typecheck** (full SwiftUI surface): EXIT=0 ✅
+- **adapter host-harness** (cached→projection, executed): 19/19 PASS ✅
+- **swiftlint --strict** (my files): 0 violations ✅
+- **swiftformat --lint** (tree-wide): 0/411 ✅
+- **placeholder gate**: 0 ✅
+
+Now let me write the honest gate log.
+
+Log written. Let me do a final consolidated verification (post-format) and a quick visual check of the reformatted sections before committing.
+
+The glob `*.*.swift` excluded the main `VersionInfoWidget.swift` (no middle segment). It's covered by the typecheck, but let me explicitly lint/format it to be 100% sure.
+
+All checks green. Let me clean up the temp harness, update tracking, and commit exactly the allowed files (my 7 surface files + the log), being careful not to stage the 2 pre-existing unrelated web changes.
+
+Exactly the 8 allowed files staged; the 2 pre-existing web changes remain untouched. Committing now.
+
+Committed (`0b0282b5`). Let me finalize tracking and confirm the working tree is clean of my changes.
+
+The task is complete. Final summary:
+
+## Delivered: `VersionInfoWidget` (P4 · Apple · 0111)
+
+Shipped a production-polished native SwiftUI surface at parity with `features/dashboard/widgets/VersionInfoWidget.tsx`, following the established `MQTTStatusWidget` multi-file convention. **Committed as `0b0282b5`** (8 files, +1806 lines).
+
+**Files** (`apps/apple/TeslaSync/dashboard-widgets/`):
+- `.Projection.swift` — Foundation adapter (cached→projection), `formatBytes`/fmtNumber/fmtInt, i18n facade, a11y summary
+- `.Model.swift` — P1/S8 state-holder seam + P1/S11 telemetry seam + registry primitives + SwiftUI i18n half
+- `.swift` — the view: header + freshness chip, loading/empty/error(retry)/content, compact vs standard vs wide layouts
+- `.Components.swift` — KV list, SHA badge, stat tiles/grid, OS/Arch row, freshness chip (design-token styled)
+- `.Previews.swift` — 8 states; `.strings` — full i18n catalog; `.Tests.swift` — adapter/format/model/registry/a11y XCTest
+
+**Parity**: every web state + live/stale/offline freshness, KV rows (Version bold / Git SHA mono / …), wide-only OS/Arch line + 4-up stat grid, `version.data`-keyed empty state, no direct HTTP in the view, all i18n keys present, a11y on every interactive element, `view.opened` emitted.
+
+**Verification on this runner (all green)**: `swiftc -typecheck`=0 (full SwiftUI surface against real token/component closure), adapter host-harness **executed 19/19**, scoped `swiftlint --strict`=0, `swiftformat --lint` tree-wide=0/411, placeholder gate=0.
+
+**Gate outcome → `EXIT=1 / STATUS=BLOCKED`** (honestly logged): the two `xcodebuild build test` steps cannot run — the runner has **Command Line Tools only (no Xcode, no iOS Simulator/`simctl`)**, which the prompt explicitly sanctions as a BLOCKED capability outcome. The tree-wide swiftlint is additionally red solely from a pre-existing **out-of-scope sibling** (`LifetimeStatsWidget.Adapter.swift`) that the allowed-files constraint forbids modifying. My surface itself passes every runnable check; the 2 pre-existing unrelated web changes were left untouched.
+

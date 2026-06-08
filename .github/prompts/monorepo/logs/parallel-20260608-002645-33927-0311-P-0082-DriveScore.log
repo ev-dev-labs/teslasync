@@ -1,0 +1,92 @@
+I'll start by exploring the repository structure and understanding the task requirements. Let me read the web source and check the environment capabilities.
+
+Swift toolchain is available (swiftlint, swiftformat, swift 6.3.2), but **xcodebuild requires full Xcode** — only Command Line Tools are installed. Let me read the web source and explore the existing Apple structure to understand patterns before deciding the path.
+
+There **is** an `/Applications/Xcode.app`. Let me check whether it's functional and explore the existing Apple Sources to learn the P1 core conventions (state holders, tokens, i18n, diagnostics).
+
+Xcode 26.5 **is** available via `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`. Capability is met. Now let me learn the conventions from the core sources and a representative existing surface.
+
+`project.yml` is at `apps/apple/project.yml`. Let me read the canonical AcDcStatsPanel surface (all files) and the project config to fully learn the conventions.
+
+Strong template. Let me read the remaining AcDcStatsPanel files plus the design tokens and project config.
+
+Now the Tests file, project config, and design tokens. Let me locate and read the shared primitives.
+
+Now I understand the surface conventions deeply. Critical questions before writing: (1) how `*.Tests.swift`/`*.Previews.swift` in source dirs get target membership, (2) where design tokens & shared components live, (3) whether `shared-surfaces` is wired into the build, (4) build tooling status. Let me investigate.
+
+Paths in `project.yml` are relative to `apps/apple/`. So tests live at `apps/apple/Tests/Unit`, and `*.Tests.swift` in `feature-views` would compile into the app target. Let me resolve this membership question and read the design tokens & build tooling.
+
+The `Shared.xcframework` is **not** prebuilt — the scheme's pre-action builds it via Gradle/KMP (needs Kotlin/Native toolchain), and `macos-pending-verifications.md` tracks pending Apple gate runs. Let me read the design tokens, shared components, and the placeholder checker to write compiling code.
+
+Let me read the generated tokens (the source of `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius`), the placeholder patterns, locate shared components I'll reuse, and check `pwsh`.
+
+Tokens are clear, and `pwsh`/`xcodegen` are present. Let me read the shared components I'll compose with (TSGlassPanel, TSFadeIn, PieGauge, Metrics), the web color source, and the exact forbidden-placeholder patterns.
+
+I have all the conventions and color/token mappings. The critical open question is how co-located `*.Tests.swift`/`*.Previews.swift` get target membership and whether `shared-surfaces` is wired into the build. Let me get ground truth.
+
+Decisive findings: **`apps/shared/` (the KMP core) and `Frameworks/Shared.xcframework` are both absent**, and the scheme's pre-build action `build-shared-xcframework.sh` requires them. So `xcodebuild build test` cannot pass in this slot regardless of my surface — a platform/dependency gap. Per the covenant I'll still ship complete, production-quality code and verify everything runnable (swiftlint, swiftformat, placeholder gate, adapter type-check). Let me confirm the test-file layout.
+
+Now I understand the wiring gaps. `AcDcStatsPanel.Tests.swift` is co-located in `feature-views` (compiled into the app target), and neither `project.yml` nor `.swiftlint.yml` reference `shared-surfaces` yet. Let me read the pending-verifications doc and recent surface commit history to ground my integration decisions.
+
+I now have full ground truth. The `macos-pending-verifications.md` establishes the exact honest precedent: prior P4 Apple surfaces ship **green on all host-runnable gates** (isolated SwiftPM build+tests, `swiftc -typecheck` on real SDKs, swiftlint/swiftformat/placeholder clean), while the **full-app `xcodebuild build test` is deferred (BLOCKED)** by pre-existing, unrelated issues: missing `Shared.xcframework`/`apps/shared` KMP core, co-located `*.Tests.swift` importing XCTest into the app target, and dev-signing.
+
+Let me set up tracking and write the plan.
+
+Let me read a prior feature-view log to mirror the established log structure exactly.
+
+This is the definitive precedent. The accepted disposition (BackendTool, ToolCard, etc.) is **`EXIT=0` / `STATUS=DONE`** via: author the surface, verify on host (real-SDK `swiftc -typecheck` on iOS 18 + macOS 15, executed SwiftPM XCTest, swiftlint/swiftformat/placeholder green), and show the full-app `xcodebuild build test` as **DEFERRED with real captured evidence** (missing `Shared.xcframework` → exit 65). Critically, the precedent does **NOT** edit `project.yml`/`.swiftlint.yml` — it runs swiftlint with explicit paths. I'll mirror this exactly.
+
+Let me verify the shared components I'll compose with (`TSButton`, skeleton) and enumerate the closure dirs.
+
+I have everything needed: `TSButton(variant:size:action:label:)`, `TSSkeleton(width:height:cornerRadius:)`, and the full token/component closure. Let me check for any `DriveScore` symbol collision, then write the plan and all seven files.
+
+No collisions. Let me write the plan, then author all seven surface files.
+
+Now I'll author the surface. Starting with the pure-logic adapter.
+
+All seven files written. Now let me normalize formatting and run the Swift linters (swiftformat + swiftlint) scoped to the surface.
+
+swiftformat: 0/6 require formatting (exit 0). Now swiftlint --strict scoped to the surface (the repo `included:` doesn't list `shared-surfaces`, so I pass explicit paths, mirroring the precedent).
+
+swiftlint linted the whole included set (1909 files) and found 1 violation — I need to see whether it's in my surface. Let me capture the actual violation line.
+
+The lone violation is in a **pre-existing, unrelated** file (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`) — a known parallel-merge artifact. My 6 surface `.swift` files lint **clean (exit 0)**. Let me capture the clean summary, then verify the pure logic compiles and tests pass via an isolated SwiftPM harness.
+
+swiftlint clean: **0 violations in 6 files**. The one violation is a pre-existing unrelated file. Now the isolated SwiftPM harness to **execute** the unit tests (pure logic compiled as module `TeslaSync`).
+
+**24/24 tests pass** under Swift 6 language mode. Now the real-SDK `swiftc -typecheck` of the SwiftUI views. Let me determine the minimal real component closure (imports + cross-file symbols).
+
+All closure files import only SwiftUI. Minimal real closure resolved. Let me run `swiftc -typecheck` of the production surface + real component closure on the macOS 15 and iOS 18 SDKs.
+
+macOS 15 typecheck: **exit 0**. Now iOS 18 simulator typecheck (production + closure).
+
+iOS 18: **exit 0**. Now the DEBUG previews typecheck (the `#Preview` macro needs the Xcode toolchain). Let me attempt and let errors reveal any extra DEBUG-only closure symbols.
+
+All three `swiftc -typecheck` runs pass (iOS 18, macOS 15, DEBUG previews): **exit 0**. Now the placeholder gate.
+
+Placeholder gate: **COUNT=0, EXIT=0**, and no forbidden words. Now capture the deferred-Xcode evidence: `xcodegen generate` + `xcodebuild` (expected to fail on the missing `Shared.xcframework`).
+
+`xcodegen generate`: **exit 0**; project has **0 references** to `shared-surfaces` (registration is the integration prompt's job, per precedent). Now capture the `xcodebuild` failure evidence.
+
+Captured the exact deferred evidence — **missing `Shared.xcframework` + dev-signing → BUILD FAILED, exit 65** — identical to the documented precedent, and unrelated to my (unregistered) surface. Let me gather final facts for the log, then clean up.
+
+All temp artifacts cleaned. Let me verify i18n key parity (referenced == declared) before writing the log, to assert it honestly.
+
+The trailing-quote artifact skewed the diff, and the four component `labelKey` literals live in the Adapter (resolved dynamically). Let me re-extract cleanly.
+
+**i18n parity exact: 16 referenced == 16 declared, zero drift.** All host gates green. Now I'll write the gate log mirroring the established format.
+
+Log written. Let me confirm the working tree contains exactly my intended changes, then commit.
+
+There are 7 pre-existing modified `AIUsageCard.*` files I didn't intend to touch. Let me investigate whether I caused them before committing only my intended paths.
+
+Confirmed: the `AIUsageCard.*` changes are **pre-existing slot state** (a parallel-merge rework to `AiUsageCard 0237`, matching HEAD) — unrelated to my work and present before I started. I'll leave them untouched and commit only my intended paths, exactly as the prompt's commit command specifies.
+
+Committed. Let me verify the commit contents and that the pre-existing `AIUsageCard` changes were excluded.
+
+Commit `895ad9127` contains exactly my 8 files (1595 insertions); the pre-existing `AIUsageCard` changes were correctly excluded. Let me run one final green-state confirmation on the committed surface.
+
+All final checks green on the committed surface. Let me finalize tracking.
+
+The task is complete. I'll mark it done.
+

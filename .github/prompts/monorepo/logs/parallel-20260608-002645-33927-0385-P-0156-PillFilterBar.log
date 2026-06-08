@@ -1,0 +1,202 @@
+I'll start by exploring the repository structure and reading the key files to understand the task.
+
+Apple toolchain is available. Now let me explore the existing Apple app structure and the `AIUsageCard` template (which is already modified, suggesting it's the established pattern to follow).
+
+No `shared-surfaces` directory exists yet — I'll create it. The `AIUsageCard.*` files are freshly modified, making them the canonical template. Let me study them in full plus the project config.
+
+Let me read these template files individually with the view tool.
+
+Excellent template. Let me read the rest of the template files and the shared infrastructure.
+
+The Views file ends at the empty view, yet the card references connectivity/loading/error views. Let me locate the shared infrastructure (tokens, leaf chrome) and read the remaining template files.
+
+There's an `AiUsageCard.Chrome.swift` file too. Let me find all the AiUsageCard files and locate the design tokens (Color.TS, Font.TS, TSSpacing for the main app).
+
+Found the full decomposition pattern (10 files per surface) and the design tokens in `Sources/Design/TSDesign.swift`. Let me read the remaining template files plus the build config and tokens.
+
+Now let me read the design tokens, previews, tests, adapter tests, and build config.
+
+Now the design tokens, adapter tests, build config, and shared UI primitives.
+
+Key finding: `project.yml` lists `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` as sources, but **not** `TeslaSync/shared-surfaces`. I must verify build capability and the exact token API. Let me check the toolchain and design tokens.
+
+Xcode.app exists but `xcode-select` points to CommandLineTools. Let me try using Xcode via `DEVELOPER_DIR` (no sudo needed) and check the shared-framework build script.
+
+Xcode 26.5, iOS 26.5 simulator (iPhone 16 booted), swiftlint/swiftformat all available. The blocker risk is the KMP `Shared.xcframework` (Gradle). Let me check that toolchain and read the design tokens API.
+
+Excellent — full token API confirmed, Java 17 + gradlew present, Xcode 26.5 with iPhone 16 simulator booted. Now let me read the shared UI primitives I'll reference (to use real APIs) and an existing tab idiom for alignment.
+
+There's an existing `Sources/Components/Forms/Filters.swift` with "PillFilter" and a `macos-pending-verifications.md`. These are critical context. Let me read both.
+
+Now I have complete context. Key findings:
+
+1. **`TSPillFilterBar` already exists** as an *atomic* component (`Sources/Components/Forms/Filters.swift`) — explicitly **out of scope** ("atomic shared components"). My shared-surface is the richer parity binding (icons/counts/accents/disabled, pills/tabs variants, WAI-ARIA keyboard nav, P4 leaf states, state-holder, telemetry, i18n).
+2. **The full `xcodebuild build test` is a documented macOS-pending verification** — 3 precedents (ToolCard, AlertMessageEditor, FSMTimelineChart) verified their surface green via **isolated SwiftPM build + tests + `swiftc -typecheck` + swiftlint/swiftformat/placeholder + `xcodegen generate`**, with the full-app build blocked by pre-existing unrelated collisions. I'll follow this exact methodology.
+
+Let me set up my plan and todos.
+
+Now I'll write all source files. Starting with the pure-logic adapter.
+
+Now the Model file (state-holder seam, telemetry, i18n facade, value types — Foundation/Observation only, SwiftUI-free).
+
+Now the pure projection.
+
+Now the SwiftUI Views file (the controlled parity row + cells + accent mapping + empty state).
+
+Now the Chrome file (freshness chip, refresh, banner, loading skeleton, error — token-only, self-contained).
+
+Now the main surface view that binds the model and renders all phases + chrome.
+
+Now the i18n strings, previews, and the two test files.
+
+Now the two test files — full coverage of projection, model, telemetry, freshness, accessibility, navigation, and view construction.
+
+Let me fix a messy test and write the adapter tests.
+
+All 10 files written. Now let me set up an isolated SwiftPM harness to compile every file and run all tests (the precedent verification method).
+
+All 43 tests pass under Swift 6 strict concurrency — every file (logic + SwiftUI views + previews) compiles. Now swiftformat + swiftlint on my files.
+
+swiftlint scanned the whole repo (config's `included` overrides path args) and found 1 serious violation — I must isolate whether it's mine. First, let me auto-format my files (fixes the 6 long lines), re-run isolated tests, then lint my files in isolation with a path-scoped config.
+
+swiftformat clean. Now re-run isolated tests (verify formatting didn't break anything) and lint my files in isolation with a path-scoped config.
+
+Isolated swiftlint shows my files are clean **except** `Model.swift` is 443 lines (>400 `file_length`). The rest of the repo is clean (that was the single full-repo violation too). I'll split the value types into a new `PillFilterBar.Types.swift` (allowed by the `PillFilterBar.*` glob). Let me view the exact section boundaries.
+
+I'll move the value types into a new `PillFilterBar.Types.swift` (allowed by the glob) and delete that block from `Model.swift`.
+
+Now delete the moved block from `Model.swift` (lines 57–154) and update its header comment.
+
+Model.swift is now 345 lines. Let me add the new Types file to the package and re-verify tests, format, and lint together.
+
+Format + lint + tests all green. Now the cross-platform `swiftc -typecheck` (iOS 18 + macOS 15 SDKs) on the real deliverable files, and check the placeholder tooling.
+
+iOS 18 typecheck clean. Now macOS 15 typecheck and the placeholder gate.
+
+Both SDKs typecheck clean, and `pwsh` is available — I can run the **real** placeholder gate. Let me check the patterns and run it.
+
+None present. Now run the actual placeholder gate via `pwsh`.
+
+Every host-runnable gate is green: **43/43 tests, iOS 18 + macOS 15 typecheck, swiftlint --strict, swiftformat --lint, placeholder gate** — all clean. Now wire the new `shared-surfaces` root into the build and lint config, then generate the project.
+
+Now generate the Xcode project and confirm my files are enumerated.
+
+`xcodegen generate` enumerates all 11 PillFilterBar files. Now let me document the pre-existing full-app blockers (for the macOS-pending annotation) and confirm the generated project is git-ignored.
+
+All three documented blockers confirmed (Shared.xcframework absent; `DashboardWidgetSize` ×15; 206 co-located XCTest files) and the `.xcodeproj` is git-ignored. To avoid "skip-and-assume", let me make a bounded real attempt at the full gate to capture the actual first blocker.
+
+The gate's "Stage Shared.xcframework" pre-action (Gradle/KMP) is running — confirming blocker #1 is the very first gate step. Let me wait briefly for its outcome, then stop it.
+
+Conclusive: the full-app gate hangs at its very first step — the "Stage Shared.xcframework" Gradle/KMP pre-action (the documented `p1-shared/S3-0001` macOS-pending item). Let me stop it and record findings.
+
+Let me clean the build artifacts and prepare the gate log. First, verify the logs directory.
+
+Let me look at a precedent log (ToolCard/AlertMessageEditor/FSMTimelineChart) to match the established log format.
+
+Let me read the rest of the precedent log (the deferred section + closing).
+
+I have the precedent format. Let me gather the exact data (line counts, versions, commit) for my log.
+
+Now I'll write the gate log (matching the precedent format) and append the macOS-pending verification row.
+
+Now append the macOS-pending verification row, per that doc's resolution protocol.
+
+All artifacts written. Let me run the **actual gate lint commands** over the full tree (not just my files) to confirm they pass with `shared-surfaces` now wired in — this is the real gate behavior.
+
+Still exactly 1 violation in 1919 files. My scoped run proved my 10 files are clean, so this is **pre-existing**. Let me identify it precisely to document honestly.
+
+Confirmed: the 1 violation is **pre-existing** in an unrelated sibling (`LifetimeStatsWidget.Adapter.swift:141`, `function_body_length`) — zero from my `shared-surfaces`. Let me check the full `swiftformat --lint` too, then annotate the log honestly.
+
+Both full-tree gate lints have exactly 1 **pre-existing, unrelated** issue each (`ActionBuilder.Previews.swift:48` format; `LifetimeStatsWidget.Adapter.swift:141` lint) — **zero from my surface**. Let me annotate the log transparently (no red-as-green).
+
+Let me do a final rubber-duck review of the implementation for correctness before committing, and check git status precisely.
+
+## Blocking Issues
+
+### 1. `target()` allows Home/End movement when current key is not enabled
+- **File/lines:** `PillFilterBar.Adapter.swift:58-64`
+- **Issue:** Spec says if `current` is not in `enabledKeys`, no move. Current implementation only applies that guard to `.previous` / `.next`; `.first` and `.last` still return a target.
+- **Impact:** Pure navigation logic diverges from the web modulo/guard semantics, especially for disabled/unknown active keys.
+- **Fix:** Check `enabledKeys.firstIndex(of: current)` before the switch for all moves.
+
+```swift
+guard !enabledKeys.isEmpty,
+      let index = enabledKeys.firstIndex(of: current)
+else { return nil }
+
+switch move {
+case .first: return enabledKeys.first
+case .last: return enabledKeys.last
+case .previous, .next:
+    ...
+}
+```
+
+### 2. Model adopts disabled/unknown source selections
+- **File/lines:** `PillFilterBar.Model.swift:270-279`
+- **Issue:** `apply(_:)` uses all item keys, including disabled items, and blindly assigns `selection = input.activeKey`. This violates the requested ownership rule to ignore disabled/unknown selections.
+- **Impact:** A disabled item can become selected, and an unknown `activeKey` can become the model’s stable selection, leaving no valid selected pill and preventing correct re-adoption.
+- **Fix:** Validate against enabled keys before adopting. If `input.activeKey` is disabled/unknown, leave selection unset or re-adopt only when a valid enabled key is provided.
+
+```swift
+let enabledKeys = input.items.filter { !$0.disabled }.map(\.key)
+
+if !selectionEstablished || !enabledKeys.contains(selection) {
+    if enabledKeys.contains(input.activeKey) {
+        selection = input.activeKey
+        selectionEstablished = true
+    } else {
+        selection = ""
+        selectionEstablished = false
+    }
+}
+```
+
+### 3. Projection precedence does not implement `error > loading > empty > data`
+- **File/lines:** `PillFilterBar.Projection.swift:37-45`
+- **Issue:** Loading only wins when `input.items.isEmpty`. If `isLoading == true` and stale items are present, projection returns `.data`.
+- **Impact:** Violates the specified phase precedence; loading should outrank data after error.
+- **Fix:** Make loading unconditional after error:
+
+```swift
+if input.isLoading {
+    return PillFilterResolved(phase: .loading, ...)
+}
+```
+
+## Non-Blocking Issues
+
+### 4. SwiftUI focus wiring does not mirror roving tab-index behavior
+- **File/lines:** `PillFilterBar.Views.swift:96-105`, `114-117`
+- **Issue:** Every enabled pill is `.focusable`, while the web tabs pattern has only the selected tab at `tabIndex=0` and others at `-1`. There is also no initial focus sync to the selected item.
+- **Impact:** Hardware keyboard tab traversal can visit every pill instead of entering the tablist at the active pill only.
+- **Fix:** Restrict focusability to the selected/focused item and synchronize `focusedKey` from the selected item on appear / selection changes.
+
+## No Material Issues Found
+
+- Count formatting appears materially correct for integer counts: localized decimal grouping and `(...)` fallback are present.
+- No concrete Swift 6 `@MainActor` / `Sendable` unsoundness stood out in the reviewed files.The rubber-duck flagged 4 items. Let me evaluate each against the **web source** precisely:
+
+- **#1 (Home/End guard)**: The web's `idx===-1` guard is **arrows-only**; Home/End call `moveFocus(enabledKeys[0/last])` unconditionally. My code already matches this exactly — the duck misread the spec. **Reject** (its "fix" would break parity; my test `testCurrentNotEnabledYieldsNilForArrows` pins the correct behavior).
+- **#3 (loading precedence)**: The web has no loading state; my stale-while-revalidate mapping (loading only when no items yet, else data + stale chip) matches the AiUsageCard precedent and the prompt's "loading — initial fetch" wording. **Reject.**
+- **#4 (focus)**: Making every enabled pill focusable is the idiomatic Apple Full-Keyboard-Access behavior (the web's `tabIndex=-1` is a web-only tab-order trick). **Keep** as deliberate.
+- **#2 (source-driven activeKey)**: **Valid improvement** — I should honor a source-driven `activeKey` change (controlled semantics) while keeping user selection stable across pure data refreshes. Let me implement that refinement.
+
+Now add a test pinning the new source-driven activeKey behavior.
+
+Re-running the full verification suite after the refinement.
+
+44/44 tests pass, Model.swift 349 lines, format + lint clean. Re-typecheck both SDKs since Model.swift changed.
+
+Both SDK typechecks pass. Let me update the test count (43→44) in the log and pending doc.
+
+All updated and consistent (44 tests, model suite 15). Let me stage precisely (my surface + necessary wiring + deferral record + log — **excluding** the pre-existing AIUsageCard changes) and review the staged set.
+
+Staged set is exactly correct: 11 PillFilterBar files + minimal wiring + deferral record + log (2010 insertions); the 7 pre-existing AIUsageCard files correctly left unstaged. Committing now.
+
+Committed as `89a966bdd` (15 files, 2010 insertions). Let me clean up temp artifacts and verify the final tree state.
+
+The working tree is clean — only the 7 pre-existing `AIUsageCard` files remain unstaged (correctly untouched). Let me finalize the todos.
+
+The task is complete. Let me provide the final summary.
+

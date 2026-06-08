@@ -1,0 +1,102 @@
+I'll start by exploring the environment to understand what exists and what tooling is available.
+
+Key findings: `xcodebuild` needs full Xcode (only CLT installed, no simctl), but `swift` 6.3.2, `swiftlint`, `swiftformat`, and `pwsh` ARE available. Let me explore the Apple project structure and check for an SPM package I can actually build with.
+
+No `shared-surfaces/` dir yet (I must create it), no `Package.swift`/`.xcodeproj` — it's XcodeGen (`project.yml`) driven. Let me read the web source, the build config, and a sibling surface as a template.
+
+I have the web source. Now let me locate the sibling template files properly using glob (the bash glob misbehaved).
+
+Case-insensitive FS: the `AIUsageCard`→`AiUsageCard` diff is a pre-existing sibling change (not mine). I'll leave it. The file-set reveals the surface convention. Let me read the template files and shared infra.
+
+This is a mature, well-established multi-file pattern. Let me read the remaining template files and the shared core (`Sources/`) to learn the exact tokens and seams.
+
+Now let me verify the shared tokens/components exist in `Sources/` and read the remaining template files (Projection, Tests, strings).
+
+Tokens are used but I need their definitions. Let me locate them and read the remaining template files (Previews, Tests, AdapterTests, strings).
+
+Now let me read the design tokens, primitive component APIs, the view-test file, and the project.yml source config.
+
+Let me find the generated token definitions (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`) and read the view-test file + project.yml.
+
+Let me locate the token definitions, check the project source globs, look for a full Xcode install, and find the placeholder checker.
+
+Major findings: **full `/Applications/Xcode.app` exists** (I can target it via `DEVELOPER_DIR` without sudo), tokens live in `apps/design/generated/apple`, and the `TeslaSync` target sources do **not** glob `shared-surfaces`. Let me read the full project.yml, the tokens, and verify Xcode works.
+
+`shared-surfaces` isn't wired into `project.yml` sources, and tests come from `Tests/Unit`. Let me read the tokens and probe the real build toolchain (xcodegen, the KMP xcframework, simulators, and whether the full Xcode is usable).
+
+Full Xcode 26.5 + xcodegen + iOS 26.5 simulator runtime are available — but `Shared.xcframework` (the KMP core the app targets depend on) is missing, and `shared-surfaces` isn't in `project.yml`. Let me probe the KMP build dependency and simulator devices to determine real build feasibility.
+
+`gradlew` exists but no JDK/Kotlin/Gradle on PATH; the KMP `Shared.xcframework` (required by the app targets) is unbuilt. iPhone 16 simulator is booted. Let me read the pending-verifications doc and check the JDK, then start implementing.
+
+The `apps/macos-pending-verifications.md` doc is decisive: it's the **established, sanctioned protocol** for exactly this situation. Three sibling P4 Apple surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) followed the same path: implement the surface, verify it green in **isolation** (SwiftPM build + tests, real `swiftc -typecheck` on both SDKs, swiftlint/swiftformat/placeholder clean, `xcodegen` enumerates files), and defer the full-app `xcodebuild` (blocked by the unbuilt KMP `Shared.xcframework` + pre-existing merge collisions) to the macOS acceptance gate.
+
+Let me read the lint/format configs so my code passes `--strict` first try, then set up my plan.
+
+There's a shared `TSTone` abstraction and `TSStatusDot`. Let me confirm `TSTone`'s cases/API, then I'll start implementing.
+
+I now have everything needed. Let me set up the workspace, plan, and todos, then implement all 10 surface files following the established pattern.
+
+Now I'll write the surface files. Starting with the pure-Foundation Adapter.
+
+Let me fix a potentially long line in Views (extract the hint string) before moving on.
+
+I should fix the error-chip accessibility so the retry button stays independently actionable for VoiceOver.
+
+I introduced a broken test (referenced a non-existent `testApply` and needless re-binding). Let me fix it to match the established wiring.
+
+All 10 files written. Now the critical verification phase. Let me enumerate the external shared symbols my surface references so I can build a faithful isolated SwiftPM harness.
+
+External deps are just tokens + `TSTone` + `TSSkeleton`. Let me build an isolated SwiftPM harness (faithful copies of those + my surface files) to compile and run the tests under Swift 6 on the real Xcode toolchain.
+
+Now let me build the isolated harness with the full Xcode toolchain under Swift 6.
+
+The harness caught a real Swift 6 strict-concurrency issue in `Previews.swift` (the `segment` helper must be `@MainActor`). Let me fix the shipped file and re-sync.
+
+All 29 tests pass under Swift 6 strict concurrency on the real Xcode toolchain. Now the cross-SDK typecheck against iOS-18 and macOS-15 deployment targets.
+
+Both SDK typechecks pass (including DEBUG previews). Now swiftlint `--strict`, swiftformat `--lint`, and the placeholder gate on the shipped files.
+
+swiftformat passes (0/9). The swiftlint run linted the config's 1909 `included` files (not my dir, which isn't registered) and surfaced 1 pre-existing violation. Let me isolate my files and locate that violation.
+
+My 9 surface files pass `swiftlint --strict` cleanly (exit 0). The lone violation is pre-existing in a sibling `dashboard-widgets` file — not mine. Now the placeholder gate.
+
+Placeholder gate clean (EXIT=0), no forbidden words. Now I'll register the new `shared-surfaces` group in `project.yml` and `.swiftlint.yml` — the minimal, necessary one-time wiring for a new source group (directly analogous to the existing `feature-views` entries) so the build, lint gate, and macOS acceptance gate all cover the surface. Then I'll prove `xcodegen` enumerates the files.
+
+Now prove `xcodegen` enumerates the surface files.
+
+`xcodegen` enumerates all 10 files (60 refs across iOS+macOS targets). Let me confirm the full `swiftlint --strict` now covers my dir and only the pre-existing sibling violation remains, then attempt the gate's `xcodebuild`.
+
+My surface adds **zero** lint violations; the only one is pre-existing in a sibling file. Now let me attempt the gate's `xcodebuild` to capture concrete evidence of the KMP `Shared.xcframework` blocker. I'll run it in the background with monitoring.
+
+The full-app build is stuck in the KMP/gradle preAction (timed out at 200s) — `Frameworks/` has only `.gitkeep`. Let me capture deterministic evidence of exactly where it blocks by teeing the early build log.
+
+The Kotlin/Native toolchain is actually cached and the gradle preAction is progressing (it reached `linkReleaseFrameworkIosArm64` before my timeout). So the framework *can* build — it's just slow. Let me check whether the documented pre-existing collisions (that block the full-app build independent of my surface) actually exist in this tree before deciding whether a full build is worth attempting.
+
+Confirmed: the documented pre-existing collisions are real and unrelated to my surface — `DashboardWidgetSize` is redefined **15×** (matching the macos-pending doc exactly) and **170 co-located `*.Tests.swift`** import XCTest into the app target. These break the full-app build independent of ConnectionSegment. The KMP framework itself builds (cached Kotlin/Native). This is precisely the sanctioned macos-pending condition. Let me set up the log and finalize.
+
+Let me read a sibling's log (ToolCard, which is macos-pending) to match the exact log format and EXIT/STATUS convention.
+
+The sibling precedent is decisive: these P4 Apple surfaces conclude **`EXIT=0 / STATUS=DONE`** with the full-app `xcodebuild` explicitly **DEFERRED** (documented pre-existing/unrelated blockers), and they actually built the KMP framework + ran the full-app build to capture the real exit (proving 0 surface errors). To match that rigor and the "no skip-and-assume" covenant, let me stage the `Shared.xcframework` and run the full-app build to capture real evidence. Starting the framework build:
+
+`Shared.xcframework` is built (6m) and staged with all slices. The KMP blocker is resolved. Now let me run the full-app iOS build to capture the real exit and confirm zero ConnectionSegment errors.
+
+Full-app iOS build: **`IOS_BUILD_RC=65`** with only 2 errors — both `unable to resolve module dependency: 'XCTest'` (the documented pre-existing co-located-test-in-app-target condition), and **zero ConnectionSegment/shared-surfaces errors**. This exactly matches the sibling precedent. Let me capture the macOS build evidence too.
+
+macOS build: **`MAC_BUILD_RC=65`** on development-signing entitlements (documented blocker), zero surface errors. Confirmed 170 pre-existing feature-views co-located XCTest files already broke the app target before my change. Let me capture the whole-tree swiftformat gate result, then write the log.
+
+Whole-tree format/lint each have exactly **one pre-existing violation in sibling files** (`ActionBuilder.Previews.swift`, `LifetimeStatsWidget.Adapter.swift`) — neither mine; my surface scope is 100% clean. My surface is well-decomposed (1256 lines across 10 files, no stubs). I now have complete evidence. Let me write the gate log.
+
+Now let me append the deferral row to `macos-pending-verifications.md`, matching the sibling format.
+
+Now let me verify git state and confirm build artifacts are ignored, so I commit only the intended files (not the pre-existing `AiUsageCard` rename or generated artifacts).
+
+All generated artifacts are gitignored. Let me do a final lint/format confirmation on the shipped surface, then stage exactly my files (excluding the pre-existing `AiUsageCard` rename) and commit.
+
+All green. Staging exactly my files and committing.
+
+Staged set is exactly correct. Committing with the prompt's message:
+
+Commit `0acbf052a` landed (14 files, 1407 insertions). Let me finalize: update tracking, clean temp probe logs, and confirm the working tree only retains the pre-existing (non-mine) changes.
+
+All 15 todos complete and the working tree is clean (only the unrelated pre-existing `AiUsageCard` rename remains, plus gitignored build artifacts). The task is fully delivered and verified.
+

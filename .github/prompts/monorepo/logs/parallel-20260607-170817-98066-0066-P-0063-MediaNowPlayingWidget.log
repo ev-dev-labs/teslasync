@@ -1,0 +1,96 @@
+I'll start by exploring the codebase to understand the task requirements, the web source, and the existing Apple app structure.
+
+Key finding: `xcodebuild` is present but the active developer dir is CommandLineTools, not full Xcode. Let me explore the web source, the existing Apple widget patterns (predecessor DigitalTwinWidget was just committed), and the supporting infrastructure.
+
+Now let me study the predecessor pattern (DigitalTwinWidget) and its log thoroughly — this is my template for structure, conventions, and gate handling.
+
+Excellent — the predecessor establishes the exact pattern and disposition. Let me read the predecessor's supporting files and the shared infrastructure (state-holder seam, tokens, registry, strings facade) in parallel.
+
+Now let me read the predecessor's tests, builder, and badges, plus locate the shared token/component infrastructure.
+
+Now let me locate the shared token/component infrastructure and the web data layer (hook shape, formatters, registry).
+
+Now let me read the token definitions, the web hook/type/formatter, and the existing Playback data-display component (likely relevant for media).
+
+Let me locate the exact token definitions and read the existing Playback component and web chrome (WidgetShell, EmptyState).
+
+Tokens appear generated. Let me find their definitions precisely.
+
+Tokens are generated at `apps/design/generated/apple`. Let me read them to get exact symbol names, and confirm the dashboard-widgets dir is not yet wired into the build target.
+
+Now I have the token vocabulary. Let me read the shared component definitions I'll use (TSTone, TSSkeleton, Feedback states/banners) and the web chrome (WidgetShell, EmptyState, WidgetProps types).
+
+Let me read the Apple Feedback components (States/Banners), the web EmptyState + DataFreshness, and the WidgetProps types to finalize the mapping.
+
+Let me check the lint/format configs, the placeholder script, and whether a full Xcode is available (predecessor referenced one via DEVELOPER_DIR).
+
+A full Xcode IS present. Let me verify the three deferral blockers (target registration, Shared.xcframework, signing) and read the placeholder patterns, then probe the simulator with the right DEVELOPER_DIR.
+
+I have a thorough understanding of the pattern. Let me set up tracking and write the plan, then implement all files.
+
+Now I'll create the source files. Starting with the domain models, builder, and state-holder seam.
+
+Now the reusable subviews + content layout, and the main surface.
+
+Now the previews, tests, and strings catalog.
+
+All 8 files created. Now let me run the gates. First, format my Swift files in place per the repo config, then lint.
+
+Format gate is clean (0/276 need formatting) and SwiftLint `--strict` reports 0 violations. Now the key validation: a real `swiftc -typecheck` of the surface against the actual component library + design tokens (and the committed DigitalTwin surface it shares registry types with).
+
+Typecheck passes (`EXIT=0`) — the surface compiles against the real tokens, component library, and the committed DigitalTwin surface (proving the shared registry types are reused, no duplicate symbols). Now the executed adapter harness: compile the pure `Models`+`Builder` to a native binary and **run** it to prove the cached→projection mapping for real.
+
+Top-level code must live in `main.swift` when compiling multiple files. Let me rename and rerun.
+
+Adapter harness: **22/22 checks PASSED** (executed, not just typechecked). Now the placeholder/stub gate.
+
+All host-runnable gates are green. Now let me capture **genuine** evidence for the Xcode app build/test deferral by actually attempting it (honesty rule 1: show it as blocked, not faked). First probe whether the XcodeGen project even resolves.
+
+XcodeGen is available but the `.xcodeproj` isn't committed. Let me generate it and run the real gate command to capture genuine deferral evidence (then clean up the generated artifact).
+
+Scheme resolves. Let me confirm the surface is absent from the app target (blocker a), then run the real build to capture the Shared.xcframework/signing failure (blocker b/c).
+
+Confirmed blocker (a): the surface files (mine and the committed DigitalTwin) have **0 references** in the generated app target — the app globs `Sources/` only. Now let me attempt the real iOS build to capture the dependency/signing failure (blockers b/c) as honest evidence.
+
+The real build got far — it even assembled the Kotlin `Shared.xcframework` via Gradle — then **BUILD FAILED** at the "Stage Shared.xcframework" phase (exit 65), independent of this UI surface. Let me capture the precise failure reason for the log (Gradle is now cached, so this is faster).
+
+Let me read the exact Gradle/staging failure section for the log evidence.
+
+Clear evidence: the build fails at the KMP `Shared.xcframework` staging (Gradle daemon stopped) — unrelated to this UI surface (which has 0 refs in the target). All three deferral blockers are now verified by real attempts. Let me check what generated artifacts to clean up so I don't leave drift.
+
+Only my 8 surface files are untracked; the generated `.xcodeproj`/Gradle artifacts are gitignored (not shown) and no tracked files were modified. Let me remove the generated project to keep things tidy, and verify the working tree stays clean.
+
+Working tree clean — only my 8 deliverable files. Let me gather final line counts and a parity self-check, then write the gate log.
+
+All gates green; files are well-sized. Let me update tracking and write the comprehensive, honest gate log.
+
+Log written. Let me do a final verification sweep on the exact committed bytes (re-run lint/format/placeholder + a fresh typecheck) before committing — no fabrication.
+
+Final lint/format/placeholder all green. Let me re-confirm the typecheck on the unchanged bytes, then stage and commit.
+
+All gates green on final bytes. Staging the 8 surface files + log and committing.
+
+Committed as `c1bbf90a`. Let me verify the tree is clean and clean up temp files.
+
+All complete and verified. Let me finalize tracking.
+
+Merge made by the 'ort' strategy.
+ ...ashboard-widgets-0063-MediaNowPlayingWidget.log | 182 +++++++++++++++
+ .../MediaNowPlayingWidget.Builder.swift            |  53 +++++
+ .../MediaNowPlayingWidget.Model.swift              | 249 ++++++++++++++++++++
+ .../MediaNowPlayingWidget.Models.swift             | 142 ++++++++++++
+ .../MediaNowPlayingWidget.Previews.swift           | 128 +++++++++++
+ .../MediaNowPlayingWidget.Tests.swift              | 234 +++++++++++++++++++
+ .../MediaNowPlayingWidget.Views.swift              | 252 +++++++++++++++++++++
+ .../MediaNowPlayingWidget.strings                  |  44 ++++
+ .../dashboard-widgets/MediaNowPlayingWidget.swift  | 248 ++++++++++++++++++++
+ 9 files changed, 1532 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0063-MediaNowPlayingWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MediaNowPlayingWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MediaNowPlayingWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MediaNowPlayingWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MediaNowPlayingWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MediaNowPlayingWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MediaNowPlayingWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MediaNowPlayingWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MediaNowPlayingWidget.swift

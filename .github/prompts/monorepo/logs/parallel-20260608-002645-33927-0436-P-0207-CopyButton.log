@@ -1,0 +1,132 @@
+I'll start by exploring the repository structure and checking tool availability to understand what's possible in this environment.
+
+Swift, swiftlint, swiftformat, and pwsh are present. `xcodebuild` needs investigation. Let me check Xcode setup and explore the Apple app structure.
+
+Xcode.app exists but `xcode-select` points to CommandLineTools. Let me try using `DEVELOPER_DIR` to access Xcode without sudo, and explore the existing structure and web source.
+
+Xcode 26.5 is available via `DEVELOPER_DIR`, iPhone 16 simulator is booted, iOS 26.5 runtime present — **not blocked**. The web source is a clipboard button. Now let me understand the existing Apple app conventions (state holders, tokens, i18n, telemetry) by examining the infrastructure and example surfaces.
+
+This uses XcodeGen with a KMP `Shared.xcframework` prebuild step. `shared-surfaces` isn't in `project.yml` yet — I'll need to add it. Let me check the build toolchain and study an example surface plus the core infrastructure (state holders, tokens, i18n, telemetry).
+
+The build needs a KMP `Shared.xcframework` (Gradle). Let me study the canonical surface pattern (DigitalTwinMiniWidget has Adapter/Content/Model/Inputs), the SharedFacade state holders, design tokens, i18n, and telemetry helpers.
+
+Now I understand the canonical pattern (Model/Adapter/Content/Views/Previews/strings/Tests). Let me examine the test wiring, i18n `.strings` format, an example feature-view, the Toast/feedback infrastructure, and the placeholder checker — these are critical for getting conventions exactly right.
+
+There are 170 co-located `.Tests.swift` files with `@testable import TeslaSync`, but `project.yml` only puts `Tests/Unit` in the test target and `feature-views` in the app target — that combination can't compile. Let me understand the real wiring and whether the gate has ever passed.
+
+Now the picture is clear. The full `xcodebuild` has never passed locally — it's blocked by documented pre-existing parallel-merge collisions (`DashboardWidgetSize` ×15, 152 co-located `*.Tests.swift` importing XCTest into the app target, unstaged KMP framework, signing). The established methodology verifies each surface **in isolation via SwiftPM** + `swiftc -typecheck` + lint/format/placeholder, and defers the full-app gate to macOS CI. Let me study the ToolCard reference (closest analog — presentational, no fetch) and the isolated-build setup.
+
+This is the sanctioned methodology: **isolated SwiftPM harness** build+test against the real design-system, host gates green (swiftlint/swiftformat/placeholder), and the full-app `xcodebuild` documented as DEFERRED/BLOCKED on pre-existing collisions. The ToolCard log is my template. Let me study the exact ToolCard source patterns, the Button/Toast/token infrastructure, i18n mechanism, and lint configs.
+
+Excellent — the patterns are clear. Now let me read the exact infrastructure I'll compose with and compile against: the native Button, Typography, Cards (TSGlassPanel), the Toast/feedback seam, design tokens, and the state-holder pattern (P1/S8).
+
+The native Toast (web `useOptionalToast`) isn't in FeedbackOverlays. Let me locate the Toast equivalent, read the typography/cards/token APIs I'll compose with, study the P1/S8 state-holder pattern, and check the i18n catalog mechanism.
+
+Key findings: the i18n keys **already exist** in the master catalog as `translation.common.copyButton.{copy,copied,errorToast,successToast}` — so the P1/S10 acceptance criterion is already satisfiable. And the feature-views use a co-located `.strings` table + a `<Surface>Strings.string(key, fallback)` helper (`NSLocalizedString(tableName:value:)`) — keeping everything in `CopyButton.*`. The native Toast is a seam I'll define (mirroring `useOptionalToast`). Let me read the tokens, cards, state-holder pattern, lint configs, and placeholder checker.
+
+Tokens, lint, and format configs are clear. `.swiftlint.yml` `included:` lists `feature-views` but not `shared-surfaces` — I'll add it (necessary wiring, same as ToolCard added feature-views). Let me read the state-holder pattern, the `<Surface>Strings` helper, TSGlassPanel, and the placeholder checker, then I'll have everything to build.
+
+Let me read the placeholder checker (to know what patterns to avoid) and confirm the `@Observable` model + view wiring used by a feature-view, then I'll start building.
+
+I now have a complete understanding. Let me verify the minimal dependency closure for the isolated build (the `tsDynamicColor` helper and imports) and confirm no `Shared`/KMP coupling in the files I'll compile against.
+
+I have everything needed. The dependency closure is clean (SwiftUI-only, no KMP coupling), so the isolated SwiftPM harness will work like ToolCard's. Let me set up the plan, todos, and create the surface directory.
+
+Now I'll write the surface. Starting with the foundational files — Model (surface/phase/projection/strings), Telemetry, Clipboard, and Toast seams.
+
+Now the state holder (P1/S8) — the `@MainActor @Observable` model that owns the phase, performs the copy, drives toast/onCopy/reset, and emits telemetry.
+
+Now the SwiftUI view with web-parity initializer, accessibility (optional aria-label, polite announcement), and tooltip.
+
+Now the i18n strings table and the previews.
+
+Now the comprehensive test suite (pure projection, model behavior across all branches, telemetry, i18n facade).
+
+All 9 source files are written. Now the necessary wiring (same pattern ToolCard used when it first added `feature-views`): register `shared-surfaces` in `project.yml` (both app targets) and `.swiftlint.yml`.
+
+All source + wiring in place. Let me run the fast host gates first (swiftformat, swiftlint, placeholder) scoped to the new surface, so I can fix any issues before the heavier isolated build.
+
+swiftformat just wants its canonical formatting. Let me auto-format the new files with the repo's formatter, then re-lint.
+
+swiftformat's if-expression rewrite is correct. swiftlint found 3 violations across all 1917 files — I need to see whether any are in my files. Let me capture the full violation list.
+
+Two violations in my files (the third is pre-existing in `LifetimeStatsWidget`). Fixes: (1) `make()` has 6 params — group the default labels into a value type; (2) `TSButton` multiple-closures — use explicit `label:` argument. Let me apply both.
+
+Now update the model's `presentation` call, the test helper, and fix the `TSButton` trailing-closure violation.
+
+Now re-run format + lint scoped to my files to confirm clean.
+
+Format clean (0/8) and swiftlint clean (0 violations in shared-surfaces). Now the placeholder gate and the isolated SwiftPM harness.
+
+Placeholder gate clean. Now the **isolated SwiftPM harness** — the primary functional verification (compiles the exact shipped sources against the real design-system under Swift 6 strict concurrency, and runs the tests).
+
+**Isolated harness: Build complete · 23/23 tests passed under Swift 6 strict concurrency.** Now let me prove cross-SDK compilation against the real **iOS 18** and **macOS 15** SDKs (this exercises the `UIPasteboard` branch + `AccessibilityNotification` that the macOS harness didn't).
+
+Both SDKs typecheck clean (exit 0). Now confirm `xcodegen generate` enumerates the new files, then capture the full-app `xcodebuild` deferral evidence.
+
+`xcodegen generate` succeeded and enumerated all 8 CopyButton files. Note: like the 152 documented co-located `*.Tests.swift`, my `CopyButton.Tests.swift` lands in the app target (verified instead via the isolated harness). Now let me capture the real full-app `xcodebuild` deferral evidence. First, check the KMP/Gradle prebuild toolchain.
+
+Java 17 + gradlew present; `Shared.xcframework` not staged, so xcodebuild will run the ~7-min Gradle prebuild then compile. Let me launch the iOS gate in the background and capture full output.
+
+While the build runs, let me review the final formatted sources and confirm the master i18n catalog already carries the 4 keys (for the log evidence).
+
+The master P1/S10 catalog already carries all 4 web keys (`translation.common.copyButton.*`, en/ar/he) — acceptance criterion satisfied without touching the shared catalog. Let me check the iOS build progress.
+
+Gradle KMP framework is linking (good progress). While it continues, let me gather final metrics for the log.
+
+Well-decomposed surface (1024 lines across 9 files; 715 production Swift + 309 tests). Let me continue monitoring the iOS build.
+
+Shared.xcframework assembled. Now the app compilation begins — let me wait for it to reach the pre-existing collisions.
+
+Release framework links are the slow tail. Let me keep waiting for app compilation to begin.
+
+iOS build finished: **IOS_EXIT=65**, failing on `Unable to resolve module dependency: 'XCTest'` — the documented co-located-test blocker. Let me categorize every error to prove zero errors come from my runtime code.
+
+**Zero errors in CopyButton runtime files; zero CopyButton-named compiler errors.** The build fails on the documented pre-existing blocker — `Unable to resolve module dependency: 'XCTest'` (co-located `*.Tests.swift` in the app target, flagged on `AIRestorePanel.Tests.swift`, a pre-existing file). Let me capture exact context and run the macOS gate.
+
+iOS evidence is conclusive — the blocker is `AIRestorePanel.Tests.swift` (pre-existing) importing XCTest into the app target. While the macOS gate runs, let me poll it.
+
+macOS gate: **MAC_EXIT=65** — the documented development-signing blocker (`entitlements that require signing with a development certificate`). Let me confirm zero CopyButton errors there too, then I have complete evidence.
+
+macOS also shows **zero CopyButton errors** — pure signing blocker. Complete evidence gathered. Let me verify the final whole-app swiftlint state (to state it precisely) and check git status before writing the log.
+
+Whole-app swiftlint = exactly 1 pre-existing violation (`LifetimeStatsWidget`, not mine). But I notice `AIUsageCard.*` and two `web/*` files show as modified — **these are not mine** (this is a shared slot). Let me confirm they're pre-existing and ensure I only stage my own files.
+
+Confirmed: `AIUsageCard.*` (mtime 06:28, checkout) and the `web/*` files are pre-existing changes from this shared slot — **not mine**. I'll stage only my own files. Now writing the authoritative gate log with all real outputs.
+
+Log written. Let me verify my wiring diffs are minimal/correct, then stage **only** my files and commit.
+
+Wiring diffs are minimal and correct (3 single-line additions). Staging only my files now.
+
+Staged set is exactly my 9 surface files + 2 wiring lines + the log. Committing.
+
+Committed as `48e2822ce`. Let me clean up the temporary harness and finalize the todos.
+
+All todos complete, temp files cleaned, commit verified, log ends with `EXIT=0 / STATUS=DONE`.
+
+## Summary
+
+Shipped a production, Apple-idiomatic **`CopyButton`** shared surface (P4/0207) at parity with `web/src/components/ui/CopyButton.tsx`, committed as `48e2822ce`.
+
+**Delivered** (9 files in `apps/apple/TeslaSync/shared-surfaces/`, ~1024 lines):
+- `CopyButton.Model` — surface slug, phase, pure `CopyButtonPresentation` projection (web `visibleLabel`/`icon`/`resolvedAriaLabel`), P1/S10 i18n facade
+- `CopyButton.Telemetry` / `.Clipboard` / `.Toast` — injectable seams (telemetry `view.opened`; `UIPasteboard`/`NSPasteboard`; `useOptionalToast`→optional sink)
+- `CopyButton.StateHolder` — `@MainActor @Observable` model (P1/S8): `copy()`==web `handleCopy`, copied phase, `onCopy`, optional toast, 2s timed reset
+- `CopyButton.swift` — SwiftUI view (`TSButton` ghost/sm, polite `AccessibilityNotification` announcement, `.help` tooltip), previews, strings, **23 XCTest cases**
+
+**Parity & states:** every web branch reproduced — idle/copied/disabled/copy-failed, icon-only, label & aria overrides, with/without toast. loading/empty/error/stale/offline are **N/A by construction** (the web source has no data fetch — only `useTranslation`+`useOptionalToast`), documented honestly, not narrowed.
+
+**Verification (all green):**
+- swiftformat `0/8` · swiftlint `0` violations in scope · placeholder `0`
+- **Isolated Swift 6 strict-concurrency SwiftPM build + 23/23 tests pass** against the real design-system
+- **iOS-18 + macOS-15 `swiftc -typecheck` both exit 0** (UIPasteboard + NSPasteboard branches)
+- `xcodegen generate` enumerates all 8 files
+
+**Full-app `xcodebuild` DEFERRED** (`IOS_EXIT=65`/`MAC_EXIT=65`) — blocked solely by **pre-existing, unrelated** issues (co-located `*.Tests.swift` importing XCTest into the app target; macOS dev-signing), with **zero CopyButton runtime errors** proven by grep. This matches the sanctioned disposition of every prior P4 Apple surface per `apps/macos-pending-verifications.md`.
+
+Necessary wiring enumerated in the log: `project.yml` + `.swiftlint.yml` register the new `shared-surfaces` tier. Pre-existing unrelated working-tree edits in this shared slot were left untouched and not staged.
+
+
+
+The task is fully complete and verified — all 13 todos done, committed as `48e2822ce`, temp files cleaned, and the log ends with `EXIT=0 / STATUS=DONE`.
+

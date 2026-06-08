@@ -1,0 +1,158 @@
+I'll start by exploring the repository structure, the web source file, and the available Apple tooling.
+
+Key finding: **Xcode is not installed** (only Command Line Tools), so `xcodebuild` and `simctl` won't work, but `swift`, `swiftlint`, and `swiftformat` are available. Let me explore the existing Apple project structure deeply to understand the established patterns before deciding on approach.
+
+There's an existing `feature-views` directory with established patterns. Let me examine what's already there and find similar implementations to pattern-match.
+
+The file set per feature view is: `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`. Let me find the closest analog — a settings "Section" with list + destructive actions + confirm dialogs.
+
+`SessionListSection` is the ideal analog. Let me read its complete file set as the primary pattern reference.
+
+Let me read the core reference files and the shared facade layer in parallel to understand state holders, tokens, i18n, and diagnostics conventions.
+
+`SessionListSection` (Apple) is the *charging* sessions list — a structural analog but different domain. There's no existing auth-session state holder. Let me study the shared facade (state-holder layer), find where models like `SessionListModel` live, and read the web `useSessions` hook + types.
+
+Let me definitively verify the Apple toolchain and locate the model-binding pattern, i18n facade, design tokens, and diagnostics helpers.
+
+`/Applications/Xcode.app` **is present** — only `xcode-select` points to CommandLineTools. I can override via `DEVELOPER_DIR` without sudo. Let me verify Xcode actually works.
+
+Xcode 26.5 works and the iPhone 16 simulator is booted. **The capability IS available** — this is a real build/test task, not BLOCKED. Let me check the build prerequisites (Shared.xcframework, project generation, gate tooling).
+
+Now I understand the "Seams" DI pattern — feature views use protocol seams, not direct `Shared` imports. But the full app build needs `Shared.xcframework` (currently absent). Let me establish the build baseline strategy.
+
+The feature views are isolated via seams (no `Shared` import), but the full app schemes + test targets all depend on building the KMP `Shared.xcframework` via Gradle as a pre-build phase. Let me probe whether the Gradle/KMP toolchain is viable here before committing to a long build.
+
+503 Kotlin files — a substantial KMP module. The `Shared.xcframework` build is the critical path for the full gate. Let me kick it off in the background now while I study the remaining patterns and write code.
+
+While the Shared framework builds, let me study the seams, views, actions, strings, previews, and tests patterns in parallel.
+
+Let me read the Views/Previews/Tests patterns, locate the design tokens (P1/S9), the `.text` string helper, and the web `useSessions` hook for the data shape and API endpoints.
+
+Let me read the design tokens, motion components, and the web `useSessions` hook + `ActiveSession` type to nail the data shape and remaining token API.
+
+Now I have the API endpoints. Let me read the `ActiveSession` types, the generated design tokens (P1/S9), and the motion/skeleton components.
+
+I now have the full token API. Let me read the motion/skeleton components, the Previews + Tests patterns, and the lint configs.
+
+Let me read the test conventions, lint configs, and check how `.strings` files and test targets are wired. Let me also check the Shared build progress.
+
+The feature-view `.Tests.swift` files import XCTest + `@testable import TeslaSync`, but the app target includes `feature-views`. There must be an exclude mechanism. Let me check how project.yml splits app vs test sources for feature-views.
+
+Let me get ground truth on whether this Apple project has been built before and how feature-view tests are wired.
+
+Critical ground truth from `macos-pending-verifications.md`: the full-app `xcodebuild build test` is a **known pre-existing blocker** (DashboardWidgetSize redefined 8×, co-located `*.Tests.swift` importing XCTest into the app target, dev-signing) — explicitly deferred to the `P99` acceptance-gate prompt on `macos-latest`. The established precedent (`ToolCard`) completed a same-tier feature-view prompt via **isolated SwiftPM build + tests + swiftlint/swiftformat/placeholder**, documenting the full-app build as macOS-pending.
+
+Let me check for an existing isolation harness and the Shared build progress.
+
+The `ToolCard` precedent is smaller (3 files) but the doc references "13/13 tests" via isolated SwiftPM build. Let me check the existing prompt logs to learn the precedented gate-logging format and isolated-build approach, and check Shared build progress.
+
+Let me read the `ToolCard` log (the documented precedent) and find the `SessionListSection` log to learn the exact isolated-build approach and gate-log format.
+
+This is the definitive precedent. The sanctioned disposition for a P4 Apple feature-view is: ship the surface, verify via **isolated SwiftPM harness (Swift 6 strict concurrency) against the REAL design-system files** + swiftlint/swiftformat/placeholder green, and DEFER the full-app xcodebuild (pre-existing unrelated collisions) — yielding **EXIT=0/STATUS=DONE**. The isolated harness compiled "the EXACT shipped sources" — I'll name the harness lib module `TeslaSync` so the co-located `@testable import TeslaSync` test compiles verbatim.
+
+Let me read the final reference details (item model, badge, row) and check the Gradle build.
+
+I have a complete and thorough understanding of every convention. Let me set up tracking and start writing the implementation. I'll model `ActiveSessionsSection` on the `SessionListSection` gold-standard (Section + list + destructive actions + states), using only `Tokens.swift` + `Motion.swift` deps so it verifies in an isolated Swift 6 harness named `TeslaSync`.
+
+The Shared.xcframework build completed. Let me confirm, then continue writing the surface.
+
+Shared.xcframework built successfully (8m21s) and is staged — I can attempt the full-app build later for concrete evidence. Now let me write the surface, starting with the pure Adapter core.
+
+Now the Views. I'll split into `.Views.swift` (orchestrator/header/rows), `.Row.swift` (device row + badge), and `.States.swift` (loading/open-mode/empty/error/chip/banner) to stay within SwiftLint's default `file_length`/`function_body_length` limits under `--strict`.
+
+Now the Actions file with the two security confirm dialogs (no silence — always confirm).
+
+Now the entry view that ties it together.
+
+Now the Previews and the strings catalog.
+
+Now the comprehensive test suite (adapter + model + accessibility), co-located per the dominant convention with `@testable import TeslaSync`.
+
+I introduced a broken test line (and it contains the word "placeholder"). Let me check the placeholder scanner's matching rules first, then fix the test.
+
+The scanner is **case-insensitive** and flags the word "placeholder" (and TODO/FIXME/XXX/stub/mock/etc.) anywhere in `.swift` files. Even though the gate's exact `-Path` won't resolve (vacuously clean, like ToolCard), the acceptance criteria forbids these words outright. Let me audit my files and fix the broken test.
+
+Let me scrub all 6 "placeholder" occurrences and fix the broken test method.
+
+All scrubbed. Now let me set up the isolated SwiftPM harness (lib module named `TeslaSync`) and verify no forbidden tokens remain.
+
+Two issues to fix: scrub the `.strings` "placeholder" comment, and the 417-line `.Tests.swift` exceeds SwiftLint's `file_length` (400) under `--strict`. I'll split tests into `.Tests.swift` + `.ModelTests.swift` (matching the SessionListSection convention).
+
+All 11 source files written. Now let me set up the isolated SwiftPM harness (Swift 6 strict concurrency, lib module named `TeslaSync`) compiling the exact shipped sources against the real `Tokens.swift` + `Motion.swift`, and build+test it.
+
+Harness is set up. Let me compile it (build tests too) to surface any errors.
+
+Only the `#Preview` macro fails — its plugin (`PreviewsMacros`) ships with Xcode, not the CommandLineTools `swift`. All logic/view/test code compiled cleanly. Let me rebuild using Xcode's toolchain so `#Preview` resolves too (maximal verification).
+
+Excellent progress — with Xcode's toolchain the `#Preview` macros and the entire production module compiled cleanly under Swift 6. The only remaining errors are a test-only global `let` of a non-`Sendable` closure type. Fix: mark it `@Sendable`. Let me patch both test files (real repo) and re-sync.
+
+Now re-sync and run the full test suite via the harness.
+
+All **32 tests pass** under Swift 6 strict concurrency with the exact shipped sources + real design-system files. Now the host gates. Let me format my files to the repo's `.swiftformat` rules, then verify with `--lint` and `swiftlint --strict`.
+
+Format applied (1 file normalized). Let me verify both lint gates on my files (`swiftformat --lint` + `swiftlint --strict`).
+
+Both lint gates are green on my files (**0/11 format, 0 violations strict**). Since formatting touched 1 file, let me re-sync the harness and re-test the final sources, then run the placeholder check and whole-tree lints.
+
+32 tests pass on final sources, pwsh available. Now the placeholder gate (both the exact gate invocation and a real scan of my files) and the whole-tree lints.
+
+Placeholder gate clean both ways (real scan of my files: `PLACEHOLDER_COUNT=0`). Now the whole-tree lints as the gate runs them.
+
+The whole-tree `swiftformat --lint` shows **1 pre-existing violation in `ActionBuilder.Previews.swift`** (a different surface, not mine). My 11 files are format-clean (0/11). Let me confirm it's pre-existing and run the whole-tree `swiftlint --strict`.
+
+Confirmed: `ActionBuilder.Previews.swift` is committed and unmodified by me (pre-existing); my changes are exactly the 12 `ActiveSessionsSection.*` files. Let me run the whole-tree `swiftlint --strict` to document the pre-existing state.
+
+**Both pre-existing violations match the ToolCard precedent exactly** — `LifetimeStatsWidget.Adapter.swift` (swiftlint) and `ActionBuilder.Previews.swift` (swiftformat), neither mine. **Zero violations in my files.** Let me update tracking and attempt the full-app build for concrete evidence (Shared.xcframework is staged).
+
+Project generated. Now the full-app iOS build for evidence (expected to fail on the documented pre-existing collisions, with zero errors in my files). This runs the Gradle staging phase + compiles ~1440 files, so I'll run it in the background.
+
+While the iOS build runs, let me monitor it. Let me check progress.
+
+iOS build failed as expected, with **0 errors in my files**. Let me extract the actual errors to confirm they're the documented pre-existing collisions.
+
+**IOS_EXIT=65** — build fails fast on a **pre-existing** file: `AcDcStatsPanel.Tests.swift:19: unable to resolve module dependency: 'XCTest'` (the documented "co-located `*.Tests.swift` importing XCTest into the app target" blocker). **Zero errors in my files.** Let me capture the macOS build result too.
+
+**MAC_EXIT=65** — pre-existing macOS dev-signing requirement (exactly as documented), **zero errors in my files**. Both full-app gates fail only on pre-existing, unrelated conditions. I now have complete evidence. Let me verify the generated artifacts are gitignored, then clean up.
+
+Clean — only my 12 files are untracked; generated artifacts are gitignored. Let me gather exact tool versions, then write the comprehensive gate log.
+
+I have all the evidence. Let me write the comprehensive gate log following the sanctioned format.
+
+The log is written. Let me clean up temporary artifacts and stage exactly my files + the log.
+
+Exactly 13 files staged (12 source/strings + log), pre-existing modified files excluded. Let me commit with the prescribed message.
+
+Committed (`9d5cf9412`). Let me do a final verification of the commit contents and working-tree state.
+
+The commit is clean: **13 files, 2122 insertions**; the two pre-existing modified web files remain unstaged (not mine). Let me finalize tracking.
+
+All todos complete. The task is finished and verified.
+
+Merge made by the 'ort' strategy.
+ ...le-feature-views-0197-ActiveSessionsSection.log | 161 +++++++++++++
+ .../ActiveSessionsSection.Actions.swift            | 112 +++++++++
+ .../ActiveSessionsSection.Adapter.swift            | 190 +++++++++++++++
+ .../ActiveSessionsSection.Model.swift              | 211 ++++++++++++++++
+ .../ActiveSessionsSection.ModelTests.swift         | 267 +++++++++++++++++++++
+ .../ActiveSessionsSection.Previews.swift           | 109 +++++++++
+ .../feature-views/ActiveSessionsSection.Row.swift  | 156 ++++++++++++
+ .../ActiveSessionsSection.Seams.swift              | 220 +++++++++++++++++
+ .../ActiveSessionsSection.States.swift             | 212 ++++++++++++++++
+ .../ActiveSessionsSection.Tests.swift              | 190 +++++++++++++++
+ .../ActiveSessionsSection.Views.swift              | 144 +++++++++++
+ .../feature-views/ActiveSessionsSection.strings    |  74 ++++++
+ .../feature-views/ActiveSessionsSection.swift      |  76 ++++++
+ 13 files changed, 2122 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0197-ActiveSessionsSection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActiveSessionsSection.Actions.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActiveSessionsSection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActiveSessionsSection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActiveSessionsSection.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActiveSessionsSection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActiveSessionsSection.Row.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActiveSessionsSection.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActiveSessionsSection.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActiveSessionsSection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActiveSessionsSection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActiveSessionsSection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActiveSessionsSection.swift

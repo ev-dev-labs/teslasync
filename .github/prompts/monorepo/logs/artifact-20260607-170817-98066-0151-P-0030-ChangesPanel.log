@@ -1,0 +1,144 @@
+=== P4 Feature view 0030 ChangesPanel (Apple) ===
+# Generated: 2026-06-08T03:19:03Z
+# Honesty Covenant rule 10 — log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+############################################################
+# 1. AUTHORITATIVE GATE (verbatim commands from the prompt) #
+############################################################
+
+----- xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test -----
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+
+----- xcodebuild -scheme TeslaSync-macOS build test -----
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+
+----- swiftlint --strict   (run in apps/apple, where .swiftlint.yml lives; project-wide) -----
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-151/apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length Violation: Function body should span 50 lines or less excluding comments and whitespace: currently spans 78 lines (function_body_length)
+Done linting! Found 1 violation, 1 serious in 581 files.
+LINT_EXIT=2   <-- 1 PRE-EXISTING violation in a sibling file (see note in §2); NOT ChangesPanel.
+
+----- swiftformat --lint apps/apple   (project-wide) -----
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-151/apps/apple/.swiftformat
+SwiftFormat completed in 0.33s.
+0/591 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+----- ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/ChangesPanel -----
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+############################################################
+# 2. SURFACE-SCOPED VERIFICATION (this prompt's files)      #
+#    feature-views is not yet in the project swiftlint /    #
+#    xcodegen 'included' set (integration owned by the P4   #
+#    acceptance gate), so these scope every runnable check  #
+#    to the ChangesPanel.* deliverables explicitly.         #
+############################################################
+
+----- swiftlint --strict --no-cache  (ChangesPanel.* only) -----
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT6_EXIT=0
+NOTE: a fresh project-wide 'swiftlint --strict --no-cache' surfaces exactly 1 PRE-EXISTING
+      violation — TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+      [function_body_length] — which is outside this surface's allowed-files scope and
+      unrelated to ChangesPanel. The ChangesPanel.* files are 0 violations.
+
+----- swiftformat --lint TeslaSync/feature-views -----
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-151/apps/apple/.swiftformat
+SwiftFormat completed in 0.18s.
+0/6 files require formatting.
+FORMAT6_EXIT=0
+
+----- check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views  (recursive over my files) -----
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER6_EXIT=0
+
+----- swiftc -typecheck (macOS 15 SDK) — logic + views (Adapter, Model, Views, ChangesPanel) -----
+(stubs mirror the real P1/S9 tokens + shared components: Color.TS / Font.TS / TSSpacing /
+ TSRadius / TSTone / TSDateTime / TSSkeleton — see signatures in the cited source files)
+TYPECHECK_CORE_EXIT=0   (0 = my logic + SwiftUI views type-check clean)
+
+----- swiftc -typecheck — test bodies against the REAL adapter/model types -----
+TYPECHECK_TESTS_EXIT=0  (0 = every assertion references my public API type-correctly)
+
+----- swiftc -frontend -parse — Previews + Tests (syntax; #Preview macro plugin + XCTest need Xcode) -----
+PREVIEWS_PARSE_EXIT=0
+TESTS_PARSE_EXIT=0
+
+############################################################
+# 3. PLATFORM-CAPABILITY EVIDENCE (why build+test is BLOCKED)#
+############################################################
+
+Capability clause: 'requires SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 /
+macOS 15 HIG. If unavailable on the runner -> STATUS=BLOCKED with API evidence.'
+xcodebuild + the iOS 18 Simulator require a full Xcode; this runner is Command Line
+Tools only, so the authoritative build+test (IOS_EXIT/MAC_EXIT) cannot execute.
+
+----- xcode-select -p -----
+/Library/Developer/CommandLineTools
+----- xcodebuild -version -----
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+----- swift --version -----
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+Target: arm64-apple-macosx26.0
+----- runnable-check tool versions -----
+swiftlint=0.63.3  swiftformat=0.61.1  pwsh=PowerShell 7.6.2
+macOS SDK=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+
+############################################################
+# 4. DELIVERABLES (apps/apple/TeslaSync/feature-views/)     #
+############################################################
+
+  ChangesPanel.swift                56 lines
+  ChangesPanel.Model.swift         289 lines
+  ChangesPanel.Adapter.swift       393 lines
+  ChangesPanel.Views.swift         359 lines
+  ChangesPanel.Previews.swift      147 lines
+  ChangesPanel.Tests.swift         347 lines
+  ChangesPanel.strings              46 lines
+
+  Parity: SwiftUI port of features/admin/components/feature-flags/ChangesPanel.tsx.
+  States: loading / empty-global / empty-scoped / error(QueryError+retry) /
+          stale(chip+auto-refresh) / offline(cached+chip) / content.
+  Web shared components -> native: Badge->ChangesOperationBadge; DataTable->
+  ChangesAuditTable (regular grid + mobileColumns cards); TimeStamp->TSDateTime;
+  EmptyState->ContentUnavailableView. compact()/OP_VARIANT/mobileColumns reproduced.
+  i18n: all 11 web keys + native-chrome keys via the ChangesPanel P1/S10 table.
+  Telemetry: view.opened(surface='ChangesPanel'). a11y: per-row VoiceOver + retry label.
+
+  Integration deps (out of this prompt's allowed-files scope; owned by the P4 gate):
+   - project.yml app + test targets must add source path 'TeslaSync/feature-views'.
+   - .swiftlint.yml 'included' must add 'TeslaSync/feature-views'.
+
+############################################################
+# 5. VERDICT                                                #
+############################################################
+
+Authoritative gate steps:
+  IOS_EXIT=1          BLOCKED — no Xcode / iOS 18 Simulator (Command Line Tools only)
+  MAC_EXIT=1          BLOCKED — no Xcode / macOS app toolchain (Command Line Tools only)
+  LINT_EXIT=2         project-wide; 1 PRE-EXISTING sibling violation, NOT ChangesPanel
+  FORMAT_EXIT=0         clean (0/591 require formatting)
+  PLACEHOLDER_EXIT=0  clean (no stubs/placeholders)
+
+ChangesPanel.* surface-scoped checks — ALL GREEN:
+  swiftlint=0  swiftformat=0  placeholder=0  typecheck(core)=0  typecheck(tests)=0  parse(previews)=0  parse(tests)=0
+
+The surface itself is complete and verified on every check this runner can execute.
+The two xcodebuild build+test steps are red SOLELY due to the missing Xcode platform
+capability (evidence in §3). No red-as-green and no commit-on-green-it-isn't: the
+surface cannot be declared DONE without the authoritative xcodebuild build+test, so
+per the Capability clause the terminal status is BLOCKED.
+
+EXIT=1
+STATUS=BLOCKED

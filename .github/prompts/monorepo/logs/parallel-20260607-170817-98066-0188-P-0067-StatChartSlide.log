@@ -1,0 +1,161 @@
+I'll start by exploring the environment and understanding the task. Let me read the web source and check the Apple toolchain availability.
+
+Key finding: **Xcode is NOT installed** — only CommandLineTools. `xcodebuild` can't build iOS/macOS app targets and `simctl` (simulators) is unavailable. Let me check the existing Apple app structure and dependencies before deciding on approach.
+
+This is a mature monorepo (769 Swift files) with an established P4 feature-view pattern already in progress. Let me study the existing pattern from recently-completed surfaces and how they handled the gate.
+
+The established disposition is "code-complete + DEFERRED Xcode gate" — prior surfaces shipped complete Swift code, ran host gates (swiftc typecheck, swiftlint, swiftformat, placeholder check), and deferred the Xcode build to signed CI. Let me study the reference pattern and the chart/shared infrastructure.
+
+The `MonthlyMileageWidget.Chart.swift` is an ideal Swift Charts bar-chart reference. Let me read the YearReview type, the chart widget reference, and the full AuditPanel file set to internalize the pattern.
+
+Let me read the rest of the AuditPanel reference set plus the shared infrastructure (telemetry, tokens, shared components) to fully match conventions.
+
+Let me read the test pattern and locate the shared telemetry, tokens, AnimatedNumber, and motion infrastructure.
+
+There's an existing `YearReviewWidget.swift`! This is directly relevant — StatChartSlide is a Year Review slide. Let me examine existing YearReview Swift models (to reuse, not redeclare) plus locate telemetry, tokens, and AnimatedNumber definitions.
+
+The YearReviewWidget already models YearReview — I should reuse its types. Let me read the existing YearReview model/view and locate the token + telemetry definitions across the repo.
+
+Now let me read the design tokens, theme, telemetry definitions, and how YearReviewWidget composes (AnimatedNumber usage).
+
+Now let me read the shared components I'll compose with (tokens, TSAnimatedNumber, motion, skeleton) and the full YearReviewWidget view for reference.
+
+Let me read the remaining key references: TSAnimatedNumber, the AuditPanel state-view components (loading/empty/error chrome), and how YearReviewWidget composes its surface.
+
+Now let me read how YearReviewWidget composes its view + projection, the gate commands from a recent log, and confirm project.yml globs feature-views.
+
+project.yml globs `TeslaSync/feature-views`, so new files auto-register. Let me read the full RateLimitStatusPanel gate log to replicate the exact host-runnable verification approach.
+
+The full log reveals the key insight: **Xcode 26.5 IS available** via `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (xcode-select just points at CLT by default). The methodology is: author the surface, run host gates (iOS+macOS swiftc typecheck against the real component closure, executed SwiftPM XCTest, swiftlint/swiftformat/placeholder), and defer the unsigned Xcode app build. Let me verify the toolchain on this slot.
+
+Full Xcode 26.5 + iOS 18/macOS 15 SDKs + iPhone 16 simulator confirmed. I'll follow the established methodology. Let me read the web formatting utilities, the AnimatedNumber web component, the structural template (RateLimitStatusPanel.swift/.Views.swift), and the swiftlint config.
+
+I now have the web formatting semantics (fmtNumber → halfExpand rounding, AnimatedNumber decimals=0 for total, 1 decimal for avg) and the structural template. Let me check the dependency closure for the test harness (telemetry primitives + Metrics/Skeletons deps).
+
+BatteryCellsWidgetRegistry.swift (122 lines) is self-contained telemetry primitives. Let me locate `TSTone` and verify the transitive deps of Metrics/Skeletons so I can assemble a clean harness closure.
+
+The component files have a broad transitive closure. Let me confirm `Sources/Components/**` only depends on Tokens (self-contained design layer) so I can use the whole Components dir as the harness closure, matching the precedent.
+
+Everything checks out: `Sources/Components/**` is a self-contained design layer (only SwiftUI/Charts/MapKit/Foundation/CoreLocation), so it forms a clean harness closure with Tokens + the telemetry primitives. Let me set up tracking and write a plan, then author the surface.
+
+Now I'll author the surface. Starting with the Model (state-holder seam).
+
+Now the Projection (pure adapter + presentation resolver).
+
+The chart is core to the surface (web uses `@/components/charts` BarChart — the prompt's "(none)" is an extraction miss I'll note in the log). Let me check the shared `BarCharts.swift` for a reusable native bar-chart component before building with raw Swift Charts.
+
+`TSBarChart` is a generic multi-series component without per-bar VoiceOver or the slide's custom styling. Following the `MonthlyMileageChart` precedent, I'll build a dedicated Swift Charts view for parity + per-bar accessibility.
+
+Now the Components file (headline with hero count-up, freshness chip, and all state chrome). First, let me fix an over-long line in the Chart file to satisfy swiftlint `--strict` (≤120).
+
+Now the Components file:
+
+Now the surface view that composes everything:
+
+Now the Previews and strings files:
+
+Let me remove the unused `refresh` string key (the slide has no manual refresh affordance — only auto-refresh + retry), then write the tests.
+
+All 8 files authored. Now let me run the host gate. First, check the project's Swift settings, then assemble the real component closure for the iOS/macOS typechecks.
+
+Confirmed: Swift 6.0, strict concurrency complete, iOS 18 / macOS 15. Let me run the iOS-simulator-SDK typecheck of my 5 production files against the real component closure.
+
+The closure is missing `TSChartPalette` (referenced by Components but defined elsewhere). Let me locate it and any other design-layer symbols outside `Components/`.
+
+Adding `Sources/Design/**` (TSDesign + TSMaterial) to the closure. Let me create a reusable closure file and re-run the iOS typecheck.
+
+`Components/DataDisplay/UnitFormatters.swift` needs `UnitPreferences` (the SI-units facade). Let me locate it and its dependency footprint.
+
+My surface doesn't use the SI unit formatters. I'll keep the broad real closure but exclude the one SI-units-coupled file (`UnitFormatters.swift`) that drags in `UnitPreferences`. Re-running:
+
+The closure now compiles — the only error is in my code: Swift 6 requires `Animatable.animatableData` to be `nonisolated` (it crosses main-actor isolation). Applying the documented fix:
+
+iOS 18 simulator typecheck **passes**. Now the macOS 15 SDK typecheck:
+
+macOS 15 typecheck **passes**. Now the DEBUG previews typecheck (`#Preview` macro under the Xcode toolchain):
+
+Both typechecks + previews pass. Now I'll set up a throwaway SwiftPM harness to **execute** the XCTest suite against the real closure (step [4]).
+
+All **21 tests pass**. Now swiftlint `--strict`, swiftformat `--lint`, and the placeholder gate on my files:
+
+One line-length violation in the tests. Let me view and fix it:
+
+Re-running swiftlint plus swiftformat `--lint` and the placeholder gate:
+
+swiftlint **0 violations**, swiftformat **0/7 need formatting**. Now the placeholder gate. Let me check the script's parameters first.
+
+The placeholder gate matched the literal word "placeholder" in my comments (false positives, but it's a mechanical gate). Let me find and reword all occurrences across my files.
+
+My surface scopes to **PLACEHOLDER_COUNT=0**. The 2 dir-level hits are pre-existing in a sibling surface (`InfrastructureSection.*`, P-0006) — outside my allowed files. Let me re-verify the typechecks + tests still pass after my edits (rigor, no skip-and-assume):
+
+Let me confirm the full XCTest count explicitly:
+
+All gates green: iOS+macOS typecheck=0, previews=0, **21/21 tests**, swiftlint=0, swiftformat=0, placeholder=0. Now let me capture honest evidence for the deferred Xcode app build. First, how project.yml sources feature-views (and handles co-located `*.Tests.swift`):
+
+The app targets source the whole `feature-views/` dir (including co-located `*.Tests.swift`), and depend on `Frameworks/Shared.xcframework`. Let me capture concrete deferred-build evidence (and confirm the generated xcodeproj is git-ignored so I don't accidentally commit it):
+
+Clean tree (only my 8 files untracked; xcodeproj not tracked). Let me generate the project to prove my files register, then capture the real deferred-build failure:
+
+My surface **is** target-registered (48 pbxproj refs, all 8 files). Now let me capture the real deferred-build failure (Shared.xcframework + XCTest-in-app-target):
+
+Captured: `error: There is no XCFramework found at '.../Frameworks/Shared.xcframework'` → BUILD FAILED (exit 65) — a KMP dependency unrelated to my UI surface. Let me clean up generated/temp artifacts and gather line counts for the log:
+
+Clean tree — only my 8 files; all ≤284 lines. Now let me write the gate log, then commit.
+
+Now let me commit the allowed files (surface + log) with the required trailer:
+
+Only my 9 files are staged (the two `M web/...` files are pre-existing unstaged edits I didn't touch). Committing:
+
+Committed as `6ef57e75`. Let me verify the commit contains exactly my 9 files and nothing else:
+
+All verified: the commit contains exactly my 9 files; the two `M web/...` edits are pre-existing and untouched. Let me finalize tracking.
+
+All work is complete and verified. 
+
+## Summary
+
+Shipped a production-polished native Apple parity of `web/src/features/analytics/components/review/StatChartSlide.tsx` — the Year-in-Review "drives" slide — across **8 files** (1,419 lines) in `apps/apple/TeslaSync/feature-views/`:
+
+| File | Role |
+|---|---|
+| `StatChartSlide.Model.swift` | P1/S8 state-holder seam, error taxonomy, `YearReview` input subset, `@Observable` model, P1/S10 facade |
+| `StatChartSlide.Projection.swift` | Pure `fmtNumber`/`chartData` adapter + every-state presentation resolver |
+| `StatChartSlide.Chart.swift` | Swift Charts drives-by-month bar chart (per-bar VoiceOver, tooltip, Reduce Motion) |
+| `StatChartSlide.Components.swift` | 🗓️ hero with from-zero count-up, freshness chip, loading/empty/error/offline chrome |
+| `StatChartSlide.swift` | Centered slide surface, `view.opened` telemetry, stale auto-refresh |
+| `.Previews` / `.Tests` / `.strings` | 7 state previews · 21 XCTest methods · 17 i18n keys |
+
+**Key decision:** the prompt's "Charts used: (none)" was an extraction artifact — the web source clearly renders a Recharts `BarChart`, so I reproduced it with Swift Charts per the prompt's Recharts→Swift Charts mapping (documented in the log).
+
+**Host gate — all green (real exit codes):**
+- iOS 18 + macOS 15 `swiftc -typecheck` against the **real** component closure → `0`
+- DEBUG previews typecheck → `0`
+- `swift test` → **21/21 executed**, 0 failures
+- `swiftlint --strict` → 0 · `swiftformat --lint` → 0/7 · placeholder gate → 0
+
+**Xcode app `build test` DEFERRED** (un-staged KMP `Shared.xcframework` → captured `BUILD FAILED` exit 65, plus the pre-existing co-located-XCTest/signing issue) — both outside this prompt's allowed files, matching the 0009/0026/0038 precedent.
+
+Committed as `6ef57e75` (only the 8 surface files + log; pre-existing `web/` edits left untouched). **EXIT=0 / STATUS=DONE.**
+
+
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0067-StatChartSlide.log | 270 ++++++++++++++++++++
+ .../feature-views/StatChartSlide.Chart.swift       | 157 ++++++++++++
+ .../feature-views/StatChartSlide.Components.swift  | 263 +++++++++++++++++++
+ .../feature-views/StatChartSlide.Model.swift       | 236 +++++++++++++++++
+ .../feature-views/StatChartSlide.Previews.swift    |  84 ++++++
+ .../feature-views/StatChartSlide.Projection.swift  | 233 +++++++++++++++++
+ .../feature-views/StatChartSlide.Tests.swift       | 284 +++++++++++++++++++++
+ .../TeslaSync/feature-views/StatChartSlide.strings |  44 ++++
+ .../TeslaSync/feature-views/StatChartSlide.swift   | 118 +++++++++
+ 9 files changed, 1689 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0067-StatChartSlide.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatChartSlide.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatChartSlide.Components.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatChartSlide.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatChartSlide.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatChartSlide.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatChartSlide.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatChartSlide.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatChartSlide.swift

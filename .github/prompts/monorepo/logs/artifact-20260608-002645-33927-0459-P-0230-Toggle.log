@@ -1,0 +1,137 @@
+=== P4 Shared surface 0230 Toggle (Apple) ===
+Generated: 2026-06-08T14:25:14Z
+Surface:   apps/apple/TeslaSync/shared-surfaces/Toggle.{swift,Views,Adapter,Model,Previews,Tests,strings}
+Web src:   web/src/components/ui/Toggle.tsx (atomic controlled switch: label?, checked, onChange, size sm|md)
+
+--- Platform capability (REQUIRED: SwiftUI + iOS18/iPadOS18/macOS15 HIG) — AVAILABLE ---
+  Xcode 26.5
+  Build version 17F42
+  swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+  swiftlint   0.63.3
+  swiftformat 0.61.1
+  iOS sim:    iPhone 16 (83717DEE-70A3-4325-AA61-CBDDD3140989) (Booted) 
+
+############################################################################
+# LITERAL GATE — the two whole-app xcodebuild steps are BLOCKED in-scope.   #
+# Reason is NOT platform capability (proven available + used below) but the #
+# allowed-files scope + shared runner. See evidence, then the equivalent    #
+# in-scope verification that builds+tests THIS surface green on iPhone 16.   #
+############################################################################
+
+[BLOCKER 1] shared-surfaces/ is not in project.yml 'sources' (TeslaSync / TeslaSync-macOS),
+            and project.yml is NOT in this prompt's Allowed files. After 'xcodegen generate':
+            occurrences of 'shared-surfaces' in generated pbxproj = 0  (none — surface not compiled by the literal gate)
+            (control) occurrences of a registered feature-view 'AiUsageCard'  = 60
+            => the literal 'xcodebuild -scheme TeslaSync build test' does NOT compile the Toggle files.
+
+[BLOCKER 2] The whole-app scheme compiles the entire app (1400+ feature files) incl. 1262 co-located
+            *.Tests.swift in app-target source dirs, and its preAction Gradle-builds a KMP Shared.xcframework.
+            This is a repo-wide integration build unrelated to the Toggle surface.
+
+[BLOCKER 3] Shared, non-dedicated runner: a sibling parallel job was concurrently running
+            'xcodebuild -scheme TeslaSync-macOS build test'. Hogging it for a 1400-file build is unsafe;
+            the Toggle surface is instead verified in isolation on the SAME iPhone 16 / iOS 18 destination.
+
+==================================================================================
+EQUIVALENT IN-SCOPE VERIFICATION — the Toggle surface, built + tested + linted GREEN
+==================================================================================
+
+--- [maps to LINT_EXIT] swiftlint --strict (the 6 surface .swift files) ---
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+  (note: the repo-wide 'swiftlint --strict' reports 1 pre-existing violation in
+   dashboard-widgets/LifetimeStatsWidget.Adapter.swift — NOT a shared-surfaces/Toggle file.)
+
+--- [maps to FORMAT_EXIT] swiftformat --lint (shared-surfaces) ---
+SwiftFormat completed in 3.79s.
+0/6 files require formatting.
+FORMAT_EXIT=0
+
+--- [maps to PLACEHOLDER_EXIT] check-placeholders.ps1 (no stubs/TODO/placeholder) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- module-integration safety: each public symbol is unique across the app module ---
+  ToggleSurface: 0 external definitions
+  ToggleSurfaceModel: 0 external definitions
+  ToggleSurfaceSize: 0 external definitions
+  ToggleMetrics: 0 external definitions
+  ToggleAccessibility: 0 external definitions
+  ToggleStrings: 0 external definitions
+  ToggleTelemetry: 0 external definitions
+  OSLogToggleTelemetry: 0 external definitions
+  ToggleSwitchControl: 0 external definitions
+  ToggleLabel: 0 external definitions
+
+--- [stand-in for MAC_EXIT: TeslaSync-macOS build test] swift test (host macOS 15, Swift 6 strict concurrency) ---
+    harness module named 'TeslaSync' so shipped '@testable import TeslaSync' runs unchanged; vendors real Tokens.swift + Motion.swift
+	 Executed 14 tests, with 0 failures (0 unexpected) in 0.003 (0.005) seconds
+	 Executed 14 tests, with 0 failures (0 unexpected) in 0.003 (0.006) seconds
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+MAC_SURFACE_EXIT=0
+
+--- [stand-in for IOS_EXIT: TeslaSync iPhone 16 build test] xcodebuild test -destination 'platform=iOS Simulator,name=iPhone 16' ---
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.006 (0.008) seconds
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.005 (0.011) seconds
+	 Executed 14 tests, with 0 failures (0 unexpected) in 0.013 (0.025) seconds
+Test Suite 'All tests' passed at 2026-06-08 07:26:36.498.
+	 Executed 14 tests, with 0 failures (0 unexpected) in 0.013 (0.026) seconds
+** TEST SUCCEEDED **
+IOS_SURFACE_EXIT=0
+
+==================================================================================
+GATE VARIABLE MAPPING
+==================================================================================
+  IOS_EXIT         = BLOCKED  (whole-app 'xcodebuild -scheme TeslaSync ... build test' does not
+                               compile shared-surfaces/ — see BLOCKER 1/2/3. The Toggle surface
+                               itself builds+tests on the SAME iPhone 16 / iOS 18 destination:
+                               IOS_SURFACE_EXIT=0, ** TEST SUCCEEDED **, 14/14.)
+  MAC_EXIT         = BLOCKED  (whole-app 'xcodebuild -scheme TeslaSync-macOS build test', same reason.
+                               Toggle surface on macOS 15 / Swift 6 strict: MAC_SURFACE_EXIT=0, 14/14.)
+  LINT_EXIT        = 0        (swiftlint --strict on the 6 surface files: 0 violations.)
+  FORMAT_EXIT      = 0        (swiftformat --lint: 0/6 require formatting.)
+  PLACEHOLDER_EXIT = 0        (PLACEHOLDER_COUNT=0 — no stub/TODO/placeholder.)
+
+==================================================================================
+ACCEPTANCE CRITERIA (self-audit)
+==================================================================================
+  [x] All states from the web source reproduced (off/on x sm/md x labeled/unlabeled, focus,
+      increased-contrast border, Dynamic Type). The source is a synchronous controlled switch
+      (only hook = useId) — it has NO loading/empty/error/stale/offline data branches, so none
+      are invented (honesty: no fabricated surface). Every real branch renders (Previews + Tests).
+  [x] Binds via the P1/S8 state-holder (ToggleSurfaceModel); no HTTP / no logic in the view.
+  [x] Every component-owned string resolves through the P1/S10 facade (ToggleStrings + Toggle.strings).
+  [x] Accessibility: native switch (.isToggle) trait + label + on/off value; VoiceOver, Dynamic
+      Type, Reduce Motion, increased-contrast all handled.
+  [x] Tests: adapter geometry unit tests + per-state/model tests + a11y label test (14, green).
+  [x] view.opened telemetry (P1/S11) emitted once with slug 'Toggle' (asserted).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code.
+
+==================================================================================
+HONESTY COVENANT
+==================================================================================
+  1 No red-as-green ...... the two whole-app xcodebuild steps are reported BLOCKED, not passed.
+  2 No scope narrowing ... full web parity reproduced; cross-cutting i18n/a11y/telemetry/tests added.
+  3 No skip-and-assume ... blockers shown with concrete evidence (pbxproj grep, shared-runner ps).
+  4 No stubs as final .... placeholder gate = 0; complete implementation.
+  5 No parity shortcuts .. geometry reproduces the web Tailwind constants verbatim (incl. md asymmetry).
+  6 No delegation ........ surface authored in the allowed files only.
+  7 No predecessor bypass  P1 deps (tokens/motion/i18n/telemetry/state-holder) consumed, not forked.
+  8 No commit on red ..... only GREEN, verified work is committed; status is transparently BLOCKED.
+  9 No silent drift ...... deliverable touches only shared-surfaces/Toggle.* + this log (project.yml
+                           intentionally NOT edited — it is outside this prompt's Allowed files).
+ 10 Log ends with EXIT/STATUS (below).
+
+SUMMARY: The Toggle shared surface is production-complete and verified GREEN on the exact gate
+platforms (iPhone 16 / iOS 18 simulator + macOS 15, Swift 6 strict) plus swiftlint/swiftformat/
+placeholder. The literal whole-app xcodebuild build+test cannot include this surface within the
+prompt's Allowed-files scope (shared-surfaces/ is unregistered in project.yml, which is not an
+allowed file) and must not monopolise the shared runner — hence BLOCKED, with the equivalent
+in-scope build+test proving the surface itself is correct.
+
+EXIT=1
+STATUS=BLOCKED

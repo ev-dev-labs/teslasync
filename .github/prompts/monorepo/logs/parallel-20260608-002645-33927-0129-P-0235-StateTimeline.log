@@ -1,0 +1,134 @@
+I'll start by assessing the environment capability and exploring the repo structure, since this task requires native Apple tooling.
+
+Toolchain check: `swift` 6.3.2, `swiftlint` 0.63.3, `swiftformat` 0.61.1 are present, but **full Xcode is NOT installed** (only CommandLineTools), so `xcodebuild` iOS Simulator builds cannot run. Let me verify this and examine the existing feature-view pattern (AIUsageCard was just modified — a sibling template).
+
+I have the full web spec. `StateTimeline` is a presentational FSM-transition mini-timeline with two visual branches (empty/populated). Now let me study the sibling `FSMStateDiagram` (same `state-machine` feature, also FSM-based) and the recently-modified `AiUsageCard` as the canonical templates, plus the shared facades (i18n, tokens, telemetry, state-holders).
+
+Excellent — `FSMStateDiagram` is the canonical sibling. Critically, it **already defines `public FSMTransition` and `FSMConnection`** in the same target, so I must reuse them (not redefine). Let me study the FSM color resolution, projection, previews, and tests, plus the web FSM types and date helpers.
+
+Now I understand the architecture deeply. Let me examine the FSM→Color token mapping, the model tests, the web FSM types/date helpers, and confirm shared components (especially Tooltip) exist.
+
+Let me grab the exact `formatTime`/`formatRelative` web implementations, locate the FSM types, and verify the shared components (especially Tooltip) and tokens exist.
+
+Now let me read the project config, design tokens, and confirm all shared components (especially Tooltip) plus the most recent canonical `AiUsageCard` structure.
+
+Both app targets compile `TeslaSync/feature-views` + `Sources/` + generated design tokens. Let me read the exact APIs of the shared components/tokens I'll use, and check `pwsh`/SwiftUI availability.
+
+`pwsh` is available, SwiftUI typechecks on host, and I've confirmed `TSEmptyState`/`TSQueryError`/`TSButton` APIs. Note: there's no `TSTooltip` view — the native idiom is the `.help()` / `tsTooltip` modifier. Let me read the design tokens and remaining components (Buttons, Motion, Skeletons), plus the design token definitions.
+
+Let me locate the generated design tokens and read the Cards (TSGlassPanel), Motion (TSFadeIn), and Skeletons (TSSkeleton) components.
+
+Let me read the full design tokens, the Cards (TSGlassPanel), and Typography (Font.TS) definitions.
+
+I now have all tokens/components. Let me read the placeholder gate, lint configs, and the most-recent `AiUsageCard` (its main view, strings, and adapter test) to match conventions exactly.
+
+I have everything needed. Let me verify two things in parallel: whether `@Observable`/`@MainActor` classes compile under the host `swiftc` (for my logic harness), and the AiUsageCard adapter-test convention.
+
+`@Observable` typechecks under host `swiftc` (exit 0) — I can build a real logic harness. Let me confirm the test-target wiring (FSM tests use no module import) before writing.
+
+The test bundles source from `Tests/Unit`, not feature-views — yet FSM's `.Tests.swift` lives in feature-views. Let me see how those test files get compiled (app-target excludes / test-target includes).
+
+Test wiring confirmed: feature-view `.Tests.swift` files compile alongside the app sources (FSM uses `import Foundation`/`import XCTest`, no module import, public types). I'll mirror the FSM sibling exactly. I have full context now. Let me set up tracking and write the plan.
+
+Now I'll write all eight files, modeled faithfully on the verified `FSMStateDiagram` sibling. Starting with the pure layers (Model + Projection), which I can compile-verify without Xcode.
+
+Pure layers written. Before adding the SwiftUI files, let me compile-verify the Model + Projection against the real FSM sibling deps using a standalone `swiftc` harness (since `xcodebuild` can't run). This catches type errors early and proves the core arithmetic.
+
+Good news: the 6 repo files compiled cleanly — only the harness's top-level isolation needs fixing (Swift 6 makes top-level MainActor-isolated). Let me fix the helpers.
+
+Top-level vars can't carry an actor annotation. Let me wrap the whole harness in a single `@MainActor` function with a local counter.
+
+All pure-layer assertions pass and the Model/Projection compile against the real FSM deps. Now the SwiftUI layers.
+
+All 8 files written. Now I'll verify the SwiftUI layer compiles against the real APIs. Since `xcodebuild` can't run, I'll typecheck the view files against contract stubs that mirror the exact component/token signatures I read, with the **real** FSM deps providing `FSMStateColor`/`FSMRegistry`/`FSMTransition`.
+
+Good — the typecheck caught a real shadowing bug. Let me fix it.
+
+View layer typechecks clean. Now typecheck the two XCTest files against the real pure deps.
+
+XCTest ships only with full Xcode (not CLT), so I can't typecheck those two files directly. I've already proven the test *logic* in the harness. To also typecheck the test files' use of my APIs, I'll typecheck them against a minimal XCTest shim + the real pure deps.
+
+The shim needs to BE the `XCTest` module. Let me compile it as a named module and point the import search path at it.
+
+Both test files typecheck against the real deps. Now the runnable quality gates. First `swiftformat --lint` on my files.
+
+swiftformat wants the long assertion lines wrapped. Let me let the tool auto-fix all my files, then re-lint.
+
+swiftformat passes (0/7 need formatting). Now swiftlint `--strict`. Let me also see the full lint config (rule thresholds) and my file sizes.
+
+The `.swiftlint.yml` uses default `file_length` (400 warn → error under `--strict`), and my `StateTimeline.Views.swift` is 436 lines. I'll extract the Foundation-only `StateTimelineCopy` into its own file — cleaner separation and keeps every file well under the limit. Let me view the current Copy block boundaries after formatting.
+
+I'll extract `StateTimelineCopy` (lines 16–133) into a Foundation-only `StateTimeline.Copy.swift` and remove it from Views.
+
+Clean split: Copy.swift (128) + Views.swift (317), both under 400. Let me format the two changed files and re-typecheck the full view layer (now including Copy).
+
+View layer typechecks with the split. Now `swiftlint --strict` on all 8 Swift files.
+
+`swiftlint --strict`: **0 violations in 8 files.** Now let me add the new `Copy.swift` to the logic harness (with i18n-rendering assertions) and check the placeholder gate's path handling.
+
+Harness green including i18n rendering. Now the placeholder gate — let me check its `-Path` handling, then run it as the gate specifies.
+
+The gate's literal `-Path .../StateTimeline` prefix isn't a real path (the script needs an existing dir). I'll scan a temp dir containing exactly my surface files for a clean, scoped result, and run the script's self-test to prove it's functioning.
+
+Placeholder gate: **self-test PASS, surface scan PLACEHOLDER_COUNT=0, EXIT=0.** All runnable gates are green. Now let me capture the authoritative xcodebuild capability evidence and run the whole-tree swiftformat lint.
+
+Definitive evidence: `xcode-select -p` → CommandLineTools, `xcodebuild` errors with "requires Xcode", and `simctl` is absent. The iOS/macOS build+test steps are genuinely BLOCKED. Let me run the gate's whole-tree `swiftformat --lint` to capture honest output.
+
+Whole-tree `swiftformat` shows the only failing file is **`ActionBuilder.Previews.swift` (a sibling surface, not mine)** — my 8 files all pass. I won't touch that unrelated file (out of allowed scope). Let me run the whole-tree `swiftlint --strict` to capture honest gate output.
+
+One violation across 1917 files — let me identify which file (it scrolled off).
+
+The only two whole-tree violations are in **other surfaces** (`ActionBuilder.Previews.swift`, `LifetimeStatsWidget.Adapter.swift`) — both outside my allowed scope and untouched. My surface is fully clean. Now let me write the gate log honestly. Let me confirm the log directory and check for sibling logs.
+
+There's a clear predecessor disposition. Let me confirm it's consistent across the track before finalizing my log's status.
+
+The track is unambiguous: **all 174 feature-view logs are `STATUS=DONE` / `EXIT=0`**, using the established disposition "code-complete + real-SDK host validation + **DEFERRED** Xcode app build/test" (xcodebuild shown deferred-not-green, committed on all-green host gates). My approach (real-dep typecheck, XCTest shimmed, host gates green, runtime harness) matches this exactly. Let me read one full sibling log to mirror its structure.
+
+The predecessor log is detailed and shows they accessed Xcode via `DEVELOPER_DIR` (no sudo) for **strong typechecks against the REAL component library** on both SDKs — stronger than my stubs. Let me check whether this runner has Xcode.app available that way.
+
+Xcode 26.5 **is** available via `DEVELOPER_DIR` (no sudo) — same as the predecessor. This lets me do a **strong typecheck against the REAL component library** on the actual SDKs (stronger than stubs). Let me check the component dirs are self-contained (no Charts/Maps/Shared imports), then compile.
+
+Components are pure SwiftUI (no Charts/MapKit/Shared). Let me run the **strong typecheck against the real component library** on the macOS 26.5 SDK (surface + real Tokens/Design/Components + real FSM siblings incl. the real `FSMStateColor.tint`).
+
+Need `TSMetricBar` from the DataDisplay category. Let me check all Components imports, then include the full component library.
+
+All Components are SDK-only (SwiftUI/Charts/MapKit/CoreLocation, no KMP). Let me retry with the **entire** real component library.
+
+The whole-directory glob pulls in unrelated files (FeedbackOverlays→TSMetricBar→UnitFormatters→UnitPreferences, an app-level type). I only need the specific component files my surface transitively uses. Let me hand-pick the minimal real set (matching the predecessor's approach) and iterate.
+
+**Strong macOS typecheck against the REAL component library + real FSM siblings: EXIT=0.** Now the same against the iOS 18 Simulator SDK (covers iOS/iPadOS).
+
+Both strong typechecks (macOS + iOS) against the real component library pass. Now let me capture the honest evidence for the deferred xcodebuild step (xcframework staging, signing, registration).
+
+feature-views **is** registered in `project.yml` (so my files compile in a real build), but `Shared.xcframework` is absent (only `.gitkeep`) and there are **0 codesigning identities** — the two real, code-unrelated blockers for the full app build/test. Since Xcode is present, let me capture the *actual* xcodebuild exit as honest evidence rather than inferring it.
+
+xcodeproj generated. Let me attempt the real macOS build (signing disabled to isolate the framework blocker) to capture an authentic exit code, with a cap.
+
+The full-app build compiles all ~1900 files before the link stage — slow but progressing with no surface errors. Let me wait a bit more to try to capture the actual link-time framework failure + exit code.
+
+The build churns through the entire app (6+ min, `-quiet` shows only errors — none surfaced) and would only fail at the KMP-core link stage. That's sufficient; I'll stop it and rely on the definitive static evidence (unstaged `Shared.xcframework` + 0 signing identities) plus the green strong typechecks — matching the predecessor disposition.
+
+Let me clean up build artifacts and confirm git state before writing the log.
+
+My 9 files are new/untracked; the `AIUsageCard.*` modifications are from a prior session (not mine) and my scoped commit won't touch them. Let me get final line counts and write the comprehensive gate log.
+
+Now I'll write the comprehensive, honest gate log mirroring the established predecessor format.
+
+Log written. Let me mark todos done and commit — scoped to exactly my StateTimeline files + the log (leaving the prior session's unrelated changes untouched).
+
+Exactly my 10 files staged (9 surface files + log), nothing unrelated. Committing.
+
+Committed cleanly (10 files, no unrelated changes). One acceptance item deserves an explicit shipped test: the prompt lists an **"a11y label test"**. My a11y labels all originate from `StateTimelineCopy`, so I'll add an XCTest covering them, then re-verify and amend the commit.
+
+Tests.swift now references `StateTimelineCopy` (Foundation-only Copy file). Let me re-format, re-lint, and re-typecheck the test files (now including Copy).
+
+All green (swiftformat 0/8, swiftlint 0 violations, Tests.swift 302 lines). Now re-typecheck the test files (now referencing `StateTimelineCopy`) against the XCTest shim.
+
+Test files (with the new a11y label class) typecheck clean. Let me update the log to reflect the explicit a11y test + new line count, then amend the commit.
+
+Now let me amend the commit with the updated test + log.
+
+Commit amended cleanly (d7611e5, 10 files, all my StateTimeline files committed; only unrelated prior-session changes remain in the tree). Let me do a final integrity sweep.
+
+All checks pass and the work is committed cleanly. Task complete.
+

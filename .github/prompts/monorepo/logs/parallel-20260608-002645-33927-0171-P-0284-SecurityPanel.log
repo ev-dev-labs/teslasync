@@ -1,0 +1,96 @@
+I'll start by exploring the repository structure, reading the web source specification, and checking tooling availability.
+
+Key finding: **xcodebuild requires full Xcode but only Command Line Tools is installed.** Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me note this capability constraint and explore the existing patterns.
+
+Large existing codebase with a clear file-split convention. Let me check whether SecurityPanel already exists and study the closest template panel (AcDcStatsPanel) plus the parity manifest.
+
+`SecurityPanel` does NOT exist yet (only `SecurityStatistics` and `SecurityStatusCards`). `AcDcStatsPanel` is an excellent template. Let me read its full file set plus the security-domain siblings to understand data shapes and conventions.
+
+Now let me read the remaining template files and the security-domain siblings to understand data shapes and the strings/tests/previews conventions.
+
+Excellent — I now understand the full convention. Let me read the Adapter (formatters/accessibility helpers) and the security-domain siblings for the `SecurityEvent` data shape, plus locate the design tokens and shared UI components.
+
+Let me confirm the exact `SecurityEvent` web type and study the security-domain adapter plus the design tokens and shared components available.
+
+I now fully understand the domain and conventions. Let me locate the design tokens, shared components, and the build setup (Package.swift / xcodeproj) to determine what I can actually compile and verify.
+
+`pwsh` is available (placeholder check can run). Tokens/components live in `apps/apple/Sources/`. No checked-in xcodeproj/Package.swift at shallow depth — let me find the build setup and token definitions.
+
+There's a `project.yml` (XcodeGen). Let me read it and locate the exact token/component definitions the feature-views compile against.
+
+Now I understand the build: XcodeGen generates the project; the app target compiles `Sources/` + `TeslaSync/feature-views`. Tests are co-located per the established pattern. Critically, **xcodebuild needs full Xcode which isn't installed** (only CommandLineTools), so the gate's build/test steps can't run here. Let me confirm token/component APIs I'll reference, then verify what I CAN run.
+
+The `Color.TS` tokens are generated into `design/generated/apple`. Let me read them and the shared component signatures (TSGlassPanel, TSFadeIn, TSButton, TSSkeleton, fonts, spacing, radius).
+
+I have all tokens. Now let me read the exact public signatures of the shared components I'll use: `TSGlassPanel`, `TSFadeIn`, `TSButton`, `TSSkeleton`.
+
+Now I have all design tokens and component APIs. Let me read the exact `TSButton` init, the placeholder-check rules, and the security-domain Views/Tests/strings/Previews to align patterns precisely.
+
+Let me confirm the placeholder gate's case-sensitivity, review the security-domain Views for chip/banner/error patterns, and test whether I can at least syntax-check Swift files in this environment.
+
+`swiftc -typecheck` works **with SwiftUI** on this runner — so I can semantically typecheck my files (with their token/component deps) even without Xcode. That's strong verification. Now let me check for name collisions and read the security-domain Tests/Previews/strings to finalize alignment.
+
+No collisions, and I have the complete convention. Let me set up tracking and write the plan, then implement the 7 files.
+
+No collisions, full convention understood. Now writing the 7 files. Starting with the pure, Foundation-only Adapter (the unit-tested core).
+
+Now the Views file with all subviews matching the web composition.
+
+Now the main entry view (header, freshness chip, connectivity banner, content switch).
+
+Now the Previews and the strings catalog.
+
+Now the comprehensive test suite covering the adapter, projection, model wiring/telemetry/freshness, and accessibility.
+
+All 7 files created. Let me update tracking and begin verification — starting with a full semantic typecheck of the Foundation-only Adapter and inspecting the shared-component dependency closure.
+
+Adapter typechecks clean (exit 0). Shared components only need SwiftUI + tokens. Let me attempt a broader semantic typecheck of the full surface against the real tokens and shared components (macOS target).
+
+My files produced zero errors — the only failures are transitive deps inside `Cards.swift` (`TSPanelTitle`, `TSCaption`). Let me add the typography components to the closure and retry.
+
+Broad typecheck passes with **zero errors** against the real tokens and shared components (Swift 6, macOS 15). Now let me verify the Previews (with DEBUG) and build a testable module to typecheck the Tests file for real.
+
+The Previews error is solely the `#Preview` macro plugin (`PreviewsMacros`) which ships only with full Xcode — an environment gap, not a code defect (it also breaks the repo's own `Typography.swift`). Let me confirm Previews parses syntactically, and build a testable module to verify the Tests file for real.
+
+Previews parses clean and the testable `TeslaSync` module built with 0 errors. Now typechecking the Tests file against that real module.
+
+XCTest framework isn't available under CommandLineTools (Xcode-only). Let me confirm, and meanwhile verify the Tests' API usage another way: a non-XCTest probe that calls every public API the tests use, typechecked against the real module.
+
+XCTest is Xcode-only (confirmed absent); Tests parse clean and **every public API the tests use typechecks against the real module (0 errors)**. Now running swiftlint and swiftformat. Let me locate the configs first.
+
+Configs found at `apps/apple/`. Let me read them and run swiftlint + swiftformat on my files.
+
+Now running swiftlint `--strict` and swiftformat `--lint` (read-only) on my files, using the project configs.
+
+Both flag only `SecurityPanel.Views.swift` (single-line property bodies swiftformat wants wrapped + one long line). Let me auto-format with the project config, then re-verify both linters.
+
+Both linters pass: **swiftformat 0/6 need formatting, swiftlint 0 violations**. swiftformat reformatted Views.swift — let me re-verify the typecheck still passes, run the placeholder gate, and scan for forbidden words. First, let me see how the placeholder script resolves `-Path`.
+
+The gate's `-Path .../SecurityPanel` resolves to a non-existent dir (it's a filename prefix), so it scans nothing → vacuously clean. I'll instead scan copies of my actual files for honesty. Let me re-verify the typecheck post-format, scan for forbidden words, run the real placeholder gate on my files, and review the reformatted Views.
+
+All green: post-format typecheck 0 errors, forbidden-word scan clean, placeholder gate `EXIT=0 COUNT=0`. Let me review the reformatted Views.swift to confirm the auto-wrap produced clean code.
+
+The reformatting is clean and correct. Let me spot-check the tail (where the long-line wrap occurred) and confirm final structure.
+
+All clean and well-formed. Let me verify i18n completeness — every user-facing string routes through the facade (no hardcoded English) and every strings key is actually used.
+
+The comparison had a trailing-quote artifact in my sed. Let me redo the key cross-check cleanly.
+
+"Used but not defined" is empty — perfect. The 3 "defined but not used" are false negatives from my single-line grep (one was line-wrapped by swiftformat; two are passed as `labelKey:` args). Let me confirm they're genuinely referenced.
+
+Every i18n key is wired (0 missing, 0 orphans) and no hardcoded English. Before writing the log, let me probe whether XCTest is reachable via SwiftPM — if so, I can actually *run* the unit tests, not just typecheck them.
+
+Confirmed: XCTest is unavailable via SwiftPM too — running the XCTest suite is impossible without Xcode. My verification is therefore maximal: full typecheck of impl + test API surface, lint, format, placeholder — all green. Let me write the honest gate log and commit. First, clean up temp probes.
+
+Now I'll generate the gate log by actually running each runnable step and capturing authentic output, documenting the xcodebuild/XCTest capability gap with evidence.
+
+The log is complete and honest. Now let me commit only the allowed files (the 7 `SecurityPanel.*` files + the log), leaving the pre-existing AiUsageCard changes untouched.
+
+Exactly the 8 allowed files are staged (the pre-existing AiUsageCard changes remain untouched). Committing now.
+
+Committed cleanly — 8 files, 1475 insertions. Let me confirm the commit contents and that the pre-existing AiUsageCard changes were left untouched.
+
+Everything is correct: the commit contains exactly the 8 allowed files, and the pre-existing AiUsageCard changes were left untouched. Let me finalize tracking.
+
+All todos done and committed. Task complete.
+

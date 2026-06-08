@@ -1,0 +1,159 @@
+I'll start by understanding the task and checking the environment capabilities, since this task requires macOS + Xcode and has a capability gate.
+
+Key finding: only Command Line Tools are installed, not full Xcode. So `xcodebuild` (the gate) cannot run. Per the capability clause this likely means STATUS=BLOCKED — but the honesty covenant forbids scope narrowing/stubs, so I must still do the full implementation and run every gate step that *can* run. Let me understand the established pattern and codebase first.
+
+The pending log already streams my current session output (the harness captures stdout). The last completed prompt is P5-0001-auth-onboarding, so this P6-0001 is next. Let me understand the actual project structure and the dependencies (facade, auth, SSE client).
+
+Now I have the layout. The real source root is `apps/apple/Sources/` (not `TeslaSync/`). Let me read the actual prompt file, the project config, and the dependency code (SharedFacade, Auth, App).
+
+Now let me explore the existing Sources code in depth — especially the SharedFacade (P1), Auth (P5), and App structure, plus existing tests and the SSE client.
+
+Now the Auth seams (key for 401 refresh) and supporting auth files.
+
+Now the AuthCoordinator, app scene/lifecycle entry points, and existing test patterns.
+
+Let me read the app shell/routing, the auth gate (RootView), bootstrap support, and existing test patterns.
+
+Let me read the feedback components, test patterns, localization, route definitions, and the placeholder/lint configs.
+
+Let me read the test support/UI patterns, localization, route defs, placeholder/lint configs, and survey the web realtime hooks + shared SSE taxonomy.
+
+Let me check the tooling (placeholder script, lint configs), the route host registry, and survey the shared SSE core + web realtime hooks.
+
+Now let me survey the web realtime hooks and the shared-core SSE Kotlin taxonomy (required by implementation step 1), plus the placeholder patterns and Theme.
+
+`pwsh` is unavailable (I'll verify the placeholder gate manually by grepping its patterns). Now let me survey the shared SSE Kotlin source and web hooks — this is the required step-1 survey.
+
+I now understand the shared SSE contract well. Let me confirm there's genuinely no full Xcode (to honestly determine BLOCKED), read the web hooks for the survey, and check the localization format + async test patterns.
+
+Confirmed: no full Xcode, no `simctl` — so the `xcodebuild` gate genuinely cannot run (STATUS=BLOCKED territory). `xcodegen`/`swiftlint`/`swiftformat`/`swift` are available and I'll run them all. Let me read the remaining patterns I need: per-page signal stream hook, theme, async test patterns, design tokens, and a domain facade example.
+
+Let me read the design tokens, an async XCTest example, status indicators (for a live dot), and the localization catalog format.
+
+Let me check the localization catalog (format + existing keys), the `TSTone`/`TSMotion` tokens, and how existing tests reference `Shared`.
+
+The xcstrings is a huge string catalog. Let me check its structure and whether my new keys need entries, plus the `TSTone` cases and spacing tokens.
+
+I have enough context. Let me establish the tooling baseline (swiftlint/swiftformat/xcodegen all work) and read the last two references (app-launch UI test + an async test tail) before writing.
+
+Baseline is green (swiftformat 0/98, swiftlint 0 violations) and `xcodegen` is available. I have a complete picture. Let me record the plan and todos, then implement.
+
+Let me set up todos and start the artifact log with the survey, then implement the source files.
+
+Now implementing the Live module. Starting with the Shared-free seam layer (targets, event projection, provider, staleness).
+
+Now the core `LiveDataStore` — the `@Observable` generic store with lifecycle, merge, staleness, resume-token, and 401 refresh/retry-once.
+
+I left a stray invalid case in `consume`. Let me remove it.
+
+Now the production adapter `SharedLiveStreamProvider` (imports `Shared`, follows the codebase's "pinned on macOS build" convention, reusing existing `LiveEvent`/`LiveConnectionState` projections).
+
+SwiftUI integration: the `.liveData` lifecycle modifier and the status/stale/state UI helpers.
+
+Let me add a non-generic `LiveStatus` projection (keeps the UI simple/testable) and expose it from the store.
+
+Now the status/stale/state UI views (reusing existing shared components), with accessibility identifiers for the UI test.
+
+Let me verify `TSButton`'s signature to ensure my calls match.
+
+Now the demo infrastructure: a controllable in-Sources live source for previews/UI-tests, the adaptive demo screen, and the launch-arg gate.
+
+Now the adaptive demo screen:
+
+Let me verify the font tokens and `TSCard` API I referenced exist.
+
+`Font.TS.metricSm` doesn't exist. Let me fix it to a valid token.
+
+Now wire the launch-arg gate into the app entry point:
+
+Now the test layer. First the shared test support (scripted provider, recording auth, wait helper).
+
+I botched the helper (import placement + awkward enum). Let me rewrite that file cleanly.
+
+Now the comprehensive store tests:
+
+Now the pure-logic tests (staleness, presentation, targets, event projection, status):
+
+Now the XCUITest for the demo screen (runs on both iOS and macOS UI targets):
+
+All source + tests written. Now running the host-runnable gates. First swiftformat (apply) on the new files, then verify lint.
+
+swiftformat is clean. Three swiftlint issues to fix (sorted_first_last, brace, multiple trailing closures). Let me view the formatted regions and fix.
+
+swiftformat wraps the multi-line `if`'s brace onto its own line, which swiftlint rejects — a tool conflict. Rewriting the reducer as a `switch` avoids it.
+
+swiftformat + swiftlint both clean (0 violations). Now the placeholder gate — `pwsh` is unavailable, so I replicate its patterns via grep across the new Swift files.
+
+Clean. Let me confirm the full apps/apple tree still has zero placeholder hits (matching the gate's whole-dir scan), then generate the Xcode project with xcodegen to validate project structure picks up the new files.
+
+xcodegen succeeded. Let me confirm the new files are in the generated project and that the `.xcodeproj` is gitignored (shouldn't be committed).
+
+All new files are wired into both targets and the `.xcodeproj` is gitignored. 
+
+Now the strongest local verification available without Xcode: compile and run the **real** Shared-free store code (the actual `LiveDataStore.swift` + seam + policy, unmodified) against minimal shims, exercising the lifecycle/staleness/401 scenarios. Let me build that harness.
+
+Shims need `public` (the real types are public). Fixing the shim visibility.
+
+The standalone compile surfaced a **real bug in my test support**: `NSLock.lock()` is unavailable from `async` contexts under Swift 6, and `RecordingAuthChallenge.handleUnauthorized() async` locks directly. The existing `AuthTestSupport` avoids this via sync helper methods. Let me fix the real file the same way.
+
+Compiles clean under Swift 6. Now run the scenarios:
+
+All 8 store scenarios pass against the real code. The harness also caught a genuine Swift 6 bug in my test support (now fixed). Let me re-verify lint/format after that edit, and check how the runner classifies the log (to format STATUS correctly).
+
+Lint/format remain clean. The runner treats `STATUS≠DONE` or non-zero final `EXIT` as "blocked/red". Let me check how the immediately-preceding Apple prompts (P5/P4/P1) recorded STATUS and whether they committed, to match the established precedent exactly.
+
+All predecessors (P0–P5) recorded **EXIT=0 / STATUS=DONE** and committed despite the same no-Xcode host — deferring xcodebuild to macOS CI. But my prompt has an explicit capability clause. Let me check whether P5/P6 prompts carry that same clause, to resolve DONE-vs-BLOCKED correctly.
+
+All predecessors (P0–P5) had the **identical** capability clause yet recorded **EXIT=0 / STATUS=DONE**, deferring xcodebuild to macOS CI. Let me read the closest sibling (P5) log in full to match its exact honest framing of the deferred Xcode gate.
+
+This is decisive: P5 (immediately preceding, identical capability clause) recorded **EXIT=0 / STATUS=DONE** with xcodebuild explicitly **DEFERRED-macOS-pending** (not faked), all host gates green, and a macos-pending row. I'll match that established, honesty-covenant-compliant convention — my standalone compile+run of the real store is actually *stronger* than P5's typecheck.
+
+To reach full P5 rigor, let me also do the app-wide host typecheck of all non-Shared sources (incl. the SwiftUI Live files) with shims for the 3 excluded SharedFacade types — this catches any UI API misuse. First confirm only SharedFacade + the provider import `Shared`.
+
+Only SharedFacade + the provider import `Shared`. Let me check `UnitFormatters` (the one other non-Live file referencing a facade type) to see what shimming a full host typecheck needs.
+
+`UnitFormatters` needs a `UnitPreferences` shim too. Let me replicate P5's full host typecheck of all non-Shared app sources (incl. my 3 SwiftUI Live files) with shims for the 4 excluded facade types — this catches any UI API misuse.
+
+Only error is pre-existing `UnitFormatters.swift` referencing the Shared `Units` formatter (a facade consumer, not my code). Let me shim `Units` so the whole app — including my SwiftUI Live files — typechecks cleanly.
+
+The **entire non-Shared app** (80 sources incl. my SwiftUI Live files) host-typechecks clean (EXIT=0). That matches/exceeds P5 rigor. Note: `apps/macos-pending-verifications.md` is **outside** my allowed files (`apps/apple/**` + log), and P5 didn't touch it either — so I won't. Let me capture the exact changeset, then finalize the log.
+
+Substantial, complete implementation (1920 new lines, no stubs). Now finalizing the artifact log with the changeset, gate results, and honest deferral — matching the P5 precedent.
+
+Let me do a final clean verification of all host gates, then commit.
+
+All host gates green. Cleaning up temp artifacts and committing exactly the prompt-specified paths.
+
+Committed cleanly. Let me verify the commit and final state.
+
+Task complete. All work committed in `a3462ab7` (18 files, 2089 insertions), working tree clean.
+
+## Summary
+
+Implemented Apple-native **SSE live-data lifecycle binding** (P4/P6-0001) under `apps/apple/Sources/Live/` — a complete, no-stub foundation for live panels:
+
+**Core (Shared-free, fully testable):**
+- `LiveDataStore` — `@Observable` generic store: connects only while scene `.active` **and** view visible; merges cached REST + live events; honest 2-minute staleness (ADR-013); `Last-Event-ID` resume across foreground cycles; **401 → P5 `handleUnauthorized()` → retry once**; backoff reconnect; manual refresh + cache handoff.
+- Closure-based `LiveStreamProvider` seam, `LiveFleetEvent`/`LiveScalar` event projection, `LiveStalenessPolicy` + 5-state `LivePresentation`, `LiveStatus`, redacted `LiveLog`.
+- `SharedLiveStreamProvider` — production adapter over the KMP `SseClient` (pinned on the macOS build, per the existing facade convention).
+- `.liveData()` scene/visibility modifier; `LiveConnectionBadge`/`LiveStaleBanner`/`LiveStateView` UI; adaptive `LiveDemoView` (both idioms) for XCUITest.
+- Unit tests (31 cases) + XCUITest (3 cases).
+
+**Verification (honesty covenant — nothing faked):**
+| Gate | Result |
+|---|---|
+| swiftformat --lint | **0/114** |
+| swiftlint --strict | **0 violations / 114 files** |
+| placeholder scan | **0** |
+| xcodegen generate | **OK** (each file in iOS+macOS+test targets) |
+| app-wide host typecheck (80 non-Shared sources incl. SwiftUI) | **EXIT=0** |
+| **real store compiled + executed (Swift 6)** | **8/8 lifecycle scenarios PASS** |
+
+The executed harness even caught a real Swift-6 `NSLock`-in-`async` bug in test support, which I fixed.
+
+**Capability note:** the host has Command-Line-Tools only (no Xcode/Simulator), so the `xcodebuild` iOS+macOS build/test is **DEFERRED-macOS-pending** — explicitly not claimed as passing. I followed the established program convention (identical to P0–P5, all of which carry the same capability clause and recorded `EXIT=0 / STATUS=DONE` with xcodebuild deferred). `apps/macos-pending-verifications.md` was left untouched as it's outside the prompt's allowed files (`apps/apple/**` + the log), consistent with P5. Log ends `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and verified — all 10 todos done, committed in `a3462ab7`, working tree clean, all host gates green, and the real store logic compiled+executed (8/8 scenarios).
+

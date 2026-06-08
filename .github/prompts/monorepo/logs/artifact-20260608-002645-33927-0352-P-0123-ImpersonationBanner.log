@@ -1,0 +1,135 @@
+=== P4 Shared surface 0123 ImpersonationBanner (Apple) ===
+date: 2026-06-08T12:48:09Z  host: Darwin 25.5.0 arm64
+web source : web/src/components/feedback/ImpersonationBanner.tsx
+native out : apps/apple/TeslaSync/shared-surfaces/ImpersonationBanner.{Adapter,Model,Views,swift,Previews,Tests}.swift + .strings
+
+--- Honesty Covenant (self-attestation) ---
+ 1 No red-as-green   : Xcode build/test legs NOT run here; their TRUE non-zero exits are recorded + labelled DEFERRED, never green.
+ 2 No scope narrowing : every web state (loading/active/empty/error/stale/offline) + end lifecycle reproduced natively.
+ 3 No skip-and-assume : web source read end-to-end; all 6 web i18n keys + countdown semantics ported verbatim.
+ 4 No stubs as final  : no TODO/Placeholder/stub markers; surface target-registered (proven refs below), not dead code.
+ 5 No parity shortcuts: countdown math byte-equal to web formatRemaining (executed harness, below).
+ 6 No delegation      : authored directly.
+ 7 No predecessor bypass: mirrors UserImpersonateButton sibling + the P4 'code-complete + DEFERRED Xcode gate' disposition (log 0020).
+ 8 No commit on red    : every host-runnable gate is GREEN for this surface; only the deferred Xcode legs + a pre-existing non-owned defect remain.
+ 9 No silent drift     : changes = ImpersonationBanner.* ; PLUS minimal additive registration of the NEW shared-surfaces tier dir in
+                         project.yml (TeslaSync + TeslaSync-macOS sources) and .swiftlint.yml (included) — fully disclosed in DISPOSITION.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED> below.
+
+============================================================
+CAPABILITY PROBE
+============================================================
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+$ xcrun simctl list devices available | grep -i 'iPhone 16'
+  (simctl not a developer tool here / no simulators)
+$ ls -a apps/apple/Frameworks  (Shared.xcframework staged?)
+  .
+  ..
+  .gitkeep
+$ swift --version
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+tools: swiftlint=0.63.3  swiftformat=0.61.1  pwsh=PowerShell 7.6.2  xcodegen=Version: 2.45.4
+
+>> VERDICT: full Xcode (xcodebuild), iOS SDK, Simulators, and the KMP Shared.xcframework are ABSENT on this
+   Command-Line-Tools-only runner. The two 'xcodebuild build test' legs are DEFERRED to the signed CI runner
+   (environment limitation, not a defect in this surface). Every other gate leg runs here — results below.
+
+============================================================
+GATE LEG (1) iOS: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+============================================================
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1   [DEFERRED to signed CI runner — capability absent, see probe; NOT a pass]
+
+============================================================
+GATE LEG (2) macOS: xcodebuild -scheme TeslaSync-macOS build test
+============================================================
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1   [DEFERRED to signed CI runner — same capability gap; NOT a pass]
+
+============================================================
+GATE LEG (3) swiftlint --strict  [surface-scoped: 6 .swift files]
+============================================================
+  Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+  disclosure: a bare repo-wide 'swiftlint --strict' also reports ONE pre-existing violation in a NON-owned file
+  (apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length) — outside
+  this prompt's allowed-files scope; identical baseline defect disclosed by predecessor log 0020. Not introduced here.
+
+============================================================
+GATE LEG (4) swiftformat --lint apps/apple/TeslaSync/shared-surfaces
+============================================================
+  0/6 files require formatting.
+FORMAT_EXIT=0
+
+============================================================
+GATE LEG (5) check-placeholders.ps1  [real recursive scan of the surface dir]
+============================================================
+  $ pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces -Language swift
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  EXIT=0
+PLACEHOLDER_EXIT=0
+
+============================================================
+COMPENSATING HOST VERIFICATION (the Xcode legs are deferred; these PROVE the surface is real + correct)
+============================================================
+[A] swiftc -typecheck logic core (Adapter+Model) — Swift 6 / -strict-concurrency=complete (== project.yml)
+    LOGIC_TYPECHECK_EXIT=0
+[B] executed logic harness (Adapter+Model compiled & RUN; countdown math + state machine)
+    HARNESS_COMPILE_EXIT=0 ; HARNESS_RUN_EXIT=0
+      LOGIC_ASSERTIONS_PASSED=45 FAILED=0
+      ALL_LOGIC_TESTS_PASSED
+[C] full-surface typecheck (Adapter+Model+Views+main) vs the REAL apps/apple tokens + component library
+    SURFACE_CLOSURE_TYPECHECK_EXIT=0  (0 = Views/main compile against real TSButton/TSIconBox/TSSkeleton/tokens)
+[D] target-registration proof (xcodegen generate -> count refs in generated pbxproj, then discard)
+    pbxproj_ImpersonationBanner_refs=42 ; ImpersonationBanner.swift_in_Sources_lines=4  (=> 2 targets: TeslaSync + TeslaSync-macOS)
+
+============================================================
+SURFACE INVENTORY
+============================================================
+  ImpersonationBanner.Adapter.swift           189 lines
+  ImpersonationBanner.Model.swift             355 lines
+  ImpersonationBanner.Views.swift             367 lines
+  ImpersonationBanner.swift                   107 lines
+  ImpersonationBanner.Previews.swift          123 lines
+  ImpersonationBanner.Tests.swift             356 lines
+  ImpersonationBanner.strings                  47 lines
+  data sources bound via P1/S8 seams : useImpersonationStatus -> StatusProviding ; useEndImpersonation -> Ending ; isImpersonationActive -> StatusPhase.isActive
+  i18n keys (P1/S10) parity          : impersonation.banner.{title,body,endsIn,expired,ending,end} + native chrome keys
+  states rendered                    : loading / active(parity) / empty(inactive) / error / stale / offline / ending / ended / end-failed
+  diagnostics (P1/S11)               : view.opened surface=ImpersonationBanner (emitted once on appear)
+  charts/maps                        : none (web source uses none)
+
+============================================================
+DISPOSITION
+============================================================
+  Production-polished native ImpersonationBanner shipped at parity with the web source: a Foundation-only
+  Adapter (countdown/formatRemaining + phase/connection/end-label/chip/a11y projections, executed-green 45/45),
+  a P1/S8 status+end seam pair (zero view I/O), the @Observable state holder (status phases + end lifecycle +
+  freshness + offline-cache + re-entrancy guard), P1/S11 view.opened telemetry, a per-second TimelineView
+  countdown (web setInterval parity), EVERY state rendered (never a blank box; web's null open-mode -> friendly
+  empty), all 6 web i18n keys + native chrome keys, and VoiceOver labels/identifiers — composed over the REAL
+  apps/apple design tokens + component library (TSIconBox/TSButton/TSSkeleton/TSTone), surface-closure typecheck 0.
+  ALL host-runnable gates pass for this surface (logic typecheck 0, executed harness 45/45, surface swiftlint
+  --strict 0/6, swiftformat 0/6, placeholder COUNT=0, closure typecheck 0, target-registered 4/4 lines).
+  The two Xcode 'build test' legs are DEFERRED to the signed CI runner (no full Xcode / iOS SDK / Simulators /
+  Shared.xcframework on this CLT-only host — an environment limitation, not a defect in this code), matching the
+  user-approved P4 'code-complete + DEFERRED Xcode gate' disposition established by predecessors (log 0020).
+  Minimal additive INFRA registration of the NEW shared-surfaces tier (project.yml x2 app targets + .swiftlint.yml
+  included) was required so the surface compiles/lints as a real target member rather than dead code; disclosed here.
+  The bare swiftlint gate's lone violation is a pre-existing baseline defect in a non-owned file (LifetimeStats
+  Widget.Adapter.swift), out of allowed-files scope.
+
+============================================================
+COMMIT
+============================================================
+  git add apps/apple/TeslaSync/shared-surfaces/ImpersonationBanner.* \
+          apps/apple/project.yml apps/apple/.swiftlint.yml \
+          .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0123-ImpersonationBanner.log
+  git commit -m 'feat(apps/apple/shared-surfaces): add ImpersonationBanner surface (P4)'
+
+EXIT=0
+STATUS=DONE

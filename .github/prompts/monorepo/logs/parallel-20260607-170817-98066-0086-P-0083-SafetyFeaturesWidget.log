@@ -1,0 +1,77 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Now let me explore the Apple app structure and the related web files in parallel.
+
+Swift 6.3 toolchain is present. Let me verify full Xcode availability and examine the existing dashboard-widgets patterns.
+
+**Critical finding:** Only Command Line Tools are installed — full Xcode is absent, so `xcodebuild` and `xcrun simctl` cannot run. Swift 6.3, swiftlint, and swiftformat ARE available. I'll write the full production code and run every available check, documenting the xcodebuild steps per the BLOCKED protocol. Let me check the build system and read the closest existing widget (GuardMode — also a security widget) plus the web shared files.
+
+This is an XcodeGen project (`project.yml`, no Package.swift). Let me read the rest of the GuardMode template and the web shared spec files in parallel.
+
+Now reading the web spec files for SafetyFeatures plus the design tokens used by the Apple widgets.
+
+Now let me examine the design tokens (exact APIs), the placeholder checker, and tool availability.
+
+I have all the design tokens and the proven GuardMode pattern. Let me check the lint/format configs and the placeholder checker before writing code.
+
+I now have a complete understanding. Let me set up tracking, verify no symbol collisions, then write the files.
+
+No collisions. Now writing the files, starting with the pure adapter core.
+
+All 7 files created. Now verifying formatting and lint on the new files.
+
+Two long lines to wrap. Let me view and fix them.
+
+swiftformat passes. SwiftLint flags `buildCells` body length (66 > 50). Let me check how the codebase handles this elsewhere before choosing a fix.
+
+Codebase uses zero `swiftlint:disable` — I'll refactor `buildCells` to stay under the limit cleanly. Let me view the exact block to replace.
+
+Now adding the cell-builder helpers in the Helpers section.
+
+Scoped swiftlint + swiftformat are clean (0 violations). Now running the placeholder check and a Swift syntax parse, plus the full-tree gate commands.
+
+Placeholder check clean (COUNT=0) and all files parse. Now a deeper standalone **type-check** against the real design tokens + a faithful registration shim — the strongest verification possible without full Xcode.
+
+Only missing symbol is `TSSkeleton` (a real module symbol I didn't include). Adding a faithful shim for it and re-running.
+
+**Type-check passes clean (EXIT=0)** for the full surface against real tokens. Now running the full-tree gate linters to capture honest baseline for the log.
+
+The one full-tree lint violation is in a pre-existing sibling (`LifetimeStatsWidget.Adapter.swift`), not my files — and it's outside my allowed scope. My 6 files are clean. Now the full-tree swiftformat check.
+
+My files pass every runnable check; the full-tree swiftformat is clean and the only swiftlint violation is a pre-existing sibling outside my scope. The blocking factor is the absent Xcode toolchain. Let me generate the honest gate log with real command output.
+
+Let me review the complete log for accuracy.
+
+The log is complete and honest. Now let me verify final file state. Per the Honesty Covenant ("No commit on red", EXIT=1/STATUS=BLOCKED), I will not create a git commit — I'll leave the complete, verified artifacts in the working tree. Let me confirm everything is in place.
+
+All artifacts in place; the 2 pre-existing modified web files were correctly left untouched. Let me do a final correctness sweep: verify every i18n key referenced in code exists in the strings catalog.
+
+All 31 i18n keys referenced in code are defined in the catalog — zero missing. Let me finalize tracking.
+
+I've completed the SafetyFeaturesWidget Apple surface. Here's the summary.
+
+## P4 · Dashboard widget 0083 — `SafetyFeaturesWidget` (Apple)
+
+**Delivered** — a production-complete, native-idiomatic SwiftUI port at parity with `features/dashboard/widgets/SafetyFeaturesWidget.tsx`, 7 files / 1,529 lines under the allowed scope `apps/apple/TeslaSync/dashboard-widgets/SafetyFeaturesWidget.*`:
+
+| File | Role |
+|---|---|
+| `.Adapter.swift` | Verbatim port of `lib/safetyEnum.ts` (`cleanSafetyEnum`/`isSafetyEnumActive`) + `buildCells`/active-count/a11y — pure, testable |
+| `.Model.swift` | P1/S8 `SafetySource` seam, `@Observable SafetyModel`, P1/S11 telemetry, P1/S10 facade, snapshot DTO |
+| `.swift` | Main view: glass shell, header, all states, compact-vs-grid (`cols>=3 ? 4 : 2`) |
+| `.Views.swift` | Status grid + tinted cells, compact count, stale/offline banner, empty state |
+| `.Previews.swift` | 9 previews (content, wide 4-col, compact, sparse, loading, no-data, error, offline, stale) |
+| `.Tests.swift` | Adapter/model/registry/a11y/telemetry tests |
+| `.strings` | All 31 i18n keys |
+
+**Verification (every runnable check green for my files):**
+- `swiftformat --lint apps/apple` → **PASS** (0/317 require formatting)
+- `swiftlint --strict` (my 6 files) → **PASS** (0 violations)
+- `check-placeholders` → **PASS** (`PLACEHOLDER_COUNT=0`)
+- `swiftc -parse` 6/6 + `swiftc -typecheck` full surface vs **real** design tokens → **0 errors**
+- i18n: all 31 code keys defined in catalog; registry parity (`safety-features`, security, 2×4 / 1×2 / 4×40)
+
+**Status = BLOCKED** (`EXIT=1`), per the prompt's sanctioned capability clause: this runner has **Command Line Tools only — no full Xcode**, so `xcodebuild` iOS/macOS build+test cannot execute (evidence captured in the log). The one full-tree swiftlint failure is a **pre-existing sibling** (`LifetimeStatsWidget.Adapter.swift`), outside my allowed files.
+
+Honoring Covenant #8 ("No commit on red"), I did **not** commit — the complete, verified artifacts + the honest `STATUS=BLOCKED` log sit in the working tree, ready for the xcodebuild gate + commit on a full-Xcode runner. Pre-existing modified web files were left untouched.
+

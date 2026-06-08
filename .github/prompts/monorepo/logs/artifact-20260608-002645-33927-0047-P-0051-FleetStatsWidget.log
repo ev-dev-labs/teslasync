@@ -1,0 +1,209 @@
+================================================================================
+P4 · Dashboard widget · 0051 — FleetStatsWidget (Apple)
+Run: 2026-06-08T00:30-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/47
+Base: c9c6fdb9f
+Prompt: P4/dashboard-widgets/0051 — FleetStatsWidget
+Web source (spec): web/src/features/dashboard/widgets/FleetStatsWidget.tsx
+                    (composes web/src/features/dashboard/components/FleetStatsBar.tsx)
+Mode: code-complete + DEFERRED Xcode app build/test (P4/0064 MileageStatsWidget precedent, ADR-012).
+================================================================================
+
+=== CAPABILITY PROBE (this runner) ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK 26.5 present             OK
+  swiftc -typecheck SwiftUI .. compiles (macOS 15 target, real design tokens)       OK
+  swiftc -O + run (harness) .. compiles + executes a native binary                  OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  /Applications/Xcode.app .... NOT installed — `xcode-select -p` = /Library/Developer/CommandLineTools
+                               → `xcodebuild` reports "requires Xcode" (unavailable here)
+  iphonesimulator SDK ........ `xcrun --sdk iphonesimulator --show-sdk-path` = "cannot be located"
+                               (no Simulator runtime on a CommandLineTools host)
+
+  Charts/Maps capability note: per the prompt metadata this surface uses NEITHER
+  Swift Charts NOR MapKit ("Charts/maps used: (none)"). The web sparkline is a
+  hand-rolled SVG <polyline> (components/charts/MiniChart.tsx), reproduced 1:1 as a
+  SwiftUI `Path` (FleetSparkline) — not a chart library — so the rendering is the
+  most faithful port. The core requirement is SwiftUI, which is available and proven
+  by a real macOS-SDK compile below. The capability-BLOCKED escape hatch
+  ("SwiftUI/Charts/MapKit unavailable") therefore does NOT apply — the surface is
+  authored and host-validated for real, then the Xcode-only app build/test is
+  DEFERRED (see the dedicated section), matching the 0064 precedent.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/FleetStatsWidget.*) ===
+  FleetStatsWidget.Models.swift    200  value types: FleetDistanceUnit (km/mi/ft + fromLabel + SI divisor +
+                                        distance/efficiency symbols), FleetStatsInput, FleetVehicleRef,
+                                        FleetStatsProjection, FleetStatsNumberFormat (en-US grouped, half-up)
+  FleetStatsWidget.Builder.swift    68  pure adapter: convertDistanceFromSI + convertEfficiency + sparkline
+                                        (reverse/drop-nonfinite) + project() — the unit-tested cached→projection
+                                        core (port of the web FleetStatsBar derive block)
+  FleetStatsWidget.Model.swift     265  P1/S8 state-holder seam (Source/Update/Model + InMemory source) +
+                                        P1/S11 telemetry seam + P1/S10 i18n facade + a11y summary
+  FleetStatsWidget.swift           273  FleetStatsWidget surface: glass shell + title-less header (freshness
+                                        chip + refresh) + all states + adaptive 5-tile metric grid + banner
+  FleetStatsWidget.Tile.swift      195  FleetStatTile (web GlassPanel cell) + FleetSparkline (Path port of web
+                                        MiniChart) + FleetStatTone (per-metric color → design tokens)
+  FleetStatsWidget.Previews.swift  133  #if DEBUG previews — content (mi + km) / loading / empty / error /
+                                        stale / offline
+  FleetStatsWidget.Tests.swift     303  XCTest: adapter + sparkline geometry + model + registry + a11y
+                                        (90+ assertions, 24 methods)
+  FleetStatsWidget.strings          46  P1/S10 catalog contribution (8 source keys + registry name/desc/title
+                                        + 10 chrome keys)
+  Every file <= 400 lines (house file_length); largest 303. One exported View per file
+  (FleetStatsWidget; the Tile/Sparkline leaves are internal helpers).
+
+=== PARITY (vs web FleetStatsWidget.tsx + FleetStatsBar.tsx) ===
+  Data sources -> bound via the shared state-holder seam (FleetStatsSource -> FleetStatsModel):
+    useVehicles, useFleetAnalytics(30), useUnits, useQuery(drives/charges). The production app wires
+    FleetStatsSource over the KMP analytics + vehicles stores + the units preference
+    (StateHolderModel<LoadableState<...>>); the view performs NO HTTP. No direct transport in the view.
+  Projection -> FleetStatsBuilder.project is a 1:1 port of the web derive block:
+    vehicleCount = vehicles.length; onlineCount = vehicles.filter(state === 'online');
+    distanceDisplay = convertDistanceFromSI(analytics.total_distance_km, unit) [the web feeds the
+      `_km`-named field straight into the SI(meters) converter — Phase-48 SI canonical — ported VERBATIM,
+      no silent unit "fix": km/1000, mi/1609.344, ft/0.3048];
+    energyKwh = analytics.total_energy_kwh (passthrough, 1 dp + " kWh");
+    efficiencyDisplay = unit === 'mi' ? avg_efficiency_wh_km * 1.609344 : avg_efficiency_wh_km
+      (suffix Wh/mi else Wh/km); unreadAlerts = 0 (web hard-codes 0);
+    distanceSpark = recentDrives.map(distance_m).reverse(); energySpark = recentCharges
+      .map(total_energy_added_wh).reverse(). Verified by an EXECUTED harness (32/32) — see gate step [2].
+  Composition -> title-less WidgetShell chrome (freshness chip + refresh, matching the web shell which
+    receives NO `title`) · FleetStatsBar reproduced as an adaptive LazyVGrid of five GlassPanel tiles in the
+    web order: Fleet Size (+ "{n} online") · Distance (30d) (+ sparkline) · Energy (30d) (+ sparkline) ·
+    Efficiency (+ "fleet average") · Alerts (+ "unread", red when > 0 else green).
+  MiniChart -> FleetSparkline: a faithful SwiftUI `Path` port of the web SVG polyline normalization
+    (x = i/(n-1)*(w-2p)+p, y = h-p-((v-min)/range)*(h-2p)); renders nothing below two points, exactly like
+    MiniChart's `data.length < 2` null-guard. Geometry unit-tested. Recharts->none / Leaflet->none.
+  Shared components -> reuses the REAL apps/apple design tokens: Color.TS / Font.TS / TSSpacing / TSRadius
+    + TSSkeleton + ContentUnavailableView (compiled against the real Tokens.swift in the typecheck below).
+    Per-metric web colors mapped to tokens (no neon/raw hex in body): distance cyan #00f0ff = Color.TS.accent,
+    energy emerald #10b981 = Color.TS.chartSeriesBattery, efficiency amber = statusWarning, alerts =
+    statusDanger/statusSuccess, size = textPrimary. Reuses the shared DashboardWidgetSize /
+    DashboardWidgetRegistration grid primitives — NOT redefined in this surface (consumer pattern, like 0064;
+    0 definitions across the 7 files — proven by grep + the co-compile below; no symbol collision).
+  States (all render) -> loading (5-tile skeleton chrome) · empty ("No fleet data") · error (retry) · stale
+    (chip + banner, cached tiles stay visible) · offline (chip + banner, cached) · content. Model phase
+    resolution keeps cached content visible behind refresh/errors and renders all-zero totals (never a hidden
+    panel), matching the web `?? 0` shell.
+  i18n -> all 8 source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    fleet.size, fleet.online, fleet.distance, fleet.energy, fleet.efficiency, fleet.average, fleet.alerts,
+    fleet.unread -> ALL PRESENT in FleetStatsWidget.strings (verified). No English literals in native code
+    (every Text uses `verbatim:` or the facade; grep for hardcoded Text("...") = 0).
+  a11y -> each tile carries a combined label (label + value + unit + subtitle); the grid carries the spoken
+    value summary (FleetStatsAccessibility.summary); the sparkline is accessibilityHidden; the surface is
+    labeled "Fleet Stats"; refresh + retry buttons have accessibilityLabels; Dynamic Type via tokens +
+    minimumScaleFactor; Reduce Motion respected (the only motion — the skeleton shimmer — self-gates).
+  Telemetry -> FleetStatsModel.start() emits viewOpened(surface:"FleetStatsWidget") -> bridges shared
+    Telemetry.track(.screenView) (P1/S11). Asserted by a spy test (emitted exactly once).
+  Registry -> FleetStatsWidget.registration: id "fleet-stats", category "analytics", default 4x2, min 2x2,
+    max 4x40 (+ clamp()), matching registry/analytics.ts. Asserted.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — the 5 non-test/preview surface files compiled together with the REAL design tokens
+    (apps/design/generated/apple/Tokens.swift) and a minimal host stub providing only the shared
+    DashboardWidgetSize / DashboardWidgetRegistration grid primitives + TSSkeleton (whose canonical
+    definitions live in sibling surfaces / the component library in the integrated target — identical shape):
+      xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 Tokens.swift <stub> \
+        FleetStatsWidget.{Models,Builder,Model,Tile}.swift FleetStatsWidget.swift
+      TYPECHECK_EXIT=0                                                              OK
+      (The surface is platform-agnostic SwiftUI — no `#if os(iOS)` branches — so the macOS compile fully
+       covers the iOS/iPadOS code paths. ContentUnavailableView / @Observable / GeometryReader+Path resolve
+       against the macOS 15 SDK.)
+
+[2] Adapter EXECUTED test (compiled Models+Builder+harness to a native binary and RAN it — real
+    "cached -> projection" verification, not a typecheck):
+      xcrun --sdk macosx swiftc -O ... FleetStatsWidget.{Models,Builder}.swift main.swift -o run && ./run
+      CHECKS=32 FAILURES=0 -> ADAPTER_HARNESS=PASS                                  OK
+      Covers: km/mi/ft distance conversion factors (+ NaN -> 0), efficiency mi-only scaling, sparkline
+      reverse + non-finite drop + empty tolerance, unit-label parsing + symbols, the full km + mi projection
+      (counts, distance, energy passthrough, efficiency, both reversed sparklines), and the en-US grouped +
+      half-up number formatting (1,930 / 10,000 / 842.5 / 12.3 / 12.4).
+      ADAPTER_HARNESS_EXIT=0                                                        OK
+
+[3] swiftlint --strict on the 7 surface Swift files (explicit paths; .swiftlint.yml `included:` DOES list
+    TeslaSync/dashboard-widgets, so the bare gate scans them too):
+      Done linting! Found 0 violations, 0 serious in 7 files.
+      SWIFTLINT_EXIT=0                                                              OK
+
+[4] swiftformat --lint on the 7 surface Swift files (the gate's config — maxwidth 120, numberFormatting,
+    wrapLoopBodies, importgrouping testable-bottom, self remove):
+      0/7 files require formatting.
+      SWIFTFORMAT_EXIT=0                                                            OK
+
+[5] check-placeholders (ADR-011 stub gate; swift) — scoped to the SHIPPED surface files:
+      pwsh ./apps/tools/check-placeholders.ps1 -Path <copy of FleetStatsWidget.*>
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   ->   PLACEHOLDER_EXIT=0          OK
+      The prompt's literal `-Path …/dashboard-widgets/FleetStatsWidget` (a filename PREFIX) also returns
+      COUNT=0 / EXIT=0. NOTE: a whole-DIR scan reports 24 PRE-EXISTING placeholders in UNRELATED sibling
+      surfaces (WatchSummaryWidget.*, YearReviewWidget.*) that are OUTSIDE this prompt's allowed-files scope
+      (Honesty rule 9 — left untouched). This surface contributes ZERO.
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the signed macos-latest CI runner; NOT faked) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Why deferred (each is independent and code-unrelated — none is a defect in this surface):
+      (a) NO XCODE ON THIS HOST: `xcode-select -p` = CommandLineTools and `xcrun --sdk iphonesimulator`
+          cannot be located, so `xcodebuild` + the iOS Simulator destination cannot be invoked here at all.
+          The host swiftc compile in step [1] DOES compile this surface against the real design tokens, which
+          is the meaningful validation available on a CLT host.
+      (b) NOT-YET-REGISTERED: project.yml's app target globs `Sources/` + `TeslaSync/dashboard-widgets`; the
+          surface is wired into the dashboard grid + registry by the P4 dashboard-grid integration prompt
+          (predecessor, Honesty rule 7). Running xcodebuild now would not exercise this surface in a grid.
+      (c) Shared.xcframework not staged: the app target links the KMP core; building it needs a
+          Kotlin/Native gradle build. Independent of this UI surface.
+      (d) macOS signing: the macOS app/widget entitlements require a development certificate; ADR-012 defers
+          this to a signed macos-latest runner.
+    XCTest (FleetStatsWidget.Tests.swift) likewise runs in the TeslaSync(/-macOS) test target under Xcode;
+    XCTest is unavailable to CLT here. The pure-adapter subset of those tests is independently PROVEN GREEN by
+    the executed harness in step [2]; the model / registry / a11y / sparkline-geometry suites compile against
+    the same public API exercised by the host typecheck. The #Preview macro needs Xcode's previews plugin
+    (absent under CLT), so Previews are excluded from the host typecheck — identical in shape to 0064's.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) — implemented; each has a
+      #if DEBUG preview; phase logic unit-tested.
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — 8/8 present in FleetStatsWidget.strings.
+  [x] Accessibility labels on every interactive element; tiles + grid carry value summaries; sparkline hidden.
+  [x] Tests: adapter unit test (EXECUTED, 32/32) + sparkline geometry + per-state model test + registry
+      parity + a11y label test.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0 on this surface.
+  [x] Host gates green (typecheck/harness/lint/format/placeholder); Xcode app build/test DEFERRED with
+      capability + predecessor evidence (per the 0064 disposition).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green); reasons given. Every "OK" is a command
+                       actually run on this host with its real exit code.
+  2  No scope narrowing: implemented ALL five metric tiles + sparklines + every state + i18n + a11y +
+                       telemetry + registry.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0 on the surface.
+  5  No parity shortcuts: faithful port of the web FleetStatsBar derive block (executed-green adapter) +
+                       MiniChart -> Path sparkline + full composition; the `_km`-into-SI-converter quirk is
+                       reproduced verbatim, not silently "corrected".
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / dashboard grid (integration prompt's
+                       scope) and did NOT edit the shared Localizable.xcstrings (parallel-unsafe across slots)
+                       — strings shipped as the per-surface table; reused the shared grid primitives.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed FleetStatsWidget.* files + this log. Pre-existing
+                       unrelated working-tree edits and sibling-surface placeholders left untouched.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native FleetStatsWidget shipped at parity with the web source: pure-Swift domain port
+  (executed-green adapter, 32/32), P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, every state +
+  i18n key + a11y label, a faithful MiniChart->Path sparkline, registry-correct (fleet-stats, 4x2 / 2x2 /
+  4x40). All host-runnable gates pass; the Xcode app build/test is DEFERRED to the signed CI runner (this CLT
+  host has no Xcode + no iphonesimulator SDK; surface not yet grid-registered; Shared.xcframework + macOS
+  signing pending — none a defect in this code), matching the 0064 "code-complete + DEFERRED Xcode gate"
+  disposition.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/FleetStatsWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0051-FleetStatsWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add FleetStatsWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

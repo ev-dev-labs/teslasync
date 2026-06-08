@@ -1,0 +1,161 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Now let me explore the Apple app structure and the driving types to understand the existing patterns.
+
+Let me explore the key infrastructure: feature-views directory, maps components, state holders, i18n facade, and an existing feature view as a template.
+
+The feature-views directory has a rich multi-file pattern. Let me read a complete example (ToolCard) plus the maps components and a driving-related view to understand the full conventions.
+
+Now let me study the maps components (critical for this map-based view), the test pattern, and the strings catalog format.
+
+Let me look at how maps are used in feature-views, the test pattern, the strings format, and the feedback/UI components.
+
+No feature-view uses maps yet — this will be the first. Let me read the design tokens, feedback components, GlassPanel, a strings file, and the project config.
+
+Let me read the feedback components, GlassPanel, state holder, and locate the design token definitions.
+
+Let me locate the generated design tokens (TSSpacing, TSRadius, Color.TS, Font.TS, TSTone) and read GlassPanel/Cards.
+
+Now let me understand the in-feature-views test pattern, the state holder (P1/S8), TSTone, and the generated tokens.
+
+Let me read the generated tokens, typography components, and the most complete feature-view example (FleetTelemetryHealth) to match idioms.
+
+Let me read the Typography component APIs, the connection enum, and a complete presentational example with the state envelope (EnvironmentalImpact) to finalize my design.
+
+`EnvironmentalImpact` is the ideal template (presentational, web-parity, full state envelope). Let me read its adapter and check its full file set, plus the TSSkeleton signature.
+
+EnvironmentalImpact has the complete 7-file set including `.Tests.swift` in feature-views. Let me verify how those test files are wired into the build (since feature-views is an app-target source path).
+
+103 test files in feature-views with no excludes — let me verify the build tooling availability and how these are actually wired, since this determines whether I can run the gate.
+
+Critical finding: only Command Line Tools are installed (no full Xcode), so `xcodebuild` with iOS Simulator/SwiftUI/MapKit SDKs cannot run. I'll build the complete implementation following the established pattern, run all available checks, and record the capability gap honestly in the log. Let me read the rest of the EnvironmentalImpact template set.
+
+Excellent — I now understand the pattern thoroughly. Let me read the Views, Previews, and Tests templates plus the TSSkeleton API to complete my reference.
+
+Let me read the test template, lint config, and verify the remaining tooling (placeholder script, pwsh, swift parse capability).
+
+Let me check the forbidden placeholder patterns and test whether `swift` can syntax-check SwiftUI files without full Xcode.
+
+Forbidden patterns confirmed (I must avoid the literal word "placeholder"/"TODO"/etc.). Crucially, `swift -parse` works for SwiftUI/MapKit/Charts, so I can syntax-check my files. Let me confirm whether any full Xcode is available (determines BLOCKED vs DONE for the build gate), then set up tracking.
+
+Xcode.app exists — I can override `DEVELOPER_DIR` without sudo. Let me verify that unlocks `xcodebuild` and simulators.
+
+Full Xcode 26.5 + iPhone 16 simulator are available via `DEVELOPER_DIR` override — the gate CAN run. Let me set up tracking, check the Shared.xcframework dependency (the build's riskiest part), and generate the project.
+
+The build needs a KMP `Shared.xcframework` assembled via Gradle (the long pole). Let me pre-warm that build in the background while I write the implementation. First, a quick feasibility check and kickoff.
+
+Java 17 + gradlew are present. Let me kick off the `Shared.xcframework` assembly in the background (long pole) and generate the Xcode project while I write the implementation.
+
+Project generated; Gradle building in background. Let me check the glass-panel material modifier so the map can bleed to panel edges (web `p-0 overflow-hidden`), then I'll write all files.
+
+Gradle is building the shared framework in the background. I have a complete picture of the pattern. Let me write all seven files, starting with the Model and Adapter (pure, testable core).
+
+The Gradle build finished. Let me check its result and verify the xcframework was staged, then continue writing the Adapter.
+
+Gradle built the debug xcframework but a parallel slot's daemon-stop interrupted the release link (the staging script needs the **release** variant). This is an environmental daemon race. Let me re-run to completion with `--no-daemon` (immune to other slots' `--stop`), leveraging the now-warm build cache.
+
+Release link keeps dying at `linkReleaseFrameworkIosArm64` — the shared Kotlin/Native compiler daemon is being stopped by parallel slots. Let me check the Gradle config and retry with the compiler daemon disabled.
+
+`GRADLE_USER_HOME` is shared across all 20+ slots, so other slots' daemon stops kill my Kotlin/Native compiler. Let me re-run with the native compiler daemon disabled (runs in-process, immune to external stops).
+
+Good — no daemon-stop this time; the in-process compiler is working. Let me continue writing the Adapter while it builds.
+
+Let me check the Gradle build progress while I continue.
+
+Gradle build **succeeded** (8m47s) — the release `Shared.xcframework` is built and cached, so the xcodebuild pre-action will now be near-instant (all tasks UP-TO-DATE). Let me stage it as a safety net and continue writing the view layer.
+
+Framework staged. Now the view layer — the MapKit map with markers, route polyline, selection callout, and freshness chip.
+
+Now the main view orchestrating the state envelope.
+
+Now the previews covering every state.
+
+Now the test suite — comprehensive coverage of the adapter, states, markers, accessibility, i18n parity, and telemetry.
+
+All seven files written. Now let me run the fast static checks before the heavy build: auto-format, lint, placeholder gate, and a syntax parse.
+
+swiftformat and placeholder checks pass. swiftlint flagged file-length (Adapter 506, Tests 528 > 400) and single-char identifiers. But first — a critical question: how do `.Tests.swift` files in the app-target's `feature-views` path compile with `@testable import TeslaSync`? Let me inspect the generated project to resolve target membership before splitting files.
+
+6 references is surprising. Let me trace exactly which targets `EnvironmentalImpact.Tests.swift` belongs to — this determines whether my test file compiles into the app target (which would break the build) or a test target.
+
+Decisive finding: `EnvironmentalImpact.Tests.swift` is a member of the two **app** targets (feature-views is their source) — so the established pattern relies on `@testable import` working within the app module. I'll trust the pattern (100+ surfaces use it) and verify via the real build. First, let me fix the swiftlint `--strict` violations: split the over-length Adapter and Tests files (>400 lines) and rename single-char identifiers. Let me check exact line counts and section offsets.
+
+My files are the longest in the dir; I need to split the Adapter (506) and Tests (528) under the 400-line strict limit. Let me view the Adapter's marker/chip/accessibility sections to extract them into a new `TripPlannerMap.Markers.swift`.
+
+Let me view the remaining sections to extract precisely.
+
+The cleanest split is to recreate the Adapter trimmed and add a `Markers` file. Let me remove the old Adapter and write both, plus split the tests.
+
+Now the split test files. First the geometry/state tests:
+
+Now the marker/accessibility/telemetry test file:
+
+All 8 files written and split. Let me re-run the static checks (format, lint, placeholder) on the full set.
+
+All files now ≤308 lines, format clean. Now swiftlint `--strict` and the placeholder gate:
+
+swiftlint `--strict` clean (0 violations), placeholder gate clean. Now regenerate the project to pick up the new files and run the iOS build (validates my code compiles inside the app target — the critical integration check).
+
+Project regenerated with the new files. Now the critical integration check — building the iOS app target (which compiles my files, including the in-target test files). This is a large first build; I'll run it in the background and monitor.
+
+Let me monitor the build progress (this is a large first build with the Gradle pre-action).
+
+Key findings: the Gradle pre-action staged cleanly (no daemon race), and my `@testable import` lines produce only a harmless "part of module; ignoring import" warning. The `build` action **failed on a pre-existing file** (`AcDcStatsPanel.Tests.swift`, not mine) because the app target can't resolve `XCTest` under the plain `build` action. The gate uses `build test` — the `test` action enables testing search paths. Let me confirm that hypothesis cheaply before the full run.
+
+Let me wait for the app target to compile with testing search paths — this is the real type-check of all my code.
+
+Important development: with testing search paths enabled, the `XCTest` resolution error disappeared and the build advanced to type-checking — but it now fails on **pre-existing sibling-surface files** (`FleetApiSection.Models.swift`, `ResultPanel.Tests.swift`) with `JSONValue` ambiguity errors, **none of which are mine**. This is a shared-module collision from other surfaces in this parallel slot. Let me assess the full error scope and whether any error references my files, and check git state.
+
+Decisive finding: the build now fails with **1202 errors across ~36 committed sibling surfaces** (ChargerTypeBreakdown, DriveOverviewChart, FleetApiSection, ResultPanel, etc.) due to a shared-module `JSONValue` collision — **zero errors reference any TripPlannerMap file**, and those broken files are committed baseline (not mine, and outside my allowed scope). The app module is broken independent of my work.
+
+To still prove my surface compiles against the real shared layer, let me attempt a scoped type-check of `Sources/` + my files (excluding the broken siblings). First, gather the toolchain pieces.
+
+`Sources/` is self-contained (no references to any feature-view). So I can type-check `Sources/**` + my six non-test files as a module against the real `Shared.xcframework`, isolating my surface from the broken siblings. Let me run that scoped type-check.
+
+Only **2 errors**, both pre-existing ambiguities in `Sources/DashboardWidgets/` (a baseline `DashboardWidgetSize` duplicate) — **zero in TripPlannerMap**. My surface doesn't depend on DashboardWidgets. Let me re-run excluding that pre-broken dir to get a clean proof my surface + the full shared UI layer type-checks.
+
+**TOTAL_ERRORS=0** — my surface plus the entire shared UI layer type-checks cleanly against the real `Shared.xcframework`. This definitively proves my code is correct and integrates properly. Let me also confirm my two test files type-check (adding the XCTest search path), then I'll attempt to actually run the unit tests in isolation.
+
+All 8 files (including tests) type-check cleanly. Now let me actually **run** the unit tests by building an isolated macOS `.xctest` bundle from the scoped module (excluding the pre-broken DashboardWidgets) and executing it — this gives a real pass/fail for my logic.
+
+The only errors are `XCTAssert* not found` — I omitted the XCTest **Swift overlay** search/link path (`-I`/`-L .../Developer/usr/lib -lXCTestSwiftSupport`). The whole module + my non-test files compiled fine. Let me add those flags and rebuild, then run.
+
+Compilation succeeded (0 Swift errors across all 187 files) but the **link** failed. Let me see the linker diagnostic.
+
+The macOS link failed only because manually linking SwiftUI bundles hits a `SwiftUICore` client restriction (a harness limitation, not my code — all 187 files **compiled** with 0 Swift errors). To actually execute my pure-logic tests, let me build a lean SwiftUI-free bundle (Model+Adapter+Markers+tests with faithful 2-line shims for the trivial pass-through `TSTone` cases and `TripPlannerMap.surfaceSlug`) and run it.
+
+Shim `TSTone` must be `public` (my public `tone` properties expose it). Quick fix and re-run.
+
+Outstanding — the isolated bundle built cleanly and **all 39 unit tests pass (0 failures)**. 
+
+Summary of verification now complete:
+- ✅ swiftformat `--lint`: clean · swiftlint `--strict`: 0 violations · placeholder gate: 0
+- ✅ Scoped type-check (all 8 files + full shared layer + real `Shared.xcframework`): 0 errors
+- ✅ macOS full-module compile (187 files incl. real types): 0 Swift errors
+- ✅ **39/39 unit tests pass**
+- ❌ Full `xcodebuild build test`: blocked by 1202 pre-existing errors in ~36 committed sibling surfaces (0 in my files)
+
+Let me check the log directory and gitignore, then write the gate log.
+
+Log dir exists; build artifacts are git-ignored. Let me capture clean evidence lists, then write the comprehensive honest gate log.
+
+36 distinct sibling files across 16 surfaces are broken by `JSONValue`/`DashboardWidgetSize` type-ambiguity collisions in the committed baseline — none mine. To avoid any "skip-and-assume," let me capture the real macOS gate failure too (backgrounded) while I write the log.
+
+While the macOS build runs, let me re-capture the exact surface-level check outputs for the log record.
+
+The macOS gate also failed (`MAC_BUILD_EXIT=65`). Let me confirm its error signature.
+
+The macOS gate is blocked by a **code-signing** requirement (no development certificate — an environment limitation), with 0 errors in my files. To corroborate the underlying compile, let me run the macOS build with signing disabled (backgrounded) while I write the log.
+
+Now let me write the comprehensive, honest gate log.
+
+The macOS no-signing build finished. Let me get its result and fill in the log placeholder.
+
+Confirmed: macOS no-signing compile fails on the same pre-existing `DashboardWidgetSize`/`JSONValue` ambiguity (54 errors surfaced before it bailed), **0 in my files**. Let me fill in the log placeholder.
+
+The log is complete and honest. Now let me clean up temporary build artifacts and verify the working-tree state.
+
+Working tree is clean — only my 9 deliverable files + the log are new (the two modified `web/*.tsx` files are pre-existing baseline changes, not mine). Build artifacts (`.xcodeproj`, staged `Shared.xcframework`) are git-ignored. Let me do a final confirmation of the deliverables.
+
+All deliverables are in place and the log honestly ends with `STATUS=BLOCKED`. The task is complete to the maximum extent the environment allows.
+

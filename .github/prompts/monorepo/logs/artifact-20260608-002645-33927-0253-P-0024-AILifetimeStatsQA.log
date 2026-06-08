@@ -1,0 +1,121 @@
+=== P4 Shared surface 0024 AILifetimeStatsQA (Apple) ===
+Prompt: .github/prompts/monorepo/... p4-apple-shared-surfaces / 0024-AILifetimeStatsQA
+Web source (spec): web/src/components/ai/AILifetimeStatsQA.tsx
+Native output:      apps/apple/TeslaSync/shared-surfaces/AILifetimeStatsQA.*
+Toolchain: Xcode 26.5 (DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer),
+           Swift 6.3.2, swiftlint + swiftformat (Homebrew), pwsh.
+Capability check: SwiftUI present; iOS 18.0 / macOS 15.0 deployment SDKs present
+                  (iPhoneSimulator26.5 / MacOSX26.5 supersede the 18/15 HIG minimum).
+                  Swift Charts / MapKit not required by this surface (web "Charts/maps used: none").
+
+------------------------------------------------------------------
+ARTIFACT (8 source files + 1 strings catalog, shared-surfaces/)
+------------------------------------------------------------------
+AILifetimeStatsQA.swift            124  View + withAiFeature gate + GlassPanel card + composition
+AILifetimeStatsQA.Model.swift      386  i18n facade (P1/S10), telemetry seam (P1/S11), state-holder
+                                        seam (P1/S8), stream value types, @Observable model, in-mem seams
+AILifetimeStatsQA.Projection.swift 104  pure gate/loading/error/ready resolve + canAsk + a11y labels
+AILifetimeStatsQA.Adapter.swift    154  SSE frame parser (port of useAiStream parseSSEFrame/toTypedEvent)
+                                        + idle→streaming→(done|error) reducer
+AILifetimeStatsQA.Views.swift      244  header/badge/freshness/banner/description/input/ask/thinking
+AILifetimeStatsQA.Chrome.swift     189  AiOutputPanel peer + stream-error + loading + config-error
+AILifetimeStatsQA.Previews.swift   131  10 previews: idle/thinking/partial/answered/error/loading/
+                                        config-error/stale/offline/gated
+AILifetimeStatsQA.Tests.swift      283  projection + model lifecycle + telemetry + a11y (XCTest)
+AILifetimeStatsQA.AdapterTests.swift 149 SSE parser + reducer (XCTest)
+AILifetimeStatsQA.strings          --   per-surface i18n table "AILifetimeStatsQA"
+
+Parity reproduced from the web source + its AIFeatureCard scaffold (inlined, as the native
+AIFeatureCard atom is owned by the out-of-scope P4 component-library bundle, exactly as AiUsageCard
+inlines the shared UsageCard scaffold):
+  - withAiFeature gate (ADR-015): AI off OR feature toggle off -> surface renders nothing;
+    view.opened telemetry deferred past the gate.
+  - useAiStream lifecycle: idle -> streaming -> (done | error), delta-text accumulation; the SSE
+    parser decodes all 6 wire frame types (delta/tool_call/tool_result/confirm_request/done/error).
+  - AIFeatureCard composition: title + "Helix" badge, description, question textarea (clamped to
+    MaxQuestionChars=1024), right-aligned universal "Ask Helix" CTA (visible "Ask Helix"/"Helix is
+    thinking…", a11y name "Ask Helix · Ask", disabled when !canStart||streaming), AiOutputPanel.
+  - States: gated / loading / config-error / ready-idle (empty hint) / streaming (thinking + partial)
+    / done / stream-error (retry) + the P4 leaf connectivity axis (live chip; stale chip+banner with
+    one-shot auto-refresh; offline chip+banner + disabled Ask).
+  - i18n: every string via the P1/S10 facade (no English literals in code paths; .strings table).
+  - a11y: VoiceOver labels on badge/input/Ask/output/states; Dynamic Type fonts; reduce-motion honored.
+  - Telemetry: view.opened with slug "AILifetimeStatsQA" (P1/S11), deferred past the gate.
+
+------------------------------------------------------------------
+PER-SURFACE VERIFICATION (host-runnable) — ALL GREEN
+------------------------------------------------------------------
+Method: isolated SwiftPM package (module named "TeslaSync" so `@testable import TeslaSync` resolves
+identically), compiling the surface against the REAL design tokens + shared UI component sources
+(design/generated/apple/Tokens.swift, Sources/Components/UI/{Typography,Fields,Buttons}.swift,
+Sources/Components/Motion/Motion.swift; TSSkeleton signature-matched shim). Swift 6 language mode
+(strict concurrency = complete), matching project.yml.
+
+[1] Isolated SwiftPM build (Swift 6 strict concurrency)   -> Build complete (15.0s). EXIT=0
+[2] Isolated SwiftPM tests                                -> Executed 40 tests, 0 failures. EXIT=0
+        AILifetimeStatsQAParserTests        14   (SSE frame parser: all 6 frame types + guards)
+        AILifetimeStatsQAReducerTests        4   (idle->streaming->done|error, tool frames inert)
+        AILifetimeStatsQAProjectionTests    10   (gate/loading/error/ready, clamp, haveX, canAsk matrix)
+        AILifetimeStatsQAModelTests          3   (ready resolve, gate, telemetry deferred+once, stale auto-refresh)
+        AILifetimeStatsQAStreamLifecycleTests 5  (ask streams/accumulates/finishes, no-op, reset, cancel, clamp)
+        AILifetimeStatsQAAccessibilityTests  3   ("Ask Helix · Ask" / "Your question" / "Helix")
+[3] swiftc -typecheck iOS 18  (-target arm64-apple-ios18.0-simulator -swift-version 6)   -> EXIT=0
+[4] swiftc -typecheck macOS 15 (-target arm64-apple-macos15.0 -swift-version 6)          -> EXIT=0
+[5] swiftlint --strict (repo .swiftlint.yml rules, scoped to the surface files)          -> 0 violations. LINT_EXIT=0
+[6] swiftformat --lint (repo .swiftformat)                                               -> 0/9 require formatting. FORMAT_EXIT=0
+[7] check-placeholders.ps1 (repo apps/tools, scanned shared-surfaces dir)                 -> PLACEHOLDER_COUNT=0. PLACEHOLDER_EXIT=0
+        (no TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not-implemented/stub/mock in shipped code)
+[8] xcodegen generate                                                                    -> spec parses, project written. EXIT=0
+
+------------------------------------------------------------------
+FULL-APP GATE (xcodebuild -scheme TeslaSync / TeslaSync-macOS build test) — BLOCKED (deferred)
+------------------------------------------------------------------
+Attempted: DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+Result: did not complete within bounded host runs (2x, 140s + 240s, KILLED). The scheme's
+"Stage Shared.xcframework" pre-action runs apps/shared/gradlew :core:assembleSharedXCFramework and was
+still in Kotlin/Native release-linking (`:core:linkReleaseFrameworkIosArm64`,
+`:core:linkReleaseFrameworkIosSimulatorArm64`) at the time bound — it never reached app compilation.
+
+These blockers are PRE-EXISTING and UNRELATED to this surface (zero AILifetimeStatsQA / shared-surfaces
+errors), and are identical to the deferred verifications recorded in apps/macos-pending-verifications.md
+for the sibling surfaces ToolCard (P-0010), AlertMessageEditor (0180), and FSMTimelineChart (0231):
+  B1. KMP Shared.xcframework is UNSTAGED (apps/apple/Frameworks/ contains only .gitkeep) and is built
+      from source via gradlew; full Apple-slice release linking is prohibitively slow on the host
+      (exceeded 240s, still linking). gradle/kotlin/kotlinc are not on PATH.
+  B2. 204 co-located *.Tests.swift under TeslaSync/feature-views import XCTest + `@testable import
+      TeslaSync` INTO the app target (project.yml sources feature-views into the app target) — invalid
+      in a non-test target.
+  B3. `struct DashboardWidgetSize` is redefined 15x across the app-target sources (parallel-merge
+      collision in Sources/* + TeslaSync/dashboard-widgets/*).
+  B4. macOS development-signing identities are not present on this runner.
+None of B1–B4 are within this prompt's allowed files (apps/apple/TeslaSync/shared-surfaces/
+AILifetimeStatsQA.*, the log). Per ADR-012's CI matrix they are deferred to
+p4-apple/P99-0001-apple-acceptance-gate (macos-latest, with signing identities + a prebuilt
+Shared.xcframework). Additionally, the `shared-surfaces` source group is not yet wired into project.yml
+nor into .swiftlint.yml `included:` — that wiring is the P4-core dependency declared by this prompt
+("Depends on: P4 core") and is intentionally NOT done here (outside allowed files; "no predecessor
+bypass"). The surface is verified in isolation by [1]-[8] above and is mergeable as-is.
+
+IOS_EXIT=137      (xcodebuild bounded/killed during KMP Shared.xcframework staging; see B1-B4)
+MAC_EXIT=137      (same; not separately re-run — identical pre-existing blockers)
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------
+HONESTY COVENANT
+------------------------------------------------------------------
+1 No red-as-green:      full-app xcodebuild is reported BLOCKED with raw evidence, not green.
+2 No scope narrowing:   every web state/branch + i18n key reproduced; all 6 SSE frame types decoded.
+3 No skip-and-assume:   each gate command was actually run; outputs pasted above.
+4 No stubs as final:    no TODO/stub/mock/placeholder/Lorem (placeholder gate COUNT=0).
+5 No parity shortcuts:  AIFeatureCard scaffold + withAiFeature gate + useAiStream lifecycle reproduced.
+6 No delegation:        authored directly (delegation forbidden by prompt).
+7 No predecessor bypass: shared-surfaces project.yml/swiftlint wiring left to the P4-core dependency.
+8 No commit on red:     committing the surface (per-surface gates green); full-app gate documented BLOCKED.
+9 No silent drift:      "placeholder"->"prompt" rename (SwiftUI-idiomatic) noted; inlined scaffold noted.
+10 (this line):         EXIT/STATUS below.
+
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,164 @@
+I'll start by exploring the repository structure, reading the web source, and checking platform capabilities.
+
+Swift, swiftlint, swiftformat, pwsh are available. `xcodebuild` requires full Xcode (only CLT installed). Let me read the web source and explore the Apple app structure to understand existing patterns.
+
+I have the web source. The `useMemo` computes `avg10to80`, `avg20to80`, `fastest`, `slowest`, and `yearlyTrend`, then renders a title, description, 4 metric cards, and a `YearlyTrendChart` child. Now let me explore the Apple app structure to understand established patterns (state holders, tokens, i18n, telemetry, existing sibling surfaces).
+
+There's an existing `TeslaSync/feature-views` directory and `Tests/Unit/FeatureViews`. Let me examine existing feature-view surfaces to follow established patterns.
+
+`SummaryStatsRow` is the closest analog (a row of summary stat cards). Let me read its full file set to learn the established pattern.
+
+This is a rich, well-established pattern. Let me read the remaining SummaryStatsRow files (Adapter, Views, Previews, strings, Tests) to fully internalize it.
+
+Now let me read the Previews, strings, and Tests for SummaryStatsRow, and locate the shared tokens/components plus a surface that implements the full error/empty/stale/offline lifecycle.
+
+Now let me find the shared design tokens, shared components, and a surface implementing the full error/empty/stale/offline lifecycle (the states this prompt requires).
+
+`AuditPanel` looks like a full-lifecycle surface. Let me read it plus the shared token/component definitions.
+
+AuditPanel is the ideal full-lifecycle reference. Let me read its Model, Projection, Components, plus the shared token/component source files.
+
+Now let me read AuditPanel's Components, the shared tokens/components, the telemetry types, and check whether a native `ChargingSession` domain model exists.
+
+Let me locate the token palette definitions, motion, telemetry types, and check for a native ChargingSession model.
+
+Let me find the actual token definitions (`Color.TS`, `TSSpacing`, `TSRadius`, `Font.TS`, `TSMotion`, `TSTone`, `TSSkeleton`) which appear to be generated.
+
+The main-target design tokens are generated (not committed). Let me inspect the project setup, token generation, and the gate's tooling to understand build feasibility.
+
+Design tokens live in `apps/design/generated/apple`. The official gate needs full Xcode (only CLT is installed). Let me check Xcode availability and read the exact token/component/telemetry definitions my code must compile against.
+
+Critical finds: Xcode.app **is** installed (I can use `DEVELOPER_DIR` to target it), `xcodegen` is available, `Tokens.swift` exists — but `Shared.xcframework` is absent (only `.gitkeep`). Let me verify Xcode works and read the exact token/component/telemetry APIs.
+
+Excellent — **xcodebuild works via `DEVELOPER_DIR` (Xcode 26.5), iPhone 16 simulator is available.** The one gap is the absent `Shared.xcframework`. Let me check if it's buildable, and confirm how existing surfaces avoid importing `Shared` (defining domain types locally) plus the telemetry API.
+
+Confirmed: feature-views define domain types locally (no `Shared` import); the app build's pre-build phase runs a **Gradle KMP build** to produce `Shared.xcframework`. Let me read the lint configs, the full-lifecycle test/preview/model pattern, the `TSSkeleton`/`TSTone` APIs, and the placeholder checker so my code conforms exactly.
+
+Let me read the remaining references: the telemetry event API, `TSTone`, the web number/unit helpers I must port, the full-lifecycle Previews/Tests pattern, and the placeholder checker.
+
+Let me read the energy conversion I must port, the full-lifecycle Previews/Tests pattern, and the placeholder checker rules.
+
+Let me see the exact `convertEnergyFromSI` body and the full-lifecycle test file to mirror.
+
+Let me confirm the web `ChargingSession` field names and read the rest of `project.yml` (macOS scheme, test target wiring).
+
+Let me read the test target and scheme configuration at the end of `project.yml`.
+
+Let me check how `*.Tests.swift`/`*.Previews.swift` in `feature-views/` are handled by the app target (excludes?) and what's in `Tests/Unit/FeatureViews`.
+
+I now have a complete understanding of the architecture, patterns, tokens, lint rules, and the web spec. Key facts:
+- `xcodebuild` works via `DEVELOPER_DIR=/Applications/Xcode.app/...` (Xcode 26.5, iPhone 16 sim available), but the app build's pre-action runs a **Gradle KMP build** to produce the absent `Shared.xcframework`.
+- Feature-views define domain types locally (no `Shared` import) and follow a 7-file pattern.
+
+Let me set up a plan and todos, then build the surface.
+
+Now I'll write the pure Foundation adapter (the metrics port — the standalone-testable core).
+
+Let me verify the adapter compiles standalone (Foundation-only) before continuing.
+
+Adapter typechecks clean. Now the Model (source seam, observable model, i18n facade).
+
+Now the Views file (presentational subviews for every state).
+
+Now the main view file (state switch, telemetry, refresh wiring).
+
+Now the i18n strings table, previews, and tests.
+
+Reviewing tie-breaking parity: the web `reduce` keeps the **later** element on rate ties (the ternary returns `b` when the strict comparison is false). My adapter used strict `>`/`<`, which keeps the earlier element — a mismatch. Let me fix it to match the web fold exactly.
+
+Now the comprehensive test file with the values I computed.
+
+All 7 files written. Now let me prove the pure logic correct by compiling the real `Adapter.swift` with a standalone harness using the `swift` toolchain (genuine runnable verification, independent of Xcode).
+
+**All 41 logic assertions pass** with the real `swift` compiler — the metrics port (band averages, fastest/slowest tie-break parity, yearly trend, formatting) and all presentation states are proven correct. Now let me type-check the SwiftUI layer (Model/Views/main/Previews) against the **real** design tokens, using accurate shims for the shared components, under the project's Swift 6 / strict-concurrency settings.
+
+The only errors are the `#Preview` macro plugin not loading under bare `swiftc` (an environment limitation of standalone compilation — Xcode loads `PreviewsMacros`; the macro itself resolves to `SwiftUI.Preview`). Not a code defect. Let me confirm the non-preview SwiftUI files typecheck clean.
+
+Core SwiftUI files typecheck **clean** under Swift 6 strict-concurrency against the real tokens. (The preview-macro plugin error is environmental — Xcode loads it.) Now the lint/format/placeholder gates — first scoped to my files.
+
+Under `--strict`, the 400-line warning becomes an error: `Adapter.swift` (618) and `Tests.swift` (511) are too long, and two card-builder helpers exceed the 5-param limit. I'll split the value types into `.Models.swift`, inline the card builders (init is exempt), and split the tests. Let me restructure.
+
+Now the logic-only `Adapter.swift` (formatting, projection, inlined cards, resolver, layout, a11y) — trimmed under 400 lines.
+
+Now split the tests into two sub-400-line files.
+
+Restructured into 8 files. Let me re-prove the logic (now spanning Models + Adapter), then re-run swiftlint, check line counts, and run swiftformat + placeholder gates.
+
+Logic re-proven (0 failures, `ALL_LOGIC_OK`). Now re-run swiftlint `--strict` on all 8 Swift files and check line counts.
+
+All files are now under 400 lines. One violation remains: the `rateCard` helper (7 params, not exempt). I'll inline both rate cards directly (the `init` is exempt from the rule).
+
+`durationCard` still has 6 params. Let me unify both builders to take a static spec (3 params each).
+
+Now re-run the logic proof and swiftlint on the updated Adapter.
+
+swiftlint `--strict`: **0 violations**. Logic still passes. Now swiftformat `--lint` and the placeholder gate.
+
+These are auto-fixable formatting rules (`numberFormatting` digit grouping, `wrapPropertyBodies`). Let me apply swiftformat (the ecosystem tool, same config) to my files, then re-lint.
+
+Both formatters pass (0 issues). Let me re-verify the logic + SwiftUI typecheck after formatting, then run the placeholder gate.
+
+Logic + SwiftUI typecheck clean. Now the placeholder gate. The gate passes a path *prefix* (`.../TimeToChargeSection`, no extension) — let me check how the script resolves it before running.
+
+The script treats a missing path as clean (exit 0), so the gate's prefix path passes trivially. For an honest check, I'll scan a temp dir containing my actual files, run the literal gate command, and grep for forbidden tokens myself.
+
+All placeholder checks pass (COUNT=0). Now the heavy gate: the real `xcodebuild`. First `xcodegen generate` (proves the project assembles with my 8 files), then I'll probe the `Shared.xcframework` pre-build dependency.
+
+Project generates with my files included (54 references). Now let me probe the `Shared.xcframework` pre-build dependency (the KMP/Gradle step the scheme runs before building).
+
+The KMP/Gradle shared-framework build is running (timeboxed 150s). Let me wait for it.
+
+The KMP/Gradle toolchain actually **works** — it built the Debug `Shared.xcframework` and was mid-way through Release linking when my 150s timeout fired (EXIT=124). So the framework isn't a hard block; it just needs more time. Let me kick off the full shared-framework build in the background, and meanwhile check a critical question: whether the co-located `*.Tests.swift` files land in the app target (a systemic concern affecting all surfaces).
+
+Decisive finding: the generated project compiles the co-located `*.Tests.swift`/`*.Previews.swift` into **both app targets** (iOS + macOS) — they're in the app `Sources` build phase, not a test bundle. Those files do `@testable import TeslaSync`, which cannot compile inside the `TeslaSync` module itself. This is a **pre-existing, systemic** repo convention (every sibling surface is identical; `macos-pending-verifications.md` + the `.gitkeep` framework confirm the Apple gate is pending). Let me produce concrete evidence: compile my files under `-module-name TeslaSync` — non-test files should pass; test files should fail on the self-import.
+
+My non-test files compile **cleanly** as the `TeslaSync` module (exit 0). The test-file failure above hit a wrong XCTest search path. Let me set `DEVELOPER_DIR` and resolve XCTest properly to surface the precise `@testable`-self-import error.
+
+Conclusive: my 5 non-test files compile cleanly as the `TeslaSync` module, but the co-located `*.Tests.swift` (with `@testable import TeslaSync` + XCTest) cannot compile inside that same app module — and the pbxproj puts them in the app targets. This is a pre-existing, systemic repo convention. Let me capture authentic `xcodebuild` evidence efficiently: stage the Gradle-built Debug framework, then build the app target directly.
+
+The real `xcodebuild` fails (exit 65) on the `@testable import TeslaSync` lines across the co-located test files. Let me capture the exact compiler error text to quote in the gate log.
+
+Definitive authentic evidence: `error: unable to resolve module dependency: 'XCTest'` on `AuditPanel.Tests.swift` (a sibling) — the app target compiles every surface's co-located `*.Tests.swift`, which `import XCTest` + `@testable import TeslaSync` and cannot resolve in the app module. This is a **pre-existing, systemic** target-wiring condition (not my code; my non-test files compile clean), unfixable within my allowed files (`project.yml` is out of scope).
+
+Let me clean up build artifacts and confirm git only sees my intended files.
+
+Clean — git sees only my 9 files; generated project/framework/build outputs are gitignored. Let me confirm the macOS target hits the identical systemic block (not assume it), then write the gate log.
+
+Both iOS and macOS app targets fail identically (exit 65, `unable to resolve module dependency: 'XCTest'` on the co-located test files) — systemic across both platforms. Git is clean (9 files). Now let me write the honest gate log.
+
+Let me check a sibling P4 feature-view log to match conventions, then write mine.
+
+This is the key precedent: the sibling **AuditPanel (0026)** log — the established, user-approved disposition for these P4 Apple surfaces — marks `IOS_EXIT=DEFERRED`/`MAC_EXIT=DEFERRED` (Xcode app build/test deferred to the signed CI runner for documented infra reasons, "none a defect in this code"), with `LINT/FORMAT/PLACEHOLDER=0`, `EXIT=0`, `STATUS=DONE`. My evidence is stronger. Let me read the full sibling log + the pending-verifications doc to mirror the format precisely.
+
+This is decisive: `macos-pending-verifications.md` **already documents my exact blocker** as a pre-existing, accepted condition — for `feature-views`, the full-app `xcodebuild build test` is blocked by "co-located `*.Tests.swift` importing `XCTest` into the app target" and is **deferred to the `p4-apple/P99-0001-apple-acceptance-gate`** (macos-latest). The sibling AuditPanel (0026) disposition is `IOS/MAC=DEFERRED`, `EXIT=0`, `STATUS=DONE`. My evidence is stronger (I actually ran xcodebuild and captured the systemic error; my non-test files compile clean as the module). Let me gather git metadata and write the log.
+
+All files ≤391 lines, 20 i18n keys. Now I'll write the comprehensive, honest gate log.
+
+Log written. Let me run a final consolidated verification of all host gates, clean up temp artifacts, and confirm git state before committing.
+
+All final gates green (swiftlint 0, swiftformat 0, placeholder 0, logic 40/40). Git shows exactly my 9 surface files + the log. Committing now.
+
+All todos complete, working tree clean, commit `0ed906c8` landed.
+
+Merge made by the 'ort' strategy.
+ ...pple-feature-views-0094-TimeToChargeSection.log | 198 +++++++++++
+ .../TimeToChargeSection.Adapter.swift              | 367 +++++++++++++++++++
+ .../feature-views/TimeToChargeSection.Model.swift  | 173 +++++++++
+ .../feature-views/TimeToChargeSection.Models.swift | 245 +++++++++++++
+ .../TimeToChargeSection.Previews.swift             | 123 +++++++
+ .../TimeToChargeSection.StateTests.swift           | 240 +++++++++++++
+ .../feature-views/TimeToChargeSection.Tests.swift  | 267 ++++++++++++++
+ .../feature-views/TimeToChargeSection.Views.swift  | 391 +++++++++++++++++++++
+ .../feature-views/TimeToChargeSection.strings      |  44 +++
+ .../feature-views/TimeToChargeSection.swift        | 128 +++++++
+ 10 files changed, 2176 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0094-TimeToChargeSection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/TimeToChargeSection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TimeToChargeSection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TimeToChargeSection.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TimeToChargeSection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TimeToChargeSection.StateTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TimeToChargeSection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TimeToChargeSection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TimeToChargeSection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/TimeToChargeSection.swift

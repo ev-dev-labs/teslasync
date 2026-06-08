@@ -1,0 +1,120 @@
+=== P4 Feature view 0253 SLOTrackingCard (Apple) ===
+Generated: 2026-06-08T09:21:41Z
+Runner: Darwin 25.5.0 arm64 — Command Line Tools only (no full Xcode app)
+Web source: web/src/features/system/components/status/SLOTrackingCard.tsx
+Native output: apps/apple/TeslaSync/feature-views/SLOTrackingCard.* (10 files)
+
+--- Platform-capability probe (this artifact's gate runs two xcodebuild build/test steps) ---
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+$ xcrun --sdk iphoneos --show-sdk-path
+xcrun: error: SDK "iphoneos" cannot be located
+xcrun: error: SDK "iphoneos" cannot be located
+xcrun: error: unable to lookup item 'Path' in SDK 'iphoneos'
+$ xcrun simctl help | head -1
+xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+$ swift --version | head -1
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+$ swiftlint version
+0.63.3
+$ swiftformat --version
+0.61.1
+$ pwsh --version
+PowerShell 7.6.2
+
+--- Gate step 1/5: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test ---
+BLOCKED (platform capability): xcodebuild requires the full Xcode app — this runner has only
+/Library/Developer/CommandLineTools. No 'iphoneos' SDK and no 'simctl' (iOS Simulator) are present,
+so neither an iOS-Simulator build nor Swift Charts/MapKit-bearing targets can be exercised here.
+IOS_EXIT=BLOCKED
+
+--- Gate step 2/5: xcodebuild -scheme TeslaSync-macOS build test ---
+BLOCKED (platform capability): xcodebuild requires the full Xcode app (CLT-only runner; see probe above).
+MAC_EXIT=BLOCKED
+
+--- Gate step 3/5: swiftlint --strict (SLOTrackingCard surface — 10 swift files) ---
+Done linting! Found 0 violations, 0 serious in 10 files.
+LINT_EXIT=0
+
+--- Gate step 4/5: swiftformat --lint (SLOTrackingCard surface — 10 swift files) ---
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+SwiftFormat completed in 2.66s.
+0/10 files require formatting.
+FORMAT_EXIT=0
+
+--- Gate step 5/5: apps/tools/check-placeholders.ps1 (forbids TODO/FIXME/stub/Coming soon/Placeholder/Lorem/...) ---
+$ pwsh check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/SLOTrackingCard   (exact gate path)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+(supplemental real scan of all 10 surface .swift files):
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- Compensating verification on this runner (the blocked xcodebuild steps are environment-only) ---
+[A] Standalone Swift version 6.3.2 compile of the REAL surface logic
+    (SLOTrackingCard.Adapter/.Projection/.Model/.Doubles) + 70 runtime assertions mirroring the XCTest suite:
+      build: swiftc -o slo_check *.swift  => BUILD_EXIT=0
+      run  : ok   - model surface slug  (got: SLOTrackingCard)
+---
+ALL PASS
+    Covers: fmtPercent grouping/2dp + nil/NaN dash, count dash, tone thresholds (>=tgt / >=tgt-1),
+            window order+default, caveat predicate, target parse/sanitize/display bounds, projection
+            loading/empty/error(precedence)/data phases, selected-window summary, caveat default/custom,
+            window-pill selection, model telemetry-once, select() delegation+summary, setTarget persist/
+            re-tint/invalid-ignore, target load-from-store, stale auto-refresh-once, offline no-refresh.
+[B] macOS-15 SDK -typecheck of ALL SwiftUI view files (SLOTrackingCard.swift/.Views/.Chrome/.Previews
+    + .Model/.Adapter/.Projection/.Doubles) against the REAL generated tokens (apps/design/generated/
+    apple/Tokens.swift) and the REAL shared TSButton (Sources/Components/UI/Buttons.swift):
+      exit=0
+    (iOS-only keyboardType branch compiles out via #if os(iOS); no Swift Charts/MapKit used by this surface.)
+[C] i18n key parity: every SLOTrackingStrings key referenced in Swift exists in SLOTrackingCard.strings
+    and every defined key is referenced (used-set == defined-set). OK.
+
+--- States rendered (web parity, no hidden surface) ---
+  loading (dash headline + 'Loading uptime…', chrome intact) · empty (friendly hint, never blank) ·
+  error ('Failed to load uptime data.' + Retry) · data (tinted headline + counts + window pills) ·
+  stale (chip + banner + one-shot auto-refresh) · offline (chip + banner, cached value).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green : the two xcodebuild build/test steps are reported BLOCKED with raw xcode-select/
+                       xcrun error evidence — never reported as passing. STATUS=BLOCKED accordingly.
+  2  No scope narrow : every web region+branch reproduced — title, editable personal target (default 99,
+                       persisted, accept/discard validation), tinted headline (fmtPercent 2dp), counts
+                       summary, 24h/7d/30d/90d/1y selector, historical-source caveat, loading+error lines.
+  3  No skip-assume  : every runnable step executed on THIS runner; raw exits pasted; the xcodebuild block
+                       re-confirmed by xcode-select/xcrun/simctl probes, not assumed.
+  4  No stubs final  : complete production surface + 48 real XCTest cases; placeholder scanner COUNT=0.
+  5  No parity short : fmtPercent grouping, the tone >=tgt / >=tgt-1 thresholds, the n>0&&n<=100 target
+                       bounds, the !=‘series’ caveat predicate are each asserted against the web exprs
+                       (en_US golden values verified empirically in [A]).
+  6  No delegation   : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor  : P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened
+       bypass         telemetry all honoured; no sibling surfaces touched.
+  8  No commit on red: the committed artifact (10 SLOTrackingCard.* files + this log) is GREEN on every
+                       runnable code gate (swiftlint/swiftformat/placeholder) AND on a real Swift 6 compile+
+                       run of its logic and a macOS-SDK typecheck of its views; the only non-green item is
+                       the xcodebuild build/test gate, BLOCKED solely by the absent Xcode toolchain (env),
+                       not by any defect in this code.
+  9  No silent drift : changes confined to feature-views/SLOTrackingCard.{swift,Adapter,Model,Projection,
+                       Views,Chrome,Doubles,Previews,Tests,AdapterTests}.swift + .strings and this log.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic SLOTrackingCard shipped at parity with the web source. All gates that
+  can run on a Command-Line-Tools-only runner are GREEN (swiftlint --strict 0, swiftformat --lint clean,
+  placeholder COUNT=0), and the surface's logic + SwiftUI views are independently verified to compile and
+  behave correctly via standalone Swift 6.3 (real sources, 70 assertions PASS) and a macOS-15 SDK typecheck
+  against the real design tokens + shared TSButton. The two xcodebuild build/test steps are BLOCKED by the
+  platform-capability clause of this prompt: this runner provides Command Line Tools only (no Xcode app, no
+  iphoneos SDK, no iOS Simulator), so the iOS/iPadOS/macOS xcodebuild + Swift Charts/MapKit toolchain is
+  unavailable. Per the prompt's capability clause, this is reported as STATUS=BLOCKED with API evidence; the
+  full xcodebuild build/test belongs to a runner/acceptance gate that has the Xcode app installed.
+
+EXIT=1
+STATUS=BLOCKED

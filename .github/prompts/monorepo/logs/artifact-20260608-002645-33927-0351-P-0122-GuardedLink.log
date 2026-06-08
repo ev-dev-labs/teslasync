@@ -1,0 +1,128 @@
+=== P4 Shared surface 0122 GuardedLink (Apple) ===
+date: 2026-06-08T12:27:35Z
+host: Darwin 25.5.0 arm64
+cwd:  /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-351
+
+##############################################################################
+# CAPABILITY PROBE (Honesty Covenant: BLOCKED requires platform evidence)     
+##############################################################################
+--- xcode-select -p ---
+/Library/Developer/CommandLineTools
+--- swift --version ---
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+Target: arm64-apple-macosx26.0
+--- xcodebuild -version (expect FAIL: full Xcode not installed) ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+xcodebuild_version_exit=1
+--- macOS SDK frameworks present (SwiftUI/Charts/MapKit) ---
+Charts.framework MapKit.framework SwiftUI.framework 
+--- swiftlint / swiftformat / pwsh available ---
+swiftlint=0.63.3 swiftformat=0.61.1 pwsh=PowerShell 7.6.2
+
+##############################################################################
+# GATE STEPS (verbatim from prompt) — real exit codes                          
+##############################################################################
+--- [1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+
+--- [2] xcodebuild -scheme TeslaSync-macOS build test ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+
+>> [1] and [2] are BLOCKED: active developer dir is CommandLineTools, not a full
+>> Xcode. iOS Simulator + the iOS/macOS app build/test toolchain are unavailable.
+>> This is the capability gap the prompt's capability clause anticipates.
+
+--- [3] swiftlint --strict (repo config scope) ---
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-351/apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length Violation: Function body should span 50 lines or less excluding comments and whitespace: currently spans 78 lines (function_body_length)
+LINT_EXIT=2
+   note: the single violation is PRE-EXISTING and NOT in this surface:
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-351/apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length Violation: Function body should span 50 lines or less excluding comments and whitespace: currently spans 78 lines (function_body_length)
+
+--- [4] swiftformat --lint apps/apple (whole tree) ---
+Source input did not pass lint check.
+1/1918 files require formatting, 2 files skipped.
+FORMAT_EXIT=1
+
+--- [5] placeholder gate (pwsh) — surface dir, swift ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+>> swiftlint LINT_EXIT=2 and swiftformat FORMAT_EXIT=1 are PRE-EXISTING repo
+>> issues OUTSIDE this surface (this prompt's Allowed-files forbid touching them):
+>>   swiftlint  : TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift (function_body_length)
+>>   swiftformat: TeslaSync/feature-views/ActionBuilder.Previews.swift
+
+##############################################################################
+# SURFACE-SCOPED VERIFICATION (this prompt's files only) — all GREEN           
+##############################################################################
+--- swiftformat --lint TeslaSync/shared-surfaces ---
+0/5 files require formatting.
+surface_format_exit=0
+--- swiftlint --strict (repo rules) — surface files only ---
+surface_swiftlint_exit=0
+--- check-placeholders.ps1 (surface) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+
+##############################################################################
+# REAL TYPE-CHECK against the macOS SDK + the real design tokens               
+# (SwiftUI/@Observable/@Bindable/.confirmationDialog all expand under CLT)      
+##############################################################################
+--- swiftc -parse (syntax) — all 5 shipped files ---
+parse_all_exit=0
+--- swiftc -typecheck: Model+Views+GuardedLink + real Tokens.swift (runtime, shipped as-is) ---
+runtime_typecheck_exit=0
+--- swiftc -typecheck: + preview bodies (PreviewsHarness: #Preview->func; macro plugin is Xcode-only) ---
+previews_typecheck_exit=0
+--- swiftc -typecheck: + test bodies (TestsHarness + throwaway XCTest shim; XCTest plugin is Xcode-only) ---
+tests_typecheck_exit=0
+
+##############################################################################
+# SUMMARY                                                                      
+##############################################################################
+Gate sub-steps:
+  IOS_EXIT=1          BLOCKED  (xcodebuild requires full Xcode; CLT only)
+  MAC_EXIT=1          BLOCKED  (xcodebuild requires full Xcode; CLT only)
+  LINT_EXIT=2         pre-existing repo violation outside this surface
+  FORMAT_EXIT=1       pre-existing repo file outside this surface
+  PLACEHOLDER_EXIT=0  PASS
+
+This surface (apps/apple/TeslaSync/shared-surfaces/GuardedLink.*) — all runnable checks PASS:
+  surface swiftformat --lint .......... 0/5 files require formatting   (PASS)
+  surface swiftlint --strict (repo) ... 0 violations                   (PASS)
+  surface placeholder gate ............ PLACEHOLDER_COUNT=0             (PASS)
+  swiftc -parse (5/5 files) ........... PASS
+  swiftc -typecheck runtime (real SDK + real Design Tokens) ... EXIT 0 (PASS)
+  swiftc -typecheck preview bodies (harness) ................... EXIT 0 (PASS)
+  swiftc -typecheck test bodies (harness + XCTest shim) ........ EXIT 0 (PASS)
+
+Acceptance criteria:
+  [x] Surface renders all web-source branches: ready / confirming (Unsaved-changes
+      dialog) / disabled + the shouldSkipGuard bypass (augmented + external).
+      NB: web GuardedLink has NO data fetch (binds only useNavigate +
+      useNavigationGuardContext), so the leaf data-freshness axis
+      (loading/empty/error/stale/offline) has no web branch to reproduce —
+      documented in GuardedLink.Model.swift; not fabricated (covenant #2/#5).
+  [x] Hooks bound via P1/S8 seams (GuardedLinkNavigator + GuardedLinkNavigationContext);
+      no direct HTTP/navigation from the view body.
+  [x] i18n: every string via the P1/S10 facade (GuardedLinkStrings → GuardedLink.strings);
+      no English literals in Swift. Web provider dialog keys mapped 1:1.
+  [x] Accessibility: isLink trait + per-destination VoiceOver hint on the control;
+      isSelected on the active nav link; symbol marked decorative.
+  [x] Tests: guard-policy truth table + confirm-copy + model wiring (clean/dirty/
+      confirm/cancel/bypass/disabled/double-tap) + view.opened telemetry + a11y.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (mechanical gate PASS).
+  [~] EXIT=0 NOT achievable: xcodebuild iOS+macOS build/test BLOCKED — full Xcode
+      (iOS SDK + Simulator + Preview/XCTest macro plugins) is not installed.
+
+Verdict: implementation COMPLETE and verified to the maximum extent possible on a
+Command-Line-Tools-only runner. The two build/test gate steps require full Xcode,
+which is unavailable here — reported honestly as BLOCKED per the prompt's capability
+clause (no red-as-green). Re-run the gate on an Xcode-equipped runner to green IOS/MAC.
+
+EXIT=1
+STATUS=BLOCKED

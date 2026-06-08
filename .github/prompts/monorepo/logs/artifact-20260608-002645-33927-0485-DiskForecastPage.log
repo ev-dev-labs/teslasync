@@ -1,0 +1,195 @@
+================================================================================
+ p4-apple · P7 · page:admin/DiskForecast — SwiftUI / HIG parity
+ Artifact: apps/apple/TeslaSync/Features/Admin/DiskForecastPage.swift (+ support)
+ Web source: web/src/features/admin/pages/DiskForecastPage.tsx
+ Web route: /admin/disk-forecast    Data: useDiskForecast → GET /admin/observability/disk-forecast
+================================================================================
+
+HONESTY COVENANT — this log reports only what was actually executed. The full
+xcodebuild build/test gate could NOT run in this environment (see ENVIRONMENT);
+per the prompt's gate contract ("If no Xcode runner is available, the gate →
+STATUS=BLOCKED") the terminal status is BLOCKED. No result below is fabricated;
+every gate that COULD run was run and its real output is reproduced.
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+host                 : Darwin (arm64)
+xcode-select -p      : /Library/Developer/CommandLineTools   (NO full Xcode.app)
+xcodebuild           : present but unusable —
+    "xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+     directory '/Library/Developer/CommandLineTools' is a command line tools
+     instance"
+swift                : Apple Swift 6.3.2  (usable — typecheck + executable logic)
+swiftlint            : 0.63.3            (usable)
+xcodegen             : 2.45.4            (usable — project generation/validation)
+pwsh                 : present           (usable — placeholder gate)
+
+Consequence: BUILD_EXIT and TEST_EXIT cannot be produced here (they require a
+full Xcode toolchain + iOS/macOS SDKs + simulators). Everything that does NOT
+require Xcode was executed and PASSED. The implementation is complete and was
+statically + dynamically verified to the maximum extent the host allows.
+
+--------------------------------------------------------------------------------
+DELIVERABLES (apps/apple/TeslaSync/Features/Admin/ — 1405 lines, 8 files)
+--------------------------------------------------------------------------------
+DiskForecastPage.swift                 (91)  main SwiftUI View — scaffold, phase switch, refresh
+DiskForecastPage.Model.swift          (260)  L10n facade, Input/Resolved, Source seam (P1/S8), @Observable model
+DiskForecastPage.Adapter.swift        (194)  pure ports: formatBytes, fmtNumber, severity, fleet totals
+DiskForecastPage.Projection.swift     (143)  pure Input→Resolved (phases, stat cards, table rows)
+DiskForecastPage.Views.swift          (320)  subviews: header, stat tiles, adaptive table, banner, states
+DiskForecastPage.Previews.swift        (85)  #Preview per state (success/loading/empty/error/subsystem)
+DiskForecastPage.Tests.swift          (266)  XCTest — adapter + projection + model wiring
+DiskForecastRouteRegistration.swift    (46)  nav registration (.admin route host; /admin/disk-forecast deep link)
+
+Navigation / registration (allowed surfaces beyond the feature dir):
+  Sources/TeslaSyncApp.swift            — composes DiskForecastRouteRegistration.registry(base: settings…)
+  Localization/Localizable.xcstrings    — +32 keys (23 parity + 9 native-chrome), additions-only diff
+  project.yml                           — registers `TeslaSync/Features` in both app targets (build wiring)
+  .swiftlint.yml                        — adds `TeslaSync/Features` to lint `included`
+  apps/parity/apple-ledger.json         — new ledger, status=blocked, covered 32/32
+
+Architecture: mirrors the established feature-view contract — a `DiskForecastSource`
+state-holder seam (P1/S8) with an `InMemoryDiskForecastSource`, an `@Observable`
+`DiskForecastPageModel`, and a pure `DiskForecastProjection`. SI/format conversion
+happens only at the display boundary via the pure adapter (ADR-005). All strings
+resolve from `Localizable.xcstrings` via `String(localized:defaultValue:)` keeping
+the web key names (ADR-014). Components reused from the P3 library (TSGlassPanel,
+TSAlertBanner, TSEmptyState, TSStatGridSkeleton, TSTableSkeleton, TSBadge, TSCard,
+TSFadeIn, typography). The hypertable table is a scoped read-only adaptive grid
+(the web disk-forecast table is read-only, no selection): columnar Grid on macOS /
+regular width, card list on compact iPhone width (ADR-002/ADR-006).
+
+Data source note (ADR-013): useDiskForecast is a REST query, NOT a live SSE
+stream, so there is no >2-min staleness subscription (the SSE/staleness clause is
+conditional on a live source). `refresh()` + pull-to-refresh re-request the source.
+
+--------------------------------------------------------------------------------
+GATES THAT RAN (real output)
+--------------------------------------------------------------------------------
+[1] swiftc -typecheck -swift-version 6 -strict-concurrency=complete
+        Adapter + Model + Projection
+    → EXIT=0   (pure-Foundation core type-checks under Swift 6 complete concurrency)
+
+[2] swift logic validation (built the real pure code into an executable and ran
+    every XCTest expectation as a live assertion, since XCTest itself needs Xcode):
+        PASS bytes nil = —          PASS bytes 4.82G = 4.5 GB
+        PASS bytes 1024 = 1.0 KB    PASS grouped 1234.5 = 1,234.50
+        PASS days 14 = 14.00        PASS days nil = —
+        PASS total value = 1000 B   PASS total sub = 2 hypertables
+        PASS uncompressed sub = 80.0% of total
+        PASS compressed sub = 20.0% of total
+        PASS growth value = 150 B/d PASS growth sub = Sum across all hypertables
+        PASS row0 chunk = 412 chunks  PASS row0 days = 365.00  PASS row1 days = —
+        PASS loading / empty / success / subsystem phases
+        ALL_PASS  (31/31 assertions)  → RUN_EXIT=0
+
+[3] swiftlint --strict (Features/Admin, isolated with the repo rule set)
+        Done linting! Found 0 violations, 0 serious in 8 files.
+    → LINT_EXIT(Admin)=0
+    NOTE: a repo-wide `swiftlint --strict` reports exactly 1 PRE-EXISTING violation
+    in TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+    (function_body_length) — unrelated to this prompt; zero violations in the
+    files this prompt authored.
+
+[4] check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Admin -Language swift
+        PLACEHOLDER_ALLOWED=0
+        PLACEHOLDER_COUNT=0
+    → PLACEHOLDER_EXIT=0   (no stubs/skeletons/TODOs — ADR-011)
+
+[5] xcodegen generate
+        Created project at …/apps/apple/TeslaSync.xcodeproj
+    → XCODEGEN_EXIT=0   (project.yml valid; 48 references to the new files confirm
+      TeslaSync/Features is compiled into both app targets; generated .xcodeproj is
+      git-ignored and was removed after validation)
+
+GATES THAT COULD NOT RUN (require full Xcode — BLOCKED, not failed):
+    BUILD_EXIT  = (blocked: xcodebuild requires Xcode.app; CommandLineTools only)
+    TEST_EXIT   = (blocked: same)
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=32
+--------------------------------------------------------------------------------
+PANELS (5/5)
+[x] panel  Total-disk        DiskForecastProjection.fleetStats id="total"
+                              (labelKey admin.diskForecast.fleetTotal) → Views
+                              DiskForecastStatTile via DiskForecastStatGrid
+[x] panel  Uncompressed       DiskForecastProjection.fleetStats id="uncompressed"
+                              → Views DiskForecastStatTile
+[x] panel  Compressed         DiskForecastProjection.fleetStats id="compressed"
+                              → Views DiskForecastStatTile
+[x] panel  Growth-per-day     DiskForecastProjection.fleetStats id="growth"
+                              → Views DiskForecastStatTile
+[x] panel  GlassPanel5        Views DiskForecastTablePanel (TSGlassPanel +
+                              DiskForecastTable) / DiskForecastEmptyPanel
+
+STATES (4/4)  — every data source state, never a blank region
+[x] state  loading           DiskForecastResolved.Phase.loading (Model) →
+                              Views DiskForecastLoadingView (TSStatGridSkeleton +
+                              TSTableSkeleton, redacted skeleton chrome)
+[x] state  empty             DiskForecastResolved.Phase.empty →
+                              Views DiskForecastEmptyPanel (TSEmptyState over
+                              ContentUnavailableView)
+[x] state  error             DiskForecastResolved.Phase.error(String) →
+                              Views DiskForecastErrorView (retry, TSButton)
+[x] state  success           DiskForecastResolved.Phase.success →
+                              DiskForecastPage.successBody (banner? + stats + table)
+
+STRINGS (23/23) — every web key, resolved from Localization/Localizable.xcstrings
+                  via String(localized:defaultValue:) / LocalizedStringKey
+[x] string admin.diskForecast.chunkCount       Projection.row(from:) chunkText
+[x] string admin.diskForecast.colDays          Views DiskForecastTable columnHeader/kvRow
+[x] string admin.diskForecast.colGrowth        Views DiskForecastTable columnHeader/kvRow
+[x] string admin.diskForecast.colSeverity      Views DiskForecastTable columnHeader
+[x] string admin.diskForecast.colSplit         Views DiskForecastTable columnHeader/kvRow
+[x] string admin.diskForecast.colTable         Views DiskForecastTable columnHeader
+[x] string admin.diskForecast.colTotal         Views DiskForecastTable columnHeader/kvRow
+[x] string admin.diskForecast.compressedSuffix Projection.row compressedSuffix → Views splitCell
+[x] string admin.diskForecast.emptyMessage     Views DiskForecastEmptyPanel (TSEmptyState message)
+[x] string admin.diskForecast.emptyTable       Views DiskForecastTablePanel empty note
+[x] string admin.diskForecast.emptyTitle       Views DiskForecastEmptyPanel (TSEmptyState title)
+[x] string admin.diskForecast.fleetCompressed  Projection.fleetStats id="compressed" labelKey
+[x] string admin.diskForecast.fleetGrowth      Projection.fleetStats id="growth" labelKey
+[x] string admin.diskForecast.fleetTotal       Projection.fleetStats id="total" labelKey
+[x] string admin.diskForecast.fleetUncompressed Projection.fleetStats id="uncompressed" labelKey
+[x] string admin.diskForecast.growthSub        Projection.fleetStats id="growth" sublabel
+[x] string admin.diskForecast.notConfigured    Views DiskForecastSubsystemBanner message
+[x] string admin.diskForecast.pageTitle        Views DiskForecastHeader (TSPageTitle)
+[x] string admin.diskForecast.percentSub       Projection.sharePercentSublabel
+[x] string admin.diskForecast.subtitle         Views DiskForecastHeader
+[x] string admin.diskForecast.tableCount       Projection.fleetStats id="total" sublabel
+[x] string admin.diskForecast.tableTitle       Views DiskForecastTablePanel/EmptyPanel/LoadingView (TSPanelTitle)
+[x] string admin.subsystem.unavailableTitle    Views DiskForecastSubsystemBanner title
+
+Native-chrome strings (added to the catalog; NOT counted in the 23 parity set, but
+ensure zero hardcoded literals): admin.diskForecast.severity.{ok,warn,critical,
+unknown}, admin.diskForecast.perDay, admin.diskForecast.refresh,
+admin.diskForecast.retry, admin.diskForecast.errorTitle, admin.diskForecast.loadingA11y
+--------------------------------------------------------------------------------
+PARITY_COVERED=32
+=== END PARITY ===
+================================================================================
+
+ACCEPTANCE
+[x] Every named panel implemented; the subsystem-unavailable banner + table-empty
+    note reproduce the remaining anonymous web regions.
+[x] All 32 parity items render from the bound @Observable DiskForecastPageModel.
+[x] loading / empty / error implemented for the data source (+ success + subsystem).
+[x] All visible strings sourced from Localizable.xcstrings; zero hardcoded literals;
+    web key names preserved.
+[x] Dark mode + Dynamic Type (design-token ramp) + a11y (accessibilityLabel/traits,
+    ContentUnavailableView) + SI byte/number formatting at the display boundary.
+    SwiftUI-native only (no web cloning, no WKWebView).
+[~] build + lint + test + placeholder gates: placeholder=0, lint(Admin)=0,
+    typecheck+logic=PASS, xcodegen=0; BUILD/TEST BLOCKED (no Xcode runner).
+[x] PARITY_COVERED == PARITY_REQUIRED (32 == 32).
+[~] ledger row written status=blocked (covered 32/32) — flips to done when a
+    full-Xcode runner greenlights build+test.
+
+BLOCKED_REASON: full Xcode toolchain unavailable on host (CommandLineTools only);
+xcodebuild build/test cannot execute. All non-Xcode gates pass; the implementation
+is complete and statically + dynamically verified.
+
+EXIT=1
+STATUS=BLOCKED

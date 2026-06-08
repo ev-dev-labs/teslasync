@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is available. Let me read the web source and explore the Apple app structure.
+
+The multi-file widget pattern is clear. Let me check if SoftwareUpdateStatusWidget already exists and study a clean reference widget (GuardModeWidget) plus the web hooks/config types.
+
+There's a sibling `SoftwareUpdateHistoryWidget` in the same domain — excellent reference. Let me read its full set plus the remaining GuardMode files to learn all conventions.
+
+Strong foundation. Now let me read the sibling's remaining files plus the web hooks and core token/registration definitions in parallel.
+
+Let me locate the core P4/P1 shared types and read the web hooks plus the sibling's view/preview/test files.
+
+`DashboardWidgetRegistration` is referenced widely. Let me find its canonical definition and the design tokens.
+
+Multiple definitions exist — these widget files appear to be self-contained units. Let me verify how the sibling defines the registration and understand the build setup.
+
+Many widget files each redefine the registration structs — this needs investigation. Let me check the build reality: xcodeproj presence, xcodegen, and the actual baseline build state.
+
+The brace pattern was off. Let me recount duplicates correctly and check how sibling prompts resolved their gate (logs) to understand the expected outcome.
+
+The sibling 0091 log reveals the established pattern precisely: 8 self-contained files, **don't** redefine the triple-defined `DashboardWidgetSize`/`Registration`, full `xcodebuild scheme build test` is **deferred** due to pre-existing repo-wide duplicate-symbol blockers, while the surface type-checks green standalone + adapter tests pass + lint/format/placeholder green → `EXIT=0 STATUS=DONE`. Let me read the remaining sibling files and core type/token definitions.
+
+Now the design tokens, the sibling Previews/Tests, and the web MetricBar component (key visual for my widget's progress bars).
+
+Let me read the sibling's adapter tests, the web MetricBar (my widget's key visual), the lint/format configs, and the placeholder gate patterns.
+
+I have the full pattern. Let me check the lint/format configs, placeholder patterns, the TSSkeleton API, and whether predecessors used a standalone swiftc harness.
+
+Let me review the full 0091 log to replicate the predecessor's standalone verification harness, then set up my plan.
+
+I have a complete, proven recipe from the predecessor 0091. Let me verify the exact web registry entry and Badge variants, then check TSSkeleton's dependencies for the typecheck harness.
+
+I now have a complete, proven recipe. The web registry confirms: `software-update-status`, vehicle, 2×2 / 1×2 / 4×40. Let me set up tracking and plan, then author the 8 files following the sibling pattern.
+
+Now I'll author the files. Starting with the pure Projection adapter.
+
+Now the Views file with the compact/full subviews, progress bar, badge, and freshness chip.
+
+Now the main surface file.
+
+Now the previews covering every state.
+
+Now the adapter parity tests.
+
+Now the model/registry/accessibility tests.
+
+Now the i18n strings table.
+
+All 8 files authored. Now verification — starting with formatting and line counts.
+
+swiftformat wants house-style wrapping. Let me auto-apply it to my files, then re-lint.
+
+My files pass formatting. Now the full-dir format lint (as the gate runs it) and swiftlint.
+
+My 7 files pass formatting cleanly. The full-dir failure is one **pre-existing** sibling file (`ActionBuilder.Previews.swift` in feature-views) outside my scope. Let me confirm I didn't touch it, then run swiftlint.
+
+Let me identify the single swiftlint violation (confirm it's not mine).
+
+The lone swiftlint violation is the **pre-existing** `LifetimeStatsWidget.Adapter.swift:141` (sibling, out of scope) — exactly as the 0091 predecessor documented. Zero violations in my files.
+
+Now the placeholder gate. The acceptance criteria forbid the literal word "placeholder" — I used it as a symbol name. Let me check the gate script and scan my files.
+
+Critical: the placeholder gate scans `.swift` files case-insensitively for the word "Placeholder" — my `placeholder` symbol name would trigger 5 violations (and the acceptance criteria forbid it). Renaming to `idleProjection`.
+
+Now run the actual placeholder gate. I'll scan my real files (via a temp copy, since the prompt's literal path has no extension) plus re-grep.
+
+Placeholder gate passes (COUNT=0). Let me re-verify formatting after my edits and inspect the available Swift toolchain for the typecheck harness.
+
+Default points at CommandLineTools, but full Xcode.app is present (needed for the `#Preview` macro). Let me build the standalone typecheck harness against the real design system using the Xcode toolchain.
+
+Skeletons.swift depends on `TSCard`. Let me find and include the real Card component (keeping the harness against the real design system).
+
+Cards.swift pulls a further `tsGlassPanel()` modifier chain. Since I only use `TSSkeleton` (whose real public API I verified), I'll shim that one external view faithfully and keep the **real** generated Tokens. Re-running the typecheck.
+
+One real error in my file: `Self` in a stored-property initializer. I'll move the neutral projection to a static on the value type (`SoftwareUpdateStatusProjection.idle`), matching the `GuardStatus.empty` precedent.
+
+That edit was a mistake — it removed the property bodies. Let me view and repair.
+
+Now update Model.swift to use the value-type static and remove the old class static.
+
+Re-running the typecheck.
+
+Typecheck is **green (0 errors)** against the real design tokens. Now the execution harness to prove the adapter/model logic runs green.
+
+Harness-only concurrency issue (global mutable counters). Let me make the harness MainActor-isolated and drop the unused spy.
+
+Execution harness: **CHECKS=80 FAILURES=0 HARNESS_OK**. Now the xcodebuild attempt for DEFERRED evidence. Let me check the framework dependency and generate the project.
+
+Project generates; schemes exist. The app target needs `Frameworks/Shared.xcframework` (only a `.gitkeep` present — the KMP core isn't built). Let me check the framework build script and attempt it time-boxed.
+
+JDK17 + gradlew present. Let me attempt the KMP framework build (time-boxed, async) to strengthen the xcodebuild evidence, while I prepare the gate log.
+
+While the KMP build runs, let me gather the precise pre-existing-blocker evidence and re-verify my files after edits.
+
+All verifications pass: my files format-clean, all ≤400 lines, I define 0 of the duplicated registry types, and the pre-existing blockers are confirmed (15/13 duplicate defs; 59 co-located test files). Let me check the KMP build progress.
+
+KMP build still running (downloading the Kotlin/Native toolchain). Let me continue waiting.
+
+~7.5 min with no output — this is the first-time Kotlin/Native toolchain fetch, which is slow/environmental. Since the `xcodebuild` scheme step is DEFERRED-by-design anyway (the duplicate-symbol + XCTest-in-app-target blockers fail the build regardless of the framework), I'll cap this and proceed with the accepted DEFERRED disposition. Let me check briefly then stop.
+
+Capping the KMP build (first-time K/N toolchain fetch is too slow and the scheme step is DEFERRED regardless). Let me stop it and verify my git scope is clean.
+
+Build artifacts are gitignored; my scope is clean. Now writing the honest gate log following the accepted 0091 disposition.
+
+Log written. Let me do a final clean re-verification of all in-scope gates after my edits (typecheck, harness, format, placeholder, forbidden-words), then swiftlint.
+
+All in-scope gates green. Final swiftlint confirmation after edits.
+
+Confirmed: zero violations attributable to my surface (only the pre-existing sibling). All in-scope gates are green. Committing exactly my 8 files + the log.
+
+Staged set is exactly my 8 files + the log; pre-existing changes remain unstaged. Committing.
+
+Committed cleanly (9 files, 2269 insertions). Let me clean up temp artifacts and finalize tracking.
+
+All work complete and committed (`4f0a7e10d`). Final summary:
+

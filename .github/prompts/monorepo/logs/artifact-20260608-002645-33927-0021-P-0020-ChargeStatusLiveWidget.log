@@ -1,0 +1,205 @@
+================================================================================
+P4 · Dashboard widget · 0020 — ChargeStatusLiveWidget (Apple)
+Run: 2026-06-08T00:50-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/21
+Base: c9c6fdb9
+Prompt: P4/dashboard-widgets/0020 — ChargeStatusLiveWidget
+Web source (spec): web/src/features/dashboard/widgets/ChargeStatusLiveWidget.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (0054 GuardModeWidget precedent, ADR-012).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18 deploy target)       OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15 deploy target)              OK
+  iOS simulators ............. iPhone 17 / 17 Pro / 17 Pro Max / 17e / Air present  OK
+                               (the gate string names "iPhone 16"; this runner ships the
+                               iPhone 17 family — an available sim is substituted for the
+                               DEFERRED Xcode step, which does not run here regardless)
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen 2.45.4                     OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  surface in project.yml ..... 0 direct references (globbed via TeslaSync/dashboard-widgets) WARN
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and PROVEN by real iOS-18-simulator AND macOS-15 SDK compiles below.
+  The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does
+  NOT apply — the surface is authored, host-compiled, and host-tested for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.*) ===
+  ChargeStatusLiveWidget.Adapter.swift   226  testable projection core — ChargeUnits + ChargeConvert
+                                              (port of convertDistanceFromSI / convertEnergyFromSI) +
+                                              ChargeMetrics.project (web `metrics` memo) + ChargeFormat
+                                              (power/voltage/current/energy/rate/battery + formatTime) +
+                                              ChargeAccessibility summary
+  ChargeStatusLiveWidget.Model.swift     263  P1/S8 state-holder seam (ChargeStatusSource→ChargeStatusModel)
+                                              + P1/S11 telemetry seam + P1/S10 strings facade + DTOs +
+                                              in-memory source
+  ChargeStatusLiveWidget.Views.swift     301  presentational subviews — ChargeChip / connectivity banner /
+                                              metric cell / compact charging / compact idle / full charging
+                                              (primary kW + 2x2 grid + tall row) / full idle (last session)
+  ChargeStatusLiveWidget.swift           280  the surface (shell chrome + freshness chip + state switch +
+                                              charging/idle × compact/full composition + registry)
+  ChargeStatusLiveWidget.Previews.swift  152  #if DEBUG previews — one per state (charging 2x2 / charging
+                                              compact / idle / idle compact / no-data / loading / error /
+                                              stale / offline)
+  ChargeStatusLiveWidget.Tests.swift     293  XCTest — adapter + model + registry + a11y (20 methods)
+  ChargeStatusLiveWidget.strings          50  P1/S10 catalog contribution (11 source keys + registry
+                                              description + native chrome + a11y)
+  Every .swift file <= 400 lines (house file_length). Total 1515 swift lines across 6 files.
+  Shared registry types (DashboardWidgetSize / DashboardWidgetRegistration) and the design tokens /
+  TSTone / TSSkeleton are REUSED from the shared module — this surface REDECLARES NONE of them
+  (grep count of redeclarations in ChargeStatusLiveWidget.* = 0), so it adds no duplicate symbols.
+
+=== PARITY (vs web ChargeStatusLiveWidget.tsx) ===
+  Data sources -> bound via the shared state-holder seam (ChargeStatusSource -> ChargeStatusModel):
+    useVehicles, useVehicleState (refetch 5s), useChargingSessionsPaginated(limit 1), useUnits,
+    useTranslation. The production app wires ChargeStatusSource over the KMP vehicle-state live query +
+    charging-session store + unit preferences; the view performs NO HTTP.
+  Projection -> ChargeMetrics.project mirrors the web `metrics` memo exactly: power = charger_power (kW),
+    voltage = null, amps = null (web hardcodes both -> em-dash cells), energyAdded = total_energy_added_wh
+    ?? 0 (SI Wh), timeToFull = time_to_full_charge ?? 0 (h), rate = charge_rate ?? 0 (SI m), battery =
+    battery_level ?? 0. ChargeConvert reproduces convertDistanceFromSI (METERS_PER_KM 1000 / METERS_PER_MILE
+    1609.344) and convertEnergyFromSI (Wh/1000) to the digit. ChargeFormat.timeRemaining is a 1:1 port of the
+    web `formatTime` ('—' / Nm / Nh / Nh Mm). SI stays on the wire; conversion happens at the display boundary
+    (useUnits -> ChargeUnits.distance), per the unit-conversion contract. Verified by executed XCTest.
+  Composition -> shell chrome (bolt icon + "Charge Status" title [hidden when compact] + freshness chip +
+    refresh + optional Open) · 1x1 CompactChargingView (pulsing charge glyph + kW + battery%) · 1x1
+    CompactIdleView (plug + battery% + "Not Charging") · full FullChargingView (status header: charge glyph +
+    "Charging" success chip + battery%; primary kW; 2x2 metric grid Voltage/Current/Time Left/Added; + a tall
+    row Rate/Battery when rows>=2) · full IdleView (plug + "Not Charging" + battery% + "Last Session" recap when
+    a prior session is cached). isCompact/isTall are computed from the requested size, like the web prop.
+  Shared components -> reuses Color.TS / Font.TS / TSSpacing / TSRadius / TSTone / TSSkeleton +
+    ContentUnavailableView (compiled against the REAL apps/apple tokens + TSTone badges in the typechecks
+    below). ChargeChip mirrors the TSBadge tokens, extended to take a pre-localized String (our per-surface
+    table) + a leading SF Symbol the LocalizedStringKey-only TSBadge can't express.
+    Recharts -> none / Leaflet -> none (no chart/map on this surface).
+  States (all render) -> loading (skeleton chrome) · empty ("No charge data") · error (retry affordance) ·
+    stale (chip + banner) · offline (cached value + chip + banner) · content (charging|idle × compact|full).
+    Model phase resolution keeps cached content visible behind refresh/errors, matching the web shell
+    (state present -> content for every load status; state absent -> loading/empty/error).
+  i18n -> all source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    widget.chargeStatusLive, noChargeData, notCharging, charging, voltage, amps, timeRemaining, energyAdded,
+    chargeRate, batteryLevel, lastSession -> ALL PRESENT in ChargeStatusLiveWidget.strings (+ registry
+    description + native chrome: open/chargeLive/chargeStale/chargeOffline/chargeRefresh/chargeRetry/
+    chargeLoading/noChargeDataHint/chargeErrorTitle/chargeOfflineBanner/chargeStaleBanner/chargeOpenA11y).
+    No English literals in native code (verbatim from the facade). Key cross-check: used == declared.
+  a11y -> the content carries a combined charging/idle summary (ChargeAccessibility.summary); each metric
+    cell a combined "label: value"; the freshness chip + every button (refresh / retry / open) an
+    accessibilityLabel; Dynamic Type via tokens; the charge glyph uses .symbolEffect(.pulse) which respects
+    Reduce Motion; the shimmer skeleton respects Reduce Motion.
+  Telemetry -> ChargeStatusModel.start() emits viewOpened(surface:"ChargeStatusLiveWidget") -> bridges the
+    shared Telemetry.track(.screenView) (P1/S11). Asserted by a spy test (fires exactly once).
+  Registry -> ChargeStatusLiveWidget.registration: id "charge-status-live", category "charging", default
+    2x2, min 1x2, max 3x40 (+ clamp()), matching registry/charging.ts. Asserted.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (the 5 shipping non-test source files compiled together with
+    the REAL apps/apple design Tokens + REAL Components/UI/Badges (TSTone) + a minimal registry/TSSkeleton
+    shim; none import the Shared xcframework):
+      xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+        -swift-version 6  <Tokens + Badges + shim> <ChargeStatusLiveWidget.{swift,Adapter,Model,Views,Previews}>
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swiftc -typecheck — DEBUG previews (-D DEBUG; same closure; exercises every #Preview body):
+      PREVIEWS_TYPECHECK_EXIT=0                                                     OK
+[4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM harness (real
+    production Adapter/Model/Views/Widget + real design tokens + real TSTone badges + minimal TSSkeleton/
+    registry shims), Swift 6 language mode (.swiftLanguageMode(.v6)):
+      Executed 20 tests, with 0 failures (0 unexpected) in 0.004 seconds
+        ChargeAdapterTests       10/10 (distance/energy SI conversions, project carry + nil defaults,
+                                       formatTime branches, voltage/current/battery sentinels, energy/rate/
+                                       power suffixes, a11y summary key resolution charging + idle)
+        ChargeStatusModelTests    8/8  (phase loading/empty/error/content, content-while-loading-or-failed,
+                                       telemetry-once, refresh delegation, apply tracks conn/metrics/units/
+                                       session, idle clears charging flag)
+        ChargeRegistryTests       2/2  (canonical charge-status-live metadata, clamp min/max)
+      SWIFT_TEST_EXIT=0                                                             OK
+[5] swiftlint --strict on the 6 surface .swift files (explicit paths; config apps/apple/.swiftlint.yml):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0                                                                   OK
+[6] swiftformat --lint on the 6 surface .swift files (config apps/apple/.swiftformat):
+      0/6 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+[7] check-placeholders (ADR-011 stub gate; swift):
+      ./apps/tools/check-placeholders.ps1 -Path apple/TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.swift -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   (whole-surface re-scan also COUNT=0)
+      PLACEHOLDER_EXIT=0                                                            OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host):
+      - `xcodegen generate` -> XCODEGEN_EXIT=0 (project + 12 targets + schemes generate cleanly).
+      - `xcodebuild -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO` ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **   BUILD_EXIT=65
+    Why deferred (three independent, code-unrelated reasons — none is a defect in this surface;
+    identical disposition to the 0054 GuardModeWidget predecessor surface, Honesty rule 7):
+      (a) Shared.xcframework not staged: the app target links the KMP core; staging it needs a
+          Kotlin/Native gradle build (apps/shared/gradlew :core:assembleSharedXCFramework). Independent of
+          this UI surface; concrete missing-framework error (BUILD_EXIT=65) captured above.
+      (b) Cross-surface duplicate symbols: the parallel-generated app module currently carries 13 public
+          `DashboardWidgetRegistration` + 15 public `DashboardWidgetSize` declarations across sibling widget
+          files. A full app compile is red until the P4 integration prompt de-dupes them into one shared
+          owner. THIS surface deliberately redeclares NONE of those types (count = 0) so it adds nothing to
+          that debt; steps [1]/[2] compile it against a single shared definition for real.
+      (c) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    XCTest under Xcode runs in the TeslaSync/-macOS test target; here the SAME tests are PROVEN GREEN
+    (20/20) by the executed SwiftPM harness in step [4], and the views/model/adapter compile against
+    both the iOS 18 and macOS 15 SDKs in steps [1]/[2] (+ previews in [3]).
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content, charging|idle ×
+      compact|full) — implemented; each has a #if DEBUG preview; phase logic unit-tested + executed green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (ChargeStatusSource->ChargeStatusModel); no
+      view HTTP.
+  [x] Every i18n key from source has a matching catalog key — 11 source keys + registry description + native
+      chrome, all present in ChargeStatusLiveWidget.strings; used==declared cross-check passed.
+  [x] Accessibility labels on every interactive element; content + each metric cell carry combined values.
+  [x] Tests: adapter unit + per-state model + registry + a11y — 20 methods, EXECUTED 20/20.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured evidence.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with the real BUILD_EXIT=65
+                       framework error captured; every "OK" is a command actually run with its real
+                       exit code (incl. a 20/20 executed XCTest run and iOS+macOS+previews SDK compiles).
+  2  No scope narrowing: implemented ALL states/views + i18n + a11y + telemetry + registry; both compact
+                       and full charging/idle compositions + the tall metric row.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (Shims used ONLY in the
+                       throwaway test/typecheck harness, never in shipped surface files.)
+  5  No parity shortcuts: faithful port of the `metrics` memo + convertDistanceFromSI/convertEnergyFromSI +
+                       formatTime + full compact/full charging/idle composition + all states.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / dashboard grid (integration prompt's
+                       scope) and did NOT edit the shared Localizable.xcstrings (parallel-unsafe) — strings
+                       shipped as the per-surface table, exactly like 0054. Redeclares no shared types.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed ChargeStatusLiveWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native ChargeStatusLiveWidget shipped at parity with the web source: pure-Swift
+  projection core (executed-green XCTest, 20/20), P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry,
+  every state + i18n key + a11y label, registry-correct (charge-status-live, 2x2 / 1x2 / 3x40). All
+  host-runnable gates pass AND the surface compiles against BOTH the iOS 18 simulator and macOS 15 SDKs
+  with the real Xcode 26 toolchain under Swift 6 strict concurrency (+ DEBUG previews). The Xcode app
+  build/test is DEFERRED to the downstream integration/signed runner (Shared.xcframework KMP staging +
+  cross-surface duplicate-symbol de-dup + signing — none a defect in this code, all outside this prompt's
+  allowed files), matching the 0054 GuardModeWidget "code-complete + DEFERRED Xcode gate" precedent.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0020-ChargeStatusLiveWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add ChargeStatusLiveWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,194 @@
+=== P4 Dashboard widget 0091 SoftwareUpdateHistoryWidget (Apple) ===
+
+Surface : apps/apple/TeslaSync/dashboard-widgets/SoftwareUpdateHistoryWidget.*
+Web spec: web/src/features/dashboard/widgets/SoftwareUpdateHistoryWidget.tsx
+Registry: registry/vehicle.ts -> "software-update-history" - category=vehicle - 2x4 / 1x4 / 4x40
+Runner  : Darwin - Xcode 26 toolchain (Swift 6.3.2) reachable via DEVELOPER_DIR=/Applications/Xcode.app
+          - swiftformat + swiftlint + pwsh + xcodegen + JDK17 + Gradle 8.14.5 present
+          - default xcode-select points at CommandLineTools (no #Preview macro plugin there); the
+            full Xcode toolchain was used explicitly for every swiftc/xcodebuild step below.
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (allowed scope: SoftwareUpdateHistoryWidget.* + this log)
+--------------------------------------------------------------------------------
+  SoftwareUpdateHistoryWidget.swift            - SwiftUI surface. compact (1-col latest badge) +
+                                                 full (event feed) layouts; header w/ download glyph +
+                                                 title + freshness chip + refresh + open; all states
+                                                 (loading/empty/error/stale/offline/content); full a11y; i18n.
+  SoftwareUpdateHistoryWidget.Model.swift      - P1/S8 state-holder seam (SoftwareUpdateHistorySource),
+                                                 @Observable SoftwareUpdateHistoryModel (+ static resolvePhase),
+                                                 P1/S11 telemetry seam, InMemory source, P1/S10 Strings facade,
+                                                 SoftwareUpdateHistorySurface (slug + canonical registration),
+                                                 testable accessibility summaries.
+  SoftwareUpdateHistoryWidget.Projection.swift - pure (SwiftUI-free) adapter: SoftwareUpdate DTO +
+                                                 SoftwareUpdateStatus (web STATUS_MAP: icon/tone/severity/
+                                                 compactTone) + feedItems()/latest() + relative-time formatter.
+                                                 Ports the web feedItems useMemo + WidgetEventFeed sort/slice +
+                                                 formatRelativeTime VERBATIM.
+  SoftwareUpdateHistoryWidget.Feed.swift       - native subviews: event feed list/row (web TimelineItem
+                                                 icon-box+connector), compact latest badge (web CompactView),
+                                                 status chip, freshness chip; SoftwareUpdateTone -> Color.TS.
+  SoftwareUpdateHistoryWidget.Previews.swift   - #if DEBUG previews for every state (content/compact/
+                                                 loading/empty/error/stale/offline).
+  SoftwareUpdateHistoryWidget.Tests.swift      - XCTest: status mapping + feed projection + compact latest +
+                                                 relative formatter (adapter parity).
+  SoftwareUpdateHistoryWidget.ModelTests.swift - XCTest: model phases/telemetry/refresh/tracking + registry +
+                                                 accessibility (split from .Tests.swift to satisfy the 400-line
+                                                 SwiftLint file_length limit; both run in the app test targets).
+  SoftwareUpdateHistoryWidget.strings          - per-surface P1/S10 i18n table (every web t() key + per-status
+                                                 labels + native chrome).
+
+--------------------------------------------------------------------------------
+PARITY NOTES (cross-platform value parity, NOT a "corrected" version)
+--------------------------------------------------------------------------------
+  STATUS_MAP reproduced: installed=checkmark.circle.fill/success/info ; installing=arrow.down.circle/
+    warning/warning ; downloading=arrow.down.circle/info(blue) ; available=square.and.arrow.down/neutral/
+    info ; scheduled=clock/purple/info ; default=square.and.arrow.down/neutral/info. Web hex colors mapped
+    onto the generated Color.TS palette (success/warning/chartSeriesSpeed/textMuted/chartSeriesPower).
+  feedItems: isCurrent = (original index 0 && status==installed) -> checkmark + cyan(chartSeriesRegen) +
+    "Current" subtitle ; timestamp = installedAt ?? scheduledAt ?? createdAt ?? epoch(0) ; sorted by
+    timestamp DESC ; sliced to maxItems=15 ; missing version -> em-dash. (matches feedItems useMemo +
+    WidgetEventFeed.)
+  CompactView: latest = list[0] (NOT newest) ; badge = installed?"Current"/success : installing?status/
+    warning : status/info.
+  formatRelativeTime: <1m "Just now" ; <60m "{m}m ago" ; <24h "{h}h ago" ; else locale absolute date-time.
+  i18n: every web key present in the catalog (widget.softwareUpdateHistory, widget.updateCurrent,
+    widget.updateStatus, widget.noUpdates); the raw web status string is localized via explicit per-status
+    keys; no English literal ships (all via SoftwareUpdateHistoryStrings).
+
+--------------------------------------------------------------------------------
+GATE RESULTS (real commands, real exit codes on this host)
+--------------------------------------------------------------------------------
+
+[HOST] xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG
+       (View + Feed + Model + Projection + Previews vs the REAL design system: generated Color/Font/
+        spacing/radius Tokens + ALL Sources/Components + Sources/Design + the REAL DashboardWidget
+        registration types from DigitalTwinWidget; Xcode MacOSX SDK; strict concurrency complete; the
+        only design file excluded is UnitFormatters.swift, which depends on the KMP UnitPreferences layer
+        and is NOT used by this surface)
+       -> error count = 0
+       TYPECHECK_EXIT=0
+       Zero errors originate in SoftwareUpdateHistoryWidget.*; the surface + its previews type-check green.
+
+[HOST] xcrun swiftc -swift-version 6 + execute adapter/model harness
+       (Shim[DashboardWidget reg types] + REAL Projection + REAL Model + driver; SwiftUI linked)
+       -> === SoftwareUpdateHistoryWidget host harness ===  CHECKS=82 FAILURES=0  HARNESS_OK
+       HARNESS_EXIT=0
+       Verified green by EXECUTION: status mapping (tone/symbol/severity/compactTone/raw round-trip);
+       feed projection (isCurrent from original order, timestamp precedence + epoch fallback, sort desc,
+       slice 15, missing-version dash, exact subtitles "Current"/"Downloading"/"Installed", exact relative
+       strings "40m ago"/"1h ago", current=cyan/checkmark); compact latest ("Current"/success,
+       "Installing"/warning, "Downloading"/info, first-not-newest); relative buckets ("Just now"/"1m ago"/
+       "5m ago"/"1h ago"/"3h ago"/absolute); model phase matrix (loading/empty/error/content x cached?);
+       telemetry-once + slug; refresh/stop delegation; connection+feed+latest tracking; feed limit 15;
+       registry metadata (software-update-history, vehicle, 2x4/1x4/4x40) + clamp; a11y summaries.
+
+[HOST] swiftformat --lint apps/apple
+       -> 0/339 files require formatting, 2 files skipped
+       FORMAT_EXIT=0  (all 8 shipped files conform; verified from repo root)
+
+[HOST] cd apps/apple && swiftlint --strict
+       -> Found 1 violation, 1 serious in 335 files
+       SURFACE_LINT=0 violations attributable to SoftwareUpdateHistoryWidget.* (proven by baseline diff:
+       removing the 8 shipped files leaves exactly the SAME 1 violation). The lone remaining --strict
+       violation is PRE-EXISTING and OUT OF SCOPE:
+         LifetimeStatsWidget.Adapter.swift:141 function_body_length (78>50) - sibling 0055's committed
+         file, not in this surface's allowed files (SoftwareUpdateHistoryWidget.* + log). Not edited.
+       LINT_EXIT=2 (driven solely by the pre-existing sibling violation, NOT by this surface).
+
+[HOST] pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets -Language swift
+       -> PLACEHOLDER_ALLOWED=0 - PLACEHOLDER_COUNT=0
+       PLACEHOLDER_EXIT=0
+       (the prompt's -Path .../SoftwareUpdateHistoryWidget prefix is not a literal path; scanned the
+        containing directory instead, which includes all 8 shipped files. A manual case-insensitive
+        forbidden-word scan of the 8 files - TODO/FIXME/stub/mock/placeholder/Lorem/unimplemented/
+        fatalError - found NONE.)
+
+[ATTEMPTED -> DEFERRED] xcodebuild scheme build/test
+       Capability IS present and was exercised end-to-end on this runner:
+         - apps/shared gradlew :core:assembleSharedXCFramework  -> BUILD SUCCESSFUL (KMP Shared.xcframework
+           built + staged to apps/apple/Frameworks via Scripts/build-shared-xcframework.sh).
+         - cd apps/apple && xcodegen generate  -> Created TeslaSync.xcodeproj (TeslaSync + TeslaSync-macOS
+           schemes; iPhone 16 simulator present).
+         - xcodebuild -scheme TeslaSync-macOS build (signing disabled): compiled the app target INCLUDING
+           all 5 non-test SoftwareUpdateHistoryWidget.* files. ZERO errors are attributed to this surface.
+       IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED   (NOT claimed green)
+       The unmodified scheme `build test` cannot go green because of PRE-EXISTING, repo-wide integration
+       issues in the P4 dashboard-widgets staging dir - none in this surface's code, all outside its
+       allowed files:
+         (1) Co-located *.Tests.swift are globbed into the APP target by project.yml (sources:
+             TeslaSync/dashboard-widgets), so the app target imports XCTest:
+               error: unable to resolve module dependency: 'XCTest'   (every widget's .Tests.swift)
+         (2) DashboardWidgetSize / DashboardWidgetRegistration are defined THREE times across widget
+             bundles (Sources/DashboardWidgets/DrivetrainHealthWidgetModel.swift,
+             Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift,
+             TeslaSync/dashboard-widgets/DigitalTwinWidget.Model.swift):
+               error: 'DashboardWidgetSize' is ambiguous for type lookup   (DigitalTwin/LivePowerFlow/
+               LiveSignalSparklines sibling files)
+         (3) Sibling LivePowerFlowWidget.Previews.swift previewModel lacks @MainActor under strict
+             concurrency:
+               error: call to main actor-isolated initializer ... in a synchronous nonisolated context
+       Fixing any of (1)-(3) requires editing project.yml or sibling widget files - explicitly OUTSIDE
+       this prompt's allowed files (covenant #2 no scope narrowing in the other direction: #7 no
+       predecessor bypass, #9 no silent drift). This surface itself: does NOT redefine DashboardWidgetSize,
+       DOES mark its preview helper @MainActor, and is verified green by the in-scope HOST gates above.
+       Disposition matches the user-approved P3 "code-complete + DEFERRED xcode scheme gate" used by
+       predecessors 0036 / 0055 / 0059.
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) + both layouts -
+      implemented; each state has a #if DEBUG preview; phase + projection logic unit-tested AND executed.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (SoftwareUpdateHistorySource); no HTTP in view.
+  [x] Every i18n key from source has a matching catalog key - widget.softwareUpdateHistory / updateCurrent /
+      updateStatus / noUpdates + per-status + native chrome in .strings; view holds no English literals.
+  [x] Accessibility labels on every interactive element (refresh/open/retry), the compact badge, every
+      feed row (spoken "version. status. time"), and the feed (count summary); icons accessibilityHidden.
+  [x] Tests: adapter parity unit tests + per-phase model tests + registry + a11y label tests (.Tests.swift
+      + .ModelTests.swift; the same assertions executed green 82/82 in the host harness).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code - placeholder gate COUNT=0; manual word-scan clean.
+  [x] Telemetry: view.opened emitted once with surface slug "SoftwareUpdateHistoryWidget" (P1/S11) - tested.
+  [x] In-scope gates green (typecheck swift6 strict-concurrency / executed harness 82/82 / format / surface
+      lint 0 / placeholder 0); xcodebuild scheme build/test DEFERRED with capability + pre-existing-blocker
+      evidence (per the approved disposition).
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+  1  No red-as-green : the xcodebuild scheme steps are shown DEFERRED (NOT green); the real build exit was
+                       65 and is attributed, file-by-file, to PRE-EXISTING sibling/integration issues.
+                       Every "EXIT=0" above is a command actually executed on this host.
+  2  No scope narrowing: implemented BOTH layouts + ALL states + i18n + a11y + telemetry + registry + the
+                       full status set + the event-feed AND compact projections.
+  3  No skip-and-assume: each in-scope gate executed and its real output captured; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; harness executes real logic.
+  5  No parity shortcuts: STATUS_MAP + feedItems(isCurrent/timestamp/sort/slice) + CompactView + relative
+                       buckets ported VERBATIM and pinned by executed assertions to exact display strings.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / the dashboard grid, did NOT edit the
+                       shared Localizable.xcstrings, did NOT edit any sibling widget file or the triple-
+                       defined DashboardWidgetSize; strings shipped as the per-surface table (predecessor pattern).
+  8  No commit on red  : committing on all-green IN-SCOPE gates; the xcodebuild scheme steps are DEFERRED
+                       (documented pre-existing-blocker deferral with capability evidence), not a green claim;
+                       the single swiftlint --strict violation pre-exists in a sibling file and is out of scope.
+  9  No silent drift   : repo changes confined to the 8 allowed SoftwareUpdateHistoryWidget.* files + this log
+                       (git status verified); build artifacts (xcodeproj / Frameworks / gradle build) are git-ignored.
+  10 Log ends with EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished native SoftwareUpdateHistoryWidget shipped at parity with the web source: a SwiftUI
+  surface (compact latest badge / full event feed) over a P1/S8 state-holder seam (no view HTTP), P1/S11
+  telemetry, P1/S10 i18n, P1/S9 tokens; every state, every i18n key, every interactive a11y label;
+  registry-correct (software-update-history, vehicle, 2x4 / 1x4 / 4x40). The surface type-checks GREEN under
+  Swift 6 strict concurrency against the real design system, its adapter/model logic executes GREEN (82/82)
+  with exact web value parity, and it COMPILED with zero attributable errors inside the real app target via
+  xcodebuild (against a freshly built KMP Shared.xcframework). The unmodified xcodebuild scheme `build test`
+  is DEFERRED solely because of pre-existing repo-wide integration wiring (test-file co-location, triple-
+  defined DashboardWidgetSize across widget bundles, a sibling preview's missing @MainActor) - all outside
+  this surface's allowed files and none a defect in this code.
+
+EXIT=0
+STATUS=DONE

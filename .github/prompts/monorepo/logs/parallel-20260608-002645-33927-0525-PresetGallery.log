@@ -1,0 +1,194 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure and related files.
+
+Full Xcode exists at `/Applications/Xcode.app` but isn't selected. Let me verify I can use it via `DEVELOPER_DIR`.
+
+`DEVELOPER_DIR` override works (Xcode 26.5). Now let me explore the Apple app structure deeply.
+
+Project uses XcodeGen. Note the sources reference `TeslaSync/feature-views`, not `TeslaSync/Features`. Let me examine the actual structure and existing parity implementations.
+
+There's both `Sources/Features` and `TeslaSync/feature-views`. Let me examine the parity manifest, ledger, and existing page conventions.
+
+Let me understand the parity ledger system and existing page conventions.
+
+Let me study an existing complete parity unit and the supporting infrastructure (KMP facade, navigation, strings).
+
+Let me understand the build/test wiring, lint config, and placeholder checker. These determine the correct file layout.
+
+Let me resolve how `.Tests.swift`/`.Previews.swift` files in `feature-views` are handled (they can't be in the app target with `@testable import`).
+
+Let me find the p4-apple gate contract, the placeholder checker, and a prior page log for reference.
+
+Let me check the SwiftLint config, the Shared.xcframework staging, and whether the framework is prebuilt (KMP builds are slow).
+
+Let me generate the Xcode project and inspect how `.Tests.swift`/`.Previews.swift` files in `feature-views` are assigned to targets. In parallel, I'll study the facade wiring and search for a presets client.
+
+The feature-view `.Tests.swift` files compile into the app targets. I need to verify the baseline builds. Let me check the toolchain prerequisites, then start a baseline build.
+
+Toolchain is warm (Gradle 3.1G, Konan 1.6G cached). Let me build the Shared.xcframework in the background while I design the implementation.
+
+Build running in background. Let me study the web hook/types and the existing AutomationActivityFeed component set in parallel.
+
+Now let me study the native component library, design tokens, and the rest of the AutomationActivityFeed set to replicate conventions.
+
+Let me examine the design tokens, native component library, previews/tests pattern, and check the build progress.
+
+Let me read the design tokens, badge/button/motion components, and find where the feed's empty/loading/error subviews live.
+
+Now let me read the feed's state subviews, adapter, previews, tests, and the navigation system.
+
+Let me read the adapter/tests conventions, navigation system, and confirm `TSSkeleton` exists.
+
+Let me read the navigation system, skeleton API, and test conventions, then check the build.
+
+Let me check how composable feature views are surfaced and the AppShell, plus the build status.
+
+Let me check whether any feature views use NavigationStack (page convention) and check the build progress.
+
+The convention is clear: self-contained composable feature views with a state-holder seam. Let me study the one KMP-backed Domains model and the facade to decide how faithfully to wire the production source.
+
+The facade has a clean KMP binding pattern. Let me check whether the shared core exposes a presets flow and how `AppContainer` builds stores, to decide how faithfully to wire production.
+
+The shared core fully exposes `automationPresets()`. Let me read the AppContainer facade helpers and the Kotlin preset model to wire a faithful production model.
+
+I now have a complete understanding of the architecture. Let me check the xcframework build progress.
+
+The architecture is fully understood. Let me set up tracking and check remaining infra (Localization dir, swiftformat) while the framework builds.
+
+Plan set. Let me check the framework build, then begin creating the implementation files.
+
+Shared.xcframework built successfully (12m) and is staged. Let me start a baseline build to confirm the environment and the test-in-app-target pattern, while I create the implementation files.
+
+Build failed but the real error was truncated. Let me find the actual compile error and check simulator availability.
+
+No iOS simulator runtimes are installed — only the macOS target can be fully built/tested on this host. Let me check all runtimes and get the real baseline compile result on macOS.
+
+Let me check simulators with the correct DEVELOPER_DIR and get the real baseline error via a native macOS build.
+
+iOS Simulator (iPhone 17, iOS 26.5, arm64) IS available — earlier query failed only due to wrong DEVELOPER_DIR. The macOS failure is code-signing. Let me get the real iOS baseline error by targeting the arm64 simulator directly.
+
+Found it: the pre-existing `feature-views/*.Tests.swift` files `import XCTest` and are compiled into the app target, so a *plain* `build` can't resolve XCTest — but a test build adds testing search paths. Let me confirm the baseline builds with testing search paths enabled.
+
+More pre-existing breakage: duplicate `VehicleHeroProjection` declarations in `dashboard-widgets` (unrelated to my task). Let me check the git state to understand whether the baseline tree is committed-red or dirty.
+
+This is a pre-existing baseline break: two parallel sibling prompts (`VehicleHeroCardWidget` and `VehicleHeroWidget`) both declare `VehicleHeroProjection` in the same app target — unrelated to PresetGallery. Let me determine the full blast radius of pre-existing errors.
+
+All pre-existing errors are confined to `dashboard-widgets/*` (sibling-prompt collisions), entirely outside my `automations` scope. My unit can't be blamed, but the full-app gate is poisoned. Let me confirm `dashboard-widgets` isn't referenced elsewhere so I can isolate-verify my unit cleanly.
+
+`dashboard-widgets` (416 files) is self-contained and not referenced by `Sources`/`feature-views`, so I can isolate-verify my unit cleanly. Now let me write the implementation. Starting with the plan file and the pure adapter.
+
+Now let me create the feature directory and the pure adapter file.
+
+Now the `@Observable` model with the state-holder seam, projection, telemetry, and strings facade.
+
+Now the presentational subviews — card (GlassPanel1), skeleton (GlassPanel2), empty, and error states.
+
+Now the top-level adaptive view with the phase switch and grid.
+
+Now the per-surface strings table.
+
+Now the previews (DEBUG-only, all states, hosted in a NavigationStack).
+
+Now the XCTest unit coverage.
+
+All 7 files created. Let me run the fast my-file gates (lint, format, placeholder) before wiring the project.
+
+Placeholder scan is clean (0). SwiftLint with the apple config linted the whole project (via `included`) and found 1 violation — I need to know if it's in my files. Let me isolate it and run the gate-literal lint.
+
+The apple-config lint skips my files (Features not in its `included` list), so its 1 violation is pre-existing in `dashboard-widgets`. The gate's default-config lint found 3 real issues in MY files (trailing commas + one 121-char line). Let me see the exact lines and run swiftformat to catch all style issues at once.
+
+SwiftFormat flags the same trailing commas/wraps plus two doc-comment conversions. Let me auto-fix with the ecosystem tool, then re-verify both linters.
+
+SwiftFormat clean now. Let me re-run the gate-literal SwiftLint and verify the auto-fixed sections are correct.
+
+My-file gates all pass: **placeholder=0, swiftlint --strict=0, swiftformat=0**. Now let me wire `TeslaSync/Features` into the build (both app targets + swiftlint config).
+
+Now regenerate the Xcode project and confirm my files are included in the targets.
+
+My files are in both app targets. Now I'll isolate-verify my unit by building the iOS scheme with the pre-existing-broken `dashboard-widgets` excluded (via a temporary spec that leaves the real `project.yml` untouched).
+
+Iso spec excludes `dashboard-widgets`. Let me build the iOS app target with it to verify my files (plus the rest of the real module) compile.
+
+The `@testable import` self-import warning confirms my test file compiles in the app module. Let me check the overall build result and any errors.
+
+A `PresetGalleryPhase` ambiguity appeared — I must check whether a sibling prompt already defines `PresetGallery*` types elsewhere (a real collision I'd need to avoid), versus a cascade from the other broken clusters. Let me search the whole tree.
+
+A real, in-scope collision: the existing `AlertMessageEditor` surface already defines module-level `PresetGalleryPhase` (and possibly `PresetGalleryModel`) in `feature-views`. I must rename my public types to avoid the clash. Let me map exactly what collides.
+
+Three of my type names collide with the existing `AlertMessageEditor` message-preset gallery: `PresetGalleryPhase`, `PresetGalleryProjection`, `PresetCardView`. Let me comprehensively check ALL my type names against the module so I rename every real collision.
+
+Exactly 3 collisions confirmed; all my other 20 type names are unique. Let me rename the 3 colliding types to domain-specific unique names, then re-format/lint.
+
+Renames applied cleanly. Let me re-format (longer names may exceed 120 cols) and re-lint.
+
+My-file lint/format clean after renames. The baseline has multiple pre-existing collision clusters (dashboard-widgets, ChargerType*), so directory-exclusion is whack-a-mole. Instead, let me type-check my unit decisively against its real dependency closure. First, what does the component library depend on?
+
+Components depend only on Apple SDKs (SwiftUI/Charts/MapKit) — no internal cross-module imports. So `{Tokens, Design, Components, Features/Automations}` is a closed set. Let me type-check my entire unit against its real dependencies as the `TeslaSync` module.
+
+Components aren't fully self-contained — `DataDisplay/UnitFormatters.swift` pulls in `UnitPreferences` (SharedFacade→Shared). My files don't use that. Let me find which component files reach outside the design system, then type-check against only the minimal closure.
+
+Only `UnitFormatters.swift` reaches outside the design system. Let me re-run the type-check excluding it.
+
+Real fix needed: the global `fallbackLocalize` closure isn't `Sendable` (would fail the Swift 6 app build). Let me convert it to a global function, then re-type-check with proper XCTest paths.
+
+**Decisive: my entire unit (production + tests) type-checks cleanly** against its real dependency closure as the `TeslaSync` module under Swift 6. Now let me actually RUN the tests in isolation via a tiny macOS verify project (framework module named `TeslaSync` so `@testable import` resolves), after re-confirming lint.
+
+SwiftLint clean; SwiftFormat wants a tweak from my edit. Let me auto-fix, then generate and run the isolated test project.
+
+PGVerify project generated. Let me build and run my unit's tests in isolation.
+
+The test bundle needs the framework's product name (not just module name) to be `TeslaSync`. Let me fix the verify spec and re-run.
+
+**All 18 tests pass** in isolation, and the build succeeds — decisive proof my unit is correct. Let me clean up the temporary harness, restore the real project, and update tracking.
+
+Real project restored with my files included. Now let me run the full-app gate to capture its honest result and confirm **zero** errors originate from my files.
+
+Full-app gate fails with **183 pre-existing errors, all in `dashboard-widgets`, ZERO in my files** (`MY_ERROR_COUNT=0`). My unit is verified clean in isolation. Let me check the ledger schema to record this honestly.
+
+My unit is verified clean (0 errors in my files; the 183 failures are all pre-existing `dashboard-widgets` sibling collisions). Now let me write the honest gate log with the `=== PARITY ===` section.
+
+Let me verify the file:line evidence cited in the log is accurate (formatting may have shifted lines).
+
+Line numbers shifted after formatting — let me correct the evidence citations in the log for accuracy.
+
+Now the parity ledger. Let me create `apps/parity/apple-ledger.json` with the covered rows (both idioms) and honest status.
+
+Now a final verification pass: re-run all my-file gates, validate the JSON, and check git state before committing.
+
+All final gates green (placeholder=0, swiftlint=0, swiftformat=0), ledger valid, temp files removed, xcodeproj ignored. Let me commit only my scoped files (excluding pre-existing dirty files).
+
+All 11 intended files staged (no pre-existing dirty files). Let me commit.
+
+Committed as `5e0fb359b`. Let me finalize tracking and do a last verification of the committed state.
+
+All 12 todos done; log ends `EXIT=65 / STATUS=BLOCKED`; working tree shows only the pre-existing dirty files I correctly left untouched. Let me confirm the exact committed file set.
+
+The task is complete. Here's a summary of what was accomplished.
+
+## Summary
+
+I implemented **`page:automations/PresetGallery`** as a native SwiftUI/HIG surface, adaptive across macOS + iOS, at full web parity (9/9 manifest items), and committed it (`5e0fb359b`).
+
+### Delivered (`apps/apple/TeslaSync/Features/Automations/`)
+- **PresetGallery.swift** — adaptive `LazyVGrid` (web `grid-cols-1 sm:2 lg:3 xl:4`) + phase switch, bound to an `@Observable` model.
+- **PresetGallery.Model.swift** — `PresetGalleryModel` + `PresetGallerySource` state-holder seam (P1/S8; production wires shared-core `AutomationsStore.automationPresets`) + projection + telemetry + i18n facade.
+- **PresetGallery.Adapter.swift** — pure icon/trigger maps, DTOs, row projection, accessibility.
+- **PresetGallery.Views.swift** — `AutomationPresetCardView` (**GlassPanel1**), `PresetCardSkeletonView` (**GlassPanel2**), empty (`ContentUnavailableView`) + native error/retry.
+- **.Previews.swift / .strings / .Tests.swift**, plus wiring `TeslaSync/Features` into `project.yml` (iOS+macOS) and `.swiftlint.yml`, and a new `apps/parity/apple-ledger.json`.
+
+### Parity (9/9): 2 panels · loading/empty/success states · 4 strings — each evidenced by file+symbol in the log.
+
+### Verification (all green for my unit)
+- `placeholder=0`, `swiftlint --strict=0`, `swiftformat=0`
+- Clean `swiftc -typecheck` against the real design-token/component closure
+- **18/18 XCTest pass** in an isolated build (framework module `TeslaSync`)
+- A real collision was found and fixed: renamed `PresetGalleryPhase/Projection`/`PresetCardView` (clashed with the existing `AlertMessageEditor` surface) to `Automation*`-prefixed names.
+
+### Honest gate disposition: **BLOCKED**
+The prompt's whole-app `xcodebuild build/test` cannot reach green: it fails with **183 pre-existing compile errors, all in `TeslaSync/dashboard-widgets/*`** (colliding sibling parity prompts — VehicleHeroWidget vs VehicleHeroCardWidget, ChargerType*, etc.), **zero of which are in my files**. Fixing those is out of scope. Per the Honesty Covenant (no red-as-green), the log ends `EXIT=65 / STATUS=BLOCKED` with full evidence that this unit itself is complete and independently verified.
+
+
+
+The task is fully complete — all 12 todos done, the unit implemented at 9/9 parity, independently verified, and committed. The only remaining blocker (whole-app build) is pre-existing, out-of-scope `dashboard-widgets` breakage I'm explicitly forbidden to fix. I've made the reasonable, honest call and there is nothing further actionable within scope.
+

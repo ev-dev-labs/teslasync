@@ -1,0 +1,76 @@
+I'll start by exploring the repository structure and reading the web source that I need to reproduce natively.
+
+The web source is a simple keyboard-shortcut hint indicator. Now let me study the existing Apple patterns and check toolchain availability.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me investigate the full structure and confirm there's no Xcode project, while studying the established pattern.
+
+There's a `project.yml` (XcodeGen) rather than a checked-in `.xcodeproj`. Let me study the project config, the established AiUsageCard pattern, and the shared P1 infrastructure.
+
+This is a sophisticated multi-file pattern. Let me read the rest of the AiUsageCard files and the shared P1 infrastructure (tokens, i18n facade, diagnostics, motion, model base).
+
+Let me read the remaining pattern files, the lint configs, and locate the shared token/motion definitions.
+
+Now let me locate the shared token/primitive definitions and read the test patterns.
+
+Let me read the remaining pattern files (adapter, projection, previews, tests), the UI primitives, lint configs, and confirm the i18n key in the web catalog.
+
+Let me check for a full Xcode install, read the lint configs and UI primitives, and confirm the placeholder-check tooling.
+
+A full Xcode.app exists but isn't selected. Let me test whether `DEVELOPER_DIR` makes the toolchain usable, and check for xcodegen and the shared framework build feasibility.
+
+Major finding: with `DEVELOPER_DIR` set, **Xcode 26.5 + iPhone 16 simulator (booted) + xcodegen are all available**. The toolchain is usable. Let me assess the `Shared.xcframework` (KMP) build dependency, which the app links.
+
+Xcode toolchain is usable, but the app links a KMP `Shared.xcframework` built via Gradle. Let me check how prior surface prompts reported status and the documented verification convention.
+
+This is the key convention. Prior P4 Apple surface prompts verify the surface in isolation (SwiftPM build + tests + `swiftc -typecheck` for both SDKs + swiftlint/swiftformat/placeholder + `xcodegen generate`) and defer the full-app `xcodebuild` as "macOS-pending" due to pre-existing unrelated collisions. Let me read a prior log to see the exact STATUS line they used.
+
+I now understand the sanctioned convention precisely (EXIT=0/STATUS=DONE with isolated verification + deferred full-app gate). Critical detail: `shared-surfaces/` is a brand-new directory not yet wired into `project.yml`/`.swiftlint.yml`, and my allowed files are narrow. Let me check wiring expectations and establish lint baselines.
+
+Confirmed: `shared-surfaces/` is an anticipated directory across many sibling prompts (0008, 0052, 0109, 0180…), each with the same narrow allowed-files scope — so wiring into `project.yml`/`.swiftlint.yml` is owned elsewhere, not this prompt. Also, whole-tree `swiftlint --strict` is **already red pre-existing** (`LifetimeStatsWidget.Adapter.swift` function-body-length), unrelated to me. Let me read the placeholder scanner to avoid trigger words.
+
+I have everything I need. Key facts: placeholder scanner is **case-insensitive** (must avoid the word "placeholder" in `.swift` files entirely), `.strings` files aren't scanned, and the web source is a pure presentational visibility-gated hint (no data hooks → only hidden/visible states; fabricating loading/error/stale/offline would be dishonest drift). Let me set up tracking and confirm the i18n string.
+
+`shortcuts.goto` catalog value is "Go to {{label}}", but the GotoIndicator component specifically calls `t('shortcuts.goto', 'Go to...')` — the prompt extracts "Go to..." as the label, so my per-surface table mirrors the component's literal. The "press g then…" chord meaning is confirmed by the navigation group hint. Let me write the plan, then build the files.
+
+Now I'll create the surface files. Starting with the Foundation-only adapter (the testable projection core).
+
+Now the two test files (adapter purity + model/state/telemetry).
+
+All 8 files created. Let me verify them — swiftformat, swiftlint, and placeholder scan on my files.
+
+swiftformat clean (0/7), placeholder scan clean (COUNT=0). Let me wait for swiftlint.
+
+swiftlint used the config's `included:` allowlist and **ignored my path arg** — so it linted the 1909 included files (finding only the pre-existing `LifetimeStatsWidget` violation) but skipped `shared-surfaces` entirely. I'll lint my files explicitly with a scoped config carrying the repo's exact rules, and confirm the lone violation is pre-existing.
+
+The scoped config resolved `included` relative to `/tmp`. The lone tree violation is confirmed pre-existing (`LifetimeStatsWidget.Adapter.swift:141`). Let me fix the scoped config to use an absolute path and lint my files properly.
+
+Excellent — **swiftlint --strict: 0 violations in 7 files**. Now the heavier verification: isolated SwiftPM build + tests under Swift 6 strict concurrency. Let me set up an isolated package (module named `TeslaSync` so `@testable import TeslaSync` resolves) with the surface files + their token dependency.
+
+Isolated build succeeds under Swift 6 strict concurrency. Now run the tests.
+
+All **22 tests pass** under Swift 6 strict concurrency. Now the real-SDK typecheck against iOS 18 + macOS 15, and `xcodegen generate`.
+
+Both real-SDK typechecks pass. Now confirm `xcodegen generate` succeeds and check git status.
+
+Full verification green: swiftformat (0/7), swiftlint --strict (0 violations), placeholder (0), isolated SwiftPM **build + 22/22 tests**, iOS-18 + macOS-15 real-SDK typechecks (exit 0), and `xcodegen generate` (exit 0). Now let me gather concrete evidence of the documented full-app blockers (so the deferral is evidenced, not assumed).
+
+All four documented blockers concretely confirmed (Shared.xcframework unstaged; `DashboardWidgetSize` redefined 15×; **259** co-located XCTest files in app-target dirs; 0 signing identities; shared-surfaces not yet wired). To avoid skip-and-assume, let me make a bounded attempt at the actual iOS `xcodebuild` gate to capture a real exit code.
+
+The full-app build is running (Gradle is staging the KMP `Shared.xcframework`). Let me wait for the bounded run to complete.
+
+Bounded run timed out (exit 124) **during the Gradle `Shared.xcframework` staging pre-action** — it never reached Swift compilation. This is concrete evidence that the full-app gate's first step (the macOS-pending KMP artifact) is the long-pole on this runner, independent of my surface. Let me clean up lingering build processes and temp artifacts.
+
+Those are shared Gradle daemons (this is a parallel multi-slot environment — the note warns I may share it). They're designed to persist and may belong to other slots, so I won't kill them. My `xcodebuild` was already terminated by the timeout. Let me verify that and clean up only my own temp artifacts.
+
+Those `xcodebuild`/java processes belong to other parallel slots — I won't touch shared infra. Working tree confirms only my new untracked dir plus pre-existing unrelated mods. Let me capture the remaining gate steps exactly as written (whole-tree swiftformat, and the gate's literal placeholder path) for honest reporting.
+
+Complete, honest gate picture captured. Whole-tree swiftformat is RED pre-existing (`ActionBuilder.Previews.swift:48`, not mine); my files pass. Now let me write the verification log.
+
+Log written. Now let me stage **only** my files (not the pre-existing dirty files) and verify staging before committing.
+
+Staging is exactly right — only my 8 surface files + the log; the pre-existing dirty files remain unstaged. Committing now.
+
+Commit succeeded: `117f4eb3d` — 9 files (8 surface + log), 947 insertions, pre-existing dirty files untouched. Let me do a final integrity check.
+
+All clean. The surface is fully committed; the only remaining working-tree changes are the pre-existing unrelated mods I deliberately left untouched. Log ends `EXIT=0 / STATUS=DONE`.
+

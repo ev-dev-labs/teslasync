@@ -1,0 +1,96 @@
+I'll start by assessing the task: this requires building a native Apple/SwiftUI feature view. The gate uses `xcodebuild`, `swiftlint`, `swiftformat`. Let me first check capability and explore the repo structure.
+
+Key finding: **full Xcode is NOT installed** (only Command Line Tools), and **simctl is unavailable**. But `swift` 6.3.2, `swiftlint`, and `swiftformat` ARE available. Let me explore the Apple app structure and test SwiftUI compilation capability before deciding DONE vs BLOCKED.
+
+SwiftUI **parses** with CLT. Web source is a pure presentational 5-state component (idle/loading/error/data/empty). No `feature-views` dir yet. Critically, no `Package.swift` or `.xcodeproj` found yet. Let me dig deeper into the build system and conventions, and verify full SwiftUI type-checking (not just parse).
+
+SwiftUI + Swift Charts + MapKit **all type-check cleanly** with the CLT Swift compiler (capability present). Build system is **XcodeGen** (`project.yml`), and the gate's `xcodebuild`/simulator harness needs full Xcode (only CLT installed). Let me learn the established pattern from prior feature-views and locate the P1/S8/S9/S10/S11 dependencies.
+
+Critical discovery: **`/Applications/Xcode.app` IS installed** — `xcode-select` just points at CLT. I can likely use `DEVELOPER_DIR` to run `xcodebuild` without sudo. `xcodegen` is also installed. No prior feature-views exist, but `dashboard-widgets/` has a clear established pattern. Let me test the real build harness and learn conventions.
+
+Capability is **fully present**: Xcode 26.5 via `DEVELOPER_DIR`, iPhone 16 simulator exists, iOS/macOS SDKs available, `xcodegen` installed. The app target depends on `Frameworks/Shared.xcframework` (KMP core) — that's my #1 risk. Let me check whether it's prebuilt, and study the established widget pattern + shared components in depth.
+
+`Shared.xcframework` is **not prebuilt** (only `.gitkeep`) — it's built via Gradle/KMP, which is my key gate risk. The most informative artifact is a **prior dashboard-widgets log** — it reveals whether the xcodebuild gate actually passes on this runner. Let me read that plus the full GuardModeWidget reference set.
+
+This prior log is the **methodology blueprint**. The established, accepted disposition (ADR-012, precedent surfaces 0036/0054) is: **code-complete + host-runnable gates green + DEFERRED xcodebuild** (because Shared.xcframework needs KMP Gradle staging and project.yml registration is outside allowed files — neither a code defect). `STATUS=DONE`, `EXIT=0`. I must replicate this exactly, not bypass it. Let me study the full GuardModeWidget reference set.
+
+The pattern is crystal clear now. Let me finish studying the reference set (Views, Adapter, Tests, Previews, strings) and locate the design tokens + shared components (Badge, Skeleton, table equivalent) so my native version compiles against the real library.
+
+Pattern fully understood. Now I need the token/component definitions, the test/preview/strings format, and the web data shapes (`TelemetryError` type + how the panel's columns/props are wired in `FleetApiSection`).
+
+Let me read the column definitions + call-site i18n keys in `FleetApiSection`, the `extractTelemetryErrors` projection in `helpers.ts`, and the native token/component definitions (Theme, Badges, Skeletons, DataTable).
+
+Now I have full web parity details (3 columns, the i18n keys, and the `extractTelemetryErrors` projection). Let me read the native component/token definitions I'll compile against: Badges (TSTone/TSBadge), Skeletons (TSSkeleton), DataTable, and the design tokens (Font.TS/TSSpacing/TSRadius).
+
+Let me read the generated tokens (exact `TSSpacing`/`TSRadius`/`Font.TS`/`Color.TS` members), the native `DataTable` API, and the Previews/Tests reference format.
+
+I now have all tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSTone`), `TSBadge`, `TSSkeleton`, and the real `TSDataTable`/`TSColumn`. Let me read the Previews/Tests reference format, the `TSCard` dependency, and the web `formatDateTime` helper to finalize parity before writing.
+
+Let me grab the web `formatDateTime` semantics and the `TSCard` definition (needed in my compile closure), then I'll write the surface.
+
+`TSCard` → needs `.tsGlassPanel()` (TSMaterial) + `TSPanelTitle` (Typography). Let me confirm the curated compile-closure is KMP-free (SwiftUI-only imports), then I'll write the surface.
+
+Curated closure is KMP-free. I have everything needed. Let me set up tracking and scaffold the feature-views directory, then write all 7 artifact files.
+
+Now I'll write the artifact files. Starting with the pure, testable Adapter core.
+
+Now the presentational subviews (reusing `TSDataTable`, `TSStatusPill`, `TSSkeleton`).
+
+Now the surface shell that switches over phases and emits telemetry.
+
+Now the per-state previews.
+
+Now the XCTest suite. Let me first check the lint config to respect limits.
+
+`--strict` makes the 120-col warning fail, and swiftformat enforces before-first wrapping — I'll auto-format my files before the lint gate. Now the test suite:
+
+Now the i18n strings table (every web source key + native chrome).
+
+All 7 files written. Let me update tracking and run the formatter/linter on the new files (auto-format first, then verify `--lint` and `--strict`).
+
+Both lints pass clean (0 violations). Now the strongest evidence: compile my surface against the **real** component library on the iOS 18 simulator SDK, then the macOS 15 SDK, under Swift 6 mode.
+
+The `TSButton` error is from `Cards.swift`'s own `#if DEBUG` preview (foreign preview), pulled in by `-D DEBUG`. Per precedent, steps [1]/[2] compile the shipped (non-preview) files against the real lib without `-D DEBUG`; previews get an isolated shim pass. Re-running:
+
+Both **iOS 18 and macOS 15 typechecks pass (EXIT=0)** against the real library under Swift 6. Now the isolated previews typecheck (step [3]) with minimal shims, per precedent:
+
+Previews typecheck passes too. Now step [4]: execute the full XCTest suite on the macOS host via a self-contained SwiftPM harness (real Adapter/Model/Views/surface + real tokens/badges + minimal render shims), per precedent.
+
+**All 26 XCTest cases pass on the macOS host (0 failures).** Host gates green: typecheck iOS+macOS+previews, swift test, swiftlint, swiftformat. Now the placeholder gate and the honest xcodebuild deferral evidence.
+
+pwsh + placeholder script present; `.xcodeproj` and `*.xcframework` are gitignored (xcodebuild evidence won't pollute the commit). Running the placeholder gate and capturing the honest xcodebuild deferral evidence:
+
+The "XXX" is a false positive from `\uXXXX` in a doc comment. Rewording to avoid the placeholder pattern:
+
+All host gates green (placeholder=0, format=0, lint=0). Now capture the honest xcodebuild deferral evidence (project generates; app target blocks on the un-staged KMP `Shared.xcframework`):
+
+Project generates cleanly. Now the real `xcodebuild` attempt (captures the missing-`Shared.xcframework` deferral evidence) and confirmation that `feature-views` is not yet target-registered:
+
+Deferral evidence captured — **three independent, code-unrelated reasons** (identical to precedent): feature-views not yet target-registered (0 pbxproj refs; project.yml is outside allowed files), `Shared.xcframework` KMP staging missing, and macOS dev-cert signing. Now writing the gate log.
+
+Now cleanup of the generated project + temp harness, then verify the git status before committing.
+
+Clean tree — only the two intended additions (no project.yml drift). Committing:
+
+Committed cleanly (8 files, commit `b3b3a394`). Updating tracking and final summary.
+
+All 12 todos done. The task is complete and verified.
+
+Merge made by the 'ort' strategy.
+ ...ple-feature-views-0009-TelemetryErrorsPanel.log | 210 ++++++++++++++
+ .../TelemetryErrorsPanel.Adapter.swift             | 323 +++++++++++++++++++++
+ .../feature-views/TelemetryErrorsPanel.Model.swift | 237 +++++++++++++++
+ .../TelemetryErrorsPanel.Previews.swift            |  96 ++++++
+ .../feature-views/TelemetryErrorsPanel.Tests.swift | 305 +++++++++++++++++++
+ .../feature-views/TelemetryErrorsPanel.Views.swift | 254 ++++++++++++++++
+ .../feature-views/TelemetryErrorsPanel.strings     |  32 ++
+ .../feature-views/TelemetryErrorsPanel.swift       |  76 +++++
+ 8 files changed, 1533 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0009-TelemetryErrorsPanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/TelemetryErrorsPanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TelemetryErrorsPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TelemetryErrorsPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TelemetryErrorsPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TelemetryErrorsPanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TelemetryErrorsPanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/TelemetryErrorsPanel.swift

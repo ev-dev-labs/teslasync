@@ -1,0 +1,76 @@
+I'll start by exploring the repository structure to understand what exists and what I need to build.
+
+The Apple project structure differs from the prompt's templated path. Let me investigate the actual structure of existing feature pages.
+
+The `feature-views` directory is flat with a `{Name}.{Aspect}.swift` convention. Let me find existing page-level implementations and any existing navigation/location files to use as templates.
+
+Good — full Xcode toolchain is available (xcodebuild, swiftlint, xcodegen, pwsh, swift 6.3.2). Let me understand the navigation/routing and how pages are composed.
+
+Let me see how pages are registered and hosted, and look at the AppShell.
+
+Let me examine the parity ledger, existing logs, localization setup, and how the web `/navigation` route maps — these establish the real convention.
+
+Let me study the established feature-view convention in depth — how strings resolve, model/adapter structure, and how a chart feature is built.
+
+Let me check build feasibility (KMP framework, scripts) and the gate tooling — these determine whether the build gate can pass.
+
+Critical context: no `Shared.xcframework` (KMP must be built via Gradle), no generated xcodeproj. Java 17 + gradlew exist. Let me verify how tests/previews are handled in the app target and settle conventions.
+
+This is a data-driven chart surface — let me study SOCRouteChart's full pattern (Model, Adapter, Views) to mirror the production data-binding seam and chart wrappers.
+
+Now let me read the rest of the web page and the design tokens + shared components inventory.
+
+I now understand the full page. Let me examine the design tokens, shared components inventory, and the route parser to know my building blocks.
+
+Rich shared component + facade libraries exist. Let me inspect the SharedFacade (production data wiring), key shared components (Cards, Metrics, DataTable, States, Motion), and unit formatters.
+
+Let me study the facade primitives and a real data-driven adapter, plus the component APIs I'll compose with.
+
+Let me verify the KMP boundary: do feature-views import Shared, and how does the production DI container (AppContainer) build models/sources?
+
+Zero feature-views import Shared — the seam keeps surfaces KMP-free. Let me capture the public APIs of all building blocks I'll compose with (tokens, cards, metrics, states, motion, badges, datatable, charts, formatters) in one pass.
+
+Let me capture the design tokens, theme colors/fonts, unit formatters, and chart container APIs — the last building blocks.
+
+Let me read the SwiftLint config (to pass `--strict`) and the exact DataTable/EmptyState/ChartContainer APIs I'll compose with.
+
+Let me check the GPS state normalizer and the charging telemetry hook/type to mirror them faithfully, then I'll start building.
+
+I have a complete understanding now. The build gate requires a KMP `Shared.xcframework` (no prebuilt one exists). Let me kick off that build in the background while I implement, and set up my plan/todos.
+
+KMP build is running detached. Let me check its progress and start implementing the Adapter (the pure projection core everything depends on).
+
+`/Applications/Xcode.app` exists but the active dir is CommandLineTools. I can override with `DEVELOPER_DIR` (no sudo needed). Let me verify.
+
+`DEVELOPER_DIR` unblocks Xcode 26.5 + iOS 26.5 simulator. The build gate is viable. Let me restart the KMP framework build with the correct env while I implement.
+
+The KMP build is running. Now let me build the Adapter — the pure projection core (Foundation-only, testable), carefully written for `swiftlint --strict`.
+
+The KMP build produced a **debug** xcframework but the staging script expects **release**. Let me kick off the release variant in the background, then continue implementing.
+
+Now the Format + GPS normalizer + accessibility + surface slug (pure, Foundation-only).
+
+Many parallel agents share the Gradle/Kotlin toolchain, so the release framework is building slowly. I'll keep implementing. Now the projection logic (pure derivations).
+
+Now the metrics builder + accessibility summaries (pure).
+
+Now the Model: telemetry seam, i18n facade, source protocol, `@Observable` model, and in-memory source.
+
+Now the production live source — a real (Foundation-only) URLSession data provider that keeps the `useChargingTelemetryLatest` call-site name.
+
+Files are compact. Let me mark progress and build the two Swift Charts (AreaChart + LineChart) with a shared legend.
+
+Let me check the release framework build progress and write the reusable chrome (panels, badges, cards) that the sections compose from.
+
+Release framework is nearly done (linking macOS now). Let me write the reusable chrome components.
+
+Now the state chrome (loading/empty/error), banners, live chip, and adaptive grid.
+
+Let me check the framework build and add small localization helpers to the Model, then build the panels.
+
+The release `Shared.xcframework` built successfully and `release/` now exists, so the scheme's staging pre-action will work. Let me verify the staged framework, then continue with the panels.
+
+Framework staged (iOS + simulator + macOS slices). Let me add localization helpers and build the panels.
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: C824:245C1D:AAAFBE:B3F558:6A26E74F)

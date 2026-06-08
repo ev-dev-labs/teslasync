@@ -1,0 +1,145 @@
+I'll start by exploring the repository structure to understand the task context.
+
+Now let me explore the Apple app structure and the web shared components used by this widget.
+
+Let me look at the full Apple directory structure and the shared flow diagram component.
+
+The native output convention uses `apps/apple/TeslaSync/<tier>/<Name>.*`. Let me examine that directory and the recently-modified AIUsageCard as a template.
+
+`LivePowerFlowWidget` is the most relevant existing template — also a flow diagram. Let me check for any existing EnergyFlowWidget and examine LivePowerFlowWidget end-to-end.
+
+Excellent template. Let me read all the LivePowerFlowWidget supporting files and the web source it mirrors.
+
+Now let me read the Previews, strings, Tests files and the web registry metadata, plus understand the shared infrastructure.
+
+The Previews file needs the `.swift` extension. Let me read it and the Tests, plus locate the shared infrastructure types.
+
+Now let me locate the shared infrastructure types and design tokens used by these widgets.
+
+Key question: how are these widgets compiled? Multiple widgets define `DashboardWidgetSize` publicly. Let me check the build setup.
+
+There's a `project.yml` (XcodeGen) but no generated `.xcodeproj`. Let me read it and check tool availability on this runner.
+
+`xcodebuild` points at Command Line Tools, not full Xcode. Let me verify whether a full Xcode and the other gate tools (pwsh, simulators) exist.
+
+There IS an `/Applications/Xcode.app`. The issue is just `xcode-select`. Let me try using it via `DEVELOPER_DIR`.
+
+Full Xcode 26.5 with simulators IS available — the runner is capable. Now a critical architecture question: multiple widgets define `DashboardWidgetSize`/`DashboardWidgetRegistration` but LivePowerFlowWidget doesn't. Let me find the canonical shared definition.
+
+13 sibling widgets define these structs but LivePowerFlowWidget (my template) does not. I need to understand the canonical definition. Let me compare the shapes.
+
+Now I understand the convention. Let me verify the exact design-token API surface (`Color.TS`, `Font.TS`, `TSSpacing`, `TSSkeleton`, etc.) that my template relies on, so my code compiles against the same shapes.
+
+Tokens confirmed. Let me read TSDesign.swift to confirm the namespaces (`TSSpacing`, `TSRadius`, `TSSkeleton`, `Font.TS`).
+
+All tokens confirmed. Let me verify the web `useVehicleState` data shape to faithfully reproduce the data handling (units).
+
+I have full understanding of the pattern and data. Let me check the build prerequisites (Shared.xcframework, build script) before deciding on verification strategy, and write a plan.
+
+Important: the full `xcodebuild` gate has two pre-existing blockers outside my allowed scope (missing KMP `Shared.xcframework`, and 13+ sibling widgets duplicate-defining `DashboardWidgetSize`). Let me confirm what `Sources/` provides and verify the duplicate situation precisely.
+
+I now have full clarity. Key decision: the 13 majority sibling widgets each **self-define** `DashboardWidgetSize`/`DashboardWidgetRegistration` (none exist in `Sources/`), making each widget self-contained/parallel-safe. I'll follow that majority convention so my widget compiles in isolation. Let me write a plan and start building.
+
+Now I'll create all nine files. Starting with the domain models and the pure builder.
+
+All nine files created. Let me verify i18n key coverage and check for prohibited placeholder words.
+
+Key coverage looks complete, but my regex excluded digit-containing keys (like `diagramA11y`). Let me re-check with digits included.
+
+All i18n keys are fully covered (no unused, no undefined). Now let me run the real verification tools — swiftformat and swiftlint on my files.
+
+swiftformat found fixable formatting issues. Let me auto-fix with the ecosystem tool, then re-lint.
+
+swiftformat passes. Now swiftlint --strict on my files.
+
+swiftlint passes with 0 violations. Now the placeholder check via pwsh.
+
+Placeholder scan clean. Now the critical check — does my Swift actually type-check? Let me inspect the token/skeleton dependencies to build an isolated compile harness.
+
+Tokens and TSSkeleton are self-contained. Let me build an isolated type-check harness with the real tokens + skeletons + my files, compiled with Swift 6 strict concurrency (matching the project).
+
+Only errors are in the copied `Skeletons.swift` dependency (references `TSCard`), not my code. Let me replace it with a minimal `TSSkeleton` stub to isolate my files.
+
+A genuine Swift 6 strict-concurrency issue in my Previews helper (calls `@MainActor` members from a nonisolated function). The fix is correct and simple — mark the helper `@MainActor`. Let me fix the real file.
+
+Production code type-checks cleanly under Swift 6 strict concurrency. Now let me include the Tests file (with XCTest).
+
+The XCTest errors are a harness limitation (XCTest's C macros aren't importable via raw `swiftc -F`), not defects in my tests. Let me validate the test *logic* against my real production types using a minimal XCTest shim.
+
+The `@testable import TeslaSync` line also needs stripping for the single-module harness. Let me remove both import lines.
+
+Two harness-related items surfaced. The `Date` issue is a harness artifact (real `import XCTest` re-exports Foundation, as the committed LivePowerFlow tests rely on). The `registration` isolation note is real-ish — `View` is `@MainActor` in Swift 6. I'll mark the registry test class `@MainActor` (clean correctness) and make the shim re-export Foundation.
+
+All files type-check cleanly under Swift 6 strict concurrency. Let me re-run lint/format after my edits.
+
+Both lint and format pass. Now let me validate the project graph with `xcodegen generate` and check the KMP build prerequisites.
+
+Project generates and includes my 9 files (54 references across targets). Now let me check the KMP prerequisites and capture real evidence of the build blockers.
+
+KMP `Shared.xcframework` is missing and 14 files now define `DashboardWidgetSize` in one module (13 pre-existing siblings + mine). Let me capture authentic build evidence by compiling the app target directly (bypassing the Gradle scheme pre-action) with a bounded timeout.
+
+The direct build fails fast at the missing `Shared.xcframework` (blocker a) before reaching Swift compilation. Java 17 + gradlew exist, so let me attempt the KMP framework build in the background to reach the compile phase and capture authentic evidence, while I demonstrate blocker (b) deterministically in the foreground.
+
+While the KMP build runs, let me deterministically demonstrate blocker (b): two files in one module declaring the same public struct is a hard Swift error.
+
+Blocker (b) is conclusively demonstrated. Let me check the KMP build progress.
+
+The backgrounded build didn't persist (sync session teardown). I already have authentic evidence for blocker (a) from the real `xcodebuild` (EXIT=65, missing XCFramework). Let me make one bounded, persistent attempt at the KMP build to characterize it honestly.
+
+The KMP build has run 6+ minutes with no output — it's downloading the heavy Kotlin/Native toolchain. Even if it completes, blocker (b) still fails the compile. Let me capture one more interval then stop it.
+
+I have conclusive evidence for both blockers. Let me verify git state and clean up generated artifacts before writing the log.
+
+My 9 files are staged-ready; the xcodeproj is properly ignored; pre-existing modified files aren't mine. Let me locate the log directory and write the honest gate log.
+
+Let me examine the sibling LivePowerFlowWidget log to match the expected format and see how siblings handled the same build blockers.
+
+This is decisive. The sibling precedent (LivePowerFlowWidget/GuardModeWidget logs) establishes the correct convention via Honesty rule 7: **"REUSED the shared `DashboardWidgetSize`/`Registration` rather than redefining them."** The canonical owner is DigitalTwinWidget (0036). My self-defining choice violates that. Let me fix it — remove my redefinitions and reuse the shared ones, and verify by compiling alongside DigitalTwinWidget.
+
+Now my code reuses the shared types. Let me re-verify: re-run format/lint on the edited Model file, and rebuild the type-check harness with the canonical registry provided externally (as DigitalTwinWidget provides it) to prove no redeclaration and correct resolution.
+
+Model now passes. Let me rebuild the harness with the canonical registry provided externally (as DigitalTwinWidget provides it) and re-run the full type-check.
+
+The temp harness was cleaned up between sessions. Let me do the entire harness setup + type-check in a single self-contained command.
+
+My line-slice of DigitalTwin captured an adjacent enum. Let me write the canonical registry file explicitly (identical shape to the shared owner) and re-run.
+
+Type-check passes (surface + canonical registry + tests, no redeclaration). Now let me run an **executed** adapter harness (compile Models+Builder to a native binary and run it) to prove the cached→projection logic at runtime, like the sibling precedent.
+
+The harness runner's own top-level vars trip Swift 6 isolation (a harness issue, not my code). My Models/Builder already passed Swift 6 strict-concurrency type-check separately. Let me compile the *executable* in Swift 5 mode to run the real logic.
+
+Executed adapter harness: **30/30 PASSED** at runtime. Let me run a consolidated final verification pass capturing exact outputs for the log, plus line counts.
+
+All clean — 8 files lint/format green, all under 400 lines. Let me gather metadata and write the comprehensive, honest gate log.
+
+Now I'll write the comprehensive, honest gate log.
+
+Log written. Let me clean up generated artifacts and stage exactly my files for commit.
+
+Exactly my 9 files + the log are staged (no unrelated files). Let me commit.
+
+Commit succeeded. Let me verify the final state.
+
+The task is complete. The commit `322469b26` contains exactly my 9 surface files + the log (1878 insertions); pre-existing unrelated modifications remain untouched.
+
+## Summary
+
+I shipped a production-polished, native Apple/SwiftUI **EnergyFlowWidget** at parity with `web/src/features/dashboard/widgets/EnergyFlowWidget.tsx`, following the established sibling precedent (LivePowerFlowWidget 0056).
+
+**9 files** in `apps/apple/TeslaSync/dashboard-widgets/` (1660 LOC, each ≤312 lines):
+- **Models / Builder** — pure cached→projection adapter: battery/motor/charger nodes, the always-present base arrows (battery↔motor) + charger arrow while charging, percent/kW/dash value kinds, stroke/visibility math.
+- **Model** — P1/S8 state-holder seam (no view HTTP), P1/S11 `view.opened` telemetry (slug `EnergyFlowWidget`), P1/S10 i18n facade, locale-aware formatters, a11y summary.
+- **Diagram / Palette** — SwiftUI `Canvas` flow diagram with magnitude-weighted marching-dash arrows (Reduce-Motion-aware) + positioned node views; web Tailwind colors.
+- **swift** — glass shell + header + every state (loading/empty/error/stale/offline/content); registry-correct (`energy-flow`, `battery`, 2×4/2×4/4×40); **reuses** the shared `DashboardWidget*` types (no redeclaration — Honesty rule 7).
+- **Previews / Tests / strings** — per-state previews; XCTest (adapter+model+registry+format+a11y); all 7 source i18n keys + native chrome.
+
+**Verification (all real, on this host with Xcode 26.5):**
+- Swift 6 strict-concurrency `swiftc -typecheck` (surface + canonical registry + tests) — **EXIT=0**
+- **Executed** adapter binary — **30/30 checks PASSED**
+- `swiftlint --strict` — **0 violations**; `swiftformat --lint` — **0/8**; placeholder gate — **COUNT=0**; `xcodegen generate` — **EXIT=0**
+- Xcode app build/test **DEFERRED** (documented with real evidence: missing KMP `Shared.xcframework` → genuine `EXIT=65`; pre-existing cross-sibling `DashboardWidget*` redeclarations + grid registration owned by the integration prompt — all outside this prompt's allowed files), matching the P4 0036/0054/0056 precedent.
+
+Log: `.github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0046-EnergyFlowWidget.log` → **EXIT=0 / STATUS=DONE**.
+
+I found and fixed two genuine Swift 6 concurrency issues during host validation (a `@MainActor` on the preview helper and the registry test class), and corrected an initial design choice to **reuse** the shared registry types rather than redefine them — matching the repo's documented convention.
+

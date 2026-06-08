@@ -1,0 +1,192 @@
+=== P4 Shared surface 0129 NewVersionBanner (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir is /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no `xcode-select -s`, so the shared runner is untouched). `xcodebuild -version`
+                       under the CommandLineTools dir errors ("requires Xcode") — hence the DEVELOPER_DIR override,
+                       the SAME mechanism every prior P4 surface used.
+  Toolchain          : swift 6.3.2 (Apple) · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2
+  Capability         : SwiftUI present (the macOS SDK SwiftUI/AppKit primitives compile under the override —
+                       verified by the isolated build below). This surface uses NO Swift Charts and NO MapKit:
+                       the web source (components/feedback/NewVersionBanner.tsx) has neither (prompt "Charts /
+                       maps used: (none)"). The iOS 18 / iPadOS 18 / macOS 15 HIG primitives it needs (an overlay
+                       banner card, SF Symbols, TSButton) are all available → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification — read end to end)
+  components/feedback/NewVersionBanner.tsx + its data hook hooks/useVersionWatcher.ts.
+    useVersionWatcher : boot-probes GET /system/version once on mount (bootVersion), polls every 5 min
+                        (latestVersion), coalesces peer tabs over a `teslasync:version` BroadcastChannel, and
+                        SWALLOWS transient poll errors (only a 4xx is console.warn'd; the banner stays silent).
+                        newVersionAvailable = !!(bootVersion && latestVersion && latestVersion !== bootVersion).
+    NewVersionBanner  : a soft bottom-right toast (role="status", aria-live="polite", max-w-sm) surfaced only
+                        when a redeploy is detected. Branches:
+                          if (!newVersionAvailable) return null;                              // L50
+                          if (latestVersion && dismissedVersion === latestVersion) return null; // L51
+                          else render { Sparkles · message · <Button ghost>Later · <Button primary>Reload }
+                        handleReload = window.location.reload();
+                        handleLater  = sessionStorage['teslasync:new-version-dismissed-for'] = latestVersion;
+                        per-version dismissal reset (L43-L48): once latestVersion advances past the dismissed
+                        value, the stored dismissal is cleared so the user is nudged again.
+    i18n keys (the surface IS internationalised — t(key, default)):
+                        app.newVersion.message = "A new version of TeslaSync is available."
+                        app.newVersion.later   = "Later"
+                        app.newVersion.reload  = "Reload"
+
+ARTIFACTS SHIPPED  (allowed files: apps/apple/TeslaSync/shared-surfaces/NewVersionBanner.* + this log)
+  NewVersionBanner.Adapter.swift  — pure Foundation core (no SwiftUI / store / bundle): VersionConnection axis,
+                                     VersionWatcherSnapshot (+ the exact `newVersionAvailable` three-part
+                                     predicate), VersionBannerContent, VersionBannerResolved (Phase = idle(reason)
+                                     | presented(content); IdleReason = awaitingBaseline / upToDate / pollError /
+                                     dismissed), VersionBannerProjection.resolve (web L50/L51 guard order) +
+                                     shouldResetDismissal (web L43-L48), VersionBannerAccessibility.
+  NewVersionBanner.Model.swift    — P1/S8 state-holder seam (VersionWatcherSource + @Observable
+                                     NewVersionBannerModel + InMemoryVersionWatcherSource), P1/S11 telemetry seam
+                                     (VersionBannerTelemetry + OSLog sink, view.opened surface="NewVersionBanner"
+                                     deferred past withdrawn), P1/S10 facade (NewVersionBannerStrings), the
+                                     per-version dismissal store (VersionDismissalStore + InMemory, the
+                                     sessionStorage peer), and the app-update action seam (VersionBannerReloadHandler
+                                     + OSLog default, the window.location.reload() peer).
+  NewVersionBanner.swift          — the surface: phase switch (idle → EmptyView = web `return null`; presented →
+                                     the banner card), onAppear start / onDisappear stop; static
+                                     surfaceSlug = "NewVersionBanner".
+  NewVersionBanner.Views.swift    — the banner body (sparkles tile + message + Later[ghost]/Reload[primary]
+                                     TSButtons) + the P4 leaf freshness chrome (live/stale/offline note + glyph),
+                                     TSFadeIn entrance (honors Reduce Motion). Tokens only — no Tailwind, no hex.
+  NewVersionBanner.Previews.swift — #if DEBUG #Preview for presented (live/stale/offline) + every withdrawn branch
+                                     (loading / up-to-date / dismissed / poll-error); the withdrawn previews render
+                                     nothing on purpose (web `return null`, made visible as an absence).
+  NewVersionBanner.strings        — P1/S10 catalog (table "NewVersionBanner"): the 3 parity keys verbatim from the
+                                     web source + the native chrome (title, live/stale/offline, freshness notes,
+                                     the Later/Reload accessibility labels).
+  NewVersionBanner.Tests.swift    — adapter (predicate / projection / dismissal-reset / freshness / a11y) + model
+                                     (wiring, deferred telemetry, dismiss, reload, refresh, dismissal reset vs
+                                     persist, stale one-shot auto-refresh, offline no-op, re-arm).
+  (7 files, all sharing the NewVersionBanner.* stem — the same multi-file decomposition the feature-views use,
+   e.g. 0237 AiUsageCard.{Adapter,Model,Views,Previews,Tests}; every file is well within the 400-line SwiftLint
+   file_length budget. Web ~93-line toast + ~150-line hook → 1113 native lines because the web's render-time
+   conditionals, the sessionStorage dismissal, the cross-tab coalescing seam, the P4 leaf freshness axis, the
+   full i18n promotion, the accessibility summary, the previews, and 30 unit tests are all materialised.)
+
+PARITY MAPPING  (web → Apple platform tokens; no Tailwind ported, no raw hex)
+  bottom-4 right-4 max-w-sm toast       → self-contained 420pt card (host positions it; surface owns the body)
+  border-emerald-500/30 + shadow-emerald → RoundedRectangle stroke Color.TS.statusSuccess.30 + success shadow
+  bg-[var(--surface-overlay)]           → Color.TS.surface (dynamic light/dark/high-contrast token)
+  bg-emerald-500/10 Sparkles emerald-300 → SF Symbol "sparkles" on statusSuccess.10 tile, statusSuccess tint
+  text-[var(--text-primary)] message    → Font.TS.body / Color.TS.textPrimary
+  <Button size=sm variant=ghost>Later    → TSButton(variant:.ghost, size:.small)
+  <Button size=sm variant=primary>Reload → TSButton(variant:.primary, size:.small)
+  newVersionAvailable / L50 / L51 guards → VersionBannerProjection.resolve (idle vs presented), 1:1 branch order
+  sessionStorage per-version dismissal   → VersionDismissalStore (process-lifetime default; web sessionStorage
+                                            = per-tab, fresh tab clean ⇒ native fresh launch clean)
+  dismissal reset (L43-L48)              → VersionBannerProjection.shouldResetDismissal + model.apply reset
+  window.location.reload()               → VersionBannerReloadHandler.reload() (production injects re-bootstrap)
+  role="status" aria-live="polite"       → accessibilityElement(.contain) + status label; icon accessibilityHidden;
+                                            Later/Reload carry explicit a11y labels; Dynamic Type via Font.TS;
+                                            Reduce Motion via TSFadeIn
+  i18n t('app.newVersion.*')             → NewVersionBannerStrings (NSLocalizedString table, web literal fallback)
+  telemetry                              → view.opened surface="NewVersionBanner" on the first PRESENTED apply
+                                            (mirrors the web component emitting no DOM until newVersionAvailable)
+
+STATES (every web branch reproduced; each generic leaf state mapped — no hidden DATA section)
+  This surface is a NOTIFICATION toast, not a persistent data panel: the web component is `null` in every state
+  except "a new, undismissed version exists". Reproducing the web faithfully therefore means the surface is
+  withdrawn (EmptyView) for the non-announce states and PRESENTED for the announce state — the same accepted
+  disposition as the AiUsageCard off-mode gate (P4 0237: a web `return null` maps to a withdrawn native phase,
+  explicitly "NOT a hidden section"). The generic leaf states map as:
+    loading  → idle(.awaitingBaseline): the boot probe has not resolved; a version toast is intentionally absent
+               until there is something to announce (web hook pre-resolution). Rendering a skeleton toast on every
+               launch would be a fabrication the web does not perform.
+    empty    → idle(.upToDate): backend matches the boot baseline (web `!newVersionAvailable` → null).
+    error    → idle(.pollError): the web hook SWALLOWS poll errors and keeps the banner silent — reproduced as
+               withdrawn, never a visible error box (a QueryError toast here would contradict the source).
+    dismissed→ idle(.dismissed): deferred for exactly this version (web `dismissedVersion === latestVersion`).
+    presented→ the banner body. While presented the P4 leaf freshness axis renders: live (no note), stale (amber
+               note + one-shot auto-refresh on the live→stale transition), offline (muted "last known" note).
+  Every idle reason is a distinct, unit-tested classification (so the mapping is explicit and verifiable), even
+  though all render the same faithful withdrawn surface.
+
+GATES  (raw exits; per-surface scope unless noted)
+  [GREEN] swiftformat --lint (.swiftformat, 6 swift files)        : 0/6 files require formatting   FORMAT_EXIT=0
+  [GREEN] swiftlint --strict (.swiftlint.yml, explicit 6 files)   : 0 violations, 0 serious        LINT_EXIT=0
+          (the repo .swiftlint.yml `included:` list does not yet name shared-surfaces — wiring that path, like
+           adding it to project.yml, is owned by P4 core / the acceptance gate, NOT in this prompt's allowed
+           files — so the surface is linted by EXPLICIT path here to prove it is clean under the repo config.)
+  [GREEN] check-placeholders.ps1 (-Language swift, shared-surfaces): PLACEHOLDER_ALLOWED=0
+                                                                      PLACEHOLDER_COUNT=0           PLACEHOLDER_EXIT=0
+  [GREEN] ISOLATED build + test — SwiftPM, swift-tools 6.0, swiftLanguageModes [.v6] (Swift 6 language mode =
+          strict-concurrency complete, the SAME as the app target), compiling the EXACT shipped NewVersionBanner.*
+          sources (incl. the #Preview macro file) against the REAL repo design-system files (generated
+          apps/design/generated/apple/Tokens.swift + Sources/Components/UI/Buttons.swift + Sources/Components/
+          Motion/Motion.swift) under the Xcode 26.5 toolchain (so the real #Preview macro + XCTest are present):
+              Build complete!  ·  Executed 30 tests, with 0 failures (0 unexpected)               SWIFT_TEST_EXIT=0
+  [GREEN] xcodegen generate (full project.yml spec)               : project written OK            XCODEGEN_EXIT=0
+
+  [DEFERRED] Full-app iOS-Simulator + macOS `xcodebuild -scheme TeslaSync(-macOS) … build test`.
+          NOT run-to-green on this runner because the full app target is blocked by PRE-EXISTING, unrelated
+          conditions this prompt neither introduced nor is allowed to touch (each VERIFIED here, not assumed):
+            • Frameworks/Shared.xcframework is NOT staged (only .gitkeep) — needs the ~7-min Gradle
+              :core:assembleSharedXCFramework (a macOS-pending row for p1-shared/S3). REAL captured failure from a
+              target-level build (which skips the scheme's Gradle preAction):
+                  error: There is no XCFramework found at '…/apps/apple/Frameworks/Shared.xcframework'.
+                         (in target 'TeslaSync' from project 'TeslaSync')
+            • `struct DashboardWidgetSize` is redefined 15× across Sources/* + TeslaSync/dashboard-widgets/*
+              (parallel-merge collisions) — verified by grep.
+            • 224 co-located `*.Tests.swift` under TeslaSync/feature-views + dashboard-widgets import XCTest into
+              the APP target (the same config the prior surfaces recorded at 140; it has only grown) — verified by ls.
+            • The full-scope `swiftformat --lint apps/apple` itself fails on a PRE-EXISTING, untouched file —
+              `TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes)` (1/1919 files) —
+              confirming the full scope is RED independently of this surface (my 6 files are 0/6).
+            • The gate's literal `-destination name=iPhone 16` does not exist on Xcode 26.5 (the runner ships
+              iPhone 17 simulators); moot, since the build halts at the missing Shared.xcframework first.
+            • This surface's shared-surfaces/ directory is not yet referenced by project.yml, so it is not even
+              compiled INTO the app target (it cannot affect that build) — wiring it is owned by P4 core / the
+              acceptance gate (out of this prompt's allowed files).
+          This is the SAME sanctioned "code-complete + DEFERRED full-app Xcode gate" disposition recorded by every
+          prior P4 surface (see p4-apple-feature-views-0237-AiUsageCard.log) and is owned by the Apple acceptance
+          gate on a signed runner with a staged Shared.xcframework. ZERO NewVersionBanner errors are attributable
+          to this change — its real compile + 30 tests are GREEN in isolation above.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED with a RAW captured failure
+                           (missing Shared.xcframework) + verified pre-existing blockers — never reported as passing.
+                           The full-scope swiftformat RED (a pre-existing untouched file) is disclosed, not hidden.
+  2  No scope narrowing  : every web branch reproduced — the newVersionAvailable predicate, both `return null`
+                           guards (L50/L51), the per-version dismissal + its reset (L43-L48), the Sparkles/message/
+                           Later/Reload body, window.location.reload, and all 3 i18n keys; the P4 leaf freshness axis
+                           (live/stale/offline) renders while presented. Every leaf state is mapped + tested.
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; raw exits pasted; the deferred blockers were
+                           each re-confirmed by ls/grep AND a real target-level xcodebuild error line — not assumed.
+  4  No stubs as final   : complete production surface + 30 real tests; placeholder scanner COUNT=0; no
+                           TODO/FIXME/XXX/Coming-soon/Placeholder/Lorem/not-implemented anywhere; the OSLog reload +
+                           telemetry defaults are working (logging) seams the production app overrides, not stand-ins.
+  5  No parity shortcut  : the `&& !==` newVersionAvailable predicate, the L50/L51 guard ORDER, the dismissal-reset
+                           condition, and the sessionStorage-keyed-on-latestVersion dismissal are each unit-asserted
+                           against the web expressions.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: binds the P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, and P1/S11
+                           view.opened telemetry; honours the established P4 "isolated-build + DEFERRED full-app"
+                           disposition. The pre-existing AIUsageCard.* worktree edits (present BEFORE this session)
+                           were left untouched; only shared-surfaces/NewVersionBanner.* + this log are committed.
+  8  No commit on red    : the committed artifact (7 NewVersionBanner.* files + this log) is GREEN on every
+                           per-surface gate AND on a real isolated Swift 6 strict-concurrency build + 30/30 XCTest;
+                           the deferred full-app gate is blocked only by pre-existing, unrelated surfaces/staging.
+  9  No silent drift     : changes confined to TeslaSync/shared-surfaces/NewVersionBanner.{Adapter,Model,Views,
+                           Previews,Tests}.swift + NewVersionBanner.swift + NewVersionBanner.strings and this log.
+                           The notification-toast "withdrawn = web return null" disposition and the not-yet-wired
+                           project.yml/swiftlint-included path (owned by P4 core) are disclosed above.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic NewVersionBanner shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 30 tests pass under the app's own Swift 6 strict-concurrency rules, against the
+  REAL design system, via the Xcode 26.5 toolchain, with swiftformat / swiftlint / placeholder all green on the
+  6 surface swift files and the #Preview macro compiling. The full-app iOS-Simulator + macOS xcodebuild build/test
+  gate is DEFERRED (not failed by this code) on pre-existing, unrelated, out-of-allowed-files blockers (unstaged
+  Shared.xcframework — real error captured — the DashboardWidgetSize 15× redefinition, the 224 co-located tests in
+  the app target, a pre-existing swiftformat nit, and the not-yet-wired shared-surfaces path), owned by the Apple
+  acceptance gate on a signed runner with a staged Shared.xcframework.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,146 @@
+I'll start by exploring the environment and reading the web source specification.
+
+Xcode full toolchain isn't installed (only Command Line Tools), but Swift 6.3.2, swiftlint, and swiftformat are available. Let me read the web source and explore the Apple app structure before deciding on capability status.
+
+Now let me examine the existing native dashboard-widgets to understand established patterns I must follow.
+
+There's a `DigitalTwinWidget` sibling I can study as the canonical pattern. Let me read all its files.
+
+Now let me read the remaining DigitalTwin files and locate shared tokens (P1/S9) and components.
+
+Now let me read the Tests file and locate the shared design tokens (TSSpacing, Color.TS, Font.TS, TSTone, TSSkeleton).
+
+Let me locate the design tokens and shared native components (Timeline, Badge, tokens).
+
+The tokens come from generated `apps/design/generated/apple/Tokens.swift`. Let me read those plus the SharedFacade (P1/S8) layer.
+
+Now I have the full token reference. Let me read the native Timeline/Badge components and the web data hooks + WidgetShell to nail the data shapes and behavior.
+
+Let me read the web data hooks and WidgetShell to capture exact data shapes and shell behavior.
+
+Let me read the maintenance type definitions and hook config, plus the WidgetProps/types for size.
+
+Let me read the unit conversion logic, the native Units facade, and the registry entry.
+
+Let me confirm the conversion constants and the formatting/units hooks to mirror behavior faithfully.
+
+Let me check existing native date/currency formatting conventions and the web `formatDate` default so I mirror them.
+
+Let me read the Builder (adapter seam style), project.yml target config, and the host-gate/placeholder scripts.
+
+Let me read the placeholder-check patterns and verify pwsh availability before designing the code (so I avoid tripping it).
+
+`pwsh` is available but full Xcode is **not** (only Command Line Tools) — so the `xcodebuild` gate steps will be BLOCKED, which the prompt explicitly permits with evidence. I'll still ship the complete implementation and run every check I can (swiftlint, swiftformat, placeholder gate, swift parse). Let me read the lint/format configs and write a plan.
+
+Let me check whether the dashboard registry types (`DashboardWidgetSize`, `DashboardWidgetRegistration`) have a canonical home in `Sources/`, to avoid duplicate definitions when integrated alongside DigitalTwin.
+
+Found it: `DashboardWidgetSize`/`DashboardWidgetRegistration` are canonical types declared once (by the sibling `DigitalTwinWidget.Model.swift`) and shared across the dashboard-widgets bundle. Since my allowed files are only `MaintenanceTrackerWidget.*`, I must **reference** them (not redefine — that would be a duplicate-symbol collision at integration). All my other seams get `Maintenance`-prefixed names.
+
+Let me set up tracking and write the implementation.
+
+Now the Tests file, then I'll format and verify everything.
+
+All 6 source files written. Now let me auto-format with swiftformat, then run the full verification suite.
+
+Single issue: `file_length` (431 > 400). I'll split the content-body layouts into a sibling file (consistent with the multi-file pattern). Let me view the formatted main file to plan the split precisely.
+
+I'll split the content-body layouts into a sibling file. First, let me make the access-level adjustments and view the boundary.
+
+I'll keep `connectivityBanner` in the main file (made internal) and move only the content-body extension + badge out. Applying access adjustments first:
+
+Now re-format and re-lint all files (now 7 swift files).
+
+Both pass for my files (0 format changes, 0 lint violations). Now let me run the actual gate commands (whole-tree) to capture honest evidence, plus the placeholder gate and a `swift -parse` syntax check.
+
+Whole-tree swiftformat is clean (0/276) and the placeholder gate is clean (COUNT=0). Let me run the exact gate's placeholder path prefix, the swiftlint gate, and a best-effort `swift -parse` syntax check.
+
+Placeholder gate (exact prefix) and whole-tree swiftlint both pass (0 violations). Let me add a best-effort `swift -parse` syntax check as extra evidence.
+
+All 7 files pass `swift -parse`. The adapter core (Models + Builder) depends only on Foundation, so I can do better than parse — I can **compile and run** it to verify the parity arithmetic for real. Let me build a host harness.
+
+Just needs the harness file named `main.swift` (top-level code rule). Let me rename and rerun.
+
+The harness caught a **wrong test expectation** (not a code bug): `timeline[1]` is the cabin record (18000 km → "7 mi"), not the 12000 km record. My XCTest asserted "12 mi" incorrectly. Let me fix the test assertion to the correct value and re-run.
+
+Adapter verified at runtime (all parity values correct, EXIT=0). Let me re-lint/format after the test edit, then clean up the temp harness.
+
+All checks green. Now let me write the gate log. First, let me check the logs directory and a sibling log for format conventions.
+
+This is the canonical precedent — and importantly, even with full Xcode it marked the xcodebuild steps **DEFERRED** (not BLOCKED) and concluded `STATUS=DONE`, because the real validation is a host `swiftc -typecheck` against the actual component library. Let me replicate that stronger check. First, find which component files import the (unstaged) `Shared` framework so I can build a clean closure.
+
+No component/design file imports `Shared`, so I can type-check my surface against the **real** component library (matching the precedent). Let me compile the surface + the component/design closure with `swiftc -typecheck`.
+
+The only failures are in `UnitFormatters.swift`, which depends on the `Shared`-facade (`Units`/`UnitPreferences`). My surface doesn't use it. Let me exclude the Shared-facade-dependent component files and re-check.
+
+Only `UnitFormatters.swift` needs excluding. Let me re-run the type-check without it.
+
+Let me capture swiftc's authoritative exit code directly (the previous `ERRORS` count was a quoting artifact).
+
+Type-check now fails *only* because `DashboardWidgetSize`/`DashboardWidgetRegistration` live in the sibling file I intentionally don't redefine — which confirms my no-duplicate-symbol decision. Let me compile the **whole dashboard-widgets bundle together** (DigitalTwin + Maintenance, minus test files) against the component library, exactly as it integrates.
+
+The only remaining error is the `#Preview` macro plugin (ships with full Xcode, absent in CLT) — a toolchain limit, not a code issue. The `#Preview` blocks are inside `#if DEBUG`, so dropping `-D DEBUG` compiles them out (the precedent did the same). Re-running:
+
+`BUNDLE_TYPECHECK_EXIT=0` — the whole bundle type-checks against the real component library. That's strong validation. Let me gather metadata for the log (line counts, base commit, iOS SDK availability).
+
+No full Xcode (iOS SDK absent) — confirms xcodebuild can't run here. Let me verify i18n key consistency between code and the catalog before writing the log.
+
+Every code i18n key (24) resolves in the catalog; all 11 web-source parity keys present. Now let me write the gate log with honest, executed evidence.
+
+Log written. Let me run a consolidated final verification and confirm only my files are staged for commit.
+
+All 8 surface files + the log are present; only the pre-existing (not mine) web files remain unstaged. Final consolidated re-verification, then commit the allowed paths only.
+
+All gates green. Committing the allowed paths only (per the prompt's commit spec), leaving the pre-existing web changes untouched.
+
+Committed cleanly (the pre-existing web files were correctly left unstaged). Let me finalize the todo tracking.
+
+All 9 todos complete. Task delivered and verified.
+
+## Summary
+
+Shipped a production-polished native **`MaintenanceTrackerWidget`** (Apple/SwiftUI) at parity with `features/dashboard/widgets/MaintenanceTrackerWidget.tsx`, committed as `a53d224a`.
+
+**8 surface files** (`apps/apple/TeslaSync/dashboard-widgets/MaintenanceTrackerWidget.*`), mirroring the sibling `DigitalTwinWidget` architecture:
+- **Models / Builder** — pure cached→projection adapter (urgency heuristic, soonest-item selection, date-desc top-3 records, distance/currency/date formatting). Replicates the web's exact distance arithmetic for byte-identical output.
+- **Model** — P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, P1/S10 i18n facade, a11y summary. References the shared `DashboardWidgetSize`/`Registration` (never redefines them → no duplicate-symbol).
+- **View + Content** — compact (cols≤1) + standard layouts; every state renders (loading/empty/error/stale/offline/content); registry `maintenance-tracker` 2×4 / 1×2 / 4×40.
+- **Previews / Tests / .strings** — per-state previews, adapter+model+registry+a11y tests, all 11 source i18n keys + native chrome.
+
+**Verification (all executed, real exit codes):**
+| Gate | Result |
+|---|---|
+| `swiftc -typecheck` whole bundle vs **real** component library | ✅ EXIT=0 |
+| Adapter harness (compiled + **ran** native binary) | ✅ 23/23 |
+| `swift -parse` (7 files) | ✅ |
+| `swiftlint --strict` | ✅ 0 violations |
+| `swiftformat --lint apps/apple` | ✅ 0/276 |
+| `check-placeholders` (exact prompt path) | ✅ COUNT=0 |
+
+The harness caught and I fixed an incorrect test expectation (red→green). `xcodebuild build test` is **DEFERRED** — this host has Command Line Tools only (no full Xcode); the surface uses no Charts/MapKit, so the BLOCKED capability hatch doesn't apply, and it's fully host-validated. Log: `p4-apple-dashboard-widgets-0061-MaintenanceTrackerWidget.log` → `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and committed. Let me do a final confirmation of the commit state.
+
+All 9 files (8 surface files + log) are in commit `a53d224a`. The task is fully complete and verified.
+
+Merge made by the 'ort' strategy.
+ ...board-widgets-0061-MaintenanceTrackerWidget.log | 185 ++++++++++++
+ .../MaintenanceTrackerWidget.Builder.swift         | 186 ++++++++++++
+ .../MaintenanceTrackerWidget.Content.swift         | 190 ++++++++++++
+ .../MaintenanceTrackerWidget.Model.swift           | 279 ++++++++++++++++++
+ .../MaintenanceTrackerWidget.Models.swift          | 171 +++++++++++
+ .../MaintenanceTrackerWidget.Previews.swift        | 160 ++++++++++
+ .../MaintenanceTrackerWidget.Tests.swift           | 323 +++++++++++++++++++++
+ .../MaintenanceTrackerWidget.strings               |  51 ++++
+ .../MaintenanceTrackerWidget.swift                 | 257 ++++++++++++++++
+ 9 files changed, 1802 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0061-MaintenanceTrackerWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MaintenanceTrackerWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MaintenanceTrackerWidget.Content.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MaintenanceTrackerWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MaintenanceTrackerWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MaintenanceTrackerWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MaintenanceTrackerWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MaintenanceTrackerWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MaintenanceTrackerWidget.swift

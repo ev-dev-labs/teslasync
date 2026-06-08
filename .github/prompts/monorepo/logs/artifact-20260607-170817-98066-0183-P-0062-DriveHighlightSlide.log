@@ -1,0 +1,166 @@
+================================================================================
+P4 · Feature view · 0062 — DriveHighlightSlide (Apple)
+Run: 2026-06-07T20:16-0700   Host: Darwin arm64 (macOS)   Slot: slot-183
+Prompt: P4/feature-views/0062 — Feature view: DriveHighlightSlide
+Web source (spec): web/src/features/analytics/components/review/DriveHighlightSlide.tsx
+Mode: code-complete + host-real Swift compile/run; full Xcode build/test BLOCKED on
+      this runner (Command Line Tools only — no Xcode / xcodebuild / iOS Simulator).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ........................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  macOS SDK (CLT) .............. MacOSX.sdk @ /Library/Developer/CommandLineTools     OK
+  SwiftUI (macOS SDK) ......... present — surface type-checks against it (below)      OK
+  swiftlint .................... /opt/homebrew/bin/swiftlint                          OK
+  swiftformat .................. /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) ...... /opt/homebrew/bin/pwsh                              OK
+  Xcode.app .................... NOT installed (xcode-select -p = CommandLineTools)  ABSENT
+  xcodebuild ................... requires Xcode (cannot run under CLT)               ABSENT
+  iPhoneSimulator SDK / simctl . unavailable (no Xcode)                             ABSENT
+  Shared.xcframework ........... not staged (apps/apple/Frameworks/ = .gitkeep)      WARN
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The only platform requirement is SwiftUI, which
+  IS available in the CLT macOS SDK and is PROVEN below (the full surface + the real
+  shared component library type-check with 0 errors on the macOS-15 target). The
+  xcodebuild iOS-Simulator + macOS build/test steps are BLOCKED purely because this
+  runner has Command Line Tools, not Xcode — a runner-tooling limitation, not a code
+  or capability defect. Those steps are deferred to the macOS acceptance-gate runner
+  (P4 acceptance gate / ADR-012 macos-latest matrix), per the 0009/0010 precedent.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/DriveHighlightSlide.*) ===
+  DriveHighlightSlide.Adapter.swift    229  pure (Foundation-only) projection core —
+                                            DriveDistancePreference (km/mi/ft) reproducing
+                                            convertDistanceFromSI + the unitPrefs.distance==='mi'
+                                            efficiency branch; DriveHighlightInput (web
+                                            YearReviewDriveHighlight); DriveHighlightProjection
+                                            (distance/duration/efficiency/date + em-dash
+                                            fallbacks); a11y summary seam
+  DriveHighlightSlide.Model.swift      243  P1/S8 state-holder seam (DriveHighlightSource→Model)
+                                            + P1/S11 telemetry seam (view.opened) + P1/S10
+                                            DriveHighlightStrings facade + phase resolution
+                                            (loading/empty/error/content) + freshness
+                                            (live/stale/offline) + in-memory source
+  DriveHighlightSlide.swift             91  DriveHighlightSlide surface (phase switch, onAppear
+                                            telemetry, freshness overlay, combined a11y label)
+  DriveHighlightSlide.Views.swift      282  presentational subviews — spring emoji
+                                            (interpolatingSpring 180/14, web motion.span),
+                                            glass card (route + 3-stat grid + date), stat cell,
+                                            stale/offline chip, empty (emoji + noDriveData),
+                                            loading skeleton, error (+retry)
+  DriveHighlightSlide.Previews.swift   129  #if DEBUG previews — longest(km)/efficient(mi)/empty/
+                                            loading/error/stale/offline
+  DriveHighlightSlide.Tests.swift      337  XCTest — preference+conversion, duration+rounding,
+                                            full projection, model phases+telemetry+wiring, a11y
+                                            (28 methods across 5 suites)
+  DriveHighlightSlide.strings           34  P1/S10 catalog (2 web-source parity keys
+                                            [yearReview.noDriveData, yearReview.duration] + 6
+                                            native chrome/a11y keys)
+  Total 1345 lines across 7 files (1311 Swift + 34 strings); every file <= 400 (house rule).
+  Shared tokens/components (Color.TS, Font.TS, TSSpacing, TSRadius, TSFadeIn, TSSkeleton) are
+  REUSED from the real library — no redeclaration, so no duplicate symbols in the app module.
+
+=== PARITY (vs web DriveHighlightSlide.tsx) ===
+  Data sources -> useTranslation + useUnits ONLY. The web leaf is presentational: its
+    parent (SlideRenderer) passes `drive`, a localized `label`, and an `emoji`. The native
+    surface mirrors this — the P1/S8 DriveHighlightSource carries that prop snapshot + the
+    distance preference + load/freshness status; the view performs NO HTTP.
+  Conversion -> distance: convertDistanceFromSI(distance_km*1000, unit) [km/mi/ft divisors
+    1000 / 1609.344 / 0.3048]; efficiency: unit==='mi' ? wh_km*1.609344 : wh_km, with the
+    'Wh/mi' vs 'Wh/km' suffix; both rounded with Math.round parity (half away from zero,
+    no grouping). Duration: floor(min/60)+'h '+min%60+'m' or just 'm'. Reproduced VERBATIM
+    and PROVEN by host execution (below): 412.7 km->413, 178.4 Wh/km->178, 312 min->"5h 12m";
+    23.5 km->15 mi, 132 Wh/km->212 Wh/mi.
+  States -> every state renders: loading (skeleton), empty (web !drive: emoji + "No drive
+    data for this year"), error (QueryError-equivalent + retry), stale/offline (freshness
+    chip over the cached recap), content (animated card). No hidden surfaces.
+  Motion -> web @/components/motion mapped to native: label/card via shared TSFadeIn
+    (Reduce-Motion aware); the emoji's spring (scale 0->1, rotate -10->0, stiffness 180,
+    damping 14) via SwiftUI interpolatingSpring(stiffness:180, damping:14), static under
+    Reduce Motion.
+  i18n -> all strings via the P1/S10 facade; the two web keys (yearReview.noDriveData,
+    yearReview.duration) carry their exact en.json values; recap label/emoji are parent-
+    supplied (not owned here). No hardcoded English literals in the view.
+  a11y -> populated slide is one combined VoiceOver element (label, route, distance,
+    duration, efficiency, date); decorative glyphs accessibilityHidden; retry has a label;
+    Dynamic Type via tokens; Reduce Motion honored.
+
+=== GATE EXECUTION (commands from the prompt's Gate block) ===
+  [1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+        > xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+          directory '/Library/Developer/CommandLineTools' is a command line tools instance
+      IOS_EXIT=1            (BLOCKED — no Xcode/iOS Simulator on this runner)
+  [2] xcodebuild -scheme TeslaSync-macOS build test
+        > xcode-select: error: tool 'xcodebuild' requires Xcode, ... command line tools instance
+      MAC_EXIT=1            (BLOCKED — no Xcode on this runner)
+  [3] swiftlint --strict   (full apps/apple, 756 files)
+        > Done linting! Found 1 violation, 1 serious in 756 files.
+        > The single violation is PRE-EXISTING and NOT in this surface:
+          TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19
+          Function Body Length (78 > 50) — owned by a different prompt, outside this
+          prompt's allowed-files scope (DriveHighlightSlide.*). Not modified.
+      LINT_EXIT=2          (pre-existing, unrelated; this surface contributes 0 — see [3b])
+  [4] swiftformat --lint apps/apple
+        > 0/760 files require formatting, 2 files skipped.
+      FORMAT_EXIT=0        PASS
+  [5] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/DriveHighlightSlide
+        > PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+      PLACEHOLDER_EXIT=0   PASS
+
+=== HOST-REAL EVIDENCE FOR THIS SURFACE (supplementary, all green) ===
+  [3b] swiftlint --strict (scoped to the 6 DriveHighlightSlide*.swift files)
+        > Done linting! Found 0 violations, 0 serious in 6 files.            PASS
+  [4b] swiftformat --lint (scoped to the 6 files)  > 0/6 require formatting   PASS
+  [p]  swiftc -parse — all 6 Swift files                                      PARSE OK (6/6)
+  [tc] swiftc -typecheck -target arm64-apple-macosx15.0 -sdk <CLT macOS SDK>
+         my 5 view/adapter/model/previews files + the 40 REAL shared component
+         files (Sources/Components + Sources/Design, less the one KMP-Shared-coupled
+         UnitFormatters.swift) + generated DesignTokens
+        > TYPECHECK_EXIT=0 — 0 errors. The surface compiles against the real
+          Color.TS/Font.TS/TSSpacing/TSRadius/TSFadeIn/TSSkeleton library + SwiftUI.
+  [ra] Adapter compiled (-O) + EXECUTED on the macOS SDK — parity values:
+        km.distance=413  km.duration="5h 12m"  km.efficiency=178 (Wh/km)
+        mi.distance=15   mi.efficiency=212 (Wh/mi)  mi.duration="48m"
+        dash.start/end/eff="—"  dur.0="0m"  dur.60="1h 0m"  round.half(178.5)=179
+        round.inf=0  a11y summary built + omits efficiency on em-dash         18/18 PASS
+  [rm] Model + state machine compiled + EXECUTED on the macOS SDK (SwiftUI):
+        resolvePhase loading/noDrive=loading, loading/drive=content,
+        loaded/noDrive=empty, loaded/drive=content, empty=empty, failed=error;
+        model.phase=content, display.distance=100, start() telemetry-once
+        (startCount=1), refresh delegates (refreshCount=2)                    10/10 PASS
+  [ph] placeholder per-file scan of all 6 Swift files     > PLACEHOLDER_COUNT=0 each
+       forbidden-token grep (TODO/FIXME/XXX/Coming soon/placeholder/Lorem/not implemented)
+       across DriveHighlightSlide.*  > NONE FOUND
+
+=== CAPABILITY EVIDENCE (why the xcodebuild steps are BLOCKED) ===
+  $ xcode-select -p
+    /Library/Developer/CommandLineTools
+  $ xcodebuild ...
+    xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+    directory '/Library/Developer/CommandLineTools' is a command line tools instance
+  $ xcrun simctl list devices
+    xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web-source states (empty/content) + native states contract
+      (loading/error/stale/offline) — proven by previews + model execution.
+  [x] Hooks bind to the shared P1/S8 state-holder seam; no direct HTTP in the view.
+  [x] Every web i18n key has a matching key in the surface catalog (.strings).
+  [x] Accessibility labels on every interactive element (retry) + combined slide label.
+  [x] Tests: adapter unit tests + per-state model/phase tests + a11y tests (executed
+      for real on the macOS SDK; full XCTest run deferred to the macOS gate).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (scanned, 0).
+  [~] xcodebuild iOS+macOS build test — BLOCKED on this CLT-only runner (evidence above);
+      deferred to the P4 acceptance gate on a macOS+Xcode runner.
+
+=== CONCLUSION ===
+  The DriveHighlightSlide surface is code-complete, parity-faithful, and verified as far
+  as this runner allows: 0 swiftlint/swiftformat/placeholder issues on the surface, a real
+  macOS-15 SDK type-check of the full surface against the real shared component library
+  (0 errors), and live execution of the adapter + model logic with exact parity values.
+  The ONLY unmet gate steps are the Xcode-dependent `xcodebuild build test` runs, which
+  cannot execute on a Command-Line-Tools-only host. Per covenant rule 1 (no red-as-green)
+  these are reported BLOCKED with API evidence rather than asserted green.
+
+EXIT=1
+STATUS=BLOCKED

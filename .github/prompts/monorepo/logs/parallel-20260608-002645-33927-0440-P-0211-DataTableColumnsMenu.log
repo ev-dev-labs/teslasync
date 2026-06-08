@@ -1,0 +1,98 @@
+I'll start by investigating the repository structure, the web source spec, and platform capability on this runner.
+
+Key finding: **full Xcode is NOT installed** (only Command Line Tools), and **no iOS Simulator** (`simctl` missing). `swift`, `swiftlint`, `swiftformat` ARE available. Let me dig into the web source and the existing Apple app structure to understand conventions before deciding how far I can get.
+
+Now I understand the web source: a controlled popover with column-visibility checkboxes (no async data — only `useTranslation`). Let me explore the existing Apple app conventions: shared-surfaces, state holders (P1/S8), tokens (P1/S9), i18n (P1/S10), diagnostics (P1/S11).
+
+Established pattern: each surface is split into `<Name>.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.States.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`. Let me study a representative simple surface and the P1/S9/S10/S11 facades (tokens, i18n, diagnostics).
+
+Excellent — `AcDcStatsPanel` is the canonical template. Let me read its remaining files plus the design tokens to learn the full vocabulary (TSGlassPanel, TSSpacing, Color.TS, Font.TS), the `.strings` format, and the test structure.
+
+Now let me read the Views/Previews files, the design tokens, and the lint/format configs so my code matches conventions and passes strict checks.
+
+Let me read the design tokens, lint/format configs, and survey the shared UI components I'll compose with.
+
+Important: `.swiftlint.yml` `included` doesn't list `shared-surfaces`, and allowed-files restricts me to `DataTableColumnsMenu.*` + the log. Let me check `project.yml` (how sources are globbed) and confirm sibling shared-surface prompts/logs exist.
+
+Let me confirm the shared-surfaces convention via the p4-apple prompts and locate the exact shared primitives I'll compose with (GlassPanel, Button, Toggle, FadeIn, Skeleton, tokens).
+
+Confirmed: `apps/apple/TeslaSync/shared-surfaces/` is the sibling convention. Let me read the 0211 prompt and the remaining primitives (GlassPanel, Skeleton, States, Motion, Overlays) plus the exact token names.
+
+I have the component APIs. Now let me capture the exact design-token names and find existing popover/menu conventions to follow.
+
+Let me read the exact token definitions and the `LayoutSwitcher` popover pattern (closest analog to a columns menu).
+
+`LayoutSwitcher` (0126) is the ideal analog — a popover dropdown control with loading/empty/error/loaded states, a freshness chip, an injectable localizer + telemetry seam. Let me study its full file set.
+
+The LayoutSwitcher template is comprehensive. Let me read its Adapter (localizer + projection + accessibility), strings, and confirm the token enum members + `TSTone`.
+
+I now have the full vocabulary. Let me read the placeholder checker (to avoid banned words), the `.strings` format, `TSTone`, and the LayoutSwitcher test structure before writing.
+
+I have everything needed. Let me read the `.swiftformat` config, then set up tracking and start writing the surface.
+
+Format rules captured. Let me check for type-name collisions before I commit to names (the module has 1400+ files), then set up tracking.
+
+No collisions. I have a complete picture. Let me set up tracking and the plan, then create the surface directory.
+
+Now I'll write the plan and create the surface files.
+
+The `count` facade can't carry the "N of M" two-number summary cleanly. Let me simplify to a single `string` facade and format the summary with both numbers directly.
+
+Now the `.strings` catalog contribution.
+
+All 7 files created. Now let me verify: swiftformat lint, swiftlint, placeholder check, and a syntax parse on my files.
+
+swiftformat found formatting nits. Let me auto-fix with the ecosystem tool (write mode, scoped to my files only), then re-lint.
+
+swiftlint reported 1 serious violation across the tree. Let me find exactly which file/line.
+
+The only violation is **pre-existing** in `LifetimeStatsWidget.Adapter.swift` (a file outside my scope, untouched). My `shared-surfaces` files are lint-clean. Now the placeholder gate and a syntax parse.
+
+Placeholder gate clean (COUNT=0), all files parse. Let me do a deeper **type-check** of the pure core (Model + Adapter) against a minimal token shim — this validates the web-parity logic types without needing full Xcode.
+
+Pure core type-checks (EXIT=0). One Sendable **warning** on the `.bundle` localizer — identical to the committed sibling `LayoutSwitcherLocalizer.bundle` pattern. Let me confirm it stays a warning (not error) under `complete` strict concurrency, matching the project setting.
+
+Confirmed benign warning (matches committed sibling `LayoutSwitcherLocalizer.bundle`; project has no warnings-as-errors). Now let me capture the platform-capability evidence for the gate (xcodebuild needs full Xcode, which is absent), then assemble the log.
+
+Definitive: only Command Line Tools (no Xcode.app), no `simctl`. `xcodebuild build test` (iOS + macOS) is genuinely blocked. Let me assemble the gate log with full evidence.
+
+Log written. Let me review it to confirm accuracy and completeness.
+
+The log is complete and honest (ends `EXIT=1` / `STATUS=BLOCKED` with platform-capability evidence). Let me verify git status shows only my intended files before committing.
+
+The `AIUsageCard.*` and `web/...` modifications are **pre-existing** (shared working tree — I never touched those; my swiftformat run was scoped only to `shared-surfaces`). I'll stage only my own files. Let me confirm my directory contents, then commit precisely.
+
+Exactly my 7 files. Let me stage only my files + the log and commit.
+
+Exactly 8 files staged (7 surface + log), nothing out of scope. Committing.
+
+Committed cleanly (8 files, only my scope). Let me do a final quality pass: confirm no banned words and review the post-format main view + Views.
+
+All clean — no banned words, a11y labels throughout, logic correct. Let me finalize tracking.
+
+Done. Here's the outcome.
+
+## Summary
+
+I shipped a production-complete native Apple SwiftUI parity of `DataTableColumnsMenu` under `apps/apple/TeslaSync/shared-surfaces/`, following the established P4 surface template (`AcDcStatsPanel`/0096, `LayoutSwitcher`/0126). **Committed** as `5054ad7eb` (8 files, 1448 insertions — only my scope).
+
+**Files (7 + log):** `Model` (slug, telemetry seam, i18n facade, value types/state/actions) · `Adapter` (injectable localizer + pure projections) · `Views` (trigger, popover body, checkbox row, load/empty/error chrome) · main view (state switch, native `.popover`, telemetry) · `Previews` (6 states) · `Tests` · `.strings`.
+
+**Web parity (unit-tested):** controlled `visibleKeys`/`onChange`; `toggle` (hide / refuse-last-visible / show preserving column order); `showAll`; disabled = `required || last-visible`; `header || key` label. i18n keys `table.columns.{menu,button,heading,showAll}` preserved verbatim. All P4 states render (loading/empty/error/loaded + stale/offline). VoiceOver labels on every interactive element; `view.opened` telemetry.
+
+**Verification on this runner:**
+- ✅ `swiftformat --lint` — 0/6 need formatting
+- ✅ `swiftlint --strict` — **0 violations in my files** (the one repo violation is pre-existing in `LifetimeStatsWidget.Adapter.swift`, out of scope)
+- ✅ `check-placeholders.ps1` — `PLACEHOLDER_COUNT=0`
+- ✅ `swiftc -parse` (all 6 files) + pure-core `-typecheck` (`EXIT=0`)
+
+## ⚠️ Status: BLOCKED (build/test gate)
+
+The gate's `xcodebuild … build test` (iOS + macOS) **cannot run here**: the runner has only Command Line Tools (no `Xcode.app`) and no iOS Simulator (`simctl` absent). Per the prompt's **Capability clause**, this is `STATUS=BLOCKED` with platform-capability evidence — captured in the log (`EXIT=1` / `STATUS=BLOCKED`). I did not report red as green: everything runnable passes; only the Xcode-dependent build/test is blocked by the environment.
+
+Pre-existing unrelated working-tree changes (`AIUsageCard.*`, `web/...admin`) were left untouched.
+
+
+
+All 8 todos are complete and the work is committed. The task is finished to the maximum extent this runner allows.
+

@@ -1,0 +1,166 @@
+=== P4 Dashboard widget 0052 FSMDistributionWidget (Apple) ===
+Date: 2026-06-07
+Repo: ev-dev-labs/teslasync   Branch: auto/20260607-170817-98066/55
+
+--------------------------------------------------------------------------------
+TOOLCHAIN / CAPABILITY EVIDENCE (capability IS available on this runner)
+--------------------------------------------------------------------------------
+Xcode 26.5 Build version 17F42 (via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer)
+SDKs: iphoneos26.5 / iphonesimulator26.5 / macosx26.5  (>= prompt minimum iOS 18 / macOS 15)
+Simulator: iPhone 16 (83717DEE-70A3-4325-AA61-CBDDD3140989)
+SwiftUI + Swift Charts (SectorMark donut) + StringCatalog i18n: present and compiled.
+KMP Shared.xcframework assembled + staged:
+  apps/shared/gradlew :core:assembleSharedXCFramework -> BUILD SUCCESSFUL
+  staged -> apps/apple/Frameworks/Shared.xcframework (ios-arm64, ios-arm64-simulator, macos-arm64)
+xcodegen 2.45.4 generated TeslaSync.xcodeproj (FSMDistributionWidget files included; 30 refs).
+
+NOTE ON RUNNER LIMITATION (root cause of the two test-execution reds below):
+  The active global developer dir is CommandLineTools:
+    `xcode-select -p` => /Library/Developer/CommandLineTools
+  Switching it (`sudo xcode-select -s`) requires root; `sudo` is password-gated and
+  unavailable in this sandbox ("sudo: a password is required"). The CoreSimulator /
+  testmanagerd diagnostics subprocess therefore cannot resolve `xcrun simctl`
+  ("unable to find utility simctl"), which destabilizes the iOS-Simulator UI-test
+  harness. There is also no code-signing identity in this sandbox
+  (CODE_SIGNING_ALLOWED=NO), so host app-install for `platform=macOS` test launch fails.
+  These are runner limitations, not surface defects.
+
+--------------------------------------------------------------------------------
+GATE STEP 1 — iOS Simulator, full scheme (prompt gate, verbatim)
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+--------------------------------------------------------------------------------
+** BUILD SUCCEEDED **
+Test Suite 'FSMDistributionWidgetTests' passed   (25/25 cases)
+Test Suite 'TeslaSyncTests.xctest' passed        (Executed 280 tests, 1 skipped, 0 failures)
+** TEST FAILED **
+IOS_EXIT=65
+Failing tests (ALL in unrelated, pre-existing UI-test targets — NOT this surface):
+  AuthOnboardingUITests.testCancelledSignInReturnsToSignedOutShell()
+  LiveDataUITests.testLiveIndicatorAndContentAppear()
+  PushNotificationsUITests.testForegroundChargingPushShowsBannerThenDeepLinks()
+  PushNotificationsUITests.testRequestAuthorizationUpdatesStatus()
+Diagnostic surfaced during the run:
+  IDETestOperationsObserverDebug: Failure collecting diagnostics from simulator:
+  xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+Re-ran on a freshly `simctl erase`d iPhone 16 -> same unrelated UI tests crash the
+runner (deterministic environmental instability; the FSMDistribution surface is not
+referenced by any UI test or app navigation — it is an additive, not-yet-grid-wired
+surface, so it cannot affect these targets; the app + all 280 unit tests build & pass).
+
+--------------------------------------------------------------------------------
+GATE STEP 1b — iOS Simulator, SURFACE verification (deterministic, isolates this surface)
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' \
+             build test -only-testing:TeslaSyncTests
+--------------------------------------------------------------------------------
+** TEST SUCCEEDED **
+Test Suite 'FSMDistributionWidgetTests' passed (25/25)
+Test Suite 'TeslaSyncTests.xctest'   Executed 280 tests, 1 skipped, 0 failures
+IOS_UNIT_EXIT=0
+  Covers: adapter projection (cached JSON -> donut segments, web buildDonutData parity),
+  zero-total/empty handling, transitions decode + compact/standard slicing, duration &
+  percent formatting, semantic state-color map, freshness/status reducer (loading/empty/
+  error/offline/stale/content), registry metadata (id=fsm-distribution, 2x4 / 1x2 / 4x40),
+  per-state SwiftUI render (ImageRenderer) for every state in standard + compact,
+  a11y label builders, and the P1/S11 ScreenView ("screen_view", slug FSMDistributionWidget)
+  diagnostics emission.
+
+--------------------------------------------------------------------------------
+GATE STEP 2 — macOS app scheme
+  xcodebuild -scheme TeslaSync-macOS build test
+--------------------------------------------------------------------------------
+** BUILD SUCCEEDED **   (TeslaSync-macOS.app built; FSMDistributionWidget compiles for macOS 15+)
+MAC_EXIT=70
+xcodebuild: error: Could not find test host for TeslaSync-macOSTests:
+  TEST_HOST evaluates to ".../TeslaSync-macOS.app/Contents/MacOS/TeslaSync-macOS"
+ROOT CAUSE (pre-existing, NOT this surface): the macOS app target sets
+  PRODUCT_NAME=TeslaSync (project.yml) so its product is `TeslaSync.app`, but the
+  xcodegen-generated TEST_HOST for TeslaSync-macOSTests points at `TeslaSync-macOS.app`.
+  The app BUILDS; only the pre-existing test-host path mismatch blocks the test phase.
+  Fixing it requires editing apps/apple/project.yml (outside this prompt's allowed files
+  and unrelated to this surface).
+
+--------------------------------------------------------------------------------
+GATE STEP 2b — macOS via the authoritative CI invocation (.github/workflows/apps-apple.yml)
+  xcodebuild build -scheme TeslaSync -destination 'platform=macOS'
+  xcodebuild test  -scheme TeslaSync -destination 'platform=macOS'
+--------------------------------------------------------------------------------
+build:  ** BUILD SUCCEEDED **            MAC_CI_BUILD_EXIT=0
+test:   ** TEST FAILED **                MAC_CI_TEST_EXIT=65
+  IDELaunchReport: Unable to Install "io.teslasync.app"
+  (host app-install requires a signing identity; CODE_SIGNING_ALLOWED=NO in this sandbox.)
+  Compilation + linking of the app (incl. this surface) for platform=macOS succeeds.
+
+--------------------------------------------------------------------------------
+GATE STEP 3 — swiftlint --strict   (run from apps/apple, whole project)
+--------------------------------------------------------------------------------
+0 violations.
+LINT_EXIT=0
+
+--------------------------------------------------------------------------------
+GATE STEP 4 — swiftformat --lint apps/apple
+--------------------------------------------------------------------------------
+0/265 files require formatting, 3 files skipped.
+FORMAT_EXIT=0
+
+--------------------------------------------------------------------------------
+GATE STEP 5 — placeholder / stub gate (check-placeholders.ps1, swift)
+  Path: apps/apple/Sources/Dashboard/Widgets  +  Tests/Unit/Widgets/FSMDistributionWidget.Tests.swift
+  (surface shipped under Sources/Dashboard/Widgets/* — the project compiles Sources/**;
+   the prompt's idealized apps/apple/TeslaSync/dashboard-widgets/ path is not a real source root)
+--------------------------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+DELIVERED ARTIFACT (allowed-file basename glob FSMDistributionWidget.* honored)
+--------------------------------------------------------------------------------
+apps/apple/Sources/Dashboard/Widgets/FSMDistributionWidget.swift          (view: shell, header, donut, legend, transitions, compact)
+apps/apple/Sources/Dashboard/Widgets/FSMDistributionWidget.Model.swift    (@Observable model binding KMP FsmStore via StateHolderModel; ScreenView telemetry)
+apps/apple/Sources/Dashboard/Widgets/FSMDistributionWidget.Adapter.swift  (pure DTOs/projection/colors/format/reducer/registry — no Shared dep)
+apps/apple/Sources/Dashboard/Widgets/FSMDistributionWidget.Support.swift  (i18n facade, relative-time, a11y builders, loading/empty/error bodies)
+apps/apple/Tests/Unit/Widgets/FSMDistributionWidget.Tests.swift           (25 XCTest cases — adapter + per-state render + a11y + diagnostics)
+
+ACCEPTANCE CRITERIA
+  [x] Every state from the web source reproduced (loading/empty/error/stale/offline/content; compact + standard).
+  [x] Hooks bind to the shared P1/S8 state-holder (FsmStore.stats/.transitions via StateHolderModel + LoadableState); no HTTP in the view.
+  [x] Every i18n key from source resolves through the P1/S10 catalog
+      (translation.widget.fsmDistribution.{title,min,hr,noData,recentTransitions}); per-state
+      keys absent in source/catalog -> capitalized-state fallback, matching the web default.
+  [x] Accessibility labels on donut sectors, legend, transitions, compact, refresh, freshness chip.
+  [x] Tests: adapter unit (cached->projection) + per-state render + a11y label + ScreenView telemetry.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate = 0).
+  [x] Build SUCCEEDED on iOS + macOS; surface unit tests + lint + format + placeholder all EXIT=0.
+
+--------------------------------------------------------------------------------
+SUMMARY
+  Surface is COMPLETE and verified: builds on iOS AND macOS; its 25 tests pass within the
+  280-test unit suite (0 failures); swiftlint --strict, swiftformat --lint, and the
+  placeholder gate are all EXIT=0.
+  The prompt's full-scheme `build test` cannot reach a clean EXIT=0 on THIS runner due to
+  causes outside this surface and outside this prompt's allowed files:
+    (a) iOS-Simulator UI-test harness instability + `xcrun simctl` unresolvable because the
+        global xcode-select points at CommandLineTools and `sudo xcode-select -s` is not
+        permitted (no password) — affects only pre-existing Auth/Live/Push UI tests;
+    (b) pre-existing macOS TEST_HOST path mismatch (PRODUCT_NAME TeslaSync vs target
+        TeslaSync-macOS) in project.yml;
+    (c) no code-signing identity for host app-install on `platform=macOS`.
+  Per ADR-012 / apps/macos-pending-verifications.md, full Apple test execution is designed
+  to run on a `macos-latest` CI runner; all host-runnable gates for this surface are green.
+
+IOS_EXIT=65            (full scheme; reds are pre-existing UI tests, evidence above)
+IOS_UNIT_EXIT=0        (surface verification: build + TeslaSyncTests incl. 25 widget tests)
+MAC_BUILD=SUCCEEDED
+MAC_EXIT=70            (pre-existing TEST_HOST misconfig; app builds)
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+EXIT=65
+STATUS=BLOCKED
+  (Reason: full-scheme `xcodebuild build test` cannot reach EXIT=0 on this sandbox runner —
+   pre-existing/unrelated UI-test + project-config + code-signing limitations, NOT the
+   FSMDistributionWidget surface. The surface itself is fully implemented and every
+   host-runnable surface gate — iOS+macOS build, the 25 widget unit tests, swiftlint
+   --strict, swiftformat --lint, placeholder gate — is green. Defer full Apple test
+   execution to a macos-latest CI runner with a signing identity per apps-apple.yml.)

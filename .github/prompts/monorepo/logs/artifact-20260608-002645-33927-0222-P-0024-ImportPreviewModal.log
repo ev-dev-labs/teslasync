@@ -1,0 +1,58 @@
+=== P4 Modal / dialog 0024 ImportPreviewModal (Apple) ===
+run-utc=2026-06-08T10:52:36Z
+
+## CAPABILITY (prompt clause: requires full SwiftUI/Swift Charts/MapKit Xcode toolchain;
+## if unavailable on the runner -> STATUS=BLOCKED with API evidence)
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+-> xcodebuild is UNAVAILABLE (Command Line Tools only; no .xcodeproj toolchain, no iOS/macOS
+   simulators, no Preview/XCTest macro plugins). The gate's build+test steps cannot execute.
+
+## GATE STEP: iOS build test (xcodebuild -scheme TeslaSync -destination 'iPhone 16')
+IOS_EXIT=BLOCKED  # xcodebuild requires Xcode.app; not installed on this runner
+## GATE STEP: macOS build test (xcodebuild -scheme TeslaSync-macOS)
+MAC_EXIT=BLOCKED  # same capability block
+
+## GATE STEP: swiftlint --strict  (scoped to the shipped surface; whole-project run below)
+swiftlint 0.63.3
+modals-dialogs violations:
+  (none)
+LINT_EXIT=0  # 0 violations in ImportPreviewModal.* ; (0 found)
+  note: 1 PRE-EXISTING, unrelated violation exists project-wide in
+        TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift (not in scope, not edited).
+
+## GATE STEP: swiftformat --lint apps/apple (scoped to the shipped surface)
+  0/8 files require formatting.
+FORMAT_EXIT=0
+
+## GATE STEP: check-placeholders.ps1 -Path apps/apple/TeslaSync/modals-dialogs/ImportPreviewModal
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  EXIT=0
+PLACEHOLDER_EXIT=0
+
+## SUBSTITUTE VERIFICATION (best-effort on a CLT-only runner, since xcodebuild is blocked):
+##  - swiftc -typecheck -swift-version 6 -strict-concurrency=complete of all 6 source files
+##    against the REAL shared components (Tokens, Components/UI+Feedback+Motion, WidgetCatalog):
+    SWIFTC_TYPECHECK=0 (clean; macOS 15 target, SwiftUI present)
+##  - swiftc-built executable running ALL XCTest assertions via an in-module XCTest shim
+##    (adapter + projection + model + accessibility):
+    XCTEST_RUN: CHECKS=139 FAILURES=0  (ALL_XCTEST_ASSERTIONS_PASS)
+##  - #Preview macro expansion is the only Xcode-only bit (PreviewsMacros plugin absent under
+##    CLT) — identical limitation for every existing surface's *.Previews.swift.
+
+## ARTIFACTS (apps/apple/TeslaSync/modals-dialogs/):
+    ImportPreviewModal.Adapter.swift
+    ImportPreviewModal.AdapterTests.swift
+    ImportPreviewModal.Model.swift
+    ImportPreviewModal.Previews.swift
+    ImportPreviewModal.Projection.swift
+    ImportPreviewModal.strings
+    ImportPreviewModal.swift
+    ImportPreviewModal.Tests.swift
+    ImportPreviewModal.Views.swift
+
+EXIT=1
+STATUS=BLOCKED

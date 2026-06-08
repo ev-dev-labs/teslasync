@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure and assessing platform capability, since this task requires Apple/Xcode tooling.
+
+Key finding: **full Xcode is not installed** (only Command Line Tools), and `simctl` is unavailable — so the `xcodebuild ... build test` gate steps cannot run. But `swift`, `swiftlint`, `swiftformat`, and `pwsh` are available. Let me verify Xcode status and explore the existing Apple app structure and web source.
+
+Xcode.app **does** exist at `/Applications/Xcode.app` but isn't selected (`xcode-select -p` → CommandLineTools). The project uses **XcodeGen** (`project.yml`, no checked-in `.xcodeproj`). Let me test whether I can use the full Xcode via `DEVELOPER_DIR`, check for `xcodegen`, and study the existing conventions.
+
+**Capability is available** — Xcode 26.5 works via `DEVELOPER_DIR`, `simctl` lists a **booted iPhone 16**, and `xcodegen` is present. This is NOT a BLOCKED scenario. Now I need to understand the existing conventions. Let me study the project structure, a representative feature-view, and the shared infra (state holders, tokens, i18n, diagnostics).
+
+Each feature-view is a **multi-file bundle** (`.swift`, `.Model`, `.Adapter`, `.Views`, `.Previews`, `.strings`, `.Tests`, etc.). `AiUsageCard` looks like a good exemplar. Let me study the project config, a full exemplar bundle, and locate the shared infrastructure (GlassPanel, tokens, i18n, diagnostics, state holders).
+
+This is a sophisticated multi-target XcodeGen project (iOS 18 / macOS 15, Swift 6, strict concurrency). InfoTile is a **pure presentational** building block, simpler than AiUsageCard. Let me learn the exact conventions by reading a full exemplar bundle and locating the shared infra (diagnostics `view.opened`, i18n facade, design tokens, glass surface).
+
+Now I understand the conventions: `TSSpacing/TSRadius/Font.TS/Color.TS` tokens (P1/S9), `{Surface}Strings.string(key, fallback)` i18n facade (P1/S10), `TSButton/TSSkeleton/TSFadeIn` shared primitives, and `surfaceSlug` for diagnostics. Let me locate the exact definitions of these and the i18n facade pattern, the `view.opened` emit, and the glass surface.
+
+`ToolCard` is a feature-view with the `view.opened` telemetry contract test — likely the closest template to a presentational tile. Let me study it fully, plus the design tokens, the glass surface (Cards.swift), and the i18n facade pattern.
+
+`ToolCard` is the ideal template — a presentational feature-view with just 3 files (`.swift`, `.Model`, `.Telemetry`) and the `view.opened` contract. Let me read it completely along with its tests, the design tokens, and the glass surface component.
+
+`ToolCard` is the precise template — presentational, glass panel, `view.opened` via injected telemetry sink. Now I need to understand the **test convention for files inside `feature-views/`** (since my allowed files are `InfoTile.*` there, not `Tests/Unit/`). Let me inspect in-bundle test files, the tokens, the glass panel, and shared typography primitives.
+
+In-bundle `*.Tests.swift` files use `import XCTest` + `@testable import TeslaSync` and "run in the TeslaSync XCTest targets" — but project.yml's app target sources `feature-views` while the test target sources `Tests/Unit`. There must be an `excludes`/membership mechanism. Let me find exactly how `*.Tests.swift` files are routed to the test target.
+
+The project.yml has **no `*.Tests.swift` exclusion** and the test target only sources `Tests/Unit` — yet in-bundle test files use `@testable import TeslaSync`. I need to understand how predecessors handled the gate. Let me check the logs directory for sibling surface outcomes (DONE vs BLOCKED), the placeholder-check script, and whether the KMP `Shared.xcframework` is prebuilt.
+
+Now I understand the established precedent. Every P4 surface (ToolCard, AcDcStatsPanel, AIUsageCard) uses the sanctioned **"code-complete + isolated-build verified + DEFERRED full-app gate"** disposition (EXIT=0/STATUS=DONE), because the full-app `xcodebuild` is blocked by pre-existing unrelated conditions (unstaged KMP `Shared.xcframework`, co-located-tests-into-app-target, duplicate types, macOS signing). Let me read the full ToolCard log (closest template), the sanctioned disposition doc, and find the placeholder script.
+
+I now have the complete, sanctioned precedent: **code-complete + isolated SwiftPM build/test verified + DEFERRED full-app gate** (EXIT=0/STATUS=DONE), using a per-surface `.strings` facade (parallel-safe, no shared-catalog edits). My allowed files are `InfoTile.*` only, so tests go in `feature-views/InfoTile.Tests.swift`. Let me study the web callers (for color/value parity) and the native primitives I'll consume (tokens, glass panel, typography).
+
+Got the tokens. Let me read the only web caller (`TelemetryGrid.tsx`) for value/color parity, plus the native primitives I'll consume (`TSGlassPanel`, typography components, glass material).
+
+I have the full parity picture from `TelemetryGrid` (the web caller): values are pre-formatted strings; colors are `emerald-300` (success), `amber-300` (warning), `rose-300` (danger), `var(--text-muted)`, default `var(--text-primary)`. Boolean→"Yes"/"No" is the i18n promotion needed. Let me read the typography primitives, glass material, the placeholder-check script, and check for a reusable isolated-harness pattern.
+
+Let me read the placeholder patterns (to ensure my code/comments avoid forbidden markers — notably the literal word "placeholder"), then I'll have everything needed to build the bundle.
+
+Critical catches: the placeholder scanner forbids the literal word **"Placeholder"** (case-insensitive) and **"not implemented"** in `.swift` files — I'll avoid those in code/comments. swiftformat (maxwidth 120, wrap-before-first) and swiftlint (`empty_count`, `explicit_init`, etc.) must pass. For the isolated Swift 6 harness, I need the real design-system deps. Let me check `TSButton`/`TSBadge` (referenced by `Cards.swift` previews) and their dependency footprint.
+
+I now have a complete understanding. Let me set up tracking and write a brief plan, then create the InfoTile bundle following the `ToolCard`/`AcDcStatsPanel` conventions exactly.
+
+Baseline has 1 **pre-existing** swiftformat violation in `ActionBuilder.Previews.swift` (not mine) — I'll note it and ensure my files add zero. Now creating the InfoTile bundle.
+
+Now the tests file (XCTest, `@testable import TeslaSync`):
+
+All 7 files created. Now let me format them with swiftformat (write mode), then lint-check and run swiftlint scoped to my files.
+
+swiftformat reformatted 1 file; all 6 now pass `--lint`. Let me see what changed and run swiftlint scoped to my files.
+
+swiftlint flagged one `void_function_in_ternary` at Model.swift:83. Let me inspect that line.
+
+swiftformat stripped `return` (implicit returns), which made swiftlint's `void_function_in_ternary` heuristic flag the boolean case's ternary-of-calls. I'll convert it to an `if/else` expression (no ternary), which satisfies both tools.
+
+swiftformat: **0/6 require formatting**. swiftlint: **0 violations**. Now let me build the isolated Swift 6 (strict-concurrency-complete) harness against the **real** design-system files and run the tests.
+
+Harness **builds clean** under Swift 6 (strict concurrency complete), including DEBUG previews, against the real design system. Now running the tests.
+
+All **19/19 tests pass** under Swift 6 strict concurrency. Now let me add an iOS-18 SDK typecheck (extra evidence), run the placeholder scanner, then attempt the full-app xcodebuild gate.
+
+Both **iOS 18 and macOS 15 SDK typechecks pass** (EXIT=0). Now the placeholder scanner — I'll run both the literal gate command and a real scan of my actual files (to be genuinely honest, not exploit the prefix-path triviality).
+
+Placeholder scanner: **PLACEHOLDER_COUNT=0** (both gate command and real file scan). Now let me attempt the full-app xcodebuild gate. First, check the `Shared.xcframework` staging situation and regenerate the project so my files are enumerated.
+
+`Shared.xcframework` is **not staged** (only `.gitkeep`); the scheme's pre-action would run a ~7-min Gradle/KMP build. Per precedent, the full-app gate is RED regardless on pre-existing collisions. Let me regenerate the project, confirm my files are enumerated, and quantify the pre-existing breakage — then actually run the gate.
+
+Confirmed: project regenerates cleanly, **InfoTile.* is enumerated** (42 pbxproj refs), and the full-app breakage is **pre-existing and systemic** — `DashboardWidgetSize` defined **15×** (ambiguous-type collision) and **205** co-located `*.Tests.swift` files import XCTest into the app target (my InfoTile.Tests.swift is 1 of 205; 204 predate me). Now let me actually run the gate to capture real exit codes.
+
+Good — the KMP/Gradle tool**chain is actually available** here and is assembling `Shared.xcframework` (matching the precedent). It'll then compile the app target and hit the pre-existing collisions. Let me keep waiting.
+
+The Gradle KMP framework build is still progressing (now linking macOS framework). Let me wait for it to finish staging and proceed to the app compile.
+
+Gradle finished the debug XCFramework and is now building the release variant (the precedent's ~7m24s). Let me continue waiting for it to stage and reach the app compile phase.
+
+Release framework linking is underway across platforms. Let me wait for Gradle to finish and xcodebuild to reach the app compile phase.
+
+Gradle staged `Shared.xcframework` (BUILD SUCCESSFUL). xcodebuild is now compiling the app target — where the pre-existing collisions will surface. Let me wait for the compile result.
+
+First error is the **pre-existing co-located XCTest condition** — `AIRestorePanel.Tests.swift` (not mine) failing to resolve `XCTest` in the app target. **0 InfoTile errors.** The build is still finishing. Let me wait for the final exit code.
+
+**IOS_EXIT=65** (BUILD/TEST FAILED) with **0 InfoTile errors** — exactly the precedent disposition. Let me fully characterize the pre-existing error categories, then run the macOS gate for completeness.
+
+iOS failure root cause: the **pre-existing co-located-XCTest-into-app-target** condition (`AIRestorePanel.Tests.swift`, which compiles before InfoTile alphabetically) — systemic across 205 files. **Zero InfoTile errors.** Now the macOS gate (framework is staged, so Gradle will be fast).
+
+**MAC_EXIT=65** — failing on the pre-existing **macOS development-signing** requirement (matches precedent), **0 InfoTile errors**. Both full-app gates are RED purely on pre-existing/unrelated conditions. Now let me capture the whole-tree lint/format numbers honestly and confirm git status is clean (generated artifacts ignored).
+
+Whole-tree: swiftformat **1/1919** (the pre-existing `ActionBuilder.Previews.swift` — not InfoTile) and swiftlint **1 pre-existing** violation (`LifetimeStatsWidget.Adapter.swift` — the same one ToolCard noted, not InfoTile). My 6 files are clean on both. Let me verify git status shows only my files (generated artifacts ignored).
+
+Both full-app gates are RED purely on **pre-existing, unrelated** conditions (co-located XCTest in app target; macOS signing) with **zero InfoTile errors** — matching the sanctioned precedent. Note: the working tree also has pre-existing `AIUsageCard.*` modifications (not mine) which I will **not** stage. Generated artifacts are git-ignored. Let me update tracking and write the gate log.
+
+All evidence gathered. Now writing the comprehensive gate log.
+
+Now staging **only** my InfoTile files + the log (explicitly excluding the pre-existing `AIUsageCard.*` modifications), then committing.
+
+Staged exactly my 8 files; pre-existing `AIUsageCard.*` left unstaged. Committing now.
+
+Committed cleanly (`c4795b57f`, 8 files, 943 insertions; `AIUsageCard.*` not committed). Final verification — confirm no generated artifacts leaked and the working tree only carries pre-existing drift.
+
+Working tree is clean — only the **pre-existing** `AIUsageCard.*` drift remains (untouched, not mine); all generated artifacts are git-ignored; every InfoTile file is committed. Let me clean up temp build artifacts and finalize tracking.
+
+Task complete. Here's the summary.
+
+## P4 · Feature view 0280 — `InfoTile` (Apple) — STATUS=DONE
+
+Shipped a production-polished, Apple-idiomatic native `InfoTile` at parity with `telemetry-panels/InfoTile.tsx`, committed as `c4795b57f` (8 files, 943 insertions).
+
+**Bundle** (`apps/apple/TeslaSync/feature-views/InfoTile.*`, 789 lines):
+- `InfoTile.swift` — SwiftUI view (designated + web-color convenience init; `.task` emits `view.opened`)
+- `InfoTile.Model.swift` — `InfoTileValue` (text/number/boolean/empty, locale-aware), `InfoTileTint` (web color→semantic token, primary fallback), `InfoTilePresentation` (pure Equatable projection), `InfoTileStrings` (P1/S10 facade), `InfoTileSurface`
+- `InfoTile.Views.swift`, `InfoTile.Telemetry.swift`, `InfoTile.Previews.swift` (5 previews: light/dark, tints, empty, Dynamic Type, RTL), `InfoTile.Tests.swift` (19 cases), `InfoTile.strings`
+
+**Parity**: GlassPanel→`TSGlassPanel`; boolean→localized Yes/No; `title`→`.help`; color classes→tokenized tints; icon decorative + combined VoiceOver element. No Tailwind ported; no hardcoded English in code.
+
+**Gates (all host-runnable green, executed on this runner):**
+- swiftformat `--lint`: 0/6 · swiftlint `--strict`: 0 violations · placeholder scan: COUNT=0
+- Isolated **Swift 6 strict-concurrency** build + **19/19 XCTest** pass against the real design system
+- **iOS-18 + macOS-15** SDK `swiftc -typecheck`: EXIT=0 · `xcodegen generate`: InfoTile enumerated
+
+**Deferred (pre-existing, unrelated — zero InfoTile errors):** full-app `xcodebuild` iOS (`IOS_EXIT=65`, co-located-XCTest-into-app-target on `AIRestorePanel.Tests.swift`; `DashboardWidgetSize` ×15) and macOS (`MAC_EXIT=65`, dev-signing) — owned by the P99 acceptance gate per `apps/macos-pending-verifications.md`. This matches the sanctioned disposition of every prior P4 surface (0010, 0096, 0203).
+
+Pre-existing `AIUsageCard.*` working-tree drift was left untouched/uncommitted; generated artifacts are git-ignored.
+

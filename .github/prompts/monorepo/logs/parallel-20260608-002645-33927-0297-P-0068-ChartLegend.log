@@ -1,0 +1,130 @@
+I'll start by exploring the repository structure and reading the key files for this task.
+
+Let me read the web source and understand the established native pattern by examining existing feature-views.
+
+Let me check the Apple toolchain availability (critical for the honesty covenant) and read the canonical reference pattern (AIUsageCard).
+
+Key finding: `xcodebuild` requires full Xcode but only CommandLineTools is installed. `swift` 6.3.2, `swiftlint`, `swiftformat`, `xcodegen` ARE available. Let me dig into the reference pattern and shared infrastructure.
+
+Files are `AiUsageCard.*` (case-insensitive FS). Let me read the canonical reference pattern and the project config.
+
+Now I understand the multi-file pattern. Let me read the web source's dependencies and the rest of the reference implementation (Adapter, Projection, Views, Chrome, Previews, Tests) plus design tokens.
+
+Let me read the web context dependencies and the remaining reference files plus design tokens.
+
+Now I fully understand the web contract. Let me read the design tokens and remaining reference files to match conventions exactly.
+
+Let me read the Tokens.swift to get the full Color.TS / Font.TS / TSMotion definitions, and the remaining reference files.
+
+Let me read the remaining reference files (Chrome, Adapter, Previews, Tests, AdapterTests) to nail the conventions.
+
+Let me read the Previews and Tests reference files, and confirm shared component signatures (TSSkeleton, TSButton).
+
+I have the full pattern. Now let me verify toolchain capability (is full Xcode available anywhere?), shared component signatures, and the test/placeholder mechanics.
+
+`/Applications/Xcode.app` exists! The issue is just `xcode-select` pointing to CommandLineTools. I can override with `DEVELOPER_DIR` (no sudo needed). Let me verify this unblocks xcodebuild.
+
+This is a major unblock — **Xcode 26.5 is fully available** via `DEVELOPER_DIR`, with a booted iPhone 16 simulator and pwsh. Let me check the build dependencies (KMP xcframework) before committing to the full gate.
+
+Massive unblock confirmed: full Xcode 26.5 + booted iPhone 16 sim + pwsh all available. The full gate also needs a KMP Gradle build (heavy). Let me read the lint/format configs before writing, so my files pass cleanly.
+
+I now have everything needed. Let me set up tracking and create the surface. I'll mirror the AiUsageCard multi-file convention exactly.
+
+Now I'll write the surface files. Starting with the Adapter (pure Foundation core — DTOs, swatch, accessibility):
+
+Now the Model file (i18n facade, item type, connection, telemetry, input, resolved, source seam, observable model, in-memory source):
+
+Now the Projection (pure resolve with the passive-mode hidden rule and localized a11y):
+
+Now the Views file (swatch resolver, chip, wrapping flow layout, items view, empty state):
+
+Now the Chrome file (freshness chip, connectivity banner, refresh, loading skeleton chips, error):
+
+Now the main surface view:
+
+Now the i18n strings catalog:
+
+Now the Previews:
+
+Now the main Tests file (projection, model wiring, telemetry, toggle, freshness, a11y):
+
+Now the AdapterTests (cached → projection adapter coverage):
+
+All 10 files created. Let me update tracking and run formatting/lint verification.
+
+swiftformat passes (0/9 need formatting). The swiftlint error is in a **pre-existing** dashboard-widgets file, not mine. Let me isolate my files and check whether that violation is pre-existing baseline.
+
+My 9 Swift files: **0 violations, 0 serious**. The dashboard-widgets violation is pre-existing (commit b7fffb078, not mine). Now let me run the placeholder gate and survey dependencies for a standalone SDK typecheck.
+
+check-placeholders: **EXIT=0**. Dependencies are self-contained (none import the KMP `Shared` module). Let me do a standalone SDK typecheck of my production files against the real iOS 18 SDK + real shared components — strong proof the code compiles.
+
+Path fix — Tokens.swift is one level up. Let me correct and rerun.
+
+Errors are in an unrelated `DataDisplay/UnitFormatters.swift` (needs `UnitPreferences` from another dir) — not my code. Let me narrow to my surface's exact dependency closure.
+
+Only remaining error is a sibling `TSCardSkeleton` (which I don't use) needing `TSCard`. Let me locate the missing symbols and include the full component closure (excluding the one file needing out-of-scope `UnitPreferences`, or including its source).
+
+`UnitPreferences` lives in `SharedFacade` (KMP-coupled), so DataDisplay is out. But `TSCard` (Cards.swift) is just a sibling pulled in by `TSCardSkeleton`. Let me check Cards.swift is self-contained and add it.
+
+The component library is cross-referential. Let me try including the full UI+Feedback+Motion+Design closure (excluding the SharedFacade-coupled DataDisplay) for an honest real-dependency typecheck.
+
+The component library is heavily cross-referential, making partial standalone typecheck impractical. I have full Xcode — let me pursue the authoritative path. First, generate the project and inspect how tests/surfaces are wired.
+
+Project generated; KMP module exists (no prebuilt xcframework). The shared script references `apps/macos-pending-verifications.md` — let me read it (it likely defines the honest local-vs-CI verification contract) and check test target membership.
+
+This is decisive context. The repo has a documented methodology (`macos-pending-verifications.md`): prior P4-apple surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) hit the **same** wall — the full-app `xcodebuild build test` is blocked by **pre-existing, unrelated** parallel-merge collisions (`DashboardWidgetSize` redefined 15×, 100+ co-located `*.Tests.swift` importing XCTest into the app target, unstaged `Shared.xcframework`, macOS signing). The sanctioned per-surface proof is an **isolated SwiftPM build + tests + dual-SDK typecheck + swiftlint/swiftformat/placeholder**. Let me confirm those pre-existing collisions exist, then build my surface in isolation.
+
+Pre-existing blockers confirmed: `DashboardWidgetSize` ×15, **199** co-located test files in the app target — exactly the documented macOS-pending full-app blockers, entirely unrelated to ChartLegend. `TSSkeleton` is self-contained (lines 1–42). Let me build my surface in isolation (the sanctioned per-surface proof) via a throwaway SwiftPM package.
+
+Isolated build is green. Now run the tests:
+
+**27/27 tests pass, 0 failures** under Swift 6 strict concurrency. Now the dual-SDK typecheck (iOS 18 + macOS 15):
+
+Outstanding — the surface is **fully green in isolation**: build + 27/27 tests + iOS 18 + macOS 15 typechecks all pass. Now let me wire the new `shared-surfaces/` directory into the project so the files are actually part of the app build (mirroring `feature-views`), then confirm enumeration.
+
+Many shared-meaningful prompts target `shared-surfaces/`. Let me check whether the established pattern wires it into project.yml or expects it pre-wired.
+
+All sibling shared-surface prompts share the same narrow allowed-files (surface + log only), and `project.yml` lists neither `shared-surfaces` nor shared dirs — so wiring `shared-surfaces` is a P4-core infrastructure dependency, **not** this prompt's scope. I'll keep my commit to allowed files. But to gather honest integration evidence, let me **temporarily** wire it, prove xcodegen enumerates my 10 files + the app's only errors are pre-existing, then revert.
+
+All 10 files enumerate correctly. Now let me capture honest in-project compile evidence: build the app target directly (skipping the KMP scheme pre-action) to show ChartLegend has zero errors while the app has the documented pre-existing collisions. Time-boxed.
+
+While that builds, let me capture the tree-wide format/lint results (the gate runs these whole-tree). First swiftformat:
+
+The app build finished. Let me read its result while swiftformat continues.
+
+The app build stops immediately at the missing KMP `Shared.xcframework` (documented macOS-pending item #1, deferred to p5-hardening) — **0 ChartLegend errors**. Let me read the tree-wide swiftformat result.
+
+Tree-wide swiftformat: only **1/1922** pre-existing file (`ActionBuilder.Previews.swift`, not mine) needs formatting. Let me capture the whole-tree swiftlint count, then revert the temporary wiring.
+
+I have comprehensive evidence. My files have **0** lint violations; the tree's only violations are pre-existing (`LifetimeStatsWidget`, `ActionBuilder.Previews`) — unrelated to ChartLegend. Now let me revert the temporary wiring and clean build artifacts.
+
+Everything reverted cleanly; only my ChartLegend files + the pre-existing (unrelated) working-tree changes remain. Now let me write the honest gate log. First, let me confirm the exact working-tree state to scope my commit precisely.
+
+Working tree confirmed: only my `shared-surfaces/` is new; pre-existing modifications stay untouched. Now let me write the honest gate log.
+
+Now let me do final verification of my files and confirm the commit scope, then commit.
+
+All green. Committing exactly the 10 surface files + the log (leaving pre-existing changes untouched):
+
+Committed (`6cfa25ead`) with exactly the 10 surface files + log. Let me clean up temp artifacts and do a final repo-state check.
+
+The ChartLegend Apple shared surface is implemented, verified, and committed (`6cfa25ead`).
+
+## Summary
+
+Shipped a production-grade SwiftUI parity of `components/charts/ChartLegend.tsx` — the recharts `<Legend>` wrapper that toggles series visibility and persists the hidden set via `useChartHiddenSeries`. **10 files** under `apps/apple/TeslaSync/shared-surfaces/` following the established multi-file convention (view / Model / Adapter / Projection / Views / Chrome / Previews / Tests / AdapterTests / strings).
+
+**Parity reproduced:** toggleable chips with dim + strike-through when hidden, passive mode (`resolved == null` → no dim, no tap), colour swatches via shared palette tokens, wrapping flow layout with `align` support. **States:** loading / empty / error / data + the orthogonal live/stale/offline axis (freshness chip + banner + one-shot stale auto-refresh). Full i18n (0 English literals in Swift), VoiceOver labels/values mirroring `aria-pressed`, `view.opened` telemetry, bound through a P1/S8 state-holder seam (no HTTP in the view).
+
+**Verification — every host-runnable gate GREEN:**
+- swiftformat `--lint`: 0/9 · swiftlint `--strict`: 0 violations/9 files · check-placeholders: 0
+- Isolated SwiftPM build + **27/27 tests pass** under Swift 6 strict concurrency
+- **iOS 18 + macOS 15** `swiftc -typecheck`: 0 errors
+- xcodegen enumerates all 10 files when `shared-surfaces` is wired (temporarily verified, reverted — that wiring is a P4-core infra dependency outside this prompt's allowed files)
+
+**Full-app `xcodebuild build test`: BLOCKED / macOS-pending** for four documented, ChartLegend-*unrelated* reasons — KMP `Shared.xcframework` deferred (macOS-pending row 1), `shared-surfaces` wiring is P4-core's job, pre-existing merge collisions (`DashboardWidgetSize`×15, 199 co-located XCTest files), and absent signing. **0 ChartLegend errors/violations** anywhere. Deferred to `p4-apple/P99-0001-apple-acceptance-gate`.
+
+Per the honesty covenant, the log records the real non-zero gate result: **`EXIT=65` / `STATUS=BLOCKED`** — the surface itself is complete and verified to the maximum extent possible on this host. project.yml and all pre-existing changes were left untouched; commit scoped to the allowed files + log.
+
+
+

@@ -1,0 +1,162 @@
+=== P4 Modal / dialog 0005 JobProgressDrawer (Apple) ===
+date: 2026-06-08T07:53:01Z
+host: Darwin 25.5.0 arm64
+artifact: apps/apple/TeslaSync/modals-dialogs/JobProgressDrawer.*
+
+############################################################
+# SECTION A — Runner capability probe (BLOCKED evidence)   #
+############################################################
+--- swift toolchain ---
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+Target: arm64-apple-macosx26.0
+--- xcodebuild (required by the gate) ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+--- iOS Simulator SDK (required: 'platform=iOS Simulator,name=iPhone 16') ---
+xcrun: error: SDK "iphonesimulator" cannot be located
+xcrun: error: SDK "iphonesimulator" cannot be located
+xcrun: error: unable to lookup item 'Path' in SDK 'iphonesimulator'
+--- macOS SDK (present) ---
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+--- XCTest module availability ---
+/tmp/_xc.swift:1:8: error: no such module 'XCTest'
+1 | import XCTest
+  |        `- error: no such module 'XCTest'
+--- xcodegen (project.yml -> .xcodeproj generator) ---
+Version: 2.45.4
+--- swiftlint / swiftformat / pwsh ---
+0.63.3
+0.61.1
+PowerShell 7.6.2
+
+VERDICT(A): xcodebuild requires a full Xcode (only CommandLineTools is active),
+            the iphonesimulator SDK is absent, and the XCTest module is not in the CLT SDK.
+            => the gate's 'xcodebuild ... build test' steps cannot run on this runner.
+
+############################################################
+# SECTION B — Gate steps (as specified in the prompt)      #
+############################################################
+--- [gate 1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=BLOCKED (xcodebuild exited non-zero — 'tool xcodebuild requires Xcode'; no iphonesimulator SDK; see SECTION A)
+
+--- [gate 2] xcodebuild -scheme TeslaSync-macOS build test ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=BLOCKED (xcodebuild exited non-zero — 'tool xcodebuild requires Xcode'; .xcodeproj is XcodeGen-generated, absent; see SECTION A)
+
+--- [gate 3] swiftlint --strict (surface files; dir not yet in .swiftlint included:, run explicitly) ---
+Done linting! Found 0 violations, 0 serious in 10 files.
+LINT_EXIT=0
+
+--- [gate 4] swiftformat --lint apps/apple/TeslaSync/modals-dialogs ---
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-437/apps/apple/.swiftformat
+SwiftFormat completed in 2.82s.
+0/10 files require formatting.
+FORMAT_EXIT=0
+
+--- [gate 5] check-placeholders.ps1 (run against the real dir so files are actually scanned) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+############################################################
+# SECTION C — Alternative verification (runnable on CLT)   #
+#   Compensating for the Xcode-blocked build/test steps.   #
+############################################################
+--- [C1] swiftc -typecheck of all real (non-preview) sources vs the macOS 15 SDK, Swift 6 strict concurrency ---
+TYPECHECK_REAL_EXIT=0
+
+--- [C2] swiftc -parse of the preview + test sources (#Preview macro plugin + XCTest are Xcode-only) ---
+  parse OK: JobProgressDrawer.Previews.swift
+  parse OK: JobProgressDrawer.Tests.swift
+  parse OK: JobProgressDrawer.ModelTests.swift
+
+--- [C3] swiftc -typecheck of the TEST LOGIC against the real types (local XCTest shim; single-module) ---
+         (verifies every assertion uses a real method/label/enum-case — beyond mere -parse)
+TYPECHECK_TESTLOGIC_EXIT=0
+
+--- [C4] Native runtime execution of the PURE logic (adapter + projection) — web-parity outputs ---
+  [PASS] formatBytes(512): 512 B
+  [PASS] formatBytes(1536): 1.5 KB
+  [PASS] formatBytes(2_411_000): 2.3 MB
+  [PASS] formatBytes(3GB,2dp): 3.00 GB
+  [PASS] formatBytes(nil): —
+  [PASS] formatBytes(0,zeroAsEmpty): —
+  [PASS] relative(30s): just now
+  [PASS] relative(1800s): 30m ago
+  [PASS] display: open
+  [PASS] phase: data
+  [PASS] activeIDs: ["p", "q"]
+  [PASS] recentIDs: ["r", "f"]
+  [PASS] activePill: 2 active
+  [PASS] minimizedLabel: 2 export running
+  [PASS] active[0].detail: Processing · started just now
+  [PASS] recent[0].detail: 2.3 MB · 30m ago
+  [PASS] recent[0].downloadPath: /api/v1/export/jobs/r/download
+  [PASS] recent[0].downloadURL: https://teslasync.local/api/v1/export/jobs/r/download
+  [PASS] recent[0].a11y: Charging, Ready. 2.3 MB · 30m ago
+  [PASS] minimized.recent-only label: Exports
+  [PASS] minimized+empty -> withdrawn: withdrawn
+RUNTIME_EXIT=0
+
+--- [C5] i18n parity: every web t() key resolves in the native JobProgressDrawer.strings catalog ---
+  web_keys=28 missing=0
+I18N_MISSING=0
+
+############################################################
+# SECTION D — Artifact inventory + acceptance mapping      #
+############################################################
+Files (apps/apple/TeslaSync/modals-dialogs/):
+  JobProgressDrawer.Adapter.swift                269 lines
+  JobProgressDrawer.Chrome.swift                 148 lines
+  JobProgressDrawer.Model.swift                  261 lines
+  JobProgressDrawer.ModelTests.swift             201 lines
+  JobProgressDrawer.Previews.swift               152 lines
+  JobProgressDrawer.Projection.swift             210 lines
+  JobProgressDrawer.State.swift                  276 lines
+  JobProgressDrawer.strings                       69 lines
+  JobProgressDrawer.swift                        181 lines
+  JobProgressDrawer.Tests.swift                  306 lines
+  JobProgressDrawer.Views.swift                  248 lines
+
+Acceptance criteria:
+  [x] Renders all web states: minimized chip / open panel; loading / empty / error / data;
+      + P4 leaf freshness (live / stale / offline) chip + banner + one-shot stale auto-refresh.
+  [x] Hooks bind via the P1/S8 state-holder seam (JobProgressSource -> JobProgressDrawerModel);
+      no direct HTTP in the view (web useExportJobs / useTranslation mapped).
+  [x] Every web i18n key present in P1/S10 catalog (SECTION C5: I18N_MISSING=0).
+  [x] Accessibility: VoiceOver labels on every interactive element (chip, refresh, minimize,
+      dismiss, download, rows), Dynamic Type fonts, Reduce-Motion-aware spin, .isModal panel,
+      macOS Esc-to-minimize.
+  [x] Tests: adapter + projection (JobProgressDrawer.Tests.swift) + state-holder + a11y
+      (JobProgressDrawer.ModelTests.swift); per-state previews (JobProgressDrawer.Previews.swift).
+  [x] No TODO/stub/mock/placeholder/Lorem (SECTION B gate 5: PLACEHOLDER_COUNT=0).
+  [~] EXIT=0 / STATUS=DONE — BLOCKED on the xcodebuild build/test steps (no Xcode toolchain on
+      this runner; SECTION A). All other gate steps + compensating checks are green.
+
+############################################################
+# SUMMARY                                                  #
+############################################################
+Gate steps:
+  IOS_EXIT          = BLOCKED (xcodebuild requires Xcode; no iphonesimulator SDK)
+  MAC_EXIT          = BLOCKED (xcodebuild requires Xcode; .xcodeproj is XcodeGen-generated)
+  LINT_EXIT         = 0  (swiftlint --strict, 10 files, 0 violations)
+  FORMAT_EXIT       = 0  (swiftformat --lint, 0 files require formatting)
+  PLACEHOLDER_EXIT  = 0  (0 placeholders)
+Compensating checks (Xcode-independent):
+  TYPECHECK_REAL    = 0  (all real sources, macOS 15 SDK, Swift 6 strict concurrency)
+  TYPECHECK_TESTS   = 0  (test logic vs real types, XCTest shim)
+  RUNTIME_PARITY    = 0  (pure adapter+projection outputs match the web byte/relative/row strings)
+  PARSE_PREVIEWS    = OK (Previews/Tests/ModelTests parse; #Preview + XCTest are Xcode-only)
+  I18N_MISSING      = 0  (28/28 web keys covered)
+
+BLOCKED REASON (verbatim capability): the active developer dir is
+  /Library/Developer/CommandLineTools (not a full Xcode), so 'xcodebuild' errors out, the
+  iphonesimulator SDK is not installed, and the XCTest module is absent from the CLT SDK.
+  The prompt's capability clause: 'If unavailable on the runner -> STATUS=BLOCKED with API
+  evidence.' The surface is code-complete and green on every check that does not require Xcode;
+  re-running the gate verbatim on an Xcode runner (iPhone 16 sim + macOS) is the only remaining
+  step.
+
+EXIT=1
+STATUS=BLOCKED

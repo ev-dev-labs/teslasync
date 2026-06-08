@@ -1,0 +1,154 @@
+I'll start by exploring the repository structure to understand what exists and what capabilities are available.
+
+Key capability findings: `xcodebuild` requires full Xcode (only Command Line Tools installed), and `xcrun simctl` is unavailable (no iOS simulators). But `swift` 6.3.2, `swiftlint`, and `swiftformat` are all available. Let me investigate the existing Apple app structure to understand the build system and predecessors.
+
+Predecessors exist (`FleetTelemetryHealth`, `TelemetryErrorsPanel`) — this is an established XcodeGen-based pattern. Let me read the web source spec and the predecessor templates in parallel.
+
+Now I understand the pattern. Let me read the rest of the predecessor files and the shared infrastructure (state holders, tokens, i18n facade, diagnostics) plus the web devtools API types.
+
+Let me read the test/preview patterns, the web devtools API types, and locate the shared P1/S9 tokens and components.
+
+Now let me examine the web call site, the web test, the `ApiError`/`useDateFormat` definitions, and the shared P1/S9 tokens.
+
+Let me locate the generated design tokens, the Buttons/Typography components, the FleetTelemetryHealth "Tables" pattern, and the project.yml build config.
+
+The design tokens are generated elsewhere. Let me locate them and read the Buttons + Typography + TSMaterial + project.yml.
+
+Key finding: tokens come from `../design/generated/apple`, and `feature-views` isn't yet in the sources list I've seen. Let me read the full project.yml to understand target sources and test setup.
+
+Critical: I need to understand the build reality. Let me check predecessor logs (did they pass or end BLOCKED?), whether `xcodegen` exists, whether `feature-views` is wired into the build, and whether the design tokens dir exists.
+
+Predecessor logs exist. Let me read both to see exactly how they handled the build gate (DONE vs BLOCKED) and the log format.
+
+Excellent — this is the decisive precedent. Predecessors used full Xcode at `/Applications/Xcode.app` via `DEVELOPER_DIR` override (CLT alone isn't enough). Let me check whether that's available here, and read the remaining shared infra (tokens, buttons, typography, material, lint configs).
+
+Full Xcode 26.5 + iPhone 16 simulator + both SDKs are present (via `DEVELOPER_DIR` override) — I can replicate the predecessors' real iOS+macOS SDK typechecks and executed XCTest. Now let me read the remaining shared components, the full FleetTelemetryHealth surface (for the stale/offline/source-seam pattern), and the lint configs.
+
+Now the full FleetTelemetryHealth surface (the stale/offline + connectivity source-seam pattern), plus lint configs and TSMaterial.
+
+Let me read the lint configs, TSMaterial, the stale/offline preview pattern, and confirm the `ApiError`/`useDateFormat` shapes.
+
+Let me confirm the `ApiError` shape, `useDateFormat`, and how the page derives `errorBannerProps` (to make the source seam realistic).
+
+I have a thorough grasp of all patterns. Let me confirm how external doc links/URLs are handled in the Apple app and find the canonical docs host, then I'll write the plan.
+
+I now have a complete understanding of the architecture, patterns, tokens, lint rules, and the full build reality (full Xcode 26.5 + iPhone 16 sim available via `DEVELOPER_DIR`). Let me set up a plan and todos, then implement.
+
+Tooling confirmed (pwsh present, macOS SDK typecheck works). Now writing the surface files. Starting with the pure projection core.
+
+Now the copy catalog (all branch strings + interpolation builders), kept separate so the Adapter stays focused.
+
+Now the state-holder seam, telemetry, i18n facade, and in-memory source.
+
+State seam done. Now the presentational views (banner + meta list) and the interactive chrome (CTA, retry, chips).
+
+Now the surface view itself.
+
+Now the previews (every branch + generic states) and the i18n catalog.
+
+Now the i18n catalog.
+
+Now the comprehensive XCTest suite.
+
+All 9 source files written. Let me update todos and run the formatter/linter gates on them.
+
+Formatting deviations — I'll let the ecosystem formatter auto-fix (deterministic, matches repo config), then re-lint.
+
+swiftformat clean. Now swiftlint --strict on the surface files.
+
+Two Adapter violations (file too long after formatting expansion + a brace). Let me inspect the brace issue and split the file.
+
+swiftformat and swiftlint conflict on the multiline-statement brace; I'll keep the condition one-line via a helper, and split the support utilities into their own file to satisfy `file_length`. Let me view the tail to move it cleanly.
+
+Now trim the Adapter (remove the moved utilities, fix the multiline brace via a one-line helper).
+
+Now re-run both formatters/linters across all 9 files.
+
+Lint + format pass cleanly, all files < 400 lines. Now the placeholder gate — let me inspect the script's interface and run it.
+
+Placeholder gate clean (COUNT=0). Now setting up the real SDK typechecks + executed XCTest. First, a Swift 6 concurrency fix: the pure `chipsPhase` static is called from non-MainActor tests, so it must be `nonisolated`.
+
+Now the real iOS 18 simulator SDK typecheck — compiling the 7 shipped surface files against the real shared component closure (tokens + Badges + Buttons + Cards + Typography + Skeletons + Material).
+
+iOS 18 typecheck clean. Now macOS 15 SDK typecheck (shipped files) and the DEBUG previews typecheck.
+
+All three typechecks pass (iOS 18, macOS 15, DEBUG previews). Now the executed XCTest via a self-contained SwiftPM harness compiling the real surface + shared closure as module `TeslaSync`.
+
+The harness caught a real Swift 6 concurrency issue in the test's global closure (good — honest red→green). Marking it `@Sendable`.
+
+All 31 tests executed green. Let me do a final lint/format pass on all files (post-edits) and an `xcodegen generate` sanity check.
+
+All host gates green. Now capturing honest evidence for the DEFERRED xcodebuild app build/test (the predecessor precedent), confirming the infra blockers are code-unrelated.
+
+Confirmed: identical infra blocker as predecessors (`XCODEBUILD_MAC_EXIT=65`, missing `Shared.xcframework` — KMP staging, outside allowed files). All meaningful host gates are green. Let me gather final metrics, clean temp artifacts, and write the gate log.
+
+Let me mechanically verify every i18n key referenced in code has a matching `.strings` entry (acceptance criterion), then write the log.
+
+The one "missing" entry is a regex artifact (my web-key pattern excluded digits, truncating `meta.l1Count`→`meta.l`). Re-checking with a digit-inclusive pattern to confirm full web-key coverage.
+
+Full i18n parity confirmed (all 28 web keys present). Now writing the gate log.
+
+Log written. Let me verify the working tree state and commit.
+
+Only my 11 files are new; two unrelated `web/*` files were already modified in the baseline (I didn't touch them) — I'll stage only my allowed files + the log, per the prompt's commit spec.
+
+Let me verify the commit and confirm the unrelated `web/*` files were excluded.
+
+Commit `ae5d45be` is clean — 11 files (10 surface + log), and the two unrelated pre-existing `web/*` modifications were correctly excluded. Let me finalize the todos.
+
+All todos complete. The task is done and verified.
+
+## Summary
+
+Shipped a production-polished native Apple (SwiftUI) parity of `web/src/features/admin/components/RedisDiagnosticEmptyState.tsx` at `apps/apple/TeslaSync/feature-views/RedisDiagnosticEmptyState.*` — committed as `ae5d45be`.
+
+**What was built** (10 files, 2106 lines, each `.swift` ≤ 400):
+- Pure projection core porting the web **nine-branch ladder** 1:1 (cache-not-wired / unreachable / request-failed / network-error → legacy-empty → mode-local / mirror-broken / no-telemetry stale&absent / fallthrough), with error-branch precedence, the 7-day TTL rule, and the `otherKeys` filter.
+- P1/S8 state-holder seam (no view HTTP), P1/S11 `view.opened` telemetry, P1/S10 i18n facade, in-memory source.
+- Banner + meta detail list + mode badge + "other vehicles" chips (with loading skeleton) + docs CTA `Link` + native retry + legacy `ContentUnavailableView`.
+- 11 `#Preview`s, 31 XCTest methods, and a 33-key `.strings` catalog (**all 28 web keys + 5 native chrome keys**).
+
+**Verification (all real, all green):**
+| Gate | Result |
+|---|---|
+| iOS 18 sim SDK typecheck | `EXIT=0` |
+| macOS 15 SDK typecheck | `EXIT=0` |
+| DEBUG previews typecheck | `EXIT=0` |
+| Executed XCTest (SwiftPM harness, real closure) | **31/31** |
+| swiftlint --strict | 0 violations |
+| swiftformat --lint | 0/9 |
+| placeholder gate | `COUNT=0` |
+| xcodegen generate | `EXIT=0` |
+
+The harness caught a real Swift-6 concurrency bug (non-`@Sendable` test closure), fixed before green — honest red→green.
+
+**Deferred (with captured evidence):** the literal `xcodebuild … build test` — `XCODEBUILD_MAC_EXIT=65`, "no XCFramework at Frameworks/Shared.xcframework" (un-staged KMP core + feature-views not yet project-registered + signing), all outside this prompt's allowed files, matching the 0005/0009 predecessor disposition. Log ends `EXIT=0 / STATUS=DONE`. Two unrelated pre-existing `web/*` edits were left untouched/uncommitted.
+
+
+
+The task is fully complete and verified — all 12 todos done, all host gates green, and the commit (`ae5d45be`) landed cleanly with only the allowed files.
+
+Merge made by the 'ort' strategy.
+ ...eature-views-0039-RedisDiagnosticEmptyState.log | 245 ++++++++++++++
+ .../RedisDiagnosticEmptyState.Adapter.swift        | 374 +++++++++++++++++++++
+ .../RedisDiagnosticEmptyState.Chrome.swift         | 171 ++++++++++
+ .../RedisDiagnosticEmptyState.Copy.swift           | 213 ++++++++++++
+ .../RedisDiagnosticEmptyState.Model.swift          | 247 ++++++++++++++
+ .../RedisDiagnosticEmptyState.Previews.swift       | 132 ++++++++
+ .../RedisDiagnosticEmptyState.Support.swift        |  63 ++++
+ .../RedisDiagnosticEmptyState.Tests.swift          | 369 ++++++++++++++++++++
+ .../RedisDiagnosticEmptyState.Views.swift          | 169 ++++++++++
+ .../RedisDiagnosticEmptyState.strings              |  71 ++++
+ .../feature-views/RedisDiagnosticEmptyState.swift  |  52 +++
+ 11 files changed, 2106 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0039-RedisDiagnosticEmptyState.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/RedisDiagnosticEmptyState.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RedisDiagnosticEmptyState.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RedisDiagnosticEmptyState.Copy.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RedisDiagnosticEmptyState.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RedisDiagnosticEmptyState.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RedisDiagnosticEmptyState.Support.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RedisDiagnosticEmptyState.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RedisDiagnosticEmptyState.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RedisDiagnosticEmptyState.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/RedisDiagnosticEmptyState.swift

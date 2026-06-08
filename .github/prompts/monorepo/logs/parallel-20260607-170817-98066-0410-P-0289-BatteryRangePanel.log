@@ -1,0 +1,49 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Toolchain note: `swiftlint`, `swiftformat`, and `swift` 6.3.2 are present, but `xcodebuild` requires full Xcode (only CommandLineTools is active). Let me explore the Apple app structure and read the web source.
+
+There's already a `feature-views` directory. Let me explore existing native patterns and the supporting infrastructure (state holders, tokens, i18n, diagnostics).
+
+Each surface follows a 7-file convention: `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`. Let me find sibling vehicle-detail panels already ported (most relevant templates) and study the shared infrastructure.
+
+No vehicle-detail siblings ported yet — this is the first. `HeroGauges` uses RadialGauge, so it's the closest template. Let me read its full set and locate the shared P1 infrastructure (state holders, tokens, i18n, diagnostics).
+
+This `HeroGauges` set is the ideal template — gauge-based, full state machine, tokens, i18n facade, telemetry seam. Let me read the rest of its files plus the shared components it references (gauge, glass panel, tokens, metric card), and the web `VehicleState`/`useUnits`.
+
+Now let me read the remaining HeroGauges files (Previews, strings, Tests) and locate the shared design system (tokens + components) plus the web-side `VehicleState`, `useUnits`, `MetricCard`, `RadialGauge`.
+
+I have the full template pattern. Now let me read the web-side contracts (VehicleState, useUnits, RadialGauge, MetricCard) and the native shared design system (tokens + components) to build with exact parity.
+
+Now let me read the exact `formatDistance`/`fmtNumber` web implementations (for numeric parity) and the native design tokens + components I'll compose with.
+
+I need the exact distance formatting helpers for numeric parity. Let me read them plus the native design tokens and shared components.
+
+Need the `DEFAULT_PRECISION.distance` value and the correct native `Sources` path. Let me pin both.
+
+Native sources live at `apps/apple/Sources/` with the feature-views at `apps/apple/TeslaSync/feature-views/`. Let me read `project.yml`, the design tokens, and the shared components (TSGlassPanel, TSEmptyState, TSSkeleton, Font.TS).
+
+The `Color.TS` palette is generated. Let me locate the generated tokens and the design/component definitions.
+
+All design tokens captured. Now let me read the shared components (`TSGlassPanel`, `TSEmptyState`, `TSSkeleton`), check for a shared metric card, and read `project.yml` to confirm target/test/strings wiring.
+
+A shared native metrics component exists. Let me read it, plus `TSEmptyState`, `TSSkeleton`, and the localization wiring.
+
+Excellent — shared atoms exist. Let me read the typography atoms (`TSMetricLabel`, `TSMetricValue`, `TSCaption`, `TSIconBox`, `TSTone`) and the `project.yml` to confirm target/test/strings wiring before I write code.
+
+Now let me check the logs directory (to match the established log format and see how sibling surfaces handled toolchain capability), the Localization wiring, and whether `pwsh`/placeholder-checker exist.
+
+`pwsh` and the placeholder checker are available. Let me read a sibling feature-view log (especially HeroGauges 0143) to mirror the exact log format and see how the toolchain/STATUS was handled, plus the placeholder checker.
+
+The sibling logs reveal the established methodology (including an isolated SwiftPM harness for build+test). Let me read the closest analog's full log (HeroGauges 0143) and check whether a full Xcode is present on this runner.
+
+**Key finding:** `/Applications/Xcode.app` IS present — the default `xcode-select` points at CommandLineTools, but I can override `DEVELOPER_DIR` non-destructively (exactly the established sibling methodology). This means I'm **not** capability-blocked. Let me confirm the override works and read the lint configs.
+
+Capability confirmed (Xcode 26.5, iOS 26.5 sim w/ iPhone 16 booted, macOS SDK). `.swiftlint.yml` already includes `feature-views`; configs read. This matches the **HeroGauges 0143** precedent exactly — I'll follow that 7-file, zero-shared-edit convention. Let me check the canonical i18n English for the parity keys, then start building.
+
+Canonical English matches the inline fallbacks exactly. I have everything needed. Let me set up tracking and start building the 7-file surface.
+
+Now writing the SwiftUI-free core. Starting with the Model (state-holder + telemetry + i18n seams).
+
+Now the Adapter — the pure projection core porting the web numeric pipeline verbatim.
+
+Now the SwiftUI presentational chrome (Views), mapping accents to tokens and reproducing the gauge + metric cards.

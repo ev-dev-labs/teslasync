@@ -1,0 +1,183 @@
+=== P4 Shared surface 0021 AIInboxAutoCategorization (Apple) ===
+
+Surface: AIInboxAutoCategorization  (registry id `inbox-auto-categorization`)
+Web source: web/src/components/ai/AIInboxAutoCategorization.tsx (reproduced end-to-end)
+Native output: apps/apple/TeslaSync/shared-surfaces/AIInboxAutoCategorization.*
+Date: 2026-06-08
+
+------------------------------------------------------------
+CAPABILITY VERIFICATION (runner)
+------------------------------------------------------------
+- Full Xcode present: /Applications/Xcode.app -> Xcode 26.5 (Build 17F42)
+  (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is driven via
+   DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer)
+- SDKs: iphonesimulator26.5 / macosx26.5 (backward-compatible with the project's iOS 18.0 /
+  macOS 15.0 deployment targets). SwiftUI + Swift Charts + MapKit available.
+- Simulators: iPhone 16 (booted) on iOS 26.5 runtime.
+- Toolchain: xcodegen 2.x, swiftlint, swiftformat, pwsh present. swift 6.3.2 standalone.
+- KMP shared core: Java 17 + ~/.konan kotlin-native-prebuilt 2.4.0 + warm ~/.gradle.
+  Shared.xcframework assembled (Gradle :core:assembleSharedXCFramework BUILD SUCCESSFUL,
+  16m08s cold) and staged to apps/apple/Frameworks/Shared.xcframework.
+  => Native Apple capability is AVAILABLE on this runner.
+
+NOTE ON XCTest: this runner's swift toolchain ships WITHOUT XCTest for standalone
+`swiftc`/`swift test` (CLT SDK), so the per-surface XCTest suite cannot be executed by a
+bare `swift test`. It compiles + runs inside the Xcode app targets (where XCTest resolves).
+To independently EXECUTE the suite's assertions on this runner, an equivalent standalone
+assertion harness (same cases, no XCTest dependency) was compiled from the REAL
+Adapter+Model and run (see VERIFICATION below). No assertion was skipped.
+
+------------------------------------------------------------
+INTEGRATION (documented — no silent drift)
+------------------------------------------------------------
+`TeslaSync/shared-surfaces` is a NEW source group introduced by the P4 shared-surfaces
+prompt family. To compile/lint the surface in the iOS + macOS app targets it must be
+registered ONCE, exactly like the existing `TeslaSync/feature-views` group:
+  - apps/apple/project.yml      : `- path: TeslaSync/shared-surfaces` under BOTH
+                                   `TeslaSync` (iOS) and `TeslaSync-macOS` targets.
+  - apps/apple/.swiftlint.yml   : `- TeslaSync/shared-surfaces` under `included`.
+This one-time source-group registration is a P4-core / integration responsibility (a single
+registration serves ALL shared-surface prompts 0001..N). It is intentionally NOT committed
+from this single surface slot, to (a) honor this prompt's Allowed-files list and (b) avoid
+duplicate-path merge conflicts when the parallel shared-surface slots are combined.
+
+The two edits above WERE applied locally + `xcodegen generate` run, purely to execute the
+real end-to-end gate below and obtain in-target build evidence; they are then reverted so the
+committed change set is exactly the Allowed-files (the 7 surface files + this log). With the
+registration applied, project.pbxproj confirmed all 6 Swift files + the .strings resource in
+both app targets' build phases, and the in-target builds reported 0 errors in this surface.
+
+------------------------------------------------------------
+PARITY (web source reproduced)
+------------------------------------------------------------
+- Data sources (P1/S8 state-holder seam — no HTTP in the view):
+    * useTranslation -> AIInboxCategorizationStrings facade (P1/S10).
+    * useAiStream    -> AIInboxCategorizationSource seam; the model consumes coalesced
+      AIInboxStreamSnapshot pushes (phase/text/error/proposal). Production binds this over
+      the SSE consumer for POST /ai/alerts/inbox/categorize; previews/tests use
+      InMemoryAIInboxCategorizationSource.
+- Shared components mapped: AIFeatureCard -> native glass card (TSGlassPanel) with the
+  universal "Ask Helix" CTA; withAiFeature -> the `gateOpen` visibility gate (ADR-015 AI-Off:
+  renders no visible chrome when AI mode is off); @/components/ui -> TSButton/TSSkeleton/etc.
+  AiOutputPanel -> AIInboxOutputPanel (thinking lines / streamed text / Helix-error line).
+- Logic ported verbatim (pure, unit-asserted):
+    * handleEvent `draft_alert_categories` acceptance walk: status=="ok", non-empty category,
+      count is a number >= 0, rule_ids filtered to > 0, sample_titles filtered to non-empty,
+      proposal committed only when >= 1 bucket survives (AIInboxCategoryParsing.buckets).
+    * Loosely-typed/tolerant decode of the LLM payload (bad type -> field nil / element
+      dropped), mirroring "never blindly trust a field the LLM emits".
+    * allRuleIds union: sorted, de-duplicated across every bucket (AIInboxCategoryParsing.allRuleIds).
+    * body memo: emit only present scope fields (vehicle_id/window_days/severities/rule_ids),
+      drop null/empty (AIInboxCategorizeScope.requestFields).
+    * isBusy = streaming||paused-confirm; canStart = state != paused-confirm;
+      applyDisabled = allRuleIds.isEmpty || isBusy; categorize() no-ops while busy;
+      apply() no-ops when union empty; cancel/reset on disappear (model.stop -> source.stop).
+- States (every one renders — no hidden surface):
+    loading (skeleton card), empty/resting (friendly hint, never blank), error (QueryError
+    peer + retry for the parent-load failure; Helix-error line in the output panel for a
+    stream error), ready (Suggest action + proposal chips + Apply), streaming (thinking),
+    proposal/done, paused-confirm (Suggest disabled), stale (chip + banner + one-shot
+    auto-refresh), offline (cached + offline chip), AI-off gate (no visible chrome).
+- i18n: all 6 source keys (notifications.inbox.aiCategorize.{title,description,suggestButton,
+    badge,applyButton,previewLabel}) + shared Helix scaffold (helix.askHelix/thinking/
+    errorLabel, ai.common.errorUnknown) + native chrome keys, all in the
+    "AIInboxAutoCategorization" P1/S10 table. No English string literals in Swift code.
+- Accessibility: VoiceOver labels on every interactive element (Suggest, Apply, refresh,
+    chips, freshness chip, error line), header `.isHeader`, Dynamic-Type system fonts (Font.TS),
+    reduce-motion honored (TSSkeleton shimmer + symbolEffect gated), accessibility identifiers
+    mirroring the web testids (ai-feature-inbox-auto-categorization-{root,categorize,apply}).
+- Telemetry (P1/S11): emits view.opened with surface slug "AIInboxAutoCategorization" on appear.
+
+Files (well-decomposed; one exported surface; no monolith; no stub):
+  AIInboxAutoCategorization.swift           231  (View entry + header + freshness + state switch)
+  AIInboxAutoCategorization.Views.swift     374  (badge, Suggest, proposal chips, output panel, chrome)
+  AIInboxAutoCategorization.Model.swift     350  (state-holder + telemetry + i18n seams, @Observable)
+  AIInboxAutoCategorization.Adapter.swift   285  (parsing + allRuleIds + scope + a11y — pure)
+  AIInboxAutoCategorization.Tests.swift     372  (adapter + projection + model + i18n XCTest)
+  AIInboxAutoCategorization.Previews.swift  105  (one #Preview per state)
+  AIInboxAutoCategorization.strings          44  (P1/S10 catalog contribution)
+
+------------------------------------------------------------
+SURFACE VERIFICATION (this surface — ALL GREEN)
+------------------------------------------------------------
+[typecheck] swiftc -typecheck against the REAL design system (Tokens/Theme/TSDesign/
+  TSMaterial/Buttons/Cards/Typography/Skeletons/Motion), Swift 6 strict concurrency:
+    - macOS 15  (arm64-apple-macos15.0)            -> 0 errors
+    - iOS 18 sim (arm64-apple-ios18.0-simulator)   -> 0 errors
+[in-target] full Xcode app build with XCTest resolvable (ENABLE_TESTING_SEARCH_PATHS=YES):
+    - TeslaSync-macOS  -> 0 errors in shared-surfaces/AIInbox* (surface compiles in-target)
+    - TeslaSync (iOS)  -> 0 errors in shared-surfaces/AIInbox* (surface compiles in-target)
+[behavioral] standalone assertion harness compiled from the REAL Adapter.swift + Model.swift
+    (no XCTest dep), executed: 37/37 checks pass -> HARNESS_OK, exit 0. Covers the parsing
+    walk, tolerant JSON decode, allRuleIds union, request scope, a11y summary, projection
+    (loading/error/ready), model wiring + view.opened-once telemetry, gate, categorize/apply
+    busy/empty no-ops, paused-confirm, stale one-shot auto-refresh, offline no-refresh,
+    stop/re-arm, surface slug.
+[swiftlint] swiftlint --strict over the 6 surface files -> Found 0 violations, 0 serious.
+[swiftformat] swiftformat --lint TeslaSync/shared-surfaces -> 0/6 files require formatting.
+[placeholders] ./apps/tools/check-placeholders.ps1 -Path .../AIInboxAutoCategorization
+    -> PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+[words] no TODO/FIXME/stub/mock/placeholder/Lorem in shipped code.
+
+------------------------------------------------------------
+GATE RESULTS (actual command output)
+------------------------------------------------------------
+[1] iOS  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    ** BUILD FAILED **  IOS_EXIT=65
+    Fails during the `TeslaSync` module compile. Root causes are PRE-EXISTING and unrelated
+    to this surface (proven below):
+      (a) ENABLE_TESTING_SEARCH_PATHS=NO on the app target makes `import XCTest` unresolvable
+          for the 262 co-located *.Tests.swift files compiled into the app target (repo-wide
+          convention). The compiler attributes the first occurrence to the alphabetically-first
+          importer; with this surface added that is AIInboxAutoCategorization.Tests.swift, and
+          the diagnostic itself lists "also imported here: AIRestorePanel.Tests.swift,
+          AISettings.Tests.swift, ..." — i.e. the condition predates and is independent of this
+          surface.
+      (b) With XCTest made resolvable (ENABLE_TESTING_SEARCH_PATHS=YES) the build advances and
+          reports 658 errors, ALL in TeslaSync/dashboard-widgets/* — `'DashboardWidgetSize' is
+          ambiguous for type lookup` from a duplicate definition across Sources/DashboardWidgets/
+          and TeslaSync/dashboard-widgets/. ZERO errors in shared-surfaces/AIInbox*.
+
+[2] macOS  xcodebuild -scheme TeslaSync-macOS build test
+    ** BUILD FAILED **  MAC_EXIT=65
+    Identical pre-existing root causes: (a) the same XCTest search-path condition; (b) with
+    XCTest resolvable, 48 errors ALL in TeslaSync/dashboard-widgets/* (`DashboardWidgetSize`
+    ambiguity). ZERO errors in shared-surfaces/AIInbox*.
+
+[3] swiftlint --strict
+    Found 1 violation, 1 serious in 1915 files  LINT_EXIT=2
+    The single violation is PRE-EXISTING and unrelated:
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length.
+    The 6 shared-surfaces/AIInbox* files: 0 violations (scoped run above).
+
+[4] swiftformat --lint apps/apple
+    1/1919 files require formatting  FORMAT_EXIT=1
+    The single file is PRE-EXISTING and unrelated:
+      TeslaSync/feature-views/ActionBuilder.Previews.swift:48 blankLinesBetweenScopes.
+    The 6 shared-surfaces/AIInbox* files: 0/6 require formatting.
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/AIInboxAutoCategorization
+    PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------
+ASSESSMENT
+------------------------------------------------------------
+This surface is COMPLETE and VERIFIED clean on every dimension it owns: it compiles in both
+app targets (iOS + macOS) with 0 surface errors, its full assertion suite passes (executed via
+an XCTest-free harness from the real Adapter+Model because the runner lacks standalone XCTest),
+and it is 0-violation/0-format-issue/0-placeholder.
+
+The end-to-end `xcodebuild ... build test` gate (and the repo-wide swiftlint/swiftformat steps)
+cannot reach EXIT=0 on the current repo state because of PRE-EXISTING defects in files and
+configuration OUTSIDE this prompt's scope and Allowed-files list:
+  - repo-wide ENABLE_TESTING_SEARCH_PATHS=NO vs 262 co-located XCTest *.Tests.swift files,
+  - duplicate `DashboardWidgetSize` across two dashboard-widgets source trees (658/48 errors),
+  - 1 pre-existing swiftlint violation (LifetimeStatsWidget.Adapter.swift),
+  - 1 pre-existing swiftformat file (ActionBuilder.Previews.swift).
+Fixing these would require touching dozens of dashboard-widgets files and shared build config,
+which is out of scope for surface 0021 and forbidden by its Allowed-files. They are recorded
+here per Honesty Covenant #1 (no red-as-green) and #9 (no silent drift) rather than worked
+around or masked.
+
+EXIT=65
+STATUS=BLOCKED

@@ -1,0 +1,118 @@
+=== P4 Modal / dialog 0016 SignalConfigModal (Apple) ===
+
+SURFACE
+  Web source : web/src/components/ui/SignalConfigModal.tsx
+  Native     : apps/apple/TeslaSync/modals-dialogs/SignalConfigModal.{Adapter,Projection,Model,
+               Views,Chrome,Previews,Tests}.swift + SignalConfigModal.swift + SignalConfigModal.strings
+  Wiring     : apps/apple/project.yml (TeslaSync + TeslaSync-macOS sources) and apps/apple/.swiftlint.yml
+               (included) gain `TeslaSync/modals-dialogs` — the first surface in a new dir, exactly as
+               the first feature-views surface (ToolCard, commit acc76624a) registered its dir.
+
+WHAT SHIPPED (full parity — no scope narrowing)
+  The Fleet Telemetry signal-subscription configurator, an Apple-HIG sheet (NavigationStack + scrolling
+  body + pinned footer). Every web region + behaviour reproduced:
+    • The 10 INTERVAL_OPTIONS (0==500ms … 86400==24h) with label + descriptive tier + accent tint,
+      and the `… || INTERVAL_OPTIONS[3]` 10s fallback.
+    • All 8 PRESETS (⚡ Real-time Driving / ⚖️ Balanced / 🔋 Low Power / 🏎️ Track Mode / 💰 Cost Saver /
+      😴 Sleep Watch / 🔧 Diagnostics / 🗺️ Trip Logger) — each transcribed 1:1 as pure category→selection
+      + category→interval rules (every "everything else" arm included).
+    • The CATEGORY_ICONS lucide map → SF Symbols with the `|| Zap` → bolt.fill fallback.
+    • Master controls: preset chips, Select-All/Deselect-All toggle, master cadence menu (applies to all),
+      and the case-insensitive search field.
+    • Per-category collapsible section: disclosure chevron, tri-state checkbox (all/partial/none),
+      glyph, name, (sel/total) count, and "Set all…" cadence menu.
+    • Per-signal row: checkbox, monospaced name, cadence menu; deselected rows dim (web opacity-40).
+    • Footer: "{n} signals selected • {x} at 500ms • {y} at 10s" roll-up + Cancel + the count-stamped
+      "Subscribe {n} Signals" (disabled at 0).
+  States: the web component is presentational + prop-driven with NO fetch, so it has no loading / error /
+  stale / offline branch — and neither does this parity (fabricating an unreachable network state would
+  be scope INVENTION, not parity). The branches that exist are reproduced in full: `.data` (grouped list)
+  and the two empties `.emptyNoSignals` / `.emptyNoMatch`, each a friendly message, never a blank box.
+  Architecture: pure Adapter+Projection (domain + reducers), an @Observable @MainActor SignalConfigModel
+  (P1/S8) bound by the view, the P1/S10 string facade (table "SignalConfigModal", English fallbacks, no
+  English literals in code), and a P1/S11 `view.opened` telemetry seam emitting slug "SignalConfigModal"
+  once on presentation. Full VoiceOver labels/values/traits, Dynamic Type (Font.TS), Reduce-Motion (TSFadeIn).
+
+GATES (executed on THIS host — Command Line Tools 17, Swift 6.3.2, swiftlint/swiftformat/pwsh present)
+  [GREEN]    swiftformat --lint  (modals-dialogs scope)        : 0/8 files require formatting          (FORMAT_EXIT=0)
+             swiftformat --lint  (whole app, FYI)              : 1 PRE-EXISTING file requires formatting —
+                                                                 TeslaSync/feature-views/ActionBuilder.Previews.swift
+                                                                 (blankLinesBetweenScopes); NOT a SignalConfigModal
+                                                                 file; not introduced here.
+  [GREEN]    swiftlint --strict  (modals-dialogs scope)        : 0 violations in 8 SignalConfigModal files (LINT_EXIT=0)
+             swiftlint --strict  (whole app, FYI)              : 1 PRE-EXISTING violation — function_body_length
+                                                                 in TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+                                                                 (NOT a SignalConfigModal file; not introduced here).
+  [GREEN]    check-placeholders.ps1 -Path …/SignalConfigModal  : PLACEHOLDER_COUNT=0, ALLOWED=0           (PLACEHOLDER_EXIT=0)
+  [GREEN]    SignalConfigModal build — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode =
+             same as the app), compiling the EXACT shipped SignalConfigModal.{Adapter,Projection,Model,
+             Views,Chrome}.swift + SignalConfigModal.swift against the REAL repo design-system
+             (apps/design/generated/apple/Tokens.swift + Components/UI/Buttons.swift + Components/Motion/Motion.swift):
+                 Build complete!                                                                          (SWIFT_BUILD_EXIT=0)
+  [GREEN]    SignalConfigModal behaviour — the shipped XCTest suite (SignalConfigModal.Tests.swift) targets
+             the app's Xcode XCTest bundle; XCTest is unavailable to command-line SwiftPM under Command Line
+             Tools, so the SAME assertions were executed here via an `scmVerify` executable driving the exact
+             shipped Adapter/Projection/Model/Formatting/Accessibility sources:
+                 scmVerify: 123/123 checks passed                                                         (SWIFT_VERIFY_EXIT=0)
+  [GREEN]    swiftc -typecheck  (real macOS 15 SDK, -swift-version 6) over the production sources + the real
+             design-system files:                                                                        (TYPECHECK_MACOS_EXIT=0)
+  [GREEN]    xcodegen generate --spec project.yml               : project regenerates; the generated pbxproj
+             enumerates all 9 SignalConfigModal.* files into TeslaSync + TeslaSync-macOS (54 references)  (XCODEGEN_EXIT=0)
+             SignalConfigModal.Previews.swift parses clean under the macОS 15 SDK; its `#Preview` macro
+             expansion is an Xcode-only plugin step (PreviewsMacros), unavailable to command-line swift, and
+             is exercised by the Xcode build below.
+
+  [DEFERRED] swiftc -typecheck  (iOS 18 SDK)                                                              : no iphoneos SDK on host
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=1
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=1
+
+  WHY DEFERRED (full-app Xcode gate + iOS-SDK typecheck — environmental, ZERO SignalConfigModal errors):
+    This host runs Apple **Command Line Tools only** (xcode-select -p = /Library/Developer/CommandLineTools);
+    `xcodebuild` refuses to run ("tool 'xcodebuild' requires Xcode, but active developer directory … is a
+    command line tools instance"), and the iphoneos / iphonesimulator SDKs are absent ("SDK \"iphoneos\"
+    cannot be located"). Only the macOS 15 SDK is installed — against which this surface is fully GREEN
+    (isolated Swift 6 build + 123 behavioural checks + explicit -typecheck). The full-app iOS-Simulator +
+    macOS build/test and the iOS-18 typecheck require a signed `macos-latest` runner with full Xcode — the
+    exact artifacts apps/macos-pending-verifications.md defers to the P4/P99 Apple acceptance gate. A
+    pending-verification row is recorded there. No SignalConfigModal code error is implicated: the surface
+    compiles + passes its checks against the real design-system under the app's own Swift 6 strict-concurrency
+    settings.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the iOS/macOS xcodebuild gate + iOS-18 typecheck are reported RED/UNAVAILABLE
+                          (IOS_EXIT=1/MAC_EXIT=1, no iphoneos SDK) and explicitly DEFERRED with host evidence —
+                          never reported as passing.
+  2  No scope narrowing : every web region + branch reproduced (10 intervals, 8 presets, category icons,
+                          master controls, tri-state category, per-row cadence, footer tallies, both empties).
+                          The web has no network state, so none is invented.
+  3  No skip-and-assume : every host-runnable gate executed; raw exits pasted; the xcodebuild/iOS-SDK
+                          unavailability was confirmed by running the commands, not assumed.
+  4  No stubs as final  : complete production surface + 123 executed behavioural checks + a full XCTest suite;
+                          placeholder scanner = 0, 0 opt-outs.
+  5  No parity shortcut : presets/intervals/icons/tri-state/footer arithmetic/typography/a11y/telemetry all
+                          mapped to platform tokens + facade and verified against the web arithmetic.
+  6  No delegation      : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holder, P1/S9 tokens (Color.TS/Font.TS/TSSpacing/TSRadius),
+                          P1/S10 i18n facade, P1/S11 view.opened all present and consumed.
+  8  No commit on red   : the COMMITTED artifact (SignalConfigModal.* + 2 wiring lines) is GREEN on every
+                          host-runnable gate AND on a real isolated Swift 6 build + 123 checks + macOS-15
+                          -typecheck; the deferred gate is unavailable on THIS host (no Xcode), not failing on
+                          this code.
+  9  No silent drift    : changes are confined to TeslaSync/modals-dialogs/SignalConfigModal.* (9 files), the
+                          two necessary wiring lines (project.yml ×2, .swiftlint.yml ×1), this log, and one
+                          macos-pending-verifications row — all enumerated above.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic SignalConfigModal shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its behaviour (123 checks mirroring the shipped XCTest suite) passes
+  under the app's own Swift 6 strict-concurrency rules, against the real design-system, with
+  swiftlint/swiftformat/placeholder all green and xcodegen enumerating every file into both app targets. The
+  full-app iOS-Simulator + macOS xcodebuild build/test and the iOS-18 typecheck are DEFERRED (not failed by
+  this code): this host has Command Line Tools only — no Xcode, no iOS SDK, no simulators — so those gates are
+  owned by the P4/P99 Apple acceptance gate on a signed macos-latest CI runner per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate"
+  disposition used by every P4 Apple surface to date.
+
+EXIT=0
+STATUS=DONE

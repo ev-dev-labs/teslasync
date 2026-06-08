@@ -1,0 +1,265 @@
+=== P4 Shared surface 0151 DatePresetChips (Apple) ===
+Date: 2026-06-08
+Host: macOS (Darwin, Apple Silicon) — SHARED 40-slot parallel runner, slot-380.
+Toolchain (capability check — SwiftUI/Swift Charts/MapKit AVAILABLE):
+  Xcode 26.5 (Build 17F42) at /Applications/Xcode.app  [present]
+    NOTE: global `xcode-select -p` = /Library/Developer/CommandLineTools (NOT full
+    Xcode); sudo is NOT available, so the global selection cannot be changed.
+    Overridden per-process with DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer.
+  Swift 6 ; swiftlint + swiftformat (homebrew) ; xcodegen ; pwsh ; gradle + JDK 17.
+  iOS Simulator 26.5 SDK ; macOS 26.5 SDK ; iPhone 16 simulator present (booted).
+  macOS CommandLineTools SDK has SwiftUI/Charts/MapKit but NOT XCTest; the Xcode
+  toolchain (DEVELOPER_DIR override) provides XCTest + simulators.
+
+Web source (THE spec): web/src/components/forms/DatePresetChips.tsx
+  + its data lib  web/src/lib/datePresets.ts (DATE_PRESETS / DEFAULT_PRESET_IDS /
+  getDatePreset / resolveAllTimeStart / matchPresetId).
+Data sources: useTranslation only (presentational; no query hook). Shared component
+  used: @/components/ui/Button. Charts/maps: none.
+
+================================================================================
+=== CHANGES ===
+================================================================================
+Native surface (allowed glob apps/apple/TeslaSync/shared-surfaces/DatePresetChips.*),
+split per the repo's <=400-line file norm:
+  + DatePresetChips.Catalog.swift   pure date-preset domain — DatePresetRange /
+                                    DatePreset / DatePresetCatalog (11 presets,
+                                    defaultIDs, preset(id:), iso(), range(for:now:
+                                    calendar:allTimeFloor:) split into rollingRange +
+                                    boundaryRange, resolveAllTimeStart, matchPresetID).
+                                    Faithful port of datePresets.ts using Calendar/
+                                    DateComponents for deterministic LOCAL-day output.
+  + DatePresetChips.Adapter.swift   DatePresetSelection, DatePresetChipSize, view-ready
+                                    DatePresetChip, load envelope enums (LoadStatus/
+                                    Connection/Phase), DatePresetChipsSurface.slug,
+                                    DatePresetChipsProjection (chips filter→catalog
+                                    order + active flag; resolvePhase; selection
+                                    resolver = web onSelect), DatePresetChipsAccessibility.
+  + DatePresetChips.Model.swift     P1/S10 i18n facade (DatePresetChipsStrings, table
+                                    "DatePresetChips"), P1/S11 telemetry seam
+                                    (protocol + OSLog default → view.opened), P1/S8
+                                    state-holder seam (DatePresetChipsSource + Local…
+                                    Source + InMemory… source), DatePresetChipsUpdate,
+                                    @MainActor @Observable DatePresetChipsModel
+                                    (phase/chips/anchor, day-rollover staleness,
+                                    stale auto-refresh, offline cached, selection,
+                                    retry, once-only view.opened).
+  + DatePresetChips.States.swift    loading skeleton chips / empty (web empty group) /
+                                    error+retry (web QueryError) — inline-sized.
+  + DatePresetChips.Views.swift     DatePresetFlow (iOS18/macOS15 Layout — web flex-
+                                    wrap), DatePresetChipButton (shared TSButton, web
+                                    <Button variant primary/ghost>, isSelected trait =
+                                    aria-pressed), DatePresetChipRow, freshness chip.
+  + DatePresetChips.swift           public DatePresetChips view (parity API: presetIDs/
+                                    activeID/onSelect/size/ariaLabel) + DI init; phase
+                                    switch; onAppear start()+view.opened+revalidate.
+  + DatePresetChips.Previews.swift  9 #Preview states (content sm/md, active=all, all
+                                    presets, empty, loading, error, stale, offline).
+  + DatePresetChips.strings         en catalog: 12 web-parity keys (date.preset.label
+                                    + each preset) + 7 envelope keys (selected/loading/
+                                    empty/error/retry/stale/offline).
+  + Tests/Unit/SharedSurfaces/DatePresetChipsTests.swift        catalog + projection +
+                                    a11y (+ shared DPFixture / telemetry spy).
+  + Tests/Unit/SharedSurfaces/DatePresetChipsModelTests.swift   model state-machine +
+                                    per-state ImageRenderer snapshots. (33 tests total.)
+  ~ project.yml        added "TeslaSync/shared-surfaces" to the TeslaSync (iOS) +
+                       TeslaSync-macOS app target sources (precedent: P4 dashboard-
+                       widgets/feature-views edited project.yml the same way).
+  ~ .swiftlint.yml     added "TeslaSync/shared-surfaces" to `included`.
+
+Architecture parity:
+  - useTranslation → P1/S10 DatePresetChipsStrings table; NO English literals in code.
+  - No data hook in the web source; the surface still binds through a P1/S8 seam
+    (DatePresetChipsSource → @Observable model); the view performs no I/O.
+  - States reproduced + widened to the P4 envelope: content (chip row) / loading
+    (skeleton) / empty (web empty group) / error (QueryError+retry) / stale / offline.
+    "Stale" is genuinely meaningful here: a row resolved before midnight goes stale
+    once "Today" rolls (the web source's wall-clock caveat) — modelled as day-rollover.
+  - Diagnostics: model emits view.opened with slug "DatePresetChips" once on appear.
+  - Accessibility: role=group label (web aria-label); each chip carries isSelected
+    (web aria-pressed) + a combined "Title, selected" VoiceOver label.
+
+================================================================================
+=== PARITY ===
+================================================================================
+PARITY_REQUIRED (web states/keys/data-sources/composition): reproduced 1:1 + widened
+to the mandatory P4 state envelope. All 12 web i18n keys + 11 presets ported with
+exact fallbacks. Chip order = canonical catalog order (web DATE_PRESETS.filter), not
+caller order. Selection payload = {id,start,end} local YYYY-MM-DD (web onSelect).
+Charts/maps: none for this surface (none in the web source).
+
+================================================================================
+=== GATE (host-runnable — EXECUTED on this machine) ===
+================================================================================
+$ xcodegen generate --spec project.yml                 -> Created TeslaSync.xcodeproj
+XCODEGEN_EXIT=0   (surface + tests wired into iOS app, macOS app, and test targets)
+
+$ swiftformat --lint TeslaSync/shared-surfaces Tests/Unit/SharedSurfaces
+   -> 0/9 files require formatting
+FORMAT_EXIT=0
+
+$ swiftlint lint --strict <7 surface files + 2 test files>   -> 0 violations, 0 serious
+   (all files <=400 lines; the test file was split into Tests + ModelTests to satisfy
+    file_length; cyclomatic_complexity of range() resolved by the rolling/boundary
+    split; multiple_closures resolved by explicit TSButton label:.)
+   Scoped to the surface files exactly as the accepted P4 dashboard-widget precedent
+   scoped swiftlint; a full-`included` run also reports 7 PRE-EXISTING violations in
+   unrelated predecessor files (not this surface).
+LINT_EXIT=0
+
+$ pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces -Language swift
+   -> PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+================================================================================
+=== GATE (Xcode — EXECUTED on this machine) ===
+================================================================================
+$ apps/shared/gradlew -p apps/shared --console=plain :core:assembleSharedXCFramework
+   -> BUILD SUCCESSFUL in 30m 37s ; release Shared.xcframework assembled + staged into
+      apps/apple/Frameworks (ios-arm64, ios-arm64-simulator, macos-arm64).
+XCFRAMEWORK_ASSEMBLE_EXIT=0
+
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' \
+      -derivedDataPath ./.build/DerivedData build-for-testing CODE_SIGNING_ALLOWED=NO
+   -> ** TEST BUILD FAILED **   IOS_BUILD_EXIT=65
+   Root cause is PRE-EXISTING and entirely OUTSIDE this surface — the app module does
+   not compile in this checkout because predecessor surfaces declare duplicate types
+   and embed XCTest in the app target:
+     • 132 real (non-cascade) compile errors, grouped by source dir:
+         TeslaSync/dashboard-widgets/  = 60 errors
+         TeslaSync/feature-views/      = 72 errors
+         TeslaSync/shared-surfaces/    =  0 errors   <-- THIS surface is clean
+     • invalid redeclaration / ambiguous type lookup for predecessor-owned symbols
+       duplicated across the dashboard-widgets AND feature-views copies of the same
+       feature: DashboardWidgetSize, DashboardWidgetRegistration, DrivetrainHealthStatus,
+       DrivetrainTemperatureUnit, TelemetryErrorsModel, TelemetryErrorsSource,
+       TelemetryErrorsTelemetry, TelemetryErrorsProjection, TelemetryErrorRow,
+       TelemetryErrorsAccessibility, TelemetryErrorsFormat, InMemoryTelemetryErrorsSource,
+       OSLogTelemetryErrorsTelemetry.
+     • 204 (feature-views) + 57 (dashboard-widgets) inline *.Tests.swift files `import
+       XCTest` while living in the APP target's sources (the gold-standard P4 widget
+       precedent deliberately put its tests under Tests/Unit for exactly this reason).
+   ZERO errors are attributable to DatePresetChips. `grep ': error:' | grep DatePreset`
+   = 0. Reconciling the predecessor duplicate declarations would require editing other
+   surfaces' files, which Honesty-Covenant #7 (No predecessor bypass) and this prompt's
+   "Out of Scope: Other surfaces in the same feature" both forbid. The TeslaSyncTests
+   target depends on the app target, so the simulator unit run cannot be reached while
+   the app module is red. macOS `build test` consumes the identical Sources/feature-
+   views/dashboard-widgets set and is blocked by the same predecessor errors, so it was
+   not separately executed (it cannot reach a different terminal state).
+IOS_FULL_APP_BUILD=BLOCKED-pre-existing-predecessor-duplicate-declarations
+MACOS_FULL_APP_BUILD=BLOCKED-same-predecessor-sources
+
+================================================================================
+=== GATE (Xcode — SURFACE PROVEN GREEN in isolation, EXECUTED on this machine) ===
+================================================================================
+Because the shared app module is blocked by predecessor breakage (above), the surface
+was verified against its REAL closed dependency set — the generated design Tokens, the
+shared TSButton, and the shared TSSkeleton — in a throwaway SwiftPM package (NOT
+shipped; apps/apple/.build is gitignored), compiled under Swift 6 strict concurrency
+(.swiftLanguageMode(.v6), platform macOS 15) to mirror the app's SWIFT_VERSION 6 /
+SWIFT_STRICT_CONCURRENCY=complete settings:
+
+$ DEVELOPER_DIR=…/Xcode swift test --disable-sandbox     (target arm64-apple-macos)
+   -> Compiling DatePresetChips.{Catalog,Adapter,Model,States,Views,Previews}.swift +
+      DatePresetChips.swift  — ALL COMPILE CLEAN against real Tokens + TSButton + TSSkeleton.
+   -> Test Suite 'All tests' passed.
+      Executed 33 tests, with 0 failures (0 unexpected) in 0.144s
+        DatePresetCatalogTests        (today/yesterday/7d/30d/90d/1y/mtd/qtd/ytd/
+                                       lastMonth/all ranges for a fixed UTC clock,
+                                       iso(), defaults+lookup, all-time floor clamp,
+                                       matchPresetID)
+        DatePresetChipsProjectionTests (catalog-ordered filtered+flagged chips,
+                                       resolvePhase, selection resolver)
+        DatePresetChipsAccessibilityTests (group label default/override, chip
+                                       "…, selected")
+        DatePresetChipsModelTests      13 — start/view.opened-once, content, empty,
+                                       loading, error, stale auto-refresh-once +
+                                       re-arm, offline-no-refetch, day-rollover→stale
+                                       +revalidate, selection, activeID reproject,
+                                       retry, stop
+        DatePresetChipsRenderTests      6 — ImageRenderer snapshots for content /
+                                       loading / empty / error / stale / offline
+                                       (every state renders a non-empty image)
+SURFACE_COMPILE=GREEN (Swift 6 strict concurrency, macOS 15)
+SURFACE_TESTS=GREEN (33/33, 0 failures)
+Additionally, during the full-app build-for-testing above, the Swift compiler emitted
+ZERO diagnostics for any shared-surfaces/DatePresetChips file — the surface also
+type-checks inside the real TeslaSync module; only predecessor files fail.
+
+================================================================================
+=== HONESTY COVENANT ===
+================================================================================
+1  No red-as-green : the iOS/macOS full-app xcodebuild is reported RED (EXIT=65) with
+                     raw error evidence; it is NOT claimed green. Everything marked
+                     green (host gates, surface compile, 33 surface tests) was actually
+                     executed and is green.
+2  No scope narrowing: full surface implemented — every web preset+key, all states
+                     (content/loading/empty/error/stale/offline), i18n, a11y, telemetry,
+                     flow layout, selection resolver, 33 tests.
+3  No skip-and-assume: every host gate + the gradle xcframework + the full-app build +
+                     the standalone Swift-6 compile/test were actually run.
+4  No stubs as final: zero stubs/placeholders (placeholder gate = 0). The standalone
+                     package reuses the REAL Tokens/TSButton/TSSkeleton, not fakes.
+5  No parity shortcuts: web states/keys/data-source(useTranslation)/composition/onSelect
+                     reproduced 1:1; chip order = catalog order; SI/format n/a.
+6  No delegation     : performed directly; no sub-agents (delegation FORBIDDEN here).
+7  No predecessor bypass: did NOT edit any predecessor surface to force a green app
+                     build; P1/S8 holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics
+                     consumed as-is. A temporary test-file exclude experiment in
+                     project.yml was REVERTED — the commit contains only this surface's
+                     own files + the minimal shared-surfaces wiring.
+8  No commit on red  : the committed CODE is GREEN (compiles under Swift 6 strict
+                     concurrency; 33/33 tests pass). The residual blocker is predecessor
+                     breakage in files this commit does NOT touch. No red code committed.
+9  No silent drift   : project.yml + .swiftlint.yml edits listed under CHANGES; the
+                     reverted exclude experiment disclosed in #7.
+10 Log ends with EXIT=<int> and STATUS=<...> below.
+
+================================================================================
+=== ACCEPTANCE CRITERIA ===
+================================================================================
+[x] Surface renders on Apple with every web state reproduced (6 ImageRenderer snapshot
+    tests green: content/loading/empty/error/stale/offline).
+[x] Hooks bind to the shared P1/S8 state-holder layer (DatePresetChipsSource →
+    @Observable DatePresetChipsModel); no direct HTTP/IO in the view.
+[x] Every i18n key from the source has a matching key in the P1/S10 catalog
+    (per-surface "DatePresetChips" table; 12 web keys + 7 envelope keys).
+[x] Accessibility labels present on every interactive element (group label; each chip
+    isSelected trait + combined label; freshness chip label) — a11y unit-tested.
+[x] Tests: adapter unit (catalog/projection) + per-state snapshot/UI (ImageRenderer) +
+    a11y label test + model state-machine — 33/33 passed.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate = 0).
+[~] EXIT=0 / STATUS=DONE — NOT achievable in this checkout: the literal xcodebuild gate
+    is BLOCKED by PRE-EXISTING predecessor duplicate-declaration breakage in
+    dashboard-widgets + feature-views (132 errors, 0 in this surface), which #7 forbids
+    fixing. The surface itself is COMPLETE and proven GREEN in isolation (Swift 6 strict
+    concurrency compile + 33/33 tests). Reported honestly as STATUS=BLOCKED per the
+    prompt's allowed alternative, with full evidence above.
+
+================================================================================
+=== DISPOSITION ===
+================================================================================
+The DatePresetChips shared surface is COMPLETE and verified to the maximum this
+checkout allows: host gates green (xcodegen/format/lint/placeholder), the surface
+compiles against its real shared dependencies under Swift 6 strict concurrency, and all
+33 surface tests pass. The only step that cannot reach EXIT=0 is the full-app
+xcodebuild, which is blocked by pre-existing duplicate type declarations + inline-XCTest
+in predecessor surfaces (dashboard-widgets / feature-views) — environmental/predecessor
+breakage that is out of this surface's scope and forbidden to "fix" by editing other
+surfaces. Nothing is faked; no red is reported as green; the surface itself carries
+zero errors.
+
+================================================================================
+=== COMMIT ===
+================================================================================
+git add apps/apple/TeslaSync/shared-surfaces \
+        apps/apple/Tests/Unit/SharedSurfaces \
+        apps/apple/project.yml apps/apple/.swiftlint.yml \
+        .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0151-DatePresetChips.log
+git commit -m "feat(apps/apple/shared-surfaces): add DatePresetChips surface (P4)"
+(Pre-existing, unrelated working-tree modifications under feature-views/AIUsageCard.*
+were deliberately NOT staged.)
+
+EXIT=65
+STATUS=BLOCKED

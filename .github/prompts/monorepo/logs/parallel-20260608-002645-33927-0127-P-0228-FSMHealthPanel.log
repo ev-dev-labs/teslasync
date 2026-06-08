@@ -1,0 +1,107 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple toolchain availability.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me explore the established pattern and FSM-related native code before deciding on approach.
+
+Related FSM panels exist (`FSMSubFSMPanel`, `FSMTimelineChart`, `FSMStateDiagram`). Let me study the closest analog and check how prior logs on this runner resolved the xcodebuild capability.
+
+The precedent is clear: ship complete code, run all host-runnable gates green, DEFER the xcodebuild app build/test with captured evidence (ADR-012, "code-complete + DEFERRED Xcode gate"). Let me verify my toolchain's SwiftUI capability and study the closest analog in full.
+
+SwiftUI/Charts/MapKit ARE importable via `swift` (Command Line Tools macOS SDK). I can do real compile checks. Let me read the closest analog in full plus the shared infrastructure (tokens, state-holder, i18n, telemetry, placeholder gate).
+
+Excellent established pattern. Let me read the remaining analog files, design tokens, and locate the `FSMTransition` web type.
+
+Let me read the FSMTransition type, the test/preview patterns, and design tokens.
+
+Let me read the design tokens, the test pattern, the data-source parent, and locate all shared token/component definitions.
+
+I have the full pattern. Now let me locate all the shared token/component APIs I'll reference and check how count-interpolation is handled in existing surfaces.
+
+Tokens are referenced everywhere but defined in a generated file. Let me pin down their exact definitions so I reference real members, plus read the remaining shared components (Buttons, Skeletons, Motion, Badges, Typography).
+
+Design tokens live in `apps/design/generated/apple`. Let me read the token definitions and remaining shared components to confirm exact APIs.
+
+Let me read the full Tokens.swift and the remaining shared components (Buttons, Skeletons, Motion, Badges, Typography) to confirm exact APIs.
+
+Now let me read the remaining shared components to confirm `TSTone`, `TSButton`, `TSIconBox`, `TSSkeleton`, `TSFadeIn` APIs.
+
+Let me confirm `TSButton` and `TSFadeIn` APIs, and the web `fmtInt` formatter.
+
+I now have every shared API I need. Let me check the lint/format configs and the placeholder gate before writing.
+
+Forbidden patterns are case-insensitive (incl. "placeholder", "stub" per prompt). I'll avoid them all. Let me locate the last view dependencies (`tsGlassPanel()` modifier, Typography components) so my code references real symbols and I can build a compile harness.
+
+I have everything needed. Let me set up tracking, read the last two harness deps, and start writing the Adapter (pure logic).
+
+All dependencies mapped. Let me create the plan and write the Adapter (pure parity logic).
+
+Now the comprehensive tests file.
+
+All 7 files created. Let me run the available host gates (swiftformat, swiftlint, placeholder scan) on the new files.
+
+Auto-fixable style issues. Let me apply swiftformat in-place then re-lint.
+
+swiftlint hit only the 400-line file-length limit on the test file. I'll split tests into two files (matching the established `.Tests`/`.AdapterTests` pattern, both within the allowed `FSMHealthPanel.*` glob).
+
+Now let me re-run swiftformat and swiftlint on all 7 files, plus the placeholder scan.
+
+swiftlint clean. One numberFormatting nit in the new test file — auto-fix it.
+
+Both swiftformat (0/7) and swiftlint (0 violations) pass. Let me update tracking and run the placeholder gate (both the literal gate line and a genuine scan of the real files).
+
+Genuine scan caught the word "placeholders" in one comment. Let me reword it (the scan is case-insensitive).
+
+Placeholder gate passes (real scan COUNT=0). Now the key real verification: compile + run the **actual shipped** Adapter logic via `swiftc` with an assertion harness.
+
+Shipped Adapter compiles cleanly. Let me run the assertion harness.
+
+All 24 checks pass against the shipped Adapter. Now let me attempt a real SwiftUI typecheck by building a SwiftPM package with the actual design tokens + shared components + my SwiftUI files.
+
+Only `#Preview` macro errors remain (Xcode-only `PreviewsMacros` plugin) — and they appear in the shared components too, not just mine. All real view code compiled. Let me rebuild without `DEBUG` to get a clean typecheck of the shipped runtime SwiftUI code.
+
+SwiftPM defaults to debug config (so `#if DEBUG` previews compile). Let me build in release config to exclude the Xcode-only `#Preview` macros and typecheck the shipped runtime code.
+
+Even `-c release` keeps `DEBUG` defined in SwiftPM. The errors are exclusively the Xcode-only `#Preview` macro. Let me strip the trailing preview blocks from the throwaway `/tmp` copies to get a definitive runtime-code typecheck.
+
+**BUILD_EXIT=0** — the shipped runtime SwiftUI surface compiles cleanly against the **real** design tokens and shared components. Now let me capture the precise platform-capability evidence (xcodebuild/iOS SDK availability) for the log.
+
+All evidence captured. The runner is Command Line Tools-only — `xcodebuild` and the iOS simulator SDK are unavailable, while swift/swiftlint/swiftformat/pwsh are present and my code compiles+passes against them. Let me generate the authoritative log with real captured output.
+
+Now append the host-side compile + execution evidence (shipped Adapter logic + SwiftUI surface typecheck).
+
+Clean rebuild from scratch succeeds (BUILD_EXIT=0). Let me append the SwiftUI typecheck evidence and the final log sections.
+
+Let me review the complete log for coherence, especially the xcodebuild-captured sections.
+
+The log is accurate. Let me do a final lint/format pass on all 7 files, then stage and commit.
+
+Final gates clean (0/7 format, 0 lint violations). Note: the `AIUsageCard.*` modifications are pre-existing/external (I only created `FSMHealthPanel.*` files and scoped all tooling to them). I'll stage **only** my files + the log, respecting scope.
+
+Exactly my scope is staged. Let me commit with the prompt's message.
+
+Committed (9 files, 1833 insertions; `AIUsageCard.*` correctly excluded). Let me clean up temp artifacts and finalize tracking.
+
+Task complete. Here's the summary.
+
+## FSMHealthPanel (Apple) — P4 feature view 0228
+
+Shipped a production-polished native Apple parity of `features/system/components/FSMHealthPanel.tsx` across 8 files (1,833 lines), committed as `64d70abc`.
+
+**What was built (faithful web parity):**
+- **Adapter** — pure flap/stuck/recovery analysis + the exported `computeFlapIds`: the 60s/`>5` flap window (incl. the web's capture-at-first-detection count quirk — alert shows 6 while the full flagged set is 12), the 4h stuck cutoff over `instanceLatest`, the recovery count, `NaN`-semantics timestamps, `fmtInt` grouping, and `{{count}}` interpolation.
+- **Model** — P1/S8 state-holder seam (`FSMHealthSource`→`@Observable FSMHealthModel`, no view HTTP), P1/S11 `view.opened` telemetry, P1/S10 i18n facade.
+- **View/Views** — glass panel, alerts grid + cards, the green "all clear" line, plus P4 loading/error states and the live/stale/offline freshness chip + banner with one-shot auto-refresh. Shared tokens/components only; VoiceOver labels, Dynamic Type, Reduce-Motion-safe.
+- **strings** — all 8 web i18n keys + native chrome; **Tests/AdapterTests** — adapter, projection, model, a11y.
+
+**Verification (all host-runnable gates GREEN):**
+- `swiftlint --strict`: **0 violations** · `swiftformat --lint`: **0/7** · placeholder scan: **COUNT=0** (real scan of actual files)
+- Shipped Adapter compiled + **executed 24/24 assertions green** (`swiftc`)
+- Shipped SwiftUI surface **typechecks clean against the real generated tokens + shared components** (SwiftPM `BUILD_EXIT=0`)
+
+**Disposition — `STATUS=BLOCKED`** (per the prompt's capability clause, with API evidence in the log): this runner is a **Command Line Tools-only** instance — `xcodebuild`, the iOS-simulator SDK, the `#Preview` macro plugin, and XCTest execution all require Xcode.app, which is not installed (`xcode-select` → `/Library/Developer/CommandLineTools`; `xcodebuild`/`xcrun iphonesimulator` → rc=1). The block is purely a missing platform tool, not a code defect — the surface is complete and proven to compile and behave correctly. Scope was respected: only `FSMHealthPanel.*` + the log were committed (pre-existing `AIUsageCard.*` working-tree changes left untouched).
+
+
+
+All work is complete, verified, and committed. Let me update the plan to reflect completion, then mark the task done.
+
+Everything is complete, verified, and committed.
+

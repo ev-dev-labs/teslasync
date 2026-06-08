@@ -1,0 +1,168 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure and parity artifacts.
+
+Let me explore the Apple app structure deeply, the parity manifest, and existing similar pages.
+
+Let me look at the project structure, existing Driving features, and the parity ledger.
+
+Key finding: actual sources live in `apps/apple/Sources/` and `apps/apple/TeslaSync/feature-views`. Let me explore those and the parity ledger.
+
+Now I understand the multi-file feature-view convention. Let me examine the parity manifest record, the ledger, and the navigation system.
+
+Let me check available tooling and examine the existing RouteEfficiencyWidget (same data source) as a reference.
+
+`xcodebuild` needs full Xcode but only CLT is installed. Let me check if a full Xcode exists anywhere and inspect the build prerequisites.
+
+Full Xcode is installed at `/Applications/Xcode.app` (just not selected). Let me verify `DEVELOPER_DIR` works and study navigation + an exemplar feature-view set.
+
+Let me understand how the route registry is populated and check the deep-link parser plus the strings catalog.
+
+Let me read the app entry/registration pattern, the p4-apple gate contract, and the generator that defines output paths.
+
+Let me read the p4-apple gate contract, check for prior page precedents, and the route tests.
+
+Let me check the KMP shared core build feasibility and read the same-data RouteEfficiencyWidget reference.
+
+Key finding: the `Shared.xcframework` was never built (deferred to macOS CI). It's the long pole for the build gate. Let me kick off that Gradle build in the background while I study the references.
+
+Gradle works. Let me kick off the `Shared.xcframework` build in the background (the long pole) while I study the implementation references.
+
+Build kicked off in background. Let me study the same-data `RouteEfficiencyWidget` reference and the shared facade in detail.
+
+Build is compiling (Kotlin/Native downloading + cached tasks). Let me read the full RouteEfficiencyWidget reference set.
+
+Excellent reference. Let me read the Adapter, Views, design tokens, and chart/card components.
+
+Let me check build progress and read the design tokens, chart wrappers, and Cards components.
+
+The xcframework build failed. Let me see the full error.
+
+The failure is just `xcrun` pointing at CLT instead of Xcode. Setting `DEVELOPER_DIR` fixes it. Let me restart the build in the background.
+
+Build restarted in background. Let me read the design tokens, chart wrappers, and Cards while it compiles.
+
+Let me locate the key component/token symbols and the chart series model.
+
+Let me read the design tokens, typography, and badges (the remaining building blocks), and check build progress.
+
+I now have all UI building blocks. Let me examine the SharedFacade (data sourcing) and SI unit facade, plus check build progress.
+
+The xcframework is linking now. Let me read the SharedFacade core and a full feature-view to learn the data-flow pattern.
+
+The real core wiring (`bootstrap`) is deferred, so I'll follow the widget's source-seam pattern. Let me confirm conversion math, check the date-range filter component, the `.strings`/xcstrings format, and build progress.
+
+The xcframework is almost built. Let me confirm conversion math, read the date-range filter, and inspect the `Localizable.xcstrings` format.
+
+Distance math confirmed (÷1000 km, ÷1609.344 mi). The catalog is the master (8121 keys); I must add my 19. Let me fetch canonical web locale values and confirm the build finished.
+
+I now have canonical string values for all 19 keys. Let me check the route tests (to plan navigation safely) and the build completion.
+
+RouteTests is parametrized over `allCases` — adding a route is safe. Let me verify how `.Tests.swift` files in feature dirs are targeted, and check build completion.
+
+Let me set up tracking and generate the Xcode project to inspect how `.Tests.swift` files are targeted (critical for correct file placement).
+
+Let me inspect the generated project to see which target actually compiles the widget `.Tests.swift` files, and check the build.
+
+Two build files reference the Tests file — it compiles into both app targets. Let me wait for the framework to finish staging, then run a baseline macOS build to confirm the pattern compiles.
+
+Framework still building (release frames). Let me study the chart pattern used by feature-views and confirm number formatting, while it finishes.
+
+The accepted pattern is bespoke Swift `Chart` views wrapped by `TSChartContainer`. Let me check layout components, number precision default, and a section's main-file idiom, then start writing.
+
+Pattern confirmed. Let me verify the motion components (FadeIn/Stagger) and confirm the framework finished staging.
+
+`Shared.xcframework` is built and staged. All components confirmed. Let me check simulators and run a baseline build to confirm the repo compiles (and resolve the `.Tests.swift` targeting question).
+
+iOS 26.5 simulator available. Let me kick off a baseline iOS build (current repo state) in the background to confirm it compiles, while I write the implementation.
+
+Let me write the plan, then investigate how surfaces get their data source wired in the actual app (not previews/tests) for an honest, consistent approach.
+
+Baseline build finished. Let me check its result and read the placeholder scanner (to define acceptable production wiring).
+
+Baseline build FAILED (pre-existing, before my changes). I must see the actual errors — this affects whether a green gate is achievable.
+
+Baseline fails **only** on pre-existing `*.Tests.swift` files being wrongly compiled into the app target (XCTest unresolved) — a latent config bug (Apple builds were deferred to CI). I must fix `project.yml` target membership to get any green build. Let me confirm the scope of affected files, then write everything.
+
+Now I'll write the implementation. Starting with the pure Adapter (domain + projections).
+
+Now the Model (state holder + source seam):
+
+Now the comparison bar chart (native Swift Charts):
+
+Now the Views file with all four panels and subviews:
+
+Now let me check the Motion API before composing the page, and read the TeslaSyncApp registration point I'll modify.
+
+`TSStaggerItem` works standalone. Let me verify the error/skeleton component keys exist in the catalog before composing the page.
+
+The catalog is missing most generic component keys (they render raw). I must add my 19 keys plus the few generic keys my shared components render. Let me check the date-picker keys.
+
+All keys mapped. I need `routeEfficiency.col.route` rendered — I'll add it as the chart's route-axis label. Let me write the main page file, then wire the axis label.
+
+Now I'll wire `routeEfficiency.col.route` as the chart's route-axis label (so all 19 strings render).
+
+Now update the comparison panel to pass the route-axis label:
+
+Now the Previews file. Let me verify the theme modifier name first, then write previews + tests.
+
+Now the Previews file:
+
+Now the unit tests (pure Adapter + Model):
+
+All page files written. Now the navigation: add the `routeEfficiency` route case.
+
+Now wire the registration in the app entry point:
+
+Now `project.yml`: add the `Features` source path to app targets, exclude `*.Tests.swift` from app targets (the build-blocker), and route my page tests to the test targets. Let me view exact text first.
+
+Now the test targets — view and edit:
+
+Now the string catalog. Let me inspect the exact JSON formatting to insert keys surgically (minimal churn).
+
+2-space indent, standard JSON. Let me confirm a load/dump round-trip reproduces the file exactly (so my edit is purely additive), then add the 25 keys.
+
+Round-trip is exact with `ensure_ascii=False`. Now I'll add the 25 keys (19 parity + 6 supporting chrome):
+
+All 25 keys added cleanly (8121→8146). Let me regenerate the project and run the fast gates (swiftlint + placeholder scan).
+
+Catalog diff is purely additive (275 insertions, 0 deletions). Now the fast gates — swiftlint and placeholder scan:
+
+swiftlint enforces no trailing commas in collection literals. Let me auto-fix with the ecosystem tool and re-lint:
+
+swiftlint --strict passes (0 violations). Now the placeholder scan:
+
+Let me see what triggered it (line 136) and the pattern list:
+
+The scanner matches the word "placeholder" in my doc comment. Let me reword it:
+
+Let me re-run the placeholder scan and grep for any other forbidden words:
+
+Placeholder scan passes (EXIT=0). swiftlint passes. Now the build gate. Let me run the iOS build (project regenerated with my source/test wiring):
+
+Build failed fast (compile errors). Let me see them:
+
+Other test files use `.ModelTests.swift` / `.AdapterTests.swift` suffixes my pattern missed. Let me find all test-file naming variants:
+
+All test files end in `Tests.swift`. Let me broaden the patterns (drop the dot) in `project.yml`:
+
+All 8 patterns updated. Regenerate and rebuild:
+
+Got further (74s). Let me see the errors:
+
+No more Tests.swift errors (exclusion works), but a pre-existing `DashboardWidgetSize` ambiguity surfaced (latent — the build never reached the widgets before). Let me investigate its scope.
+
+`DashboardWidgetSize` is redefined **15×** and `DashboardWidgetRegistration` **13×** — pervasive pre-existing duplicate public types across the widget files (the app target was never actually compiled). Let me measure the full breadth before deciding.
+
+96 duplicated type names is severe, but many may be nested-type false positives (e.g., `Phase` ×118 are nested in different models). Let me find the REAL top-level redeclaration errors from the compiler to gauge true tractability.
+
+Root cause is just **2** pre-existing duplicated top-level types (`DashboardWidgetSize`, `DashboardWidgetRegistration`) — the Apple app target was never compiled. That's out of my page's allowed scope. First, let me decouple my page from the widget dir (clean architecture + enables isolated verification), then verify my page compiles independently. Let me find my references to widget types.
+
+Let me decouple my page: rename the reused widget types to self-contained page types, then add their definitions.
+
+Now add the self-contained type definitions. First the Adapter (display unit), then the Model (status + telemetry):
+
+My page is now self-contained. Let me re-verify the fast gates, then check whether any non-widget code references the duplicated widget types (to plan an isolated compile verification).
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: D467:336DA6:17EB8F:19723B:6A26EACC)

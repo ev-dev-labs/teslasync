@@ -1,0 +1,39 @@
+I'll start by exploring the repository structure to understand what exists for this Apple acceptance gate, then run the preflight checks.
+
+I have critical preflight findings already. Let me gather the remaining evidence: predecessor logs, signing identities, simulators, and confirm the missing ledgers/tools.
+
+Critical preflight findings are clear. Let me gather predecessor log STATUS evidence and exact tool versions before writing the acceptance log.
+
+All evidence points to BLOCKED. Let me capture the two BLOCKED predecessor logs (one is a direct P4/P9 predecessor) and confirm the missing ledger/tool, then write the acceptance log.
+
+Evidence is conclusive. The gate is **BLOCKED** on multiple independent grounds (no Xcode/simulators/signing, a BLOCKED direct P4/P9 predecessor, and missing Apple ledgers + `check-parity-ledger.ps1`). Per the covenant (no skip-and-assume), I'll still run every host-runnable gate step for firsthand evidence. Writing the acceptance log via a reproducible script.
+
+Script completed with aggregate EXIT=1. Let me review the generated log for accuracy and completeness.
+
+All nine gate steps produced genuine nonzero exits (swiftlint actually ran over 1909 files and found a serious violation). Let me confirm the result table, disposition, and final EXIT/STATUS lines.
+
+The log is complete and ends correctly with `EXIT=1` / `STATUS=BLOCKED` on their own lines. Now I'll commit **only** the log file (Covenant rule 8: BLOCKED → commit only the log, never code), explicitly avoiding the pre-existing uncommitted code changes.
+
+Only the log is staged; the pre-existing code edits remain untouched. Committing now.
+
+Commit succeeded — only the log (1 file, 344 insertions); pre-existing code edits remain untouched. Cleaning up temp artifacts.
+
+The Apple acceptance gate (P4/P99/0001) has been run honestly and recorded. Outcome: **STATUS=BLOCKED**.
+
+## What I did
+Ran the gate as a **run-only** acceptance check (no code fixes, no delegation, no scope narrowing), executing every host-runnable step for firsthand evidence, then committed **only** the log per Covenant rule 8.
+
+## Why BLOCKED — four independent, evidence-backed grounds
+- **A. Capability** (the gate's own mandate): full Xcode absent (`xcode-select -p` → `CommandLineTools`; `xcodebuild` errors out), no iOS simulators (`xcrun simctl` missing), **0 valid code-signing identities** → build/test and signed archives are impossible.
+- **B. Predecessor** (rule 7): the **direct P4/P9 dependency** `p4-p9-0001-xctest-unit.log` is `STATUS=BLOCKED EXIT=70`, so "P4/P0..P9 all DONE" is false (`p1-s3-0001-kmp-scaffold` also BLOCKED).
+- **C. Required artifacts**: `apple-macos-ledger.json`, `apple-ios-ledger.json`, and `check-parity-ledger.ps1` are **missing** → 100% Apple parity cannot be verified.
+- **D. Hygiene**: working tree not clean at entry (pre-existing edits, left untouched).
+
+## Gate result table (EXIT=0 needs all nine == 0)
+`IOS=1 MAC=1 LINT=2 FORMAT=1 PLACEHOLDER=1 MAC_LEDGER=64 IOS_LEDGER=64 IOS_ARCHIVE=1 MAC_ARCHIVE=1` → aggregate **EXIT=1**. (SwiftLint genuinely ran over 1909 files and found 1 serious violation.)
+
+## Artifact
+`​.github/prompts/monorepo/logs/p4-p99-0001-apple-acceptance-gate.log` — committed (`4b0ad90`, 1 file, log only). Ends with `EXIT=1` / `STATUS=BLOCKED`. Pre-existing code changes were **not** staged or modified.
+
+Promotion to DONE requires a macOS CI runner with full Xcode + simulators + signing/archive credentials, after the blocked predecessors pass and the Apple ledgers + `check-parity-ledger.ps1` are produced by their owning prompts (all out of scope here).
+

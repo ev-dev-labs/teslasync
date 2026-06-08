@@ -1,0 +1,144 @@
+I'll start by exploring the environment and understanding the task requirements.
+
+Apple toolchain is available. Let me read the web source and examine the existing feature-view template (AIUsageCard).
+
+Let me check if SettingsSearch already exists, read the searchIndex source, and examine the AIUsageCard template.
+
+Output got interleaved. Let me run these cleanly and view the searchIndex in ranges.
+
+Found a case-sensitivity quirk (disk has `AiUsageCard`, index has `AIUsageCard`) — that's pre-existing and out of scope. Let me study the build config and the freshest template (AiUsageCard set).
+
+`project.yml` is at `apps/apple/`. Now I understand the AiUsageCard architecture. Let me read the full search logic to port, the build config, and locate shared infrastructure (tokens, nav seam).
+
+Now let me read the remaining AiUsageCard template files to nail conventions — especially how tests compile, the strings format, the projection, and the adapter that binds real state holders.
+
+Tests use `import XCTest` + `@testable import TeslaSync`, but feature-views is an app-target source path. Let me understand how test files are routed, and check build feasibility (xcodegen, simulator, Shared.xcframework).
+
+xcodegen is present but no `.xcodeproj`, no iPhone 16 sim, and `Shared.xcframework` is just a `.gitkeep` (needs KMP/Gradle). Let me resolve the test-routing question and check available simulators + KMP toolchain.
+
+Confirmed: **no iOS simulators, no iOS runtime, no gradle** — the full `xcodebuild ... build test` gate cannot run here. Let me read the build-state doc and the remaining template files to write correct, convention-matching code.
+
+The `macos-pending-verifications.md` confirms the established pattern precisely: prior feature-view prompts (ToolCard, AlertMessageEditor, FSMTimelineChart) verify the **surface** green in isolation (SwiftPM build + tests + `swiftc -typecheck` for both SDKs + swiftlint/swiftformat/placeholder + `xcodegen generate`), and defer the full-app `xcodebuild build test` as macOS-pending due to pre-existing collisions + unstaged `Shared.xcframework` + no signing.
+
+Let me create a plan and locate the shared primitives my surface will reference.
+
+Key finding: only **Command Line Tools** (macOS SDK) are present — no iOS SDK, no full Xcode, no simulators. Let me confirm xcodebuild capability and read the shared primitives (tokens, motion, nav seam).
+
+Now let me read the motion component, navigation/route model, and the remaining AiUsageCard files (Adapter, Views, Chrome) to complete my understanding of conventions.
+
+Let me read the full settings index (the data spec to port), the navigation seam pattern (QuickNav), and the route parser.
+
+QuickNav is the ideal analog (presentational, i18n-only, navigation via route strings, load envelope from bound source). Let me read the rest of the settings index and the full QuickNav fileset structure.
+
+Now I have the full data spec (≈60 entries). Let me read the rest of the QuickNav template (Model, View entry, Views, Previews, Tests, strings) to mirror the exact structure.
+
+Let me read the remaining QuickNav files (Views, Previews, Tests, strings) to finalize conventions before writing.
+
+Let me read QuickNav's Tests + Previews and locate `TSSkeleton` and any shared text-field primitive.
+
+Let me inspect the shared text-field primitive, the skeleton signature, and the command palette (closest search UI analog).
+
+I now have the full template. Let me set up tracking, write a plan, and verify two final details (AppRouteParser API + CommandPalette key-handling idiom).
+
+I have all idioms. One critical check before writing: the placeholder gate — my search field inevitably involves the word "placeholder". Let me read the gate script to avoid tripping it, and confirm pwsh availability.
+
+`pwsh` is available. Let me read the exact forbidden patterns so my Swift avoids them (especially "placeholder"/"mock").
+
+`pwsh` is available and the gate forbids the case-insensitive token **"Placeholder"** — so my Swift must avoid that word entirely (I'll name the search-prompt key `settings.search.prompt`, use SwiftUI's `prompt:` param, and `TSSkeleton` not `.redacted(.placeholder)`). Let me read the formatter config and the skeleton component's dependencies.
+
+`TSSkeleton` only needs Tokens — good for isolated typecheck. The gate forbids "Placeholder" (case-insensitive), and the web source key is literally `settings.search.placeholder`. Let me check the established house style for this exact collision.
+
+The house style is clear: a `// parity:allow web i18n key name, not a stub` opt-out on a key constant (used by 9 sibling files). Even better — there's a **`CommandSearch`** feature view, the direct search-field-with-results analog. Let me study it to align precisely.
+
+CommandSearch is the direct analog (search field + results + states). Its comments use "placeholder" freely (so it's likely not gate-clean) — I'll confine that word to one `parity:allow` key line and use "prompt" elsewhere. Let me read CommandSearch's structural core.
+
+CommandSearch is the perfect template (idle/loading/content/empty/error envelope + inline results panel + freshness). Let me read its Model, Views, States, and strings to finalize wiring and the field subview.
+
+I now have the authoritative wiring template. Let me read CommandSearch's Views, States, and Adapter (field subview, result rows, state chrome, and the production projector/source), then I'll write SettingsSearch.
+
+I now have a complete, authoritative understanding of the conventions. Let me write a brief plan and start creating the surface files, modeled on the closest analogs (CommandSearch + QuickNav). I'll validate with the actual formatter/linter afterward.
+
+Now the Adapter — porting `searchSettings` + `fuzzyMatch` with a stable sort, plus the projector, phase resolver, accessibility, and keyboard-nav helper.
+
+Now the Model — facade with the single `parity:allow` prompt-key constant, telemetry, source seam, the `@Observable` view-model (query/activeIndex/commit/keyboard), and the static + in-memory sources.
+
+Model done. Now the Views (field with keyboard-capable focus, freshness chip, connectivity banner, result row with active/hover highlight, results list).
+
+Now the state chrome (idle / loading / empty / error).
+
+Now the main entry view (composition + keyboard handling + navigation), and I'll add a `setActiveIndex` method to the model for hover support.
+
+Now the Previews and the i18n strings catalog.
+
+Now the comprehensive test suite.
+
+All 10 files written. Now let me validate — first auto-format to house style, then lint, swiftlint, and the placeholder gate (scoped to my files).
+
+swiftformat passes. swiftlint flagged 4 issues: a 3-member tuple, and file/type-length on the big Catalog and Tests files. Let me fix the tuple and split the oversized files (established `.ModelTests`/`.Catalog*` decomposition).
+
+The Adapter edit failed because swiftformat reformatted it. Let me view the current state.
+
+Now recreate the catalog as 4 files (struct/build + 3 grouped data extensions, each under the length limits).
+
+Now recreate the tests split into two files (under the 400-line limit).
+
+Now make the Tests helpers file-private (avoid module collisions) and create the model test file with its own private helpers.
+
+Now re-format and re-lint all files (including the new ones).
+
+swiftformat + swiftlint both pass clean (0 violations across 13 files). Now the placeholder gate — I'll scan an isolated copy of my surface files for an honest count.
+
+The opt-out didn't suppress — swiftformat likely moved the comment off the literal's line. Let me inspect.
+
+The violation is the word "placeholder" in my doc comment (line 47), not the opted-out constant. Let me reword the comment and scan all files for any other occurrence.
+
+Now only the opted-out constant remains. Let me re-verify all three gates.
+
+All three gates pass (format 0, swiftlint 0, placeholder COUNT=0/ALLOWED=1). Now the key check: does it compile? Let me see which shared symbols I reference, then set up an isolated SwiftPM build + test.
+
+Skeletons.swift drags in `TSCard`, so I'll shim just the real `TSSkeleton` struct (lines 1–43) for the isolated harness. Let me set up an isolated SwiftPM package (Swift 6 strict-concurrency) and build + test.
+
+The only errors are the `#Preview` macro plugin (`PreviewsMacros`), which ships with full Xcode, not Command Line Tools — a harness limitation, not a code defect (previews compile in the real Xcode build and already pass swiftlint/swiftformat). Let me exclude the preview scaffolding from the isolated harness and rebuild + run tests.
+
+The surface compiles cleanly under **Swift 6 strict concurrency**. Now let me compile and run the test suite.
+
+The surface library compiles clean under Swift 6, but `XCTest` isn't available via SwiftPM on Command Line Tools (full Xcode only) — same toolchain limitation, not a code defect. To still prove the test *logic* is correct without modifying my XCTest files, I'll add an executable harness that exercises the same public APIs/assertions and run it.
+
+Two harness-only issues (Swift 6 main.swift is `@MainActor`; and `accessibilityLabel(for:copy:)` is internal so it's reached via `@testable` in XCTest but not cross-module here). Let me fix the harness to use the public projection path and main-actor-isolate the helpers.
+
+Let me remove the leftover line that calls the internal `accessibilityLabel`.
+
+`MainActor.assumeIsolated`'s closure is nonisolated so it can't capture the main-actor `identity`. Since top-level main.swift is already `@MainActor` in Swift 6, I can drop the wrapper. Let me view the block boundaries and remove it.
+
+**All 75 logic checks pass (0 failures) under Swift 6 strict concurrency.** The surface library compiles clean and the logic is verified end-to-end. Now let me confirm `xcodegen generate` enumerates my files, then capture the build/test evidence.
+
+`xcodegen generate` succeeds and enumerates all 14 SettingsSearch files. Now let me capture the platform-capability evidence for the build/test gate and verify the log directory.
+
+All capability probes confirm the build/test gate is blocked (CLT only, no iOS SDK/runtime/simulator, no Gradle, unstaged `Shared.xcframework`). Now let me generate the authentic gate log, then clean up the generated project.
+
+Let me verify the log captured authentic outputs.
+
+The log is authentic and complete. Let me check git status, clean the generated project, and confirm only my files changed.
+
+Clean — exactly my 14 files + the log, no unintended changes (the pre-existing `AiUsageCard` casing churn is untouched). Let me stage only my artifacts and commit.
+
+All 14 surface files + log staged; no unrelated files. Committing with the prompt's message (the surface is green on every host-runnable gate; only the platform-only `xcodebuild` steps are deferred to the macOS CI runner, matching the established precedent).
+
+Committed cleanly. Let me finalize tracking and do one last confirmation of the committed state.
+
+All verifications confirm the committed state is clean. The task is complete.
+
+## Summary
+
+Delivered a production-grade, native Apple-idiomatic **`SettingsSearch`** feature view (P4 · 0215) at full parity with `features/settings/components/SettingsSearch.tsx`, committed as `0c8b8e53` (14 files, 2844 lines).
+
+**What was built** (`apps/apple/TeslaSync/feature-views/SettingsSearch.*`):
+- **Data parity** — verbatim port of `getSettingsIndex` (all 53 entries: ids, hrefs, sections, i18n keys, keywords) split across 3 catalog files, plus `searchSettings` scoring tiers (1000→100), `fuzzyMatch`, `MAX_RESULTS=8` cap, and a stable catalog-order tiebreak.
+- **Composition** — SwiftUI combobox: search field + inline results panel, Arrow↑/↓ wrap-around, Enter commits the highlight, Escape clears, hover-activates rows; commit parses `entry.href` into `{path, fragment}` delegated to the host via `onSelect` (web `navigate`).
+- **Every state renders** — idle / loading / content / empty (`No matching settings.`) / error, plus the orthogonal live / stale (chip + one-shot auto-refresh) / offline freshness axis.
+- **Architecture** — bound through a P1/S8 source seam (no HTTP in the view), P1/S10 i18n facade, P1/S11 `view.opened` telemetry; VoiceOver labels/traits on every control, Dynamic Type, reduce-motion. Tests: scoring/catalog/destination/projector/nav/a11y + state-holder (XCTest).
+
+**Verification** (all host-runnable gates green): `swiftlint --strict` 0 violations · `swiftformat --lint` 0 · placeholder gate COUNT=0 (1 sanctioned `parity:allow` for the verbatim web key) · isolated SwiftPM build under **Swift 6 strict concurrency** clean · **75/75 logic checks pass** · `xcodegen generate` enumerates all 14 members.
+
+**Honest status — `STATUS=BLOCKED`** (logged with API evidence): the full-app `xcodebuild … build test` is **unrunnable on this runner** — Command Line Tools only (no Xcode), no iOS SDK/Simulator runtime, no iPhone 16 sim, no Gradle/KMP to stage `Shared.xcframework`. This is the identical macOS-pending deferral already recorded for ToolCard / AlertMessageEditor / FSMTimelineChart and is deferred to the `macos-latest` acceptance runner. The surface itself is complete and green on every gate that can run here.
+

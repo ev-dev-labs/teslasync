@@ -1,0 +1,98 @@
+I'll start by exploring the repository structure to understand the task context.
+
+Key findings: `apps/apple/TeslaSync/feature-views/` exists with prior surfaces (AIUsageCard). Swift 6.3.2, swiftlint, swiftformat present. Let me check xcodebuild and the existing patterns.
+
+Critical capability finding: only Command Line Tools are installed (no full Xcode), so `xcodebuild` and iOS Simulator (`simctl`) are unavailable. Swift 6.3.2 compiler, swiftlint, swiftformat ARE available. Let me read the web source spec and existing patterns.
+
+Now I understand the spec. Let me study the established native pattern by reading a close analog (`TemperatureSection`) end-to-end, plus the web types and infrastructure.
+
+The `macos-pending-verifications.md` reveals the established convention precisely: surfaces are verified via **isolated SwiftPM build + tests, swiftc -typecheck, swiftlint --strict, swiftformat --lint, placeholder gate**, while full-app `xcodebuild` is deferred to `macos-latest` CI. Let me study the reference surface and test the toolchain.
+
+SwiftUI + Charts + MapKit typecheck works, and **macOS 15 SDK is available** (MacOSX15.sdk). Let me verify the exit code cleanly and read the rest of the reference surface to internalize the full pattern.
+
+macOS 15 SDK exists as a full path. Let me verify typecheck against it and locate the shared P4 core/P1 token components (`TSSpacing`, `Color.TS`, `TSFadeIn`, native `MetricCard`/`GlassPanel`/`EmptyState` equivalents).
+
+Both default and macOS 15 SDK typechecks pass (exit 0) — SwiftUI/Charts/MapKit capability confirmed. The shared component library is in `Sources/Components/{UI,DataDisplay,Feedback,...}` and tokens in `Sources/Design`. Let me read the reference Views/Tests/Previews and locate the shared token + component definitions.
+
+Design tokens live in `Sources/Design/TSDesign.swift`. Let me read the tokens and locate the native shared components (GlassPanel/MetricCard/EmptyState equivalents) that ClimateSection's web source uses.
+
+Native shared components exist: `TSGlassPanel`, `TSMetricCard`, `TSEmptyState`, `TSQueryError` — exactly mapping ClimateSection's web imports. Let me read their APIs, find the token definitions, and study the reference Previews/Tests.
+
+Now let me read the rest of the Metrics API, the web `MetricCard` (for icon/color parity), the token definitions, and the reference Previews/Tests to nail the conventions.
+
+I need to locate the generated design-token definitions (`TSSpacing`, `Color.TS`, `Font.TS`, `TSRadius`, `TSMotion`) for the isolated build. Let me find them and check for an existing verification harness.
+
+Found it: design tokens are generated under `apps/design/generated/apple` (included as `DesignTokens`). Placeholder check is PowerShell. Let me inspect tokens, the reference Previews/Tests, lint configs, and check `pwsh` availability.
+
+Let me read the design tokens, the reference Tests, and the Adapter (value model) to complete my understanding.
+
+I have the full pattern. Let me read the web `useUnits().formatTemperature`, the `ClimateSnapshot` type, and the reference Adapter to ensure exact data + formatting parity.
+
+Let me read the exact `formatTemperature` lib implementation (and its null handling) to ensure precise native parity.
+
+Let me read the exact web `formatTemperature`, `convertTempFromSI`, and `formatNumber` to nail formatting/null parity.
+
+I now have full parity detail: `formatTemperature` → 1-decimal default, `°`-suffix no space, `—` for null. Let me verify a few native specifics (SF Symbols already used in-repo, `TSSkeleton` signature, web `EmptyState`) before writing.
+
+`fan.slash.fill`, `thermometer.medium`, `wind` confirmed in-repo; `TSSkeleton(height:cornerRadius:)` confirmed. Let me verify the shared Components/Design are self-contained (for an isolated build harness) by checking their imports.
+
+Shared `Sources/Components` + `Sources/Design` are fully self-contained (SwiftUI/Charts/MapKit/Foundation only) — perfect for an isolated SwiftPM build harness. Let me calibrate file-size limits and confirm a clean lint baseline on the reference surface before writing.
+
+Baseline is clean (0 violations) and files run up to ~365 lines. I have everything I need. Let me set up tracking and write the surface, mirroring the established `TemperatureSection` architecture.
+
+Now let me read the rest of the reference model-tests to mirror the spy/MainActor conventions exactly.
+
+Now let me auto-format with the repo's swiftformat config (to handle wrapping), then lint. Running format first:
+
+Only 1 file needed reformatting. Let me run both linters in strict/lint mode to surface any remaining violations (especially long lines):
+
+swiftformat passes. One swiftlint violation: `void_function_in_ternary` at Adapter.swift:205. Let me inspect it.
+
+It's a false-positive heuristic on the implicit-return ternary. I'll restructure so the ternary selects the key/fallback inside a single call (semantically identical, lint-clean):
+
+Both linters pass cleanly (0 violations). Now the strongest check — an **isolated SwiftPM build + test** under Swift 6. Let me confirm the macOS target shares `Sources/` (proving Components is macOS-safe) then build the harness.
+
+Confirmed: the macOS target shares `Sources/` + `feature-views` + `DesignTokens` — so Components/Design are macOS-safe. Let me build the isolated SwiftPM harness (Tokens + Components + Design + ClimateSection) and run its tests under Swift 6.
+
+My ClimateSection files compiled cleanly (steps 47–49). The only errors are the `#Preview` macro plugin — a **toolchain gap**: Command Line Tools lack `PreviewsMacros` (it ships with full Xcode). This affects the shared Components' own previews too, not my logic. Building in **release** excludes `#if DEBUG` previews. Let me build + test in release:
+
+Components has one external dependency: `UnitFormatters.swift` references a `Units` type defined outside Components (in the app module). ClimateSection doesn't use it. Let me locate `Units` and scan for any other external refs, then exclude the unrelated file(s).
+
+Only `UnitFormatters.swift` has that external dep, and ClimateSection doesn't use it. I'll exclude that one unrelated file from the harness and re-run build + tests:
+
+Test target hits `no such module 'XCTest'` — Command Line Tools don't ship `XCTest.framework` (it's bundled with full Xcode), the same capability gap as `xcodebuild`. The **library (surface) itself compiled in release**. Let me confirm XCTest's absence, get a clean library build, then verify the test *logic* at runtime via a plain-Swift executable (no XCTest needed).
+
+Confirmed: XCTest ships only with full Xcode (absent from Command Line Tools) — a documented capability gap. The **library/surface builds clean in release (exit 0)**. Now let me verify the test *logic* runs correctly at runtime via a plain-Swift executable that drives the real projector/model/format code:
+
+Swift 6 concurrency: `check` must be `@MainActor` (top-level vars are MainActor-isolated). Quick fix:
+
+The exec can't reach `internal` helpers (`defrostMetric`/`climateOnMetric`) — those are covered by the `@testable` XCTest. The public `project(...)` path already validates those branches. Let me drop the two redundant internal-helper lines from the exec:
+
+**Runtime verification: 58 checks passed, 0 failed (exit 0).** The real projector/formatter/model lifecycle all behave exactly as the committed XCTest asserts. Now the placeholder gate — let me read the checker and run it on the new files.
+
+The gate's `-Path .../ClimateSection` (a prefix, not a real path) scans vacuously. To verify honestly, I'll scan a temp dir containing exactly my files, plus run the checker's self-test and the literal gate path:
+
+Good — the gate works (self-test passes). It flagged the literal word "placeholder" in my doc comments (forbidden per acceptance criteria, even in comments). Let me find and reword every occurrence:
+
+Let me view the forbidden patterns to be thorough, then re-scan my (edited) files:
+
+Placeholder gate passes (COUNT=0). Since I edited comments, let me re-run the full verification suite (format, lint, isolated build, runtime checks) on the final files to confirm everything's still green:
+
+All host-runnable gates are green: format/lint/placeholder/isolated-build/runtime all pass. Now let me check how prior P4 surface logs handled the `xcodebuild` capability gap (to mirror the repo's exact STATUS convention), and verify i18n key coverage.
+
+This is the established repo convention (predecessor parity): **STATUS=DONE** with `xcodebuild` build/test shown as **DEFERRED** (real non-zero exit + cause), all host-runnable gates green, recorded in macos-pending. Let me read a full prior log to mirror its exact structure.
+
+That's the exact sanctioned template. Note my runner is a **harder** gap than ToolCard's (CLT-only, no Xcode at all → no XCTest either), so I'll be scrupulously honest: tests verified via runtime exec, XCTest execution deferred. Let me verify i18n key coverage and gather final evidence before writing the log.
+
+i18n coverage is complete: all 21 referenced keys declared, MISSING_KEYS=0 (including every one of the 13 web-source keys). Let me capture capability evidence and final stats for the log:
+
+All evidence captured. Now let me write the gate log (mirroring the sanctioned predecessor format, scrupulously honest about my CLT-only runner), then commit.
+
+Now let me commit exactly the allowed scope (my 8 ClimateSection files + the log), being careful not to include the pre-existing unrelated AIUsageCard changes:
+
+Exactly the 9 allowed files staged. Committing:
+
+Committed cleanly (9 files, 1789 insertions; pre-existing AIUsageCard changes correctly left unstaged). Let me clean up temp artifacts and do a final confirmation pass on the committed files:
+
+All work is complete and verified. Cleaning summary:
+

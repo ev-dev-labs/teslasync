@@ -1,0 +1,130 @@
+I'll start by exploring the repository structure to understand what exists, then read the web source specification.
+
+Both the web source and apps/apple exist. Let me read the web source spec and explore the apple structure in parallel.
+
+There's a well-established pattern here. Let me check the Apple toolchain availability and find the closest sibling example to learn the established conventions.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swift`, `swiftlint`, `swiftformat` ARE available. Let me check the build setup and learn the established pattern from siblings.
+
+`project.yml` is XcodeGen (no full Xcode → xcodebuild blocked). Let me find sibling feature-views from the same web feature and read the apps README + parity conventions.
+
+Now I understand the structure. The existing feature-views are developer-tool panels. Let me study the shared facade (state holders, i18n, tokens, diagnostics) and one complete representative feature-view to learn all conventions.
+
+`RateLimitStatusPanel` is the cleanest 7-file template. Let me read it fully plus the shared facade primitives and design tokens.
+
+Excellent pattern. Let me read the remaining RateLimit files (Views, Previews, strings, Tests) and the shared facade primitives + design tokens.
+
+Now let me read the Tests file, the shared facade primitives, design tokens, and the key components (StatCard, GlassPanel, MetricBar) I'll need.
+
+Let me examine the native components (DataDisplay/StatCard, UI/GlassPanel, Motion), the design token definitions, and the web StatCard + useFormatting + numberFormat sources.
+
+Let me read the native Metrics (StatCard/MetricBar), Cards (GlassPanel), Motion (FadeIn), and locate the design token definitions (TSSpacing, Color.TS, Font.TS, TSTone, TSRadius).
+
+Now let me read the card/motion/typography components, locate the token definitions, and read the web data sources (useWeeklyDigest, useFormatting, numberFormat).
+
+Now I understand the full data flow. Let me read the token definitions (Theme.swift), card/motion/typography components, and the web formatting helpers.
+
+Let me read the generated design tokens, the card/motion/typography/button components, and confirm `fmtInt`.
+
+Let me read the Motion, Buttons (TSButton + TSTone), Typography, and Feedback States components.
+
+Let me read the Badges (TSTone), Typography, Feedback States, and the project.yml to understand targets.
+
+Let me read Typography, the placeholder-patterns, project.yml structure, and check whether the i18n keys already exist in the catalog.
+
+I now have the full pattern. Let me check the build/test wiring (project.yml), the placeholder checker, and probe whether I can compile SwiftUI with the available toolchain.
+
+Strong findings: `pwsh` is available and SwiftUI type-checks cleanly against the macOS SDK. `xcodebuild` needs full Xcode (only CLT present) → that gate step will be BLOCKED. Let me map the dependency closure for a standalone type-check (find `tsGlassPanel` modifier and any `Shared` importers).
+
+None of the components import `Shared`, and `tsGlassPanel()` lives in `TSMaterial.swift`. I can do a standalone type-check. Let me read TSMaterial and check the parity manifest entry, then start building.
+
+Everything is clear. Let me read the loading skeleton reference and the native Skeleton API, then build.
+
+I have the complete picture. Let me check the lint/format configs, then set up tracking and start building.
+
+Now I understand the conventions (maxwidth 120, `@testable` at bottom, case-insensitive placeholder scan — I must avoid `.placeholder`/`TODO`/`stub`/`mock` even in comments). Let me read the placeholder script's path handling, set up tracking, and write the plan.
+
+Confirmed: the placeholder scan is **case-insensitive**, so I must avoid `.redacted(reason: .placeholder)` and the words TODO/stub/mock/placeholder everywhere — I'll use the skeleton components instead. Let me write the plan and start building the Adapter (pure core).
+
+Now I'll build the Adapter (pure core), mirroring the established pattern.
+
+Now the Model (state holder + telemetry + i18n facade).
+
+Updating progress and creating the root view.
+
+Now the subviews file (the largest — chip, header, loading skeleton, error, empty, grid, and the stat card mirroring web `StatCard`).
+
+Now the previews, strings, and tests.
+
+Now the comprehensive test suite.
+
+All 7 files created. Now let me verify — first a standalone Swift type-check of the surface against the real component APIs (excluding `Shared`-dependent files). Let me confirm the dependency set's imports, then compile.
+
+All deps import only SwiftUI. Now the standalone type-check against the macOS SDK with Swift 6 + complete concurrency (matching project settings).
+
+Type-check passes (`TYPECHECK_EXIT=0`) against the macOS SDK with Swift 6 + complete concurrency. Now swiftformat and swiftlint.
+
+The repo's swiftformat config enables `wrapPropertyBodies`. Let me view the flagged lines, then auto-format with swiftformat (the canonical fixer).
+
+Let me check how the existing accepted files fare under the same rule, to match their style.
+
+Existing files wrap computed bodies onto multiple lines. Let me auto-format my files with swiftformat (the canonical fixer), then re-verify lint + type-check.
+
+Auto-format applied (1/6 files changed). Let me confirm the fix and re-run lint + type-check.
+
+swiftformat passes (0/6 require formatting). Now re-typecheck (Adapter changed) and run swiftlint --strict on the new files.
+
+Type-check and swiftlint both clean (0 violations). Now the placeholder gate. Let me check the script's invocation/exit semantics, then run it on my files plus a targeted grep.
+
+A test name tripped a pattern. Let me find the exact match in both the script and grep.
+
+Found it: `FallsBack**ToDo**llar` — the test name contains "ToDo" which matches "TODO" case-insensitively. Let me rename it and re-scan for any other accidental substrings.
+
+All placeholder checks clean. Let me re-verify lint/format after the edit and gather the xcodebuild capability evidence for an honest log.
+
+`/Applications/Xcode.app` exists — I may be able to use it via `DEVELOPER_DIR` without sudo. But `Shared.xcframework` (a KMP build dependency) is missing. Let me probe whether the real xcodebuild path is viable.
+
+Xcode 26.5 and an iPhone 16 simulator ARE available — the platform is capable. The only gap is the KMP `Shared.xcframework` (a generated artifact). Let me check whether I can build it to run the real gate.
+
+This is achievable — Java 17 + gradlew are present, and `:core:assembleSharedXCFramework` builds only the Apple Kotlin/Native targets (no Android SDK needed). Xcode 26.5 + iPhone 16 sim are available. Let me build the KMP xcframework so I can run the **real** gate. Starting it in the background.
+
+Excellent — Gradle cache (3GB) and Kotlin/Native prebuilt 2.4.0 are already present, and the targets are Apple-only. Let me build the xcframework.
+
+Gradle is compiling Kotlin/Native (slow first pass). Let me wait for it.
+
+`BUILD SUCCESSFUL` — the xcframework is built. Now let me stage it, generate the Xcode project, and list schemes.
+
+Project generated with `TeslaSync` and `TeslaSync-macOS` schemes. I need to confirm how `*.Tests.swift` files are routed to test targets (not the app target). Let me inspect the test-target config in project.yml.
+
+Let me examine the exact source/exclude config for the app and test targets — this determines whether `*.Tests.swift` compiles into the app target.
+
+Let me verify how the existing per-surface `*.Tests.swift` files are wired (or not) — reading the test-target config, the pending-verifications note, and the Tests/Unit layout.
+
+This is the key clarification. `macos-pending-verifications.md` documents the established methodology: the full-app `xcodebuild build test` is **macOS-pending, blocked by pre-existing unrelated issues** (co-located `*.Tests.swift` compiling `XCTest` into the app target, `DashboardWidgetSize` redefined 8×, dev-signing). Surfaces are verified green via an **isolated SwiftPM build + tests** (as ToolCard did). Let me confirm the pre-existing app-target breakage is real (not mine), then run the isolated SwiftPM verification.
+
+Confirmed: 25 co-located `*.Tests.swift` and 15 `DashboardWidgetSize` definitions are pre-existing app-target blockers — none are mine. The documented methodology is **isolated SwiftPM build + tests**. Let me set that up and actually run my tests under Swift 6 strict concurrency.
+
+Isolated build succeeds under Swift 6. Now let me run the test suite.
+
+All **37/37 tests pass** under Swift 6 strict concurrency — matching the documented ToolCard methodology. Now let me capture concrete evidence from the real full-app `xcodebuild` to confirm the failure is pre-existing and references zero of my files. Running the iOS build now (bounded).
+
+The real iOS build fails (exit 65) at the **first** pre-existing co-located test file (`AuditPanel.Tests.swift` — XCTest into app target), with **zero** errors referencing my surface. This corroborates the documented pre-existing blocker. Let me capture the macOS build exit too (bounded), then write the log.
+
+Both full-app builds fail identically at the pre-existing `AuditPanel.Tests.swift` blocker — zero errors from my surface. Now let me locate the log directory and check for a sibling log's format.
+
+Let me read a sibling p4-apple surface log to match the established STATUS/format convention for this exact situation.
+
+This sibling log is decisive. It confirms the established convention: the feature-views-tier full-app `xcodebuild build test` is **pre-existing-blocked** by co-located `*.Tests.swift` + collisions (the directly-comparable ToolCard feature-views surface is macOS-pending/BLOCKED, verified via **isolated SwiftPM build + tests** — exactly my situation). My surface is green by that methodology. Let me write the honest gate log.
+
+Now let me verify git state — ensure only my 7 surface files + log are committed (xcodeproj/xcframework/DerivedData must be ignored artifacts).
+
+Clean separation: `xcodeproj`/`xcframework` are git-ignored; the 2 modified web files are pre-existing (not mine). Let me stage only my 7 surface files + the log and commit.
+
+Exactly my 8 files staged. Committing with the prompt's message.
+
+Committed cleanly (8 files, 1703 insertions). Let me do a final consolidated green check on the committed files and clean up temporary artifacts.
+
+All final gates green and temp artifacts cleaned. Let me mark the work complete in tracking.
+
+All 8 todos done. The surface is delivered, verified, and committed.
+

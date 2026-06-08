@@ -1,0 +1,120 @@
+I'll start by exploring the repository structure to understand the task scope and existing patterns.
+
+Now let me explore the Apple app structure and related context in parallel.
+
+Now let me explore the Apple app structure deeply to understand existing patterns.
+
+Now let me look at the apple ledger, the parity README, and find the p4-apple README referenced in the gate.
+
+xcodebuild is unavailable (Command Line Tools only, no full Xcode) — so build/test gates will be BLOCKED, but swiftlint/swiftformat/placeholder scan + full implementation are all doable. Let me study the app shell, navigation, and an existing feature-view to match conventions exactly.
+
+Let me examine the component library, design tokens, shared facade, and a complete feature-view example to lock conventions.
+
+This is the established seam architecture. Let me read the remaining reference facets, formatters, design tokens, and the web helpers to match formatting precisely.
+
+Let me read the web formatting helpers, the Apple formatters/tokens/motion, and `TSTone` to match formatting and styling precisely.
+
+Let me verify how `.Tests.swift` files in feature-views are wired (app vs test target) to avoid breaking the build.
+
+Let me read the lint configs and placeholder patterns to ensure my code passes the runnable gates.
+
+I have enough understanding. Let me set up tracking, then verify a couple final details (existing xcstrings keys, PageContainer semantics) before writing.
+
+I now have a complete understanding of the architecture. Let me set up tracking and write the plan.
+
+Let me verify the web default number precision to format counts faithfully.
+
+Now I'll write the page files. Starting with the pure projection Adapter:
+
+Let me add raw sort fields to the row model so the table can be sortable like the web `DataTable`.
+
+Now wire the registration into the app entry point:
+
+Now the scaffolding — wire the `Features/` tree into the build and lint config:
+
+Now insert the 28 string keys into the catalog surgically (preserving the existing 8121 keys):
+
+My inserted blocks use ` : ` but the existing file uses `: `. Let me fix the style to match exactly:
+
+Now let me run the gates I can execute. First, apply swiftformat to my new files:
+
+Now swiftlint --strict on the new files:
+
+Pre-existing violation aside, I have fixable issues in my files (trailing-closure with `comparator:`, function length, one long test line). Let me refactor the columns and fix the test line:
+
+Now fix the long test assertion line:
+
+Now re-run swiftformat and swiftlint to confirm my files are clean:
+
+My files pass swiftformat and swiftlint cleanly. Now the placeholder gate:
+
+Placeholder gate passes. Since `xcodebuild` can't run XCTest here, let me validate the pure formatter/projection logic (the golden vectors my tests assert) by compiling and running it standalone with the real Swift compiler:
+
+All 45 golden vectors pass under the real Swift compiler. Let me clean up and check the log/ledger conventions from an existing precedent.
+
+The precedent reached full Xcode via `DEVELOPER_DIR` override. Let me check whether Xcode.app is actually installed here:
+
+Full Xcode 26.5 is available via `DEVELOPER_DIR`. This changes things — I may be able to run the real gate. Let me assess what's needed (xcframework, components' dependencies):
+
+Full Xcode is usable and the shared components are `Shared`-free. Let me attempt a real SDK type-check of my SwiftUI surface against the actual component library. First, assess the dependency set:
+
+Only `UnitFormatters.swift` touches the facade. Let me run a real SDK type-check of my SwiftUI surface against the actual component library (iOS simulator SDK, Swift 6):
+
+The real type-check caught a genuine bug (the pure-logic harness didn't cover the Views `compare` helper). `some Comparable` for two params creates two independent opaque types. Let me fix it with a proper generic:
+
+That wrapper reintroduces the same problem. Let me simplify to a single generic:
+
+Now re-run the iOS type-check and add the macOS check:
+
+iOS type-check passes with 0 errors. Waiting for macOS:
+
+Both iOS and macOS type-checks pass with 0 errors — the full SwiftUI surface compiles against the real component library. Now let me also **execute** the `@Observable` model's runtime behavior (the model tests) using the real Model + Adapter:
+
+Comprehensive in-scope verification complete (logic 45/45, model 17/17, dual-SDK typecheck 0 errors). Now let me validate my `project.yml` edits generate a correct project, and assess the full-build path:
+
+`xcodegen` validates my `project.yml` (42 VehicleCostPage refs in the generated project). For the gold-standard evidence, let me attempt the real app build. First I need the `Shared.xcframework` — let me kick off the Gradle build in the background and check feasibility:
+
+Gradle works with Java 17. Let me build the `Shared.xcframework` in the background (this compiles Kotlin/Native — several minutes):
+
+The Gradle Kotlin/Native build is running. Let me check its progress:
+
+Good progress — compiles are cached, it's linking frameworks and downloading the Kotlin/Native distribution. Let me wait for completion:
+
+It's on the final macOS link. Let me wait for the build to complete:
+
+The `Shared.xcframework` built successfully (7m 3s). Let me stage it and run the real `xcodebuild build`:
+
+Now the real `xcodebuild build` for the iOS app target (using `-target` to skip the Gradle pre-action since the framework is staged):
+
+Build failed with EXIT=65 in 37s (31 failures) — exactly the pre-existing sibling breakage the precedent documented. Let me prove ZERO errors originate in my files:
+
+**MY_FILE_ERRORS=0** — every one of the 31 failures is pre-existing `DashboardWidgetSize`/`VehicleHeroModel` breakage in unmodified `dashboard-widgets` siblings (exactly the precedent's documented blocker). Let me confirm my files were compiled in-context, verify git scope, and run the macOS build:
+
+All confirmed: my files compiled in-context (0 errors), `DashboardWidgetSize` is pre-existing duplicate-defined across 15 unmodified siblings, and git scope is exactly my intended files. Now the macOS build + full lint/format capture:
+
+macOS build: same EXIT=65 pre-existing sibling breakage, **0 errors in my files**. Now capture the full-tree lint/format state:
+
+Let me identify the pre-existing swiftformat issue and confirm the iOS build also showed my files compiled, then finalize:
+
+Comprehensive verification complete. Let me clean up build artifacts and write the evidence log:
+
+Now create the parity ledger (referenced by the commit step) with rows for both Apple idioms:
+
+Let me validate the ledger, confirm final scope, and stage exactly my intended files (excluding the pre-existing dirty files that aren't mine):
+
+Clear separation. Let me stage exactly my intended files (explicitly excluding the pre-existing `AIUsageCard.*` and `web/*` dirty files), verify the staged set, then commit:
+
+`git add` is hanging unusually long. Let me stop and investigate (possible index lock in this shared parallel environment):
+
+No lock, nothing staged yet. Let me stage in steps to isolate any slow file (the 187k-line xcstrings is the likely culprit):
+
+The smaller files staged fine. Now the large xcstrings file separately:
+
+All my files staged. Final verification before commit:
+
+The git diff is intermittently slow on the large xcstrings (shared-env IO). The staged set was already confirmed (13 files, no pre-existing files). Let me stop and commit:
+
+Commit succeeded (13 files, 2090 insertions). Let me verify the commit and confirm only pre-existing files remain uncommitted:
+
+Committed cleanly. All 13 of my intended files are in the commit; the only remaining uncommitted files are the pre-existing `AIUsageCard.*`/`web/*` changes that were already dirty before I started (correctly excluded — no scope drift).
+

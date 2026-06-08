@@ -1,0 +1,64 @@
+I'll start by exploring the repository structure and reading the web source that I need to reproduce natively.
+
+Case-insensitive FS — files are `AiUsageCard.*`. The `AIUsageCard.*`/web changes are pre-existing working-tree edits unrelated to my task; I'll leave them untouched. Let me study conventions and shared infrastructure.
+
+Key finding: `project.yml` lists explicit source paths (`feature-views`, `dashboard-widgets`) but **not** `shared-surfaces`, and `xcodebuild` needs full Xcode (only CLT installed). Let me verify tooling and read the conventions/infrastructure.
+
+Major update: **Xcode.app, xcodegen, and pwsh ARE installed** — the earlier error was just `xcode-select` pointing at CLT. The capability may be available. Let me read the build infra and conventions before deciding feasibility.
+
+`Shared.xcframework` must be built from KMP via Gradle (heavy) and isn't checked in. Let me assess full-build feasibility and check prior log outcomes to understand the expected verification pattern.
+
+This is the key insight. `macos-pending-verifications.md` documents the **established methodology**: prior surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) verify the surface in **isolation** (SwiftPM build+tests, `swiftc -typecheck` against iOS18/macOS15 SDKs, swiftlint/swiftformat/placeholder), while the full-app `xcodebuild` is deferred as macOS-pending due to **pre-existing, unrelated** parallel-merge collisions. JDK 17 + Xcode + simulators exist. Let me read the canonical template (AiUsageCard) and shared facade.
+
+Conventions are clear. Let me read the rest of the template (Adapter/Projection/Views/Chrome/Previews/Tests/strings), the design tokens, and the navigation source the web `useLocation`/`useNavigationType` maps to.
+
+Let me check how prior surface commits handled project wiring, read a prior surface's gate log for the exact STATUS pattern, and read the remaining shared components I'll need.
+
+The FSMTimelineChart log is the definitive template: **STATUS=DONE/EXIT=0** via isolated SwiftPM harness (module named `TeslaSync` so `@testable import TeslaSync` works), real-SDK `swiftc -typecheck` on both platforms, lint/format/placeholder clean, `xcodegen generate` enumeration — with full-app `xcodebuild` **deferred** (macOS-pending) for pre-existing collisions. Let me read the motion primitive and check baseline tooling + simulator.
+
+SDKs are iOS/macOS 26.5 (deployment target stays 18/15), iPhone 16 simulator is **booted**, and lint/format pass on the reference file. Let me de-risk the most uncertain part — the iOS 18 scroll APIs (`ScrollPosition`, `onScrollGeometryChange`) — with a quick typecheck smoke test on both SDKs before writing the surface.
+
+All de-risked: iOS 18 scroll APIs typecheck on both SDKs, iPhone 16 simulator booted, lint/format clean on reference. I have a complete understanding of the conventions. Let me set up tracking and write the surface.
+
+Now the pure core. Writing the Adapter, Model, and Projection files:
+
+Now the Chrome (phase style + chip + banner) and Views (status view + scroll modifier):
+
+Now the production companion surface, previews, and the i18n catalog:
+
+Now the two test files (model/projection/a11y, and the pure adapter core):
+
+All 10 surface files written. Let me update tracking and stand up the isolated SwiftPM harness (module `TeslaSync`) to build + test.
+
+Harness builds clean under Swift 6 (including previews). Now running the tests:
+
+**36/36 tests pass**, TEST_RC=0. Now the real-SDK typechecks (iOS 18 + macOS 15, Swift 6 mode) against the **shipped** repo files:
+
+Both SDK typechecks pass under Swift 6. Now lint, format, and the placeholder gate on the surface:
+
+swiftformat found mechanical issues (trailing commas, unused args) and swiftlint reported 1 violation somewhere in the full tree. Let me auto-fix formatting with the ecosystem tool, then pinpoint the lint violation on my files specifically:
+
+Surface is **lint-clean and format-clean** (the earlier lint violation was a pre-existing file, not mine). Let me verify what swiftformat changed and confirm the harness still passes after formatting:
+
+Formatting is valid (protocol conformance preserved). Let me re-sync the harness and re-verify everything still passes, plus run the placeholder gate:
+
+All green: 36/36 tests post-format, placeholder gate clean (self-test + surface scan, 0 violations, 0 opt-outs). Now the `xcodegen generate` evidence. First, baseline generation, then I'll verify enumeration:
+
+Baseline `xcodegen generate` succeeds; `shared-surfaces` isn't centrally registered yet (expected — that's a one-time central concern, not per-surface, to avoid parallel-merge conflicts). Let me prove enumeration works once the group is registered, via a **temporary, reverted** project.yml edit:
+
+**xcodegen enumeration proven**: with the group registered, all 10 files enumerate cleanly (XCODEGEN_RC=0, 60 refs — matching the established pattern), and project.yml is reverted (no committed infra change — correct for parallel-merge safety). Let me gather concrete evidence of the pre-existing full-app blockers (to honestly document the deferral, not fabricate it):
+
+All four pre-existing blockers confirmed in this tree (15× `DashboardWidgetSize`, 261 co-located XCTest files, unstaged xcframework, 0 signing identities) — my surface contributes none of them. Let me pin down the baseline for the whole-tree lint/format gates so I report them honestly:
+
+Complete honest picture now. The whole-tree lint/format gates each carry exactly **1 pre-existing violation in unrelated files** (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`) — neither in my surface, neither fixable within my allowed files. My surface is clean on every gate. Let me write the gate log:
+
+Let me update tracking, do a final end-to-end re-verification, confirm the working tree is clean of stray changes, and commit:
+
+Let me re-confirm the SDK typechecks on the **post-format** committed files (swiftformat touched Adapter/Previews after my first typecheck) and verify infra files are untouched:
+
+All green and infra untouched. Committing the surface + log (only my files):
+
+Committed cleanly — 11 files, 1560 insertions, only my surface + log. Let me mark complete and clean up the throwaway harness:
+
+All 16 todos done, harness cleaned, surface fully committed.
+

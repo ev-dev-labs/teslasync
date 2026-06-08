@@ -1,0 +1,102 @@
+Let me explore the environment to understand what's available and what exists.
+
+Key finding: only **CommandLineTools** is installed (`xcode-select -p` → `/Library/Developer/CommandLineTools`), and `simctl` is NOT FOUND. Full Xcode is required for iOS Simulator builds. Let me investigate the apple app structure and read the web source.
+
+Now let me read the helpers, types, and study the existing native feature-views to match conventions.
+
+Clear file-naming convention exists. Let me verify build capability concretely and read a complete reference feature-view (`TelemetryErrorsPanel`) plus project config.
+
+**Critical capability finding (evidence):**
+- `xcodebuild` → `error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance`
+- `xcrun simctl` → `error: unable to find utility "simctl"` (no iOS simulators)
+
+Full Xcode is NOT installed, so the `xcodebuild ... build test` gate steps **cannot run** → this surface's gate is platform-BLOCKED. But `swiftlint`, `swiftformat`, and `xcodegen` ARE available. Per the Honesty Covenant I'll still author the complete parity surface, run every check that CAN run, and record honest evidence. Let me research the established native pattern thoroughly.
+
+Excellent, the pattern is clear and mature. Let me read the rest of the reference set, the project config, and find shared building blocks + stale/offline patterns.
+
+project.yml notably lists `TeslaSync/dashboard-widgets` but I need to confirm how `feature-views` is included. Let me read the full project.yml and study the stale/offline freshness pattern + shared tokens from `FleetTelemetryHealth` and the design system.
+
+Confirmed: `feature-views` is wired in at integration time (not in this slot's project.yml, and not editable by me — allowed files are only `WindowStatusDetail.*` + log). I'll follow the exact established convention. Now let me find the shared design tokens, GlassPanel, and the stale/offline freshness pattern.
+
+Now I understand the stale/offline pattern. Let me read the design tokens, the FleetTelemetryHealth model (freshness/connection), GlassPanel, and status indicators.
+
+Let me pin down the exact token definitions and reusable component signatures I'll compose with.
+
+Let me read the full Tokens.swift (the authoritative design system) and the Badges.swift (TSTone, TSIconBox), plus the skeleton and status pill components.
+
+I now have the full token system and pattern. Let me confirm the `SecurityEvent` window field types, the `asNonEmptyString` guard, the `TSSkeleton` signature, and the native motion/FadeIn equivalent.
+
+Existing `WindowState`/`parseWindowState` symbols exist (44/17 refs) — I must not collide and should reuse if there's a canonical definition. Let me find where they're defined.
+
+`parseWindowState` exists only as namespaced static methods returning `TwinWindowState?` — no global collision. Let me do a precise type-declaration collision check and read the lint/format configs (the gate runs `swiftlint --strict` + `swiftformat --lint`, which I CAN run).
+
+No global type collisions. Important: swiftlint's `included:` doesn't list `feature-views` (so the gate's bare `swiftlint --strict` skips them — like all sibling surfaces), but I'll still self-lint my files explicitly. `swiftformat --lint apps/apple` WILL cover my files. Let me read the placeholder script (to know forbidden tokens) and the TSSkeleton signature, then write the surface.
+
+I now have everything needed: tokens, components, the 7-file pattern, lint/format rules, and forbidden placeholder tokens (`TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented`). Baseline placeholder scan is clean. Let me set up tracking and author the surface.
+
+Now authoring the surface. Starting with the pure domain/projection adapter.
+
+All 7 files created. Now running the verifications that this runner supports — starting with swiftformat (in-place on my files only) and confirming clean.
+
+swiftformat normalized 3 files. Now confirming `--lint` is clean (my files + full-tree like the gate), then swiftlint and placeholder scan.
+
+All three runnable gate checks are green: **swiftformat --lint 0/6**, **swiftlint --strict 0 violations**, **placeholder scan COUNT=0**. Now a best-effort `swiftc -parse` syntax check against the macOS SDK for extra confidence.
+
+Parse of app files is clean. Let me parse the Tests file (XCTest) and attempt a scoped **typecheck** of my non-test files against the real shared token/component sources for deeper validation.
+
+The typecheck errors are in a *dependency* file (`Skeletons.swift` references `TSCard`), not my code — scoped typecheck cascades. Let me confirm the Tests parse failure reason and retry the typecheck including the missing `Cards.swift` dependency.
+
+The typecheck cascades endlessly through the component library's transitive deps (never my files) — a full typecheck effectively requires the whole module (= the BLOCKED xcodebuild). Let me capture the real Tests-parse error and validate the Tests **body** syntax via a non-destructive temp copy.
+
+Confirmed: the Tests file **body is syntactically valid** (parses with shimmed imports); the direct parse fails only because `@testable import TeslaSync` needs the module from a real build. Let me check the logs dir, prior-log precedent, and the repo's documented convention for Xcode-unavailable verifications.
+
+**Decisive precedent found.** Sibling surface `p4-apple-feature-views-0002-BackendTool.log` ends `EXIT=0 / STATUS=DONE`: host-runnable gates (swiftlint/swiftformat/placeholder) are green, and the `xcodebuild` app build/test is recorded as **DEFERRED** to macOS CI with real evidence — explicitly NOT red-as-green. `apps/macos-pending-verifications.md` codifies this ("not unfinished work… all host-runnable gates are green… deferred artifact verifications"). Covenant rule 7 (no predecessor bypass) requires I follow this exact disposition. Let me read the full BackendTool log to mirror its structure.
+
+The predecessor (BackendTool 0002) had **full Xcode** and executed typecheck+tests, deferring only `xcodebuild`. This runner is **CLT-only**, so more steps defer — but let me push to execute the strongest real validation CLT allows. First, probe whether the `@Observable` macro plugin loads under CLT and attempt a real macOS `-typecheck` of my files against the broad component closure.
+
+Two big findings: (1) `@Observable` macro **loads cleanly under CLT** (OBS_EXIT=0); (2) every typecheck error is in an unrelated closure file `UnitFormatters.swift` (needs `Units`/`UnitPreferences` defined outside my included set) — **zero errors in my files**. Let me include the missing `Units` definition so the closure resolves and I get a clean signal.
+
+`Units`/`UnitPreferences` live in `Sources/SharedFacade/` (which needs the unavailable Shared.xcframework). My surface doesn't use unit formatting, so I'll scope the closure to the dirs my files actually need (Design + Components/UI + Feedback + Motion), excluding the SharedFacade-dependent `DataDisplay`/`Charts`/`Maps`.
+
+Down to one straggler: `FeedbackOverlays.swift` needs `TSMetricBar` (from the excluded DataDisplay dir) — still **zero errors in my files**. Excluding that one unrelated file:
+
+**MAC_TYPECHECK_EXIT=0** — my files typecheck **cleanly against the real 20-file component closure** (design tokens + Design + Components/UI/Feedback/Motion) on the macOS 15 SDK, Swift 6 strict concurrency, with the `@Observable` macro. Since `@Observable` works under CLT and my Model/Adapter are SwiftUI-free, I can actually **execute** the test logic. Let me build a real execution harness.
+
+Now compiling and **executing** the harness against the real production files + component closure:
+
+Just a Swift 6 isolation nit in my harness (top-level is `@MainActor`; `check` must be too). Fixing and rebuilding:
+
+**All 40 assertions PASS — real on-host execution** of the projection, model, telemetry, freshness, and accessibility logic against the production files + real component closure (macOS 15 SDK, Swift 6, `@Observable`). This matches the predecessor's test-execution rigor. Let me probe the `#Preview` macro under CLT, then clean up.
+
+Confirmed: the `#Preview` macro plugin (`PreviewsMacros`) ships only with full Xcode — absent under CLT (exactly the predecessor's documented limitation; previews are `#if DEBUG`, out of gate scope). Now gathering capability evidence + line counts for the log and cleaning up the temp harness.
+
+All evidence gathered and temp files cleaned. My surface (1158 lines across 7 files vs the 45-line presentational web leaf — expanded for the full S8/S10/S11 seams + 5-state contract + tests). Now writing the honest, comprehensive log mirroring the predecessor structure.
+
+Log written. Let me re-verify the committed-state gates one final time (typecheck + lint + format + placeholder) before committing.
+
+All final gates green: **MAC_TYPECHECK=0, swiftlint 0 violations, swiftformat 0/6, placeholder COUNT=0**. Committing.
+
+All 8 files staged (7 surface + log). Committing with the prompt's message and co-author trailer.
+
+Committed `d9caa562` with all 8 files. Final cleanup check.
+
+Task complete. The surface is authored, host-validated, executed, and committed (`d9caa562`), with a clean working tree and the temp harness removed.
+
+Merge made by the 'ort' strategy.
+ ...apple-feature-views-0049-WindowStatusDetail.log | 225 ++++++++++++++++
+ .../feature-views/WindowStatusDetail.Adapter.swift | 221 ++++++++++++++++
+ .../feature-views/WindowStatusDetail.Model.swift   | 211 +++++++++++++++
+ .../WindowStatusDetail.Previews.swift              |  93 +++++++
+ .../feature-views/WindowStatusDetail.Tests.swift   | 221 ++++++++++++++++
+ .../feature-views/WindowStatusDetail.Views.swift   | 291 +++++++++++++++++++++
+ .../feature-views/WindowStatusDetail.strings       |  45 ++++
+ .../feature-views/WindowStatusDetail.swift         |  76 ++++++
+ 8 files changed, 1383 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0049-WindowStatusDetail.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/WindowStatusDetail.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WindowStatusDetail.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WindowStatusDetail.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WindowStatusDetail.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WindowStatusDetail.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WindowStatusDetail.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/WindowStatusDetail.swift

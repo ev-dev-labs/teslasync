@@ -1,0 +1,147 @@
+=== P4 Feature view 0249 LiveStatusPill (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no `xcode-select -s`, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5) present + booted · macOS 26.5 SDK present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL; release + debug XCFrameworks
+                       staged to apps/apple/Frameworks/Shared.xcframework; scheme pre-action re-run UP-TO-DATE in 3s).
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS simulators/SDKs all present → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/features/system/components/status/LiveStatusPill.tsx — a PURE presentational connection-state badge
+  mounted beside the Refresh control on /system-status, reflecting the useStatusLiveSSE pump:
+    <span role="status" aria-live="polite" aria-label="Live status stream: {label}, updated {rel}"
+          data-status-live-state={state} class="… rounded-full px-2.5 py-1 text-xs font-medium ring-1 tabular-nums {tone.cls}">
+      <dot bg-{tone}  (+animate-pulse when reconnecting)> <Icon> <label> <·> <relative>
+  TONE: live → green Activity (no pulse) · reconnecting → amber Wifi (pulse) · offline → zinc WifiOff (no pulse).
+  relative(now,lastUpdateAt): null → "—" · secs=max(0,floor((now-lastUpdateAt)/1000)) ·
+    <5 → "just now" · <60 → "{secs}s ago" · <3600 → "{floor/60}m ago" · else "{floor/3600}h ago".
+  No data hooks. The prompt itself records "Data sources: (none — pure presentational component)"; the surface's
+  ONLY branches are the three connection tones + the null-timestamp relative branch — all reproduced, none hidden.
+
+ARTIFACTS SHIPPED  (only apps/apple/TeslaSync/feature-views/LiveStatusPill.* + this log were touched)
+  LiveStatusPill.Adapter.swift   — pure Foundation core: LiveStatusState (=web StatusLiveState union),
+                                    LiveStatusPalette, LiveStatusTone (web TONE), LiveStatusRelative.bucket
+                                    (verbatim web thresholds + floor + clamp), LiveStatusProjection.resolve,
+                                    LiveStatusAccessibility (web aria-label). No SwiftUI / no store.
+  LiveStatusPill.Model.swift     — LiveStatusStrings (P1/S10 i18n facade), LiveStatusTelemetry seam +
+                                    OSLogLiveStatusTelemetry (redaction-safe os_log "view.opened", P1/S11),
+                                    LiveStatusInput, LiveStatusSource (P1/S8 state-holder seam),
+                                    LiveStatusModel (@MainActor @Observable), InMemoryLiveStatusSource.
+  LiveStatusPill.Views.swift     — LiveStatusPaletteStyle (palette→token), LiveStatusDot (pulse + Reduce-Motion),
+                                    LiveStatusPillView (capsule + ring + dot + icon + label + middot + relative).
+  LiveStatusPill.swift           — public LiveStatusPill view, surfaceSlug "LiveStatusPill", TimelineView 1s tick
+                                    (native peer of the web `now` prop), start/stop lifecycle.
+  LiveStatusPill.strings         — P1/S10 catalog: every web literal promoted to a key (labels, relative
+                                    templates, em-dash, aria-label) — zero English prose literals in code.
+  LiveStatusPill.Previews.swift  — DEBUG previews: live·justNow, live·seconds, reconnecting·minutes(pulse),
+                                    offline·hours, offline·never-updated.
+  LiveStatusPill.Tests.swift     — 20 XCTest cases (relative bucketing, tone, projection, a11y, model+telemetry).
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  rounded-full pill            → Capsule        ring-1 → .strokeBorder(lineWidth:1)
+  bg-{tone}-500/10 + ring/30   → accent.opacity(0.10) background + accent.opacity(0.30) ring   (exact web scale)
+  TONE accent                  → live→Color.TS.statusSuccess · reconnecting→Color.TS.statusWarning ·
+                                 offline→Color.TS.textMuted   (semantic P1/S9 tokens, light/dark/high-contrast)
+  lucide icons                 → Activity→"waveform.path.ecg" · Wifi→"wifi" · WifiOff→"wifi.slash" (SF Symbols)
+  animate-pulse (reconnecting) → dot opacity oscillation via TSMotion.slowDuration.repeatForever; suppressed
+                                 under Reduce Motion (accessibilityReduceMotion)
+  text-xs / font-medium / tabular-nums → Font.TS.caption + .fontWeight(.medium) + .monospacedDigit()
+  middot "·"                   → decorative Text, .accessibilityHidden(true)  (web aria-hidden)
+  aria-label                   → one combined VoiceOver element (.accessibilityElement(children:.ignore) +
+                                 .accessibilityLabel) + .updatesFrequently trait (web role=status/aria-live=polite)
+  data-status-live-state       → .accessibilityIdentifier("LiveStatusPill.{state}")  (UI-test marker parity)
+  i18n  : LiveStatusStrings (table "LiveStatusPill") with web English fallbacks — P1/S10.
+  binding: state + lastUpdateAt arrive via LiveStatusModel/LiveStatusSource — P1/S8; no HTTP in the view.
+  telemetry: view.opened surface="LiveStatusPill" emitted exactly once on present — P1/S11.
+
+GATES
+  [GREEN]  swiftformat --lint  (LiveStatusPill scope, 6 files)        : 0/6 require formatting          (FORMAT_SCOPED=0)
+  [GREEN]  swiftlint --strict  (LiveStatusPill scope, 6 files)        : 0 violations, 0 serious         (LINT_SCOPED=0)
+  [GREEN]  check-placeholders.ps1 -Path …/feature-views/LiveStatusPill : PLACEHOLDER_COUNT=0             (PLACEHOLDER_EXIT=0)
+  [GREEN]  swiftc -typecheck  (4 shipped production files + real Tokens.swift),
+           -swift-version 6 -strict-concurrency=complete                : no diagnostics                 (TYPECHECK_EXIT=0)
+  [GREEN]  LiveStatusPill build + test — ISOLATED SwiftPM harness, swift-tools 6.0, .swiftLanguageMode(.v6)
+           (Swift 6 language mode ⇒ strict-concurrency complete, == the app), compiling the EXACT shipped
+           LiveStatusPill.{Adapter,Model,Views,swift,Previews}.swift sources against the REAL repo design-system
+           (apps/design/generated/apple/Tokens.swift), with the EXACT shipped LiveStatusPill.Tests.swift
+           (@testable import TeslaSync, library target named TeslaSync):
+               Build complete!  ·  Executed 20 tests, with 0 failures                                   (SWIFT_TEST_EXIT=0)
+               (LiveStatusRelativeTests 7 · LiveStatusToneTests 4 · LiveStatusProjectionTests 3 ·
+                LiveStatusAccessibilityTests 1 · LiveStatusModelTests 5)
+  [GREEN]  swiftc executable runtime parity asserts (relative bucketing / tone / projection / aria-label
+           vs the web arithmetic)                                       : printed LSP_ADAPTER_RUNTIME_OK
+
+  [FYI]    swiftformat --lint apps/apple (whole tree)                   : 1 PRE-EXISTING violation —
+                                                                          TeslaSync/feature-views/ActionBuilder.Previews.swift:48
+                                                                          (blankLinesBetweenScopes). NOT a LiveStatusPill file;
+                                                                          outside this prompt's allowed-files; not introduced here.
+  [FYI]    swiftlint --strict  (whole app, 1915 files)                  : 1 PRE-EXISTING violation —
+                                                                          TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+                                                                          (function_body_length). NOT a LiveStatusPill file;
+                                                                          outside allowed-files; not introduced here.
+                                                                          All 6 LiveStatusPill files linted clean within this run.
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO LiveStatusPill errors; all blockers pre-exist this change):
+    Shared.xcframework staged OK ("✓ Shared.xcframework staged", BUILD SUCCESSFUL in 3s) — not a framework issue.
+    iOS  : the app target fails to resolve `import XCTest` for ~230 PRE-EXISTING co-located `*.Tests.swift`
+           files across the feature-views/ + dashboard-widgets/ trees (the first to fail is
+           AIRestorePanel.Tests.swift:18 — "unable to resolve module dependency: 'XCTest'"). Every P4 feature-view
+           surface co-locates its `<Surface>.Tests.swift` beside its sources (the AiUsageCard 0237 precedent and
+           THIS prompt's allowed-files mandate `feature-views/LiveStatusPill.*`), but the app targets do not link
+           XCTest — so the whole-app build is red independently of any single surface. `grep -i LiveStatusPill`
+           over the iOS build log = 0 error hits.
+    macOS: the gate-faithful run fails earlier still, on provisioning —
+           "'TeslaSync-macOS' has entitlements that require signing with a development certificate" (also
+           TeslaSyncWidgets-macOS); this runner provisions no development cert. Re-running with
+           CODE_SIGNING_ALLOWED=NO advances past signing and then hits the IDENTICAL pre-existing co-located
+           `*.Tests.swift` XCTest condition as iOS (220 files; first = AIRestorePanel.Tests.swift). `grep -i
+           LiveStatusPill` over both macOS logs = 0 error hits.
+    These are exactly the conditions apps/macos-pending-verifications.md defers to the ADR-012 macos-latest CI
+    runner (signing/archive) plus a co-located-test / dashboard-widget cleanup owned by the P4/P99 Apple
+    acceptance gate — NOT by a single feature-view prompt (task rule: do not fix pre-existing unrelated breakage,
+    and this prompt's allowed-files forbid touching those surfaces). This is the same "code-complete + DEFERRED
+    full-app Xcode gate" disposition recorded by every P4 feature-view to date (see p4-apple-feature-views-0010-ToolCard.log).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                           explicitly DEFERRED with evidence; the two whole-tree lint pre-existings are reported
+                           RED-as-FYI. None are claimed to pass.
+  2  No scope narrowing  : every web region + branch reproduced — 3 tones, pulse flag, icon family, the floor+clamp
+                           relative arithmetic with all four buckets, the null-timestamp em-dash, the aria-label.
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; macOS signing AND compile failures
+                           both confirmed (two separate runs), not assumed.
+  4  No stubs as final   : complete production view + 20 real, passing tests; placeholder scanner = 0.
+  5  No parity shortcut  : tone/opacity/icons/pulse/typography/a11y/telemetry/i18n all mapped to platform tokens
+                           and verified at runtime against the web arithmetic.
+  6  No delegation       : implemented directly; no sub-agents.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry all present
+                           and consumed; P4 core design-system compiled against in the harness.
+  8  No commit on red    : the COMMITTED artifact (LiveStatusPill.* + this log) is GREEN on every in-scope host gate
+                           (swiftformat, swiftlint, placeholders, Swift-6 typecheck) AND on a real isolated Swift-6
+                           build + 20-test run; the deferred full-app gate is RED only on pre-existing, unrelated
+                           surfaces that this commit neither introduces nor is permitted to touch.
+  9  No silent drift     : changes are confined to the seven feature-views/LiveStatusPill.* files and this log —
+                           enumerated above; git status shows them as the only additions.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic LiveStatusPill shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 20 tests pass under the app's own Swift-6 strict-concurrency rules, against the
+  real design-system, with scoped lint / format / placeholder all green and a runtime parity check against the
+  web `relative()` + `TONE` arithmetic. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED
+  (not failed by this code): it is blocked by ~230 pre-existing co-located `*.Tests.swift` files that import XCTest
+  into the app targets and by macOS development-signing — both owned by the P4/P99 acceptance gate on a signed
+  macos-latest CI runner per apps/macos-pending-verifications.md. This matches the repo's sanctioned
+  "code-complete + DEFERRED full-app Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

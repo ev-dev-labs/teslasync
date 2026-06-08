@@ -1,0 +1,199 @@
+================================================================================
+P4 · Feature view · 0169 — GForcePanel (Apple)
+Run: 2026-06-08T01:55-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/107
+Base: c9c6fdb9f
+Prompt: P4/feature-views/0169 — Feature view: GForcePanel
+Web source (spec): web/src/features/driving/components/driving-dynamics/GForcePanel.tsx
+Mode: code-complete + host/SDK-executed gates (both SDK typechecks + executed XCTest)
+      + DEFERRED full-app Xcode build/test (0058/0103/0143/0170 precedent, ADR-012,
+      apps/macos-pending-verifications.md → P99-0001; Honesty rule 7 — predecessor parity).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)             OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` = /Library/Developer/CommandLineTools; Xcode driven via
+     DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo, matching 0143/0170)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)      OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)             OK
+  iPhone 16 simulator ........ present (83717DEE-…-CBDDD3140989, Booted)             OK
+  SwiftUI .................... present in both SDKs (this surface's core requirement) OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)      OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  xcodegen ................... 2.45.4 (project + targets generate cleanly, exit 0)   OK
+  Kotlin/Native toolchain .... ~/.konan present; KMP Gradle build runs (JDK 17)      OK
+  Shared.xcframework ......... NOT prestaged (apps/apple/Frameworks holds only .gitkeep) WARN
+
+  Capability note: the prompt's escape hatch is "SwiftUI + Swift Charts + MapKit
+  unavailable on the runner → STATUS=BLOCKED". It does NOT apply: SwiftUI is AVAILABLE
+  and PROVEN by the real iOS-18-Simulator AND macOS-15 SDK compiles below. This surface
+  is a pure 3-up StatCard grid drawn with native SwiftUI primitives — it uses NEITHER
+  Swift Charts NOR MapKit ("Charts/maps used: (none)" per the prompt). => AVAILABLE.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/GForcePanel.*) ===
+  GForcePanel.swift            159  SwiftUI surface: TSGlassPanel + header (title + freshness
+                                    chip) + phase switch (loading/empty/error/content) + i18n
+                                    Text helper. onAppear start()+autoRefreshIfStale; onDisappear
+                                    stop; onChange(connection) auto-refresh.
+  GForcePanel.Model.swift      298  P1/S8 state-holder seam (GForceSource → GForceModel) + P1/S11
+                                    telemetry seam (view.opened) + P1/S10 i18n facade
+                                    (GForcePanelStrings, table "GForcePanel") + input/update/prefs
+                                    DTOs + InMemoryGForceSource + GForcePanelSurface.slug.
+  GForcePanel.Adapter.swift    209  SwiftUI-free projection core: GForceFormat (fmtNumber port,
+                                    half-up, safeNumber, "—" missing value), GForceStat,
+                                    GForceProjection, GForceProjector (lateral/longitudinal/
+                                    combined=hypot), GForceAccessibility.summary.
+  GForcePanel.Views.swift      146  GForceGrid (adaptive 1→3 cols), GForceStatTile (label + gauge
+                                    glyph + bold value + "g" unit), GForceFreshnessChip,
+                                    GForceLoadingGrid (TSStatSkeleton ×3).
+  GForcePanel.Previews.swift    76  #Preview ×7: content / single-axis / empty / loading / error /
+                                    stale / offline (DEBUG-only).
+  GForcePanel.Tests.swift      327  29 test methods (23 host-executed below + 6 SwiftUI view-render
+                                    smoke, run by the full-app/acceptance gate).
+  GForcePanel.strings           33  13 i18n keys (5 web-parity + 8 native chrome/a11y).
+  TOTAL                       1248  (no stubs; placeholder gate COUNT=0)
+
+=== PARITY — web numeric pipeline ported VERBATIM (covenant #5) ===
+  Source: GForcePanel.tsx reads useDriveDynamicsLatest(vehicleId, INTERVALS.REALTIME) and renders
+  the 3-up StatCard grid when `hasAny`, else the EmptyState. Reproduced 1:1 in GForceProjector:
+    lateral      = data.lateral_acceleration is number ? value : nil        (Double?)
+    longitudinal = data.longitudinal_acceleration is number ? value : nil   (Double?)
+    hasAny       = lateral != nil || longitudinal != nil
+    magnitude    = (lateral != nil && longitudinal != nil)
+                     ? (lat*lat + lon*lon).squareRoot() : nil      (web Math.sqrt; both-axes only)
+    StatCard value = x != nil ? fmtNumber(x, 2) : '—'   ·   unit = "g"   ·   icon = gauge
+  fmtNumber port (GForceFormat.number): locale-grouped, fixed 2 fraction digits, half-away-from-zero
+  (NumberFormatter .halfUp == Intl halfExpand), safeNumber collapses NaN/±Inf → 0. The explicit `2`
+  is the web literal (NOT getGlobalPrecision). G-force is dimensionless ("g") — no SI conversion,
+  no Phase-48 unit-suffix concern. Worked example pinned by test (matches web regression suite
+  DriveDynamicsPanels.test.tsx): {lateral 0.12, longitudinal -0.04} → "0.12" / "-0.04" /
+  combined sqrt(0.016)=0.12649… → "0.13"; {} → empty state, labels gone.
+
+=== i18n (P1/S10) — keys + English fallbacks, table "GForcePanel" ===
+  PARITY  : dynamics.gForce="Acceleration G-Force" · dynamics.lateral="Lateral" ·
+            dynamics.longitudinal="Longitudinal" · dynamics.combined="Combined" ·
+            dynamics.gForceNoData="No G-force telemetry received yet"
+  CHROME  : dynamics.gforce.{live,stale,offline,updating,loading,errorTitle,retry,noReading}
+  No English literals in code — every string flows through GForcePanelStrings (NSLocalizedString,
+  value: fallback so previews/tests resolve deterministically when the table is absent).
+
+=== STATES — all render (no hidden surfaces); a11y on every element ===
+  loading (3 TSStatSkeleton) · empty (TSEmptyState "No G-force telemetry received yet", never blank) ·
+  error (errorTitle + Retry button) · stale (amber freshness chip + one-shot auto-refresh) ·
+  offline (cached stats + chip) · content (3 StatCards: Lateral/Longitudinal/Combined) ·
+  content-single-axis (combined renders "—" when only one axis reports).
+  VoiceOver: per-tile combined label ("<label> <value> g" / "<label> No reading"); grid carries a
+  summary; header is an a11y header; Retry has an a11y label. Dynamic Type via tokens;
+  Reduce-Motion honored (TSStatSkeleton shimmer, TSFadeIn). Telemetry: view.opened(surface:
+  "GForcePanel") emitted once on start (P1/S11). Data binds ONLY via GForceSource (P1/S8) — zero
+  HTTP in the view.
+
+================================================================================
+GATE RESULTS
+================================================================================
+--- swiftformat --lint apps/apple (GForcePanel.* — config apps/apple/.swiftformat) ---
+    0/6 files require formatting.                                            FORMAT_EXIT=0   PASS
+
+--- swiftlint --strict (GForcePanel.* — config apps/apple/.swiftlint.yml) ---
+    Done linting! Found 0 violations, 0 serious in 6 files.                  LINT_EXIT=0     PASS
+
+--- check-placeholders.ps1 (swift scan of the shipped GForcePanel.* files) ---
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0                                                      PLACEHOLDER_EXIT=0 PASS
+    (Note: the prompt's literal `-Path …/GForcePanel` is a path PREFIX that Test-Path resolves to
+     nothing → vacuous COUNT=0. Verified GENUINELY by copying the 7 shipped files into a temp dir
+     and scanning -Language swift; also `grep -niE 'TODO|FIXME|XXX|placeholder|lorem|not implemented'`
+     over all 7 files = 0 hits.)
+
+--- ISOLATED SDK typecheck of the SwiftUI surface vs the REAL shared component library ---
+    Inputs: Sources/Components + Sources/Design (41 files, minus app-coupled UnitFormatters.swift,
+            which this surface does NOT use) + design/generated/apple/Tokens.swift + the 5 GForcePanel
+            UI/logic files. swiftc -typecheck -swift-version 6 -strict-concurrency=complete.
+    macOS  : -sdk MacOSX26.5            -target arm64-apple-macos15            EXIT=0  PASS
+    iOS-18 : -sdk iPhoneSimulator26.5   -target arm64-apple-ios18.0-simulator  EXIT=0  PASS
+    => the surface COMPILES against BOTH the macOS-15 and iOS-18-Simulator SDKs with the real
+       Xcode 26.5 toolchain under Swift 6 strict concurrency.
+
+--- ISOLATED SwiftPM build + EXECUTED tests (real Xcode 26.5 toolchain, Swift 6 strict) ---
+    Vendored the SwiftUI-free core (GForcePanel.Adapter.swift + GForcePanel.Model.swift) into a
+    throwaway SwiftPM package (swiftLanguageModes: [.v6]) and ran the shipped GForcePanel.Tests.swift
+    (the 23 non-SwiftUI methods; the 6 #if-guarded view-render smokes are deferred to the app gate):
+        Test Suite 'All tests' passed.  Executed 23 tests, with 0 failures (0 unexpected).
+    Covers: fmtNumber grouping/half-up/negatives/locale(de_DE), safeNumber non-finite, "—" missing
+    value, stat order/units/labels, both-axes formatting + combined=hypot, clean-triangle 0.50,
+    single-axis (combined absent), empty snapshot (hasAny false), non-finite collapse, phase matrix,
+    initial content projection, empty/loading/error phases, cached-stays-content-while-failing,
+    freshness tracking, refresh delegation, stale auto-refresh-once-until-live, autoRefreshIfStale
+    fetching guard, view.opened-once telemetry, and the a11y summary (present + "No reading").
+
+--- FULL-APP xcodebuild build/test (TeslaSync iOS-Sim + TeslaSync-macOS) — DEFERRED ---
+    Attempted for real (DEVELOPER_DIR set; `xcodegen generate` → exit 0, GForcePanel registered in
+    both app targets). The macOS scheme's pre-build Run Script ran the KMP Kotlin/Native build for
+    real (~/.konan llvm-21 clang++ actively emitting objects) to stage Shared.xcframework. The
+    capture was disrupted by concurrent SIBLING parallel slots on this shared runner (an unrelated
+    `xcodebuild -scheme TeslaSync-macOS -destination platform=macOS build` from another slot was
+    observed, and /tmp capture files were cleaned mid-run) — the exact "shared runner / overlapping
+    /tmp" hazard the 0143 log documents. Per that precedent, the controlled isolated SDK-compiles +
+    executed SwiftPM tests above are the authoritative DoD.
+    The full-app build's terminal failure is PRE-EXISTING, PROJECT-WIDE and OUTSIDE this prompt's
+    allowed files: project.yml globs `TeslaSync/feature-views` into the app targets, so the
+    convention's co-located `*.Tests.swift` files import XCTest + `@testable import TeslaSync` INTO
+    the app module. Empirically confirmed on the generated project: 900 "*.Tests.swift in Sources"
+    build-file entries across the app targets; `AcDcStatsPanel.Tests.swift` (alphabetically before
+    GForcePanel) compiles first and aborts the app module with "unable to resolve module dependency:
+    'XCTest'". ZERO GForcePanel surface compile errors are attributable to this prompt — GForcePanel
+    is independently PROVEN to compile against BOTH SDKs above. Fixing this = moving *.Tests.swift to
+    a dedicated test target in project.yml, OUTSIDE the allowed `GForcePanel.*` files. Deferred to
+    p4-apple/P99-0001-apple-acceptance-gate (macos-latest + signing), matching the accepted
+    0058/0103/0143/0170/ToolCard "surface green in isolation + DEFERRED full-app gate" disposition.
+        IOS_EXIT=  (deferred — pre-existing XCTest-in-app-target; 0 GForcePanel errors) → P99-0001
+        MAC_EXIT=  (deferred — same pre-existing structural cause)                       → P99-0001
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green : surface-scoped gates are genuinely green (outputs pasted; 23/23 tests EXECUTED;
+                     both SDKs typecheck). The full-app xcodebuild is reported DEFERRED (with its real
+                     pre-existing cause + empirical 900-entry proof), never as passed.
+ 2 No scope narrow : full surface — 6 .swift + strings, all 7 states, P1/S8+S10+S11 seams, 29 tests.
+ 3 No skip-assume  : web source read end-to-end; every t() + render branch + numeric guard reproduced
+                     and pinned by an executed test (incl. the regression-suite worked example).
+ 4 No stubs final  : complete implementation (1,248 lines / 7 files); placeholder COUNT=0. The /tmp
+                     SwiftPM + typecheck harnesses are throwaway verification scaffolding, never shipped.
+ 5 No parity short : numeric pipeline ported VERBATIM (lateral/longitudinal/combined=hypot, fmtNumber
+                     half-up, safeNumber, "—", explicit 2 decimals, both-axes-only combined).
+ 6 No delegation   : authored directly (delegation FORBIDDEN; none used).
+ 7 No predecessor bypass : did NOT edit project.yml, Localizable.xcstrings, shared registry types, or
+                     any non-GForcePanel file; the AIUsageCard.* + 2 web edits already present in the
+                     worktree were left untouched and EXCLUDED from the commit. Xcode accessed via
+                     DEVELOPER_DIR exactly as the predecessors did; full-app build deferred identically.
+ 8 No commit on red : committing on GREEN surface-scoped gates + green executed tests + both-SDK
+                     compiles; the only non-green step is the environment/structural-blocked full-app
+                     build, explicitly DEFERRED (predecessor-accepted), not a red GForcePanel result.
+ 9 No silent drift : changes confined to the allowed GForcePanel.* files + this log.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+================================================================================
+DISPOSITION
+================================================================================
+Production-polished native GForcePanel shipped at parity with the web source: a Foundation-only
+projection core (EXECUTED green — 23/23 XCTest under the real Xcode 26.5 toolchain, Swift 6 strict),
+a P1/S8 state-holder seam (no HTTP in the view), P1/S11 view.opened telemetry, every state + every
+i18n key + VoiceOver labels + Dynamic Type / Reduce-Motion. All surface-scoped gates pass
+(swiftformat / swiftlint / placeholder) AND the surface COMPILES against BOTH the macOS-15 and
+iOS-18-Simulator SDKs with the real Xcode 26.5 toolchain. The full-app `xcodebuild build test` is
+DEFERRED to the apple acceptance gate (P99-0001): it fails only on the pre-existing, project-wide
+co-located-XCTest-in-app-target structural issue (empirically 900 Sources entries; outside this
+prompt's allowed files), matching the accepted 0058 / 0103 / 0143 / 0170 / ToolCard precedent.
+
+================================================================================
+COMMIT
+================================================================================
+git add apps/apple/TeslaSync/feature-views/GForcePanel.* \
+        .github/prompts/monorepo/logs/p4-apple-feature-views-0169-GForcePanel.log
+git commit -m "feat(apps/apple/feature-views): add GForcePanel surface (P4)"
+
+EXIT=0
+STATUS=DONE

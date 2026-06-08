@@ -1,0 +1,64 @@
+I'll start by exploring the repository structure to understand the web source and the Apple project layout.
+
+I have the web source — it's a pure presentational component. Now let me examine the existing Apple project structure and the `AIUsageCard` files which appear to be the established pattern to follow.
+
+The `AIUsageCard` is a complex feature-view. My `ResourcesPanel` is a pure presentational shared-surface, simpler. Let me read the remaining pattern files and the design tokens/i18n/telemetry infrastructure.
+
+The pattern is clear. Now let me understand the design tokens, shared chrome components, project build setup, and the placeholder checker before designing the ResourcesPanel surface.
+
+The tokens live under `apps/apple/`, not `apps/apple/TeslaSync`. Let me locate them correctly.
+
+Critical detail: `project.yml` lists explicit source paths and `TeslaSync/shared-surfaces` isn't among them. Let me assess build capability (xcframework, xcodegen, simulators) and read the test-target config.
+
+Decisive capability findings: `xcodebuild` requires full Xcode but only CommandLineTools is active, `Shared.xcframework` is an empty `.gitkeep` placeholder, and no iOS SDK/simulator exists. The build/test gate cannot run here. Let me confirm the remaining details (excludes, pwsh, parity registry) and check what verification IS possible.
+
+`swift` 6.3.2, `pwsh`, `swiftlint`, `swiftformat` are all available — but `xcodebuild` is not. Let me cross-reference the Windows `ResourcesPanel` parity and the manifest entry to lock in exact states and i18n keys.
+
+Excellent — the Windows parity confirms the exact structure and severity thresholds. Now let me read the remaining AIUsageCard chrome subviews and projection/accessibility code to mirror them precisely.
+
+Let me locate the freshness chip / banner / loading / error chrome subviews and read the projection + accessibility code.
+
+There's a separate `AiUsageCard.Chrome.swift`. Let me read it plus the projection/accessibility code to mirror the exact chrome patterns.
+
+I now have everything needed. Let me check the lint/format configs, then set up my plan and todos.
+
+I have a complete understanding. Let me set up my plan and todos, then build the surface. First the directory and plan.
+
+Now let me write the surface files, starting with the pure Adapter core.
+
+All 8 files written. Now let me verify — first swiftformat, then swiftlint, then the placeholder gate.
+
+swiftformat is clean (0/7 need formatting). Now swiftlint --strict on the new files.
+
+swiftlint linted the whole tree and found 1 violation. Let me find which file.
+
+The only violation is a **pre-existing** issue in `LifetimeStatsWidget.Adapter.swift` (not my code). Let me confirm my files are clean by scoping swiftlint to only them via a temp config.
+
+Scoped swiftlint is clean (0 violations in my files). Now the placeholder gate via pwsh.
+
+Placeholder gate clean (COUNT=0). Now the key supplementary check, since `xcodebuild` can't run: a standalone `swiftc` typecheck of my code against the **real** design tokens + shared atoms. First, confirm the toolchain can import SwiftUI.
+
+SwiftUI + `@Observable` typecheck works (SMOKE_EXIT=0). Now let me assemble the real token + shared-atom dependencies with my source files and typecheck them as one module.
+
+The only error is the `#Preview` **macro plugin** (`PreviewsMacros`), which ships with full Xcode, not CommandLineTools — a tooling gap, not a code issue (it also hits the pre-existing `Buttons.swift`). Re-running without `-D DEBUG` excludes the `#if DEBUG` preview blocks and typechecks all production code.
+
+Those errors are inside the shared `Skeletons.swift` dependency referencing `TSCard` (a sibling shared atom I didn't copy) — not my code. Let me add the `TSCard` source and re-run.
+
+Dependency chain (pre-existing shared files): Skeletons→Cards→Typography. Adding `Typography.swift` (tokens-only deps) should close it.
+
+All production code typechecks cleanly (TYPECHECK_EXIT=0) against the **real** tokens and shared atoms. Now the Tests file — strip the single-module `@testable import` and typecheck against XCTest.
+
+XCTest ships only with full Xcode (absent here). To still verify the test logic typechecks against the **real** production types, I'll provide a minimal XCTest harness shim (standard Apple API) and typecheck the test bodies against it.
+
+All code typechecks (production + tests) against real types — `TYPECHECK_ALL_EXIT=0`. Now let me go further and **execute** the pure web-parity arithmetic at runtime to prove correctness (not just typecheck).
+
+All 27 runtime parity checks pass. Now let me also verify the **Model wiring** (telemetry-once, stale auto-refresh, offline, re-arm) at runtime against the real types.
+
+All Model wiring checks pass at runtime. Comprehensive verification complete. Now let me generate the gate log honestly, capturing real evidence for each step.
+
+Let me verify the full log reads correctly, especially the captured xcodebuild errors.
+
+The log is complete with genuine captured evidence. Let me finalize todos, clean up temp files, and confirm the deliverables.
+
+The ResourcesPanel surface is complete and all runnable verification is green. Let me update the plan and finalize.
+

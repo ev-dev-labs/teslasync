@@ -1,0 +1,134 @@
+I'll start by exploring the repository structure to understand the task — the web source, the existing Apple app structure, and the platform capabilities available.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed — the gate's `xcodebuild build test` cannot run here. But Swift 6.3.2, swiftlint, and swiftformat ARE available. There are ~760 existing feature-view files following an established pattern. Let me study the web source and an existing example set thoroughly.
+
+Now I understand the web source. Let me find the shared state-holders (P1/S8), i18n facade (P1/S10), tokens (P1/S9), diagnostics (P1/S11), and a sibling feature-view that uses the same `useDriveDynamicsLatest` hook to copy the exact binding pattern.
+
+The shared facade lives at `apps/apple/Sources/SharedFacade/`. Let me study the canonical sibling `DriveDetailHeader` (all files) and the SharedFacade structure in parallel.
+
+This is a rich, well-established pattern. Let me read the rest of the canonical example and the shared facade core in parallel.
+
+Let me read the remaining canonical files and locate the shared design system (P1/S9 tokens + components) used by these views.
+
+Now I have the architecture. Let me read the shared design system (tokens + the exact components GForcePanel needs), the SharedFacade core, the test pattern, and the closest analog `AcDcStatsPanel`.
+
+The closest analog is `AcDcStatsPanel` (a stats panel). Let me read its full set plus the web `StatCard`, design tokens, Motion, Cards, the test pattern, and SharedFacade core.
+
+Now let me read the design tokens, the card/typography/motion primitives, the SharedFacade core seam, the test pattern, and the project build config.
+
+Let me locate the generated tokens (TSSpacing/Color.TS/Font.TS — P1/S9) and read Typography, the test pattern, SharedFacade core, and project.yml.
+
+Let me find the token definitions (P1/S9), read Typography, the build config, and lint/format configs.
+
+The tokens are referenced widely; let me find their definitions (Theme.swift), `TSIconBox`, the build config, and lint/format rules.
+
+Key finding: tokens are generated at `apps/design/generated/apple/Tokens.swift`. Also need to understand how `*.Tests.swift`/`*.Previews.swift` in `feature-views/` are wired into targets. Let me read the full project.yml, the token names, TSIconBox, and the SharedFacade seam.
+
+Now I understand the build wiring and conventions. Let me confirm the remaining token names, the web data shape + number formatting to replicate exactly, the placeholder checker, and `TSIconBox`.
+
+`pwsh`, swiftlint, swiftformat all available — only `xcodebuild` (full Xcode) is blocked. Let me read the exact `fmtNumber`, the web data shape, and `TSIconBox`.
+
+Let me read the web hook and its return type to capture the exact data shape.
+
+I now have everything needed. Let me quickly align with the shared facade's connection/loadable semantics, then start building.
+
+I have full context now. Let me check the placeholder patterns to avoid forbidden words, then set up my plan and todos.
+
+Forbidden words noted (avoid "Placeholder", "TODO", "not implemented", etc.). Let me set up the plan and todos, then build the 7 files.
+
+Now I'll build all 7 files. Starting with the Foundation-only seam (Model) and pure projection (Adapter):
+
+Now the SwiftUI views (presentational subviews) and the main view:
+
+Now the main view:
+
+Now the previews, strings, and tests:
+
+All 7 files created. Let me update todos and run the verification pipeline — format, lint, placeholder check, and a standalone typecheck of the Foundation-only core.
+
+Formatting applied. Now let me run the full verification: format-lint, swiftlint --strict, placeholder check, and a standalone typecheck of the Foundation-only core.
+
+swiftformat **0/6 need formatting** and swiftlint **0 violations** — both pass. Now the placeholder gate and a standalone typecheck of the Foundation-only core.
+
+All four runnable gates pass: **swiftformat 0/6**, **swiftlint 0 violations**, **placeholder COUNT=0**, **core typecheck EXIT=0**. Let me attempt a fuller SwiftUI typecheck against the design system to catch any API mismatch, and capture the xcodebuild evidence.
+
+Design system is self-contained (no `Shared` import). Let me attempt a full SwiftUI typecheck of my view files against the design system to catch any API mismatch.
+
+All errors are from unrelated `UnitFormatters.swift` (depends on app-level `Units`/`UnitPreferences` types outside the design system) — **zero errors reference my GForcePanel files**. Let me retry with the minimal design-system set my views actually use, to get a clean signal.
+
+**MIN_TYPECHECK_EXIT=0** — my SwiftUI views typecheck cleanly against the real design-system APIs. Summary of verification:
+
+- swiftformat --lint: **0/6 need formatting**
+- swiftlint --strict: **0 violations**
+- check-placeholders: **PLACEHOLDER_COUNT=0**
+- Foundation core (Model+Adapter) typecheck: **EXIT=0**
+- SwiftUI views vs design system typecheck: **EXIT=0**
+- `xcodebuild`: **unavailable** (Command Line Tools only, not full Xcode)
+
+Let me write the honest gate log and check sibling log conventions.
+
+A sibling apple feature-view BLOCKED log exists. Let me read it to match the established convention exactly.
+
+This is the key precedent. Critical learnings:
+1. The reference runner **had full Xcode** ("platform capability IS available") — mine does **not**, so per the prompt this genuinely IS a `STATUS=BLOCKED` capability case.
+2. `project.yml` sweeps all `*.Tests.swift` into the **app** target; the passing precedent **guards its Tests file with `#if canImport(XCTest)`** so it "compiles to NOTHING in the app target." My Tests file is unguarded — I'll fix that to match the correct precedent.
+3. The precedent **ran unit tests via a standalone SwiftPM module**. I'll do the same to get executed-test evidence.
+
+Let me guard the Tests file:
+
+Now append `#endif` at the end and let swiftformat handle the indentation:
+
+Now reformat (to auto-indent the `#if` body) and re-verify the Tests file:
+
+Tests file guarded, formatted, and lint-clean. Now let me build a standalone SwiftPM harness in `/tmp` to actually **run** the tests (mirroring the precedent), since `xcodebuild` is unavailable.
+
+The only errors are the `#Preview` macro (needs Xcode's macro plugin) in **design-system** files' `#if DEBUG` blocks — not my code. Building in **release** excludes `#if DEBUG`. Let me run the tests in release config:
+
+Build succeeded; exit 0 means tests passed. Let me capture the explicit test-run summary for the log evidence:
+
+Let me capture the full test output to inspect how results are reported:
+
+`swift test` in release isn't executing the suite (likely test-discovery quirk). The normal test path is **debug**, but the harness copies contain `#Preview` blocks that need Xcode's macro plugin. Let me strip the `#if DEBUG` preview blocks from the throwaway copies and run in debug:
+
+Build is clean but no test-run output is surfacing. Let me capture the complete output literally to see what the runner emits:
+
+`swift test` builds the bundle but executes 0 cases. Let me check whether the XCTest **runner** (`xctest`, an Xcode-provided tool) can run the built bundle at all on this CLT-only host:
+
+Confirmed: `xctest` (Xcode-provided) is **not available** on this CLT-only host — XCTest *execution* is blocked for the same reason as `xcodebuild`. But the full harness (14 real sources + the test bundle, `@testable`) **compiled cleanly**. 
+
+To get genuine *executed* parity evidence on this host, let me compile the Foundation-only core into a plain executable and assert the web-parity outputs at runtime:
+
+Top-level code requires the file be named `main.swift`. Let me fix that:
+
+**27/27 runtime parity assertions PASS** — the adapter/projection logic executes correctly on this host. Let me clean up temp files, run a final consolidated lint sweep, and gather git info for the log.
+
+All 7 files ship and pass every host-runnable gate. HEAD is `bcea7fa60`; the 2 modified web files are pre-existing and not mine (I'll only commit my files + log). Now the honest gate log:
+
+Now let me commit only my 7 files plus the log (leaving the pre-existing modified web files untouched):
+
+Committed `138e242e7` — 8 files, 1517 insertions, with only the pre-existing unrelated web files left untouched. Let me do a final confirmation:
+
+All work is complete and committed. The working tree shows only pre-existing unrelated web modifications; all 7 GForcePanel files are tracked.
+
+## Summary
+
+Shipped a production-polished native Apple (SwiftUI) `GForcePanel` at parity with `web/src/features/driving/components/driving-dynamics/GForcePanel.tsx`, following the established 7-file feature-view pattern (Model · Adapter · Views · swift · Previews · strings · Tests). Committed as `138e242e7`.
+
+**Parity & architecture**
+- Binds the live drive-dynamics snapshot through the shared **P1/S8** state-holder seam (`GForcePanelSource`) — no HTTP in the view; reads SI/g directly (no unit-suffix violations).
+- Faithful web logic: `fmtNumber(v,2)` (locale + grouping + `safeNumber`), `Math.sqrt` combined magnitude, `hasAny` gate, the 3-up `Grid default:1/sm:3` (→ `ViewThatFits`), `EmptyState`, `FadeIn(0.05)`, `GlassPanel`.
+- All 5 web i18n keys verbatim + native chrome keys via the **P1/S10** facade; **P1/S11** `view.opened` telemetry; full a11y (labels, Dynamic Type, reduce-motion).
+- Every required state renders: loading · empty · error+retry · **stale** (chip+banner+auto-refresh) · **offline** (chip+banner) · data.
+
+**Verification — every host-runnable gate green**
+- swiftformat `--lint`: **0/6** · swiftlint `--strict`: **0 violations** · placeholder gate: **COUNT=0**
+- `swiftc -typecheck`: Foundation core **EXIT 0** + full SwiftUI surface vs the real design system **EXIT 0**
+- SwiftPM compile of the surface **+ the `@testable` test bundle**: **Build complete** (debug & release)
+- Executed **27/27** runtime parity assertions for the projection/formatting logic
+
+**STATUS=BLOCKED (prompt-sanctioned capability outcome)**: `xcodebuild build test` and `xctest` require full Xcode, but this runner has **Command Line Tools only** (`xcode-select`/`xctest` API evidence captured in the log). That's an environment gap, not a code defect — the surface and its test bundle compile clean and contribute zero errors, and the Tests file is guarded with `#if canImport(XCTest)` so it stays inert in the app-target sweep. The log honestly ends `EXIT=1 / STATUS=BLOCKED`.
+
+
+
+All todos are done and the work is committed. The task is complete.
+

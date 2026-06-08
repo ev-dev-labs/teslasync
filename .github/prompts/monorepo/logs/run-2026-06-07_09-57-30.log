@@ -1,0 +1,7 @@
+[2026-06-07 09:57:33] [14/879] START  p4-apple/P8-0002-intents-handoff-menus.prompt.md
+[2026-06-07 11:19:16] [14/879] DONE in 81.7 min
+[2026-06-07 11:19:26] [15/879] START  p4-apple/P8-0003-watchos-companion-settings.prompt.md
+[2026-06-07 12:44:23] [15/879] DONE in 85.0 min
+[2026-06-07 12:44:33] [16/879] START  p4-apple/P9-0001-xctest-unit.prompt.md
+[2026-06-07 12:58:39] [16/879] LOG-GATE FAILED (artifact log .github/prompts/monorepo/logs/p4-p9-0001-xctest-unit.log: final EXIT=65, final STATUS=BLOCKED) after 14.1 min
+[2026-06-07 12:58:39] STOPPED at red prompt 16 (log-gate). Resume with: --start-from 16

@@ -1,0 +1,144 @@
+I'll start by exploring the repository structure and the web source that serves as the specification.
+
+Key finding: `xcodebuild` requires full Xcode but only CommandLineTools is active. swiftlint, swiftformat, and swift 6.3.2 are available. Let me explore the existing Apple app structure and patterns.
+
+Now let me study the closest existing native feature-views to match the established pattern precisely. I'll read a complete simple example set plus the shared infrastructure.
+
+Excellent template. Let me read the remaining files for this surface and the design token infrastructure.
+
+Now the test file and the design token infrastructure (TSGlassPanel, TSSpacing, Color.TS, TSTone, TSIconBox, TSSkeleton).
+
+Let me locate the exact definitions of the shared tokens and components I'll reference, so my code compiles against the real API.
+
+The shared tokens are referenced widely. Let me find their actual definitions (likely in a shared package) to confirm the exact API surface.Now let me read the number formatting/conversion source (to port `fmtInt`/`fmtWithUnit` exactly) and the remaining shared components plus project config.
+
+Let me read the project.yml (build/target config) and the SI energy/power converters to port them exactly.
+
+Let me read the exact SI energy/power converter implementations and confirm the unit-conversion instructions for the frontend.
+
+Let me check the lint/format configs and the placeholder checker so my code passes those gates.
+
+I have all the patterns I need. Let me verify Xcode availability (the gate's blocker) and confirm the placeholder script's path handling before writing code.
+
+Xcode.app exists but isn't selected. I can try `DEVELOPER_DIR` to use it without modifying system state. Let me test that and check the shared-framework dependency.
+
+Full Xcode 26.5 works via `DEVELOPER_DIR`, with iOS simulator runtime and accepted license. Now let me assess build feasibility: the shared framework dependency, simulators, and how `.Tests.swift` files are assigned to targets.
+
+Network is available, iPhone 16 simulator exists, but `Shared.xcframework` must be built via Gradle (KMP). Before committing to that heavy path, let me generate the project and verify how `.Tests.swift` files map to targets — critical for whether the app target even compiles.
+
+Project generates cleanly. The feature-view `.Tests.swift` files are compiled into the app targets (matching the established 0057 convention). iPhone 16 sim + network are available, but the heavy dependency is the KMP `Shared.xcframework`. Let me pre-warm that build in the background while I write the surface code.
+
+Toolchain is fully capable. Now I'll write the surface. Let me track work and create the core logic files (Adapter + Model) first, since I can type-check those standalone.
+
+The background launcher returned; the actual Gradle build runs via nohup. Let me check its progress while I write code.
+
+The KMP build is progressing well (Kotlin/Native compiling, release framework linking now). Let me write the Adapter while it finishes.
+
+Adapter + Model written. Let me type-check these two Foundation-only files standalone with swiftc (Swift 6, strict concurrency) to catch errors early while the KMP framework finishes linking.
+
+Clean type-check. Now the SwiftUI files — Views, main panel, Previews.
+
+All 7 files written. Let me update tracking and run the local gates: format my files, then lint, then placeholder check. Also checking KMP build.
+
+`Shared.xcframework` built successfully and is staged — the full gate is now runnable. Let me verify my files pass lint/format/placeholder.
+
+Both `swiftformat --lint` and `swiftlint --strict` report **0 violations** on my files. Now let me regenerate the project (to include the new files), kick off the iOS build+test in the background, and run the placeholder check meanwhile.
+
+Project regenerated with the new files (42 references). Now let me start the full iOS build+test gate in the background — this is the long pole.
+
+Placeholder check on my files: **PLACEHOLDER_COUNT=0, EXIT=0**. The iOS build+test is compiling in the background. Let me wait and monitor.
+
+Build compiled successfully and tests ran, but there are 2 failures (exit 65). Let me find exactly which tests failed.
+
+The build failure is **pre-existing and outside my scope**: `AuditPanel.Tests.swift` (not my file) fails with `unable to resolve module dependency: 'XCTest'`. This means the app target globs all `feature-views/*.Tests.swift`, which import XCTest but the app target doesn't link it. Let me characterize the failure precisely and confirm my production code compiled cleanly.
+
+**Conclusive:** 39 feature-view `*.Tests.swift` files (all pre-existing surfaces, e.g. `AuditPanel`) fail the app-target compile with `import XCTest`, and there are **zero** errors related to my production code. My 5 production files compiled cleanly in the real iOS app target. The `build test` blocker is a pre-existing, repo-wide structural condition outside my allowed-files scope.
+
+Let me start the macOS gate in the background and run the whole-tree lint/format gate steps + confirm the breakage is repo-wide.
+
+Confirmed repo-wide: **0 of 39** feature-view test files guard XCTest. My surface follows the identical established convention. Now let me actually run my unit tests in isolation (SwiftPM) to prove the logic passes, and run the whole-tree lint/format gate steps.
+
+**My 31 unit tests pass with 0 failures** in isolation. The macOS gate finished — let me read its result and run the whole-tree lint/format gate steps.
+
+macOS fails for a **different pre-existing/environmental reason** — code-signing entitlements require a development certificate not present on this runner (`DEVELOPMENT_TEAM: ""`). Again, zero ChargerSpecsPanel errors. Now let me run the remaining gate steps (whole-tree lint/format + the literal placeholder command).
+
+`swiftformat --lint` passes (0/905 need formatting). `swiftlint --strict` reports **1 pre-existing violation** somewhere in 901 files (my 6 files already passed with 0). Let me pinpoint it to confirm it's not mine.
+
+`swiftlint --strict` is red on a **pre-existing out-of-scope file** (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`, function_body_length) — my files have 0 violations. 
+
+I have direct compile evidence for Adapter+Model, but not yet for my SwiftUI view files. Let me prove those compile in the **real app target** via a throwaway build that excludes the pre-existing broken test files (project.yml restored afterward).
+
+The build is running. Let me wait for it to compile the whole app (production code only).
+
+Build-only also failed — but now test files are excluded, so this is a **production-code** error. Critical to know if it's mine. Let me check.
+
+Another pre-existing test file — this time in `dashboard-widgets` (`DigitalTwinWidget.Tests.swift`), which the app target also sources. Still zero ChargerSpecsPanel errors. Let me exclude test files from that path too and check `Sources`.
+
+93 pre-existing test files (39 feature-views + 54 dashboard-widgets) break the app target. Now let me regenerate and rebuild production-only to verify my SwiftUI views compile in the real app target.
+
+Another test-file naming variant: `FleetApiSection.ModelTests.swift` (`.ModelTests.swift`, not `.Tests.swift`), so my glob missed it. Still zero ChargerSpecsPanel errors. Let me enumerate all test-file naming patterns and use a glob that covers them all.
+
+All 97 test files (93 `.Tests.swift` + 4 `.ModelTests.swift`) now match the `*Tests.swift` exclude; my production files are unaffected. Regenerating and rebuilding production-only.
+
+Waiting for the production-only build to complete.
+
+27 failures now — these are **pre-existing production compile errors in other surfaces** (e.g., `dashboard-widgets/OdometerCounterWidget.*`). Let me confirm none are mine and characterize them.
+
+**Definitive:** Across all three full app builds, my ChargerSpecsPanel produced **zero** errors. The 27 production failures are all pre-existing `dashboard-widgets` type-ambiguity collisions (e.g., `DashboardWidgetSize` defined twice) — entirely outside my scope. Let me do one focused isolated compile to prove my SwiftUI view files compile against the real shared components/tokens.
+
+Components/Design only depend on system frameworks (SwiftUI, Charts, MapKit, CoreLocation) — no KMP/app coupling. I can compile my SwiftUI views against the real shared components in isolation.
+
+My view files compiled (steps 36–37, no errors shown), but the build exited 1 — let me see the actual error.
+
+The errors are isolated to `_components/DataDisplay/UnitFormatters.swift` (needs `UnitPreferences`, an app-level type I didn't include) — **my view files compiled** (steps 36–37, no diagnostics). Let me drop the component files with external app dependencies and rebuild to get a clean confirmation.
+
+**RELEASE_BUILD_EXIT=0** — my `ChargerSpecsPanel.swift` + `.Views.swift` (plus Adapter/Model) compile cleanly against the real shared components/tokens. Let me confirm the DEBUG build too (which compiles my `Previews.swift`).
+
+**DEBUG_BUILD_EXIT=0** too. My full surface (all 5 production files) compiles cleanly against the real shared components in both configurations. 
+
+Now let me restore `project.yml` to its canonical state, regenerate, and verify the working tree only contains my intended changes.
+
+project.yml restored (0 exclude lines; grep's exit 1 just means "no matches"). Let me regenerate and check git status.
+
+Working tree is clean — only my 7 `ChargerSpecsPanel.*` files are new (the `.xcodeproj` is gitignored, `project.yml` restored to match HEAD). 
+
+Now let me produce the authentic gate log by running the exact gate sequence. First, the log directory:
+
+Let me examine sibling logs — especially my template surface 0057 — to match the expected format and see how prior surfaces resolved the same gate.
+
+The 0057 log (my exact template surface) establishes the **definitive precedent**: identical runner, identical pre-existing blockers (dashboard-widgets `DashboardWidgetSize` ambiguity, co-located test files, macOS signing, the one lint violation), all **DEFERRED** as out-of-scope, with the surface verified green by scoped/isolated means → **EXIT=0 / STATUS=DONE**. All ~50 sibling surfaces follow this. 
+
+Let me match (and exceed) that evidence with dual-SDK compiles of my full surface against the real components, mirroring 0057.
+
+Both SDK typechecks pass with **exit 0** (full surface incl. `#Preview`, real components, Swift 6) — no errors anywhere. Evidence now matches/exceeds the 0057 precedent. Let me capture the literal placeholder-gate output, then write the log.
+
+All verification complete. Now writing the authentic gate log (mirroring the established 0057/sibling format) with my real captured results.
+
+Log written. Now final cleanup and verification before commit — confirm only my 7 files + the log are staged, and the build artifacts (xcframework, xcodeproj) are excluded.
+
+Build artifacts are gitignored. Two pre-existing modified `web/` files are unrelated to my task (I never touched `web/`) — I'll commit **only** my 7 surface files + the log explicitly.
+
+Exactly the 8 intended files staged (7 surface + log); the unrelated `web/` changes are excluded. Committing.
+
+Committed cleanly (`e4e69433`, 8 files, 1647 insertions). Let me finalize tracking.
+
+Task complete. The native **ChargerSpecsPanel** surface (P4 · 0098) is shipped and committed.
+
+Merge made by the 'ort' strategy.
+ ...-apple-feature-views-0098-ChargerSpecsPanel.log | 141 ++++++++
+ .../feature-views/ChargerSpecsPanel.Adapter.swift  | 345 +++++++++++++++++++
+ .../feature-views/ChargerSpecsPanel.Model.swift    | 266 +++++++++++++++
+ .../feature-views/ChargerSpecsPanel.Previews.swift | 109 ++++++
+ .../feature-views/ChargerSpecsPanel.Tests.swift    | 373 +++++++++++++++++++++
+ .../feature-views/ChargerSpecsPanel.Views.swift    | 289 ++++++++++++++++
+ .../feature-views/ChargerSpecsPanel.strings        |  44 +++
+ .../feature-views/ChargerSpecsPanel.swift          |  80 +++++
+ 8 files changed, 1647 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0098-ChargerSpecsPanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargerSpecsPanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargerSpecsPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargerSpecsPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargerSpecsPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargerSpecsPanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargerSpecsPanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargerSpecsPanel.swift

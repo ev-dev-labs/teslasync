@@ -1,0 +1,115 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Swift toolchain, swiftlint, and swiftformat are available. `xcodebuild` is present but `-version` failed. Let me investigate the Apple project structure and xcodebuild more carefully.
+
+Critical finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. This is a capability constraint I'll need to document. But first, let me deeply understand the existing Apple codebase, sibling widgets, and the shared facades so I can implement at true parity. Let me explore extensively.
+
+No sibling dashboard-widget logs exist yet — this is the first. There's no `Dashboard` dir in Sources and the prompt's output path `apps/apple/TeslaSync/dashboard-widgets/` doesn't exist yet. Let me understand the project layout, state-holder pattern, and shared components in depth.
+
+This is a sophisticated KMP-backed SwiftUI app. The app depends on a `Shared.xcframework` (KMP) built via a script needing full Xcode — which isn't available (only Command Line Tools). I need to study the existing patterns deeply to build at true parity. Let me explore the shared facade, components, design tokens, i18n, and diagnostics infrastructure.
+
+This is the first native dashboard widget — no existing dashboard framework, energy facade, or `view.opened` telemetry yet natively. I need to find the KMP Shared energy types (source of truth in `apps/shared`), the design tokens, i18n format, and a real binding/view example. Let me explore in parallel.
+
+I now have design tokens, components, and the binding pattern. Let me verify the KMP `EnergyStore` API (real symbols for backup history + sites), check existing i18n key namespaces, the freshness/offline patterns, and tooling availability (pwsh, parity manifests).
+
+`pwsh` and the placeholder script are available. The KMP `EnergyStore` exposes `teslaEnergySites()` and `teslaBackupHistory(siteId,since,until)` as `StateFlow<Resource<JsonElement>>` (raw SI JSON, no DTO). There's already a `widget.freshness.*` i18n namespace. I need to find how Swift consumes JsonElement feeds and whether a native widget-shell/freshness chrome exists. Let me dig.
+
+The JSON-bridging pattern lives in `SharedLiveStreamProvider.swift`, and there's no native dashboard-widget shell yet (I'll build it in-scope). Let me read the JSON decode pattern, the live-state/freshness rendering, the staleness policy, and check the parity manifest.
+
+Now let me read the freshness/staleness model, the card/typography/formatter primitives, the freshness indicator, the test conventions, and the parity manifest entry.
+
+Now I understand the XCTest conventions and the pure-logic testing pattern (test value projections without the Shared framework). Let me read the error model, formatters, the web hook types, and the canonical JSON shapes to nail the data adapter.
+
+I now have the complete data model, registry sizing, web logic, i18n keys, and conventions. Let me verify the logs directory and understand the placeholder check before implementing.
+
+The canonical log path is `.github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0008-BackupHistoryWidget.log` (exists). Let me read the actual prompt file and the forbidden-pattern list so my code avoids every trigger word.
+
+I have the full picture. Let me read the web `WidgetShell` (the panel chrome I must reproduce), the `WidgetProps` types, and confirm skeleton/banner APIs and any existing diagnostics event sink.
+
+Now I'll confirm the skeleton/banner APIs and search for any existing diagnostics/analytics event sink to conform to (rather than invent one).
+
+There's a real KMP diagnostics contract (P1/S11): `diagnostics/DiagnosticsSink.kt`, `Telemetry.kt`, `Diagnostics.kt`. Let me read them to emit `view.opened` via the real contract instead of inventing one.
+
+Found the real KMP diagnostics contract (ADR-016): `TelemetryEvent.ScreenView(screen,platform,appVersion)` + `Telemetry.track()`. The `view.opened` maps to `ScreenView` with slug `BackupHistoryWidget`. Now let me read the lint/format configs, the freshness key values, and the Button init signature so my code matches house style exactly.
+
+I now have a complete understanding of the codebase, the web spec, the KMP data layer, the diagnostics contract, design tokens, components, i18n, and tooling. Key constraints discovered:
+
+- **`xcodebuild` cannot run** (only Command Line Tools, no Xcode/simulators/KMP toolchain) → the build/test gate is platform-BLOCKED.
+- `swiftformat`, `swiftlint`, `pwsh` + the placeholder script **are** available.
+- The app is KMP-backed; `EnergyStore.teslaEnergySites()` + `teslaBackupHistory(siteId,since)` return `StateFlow<Resource<JsonElement>>` (raw SI JSON).
+- Real diagnostics contract exists: `TelemetryEvent.ScreenView` + `Telemetry.track()`.
+
+Let me set up a plan and todos, then implement.
+
+Now I'll write the main view file with pure value types, the data adapter, view-state machine, presentational SwiftUI view, registry descriptor, i18n facade, and previews.
+
+Let me check how existing Swift code calls KMP suspend functions returning `Result`, and the `EnergyRepository` default constants, so the model's refresh + feed calls match the real bridging.
+
+`DEFAULT_PERIOD = "day"`. K/N bridges suspend funcs to Swift `async throws`. Now I'll write the Shared-backed model + container panel.
+
+Now the tests file — pure adapter/projection/state-machine tests plus a per-state render smoke and i18n/a11y key wiring assertions.
+
+Let me fix the `XCTUnwrap` (needs `throws`) by using a guard instead, then add the i18n catalog keys.
+
+Now let me inspect the exact format of an existing `widget.*` entry so my new keys match byte-for-byte, then insert them.
+
+I'll match the existing convention (ar/en/he, en translated). Let me capture the exact raw formatting of an existing entry and the `"strings"` opening line, then insert textually for a minimal, safe diff.
+
+I have the exact format. Let me insert the 10 `widget.backupHistory.*` keys (ar/en/he, matching the existing convention) right after the `"strings"` opening, with a JSON-validity check.
+
+10 keys inserted, JSON valid (8088→8098). Now let me format my files to house style, then run the available gate checks (swiftformat, swiftlint self-check, placeholder check).
+
+swiftformat passes cleanly (0/263 files need formatting). Now swiftlint (self-check on my files + the gate command) and the placeholder check.
+
+SwiftLint used the config's `included` list (256 files, 0 violations) but skipped my files (not in `included`). Let me lint my files in isolation with a temp config mirroring the same rules.
+
+SwiftLint strict flags one issue: `BackupHistoryWidget.swift` is 726 lines (>400 `file_length`). The gate's swiftlint won't scan my path, but I'll comply with the repo's rule for quality and future wiring. Let me split the pure data/logic out into a `BackupHistoryWidgetData.swift` file. First, let me find the section boundaries.
+
+Sections are clean at MARK boundaries. Let me verify the exact split points, then split into three prefixed files (data / view / previews) so each is well under 400 lines.
+
+Confirmed boundaries. Let me split into three prefixed files (data / view / previews), each well under 400 lines.
+
+Now 5 files, all under 400 lines. Let me re-format, then re-run swiftformat lint, swiftlint (isolated strict), and the placeholder check.
+
+swiftformat (0/5) and swiftlint strict (0 violations) both pass on the deliverable. Now the placeholder check — let me run it as the gate specifies and also directory-scoped to confirm my files are clean.
+
+Both placeholder checks pass (COUNT=0). Let me verify the split files are coherent (correct heads/tails, no dangling braces) and run the gate's actual swiftlint command + whole-tree swiftformat for the log.
+
+All three split files are coherent. Now let me capture the real gate outputs: the actual `xcodebuild` failures (BLOCKED evidence), the gate's `swiftlint --strict`, and confirm git status.
+
+All gate steps captured: `xcodebuild` is BLOCKED (requires Xcode), while swiftlint/swiftformat/placeholder pass. Let me gather full capability evidence (toolchain, simulators, xcodegen, Shared.xcframework) before writing the authoritative log.
+
+Comprehensive BLOCKED evidence confirmed: CLT-only (no Xcode), zero simulators, and `Shared.xcframework` is just a `.gitkeep` (KMP framework unbuilt). Let me generate the authoritative gate log.
+
+Now let me append the deliverable verification (isolated lint/format/placeholder + line counts), full capability evidence, scope/honesty notes, and the closing EXIT/STATUS.
+
+Let me review the complete log to ensure it's accurate and coherent.
+
+The log is complete and honest, ending with `EXIT=1` / `STATUS=BLOCKED`. Let me verify there are no duplicate type definitions across the split files and confirm the working-tree state.
+
+All type declarations are unique (no duplicates), and the working tree shows only my additive changes (the two `web/*.tsx` were pre-existing, untouched). Let me do a final correctness review of the model and view files.
+
+Both files are correct and consistent with the codebase conventions. Everything is verified. Let me finalize the todos and plan.
+
+The task is complete. Here's the final state.
+
+## Summary
+
+I shipped a production-grade native Apple (SwiftUI) `BackupHistoryWidget` at parity with the web source, then ran every gate step the runner supports. The build/test gate is **BLOCKED on platform capability** (no Xcode), which the prompt's capability clause explicitly permits — documented with full evidence.
+
+**Deliverable** (`apps/apple/TeslaSync/dashboard-widgets/`, all ≤400 lines, swiftlint/swiftformat clean):
+- `BackupHistoryWidget.swift` — stateless SwiftUI surface: shell chrome, freshness (updated/stale/offline + refresh), all branches, i18n facade, registry descriptor.
+- `BackupHistoryWidgetData.swift` — pure value types, SI-JSON adapter (`fmtDuration`, 30-day window, sort/slice/aggregate), and the `BackupHistoryViewState` machine.
+- `BackupHistoryWidgetModel.swift` — `@Observable` model binding KMP `EnergyStore.teslaEnergySites()` + `teslaBackupHistory()` via `StateHolderModel`/`LoadableState`, decoding, refresh, `view.opened` telemetry (mapped to the fixed `TelemetryEvent.ScreenView` taxonomy, slug `BackupHistoryWidget`), plus the registered `BackupHistoryWidgetPanel`.
+- `BackupHistoryWidgetPreviews.swift` — per-state previews.
+- `BackupHistoryWidgetTests.swift` — adapter/projection/state-machine/registry/i18n + per-state hosting-render tests.
+- +10 `widget.backupHistory.*` keys added to `Localizable.xcstrings` (P1/S10, JSON-validated).
+
+**States reproduced:** loading (skeleton chrome), no-site, no-events, error (`TSQueryError` + retry), content (compact ≤3 / standard ≤10 events, Outages + Avg Duration stat cards), plus stale + offline chips. Registry id `backup-history`, sizes 2×4 / 1×2 / 4×40 with clamping.
+
+**Gate results:** `swiftformat --lint` ✅ (0/265), `swiftlint --strict` ✅ (0 violations; also 0 on the deliverable in isolation), placeholder check ✅ (0). `xcodebuild` ❌ — `/Library/Developer/CommandLineTools` (no Xcode), zero simulators, and `Shared.xcframework` unbuilt (`.gitkeep` only).
+
+**Log:** `.github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0008-BackupHistoryWidget.log` → `EXIT=1` / `STATUS=BLOCKED` with platform evidence.
+
+Per Honesty Covenant rule 8 (**No commit on red**), I did **not** commit — the complete deliverable, log, and i18n keys remain staged in the working tree for a capable (Xcode + KMP) runner to build, verify, and commit.
+

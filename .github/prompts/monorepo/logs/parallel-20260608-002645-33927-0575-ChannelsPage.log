@@ -1,0 +1,72 @@
+I'll start by exploring the repository structure to understand the task scope.
+
+The directory structure is complex. Let me map it carefully.
+
+Let me look at the existing component patterns, the ledger, and the README gate contract.
+
+An Xcode runner is available (Xcode 26.5 via `DEVELOPER_DIR`). Now let me understand localization and the component conventions.
+
+No P7 page exists yet — I'm establishing the pattern. Let me examine the gate tooling.
+
+Let me examine the feedback components, design tokens, and the test conventions.
+
+This `macos-pending-verifications.md` is the key. Let me study how precedent P4 surface prompts handled the pre-existing full-app build blockers.
+
+This is the authoritative pattern. Let me write the plan and gather the exact API signatures I need.
+
+Now let me verify the documented pre-existing blockers are real in this tree, and write my plan.
+
+Let me read the lint/format config so my code complies on the first pass, then write the plan.
+
+I have everything I need. Let me set up the plan and todos, then implement.
+
+Now I'll create the main page file.
+
+Now the previews and tests.
+
+Now let me add the catalog keys. First, inspect the catalog's JSON structure.
+
+Now I'll add the 4 keys to the catalog via a precise textual insertion (preserving the rest of the file byte-for-byte).
+
+Catalog keys look correct. Now wire `project.yml` for both app targets.
+
+The single violation is pre-existing in `dashboard-widgets` (unrelated). Let me confirm my files are clean by linting them explicitly.
+
+My 3 surface files lint clean; the lone repo-wide violation is pre-existing in `dashboard-widgets` (unrelated, out of scope). Now the placeholder gate.
+
+Placeholder gate clean. Now I'll build an isolated harness for the two-SDK typecheck + tests. Let me inspect the token helper dependency first.
+
+The token + typography files are self-contained. Let me add the explicit `Observation` import (matching repo convention), then build the isolated harness.
+
+Now I'll build the isolated SwiftPM harness for the two-SDK typecheck and the test run.
+
+All 11 tests pass in the isolated harness. Now the two-SDK typecheck.
+
+Both SDK typechecks pass. Now `xcodegen generate` to prove enumeration.
+
+`xcodegen` enumerates all 3 files into both targets. All host-runnable gates are green. Now let me capture concrete evidence that the deferred full-app build fails on pre-existing collisions (not my files).
+
+The full-app build fails first on the unstaged `Shared.xcframework` (documented blocker) — zero ChannelsPage errors. Let me verify git tracking and clean build artifacts.
+
+Note: `AIUsageCard.*` and `web/*` files are pre-existing dirty state (not mine) — I'll stage selectively. Let me check the ledger format.
+
+My catalog diff is exactly the 4 keys. Let me check if any tooling references the apple ledger shape before creating it.
+
+The ledger is an "array of rows". Let me read the validator to match its exact shape.
+
+`check-parity-ledger.ps1` isn't implemented yet — I'll create `apple-ledger.json` as an array of rows per the schema. Let me create it.
+
+Now add the deferral row to `macos-pending-verifications.md`.
+
+Now let me gather line counts and write the evidence log.
+
+Let me re-verify the final surface state (the `Observation` import was added after the first format pass) and validate the ledger JSON.
+
+All final gates green. Let me update tracking, stage only my files, and verify the staged set.
+
+Staged set is exactly my 8 files; the pre-existing `AIUsageCard.*`/`web/*` changes remain unstaged. Committing now.
+
+Commit succeeded with exactly my 8 files. Let me clean up the temp harness and finalize tracking.
+
+All 8 todos done, tree clean, committed. Task complete.
+

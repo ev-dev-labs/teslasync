@@ -1,0 +1,100 @@
+I'll start by exploring the environment and the web source to understand the task fully.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swift`, `swiftlint`, `swiftformat` are available. Let me read the web source and explore the existing Apple structure to follow established patterns.
+
+There's an existing `dashboard-widgets` directory with a multi-file-per-widget convention. Let me examine the structure and find a similar chart-based widget to use as a template.
+
+No climate widget exists yet. `MotorHistoryWidget` and `PowerFlowHistoryWidget` look like the closest chart-based analogs. Let me examine their full file structure and the web source for one of them to find the best template.
+
+`MotorHistoryWidget` is the ideal template — it's an area-chart history widget like ClimateHistory. Let me read all its files plus the web counterpart and registry.
+
+Now let me read the climate registry, web shared components, the climate data hook, and confirm the shared design tokens exist.
+
+Let me examine the climate data hook shape and verify the shared design tokens (Color.TS, Font.TS, MeasurementSystem, TSSkeleton) exist.
+
+The `ClimateState` shape matches: `created_at`, `timestamp`, `insideTemp`, `outsideTemp`. Now let me locate the exact design token definitions to map the inside (orange) / outside (blue) colors correctly.
+
+The design tokens live in `apps/design/generated/apple/Tokens.swift`. Let me read it to get the exact palette for the inside (orange) / outside (blue) temperature series.
+
+I have the full token palette. Climate maps cleanly: inside/cabin → `chartSeriesEnergy` (amber-orange ≈ web `#f97316`), outside → `chartSeriesSpeed` (blue = web `#3b82f6`). Now let me understand the build/test/lint setup and tooling availability.
+
+`pwsh` is available and sources use directory globs (new files auto-included). Only `xcodebuild` is blocked (needs full Xcode). Let me read the test target config, lint configs, and placeholder patterns.
+
+Let me definitively check the Xcode/simulator situation and examine a simpler area-chart widget (Solar) for the `AreaMark` gradient pattern that matches ClimateHistory's two-area chart.
+
+`/Applications/Xcode.app` exists but isn't selected. I may be able to use it via `DEVELOPER_DIR` without sudo. Let me test that — if it works, I can run the real build/test gate.
+
+I have full Xcode 26.5 with an iPhone 16 simulator (booted) via `DEVELOPER_DIR`. The real gate CAN run — STATUS=DONE is achievable. Let me set up a plan, generate the project, and kick off a baseline build to confirm the tree is green before my changes.
+
+Scope is isolated (9 pre-existing unrelated changes, none in dashboard-widgets). Let me confirm the web unit semantics (`unitPrefs.temperature`, `convertTempFromSI`) to nail the label, then write the plan.
+
+Confirmed: web `tempUnit` is `'°C'`/`'°F'` (= `MeasurementSystem.temperatureLabel`), conversion matches. Critical check before writing: where are `DashboardWidgetSize`/`DashboardWidgetRegistration` defined — to avoid duplicate-symbol collisions.
+
+15 widgets each define `public struct DashboardWidgetSize` in the same module — that should be a redeclaration error. This smells like a pre-existing merge collision (each slot added its own copy, then all merged). I must verify the baseline empirically. Let me generate the project and build it as-is.
+
+The duplicate type defs are unguarded `public struct` — they WILL collide. Project generates fine. The decisive test is the baseline build. Let me run it (build-only first, to fail fast on redeclarations).
+
+The build is compiling (large app). Let me keep waiting for the baseline result — it's the key signal for how to handle the shared `DashboardWidgetSize` type.
+
+Baseline build failed (exit 65, before any of my changes). Let me see the actual errors to understand the pre-existing state.
+
+Baseline fails on a pre-existing issue: `AIRestorePanel.Tests.swift` imports XCTest but is compiled into the app target. This suggests `*.Tests.swift` should be excluded from the app target. Let me inspect the full project.yml and how the generated project assigns test files.
+
+Root cause is pre-existing and systemic: `*.Tests.swift` files sit in app-target source dirs (importing XCTest), and 15 widgets duplicate `DashboardWidgetSize`. This is an integration-merge artifact outside my scope. Let me confirm the duplicate-collision empirically (build with test files excluded) and inspect `TSSkeleton`'s dependencies for an isolated verification harness.
+
+My exclude glob missed `*ModelTests.swift` variants. Let me use the broader `*Tests.swift` pattern to finally expose whether the duplicate types collide once all XCTest files are excluded from the app target.
+
+Confirmed decisively: the merged integration branch is unbuildable due to **pre-existing cross-slot duplicate symbols** (`DashboardWidgetSize`, `TelemetryErrorsModel`, etc. are "ambiguous for type lookup") — entirely outside my scope. Per-widget prompts are evaluated against a clean base. My plan: follow the proven MotorHistory pattern, then verify my widget in isolation (base + only my widget). Let me check for central widget references and test-target membership before writing.
+
+Good — no central registry references widget types (safe to isolate-build). Let me fix the target-membership analysis to learn whether `.Tests.swift` files reach a test target.
+
+Forensics complete. The merged branch is unbuildable from pre-existing cross-slot duplicate symbols (e.g. `DashboardWidgetSize` ambiguous) and `*.Tests.swift` files compiled into the app target — all outside my allowed scope. Per-slot prompts evaluate against a clean base, and no central file references widget types (isolated build is safe). I'll follow the proven MotorHistory pattern and verify my widget in isolation. Writing the files now.
+
+All 7 files written. Let me update tracking and run swiftlint + swiftformat on the new files.
+
+One line-length violation (126 > 120) on the empty-hint line. Let me shorten that fallback string and keep the `.strings` value consistent.
+
+swiftlint --strict: **0 violations**. swiftformat --lint: **0/6 need formatting**. Now the placeholder check via pwsh, and let me view the script to call it correctly.
+
+The gate's literal path (no extension) resolves to nothing (clean by default). To verify *meaningfully*, I'll run the real script against a temp copy of exactly my files, plus run the literal gate command.
+
+Placeholder check: **PLACEHOLDER_COUNT=0** (both meaningful and literal). Now the key compile verification. The merged tree is poisoned, so I'll do an **isolated build**: real app target with base `Sources/` + only my widget's production files (excluding all other widgets + all test files). First regenerate the project to include my new files.
+
+My files are in the project. Now the isolated build (base + only my widget's production files, excluding all other widgets and all test files):
+
+Now the picture is fully clear: the base `Sources/DashboardWidgets/` (BatteryCells-slot) ALSO defines `DashboardWidgetSize`, and feature-views have their own cross-slot dupes (`ChargerType*` ambiguous). The merged tree is riddled with duplicate types from many slots — every widget self-contains these types (correct per-slot, collides only when merged). My widget correctly follows the dominant `dashboard-widgets/*` convention. For a clean compile proof, I'll use a `swiftc -typecheck` harness with only my files + real leaf deps. Let me check `TSCard`'s dependency depth.
+
+My widget only uses `TSSkeleton` (not `TSCard`). For a fully-real typecheck harness, let me trace the small dependency closure: find where `.tsGlassPanel()` is defined (pulled in by `Skeletons.swift` → `Cards.swift`).
+
+Closure: `TSSkeleton`→`TSCard`→`.tsGlassPanel()`(TSMaterial.swift). Let me run a real `swiftc -typecheck` harness of my 5 production files against the real iOS SDK + real tokens/material/cards/skeletons + MeasurementSystem, under Swift 6 strict concurrency (matching the project).
+
+The only errors are inside the shared `Cards.swift` (it cascades into Typography components) — *not* my widget. To isolate cleanly, I'll swap the heavy `Cards/Skeletons/Material` chain for a minimal `TSSkeleton` shim matching the real signature, and typecheck my code against the real SDK + real tokens.
+
+**Production code type-checks cleanly (EXIT=0)** against the real iOS 26.5 SDK (SwiftUI + Charts + ContentUnavailableView), real design tokens, real `MeasurementSystem`, under Swift 6 strict-concurrency. Now let me verify the **Tests** file compiles against my types (stripping `@testable import` since the harness puts everything in one module, linking XCTest).
+
+The harness copy wasn't created (prior `&&` chain aborted). Let me recreate it and run.
+
+The only errors are `XCTAssert*` macro resolution (a bare-`swiftc` limitation), **not** my code — every reference to my production API resolved. To definitively compile **and run** the tests, I'll build a minimal SwiftPM package (my production files + tokens + shim + tests) and run `swift test`.
+
+The `swift test` failure is only in `Previews.swift` (free `previewModel` calling `@MainActor` members) — identical to MotorHistory's proven pattern. This is an actor-isolation environment mismatch. Let me check whether the app target sets default MainActor isolation (which would make previews compile in the real target).
+
+No default MainActor isolation is set, so under strict Swift 6 the free `previewModel` helper calling `@MainActor` members is genuinely incorrect. I'll harden my `Previews.swift` by marking the helper `@MainActor` (preview-only, zero behavior change, strictly more correct). Then re-run `swift test` with previews included to confirm the whole widget compiles under Swift 6 mode and tests pass.
+
+`swift test` (Swift 6 language mode): **25 tests, 0 failures** — the full widget (Projection+Model+Chart+View+Previews) compiles and all adapter/model/registry/a11y tests pass. Let me re-confirm lint/format after the `@MainActor` edit, and prep the log directory.
+
+Lint/format still clean after the edit. Now let me run the **literal gate** iOS command once to capture the real (pre-existing) merged-tree result and prove no `ClimateHistory` file is implicated — this evidence goes in the log.
+
+Literal iOS gate fails (exit 65) on **pre-existing** `feature-views/AIRestorePanel.Tests.swift` XCTest-in-app-target — **zero ClimateHistory errors**. Let me kick off the macOS literal gate (async, for the log) while I write the gate log.
+
+The merged tree has **three** different base conventions all defining `DashboardWidgetSize`/`DashboardWidgetRegistration`/`DashboardWidgetTelemetry` (`Sources/DashboardWidgets/*`, `Sources/Features/Dashboard/Widgets/*`, and the 15 `dashboard-widgets/*` siblings) — a pre-existing cross-slot collision. My surface self-contains them exactly like every `dashboard-widgets/*` sibling. Let me check the macOS gate progress.
+
+macOS literal gate also fails (exit 65) — on a different **pre-existing** cause: code-signing/entitlements (no dev certificate in this environment), again with **zero ClimateHistory errors**. I now have complete evidence. Writing the comprehensive, honest gate log.
+
+Log written. Now let me verify git state, confirm generated artifacts are ignored, clean up temp files, and stage only the allowed files.
+
+Clean: generated `.xcodeproj`/`build/` are gitignored, and only my 7 surface files + the log are untracked. Staging exactly the allowed files and committing.
+
+Committed. Let me verify the commit contains exactly the 8 intended files and the pre-existing changes were left untouched.
+
+All verified. The commit contains exactly the 8 intended files (1,519 insertions); the 9 pre-existing unrelated changes were left untouched.
+

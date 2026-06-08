@@ -1,0 +1,164 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure, parity manifest, and related files.
+
+Xcode CLT is installed but let me check if a full Xcode is available (needed for `xcodebuild -project`). Let me explore the Apple app structure and parity files.
+
+Full Xcode.app exists but `xcode-select` points to CLT. Let me examine the project structure, existing feature pages, and the parity manifest record.
+
+Let me find the p4-apple README gate contract, check build tooling availability, and look at completed page examples.
+
+Key findings: this is the **first** page prompt (no prior `apple-page-*` logs), `.xcodeproj` and `Shared.xcframework` don't exist yet, and `Features/` isn't in `project.yml` sources. Let me study navigation, the shared facade, design tokens, and components.
+
+Let me examine the route parser, app entry/registration wiring, design tokens, and the shared facade for data access.
+
+Let me study the app entry/registration pattern, settings registration (the model to mirror), and design tokens.
+
+Let me check existing routing tests (to avoid breakage), design tokens, the components library, and SI converters.
+
+Now let me read the core building blocks: cards (GlassPanel), pickers (Select), metrics, SI unit facade, and how existing surfaces bind to the KMP core.
+
+This is a rich, well-established multi-file parity pattern. Let me examine the test convention, sub-view patterns, pickers, metrics, and typography components.
+
+Let me resolve the test-target wiring question and read the remaining components I'll need (metrics, typography, motion, timestamp).
+
+Let me find the gate contract (p4-apple README), the xcodegen/test wiring, and read typography + motion + timestamp components.
+
+Key finding: README says ledgers are `apple-macos-ledger.json` + `apple-ios-ledger.json` (gate needs `xcodegen generate` + KMP `Shared.xcframework`). Let me read the final components and assess build feasibility (KMP shared module).
+
+The shared KMP module exists (heavy Gradle/Kotlin-Native build). Let me definitively resolve the test-target wiring by generating the project and inspecting it, plus read typography signatures.
+
+xcodegen works. Let me inspect the generated project to definitively resolve test-target membership.
+
+Project generation works and feature-view tests compile into the app targets (established convention). Let me read the measurement-system/settings bridge to wire `UnitPreferences` correctly, then start building.
+
+I have enough context. Let me confirm exact token names and a few component signatures, then build.
+
+Let me check the `Localizable.xcstrings` format and confirm the `charging.curve.*` keys aren't already present.
+
+The 6 keys are missing — I'll add them. Let me check whether the KMP shared core exposes a charging-sessions API (to wire a real data source) and how other surfaces bind to it.
+
+Let me read the rest of `AppContainer` and the shared `ChargingStore` to see if a real production data source is wireable within the allowed files.
+
+The shared `ChargingStore.sessionsPaginated` is the exact KMP equivalent of `useChargingSessionsPaginated` (the production binding target). The local `AppContainer.bootstrap` is explicitly "future/unwired", so I'll ship the page + source seam + InMemory + registration infra (not inject fake data into the live route). Let me verify base component string keys exist before writing.
+
+Base component keys (e.g., `action.retry`) are missing from the catalog (components fall back to raw keys) — so I'll make my page fully self-localized with `charging.curve.*` keys. I have a complete design. Let me create the directory and write a plan file, then build the files.
+
+Now let me write the implementation. Starting with the pure projection core (Adapter).
+
+Now the sub-views. First let me remove the unused `stale` key from the model (this page's data source isn't live).
+
+Now the main page view.
+
+Now the navigation registration helper.
+
+Now wire the `/charging-curve` deep-link alias into the route parser.
+
+Now the previews and tests.
+
+Now wire the build (project.yml sources) and add the string catalog keys. Let me do project.yml first.
+
+Now add the 24 `charging.curve.*` keys to the string catalog via textual insertion (preserving the rest of the file byte-for-byte).
+
+The file uses no-space colons (`"key": {`); my block used spaced colons. Let me normalize my inserted block to match the file's dominant style.
+
+Now let me create the apple ledger. Let me read the ledger schema and an example ledger first.
+
+Ledger uses `apple-macos`/`apple-ios` platforms. I'll finalize it after the gate (honest status). Now let me run the gate — starting with the fast, reliable checks: regenerate the project, placeholder scan, and SwiftLint.
+
+The placeholder scanner flags the literal word "placeholder" (including SwiftUI's `.redacted(reason: .placeholder)` and my doc comments). Let me read the scanner rules.
+
+The scanner bans the literal word "placeholder" (incl. SwiftUI's `.placeholder` redaction). Let me check the patterns and whether a `TSSkeleton` exists to avoid `.redacted(reason: .placeholder)` cleanly.
+
+`TSSkeleton`/`TSStatGridSkeleton` exist — I'll use those for the loading view (no `.redacted(.placeholder)`) and reword comments. Let me read the skeleton signatures.
+
+Clean skeleton components exist. Let me find all banned-word occurrences across my files, then fix them (use skeletons for loading, reword comments).
+
+Let me fix all 4 occurrences: reword two doc comments and rebuild the loading view using shimmer skeleton components (no `.redacted(.placeholder)`).
+
+Now re-run the placeholder scan and run SwiftLint.
+
+Placeholder scan passes. Now SwiftLint --strict.
+
+SwiftLint found 6 line-length violations (>120). Let me view and wrap them.
+
+Let me wrap all 6 long lines.
+
+Now fix the Model, Views, and Tests long lines.
+
+Re-running SwiftLint --strict to confirm clean.
+
+Adapter.swift is now 409 lines (>400 limit). Let me move the accessibility + surface sections into a separate file.
+
+Trailing newline issue from the edit. Let me fix it.
+
+SwiftLint passes (0 violations) and the placeholder scan passes. Now let me assess whether the heavy `xcodebuild` build can actually run here (full Xcode + KMP Shared.xcframework).
+
+Full Xcode 26.5, Java 17, and simulators are available. The KMP `Shared.xcframework` is the long pole. Let me attempt building it (gradle), monitoring for progress vs. fast failure.
+
+Network is available. Let me locate the real `JAVA_HOME` and launch the Shared.xcframework gradle build in the background.
+
+JAVA_HOME found. Let me launch the gradle `Shared.xcframework` build in the background and monitor it.
+
+The gradle build is running (likely downloading the Kotlin/Native toolchain). Let me let it continue and check progress while I prepare the log and review code.
+
+The KMP build is progressing fast (artifacts cached) — release frameworks linking now. Let me wait for it to complete.
+
+Release frameworks linking (the final step before staging). Let me wait for completion.
+
+On the final macOS release link. Let me wait for the build script to finish and stage the framework.
+
+`BUILD SUCCESSFUL` — the KMP framework built. Let me stage it and start the iOS app build.
+
+Framework staged. Now build the iOS app for the simulator (compiles all sources + links the KMP framework). This is slow, so I'll run it in the background.
+
+Build failed (exit 65). Let me inspect the errors.
+
+The only errors are from a **pre-existing** file (`feature-views/AIRestorePanel.Tests.swift`) that imports `XCTest` in the app target — my own test file is `#if canImport(XCTest)`-guarded so it's unaffected. The app target lacks testing search paths. Let me verify my files compile by building with `ENABLE_TESTING_SEARCH_PATHS=YES` (so the pre-existing colocated tests resolve XCTest).
+
+Critical finding: **zero** errors come from my `Features/Charging` files. With `ENABLE_TESTING_SEARCH_PATHS=YES`, the build surfaces ~6000 **pre-existing** errors in `dashboard-widgets/` (`DashboardWidgetSize` ambiguous) and unguarded test files — all outside my scope. Let me confirm my code is clean and characterize the pre-existing breakage.
+
+Definitive: **0 errors mention ChargingCurve**; all ~6000 errors are pre-existing in `dashboard-widgets/` (duplicate `DashboardWidgetSize` struct declared ~17×) and `feature-views/` — outside my allowed scope. To conclusively prove my page compiles + links against the real `Shared.xcframework`, let me build an isolated probe target (Sources + my Features, excluding the broken legacy dirs) without touching the committed project.
+
+Even `Sources/DashboardWidgets/` has the duplicate `DashboardWidgetSize` (pre-existing). My Features still show **0 errors**. Let me refine the probe to exclude the broken dashboard dirs (which my page doesn't depend on) to get a clean isolated build.
+
+The isolated probe now surfaces **12 real errors in my files** (previously masked by the upstream failures). This is the signal I needed. Let me see them.
+
+All 12 are the same Swift 6 strict-concurrency issue: `static let` of non-`Sendable` `LocalizedStringKey`. The fix is computed `static var` (no stored global state). Let me fix `ChargingCurveStrings`.
+
+Let me rebuild the probe to confirm my files now compile cleanly.
+
+**PROBE3: BUILD SUCCEEDED, 0 errors.** My page compiles AND links cleanly against the real `Shared.xcframework` + all real dependencies — definitive proof. The full-app build fails only on **pre-existing** duplicate `DashboardWidgetSize` structs (declared ~17× in `Sources/DashboardWidgets` + `TeslaSync/dashboard-widgets`) and unguarded `import XCTest` in legacy test files — all outside my allowed scope.
+
+Let me re-run SwiftLint, clean up probe artifacts, and verify nothing pre-existing changed.
+
+SwiftLint and placeholder gates are clean; probe artifacts removed. Now let me go further and actually **execute** my unit tests (in isolation) to prove the test step passes for my code — via a probe test target.
+
+3 fixable errors in my **test** file: two methods use `try XCTUnwrap` without `throws`, and `EmptyView` needs `import SwiftUI`. Let me find all `try` usages and fix.
+
+Only lines 65 and 89 use `try`. Let me add `import SwiftUI` and `throws` to those two methods.
+
+Now re-run SwiftLint and the isolated test.
+
+**TEST_EXIT=0 — all 26 unit tests PASS** (projection, model, registration, accessibility), including the runtime SI-formatting path through the KMP framework. Let me capture the full results, confirm git status shows only my intended changes, and clean up.
+
+I see unexpected `AIUsageCard.*` modifications in git status — I never touched those. Let me investigate whether they're pre-existing worktree changes.
+
+Confirmed: the `AIUsageCard.*` changes are **pre-existing worktree state** (mtime 08:04, before my session) — not mine. My changes are only: `Localizable.xcstrings`, `AppRouteParser.swift`, `project.yml`, and `TeslaSync/Features/`. Let me clean up probe artifacts and regenerate the real project.
+
+All gates verified. My changes are surgical and correct. Now let me write the honest gate log with the `=== PARITY ===` section.
+
+Now the parity ledger (honest status reflecting the pre-existing blocker).
+
+Let me also verify the page compiles for **macOS** (adaptive parity, ADR-002) via a quick macOS isolation probe.
+
+**macOS isolation build: BUILD SUCCEEDED, 0 errors** — the page compiles cleanly for both iOS and macOS (adaptive, ADR-002). Let me clean up and update the log with the macOS evidence.
+
+Let me update the log's isolation-proof section to record the macOS verification too.
+
+Let me run a final verification pass (lint, placeholder, xcstrings validity, required keys) and mark todos complete.
+
+All final checks pass: SwiftLint 0, placeholder 0, xcstrings valid with all 6 required keys (24 total), ledger valid, 9 feature files present. Let me do a final confirmation of the committed-state scope and that no build artifacts leaked into git.
+
+All work is complete, in-scope, and verified. Here's my final summary.
+

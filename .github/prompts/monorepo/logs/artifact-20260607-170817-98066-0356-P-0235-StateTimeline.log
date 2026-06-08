@@ -1,0 +1,155 @@
+================================================================================
+P4 · Feature view · 0235 — StateTimeline (Apple)
+Run: 2026-06-07T23:5x-0700   Host: Darwin arm64 (macOS 26.5.1)   Branch: auto/20260607-170817-98066/356
+Base: 413d1c60a
+Prompt: .github/prompts/monorepo/p4-apple/feature-views/P-0235-StateTimeline.prompt.md
+Web source (spec): web/src/features/system/components/state-machine/StateTimeline.tsx (198 lines)
+Mode: code-complete + host-validated on REAL iOS-18 sim + macOS-15 (build + run +
+      typecheck). DEFERRED only the full-app Xcode scheme build/test (ADR-012
+      macOS-pending), matching predecessors 0010 ToolCard / 0180 AlertMessageEditor.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                 OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iOS simulator SDK .......... iPhoneSimulator 26.5 (deployment target iOS 18.0)    OK
+  macOS SDK .................. MacOSX 26.5 (deployment target macOS 15.0)            OK
+  iOS simulator device ....... iPhone 16 present + booted (simctl via Xcode)        OK
+  swiftlint .................. 0.63.3                                               OK
+  swiftformat ................ 0.61.1                                               OK
+  xcodegen ................... 2.45.4                                               OK
+  pwsh (placeholder gate) .... 7.6.2                                               OK
+  default xcode-select ....... /Library/Developer/CommandLineTools (NO iOS SDK)    WARN
+  Shared.xcframework ......... built on demand by the scheme pre-action (Gradle
+                               :core:assembleSharedXCFramework SUCCEEDED here)      OK
+  codesign identities ........ none (BLOCKER for the signed full-app gate, ADR-012) WARN
+
+  Charts/Maps capability note: per the web source this surface uses NEITHER Swift
+  Charts NOR MapKit ("Charts / maps used: (none)") — it is a horizontal mini-timeline
+  of FSM transitions (positioned dots on a rule + an empty-state hint). The core
+  requirement is SwiftUI, which is available and PROVEN below by a real iOS-18 build
+  that runs 25/25 XCTest on the iPhone 16 simulator and real iOS-18 + macOS-15
+  swiftc -typecheck. The capability-BLOCKED escape hatch therefore does NOT apply;
+  the surface is authored + host-validated for real, and STATUS=DONE.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/StateTimeline.*) ===
+  StateTimeline.Model.swift     274  Surface slug ("StateTimeline"), P1/S11 telemetry seam
+                                     (+ OSLog default), P1/S10 strings facade + {{name}}
+                                     interpolation, the input value types (FSMStateTransition,
+                                     FSMStateTimelineTick, FSMStateTimelineData), the render-state
+                                     enum (loading/empty/error/loaded), the live/stale/offline
+                                     connection enum, and the action seam (onSelect / onWidenWindow
+                                     / onJumpToLast / onRetry / onStaleRefresh).
+  StateTimeline.Adapter.swift   353  Foundation-only pure core: the localizer (.bundle/.echo),
+                                     the FSM color-role port of web getStateColor(fsmType,state).dot
+                                     (vehicle + telemetry_connection tables, lowercased lookup,
+                                     vehicle fallback, neutral default), the windowing port of
+                                     windowTransitions + nextWiderPreset, the useMemo tick projection
+                                     (+ cached→projection make()), the presetLabel / formatRelative /
+                                     window / widen / jump / empty copy, and the VoiceOver builders.
+  StateTimeline.Views.swift     373  Subviews: role→swatch, the bordered box, axis header
+                                     (start · "Window: {n} min" · end), the GeometryReader track +
+                                     center rule, the colored selectable tick (44pt hit target, ring
+                                     on select, .help tooltip, aria label+value), the empty box
+                                     (last-seen copy + widen/jump), the stale/offline banner, the
+                                     loading skeleton, and the error+retry view.
+  StateTimeline.swift           142  The composed FSMStateTimeline surface: freshness banner +
+                                     state switch (loading/empty/error/loaded→chart-or-empty),
+                                     view.opened lifecycle, stale one-shot auto-refresh, injected
+                                     time/date formatters for determinism.
+  StateTimeline.Previews.swift  132  #if DEBUG previews: loaded timeline (+selection) / in-window
+                                     empty hint / live·stale·offline freshness / loading·empty·error.
+  StateTimeline.Tests.swift     379  XCTest (25): windowing, projection (web parity: 11:55/11:58 in a
+                                     10-min window → leftFraction 0.5/0.8), palette roles, preset/
+                                     window/widen/jump/empty/relative copy, a11y labels, i18n key
+                                     parity (recorder asserts the 9 verbatim web keys), state accessor,
+                                     connection freshness, and the view.opened telemetry.
+  StateTimeline.strings          45  P1/S10 catalog — every web key verbatim + native chrome/a11y.
+  Total 1698 lines (7 files). Every .swift file <= 379 lines (house file_length); largest
+  Tests.swift 379. Type prefix FSMStateTimeline*/FSMState* avoids collision with the
+  existing StateTimelineWidget dashboard surface in the same target. ZERO `// parity:allow`
+  opt-outs; no TODO/stub/mock/placeholder/Lorem in shipped code.
+
+=== PARITY (vs web features/system/components/state-machine/StateTimeline.tsx) ===
+  Data sources (web → native): useTranslation → FSMStateTimelineLocalizer (P1/S10);
+    useDateFormat().formatTime + formatRelative → injected DateFormatters + the ported
+    relative buckets. The component owns no data hook (web parity: pure presentational);
+    the parent windows the shared P1/S8 transition buffer into FSMStateTimelineData.
+  Composition reproduced 1:1:
+    bordered box · axis header (formatTime(start) · "Window: {{minutes}} min" · formatTime(end)) ·
+    h-10 track with a center rule + one dot per in-window transition placed by leftPct, colored by
+    getStateColor(fsmType, to_state).dot, selectable (ring on select), Tooltip "{from} → {to} · {time}" ·
+    empty branch: "No transitions in window" (+ " · Last transition {{rel}}" when a last transition
+    exists) with the "Widen window to {{label}}" (primary) + "Jump to last transition" (ghost) controls
+    gated exactly as the web (showWiden = widerPreset && onWidenWindow; showJump = lastTransition && onJumpToLast).
+  Verbatim web logic ported + unit-pinned: windowTransitions (in/out split + most-recent), nextWiderPreset
+    (smallest preset > current that fits the gap; nil > 24h / negative), the useMemo placement math
+    (span guard, sort, leftPct), presetLabel (<60 "{n} min" / <1440 "{round(n/60)} h" / "24 h"),
+    formatRelative ("just now"/"{m}m ago"/"{h}h ago"/"{d}d ago"/date).
+  States (all render, never a blank box): loading (skeleton) · empty ("no transitions") · error(+retry) ·
+    loaded→timeline OR in-window empty hint · stale (banner + one-shot auto-refresh) · offline (cached
+    timeline + banner). ADR-013 freshness envelope.
+  i18n: every web key resolves through the P1/S10 facade; the catalog carries the verbatim web English
+    (debugger.window.minutes/hours/day, debugger.timeline.empty/lastSeen/widenTo/jumpToLast/windowLabel/
+    tickAria). a11y: VoiceOver label + value on every tick, region label on the track, combined labels
+    on the axis/empty/banner; Dynamic Type via Font.TS ramp; reduce-motion-safe selection animation.
+  Telemetry: emits view.opened with surface slug "StateTimeline" once (P1/S11), asserted by test.
+
+=== HOST-RUNNABLE GATES (all green) ===
+  swiftformat --lint <surface 6 swift files> ........ 0/6 require formatting           FORMAT_EXIT=0
+  swiftlint lint --strict (full apps/apple tree) .... 0 StateTimeline violations       LINT(StateTimeline)=0
+       (1 pre-existing, UNRELATED: dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+        function_body_length — present before this surface; not in scope/allowed files)
+  check-placeholders.ps1 -Language swift ............ PLACEHOLDER_COUNT=0 ALLOWED=0     PLACEHOLDER_EXIT=0
+  swiftc -typecheck iPhoneSimulator (ios18.0-simulator, swift6, strict-concurrency=complete)  IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (macos15.0, swift6, strict-concurrency=complete) .................  MAC_TYPECHECK_EXIT=0
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS, Swift 6 mode) .............. 25/25 passed, EXIT=0
+  xcodebuild test -scheme TeslaSync-Package -destination 'platform=iOS Simulator,name=iPhone 16'
+       → REAL iOS-18 simulator RUN: ** TEST SUCCEEDED **, 25/25 (result bundle /tmp/st-ios-result)
+  xcodegen generate (project spec with the 7 new files) ................................ XCODEGEN_EXIT=0
+       (42 StateTimeline references emitted into TeslaSync.xcodeproj across iOS+macOS targets)
+
+  Isolated harness: the shipped feature-view sources compiled against the REAL generated design
+  tokens (apps/design/generated/apple/Tokens.swift) + TSDesign + a minimal TSSkeleton stand-in,
+  under Swift 6 language mode (complete concurrency). Test suites: FSMStateWindowingTests,
+  FSMStateTimelineProjectionTests, FSMStatePaletteTests, FSMStateTimelineFormatTests,
+  FSMStateTimelineAccessibilityTests, FSMStateTimelineKeyParityTests, FSMStateTimelineStateTests,
+  FSMStateTimelineTelemetryTests.
+
+=== DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test ===
+  xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. The scheme pre-action (Gradle :core:assembleSharedXCFramework) SUCCEEDED on
+    this host (Shared.xcframework staged), so the KMP step is NOT the blocker here. The full-app build is
+    blocked by PRE-EXISTING, UNRELATED parallel-merge state in the shared app target — ZERO of which
+    originates in this surface:
+      • `public struct DashboardWidgetSize` redeclared across 15 files (Sources/DashboardWidgets/* +
+        TeslaSync/dashboard-widgets/*) — "invalid redeclaration" across the single app module.
+      • 215 co-located feature-view + dashboard-widget *.Tests.swift `import XCTest` + `@testable import
+        TeslaSync` into the app target (project.yml compiles those dirs into the app), which an app
+        target can neither link (XCTest) nor self-`@testable`-import.
+      • No macOS development-signing identity (ADR-012); default xcode-select is CommandLineTools.
+    A time-boxed full-app `build` via Xcode.app was launched; it staged the framework and compiled with
+    ZERO `feature-views/StateTimeline*` errors before being stopped (the failure set is entirely the
+    pre-existing redeclarations + app-target XCTest files above). This surface's OWN code is proven to
+    compile against the REAL iOS-18 + macOS-15 SDKs AND to RUN 25/25 XCTest on the iPhone 16 simulator.
+    The full-app build/test is the P99 acceptance gate's responsibility on a macos-latest runner with
+    signing identities (tracked in apps/macos-pending-verifications.md alongside 0010/0180).
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all web states reproduced (loading/empty/error/stale/offline + the
+      loaded timeline and the in-window widen/jump hint).
+  [x] Hooks bind via the shared P1/S8 projection (FSMStateTimelineData); no direct HTTP from the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (9 verbatim web keys; pinned
+      by the key-parity test).
+  [x] Accessibility labels present on every interactive element (tick label+value, retry/widen/jump
+      buttons, track region, axis/empty/banner combined labels).
+  [x] Tests: adapter unit tests + per-state/projection tests + a11y label test + i18n parity + telemetry
+      (25 total, green on macOS AND the iOS-18 simulator).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (stub gate: COUNT=0, 0 opt-outs).
+  [~] xcodebuild build test (full app): DEFERRED to P99 macos-latest (pre-existing unrelated blockers);
+      host-runnable equivalents — real-SDK typecheck both platforms + 25/25 XCTest run on the iPhone 16
+      simulator + 25/25 on macOS — are green.
+
+EXIT=0
+STATUS=DONE

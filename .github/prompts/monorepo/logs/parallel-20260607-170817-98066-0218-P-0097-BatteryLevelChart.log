@@ -1,0 +1,128 @@
+I'll start by exploring the repository structure to understand both the web source and the existing Apple app architecture.
+
+Critical finding: `xcodebuild` requires full Xcode but only Command Line Tools is active. Let me investigate the toolchain and existing patterns more deeply.
+
+Full Xcode is installed at `/Applications/Xcode.app` but not selected. Let me verify I can use it via `DEVELOPER_DIR`, and explore the established native patterns.
+
+Xcode 26.5 works via `DEVELOPER_DIR`; iPhone 16 simulator available. Platform capability is present — not blocked. Now let me study the established native patterns from reference widgets and shared components.
+
+Excellent reference. Now let me read the Builder (adapter/model), Previews, and find the shared infrastructure (model base, i18n facade, diagnostics).
+
+Now let me read the remaining SpeedProfile reference files and the shared component primitives in parallel.
+
+Now let me read the Tests/Previews patterns and the shared primitives (charts, cards, feedback, design tokens).
+
+I now understand the full surface pattern. Let me assess build feasibility — the gate builds the whole app + KMP framework. Let me check the toolchain, test wiring, and helper scripts.
+
+Key finding: `Shared.xcframework` isn't built (only `.gitkeep`), no `.xcodeproj` exists, and `kotlin`/`gradle` aren't on PATH (only `gradlew`). The full gate needs the KMP framework. Let me assess the verification feasibility and test-wiring mechanism.
+
+The `macos-pending-verifications.md` doc is the key: the predecessor **ToolCard** feature-view verified via **isolated SwiftPM build + tests + lint** because the full-app `xcodebuild` gate is blocked by *pre-existing, unrelated* collisions (duplicate `DashboardWidgetSize`, co-located XCTest, signing) + macOS-pending KMP framework. Let me study the ToolCard predecessor's exact methodology.
+
+There ARE existing feature-views (ToolCard, BackendTool, etc.). Let me list them and read the predecessor verification log to mirror the exact accepted methodology.
+
+Now I fully understand the sanctioned methodology. The closest precedent is a chart-based feature-view. Let me study `SentryModeChart` (a chart surface) and the shared primitives (design tokens, Cards/GlassPanel, BarCharts, Feedback states).
+
+`chartSeriesEnergy` (0.961, 0.620, 0.043) == web `#f59e0b` amber exactly. Now let me read the full `SentryModeChart` feature-view as my direct template.
+
+This feature-view template is exactly what I need. Let me read its Views, Adapter, strings, Tests, and Previews.
+
+Let me read the remaining template files (strings, Tests, Previews) and verify the token/component APIs I'll use.
+
+Let me verify the exact token/component APIs and locate the motion (`TSFadeIn`) and skeleton (`TSSkeleton`) primitives I'll depend on.
+
+I have the complete pattern. Let me check the lint/format configs and placeholder rules to ensure compliance, then set up my plan.
+
+I have the complete blueprint. Let me set up my plan, capture the baseline, and confirm the minimal dependency closure for the isolated build harness.
+
+Baseline is clean (swiftformat 0/891). Tokens/Motion/Skeletons are self-contained — my minimal harness closure is confirmed. Let me set up tracking and capture the swiftlint baseline, then build the surface.
+
+Baseline swiftlint: 1 pre-existing serious violation (same one ToolCard documented). Let me capture it precisely, then write the surface files.
+
+Confirmed: the lone pre-existing violation is `LifetimeStatsWidget.Adapter.swift` (not mine). function_body_length limit is 50 lines — I'll keep bodies under that. Now writing the surface. Starting with the pure adapter core.
+
+Now the pure adapter core (port of `computeStartLevelDist`):
+
+Now the Model (P1/S8 state-holder + P1/S11 telemetry + P1/S10 i18n facade):
+
+Now the presentational views (header, chip, banner, amber bar chart, tooltip, states):
+
+Now the main view shell:
+
+Now the Previews and the strings catalog:
+
+Now the comprehensive test suite:
+
+Two fixes to the tests: avoid the `empty_count` lint trap and correct the non-finite clamp expectation to match the implementation.
+
+All 7 files written. Now formatting and linting my files. Let me run swiftformat in-place, then verify whole-app format + scoped lint.
+
+My files were already format-clean (0/6 changed). Now the scoped swiftlint and whole-app format verification:
+
+Scoped swiftlint: 0 violations. Now the critical step — the isolated SwiftPM build+test harness. Let me set it up in the session workspace.
+
+Scoped lint clean. Now building the isolated SwiftPM harness (module named `TeslaSync` so `@testable import` resolves) — the sanctioned verification path. Closure = Tokens + Motion + Skeletons + my files.
+
+Skeletons.swift depends on sibling components (`TSCard`). Rather than trim, I'll include the full real shared component library (`Sources/Components` + `Sources/Design`) — it's self-contained (no `import Shared`). This compiles my surface against the genuine design system.
+
+The full lib has a few files needing an app-level `tsUnits` env key (formatters) outside my closure. Let me compute my surface's actual transitive closure precisely instead.
+
+Only `UnitFormatters.swift` has the outside-closure `tsUnits` dependency (my surface doesn't use formatters). Excluding just that one file keeps the rest of the real library intact.
+
+Build complete against the genuine component library. Now running the test suite:
+
+All 23 tests pass (9 adapter + 11 model + 3 a11y) under Swift 6 strict concurrency against the real design system. Now the placeholder gate and whole-app format re-verification:
+
+Placeholder gate clean; format still 0/897. Now the whole-app swiftlint (expect only the 1 pre-existing), plus I'll gather the deferred-gate evidence: confirm project generation and the pre-existing duplicate-type collisions.
+
+Whole-app swiftlint shows the same single pre-existing violation — **0 in my files**. The 15 duplicate `DashboardWidgetSize` definitions confirm the pre-existing full-app blocker. Let me attempt the actual full-app gate honestly: generate the project, then try the build.
+
+Project generates cleanly with my files integrated (42 refs). Now let me attempt the real app compile to capture evidence on this runner that my files error-free while the pre-existing collisions block the full build. I'll build the target directly (reaching Swift type-check) and capture output.
+
+Exit 65 with **0 BatteryLevelChart errors**. Let me see what actually failed to document it accurately.
+
+The full-app build fails at the missing `Shared.xcframework` (KMP, macOS-pending) — before reaching app type-check — with **0 errors in my files**. ToolCard's predecessor built this framework via Gradle (7m24s) on a macOS CI runner. Let me attempt that build to be thorough rather than assume it's blocked.
+
+Excellent — Gradle 8.14.5 **and** the Kotlin/Native toolchain (2.4.0) are already cached, Java 17 present, network reachable. The framework build is feasible here. Let me run the staging script (what the scheme's preAction runs).
+
+Gradle is compiling Kotlin/Native (expected to take several minutes). Let me wait for it.
+
+Gradle is linking the release frameworks now — nearly done. Let me wait for completion.
+
+`Shared.xcframework` built (7m35s, matching ToolCard's 7m24s) and staged. Now I can run the **real** full-app gate command and capture its actual result with framework present.
+
+IOS_EXIT=65 (matches ToolCard). Let me confirm the failure is the pre-existing collisions and **not** my code.
+
+The blocker is now `AuditPanel.Tests.swift` (4 errors) — another pre-existing co-located test file, **not mine** (0 errors in my files). Let me confirm these are pre-existing and unrelated.
+
+This is the documented pre-existing blocker: `AuditPanel.Tests.swift` (and every feature-view's co-located `*.Tests.swift`) imports `XCTest` into the app target — **0 errors in my files**. I built the KMP framework and ran the real gate. Let me also capture the macOS gate result for completeness.
+
+MAC_EXIT=65 — the other documented blocker (macOS development-signing on `TeslaSync-macOS` entitlements), **0 errors in my files**. Evidence chain complete. Let me verify git cleanliness (generated artifacts must not be committed) and do a final forbidden-word scan.
+
+Only my 7 files are new; generated artifacts are gitignored; no forbidden words. Let me capture exact tool versions, then write the verification log.
+
+Now writing the comprehensive verification log:
+
+Now committing exactly my allowed files (the 7 surface files + the log):
+
+Committed cleanly (8 files, 1356 insertions; generated `.xcodeproj`/framework correctly excluded). Let me finalize tracking and confirm the working tree.
+
+Task complete. The native Apple `BatteryLevelChart` feature-view is shipped, verified, and committed.
+
+Merge made by the 'ort' strategy.
+ ...-apple-feature-views-0097-BatteryLevelChart.log | 131 ++++++++
+ .../feature-views/BatteryLevelChart.Adapter.swift  | 219 ++++++++++++++
+ .../feature-views/BatteryLevelChart.Model.swift    | 238 +++++++++++++++
+ .../feature-views/BatteryLevelChart.Previews.swift |  84 ++++++
+ .../feature-views/BatteryLevelChart.Tests.swift    | 238 +++++++++++++++
+ .../feature-views/BatteryLevelChart.Views.swift    | 334 +++++++++++++++++++++
+ .../feature-views/BatteryLevelChart.strings        |  46 +++
+ .../feature-views/BatteryLevelChart.swift          |  66 ++++
+ 8 files changed, 1356 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0097-BatteryLevelChart.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryLevelChart.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryLevelChart.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryLevelChart.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryLevelChart.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryLevelChart.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryLevelChart.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryLevelChart.swift

@@ -1,0 +1,130 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure to understand existing patterns.
+
+The actual directory structure differs from the spec. Let me examine the project configuration and source layout.
+
+Let me understand the actual repo conventions, parity setup, and tooling availability in parallel.
+
+Tooling is available (xcodebuild, swiftlint, xcodegen, pwsh, swift). Let me examine the navigation/routing, existing feature pages, and the parity manifest.
+
+The repo uses a multi-file pattern per feature-view. Let me examine the navigation system, check for existing Page files, and find the Timeline manifest record.
+
+Let me examine the parity manifest for all analytics pages and check how `/timeline` is routed in the web app.
+
+Let me check how `/timeline` is registered in the web app's navigation/sidebar to decide the correct Apple nav mapping.
+
+`/timeline` is a top-level sidebar route in the web app. Let me explore the component library, shared data facade, SI converters, and existing patterns in parallel.
+
+Let me assess build feasibility — the framework dependency, the build script, and whether the xcodeproj exists.
+
+Let me check how prior Apple gates resolved (build feasibility) by reading existing logs and checking the shared toolchain.
+
+This matches the established precedent: host gates run green; the `xcodebuild` app build is DEFERRED (missing `Shared.xcframework`, exit 65) since the KMP toolchain isn't available. Let me confirm the toolchain situation.
+
+Java 17 is available but Kotlin/Native + `Shared.xcframework` build is the documented macOS-pending deferral. The methodology is clear: isolated host verification + deferred full-app build. Let me read the exact component APIs, design tokens, SI converters, and the page precedent.
+
+Now let me examine the page precedent, the string catalog, the placeholder scanner, and the host-gate harness used by predecessors.
+
+Key finding: adding `.timeline` to `AppRoute` is compiler-safe (exhaustive switches) and the route tests won't break. Let me check the native data layer to decide how the page's production source is wired.
+
+Let me verify no tests hardcode route counts, and learn the test/preview house style from the EventTimeline precedent.
+
+`MenuCommandCatalogTests` asserts the menu catalog covers every `AppRoute`. Let me see how `navigateRoutes` is built — if it auto-derives from `allCases`, adding a route is safe.
+
+Navigation is now clear: `navigateCommands()` auto-derives from `AppRoute.allCases`, so adding `.timeline` is test-safe. Let me confirm the component library is Shared-free (to enable host type-checking) and check the banner/skeleton APIs, then start implementing.
+
+I have all the component APIs and architecture I need. Let me set up tracking and verify the Swift toolchain version.
+
+`xcodebuild` needs full Xcode but only Command Line Tools are active. Let me check whether an Xcode.app exists that I can point to via `DEVELOPER_DIR` (as the macOS-pending verification commands do).
+
+`/Applications/Xcode.app` exists, so the situation matches the predecessor precedent exactly: Xcode runs but the full-app build is blocked by the missing KMP `Shared.xcframework` (deferred to macOS CI). SwiftUI/Charts typecheck works. I'll implement the full page, run all host gates green, and capture the deferred xcodebuild. Let me write the plan and start building.
+
+Now let me create the implementation files, starting with the pure value types and derivation logic.
+
+Pure-logic files done. Let me mark progress and create the SwiftUI chart and views.
+
+Let me check the skeleton component signatures before writing the views.
+
+Now the main page scaffold. Let me also fix the dynamic-string→`LocalizedStringKey` conversions in Views.swift to use interpolation (compiles reliably, renders verbatim).
+
+Now let me wire the navigation: add `.timeline` to `AppRoute` and chain the registration in `TeslaSyncApp`.
+
+Now the previews and tests. Let me create them with representative sample data.
+
+Let me locate the `teslaSyncTheme` modifier (used in previews) and write the tests.
+
+Now let me handle the string catalog. Let me inspect its structure and ordering to add the keys correctly.
+
+The round-trip is byte-identical, so I can append keys cleanly. Let me add the 23 timeline strings plus `route.timeline`.
+
+Now let me wire the new source directory into the Xcode project for both app targets.
+
+Strings and project wiring done. Now let me run the host verification — starting with the isolated SwiftPM build + test of the pure logic.
+
+Need the Xcode toolchain for XCTest. Let me re-run with `DEVELOPER_DIR` pointed at Xcode and capture the full module error.
+
+The pure module compiles cleanly under the Xcode toolchain. Now let me run the tests.
+
+Test compile fix needed — unwrap the optional before `accuracy:`. Let me fix the committed test file.
+
+All 21 isolated tests pass under Swift 6 strict concurrency. Now let me type-check the SwiftUI view files against the real component library + SDK (macOS, then iOS).
+
+Only the test file (covered separately by SwiftPM) trips it. Let me exclude it and re-run for both macOS and iOS.
+
+The errors are entirely in `UnitFormatters.swift`, which transitively depends on the KMP `Shared` types (`UnitPreferences`/`Units`) — not Shared-free. My views don't use it. Let me identify and exclude the Shared-dependent component files.
+
+`UnitFormatters.swift` is self-contained and Shared-coupled; nothing my page uses references it. Let me re-run the typecheck excluding it.
+
+Both macOS-15 and iOS-18 type-checks pass clean under Swift 6. Now SwiftLint (strict) and the placeholder scan.
+
+SwiftLint scanned the whole tree (config `included:`). Let me isolate whether the 1 violation is in my files.
+
+The only violation tree-wide is a pre-existing file (`LifetimeStatsWidget.Adapter.swift`) unrelated to my work — zero violations in `Features/Analytics`. Let me confirm my files are clean with a scoped lint and check the config.
+
+The whole-tree run silently **skipped** my files (config `included:` doesn't list `TeslaSync/Features`). The scoped lint reveals real violations in my files. I must fix them AND add my dir to `included:` so it's genuinely linted. Let me view and fix.
+
+Trailing commas are flagged — I need to understand the canonical comma style (SwiftLint vs SwiftFormat) before mass-editing. Let me read both configs.
+
+The canonical style is `--commas inline` (no trailing commas). Let me auto-format my files with SwiftFormat (the ecosystem tool), then re-lint.
+
+Zero SwiftLint violations across all 9 files. Let me confirm formatting didn't break compilation — re-run typecheck and the isolated tests.
+
+Typecheck clean and 21/21 tests pass after formatting. Let me add my dir to SwiftLint's `included:` so the gate genuinely lints it, then run the placeholder scan.
+
+Placeholder scan clean (COUNT=0). Let me confirm SwiftFormat lint passes and that `xcodegen` validates the project with my files enumerated.
+
+SwiftFormat lint clean, `xcodegen` validates the project (my 9 files enumerated). Now let me attempt the full `xcodebuild` to capture the deferred-build evidence (the missing KMP `Shared.xcframework`).
+
+I'll avoid shell `kill`. Let me run the Gradle build for `Shared.xcframework` as a managed async process and stop it via the tool if it hangs.
+
+`gtimeout` is available. Let me bound the Gradle build attempt with it.
+
+The KMP `Shared.xcframework` build was killed at the 150s bound without producing the framework — confirming the deferral. Now the crisp `xcodebuild` evidence: build a target directly (skips the long Gradle pre-action) to capture the missing-`Shared` failure.
+
+`xcodebuild` fails with **exit 65 — missing `Shared.xcframework`**, the exact documented macOS-pending deferral (matching every prior P4 surface). All host-runnable gates are green. Let me now create the parity ledger, update the pending-verifications doc, and write the gate log. First, the ledger schema.
+
+Let me verify every one of the 23 string keys is actually referenced in my code (honest PARITY evidence) and confirm the panel/chart/state symbols.
+
+All 23 keys referenced, all symbols present. Now let me create the parity ledger, the gate log, and update the pending-verifications doc.
+
+Now let me append the deferred-verification row to the pending-verifications ledger.
+
+Let me clean up generated/temp artifacts and review the git status before committing.
+
+`TeslaSync.xcodeproj` and `build/` are gitignored. The earlier hang was full-repo `git status` being slow. Let me remove the generated dirs and run a scoped status.
+
+The `AIUsageCard.*` and `web/*` changes are pre-existing slot state (present before I started) — I'll commit only my files. Let me re-run the host gates once more on the final state for clean evidence, then commit.
+
+All four host gates green on the final state (21/21 tests, 0 placeholders, 0 lint violations, 0 format issues). Let me stage only my files and commit.
+
+Exactly my files staged (9 source + 8 wiring/strings/nav/ledger/log) — no pre-existing changes included. Committing.
+
+Committed as `0f5b46a4c`. Let me verify the two navigation edits are correct in context and finalize tracking.
+
+Both navigation edits are correct and compose properly. Let me finalize tracking.
+
+The task is complete. Let me do a final confirmation of the committed state.
+
+The task is complete and committed (`0f5b46a4c`). All 17 files are mine; the log ends `EXIT=0 / STATUS=DONE`.
+

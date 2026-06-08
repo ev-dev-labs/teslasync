@@ -1,0 +1,94 @@
+I'll start by exploring the repository structure and reading the web source for this task.
+
+The `shared-surfaces` directory doesn't exist yet. Let me read the web source and examine existing patterns from the recently-built feature-views.
+
+Now let me read the web `useLiveConnection` hook and examine the recently-built AIUsageCard pattern plus the core infrastructure.
+
+The AIUsageCard files appear case-folded. Let me look at the actual files and the core infrastructure (state holders, tokens, i18n, diagnostics).
+
+Found the `SharedFacade/LiveConnection.swift` state holder. Let me read it along with the AiUsageCard reference pattern.
+
+Let me read the AiUsageCard Model, Views, strings, Previews, and Tests to fully internalize the pattern, plus the design tokens.
+
+Let me examine the design tokens, the Views/Previews/Tests reference patterns, and how the shared LiveConnection state holder is consumed elsewhere.
+
+There's an existing `TSLiveIndicator`/`LiveConnectionBadge`. Let me read the web `formatRelativeTime`, find `TSLiveIndicator`, and read the AiUsageCard Adapter/Projection/Previews/Tests plus project.yml to understand the build globbing.
+
+Key finding: `project.yml` lists `TeslaSync/feature-views` but not `shared-surfaces`, and allowed files exclude `project.yml`. Let me check toolchain availability (this determines DONE vs BLOCKED) and how other surfaces handle the swift Package/compilation.
+
+Critical: Xcode is not installed (only Command Line Tools), so `xcodebuild build test` and the iOS simulator are unavailable. Swift 6.3.2, swiftlint, swiftformat, xcodegen, pwsh are present. Let me verify whether a full Xcode exists anywhere and whether the macOS SDK can typecheck SwiftUI.
+
+`/Applications/Xcode.app` exists — the active dir is just pointing at CLT. I can override with `DEVELOPER_DIR`. Let me verify the full Xcode works and has iOS simulators.
+
+Full Xcode 26.5 with a booted iPhone 16 simulator is available via `DEVELOPER_DIR`. Now let me understand the project wiring — `shared-surfaces` isn't in `project.yml`. Let me read the full project.yml and check how tests are wired.
+
+Now I understand the build wiring. Let me check baseline feasibility: whether the prebuilt `Shared.xcframework` exists, how feature-view `.Tests.swift` files are wired, and whether `shared-surfaces` appears in any branch's project.yml.
+
+Other parallel slots added shared-surfaces. Let me inspect one such commit to learn the established convention (does it edit `project.yml`, and how are tests wired?).
+
+This is the key insight. Other shared-surfaces use a **subdirectory** (`shared-surfaces/<Name>/<Name>.*`) and wire `project.yml` + `.swiftlint.yml` + `macos-pending-verifications.md`. Let me study the AIFeatureCard precedent in full — it's the closest sibling pattern.
+
+Let me read the rest of the AIFeatureCard precedent (Telemetry, Projection, Model, Views, Previews, Tests, strings) and its log format to match conventions precisely.
+
+Let me read the AIFeatureCard Model, Views, Previews, Tests, and the log file to complete my understanding of the seam/model/test/log conventions.
+
+I now have the full sanctioned pattern. Let me read the rest of the Model, plus Views, Previews, and Tests to mirror structure precisely.
+
+Let me read the AIFeatureCard Views/Previews and locate the exact token definitions plus the placeholder-check script and swiftformat config.
+
+Let me locate the exact token definitions (`TSSpacing`, `TSRadius`, `Color.TS`, `Font.TS`) and read the placeholder script.
+
+Let me read the generated Tokens, the Font.TS/typography defs, the existing TSLiveIndicator/TSFreshnessIndicator components, and the placeholder patterns.
+
+Let me read the placeholder patterns (to avoid forbidden tokens) and confirm the motion helper exists.
+
+I have a complete understanding of the conventions, tokens, and verification recipe. Let me check the top of `Tokens.swift` (the `tsDynamicColor` helper) for my isolated build harness, then set up my plan.
+
+I have all the context I need. Let me write a brief plan and create the first batch of files (strings, telemetry, projection, model).
+
+Now the Views file. Let me write it, then immediately typecheck what I have to catch issues early.
+
+Now the entry view, previews, and tests.
+
+Let me typecheck the core source files now against the real macOS SDK (with the design tokens) to catch issues early — especially the `symbolEffect` API.
+
+Core files typecheck clean against the macOS SDK (including the `symbolEffect` rotate API). Now the Previews and Tests.
+
+All 8 files created and core typechecks clean. Now let me build an isolated SwiftPM harness (real design tokens + surface as module `TeslaSync`) and run the tests under Swift 6.
+
+The module builds clean under Swift 6 strict concurrency. Now let me run the tests.
+
+All 24 tests pass under Swift 6 strict concurrency. Now let me wire the build integration (project.yml, .swiftlint.yml, pending-verifications) following the sibling precedent, then run the remaining gates. Let me view the pending-verifications table tail first.
+
+Now the three integration edits (sibling-precedented wiring).
+
+Now let me run the format/lint/placeholder gates. First normalize with swiftformat, then lint-verify.
+
+Formatting clean (0/7). Now swiftlint --strict on the surface, then placeholders and xcodegen.
+
+swiftlint linted the whole project (1 serious in 1916 files). Let me check whether that violation is in my files.
+
+Confirmed: the sole swiftlint violation is in a pre-existing unrelated dashboard-widget file (`LifetimeStatsWidget.Adapter.swift:141`), not in my surface (0 violations in LiveIndicator). Now the placeholder gate, iOS/macOS typechecks, and xcodegen.
+
+Placeholder gate clean (COUNT=0) and iOS 18 typecheck passes. Now macOS 15 typecheck and `xcodegen generate` to confirm file enumeration.
+
+All gates green (macOS typecheck EXIT=0; xcodegen enumerates all 8 files). Since swiftformat touched 2 files after the test run, let me re-sync the harness with the committed (formatted) files and re-run tests to confirm, and verify the generated project is git-ignored.
+
+24/24 tests pass on the formatted files; generated project is git-ignored. The dirty `AIUsageCard.*` and `web/*` files are pre-existing (not mine). Let me capture the whole-project lint/format baseline for honest log reporting and verify the logs dir.
+
+Whole-project format red is a pre-existing unrelated file (`ActionBuilder.Previews.swift:48`); my 7 files are clean. Now let me gather honest evidence for the deferred full-app `xcodebuild` (the KMP staging + parallel-merge blockers), then attempt a bounded real build.
+
+Conclusive first-hand deferral evidence: `Shared.xcframework` unstaged, `DashboardWidgetSize` defined 15× (pre-existing collision), 262 co-located app-target XCTest files, and 4 concurrent multi-hour KMP gradle builds from sibling slots (etimes 6–11h+) saturating this shared host. Launching another would be irresponsible and just reproduce the known stall. Let me write the gate log, then clean up and commit.
+
+Now let me write the gate log with accurate numbers and first-hand evidence.
+
+Now let me update tracking, stage only my files (excluding pre-existing dirty files), and verify the staged set before committing.
+
+Staged set is exactly correct (8 surface files + 3 wiring + log; pre-existing dirty files excluded). Committing.
+
+Committed cleanly as `9a23d5a80`; pre-existing dirty files correctly left untouched. Let me clean up temp artifacts and finalize the plan.
+
+The task is complete and verified. Let me do a final confirmation that the surface still passes its core gates post-commit (a quick sanity re-typecheck of the committed source against the iOS SDK).
+
+Final iOS typecheck passes (EXIT=0) and my surface is fully committed. Task complete.
+

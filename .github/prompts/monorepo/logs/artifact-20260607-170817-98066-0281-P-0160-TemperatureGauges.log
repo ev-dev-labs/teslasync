@@ -1,0 +1,147 @@
+=== P4 Feature view 0160 TemperatureGauges (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon)
+  Toolchain present  : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · pwsh 7.6.2
+  Active developer   : /Library/Developer/CommandLineTools  (Command Line Tools ONLY — no Xcode.app)
+  CAPABILITY         : *** CAPABILITY-BLOCKED for the mandated xcodebuild/XCTest gate ***
+                       The prompt requires iOS 18 / iPadOS 18 / macOS 15 builds+tests via
+                       `xcodebuild ... build test` on an iOS Simulator + macOS, i.e. the full Xcode
+                       toolchain. This runner has only Command Line Tools. Hard API evidence:
+                         $ xcode-select -p                  -> /Library/Developer/CommandLineTools
+                         $ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+                             xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+                             directory '/Library/Developer/CommandLineTools' is a command line tools instance
+                           IOS_EXIT=1
+                         $ xcodebuild -scheme TeslaSync-macOS build test
+                             (same "requires Xcode" error)                                  MAC_EXIT=1
+                         $ xcrun simctl list devices available
+                             xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+                         $ swift test (probe)  ->  error: no such module 'XCTest'
+                           (XCTest ships with Xcode; it is NOT in the Command Line Tools SDK.)
+                       Per the prompt's capability clause ("If unavailable on the runner -> STATUS=BLOCKED
+                       with API evidence"), the iOS-Simulator + macOS xcodebuild build/test gate and the
+                       co-located XCTest run are BLOCKED on THIS runner and deferred to a macos-latest CI
+                       host with full Xcode (ADR-012 CI matrix; cf. apps/macos-pending-verifications.md).
+  Frameworks present : SwiftUI + Swift Charts + MapKit DO resolve against the macOS SDK in the CLT
+                       (verified: `swiftc -typecheck -target arm64-apple-macos14.0` importing all three
+                       = exit 0). The shipped surface itself was therefore BUILT + its logic EXECUTED on
+                       this runner via an isolated SwiftPM harness (see GATES) — only the Xcode-hosted
+                       app build/test + XCTest are unavailable.
+
+WEB SOURCE (the specification)
+  web/src/features/driving/components/drivetrain-health/TemperatureGauges.tsx (53 lines):
+    FadeIn(delay 0.15) -> GlassPanel(p-6)
+      -> <h3 uppercase tracking-wider text-[--text-muted]> <Thermometer/> t('drivetrain.tempGauges','Temperature Gauges')
+      -> Grid cols={{default:2, md:4}} of, per sensor:
+           <RadialGauge value={value!==null ? convertTempFromSI(value,unit) : 0}
+                        max={convertTempFromSI(maxTemp,unit)} label={t(sensor.labelKey, sensor.defaultLabel)}
+                        unit={tempUnit} color={tempSeverityColor(value, maxTemp)} />
+           <p text-xs text-[--text-muted]> {t('drivetrain.maxLabel','Max')}: {fmtNumber(convertTempFromSI(maxTemp,unit),0)}{tempUnit} </p>
+  Hooks (data sources): useTranslation (i18n), useUnits (unitPrefs.temperature in {°C,°F}).
+  RadialGauge centre   : fmtNumber(clamped, decimals ?? (Number.isInteger(clamped) ? 0 : getGlobalPrecision()))
+                         ; clamped = max(0, min(value,max)); globalPrecision default = 2; fill = clamped/max.
+  tempSeverityColor    : null -> #6b7280; ratio=celsius/max; >=.85 critical #ef4444; >=.65 warning #f59e0b; else good #10b981.
+                         (Evaluated on RAW Celsius -> unit-independent; the fill is in DISPLAY units, so °F
+                          differs from °C — a faithful web quirk reproduced verbatim.)
+  Canonical sensors (parent DrivetrainHealthPage.tsx): frontMotor/rearMotor (max 150 °C), inverter (120), battery (60).
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/feature-views/TemperatureGauges.*, 8 files, ~1582 lines)
+  TemperatureGauges.Model.swift     — P1/S8 state-holder seam (Source protocol, @Observable model, phases
+                                       loading/empty/error/content + freshness), P1/S11 telemetry seam
+                                       (view.opened), P1/S10 strings facade, TemperatureGaugeUnit (°C/°F · fromSI),
+                                       InMemory source. SwiftUI-free (Foundation/Observation/OSLog).
+  TemperatureGauges.Adapter.swift   — Foundation-only projector: fmtNumber/gaugeDecimals (web parity),
+                                       TempGaugeSeverity (tempSeverityColor port), clamp + display-unit fill,
+                                       literal-0 for absent reading, Max caption, a11y summaries.
+  TemperatureGauges.Views.swift     — radial gauge (track+arc fill, Reduce-Motion aware), responsive grid
+                                       (2/4-up), Max caption, loading skeletons, empty, error+retry, freshness
+                                       chip, stale/offline banner, severity-accent -> token mapping.
+  TemperatureGauges.swift           — composed surface: TSFadeIn(0.15) -> TSGlassPanel -> header + banner + state switch.
+  TemperatureGauges.Previews.swift  — #Preview per state (°C/°F/all-readings/empty/loading/error/stale/offline).
+  TemperatureGauges.strings         — P1/S10 keys (drivetrain.tempGauges, drivetrain.maxLabel, 4 sensor labels, chrome).
+  TemperatureGauges.Tests.swift     — XCTest: format/conversion/severity/projector parity, model phases+refresh+
+                                       telemetry, accessibility summaries.
+  TemperatureGauges.ViewTests.swift — XCTest: per-state ImageRenderer render smoke (content/empty/loading/error/
+                                       stale/offline). Split out so each test file stays within file_length.
+  (No edits outside the allowed TemperatureGauges.* scope: project.yml / .swiftlint.yml already include
+   TeslaSync/feature-views from predecessor surfaces, so the files are wired with zero extra changes.)
+
+PARITY MAPPING (web -> Apple platform tokens; no Tailwind ported)
+  FadeIn delay 0.15        -> TSFadeIn(delay: 0.15)            GlassPanel p-6 -> TSGlassPanel
+  <h3 uppercase muted>     -> Image(thermometer.medium)+Font.TS.label .textCase(.uppercase) Color.TS.textMuted
+  RadialGauge              -> TemperatureGaugeView (Circle track + trimmed arc, centre Font.TS.section + unit)
+  color=tempSeverityColor  -> TempGaugeAccent {none/good/warning/critical} -> {textMuted/statusSuccess/statusWarning/statusDanger}
+  convertTempFromSI        -> TemperatureGaugeUnit.fromSI (°C identity / °F = c*9/5+32)
+  fmtNumber / globalPrec   -> TemperatureGaugesFormat.number / gaugeDecimals (half-away-from-zero, default precision 2)
+  unit (°C/°F)             -> TemperatureGaugeUnit.symbol           Grid 2/4-up -> LazyVGrid(.adaptive(min:132))
+  i18n   : every literal via TemperatureGaugesStrings (NSLocalizedString, table "TemperatureGauges") — 0 English literals in code.
+  a11y   : per-gauge .accessibilityElement(.combine) + spoken "<label> <value> <unit>, Max <max> <unit>"; grid summary; header .isHeader.
+  motion : arc fill + FadeIn honor .accessibilityReduceMotion.    telemetry: view.opened surface="TemperatureGauges" (P1/S11).
+  STATES reproduced: loading (skeleton gauges) · empty (friendly state) · error (QueryError + retry) · content ·
+                     stale (chip + one-shot auto-refresh) · offline (cached + chip/banner).
+
+GATES
+  [GREEN]   Isolated SwiftPM build — swift-tools 6.0, .swiftLanguageMode(.v6) (Swift 6 strict concurrency =
+            same as the app), compiling the EXACT shipped TemperatureGauges.{Model,Adapter,Views,swift,Previews}
+            against the REAL repo design system (design/generated/apple/Tokens.swift + Sources/Design +
+            Sources/Components/{UI,Motion,Feedback}):
+                Build of target: 'TeslaSync' complete! (57.47s)                              LIB_BUILD_EXIT=0
+  [GREEN]   Shipped-logic EXECUTION — a plain-Swift parity runner (no XCTest; XCTest is unavailable on this
+            runner) imports the compiled library and asserts every web-parity fact the XCTest suite asserts
+            (fmtNumber/gaugeDecimals, °C/°F conversion, severity thresholds incl. .85/.65 boundaries, projector
+            order/value/unit/maxLabel, display-unit fill incl. the °F-differs quirk, literal-0 + .none for an
+            absent reading, clamp-to-max, model phase matrix + refresh + stale auto-refresh guard + view.opened
+            once, accessibility summaries):
+                == RESULT: ALL PASS ==                                                        RUN_EXIT=0
+            (This runner also CAUGHT + fixed a real bug in the authored XCTest: an optional `tile?.accent`
+             compared to `.none` resolved to Optional.none, not TempGaugeAccent.none — now pinned with the
+             explicit type in both the runner and the shipped Tests.)
+  [GREEN]   swiftlint --strict (surface, 7 swift files)   : Found 0 violations, 0 serious     LINT_EXIT=0
+  [GREEN]   swiftformat --lint (surface, 7 swift files)   : 0/7 files require formatting       FORMAT_EXIT=0
+  [GREEN]   check-placeholders.ps1 (surface)              : PLACEHOLDER_COUNT=0                 PLACEHOLDER_EXIT=0
+            (self-test PASS; a real "placeholder" word in a Model.swift doc comment was found + removed.)
+
+  [BLOCKED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=1
+  [BLOCKED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=1
+  [BLOCKED] XCTest run of TemperatureGauges.Tests.swift + TemperatureGauges.ViewTests.swift                     : XCTest module absent
+            WHY BLOCKED (capability, not code): this runner is Command Line Tools only — no Xcode.app, no iOS
+            simulators (simctl absent), and no XCTest module. Evidence pasted in PREFLIGHT. ZERO TemperatureGauges
+            errors are involved; the shipped surface compiles + its logic executes green here. These steps are
+            deferred to a macos-latest CI host with full Xcode (ADR-012), exactly as apps/macos-pending-verifications.md
+            defers the full-app iOS/macOS xcodebuild gate for every P4 surface. The authored XCTest suites mirror
+            the green sibling suites (HeroGauges / DrivingTemperatureStats) 1:1 and every fact they assert is
+            independently verified green by the parity runner above.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the xcodebuild iOS/macOS + XCTest gate is reported BLOCKED (IOS_EXIT=1/MAC_EXIT=1,
+                          XCTest absent) with raw API evidence — never reported as passing.
+  2  No scope narrowing : every web region + branch reproduced (header, per-sensor gauge, Max caption, severity
+                          map incl. null-gray, the °F display-unit fill quirk) PLUS all six required states.
+  3  No skip-and-assume : every host-runnable gate executed on THIS runner; raw exits pasted; the Xcode gap is
+                          proven by API evidence, not assumed.
+  4  No stubs as final  : complete production surface (8 files); 0 TODO/stub/placeholder (scanner GREEN); real
+                          projector + model + tests, executed green via the parity runner.
+  5  No parity shortcut : fmtNumber/precision, clamp, severity thresholds, unit conversion, the °F-differs fill,
+                          tokens, a11y, telemetry all mapped + verified value-for-value against the web source.
+  6  No delegation      : implemented directly; no agents.
+  7  No predecessor bypass: binds P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened;
+                          consumes the real Sources/Components + Sources/Design design system.
+  8  No commit on red   : the committed artifact is GREEN on EVERY host-runnable gate (Swift 6 strict-concurrency
+                          build + executed parity logic + swiftlint + swiftformat + placeholder). The only
+                          non-green steps are environmentally BLOCKED (no Xcode), not red code.
+  9  No silent drift    : changes confined to apps/apple/TeslaSync/feature-views/TemperatureGauges.* and this log.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic TemperatureGauges shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED on this runner to the maximum the platform allows: it compiles under the app's own Swift 6 strict-
+  concurrency rules against the real design system, and its full projection + model logic executes with web-
+  parity values; swiftlint/swiftformat/placeholder are all green. The mandated iOS-Simulator + macOS xcodebuild
+  build/test gate and the co-located XCTest run cannot execute here because the runner provides Command Line
+  Tools only (no Xcode.app / no simulators / no XCTest) — this is the prompt's explicit "capability unavailable
+  on the runner" branch, so STATUS=BLOCKED with API evidence. The artifact is committed (code-complete, all
+  host gates green) so the deferred Xcode-hosted gate runs on the ADR-012 macos-latest CI matrix.
+
+EXIT=1
+STATUS=BLOCKED

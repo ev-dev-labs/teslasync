@@ -1,0 +1,224 @@
+================================================================================
+P4 · Feature view · 0020 — TeslaApiRefTool (Apple)
+Run: 2026-06-07T20:07-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/141
+Base: b26f0562
+Prompt: P4/feature-views/0020 — TeslaApiRefTool
+Web source (spec): web/src/features/admin/components/devtools/tools/TeslaApiRefTool.tsx
+Mode: code-complete + host-validated (swiftc iOS/macOS SDK + executed harness) +
+      DEFERRED Xcode app build/test (surface not yet target-registered — proven 0 refs;
+      matches the user-approved dashboard-widget precedent, e.g. 0070 OdometerCounter).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                ✅
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        ✅
+  iOS simulator runtime ...... iPhoneSimulator26.5 SDK present                     ✅
+  swiftc -typecheck SwiftUI .. compiles (macOS 15 target, strict concurrency)      ✅
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                   ✅
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        ✅
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              ✅
+  xcodegen ................... /opt/homebrew/bin/xcodegen 2.45.4                    ✅
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks has only .gitkeep) ⚠
+  codesign identities ........ "0 valid identities found"                          ⚠ (BLOCKER for the macOS app gate, per P9 / ADR-012)
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is available
+  and proven by real macOS-SDK compiles + an executed binary below. The capability-
+  BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") therefore does NOT apply —
+  the surface is authored and host-validated for real → STATUS=DONE (not BLOCKED).
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/TeslaApiRefTool.*) ===
+  TeslaApiRefTool.Models.swift    171  Foundation value types (TeslaApiEndpoint, method tone,
+                                       load/connection/freshness/phase enums, ApiRefUpdate) +
+                                       the bundled TeslaApiCatalog (port of web TESLA_ENDPOINTS,
+                                       11 rows) + the P1/S10 strings facade (string/count)
+  TeslaApiRefTool.Builder.swift   165  Pure adapter: filter (web `filtered` memo) + method tone
+                                       (GET→info/else→warning) + phase/freshness resolution +
+                                       formatInt + resultsLabel + relativeTime + a11y seam
+  TeslaApiRefTool.Model.swift     201  P1/S11 telemetry seam + P1/S8 state-holder seam
+                                       (TeslaApiRefSource protocol + StaticTeslaApiRefSource [prod
+                                       binding of the bundled catalog] + InMemory… [tests/previews])
+                                       + @Observable TeslaApiRefModel + strings SwiftUI half
+  TeslaApiRefTool.Views.swift     299  Leaf views: ToolCard header (TSIconBox book/cyan + title +
+                                       desc + freshness chip), search field, method badge, column
+                                       header, endpoint row (path mono + TSCopyButton), result count
+  TeslaApiRefTool.swift           221  The surface shell + every state branch + the 3-column table
+  TeslaApiRefTool.Previews.swift   90  #if DEBUG #Preview — one per state (content/loading/empty/
+                                       error/stale/offline)
+  TeslaApiRefTool.Tests.swift     243  XCTest: adapter + catalog + model phases/telemetry + a11y
+  TeslaApiRefTool.strings          58  P1/S10 catalog: 6 web-parity keys + native chrome/freshness
+  Every .swift file ≤ 400 lines (house file_length); largest 299 (Views). Word-scan clean
+  (no TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/"not implemented"; placeholder gate COUNT=0).
+
+=== PARITY (vs web TeslaApiRefTool.tsx) ===
+  Data sources → useTranslation binds through the P1/S10 strings facade. The web reads the
+    static `TESLA_ENDPOINTS` constant directly; native delivers that bundled reference table
+    through the P1/S8 state-holder seam (StaticTeslaApiRefSource → TeslaApiRefModel), so the
+    view performs NO networking/HTTP. The seam still models loading/empty/error/stale/offline
+    so the full state matrix is reachable + tested (defensive branches, like 0087 SignalCatalog).
+  Catalog → TeslaApiCatalog.endpoints is a 1:1 port of TESLA_ENDPOINTS (11 rows, 3 GET / 8 POST);
+    asserted by the executed harness + XCTest (count, first/last, method split, identity = path).
+  Composition → web `ToolCard(icon=BookOpen, color=cyan, title, description)` → glass shell with
+    TSIconBox("book", .accent=cyan) + title + description (+ a freshness/refresh chip, native
+    chrome for the state matrix). web search `Input(t('Search Endpoints'))` → token search field
+    (magnifyingglass per Apple HIG + a clear button). web `DataTable` (compact, pagination) over
+    Method/Path/Endpoint Desc → a compact 3-column native table (Method badge · monospaced Path ·
+    Endpoint Desc · per-path copy) with a result-count caption (native counterpart of the web row
+    count/pagination over a small static catalog; native scroll replaces page chrome). web
+    `Badge variant={method==='GET'?'info':'warning'}` → TeslaApiRefMethodBadge (info/warning tone).
+    web `CopyButton text={path}` → the shared TSCopyButton(value: path). Recharts→none / Leaflet→none.
+  Shared components → renders over the REAL apps/apple tokens + component library (Color.TS /
+    Font.TS / TSSpacing / TSRadius / tsGlassPanel / TSIconBox / TSCopyButton / TSSkeleton /
+    ContentUnavailableView), compiled against them in the typecheck below. The method badge +
+    search field + table row are surface-local token-driven leaves (the way 0087 SignalCatalog
+    builds SignalCatalogUnitBadge/Row), keeping the surface self-contained.
+  States (all render) → loading (skeleton table) · empty (ContentUnavailableView "No endpoints") ·
+    error (retry) · stale (banner + content) · offline (cached banner + content) · content (search +
+    count + table) · no-results (the web filtered-empty: ContentUnavailableView "No matching
+    endpoints"). Cached catalog stays visible behind refresh/stale/offline.
+  i18n → the exact web t() keys resolve through the P1/S10 facade with the web English fallback:
+    "Tesla Api Ref", "Tesla Api Ref Desc", "Search Endpoints", "Method", "Path", "Endpoint Desc"
+    (en.json holds Method/Path; the others are echoed by i18next, reproduced verbatim) → ALL PRESENT
+    in TeslaApiRefTool.strings. No English literals in native code; the row a11y label is composed
+    from the Method/Path/Endpoint Desc keys so those parity keys are exercised.
+  a11y → each row is one combined VoiceOver element (rowLabel = "Method GET, Path …, Endpoint Desc
+    …"); the copy button stays separately actionable with a "Copy path" label; the search field +
+    clear + freshness chip + retry all carry labels; Dynamic Type via tokens; the freshness spinner
+    + skeleton shimmer respect Reduce Motion.
+  Telemetry → TeslaApiRefModel.start() emits viewOpened(surface:"TeslaApiRefTool") → bridges the
+    shared Telemetry .screenView (P1/S11). Asserted by a spy in the executed harness (once-only).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — the 5 production source files compiled together with the REAL apps/apple
+    tokens + Shared-free component library (Tokens + Design/{TSMaterial,TSDesign} +
+    Components/UI/{Typography,Buttons,Cards,Badges,Utility} + Feedback/Skeletons; none import the
+    Shared xcframework), macOS 15 target, -strict-concurrency=complete:
+      xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 -strict-concurrency=complete <closure>
+      TYPECHECK_EXIT=0                                                              ✅
+      (The surface is platform-agnostic SwiftUI — no `#if os(...)` branches — so the macOS compile
+       fully covers the iOS / iPadOS code paths. Re-verified GREEN after swiftformat.)
+
+[1b] swiftc -typecheck -D DEBUG including TeslaApiRefTool.Previews.swift, under the Xcode 26.5
+     toolchain (which ships the #Preview PreviewsMacros plugin CLT lacks):
+      PREVIEWS_TYPECHECK_EXIT=0                                                     ✅
+
+[2] Executed harness — compiled Models + Builder + Model to a native binary and RAN it (real
+    "cached → projection" + model + a11y verification, not a typecheck):
+      HARNESS PASSED 47/47   (catalog parity, filter by method/path/desc, case-insensitivity,
+      no-match, method tone, phase resolution, freshness precedence, result summary, relative-time
+      buckets, row a11y label, model phases loading/empty/error/content, view.opened once,
+      refresh delegation, offline tracking, StaticSource catalog delivery, surface slug)
+      HARNESS_EXIT=0                                                                ✅
+      (Re-compiled + re-run GREEN after swiftformat. The XCTest file [TeslaApiRefTool.Tests.swift]
+       asserts the same public API in the app test target; XCTAssert C-macros + `@testable import
+       TeslaSync` need the module [+ the un-staged Shared.xcframework], so the logic is proven here.)
+
+[3] swiftlint --strict on the 7 surface .swift files (explicit paths; the repo .swiftlint.yml
+    `included:` does not list TeslaSync/feature-views — that wiring is the P4 integration prompt's
+    job — so the bare gate does not scan this dir; run explicitly here to prove clean):
+      Done linting! Found 0 violations, 0 serious in 7 files.
+      SURFACE_SWIFTLINT_EXIT=0                                                      ✅
+    Bare gate `swiftlint --strict` (from apps/apple, included: paths, 543 files):
+      Found 1 violation, 1 serious in 543 files.
+      SWIFTLINT_GATE_EXIT=2                                                         ⚠ PRE-EXISTING — NOT this surface
+      The single violation is TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+      (function_body_length, 78 lines) — a different surface's file committed at b7fffb07
+      (P4/dashboard-widgets/0055), unmodified by this run (git porcelain empty) and OUTSIDE this
+      prompt's allowed-files contract (TeslaApiRefTool.* + the log). It is reported honestly, not
+      waved through; this deliverable's own 7 files are 0-violation, and the bare gate does not even
+      scan feature-views/. No red-as-green (Honesty rule 1): the baseline red is attributed, not hidden.
+
+[4] swiftformat --lint TeslaSync/feature-views (the exact gate rules, via apps/apple/.swiftformat):
+      0/7 files require formatting.
+      FORMAT_EXIT=0                                                                 ✅
+      (One file was auto-formatted before this lint; the typecheck + harness in [1]/[2] were re-run
+       GREEN against the formatted sources.)
+
+[5] check-placeholders (ADR-011 stub gate; pwsh):
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views -Language swift
+        PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0                        ✅
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/TeslaApiRefTool
+        (the prompt's literal -Path is a filename PREFIX Test-Path resolves to nothing → clean) EXIT=0 ✅
+      PLACEHOLDER_EXIT=0                                                            ✅
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the signed CI runner; NOT faked) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Why deferred (three independent, code-unrelated reasons — none is a defect in this surface):
+      (a) NOT-YET-REGISTERED (PROVEN, not assumed): project.yml's iOS + macOS targets glob `Sources`,
+          `TeslaSync/dashboard-widgets`, `Localization`, `../design/generated/apple` — NOT
+          `TeslaSync/feature-views`. This surface lives at TeslaSync/feature-views/ and is registered
+          into the XcodeGen target by the P4 feature-views integration prompt (predecessor, Honesty
+          rule 7); the allowed-files contract forbids editing project.yml here.
+          Evidence: `xcodegen generate` then grep of the generated TeslaSync.xcodeproj/project.pbxproj →
+          TeslaApiRefTool = 0 refs, while registered siblings OdometerCounterWidget = 42 refs and
+          LifetimeStatsWidget = 36 refs. Running xcodebuild now would build the app WITHOUT these files
+          and re-run the existing suite — ZERO evidence about this deliverable. The host swiftc compiles
+          + executed harness in [1][1b][2] DO exercise this surface against the real library + SDK, which
+          is the meaningful validation here. (generated .xcodeproj removed after the probe; git clean.)
+      (b) Shared.xcframework not staged: the app target links the KMP core; building it needs a
+          Kotlin/Native gradle build staged into apps/apple/Frameworks (which holds only .gitkeep).
+          Independent of this UI surface.
+      (c) macOS signing: `security find-identity -p codesigning` → 0 valid identities; the macOS
+          app/widget entitlements require a development certificate. ADR-012 defers this to a signed
+          macos-latest runner.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content + the filtered
+      no-results state) — implemented; each has a #if DEBUG preview; phase logic executed-tested.
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP/networking in the view.
+  [x] Every i18n key from source has a matching catalog key — 6/6 web keys present in the strings table.
+  [x] Accessibility labels on every interactive element; each row carries a combined Method/Path/
+      Endpoint Desc label; copy button independently labelled.
+  [x] Tests: adapter unit test + per-state model test + a11y label test (executed harness 47/47 +
+      a full XCTest suite for the app test target).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; word-scan clean.
+  [x] Host gates green for THIS surface (typecheck/preview-typecheck/executed-harness/surface-lint/
+      format/placeholder); Xcode app build/test DEFERRED with proven non-registration + framework +
+      signing evidence. Bare swiftlint shows 1 PRE-EXISTING baseline violation in a non-owned file
+      (LifetimeStatsWidget.Adapter.swift), reported honestly and outside this prompt's editable scope.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with reasons proven on this
+                       host; the bare-swiftlint pre-existing violation is reported + attributed to a
+                       non-owned baseline file, never claimed clean. Every "✅" is a real command exit.
+  2  No scope narrowing: implemented ALL states + the ToolCard chrome + search + 3-column table +
+                       method badges + per-path copy + i18n + a11y + telemetry + freshness chip.
+  3  No skip-and-assume: every host gate executed; non-registration PROVEN via generated pbxproj grep.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; the 6 web keys carry the
+                       web English (echoed by i18next for the un-catalogued keys) for exact parity.
+  5  No parity shortcuts: faithful port of the filter, the GET→info/else→warning badge rule, the full
+                       endpoint catalog, every column, and every t() key.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / .swiftlint.yml included: (the
+                       integration prompt's scope) and did NOT edit the shared Localizable.xcstrings
+                       (parallel-unsafe across the concurrent slots) — strings shipped as the per-surface table.
+  8  No commit on red  : committing on all-green host gates for THIS surface; Xcode steps DEFERRED (not
+                       failed); the lone bare-lint red is a pre-existing non-owned baseline file the
+                       allowed-files contract forbids touching — disclosed, not introduced, not hidden.
+  9  No silent drift   : changes confined to the allowed TeslaApiRefTool.* files + this log. Two
+                       unrelated pre-existing working-tree edits (web/.../FleetApiSection.tsx,
+                       web/.../BackupRestorePage.tsx) were left untouched and are NOT staged.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native TeslaApiRefTool shipped at parity with the web source: a Foundation
+  search/tone/phase/freshness adapter (executed-green), the bundled TESLA_ENDPOINTS catalog, a P1/S8
+  state-holder seam (no view networking), P1/S11 telemetry, every state + filtered no-results + all 6
+  web i18n keys + a11y labels, composed over the REAL apps/apple tokens + component library. All host-
+  runnable gates pass for this surface (production + preview typecheck, executed harness 47/47, surface
+  swiftlint --strict 0/7, swiftformat 0/7, placeholder COUNT=0). The Xcode app build/test is DEFERRED to
+  the signed CI runner (surface not yet target-registered [proven 0 refs] + Shared.xcframework not staged
+  + macOS signing — none a defect in this code), matching the user-approved P4 "code-complete + DEFERRED
+  Xcode gate" disposition established by the dashboard-widget predecessors. The bare swiftlint gate's one
+  violation is a pre-existing baseline defect in a non-owned file (LifetimeStatsWidget.Adapter.swift),
+  disclosed here and outside this prompt's allowed-files scope.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/TeslaApiRefTool.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0020-TeslaApiRefTool.log
+  git commit -m "feat(apps/apple/feature-views): add TeslaApiRefTool surface (P4)"
+
+EXIT=0
+STATUS=DONE

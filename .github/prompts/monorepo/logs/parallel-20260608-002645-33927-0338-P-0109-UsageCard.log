@@ -1,0 +1,99 @@
+I'll start by exploring the repository structure to understand the web source, the existing Apple app architecture, and the dependencies referenced in the prompt.
+
+Now let me explore the Apple app structure and the dependencies referenced in the prompt.
+
+No existing `shared-surfaces` dir or logs yet — I'm establishing the pattern. Let me study a complete `feature-views` example and the build/project setup to understand conventions.
+
+Key finding: `shared-surfaces/` is **not** in `project.yml` sources yet — I'll need to register it. Let me study the design system, i18n, telemetry, and the test conventions before writing code.
+
+Found an existing `AiUsageCard` native feature-view — the web `UsageCard` is its shared primitive. This is the most relevant reference. Let me study it and the telemetry/i18n infrastructure.
+
+This is the canonical reference. The native `UsageCard` primitive I must build is what `AiUsageCard.Views.swift` explicitly says is "out of scope here, and not yet present" — owned by this P4 shared-surfaces bundle. Let me read the rest of the reference set to nail conventions for i18n, telemetry, models, and tests.
+
+Excellent — I now understand the architecture fully. The web `UsageCard` is a **pure presentational primitive**; `AiUsageCard.Views.swift` explicitly notes its native atomic peer "is owned by the P4 component-library bundle (out of scope here, and not yet present)" — that's exactly this prompt. Let me verify the design tokens and shared components I'll use exist as real symbols.
+
+All tokens and components exist. Now I need to understand how the co-located `.Tests.swift` files in `feature-views` get compiled/run, since the test bundles only list `Tests/Unit`. Let me investigate test wiring and read the reference Tests/Previews + component signatures.
+
+Critical questions: (1) are the Apple toolchain binaries present on this runner, and (2) how do co-located `.Tests.swift` files (which `import XCTest`) get routed to the test target rather than the app target? Let me check both.
+
+Key findings: `swift` 6.3.2, `swiftlint`, `swiftformat`, `xcodegen`, `pwsh` are all present — but **`xcodebuild` requires full Xcode and only Command Line Tools are installed**, so the iOS/macOS simulator build+test gate steps cannot run here. That's the platform-capability blocker the prompt anticipates. I'll build to full production quality, run every gate I *can*, and do a best-effort offline Swift typecheck. Let me verify SwiftUI compiles offline and read the remaining component signatures + previews/test conventions.
+
+SwiftUI typechecks offline (`PROBE_EXIT=0`) — I can verify my code compiles even without full Xcode. Let me read the component signatures and remaining reference conventions.
+
+I have all building blocks. Let me read the test conventions and the accessibility helper location, then write the plan.
+
+I now have a complete understanding of all conventions, tokens, components, i18n, telemetry, and test patterns. Key reality: **full Xcode is absent on this runner (only Command Line Tools)** so the `xcodebuild build test` gate steps are platform-blocked — but `swift`/`swiftlint`/`swiftformat`/`pwsh` work, and SwiftUI typechecks offline, so I can prove the code compiles. Let me write a plan and build the surface.
+
+Now I'll create the surface. Starting with the directory and the model file (value types, i18n facade, telemetry seam, intent mapper, accessibility helper).
+
+Now the main `UsageCard` view with composition and `view.opened` telemetry.
+
+Now the section subviews — Budget, Bands, Details — plus the intent→token style mapper.
+
+Now the remaining sections — TopLists, Banner, Footer (with a native flow layout for wrapping links), and the Empty view.
+
+Now the i18n catalog contribution, previews, and tests.
+
+I'll extract the once-only telemetry logic into a testable value type so the gating is unit-testable without hosting the view.
+
+Now the test suite — covering budget math, content guards, footer target discrimination, accessibility strings, the once-only telemetry gate (with a spy), the surface slug, and per-state render smoke tests via `ImageRenderer`.
+
+Let me check line counts and run the formatter/linter on the new files.
+
+The formatter wants fixes (trailing commas per `--commas inline`, and a keyPath conversion). Let me auto-apply swiftformat to my files, then re-lint.
+
+Formatter passes. Let me verify the keyPath change is still correct, then run swiftlint --strict.
+
+One violation surfaced across the project lint. Let me isolate it.
+
+My `UsageCard` files are clean — the single violation is in a **pre-existing, unrelated** file (`LifetimeStatsWidget.Adapter.swift`), outside my allowed scope. Let me prove my files pass the exact repo ruleset by scoping the config to my directory (temp config, not committed).
+
+All 6 `UsageCard` files pass `swiftlint --strict` (0 violations) with the exact repo ruleset, and swiftformat is clean. My files depend only on the generated design tokens (not the hand-written components), so I can do a clean offline typecheck against the real tokens + SwiftUI to prove the code compiles.
+
+The **only** errors are the `#Preview` macro plugin being unavailable to standalone `swiftc` (an Xcode-only macro plugin) — not a code defect. Let me typecheck the shipping (non-preview) sources to get a clean signal.
+
+Core shipping sources typecheck **clean (EXIT=0)** under Swift 6 strict. The preview-macro plugin is Xcode-only, so let me validate the preview *bodies* by transforming `#Preview` into plain functions and typechecking those against the real surface.
+
+All 6 preview bodies typecheck clean too. The full surface is type-correct. Now the placeholder gate.
+
+Placeholder gate passes (0 violations). Now let me capture the precise platform-capability evidence for the blocked `xcodebuild` steps.
+
+All evidence captured. Every runnable gate is green; only the Xcode/simulator harness is absent. Let me write the comprehensive, honest log.
+
+Let me do a final review of the key post-format files to ensure correctness, then verify git status.
+
+Code is clean, faithful, and verified. Let me check git status and commit precisely the surface files plus the log.
+
+The pre-existing `AIUsageCard.*` and `web/...` modifications were already in this slot's working tree before I started — **not mine**. I'll stage only my new files (the `shared-surfaces/UsageCard.*` set + the log), exactly as the prompt's commit step specifies.
+
+All 8 intended files staged (no unrelated changes). Committing.
+
+Committed cleanly (`afdb085d3`); the pre-existing unrelated changes remain untouched. Let me verify the commit contents and clean up temp files.
+
+The task is complete. Here's the summary.
+
+## Delivered: native Apple `UsageCard` shared surface (P4 · 0109)
+
+Built the SwiftUI parity of `components/data-display/UsageCard.tsx` — the shared, pure‑presentational "spend/volume" card primitive that `AiUsageCard`/`TeslaApiUsageCard` consume (the native `AiUsageCard.Views.swift` explicitly flagged this atomic peer as "not yet present" — this prompt delivers it).
+
+**Files** (`apps/apple/TeslaSync/shared-surfaces/UsageCard.*`, 1,574 lines, committed `afdb085d3`):
+- `UsageCard.Model.swift` — value types, `UsageCardContent`, intent, i18n facade, telemetry seam + once‑only emitter, a11y helper
+- `UsageCard.swift` — the public View + composition + `view.opened`
+- `UsageCard.Views.swift` / `.Sections.swift` — Budget/Bands/Details + TopLists/Banner/Footer/Empty (with a native flow `Layout` = web `flex-wrap`)
+- `UsageCard.Previews.swift`, `UsageCard.strings`, `UsageCard.Tests.swift`
+
+**Parity**: all six sections, three intents (normal/warn/danger), budget width clamp with **unclamped** a11y percent (overflow announced), internal‑route vs external‑URL footer links, friendly empty state. i18n via the `UsageCard` table (the single web literal + a11y chrome — no English in Swift). `view.opened` slug `UsageCard`. VoiceOver labels + Dynamic Type throughout.
+
+**Verification on this runner**:
+- ✅ `swiftlint --strict` (exact repo ruleset): **0 violations / 6 files**
+- ✅ `swiftformat --lint`: **0/6 require formatting**
+- ✅ `check-placeholders.ps1`: **EXIT=0**
+- ✅ Offline `swiftc -typecheck` (Swift 6 strict, real SwiftUI SDK + design tokens): **core EXIT=0**, **preview bodies EXIT=0**
+- ⛔ `xcodebuild build test` (iOS+macOS): **BLOCKED** — only Command Line Tools are installed (no full Xcode/iOS Simulator); captured evidence: `xcode-select: ... 'xcodebuild' requires Xcode`.
+
+Per the prompt's capability clause, the log ends `EXIT=1 / STATUS=BLOCKED` with full platform‑capability evidence, and documents (no silent drift) that wiring the new `shared-surfaces` group into `project.yml`/`.swiftlint.yml` is the integration step outside this prompt's allowed files. Pre‑existing unrelated working‑tree changes were left untouched; only my 7 files + the log were committed.
+
+
+
+The task is fully complete and committed. All runnable gates are green, the surface type-checks offline, and the only blocked step (xcodebuild) is due to the absent full Xcode toolchain on this runner — the prompt-sanctioned BLOCKED outcome with evidence logged.
+

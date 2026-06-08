@@ -1,0 +1,257 @@
+================================================================================
+P4 · Feature view · 0127 — LiveTelemetry (Apple)
+Run: 2026-06-08T01:49-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/93
+Base: c9c6fdb9f
+Prompt: P4/feature-views/0127 — Feature view: LiveTelemetry
+Web source (spec): web/src/features/dashboard/components/LiveTelemetry.tsx
+Mode: code-complete + host-executed gates + DEFERRED Xcode app build/test
+      (0170 LiveMotorStatus / 0096 AcDcStatsPanel precedent, ADR-012, Honesty rule 7 —
+      predecessor parity).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (83717DEE-…-CBDDD3140989, Booted)            OK
+  SwiftUI .................... present in both SDKs (this surface's core requirement) OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                    OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                  OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  xcodegen ................... 2.45.4 (project + 12 targets generate cleanly)       OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+  feature-views in project.yml  REGISTERED (iOS + macOS app targets reference it)   OK
+
+  Capability note: the prompt's core requirement is SwiftUI + Swift Charts + MapKit on
+  iOS 18 / macOS 15; the prompt lists "Charts/maps used: (none)" for this surface. SwiftUI
+  is AVAILABLE and PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles below.
+  LiveTelemetry is a composed six-panel section drawn entirely with native SwiftUI
+  primitives (no Charts / MapKit dependency). The capability-BLOCKED escape hatch does NOT
+  apply — the surface is authored, host-compiled on BOTH SDKs, and its full test suite is
+  EXECUTED green on the macOS host.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/LiveTelemetry.*) ===
+  LiveTelemetry.Model.swift      364  P1/S8 state-holder seam (LiveTelemetrySource→
+                                      LiveTelemetryModel) + P1/S11 telemetry seam
+                                      (view.opened) + P1/S10 strings facade + load/connection
+                                      enums + temp/distance/pressure unit prefs + coalesced
+                                      LiveTelemetryUpdate + in-memory source + surface slug
+  LiveTelemetry.Data.swift       236  the six input DTOs (Drivetrain/Climate/Security/Tire/
+                                      Media/Navigation) + LiveTelemetrySnapshot (web MotorData/
+                                      ClimateData/SecurityData/TirePressureData/MediaData/
+                                      LocationData mirrors), every field optional like `…|null`
+  LiveTelemetry.Adapter.swift    198  cleanNil (lib/cleanNil.ts), fmtNumber/fmtInt/plain
+                                      (lib/numberFormat.ts), the SI converters + display
+                                      wrappers (lib/unitConversion.ts), tire thresholds, and the
+                                      tone/accent/chip value types — pure, SwiftUI-free
+  LiveTelemetry.Projection.swift 203  the six panel view-model structs + the aggregate
+                                      LiveTelemetryProjection (pre-formatted strings + pure
+                                      tone/status/tag enums; the view is a pure function of it)
+  LiveTelemetry.Projector.swift  269  the pure projector reproducing EVERY web numeric branch
+                                      (torque raw value, motor-temp conversion, gear tone/text,
+                                      g-force axle-max, climate modes + fan fraction, door/window
+                                      open counts, tire tiles + all-normal, media cleanNil + tone
+                                      + volume, navigation destination/distance/eta/tags) + a11y
+  LiveTelemetry.swift            197  the surface — section header (web "Live Telemetry" divider
+                                      + freshness chip), connectivity banner, state switch
+                                      (loading/empty/error/content), retry affordance, slug,
+                                      i18n SwiftUI text() helper
+  LiveTelemetry.Views.swift      331  shared atoms — tone/accent→token maps, TelemetryRow,
+                                      TelemetryBadge (verbatim), TelemetryChip, TelemetryMeterBar
+                                      (web fan/volume gradient bars), TelemetryPanelCard chrome,
+                                      skeleton rows, freshness chip, tire-status colour
+  LiveTelemetry.Panels.swift     250  the grid + Drivetrain/Climate/Security panels (+ the
+                                      lock/sentry status row helper)
+  LiveTelemetry.PanelsB.swift    196  the Tire/Media/Navigation panels (+ the tire tile)
+                                      (split from .Panels to keep each file ≤ 400 lines)
+  LiveTelemetry.Previews.swift   131  #if DEBUG previews — content / imperial (°F·mi·psi) /
+                                      partial (some panels loading) / empty / loading / error /
+                                      stale / offline
+  LiveTelemetry.Tests.swift      317  XCTest — cleanNil + format + convert + tire thresholds +
+                                      per-panel projection + a11y joiners
+  LiveTelemetry.ModelTests.swift 275  XCTest — projector wiring + phase matrix + model
+                                      (telemetry-once / push / stale auto-refresh / offline /
+                                      autoRefreshIfStale guards / refresh / stop re-arm / slug) +
+                                      per-state ImageRenderer render (all six states)
+  LiveTelemetry.strings           69  P1/S10 catalog contribution (table "LiveTelemetry")
+  Largest .swift = 364 lines (swiftlint file_length ≤ 400 honored — .Panels split into
+  .Panels + .PanelsB to stay within budget). No file imports the Shared xcframework (the seam
+  is a Swift protocol; the prod app injects the facade-backed source, previews/tests inject
+  InMemoryLiveTelemetrySource).
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data source (web useTranslation; the six snapshots fed by the Dashboard page hooks): bound
+    through the P1/S8 seam LiveTelemetrySource→LiveTelemetryModel. The view never issues HTTP;
+    the source resolves the snapshot + unit prefs and pushes coalesced updates.
+  - Composition (web section divider + grid[6 × GlassPanel]):
+      • Section header -> web <Cog/> {t('telemetry.title','Live Telemetry')} uppercase divider,
+        plus a freshness chip while fetching / stale / offline.
+      • GlassPanel    -> TelemetryPanelCard over TSGlassPanel with the web <h4><Icon/> {title}>.
+      • Drivetrain    -> Torque (RAW `${di_torque} Nm`), Motor Temp (fmtInt(toTempDisplay)+unit),
+        Gear badge (cleanNil text; D=success/R=danger/else neutral), G-Force
+        (fmtNumber(max(|lat|,|lon|),2)+"g"). Per-panel <SkeletonRows/> when data is nil.
+      • Climate       -> Cabin/Outside temp, HVAC `${fmtNumber(p,1)} kW`, fan bar (n/6 +
+        gradient), defrost / battery-heater pills, "No active modes" caption.
+      • Security      -> Lock (🔒/🔓 → lock.fill/lock.open.fill, emerald/rose), Sentry
+        (Active/Off, cyan/muted), Doors / Windows "All Closed" | "N Open" badges
+        (success/warning) computed from the split door_state + the four window fields.
+      • Tire Pressure -> 2×2 corner tiles (FL/FR/RL/RR) tinted by the raw-bar band
+        (<2.068||>3.103 critical, <2.275||>2.896 warning, else normal), value =
+        fmtNumber(toPressureDisplay(bar),1), unit suffix, + "All Normal"|"Warning" summary.
+      • Media         -> now-playing title/artist (cleanNil; artist→"Unknown artist"), status
+        badge (Playing=success/Paused=warning/else neutral), volume `${v}/${max}` + bar.
+      • Navigation    -> Destination (`name || '—'`), Distance (fmtNumber(toDistanceDisplay,1)+
+        unit), ETA (`fmtInt(min) min`), Home/Work/Favorite pills, "No saved location" caption.
+  - Unit conversion: convertTemp/Distance/PressureFromSI ported 1:1 (constants 1609.344,
+    6.894757, etc.); the display wrappers reproduce the Dashboard parent's wrapping —
+    toDistanceDisplay(km)=convertDistanceFromSI(km*1000,…), toPressureDisplay(bar)=
+    convertPressureFromSI(bar*100,…). The web `miles_to_arrival` field is carried VERBATIM and
+    fed to the kilometre converter exactly as LiveTelemetry.tsx L340 does (documented in Data).
+  - States (ALL rendered, each with a #if DEBUG preview + a model/view test):
+      loading (every panel skeleton) · empty (web-absent surface branch
+      t('telemetry.empty','Awaiting live telemetry')) · content (six-panel grid; a nil panel
+      still shows its own skeleton, the web `data ? … : <SkeletonRows/>` branch) · error
+      (message + Retry; native QueryError affordance) · stale (freshness chip + one guarded
+      auto-refresh) · offline (cached readings kept + offline chip + banner).
+  - i18n (P1/S10): web keys preserved VERBATIM — telemetry.{title,drivetrain,climate,security,
+    tirePressure,media,navigation,torque,motorTemp,gear,gforce,cabin,outside,hvac,fan,defrost,
+    batHeater,noModes,lock,locked,unlocked,sentry,active,off,doors,allClosed,open,windows,
+    allNormal,warning,unknownArtist,status,volume,destination,distance,eta,home,work,favorite,
+    noSavedLocation} (40); native chrome telemetry.{live,stale,offline,updating,staleBanner,
+    offlineBanner,loadingPanel,empty,errorTitle,retry} (10). Every code-referenced i18n key is
+    declared in LiveTelemetry.strings; referenced==declared VERIFIED (50==50, zero orphans;
+    the lone extra grep hit `telemetry.viewOpened` is the Swift method call
+    `self.telemetry.viewOpened(surface:)`, not a string key). NO English string literals in
+    native code beyond locale-invariant unit symbols (Nm / kW / min / g).
+  - Accessibility: VoiceOver labels on every row / badge / chip / tile (combined "label, value"
+    phrases via LiveTelemetryAccessibility), the freshness chip, and the Retry button; each
+    panel/grid carries a contained a11y element; Dynamic-Type system fonts (Font.TS);
+    reduce-motion honored (meter-bar fill + TSSkeleton shimmer).
+  - Telemetry (P1/S11): LiveTelemetryModel.start() emits view.opened with surface slug
+    "LiveTelemetry" exactly once (OSLogLiveTelemetryTelemetry default; prod app injects the
+    shared diagnostics adapter). Asserted by testStartAppliesInitialAndEmitsTelemetryOnce.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 10 production files (+ DEBUG previews) compiled together with the REAL
+  apps/apple component closure (design Tokens + Design/{TSDesign,TSMaterial} + Components/**),
+  excluding only DataDisplay/UnitFormatters.swift (the one component file that references the
+  external SharedFacade `UnitPreferences`; it is NOT used by this surface — same disposition as
+  the 0170 predecessor).
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK
+        xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+          -swift-version 6 -strict-concurrency=complete  <closure> <9 production .swift>
+        IOS_TYPECHECK_EXIT=0   (0 errors)                                          OK
+  [2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0   (0 errors)                                          OK
+  [3] DEBUG previews — compiled by the SwiftPM harness library build below (the #Preview macro
+        plugin resolves under the Xcode toolchain; `swift build` → Build complete):
+        PREVIEWS_BUILD_EXIT=0                                                      OK
+  [4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained
+        SwiftPM harness (real production Model/Data/Adapter/Projection/Projector/surface/Views/
+        Panels/PanelsB + DEBUG previews + real design tokens + real TS component closure),
+        Swift 6 language mode:
+          LiveTelemetryCleanNilTests ............... 2 tests, 0 failures
+          LiveTelemetryFormatTests ................. 4 tests, 0 failures
+          LiveTelemetryConvertTests ................ 3 tests, 0 failures
+          LiveTelemetryTireTests ................... 2 tests, 0 failures
+          LiveTelemetryDrivetrainTests ............. 6 tests, 0 failures
+          LiveTelemetryClimateTests ................ 2 tests, 0 failures
+          LiveTelemetrySecurityTests ............... 2 tests, 0 failures
+          LiveTelemetryTireProjectionTests ......... 2 tests, 0 failures
+          LiveTelemetryMediaTests .................. 3 tests, 0 failures
+          LiveTelemetryNavigationTests ............. 2 tests, 0 failures
+          LiveTelemetryAccessibilityTests .......... 2 tests, 0 failures
+          LiveTelemetryProjectorWiringTests ........ 3 tests, 0 failures
+          LiveTelemetryPhaseTests .................. 3 tests, 0 failures
+          LiveTelemetryModelTests .................. 8 tests, 0 failures
+          LiveTelemetryViewRenderTests ............. 6 tests, 0 failures (ImageRenderer smoke,
+                                                     all six states render a non-nil image)
+          Executed 50 tests, with 0 failures (0 unexpected)
+        SWIFT_TEST_EXIT=0                                                          OK
+  [5] swiftlint --strict (12 surface .swift files; explicit paths, repo .swiftlint.yml):
+          Done linting! Found 0 violations, 0 serious in 12 files.
+        LINT_EXIT=0                                                               OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/12 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate; swift):
+          REAL scan of the 12 shipped .swift files (copied to a clean temp dir so the script's
+          Get-ChildItem -Recurse actually reaches them — the prompt's literal `-Path …/
+          LiveTelemetry` prefix resolves to no file and trivially returns 0):
+            PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+          self-test: 6/6 PASS (dirty tree flagged, clean tree 0, opt-out honored)  SELFTEST_EXIT=0
+          literal prompt invocation also run: PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                        OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode toolchain):
+      - `xcodegen generate`                         -> XCODEGEN_EXIT=0 (project + 12 targets +
+          schemes; this surface's files ARE in the generated build graph).
+      - `xcodebuild -target TeslaSync-macOS build`  ->
+          error: "TeslaSync-macOS" has entitlements that require signing with a development
+                 certificate. Enable development signing in the Signing & Capabilities editor.
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **                        -> MAC_BUILD_EXIT=65
+    Why deferred (two independent, code-unrelated reasons — neither is a defect in this surface;
+    identical disposition to the 0170 LiveMotorStatus / 0096 AcDcStatsPanel predecessors,
+    Honesty rule 7):
+      (b) Shared.xcframework not staged: the app target links the KMP core; staging it needs a
+          Kotlin/Native gradle build (apps/shared :core:assembleSharedXCFramework). It is
+          independent of this UI surface; the concrete missing-framework error is captured above.
+          Frameworks/ holds only .gitkeep.
+      (c) macOS app/widget signing requires a development certificate on a signed runner
+          (ADR-012); the entitlements error is captured above.
+    Note: project.yml ALREADY registers TeslaSync/feature-views in the iOS + macOS app targets,
+    so this surface IS in the build graph. The deferral is purely (b) the unstaged KMP
+    xcframework + (c) signing. The SAME tests are PROVEN GREEN (50/50) by the executed SwiftPM
+    harness in step [4], and the surface compiles against BOTH the iOS 18 and macOS 15 SDKs in
+    steps [1]/[2].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading / empty / error / stale / offline / content) —
+      implemented; each has a #if DEBUG preview; phase + per-state render EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (LiveTelemetrySource→
+      LiveTelemetryModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — web telemetry.* (40) preserved
+      verbatim + native chrome (10); referenced==declared (50==50, zero orphans).
+  [x] Accessibility labels on every interactive element (rows, badges, chips, tiles, freshness
+      chip, Retry); each panel/grid carries a contained summary.
+  [x] Tests: adapter unit + per-panel projection + model phases/wiring + a11y + per-state view
+      render — 50 methods, EXECUTED 50/50, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0 (real scan).
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured
+      evidence (xcframework + signing), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green (50/50 tests executed; both SDKs
+                          compile); the xcodebuild build/test is shown DEFERRED with its real
+                          exit 65 + cause, not as pass.
+  2 No scope narrowing ... full surface (12 .swift + strings), all six panels, all states, seams,
+                          50 tests.
+  3 No skip-and-assume ... web source read end-to-end; every t() + render branch + numeric guard
+                          (cleanNil, raw `${}`, fmtNumber/fmtInt, conversions, tire thresholds,
+                          door/window split) reproduced and pinned by an executed test.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0 (real scan + self-test).
+  5 No parity shortcuts .. six panels with every web row/badge/chip/bar + per-panel skeleton +
+                          6 states; web hex → token sRGB (semantic ADR-006 map).
+  6 No delegation ........ authored directly (delegation FORBIDDEN; no sub-agents used).
+  7 No predecessor bypass  same host-gate + deferral disposition as 0170/0096; Xcode accessed via
+                          DEVELOPER_DIR exactly as the predecessors did.
+  8 No commit on red ..... committed work is green on every runnable gate; the only non-green step
+                          is the environment-blocked xcframework build/signing, deferred with
+                          evidence (predecessor-accepted disposition).
+  9 No silent drift ...... deferral reasons documented; the web `miles_to_arrival`→km-converter
+                          quirk is reproduced verbatim and documented, not silently "corrected".
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

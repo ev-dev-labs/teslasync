@@ -1,0 +1,106 @@
+I'll start by exploring the repository structure and reading the key files to understand the task.
+
+The web page is a thin wrapper around `ActiveOrdersSection`. Let me read that component and explore the Apple app structure.
+
+Now let me explore the Apple app structure to understand the existing patterns, KMP core, navigation, and component library.
+
+The structure differs from the prompt's expectation. Let me examine the project layout, XcodeGen config, and existing pages.
+
+Let me examine the actual feature-views directory and the routing/navigation system.
+
+There's already a native `ActiveOrdersSection`! Let me read it and understand how pages register routes.
+
+There's already a native `ActiveOrdersSection`. My page should wrap it, mirroring the web. Let me study the registration pattern and the model.
+
+Let me read the model, previews, cards, header, and check the toolchain + string catalog.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are present — so the build/test gate will be BLOCKED. `swift`, `swiftlint`, `xcodegen` are available. The heavy `ActiveOrdersSection` already exists; my P7 page wraps it. Let me study the page-scaffold conventions, the gate contract, and the ledger.
+
+No P7 pages exist yet. Let me read the gate contract README, the pages prompt directory, and how AppShell hosts routes.
+
+Now let me read the actual repo prompt, a sibling page prompt for registration convention, and find the PageContainer/PageHeader parity component.
+
+The repo prompt matches. The page wraps the existing `ActiveOrdersSection`. The crux is navigation registration — let me examine the route parser, route tests, the string catalog, and how the web routes `/tesla-orders`.
+
+Now I understand the routing model: `AppRoute` is a curated coarse set; admin sub-pages aren't top-level routes. Let me find the app composition root and how feature-view models get production data sources.
+
+Let me read the remaining Orders files (Views, Adapter) and inspect the test convention.
+
+I now fully understand the existing `ActiveOrdersSection`. Let me check what production data facilities (P1 facade / API client / live store) exist to decide how the page obtains a real `ActiveOrdersModel`.
+
+There's a `Sources/Features` dir. Let me inspect it, the SharedFacade, and Live provider to understand production data + page conventions.
+
+The production data layer (`AppContainer.bootstrap`) is deferred — no orders store is wired yet, consistent with every page. So the page binds through the injected `ActiveOrdersModel` seam. Let me read the web `PageContainer`, Apple typography/scaffold components, and design tokens to build a faithful HIG page header.
+
+Let me read the typography component signatures, the swiftlint config, and confirm token symbols exist.
+
+Let me verify the spacing/radius tokens, `TSEmptyState`/`TSFadeIn` signatures, and whether the orders strings already exist in the catalog.
+
+Strings aren't in the catalog. Let me inspect the `Localizable.xcstrings` structure to add entries correctly.
+
+Let me check how feature-view co-located tests are built (to place my test correctly within scope).
+
+I have enough to design the page. Let me check the ledger schema, the placeholder-check script, and whether `pwsh`/xcodeproj exist — these determine how I record the gate honestly.
+
+The sibling `ActiveOrdersSection` log reveals the precedent: in this environment they run **isolated** swift build/test + lint + placeholder (all green) and **defer** the full `xcodebuild` app build. Let me check for an isolated build harness and confirm the Orders surface + components I need are `Shared`-free (so I can compile in isolation).
+
+No harness exists, but the Orders surface + components are `Shared`-free. The key question: can the Command-Line-Tools `swift` even compile `import SwiftUI` (SwiftUI ships with Xcode, not CLT)? Let me test empirically.
+
+CLT `swiftc` **can** typecheck SwiftUI against the macOS SDK — so I can verify compilation in isolation even without full Xcode. Let me map the component closure (locating `TSButton`/`TSIconBox`/`TSSkeleton` etc.) and which Components files import `Shared` (to exclude from the isolated build).
+
+Excellent — the entire component library + tokens + Orders surface are `Shared`-free, so I can isolated-compile the page against the real dependencies. Let me confirm `TSFadeIn`/`TSGlassPanel` signatures, then write the page.
+
+I now have a complete understanding. Let me set up a plan and todos, then implement.
+
+Now let me write the main page file:
+
+Now the previews file, following the section's `#if DEBUG` preview convention:
+
+Now the co-located XCTest model tests (matching the `*.ModelTests.swift` convention):
+
+Now wire `TeslaSync/Features` into the build (project.yml) and lint config:
+
+Now add the two parity strings to the catalog. First, let me verify the exact JSON formatting style to match it precisely.
+
+Style confirmed (`"key": value`, 2-space indent). Let me insert the two keys with a targeted, format-matching script and validate:
+
+Strings inserted cleanly (8121→8123, JSON valid). Let me check the placeholder script, then run lint + placeholder + git diff in parallel.
+
+All clean of placeholder patterns. Now let me run the real gates: swiftlint, placeholder scan, xcstrings diff check.
+
+Placeholder=0 ✅, xcstrings diff minimal ✅. SwiftLint found 1 violation across 1912 files — I need to locate it (could be mine or pre-existing). Let me isolate it.
+
+The only violation is **pre-existing** (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`) — my 3 files are clean. Let me reproduce the exact gate invocation from repo root and confirm whether a root config exists.
+
+Gate-exact lint = **0 violations in my 3 files** ✅. Now validate the project spec (xcodegen) and set up the isolated compile. Let me find the `tsGlassPanel()` modifier source and run xcodegen.
+
+xcodegen validates the spec (RC=0) ✅. Now the isolated typecheck of the page against its real `Shared`-free dependency closure (tokens + Design + Components + Orders surface + page), under Swift 6 strict concurrency:
+
+The errors are all in `Sources/Components/DataDisplay/UnitFormatters.swift` — it depends on the `Shared` facade (`UnitPreferences`/`Units`), which my page/section don't use. Let me exclude facade-dependent Components files and re-run the isolated typecheck against my actual closure.
+
+Only `UnitFormatters.swift` is facade-dependent. Let me re-run the isolated typecheck excluding it:
+
+Isolated typecheck **CLEAN** (49 files, Swift 6 strict concurrency, RC=0) — the page compiles against the real design system + real `ActiveOrdersSection`. Now verify the previews compile (`-DDEBUG`) and probe XCTest availability for the test build:
+
+Two CLT toolchain limits (no Xcode): the `#Preview` macro plugin and the `XCTest` module are Xcode-only. The previews/tests follow the exact known-good section convention. Let me confirm their **syntactic** validity with `-parse` (which doesn't need the plugin/module):
+
+All 3 files parse cleanly. Let me confirm the generated project includes my files in the app target and that the `.xcodeproj` is git-ignored (won't be committed):
+
+My files are wired into the app target (6 refs); `.xcodeproj` is git-ignored ✓. Co-located test matches the 204-file convention. Now let me create the ledger and the evidence log. First the ledger:
+
+Let me capture the final gate evidence cleanly for the log, then write it:
+
+Now the evidence log:
+
+Let me validate the ledger JSON and review the full change set before committing:
+
+The `AIUsageCard.*` and `web/*` changes are **pre-existing/concurrent** (other slots share this tree) — not mine. I'll stage only my exact paths. Let me commit precisely:
+
+All 8 of my files staged (no foreign changes). Let me verify the staged catalog diff is only my +22 lines, then commit:
+
+Clean, minimal diffs. Now commit:
+
+Committed cleanly (8 files, 627 insertions — only my files). Let me clean up the generated `.xcodeproj` validation artifact and do a final state check:
+
+The task is complete. All todos are done and the work is committed. Let me provide the final summary.
+

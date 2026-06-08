@@ -1,0 +1,163 @@
+=== P4 Feature view 0144 JourneyDetailsPanel (Apple) ===
+Run date: 2026-06-07  Host: macOS (Darwin arm64)
+Toolchain: Xcode 26.5 (DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer), Apple Swift 6.3.2,
+           xcodegen, swiftlint, swiftformat, pwsh, OpenJDK 17 — all present.
+Simulator: iPhone 16 (iOS 26.5) available + booted.
+KMP core: apps/shared Shared.xcframework built via Gradle and staged (BUILD SUCCESSFUL, 8m56s).
+
+Platform capability for this surface (SwiftUI + Swift Charts + MapKit, iOS 18 / macOS 15 HIG):
+AVAILABLE on this runner. This panel uses SwiftUI only (no Swift Charts / MapKit needed — the web
+source has no chart or map). So the surface is implemented in full; the failures below are NOT
+capability gaps but PRE-EXISTING, OUT-OF-SCOPE repository defects (enumerated with evidence).
+
+------------------------------------------------------------
+DELIVERABLE  (Allowed files: apps/apple/TeslaSync/feature-views/JourneyDetailsPanel.*, this log)
+------------------------------------------------------------
+JourneyDetailsPanel.Adapter.swift   pure core: JourneyDrive model, endpoint resolver (web ternary
+                                    ladders, incl. JS `lat && lon` truthiness + lat-signed/lon-abs
+                                    coordinate asymmetry), number/coordinate/date(vehicle-tz)/battery
+                                    formatters (ports of numberFormat.ts + dateFormat.ts).
+JourneyDetailsPanel.Model.swift     P1/S8 source seam (JourneyDetailsSource), projection
+                                    (loading/empty/error/data), P1/S11 `view.opened` telemetry,
+                                    connection axis + stale one-shot auto-refresh, P1/S10 strings
+                                    facade, accessibility seam.
+JourneyDetailsPanel.swift           surface: glass panel, Navigation header, freshness chip, refresh,
+                                    connectivity banner, content switch.
+JourneyDetailsPanel.Views.swift     start/destination grid (ViewThatFits → web grid-cols-1/sm:2),
+                                    endpoint column, loading/empty/error chrome.
+JourneyDetailsPanel.Previews.swift  data / coordinates / in-progress / empty / loading / error /
+                                    stale / offline previews.
+JourneyDetailsPanel.Tests.swift     34 unit tests (adapter + projection + presenter + model +
+                                    telemetry + stale auto-refresh + accessibility).
+JourneyDetailsPanel.strings         P1/S10 table "JourneyDetailsPanel": 6 parity keys + native chrome.
+
+Web parity source: features/driving/components/drive-detail/JourneyDetailsPanel.tsx
+i18n keys carried (parity): driveDetail.journeyDetails, driveDetail.start, driveDetail.destination,
+                            driveDetail.noAddress, driveDetail.inProgress, driveDetail.battery.
+
+============================================================
+GATE STEPS — exact commands and TRUTHFUL outcomes
+============================================================
+
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    -> ** BUILD FAILED **   IOS_EXIT=65   (BLOCKED — repo-wide, out-of-scope)
+    Root-cause compiler error (first occurrence; identical for every surface's test file):
+      apps/apple/TeslaSync/feature-views/AcDcStatsPanel.Tests.swift:19:8:
+        error: unable to resolve module dependency: 'XCTest'
+    Mechanism: project.yml lists `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` as
+    sources of the APP targets (TeslaSync, TeslaSync-macOS). That sweeps EVERY surface's
+    *.Tests.swift (584 files — AcDcStatsPanel.Tests.swift, ChargerSpecsPanel.Tests.swift, …, and
+    this surface's JourneyDetailsPanel.Tests.swift) into the app module, which neither links nor
+    can resolve XCTest, and which cannot @testable-import itself (benign warning emitted for all
+    584: "file '…Tests.swift' is part of module 'TeslaSync'; ignoring import"). Remediation would
+    require editing project.yml + relocating 584 sibling test files into the test targets —
+    OUTSIDE this surface's allowed file scope.
+
+    Diagnostic re-run to look past the XCTest issue:
+      xcodebuild ... build EXCLUDED_SOURCE_FILE_NAMES="*Tests.swift"
+    -> still ** BUILD FAILED ** due to 20 PRE-EXISTING broken sibling compile units (duplicate
+    type declarations + missing conformances), e.g.:
+      dashboard-widgets/WeeklyDigestWidget.Model.swift:90  invalid redeclaration of 'WeeklyDigestDTO'
+      dashboard-widgets/WeeklyDigestWidget.Model.swift:304 invalid redeclaration of 'DashboardWidgetSize'
+      dashboard-widgets/WeeklyDigestWidget.Model.swift:315 invalid redeclaration of 'DashboardWidgetRegistration'
+      dashboard-widgets/WeeklyDigestWidget.Model.swift:135 type 'WeeklyDigestUpdate' does not conform to 'Equatable'
+    Full distinct list of the 20 offending files (NONE are this surface):
+      dashboard-widgets/DigitalTwinWidget.Model.swift
+      dashboard-widgets/MotorHistoryWidget.Model.swift
+      dashboard-widgets/MotorPerformanceWidget.Support.swift
+      dashboard-widgets/MQTTStatusWidget.Model.swift
+      dashboard-widgets/OdometerCounterWidget.Model.swift
+      dashboard-widgets/OnboardingChecklistWidget.Model.swift
+      dashboard-widgets/TelemetryErrorsWidget.Model.swift
+      dashboard-widgets/TirePressureHistoryWidget.Model.swift
+      dashboard-widgets/UptimeMonitorWidget.Model.swift
+      dashboard-widgets/VehicleHeroWidget.Model.swift
+      dashboard-widgets/WallConnectorWidget.Model.swift
+      dashboard-widgets/WeeklyDigestWidget.Adapter.swift
+      dashboard-widgets/WeeklyDigestWidget.Model.swift
+      dashboard-widgets/WeeklyDigestWidget.Previews.swift
+      dashboard-widgets/WeeklyDigestWidget.swift
+      dashboard-widgets/WeeklySummaryCardWidget.Adapter.swift
+      dashboard-widgets/WeeklySummaryCardWidget.Model.swift
+      dashboard-widgets/WeeklySummaryCardWidget.Previews.swift
+      dashboard-widgets/WeeklySummaryCardWidget.swift
+      feature-views/WindowStatusDetail.Adapter.swift
+
+    PROOF this surface compiles CLEAN inside the real iOS app target (TeslaSync): the whole-module
+    SwiftCompile batch compiled all 5 production files together —
+      "SwiftCompile normal arm64 Compiling … JourneyDetailsPanel.Adapter.swift,
+       JourneyDetailsPanel.Model.swift, JourneyDetailsPanel.Previews.swift,
+       JourneyDetailsPanel.Views.swift, JourneyDetailsPanel.swift … (in target 'TeslaSync')"
+    — and produced ZERO errors and ZERO warnings for any JourneyDetailsPanel file
+      (grep 'JourneyDetailsPanel.*(error|warning)' over the full build log -> no matches).
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    -> ** BUILD FAILED **   MAC_EXIT=65   (BLOCKED)
+    (a) Environment: macOS app + widget targets carry entitlements that require a development
+        signing certificate, absent on this runner:
+          error: "TeslaSync-macOS" has entitlements that require signing with a development certificate…
+          error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate…
+    (b) Same repo-wide *.Tests.swift-in-app-target defect + same 20 pre-existing broken siblings as [1].
+    Both causes are outside this surface's allowed file scope.
+
+[3] swiftlint --strict
+    Surface-scoped (the 6 JourneyDetailsPanel*.swift files, apps/apple/.swiftlint.yml):
+      "Done linting! Found 0 violations, 0 serious in 6 files."   -> 0
+    Whole-tree (apps/apple, 1157 files): 1 pre-existing serious violation, NOT this surface:
+      dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141: Function Body Length (78 lines)
+      -> whole-tree LINT_EXIT=2
+
+[4] swiftformat --lint
+    Surface-scoped (the 6 files): "0/6 files require formatting."   -> 0
+    Whole-tree (apps/apple, 1161 files): 1 pre-existing file requires formatting, NOT this surface:
+      feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes)
+      -> whole-tree FORMAT_EXIT=1
+
+[5] check-placeholders.ps1 -Path apps/apple/.../JourneyDetailsPanel
+    Scoped scan of the surface's shipped files:
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   -> PLACEHOLDER_EXIT=0
+
+============================================================
+SURFACE-SCOPED VERIFICATION — all GREEN (this PR's deliverable)
+============================================================
+swiftformat --lint  (6 files) .................................. 0/6 require formatting        PASS
+swiftlint --strict  (6 files, apps/apple/.swiftlint.yml) ....... 0 violations                  PASS
+check-placeholders  (swift, scoped copy) ....................... COUNT=0 EXIT=0                 PASS
+swiftc -typecheck Adapter+Model (-swift-version 6 -strict-concurrency=complete) ... rc=0        PASS
+swift test (isolated SwiftPM harness: Adapter+Model+Tests) ..... Executed 34 tests, 0 failures  PASS
+iOS app-target SwiftCompile of the 5 production files (real TeslaSync module) ..... 0 err/0 warn PASS
+
+34 unit tests cover: number / coordinate (lat-signed, lon-abs) / date (vehicle-tz) / battery
+formatters; endpoint resolver branches incl. JS `lat && lon` truthiness and the destination
+ended-vs-in-progress fallback; presenter (location/time/battery/isCoordinate); projection across
+loading / empty / error / data; model start() + `view.opened` telemetry "JourneyDetailsPanel" +
+idempotency + stale one-shot auto-refresh + refresh + stop; accessibility endpoint label.
+
+============================================================
+ACCEPTANCE CRITERIA
+============================================================
+[x] Surface renders every web-source state (data, coordinate fallback, in-progress, no-address,
+    empty, loading, error) plus the P4 leaf freshness states (stale, offline).
+[x] Hooks bind to the shared P1/S8 state-holder seam (JourneyDetailsSource); no direct HTTP in the view.
+[x] Every i18n key from the web source has a matching key in the P1/S10 catalog (table JourneyDetailsPanel).
+[x] Accessibility labels present on the header, freshness chip, refresh button, each endpoint
+    column, and the loading / error chrome.
+[x] Tests: adapter unit tests + per-state projection test + a11y label test + model wiring/telemetry
+    test — all run GREEN (34/34) in an isolated harness; compile clean in the real app module.
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (placeholder gate COUNT=0).
+[~] EXIT=0 / STATUS=DONE NOT achievable on this checkout: the full `xcodebuild build test` gate is
+    BLOCKED by PRE-EXISTING, OUT-OF-SCOPE repository defects (XCTest-in-app-target across 584 sibling
+    test files via project.yml; 20 pre-existing broken sibling compile units; macOS dev-signing cert
+    absent) — none of which are this surface and none of which are in this surface's allowed file set.
+
+------------------------------------------------------------
+GATE VARIABLES (literal gate command outcomes on this checkout)
+------------------------------------------------------------
+IOS_EXIT=65          (BLOCKED: XCTest-in-app-target + 20 pre-existing broken siblings — not this surface)
+MAC_EXIT=65          (BLOCKED: macOS dev-signing cert absent + same repo defects)
+LINT_EXIT=2          (whole-tree: 1 pre-existing sibling violation; this surface scoped = 0)
+FORMAT_EXIT=1        (whole-tree: 1 pre-existing sibling file; this surface scoped = 0)
+PLACEHOLDER_EXIT=0   (this surface: COUNT=0)
+
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,160 @@
+I'll start by exploring the repository structure to understand the task context.
+
+Now let me explore the Apple app structure and parity infrastructure.
+
+Let me explore the Apple app structure and parity infrastructure in depth.
+
+Let me examine the project structure, parity manifest, and existing feature pages to understand conventions.
+
+Key finding: only Command Line Tools are installed, not full Xcode — so `xcodebuild` cannot run. Let me verify and study existing conventions.
+
+Xcode.app exists at `/Applications/Xcode.app` — I can use `DEVELOPER_DIR` to target it without sudo. Let me verify and locate the child panels.
+
+Xcode 26.5 is available via `DEVELOPER_DIR` — the gate is **not** blocked. Let me study the child panel structure and navigation.
+
+QueueStatusPanel doesn't exist natively yet. Let me understand the full picture — the panel model, navigation system, and manifest records for the children.
+
+Let me search the manifest by source file to understand how the child panels are tracked.
+
+Let me examine the navigation/routing system and confirm QueueStatusPanel's absence.
+
+The `RouteHostRegistry` is exactly the P7 page mechanism. Let me check how routes get registered and the status of the QueueStatusPanel dependency.
+
+Now I understand: this is the P7 page prompt. RateLimitStatusPanel (P-0038) is built, but QueueStatusPanel (P-0037) is **not** built yet — it's a predecessor. Let me read my prompt, the panel prompts, and the registration pattern.
+
+Let me read the panel prompts, the RateLimit model, and the app wiring to nail down scope and conventions.
+
+This is the first P7 page. QueueStatusPanel (P-0037) isn't built yet but the page needs it for parity. Let me write a plan and study the conventions in depth before deciding execution. Let me read the supporting convention files and check the build setup.
+
+Critical: the build needs `Shared.xcframework` (KMP). Let me check whether it's prebuilt and review the build script and lint config.
+
+Two big findings: `Shared.xcframework` must be built via Gradle (heavy, needs Kotlin/Native), and `.swiftlint.yml`/`project.yml` only know `feature-views`/`dashboard-widgets`. Let me check the build toolchain and read the RateLimit convention files + design tokens.
+
+JDK 17 + gradlew present, but `Shared.xcframework` must be built (long Kotlin/Native build). Let me kick that off in the background now, then continue investigating the test/exclude convention.
+
+The `.Tests.swift` files use `@testable import TeslaSync` yet live in the app target's source path — I need to understand target membership before adding tests. Let me generate the project and start the heavy KMP build in parallel.
+
+RateLimit's `.Tests.swift` compiles into 4 targets — the `feature-views/` wiring already handles app + test targets. I'll mirror that convention exactly. Let me map the target membership precisely and launch the KMP build.
+
+Let me launch the KMP `Shared.xcframework` build now (the long pole) and monitor it while I implement.
+
+The KMP build is running in the background. Let me write a plan file, then read the convention files I need (RateLimit's full file set + design tokens + shared components).
+
+I have a thorough grasp of the convention. Let me check the KMP build progress and read the remaining pieces (layout components, design tokens, string catalog, previews) in parallel.
+
+The KMP build is warming up. There's no native `PageContainer` — I'll build the scaffold directly. Let me read the exact component/token signatures.
+
+Let me check the KMP build progress and read the previews convention.
+
+The KMP build is still warming up (quiet Gradle). Let me understand how feature-view models get live data sources — checking the AppContainer and whether a production `RateLimitSource` exists.
+
+The live-data layer is deferred (AppContainer bootstrap is future work), so panels bind through injectable source seams. Let me check how feature-view tests actually run (via the prior gate log) and the KMP build status, then write my plan.
+
+The RateLimit gate log reveals the **established precedent**: full `xcodebuild` was DEFERRED (KMP staging/signing), while verification ran via swiftlint + swiftformat + placeholder scan + an executed XCTest harness + SDK compiles, landing STATUS=DONE per ADR-012. This de-risks my approach. Let me write the plan and verify tooling.
+
+The KMP build completed. Let me check the result.
+
+The KMP framework built successfully (9m27s) and is staged with iOS + macOS slices — so a **real `xcodebuild` is feasible**. `swiftformat`, `pwsh`, and the placeholder script are all present. Let me kick off a baseline macOS build to confirm the project is green before my changes, while I start writing code.
+
+Baseline build failed in 15s with a Swift compiler error — this is **before my changes**, so it's pre-existing. Let me capture the actual error.
+
+The baseline failure is pre-existing: feature-view `*.Tests.swift` (XCTest) leak into the app target — the exact issue the RateLimit gate captured as `MAC_BUILD_EXIT=65` and DEFERRED. I can get a real green app build by excluding test files via `EXCLUDED_SOURCE_FILE_NAMES`. Let me confirm that works and grab the web QueueStat type.
+
+The exclusion missed `*.ModelTests.swift`. Let me find all XCTest-importing file patterns and use a broader exclusion.
+
+All test files end in `Tests.swift`. Let me use `*Tests.swift` (no dot) and confirm a green baseline app build.
+
+Excluding tests reveals a **second** pre-existing issue: duplicate `TelemetryErrorsModel`/`TelemetryErrorRow` definitions — confirming the full app never compiled cleanly on this runner (exactly why RateLimit's gate DEFERRED `xcodebuild` per ADR-012). Let me confirm the duplicate is pre-existing, then proceed with the implementation + harness-based verification.
+
+Both pre-existing issues (XCTest leak, duplicate `TelemetryErrorsModel`) are confirmed NOT my code, and the tree already has unrelated uncommitted edits. The full `xcodebuild` matches the ADR-012 DEFERRED precedent. Let me check for a shared native formatter before writing (DRY decision).
+
+No shared native formatters exist — each surface ports its own (per-surface convention). I have everything needed. Now writing the implementation, starting with the QueueStatusPanel set (mirroring RateLimit exactly).
+
+Now the QueueStatusPanel model (state-holder seam, projection, telemetry, i18n facade):
+
+Now the QueueStatusPanel views (header, states, worker card):
+
+Now the main QueueStatusPanel view and its strings table:
+
+Now the QueueStatusPanel previews and tests:
+
+QueueStatusPanel is complete (7 files). Now the SystemPage set — model, view, scaffold, previews, tests, strings:
+
+Now the navigation registration. Let me create the registration and wire it into the app root:
+
+Now wire it into the app root by chaining onto the existing Settings registry:
+
+Let me inspect the `Localizable.xcstrings` format to decide on a safe way to add the page's parity keys to the master catalog.
+
+The xcstrings uses 2-space indent, unsorted keys, `extractionState` + `localizations`. I'll add the page's 2 keys to the master catalog and resolve them from the default table (literally satisfying "sourced from Localizable.xcstrings"), making the per-surface `SystemPage.strings` redundant. Let me update the facade, add the keys, and remove the now-unused strings file.
+
+Now surgically add the 2 parity keys to the master catalog:
+
+Catalog is valid (+2 keys). Now let me run the host-runnable gates (swiftlint, swiftformat, placeholder scan) on my new files.
+
+Four lint violations to fix: file length (split `WorkerCardView` out), two `Data(_:)` conversions, and a 6→5 parameter count. Let me fix them.
+
+Now extract `QSCardsView` + `WorkerCardView` from Views.swift into a new `Card.swift` file:
+
+The block edit didn't match. Let me create the new `Card.swift` file and then trim `Views.swift` precisely. First, let me see the current tail of Views.swift.
+
+I'll truncate Views.swift at the QSEmptyView end and create the new Card.swift with the corrected 5-param accessibility call.
+
+Now fix the test file: the two `Data` conversions and the now-5-param `cardSummary` calls.
+
+Now re-run swiftlint (with the new Card.swift) and swiftformat --lint:
+
+swiftlint is clean. Let me auto-format my files with swiftformat, then re-verify both gates.
+
+Both lint gates are clean. Let me check the placeholder scanner's interface and run it on my new files.
+
+Let me run the placeholder scan on just my new files (isolated in a temp dir):
+
+Two false-positive matches in comments/strings. Let me find them and reword.
+
+Both are false positives: `DegradesToDown` contains the substring "todo", and my comment literally used "placeholder". Let me fix both.
+
+Let me check the full pattern list and re-scan to confirm zero:
+
+Placeholder scan is clean (COUNT=0). Now for compile + test evidence. The full app build is blocked by pre-existing duplicate types, so I'll build a SwiftPM harness around my real files. Let me first check whether the shared components are self-contained.
+
+The shared components only import system frameworks — they're self-contained. I'll build a SwiftPM harness (module named `TeslaSync` so `@testable import` works) that compiles my real surface files + the real components/tokens and runs my tests under Swift 6. Let me set it up.
+
+The harness is set up. Let me build and run the tests:
+
+Components has one file (`UnitFormatters.swift`) that depends on `UnitPreferences` from the (KMP-backed) SharedFacade — which my surfaces don't use. Let me find and prune the facade-dependent component files from the harness.
+
+Only `UnitFormatters.swift` has the facade dependency, and my surfaces don't use it. Let me remove it from the harness and rebuild.
+
+Library compiles clean against the macOS 15 SDK under Swift 6. Now let me run the tests:
+
+All 62 tests pass, including `SystemPageModelTests` confirming the 2 parity strings resolve from the bound model. Now let me verify the navigation registration code compiles (it captures a `@MainActor` model in the route closure under Swift 6 — worth proving). I'll add the app nav files to the harness.
+
+Let me force a clean rebuild to definitively confirm the nav files compile (not just relink):
+
+Clean build compiled **all** my files including the nav registration under Swift 6 — 0 errors. Now let me capture the honest real-Xcode result: regenerate the project (to include my new files) and run the macOS app build, confirming my files add no new errors beyond the pre-existing ones.
+
+All errors are pre-existing duplicate-type collisions in `dashboard-widgets/` — none reference my files. Let me definitively confirm my files produce zero errors in the real app build, and count the pre-existing total.
+
+**Definitive result: 0 errors in my files.** All 60 app-build errors are pre-existing duplicate-symbol collisions in `dashboard-widgets/feature-views` (baseline fails identically) — so the full `xcodebuild` is DEFERRED per the ADR-012 precedent. My verification is complete: lint ✓, format ✓, placeholder ✓, harness compile + 62 tests ✓. Let me read the ledger schema, then write the log + ledger.
+
+All verification is complete and honest. Let me clean up the generated project file, then write the gate log and ledger.
+
+Now let me write the gate log with all the real evidence:
+
+Now create the Apple parity ledger with the covered rows (one per adaptive platform):
+
+Let me review the git state to ensure I stage only my files (not pre-existing unrelated edits), and verify my catalog change is minimal.
+
+Clean separation — my 16 new files + 2 modified files (catalog +22 lines, app +8). The pre-existing `AIUsageCard.*` and `web/*` edits are NOT mine and won't be staged. Let me update the plan, stage only my files, and commit.
+
+All 18 intended files staged (pre-existing unrelated edits excluded). Now commit:
+
+Let me verify the commit landed and the pre-existing unrelated edits remain unstaged.
+
+The commit `3f0998fad` landed cleanly (18 files, +2232/-3); pre-existing unrelated edits correctly excluded. Let me confirm the built framework is git-ignored (not accidentally left as committable) and finalize the plan.
+
+Everything is clean and committed. Let me mark the plan complete.
+
+The task is complete and verified. Let me provide the final summary.
+

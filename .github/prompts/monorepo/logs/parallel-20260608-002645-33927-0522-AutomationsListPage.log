@@ -1,0 +1,138 @@
+I'll start by exploring the repository structure to understand the codebase and the task requirements.
+
+Swift 6.3.2, swiftlint, and pwsh are available. Let me verify xcodebuild status since the gate depends on it.
+
+xcodebuild requires full Xcode (only Command Line Tools present), so the build/test gate cannot pass. Per the prompt, that forces `STATUS=BLOCKED`. But I'll still implement the page fully and correctly, and run all verifications I can (swiftlint, placeholder scan, swift syntax). Let me explore the existing structure.
+
+Let me explore the Apple app's `TeslaSync/` structure, the parity manifest, ledger, and the placeholder checker.
+
+The actual structure uses `feature-views/` (flat, 1438 files) with multi-file per component (e.g. `AIUsageCard.swift`, `.Model.swift`, `.Views.swift`). Let me understand conventions and check for existing automations files.
+
+Key findings: build is **XcodeGen** (`apps/apple/project.yml`), and `AutomationCard.*` + `AutomationActivityFeed.*` already exist in `feature-views/`. The page itself is missing — that's my task. I'll follow the real repo convention (`feature-views/<Name>.*`), not the generator's idealized `Features/` path. Let me study the existing automation components and project setup.
+
+This is a sophisticated, established codebase. Let me study the full Automation component set, the shared facade for automations, and find an existing "Page" to model conventions.
+
+Excellent, patterns are clear. Now let me find an existing full "Page" surface with an `@Observable` model + the shared-facade hooks (`useAutomations` etc.), plus navigation registration.
+
+No `useAutomations` Swift hook or page surface exists yet — I'm building the data-binding page. Let me study the existing `@Observable` data-loading patterns, the design-system components, `AutomationActivityFeed`'s API, and navigation. Let me look in parallel.
+
+`AppRoute.automations` already exists. Let me find where routes render to destination views, and study a representative data-fetching `@Observable` model + the shared facade/data layer.
+
+Let me read the facade container, live-connection primitive, and the `AutomationActivityFeed` sibling (which the page composes) to nail the data-binding pattern.
+
+Now I understand the seam-based, KMP-deferred pattern. Let me inventory the design-system components and read the `AutomationActivityFeed` API + strings format.
+
+Let me read the design tokens, key components (Cards, Metrics, States), and the `AutomationFeedModel` API that the page must construct.
+
+Let me locate the design tokens and read the core component signatures I'll compose with, plus check whether a `PresetGallery` Swift surface exists.
+
+`TSStatCard` exists. `PresetGallery` is a separate (not-yet-built) child unit. Let me inspect the exact manifest record for this page to disambiguate panels/strings, and check whether `PresetGallery` is its own parity unit.
+
+Confirmed: 33 items (7 panels + 3 states + 23 strings). Let me check whether `PresetGallery` is its own parity unit and look at an existing apple page log for the required log format.
+
+`PresetGallery` is its own (not-yet-built) parity unit, so I'll host it via an injected slot (mirroring how `AutomationActivityFeed`/`AutomationCard` are composed) rather than rebuild it. Let me read the web PresetGallery scope, the feed adapter input types, `TSStatCard`/`TSGlassPanel`/states signatures, and the route registration site.
+
+Let me read the remaining component signatures I'll compose with (Cards, States, Banners, Buttons, Disclosure, Inputs, Pickers, Motion, Badges/tones) and see how existing feature-views localize `TSStatCard`.
+
+Let me read the exact inits for the components I'll use plus the design tokens and the route-registration site.
+
+Let me read the app shell (route hosting), design tokens, any page-scaffold component, and the swiftlint config.
+
+The shell renders `routeHosts.view(for:)` and I must register `.automations`. Let me find where the registry is constructed/injected and how registration is intended to happen.
+
+Let me read the design tokens and the remaining exact component signatures (tones, buttons, typography, motion, search input) so my code matches precisely.
+
+Let me read typography/motion/search components and the sibling Tests + Previews to match the test framework and preview conventions.
+
+Let me read the sibling Tests + Previews + Views to match test framework and preview conventions exactly.
+
+Let me read the placeholder checker and patterns so my code won't trip the gate.
+
+I now have a complete picture. Let me read the sibling `AutomationCard.Views.swift` to mirror sub-view style precisely, then set up tracking and implement.
+
+I have a complete understanding of the architecture, conventions, types, and constraints. Key reality: **xcodebuild requires full Xcode (only Command Line Tools present)** → the build/test gate cannot run → `STATUS=BLOCKED` per the prompt's own rule. I'll still implement the page fully and run every verification possible (swiftlint --strict, placeholder scan). Let me set up tracking and begin.
+
+Now I'll build the implementation. Starting with the strings catalog (the 23 parity strings + chrome), mirroring the sibling `.strings` convention.
+
+Now the Adapter — the pure, testable projection core (stats, filter, sort, import-envelope validation, card mapping, status options).
+
+Now the Model — surface identity, i18n facade, the input snapshot, the source seam (+ unavailable/in-memory/hook-backed sources), and the `@Observable` page model that bridges to the activity feed.
+
+Let me read `Cards.swift` to match `TSCard`/`TSGlassPanel` radius/padding, then write the Views file.
+
+`TSCard` uses `TSRadius.lg`. Now I'll write the Views file (all panels, states, and chrome), then update the strings for two new chrome keys.
+
+Let me add the two chrome strings I referenced (`search.clear`, `presets.empty`) to the catalog.
+
+Now the main page scaffold (`AutomationsListPage.swift`) — composes all sections, the file importer, the import-error alert, and the activity feed.
+
+Now the navigation registration (`AutomationsRouteRegistration`) and wiring it into `TeslaSyncApp`.
+
+Now the Previews (every state) and Tests (XCTest covering the adapter + model), mirroring sibling conventions.
+
+The sibling `*.Tests.swift` files live in `feature-views/` (an app-target source) yet `@testable import TeslaSync`. There must be a routing/exclusion mechanism. Let me verify how test files are compiled so mine lands in the right target.
+
+Let me verify whether the sibling test convention (`*.Tests.swift` in `feature-views` with `@testable import TeslaSync`) actually compiles, since it affects where my Tests file belongs.
+
+Self-`@testable import` is a benign warning (compiles). Let me confirm how XcodeGen is invoked (whether `.Tests.swift` get routed/excluded from the app target) before finalizing the test file's location.
+
+This is decisive: the apple CI **guards build/lint/test behind "is there a buildable project"** — and since the `.xcodeproj` is git-ignored/generated and there's no `Package.swift`, CI treats it as a documented no-op. So the repo itself has no wired Xcode build yet. My `STATUS=BLOCKED` (no Xcode + no buildable project) matches the repo's own state. I'll follow the sibling convention exactly and run the checks that don't need a project. Let me check swiftformat config and run the linters on my files.
+
+swiftformat (maxwidth 120, `--self remove`, before-first wrapping) and swiftlint 0.63 are both available. Let me lint/format-check my new files and fix anything flagged.
+
+swiftformat wants its standard wrapping/self rules applied. I'll let the ecosystem tool auto-format my files (preferred over manual edits), then re-verify with both linters.
+
+swiftformat is clean (0/7 require formatting). Now swiftlint --strict on the new files.
+
+swiftlint flags two things: `file_length` (>400 lines) on Model + Views, and `multiple_closures_with_trailing_closure` on 3 buttons. Let me view the exact spots to split files and fix the button calls.
+
+I'll split Model.swift (695→ three files: State, Model, Sources) and Views.swift (521→ Views + Sections), each ≤400 lines, then fix the button trailing-closure calls. Let me view the headers/boundaries precisely.
+
+Now I'll assemble the three split files via headers + extracted bodies.
+
+Now fix the 3 `TSButton` calls flagged for trailing-closure-with-multiple-closures in Sections.swift.
+
+Now re-run swiftformat (apply) and swiftlint --strict across all the (now-split) files.
+
+swiftformat and swiftlint --strict are both **clean** on all 10 files. Now the placeholder/stub gate (ADR-011) on my files.
+
+Placeholder gate is clean (COUNT=0). Now let me compile-verify the one Foundation-only piece I can isolate — the import-envelope boolean detection — since type-checking matters and I can't run the full build.
+
+The Foundation-only envelope logic compiles and behaves correctly. Let me review the SwiftUI files for type-correctness (can't full-compile) and fix the alert title to use a `StringProtocol` overload.
+
+Let me review the final Model and Sources files for type-correctness.
+
+I spotted a Swift 6 strict-concurrency risk: the `mutate` helper captured a non-Sendable closure across the `Task` boundary. Let me inline the mutations (capturing only the `Sendable` hooks + args + `weak self`), matching the blessed `StateHolderModel` pattern.
+
+Let me re-run swiftformat + swiftlint on all files after the concurrency rewrite, and view the filter bar + cards region to finish the review.
+
+Both clean. Let me view the filter bar and cards region to finish the type-correctness review.
+
+The filter bar and cards region are correct. Let me verify all 33 parity items are actually referenced in the Swift code (each of the 23 string keys must appear in a `localize` call, not just the `.strings` file).
+
+All 23 string keys are referenced in Swift (the summary confirms "23 present"; the 3 flagged are multi-line calls). Let me verify the panel/state symbols and inspect the apple ledger schema before writing the log.
+
+The ledger row schema is clear (`unitId`, `platform`, `status`, `coveredCount`, `requiredCount`). Now let me generate the `=== PARITY ===` evidence and assemble the honest log. First, capture evidence locations for each item.
+
+All 23 strings have evidence. Let me run the final gate commands fresh (capturing exit codes) and then write the honest parity log.
+
+All runnable gates pass (placeholder=0, swiftformat=0, swiftlint --strict=0); xcodebuild is confirmed unavailable. To produce real test evidence for the pure projections (since I can't run XCTest without Xcode), let me compile+run a standalone Foundation harness mirroring the adapter logic.
+
+All 8 pure-projection tests + 4 envelope tests pass at runtime. Now I'll write the honest parity log and the apple ledger.
+
+Now the apple ledger (array of rows for the adaptive macOS + iOS targets), honestly reflecting `status=blocked` with full `33/33` coverage.
+
+Let me validate the ledger JSON, lint the edited `TeslaSyncApp.swift`, and update tracking.
+
+Let me do a final full-suite lint pass (all new files + edited app file) and confirm every file is within the 400-line limit.
+
+All 11 files ≤400 lines, swiftformat + swiftlint --strict fully clean. Let me validate the `.strings` file and finalize tracking.
+
+`.strings` valid (37 keys, all 23 parity present). Let me finalize tracking and review the complete change set.
+
+Complete change set: 12 new `AutomationsListPage.*` files + log + ledger, and one navigation-registration edit to `TeslaSyncApp.swift`. The pre-existing `AIUsageCard.*`/web admin modifications are untouched (not mine). Let me update the plan, clean up temp artifacts, and do a final consolidated verification.
+
+Let me mark the plan complete with the final status.
+
+The task is complete. Final consolidated verification is green on everything runnable; the build/test triad is genuinely blocked by the missing Xcode toolchain (which the prompt explicitly anticipates).
+

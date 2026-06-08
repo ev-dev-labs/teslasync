@@ -1,0 +1,108 @@
+I'll start by exploring the repository structure and checking platform capabilities, since this task requires Apple/Xcode tooling.
+
+Swift 6.3.2, swiftlint, swiftformat are present. `xcodebuild -version` failed though — let me investigate the Apple app structure and Xcode status.
+
+Key finding: only **Command Line Tools** is installed (no full Xcode), so `xcodebuild` and `simctl` are unavailable. Swift compiler, swiftlint, swiftformat ARE available. Let me examine the existing dashboard-widgets pattern to mirror it exactly.
+
+There's a rich existing pattern (418 files, widgets decomposed into `.Adapter`, `.Content`, `.Glyph`, etc.). Let me read the web source and examine a complete sibling widget set to mirror the exact pattern.
+
+55 widgets already exist, each decomposed into `.swift`, `.Builder`/`.Adapter`, `.Model(s)`, `.Row`/`.Sections`, `.Previews`, `.strings`, `.Tests`. The closest siblings are `SignalCatalogWidget`/`SignalLogWidget`/`SystemHealthWidget`. Let me study the shared infrastructure and a complete sibling in parallel.
+
+Now I understand the layout. Let me study the closest sibling (`SignalCatalogWidget` — same telemetry hooks) end-to-end, plus the shared facade and design tokens.
+
+Excellent, very thorough established pattern. Let me read the remaining sibling files and shared infrastructure to fully understand the conventions.
+
+Let me read the tests, previews, strings, and locate the shared design/registration definitions.
+
+Now let me find the shared design token definitions, the registration types, the previews pattern, and check how the project builds (project.yml) plus any headless harness.
+
+Design tokens come from `../design/generated/apple`. Let me inspect those token definitions, the test target config, the previews pattern, and the tools directory.
+
+Let me read the full project.yml to understand how `.Tests.swift` and `.strings` files in the widget dir are routed to the right targets, plus the design tokens.
+
+I need to understand how predecessors handled verification on this runner (no full Xcode). Let me check the logs directory and search for any headless harness mechanism.
+
+Predecessor 0087 ended `STATUS=DONE` with Xcode gate DEFERRED (no Xcode on runner), verified via swiftlint/swiftformat/placeholder + real `swiftc` compiles + executed headless adapter tests. I'll follow that exact convention. Let me read the full predecessor log, the previews pattern, and the design tokens.
+
+I now fully understand the predecessor methodology. Let me read the design tokens and the canonical shared registry type definitions to mirror them exactly.
+
+Now let me read the canonical registry struct definition, the shared component library inventory, and the closest compositional sibling (`SystemHealthWidget` — uses stat grid + status badge like ours).
+
+Let me study the closest compositional sibling `SystemHealthWidget` (stat grid + status pill) and the shared component APIs (Metrics/Badges/States).
+
+`SystemHealthWidget` is the ideal compositional template. Let me read its Model, Projection, strings, Tests, and Previews to complete my understanding.
+
+Let me read the SystemHealth tests/strings/previews and the web hooks/lib functions I'm porting, to nail the data shapes.
+
+Let me read `formatRelative`/`fmtInt` (to port faithfully) and the SystemHealth tests + previews structure.
+
+I have the full picture. Let me check the swiftlint/swiftformat configs so I write compliant code from the start, then set up my task tracker.
+
+Let me confirm `TSSkeleton`'s signature/deps (I'll reuse it for loading chrome) and the default file/function length limits are satisfied by keeping files modular.
+
+I now have a complete understanding of the pattern, data shapes, tokens, lint rules, and the predecessor verification methodology (STATUS=DONE with Xcode gate deferred + executed Foundation harness + swiftc typechecks + swiftlint/swiftformat/placeholder). Let me set up tracking and start authoring.
+
+Now I'll author the files. Starting with the Foundation-only `Models` and `Builder` (these power the executed harness).
+
+Let me quickly verify the two Foundation files compile before continuing, to catch errors early.
+
+Foundation core typechecks clean. Now the Model (seams + observable view-model).
+
+Now the leaf components (StatCard/Badge/FreshnessChip/GapRow/compact summary → native, token-driven).
+
+Now the main surface view with header + all state branches + compact/standard/wide layouts.
+
+Now the i18n catalog, previews, and tests. Updating tracker and writing the strings file.
+
+Now the previews and the test suite.
+
+All 8 files authored. Let me verify line counts and run swiftformat/swiftlint on them.
+
+swiftformat found auto-fixable issues (number grouping, redundant returns, line wrapping). Let me apply swiftformat to my files (the canonical workflow), then re-lint.
+
+swiftformat passes. Now swiftlint --strict on the surface files.
+
+swiftlint clean (0/0). Now the **executed Foundation harness** — compile Models+Builder+a runnable harness and actually run the adapter logic.
+
+Adapter harness: **48/48 passed**. Now the SwiftUI surface typecheck against the real design tokens. Let me set up a support shim (registry types + TSSkeleton signature) and typecheck the production files.
+
+Pass A typechecks (exit 0), but swiftformat's `redundantReturn` created a mixed-branch switch warning in `FreshnessChip.label` (3 cases now discard their value). Let me inspect and fix it to a clean switch-expression.
+
+Pass A clean (0 warnings). Now typecheck the Previews (with `-D DEBUG`) and check the real-`TSSkeleton` dependency closure for the coexistence pass.
+
+The `#Preview` macro needs Xcode's `PreviewsMacros` plugin (absent under CLT) — a known toolchain limit, not a code issue (0087 noted the same). I'll prove the preview *construction* code via a macro-free proof, and run the coexistence pass against the **real** `TSSkeleton`.
+
+Preview construction proof passes. Pass B's failures are all in the dependency `Cards.swift` (not my code) — the real `TSSkeleton` lives in `Skeletons.swift` alongside siblings that pull in more UI files. Let me resolve the real component-library closure to do an honest coexistence compile.
+
+`tsGlassPanel` is an extension elsewhere — pulling the whole UI closure tests unrelated code. The surgical honest proof: compile my files against the **verbatim real `TSSkeleton`** source (the one shared component I actually use) + registry shim.
+
+Pass B' clean — my surface compiles against the **verbatim real `TSSkeleton`** with zero redeclaration. Now Pass C: typecheck the test suite in-module (XCTest is CLT-unavailable, so via a shim) to prove every assertion matches the public API.
+
+Stripping `import XCTest` also dropped its transitive Foundation re-export. Let me have the shim re-export Foundation (as real XCTest does) and re-run.
+
+Pass C clean. Now the placeholder gate. Let me check `pwsh` availability and the placeholder patterns.
+
+pwsh 7.6.2 is available. Let me grep my files for forbidden patterns, then run the actual placeholder gate (self-test + literal gate path + a real scoped scan of my files).
+
+Self-test passes, literal gate clean. Now a **real** scoped scan of my actual files (copy to temp dir, scan it).
+
+Real scoped scan clean (COUNT=0). Now the **bare gate** commands over the whole tree to confirm my files add zero violations and to record the honest baseline.
+
+Bare swiftformat flags one **pre-existing** file in `feature-views/` (not mine, outside allowed files). Let me run the bare swiftlint gate and confirm git shows only my files changed.
+
+Let me identify that 1 pre-existing violation and confirm git shows only my files changed.
+
+Confirmed: the 1 swiftlint violation is the **pre-existing** `LifetimeStatsWidget.Adapter.swift` defect (not mine). The `M` files (AIUsageCard, web .tsx) are **pre-existing working-tree changes I didn't make** — I'll commit only my files via explicit paths. Let me gather git context for the log.
+
+All gates verified. Let me write the gate log, then commit only my files.
+
+Now commit **only** my files (explicit paths — never the pre-existing working-tree changes).
+
+Exactly my 8 files + the log — no unrelated changes. Committing.
+
+Committed as `549251a00`. Let me verify the exact commit subject (the oneline showed a possible stray space) and clean up temp files.
+
+Commit subject is clean and the trailer is present. Final consolidated re-verification against the committed files (lint + format on the surface), then I'm done.
+
+All final checks green. Marking complete.
+

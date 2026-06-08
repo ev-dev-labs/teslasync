@@ -1,0 +1,198 @@
+=== P4 Shared surface 0019 AIFeedbackQueueTriage (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon).
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer.
+                       The active dir was /Library/Developer/CommandLineTools (under which `xcodebuild`/`simctl`
+                       error "requires Xcode"); the DEVELOPER_DIR override is non-destructive (no sudo, no
+                       xcode-select -s), the SAME mechanism every prior P4 surface used. Verified live:
+                         xcodebuild -version → Xcode 26.5 / 17F42
+                         simctl list runtimes → iOS 26.5 (23F77) installed; iPhone 16 device present + Booted.
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh present.
+  Capability         : SwiftUI present; iOS 26.5 simulator runtime installed. This surface uses NO Charts and NO
+                       MapKit (the web source has none — prompt "Charts / maps used: (none)"), so the iOS 18 /
+                       macOS 15 HIG primitives it needs are all available → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification — read end to end)
+  components/ai/AIFeedbackQueueTriage.tsx → components/ai/AIFeatureCard.tsx →
+  components/ai/AiOutputPanel.tsx + components/ai/AIThinkingIndicator.tsx. The Helix feedback-triage advisor
+  rendered beneath the Admin FeedbackQueuePage per-row manual controls:
+
+    Gate (withAiFeature('feedback-queue-triage', InnerSection), ADR-015): renders nothing unless
+      useAiEnabled('feedback-queue-triage') is on (ai_mode local/cloud AND the per-feature toggle on). In off
+      mode NO data-ai-feature marker enters the DOM.
+    InnerSection({feedbackId}):
+      haveFeedback = typeof id==='number' && Number.isFinite(id) && id>0
+      body = useMemo → { feedback_id: haveFeedback ? feedbackId : 0 }
+      stream = useAiStream({ url:'/ai/feedback/triage/draft', body, onEvent: ()=>{} })
+      → <AIFeatureCard title='Helix triage advisor' description=<privacy paragraph> buttonLabel='Suggest triage'
+                       badgeLabel='Helix' canStart={haveFeedback} stream={stream} />
+    AIFeatureCard: GlassPanel → header(title + Helix AIBadge + description + emptyHint when !canStart) →
+      "Ask Helix" Button (idle 'Ask Helix' / streaming 'Helix is thinking…' AIThinkingDots; disabled =
+      `!canStart || isStreaming` — a COMPUTED expression; aria-label "Ask Helix · {buttonLabel}"; title=description)
+      → AiOutputPanel(text, state, error).
+    AiOutputPanel branch precedence (reproduced exactly): hasAnything = text>0 || state∈{streaming,error,done};
+      !hasAnything → render nothing; state==='error' → "Helix error: {error ?? unknown}"; text===''&&streaming →
+      AIThinkingIndicator (shimmer lines + bouncing dots); else → the accumulated delta text (pre-wrap).
+  Data sources (prompt): useUpdateFeedback / useTranslation / useAiStream.
+    • useTranslation → the P1/S10 i18n facade (AIFeedbackTriageStrings).
+    • useAiStream    → the P1/S8 stream seam (AIFeedbackTriageSource.suggestTriage/cancel + the stream snapshot).
+    • useUpdateFeedback → PROPOSE-ONLY contract: the web InnerSection NEVER calls it (the advisor only proposes;
+      the operator's manual controls remain the sole write authority). Reproduced verbatim — the native surface
+      exposes no feedback-mutation affordance and never writes. Asserted by testProposeOnlyNeverWritesFeedback.
+
+ARTIFACTS SHIPPED  (allowed files: apps/apple/TeslaSync/shared-surfaces/AIFeedbackQueueTriage.* + this log)
+  AIFeedbackQueueTriage.State.swift       — P1/S10 i18n facade (string + %@ format), the connection axis, the
+                                            stream-phase enum + snapshot, and the resolved value types
+                                            (AIFeedbackTriageOutput.Kind, AIFeedbackTriageReady, …Resolved.Phase).
+  AIFeedbackQueueTriage.Projection.swift  — the pure projection: gate (off→.gated) > settings error (.error) >
+                                            unresolved (.loading) > .ready; the ready body (canStart, the empty
+                                            hint, the computed disable, web copy); and the AiOutputPanel branch
+                                            precedence (hidden/thinking/text/error) reproduced exactly.
+  AIFeedbackQueueTriage.Model.swift       — P1/S8 state-holder seam (AIFeedbackTriageSource + @Observable
+                                            AIFeedbackTriageModel + InMemory source), P1/S11 telemetry seam
+                                            (AIFeedbackTriageTelemetry + OSLog sink; view.opened deferred past the
+                                            gate, emitted once), input snapshot, double-submit coalescing,
+                                            stale one-shot auto-refresh.
+  AIFeedbackQueueTriage.swift             — the surface: off-mode gate wrapper (EmptyView) + card chrome (title +
+                                            Helix badge + freshness chip + refresh), connectivity banner, phase
+                                            switch, TSFadeIn ready body; static surfaceSlug="AIFeedbackQueueTriage";
+                                            onAppear start / onDisappear stop.
+  AIFeedbackQueueTriage.Views.swift       — Helix badge pill, "Ask Helix" action button (idle/thinking + bouncing
+                                            dots, computed .disabled, aria-equivalent a11y label/hint), the output
+                                            panel (hidden/thinking/prose/error), and the thinking indicator
+                                            (glyph+label+dots over shimmer skeleton lines).
+  AIFeedbackQueueTriage.Chrome.swift      — P4 leaf chrome: freshness chip, refresh button, stale/offline banner,
+                                            loading skeleton, retryable error (TSButton).
+  AIFeedbackQueueTriage.Previews.swift    — #if DEBUG #Preview for gated / loading / error / ready-no-row /
+                                            ready-idle / streaming-thinking / streaming-text / done / stream-error /
+                                            stale / offline (11 states).
+  AIFeedbackQueueTriage.strings           — P1/S10 catalog (table "AIFeedbackQueueTriage"): every key extracted
+                                            from the web source (incl. the verbatim privacy paragraph) + the native
+                                            P4 leaf chrome copy.
+  AIFeedbackQueueTriage.Tests.swift       — model wiring, gated/deferred-then-once telemetry, stale one-shot
+                                            auto-refresh + re-arm, offline no-refresh, suggest coalescing,
+                                            propose-only, a11y label content.
+  AIFeedbackQueueTriage.ProjectionTests.swift — projection phases, ready body (canStart/empty-hint/disable/copy/
+                                            privacy envelope), the 8 AiOutputPanel branch cases, haveFeedback.
+  (10 files; split across .State/.Model/.Projection and .Views/.Chrome and .Tests/.ProjectionTests purely to keep
+   every file within the repo's 400-line SwiftLint file_length budget — the same multi-file decomposition the
+   prior P4 surfaces use, e.g. 0237 AiUsageCard.{Model,Projection,Views,Chrome,Tests,AdapterTests}.)
+
+PARITY MAPPING  (web → Apple platform tokens; no Tailwind ported, no raw hex)
+  GlassPanel                    → TSGlassPanel material via .tsGlassPanel() (Sources/Design/TSMaterial.swift)
+  AIBadge (cyan Helix pill)     → AIFeedbackTriageBadge: SF Symbol "sparkles" + label in a Color.TS.accent
+                                  tinted capsule (the cyan brand token; light theme via the dynamic Color.TS ramp)
+  "Ask Helix" Button            → AIFeedbackTriageActionButton over the shared TSButton(.secondary,.small); label
+                                  flips idle 'Ask Helix' / streaming 'Helix is thinking…' + AIFeedbackTriageThinkingDots
+  disabled={!canStart||stream}  → .disabled(ready.isDisabled) — a COMPUTED flag (web W1-A: never a literal disable)
+  aria-label "Ask Helix · X"    → .accessibilityLabel("\(askLabel) · \(contextLabel)"); title→ .accessibilityHint(summary)
+  AiOutputPanel branches        → AIFeedbackTriageProjection.output + AIFeedbackTriageOutputView (hidden→EmptyView,
+                                  error→AIFeedbackTriageErrorLine, thinking→AIFeedbackTriageThinkingIndicator, else→prose)
+  AIThinkingIndicator           → glyph + label + dots over three TSSkeleton shimmer lines (Reduce-Motion via the
+                                  shared TSSkeleton + the dots' reduceMotion guard)
+  i18n                          → every string via AIFeedbackTriageStrings (NSLocalizedString table
+                                  "AIFeedbackQueueTriage"; web literal as the value: fallback)
+  a11y                          → badge/label/button/retry/chip labelled; Dynamic Type via Font.TS tokens;
+                                  Reduce Motion via TSFadeIn / TSSkeleton / the dots guard
+  telemetry                     → view.opened surface="AIFeedbackQueueTriage" once on the first NON-gated apply
+                                  (mirrors the web data-ai-feature marker, absent in off mode)
+
+DISCLOSED FAITHFUL DEVIATIONS  (no silent drift)
+  • paused-confirm NOT modeled: AiStreamState's 'paused-confirm' is unreachable for this surface (the triage draft
+    endpoint emits only delta/done/error; onEvent is a no-op; AiOutputPanel itself has no confirm branch). Modeling
+    it would invent UI the web never shows. The four reachable phases (idle/streaming/done/error) are reproduced.
+  • emptyHint surfaced: the web parent passes no emptyHint, but AIFeatureCard documents this exact "Waiting for a
+    feedback row…" hint for the no-row case, and the native state contract requires a friendly empty state (never a
+    blank box). Shown only when !canStart — a supported, prompt-mandated leaf, not a behavior change.
+  • button placement 'below': AIFeatureCard supports inline/below; the long privacy paragraph + the P4 leaf
+    freshness chrome make the right-aligned 'below' row the HIG-idiomatic choice. Same affordances, computed disable.
+  • loading/error/stale/offline are P4 leaf states layered around the genuine web surface (the web AIFeedbackQueue-
+    Triage has only the gate + stream states), consistent with the established P4 leaf contract (cf. 0237 AiUsageCard).
+
+STATES (every non-gated one renders — no hidden surface)
+  gated    → withAiFeature off → the whole surface is withdrawn (EmptyView), reproducing ADR-015. NOT a hidden
+             section: when the feature is on, the body renders.
+  loading  → enablement settings still resolving → skeleton chrome (P4 leaf).
+  empty    → ready & no row selected (!canStart) → the "Waiting for a feedback row…" hint + disabled action +
+             absent output panel; the card still shows title/badge/summary → never a blank box.
+  error    → settings snapshot failed → retryable error chrome (P4 leaf). (Stream errors render in the output
+             panel as the inline "Helix error: …" line — the web AiOutputPanel branch.)
+  ready    → summary + the action + the streaming output panel (idle-hidden / thinking / prose / error).
+  stale / offline → header chip + banner; one-shot auto-refresh on the live→stale transition; offline shows the
+             last-known state with no auto-refresh.
+
+GATES  (raw exits; per-surface scope)
+  [GREEN] swiftformat --lint (.swiftformat, 9 swift files)        : 0/9 files require formatting       FORMAT_EXIT=0
+  [GREEN] swiftlint --strict (.swiftlint.yml, 9 swift files)      : 0 violations, 0 serious in 9 files LINT_EXIT=0
+  [GREEN] check-placeholders.ps1 (-Language swift, surface dir)   : PLACEHOLDER_ALLOWED=0
+                                                                    PLACEHOLDER_COUNT=0           PLACEHOLDER_EXIT=0
+  [GREEN] ISOLATED build + test — SwiftPM, swift-tools 6.0 (Swift 6 language mode = strict-concurrency complete,
+          the same as the app target), compiling the EXACT shipped AIFeedbackQueueTriage.* sources (incl. the
+          #Preview macro file) against the REAL repo design system (generated apps/design Tokens + Sources/Design
+          TSMaterial/TSDesign + Sources/Components Buttons/Badges/Typography/Cards/Skeletons/Motion) under the
+          Xcode 26.5 toolchain (so the real #Preview macro + XCTest are available):
+              Build complete!  ·  Executed 36 tests, with 0 failures (0 unexpected)              SWIFT_TEST_EXIT=0
+
+  [DEFERRED] Full-app iOS-Simulator + macOS `xcodebuild -scheme TeslaSync(-macOS) … build test`.
+          NOT run-to-green on this runner because the full app target is blocked by PRE-EXISTING, unrelated
+          conditions this prompt neither introduced nor is allowed to touch (each VERIFIED LIVE here, not assumed):
+            • apps/apple/Frameworks/Shared.xcframework is NOT staged (only .gitkeep present). Captured live:
+                xcodebuild … -target TeslaSync build →
+                "error: There is no XCFramework found at '…/apps/apple/Frameworks/Shared.xcframework'."
+              Staging it needs the ~7-min Gradle :core:assembleSharedXCFramework (a macOS-pending row).
+            • `struct DashboardWidgetSize` is redefined 15× across Sources/DashboardWidgets/* +
+              TeslaSync/dashboard-widgets/* (parallel-merge collisions).
+            • 170 co-located `*.Tests.swift` under TeslaSync/feature-views import XCTest into the app target.
+            • shared-surfaces/ is not yet listed in apps/apple/project.yml `sources:` — wiring the new surface
+              directory into the Xcode project is owned by P4 core / the acceptance gate (project.yml is OUTSIDE
+              this prompt's allowed files). xcodegen generate was run to confirm: the generated project does not
+              include AIFeedbackQueueTriage (grep count 0), so the full-app target cannot yet compile this surface
+              regardless of the blockers above — which is exactly why the isolated build+test is the authoritative
+              per-surface verification.
+          This is the SAME sanctioned "code-complete + isolated build/test green + DEFERRED full-app Xcode gate"
+          disposition recorded by every prior P4 surface (see p4-apple-feature-views-0237-AiUsageCard.log and
+          -0203-AIUsageCard.log) and is owned by the P4 Apple acceptance gate on a signed runner with the staged
+          Shared.xcframework. ZERO AIFeedbackQueueTriage / shared-surfaces errors are attributable to this change.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED with the raw, live-captured
+                           pre-existing-blocker error (missing Shared.xcframework) — never reported as passing.
+  2  No scope narrowing  : every web region + branch reproduced — the withAiFeature gate, the AIFeatureCard
+                           header/badge/summary/empty-hint/action, the computed disable, the streaming label, and
+                           all four AiOutputPanel branches (hidden/thinking/prose/error) with their exact precedence;
+                           all six P4 states render; the propose-only + double-submit contracts preserved.
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; raw exits pasted; the deferred full-app
+                           blockers were each re-confirmed live (Shared.xcframework absent via a real xcodebuild,
+                           DashboardWidgetSize 15×, 170 co-located tests, shared-surfaces absent from the generated
+                           project) — not assumed.
+  4  No stubs as final   : complete production surface + 36 real tests; placeholder scanner COUNT=0; no
+                           TODO/FIXME/stub/Coming-soon/Placeholder/Lorem anywhere in the shipped code.
+  5  No parity shortcut  : the haveFeedback predicate, the canStart→emptyHint/disable computation, and the
+                           AiOutputPanel branch precedence (incl. error-wins-over-text, done-empty→empty-prose,
+                           idle-with-leftover-text→prose, error→unknown fallback) are each unit-asserted against the
+                           web expressions.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened telemetry,
+                           and the established P4 "isolated-build + DEFERRED full-app" disposition all honoured.
+  8  No commit on red    : the committed artifact (10 AIFeedbackQueueTriage.* files + this log) is GREEN on every
+                           per-surface gate AND on a real isolated Swift 6 strict-concurrency build + 36/36 XCTest;
+                           the deferred full-app gate is blocked only by pre-existing, unrelated conditions.
+  9  No silent drift     : changes are confined to TeslaSync/shared-surfaces/AIFeedbackQueueTriage.{State,Model,
+                           Projection,swift,Views,Chrome,Previews,Tests,ProjectionTests}.swift + .strings and this
+                           log; the generated git-ignored .xcodeproj was removed; project.yml/Resources untouched;
+                           the four disclosed faithful deviations are documented above.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic AIFeedbackQueueTriage shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 36 tests pass under the app's own Swift 6 strict-concurrency rules,
+  against the REAL design system, via the Xcode 26.5 toolchain, with swiftformat / swiftlint / placeholder all
+  green on the 9 surface files and the #Preview macro compiling. The full-app iOS-Simulator + macOS xcodebuild
+  build/test gate is DEFERRED (not failed by this code) on pre-existing, unrelated, out-of-allowed-files blockers
+  (unstaged Shared.xcframework — captured live, DashboardWidgetSize 15× redefinition, 170 co-located feature-view
+  tests, and shared-surfaces not yet wired into project.yml), owned by the P4 Apple acceptance gate on a signed
+  runner with the staged framework.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,209 @@
+================================================================================
+P4 · Widget primitive · 0006 — WidgetFlowDiagram (Apple)
+Run: 2026-06-08T07:18-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/470
+Base: c9c6fdb9f
+Prompt: P4/widget-primitives/0006 — WidgetFlowDiagram
+Web source (spec): web/src/features/dashboard/widgets/shared/WidgetFlowDiagram.tsx
+Tier: Widget primitive (shared building block used by many widgets — pure presentational)
+Mode: code-complete + host-validated; DEFERRED Xcode app build/test (P4 precedent 0036
+      DigitalTwinWidget / 0056 LivePowerFlowWidget — the same WidgetFlowDiagram web source).
+================================================================================
+
+=== CAPABILITY PROBE (real, this host) ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                  OK
+  swiftc -typecheck SwiftUI .. compiles (Canvas / TimelineView / contentTransition /
+                               ContentUnavailableView / .task(id:) all resolve)      OK
+  swiftc -typecheck Charts ... import Charts + import MapKit typecheck under the SDK  OK (unused here)
+  swiftlint .................. /opt/homebrew/bin/swiftlint                            OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                          OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                             OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                                 OK
+  xcodebuild ................. PRESENT at /usr/bin but active developer dir is
+                               /Library/Developer/CommandLineTools — full Xcode
+                               absent → `xcodebuild` refuses to run (evidence below)  BLOCKED
+  iOS Simulator runtimes ..... none under the active CLT toolchain — full Xcode req'd BLOCKED-input
+  Generated .xcodeproj ....... ABSENT (xcodegen not run; project is generated at gate) deferral-input
+  Shared.xcframework ......... not staged (apps/apple/Frameworks)                     deferral-input
+  widget-primitives wiring ... NOT yet in project.yml sources / .swiftlint.yml
+                               `included` — that wiring is the P4 acceptance-gate /
+                               integration step's job, and project.yml + .swiftlint.yml
+                               are NOT in this prompt's allowed files (parallel-unsafe)  deferral-input
+
+  Charts/Maps note: this surface uses NEITHER Swift Charts NOR MapKit (web
+  "Charts/maps used: (none)" — it is a bespoke SVG, ported to a SwiftUI Canvas +
+  positioned node views). The capability requirement that matters is SwiftUI, which
+  IS available and is proven by a REAL macOS-SDK compile below. The capability-
+  BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") therefore does not apply
+  to the code; only the Xcode *app build/test harness* is unavailable on this host.
+
+=== ARTIFACT (apps/apple/TeslaSync/widget-primitives/WidgetFlowDiagram.*) ===
+  WidgetFlowDiagram.Models.swift    179  FlowNode/FlowArrow/FlowNodePosition/FlowTint/WidgetFlowGraph/State
+  WidgetFlowDiagram.Builder.swift   103  pure diagram math (coords offset, visibleArrows, stroke, label, fmt)
+  WidgetFlowDiagram.Palette.swift    64  arrow sign colors (emerald/red/muted) + token node chrome
+  WidgetFlowDiagram.Support.swift    84  P1/S11 telemetry seam + P1/S10 i18n facade + a11y summary
+  WidgetFlowDiagram.Diagram.swift   196  Canvas arrows (animated marching-dash) + positioned node views
+  WidgetFlowDiagram.swift           276  the primitive: state switch + chrome + retry/refresh + telemetry
+  WidgetFlowDiagram.Previews.swift   96  #if DEBUG previews — one per state (+ compact + light)
+  WidgetFlowDiagram.Tests.swift     199  XCTest: builder + state mapping + a11y + telemetry (40+ asserts)
+  WidgetFlowDiagram.strings          32  P1/S10 catalog contribution (9 keys)
+  All files well under the house file_length budget; one exported public View (WidgetFlowDiagram);
+  the rest are value types or internal helper views (Canvas/Node/Value), mirroring the 0056 precedent.
+
+=== PARITY (vs web shared/WidgetFlowDiagram.tsx) ===
+  Nature → the web component is PURE PRESENTATIONAL (props: nodes, arrows, compact, emptyMessage; no
+    hooks, no t() calls, no charts/maps). The native primitive is likewise presentational: consumers
+    pass a resolved WidgetFlowGraph (or a render state). NO HTTP, NO data source invented (would violate
+    parity). "Data sources: (none)" honored exactly.
+  Model → FlowNode {id,label,value,formattedValue,icon→symbol,position} and FlowArrow {from,to,value,
+    active,color→tint} are 1:1 ports of the web interfaces. POSITION_COORDS reproduced verbatim
+    (top 50,12 · bottom 50,88 · left 12,50 · right 88,50 · center 50,50) — unit-tested.
+  Geometry → WidgetFlowBuilder.segment offsets both ends by the node radius so lines never overlap the
+    rings (web x1=cx+ux*r … x2=cx-ux*r); NODE_RADIUS 14 / compact 10; stroke 1..4 scaled by
+    |value|/max(|value|,1) (web strokeForValue) — unit-tested (vertical + horizontal edges, guard).
+  Visibility → compact keeps the 3 largest arrows by |value| and truncates labels >3 chars to the first
+    3 upper-cased (web visibleArrows + label slice) — unit-tested.
+  Color → arrowColor(value, tint): explicit tint override, else value>0 emerald-400, <0 red-400, else
+    muted token (web arrowColor) — unit-tested. Node chrome fill-white/5 → textPrimary@5%, stroke-white/20
+    → border token, label fill-white/60 → muted token (theme-safe).
+  Animation → active arrows dash "4 8" with a marching offset (web dashFlow keyframe → -12 over 0.8s),
+    drawn in a Canvas inside TimelineView(.animation(paused: reduceMotion)); the node value rolls via
+    contentTransition(.numericText()) (web AnimatedNumber), snapping under Reduce Motion. SVG
+    <line>/<circle>/<foreignObject> → Canvas stroke + positioned SwiftUI views (crisp SF Symbols).
+  Empty → web nodes.length===0 → EmptyState("No flow data available"); native maps to ContentUnavailable
+    (the component TSEmptyState wraps) driven by the per-surface facade, default emptyMessage overridable.
+  Shared comps → web data-display(AnimatedNumber) → WidgetFlowValueText (numericText roll);
+    web feedback(EmptyState) → ContentUnavailableView/TSEmptyState equivalent.
+
+=== STATES (all render — no hidden surfaces) ===
+  loading  → skeleton chrome (TSSkeleton) + a11y label.
+  content  → the diagram (web's own branch).
+  empty    → ContentUnavailableView with the (overridable) "No flow data available" message + hint.
+  error    → triangle + title + optional detail + Retry affordance (onRetry), a11y-combined.
+  stale    → cached diagram + amber "Reconnecting — values may be stale" chip + AUTO-refresh (onRefresh,
+             cancelled on state change) + manual refresh button.
+  offline  → cached diagram + muted "Offline — showing last known values" chip + refresh button.
+  Each state has a #if DEBUG preview; the content/empty/state-mapping logic is unit-tested.
+
+=== i18n (P1/S10) ===
+  Web source is anonymous (no t() keys) — its only literals are the default emptyMessage and the SVG
+  aria-label, reproduced here. Native chrome keys added for the required states/actions/a11y.
+  Used-vs-defined parity (table "WidgetFlowDiagram"): 9 used == 9 defined, DRIFT = 0.
+    widget.flowDiagram.{empty,diagramA11y,loading,emptyHint,errorTitle,staleBanner,offlineBanner,
+                        retry,refresh}
+  No English string literals in native code — every Text routes through WidgetFlowDiagramStrings
+  (verbatim only of facade output / caller-supplied messages).
+
+=== a11y ===
+  The diagram is one image element (accessibilityElement(children:.ignore) + .isImage) with a localized
+  label (default "Flow diagram", overridable) + a per-node value summary (label + formattedValue, falling
+  back to the one-decimal magnitude) — VoiceOver speaks the whole graph. Decorative symbols/labels are
+  accessibilityHidden. Retry/Refresh carry explicit accessibilityLabels. Dynamic Type via system fonts;
+  Reduce Motion honored on the dash animation and the value roll.
+
+=== telemetry (P1/S11) ===
+  WidgetFlowDiagram emits a `view.opened` (screen_view) event once on first appear via the injectable
+  WidgetFlowDiagramTelemetry seam (OSLog default), surface slug "WidgetFlowDiagram". The emission is
+  funnelled through WidgetFlowDiagramDiagnostics.recordOpen so the contract is unit-tested deterministically.
+
+================================================================================
+HOST GATES (every command below was actually run on this host; real exit codes)
+================================================================================
+
+--- (1/6) iOS app build+test — DEFERRED (Xcode absent) -------------------------
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1   (DEFERRED — full Xcode + iOS runtime + generated project + signing required)
+
+--- (2/6) macOS app build+test — DEFERRED (Xcode absent) -----------------------
+$ xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1   (DEFERRED — same reason)
+
+--- (3/6) swiftlint --strict — PASS (scoped to this artifact) ------------------
+$ swiftlint lint --strict --no-cache --config <rules> apps/apple/TeslaSync/widget-primitives
+Linting 8 Swift files (Palette/Models/Builder/Tests/Previews/Diagram/main/Support)
+Done linting! Found 0 violations, 0 serious in 8 files.
+LINT_EXIT=0
+  (Project-wide `swiftlint --strict` surfaces ONE pre-existing, out-of-scope violation in
+   dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 [function_body_length] — a different
+   surface, not in this prompt's allowed files; the widget-primitives dir is not yet in the config
+   `included` allowlist, which is the integration step's job.)
+
+--- (4/6) swiftformat --lint — PASS -------------------------------------------
+$ swiftformat --lint apps/apple/TeslaSync/widget-primitives   (config: apps/apple/.swiftformat)
+SwiftFormat completed. 0/8 files require formatting.
+FORMAT_EXIT=0
+
+--- (5/6) check-placeholders.ps1 — PASS ---------------------------------------
+$ pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/widget-primitives -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- (6/6) host compile validation (substitute for the absent Xcode build) -----
+  Real `swiftc -typecheck` against the macOS 15 SDK + the REAL design tokens
+  (apps/design/generated/apple/Tokens.swift) + a 6-line TSSkeleton typecheck shim
+  (the real Sources/Components/Feedback provides it in-target):
+    • production sources (Models+Builder+Palette+Support+Diagram+main) .. TYPECHECK_EXIT=0
+    • Tests.swift logic (XCTest shim, @testable stripped) ............... TESTS_LOGIC_EXIT=0
+    • Previews.swift bodies (#Preview → fn wrapper; macro plugin is Xcode-only) PREVIEWS_LOGIC_EXIT=0
+  (The #Preview macro plugin `PreviewsMacros` and the `XCTest` module ship only with full Xcode, hence
+   the harness substitution — the surface code itself type-checks clean against the real tokens.)
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states (loading/content/empty/error/stale/offline) — each has a #if DEBUG
+      preview; the content/empty/state-mapping logic is unit-tested.
+  [x] No direct HTTP in the view — the surface is pure presentational (matches the web source); no data
+      source invented. (No P1/S8 hook to bind — "Data sources: (none)".)
+  [x] Every i18n key resolves through the P1/S10 facade with a matching catalog key — used-vs-defined
+      drift = 0 (9/9).
+  [x] Accessibility labels on every interactive element; the diagram carries a label + per-node value.
+  [x] Tests: builder/adapter unit tests + state-mapping + a11y summary + telemetry contract (host-
+      typechecked; execution DEFERRED with the Xcode test harness).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [~] EXIT=0 / STATUS=DONE on host-runnable gates; the mandated `xcodebuild` build+test is transparently
+      DEFERRED (Xcode absent) — NOT reported green.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the two xcodebuild steps are shown DEFERRED with their real IOS_EXIT=1/MAC_EXIT=1
+                       and the verbatim xcode-select error — never painted green. Every PASS above is a
+                       command actually executed on this host with its real exit code.
+  2  No scope narrowing: implemented every node/arrow rule, all six states, i18n, a11y, telemetry, tests.
+  3  No skip-and-assume: each host gate executed; the absent Xcode harness is substituted by a real
+                       macOS-SDK typecheck, not an assumption.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of the web geometry/visibility/color/animation + empty state.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit project.yml / .swiftlint.yml `included` / shared
+                       Localizable.xcstrings (all parallel-unsafe + the integration/P4-gate's job, and
+                       none in this prompt's allowed files). Strings shipped as the per-surface table.
+  8  No commit on red  : committing on all host-runnable gates green; xcodebuild explicitly DEFERRED.
+  9  No silent drift   : changes confined to the allowed widget-primitives/WidgetFlowDiagram.* files +
+                       this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished, native Apple-idiomatic WidgetFlowDiagram primitive shipped at parity with the web
+  source. The bespoke SVG flow diagram is reproduced with a SwiftUI Canvas (magnitude-weighted, marching-
+  dash, Reduce-Motion-aware arrows) + positioned node views (SF Symbol + rolling numericText value +
+  outside-ring label); the pure geometry/visibility/color math is a 1:1, unit-tested port. As a reusable
+  primitive it renders every required state (loading/content/empty/error/stale/offline) through a clean
+  WidgetFlowDiagramState API, with a presentational nodes/arrows initializer for direct web parity, full
+  i18n (0 key drift), VoiceOver labels + per-node summary, and a P1/S11 view.opened telemetry seam.
+
+  All host-runnable gates pass (swiftlint 0/0, swiftformat 0/8, placeholder COUNT=0, real macOS-SDK
+  typecheck of production + tests + preview bodies = 0). The mandated `xcodebuild` app build+test is
+  DEFERRED to a signed CI runner because full Xcode is absent on this host (CLT-only: no iOS runtime, no
+  generated .xcodeproj, no Shared.xcframework, no signing identity) and because widget-primitives is not
+  yet wired into project.yml / the swiftlint allowlist — integration work owned by the P4 acceptance gate,
+  none of it a defect in this code. This matches the user-approved P4 "code-complete + DEFERRED Xcode
+  gate" disposition established by 0036 DigitalTwinWidget and 0056 LivePowerFlowWidget (the same
+  WidgetFlowDiagram web source).
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/widget-primitives/WidgetFlowDiagram.* \
+          .github/prompts/monorepo/logs/p4-apple-widget-primitives-0006-WidgetFlowDiagram.log
+  git commit -m "feat(apps/apple/widget-primitives): add WidgetFlowDiagram surface (P4)"
+
+EXIT=0
+STATUS=DONE

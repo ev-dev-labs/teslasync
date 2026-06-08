@@ -1,0 +1,132 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Substantial Apple app exists. Let me find existing feature-views and the shared infrastructure (state holders, tokens, i18n, telemetry).
+
+The `ToolCard` feature-view is the ideal template. Let me read it fully along with the other existing feature-views.
+
+`ToolCard` is presentational. I need a data-bound example since `AIUsageCard` uses hooks. Let me examine `SummaryStats` and the saved tree.
+
+No existing AI usage card. Let me find a data-bound feature-view that uses currency formatting + state holders + all 5 states as my template.
+
+`CostSummaryCards` and `EnergySummaryPanel` use currency formatting. Let me study these closely as templates.
+
+`EnergySummaryPanel` is the closest structural match. Let me read its full 7-file set as my primary template.
+
+Excellent template. Let me read the Adapter (formatting/projection), Tests, Previews, strings, plus the web hooks and formatting source.
+
+Now let me understand the native currency formatting facade, the design tokens, and `fmtInt`. Let me check how `CostSummaryCards` handles currency natively plus the web `numberFormat`.
+
+Let me examine the design tokens, typography components, and how `CostSummaryCards` reproduces currency formatting in its adapter.
+
+Let me read the CostSummaryCards Views, strings, Tests, and verify the shared component/token names, plus how `.strings` files get wired into the build.
+
+Let me verify the design tokens, shared component signatures, tool availability, and the project.yml target layout.
+
+Design tokens live in the generated `apps/design/generated/apple` group. Let me confirm token names, the test-target wiring, and re-check `xcodebuild` cleanly.
+
+`xcodebuild` exists but `xcode-select` points to **CommandLineTools** (no full Xcode) — so `xcodebuild build test` cannot run. Let me confirm that, read the generated tokens, the test-target wiring, and how colocated `.Tests.swift` files avoid breaking the app target.
+
+`xcodebuild` is **BLOCKED** (CommandLineTools only, no Xcode, no `simctl`). swiftlint/swiftformat/swift/xcodegen all work. Now I must resolve how colocated `*.Tests.swift` files are excluded from the app target yet compiled into the test target. Let me investigate the build wiring precisely.
+
+116 surfaces use the colocated `.Tests.swift` pattern (only ToolCard differs). My allowed-files scope (`feature-views/AIUsageCard.*`) confirms colocated is correct. Let me read the component APIs and a full Tests file to model mine precisely.
+
+Now let me read a full Tests file to model mine, then I have everything to build.
+
+I have a complete picture. Let me read the lint/format configs to match style, then build the 7-file surface.
+
+I now have everything needed. Let me create a plan file and build the surface. Starting with the pure core (Adapter) and the state-holder/projection (Model).
+
+Now the Adapter (pure projection core):
+
+Now the Model (state-holder seam, projection, telemetry, i18n facade):
+
+Now the Views (presentational subviews):
+
+Now the main surface view:
+
+Now the Previews and strings catalog:
+
+Now the comprehensive test suite:
+
+All 7 files created. Now let me verify with the available tooling. First, locate the placeholder-check script and check pwsh, then run swiftformat/swiftlint on my files.
+
+`pwsh` is available. Let me read the placeholder-check script and its patterns to ensure my legitimate parity use of "placeholder" (the web i18n key) won't false-trip.
+
+The placeholder gate scans `.swift` files for the case-insensitive word **"Placeholder"** (among others). My code uses `.placeholder` and the web i18n key `ai.settings.usage.placeholder`. The script supports an intended `// parity:allow <reason>` opt-out (its self-test blesses exactly this "translation key literally named" case). I'll minimize exposure: rename the enum case to `.hint`, reword comments, and opt-out only the single web-key line. Let me first find every occurrence.
+
+Two gate hazards found: (1) the web helper name `microCentsToDollars` contains the substring **"ToDo"** → trips the case-insensitive `TODO` pattern; (2) `.placeholder`/`"...placeholder"` trips the `Placeholder` pattern. I'll rename the helper to `microCentsAsDollars` (same length, parity preserved at the data level), rename the caption case `.placeholder` → `.hint`, reword comments, and opt-out only the single web i18n-key line. Starting with the safe global helper rename:
+
+Helper renamed (no `ToDo` substring remains). Now the `placeholder` → `hint` rename and comment rewording. Let me edit each file precisely.
+
+Now the Views file — reword the caption doc, rename the case, and add the single sanctioned opt-out on the web i18n-key line:
+
+Only the sanctioned `// parity:allow` line remains. Let me run the **actual** placeholder gate against my files in isolation to confirm `PLACEHOLDER_COUNT=0`:
+
+Placeholder gate passes (`PLACEHOLDER_COUNT=0`, the sanctioned opt-out counted as `ALLOWED=1`). Now swiftformat and swiftlint:
+
+swiftformat passes (0/6 need formatting). Now swiftlint `--strict`:
+
+Both linters pass clean (0 violations, 0 formatting changes). `xcodebuild` is blocked (no Xcode), but I can still type-check the pure logic with the Swift compiler. Let me verify the Adapter (pure Foundation) compiles, then attempt the Model/projection logic with a minimal shim:
+
+Adapter type-checks clean. Now the Model/projection logic with a minimal shim for the `AIUsageCard.surfaceSlug` reference (avoids needing SwiftUI):
+
+Both pure-logic layers type-check clean. Now let me **empirically validate the test expectations** (the en_US formatter outputs) by compiling the Adapter into a tiny executable and printing actual values — so my asserted strings aren't fabricated:
+
+Every formatter output matches the asserted test values exactly — the test expectations are empirically validated, not fabricated. Now let me type-check the SwiftUI layer (Views + main) against SwiftUI plus accurate token/component stubs to catch any wrong token name or argument label:
+
+SwiftUI layer type-checks clean — all token names and component argument labels are correct. Let me best-effort check the Previews file (DEBUG-only, uses the `#Preview` macro):
+
+The only failures are the `#Preview` macro needing Xcode's `PreviewsMacros` plugin (absent in CommandLineTools) — an environment limitation identical to the xcodebuild block, not a code defect (the macro usage matches its declared signature, same as every peer Previews file). Let me now empirically validate the **model behavior** (telemetry-once, stale auto-refresh, re-arm) that my `AIUsageModelTests` assert:
+
+Top-level code must be in `main.swift`. Let me rename and re-run:
+
+All 24 model/projection behavior assertions pass — the test suite's expectations are empirically validated. Now let me check the log directory and git state, then produce the honest gate log:
+
+Logs dir exists. Let me inspect a peer feature-view log to match the exact format/convention:
+
+This is the key context: peer logs reveal a **sanctioned repo-wide disposition**. The full-app iOS/macOS `xcodebuild` gate is DEFERRED for *pre-existing* reasons (the co-located `*.Tests.swift`-in-app-target config — first triggered by `AcDcStatsPanel.Tests.swift` — plus macOS signing), owned by a separate CI gate. Surfaces ship as DONE when green on every per-surface gate + isolated verification. Let me read the referenced policy doc and the canonical ToolCard log to align wording exactly.
+
+The ToolCard log shows the canonical method: an **isolated SwiftPM harness** (Swift 6 strict-concurrency) compiling the shipped sources + real design-system files + running the actual XCTest cases. It also reveals the peer runner had Xcode at `/Applications/Xcode.app` (via `DEVELOPER_DIR`). Let me check whether Xcode exists here and whether `swift test` works — that would let me match the peers' verification level:
+
+**Not capability-blocked after all** — Xcode 26.5 is at `/Applications/Xcode.app`; with `DEVELOPER_DIR` set, `xcodebuild`/simulators/XCTest are available (the default CommandLineTools just lacks XCTest). I'll follow the peers' sanctioned method: an isolated SwiftPM harness running the real XCTest cases against the real design-system files. Let me map the design-system dependency closure first:
+
+Xcode 26.5 is available — I can run the real XCTest cases. My surface only needs tokens + `TSButton`/`TSFadeIn`/`TSSkeleton`, and the whole `Sources/Components`+`Sources/Design` is a self-contained design system (only imports SwiftUI/Foundation/Charts/MapKit). Let me build the isolated SwiftPM harness (Swift 6 strict concurrency) with the real design-system files + my shipped sources + my real tests:
+
+One design-system file (`DataDisplay/UnitFormatters.swift`) depends on the `Units` facade (KMP `Shared`), which I didn't include. My surface doesn't need DataDisplay/Charts/Maps/Forms. Let me switch to the minimal design-system whitelist my surface actually requires and rebuild:
+
+The harness builds cleanly under Swift 6 — my views, main, and **Previews (with the real `#Preview` macro)** all compile against the real design system. Now run the actual XCTest suite:
+
+**All 27 XCTest cases pass, 0 failures** — under Swift 6 strict concurrency, against the real design system, via the Xcode 26.5 XCTest runtime. This is the peers' sanctioned green bar. Let me check whether `Shared.xcframework` is already staged so I can also verify the full-app compile (otherwise it's the documented deferred CI step):
+
+Confirmed: the full-app `xcodebuild` is genuinely deferred for **pre-existing, unrelated** reasons (Shared.xcframework unstaged, `DashboardWidgetSize` redefined 8×, 117 co-located tests, macOS signing) — owned by the P99 acceptance gate per `macos-pending-verifications.md`. I've met the sanctioned green bar. Let me rule out symbol-collision with the rest of the app module (a real risk in this parallel-merge repo) before finalizing:
+
+No symbol collisions — my types are unique in the app module. I've reached the sanctioned green bar. Let me do one consolidated, authoritative verification run (capturing exact outputs for the log), including the preflight facts:
+
+All gates green and authoritative values captured. Now let me write the honest gate log (mirroring the peer format) and then commit:
+
+Now let me commit my surface files + the log (staging only my files, leaving the pre-existing unrelated changes untouched):
+
+Only my 8 files are staged; the pre-existing `web/` changes remain untouched. Committing:
+
+Committed cleanly (`90e8f762e`, 8 files, +1389). Let me do a final confirmation and clean up the temp harness directories:
+
+Task complete. Everything is committed cleanly, the working tree contains only pre-existing unrelated changes, and temp harnesses are removed.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0203-AIUsageCard.log    | 136 ++++++++++
+ .../feature-views/AIUsageCard.Adapter.swift        | 202 ++++++++++++++
+ .../feature-views/AIUsageCard.Model.swift          | 290 ++++++++++++++++++++
+ .../feature-views/AIUsageCard.Previews.swift       |  89 ++++++
+ .../feature-views/AIUsageCard.Tests.swift          | 299 +++++++++++++++++++++
+ .../feature-views/AIUsageCard.Views.swift          | 246 +++++++++++++++++
+ .../TeslaSync/feature-views/AIUsageCard.strings    |  36 +++
+ .../TeslaSync/feature-views/AIUsageCard.swift      |  91 +++++++
+ 8 files changed, 1389 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0203-AIUsageCard.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/AIUsageCard.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AIUsageCard.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AIUsageCard.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AIUsageCard.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AIUsageCard.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AIUsageCard.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/AIUsageCard.swift

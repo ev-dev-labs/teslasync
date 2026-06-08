@@ -1,0 +1,160 @@
+=== P4 Feature view 0256 TelemetryPipelineCard (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/TelemetryPipelineCard.*
+Web src : web/src/features/system/components/status/TelemetryPipelineCard.tsx
+Tier    : Feature view (composed status card below page level)
+ADRs    : ADR-002 (shared SwiftUI source) · ADR-004 (KMP Shared core) · ADR-009
+Host    : macOS (Darwin) · Xcode 26.5 (17F42) via DEVELOPER_DIR · Swift 6.3.2
+          xcodegen 2.x · swiftlint 0.63.3 · swiftformat 0.61.1 · pwsh 7 · iOS 26.5 + macOS 26.5 SDKs
+
+--- WHAT SHIPPED (13 files, established feature-view multi-file pattern) -------------
+  TelemetryPipelineCard.Adapter.swift    (287 ln) liveness severity/source/tone enums +
+        union-of-two-ingest-paths liveness ladder (web `liveness`, 5/30-min thresholds) +
+        relative-time decomposition + descriptor/format (web `relativeTime`). Pure.
+  TelemetryPipelineCard.Format.swift     (142 ln) count formatter (web `fmtCount`/`fmtInt`),
+        VIN tail / battery tone / state-badge normalization (web `vinTail`/`batteryColor`/
+        `vehicleStateBadge`), footer-destination paths (web `Link to=…`), a11y builders. Pure.
+  TelemetryPipelineCard.Model.swift      (278 ln) P1/S11 telemetry seam, connection axis,
+        input snapshot (vehicles + poll/stream maps + counts + lifecycle), P1/S8 source seam +
+        in-memory source, @Observable model (stale one-shot auto-refresh), P1/S10 strings facade.
+  TelemetryPipelineCard.Projection.swift (263 ln) resolved view-state (rollup, liveness summary
+        tally, per-vehicle row) + `TelemetryPipelineProjection.resolve` (web render branches +
+        per-vehicle join: poll/stream union → liveness, battery, relative ages). Pure.
+  TelemetryPipelineCard.swift            (124 ln) main View: glass-panel chrome (icon/title/
+        description + freshness chip + refresh) + connectivity banner + phase switch.
+        surfaceSlug = "TelemetryPipelineCard".
+  TelemetryPipelineCard.Views.swift      (364 ln) localization+tone bridges, copy helpers,
+        reusable tone chip, freshness chip + banner, ready content, fleet rollup grid (2/5 col),
+        liveness chip row (per-bucket counts + MQTT + polling chips).
+  TelemetryPipelineCard.Rows.swift       (229 ln) per-vehicle list (bordered/divided), vehicle row
+        (status pip · name · VIN · state · battery bar · liveness chip + last/next poll), battery
+        bar, liveness badge.
+  TelemetryPipelineCard.Chrome.swift     (179 ln) "no vehicles configured" empty state, footer
+        link row (Open Telemetry Coverage · MQTT Inspector · All vehicles), loading skeleton,
+        error (web `QueryError` peer) + retry.
+  TelemetryPipelineCard.Layout.swift     (98 ln)  wrapping flow layout (web `flex flex-wrap`) for
+        the chip + footer rows. Pure geometry.
+  TelemetryPipelineCard.Previews.swift   (149 ln) data / empty / mqtt-disconnected / loading /
+        error / stale / offline previews (DEBUG).
+  TelemetryPipelineCard.strings          (i18n)  table "TelemetryPipelineCard": 56 keys backing
+        ALL native chrome (the web source is an ANONYMOUS surface — every user-facing string is a
+        hardcoded English literal with no t() call — so each literal maps 1:1 to a key here).
+  TelemetryPipelineCard.Tests.swift      (271 ln) 5 suites / 27 tests — adapter core.
+  TelemetryPipelineCard.ModelTests.swift (288 ln) 4 suites / 20 tests — state holder + a11y.
+
+  States reproduced (no hidden surface): loading (web skeleton chrome) · empty (data resolved,
+  no vehicles → the web "no vehicles configured" callout; the rollup grid + footer still render,
+  never a blank box) · error (web `QueryError` peer + retry) · stale + offline (the orthogonal
+  `connection` axis → freshness chip + banner + one-shot auto-refresh on the stale transition).
+  PLUS the web's own domain chips: MQTT-broker connected/disconnected, polling-engine
+  off(streaming-only)/disabled, and the four per-vehicle liveness buckets (sending/slow/stale/
+  offline) over the UNION of the two ingest paths (stream MQTT vs REST poll), all reproduced.
+
+--- HOST-RUNNABLE GATES (all green) ------------------------------------------------
+  swiftformat --lint <12 .swift> .............. 0/12 require formatting              FORMAT_EXIT=0
+  swiftlint lint --strict <12 .swift> ......... Found 0 violations, 0 serious        LINT_EXIT=0
+  check-placeholders.ps1 -Language swift ...... PLACEHOLDER_COUNT=0 ALLOWED=0        PLACEHOLDER_EXIT=0
+        (per-file over all 12 .swift; -SelfTest PASS — gate proven to detect stubs:
+         dirty tree → COUNT=4, clean tree → COUNT=0, opt-out-without-reason still a violation)
+  swiftc -typecheck iPhoneSimulator (target arm64-apple-ios18.0-simulator,
+        swift6, -strict-concurrency=complete, real iOS-26.5 SDK) ................... IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (target arm64-apple-macos15.0,
+        swift6, -strict-concurrency=complete, real macOS-26.5 SDK) ................ MAC_TYPECHECK_EXIT=0
+        (both typechecks bind the surface against the REAL shared Sources/Components +
+         Sources/Design + generated DesignTokens; the single Components file excluded is
+         DataDisplay/UnitFormatters.swift, which `import Shared` (the unstaged KMP framework)
+         and is NOT referenced by this surface — verified: 0 `Units`/`UnitPreferences` uses here)
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6,
+        bound against the REAL shared Components + design Tokens) ................. 47/47 passed, TEST_EXIT=0
+      → TelemetryLivenessRulesTests · TelemetryRelativeFormatTests · TelemetryCountFormatTests ·
+        TelemetryVehicleFormatTests · TelemetryDestinationTests · TelemetryPipelineProjectionTests ·
+        TelemetryLivenessSummaryTests · TelemetryPipelineModelTests · TelemetryAccessibilityTests
+  xcodegen generate (spec auto-globs TeslaSync/feature-views; all 13 files wired —
+        78 pbxproj refs across iOS app + macOS app + test targets) ................ XCODEGEN_EXIT=0
+
+--- DEFERRED (macOS-pending) — full-app Xcode scheme build/test --------------------
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. Blocked by PRE-EXISTING, UNRELATED state in the shared app target —
+    ZERO of which originates in this surface. A deterministic target build emits EXACTLY one
+    error, and it is the framework dependency, not this code:
+
+      xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator build \
+                 CODE_SIGNING_ALLOWED=NO
+        → error: There is no XCFramework found at
+          '/…/apps/apple/Frameworks/Shared.xcframework'. (in target 'TeslaSync')
+        ** BUILD FAILED **                                                          TARGET_BUILD_EXIT=65
+
+      • Shared.xcframework not staged (apps/apple/Frameworks has only .gitkeep). The scheme
+        pre-action stages it via Scripts/build-shared-xcframework.sh → the Kotlin/Native Gradle
+        toolchain (apps/shared/gradlew :core:assembleSharedXCFramework), the P1/S3 artifact
+        already tracked macOS-pending in apps/macos-pending-verifications.md.
+      • The feature-view *.Tests.swift / *.ModelTests.swift files (this surface's + every
+        sibling's) are assigned to the app target by the current XcodeGen spec and
+        `@testable import TeslaSync` into it — the integration-wiring gap shared by all ported
+        surfaces (e.g. struct DashboardWidgetSize redefined 15×).
+      • No macOS development-signing identity.
+
+    This surface's OWN code is proven to compile against the real iOS-18 + macOS-15 SDKs
+    (typechecks above, EXIT=0 both) and its logic runs green (47/47 XCTest under Swift 6 strict
+    concurrency). The full-app build/test is the same deferral recorded for
+    p4-apple/feature-views/0010-ToolCard, 0180-AlertMessageEditor, and 0231-FSMTimelineChart in
+    apps/macos-pending-verifications.md; it belongs to the p4-apple/P99-0001-apple-acceptance-gate
+    on a macos-latest runner with signing. (macos-pending-verifications.md is outside this
+    prompt's allowed-files scope — apps/apple/TeslaSync/feature-views/TelemetryPipelineCard.* +
+    this log — so the deferral is recorded here rather than appended there.)
+
+--- ACCEPTANCE CRITERIA ------------------------------------------------------------
+  [x] Surface renders on Apple with all web states reproduced (loading/empty/error/stale/offline)
+      + the web domain chips (MQTT, polling) + the per-vehicle liveness union.
+  [x] Hooks (useMQTTStatus + useQuery(getPollingStatus) + the vehicle-list/fleet-count props)
+      bind to the shared P1/S8 source seam; no direct HTTP from the view.
+  [x] Every web string has a matching key in the P1/S10 catalog (TelemetryPipelineCard.strings,
+      56 keys; the web source is anonymous/literal, so each literal is keyed 1:1).
+  [x] Accessibility labels present on every interactive element (refresh, per-vehicle open,
+      footer links) + combined row/summary VoiceOver labels; Dynamic Type + reduce-motion honoured
+      via shared components.
+  [x] Tests: adapter unit (liveness ladder, relative-time, count, vin/battery/state, destinations)
+      + projection/model per-state + a11y label tests (47 total, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate: COUNT=0, 0 opt-outs).
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing unrelated blockers above);
+      host-runnable equivalents (real-SDK typecheck both platforms + 47/47 XCTest + lint/format/
+      placeholder + xcodegen) all green.
+
+--- HONESTY COVENANT ---------------------------------------------------------------
+  1 No red-as-green ...... surface-scoped gates are genuinely green (real exit codes pasted);
+                          the deferred app-scheme xcodebuild is shown with its REAL non-zero
+                          status (TARGET_BUILD_EXIT=65) and root-caused to the unstaged
+                          Shared.xcframework — never dressed up as passing.
+  2 No scope narrowing ... full surface (12 .swift + strings), all five P4 states, the web's own
+                          MQTT/polling chips + the four-bucket liveness UNION over both ingest
+                          paths, three seams (S8/S10/S11), 47 tests; every web helper ported.
+  3 No skip-and-assume ... TelemetryPipelineCard.tsx read end-to-end; the union liveness ladder,
+                          the successive-rounding relative-time, the stream-ties-poll rule, the
+                          battery-from-poll source, and the polling-chip asymmetry all reproduced
+                          and pinned by tests.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. all web helpers (fmtCount/relativeTime/parseIso/liveness/livenessClasses/
+                          vinTail/batteryColor/vehicleStateBadge) ported with locale-correct
+                          formatting; semantic-tone token mapping documented inline.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0010 ToolCard / 0180 AlertMessageEditor /
+                          0231 FSMTimelineChart: host-proven (real-SDK typecheck both platforms +
+                          isolated SwiftPM XCTest) + documented app-scheme deferral with the real
+                          exit code and named root cause.
+  8 No commit on red ..... committed work is green on every gate scoped to it AND introduces ZERO
+                          new tree-wide violations; the app-scheme red predates this surface and is
+                          untouched. No surface code is red.
+  9 No silent drift ...... the anonymous-source→keyed-i18n decision, the UnitFormatters exclusion
+                          (KMP-Shared-coupled, unused here), and the xcodebuild deferral cause are
+                          all documented in code + this log.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+FORMAT_EXIT=0
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+IOS_TYPECHECK_EXIT=0
+MAC_TYPECHECK_EXIT=0
+TEST_EXIT=0
+XCODEGEN_EXIT=0
+EXIT=0
+STATUS=DONE

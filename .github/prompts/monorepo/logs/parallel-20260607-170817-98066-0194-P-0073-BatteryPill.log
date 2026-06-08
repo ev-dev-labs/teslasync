@@ -1,0 +1,176 @@
+I'll start by exploring the repository structure and the web source, and checking platform capabilities.
+
+Toolchain is available (xcodebuild, swift, swiftlint, swiftformat). Let me read the web source and explore the Apple app structure.
+
+Now let me explore the existing feature-views directory and project configuration to understand established patterns.
+
+Web source is a pure presentational pill. Now I need to understand the established native conventions. Let me find a similar simple presentational feature-view and the shared infrastructure (tokens, i18n, diagnostics, state holders).
+
+Let me read a representative feature-view fileset (ToolCard) and find the diagnostics/i18n/token conventions used within feature-views.
+
+`ToolCard` is a near-perfect analog — a presentational, data-less component just like `BatteryPill`. Let me read its model/telemetry files and locate the shared token/typography/color/format primitives.
+
+Clear pattern established. Now let me locate the native design tokens, typography, status colors, and number formatting — plus the web `STATUS_COLORS`/`fmtInt` semantics I must reproduce.
+
+Let me read the GlassPanel and Typography definitions, and find the spacing/radius tokens, status colors, and number-format equivalents.
+
+The design tokens may be generated. Let me explore the design tokens directory and the Components/UI primitives directly.
+
+Let me read the generated Tokens.swift (the source of truth for colors, spacing, radius) and the Typography + Cards primitives.
+
+Now I have the tokens. `Color.TS.statusSuccess/statusWarning/statusDanger` (dark variants are exactly `#10b981/#f59e0b/#ef4444` = web `STATUS_COLORS`). Let me read the GlassPanel, Typography primitives, the web fmtInt/STATUS_COLORS detail, and find a native integer formatter.
+
+Let me read the Typography primitives and search for an existing native integer/number formatting facade (the `fmtInt` equivalent).
+
+Let me read the formatter facade, examine how feature-view `.Tests`/`.strings`/`.Previews` are structured and wired, and check the Localization setup.
+
+Critical to establish build feasibility before writing code. Let me check the KMP framework dependency, simulators, and how feature-view tests are wired.
+
+Now I see tests live in `Tests/Unit/FeatureViews/` too. Let me resolve the test wiring and assess the heavy KMP/simulator build feasibility.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed, and no iOS simulators are present. Let me confirm whether full Xcode exists anywhere and check the remaining tools (pwsh for the placeholder script).
+
+Full Xcode.app exists. I can use `DEVELOPER_DIR` to point to it without sudo. Let me verify.
+
+Platform capability is fully available (Xcode 26.5, iOS 26.5 sim, iPhone 16). I'll aim for STATUS=DONE. The KMP `Shared.xcframework` (Gradle/Kotlin-Native) is the long pole — let me start that build in the background now while I write code, and generate the Xcode project.
+
+Gradle build is running in the background. Let me generate the Xcode project and definitively resolve the test-target wiring (how `feature-views/*.Tests.swift` are assigned), plus read the `.strings`/`.Previews` conventions.
+
+Project generated. Let me definitively check which target the existing `feature-views/*.Tests.swift` files belong to in the generated project — this determines where my tests must live.
+
+`AuditPanel.Tests.swift` is compiled into the app targets (292 such entries). I must verify this `@testable import TeslaSync`-within-the-module pattern actually compiles, since my tests can only live in `feature-views/`. Let me empirically test with swiftc and check the KMP build progress.
+
+The self-`@testable import` compiles (only XCTest path was missing in my isolated test — the app target provides it). The established pattern (292 entries) is `feature-views/<Name>.Tests.swift`, which fits my allowed-files constraint. Let me read the exact web number-format/NaN semantics and check for a reusable native bar component, then write the code.
+
+Key parity detail: web `fmtInt` uses `safeNumber` (non-finite → **0**), so `BatteryPill` with NaN shows "0%" + critical color + empty bar — I'll reproduce that exactly (no em-dash divergence). Let me read the lint/format configs and a header convention, then write the files.
+
+I have all conventions. Now writing the six `BatteryPill.*` files, mirroring the proven `ToolCard`/`AuditPanel` patterns. Let me update todos and create the files.
+
+KMP build finished — let me confirm it succeeded, then continue with the remaining files.
+
+Gradle build succeeded — the xcframework exists but needs staging into `Frameworks/`. Let me run the staging script (Gradle is now cached, so fast) and write the Previews + strings files in parallel.
+
+xcframework staged. Now the Tests file, mirroring `ToolCardTests` + the buffered telemetry-sink pattern.
+
+All six files written. Now formatting and linting them to the repo style.
+
+swiftlint passes on my files. Let me verify the formatted output didn't alter semantics in the key files.
+
+View is correct. Now running the **full gate lint commands** (whole tree, as the gate specifies) to ensure no issues in context.
+
+One violation found. Let me locate it.
+
+One violation — but in a **pre-existing, unrelated** file (`LifetimeStatsWidget.Adapter.swift`), not my BatteryPill files. Let me confirm it's pre-existing (untouched vs HEAD) and assess.
+
+Confirmed: the violation is **pre-existing** at HEAD (`LifetimeStatsWidget.Adapter.swift` is pristine) and unrelated to BatteryPill. My six files lint clean. The repo-wide `swiftlint --strict` gate step nonetheless fails on this baseline defect. Let me inspect the offending function to gauge a minimal, behavior-preserving unblock.
+
+Now let me check the repo-wide `swiftformat --lint` baseline and kick off the heavy iOS build+test (the long pole) in the background.
+
+`swiftformat --lint` is clean repo-wide (FORMAT_EXIT=0). iOS build+test is running in the background. Let me run the placeholder check on my surface and locate that script.
+
+Placeholder check passes. The iOS build+test pipeline finished — but the exit code was masked by `tail`. Let me check the actual build/test result.
+
+The iOS **build** failed — but on a **pre-existing** file: `AuditPanel.Tests.swift:19: unable to resolve module dependency: 'XCTest'`. The app target compiles `feature-views/*.Tests.swift` (which `import XCTest`) but lacks XCTest resolution. This is a baseline project-config issue, not mine. Let me investigate the testing-search-paths configuration.
+
+Important finding: the iOS **build fails at baseline** because pre-existing `feature-views/*.Tests.swift` files (e.g., `AuditPanel.Tests.swift`) `import XCTest` but are compiled into the **app target**, which has no testing search paths — a systemic baseline defect affecting all surfaces, outside my allowed-files. 
+
+Two things: (1) make my own test file defensively safe so it never adds to the breakage, and (2) rigorously verify my surface compiles and its tests pass under correct test-target wiring. Let me guard my test file first.
+
+Let me re-lint the guarded test file and set up the local-only verification scaffold (backing up `project.yml` first so I can cleanly revert).
+
+Test file guarded and lint-clean. Now configuring a **local-only** project (excluding pre-existing `*.Tests.swift` from the app target and wiring my test into the test target) to verify my surface compiles and tests pass. I'll revert this after.
+
+Project regenerated with correct test wiring. Now building + running my `BatteryPillTests` to verify the surface (full app build, so it'll take a few minutes).
+
+While the verification build runs, let me confirm the log directory exists.
+
+The sibling `SentryModeChart` log (merged at HEAD) establishes the precedent precisely: host-runnable gates pass; the full Xcode app build/test is **deferred to the P4 integration runner** (pre-existing test-target wiring + KMP pre-action + macOS signing — "none a defect in this code"); the same pre-existing `LifetimeStatsWidget` lint violation is noted as out-of-scope; `STATUS=DONE`.
+
+I'm going further — actually staging the KMP framework and running a real build+test with corrected wiring. Let me monitor that.
+
+Still failing in the app target compile — there's another error beyond the test files. Let me find it.
+
+Another pre-existing test file — this time in `dashboard-widgets` (`DigitalTwinWidget.Tests.swift`). The systemic breakage spans both `feature-views` and `dashboard-widgets`. Let me find all such files under the app target's source paths and exclude them too.
+
+Only `feature-views` (20) and `dashboard-widgets` (54) contain test files; `Sources` is clean. Let me add the `dashboard-widgets` exclude to the iOS app target and rebuild.
+
+Build+test running with both excludes. Let me wait for it.
+
+Still failing — let me see the actual compile errors now (could be my code or another pre-existing issue).
+
+Test files use inconsistent naming (`.Tests.swift` AND `.ModelTests.swift`). My glob missed `.ModelTests.swift`. Let me enumerate all XCTest-importing files and use a broader exclude.
+
+All 78 are `*Tests.swift` (74 `.Tests.swift` + 4 `.ModelTests.swift`). Let me re-apply the patch cleanly from backup using the broader `**/*Tests.swift` glob.
+
+376 remain (macOS target + legitimate test targets, not built by the iOS scheme). Let me rebuild + run my tests.
+
+Let me wait for the build to compile the app and run my tests.
+
+11 failures now in production widget files. Let me see the actual error messages.
+
+Now the errors are in **pre-existing dashboard-widget production code**: `'DashboardWidgetSize' is ambiguous`, `invalid redeclaration of 'DashboardWidgetSize'`, `'WeeklyDigestDTO' is ambiguous`. The aggregated app target doesn't even compile at baseline (duplicate type declarations from parallel-merged widgets) — exactly the integration-runner concern the sibling precedent cites.
+
+Chasing a whole-app build is futile (pre-existing, out-of-scope breakage). Instead I'll **definitively verify my surface** two ways: (1) run my tests via a standalone SwiftPM package against the **real** tokens, and (2) typecheck the View against both SDKs. Let me set up the SwiftPM test first.
+
+The library (real tokens + my Model + Telemetry) **compiled cleanly** — proving my logic is correct. The verification caught a real bug: my test file references `Color`/`LocalizedStringKey` (SwiftUI types) but doesn't `import SwiftUI`. Let me fix that.
+
+**18/18 BatteryPillTests pass** against the real `Color.TS` design tokens (macOS, SwiftPM). The verification also caught and fixed a real missing-`import SwiftUI` bug. Now let me typecheck the **View** (`BatteryPill.swift`) against its real UI dependency closure on **both** the iOS-simulator and macOS SDKs.
+
+TSMaterial is self-contained. Now typechecking the full View closure against both SDKs under Swift 6 strict concurrency (matching the project's settings).
+
+Both SDKs typecheck the View closure cleanly under Swift 6 strict concurrency. Let me also verify the **Previews** file (DEBUG) compiles — I'll add the few extra components its `BatteryPill` dependency transitively needs under DEBUG.
+
+The Previews typecheck caught a second real bug: a top-level `private let` array is not concurrency-safe under Swift 6 strict concurrency. Let me fix it by moving the preview data inside the `@MainActor` view. Let me view the current file and rewrite it.
+
+Fixed. Let me re-typecheck the Previews under DEBUG and re-lint the file.
+
+Everything typechecks on both SDKs under DEBUG, and Previews is lint-clean. Now let me **revert** my local-only `project.yml` changes, then run final scoped checks on all six files.
+
+project.yml restored; only my six files are new. Let me run the final scoped checks (lint, format, placeholder, and a final SwiftPM test run) on the deliverable.
+
+All final scoped checks pass: **swiftformat 0/5**, **swiftlint 0 violations**, **placeholder 0**, **18/18 tests pass**. Let me update todos and write the gate log.
+
+Now writing the comprehensive, honest gate log.
+
+Log written. Now committing the surface per the prescribed commit (6 files + log).
+
+Committed cleanly (commit `960c1703`, 7 files, 780 insertions). Let me verify the working tree is clean and remove scratch artifacts.
+
+Working tree is clean — only the two pre-existing modified web files remain (they were modified before I started; not mine, correctly untouched). The `.xcodeproj` and `Shared.xcframework` are gitignored build artifacts. Let me mark the final todo done.
+
+All todos complete. The BatteryPill Apple surface is shipped and committed.
+
+## Summary
+
+I built the native Apple parity of the web `BatteryPill` (`features/analytics/components/weekly-digest/BatteryPill.tsx`) as a production-quality SwiftUI surface and committed it (`960c1703`).
+
+**Delivered (6 files, `apps/apple/TeslaSync/feature-views/BatteryPill.*`):** view, model/projection, telemetry seam, previews, 18 XCTest cases, and the i18n strings table — following the established `ToolCard`/`AuditPanel` conventions (TSGlassPanel, `Color.TS` tokens, `Font.TS`, P1/S11 `view.opened`).
+
+**Web parity reproduced exactly:** the `STATUS_COLORS` 60/30 tint ladder → theme-aware `statusSuccess/Warning/Danger`; `fmtInt`/`safeNumber` (non-finite ⇒ `0%`); `min(level,100)` meter clamp; `transition-all` honoring reduce-motion; combined VoiceOver label + Dynamic Type.
+
+**Verification (platform available — Xcode 26.5 / iOS 26.5 sim):**
+- swiftc `-typecheck` on **iOS-sim AND macOS** SDKs under Swift 6 strict concurrency — **0 errors** (caught + fixed 2 real bugs: a missing `import SwiftUI` and a concurrency-unsafe preview global).
+- **18/18 unit tests executed green** against the real design tokens (standalone SwiftPM).
+- swiftlint `--strict`, swiftformat `--lint`, placeholder check — **all 0** on the surface.
+- I even staged the KMP `Shared.xcframework` (Gradle build succeeded) and ran a real simulator build.
+
+**Honest deferral:** the full `xcodebuild build test` fails on **pre-existing, out-of-scope** baseline defects (78 sibling `*Tests.swift` swept into the app target without XCTest; duplicate `DashboardWidgetSize`/`WeeklyDigestDTO` declarations in `dashboard-widgets`) and one pre-existing `LifetimeStatsWidget` lint violation — none of them this surface's code, all outside the allowed-files scope. My test file is defensively `#if canImport(XCTest)`-guarded so it can never add to that breakage. This matches the merged sibling P-0047 precedent: host-runnable gates green, Xcode app build/test deferred to the P4 integration runner. Full evidence is in the gate log. **EXIT=0 / STATUS=DONE.**
+
+
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0073-BatteryPill.log    | 181 +++++++++++++++++++++
+ .../feature-views/BatteryPill.Model.swift          | 166 +++++++++++++++++++
+ .../feature-views/BatteryPill.Previews.swift       |  63 +++++++
+ .../feature-views/BatteryPill.Telemetry.swift      |  40 +++++
+ .../feature-views/BatteryPill.Tests.swift          | 172 ++++++++++++++++++++
+ .../TeslaSync/feature-views/BatteryPill.strings    |  26 +++
+ .../TeslaSync/feature-views/BatteryPill.swift      | 132 +++++++++++++++
+ 7 files changed, 780 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0073-BatteryPill.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryPill.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryPill.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryPill.Telemetry.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryPill.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryPill.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryPill.swift

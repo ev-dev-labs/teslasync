@@ -1,0 +1,138 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Swift toolchain, swiftlint, and swiftformat are available. Let me verify xcodebuild works (the earlier `||` chaining obscured the result).
+
+`xcodebuild` requires full Xcode but only Command Line Tools are present. Let me check for a full Xcode install and examine the existing native widget patterns + web source in parallel.
+
+Key findings: **Full Xcode is installed** at `/Applications/Xcode.app` (xcode-select just points elsewhere), and Charts/MapKit/SwiftUI frameworks are present. There's a rich set of existing native widgets to pattern-match. Let me verify xcodebuild works via `DEVELOPER_DIR`, and study the most analogous existing widget (`MotorHistoryWidget` — chart-based history) plus the web hooks/shared components.
+
+`xcodebuild` works via `DEVELOPER_DIR` and an iPhone 16 simulator is booted — the full gate is runnable, so STATUS=DONE is achievable. Let me study the rest of the MotorHistoryWidget pattern (the closest analog: chart + projection + tests) and the web hooks that define the data contract.
+
+Now I have the full native widget pattern. Let me read the web data contract (hooks), the shared web components, the registry, and the remaining MotorHistoryWidget template files (Previews, strings) in parallel.
+
+Let me read the data types, pressure conversion math, shared web components, and the native `MeasurementSystem` to nail down the exact contract.
+
+The SI source unit for pressure is **kPa** (`convertPressureFromSI(kpa,...)` divides by `KPA_PER_PSI`/`KPA_PER_BAR`). The web widget's `* 100_000` looks suspicious. Let me read the full conversion math, the shared web components (`WidgetChartSummary`, `WidgetShell`), and the unit-conversion instructions to resolve the canonical unit precisely.
+
+SI pressure unit is **kPa**. The web's `RECOMMENDED_RANGE_BAR.low * 100_000` is an off-by-1000 bug (2.4 bar = 240 kPa, not 240,000) that pushes the reference lines off-screen. Since "Min"/"Max" are explicit i18n keys and the recommended-range band is a real feature, I'll port it **correctly** at 240/280 kPa converted to the display unit. Let me confirm the metric→kPa mapping, read `WidgetShell`, the required instruction files, and locate the native design tokens.
+
+Now let me read the design tokens (color/spacing/font names, especially chart series colors for the 4 tires) and the `TSSkeleton` component API.
+
+I have the full token/component picture. The web tire colors map cleanly to native chart-series tokens (FL blue→`chartSeriesSpeed`, FR cyan→`chartSeriesRegen`, RL green→`chartSeriesBattery`, RR purple→`chartSeriesPower` — three are exact hex matches). Now I must understand the **test/build wiring**: the `.Tests.swift` files live in the app-target source dir but `@testable import TeslaSync`. Let me check how tests are wired and whether `Shared.xcframework` is prebuilt (the scheme has a KMP preAction).
+
+The `.Tests.swift` files sit in the app-target source dir yet `@testable import TeslaSync` — there must be a wiring mechanism. Also a full build needs the KMP `Shared.xcframework` (gradle/Kotlin-Native). Let me inspect the test-target wiring, the placeholder checker, and how existing widget tests are linked.
+
+The actual XCTest bundle is `Tests/Unit/DashboardWidgets/` (only 3 widgets there), yet most widgets co-locate `.Tests.swift` in the app-target source dir. I need to understand the real build/test wiring before committing. Let me read the pending-verifications note, check KMP/gradle feasibility, and generate the Xcode project to see where files land.
+
+Let me read existing gate logs to learn how the gate actually ran (DONE vs BLOCKED, and how co-located tests are handled).
+
+The precedent is clear: every existing widget reached `STATUS=DONE` by running **host gates** (swiftc typecheck, a SwiftPM XCTest harness that actually executes the domain tests, swiftlint, swiftformat, placeholder) green, while the full `xcodebuild` app build/test is DEFERRED because of the unbuilt KMP `Shared.xcframework` (a predecessor/CI concern, explicitly tracked in `macos-pending-verifications.md`). Let me read the full MotorHistory log to get the exact verification recipe.
+
+This is the exact, proven recipe. I'll replicate MotorHistory's approach: build the complete surface, then run the same host gates (swiftc typecheck against the real component library + macOS-15 SDK, a SwiftPM package that **executes** the XCTest suite, an adapter harness, swiftlint, swiftformat, placeholder), and defer the KMP-dependent Xcode app build with verified evidence. Let me map the component-library closure (what's Shared-free) and check for reusable harness tooling.
+
+The surfaces are Shared-free. I'll mirror MotorHistory's curated component-library closure for the harness. Let me enumerate the exact closure files (Design, UI, Feedback, Motion, Settings) to assemble a clean compile set.
+
+Let me confirm the backend stores tire pressure in kPa (to validate my recommended-range correction) and check for any existing native pressure helper to reuse.
+
+Confirmed: SI pressure = **kPa** (LiveSignals tests: `convertPressureFromSI(100, .bar)=1`, `(250,.psi)=250/6.894757`), so my recommended range = 240/280 kPa is correct. `Color.TS.bg`/`accent` exist. There's a closer precedent — `LiveSignalsWidget` — which models a 3-way pressure unit (kPa/bar/psi) matching the web's `PressureUnitPref`. Let me study its pressure idiom to mirror it faithfully.
+
+I have everything I need. The contract is fully mapped:
+- **Data**: `/tire-pressure?vehicle_id=` → `TirePressureReading[]` with `frontLeft/Right`, `rearLeft/Right` in **kPa** (SI), `timestamp`.
+- **Pressure unit**: 3-way (kPa/psi/bar) mirroring `LiveSignalsWidget` precedent + web `PressureUnitPref` (default bar).
+- **Recommended range**: web's `2.4*100_000` is a kPa/Pa bug — correct value is **240/280 kPa** (the converter consumes kPa, verified by backend + LiveSignals tests).
+- **Color tokens**: FL→`chartSeriesSpeed`(blue), FR→`chartSeriesRegen`(cyan), RL→`chartSeriesBattery`(green), RR→`chartSeriesPower`(purple) — 3 exact hex matches.
+
+Let me write the plan and set up tracking.
+
+Now I'll write the surface files. Starting with the pure-domain Projection.
+
+Now the Model (state-holder seam, telemetry, registry, i18n facade, a11y summary).
+
+Now the Swift Charts composition (4 corner lines + Min/Max reference rules).
+
+Now the surface view with all states, header, freshness chip, and the 4-corner stat row.
+
+Now the Previews, strings catalog, and Tests.
+
+Now the XCTest suite.
+
+All 7 files are written. Now let me verify — first auto-format my files to match the gate, then review what changed.
+
+My files are already format-clean. Now run the lint gates — first scoped to my files, then the full gate commands.
+
+Both format and scoped lint pass. Now the full swiftlint gate command:
+
+The full gate shows 1 violation, but my 6 files are clean (0 violations scoped). Let me locate the pre-existing violation.
+
+The single violation is in `LifetimeStatsWidget.Adapter.swift` (a sibling widget from prompt 0055) — pre-existing and outside my allowed files. Let me confirm I haven't touched it and that my files are the only changes.
+
+Confirmed: only my 7 files are new; the lint violation is a pre-existing sibling (`LifetimeStatsWidget.Adapter.swift`, unmodified by me). My files are 0-violation.
+
+Now GATE [1] (swiftc typecheck) + GATE [2] (SwiftPM test execution). Let me determine the Shared-free component-library closure by inspecting dependency imports.
+
+Let me run GATE [1] — `swiftc -typecheck` of the surface against the real (Shared-free) component-library closure on the macOS SDK, iterating to resolve the closure.
+
+Need `Typography.swift` (Cards uses `TSPanelTitle`/`TSCaption`). Adding it:
+
+**GATE [1] TYPECHECK_EXIT=0** — the surface compiles against the real component library on the macOS 15 SDK (Swift 6, strict concurrency), proving `import Charts` + the chart + `@Observable` + `ContentUnavailableView` all resolve.
+
+Now GATE [2]: a SwiftPM package (module `TeslaSync`) that **executes** the XCTest suite. Setting it up in a temp dir.
+
+Now run `swift test` to **execute** the suite (using Xcode's toolchain/SDK for Charts + SwiftUI):
+
+The harness pulled in `Cards.swift`, whose `#Preview` references `TSBadge`/`TSButton` (from Badges/Buttons). Under full compilation these expand. Adding Badges + Buttons to the closure (the MotorHistory closure set):
+
+The full build surfaced real issues in my **test** code: `XCTAssertEqual(optional, value, accuracy:)` has no optional overload, and the View's MainActor-isolated `registration` needs a `@MainActor` test class. Let me fix the tests (unwrap optionals for accuracy asserts; annotate the registry test).
+
+Re-copy the fixed tests into the harness and re-run:
+
+**GATE [2] passed — 31 tests, 0 failures**, executed green via SwiftPM. Now re-verify format/lint after my test edits, re-run the typecheck with the full closure, and run the remaining gates (adapter harness, placeholder, Xcode-deferral evidence).
+
+All green: typecheck (full closure) = 0, format = 0, scoped lint = 0. 
+
+**GATE [3]**: independent adapter harness — compile the Foundation-only Projection + a checker `main` into a native binary and run it.
+
+Swift 6 isolates top-level globals to MainActor. Let me wrap the harness in a function with local state (nested funcs can mutate captured locals):
+
+**GATE [3] passed — adapter harness 32/32 checks, exit 0.**
+
+**GATE [6]**: placeholder/stub gate (pwsh). Running the literal prompt path plus a real scan of my files.
+
+**GATE [6] passed — PLACEHOLDER_COUNT=0** for both the literal path and a real per-file scan.
+
+Now the Xcode app build/test evidence. Let me prove my files wire into the app target (via `xcodegen generate`) and capture the real, code-unrelated blocker (the unstaged KMP `Shared.xcframework`).
+
+All 7 surface files are wired into the app target (42 pbxproj refs). The `.xcodeproj` isn't git-ignored, so I must clean it up. Let me capture the Shared.xcframework/signing blockers and check the generated project's git state.
+
+Blockers confirmed: Frameworks/ holds only `.gitkeep` (no `Shared.xcframework`), 0 codesigning identities, and 13 app `Sources` import `Shared`. Let me capture the real app-build failure as honest evidence — building the app target directly (skips the gradle scheme preAction), bounded.
+
+**Confirmed: `IOS_TARGET_BUILD_EXIT=65`** — "no XCFramework found at Frameworks/Shared.xcframework". The exact code-unrelated blocker (unstaged KMP framework, deferred to macos-latest CI per ADR-012). Now cleanup + verify only my 7 files remain.
+
+Clean — only my 7 files, 0 other changes. Now let me get accurate line counts and write the gate log.
+
+All files are under 400 lines; the logs dir exists (19 sibling logs). Now writing the gate log with the real, executed results.
+
+The gate log is written. Let me do a final reproducibility check of the cheap gates, confirm a clean git state, then commit.
+
+All green and the working tree is exactly the 7 surface files + the log. Committing.
+
+Committed as `7f02f45a` with a clean tree. Let me finalize tracking.
+
+Merge made by the 'ort' strategy.
+ ...oard-widgets-0101-TirePressureHistoryWidget.log | 248 +++++++++++++++
+ .../TirePressureHistoryWidget.Chart.swift          | 181 +++++++++++
+ .../TirePressureHistoryWidget.Model.swift          | 272 +++++++++++++++++
+ .../TirePressureHistoryWidget.Previews.swift       | 108 +++++++
+ .../TirePressureHistoryWidget.Projection.swift     | 339 +++++++++++++++++++++
+ .../TirePressureHistoryWidget.Tests.swift          | 309 +++++++++++++++++++
+ .../TirePressureHistoryWidget.strings              |  48 +++
+ .../TirePressureHistoryWidget.swift                | 323 ++++++++++++++++++++
+ 8 files changed, 1828 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0101-TirePressureHistoryWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TirePressureHistoryWidget.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TirePressureHistoryWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TirePressureHistoryWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TirePressureHistoryWidget.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TirePressureHistoryWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TirePressureHistoryWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TirePressureHistoryWidget.swift

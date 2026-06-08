@@ -1,0 +1,140 @@
+I'll start by exploring the repository structure, the web source, and checking platform capabilities.
+
+Swift toolchain is present. Let me verify `xcodebuild` actually works and explore the existing Apple project structure and the web source's dependencies.
+
+Key finding: `xcodebuild` requires full Xcode but only CommandLineTools is installed. However `swift`, `swiftlint`, `swiftformat` work. Let me explore the existing feature-views (predecessor work), the shared facades, and check the build system.
+
+Now I understand the structure: 160 feature-view files following a multi-file pattern (`.swift`, `.Model.swift`, `.Adapter`/`.Projection.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`). Build is via xcodegen→xcodebuild, but full Xcode is missing. Let me check SDK/compile capability and read representative predecessor examples + shared facades.
+
+Critical finding: the CommandLineTools macOS SDK **includes SwiftUI + Charts**, and `swiftc -typecheck` with `Chart { BarMark }` **passes (PROBE_EXIT=0)**. So I can standalone-typecheck my code even without full Xcode. `pwsh` is also available for the placeholder gate. There's a directly-related `WeeklyDigestWidget` predecessor. Let me read it plus the shared facades, design tokens, and a chart example.
+
+The architecture is crystal-clear now. `DrivingSection` is a feature-view sibling of the `WeeklyDigestWidget` dashboard widget, sharing the same domain. Let me read the design tokens, a chart-based feature-view example (`SentryModeChart`), and the remaining reference files (Delta types, strings, tests, views, previews).
+
+Let me find the core design token definitions and read the remaining reference files (SentryModeChart main view, adapter, strings, tests, previews; plus WeeklyDigest delta/models/views/strings/tests).
+
+The core tokens (`TSSpacing`, `Color.TS`, `Font.TS`) aren't in the small `TSDesign.swift` — they're likely generated. Let me locate them precisely and read the remaining reference files.
+
+I have the full feature-view template. Now I must locate the real design-token definitions (`TSSpacing`, `Color.TS`, `Font.TS`, `TSMotion`, `TSSkeleton`, `TSFadeIn`) so my code matches their exact API and I can typecheck against them.
+
+Found it: tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read the tokens, the motion/skeleton components, and the WeeklyDigest test/preview/strings/delta files to nail conventions.
+
+I now have the full token API. Let me read the test/preview/views/delta conventions and the project/lint configs.
+
+Complete picture obtained. Test framework is XCTest with `@testable import TeslaSync`; previews use `#Preview` under `#if DEBUG`. Let me verify the build/lint config and the exact web formatting helpers for parity.
+
+I now have a complete understanding. Let me confirm a few final details: the `TSCard` dependency, how feature-view tests are wired, and the web `useWeeklyDigest` data derivation for faithful chart/stat parity.
+
+Let me grab the `DAY_LABELS` constant for chart parity, then I'll write the plan and start implementing.
+
+I have everything needed. Let me set up a plan and todos, then implement the 7-file `DrivingSection` surface following the `SentryModeChart` feature-view pattern exactly.
+
+Now the pure projection core — the testable adapter:
+
+Now the state-holder model, telemetry seam, and strings facade:
+
+Now the presentational chrome — header, chart, stats, top-drive card, and state views:
+
+Now the main surface view:
+
+Now the i18n strings catalog:
+
+Now the previews exercising every state:
+
+Now the test suite with web-parity assertions:
+
+All 7 files created. Let me set up the throwaway SwiftPM verification package to actually compile and run the tests. First, check the `TSCard`/`Cards.swift` dependency.
+
+`Cards.swift` cascades into many components, so for the throwaway verify package I'll copy only the real token files + a verbatim `TSSkeleton`. Let me build the SwiftPM package and run the tests.
+
+Package laid out. Now compile and run the tests:
+
+The `DrivingSectionStrings` facade is missing the `text(_:_:)` → `Text` helper (used throughout the views). I'll add it (and `import SwiftUI`) to the Model, mirroring `SentryModeStrings`. Let me sync both the real file and the verify copy.
+
+Excellent — everything compiles except the `#Preview` macro, which fails only because the **macro plugin ships with full Xcode, not the CommandLineTools SwiftPM** (`PreviewsMacros plugin not found`). That's an environment limitation, not a code defect — the `#Preview` syntax is standard and valid under xcodebuild. To still compile-verify the preview bodies, I'll transform `#Preview` → an implicit-return `some View` function in the throwaway copy only, then build + test.
+
+`swift test`/XCTest isn't available under CommandLineTools-only SwiftPM (no `XCTest.framework`), same Xcode-toolchain limitation. And the transformed previews hit an emit-module error I need to see. Let me get the real library error, then switch my local verification to an **executable harness** that actually runs the parity assertions against the public API.
+
+I need to create the executable target's directory first. Let me write a comprehensive verification harness that executes the parity assertions against the public API, then build.
+
+The library (including the transformed previews) now compiles cleanly. Let me run the executable harness to actually execute the parity assertions:
+
+Swift 6 actor-isolation on the harness counter — annotate the helpers `@MainActor`:
+
+This is taking far too long — let me inspect what's happening in a separate shell.
+
+Two findings: (1) the machine is shared — heavy `.konan`/KMP `clang++` + `swift-frontend` jobs from another process are saturating CPU, slowing my build; (2) the binary actually built, but my harness **deadlocks**: top-level code is MainActor-isolated, and `sem.wait()` blocks the MainActor so the `Task { @MainActor }` can never run. Let me fix the harness to call `modelChecks()` directly.
+
+**All 53 checks PASSED** — the full surface compiles and the parity/formatting/phase/model logic executes correctly against the real design tokens. Now the gate-equivalent static checks on the real repo files. Update todos and run swiftformat + swiftlint + placeholder gate.
+
+Two formatting issues to fix: `try!` in tests (use `throws`/`try`) and a too-long line in Views. Let me view and fix.
+
+Now re-run swiftformat and run swiftlint on the new files:
+
+swiftformat passes. swiftlint flags `file_length` (>400 lines) on Adapter (628) and Views (535) — the project convention splits files to stay under 400. Let me check sibling sizes to confirm the limit, then split. First, the section boundaries:
+
+Confirmed: 396 lines is the longest sibling — 400 is the hard limit. I'll split Adapter (628→3 files) and Views (535→3 files). Let me get current Views boundaries (shifted by my wrap edit) and do a precise, range-based split.
+
+Confirmed 400-line limit. I'll split Adapter (628→Models+Projection+Adapter) and Views (535→Views+Chart+States) by exact line ranges, with fresh per-file headers.
+
+All files now under 400 lines. Let me normalize formatting with swiftformat (fix mode) on my files, then confirm with lint + swiftlint:
+
+swiftformat **0**, swiftlint **0 violations**, all files <400 lines. Now re-verify compilation+execution after the split. Let me re-sync the verify package and re-run the harness.
+
+All 53 checks pass post-split. Now the placeholder gate. Let me inspect how the script resolves `-Path` and the forbidden patterns, then run it as the gate specifies.
+
+The script uses `Get-ChildItem -LiteralPath $ScanPath -Recurse -File` after a `Test-Path` check. The gate's `-Path .../DrivingSection` isn't a real directory, so I'll both (a) run the gate's literal command and (b) genuinely scan my files via a temp dir. Let me check the `Test-Path` branch behavior first.
+
+Confirmed — a non-existent `-Path` returns a clean no-op. For honesty, I'll genuinely scan my files via a temp dir. First, sanity-grep my files for forbidden substrings:
+
+None found. Now run the placeholder gate — both the literal gate command and a genuine scan of my files via a temp dir:
+
+Both placeholder checks pass (COUNT=0). Now let me verify i18n key coverage (every key used in code has a `.strings` entry) and confirm the log directory exists.
+
+i18n coverage is complete (no used-but-undefined keys; used ⊆ defined). The log directory is missing — let me check the prompts/logs structure and any sibling logs for format reference.
+
+The logs dir exists (my earlier relative path was wrong). Let me examine a sibling feature-view log to match the expected format.
+
+The sibling 0047 log is highly informative — it shows the established disposition. Note: that run *had* full Xcode yet still DEFERRED xcodebuild. My runner has **no** full Xcode at all. Let me check how the BLOCKED-status logs handled EXIT/STATUS and commit, to follow precedent precisely.
+
+Decisive precedent: `p4-p6-0001-live-data-sse.log` ran on an identical **CommandLineTools-only** host (`xcode-select -p => /Library/Developer/CommandLineTools`, no Xcode.app) and recorded **EXIT=0 / STATUS=DONE** with xcodebuild DEFERRED-macOS-pending; the one artifact that chose BLOCKED on a CLT-only host was explicitly superseded as deviating from convention. I'll follow the convention. Let me run the bare gate commands to capture real exit codes for the log.
+
+swiftformat whole-tree = 0. Bare swiftlint shows **1 pre-existing violation** (my files already passed targeted swiftlint with 0). Let me identify it to document honestly.
+
+The lone violation is the documented pre-existing sibling defect `LifetimeStatsWidget.Adapter.swift:141` (dashboard-widgets, outside my scope) — my files add **0**. Let me verify git status before writing the log and committing.
+
+Git is clean: 11 untracked DrivingSection.* files (all mine, all in-scope) + 2 pre-existing unrelated web `.tsx` edits that predate this task (I'll leave them unstaged, as the sibling log did). Now let me write the honest gate log.
+
+Now let me commit exactly my 11 files + the log (excluding the 2 pre-existing unrelated web edits).
+
+All 12 staged correctly; the 2 pre-existing web edits remain unstaged. Now commit:
+
+Committed as `579d0293`. Let me do a final verification of the commit contents, clean up the throwaway verification package, and finalize todos.
+
+All todos complete and committed. Task finished.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0075-DrivingSection.log | 257 ++++++++++++++
+ .../feature-views/DrivingSection.Adapter.swift     | 268 +++++++++++++++
+ .../feature-views/DrivingSection.Chart.swift       | 166 +++++++++
+ .../feature-views/DrivingSection.Model.swift       | 266 +++++++++++++++
+ .../feature-views/DrivingSection.Models.swift      | 197 +++++++++++
+ .../feature-views/DrivingSection.Previews.swift    | 120 +++++++
+ .../feature-views/DrivingSection.Projection.swift  | 173 ++++++++++
+ .../feature-views/DrivingSection.States.swift      | 124 +++++++
+ .../feature-views/DrivingSection.Tests.swift       | 372 +++++++++++++++++++++
+ .../feature-views/DrivingSection.Views.swift       | 265 +++++++++++++++
+ .../TeslaSync/feature-views/DrivingSection.strings |  58 ++++
+ .../TeslaSync/feature-views/DrivingSection.swift   |  80 +++++
+ 12 files changed, 2346 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0075-DrivingSection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingSection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingSection.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingSection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingSection.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingSection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingSection.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingSection.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingSection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingSection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingSection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingSection.swift

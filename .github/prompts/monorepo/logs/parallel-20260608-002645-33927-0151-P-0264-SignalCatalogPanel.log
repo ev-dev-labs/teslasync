@@ -1,0 +1,140 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Tools are available. Let me read the web source and explore the Apple app structure.
+
+Now let me explore the Apple app structure deeply to understand existing patterns, state holders, tokens, i18n, and existing feature-views.
+
+The feature-views directory is large with established patterns. Let me examine the file naming convention and check for existing SignalCatalogPanel files.
+
+The standard file set is clear: `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`. Let me study the reference example `AcDcStatsPanel` end-to-end and find a table-based panel similar to SignalCatalogPanel.
+
+Let me read the rest of the reference set (Views, Previews, strings, Tests) and find shared core primitives.
+
+Let me read the strings and Tests reference files, and locate the shared core primitives.
+
+I now understand the established pattern thoroughly. Let me locate the shared core components I'll need (TSDataTable, TSColumn, TSBadge, StatCard equivalent, TSTextField, TSButton, etc.) and find a reference panel that uses a search field + stat cards.
+
+Shared components live in `apps/apple/Sources/Components/`. Let me explore that and the design tokens.
+
+Let me read the design tokens and the core shared components I'll be composing with.
+
+Let me find the token definitions (Color.TS, Font.TS, TSSpacing, TSRadius) and read the key shared components.
+
+The tokens are defined in `WatchDesignTokens.swift`. Let me understand the project structure via project.yml and read the token definitions.
+
+Key insight: tokens come from `../design/generated/apple`. Let me examine the design tokens, the state-holder layer, the placeholder checker, and check the build tooling status.
+
+Now let me examine the state-holder layer (P1/S8), the build tooling, available simulators, and the web telemetry types. Let me batch these.
+
+Critical capability finding: `xcodebuild` requires full Xcode but only Command Line Tools are active, and no iOS simulators exist. Let me verify whether a full Xcode is installed anywhere and check pwsh + existing precedent.
+
+`/Applications/Xcode.app` exists — just not selected. I can use `DEVELOPER_DIR`. Let me verify xcodebuild works with it, check simulators, and read a precedent log (the telemetry-related 0009).
+
+Full Xcode 26.5 + iPhone 16 sim + iOS 26.5 runtime are available via `DEVELOPER_DIR`. Let me check the precedent log, the Shared.xcframework build dependency, and pending-verifications doc.
+
+This is the exact precedent (ADR-012 "code-complete + DEFERRED Xcode gate"). Let me read the full precedent log to replicate the verification approach precisely.
+
+I have the complete blueprint (ADR-012 "code-complete + DEFERRED Xcode gate"). Let me record a plan and gather the remaining specifics: web types/hook shape and the shared components I'll compose with.
+
+Now I understand the hook shape (`Record<name, {value, timestamp}>`) and `TSStatCard`. Let me read the remaining shared components I'll compose with (Badges, Buttons, Fields, Skeletons, Motion, Cards, relative-time formatter, segmented picker).
+
+Let me read the search field, skeleton, motion, cards, typography, and relative-time formatter components.
+
+Let me read Cards, Typography, Pickers/Tabs (for segmented control), and the feedback States + relative-time formatter.
+
+Let me read the feedback states (empty/error), the relative-time formatter, and the segmented control options.
+
+Let me check the web TimeStamp/relative formatter to port faithfully, and the Tabs/Filters/Pickers segmented options.
+
+I have all the formatter logic and components. Let me read the lint/format configs and confirm the segmented-control idiom against an existing surface, then check how tests are wired/run.
+
+Let me kick off baseline lint/format checks (background) and find a precedent feature-view that combines a search field + segmented picker + table.
+
+`InfrastructureSection.Catalog` (search+table) and `InboxBody` (segmented filter/sort) are perfect idiom references. Let me read them and start the baseline lint in the background.
+
+The segmented-picker idiom is confirmed. Let me read the search+catalog reference.
+
+I have all the patterns confirmed. Let me check the baseline lint result and write the plan.
+
+Baseline `swiftlint --strict` is already RED from a pre-existing violation in `LifetimeStatsWidget.Adapter.swift` (outside my scope) — I'll lint my files explicitly, per precedent. I have everything needed. Let me set up tracking and start authoring.
+
+Components/Design are Shared-free — my typecheck closure is viable. Let me write a brief plan and author the Adapter (pure logic) first.
+
+Adapter written. Let me typecheck it standalone (Foundation-only) for fast feedback before continuing.
+
+Swift 6 strict concurrency flags cached static formatters. Let me make them local to the function (matching the AcDc adapter's local-formatter approach).
+
+Adapter is clean under Swift 6. Now the Model file (P1/S8 seam + P1/S11 telemetry + P1/S10 facade + projection + observable model with optional selection).
+
+Let me fix the `import SwiftUI` placement (belongs at top).
+
+Now the main surface file (orchestrator + header chrome + state switch).
+
+Now the Views file (summary cards, search/filter/sort controls, loading/error/message, footer, status chip).
+
+I need to fix selection observation in the Model — `isSelected` reads the `@ObservationIgnored` Set, so cells wouldn't update on toggle. Let me switch to the observed array.
+
+Let me add a shared `level → color` mapping (used by both the chip and the time-since cell) and refactor the chip to use it.
+
+Now the Table file (results gate + TSDataTable columns + optional select column).
+
+Now the strings catalog (i18n).
+
+Now the Previews file (one per state).
+
+Now the Tests file (pure logic + model wiring, deterministic `now`).
+
+All 8 files written. Now the critical step — typecheck my surface against the **real** component library for the iOS 18 simulator SDK. Let me assemble the closure and compile.
+
+Components aren't fully self-contained (the SI unit formatters need `UnitPreferences` from outside). Per precedent, I'll hand-pick the actual dependency closure my surface uses. Let me retry.
+
+iOS 18 simulator typecheck **passes** against the real component library. Now the macOS 15 SDK typecheck (same closure).
+
+Both SDK typechecks pass. Now step [3]: typecheck the DEBUG previews (`-D DEBUG`) against the closure.
+
+Previews typecheck clean. Now step [4] — build a self-contained SwiftPM harness and **execute** the test suite green. Let me set it up.
+
+All **40 tests pass green** in the executed harness. Now formatting + lint + placeholder gates. Let me auto-format my files, then lint.
+
+Formatting applied (2 files), all pass `--lint`. Now swiftlint --strict on my files + re-typecheck (since 2 files were reformatted).
+
+Clean: 0 violations, all files <400 lines. Since formatting touched 2 files, let me re-verify typecheck + re-run the harness with the formatted sources.
+
+Typecheck + tests still green post-format. Now the placeholder gate (scoped to my files to avoid pre-existing issues in sibling surfaces).
+
+The placeholder gate flagged Views.swift:56 — almost certainly the web i18n key `filterPlaceholder` (a false positive on the literal substring). Let me inspect the line and the pattern definition.
+
+Confirmed false positive: it's the web i18n key `filterPlaceholder` (which I must keep for i18n parity), not a stub. The script provides an inline opt-out (`// parity:allow <reason>`) for exactly this. Let me apply it.
+
+The opt-out must be on the same line as the match. Let me move it to a trailing comment on the match line.
+
+The trailing marker makes the line exceed the 120/160 limits. Let me restructure so the flagged key sits on a short standalone line where the opt-out fits the line budget. First let me view the current controls block.
+
+Now re-run all gates on the restructured file (format, lint, placeholder) plus a typecheck.
+
+All clean. Let me run the full surface-wide gates (all 7 files) + placeholder + a final iOS typecheck to confirm the restructure holds.
+
+All host gates green. Now let me capture the final placeholder result, macOS typecheck, and the DEFERRED Xcode evidence (xcodegen + framework status + registration).
+
+My explanatory comment reintroduced the "placeholder" substring (in "filterPlaceholder i18n key name" and "web `placeholder` prop"). Let me reword the comment to avoid the literal while keeping the single allowed match on the key line.
+
+Placeholder gate green (ALLOWED=1, COUNT=0), format + lint clean. Let me capture definitive final typecheck (both SDKs) + harness run for the log record.
+
+Definitive host gates all green (iOS=0, macOS=0, 40/40 tests). Now capture the DEFERRED Xcode evidence: xcodegen + registration check + the framework-missing build error.
+
+Surface is registered (48 pbxproj refs — better than the precedent's 0). Now capture the actual build blocker (missing KMP `Shared.xcframework`).
+
+Deferred-gate evidence captured (missing `Shared.xcframework`, exit 65 — a repo-wide KMP infra blocker outside this prompt's allowed files). Let me clean up generated artifacts and check git status before writing the log.
+
+Pre-existing `AIUsageCard.*` modifications exist (another agent's work — outside my scope; I won't stage them). Let me gather final line counts + the Swift version for the log, then write it.
+
+All metrics gathered. Now let me write the gate log.
+
+Now let me stage **only** my surface files + the log (not the unrelated `AIUsageCard.*` edits) and verify the staged set before committing.
+
+Staged set is exactly my 8 files + the log; the unrelated `AIUsageCard.*` edits remain unstaged. Committing now.
+
+Committed cleanly: 9 files (8 surface + log), 2104 insertions; the unrelated `AIUsageCard.*` edits were excluded. Let me do a final verification.
+
+All verified. Let me mark the final todo complete.
+

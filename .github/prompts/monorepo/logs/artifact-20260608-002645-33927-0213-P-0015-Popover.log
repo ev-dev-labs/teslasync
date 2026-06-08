@@ -1,0 +1,192 @@
+================================================================================
+P4 · Modal / dialog · 0015 — Popover (Apple)
+Run:  2026-06-08T03:28-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/213
+Base: c9c6fdb9f
+Prompt:     P4/modals-dialogs/0015 — Modal / dialog: Popover
+Web source: web/src/components/ui/Popover.tsx   (THE spec)
+Native out: apps/apple/TeslaSync/modals-dialogs/Popover.*
+Mode: code-complete + DEFERRED full Xcode app build/test (KioskOverlay 0124 +
+      BackendTool 0002 precedent, ADR-002, Honesty rule 7 — predecessor parity).
+      Capability is PRESENT and EXERCISED (real iOS-18 + macOS-15 SDK compiles of
+      the surface sources + executed host XCTest below) — this is NOT a
+      STATUS=BLOCKED platform-capability case.
+================================================================================
+
+=== HONESTY COVENANT (binding) ===
+  1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+  5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+  Delegation: NONE used (no sub-agents). All artifacts authored directly.
+
+=== CAPABILITY PROBE ===
+  swift (CommandLineTools default) ... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)     OK
+  /Applications/Xcode.app ............ Xcode 26.5 (Build 17F42) via DEVELOPER_DIR    OK
+     (default `xcode-select -p` = /Library/Developer/CommandLineTools; Xcode is
+      driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ................ iPhoneSimulator26.5.sdk (iOS 18 deploy)        OK
+  macOS SDK .......................... MacOSX26.5.sdk (macOS 15 deploy)               OK
+  iPhone 16 simulator ................ present + Booted (83717DEE-…-CBDDD3140989)     OK
+  SwiftUI ............................ present in BOTH SDKs (this surface's only dep) OK
+  Swift Charts / MapKit .............. present in BOTH SDKs (this surface uses NONE)  OK
+  swiftlint .......................... /opt/homebrew/bin/swiftlint                    OK
+  swiftformat ........................ /opt/homebrew/bin/swiftformat                  OK
+  pwsh (placeholder gate) ............ /opt/homebrew/bin/pwsh                         OK
+  modals-dialogs in project.yml ...... 0 references (not yet target-registered)      WARN
+  modals-dialogs in .swiftlint.yml ... 0 references (not in `included:`)             WARN
+  Shared.xcframework ................. not staged (apps/apple/Frameworks = .gitkeep)  WARN
+
+  The three WARNs are shared-file integration concerns (project.yml sources,
+  .swiftlint.yml `included`, Localizable.xcstrings). Per the prompt's "Allowed
+  files" (Popover.* + this log) and the parallel-safe design the sibling .strings
+  headers describe, those shared files are registered at INTEGRATION time, not by
+  a per-surface slot (editing them would collide across the concurrent slots).
+
+=== ARTIFACT (apps/apple/TeslaSync/modals-dialogs/Popover.*) — 727 lines, 7 files ===
+  Popover.Model.swift       210  pure host-free projection — PopoverSide/PopoverAlign
+                                 (web unions, webValue decode), PopoverPlacement
+                                 (side×align → arrowEdge/facingEdge/attachmentUnitPoint),
+                                 PopoverMetrics (sideOffset=6, margin=8), PopoverSurface
+                                 (P1/S11 slug), PopoverStrings (P1/S10 facade),
+                                 PopoverAccessibility (aria-label fallback policy)
+  Popover.Telemetry.swift    40  P1/S11 view.opened seam (protocol + os_log sink)
+  Popover.Views.swift        51  PopoverSurfaceContent — token surface chrome
+                                 (--surface-1/--text-primary), sideOffset gap on the
+                                 anchor-facing edge, role=dialog a11y region (non-modal),
+                                 VoiceOver dismiss action, view.opened on .task
+  Popover.swift             119  public View.tsPopover(...) modifier over the native
+                                 .popover() presentation + PopoverPresentationModifier
+                                 (open/onClose bridge)
+  Popover.Previews.swift    114  #if DEBUG — per-placement surfaces (bottom·start /
+                                 top·end / bottom·center) + light/dark + Dynamic Type
+                                 XXL + an interactive trigger stage
+  Popover.Tests.swift       167  XCTest (#if canImport(XCTest)) — 17 methods: placement
+                                 projection, side/align decode, metrics, a11y fallback,
+                                 strings facade, telemetry slug
+  Popover.strings            26  P1/S10 catalog contribution (table "Popover")
+
+=== PARITY (web Popover.tsx reproduced — contract, composition, states, i18n) ===
+  The web component is a lightweight positioning primitive (no data hooks, anonymous,
+  no charts/maps). Apple's system popover provides the SAME contract natively and is
+  the house idiom (LayoutSwitcher / SettingField / AlertMessageEditor all use
+  `.popover` + `.presentationCompactAdaptation(.popover)`). Mapping:
+    web prop / behavior            → native mechanism
+    ----------------------------------------------------------------------------
+    anchorRef                      → the modified (trigger) view (`.tsPopover` on it)
+    open / onClose                 → isPresented binding + onDismiss on open→closed
+    side = 'bottom'|'top'          → arrowEdge + attachmentUnitPoint.y  (PopoverPlacement)
+    align = 'start'|'center'|'end' → attachmentUnitPoint.x ∈ {0, 0.5, 1}
+    sideOffset = 6                 → padding on the content's anchor-facing edge
+    auto-flip on overflow          → system popover flip (PopoverSide.flipped documents it)
+    viewport clamp (margin 8)      → system popover safe-area clamp (PopoverMetrics.margin)
+    Esc / outside-pointer dismiss  → native popover dismissal (+ onDismiss)
+    restore focus to trigger       → system restores focus to the presenting control
+    aria-modal="false" (non-trap)  → NO `.isModal` trait (children stay reachable)
+    role="dialog" + aria-label     → .accessibilityElement(.contain) + .accessibilityLabel
+    children                       → the @ViewBuilder content the caller hands it
+    surface (rounded/border/shadow/--surface-1/--text-primary)
+                                   → system popover chrome + .presentationBackground(
+                                     Color.TS.surface) + Color.TS.textPrimary
+  No web Tailwind ported; platform tokens (P1/S9: Color.TS / Font.TS / TSSpacing /
+  TSRadius) used throughout.
+
+=== STATES (every branch the web source carries is reproduced) ===
+  The web Popover owns NO data lifecycle — it positions whatever children it is
+  handed — so loading/empty/error/stale/offline belong to the content a caller hosts
+  inside the popover, NOT to the primitive (identical precedent: the merged pure
+  presentational sibling KioskOverlay 0124, documented in its log/header). The render
+  branches the web source DOES carry are reproduced + tested:
+    closed (`!open` → null)        → not presented (binding false → nothing rendered)
+    open + positioned              → system-positioned per PopoverPlacement
+    flipped (overflow)             → system flip (PopoverSide.flipped, tested)
+    clamped (viewport edge)        → system safe-area clamp
+  (The web pre-measurement `visibility:hidden @ -9999` branch is a DOM-measurement
+  artifact the system popover has no analogue for — it measures atomically.)
+
+=== GATE — HOST-RUNNABLE STEPS (executed at this HEAD; real exits) ===
+  [1] REAL iOS-18 simulator SDK compile — surface + previews (#Preview expanded):
+        xcrun swiftc -typecheck -sdk iPhoneSimulator26.5.sdk \
+          -target arm64-apple-ios18.0-simulator -D DEBUG \
+          Tokens.swift Buttons.swift Popover.{Model,Telemetry,Views}.swift \
+          Popover.swift Popover.Previews.swift
+      IOS_SDK_COMPILE_EXIT=0                                                          OK
+  [2] REAL macOS-15 SDK compile — surface + previews:
+        xcrun swiftc -typecheck -sdk MacOSX26.5.sdk -target arm64-apple-macos15.0 \
+          -D DEBUG  <same sources>
+      MAC_SDK_COMPILE_EXIT=0                                                          OK
+  [3] EXECUTED host unit tests (real XCTest, throwaway SwiftPM pkg, Xcode toolchain):
+        xcrun swift test   (Sources/TeslaSync = Tokens + Popover.{Model,Telemetry,
+        Views,swift}; Tests = Popover.Tests.swift, @testable import TeslaSync)
+      → Test Suite 'PopoverTests' passed — Executed 17 tests, 0 failures (0 unexpected)
+      SWIFT_TEST_EXIT=0                                                               OK
+  [4] swiftlint --strict (scoped to the 6 surface .swift files, project rules):
+        swiftlint lint --strict --config <project rules, included=modals-dialogs>
+      → Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0                                                                     OK
+  [5] swiftformat --lint apps/apple/TeslaSync/modals-dialogs (apps/apple/.swiftformat):
+      → 0/6 files require formatting.
+      FORMAT_EXIT=0                                                                   OK
+  [6] check-placeholders.ps1 -Path apps/apple/TeslaSync/modals-dialogs/Popover -Language swift:
+      → PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+      PLACEHOLDER_EXIT=0                                                              OK
+      (scanner coverage of this dir PROVEN: a planted `// TODO` probe → COUNT=1/EXIT=1;
+       script -SelfTest → all PASS; probe removed; real files COUNT=0.)
+  [7] XCTest-guard safety — app-target compile of the guarded Tests file (no XCTest
+      search path) takes the empty `#else`, so it can never break the app build:
+        xcrun swiftc -typecheck (iOS-18-sim app config) Popover.Tests.swift
+      TESTS_APP_TARGET_GUARD_EXIT=0                                                   OK
+
+=== GATE — FULL XCODE APP BUILD/TEST (DEFERRED — not faked, not green) ===
+  The literal gate runs `xcodebuild -scheme TeslaSync -destination 'iPhone 16'
+  build test` and the macOS scheme. These are DEFERRED to the integration/signed
+  runner, for reasons that are out-of-scope for this surface and identical to the
+  merged sibling precedent (KioskOverlay 0124, BackendTool 0002, GuardModeWidget
+  0054):
+    • modals-dialogs/ is not yet a `sources:` path in apps/apple/project.yml, so an
+      app-scheme build would NOT even compile this surface — registering it is a
+      shared-file integration step, parallel-unsafe across the concurrent slots,
+      and outside this prompt's Allowed-files (Popover.* + this log).
+    • Shared.xcframework is not staged (apps/apple/Frameworks holds only .gitkeep),
+      so the app target does not link on this runner regardless of this surface.
+    • macOS scheme additionally needs signing not available here.
+  Capability is therefore PROVEN against the surface's actual sources on BOTH target
+  SDKs (steps [1]+[2]) and by the 17/17 EXECUTED host tests (step [3]); the surface
+  contributes ZERO errors on either SDK. Deferral is recorded with cause, not as a
+  pass.
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all branches the web source carries reproduced
+      (closed / positioned / flipped / clamped); data-lifecycle states are the
+      hosted content's concern for this pure primitive (KioskOverlay precedent).
+  [x] No HTTP in the view — the web source has no data hooks (anonymous primitive);
+      i18n binds through the P1/S10 PopoverStrings facade, telemetry through the
+      P1/S11 PopoverTelemetry seam. No direct HTTP anywhere.
+  [x] Every string resolves through P1/S10 (table "Popover"): popover.a11yLabel +
+      popover.dismiss; the web `ariaLabel` is caller-forwarded with a localized
+      default. No hardcoded English in shipped code.
+  [x] Accessibility on every interactive element: dialog region labelled (caller
+      ariaLabel or localized default), explicit VoiceOver dismiss action, non-modal
+      (parity with aria-modal="false") so children stay reachable; Dynamic Type +
+      reduce-motion honored by the system popover.
+  [x] Tests: projection ("adapter") unit tests + per-placement preview states +
+      a11y-label fallback test + strings + telemetry slug — 17/17 EXECUTED green
+      against the real value types on the host.
+  [x] No TODO / stub / mock / placeholder / Lorem in shipped code (gate = 0).
+  [x] EXIT=0 / STATUS=DONE — host-runnable gates green on iOS-18 AND macOS-15 SDKs
+      under Swift 6; full Xcode app build/test DEFERRED with real cause (shared-file
+      registration + unstaged xcframework + signing), matching merged precedent —
+      capability present + exercised, so NOT a BLOCKED case.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/modals-dialogs/Popover.swift \
+          apps/apple/TeslaSync/modals-dialogs/Popover.Model.swift \
+          apps/apple/TeslaSync/modals-dialogs/Popover.Telemetry.swift \
+          apps/apple/TeslaSync/modals-dialogs/Popover.Views.swift \
+          apps/apple/TeslaSync/modals-dialogs/Popover.Previews.swift \
+          apps/apple/TeslaSync/modals-dialogs/Popover.Tests.swift \
+          apps/apple/TeslaSync/modals-dialogs/Popover.strings \
+          .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0015-Popover.log
+  git commit -m "feat(apps/apple/modals-dialogs): add Popover surface (P4)"
+
+EXIT=0
+STATUS=DONE

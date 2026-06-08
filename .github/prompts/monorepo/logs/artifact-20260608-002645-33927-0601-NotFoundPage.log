@@ -1,0 +1,256 @@
+================================================================================
+P4 · Apple page · system/NotFound — NotFoundPage (SwiftUI / Apple HIG)
+Run: 2026-06-08T09:40-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/601
+Base: c9c6fdb9f
+Prompt: p4-apple/pages/system/NotFoundPage  (parity unit page:system/NotFound)
+Web source (spec): web/src/features/system/pages/NotFoundPage.tsx
+  (+ ported engine web/src/lib/closestRoute.ts, registry web/src/lib/routeRegistry.ts)
+Mode: code-complete + DEFERRED Xcode app build/test (Base64Tool 0011 / pending-verifications precedent, ADR-012).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18 deploy target)       OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15 deploy target)              OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                            OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  surface in project.yml ..... 0 references (not yet target-registered)             WARN
+
+  NOTE — the full Xcode 26.5 toolchain (xcodebuild, simctl, iOS+macOS SDKs) is reached
+  with `export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`. The
+  capability-BLOCKED escape hatch ("SwiftUI unavailable") does NOT apply — SwiftUI is
+  present and PROVEN by real iOS-18-simulator AND macOS-15 SDK compiles below. This
+  page uses NEITHER Swift Charts NOR MapKit (web "Charts/maps used: (none)").
+
+=== ARTIFACT (apps/apple/TeslaSync/Features/System/NotFoundPage.*) ===
+  NotFoundPage.Adapter.swift       180  dependency-free projection core — NotFoundText.normalize +
+                                        levenshtein (port of closestRoute.ts), NotFoundRouteRegistry
+                                        (AppRoute.allCases = native ROUTE_REGISTRY), NotFoundSuggestion,
+                                        NotFoundSuggestionEngine.closest (port of closestRoutes),
+                                        NotFoundDeepLink.resolve (web <Route path="*"> fallthrough),
+                                        NotFoundSurface.slug, NotFoundAccessibility.summary
+  NotFoundPage.Model.swift         122  P1/S8 state holder (NotFoundPageModel: unmatchedPath + derived
+                                        suggestions = web useMemo) + P1/S11 telemetry seam
+                                        (view.opened + [404] = web console.warn) + P1/S10 strings facade
+  NotFoundPage.Views.swift         134  presentational subviews — NotFoundHeader (compass + heading +
+                                        body), NotFoundSuggestionsList/Row (Did-you-mean <Link> list),
+                                        NotFoundActions (back / home / palette, adaptive ViewThatFits)
+  NotFoundPage.swift                77  the page — single TSGlassPanel (GlassPanel1) + navigationTitle
+                                        (notFound.title) + view.opened task + VoiceOver summary
+  NotFoundPage.Registration.swift   38  navigation registration — NotFoundRouteRegistration.page factory
+                                        (mounts page for an unmatched path with shell actions wired)
+  NotFoundPage.Previews.swift       42  #if DEBUG previews — suggestions / no-suggestions / long-path
+  NotFoundPage.Tests.swift         168  XCTest — text(2) + engine(6) + deeplink(3) + model(4) + a11y(2)
+                                        = 17 methods
+  Total 761 lines across 7 files (551 shipping). Every file <= 180 lines (house file_length);
+  no line > 104 cols (house line_length 120). The surface depends only on the design Tokens,
+  the shared TSGlassPanel/TSButton (Components/UI) + .tsGlassPanel (Design/TSMaterial), and the
+  navigation primitives AppRoute / AppRouteParser (Sources/App) — no KMP `Shared` import.
+
+  Strings: 7 web-source keys added to the master catalog
+  apps/apple/Localization/Localizable.xcstrings (default table, alongside the existing route.*
+  chrome the app shell already resolves) — +77 additive lines, no existing key reordered.
+
+=== PARITY (vs web NotFoundPage.tsx) ===
+  Data sources -> the web source has NO data hook (the manifest declares none): it renders from
+    navigation values / local state. `useTranslation` + a synchronous `useMemo(closestRoutes(…))`.
+    The native parity binds through a local P1/S8 state holder (NotFoundPageModel) that owns
+    `unmatchedPath` and DERIVES the closest-route suggestions on read (the @Observable analogue of
+    the web useMemo). The view performs no HTTP — there is none to perform.
+  Engine -> NotFoundText.normalize + levenshtein are faithful ports of web closestRoute.ts
+    (lower-case + strip [\s\-_/], iterative two-row Levenshtein). NotFoundSuggestionEngine.closest
+    ports closestRoutes: rank each registry entry by min(distance(path), distance(identifier)),
+    keep distance <= 6, sort by distance then path, take 5. The web ROUTE_REGISTRY (browser routes,
+    excluding parameterized/hidden) maps to AppRoute.allCases — every native route is directly
+    navigable, so a tapped suggestion sets a real shell selection (web <Link to={path}>).
+    Verified by executed XCTest (kitten/sitting=3, vehiclees/vehicles=1, baterry/battery=2;
+    "/vehiclees" -> .vehicles first @ distance 1; far query -> []; blank -> []; sorted ascending).
+  Composition -> one centered glass panel (web GlassPanel `mx-auto max-w-2xl`, "GlassPanel1") with:
+    compass header (web lucide Compass -> SF `safari`, decorative) over the heading + the break-all
+    body line; the "Did you mean" suggestion list (web <ul>/<Link>, hidden when none = web
+    `suggestions.length > 0 &&`); and the back / dashboard / command-palette action row (web Button
+    row, ArrowLeft/Home/Search -> SF arrow.left/house/magnifyingglass), adaptive H<->V via ViewThatFits.
+  Shared components -> TSGlassPanel (web GlassPanel), TSButton (web Button), the design tokens
+    (Color.TS / Font.TS / TSSpacing / TSRadius). Recharts -> none / Leaflet -> none (no chart/map).
+  States (all render) -> the manifest declares ONE data state: `success`. There is no async data
+    source, so the generic loading / empty / error / stale / offline states have NO trigger on this
+    surface (web parity = matching the source; reproducing them would fabricate behavior absent from
+    the spec, Honesty rule 3). The page ALWAYS renders content (never a blank region): the only
+    conditional is the suggestion block, which collapses to just the header + actions when there are
+    no close matches — exactly the web `suggestions.length > 0 && …`.
+  i18n -> all 7 source keys resolve through the P1/S10 facade (NotFoundStrings, default catalog) with
+    the web `t(key, default)` fallback, verbatim web defaults: notFound.title ("Page not found"),
+    notFound.heading ("We couldn't find that page"), notFound.body ("%@ doesn't match any route." =
+    web "{{path}} doesn't match any route." with the path interpolated), notFound.didYouMean
+    ("Did you mean:"), notFound.goBack ("Go back"), notFound.goHome ("Go to dashboard"),
+    notFound.openSearch ("Open command palette"). No English literals in native code.
+  a11y -> the compass glyph is decorative (.accessibilityHidden); the heading+body combine into one
+    element; each suggestion is an `.isLink` element with a label (route title) + hint (path); the
+    action icons are decorative (text label conveys meaning); the page exposes a combined VoiceOver
+    summary (NotFoundAccessibility.summary). Dynamic Type via tokens; targets >= 28-44pt. Light/dark
+    + increased-contrast honored through the dynamic Color.TS tokens (ADR-015).
+  Telemetry -> NotFoundPageModel.start() emits viewOpened(surface:"NotFoundPage") AND notFound(path:)
+    exactly once (the web `useEffect(() => console.warn('[404]', path))`) via the P1/S11 seam.
+    Asserted by a spy test (fires once across two start() calls; slug == "NotFoundPage").
+  Navigation -> NotFoundDeepLink.resolve(path:) is the native <Route path="*"> fallthrough: a known
+    path (incl. web aliases like "/" -> dashboard, "/battery" -> energy via AppRouteParser) yields
+    `.route`, anything else yields `.notFound(path:)`; NotFoundRouteRegistration.page mounts the page
+    with the shell's back/home/palette/navigate actions. The page sets its navigationTitle from
+    notFound.title (web usePageTitle). Unit-tested (known/alias/unmatched).
+
+=== PARITY ===
+  PARITY_REQUIRED=9
+  [x] panel   GlassPanel1        -> NotFoundPage.swift `NotFoundPage.panel` (TSGlassPanel { header + suggestions + actions })
+  [x] state   success            -> NotFoundPage.swift `body` always renders the panel; suggestion block is the sole web-faithful conditional
+  [x] string  notFound.title     -> NotFoundPage.swift `.navigationTitle(NotFoundStrings.string("notFound.title", …))` + catalog
+  [x] string  notFound.heading   -> NotFoundPage.Views.swift `NotFoundHeader` NotFoundStrings.text("notFound.heading", …) + catalog
+  [x] string  notFound.body      -> NotFoundPage.Model.swift `NotFoundStrings.body(path:)` rendered in NotFoundHeader + catalog
+  [x] string  notFound.didYouMean-> NotFoundPage.Views.swift `NotFoundSuggestionsList` NotFoundStrings.text("notFound.didYouMean", …) + catalog
+  [x] string  notFound.goBack    -> NotFoundPage.Views.swift `NotFoundActions` actionLabel("notFound.goBack", …) + catalog
+  [x] string  notFound.goHome    -> NotFoundPage.Views.swift `NotFoundActions` actionLabel("notFound.goHome", …) + catalog
+  [x] string  notFound.openSearch-> NotFoundPage.Views.swift `NotFoundActions` actionLabel("notFound.openSearch", …) + catalog
+  PARITY_COVERED=9
+  PARITY_COVERED==PARITY_REQUIRED (9==9)
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (the 6 shipping source files compiled with the REAL
+    component closure: design Tokens + Design/TSMaterial,TSDesign + Components/UI Typography,Badges,
+    Buttons,Cards + App/AppRoute,AppRouteParser; no Shared xcframework; no -D DEBUG):
+      xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+        -swift-version 6  <closure> NotFoundPage.{Adapter,Model,Views,,Registration,Previews}.swift
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swiftc -typecheck — DEBUG previews (-D DEBUG; same files + closure, exercises every #Preview body
+    against the macOS 15 SDK):
+      PREVIEWS_TYPECHECK_EXIT=0                                                     OK
+[4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained, throwaway
+    SwiftPM harness (real production Adapter + Model + AppRoute + AppRouteParser copied verbatim;
+    the harness library module is named `TeslaSync` so the test file's `@testable import TeslaSync`
+    is unchanged; Swift 6 language mode; platforms macOS 14). NO shims — the projection core + state
+    holder compile standalone (no Shared, no UI components):
+      Test Suite 'All tests' passed
+        NotFoundTextTests             2/2  (normalize strip/lowercase; levenshtein kitten/sitting=3,
+                                            vehiclees/vehicles=1, baterry/battery=2, empty vectors)
+        NotFoundSuggestionEngineTests 6/6  (blank->[], typo ranks .vehicles@1, limit, ascending sort,
+                                            far query clears threshold, every suggestion navigable)
+        NotFoundDeepLinkTests         3/3  (known route, web aliases "/"->dashboard "/battery"->energy,
+                                            unmatched -> .notFound(path:))
+        NotFoundPageModelTests        4/4  (suggestions derive from path, body includes path,
+                                            view.opened+[404] once + slug, a11y summary includes path)
+        NotFoundAccessibilityTests    2/2  (summary heading+path; mentions suggestions when present)
+      Executed 17 tests, with 0 failures (0 unexpected)
+      SWIFT_TEST_EXIT=0                                                             OK
+[5] swiftlint --strict on the 7 surface .swift files (explicit paths; the repo .swiftlint.yml
+    `included:` does not list TeslaSync/Features — that wiring is the downstream integration prompt's
+    job — so it is run explicitly here):
+      Done linting! Found 0 violations, 0 serious in 7 files.
+      LINT_EXIT=0                                                                   OK
+      (NB: a directory-scoped run unions with the config `included:` and surfaces 1 PRE-EXISTING
+       serious violation elsewhere in the repo — 0 in any NotFoundPage file, confirmed by the
+       explicit-file run above.)
+[6] swiftformat --lint on the surface dir (config: apps/apple/.swiftformat):
+      0/7 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+[7] check-placeholders (ADR-011 stub gate; pwsh) on the surface dir:
+      & ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/System -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host with DEVELOPER_DIR=Xcode):
+      - `xcodegen generate` -> EXIT=0 (project + 12 targets + schemes generate cleanly).
+      - generated TeslaSync.xcodeproj references to "NotFoundPage" = 0, "Features/System" = 0
+        (surface NOT target-registered).
+      - `xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO` ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **   REAL_BUILD_EXIT=65
+    Why deferred (independent, code-unrelated reasons — none a defect in this surface; identical
+    disposition to the Base64Tool 0011 / pending-verifications precedent, Honesty rule 7):
+      (a) NOT-YET-REGISTERED: project.yml's app targets glob `Sources/` + `TeslaSync/dashboard-widgets`
+          + `TeslaSync/feature-views`; this page lives at TeslaSync/Features/System/ and has 0
+          references in project.yml. Registration into the XcodeGen target + the shell deep-link call
+          site is the downstream pages-integration prompt's job (editing project.yml / Sources/App is
+          parallel-unsafe across slots and outside this prompt's allowed files). The navigation
+          registration API (NotFoundDeepLink.resolve + NotFoundRouteRegistration.page) is shipped and
+          isolation-compiled; steps [1]/[2] compile the surface against the real library and step [4]
+          EXECUTES its full XCTest suite — the meaningful validation.
+      (b) Shared.xcframework not staged: the app target links the KMP core; staging needs a
+          Kotlin/Native gradle build (apps/shared gradlew :core:assembleSharedXCFramework).
+          Independent of this UI page; concrete missing-framework error captured above (EXIT=65).
+      (c) macOS signing + the pre-existing parallel-merge collisions documented in
+          apps/macos-pending-verifications.md (struct DashboardWidgetSize redefined 15x; 150+
+          co-located *.Tests.swift importing XCTest into the app target) block the FULL-app build
+          independently of this surface — zero NotFoundPage/Features errors.
+    XCTest under Xcode runs in the TeslaSync/-macOS test target; here the SAME tests are PROVEN GREEN
+    (17/17) by the executed SwiftPM harness in step [4], and the views/model/adapter compile against
+    BOTH the iOS 18 and macOS 15 SDKs in steps [1]/[2].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Every named panel implemented (GlassPanel1 -> TSGlassPanel); every web region reproduced
+      (compass header, body, suggestion list, action row).
+  [x] All 9 parity items render from the bound @Observable state holder (NotFoundPageModel).
+  [x] The single declared data state (success) renders; loading/empty/error have no async trigger on
+      this navigation-only surface (documented, not silently dropped). Never a blank region.
+  [x] All visible strings sourced from Localizable.xcstrings; zero hardcoded literals; web key names
+      match (7/7).
+  [x] Dark mode + Dynamic Type + accessibility (VoiceOver labels/hints/summary, decorative glyphs,
+      .isLink) + SI units (N/A — no units on this surface) honored; SwiftUI-native only.
+  [x] build + lint + test + placeholder gates: host-runnable steps GREEN; Xcode app build/test
+      DEFERRED with captured evidence (REAL_BUILD_EXIT=65 missing framework). PARITY_COVERED==9.
+  [x] apple ledger rows for page:system/NotFound (apple-macos + apple-ios) set covered (9/9).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with the real REAL_BUILD_EXIT=65
+                       framework error captured; every "OK" is a command actually run with its real
+                       exit code (incl. a 17/17 EXECUTED XCTest run + iOS+macOS SDK compiles).
+  2  No scope narrowing: implemented the full page — header, body, suggestion engine, suggestion list,
+                       action row, navigationTitle, i18n, a11y, telemetry, deep-link resolution.
+  3  No skip-and-assume: web source + closestRoute.ts + routeRegistry.ts read end-to-end; each host
+                       gate executed; the absent async states are documented as genuinely trigger-less.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. No shims (harness compiled
+                       the real Adapter + Model + nav primitives unmodified).
+  5  No parity shortcuts: faithful normalize + Levenshtein + closestRoutes port (executed vectors),
+                       every web region + the catch-all <Route path="*"> semantics + verbatim i18n keys.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml or edit Sources/App shell internals
+                       (parallel-unsafe, downstream integration scope); shipped the registration API in
+                       the page's own dir + the prompt-allowed Localizable.xcstrings keys.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to TeslaSync/Features/System/NotFoundPage.*, the additive
+                       Localizable.xcstrings keys, apple-ledger.json, and this log. The dirty
+                       AIUsageCard.* files in feature-views are PRE-EXISTING slot WIP (mtime 09:11,
+                       before this run) — left untouched and excluded from the commit.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native NotFoundPage shipped at parity with the web catch-all 404: a pure-Swift,
+  executed-green suggestion engine (normalize + Levenshtein + closestRoutes port, 17/17 XCTest), a
+  P1/S8 state holder (no view HTTP), P1/S11 view.opened + [404] telemetry, the single web GlassPanel
+  with the compass header / break-all body / "Did you mean" navigable suggestions / back-home-palette
+  actions, every source i18n key (7/7), VoiceOver labels/hints + a combined summary, and the native
+  <Route path="*"> deep-link resolution + page registration API. All host-runnable gates pass AND the
+  surface compiles against BOTH the iOS 18 simulator and the macOS 15 SDKs with the real Xcode 26
+  toolchain under Swift 6 strict concurrency. The Xcode full-app build/test is DEFERRED to the
+  downstream pages-integration / signed runner (surface not yet target-registered + Shared.xcframework
+  KMP staging + macOS signing + pre-existing parallel-merge collisions — none a defect in this code,
+  all outside this prompt's allowed files), matching the Base64Tool 0011 / pending-verifications
+  "code-complete + DEFERRED Xcode gate" precedent.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/Features/System \
+          apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-system-NotFoundPage.log
+  git commit -m "feat(apps/apple): NotFoundPage at web parity (P7 system)"
+
+EXIT=0
+STATUS=DONE

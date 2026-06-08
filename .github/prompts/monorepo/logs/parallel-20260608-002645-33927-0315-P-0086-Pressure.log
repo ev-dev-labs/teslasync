@@ -1,0 +1,107 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Good — macOS with Swift 6.3.2, swiftlint, swiftformat available. `xcodebuild -version` failed though. Let me read the web source and explore the existing Apple app structure.
+
+Now I have a clear picture. Key finding: `xcodebuild` requires **full Xcode**, but only **Command Line Tools** are installed (`/Library/Developer/CommandLineTools`). Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me explore the existing Apple app conventions before deciding on approach.
+
+`shared-surfaces` doesn't exist yet — I'll create it. Let me study the sibling `feature-views` implementations (AiUsageCard, LiveControls) that were just committed, plus a format-related one if any.
+
+The convention is clear: each surface is a multi-file Swift bundle (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.States.swift`, `.Previews.swift`, `.Tests.swift`, `.AdapterTests.swift`, `.strings`). Let me read the web conversion/format dependencies and find the native units facility.
+
+There's a native units facility in `apps/apple/Sources/`. Let me read the key native facade files and the exact web conversion math.
+
+Excellent — there's already a native `TSPressure` view, `Units` facade, and `UnitPreferences` (with `.metric` default) in `Sources/`. These are outside my allowed path but I can import them. Now let me study sibling surface conventions (imports, i18n facade, diagnostics `view.opened`, state-holder binding) by reading a simpler sibling in full.
+
+Now let me understand the module/target layout (can `shared-surfaces` see the `Sources/` facade?) and the exact seam conventions. Reading project config and a representative complete sibling.
+
+All app sources compile into one `TeslaSync` module — so `Units`, `UnitPreferences`, `tsUnits`, and `TSPressure` are directly visible to my `shared-surfaces/Pressure.*` files without imports. Now let me read the exact seam shapes (diagnostics/i18n/state), the `.metric` default, design tokens, and a complete sibling set to copy conventions precisely.
+
+The FSMStateDiagram set is the ideal template. Let me read the web test expectations, the design tokens, and the FSMStateDiagram view/states/previews/tests to mirror conventions exactly.
+
+I have the web test expectations confirmed. Now let me read the remaining template files (States/Views/Previews/Tests/strings), the design tokens, lint config, and the placeholder checker referenced by the gate.
+
+`States` logic lives in `.Views`/`.Projection` for FSM. Let me read the placeholder patterns (forbidden words), design tokens, and the remaining FSM template files to finalize my conventions.
+
+Now I have the forbidden words (avoid: TODO, FIXME, XXX, "Coming soon", "Placeholder", "Lorem ipsum", "not implemented", `fatalError`). Let me confirm the `UnitPreferences.metric/.imperial` definitions, preview injection style, and the telemetry-spy test pattern.
+
+Let me read the `.metric/.imperial` presets and confirm accessibility/tooltip conventions, then I'll have everything to build.
+
+I have all conventions. Let me verify tooling (`pwsh` for the placeholder gate, swiftlint version) and confirm `Font.TS` members before writing.
+
+`pwsh` is available (placeholder gate runnable), swiftlint 0.63.3, swiftformat 0.61.1, and `Font.TS` confirmed. 
+
+Key finding: **full Xcode is not installed** (only Command Line Tools), so the gate's `xcodebuild build test` for iOS/macOS **cannot run** on this runner — a platform-capability limit. But I can run swiftlint, swiftformat, the placeholder gate, and a standalone `swift` compile of the pure logic. I'll ship complete, production-quality code + tests and run every available check.
+
+Let me set up tracking and create the directory.
+
+Now let me write the plan and create all source files.
+
+Now creating the source files, starting with the Model (types + seams).
+
+Now the test files. First the pure adapter tests (mirroring the web `Format.test.tsx` Pressure vectors plus edges).
+
+Now the model/telemetry/i18n/accessibility tests.
+
+All 9 files created. Let me update tracking and run a standalone `swift` verification of the pure logic against the web test vectors (real evidence, since full Xcode is unavailable).
+
+All 15 vectors pass under Swift 6.3.2 — including the `de-DE` grouping `1.234,50 kPa`. Real evidence the parity logic is correct. Now let me run swiftformat and swiftlint on the new files.
+
+swiftformat passes (0/8 need formatting). Now swiftlint `--strict` on the new files.
+
+swiftlint linted the whole project (config `included` took over) and found 1 serious violation. Let me isolate which file and line.
+
+The only violation is in a **pre-existing** file (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141`) — not mine, and outside my allowed scope. Let me confirm my files are clean by linting only them with a temp config mirroring the repo rules.
+
+Confirmed: the `AIUsageCard.*` / web `.tsx` modifications and the `LifetimeStatsWidget` lint violation are all **pre-existing** working-tree state, not mine. My only changes are the new `shared-surfaces/` files. Let me prove my files are individually lint-clean with a temp config mirroring the repo rules.
+
+My 8 Swift files: **0 violations, 0 serious** under swiftlint `--strict` with the repo rule set. Now the placeholder gate (the actual PowerShell script from the gate).
+
+Placeholder gate: **PLACEHOLDER_COUNT=0, EXIT=0**. Let me double-check no forbidden words (incl. stub/mock/lorem) slipped in, and capture the xcodebuild platform-capability evidence for the log.
+
+No forbidden words; xcodebuild confirmed unavailable (Command Line Tools only). Let me check the repo-wide swiftformat exit (gate scope) for honest logging, then assemble the gate log.
+
+Confirmed: both pre-existing baseline issues (`ActionBuilder.Previews.swift` format, `LifetimeStatsWidget.Adapter.swift` lint) are out-of-scope and not mine. My surface is fully clean. Now I'll author the honest gate log with authentic command output.
+
+The log is complete and honest. Now, to strengthen evidence beyond the pure-logic check, let me attempt to **actually compile the full SwiftUI surface and run the XCTest suite** via a throwaway SwiftPM harness with faithful shims for the in-module dependencies. First, let me enumerate exactly which external symbols my files use.
+
+I have the exact symbol list. Let me build a SwiftPM harness with faithful shims to compile the full SwiftUI surface and **run the XCTest suite** on macOS.
+
+Now build and run the full XCTest suite via the harness.
+
+Only the `#Preview` macro fails — its `PreviewsMacros` plugin ships with full Xcode (not Command Line Tools). That's a harness limitation, not a code defect (siblings use `#Preview` identically). Let me exclude the preview file from the harness and run the **actual test suite**.
+
+`XCTest` itself isn't available without Xcode (same root block). But there's also an `emit-module` error in my library — let me see the full error to rule out a real code defect.
+
+The full SwiftUI surface **compiles cleanly** (`swift build --target PressureSurface` = exit 0). The `emit-module` error was just a cascade from the missing XCTest framework (Xcode-only). To actually *execute* the real surface code (not a copy), let me add an executable that imports the compiled library and runs the assertions.
+
+Harness hit Swift 6's global-mutable-state rule (my `var failures` global) — a harness issue, not a surface issue (the library compiled fine). Let me move state into the struct.
+
+**All 20 assertions pass running the REAL compiled surface library** (`ALL_PASS`, exit 0) — the full SwiftUI surface compiles under Swift 6 strict concurrency, and the actual `PressureAdapter`/`PressureModel`/telemetry/i18n/a11y code executes correctly. This is equivalent to the XCTest suite running, minus the Xcode-only XCTest harness. Let me regenerate the log with this stronger evidence.
+
+Let me verify the final log content (steps 3–7 with authentic output).
+
+The log is comprehensive and authentic (all 8 result lines green except the two environmentally-blocked xcodebuild steps). Let me clean up temp artifacts and commit per the prompt's Commit section.
+
+Exactly my 9 surface files + the log are staged (pre-existing modifications excluded). Committing per the prompt.
+
+Committed cleanly as `b4745af52` (10 files, 1136 insertions). Let me do a final sanity check on the working tree and todos.
+
+All work is complete and verified to the maximum extent the runner allows. The working tree shows only **pre-existing, non-mine** modifications (untouched); my commit `b4745af52` contains exactly the 9 `Pressure.*` files + the gate log. All 9 todos are done.
+
+## Summary
+
+I shipped a production-polished, Apple-idiomatic SwiftUI **`Pressure`** shared surface at parity with the web source `components/data-display/format/Pressure.tsx`, in `apps/apple/TeslaSync/shared-surfaces/` (9 files, 1136 LOC), and committed it with the gate log.
+
+**Parity & architecture**
+- Faithful port of the web logic: `bar`/`psi`/`precision` props → SI kPa (`×100`, `×6.894757`) → `convertPressureFromSI` → locale-aware `fmtNumber` → `{value} {unit}`, with the raw source-unit hover `title` and the em-dash empty branch.
+- Binds the unit preference through the shared **P1/S8** `@Environment(\.tsUnits)` holder (no HTTP in the view); **P1/S9** `Color.TS`/`Font.TS`/`TSSpacing` tokens; **P1/S10** `PressureStrings` i18n facade; **P1/S11** `view.opened` telemetry (slug `Pressure`).
+- Both genuine states render (value + VoiceOver-labelled empty); `.help` tooltip, `monospacedDigit`, Dynamic-Type/dark previews; adapter + model/telemetry/i18n/a11y tests.
+
+**Verification (every runnable gate step green)**
+- swiftlint `--strict`: **0 violations** (8 files) · swiftformat `--lint`: **0/8** · placeholder gate: **PLACEHOLDER_COUNT=0**
+- Full SwiftUI surface **compiles** under Swift 6 strict concurrency (SwiftPM) · real surface code **executes 20/20** · pure parity logic **15/15** vs the web Vitest vectors.
+
+**Status: BLOCKED (environmental, with API evidence)** — the gate's `xcodebuild` iOS/macOS build+test (plus the `#Preview` macro plugin and `XCTest.framework`) require **full Xcode**; this runner has Command Line Tools only (`xcode-select -p = /Library/Developer/CommandLineTools`). I compensated with SwiftPM compilation + real-code execution and documented everything honestly. The log ends with `EXIT=1` / `STATUS=BLOCKED`, exactly as the prompt's capability clause permits.
+
+(Note: the repo already had two pre-existing, out-of-scope baseline issues — `LifetimeStatsWidget.Adapter.swift` lint and `ActionBuilder.Previews.swift` format — not touched, since they're outside this prompt's allowed files.)
+

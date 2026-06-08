@@ -1,0 +1,54 @@
+I'll start by exploring the environment and understanding the task scope.
+
+Key finding: full Xcode is **not** installed (only Command Line Tools), so `xcodebuild`/`simctl` won't run. But `swift`, `swiftlint`, `swiftformat` are available. Let me examine the established predecessor pattern (AIUsageCard) and the apps/apple structure.
+
+There's an established pattern with ~1438 files. Let me check if BatteryRangeCharts already exists and study the AIUsageCard predecessor closely.
+
+Now let me study the most analogous predecessor — `BatteryLevelChart` (a battery chart with the clean 7-file structure) — and the relevant instructions.
+
+Excellent, very thorough pattern. Let me read the remaining BatteryLevelChart files (Views, Previews, Tests, strings) and the shared token/component infrastructure.
+
+Let me read the Tests, strings, and locate the shared design-token/component infrastructure.
+
+Let me locate the shared design tokens (Color.TS, Font.TS, TSSpacing, TSMotion) and component infrastructure in the Sources tree.
+
+Let me read the core design tokens and explore the shared component categories (Charts, DataDisplay, Feedback, Motion) to find native counterparts.
+
+Let me find the generated design tokens (Color.TS, TSSpacing, Font.TS, TSMotion) and read the key shared chart/format components.
+
+The tokens live in `apps/design/generated/apple/Tokens.swift`. Let me read it along with the Motion, Charts (PieGauge/RadialGauge), Metrics (AnimatedNumber), and Feedback States components.
+
+Now let me read the shared components I'll map to (gauge, bar/area charts, metrics, unit formatters, empty state) plus the project.yml build config and the latest predecessor AiUsageCard.
+
+Let me find the `Units`/`UnitPreferences` helpers and read the bar/area chart, metrics, empty-state components plus the build config.
+
+Let me read the Units facade, chart components, metrics, and the latest predecessor (AiUsageCard) to confirm current conventions.
+
+Let me check for any full Xcode install, read the build config, and study the latest predecessor (AiUsageCard) plus the area-chart and metrics components.
+
+`/Applications/Xcode.app` exists — `xcode-select` is just pointed at CommandLineTools. Let me test whether the full Xcode toolchain actually works via `DEVELOPER_DIR`.
+
+Full Xcode 26.5 with iOS simulators is available (iPhone 16 is even booted) — so I can run the real gate and target `STATUS=DONE`. Let me read the remaining reference files (latest predecessor AiUsageCard, area charts, metrics) and check for an existing generated project.
+
+Let me see how existing surfaces bind `useUnits`/`UnitPreferences` and model vehicle drive/distance data, to mirror the established pattern.
+
+`DrivingTab` is the ideal reference (drives + distance + duration + units). Let me read its Adapter and Model.
+
+I have the architecture nailed. Let me read the `batteryColor`/`formatDate` web helpers, the `VehicleState`/`Drive` types, the Metrics component, and confirm the `.metric` default.
+
+Let me confirm the `.metric` default, typography components, and the web `VehicleState`/`Drive` types plus `formatDate`.
+
+I have all the data semantics. Let me confirm the web `CHART_COLORS` palette mapping and kick off project generation + a baseline build in the background.
+
+Palette indices match (Okabe-Ito CB-safe). Let me check `AnimatedNumber`'s default decimals for faithful formatting and start a baseline iOS build in the background to de-risk the gate.
+
+`AnimatedNumber` defaults to 0 decimals. Baseline iOS build is compiling in the background. Let me check the lint config and write the plan, then create the files.
+
+Confirmed converter parity (km/mi/ft). Let me set up the plan/todos and write the data layer (Adapter, Model, strings).
+
+Now let me create the data-layer files. First the pure Adapter:
+
+Now the Model (state holder + seams):
+
+Let me check the baseline build progress before continuing.
+

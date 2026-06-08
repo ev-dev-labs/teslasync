@@ -1,0 +1,195 @@
+=== P4 Shared surface 0088 Speed (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/Speed.*
+Web spec : web/src/components/data-display/format/Speed.tsx (THE specification)
+Runner   : Darwin arm64 (macOS 26 SDK), Apple Swift 6.3.2, CommandLineTools only
+Date     : 2026-06-08
+
+----------------------------------------------------------------------
+ARTIFACT — files shipped (allowed set: shared-surfaces/Speed.*, this log)
+----------------------------------------------------------------------
+  Speed.Adapter.swift    188  pure Foundation projection (web Speed.tsx function body)
+  Speed.Model.swift      101  P1/S10 i18n facade + P1/S11 telemetry seam + reporter
+  Speed.swift             94  SwiftUI view (binds P1/S8 \.tsUnits; no HTTP)
+  Speed.Previews.swift    60  #Preview per branch (value metric/imperial, km/h, empty)
+  Speed.Tests.swift      231  XCTest: projection + a11y + telemetry-once
+  Speed.strings           20  P1/S10 "Speed" table (VoiceOver unit names + empty)
+                         ----
+                          694 total
+
+----------------------------------------------------------------------
+WEB-SOURCE PARITY (every region + branch of Speed.tsx reproduced)
+----------------------------------------------------------------------
+  • Data source useUnits -> bound via the shared \.tsUnits environment
+    (UnitPreferences, P1/S8). The view performs no networking.
+  • Input props mph / kmh -> SpeedInput; mph wins over kmh (web if/else-if order).
+  • SI normalization: mph * 0.44704 ; kmh * 1000 / 3600  (web constants pinned).
+  • convertSpeedFromSI parity: km/h = mps*3600/1000 ; mph = mps*3600/1609.344.
+  • fmtNumber parity: locale-grouped decimal at `precision` digits;
+    precision falls back to the preference precision then the web default (2).
+  • Hover title parity (web title=): "<rawValue.toFixed(1)> <sourceUnit>"
+    -> SwiftUI .help(...) (pointer tooltip), one-decimal, dot-separated.
+  • Empty branch parity (web <span>—</span>): em dash for nil / NaN / +-inf input,
+    title nil. Never a blank surface.
+  • Native a11y add (VoiceOver): spoken unit name + "No speed" empty phrase,
+    resolved through the P1/S10 "Speed" table (no English literals in code).
+  States in the web source = { value, empty }. Both render. The source is a pure,
+  synchronous formatter (only data dep is useUnits); it has no fetch, so no
+  loading/error/stale/offline async branches exist to reproduce — confirmed by
+  reading Speed.tsx end-to-end. No invented states (covenant #9 No silent drift).
+
+======================================================================
+HOST-RUNNABLE GATES — executed on THIS runner, raw exits pasted
+======================================================================
+
+--- swiftformat --lint apps/apple/TeslaSync/shared-surfaces -------------
+  (lint mode - no files will be changed.)
+  0/5 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (config .swiftlint.yml; explicit Speed.* paths) ---
+  Linting Speed.Adapter.swift / Speed.Model.swift / Speed.swift /
+          Speed.Previews.swift / Speed.Tests.swift
+  Done linting! Found 0 violations, 0 serious in 5 files.
+LINT_EXIT=0
+  NOTE: .swiftlint.yml `included:` lists Sources, dashboard-widgets,
+  feature-views, Tests — NOT shared-surfaces. Linted via explicit paths so the
+  surface is proven clean today; the directory must be added to `included:` when
+  shared-surfaces is wired (see INTEGRATION below).
+
+--- apps/tools/check-placeholders.ps1 -Path .../shared-surfaces ---------
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- swiftc -parse (macOS SDK) Speed.swift Model Previews Adapter --------
+PARSE_EXIT=0
+
+--- swift build (isolated SwiftPM, Swift 6 language mode) — library -----
+  Build of target: 'SpeedSurface' complete!
+  (Adapter + Model + View + a UnitPreferences/\.tsUnits shim emit + compile
+  cleanly as a Swift 6 strict-concurrency module.)
+BUILD_LIB_EXIT=0
+
+--- swiftc -typecheck -swift-version 6 -strict-concurrency=complete -----
+  view+model+adapter                         : exit 0
+  + preview bodies (#Preview rewritten to     : exit 0
+    @MainActor funcs; macro plugin is Xcode-only)
+  Fixed 1 real finding pre-commit: preview helper needed @MainActor
+  (#ActorIsolatedCall) — matches the SpeedTrendChart.Previews precedent.
+TYPECHECK_EXIT=0
+
+--- swift run (isolated executable over the REAL compiled module) -------
+  17/17 assertions PASS — the surface logic executed, not just typechecked:
+    mph->metric 104.6 km/h | mph->imperial 65.0 mph | kmh->metric 120 km/h
+    mph-priority | precision(0/1/2/3) | en_US grouping 8,047 | empty em dash
+    nan->kmh fallthrough | unknown-unit raw-SI | a11y imperial/metric/empty
+    hover title present/nil | telemetry view.opened fires ONCE for slug "Speed"
+  HARNESS_FAILURES=0
+RUN_EXIT=0
+
+  These assertions are the exact expected values asserted by the committed
+  Speed.Tests.swift XCTest cases, executed here through the real module because
+  the XCTest *framework* is unavailable on this runner (see BLOCKED below).
+
+======================================================================
+BLOCKED — platform capability unavailable on this runner (API evidence)
+======================================================================
+The prompt Capability clause: "requires ... iOS 18 / iPadOS 18 / macOS 15 HIG.
+If unavailable on the runner -> STATUS=BLOCKED with API evidence." The full-app
+xcodebuild gate cannot execute here. Evidence:
+
+  $ xcode-select -p
+    /Library/Developer/CommandLineTools
+  $ xcodebuild -version
+    xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+    directory '/Library/Developer/CommandLineTools' is a command line tools instance
+  $ xcrun simctl list devices
+    xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+  $ ls apps/apple/Frameworks/Shared.xcframework
+    No such file or directory   (needs KMP/Gradle assembleSharedXCFramework)
+
+  -> xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,
+       name=iPhone 16' build test        IOS_EXIT=BLOCKED (no Xcode / no simulator)
+  -> xcodebuild -scheme TeslaSync-macOS build test
+                                          MAC_EXIT=BLOCKED (no Xcode / no signing /
+                                                            no Shared.xcframework)
+  -> swift test (XCTest)                  BLOCKED: "no such module 'XCTest'"
+                                          (XCTest ships with Xcode, not CLT)
+  -> #Preview macro expansion             BLOCKED: "plugin for module
+                                          'PreviewsMacros' not found" (Xcode-only).
+                                          #Preview usage is identical to the
+                                          proven sibling SpeedTrendChart.Previews.
+
+This is the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition
+(apps/macos-pending-verifications.md): the surface is verified green on every
+host-runnable gate; the full-app iOS-Simulator + macOS xcodebuild build/test is
+deferred to p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest
+runner. Re-run there:
+  cd apps/apple && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+
+======================================================================
+INTEGRATION FOLLOW-UPS (outside this prompt's allowed file set)
+======================================================================
+  1. apps/apple/project.yml — add `- path: TeslaSync/shared-surfaces` to the
+     TeslaSync and TeslaSync-macOS targets' sources so the surface compiles into
+     the app (today the targets list dashboard-widgets + feature-views only).
+  2. apps/apple/.swiftlint.yml — add `TeslaSync/shared-surfaces` to `included:`.
+  3. Speed.strings — fold into Localization/Localizable.xcstrings at integration.
+  4. apps/macos-pending-verifications.md — add the deferred-xcodebuild row.
+  Both files are intentionally NOT edited here: the allowed set is Speed.* + this
+  log, and editing shared project files would collide with the other parallel
+  surface prompts (the documented parallel-merge hazard).
+
+======================================================================
+HONESTY COVENANT
+======================================================================
+  1  No red-as-green     : xcodebuild/XCTest/#Preview are reported BLOCKED with raw
+                           tool errors — never recoloured as passing.
+  2  No scope narrowing  : every Speed.tsx region + both branches (value, em-dash
+                           empty) + title + precision + unit-pref switch reproduced.
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; raw exits
+                           pasted; the blocked gates are proven blocked, not assumed.
+  4  No stubs as final   : complete production view + adapter + 14-case XCTest, all
+                           runtime-verified through the real module; placeholder=0.
+  5  No parity shortcut  : SI math, fmtNumber grouping/precision, hover title, empty
+                           token, a11y, telemetry all mapped to platform idioms +
+                           verified numerically against the web constants.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 (\.tsUnits state holder), P1/S10 (i18n facade),
+                           P1/S11 (view.opened telemetry) all consumed.
+  8  No commit on red     : the committed artifact is GREEN on every host-runnable
+                           gate AND on a real isolated Swift-6 module build + a
+                           17/17 runtime harness; the only non-green steps are
+                           BLOCKED by absent Xcode toolchain, not by this code.
+  9  No silent drift      : changes confined to shared-surfaces/Speed.* + this log;
+                           no invented async states; no edits to shared project files.
+  10 EXIT/STATUS below.
+
+======================================================================
+DISPOSITION
+======================================================================
+Production-polished, Apple-idiomatic `Speed` shared surface shipped at parity with
+the web source and verified to the maximum extent this runner allows: the module
+builds and all 17 logic assertions (mirroring the committed XCTest suite, incl. the
+P1/S11 view.opened-once telemetry) pass at runtime under Swift 6 strict concurrency,
+with swiftlint/swiftformat/placeholder/parse all green. The prescribed full-app
+iOS-Simulator + macOS `xcodebuild build test` gate CANNOT run here — full Xcode,
+the iOS-18 simulator, the XCTest framework, the #Preview macro plugin, and the
+KMP `Shared.xcframework` are all absent on a CommandLineTools-only host. Per the
+prompt's Capability clause this is reported as BLOCKED with API evidence, and per
+apps/macos-pending-verifications.md the Xcode gate is deferred to the signed
+macos-latest acceptance runner.
+
+IOS_EXIT=BLOCKED
+MAC_EXIT=BLOCKED
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+BUILD_LIB_EXIT=0
+TYPECHECK_EXIT=0
+RUN_EXIT=0
+
+EXIT=1
+STATUS=BLOCKED

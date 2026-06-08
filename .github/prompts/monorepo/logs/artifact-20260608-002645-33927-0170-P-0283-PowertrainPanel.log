@@ -1,0 +1,121 @@
+=== P4 Feature view 0283 PowertrainPanel (Apple) ===
+Runner: macOS (Darwin, arm64). Toolchain probe:
+  - Xcode 26.5 (Build 17F42) at /Applications/Xcode.app  (active dir was CLT; used DEVELOPER_DIR override)
+  - iOS Simulator: iPhone 16 present (booted); iOS 26.5 runtime (>= deployment target 18.0)
+  - swiftlint 0.63.3, swiftformat 0.61.1, xcodegen 2.45.4, pwsh present
+  - KMP/Kotlin Native toolchain present (konan kotlin-native-prebuilt 2.4.0); Gradle caches present
+Platform capability: SwiftUI + Swift Charts + MapKit available (iOS 18 / macOS 15 SDKs present).
+=> Platform IS capable; surface authored + verified. See STATUS note at end for the gate block.
+
+--- Surface deliverable (apps/apple/TeslaSync/feature-views/PowertrainPanel.*) ---
+Web source of truth: features/vehicles/components/telemetry-panels/PowertrainPanel.tsx
+Files shipped (9):
+  PowertrainPanel.Model.swift        (P1/S8 state-holder + P1/S11 telemetry seam + P1/S10 i18n facade)
+  PowertrainPanel.Adapter.swift      (temp conversion + fmtNumber/fmtInt + formatTemperature, web-parity)
+  PowertrainPanel.Projection.swift   (shift/power/rpm/torque/temp/regen projection + projector + a11y)
+  PowertrainPanel.swift              (surface: TSGlassPanel + header + state switch)
+  PowertrainPanel.Views.swift        (shift row, power bar, MetricCard grid, temp rows, regen, chip, skeleton)
+  PowertrainPanel.Previews.swift     (content / Fahrenheit / regen+hot / parked / empty / loading / error / stale / offline)
+  PowertrainPanel.Tests.swift        (model phases/refresh/telemetry, a11y, per-state ImageRenderer smoke)
+  PowertrainPanel.AdapterTests.swift (formatting + projector web-parity)
+  PowertrainPanel.strings            (P1/S10 catalog, table "PowertrainPanel")
+States rendered: loading skeleton / empty / error+retry / content / stale chip+auto-refresh / offline cached banner.
+Telemetry: view.opened emitted with surface slug "PowertrainPanel" (P1/S11).
+i18n: 12 web keys + 8 native-chrome keys, all via the P1/S10 facade; no English literals in code.
+
+================================================================================
+GATE STEP 1 — xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+================================================================================
+Result: 163 compile errors, ALL pre-existing and OUT OF SCOPE. IOS_EXIT=65
+Breakdown of unique root causes (note: "found this candidate" lists are all in dashboard-widgets):
+  133x  error: 'DashboardWidgetSize' is ambiguous for type lookup in this context
+   22x  error: 'SpeedUnit' is ambiguous for type lookup in this context
+        (remaining are cascade errors from the two ambiguities above)
+Root cause: duplicate public type declarations across the app module, e.g.
+  apps/apple/Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift:13   struct DashboardWidgetSize
+  apps/apple/Sources/DashboardWidgets/DrivetrainHealthWidgetModel.swift:10  struct DashboardWidgetSize
+  apps/apple/TeslaSync/dashboard-widgets/DigitalTwinWidget.Model.swift:222  struct DashboardWidgetSize
+  ... (DashboardWidgetSize redeclared in 15+ dashboard-widget files; SpeedUnit in 3)
+PowertrainPanel / feature-views errors in this build:  0   (grep -cE "feature-views/.*: error:" => 0)
+These files are committed (tracked) repo state; my change only ADDS untracked PowertrainPanel.* files.
+They are out of scope per this prompt ("Out of Scope: Other surfaces in the same feature") and outside
+my allowed-files set (apps/apple/TeslaSync/feature-views/PowertrainPanel.*). I cannot edit them.
+IOS_EXIT=65
+
+================================================================================
+GATE STEP 2 — xcodebuild -scheme TeslaSync-macOS build test
+================================================================================
+Run A (signing on): app module compiled with ZERO feature-views errors; failed only at code-signing:
+  error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+  error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+  (project.yml sets CODE_SIGN_STYLE=Automatic, DEVELOPMENT_TEAM=""; no dev certificate in this env.)
+Run B (CODE_SIGNING_ALLOWED=NO, to get past the env signing limitation): 27 compile errors, all the
+  SAME pre-existing duplicate-type ambiguities surfacing once signing no longer short-circuits:
+  'DashboardWidgetSize', 'VehicleHeroModel/Source/Update/Projection/Connection/LoadStatus/Telemetry',
+  'InMemoryVehicleHeroSource' ambiguous (+ cascades) — all in dashboard-widgets usage sites.
+PowertrainPanel / feature-views errors in either macOS run:  0
+MAC_EXIT=65
+
+================================================================================
+GATE STEP 3 — swiftlint --strict
+================================================================================
+Scoped to the shipped surface (the 8 PowertrainPanel*.swift files):
+  Done linting! Found 0 violations, 0 serious in 8 files.   => surface LINT clean.
+Tree-wide (1917 files, as the gate runs it): 1 pre-existing violation, NOT in my files:
+  TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 Function Body Length (78>50).
+LINT_EXIT(surface)=0 ; LINT_EXIT(tree)=2 (pre-existing, out of scope)
+
+================================================================================
+GATE STEP 4 — swiftformat --lint apps/apple
+================================================================================
+Scoped to the shipped surface (8 files): 0/8 require formatting => surface FORMAT clean.
+Tree-wide: 1 pre-existing issue, NOT in my files:
+  TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes).
+FORMAT_EXIT(surface)=0 ; FORMAT_EXIT(tree)=1 (pre-existing, out of scope)
+
+================================================================================
+GATE STEP 5 — check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/PowertrainPanel
+================================================================================
+Ran the checker against each shipped PowertrainPanel*.swift file (Language swift):
+  PLACEHOLDER_COUNT=0 for all 8 files.   => no TODO/FIXME/stub/mock/placeholder/Lorem in shipped code.
+PLACEHOLDER_EXIT=0
+
+================================================================================
+SUPPLEMENTARY SURFACE VERIFICATION (within my control; all PASS)
+================================================================================
+A) swiftc -typecheck -swift-version 6 -strict-concurrency=complete
+     PowertrainPanel.Model.swift + .Adapter.swift + .Projection.swift  => TYPECHECK_EXIT=0
+B) Whole-module app compile (iOS + macOS): 0 errors attributable to PowertrainPanel/feature-views.
+     The surface compiles cleanly inside both app targets; only the @testable import self-warning
+     ("file is part of module 'TeslaSync'; ignoring import") is emitted — the established convention
+     for the 170 sibling feature-view *.Tests.swift files (they compile into the app target).
+C) Standalone web-parity harness (compiled the 3 SwiftUI-free logic files + an assertion main):
+     45/45 assertions PASS — fmtNumber/fmtInt grouping + half-away-from-zero rounding, °C/°F
+     formatTemperature ("51.2°C" / "124.2°F" / "—"), power readout + bar magnitude/direction
+     (drive vs regen, clamp), shift tone (D/R/N/default), RPM/torque tiles, peak-motor max + >80°C
+     hot flag, inverter + regen "—" branches, precision override, and the VoiceOver summary.
+     Output tail: "ALL PASS"  (HARNESS_EXIT=0)
+
+================================================================================
+STATUS DETERMINATION
+================================================================================
+The PowertrainPanel surface itself is COMPLETE and VERIFIED: it passes swiftlint --strict,
+swiftformat --lint, the placeholder gate, a Swift 6 strict-concurrency type-check, compiles
+error-free inside BOTH the iOS and macOS app targets, and its web-parity numeric pipeline is
+proven by 45/45 standalone assertions.
+
+The full gate cannot reach EXIT=0 in this environment for reasons entirely external to this
+surface and outside my allowed-files set:
+  (1) iOS build test  — 163 pre-existing duplicate-type ambiguity errors in dashboard-widgets
+      ('DashboardWidgetSize', 'SpeedUnit'); 0 PowertrainPanel/feature-views errors.
+  (2) macOS build test — same pre-existing dashboard-widgets/VehicleHero duplicate-type ambiguities,
+      plus macOS code-signing requires a development certificate not available on this runner.
+  (3) tree-wide swiftlint/swiftformat each have 1 pre-existing violation in committed dashboard-widgets
+      / ActionBuilder files, not in my surface.
+None of (1)-(3) are introduced by, or fixable within, the PowertrainPanel.* allowed files.
+
+Per the Honesty Covenant (no red-as-green, no scope narrowing): the build/test steps are reported
+RED with evidence rather than forced green.
+
+EXIT=1
+STATUS=BLOCKED

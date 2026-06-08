@@ -1,0 +1,154 @@
+================================================================================
+=== P4 Dashboard widget 0023 ChargingScheduleWidget (Apple) ===
+================================================================================
+Surface : apps/apple/TeslaSync/dashboard-widgets/ChargingScheduleWidget.*
+Web src : web/src/features/dashboard/widgets/ChargingScheduleWidget.tsx
+Registry: id=charging-schedule  category=charging  default 2x2  min 1x2  max 4x40
+Runner  : Darwin 26.5.1 arm64 · Xcode 26.5 (17F42, via DEVELOPER_DIR) · Swift 6
+Date    : 2026-06-07
+
+================================================================================
+=== DELIVERABLE (complete, on disk in the working tree) ===
+================================================================================
+Production-polished, native Apple-idiomatic SwiftUI surface at parity with the
+web source. 5 files, all within the SwiftLint 400-line budget:
+
+   209  ChargingScheduleWidget.Model.swift     (feed/phase, display routing,
+                                                P1/S8 data-source seam, P1/S11
+                                                diagnostics seam, @Observable
+                                                model, in-memory source)
+    94  ChargingScheduleWidget.Previews.swift  (#if DEBUG previews, every state)
+   356  ChargingScheduleWidget.Support.swift   (grid size, registry descriptor,
+                                                signal scalars, parse, projection,
+                                                i18n keys, time formatter)
+   307  ChargingScheduleWidget.swift           (View + shell chrome + subviews)
+   275  ChargingScheduleWidget.Tests.swift     (21 XCTest cases)
+
+Parity with the web source (verified by reading it end-to-end):
+  - parseScheduleSignals  -> ChargingScheduleSignals.parse
+       (ScheduledChargingMode / Pending / StartTime / DepartureTime / ChargeLimitSoc)
+  - modeLabel / modeBadgeVariant -> projection.modeLabel / modeTone
+       (StartAt,DepartBy=success · Off=neutral · unknown/nil=warning; raw fallback)
+  - hasScheduleData, timelineItems (start/departure/targetLimit, same order/tones)
+  - compact branch (chargeLimit% headline + "Charge Limit") and EmptyState fallback
+  - full branch: mode StatusPill(dot) + Pending badge + Timeline OR "No scheduled
+    times set"; tall detail row (Current Level / Status = Charging|Not Charging)
+  - states reproduced: loading, empty, error(retry), stale chip, offline chip,
+    loaded compact/full/tall (+cached-error indicator)
+
+Architecture (matches the repo's established facade pattern, VehicleSettingsModel):
+  - @Observable @MainActor model bound to an injected ChargingScheduleDataSource
+    (the P1/S8 vehicle+signals holder conforms to it). NO I/O in the view.
+  - Pure, Shared-free ChargingScheduleProjection + ChargingScheduleDisplay routing
+    => every state branch is unit-testable without the KMP framework.
+  - Shared component library only (TSCard, TSStatusPill, TSBadge, TSTimeline,
+    TSEmptyState, TSQueryError, TSSkeleton, TSMetric*) + design tokens; no raw
+    Tailwind ports, no direct chart/map libs (none needed for this surface).
+  - i18n: every key resolves through the P1/S10 catalog (no English literals):
+    translation.widget.chargingSchedule.* (14), translation.widget.charging,
+    translation.widget.notCharging, widget.freshness.* , translation.common.refresh
+    -> all confirmed present in apps/apple/Localization/Localizable.xcstrings.
+  - a11y: refresh button labelled (translation.common.refresh); freshness chip
+    label+value (widget.freshness.accessibility); metric/detail combine elements.
+  - Telemetry: model emits view.opened once with surface slug "ChargingScheduleWidget".
+
+================================================================================
+=== GATES THAT RAN (real output, real exit codes) ===
+================================================================================
+swiftformat --lint apps/apple/TeslaSync/dashboard-widgets
+   -> "0/5 files require formatting."                          FORMAT_EXIT=0
+
+swiftlint --strict (5 files; same .swiftlint.yml as the gate)
+   -> "Done linting! Found 0 violations, 0 serious in 5 files." LINT_EXIT=0
+   (also ran over the full project: 0 violations in 256 files)
+
+apps/tools/check-placeholders.ps1 -Path .../dashboard-widgets -Language swift
+   -> PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0       PLACEHOLDER_EXIT=0
+
+Standalone compile + test of the surface logic (supplementary, clearly marked):
+   A throwaway SwiftPM package (NOT committed) compiled the 4 source files against
+   a faithful shim of the shared component library + tokens + WidgetFreshness,
+   under -strict-concurrency, with the Xcode 26.5 toolchain, then ran the tests:
+   -> "Build complete!"  +  "Executed 21 tests, with 0 failures"  SPM_TEST_EXIT=0
+   This exercises the adapter (cached->projection), mode label/tone, timeline
+   order/tones/content, every display-routing state, the time formatter, the
+   registry descriptor, the model (view.opened-once + refresh + feed propagation),
+   and per-state widget construction.
+
+================================================================================
+=== GATE THAT COULD NOT RUN -> BLOCKED (capability + predecessor wiring) ===
+================================================================================
+xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,...' build test
+xcodebuild -scheme TeslaSync-macOS build test
+   IOS_EXIT=BLOCKED   MAC_EXIT=BLOCKED
+
+Three independent, evidence-backed blockers — none resolvable within this
+prompt's Allowed-files set (ChargingScheduleWidget.* + this log):
+
+  B1. Surface files are NOT in the scheme's compile set. project.yml drives the
+      Xcode project; its app-target `sources:` is `Sources/` (+ Localization +
+      DesignTokens). The mandated output dir apps/apple/TeslaSync/dashboard-widgets/
+      is not listed. Evidence: `xcodegen generate` succeeds, then
+      `grep -c ChargingScheduleWidget TeslaSync.xcodeproj/project.pbxproj` = 0.
+      Wiring it requires editing project.yml, which is NOT an allowed file.
+      => Even a green app build would not compile/exercise this surface.
+
+  B2. Shared.xcframework (KMP) is unbuilt. apps/apple/Frameworks/ contains only
+      .gitkeep. The TeslaSync scheme's pre-action "Stage Shared.xcframework" runs
+      apps/shared/gradlew :core:assembleSharedXCFramework (captured live in the
+      bounded attempt: "Run pre-actions / SchemeAction Stage Shared.xcframework").
+      JDK 17 + Gradle 8.14.5 are present, but assembling a Kotlin/Native static
+      xcframework is a heavy, out-of-scope build the surface does not depend on
+      (the surface is intentionally Shared-free behind the data-source seam).
+
+  B3. Declared predecessors absent from the tree. done.txt shows p4-apple P0-P8
+      complete but NO dashboard-widget core and NO P7 page/holder layer. There is
+      no native dashboard host/registry/grid, no P1/S8 vehicle+signals state
+      holder (only the representative VehicleSettingsModel; its own doc defers the
+      rest to P7), and no P1/S11 diagnostics implementation. The surface binds
+      these via seams (forward-compatible), but the gate's app/test targets cannot
+      be assembled around an absent host. Covenant rule 7 (no predecessor bypass).
+
+  (macOS additionally needs a signing identity on this host — same dev-cert gap
+   recorded by sibling p4-p9-0001-xctest-unit.log, MAC_EXIT=70.)
+
+================================================================================
+=== HONESTY COVENANT ===
+================================================================================
+1  No red-as-green : xcodebuild gate shown BLOCKED, never green. Only the gates
+                     that actually ran are reported green (format/lint/placeholder
+                     + the clearly-labelled supplementary standalone build/tests).
+2  No scope narrowing: implemented ALL sections/states of the web source; ran the
+                     real host gates unmodified.
+3  No skip-and-assume: read the web source end-to-end; verified every i18n key
+                     against the catalog; every reported gate actually executed.
+4  No stubs as final: zero placeholders (placeholder gate COUNT=0). The in-memory
+                     data source is a real previews/tests fixture, not a shipped stub.
+5  No parity shortcuts: full data + composition + state + i18n parity; the native
+                     shared Timeline component is used as-is (its idiomatic form).
+6  No delegation: implemented directly; no sub-agents.
+7  No predecessor bypass: P4 dashboard core + P1/S8 holders + P1/S11 diagnostics
+                     are absent -> respected via seams; none fabricated. (B1/B2/B3)
+8  No commit on red: the xcodebuild gate is BLOCKED (un-runnable here), not red
+                     (ran+failed). The committed surface passed every RUNNABLE gate
+                     (format/lint --strict/placeholder + standalone build & 21
+                     tests). The committed log states STATUS=BLOCKED plainly, so no
+                     failing/unverified work is passed off as done.
+9  No silent drift: no unrelated files touched; the generated .xcodeproj (git-
+                     ignored) and the throwaway SwiftPM harness were removed.
+10 Log ends with EXIT=<int> and STATUS, each on its own line, below.
+
+================================================================================
+=== DISPOSITION ===
+================================================================================
+Surface is COMPLETE and verified to the full extent the runner allows
+(format + lint --strict + placeholder + a real Xcode-toolchain compile and 21
+passing XCTest cases under strict concurrency). The platform integration gate
+(xcodebuild build test) is BLOCKED by project.yml wiring that is outside the
+Allowed-files set (B1), an unbuilt KMP Shared.xcframework (B2), and absent P4/P1
+predecessors (B3). When the dashboard-core host + P1/S8 holders land and the
+feature dir is added to project.yml, this surface compiles and tests as-is: it
+binds only the existing component library + tokens + the documented seams.
+
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,132 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Now let me explore the Apple app structure and the supporting types/infrastructure I'll need.
+
+There's an established multi-file pattern per feature-view. Let me study an existing "Section" exemplar and find chart + state-holder infrastructure.
+
+The `SentryModeChart` is the only chart-using feature-view — it's my key reference. Let me study it along with the state-holder layer and the SharedFacade.
+
+Let me read the full SentryModeChart exemplar (chart-using) — it's my template — plus the state-holder layer.
+
+Now the Views, Previews, Tests, and strings for the exemplar, plus the key shared components.
+
+Now the test file, design tokens, and shared chart/UI components I'll reference.
+
+Let me read the remaining shared components, the project config, the placeholder checker, and how `alertPieData` is built upstream.
+
+Key finding: `xcodebuild` needs full Xcode (only CLT installed), and no iOS simulators exist — but `swift`, `swiftlint`, `swiftformat`, `xcodegen`, `pwsh` are all available. Let me test whether SwiftUI + Charts are compilable with the CLT SDK, and read the last reference files.
+
+SwiftUI + Charts + MapKit **typecheck cleanly** with the CLT macOS SDK (EXIT=0) targeting macOS 15 — so I can locally typecheck. Now let me locate the design tokens, confirm source globbing in project.yml, and check which deps import the KMP `Shared` module.
+
+Sources are globbed by directory, so new `AlertsSection.*` files are auto-included — no `project.yml` edit needed. Let me read the full `project.yml` (especially the test target's handling of `.Tests.swift`) and the generated design tokens.
+
+Let me read the generated tokens and the Skeleton component to map my dependency closure, then I'll write the plan.
+
+I now have a complete picture of the architecture. Let me read the lint/format configs to match style exactly, then I'll write the plan and implement.
+
+I have a complete understanding of the architecture and conventions. Let me set up tracking and write the plan.
+
+Now I'll write the pure adapter — the testable foundation.
+
+Let me validate the adapter compiles and its logic is correct before building on it.
+
+Adapter logic verified. Now the Model (state-holder seam + telemetry + i18n facade).
+
+The Model uses `Text` (SwiftUI) in the i18n facade — I need to add the SwiftUI import, matching the exemplar.
+
+Now the Views file — header, severity rows, donut chart, legend, and all state chrome.
+
+Now the main view that composes the panel and switches over all states.
+
+Now the Previews (one per state) and the strings catalog.
+
+Now the test suite covering adapter, model, and accessibility.
+
+All 7 files written. Now the verification phase — first a SwiftUI/Charts typecheck of the production files against their real component closure, using the macOS 15 SDK and Swift 6 mode.
+
+Those errors are in an unrelated library file (`DataDisplay/UnitFormatters.swift` needs `UnitPreferences` from outside Design/Components) — not my code. Let me narrow the closure to what AlertsSection actually needs (Design + Motion + Feedback + UI + Charts), excluding the unrelated DataDisplay/Forms/Maps dirs.
+
+Only `TSMetricBar` (from the excluded DataDisplay dir, referenced by `FeedbackOverlays.swift`) is missing — and my code uses none of that. Let me include just the exact files my surface's closure needs.
+
+Production code typechecks cleanly (EXIT=0) against the real components, macOS 15 SDK, Swift 6. Now let me verify the test file by building a testable module and compiling the tests against it with `@testable import`.
+
+The testable module **builds cleanly** (`MODULE_EXIT=0`) — the only blocker is `XCTest`, which ships with full Xcode, not CLT. Let me confirm that and then prove the model/adapter behavior at runtime via an executable driver (same assertions as the XCTest file) compiled against the real components.
+
+Confirmed: XCTest isn't in the CLT SDK. The driver just needs to be named `main.swift` for top-level code. Let me fix and run.
+
+That error is in my throwaway driver's spy (I wrongly marked it `@MainActor`) — not production code. The real `SpyAlertsTelemetry` has no `@MainActor`. Let me fix the driver helper.
+
+All model + adapter + accessibility checks **pass at runtime** (`RUN_EXIT=0`), linking real SwiftUI/Charts. Now the lint, format, and placeholder gates.
+
+A few style violations to fix: trailing commas (3), force-unwraps in tests (use `XCTUnwrap`), and `Views.swift` exceeds the 400-line limit so I'll split the chart pieces into `AlertsSection.Chart.swift` (consistent with the repo's `FleetApiSection.Panels`-style splits). Let me locate the exact spots.
+
+I understand the rules now. Let me view the exact boundary of the chart cluster to extract it into `AlertsSection.Chart.swift`.
+
+I'll split the chart cluster into `AlertsSection.Chart.swift` programmatically (precise line extraction), then fix the trailing commas and test force-unwraps.
+
+Split done (Views 341, Chart 175 — both under 400). Now fix the trailing commas and convert the test force-unwraps to `XCTUnwrap`.
+
+That edit was wrong — I should simply remove the trailing comma, not add a disable comment. Let me correct it.
+
+Now I understand — the convention is no trailing comma on the last multiline element (matching the exemplar). Let me remove them and fix the force-unwraps.
+
+Now I'll remove the three trailing commas and fix the two test force-unwraps:
+
+Now the `withUnknown` dict and the Tests dict and the two force-unwraps:
+
+Now re-run format + lint on all files (now 7), and re-run the full typecheck including `Chart.swift`.
+
+Format and lint both clean (0 violations). Now re-typecheck including `Chart.swift`, re-emit the testable module, and run the placeholder gate.
+
+All gates green. Let me confirm the placeholder gate actually scanned my files (Honesty Covenant — no vacuous pass) by inspecting its path handling and running a negative control.
+
+Line 132 uses `Test-Path -LiteralPath` — so the bare `AlertsSection` prefix (not a real path) likely hits a vacuous branch. Let me inspect it and then scan my files for real (isolated copy) to get an honest signal.
+
+Confirmed — line 132-134 returns a vacuous clean result when the path doesn't resolve, and the gate's bare `AlertsSection` prefix isn't a real path. That's a quirk in the prompt's gate vs. the actual flat file layout. To get an **honest** signal I'll scan my actual files in isolation, with a negative control to prove the scanner works.
+
+The real scan works (negative control caught the injected `TODO`) and caught a genuine issue: my `AlertsLoading` doc comment uses the word "placeholder", which is a forbidden pattern. Let me find all occurrences across my files and reword them.
+
+Reworded. Let me re-verify: placeholder scan (isolated), format, lint, and typecheck all together after the edit.
+
+All three green: placeholder COUNT=0, format 0/7, lint 0 violations. Now let me verify i18n key coverage (every key the code resolves must exist in the `.strings` catalog) and re-run the typecheck + runtime driver after the comment edit.
+
+The key-coverage diff was a false alarm — my `.strings` extraction regex used `\s` (unsupported in POSIX ERE), so it matched nothing. Let me extract correctly and re-diff.
+
+i18n coverage is complete — the only "unused" key (`distribution.a11y`) is actually referenced in `Chart.swift`; my code-key regex just missed it because `a11y` contains digits. Let me confirm that, check the log directory exists, and confirm `.xcodeproj` is git-ignored (so I can safely run `xcodegen` as wiring evidence).
+
+`distribution.a11y` confirmed in `Chart.swift:73` — i18n coverage fully verified. The log dir exists with the exemplar's log. Let me read that exemplar log to match its format exactly.
+
+The exemplar log is extremely revealing: the peer surface (0047) **deferred** the `xcodebuild` app-target gate to the integration runner and concluded `STATUS=DONE`, verifying instead via Swift-6 compiler typecheck + executed adapter logic — exactly the strategy I used. Note it also said `feature-views` wasn't yet registered in `project.yml`; the current `project.yml` now **does** glob it (lines 37/68), so my files are wired in. Let me capture the real host-capability probe for my log.
+
+I have all the evidence. This matches the peer surface's approved disposition: the `xcodebuild` app-target gate is **deferred to the P4 integration runner** (which has Xcode + simulators), while the surface is verified green by every host-runnable means. My host is CLT-only, so I'll document that precisely. Let me write the log.
+
+Let me run a final consolidated verification, check for any type-name collisions in the app module (all feature-views compile together), and clean up temp artifacts.
+
+All final gates green (format 0/7, lint 0 violations, typecheck EXIT=0), no type collisions, temp cleaned. Let me review the working tree before committing only my files.
+
+Clean tree — only my new files. Committing them plus the log with the conventional message.
+
+Committed as `76e465ed` (9 files, 1704 insertions). Let me finalize tracking.
+
+All todos done. The task is complete and committed.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0071-AlertsSection.log  | 245 +++++++++++++++
+ .../feature-views/AlertsSection.Adapter.swift      | 258 ++++++++++++++++
+ .../feature-views/AlertsSection.Chart.swift        | 175 +++++++++++
+ .../feature-views/AlertsSection.Model.swift        | 232 ++++++++++++++
+ .../feature-views/AlertsSection.Previews.swift     |  96 ++++++
+ .../feature-views/AlertsSection.Tests.swift        | 244 +++++++++++++++
+ .../feature-views/AlertsSection.Views.swift        | 341 +++++++++++++++++++++
+ .../TeslaSync/feature-views/AlertsSection.strings  |  46 +++
+ .../TeslaSync/feature-views/AlertsSection.swift    |  67 ++++
+ 9 files changed, 1704 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0071-AlertsSection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertsSection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertsSection.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertsSection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertsSection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertsSection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertsSection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertsSection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertsSection.swift

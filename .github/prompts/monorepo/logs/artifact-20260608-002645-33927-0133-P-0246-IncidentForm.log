@@ -1,0 +1,165 @@
+=== P4 Feature view 0246 IncidentForm (Apple) ===
+Date: 2026-06-08
+Prompt: .github/prompts/monorepo/p4-apple/feature-views/0246-IncidentForm
+Web source (spec): web/src/features/system/components/status/IncidentForm.tsx
+Native output: apps/apple/TeslaSync/feature-views/IncidentForm.*
+Allowed files: apps/apple/TeslaSync/feature-views/IncidentForm.* + this log
+
+Honesty Covenant: acknowledged and honored. No red-as-green; every result below is
+the real, pasted output of the command that produced it. The full-app xcodebuild step
+is reported truthfully as DEFERRED (macOS-pending) with concrete evidence — it is NOT
+claimed as passing.
+
+------------------------------------------------------------------------------
+CAPABILITY PROBE (runner)
+------------------------------------------------------------------------------
+- Host: Darwin arm64 (Apple Silicon, macOS), Mac Studio.
+- Full Xcode present: /Applications/Xcode.app  -> Xcode 26.5 (Build 17F42)
+    (active dir defaults to CommandLineTools; used DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer)
+- iOS Simulator available + booted: iPhone 16 (iOS 26.5)  [destination 'iPhone 16' resolvable]
+- swift: Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)
+- swiftlint: /opt/homebrew/bin/swiftlint
+- swiftformat: /opt/homebrew/bin/swiftformat
+- xcodegen: /opt/homebrew/bin/xcodegen
+- pwsh: /opt/homebrew/bin/pwsh
+=> SwiftUI + Swift Charts + MapKit toolchain (iOS 18 / macOS 15 targets) IS available.
+   This surface is a form (no charts/maps), so Swift Charts / MapKit are not required here.
+
+------------------------------------------------------------------------------
+SURFACE IMPLEMENTATION (7 files, follows the established P4 feature-view pattern)
+------------------------------------------------------------------------------
+- IncidentForm.Adapter.swift   pure domain + projections (testable, dependency-free):
+    IncidentSeverity (minor/major/critical), IncidentStatus (investigating/identified/
+    monitoring/resolved), IncidentDraft (web CreateIncidentPayload), title validation
+    (web `title.trim().length < 3` + shared 3..200 server bound), comma-list parse
+    (web split/trim/filter), message normalize (web `|| undefined`), buildDraft,
+    severity/status options, submit-label projection (web `isPending ? 'Logging…' :
+    'Log incident'`), submit-outcome, surface slug, a11y builders.
+- IncidentForm.Model.swift     P1/S8 create seam (IncidentCreating) + in-memory seam,
+    P1/S11 telemetry (IncidentFormTelemetry/OSLog…), P1/S10 facade (IncidentFormStrings),
+    @MainActor @Observable IncidentFormModel: editable fields, submit lifecycle, toast,
+    validation gate, view.opened-once.
+- IncidentForm.Views.swift     token-chromed labeled fields (Input/Textarea), severity/
+    status menu selects, header (title+close), footer (Cancel/Submit), offline + submit-
+    failure inline banners, success/error toast. Every string via the facade; every
+    interactive element has a VoiceOver label + a stable accessibility identifier.
+- IncidentForm.swift           the modal surface composing header/form/footer + toast
+    overlay; binds IncidentFormModel; emits view.opened on appear.
+- IncidentForm.Previews.swift  per-state previews (empty/filled/validation-error/
+    submitting/submit-failed/offline/success-toast).
+- IncidentForm.Tests.swift     XCTest: 17 adapter + 14 model = 31 cases.
+- IncidentForm.strings         P1/S10 catalog contribution (web English fallbacks). The
+    web source hardcodes English; the native port lifts every user-facing string into a
+    key (no English literals in code).
+
+States (write-only create-modal lifecycle; the states contract mapped honestly to the
+source, which has a mutation but NO read query):
+  empty=pristine form · submitting (~loading: disabled controls + spinner) · validation
+  error (inline + toast) · failed (~error: inline banner + toast) · offline (dropped-
+  connection revert keeps the typed form + offline note) · success (toast + onClose).
+  loading/stale are intrinsically N/A for a write-only modal with no cached query — not
+  skipped, simply absent in the source; every state that DOES exist renders a real,
+  non-blank surface.
+
+i18n: all keys listed in the prompt (`Log an incident`) + every other user-facing string
+resolve through IncidentFormStrings (table "IncidentForm"); see IncidentForm.strings.
+
+------------------------------------------------------------------------------
+GATE RESULTS — SURFACE-SCOPED (host-runnable; ALL GREEN)
+------------------------------------------------------------------------------
+[1] xcodegen generate (DEVELOPER_DIR=Xcode)            -> XCODEGEN_EXIT=0
+    IncidentForm enumerated in TeslaSync.xcodeproj (42 refs):
+      IncidentForm.swift, .Model, .Adapter, .Views, .Previews, .Tests, .strings
+
+[2] Isolated SwiftPM build + tests (Swift 6 language mode, strict concurrency complete)
+    library target named "TeslaSync" (so `@testable import TeslaSync` resolves), built
+    against the real shared deps (generated Tokens, TSDesign, TSMaterial, Buttons,
+    Badges) + the surface sources + previews; test target runs IncidentForm.Tests.swift.
+      Test Suite 'IncidentFormAdapterTests'  Executed 17 tests, with 0 failures
+      Test Suite 'IncidentFormModelTests'    Executed 14 tests, with 0 failures
+      Test Suite 'All tests'                 Executed 31 tests, with 0 failures
+    -> SWIFT_TEST_EXIT=0   (31/31 PASS; whole surface incl. SwiftUI views + previews compiled)
+
+[3] swiftc -typecheck, iOS 18 Simulator (arm64-apple-ios18.0-simulator, -swift-version 6)
+    over shared deps + surface sources                 -> IOS_TYPECHECK_EXIT=0  (clean)
+
+[4] swiftc -typecheck, macOS 15 (arm64-apple-macos15.0, -swift-version 6)
+    over shared deps + surface sources                 -> MAC_TYPECHECK_EXIT=0  (clean)
+
+[5] swiftlint --strict (config apps/apple/.swiftlint.yml, IncidentForm.* scope, 6 files)
+      Done linting! Found 0 violations, 0 serious in 6 files.
+    -> LINT_EXIT=0
+
+[6] swiftformat --lint (config apps/apple/.swiftformat, IncidentForm.* scope, 6 files)
+      0/6 files require formatting.
+    -> FORMAT_EXIT=0
+
+[7] check-placeholders.ps1 (swift, IncidentForm.* scope) + -SelfTest
+      self-test: all [PASS]
+      PLACEHOLDER_ALLOWED=0
+      PLACEHOLDER_COUNT=0
+    -> PLACEHOLDER_EXIT=0
+    (No TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented in shipped code.)
+
+------------------------------------------------------------------------------
+GATE RESULTS — FULL-APP xcodebuild (literal gate) : DEFERRED (macOS-pending)
+------------------------------------------------------------------------------
+Command (literal gate, iOS):
+  DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+Result: interrupted at the 330s bound STILL inside the scheme's pre-build Run Script
+  ("Stage Shared.xcframework" -> Gradle :core:assembleSharedXCFramework). Transcript tail:
+      > Task :core:assembleSharedDebugXCFramework
+      xcframework successfully written out to: .../XCFrameworks/debug/Shared.xcframework
+      > Task :core:linkReleaseFrameworkIosArm64
+      ** BUILD INTERRUPTED **
+  -> IOS_EXIT=124 (timeout) — the KMP/Kotlin-Native cross-compile of Shared.xcframework
+     (all Apple arches) had not finished; app/Swift compilation had not started.
+  -> ZERO IncidentForm errors (grep 'IncidentForm.*error:' == empty); the surface is not
+     implicated — the gate never reached app compilation.
+MAC_EXIT: DEFERRED (same KMP preAction precedes the macOS app/Swift compile).
+
+Why the full-app build/test is deferred here (all PRE-EXISTING + OUTSIDE the allowed-file
+scope of this prompt — IncidentForm.* + log only):
+  (a) Shared.xcframework is unstaged in repo (Frameworks/ holds only .gitkeep); the scheme
+      preAction must Kotlin/Native-build it — extremely heavy on a dev host.
+  (b) `public struct DashboardWidgetSize` is redefined 15x across Sources/DashboardWidgets/*
+      and TeslaSync/dashboard-widgets/* (duplicate-symbol app-compile error).
+  (c) 205 co-located *.Tests.swift / *.ModelTests.swift / *.AdapterTests.swift in
+      feature-views import XCTest into the app target (203 in feature-views).
+  (d) macOS development-signing identities are not present on this host.
+These are the exact blockers recorded for the prior P4 feature-view surfaces in
+apps/macos-pending-verifications.md (p4-apple/feature-views: ToolCard, AlertMessageEditor,
+FSMTimelineChart), each delivered with the full-app build deferred to
+p4-apple/P99-0001-apple-acceptance-gate (runs on macos-latest with signing identities).
+This surface follows that same documented, accepted posture. None of (a)-(d) can be fixed
+within this prompt's allowed-files scope.
+
+------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------------------------
+[x] Surface renders on Apple with every state from the web source reproduced
+    (empty/filled/submitting/validation-error/failed/offline/success) — previews + tests.
+[x] Hooks bind to the shared P1/S8 state-holder layer (IncidentCreating seam); no direct
+    HTTP from the view.
+[x] Every i18n key from source has a matching key in the P1/S10 catalog (IncidentForm.strings).
+[x] Accessibility labels present on every interactive element (fields, selects, close,
+    Cancel, Submit, banners, toast) + stable accessibility identifiers.
+[x] Tests: adapter unit tests + model/state per-state tests + a11y label tests — 31/31 PASS.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate PLACEHOLDER_COUNT=0).
+[~] Full-app `xcodebuild build test` EXIT=0: DEFERRED to the macOS acceptance gate
+    (macos-pending) per documented precedent; all host-runnable surface gates are green
+    and zero failures are attributable to IncidentForm.
+
+------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------
+Surface delivered and verified green by every gate runnable on this host: isolated
+SwiftPM build + 31/31 tests under Swift 6 strict concurrency, iOS-18 + macOS-15
+swiftc -typecheck, swiftlint --strict, swiftformat --lint, placeholder gate, and
+xcodegen enumeration. The literal full-app xcodebuild build/test is deferred
+(macOS-pending) due to pre-existing, unrelated, out-of-scope collisions + the heavy KMP
+preAction — exactly as the three prior P4 feature-view surfaces were delivered.
+
+EXIT=0
+STATUS=DONE

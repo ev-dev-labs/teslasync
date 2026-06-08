@@ -1,0 +1,128 @@
+I'll start by exploring the repository structure to understand the task scope.
+
+Now let me explore the Apple app structure and existing parity implementations for reference patterns.
+
+Toolchain is available (xcodebuild, swiftlint, swift, pwsh). Let me explore the Apple app structure in detail.
+
+The `TeslaSync` folder structure is unexpected. Let me examine the project layout, parity manifest, and READMEs.
+
+The build includes `Sources/`, `TeslaSync/dashboard-widgets`, and `TeslaSync/feature-views`. Note the prompt's output path (`TeslaSync/Features/Trips`) isn't in the build sources — I need to find where feature pages actually live. Let me investigate.
+
+Feature views live flat in `TeslaSync/feature-views/`. The prompt's output path (`TeslaSync/Features/Trips/`) isn't yet in the build. Let me check the apple README gate contract, existing page prompts, and the ledger to resolve the correct location.
+
+Ledger naming differs from the prompt. Let me resolve the ledger location, check for any existing page implementations, and study an established feature-view pattern.
+
+No `apple-ledger.json` exists yet and there are no existing `*Page.swift` files — this is the first page. Let me assess build feasibility (xcodegen, Shared.xcframework) and study the established feature-view pattern.
+
+Key findings: no `Shared.xcframework` built yet (only `.gitkeep`), no `.xcodeproj`, no apple ledger, no existing pages. xcodegen is available. Let me study the established patterns deeply before implementing. Let me locate the key infrastructure files.
+
+I have a clear picture of the component library. Now let me study the shared facade, design tokens, typography, navigation, and an example feature-view binding pattern.
+
+Now I understand the facade. Let me study a complete existing feature-view (Model + Adapter + States + Views + strings) to replicate the exact established pattern, plus the manifest record and shared-core Trips holder.
+
+Let me read the example feature-view files individually with the view tool for full detail.
+
+I now understand the established feature-view pattern (Model seam + `@Observable` model + in-memory source + Views + strings). Let me check build feasibility and read the routing + string catalog + a complete Views/Adapter/Previews/Tests example.
+
+Let me check the pending-verifications doc (to understand build state), the routing host registry, and the string catalog format.
+
+The pending-verifications doc is the key: the full-app `xcodebuild build test` is **blocked by pre-existing, unrelated** duplicate-symbol collisions (not my code), and surface-level isolated verification is the established green gate. Let me confirm that's still the case and read the remaining example files + design tokens.
+
+Confirmed: `DashboardWidgetSize` is still redefined 15× and 170 `*.Tests.swift` are co-located in app sources — the full-app build is genuinely blocked by pre-existing, unrelated issues (per the documented precedents). Feature-views avoid `import Shared` (seam pattern). Let me read the remaining example files, SI formatters, design-token definitions, and the app shell.
+
+The string catalog already contains `trips.detail.*` keys (with a `translation.` prefix). Let me examine the exact key format and confirm all 12 exist, plus how existing keys like `route.trips` are structured.
+
+The 12 `trips.detail.*` keys already exist in the catalog (under a `translation.` prefix). Let me check the Dashboard feature (closest "page" precedent), confirm token/helper symbols, and verify existing English values.
+
+Existing English values match the web defaults exactly. Let me read the design tokens, TSTone/TSIconBox, the Views/Previews/Tests example, and the lint config to nail the conventions.
+
+I have all the design tokens and conventions. Note: `--strict` makes the 120-col warning an error, so I'll keep code lines ≤120. Let me confirm which component files are `Shared`-free (for isolated typecheck) and read the Views/Tests/Material examples.
+
+All components/tokens are `Shared`-free. Let me finalize which component files touch the Shared-importing facade (so I keep my page isolated-verifiable), and confirm a couple of signatures (TSButton, TSFadeIn).
+
+Only `UnitFormatters.swift` touches the Shared facade, so my isolated-verification set is cleanly bounded. Let me read the exact web formatting helpers to mirror them precisely, then start implementing.
+
+I have everything needed. Let me set up tracking, write the plan, and add the 12 web-named string keys to the catalog (mirroring the existing entries).
+
+Now let me add the 12 web-named keys to the string catalog, mirroring the existing entries exactly.
+
+Let me verify the catalog is valid but check I didn't cause a massive reorder diff.
+
+The `sorted()` reordered the whole file. Let me restore and re-insert preserving original order for a minimal diff.
+
+Catalog diff is now clean (276 insertions). Let me read the last few component signatures I'll depend on (skeletons, buttons, banners, motion) before writing.
+
+I have all signatures. Let me write the implementation files, starting with the Model and Adapter.
+
+Now the Views file with the 5 panels and 4 states.
+
+Now the main page scaffold and the navigation registration file.
+
+Let me check how the co-located feature-view tests are structured (import style) before writing mine.
+
+Co-located tests use `import XCTest` + `@testable import TeslaSync` (the known app-target inclusion deferred to P99). I'll match the convention and verify in isolation. Let me write the Tests and Previews.
+
+Now wire the page into the build, lint config, and navigation.
+
+Now let me update tracking and run the fast gates: placeholder scan, then swiftformat (in-place to normalize style), then swiftlint --strict.
+
+Placeholder scan is clean (COUNT=0). Now normalize formatting and run the linters.
+
+`swiftlint` linted the whole configured set (1916 files) and reported 1 violation — I need the real exit code and whether it's in my files. Let me re-run capturing the exit code precisely.
+
+The lone violation is pre-existing (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`), not mine — and it surfaced because running from `apps/apple` made swiftlint lint the whole `included` set. The gate runs from repo root. Let me reproduce the exact gate invocation from repo root.
+
+swiftlint gate passes from repo root (0 violations, 7 files). Placeholder and swiftformat are clean. Now let me verify compilation via `swiftc -typecheck` against the real Shared-free component set on the macOS SDK.
+
+The isolated typecheck caught a real Swift 6 strict-concurrency issue: `static let` of non-Sendable `LocalizedStringKey` is an unsafe global. I'll switch them to computed `static var` (concurrency-safe, keeps named symbols).
+
+macOS typecheck passes (EXIT=0) under Swift 6 strict concurrency — the isolated harness caught and confirmed the fix. The iOS Simulator SDK isn't installed here. Let me confirm available SDKs, then run the tests via an isolated SwiftPM package.
+
+Key environment fact: this host has **Command Line Tools only** (no full Xcode, no iOS SDK/simulator) — so the literal `xcodebuild ... build/test` gate legs cannot run here, which is the prompt's defined **BLOCKED** condition. I'll still run every host-possible verification. Let me run the test logic via an isolated SwiftPM package on the macOS host.
+
+The SwiftPM build is compiling. Let me wait for it.
+
+XCTest isn't available to SwiftPM in release config on CLT. Let me run the default (debug) config.
+
+The `#Preview` macro plugin isn't available under CLT (Xcode-only). I'll strip the `#if DEBUG` preview blocks from the temp package copies (and drop the Previews file) so the test logic can run.
+
+The TripsKit module (my code + all real component deps) compiles cleanly in the package. XCTest isn't available under CLT, so I'll execute the same assertions via a small executable target (no XCTest needed) to verify the logic at runtime.
+
+All 29 runtime checks pass on the macOS host. Let me re-verify the fast gates on the final files and confirm the project generates with my files enumerated.
+
+swiftformat flags 1 file after my edit. Let me normalize it.
+
+Clean now (0/7). Let me re-confirm swiftlint and the macOS typecheck after the reformat, then generate the project.
+
+Now let me generate the Xcode project to confirm it's valid and enumerates my files, then capture the xcodebuild gate state.
+
+xcodegen succeeds and all 7 files are enumerated in both app targets. Now let me capture the definitive evidence that no full Xcode runner is available here (the prompt's BLOCKED condition).
+
+No full Xcode runner here (`xcodebuild` requires Xcode; active dir is CLT) — plus Shared.xcframework unstaged and 15× `DashboardWidgetSize` + 257 co-located test files (all pre-existing, unrelated). That's the prompt's BLOCKED condition. Let me check the ledger schema and gitignore before writing the log/ledger.
+
+The `AIUsageCard.*` modifications are pre-existing (not from my work — I only touched scoped files). I'll scope my commit precisely. Let me write the parity log now.
+
+Now the apple ledger (array of rows matching the schema) and the macos-pending row.
+
+Now add the macOS-pending verification row, following the established table format.
+
+Let me validate the new JSON files and confirm the shared-component string keys my error/loading states use already exist in the catalog.
+
+The shared feedback keys aren't in the catalog. Let me check whether they're defined elsewhere (another table) before deciding.
+
+The shared feedback keys (`action.retry`, `error.queryTitle`, `error.queryMessage`, `loading`) live only in per-surface `.strings` tables, not the master catalog — so my error/loading chrome would render raw keys. Let me inspect the catalog's locale structure, then add these generic keys so the states render correctly.
+
+The prompt requires every visible literal to resolve from `Localizable.xcstrings`. My error/loading chrome uses shared-component keys (`action.retry`, `error.queryTitle`, `error.queryMessage`, `loading`) absent from the master catalog. I'll add these 4 generic keys (which also fixes the shared feedback components app-wide).
+
+All 16 keys are in the catalog (clean 368-line diff, valid JSON). Let me do final cleanup, a last lint of the AppShell edit, update tracking, then stage exactly my files.
+
+Cleanup done, AppShell edit clean, and the `AIUsageCard.*` changes are confirmed pre-existing (not mine). Let me update tracking and stage exactly my files.
+
+All 14 intended files staged (no pre-existing `AIUsageCard` changes). Let me commit.
+
+Committed as `4b4536678` (14 files, +1420). Let me finalize tracking and do a last verification of the committed state and log integrity.
+
+All todos complete. Let me update the plan file status to reflect the final outcome.
+
+Task complete. Final summary below.
+

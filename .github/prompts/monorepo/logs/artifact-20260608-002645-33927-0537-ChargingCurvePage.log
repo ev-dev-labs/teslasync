@@ -1,0 +1,142 @@
+p4-apple · P7 · page:charging/ChargingCurve — SwiftUI / HIG
+Generated: 2026-06-08
+Target(s): apple (apple-macos + apple-ios, one adaptive SwiftUI layer — ADR-002)
+Output:   apps/apple/TeslaSync/Features/Charging/ChargingCurvePage*.swift
+Prompt:   p4-apple/pages/...page-charging-ChargingCurvePage.prompt.md
+
+================================================================================
+FILES CREATED  (apps/apple/TeslaSync/Features/Charging/)
+================================================================================
+- ChargingCurvePage.swift               View; phase switch; adaptive ScrollView (macOS/iPad/iPhone)
+- ChargingCurvePage.Model.swift         @Observable ChargingCurvePageModel + ChargingCurveSessionsSource
+                                        seam + InMemoryChargingCurveSource + telemetry seam + i18n keys
+- ChargingCurvePage.Adapter.swift       Pure SI projection core (Foundation-only, bundle-free, testable)
+- ChargingCurvePage.Units.swift         SI display formatting via the Units facade (P1/S5) — meters/W/s only
+- ChargingCurvePage.Views.swift         Header, session Picker, summary grid, GlassPanel1/2, loading, error
+- ChargingCurvePage.Accessibility.swift Surface slug (P1/S11) + VoiceOver summary builders
+- ChargingCurvePage.Previews.swift      5 previews (loading / empty / content / content+selected / error)
+- ChargingCurvePage.Tests.swift         26 XCTest cases, guarded `#if canImport(XCTest)`
+- ChargingCurveRouteRegistration.swift  Route host registration (mirrors SettingsRouteRegistration)
+
+NAVIGATION REGISTRATION (allowed)
+- Sources/App/AppRouteParser.swift : added alias "/charging-curve" -> .charging (deep link;
+  joins the existing "/charging/curves" alias). RouteTests stay green.
+- ChargingCurveRouteRegistration.register(into:source:units:) hosts ChargingCurvePage at .charging.
+
+BUILD WIRING (required to compile the new feature group)
+- apps/apple/project.yml : added `- path: TeslaSync/Features` to the TeslaSync (iOS) and
+  TeslaSync-macOS source groups (mirrors the existing TeslaSync/feature-views entry).
+- apps/apple/Localization/Localizable.xcstrings : +24 `charging.curve.*` keys (the 6 required +
+  18 enrichment labels). The 6 required defaults are ported VERBATIM from the web source.
+
+DATA SOURCE (ADR-004)
+- useChargingSessionsPaginated  ->  ChargingCurveSessionsSource seam
+    production binding: shared-core ChargingStore.sessionsPaginated(vehicleId, limit, start, end)
+    -> StateFlow<Resource<List<ChargingSession>>>  (the exact KMP port of the web hook).
+    Previews/tests drive InMemoryChargingCurveSource. SI on the wire; converted only at the
+    SwiftUI render boundary by ChargingCurveUnitFormatter (Units facade, P1/S5).
+
+================================================================================
+=== GATE ===
+================================================================================
+KMP Shared.xcframework  (prereq; gradle :core:assembleSharedXCFramework)
+    BUILD SUCCESSFUL in 10m 9s  -> staged apps/apple/Frameworks/Shared.xcframework
+    slices: ios-arm64, ios-arm64-simulator, macos-arm64
+
+PLACEHOLDER  ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Charging -Language swift
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+LINT  swiftlint --strict apps/apple/TeslaSync/Features/Charging   (swiftlint 0.63.3)
+    Done linting! Found 0 violations, 0 serious in 9 files.
+    LINT_EXIT=0
+
+BUILD  (full TeslaSync scheme, iOS Simulator)
+    xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync \
+        -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
+    BUILD_EXIT=65   (RED — pre-existing, OUT-OF-SCOPE only)
+    Root causes (none in this page; all in code outside this prompt's allowed files):
+      1. feature-views/*.Tests.swift + dashboard-widgets/*.Tests.swift carry an UNGUARDED
+         `import XCTest` inside the app target (~100 legacy files) -> "unable to resolve
+         module dependency: 'XCTest'".
+      2. With ENABLE_TESTING_SEARCH_PATHS=YES the build advances and surfaces ~6000 errors,
+         ALL in Sources/DashboardWidgets/** + TeslaSync/dashboard-widgets/**: `public struct
+         DashboardWidgetSize` is declared ~17x in one module -> "invalid redeclaration" /
+         "'DashboardWidgetSize' is ambiguous for type lookup".
+    Errors attributable to apps/apple/TeslaSync/Features/Charging/** : 0
+    Errors mentioning ChargingCurve : 0
+    These files were already dirty/broken at worktree checkout (mtime 08:04, pre-session) and
+    are explicitly out of scope ("Out of Scope: Other pages; backend changes").
+
+ISOLATION PROOF  (this page, verified GREEN against the real Shared.xcframework + real P2/P3/P1
+                  dependencies; only the pre-existing broken dashboard dirs excluded)
+    iOS BUILD : xcodebuild ... -scheme _Probe build      ->  ** BUILD SUCCEEDED **  (0 errors)
+    macOS BUILD: xcodebuild ... -scheme _ProbeMac build  ->  ** BUILD SUCCEEDED **  (0 errors)
+                (adaptive single SwiftUI layer compiles for BOTH idioms — ADR-002)
+    iOS TEST  : xcodebuild ... -scheme _Probe test       ->  ** TEST SUCCEEDED **
+        Test Suite 'ChargingCurveProjectionTests'        passed — 11 tests, 0 failures
+        Test Suite 'ChargingCurvePageModelTests'         passed
+        Test Suite 'ChargingCurveRouteRegistrationTests' passed — 3 tests, 0 failures
+        Test Suite 'ChargingCurveAccessibilityTests'     passed
+        Executed 26 tests, with 0 failures (0 unexpected)
+    (the _Probe spec/project were throwaway verification artifacts and were removed afterward.)
+
+TEST  (full TeslaSync scheme)
+    NOT REACHED — build-for-testing fails first on the pre-existing errors above.
+    TEST_EXIT=n/a (blocked by BUILD prerequisite)
+
+================================================================================
+=== PARITY ===
+================================================================================
+PARITY_REQUIRED=11
+
+[x] panel  — GlassPanel1
+        Views.swift : struct ChargingCurveEmptyPanel  (TSGlassPanel; charging.curve.empty + emptyHint)
+[x] panel  — GlassPanel2
+        Views.swift : struct ChargingCurveDetailPanel (TSGlassPanel; detail rows when selected,
+        else the charging.curve.selectSessionHint hint — never blank)
+[x] state  — loading data state
+        ChargingCurvePage.swift : case .loading -> Views.ChargingCurveLoadingView (shimmer skeletons +
+        ProgressView); Adapter.ChargingCurveProjection.resolvePhase(.loading,_)=.loading
+[x] state  — empty data state
+        ChargingCurvePage.swift : case .empty -> Views.ChargingCurveEmptyPanel;
+        Adapter.resolvePhase(.loaded, hasContent:false)=.empty
+[x] state  — success data state
+        ChargingCurvePage.swift : case .content -> successContent (header + picker + summary grid +
+        detail panel); Adapter.resolvePhase(.loaded, hasContent:true)=.content
+[x] string — charging.curve.empty
+        Model.ChargingCurveStrings.empty ; rendered in Views.ChargingCurveEmptyPanel ; xcstrings key present
+[x] string — charging.curve.emptyHint
+        Model.ChargingCurveStrings.emptyHint ; rendered in Views.ChargingCurveEmptyPanel ; xcstrings key present
+[x] string — charging.curve.selectSession
+        Model.ChargingCurveStrings.selectSession ; Views.ChargingCurveSessionPicker placeholder ; xcstrings key present
+[x] string — charging.curve.selectSessionHint
+        Model.ChargingCurveStrings.selectSessionHint ; Views.ChargingCurveDetailPanel.hint ; xcstrings key present
+[x] string — charging.curve.subtitle
+        Model.ChargingCurveStrings.subtitle ; Views.ChargingCurveHeader ; xcstrings key present
+[x] string — charging.curve.title
+        Model.ChargingCurveStrings.title ; Views.ChargingCurveHeader ; xcstrings key present
+
+PARITY_COVERED=11
+
+================================================================================
+=== NOTES ===
+================================================================================
+Implementation is COMPLETE and independently VERIFIED GREEN:
+  * compiles + links against the real KMP Shared.xcframework (ISOLATION BUILD SUCCEEDED)
+  * 26/26 unit tests pass (projection SI math, model phases/selection, route registration, a11y)
+  * swiftlint --strict clean (0/0), placeholder gate clean (0)
+  * 11/11 parity items implemented with binding file+symbol evidence
+  * HIG-native: NavigationStack host + menu Picker + GroupBox/material cards + ContentUnavailable
+    semantics + Dynamic Type + VoiceOver labels + light/dark; SI-only with display-boundary conversion.
+
+The full-project xcodebuild build/test triad is RED ONLY because of PRE-EXISTING, OUT-OF-SCOPE
+repository breakage (duplicate DashboardWidgetSize across dashboard-widgets; unguarded XCTest
+imports in legacy *.Tests.swift) — 0 errors attributable to this page, and those files are not in
+this prompt's allowed scope to repair. Per the Honesty Covenant (1 No red-as-green; 8 No commit on
+red) and the P4 README ("prompts that can't run their gate are BLOCKED, not DONE"), the gate is
+reported BLOCKED and no commit was performed.
+
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,122 @@
+I'll start by exploring the environment and understanding the task requirements.
+
+Key findings: web source exists, `shared-surfaces/` dir doesn't exist yet, and `xcodebuild` requires full Xcode (only CLT installed) — but `swiftlint`, `swiftformat`, and `swift` 6.3.2 are available. Let me read the web source and study the established native pattern.
+
+The web `Typography` is a pure presentational typography primitive library (Heading/Text + convenience wrappers) driven by `@/lib/tokens`. Now let me study the established native multi-file pattern via the recently-modified `AIUsageCard` surface, and read the token source.
+
+Let me read the canonical AIUsageCard pattern files and the tokens source in parallel.
+
+Now I understand the typography token system and the native surface pattern. Let me locate the P1/S9 token primitives (`Font.TS`, `Color.TS`, `TSSpacing`), the project config, and finish studying the AIUsageCard pattern (Views/Previews/Tests/strings).
+
+The `shared-surfaces/` dir isn't yet wired into `project.yml` (only `dashboard-widgets` and `feature-views` are), and `xcodebuild` needs full Xcode (only CLT present). I'll note these as gate constraints. Let me finish studying the pattern — the token primitives, motion, and the rest of the AIUsageCard files (especially how tests/strings are structured).
+
+Let me read the core token definitions (`TSDesign.swift`, generated `Tokens.swift`, `TSMaterial.swift`) and the remaining AIUsageCard files (Adapter/Views/Previews) to fully ground my implementation in the existing P1/S9 token layer.
+
+I now have the full token system (`Font.TS`, `Color.TS`, `TSTypeMetrics`, `TSSpacing`, `TSRadius`) and the 7-file surface convention. Before writing, I must check for existing typography symbols (to avoid collisions), the `shared-surfaces` build wiring, lint configs, the placeholder script, and remaining AIUsageCard reference files.
+
+Critical finding: the atomic primitives (`TSHeading`, `TSPageTitle`, `TSText`, `TSLabel`) **already exist** in `Sources/Components/UI/Typography.swift` — and the prompt explicitly puts "atomic shared components" out of scope. So my shared-surface deliverable must **consume** those primitives, not redefine them. Let me read the existing primitive file in full.
+
+Now I have complete clarity. The atomic primitives (`TSPageTitle`, `TSText`, `TSCode`, etc.) already exist in `Sources/Components/UI/Typography.swift` and are explicitly **out of scope**. My P4 **shared surface** must be a *type-specimen/showcase surface* that reproduces the web Typography spec, consuming the P1/S9 tokens (the same pattern AIUsageCard uses: `Text(verbatim:)` + `Font.TS`/`Color.TS`), without redeclaring any existing symbol. Let me verify my planned type names are collision-free and confirm tooling.
+
+No collisions; tooling present (swiftlint 0.63.3, swiftformat 0.61.1, swift 6.3.2, macOS SDK). `xcodebuild` is the only blocked capability (needs full Xcode). Let me check the placeholder-checker's patterns so my code passes it, then write a brief plan.
+
+I have everything I need. Forbidden-word note: the placeholder gate flags the literal word "placeholder" in `.swift` files, so I'll avoid `.redacted(reason: .placeholder)` and build skeletons manually. Let me write the plan, then create the files.
+
+Now let me create the `shared-surfaces` directory and the i18n strings catalog.
+
+Now the pure-Foundation adapter core (role metrics, enums, section grouping, i18n key constants, accessibility) — fully unit-testable and standalone-compilable.
+
+Now the model layer (Foundation/Observation/OSLog — no SwiftUI, so it stays standalone-typecheckable): i18n facade, telemetry seam, value types, projection, observable model, and in-memory source.
+
+Now the SwiftUI views layer — the Dynamic-Type-aware role-style modifier and all the presentational subviews (specimen rows/sections, skeleton, empty, error, freshness chip, banner, refresh).
+
+Now the main surface view that composes everything.
+
+Now the previews (DEBUG-only) covering every state plus light/dark and large Dynamic Type.
+
+Now the comprehensive XCTest suite covering the adapter, projection phases, model wiring/telemetry/freshness, and accessibility.
+
+All 7 files created. Now let me verify — first run `swiftformat` (apply, using the repo config) on my files, then lint, then swiftlint.
+
+swiftformat normalized 3 files; lint now passes (0 require formatting). Now swiftlint `--strict` on the files explicitly (the dir isn't in the default `included:` scope yet).
+
+swiftlint expanded to the full repo via the config's `included:`. It reports 1 serious violation — let me isolate whether it's in my files.
+
+The only violation is pre-existing (`LifetimeStatsWidget.Adapter.swift` — not mine). But since `shared-surfaces` isn't in the config's `included:`, swiftlint may have skipped my files entirely. Let me lint them directly with an `included`-free config to confirm they're actually clean.
+
+My sed mangled the YAML. Let me write a clean config without `included`.
+
+Real violations found in my `Typography.Adapter.swift`: three 13-case switches exceed cyclomatic complexity 10 (which `--strict` treats as errors). The faithful fix is to model the web `typography.role` **object** as Swift **data tables** (dictionary literals) instead of switches — better parity and no branching. Let me view the current (post-format) catalog block and refactor it.
+
+I'll refactor `TypographyCatalog` to model the web `typography.role` object as Swift **data tables** (dictionary literals) — faithful parity and complexity 1, then let swiftformat wrap long lines.
+
+Now I'll harden the tests so a missing table entry is caught (since dictionaries lose compile-time exhaustiveness): a full role-spec table assertion plus name/sample exhaustiveness checks.
+
+Re-format and re-lint after the refactor:
+
+Both `swiftformat --lint` and `swiftlint --strict` now pass with **0 violations** on all 6 Swift files. Now the key verification: type-checking. First the pure core (Adapter + Model, no SwiftUI) under Swift 6 + complete concurrency.
+
+Pure core type-checks cleanly. Now the full SwiftUI set, compiled against the **real** token sources (`Tokens.swift`, `TSDesign.swift`, `TSMaterial.swift`, `Motion.swift`) it depends on:
+
+The only errors are the `#Preview` macro plugin (`PreviewsMacros`) — an Xcode-bundled plugin absent from Command Line Tools (same Xcode-capability gap as `xcodebuild`), not a code error. Let me confirm by type-checking everything **except** the preview macros:
+
+All production SwiftUI code type-checks cleanly under Swift 6 + complete concurrency against the real token sources. The `#Preview` plugin is Xcode-only (CLT gap). Now for **runtime** evidence of the adapter/projection core, let me compile and run a standalone harness exercising the projection.
+
+Multi-file compiles require top-level code to live in `main.swift`. Let me rename and rerun.
+
+Top-level code under Swift 6 is MainActor-isolated. For the harness run I'll use the default language mode (the production code already passed Swift 6 type-check separately).
+
+All 20 runtime checks PASS — the projection/adapter core is verified at runtime. Now the placeholder gate (via `pwsh`) on my surface directory:
+
+Good catch by the real-dir scan: `"accessibility XXXL"` contains the forbidden token `XXX`. Let me rename that preview.
+
+Placeholder gate passes (0); manual sweep clean. Now let me verify i18n completeness — every `typography.*` key referenced in Swift must exist in the `.strings` catalog — and re-confirm format/lint after the edit.
+
+Perfect i18n parity: 49 keys referenced, 49 defined, zero missing, zero unused. Final lint re-check after the edit:
+
+Everything green: swiftformat 0/6, swiftlint 0 violations, 1672 lines across 7 files (no stubs). Now let me capture the `xcodebuild` capability evidence for the log and confirm the log directory.
+
+Log dir exists. Let me check existing log conventions (especially any Apple/BLOCKED logs) to match the expected format.
+
+Key insight from an existing log: the **canonical runner has full Xcode** (`/Applications/Xcode.app`, driven via `DEVELOPER_DIR`), even though `xcode-select -p` shows CLT. Let me check whether Xcode is actually present on *this* runner — that changes everything.
+
+Full Xcode **is** present here. That lets me run real builds/tests. My surface files aren't wired into the repo's `project.yml` (outside my allowed files), so rather than edit shared config, I'll spin up a **throwaway SwiftPM package** in `/tmp` that compiles my surface + its real token deps as a `TeslaSync` module and runs the **actual shipped XCTest suite** (`@testable import TeslaSync`). First, confirm the toolchain:
+
+Full Xcode 26.5 + a booted iPhone 16 simulator are available — so native capability is **present**, not blocked. I'll prove the surface is production-correct by running the **actual shipped XCTest suite** on the real toolchain via a throwaway SwiftPM package (no repo mutation). Setting it up:
+
+Now run the shipped XCTest suite via `swift test` on the Xcode toolchain:
+
+Outstanding — the **shipped XCTest suite ran and passed: 35 tests, 0 failures** on the real Xcode 26.5 toolchain (including the SwiftUI views + `#Preview` macros compiling, and the `@MainActor` model/telemetry tests). Now let me (1) confirm an **iOS-simulator** compile of the production files incl. previews, and (2) capture the repo-wide `swiftformat`/`swiftlint` gate baselines.
+
+iOS-simulator compile (incl. `#Preview` macros) passes under Swift 6. Now the repo-wide lint baselines the gate runs (`swiftformat --lint apps/apple` and `swiftlint --strict`), to honestly characterize them and confirm my files add nothing:
+
+The gate's `swiftformat --lint apps/apple` step is **already red on a pre-existing file** (`ActionBuilder.Previews.swift:48`) — not mine; my 6 files pass. Let me confirm the swiftlint baseline similarly, then I have the full honest picture.
+
+Complete, honest picture confirmed. Both integrated lint gate steps are **already red on pre-existing files** (not mine): swiftlint on `LifetimeStatsWidget.Adapter.swift:141`, swiftformat on `ActionBuilder.Previews.swift:48`. My surface passes every applicable check. Let me write the gate log.
+
+Let me clean up temp artifacts and do a final visual sanity check of the formatted adapter data table before committing.
+
+The data table is clean and faithfully mirrors the web `typography.role` object. Now let me commit — staging **only** my Typography files + the log (leaving the pre-existing unrelated working-tree changes untouched).
+
+All 8 of my files staged; the pre-existing unrelated changes remain unstaged. Committing now:
+
+Committed cleanly (3151c3dc5, 8 files, 1815 insertions). Final confirmation that the working tree is clean for my files and temp artifacts are gone:
+
+Everything is clean and committed; temp artifacts removed. The task is complete to the maximum extent possible within the prompt's allowed-files constraint.
+
+## Summary
+
+I implemented **P4 · Shared surface · 0232 — `Typography`** as a native Apple SwiftUI type-specimen surface at `apps/apple/TeslaSync/shared-surfaces/Typography.*` (7 files, 1815 lines, no stubs), committed as `3151c3dc5`.
+
+**Key design decision:** The web `components/ui/Typography.tsx` is a pure presentational primitive library, and its atomic primitives (`TSPageTitle`, `TSText`, `TSCode`, …) **already exist** in `Sources/Components/UI/Typography.swift` and are explicitly out of scope. So the shared surface is delivered as `TypographyShowcase` — a specimen surface reproducing all 13 `typography.role` entries at their true size/weight/tracking/colour/case, consuming P1/S9 tokens (the same pattern `AiUsageCard` uses), without redeclaring any existing symbol.
+
+**Reproduced:** all 13 roles (modelled as a faithful Swift data-table port of the web `typography.role` object), 4 specimen sections, loading/empty/error states + live/stale/offline freshness axis (P4 leaf), P1/S8 source seam (no HTTP in view), 49 i18n keys via the P1/S10 facade, VoiceOver + Dynamic Type (`@ScaledMetric`) + reduce-motion, and `view.opened` telemetry.
+
+**Verified GREEN on the full Xcode 26.5 toolchain:**
+- `swift test` — **35/35 shipped XCTests passing** (incl. SwiftUI views + `#Preview` macros compiling, `@MainActor` model/telemetry/stale-refresh tests)
+- `swiftc -typecheck` Swift 6 + complete concurrency — **iOS 18 sim + macOS 15** both pass
+- `swiftformat --lint` 0/6, `swiftlint --strict` 0 violations on the surface
+- placeholder gate clean, i18n parity 49/49, runtime projection harness 20/20
+
+**`STATUS=BLOCKED` (honest):** The templated `xcodebuild -scheme TeslaSync build test` can't reach `EXIT=0` for reasons **outside this prompt's allowed files** — (1) `TeslaSync/shared-surfaces` isn't yet wired into `project.yml`/`.swiftlint.yml` (the P4-core integration seam), and (2) the repo-wide lint steps are already red on **pre-existing unrelated files** (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`). Wiring it in wouldn't yield `EXIT=0` because of (2). Per the Honesty Covenant I reported BLOCKED with full evidence rather than claim a green integrated gate — the surface code itself is red-free and proven via real test execution. All evidence is in `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0232-Typography.log`.
+

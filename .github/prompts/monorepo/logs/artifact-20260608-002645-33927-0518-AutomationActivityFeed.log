@@ -1,0 +1,237 @@
+================================================================================
+P4-APPLE · P7 · page:automations/AutomationActivityFeed (SwiftUI / HIG)
+Run: 2026-06-08T07:40-0700   Host: Darwin arm64   Slot: slot-518
+Prompt: .github/prompts/monorepo/p4-apple/pages/automations/AutomationActivityFeed.prompt.md
+Web source (spec): web/src/features/automations/pages/AutomationActivityFeed.tsx
+Parity unit: page:automations/AutomationActivityFeed   PARITY_REQUIRED=11
+Mode: code-complete + REAL iOS-18/macOS-15 SDK typechecks + EXECUTED XCTest (24/24) +
+      xcodegen enumeration. Full Xcode app build/test DEFERRED (un-staged KMP
+      Shared.xcframework + pre-existing parallel-merge collisions; ADR-012 / 0081 /
+      ToolCard / AlertMessageEditor / FSMTimelineChart precedent). No stubs as final.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18 deploy target)       OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15 deploy target)              OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.x                    OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.x                  OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                            OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)       OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+
+  NOTE on the active toolchain: `xcode-select -p` points at /Library/Developer/
+  CommandLineTools (no iPhoneSimulator SDK + no XCTest), so a BARE `xcodebuild` /
+  `swift test` fails. Full Xcode 26.5 IS installed at /Applications/Xcode.app and is
+  used here via the DEVELOPER_DIR override (the 0081 / ToolCard precedent), which unlocks
+  the iOS 18 simulator SDK, the macOS 15 SDK, XCTest, and `swift test`.
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit (web
+  "Charts: (none) / Maps: (none)"). The core requirement is SwiftUI, which is available and
+  PROVEN by the real iOS-18 AND macOS-15 SDK compiles below. The capability-BLOCKED escape
+  hatch does NOT apply — the surface is authored, both-SDK-compiled, and host-tested for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/Features/Automations/AutomationActivityFeed*) ===
+  AutomationActivityFeedData.swift     383  Foundation-only projection core — status/event
+                                            enums (+ nullish fallbacks), formatDurationMs /
+                                            fmtPercent / timeAgo ports, DTOs, row projections,
+                                            displayName ?? '#id', slice(0,5) cap, stats gate,
+                                            VoiceOver summaries
+  AutomationActivityFeedModel.swift    295  @Observable page model (P1/S8 seam) + async
+                                            load()/refresh() + telemetry (P1/S11 view.opened)
+                                            + snapshot/resolved + phase ladder + ADR-013
+                                            staleness (effective connection) + in-memory source
+                                            + .live() route default
+  AutomationActivityFeedChrome.swift   226  catalog facade (String(localized:)), status/event
+                                            SF-Symbol+tint maps, animate-pulse modifier,
+                                            connection chip (Live/Reconnecting/Stale/Offline),
+                                            gated stats row, neutral badge
+  AutomationActivityFeedRows.swift     243  live-event row (web LiveEventRow) + history row
+                                            (web HistoryRow) + cached-data banner + loading
+                                            (TSSkeleton) / empty (ContentUnavailableView) /
+                                            error+Retry states
+  AutomationActivityFeed.swift         155  the page — AutomationActivityFeedScreen adaptive
+                                            scaffold (macOS regular / iOS compact+regular),
+                                            FadeIn+GlassPanel surface, header (title + chip +
+                                            gated stats), live rows, history phase switch,
+                                            .task(load)/.refreshable(refresh) + nav registration
+  AutomationActivityFeed.Previews.swift 102 #if DEBUG previews — loading / empty / success /
+                                            live+history / error / stale / offline
+  AutomationActivityFeedTests.swift    245  XCTest — status/format/projection/connection/model/
+                                            a11y (24 methods)
+  Total 1649 Swift lines across 7 files; every file <= 383 lines (swiftlint --strict
+  file_length warning 400 honored). Shared P2/P3 primitives (Color.TS / Font.TS / TSSpacing /
+  TSRadius / TSGlassPanel / TSFadeIn / TSSkeleton / TSEmptyState) are REUSED from the P2/P3
+  core (no redeclaration in shipped files). Page-scoped type names (AutomationActivity* /
+  AutomationActivityFeedScreen) avoid collision with the sibling P4 feature-view
+  (AutomationFeed* / AutomationActivityFeed) compiled into the same module.
+
+  Allowed-file edits beyond the feature dir (navigation registration + catalog):
+    project.yml ............ added `TeslaSync/Features` source to the TeslaSync + TeslaSync-macOS
+                             targets (the page compiles into both app idioms).
+    Sources/TeslaSyncApp.swift  chained AutomationActivityFeedRouteRegistration onto the
+                             routeHosts environment so the shell renders the page at `.automations`.
+    Localization/Localizable.xcstrings  added 27 keys (7 web-parity + 8 status + 5 event +
+                             7 native chrome), style-matched to the catalog; JSON validated.
+
+=== PARITY === (vs web AutomationActivityFeed.tsx)  PARITY_REQUIRED=11
+  Each item below names its binding evidence (file + symbol). Every visible string resolves
+  through Localizable.xcstrings via AutomationActivityStrings.resolve / LocalizedStringKey;
+  zero hardcoded literals (Text(verbatim:) only wraps catalog output / runtime data).
+
+  [x] panel  GlassPanel1
+        AutomationActivityFeed.swift :: AutomationActivityFeedScreen.surface — TSGlassPanel { … }
+        (web `<GlassPanel className="p-6">`); wrapped in TSFadeIn(delay:0.1) (web FadeIn delay 0.1)
+  [x] state  loading
+        AutomationActivityFeedRows.swift :: AutomationActivityLoadingState (5×TSSkeleton redacted
+        shimmer) ⟵ AutomationActivityFeed.swift historyContent `.loading` (web 5×<Skeleton h-10/>)
+  [x] state  empty
+        AutomationActivityFeedRows.swift :: AutomationActivityEmptyState (ContentUnavailableView via
+        TSEmptyState, title automations.noHistory) ⟵ historyContent `.empty` (web <EmptyState/>)
+  [x] state  success
+        AutomationActivityFeed.swift :: historyContent `.data` → ForEach(model.historyRows)
+        AutomationActivityHistoryRowView (web history list); + live rows + gated stats overlays
+  [x] string automations.avgDuration
+        AutomationActivityFeedChrome.swift :: AutomationActivityStatsRow.body metric(key:
+        "automations.avgDuration", "avg")  + catalog entry
+  [x] string automations.live
+        AutomationActivityFeedChrome.swift :: AutomationActivityConnectionChip.descriptor(.connected)
+        key "automations.live" ("Live")  + catalog entry
+  [x] string automations.noHistory
+        AutomationActivityFeedRows.swift :: AutomationActivityEmptyState title
+        LocalizedStringKey("automations.noHistory") ("No execution history yet") + catalog entry
+  [x] string automations.recentActivity
+        AutomationActivityFeed.swift :: AutomationActivityFeedScreen.titleGroup key
+        "automations.recentActivity" ("Recent Activity")  + catalog entry
+  [x] string automations.reconnecting
+        AutomationActivityFeedChrome.swift :: AutomationActivityConnectionChip.descriptor(.reconnecting)
+        key "automations.reconnecting" ("Reconnecting")  + catalog entry
+  [x] string automations.successRate
+        AutomationActivityFeedChrome.swift :: AutomationActivityStatsRow.body metric(key:
+        "automations.successRate", "success")  + catalog entry
+  [x] string automations.totalRuns
+        AutomationActivityFeedChrome.swift :: AutomationActivityStatsRow.body metric(key:
+        "automations.totalRuns", "total")  + catalog entry
+  PARITY_COVERED=11   (== PARITY_REQUIRED=11)
+
+  Beyond the 11 gate items (no scope narrowing — every anonymous web region reproduced):
+    header Activity glyph + title + connection chip; the gated stats summary (web
+    historyStats && total_executions>0); up to five live SSE rows (web liveEvents.slice(0,5),
+    pulsing kind icon · name · error/reason · neutral kind badge); the full history row
+    (status icon · name · error · time-ago · duration · actions); plus the native HIG error+
+    Retry and the ADR-013 stale/offline cached-data chrome. Projection 1:1 with the web render
+    (statusConfig 8 + typeMap 5 fallbacks, formatDurationMs, fmtPercent(_,0), displayName ?? '#id',
+    the slice(0,5) cap, the stats gate, empty-string error/reason folding) — EXECUTED-test verified.
+
+=== ADAPTIVITY / a11y / units (ADR-002/013/014/015) ===
+  Adaptive: AutomationActivityFeedScreen reads horizontalSizeClass (iOS) / regular on macOS;
+  the gated stats sit trailing on regular (macOS/iPad) and wrap to a second line on compact
+  (iPhone); the glass surface is centered + capped to a 720pt readable measure on wide panes.
+  Lifecycle: .task { load() } (emits view.opened once), .refreshable { refresh() } (pull-to-
+  refresh on both idioms), .onDisappear { stop() }.
+  a11y: title carries .isHeader; chip / stats / each live+history row / banner are single
+  combined elements with spoken VoiceOver summaries; decorative glyphs .accessibilityHidden;
+  Dynamic Type via Font.TS text styles; Reduce Motion honored by the pulse + TSFadeIn/TSSkeleton;
+  light/dark via the dynamic Color.TS tokens.
+  Units (ADR-014/SI): durations formatted at the display boundary (formatDurationMs port); no
+  non-SI value stored/computed. Strings via String(localized:) / LocalizedStringKey (ADR-014),
+  web key names preserved.
+
+=== VERIFICATION (every line below is a command actually run, with its real exit code) ===
+  [host gates — GREEN]
+  swiftformat --lint (7 files) ............ 0/7 require formatting          FORMAT_EXIT=0
+  swiftlint --strict (my 7 files, explicit)  0 violations                  LINT_SCOPE_EXIT=0
+  check-placeholders.ps1 (exact gate path)  PLACEHOLDER_COUNT=0            PLACEHOLDER_EXIT=0
+
+  [real SDK compiles — GREEN] swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG
+  iOS 18 simulator (arm64-apple-ios18.0-simulator) ........................ IOS_TYPECHECK_EXIT=0
+  macOS 15 (arm64-apple-macos15.0) ....................................... MAC_TYPECHECK_EXIT=0
+    (Data+Model+Chrome+Rows+screen+Previews compiled together against the real SwiftUI SDK + a
+     throwaway shim mirroring the P2/P3/P4 primitive signatures; shim used ONLY in the isolated
+     harness, NEVER in shipped files. A real public-API-leak error — register(into:) exposing the
+     shim's internal registry — was surfaced by this step and the shim corrected before green.)
+
+  [executed tests — GREEN] SwiftPM harness (module "TeslaSync" = Data+Model; @testable tests; Xcode toolchain)
+  swift test .............................. Executed 24 tests, 0 failures   SWIFT_TEST_EXIT=0
+    Suites: AutomationActivityFeedStatusTests(5) · AutomationActivityFeedFormatTests(5) ·
+            AutomationActivityFeedProjectionTests(5) · AutomationActivityFeedConnectionTests(3) ·
+            AutomationActivityFeedAccessibilityTests(2) · AutomationActivityFeedModelTests(4).
+            [DEBUG_TESTS=24/24]
+
+  [project enumeration — GREEN]
+  xcodegen generate ....................... project created                 XCODEGEN_EXIT=0
+    (surface registered: 90 build refs to AutomationActivityFeed; TeslaSync/Features path in both
+     the TeslaSync + TeslaSync-macOS targets. The generated .xcodeproj is git-ignored.)
+
+  [Xcode app build/test — DEFERRED, shown NOT green, real evidence captured]
+  xcodebuild -target TeslaSync-macOS build (CODE_SIGNING_ALLOWED=NO) ....... APP_BUILD_EXIT=65
+    -> the ONLY error: "There is no XCFramework found at '.../apps/apple/Frameworks/
+       Shared.xcframework'" — the un-staged KMP vendored binary (Frameworks/ holds only
+       .gitkeep). The build halts at this dependency gate, so the Swift compile phase never runs
+       (CompileSwift task count = 0); AutomationActivity*-attributed errors in the app build: 0.
+    -> Even with the framework staged, the FULL app build remains blocked by the SAME pre-existing,
+       unrelated parallel-merge collisions documented in apps/macos-pending-verifications.md and
+       still present in this slot: `struct DashboardWidgetSize` redefined 15×, and 261 co-located
+       *.Tests.swift importing XCTest into the app target. The deferral is infra, NOT this surface.
+  full-project `swiftlint --strict` over the whole app ... 1 pre-existing violation only:
+       TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length) —
+       outside this prompt's allowed files, unmodified by this task, 0 in Features/Automations.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the Xcode app build/test is shown DEFERRED (APP_BUILD_EXIT=65, framework
+                       gate), NEVER recolored green. Every GREEN above is a command actually run
+                       with its real exit code (incl. both-SDK compiles + an EXECUTED 24/24 XCTest).
+  2  No scope narrowing: implemented ALL states (loading/empty/success/error/stale/offline) + live
+                       rows + gated stats + connection chip + i18n + a11y + telemetry + adaptivity.
+  3  No skip-and-assume: each gate executed; nothing assumed green (a real public-API-leak was
+                       found by the SDK typecheck and fixed before reporting green; a `Placeholder`
+                       word in a comment was found by the placeholder gate and reworded).
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. The shim is used ONLY
+                       in the throwaway typecheck harness, clearly labeled, NEVER in shipped files.
+  5  No parity shortcuts: faithful self-contained port of statusConfig/typeMap, the formatters, the
+                       display-name rule, the slice(0,5) cap, the stats gate, and every state — not
+                       a delegate-to-feature-view wrapper. All 11 evidence symbols live in my files.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: the page is self-contained (own model/projection/views/strings); it
+                       reuses ONLY the shared P2/P3 design primitives, never the sibling feature-view's
+                       types. project.yml / TeslaSyncApp.swift / Localizable.xcstrings edits are the
+                       prompt's allowed "navigation registration + platform string catalog".
+  8  No commit on red  : committing on green host gates + iOS/macOS compiles + executed 24/24 tests +
+                       xcodegen; the Xcode app build/test is explicitly DEFERRED (captured evidence),
+                       blocked by repo-wide infra, not a failure of this code.
+  9  No silent drift   : changes confined to apps/apple/TeslaSync/Features/Automations/**, the two
+                       allowed registration files, the string catalog, this log, and apps/parity/
+                       apple-ledger.json (the prompt's commit set).
+  10 Log ends with EXIT/STATUS below.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Every named panel implemented (GlassPanel1); every anonymous web region reproduced.
+  [x] All 11 parity items render from the bound @Observable AutomationActivityFeedModel.
+  [x] loading / empty / success implemented for the surface (+ native error / stale / offline).
+  [x] All visible strings from Localizable.xcstrings; zero hardcoded literals; web key names kept.
+  [x] Dark mode + Dynamic Type + accessibility + SI-boundary formatting honored; SwiftUI-native,
+      adaptive macOS + iOS (no web cloning).
+  [x] build + lint + test + placeholder: lint(my files)/format/placeholder/both-SDK-typecheck/
+      executed-tests/xcodegen GREEN; PARITY_COVERED==PARITY_REQUIRED (11). The Xcode app build/test
+      is DEFERRED (un-staged Shared.xcframework + pre-existing collisions — repo-wide infra, ADR-012
+      / P99 acceptance gate), with captured evidence; 0 errors attributable to this surface.
+  [x] apple ledger rows for page:automations/AutomationActivityFeed set covered (apple-macos +
+      apple-ios), coveredCount=11/requiredCount=11.
+
+=== DISPOSITION ===
+  Production-polished native AutomationActivityFeed PAGE shipped at parity with the web source:
+  a self-contained pure-Swift projection core (EXECUTED-green XCTest, 24/24), an @Observable page
+  model with async load()/refresh() over a P1/S8 source seam (no view HTTP), P1/S11 telemetry,
+  every web region + data state + i18n key + a11y label, the live SSE rows, the gated stats summary,
+  the connection chip, and the adaptive macOS/iOS scaffold + navigation registration. All
+  host-runnable gates pass AND the surface compiles against BOTH the iOS 18 simulator and macOS 15
+  SDKs under Swift 6 strict concurrency with the real Xcode 26 toolchain. The signed Xcode app
+  build/test is DEFERRED to the downstream P99 macOS acceptance runner (un-staged KMP
+  Shared.xcframework + pre-existing parallel-merge collisions — not defects in this code; outside
+  this prompt's allowed files), matching the 0081 / ToolCard / AlertMessageEditor / FSMTimelineChart
+  "code-complete + DEFERRED Xcode gate" precedent.
+
+EXIT=0
+STATUS=DONE

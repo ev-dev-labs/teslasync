@@ -1,0 +1,146 @@
+=== P4 Dashboard widget 0027 ClimateHistoryWidget (Apple) ===
+Date: 2026-06-07 (America/Los_Angeles)
+Runner: Darwin arm64, 20 cores, 64 GiB. Xcode 26.5 (17F42), Swift 6.3.2,
+        swiftlint + swiftformat (homebrew), xcodegen, pwsh 7, OpenJDK 17.
+Capability: SwiftUI + Swift Charts present and used. iOS Simulator (iPhone 16,
+        iOS 26.5) + macOS 15+ toolchain present.
+
+------------------------------------------------------------------------------
+ARTIFACT (complete — web parity with
+features/dashboard/widgets/ClimateHistoryWidget.tsx)
+------------------------------------------------------------------------------
+Native output (mapped to the XcodeGen `Sources/` group that the TeslaSync target
+actually compiles — the prompt's literal `apps/apple/TeslaSync/dashboard-widgets/`
+path is not a compiled source root in project.yml, so placing the surface there
+would NOT be exercised by the gate; documented here per covenant rule 9):
+
+  apps/apple/Sources/Dashboard/Widgets/ClimateHistoryWidget.swift          (view: container + shell + summary + states)
+  apps/apple/Sources/Dashboard/Widgets/ClimateHistoryWidgetChart.swift     (Swift Charts inside/outside area chart + previews)
+  apps/apple/Sources/Dashboard/Widgets/ClimateHistoryWidgetModel.swift     (ClimateSample, adapter, projection, @Observable store bound to VehicleSystemsStore, telemetry, registry descriptor)
+  apps/apple/Sources/Dashboard/Widgets/ClimateHistoryWidgetFormatter.swift (pure display + a11y helpers)
+  apps/apple/Tests/Unit/Dashboard/ClimateHistoryWidgetTests.swift          (19 tests)
+  apps/apple/Localization/Localizable.xcstrings                            (+9 i18n keys)
+
+Parity coverage:
+  - Data sources bound via shared P1/S8 state holders (no HTTP in the view):
+    VehicleSystemsStore.climateHistory (useClimateHistory), useVehicles vehicle
+    id, useUnits (SI->display °C at the render boundary only), useDateFormat
+    (injected time formatter), useTranslation (LocalizedStringKey), Resource ->
+    LoadableState cache-then-network projection.
+  - States reproduced (every one renders — never a blank box): loading
+    (skeleton chrome), content, empty ("No climate history"), error
+    (QueryError + retry), stale (freshness chip), offline (cached rows + offline
+    chip), plus compact (size.cols<=1) and regular/wide.
+  - i18n keys: widget.climateHistory.{title,displayName,description,cabin,
+    outside,noData,error}, widget.action.refresh, widget.freshness.error
+    (+ reused widget.freshness.{stale,offline}). No English string literals in
+    native code.
+  - Registry: id "climate-history", category "climate", default 2x4, min 2x4,
+    max 4x40 (clamp enforced + unit-tested).
+  - Telemetry: emits the shared typed taxonomy TelemetryEvent.ScreenView
+    (stable name "screen_view") carrying surface slug "ClimateHistoryWidget"
+    via the consent-gated Telemetry sink (ADR-016). The P1/S11 taxonomy has no
+    free-form "view.opened" variant; ScreenView(screen:) is its contract-faithful
+    encoding of a surface open.
+  - Accessibility: VoiceOver labels on the refresh control, freshness chip, stat
+    pills and the chart (latest cabin/outside summary); Dynamic Type via Font.TS;
+    reduce-motion respected by the reused shared components.
+
+------------------------------------------------------------------------------
+PREREQUISITES
+------------------------------------------------------------------------------
+$ cd apps/shared && ./gradlew :core:assembleSharedXCFramework
+  BUILD SUCCESSFUL in 11m 46s — Shared.xcframework produced for
+  ios-arm64, ios-arm64-simulator, macos-arm64; staged to apps/apple/Frameworks/.
+$ cd apps/apple && xcodegen generate
+  Created TeslaSync.xcodeproj (schemes: TeslaSync, TeslaSync-macOS, ...).
+
+------------------------------------------------------------------------------
+GATE STEPS
+------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    BUILD: ** compiles clean ** (all ClimateHistoryWidget* sources compile;
+           verified across multiple invocations).
+    UNIT TESTS (TeslaSyncTests, incl. all 19 ClimateHistoryWidgetTests) on an
+           isolated iPhone 16 / iOS 26.5 simulator:
+               ** TEST SUCCEEDED ** — Executed 274 tests, 0 failures.
+           (xcresult: Run-TeslaSync-2026.06.07_18-01-05; result=Passed,
+            passed=274 failed=0 skipped=0.)
+           ClimateHistoryWidgetTests methods observed passing:
+             testAdapterParsesSnakeCaseAndSortsAscending,
+             testAdapterAcceptsCamelCaseAndNullTemperatures,
+             testAdapterDropsRowsWithoutTimestamp,
+             testAdapterHandlesEmptyAndInvalidInput,
+             testProjectionIdleAndLoadingMapToLoading,
+             testProjectionLoadingWithCachedKeepsContent,
+             testProjectionLoadedAndEmpty,
+             testProjectionFailedWithCachedShowsStaleContent,
+             testProjectionFailedOfflineAndError, testProjectionFoldsUpdatedAt,
+             testDisplayValueRoundsConvertsAndHandlesNil, testPointsDropNullReadings,
+             testAccessibilitySummaryComposesLabelsAndValues,
+             testRegistryDescriptorMatchesCanonicalMetadata,
+             testRegistryClampRespectsBounds,
+             testScreenViewTelemetryEmitsScreenViewWithSurfaceSlug,
+             testNoopTelemetryDoesNotCrash, testBodyConstructsForEveryState,
+             testCompactBodyConstructs.
+    FULL-SCHEME UI TESTS: BLOCKED by runner capacity. The host is oversubscribed
+           by parallel CI slots — load averages observed 227 / 250 / 259, rising
+           to 529 / 514 / 400 on 20 cores (11x–26x). CoreSimulator could not
+           service the UI-test runner launch:
+             "Failed to prepare device 'slot30-ip16' ... Timed out trying to boot
+              simulator after waiting 60.00s."
+             "Mach error -308 - (ipc/mig) server died" / "Invalid device state".
+             "[Client] XPC connection interrupted" mid-suite.
+           The same suite's unit half passes when the host has a calmer window
+           (the 274/0 run above), confirming this is host capacity, not code.
+    IOS_EXIT=65   (build OK + unit tests pass; UI-test sim launch blocked by host load)
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    BUILD: ** BUILD SUCCEEDED ** (all ClimateHistoryWidget* sources compile for
+           macOS arm64 with code signing disabled).
+    TEST:  BLOCKED — the macOS app cannot be provisioned as a test host on this
+           runner:
+             "TeslaSync-macOS has entitlements that require signing with a
+              development certificate. Enable development signing ..."
+             "Could not find test host for TeslaSync-macOSTests: TEST_HOST
+              evaluates to .../Debug/TeslaSync-macOS.app/..."
+           No Apple development signing identity is available on this host. This
+           is exactly the class of verification apps/macos-pending-verifications.md
+           defers to a provisioned `macos-latest` CI runner.
+    MAC_EXIT=70   (compiles; test host requires an absent development certificate)
+
+[3] swiftlint --strict
+    "Done linting! Found 0 violations, 0 serious in 261 files."
+    LINT_EXIT=0
+
+[4] swiftformat --lint apps/apple
+    "0/265 files require formatting, 2 files skipped."
+    FORMAT_EXIT=0
+
+[5] check-placeholders.ps1 -Path apps/apple/Sources/Dashboard/Widgets
+    PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+    (Tests/Unit/Dashboard also scanned: PLACEHOLDER_COUNT=0.)
+    PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------
+Artifact COMPLETE and validated. All host-runnable code gates are GREEN:
+  iOS compile, macOS compile, iOS unit tests 274/0 (incl. 19 widget tests),
+  swiftlint --strict = 0, swiftformat --lint = 0, placeholder = 0.
+Two gate steps are BLOCKED by the shared runner, not by the code:
+  - iOS full-scheme UI tests: CoreSimulator cannot boot/launch under 11x-26x CPU
+    oversubscription from parallel slots (load 227-529 on 20 cores).
+  - macOS build test: app entitlements require an Apple development signing
+    certificate that is not present on this runner.
+Per the prompt's capability clause and apps/macos-pending-verifications.md, these
+are deferred to a provisioned, uncontended `macos-latest` CI runner. No code gate
+is red.
+
+IOS_EXIT=65
+MAC_EXIT=70
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+EXIT=1
+STATUS=BLOCKED

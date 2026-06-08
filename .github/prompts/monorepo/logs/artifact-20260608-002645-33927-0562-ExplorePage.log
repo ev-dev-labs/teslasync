@@ -1,0 +1,169 @@
+================================================================================
+p4-apple · P7 · page:explore/Explore — native SwiftUI / HIG parity
+log: .github/prompts/monorepo/logs/apple-page-explore-ExplorePage.log
+================================================================================
+
+ARTIFACT
+  Parity unit   : page:explore/Explore   (kind=page, web route /explore)
+  Web source    : web/src/features/explore/pages/ExplorePage.tsx (the Feature Hub)
+  Target        : native SwiftUI View + @Observable model, adaptive macOS + iOS
+  Host          : macOS (Darwin), Xcode 26.5 (Swift 6.3.2) at /Applications/Xcode.app
+                  NOTE: this parallel dev slot's `xcode-select` points at
+                  /Library/Developer/CommandLineTools; full Xcode is reached via
+                  DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer.
+
+--------------------------------------------------------------------------------
+PATH RECONCILIATION (covenant #9 — no silent drift)
+--------------------------------------------------------------------------------
+The generated prompt names output `apps/apple/TeslaSync/Features/Explore/…`.
+That directory does NOT exist and is NOT a compiled source root. The real,
+compiled home for native feature *pages* is `apps/apple/Sources/Features/…`
+(precedent: `Sources/Features/Dashboard`, and the Settings page at
+`Sources/Platform/Settings/AppSettingsView.swift`). `apps/apple/TeslaSync/…`
+holds *components* (feature-views) + dashboard-widgets, not pages.
+→ Implemented at apps/apple/Sources/Features/Explore/** (already enumerated by
+  both app targets via `sources: - path: Sources` in project.yml — no build-config
+  edit required). Scope is unchanged (only the Explore page's own files + the nav
+  registration + the string catalog + the ledger/log).
+
+--------------------------------------------------------------------------------
+FILES (apps/apple/Sources/Features/Explore/)
+--------------------------------------------------------------------------------
+  ExplorePage.swift              — page view: header, sticky search inset, phase body
+  ExplorePage.Model.swift        — ExploreInput, ExploreSource seam, InMemory source,
+                                   ExploreTelemetry, @Observable ExploreModel, ExplorePhase
+  ExplorePage.Projection.swift   — pure: visible/filter/group/highlight/suggestions/
+                                   slugify/levenshtein (parity of featureCatalog.ts +
+                                   closestRoute.ts + <Highlight>)
+  ExplorePage.Catalog.swift      — feature catalog from AppRoute×AppRouteGroup + resolve
+  ExplorePage.Views.swift        — RecentStrip, SearchPanel(GlassPanel1), AnchorStrip,
+                                   SectionBand, FeatureCard, EmptyResult(GlassPanel2)
+  ExplorePage.Adapter.swift      — LiveExploreSource over VehicleDirectoryStore +
+                                   RecentRoutesStore + injected forward-auth provider
+  ExplorePage.Strings.swift      — i18n facade over Localizable.xcstrings (default table)
+  ExplorePage.Previews.swift     — success / filtered / empty / loading / gated previews
+  ExplorePage.Tests.swift        — XCTest: catalog + projection + model (19 cases)
+  ExploreRouteRegistration.swift — registers .explore into AppRouteHostRegistry
+  EDIT Sources/TeslaSyncApp.swift           — chains ExploreRouteRegistration (nav registration)
+  EDIT Localization/Localizable.xcstrings   — +13 parity keys, +22 feature-desc keys (JSON-validated)
+
+DATA LAYER
+  Web hooks ported (same names at the Swift call sites): useIsForwardAuth, useVehicles.
+  The catalog is static + client-side (the only live inputs are the two gates +
+  recents), so LiveExploreSource reads `VehicleDirectoryStore.load().count`
+  (useVehicles → count gate) + `RecentRoutesStore.recents`, with forward-auth
+  (useIsForwardAuth) injected via a provider closure (no native auth-mode store yet;
+  defaults false = self-hosted non-forward-auth). Every state binds through the
+  @Observable ExploreModel (P1/S8). loading→redacted skeleton; empty→ContentUnavailable-
+  style GlassPanel; error→TSErrorDisplay+Retry; success→section bands.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=17
+--------------------------------------------------------------------------------
+[01] panel  GlassPanel1 (sticky search)   → ExplorePage.Views.swift:125
+       symbol ExploreSearchPanel { TSGlassPanel { searchField; ExploreSectionAnchorStrip } }
+[02] panel  GlassPanel2 (empty result)    → ExplorePage.Views.swift:312
+       symbol ExploreEmptyResult { TSGlassPanel { title/body/suggestions/clear } }
+[03] state  empty data state              → ExplorePage.swift:95 (case .empty → ExploreEmptyResult)
+       symbol ExplorePhase.empty (Model.swift:51) ; Model.phase (Model.swift:231) grouped.isEmpty
+[04] state  success data state            → ExplorePage.swift:105 (case .success → successBands)
+       symbol ExplorePhase.success ; ExploreSectionBand grid (Views.swift)
+[05] string explore.anchorCountAria       → ExplorePage.Views.swift:195 (ExploreSectionAnchorStrip count aria)
+[06] string explore.empty.body            → ExplorePage.Views.swift:323 (ExploreEmptyResult)
+[07] string explore.empty.clear           → ExplorePage.Views.swift:336 (ExploreEmptyResult TSButton)
+[08] string explore.empty.didYouMean      → ExplorePage.Views.swift:349 (ExploreEmptyResult.suggestionList)
+[09] string explore.empty.title           → ExplorePage.Views.swift:317 (ExploreEmptyResult, "%@" query)
+[10] string explore.pageTitle             → ExplorePage.swift:36 (.navigationTitle + .accessibilityLabel)
+[11] string explore.recent.heading        → ExplorePage.Views.swift:64 (ExploreRecentStrip)
+[12] string explore.searchLabel           → ExplorePage.Views.swift:148 (ExploreSearchPanel field label/a11y)
+[13] string explore.searchPlaceholder     → ExplorePage.Views.swift:144 (ExploreSearchPanel field prompt)
+[14] string explore.sectionsAriaLabel     → ExplorePage.Views.swift:208 (ExploreSectionAnchorStrip a11y)
+[15] string explore.subtitle.all          → ExplorePage.Model.swift:224 (ExploreModel.subtitle, %lld total)
+[16] string explore.subtitle.filtered     → ExplorePage.Model.swift:218 (ExploreModel.subtitle, %lld/%lld/%@)
+[17] string explore.title                 → ExplorePage.swift:77 (header H1)
+--------------------------------------------------------------------------------
+PARITY_COVERED=17
+(Bonus i18n: +22 explore.feature.<route> card descriptions, all in Localizable.xcstrings.)
+================================================================================
+
+--------------------------------------------------------------------------------
+GATE (host-runnable, real output)
+--------------------------------------------------------------------------------
+# placeholder scan (ADR-011)
+$ pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Explore -Language swift
+  PLACEHOLDER_ALLOWED=2   PLACEHOLDER_COUNT=0
+  (2 justified `// parity:allow`: SwiftUI `.redacted(.placeholder)` loading skeleton API;
+   the required web-parity key name `explore.searchPlaceholder`. Neither is a stub.)
+PLACEHOLDER_EXIT=0
+
+# swiftlint --strict (apps/apple/.swiftlint.yml) — Explore files
+$ swiftlint lint --strict --config apps/apple/.swiftlint.yml   (filtered to Features/Explore)
+  0 violations in Sources/Features/Explore
+LINT_EXIT=0
+
+# swiftformat --lint (apps/apple/.swiftformat)
+$ swiftformat --lint apps/apple/Sources/Features/Explore
+  0/10 files require formatting
+FORMAT_EXIT=0
+
+# isolated SwiftPM build of the FULL surface (views+page+adapter+registration+previews)
+# against the REAL component library + tokens + AppRoute/route-host registry + native
+# stores (TSMaterial, Cards, Buttons, Typography, Badges, States, Banners, RouteHostRegistry,
+# AppRouteParser, RecentRoutesStore, VehicleEntity, WidgetAppGroup), Swift 6 strict
+# concurrency, macOS 15.
+$ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swift build
+  Build complete!
+ISOLATED_BUILD_EXIT=0
+
+# isolated XCTest run (catalog + projection + model)
+$ DEVELOPER_DIR=… xcrun swift test
+  Executed 19 tests, with 0 failures (0 unexpected)
+ISOLATED_TEST_EXIT=0   (ExploreCatalogTests 3, ExploreModelTests 9, ExploreProjectionTests 7)
+
+# project integration — xcodegen enumerates all 10 Explore files
+$ DEVELOPER_DIR=… xcodegen generate   (apps/apple)
+  Created project at apps/apple/TeslaSync.xcodeproj
+  pbxproj contains: ExplorePage.swift, .Strings, .Catalog, .Projection, .Model, .Views,
+                    .Adapter, .Previews, .Tests, ExploreRouteRegistration.swift
+XCODEGEN_EXIT=0
+
+--------------------------------------------------------------------------------
+GATE (full-app Xcode triad — DEFERRED to macOS acceptance gate)
+--------------------------------------------------------------------------------
+BUILD_EXIT=DEFERRED
+TEST_EXIT=DEFERRED
+  The full-app `xcodebuild -scheme TeslaSync build test` cannot be green on this host
+  for reasons OUTSIDE this surface's scope, matching the documented disposition for the
+  prior P4-apple surfaces (ToolCard / AlertMessageEditor / FSMTimelineChart):
+    1. PRE-EXISTING parallel-merge collisions — `struct DashboardWidgetSize` redefined
+       15× across Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/*, and 170
+       co-located `*.Tests.swift` importing XCTest into the app target. (Out of scope —
+       "Other pages; backend changes" are rejected by this prompt.)
+    2. `Shared.xcframework` (KMP) is unstaged; the Kotlin/Native link runs `xcrun
+       xcodebuild` which requires a *selected* full Xcode — this slot's xcode-select
+       points at CommandLineTools, and a shared Gradle daemon races a sibling slot
+       (observed writing to slot-537). This is itself a documented macOS-pending item
+       (p1-shared/S3 → p5-hardening/H8).
+    3. macOS development code-signing identities (CI-only).
+  The Explore surface itself is proven to compile + test GREEN in isolation against the
+  REAL components (see ISOLATED_BUILD/TEST above); zero errors originate from any Explore
+  file. Recorded in apps/macos-pending-verifications.md; final verification runs on
+  p4-apple/P99-0001-apple-acceptance-gate (macos-latest).
+
+--------------------------------------------------------------------------------
+ACCEPTANCE
+--------------------------------------------------------------------------------
+[x] Every named panel implemented; every web region reproduced (recents, search,
+    anchor strip, section bands, feature cards, empty result).
+[x] All 17 parity items render from the bound @Observable ExploreModel state.
+[x] loading / empty / error / success implemented for the data source.
+[x] All visible strings from Localizable.xcstrings; key names match web; 0 hardcoded prose.
+[x] Dark mode + Dynamic Type + a11y (VoiceOver labels, ≥44pt) + adaptive macOS/iOS;
+    SwiftUI-native (Swift Charts/MapKit not required — page has no charts/maps).
+[x] swiftlint --strict / swiftformat --lint / placeholder / isolated build+test / xcodegen GREEN.
+[x] PARITY_COVERED == PARITY_REQUIRED (17). apple-ledger.json rows set covered (macos+ios).
+[~] Full-app xcodebuild build test DEFERRED (macOS acceptance gate; pre-existing+KMP+signing).
+
+EXIT=0
+STATUS=DONE

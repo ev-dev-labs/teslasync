@@ -1,0 +1,116 @@
+=== P4 Dashboard widget 0050 FleetStatsBarWidget (Apple) ===
+Surface : FleetStatsBarWidget  (registry id: fleet-stats-bar, analytics, 4x2 / min 3x2 / max 4x40)
+Web spec: web/src/features/dashboard/widgets/FleetStatsBarWidget.tsx
+Output  : apps/apple/TeslaSync/dashboard-widgets/FleetStatsBarWidget.{swift,Model,Adapter,Previews,Tests}.swift + .strings
+Runner  : Darwin (arm64), Swift 6.3.2, swiftlint 0.63.3, swiftformat 0.61.1, pwsh 7, Xcode 26.5 (via DEVELOPER_DIR)
+
+--------------------------------------------------------------------------------
+[GATE STEP 1+2] xcodebuild  (iOS Simulator build+test  /  macOS build+test)
+--------------------------------------------------------------------------------
+STATUS: BLOCKED — the gate's authoritative whole-module build+test cannot run in this slot.
+Xcode IS present (Xcode 26.5, Build 17F42) and reachable via
+  DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+so this is NOT a "no-Xcode" block. The TeslaSync iOS + macOS targets compile the ENTIRE
+TeslaSync/dashboard-widgets + TeslaSync/feature-views tree into one module (project.yml),
+and that module is not buildable in this slot's parallel-staging state for three reasons,
+ALL outside this prompt's allowed-files scope (FleetStatsBarWidget.* + this log):
+
+  (a) Predecessor dependency P1/S9 tokens not materialized: the project.yml source group
+      `../design/generated/apple` (DesignTokens) does not exist in this slot, so the shared
+      tokens (TSSpacing, TSRadius, Color.TS.*, Font.TS.*, TSStatGridSkeleton, …) are undefined
+      module-wide. Evidence:
+      $ ls -d apps/apple/design/generated/apple
+      ls: apps/apple/design/generated/apple: No such file or directory
+  (b) Concurrent sibling slots staged duplicate copies of the shared P1/S8 grid types in the
+      same module → 'invalid redeclaration' across the module. Evidence (count of files that
+      define `struct DashboardWidgetSize` inside the single TeslaSync module):
+      $ grep -rl 'struct DashboardWidgetSize' apps/apple/TeslaSync apps/apple/Sources | wc -l
+      15
+  (c) The scheme's required pre-action Scripts/build-shared-xcframework.sh (ADR-004 KMP
+      Shared.xcframework) does not complete on this runner — a best-effort
+        DEVELOPER_DIR=…/Xcode xcodegen generate && xcodebuild -scheme TeslaSync \
+          -destination 'platform=iOS Simulator,name=iPhone 16' build
+      generated the project (xcodegen rc=0) but the build was still in the Shared.xcframework
+      staging pre-action at a 300s time-box (terminated, rc=124) — the Kotlin/Native toolchain
+      is not provisioned here.
+
+Per Honesty Covenant #7 (No predecessor bypass) these are NOT worked around by fabricating the
+tokens dir, de-duplicating sibling files, or stubbing the KMP framework — all are out of scope.
+IOS_EXIT=BLOCKED
+MAC_EXIT=BLOCKED
+
+--------------------------------------------------------------------------------
+[GATE STEP 3] swiftlint --strict   (scope: this surface's 5 Swift files)
+--------------------------------------------------------------------------------
+Linting Swift files at paths TeslaSync/dashboard-widgets/FleetStatsBarWidget.swift, TeslaSync/dashboard-widgets/FleetStatsBarWidget.Model.swift, TeslaSync/dashboard-widgets/FleetStatsBarWidget.Adapter.swift, TeslaSync/dashboard-widgets/FleetStatsBarWidget.Previews.swift, TeslaSync/dashboard-widgets/FleetStatsBarWidget.Tests.swift
+Linting 'FleetStatsBarWidget.swift' (1/5)
+Linting 'FleetStatsBarWidget.Model.swift' (2/5)
+Linting 'FleetStatsBarWidget.Adapter.swift' (3/5)
+Linting 'FleetStatsBarWidget.Previews.swift' (4/5)
+Linting 'FleetStatsBarWidget.Tests.swift' (5/5)
+Done linting! Found 0 violations, 0 serious in 5 files.
+LINT_EXIT=0
+
+--------------------------------------------------------------------------------
+[GATE STEP 4] swiftformat --lint   (scope: this surface's 5 Swift files)
+--------------------------------------------------------------------------------
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-46/apps/apple/.swiftformat
+SwiftFormat completed in 1.8s.
+0/5 files require formatting.
+FORMAT_EXIT=0
+
+Tool versions: 0.63.3 (swiftlint) / 0.61.1 (swiftformat)
+--------------------------------------------------------------------------------
+[GATE STEP 5] check-placeholders.ps1   (no TODO/stub/mock/placeholder/Lorem)
+--------------------------------------------------------------------------------
+# Exact gate invocation (the -Path prefix is a filename stem, not a dir → 0 scanned):
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/FleetStatsBarWidget
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+
+# Genuine scan of THIS surface's files (copied to a temp dir, -Language swift):
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+[ISOLATED VERIFICATION] this surface compiles + behaves correctly (despite the
+blocked whole-module build above). Stubs reproduce the documented P1/S9 token +
+P1/S8 registration API extracted verbatim from sibling LifetimeStatsWidget usage.
+--------------------------------------------------------------------------------
+# swiftc -typecheck (SwiftUI, -swift-version 6, -strict-concurrency=complete, -D DEBUG): view+model+adapter+previews+stubs
+TYPECHECK_EXIT=0 (0 = all 5 surface files type-check against SwiftUI + token contract)
+
+# swiftc compile + RUN of the pure (Foundation) adapter+model logic — pins web parity:
+#   online filter, convertDistanceFromSI(total_distance_km) km/mi, fmtNumber, plainInteger,
+#   phase matrix, hasData, registry clamp, a11y summary, layout.
+ASSERTIONS: 36 passed, 0 failed
+LOGIC_RUN_EXIT=0
+
+--------------------------------------------------------------------------------
+[SUMMARY]
+--------------------------------------------------------------------------------
+  Step                                   Result
+  xcodebuild iOS  build+test ........... BLOCKED  (whole-module; out-of-scope predecessor/deps)
+  xcodebuild macOS build+test .......... BLOCKED  (same module, same blockers)
+  swiftlint --strict (surface) ......... PASS  (LINT_EXIT=0, 0 violations)
+  swiftformat --lint (surface) ......... PASS  (FORMAT_EXIT=0, 0/5 require formatting)
+  check-placeholders (surface) ......... PASS  (PLACEHOLDER_EXIT=0, COUNT=0)
+  swiftc -typecheck SwiftUI surface .... PASS  (TYPECHECK_EXIT=0, all 5 files)
+  swiftc compile+run pure logic ........ PASS  (36/36 assertions, LOGIC_RUN_EXIT=0)
+
+Every check inside this prompt's allowed-files scope is GREEN, and the full surface
+type-checks against SwiftUI + the documented P1/S9 token contract. The ONLY red is the
+gate's whole-module xcodebuild build+test, which is blocked by predecessor/sibling state
+(absent design/generated/apple tokens dir; 15 duplicate DashboardWidgetSize defs from
+concurrent slots; unprovisioned KMP Shared.xcframework) — none of which are editable under
+this prompt's allowed files (FleetStatsBarWidget.* + this log). Reported honestly per the
+capability clause ("If unavailable on the runner -> STATUS=BLOCKED with API evidence") and
+Honesty Covenant #1/#7/#8/#10.
+
+EXIT=124
+STATUS=BLOCKED

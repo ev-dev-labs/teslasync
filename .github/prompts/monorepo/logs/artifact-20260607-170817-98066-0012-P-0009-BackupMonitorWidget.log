@@ -1,0 +1,148 @@
+=== P4 Dashboard widget 0009 BackupMonitorWidget (Apple) ===
+Host: Darwin (macOS 26.5.1, aarch64). Xcode 26.5 (17F42) at /Applications/Xcode.app.
+Toolchain: swift 6.3.2, swiftlint, swiftformat, pwsh, xcodegen, JDK17, Gradle 8.14.5.
+Date: 2026-06-07.
+
+--------------------------------------------------------------------------------
+PATH RECONCILIATION (documented per Honesty Covenant #9 — no silent drift)
+--------------------------------------------------------------------------------
+The prompt template output path `apps/apple/TeslaSync/dashboard-widgets/` does
+not exist in this repo and is not referenced by any xcodegen target's `sources`.
+The compiled SwiftUI source root for the iOS + macOS app targets is
+`apps/apple/Sources/` (apps/apple/project.yml). To make the surface actually
+BUILD and be TESTABLE (covenant #2/#4/#5 forbid scope/parity shortcuts and stubs),
+the artifact was placed in the compiled tree:
+  - View+model+adapter+previews: apps/apple/Sources/Dashboard/Widgets/BackupMonitorWidget.swift
+  - Tests:                       apps/apple/Tests/Unit/Dashboard/BackupMonitorWidgetTests.swift
+  - i18n catalog (P1/S10):       apps/apple/Localization/Localizable.xcstrings  (+15 widget.backupMonitor.* keys, en)
+xcodegen confirms inclusion: `grep -c BackupMonitorWidget TeslaSync.xcodeproj/project.pbxproj` = 12
+(source + test across iOS/macOS app + test targets).
+
+--------------------------------------------------------------------------------
+ARTIFACT SUMMARY (parity with web features/dashboard/widgets/BackupMonitorWidget.tsx)
+--------------------------------------------------------------------------------
+- Registry: id `backup-monitor`, category `system`, default 2x2, min 1x2, max 4x40
+  reproduced as BackupMonitorWidget.metadata (+ clamp()); asserted in tests.
+- Data sources: bound through the shared state-holder layer (P1/S8) —
+  BackupMonitorViewModel reads a StateHolderModel<LoadableState<[BackupRunVM]>>
+  (the canonical AppContainer.loadable(from: adminStore.backupRuns(), map:) adapter);
+  literal-state init for previews/tests. No direct HTTP in the view.
+- Shared components reused: TSCard/TSGlassPanel/TSStatCard/TSMetricLabel (data-display+ui),
+  TSBadge (ui), TSEmptyState/TSQueryError/TSSkeleton/TSStatSkeleton (feedback),
+  typography + design tokens (Color.TS/Font.TS/TSSpacing/TSRadius). WidgetShell is
+  out-of-scope/unbuilt, so its chrome (title/icon, freshness, stale+offline chips,
+  refresh, skeleton, error) is reproduced locally with existing primitives.
+- States rendered: loading (skeleton), empty (TSEmptyState), error (TSQueryError+retry),
+  stale (chip + refresh), offline (cached + offline chip). Layouts: compact (cols<=1),
+  standard (2-3), wide (>=4, last-5 Recent Runs). All web `t()` keys mapped to P1/S10.
+- a11y: composed VoiceOver label (title+relative time+status); refresh button labeled;
+  reduce-motion honored by reused skeleton/components; accessibilityElement(.contain).
+- Telemetry (P1/S11): emits `view.opened` (TelemetryEvent.ScreenView) with surface slug
+  `BackupMonitorWidget` on appear via the injected WidgetTelemetry seam.
+- Tests: decode adapter, ISO date parse, sort/latest/recent projection, status+tone
+  mapping, byte/relative/duration formatting, registry metadata + clamp, a11y label
+  composer, view-model state projection (loaded/empty/offline), telemetry view.opened
+  emission, refresh callback, and per-state ImageRenderer render-smoke across 3 sizes.
+
+================================================================================
+GATE RESULTS
+================================================================================
+
+---- KMP Shared.xcframework (prerequisite — app targets link it) ----
+cmd: (cd apps/shared && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+      ./gradlew :core:assembleSharedXCFramework)
+> Task :core:assembleSharedReleaseXCFramework
+  xcframework successfully written out to: apps/shared/core/build/XCFrameworks/release/Shared.xcframework
+BUILD SUCCESSFUL in 24m 21s
+ASSEMBLE_EXIT=0
+Staged to apps/apple/Frameworks/Shared.xcframework (slices: ios-arm64, ios-arm64-simulator, macos-arm64).
+
+---- swiftlint --strict ----
+cmd: (cd apps/apple && swiftlint --strict)
+Done linting! Found 0 violations, 0 serious in 258 files.
+LINT_EXIT=0
+
+---- swiftformat --lint apps/apple ----
+cmd: (cd apps/apple && swiftformat --lint .)
+0/262 files require formatting.
+FORMAT_EXIT=0
+
+---- check-placeholders.ps1 ----
+cmd: pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Dashboard/Widgets/BackupMonitorWidget.swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+---- xcodebuild iOS — COMPILE ----
+cmd: (cd apps/apple && DEVELOPER_DIR=.../Xcode xcodebuild -scheme TeslaSync \
+      -destination 'platform=iOS Simulator,name=iPhone 16' -derivedDataPath build/DerivedData build)
+Result: ** BUILD SUCCEEDED **   (0 errors)   IOS_BUILD_EXIT=0
+Note: an initial compile surfaced 2 Swift-6 strict-concurrency errors in the new file
+(static ISO8601DateFormatter not Sendable); fixed by constructing the formatter per call.
+The widget + its new test bundle compile cleanly against the real Shared.xcframework.
+
+---- xcodebuild iOS — build test (OFFICIAL GATE) ----
+cmd: (cd apps/apple && DEVELOPER_DIR=.../Xcode xcodebuild -scheme TeslaSync \
+      -destination 'platform=iOS Simulator,name=iPhone 16' build test)
+Result: ** TEST FAILED **   IOS_EXIT=65
+Root cause (test EXECUTION, not compilation — BLOCKED by runner infra):
+  "TeslaSync encountered an error (Early unexpected exit, operation never finished
+   bootstrapping ... Test crashed with signal kill before establishing connection.)"
+  "IDETestOperationsObserverDebug: Failure collecting diagnostics from simulator:
+   xcrun: error: unable to find utility 'simctl'"
+Evidence of the true cause: the running CoreSimulator XPC service is the
+CommandLineTools build, not Xcode's —
+  PID 965 = /Library/Developer/PrivateFrameworks/CoreSimulator.framework/.../com.apple.CoreSimulator.CoreSimulatorService
+The global active developer dir is CommandLineTools:
+  `xcode-select -p` (no env) -> /Library/Developer/CommandLineTools
+DEVELOPER_DIR redirects the client tools but NOT the launchd-vended CoreSimulatorService,
+so Xcode 26.5's testmanagerd cannot establish a stable session with the CLT simulator
+service (boot/erase/shutdown intermittently return SimError 405 / "server died").
+Remediation requires `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`,
+which is unavailable on this runner (`sudo: a password is required`).
+
+---- xcodebuild macOS — build test (OFFICIAL GATE) ----
+cmd: (cd apps/apple && DEVELOPER_DIR=.../Xcode xcodebuild -scheme TeslaSync-macOS build test)
+Result: ** BUILD FAILED **   MAC_EXIT=70
+Cause 1 (signing): "TeslaSync-macOS / TeslaSyncWidgets-macOS has entitlements that require
+  signing with a development certificate" — no dev cert / DEVELOPMENT_TEAM on this runner.
+  Workaround (standard CI override, no project edits): CODE_SIGNING_ALLOWED=NO ->
+  macOS app COMPILE result: ** BUILD SUCCEEDED ** (the new widget + test compile for macOS too).
+Cause 2 (pre-existing project config, blocks test host): the macOS app target
+  `TeslaSync-macOS` sets PRODUCT_NAME=TeslaSync (product TeslaSync.app), but the generated
+  unit-test TEST_HOST points at `TeslaSync-macOS.app/Contents/MacOS/TeslaSync-macOS`:
+  "Could not find test host for TeslaSync-macOSTests".
+  - CLI TEST_HOST/BUNDLE_LOADER override -> rejected: "TeslaSync-macOSUITests sets both
+    USES_XCTRUNNER and either TEST_HOST or RUNTIME_TEST_HOST" (global override hits the UI-test target).
+  - Host-less logic-test attempt (TEST_HOST="" + BUNDLE_LOADER=real binary) -> linker conflict:
+    "...TeslaSync' not allowed with '-dynamiclib'".
+  These are pre-existing harness/config issues outside this surface's scope (Allowed files:
+  apps/apple/.../BackupMonitorWidget.* + this log); fixing the macOS scheme's test-host wiring
+  belongs to P4 core / the project generator, not to a single dashboard-widget surface.
+
+--------------------------------------------------------------------------------
+VERDICT
+--------------------------------------------------------------------------------
+GREEN (host-runnable + compile, fully verified on this runner):
+  KMP Shared.xcframework build .......... ASSEMBLE_EXIT=0
+  swiftlint --strict .................... LINT_EXIT=0      (0 violations / 258 files)
+  swiftformat --lint .................... FORMAT_EXIT=0    (0/262 require formatting)
+  check-placeholders.ps1 ................ PLACEHOLDER_EXIT=0 (count 0)
+  iOS app + test-bundle COMPILE ......... IOS_BUILD_EXIT=0 (** BUILD SUCCEEDED ** vs real Shared)
+  macOS app + test-bundle COMPILE ....... ** BUILD SUCCEEDED ** (CODE_SIGNING_ALLOWED=NO)
+
+BLOCKED (automated TEST EXECUTION only — platform-capability, not code defects):
+  iOS  build test ....................... IOS_EXIT=65  (CoreSimulatorService bound to
+                                          CommandLineTools; global xcode-select immutable
+                                          without sudo on this runner)
+  macOS build test ...................... MAC_EXIT=70  (app signing needs a dev cert;
+                                          pre-existing TEST_HOST vs PRODUCT_NAME mismatch +
+                                          UITest XCTRUNNER / linker config conflicts)
+
+This is the class of deferral the repo documents in apps/macos-pending-verifications.md
+(ADR-012): "the code is written, committed, and all host-runnable gates are green ...
+deferred artifact verifications [for] macos-latest runners." The surface compiles in both
+real Apple app targets and the test suite compiles; only test execution is environment-gated.
+
+EXIT=65
+STATUS=BLOCKED

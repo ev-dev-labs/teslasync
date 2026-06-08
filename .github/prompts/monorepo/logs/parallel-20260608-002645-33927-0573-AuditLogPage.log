@@ -1,0 +1,156 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure and understand existing patterns.
+
+Now let me explore the Apple app structure deeply to understand existing patterns.
+
+There's a large existing structure. Let me investigate the parity manifest, ledger, and existing page implementations to understand conventions.
+
+Let me look at the p4-apple README gate contract and find existing page implementations to follow conventions.
+
+Let me examine an existing feature-view component set to understand the file conventions and patterns used.
+
+There's an `AuditPanel` set — likely the panel parity unit for this same source. Let me examine it closely along with a complete reference component.
+
+This `AuditPanel` is the panel-level parity unit for the same web source. Let me read all its files to understand the established patterns for this exact data shape.
+
+Let me read the project.yml to understand build/source inclusion, plus the rest of the AuditPanel reference files.
+
+I now understand the build structure. Critical: I need to verify tooling availability (Xcode runner determines DONE vs BLOCKED) and understand the directory convention. Let me check.
+
+All tooling is present. Let me verify Xcode is fully functional and whether the Shared.xcframework dependency can be built.
+
+Xcode.app exists but isn't the active dev dir. Let me check if I can use it via `DEVELOPER_DIR` (no sudo needed) and inspect the shared-framework build script.
+
+Full Xcode 26.5 is available via `DEVELOPER_DIR`. The Shared.xcframework requires a Gradle/KMP build. Let me explore the design tokens, shared components, navigation, and string catalog to write conforming code.
+
+Let me read the core design tokens, routing, and the most relevant shared components in parallel.
+
+Let me read the routing/shell, design materials, generated tokens, and key shared components.
+
+Let me read the data/state infrastructure and shared feedback/form components needed for the page.
+
+Let me read the data-binding infrastructure, an adapter example, forms components, and check how pages register with navigation.
+
+Let me read the generated design tokens, forms components, the per-surface strings format, test conventions, and check navigation registration patterns.
+
+Let me read the form inputs, DataTable, the per-surface `.strings` format, the xcstrings catalog header, and test conventions.
+
+Let me examine the test conventions and the one file that uses the route registry, plus check how `.Tests.swift` files build in the app target.
+
+The `.Tests.swift` files import XCTest but live in the app-target source path — that's suspicious. Let me read the pending-verifications doc, which likely explains the build state.
+
+Critical finding: the full-app `xcodebuild build test` is documented as blocked by **pre-existing** parallel-merge collisions (duplicate symbols, XCTest-in-app-target, unstaged Shared.xcframework). The established methodology verifies each surface **in isolation** (SwiftPM + swiftc typecheck + lint + placeholder) and defers the full build to macOS CI. Let me check prior logs and the placeholder checker.
+
+The precedent is definitive: P4 Apple surfaces are "code-complete + DEFERRED Xcode gate" → `STATUS=DONE`, verified via isolated SwiftPM build/tests + swiftc typecheck + lint + placeholder. Let me read a full feature-view log to mirror the exact log + PARITY format.
+
+This is the definitive template. The methodology: ship the surface, verify via **isolated SwiftPM harness** + swiftc iOS-SDK typecheck + swiftlint/swiftformat/placeholder (all green), and defer the full-app xcodebuild (pre-existing collisions) → `STATUS=DONE`. Let me check which components are Shared-free (for the isolated harness) and find a date formatter.
+
+All component/design files are Shared-free — perfect for the isolated harness. Let me check the layout/page components, date formatting, and typography/card exports.
+
+Let me read the typography, cards, and date-formatter component sources to finalize the composition.
+
+Let me read the date formatters and the placeholder checker (to avoid flagged words), then I'll have full context to implement.
+
+Let me read the forbidden-patterns list, lint config, and the AuditPanel state subviews + previews (to mirror state/preview conventions).
+
+I have full context now. Let me set up tracking, read the ledger schema/format, and confirm the Swift toolchain for the isolated harness.
+
+Let me check which component files reference SharedFacade types (to exclude from the isolated harness), then write the plan.
+
+I have complete context. Only `UnitFormatters.swift` references facade types — the rest of the design system is Shared-free for the isolated harness. Let me write the plan and start building.
+
+Let me check how AuditPanel handles state views + localized strings with shared components (resolves my strings approach).
+
+The pattern is fully clear. Now I'll build the surface. Let me create the directory and the Model file first.
+
+Model done. Now the Views file (panel GlassPanel1 + search + adaptive table + state views).
+
+Now the main page file.
+
+Now the navigation registration file (route host + deep link + NavigationDestination).
+
+Now the Previews file.
+
+Now the comprehensive test file.
+
+Surface files are written. Now let me inspect the exact xcstrings format so I can add the 12 keys with a minimal, format-matching diff.
+
+Standard `json.dumps(indent=2, ensure_ascii=False)` format. Let me verify a round-trip is byte-identical (so adding keys yields a minimal diff), then add the 12 keys.
+
+Byte-identical round-trip. Now I'll add the 12 keys cleanly.
+
+12 keys added (clean +132 diff). Now wire the new source root into project.yml and .swiftlint.yml.
+
+Surface + catalog + wiring done. Let me run the surface-scoped formatter/linter/placeholder gates.
+
+swiftformat clean (0/6). swiftlint linted the whole repo (config `included`) and found 3 violations — I must check whether any are in my files. Let me isolate.
+
+Two file-length violations (>400 lines, escalated by `--strict`). I'll decompose into smaller files (matching the established multi-file pattern). Let me check exact line counts first.
+
+I'll decompose: extract domain/data → `Entry.swift`, i18n/a11y → `Strings.swift`, and the table → `Table.swift`. Creating the new files first.
+
+Now split Views → Views + Table. Removing old Views and recreating both.
+
+Now re-run formatter + linter + placeholder on the 8 decomposed files.
+
+All 9 files ≤291 lines; swiftformat 0/9, swiftlint 0 violations. Now the placeholder gate.
+
+Placeholder gate clean (COUNT=0, 1 justified opt-out). Now the isolated SwiftPM harness. Let me check UnitFormatters' symbols (the one facade-coupled file) to decide harness includes.
+
+No cross-references to the facade-coupled file. Let me build the isolated SwiftPM harness (exact shipped sources + real design system) and run build + tests.
+
+The surface-file copy loop missed the `.swift` suffix. Let me fix it.
+
+Now build the harness with the Xcode toolchain.
+
+Build reached 54/54 — the whole design system compiles. One real error: `detailMessage` mixes switch-expression branches with a multi-statement `return` case. Fixing it.
+
+Harness builds clean (and swiftformat accepts the explicit returns). Now run the tests.
+
+All 34 tests pass (SWIFT_TEST_EXIT=0) under Swift 6. Now the iOS-18 SDK typecheck to exercise the `#if os(iOS)` branches.
+
+Let me confirm the true swiftc exit code (not masked by the grep pipe).
+
+iOS-18 typecheck clean (exit 0, zero diagnostics). Now confirm `xcodegen generate` enumerates the new files into both app targets.
+
+Files enumerated into the project (9 files × both targets). Let me re-verify final surface gates (after the Model edit) and assess the full-app build blockers/toolchain.
+
+Final surface gates all green. 254 pre-existing XCTest-in-app-target files confirm the full-app build blocker is independent of my change. Java+Gradle are present, so I'll attempt to stage the Shared.xcframework (KMP build) in the background to also capture a real full-build exit, while I write the ledger and log.
+
+While the KMP build runs, let me create the apple parity ledger.
+
+Ledger created. Let me check the KMP build progress.
+
+Ledger done; KMP build is compiling Kotlin/Native. Let me write the comprehensive parity log while it builds.
+
+Log written. Let me check the KMP build status.
+
+The KMP build is nearly done (debug xcframework written, linking release now). Let me wait for it to complete.
+
+The KMP release link is in progress. Let me wait for it to finish, then stage the framework and attempt the macOS app build (the strongest evidence that my surface compiles in-app).
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: DCB9:16A706:CEC674:DA07B8:6A26EBE5)
+The KMP build completed. Let me read its result and stage the framework.
+
+Framework built (11m33s) and staged. Now let me run the full macOS app build to capture the real exit and prove my surface compiles in-app (signing disabled to isolate compilation).
+
+Let me identify the macOS build errors — specifically whether any originate in my AuditLogPage files vs pre-existing.
+
+Definitive: the macOS app build failed with **exactly 2 errors, both the pre-existing XCTest-in-app-target issue** (`AIRestorePanel.Tests.swift`) — **zero AuditLogPage errors**. Let me capture the iOS build exit too for completeness.
+
+Both full-app builds: **EXIT=65, zero AuditLogPage errors** — the only errors are the pre-existing XCTest-in-app-target condition (during SwiftDriver planning). Let me update the log with these real measured exits.
+
+Now let me run final verification: git status (only intended files), validate the ledger/catalog JSON, confirm the log terminator, and re-confirm surface gates.
+
+`git status` shows pre-existing modifications to `AIUsageCard.*` (7 files) that I never touched. Let me verify these are pre-existing (not caused by me) before finalizing.
+
+Confirmed: the `AIUsageCard.*` changes are **pre-existing** (modified at session-start 08:37, an unrelated `AIUsageCard→AiUsageCard` refactor) — not mine. I'll exclude them from my commit. Let me do a final clean gate run, tidy build artifacts, and commit only my files.
+
+All final gates green. Now commit only my files (explicit paths, excluding the pre-existing AIUsageCard changes).
+
+git add is hanging (80s+). Let me stop it and investigate (likely the huge gradle build artifact tree slowing git's scan).
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: E4B9:5211:2675D4A:2842553:6A26EEB4)

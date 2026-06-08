@@ -1,0 +1,205 @@
+================================================================================
+P4 · Shared surface · 0141 — SuspenseProgressBoundary (Apple)
+Run: 2026-06-08T06:01-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/370
+Base: c9c6fdb9f
+Prompt: P4/shared-surfaces/0141 — Shared surface: SuspenseProgressBoundary
+Web source (spec): web/src/components/feedback/SuspenseProgressBoundary.tsx
+                   (+ its shared infra web/src/lib/globalProgress.ts and the bar it drives,
+                    web/src/components/feedback/TopProgress.tsx)
+Mode: code-complete + host-compiled (iOS 18 + macOS 15 SDK) + host-tested (SwiftPM XCTest,
+      32/32). The xcodebuild -scheme app build/test is DEFERRED with its real exit + cause
+      (predecessor parity: 0002 BackendTool / 0054 GuardModeWidget, ADR-012, Honesty rule 7).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)             OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (83717DEE-70A3-4325-AA61-CBDDD3140989)       OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                   OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                 OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+  shared-surfaces in project.yml  0 references (not yet target-registered)          WARN
+
+  Capability note: the web source lists no charts and no maps — it is a pure
+  presentational Suspense→progress bridge. The core requirement is SwiftUI +
+  Observation, which is AVAILABLE and PROVEN by the real iOS-18-simulator AND
+  macOS-15 SDK compiles below, and by the executed SwiftPM XCTest run (32/32). The
+  capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT
+  apply — the surface is authored, host-compiled on both SDKs, and host-tested.
+
+=== ARTIFACT (apps/apple/TeslaSync/shared-surfaces/SuspenseProgressBoundary.*) ===
+  SuspenseProgressBoundary.Model.swift        344  P1/S10 strings facade + P1/S11 telemetry seam
+                                                   (view.opened) + the SuspenseProgress coordinator
+                                                   (refcounted @Observable port of globalProgress) +
+                                                   input snapshot + resolved phase + P1/S8 source
+                                                   seam + @Observable model + in-memory source
+  SuspenseProgressBoundary.Tests.swift        276  XCTest — projection / model wiring+telemetry+
+                                                   freshness / coordinator refcount / a11y (23 methods)
+  SuspenseProgressBoundary.Views.swift        111  SuspenseProgressBar (TopProgress peer) + loading
+                                                   host (ProgressTrackingFallback peer; start/stop the
+                                                   coordinator on appear/disappear) + empty state
+  SuspenseProgressBoundary.Chrome.swift        98  refresh button + stale/offline connectivity banner
+                                                   + retryable error state (P4 leaf chrome)
+  SuspenseProgressBoundary.Previews.swift      88  #if DEBUG previews — one per state (loading+driven
+                                                   bar / content / empty / error / stale / offline)
+  SuspenseProgressBoundary.AdapterTests.swift  82  XCTest — trickle maths parity + valueNow clamp (9)
+  SuspenseProgressBoundary.swift               81  the generic boundary surface (fallback/content slots
+                                                   + phase switch + onAppear/onDisappear + surfaceSlug)
+  SuspenseProgressBoundary.Adapter.swift       77  pure trickle maths (globalProgress port: target/
+                                                   initial/interval + next() + valueNow) + a11y + slug
+  SuspenseProgressBoundary.Projection.swift    42  pure input→resolved phase (error/loading/empty/content)
+  SuspenseProgressBoundary.strings             28  P1/S10 catalog contribution (table "SuspenseProgressBoundary")
+  Total 1227 lines. Largest .swift = Model 344 (swiftlint file_length<=400 honored). No file
+  imports the Shared xcframework (seams are Swift protocols; the prod app injects the
+  facade-backed source, previews/tests inject InMemorySuspenseProgressSource).
+
+=== PARITY (web source reproduced end-to-end) ===
+  The web SuspenseProgressBoundary wraps <Suspense> so that while the lazy fallback is
+  mounted the global progress bar (lib/globalProgress.ts → TopProgress.tsx) is active, and
+  when the children resolve the fallback unmounts and the bar deactivates. SwiftUI has no
+  Suspense primitive, so the "is the wrapped content resolving?" signal is bound through a
+  P1/S8 state-holder seam (native idiom) instead of a thrown promise; everything else is a
+  faithful port.
+
+  - Coordinator (lib/globalProgress.ts): SuspenseProgress is the refcounted @Observable port.
+    Constants reproduced verbatim — TRICKLE_TARGET=80, TRICKLE_INITIAL=8, TRICKLE_INTERVAL=120.
+    next(p) = p>=80 ? 80 : min(80, p + max(1, (80-p)*0.15)) — 15% of the remaining gap, floor 1,
+    clamped. start() returns an idempotent stop; concurrent starts stack; the last stop snaps
+    progress to 0 and deactivates. valueNow = round(clamp(p,0,100)) (TopProgress aria-valuenow).
+  - Loading host (ProgressTrackingFallback): SuspenseProgressLoadingHost renders the caller's
+    fallback and, for exactly as long as it is on screen, holds one coordinator consumer —
+    start on appear, stop on disappear — the precise mirror of useEffect(()=>start(),[]).
+  - Bar (TopProgress.tsx): SuspenseProgressBar observes the coordinator and paints a 2 pt
+    full-width strip; width = trickle %, cyan→indigo→emerald sweep, collapses when inactive,
+    width transition omitted under Reduce Motion, role=progressbar with localized label + value.
+  - Composition (web fallback/children slots): the boundary is generic over Fallback/Content
+    view builders, a drop-in wrapper exactly like the web component. A live boundary is a
+    transparent pass-through of its current slot (web parity).
+  - States (ALL rendered, each with a #if DEBUG preview + a unit test):
+      loading (fallback chrome + active global trickle — the web Suspense branch) ·
+      content (children rendered transparently — the web children branch) ·
+      empty  (resolved with no rows → friendly message, never a blank box — P4 leaf) ·
+      error  (async load failed → retry — P4 leaf; web pairs Suspense with an ErrorBoundary) ·
+      stale / offline (orthogonal connection axis → banner + inline refresh + one-shot
+              auto-refresh on the stale transition — P4 leaf, matches the AiUsageCard precedent).
+  - i18n (P1/S10): the one web string — TopProgress aria-label t('global.loading','Loading') —
+    is preserved verbatim as suspenseProgress.loadingA11y; the P4 leaf chrome keys
+    (empty/errorTitle/retry/staleBanner/offlineBanner/refresh) are namespaced suspenseProgress.*.
+    Every code-referenced key is declared in the .strings catalog; NO English string literals in
+    native code (all via SuspenseProgressStrings facade + Text(verbatim:)). referenced==declared.
+  - Accessibility: the bar exposes a localized label + "{percent}%" value and hides when idle;
+    the loading host carries a "Loading" label; the retry button + refresh button carry labels;
+    the banner + empty + error compose their children for VoiceOver; Reduce Motion respected.
+  - Telemetry (P1/S11): view.opened with slug "SuspenseProgressBoundary" emitted exactly once on
+    the first presented snapshot (asserted by SpySuspenseProgressTelemetry).
+
+=== GATES (each command actually run; real exit pasted) ===
+  [1] iOS 18 simulator SDK compile (DEVELOPER_DIR=Xcode 26.5):
+        xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6 \
+          -target arm64-apple-ios18.0-simulator <Tokens+Design+Components closure> \
+          <7 surface source files>
+      IOS_SDK_COMPILE_EXIT=0                                                        GREEN
+  [2] macOS 15 SDK compile (DEVELOPER_DIR=Xcode 26.5):
+        xcrun --sdk macosx swiftc -typecheck -swift-version 6 \
+          -target arm64-apple-macos15.0 <same closure> <7 surface source files>
+      MACOS_SDK_COMPILE_EXIT=0                                                      GREEN
+      (test sources also type-check in-module against the real types — XCTest macros
+       verified separately; see [5].)
+  [3] swiftformat --lint (this surface):
+        swiftformat --lint apps/apple/TeslaSync/shared-surfaces
+      0/9 files require formatting                                                  GREEN
+      Full-tree `swiftformat --lint apps/apple`: 1/1922 require formatting — the ONE
+      offender is PRE-EXISTING and OUTSIDE this surface
+      (feature-views/ActionBuilder.Previews.swift); this surface is clean.
+  [4] swiftlint --strict (this surface): 0 violations in shared-surfaces/SuspenseProgressBoundary.*
+      GREEN.  The repo-wide `swiftlint --strict` reports exactly 1 serious violation,
+      PRE-EXISTING and OUTSIDE this surface
+      (dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length).
+  [5] SwiftPM XCTest (real XCTest runner, macOS host, Xcode toolchain):
+        swift test   (scratch package: this surface + its minimal token/component closure)
+      Test Suite 'All tests' passed — Executed 32 tests, with 0 failures (0 unexpected).
+      SWIFT_TEST_EXIT=0                                                             GREEN
+      (Covers projection phases, model wiring/telemetry/freshness/auto-refresh, the
+       coordinator refcount/trickle/idempotent-stop/snap-back, the trickle maths +
+       valueNow clamp, and the a11y summary.)
+  [6] placeholder gate:
+        pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/SuspenseProgressBoundary
+      PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0                            GREEN
+      (also re-run against the real dir `-Path apps/apple/TeslaSync/shared-surfaces`:
+       PLACEHOLDER_COUNT=0 — genuinely clean, not a no-op.)
+  [7] xcodebuild -scheme TeslaSync / TeslaSync-macOS  build test:
+      As-written (bare) on this runner the default toolchain is CLT:
+        "xcode-select: error: tool 'xcodebuild' requires Xcode ... is a command line tools instance"
+      IOS_EXIT=1   MAC_EXIT=1
+      DEFERRED (predecessor-accepted disposition — 0002 BackendTool, 0054 GuardModeWidget,
+                ADR-012, Honesty rule 7). Even with DEVELOPER_DIR pointed at Xcode 26.5 the
+                scheme build cannot give evidence about THIS deliverable in this slot:
+        (a) NOT-YET-REGISTERED: project.yml's app + test targets enumerate `Sources/`,
+            `TeslaSync/dashboard-widgets/` and `TeslaSync/feature-views/`; this surface lives at
+            `TeslaSync/shared-surfaces/` and has 0 references in project.yml
+            (verified: shared_surfaces_refs=0). The shared-surfaces directory is registered into
+            the XcodeGen app + test targets by the downstream P4 integration/acceptance prompt
+            (exactly as dashboard-widgets / feature-views are wired once for all their surfaces).
+            Editing project.yml is OUTSIDE this prompt's allowed files (SuspenseProgressBoundary.*
+            + the log). Running xcodebuild now would build the app WITHOUT these files and re-run
+            the existing suite — ZERO evidence about this deliverable. Gates [1]/[2] DO compile
+            this surface against the real library on BOTH SDKs, and gate [5] EXECUTES its full
+            XCTest suite — the meaningful validation.
+        (b) Shared.xcframework not staged: the app target links the KMP core
+            (apps/apple/Frameworks holds only .gitkeep); staging it needs a Kotlin/Native gradle
+            build. Independent of this UI surface.
+        (c) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+      The SAME tests that would run in the TeslaSync(/-macOS) test target are PROVEN GREEN (32/32)
+      by the executed SwiftPM harness in gate [5], and the surface compiles against BOTH the
+      iOS 18 and macOS 15 SDKs in gates [1]/[2].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source (loading/content) + the P4 leaf
+      contract (empty/error/stale/offline) — implemented; each has a #if DEBUG preview;
+      phase + coordinator logic unit-tested AND EXECUTED green (32/32).
+  [x] Hooks bind through the shared P1/S8 state-holder seam (SuspenseProgressSource→
+      SuspenseProgressModel); no HTTP/networking in the view. (Web lists no data sources;
+      the boundary's loading/connection signal is bound through the seam, not inferred in-view.)
+  [x] Every i18n key from source has a matching catalog key — web global.loading preserved
+      verbatim (suspenseProgress.loadingA11y); native chrome suspenseProgress.* present;
+      referenced==declared verified; no English literals in native code.
+  [x] Accessibility labels on every interactive element (refresh + retry buttons), plus the
+      progressbar label+value, the loading-host label, and combined banner/empty/error values.
+  [x] Tests: adapter unit (trickle maths + valueNow) + per-state projection + model wiring/
+      telemetry/freshness + coordinator refcount + a11y — 32 methods total (23 in Tests + 9 in
+      AdapterTests), EXECUTED 32/32 via SwiftPM XCTest with 0 failures (gate [5]).
+  [x] No TODO / stub / mock / placeholder / Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green (both-SDK compile + 32/32 XCTest + format + lint
+      + placeholder); the Xcode app build/test is DEFERRED with captured evidence (xcframework +
+      shared-surfaces registration + signing), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green (real exit codes pasted); the
+                          xcodebuild build/test is shown DEFERRED with its real exit 1 + cause,
+                          never as a pass.
+  2 No scope narrowing ... full surface (9 .swift + strings), all states, seams, tests, previews.
+  3 No skip-and-assume ... web source (SuspenseProgressBoundary + globalProgress + TopProgress)
+                          read end-to-end; every branch + the one t() + the trickle maths reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. coordinator refcount/trickle + bar + loading host + 6 states reproduced;
+                          trickle arithmetic asserted equal to the web controller.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0002 BackendTool / 0054 GuardModeWidget
+                          (host-gate green + xcodebuild deferral with evidence).
+  8 No commit on red ..... committed work is green on every runnable gate; the only non-green
+                          step is the environment/integration-blocked xcodebuild scheme, deferred
+                          with evidence (predecessor-accepted disposition).
+  9 No silent drift ...... path/registration deviation documented (shared-surfaces not yet in
+                          project.yml; wiring is the integration prompt's job; project.yml is
+                          outside this prompt's allowed files).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

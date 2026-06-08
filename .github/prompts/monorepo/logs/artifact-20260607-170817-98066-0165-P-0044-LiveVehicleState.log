@@ -1,0 +1,226 @@
+================================================================================
+P4 · Feature view · 0044 — LiveVehicleState (Apple)
+Run: 2026-06-07T19:5x-0700   Host: Darwin arm64 (macOS 26.x)   Slot: slot-165
+Prompt: P4/feature-views/0044 — Feature view: LiveVehicleState
+Web source (spec): web/src/features/admin/components/security-access/LiveVehicleState.tsx
+Mode: code-complete + host-verified (macOS 15 SDK) ; Apple BUILD/TEST toolchain
+      (Xcode / iOS-Simulator SDK / XCTest) UNAVAILABLE on this runner -> see GATE.
+================================================================================
+
+=== CAPABILITY PROBE (real command output) ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)             OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                            OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  macOS SDK .................. /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk   OK
+  SwiftUI / Charts / MapKit .. `import` resolves against the macOS SDK              OK
+  --- the Apple BUILD/TEST toolchain is ABSENT (Command Line Tools only) ---
+  xcodebuild ................. xcode-select: error: tool 'xcodebuild' requires Xcode,
+                               but active developer directory '/Library/Developer/
+                               CommandLineTools' is a command line tools instance   MISSING
+  iPhoneSimulator SDK ........ xcrun: error: SDK "iphonesimulator" cannot be located MISSING
+  simctl ..................... xcrun: error: unable to find utility "simctl",
+                               not a developer tool or in PATH                       MISSING
+  XCTest module .............. error: no such module 'XCTest'                        MISSING
+
+  Capability disposition (Honesty rule 1/3): this surface uses NEITHER Swift Charts
+  NOR MapKit (web "Charts/maps used: (none)"); its core requirement is SwiftUI, which
+  IS available and is PROVEN by the real macOS-15 SDK type-check below (MAC_TC=0).
+  However, this runner has NO Xcode at all (Command Line Tools only): there is no
+  iPhoneSimulator SDK, no simctl, no XCTest framework, and no xcodebuild. Therefore
+  the gate's `xcodebuild ... build test` (iOS + macOS), an iOS-18-Simulator compile,
+  and EXECUTION of the XCTest suite CANNOT run here. Per the prompt's capability
+  clause ("If unavailable on the runner -> STATUS=BLOCKED with API evidence"), the
+  terminal status is BLOCKED — with the full surface authored, host-compiled against
+  the macOS 15 SDK, host-linted, and its test bodies host-type-checked (see GATE).
+  Nothing below is faked or marked green that did not actually run.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/LiveVehicleState.*) ===
+  LiveVehicleState.Adapter.swift   331  testable projection core — StringOrBool union +
+                                        SecurityEventSnapshot DTO (10 web fields) +
+                                        LiveVehicleSignalBuilder (port of buildLiveSignals /
+                                        boolLabel / seatLabel / asNonEmptyString / count / the
+                                        !includes("off") active rule) + LiveVehicleStatePhase +
+                                        Projection.resolvePhase + a11y signal summary
+  LiveVehicleState.Model.swift     220  P1/S8 state-holder seam (LiveVehicleStateSource->Model) +
+                                        P1/S11 telemetry seam + P1/S10 LiveVehicleStateStrings
+                                        facade + load-status / connection / input +
+                                        @Observable model (phase/signals/connection/hasEvent) +
+                                        stale one-shot auto-refresh + in-memory source
+  LiveVehicleState.swift            55  LiveVehicleState surface — TSFadeIn(0.17) -> TSGlassPanel
+                                        -> header + connectivity banner + phase switch
+                                        (loading / error / empty / content); onAppear telemetry
+  LiveVehicleState.Views.swift     275  presentational subviews — header / freshness chip
+                                        (Live pulse, Reduce-Motion-aware) / stale+offline banner /
+                                        signal tile (active accent vs muted) / adaptive grid /
+                                        loading skeleton grid / empty (web EmptyState) / error
+                                        (QueryError + retry)
+  LiveVehicleState.Previews.swift   84  #if DEBUG previews — one per state (content-live /
+                                        content-stale / content-offline / loading / empty / error)
+  LiveVehicleState.Tests.swift     368  XCTest — builder helpers + all 10 tiles + projection
+                                        per-state + model wiring/telemetry/stale/offline + a11y
+                                        (24 methods)
+  LiveVehicleState.strings          46  P1/S10 catalog contribution (17 web-source keys + 9 native
+                                        chrome/a11y keys)
+  Total 1379 lines across 7 files (1333 Swift + 46 strings) — a complete implementation, not a
+  skeleton. Shared TSFadeIn / TSGlassPanel / TSSkeleton / Color.TS / Font.TS / TSSpacing / TSRadius
+  are REUSED from the real component library (no redeclaration -> no duplicate symbols in-module).
+
+=== PARITY (vs web LiveVehicleState.tsx) ===
+  Data sources -> useTranslation only. The web source is a pure presentational leaf fed
+    `latest: SecurityEvent | undefined` by its parent; it performs NO HTTP. The native surface
+    mirrors this: the P1/S8 `LiveVehicleStateSource` carries the latest security-event snapshot +
+    the live-stream connection; the view performs NO networking. buildLiveSignals is reproduced
+    natively so it is exercised end-to-end rather than trusted from the caller.
+  Projection -> LiveVehicleSignalBuilder.build is a 1:1 port of web buildLiveSignals: nil event
+    -> [] ; otherwise the SAME 10 tiles in the SAME order (hazards, highBeams, turnSignal,
+    driverSeat, pairedKeys, valetMode, serviceMode, speedLimit, homelinkDevices, centerDisplay).
+    boolLabel(On/Off/—), asNonEmptyString (non-empty string only; boolean never coerces),
+    count -> String or —, driver-seat Occupied/Empty/—, and the active rule
+    (`!!s && !s.toLowerCase().includes('off')` ; counts active when > 0 ; booleans active when true)
+    are all ported and unit-tested branch-by-branch. speedLimitMode/centerDisplay model the web
+    `string | boolean | null` union via StringOrBool?.
+  Composition -> web FadeIn(delay 0.17) -> GlassPanel(header + grid|empty). Native: TSFadeIn(0.17)
+    -> TSGlassPanel -> header (title + freshness chip) + content. Web inner GlassPanel tiles ->
+    LiveSignalTile (icon + truncating label above the emphasized value; active accent-cyan icon +
+    primary value, inactive muted — web cyan/white vs var(--text-muted)). Web responsive
+    grid-cols-2/3/5 -> LazyVGrid(.adaptive(minimum:150)) reflowing across iPhone/iPad/Mac (HIG).
+  Charts/maps -> NONE (web "(none)"). No Swift Charts, no MapKit — nothing to port.
+  States (all render) -> content (grid) + empty (web EmptyState "No live state data available")
+    are the two web branches. The Apple HIG states contract adds: loading (skeleton grid),
+    error (QueryError + retry wired to model.refresh), stale (amber freshness chip + "Reconnecting"
+    banner + ONE guarded auto-refresh), offline (muted chip + "last known" banner, no auto-refresh).
+    Cached signals stay visible behind a refresh/failure (resolvePhase) while the chip/banner flag
+    staleness. The web "Live" indicator (animated CircleDot) is reproduced as the live freshness
+    chip with a Reduce-Motion-aware pulsing dot. Each state has a #if DEBUG preview and a
+    projection/model unit test.
+  i18n -> all 17 source strings resolve through the P1/S10 facade with the web t(key,default)
+    fallback: admin.security.liveState, .on, .off, live.hazards, live.highBeams, live.turnSignal,
+    live.driverSeat, live.occupied, live.empty, live.pairedKeys, live.valetMode, live.serviceMode,
+    live.speedLimit, live.homelinkDevices, live.centerDisplay, live.indicator ("Live"),
+    live.noData — ALL present in LiveVehicleState.strings, plus 9 native chrome/a11y keys (stale/
+    offline/banners/loading/error/retry/active/inactive). No English literals in native code
+    (Text(verbatim:) over the facade).
+  a11y -> each tile is one element with a combined "label, value, Active/Inactive" VoiceOver label
+    (LiveVehicleStateAccessibility.signalSummary, tested); the freshness chip + banner combine to a
+    labeled element; the retry button carries an accessibilityLabel; the loading grid is one labeled
+    element; icons are accessibilityHidden; Dynamic Type via tokens; Reduce Motion gates the live-dot
+    pulse and the TSSkeleton shimmer.
+  Telemetry -> LiveVehicleStateModel.start() emits viewOpened(surface:"LiveVehicleState") (P1/S11),
+    asserted by a spy test to fire exactly once.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[A] swiftc -typecheck — macOS 15 SDK. The 4 shipped non-preview files compiled together with the
+    REAL apps/apple component closure (generated Tokens + all of Sources/Components except the
+    UnitPreferences-dependent DataDisplay/UnitFormatters.swift + Sources/Design); none import the
+    Shared xcframework. PROVES the SwiftUI surface + design tokens + shared components type-check:
+      swiftc -typecheck -sdk <MacOSX.sdk> -target arm64-apple-macos15.0 <closure> <surface 4 files>
+      MAC_TC=0                                                                       OK
+[B] swiftc -typecheck — XCTest test bodies. The full Tests.swift compiled against the same real
+    closure + the production surface + a faithful XCTest shim (XCTestCase + XCTAssert* signatures),
+    proving every test references a real, correctly-typed API. (NOT an execution — see BLOCKED [F].)
+      TEST_TC=0                                                                      OK
+[C] swiftlint --strict — the 6 surface .swift files (explicit paths; the repo .swiftlint.yml
+    `included:` does NOT list TeslaSync/feature-views — that wiring is the P4 integration prompt's
+    job — so the bare gate `swiftlint --strict` SKIPS this dir; run explicitly here):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0                                                                    OK
+    NOTE (full-tree disclosure): the bare `swiftlint --strict` over the repo's included paths reports
+    exactly 1 PRE-EXISTING violation — TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:
+    141 function_body_length — which is NOT a LiveVehicleState file, is unmodified by this change, and
+    is OUTSIDE this prompt's allowed files. It is disclosed, not silently absorbed (Honesty rule 9).
+[D] swiftformat --lint — config apps/apple/.swiftformat:
+      surface files: 0/6 files require formatting.                                   FORMAT_EXIT=0  OK
+      whole tree (gate form `swiftformat --lint apps/apple`): 0/659 files require formatting.       OK
+[E] check-placeholders (ADR-011 stub gate; pwsh):
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                             OK
+
+=== GATE — APPLE-TOOLCHAIN STEPS (BLOCKED — Xcode absent on this runner; NOT faked, NOT green) ===
+    The literal gate commands require Xcode, which is not installed here (Command Line Tools only):
+      xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+      xcodebuild -scheme TeslaSync-macOS build test
+      swiftlint --strict ; swiftformat --lint apps/apple ; check-placeholders.ps1  (the last three RAN
+      — see [C][D][E]; only the two xcodebuild lines and the iOS/XCTest steps below are blocked)
+    [F] IOS_BUILD_TEST  = BLOCKED   evidence: `xcodebuild` -> "requires Xcode, but active developer
+                                    directory '.../CommandLineTools' is a command line tools instance";
+                                    `xcrun --sdk iphonesimulator` -> "SDK cannot be located";
+                                    `xcrun simctl` -> "unable to find utility 'simctl'".
+    [G] MAC_BUILD_TEST  = BLOCKED   same: no `xcodebuild`. (The macOS 15 *SDK* IS present and the
+                                    surface type-checks against it — step [A], MAC_TC=0 — but the
+                                    xcodebuild app build + signed test run cannot execute.)
+    [H] iOS-18-Simulator compile = BLOCKED  no iPhoneSimulator SDK to target.
+    [I] XCTest EXECUTION = BLOCKED  no XCTest framework in Command Line Tools, so neither an Xcode
+                                    test target nor a SwiftPM `swift test` harness can run. The suite
+                                    is instead host-type-checked against an XCTest shim (step [B],
+                                    TEST_TC=0). This is honestly LESS than executing the tests; it is
+                                    not claimed as a green test run.
+    Additional (code-unrelated) deferral that would ALSO block xcodebuild even on an Xcode runner:
+    this surface lives at TeslaSync/feature-views/ with 0 references in project.yml (proven: the app
+    targets source Sources/ + TeslaSync/dashboard-widgets only); registration + Localizable.xcstrings
+    folding are the downstream P4 integration prompt's scope and OUTSIDE this prompt's allowed files;
+    the app target also links a not-yet-staged Shared.xcframework (KMP) and the macOS target needs a
+    signing certificate. None is a defect in this surface.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (content grid + empty) PLUS the HIG contract states
+      (loading/error/stale/offline) — implemented; each has a #if DEBUG preview; projection +
+      model unit-tested (type-checked; execution BLOCKED — see [F]-[I]).
+  [x] Hooks bind through the shared P1/S8 state-holder seam (LiveVehicleStateSource->Model); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — all 17 source keys present in the strings.
+  [x] Accessibility labels present on every interactive element (retry button; tiles; chip/banner).
+  [x] Tests: adapter (all 10 tiles + helpers) + projection per-state + model wiring/stale/telemetry +
+      a11y — 24 methods authored and type-checked against the real API (execution BLOCKED — [I]).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [~] EXIT=0 / STATUS=DONE -> NOT achievable on this runner: the Apple build/test toolchain (xcodebuild,
+      iOS-Simulator SDK, XCTest) is absent. STATUS=BLOCKED with the capability evidence above, per the
+      prompt's capability clause. SwiftUI itself is proven (macOS 15 SDK compile, MAC_TC=0).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the two xcodebuild steps, the iOS compile, and the XCTest EXECUTION are shown
+                       BLOCKED with real `xcode-select`/`xcrun` error output; every "OK" is a command
+                       actually run with its real exit code. Test EXECUTION is NOT claimed — only a
+                       type-check of the test bodies (TEST_TC=0) is.
+  2  No scope narrowing: implemented ALL 10 tiles + every web state + the HIG states + i18n + a11y +
+                       telemetry; no field, branch, or string omitted.
+  3  No skip-and-assume: each host-runnable gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (A shim is used ONLY in the
+                       throwaway test-body type-check harness, never in shipped surface files.)
+  5  No parity shortcuts: faithful port of buildLiveSignals + boolLabel + asNonEmptyString + the active
+                       rule + the union-typed fields + all states; web source treated as THE spec.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml and did NOT edit the shared
+                       Localizable.xcstrings (parallel-unsafe); strings shipped as the per-surface table,
+                       exactly like the 0005/0009/0011 predecessors.
+  8  No commit on red  : the committed work is COMPLETE and green on every gate this runner can execute
+                       (macOS compile, test-body type-check, swiftlint, swiftformat, placeholder); the
+                       Apple build/test steps are BLOCKED by an absent toolchain (capability evidence
+                       captured), not failing code. STATUS=BLOCKED is declared truthfully here, not
+                       painted green.
+  9  No silent drift   : changes confined to the allowed LiveVehicleState.* files + this log. The one
+                       pre-existing full-tree swiftlint violation (LifetimeStatsWidget, another feature)
+                       is disclosed in [C], not absorbed or "fixed" outside scope.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native LiveVehicleState shipped at parity with the web source: a pure-Swift
+  signal builder (all 10 tiles, the union-typed fields, the boolean/label/count value coercion and the
+  active rule, branch-by-branch authored to web parity), a P1/S8 state-holder seam (no view HTTP), P1/S11
+  telemetry, every web state + the Apple HIG loading/error/stale/offline chrome, all 17 i18n keys, and
+  per-tile VoiceOver labels. The surface type-checks against the real apps/apple component library on the
+  macOS 15 SDK (MAC_TC=0) and the full XCTest suite type-checks against the real API (TEST_TC=0);
+  swiftlint/swiftformat/placeholder are green. The Apple BUILD/TEST toolchain (Xcode, iOS-Simulator SDK,
+  XCTest) is ABSENT on this Command-Line-Tools-only runner, so `xcodebuild ... build test`, an iOS-18
+  compile, and XCTest EXECUTION cannot run here -> STATUS=BLOCKED with the captured capability evidence,
+  per the prompt's capability clause. The implementation is complete and ready to pass the full gate on
+  an Xcode-equipped, target-registered, signed runner (the downstream P4 integration prompt's scope).
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/LiveVehicleState.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0044-LiveVehicleState.log
+  git commit -m "feat(apps/apple/feature-views): add LiveVehicleState surface (P4)"
+
+EXIT=1
+STATUS=BLOCKED

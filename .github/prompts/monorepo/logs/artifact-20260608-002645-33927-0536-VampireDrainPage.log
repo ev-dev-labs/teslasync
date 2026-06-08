@@ -1,0 +1,164 @@
+================================================================================
+P4 · Apple · P7 page — page:battery/VampireDrain (SwiftUI / HIG)
+Run: 2026-06-08T08:49-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/536
+Base: c9c6fdb9f
+Prompt: p4-apple/P7 — page:battery/VampireDrain (SwiftUI / Apple HIG)
+Web source (spec): web/src/features/battery/pages/VampireDrainPage.tsx   route /charging/vampire-drain
+Manifest unit: page:battery/VampireDrain   requiredCount=45 (9 panels + 3 charts + 0 maps + 3 states + 30 strings)
+Mode: code-complete + host-validated (swiftc -typecheck vs macOS SDK + real component closure).
+      Xcode app build/test + iOS-sim gate BLOCKED — runner has Command Line Tools only (no full Xcode).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                          OK
+  swiftc -typecheck SwiftUI .. page + REAL component closure typechecks (macOS 15 target)   OK
+  swiftc -strict-concurrency . -swift-version 6 -strict-concurrency=complete → 0 errors/0 warn (my files)  OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                            OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                                 OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen — project.yml generates clean      OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh — self-test PASS                       OK
+  xcodebuild ................. ERROR "requires Xcode, active dir = CommandLineTools"          BLOCKER (app build + test + iOS-sim)
+
+  The core requirement — SwiftUI + Swift Charts (RadialGauge/LineChart/BarChart) — is AVAILABLE and PROVEN
+  by a REAL macOS-SDK typecheck below (the page compiles against the actual TS component library + design
+  tokens with Swift 6 complete concurrency). No MapKit on this page (0 maps). The capability escape hatch
+  ("SwiftUI/Charts unavailable") does NOT apply. Only the xcodebuild app build/test + simulator gate is
+  BLOCKED (environment: no full Xcode), per the prompt's "If no Xcode runner is available → STATUS=BLOCKED".
+
+=== ARTIFACT (apps/apple/TeslaSync/Features/Battery/VampireDrainPage.*) ===
+  VampireDrainPage.Models.swift    163  domain value types (Stats/Session/Daily DTO + Severity/ScoreBand/Tip)
+  VampireDrainPage.Builder.swift   176  severity/scoreBand/gaugeColorIndex/gaugeFraction/sort/tips + locale Format
+  VampireDrainPage.Model.swift     294  @Observable model + Source seam (P1/S8) + telemetry (P1/S11) + strings facade (P1/S10) + a11y
+  VampireDrainPage.Views.swift     219  value pill + freshness chip + summary grid + score gauge + trend + daily panels
+  VampireDrainPage.Sessions.swift  237  sessions table (TSDataTable, 7 cols) + tips panel + loading/error regions + comparators
+  VampireDrainPage.swift           133  VampireDrainPage scaffold (header + 3-state switch + adaptive sections)
+  VampireDrainPage.Route.swift      97  navigationDestination value + deep-link parser + model-factory seam
+  VampireDrainPage.Previews.swift  107  #if DEBUG previews — success/dark/loading/error/empty/compact
+  VampireDrainPage.Tests.swift     253  XCTest: builder/format/model/strings/route (40+ assertions, 19 methods)
+  Localizable.xcstrings            +40  catalog: 30 required parity keys + vampire.* chrome + surfaced infra keys
+  Every .swift file <= 400 lines (house file_length); largest 294 (Model). One exported page View
+  (VampireDrainPage); all sub-views/types are internal composition. project.yml registers TeslaSync/Features
+  for both app targets (iOS + macOS); apps/parity/apple-ledger.json carries the coverage row.
+
+=== ARCHITECTURE / DECISIONS ===
+  - Page-local symbols are `VampireDrainPage*`-prefixed to avoid collision with the sibling dashboard
+    `VampireDrainWidget` public model symbols in the same TeslaSync module.
+  - Data binding (ADR-004 / P1-S8): the view binds a `VampireDrainPageModel` (@Observable) through the
+    `VampireDrainPageSource` seam; the production app injects a source over the shared KMP energy state holder
+    (web `useVampireDrainStats` → /vampire-drain/stats); previews/tests/nav use `InMemoryVampireDrainPageSource`.
+    The view performs NO networking (mirrors the proven `VampireDrainWidget` seam — builds/tests without KMP).
+    The manifest declares no API dataSource for this unit; the three data states (loading/error/success) are
+    still modelled + implemented in full.
+  - SI (P1/S5): this page has no SI-unit fields (percent, kWh, hours, score) → formatting is locale-aware
+    decimals (`VampireDrainPageFormat`, port of web `fmtNumber`); no non-SI value is stored or computed.
+  - i18n (ADR-014): all visible literals resolve from `Localizable.xcstrings`; shared TS components consume
+    `LocalizedStringKey`, runtime strings (Sentry On/Off, sessions count, freshness, a11y) via
+    `VampireDrainPageStrings` (NSLocalizedString). Web key names preserved verbatim.
+  - Charts (ADR-005): native Swift Charts via the P3 wrappers TSRadialGauge / TSLineChart / TSBarChart — never
+    a WKWebView. Web Recharts RadialGauge/LineChart/BarChart → native equivalents (semantic, not pixel, parity).
+  - Navigation: /charging/vampire-drain is a charging sub-route; on Apple it is a value-typed
+    `NavigationDestination` (`VampireDrainPageDestination`) installed via `.vampireDrainPageDestination()`, with a
+    pure deep-link parser for both web paths (/charging/vampire-drain, /vampire-drain). Non-invasive — does not
+    hijack a top-level AppRoute host owned by another P7 page.
+  - a11y (ADR-015): panels/charts carry accessibilityLabels; gauge/metric labels composed via
+    `VampireDrainPageAccessibility`; Dynamic Type via Font.TS tokens; light/dark + increased-contrast via the
+    generated dynamic-color tokens; Reduce Motion honored by shared TSFadeIn/TSSkeleton.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck (7 source files compiled WITH the real apps/apple component closure — Tokens.swift +
+    Sources/Components/** + Sources/Design/**, excluding the one Shared-coupled file UnitFormatters.swift which
+    this page does not use), -target arm64-apple-macos15.0 -swift-version 6 -strict-concurrency=complete:
+        TYPECHECK rc=0   total errors=0   my-file errors=0   my-file warnings=0
+[2] swiftlint lint --strict --config apps/apple/.swiftlint.yml  (9 files):
+        Done linting! Found 0 violations, 0 serious in 9 files.           LINT_EXIT=0
+[3] swiftformat --lint  (9 files):
+        0/9 files require formatting.                                     FORMAT_EXIT=0
+[4] swiftc -frontend -parse  (all 9 files incl Tests + Previews):
+        parse_all_rc=0
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Battery -Language swift:
+        PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0                       PLACEHOLDER_EXIT=0
+[6] xcodegen generate (project.yml registers TeslaSync/Features for iOS + macOS app targets):
+        Created project at apps/apple/TeslaSync.xcodeproj — 54 VampireDrainPage refs in pbxproj
+        XCODEGEN_EXIT=0   (.xcodeproj is git-ignored; removed after validation)
+
+=== GATE — XCODE-ONLY STEPS (BLOCKED: no full Xcode on this runner) ===
+    xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync build
+        → xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+          '/Library/Developer/CommandLineTools' is a command line tools instance               BUILD_EXIT=BLOCKED
+    swiftlint --strict apps/apple/TeslaSync/Features/Battery                                    LINT_EXIT=0 (ran, see [2])
+    xcodebuild ... test                                                                         TEST_EXIT=BLOCKED
+    The 19 XCTest methods (VampireDrainPage.Tests.swift) are authored + parse-clean; they execute once a full
+    Xcode + simulator runner is available. Per prompt: no Xcode runner ⇒ this gate is BLOCKED (not red).
+
+=== PARITY ===
+PARITY_REQUIRED=45
+
+  PANELS (9):
+  [x] panel · Avg-Drain-Rate ......... Views.swift VampireDrainSummaryGrid.tile(key:"Avg Drain Rate")/avgText (TSStatCard)
+  [x] panel · Total-Phantom-Loss ..... Views.swift VampireDrainSummaryGrid.tile(key:"Total Phantom Loss")/lossText
+  [x] panel · Worst-Session .......... Views.swift VampireDrainSummaryGrid.tile(key:"Worst Session")/worstText
+  [x] panel · Drain-Score ............ Views.swift VampireDrainSummaryGrid.tile(key:"Drain Score")/scoreText
+  [x] panel · GlassPanel5 ............ Views.swift VampireDrainScorePanel (TSGlassPanel + TSRadialGauge)
+  [x] panel · GlassPanel6 ............ Views.swift VampireDrainTrendPanel (TSChartContainer + TSLineChart)
+  [x] panel · GlassPanel7 ............ Views.swift VampireDrainDailyPanel (TSChartContainer + TSBarChart)
+  [x] panel · GlassPanel8 ............ Sessions.swift VampireDrainSessionsPanel (TSGlassPanel + TSDataTable)
+  [x] panel · GlassPanel9 ............ Sessions.swift VampireDrainTipsPanel (TSGlassPanel + tips list)
+
+  CHARTS (3):
+  [x] chart · RadialGauge ............ Views.swift VampireDrainScorePanel → TSRadialGauge(value:label:colorIndex:)
+  [x] chart · LineChart .............. Views.swift VampireDrainTrendPanel.series → TSLineChart(series:)
+  [x] chart · BarChart ............... Views.swift VampireDrainDailyPanel.series → TSBarChart(series:)
+
+  STATES (3):
+  [x] state · loading ................ Model.swift Phase.loading (resolvePhase) → Page.swift richRegion → Sessions.swift VampireDrainLoadingSections
+  [x] state · error .................. Model.swift Phase.error → Page.swift richRegion → Sessions.swift VampireDrainErrorContent (TSErrorDisplay + Retry)
+  [x] state · success ................ Model.swift Phase.success → Page.swift successSections (+ per-section empty: TSChartContainer isEmpty / "No drain sessions recorded yet.")
+
+  STRINGS (30) — all in Localizable.xcstrings AND referenced in Swift (verified: 30/30):
+  [x] string · "Analyze phantom energy loss while your vehicle is parked" .. swift.swift header subtitle (TSText)
+  [x] string · "Avg Drain Rate" .................. Views.swift tile key
+  [x] string · "Avoid opening the app frequently — each wake cycle costs battery." .. Builder.swift tips()[2]
+  [x] string · "Daily Drain While Parked" ........ Views.swift VampireDrainDailyPanel (TSChartContainer title)
+  [x] string · "Date" ............................ Sessions.swift column "date" title
+  [x] string · "Disable Sentry Mode when parked at home to save 1–2 % per day." .. Builder.swift tips()[0]
+  [x] string · "Drain %" ......................... Views.swift daily series name + legend
+  [x] string · "Drain Rate" ...................... Views.swift trend series name
+  [x] string · "Drain Rate Trend" ................ Views.swift VampireDrainTrendPanel (TSChartContainer title)
+  [x] string · "Drain Score" ..................... Views.swift tile key
+  [x] string · "Drain Sessions" .................. Sessions.swift VampireDrainSessionsPanel (TSPanelTitle)
+  [x] string · "Duration" ........................ Sessions.swift column "duration" title
+  [x] string · "Enable energy-saving mode in vehicle settings for better standby." .. Builder.swift tips()[3]
+  [x] string · "End %" ........................... Sessions.swift column "end" title
+  [x] string · "Loss %" .......................... Sessions.swift column "loss" title
+  [x] string · "No drain sessions recorded yet." . Sessions.swift TSEmptyState (empty table)
+  [x] string · "Off" ............................. Model.swift VampireDrainPageStrings.sentryLabel
+  [x] string · "On" .............................. Model.swift VampireDrainPageStrings.sentryLabel
+  [x] string · "Parked Hours" .................... Views.swift daily series name + legend
+  [x] string · "Rate %/hr" ....................... Sessions.swift column "rate" title
+  [x] string · "Reduce third-party app polling intervals to let the car sleep faster." .. Builder.swift tips()[1]
+  [x] string · "Score" ........................... Views.swift TSRadialGauge label + Model.swift gaugeLabel
+  [x] string · "Sentry" .......................... Sessions.swift column "sentry" title
+  [x] string · "Start %" ......................... Sessions.swift column "start" title
+  [x] string · "Tips to Reduce Vampire Drain" .... Sessions.swift VampireDrainTipsPanel (TSPanelTitle)
+  [x] string · "Total Phantom Loss" .............. Views.swift tile key
+  [x] string · "Vampire Drain" ................... swift.swift header TSPageTitle
+  [x] string · "Worst Session" ................... Views.swift tile key
+  [x] string · "sessions" ........................ Model.swift VampireDrainPageStrings.sessionsCount
+  [x] string · "vampire.title" ................... swift.swift .navigationTitle(Text("vampire.title"))
+
+PARITY_COVERED=45
+PARITY_REQUIRED=45
+PARITY_RESULT=45/45 COVERED
+
+=== SUMMARY ===
+  PLACEHOLDER_EXIT=0  LINT_EXIT=0  FORMAT_EXIT=0  TYPECHECK_EXIT=0  PARSE_EXIT=0  XCODEGEN_EXIT=0
+  BUILD_EXIT=BLOCKED  TEST_EXIT=BLOCKED   (xcodebuild requires full Xcode; runner has Command Line Tools only)
+  PARITY_COVERED=45 / PARITY_REQUIRED=45
+
+  Implementation is complete at 45/45 parity and passes every host-runnable gate (typecheck against the real
+  SDK + component closure under Swift 6 complete concurrency, swiftlint --strict, swiftformat --lint, parse,
+  placeholder scan, xcodegen). The Xcode app build/test + iOS-simulator gate cannot be executed on this runner
+  (no full Xcode), so per the prompt and Honesty Covenant #1/#10 this is reported BLOCKED, not green.
+
+EXIT=2
+STATUS=BLOCKED

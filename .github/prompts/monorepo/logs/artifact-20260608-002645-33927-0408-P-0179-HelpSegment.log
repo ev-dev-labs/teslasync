@@ -1,0 +1,197 @@
+=== P4 Shared surface 0179 HelpSegment (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/HelpSegment.*
+Web src  : web/src/components/layout/status-bar/HelpSegment.tsx
+Tier     : Shared surface (cross-feature layout chrome — status-bar segment)
+Delegation: FORBIDDEN — authored directly, no sub-agents used.
+ADRs     : ADR-002 (shared Sources, dual iOS/macOS target), ADR-005, ADR-009.
+
+=== HONESTY COVENANT (binding) ===
+ 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+ 5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+ 9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+=== RUNNER CAPABILITY (honest inventory, with evidence) ===
+PRESENT on this runner:
+  - Swift 6.3.2 — "Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)"
+  - macOS SDK (SwiftUI) — /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk. The surface
+    COMPILES + links against it under the Swift 6 language mode (see SWIFTPM_BUILD).
+  - swiftlint 0.63.3, swiftformat 0.61.1, pwsh 7 — all runnable.
+ABSENT on this runner (Command Line Tools only — NO full Xcode):
+  - xcodebuild → "xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+    directory '/Library/Developer/CommandLineTools' is a command line tools instance"
+  - iOS Simulator SDK → "xcrun: error: SDK \"iphonesimulator\" cannot be located"
+  - XCTest swift module → "error: no such module 'XCTest'" (CLT ships no XCTest.framework swift
+    module — requires full Xcode)
+  - SwiftUI #Preview macro plugin → "external macro implementation type 'PreviewsMacros.SwiftUIView'
+    could not be found ... plugin for module 'PreviewsMacros' not found"
+Disposition: the Apple RENDERING capability (SwiftUI on the macOS SDK) IS present and was used to
+build + logic-verify the surface. The Xcode-only TOOLING (xcodebuild iOS-Sim/macOS build+test, the
+XCTest runner, the #Preview plugin) is environment-blocked and DEFERRED to a macos-latest CI runner
+with signing — the same disposition as the 0112 EnvironmentalImpact CLT precedent and the
+apps/macos-pending-verifications.md framework. The surface code is COMPLETE, not a stub.
+
+=== SURFACE FILES (allowed: shared-surfaces/HelpSegment.* + this log) ===
+  HelpSegment.Model.swift    — P1/S11 slug + telemetry seam, P1/S10 strings facade, the decoupled
+                               action contract (HelpSegmentAction + 3 Notification.Name signals +
+                               NotificationCenterHelpSegmentActions), HelpSegmentDensity, item type
+  HelpSegment.Adapter.swift  — localizer seam (.bundle/.echo), projection items() (the 3 web
+                               buttons), per-density showsKeyCap/showsLabel, a11y label/tooltip
+  HelpSegment.Views.swift    — HelpSegmentButton (ghost, hover-brighten, .help tooltip, a11y label),
+                               HelpSegmentKeyCap (the web <kbd>?)
+  HelpSegment.swift          — View: density / iconOnly init, HStack of the 3 affordances, P1/S11
+                               view.opened .task
+  HelpSegment.Previews.swift — #if DEBUG previews: iconOnly / keyCapOnly / full × light + dark
+  HelpSegment.Tests.swift    — XCTest: projection, per-density decisions, a11y, i18n parity,
+                               action contract (+ NotificationCenter post), telemetry
+  HelpSegment.strings        — P1/S10 catalog (the 7 web keys, verbatim)
+
+=== PARITY MAP (web source -> native) ===
+  div.flex items-center gap-1        -> HStack(spacing: TSSpacing.xs), a11y container "keyboard-hint"
+  Tooltip (@/components/ui)          -> .help(Text) (macOS tooltip) + always-on accessibilityLabel
+  ghost <button> (muted→hover)       -> Button + .buttonStyle(.plain), textMuted→textSecondary on hover
+  Keyboard / HelpCircle / Bug (lucide) -> SF Symbols keyboard / questionmark.circle / ladybug
+  <kbd>?</kbd>                       -> HelpSegmentKeyCap (surfaceGlass chip), literal "?" key glyph
+  iconOnly prop + hidden xl:inline   -> HelpSegmentDensity { iconOnly, keyCapOnly, full } (all 3 web
+                                        presentations reproduced; tooltips + a11y in every density)
+  window CustomEvent dispatch        -> Notification.Name post (io.teslasync.keyboardShortcutsToggle… /
+   (toggle-keyboard-shortcuts /        tourLauncherOpenRequested / feedbackModalOpenRequested) — the
+    tour launcher / open-feedback)      native mirror of the decoupled web window events
+  data-tour-launcher-trigger /       -> HelpSegmentAction.accessibilityIdentifier
+   data-testid=status-bar-feedback…     (tour-launcher-trigger / status-bar-feedback-trigger)
+  useTranslation t(key, default)     -> HelpSegmentStrings facade (table "HelpSegment") + .echo seam
+
+=== STATES (honest) ===
+  The web source binds NO data hook — its only hook is `useTranslation` (the P1/S10 facade). It is
+  pure presentational layout chrome (three always-available help affordances), so it has NO async
+  loadable surface: there is no loading / empty / error / stale / offline branch in the web source.
+  Manufacturing those states would invent behaviour the source does not have (covenant #2 + #9), so
+  this surface reproduces the states that DO exist — the three real web presentations driven by the
+  `iconOnly` prop + the responsive `hidden xl:inline` tier:
+    iconOnly   (web iconOnly=true)        : icons only, no key-cap, no labels
+    keyCapOnly (web iconOnly=false, < xl) : shortcuts shows the "?" key-cap; labels hidden
+    full       (web iconOnly=false, xl)   : every label visible
+  All three are previewed (#if DEBUG, light + dark) and unit-asserted (showsKeyCap / showsLabel per
+  density). Because there is no data hook, there is no P1/S8 data holder to bind and the view does
+  ZERO HTTP — the "bind via state holder, no view HTTP" criterion is satisfied vacuously + the
+  decoupled actions go through NotificationCenter, never the network.
+
+=== i18n KEYS (every t() from web source, resolved via the P1/S10 facade — no English literals in code) ===
+  shortcuts.tooltip / shortcuts.openAria / shortcuts.hintSuffix
+  tour.launcher.openShort / tour.launcher.openAria
+  feedback.openShort / feedback.openAria                              (7 web keys, verbatim)
+  Mechanical parity: the set of keys the surface references == exactly these 7 (asserted in
+  LOGIC_EXEC "i18n key parity" + HelpSegment.Tests.swift testReferencedKeysAreExactlyTheWebKeys).
+  plutil -lint HelpSegment.strings = OK; key count = 7.
+
+=== GATE RESULTS (run on THIS runner — raw exits) ===
+[SWIFTPM_BUILD] isolated macOS 15 SwiftPM harness (Swift 6 language mode + StrictConcurrency), the
+  surface's 4 non-preview files compiled against the REAL generated design tokens
+  (apps/design/generated/apple/Tokens.swift):
+    "Build complete! (5.61s)"  ->  SWIFTPM_BUILD_EXIT=0
+  (Previews.swift excluded: #Preview macro plugin absent in CLT — see DEFERRED.)
+[LOGIC_EXEC] standalone executable running the SAME assertions as HelpSegment.Tests.swift (XCTest
+  runner unavailable — see capability):
+    "CHECKS=75 FAILURES=0 ALL GREEN"  ->  LOGIC_EXEC_EXIT=0
+  Covered: projection items/order/ids/icons/keycap, every copy key+fallback verbatim, density flags,
+  per-item showsKeyCap/showsLabel across all densities, a11y labels + tooltips + trailing labels,
+  i18n key parity (== the 7 web keys), action→Notification.Name mapping + raw values + a11y ids,
+  NotificationCenter sink actually POSTS each decoupled signal, view.opened telemetry slug.
+[LINT] swiftlint --strict (config apps/apple/.swiftlint.yml), scoped to the 6 surface .swift files:
+    "Done linting! Found 0 violations, 0 serious in 6 files."  ->  LINT_EXIT=0
+[FORMAT] swiftformat --lint (config apps/apple/.swiftformat) over the surface dir:
+    "0/6 files require formatting."  ->  FORMAT_EXIT=0
+[PLACEHOLDER] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces:
+    "PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0"  ->  PLACEHOLDER_EXIT=0
+  Manual grep (TODO|FIXME|XXX|coming soon|placeholder|lorem|not implemented|stub|mock|fatalError):
+    "NONE FOUND".
+
+=== DEFERRED (environment-blocked, NOT code-blocked — raw evidence above) ===
+  IOS_BUILD_TEST  = DEFERRED  (xcodebuild requires Xcode; no iphonesimulator SDK — exits 1)
+  MAC_BUILD_TEST  = DEFERRED  (xcodebuild requires Xcode — CLT only — exits 1)
+  XCTEST_RUNNER   = DEFERRED  (XCTest swift module absent in CLT — "no such module 'XCTest'";
+                               equivalent assertions EXECUTED green via LOGIC_EXEC — 75/75)
+  PREVIEW_MACRO   = DEFERRED  (PreviewsMacros plugin absent in CLT — probe confirmed; Previews.swift
+                               is lint+format clean and references only verified public symbols)
+  TARGET_WIRING   = DEFERRED  (project.yml lists TeslaSync/dashboard-widgets + TeslaSync/feature-views
+                               as source groups but not the NEW TeslaSync/shared-surfaces; adding the
+                               single `- path: TeslaSync/shared-surfaces` line to the iOS + macOS
+                               targets is shared across ALL P4 shared-surface prompts, so it is an
+                               integration-level edit OUTSIDE this prompt's allowed files. Likewise the
+                               co-located *.Tests.swift follows the established 116-file feature-view
+                               convention and is wired into the XCTest target at integration.)
+  Tracked by apps/macos-pending-verifications.md → the P4 Apple acceptance gate on macos-latest with
+  signing identities (DEVELOPER_DIR=/Applications/Xcode.app/...).
+
+=== ACCEPTANCE CRITERIA ===
+ [x] Surface renders on Apple with ALL states from the web source reproduced — the three real web
+     presentations (iconOnly / keyCapOnly / full); each has a #if DEBUG preview (light + dark) and
+     per-density logic asserted green. (The data states loading/empty/error/stale/offline do not
+     exist in the web source — it binds no data hook — so they are intentionally not invented.)
+ [x] Hooks bind through the P1/S8 seam layer with no view HTTP: the segment is presentational +
+     prop-driven exactly like the web component (the only web hook is useTranslation / P1/S10). It
+     has no data hook to bind, performs ZERO networking, and keeps its 3 actions decoupled by
+     posting Notification.Name signals (the native mirror of the web window events).
+ [x] Every i18n key from source has a matching catalog key (7 web keys verbatim); the referenced
+     set == the 7 keys, verified mechanically (LOGIC_EXEC + Tests).
+ [x] Accessibility labels on every interactive element: each button carries its web aria-label as a
+     VoiceOver label in EVERY density, plus .help tooltip, the .isButton trait, and a stable
+     accessibilityIdentifier; the key-cap is accessibilityHidden (the button already announces it).
+     Dynamic Type via Font.TS system fonts.
+ [x] Tests: adapter unit tests + per-density decision tests + a11y label tests + i18n parity +
+     action contract + telemetry — authored as XCTest (HelpSegment.Tests.swift) AND executed green
+     on this runner via the equivalent executable harness, 75/75 (XCTest runner deferred).
+ [x] No TODO/stub/mock/placeholder/Lorem in shipped code — PLACEHOLDER_COUNT=0, 0 opt-outs + grep.
+ [x] EXIT=0 / STATUS=DONE on every runnable owned gate; Xcode-only gates DEFERRED with API evidence.
+
+=== HONESTY COVENANT CHECK ===
+  1 No red-as-green ...... every runnable owned gate is genuinely green; the Xcode-only gates are
+                          shown DEFERRED with raw error evidence, never as a pass.
+  2 No scope narrowing ... full 7-file surface; all three web presentations + every web button,
+                          icon, key-cap, label, tooltip, aria-label, and the decoupled action
+                          contract reproduced; 75 executed assertions.
+  3 No skip-and-assume ... web source read end-to-end; every t() + the iconOnly / hidden-xl branch
+                          reproduced; every gate (incl. the xcodebuild/XCTest/#Preview blocks) was
+                          EXECUTED on this runner with raw output pasted, not assumed.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0 + grep clean.
+  5 No parity shortcuts .. ghost hover-brighten button, "?" key-cap chip, the 3-tier density model,
+                          SF-Symbol icon mapping, decoupled NotificationCenter actions, a11y +
+                          telemetry all mapped to platform tokens/idioms (no ported Tailwind).
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  consumes P1/S9 tokens (Color.TS / Font.TS / TSSpacing / TSRadius),
+                          P1/S10 i18n facade, P1/S11 view.opened telemetry seam; same code-complete
+                          + DEFERRED-Xcode disposition as the 0112 EnvironmentalImpact CLT precedent.
+  8 No commit on red ..... the COMMITTED surface is GREEN on every runnable owned gate (SwiftPM
+                          build, 75/75 logic exec, scoped strict lint, format, placeholder); the
+                          only non-green signals are the Xcode-only gates, shown DEFERRED with raw
+                          error evidence (environment, not code).
+  9 No silent drift ...... changes confined to shared-surfaces/HelpSegment.* (7 files) + this log.
+                          project.yml / .swiftlint.yml / macos-pending-verifications.md NOT edited
+                          (outside allowed files; wiring noted under DEFERRED). The pre-existing
+                          unstaged working-tree edits (AIUsageCard.* @ 06:02 slot-setup,
+                          FleetApiSection.tsx, BackupRestorePage.tsx) are NOT mine and NOT staged.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+=== DISPOSITION ===
+  Production-polished, Apple-idiomatic HelpSegment shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED on this runner to the maximum its capability allows: it COMPILES against the
+  real generated design tokens on the macOS 15 SDK under the Swift 6 language mode + strict
+  concurrency, and 75/75 of its test assertions EXECUTE green — with swiftlint --strict (scoped) /
+  swiftformat / placeholder all clean. The full-app iOS-Simulator + macOS xcodebuild build/test, the
+  XCTest runner, and the #Preview macro are DEFERRED (not failed by this code): this runner is
+  Command-Line-Tools-only (no full Xcode, no iOS Simulator SDK, no XCTest module, no PreviewsMacros
+  plugin) — per apps/macos-pending-verifications.md → the P4 Apple acceptance gate on a signed
+  macos-latest runner. Adding the one `TeslaSync/shared-surfaces` source-group path to project.yml
+  (shared by every P4 shared-surface prompt) is the only integration step and is likewise deferred.
+
+SWIFTPM_BUILD_EXIT=0
+LOGIC_EXEC_EXIT=0
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+IOS_BUILD_TEST=DEFERRED
+MAC_BUILD_TEST=DEFERRED
+XCTEST_RUNNER=DEFERRED
+PREVIEW_MACRO=DEFERRED
+TARGET_WIRING=DEFERRED
+EXIT=0
+STATUS=DONE

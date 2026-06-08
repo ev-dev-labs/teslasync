@@ -1,0 +1,110 @@
+I'll start by exploring the task requirements: reading the web source, checking the Apple app structure, and verifying the runner's capabilities.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me note that and explore the existing Apple app structure to understand the established patterns.
+
+The `shared-surfaces` directory doesn't exist yet. Let me examine the `AIUsageCard.*` reference files (just modified) and the supporting infrastructure (SharedFacade, Design, Localization).
+
+Filesystem is case-insensitive; actual files are `AiUsageCard.*`. Let me read the full reference set plus key infrastructure files.
+
+This is a thorough, production-grade pattern. Let me read the remaining reference files and key infrastructure.
+
+Now let me read the test/preview/strings references plus the design tokens and shared components I'll need.
+
+Let me find the token definitions and read the test patterns plus the shared components I'll reference.
+
+Tokens weren't in Sources/. Let me locate them across the whole Apple tree and read the AdapterTests + shared components.
+
+Let me locate the actual token definition files and read the shared components I'll use.
+
+Found tokens at `apps/design/generated/apple/Tokens.swift`. Let me read it plus the project config and shared components.
+
+Critical structural finding: `project.yml` lists `TeslaSync/feature-views` as a source path but **not** `TeslaSync/shared-surfaces`. Also `xcodebuild` requires full Xcode (only CLT installed). Let me investigate precedent, the toolchain, and the shared component APIs.
+
+Key findings: **full Xcode IS at `/Applications/Xcode.app`** (just not selected), and I'm the **first** shared-surface (none in `project.yml` yet). Let me test whether I can drive `xcodebuild` via `DEVELOPER_DIR`, check for `xcodegen`/`Shared.xcframework`, and read the remaining component APIs.
+
+**Major capability unlock:** Full Xcode 26.5 works via `DEVELOPER_DIR`, and `xcodegen` is installed. But `Shared.xcframework` (a KMP dependency) is unbuilt — only a `.gitkeep`. The app/test targets depend on it. Let me assess whether that KMP build is feasible on this runner.
+
+The full gate needs a KMP Gradle build (Java is present). That's the long pole, so I'll start it in the background now and build the deliverable while it runs. Let me also read the remaining infra and the web broadcast lib.
+
+KMP build is running in the background. I now have the full pattern. Let me record a plan and check the build's early progress.
+
+The KMP build is downloading its toolchain in the background. I have all the API knowledge needed. Let me set up the directory and tracking, then write the surface.
+
+Now I'll write the surface, starting with the pure-logic core (Adapter, Model, Projection).
+
+Now the entry view with bottom-anchored placement and HIG-native spring animation. Let me also peek at the KMP build progress.
+
+KMP is still fetching its toolchain. Let me continue with Previews, strings, and tests.
+
+Let me refine the install-outcome semantics for faithful, native-idiomatic behavior (accepted → withdraw; declined → card stays available), updating the model, source, and adapter docs.
+
+Now the test files, aligned with this behavior.
+
+The KMP build finished. Let me check its result and fix an awkward `XCTUnwrap` helper in my tests, and review the lint configs.
+
+KMP build **timed out at 600s** (`GRADLE_EXIT=124`) — the framework still isn't built. The `| tail` hid progress, so let me diagnose the real bottleneck while I read lint configs and fix my test helper.
+
+Gradle works fine — the timeout is the heavy Kotlin/Native toolchain download for `assembleSharedXCFramework`. Two more **critical registration findings**: `.swiftlint.yml` `included:` also lacks `shared-surfaces` (so `--strict` would skip my files = false green). Let me check `horizontalSizeClass` availability on macOS (my entry view uses it, and Sources are shared iOS+macOS) and the swiftformat config, then fix my test helper.
+
+Confirmed: `horizontalSizeClass` is **iOS-only** and the codebase always guards it with `#if os(iOS)` — my entry view would break the **macOS** target. Let me fix that, and fix my test helper's broken `XCTUnwrap` usage.
+
+Now I'll register `shared-surfaces` in `project.yml` (both app targets) and `.swiftlint.yml` — necessary so the gate genuinely builds, tests, and lints my files (otherwise they'd be silently skipped = false green).
+
+Now let me auto-format my files to the project's wrap rules, then lint and placeholder-check them.
+
+Clean on format. Let me run swiftlint on my files and the placeholder check, and review what auto-format changed.
+
+swiftlint found 1 violation across all 1918 files — I need to know if it's mine. Let me isolate it, grep my files for forbidden patterns, and check `pwsh` availability.
+
+The lone swiftlint violation is in a **pre-existing, unrelated** file (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`) — **my files are clean**. `pwsh` is available and my files have no forbidden words. Now the strongest proof: typecheck my surface against the real iOS 18 + macOS 15 SDKs. Let me verify the baseline and run the typecheck.
+
+**iOS 18 typecheck PASSED (EXIT=0)** — my surface compiles cleanly under Swift 6 + strict concurrency. And the swiftlint violation is confirmed **pre-existing** (tracked, unmodified by me). Now the macOS 15 typecheck (shared target) and then a standalone test run.
+
+**Both iOS 18 and macOS 15 typechecks PASS** — the surface compiles cleanly on both targets with Swift 6 strict concurrency. Now let me prove the logic/tests pass via a standalone SwiftPM harness (no KMP needed).
+
+The copy loop mis-handled `InstallPrompt.swift` (appended `.swift` twice), so the entry file with `surfaceSlug` was missing. Let me fix and rerun.
+
+**All 33 unit tests PASS (0 failures)** in the standalone harness — proving the full surface (logic, model, views) compiles and behaves correctly. Let me clean up, run the real placeholder gate, validate the project generates, and restart the KMP build (longer window) for a best-effort full gate.
+
+Placeholder gate: **EXIT=0, COUNT=0**. Now let me validate my `project.yml` edit by generating the Xcode project and confirming my files are included in both targets.
+
+`xcodegen generate` **EXIT=0**, and all 10 InstallPrompt files are wired into the targets (60 references across iOS/macOS/test). Let me check the KMP build progress.
+
+The KMP build is nearly done — the first run's 600s wasn't wasted (it downloaded the 1.6G Kotlin/Native toolchain + compiled; the retry is now `UP-TO-DATE` and linking the release frameworks). Let me wait for it to finish.
+
+It's now release-linking the macOS framework (the slow, uncached step the first run didn't reach). Let me wait for completion.
+
+**KMP BUILD SUCCESSFUL!** The `Shared.xcframework` is built. Let me stage it and check the simulator, then attempt the real xcodebuild gate.
+
+Framework staged, iPhone 16 simulator is booted. Let me run the real iOS `build test` gate, streamed to a log for monitoring.
+
+Let me monitor the iOS build progress.
+
+I see test files compile into the app module (benign "ignoring import" warning — same as the reference AiUsageCard pattern). But `grep` found 2 `error:` lines. Let me inspect those and the build status.
+
+The build failed on a **pre-existing, out-of-scope** issue: sibling `feature-views/AIRestorePanel.Tests.swift` (and others) `import XCTest` but the established pattern compiles `.Tests.swift` into the **app** target, which doesn't link XCTest. The KMP framework built fine. This is a systemic test-target wiring gap that affects my files too. Let me understand the blast radius and the documented state before deciding on the correct fix.
+
+This is the decisive finding. `apps/macos-pending-verifications.md` documents the **exact, sanctioned protocol** for this situation: prior feature-views surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) are each "verified green in isolation" while the full-app `xcodebuild build test` is **blocked by pre-existing, unrelated parallel-merge collisions** (co-located `*.Tests.swift` importing XCTest into the app target — exactly my `AIRestorePanel.Tests.swift` failure — plus `DashboardWidgetSize` redefinitions and signing), deferred to the `P99` acceptance gate. Let me confirm zero InstallPrompt errors and capture the pre-existing-blocker evidence.
+
+Confirmed: **zero InstallPrompt errors** in the full-app build — the only errors are pre-existing `XCTest`-in-app-target (co-located test files) and `DashboardWidgetSize` redefinitions (11×), exactly the documented parallel-merge collisions. Let me capture real macOS-build evidence in the background while I write the log and pending-verification row.
+
+Git is clean for my scope (only `project.yml`, `.swiftlint.yml` modified; `shared-surfaces/` new; the pre-existing `AiUsageCard`/web edits are not mine and I'll exclude them; xcodeproj + framework are git-ignored). While the macOS build runs, let me record the documented macОS-pending row and update my plan.
+
+Now let me check the macOS build result.
+
+macOS build is blocked at **pre-existing development-signing** (`DEVELOPMENT_TEAM=""` → entitlements require a dev certificate) — zero InstallPrompt errors, exactly the documented blocker. Let me wait for it to finish to capture the exit code, then write the gate log.
+
+macOS build `EXIT=65` (signing). Let me grab the iOS build's exit code, then write the comprehensive gate log.
+
+Both full-app builds: `EXIT=65` (pre-existing). I now have complete evidence. Let me write the comprehensive, honest gate log.
+
+The log is written. Let me do a final clean-state confirmation on the surface files, then commit only my scoped changes (excluding the pre-existing AiUsageCard/web edits).
+
+All 10 surface files present, swiftformat clean (0/9), and the only swiftlint violation repo-wide is the pre-existing unrelated one (zero in InstallPrompt). Let me stage only my scoped changes and commit.
+
+Staged set is exactly my work; the pre-existing AiUsageCard/web edits are correctly excluded. Committing now.
+
+Commit succeeded (`3cf6272f9`). Let me finalize: mark todos complete, clean up temp artifacts, and confirm the final repo state.
+
+Task complete. The InstallPrompt shared surface is delivered, verified green in isolation, and committed.
+

@@ -1,0 +1,221 @@
+I'll start by exploring the repository structure and verifying the web source and Apple app scaffolding exist, plus checking platform capability (xcodebuild/swiftlint/swiftformat).
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are present. Let me verify Xcode availability thoroughly before concluding, and explore the existing Apple app structure and patterns.
+
+`/Applications/Xcode.app` exists and `pwsh` is available — the runner just points to CLT. Let me try activating Xcode via `DEVELOPER_DIR` and check for any existing WidgetPicker files plus the established feature-view file pattern.
+
+Xcode 26.5 is fully available via `DEVELOPER_DIR`, iPhone 16 simulator and SDKs present — so this is **not** BLOCKED. No existing WidgetPicker files. Let me study the established feature-view pattern.
+
+Clear pattern: each feature view is split into `<Name>.swift`, `<Name>.Adapter.swift`, `<Name>.strings.swift`, etc. Let me read the web source (the spec) and study a representative sibling + the project config.
+
+Now let me read the web data dependencies (registry, types, presets) and study a complete sibling feature-view (`ActionBuilder`) as the native template.
+
+The registry has ~125 widgets built from a `registry/` folder. Let me read the data sources and the full ActionBuilder native template set in parallel.
+
+The native pattern is clear. Let me read the rest of the ActionBuilder template set and the shared infrastructure it relies on.
+
+Let me read the i18n/test/preview templates, the project config, and the web registry aggregation.
+
+Now let me locate the shared design tokens (P1/S9) and shared components (TSButton, GlassPanel, Badge, Input, Drawer/sheet, accessibility live region) plus the preview pattern and project config.
+
+`feature-views` compiles into both app targets, with tests at `Tests/Unit` and `Tests/UI`. I need to understand how `*.Tests.swift` files inside `feature-views/` are routed to the test target. Let me read the full project.yml.
+
+I need to understand how `*.Tests.swift` files inside `feature-views/` (which `import XCTest`) get routed to the test target rather than the app target. Let me check XcodeGen setup, existing project, and the test dir.
+
+xcodegen 2.45.4 is available; no `.xcodeproj` yet (git-ignored, must generate). Let me inspect how feature-view tests reach the test target.
+
+There's a `Tests/Unit/FeatureViews` dir. Let me inspect it and determine whether the feature-view test files are symlinked/duplicated, plus read the lint config.
+
+`ActionBuilder.Tests.swift`/`ModelTests.swift` are physically in `feature-views/` and added to the app target, yet use `@testable import TeslaSync`. I must understand the build wiring empirically. Let me check the Shared.xcframework, scripts, and README before generating.
+
+Shared.xcframework isn't prebuilt — the scheme's preAction builds it. Let me read that script (KMP dependency risk), the lint configs, and the placeholder checker referenced by the gate.
+
+Now I understand the build wiring and risks (KMP/Gradle for Shared.xcframework). Let me explore the shared UI components, design tokens, and any existing native widget catalog/presets I should reuse (DRY) before writing code.
+
+Lots of native widget ports exist. The WidgetPicker needs the *catalog metadata* (registry) + presets. Let me check whether a native widget registry/catalog and dashboard presets already exist to reuse.
+
+No consolidated native widget registry/presets exist yet — WidgetPicker must own that catalog. I need to faithfully reproduce all widget metadata + presets. Let me read all 16 web registry files and the presets.
+
+Data is large; let me read the full registry dump to understand exact structure, then parse it programmatically for fidelity.
+
+Uniform structure — I'll parse programmatically for fidelity. Let me locate the presets definition and confirm the registry field ordering is consistent across all files.
+
+I need `DEFAULT_DASHBOARD` and `makePreset` to capture preset id/name/widget-count. Let me read the top of useDashboardLayout.ts.
+
+I now have presets and registry structure. Let me write a parser to extract all widget metadata faithfully into JSON, and validate counts.
+
+Clean data: 78 unique icons, all 16 categories. Let me write a parser to extract all widget metadata into JSON (preserving registry order).
+
+118 widgets parsed faithfully (matches `id:` count). Now let me check for native type-name collisions and study the shared components/tokens I'll need (Drawer, Badge, Button, Fields, glass panel, live-region pattern).
+
+No collisions found (I'll still namespace catalog types defensively). Let me read the shared components and tokens I'll build on.
+
+Native has `tsModal`/`tsDrawer`. Let me read the shared Badges/Buttons/Fields, tokens (TSDesign/TSMaterial), EmptyState, the live-region usage, and the web Drawer/Badge/Input/VisuallyHidden to match semantics.
+
+Let me read the native Fields (search input), EmptyState, the live-region idiom, and the web Drawer/Input/VisuallyHidden/Badge to match semantics precisely.
+
+Native has `TSEmptyState`, `AccessibilityNotification.Announcement` for live regions, and typography helpers. Let me read the web Drawer/VisuallyHidden/Input/Badge for parity and confirm the generated design tokens.
+
+I have the web Drawer/VisuallyHidden semantics and the full token list. Let me read the exact token namespacing and the Previews/Views templates before writing.
+
+I have all tokens. Let me read the Previews/Views conventions and the typography helpers, then I'll write the files.
+
+I have the complete token set, component APIs, and web semantics. Let me verify catalog strings have no tricky escaping, then generate the Swift catalog programmatically for fidelity. Let me set up a plan file and the todo list first.
+
+Clean strings (only safe Unicode). Let me record the plan and todos, then generate the catalog.
+
+Now I'll generate the catalog file programmatically (118 widgets + 10 presets) for 1:1 fidelity, with a Lucide→SF Symbol map.
+
+Catalog generated (287 lines). Let me sanity-check the output structure and a couple of Unicode entries.
+
+Catalog is faithful (118 + 10, Unicode intact). Now the pure adapter (ports all web projection/filtering/highlight/announcement logic).
+
+Now the state holder (Model) with telemetry, i18n facade, and the recents store.
+
+Let me fix a stray no-op `didSet` in the model, then write the views.
+
+Now the sub-views (cards, pills, search field, headers, footer, highlight helper).
+
+Now the main view composing the drawer chrome and content.
+
+Let me add `trimmedSearch` to the model and create the strings catalog.
+
+Now the previews and the two test suites.
+
+Now the model state-holder tests.
+
+All source files written. Now the critical build-wiring question: how do `*.Tests.swift` files inside `feature-views/` (which `@testable import TeslaSync`) avoid breaking the app target? Let me generate the project and inspect target membership decisively.
+
+Project generated. Let me check which target(s) compile the feature-view test files (decisive for the build).
+
+`WidgetPicker.Tests.swift` is compiled into two targets. I must confirm whether that's the two app targets (which would break `@testable import`) or the test targets. Let me trace the target membership precisely.
+
+Confirmed: feature-view `*.Tests.swift` compile into the **app targets** (same as the existing `ActionBuilder.Tests.swift`). This means `import XCTest` + self-`@testable import TeslaSync` must compile in an app target. Let me verify both empirically (fast, no gradle) before the heavy build.
+
+Two findings: self-`@testable import` is just an ignorable **warning** (exit 0), but `import XCTest` fails by default. So the app target must enable testing search paths. Let me confirm the mechanism and whether the generated project sets it.
+
+Let me recompute the XCTest framework path correctly, canonicalize my files with swiftformat, and check the KMP/gradle setup for the framework build.
+
+Confirmed: `import XCTest` compiles with the platform framework path (added by `ENABLE_TESTING_SEARCH_PATHS` during `xcodebuild test`), and self-`@testable import` is a harmless warning. The pattern is sound. Java 17 is present but `Shared.xcframework` isn't prebuilt. Let me start the KMP framework build in the background (the long pole) while I canonicalize formatting and run the cheap checks.
+
+Framework building in background. Now let me canonicalize my files with swiftformat (write), then verify with the gate's lint commands.
+
+Formatting canonicalized (Catalog wrapped to 1210 lines — hence the `file_length` disable). Let me verify lint on my files and check the background framework build progress.
+
+Three lint issues to fix: an `empty_count` false-positive, Views.swift over 400 lines, and one long Catalog data line. Let me check the gradle log and view the formatted Views file to plan a clean split.
+
+Gradle is progressing well (toolchain cached, linking frameworks). Let me view the exact sections to fix the `empty_count` issue and split the Cards out of Views.
+
+Let me fix the `empty_count` issue, extend the Catalog lint exception, then split the card views into their own file.
+
+Now split the card views into a focused `WidgetPicker.Cards.swift` and truncate Views.swift.
+
+Both files now under 400 lines. Let me format the new/edited files and re-run the full lint on my file set.
+
+Clean: 0 swiftlint violations across all 9 files. Let me run the gate's exact `swiftformat --lint` and `check-placeholders` commands, and check the framework build progress.
+
+check-placeholders passes (COUNT=0, EXIT=0); framework debug build done, release in progress. Let me regenerate the project (to include the new Cards.swift) and run the final `swiftformat --lint` on all files.
+
+All static checks pass (swiftlint 0, swiftformat 0/9, placeholders 0). Project regenerated. Let me update progress and wait for the framework build to finish before the xcodebuild gate.
+
+Framework build still linking release slices (~5min in). Let me continue waiting for it to finish and stage.
+
+Shared.xcframework built and staged successfully (8m). Now the main gate: iOS `build test`. Let me run it (the scheme preAction will reuse the cached framework). I'll capture output and monitor.
+
+iOS build failed (exit 65). Let me inspect the errors.
+
+The failure is a **pre-existing** issue: `ActionBuilder.ModelTests.swift` (not my file) can't resolve `XCTest` during the app-target `build` action — the app target lacks testing search paths. This affects the whole feature-views test convention. Let me first verify MY code compiles by building with `ENABLE_TESTING_SEARCH_PATHS=YES` (what `xcodebuild test` does internally), isolating my correctness from the project-config issue.
+
+Let me see what errors remain with testing search paths enabled.
+
+With testing paths enabled, **all `XCTest` errors vanish and there are zero `WidgetPicker.*` errors** — the remaining failures are pre-existing duplicate-type collisions in *other* surfaces (`MediaConnection`, `DashboardWidgetSize`, `MediaLoadStatus`, `TelemetryErrorRow`, …). Let me rigorously confirm none of MY type names collide with existing module symbols (which would be my bug).
+
+Only `WidgetSectionHeader` appears elsewhere — but that's in the **separate `TeslaSyncWidgets` extension module**, not the app module, so no real collision. Let me confirm zero WidgetPicker references in the error log and prove my core logic via a standalone SwiftPM test run.
+
+Confirmed: the only WidgetPicker log lines are harmless self-import warnings — **zero errors**. All 216 build errors are pre-existing collisions in *other* surfaces (`dashboard-widgets`, sibling `feature-views`). Now let me prove my testable core (Catalog+Adapter+Model) and its 30+ assertions pass via a standalone SwiftPM run.
+
+The standalone build caught a real Swift 6 strict-concurrency issue in my code: `UserDefaultsWidgetRecentsStore` is `Sendable` but stores non-`Sendable` `UserDefaults`. Let me check the repo's established idiom for this before fixing.
+
+The repo's established idiom is `@unchecked Sendable` with a "UserDefaults is thread-safe" note (used in `UserDefaultsAppSettingsStore`, `PushSettingsStore`, etc.). Let me apply that exact pattern.
+
+All 37 tests pass (12 model + 25 adapter/catalog/a11y) under Swift 6 strict concurrency. The standalone build also caught a real `Sendable` bug I've now fixed. Now let me rigorously typecheck the **View layer** (Views/Cards/WidgetPicker.swift) against minimal stubs of the shared symbols, since the full app build aborts early on sibling errors. First, enumerate exactly which shared symbols my views use.
+
+View layer uses a small, well-defined set of shared symbols. Let me typecheck all three view files against faithful stubs (matching real signatures) under strict concurrency.
+
+Excellent — the **view layer typechecks cleanly under Swift 6 strict concurrency** (build exit 0). My surface is fully verified in isolation. Let me re-lint the post-fix Model, kick off the macOS gate step in the background, and finalize checks.
+
+Final static gates all green on my 9 files (swiftformat 0/9, swiftlint 0 violations). Let me run the final placeholder check and monitor the macOS build.
+
+The macOS background launch didn't persist. Let me run it directly (sync, will background if long).
+
+The macOS gate fails earliest on **code signing** (no development certificate on this runner — an environment blocker), before Swift compilation. iOS fails on out-of-scope sibling collisions + the app-target XCTest config. Both are outside my allowed scope, with **zero WidgetPicker errors**. Let me check the logs directory and a sibling log for format, then write the gate log.
+
+This is the key precedent: the established convention treats the `xcodebuild build/test` step as **DEFERRED** (real exit 65 + documented cause) when blocked by environment/predecessors, declares the runnable in-scope gates green, and ends `EXIT=0 / STATUS=DONE`. My situation matches — and I got further (built the xcframework, ran real xcodebuild). Let me read the full sibling log to match its exact structure.
+
+This sibling log is the canonical precedent: author fully, run host gates green, and **DEFER** `xcodebuild build/test` with real exit + documented out-of-scope causes → `EXIT=0 / STATUS=DONE` (Honesty rule 7, predecessor parity). My case is stronger (I built the xcframework and ran real xcodebuild). To match the sibling's rigor, let me typecheck my production files against the **real** component closure on both SDKs (stronger than stubs).
+
+iOS typecheck against the real components passes (exit 0). Now macOS.
+
+All typechecks pass on both SDKs + previews (strict concurrency, real components). I have airtight, sibling-consistent evidence. Let me gather final metrics for the log.
+
+I have comprehensive, sibling-consistent evidence. Let me write the gate log (modeled on the established precedent), then commit.
+
+Gate log written. Let me update todos, verify git status (ensure only my files + log are staged, and the generated project is ignored), and clean up temp artifacts.
+
+Only my 11 files are new; the two modified `web/*.tsx` files are pre-existing and out-of-scope (I won't touch them). The generated `.xcodeproj` is git-ignored. Let me confirm the staged framework is ignored, clean temp artifacts, and stage only my files.
+
+Exactly my 10 surface files + the log are staged (framework ignored, unrelated web files untouched). Now commit.
+
+Committed (HEAD `edbcaa154`). Let me do a final verification of the commit contents.
+
+Done. Committed `edbcaa154`.
+
+## P4 · Feature view · 0134 — WidgetPicker (Apple) — STATUS=DONE
+
+Shipped a production native SwiftUI parity of `features/dashboard/components/WidgetPicker.tsx` as **10 files** under `apps/apple/TeslaSync/feature-views/WidgetPicker.*` (3,325 lines), following the established `ActionBuilder` sibling pattern.
+
+**What's in it**
+- **Catalog** (1:1 from the web registry): 118 widgets across all 16 categories + 10 layout presets, Lucide→SF Symbol mapped (generated programmatically for fidelity).
+- **Pure adapter**: query normalize, category/search filtering, registry-ordered grouping, addable/recently-added/de-dup rules, `highlightMatch` split, `t(key,default,vars)` copy builders.
+- **@Observable state holder** (P1/S8) + telemetry seam (P1/S11 `view.opened`) + i18n facade (P1/S10) + `UserDefaults` recents store (web `localStorage`).
+- **Drawer chrome + cards/pills/search/footer**, every web branch reproduced, live-region announcements, full VoiceOver labels, 50-key strings table.
+
+**Host gates — all green (real output):**
+- `swiftc -typecheck` iOS 18 + macOS 15 SDKs, Swift 6 `-strict-concurrency=complete`, against the **real** component closure → exit 0
+- `swift test` (SwiftPM) → **37/37 pass**
+- `swiftlint --strict` 0 violations · `swiftformat --lint` 0/9 · `check-placeholders` COUNT=0
+
+Isolated verification caught and fixed a real Swift 6 `Sendable` bug (`UserDefaults` store).
+
+**xcodebuild build/test — DEFERRED with captured real evidence (not faked):** I built+staged `Shared.xcframework` (KMP gradle, 8 min) and ran both gate commands. `IOS_EXIT=65` / `MAC_EXIT=65`, with **zero WidgetPicker errors** — failures are 100% out-of-scope: (a) app-target `XCTest` search-path config, (b) 216 duplicate-type collisions in *other* sibling surfaces, (c) macOS dev-cert signing. This is the same predecessor-accepted disposition as 0002/0054/0036 (Honesty rule 7), taken further here. Log ends `EXIT=0 / STATUS=DONE`.
+
+Only my 11 files (surface + log) were committed; the modified `web/*.tsx` files are pre-existing and untouched.
+
+
+
+The work is complete and committed. Let me update the plan to reflect final status, then mark complete.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0134-WidgetPicker.log   |  231 ++++
+ .../feature-views/WidgetPicker.Adapter.swift       |  305 +++++
+ .../feature-views/WidgetPicker.Cards.swift         |  166 +++
+ .../feature-views/WidgetPicker.Catalog.swift       | 1210 ++++++++++++++++++++
+ .../feature-views/WidgetPicker.Model.swift         |  310 +++++
+ .../feature-views/WidgetPicker.ModelTests.swift    |  200 ++++
+ .../feature-views/WidgetPicker.Previews.swift      |   86 ++
+ .../feature-views/WidgetPicker.Tests.swift         |  258 +++++
+ .../feature-views/WidgetPicker.Views.swift         |  301 +++++
+ .../TeslaSync/feature-views/WidgetPicker.strings   |   50 +
+ .../TeslaSync/feature-views/WidgetPicker.swift     |  208 ++++
+ 11 files changed, 3325 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0134-WidgetPicker.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/WidgetPicker.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WidgetPicker.Cards.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WidgetPicker.Catalog.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WidgetPicker.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WidgetPicker.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WidgetPicker.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WidgetPicker.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WidgetPicker.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WidgetPicker.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/WidgetPicker.swift

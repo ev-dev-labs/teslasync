@@ -1,0 +1,83 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Found the web source and the Apple app structure. Let me read the web source and explore the Apple app layout.
+
+The web source is a pure presentational SVG flow diagram. Now let me study the existing Apple app conventions deeply — especially recently-built surfaces, state holders, tokens, and i18n.
+
+The most relevant existing example is `LivePowerFlowWidget` (a flow diagram). Let me study it and the project structure, plus look for the P1/S8/S9/S10/S11 infrastructure.
+
+`LivePowerFlowWidget` already made a *domain-specific* `PowerFlowDiagram`. My task is the *generic* reusable `WidgetFlowDiagram` primitive. Let me study the remaining LivePowerFlow files, the build config, tokens, i18n facade, and telemetry contract.
+
+Let me check the build tooling availability (critical gating factor) and read the project config plus the i18n/telemetry/preview patterns.
+
+Critical finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed — the iOS/macOS build+test gate will be genuinely BLOCKED. But `swift`, `swiftlint`, `swiftformat`, `xcodegen` are available. I'll produce the complete production artifact and run all verifications that *can* run. Let me study the shared i18n/telemetry/token infrastructure.
+
+pwsh and the placeholder script are available. Let me read the model's strings facade + telemetry + state holder, the design tokens, the placeholder script, and find TSSkeleton.
+
+Let me examine the placeholder patterns, lint configs, the `TSSkeleton`/feedback components, and how test files are wired, plus a recent feature-view for full state-pattern reference.
+
+I now have a complete picture of the architecture. Let me create a plan and probe the exact toolchain capabilities (SwiftUI/Charts/MapKit availability under Command Line Tools).
+
+SwiftUI, Charts, and MapKit all typecheck under the Command Line Tools SDK — so I can do a real standalone `swiftc -typecheck` of the primitive (strong compile evidence), even though the full `xcodebuild` scheme build/test is genuinely BLOCKED (no Xcode).
+
+Now I'll build the artifact. Creating the directory and the model/builder/palette/support core first.
+
+Now the diagram rendering layer (Canvas arrows + node views + animated value).
+
+Now the main `WidgetFlowDiagram` view — the state switch, chrome, retry/refresh affordances, and telemetry.
+
+Now the i18n catalog contribution and the previews.
+
+I'll add a testable `resolveState` helper to the view so the presentational mapping is unit-testable, then write the tests.
+
+All 9 files created. Now let me run the verifications I can run: swiftformat lint, swiftlint, the placeholder gate, then a standalone typecheck.
+
+Let me use the formatter to auto-fix (the ecosystem tool), then re-lint.
+
+swiftformat passes. Now swiftlint on the new files.
+
+swiftlint scanned the whole project (via config `included`) and found 1 serious violation. Let me identify whether it's in my files.
+
+The only violation is in a pre-existing file (`LifetimeStatsWidget.Adapter.swift`) owned by a different surface — **my files produce zero violations**. Let me prove that conclusively by linting only my directory via a scoped temp config.
+
+Scoped swiftlint: **0 violations in all 8 Swift files**. Now the placeholder gate and the standalone typecheck.
+
+Placeholder gate: **0 stubs, EXIT=0**. Now the strongest check available without Xcode — a real standalone `swiftc -typecheck` of the production sources against the *real* design tokens plus a minimal `TSSkeleton` shim.
+
+Production sources typecheck cleanly against the **real** design tokens. Now let me verify the Previews (DEBUG) and Tests files compile too.
+
+Both failures are **toolchain limitations of Command Line Tools** (the `#Preview` macro plugin and `XCTest` module ship only with full Xcode), not code errors — which is exactly why the build/test gate is BLOCKED. Let me still validate the *logic* of both files against my real types using minimal shims for `XCTest` and the preview macro.
+
+Tests logic typechecks cleanly (**TESTS_LOGIC_EXIT=0**). The Previews error is just my naive sed turning a declaration macro into a top-level expression. Let me transform each `#Preview` into a function returning `some View` (one expression each) to validate the bodies.
+
+All three logic typechecks pass (**production / tests / previews = EXIT 0**) against the real design tokens. Now let me run the actual gate commands to capture authentic evidence and write the log. First, confirm the log directory and capture the real `xcodebuild` failure.
+
+Let me look at an existing p4-apple log to match the expected log format and conventions.
+
+I now have the established log format and the accepted P4 disposition (precedent: 0036 DigitalTwinWidget, 0056 LivePowerFlow — literally the same `WidgetFlowDiagram` web source): **code-complete + host-gates-green, with the Xcode app build/test transparently DEFERRED** (never claimed green). My situation is identical. Let me gather final metrics and run the real gate commands to capture authentic output.
+
+i18n parity is airtight (9 used = 9 defined, 0 drift). Now let me run the real gate commands, capture authentic output, and assemble the log.
+
+Both `xcodebuild` steps fail with the real `xcode-select` error (Xcode absent). Let me gather header metadata, then write the comprehensive evidence log.
+
+Now I'll write the comprehensive evidence log.
+
+Let me do a final review of the formatted main view and previews to confirm the auto-formatter didn't harm anything.
+
+The formatter wrapped things cleanly and everything is consistent. Let me verify git status and commit.
+
+There are pre-existing uncommitted `AIUsageCard.*` changes in `feature-views` that I did **not** touch (part of the slot's base working tree). I'll stage **only** my two paths to avoid any drift.
+
+All 9 artifact files + the log are staged; the unrelated `AIUsageCard` changes are excluded. Committing now.
+
+Commit complete (10 files, only my artifact + log). Let me run a final consolidated verification against the committed state and clean up scratch files.
+
+All final gates pass on the committed state:
+
+- **swiftformat --lint**: `0/8 files require formatting` ✅
+- **swiftlint --strict** (scoped): `0 violations, 0 serious in 8 files` ✅
+- **placeholder gate**: `COUNT=0, EXIT=0` ✅
+- **production typecheck** vs real design tokens: `EXIT=0` ✅
+
+Scratch files cleaned up.
+

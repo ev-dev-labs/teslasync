@@ -1,0 +1,114 @@
+I'll start by exploring the repository structure and reading the web source that I need to reproduce natively.
+
+The web source exists and the Apple toolchain is partially present, but `xcodebuild` reports only Command Line Tools (no full Xcode). Let me read the web source and explore the existing Apple app structure.
+
+The web source is a simple presentational component. There's an `Xcode.app` present but `xcode-select` points to CommandLineTools. Let me explore the Apple app structure and check if I can use the full Xcode.
+
+Full Xcode 26.5 is available via `DEVELOPER_DIR`. Let me explore the Apple app's internal structure deeply — feature-views, state holders, tokens, i18n facade — and check simulators.
+
+The iPhone 16 simulator is already booted. The feature-views use a multi-file pattern per surface. Let me study an existing simple presentational surface as a template and locate shared infrastructure (tokens, i18n, diagnostics, CopyButton).
+
+This is an ideal template — `Base64Tool` is a presentational tool with a copy button, very close to `CodeBlock`. Let me read the remaining template files, the shared CopyButton, tokens, and project config.
+
+The pattern is now clear. Let me verify the design tokens, project configuration (XcodeGen vs synchronized groups), and the shared CopyButton.
+
+XcodeGen with folder-based sources — new `CodeBlock.*` files will be auto-included on regenerate. Let me read the test target config and exact token/button APIs.
+
+There's a shared `TSCopyButton(value:)` — the proper native counterpart for the web `CopyButton`. Let me read the full project.yml (test target wiring) and the design tokens precisely.
+
+I need to understand how `*.Tests.swift` files in `feature-views/` get compiled into the test target. Let me investigate the Tests directory and any excludes/scripts.
+
+There's a `Tests/Unit/FeatureViews/` dir, yet `Base64Tool.Tests.swift` lives in `feature-views/`. Let me resolve this and check the lint configs, then establish a build baseline.
+
+`feature-views` test files appear to compile into the app target. Let me check the critical build dependencies (Shared.xcframework, generated design tokens) before attempting a baseline build.
+
+Critical: `Shared.xcframework` is absent (only `.gitkeep`) — the app target depends on it. Let me verify whether the app imports `Shared`, whether a build script exists, and where the tokens are defined.
+
+The app target imports `Shared` (KMP framework) in 15 files. Let me check the build script and whether the Kotlin/Gradle toolchain can produce `Shared.xcframework`.
+
+There's a `gradlew` wrapper and a pre-build script that builds the KMP framework. This is the long pole. Let me verify the JDK, confirm project.yml wires the script, and kick off the shared-framework build in the background while I write code.
+
+JDK 17 + Gradle 8.14.5 wrapper present; the pre-build script is wired into the schemes. The KMP framework build is the long pole — let me start it in the background now, then write code while it runs.
+
+While Gradle runs, let me read the exact token definitions so my code uses correct member names.
+
+I have all the tokens. Let me read the lint/format configs, the placeholder-check script, and verify `pwsh` availability so my code passes the gate exactly.
+
+`pwsh` is available. swiftformat uses `before-first` wrapping and `--commas inline`. Let me check the Gradle build progress and read the placeholder patterns to avoid trip words.
+
+Placeholder patterns flag the word "Placeholder" and "not implemented" (case-insensitive) — I'll avoid those. `pwsh` is available. Let me decisively determine how `feature-views/*.Tests.swift` files are wired by generating the project and inspecting target membership.
+
+Project generated. Let me determine which target compiles the feature-view test files.
+
+The test files compile into both app targets (iOS + macOS) — same as `Base64Tool.Tests.swift`. My files will follow this exact precedent. Let me check Gradle progress.
+
+Gradle is downloading its distribution (silent under `--console=plain`). I'll write the CodeBlock surface files while it builds. Starting with the pure, testable adapter core.
+
+All 7 files written. Let me format and lint my new files, and check the Gradle build progress.
+
+Both swiftformat and swiftlint pass cleanly on my files (0 violations). Let me run the placeholder check and verify Gradle progress.
+
+Gradle built `Shared.xcframework` successfully (9m22s), placeholder check passes, and my files are clean. Now I must regenerate the Xcode project to include my new files, stage the framework, then run the full build. Let me regenerate and stage.
+
+Project regenerated with my files (42 references), framework staged. Now the main event — the full iOS build + test. I'll run it in the background and monitor.
+
+Build launched. Let me monitor the log — the pre-build script runs Gradle first (now cached), then compiles the app.
+
+The log file is missing — the backgrounded subshell may not have persisted. Let me investigate the state.
+
+There's an **external harness** already running the exact gate (`xcodebuild ... -derivedDataPath /tmp/ft_DD build test` under `timeout 900`). My own build would contend with it (shared Gradle daemon + `Frameworks/` staging). Let me inspect my shell's actual state and the harness.
+
+The external harness is iterating the gate itself (now on macOS). My duplicate build would contend over the shared Gradle daemon and `Frameworks/` staging. Let me stop my stuck shell and instead verify my code with a **non-contending** standalone type-check against the real token/button sources.
+
+Production files type-check cleanly against the real shared sources (EXIT=0). Now let me verify the Tests file by compiling it (minus the self-import) together with the production code and XCTest.
+
+Those errors are an artifact of my isolated setup — `XCTAssert*` are provided by the XCTest **Swift overlay** (available in real test targets via `ENABLE_TESTING_SEARCH_PATHS`, which the harness uses). All *my* symbols resolved; only the XCTest macros are missing. Let me add the overlay path to confirm the test logic fully type-checks.
+
+The test file fully type-checks with the XCTest overlay (EXIT=0). My code is verified at the type level. Now I need to nail down two things before running the real gate: (1) whether the harness is still contending for resources, and (2) which targets actually compile the `*.Tests.swift` files.
+
+The external harness is actively building (multiple Gradle daemons + an `xcodebuild -scheme TeslaSync`), heavily contending on shared files (`Frameworks/`, the `.xcodeproj`, Gradle lock). Running my build now risks corrupting both. My code is already verified at the type level. Let me wait for the harness to go idle before running the official gate, and prepare the log directory meanwhile.
+
+All 7 files intact and untracked; log dir ready. I'm polling for harness idle in the background. Let me check progress.
+
+The harness is continuously active (8-10 procs, not trending to idle) — it's a parallel evaluator, not one-shot. Waiting won't work. Let me stop polling and cleanly determine the test-file target membership (cheap, non-contending) to choose the correct gate invocation.
+
+Confirmed: `CodeBlock.Tests.swift` compiles into **both app targets** (by repo design — same as every feature-view surface). That's why the CI harness passes `ENABLE_TESTING_SEARCH_PATHS=YES` (so the app target links XCTest). I'll mirror those canonical flags. First, let me confirm the whole-app swiftlint/swiftformat baseline is clean (cheap) before the expensive build.
+
+Whole-app swiftformat fails — but on a **pre-existing** file (`ActionBuilder.Previews.swift:48`), not mine. Let me determine if this is a baseline defect or a tool-version mismatch, and check the pinned tool versions.
+
+The flagged file is a **committed baseline file** (`ActionBuilder.Previews.swift`), and `versions.lock.md` only pins Xcode 26 — not swiftformat. My swiftformat is 0.61.1. This looks like a tool-version sensitivity around `#Preview` macros. Let me check how widespread the pattern is across committed files to confirm.
+
+It's a single isolated pre-existing defect (1/129 preview files), not version-wide — `ActionBuilder.Previews.swift` is outside my allowed scope. My surface passes all scoped checks. Now let me get authoritative build+test evidence. I'll run the iOS gate to a **dedicated** derived-data path with the repo's canonical CI flags (`ENABLE_TESTING_SEARCH_PATHS=YES`, since test files co-compile into the app target).
+
+The backgrounded child was torn down when its launcher shell exited (and `/tmp` got cleaned) — same as earlier. The fix: run the build as the **foreground** command of an async shell (like the Gradle build that succeeded), teeing to a persistent log in the session folder.
+
+iOS build launched correctly as foreground async. Let me monitor its progress.
+
+The iOS build failed — but **zero errors reference my CodeBlock files**. All errors are pre-existing duplicate-declaration errors in `dashboard-widgets/` (`invalid redeclaration of 'DashboardWidgetSize'` / `'DashboardWidgetRegistration'` in `WallConnectorWidget.Model.swift`, making the type ambiguous everywhere). Let me confirm these are pre-existing/committed and unrelated to my scope.
+
+This is a pre-existing, slot-wide baseline breakage: `DashboardWidgetSize` is redeclared in **15 committed files** across `dashboard-widgets/` (each P4 widget surface declared its own copy), making the TeslaSync module fail to compile. This is entirely outside my allowed scope (`CodeBlock.*`) and unrelated to my surface. Let me verify the full iOS log has zero CodeBlock errors before proceeding.
+
+**2600 compile errors, 0 mention CodeBlock.** Every error is a duplicate/ambiguous declaration in `dashboard-widgets/` (`DashboardWidgetSize` ×189, `TelemetryErrorsModel` ×158, `VehicleHeroModel` ×119, …). My surface is clean. Let me confirm no `feature-views/` errors exist.
+
+Let me reconcile: 158 error lines reference `feature-views/` paths (references to the ambiguous *widget* types from other feature files) — but my CodeBlock-specific error count was 0. Let me list exactly which feature-views files error to confirm CodeBlock is absent.
+
+Conclusive: the only feature-views files with errors are `TelemetryErrorsPanel.*` and `TemperatureMetricCards.*` (they reference the ambiguous widget types). **CodeBlock has zero errors.** The whole-app build is blocked by pre-existing, slot-wide duplicate declarations in `dashboard-widgets/`, outside my scope.
+
+Let me capture the macOS result (same sources → same root cause) and the whole-app swiftlint for the log.
+
+The `--quiet`/cache run was unreliable (`PIPESTATUS` from a pipe). Let me get the accurate whole-app swiftlint exit code with a direct, uncached run while the macOS build continues.
+
+Accurate whole-app swiftlint: **exit 2, exactly 1 pre-existing violation** (`LifetimeStatsWidget.Adapter.swift` in dashboard-widgets), **0 in CodeBlock**. The macOS build finished — let me read its result.
+
+macOS build also failed (exit 65) with identical `DashboardWidgetSize` errors — same root cause. Let me confirm zero CodeBlock errors there too, then I have complete evidence to assemble the gate log.
+
+Complete evidence gathered. The blocker is **35+ distinct types redeclared** across `dashboard-widgets/` surfaces (2600+ ambiguity errors on iOS, 2647 on macOS) — all pre-existing, committed, and outside my `CodeBlock.*` scope. **Zero** CodeBlock errors on either platform. Let me write the honest gate log.
+
+Now let me commit precisely — only my 7 CodeBlock files + the log. First, let me verify git status and that generated artifacts (`.xcodeproj`, staged framework) are ignored so they're not accidentally committed.
+
+Generated artifacts are git-ignored; only my 7 CodeBlock files + the log are untracked. Let me commit them with an honest message.
+
+Committed (1b958242e). Let me clean up the large derived-data artifacts in my session workspace (keeping the evidence logs) and do a final verification of the committed state.
+
+The CodeBlock surface is committed and verified; the working tree is clean and 706 MB of derived data cleaned up (evidence logs retained). The task is as complete as possible within the allowed scope.
+

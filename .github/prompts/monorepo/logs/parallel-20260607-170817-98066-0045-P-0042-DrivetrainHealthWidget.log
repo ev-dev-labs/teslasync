@@ -1,0 +1,134 @@
+I'll start by exploring the repository structure and the web source that serves as the specification.
+
+Key findings so far:
+- **Web source read** ✓ — gauge hero + 4 stats (Motor/Stator/Inverter temps, Drive State), compact & full layouts, empty state.
+- **Toolchain**: `swift` 6.3.2, `swiftlint`, `swiftformat` available. **`xcodebuild` requires full Xcode but only Command Line Tools are installed.**
+- **`apps/apple/TeslaSync` does not exist.**
+
+Let me gather complete evidence about the Apple project structure and dependencies before deciding status.
+
+Significant discovery: there's a substantial existing Apple app (261 Swift files) using XcodeGen (`project.yml`), and SwiftUI+Charts+MapKit **typecheck successfully** with the CLT SDK. Let me check for a full Xcode install and explore the existing widget patterns.
+
+**Critical discovery: `/Applications/Xcode.app` exists** — it's just not the selected developer directory. I can use `DEVELOPER_DIR` to access full `xcodebuild` + simulators. This means the platform capability IS available. Let me verify and explore the project layout.
+
+**Platform capability confirmed available:** Xcode 26.5, iOS 26.5 simulator (iPhone 16), macOS SDK — all reachable via `DEVELOPER_DIR`. The scheme's shared source group is `apps/apple/Sources/` (not `apps/apple/TeslaSync/`). I need to reconcile the prompt's path with reality and find how predecessor dashboard widgets were placed. Let me explore the existing dashboard-widget infrastructure, state holders, and web shared components.
+
+No predecessor P4 dashboard-widget logs exist, and the Apple Sources have **no in-app dashboard infrastructure yet** (no WidgetShell/registry/gauge). But the facade (`LoadableState`, `StateHolderModel`, `AppContainer`), Components, Design tokens, and Localization DO exist. The scheme builds from `Sources/`, not `TeslaSync/`. Let me enumerate the exact primitives and web shared files I must build on.
+
+Now let me read the core facade primitives, feedback components, and the web shared widget files I must build on. These are independent reads.
+
+The facade binds to a KMP `Shared.xcframework` (Kotlin core). I need to verify the app can actually build (Shared framework staged, xcodegen, JDK) before committing to the full xcodebuild gate. Let me check build feasibility and read the remaining web/Apple references in parallel.
+
+Build deps exist: `xcodegen`, JDK 17, KMP `apps/shared` project, and the `Shared.xcframework` is built on-demand by a scheme preAction. The widget must be self-contained (per "Allowed files"). Let me verify what KMP stores/DTOs exist and read the remaining references (Feedback states, Design tokens, Localization, an existing widget test, web types/registry).
+
+The KMP core **does** have the canonical stores (`DrivingStore.drivetrainHealth`, `VehiclesStore.motorLatest`, returning `Resource<JsonElement>`). The Feedback components and design-token pattern are clear. Now I need to calibrate the *achievable* gate bar in this environment — predecessors reference "macOS-pending DONE". Let me read those calibration artifacts and the KMP build script.
+
+Now I understand the **accepted completion bar** (from the P8-0001 widget gate, which is `EXIT=0 STATUS=DONE`): all host-runnable gates green (SwiftLint --strict, SwiftFormat --lint, placeholder, `xcodegen generate`, **surface compiles 0-error against the real iOS 26.5 + macOS 26.5 SDK**, host unit tests PASS), with the full `xcodebuild build/test` deferred as **macOS-pending** because the KMP `Shared.xcframework` needs the Android SDK + signing. I'll follow this exact, honest pattern.
+
+Let me read the remaining references: design tokens, a native gauge, an existing test, the diagnostics seam, the web hooks, registry, and the localization catalog.
+
+Confirmed: native `TSRadialGauge` exists (fraction-based, palette color) — I'll compose a health-colored ring for parity. Registry metadata matches the prompt exactly. Test convention is pure-logic XCTest. No `view.opened` emitter exists yet, so I'll add a small redaction-safe diagnostics seam. Let me read the design tokens, typography components, the exact `DrivetrainHealthData` type, and the localization format.
+
+I have nearly everything. Let me read the exact token definitions, typography component signatures, the logging style, and confirm the `DrivetrainHealthData` shape before writing.
+
+I have the full data contract and tokens. Final reads: the skeleton/status-chip/badge components for parity reuse, and the exact xcstrings JSON format. Then I'll write the plan and implement.
+
+I now have the complete component vocabulary. Let me confirm a few gate-related specifics (placeholder script, pwsh availability, Android SDK for the KMP build, lint/format configs) and the `TSTone` cases, then write the plan and implement.
+
+All gate tooling is available (`pwsh` for placeholder check; Xcode for SDK compile). **Android SDK is absent** — confirming the KMP `Shared.xcframework` build (and thus full `xcodebuild build/test`) is legitimately macOS-CI-pending, matching the established accepted pattern. Let me check for symbol collisions and read the `FlowBridge`/store signatures for the production provider, then write the plan.
+
+`WidgetFreshness` **already exists** in the shared widgets layer — I'll reuse it instead of redeclaring. Store signatures confirmed. Let me read `WidgetFreshness` and the `TSButton` API, then write the plan and implement.
+
+I now have a complete, verified picture. Let me confirm the component/token files are `Shared`-free (so I can host-compile my surface against the real SDK in isolation, like the predecessor did) and do a final collision check, then write the plan and implement.
+
+Everything checks out: components are `Shared`-free (so I can host-compile my surface against the real SDK), no name collisions, `WidgetFreshness` exists to reuse, and the Android SDK absence confirms the documented macOS-pending deferral for the full `xcodebuild`. Let me write the plan, then implement.
+
+Now the main widget surface file:
+
+Now the Shared-guarded production provider:
+
+Now the test suite:
+
+Now let me add the localization keys. First, let me confirm the exact JSON format/indentation at the top of the catalog.
+
+The format is clear. Let me insert the localization keys right after the `"strings": {` opening (JSON key order is irrelevant; this yields a clean, minimal diff).
+
+Now let me verify the localization JSON is valid and the keys are present:
+
+All 10 keys present, JSON valid. Now let me run the host-runnable gates. First, format and lint my files:
+
+swiftformat applied and now passes lint. Let me run swiftlint --strict on the new files:
+
+swiftlint linted the whole project (config `included:` overrides path args). 6 violations found — let me see if any are in my files:
+
+3 violations are in my files (file length, a multi-closure call, test body length). Let me see all 6 to confirm the baseline is otherwise clean:
+
+Only my 3 violations; baseline is clean. I'll split the widget into two prefixed files (file-length), fix the multi-closure `TSButton` call, and split the test class (body-length). Let me restructure:
+
+Now the View file (with the multi-closure `TSButton` fix):
+
+Now the test file, split into two classes with file-scope helper doubles:
+
+Now re-run swiftformat + swiftlint --strict on the restructured files:
+
+One violation left: the model file is 424 lines. Let me split out the state/provider/telemetry/freshness section into a third prefixed file. Let me find the split boundary:
+
+I'll split out the state/provider/telemetry/freshness into a third prefixed file using `sed`, and fix imports:
+
+All host lint/format gates are green (0 violations). Now the placeholder gate and project generation:
+
+Placeholder gate clean (COUNT=0) and `xcodegen generate` succeeded with my files wired into all targets (30 references). Now the real-SDK compile of my Shared-free surface + its dependency island, for both iOS 26.5 and macOS 26.5:
+
+`UnitFormatters.swift` uses the Shared type `UnitPreferences` (available module-wide). My surface doesn't use `DataDisplay`, so I'll narrow the island to exactly my surface's UI dependencies (Components/UI, Components/Feedback, Design, tokens, Widgets/Shared) and exclude Shared-touching dirs:
+
+Narrowed further — the only Shared ref now is my own guarded LiveProvider (correctly compiles to nothing without Shared). `FeedbackOverlays.swift` pulls `DataDisplay`, which my surface doesn't use. Let me compile the exact dependency closure of my surface:
+
+Both SDKs typecheck my surface **0-error**. Now let me execute the unit logic on-host by compiling the surface + a runner against the macOS SDK and running it:
+
+Swift 6 strict concurrency flags the global mutable state. Let me move the helpers into the `@MainActor` struct:
+
+**All 31 host unit assertions PASS** against the real macOS 26.5 SDK. Now let me capture honest evidence for the deferred full `xcodebuild` step — confirming the KMP `Shared.xcframework` blocker (Android SDK + Gradle distribution):
+
+Blockers confirmed: KMP `core` requires the **Android SDK** (`androidTarget` + `android.library` plugin), no `local.properties`/`ANDROID_HOME`, and `Shared.xcframework` isn't staged. Let me capture the actual Gradle failure as honest evidence (bounded run):
+
+`--dry-run` configured cleanly, so the precise blocker isn't config-time Android SDK. Let me pin down the true blocker (Kotlin/Native `konan` toolchain + staged framework) before deciding the deferral wording:
+
+The Kotlin/Native toolchain (`~/.konan/...2.4.0`) **is** cached and the xcframework tasks are configured. Let me make a bounded attempt to actually build `Shared.xcframework` to gather honest evidence either way:
+
+The KMP build is actively compiling Kotlin/Native (CPU-heavy, multi-target). Let me continue waiting for it:
+
+**Major evidence: the KMP `Shared.xcframework` built successfully here** (debug variant written; Kotlin/Native compiles were cached; release link was interrupted by an external Gradle-daemon stop — a shared-env artifact, not a compile error). This means I can attempt the actual full app build. Let me try compiling the **whole macOS app** (which links the framework and compiles my files + the Shared-bound `LiveProvider`) against it — the strongest possible evidence:
+
+The build failed in ~4 min. Let me see exactly where — gradle pre-action (xcframework staging) or Swift compilation:
+
+Definitive diagnosis: the macOS build failed **only** in the `Stage Shared.xcframework` Gradle pre-action — "Gradle build daemon has been stopped: stop command received" — with **0 Swift files compiled and 0 Swift errors**. This is shared-environment Gradle-daemon contention (parallel slots share `~/.gradle`), not a code defect — the xcframework itself built successfully standalone moments earlier. This is exactly the documented macOS-CI-pending concern.
+
+Let me now produce the authoritative gate log by actually re-running every host-runnable step and recording real exit codes:
+
+The log is complete and honest. Let me verify git status to ensure only intended files are committed (no generated artifacts), then commit:
+
+Two `web/*.tsx` files were already modified in the working tree (not mine — I never touched `web/`). The xcodeproj/build dirs are correctly gitignored. I'll stage **only** my files explicitly:
+
+Exactly my 7 files staged (the two unrelated `web/*.tsx` working-tree changes are correctly excluded). Let me commit and clean up temp artifacts:
+
+Committed as `0a3a84b7`. The only remaining working-tree changes are the two pre-existing `web/*.tsx` files I correctly left untouched. Let me do a final sanity verification on the committed surface:
+
+The `swiftlint` exit was a stderr/grep artifact (swiftlint writes its summary to stderr, which I'd redirected). Let me re-confirm cleanly, capturing both streams, plus the xcstrings check that got skipped:
+
+All gates confirmed green: **swiftlint --strict → 0 violations (522 files)**, xcstrings valid with 10 keys. The task is complete.
+
+Merge made by the 'ort' strategy.
+ ...shboard-widgets-0042-DrivetrainHealthWidget.log | 115 +++++++
+ apps/apple/Localization/Localizable.xcstrings      | 110 ++++++
+ .../DashboardWidgets/DrivetrainHealthWidget.swift  | 367 +++++++++++++++++++++
+ .../DrivetrainHealthWidgetLiveProvider.swift       | 137 ++++++++
+ .../DrivetrainHealthWidgetModel.swift              | 316 ++++++++++++++++++
+ .../DrivetrainHealthWidgetState.swift              | 107 ++++++
+ .../DrivetrainHealthWidgetTests.swift              | 313 ++++++++++++++++++
+ 7 files changed, 1465 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0042-DrivetrainHealthWidget.log
+ create mode 100644 apps/apple/Sources/DashboardWidgets/DrivetrainHealthWidget.swift
+ create mode 100644 apps/apple/Sources/DashboardWidgets/DrivetrainHealthWidgetLiveProvider.swift
+ create mode 100644 apps/apple/Sources/DashboardWidgets/DrivetrainHealthWidgetModel.swift
+ create mode 100644 apps/apple/Sources/DashboardWidgets/DrivetrainHealthWidgetState.swift
+ create mode 100644 apps/apple/Tests/Unit/DashboardWidgets/DrivetrainHealthWidgetTests.swift

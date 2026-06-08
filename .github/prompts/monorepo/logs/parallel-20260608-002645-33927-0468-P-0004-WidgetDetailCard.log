@@ -1,0 +1,126 @@
+I'll start by exploring the repository structure to understand what exists, then read the web source specification.
+
+Let me read the web source spec and examine existing native conventions (the modified AIUsageCard is a template).
+
+Let me read the AIUsageCard template files (currently modified) and check tooling availability in parallel.
+
+`xcodebuild` needs full Xcode (only CLT present) — the gate's build/test steps can't run here. swiftlint/swiftformat/swift ARE available. Let me investigate the AIUsageCard mystery and find the shared dependency modules.
+
+Now I understand — `AIUsageCard.*` (uppercase) are 0-byte case-collision artifacts vs the real `AiUsageCard.*` files (macOS case-insensitive FS). That's pre-existing environmental noise, not my task. I'll only commit my own files.
+
+Let me study the shared dependencies (P1 tokens/i18n/state-holders/diagnostics, P4 core) and a full template. Let me write a plan and explore in parallel.
+
+The `WarrantyDetailCard` is a perfect reference implementation. Now let me read the canonical repo prompt and locate the shared P1 modules (tokens, i18n facade, diagnostics, state holders).
+
+Design tokens live at the `apps/apple/` level (Sources/Frameworks are siblings of TeslaSync/). Let me locate them correctly.
+
+Two structures coexist: `apps/apple/TeslaSync/` (flat, my target) and `apps/apple/Sources/` (package-style). Let me read project.yml, the Design tokens, and the strings-facade pattern.
+
+project.yml shows targets include `Sources`, `TeslaSync/dashboard-widgets`, `TeslaSync/feature-views`, and `../design/generated/apple` (the tokens). Let me read the generated tokens, the WarrantyStrings facade pattern, and a sibling primitive's full structure.
+
+Now I have the token vocabulary. Let me read the WarrantyStrings facade pattern, the badge/text models, and the full file structure of a complete surface (entry, tests, previews).
+
+I now have the full conventions. Let me look at the telemetry emission pattern, `TSTone`/`TSSkeleton`/`TSBadge`, and a feature-view's test/preview structure to complete my reference set.
+
+Let me read the TSSkeleton API, the test/preview/strings conventions, and TSGlassPanel to finalize my reference set.
+
+Let me read the rest of the test conventions (state-holder/telemetry/a11y + spies), the strings format, and how project.yml wires test targets.
+
+I need to clarify how `.Tests.swift`/`.Previews.swift` files in `feature-views/` get routed to the right targets. Let me inspect the app-target source config and Tests/Unit.
+
+Let me check whether a full Xcode is installed anywhere (which would unblock the gate) and whether PowerShell is available for the gate scripts.
+
+`/Applications/Xcode.app` exists, plus `pwsh` and the placeholder script. I can override `DEVELOPER_DIR` to use full Xcode. Let me verify Xcode works and check for xcodegen + simulators.
+
+Excellent — full Xcode 26.5, iOS SDK, xcodegen, and a booted iPhone 16 sim are all available. Let me verify my dependency closure (Skeletons), confirm the repo-wide test-colocation pattern, and read the placeholder checker.
+
+`TSSkeleton` depends only on tokens. Confirmed the app target is pre-existingly uncompilable in this raw parallel-authoring checkout (170 co-located `@testable` XCTest files in an app-target dir) — that's an integration-time concern. Full Xcode is present though, so I'll verify my surface by compiling against the real iOS SDK + running my tests via a throwaway SwiftPM harness. Let me read the lint/format/placeholder configs so my code conforms, then write my plan.
+
+I now have a complete picture. Let me set up tracking and write the plan, then implement.
+
+Directory + first file. Let me create the Foundation-only Adapter (value types + projection + builder).
+
+Now the Model file (state-holder + telemetry + i18n facade + accessibility seam).
+
+Now the Views file (presentational subviews — the parity core + leaf-state views).
+
+Now the surface entry View.
+
+Now the Previews file.
+
+Now the Tests file (adapter + state-holder/telemetry + accessibility).
+
+Strings file next — let me first confirm the exact set of i18n keys my shipped (non-DEBUG) code resolves.
+
+All 7 files written. Now the verification phase. Let me auto-format my files (allowed — my own files), then lint-check.
+
+swiftformat lint passes (0/6 require formatting). Now swiftlint --strict on my files.
+
+SwiftLint linted the whole `included` set (1909 files) and found 1 violation. Let me locate it — check whether it's in my files.
+
+The single swiftlint violation is in a pre-existing file (`LifetimeStatsWidget.Adapter.swift`), **not mine** — my files have zero violations. Now let me verify my code actually compiles against the real iOS/macOS SDK and run the unit tests via a throwaway SwiftPM harness.
+
+Cards needs TSMaterial. Let me build the SwiftPM harness (module named `TeslaSync`) with the real shared deps + my sources, then compile and run my tests.
+
+My own files all compiled — the only errors are in the copied `Cards.swift` **preview block** (references `TSButton`/`TSText` from files I didn't include). Let me find those and include them so the dependency closure compiles.
+
+I'll strip the `#if DEBUG` preview blocks from the copied dependency files (they pull extra transitive deps) — keeping my own Previews intact to prove it compiles.
+
+My code only needs `TSSkeleton` + `TSTone` + tokens — but full `Cards.swift`/`Skeletons.swift` drag in the whole typography/button library. Let me use the real `TSSkeleton` struct in isolation (verbatim) plus real tokens + Badges.
+
+Build succeeds (Swift 6 mode, macOS 15). Now let me run the unit tests.
+
+All 29 tests pass (0 failures) on macOS 15 / Swift 6 strict concurrency. Now let me prove the iOS 18 simulator SDK also type-checks my code (the gate's iOS target).
+
+iOS 18 SDK type-check passes too. Now the placeholder gate (pwsh) scoped to my files.
+
+The gate's literal path scans vacuously (missing path = clean), so let me scan my **actual** directory for real evidence, plus run the exact gate invocation.
+
+Placeholder gate is clean (COUNT=0, EXIT=0). Now let me gather concrete baseline evidence for the full `xcodebuild` gate: generate the project and check target membership of the co-located test files and my new dir.
+
+Definitive baseline evidence captured:
+- `xcodegen generate` succeeds, but my `widget-primitives` dir is **not referenced** in the project (not in project.yml sources, which is outside my allowed files).
+- The app target includes co-located `*.Tests.swift` files (`@testable import TeslaSync` + XCTest) → the aggregate app target can't compile in this raw checkout.
+
+Both are pre-existing/integration-time concerns. Let me check how sibling surface logs record their status.
+
+The sibling logs confirm the convention: surfaces verify via **surface-scoped** gates (build, own tests, lint, format, placeholder) and document the literal full-scheme `xcodebuild` environmental/pre-existing limitation, concluding `EXIT=0 / STATUS=DONE`. My evidence is even stronger (real macOS build+test + iOS SDK type-check). Let me confirm the generated project is git-ignored, then assemble the log with real captured output.
+
+Generated project is git-ignored; only my new dir is staged-to-be. Now let me assemble the log with real captured output. First, a precise per-surface SwiftLint run via a scoped config.
+
+Per-surface SwiftLint: **0 violations in 6 files**. Now let me assemble the complete log with all real captured output.
+
+All surface-scoped gates green. Now the final log section: literal full-scheme `xcodebuild` evidence + conclusion.
+
+Let me review the full log for coherence, then clean up and commit.
+
+Log is coherent and honest. Let me clean up temp artifacts, confirm my directory contents, and verify final git state before committing.
+
+Clean state — only my new dir + log are untracked; the pre-existing AIUsageCard modifications stay out of my commit. Let me stage exactly my files + log and commit.
+
+Committed cleanly (8 files, 1393 insertions, AIUsageCard noise excluded). Let me finalize tracking and do a last sanity check.
+
+All complete and verified. The working tree contains only the pre-existing AIUsageCard case-collision noise (not mine); my commit is clean.
+
+## Summary
+
+I shipped a production-grade, native Apple-idiomatic **`WidgetDetailCard`** widget primitive at parity with `web/src/features/dashboard/widgets/shared/WidgetDetailCard.tsx`, committed as `8bcb258ce`.
+
+**7 files** in `apps/apple/TeslaSync/widget-primitives/` (1393 lines):
+- `.Adapter.swift` — Foundation-only value types (`DetailEntry`/badge/value) + `WidgetDetailProjectionBuilder` (the pure cached→projection adapter: web empty-vs-content branch, `compact ? slice(0,4)`, `value ?? '—'`, `badgeVariantMap` error→danger).
+- `.Model.swift` — `@Observable WidgetDetailCardModel` (P1/S8 state-holder + `InMemory` source), P1/S11 `view.opened` telemetry seam, P1/S10 `WidgetDetailStrings` facade, a11y seam.
+- `.Views.swift` — parity rows (label·value·badge), badge chip, loading/empty/error views, stale/offline banner, variant→`TSTone`.
+- `.swift` — the surface (phase switch + banner, `surfaceSlug`, start/stop).
+- `.Previews.swift`, `.Tests.swift` (29 tests), `.strings` (7 keys).
+
+**Every state renders** (content, compact, empty, loading, error, stale, offline); no networking in views; no English literals; no charts/maps (the web source has none).
+
+**Verification — all surface-scoped gates GREEN** (full Xcode 26.5 present):
+- `swiftformat --lint` → 0/6 need formatting
+- `swiftlint --strict` → 0 violations in 6 files
+- `check-placeholders.ps1` → 0
+- **macOS 15 build + 29 unit tests** (Swift 6 strict concurrency) → 0 failures
+- **iOS 18 simulator SDK type-check** → clean
+
+The literal full-scheme `xcodebuild build test` is documented in the log as not certifiable in this isolated pre-integration checkout — the new `widget-primitives/` dir isn't wired into `project.yml` (outside allowed files) and the app target carries 170+ co-located sibling-surface XCTest files (pre-existing) — with concrete `xcodegen` membership evidence. Log ends `EXIT=0 / STATUS=DONE`.
+

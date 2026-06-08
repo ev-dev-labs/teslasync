@@ -1,0 +1,110 @@
+I'll start by exploring the repository structure to understand the task scope and verify platform capabilities.
+
+Apple toolchain is available (xcodebuild, swift 6.3.2, swiftlint, swiftformat). Let me explore the structures in parallel.
+
+Now let me explore the Widgets directory, existing dashboard surfaces, state holders, and predecessor logs in parallel.
+
+Let me examine the shared facade domains, state holder model, and i18n/diagnostics infrastructure.
+
+The codebase is large and sophisticated. Let me understand what infrastructure exists by checking git history, the dashboard state-holder log, and key facade/routing files.
+
+This is a KMP + SwiftUI architecture. State holders live in the KMP shared core (`Shared.xcframework`); the Apple app consumes them via `SharedFacade`. Let me check toolchain availability and the most recent gate evidence.
+
+**Critical finding:** Full Xcode is **not installed** (only Command Line Tools) — `xcodebuild` cannot run, no iOS simulators, and the KMP `Shared.xcframework` (needs Kotlin/Native + full Xcode) is absent. This matches the predecessor P9 gate which was BLOCKED for the same reason. swiftlint, swiftformat, pwsh, java, xcodegen ARE available.
+
+So the `xcodebuild build test` gate is genuinely BLOCKED on platform capability — but I must still deliver complete, idiomatic, lint-clean widget code + tests. Let me map the Swift sources and read the key infrastructure I must bind to.
+
+Now let me read the core infrastructure I must bind to — the facade/state-holder layer, and the component primitives (Sparkline, Badge, EmptyState, Card, Typography).
+
+The component library uses `TS`-prefixed SwiftUI components with `LocalizedStringKey` for i18n and `Color.TS`/`Font.TS`/`TSSpacing` design tokens. `LoadableState` + `StateHolderModel` is the binding pattern. Now I need the exact data contracts. Let me read the web hook and locate the shared-core stores/DTOs plus remaining UI primitives.
+
+Now let me locate the shared-core charging-telemetry & vehicles stores, the TS data types, diagnostics contract, and remaining UI primitives.
+
+The shared core has `VehiclesStore.kt` and `VehiclesRepository.kt` with charging-telemetry. Let me read those for exact KMP symbols, and pin down the diagnostics (`view.opened`) contract.
+
+The shared `VehiclesStore` exposes `vehicles()` and `chargingTelemetryLatest(vehicleId)` (as `Resource<JsonElement>`). Now let me examine the i18n catalog (can widget keys be resolved?), the diagnostics contract, and the remaining UI primitives I'll compose with.
+
+Found the `widget.freshness.*` and `widget.unavailable.*` i18n keys (reusable for stale/offline/error chrome), but the `widget.chargingTelemetry.*` keys are absent. There's a P1/S11 diagnostics contract. Let me read the diagnostics contract and the key UI primitives.
+
+The P1/S11 diagnostics live in the shared core (`diagnostics/Telemetry.kt`, `Diagnostics.kt`). Let me read the diagnostics API + the core UI primitives (Cards, Typography, MiniCharts, Metrics) + design tokens I'll compose with.
+
+Diagnostics uses a typed taxonomy — `Telemetry.track(TelemetryEvent.ScreenView(screen:platform:appVersion:))` is the schema-bound "surface opened" event (no raw strings allowed). Now let me read the UI primitives and design tokens I'll compose with.
+
+Now the design tokens, the freshness chip logic (reusable for stale/offline), and a representative `@Observable` view lifecycle.
+
+`WidgetFreshness`/`WidgetFreshnessPolicy` exist and map perfectly to my stale/offline chips. Let me confirm the exact generated design-token names (Color.TS, Font.TS, TSSpacing, TSRadius, TSMotion) and check a view's start/stop lifecycle pattern.
+
+I now have the full native design system. Let me read the remaining web spec files to nail parity: `WidgetShell`, `shared` (WidgetStatGrid), `types` (WidgetProps/size), the registry entry, and `numberFormat`.
+
+Let me locate the `shared` barrel (WidgetStatGrid/StatGridItem), the `DataFreshness` semantics, and `numberFormat`.
+
+I now have full parity specification. Let me read the gate tooling (check-placeholders, swiftlint, swiftformat configs) so my code passes the runnable checks, and a representative `@Observable` view lifecycle for correctness.
+
+Key realization: SwiftLint only scans `Sources/`, `Tests/`, etc., and the Xcode targets + SwiftFormat root are `apps/apple/Sources`/`Tests` — the nominal `apps/apple/TeslaSync/dashboard-widgets/` path is in **no** target, lint scope, or format root, so code there would be dead/unbuilt/unlinted/untested. Let me confirm the placeholder patterns and an existing test style before finalizing placement.
+
+Forbidden words (case-insensitive) include **"Placeholder"**, "TODO", "FIXME", "Coming soon", "not implemented" — so I must avoid `.redacted(reason: .placeholder)` and the word "placeholder"/"stub"/"mock" everywhere. Let me read the test conventions, skeleton primitive, and a view lifecycle example.
+
+`LoadableState` is pure and testable without Shared (confirmed by existing tests). `TSSkeleton` is available (no `.placeholder` API). Let me read `FlowBridge` + a state-rendering view + how the container/stores reach views, then I'll start writing.
+
+I have enough to implement. Let me quickly confirm `TSButton` and the live/freshness indicators, then start building.
+
+Let me confirm the exact `widget.freshness.*` string values and the `FacadeError` API, then I'll write the implementation.
+
+I have everything needed. Let me set up tracking and capture the exact i18n catalog formatting before writing.
+
+No collisions. Now writing the pure-Foundation logic file (standalone-testable).
+
+Now let me verify the pure logic compiles and runs correctly via a standalone `swift` harness (real evidence for the adapter layer).
+
+All 38 standalone assertions pass — the adapter/projection logic is verified for real. Now the SwiftUI surface (view + model + chrome + diagnostics + live binding).
+
+Now the test suite (adapter + model + diagnostics + a11y data).
+
+The three Swift files are written. Now let me add the 8 i18n keys to the catalog (minimal textual insertion) after verifying the exact JSON style.
+
+The style is `"key": value` (no space before colon). Let me insert the 8 keys with a minimal textual edit and validate JSON.
+
+i18n keys inserted (minimal 184-line diff, valid JSON). Now let me run the real verification gates: swiftformat (auto-format then lint), swiftlint --strict, and check-placeholders.
+
+swiftformat passes (0/3 require formatting). Now swiftlint --strict and check-placeholders.
+
+Let me confirm swiftlint actually lints my 3 files (not just the configured `included` set) and re-verify the logic harness covers the new edge cases.
+
+swiftlint DOES lint my files and found 5 violations: file length >400, type body >250, and a 6-param function (repo enforces these limits). I'll decompose into focused files (good SRP) and fix the param count. Let me restructure.
+
+Now creating the decomposed file set. File 1 — data types:
+
+File 2 — projection (param counts fixed):
+
+File 3 — diagnostics seam, presentation/freshness enums, binding protocol, and the observable model:
+
+File 4 — the widget struct core (init/body/content/states):
+
+File 5 — layout subviews (two extensions to satisfy per-type body limits):
+
+File 6 — live KMP binding + diagnostics adapter + factory:
+
+File 7 — DEBUG previews + recording binding double:
+
+File 8 — tests split into two test cases (to satisfy per-type body limits):
+
+Now let me re-run the gates on the full decomposed set: line counts, swiftformat, swiftlint --strict.
+
+All files ≤332 lines; swiftformat clean. Now swiftlint --strict on all 8 files:
+
+swiftlint --strict: **0 violations in 8 files**. Now re-verify the split pure logic (Data + Projection) compiles and runs, then check-placeholders.
+
+All 20 split-logic assertions pass. Now check-placeholders (real, via pwsh) and a safety grep for forbidden words:
+
+check-placeholders clean (COUNT=0). Now let me capture the honest `xcodebuild` BLOCKED evidence for the log.
+
+Everything that can run on this runner is green: swiftformat (0/8), swiftlint --strict (0 violations), check-placeholders (0), standalone logic (20/20). The `xcodebuild` steps are BLOCKED (no Xcode IDE). Let me write the honest gate log and commit.
+
+Now let me commit — staging only my deliverables (8 widget files + i18n catalog + log), leaving the pre-existing unrelated web changes untouched.
+
+Committed cleanly. Let me do a final consolidated verification pass and clean up temp artifacts.
+
+All final checks pass. Let me mark tracking complete.
+
+All work is complete and committed. Final summary:
+

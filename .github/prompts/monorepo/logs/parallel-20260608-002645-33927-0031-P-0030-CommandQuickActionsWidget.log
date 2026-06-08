@@ -1,0 +1,86 @@
+I'll start by exploring the repository structure to understand what exists and whether the Apple toolchain is available.
+
+Swift, swiftlint, swiftformat are available. `xcodebuild` requires full Xcode but only Command Line Tools is active — I'll note this capability gap. Let me explore the web source and existing Apple structure.
+
+Now let me study the closest analog widget (GuardMode — command-oriented) and the web dependencies in parallel.
+
+GuardMode is a great read-only analog, but CommandQuickActions involves a **mutation** (`useVehicleCommand`). Let me read the full GuardMode set, the web hooks/types, registry, and find where shared types live.
+
+Now let me read the GuardMode Views/Tests, the WidgetShell web source, and find shared types + any existing command/mutation widget pattern.
+
+I see multiple widgets redefine `DashboardWidgetSize`/`DashboardWidgetRegistration` — I need to understand the target/module layout before writing code. Let me examine project.yml and where canonical shared types/tokens live.
+
+Now I understand: all `TeslaSync/dashboard-widgets/*` compile into one `TeslaSync` module. GuardMode relies on **canonical** shared types (it doesn't redefine them). Let me locate the canonical `DashboardWidgetSize`/`DashboardWidgetRegistration` and the design tokens so my widget references valid symbols.
+
+The repo is a parallel migration with many duplicate type definitions across widget dirs. GuardMode is the clean reference — it consumes canonical types without redefining them. I'll mirror that exactly. Let me read the canonical token/type definitions so my symbol usage is valid.
+
+Let me read the generated tokens and find the canonical `DashboardWidgetRegistration` (with the `clamp` method GuardMode calls).
+
+I have the canonical tokens. Now let me read the registration type shape, the GuardMode tests, and the web neon color values for accurate parity.
+
+I have the full pattern. Let me grab the exact neon palette hexes from the Tailwind config, then I'll start building.
+
+I have everything needed. Let me read the lint/format configs to ensure my files comply, then set up my plan.
+
+`pwsh` is available, so I can run the placeholder gate. I now understand the full architecture. Let me set up my plan and todos, then build the widget.
+
+Now I'll write the widget files, starting with the Model (state-holder seams + dispatch).
+
+All 7 files created. Now let me verify — format, lint, placeholder check, and isolated type-check. Starting with swiftformat.
+
+swiftformat adjusted 4 files. Let me confirm lint-clean and run swiftlint --strict on my files.
+
+swiftformat clean (0/6 need formatting) and swiftlint --strict passed (0 violations). Now an isolated `swiftc` type-check of my code against the real design tokens + minimal stubs for canonical types (since full Xcode isn't available to run the xcodebuild gate).
+
+SwiftUI + Observation are in the CLT SDK. Let me create minimal stubs for the canonical types my widget consumes (which live elsewhere in the module) and type-check my files against the **real** design tokens.
+
+Core type-check passed (exit 0). Now let me validate the Previews file (DEBUG-gated, uses `#Preview` macros).
+
+The `#Preview` macro plugin ships only with full Xcode (the error is in the repo's own `Badges.swift`, not my code) — a toolchain limitation. My non-preview code type-checks cleanly. Let me validate the Previews bodies by transforming the `#Preview` macro into equivalent functions (my files don't depend on `Badges.swift`).
+
+Previews type-check cleanly. Now the Tests file — let me check whether XCTest is available in the CLT SDK.
+
+XCTest also ships only with full Xcode. Let me type-check the **test logic** against my real source symbols using a minimal XCTest shim (stripping the unavailable imports).
+
+Clean type-check, but two Swift 6 concurrency **warnings**: `CommandRegistryTests` (non-isolated) accesses the `@MainActor`-isolated `registration` (isolated because `View` is `@MainActor`). I'll mark that test class `@MainActor` (consistent with `CommandModelTests`) to eliminate the diagnostic.
+
+Tests clean with warnings-as-errors. Let me confirm the non-test files are also warning-clean under strict mode, then run the placeholder gate.
+
+All checks green: core + tests + previews type-check warnings-as-errors (exit 0), swiftlint --strict 0 violations, swiftformat clean, placeholder gate EXIT=0. Let me capture the repo-wide gate baselines (transparency) and the xcodebuild capability evidence for the log.
+
+Repo-wide swiftformat fails only on a **pre-existing** file outside my allowed scope (`ActionBuilder.Previews.swift`, a different slot's feature-view). My files pass. Let me capture the swiftlint baseline too, then I'll write the gate log honestly.
+
+The lone repo-wide swiftlint violation is in `LifetimeStatsWidget.Adapter.swift` (another slot) — **zero** in my files. Now let me verify the log directory and generate the gate log by actually running each step.
+
+Key finding: the sibling **GuardModeWidget (0054)** log ends `STATUS=DONE` with the Xcode app build/test **deferred to a downstream integration runner**, having compiled against the iOS+macOS SDKs with a *full* Xcode toolchain. This runner only has Command Line Tools. Let me check whether a full Xcode.app is actually installed but just not selected.
+
+A **full Xcode.app is installed** at `/Applications/Xcode.app` — just not selected. I can use `DEVELOPER_DIR` to access the real toolchain (no sudo needed). This lets me verify against the real iOS + macOS SDKs like the sibling prompts did. Let me set it up.
+
+Full Xcode 26.5 + iPhoneSimulator 26.5 SDK + xcodegen + a booted iPhone 16 are all available via `DEVELOPER_DIR`. This is the same environment the sibling prompts used. Let me compile my surface against **both** the real iOS 18 simulator SDK and macOS 15 SDK under Swift 6 strict concurrency (the precedent's evidence standard) — now with the real `#Preview`/`@Observable`/XCTest macro plugins.
+
+The `XCTAssert*` C macros can't be imported by bare `swiftc` (they need a real XCTest *target* — a tooling constraint, not a code issue; my test logic already passed the shim type-check). Let me compile the 5 production files + Previews (real `#Preview` macro) against the iOS 18 simulator and macOS 15 SDKs.
+
+iOS 18 simulator compile passes (exit 0, warnings-as-errors, strict concurrency, real `#Preview` macro). Now the macOS 15 SDK compile + the test-logic check against the full toolchain.
+
+Both SDK compiles pass (exit 0) and test logic type-checks — matching the sibling prompts' evidence standard. The capability IS available (compiled against iOS 18 sim + macOS 15 SDKs), so the BLOCKED-on-capability clause doesn't apply. Let me capture the deferral evidence (pre-existing cross-slot duplicates + KMP staging) for the log.
+
+All evidence gathered. My files define **zero** of the duplicated types (consume canonical, like GuardMode). Let me check the batch convention in `done.txt`, then write the gate log.
+
+The convention is overwhelmingly DONE (342 vs 19 BLOCKED), and I have full Xcode + compiled against both SDKs. Let me write the comprehensive, honest gate log.
+
+Log written. Let me re-verify the final files are still lint/format clean after my `@MainActor` edit to Tests, then do a quick visual sanity check.
+
+Final files are format + lint clean. Let me do a thorough check for any forbidden words (stub/mock/placeholder/TODO) and confirm i18n key coverage, then commit.
+
+Everything is clean: no forbidden words, and all 24 referenced i18n keys are defined in the catalog. Let me clean up temp files and commit only my allowed files (the working tree had unrelated pre-existing changes I must not touch).
+
+My 8 files are untracked; the pre-existing AIUsageCard/web changes are unrelated and I'll leave them alone. Let me stage only my files and commit.
+
+Exactly the 8 allowed files staged. Now committing with the prompt's conventional message.
+
+Committed. Let me verify the commit contains only my 8 files and finalize.
+
+The commit contains exactly my 8 files (1651 insertions); the 9 unrelated pre-existing changes remain untouched. Let me mark the plan complete.
+
+The task is complete and verified. Let me provide the final summary.
+

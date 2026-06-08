@@ -1,0 +1,231 @@
+================================================================================
+P4 · Shared surface · 0082 — DriveScore (Apple)
+Run: 2026-06-08T04:56-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/311
+Base: c9c6fdb9f
+Prompt: P4/shared-surfaces/0082 — Shared surface: DriveScore
+Web source (spec): web/src/components/data-display/DriveScore.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (BackendTool/ToolCard/
+      AlertMessageEditor/FSMTimelineChart precedent, ADR-012, Honesty rule 7 —
+      predecessor parity; full-app gate is macOS-pending, not a surface defect).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (83717DEE-70A3-4325-AA61-CBDDD3140989, Booted) OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  xcodegen ................... project generates cleanly (see deferred section)     OK
+  Shared.xcframework ......... NOT staged — apps/apple/Frameworks has no xcframework  WARN
+  apps/shared (KMP core) ..... ABSENT in this slot — build-shared-xcframework.sh
+                               cannot produce Shared.xcframework here               WARN
+  shared-surfaces in project.yml  0 references (dir not yet target-registered)      WARN
+
+  Capability note: the web source lists "Charts/maps used: (none)" and shared
+  components "@/components/ui". The core requirement is SwiftUI, which is AVAILABLE
+  and PROVEN by real iOS-18-simulator AND macOS-15 SDK compiles below. The
+  capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT
+  apply — the surface is authored, host-compiled on both SDKs, host-tested, and lint/
+  format/placeholder-clean. The ONLY non-green step is the full-app xcodebuild, which
+  is environment-blocked (missing KMP Shared.xcframework + dev signing) and DEFERRED.
+
+=== ARTIFACT (apps/apple/TeslaSync/shared-surfaces/DriveScore.*) ===
+  DriveScore.Adapter.swift    246  pure scoring core — DriveScoreDrive (SI input),
+                                   DriveScoreScoring.compute (port of computeDriveScore:
+                                   efficiency/40 + speed/20 + range/20 + trip/20 + clamp +
+                                   Math.round), DriveScoreTone (getScoreColor 40/70),
+                                   DriveScoreComponents (4 breakdown rows), accessibility
+                                   summaries — dependency-free (Foundation only)
+  DriveScore.Model.swift      269  P1/S8 state-holder seam (DriveScoreSource→DriveScoreModel)
+                                   + P1/S11 telemetry seam (view.opened) + P1/S10 strings
+                                   facade + DriveScoreConnection axis + DriveScoreProjection
+                                   (loading/empty/error/data) + InMemory source + slug anchor
+  DriveScore.Views.swift      279  presentational subviews — animated ring gauge (web SVG
+                                   motion.circle), 4 breakdown bars (semantic token colours),
+                                   loading skeleton / empty / error chrome; Reduce-Motion safe
+  DriveScore.swift            149  DriveScore surface (glass panel + header w/ freshness chip +
+                                   refresh + connectivity banner + state composition + surfaceSlug)
+  DriveScore.Previews.swift    89  #if DEBUG previews — one per state (data-good/data-poor/
+                                   empty/loading/error/stale/offline)
+  DriveScore.Tests.swift      296  XCTest — adapter + tone + components + projection + model +
+                                   a11y (24 methods)
+  DriveScore.strings           36  P1/S10 catalog contribution (table "DriveScore")
+  Largest production .swift = 279 lines (swiftlint file_length<=400 honored). No file
+  imports the Shared xcframework (seams are Swift protocols; the prod app injects the
+  facade-backed source, previews/tests inject InMemoryDriveScoreSource).
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data source (web useTranslation; the leaf is fed a `drive` prop by its parent):
+    bound through the P1/S8 seam DriveScoreSource→DriveScoreModel. The web component is
+    a pure presentational leaf, so the snapshot carries the SI drive (distance_m,
+    duration_s, max_speed_mps, start/end_battery_pct) plus the parent's loading/error/
+    connectivity state. No HTTP in the view.
+  - Scoring (web computeDriveScore + getScoreColor): ported VERBATIM in
+    DriveScoreScoring.compute — the 150 Wh/km optimal target, the 750 Wh-per-battery-%
+    estimate, the four clamped components (efficiency 40 / speed 20 / range 20 / trip 20),
+    and the Math.round rounding. getScoreColor → DriveScoreTone (<40 bad, <70 warning,
+    else good). EXECUTED-green against hand-computed web values (40 km/40 min drive ⇒
+    total 74; all-defaults drive ⇒ 23; harsh 2 km drive ⇒ 4 with clamped 0s).
+    Inputs are SI and the surface renders only the unitless score, so NO unit-system
+    conversion applies at any layer (matches the web source).
+  - Composition (web GlassPanel + SVG ring gauge + breakdown bars):
+      • GlassPanel  -> TSGlassPanel.
+      • ring gauge  -> ZStack(background Circle stroke + tone-coloured trimmed arc +
+                       centred score number + "Score" caption); arc + number animate in
+                       (web motion.circle sweep), instant under Reduce Motion.
+      • breakdown   -> 4 rows, each a label + value/max chip + proportional bar; colours
+                       map web hex → brand tokens (efficiency #00f0ff→accent, speed
+                       #a855f7→chartSeriesPower, range #10b981→chartSeriesBattery, trip
+                       #f59e0b→chartSeriesEnergy); gauge tone bad→statusDanger #ef4444,
+                       warning→statusWarning #f59e0b, good→statusSuccess #10b981.
+      • layout      -> ViewThatFits(HStack | VStack) so it stacks under compact width /
+                       large Dynamic Type instead of truncating.
+  - States (ALL rendered, each with a #if DEBUG preview + a projection/model unit test):
+      loading (skeleton ring + bar skeletons) · empty (no trip to score — distance &
+      duration both ≤ 0 ⇒ friendly ContentUnavailableView, never a blank box) · error
+      (message + Retry) · data (gauge + breakdown) · stale (freshness chip + "score may
+      be stale" banner + one-shot auto-refresh on the stale transition) · offline (cached
+      score kept + offline chip + "showing last known score" banner).
+  - i18n (P1/S10): web keys preserved verbatim — driveScore.title/score/efficiency/
+    speedDiscipline/rangePreservation/tripLength; native chrome namespaced driveScore.*
+    (live/stale/offline/refresh/staleBanner/offlineBanner/loadingA11y/empty/errorTitle/
+    retry). referenced==declared VERIFIED: 16 keys referenced in Swift == 16 keys declared
+    in DriveScore.strings, 0 on either side. NO English string literals in native code
+    (all via DriveScoreStrings facade + Text(verbatim:)).
+  - Accessibility: VoiceOver labels on the gauge ("Drive Score, {score}"), each breakdown
+    row ("{label}, {value}/{max}"), the freshness chip, the refresh button, the retry
+    button, and the banners; the panel is an accessibility container; Dynamic-Type system
+    fonts (Font.TS); Reduce Motion honored (gauge arc + bar fills + TSFadeIn + TSSkeleton).
+  - Telemetry (P1/S11): DriveScoreModel.start() emits view.opened with surface slug
+    "DriveScore" exactly once (OSLogDriveScoreTelemetry default; prod app injects the
+    shared diagnostics adapter). Asserted once-only by the model test.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 4 production files compiled together with the REAL apps/apple
+  component closure (design Tokens + Design/TSMaterial + Components/Motion/Motion +
+  Components/UI/{Typography,Cards,Buttons,Badges} + Components/Feedback/Skeletons);
+  none import the Shared xcframework.
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK
+        xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+          -swift-version 6 -strict-concurrency=complete  <closure> <4 production files>
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [3] swiftc -typecheck — DEBUG previews (-D DEBUG, Xcode #Preview macro plugin;
+        the 4 production files + previews + closure + Badges for the closure's own
+        DEBUG previews):
+        PREVIEWS_TYPECHECK_EXIT=0                                                  OK
+  [4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained
+        SwiftPM harness (real production Adapter + Model + the surface's Tests compiled as
+        module TeslaSync so `@testable import TeslaSync` resolves), Swift 6 language mode:
+          Test Suite 'DriveScoreScoringTests'       passed —  4 tests, 0 failures
+          Test Suite 'DriveScoreToneTests'          passed —  1 test,  0 failures
+          Test Suite 'DriveScoreComponentsTests'    passed —  3 tests, 0 failures
+          Test Suite 'DriveScoreDriveTests'         passed —  1 test,  0 failures
+          Test Suite 'DriveScoreProjectionTests'    passed —  5 tests, 0 failures
+          Test Suite 'DriveScoreModelTests'         passed —  8 tests, 0 failures
+          Test Suite 'DriveScoreAccessibilityTests' passed —  2 tests, 0 failures
+          Executed 24 tests, with 0 failures (0 unexpected) in 0.015 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: web scoring arithmetic parity (efficient/empty/harsh-clamp drives +
+        max-speed fallback), tone thresholds, the 4-row breakdown (order/maxima/fraction/
+        ratio/clamp/zero-max), hasTrip, projection loading/empty/error/data, model wiring
+        (start applies initial + view.opened-once + slug, push updates, stale one-shot
+        auto-refresh, offline no-refresh, manual refresh, stop re-arms), a11y labels.
+  [5] swiftlint --strict (6 surface .swift files; explicit paths — the repo
+        .swiftlint.yml `included:` does not list TeslaSync/shared-surfaces, that wiring is
+        the P4 integration prompt's job, so the bare `swiftlint --strict` SKIPS this dir;
+        run explicitly here):
+          Done linting! Found 0 violations, 0 serious in 6 files.
+        LINT_EXIT=0                                                               OK
+        (The whole-tree `swiftlint --strict` reports 1 pre-existing, unrelated violation
+         in dashboard-widgets/LifetimeStatsWidget.Adapter.swift — a known parallel-merge
+         artifact, NOT in this surface. Zero DriveScore violations.)
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/6 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate; swift):
+          ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces -Language swift
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                        OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode toolchain):
+      - `xcodegen generate`                          -> XCODEGEN_EXIT=0 (project + targets +
+          schemes written; shared-surfaces refs in generated project = 0, see reason (a)).
+      - `xcodebuild -target TeslaSync-macOS build`   ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          error: "TeslaSync-macOS"/"TeslaSyncWidgets-macOS" require a development signing certificate.
+          ** BUILD FAILED **                         -> MAC_BUILD_EXIT=65
+    Why deferred (three independent, code-unrelated reasons — none is a defect in this
+    surface; identical disposition to the BackendTool / ToolCard / AlertMessageEditor /
+    FSMTimelineChart predecessors recorded in apps/macos-pending-verifications.md,
+    Honesty rule 7):
+      (a) NOT-YET-REGISTERED: project.yml's app targets enumerate `Sources/`,
+          `TeslaSync/dashboard-widgets/`, and `TeslaSync/feature-views/`; this surface
+          lives at TeslaSync/shared-surfaces/ and has 0 references in the generated
+          project (verified). The shared-surfaces directory is registered into the
+          XcodeGen app + test targets by the downstream P4 integration/acceptance prompt
+          (exactly as dashboard-widgets / feature-views were wired once for all their
+          surfaces). Editing project.yml / .swiftlint.yml is OUTSIDE this prompt's allowed
+          files (DriveScore.* + the log). Running the full xcodebuild now would build the
+          app WITHOUT these files — ZERO evidence about this deliverable. Steps [1]/[2] DO
+          compile this surface against the real library on BOTH SDKs, and step [4]
+          EXECUTES its full XCTest suite — the meaningful validation.
+      (b) Shared.xcframework not staged: the app target links the KMP core; staging it
+          needs the Kotlin/Native gradle build (apps/shared :core:assembleSharedXCFramework),
+          and apps/shared is absent in this slot. Independent of this UI surface; concrete
+          missing-framework error captured above (already tracked as macOS-pending for the
+          p1-shared/S3 KMP scaffold).
+      (c) macOS app/widget signing requires a development certificate on a signed runner
+          (ADR-012); concrete signing error captured above.
+    XCTest under Xcode runs in the TeslaSync(/-macOS) test target; here the SAME tests are
+    PROVEN GREEN (24/24) by the executed SwiftPM harness in step [4], and the surface
+    compiles against BOTH the iOS 18 and macOS 15 SDKs in steps [1]/[2] + the DEBUG
+    previews in [3].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states (loading/empty/error/data/stale/offline) — implemented;
+      each has a #if DEBUG preview; phase logic unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (DriveScoreSource→
+      DriveScoreModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — web driveScore.* preserved
+      verbatim; native chrome present; referenced==declared verified (16==16).
+  [x] Accessibility labels on every interactive element (gauge/rows/freshness chip/refresh/
+      retry/banners); panel is an a11y container; Reduce Motion + Dynamic Type honored.
+  [x] Tests: adapter + per-state model + a11y — 24 methods, EXECUTED 24/24, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured
+      evidence (xcframework + registration + signing), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; the xcodebuild build/test is
+                          shown DEFERRED with its real exit 65 + cause, not as a pass.
+  2 No scope narrowing ... full surface (7 files), all states, seams, tests, strings.
+  3 No skip-and-assume ... web source read end-to-end; computeDriveScore/getScoreColor +
+                          every t() reproduced; scoring parity checked vs hand computation.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. gauge + 4-component breakdown + tones + 6 states + i18n + a11y.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as BackendTool/ToolCard host-gate + deferral.
+  8 No commit on red ..... committed work is green on every runnable gate; the only
+                          non-green step is the environment-blocked xcframework build,
+                          deferred with evidence (predecessor-accepted disposition).
+  9 No silent drift ...... path/registration deviation documented above (shared-surfaces
+                          not yet in project.yml/.swiftlint.yml; wiring is the integration
+                          prompt's job; swiftlint run with explicit paths instead).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

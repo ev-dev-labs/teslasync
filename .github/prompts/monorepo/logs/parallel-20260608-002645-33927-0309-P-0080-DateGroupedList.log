@@ -1,0 +1,122 @@
+I'll start by exploring the repository structure and reading the web source component that I need to reproduce natively.
+
+There's an existing Apple app. Let me read the web source and explore the Apple app structure in parallel.
+
+Now let me study the existing `feature-views` files (the AIUsageCard surface is the most recent pattern) to understand the file conventions.
+
+Now let me understand the conventions by reading the AiUsageCard reference surface and a simpler 7-file surface (AcDcStatsPanel) in parallel.
+
+The pattern is clear. Let me read the rest of the AcDcStatsPanel files and find the shared token/component definitions.
+
+Now let me locate the shared design-system tokens and components (TSSpacing, Color.TS, Font.TS, TSFadeIn, TSSkeleton, etc.) so I use them correctly.
+
+The shared design system and components are in `Sources/`. Note `TeslaSync/shared-surfaces` is a NEW directory not yet in `project.yml`. Let me check tool availability and how prior surface prompts logged their gates.
+
+Key finding: only **Command Line Tools** are installed (`/Library/Developer/CommandLineTools`), not full Xcode — so `xcodebuild` can't build iOS/macOS app targets or run simulators. Let me confirm and check how prior P4 surface prompts logged their gate outcome.
+
+There IS a full `/Applications/Xcode.app` — the active dir just points to CommandLineTools. I can override with `DEVELOPER_DIR`. Let me verify xcodebuild works and check a prior feature-views gate log for precedent.
+
+Full Xcode 26.5 + iPhone 16 simulator ARE available. There's a sanctioned "code-complete + independently-verified surface, DEFERRED full-app gate" disposition. Let me read the exact verification methodology used by prior surfaces.
+
+This is the sanctioned methodology: ship the surface, gate it green with swiftlint/swiftformat/placeholder + an **isolated SwiftPM harness** (Swift 6, strict concurrency) compiling the surface against the real design system and running its XCTest, then record the full-app xcodebuild gate as DEFERRED with raw evidence. Let me read the design tokens, shared components, and the disposition doc.
+
+Let me read the generated tokens, material, and the shared components I'll use.
+
+Now I have the tokens. Let me read the feedback components (States, Skeletons), the DataDisplay Lists (same category), and the disposition + harness references.
+
+Let me read the remaining shared components I'll use (Lists, Cards, Typography, Buttons), the disposition doc, and locate the harness/placeholder tooling.
+
+Important: an atomic `TSDateGroupedList` primitive already exists in `Components/DataDisplay/Lists.swift`, but it lacks the web header's `relativeLabel`, `summary`, and horizontal-rule divider. Per the parity mandate ("reproduce its composition"), my shared **surface** must render the full web header itself. Let me verify there's no name collision, check Components' import cleanliness (for the harness), and read the disposition doc + placeholder tool.
+
+Components only import system frameworks (SwiftUI/Charts/MapKit/CoreLocation/Foundation) — so an isolated SwiftPM harness can compile the surface against the real design system. Let me read the placeholder tool and confirm tool versions, then I'll write the surface.
+
+I now have a complete picture. Let me set up tracking and the directory, then build the surface following the sanctioned precedent.
+
+Now I'll write the surface. Starting with the Adapter (pure model + projection).
+
+Now the main surface view.
+
+Now the subviews (section header divider, rows, chrome, banner).
+
+Now the Previews (DEBUG) with a concrete item type.
+
+Now the tests.
+
+Now the strings file.
+
+All 7 files are written. Let me make one safety edit (use an explicit closure for the default `itemID` to avoid generic-default-arg specialization risk), then format and verify.
+
+Now format and lint the surface files.
+
+swiftformat: 0/6 require formatting (GREEN). Let me run swiftlint and view what formatting changed.
+
+Let me identify the single violation and confirm it's not in my surface.
+
+Pre-existing whole-app violation is `LifetimeStatsWidget` (not mine). My one violation is a `multiple_closures_with_trailing_closure` in Previews. Let me fix it.
+
+Surface files are clean: swiftlint 0 violations, swiftformat 0/6. Now the key independent verification — an isolated SwiftPM harness compiling the surface against the **real** design system + components, running the XCTest under Swift 6.
+
+Need to copy the main `DateGroupedList.swift` (the loop mis-handled it). Then write Package.swift and build.
+
+Now build and run the harness tests (this compiles the full design system + components, may take a few minutes).
+
+The Previews helper needs `@MainActor` (it calls the MainActor model factory). Let me fix the shipped file and re-sync the harness.
+
+My surface compiled cleanly. The only errors are in an unrelated component file (`UnitFormatters.swift`) referencing a `Units` type defined in the app layer (not in Design/Components). Let me locate that dependency to include it (more faithful than excluding).
+
+`Units` comes from the KMP `Shared` framework (out of harness scope) and only `UnitFormatters.swift` uses it — my surface doesn't. Let me check nothing else depends on UnitFormatters' types, then exclude it.
+
+Confirmed — `UnitFormatters`' types are used nowhere else. Excluding it from the harness (it depends on the KMP `Shared`-backed `Units` facade my surface never uses). Let me update Package.swift and run the tests.
+
+All components + the surface compiled. One test error: the Tests file references `EmptyView` (SwiftUI) without importing SwiftUI. Let me add the import.
+
+All 24 tests passed under Swift 6. Let me verify the formatted Tests file header is intact (imports + conformances).
+
+All 24 tests pass under Swift 6. swiftformat normalized `SampleItem` to rely on implicit `Sendable` (private struct) — correct. Let me run the final host gates (format, lint, placeholder) on the finished files.
+
+Host gates all GREEN. Now I'll strengthen the surface verification with a **real iOS-18 + macOS-15 SDK `swiftc -typecheck`** (matching the precedent), proving the surface compiles on both Apple SDKs — not just the SwiftPM host.
+
+iOS 18 typecheck passes (incl. DEBUG previews). Now macOS 15.
+
+Both SDK typechecks pass. Now the **deferred** full-app xcodebuild gate — I must run it and record raw evidence honestly. Let me first check the prerequisites (the scheme's Gradle preAction, gitignore for the generated project).
+
+Java 17 is present but `Shared.xcframework` is unstaged (only `.gitkeep`) — a documented pre-existing blocker. Let me generate the project (to confirm the registration gap) and run the literal iOS gate with a bounded wait.
+
+Confirmed: `shared-surfaces` is enumerated 0× (registration gap — integration scope, outside allowed files). Let me confirm the other documented pre-existing blockers, then run the literal iOS gate.
+
+Confirmed the documented pre-existing blockers (261 co-located XCTest files, 15× `DashboardWidgetSize`, unstaged framework). Now I'll execute the literal iOS xcodebuild gate (it triggers the heavy Gradle preAction) and capture raw output.
+
+Gradle preAction is progressing (using cache). Let me wait for it to finish staging and the app compile to hit the pre-existing blockers.
+
+Gradle is linking the frameworks now. Let me continue waiting for it to finish and the app compile to begin.
+
+The XCFramework assembled successfully; Gradle is finishing the release variant. Let me wait for the app compile phase to begin and hit the pre-existing blockers.
+
+Gradle is on the final release-link phase. Let me keep waiting for it to stage and the app compile to start.
+
+iOS gate: **IOS_EXIT=65**, failing on the documented pre-existing `Unable to resolve module dependency: 'XCTest'` (co-located test files in the app target). Let me confirm zero DateGroupedList errors, then run the macOS gate.
+
+Confirmed: **zero** DateGroupedList errors; the 4 errors are all pre-existing `XCTest` failures from `feature-views/AIRestorePanel.Tests.swift` (a co-located test in the app target). Now the macOS gate (framework now cached).
+
+macOS gate: **MAC_EXIT=65**, failing on the documented pre-existing macOS dev-signing blocker. Let me confirm zero surface errors there and review the working-tree state before cleanup.
+
+Zero DateGroupedList errors in both builds. The `AIUsageCard.*` modifications are **pre-existing** (from the slot's HEAD, not mine) — I'll leave them untouched. The generated `xcodeproj` and Gradle outputs are git-ignored. Let me verify the full tree state and clean up build artifacts.
+
+Working tree is clean (only my `shared-surfaces/` untracked; the dirty `AIUsageCard.*` are pre-existing from the slot, not mine — I won't touch them). Let me gather line counts and finalize the gate log.
+
+All evidence gathered. Now I'll write the comprehensive, honest gate log.
+
+Let me do a final clean verification: re-sync the exact shipped files into the harness, re-run the Swift 6 build+test, and re-confirm all host gates in one pass before committing.
+
+The loop mishandled the `swift` filename again (the harness copy is unchanged/identical). Let me explicitly confirm the main view file's byte-identity and run the final host gates.
+
+All gates green and the harness is byte-identical. Let me stage only the allowed files (the surface dir + the log) — explicitly excluding the pre-existing `AIUsageCard.*` changes — and commit.
+
+The `git add` didn't stage — let me diagnose (check-ignore) and retry with verbose output.
+
+All 8 allowed files staged (7 surface + log); `AIUsageCard.*` correctly excluded. Committing now.
+
+Commit `87d5a90e8` created with exactly the 8 allowed files (1351 insertions). Working tree shows only the pre-existing `AIUsageCard.*` (not mine). Let me clean up temp artifacts and finalize tracking.
+
+All work is complete and verified. Let me record the final disposition.
+

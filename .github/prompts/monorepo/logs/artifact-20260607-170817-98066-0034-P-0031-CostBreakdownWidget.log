@@ -1,0 +1,115 @@
+=== P4 Dashboard widget 0031 CostBreakdownWidget (Apple) ===
+date: 2026-06-08T00:47:49Z
+host: Darwin 25.5.0 arm64
+git_branch: auto/20260607-170817-98066/34
+
+## Artifact path mapping (no silent drift)
+Prompt template native-output path: apps/apple/TeslaSync/dashboard-widgets/CostBreakdownWidget.*
+Repo reality: the Apple app root is apps/apple (project.yml at apps/apple/project.yml);
+  ONLY 'Sources/' is compiled into the app targets and ONLY 'Sources'+'Tests' are linted
+  (.swiftlint.yml 'included'). A file under apps/apple/TeslaSync/dashboard-widgets/ would be
+  dead code (never compiled/linted/tested). Faithful, build-correct mapping used instead:
+    Source: apps/apple/Sources/Dashboard/Widgets/CostBreakdownWidget*.swift  (5 files)
+    Tests:  apps/apple/Tests/Unit/Dashboard/CostBreakdownWidgetTests.swift
+  Rationale: the surface must actually compile/render (honesty covenant: no stubs/dead code).
+  Decomposed into 5 sub-400-line files to honor the repo's strict file_length<=400 convention
+  (largest pre-existing source file is 390; repo never uses swiftlint:disable).
+
+## Files
+  198 lines  apps/apple/Sources/Dashboard/Widgets/CostBreakdownWidgetModel.swift
+  108 lines  apps/apple/Sources/Dashboard/Widgets/CostBreakdownWidgetAdapter.swift
+  133 lines  apps/apple/Sources/Dashboard/Widgets/CostBreakdownWidgetProvider.swift
+  326 lines  apps/apple/Sources/Dashboard/Widgets/CostBreakdownWidget.swift
+  258 lines  apps/apple/Sources/Dashboard/Widgets/CostBreakdownWidgetViews.swift
+  270 lines  apps/apple/Tests/Unit/Dashboard/CostBreakdownWidgetTests.swift
+
+############################################################
+## GATE STEP 1+2: xcodebuild build test (iOS Simulator + macOS)
+############################################################
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+    -- xcrun simctl probe --
+    xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+    -- active developer dir --
+    /Library/Developer/CommandLineTools
+    -- Shared.xcframework presence --
+IOS_EXIT=127   # BLOCKED: xcodebuild unavailable (Command Line Tools only; requires full Xcode)
+MAC_EXIT=127   # BLOCKED: same — no Xcode, no macOS app SDK build, no Shared.xcframework
+
+############################################################
+## GATE STEP 3: swiftlint --strict   (RUNNABLE on this host)
+############################################################
+Done linting! Found 0 violations, 0 serious in 262 files.
+LINT_EXIT=0
+
+############################################################
+## GATE STEP 4: swiftformat --lint apps/apple   (RUNNABLE)
+############################################################
+SwiftFormat completed in 0.58s.
+0/266 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+############################################################
+## GATE STEP 5: check-placeholders.ps1   (RUNNABLE via pwsh)
+############################################################
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Dashboard
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/Tests/Unit/Dashboard
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+############################################################
+## SUPPLEMENTARY COMPILE EVIDENCE (xcodebuild substitute)
+############################################################
+$ swiftc -typecheck (Foundation-only logic: Model + Adapter)
+TYPECHECK_LOGIC_EXIT=0  (0 = pure model/adapter/projection/formatting/a11y type-check clean)
+$ swiftc -parse (syntax) for SwiftUI/Shared/test files:
+    parse OK: apps/apple/Sources/Dashboard/Widgets/CostBreakdownWidget.swift
+    parse OK: apps/apple/Sources/Dashboard/Widgets/CostBreakdownWidgetViews.swift
+    parse OK: apps/apple/Sources/Dashboard/Widgets/CostBreakdownWidgetProvider.swift
+    parse OK: apps/apple/Tests/Unit/Dashboard/CostBreakdownWidgetTests.swift
+
+############################################################
+## PARITY COVERAGE (web CostBreakdownWidget.tsx -> native)
+############################################################
+Registry      : id=cost-breakdown, category=analytics, default 2x4, min 1x2, max 4x40 (clamp tested)
+Data binding  : KMP AnalyticsStore.costBreakdown(vehicleId) StateFlow<Resource<JsonElement>>
+                -> StateHolderModel/LoadableState (ADR-013). No HTTP in the view (CostBreakdownModel).
+Layouts       : compact (cols<=1) big number; standard donut + ranked list + 3 stat cards.
+States        : loading(skeleton), empty, error(QueryError+retry), stale(chip+auto-refresh),
+                offline(cached value + offline chip; offline-no-cache -> retry empty state).
+Derivations   : last-6 donut, full ranked(max5), current-month=last, cost/dist *1.60934 for mi,
+                null-safety ev_cost??0 / month??'—'  (all unit-tested).
+i18n (P1/S10) : every catalog key resolved via Localizable.xcstrings facade — no English literals:
+                translation.widget.costBreakdown.{title,monthlyTotal,savedVsGas,saving,noData,
+                totalCost,costPerDist,gasSavings,lifetime} + chrome translation.common.{refresh,
+                retry,offline}, translation.mqtt.stale. %1$@ params via String(format:).
+Telemetry     : WidgetTelemetry seam; SharedWidgetTelemetry -> TelemetryEvent.ScreenView
+                screen='CostBreakdownWidget' (P1/S11, ADR-016 consent-gated).
+A11y          : VoiceOver labels (donut summary, ranked rows), Dynamic Type (Font.TS),
+                Reduce-Motion-aware numeric animation; pure a11y strings unit-tested.
+Tests         : 22 cases — decode+null-safety, projection(donut/ranked/current/costPerDist),
+                currency formatting, registry+clamp, grid compact, a11y labels, telemetry seam,
+                per-state construction (loading/loaded/stale/empty/error/offline).
+
+## Acceptance criteria
+[x] Surface renders all web states (loading/empty/error/stale/offline/compact/standard).
+[x] Hooks bind via shared P1/S8 state-holder layer; no direct HTTP in the view.
+[x] Every source i18n key has a matching key in the P1/S10 catalog (verified present).
+[x] Accessibility labels on chart, rows, refresh control, retry.
+[x] Tests: adapter unit test + per-state construction + a11y label test.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate EXIT=0).
+[~] xcodebuild build/test: BLOCKED — runner is Command Line Tools only (no Xcode/simulator/
+    Shared.xcframework). Substituted with swiftlint(0)+swiftformat(0)+placeholder(0)+typecheck(0)+parse(0).
+
+## RESULT (honesty covenant: no red-as-green)
+Runnable gates : LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0  TYPECHECK_LOGIC_EXIT=0  PARSE=OK
+Blocked gates  : IOS_EXIT=127  MAC_EXIT=127  (platform capability: full Xcode + iOS18 sim + KMP
+                 Shared.xcframework required; unavailable on this Command-Line-Tools-only runner)
+
+EXIT=127
+STATUS=BLOCKED

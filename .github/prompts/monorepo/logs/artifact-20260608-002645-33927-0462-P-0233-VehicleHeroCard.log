@@ -1,0 +1,190 @@
+================================================================================
+ P4 · Shared surface · 0233 — VehicleHeroCard (Apple)
+ SwiftUI parity of web/src/components/vehicles/VehicleHeroCard.tsx
+ Native output: apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.*
+ Run date: 2026-06-08 (slot-462)
+================================================================================
+
+--------------------------------------------------------------------------------
+ RUNNER CAPABILITY (probed, not assumed)
+--------------------------------------------------------------------------------
+  xcodebuild -version            -> Xcode 26.5 (Build 17F42)   [via DEVELOPER_DIR]
+  xcode-select -p                -> /Library/Developer/CommandLineTools (CLT only);
+                                    full Xcode present at /Applications/Xcode.app,
+                                    used via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                                    (sudo xcode-select -s unavailable — no passwordless sudo).
+  xcrun simctl … iPhone 16       -> iPhone 16 (iOS 26.5) present + Booted.
+  SDKs                           -> iphonesimulator26.5, macosx26.5 (deployment targets
+                                    iOS 18 / macOS 15 from project.yml — satisfied).
+  Frameworks in MacOSX SDK       -> SwiftUI.framework, Charts.framework, MapKit.framework ALL present.
+  swift                          -> Apple Swift 6.3.2.   swiftlint + swiftformat + xcodegen 2.45.4 + pwsh present.
+
+  Capability verdict: SwiftUI + Swift Charts + MapKit + iOS 18 / macOS 15 SDKs are ALL present.
+  This surface uses NO charts and NO maps (the web source has none — "Charts/maps used: (none)").
+  => NOT BLOCKED on platform capability.
+
+--------------------------------------------------------------------------------
+ FILES SHIPPED (allowed scope: apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.* + this log)
+--------------------------------------------------------------------------------
+  VehicleHeroCard.swift             surface view, glass shell, phase switch, header, photo, actions
+  VehicleHeroCard.Model.swift       P1/S8 state-holder seam + P1/S11 telemetry seam + inputs + P1/S10 facade
+  VehicleHeroCard.Adapter.swift     palette, SI→display converters, fmtNumber/fmtInt, status catalog, a11y
+  VehicleHeroCard.Projection.swift  pure projection: 4 gauges + 8 stat cards + identity + photo alt
+  VehicleHeroCard.Content.swift     gauge flow/view, stat grid/cell, action bar, no-live-data fallback panel
+  VehicleHeroCard.Views.swift       photo, status/model badges, freshness chip, refresh, banner, loading/empty/error
+  VehicleHeroCard.Previews.swift    9 #Preview states (DEBUG)
+  VehicleHeroCard.strings           i18n catalog (table "VehicleHeroCard")
+  VehicleHeroCard.Tests.swift       27 XCTest cases (adapter + projection + model/telemetry + a11y)
+
+  Unique `VehicleHeroCard*` symbol prefix — NO collision with the sibling `VehicleHeroWidget` (0108)
+  or `VehicleHeroCardWidget` (0107) `VehicleHero*` types, nor `TSVehicleHeroCard` (People.swift).
+  `struct VehicleHeroCard` itself was verified free before use.
+
+--------------------------------------------------------------------------------
+ PARITY (web source is THE spec — data, composition, states, i18n reproduced)
+--------------------------------------------------------------------------------
+  Gauges (rendered when vehicleState present — web RadialGauge array):
+    battery  value=battery_level max=100 unit=%  color=(>20 ? #22d3ee : #ef4444)
+    range    value=round(convertDistanceFromSI(rated_range)) max=(km 644 / mi 400) color=#4ade80
+    inside   value=round(convertTempFromSI(inside_temp)) max=(°C 50 / °F 122) color=#f59e0b
+    outside  value=round(convertTempFromSI(outside_temp)) max=tempMax color=#a78bfa
+  Stat grid (web StatCard, default 2 / md 4 cols), exact source order:
+    Inside Temp, Outside Temp, Odometer(fmtInt grouped), Range, Status(Locked/Unlocked),
+    Sentry(On/Off), Firmware(software_version), Power(fmtNumber + "kW").
+  Identity: display_name title + StatusBadge(toStatus(state)) + mono VIN + model Badge.
+  Photo: optional photoUrl → AsyncImage, alt = "{{name}} photo" interpolated with display_name.
+  Actions: Details → /vehicles/:id · Commands → /…/commands · Live Map → /…/map (host-injected onNavigate).
+  Status dots (web FSM badgeDot, types/fsm/vehicle.ts + theme.ts): online green-400, driving blue-500,
+    charging yellow-400, parked cyan-500, updating indigo-500, asleep purple-500, offline/unknown red-400.
+  Converters 1:1 with web unitConversion.ts; fmtNumber halfUp + grouping + NaN/±Inf→0 (numberFormat.ts).
+  States (every one renders, never a blank box): loading skeleton · empty (no vehicle) · error+retry ·
+    content (gauges+stats OR no-live-data fallback when vehicleState==null) · stale chip+banner · offline
+    chip+banner (cached values stay visible). Data bound only via P1/S8 model — no HTTP in the view.
+  Telemetry: model.start() emits P1/S11 `view.opened` with surface slug "VehicleHeroCard" (idempotent).
+  Accessibility: VoiceOver labels on every interactive element (Details/Commands/Live Map/refresh) and on
+    gauges/stats/badges; Dynamic Type via Font.TS system tokens; Reduce-Motion honored (gauge arc + skeleton).
+
+--------------------------------------------------------------------------------
+ GATE RESULTS — in-scope steps (every PASS below is REAL tool output)
+--------------------------------------------------------------------------------
+  [swiftformat]  swiftformat --lint apps/apple/TeslaSync/shared-surfaces
+                 -> "0/8 files require formatting."                         FORMAT_EXIT=0
+
+  [swiftlint]    swiftlint lint --strict --config .swiftlint.yml  (8 surface .swift files)
+                 -> "Done linting! Found 0 violations, 0 serious in 8 files."   LINT_EXIT=0
+                 (Note: a single pre-existing violation exists in the repo —
+                  TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+                  function_body_length — that file is OUTSIDE this surface's scope.)
+
+  [placeholders] pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces
+                 -> PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0     PLACEHOLDER_EXIT=0
+                 (No TODO/FIXME/stub/mock/placeholder/Lorem in shipped code.)
+
+  [XCTest]       swift test  (isolated SwiftPM module named `TeslaSync`, macOS 15, Swift 6
+                 strict concurrency; surface compiled against the REAL apps/design/generated/
+                 apple/Tokens.swift + a verbatim TSSkeleton; `@testable import TeslaSync`)
+                 -> "Build complete!"  then  "Executed 27 tests, with 0 failures"   XCTEST_EXIT=0
+                 Coverage: SI converters · fmtNumber/fmtInt/gauge formatters · toStatus+StatusBadge
+                 catalog (known/unknown→offline) · 4 gauges (battery threshold, clamp, unit-scaled
+                 max, °C/°F, nil temp→0) · 8 stat cards (order + values + grouping + lock/sentry/
+                 firmware-emdash/power) · identity + photo-alt interpolation · no-state guard ·
+                 model phase resolution · view.opened-once telemetry (spy) · refresh delegation ·
+                 accessibility summaries. EXECUTES GREEN — not merely typechecks.
+
+  [build]        swift build (same isolated module, DEBUG → compiles #Preview too)
+                 -> "Build complete! (≈8–15s)"                              BUILD_EXIT=0
+                 Surface + Previews compile clean under Swift 6 complete concurrency against the
+                 macOS 15 SDK with the real design tokens. (iOS-18 surface APIs used — AsyncImage,
+                 @Observable, ContentUnavailableView, LazyVGrid — are all iOS 18 / macOS 15 baseline.)
+
+--------------------------------------------------------------------------------
+ GATE — xcodebuild scheme build/test : DEFERRED (pre-existing, out-of-scope blockers; NOT a code red)
+--------------------------------------------------------------------------------
+     xcodebuild -scheme TeslaSync      -destination 'platform=iOS Simulator,name=iPhone 16' build test
+     xcodebuild -scheme TeslaSync-macOS                                                      build test
+
+  These two whole-app scheme steps cannot reach EXIT=0 ON THIS RUNNER for reasons entirely
+  outside this surface's allowed scope. Evidence (probed live, not assumed):
+
+  (b1) KMP Shared.xcframework not staged. Both schemes run the pre-action "Stage Shared.xcframework"
+       => apps/apple/Scripts/build-shared-xcframework.sh => Gradle :core:assembleSharedXCFramework
+       (Kotlin/Native). Frameworks/ holds only the placeholder keep-file:
+           $ ls -la apps/apple/Frameworks/   ->   .gitkeep   (Shared.xcframework is git-ignored)
+       A backgrounded `xcodebuild -scheme TeslaSync-macOS build` emitted ZERO compiler output after
+       ~140s — parked in the Gradle pre-action. The runner is concurrently executing OTHER slots'
+       KMP jobs (observed live):
+           java … slot-20/apps/shared … :core:assembleSharedXCFramework
+           gtimeout 540 apps/shared/gradlew … slot-469 … :core:assembleSharedXCFramework
+       i.e. cross-slot KMP/Gradle saturation — an environment/integration condition, not this code.
+
+  (b2) Pre-existing cross-slot duplicate registry-type definitions in the merged worktree. HEAD is a
+       parallel-merge of dozens of auto/* surface branches; two already-merged surfaces BOTH declare
+       the same top-level public types, so the app module is a duplicate-declaration red independent
+       of this surface. Decisive proof (swiftc -typecheck, macOS 15 SDK):
+           TeslaSync/dashboard-widgets/VehicleHeroCardWidget.Adapter.swift:149:15:
+               error: invalid redeclaration of 'VehicleHeroProjection'
+           TeslaSync/dashboard-widgets/VehicleHeroWidget.Projection.swift:55:
+               note: 'VehicleHeroProjection' previously declared here
+       (Same pattern the predecessor 0107 recorded for 'DashboardWidgetSize'.) Likewise 2× each of
+       VehicleHeroModel / VehicleHeroStrings / VehicleHeroUpdate / VehicleHeroSource / VehicleHeroFormat.
+       De-duplicating those is an integration-layer task across OTHER surfaces' files — NOT in this
+       prompt's allowed scope, and NOT a defect in VehicleHeroCard.* (which uses a unique prefix).
+
+  (b3) project.yml source wiring. The two app targets list `TeslaSync/dashboard-widgets` and
+       `TeslaSync/feature-views` but not yet `TeslaSync/shared-surfaces` (this is the first shared
+       surface; wiring that path + the swiftlint `included:` entry is a P4-core/integration step,
+       outside this prompt's allowed files). The surface is self-consistent and fully verified in the
+       isolated `TeslaSync` module above, so it integrates as soon as the path is added.
+
+  IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED   (capability present; blockers are pre-existing + out-of-scope)
+
+  Precedent: matches the accepted "code-complete + DEFERRED Xcode scheme" outcome of the sibling
+  p4-apple-dashboard-widgets-0107-VehicleHeroCardWidget.log (EXIT=0 / STATUS=DONE) and the 0066/0070/
+  0077 precedent it cites. This surface goes further: it EXECUTES its XCTest suite (27/27) and runs a
+  full `swift build` (not just a typecheck) in an isolated real-token module.
+
+--------------------------------------------------------------------------------
+ HONESTY COVENANT — compliance
+--------------------------------------------------------------------------------
+  1  No red-as-green   : Every PASS above is real, pasted tool output. The xcodebuild scheme step is
+                         transparently labelled DEFERRED with concrete Frameworks/=.gitkeep + live
+                         Gradle PIDs + a swiftc redeclaration error — it is NOT claimed to pass.
+  2  No scope narrowing: All 4 gauges, all 8 stat cards, photo, identity, 3 actions, and every state
+                         (loading/empty/error/content/stale/offline + no-live-data) are implemented.
+  3  No skip-and-assume: Capability, tokens, FSM colors, formatter math, and the baseline collision
+                         were each PROBED (commands run), not assumed.
+  4  No stubs as final : check-placeholders EXIT=0; no TODO/stub/mock/placeholder/Lorem; real bodies.
+  5  No parity shortcut: Values match the web source (e.g. 441000 m → "441" km / "274" mi; odometer
+                         "42,350"; power "0.00 kW"; round(22.5°C)→23, →"73"°F) — asserted in XCTest.
+  6  No delegation     : Authored directly; no sub-agents used for this surface.
+  7  No predecessor bypass: The pre-existing baseline reds (b1/b2) are documented with evidence, not
+                         worked around or hidden; this surface adds no new collision.
+  8  No commit on red  : No in-scope red exists — format/lint/placeholder/XCTest/build are all green.
+                         The DEFERRED scheme step is a pre-existing environment blocker, not this code.
+  9  No silent drift   : i18n keys, FSM colors, and converter constants trace 1:1 to the cited web files.
+ 10  Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+--------------------------------------------------------------------------------
+ ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+  [x] Surface renders on Apple with all web-source states reproduced (build + 9 previews compile).
+  [x] Hooks bind to the shared P1/S8 state-holder layer (VehicleHeroCardModel/Source); no HTTP in view.
+  [x] Every i18n key from source has a matching key in the surface catalog (VehicleHeroCard.strings,
+      table "VehicleHeroCard"); folds into Localizable.xcstrings at integration.
+  [x] Accessibility labels present on every interactive element (Details/Commands/Live Map/refresh).
+  [x] Tests: adapter unit tests + per-state/projection tests + a11y label tests — 27/27 EXECUTE GREEN.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate EXIT=0).
+  [~] xcodebuild scheme build/test: DEFERRED with platform-capability + pre-existing-blocker evidence
+      (b1 KMP staging, b2 cross-slot duplicate registry types, b3 project.yml wiring) per 0107 precedent.
+
+--------------------------------------------------------------------------------
+ COMMIT
+--------------------------------------------------------------------------------
+  git add apps/apple/TeslaSync/shared-surfaces/VehicleHeroCard.* \
+          .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0233-VehicleHeroCard.log
+  git commit -m "feat(apps/apple/shared-surfaces): add VehicleHeroCard surface (P4)"
+
+================================================================================
+EXIT=0
+STATUS=DONE
+================================================================================

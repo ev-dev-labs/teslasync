@@ -1,0 +1,96 @@
+I'll start by exploring the repository structure and understanding the task requirements. Let me check the web source, the Apple app structure, and the available toolchain.
+
+Let me read the web source and explore the existing Apple app patterns. The toolchain check shows `xcodebuild` needs full Xcode (only Command Line Tools present), but `swiftlint`, `swiftformat`, `swift`, and `pwsh` are available.
+
+Now I understand the web source — it's a WCAG 2.4.1 skip-link (visually hidden until focused, jumps focus to main content). It has no data states; the generic loading/error/offline template states don't apply. Let me study the established Apple patterns and infrastructure.
+
+Key finding: `shared-surfaces/` doesn't exist yet (this is the first one), and `project.yml` only lists `dashboard-widgets` and `feature-views` as sources — but `project.yml` is **not** in my allowed-files list. Let me resolve the AIUsageCard template and locate the i18n/tokens/telemetry/state-holder infrastructure.
+
+The AiUsageCard (10-file) and AcDcStatsPanel (7-file) are the canonical templates. Let me read them to learn the exact i18n facade, token, telemetry, and test APIs in use.
+
+Now let me learn the i18n facade, telemetry emit, state-holder, token definitions, and test framework from the AiUsageCard template (10-file canonical).
+
+Now let me learn the test framework and verify the token/primitive definitions exist (so I reference valid names), plus read the placeholder checker.
+
+Tests use XCTest with `@testable import TeslaSync`. Tokens live in `design/generated/apple/Tokens.swift`. Let me read the token definitions, the glass/motion primitives, and the placeholder checker.
+
+Now I have the full token vocabulary. Let me read the forbidden-pattern list, lint/format configs, the glass/motion primitives, and check how accessibility-focus and reduce-motion are handled idiomatically in the codebase.
+
+I now have the full token vocabulary, lint/format rules, and forbidden-pattern list ("Placeholder", "TODO", "FIXME", "XXX", "Coming soon", "Lorem ipsum", "not implemented" — must avoid all). Let me read the telemetry-spy test pattern and a Views file to mirror idioms exactly, plus check the Localization integration.
+
+I have everything I need: the telemetry-spy pattern, projection style, token vocabulary, and constraints. Note: `shared-surfaces/` is **not** in `project.yml` sources nor `.swiftlint.yml` `included` — but neither is in my allowed-files, so build-wiring is the P4-core/acceptance-gate's responsibility. Let me confirm the logs dir and projection style, then write the files.
+
+The prompt is at `p4-apple/shared-meaningful/P-0139-SkipToContent.prompt.md`. Let me read the authoritative source to confirm exact paths/spec before writing.
+
+I have full clarity on the spec and patterns. Let me set up tracking and write the implementation. The web source is a pure WCAG 2.4.1 skip-link (no data/async states — its only hook is `useTranslation`), so I'll faithfully reproduce its two real visual states (hidden/sr-only ↔ focused pill) plus the focus-move behavior, following the house multi-file convention.
+
+Now writing all seven surface files following the house multi-file convention.
+
+All seven files created. Let me update tracking and run verification (swiftformat, swiftlint, placeholder gate, syntax parse, forbidden-word grep).
+
+Two fixes needed: (1) `wrapFunctionBodies` wants the `Counter.increment` body wrapped, and (2) the preview name "XXXL" contains "XXX" which the placeholder gate flags case-insensitively. Let me fix both.
+
+Re-running verification with proper exit-code capture: swiftformat on my dir, swiftlint pointed at my files, the placeholder gate, and a syntax parse.
+
+swiftformat passes (0/6 require formatting). swiftlint is still running — let me wait for it.
+
+swiftformat ✅, placeholder gate ✅ (COUNT=0). swiftlint scanned all 1909 configured files and found 1 violation — I need to locate it and confirm whether it's in my files or pre-existing.
+
+My 6 files are **clean**: swiftlint found 0 violations in them. The 1 repo violation is pre-existing in `LifetimeStatsWidget.Adapter.swift` (unrelated, outside my allowed files). Now let me confirm syntax via `swiftc -parse` on all files and a full type-check on the self-contained Projection.
+
+All files parse cleanly and the self-contained Projection fully type-checks. Let me attempt a deeper, combined type-check of the SwiftUI-dependent files together with the design tokens (if SwiftUI is importable under Command Line Tools) — this would give real compile confidence beyond syntax.
+
+SwiftUI imports fine under CLT. Now the real test — a combined type-check of the production surface files against actual SwiftUI + the real design tokens, under **Swift 6 strict concurrency** (matching the app's build settings). This catches type/concurrency errors a full build would.
+
+The combined type-check surfaced two issues in **Previews only**:
+1. `#Preview` macro "plugin not found" — a harness limitation of bare `swiftc` (the macro plugin loads in Xcode; existing `AiUsageCard.Previews.swift` uses it identically). Not a code bug.
+2. **Real bug**: `\.accessibilityReduceMotion` and `\.colorSchemeContrast` are read-only KeyPaths — they can't be set via `.environment()`. `\.dynamicTypeSize` is writable (not flagged). Let me fix the two read-only overrides with portable `.preferredColorScheme` previews instead.
+
+Now re-validating: (1) type-check the production + view files (no previews) under Swift 6 strict concurrency — must be fully clean; (2) locate the preview-macro plugin so I can also type-check the preview bodies.
+
+**Production + view files type-check cleanly under Swift 6 strict concurrency (RC=0).** That's the critical validation. The CLT toolchain lacks the `#Preview` macro plugin, so to validate the preview *bodies* (not just syntax), I'll typecheck their content via a temporary probe that unwraps the macro — without modifying the shipped file.
+
+**All surface code + preview bodies type-check cleanly under Swift 6 strict concurrency (RC=0).** Let me run the final gate checks on the edited files (swiftformat, swiftlint, placeholders, forbidden-words), then write the log and commit.
+
+All gate checks I can run pass: forbidden-words clean, swiftformat 0/6, swiftlint 0 violations (my files), placeholders EXIT=0, plus Swift 6 strict-concurrency type-check RC=0. Before declaring the xcodebuild steps BLOCKED, let me do due diligence — confirm there's genuinely no full Xcode and capture exact evidence for the log.
+
+There's an `/Applications/Xcode.app`, but the active toolchain is Command Line Tools. Let me check if Xcode is usable via `DEVELOPER_DIR` override (no sudo needed), and whether the project's prerequisites (xcodegen, the KMP `Shared.xcframework`) are present — this determines whether the xcodebuild gate is genuinely runnable.
+
+Xcode 26.5 is reachable via `DEVELOPER_DIR` and xcodegen exists — but **`Frameworks/Shared.xcframework` is absent (only a `.gitkeep`)**. The app targets declare a hard dependency on that KMP core framework, which requires the Kotlin/Native toolchain to build (out of scope, not in my allowed files). Let me capture concrete evidence by generating the project and attempting the build.
+
+Project generates and schemes exist. Now let me capture concrete evidence that the `xcodebuild build` gate cannot pass on this checkout (missing `Shared.xcframework` / `import Shared`), running the real build via Xcode 26.5.
+
+The harness blocked the `kill` usage. Let me run the build directly (writing exit code to the log) and inspect afterward.
+
+The build progressed into a heavy Gradle/Kotlin-Native KMP compile (it stages `Shared.xcframework` at build time by downloading the Kotlin/Native distribution). Critically, **my `shared-surfaces` files are not in `project.yml`** (which I can't edit — allowed-files), so this whole-app build/test won't exercise my surface regardless. I'll stop this long-running build (no validation value for my files) and instead validate my test file rigorously by compiling my surface into a testable `TeslaSync` module.
+
+Now validating the **test file** rigorously: compile my surface into a testable `TeslaSync` module and type-check `SkipToContent.Tests.swift` against it (using Xcode's toolchain for XCTest availability).
+
+The module built cleanly (RC=0) and `@testable import TeslaSync` resolved **all** my surface symbols — the only errors are the `XCTAssert*` **C macros** being unavailable to bare `swiftc` (a known harness limitation; they work in a real XCTest target). To conclusively validate my test *logic*, I'll resolve `import XCTest` to a tiny shim providing the assertion functions and re-typecheck.
+
+`TESTS_RC=0` — the test file resolves all surface symbols. But there are **Swift 6 strict-concurrency warnings**: `SkipToContent` is `@MainActor`-inferred (it's a `View`), so its static slugs can't be read from the nonisolated `SkipToContentAccessibilityTests`. The house pattern (AiUsageCard) tests these from a `@MainActor` class. Let me apply that fix and re-verify clean.
+
+Re-verifying the test file is warning-clean under Swift 6, plus a final pass of swiftformat/swiftlint/placeholders on all files.
+
+`TESTS_RC=0` with no output — the test file is now warning-clean under Swift 6. Waiting for the format/lint/placeholder results.
+
+Every surface-scoped check passes: Swift 6 strict-concurrency type-check of production, view, preview, and test code = **0 errors / 0 warnings**; swiftlint 0; swiftformat 0; placeholder gate 0. Now let me write the gate log with full honest evidence, then clean up and commit.
+
+Now cleaning up build artifacts and verifying git status before the scoped commit.
+
+Git status is clean: only my new `shared-surfaces/` files and the log are mine (the `AIUsageCard.*` and web `.tsx` modifications are pre-existing working-tree detritus from before I started — I'll exclude them). The KMP build left no stray tracked files. Now the scoped commit (staging only my 7 surface files + the log).
+
+git add is hanging abnormally (~2 min, no output at all). Let me stop it and investigate — likely a leftover git index lock from the earlier background build.
+
+`.git` is a gitfile (this is a worktree), and there's a concurrent `git diff` process plus lingering Gradle daemons from the stopped build causing contention. Let me locate the real gitdir, check for a stale lock, and see if anything got staged.
+
+Git is responsive now (no lock; nothing staged yet — the earlier add hung before completing). Retrying with explicit file paths.
+
+All 8 files staged cleanly (7 surface + log), zero detritus. Committing with the prompt's exact message.
+
+Committed as `0c57a050a` — 8 files, 686 insertions, zero detritus. Let me update tracking and do a final clean-state verification.
+
+The commit is clean and complete. One covenant-compliance refinement: rule 10 requires the log to **end** with `EXIT=<int>` and `STATUS=<...>`, but mine has an explanatory paragraph after them. Let me append a canonical trailing block and amend the commit.
+
+Task complete. The commit `ed5250da5` contains the full SkipToContent surface (7 files, 566 lines of Swift/strings) plus the gate log, with the log ending in the canonical `EXIT=1` / `STATUS=BLOCKED` block.
+

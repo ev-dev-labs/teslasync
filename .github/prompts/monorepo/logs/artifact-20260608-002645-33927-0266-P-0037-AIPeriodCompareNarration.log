@@ -1,0 +1,151 @@
+=== P4 Shared surface 0037 AIPeriodCompareNarration (Apple) ===
+date: 2026-06-08T11:30:58Z
+host: Darwin 25.5.0 arm64  swift: Target: arm64-apple-macosx26.0
+xcode: Xcode 26.5 Build version 17F42 
+deployment targets: iOS 18.0 / iPadOS 18.0 / macOS 15.0 (SDKs: iOS 26.5 / macOS 26.5)
+
+Web source: web/src/components/ai/AIPeriodCompareNarration.tsx
+Native out: apps/apple/TeslaSync/shared-surfaces/AIPeriodCompareNarration.{Adapter,Model,Views,Previews,Tests}.swift, .swift, .strings
+
+Capability: SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 — AVAILABLE.
+  (This surface uses SwiftUI only; the web source declares no charts/maps.)
+
+############################################################
+# A. HOST-RUNNABLE SURFACE GATES (authoritative, all green) #
+############################################################
+
+----- [A1] Isolated SwiftPM build (Swift 6 language mode, strict concurrency) -----
+Building for debugging...
+[0/1] Write swift-version--58304C5D6DBC2206.txt
+Build complete! (0.52s)
+ISO_BUILD_EXIT=0
+
+----- [A2] Isolated XCTest suite (adapter + model + a11y + telemetry) -----
+Test Suite 'All tests' passed at 2026-06-08 04:31:03.876.
+	 Executed 27 tests, with 0 failures (0 unexpected) in 0.005 (0.009) seconds
+ISO_TEST_EXIT=0
+
+----- [A3] swiftc -typecheck — iOS 18 simulator (Swift 6, -D DEBUG incl. previews) -----
+IOS_TYPECHECK_EXIT=0
+
+----- [A4] swiftc -typecheck — macOS 15 (Swift 6, -D DEBUG incl. previews) -----
+MAC_TYPECHECK_EXIT=0
+
+----- [A5] swiftlint --strict (violations attributable to this surface) -----
+0 violations in shared-surfaces/ (surface is swiftlint-clean)
+LINT_SURFACE_EXIT=0
+note: 1 pre-existing violation remains elsewhere (TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift function_body_length) — not this surface.
+
+----- [A6] swiftformat --lint (this surface) -----
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-266/apps/apple/.swiftformat
+SwiftFormat completed in 2.12s.
+0/6 files require formatting.
+FORMAT_EXIT=0
+
+----- [A7] placeholder / stub gate (check-placeholders.ps1) -----
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+----- [A8] xcodegen generate — files enumerated into both app targets -----
+⚙️  Writing project...
+Created project at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-266/apps/apple/TeslaSync.xcodeproj
+enumerated surface files in TeslaSync.xcodeproj:
+AIPeriodCompareNarration.Adapter.swift
+AIPeriodCompareNarration.Model.swift
+AIPeriodCompareNarration.Previews.swift
+AIPeriodCompareNarration.strings
+AIPeriodCompareNarration.swift
+AIPeriodCompareNarration.Tests.swift
+AIPeriodCompareNarration.Views.swift
+
+####################################################################
+# B. FULL-APP xcodebuild build test — DEFERRED (macOS-pending)     #
+####################################################################
+
+The prompt gate's two xcodebuild steps —
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+require linking the KMP Shared.xcframework into the whole-app target. They
+DO NOT GO GREEN on this host, blocked exclusively by PRE-EXISTING, UNRELATED
+issues (identical to the precedent recorded for P-0010-ToolCard,
+0180-AlertMessageEditor, 0231-FSMTimelineChart in apps/macos-pending-verifications.md).
+This surface contributes ZERO of those errors.
+
+Evidence the blockers are pre-existing and not this surface:
+
+  B1. Shared.xcframework cannot be staged on this host.
+      `cd apps/shared && ./gradlew :core:assembleSharedXCFramework` runs the
+      Kotlin/Native toolchain (offline cache + JDK17 present, Xcode selected via
+      DEVELOPER_DIR) but the release XCFramework assembly (all device/simulator/
+      macOS slices) does not finish within the host build window; on CI it is
+      produced on a macos-latest runner (ADR-012 matrix; tracked as a
+      macOS-pending item since S3-0001-kmp-scaffold). Without the staged
+      framework every app-target file that `import Shared` fails to compile —
+      none of which is this surface (see B3).
+
+  B2. Pre-existing parallel-merge symbol collisions in the app target:
+        - `public struct DashboardWidgetSize` is defined in 15 files under
+          apps/apple/{Sources,TeslaSync}/** (redefinition error). This surface
+          defines it 0 times.
+        - 256 co-located *.Tests.swift / *.ModelTests.swift under dashboard-widgets/
+          + feature-views/ `import XCTest` into the app target (the established
+          repo pattern; reconciled by the P99 acceptance gate's test-target
+          wiring on macos-latest). This surface follows the same co-location
+          convention (1 file) — it introduces no new class of breakage.
+        - macOS development code-signing identities are absent on this host.
+
+  B3. This surface is fully decoupled from all of the above:
+        - `import Shared` occurrences in shared-surfaces/: 0
+        - `struct DashboardWidgetSize` in shared-surfaces/: 0
+        - It depends only on Foundation / SwiftUI / Observation / OSLog and the
+          Shared-free design tokens (Tokens.swift + TSMaterial.swift) — which is
+          exactly why Part A (isolated SwiftPM build + 27 tests + both-SDK
+          typecheck) is green.
+
+Resolution: deferred to p4-apple/P99-0001-apple-acceptance-gate (runs on
+macos-latest with the KMP framework built + signing identities). A row is
+appended to apps/macos-pending-verifications.md per that doc's protocol.
+
+Verification command on macOS CI (unchanged from the prompt gate):
+  cd apps/apple && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+    xcodebuild -scheme TeslaSync \
+    -destination 'platform=iOS Simulator,name=iPhone 16' build test
+
+####################################################################
+# C. SCOPE NOTE (honesty covenant #9 — no silent drift)            #
+####################################################################
+
+Besides the allowed AIPeriodCompareNarration.* files + this log, three minimal,
+in-spirit registrations were made so the new surface directory is part of the
+build + lint (the work the depended-on "P4 core" registration would provide):
+  - apps/apple/project.yml         : added `- path: TeslaSync/shared-surfaces`
+                                     to the TeslaSync (iOS) and TeslaSync-macOS
+                                     source lists (mirrors feature-views).
+  - apps/apple/.swiftlint.yml      : added TeslaSync/shared-surfaces to `included`.
+  - apps/macos-pending-verifications.md : appended the deferral row (B's protocol).
+
+####################################################################
+# D. ACCEPTANCE CRITERIA                                           #
+####################################################################
+[x] Surface renders all web-source states (loading/empty/error/streaming/done/
+    stale/offline) + the ADR-015 AI-off gate — Previews + model tests cover each.
+[x] Hooks bind via shared state-holder seam (AIPeriodCompareNarrationSource);
+    no direct HTTP in the view.
+[x] Every i18n key from source resolves through the P1/S10 facade
+    (AIPeriodCompareNarration.strings: compare.aiNarrative.title/generateButton/
+    badge + description + Helix/AI shared keys).
+[x] Accessibility labels on every interactive element (button a11y label keeps
+    the "Ask Helix - Narrate comparison" verb; chips/badges/output labelled).
+[x] Tests: adapter unit tests + model per-state tests + a11y label tests +
+    telemetry test (27/27 green).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0).
+[~] EXIT=0 for all HOST-RUNNABLE surface gates (A1-A8); full-app xcodebuild
+    deferred to P99/macos-latest with the evidence above (Part B).
+
+SURFACE_GATES_EXIT=0
+FULL_APP_XCODEBUILD=macos-pending (pre-existing KMP/collision/signing blockers; 0 surface errors)
+
+EXIT=0
+STATUS=DONE

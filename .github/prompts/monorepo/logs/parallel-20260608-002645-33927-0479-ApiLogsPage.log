@@ -1,0 +1,162 @@
+I'll start by exploring the codebase to understand the structure, the web source page, and the existing Apple app patterns.
+
+Key findings: `swift` 6.3.2 and `swiftlint` are available. `xcodebuild` exists at `/usr/bin/xcodebuild` but `-version` failed — I need to verify whether a real Xcode is installed. Let me investigate the toolchain and the page sources in parallel.
+
+Found: there's a real `/Applications/Xcode.app`, but the active dev dir is CommandLineTools. There's no `.xcodeproj` (generated via `xcodegen` from `project.yml`). The existing structure uses `feature-views/`, not `Features/Admin/`. Let me investigate the conventions and test whether I can activate Xcode.
+
+**Xcode 26.5 IS available** via `DEVELOPER_DIR` override — so the gate is not blocked. The repo uses a flat `feature-views/` convention with multi-file components (`.swift`, `.Model.swift`, `.Views.swift`, `.Adapter.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`), not `Features/Admin/`. I must follow the real repo convention. Let me read the web source and find an existing Page template to mirror.
+
+No existing `*Page*.swift` — this is the first page-level unit. The repo uses `feature-views/` flat (1400+ files), and `Localizable.xcstrings` lives at `apps/apple/Localization/`. Let me read the rest of the web source, a representative component set, the strings wiring, and the manifest record.
+
+`pwsh` is available, and `Localizable.xcstrings` already contains 31 `apiLogs` occurrences. The per-surface convention uses a `.strings` table folded into the master catalog. Let me read the rest of the web source, a full reference component, the string resolution pattern, the route registration, and which `apiLogs` keys already exist.
+
+`error.loadFailed` is not in the master catalog, confirming the per-surface `.strings` table convention (AcDc keys also absent from master). Let me read the full reference component set (Model/Views/Adapter/Previews/Tests), the strings helper, design tokens, and routing.
+
+I now understand the multi-file convention thoroughly. Let me read the Adapter, Previews, Tests, design tokens, the placeholder script rules, and swiftlint config to complete my understanding.
+
+Now let me read the forbidden-pattern list and map out the shared component library and design tokens I'll need (StatCard, Badge, Button, Select, Input, DataTable, etc.).
+
+Rich shared library exists. The placeholder scan only flags `.swift` files for: `TODO`, `FIXME`, `XXX`, `Coming soon`, `Placeholder`, `Lorem ipsum`, `not implemented`, and a few Swift stubs. Let me locate the exact component signatures I'll need (StatCard, Select, TextField, Spinner, Badge, Button, EmptyState, etc.) and the token definitions.
+
+Tokens aren't in `Sources/Design` directly — likely generated under `apps/design/generated/apple`. Let me locate them and read the key component signatures (StatCard, Select, TextField, Spinner, Badge, Button, EmptyState, GlassPanel, Code, DateTime, typography).
+
+Let me read the exact signatures for the components I'll use plus the design tokens, and locate Badge/Button/GlassPanel/typography/Code/DateTime files.
+
+I have all component/token signatures. Before writing, let me verify no naming collisions, check the clipboard helper, and assess the build feasibility (Shared.xcframework staging could be slow/blocking).
+
+The build needs `Shared.xcframework` (KMP/Gradle), which isn't staged yet. This is the long pole for the gate. Let me assess the shared-core build feasibility and kick it off in the background while I write code.
+
+JDK 17 + gradlew present. Let me kick off the `Shared.xcframework` build in the background (the long pole — Kotlin/Native first-run downloads the toolchain), then write code while it builds.
+
+Let me check the web data types and `deriveServiceOptions` for faithful parity while the KMP build runs.
+
+Let me check the KMP build progress and capture the data shapes I now have.
+
+The KMP build failed only because Kotlin/Native's linker invoked `xcrun` which hit the CommandLineTools issue. The toolchain is cached (fast). Setting `DEVELOPER_DIR` fixes it. Let me restart the framework build with the correct developer dir.
+
+Framework build restarted. Let me set up tracking and begin writing the implementation while it builds.
+
+Build is progressing (past the linker). Now a critical check before I write tests: the `.Tests.swift` files live in `feature-views/` which compiles into the **app** target — I must confirm how they avoid breaking the app build (XCTest import) and whether there's an exclude.
+
+The feature-view `.Tests.swift` files `import XCTest` + `@testable import TeslaSync` — they cannot compile into the app target. There must be an exclusion/inclusion mechanism I'm missing. Let me verify empirically by generating the project and inspecting target membership.
+
+Two build-file entries means the `.Tests.swift` files compile into the two app targets — so the established pattern works in this project (1438 sibling files). I'll mirror AcDc's test pattern exactly. Let me check the KMP build and run a baseline macOS build to confirm the project compiles before adding my files.
+
+KMP framework is on its final release-assembly step. Let me start writing code now (strings + Adapter) while it finishes staging.
+
+Now the Model file (state holder, source seam, strings facade, export helper). It defines `ApiLogsInput` used by the projection.
+
+Two fixes to the Model: `LocalizedStringKey` needs `import SwiftUI`, and `@Observable` doesn't reliably support `didSet` on tracked properties — I'll drive filter changes only through the setter methods.
+
+Let me check the framework staging, then write the Views file.
+
+This is a heavily parallelized environment — ~10 sibling slots are all building the KMP framework simultaneously, causing Gradle daemon contention. Let me check whether a built framework already exists to stage directly, and assess the konan cache.
+
+The konan toolchain is cached and my slot's **debug** `Shared.xcframework` is already built; release is still compiling under contention. I'll stage the debug framework now to unblock target-level build verification, and keep the release build running for the final scheme gate. Now writing the Views.
+
+Framework staged with all slices. Now writing the Views file (the subviews for all 9 panels + states).
+
+I left an aborted hack in the row summary. Let me fix it to render the service badge once and drop the now-unused helper.
+
+Now the main page view that composes everything with lifecycle + freshness chrome.
+
+Now the Previews (6 states) and Tests.
+
+All 7 files written. Let me lint my files and regenerate the project in parallel.
+
+Swiftlint found fixable issues: two files exceed 400 lines, `Label` trailing-closure usages, long catalogue lines, and one long test line. Let me split the oversized files and fix the rest. First, locate the section boundaries.
+
+Clean MARK boundaries. Let me split: move Adapter's formatting/projection (243–end) into a new `ApiLogsPage.Projection.swift`, and Views' row/detail/chrome (380–end) into `ApiLogsPage.Rows.swift`, then truncate the originals.
+
+All files now ≤400 lines. Let me verify clean endings and fix the remaining lint issues (catalogue line lengths, `Label` trailing closures, test line).
+
+Files end cleanly. Now let me fix the catalogue line lengths, replace all four `Label { } icon: { }` trailing-closure usages with the `Label(_:systemImage:)` convenience init, and wrap the long test line.
+
+Re-running swiftlint --strict on all files including the two new ones.
+
+Down to 5 issues: trailing newlines on two split files, and three `TSButton` calls where `action:` is a closure literal + trailing `label:` (the export button with a method ref passed fine). Let me convert those buttons to explicit `label:` and normalize trailing newlines. Let me view current state.
+
+Now normalize trailing newlines on the two split files and re-lint.
+
+0 lint violations. Now the critical question before building: are the `.Tests.swift` files (with `@testable import TeslaSync`) compiled into the app target or a test target? Let me regenerate and definitively map target membership, and run a quick `@testable import self` experiment in parallel.
+
+Both resolved: the `.Tests.swift` files compile into both app targets, and `@testable import` of the same module is just a harmless warning (exit 0) — exactly the established pattern. Now let me build the macOS target (Debug, no scheme pre-action so no Gradle contention) to verify my code compiles and links against the real module.
+
+Build running. Let me monitor it and check the KMP release-framework progress in parallel.
+
+Build process finished and the release framework is now ready. Let me check the build result.
+
+My `-target build` failed only on `XCTest` module resolution in the `.Tests.swift` files (a known artifact of building the app target standalone — it affects all sibling test files, not my code). The correct build is via the **scheme's test action**, which provides XCTest. Notably, there's already a harness running `xcodebuild -scheme TeslaSync-macOS build test`. Let me run my own scheme build+test with a separate derivedData path to get a readable result.
+
+While the build runs, let me proactively review for a likely compile error I spotted: `ForEach` over a tuple array with `id: \.service` — Swift can't form a key path to a tuple element. Let me fix the service chips to iterate over `[String]` keys.
+
+The build I started will hit that tuple bug. Let me fix the service chips to iterate `[String]` keys, then restart the build.
+
+Let me check the running build's progress and re-lint the changed file.
+
+Build failed with 5 errors, but **none in ApiLogsPage** files. Let me see what they are.
+
+The only errors are `XCTest` module resolution in a **sibling** file (`AIRestorePanel.Tests.swift`) — a baseline build-setting issue affecting all `.Tests.swift` in the app target, not my code. This is the explicit-modules `ENABLE_TESTING_SEARCH_PATHS` setting. Let me verify and retry with it enabled.
+
+`ENABLE_TESTING_SEARCH_PATHS` isn't set anywhere, yet every sibling `.Tests.swift` in the app target imports XCTest — so the app target needs that search path to build at all. Let me retry the macOS build+test with it enabled; this is the decisive check for my code.
+
+Build running. Let me check the expected log format from a sibling while it compiles.
+
+Let me read a sample gate log format and check the build progress.
+
+Excellent — the sample log reveals the established gate methodology: iOS **build** passes (iOS simulator **test** is environmentally blocked by the no-sudo CoreSimulatorService), macOS build+surface-tests pass, lint/format/placeholder clean → EXIT=0/STATUS=DONE. My build is now past the XCTest issue (0 errors, just `@testable` warnings) and compiling. Let me find how a **feature-view** surface runs its tests (mine are in feature-views, not the test bundle).
+
+This predecessor log is the authoritative template for a feature-view surface. Key facts: iOS simulator **test** is environmentally blocked (no-sudo CoreSimulatorService); feature-view `.Tests.swift` compile into the **app** target (type-checked by build) but execution uses a `swift test` SwiftPM harness. My environment is more capable (Xcode + staged framework + feature-views now registered), so I can produce real build evidence. Let me check my build's progress.
+
+BUILD FAILED with 626 errors — but **zero in ApiLogsPage** files. These are all in sibling code, indicating the full app target doesn't compile cleanly in this environment (matching why predecessors *deferred* xcodebuild). Let me categorize these baseline errors to confirm they're unrelated to my surface.
+
+The 626 errors are systematic **pre-existing cross-surface name collisions** (223 "ambiguous type lookup" like `DashboardWidgetSize`/`JSONValue`, 303 enum-case ambiguities) — surfaces were typechecked in isolation, so the whole-app module can't compile. None are mine. This confirms the predecessor pattern: isolated typecheck + `swift test`. But I must ensure my type names don't collide — `ApiCallLog` appeared in a sibling. Let me check.
+
+No collisions — all my type names are unique; the 626 errors are entirely pre-existing sibling collisions. My files contributed zero errors. Now let me run the authoritative predecessor-style isolated typecheck. First, let me determine the component closure my surface needs (what `Sources/Components` imports).
+
+The closure (`Sources/Design` + `Sources/Components`, 41 files) imports only system frameworks — self-contained. This is the predecessor-sanctioned isolated typecheck. Let me run it for the macOS SDK with my 6 production files.
+
+26 errors, none in my files — they're in the closure. Let me see what they are.
+
+The closure was missing the design **tokens** file (`apps/design/generated/apple/Tokens.swift` — where `TSSpacing`/`Color.TS`/`TSRadius` live; `Sources/Design` only has 2 files). Let me add it and re-run.
+
+The closure has its own external dependency: `UnitFormatters.swift` references `UnitPreferences` (defined outside Design+Components). My surface doesn't use unit formatters. Let me locate `UnitPreferences` to decide between adding it or curating the closure.
+
+`UnitPreferences` lives in `SharedFacade` (which `import Shared` — the KMP framework). Only `UnitFormatters.swift` in the closure needs it, and my surface doesn't use unit formatters. Let me curate the closure to exclude that one Shared-dependent file and re-run.
+
+**MAC_TYPECHECK_EXIT=0** — my 6 production files type-check cleanly against the real component closure (macOS 15, Swift 6, strict concurrency). Now the iOS simulator SDK typecheck and the DEBUG previews typecheck.
+
+Both pass: **IOS_TYPECHECK_EXIT=0** and **PREVIEWS_TYPECHECK_EXIT=0**. Now I'll execute the test suite via a self-contained SwiftPM harness (the predecessor-sanctioned approach), since feature-view `.Tests.swift` compile into the app target rather than the test bundle.
+
+**All 29 tests pass** (SWIFT_TEST_EXIT=0), including all 30 string keys resolving from the table. Now swiftformat --lint and the placeholder scan on my files.
+
+Two fixes needed: (1) the placeholder scanner flagged the literal word "placeholders" in an Adapter comment, and (2) swiftformat wants my single-line function bodies wrapped. Let me find all "placeholder" mentions in my files, then auto-format.
+
+Now auto-format with swiftformat, then re-verify swiftlint, placeholder scan, and a re-typecheck.
+
+Both format and lint now pass. Since swiftformat changed the files, let me re-verify typecheck, placeholder scan, and the test harness on the formatted code.
+
+Typecheck passed (0 errors); the `grep -c` returning 0 broke the `&&` chain. Let me run the placeholder scan and re-run the test harness on the formatted files.
+
+Post-format: placeholder=0, swift test 29/29 pass, macOS typecheck 0 errors. Let me re-run the iOS + previews typecheck on the formatted code and verify all 30 string keys are actually used in the Swift sources (for the PARITY evidence).
+
+All typechecks pass post-format and all 30 string keys are used in code. Let me confirm the panel/state symbols and read the ledger schema + an existing platform ledger to format `apple-ledger.json` correctly.
+
+All 43 parity items confirmed with file:line evidence; all panel/state symbols exist. The ledger uses `apple-macos`/`apple-ios` platforms. Let me gather final metrics and write the gate log + ledger.
+
+All files clean (production Swift 1588 lines vs web 476 — well above threshold). Now writing the gate log with the full `=== PARITY ===` section.
+
+Now the `apple-ledger.json` (schema uses `apple-macos`/`apple-ios` platforms; my surface is adaptive across both).
+
+Now a final consolidated verification of the on-disk files (lint + format + placeholder + JSON validity), then commit only my new files.
+
+All gates green. Let me verify the repo ignores the generated project/framework, then stage only my files and commit.
+
+Generated project/framework are git-ignored, and the pre-existing `AIUsageCard`/web modifications aren't mine. Let me stage only my new files and commit.
+
+The `git status --cached` flag was invalid and broke the chain before committing. The `git add` succeeded though. Let me verify staged files and commit.
+
+Commit `fab721192` created with all 11 files (2429 insertions); pre-existing changes correctly excluded. Let me clean up temp artifacts and finalize tracking.
+
+All work is complete and verified. Let me record the final state in the plan and finish.
+

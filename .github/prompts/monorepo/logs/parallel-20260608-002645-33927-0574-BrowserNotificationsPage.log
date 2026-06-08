@@ -1,0 +1,139 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Key finding: `project.yml` only includes `TeslaSync/dashboard-widgets` and `TeslaSync/feature-views` (not `Features/Notifications`). Let me check tooling availability and existing patterns.
+
+All tooling is present. Let me verify Xcode is fully functional and examine the ledger/routing patterns.
+
+Full Xcode exists at `/Applications/Xcode.app`. Let me verify I can target it and check the Shared.xcframework dependency.
+
+Xcode 26.5 works. Now let me understand the page scaffold pattern, the model wiring, navigation, and string catalog. Let me read the key reference files in parallel.
+
+Now let me examine the model construction details and check for a live source and page-scaffold components.
+
+Now let me examine the design-token components, typography, and the string catalog so the page uses proper shared components.
+
+Let me read AppShell to understand how route hosts are wrapped (navigation, title, scroll, theme).
+
+Let me read the copy-link button (web), the TSButton API, design tokens, and motion components.
+
+Let me verify token names, check if copy-link strings already exist, and confirm the default input state.
+
+The catalog uses bare keys for native UI (e.g., `settings.notifications.enabled`). Copy-link keys exist only under `translation.*`. Let me check the test wiring and existing Notifications tests.
+
+Let me check for existing OS-authorization readers and notification-prefs stores I can reuse, to avoid duplicating P1/S8 seams.
+
+Let me confirm `Color.TS` members and the motion component API, then check how RootView wires the shell.
+
+Let me verify the build baseline: check for project.yml excludes, the self-import situation in co-located tests, and attempt project generation.
+
+I've confirmed a critical baseline issue: 224 co-located `*.Tests.swift` files with `@testable import TeslaSync` are compiled into the **app target** itself. Let me empirically verify whether Swift tolerates self-import and whether the project generates.
+
+Self-import is only a warning — not a blocker. The real dependency is the KMP `Shared.xcframework`. Let me check KMP build feasibility and generate the Xcode project.
+
+JDK 17 + gradlew present; 15 app files depend on `Shared.xcframework`. The KMP framework build is the long pole — let me kick it off in the background now, then write the implementation while it builds.
+
+Project generated. The KMP build is running in the background. Let me check its progress, then write the implementation.
+
+The background build was killed when the sync session ended. Let me restart it properly in a detached async session, then write the implementation while it runs.
+
+The KMP build is running detached. Now let me write the implementation. First, register the new source directory in `project.yml` for both app targets:
+
+Now let me check the SwiftLint config so my file passes `--strict`, then write the page.
+
+SwiftLint's `included:` list doesn't cover `TeslaSync/Features` — I'll add it so my code is linted consistently. Now let me create the page implementation:
+
+Now wire the route registration in `TeslaSyncApp.swift` and add the SwiftLint include path:
+
+Now let me add the strings to the catalog via a surgical insertion that preserves the rest of the file:
+
+The JSON is valid, but I used ` : ` spacing while the file uses compact `:`. Let me verify and match the existing style exactly.
+
+Style mismatch confirmed. Let me revert and re-insert with the compact `:` style matching the file:
+
+Style now matches. Let me check the KMP build progress and run the fast gates (placeholder scan + swiftlint + swiftformat) on my new file.
+
+KMP build looks near done. The swiftlint run linted all files (via `included:`) and found 1 violation — I need to check if it's mine. Let me isolate my file and recheck the build.
+
+My file: **0 lint violations** (the 1 violation was pre-existing elsewhere). KMP build is near done (linking macOS framework). Let me run the exact gate commands as written and recheck the build.
+
+Both placeholder scan (`EXIT=0`) and the exact gate lint (`LINT_EXIT=0`) pass. Let me check the KMP framework build completion.
+
+This is a shared parallel-build environment (multiple slots). My slot's KMP release-framework build is still linking. Let me regenerate the Xcode project (to include the new `Features` path) and wait for the framework.
+
+Project regenerated with my file included. Now let me wait for the KMP framework build to finish staging.
+
+The `Shared.xcframework` is **staged** (DONE_EXIT=0). Now let me run the gate build. I'll start it async and monitor, targeting the iOS simulator with signing disabled.
+
+The gate build is running. Let me monitor its progress.
+
+The build surfaced pre-existing issues with the 224 `*.Tests.swift` files importing XCTest into the app target. Let me see the actual errors.
+
+The gate build failed (`BUILD_EXIT=65`) due to a **pre-existing** repo issue: 224 `*.Tests.swift` files are compiled into the app target (per `project.yml`) and can't resolve `XCTest`. My `BrowserNotificationsPage.swift` is not implicated in any error.
+
+To get positive proof my code compiles, let me build the app excluding those pre-existing broken test files (command-line only, no repo change):
+
+Let me prepare the log/ledger while monitoring the verification build. First, let me check the build progress.
+
+The exclusion missed `*.ModelTests.swift` files. Let me find all XCTest-importing filename patterns in the app-target source dirs and exclude them all.
+
+All XCTest files end in `Tests.swift` (my pattern needed no dot). Let me re-run the verification build excluding `*Tests.swift`:
+
+The remaining blocker is a pre-existing repo-wide defect (test files in the app target). Let me wait for the verification build to confirm my page compiles cleanly.
+
+1260 pre-existing errors surfaced — all duplicate-type-declaration / ambiguity defects in **other** files (`dashboard-widgets`, `TelemetryErrors*`). My `BrowserNotificationsPage.swift` is implicated in **none**. Let me quantify the broken pre-existing files to see if I can isolate a clean compile of my page.
+
+Only 22 pre-existing broken files (duplicate type declarations in the TelemetryErrors/widget system) — none are mine. Let me make one bounded attempt at positive compile proof by excluding those pre-existing-broken files plus the test files:
+
+While the isolation build runs, let me draft the evidence log structure. Let me monitor the build first.
+
+Three build attempts confirm the blocker is **systemic pre-existing breakage**: 1280 "ambiguous type lookup" errors from duplicate type declarations spread across hundreds of parallel-authored widget/feature-view files (`DashboardWidgetSize`, `JSONValue`, `HTTPMethod`, etc.), plus 261 test files that can't resolve XCTest in the app target. My `BrowserNotificationsPage.swift` compiles in the batch and is implicated in **zero** errors. This is far outside a single page's scope.
+
+Let me verify git state and swiftformat compliance, then finalize honestly.
+
+Git shows many `AIUsageCard.*` files as modified that I never touched. Let me investigate before committing anything.
+
+The `AIUsageCard.*` changes are pre-existing working-tree modifications **not made by me** (unrelated in-flight work — note the file even renames to `AiUsageCard`). I'll commit only my intended files. Let me confirm the full git state.
+
+My file is swiftformat-clean and lint-clean. Let me definitively verify my file references **none** of the pre-existing ambiguous types, then finalize. Let me also do an isolated compile of my page against its real dependency closure for positive proof.
+
+My page references **zero** of the 51 pre-existing ambiguous types — fully decoupled. Let me get definitive positive proof via an isolated type-check of my page against its real dependency closure (design system + NotificationSettings), excluding the broken widgets.
+
+Errors are all in unrelated included files (`UnitFormatters.swift` needs `UnitPreferences` from a layer I didn't include) — **zero** errors in my file. Let me trim the closure to what my page actually needs and retry for a clean result.
+
+Down to 2 errors, both in `FeedbackOverlays.swift` (not mine). Let me see them and trim that file if my closure doesn't need it.
+
+`FeedbackOverlays.swift` just needs `TSMetricBar` (DataDisplay) — and NotificationSettings uses its own custom state views, not shared Feedback. Let me drop Feedback and retry for a clean compile.
+
+**`TYPECHECK3_EXIT=0` — definitive positive proof.** My page type-checks cleanly (Swift 6, strict concurrency) against its real dependency closure (30 actual files: tokens, theme, design, UI/Motion components, app route registry, all 9 NotificationSettings files) — no stubs.
+
+Evidence summary:
+- ✅ Placeholder scan: `EXIT=0`
+- ✅ SwiftLint `--strict` (exact gate cmd): 0 violations
+- ✅ SwiftFormat `--lint`: clean
+- ✅ Isolated type-check: 0 errors
+- ✅ References 0 of 51 pre-existing ambiguous types
+- ✅ KMP `Shared.xcframework` builds
+- ❌ Full `xcodebuild` build/test: BLOCKED by pre-existing repo-wide defects (not my page)
+
+Now let me write the evidence log and ledger.
+
+Now create the apple ledger with rows validated against `ledger.schema.json`:
+
+Let me validate both JSON files against their schemas, then do a final review before committing.
+
+Both validate. Let me review my wiring diffs before committing.
+
+All wiring diffs are clean and minimal. Let me confirm the xcstrings change is only my 5 added keys (no mass reformat), then commit only my files.
+
+The xcstrings change is purely additive (115 added, 0 removed). Let me stage only my files and verify nothing unintended is included before committing.
+
+Exactly my 7 files staged, nothing unintended. Now let me commit with an honest, transparent message:
+
+The commit landed cleanly: 7 files, the pre-existing `AIUsageCard.*` changes correctly excluded. Let me do a final verification and clean up temp files.
+
+The task is complete to the fullest extent the repository state allows. Final state verified:
+
+- My commit (`3315098e5`) contains exactly 7 files; the pre-existing `AIUsageCard.*` working-tree changes (not mine) were correctly left out.
+- The committed page exposes `BrowserNotificationsPage`, `BrowserNotificationsPageModel`, `BrowserNotificationsRouteRegistration`, and the two parity string keys.
+- Temp build logs cleaned up.
+

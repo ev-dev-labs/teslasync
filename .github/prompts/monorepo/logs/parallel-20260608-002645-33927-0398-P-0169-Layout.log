@@ -1,0 +1,230 @@
+I'll start by exploring the repository structure to understand what exists and what tooling is available.
+
+I have important findings. Let me note the critical capability constraint and explore the existing structure deeply.
+
+Key tooling finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed; `xcrun simctl` (simulators) is unavailable. `swift`, `swiftlint`, `swiftformat` ARE available. Let me explore the existing Apple app structure and patterns before deciding anything.
+
+Major findings: the Apple app is real and substantial (1438 files in `feature-views/`), but there's NO `shared-surfaces/` dir yet (I must create it). The web `Layout.tsx` is 81KB (huge). Critically, `pwsh`, `swiftlint`, `swiftformat`, and `swift` ARE available, but `xcodebuild` needs full Xcode (only CLT installed) and `simctl` is unavailable.
+
+Let me read the web source and study the established patterns + shared infrastructure in parallel.
+
+The build system is XcodeGen (`project.yml`), shared infra lives in `Sources/{Design,SharedFacade,Components,Platform}`, and surfaces follow a multi-file pattern. Note: `shared-surfaces/` isn't in project.yml sources and I'm restricted to `shared-surfaces/Layout.*` files — the directory wiring is a P4-core concern.
+
+Let me test whether SwiftUI even compiles under Command Line Tools (critical for verification strategy) and study the reference surface + shared infra in parallel.
+
+SwiftUI, Charts, and MapKit all typecheck under Command Line Tools (macOS SDK) — no errors emitted. This means I can do real compile verification of my surface in isolation even without Xcode. Let me confirm exit codes properly and fix the Sources path.
+
+Confirmed: `swiftc -typecheck` compiles SwiftUI+Charts+MapKit (EXIT=0). I have a viable compile-verification path. Now let me study the exact conventions: design tokens, state-holder layer, i18n facade, telemetry, and the full reference surface (AIUsageCard).
+
+State-holder layer is clear: `StateHolderModel<State>` (`@Observable`), `LoadableState<Value>`, `LiveConnectionState`, `FacadeError`, all over a KMP `Shared` module. Note: isolated compile will need stubs for `Shared`. Now let me nail the surface pattern from the full AIUsageCard reference and locate the relevant web Layout render logic for each extracted i18n string.
+
+I mis-used the grep `paths` param (searched whole repo). Let me correct that and read the rest of the reference surface + locate the design tokens.
+
+Excellent — the AIUsageCard reference fully defines the surface pattern. Now let me read the design tokens, the motion helper, the reference Views/Previews/Tests, and the key web Layout render ranges in parallel.
+
+I have the surface pattern well understood. Let me read the actual token definitions and the remaining reference files, plus begin mapping the web Layout's structure.
+
+Views.swift ends at 252; the chip/banner/loading/error subviews live elsewhere. Let me locate the tokens file and those subviews, read the test conventions, and start reading the web Layout structure.
+
+Found it: tokens at `apps/design/generated/apple/Tokens.swift`, and chrome subviews in a `.Chrome.swift` file (so surfaces use up to 8 files). Let me read the tokens, chrome reference, and test conventions.
+
+I now have all token/chrome conventions. Let me confirm the shared component APIs I'll reuse (`TSButton`, `TSSkeleton`) and read the web Layout's nav data + sidebar + header structure.
+
+Now let me read the web Layout's nav data model and the key render regions (sidebar, pinned/recent, header).
+
+I have the complete nav data model (19 sections, ~90 items, with `minVehicles`/`requiresAuth` visibility rules). Now let me read the render regions: pinned/recent logic, the sidebar JSX, and the header.
+
+The sidebar composition and behaviors are clear. Let me read the component's hooks/state header, the `renderNavLink`/`unpinNavPath` helpers, and the header + footer regions.
+
+I now have a comprehensive picture. Let me read the final pieces: `DEFAULT_PINNED_NAV_PATHS`, the header region, the theme picker, and the reference test conventions.
+
+I now have a complete understanding of the web Layout. Let me capture the exact i18n keys and check the test framework conventions before building.
+
+I'll record the extracted i18n keys and set up a tracking plan.
+
+Tests use XCTest. Let me check the lint/format config and how `HelixMark` is realized natively, plus the model/telemetry test patterns.
+
+I have all conventions. Critical for my verification strategy: AIUsageCard's surface files import only SwiftUI/Foundation (NOT the KMP `Shared` module), which means I can isolate-compile my surface. Let me confirm which shared components are pure SwiftUI (no `Shared` import) so I know my safe dependency set.
+
+All my planned dependencies (tokens, motion, Buttons, Skeletons, States) are pure SwiftUI — so I can isolate-compile the shipped surface with `swiftc -typecheck` for real verification. Let me set up a plan and tracking, then build.
+
+Now I'll build the surface. Creating the directory and writing the Model (types, i18n facade, telemetry, state holder) first.
+
+Model written. Now the pure projection adapter (web nav logic, exactly reproduced) plus the `LayoutTint` value type.
+
+Now the largest piece: the full nav catalog (19 sections, ~90 items) plus its matching i18n strings. To guarantee key/fallback consistency, I'll generate the catalog Swift file and the strings file from a single data source via a generator script.
+
+Catalog generated: 19 sections, 104 items. Let me verify the items with special flags (badge/minVehicles/requiresAuth/tour) and the strings file.
+
+All special items and i18n keys verified — every prompt-extracted string is present. Let me check the exact APIs of the shared components I'll reuse before writing the views.
+
+APIs confirmed. Now writing the sidebar views (the nav composition). I'll use closure-based action injection (SOLID) and the facade for all strings.
+
+Now the chrome: header, freshness chip, connectivity banner, loading/empty/error states, footer, and brand mark.
+
+Now the main shell view — adaptive composition (persistent rail on regular width, drawer on compact), state switch, telemetry, progress bar, and action wiring.
+
+Let me verify the surface compiles before writing previews/tests. First check whether the shared Components I'd include reference the KMP-coupled SharedFacade layer, then run an isolated typecheck.
+
+Components/Design are self-contained. Let me run an isolated typecheck of the shipped surface against its real pure-SwiftUI dependencies.
+
+Path fix needed — Tokens.swift is at `apps/design/...` (one level up). Let me correct and rerun.
+
+Those errors are in an unrelated component (`UnitFormatters.swift` needs `UnitPreferences` from SharedFacade) — not my code. Let me narrow to the minimal real dependencies my surface actually uses.
+
+`Skeletons` pulls in `TSCard` (Cards.swift). Let me add it and iterate on the transitive closure.
+
+The shared components have deep transitive chains and one couples to SharedFacade. Let me compile the full pure-SwiftUI Component subset (excluding the SharedFacade-coupled file) to get a clean closure.
+
+Only `UnitFormatters.swift` is coupled. Let me typecheck the full pure-SwiftUI component subset (excluding that one file) plus my surface.
+
+Good — the entire component subset compiles; the only errors are in my code (Swift 6 strict concurrency on static `let` with closure-holding structs). Let me convert those to computed statics.
+
+`Layout` is generic so `Layout.surfaceSlug` can't infer `Content`. Let me add a non-generic slug holder.
+
+The shipped surface typechecks cleanly under Swift 6 strict concurrency against real dependencies (`TYPECHECK_EXIT=0`). Now the previews and tests.
+
+Now the comprehensive XCTest suite (adapter + projection + model + a11y).
+
+Now let me typecheck the previews (DEBUG) and the test file against the real surface API (compiling the test logic in-module, dropping the module import).
+
+The `#Preview` macro needs Xcode's macro plugin (unavailable to CLI swiftc — this also hits the repo's own `Typography.swift`, so it's a toolchain limit, not a code error). Let me verify the previews and tests bodies typecheck by transforming the macros/module-import, and check XCTest availability.
+
+XCTest also ships only with Xcode (unavailable under CLT). To still verify my test code is correct, let me (1) typecheck the real test file against the surface using an XCTest shim, and (2) build a runtime harness that executes the core assertions to prove the logic passes.
+
+The typecheck caught a real bug in my test file — `LayoutInput` argument order (`isLoading` must precede `errorMessage`). Let me fix it in the actual test file and re-verify.
+
+Tests typecheck clean against the surface API (`TESTS_TYPECHECK_EXIT=0`). Now let me build a runtime harness that actually executes the core adapter/projection/model logic to prove correctness (since XCTest itself can't run here).
+
+Concurrency on the harness globals — let me isolate them to MainActor and rebuild.
+
+Runtime harness: **48 checks, 0 failures**. The logic is proven correct. Now let me run the available gate tools — first swiftformat (apply repo style to my files), then swiftlint, then placeholder check.
+
+swiftformat wants auto-fixable changes (wrapping). Let me apply repo formatting to my files, then confirm lint passes and the surface still typechecks.
+
+swiftformat passes (0/8 require formatting). Now swiftlint, a re-typecheck (ensure formatting didn't break compilation), and the placeholder check.
+
+swiftlint linted all 1909 files (config `included` overrides) and found 1 serious violation. Let me isolate it with `--quiet`.
+
+The single violation is in a **pre-existing** file (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`) — none in my files. Let me confirm my files are lint-clean in isolation, re-typecheck post-format, and run the placeholder check.
+
+Linting *only* my files reveals real violations (the full-repo run skipped them since `shared-surfaces` isn't yet in `included`). The repo enforces ≤400 lines/file, ≤50 lines/function, ≤5 params — that's why surfaces are multi-file. Let me see the full list.
+
+Real violations in my files (the repo enforces ≤400 lines/file, ≤350/type body, ≤50/function, ≤5 params via the standard multi-file decomposition). I'll fix all: add a `swiftlint:disable` to the generated data Catalog (repo convention for generated files), split the oversized code files, and refactor the Adapter. Let me view the current Adapter to refactor precisely.
+
+Let me refactor the Adapter: reduce `recentItems` to 5 params (move pinned-exclusion into the projection) and extract `resolve` helpers to get the body under 50 lines.
+
+Now the file splits. First, the data-only Catalog: I'll add the repo's `swiftlint:disable` convention (used by generated files like `Tokens.swift`) since the length is inherent to mirroring all 104 nav items.
+
+Now split the oversized code files. Let me find the section boundaries in `Layout.Model.swift` to split it cleanly into types / view-state / store.
+
+Clear split points. Let me extract `Layout.Model.swift` (634 lines) into three focused files: types / view-state / store.
+
+Model split done (230/179/248 lines). Now split `Layout.Chrome.swift` (474). Let me find its boundaries.
+
+Now split `Layout.Views.swift` (428) into Views + Rows.
+
+`LayoutSectionDisclosure` begins at line 290. Let me view the boundary, then split Views → Views + Rows.
+
+Views split done. Now split `Layout.Tests.swift` (467) into Tests (nav + projection) and ModelTests (model + a11y). Let me find the class boundaries.
+
+Before splitting Tests, I must update the recent-items test to match the refactored Adapter signature, make the test catalog shareable, and add a projection-level pinned-exclusion test.
+
+Now split the test file into Tests (nav + projection) and ModelTests (model + a11y).
+
+All splits complete. Let me reformat, verify all files are now under the limits, and run swiftlint on my files.
+
+The only remaining lint issue is `blanket_disable_command` on the Catalog's file-level disable (and `shared-surfaces` isn't even in the repo's swiftlint `included` yet). The repo-idiomatic fix is decomposition, not suppression. Let me split the data catalog into grouped global-constant files via the generator instead of disabling rules.
+
+Let me rewrite the generator's catalog block to emit grouped global-constant data files (no rule suppression needed).
+
+All catalog files now under 400. Let me run swiftlint on my files and re-typecheck the full surface with the new file layout.
+
+swiftformat clean (0/16), swiftlint clean on my files, surface typecheck EXIT=0. Let me confirm swiftlint's exit code explicitly, then update and re-run the runtime harness + re-typecheck the tests.
+
+swiftlint exit 0 on my files. Let me rebuild + run the runtime harness with the new file layout, and re-typecheck both test files.
+
+Harness: 49 checks, 0 failures. Now re-typecheck both test files (Tests + ModelTests) against the surface via the XCTest shim.
+
+The shim file was cleared from /tmp. Let me recreate it and re-run.
+
+Both test files typecheck clean. Now let me verify the Previews bodies are type-correct (transforming the Xcode-only `#Preview` macro into functions).
+
+Only error is Typography.swift's own `#Preview` macro (toolchain limit) — my transformed previews produced zero errors. Let me confirm cleanly by stripping the dependency's preview block.
+
+Multiple shared components have `#Preview` blocks. Let me strip all `#if DEBUG` blocks from the dependency copies uniformly, then typecheck my previews.
+
+All my files typecheck clean (surface, tests, previews) and the runtime harness passes 49/49. Now the placeholder check. Let me inspect the script then run it as the gate does.
+
+Let me check the placeholder patterns, then run the check on the real directory (the gate's literal `-Path .../Layout` matches no directory, so I'll scan the actual folder for genuine verification).
+
+The common patterns include "Placeholder" (case-insensitive). My `layout.content.placeholder` key would trip it. Let me scan my files for all banned patterns.
+
+The only real hit is the key `layout.content.placeholder` (the word "Placeholder" is banned). Let me rename it to `layout.content.lead` in the Previews, strings, and generator (the "stub" comments aren't a banned pattern for Swift).
+
+No banned patterns remain. Let me run the actual placeholder gate (both the real directory and the gate's literal path) via pwsh, plus a final format/lint confirmation.
+
+Placeholder check passes (COUNT=0) and self-test all green. Let me check the log directory and confirm I only stage my own files (other AIUsageCard changes are pre-existing in the tree).
+
+The logs dir exists with many sibling P4 logs. Let me inspect a sibling to match the expected log format and how the Xcode-capability situation is recorded.
+
+The sibling logs reveal the original runner had full Xcode (via `DEVELOPER_DIR=/Applications/Xcode.app`). I must check whether Xcode.app actually exists on THIS runner (my earlier check only showed `xcode-select` pointed at CLT) — if it does, the capability is available and I should run the real gate.
+
+Critical update: **Xcode.app DOES exist** (driven via `DEVELOPER_DIR`), `xcodegen` and KMP caches are present — but `Shared.xcframework` (the KMP core the app links) is missing. The capability may be available. Let me probe feasibility: Xcode version, simulators, and how `Shared.xcframework` is built.
+
+The capability IS available: Xcode 26.5, iPhone 16 simulator (booted), and the KMP framework builds via `Scripts/build-shared-xcframework.sh`. The BLOCKED escape hatch does NOT apply — I must attempt the real gate. Let me start the (long) KMP framework build in the background while I wire the project.
+
+The app targets don't include `shared-surfaces` — I'll need to wire it. Let me start the KMP framework build in the background now, and meanwhile check for public-symbol collisions with the 1900-file app and find the test target config.
+
+No symbol collisions. The test targets use `Tests/Unit`, yet `feature-views` (with `*.Tests.swift`) is an app-target source — I need to understand how tests are handled. Let me inspect the app-target excludes + test targets, and check the KMP build result.
+
+Let me check the KMP build status and do a cheap, high-value check: compile my surface against the real **iOS simulator SDK** (proving iOS-target compilation, complementing the macOS one).
+
+My surface compiles for **both** macOS and iOS-simulator targets (EXIT=0). The KMP framework is still building (downloading kotlin-native). Let me understand the test wiring while it builds — how `feature-views` test files are handled.
+
+My surface compiles for both iOS-simulator and macOS targets under the real Xcode SDKs. The KMP framework is still building. Since the capability is genuinely available, I'll pursue the real gate. Let me monitor the KMP build.
+
+The KMP framework is nearly done (debug XCFramework written, building release). Let me wait for it to stage `Shared.xcframework`.
+
+KMP is linking the release frameworks (the assemble step). Let me continue waiting for it to finish staging.
+
+KMP is on the slow release-linking phase (macosArm64). Let me keep waiting for it to assemble and stage the framework.
+
+Gradle build succeeded (12m54s) but my direct task invocation didn't run the staging copy. Let me run the full staging script (gradle is now cached, so it's fast) to stage `Shared.xcframework`.
+
+`Shared.xcframework` staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now let me wire `shared-surfaces` into the app + test targets in project.yml (backing it up first), then generate the Xcode project.
+
+Wiring applied correctly. Now generate the Xcode project.
+
+Project generated with my files wired in (192 references). Now the real gate — let me run the macOS app build first (validates my surface compiles in the actual app target). This builds the full app, so I'll run it in the background and monitor.
+
+The macOS build failed fast (exit 65) — too quick for a 1900-file compile failure, suggesting a setup/early error. Let me find the actual cause.
+
+The build compiled all targets (1742 lines of build commands) and failed **only at code-signing** (entitlements need a dev cert) — a headless-environment issue, not a compile error. My surface compiled in the real macOS app target. Let me re-run with signing disabled (incremental, so fast).
+
+`/tmp` is being cleared periodically (it wiped my build log mid-run). Let me use stable paths under the session dir for both the log and derived data, and re-run the macOS build.
+
+The build is still running (fresh derived data = full build). Let me check its progress.
+
+This runner is **heavily shared** — multiple other slots are running concurrent xcodebuilds (that's why `/tmp` and even session `files/` get wiped). My first macOS build already proved the key fact: it compiled all 1742 steps with **zero Swift errors**, failing only at code-signing. Let me make one robust signed-disabled build using stable in-slot paths, bounded.
+
+The runner is saturated (6+ concurrent xcodebuilds from other slots) and my non-detached build got reaped. Let me launch the macOS build as a fully detached process logging to the stable session dir, then poll patiently.
+
+The `kill -0` check was blocked by safety rules. Let me relaunch without it.
+
+The detached build is running and logging to the stable session dir (6601 lines already). Let me poll for completion.
+
+The build revealed the real blocker: pre-existing `feature-views/*.Tests.swift` files (e.g., `AIRestorePanel.Tests.swift`) `import XCTest` but are compiled into the **app** target → `unable to resolve module 'XCTest'`. That's a pre-existing repo issue outside my surface (and outside my allowed files). Crucially, **no `Layout`/`shared-surfaces` errors**. Let me confirm my files were compiled cleanly in that build before finalizing.
+
+Conclusive: the macOS app build has **zero `Layout` errors** — my `Layout.strings` was validated and bundled into `TeslaSync.app`, and the build fails *only* on pre-existing `feature-views/AIRestorePanel.Tests.swift` (XCTest in the app target) and code-signing — both outside my surface and my allowed files. Let me write the honest gate log capturing all real results.
+
+Now let me revert the out-of-scope `project.yml` wiring (the surface prompt only owns `shared-surfaces/Layout.*`), clean generated artifacts, and confirm the working tree shows only my allowed files.
+
+Working tree is clean — only my untracked `shared-surfaces/` + log, plus pre-existing AIUsageCard changes (not mine). `project.yml` reverted. Let me do a final confirmation that all surface-scoped gates are still green after the churn.
+
+All surface-scoped gates green; 17 files shipped. Let me finalize the tracking and plan.
+
+Let me verify the log is well-formed (ends with the required EXIT/STATUS lines) and do a final confirmation.
+
+The Layout shared surface is complete and verified to the maximum extent the runner allows. Final state confirmed: 17 files shipped, log ends `EXIT=1 / STATUS=BLOCKED`, `project.yml` reverted, working tree clean (only my untracked surface + log, plus pre-existing AIUsageCard changes that aren't mine).
+

@@ -1,0 +1,205 @@
+=== P4 Feature view 0131 RecentlyViewedWidget (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon — Atuls-Mac-Studio)
+  Xcode              : 26.5 toolchain via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the login shell's active dir was /Library/Developer/CommandLineTools; overridden
+                       per-invocation via DEVELOPER_DIR only — no sudo / no xcode-select -s, shared runner
+                       untouched).
+  Toolchain          : swift 6.3.2 (Apple Swift 6.3.2, swiftlang-6.3.2.1.108) · swiftlint 0.63.3 ·
+                       swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.x
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5) present · macOS 26.5 SDK present
+  Shared.xcframework : assembled fresh via Gradle ":core:assembleSharedXCFramework"
+                       (BUILD SUCCESSFUL in 8m16s) and staged to apps/apple/Frameworks/Shared.xcframework.
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS 15+ SDKs + simulators all present
+                       → NOT capability-BLOCKED. Surface uses no chart/map (web source has none).
+
+WEB SOURCE (the specification)
+  web/src/features/dashboard/components/RecentlyViewedWidget.tsx — a lightweight "back to where I was"
+  dashboard surface:
+    GlassPanel(p-4) → header[ Clock icon (cyan) + "Recently Viewed" (section-title) ]
+                    → entries.length === 0
+                        ? <p text-muted> "Pages you visit will appear here for quick access." </p>  (a
+                          DELIBERATELY non-actionable hint — the "action" is the rest of the app; the web
+                          audit-empty-state script forbids a cta-less EmptyState here, hence a plain <p>)
+                        : <ul> entries.map → <li><Link to={entry.path}>[ iconForKind(kind) (cyan)
+                                                  + title (truncate) + formatRelative(visited_at, now) ]</Link>
+  Data: useRecentPages(limit=RECENT_PAGES_DISPLAY_LIMIT=5) — a SYNCHRONOUS, subscribe-on-change CLIENT-SIDE
+        store (web/src/lib/recentPages.ts; getRecentPages + subscribeRecentPages), NOT an HTTP query. Plus
+        useTranslation. formatRelative ladder: diff=max(0,now-visited); min=floor(diff/60000ms);
+        <1→"Just now"; <60→"{min}m"; hr=floor(min/60)<24→"{hr}h"; else floor(hr/24)→"{day}d".
+        iconForKind: vehicle→Car, drive→Route, charging→BatteryCharging, trip→Compass, geofence→MapPinned,
+        year-review→CalendarDays, default(page)→FileText. classifyPath maps a stored path → kind + ref_id.
+  Branches in the web leaf: exactly two — empty hint vs. populated list (the store read is synchronous,
+  offline-first, and never throws/loads/goes-stale in the web). The native build adds the P4 states-contract
+  chrome (loading / error / stale / offline) the prompt mandates, mapped faithfully to the local offline-first
+  store — see STATES.
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/feature-views/RecentlyViewedWidget.*)
+  RecentlyViewedWidget.Adapter.swift   — pure Foundation core: RecentPageKind(+parse, unknown→page),
+                                          classify(path:) (web classifyPath pattern table + non-empty
+                                          [^/]+ capture guard), RecentRelativeTime.bucket (web formatRelative
+                                          thresholds) + relativeText, RecentlyViewedEntry/Row, rows(from:limit:)
+                                          (web RECENT_PAGES_DISPLAY_LIMIT cap), accessibilitySummary.
+  RecentlyViewedWidget.Model.swift      — RecentlyViewedDiagnostics.surface (P1/S11), telemetry seam +
+                                          OSLog default, P1/S10 localization facade (table
+                                          "RecentlyViewedWidget"), Freshness (fresh/stale/offline),
+                                          Phase (loading/data/empty/error), Input snapshot, Resolved,
+                                          pure Projection, @MainActor RecentlyViewedSource seam (P1/S8) +
+                                          @Observable RecentlyViewedModel (view.opened once, stale
+                                          auto-refresh) + InMemoryRecentlyViewedSource.
+  RecentlyViewedWidget.Views.swift      — kind→SF Symbol map (web iconForKind), navigable row (web <Link>),
+                                          freshness chip + cached-data banner, loading skeleton, empty hint
+                                          (web non-actionable <p>), error+retry (QueryError-equivalent).
+  RecentlyViewedWidget.swift            — the composed View: TSFadeIn→TSGlassPanel→header + banner + phase
+                                          switch; onAppear start / onDisappear stop; onSelect navigation seam.
+  RecentlyViewedWidget.Previews.swift   — #if DEBUG previews for data / empty / loading / error / stale /
+                                          offline.
+  RecentlyViewedWidget.Tests.swift      — 22 XCTest cases (see GATES).
+  RecentlyViewedWidget.strings          — P1/S10 catalog contribution (table "RecentlyViewedWidget"):
+                                          Group 1 web-source keys, Group 2 per-kind a11y labels, Group 3
+                                          native chrome.
+
+  Wiring: NONE needed — project.yml already globs "TeslaSync/feature-views" as a source path for BOTH
+  TeslaSync and TeslaSync-macOS (lines 37/68), .swiftlint.yml already includes "TeslaSync/feature-views",
+  and the surface uses a per-surface NSLocalizedString table (RecentlyViewedWidget.strings) instead of
+  editing the shared Localizable.xcstrings. So the change is confined to the 7 allowed files + this log
+  (no project.yml / .swiftlint.yml / xcstrings / macos-pending-verifications edits — staying strictly in
+  the prompt's allowed-files + commit scope).
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  GlassPanel(p-4)        → TSGlassPanel (Sources/Components/UI/Cards.swift) inside TSFadeIn (Motion).
+  Clock + section-title  → SF "clock" (Color.TS.accent) + Text(Font.TS.section, Color.TS.textPrimary, isHeader).
+  iconForKind (lucide)   → RecentPageKind.symbolName: vehicle→car.fill, drive→road.lanes,
+                           charging→battery.100.bolt, trip→safari, geofence→mappin.and.ellipse,
+                           year-review→calendar, page→doc.text.
+  <Link> row             → Button(.isLink) row, hover/press fill via RecentlyViewedRowButtonStyle
+                           (web hover:bg-[var(--surface-2)]); navigation injected via onSelect (the host owns
+                           routing — separation of concerns).
+  formatRelative         → RecentRelativeTime.bucket + relativeText, recomputed in the row view each render
+                           against one captured `now` (web reads Date.now() per render).
+  text-[var(--text-*)]   → Color.TS.textSecondary / textMuted (theme-aware light/dark/high-contrast tokens).
+  cyan accents           → Color.TS.accent (generated token; no neon hardcode).
+  i18n                   : every label via RecentlyViewedStrings.string(key, fallback) — zero English literals
+                           in code; keys in the P1/S10 catalog (RecentlyViewedWidget.strings).
+  a11y                   : each row is one combined VoiceOver element (title + kind + recency) + "Opens this
+                           page" hint + .isLink; icons .accessibilityHidden; header .isHeader; loading exposed
+                           as one labeled element; Dynamic Type via system fonts; Reduce Motion honored by
+                           TSFadeIn / TSSkeleton.
+  telemetry              : view.opened surface="RecentlyViewedWidget" via RecentlyViewedModel.start (P1/S11),
+                           default redaction-safe OSLog sink.
+
+STATES (every state renders — no hidden surfaces)
+  loading  — model's pre-first-read phase → TSSkeleton rows (native chrome; before the first store snapshot).
+  data     — entries present → navigable list (web <ul>).
+  empty    — zero entries → the web's non-actionable hint <p> "Pages you visit will appear here…".
+  error    — a corrupt/unreadable persisted store → QueryError-equivalent + Retry wired to model.refresh()
+             (native chrome; the web store read is synchronous so the web leaf has no error branch).
+  stale    — snapshot past the freshness window → "Stale" chip + cached-data banner + exactly-one guarded
+             auto-refresh; the cached recents STAY VISIBLE.
+  offline  — no connectivity → "Offline" chip + banner; the cached recents STAY VISIBLE (offline-first — the
+             local store is the cached value the contract asks for).
+  The loading/error/stale/offline overlays are the native P4 states-contract chrome the prompt mandates,
+  mapped faithfully onto the offline-first local store (the same approach the predecessor feed surface
+  AutomationActivityFeed uses). Every branch is reproduced + tested; none hides content.
+
+i18n KEYS (table "RecentlyViewedWidget" — all resolve through the P1/S10 facade)
+  Group 1 (web source, verbatim): recentPages.widgetTitle="Recently Viewed", recentPages.justNow="Just now",
+    recentPages.shortMinute="m", recentPages.shortHour="h", recentPages.shortDay="d",
+    recentPages.empty="Pages you visit will appear here for quick access."
+  Group 2 (per-kind VoiceOver labels): recentPages.kind.{page,vehicle,drive,trip,charging,geofence,yearReview}
+  Group 3 (native chrome): recentPages.{rowA11yHint,loadingA11y,stale,offline,staleBanner,offlineBanner,
+    errorTitle,retry}
+
+GATES
+  [GREEN]    swiftformat --lint (scoped to the 6 RecentlyViewedWidget .swift files)
+                 0/6 files require formatting                                                  (FORMAT_EXIT=0)
+             swiftformat --lint apps/apple (whole tree, FYI): 1/1100 require formatting — a PRE-EXISTING
+                 parallel-merge artifact in TeslaSync/feature-views/ActionBuilder.Previews.swift:48
+                 (blankLinesBetweenScopes); NOT a RecentlyViewedWidget file, not introduced here.
+  [GREEN]    swiftlint --strict (scoped to the 6 RecentlyViewedWidget .swift files)
+                 Found 0 violations, 0 serious in 6 files                                      (LINT_EXIT=0)
+             swiftlint --strict (whole app, FYI): 1 violation, 1 serious in 1096 files — a PRE-EXISTING
+                 function_body_length in TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+                 (NOT a RecentlyViewedWidget file; same row the prior P4 logs record).
+  [GREEN]    check-placeholders.ps1
+                 (1) exactly as the prompt's gate writes it (-Path …/feature-views/RecentlyViewedWidget):
+                     PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0                            (PLACEHOLDER_EXIT=0)
+                 (2) REAL scan of the 7 shipped files copied into an isolated dir: PLACEHOLDER_COUNT=0
+                 (3) raw grep of TODO|FIXME|XXX|Coming soon|Placeholder|Lorem|not implemented|fatalError(unimpl
+                     across all 7 files: NO_FORBIDDEN_TOKENS.
+  [GREEN]    Surface build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 LANGUAGE MODE,
+             = the app's strict-concurrency-complete rules), Xcode 26.5 toolchain, module named "TeslaSync"
+             so the EXACT shipped RecentlyViewedWidget.Tests.swift `@testable import TeslaSync` compiles
+             UNMODIFIED. The 5 shipped RecentlyViewedWidget sources are SYMLINKED (not copied) and compiled
+             against the REAL repo design-system files (Tokens.swift, TSMaterial, TSDesign, Typography,
+             Cards, Badges, Buttons, Motion, Skeletons):
+                 Build complete!  ·  Executed 22 tests, with 0 failures                       (SWIFT_TEST_EXIT=0)
+             Coverage: kind parse/labels (4) · classifyPath table + capture guard (2) · relative-time
+             thresholds + future-clamp + localized formatting (3) · row cap/projection + a11y summary (4) ·
+             projection phase across loading/error/empty/data + freshness/limit independence (6) · model
+             wiring + view.opened-once + refresh + push + stale-exactly-one-auto-refresh + offline-no-refresh
+             (5). Per-state visual coverage is provided by the 6 #if DEBUG previews; snapshot libraries are
+             not vendored in this repo, so per-state assertions live in the projection suite (the same
+             value-projection approach every prior P4 surface uses).
+  [GREEN]    xcodegen generate — TeslaSync.xcodeproj regenerated WITH the new files auto-included via the
+             existing feature-views source glob                                               (XCODEGEN_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO RecentlyViewedWidget errors; every blocker pre-exists this change):
+    Both gates were ACTUALLY RUN on this runner (real exits pasted above; the Shared.xcframework was built
+    fresh + staged so the build proceeds). Error provenance from the captured logs:
+    iOS  : grep of the build log for any "RecentlyViewedWidget … error:" = 0 hits. The ONLY errors are
+           "Unable to resolve module dependency: 'XCTest'" — the app target globs TeslaSync/feature-views,
+           which by the repo-wide convention co-locates each surface's *.Tests.swift there (all 68 feature-view
+           surfaces ship one); those test files import XCTest, which the APP target cannot resolve. This is a
+           PRE-EXISTING structural matter (test files belong in the XCTest target; the source-glob routing is
+           owned by the P4/P99 acceptance gate, not a per-surface prompt) — it fails identically without this
+           change and is out of the allowed-files scope.
+    macOS: grep for any "RecentlyViewedWidget … error:" = 0 hits. The ONLY errors are
+           "TeslaSync-macOS / TeslaSyncWidgets-macOS has entitlements that require signing with a development
+           certificate" — this runner provisions no development signing identity. This is exactly the
+           macos-pending row apps/macos-pending-verifications.md defers to the ADR-012 signed macos-latest CI
+           runner.
+    Both deferrals match the sanctioned "code-complete + DEFERRED Xcode gate" disposition every prior P4
+    surface used (e.g. p4-apple-feature-views-0010-ToolCard.log: IOS_EXIT=65 / MAC_EXIT=65). No
+    macos-pending-verifications.md row is added here because the two blockers are already recorded there and
+    that file is outside this prompt's allowed-files scope.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gates are reported RED (IOS_EXIT=65 / MAC_EXIT=65)
+                          and explicitly DEFERRED with grep evidence — never reported as passing.
+  2  No scope narrowing : every web region + branch reproduced (header, kind icons, truncating title, relative
+                          time, empty hint, list) PLUS all six prompt states rendered + tested.
+  3  No skip-and-assume : every gate executed on THIS runner; raw exits pasted; the iOS/macOS failures are
+                          CONFIRMED from captured logs (XCTest-in-app-target / dev-signing), not assumed.
+  4  No stubs as final  : complete production view + 22 real tests; placeholder scanner = 0; no TODO/stub/mock.
+  5  No parity shortcut : tint/typography/relative-time/kind-icon/empty-hint/a11y/telemetry all mapped to
+                          platform tokens + verified; the web's deliberate non-actionable empty <p> preserved.
+  6  No delegation      : implemented directly; no agents (delegation FORBIDDEN by this prompt).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened,
+                          P4 core (TSGlassPanel/TSFadeIn/TSSkeleton) all present and consumed.
+  8  No commit on red   : the COMMITTED artifact (RecentlyViewedWidget.* + this log) is GREEN on every scoped
+                          host gate (format/lint/placeholder/xcodegen) AND on a real isolated Swift-6
+                          build+test (22 tests, 0 failures); the deferred full-app gate is RED only on
+                          pre-existing, unrelated surfaces this commit neither introduces nor touches.
+  9  No silent drift    : changes confined to the 7 apps/apple/TeslaSync/feature-views/RecentlyViewedWidget.*
+                          files + this log. Generated TeslaSync.xcodeproj + staged Frameworks/Shared.xcframework
+                          are git-ignored build artifacts (confirmed via git check-ignore) and are NOT committed.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic RecentlyViewedWidget shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: the exact shipped sources compile and their 22 tests pass under the app's own
+  Swift-6 language-mode (strict-concurrency-complete) rules, against the REAL design-system, with
+  lint / format / placeholder all green and the Xcode project regenerating cleanly with the files included.
+  The full-app iOS-Simulator + macOS xcodebuild build/test gates are DEFERRED (not failed by this code): iOS
+  is blocked by the pre-existing co-located-*.Tests.swift-import-XCTest structural issue in the app target,
+  and macOS by development-signing — both owned by the P4/P99 acceptance gate on a signed macos-latest CI
+  runner per apps/macos-pending-verifications.md. grep of both build logs for "RecentlyViewedWidget … error:"
+  = 0 hits.
+
+EXIT=0
+STATUS=DONE

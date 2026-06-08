@@ -1,0 +1,104 @@
+I'll start by exploring the repository structure to understand the task, then read the key files.
+
+Now let me explore the Apple app's Features directory, existing pages for reference, and the parity infrastructure.
+
+Let me examine the app's Features directory structure and find a similar existing page to use as a reference template.
+
+Let me check the toolchain availability, the project config, the design system, and whether any P4 Features pages already exist.
+
+Key finding: **xcodebuild is NOT available** (only Command Line Tools, no full Xcode), but swiftlint, swift, and pwsh are available. Per the prompt, the build/test gate → BLOCKED. I'll still implement the full page correctly. Let me explore the app navigation, KMP core facade for alerts, and a reference feature-view.
+
+The page must live at `TeslaSync/Features/Notifications/` (a new source path I'll need to register in project.yml). Let me read the navigation, the SharedFacade pattern, design tokens, and a representative feature-view in parallel.
+
+This is a sophisticated KMP-backed architecture. Let me read the AppShell, AppContainer, a complete reference feature-view (NotificationSettings), and key components in parallel.
+
+The architecture uses a **Source seam pattern** (protocol + InMemory impl) so views decouple from the KMP `Shared.xcframework` symbols finalized at Xcode-build time. Let me read the navigation registration, string catalog format, design tokens, key components, and the web types I need to port.
+
+Now let me read the registration pattern, design tokens, core UI components, and the placeholder checker in parallel.
+
+Let me read the placeholder patterns, design tokens, and the remaining UI components I'll compose with.
+
+Let me read the generated design tokens and the key UI component files (Cards, Badges, Buttons, Typography, Motion, DataTable).
+
+Let me read the Badges, Buttons, Typography, Motion components and the web helper components I need to port (SeverityBadge, BulkActionToolbar, useBulkSelection, EditableText) plus the AlertRule type.
+
+Let me read the web helper components and the parity manifest records to capture exact behavior and requirements.
+
+Let me read the parity manifest records and a representative surface's States/Adapter/Tests files to match conventions exactly.
+
+Let me view the rest of project.yml to understand how colocated `.Tests.swift` files and the test target are configured.
+
+Let me examine the production KMP-binding pattern (VehicleSettingsModel domain) and how RootView/container wiring works, to register navigation correctly.
+
+The codebase defers production KMP wiring to Xcode-build time via injected stores. Let me check whether the shared KMP core already defines an alert-rules store/holder so I can wire the production adapter precisely.
+
+Found the KMP `NotificationsStore`. Let me read it and the models to mirror the real holder shape.
+
+The KMP `NotificationsStore` exposes exactly the reads/mutations I need. Let me read the KMP `AlertRule` model and confirm no string-key collisions in the catalog, then write my plan.
+
+All 26 string keys are absent (no collisions), and the KMP `AlertRule` shape matches. Let me check the macOS verification status doc and the swiftlint baseline, then write my plan.
+
+This fully confirms the established workflow: surfaces are verified via **swiftlint --strict + swiftformat --lint + placeholder gate + isolated typecheck + `xcodegen generate` enumeration**, while the full-app `xcodebuild` is documented as **macOS-pending/BLOCKED** (pre-existing collisions + no Xcode). Let me check which of those tools are available here.
+
+I now have everything I need. Critically, **swiftc can typecheck SwiftUI against the CLT macOS SDK**, and swiftformat/xcodegen/swiftlint/pwsh are all available — so I can run real host gates (lint, format, placeholder, isolated typecheck, xcodegen enumeration). Only `xcodebuild` (full Xcode) is missing → BUILD/TEST gates = BLOCKED, exactly as the prompt anticipates. Let me set up tracking and write my plan.
+
+Let me read the exact APIs of the components I'll compose with (Buttons, Badges, Typography, Cards, Motion) so my code is correct.
+
+I have all component APIs. Now I'll write the files, starting with the Foundation-only logic core (Adapter), which I can typecheck in isolation immediately.
+
+Let me typecheck the Adapter in isolation immediately to validate the logic core.
+
+Adapter typechecks clean under Swift 6. Now the Model file (Observable model + Source seam + sources + i18n facade).
+
+Let me typecheck the Model + Adapter together against the SDK.
+
+The States file (loading / empty / error chrome — never blank). I'll add a few catalog-backed helper strings beyond the 26 required.
+
+Now the cells (checkbox, severity badge, status badge, inline-rename name cell). I'll split the view layer across a few small files to respect SwiftLint file/function length limits.
+
+Let me add the dependency component files and typecheck the view layer so far together.
+
+Now the chrome (bulk action bar with delete confirm, freshness chip, edit-conflict banner, studio link).
+
+Now the adaptive table (header + rows, regular grid columns + compact cards).
+
+The page references an edit-conflict flag — let me add `editConflict` to the update/model, then write the page scaffold.
+
+Now the page scaffold:
+
+Now the navigation registration (route host helper, mirroring `SettingsRouteRegistration`).
+
+Now the previews and the unit tests.
+
+All files written. Now the critical verification — an isolated `swiftc -typecheck` of the whole page against its real component dependencies (design tokens + UI components + nav). Let me run it.
+
+The full page typechecks clean under Swift 6 strict concurrency. Let me verify the Previews too (they need `Theme.swift`).
+
+Clean including previews on macOS target. Now let me run the lint, format, and placeholder gates on the new directory.
+
+Good signal: swiftformat found auto-fixable style issues in my files, and the only swiftlint error is a **pre-existing** violation in an unrelated `dashboard-widgets` file (my files produced zero swiftlint errors). Let me auto-apply swiftformat to my dir, then re-verify lint on my files explicitly.
+
+swiftformat passes (0/10). Now let me run swiftlint on my files explicitly (to isolate from the pre-existing unrelated violation) and re-typecheck after the format changes.
+
+Two real issues in my files: SwiftLint's `inclusive_language` rule flags the term "master" (web's "master checkbox"), and one `empty_count`. Let me rename those identifiers to inclusive equivalents and fix the count check.
+
+Now re-run all three gates plus typecheck after the renames:
+
+swiftlint **0 violations**, swiftformat **0 require formatting**. Let me re-run the isolated typecheck after the renames.
+
+Now the placeholder gate (pwsh), exactly as the prompt's gate specifies:
+
+Placeholder gate clean. Now let me collect every string key my code references so I can add them all to the catalog.
+
+All 26 required keys are present (plus 12 catalog-backed helper keys). Now let me add them to `Localizable.xcstrings` via a safe JSON splice that preserves the existing formatting and validates the result.
+
+I re-sorted the whole catalog, which creates a massive noisy diff (the original wasn't alphabetically sorted). Let me revert and re-add preserving the original key order to keep the diff minimal.
+
+Let me check the catalog's unicode encoding style, then do a minimal textual splice (insert my 38 entries right after `"strings": {`, leaving all existing entries byte-identical).
+
+Catalog diff is now clean (418 insertions, 0 deletions). Now let me wire the new source path into `project.yml` (both app targets) and register the route in `TeslaSyncApp.swift`.
+
+Now register the route in `TeslaSyncApp.swift` by chaining onto the existing settings registry:
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: D3F8:1AFC9B:C6525:D35F5:6A26E92C)

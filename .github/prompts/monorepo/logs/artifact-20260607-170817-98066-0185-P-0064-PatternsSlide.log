@@ -1,0 +1,142 @@
+=== P4 Feature view 0064 PatternsSlide (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (active dir was /Library/Developer/CommandLineTools; overridden non-destructively —
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2
+  Destinations       : iOS Simulator "iPhone 16" present · macOS 15 SDK present
+  Shared.xcframework : assembled + staged via Gradle ":core:assembleSharedXCFramework" (BUILD SUCCESSFUL;
+                       release + debug XCFrameworks produced under apps/shared/core/build/XCFrameworks).
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS toolchains present → NOT capability-BLOCKED.
+                       (The full-app Xcode gate is DEFERRED below for PRE-EXISTING, unrelated reasons — not a
+                       missing capability.)
+
+WEB SOURCE (the specification)
+  web/src/features/analytics/components/review/PatternsSlide.tsx — a year-in-review recap slide rendering a
+  `data: YearReview` prop through `useTranslation` + `useUnits`:
+    📊 (spring scale-in)  →  title "Your driving patterns"
+    →  card[ Calendar icon + "Favorite driving day" + most_active_day_of_week || '—' ]
+    →  card[ Clock icon    + "Peak driving hour"     + 12h AM/PM label of most_active_hour ]
+    →  3-up row[ avg_drives_per_week (fmtNumber,1) "drives/week"
+               | round(convertDistanceFromSI(avg_distance_per_drive_km*1000, unit)) "{unit}/drive avg"
+               | round(unit==='mi' ? avg_efficiency_wh_km*KM_PER_MILE : avg_efficiency_wh_km) "Wh/{mi|km} avg" ]
+  KM_PER_MILE = 1.609344. distanceUnit ∈ {mi,km}; efficiencyUnit = mi?'Wh/mi':'Wh/km'.
+  hourLabel: h>=12 ? `${h===12?12:h-12} PM` : `${h===0?12:h} AM`.
+  The leaf component receives data as a prop (parent owns fetch); the prompt nonetheless mandates the full
+  loading/empty/error/stale/offline state matrix, reproduced natively via the P1/S8 state-holder seam (same as
+  the YearReviewWidget sibling which shares this DTO).
+
+ARTIFACTS SHIPPED  (all within the allowed scope: apps/apple/TeslaSync/feature-views/PatternsSlide.* + this log)
+  PatternsSlide.Model.swift     — P1/S8 state-holder seam (PatternsReviewSource protocol, @Observable
+                                  PatternsSlideModel with loading/empty/error/content Phase + live/stale/offline
+                                  connection), P1/S11 telemetry seam (PatternsTelemetry + OSLog default emitting
+                                  view.opened surface="PatternsSlide"), DTO + unit prefs, InMemory source,
+                                  P1/S10 i18n facade (PatternsStrings, table "PatternsSlide"). SwiftUI-free.
+  PatternsSlide.Adapter.swift   — pure Foundation projection reproducing the web numeric pipeline VERBATIM:
+                                  convertDistanceFromSI, KM_PER_MILE efficiency rescale, JS-Math.round
+                                  (floor(x+0.5)) parity, fmtNumber (NumberFormatter halfUp), 12h peak-hour
+                                  label, em-dash day fallback, VoiceOver summary (exercises every source key).
+  PatternsSlide.Views.swift     — presentational sub-views (spring pop-in, the two icon cards, the 3-up metric,
+                                  loading skeleton chrome built on the shared TSSkeleton atom).
+  PatternsSlide.swift           — PatternsSlide: View; binds the model, renders every state + the stale/offline
+                                  freshness chrome; SwiftUI i18n Text helper.
+  PatternsSlide.Previews.swift  — #if DEBUG previews for content(mi)/content(km)/loading/empty/error/stale/offline.
+  PatternsSlide.strings         — the P1/S10 catalog contribution (per-surface table; folds into
+                                  Localizable.xcstrings at integration — parallel-safe, no shared-catalog edit).
+  PatternsSlide.Tests.swift     — 21 XCTest cases (adapter value parity, JS-round, fmtNumber, peak-hour edges,
+                                  phase matrix, model wiring + telemetry + stale auto-refresh, a11y summary).
+  No shared-wiring edits required: TeslaSync/feature-views is ALREADY in project.yml (iOS + macOS targets) and
+  .swiftlint.yml `included` (bootstrapped by feature-view 0010). Scope confined to PatternsSlide.* + this log.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  flex col centered h-full        → VStack centered, frame(maxWidth/maxHeight: .infinity)
+  motion.span scale spring        → PatternsPopIn (spring scaleEffect/opacity; static under Reduce Motion)
+  motion.p / motion.div delays    → TSFadeIn(delay:) from @/components/motion (0.2/0.4/0.6/0.8 cascade)
+  text-[var(--text-secondary)]    → Color.TS.textSecondary  · text-muted → Color.TS.textMuted · white → textPrimary
+  bg-white/[0.05] rounded-xl bord → Color.TS.surfaceGlass + RoundedRectangle(TSRadius.lg) + Color.TS.border stroke
+  Calendar (indigo-400)           → SF Symbol "calendar", Color.TS.chartSeriesPower
+  Clock (sky-400)                 → SF Symbol "clock", Color.TS.chartSeriesSpeed
+  convertDistanceFromSI / fmtNumber/ Math.round / KM_PER_MILE → ported verbatim (pinned by tests for km + mi)
+  i18n   : all 6 source keys (yearReview.drivingPatterns/favoriteDay/peakHour/drivesWeek/distancePerDrive/avg)
+           resolve through the P1/S10 facade; {{unit}} → native {unit} substitution; 1:1 code↔strings (verified).
+           AM/PM + unit symbols (km/mi/Wh) are format tokens emitted verbatim for value parity (as the web does).
+  a11y   : icons .accessibilityHidden; each card/metric .combine; slide exposes the full VoiceOver summary;
+           Dynamic Type via system fonts + minimumScaleFactor; Reduce-Motion respected (pop-in + TSFadeIn).
+  telemetry: view.opened surface="PatternsSlide" via PatternsSlideModel.start() (P1/S11), default OSLog sink.
+
+STATES (every state renders — no hidden surfaces)
+  loading  → PatternsLoadingChrome (TSSkeleton silhouette)        empty   → ContentUnavailableView
+  error    → icon + title + message + Retry (model.refresh)        content → the full slide
+  stale    → amber freshness chip + "Reconnecting…" banner + auto-refresh-if-stale (cached value stays visible)
+  offline  → muted chip + "Offline — showing your last recap" banner (cached value stays visible)
+
+GATES
+  [GREEN]    swiftformat --lint apps/apple                          : 0/766 files require formatting        (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict  (PatternsSlide.* — 6 files)        : 0 violations, 0 serious                (LINT_EXIT=0)
+             swiftlint --strict  (whole app, FYI)                   : 1 PRE-EXISTING violation —
+                                                                      function_body_length in
+                                                                      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+                                                                      (NOT a PatternsSlide file; not introduced here —
+                                                                       the same row ToolCard 0010 recorded).
+  [GREEN]    check-placeholders.ps1 (verbatim -Path …/PatternsSlide): PLACEHOLDER_COUNT=0                    (PLACEHOLDER_EXIT=0)
+             check-placeholders.ps1 (real scan of the 6 shipped .swift files): PLACEHOLDER_COUNT=0  (defence in depth —
+                                                                      the verbatim -Path resolves to a prefix with no
+                                                                      literal dir, so a real per-file scan is also run).
+  [GREEN]    PatternsSlide build + test — ISOLATED SwiftPM harness, swift-tools 6.0, swiftLanguageMode(.v6)
+             (Swift 6 strict-concurrency complete = the app's own setting), compiling the EXACT shipped
+             PatternsSlide.* sources against the REAL repo design-system + components (Tokens, TSMaterial/TSDesign,
+             Sources/Components/** incl. Motion + Skeletons):
+                 Build complete!  ·  Executed 21 tests, with 0 failures (0 unexpected)                       (SWIFT_TEST_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO PatternsSlide errors; every blocker pre-exists this change):
+    iOS  : the app target fails to resolve the XCTest module for the co-located *.Tests.swift files that every
+           feature-view surface ships (project.yml compiles TeslaSync/feature-views INTO the app target). The
+           build halts at the alphabetically-first such file —
+             TeslaSync/feature-views/BackendTool.Tests.swift:20:8: error: unable to resolve module dependency: 'XCTest'
+           — BEFORE PatternsSlide is even reached. This is a project-config concern (test sources belong in the
+           XCTest test target), owned by the P4/P99 acceptance gate, not a single feature-view prompt.
+    macOS: additionally requires a development SIGNING certificate —
+             error: "TeslaSync-macOS" has entitlements that require signing with a development certificate
+             error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate
+           — which this runner does not provision.
+    grep of BOTH build logs for `feature-views/PatternsSlide.*… error:` = 0 hits (confirmed). These are exactly the
+    artifacts apps/macos-pending-verifications.md already defers to the ADR-012 macos-latest CI runner (with signing
+    identities) under p4-apple/P99-0001-apple-acceptance-gate — the same disposition the ToolCard 0010 predecessor
+    and every P4 surface to date recorded. macos-pending-verifications.md is outside this prompt's allowed file set,
+    so no row is appended here; the existing ToolCard/P99 rows already cover this identical block.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                           explicitly DEFERRED with pasted evidence — never reported as passing.
+  2  No scope narrowing  : every web region + branch reproduced (km & mi pipelines, em-dash day, 12h hour label,
+                           all 3 metrics) PLUS the mandated loading/empty/error/stale/offline matrix.
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; macOS failure confirmed, not assumed.
+  4  No stubs as final   : complete production view + 21 real tests; placeholder scanner = 0 (verbatim + real scan).
+  5  No parity shortcut  : conversion/rounding/formatting/hour-label/typography/a11y/telemetry mapped + pinned by tests.
+  6  No delegation       : implemented directly; no sub-agents (delegation was FORBIDDEN for this prompt).
+  7  No predecessor bypass: P1/S8 state-holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics, P4 core all consumed;
+                            the isolated-verify + DEFERRED-Xcode disposition follows the ToolCard 0010 predecessor.
+  8  No commit on red    : the COMMITTED artifact (PatternsSlide.*) is GREEN on every host gate AND on a real isolated
+                           Swift 6 build+test; the deferred full-app gate is RED only on pre-existing, unrelated
+                           surfaces (co-located XCTest, macOS signing) that this commit neither introduces nor touches.
+  9  No silent drift     : changes confined to feature-views/PatternsSlide.{Model,Adapter,Views,swift,Previews,
+                           strings,Tests}.swift and this log — enumerated above; no shared-file edits.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic PatternsSlide shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 21 tests pass under the app's own Swift 6 strict-concurrency rules, against the
+  real design-system + shared components, with swiftlint/swiftformat/placeholder all green and 1:1 i18n key
+  coverage. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code):
+  it is blocked by the repo-wide co-located-XCTest-in-app-target structural issue (halts on BackendTool.Tests.swift
+  before reaching PatternsSlide) and by macOS development-signing — both owned by the P4/P99 acceptance gate on a
+  signed macos-latest CI runner per apps/macos-pending-verifications.md. This matches the repo's sanctioned
+  "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,116 @@
+=== P4 Shared surface 0083 Currency (Apple) ===
+date: 2026-06-08T12:13:06Z
+host: macOS 26.5.1 (arm64)
+
+--- Capability assessment (prompt: 'if unavailable on the runner -> STATUS=BLOCKED with API evidence') ---
+xcode-select active dir : /Applications/Xcode.app/Contents/Developer
+full Xcode (DEVELOPER_DIR): Xcode 26.5 Build version 17F42 
+swiftc                  : swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+swiftlint / swiftformat : 0.63.3 / 0.61.1
+xcodegen / pwsh         : Version: 2.45.4 / PowerShell 7.6.2
+KMP Shared.xcframework  :   (only .gitkeep -> NOT prebuilt)
+xcframework build needs : Kotlin/Native via apps/shared/gradlew :core:assembleSharedXCFramework
+  build-shared-xcframework.sh comment: 'Requires the Kotlin/Native Apple toolchain (full Xcode). On CI this runs on a macos-latest runner.'
+
+================================================================
+GATE STEP 1+2 — xcodebuild iOS + macOS  (scheme TeslaSync / TeslaSync-macOS, 'build test')
+================================================================
+Status: BLOCKED — two independent, in-runner-unavoidable blockers documented with evidence:
+
+[B1] The surface is not wired into any Xcode target.
+     'TeslaSync/shared-surfaces' is absent from apps/apple/project.yml (which lists only
+     dashboard-widgets + feature-views). Registering a new surface-category directory is a
+     P4-core/integration concern; project.yml is OUTSIDE this surface's allowed files
+     (allowed: TeslaSync/shared-surfaces/Currency.* + this log). Evidence — regenerate the
+     project and grep the pbxproj:
+     xcodegen generate EXIT=0
+     refs to 'shared-surfaces' in TeslaSync.xcodeproj/project.pbxproj: 0
+     refs to 'Currency.Adapter.swift'                              : 0
+     => Even a green xcodebuild would NOT compile/test this surface (0 references).
+
+[B2] The scheme pre-action 'Stage Shared.xcframework' runs the KMP Gradle build
+     (apps/shared/gradlew :core:assembleSharedXCFramework) before any compilation. A literal
+     run of the gate command was performed; xcodebuild entered that pre-action (observed:
+     'Run pre-actions / SchemeAction Stage Shared.xcframework ...') and the Kotlin/Native
+     LLVM build does not complete in this shared runner (10+ parallel sibling slots contend
+     on the same assembleSharedXCFramework task). This is the documented CI-only step.
+IOS_EXIT=BLOCKED
+MAC_EXIT=BLOCKED
+
+================================================================
+GATE STEP 3 — swiftlint --strict
+================================================================
+violations in shared-surfaces/Currency.* : 0  (this surface is CLEAN)
+total violations in whole app            : 1  (pre-existing, unrelated, out of scope):
+    /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-312/apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length Violation: Function body should span 50 lines or less excluding comments and whitespace: currently spans 78 lines (function_body_length)
+LINT_SCOPED_EXIT=0 (no violations attributable to this surface)
+
+================================================================
+GATE STEP 4 — swiftformat --lint
+================================================================
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-312/apps/apple/.swiftformat
+SwiftFormat completed in 3.6s.
+0/6 files require formatting.
+FORMAT_EXIT=0
+
+================================================================
+GATE STEP 5 — placeholder / stub gate (apps/tools/check-placeholders.ps1)
+================================================================
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+================================================================
+SUBSTITUTE VERIFICATIONS (achievable in-runner; stronger than lint — they compile/run the surface)
+================================================================
+-- swiftc -typecheck, iOS 18 simulator SDK, Swift 6 + strict concurrency, DEBUG (incl. #Preview) --
+IOS_TYPECHECK_EXIT=0
+
+-- swiftc -typecheck, macOS 15 SDK, Swift 6 + strict concurrency --
+MAC_TYPECHECK_EXIT=0
+
+-- Tests symbol typecheck (Currency.Tests.swift compiled in-module against the sources; XCTest shimmed) --
+TESTS_TYPECHECK_EXIT=0
+
+-- Runtime web-parity vectors (real CurrencyFormat/CurrencyProjection vs components/.../Currency.tsx + Format.test.tsx) --
+PASS | web: value 12.34 | "$12.34"
+PASS | web: override € on 42 | "€42.00"
+PASS | web: precision 3 on 3.14159 | "$3.142"
+PASS | web: nil -> fallback | "—"
+PASS | web: nil isFallback | true
+PASS | web: Infinity -> fallback | "—"
+PASS | web: -Infinity isFallback | true
+PASS | web: NaN isFallback | true
+PASS | web: € ctx 1234.5 en-US | "€1,234.50"
+PASS | web: canonical title 9.876 | "$9.88"
+PASS | display 9.876 | "$9.88"
+PASS | display 1234.5 grouped | "$1,234.50"
+PASS | canonical 1234.5 ungrouped | "$1234.50"
+PASS | de-DE display 1234.56 | "€1.234,56"
+PASS | de-DE canonical 1234.56 | "€1234.56"
+PASS | blank ctx symbol -> $ | "$5.00"
+PASS | nil ctx symbol -> $ | "$5.00"
+PASS | resolveSymbol override wins | "¥"
+PASS | fmtNumber de-DE | "1.234,56"
+PASS | fmtNumber NaN guard | "0.00"
+PASS | phase loading/no-ctx -> loading | true
+PASS | phase loaded/empty -> empty | true
+PASS | phase failed/no-ctx -> error | true
+PASS | phase failed/cached -> content | true
+PASS | a11y value label | "$12.34"
+PASS | a11y fallback label | "No value"
+---
+ALL VECTORS PASS
+VECTORS_EXIT=0
+
+================================================================
+SUMMARY
+================================================================
+Production surface shipped (no stubs): Currency.{swift,Model,Adapter,Views,Previews,Tests}.swift + Currency.strings
+Achievable gates PASS  : IOS_TYPECHECK=0  MAC_TYPECHECK=0  TESTS_TYPECHECK=0  VECTORS=0  FORMAT=0  PLACEHOLDER=0  swiftlint(this surface)=0
+Blocked gates          : IOS_EXIT / MAC_EXIT = BLOCKED (KMP Shared.xcframework CI-only build + shared-surfaces not in project.yml [P4-core, outside allowed files])
+Per prompt capability clause, the xcodebuild gate is unavailable on this runner -> BLOCKED with evidence above.
+
+EXIT=1
+STATUS=BLOCKED

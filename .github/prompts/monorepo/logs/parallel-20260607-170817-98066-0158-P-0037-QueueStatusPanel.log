@@ -1,0 +1,124 @@
+I'll start by exploring the repository structure and understanding the task requirements. Let me check the current state and key files in parallel.
+
+Key capability finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed, and `simctl` is unavailable. But `swift`, `swiftlint`, `swiftformat` work. Let me explore the existing Apple project structure and prior feature-view patterns before deciding anything.
+
+There's a precedent: `TelemetryErrorsPanel` (prompt 0009) follows a 7-file pattern. This is my template. Let me read all those files plus the prior log to understand the established conventions.
+
+Excellent, high-quality established pattern. Let me read the remaining template files and the prior log to understand gate handling.
+
+I now fully understand the pattern and the gate-handling precedent (host gates run green; xcodebuild app build/test deferred with real captured evidence). Let me read the web data layer and the Apple shared tokens/components I'll map to. Let me write a plan first, then batch-read.
+
+pwsh, xcodegen, and the placeholder script are all available — good, I can run the real gate steps except xcodebuild. Let me read the web data layer and locate the Apple design tokens/shared components.
+
+Let me read the web types/formatters and locate the Apple design tokens and shared components I'll reuse.
+
+Let me read the full QueueStat type block and locate the Apple design tokens + shared components I'll map to.
+
+There's a `TSMetricBar` (web `MetricBar` parity) using `TSTone`. The token definitions weren't found in Sources — they may be generated. Let me locate them and read the key shared components (Typography, Badges, States, Skeletons, DataTable, Cards) plus TSTone.
+
+Design tokens live in `apps/design/generated/apple` (a generated `DesignTokens` group). Confirmed: `feature-views/` is NOT in project.yml — same "not-yet-registered" disposition as 0009, and project.yml is outside my allowed files. Let me read the generated tokens and key shared components.
+
+Now I have the tokens. Let me read the shared UI components I'll compose with: Typography, Badges (TSTone/TSStatusPill), Cards (GlassPanel), States (Spinner/EmptyState), Skeletons, and Buttons.
+
+Let me read the remaining shared components I'll likely use: Skeletons, States (Spinner/EmptyState), and Cards (GlassPanel).
+
+I now have the full component vocabulary. Let me read the Button component, the glass-panel material modifier, the SharedFacade seam patterns, and the lint configs to match conventions.
+
+Critical lint detail: `swiftlint` `included:` does NOT list `feature-views/`, but `swiftformat --lint apps/apple` DOES cover my files. Let me probe whether the CLT toolchain can compile SwiftUI and run XCTest via SwiftPM (the 0009 log used full Xcode for that).
+
+SwiftUI typechecks under CLT. Now let me confirm `swift test` (XCTest via SwiftPM) works on this runner — that's the meaningful test-execution path.
+
+I'll wait for the SwiftPM test probe to finish (first compile can be slow).
+
+Just a syntax error in my probe (two decls on one line). The toolchain built fine. Let me fix and confirm tests actually execute.
+
+CLT lacks `XCTest` (ships only with full Xcode). Let me check whether Swift Testing (`import Testing`, bundled with the Swift 6 toolchain) is available for executing my logic tests.
+
+Neither XCTest nor Swift Testing ship with CLT. I'll execute logic via a standalone Swift executable (real pass/fail) and typecheck the SwiftUI views against the real shared components. Let me confirm executables run and map which components import the (unbuildable) `Shared` KMP framework.
+
+Both capabilities confirmed: standalone executables run, and no shared-UI files need the KMP `Shared` framework. Let me map the full Components tree for any `Shared`/`Charts`/`MapKit` imports so I can assemble a clean typecheck set, then I'll write the plan and implement.
+
+Both verification paths are viable. Let me check the web i18n catalog for the real English `queueStatus.*` values (so my `.strings` matches the actual catalog, not just inline fallbacks), then write the plan and implement.
+
+I have everything: real catalog values (severity = Healthy/Lagging/Stale/Down), tokens, components, formatters, and verified build/exec capability. Let me set up tracking and write the plan.
+
+Now implementing. Starting with the pure-logic Adapter.
+
+Now the Model — the P1/S8 state-holder seam, projection, telemetry, and i18n facade.
+
+Now I'll add a pure, i18n-bound label builder to the Model (so the worker-card text + VoiceOver summary are executable in the harness), then write the Views.
+
+Now the presentational subviews.
+
+Now the composed view.
+
+Now the previews and the strings catalog.
+
+Now the XCTest suite (folded into the test target at integration).
+
+All 7 files written. Now the verification phase. Let me start with swiftformat on my files (fast iteration), then typecheck and execute.
+
+swiftformat auto-fix is the canonical path. Let me apply it to my files, then re-lint.
+
+swiftformat clean. Now swiftlint on the new files (for honest evidence, since the gate's `included:` excludes feature-views).
+
+Three swiftlint issues: param count (6→max 5), and two files >400 lines. I'll refactor `cardSummary` to take an array, and extract the i18n facade + label builder into a dedicated `QueueStatusPanel.Labels.swift` (allowed by the glob, better SRP). Let me view the Model tail to extract cleanly.
+
+Creating the Labels file, trimming Model, and refactoring `cardSummary`.
+
+Now remove the moved block from Model and refactor `cardSummary` in the Adapter.
+
+Now fix the Tests: shorten header, update `cardSummary` call, then measure length.
+
+Tests is 417 — still over 400. swiftformat enforces blank lines between scopes, so I'll split the model tests into a second test file (clean seam) rather than mangle. Let me view the sections to extract.
+
+I'll split the model tests + spy into `QueueStatusPanel.ModelTests.swift`, leaving the rest in `Tests.swift`.
+
+Both under 400. Now re-run swiftlint --strict and swiftformat --lint on the full file set.
+
+swiftformat and swiftlint conflict on trailing commas. The gate runs `swiftformat --lint` (covers feature-views) but `swiftlint`'s `included:` deliberately excludes feature-views. Let me verify the 0009 precedent files exhibit the same behavior, so I match the repo's actual convention.
+
+0009 passes BOTH linters cleanly — so there's a mutually-acceptable style. Let me determine exactly what swiftformat 0.61 + this config does and how 0009 avoids the conflict.
+
+`cat -A` isn't on macOS. The probe shows swiftformat leaves comma-free multiline collections unchanged. So the mutually-acceptable style is NO trailing commas. Let me find every trailing comma swiftformat added and check whether removing them satisfies swiftformat too.
+
+Only 3 trailing commas (mine, in Labels.swift). The probe shows swiftformat accepts comma-free multiline, so removing them should satisfy both tools. Let me view and fix those plus the Model newline.
+
+Now fix the Model trailing newline and re-run both linters on all files.
+
+Both linters pass cleanly on all 8 files. Now the placeholder check and the full-app swiftformat (the gate's actual command). Let me inspect the placeholder script and run it.
+
+Let me check the forbidden patterns — my comments may use words like "placeholder" that could trip the gate.
+
+The common patterns include "Placeholder" (case-insensitive). Two of my comments use it — I'll scrub them, then run the real gate script.
+
+Now run the real placeholder gate (genuine scan of feature-views) plus the gate's exact path form, and the full-app swiftformat.
+
+The genuine scan caught `testUnknownSeverityDegradesToDown` — "...sToDown" contains "todo" (case-insensitive). I'll rename it and re-scan for any other accidental matches.
+
+Placeholder gate is genuinely clean now. Now the key compile evidence: typecheck the full SwiftUI surface against the real shared components + tokens. Let me assemble the file set (excluding Maps/Charts which need other frameworks my surface doesn't use) and typecheck.
+
+UI/DataDisplay/Feedback/Forms are SwiftUI-only. Let me typecheck the surface against those + Motion + Design + Tokens.
+
+Only errors are the `#Preview` macro plugin (`PreviewsMacros`) — that ships with Xcode, not CLT. It's a toolchain-plugin gap, not a code defect, and `#Preview` is `#if DEBUG`-only. Let me typecheck without `-D DEBUG` to validate all production + view code against the real components.
+
+The error is in `UnitFormatters.swift` (needs `UnitPreferences` from the Units facade) — a file my surface doesn't use. Let me typecheck against only the specific component files my surface transitively requires.
+
+Surface typechecks cleanly (EXIT=0) against the real components. Now the execution harness — compile the real Adapter+Model+Labels with a ported assertion runner and execute it for real pass/fail evidence.
+
+Now compile the real Adapter+Model+Labels with the harness and execute.
+
+All logic assertions pass against the real shipped source (HARNESS_OK). Let me re-confirm both linters after the last edits, capture the deferred-xcodebuild evidence, and count assertions for the log.
+
+Everything that can run on this runner is green: swiftformat 0/8, swiftlint 0 violations, placeholder 0, typecheck EXIT=0 against real components, and 63/63 logic assertions executed green. The xcodebuild iOS/macOS build+test + simulator are genuinely unavailable (CLT-only, no Xcode). Let me capture the remaining capability evidence and confirm the log directory.
+
+All evidence captured. Decision on terminal status: the surface is **code-complete and every host-runnable gate is green**, but the prompt's capability clause is explicit — "If unavailable on the runner → STATUS=BLOCKED with API evidence." This runner is Command-Line-Tools-only (no Xcode, no iPhoneOS SDK, no `simctl`, no `XCTest`), so the `xcodebuild` iOS/macOS build+test steps genuinely cannot run. Per the prompt's rule and the honesty covenant (no red-as-green), I'll record **STATUS=BLOCKED** with full evidence that the deliverable is complete and maximally verified. Let me write the gate log.
+
+Let me verify the working tree contains only my intended files, then commit.
+
+Only the 9 surface files + log are staged-to-be. Committing now.
+
+Committed (`57f18a65`). Let me finalize the plan and do a last clean-tree check.
+
+Clean tree, all 10 files committed. Let me clean up the temp probe directories.
+

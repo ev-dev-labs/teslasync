@@ -1,0 +1,104 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Tooling is available. Let me read the web source and examine the existing Apple feature-views structure.
+
+Now let me understand the existing Apple app structure and conventions. Let me explore the directory tree and find reference implementations.
+
+No Xcode project exists, but there's a sibling `RequestBuilder` feature-view from the same admin playground feature. This is the gold-standard reference. Let me read all its files and its web source counterpart.
+
+Excellent reference quality. Let me read the remaining RequestBuilder files to complete my understanding of the conventions.
+
+I have the full pattern. Now let me verify the shared tokens (P1/S9) and components (P4 core) that the reference relies on, to reference them correctly.
+
+There's a shared design system in `apps/apple/Sources/`. Let me explore it to find the components I need (GlassPanel, Button, CopyButton, Skeleton, EmptyState, FadeIn) and tokens.
+
+I have a clear picture. Let me read the key shared component and token files I'll depend on: Buttons, Cards, Typography, Skeletons, States, Motion, and the Design tokens.
+
+Let me find the CopyButton equivalent, the generated tokens, and the Disclosure component (the web source uses collapsible toggles).
+
+Now let me check the build system, the placeholder-check tool, and how feature-views are compiled (no .xcodeproj was found).
+
+There's a `project.yml` — this is XcodeGen. Let me read it and check whether xcodegen is available, plus review the placeholder checker and lint configs.
+
+Key finding: `project.yml` globs `TeslaSync/feature-views` into the app targets, so my files auto-include on `xcodegen generate`. Let me check the precedent log (RequestBuilder = 0040), available simulators, and the Shared.xcframework dependency.
+
+Let me examine the shared framework build script and an existing feature-view log to understand the established gate outcome precedent.
+
+The precedent is clear: the Xcode gate is **DEFERRED** (no Shared.xcframework/KMP, no iOS simulator, no signing) while surface-scoped host gates run green, ending `STATUS=DONE`. Let me read the sibling RequestBuilder (0040) log to mirror its exact methodology, plus the placeholder checker and lint configs.
+
+Let me read the RequestBuilder log's gate/verification methodology and the placeholder patterns + lint configs.
+
+Critical insight from the precedent: the full Xcode toolchain is reachable via `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`. My earlier simulator probe used the default CommandLineTools. Let me re-probe capabilities properly.
+
+The full Xcode 26.5 toolchain + booted iPhone 16 sim + both SDKs are available via `DEVELOPER_DIR`. Now let me resolve one design question — how a sibling "result/response viewer" handled the loading/empty/error/stale/offline states. Let me inspect ResultPanel (web + native).
+
+I now have a complete understanding. The full Xcode 26.5 toolchain (booted iPhone 16 sim, both SDKs) is reachable via `DEVELOPER_DIR`; the established sibling precedent (RequestBuilder 0040, ResultPanel 0008) runs surface-scoped gates green and DEFERS the full app `xcodebuild` (unstaged KMP `Shared.xcframework` + per-surface test files not yet target-registered). I'll follow that methodology and build all 8 `ResponseViewer.*` files at full parity.
+
+Let me set up tracking and write the first two pure-logic files.
+
+Now the subviews. To stay within swiftlint's strict file-length limit (≤400, like the ≤374 sibling files), I'll split the response/history subviews from the snippet-panel views.
+
+All 9 files created. Now let me verify line counts and run the host-runnable gates, starting with formatting and the placeholder check.
+
+Line counts are good (max 362). Let me apply swiftformat auto-fix to my files, then re-lint.
+
+swiftformat passes. Let me verify the auto-wrapped test assertions and property-body expansions are correct, then run swiftlint.
+
+swiftformat clean, string contents intact. Now swiftlint --strict on my files.
+
+swiftlint: 0 violations. Now the placeholder gate.
+
+Pre-existing siblings flagged (all `PLACEHOLDER_ALLOWED`); none are mine. Let me run the gate scoped strictly to my files to prove `ResponseViewer.*` is clean.
+
+All 8 surface files are placeholder-clean (COUNT=0, ALLOWED=0). Now the high-value proof: execute the adapter/snippets/model/a11y XCTest via a standalone SwiftPM harness on the macOS host.
+
+All 29 tests pass on the host. Now the REAL SDK typechecks. Let me determine which shared design-system files my surface needs and which (if any) pull in the KMP `Shared` framework.
+
+The entire design system (41 files) is KMP-`Shared`-free. I'll typecheck my full surface together with the design system + generated tokens against the real iOS-18 simulator SDK and macOS-15 SDK. Let me resolve SDK paths and run the iOS typecheck.
+
+Only `UnitFormatters.swift` fails — it references an external `Units` facade my surface doesn't use. Let me exclude design files with external (non-SDK) deps and retry. First, find them.
+
+Only `UnitFormatters.swift` has an external dep. Let me re-run the iOS typecheck excluding it (with `-D DEBUG` so my previews + all design previews compile).
+
+Real bug caught by the typecheck: in `SnippetPanel`, my stored `body: String?` collides with SwiftUI's `View.body`. Let me rename the stored property to `requestBody` (keeping the public `body:` init label for web parity).
+
+Strict-concurrency caught another real issue: my nonisolated preview factory calls the `@MainActor` model init. Let me mark it `@MainActor` (preview closures are main-actor).
+
+iOS-18 simulator SDK typecheck passes (swift 6 + strict concurrency + DEBUG). Now the macOS-15 SDK typecheck.
+
+Both SDK typechecks pass. Two real bugs fixed — let me re-verify formatting/lint on the edited files.
+
+swiftformat 0/8, swiftlint 0 violations. Now let me capture deterministic evidence for the deferred `xcodebuild` step: generate the project (git-ignored) and prove how the colocated test files + unstaged KMP framework block the full app build/test.
+
+Project generated. Let me verify surface registration in the generated project, then check git-ignore status so I can clean it up.
+
+All 8 files register via the glob; `ResponseViewer.Tests.swift` lands in the **app** target (the only XCTest target, `Tests/Unit`, excludes `feature-views`) — so `@testable import TeslaSync` + `import XCTest` there can't compile, and `Shared.xcframework` is unstaged. That's the concrete defer evidence. Let me confirm the generated project is git-ignored and check my working-tree status.
+
+`.xcodeproj` is git-ignored (won't be committed). The `AIUsageCard.*` modifications are from a concurrent slot — not mine; my scoped commit excludes them. Let me clean up the generated project and capture a final clean `swift test` transcript.
+
+All host gates are green (swift test 29/29, both SDK typechecks, swiftlint 0, swiftformat 0, placeholder 0). Let me gather header facts, then write the gate log.
+
+Now I'll write the comprehensive gate log with all real command outputs and the honest disposition.
+
+The log is written. Let me update tracking, clean up the temp harness, stage exactly my files, and commit.
+
+Exactly the 9 surface files + log staged, nothing else. Committing.
+
+Committed cleanly (10 files, 1774 insertions). Final verification that the tree is tidy and no generated artifacts linger.
+
+All gates green, working tree tidy, and the commit is scoped exactly to the allowed files. Task complete.
+
+**Summary** — Shipped a production-polished native Apple SwiftUI **`ResponseViewer`** surface (P4 · feature-views · 0041) at parity with `web/src/features/admin/components/ResponseViewer.tsx`, across 9 files (1,774 lines) in `apps/apple/TeslaSync/feature-views/ResponseViewer.*`:
+
+- **Adapter/Snippets** (pure, SwiftUI-free): order-preserving `JSON.stringify(_, null, 2)` port, `formatBytes`/status-tone/history-tint helpers, and a **byte-faithful** cURL/JavaScript/Python/Go `generateSnippet` port.
+- **Model** (P1/S8): `@MainActor @Observable` push-based state holder (no view HTTP) + P1/S11 `view.opened` telemetry seam + P1/S10 strings facade.
+- **Views/SnippetPanel/main**: every web state — loading→`TSSkeleton`, empty→`TSEmptyState`, content→`TSFadeIn`(status bar+body+headers), the history replay strip, and the exported labeled-copy `SnippetPanel` — token-driven (P1/S9), VoiceOver labels + Reduce Motion.
+- **Tests/strings/previews**: 29 XCTest methods, 6 web i18n keys + native chrome/a11y, per-state previews.
+
+**Verification (all real, all green on this runner):**
+- REAL iOS-18-simulator **and** macOS-15 SDK typechecks — `swift 6`, `strict-concurrency=complete`, DEBUG → `EXIT=0`
+- EXECUTED XCTest via SwiftPM on the host → **29/29 passed**
+- `swiftlint --strict` 0 · `swiftformat --lint` 0/8 · placeholder gate `COUNT=0` on all 8 files
+
+The typecheck caught and I fixed **two real bugs** (a `body` property colliding with `View.body`; a non-isolated preview factory calling the `@MainActor` init). The `xcodebuild` app build/test is **DEFERRED** with proof (unstaged KMP `Shared.xcframework` + per-surface `.Tests.swift` colocated in the app-target glob — both integration-owned, not platform-capability), matching the accepted 0008/0040 precedent. Log: `…/logs/p4-apple-feature-views-0041-ResponseViewer.log` → `EXIT=0 / STATUS=DONE`.
+

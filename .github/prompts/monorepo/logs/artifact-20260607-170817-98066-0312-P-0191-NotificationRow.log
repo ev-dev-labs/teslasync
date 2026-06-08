@@ -1,0 +1,155 @@
+=== P4 Feature view 0191 NotificationRow (Apple) ===
+Artifact : apps/apple/TeslaSync/feature-views/NotificationRow.*
+Web spec : web/src/features/notifications/components/NotificationRow.tsx
+Date     : 2026-06-07
+Honesty  : this log distinguishes (A) SURFACE-ISOLATED verification of the shipped
+           NotificationRow surface — all green — from (B) the COMPOSITE whole-repo
+           gate, which is red because of PRE-EXISTING compile/lint/format errors in
+           unrelated sibling surfaces that this prompt is not allowed to modify
+           (allowed files = apps/apple/TeslaSync/feature-views/NotificationRow.* +
+           this log). No red is reported as green.
+
+--------------------------------------------------------------------------------
+TOOLCHAIN (platform capability present — NOT a BLOCKED-on-capability case)
+--------------------------------------------------------------------------------
+Xcode            : 26.5 (Build 17F42)  @ /Applications/Xcode.app
+iOS SDK          : iphonesimulator26.5 ; simulator "iPhone 16" available (booted)
+macOS SDK        : MacOSX15/26 ; deployment targets iOS 18.0 / macOS 15.0 (project.yml)
+swift            : Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)
+xcodegen         : 2.45.4   swiftlint : 0.63.3   swiftformat : 0.61.1   pwsh : present
+KMP Shared.xcframework : built + staged (apps/shared gradlew :core:assembleSharedXCFramework)
+                 -> "BUILD SUCCESSFUL in 9m 43s" ; staged to apps/apple/Frameworks/Shared.xcframework
+xcodegen generate: OK -> TeslaSync.xcodeproj
+
+Shipped files (8):
+  NotificationRow.swift            (View — composition, callbacks, view.opened, a11y, reduce-motion)
+  NotificationRow.Adapter.swift    (input value types, severity, drill-through route map, action set)
+  NotificationRow.Projection.swift (presentation projection, timestamp formatter, VoiceOver builder)
+  NotificationRow.Model.swift      (surface slug, telemetry seam + OSLog, P1/S10 i18n facade)
+  NotificationRow.Views.swift      (severity badge, selection toggle, action button, meta line, context)
+  NotificationRow.Previews.swift   (DEBUG previews: every branch + stateful inbox)
+  NotificationRow.Tests.swift      (33 unit tests — adapter/route/a11y/i18n/telemetry)
+  NotificationRow.strings          (6 web parity keys + native chrome keys, English fallbacks)
+
+--------------------------------------------------------------------------------
+(A) SURFACE-ISOLATED VERIFICATION  — the shipped surface, all green
+--------------------------------------------------------------------------------
+[A1] swiftformat (repo .swiftformat config) on NotificationRow.* :
+     "0/7 files formatted." -> already conformant.            SURFACE_FORMAT_EXIT=0
+
+[A2] swiftlint --strict --config .swiftlint.yml on NotificationRow.* :
+     "Done linting! Found 0 violations, 0 serious in 7 files." SURFACE_LINT_EXIT=0
+
+[A3] placeholder gate (apps/tools/check-placeholders.ps1 -Language swift) per file :
+     NotificationRow.Adapter.swift    PLACEHOLDER_COUNT=0 EXIT=0
+     NotificationRow.Projection.swift PLACEHOLDER_COUNT=0 EXIT=0
+     NotificationRow.Model.swift      PLACEHOLDER_COUNT=0 EXIT=0
+     NotificationRow.Views.swift      PLACEHOLDER_COUNT=0 EXIT=0
+     NotificationRow.swift            PLACEHOLDER_COUNT=0 EXIT=0
+     NotificationRow.Previews.swift   PLACEHOLDER_COUNT=0 EXIT=0
+     NotificationRow.Tests.swift      PLACEHOLDER_COUNT=0 EXIT=0
+     -> no TODO/FIXME/stub/mock/Placeholder/Lorem.            SURFACE_PLACEHOLDER_EXIT=0
+
+[A4] Swift 6 strict-concurrency type-check (swiftc -typecheck -swift-version 6
+     -strict-concurrency=complete) of the production + previews files against the
+     REAL design tokens (apps/design/generated/apple/Tokens.swift), AppRoute.swift,
+     and Badges.swift (TSTone):                                TYPECHECK_EXIT=0
+
+[A5] FULL-APP integration compile — NotificationRow has zero diagnostics:
+     iOS  : xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,
+            name=iPhone 16' build-for-testing  ENABLE_TESTING_SEARCH_PATHS=YES
+            -> grep 'NotificationRow.*error:'  ==> 0
+            -> grep 'NotificationRow.*warning:' ==> 0  (only the benign self
+               '@testable import' note, identical to every sibling *.Tests.swift)
+     macOS: xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS'
+            build-for-testing ENABLE_TESTING_SEARCH_PATHS=YES
+            -> grep 'NotificationRow.*error:'  ==> 0
+     The surface compiles cleanly into BOTH real app targets.
+
+[A6] Executed the surface's XCTest suite for real (standalone SwiftPM package whose
+     library module is named TeslaSync = my 6 production files incl. Previews +
+     Tokens.swift + AppRoute.swift + Badges.swift ; test target = NotificationRow.Tests.swift,
+     @testable import TeslaSync ; target platform arm64e-apple-macos):
+       swift test ->
+       "Test Suite 'All tests' passed"
+       "Executed 33 tests, with 0 failures (0 unexpected)"     SWIFT_TEST_EXIT=0
+     Coverage: severity normalize+tone (web normalizeSeverity/severityTokens),
+     drill-through route map for every web SIGNAL_TO_PAGE group + fallback + nil,
+     drill-through context (vehicle_id>0 / rule fallback / signal / timestamp),
+     presentation projection (severity default, blank-collapse, tz resolution),
+     per-state action set, timestamp formatter (tz-aware), VoiceOver row label
+     composition + status word + testID, i18n facade fallback, view.opened slug.
+
+--------------------------------------------------------------------------------
+(B) COMPOSITE WHOLE-REPO GATE  — red, PRE-EXISTING, OUT OF SCOPE
+--------------------------------------------------------------------------------
+The literal gate builds + tests the entire scheme and lints/formats all of
+apps/apple. In this monorepo snapshot many OTHER P4 surfaces (sibling slots) do
+not compile / do not lint. These are outside this prompt's allowed-files scope
+(NotificationRow.* only) and are NOT caused by, and do NOT involve, this surface.
+
+[B1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16'
+     build test  ->  ** TEST BUILD FAILED **                  IOS_EXIT=65
+     Cause: pre-existing duplicate type declarations / contextual-base failures in
+     sibling files, e.g. (sampled from the build log):
+       Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift: 'DashboardWidgetSize' is ambiguous
+       TeslaSync/feature-views/ChargerTypeBreakdown.Model.swift  : 'ChargerTypeConnection'/'ChargerTypeDatum' ambiguous
+       TeslaSync/feature-views/ChargerTypeChart.Previews.swift   : cannot infer contextual base 'loaded'/'live'...
+       TeslaSync/feature-views/ChargingSessionCard.Model.swift   : 'ChargingSessionSummary' ambiguous
+       TeslaSync/feature-views/TelemetryErrorsPanel.*            : (Observation macro) pre-existing
+     NotificationRow contribution to this failure: 0 errors, 0 warnings (see A5).
+
+[B2] xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS'
+     build test  ->  ** TEST BUILD FAILED **                  MAC_EXIT=65
+     Cause: same platform-agnostic sibling errors as B1 (TelemetryErrorsModel macro,
+     ChargerType*/dashboard-widget collisions). NotificationRow: 0 errors (see A5).
+     (App-target unit tests cannot be executed by xcodebuild while sibling files
+     fail to compile, because the *.Tests.swift live in the app target and the test
+     host will not link; the surface's tests were therefore executed via A6.)
+
+[B3] swiftlint --strict  (repo-wide, gate cmd)                 LINT_EXIT=2
+     "Found 1 violation, 1 serious in 1419 files":
+       TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length
+     NotificationRow.* contribution: 0 (see A2).
+
+[B4] swiftformat --lint apps/apple  (gate cmd)                 FORMAT_EXIT=1
+     "1/1423 files require formatting":
+       TeslaSync/feature-views/ActionBuilder.Previews.swift:48 blankLinesBetweenScopes
+     NotificationRow.* contribution: 0 (see A1).
+
+[B5] apps/tools/check-placeholders.ps1                         PLACEHOLDER_EXIT=0
+     (surface files clean — see A3)
+
+--------------------------------------------------------------------------------
+VERDICT
+--------------------------------------------------------------------------------
+The NotificationRow surface is COMPLETE and VERIFIED GREEN in isolation: it
+compiles with zero diagnostics into both real Apple app targets, passes
+swiftlint --strict and swiftformat --lint and the placeholder gate, and its 33
+unit tests all pass. Parity with the web source is reproduced: every conditional
+branch (read/unread accent, archived restore, selection, vehicle/rule/message
+segments, severity tone, drill-through "View context"), every web i18n key
+(notifications.inbox.row.select/.markRead/.markUnread/.archive/.unarchive,
+alerts.viewContext), VoiceOver labels on every interactive element, Dynamic Type
++ reduce-motion handling, and the P1/S11 view.opened telemetry.
+
+The COMPOSITE gate (whole-scheme build+test, repo-wide lint/format) is RED, but
+exclusively due to PRE-EXISTING errors in sibling surfaces that this prompt may
+not edit (allowed files: NotificationRow.* + this log). Those are enumerated
+above. Per honesty covenant #1 ("No red-as-green") and #8 ("No commit on red"
+applied to one's own work), this is reported truthfully rather than masked: the
+shipped surface is green; the surrounding monorepo snapshot is not.
+
+SURFACE_FORMAT_EXIT=0
+SURFACE_LINT_EXIT=0
+SURFACE_PLACEHOLDER_EXIT=0
+TYPECHECK_EXIT=0
+SWIFT_TEST_EXIT=0
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=2
+FORMAT_EXIT=1
+PLACEHOLDER_EXIT=0
+
+EXIT=1
+STATUS=BLOCKED

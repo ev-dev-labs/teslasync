@@ -1,0 +1,136 @@
+I'll start by exploring the environment and understanding both the web source and the existing Apple app structure.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. Let me study the canonical pattern (the just-modified `AIUsageCard` set) and the shared infrastructure before deciding how to proceed.
+
+Xcode.app exists. Let me test whether it's usable via `DEVELOPER_DIR` override and check available simulators, while reading the conversion logic.
+
+**Major finding:** Xcode 26.5 is available via `DEVELOPER_DIR`, and an iPhone 16 simulator is already booted. The capability is NOT blocked. Let me check the build prerequisites (Shared.xcframework staging) before committing to a long build.
+
+Critical: `Shared.xcframework` isn't pre-built and requires a Gradle/Kotlin-Native build. Let me kick that off in the background (it's the long pole for the gate) and continue analysis in parallel.
+
+Let me read the energy formatter and start the long-pole xcframework build in the background.
+
+The Gradle build is running in the background. Let me find the remaining shared pattern pieces (the projection, freshness chip, loading/error views) and the `TripLocation` type.
+
+Now I have the full file decomposition. Let me read the Projection, Chrome, and AdapterTests files to mirror every convention.
+
+I see references to `TSSkeleton`, `TSButton`. Let me verify the shared component APIs I'll use and read the AdapterTests pattern.
+
+I now have the complete pattern. Let me check for symbol collisions and the lint/format configs before writing, and check on the background Gradle build.
+
+No collisions. Gradle build is progressing. Let me read the lint/format configs to conform exactly.
+
+No collisions, configs understood (≤120 cols, no trailing commas on last element, `before-first` wrapping, testable-import-bottom). The Gradle build runs in the background. Let me write the surface. Starting with the pure adapter core.
+
+Now the presentational subviews.
+
+Now the chrome (freshness chip, refresh, banner, loading, error).
+
+Now the main surface view.
+
+Now the previews.
+
+Before writing tests, I must verify how the `*.Tests.swift` files in `feature-views` are routed to a target (the app target lists that path, but test files can't compile into the app). Let me investigate the XcodeGen wiring definitively.
+
+There's a `Tests/Unit/FeatureViews/` directory. Let me see how it relates to the feature-views test files.
+
+The Gradle xcframework build completed. Let me confirm it, then generate the Xcode project to definitively learn how the sibling test files are routed to a target.
+
+Xcframework built successfully (12.5 min). Let me stage it, generate the Xcode project, and inspect how the sibling test files are routed to targets.
+
+Project generated and framework staged. Let me decisively check which target the sibling test files belong to by inspecting the generated project.
+
+Decisive: feature-view `*.Tests.swift` files compile into the **app target** (261 of them) — so my tests must live in `feature-views/` exactly like the sibling, and they're compile-validated by the build. Let me write both test files mirroring the sibling.
+
+Now the projection, model, and accessibility tests.
+
+Let me fix the messy `testLiveResetsStaleAutoRefreshArming` (leftover convoluted code).
+
+Now the i18n strings catalog.
+
+All 10 files created. Now let me run the fast verification tools (swiftformat + swiftlint) on my new files and fix any issues before the full build.
+
+swiftformat found auto-fixable style issues (number grouping threshold is 6 digits, property-body wrapping, redundant type/raw-values). Let me auto-fix with swiftformat and review.
+
+swiftformat passes. Let me verify the auto-fixed energy enum still behaves correctly, then run swiftlint.
+
+The energy enum auto-fix is correct. One swiftlint issue: `row(...)` has 6 params (max 5). Let me refactor to derive the stop inside `row` from `input` + `index`, keeping the single `minutes` resolution.
+
+Both linters pass cleanly (0 violations). Now the placeholder check, then the full build.
+
+The placeholder check only scans `.swift` files. Let me verify my files contain none of the forbidden patterns (case-insensitive), and also run the script's self-test to confirm it works here.
+
+My files are clean (no forbidden patterns) and the checker self-test passes. Now the main verification: the full `xcodebuild build` for the iOS scheme (compiles the whole app target including my 9 files). Let me start it in the background.
+
+While the build runs, let me verify a subtle point: whether the synthesized memberwise initializer gives my optional `systemImage` a default of `nil` (swiftformat's `redundantNilInit` strips explicit `= nil`, so I rely on synthesis).
+
+Confirmed — synthesized memberwise init defaults the optional to `nil`. Let me check build progress and re-read the edited projection.
+
+Build failed with a Swift compiler error. Let me extract the actual error from the log.
+
+The failure is pre-existing and not in my files: `AIRestorePanel.Tests.swift:18: unable to resolve module dependency: 'XCTest'`. The feature-view `*.Tests.swift` files compile into the **app target**, which doesn't resolve XCTest by default. Let me investigate how the build is intended to handle this.
+
+The AIRestorePanel sibling has a completed log — that's the exact pattern. Let me read it and the CI workflow to see how the build gate is intended to run.
+
+This is the well-established pattern: the whole-app `xcodebuild build test` is **DEFERRED** across all 117+ sibling surfaces because the app target is broken by pre-existing, out-of-scope issues (notably feature-view test files needing `ENABLE_TESTING_SEARCH_PATHS`, plus sibling ambiguities). The honest requirement is to prove **my** surface compiles in-context. Let me first try resolving the XCTest issue via a CLI override (no disallowed-file edits) to get the strongest evidence.
+
+While that builds, let me check progress.
+
+The build is still running. Let me prepare the executable logic harness (proving the real Adapter+Projection arithmetic) in parallel.
+
+The iOS build with testing search paths finished. Let me read the result.
+
+Definitive evidence: with `ENABLE_TESTING_SEARCH_PATHS=YES` the XCTest issue clears, and the app build now fails only on **pre-existing sibling breakage** — `VehicleHeroWidget.Adapter.swift` duplicate/ambiguous type declarations in `dashboard-widgets/` (out of my allowed scope). Zero errors originate in any TripLegList file. This is the documented DEFERRED disposition across 117+ siblings.
+
+Let me now produce the in-scope proof my surface is correct: (1) an executable logic harness over the real Adapter+Projection, (2) a scoped SwiftUI compile against the real shared library. First, check the component library's dependencies and build the harness.
+
+Both facts confirmed: the component library has no `Shared` dependency (enabling a clean scoped compile), and the `VehicleHeroFormat` duplicate is a pre-existing collision between two sibling `dashboard-widgets/` files. Now let me write and run the executable logic harness.
+
+Let me refactor the harness to keep mutable counters local (so it's clean under strict concurrency), then compile and run it.
+
+Now compile and run the harness under Swift 6 strict concurrency.
+
+The harness compiled under Swift 6 strict concurrency and **all 52 logic checks passed**. Now the scoped SwiftUI compile: my 7 surface files + the real component/design library, type-checked under Swift 6 strict concurrency against the macOS SDK (with `-D DEBUG` so previews are included).
+
+Those errors are all in `Sources/Components/DataDisplay/UnitFormatters.swift` (references the units facade in other Sources dirs) — **not my surface**, and my surface doesn't use it. Let me identify the component files with external deps and exclude them, keeping the closure my surface actually needs.
+
+Only `UnitFormatters.swift` has external facade deps (my surface doesn't use it). Let me retry the scoped typecheck excluding just that file, for both SDKs.
+
+macOS scoped typecheck passed (MAC_EXIT=0) — my full surface compiles cleanly against the real component library under Swift 6 strict concurrency. Now the iOS 18 simulator SDK.
+
+Both SDK scoped typechecks pass (iOS + macOS, Swift 6 strict concurrency). Now let me validate the **test files** compile too — by type-checking them in-module (`-module-name TeslaSync`) with the XCTest framework search path (the `ENABLE_TESTING_SEARCH_PATHS` equivalent).
+
+All errors are "cannot find `XCTAssertEqual` in scope" — XCTest didn't load in my ad-hoc swiftc invocation; **none of my surface symbols errored**. Let me isolate the correct XCTest import flags with a trivial probe, then re-validate.
+
+`-I <platform>/Developer/usr/lib` is the missing piece (XCTest overlay). Now let me re-validate the test files in-module with the correct flags.
+
+All compiles clean (TESTS_EXIT=0): the 7 surface files + both XCTest files + real component library type-check under Swift 6 strict concurrency. Let me extend the harness to also **execute** the @MainActor model logic (telemetry, stale auto-refresh, start/stop), so every test scenario is exercised, not just compiled.
+
+Outstanding — the harness now **executes 67/67 checks** (pure logic + @MainActor model wiring), all green under Swift 6 strict concurrency. 
+
+Now I'll assemble the gate log. First let me capture the scoped gates' real exit codes (including a scoped placeholder scan over copies of my actual files).
+
+All scoped gates green (format/lint/placeholder = 0). Now let me capture the **real** whole-tree gate exit codes (the documented DEFERRED reds) by running the exact gate commands. Starting the iOS `build test`.
+
+While the iOS gate runs (it will fail at the pre-existing sibling compile), let me verify my git footprint is clean — only my files should be committable, and generated artifacts must be ignored.
+
+Git footprint is clean: my 10 `TripLegList.*` files are the only additions; generated artifacts are gitignored; the `AIUsageCard.*` modifications are pre-existing (not mine, won't be staged). Let me wait for the iOS gate to finish.
+
+iOS gate captured: **IOS_GATE_EXIT=65**, first error is the pre-existing sibling `AIRestorePanel.Tests.swift` XCTest dependency, and **TRIPLEG_ERR_COUNT=0** (zero errors in any TripLegList file). Now the macOS gate.
+
+While the macOS gate runs, let me wait for its result before writing the log.
+
+Both gates captured. **iOS_EXIT=65** (pre-existing sibling XCTest dep + VehicleHero duplicate decls), **MAC_EXIT=65** (macOS dev-certificate signing), **zero TripLegList errors** in either. Now let me write the comprehensive, honest gate log.
+
+Now a final re-verification of all scoped gates before committing.
+
+All green: 10 files present, swiftformat clean, swiftlint `0 violations, 0 serious in 9 files`. Now let me stage only my files + the log and commit.
+
+Staged set is exactly my 10 files + the log. Committing.
+
+Committed cleanly as `add40bfad`. Let me clean up the temporary scratch files I created in `/tmp`.
+
+The `-q` flag rejects multiple paths — harmless. Let me do a final confirmation that artifacts are ignored, then wrap up.
+
+The task is complete. Final state confirmed: commit `add40bfad` contains exactly my 10 `TripLegList.*` files + the gate log (2,085 insertions); build artifacts are git-ignored; temp scratch removed.
+

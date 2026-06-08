@@ -1,0 +1,124 @@
+=== P4 Modal / dialog 0004 FeedbackModal (Apple) ===
+
+Surface : apps/apple/TeslaSync/modals-dialogs/FeedbackModal.*
+Web spec: web/src/components/feedback/FeedbackModal.tsx
+Host    : macOS (Darwin), Xcode 26.5, iPhone 16 simulator present, Swift 6.
+
+────────────────────────────────────────────────────────────────────────────
+SHIPPED FILES (10) — split to satisfy swiftlint file_length (≤400)
+────────────────────────────────────────────────────────────────────────────
+  FeedbackModal.swift            180  modal surface (header+chip+close, body switch, footer)
+  FeedbackModal.Model.swift      400  telemetry/connection/submit-lifecycle/input/resolved/
+                                      projection/Source seam/@Observable model/InMemory/i18n
+  FeedbackModal.Adapter.swift    383  pure: category catalog, limits, draft, validation,
+                                      context, payload builder, console truncate, serializer, a11y
+  FeedbackModal.Fields.swift     189  category select, title/body fields (on-blur), char counter
+  FeedbackModal.Views.swift      212  form composition + auto-attached context panel
+  FeedbackModal.Chrome.swift     194  submit-error alert, actions row, freshness chip, banner,
+                                      loading/error chrome
+  FeedbackModal.Previews.swift   132  #Preview ×10 (ready/filled/invalid/submitting/submit-error/
+                                      empty/loading/error/stale/offline)
+  FeedbackModal.Tests.swift      298  XCTest: catalog/validation/console/serializer/payload/
+                                      context/projection/a11y
+  FeedbackModal.ModelTests.swift 203  XCTest: model wiring/telemetry/submit lifecycle/freshness
+  FeedbackModal.strings           71  i18n catalog (web parity keys + native chrome keys)
+
+────────────────────────────────────────────────────────────────────────────
+HOST-RUNNABLE GATES (all green)
+────────────────────────────────────────────────────────────────────────────
+  swiftformat --lint TeslaSync/modals-dialogs ........ 0/9 files require formatting   FORMAT_EXIT=0
+  swiftlint lint --strict <10 files> ................. Found 0 violations, 0 serious   LINT_EXIT=0
+  check-placeholders.ps1 -Path …/modals-dialogs ...... PLACEHOLDER_COUNT=0 ALLOWED=2   PLACEHOLDER_EXIT=0
+      → ALLOWED=2 are `// parity:allow` opt-outs on the two web i18n keys whose names
+        literally contain "placeholder" (feedback.form.title/body.placeholder); the web
+        KEY must be preserved for P1/S10 catalog parity. Same mechanism the merged
+        sibling NotificationChannelsView uses. Zero stubs/TODO/mock/Lorem in shipped code.
+  swiftc -typecheck iPhoneSimulator (ios18.0-simulator, swift6, strict-concurrency, -D DEBUG)  IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (macos15.0, swift6, strict-concurrency, -D DEBUG) ...............  MAC_TYPECHECK_EXIT=0
+  swift test (isolated SwiftPM pkg, module TeslaSync, Swift 6, release) ........... 53/53 passed, TEST_EXIT=0
+      → FeedbackCategoryCatalogTests · FeedbackValidationTests · FeedbackConsoleTailTests ·
+        FeedbackErrorReportSerializerTests · FeedbackPayloadBuilderTests · FeedbackContextTests ·
+        FeedbackProjectionTests · FeedbackAccessibilityTests · FeedbackModalModelTests
+  xcodegen generate (project spec with the 10 new files) .......................... XCODEGEN_EXIT=0
+      → grep FeedbackModal TeslaSync.xcodeproj/project.pbxproj → all 10 files enumerated.
+
+  Isolated-package dependency set compiled alongside the surface (real SDKs, no Shared.xcframework
+  needed — none of these import the KMP core): design Tokens.swift, Components/UI {Typography,
+  Buttons, Pickers, Fields, Cards}, Components/Feedback/Skeletons, Components/Motion/Motion,
+  Design {TSDesign, TSMaterial}.
+
+────────────────────────────────────────────────────────────────────────────
+SUPPORTING INFRA (documented — outside the surface dir; required so the new
+`modals-dialogs` tier exists in the build/gate, mirroring feature-views /
+dashboard-widgets which a P4-core/bootstrap prompt registered earlier)
+────────────────────────────────────────────────────────────────────────────
+  project.yml      : add `- path: TeslaSync/modals-dialogs` to the iOS TeslaSync and the
+                     macOS TeslaSync-macOS app-target sources (one line each).
+  .swiftlint.yml   : add `TeslaSync/modals-dialogs` to `included` so the tier is linted by the gate.
+  apps/macos-pending-verifications.md : add the audit row for this surface's deferred xcodebuild.
+
+────────────────────────────────────────────────────────────────────────────
+DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test
+────────────────────────────────────────────────────────────────────────────
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. Captured genuine evidence: the scheme build STALLS in its
+    pre-build Run-Script preAction "Stage Shared.xcframework":
+        /bin/sh -c …/SchemeScriptAction-…sh
+        ▸ Assembling Shared.xcframework via Gradle…
+        Starting a Gradle Daemon, 16 busy and 37 stopped Daemons could not be reused…
+    i.e. it never reaches the app-target compile — it is blocked FIRST by the unstaged
+    Shared.xcframework, which the scheme builds via the Kotlin/Native Gradle toolchain
+    (the P1/S3 artifact already tracked macOS-pending; offline Kotlin/Native here).
+
+    Independently verified PRE-EXISTING, UNRELATED app-target blockers (ZERO originate in
+    this surface):
+      • apps/apple/Frameworks/ holds only .gitkeep (Shared.xcframework not staged).
+      • `struct DashboardWidgetSize` redefined across 15 files (Sources/DashboardWidgets/* +
+        TeslaSync/dashboard-widgets/*) → "invalid redeclaration" across the app target.
+      • 261 co-located feature-view/dashboard-widget *.Tests.swift `import XCTest` into the
+        app target (this surface adds 2 more of the SAME established pattern — routed to the
+        XCTest bundle by the P99 acceptance-gate tooling on a macos-latest runner).
+      • No macOS development-signing identity (ADR-012).
+    grep FeedbackModal /tmp/xcb.log → 0 lines: zero errors from this surface.
+
+    This surface's OWN code is proven to compile against the real iOS-18 + macOS-15 SDKs
+    (typechecks above) and its logic runs green (53/53 XCTest). The full-app build/test is
+    recorded in apps/macos-pending-verifications.md for the P99 acceptance gate on a
+    macos-latest runner with signing identities + the Kotlin/Native toolchain.
+
+────────────────────────────────────────────────────────────────────────────
+PARITY NOTES (web source is THE specification)
+────────────────────────────────────────────────────────────────────────────
+  • Reproduced web branches: category select (bug/feature/other), title (5–120) + details
+    (20–4000) with on-blur zod-equivalent validation, the "Auto-attached context" panel
+    (Page / App version / client), the two consent toggles (recent errors ON with live
+    count, log/console tail OFF) with helper text, the submit-error alert, Cancel + Send
+    with the "Submitting…" in-flight state + disabled-when-invalid, success → onClose.
+  • Limits/trim/console-tail-slice/conditional-attachment ported verbatim from the source.
+  • P4 leaf contract honoured truthfully for a write surface: phase loading/empty/error/ready
+    from the auto-context bind; connection live/stale/offline (offline disables submit — a
+    POST can't proceed offline; stale auto-refreshes the context once); submit lifecycle
+    idle/submitting/submitted/failed.
+  • i18n: every web `t()` key present in FeedbackModal.strings; three values carry a
+    documented native adaptation while preserving the web KEY (userAgent→"Device",
+    includeConsole→"log messages", includeErrors `{{count}}`→`%lld`).
+  • No view performs I/O — all data flows through the P1/S8 `FeedbackSource` seam; telemetry
+    emits `view.opened surface=FeedbackModal` (P1/S11).
+
+────────────────────────────────────────────────────────────────────────────
+ACCEPTANCE CRITERIA
+────────────────────────────────────────────────────────────────────────────
+  [x] Surface renders on Apple with all web states reproduced + the P4 leaf states.
+  [x] Hooks bind to the shared P1/S8 source seam; no direct HTTP from the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog.
+  [x] Accessibility labels on every interactive element + per-region summaries.
+  [x] Tests: adapter unit tests + projection tests + model/submit-lifecycle tests +
+      a11y label tests (53 total, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (stub gate COUNT=0; 2 parity opt-outs).
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing unrelated blockers:
+      Shared.xcframework Gradle preAction + DashboardWidgetSize 15× + 261 co-located XCTest);
+      host-runnable equivalents (real-SDK typecheck both platforms + 53/53 XCTest) green.
+
+EXIT=0
+STATUS=DONE

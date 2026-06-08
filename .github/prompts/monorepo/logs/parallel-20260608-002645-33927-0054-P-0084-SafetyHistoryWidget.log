@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure to understand the task context, the web source, and the existing Apple app patterns.
+
+Found a key capability issue: `xcodebuild` requires full Xcode but only Command Line Tools are active. Let me investigate the toolchain further before deciding, and read the web source + Apple app structure in parallel.
+
+Full Xcode is installed at `/Applications/Xcode.app` — the issue is just the active developer dir. Let me verify `xcodebuild` works via `DEVELOPER_DIR` override and explore the existing Apple dashboard-widgets patterns in parallel.
+
+Capability confirmed: Xcode 26.5, iPhone 16 simulator booted, swiftlint/swiftformat present. The `dashboard-widgets/` dir already has 418 files (many existing widgets). Let me study the conventions by examining a similar existing event-feed widget and the shared infrastructure.
+
+`SentryEventLogWidget` is the ideal template — same `security` category, same 2×4 size, event-feed based. Let me read its full file set to learn the exact conventions.
+
+Now the remaining Sentry files — Adapter, Views, Previews, Tests, strings — to fully internalize the pattern.
+
+Excellent template. Now let me read the Sentry tests/previews/strings and locate the shared infrastructure types (`DashboardWidgetSize`, `TSSpacing`, `Color.TS`, `Font.TS`, `TSSkeleton`, `TSTone`).
+
+I have the full template pattern. Now let me locate the shared infrastructure types and confirm how files are included in the build (project.yml).
+
+The `TeslaSync/dashboard-widgets` dir is a source path for the app target — but the `.Tests.swift` files import XCTest. I need to understand how tests are wired. Let me read project.yml fully.
+
+Now I need to understand how `.Tests.swift` files (which import XCTest) coexist in the app-target source dir, and whether the gate actually compiles. Let me check the logs of sibling widgets, xcodegen availability, and the build scaffold.
+
+`xcodegen` is present but `Shared.xcframework` is unbuilt (KMP dependency). Let me read sibling gate logs (especially SentryEventLogWidget 0086) to see the real expected outcome, and inspect the framework build script.
+
+Now I understand the established precedent (code-complete + host gates green, full Xcode app `build test` DEFERRED due to KMP `Shared.xcframework` + integration registration being out of scope). Let me read the SentryEventLogWidget 0086 log in full to reproduce the exact verification approach.
+
+This is the definitive precedent. Now let me read the remaining web-source dependencies (safetyEnum, numberFormat, WidgetShell, shared EventFeed, the hook) and check how native siblings handle a compact+statcards+feed layout.
+
+Let me read the SafetySnapshot type, shared EventFeed, StatCard, WidgetProps, and on the native side pin down the canonical shared types (DashboardWidgetSize/Registration, tokens, TSTone, TSSkeleton).
+
+Let me pin down the exact canonical declarations and APIs I must reuse (not redeclare), plus read the shared web EventFeed and StatCard for parity.
+
+Critical finding: the shared registry types are redeclared across ~30 sibling widgets (parallel-authored, isolated). SentryEventLogWidget 0086 (my closest sibling) instead **references** them without redeclaring and verifies in isolation with shims. I'll follow the 0086 precedent. Let me read the real token/registry/skeleton interfaces and the web shared EventFeed + StatCard.
+
+I have all token/registry/skeleton APIs. Let me read the web shared EventFeed, StatCard, and fmtNumber to nail feed/statcard parity and number formatting.
+
+I now have everything needed for faithful parity. Let me read the lint/format configs and the web `TimelineItem` (feed-row parity) before writing, and set up a todo list.
+
+Let me read the placeholder gate patterns to avoid tripping it, then set up my todo tracker.
+
+I have a complete understanding. Let me set up tracking and write the plan, then build the 7 surface files.
+
+Now I'll create the projection core — `SafetyHistoryWidget.Adapter.swift`.
+
+Now the Model — state-holder seam, telemetry, DTO, registry, strings facade.
+
+Now the i18n strings catalog.
+
+Now the presentational subviews.
+
+Now the previews (one per state) plus the compact sub-view preview.
+
+Now the comprehensive test suite.
+
+All 7 files are written. Now let me set up the isolated verification harness (matching the 0086 precedent): real generated `Tokens.swift` + minimal shims for the registry/TSTone/TSSkeleton core, then typecheck against the iOS 18 simulator and macOS 15 SDKs.
+
+Badges.swift is self-contained. I'll use a minimal TSTone shim. Let me build the typecheck harness and run the iOS 18 + macOS 15 SDK typechecks.
+
+iOS 18 typecheck is green (including Previews + strict concurrency). Now macOS 15.
+
+Both SDK typechecks pass. Now the executable test harness — a SwiftPM package that runs the full XCTest suite.
+
+All **48 tests pass** (0 failures). Now the lint/format gates. First check formatting on my files.
+
+swiftformat wants auto-fixable changes (wrap, redundantReturn, conditionalAssignment) in 2 files. Let me apply formatting to my files, then re-verify.
+
+Formatting applied; my files now pass. Let me re-sync to the harness/package and re-verify (typecheck + tests still green after formatting), plus run swiftlint.
+
+48/48 tests still pass. swiftlint flags 3 issues: two files exceed the 400-line house limit and one preview function is too long. I'll split the Adapter and Tests into multiple `SafetyHistoryWidget.*` files (allowed by the glob) and shorten the preview helper. Let me find split points.
+
+Tests still pass. I need to split the Adapter and Tests files to satisfy the 400-line house limit (multiple `SafetyHistoryWidget.*` files are the codebase norm and within the allowed glob), and shorten a preview helper. Let me view exact cut points.
+
+Cut points confirmed. Let me mechanically split Adapter→Adapter+Stats and Tests→Tests+ModelTests, then fix the preview helper.
+
+All files now under 400 lines. Now fix the over-long preview helper by splitting it.
+
+Now re-format all files and re-run swiftlint on the full split set.
+
+The preview helper used `static` at file scope (invalid) and has over-long lines. Let me fix both.
+
+0 violations on all 8 files. Now rebuild the harness/package with the new split file set and re-run all three SDK/test verifications.
+
+Both SDK typechecks green. Now the executed test suite.
+
+48/48 pass after split. Now the full-tree gate commands: `swiftformat --lint apps/apple`, `swiftlint --strict`, the placeholder gate, and `xcodegen generate`.
+
+My files are clean; the lone format violation is a pre-existing sibling (`ActionBuilder.Previews.swift`, feature-views — not mine, outside allowed files). Now swiftlint full-tree, the placeholder gate, and xcodegen.
+
+One pre-existing violation total in the full tree (not mine — my 8 files were 0). Let me identify it for disclosure, then run the placeholder gate and xcodegen.
+
+The lone swiftlint violation is the same pre-existing sibling Sentry disclosed (`LifetimeStatsWidget.Adapter.swift`), and the placeholder hits are all in a sibling (`YearReviewWidget.*`). My files are clean. Let me produce scoped placeholder evidence and run `xcodegen generate`.
+
+My files: placeholder gate EXIT=0. Now `xcodegen generate` to confirm the surface files register into the targets.
+
+`xcodegen generate` EXIT=0 — all 9 surface files registered (54 refs across iOS+macOS targets). Now capture the honest DEFERRED evidence for the full Xcode app build (the missing KMP `Shared.xcframework`), matching the 0086 precedent.
+
+Captured the identical `BUILD_EXIT=65` missing-`Shared.xcframework` evidence (KMP staging, out of allowed files) — confirming the Xcode app build/test is legitimately deferred. Let me verify the working tree shows only my files changed, then clean up temp artifacts.
+
+I notice pre-existing modified files (`AIUsageCard.*` in feature-views, two web admin files) that I did **not** touch — I only ever passed my own explicit file paths to swiftformat. Let me confirm these aren't my doing before scoping the commit.
+
+Confirmed: those modified files (`AIUsageCard.*` — a different surface 0237; `BackupRestorePage.tsx` — a web file) are pre-existing dirty state I never touched. I'll scope my commit strictly to my files + log. Let me gather final line counts and write the gate log.
+
+Now I'll write the comprehensive gate log with all the real evidence collected.
+
+Now I'll stage only my surface files + the log (leaving the pre-existing unrelated dirty files untouched) and commit.
+
+This `git add` is hanging abnormally. Let me stop it and investigate (possible index lock or hook).
+
+It's a linked worktree with **Git LFS** configured (`filter.lfs.process = git-lfs filter-process`) — the likely cause of the hang. Let me check LFS responsiveness and whether my file types are even LFS-tracked.
+
+Root cause: **git-lfs is declared in config but not installed**, so `git add` hangs spawning the missing `git-lfs filter-process`. My file types aren't LFS-tracked, so I'll neutralize the LFS filter for these git operations.
+
+Staged exactly my 9 surface files + the log, nothing else. Now commit (LFS filter neutralized, with the required trailer).
+
+Commit `dd0afc7d8` created with exactly my 9 surface files + the log (2575 insertions). Let me do a final verification that the tree is clean for my scope and the pre-existing unrelated files remain untouched.
+
+All verified. The commit `dd0afc7d8` contains exactly my 9 surface files + the log; no SafetyHistoryWidget files remain dirty, and the pre-existing unrelated files were left untouched. Let me close out the todos.
+
+All todos complete. The task is fully done and verified.
+

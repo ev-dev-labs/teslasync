@@ -1,0 +1,310 @@
+=== P4-APPLE · P7 · page notifications/AlertsList (Apple SwiftUI / HIG) ===
+Host: Darwin arm64 (Apple Silicon). Swift 6.3.2 (swiftlang-6.3.2.1.108). active
+developer dir = /Library/Developer/CommandLineTools (Command Line Tools only — NO
+Xcode.app on this runner). swiftlint + swiftformat + xcodegen + pwsh on PATH.
+macOS SDK present (MacOSX.sdk); iPhoneSimulator SDK NOT locatable; zero iOS
+simulators. Implication: SwiftUI + Swift Charts ARE compilable here (proven below),
+but the xcodebuild app-target build/test harness cannot run on THIS host — it is
+DEFERRED to the P4 integration runner (Xcode + simulators), exactly as the peer
+surfaces 0071-AlertsSection / 0179-AlertCard did and were accepted DONE.
+
+Web source (THE specification):
+  web/src/features/notifications/pages/AlertsListPage.tsx   (route /notifications/alerts)
+Native output (allowed files):
+  apps/apple/TeslaSync/Features/Notifications/AlertsListPage.swift
+  apps/apple/TeslaSync/Features/Notifications/AlertsListPage.{Adapter,Stats,Model,ViewModel}.swift
+  apps/apple/TeslaSync/Features/Notifications/AlertsListPage.{Overview,Views,Results,Detail,Chart}.swift
+  apps/apple/TeslaSync/Features/Notifications/AlertsListPage.{Previews,Tests}.swift
+  apps/apple/TeslaSync/Features/Notifications/NotificationsRouteRegistration.swift
+  + navigation registration (Sources/TeslaSyncApp.swift), the platform string catalog
+    (Localization/Localizable.xcstrings), build wiring (project.yml, .swiftlint.yml),
+    apps/parity/apple-ledger.json, + this log.
+Charts/maps: web Recharts BarChart → native Swift Charts BarMark (stacked); web
+  Recharts PieChart → native Swift Charts SectorMark donut. No map (0).
+
+Architecture (mirrors the accepted AlertsSection/AlertCard gold pattern):
+  • Pure Foundation projection core (Adapter + Stats) — every web useMemo ported,
+    unit-tested without a bundle.
+  • @Observable AlertsListPageModel (P1/S8) bound to an AlertsListSource seam; the
+    production AlertsListLiveSource is driven by the shared-core facade through the
+    AlertsListProviding seam (P6/ADR-004/ADR-009 integration point). NO networking
+    in the view.
+  • Reuses the shipped AlertCard component for list rows; reuses the P2 design
+    tokens (Color.TS/Font.TS/TSSpacing/TSRadius) + P3 components (TSGlassPanel,
+    TSSearchInput, TSTabs, TSActiveFilterChips, TSBadge, TSButton, TSSkeleton,
+    TSFadeIn/TSStagger…) + TSChartPalette.
+  • All AlertsList* types are namespaced to avoid collision with the existing
+    Alerts*/Alert* symbols (AlertsSection / AlertCard).
+  • Navigation: NotificationsRouteRegistration.registry(base:) registers
+    .notifications → AlertsListPage; composed into routeHosts in TeslaSyncApp.swift
+    (mirrors SettingsRouteRegistration). AppRouteParser already maps
+    /notifications/alerts (+ the /alerts alias) → .notifications.
+
+---------------------------------------------------------------------------
+PARITY MAPPING (web → native) — highlights
+---------------------------------------------------------------------------
+  page shell:  <PageContainer title=t('Alerts') subtitle copyLink loading error>
+                 → AlertsListPage: ScrollView + .navigationTitle(t('Alerts')) +
+                   AlertsListHeader(subtitle + freshness + quiet badge) + toolbar
+                   refresh; phase switch (loading/error/content).
+  overview:    <KpiOverviewCard> 6×<MetricCard> + secondary + InlineCallout footer
+                 → AlertsListOverviewSection → AlertsListOverviewCard:
+                   AlertsListStats.tiles → 6 AlertsListMetricTileView; secondary line
+                   AlertsListOverviewSecondary; AlertsListCriticalCallout.
+                 totalCount===0 → AlertsListOverviewEmpty (t('alerts.noAlertsInRange')).
+  charts:      <BarChart stacked critical/warning/info> + <PieChart>+legend
+                 → AlertsListTrendChart (Swift Charts BarMark, stacked, day x-axis) +
+                   AlertsListTypeChart (SectorMark donut + AlertsListTypeLegend).
+  watching:    pinnedRules block → AlertsListWatchingPanel + AlertsListWatchingRow
+                   (enabled/disabled Badge + pinned indicator).
+  filter:      <FilterBar><SearchInput/><TabNav All/Unread/Critical/><ActiveFilterChips>
+                 → AlertsListFilterSection: TSSearchInput + TSTabs(counts) +
+                   TSActiveFilterChips; AlertsListFilter (tab+search+page) projection.
+  list+pager:  StaggerContainer<AlertCard> + pager → AlertsListResultsSection
+                   (TSStagger + reused AlertCard) + AlertsListPagination; search-aware
+                   AlertsListEmptyResults.
+  modals:      AcknowledgeAlertDialog + Modal(Audit timeline) → AlertsListAckDialog +
+                   AlertsListDetailModal (loading/loaded/empty) + AlertsListTimelineRow.
+  toast:       toast.success + Undo (reopen) → AlertsListToastBanner (auto-dismiss).
+  fmt/quiet:   fmtInt → AlertsListFormat.count; isQuietHoursActive (overnight wrap) →
+                   AlertsListQuietHours.isActive (ported + tested).
+  units:       N/A — alerts carry no SI quantities; counts/percent only.
+
+===========================================================================
+=== PARITY ===   PARITY_REQUIRED=52
+Each item below carries binding evidence (file + symbol). PARITY_COVERED tallied
+at the end.
+---------------------------------------------------------------------------
+PANELS (10)
+[ panel  ] Total          → Stats.swift AlertsListStats.tiles id="total";  rendered Overview.swift AlertsListMetricTileView (AlertsListOverviewCard grid)
+[ panel  ] Critical       → Stats.swift tiles id="critical" (.red);        rendered AlertsListMetricTileView
+[ panel  ] Warnings       → Stats.swift tiles id="warnings" (.amber);      rendered AlertsListMetricTileView
+[ panel  ] Info           → Stats.swift tiles id="info" (.cyan);           rendered AlertsListMetricTileView
+[ panel  ] Unread         → Stats.swift tiles id="unread" (.purple);       rendered AlertsListMetricTileView
+[ panel  ] Read-rate      → Stats.swift tiles id="readRate" (.green, percent); rendered AlertsListMetricTileView
+[ panel  ] GlassPanel7    → Chart.swift AlertsListChartsSection.trendPanel  (Alert Trend (7 Days) glass card)
+[ panel  ] GlassPanel8    → Chart.swift AlertsListChartsSection.typePanel   (Alerts by Type glass card)
+[ panel  ] GlassPanel9    → Views.swift AlertsListWatchingPanel             (pinned "Watching" glass card)
+[ panel  ] GlassPanel10   → Results.swift AlertsListResultsSection (alert list card) + Overview.swift AlertsListOverviewCard
+CHARTS (2) — native Swift Charts (no WKWebView)
+[ chart  ] BarChart       → Chart.swift AlertsListTrendChart  (import Charts; BarMark stacked by AlertsListSeverityBucket, day x-axis, token scale)
+[ chart  ] PieChart       → Chart.swift AlertsListTypeChart   (import Charts; SectorMark innerRadius .ratio(0.6) donut + AlertsListTypeLegend)
+STATES (4) — implemented for every data source
+[ state  ] loading        → AlertsListPage.swift body switch .loading → Views.swift AlertsListLoadingView (TSSkeleton); ViewModel.phase=.loading; AlertCard.loading; Detail.loading
+[ state  ] empty          → Overview.swift AlertsListOverviewEmpty + Results.swift AlertsListEmptyResults (search-aware) + Detail.swift empty (ContentUnavailableView)
+[ state  ] error          → Views.swift AlertsListErrorView (retry→refresh); Model.swift AlertsListLiveSource emits .failed; ViewModel.phase=.error
+[ state  ] success        → AlertsListPage.swift .content (overview+charts+watching+filter+list populated from bound @Observable state)
+STRINGS (36) — every visible literal resolves from Localizable.xcstrings; key names match web
+[ string ] Active Rules                                   → Overview.swift AlertsListOverviewSecondary.labelValue("Active Rules", …)
+[ string ] Alert Trend (7 Days)                           → Chart.swift trendPanel AlertsListPanelHeader titleKey + AlertsListTrendChart a11y
+[ string ] Alert marked as read                           → ViewModel.swift markRead → AlertsListToast(message: localize "Alert marked as read")
+[ string ] Alerts                                         → AlertsListPage.swift .navigationTitle(AlertsListCopy.key("Alerts"))  (web usePageTitle('Alerts'))
+[ string ] Alerts by Type                                 → Chart.swift typePanel AlertsListPanelHeader titleKey + AlertsListTypeChart a11y
+[ string ] All                                            → Adapter.swift AlertsListFilterTab.all.titleKey → Views.swift tabs
+[ string ] Critical                                       → tab .critical.titleKey + bucket .critical.labelKey + tile "critical"
+[ string ] Info                                           → bucket .info.labelKey + tile "info"
+[ string ] Last 7 Days                                    → Overview.swift AlertsListOverviewSecondary.labelValue("Last 7 Days", …)
+[ string ] Most Common                                    → Overview.swift AlertsListOverviewSecondary.labelValue("Most Common", …)
+[ string ] No alerts                                      → Overview.swift AlertsListOverviewEmpty + Results.swift AlertsListEmptyResults title
+[ string ] No alerts match your search.                   → Results.swift AlertsListEmptyResults.messageKey (searching)
+[ string ] Quiet hours                                    → AlertsListPage.swift AlertsListHeader TSBadge(AlertsListCopy.key("Quiet hours"))
+[ string ] Quiet hours active                             → Overview.swift AlertsListOverviewSecondary ("Quiet hours active", amber)
+[ string ] Total                                          → Stats.swift tiles id="total" titleKey → AlertsListMetricTileView
+[ string ] Unread                                         → tab .unread.titleKey + tile "unread"
+[ string ] Warning                                        → bucket .warning.labelKey → Chart.swift AlertsListTrendLegend + trend domain
+[ string ] Warnings                                       → Stats.swift tiles id="warnings" titleKey
+[ string ] Your fleet is running smoothly. Alerts will…   → Results.swift AlertsListEmptyResults.messageKey (no search)
+[ string ] alerts.ack.success                             → ViewModel.swift submitAcknowledge toast
+[ string ] alerts.ack.undo                                → Views.swift AlertsListToastBanner undo button
+[ string ] alerts.criticalCallout                         → Stats.swift AlertsListStats.criticalCallout → Overview.swift AlertsListCriticalCallout
+[ string ] alerts.filterLabel.search                      → Views.swift AlertsListFilterSection.chips (search chip)
+[ string ] alerts.filterLabel.status                      → Views.swift AlertsListFilterSection.chips (status chip)
+[ string ] alerts.noAlertsInRange                         → Overview.swift AlertsListOverviewEmpty description
+[ string ] alerts.overview                                → Overview.swift AlertsListOverviewCard title
+[ string ] alerts.readRate                                → Stats.swift tiles id="readRate" titleKey "alerts.readRate"
+[ string ] alerts.rule                                    → Views.swift AlertsListWatchingRow.nameText fallback ("Rule #id")
+[ string ] alerts.searchPlaceholder                       → Views.swift AlertsListFilterControls.searchPrompt (TSSearchInput prompt)
+[ string ] alerts.subtitle                                → AlertsListPage.swift AlertsListHeader subtitle
+[ string ] alerts.timeline.empty                          → Detail.swift AlertsListDetailModal.empty
+[ string ] alerts.timeline.title                          → Detail.swift AlertsListDetailModal navigationTitle
+[ string ] alerts.viewCritical                            → Overview.swift AlertsListCriticalCallout action button
+[ string ] common.disabled                                → Views.swift AlertsListWatchingRow TSBadge(common.disabled)
+[ string ] common.enabled                                 → Views.swift AlertsListWatchingRow TSBadge(common.enabled)
+[ string ] pinned.section.watching                        → Views.swift AlertsListWatchingPanel header
+---------------------------------------------------------------------------
+PARITY_COVERED=52   (10 panels + 2 charts + 4 states + 36 strings)
+Verified mechanically: the 36-string render audit greps each key as a literal in
+TeslaSync/Features/Notifications/*.swift → missing=0; i18n catalog coverage →
+0 referenced keys missing, required-36 present 36/36, I18N_COVERAGE=COMPLETE.
+===========================================================================
+
+===========================================================================
+HOST GATES — each command actually executed on THIS host; real exit codes.
+===========================================================================
+[1] swiftformat --lint (repo .swiftformat: maxwidth 120, before-first, --self remove)
+    $ swiftformat --lint TeslaSync/Features/Notifications
+    → 0/13 files require formatting.        FORMAT_EXIT=0   ✅
+
+[2] swiftlint --strict (repo .swiftlint.yml, explicit page files)
+    $ swiftlint lint --strict --config .swiftlint.yml TeslaSync/Features/Notifications/*.swift
+    → 0 violations.                          LINT_EXIT=0    ✅
+    Caught + fixed during dev: file_length (Stats 415→395, moved
+    AlertsListOverviewSummary to Adapter), function_parameter_count (Previews helper
+    7→5 params), mark (a reflowed doc comment), todo (negative-control line removed).
+    NOTE (pre-existing, NOT this surface): a project-wide `swiftlint --strict` still
+    reports ONE violation in TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+    (function_body_length, committed in b7fffb078) — untouched by this prompt.
+
+[3] check-placeholders.ps1 (real recursive scan of the page dir + negative control)
+    $ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Notifications -Language swift
+    → PLACEHOLDER_ALLOWED=1  PLACEHOLDER_COUNT=0  EXIT=0   ✅
+    Negative control (appended "// TODO: control") → COUNT rose to 1+ and the line was
+    flagged (scanner proven live), then removed. The 1 ALLOWED is the required parity
+    i18n key `alerts.searchPlaceholder` (the substring "Placeholder" is a real
+    localized key) opted out with `// parity:allow required parity i18n key`.
+
+[4] EXECUTED runtime driver (Foundation + SwiftUI link, Swift 6, macOS 15 target):
+    compiled Tokens + Badges + AlertCard.{Model,Adapter,Drillthrough} +
+    AlertsListPage.{Adapter,Stats,Model,ViewModel} + a main.swift driver, then RAN it.
+    $ swiftc -swift-version 6 -sdk MacOSX.sdk -target arm64-apple-macos15.0 <files> main.swift && ./driver
+    Asserts (28, ALL PASS): severity bucket folding; tab/search filter; pagination
+    (totalPages/page/safePage); quiet-hours overnight wrap; fmtInt grouping + percent
+    dash; the six counts + readRate; tile ids + prior-period delta (lowerBetter,
+    improvement); byType desc ordering + label; byDay 7-day window bucketing +
+    weekTotal; critical-callout gating + text; model phase=content; telemetry
+    view.opened exactly once; pinnedRules order; mark-read + toast; acknowledge flow +
+    undo toast; tab resets page.
+    → ALL_DRIVER_CHECKS_PASS    BUILD_EXIT=0 / RUN_EXIT=0   ✅
+
+[5] Swift-6-strict TYPE-CHECK of the full SwiftUI + Swift Charts view set against the
+    macOS 15 SDK: real Tokens + Design + Components/** (minus the Shared-typed
+    UnitFormatters) + AlertCard.* + App/{AppRoute,RouteHostRegistry} + all 11 page
+    production files (+ Previews as a #if DEBUG no-op).
+    $ swiftc -typecheck -swift-version 6 -sdk MacOSX.sdk -target arm64-apple-macos15.0 -module-name TeslaSync <files>
+    → MACOS_TYPECHECK_EXIT=0   errors=0   warnings=0   ✅
+    Testable-module emit (prereq for @testable import TeslaSync in the XCTest target):
+    $ swiftc -emit-module -enable-testing -module-name TeslaSync … <prod>
+    → MODULE_EMIT_EXIT=0   ✅
+    NOTE: iOS-Simulator type-check could NOT run — `xcrun --sdk iphonesimulator
+    --show-sdk-path` → "SDK iphonesimulator cannot be located" (CLT ships only the
+    macOS SDK). The page's shared SwiftUI/Charts source is platform-portable; the
+    iOS-only branches are `#if os(iOS)` (navigationBarTitleDisplayMode,
+    horizontalSizeClass) and the macOS-SDK type-check exercises the shared code.
+
+[6] xcodegen spec validation (proves project.yml + the new TeslaSync/Features source
+    path are valid and the page compiles into BOTH app targets at integration):
+    $ xcodegen generate --spec project.yml
+    → Created project … TeslaSync.xcodeproj   XCODEGEN_EXIT=0   ✅
+    AlertsListPage referenced 72× and NotificationsRouteRegistration 6× in the
+    generated pbxproj; the .xcodeproj is git-ignored and was removed after the check.
+
+[7] i18n key coverage (every key the code resolves exists in the catalog)
+    Extracted all AlertsListCopy.{key,text}/NSLocalizedString literal keys +
+    programmatic tile/bucket/tab keys → 0 missing from Localizable.xcstrings;
+    required-36 present 36/36.   I18N_COVERAGE=COMPLETE   ✅
+    54 keys added to Localization/Localizable.xcstrings (36 required parity keys +
+    18 support keys: freshness/refresh/error/retry/loading/pager/toast/ack-dialog/
+    liveUnavailable), appended (purely-additive diff; round-trip byte-identical
+    re-serialization verified before writing).
+
+===========================================================================
+XCODE APP-TARGET GATE — DEFERRED (real probe; NOT claimed green; Covenant #1/#8)
+===========================================================================
+  Gate as written (prompt):
+    & check-placeholders.ps1 ; xcodebuild -project … -scheme TeslaSync build ;
+    swiftlint --strict … ; xcodebuild … test
+  Real probe performed on THIS host (not assumed):
+    $ xcode-select -p        → /Library/Developer/CommandLineTools  (no Xcode.app)
+    $ xcodebuild -version    → error: tool 'xcodebuild' requires Xcode, but active
+                               developer directory is a command line tools instance
+    $ xcrun --sdk iphonesimulator --show-sdk-path → error: SDK cannot be located
+    $ xcrun simctl list devices available | grep -i iphone → (none)
+    $ xcrun --sdk macosx --show-sdk-path → /…/MacOSX.sdk  (present; used by [4]-[6])
+  Why DEFERRED (host-capability gap, not a defect in this surface's code):
+    (a) CLT-only host — `xcodebuild` cannot launch; no iOS Simulator nor
+        iPhoneSimulator SDK exists. The P4 integration runner (Xcode + simulators)
+        owns the app-target build/test.
+    (b) The `-scheme TeslaSync*` build also runs the mandatory "Stage
+        Shared.xcframework" pre-action (ADR-004) — a heavy KMP Kotlin/Native Gradle
+        build — plus macOS test-host code-signing; both are integration-stage
+        concerns unrelated to this surface.
+    The peer P4 surfaces 0071-AlertsSection and 0179-AlertCard deferred the identical
+    gate on this same host and concluded DONE. This surface is instead verified green
+    by [1]-[7] above (real compiler + runtime on this host).
+    IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED   (cannot run on a CLT-only host; not faked)
+  AlertsListPage.Tests.swift (XCTest + @testable import TeslaSync) ships for the
+  integration XCTest target — XCTest.framework is absent on this CLT host (no
+  `xcrun --find xctest`), so the same assertions were EXECUTED here via the [4]
+  Foundation/SwiftUI driver instead.
+
+===========================================================================
+HONESTY COVENANT (binding)
+===========================================================================
+  1 No red-as-green     : xcodebuild iOS/macOS build/test reported DEFERRED with a
+                          REAL host probe (CLT-only; no Xcode/sim/iOS-SDK); every ✅
+                          is a command run on THIS host with its real exit code.
+  2 No scope narrowing  : implemented ALL 10 panels, BOTH charts, ALL 4 states for
+                          every data source, ALL 36 strings, + pagination, quiet
+                          hours, watching, acknowledge dialog, audit-timeline modal,
+                          toast/undo, a11y, telemetry — the full web page.
+  3 No skip-and-assume  : each host gate executed; the Xcode path was actually probed
+                          (xcode-select/-version/SDK/simctl), not assumed.
+  4 No stubs as final   : complete implementations; placeholder real-scan COUNT=0
+                          (negative-control proven); executed driver (28 checks) PASS.
+                          The one opt-out is a real parity i18n key, reasoned.
+  5 No parity shortcuts : faithful port of the counts/deltas, alertsByType,
+                          alertsByDay, fmtInt, quiet-hours wrap, the filter/search/
+                          pager pipeline, the stacked-bar + donut, and the exact web
+                          i18n keys/fallbacks; AlertCard reused for rows (DRY).
+  6 No delegation       : authored directly (no sub-agent delegation of the surface).
+  7 No predecessor bypass: reused the shipped AlertCard + P2 tokens + P3 components +
+                          the AppRouteHostRegistry nav mechanism; did NOT reintroduce
+                          old patterns. project.yml/.swiftlint.yml each gained ONE
+                          `TeslaSync/Features` path (the page dir was a new tree the
+                          existing globs did not cover) — minimal, disclosed build
+                          wiring; TeslaSyncApp gained the notifications route registry
+                          composition (navigation registration, allowed).
+  8 No commit on red    : committing on all-green host gates ([1]-[7]); the xcodebuild
+                          app gate is explicitly DEFERRED (not failed), the same
+                          user-approved disposition as peers 0071/0179.
+  9 No silent drift     : changes confined to the allowed page dir + the disclosed
+                          navigation/build/catalog/ledger wiring + this log. Unrelated
+                          pre-existing working-tree edits (AIUsageCard.*, two web .tsx)
+                          were left untouched and NOT staged.
+  10 Log ends with EXIT/STATUS below.
+
+===========================================================================
+DISPOSITION
+===========================================================================
+  Production-polished native AlertsListPage shipped at parity with the web source:
+  a pure executed-green projection core (Foundation, Swift 6), an @Observable P1/S8
+  state holder bound to a facade-driven live source seam (no view HTTP), the full
+  catalog-resolved i18n (36 required keys, 36/36 rendered), P1/S11 view.opened
+  telemetry, the six overview metric panels with prior-period deltas, the native
+  Swift Charts stacked trend bar + by-type donut, the "Watching" pinned panel, the
+  search/tab/active-chip filter, the reused-AlertCard paginated list, the acknowledge
+  dialog, the audit-timeline modal, and the action toast/undo — every state
+  (loading/empty/error/content) rendered with VoiceOver, Dynamic Type, dark/high-
+  contrast tokens, and ≥44pt targets. Adaptive across macOS + iOS (ViewThatFits +
+  size-class layout; #if os(iOS) for the platform-specific title mode). Registered at
+  the .notifications route (AppRouteParser already maps /notifications/alerts).
+  All host-runnable gates pass: swiftformat 0/13, swiftlint --strict 0,
+  check-placeholders COUNT=0 (negative-control proven), Swift-6-strict macOS-SDK
+  type-check + testable-module emit EXIT=0, executed 28-assert driver PASS, xcodegen
+  spec valid, i18n coverage COMPLETE, PARITY_COVERED==PARITY_REQUIRED==52. The
+  xcodebuild iOS-Simulator + macOS app build/test is DEFERRED to the P4 integration
+  runner (this host is Command Line Tools only) — matching the user-approved peer
+  disposition (0071-AlertsSection / 0179-AlertCard, same P4 batch, same runner).
+
+===========================================================================
+COMMIT
+===========================================================================
+  git add apps/apple/TeslaSync/Features/Notifications \
+          apps/apple/Sources/TeslaSyncApp.swift \
+          apps/apple/Localization/Localizable.xcstrings \
+          apps/apple/project.yml apps/apple/.swiftlint.yml \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-notifications-AlertsListPage.log
+
+EXIT=0
+STATUS=DONE

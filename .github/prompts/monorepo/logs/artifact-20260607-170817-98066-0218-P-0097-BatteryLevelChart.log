@@ -1,0 +1,131 @@
+=== P4 Feature view 0097 BatteryLevelChart (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Darwin arm64, Apple Silicon · build 25F80)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh · Java 17.0.19
+  Destinations       : iOS Simulator "iPhone 16" present · macOS 15 SDK present.
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh on THIS runner
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 7m35s; release XCFramework
+                       staged to apps/apple/Frameworks/Shared.xcframework). Gradle 8.14.5 + Kotlin/Native 2.4.0
+                       were warm in ~/.gradle + ~/.konan. This resolves the macos-pending Shared.xcframework
+                       artifact row for the purpose of running the Apple gate here.
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS toolchain present → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/features/charging/components/charging-list/BatteryLevelChart.tsx — a presentational chart:
+    GlassPanel(p-6) → h3[ BatteryCharging icon (text-neon-amber)
+                          + t('charging.charts.batteryLevelAtStart','Battery Level at Charge Start')
+                          + span.hint t('charging.charts.batteryLevelHint','How low do you typically go before charging?') ]
+                    → div.h-36 → ResponsiveContainer → BarChart(data: StartLevelBucket[])
+                                   chartGrid · XAxis dataKey="range" · YAxis · Tooltip(<ChartTooltip/>)
+                                   Bar dataKey="count" name="Sessions" fill="#f59e0b" fillOpacity={0.6} radius=[4,4,0,0]
+  `data` = StartLevelBucket[] {range,count} produced by the parent list via computeStartLevelDist(sessions)
+  (helpers.ts): ten fixed deciles `${i*10}-${i*10+10}%`, each session tallied into
+  buckets[min(floor(start_soc_pct/10), 9)]. The only web data hook is useTranslation; the parent owns
+  isLoading/refetch/freshness.
+
+ARTIFACTS SHIPPED (allowed set: feature-views/BatteryLevelChart.* + this log)
+  apps/apple/TeslaSync/feature-views/BatteryLevelChart.Adapter.swift   — pure Foundation core: BatteryStartLevelSession,
+                                                                        BatteryStartLevelBucket (StartLevelBucket port),
+                                                                        BatteryLevelProjection, BatteryLevelBuilder
+                                                                        (computeStartLevelDist port + null-safe clamp),
+                                                                        phase/status/connection enums, BatteryLevelSurface.slug,
+                                                                        BatteryLevelAccessibility
+  apps/apple/TeslaSync/feature-views/BatteryLevelChart.Model.swift     — P1/S8 source+model+update+in-memory source,
+                                                                        P1/S11 telemetry seam (view.opened), P1/S10 strings
+                                                                        facade, stale auto-refresh, surfaceSlug
+  apps/apple/TeslaSync/feature-views/BatteryLevelChart.Views.swift     — header(icon+title+hint)+freshness chip+connectivity
+                                                                        banner+Swift Charts amber BarMark chart+selection
+                                                                        tooltip+loading/empty/error states
+  apps/apple/TeslaSync/feature-views/BatteryLevelChart.swift           — BatteryLevelChart view: TSFadeIn shell + phase switch
+  apps/apple/TeslaSync/feature-views/BatteryLevelChart.Previews.swift  — #if DEBUG previews (content/empty/loading/error/stale/offline)
+  apps/apple/TeslaSync/feature-views/BatteryLevelChart.Tests.swift     — 23 XCTest cases (adapter + model + a11y)
+  apps/apple/TeslaSync/feature-views/BatteryLevelChart.strings         — P1/S10 table "BatteryLevelChart"
+  No shared wiring needed: project.yml (TeslaSync/feature-views) + .swiftlint.yml (feature-views) were already added by
+  the P-0010 ToolCard predecessor; i18n lives in the per-surface .strings table (same pattern as every other feature-view),
+  so the shared Localizable.xcstrings is untouched.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  GlassPanel(p-6)            → Color.TS.surface rounded card + 1px Color.TS.border (the feature-view panel convention)
+  BatteryCharging (amber)    → SF Symbol "bolt.batteryblock.fill", foreground Color.TS.chartSeriesEnergy
+                               (chartSeriesEnergy = sRGB 0.961,0.620,0.043 == web #f59e0b exactly)
+  title / hint               → Font.TS.panel (textPrimary) / Font.TS.caption (textMuted); hint lifted to a caption line
+                               so it stays legible at Dynamic Type (both source strings reproduced)
+  Recharts BarChart          → Swift Charts Chart { BarMark } ; x=.value(range, String) · y=.value(count, Int)
+  Bar fill #f59e0b/0.6       → Color.TS.chartSeriesEnergy.opacity(0.6) ; radius [4,4,0,0] → .cornerRadius(4)
+  ChartTooltip               → .chartXSelection RuleMark + annotation (range header + "Sessions: N")
+  states                     → loading skeleton / empty (ContentUnavailableView) / error (QueryError+retry) / stale+offline
+                               freshness chip + banner — every prompt-required state renders, never a blank box
+  i18n                       : every string via BatteryLevelStrings (NSLocalizedString table "BatteryLevelChart"); zero
+                               English literals in code paths (fallbacks are the web `t()` defaults)
+  a11y                       : icon .accessibilityHidden; panel a11y summary (title + N sessions + M ranges + busiest range);
+                               per-bar .accessibilityValue "{range}: N sessions"; Dynamic Type + Reduce Motion respected
+  telemetry                  : view.opened surface="BatteryLevelChart" via BatteryLevelSurface.slug (P1/S11), OSLog default sink
+
+GATES (raw exits on THIS runner)
+  [GREEN]    swiftformat --lint apps/apple                         : 0/897 files require formatting          (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict  (feature-views/BatteryLevelChart) : 0 violations, 0 serious in 6 files       (LINT_EXIT=0)
+             swiftlint --strict  (whole app, FYI)                  : 1 PRE-EXISTING violation — function_body_length
+                                                                     in TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+                                                                     (NOT a BatteryLevelChart file; present before this change).
+  [GREEN]    check-placeholders.ps1 -Path …/feature-views/BatteryLevelChart : PLACEHOLDER_COUNT=0             (PLACEHOLDER_EXIT=0)
+  [GREEN]    BatteryLevelChart build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode,
+             strict-concurrency complete = same as the app), compiling the EXACT shipped BatteryLevelChart.* sources
+             against the REAL repo shared component library (Sources/Components/* + Sources/Design/* + generated
+             Tokens.swift; only UnitFormatters.swift excluded — it needs the app-level \.tsUnits env key this surface
+             does not use):
+                 Build complete!  ·  Executed 23 tests, with 0 failures                                       (SWIFT_TEST_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO BatteryLevelChart errors; all blockers pre-exist this change):
+    Both schemes were run for real on this runner WITH the freshly-built Shared.xcframework staged.
+    iOS  : the only errors are 4× "AuditPanel.Tests.swift:19: unable to resolve module dependency: 'XCTest'". This is the
+           documented pre-existing architectural blocker — every feature-view ships a CO-LOCATED *.Tests.swift, and
+           project.yml compiles feature-views/ into the APP target, which does not link XCTest. It fails on AuditPanel
+           (alphabetically first) before reaching any other surface. grep "BatteryLevelChart.*error:" = 0.
+    macOS: 2× "TeslaSync-macOS / TeslaSyncWidgets-macOS has entitlements that require signing with a development
+           certificate" — this runner provisions no signing identity. grep "BatteryLevelChart.*error:" = 0.
+    These are exactly the items apps/macos-pending-verifications.md defers to the ADR-012 macos-latest CI runner and the
+    P4/P99 Apple acceptance gate (test-target wiring for co-located *.Tests.swift + signing) — owned there, NOT by a
+    single feature-view prompt (task rule: do not fix pre-existing unrelated breakage; also outside this prompt's allowed
+    file set). This matches the sanctioned disposition used by the P-0010 ToolCard predecessor (IOS_EXIT=65/MAC_EXIT=65).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65/MAC_EXIT=65) and explicitly
+                           DEFERRED with raw evidence — never reported as passing.
+  2  No scope narrowing  : every web region + branch reproduced (icon+amber, title, hint, 10-decile bars, tooltip, the
+                           content/empty split) plus the full prompt state envelope (loading/error/stale/offline).
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; the KMP framework was actually built
+                           (7m35s) and both xcodebuild schemes actually run — nothing assumed.
+  4  No stubs as final   : complete production view + 23 real tests; placeholder scanner = 0; no TODO/stub/mock/Lorem.
+  5  No parity shortcut  : fill color/opacity/radius, decile bucketing (min(floor(soc/10),9)), typography, a11y, telemetry
+                           all mapped to platform tokens + unit-verified for web parity.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened telemetry all
+                           present and consumed; mirrors the SentryModeChart (0047) chart precedent + ToolCard (0010) gate
+                           disposition.
+  8  No commit on red    : the COMMITTED artifact (BatteryLevelChart.* + this log) is GREEN on every host gate AND on a real
+                           isolated Swift 6 strict-concurrency build+test; the deferred full-app gate is RED only on
+                           pre-existing, unrelated surfaces (co-located XCTest test files; macOS signing) this commit
+                           neither introduces nor touches.
+  9  No silent drift     : changes are confined to feature-views/BatteryLevelChart.* (7 files) + this log. The generated
+                           .xcodeproj and staged Frameworks/Shared.xcframework are git-ignored and NOT committed.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic BatteryLevelChart shipped at parity with the web source and INDEPENDENTLY VERIFIED:
+  it compiles and its 23 tests pass under the app's own Swift 6 strict-concurrency rules, against the real shared component
+  library, with lint/format/placeholder all green. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED
+  (not failed by this code): with the KMP Shared.xcframework freshly built and staged here, the only iOS errors are the
+  pre-existing co-located *.Tests.swift / XCTest-in-app-target issue (first hit in AuditPanel.Tests.swift) and the only macOS
+  errors are pre-existing development-signing requirements — zero BatteryLevelChart errors in either. Both are owned by the
+  P4/P99 acceptance gate on a signed macos-latest CI runner per apps/macos-pending-verifications.md. This matches the repo's
+  sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

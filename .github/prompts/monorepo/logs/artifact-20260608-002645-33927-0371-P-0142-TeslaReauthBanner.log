@@ -1,0 +1,166 @@
+=== P4 Shared surface 0142 TeslaReauthBanner (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.x (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint · swiftformat · xcodegen · pwsh · Java 17
+  Destinations       : iOS Simulator "iPhone 16" (present, booted) · macOS 15 SDK present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 36m22s; release XCFramework
+                       staged to apps/apple/Frameworks/Shared.xcframework — ios-arm64 + ios-arm64-simulator +
+                       macos-arm64 slices present).
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS simulators present → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/components/feedback/TeslaReauthBanner.tsx — the Tesla third-party OAuth grant-recovery banner. A
+  non-modal, sticky top-of-page row that is mounted once in <Layout> (alongside NewVersionBanner / OfflineBanner)
+  and is driven entirely by two document events that survive route transitions:
+    • `teslasync:tesla-auth-expired`   → setVisible(true)  (the Tesla refresh token's hard 8-week TTL lapsed;
+                                          every Tesla-backed call now 401s with code TESLA_TOKEN_EXPIRED).
+    • `teslasync:tesla-auth-recovered` → setVisible(false) + drainQueuedTeslaMutations() (replay the commands the
+                                          user attempted while disconnected).
+  Local state: a `visible` useState latch. `if (!visible) return null` — the banner renders NOTHING when it is
+  not visible. handleReconnect → navigate('/tesla-account'); handleDismiss → setVisible(false).
+  Render (visible): role="alert" aria-live="assertive"; an amber-tinted sticky bar (border-b border-amber-500/30,
+  bg-amber-500/[0.08], backdrop-blur-md) with an AlertTriangle chip (amber-300), the title + body copy, a primary
+  Reconnect Button (sm), and an X dismiss button.
+  Data sources: useTranslation (i18n) + useNavigate (router). No data hooks, no loading/empty/error/stale/offline
+  branches in the leaf — the only web branches are the visible-vs-null latch, the recovered-drain side-effect, and
+  the dismiss toggle. i18n keys: tesla.reauth.title / tesla.reauth.body / tesla.reauth.cta / common.dismiss.
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/shared-surfaces/TeslaReauthBanner.*, the only allowed files + this log)
+  TeslaReauthBanner.Adapter.swift  (220 L) — pure, dependency-free core: TeslaGrantStatus (unknown/healthy/
+                                             expired/recovered, the web document-event lifecycle), the
+                                             connectivity axis, the reconnect-action axis (idle/launching/failed),
+                                             TeslaReauthInput, the TeslaReauthResolved + Phase, the pure
+                                             TeslaReauthProjection (the web `visible` decision tree + P4 leaf
+                                             contract), TeslaReauthAccessibility, and the TeslaReauthRoute
+                                             ("/tesla-account") constant.
+  TeslaReauthBanner.Model.swift    (297 L) — P1/S8 state holder (TeslaReauthModel + TeslaReauthSource +
+                                             InMemoryTeslaReauthSource + TeslaReauthFeed), P1/S11 telemetry seam
+                                             (TeslaReauthTelemetry + OSLog default), the navigation seam
+                                             (TeslaReauthNavigator + logging default → web useNavigate), the
+                                             recovery seam (TeslaReauthRecovery + logging default → web
+                                             drainQueuedTeslaMutations), and the P1/S10 facade (TeslaReauthStrings).
+                                             Reproduces the web side-effects: a fresh expiry clears a prior
+                                             dismissal; a recovery drains queued mutations once.
+  TeslaReauthBanner.swift          ( 90 L) — the surface view: the phase switch (dormant→EmptyView, the web
+                                             `return null`; loading/active/reconnecting/failed→visible chrome),
+                                             view.opened on appear, and the aria-live="assertive" announcement.
+  TeslaReauthBanner.Views.swift    (213 L) — the presentational subviews: the active warning bar (icon chip +
+                                             title/body + inline failure + freshness chip + reconnect CTA +
+                                             dismiss), the freshness chip, and the loading skeleton bar.
+  TeslaReauthBanner.Previews.swift ( 78 L) — active / reconnecting / error / stale / offline / loading / dormant
+                                             previews (DEBUG).
+  TeslaReauthBanner.Tests.swift    (299 L) — 29 XCTest cases (projection across every phase + chip flags, model
+                                             wiring + view.opened telemetry + reconnect→navigator deep-link +
+                                             dismiss + fresh-expiry re-surface + recovery drain, route constant,
+                                             accessibility content).
+  TeslaReauthBanner.strings        ( 28 L) — per-surface i18n table (the 4 web keys + the native chrome keys).
+  NOT touched (parallel-unsafe / integration scope): project.yml + .swiftlint.yml do NOT yet carry
+  "TeslaSync/shared-surfaces" (this is the inaugural shared surface — the dir did not exist). Registering that
+  source path is one-time central glue owed by the P4/P99 acceptance gate, exactly as "TeslaSync/feature-views"
+  and "TeslaSync/dashboard-widgets" were each wired once (not per-surface); adding it from 400 parallel surface
+  slots would collide on merge. The shared Localizable.xcstrings is NOT edited (strings ship per-surface).
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  sticky amber bar      → full-width row: Color.TS.statusWarning.opacity(0.08) over .ultraThinMaterial (web
+                          backdrop-blur-md), with a 1pt statusWarning.opacity(0.3) bottom border (web border-b).
+  AlertTriangle (amber) → SF Symbol "exclamationmark.triangle.fill" in Color.TS.statusWarning, in a warning chip
+                          (bg .opacity(0.15)); decorative → accessibilityHidden (web aria-hidden).
+  title / body          → Text(Font.TS.bodySm.medium, textPrimary) / Text(Font.TS.caption, textSecondary)
+                          (web text-[var(--text-primary)] / text-[var(--text-secondary)]).
+  Reconnect Button(sm)  → TSButton(variant: .primary, size: .small), isLoading on the reconnecting phase.
+  X dismiss button      → plain Button("xmark") in textMuted, accessibilityLabel common.dismiss (web aria-label).
+  navigate('/tesla-account') → TeslaReauthNavigator.navigate(to: TeslaReauthRoute.reconnect, replace: false).
+  drainQueuedTeslaMutations() → TeslaReauthRecovery.drainQueuedMutations() on the recovered transition.
+  role=alert aria-live=assertive → accessibilityAddTraits(.isHeader) + combined label + an
+                          AccessibilityNotification.Announcement (high priority) posted when the banner appears.
+  i18n      : every web string via the P1/S10 facade (TeslaReauthStrings, table "TeslaReauthBanner"); zero
+              English literals in code. The native chrome (Retry / Stale / Offline / loading a11y) is keyed too.
+  a11y      : the bar carries a combined VoiceOver label, the CTA + dismiss have explicit labels, the icon is
+              decorative; Dynamic Type via Font.TS tokens; Reduce Motion honored via TSAnimation/TSFadeIn.
+  telemetry : view.opened surface="TeslaReauthBanner" via TeslaReauthModel.start (P1/S11), default OSLog sink.
+  states    : dormant (web `return null` — healthy/recovered/dismissed/unknown; renders no chrome, exact parity,
+              NOT a hidden data section) · loading (re-confirming a cached expiry → skeleton bar) · active (web
+              visible) · reconnecting (CTA spinner) · failed (inline retry) · stale / offline (freshness chip on
+              the engaged bar). Every non-dormant state renders a visible surface — never a blank box.
+
+GATES
+  [GREEN]    swiftformat --lint apps/apple/TeslaSync/shared-surfaces : 0/6 files require formatting   (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict (6 explicit shared-surfaces files)   : Found 0 violations, 0 serious   (LINT_EXIT=0)
+             swiftlint --strict (whole app, FYI)                     : 1 PRE-EXISTING violation — function_body_length
+                                                                       in TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+                                                                       (NOT a TeslaReauthBanner file; not introduced here).
+  [GREEN]    check-placeholders.ps1 -Path …/shared-surfaces/TeslaReauthBanner : PLACEHOLDER_COUNT=0   (PLACEHOLDER_EXIT=0)
+  [GREEN]    TeslaReauthBanner build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode =
+             strict-concurrency complete, same as the app), compiling the EXACT shipped TeslaReauthBanner.*
+             production sources against the REAL repo design system (apps/design/generated/apple/Tokens.swift +
+             apps/apple/Sources/Design + apps/apple/Sources/Components):
+                 Build complete!  ·  Executed 29 tests, with 0 failures                              (SWIFT_TEST_EXIT=0)
+  [GREEN]    swiftc -typecheck — the SAME shipped sources against the REAL platform SDKs, Swift 6 language mode,
+             -strict-concurrency=complete:
+                 iOS 18  (arm64-apple-ios18.0-simulator)  : 0 errors                                 (IOS_TYPECHECK_EXIT=0)
+                 macOS 15 (arm64-apple-macos15.0)         : 0 errors                                 (MAC_TYPECHECK_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO TeslaReauthBanner errors; all blockers pre-exist this change):
+    iOS   : the ONLY `error:` lines are `unable to resolve module dependency: 'XCTest'` (first hit:
+            TeslaSync/feature-views/AIRestorePanel.Tests.swift:18 — an ALREADY-COMMITTED file in HEAD). 261
+            co-located *.Tests.swift files in the app-target source dirs (TeslaSync/feature-views +
+            TeslaSync/dashboard-widgets) import XCTest INTO the app target, because project.yml routes those dirs
+            into the app target while the XCTest test bundle sources are "Tests/Unit" only. This is the exact
+            "co-located *.Tests.swift importing XCTest into the app target" condition ToolCard/0010,
+            AlertMessageEditor/0180 and every prior P4 surface recorded. grep of the full build log for a
+            TeslaReauthBanner / shared-surfaces "error:" = 0 hits. (My surface is not even enumerated in the
+            generated pbxproj — see the integration-scope note above — so it can neither break nor be exercised
+            by this gate; its correctness is proven by the isolated Swift 6 build+test + dual-SDK typecheck.)
+    macOS : the ONLY `error:` lines are `"TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have entitlements that
+            require signing with a development certificate` — the macOS dev-signing condition this runner does not
+            provision. Zero TeslaReauthBanner errors.
+    Both blockers are owned by the P4/P99 Apple acceptance gate (test-target membership + macOS signing/archive +
+    the one-time "TeslaSync/shared-surfaces" source-path registration) on a signed macos-latest CI runner per
+    apps/macos-pending-verifications.md — NOT by a single shared-surface prompt (task rule: do not fix
+    pre-existing unrelated breakage; do not self-register a parallel-unsafe shared source path).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                           explicitly DEFERRED with raw, root-caused evidence — never reported as passing.
+  2  No scope narrowing  : every web branch reproduced — the visible reconnect bar (icon + title/body + CTA +
+                           dismiss), the `if (!visible) return null` dormant collapse, the recovered-drain
+                           side-effect, the dismiss latch, and the fresh-expiry re-surface — plus the P4 leaf
+                           freshness + reconnect-progress states.
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; both iOS + macOS failures
+                           confirmed and root-caused (app-target XCTest + macOS signing), not assumed.
+  4  No stubs as final   : complete production surface + 29 real tests; placeholder scanner = 0.
+  5  No parity shortcut  : tints/material/typography/a11y/telemetry/navigation/recovery/states all mapped to
+                           platform tokens + seams and verified against the real design system in a Swift 6
+                           build+test and a real iOS-18 + macOS-15 typecheck.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics, P4 core all
+                           present and consumed; did NOT self-register project.yml/.swiftlint.yml (the inaugural
+                           shared-surfaces path is one-time integration glue) and did NOT edit the shared
+                           Localizable.xcstrings (parallel-unsafe).
+  8  No commit on red    : the COMMITTED artifact (TeslaReauthBanner.* + this log) is GREEN on every host gate AND
+                           on a real isolated Swift 6 build+test + dual-SDK typecheck; the deferred full-app gate
+                           is RED only on pre-existing, unrelated conditions this commit neither introduces nor
+                           touches.
+  9  No silent drift     : changes confined to apps/apple/TeslaSync/shared-surfaces/TeslaReauthBanner.* + this log.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic TeslaReauthBanner shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 29 tests pass under the app's own Swift 6 strict-concurrency rules against the
+  real design system, it typechecks against the real iOS-18 + macOS-15 SDKs, and swiftlint/swiftformat/placeholder
+  are all green. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this
+  code): it is blocked by the pre-existing co-located-XCTest app-target condition (baseline-RED on the
+  already-committed AIRestorePanel.Tests.swift) and by macOS development-signing — both owned by the P4/P99
+  acceptance gate on a signed macos-latest CI runner per apps/macos-pending-verifications.md. This matches the
+  repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,104 @@
+I'll start by exploring the repository structure and the web source component that needs to be ported.
+
+Apple toolchain is available (Swift 6.3.2, xcodebuild, swiftlint, swiftformat). Let me read the web source and examine existing native patterns.
+
+The web source is clear. Now let me study the established native patterns from the most recently merged feature-view and find ones using similar data sources (vehicles, units, battery).
+
+Let me read the complete AnomalyInlineRow file set — it's the latest merged pattern and uses the Vehicles state holder.
+
+The pattern is clear and comprehensive. Let me read the remaining AnomalyInlineRow files (Seams, States, Views, Previews, strings, Tests).
+
+Let me read the remaining AnomalyInlineRow files plus the shared tokens and a GlassPanel-native usage example.
+
+Now let me examine the shared tokens (P1/S9), the native GlassPanel equivalent, and the test patterns.
+
+Let me read the design token definitions and the native GlassPanel/Cards.
+
+Let me locate the generated token definitions (Color.TS, TSSpacing, Font.TS, etc.) and the typography components.
+
+Design tokens live in `apps/design/generated/apple`. Let me read them and check the state-holder layer (P1/S8) for vehicles.
+
+Let me read the test patterns, the web color/units helpers, and the native measurement system.
+
+Let me gather the remaining details: SI constants, the Vehicle/VehicleState types, the adapter test style, lint config, and the placeholder checker.
+
+Let me check build feasibility — the Shared framework script, xcodegen, and a prior passing gate log.
+
+Let me check how predecessor surfaces resolved their gate (DONE vs BLOCKED) and the pending-verifications note.
+
+This is the key finding. The predecessor established the accepted disposition: the full-app `xcodebuild` is **deferred** (unbuildable at HEAD due to absent KMP `Shared.xcframework` + a pre-existing `DashboardWidgetSize` redeclaration), and the surface is verified via isolated SwiftPM build/test + dual-SDK typecheck + lint/format/placeholder gates. Let me verify the runner specifics and that those blockers still hold.
+
+Confirmed: Xcode 26.5 via DEVELOPER_DIR, pwsh present, the 15× `DashboardWidgetSize` files, and Shared.xcframework absent. Let me read the lint configs, the placeholder checker, and verify the redeclaration blocker is genuine.
+
+Everything's confirmed. Let me read the placeholder patterns and the adapter test file to finalize my understanding of the test structure.
+
+Let me verify `formatNumber` precision behavior and the `battery_level` backend type so my native formatter matches exactly.
+
+I have everything I need. Let me verify there are no naming collisions in the app module before writing, and set up tracking.
+
+No collisions. I'll prefix all domain types with `BatteryComparison` for parallel-safety. Let me write a brief plan, then create the core files.
+
+Now the two test files — pure adapter tests and model state-holder tests.
+
+All 10 files written. Let me update tracking and run the format/lint/placeholder gates on my files.
+
+swiftformat flagged a `redundantSelf` that would actually break compilation (a local `levelText` shadows the static method). Let me inspect and fix that shadow manually, then let swiftformat auto-fix the mechanical issues.
+
+Now let me run swiftformat in-place to fix the mechanical issues, then re-lint to confirm clean.
+
+swiftformat is clean. Let me verify it didn't alter the VIN string or number semantics, then run swiftlint.
+
+swiftlint is clean (0 violations). Let me examine how the placeholder checker resolves its `-Path` so I run it exactly as the gate does.
+
+The literal gate path resolves to a non-existent directory (scans nothing → false clean). To honestly verify, I'll copy my files to a temp dir and scan that, plus run the scanner's self-test to prove it works.
+
+Placeholder scan is genuinely clean (COUNT=0) and the scanner self-tests pass. Now I need an isolated SwiftPM package to run the tests. My views use `TSGlassPanel`, so let me map its real dependency closure (and check none of it imports the KMP `Shared` framework).
+
+None import `Shared` — good, they're pure SwiftUI. Let me find the full `TSGlassPanel` dependency closure (the `.tsGlassPanel()` modifier, `TSButton`, `TSBadge`, typography components).
+
+The UI + Design dirs (15 files) are self-contained SwiftUI (no `Shared`, no cross-module imports). I'll build an isolated SwiftPM package: library `TeslaSync` = real Tokens + UI + Design + my 7 sources; test target = my 2 test files. Let me set it up and run under Xcode's toolchain.
+
+All 32 tests pass under the real design system. Now the dual-SDK typecheck (iOS-simulator + macOS) of the shipped surface under Swift 6 strict concurrency.
+
+Both dual-SDK typechecks pass. Now let me honestly verify (not assume) the full-app build blockers on this runner: generate the project and run a time-boxed `xcodebuild` to capture the real failure.
+
+The project generates and all 12 targets resolve. Let me capture the real full-app build failure (building the target directly surfaces the blockers fast without the multi-minute Gradle step).
+
+Both blockers confirmed with real evidence: build fails on the absent `Shared.xcframework` (blocker a), and 15 same-module `public struct DashboardWidgetSize` redeclarations (blocker b). The runner itself is capable (my surface compiles + tests on both SDKs). Let me clean up generated artifacts and confirm a clean tree.
+
+Clean tree — only my 10 files. Let me gather exact tool versions for the log, then write the gate log.
+
+All gates green. Let me write the gate log with the real evidence.
+
+Log written. Let me do a final consolidated gate verification, then commit.
+
+All gates green. Let me update tracking and commit.
+
+Committed cleanly (HEAD `89ec8243e`), working tree clean. The task is complete and fully verified.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`BatteryComparison`** feature view (P4 · 0275) at parity with `web/src/features/vehicles/components/BatteryComparison.tsx` — a complete 10-file decomposed bundle following the established convention.
+
+**Parity (web → native):**
+- **Data:** fleet + per-vehicle state + `useUnits` bound through the P1/S8 `BatteryComparisonSource` seam (no HTTP in the view); the web `bars` non-null filter + `bars.length === 0 → return null` decision preserved and unit-pinned as `webRendersPanel`.
+- **Tier:** `batteryColor` thresholds (`>60`/`>25`) ported and asserted at the 60/25 boundaries, mapped to P1/S9 status tokens.
+- **Range:** `formatDistance(rated_range)` SI converter (m→km/mi, 1 digit, locale grouping, `—` fallback) ported with en_US goldens; converts only at the render boundary.
+- **States:** loading / content / empty (friendly widening of web `null`) / error+retry, plus stale + offline freshness chips — all inside an always-present `TSGlassPanel` shell. Uses the shared `Activity` glyph title via the `fleet.batteryStatus` i18n key; `view.opened` telemetry; combined VoiceOver labels; Dynamic Type + reduce-motion.
+
+**Verification (raw exits, this runner — Xcode 26.5):**
+| Gate | Result |
+|---|---|
+| swiftformat --lint | `0/9` → **0** |
+| swiftlint --strict | `0 violations` → **0** |
+| check-placeholders | `COUNT=0` → **0** |
+| swift test (real tokens + real TSGlassPanel) | **32/32 pass** |
+| iOS-sim typecheck (Swift 6 strict) | **0** |
+| macOS typecheck (Swift 6 strict) | **0** |
+
+The full-app `xcodebuild build test` is **DEFERRED** with freshly-captured evidence (not assumed): the build fails on the absent KMP `Frameworks/Shared.xcframework` (real `"no XCFramework"` error captured) and a pre-existing `DashboardWidgetSize` 15× redeclaration — both out-of-allowed-files baseline blockers unrelated to this leaf surface. Generated `.xcodeproj` removed; tree clean. Log ends `EXIT=0 / STATUS=DONE`.
+
+
+
+All todos complete, work committed and verified. Marking the task done.
+

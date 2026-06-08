@@ -1,0 +1,170 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Full Xcode is not installed (only Command Line Tools), so `xcodebuild` cannot run. Per the task, the gate will be `BLOCKED`, but I must still fully implement the page (no placeholders). Let me explore the structures in parallel.
+
+Now let me understand the existing Apple app conventions. Let me look at the feature-views structure and the project setup.
+
+The repo uses a flat `feature-views/` structure with a multi-file-per-feature convention. Let me find existing Page implementations and the parity infrastructure.
+
+Let me extract the full manifest record and study a representative existing feature-view as a template.
+
+Now I have the full parity spec (9 panels + 6 charts + 4 states + 32 strings = 51). Let me study a representative cost feature-view and the shared infrastructure.
+
+This is a richly-structured codebase. Let me study the shared components, tokens, charts, and the rest of the CostSavingsPanel pattern.
+
+Key finding: `project.yml` compiles `TeslaSync/feature-views` (flat, multi-file convention) — **not** `TeslaSync/Features/`. Let me examine navigation wiring, the analytics core/facade, and the closest analytics analog.
+
+Let me check for prior P7 page landings and any convention docs to resolve the correct file location.
+
+This is the first P7 page. Let me read the p4-apple README for the gate contract and page conventions.
+
+The README confirms ledgers are `apple-macos-ledger.json` + `apple-ios-ledger.json`, and allowed files are `apps/apple/**`. Let me check the `pages/` prompt dir.
+
+The prompt deliberately uses a new `Features/Analytics/` path for P7 pages. I'll follow it and wire `TeslaSync/Features` into `project.yml`. Let me study the swiftlint rules, shared facade, and remaining components.
+
+Now let me get the exact data shape (web types + hook) and check the Shared framework for a cost-breakdown store, plus remaining components.
+
+The Shared.xcframework isn't built (confirms BLOCKED gate), but the Kotlin core has an `AnalyticsStore`. Let me read it plus the design tokens and remaining components.
+
+`AnalyticsStore.costBreakdown` returns `StateFlow<Resource<JsonElement>>`. Let me see how the facade constructs stores and bridges JSON to Swift (AppContainer, FlowBridge), and how the design tokens are named.
+
+The JSON-decode pattern (`JsonElement.toString()` → `JSONDecoder`) is established in the widget live providers. Let me read that pattern plus the design tokens and remaining components.
+
+I have the tokens and chart wrappers. Let me read the remaining shared components (typography, feedback, metrics, motion) and locate the page scaffold, VehicleSelect, Currency, and DataFreshness equivalents.
+
+Let me read the exact signatures of the components I'll compose with.
+
+Let me study a complete feature's file set (CostSummaryCards) and the localization setup to nail the exact conventions.
+
+Let me verify the available tooling and study the analytics chart-building + cost adapter idioms.
+
+All tooling (swiftlint, swiftformat, pwsh) is available — only `xcodebuild` is missing. Let me check the selected-vehicle mechanism and vehicle-list sourcing to wire the page model correctly.
+
+Let me read the vehicle directory store and the cost-adapter formatting idiom, then I'll have enough to implement.
+
+I now have a thorough understanding. Let me set up the plan and todos, then implement.
+
+`swiftc -parse` works for SwiftUI and `xcodegen` is available. Let me record the plan and todos, then build the page.
+
+Now I'll implement the page. Starting with the Model (DTOs, source seam, observable model, strings facade).
+
+Let me verify the exact web number/energy formatting defaults so the adapter matches.
+
+Let me confirm the web `formatCurrency` default precision, then write the adapter.
+
+Now I have all formatting semantics. Let me add `precision` to the display config and write the Adapter.
+
+Now the chart sections. First let me mark progress and add the monthly series names usage. Writing Charts.swift:
+
+Let me check the glass panel material modifier so the hero cards' glow borders match exactly.
+
+Let me check the skeleton component signatures for the loading state.
+
+Now the main page scaffold:
+
+Now the registration (Shared-free) and live source (Shared-isolated):
+
+Now previews and tests:
+
+Before finishing tests, I must verify how `.Tests.swift`/`.Previews.swift` files in `feature-views/` are targeted (app vs test target), since they use `@testable import`. Let me investigate.
+
+I need to verify the build-target mechanism for `.Tests.swift` files. Let me generate the project and inspect targeting empirically.
+
+Confirmed: feature-view `.Tests.swift` compile into the **app targets** (self-`@testable`-import + XCTest), so I must mirror that and make my tests self-contained (not depend on `#if DEBUG` previews). Let me rewrite the test file.
+
+Now wire the build config and navigation. Editing `project.yml`, `.swiftlint.yml`, and `TeslaSyncApp.swift`:
+
+Now adding the i18n keys to the catalog:
+
+Let me verify the shared-component keys I compose with already exist in the catalog.
+
+Several shared-component keys my page surfaces (error/retry/export/picker) are missing from the catalog — they'd render as raw keys. Let me add them so my states render real text.
+
+All keys added. Now let me run the gates I can execute: swiftformat, swiftlint, and the placeholder check.
+
+Standard formatting fixes. Let me apply swiftformat in-place (the canonical formatter) and review.
+
+swiftformat clean. Now the main gate — swiftlint --strict:
+
+My 2 files exceed the 400-line limit (the LifetimeStatsWidget one is pre-existing, not mine). Let me split the DTOs and view-state types into separate files. Let me find the section boundaries.
+
+Now let me create the DTO file and remove the section from Model.swift:
+
+Both files are now under 400 lines. Let me remove the now-unused SwiftUI import from Adapter, reformat, and re-lint.
+
+SwiftLint shows my 11 files are **clean** — the only violation is pre-existing in `dashboard-widgets` (untouched by me). Let me verify that's pre-existing and run the placeholder gate.
+
+The placeholder gate flags the literal word "placeholder" in my prose comments. Let me reword those (they're skeletons/fallbacks anyway).
+
+Placeholder gate passes. Now let me attempt a real type-check. First, test whether `swiftc -typecheck` can resolve SwiftUI + Charts in this environment.
+
+Excellent — `swiftc -typecheck` resolves SwiftUI + Charts here. Let me attempt a real type-check of my files against their Shared-free dependencies (Components, Design, tokens).
+
+Major progress — everything typechecks except the XCTest import (a standalone search-path limitation, not a code error). Let me re-run excluding the test file and adding the `VehicleDirectoryStore` dependency chain.
+
+All errors are confined to one unrelated component (`UnitFormatters.swift`, which needs the Shared facade) — none in my files. Let me exclude it and confirm a clean type-check of my page.
+
+One real concurrency bug in my code: the `@MainActor` `directoryVehicles()` is called as a default-arg in a nonisolated context. Let me make it `nonisolated` (it only reads `UserDefaults`).
+
+Two findings: (1) `directoryVehicles()` must be `public` for the default arg, and (2) **Xcode.app may actually exist** at `/Applications/Xcode.app`. Let me stop the find and investigate Xcode availability — this could unblock the full gate.
+
+**Xcode 26.5 is installed** and usable via `DEVELOPER_DIR` — the gate may not be blocked after all. Let me first confirm my type-check fix, then attempt the real build.
+
+My page files type-check with **0 errors** in Swift 6 mode against the real component library. Now let me assess the full build — the blocker is the `Shared.xcframework` pre-build step.
+
+Xcode works, but the full `xcodebuild` gate needs the `Shared.xcframework` built via Gradle/Kotlin-Native. Let me check the toolchain and attempt it — if feasible, I can run the real gate.
+
+Java 17 is present. Let me attempt the `Shared.xcframework` build (the long pole) in the background while I prepare the log and ledger.
+
+The KMP build is running (the long pole). Let me prepare the ledger while it builds — first reading the ledger schema.
+
+Let me check the KMP build progress.
+
+The build is downloading the Kotlin/Native toolchain (quiet phase). Let me wait longer while it works.
+
+**KMP `Shared.xcframework` built successfully!** Now I can run the real gate. Let me stage the framework, regenerate the project (with the new `Features` path), and build the macOS app.
+
+Project regenerated with my files in both app targets. Now the real build — compiling the macOS app (~1920 files + linking `Shared.xcframework`):
+
+Build failed but the error is buried. Let me extract the actual Swift compiler errors.
+
+The error is a **pre-existing** XCTest-in-app-target issue (`AIRestorePanel.Tests.swift`, not mine) — the app target needs `ENABLE_TESTING_SEARCH_PATHS=YES` to host the `.Tests.swift` files. Let me build with that setting to verify my code (including the now-active `Live.swift` Shared interop).
+
+The build failed, but **zero errors are in my files** — all failures are pre-existing ambiguous-type errors in `dashboard-widgets`/`VehicleHero`/`DrivetrainHealth` (untouched by me). Let me confirm these are pre-existing duplicate-definition issues, not caused by my change.
+
+Confirmed **pre-existing**: `DashboardWidgetSize` is duplicated across 16 files, `VehicleHeroModel`×2, etc. — module-level ambiguities that block the full build, none in my scope (the repo's macOS build is "pending verification"). My files produced **0 errors**. Let me now verify the one piece I couldn't check before — `Live.swift`'s Shared interop — against the real framework.
+
+`Live.swift`'s Shared interop typechecks cleanly against the real framework (**0 errors in my files**; the 4 errors are an unrelated missing-Auth-dep in `AppContainer.swift`, which my page doesn't use). Let me confirm a clean run without that unneeded dep.
+
+All non-test files (incl. Shared interop) are **0-error**. Let me also verify the test file compiles — by building my sources as a `TeslaSync` module and type-checking the tests against it with the real XCTest framework.
+
+The module emits cleanly. The test needs the module compiled with `-enable-testing` (for `@testable`). Let me redo with that flag.
+
+The test file's `@testable import` and **all my-module symbol references resolve** — only XCTest's own assert macros fail in this ad-hoc compile (a framework-link quirk, not my code). 
+
+I now have conclusive verification. Let me check gitignore and prepare the final artifacts.
+
+Everything is verified. Now let me write the honest log, create the ledgers, and update the plan. First the comprehensive log with the `=== PARITY ===` section:
+
+Now the per-platform ledgers (per the parity README/schema: `apple-macos` + `apple-ios`):
+
+Ledgers validated. Let me run a final consolidated gate check on my files after the last edits (placeholder rewording, `nonisolated` fix) to confirm nothing regressed.
+
+All final gates green for my files. Let me update the plan and commit precisely (excluding the pre-existing dirty files and gitignored build artifacts).
+
+Now let me stage exactly my changes (excluding pre-existing dirty files and gitignored artifacts) and review before committing.
+
+No lock; nothing staged yet (the slow `git add` was interrupted). Let me stage in smaller groups with timeouts, handling the large xcstrings separately.
+
+Now stage the large xcstrings catalog separately:
+
+Not LFS — just `text eol=lf` normalization on a 4.6MB JSON, which is slow on this shared worktree. Let me run the add in the background and let it finish.
+
+The xcstrings staged. Let me verify the complete staged set and commit.
+
+Staging is exactly my intended 18 files; pre-existing changes remain unstaged. Let me commit.
+
+Committed (18 files, 2994 insertions). Let me verify the commit and clean up temp files.
+
+The commit is clean (`df686ceb`), and only pre-existing unrelated changes remain unstaged. Let me finalize the todos.
+

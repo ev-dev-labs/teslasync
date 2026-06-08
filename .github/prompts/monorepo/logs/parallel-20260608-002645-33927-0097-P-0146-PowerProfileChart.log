@@ -1,0 +1,148 @@
+I'll start by exploring the environment to understand what's available and reading the web source specification.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. Swift 6.3, swiftlint, swiftformat are available. Let me explore the Apple app structure and the web source in depth.
+
+Now let me examine the existing `feature-views` directory and sibling conventions to understand the established native patterns.
+
+The feature-views dir has 1438 files — each surface is multiple files. Let me examine a complete reference surface and find chart-based examples to mirror.
+
+`ElevationChart` and `PowerOutputChart` are the closest analogs (same drive-detail family, area charts). Let me read the full ElevationChart surface as the primary reference.
+
+Excellent — clear, rich conventions. Let me read the remaining PowerOutputChart files (Chart, Views, Previews, strings, Tests) to complete my understanding of the template.
+
+Now the Previews, strings, Tests, and the design token definitions (P1/S9 / motion / skeleton helpers).
+
+This is very rich. ElevationChart is the closest analog (same drive-detail family, single area). Let me read its full set and locate the design tokens + synced-cursor primitive.
+
+ElevationChart's `cursorIndex`/`updateCursor` is the native parity for the synced-cursor hooks. Let me read its remaining files plus locate the design tokens.
+
+Let me locate the design tokens, build config, the placeholder checker, and read the remaining ElevationChart reference files.
+
+Let me find the exact token definitions (Color.TS, Font.TS, TSSpacing, TSFadeIn, TSSkeleton, TSClipboard, TSMotion).
+
+`TSFadeIn`, `TSSkeleton`, `TSClipboard` exist, but the core tokens (Color.TS, Font.TS, TSSpacing…) didn't match. Let me dig deeper — they may be defined with a namespace pattern I haven't matched.
+
+Found it — tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me view it to confirm the exact token API I can rely on.
+
+Complete token API confirmed. Now let me check the number formatting semantics, the drive-detail barrel, and the lint configs.
+
+Everything's in place. Let me read the ElevationChart tests (for the cursor-sync test pattern) and the placeholder checker before writing.
+
+I have a complete understanding of the conventions. Let me set up tracking and write the plan, then create all surface files. First, the build capability situation is clear: `xcodebuild` needs full Xcode (only CLT installed), so the build/test gate will be BLOCKED — but swiftlint, swiftformat, pwsh placeholder check, and standalone swift typechecking of the pure core all run.
+
+I have everything needed. Let me create the plan and todo tracking, then build all surface files.
+
+Now writing the surface files. Starting with the pure value types (Models) and projection core (Adapter).
+
+Now the Swift Charts area chart + tooltip.
+
+Now the presentational chrome (header, stat row, freshness chip, banner, loading/empty/error).
+
+Now the main composable view.
+
+Now the previews (one per state).
+
+Now the i18n strings catalog contribution.
+
+Now the test suite.
+
+All 9 files created. Now verification. Let me run swiftformat and swiftlint on the new files.
+
+swiftformat passes (0/8 require formatting). Now swiftlint --strict.
+
+swiftlint: 0 violations. Now let me typecheck the Foundation-only core standalone to catch real type errors, and syntax-parse the SwiftUI files.
+
+Core typechecks cleanly. Let me attempt a fuller typecheck of the SwiftUI files by bundling their actual dependencies (tokens + motion + skeleton helpers).
+
+`TSFadeIn` and `TSSkeleton` signatures match my usage. Let me attempt a bundled typecheck of the SwiftUI files with their real dependencies.
+
+The standalone typecheck surfaced an actor-isolation error on the default argument. The reference `ElevationChart` uses the identical pattern, so this is likely a build-flag artifact (the app target builds with MainActor-default isolation). Let me verify by testing both the reference and my code under matching isolation flags.
+
+Confirmed: the committed `ElevationChart.Model.swift` produces the **identical** error under standalone compilation — it's a build-flag artifact (the app target builds with MainActor-default isolation, per Swift 6 "approachable concurrency"). Let me prove my code typechecks under that real config.
+
+`-default-isolation` alone doesn't cover default-argument expressions — that's governed by SE-0411 (isolated default values), which is on in **Swift 6 language mode**. The project builds in Swift 6 mode. Let me retry with `-swift-version 6`.
+
+Excellent — in Swift 6 mode the actor-isolation issue is **resolved** (SE-0411). The only remaining errors are the `#Preview` macro plugin, which ships with full Xcode, not Command Line Tools — the same capability gap as `xcodebuild`. Let me confirm a clean typecheck of all production + preview-data code (excluding only the `#Preview` macro file), then syntax-parse Previews + Tests.
+
+Now the only error is in the dependency `Skeletons.swift` needing `TSCard` (from Cards.swift) — a transitive dep of code I don't use. Let me include `TSCard`'s real file so the production typecheck is fully clean.
+
+The real `Skeletons.swift` drags in a cascade of unrelated components (`TSCard`→`tsGlassPanel`→…). Let me isolate the check to my code by substituting an accurate minimal stand-in for just `TSSkeleton` (signature verified earlier), keeping the real `Tokens.swift` and `Motion.swift`.
+
+**Production code typechecks cleanly in Swift 6 mode (EXIT=0).** The earlier actor-isolation error was a language-mode artifact (identical on the committed `ElevationChart`), resolved under the project's Swift 6 mode. Now the placeholder gate.
+
+Placeholder gate: **COUNT=0, EXIT=0**. Now let me capture the exact `xcodebuild` capability evidence and check the log directory + a sibling log's format.
+
+Let me look at the ElevationChart (0141) and PowerOutputChart (0158) sibling logs to match the exact log format and how they recorded the xcodebuild capability.
+
+The sibling log reveals full Xcode may be present at `/Applications/Xcode.app` (activated via `DEVELOPER_DIR`). Let me check if it's available here — that would let me run the real build/test gate instead of being blocked.
+
+Full **Xcode 26.5 is present** and `xcodegen` is available — I can run the real gate. Let me see how the sibling log drove the build (project generation + xcodebuild invocations).
+
+Full Xcode 26.5 is present — the platform capability is **available**, so this surface targets **STATUS=DONE**. The predecessor (ElevationChart 0141) establishes the exact methodology: per-surface lint/format/placeholder gates + an isolated Swift 6 SwiftPM build & real XCTest run + both-platform typechecks, with the full Xcode app-target gate honestly DEFERRED (co-located `*.Tests.swift` can't import XCTest in the app target — affects all 74 surfaces).
+
+Let me activate Xcode and run the both-platform typechecks (gate [7]), now with the `#Preview` macro plugin available.
+
+Both-platform strict typechecks pass (iOS + macOS, EXIT=0). Now gate [6]: an isolated Swift 6 SwiftPM package to actually **execute** the XCTest suite (module named `TeslaSync` so `@testable import TeslaSync` resolves).
+
+`swift build` → **Build complete!** Now execute the test suite.
+
+**28 tests executed, 0 failures.** Now, for full honesty (matching the predecessor), let me run the whole-tree gate commands to report any pre-existing sibling defects, and probe the real Xcode app-target path.
+
+Same pre-existing sibling defect as the predecessor (`ActionBuilder.Previews.swift`), and **0 PowerProfileChart findings**. Now whole-tree swiftlint.
+
+Same single pre-existing sibling violation as the predecessor. Let me confirm it's not one of my files.
+
+Confirmed pre-existing sibling defect (`LifetimeStatsWidget.Adapter.swift`), not my surface. Now the real Xcode app-target probe. Let me find the project generation config.
+
+The app target's `sources` include the whole `feature-views` dir (so co-located `*.Tests.swift` compile into the app — the predecessor's documented pre-existing blocker). Let me run the real probe: generate the project, list schemes, confirm registration.
+
+The probe is slow (large project generation). Let me keep waiting.
+
+The combined probe is stuck (likely xcodegen on ~1900 files). Let me stop it and run xcodegen alone in the background with output to a file so I can monitor real progress.
+
+xcodegen completed in ~20s when isolated (the earlier hang was `xcodebuild -list` resolving packages). **Note: the `.xcodeproj` is NOT git-ignored** — I'll keep it out of the commit and clean it up. Let me confirm surface registration and the working-tree state.
+
+All 9 files are registered in the app target (54 pbxproj refs), and the `.xcodeproj` is correctly git-ignored (`.gitignore:379`). Let me make one bounded, real `xcodebuild` attempt to capture the actual app-target outcome (honoring "no skip-and-assume"), with output to a file.
+
+The KMP Gradle pre-action is running (matches the predecessor's documented flow). 225 co-located `*.Tests.swift` are compiled into targets — the structural blocker. Let me wait for the Swift compile phase to surface the real root cause.
+
+The build was interrupted by session teardown (not a real outcome) — KMP Gradle was progressing well (FROM-CACHE). Let me relaunch xcodebuild **detached** so it survives, and poll its log while I prepare the gate log.
+
+Build running detached. Let me poll its progress while I prepare the gate log.
+
+KMP framework staging is progressing (Shared XCFramework assembling). Let me continue polling for the Swift compile phase.
+
+The KMP release-framework link is slow (CPU-heavy Kotlin/Native). The build is real and progressing. Let me write the gate log now (the build is detached and safe), then capture the final app-target result.
+
+Let me poll the build once more for the real app-target outcome.
+
+The KMP pre-action is assembling the full Shared XCFramework (debug+release, all platforms) — slow but real and progressing. It's safely detached. Let me write the comprehensive gate log with all gathered evidence while it continues.
+
+Gate log written. Let me check whether the detached build has reached the Swift compile phase to capture the exact root cause.
+
+The KMP release-framework staging is still running (CPU-heavy Kotlin/Native links). It's detached and safe. Let me give it more time to reach the Swift compile phase and capture the exact XCTest error.
+
+The KMP release-framework links are very slow (minutes each, ~5 platforms remaining) — waiting longer won't change the DEFERRED disposition, which is already structurally proven (225 `*.Tests.swift` in the app target + 54 surface refs + the KMP pre-action building green). Let me verify the deferral basis (`macos-pending-verifications.md`) and finalize.
+
+`macos-pending-verifications.md` confirms the canonical disposition: multiple P4 surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) ship green via isolated build/tests and **defer** the full-app `xcodebuild` to the `P99` acceptance gate for the same pre-existing causes (incl. a `DashboardWidgetSize` redefinition collision + XCTest-in-app-target). Let me verify that collision exists here (for an accurate log) and stop the build processes.
+
+The detached build completed! Let me capture its real final result and root cause. Also confirmed: `DashboardWidgetSize` is redefined **15×** (the documented pre-existing collision).
+
+**Real app-target result captured:** `BUILD FAILED`, **exit 65**, root cause `AIRestorePanel.Tests.swift:18: unable to resolve module dependency: 'XCTest'` (co-located tests in the app target) — and **0 PowerProfileChart errors**. The KMP Shared.xcframework built green. This independently reproduces the predecessor's documented outcome. Let me update the log with this concrete evidence.
+
+Let me refine the Covenant section to cite the real exit 65 and the zero-surface-error finding.
+
+Log finalized with concrete evidence. Now let me clean up build artifacts/processes and verify the working tree before committing.
+
+Lingering build subprocesses remain. Let me stop them explicitly (one `kill` per numeric PID).
+
+All build processes stopped. Let me clean the generated project and review the full working-tree state before committing.
+
+The working tree has **pre-existing, unrelated** modifications (7 `AIUsageCard.*` sibling files + 2 admin `.tsx` files) that predate my task — I must NOT commit those (Covenant #7/#9). Let me stage only my 10 files and commit with the prompt's message + trailer.
+
+Exactly my 10 files staged; pre-existing changes left untouched. Committing now.
+
+Commit `ede40f837` created with exactly the 10 files (2046 insertions). Let me do final cleanup of temp artifacts and a consolidated verification snapshot.
+
+Task complete and verified. Let me mark the plan done and finalize.
+

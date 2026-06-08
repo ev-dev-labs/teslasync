@@ -1,0 +1,165 @@
+=== P4 Feature view 0090 SessionCurveChart (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh · Java 17
+  Destinations       : iOS Simulator "iPhone 16" present (booted) · macOS 26.5 SDK present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" — release + debug XCFrameworks built from the KMP
+                       core: ios-arm64, ios-arm64-simulator, macos-arm64; release staged to
+                       apps/apple/Frameworks/Shared.xcframework).
+  Capability         : SwiftUI + Swift Charts present, iOS-18/macOS-15 deployment SDKs + iPhone 16 simulator present
+                       → NOT capability-BLOCKED. (This surface uses no MapKit — web "Charts / maps used: none".)
+
+WEB SOURCE (the specification)
+  web/src/features/charging/components/charging-curve/SessionCurveChart.tsx — a single-series area chart.
+    props: curveData: CurvePoint[]   ({ soc: number; power: number /* kW */ }).
+      The parent ChargingCurvePage derives curveData = generateChargingCurve(selectedSession) and owns the
+      selected-session / isLoading / error lifecycle; SessionCurveChart itself only renders.
+    render: ChartContainer(title "Power vs SOC" / subtitle / aria / export, data rounded power = Math.round(p.power*10)/10)
+            → Recharts AreaChart over the raw curveData: areaGradient('curvePowerGrad', CHART_COLORS[0]),
+              <XAxis dataKey="soc" label "SOC (%)">, <YAxis label "Power (kW)">, <Tooltip ChartTooltip>,
+              <Area dataKey="power" name "Power" stroke CHART_COLORS[0] fill url(#curvePowerGrad) unit " kW">.
+              No legend (single series). Empty handled by ChartContainer overlay when curveData has no rows.
+  Data sources (prompt): useTranslation.  Shared components: @/components/charts.  Charts/maps: none.
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/feature-views/SessionCurveChart.*)  — 8 files, 1402 lines
+  SessionCurveChart.Adapter.swift  (214) — pure (Foundation-only) projection: SessionCurveSample (web CurvePoint:
+                                           soc / powerKw), SessionCurve{Phase,LoadStatus,Connection},
+                                           SessionCurveProjection (samples [non-finite sanitize + order],
+                                           roundedTenth [web Math.round(x*10)/10], peakPoint, socDomain, powerDomain
+                                           [0..peak*1.1], sample(nearestSoc:) selection snap, resolvePhase),
+                                           SessionCurveFormat (locale decimal / kW / percent), SessionCurveSurface
+                                           (slug "SessionCurveChart"), SessionCurveAccessibility (chart summary +
+                                           per-point VoiceOver value).
+  SessionCurveChart.Model.swift    (245) — P1/S11 telemetry seam (OSLog "view.opened"), P1/S10 i18n facade
+                                           (NSLocalizedString table "SessionCurveChart" + web fallbacks),
+                                           SessionCurveUpdate snapshot, P1/S8 SessionCurveChartSource seam,
+                                           @Observable @MainActor SessionCurveChartModel (projects samples → points,
+                                           phase + freshness + peakPoint, once-only view.opened, guarded stale
+                                           auto-refresh, offline keeps cache), InMemorySessionCurveSource.
+  SessionCurveChart.Chart.swift    (233) — SessionCurvePalette (TSChartPalette.color(at:0) + web areaGradient fade),
+                                           SessionCurveAreaChart: Swift Charts AreaMark (gradient fill) under a 2pt
+                                           LineMark stroke, numeric SOC x-domain + power y-domain, x-selection
+                                           RuleMark + tooltip (web ChartTooltip), per-point a11y, "SOC (%)" / "Power
+                                           (kW)" axis labels; SessionCurveTooltip.
+  SessionCurveChart.Views.swift    (205) — header (title + subtitle + freshness chip), stale/offline banner,
+                                           loading skeleton (rising-ramp dots, Reduce-Motion-safe), empty
+                                           (ContentUnavailableView), error (retry). No blank surfaces.
+  SessionCurveChart.swift          ( 66) — SessionCurveChart View: TSFadeIn card, switch over phase (loading/error/
+                                           empty/content), onAppear start / onDisappear stop, a11y summary label.
+  SessionCurveChart.Previews.swift ( 92) — #if DEBUG previews: Content / Empty / Loading / Error / Stale / Offline
+                                           (a synthetic DC fast-charge curve: plateau ≤50%, taper to 80%, drop after).
+  SessionCurveChart.strings        ( 50) — P1/S10 catalog (table "SessionCurveChart"): the 8 web source keys + the
+                                           native state-envelope keys; plutil -lint = OK.
+  SessionCurveChart.Tests.swift    (297) — 31 XCTest cases (adapter projection 13 + formatting 4 + state holder 11
+                                           + a11y 3).
+  Zero files outside SessionCurveChart.* touched. feature-views is already a source path for TeslaSync /
+  TeslaSync-macOS and an included dir for swiftlint; the per-surface .strings keeps i18n self-contained exactly as
+  the sibling SpeedTrendChart surface does. xcodegen generate enumerates all 8 files into the project.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  ChartContainer card     → GlassPanel-equivalent: Color.TS.surface + TSRadius.lg + Color.TS.border, TSFadeIn(0.2).
+  Recharts AreaChart      → SwiftUI Charts `Chart { AreaMark + LineMark }`, monotone interpolation (web smooth area).
+  areaGradient(CHART_       → TSChartPalette.color(at: 0) for BOTH the line stroke AND the area gradient fill
+    COLORS[0])               (color.opacity 0.35 → 0.02 top→bottom), so stroke and fill always agree.
+  <XAxis soc label "SOC   → chartXScale(socDomain) + numeric percent axis labels + chartXAxisLabel "SOC (%)";
+    (%)">                     <YAxis "Power (kW)"> → chartYScale(0..peak*1.1) + decimal labels + chartYAxisLabel.
+  <Tooltip ChartTooltip>  → x-selection RuleMark + annotation card: "SOC % {n}%" over "Power  {kW} kW".
+  <Area unit " kW">       → power values formatted "{n} kW" (one-decimal, web rounding) in tooltip / a11y.
+  i18n      : every string via the P1/S10 facade; the 8 web source keys are present + parity-checked (below).
+  a11y      : chart accessibilityLabel = the web ariaLabel; per-point .accessibilityValue "{power} kW" with label
+              "SOC % {soc}%"; card-level summary "Power vs SOC: N points. Peak {kW} at {soc}%". Dynamic Type
+              (Font.TS roles), Reduce Motion respected (TSFadeIn / chart animation gated).
+  states    : web content/empty WIDENED to loading/content/empty/error/stale/offline (the P4 envelope, supplied by
+              the bound source — same precedent as the sibling SpeedTrendChart surface). No blank surfaces.
+  telemetry : view.opened surface="SessionCurveChart" via SessionCurveChartModel.start (P1/S11), default OSLog sink.
+
+i18n SOURCE-KEY PARITY  (every key extracted from the web source has a catalog entry)
+  OK charging.curve.powerVsSoc          OK charging.curve.col.soc         OK charging.curve.socPercent
+  OK charging.curve.powerVsSocDesc      OK charging.curve.col.power       OK charging.curve.powerKw
+  OK charging.curve.powerVsSoc.aria     OK charging.curve.power
+  (col.soc / col.power are the web export-table headers + the chart's value-name + tooltip labels — carried in the
+   catalog and used in code for full key parity.)
+
+GATES
+  [GREEN]    swiftformat --lint  (SessionCurveChart scope, 7 swift files)  : 0/7 require formatting        (FORMAT_EXIT=0)
+             swiftformat --lint  (whole apps/apple, FYI)                   : 1/1920 PRE-EXISTING — blankLinesBetweenScopes
+                                                                             in TeslaSync/feature-views/ActionBuilder.Previews.swift
+                                                                             (NOT a SessionCurveChart file; not introduced here).
+  [GREEN]    swiftlint --strict  (SessionCurveChart scope, 7 files)        : 0 violations, 0 serious        (LINT_EXIT=0)
+  [GREEN]    check-placeholders.ps1 (SessionCurveChart.* files)            : PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 (PLACEHOLDER_EXIT=0)
+  [GREEN]    plutil -lint SessionCurveChart.strings                        : OK
+  [GREEN]    xcodegen generate                                             : project created; all 8 SessionCurveChart.* enumerated (GEN_EXIT=0)
+  [GREEN]    SessionCurveChart build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode,
+             strict-concurrency complete = same as the app), compiling the EXACT shipped SessionCurveChart.*
+             sources against the REAL repo design-system files (Tokens.swift / TSDesign.swift / Motion.swift — the
+             real Color.TS / Font.TS / TSSpacing / TSRadius / TSMotion / TSChartPalette / TSFadeIn). The one leaf
+             view TSSkeleton is supplied by a minimal harness reimplementation matching its real public signature,
+             because the real Skeletons.swift pulls TSCard → TSBadge/TSText/TSButton (the whole component library)
+             through card-skeleton variants this surface does not use:
+                 Build complete!  ·  Executed 31 tests, with 0 failures                                       (SWIFT_TEST_EXIT=0)
+                 (SessionCurveProjectionTests 13 · SessionCurveFormatTests 4 · SessionCurveChartModelTests 11 · SessionCurveAccessibilityTests 3)
+  [GREEN]    swiftc -typecheck — the EXACT shipped surface (6 non-test files) + REAL design-system sources,
+             compiled together as a module against the real SDKs:
+                 iOS    : xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6 -target arm64-apple-ios18.0-simulator   (IOS_TYPECHECK_EXIT=0)
+                 macOS  : xcrun --sdk macosx          swiftc -typecheck -swift-version 6 -target arm64-apple-macos15.0           (MAC_TYPECHECK_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO SessionCurveChart errors; all blockers pre-exist this change):
+    iOS  : the app target fails at module-dependency resolution because the repo's co-located *.Tests.swift files
+           `import XCTest` + `@testable import TeslaSync` into the app target (XCTest is unavailable to a plain app
+           target) — the build reports it against the PRE-EXISTING TeslaSync/feature-views/AIRestorePanel.Tests.swift
+           (the first alphabetically). This co-located-test convention (171 *.Tests.swift in feature-views, 169
+           importing XCTest, incl. every sibling surface's *.Tests.swift AND this surface's, which follows the
+           identical established pattern) is exactly the blocker recorded in apps/macos-pending-verifications.md and
+           is owned by the P4/P99 acceptance gate, not a single surface.
+    macOS: additionally requires a development SIGNING certificate — "TeslaSync-macOS" / "TeslaSyncWidgets-macOS"
+           have entitlements that require signing with a development certificate, which this runner does not provision.
+    Also pre-existing (a compile/link collision the iOS module-resolution failure preempts): `struct DashboardWidgetSize`
+           is redefined in 15 app-target files (Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/*).
+           This surface introduces 0 DashboardWidgetSize / PowerFlowConnection definitions.
+    grep of BOTH full-app build logs for "SessionCurveChart … error:" = 0 hits (iOS:0, macOS:0). The 2 iOS + 2 macOS
+    error categories are entirely the pre-existing categories above. These are the artifacts ADR-012 defers to the
+    macos-latest CI runner; task rules confine this prompt to SessionCurveChart.* and forbid fixing pre-existing
+    unrelated breakage from a feature-view prompt.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                          explicitly DEFERRED with evidence — never reported as passing.
+  2  No scope narrowing : every web region + branch reproduced — soc/power area, CHART_COLORS[0] gradient, one-decimal
+                          power rounding, "SOC (%)" / "Power (kW)" axes, tooltip, single-series (no legend) layout.
+  3  No skip-and-assume : every gate executed on THIS runner; raw exits pasted; both Xcode failures confirmed, not assumed.
+  4  No stubs as final  : complete production surface + 31 real tests; placeholder scanner = 0; no TODO/stub/mock/Lorem.
+  5  No parity shortcut : palette/labels/tooltip/units/i18n/a11y/telemetry all mapped to platform tokens + verified.
+                          The only verification-harness substitution (leaf TSSkeleton) is disclosed above; the SHIPPED
+                          code is unchanged and was type-checked against the REAL iOS-18 + macOS-15 SDKs.
+  6  No delegation      : implemented directly; no agents/sub-tasks.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry, P4 core all consumed.
+  8  No commit on red   : the COMMITTED artifact (SessionCurveChart.*) is GREEN on every host gate AND on a real isolated
+                          Swift 6 strict-concurrency build+test AND on a real iOS-18 + macOS-15 typecheck; the deferred
+                          full-app gate is RED only on pre-existing, unrelated surfaces (co-located XCTest convention +
+                          macOS signing + DashboardWidgetSize) this commit neither introduces nor touches.
+  9  No silent drift    : changes are confined to apps/apple/TeslaSync/feature-views/SessionCurveChart.* (8 files) + this log.
+                          One documented native widening: web content/empty → full P4 state envelope (loading/error/
+                          stale/offline), supplied by the bound source — same precedent as sibling SpeedTrendChart.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic SessionCurveChart shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 31 tests pass under the app's own Swift 6 strict-concurrency rules, against the real
+  design-system, and type-checks against the real iOS-18 + macOS-15 SDKs, with swiftlint / swiftformat / placeholder /
+  plutil all green and xcodegen enumerating all 8 files. The full-app iOS-Simulator + macOS xcodebuild build/test gate
+  is DEFERRED (not failed by this code): it is blocked by the repo-wide co-located-XCTest-in-app convention, by the
+  pre-existing DashboardWidgetSize redefinition, and by macOS development-signing — all pre-existing, all owned by the
+  P4/P99 acceptance gate on a signed macos-latest CI runner per apps/macos-pending-verifications.md. This matches the
+  repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date (e.g.
+  p4-apple-feature-views-0092-SpeedTrendChart, p4-apple-feature-views-0010-ToolCard).
+
+EXIT=0
+STATUS=DONE

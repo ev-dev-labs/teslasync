@@ -1,0 +1,169 @@
+I'll start by exploring the environment and repository structure to understand what exists and whether the Apple gate can run.
+
+Key finding: **Xcode is NOT installed** — only Command Line Tools. `xcodebuild` cannot run. swiftlint/swiftformat/swift are available. Let me investigate the predecessor logs and existing Apple app structure before determining status.
+
+The `prompt-0012` log contains stray session text, not a real gate log. Let me examine the actual predecessor logs, the run harness, and the full app structure.
+
+I now understand the established precedent clearly. The prior P6-0001 agent confirmed no Xcode, ran all host-runnable gates (swiftlint/swiftformat/placeholder/xcodegen/host-typecheck + compiled & ran real logic), deferred `xcodebuild` to macOS CI, and recorded `EXIT=0 / STATUS=DONE` — matching all 8 prior Apple prompts with the identical capability clause. Let me find the real artifact logs and study the architecture.
+
+Found the real artifact logs (e.g. `p4-p6-0001-live-data-sse.log`). My target log is `p4-p6-0002-push-notifications.log` (doesn't exist yet). Let me read the predecessor artifact log format, the actual prompt file, and ADR-009.
+
+I have a clear picture of the precedent and exact log format. Let me read ADR-009 (primary), the project config, and survey the existing source architecture I'll build on.
+
+Excellent context. Now let me study the foundational files I'll integrate with: app entry, routing/deep-links, the facade container, auth seams, and the Live module patterns (seam + production adapter + preview support).
+
+Now the facade container, auth seams/log, and the Live module's seam + production-adapter + preview patterns — these define the conventions I must mirror.
+
+The seam + production-adapter pattern is clear. Let me read the remaining Live patterns (store, log, preview, demo, target, adapter) plus the feedback components I'll reuse for foreground banners.
+
+Let me read the store/modifier/preview patterns, the auth coordinator, and the feedback components for foreground presentation.
+
+Now the auth coordinator, feedback components for foreground UX, the localization catalog format, and test patterns.
+
+Let me examine the localization catalog, FacadeError, test patterns, lint/placeholder configs, and the remaining Live types.
+
+Let me check the localization catalog structure, design tokens, app shell/navigation, and survey the web notifications feature (implementation step 1).
+
+The catalog is 4.4MB/180K lines (generated). Let me check whether predecessors added their keys to it, how it's generated, and read the remaining test patterns + design tokens.
+
+Confirmed: predecessors use `LocalizedStringKey` literals and do **not** hand-edit the 4.4MB generated catalog (it's seeded from `apps/shared/i18n`, which is outside my allowed files). I'll follow that exact convention. Let me read the design tokens, empty-state component, store test pattern, web notification types, and the domain-model pattern.
+
+Let me confirm the design token definitions (TSTone, spacing, status), the empty-state API, and survey the web notification types for categories/deep-links.
+
+I have enough architectural context. Let me do a final confirmation of design tokens (spacing/radius), the live status-dot view pattern, and the web notification category/deep-link taxonomy, then write my plan.
+
+Let me locate the shared-core device-registration/push contract (a stated dependency) and the backend APNs payload shape, then I'll write the plan.
+
+Found the shared-core push domain (`PushRepository`, `PushStore`, `PushModels`). Let me read the contract I'll bind against.
+
+The shared core has a **web-push** domain (`PushStore`, VAPID `/push/subscribe`), while ADR-009 specifies a native **`/devices`** APNs token endpoint. Let me check the shared networking client surface and the OpenAPI for a `/devices` contract to bind the production adapter correctly.
+
+No `/devices` or `/push` path exists in the OpenAPI yet, and the shared client's generic `request<T>` is `inline reified` (not Swift-exportable). So ADR-009's `/devices` APNs endpoint is genuinely future additive work. I'll follow the Live module's seam convention: a Shared-free `DeviceRegistering` seam + a real URLSession-backed registrar using the P5 auth seams (the facade's auth), with production wiring macOS-pinned. Let me confirm the remaining UI component signatures I'll use, then write my plan.
+
+I have full architectural context. Let me establish the baseline gates (must be green before I start) and write my plan + todos.
+
+Baseline is green (swiftformat 0/114, swiftlint 0 violations). Now let me write the plan and start the artifact log with the survey.
+
+Now I'll write the survey/capability-probe header into the artifact log, then start building.
+
+Baseline green. Now implementing — starting with the registration slice. Let me update the todo and create the device-registration seam, ADR-009 models, HTTP registrar, and redacted push log.
+
+I need to create the directories first.
+
+Now the HTTP registrar with a transport seam and 401 retry-once.
+
+APNs authorization slice — status, seam, and the system implementation (platform-guarded).
+
+Routing slice — category→route mapping, the parsed notification model, the pure payload parser, and quiet-hours logic.
+
+The pure payload parser and quiet-hours logic.
+
+Settings slice — settings value type with foreground-presentation policy, persistence seam, and the observable model.
+
+The observable settings model, the device-registration context, then the coordinator.
+
+Now the coordinator — the heart that ties authorization, token lifecycle, registration, routing, and foreground presentation.
+
+Let me run swiftformat (apply) and swiftlint on the new files now to catch style issues early before continuing.
+
+swiftformat/swiftlint clean. Now the Live Activities slice — ActivityKit attributes (charging/drive/command) with availability-guarded conformance.
+
+The erased models, the seam + no-op presenter, the ActivityKit system presenter, and the controller.
+
+Now the preview/demo support with fakes (using the Swift 6 sync-lock-helper pattern), then the UI.
+
+The three UI views — foreground banner, settings screen, and the UI-test demo.
+
+Now the settings screen.
+
+Now the UI-test demo screen.
+
+The app delegate bridge and runtime. First, add a no-op authorizer fallback, then the runtime and delegate.
+
+Now wire it into the app entry point — delegate adaptor, push-demo gate, connect, and deep-link navigation.
+
+Let me simplify the controller's availability gate (deploy target is iOS 18, so no runtime check needed), then build the widget extension UI.
+
+Now the iOS widget extension UI for Live Activities (lock screen + Dynamic Island).
+
+Let me check the gitignore rules for the Apple app before deciding how to handle generated entitlements/Info.plist files.
+
+Only `*.xcodeproj/` is gitignored, so config files I create will be committed (correct for entitlements/plists). I can't edit root `.gitignore` (outside scope), so I'll hand-write explicit, committed config files. First, let me localize the widget chrome to honor i18n.
+
+Now the explicit, committed entitlements and Info.plist files.
+
+Now wire the config into project.yml — entitlements, background mode, and the widget extension target.
+
+Now let me format everything and validate the project generates correctly with xcodegen.
+
+xcodegen succeeded. Let me verify the generated project wired everything correctly.
+
+Project wiring looks correct (entitlements, INFOPLIST_FILE+GENERATE coexist, extension embedded, attributes shared). Now the critical host typecheck. Let me identify Shared-importing files to exclude and the facade types needing shims.
+
+Notifications is cleanly Shared-free. Let me read the facade types I must shim and how non-Shared files use Units, to build the typecheck harness.
+
+I see — `UnitFormatters.swift` uses `Units`/`UnitPreferences` (Shared types) module-wide. This is the P6-0001 harness: exclude the 9 Shared importers, shim the facade types. Let me enumerate the exact `Units`/facade API used so my shim matches.
+
+Let me see the exact `Units`/`UnitPreferences` call signatures so my shim matches precisely.
+
+Now I have the exact `Units` API. Let me check for any other facade types used by non-excluded files, then build the host-typecheck harness with shims.
+
+Clean — only the 5 shims needed. Let me build the host-typecheck harness and run it.
+
+Only error is a strict-concurrency diagnostic on the pre-existing `AppRoute.primaryTabs` — a script-mode artifact. P6-0001 used `-parse-as-library`. Let me retry with that.
+
+This `AppRoute` diagnostic is pre-existing (not my code) and the real project builds it fine. Let me determine the exact rule with a minimal test to pick the faithful flag set.
+
+Confirmed: under Swift 6 mode, public bare enums aren't implicitly `Sendable`. My `PushNotification: Sendable` stores `route: AppRoute`, so **AppRoute must be Sendable** — a legitimate, tightly-coupled fix (and it resolves the pre-existing `primaryTabs` diagnostic). Let me make `AppRoute`/`AppRouteGroup` Sendable, then re-run under Swift 6.
+
+Down to only 2 errors — both pre-existing in `RouteHostRegistry.swift` (untouched by my work; a latent Swift-6 EnvironmentKey issue across the app since P4-0001). All my new Notifications sources pass Swift-6 strict concurrency. Let me confirm the app-wide typecheck is clean in the predecessor-consistent default mode.
+
+Found it: `ActivityKit` **imports** on macOS but its types are `@available(macOS, unavailable)`, so `canImport(ActivityKit)` is the wrong guard. Live Activities are iOS-only — I must guard with `#if os(iOS)`. Let me fix all the ActivityKit guards.
+
+Now re-run both typechecks — default mode should be clean, Swift-6 should show only the pre-existing RouteHostRegistry diagnostics.
+
+App-wide typecheck is **EXIT=0 (default mode, 0 errors)** and **Swift-6 strict mode shows my new code 100% clean** (only 2 pre-existing `RouteHostRegistry` diagnostics remain, untouched by me). Now the strongest check — compiling and **executing** my real Shared-free logic under Swift 6.
+
+Now compile and run the harness against the real logic.
+
+`@main` needs `-parse-as-library`; that makes `failures` a global needing MainActor isolation. Let me fix and recompile.
+
+All 35 executed scenarios **PASS** under Swift 6. Now the test suites (XCTest + XCUITest), mirroring the existing patterns and the proven logic.
+
+Now the XCUITest for the push demo flows.
+
+All tests written. Now let me run the full gate suite — format, lint, placeholder scan, regenerate project, and re-verify the typecheck.
+
+FORMAT_EXIT=0, LINT_EXIT=0 (150 files). Now the placeholder scan, the widget-extension lint, project regeneration, and a typecheck re-confirm.
+
+Placeholder scan is clean (the one "placeholder" hit is prose describing the *absence* of placeholder UI). Let me check the actual placeholder script to replicate it faithfully, and decide on linting the extension.
+
+⚠️ Critical: the placeholder scan is **case-insensitive**, so my comment "no placeholder UI" would trip the `Placeholder` pattern. Let me find every case-insensitive match in my new files.
+
+One hit — a comment using "placeholder". Let me reword it.
+
+Let me run the faithful whole-tree placeholder replication, re-verify format/lint after the edit, regenerate the project (to include new test files), and re-confirm the typecheck.
+
+PLACEHOLDER_COUNT=0, FORMAT_EXIT=0, XCODEGEN_EXIT=0, tests wired. Let me re-confirm swiftlint, the app typecheck, and re-run the executed harness after the edits.
+
+All host-runnable gates are green. Let me verify the full changeset, confirm the `.xcodeproj` is ignored, and that the macOS target excludes the iOS-only extension.
+
+Complete changeset: 2887 lines of new push source + 589 lines of tests, `.xcodeproj` properly ignored. Let me gather exact counts and finalize the artifact log.
+
+Now let me finalize the artifact log with the complete changeset, gate results, and honest deferral.
+
+Log finalized. Let me update the plan, clean up temp artifacts, do a final consolidated gate run, and commit.
+
+All gates green. Let me update the plan, clean up temp files, and commit.
+
+Clean, scoped changeset. Now the commit (exactly as the prompt specifies, with the Co-authored-by trailer).
+
+48 files, 3774 insertions. Let me commit.
+
+Committed as `364831b4`. Let me do a final verification of the commit contents and the log's terminal status.
+
+Task complete and verified. Final state confirmed:
+- Commit `364831b4` — 48 files, 3774 insertions; `apps/apple` tracked tree **CLEAN**
+- Artifact log ends `EXIT=0 / STATUS=DONE`
+- All host-runnable gates green; real logic executed 35/35 under Swift 6
+

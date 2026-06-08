@@ -1,0 +1,193 @@
+=== P4 Shared surface 0042 AIRAGHelp (Apple) ===
+date: 2026-06-08T11:22:53Z
+host: Darwin 25.5.0 arm64
+repo: ev-dev-labs/teslasync   branch: auto/20260608-002645-33927/271
+web source (spec): web/src/components/ai/AIRAGHelp.tsx
+native output: apps/apple/TeslaSync/shared-surfaces/AIRAGHelp.*
+
+############################################################
+# CAPABILITY PROBE — Apple build/test toolchain
+# Prompt: 'requires SwiftUI + Swift Charts + MapKit, iOS 18 /
+#  iPadOS 18 / macOS 15 HIG. If unavailable on the runner ->
+#  STATUS=BLOCKED with API evidence.'
+############################################################
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ swift --version
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+Target: arm64-apple-macosx26.0
+$ swiftc present:
+/usr/bin/swiftc
+$ swiftlint present:
+/opt/homebrew/bin/swiftlint
+$ swiftformat present:
+/opt/homebrew/bin/swiftformat
+$ xcodegen present:
+/opt/homebrew/bin/xcodegen
+$ pwsh present:
+/opt/homebrew/bin/pwsh
+-- SDK frameworks (CLT) --
+  FOUND: SwiftUI
+  FOUND: Charts
+  FOUND: MapKit
+  FOUND: Combine
+
+>> BLOCKER 1: xcodebuild requires full Xcode (active dir is CommandLineTools)
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+xcodebuild_exit=1
+
+>> BLOCKER 2: iOS Simulator runtime / simctl unavailable
+$ xcrun simctl list devices available
+xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+simctl_exit=0
+
+CONCLUSION: the gate's 'xcodebuild ... build test' (iOS Simulator + macOS
+schemes) CANNOT execute on this runner. Per the prompt's capability clause
+this is a sanctioned STATUS=BLOCKED. SwiftUI/Charts/MapKit ARE present in the
+CLT SDK, so the surface is implemented in full and verified by every runnable
+substitute gate below (format, lint, placeholder, Swift 6 typecheck, parse).
+
+############################################################
+# GATE STEPS (prompt's gate, executed on this runner)
+############################################################
+
+## [1/2] xcodebuild iOS Simulator (scheme TeslaSync) — build test
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+IOS_EXIT=1
+    xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+
+## [2/2] xcodebuild macOS (scheme TeslaSync-macOS) — build test
+$ xcodebuild -scheme TeslaSync-macOS build test
+MAC_EXIT=1
+    xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+  -> Both blocked: xcodebuild unavailable (CommandLineTools, not Xcode).
+
+## swiftformat --lint (gate runs whole 'apps/apple' tree)
+$ swiftformat --lint apps/apple   # whole tree
+FORMAT_ALL_EXIT=1
+    1/1922 files require formatting, 2 files skipped.
+$ swiftformat --lint TeslaSync/shared-surfaces   # this surface
+FORMAT_SURFACE_EXIT=0
+    0/9 files require formatting.
+
+## swiftlint --strict
+$ swiftlint --strict   # gate: config 'included' = Sources + dashboard-widgets + feature-views + Tests (+watch/widgets)
+LINT_PROJECT_EXIT=2
+    Done linting! Found 1 violation, 1 serious in 1909 files.
+    pre-existing baseline violation (NOT this surface, NOT in allowed scope):
+      apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length Violation: Function body should span 50 lines or less excluding comments and whitespace: currently spans 78 lines (function_body_length)
+    NOTE: 'shared-surfaces' is absent from .swiftlint.yml 'included' (a P4-core
+          wiring prereq, outside this prompt's allowed files), so the project-wide
+          run does not lint this surface. It is linted in isolation below.
+$ swiftlint lint --strict <config-minus-included> TeslaSync/shared-surfaces/*.swift
+LINT_SURFACE_EXIT=0
+    Done linting! Found 0 violations, 0 serious in 9 files.
+
+## check-placeholders.ps1 (ADR-011 no-stubs gate)
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces
+PLACEHOLDER_EXIT=0
+    PLACEHOLDER_ALLOWED=1
+    PLACEHOLDER_COUNT=0
+    (1 ALLOWED = the verbatim web i18n key 'help.aiHelp.placeholder', opted out
+     with '// parity:allow'; 0 unaccounted stubs.)
+
+## swiftc -typecheck — production files, Swift 6 + strict concurrency=complete, macOS 15 SDK
+$ swiftc -typecheck -sdk <CLT macOS SDK> -target arm64-apple-macos15.0 -swift-version 6 \
+    -strict-concurrency=complete Tokens.swift Motion.swift Buttons.swift AIRAGHelp.{,Model.,Adapter.,Projection.,Views.,Chrome.}swift
+TYPECHECK_PROD_EXIT=0  (0 compiler errors)
+
+## swiftc -frontend -parse — test + preview files (full compile needs XCTest/PreviewsMacros = Xcode-only)
+    parse AIRAGHelp.Tests.swift -> PARSE_EXIT=0  (0 errors)
+    parse AIRAGHelp.AdapterTests.swift -> PARSE_EXIT=0  (0 errors)
+    parse AIRAGHelp.Previews.swift -> PARSE_EXIT=0  (0 errors)
+    NOTE: '#Preview' macro (PreviewsMacros plugin) and XCTest.framework ship with
+          full Xcode, not CommandLineTools; full preview/test COMPILE+RUN is part of
+          the BLOCKED xcodebuild gate. Syntax is validated here + by swiftformat/swiftlint.
+
+############################################################
+# IMPLEMENTATION MANIFEST
+############################################################
+Files (mirrors the established AiUsageCard 10-file surface pattern):
+  AIRAGHelp.swift                   102 lines
+  AIRAGHelp.Model.swift             306 lines
+  AIRAGHelp.Adapter.swift           197 lines
+  AIRAGHelp.Projection.swift         50 lines
+  AIRAGHelp.Views.swift             178 lines
+  AIRAGHelp.Chrome.swift            263 lines
+  AIRAGHelp.Previews.swift           98 lines
+  AIRAGHelp.Tests.swift             198 lines
+  AIRAGHelp.AdapterTests.swift      144 lines
+  AIRAGHelp.strings                  43 lines
+  ------------------------------------------
+  swift total (excl. .strings):         1536 lines
+
+Web parity (components/ai/AIRAGHelp.tsx -> native):
+  withAiFeature('rag-help') gate   -> AIRAGHelpResolved.Phase.gated / isGated (renders EmptyView)
+  AIFeatureCard header+badge+desc  -> AIRAGHelpHeader + AIRAGHelpBadge
+  <Textarea> prompt (rows=3)       -> AIRAGHelpPromptField (TextField axis:.vertical + prompt)
+  canStart=prompt.trim().length>0  -> AIRAGHelpPrompt.canStart / projection canAsk
+  useAiStream(url:/ai/help/query)  -> AIRAGHelpStream seam (P1/S8) + AIRAGHelpStreamReducer
+  AiOutputPanel branches           -> AIRAGHelpOutputResolver (idle/thinking/answer/failure)
+  AIThinkingIndicator              -> AIRAGHelpThinkingIndicator (skeleton+dots, reduce-motion)
+  universal 'Ask Helix' CTA        -> AIRAGHelpAskButton (idle / 'Helix is thinking…')
+
+States rendered (no hidden surface):
+  gated · idle(empty hint) · thinking(loading) · answer · error(+retry) · stale · offline
+
+i18n keys (P1/S10, table 'AIRAGHelp' -> AIRAGHelp.strings):
+  total keys: 21
+  parity keys from source: help.aiHelp.{title,description,askButton,badge,placeholder},
+    helix.{askHelix,thinking,errorLabel,ariaLabel,badge,tooltip}, ai.common.errorUnknown
+  native chrome keys: airagHelp.{live,stale,offline,staleBanner,offlineBanner,emptyHint,
+    retry,promptA11y,outputA11y}
+
+Telemetry: view.opened slug = 'AIRAGHelp' (deferred past the gate).
+Accessibility: VoiceOver labels on badge/prompt/ask/answer/error/chip; Dynamic Type via TS
+  fonts; Reduce Motion honored in thinking dots + shimmer.
+
+Tests authored (run under the BLOCKED xcodebuild gate):
+  AdapterTests: reducer(begin/delta/confirm/done/failed/finishIfStreaming/cancel), prompt gate,
+    output resolver, a11y builders.
+  Tests: projection phases + Ask-gate guards + localized-unknown, model wiring (ask trims +
+    no-op guards + snapshot propagation), telemetry-deferred-past-gate, connection axis.
+
+Out-of-scope wiring (predecessor/integration prereqs — NOT in this prompt's allowed files,
+documented, not bypassed):
+  - add 'TeslaSync/shared-surfaces' to project.yml sources (iOS + macOS targets)
+  - add 'TeslaSync/shared-surfaces' to .swiftlint.yml 'included'
+  - fold AIRAGHelp.strings into Localization/Localizable.xcstrings
+  (owned by P4 core, the same way AiUsageCard's atomic peers are owned by the component bundle)
+
+############################################################
+# DETERMINATION
+############################################################
+Runnable gates on this runner (all green for this surface):
+  FORMAT_SURFACE_EXIT=0   swiftformat --lint (this surface): 0/9 require formatting
+  LINT_SURFACE_EXIT=0     swiftlint --strict (this surface): 0 violations, 0 serious
+  PLACEHOLDER_EXIT=0      check-placeholders: PLACEHOLDER_COUNT=0 (1 sanctioned parity:allow)
+  TYPECHECK_PROD_EXIT=0   swiftc -typecheck Swift 6 + strict-concurrency=complete: 0 errors
+  PARSE (tests+previews)=0 swiftc -frontend -parse: 0 errors
+
+Blocked gates (platform capability absent — prompt-sanctioned BLOCKED):
+  IOS_EXIT!=0   xcodebuild iOS Simulator build test — xcodebuild needs full Xcode
+                (active dir = /Library/Developer/CommandLineTools); no simctl/runtimes.
+  MAC_EXIT!=0   xcodebuild macOS build test — same xcodebuild unavailability.
+
+Project-wide baseline notes (NOT this surface, outside allowed files):
+  - swiftlint --strict (project-wide) reports 1 PRE-EXISTING violation in
+    TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift (function_body_length).
+  - swiftformat --lint (whole apps/apple) reports 1 PRE-EXISTING file needing formatting,
+    TeslaSync/feature-views/ActionBuilder.Previews.swift (blankLinesBetweenScopes); 0 of the
+    9 shared-surfaces files are flagged.
+  - 'shared-surfaces' is not yet in project.yml sources / .swiftlint.yml included
+    (P4-core wiring prereq). These are recorded above, not bypassed.
+
+The AIRAGHelp shared surface is implemented in full at parity with the web source
+(every state, hook binding via P1/S8 seam, P1/S10 i18n, P1/S11 telemetry, accessibility,
+and tests). The ONLY un-passable step is the Apple build/test gate, which physically
+cannot run without full Xcode + iOS simulators on this runner. Per the prompt's capability
+clause this is STATUS=BLOCKED with API evidence, NOT a red-as-green DONE.
+
+EXIT=1
+STATUS=BLOCKED

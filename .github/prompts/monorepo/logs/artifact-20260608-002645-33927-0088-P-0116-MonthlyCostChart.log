@@ -1,0 +1,230 @@
+================================================================================
+P4 · Feature view · 0116 — MonthlyCostChart (Apple)
+Run: 2026-06-08T01:28-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/88
+Base: c9c6fdb9
+Prompt: P4/feature-views/0116 — Feature view: MonthlyCostChart
+Web source (spec): web/src/features/charging/components/cost-analysis/MonthlyCostChart.tsx
+Mode: code-complete + host-validated (typecheck both SDKs + EXECUTED XCTest via
+      SwiftPM harness) + DEFERRED xcodebuild app build/test (0002 BackendTool /
+      predecessor parity, ADR-012, Honesty rule 7).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT default) ........ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)           OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  Swift Charts ............... present in both SDKs (this surface USES it)          OK
+  MapKit ..................... present in both SDKs (this surface uses NEITHER map) OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.x                       OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  xcodegen ................... 2.45.4 (project generates cleanly, see deferred)     OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+  feature-views in project.yml  registered in BOTH app targets (lines 37, 68)       OK
+    (the XCTest *bundle* targets read Tests/Unit; the per-surface *.Tests.swift
+     compile into the app target alongside the other 170 feature-view suites —
+     the established repo convention, followed verbatim here)
+
+  Capability note: the core requirement is SwiftUI + Swift Charts, both AVAILABLE
+  and PROVEN by real iOS-18-simulator AND macOS-15 SDK typechecks below. The
+  capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT
+  apply — the surface is authored, host-compiled on both SDKs, and host-tested
+  (26/26 XCTest green).
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/MonthlyCostChart.*) ===
+  MonthlyCostChart.Adapter.swift   333  pure projection core (Foundation only) —
+                                        MonthlyCostBucket(web MonthlyBucket)/Point/
+                                        Annotation models, MonthlyCostFormat.safe +
+                                        monthTickLabel (YYYY-MM→MM/YY), Builder
+                                        (points/domainUpperBound/alignedAnnotations/
+                                        project), phase enums + resolvePhase, surface
+                                        slug, a11y summary/pointValue
+  MonthlyCostChart.Model.swift     308  P1/S8 state-holder seam (MonthlyCostChartSource
+                                        →MonthlyCostChartModel, @Observable @MainActor)
+                                        + P1/S11 telemetry seam (view.opened) + P1/S10
+                                        strings facade + useFormatting seam
+                                        (formatCurrency) + in-memory source; SwiftUI-free
+  MonthlyCostChart.Views.swift     210  header+freshness chip, stale/offline banner,
+                                        loading skeleton, empty ("Not enough data"),
+                                        error+retry — token-driven, facade copy
+  MonthlyCostChart.Chart.swift     229  Swift Charts AreaMark+LineMark+gradient (web
+                                        AreaChart, palette[0] = TSChartPalette.color(0)),
+                                        annotation RuleMarks (web renderAnnotationLines),
+                                        MM/YY x axis + currency y axis (formatCurrency
+                                        v,0), selection tooltip (web ChartTooltip), a11y
+  MonthlyCostChart.swift            98  surface — TSFadeIn glass panel + header + banner
+                                        + phase switch; Strings.text facade helper; slug
+  MonthlyCostChart.Previews.swift  107  #if DEBUG — 6 previews (content/empty/loading/
+                                        error/stale/offline)
+  MonthlyCostChart.Tests.swift     304  XCTest — adapter + model + a11y (26 methods)
+  MonthlyCostChart.strings          44  P1/S10 catalog contribution (table "MonthlyCostChart")
+  Largest .swift = 333 lines (swiftlint file_length honored). No file imports the
+  Shared xcframework (seams are Swift protocols; prod injects the cost-analysis
+  state holder; previews/tests inject InMemoryMonthlyCostSource).
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data sources (web useTranslation + useChartPalette + useFormatting): the web
+    chart is a leaf taking `data: MonthlyBucket[]` + `vehicleId` props (the parent
+    cost-analysis page derives buckets via useCostAnalysisData and owns isLoading/
+    refetch). Reproduced through the P1/S8 seam MonthlyCostChartSource→Model: each
+    coalesced MonthlyCostUpdate carries the buckets + load status + connection +
+    annotations + vehicleId. No HTTP in the view.
+      • useChartPalette palette[0] -> TSChartPalette.color(at: 0) (area stroke +
+        gradient + tooltip swatch).
+      • useFormatting formatCurrency -> MonthlyCostFormatting seam; y-axis uses
+        formatCurrency(v, 0) (web), tooltip/summary use 2 decimals.
+  - Composition (web ChartContainer + AreaChart):
+      • title "Monthly Cost Trend" + container aria "Monthly charging cost trend
+        area chart" -> panel header + container accessibilityLabel.
+      • AreaChart cost-vs-month (web `data.map(d => ({month, cost}))`, costGrad
+        0.30→0.02 fill, palette[0] stroke) -> Chart { AreaMark(gradient) + LineMark }.
+      • x tick `${p[1]}/${p[0].slice(2)}` -> MonthlyCostFormat.monthTickLabel
+        (YYYY-MM→MM/YY); y tick formatCurrency(v,0) -> currency AxisValueLabel.
+      • annotations{vehicleId,scope:'cost',chartId:'cost-monthly-trend'} +
+        renderAnnotationLines -> dashed RuleMarks tinted to ANNOTATION_COLORS
+        (milestone/maintenance/trip/issue/upgrade/custom), aligned to a plotted month.
+      • selection -> ChartTooltip parity (month + Cost ($)).
+    Scope note: the ChartContainer's CSV-export menu + screen-reader fallback table
+    (dataColumns Month / Cost ($)) are atomic shared-component concerns (P4
+    component-library bundle), out of scope here; their source i18n keys are still
+    carried in the catalog for parity.
+  - States (ALL rendered, each with a #if DEBUG preview + a model/phase unit test):
+      loading (skeleton) · content (area + annotations) · empty (web "Not enough
+      data" via ContentUnavailableView) · error (message + Retry) · stale (freshness
+      chip + "cost history may be out of date" banner + one guarded auto-refresh) ·
+      offline (cached area kept + "showing the last loaded cost history" banner +
+      offline chip, no refetch).
+  - i18n (P1/S10): web keys preserved verbatim — costAnalysis.charts.monthlyCost /
+    .monthlyCost.aria / .col.month / .col.cost / .cost / .noData. Native chrome
+    namespaced costAnalysis.charts.{live,stale,offline} + costAnalysis.charts.monthly.*
+    (staleBanner/offlineBanner/refresh/loading/emptyHint/errorTitle/retry/monthsNoun/
+    priciest). Cross-check: 17 code-referenced keys, ALL declared (referenced∖declared
+    = ∅); 18 declared (col.cost is the source CSV column, declared for catalog parity).
+    NO English string literals in native code (all via MonthlyCostStrings facade +
+    Text(verbatim:) / injected localize).
+  - Accessibility: chart carries a combined VoiceOver summary (title + month count +
+    MM/YY span + cost range + priciest month); each AreaMark carries a per-point
+    label+value; header is an .isHeader; freshness chip + banner + retry carry
+    labels; Dynamic-Type system fonts (Font.TS); reduce-motion honored (chart
+    animation gated on accessibilityReduceMotion; TSSkeleton/TSFadeIn).
+  - Telemetry (P1/S11): MonthlyCostChartModel.start() emits view.opened with surface
+    slug "MonthlyCostChart" exactly once (OSLogMonthlyCostChartTelemetry default;
+    prod injects the shared diagnostics adapter) — unit-tested.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 5 production files compiled together with the REAL apps/apple
+  component closure (design Tokens + Design/{TSDesign,TSMaterial} + Components/Motion/
+  Motion + Components/Feedback/Skeletons + Components/UI/{Typography,Badges,Buttons,
+  Cards,Utility}); none import the Shared xcframework.
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK
+        xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+          -swift-version 6 -strict-concurrency=complete <closure> <5 production files>
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [3] swiftc -typecheck — DEBUG previews (-D DEBUG, Xcode #Preview macro plugin;
+        the 5 production files + Previews + closure):
+        PREVIEWS_TYPECHECK_EXIT=0                                                  OK
+  [4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a
+        self-contained SwiftPM harness (real production Adapter/Model/Views/Chart/
+        surface + real design tokens + real TS component closure, module named
+        TeslaSync so the shipped `@testable import TeslaSync` runs unmodified),
+        Swift 6 language mode, platform macOS 15:
+          Test Suite 'MonthlyCostBuilderTests'       passed —  8 tests, 0 failures
+          Test Suite 'MonthlyCostChartModelTests'    passed — 12 tests, 0 failures
+          Test Suite 'MonthlyCostFormatTests'        passed —  3 tests, 0 failures
+          Test Suite 'MonthlyCostAccessibilityTests' passed —  3 tests, 0 failures
+          Executed 26 tests, with 0 failures (0 unexpected) in 0.004 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: monthTickLabel YYYY-MM→MM/YY + passthrough, safe() guard, point
+        projection (safe cost), domainUpperBound headroom/never-zero, annotation
+        alignment, project totals/hasData/peak, resolvePhase, surface slug; model
+        loading/loaded/empty/failed phases, vehicleId carry, annotation alignment,
+        view.opened-once, stale auto-refresh-once + re-arm-on-live, offline keeps
+        cached area without refetch, retry/stop; a11y chart summary (+empty) +
+        pointValue.
+  [5] swiftlint --strict (7 surface .swift files; explicit paths):
+          Done linting! Found 0 violations, 0 serious in 7 files.
+        LINT_EXIT=0                                                               OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/7 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate; swift) — scanned my 8 files in
+        isolation (the shared feature-views dir also holds other in-flight surfaces):
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                        OK
+        (the script self-test also passes: SELFTEST_EXIT=0)
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to a staged/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode toolchain):
+      - `xcodegen generate`                         -> XCODEGEN_EXIT=0 (project + 12
+                                                       targets + schemes; this surface's
+                                                       8 files registered — 48 pbxproj refs).
+      - `xcodebuild -target TeslaSync-macOS build`  ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          error: "TeslaSync-macOS" has entitlements that require signing with a
+                 development certificate.
+          ** BUILD FAILED **                        -> MAC_BUILD_EXIT=65
+    Why deferred (two independent, code-unrelated reasons — neither is a defect in
+    this surface; identical disposition to the 0002 BackendTool predecessor, Honesty
+    rule 7):
+      (a) Shared.xcframework not staged: the app target links the KMP core; staging it
+          needs a Kotlin/Native gradle build (apps/shared :core:assembleSharedXCFramework).
+          Independent of this UI surface; concrete missing-framework error captured above.
+      (b) macOS app/widget signing requires a development certificate on a signed
+          runner (ADR-012); entitlement errors captured above.
+    Note (differs from the 0002-era repo): feature-views IS now registered in the
+    project.yml app targets, so an app build DOES include these files — but it still
+    cannot link without the xcframework. The surface itself compiles against BOTH the
+    iOS 18 and macOS 15 SDKs (steps [1]/[2]), its previews typecheck (step [3]), and
+    its full XCTest suite is PROVEN GREEN 26/26 by the executed SwiftPM harness
+    (step [4]) — the meaningful validation that xcodebuild would add nothing to here.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/content/empty/error/stale/offline) —
+      implemented; each has a #if DEBUG preview; phase logic unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (MonthlyCostChartSource→
+      MonthlyCostChartModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — web monthlyCost/.aria/
+      col.month/col.cost/cost/noData preserved verbatim; native chrome present;
+      referenced(17)⊆declared(18) verified.
+  [x] Accessibility labels present on every interactive element (retry/refresh) +
+      chart summary + per-point values + freshness chip; header trait.
+  [x] Tests: adapter unit + per-state model + a11y — 26 methods, EXECUTED 26/26, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; xcodebuild app build/test DEFERRED with
+      captured evidence (xcframework + signing), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates (typecheck×2, previews, 26/26 XCTest, lint,
+                          format, placeholder) are genuinely green; the xcodebuild
+                          build/test is shown DEFERRED with its real exit 65 + cause,
+                          not as pass.
+  2 No scope narrowing ... full surface (7 .swift + strings), all 6 states, seams,
+                          annotations, tests.
+  3 No skip-and-assume ... web source read end-to-end; every t() + the data.length>0
+                          branch + the x/y tick formatters + the annotation layer
+                          reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. AreaChart+gradient+stroke + annotation RuleMarks + MM/YY +
+                          currency axis + ChartTooltip + 6 states + a11y.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0002 BackendTool host-gate + deferral.
+  8 No commit on red ..... committed work is green on every runnable gate; the only
+                          non-green step is the environment-blocked xcframework/signing
+                          build, deferred with evidence (predecessor-accepted disposition).
+  9 No silent drift ...... deferral reasons + the feature-views-now-registered delta
+                          documented above; generated .xcodeproj is git-ignored and was
+                          removed after evidence capture.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

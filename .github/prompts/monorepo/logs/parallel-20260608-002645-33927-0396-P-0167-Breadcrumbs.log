@@ -1,0 +1,131 @@
+I'll start by exploring the repository structure to understand the web source, existing Apple app structure, and the supporting infrastructure.
+
+Now let me explore the Apple app structure more deeply to understand the patterns, the shared-surfaces directory, and the P1 infrastructure (state holders, tokens, i18n, telemetry).
+
+There are two trees: `Sources/` (the Swift package) and `TeslaSync/feature-views` + `TeslaSync/dashboard-widgets` (prior P-prompt outputs). Let me examine the existing patterns to understand conventions.
+
+Key finding: `project.yml` lists `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` as sources, but not `shared-surfaces`. Let me check runner capabilities (the prompt requires SwiftUI/Xcode tooling, else STATUS=BLOCKED) and examine the project.yml fully.
+
+Critical capability finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed — so the `xcodebuild build test` gate steps cannot run here. Per the prompt's capability clause, that points toward STATUS=BLOCKED. But I must still produce a complete, production-quality implementation and verify everything I *can* (swiftlint, swiftformat, placeholder check, swift compile). Let me confirm the Xcode situation and study the established patterns.
+
+Xcode.app exists at `/Applications/Xcode.app` even though `xcode-select` points to CommandLineTools. I can use `DEVELOPER_DIR` to access it. Let me verify it works.
+
+Xcode 26.5 is available and iPhone 16 simulator exists. The full build gate may be runnable. Let me check SDKs and establish a baseline build before I write any code.
+
+Important: the app links a KMP `Shared.xcframework` (built via Gradle/Kotlin-Native) which is currently absent (only `.gitkeep`), and `shared-surfaces` isn't wired into `project.yml`. Both are predecessor/infra concerns. Let me study the established conventions deeply before writing code, and locate the i18n facade, tokens, telemetry contract, and the placeholder checker.
+
+I see a `.Telemetry.swift` convention. Let me study a complete, representative feature-view set (ToolCard, which has tests) and the telemetry pattern in detail.
+
+`BatteryPill` is an ideal template — presentational chrome with the full file set. Let me read it completely along with the telemetry pattern.
+
+Now let me read the rest of the BatteryPill template (tests, previews, strings), the design tokens, and find the i18n facade and navigation pattern.
+
+I now have the full template pattern. Let me examine the design tokens, i18n approach, the master string catalog (for existing breadcrumb keys), and the navigation/routing pattern.
+
+The breadcrumb keys already exist: `translation.a11y.breadcrumb` ("Breadcrumb") and `translation.a11y.breadcrumbHome`. `QuickNav` is the navigation analog. Let me study it, the routing layer, the design token definitions, and a `tableName:` usage example.
+
+Let me read the full QuickNav navigation surface (closest analog), the routing layer, and the design tokens.
+
+QuickNav confirms the full facade/seam conventions. Breadcrumbs is caller-supplied-props presentational chrome — the BatteryPill precedent fits best (no internal data source). Now let me assess build feasibility (KMP framework, project.yml wiring) and confirm exact design tokens before writing code.
+
+Let me read the exact token definitions and the `TSGlassPanel`/`TSSkeleton` signatures so my code uses real APIs.
+
+I have all tokens confirmed. Let me check the SwiftLint config and verify there are no symbol collisions before writing code.
+
+SwiftLint `included:` also omits `shared-surfaces` (a predecessor/P4-core wiring concern, like project.yml). I'll keep my files self-contained (depending only on the generated `Tokens.swift`, not heavier components) so I can do an isolated `swiftc -typecheck` as real verification. Let me check pwsh and the swiftformat config, then set up tracking.
+
+All tooling is present (pwsh, swiftlint, swiftformat, Xcode 26.5). I have everything needed. Let me set up tracking and create the directory, then write the implementation. I'll keep files self-contained (depending only on generated `Tokens.swift`) so I can do a real isolated `swiftc` type-check as verification.
+
+Now I'll write the implementation. Starting with the Model (types + adapter + surface identity + i18n facade).
+
+Now the Views file with the decomposed subviews.
+
+Now the main view that composes everything.
+
+Now the strings catalog and DEBUG previews.
+
+I need to fix a Swift correctness issue in the previews: a stored-property initializer can't cleanly call a helper. Let me make `rows` computed and `sample` an instance method.
+
+The file exists with the first version. Let me remove it and recreate with the corrected (computed `rows`) version.
+
+Now the test suite (host-free value-type coverage following the BatteryPill precedent).
+
+All 7 files written. Let me update tracking and begin verification with swiftformat and swiftlint on the new files.
+
+swiftformat found two auto-fixable issues (line wrapping + conditional-assignment style). Let me apply the formatter in place, then re-lint and review the changes.
+
+swiftformat passes. Let me review the auto-formatted sections to confirm correctness.
+
+Auto-formatted code is correct (valid Swift if-expression, clean wrapping). Now SwiftLint on the new files explicitly (the config's `included:` doesn't cover shared-surfaces, so I pass the path directly).
+
+SwiftLint linted 1909 files and reported 1 serious violation. Let me isolate which file and line it's in.
+
+The 1 violation is **pre-existing** in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (untouched by me). To get a definitive isolated strict-lint of only my files, let me use a temp config scoped to shared-surfaces with the same rules.
+
+My 6 Swift files pass **swiftlint --strict (0 violations)** and **swiftformat --lint (clean)**. Now the most important check: a real isolated `swiftc -typecheck` against the iOS Simulator SDK (my files + the generated `Tokens.swift`), using the project's Swift 6 + complete strict concurrency.
+
+Shipped files type-check cleanly (Swift 6, strict concurrency, iOS 18). Now let me validate the **test file** type-checks against my APIs — I'll compile a temp copy (with the `@testable import` stripped so the types resolve in-module) together with the sources and XCTest.
+
+The XCTest errors are a known tooling artifact — `swiftc -typecheck` can't import XCTest's C assertion *macros* outside an `xcodebuild` test context (note: "function like macros not supported"). That's not a problem with my test logic. To validate my test bodies against my real types, I'll compile with lightweight XCTest shims standing in for the harness.
+
+Both shipped code and test bodies type-check cleanly (Swift 6, strict concurrency, iOS 18). Now the placeholder/stub gate.
+
+Placeholder gate passes (0/0, EXIT=0). Now let me attempt the actual `xcodebuild` gate to capture concrete evidence of the build situation. First, generate the project and confirm whether `shared-surfaces` is wired.
+
+Definitive evidence: `xcodegen` succeeds, but `project.yml` (a P4-core predecessor file, **outside my allowed files**) doesn't register `shared-surfaces`, so Breadcrumbs isn't in the build graph (grep count 0). Plus the app hard-depends on the absent KMP `Shared.xcframework`. Let me still attempt the real `xcodebuild` gate command to capture concrete evidence of the blocker.
+
+The build is running the pre-build "Stage Shared.xcframework" Gradle/KMP script phase. Let me wait to capture how that resolves.
+
+The build is stuck in the "Stage Shared.xcframework" pre-action (the KMP/Gradle Kotlin-Native build) — confirming the infra blocker. I have definitive evidence. Let me stop it and clean up the generated artifacts.
+
+Those java/xcodebuild processes belong to other parallel slots sharing this environment (I was warned this isn't a dedicated sandbox) — I won't touch them. My own build was stopped and artifacts cleaned. Let me verify git status shows only my intended files.
+
+I see modified `AIUsageCard.*` files I never touched. Let me investigate — these may be pre-existing or from the shared environment. I must confirm they're unrelated to my work before proceeding.
+
+Confirmed: the `AIUsageCard.*` changes are **pre-existing** (mtime 05:51:14, before I started) and unrelated (a 0203→0237 rework) — not mine, and my scoped commit won't include them. Now let me generate the gate log with real command output captured live.
+
+The `cd apps/apple` broke the relative log path. Let me use an absolute path.
+
+Now append the **in-scope green checks** (the parts genuinely runnable for this surface) with live output: SwiftLint, SwiftFormat, both type-checks, and the placeholder gate.
+
+Now the conclusion, acceptance-criteria mapping, and the required `EXIT`/`STATUS` footer.
+
+The log is complete and honest (EXIT=1 / STATUS=BLOCKED) with full evidence. Let me clean two cosmetic stray `0` lines from the `grep -c` output, and do a final quality re-read of the formatted source.
+
+The view reads cleanly. Since the gate also builds the **macOS** target, let me verify my files type-check against the macOS SDK too (the main cross-platform risk is `horizontalSizeClass`/`UserInterfaceSizeClass` on macOS).
+
+macOS type-check also passes (exit 0) — the surface is cross-platform correct. Let me record this in the log (inserted before the footer so the log still ends with EXIT/STATUS).
+
+The log correctly ends with `EXIT=1` / `STATUS=BLOCKED`. All 7 files present; git shows only my files are new.
+
+Per the binding Honesty Covenant **rule 8 ("No commit on red")**, I will **not** commit — the `xcodebuild` gate is BLOCKED (not green), so landing the code would violate the covenant. The work is saved in the working tree and fully documented. Let me do final cleanup and confirm state.
+
+All finalized and clean. Let me do a last confirmation of the complete deliverable.
+
+The Breadcrumbs Apple shared surface is fully implemented and verified to the maximum extent possible within the allowed scope. Here's the outcome.
+
+## Delivered — `apps/apple/TeslaSync/shared-surfaces/Breadcrumbs.*` (7 files, 894 lines)
+
+| File | Role |
+|---|---|
+| `Breadcrumbs.Model.swift` | `BreadcrumbItem`/`BreadcrumbSegment` types, the pure `BreadcrumbsPresentation` **adapter**, surface slug, P1/S10 i18n facade |
+| `Breadcrumbs.Telemetry.swift` | P1/S11 `view.opened` seam + `os_log` sink |
+| `Breadcrumbs.swift` | Main view: nav landmark, horizontal scroll, telemetry on appear |
+| `Breadcrumbs.Views.swift` | Home link, chevron separator, link/plain/current crumbs, collapsed `…` |
+| `Breadcrumbs.Previews.swift` | DEBUG previews (all branches, compact/regular, dark/light, Dynamic Type) |
+| `Breadcrumbs.strings` | `a11y.breadcrumb`, `a11y.breadcrumbHome` (+ preview labels) |
+| `Breadcrumbs.Tests.swift` | Adapter projection, collapse, telemetry, i18n, value-semantics |
+
+**Parity:** reproduces the web source exactly — the `items.length <= 1 → null` collapse, per-crumb link/plain/current rendering, the `i>0 && !isLast` middle-collapse to `…` on compact width, Home link, separators, truncation, both aria-labels. Breadcrumbs owns no data source (caller-supplied props), so loading/error/stale/offline belong to the host — following the gate-passing **BatteryPill** precedent, documented in the headers (not a scope shortcut).
+
+## Verification — every in-scope check GREEN (raw output in the log)
+- **swiftlint --strict** (scoped): `0 violations in 6 files`
+- **swiftformat --lint**: `0/6 require formatting`
+- **swiftc -typecheck** (Swift 6 + strict-concurrency, real SDKs): **iOS 18 sim = 0** and **macOS 15 = 0** (shipped + test bodies)
+- **check-placeholders.ps1**: `EXIT=0`
+
+## Gate — `STATUS=BLOCKED`, `EXIT=1` (honest, per the covenant)
+`xcodebuild build test` cannot go green here **within the allowed files** because (b1) `project.yml` (a P4-core predecessor, out-of-scope) doesn't register the `shared-surfaces` group — proven: 0 occurrences in the generated `pbxproj`, so the surface isn't even in the build graph; and (b2) the app links the KMP `Shared.xcframework` whose Gradle/Kotlin-Native pre-build staging is absent (a bounded attempt stalled in that pre-action). Apple capability itself **is** present (Xcode 26.5, iPhone 16 sim, iOS/macOS 26.5 SDK).
+
+**No commit** was made — covenant **rule 8 ("No commit on red")** forbids landing on a BLOCKED gate. The work is saved in the working tree and fully evidenced in `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0167-Breadcrumbs.log`.
+

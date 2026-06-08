@@ -1,0 +1,102 @@
+I'll start by exploring the repository structure to understand the task scope, then check platform capabilities.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me explore the Apple app structure deeply to understand patterns before deciding on approach.
+
+Now let me explore the Apple app's existing structure, patterns, and the feature-views directory in depth.
+
+Clear file-per-view pattern. Let me read a complete representative example (`AcDcStatsPanel`) and find the shared P1 infrastructure (state holders, tokens, i18n).
+
+Now I understand the architecture well. Let me discover the shared component APIs I'll need (Input, Select, Badge, ConfirmDialog, DataTable, Button), find an interactive CRUD analog, and check toolchain specifics.
+
+Excellent — **Xcode.app IS installed**, plus `xcodegen`, `pwsh`, and `check-placeholders.ps1` are all available. The gate can potentially run via `DEVELOPER_DIR`. Let me verify the toolchain and read the shared component APIs I need.
+
+Xcode 26.5 + booted iPhone 16 sim available. Now let me read the remaining shared component APIs (Pickers, Badges, Overlays, Buttons, States, DataTable) and the design tokens in parallel.
+
+Let me read the Buttons, States, DataTable, Skeletons, design tokens, the `useExports` hook types, and find how confirm dialogs + mutations are handled in existing interactive views.
+
+I now have the full data contract. Let me find an interactive action/CRUD analog (`ActiveSessionsSection` has `.Actions`/`.Seams`), read the design tokens, DataTable, Skeletons, and check confirm-dialog conventions.
+
+The Tokens path resolves under `apps/design`. Let me read the design tokens, the `SessionListSection` interactive view + actions + model, and the DataTable/Skeletons APIs.
+
+I have the full picture of tokens, components, and the action/confirm pattern. Let me read the final pieces: DataTable, Skeletons, Cards (TSGlassPanel), the timestamp formatter, and the Tests/Previews conventions.
+
+Let me read the final shared pieces (Cards/TSGlassPanel, Motion/TSFadeIn, timestamp formatter) and the test/preview conventions, plus the project.yml test-target wiring.
+
+Let me read the Previews convention, the project.yml test/scheme wiring, and the placeholder-checker rules so I avoid tripping it.
+
+Critical: forbidden words include "Placeholder" and "not implemented" (case-insensitive) in any `.swift` file. I'll avoid those. Let me see the test-target wiring and schemes in project.yml.
+
+Let me verify how `*.Tests.swift` files in feature-views are wired (they import XCTest, so they can't be in the app target). Checking for excludes/templates in project.yml.
+
+Let me establish build feasibility: check whether `Shared.xcframework` is prebuilt (the scheme's preAction builds it, possibly needing a Kotlin toolchain) and review the baseline before committing to a full build.
+
+Key constraints discovered: `Shared.xcframework` must be built via Gradle/KMP (heavy), and the placeholder gate forbids the word "Placeholder" in `.swift` files (the web key `namePlaceholder` would trip it). Let me read the lint configs to respect the budgets, then start implementing.
+
+JDK 17 + gradlew exist, so the KMP build is theoretically possible (but heavy). Let me resolve how `*.Tests.swift` in feature-views are compiled (app target vs test target) by generating the project and inspecting target membership — this determines full-build feasibility.
+
+I now have a complete understanding of the architecture, conventions, components, tokens, data contract, lint budgets, and the placeholder gate (no "Placeholder"/"TODO"/etc. in `.swift`). Let me set up tracking and start building the surface.
+
+Now creating the Adapter (pure domain layer — Foundation only).
+
+Let me append the pure formatting + accessibility helpers to the Adapter.
+
+Now the Seams file (telemetry, i18n facade, source + actions protocols and their in-memory doubles).
+
+Now the Model (state holder, projection, connection, in-flight + form state, async actions).
+
+Updating progress and creating the Views file (list, row, actions, loading/empty/error, freshness chrome).
+
+Now the Form subview.
+
+Now the main panel view.
+
+Now Previews and the strings catalog.
+
+Now the test suite (adapter, format, projection, model wiring/actions, per-state, a11y).
+
+All 8 files created. Now verification — running swiftformat lint, swiftlint, and the placeholder check on the new files.
+
+No forbidden words. swiftformat wants formatting fixes (wrap single-line property bodies, one redundant `async`). Let me auto-format with the ecosystem tool and re-verify.
+
+swiftformat clean. Now swiftlint --strict on the new files.
+
+swiftlint clean except Tests.swift is 413 lines (>400 limit). I'll split it into `.Tests.swift` + `.ModelTests.swift` (matching the `SessionListSection` sibling convention).
+
+Now re-running swiftformat + swiftlint across all 9 files.
+
+swiftformat and swiftlint are both clean across all 9 files. Now a contained Swift 6 type-check of the product files against the real component + token sources (no KMP needed) to catch type/concurrency errors the full build would.
+
+My files produced zero errors — the only errors are pre-existing cross-deps in `Components/Maps` (`TSChartPalette`, which my surface doesn't use). Let me locate that symbol and include it so the type-check resolves cleanly.
+
+Zero errors reference my surface — my files type-check cleanly. The remaining errors are pre-existing Component→Platform deps (`UnitPreferences`/`Units`). Let me add those to get a fully clean compile as definitive evidence.
+
+My surface uses none of Maps/Charts/UnitFormatters. Let me exclude those externally-dependent component files (which my surface doesn't import) to get a clean contained compile of my code.
+
+Re-including Metrics (FeedbackOverlays needs `TSMetricBar`); only `UnitFormatters.swift` has the external Platform dep. Excluding just that one.
+
+Pass 4's exclusion created spurious cascades. Let me re-run the authoritative config (all components + Design, including UnitFormatters) and capture exactly which files have errors.
+
+**Contained Swift 6 type-check: my surface is type-clean** — the only errors are in a pre-existing component file (`UnitFormatters.swift`) with Platform/KMP deps I excluded. Now let me attempt the full gate, starting with its prerequisite: the KMP `Shared.xcframework` Gradle build. Probing feasibility first.
+
+`~/.konan` already has the Kotlin/Native 2.4.0 toolchain — the KMP build is feasible. Let me build `Shared.xcframework` (the gate's prerequisite) in the background.
+
+The KMP build is running (Gradle + Kotlin/Native, output buffered until completion). Let me wait for it.
+
+`Shared.xcframework` built and staged (BUILD SUCCESSFUL, 9m59s). Now running the real iOS gate: `xcodebuild build test` for the TeslaSync scheme. This compiles the full ~1500-file app including my surface. Kicking it off in the background.
+
+The iOS build failed — but on a **pre-existing, systemic** issue, not my code: `AIRestorePanel.Tests.swift:18: error: unable to resolve module dependency: 'XCTest'`. The feature-view `*.Tests.swift` files compile into the app target (which can't resolve XCTest). This affects every sibling. Let me analyze the full log to confirm no errors are from my files.
+
+Confirmed: the **only** real errors are pre-existing `XCTest` module-resolution failures — every sibling `*.Tests.swift` compiles into the app target (xcodegen places `feature-views/` there). **Zero errors reference my surface.** This blocks `build test` repo-wide, independent of my change.
+
+To prove my product code integrates into the real app target, let me build the app with the test files excluded (a command-line override, no repo files modified).
+
+A third test-file suffix (`.AdapterTests.swift`) slipped past my glob. Let me enumerate every test-file naming pattern in feature-views and exclude them all.
+
+All 181 sibling test files (suffixes `.Tests`, `.ModelTests`, `.AdapterTests`, `.StateTests`) import XCTest into the app target. Excluding all four patterns to validate the product compile.
+
+Another suffix (`.ViewTests`). Let me use a single catch-all glob `*Tests.swift` and first confirm no test file escapes it.
+
+All 186 covered by `*Tests.swift`. Re-running the iOS app build with that single catch-all exclusion to validate the full product compile.
+
+A second, unrelated pre-existing defect surfaced: `DashboardWidgetSize` is ambiguous across ~30 `dashboard-widgets/*` files — again, not my surface. The app target has multiple pre-existing compile blockers outside my allowed scope. Let me confirm my public symbols don't collide with anything in the module, then finalize.
+

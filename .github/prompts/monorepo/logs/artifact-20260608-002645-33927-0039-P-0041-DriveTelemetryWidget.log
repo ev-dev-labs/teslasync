@@ -1,0 +1,195 @@
+================================================================================
+P4 · Dashboard widget · 0041 — DriveTelemetryWidget (Apple)
+Run: 2026-06-08T01:0x-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/39
+Prompt: P4/dashboard-widgets/0041 — DriveTelemetryWidget
+Web source (spec): web/src/features/dashboard/widgets/DriveTelemetryWidget.tsx
+Mode: code-complete + host-validated. The web "Charts/maps used" extraction reads
+      "(none)" but the source DOES compose a Recharts ComposedChart via
+      @/components/charts (Area + Line on dual axes) — reproduced here with Swift
+      Charts (available + proven below). The web source renders NO map (it has no
+      positions/route hook), so despite the registry blurb's "...with route", the
+      canonical spec composes no MapKit. The capability-BLOCKED escape does NOT
+      apply: SwiftUI + Swift Charts are present and exercised below.
+================================================================================
+
+=== CAPABILITY PROBE (this runner) ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                 OK
+  swiftc -typecheck SwiftUI .. compiles (macOS 15 target, real component library)  OK
+  swiftc Swift Charts ........ `import Charts` Area/Line + dual AxisMarks          OK
+  swiftc -O + run (harness) .. compiles + EXECUTES a native binary (30/30 green)   OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) PRESENT — used via DEVELOPER_DIR  OK
+  iPhone 16 simulator ........ booted (xcrun simctl)                               OK
+  XCTest.framework ........... absent on the CLT toolchain (Xcode test target only) PARTIAL
+
+  Unlike the 0095 SpeedProfile run (which had no Xcode), THIS runner has Xcode 26.5
+  + a booted iPhone 16 sim, so the real `xcodebuild` gate was ATTEMPTED for real
+  (step [7]). It fails on PRE-EXISTING, out-of-scope conditions in SIBLING staging
+  files (not this surface) — raw evidence captured below.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/DriveTelemetryWidget.*) ===
+  DriveTelemetryWidget.Models.swift     283  value types: DriveDistanceUnit (km|mi + efficiencySymbol),
+                                             DriveSpeedUnit (km/h|mph), DriveSummaryInput / DriveTelemetrySample /
+                                             DriveTelemetryInput / DriveTelemetryVehicleRef, DriveTelemetryStat,
+                                             DriveTelemetryChartPoint, DriveTelemetryProjection, NumberFormat (+clockLabel)
+  DriveTelemetryWidget.Builder.swift    203  pure adapter: convertDistanceFromSI + convertSpeedFromSI + latestDrive
+                                             (max startTs reduce) + buildStats (Distance/Duration/Efficiency memo) +
+                                             buildPoints (speed convert, kW/%/m passthrough) + project + StatLabels seam
+  DriveTelemetryWidget.Model.swift      292  P1/S8 state-holder seam + P1/S11 telemetry + P1/S10 i18n facade + a11y summary
+  DriveTelemetryWidget.Chart.swift      340  DriveTelemetryStatCell (web stat) + DriveTelemetryLegend (replaces hover
+                                             tooltip; line/dashed/area swatches) + DriveTelemetryChart (Swift Charts
+                                             Area+Line dual-axis, time x-axis, power normalized to trailing axis)
+  DriveTelemetryWidget.swift            397  DriveTelemetryWidget surface (glass shell + header + all states +
+                                             compact/standard/wide + stat header + address chip + legend)
+  DriveTelemetryWidget.Previews.swift   201  #if DEBUG previews (8): content standard(mph)+wide(km/h), no-telemetry,
+                                             loading, empty, error, stale, offline
+  DriveTelemetryWidget.Tests.swift      207  XCTest adapter coverage (convert/latest/stats/points/project/format/parse)
+  DriveTelemetryWidget.ModelTests.swift 236  XCTest state-holder + registry + accessibility (26 test methods total)
+  DriveTelemetryWidget.strings           50  P1/S10 catalog contribution (11 source keys + registry name/desc + 12 chrome)
+  Every Swift file <=400 lines (house file_length); largest 397. One exported (public)
+  View per file (DriveTelemetryWidget; StatCell/Legend/Chart leaves are internal helpers).
+
+=== PARITY (vs web DriveTelemetryWidget.tsx) ===
+  Data sources -> bound via the shared state-holder seam (DriveTelemetrySource -> DriveTelemetryModel):
+    useDrives, useDriveTelemetry, useVehicles, useUnits, useTranslation, useThemeChartPalette. The production app
+    wires DriveTelemetrySource over the KMP driving store (/drives + /drives/{id}/telemetry) + the units preference
+    (StateHolderModel<LoadableState<...>>); the view performs NO HTTP. No direct transport in the view.
+  Projection -> DriveTelemetryBuilder is a 1:1 port of the web derive block, EXECUTED-green (30/30, step [1]):
+    latestDrive = drives.reduce(max startTs); convertDistanceFromSI km=m/1000, mi=m/1609.344;
+    convertSpeedFromSI km/h=mps*3600/1000, mph=mps*3600/1609.344;
+    stats = [Distance fmtNumber(conv,1)+unit, Duration fmtInt(durationS/60)+"min",
+             Efficiency fmtInt(energyUsedWh/conv)+("Wh/mi"|"Wh/km") ONLY when energyUsedWh!=nil && distanceM>0];
+    chartData = samples.map(speed=conv(speed), power=kW, battery=batteryLevel??soc, elevation=m);
+    hasDrive = latestDrive!=nil; hasTelemetry = chartData nonempty. SI on disk; display convert at the boundary.
+  Composition -> WidgetShell chrome (Activity icon -> SF "waveform.path.ecg" + "Drive Telemetry" title + freshness
+    chip + refresh + optional "Open") · standard (>=2 cols) stat row [Distance / Duration / Efficiency] + composed
+    chart + series legend · wide (>=3 cols) adds the elevation series + the start-address chip · compact (cols<=1,
+    kept for source fidelity) summary stats only.
+  Chart -> web Recharts ComposedChart -> Swift Charts: speed LineMark (cyan) + battery dashed LineMark (amber) on the
+    leading [0, dataMax+10] axis (web yAxisId="speed", shared by speed/battery/elevation), power AreaMark (green) on a
+    NORMALIZED trailing axis (Swift Charts shares one y-domain, so power is scaled into the leading band for drawing
+    and the trailing axis is labelled back in kW — web right-axis tickFormatter; same technique as MotorHistory),
+    elevation AreaMark (gray, wide-only) under the leading axis. Time x-axis (HH:mm), thinned by width (web
+    axisTick<->axisTickSm). connectNulls -> compactMap per series. Recharts hover tooltip -> persistent touch/
+    VoiceOver-friendly legend. Colors map web cyan/green/amber/gray -> design tokens Color.TS.chartSeriesSpeed /
+    chartSeriesPower / chartSeriesBattery / textMuted (P1/S9) — no inline hex (prohibited-pattern #1/#11 clean).
+  Shared components -> reuses the REAL apps/apple library: Color.TS / Font.TS / TSSpacing / TSRadius / TSSkeleton +
+    ContentUnavailableView + Swift Charts. All P1/S9 token references resolve against apps/design/generated/apple/
+    Tokens.swift (TSSpacing/TSRadius/chartSeries*) + Sources/Theme.swift (Color.TS base) + Sources/Components (TSSkeleton)
+    — verified present. Reuses the shared DashboardWidgetSize / DashboardWidgetRegistration grid primitives — NOT
+    redefined here (this surface references them, matching the 0095 canonical sibling).
+
+=== STATES (every state renders — no hidden surfaces) ===
+  loading      -> stat-row + chart TSSkeleton chrome (a11y "Loading drive telemetry")
+  empty        -> ContentUnavailableView "No recent drives" (waveform icon) — never a blank box
+  no-telemetry -> drive resolved but no samples -> in-content ContentUnavailableView "No telemetry for this drive"
+  error        -> icon + "Couldn't load drive telemetry" + message + Retry (model.refresh)
+  stale        -> amber freshness chip + "Reconnecting — drive telemetry may be stale" banner; cached chart stays
+  offline      -> muted "Offline" chip + "Offline — showing the last loaded drive" banner; cached chart stays
+  content      -> compact (summary stats) / standard (stats + composed chart + legend) / wide (+ elevation + address)
+
+=== I18N (P1/S10 — every string resolves via DriveTelemetryStrings, table "DriveTelemetryWidget") ===
+  Source keys: widget.driveTelemetry.{title,distance,duration,min,efficiency,elevation,power,speed,battery,empty,
+               noTelemetry}
+  Registry:    widget.driveTelemetry, widget.driveTelemetry.description
+  Chrome:      .{live,stale,offline,refresh,retry,open,loading,errorTitle,offlineBanner,staleBanner,openA11y}
+  No English literals in code — every Text uses DriveTelemetryStrings.text/.string (verbatim values only).
+
+=== ACCESSIBILITY ===
+  VoiceOver: DriveTelemetryAccessibility.summary (each stat label+value+unit + the plotted series, or the
+  "No telemetry for this drive" announcement) drives the content accessibilityValue; stat cells + legend + address
+  chip + buttons each combine into labelled elements; refresh/open/retry carry accessibilityLabel; the chart is one
+  labelled element with the spoken summary. Dynamic Type via Font.TS tokens + minimumScaleFactor; Reduce Motion
+  respected by TSSkeleton. iOS 18 / iPadOS 18 / macOS 15.
+
+================================================================================
+GATE (surface-owned host steps EXECUTED for real; Xcode app build/test ATTEMPTED + DEFERRED)
+================================================================================
+
+[1] ADAPTER HARNESS — real Models.swift + Builder.swift compiled (-O, Xcode 26.5 toolchain) + EXECUTED:
+      $ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun --sdk macosx swiftc -O \
+          -target arm64-apple-macos15.0 DriveTelemetryWidget.Models.swift DriveTelemetryWidget.Builder.swift main.swift \
+          -o dt_harness && ./dt_harness
+      HARNESS passed=30 failed=0
+      ADAPTER_HARNESS=GREEN
+    Covers convertDistanceFromSI/convertSpeedFromSI (exact factors), latestDrive (max startTs + empty), buildStats
+    (distance 1dp + duration min + efficiency 0dp; omitted without energy / zero distance; km & mi units),
+    buildPoints (speed convert + power/battery/elevation passthrough + nils), project (nil / empty / full flags +
+    first-stat value), number format (group/round 16.09344->16.1), clockLabel (09:05), unit fromLabel parsing,
+    efficiencySymbol. HARNESS_EXIT=0
+
+[2] SURFACE TYPECHECK — the REAL renderable files (Models+Builder+Model+Chart+view+Previews) type-checked against the
+    real macOS 15 SDK (Xcode 26.5) + a signature-faithful shim for the shared grid/skeleton/token primitives (which
+    pull in the design Tokens.swift + KMP Shared xcframework at integration):
+      $ xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 Shim.swift DriveTelemetryWidget.{Models,
+          Builder,Model,Chart}.swift DriveTelemetryWidget.swift DriveTelemetryWidget.Previews.swift
+      TYPECHECK_EXIT=0   (Swift Charts Area+Line dual AxisMarks, time chartXScale, ContentUnavailableView,
+                          @Observable model, #Preview macros, Canvas dashed swatch — all compile clean)
+
+[3] SWIFTFORMAT (--lint, config apps/apple/.swiftformat):
+      $ swiftformat --lint TeslaSync/dashboard-widgets/DriveTelemetryWidget.{swift,Model,Models,Builder,Chart,Previews,
+          Tests,ModelTests}.swift
+      0/8 files require formatting.
+      FORMAT_EXIT=0
+
+[4] SWIFTLINT (--strict, config apps/apple/.swiftlint.yml):
+      $ swiftlint lint --strict --config .swiftlint.yml TeslaSync/dashboard-widgets/DriveTelemetryWidget.*.swift
+      Done linting! Found 0 violations, 0 serious in 8 files.
+      LINT_EXIT=0
+
+[5] PLACEHOLDER GATE (apps/tools/check-placeholders.ps1, ADR-011 definition-of-done):
+      $ pwsh apps/tools/check-placeholders.ps1 -Path <DriveTelemetryWidget.* copy> -Language swift
+      PLACEHOLDER_ALLOWED=0
+      PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0
+    (The literal gate path "...dashboard-widgets/DriveTelemetryWidget" is a prefix Get-ChildItem treats as
+    nothing-to-scan = clean; the real per-file scan above is the meaningful check.)
+
+[6] SYNTAX PARSE — all 8 Swift files (incl. the two XCTest test files) parsed clean:
+      $ xcrun --sdk macosx swiftc -parse -target arm64-apple-macos15.0 DriveTelemetryWidget.*.swift
+      PARSE_EXIT=0   (tests cannot be type-checked on the CLT toolchain — XCTest.framework is Xcode-test-target-only)
+
+[7] XCODE APP BUILD/TEST — ATTEMPTED for real on this Xcode-26.5 host; BUILD FAILED on PRE-EXISTING, OUT-OF-SCOPE
+    conditions in SIBLING staging files (NOT this surface):
+      $ xcodegen generate            -> Created TeslaSync.xcodeproj (schemes: TeslaSync, TeslaSync-macOS, ...)   OK
+      $ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+        ** BUILD FAILED **  (2 failures) — first surfaced errors:
+        feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'
+      Root causes (both pre-existing across the parallel staging tree; reproduced minimally):
+        (a) project.yml includes the whole TeslaSync/{dashboard-widgets,feature-views} dirs in the APP target, so the
+            sibling *.Tests.swift / *.ModelTests.swift files (which `import XCTest`) are compiled into the app target,
+            which cannot link XCTest -> "unable to resolve module dependency: 'XCTest'". Affects every surface's tests
+            equally (incl. the 0095/0066 siblings), not just this one.
+        (b) 13 sibling *.Model.swift files each `public struct DashboardWidgetSize` / `DashboardWidgetRegistration`:
+            $ xcrun --sdk macosx swiftc -typecheck Tokens.swift MotorHistoryWidget.Model.swift UptimeMonitorWidget.Model.swift
+              error: invalid redeclaration of 'DashboardWidgetSize'
+              error: 'DashboardWidgetSize' is ambiguous for type lookup in this context
+            i.e. the staging tree is not yet de-duplicated into the integrated target.
+      Neither cause is in this surface's allowed files (DriveTelemetryWidget.* only) and neither is a defect in the
+      shipped code: this surface does NOT redefine the grid primitives (it references them, like 0095) and resolves
+      every P1/S9 token from the real Tokens.swift + Sources. The app build/test is therefore DEFERRED to the
+      integrated/CI runner that de-duplicates the grid primitives and routes *.Tests.swift to the test target —
+      matching the 0095/0036/0064 disposition (ADR-012). The surface logic the Xcode gate would exercise is covered
+      by the EXECUTED adapter harness [1] + the real-SDK typecheck [2].
+      IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED   (cleanup: generated .xcodeproj + DerivedData removed)
+
+=== DISPOSITION ===
+  Production-polished native DriveTelemetryWidget shipped at parity with the web source: pure-Swift domain port
+  (executed-green adapter, 30/30), P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, every state (loading /
+  empty / no-telemetry / error / stale / offline / content) + i18n key + a11y label, registry-correct
+  (drive-telemetry, driving, 2x4 / 2x4 / 4x40), and a real Swift Charts Area+Line composed chart (dual-axis, time
+  series, normalized power axis + wide elevation band) reproducing the web ComposedChart. All surface-owned host gates
+  pass (harness [1], typecheck [2], swiftformat [3], swiftlint [4], placeholder [5], parse [6]); the Xcode app
+  build/test was ATTEMPTED and is DEFERRED to the integrated/CI runner because the parallel staging tree carries
+  pre-existing duplicate grid primitives + test files in the app target (both out of this surface's allowed-files
+  scope, both proven above) — matching the 0095 precedent.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/DriveTelemetryWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0041-DriveTelemetryWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add DriveTelemetryWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

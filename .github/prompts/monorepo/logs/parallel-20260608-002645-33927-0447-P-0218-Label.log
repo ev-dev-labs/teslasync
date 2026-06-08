@@ -1,0 +1,97 @@
+I'll start by exploring the repository structure and checking the runner's capabilities for this Apple/SwiftUI task.
+
+Web source exists and `apps/apple` is present. Key capability finding: `xcodebuild` is installed but points to **Command Line Tools, not full Xcode** — so iOS Simulator builds/tests can't run. Let me verify the toolchain limits and explore the existing Apple app conventions before deciding.
+
+Critical findings:
+- **Web `Label.tsx`** is a pure presentational form-label primitive: renders a `<label>`, and when `required` is set adds a red `*` (`aria-hidden`) plus a `VisuallyHidden` screen-reader string from i18n key `form.required`. No data hooks despite the generic template.
+- **macOS SDK has SwiftUI/Charts/MapKit frameworks** (in CLT), but **`xcodebuild` requires full Xcode (only Command Line Tools installed)** and **no iOS SDK is present** — so the gate's iOS-Simulator + macOS scheme `xcodebuild build test` steps cannot run.
+
+Let me deeply explore the existing Apple app conventions (shared-surfaces, a11y, i18n, tokens, telemetry, tests, build system) before writing code.
+
+Now I understand the build system (XcodeGen + xcodebuild) and the placeholder gate. Note: `project.yml` lists source paths `Sources`, `TeslaSync/dashboard-widgets`, `TeslaSync/feature-views` — but **not** `TeslaSync/shared-surfaces`, and that path isn't in my allowed-files list. Let me explore the `Sources` tree to find the P1/S8 state holders, S9 tokens, S10 i18n, S11 telemetry, and the a11y `VisuallyHidden` equivalent, plus existing surface conventions.
+
+Correction: `Sources/` and `project.yml` live at `apps/apple/` level; `Tests/` too. Let me precisely locate the infra (i18n facade, tokens, telemetry `view.opened`, a11y `VisuallyHidden`, state holders) and existing form/label conventions via targeted searches.
+
+Good — there's `Sources/Components/{UI,Forms,...}`, `Sources/SharedFacade` (state holders), `Sources/Design` (tokens). The web `Label` maps conceptually to a Forms/UI primitive. Let me read the exact conventions: the i18n facade, the a11y/VisuallyHidden helper, telemetry `view.opened`, an existing Forms component, and design tokens (for the rose `*`).
+
+Let me read the actual convention sources — how `VisuallyHidden`/a11y, i18n, and forms are done — plus the telemetry seam and tokens.
+
+Conventions are clear: `TS`-prefixed SwiftUI structs, `LocalizedStringKey` for i18n, `Color.TS.*`/`Font.TS.*`/`TSSpacing`/`TSRadius` tokens, `.accessibilityHidden(true)` for a11y. There's already a typography `TSLabel` (used in `TSFormField`). I need the form-label-with-required variant. Let me read `TSLabel`/typography, the telemetry seam, tokens, and an existing `view.opened` emitter.
+
+Now I understand the telemetry contract (`view.opened` via an injected `viewOpened(surface:)` seam + `os_log`), typography roles, and tokens. Let me verify the i18n key `form.required` exists in the catalog (I can't add it — not in allowed files), confirm the rose token for `*`, read lint/format configs, and copy an existing surface's `view.opened`-on-appear + its Tests/Previews patterns.
+
+Key finding: the i18n catalog is a single `Localizable.xcstrings`, and the key appears as **`translation.form.required`** (namespaced) — I must use the exact key string that resolves. Let me inspect that entry and a non-prefixed one to learn the convention, find where `Color.TS`/tokens are defined (generated design tokens), read the telemetry-on-appear wiring, and the `.swiftformat` + an existing Tests/Previews pattern.
+
+i18n convention confirmed: web-derived keys are namespaced `translation.*` in the catalog and referenced literally as `LocalizedStringKey("translation.form.required")` — and `translation.form.required` → "required" exists. Now let me read the design tokens, the telemetry/onAppear wiring in a real widget, the `.swiftformat` config, and existing Tests/Previews patterns.
+
+Correct tokens path is `apps/design/generated/apple/Tokens.swift`. The widget pattern is clear (optional injected telemetry, `.task { telemetry?.record(viewOpened) }`, `translation.*` keys, `Color.TS`/`Font.TS`/`TSSpacing` tokens, `#if DEBUG #Preview`). Let me read the tokens, the telemetry sink type, `.swiftformat`, and an existing Tests + Previews file to match the test harness.
+
+Tokens confirmed: `Color.TS.statusDanger` (danger red for the `*`), `Color.TS.textSecondary` + `Font.TS.label` (matching `TSLabel`), `TSSpacing`. Test framework is XCTest with co-located `*.Tests.swift` in feature-views. Let me confirm the test target wiring, read a sample co-located test + the telemetry sink/event definitions to mirror precisely.
+
+I now have all conventions. Critical detail to confirm: how co-located `*.Tests.swift` in `feature-views/` get compiled (app target vs unit-test target), since that determines where my `Label.Tests.swift` belongs. Let me read the full target definitions in `project.yml`.
+
+Test routing confirmed: surfaces + their `.Tests.swift`/`.Previews.swift` are co-located in `feature-views/` (matching `SummaryStatsRow.*`), so I'll mirror that exactly in `shared-surfaces/Label.*`. Before writing, let me check for symbol collisions (`TSFormLabel`, telemetry names) and any parity manifest that references `Label`.
+
+No collisions, and the logs dir exists. Let me check how prior P4 Apple surface logs handled the `xcodebuild` gate on this runner type — that tells me the established STATUS/format (DONE vs BLOCKED) and whether the canonical environment has full Xcode.
+
+This prior `WebhookChannelsSection` log is the authoritative precedent for exactly this situation. Key insight: the canonical runner **has full Xcode at `/Applications/Xcode.app`** (driven via `DEVELOPER_DIR`, not the default `xcode-select`), and the accepted methodology is: author the full surface, prove it via `xcrun swiftc -typecheck` against **both** the iOS-Simulator and macOS SDKs, **execute the committed XCTests via a SwiftPM harness**, run swiftlint/swiftformat/placeholder/i18n gates green, and **defer** only the `xcodebuild build test` (blocked by KMP `Shared.xcframework` staging + signing, outside allowed files) with captured evidence → `EXIT=0 STATUS=DONE`.
+
+Let me verify Xcode + both SDKs are actually present on this machine.
+
+Confirmed: **full Xcode 26.5 is available** via `DEVELOPER_DIR=/Applications/Xcode.app/...` with both `iPhoneSimulator26.5.sdk` and `MacOSX26.5.sdk`; swiftlint 0.63.3 / swiftformat 0.61.1 match the precedent. So the BLOCKED escape hatch does **not** apply — I'll author the full surface and prove it green on host gates exactly like the predecessor.
+
+Let me record the plan, then write the three surface files.
+
+Now writing the surface, previews, and tests.
+
+All three files written. Now running the host-gate verification — starting with `swiftc -typecheck` against both the iOS-Simulator and macOS SDKs (Swift 6, complete strict concurrency), plus the DEBUG previews typecheck.
+
+Path fix: tokens are at `../design/generated/apple/Tokens.swift` relative to `apps/apple`.
+
+All three typechecks pass under Swift 6 strict concurrency. Now swiftformat + swiftlint.
+
+swiftformat clean (0/3) and swiftlint `--strict` clean (0 violations). Now executing the committed XCTests via a self-contained SwiftPM harness (library = real `Tokens.swift` + `Label.swift`; test target = the verbatim committed `Label.Tests.swift`).
+
+Compiling — let me wait for the test run to finish.
+
+All 8 XCTests pass (5 accessibility-adapter + 3 telemetry), `SWIFT_TEST_EXIT=0`, built under Swift 6. Now the placeholder gate, i18n cross-check, xcodebuild deferral evidence, and harness cleanup.
+
+Placeholder gate `EXIT=0` (COUNT=0), i18n verified (`translation.form.required` → "required", translated), no hardcoded English. Now capturing the honest `xcodebuild` deferral evidence — the key point being whether `shared-surfaces` is registered in the generated Xcode project.
+
+Confirmed the honest material finding: `shared-surfaces`/`Label.swift` have **0 refs** in the generated `pbxproj` (vs `feature-views`: 3 refs) — my files aren't registered because `project.yml` doesn't list `TeslaSync/shared-surfaces`, and editing it is outside my allowed files. All host gates are green. Let me clean up generated artifacts and confirm git state.
+
+No output after 2.5+ minutes — likely `git status` is stalling on this very large multi-worktree repo. Let me stop and run targeted commands instead.
+
+`.xcodeproj` is gitignored (cleaned up anyway), and my `shared-surfaces/` dir is untracked (`??`) — the earlier hang was just the unscoped full-repo `git status`. Now gathering exact line counts + tool versions for the log.
+
+All gates green and details gathered. Writing the comprehensive, honest gate log.
+
+Log written. Now a consolidated final re-verification of all host gates (so the commit lands on genuinely-green output), then commit.
+
+G1/G2/G3/G5/G6 all PASS. G7's "fail" was just a wrong relative path in my consolidated script (`cd ..` then `apps/tools/...`). Re-running the placeholder gate correctly from repo root.
+
+All 8 host gates confirmed green. Staging my allowed files + the log and committing (explicit paths only, using the prompt's commit message).
+
+No hooks, exactly 4 files staged. Committing.
+
+Committed: `70a225288`, 4 files, 519 insertions. Final cleanup/state check.
+
+Done. The task is complete, verified, and committed cleanly.
+
+## Summary
+
+Shipped the native Apple-idiomatic **`Label`** shared surface at parity with the web source `web/src/components/ui/Label.tsx`, committed as `70a225288` (4 files, 519 insertions).
+
+**Files** (`apps/apple/TeslaSync/shared-surfaces/`):
+- `Label.swift` (172) — `TSFormLabel` view (named to avoid clashing with SwiftUI's `Label` and the existing typography `TSLabel`): localized + `verbatim:` inits, danger-token `*` hidden from VoiceOver (`= aria-hidden`), accessible name composed as **"<label> required"** via `.accessibilityElement(.ignore)` + `.accessibilityLabel` (reproducing the web `VisuallyHidden` span, catalog key `translation.form.required`), a pure host-testable `TSFormLabelAccessibility` adapter, and a P1/S11 `view.opened` telemetry seam (slug `"Label"`).
+- `Label.Previews.swift` (46) — 5 DEBUG previews.
+- `Label.Tests.swift` (96) — 8 XCTest methods.
+
+**Honest parity call:** the web label has no data hooks (only `useTranslation`), so the template's loading/empty/error/stale/offline states don't exist and were **not** fabricated. The sole real branch — `required` on/off — is rendered, previewed, and tested.
+
+**Host gates — all green (real output):** `swiftc -typecheck` on iOS‑18‑sim + macOS‑15 SDKs + DEBUG previews (Swift 6, complete strict concurrency); committed XCTests **executed 8/8** via a SwiftPM harness; `swiftlint --strict` 0 violations; `swiftformat --lint` 0/3; placeholder gate COUNT=0; i18n key verified.
+
+**Honestly deferred:** only `xcodebuild build test` — `xcodegen` confirms `shared-surfaces` is **not yet registered** in `project.yml` (0 pbxproj refs vs feature-views' 3), and registering it is outside this prompt's allowed files, plus the predecessor KMP `Shared.xcframework` staging + signing blockers. Documented loudly in the log per the `WebhookChannelsSection` 0218 precedent.
+
+Log `p4-apple-shared-surfaces-0218-Label.log` ends `EXIT=0 / STATUS=DONE`. Temp harness and generated `.xcodeproj` cleaned up.
+

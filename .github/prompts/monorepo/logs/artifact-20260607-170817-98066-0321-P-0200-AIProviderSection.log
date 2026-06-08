@@ -1,0 +1,82 @@
+=== P4 Feature view 0200 AIProviderSection (Apple) ===
+date: 2026-06-08T06:14:20Z
+web source: web/src/features/settings/components/AIProviderSection.tsx
+native output: apps/apple/TeslaSync/feature-views/AIProviderSection.*
+
+--- runner capability probe ---
+swift: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+swiftlint: 0.63.3
+swiftformat: 0.61.1
+xcode-select -p: /Library/Developer/CommandLineTools
+
+### MANDATED GATE (xcodebuild build+test) — platform-capability check ###
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+$ xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+$ xcrun simctl list devices
+xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+SIMCTL: utility absent (no iOS Simulator runtimes without full Xcode)
+$ xcrun --find xctest
+xcrun: error: unable to find utility "xctest", not a developer tool or in PATH
+XCTEST: framework absent (no XCTest.framework without full Xcode)
+
+BLOCKER: active developer dir is CommandLineTools; xcodebuild + iOS simulators +
+XCTest require a full Xcode.app. The mandated build/test gate CANNOT execute on
+this runner. Per the prompt Capability clause -> STATUS=BLOCKED with this evidence.
+(xcodegen IS present: /opt/homebrew/bin/xcodegen — project generation is possible, but the
+build/test toolchain itself is unavailable.)
+
+### COMPENSATING VERIFICATION (everything runnable on this toolchain) ###
+
+--- swiftlint --strict (11 files) ---
+Done linting! Found 0 violations, 0 serious in 11 files.
+LINT_EXIT=0
+
+--- swiftformat --lint (11 files) ---
+0/11 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftc -typecheck production (macOS15, swift6, -strict-concurrency=complete) ---
+    deps = generated DesignTokens + Sources/Design + the shared Components closure
+PROD_TYPECHECK_EXIT=0
+
+--- swiftc -emit-module testable + typecheck XCTest bodies (XCTest shimmed; framework absent) ---
+    (verifies the production module PUBLIC API compiles AND the test bodies bind to it)
+EMIT_TESTABLE_MODULE_EXIT=0
+TEST_BODIES_TYPECHECK_EXIT=0
+
+--- placeholder / stub gate (apps/tools/check-placeholders.ps1, swift) ---
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- i18n parity (web t() keys -> native AIProviderSection.strings catalog) ---
+web t() keys: 28   missing in catalog: 0   (bidirectional: every catalog key is referenced)
+
+--- shipped files + line counts (SwiftLint file_length<=400 under --strict) ---
+      88 TeslaSync/feature-views/AIProviderSection.strings
+     114 TeslaSync/feature-views/AIProviderSection.Seams.swift
+     134 TeslaSync/feature-views/AIProviderSection.Fields.swift
+     141 TeslaSync/feature-views/AIProviderSection.Chrome.swift
+     143 TeslaSync/feature-views/AIProviderSection.swift
+     164 TeslaSync/feature-views/AIProviderSection.Previews.swift
+     211 TeslaSync/feature-views/AIProviderSection.Validate.swift
+     215 TeslaSync/feature-views/AIProviderSection.Adapter.swift
+     217 TeslaSync/feature-views/AIProviderSection.ModelTests.swift
+     275 TeslaSync/feature-views/AIProviderSection.Tests.swift
+     310 TeslaSync/feature-views/AIProviderSection.Views.swift
+     327 TeslaSync/feature-views/AIProviderSection.Model.swift
+    2339 total
+
+========================= SUMMARY =========================
+Mandated xcodebuild build+test gate: IOS_EXIT=1 / MAC_EXIT=1 (full Xcode + iOS sim + XCTest unavailable)
+Compensating checks ALL PASS: LINT_EXIT=0 FORMAT_EXIT=0 PROD_TYPECHECK_EXIT=0 EMIT_TESTABLE_MODULE_EXIT=0 TEST_BODIES_TYPECHECK_EXIT=0 PLACEHOLDER_EXIT=0
+Surface is production-complete (no stubs): all web data/states/i18n reproduced, a11y + tests included, 11 files each <=400 lines.
+The ONLY unmet step is the Xcode-only build/test execution this CommandLineTools runner cannot provide.
+
+EXIT=1
+STATUS=BLOCKED

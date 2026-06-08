@@ -1,0 +1,144 @@
+I'll start by investigating the environment and the web source to understand what's actually present and buildable.
+
+Good — toolchain is present (xcodebuild, swift 6.3, swiftlint, swiftformat, pwsh) and `apps/apple` exists. Let me read the web source and explore the Apple app structure.
+
+`xcodebuild` reports the active developer dir is CommandLineTools, not full Xcode. Let me check if a full Xcode is installed and explore the Apple app structure (feature-views, state holders, tokens, i18n).
+
+Full Xcode exists at `/Applications/Xcode.app` but isn't selected. I'll use `DEVELOPER_DIR` override. The feature-views follow a multi-file pattern (Adapter/Model/Previews/strings). Let me study an existing example and verify the build toolchain.
+
+Full Xcode 26.5 available via `DEVELOPER_DIR`, xcodegen present, iPhone 16 simulator booted. `BatteryLevelChart` is the ideal template (chart feature-view, 7-file pattern). Let me read its complete file set.
+
+The architecture is clear and rich. Let me read the remaining template files (Views, Previews, Tests, strings) and the shared primitives they use.
+
+Excellent — I now fully understand the 7-file pattern. MotorHistoryCharts differs: 3 charts (power area, torque line, RPM line) + an interactive hidden-series legend on the power chart. Let me gather the supporting details: web `MotorSnapshot` type, native design tokens, date-format util, hidden-series state holder, and the placeholder checker.
+
+Confirmed token mapping (web hex → design token): cyan `#06b6d4`→`chartSeriesRegen`, green `#22c55e`→`chartSeriesBattery`, blue `#3b82f6`→`chartSeriesSpeed`, purple `#a855f7`→`chartSeriesPower`. There's an existing `MotorHistoryWidget` and a native `ChartContainer` with hidden-series. Let me study those plus tokens and placeholder rules.
+
+Native `TSChartContainer`, `TSChartLegend` (with `TSChartFormat.toggleHidden`), and `TSChartSeries` exist. Color mapping is semantic (ADR-006), not literal hex. The sibling `MotorHistoryWidget` is the authoritative motor-domain reference. Let me read it and the shared chart primitives.
+
+The `MotorHistoryWidget.Projection` gives me the exact motor-domain conventions (`parseTimestamp`, `MotorNumberFormat`, snapshot input type). Note: the web `MotorHistoryCharts` plots kW/Nm/RPM directly with NO unit conversion (the `toSpeedDisplay`/`speedUnit` props are unused). Let me verify the remaining shared primitives (`TSChartSeries`, `TSChartFormat`, `TSFadeIn`, `TSSkeleton`, `Font.TS`, `TSMotion`) and test/strings conventions.
+
+I have nearly everything. `TSChartSeries` carries `points`/`colorIndex`, so for an exact-token interactive legend I'll verify its color resolution. Let me read the chart models, motion, and skeleton primitives to finalize my API usage.
+
+All shared primitives confirmed. Let me verify the color tokens, the placeholder checker behavior, the logs directory, and confirm no `MotorHistoryCharts.*` exists yet.
+
+Placeholder checker scans a path recursively; my files use a `MotorHistoryCharts` prefix. I'll run the gate as specified AND a real scan over my files to honestly verify. Note: allowed files are strictly `MotorHistoryCharts.*` + the log — no manifest edits. Let me confirm the `TSMotion`/`TSSpacing`/`TSRadius`/`Font.TS`/`Color.TS` namespaces.
+
+Tokens live at `apps/design/generated/apple/Tokens.swift`. Let me read the token namespaces I'll use.
+
+All tokens confirmed. Now the critical build-feasibility questions: (1) how `*.Tests.swift` files in `feature-views/` are wired into the test target, (2) whether the KMP `Shared.xcframework` preAction is runnable here. Let me investigate before writing code.
+
+`Shared.xcframework` isn't prebuilt — the scheme preAction builds it via Gradle/KMP. And there's a `Tests/Unit/FeatureViews/` dir. I need to understand test wiring and KMP build feasibility. Let me inspect.
+
+98 per-surface `*.Tests.swift` live in `feature-views/`, but the test target only lists `Tests/Unit`. I must learn how they're wired. KMP build looks feasible (caches + network present). Let me read the pending-verifications notes and generate the xcodeproj to inspect target membership empirically.
+
+Critical finding: `macos-pending-verifications.md` documents that the **full-app `xcodebuild build test` is blocked by pre-existing, unrelated issues** (co-located `*.Tests.swift` importing XCTest into the app target, duplicate symbols across surfaces, macOS signing) — affecting all 98 surfaces. The precedent (ToolCard P-0010) verified the surface green **in isolation** (SwiftPM build + tests + swiftlint + swiftformat + placeholder). Let me read sibling logs to mirror the exact accepted approach.
+
+I now have the complete, sanctioned playbook (BatteryLevelChart 0097 is my exact precedent). The approach: ship the 7 `MotorHistoryCharts.*` files, verify GREEN via an isolated SwiftPM harness (Swift 6 strict concurrency) + swiftlint + swiftformat + placeholder, build the KMP framework, run the full xcodebuild gate for real (expected pre-existing IOS/MAC_EXIT=65 with zero errors from my files), and document. Let me kick off the ~7min KMP build in the background now and read the lint/format configs in parallel.
+
+Configs understood (maxwidth 120, wrap-before-first, testable-bottom, type names ≤50). KMP build is running in the background. Let me verify my planned type names don't collide with the existing `MotorHistoryWidget` symbols in the same module, then set up tracking and start writing.
+
+All names are collision-free. Let me check the KMP build is progressing, then set up tracking and start writing the surface.
+
+KMP build is progressing (debug XCFramework done, release in progress). Let me write the plan and start implementing the surface, beginning with the pure adapter core.
+
+KMP build progressing. All names clear. Now writing the pure adapter core (Foundation-only, fully testable).
+
+Adapter done. Now the Model (state-holder seam, telemetry, i18n facade, in-memory source) — mirroring the BatteryLevelChart precedent and adding the power-chart hidden-series state via the shared `TSChartFormat.toggleHidden`.
+
+Adapter + Model done. Let me update tracking, check the KMP build, and write the Views file (the three charts, shared legend/tooltip, and all states).
+
+KMP build still linking. Writing the Views file now — three charts (power area, shared dual-line for torque/rpm), interactive + static legend, tooltip, and all states.
+
+Now the composed main view that wires the model to the three sections with the web fade delays.
+
+Now the previews — one per state (content / empty / loading / error / stale / offline) with realistic synthesized motor telemetry.
+
+Now the i18n strings table (all web-source keys + native chrome keys).
+
+Now the test suite (adapter + model + accessibility + telemetry spy), mirroring the BatteryLevelChart precedent.
+
+All 7 files written. One refinement: my Views referenced `MotorNumberFormat` (which lives in `dashboard-widgets`, not in the component/design layer) — that would couple my isolated harness to an unrelated surface. I'll add a self-contained formatter to my Adapter and use it instead, keeping the surface independent.
+
+Formatter decoupled. Let me check the KMP build status and survey the component/design layer to build the isolated harness.
+
+I see the shared `/tmp` log got cross-written by a parallel slot (294) — the background KMP build is unreliable due to shared `~/.gradle`/`/tmp` contention. No matter: the **isolated harness needs no KMP framework** (Components/Design only import system frameworks). Let me verify my slot's framework state and build the harness with a unique path.
+
+UnitFormatters is self-contained (only it references `tsUnits`) — safe to exclude, exactly as the BatteryLevelChart harness did. The isolated harness needs no KMP framework. Let me build it now (symlinking the exact shipped sources + real component/design library, Swift 6 mode).
+
+Harness ready. Running `swift test` (Swift 6 strict concurrency) against the real component/design library — this is the substantive verification.
+
+The component/design library compiled cleanly (the subset is self-contained). One Swift-6 concurrency error in my code: the global static closure needs `@Sendable`. Let me fix it and rebuild.
+
+All 24 isolated tests pass under Swift 6 strict concurrency against the real component/design library. Now the host gates: swiftformat, swiftlint, placeholder check on my files.
+
+Auto-fixable formatting (trailing commas, property-body wrapping). Let me apply swiftformat and re-lint.
+
+swiftformat clean (0/6). Now swiftlint `--strict` and the placeholder gate, plus re-running the harness on the reformatted files.
+
+Placeholder = 0 across all files. Three swiftlint fixes needed: large-tuple (Adapter), file-length (split Views), and trailing-closure (main view). Let me view the current formatted files to split/edit precisely.
+
+Clear split plan. Let me inspect the exact header/imports and boundary spacing before scripting the split.
+
+Now I'll split the Views file (charts → new `MotorHistoryCharts.Charts.swift`, chrome stays in Views), fix the Adapter large-tuple, and fix the main-view trailing closures.
+
+Both split files are well under 400 lines. Now fix the Adapter large-tuple (→struct) and the three main-view trailing closures. Let me view the exact current text.
+
+Let me view the rest of the main view so I can rewrite all three sections without trailing closures.
+
+Now I'll fix the Adapter large-tuple (→struct) and convert the three main-view trailing closures to explicit `chart:` arguments.
+
+Let me verify the main-view rewrite is structurally correct, then re-run format/lint/harness with the new Charts.swift file added.
+
+Format clean (0/7), lint clean (0 violations). Let me re-run the isolated harness with the split `Charts.swift` to confirm everything still compiles + passes.
+
+Isolated harness green (24/24). All scoped host gates pass. Now I'll (a) start the per-slot KMP framework build for the full xcodebuild gate, and (b) run the whole-app `swiftformat`/`swiftlint` gate commands for real evidence.
+
+Path glitch — the gate runs from repo root. Let me run both whole-app commands correctly.
+
+KMP build finished (detached). Whole-app swiftformat flags only a **pre-existing** file (`ActionBuilder.Previews.swift`), not mine. Let me check the framework staging + KMP log, and run whole-app swiftlint.
+
+KMP staging didn't complete for my slot. Let me inspect the full KMP log end, check whether the release xcframework was built, and identify the single swiftlint violation file.
+
+Confirmed: the only whole-app swiftlint violation is the **pre-existing** `LifetimeStatsWidget.Adapter.swift` (the exact one the precedent documented) — zero from my files. The KMP framework build is still running (macOS release link in progress). Let me wait for it to finish staging.
+
+Framework staged (BUILD SUCCESSFUL). Now the full iOS `xcodebuild build test` gate — running for real to capture evidence (expected to fail on pre-existing issues, with zero errors from my files).
+
+IOS_EXIT=65 (the documented pre-existing failure). Let me verify zero errors originate from my files and characterize the real (pre-existing) errors.
+
+Zero errors from my files. The blocker is the pre-existing `AcDcStatsPanel.Tests.swift` XCTest-in-app-target issue (alphabetically first) — exactly as documented. Now the macOS scheme for completeness.
+
+Both schemes: MAC_EXIT=65, **zero** MotorHistoryCharts errors. macOS blocker = pre-existing dev-signing; iOS blocker = pre-existing co-located XCTest. Placeholder gate = 0. All evidence gathered. Let me verify git state (only my files staged; generated artifacts ignored) before writing the log.
+
+Git is clean — only my 8 `MotorHistoryCharts.*` files (Views was split into Views+Charts); `.xcodeproj` and `Frameworks` are git-ignored. Let me gather toolchain versions, then write the gate log.
+
+All evidence gathered. Writing the comprehensive, honest gate log now.
+
+Log written. Final sanity check on the scoped gates, then commit.
+
+All green. Committing the 8 surface files + the gate log.
+
+Committed (6678d4fe1) with exactly the 8 files + log. Let me clean up temp artifacts and confirm a clean working tree.
+
+All complete. Working tree is clean (only git-ignored generated artifacts remain), and the commit contains exactly the 8 surface files plus the gate log.
+
+Merge made by the 'ort' strategy.
+ ...apple-feature-views-0172-MotorHistoryCharts.log | 164 ++++++++++
+ .../feature-views/MotorHistoryCharts.Adapter.swift | 314 +++++++++++++++++++
+ .../feature-views/MotorHistoryCharts.Charts.swift  | 338 +++++++++++++++++++++
+ .../feature-views/MotorHistoryCharts.Model.swift   | 253 +++++++++++++++
+ .../MotorHistoryCharts.Previews.swift              | 102 +++++++
+ .../feature-views/MotorHistoryCharts.Tests.swift   | 299 ++++++++++++++++++
+ .../feature-views/MotorHistoryCharts.Views.swift   | 335 ++++++++++++++++++++
+ .../feature-views/MotorHistoryCharts.strings       |  62 ++++
+ .../feature-views/MotorHistoryCharts.swift         | 137 +++++++++
+ 9 files changed, 2004 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0172-MotorHistoryCharts.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/MotorHistoryCharts.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MotorHistoryCharts.Charts.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MotorHistoryCharts.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MotorHistoryCharts.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MotorHistoryCharts.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MotorHistoryCharts.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MotorHistoryCharts.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/MotorHistoryCharts.swift

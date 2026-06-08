@@ -1,0 +1,162 @@
+=== P4 Feature view 0013 ColorConverter (Apple) ===
+Surface: ColorConverter  (web: features/admin/components/devtools/tools/ColorConverter.tsx)
+Native:  apps/apple/TeslaSync/feature-views/ColorConverter.*
+Runner:  Darwin (arm64), Apple Swift 6.3.2, macOS SDK present
+
+--------------------------------------------------------------------------------
+CAPABILITY PROBE (gate prerequisite — SwiftUI + Swift Charts + MapKit, iOS18/iPadOS18/macOS15)
+--------------------------------------------------------------------------------
+xcodebuild           : /usr/bin/xcodebuild present, BUT active developer dir is
+                       '/Library/Developer/CommandLineTools' (Command Line Tools only,
+                       NOT a full Xcode) -> xcodebuild is unusable.
+iphonesimulator SDK  : `xcrun --sdk iphonesimulator --show-sdk-path` -> "SDK cannot be located".
+iOS Simulator        : `xcrun simctl list devices` -> no iPhone 16 runtime available.
+swift / swiftc       : 6.3.2 — macOS SDK typecheck of `import SwiftUI` + `import Charts` -> OK (EXIT=0).
+swiftlint            : present (Homebrew).
+swiftformat          : present (Homebrew).
+xcodegen             : present (Homebrew).
+pwsh                 : present (Homebrew) — placeholder gate runnable.
+
+Conclusion: the xcodebuild build+test capability (iOS Simulator + macOS app/test bundles)
+is UNAVAILABLE on this runner. Per the prompt capability clause this is a STATUS=BLOCKED
+condition with platform-capability evidence (below). The surface itself was still authored
+in full and validated against the real shared design system with the command-line Swift 6
+toolchain (see SURFACE-SCOPED VERIFICATION).
+
+--------------------------------------------------------------------------------
+GATE STEPS (as specified in the prompt)
+--------------------------------------------------------------------------------
+STEP 1 — xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+  '/Library/Developer/CommandLineTools' is a command line tools instance
+  IOS_EXIT=1        [BLOCKED — full Xcode + iphonesimulator SDK absent]
+
+STEP 2 — xcodebuild -scheme TeslaSync-macOS build test
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+  '/Library/Developer/CommandLineTools' is a command line tools instance
+  MAC_EXIT=1        [BLOCKED — full Xcode absent]
+
+STEP 3 — swiftlint --strict            (run from apps/apple, where .swiftlint.yml lives)
+  TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error:
+    Function Body Length Violation (function_body_length) — 78 lines.
+  Done linting! Found 1 violation, 1 serious in 506 files.
+  LINT_EXIT=2       [PRE-EXISTING, OUT OF SCOPE — the single violation is in
+                     LifetimeStatsWidget.Adapter.swift, NOT in ColorConverter.*.
+                     ColorConverter.* has 0 violations (see scoped run below).
+                     That file is outside this prompt's allowed files, so it is not
+                     modified here (honesty covenant rule 7 — no predecessor bypass via
+                     touching files this prompt does not own).]
+
+STEP 4 — swiftformat --lint apps/apple (run from repo root)
+  0/514 files require formatting, 2 files skipped.
+  FORMAT_EXIT=0     [PASS — whole tree clean, including the 4 ColorConverter Swift files]
+
+STEP 5 — check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views (real recursive scan)
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0 [PASS — no TODO/FIXME/stub/placeholder/Lorem/"not implemented"]
+  (Note: invoking the script with the prompt's literal prefix '-Path .../ColorConverter'
+   resolves to a non-existent path and scans 0 files — a false PASS. The directory scan
+   above is the authoritative result and is clean.)
+
+--------------------------------------------------------------------------------
+SURFACE-SCOPED VERIFICATION (in lieu of the BLOCKED xcodebuild build+test)
+Because full Xcode is unavailable, ColorConverter was compiled and exercised against the
+REAL shared design tokens + components using `swiftc` (macOS SDK) in Swift 6 language mode
+with complete strict concurrency — i.e. the exact SWIFT_VERSION/SWIFT_STRICT_CONCURRENCY
+the project.yml targets use.
+--------------------------------------------------------------------------------
+A. Swift 6 strict-concurrency TYPECHECK of the surface against the real shared layer
+   files: ../design/generated/apple/Tokens.swift, Sources/Design/TSMaterial.swift,
+          Sources/Design/TSDesign.swift, Sources/Components/UI/{Cards,Typography,Badges,
+          Buttons,Fields,Utility}.swift  +  ColorConverter.{Model,,Previews}.swift
+   cmd:   swiftc -sdk <macosx> -target arm64-apple-macos15.0 -swift-version 6
+          -strict-concurrency=complete -typecheck ...
+   result: TYPECHECK6_EXIT=0   [PASS — resolves TSGlassPanel, TSIconBox, TSTextField,
+           TSLabel, TSCaption, TSCopyButton, Color.TS/Font.TS/TSSpacing/TSRadius tokens,
+           @Observable/@MainActor model, @Bindable, @ScaledMetric, #Preview macros]
+
+B. Swift 6 RUNTIME adapter-parity probe (compiled ColorConverter.Model.swift + a driver
+   into an executable and ran it; proves the conversion math matches the web 1:1 since the
+   XCTest target cannot run without Xcode):
+     PASS: rgb=59,130,246                 (#3b82f6)
+     PASS: hsl=217,91,60                  (#3b82f6 -> hsl(217, 91%, 60%))
+     PASS: rgbString = "rgb(59, 130, 246)"
+     PASS: hslString = "hsl(217, 91%, 60%)"
+     PASS: red/green/blue primaries -> hsl(0/120/240,100,50)
+     PASS: white/black/gray -> hsl(0,0,100)/(0,0,0)/(0,0,50)
+     PASS: "" / "#fff" / "#1234567" / "#12xy56" -> nil   (web parity: must be 6 hex digits)
+     PASS: "3b82f6" == "#3B82F6"          (no-hash + uppercase accepted)
+     PASS: rows order == [RGB, HSL, HEX]; HEX cell echoes raw input
+     PASS: copyLabel == "Copy RGB value: rgb(59, 130, 246)"; fieldLabel == "Hex Color"
+     ALL_ADAPTER_CHECKS_PASSED  (COMPILE6_EXIT=0, RUN6_EXIT=0)
+
+C. swiftlint --strict scoped to ColorConverter.* : 0 violations.
+D. swiftformat --lint scoped to ColorConverter.* : 0/4 files require formatting.
+
+These four mechanical checks are the green equivalents of the xcodebuild build (compile)
+and test steps that the runner cannot host. They are NOT a substitute for an Xcode CI run;
+this log is filed STATUS=BLOCKED, not DONE.
+
+--------------------------------------------------------------------------------
+PARITY NOTES / DECLARED DEVIATIONS (honesty covenant rule 9 — no silent drift)
+--------------------------------------------------------------------------------
+* States: the web source is a pure-local tool — its only "data source" is `useTranslation`
+  (no network). The prompt's generic loading/error/stale/offline matrix is therefore N/A
+  for this surface. The web's single real branch (`parsed && (grid)`) is reproduced as three
+  exhaustive, always-rendered states (never a blank panel):
+    - empty   : neutral swatch + entry hint caption
+    - invalid : neutral swatch + inline field validation error
+    - valid   : filled swatch + RGB/HSL/HEX grid, each value copyable
+* i18n: parity keys preserved verbatim in ColorConverter.strings (table "ColorConverter"):
+  "Color Converter", "Color Converter Desc", "Hex Color". The web `t('Color Converter Desc')`
+  has no catalog value and renders the key literally; the native catalog supplies a human
+  English value ("Convert hex colors to RGB and HSL") for the same key (production polish —
+  key preserved for parity). RGB/HSL/HEX labels and the #3b82f6 field sample are technical
+  literals rendered verbatim, exactly as the web source does.
+* Conversion: 1:1 port of web helpers.rgbToHsl + the component parse block, including the
+  Math.round rounding. Per-digit hex validation is strict (a deliberate hardening over JS
+  parseInt's lenient leading-digit parse); identical for all well-formed and all clearly
+  malformed inputs.
+* Telemetry: P1/S11 `view.opened` emitted once on appear with surface slug "ColorConverter"
+  (ColorConverterTelemetry seam + OSLog default; injectable recorder used in tests).
+* Tokens: the web decorative "purple" icon tint maps to the semantic `.accent` design-token
+  tone via the shared TSIconBox (the native TSTone set has no per-hue purple). No raw colors.
+* Integration gap (predecessor): apps/apple/project.yml registers `TeslaSync/dashboard-widgets`
+  as a target source path but not yet `TeslaSync/feature-views`. Wiring the feature-views tier
+  into the TeslaSync / TeslaSync-macOS target sources is a P4-core/scaffold responsibility and
+  is OUTSIDE this prompt's allowed files (ColorConverter.* + log). Declared here rather than
+  bypassed. Once present (with full Xcode), this surface builds with the rest of the app.
+
+--------------------------------------------------------------------------------
+WHY EXIT != 0 (two independent blockers, neither a defect in this surface)
+--------------------------------------------------------------------------------
+1. xcodebuild build+test (STEP 1 + STEP 2) require full Xcode + the iphonesimulator SDK,
+   neither installed on this runner (Command Line Tools only). Platform capability absent.
+2. swiftlint --strict (STEP 3) fails on a single PRE-EXISTING violation in
+   TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141, which this prompt is
+   not allowed to modify. ColorConverter.* itself is lint-clean.
+
+Disposition rule (authoritative): .github/prompts/monorepo/p4-apple/README.md states
+"Requires macOS + Xcode runners (ADR-010/012) — prompts that can't run their gate are
+BLOCKED, not DONE." The gate's xcodebuild build+test cannot run here (no full Xcode), so
+this surface is filed STATUS=BLOCKED — NOT reframed as DONE. The code is complete and every
+host-runnable, in-scope check is green (see SURFACE-SCOPED VERIFICATION); the build/test must
+be re-run on a signed macOS + Xcode CI runner (ADR-012 macos-latest matrix) to clear BLOCKED.
+
+--------------------------------------------------------------------------------
+FILES (this prompt's deliverables)
+--------------------------------------------------------------------------------
+apps/apple/TeslaSync/feature-views/ColorConverter.swift           (SwiftUI surface)
+apps/apple/TeslaSync/feature-views/ColorConverter.Model.swift     (adapter + state + model + i18n + telemetry + a11y)
+apps/apple/TeslaSync/feature-views/ColorConverter.Previews.swift  (6 per-state previews)
+apps/apple/TeslaSync/feature-views/ColorConverter.Tests.swift     (XCTest: adapter/rows/model/telemetry/a11y)
+apps/apple/TeslaSync/feature-views/ColorConverter.strings         (P1/S10 i18n table "ColorConverter")
+
+IOS_EXIT=1
+MAC_EXIT=1
+LINT_EXIT=2
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+EXIT=1
+STATUS=BLOCKED

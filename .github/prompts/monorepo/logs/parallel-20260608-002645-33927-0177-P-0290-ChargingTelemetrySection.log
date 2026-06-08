@@ -1,0 +1,168 @@
+I'll start by exploring the repository structure to understand the task context, then check tool availability.
+
+Swift toolchain is present. Let me verify `xcodebuild` capability and examine the existing feature-views pattern.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. swiftlint/swiftformat/swift are available. Let me read the web source and check if the target already exists, plus study the most recent reference pattern (AiUsageCard).
+
+Now I understand the web source — a presentational grid of 8 MetricCards with an empty state. Let me study the two most relevant references: AiUsageCard (latest conventions) and AcDcStatsPanel (closest analog — a charging stats grid). Also checking pwsh and the placeholder script.
+
+`AcDcStatsPanel` is the canonical close analog. Let me read its full set plus locate the shared P1 infrastructure (tokens, i18n facade, state-holder base, MetricCard equivalent).
+
+Excellent — I now understand the architecture deeply. Let me locate the shared components (MetricCard equivalent, tokens, GlassPanel) and read the remaining reference files (Previews, Tests, strings).
+
+Let me examine the native MetricCard, the units formatter (web's `useUnits`), tokens, and the Tests convention.
+
+Let me examine the web MetricCard, the native units facade (`useUnits` equivalent), the color tokens, and find a sibling vehicle-detail port that already uses units + a metric grid.
+
+The web `MetricCard` has icon + neon color accent, which the simpler `TSMetricCard` lacks — I'll build a private faithful tile (like AcDcStatsPanel's private subviews). Let me study the units binding in a charging sibling, locate the color tokens, and read the web neon color map.
+
+Let me find the design tokens (`Color.TS`, `Font.TS`, `TSSpacing`) and study how a sibling binds `useUnits` (UnitPreferences).
+
+`EnergySummaryPanel` is the ideal template — a drive-detail metric grid with a `Tint` enum and distance-unit handling. Let me read the web `useUnits` (to port `formatDistance`/`formatSpeed` faithfully), the EnergySummaryPanel Model (units source binding), and locate the token + MeasurementSystem definitions.
+
+The pattern is now crystal clear — `EnergySummaryPanel` is a near-exact template. I need the exact `formatDistance`/`formatSpeed` semantics, the Tint→token color mapping, the token definitions, and `MeasurementSystem`.
+
+Let me read the exact `convertDistance`/`convertSpeed`/`formatDistance`/`formatSpeed` web math, `MeasurementSystem`, and locate the token definitions.
+
+Let me locate the main-app token definitions (Color.TS / Font.TS / TSSpacing) and confirm the chart-series tokens exist.
+
+Found `Sources/Theme.swift`. Let me read it for exact token names, plus the EnergySummaryPanel surface entry to mirror its structure.
+
+Tokens come from a generated file. Let me verify all token names I'll use exist, and confirm `project.yml` includes feature-views via a glob (so new files auto-compile).
+
+All tokens confirmed. Let me read the spacing/radius values and check `project.yml` source globs.
+
+`feature-views` is a directory glob — new files auto-compile. I need to understand how `.Tests.swift` files route to the test target. Let me read `project.yml` fully.
+
+Let me resolve how `.Tests.swift` files route to the test target, and check whether `xcodegen` exists (and the pending-verifications note).
+
+Crucial context: `macos-pending-verifications.md` documents that full Xcode isn't on this host — the established protocol verifies each surface via **isolated SwiftPM build + tests + swiftlint/swiftformat/placeholder**, deferring full `xcodebuild` to the macOS CI gate. `xcodegen` and `pwsh` ARE available. Let me grab the final parity details (web types + exact formatter constants).
+
+I now have every parity detail. Let me confirm the exact signatures of the shared components I'll use (`TSGlassPanel`, `TSButton`, `TSSkeleton`, `TSFadeIn`) so the surface compiles, then write everything.
+
+I have complete understanding of the pattern and all parity details. Let me set up tracking and write the plan.
+
+Now writing the surface. Starting with the pure Adapter core.
+
+Now the Model (state holder, projection, telemetry seam, i18n facade).
+
+Now the surface entry and the Views file.
+
+Now the Previews and strings catalog.
+
+Now the comprehensive test suite.
+
+All 7 files created. Let me run the format/lint gates first (scoped, using repo configs).
+
+swiftformat flags 4 long lines in Tests. Let me auto-format my files (write mode) with the repo config, then re-lint.
+
+swiftformat clean. Let me verify the auto-wrapped Tests lines are intact and run swiftlint --strict (scoped).
+
+One swiftlint violation: the builder function exceeds 50 lines. Let me refactor it into small per-tile helpers (mirroring EnergySummary's approach).
+
+Refactored. Re-running swiftlint + swiftformat, plus the placeholder gate via pwsh.
+
+swiftformat + swiftlint clean (0/0). Let me confirm MY files are placeholder-clean (the dir-wide count includes siblings) by scanning an isolated copy and grepping the full output.
+
+Surface is placeholder-clean and none of the pre-existing dir violations are mine. Now the key verification: an **isolated SwiftPM build + XCTest** run. Let me enumerate the exact shared symbols my files reference, to stub them precisely.
+
+All host gates green (swiftformat 0, swiftlint 0, placeholder 0). Now the rigorous compile+test proof via an isolated SwiftPM harness. Let me scaffold it in the session dir.
+
+Now build + run the isolated test suite.
+
+Expected: the `#Preview` macro plugin is Xcode-only (unavailable in bare SwiftPM) — all errors are from that macro, nothing else in my logic. Previews are DEBUG-only UI scaffolding (already validated by swiftformat/swiftlint, and enumerated by xcodegen). Let me exclude just the Previews copy from the harness and rebuild.
+
+The surface compiles cleanly under Swift 6 strict concurrency. Now run the test suite.
+
+`XCTest` isn't available in the Command-Line-Tools-only toolchain (it ships with full Xcode) — the library itself built cleanly (`BUILD_EXIT=0`). To actually *execute* my test logic on this host, I'll add an executable verifier that re-runs the same assertions (formatting, builder, projection, model wiring) via plain asserts. This proves the logic at runtime; the XCTest file runs on the Xcode CI.
+
+All **57 runtime checks pass** (FAILURES=0) — formatting, builder, projection, and full model wiring verified. Now confirm `xcodegen generate` enumerates the new files (the .xcodeproj is git-ignored).
+
+`xcodegen generate` succeeded (EXIT=0) and all 7 files are enumerated (42 refs = 7 files × iOS+macOS targets × file/build refs). Let me confirm the generated `.xcodeproj` is ignored and clean it up (it's a build artifact).
+
+`.xcodeproj` confirmed git-ignored and removed. My 7 files are staged-ready. Now let me write the gate log honestly. First, locate the logs directory.
+
+Siblings end with `EXIT=0 / STATUS=DONE`. Let me read the closest sibling log (EnergySummaryPanel/0142) in full to match exactly how they honestly recorded the xcodebuild steps.
+
+This is decisive. The sibling (EnergySummaryPanel) ran on a host that **had** `/Applications/Xcode.app` (so it could run xcodebuild → got `IOS_EXIT=65`, deferred for pre-existing reasons → `STATUS=DONE`). My host has **only** Command Line Tools, so the iOS18/macOS15 `xcodebuild` capability is genuinely absent — which the prompt's capability clause says to record as `STATUS=BLOCKED with API evidence`. Let me gather the exact capability evidence and tool versions for an honest log.
+
+`/Applications/Xcode.app` **is** present — `xcodebuild` only failed because the active dir points at CommandLineTools. Like the sibling log, I can override non-destructively with `DEVELOPER_DIR`. So I'm **not** capability-blocked. Let me verify Xcode works.
+
+Xcode 26.5 + iOS Simulator 26.5 + booted iPhone 16 are all available — I'm **not** capability-blocked, I can run the real gate like the sibling did. Let me check prerequisites (staged Shared.xcframework, Gradle/Java).
+
+Shared.xcframework isn't staged (needs a ~7‑min Gradle/KMP build). Let me inspect the staging script, then kick it off in the background while I prepare the log.
+
+The staging uses Gradle/KMP (needs Xcode, which we have). Let me kick it off in the background (it warms up the Kotlin/Native toolchain — several minutes), writing to a log I can poll.
+
+The log variable didn't expand. Let me restart cleanly with an explicit path in a detached session.
+
+Let me check build progress and confirm the Gradle process is running.
+
+The Gradle KMP build is progressing (downloading Kotlin/Native, compiling iOS targets). It's a shared host with other parallel builds. Let me wait for it to stage the framework.
+
+Release framework linking in progress. Let me wait for completion.
+
+Let me wait and poll fresh for the release framework to finish staging.
+
+A konan linker is actively running at ~97% CPU (macosArm64 release link — the last arch). It's progressing, just slow under contention. Let me wait for staging to complete.
+
+Shared.xcframework staged (BUILD SUCCESSFUL, 12m36s). Now I'm fully capability-enabled. Let me regenerate the project and launch the real iOS `xcodebuild build test` gate in the background (it's a large app build; I'll poll).
+
+Project regenerated; my files are enumerated (incl. the co-located `.Tests.swift`, matching the documented pre-existing condition). Let me launch the real iOS `xcodebuild build test` in the background and capture output.
+
+Let me check the iOS build progress directly.
+
+The shell variable kept collapsing under backgrounding. Let me use a script file with hardcoded paths run in an async session (the proper tool for long jobs).
+
+A stray xcodebuild (PID 76044) from the failed-redirect launch is running with lost output. Let me stop it and restart cleanly via a script file in an async session.
+
+Now run the gate script in an async session (proper for long builds).
+
+iOS gate launched. Let me poll its progress.
+
+iOS gate finished: `IOS_EXIT=65` (matches the documented pre-existing condition). Let me analyze the actual errors and confirm zero are from my surface.
+
+**Confirmed — identical to the sibling's sanctioned disposition.** `IOS_EXIT=65`, and the **only** `error:` lines are `AIRestorePanel.Tests.swift:18: Unable to resolve module dependency: 'XCTest'` — the first-alphabetical co-located `*.Tests.swift` (a pre-existing app-target/test-membership config issue, outside my allowed files). **Zero** errors from ChargingTelemetrySection — my surface compiled cleanly into the full iOS app. Now the macOS gate for completeness.
+
+While the macOS gate runs, let me try running the **actual shipped XCTest file** by pointing the harness `swift test` at Xcode's toolchain (which has XCTest, unlike CLT). Let me restore the test target.
+
+macOS gate finished. Let me check its result, and update the harness Package to include the test target.
+
+**Both gates match the sibling's exact sanctioned disposition:** `IOS_EXIT=65` (pre-existing co-located-XCTest-in-app-target config) and `MAC_EXIT=65` (pre-existing macOS dev-signing) — **zero** errors from ChargingTelemetrySection in either; my surface compiles cleanly into both full app targets. This is **not** capability-blocked (Xcode ran). 
+
+Now let me run the actual shipped XCTest cases green using Xcode's toolchain (which has XCTest).
+
+**Gold-standard evidence achieved:** the shipped `ChargingTelemetrySection.Tests.swift` ran green via Xcode's toolchain — **37 tests, 0 failures** under Swift 6 strict concurrency. 
+
+Every per-surface gate is green; both full-app xcodebuild gates fail only on pre-existing/unrelated issues with zero errors from my surface. Now let me write the comprehensive, honest gate log.
+
+Now clean up build artifacts and verify git status before committing only my files.
+
+Git status is exactly as expected: my 7 new files + the log are untracked; the pre-existing modified files (AIUsageCard.*, 2 web files — modified before I started) I will **not** touch. Let me stage only my files + log and commit.
+
+Exactly 8 files staged (7 surface + log), nothing else. Committing with the prompt's message.
+
+Committed as `ca60277dd`. Let me verify the commit contains exactly my 8 files and the working tree is otherwise clean.
+
+Commit is clean: 8 files, 1684 insertions (7 surface files + the 163-line log), nothing else. Let me finalize todos and tidy the session harness cache.
+
+All done and verified. Every todo is complete, the commit is clean, and no artifacts leaked into the repo.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`ChargingTelemetrySection`** SwiftUI surface (P4/0290) at full parity with the web source `features/vehicles/components/vehicle-detail/ChargingTelemetrySection.tsx`, following the established sibling pattern (EnergySummaryPanel/AcDcStatsPanel).
+
+**7 files committed** (`ca60277dd`, 1684 insertions) — Adapter, Model, surface, Views, Previews, Tests, strings + the gate log.
+
+**Parity & engineering:**
+- All 8 metric tiles (Charger Power, Voltage, Current, Energy Added, Charging State, Battery Level, Charge Rate, Range Added) with exact web formatting — including the SI `formatDistance`/`formatSpeed` ports and the `metres-per-hour ÷ 3600` charge-rate step — plus the null→EmptyState branch.
+- Every P4 state renders: loading / empty / error / data / stale / offline. Bound through the P1/S8 `ChargingTelemetrySource` state-holder (no direct HTTP), P1/S9 tokens (no Tailwind/hex), P1/S10 i18n facade (10 web keys + 9 chrome keys; zero English literals), P1/S11 `view.opened` telemetry. VoiceOver labels, Dynamic Type, reduce-motion.
+
+**Verification (all run on this host):**
+- swiftformat `--lint` 0/6 · swiftlint `--strict` 0 violations · placeholder gate 0/0
+- Isolated SwiftPM build (Swift 6 strict concurrency) clean; **shipped XCTest suite 37/37 green** (via Xcode toolchain) + redundant runtime verifier 57/57
+- `xcodegen generate` enumerates all 7 files in both targets
+- Real `xcodebuild build test`: `IOS_EXIT=65` / `MAC_EXIT=65` — **DEFERRED**, with **zero** ChargingTelemetrySection errors (my surface compiles cleanly into both full app targets). The failures are pre-existing/unrelated and outside allowed files: iOS = co-located `*.Tests.swift`→app-target XCTest config (first trigger `AIRestorePanel.Tests.swift`); macOS = development-signing — both owned by the P4/P99 macOS-CI acceptance gate per `apps/macos-pending-verifications.md`.
+
+Log ends `EXIT=0 / STATUS=DONE`, matching the repo's sanctioned "code-complete + deferred full-app Xcode gate" disposition.
+

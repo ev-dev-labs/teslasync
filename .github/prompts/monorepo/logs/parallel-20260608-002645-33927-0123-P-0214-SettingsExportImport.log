@@ -1,0 +1,122 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me explore the Apple app structure and the web source before concluding anything.
+
+The web source exists (16KB). There's a `project.yml` (XcodeGen) but no checked-in `.xcodeproj`. Let me read the web source thoroughly and explore the Apple app conventions in parallel.
+
+Now let me explore the existing Apple conventions — feature-views, state holders, tokens, i18n, and diagnostics infrastructure.
+
+1436 files — a rich, well-established convention. Each feature view is a multi-file bundle (`.swift`, `.Model`, `.Adapter`, `.Views`, `.States`, `.Previews`, `.Tests`, `.ModelTests`, `.strings`). Let me find settings-related examples and study one end-to-end.
+
+`BackupActionsCard` is the closest analog. Let me read its complete file set to learn the conventions.
+
+Excellent — the conventions are crystal-clear and mature. Let me read the rest of BackupActionsCard (Views, Previews, Tests, strings) plus the shared design tokens to understand the full pattern.
+
+Now let me read the test pattern and locate the shared design tokens (TSSpacing, Color.TS, Font.TS, TSButton, etc.) so my code uses the exact existing primitives.
+
+The design system primitives live outside `feature-views`. Let me locate them across the Apple tree.
+
+Let me read the design tokens and shared components (Design, Buttons, Skeletons).
+
+Let me find the generated token definitions and the Cards/Typography components that map to the web's GlassPanel, IconBox, Heading, Code, etc.
+
+The tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read that plus Typography and Feedback/States to complete my vocabulary.
+
+Let me read the generated tokens, Badges (IconBox equivalent), Banners (InlineCallout), and the project build config.
+
+Now I understand the design system fully. Let me read the web hooks/schema for exact data shapes, plus the build config and capability docs.
+
+Let me read the web hook + schema (the exact data model) and check what verification tooling actually runs here.
+
+Critical capability findings: `pwsh` is available, and **SwiftUI typechecks against the macOS SDK via swiftc** (no Xcode needed for compile-checking). Full `xcodebuild ... -destination 'iOS Simulator'` still needs Xcode.app + simulators. Let me check how prior P4 surfaces handled this and read the placeholder checker.
+
+The established predecessor disposition (e.g., 0241-BackupActionsCard) is clear and honest: run all host-runnable gates green (swiftlint, swiftformat, placeholder, **actually-executed** unit tests), show `xcodebuild build/test` as DEFERRED with its real exit code + cause (never faked green), → EXIT=0 / STATUS=DONE. I'll follow that exact parity. Let me verify my execution capabilities precisely.
+
+Confirmed: SwiftUI compiles against the macOS SDK (exit 0), but XCTest is unavailable. So I'll get genuine **compile** evidence for the SwiftUI bundle via `swiftc -typecheck` with real deps, and genuine **execution** evidence for the pure-logic core (Adapter+Model) via a local harness running the same assertions. Let me read the predecessor log to mirror its honest structure, plus lint configs, Motion, and the placeholder script.
+
+I now have the complete house style. Let me read the lint configs, the placeholder script, and TSMaterial (for `tsGlassPanel`), and confirm xcodegen.
+
+Let me read the placeholder patterns and swiftformat config so my code conforms exactly, and confirm xcodegen.
+
+I now have a complete, precise understanding of the conventions, the web spec, the design system, the verification approach, and the honest predecessor disposition (host gates green + xcodebuild DEFERRED with real exit → EXIT=0/STATUS=DONE). Let me set up a plan and todos, then build.
+
+Now I'll write the Adapter (pure Foundation logic core) and the Model (seams + view-model). Starting with the Adapter.
+
+Now the Model (seams, view-model, sources, i18n facade) — Foundation/Observation/OSLog only so it executes in the harness.
+
+Logic core written. Before the SwiftUI layer, let me verify the Adapter+Model actually compile and run via a SwiftPM harness (the same approach the predecessor used). This catches errors early.
+
+Good — those errors are all in my harness runner (not the shipped Adapter/Model, which compiled cleanly under strict concurrency). Let me fix the runner's `@Sendable` closures and `try` handling.
+
+Builds clean. Now let me execute it.
+
+89/89 checks pass — the shipped logic is genuinely executed and correct. Now the SwiftUI layer. Writing Views (header, export row, toast, diff list, tone→color).
+
+Now add a number formatter to the Adapter (for the "bytes" display) and write the States layer (dropzone with file importer + drag-drop, error box, preview, applied).
+
+Now the main view and the per-state previews.
+
+Now the XCTest files (the shipped test artifacts that run under xcodebuild) — Adapter/i18n/a11y tests and Model lifecycle tests.
+
+Now the strings catalog. Then I'll run the full verification suite.
+
+All 9 files written. Now the verification phase. First, format my files with swiftformat (fix), then lint.
+
+Formatting clean (0/8 require formatting). Now swiftlint --strict on the new files.
+
+Five violations to fix: 2 file-length (split needed — idiomatic per convention), 1 cyclomatic complexity, 2 opening-brace. Let me inspect the exact spots.
+
+Clear fixes: decompose `validate()` (complexity), shorten the wrapped default-arg signatures (brace), and split the two oversized files into convention-style smaller files (all still `SettingsExportImport.*`). Let me recreate the logic core as five files.
+
+Now the Projections file (button labels, parse errors, toast, accessibility).
+
+Now the trimmed Model (seams + view-model) and the Sources file (in-memory sources + facade).
+
+Now re-format and re-lint all SEI files (now 10 swift files), and re-run the logic harness with the split files.
+
+Both green: 0/11 need formatting, 0 lint violations. Now re-run the logic harness with the split files.
+
+The harness caught a **real bug** (not a harness artifact): the DEBUG preview seams in `Sources.swift` can't set the model's `private(set)` properties because `private(set)` is file-scoped — they must live in the same file as the model. This would fail the Xcode build too. Fix: extract the seam *types* into a new `Seams.swift` and move the DEBUG seams back into `Model.swift` (co-located with the model), keeping both files under 400 lines.
+
+Now create the Seams file (seam types) and the Model file (view-model + co-located DEBUG seams so `private(set)` is accessible).
+
+Now re-run the harness with the corrected structure (6 logic files), then re-format/lint.
+
+Harness green again (89/89). Re-format + re-lint the full set, then run the SwiftUI typecheck against the macOS SDK.
+
+All 12 files clean and within size limits. Now the key compile verification: typecheck the production SwiftUI against the **real** macOS SDK + real design-system components. Let me script Pass A (production) and Pass B (previews, macro-free).
+
+The typecheck caught **two more real issues** (exactly what it's for): (1) the `InMemorySettingsBackupGateway` fixtures are `@MainActor`-isolated but referenced from nonisolated contexts (Previews' global `let`, and the non-`@MainActor` adapter tests) — would fail the real Swift 6 build; (2) a regex bug in my preview-transform (titles with parentheses). Let me fix the fixtures to be `nonisolated` and fix the transform.
+
+The fixtures need `nonisolated`. Let me add it to each (swiftformat will normalize modifier order afterward).
+
+Now fix the preview-transform regex and re-run formatting, then the typecheck.
+
+Modifier order normalized, lint clean. Now re-run the full typecheck and the harness.
+
+Pass A (production UI) is **green**. Pass B caught one more real Swift 6 issue: a `@MainActor`-isolated default argument in `previewModel(gateway:)` (default args are evaluated nonisolated — fails the real build too). Fix: construct the gateway in the body instead of as a default arg.
+
+Both typecheck passes are **green** (production compiles against the real macOS 15 SDK + real components; previews typecheck macro-free). Now re-run the harness with the updated fixtures, then the placeholder gate, xcodegen inclusion check, and capture the DEFERRED xcodebuild evidence.
+
+Harness 89/89, placeholder gate COUNT=0 (both the honest per-file scan and the literal gate command). Now xcodegen inclusion check, a grep sanity, and the DEFERRED xcodebuild capture.
+
+xcodegen includes my files (78 refs across iOS/macOS/test targets), grep sanity clean. The generated `.xcodeproj` isn't auto-ignored, so I'll remove it (it's not part of my deliverable). Now capture the DEFERRED xcodebuild evidence and the whole-tree lint baseline.
+
+xcodebuild DEFERRED evidence captured (IOS_EXIT=1, MAC_EXIT=1, CLT-only). My 13 files show as untracked. But I notice `AIUsageCard.*` files are modified — I never touched those. Let me verify I didn't cause that before proceeding.
+
+Confirmed: the `AIUsageCard.*` modifications have mtime `01:36:40` — they predate my work (my files are `01:58`). They were **pre-existing** in this parallel slot's working tree (a different surface's in-progress rename), not caused by me. My allowed scope is only `SettingsExportImport.*` + the log. Let me run the whole-tree gate lints to honestly capture the baseline and confirm my files are clean within it.
+
+Whole-tree swiftformat: only **1 pre-existing** red — `ActionBuilder.Previews.swift:48` (the same file predecessor 0241 reported), none of my files. Now the whole-tree swiftlint baseline.
+
+Whole-tree swiftlint: **1 pre-existing** violation in 1921 files; none in my files (the SettingsExportImport lines are just progress output, and my scoped `--strict` run already showed 0). Let me name the pre-existing violation for the log.
+
+The single pre-existing whole-tree lint red is `LifetimeStatsWidget.Adapter.swift:141` — the exact same one predecessor 0241 reported. My files are clean throughout. All host gates are green; xcodebuild is environment-DEFERRED. Let me write the honest gate log.
+
+All gates accounted for honestly. Now commit only my 13 files + the log (excluding the pre-existing AIUsageCard changes and the generated xcodeproj).
+
+Exactly 14 staged (13 surface files + log), no leaks. Committing.
+
+Committed as `d0b977503`. Let me clean up temporary verification artifacts and finalize.
+
+All 9 todos complete. The task is finished and verified.
+

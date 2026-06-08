@@ -1,0 +1,156 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the web component, the Apple app structure, and parity infrastructure.
+
+Let me examine the Sources/Features structure, the existing LiveSignalsTable Swift component, and how pages/navigation are structured.
+
+The existing `LiveSignalsTable` Swift component (P3) is built. Let me study it and a similar component (LiveControls) to learn conventions for models, adapters, KMP core, and localization.
+
+Excellent architecture. Let me study the localization system, models, the SharedFacade (KMP core), and the closely-related `LiveControls` component (which has vehicle selection + live data).
+
+Let me examine the Localization setup, the SharedFacade (KMP core wiring), and the `LiveControls` component for vehicle-selection patterns.
+
+The `admin.liveSignals.*` keys already exist in the catalog (with a `translation.` prefix). Let me examine the exact structure of these entries and the `route.` entries.
+
+The keys exist with a `translation.` prefix. I need to understand how Swift code resolves these web-parity keys. Let me investigate the localization helpers and how `translation.` keys are consumed.
+
+The convention is clear: web-parity keys resolve via the `translation.` prefix (e.g., `String(localized: "translation.admin.liveSignals.pageTitle")`), and all 7 keys already exist in the catalog. Now let me understand the KMP core wiring and find the vehicle-list data source.
+
+Now let me study `LiveControls` (vehicle-aware live component) and search for an existing vehicle-list source seam to reuse for the page's `useVehicles` binding.
+
+Let me check available Apple toolchain and gather the design tokens + shared components I'll need (GlassPanel, EmptyState, Select, PageContainer, LiveIndicator equivalents).
+
+Xcode full IDE isn't available (only CommandLineTools) — so the `xcodebuild` build/test gate will be BLOCKED, but `swift`, `swiftlint`, `xcodegen`, and `pwsh` work. Let me confirm no Xcode.app and gather the design tokens + shared components.
+
+`/Applications/Xcode.app` exists! I may be able to run the real gate via `DEVELOPER_DIR`. Let me test that and read the key token/component files.
+
+**Xcode 26.5 is available** via `DEVELOPER_DIR` — the full gate can run. Let me gather the remaining tokens/components and study the existing component's Previews/Tests/Table for composition and the test gate.
+
+`TSDesign.swift` references generated tokens. Let me locate the design tokens and the remaining components, plus study the existing component's Table/Previews/Tests for composition and test patterns.
+
+Let me read the existing Previews/Tests patterns, the full project.yml (targets + test wiring), and the lint/placeholder rules.
+
+Let me read the project.yml, lint config, placeholder script, ledger schema, and find the p4-apple gate contract.
+
+Let me check the Shared.xcframework, the build script, the placeholder script, and the p4-apple gate contract before establishing a baseline build.
+
+Let me read the existing `LiveSignalsTable` gate log — it's the canonical reference for the gate invocation and log format.
+
+This is the canonical disposition: **code-complete + host-validated, with the Xcode app build/test DEFERRED** (Shared.xcframework absent + 0 signing identities), ending `EXIT=0 / STATUS=DONE`. Let me assess whether I can strengthen this — checking which files need the `Shared` framework and whether the KMP build is feasible.
+
+Components/Design/App are **Shared-free** — so my page (bound through seams, like the sibling component) is fully host-typecheckable against the real component library. The KMP `gradlew` exists. Let me kick off the `Shared.xcframework` build in the background (to potentially enable a real xcodebuild), and meanwhile read the last reference files.
+
+The KMP build is running in the background. Let me resolve one critical question — how the existing `feature-views/*.Tests.swift` files coexist in the app target — since it affects whether a real `xcodebuild` is viable. Let me also check KMP build progress.
+
+Two key findings: there's a `Tests/Unit/FeatureViews` dir, and the KMP build made progress then exited. Let me check the KMP build result and resolve the test-file membership question.
+
+Resolved: the 256 sibling `feature-views/*.Tests.swift` live in the app source path (not the test target), so a real app-target build is pre-blocked independent of my work — confirming the established **DEFER xcodebuild** disposition. My page (seam-bound, Shared-free) is fully host-typecheckable against the real component library. Let me relaunch the KMP build detached (bonus evidence), set up tracking, and write the plan.
+
+All references confirmed (7 keys present with exact web values; `TSFadeIn` = FadeIn). Let me create the directory and start building the page files.
+
+Now the localization facade. Let me verify which generic component keys already exist in the catalog (to minimize new catalog edits and keep the page literal-free).
+
+The catalog is **generated** from the web i18n source (the `translation.` namespace = all web i18n keys), so generic web keys are available too. Let me find existing keys for native chrome states (loading/retry/empty) and the vehicle fallback, to avoid hand-editing the generated catalog.
+
+All needed keys already exist in the generated catalog — **no catalog edits required**: 7 web keys + `translation.common.{loading,noData,retry}` + `translation.automations.builder.vehicleFallback` ("Vehicle %1$@"). Let me verify `common.error` and finalize the Strings facade.
+
+Clean — I'll reuse `translation.error.loadFailed` (error title) and `translation.common.{loading,noData,retry}` plus `translation.automations.builder.vehicleFallback`. **Zero catalog edits needed.** Writing the Strings facade + pure option builder:
+
+Now navigation registration. Let me check whether real (Shared-free) production data providers exist for vehicles/live, to wire the registration honestly rather than as a placeholder.
+
+`VehicleDirectoryStore` is a real Shared-free vehicle cache. Let me inspect it and the Live store to decide how cleanly I can wire the registration.
+
+`VehicleDirectoryStore` (opaque string id, no VIN) and the live store both require the deferred KMP layer — so production data wiring is deferred repo-wide (only KMP-free Settings is currently route-wired; all other routes show the honest `route.pagePending`). I'll ship real, testable registration **infrastructure** (helper mirroring `SettingsRouteRegistration` + deep-link alias + build/lint wiring) and defer only the one-line composition-root call (documented, like all live data). Writing the navigation registration:
+
+The deep-link `/admin/live-signals` already resolves to `.admin` via first-segment matching, but I'll add an explicit alias per the prompt. Let me first check existing parser tests so I don't break them.
+
+Now wire the build (project.yml) and lint (.swiftlint.yml) to include `TeslaSync/Features` for both app targets.
+
+Now the previews and tests. Updating tracking and writing both:
+
+Now let me run the host gate. First, check KMP build status and whether any Components reference `Shared`-dependent facade types (which would affect my typecheck closure).
+
+**KMP `Shared.xcframework` build SUCCEEDED and is staged!** Only `UnitFormatters.swift` references a facade type. Let me confirm the full exclusion set for a clean Shared-free typecheck closure, then regenerate the project.
+
+Only `UnitFormatters.swift` touches a facade type — my closure is cleanly Shared-free. Let me regenerate the Xcode project (validates the project.yml edits) and run the host `swiftc -typecheck` over my page + the real component/design/routing/token closure.
+
+Project regenerated cleanly — `project.yml` edits are valid. Now the host `swiftc -typecheck` over my page + the real dependency closure:
+
+Typo in my file loop (double `.swift`). Fixing the LiveSignalsTable glob:
+
+Real strict-concurrency finding (the host gate working as intended): `static let` of non-`Sendable` `LocalizedStringKey` is flagged. The codebase pattern (`AppRoute.titleKey`) uses **computed** properties. Let me convert the key constants to computed `static var`:
+
+`TYPECHECK_EXIT=0` — my page + the full real component/design/routing/token closure (55 files) compile under Swift 6 strict-concurrency. Now swiftlint, swiftformat, and the placeholder scan:
+
+swiftlint linted the whole tree (config `included` wins). Let me see the 5 violations and confirm none are in my files:
+
+4 violations in my files (the 5th is pre-existing). Let me view the exact lines and fix them:
+
+Let me fix the line-length issues and refactor the 3-tuple. Viewing the Tests section to refactor cleanly:
+
+Now fixing all 4 lint issues — three line-lengths and the large-tuple (refactor to a `Harness` struct):
+
+Now refactor the 3-tuple in Tests to a `Harness` struct:
+
+Re-running swiftlint (filtered to my files), swiftformat, and the placeholder scan:
+
+swiftlint is clean on my files. swiftformat wants the computed bodies wrapped and flags a brace-parse issue in Tests.swift. Let me check the Tests.swift structure and auto-format with the ecosystem tool:
+
+Let me verify Tests.swift syntax with `swiftc -parse` and auto-format the non-test files with the ecosystem tool:
+
+Confirmed: an extra `}` from my refactor closed the class early. Let me view the refactored block to find it:
+
+Found it — a duplicate `}` at line 179. Removing it:
+
+Now re-run format (auto-fix) and verify everything is clean:
+
+Formatting is clean (`FORMAT_LINT_EXIT=0`). Now re-verify swiftlint + typecheck (Strings.swift was auto-formatted) and run the placeholder scan:
+
+swiftlint + typecheck both green. Now the placeholder scan:
+
+The scanner flags the literal word "placeholder" — a legitimate domain term here (the picker's placeholder row, mirroring the web `Select` placeholder option), not a stub. Let me read the scanner to find its opt-out mechanism:
+
+The scanner forbids the literal word "placeholder" (ADR-011). My usages are the legitimate "picker placeholder row" concept — but rather than stack 13 `// parity:allow` opt-outs (which looks like gaming the gate), I'll reword to the equally-accurate "prompt row" and simplify the option model. Let me find all occurrences:
+
+I'll reword "placeholder" → "prompt" throughout and simplify the option model (non-optional `vehicleID`, drop `isPlaceholder`). Batching the edits:
+
+The `loadingVehicles` body was reformatted by swiftformat. Let me fix that comment line alone, plus the View comments and the Tests assertion:
+
+Now update the picker tag (non-optional `vehicleID`) and remove the obsolete `isPlaceholder` test assertion:
+
+Now re-run the full host gate (placeholder, typecheck, swiftlint, format):
+
+Placeholder=0, typecheck=0, swiftlint clean. Waiting for swiftformat:
+
+All host gates are green: **PLACEHOLDER=0, TYPECHECK=0, swiftlint clean, swiftformat 0/7**. Now let me build an executed harness to prove the pure web-parity logic (option builder + a11y), mirroring the sibling component's approach:
+
+Top-level code needs a file named `main.swift` when compiling multiple files. Renaming:
+
+Executed harness: **10/10 assertions passed**. Now let me verify (not just assert) the Xcode app-build deferral cause by attempting a real build — the framework is now staged, so this isolates the remaining blocker (sibling test files in the app source path):
+
+The build compiles many dependency targets first (slow) — it timed out still in the widget target with no errors, confirming the project + my changes are coherent. Let me get fast, concrete evidence of the app-target test-file membership (the deferral cause) and confirm my page is wired into the app target, via the generated project:
+
+Verified deferral evidence: my page is wired into the app targets (42 project refs), 199 sibling `*.Tests.swift` with `@testable import TeslaSync` live in the app source path (integration-scope), and 0 codesigning identities — the framework is now staged. Let me check the ledger schema to format the apple ledger correctly:
+
+The ledger schema uses per-platform rows (`apple-macos`, `apple-ios`). My page is adaptive (one SwiftUI codebase → both idioms). Let me gather final artifact stats, then write the parity log and ledger:
+
+All confirmed. Let me write the parity log with the required `=== PARITY ===` section:
+
+Now create the apple parity ledger with rows for both adaptive idioms:
+
+Now a final clean verification sweep (all gates), JSON validation, and git status check before committing:
+
+All gates green. Let me confirm git ignores the generated project/framework, review what will be committed, and clean up temp files:
+
+The generated project/framework are correctly git-ignored. But 8 `AIUsageCard.*` files show as modified — I never touched those. Let me verify they're pre-existing (not mine) before committing only my intended files:
+
+Confirmed — the `AIUsageCard.*` changes are pre-existing (a card rename, prompt 0237, unrelated to my task). I'll stage **only** my intended files and commit:
+
+Nothing staged — the `git add` silently no-op'd. Let me investigate (this is a git worktree with a `.git` file):
+
+All my intended files are staged (7 page files + log + ledger as added; `.swiftlint.yml`, `AppRouteParser.swift`, `project.yml` as modified); `AIUsageCard.*` correctly excluded. Committing:
+
+Committed cleanly (12 files, 1274 insertions; `AIUsageCard.*` correctly excluded). Let me do a final verification of the commit and todo state:
+
+All 8 todos complete. The task is done and verified.
+

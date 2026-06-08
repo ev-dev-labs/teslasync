@@ -1,0 +1,186 @@
+I'll start by exploring the repository structure, the web source component, and checking tool availability.
+
+Key finding: **Xcode is NOT installed** (only Command Line Tools), and `simctl` is unavailable. Let me check the precedent from prior P4 Apple tasks and explore the structures.
+
+Good — `pwsh` is available, and there's a strong established pattern (162 surfaces, ~1049 files). Let me read the web source, the configs, and a recent comparable surface to learn the exact pattern.
+
+Now I understand the web source: `MarkdownRenderer` parses markdown and renders inline/fenced code, links, lists, headings, tables, with HTML sanitization and a raw-text fallback. Let me read the configs and study the established surface pattern in depth.
+
+`project.yml` and shared sources are at the `apps/apple/` root level. Let me explore the shared P1 infrastructure and study a comparable surface fully.
+
+There's a `SharedFacade` and `Design` directory. Let me study the most recent surface (LegacyAlertStudioRedirect) fully and the shared facades it uses.
+
+Let me read the LegacyAlertStudioRedirect surface files and the shared facades to learn the exact conventions.
+
+This is a rich, consistent pattern. Let me read the remaining surface files plus the design tokens and shared facade.
+
+Let me read the Adapter, Projection, Previews, Tests, and the design tokens to complete my understanding of the pattern.
+
+Let me locate the design token definitions (`TSSpacing`, `Color.TS`, `Font.TS`, `TSRadius`, `TSMotion`) and check the available SDK/build tooling.
+
+The tokens are generated/defined elsewhere. Let me locate them and the project generation setup across the whole tree.
+
+Found tokens at `apps/design/generated/apple/Tokens.swift`. Let me read it and the project.yml target structure.
+
+I now have the full token vocabulary and pattern. Let me probe the actual build/verify capabilities (swiftc typecheck against macOS SDK, tool versions) before writing code.
+
+swiftc typechecks SwiftUI against the macOS SDK successfully (real compile verification), and all host gates are available. Let me check the precedent disposition across existing logs to align my STATUS decision.
+
+Precedent is unambiguous: **132/132 logs are STATUS=DONE**, with `xcodebuild` deferred (IOS_EXIT=65/deferred) due to baseline infra, and host gates green. I'll follow this exactly — but honestly mark xcodebuild as deferred with runner-capability evidence (no Xcode.app here), while real-compile-verifying against the macOS 15 SDK and executing the parser parity tests. Let me read the web `CodeBlock` (delegated to for fenced code) to reproduce its affordances.
+
+I have everything I need. This is substantial multi-file work, so let me set up a plan and todos, then build the surface following the established pattern.
+
+Models done. The web `MarkdownInline.flatten` helper and inline parser come next. Let me first check how existing surfaces handle SwiftLint complexity rules (important since `--strict` turns warnings into errors).
+
+Inline parser next. The house style avoids SwiftLint disables (only 1 file in 1049 uses them), so I'll decompose into small functions. Let me write it.
+
+I referenced `MarkdownAutolinker`. Let me check current line counts (to respect the 400-line file_length rule) and then add the autolinker + block parser + projection.
+
+Now the gfm autolinker (separate file to respect the 400-line rule), the block parser, and the projection. Let me write them.
+
+Let me fix the awkward double-call to `parseTable` in the block dispatch — `parseTable` will be non-consuming on failure.
+
+Now the multi-line block consumers (lists, blockquotes, tables) as a `MarkdownParser` extension.
+
+Foundation core is written. Let me compile it on-host and run a parser smoke test to validate correctness before building the SwiftUI layer.
+
+Foundation core compiles. Let me run the parser parity smoke test.
+
+Foundation parser is verified — 46/47 host assertions pass; the one "FAIL" is my harness expecting 1 paragraph when the blockquote legitimately contains a nested paragraph (parser is correct, my expectation was wrong). Now the SwiftUI layer. Let me write the Model (seams + `@Observable`).
+
+SwiftUI rendering layer now. Let me write the inline/block renderers, then the code block, states, and entry view.
+
+Now the fenced code block view (web `CodeBlock` parity: language tag + copy button).
+
+Now the state views (loading/empty/error) and the entry view.
+
+All view files written. Let me typecheck the full surface against the macOS 15 SDK (strict concurrency) before writing previews/tests.
+
+The AttributedString dynamic-member setters (`run.font = …`) aren't Swift 6-safe (non-Sendable keypath capture). Let me probe a Swift 6-safe approach using typed attribute keys.
+
+The typed-key `AttributeContainer` approach is Swift 6-safe. Let me rewrite the inline `run` builder to use it (with short typealiases).
+
+Now re-typecheck the full surface in Swift 6 language mode.
+
+Full surface typechecks clean in Swift 6 mode. Let me collect every i18n key used so the strings catalog is complete.
+
+19 keys. Let me fix the one duplicate-key fallback mismatch in CodeBlock, then write the strings catalog.
+
+Now the previews (every state) and the tests.
+
+Now the test files (parser/projection/a11y + model). These will be committed targeting the app's XCTest target, and I'll also run them on-host via a temp SwiftPM package for real green evidence.
+
+Now let me actually RUN these tests on-host via a temp SwiftPM package named `TeslaSync` (so `@testable import TeslaSync` works verbatim). This compiles the entire surface (including previews + tests) and executes the test logic for real.
+
+Only failure is the `#Preview` macro plugin (Xcode-only, unavailable to the SwiftPM CLI) — not a code error. Let me exclude the DEBUG-only previews file and run the tests for real.
+
+`swift test` needs XCTest which CommandLineTools doesn't expose to the SPM CLI, and there's a library emit-module error to inspect. Let me build the library alone to see if there's a real code error.
+
+The leftover testTarget declaration confused SPM. Let me rebuild with a library-only manifest to confirm the library itself compiles clean.
+
+Library compiles clean in full Swift 6 mode — the earlier emit error was just XCTest cascade. Since CommandLineTools doesn't expose XCTest to the SPM CLI, let me add an executable target that runs the **same assertions** as the committed XCTest files (parser + projection + model), giving real executed-green evidence.
+
+A real bug — Swift runtime caught an **exclusivity violation**: `consumeEscape` takes `inout nodes`/`buffer` while the `flush` closure also captures them, causing overlapping access on the hard-break path. Great that the on-host run caught it. Let me refactor to a single `inout` sink. Let me view the exact code first.
+
+Now let me refactor to a single `inout` sink, eliminating the overlapping-access bug.
+
+Now add the `InlineSink` struct. Let me insert it before `InlineScanner`.
+
+Let me sync the fixed file to the temp package and re-run the on-host verifier.
+
+All **95/95** on-host assertions pass (parser + projection + model) — real executed-green evidence; the exclusivity bug is fixed. Let me verify the `#Preview` bodies type-check (transforming the Xcode-only macro to functions) and re-run the full SDK typecheck.
+
+Adding a second file to the executable target broke its top-level-code entry. Let me move the preview-check into its own library target instead.
+
+Access-level issue: the separate module can't see `internal` tokens — but in the real app, Previews is in the same module. Let me compile the transformed previews **inside** the TeslaSync module instead.
+
+Preview bodies type-check in-module — only the Xcode-only macro needs Xcode. Now let me run the verification gates on the **real committed files**: full SDK typecheck, then swiftformat/swiftlint/placeholder checks.
+
+Real files typecheck clean. Now let me check formatting with the repo's swiftformat config (scoped to my files).
+
+Formatting issues are all auto-fixable. Let me run swiftformat in-place on my files, then re-verify lint + typecheck + tests.
+
+swiftformat passes (0/15). Now SwiftLint `--strict` on my files, plus re-typecheck and re-run tests (formatting touched the files).
+
+Typecheck passes. SwiftLint found 2 spots where its rules conflict with swiftformat's output. Let me inspect and resolve them to satisfy both tools.
+
+Two genuine swiftformat-vs-swiftlint conflicts. Let me restructure both spots to satisfy both tools.
+
+Let me re-run swiftformat, SwiftLint, typecheck, and the on-host tests to confirm everything converges.
+
+Both pass: **swiftformat 0/15, SwiftLint 0 violations**. Let me check the placeholder script's `-Path` handling, re-typecheck, and re-run on-host tests.
+
+The script treats a non-existent path as a clean pass — so the verbatim gate is vacuous. For honest verification I'll scan my actual files in a temp dir too. Let me re-typecheck, re-run on-host tests, and run the placeholder scan properly.
+
+False positives: the placeholder scanner flags the literal token "todo" (gfm task concept / my enum case) as a "TODO" stub. Let me see the full match list and the pattern definitions.
+
+The scanner matches the literal token "todo" (my `MarkdownTask.todo` case, the i18n key, and test data). Cleanest fix: rename the enum cases to `.unchecked`/`.checked` (clearer for `[ ]`/`[x]` anyway) and adjust the key + test data. Let me view the exact spots.
+
+Let me rename `.todo`/`.done` → `.unchecked`/`.checked` across all files and update the keys + test data.
+
+Now update the test (data + assertions) to remove the "todo" token.
+
+Now sync everything to the temp package (with the rename), rebuild, and re-run the full on-host suite plus all gates.
+
+95/95 green after the rename. Let me re-run all gates on the edited real files.
+
+All gates green: **swiftformat 0/15, SwiftLint 0 violations, placeholder count 0**. Final typecheck of the real edited files.
+
+All green. Let me verify the **project-wide** swiftformat/swiftlint gates (as the gate runs them on all of `apps/apple`) to ensure my additions keep the whole project clean.
+
+A pre-existing swiftformat violation in `ActionBuilder.Previews.swift` (a different surface, outside my allowed files). Let me confirm it's baseline (not mine) and characterize the whole-app swiftlint baseline.
+
+Confirmed: `ActionBuilder.Previews.swift` is baseline (committed at HEAD, untouched by me). The whole-app swiftlint shows just **1** violation across 1578 files — let me pinpoint it to confirm it's not mine.
+
+The only whole-app violations are baseline, in sibling surfaces (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`) outside my allowed files — **MarkdownRenderer contributes 0**. Let me gather all evidence and write the log.
+
+I have all evidence. Let me write the log file following the precedent structure.
+
+Log written. Let me do a final clean-state verification of all gates and check git status (to commit only my allowed files).
+
+Final gates green (0/15 format, 0 violations) and only my 16 files + log are new. The 2 modified web/admin files are pre-existing — I'll exclude them. Let me commit only my allowed files.
+
+17 files staged (16 surface + log), web/admin excluded. Committing.
+
+Committed cleanly: **17 files, 3271 insertions** (commit `1802b9828`), web/admin changes correctly excluded. Let me verify the working tree is preserved and clean up temp files.
+
+All clean: commit contains only my 17 files, pre-existing web/admin changes preserved untouched, temp artifacts removed. Let me finalize the todo tracking.
+
+All 13 todos complete. The MarkdownRenderer surface is shipped, verified, and committed.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-feature-views-0221-MarkdownRenderer.log | 193 ++++++++++
+ .../feature-views/MarkdownRenderer.Adapter.swift   | 264 ++++++++++++++
+ .../feature-views/MarkdownRenderer.Autolink.swift  |  74 ++++
+ .../MarkdownRenderer.BlockViews.swift              | 176 ++++++++++
+ .../feature-views/MarkdownRenderer.Blocks.swift    | 205 +++++++++++
+ .../feature-views/MarkdownRenderer.CodeBlock.swift | 107 ++++++
+ .../feature-views/MarkdownRenderer.Inline.swift    | 388 +++++++++++++++++++++
+ .../feature-views/MarkdownRenderer.Model.swift     | 294 ++++++++++++++++
+ .../MarkdownRenderer.ModelTests.swift              | 167 +++++++++
+ .../feature-views/MarkdownRenderer.Models.swift    | 302 ++++++++++++++++
+ .../feature-views/MarkdownRenderer.Previews.swift  | 110 ++++++
+ .../MarkdownRenderer.Projection.swift              | 186 ++++++++++
+ .../feature-views/MarkdownRenderer.States.swift    | 139 ++++++++
+ .../feature-views/MarkdownRenderer.Tests.swift     | 291 ++++++++++++++++
+ .../feature-views/MarkdownRenderer.Views.swift     | 255 ++++++++++++++
+ .../feature-views/MarkdownRenderer.strings         |  50 +++
+ .../TeslaSync/feature-views/MarkdownRenderer.swift |  70 ++++
+ 17 files changed, 3271 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0221-MarkdownRenderer.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/MarkdownRenderer.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MarkdownRenderer.Autolink.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MarkdownRenderer.BlockViews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MarkdownRenderer.Blocks.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MarkdownRenderer.CodeBlock.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MarkdownRenderer.Inline.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MarkdownRenderer.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MarkdownRenderer.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MarkdownRenderer.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MarkdownRenderer.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MarkdownRenderer.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MarkdownRenderer.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MarkdownRenderer.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MarkdownRenderer.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MarkdownRenderer.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/MarkdownRenderer.swift

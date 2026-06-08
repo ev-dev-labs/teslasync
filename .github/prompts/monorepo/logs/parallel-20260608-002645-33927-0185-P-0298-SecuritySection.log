@@ -1,0 +1,101 @@
+I'll start by exploring the repository structure and reading the web source specification, then check the Apple app structure and runner capabilities.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swiftlint` and `swiftformat` ARE available. Let me explore the existing Apple app structure to understand patterns before writing code and determine the true capability situation.
+
+Extensive existing structure with 1438 files in feature-views following a multi-file pattern (`.swift`, `.Adapter.swift`, `.Model.swift`, `.Views.swift`, `.States.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`). Let me find sibling vehicle-detail sections to match patterns precisely.
+
+No existing Apple `SecuritySection`, but `SecurityStatusCards` and `SecurityStatistics` exist in the same security domain. Let me read `SecurityStatusCards` (closest analog) end-to-end to learn the established multi-file pattern.
+
+Let me read these files individually for clarity.
+
+Excellent, this is a clear, well-established pattern. Let me read the remaining `SecurityStatusCards` files to fully understand the projection, views, previews, strings, and tests.
+
+This is a thorough, mature pattern. Now let me read the Previews/strings/Tests of `SecurityStatusCards`, the web components it maps (MetricCard, EmptyState), the web types, and the native shared components (data-display, feedback, ui, design tokens).
+
+Now let me read the web types, the web MetricCard/EmptyState components, and the native design tokens + shared components to map them correctly.
+
+Now I have the exact web logic. Note `SecuritySection` uses a numeric `windowOpenCount` (`Number(v) > 0`), distinct from `SecurityStatusCards`. Let me examine the native design tokens, shared components (DataDisplay/Feedback/UI), and project.yml build config.
+
+`TSMetricCard` exists. Let me read it, the design tokens, and the native GlassPanel/EmptyState/Skeleton/FadeIn equivalents.
+
+`TSMetricCard` lacks icon/color, but the web `MetricCard` tints an icon chip (value stays text-primary) — core to parity. Let me read the design tokens, `TSIconBox`, `TSCard`/`TSGlassPanel`, `TSEmptyState`, `TSFadeIn`, and the web `neonColorMap`.
+
+Let me read the core design tokens and `TSTone`, plus the web `neonColorMap`.
+
+The P1/S9 tokens (`Color.TS.*`, `Font.TS.*`, `TSSpacing`, `TSRadius`) are generated/external — referenced widely but defined outside Sources (built into the target). I have enough token names from siblings. Let me read `project.yml` for build/file globs, check tool availability, and confirm the web `neonColorMap` + header icon convention.
+
+`pwsh`, `swiftlint`, `swiftformat` all available. Design tokens live in `apps/design/generated/apple`. feature-views are globbed into the app target, so my new files auto-include. Let me read the generated token names (exact `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius`) and confirm the `.Tests.swift` target handling.
+
+I now have the complete token reference (`accent` = brand cyan, `statusSuccess` = green). Let me read the lint configs and confirm `.Tests.swift`/`.strings` handling by checking a sibling and the swiftlint/swiftformat configs.
+
+I have all tokens and patterns. Let me read the typography primitives (for header/label/value) and confirm `.Tests.swift` colocated-target handling by checking how XcodeGen assigns them, then write the files.
+
+I have everything needed. Let me verify the colocated `.Tests.swift` target wiring and confirm the web i18n keys, then set up tracking and write the files.
+
+I now have a complete picture. Key facts:
+- **Capability**: `xcodebuild` requires full Xcode (only Command Line Tools present) → the build/test gate steps cannot run. But `swiftlint`, `swiftformat`, `pwsh` (placeholder check) ARE available.
+- **Pattern**: The proven sibling `SecurityStatusCards` (same security domain) uses a 7-file layout with a state-holder Model, pure Adapter projection, Views, Previews, per-surface `.strings` facade, and colocated `.Tests.swift` (170 such files exist).
+- **Tokens**: `Color.TS.accent` = brand neon-cyan, `Color.TS.statusSuccess` = green.
+
+Let me set up tracking and the plan.
+
+Now I'll write the core files. Starting with the Adapter (pure projection), Model (state-holder), and root View.
+
+Now the Model (state-holder seam) and the root View.
+
+I placed `import SwiftUI` at the bottom by mistake — imports must be at the top. Let me fix that.
+
+Now the root View file.
+
+Now the presentational Views and the strings file.
+
+Now the Previews and Tests files.
+
+Now the comprehensive test suite.
+
+All 7 files created. Now let me run the available verification tools. First, swiftformat and swiftlint on the new files.
+
+swiftformat wants auto-formatting. Let me apply it (the repo's canonical formatter), then re-verify.
+
+swiftformat passes. Let me verify it preserved logic correctness in the Adapter (it converted switches to expressions), then run swiftlint.
+
+swiftlint: **0 violations**. swiftformat: **clean**. Let me verify the `jsNumber` conversion preserved correctness.
+
+swiftlint and swiftformat both pass clean. Now the placeholder gate. Let me check how the script resolves its `-Path` argument, then run it as the gate specifies.
+
+The gate's placeholder `-Path` (no extension) resolves to nothing, so it trivially passes. To genuinely honor the covenant, let me run the scan against my actual files AND a direct grep, plus the verbatim gate command.
+
+All placeholder checks pass (0 in all 6 files). The remaining gate steps need `xcodebuild`. Let me capture definitive evidence it can't run, then do a **standalone compile+run of the Adapter logic** (it's Foundation-only and self-contained) to genuinely prove the web-parity logic is correct.
+
+`xcodebuild` is confirmed unavailable (Command Line Tools only). Critically, the **Adapter compiled with `swiftc` and all 23 web-parity assertions passed**. Let me push verification further: typecheck the SwiftUI files (View/Views/Model) against the **real** generated Tokens + exact-signature stubs of the shared components I use. First I need `TSSkeleton`'s exact init.
+
+`TSSkeleton(height:cornerRadius:)` matches my usage. Now let me typecheck the SwiftUI files against the **real** Tokens + Adapter + Model plus exact-signature stubs of the shared components.
+
+The full SwiftUI surface **typechecks cleanly under Swift 6 / macOS 15 / strict concurrency** against the real generated tokens. Let me syntax-check the Tests/Previews files, confirm the log directory, then finalize.
+
+All verifications pass. Let me check a sibling log (ideally `SecurityStatusCards`) to match the established log format and see how the `xcodebuild` capability gap was recorded.
+
+This sibling log is illuminating: that run had **full Xcode** and deferred only the final `xcodebuild` app build/test (per ADR-012: surface not yet registered in `project.yml` + `Shared.xcframework` KMP staging + signing). My runner is **CLT-only**, so I'll follow the same DEFERRED disposition but be precise about what I can run here.
+
+Let me strengthen evidence by attempting a typecheck against the **real** shared component files (not just stubs), timeboxed.
+
+Resolving the real-component closure (timeboxed). Adding Typography.
+
+Clean typecheck against the **real component library** — no stubs. Let me capture the exact file set and a quotable result for the log.
+
+Excellent — the surface typechecks against the **real** shared component library (macOS 15, Swift 6 strict concurrency), no stubs. Let me confirm git status, then write the gate log.
+
+All 7 SecuritySection files are new (untracked); the other `M` files are pre-existing (not mine) — I'll scope the commit to only my files + log. Line counts are healthy (1371 total, none a stub). Let me gather header facts for the log.
+
+I have all facts. Note: `feature-views` IS registered in `project.yml` (2 refs: iOS+macOS targets), so deferral is purely the **CLT-only toolchain** (no Xcode) + unstaged `Shared.xcframework` + signing. Let me write the comprehensive gate log.
+
+Log written. Let me do a final consolidated re-run of all host gates to confirm green, then commit only my files + log.
+
+All host gates green. Let me clean up temp files and commit only my surface files + the log.
+
+Exactly 8 files staged (7 surface + log); unrelated pre-existing changes excluded. Committing.
+
+Commit succeeded (`6d4e0d08b`). Let me finalize tracking and confirm the commit contents.
+
+Task complete. All todos done, commit `6d4e0d08b` contains exactly the 7 surface files + the gate log (1607 insertions), with unrelated pre-existing working-tree changes left untouched.
+

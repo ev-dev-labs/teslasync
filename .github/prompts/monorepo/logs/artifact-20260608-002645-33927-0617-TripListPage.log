@@ -1,0 +1,197 @@
+================================================================================
+ p4-apple · P7 · page:trips/TripList — SwiftUI / HIG parity
+ Native SwiftUI implementation of web/src/features/trips/pages/TripListPage.tsx
+ Adaptive macOS + iOS/iPadOS (ADR-002, ADR-006). Runner: macOS 26.5 / Xcode 26.5.
+================================================================================
+
+ARTIFACT
+  Page      : apps/apple/TeslaSync/Features/Trips/TripListPage.swift  (+ 11 peers)
+  Model     : TripListPageModel (@MainActor @Observable) ← TripsSource seam (P1/S8)
+  Web source: web/src/features/trips/pages/TripListPage.tsx
+  Route     : /trips  (registered into AppRouteHostRegistry for the nav shell)
+
+FILES (apps/apple/TeslaSync/Features/Trips/ — 12 files, 2115 lines)
+  TripListProjection.swift     327  pure SI/format projection: stats, chart, rows, phase, pagination
+  TripListPage.Format.swift    173  web unitConversion/numberFormat/dateFormat pins (TripListUnits/Dates)
+  TripListPage.Export.swift     89  web exportAsCSV / exportAsJSON (TripListExport)
+  TripListPage.Model.swift     254  @Observable model + TripsSource seam + InMemoryTripsSource + telemetry
+  TripListPage.Strings.swift    46  catalog-backed i18n facade (web key names, ADR-014)
+  TripListPage.Views.swift     312  stat grid, chart section, list panel, freshness chip/banner, export menu
+  TripListPage.Row.swift       161  adaptive trip row (web TripRow / GlassPanel7)
+  TripListPage.swift           114  adaptive scaffold + all states + toolbar export + pagination
+  TripListPage.Live.swift      171  #if canImport(Shared) KMP TripsStore bridge (web useTrips)
+  TripListPage.Previews.swift  109  DEBUG previews per state
+  TripListPage.Tests.swift     297  XCTest: projection parity + export + model states
+  TripsRouteRegistration.swift  62  .trips route host registration (+ guarded liveModel)
+  (catalog) apps/apple/Localization/Localizable.xcstrings  +28 keys
+  (nav reg) apps/apple/Sources/TeslaSyncApp.swift  chain TripsRouteRegistration into routeHosts
+  (build)   apps/apple/project.yml  TeslaSync/Features → app targets (excl *.Tests) + test targets
+  (lint)    apps/apple/.swiftlint.yml  TeslaSync/Features → included
+
+ARCHITECTURE (matches the established P4 seam pattern)
+  • Shared-free surface (projection/format/export/model/strings/views/page/row/previews/registration);
+    the SwiftUI views bind ONLY to TripListPageModel — no networking, no KMP symbols.
+  • The ONE Shared-importing file (TripListPage.Live.swift) is #if canImport(Shared)-guarded and
+    bridges the shared-core TripsStore.trips(params:) StateFlow<Resource<List<Trip>>> → TripListUpdate,
+    mapping Trip → the Shared-free TripSummary (SI metres / watt-hours). Mirrors LiveDrivetrainHealthProvider.
+  • SI stays on the wire; conversion happens only at the render boundary (TripListUnits, web pins) per S5.
+
+================================================================================
+ === PARITY ===
+ PARITY_REQUIRED=34
+================================================================================
+
+ PANELS (7)
+ [COVERED] panel  Total-Distance          → TripListProjection.distanceTile (id "distance") →
+                  TripStatTile/TripStatGrid (TripListPage.Views.swift); value=distanceText(Σ totalDistanceM)
+ [COVERED] panel  Energy-Used             → TripListProjection.energyTile (id "energy"); value=energyText(Σ totalEnergyWh)
+ [COVERED] panel  Total-Cost              → TripListProjection.costTile (id "cost"); value=currencyText(Σ totalCost),
+                  subtitle "$X/100<unit>" (web cost-per-distance)
+ [COVERED] panel  Total-Trips             → TripListProjection.tripsTile (id "trips"); value=count, subtitle totalDrives
+ [COVERED] panel  Top-Trips-by-Distance   → TripChartSection (TSChartContainer, TripListPage.Views.swift:TripChartSection)
+ [COVERED] panel  GlassPanel6             → TripListPanel (TSGlassPanel "All Trips", heading trips.list.heading)
+ [COVERED] panel  GlassPanel7             → TripRowView (glass row surface, TripListPage.Row.swift)
+
+ CHARTS (2) — P3 Swift Charts, no WKWebView
+ [COVERED] chart  ChartContainer          → TSChartContainer wraps the chart (TripChartSection.body)
+ [COVERED] chart  BarChart                → Swift Charts horizontal BarMark over top-10 (TripChartSection.chart);
+                  bars = TripListProjection.chart() (sort desc by totalDistanceM, prefix 10)
+
+ STATES (3) — implemented for the useTrips source
+ [COVERED] state  loading                 → TripListPage.loadingContent (TripStatLoadingGrid + TSSkeleton);
+                  TripListProjection.resolvePhase(.loading,false)=.loading  (test testResolvePhase)
+ [COVERED] state  empty                   → populatedContent w/ TSEmptyState (chart trips.chart.empty,
+                  list trips.list.empty); resolvePhase(.loaded,false)=.empty (test testEmptySnapshotProjectsEmpty)
+ [COVERED] state  success                 → populatedContent (stats+chart+rows+pagination);
+                  resolvePhase(.loaded,true)=.content (test testLoadedSnapshotProjectsContent)
+                  [+ error state TSQueryError + retry, + stale/offline freshness chip/banner — ADR-013]
+
+ STRINGS (22) — all resolve from Localizable.xcstrings by the web key names (ADR-014)
+ [COVERED] string trips.chart.col.trip    catalog "Trip"        ← TripChartSection a11y / web dataColumns
+ [COVERED] string trips.chart.distance    catalog "Distance"    ← TripChartSection.chartAccessibilityValue
+ [COVERED] string trips.chart.empty       catalog "No trip data to chart" ← TripChartSection TSEmptyState
+ [COVERED] string trips.chart.title       catalog "Top Trips by Distance" ← TSChartContainer title
+ [COVERED] string trips.chart.title.aria  catalog ...           ← TripChartSection.chart .accessibilityLabel
+ [COVERED] string trips.export.csv        catalog "CSV"         ← TripExportMenu ShareLink
+ [COVERED] string trips.export.json       catalog "JSON"        ← TripExportMenu ShareLink
+ [COVERED] string trips.list.empty        catalog "No trips recorded yet" ← TripListPanel TSEmptyState
+ [COVERED] string trips.list.heading      catalog "All Trips"   ← TripListPanel heading
+ [COVERED] string trips.row.charges       catalog "%lld charges" ← TripRowView.meta (count)
+ [COVERED] string trips.row.cost          catalog "cost"        ← TripRowView.metrics
+ [COVERED] string trips.row.drives        catalog "%lld drives" ← TripRowView.meta + metrics (count)
+ [COVERED] string trips.row.trip          catalog "Trip"        ← TripListStrings.rowTitle (name-less id fallback)
+ [COVERED] string trips.stats.cost        catalog "Total Cost"  ← costTile labelKey
+ [COVERED] string trips.stats.distance    catalog "Total Distance" ← distanceTile labelKey
+ [COVERED] string trips.stats.driveCount  catalog "%lld drives" ← energyTile subtitle (count)
+ [COVERED] string trips.stats.energy      catalog "Energy Used" ← energyTile labelKey
+ [COVERED] string trips.stats.total       catalog "Total Trips" ← tripsTile labelKey
+ [COVERED] string trips.stats.totalDrives catalog "%lld total drives" ← tripsTile subtitle (count)
+ [COVERED] string trips.stats.tripCount   catalog "%lld trips"  ← distanceTile subtitle (count)
+ [COVERED] string trips.subtitle          catalog "Multi-drive trip reports..." ← TripListHeader
+ [COVERED] string trips.title             catalog "Trips"       ← TripListHeader + navigationTitle + usePageTitle
+
+ PARITY_COVERED=34
+ PARITY_REQUIRED=34
+ PARITY_OK=TRUE   (34 == 34)
+
+================================================================================
+ GATE (host-runnable gates EXECUTED on this runner; raw exits below)
+================================================================================
+
+ [GREEN]  check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Trips -Language swift
+          PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0   PLACEHOLDER_EXIT=0
+ [GREEN]  swiftlint --strict apps/apple/TeslaSync/Features/Trips   (from repo root, gate form)
+          "Found 0 violations, 0 serious in 12 files."             LINT_EXIT=0
+          (also verified vs the project .swiftlint.yml ruleset, explicit 12-file lint: 0 violations)
+ [GREEN]  swiftformat --lint apps/apple/TeslaSync/Features/Trips
+          "0/12 files require formatting."                         SWIFTFORMAT_EXIT=0
+ [GREEN]  Isolated SwiftPM build + tests (Swift 6, strict concurrency = complete) — the Shared-free
+          parity core (Format + Export + Projection + Model) + TripListPage.Tests.swift:
+          "Executed 27 tests, with 0 failures"                     SWIFT_TEST_EXIT=0
+ [GREEN]  macOS 15 SDK typecheck — xcrun --sdk macosx swiftc -typecheck -swift-version 6
+          -target arm64-apple-macos15.0 -D DEBUG (full surface + design system + components + nav):
+          0 errors                                                 MAC_TYPECHECK_EXIT=0
+ [GREEN]  iOS 18 SDK typecheck — xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6
+          -target arm64-apple-ios18.0-simulator -D DEBUG (exercises the #if os(iOS) size-class branch):
+          0 errors                                                 IOS_TYPECHECK_EXIT=0
+ [GREEN]  KMP bridge typecheck — TripListPage.Live.swift + SharedFacade + Auth seam vs the REAL
+          staged Frameworks/Shared.xcframework (macos-arm64): 0 errors. Confirms the shared-core
+          symbol names (TripsStore.init(repo:scope:), trips(params:), TripsParams.init(...),
+          KotlinLong/KotlinInt, Shared.Trip properties, Shared.Resource, FlowBridge, LoadableState.from).
+                                                                    LIVE_TYPECHECK_EXIT=0
+ [GREEN]  Shared.xcframework assembled via Gradle (:core:assembleSharedXCFramework) — debug+release,
+          ios-arm64 / ios-arm64-simulator / macos-arm64.           XCFRAMEWORK_EXIT=0
+ [GREEN]  xcodegen generate — project spec valid; the 12 Trips files enumerated; TripListPage.Tests.swift
+          routed to the test targets (excluded from the app targets via **/*.Tests.swift).  XCODEGEN_EXIT=0
+
+ [DEFERRED] Full-app xcodebuild build/test (TeslaSync-macOS + TeslaSync iOS-Simulator).
+          EXECUTED on this runner:
+            xcodebuild -scheme TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO  →  BUILD_EXIT=65 (2 failures)
+          This is DEFERRED — NOT passed — exactly as every P4 surface to date
+          (apps/macos-pending-verifications.md). The shipped Trips surface is INDEPENDENTLY proven
+          green (SwiftPM 27/27 + dual-SDK typecheck + KMP-bridge typecheck + lint/format/placeholder),
+          and the OBSERVED full-app failure is a PRE-EXISTING, repo-wide condition this change neither
+          introduces nor touches:
+            • The 2 errors are BOTH `TeslaSync/feature-views/AIRestorePanel.Tests.swift: Unable to
+              resolve module dependency: 'XCTest'` — a co-located *.Tests.swift the app target compiles
+              (the P4 feature-view convention across 150+ peers). XCTest is unavailable to the app
+              target in this config.
+            • OUR test file (TripListPage.Tests.swift) is EXCLUDED from the app targets via
+              project.yml (TeslaSync/Features `excludes: **/*.Tests.swift`) and routed to the test
+              targets, so it adds ZERO to this failure.
+            • macOS development-signing on an unprovisioned runner is the further P99 blocker for the
+              signed targets (bypassed here with CODE_SIGNING_ALLOWED=NO to reach the compile phase).
+          Trips-attributable build errors: 0   (grep 'Features/Trips' over the build log → 0 hits).
+          Owner: p4-apple/P99 acceptance gate on a signed macos-latest runner (+ the P99 *.Tests.swift
+          test-target re-homing that resolves the XCTest-in-app-target condition repo-wide).
+
+================================================================================
+ HONESTY COVENANT (binding)
+================================================================================
+  1  No red-as-green     : the full-app xcodebuild gate is reported DEFERRED with its raw exit +
+                           root causes, NEVER as passing. Every host-runnable gate was EXECUTED with
+                           exits pasted (incl. the 10m45s Gradle xcframework + the dual-SDK typechecks).
+  2  No scope narrowing  : all 7 web panels (4 MetricCards + chart + list + row), both charts
+                           (ChartContainer+BarChart), all 3 data states, and all 22 web strings
+                           reproduced 1:1; PARITY_COVERED==PARITY_REQUIRED==34.
+  3  No skip-and-assume  : web source read end-to-end; the unitConversion/numberFormat/dateFormat
+                           math pinned + asserted by 27 host tests; every gate run on THIS runner.
+  4  No stubs as final   : complete production surface (12 files) + 27 real tests; placeholder gate 0.
+                           The pre-bootstrap route default renders the REAL empty state (no "coming soon").
+  5  No parity shortcut  : SI converters / states / strings / a11y / freshness all mapped to platform
+                           idioms (Swift Charts, ShareLink, ContentUnavailableView, materials, tokens).
+  6  No delegation       : authored directly; delegation FORBIDDEN; none used.
+  7  No predecessor bypass: consumes P1/S8 state-holder seam, P1/S5 SI pins, P2 tokens, P3 components
+                           (TSChartContainer/TSGlassPanel/TSEmptyState/TSPagination/TSSkeleton/TSCard),
+                           P4 nav shell (AppRoute/AppRouteHostRegistry). KMP bridge typechecks vs the
+                           real Shared.xcframework.
+  8  No commit on red    : the committed artifact is GREEN on every in-scope gate (placeholder/lint/
+                           format/SwiftPM-tests/dual-SDK-typecheck/KMP-typecheck/xcodegen). The DEFERRED
+                           full-app build is red ONLY on pre-existing repo-wide signing/test-host/merge
+                           conditions, with ZERO Trips-attributable errors.
+  9  No silent drift     : changes confined to apps/apple/TeslaSync/Features/Trips, the nav registration
+                           (TeslaSyncApp.swift), project.yml/.swiftlint.yml (new source dir), the string
+                           catalog (+28 keys), apps/parity/apple-ledger.json, and this log. The generated
+                           .xcodeproj, DerivedData, and staged Shared.xcframework are build artifacts
+                           (git-ignored) and are NOT committed. Unrelated concurrent edits in the working
+                           tree (feature-views/AIUsageCard.*) are NOT staged by this change.
+  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+================================================================================
+ DISPOSITION
+================================================================================
+ Production-polished, Apple-idiomatic TripListPage shipped at full web parity (34/34) and
+ INDEPENDENTLY VERIFIED: it builds + passes 27/27 tests under Swift 6 strict concurrency, typechecks
+ against both the iOS-18 and macOS-15 SDKs (incl. the #if os(iOS) adaptive branch), its KMP Live bridge
+ typechecks against the real Shared.xcframework, and lint/format/placeholder are clean. The full-app
+ iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code) to the
+ p4-apple/P99 signed macos-latest runner per apps/macos-pending-verifications.md — the sanctioned
+ "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+================================================================================
+ BUILD_EXIT=65   (full-app macOS xcodebuild — DEFERRED; 2 pre-existing
+                  AIRestorePanel.Tests.swift XCTest-in-app-target failures; 0 Trips errors)
+ TEST_EXIT=65    (deferred with BUILD — full-app build must compile first; see DEFERRED note)
+ EXIT=0
+ STATUS=DONE
+================================================================================

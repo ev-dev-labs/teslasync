@@ -1,0 +1,149 @@
+================================================================================
+p4-apple · P7 · page:notifications/QuietHours — SwiftUI / HIG gate log
+================================================================================
+artifact      : page:notifications/QuietHours
+web source    : web/src/features/notifications/pages/QuietHoursPage.tsx
+web route     : /notifications/quiet-hours
+output dir    : apps/apple/TeslaSync/Features/Notifications/
+host          : Darwin (macOS); Xcode 26.5 (/Applications/Xcode.app, Build 17F42)
+                SwiftLint 0.63.3; PowerShell (pwsh); active dir = CommandLineTools
+date          : 2026-06-08
+
+--------------------------------------------------------------------------------
+FILES (this artifact)
+--------------------------------------------------------------------------------
+apps/apple/TeslaSync/Features/Notifications/QuietHoursPage.swift          (page scaffold: title/subtitle/copy-link, composes advisor + panel, adaptive)
+apps/apple/TeslaSync/Features/Notifications/QuietHoursPage.Model.swift     (@Observable QuietHoursPageModel)
+apps/apple/TeslaSync/Features/Notifications/QuietHoursPage.Seams.swift     (service/advisor/telemetry seams + in-memory defaults + i18n facade)
+apps/apple/TeslaSync/Features/Notifications/QuietHoursPage.Core.swift      (pure: draft/validation/schedule/timezones/proposal)
+apps/apple/TeslaSync/Features/Notifications/QuietHoursPage.Panel.swift     (CRUD panel: header, loading/empty/error/data states)
+apps/apple/TeslaSync/Features/Notifications/QuietHoursPage.Row.swift       (saved-window row)
+apps/apple/TeslaSync/Features/Notifications/QuietHoursPage.Form.swift      (create/edit draft form)
+apps/apple/TeslaSync/Features/Notifications/QuietHoursPage.Advisor.swift   (Helix advisor card)
+apps/apple/TeslaSync/Features/Notifications/QuietHoursPage.Proposal.swift  (captured-proposal preview + apply-to-form)
+apps/apple/TeslaSync/Features/Notifications/QuietHoursPage.Chips.swift     (weekday + severity pills)
+apps/apple/TeslaSync/Features/Notifications/QuietHoursPage.Flow.swift      (wrapping flow Layout)
+apps/apple/TeslaSync/Features/Notifications/QuietHoursPage.Navigation.swift(NotificationsRoute + deep link + NavigationStack host)
+apps/apple/TeslaSync/Features/Notifications/QuietHoursPage.Previews.swift  (DEBUG previews: data/empty/loading/error/proposal/edit/dark)
+apps/apple/TeslaSync/Features/Notifications/QuietHoursPage.strings         (per-surface native-chrome table)
+apps/apple/Tests/Unit/Notifications/QuietHoursPageTests.swift             (XCTest: core + model + deep link, 22 cases)
+navigation/build wiring + catalog (allowed files):
+  apps/apple/project.yml            (+ `- path: TeslaSync/Features` on the iOS + macOS app targets)
+  apps/apple/.swiftlint.yml         (+ TeslaSync/Features in `included`)
+  apps/apple/Localization/Localizable.xcstrings (+ the 2 page-title keys, see PARITY)
+
+--------------------------------------------------------------------------------
+IMPLEMENTATION — every region of the web page reproduced (no stub, no shortcut)
+--------------------------------------------------------------------------------
+The web page (QuietHoursPage.tsx) renders PageContainer(title, subtitle, copyLink)
++ <AIQuietHoursSuggestion> + <QuietHoursPanel>, wiring the advisor's "Apply to form"
+into the panel via seedDraft/onSeedConsumed. All reproduced natively:
+
+• Page scaffold      — title + subtitle (the 2 parity strings) + HIG copy-link toolbar item
+                       (pasteboard, UIKit/AppKit shim), adaptive max-width, navigationTitle.
+• Helix advisor card — badge "Helix", title, description, "Suggest quiet hours" button,
+                       running/error/proposal states; proposal preview (window, weekday bitmask,
+                       bypass severities, insufficient-history + existing-count notes) with
+                       "Apply to form" → seeds the panel draft (propose-only; panel Save is the
+                       sole write path). Absent when model.aiEnabled == false (web withAiFeature).
+• Quiet-hours panel  — Moon header + subtitle + "Add window"; loading / empty (ContentUnavailableView)
+                       / error+Retry / data states; rows (enabled badge, "start → end (tz)" summary,
+                       next-change hint, Edit/Delete, weekday pills, bypass severities).
+• Draft form         — enabled toggle; start/end via DatePicker(.hourAndMinute) for the web
+                       <input type=time>; IANA timezone Picker; weekday + bypass-severity pill
+                       toggles; inline validation; Cancel / Create|Update (canonical write).
+• Pure core (ports)  — validateDraft, summarizeWindow, nextWindowChangeLabel (wrap-around),
+                       Sun=1<<0..Sat=1<<6 bitmask, critical/warn/info severities, listTimezones
+                       (TimeZone.knownTimeZoneIdentifiers), HH:mm⇄Date, QuietHoursDraftProposal.
+• Data states        — loading / empty / error implemented for the windows source.
+• i18n               — every visible string via the i18n facade; web key names preserved.
+• a11y / units       — .isHeader/.isSelected traits, VoiceOver labels, Dynamic Type (flow reflow),
+                       light/dark + high-contrast tokens. (No SI quantities on this page.)
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+--------------------------------------------------------------------------------
+PARITY_REQUIRED=2
+
+[x] string — notifications.quietHours.title
+    symbol : QuietHoursPage.swift › `titleText` → QuietHoursStrings.catalog("notifications.quietHours.title", "Quiet hours")
+    source : resolves "translation.notifications.quietHours.title" from Localization/Localizable.xcstrings
+             (entry ADDED this artifact; en="Quiet hours", ar/he seeded needs_review)
+    render : QuietHoursPage.pageHeader Text(verbatim: titleText) + .navigationTitle
+
+[x] string — notifications.quietHours.subtitle
+    symbol : QuietHoursPage.swift › `subtitleText` → QuietHoursStrings.catalog("notifications.quietHours.subtitle",
+             "Suppress non-critical notifications during a configurable window.")
+    source : resolves "translation.notifications.quietHours.subtitle" from Localization/Localizable.xcstrings
+             (entry ADDED this artifact)
+    render : QuietHoursPage.pageHeader Text(verbatim: subtitleText)
+
+PARITY_COVERED=2
+
+--------------------------------------------------------------------------------
+GATE
+--------------------------------------------------------------------------------
+[check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Notifications -Language swift]
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+
+[swiftlint --strict]  (config lints whole module; results scoped to this artifact)
+  violations in TeslaSync/Features/Notifications + Tests/Unit/Notifications = 0
+  LINT_EXIT(artifact)=0
+  note: 1 PRE-EXISTING violation remains outside scope
+        (TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length);
+        not this artifact's file.
+
+[swiftc -typecheck]  (Xcode 26.5 SDK, -target arm64-apple-macos15.0 -swift-version 6 -strict-concurrency=complete)
+  production page + real design tokens (apps/design/generated/apple/Tokens.swift)
+    + real component library (Sources/Components/UI + Feedback, Sources/Design) → 0 errors, 0 warnings
+  test API usage (QuietHoursPageTests via XCTest shim, against the real model/core) → 0 errors
+  TYPECHECK_EXIT=0
+
+[runtime execution]  (Core + Seams + Model compiled to a standalone arm64 macOS binary, Xcode 26.5,
+                      Swift 6 — no app module / SwiftUI needed; @MainActor async harness)
+  exercised: time validation, validate(), summarize(), nextChange() (non-wrap + wrap, not-today,
+             disabled), timezoneOptions(), HH:mm⇄Date round-trip, weekday bits, and the model flows
+             (load→ready, empty, create, invalid-submit-keeps-draft, edit, delete, suggest→proposal,
+             apply→seed-draft, advisor-disabled no-op).
+  RUNTIME_CHECKS pass=24 fail=0  (RC=0)
+  note: this runtime pass also caught + fixed two bugs in the TEST file (not the page):
+        a timezone assertion that assumed a real IANA id was novel, and a
+        `draft?.endLocal = draft?.startLocal` read-during-write exclusivity violation.
+
+[xcodegen generate]  → OK; page compiled into both app targets (90 pbxproj refs)
+
+[xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync build]   → BLOCKED (see below)
+[xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync test]    → BLOCKED (see below)
+  BUILD_EXIT=BLOCKED
+  TEST_EXIT=BLOCKED
+
+--------------------------------------------------------------------------------
+BLOCKERS (pre-existing / out-of-scope — NOT introduced by this artifact)
+--------------------------------------------------------------------------------
+B1. Shared.xcframework (ADR-004) is absent (apps/apple/Frameworks/ holds only .gitkeep) and is
+    assembled by a Kotlin/Native Gradle task (:core:assembleSharedXCFramework, the scheme's
+    pre-build action). A bounded 200s assembly attempt did NOT complete (terminated, RC=124);
+    the first build downloads the K/N toolchain and compiles 282 Kotlin files to native.
+
+B2. The TeslaSync app target compiles 201 PRE-EXISTING `*.Tests.swift` files from
+    TeslaSync/feature-views that each `@testable import TeslaSync` (a self-import). The generated
+    project places them in the app target's Sources phase
+    (e.g. "AcDcStatsPanel.Tests.swift in Sources" in project.pbxproj). This breaks
+    `xcodebuild build` independently of this page. These files belong to other (P3) feature-view
+    units and are outside this prompt's allowed files (apps/apple/TeslaSync/Features/Notifications/**).
+
+Because B1+B2 sit outside the allowed scope and cannot be remedied here, the triad
+build/test cannot be driven to green from this artifact. The artifact itself is complete
+and independently type-checks clean against the real Xcode 26.5 toolchain (0 errors / 0
+warnings, Swift 6 + complete concurrency), with placeholder + lint gates green and
+PARITY_COVERED == PARITY_REQUIRED.
+
+Per the Honesty Covenant (1 No red-as-green; 8 No commit on red) this is reported BLOCKED
+rather than DONE, and NOT committed. (The shared working tree also contains a concurrent
+agent's in-progress AiUsageCard rewrite, which must not be swept into any commit.)
+
+EXIT=1
+STATUS=BLOCKED
+================================================================================

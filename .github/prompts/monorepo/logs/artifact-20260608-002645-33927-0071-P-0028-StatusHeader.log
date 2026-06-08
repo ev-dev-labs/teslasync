@@ -1,0 +1,143 @@
+=== P4 Feature view 0028 StatusHeader (Apple) ===
+Surface: apps/apple/TeslaSync/feature-views/StatusHeader.*
+Web parity source: web/src/features/admin/components/dlq-inspector/StatusHeader.tsx
+Runner: macOS (Darwin), Xcode 26.5 (17F42), xcodegen 2.45.4, swiftlint, swiftformat, pwsh 7
+Date: Mon Jun  8 01:36 PDT 2026
+
+--------------------------------------------------------------------------------
+GATE STEPS (as specified by the prompt)
+--------------------------------------------------------------------------------
+
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    Command run with DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer and an
+    isolated -derivedDataPath (to remove cross-slot DerivedData contamination).
+    Result: ** BUILD FAILED ** / ** TEST FAILED **
+    Root cause (PRE-EXISTING, UNRELATED to this surface):
+      error: unable to resolve module dependency: 'XCTest'
+      …in co-located *.Tests.swift / *.ViewTests.swift / *.ModelTests.swift files that the
+      app target's source globs (TeslaSync/feature-views, TeslaSync/dashboard-widgets) sweep
+      into the *application* target, which does not link XCTest. 225 such test files exist in
+      the app-target source dirs; the failure is in siblings (AIRestorePanel.Tests.swift,
+      HealthGaugeGrid.ViewTests.swift, …), NOT in StatusHeader.
+    StatusHeader-specific errors: 0 (grep "StatusHeader.*error:" → none)
+    IOS_EXIT=65
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    Command run with DEVELOPER_DIR set and an isolated -derivedDataPath.
+    Result: ** BUILD FAILED ** / ** TEST FAILED **
+    Root cause (PRE-EXISTING, UNRELATED to this surface):
+      error: "TeslaSync-macOS" has entitlements that require signing with a development
+      certificate. Enable development signing… (also TeslaSyncWidgets-macOS)
+      i.e. the macOS app/widget targets need a development signing identity not present on
+      this runner (available on the macos-latest CI runner).
+    StatusHeader-specific errors: 0
+    MAC_EXIT=65
+
+[3] swiftlint --strict   (scoped to the 6 StatusHeader Swift files)
+    Done linting! Found 0 violations, 0 serious in 6 files.
+    LINT_EXIT=0
+
+[4] swiftformat --lint   (scoped to the 6 StatusHeader Swift files)
+    0/6 files require formatting.
+    FORMAT_EXIT=0
+
+[5] check-placeholders.ps1  (scoped to the StatusHeader files)
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+ISOLATED SURFACE VERIFICATION  (the surface itself is GREEN)
+--------------------------------------------------------------------------------
+Because the two full-app xcodebuild steps are blocked by the pre-existing, unrelated
+collisions above, the StatusHeader surface was verified in isolation against the REAL
+design tokens + UI primitives (no stubs), exactly as the prior P4 feature-view surfaces did
+(see apps/macos-pending-verifications.md: ToolCard, AlertMessageEditor, FSMTimelineChart).
+
+[A] Isolated SwiftPM build + test  (swift-tools 6.0 → Swift 6 strict concurrency, macOS host)
+    Library target = the 5 StatusHeader source files + the real dependency closure
+    (design/generated/apple/Tokens.swift, Components/UI/{Cards,Badges,Typography,Buttons}.swift,
+     Components/Feedback/Skeletons.swift, Design/TSMaterial.swift).
+    Test target = StatusHeader.Tests.swift (@testable import TeslaSync).
+    Result: Test Suite 'All tests' passed — Executed 31 tests, with 0 failures.
+      • StatusHeaderDecodeTests   4/4   (wire DLQListResponse → snapshot; replayable tally; sparse coalesce)
+      • StatusHeaderAdapterTests 12/12  (3 tiles in order; fmtInt; Enabled/Disabled echo; tone; keys; a11y)
+      • StatusHeaderModelTests   15/15  (phase resolution; banner gating; view.opened; source wiring)
+    SWIFT_TEST_EXIT=0
+
+[B] Real iOS-18 simulator typecheck
+    swiftc -typecheck -sdk <iphonesimulator> -target arm64-apple-ios18.0-simulator
+           -swift-version 6 -DDEBUG <real deps> <5 StatusHeader source files incl. Previews>
+    IOS_TYPECHECK_EXIT=0
+
+[C] Real macOS-15 typecheck
+    swiftc -typecheck -sdk <macosx> -target arm64-apple-macos15.0
+           -swift-version 6 -DDEBUG <real deps> <5 StatusHeader source files incl. Previews>
+    MAC_TYPECHECK_EXIT=0
+
+[D] Standalone adapter parity run (Foundation-only, compiled against StatusHeader.Adapter.swift)
+    Reproduces the web computation verbatim and asserts at runtime:
+      count→total, replayable = entries.filter(e=>e.replayable).length, replay_enabled echo,
+      Enabled/Disabled value, success/warning tone, replayDisabled predicate, and the
+      data?.x ?? 0 / ?? [] null-coalescing.
+    Result: ALL PARITY CHECKS PASSED (15/15).  PARITY_EXIT=0
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA  (surface scope)
+--------------------------------------------------------------------------------
+[x] Renders on Apple with all states from the web source reproduced — loading, content,
+    the replay-disabled AlertBanner branch — plus the required surface states empty, error,
+    stale, offline. (8 #Preview states compile under [B]/[C]; states unit-covered under [A].)
+[x] Hooks bind to the shared P1/S8 state-holder layer (StatusHeaderSource/Model); no direct
+    HTTP in the view.
+[x] Every i18n key from the source has a matching key in the P1/S10 catalog (StatusHeader.strings):
+    admin.dlq.stats.{total,totalSub,replayable,replayableSub,replayMode,replayModeSub,enabled,disabled}
+    + admin.dlq.banners.{disabledTitle,disabledMessage} + native-chrome admin.dlq.statusHeader.*
+[x] Accessibility labels present on every element (combined VoiceOver per tile; banners/error
+    elements labeled; a11y summary unit-tested).
+[x] Tests: adapter unit test + per-state model test + a11y label test (31/31 green under [A]).
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (PLACEHOLDER_COUNT=0).
+[x] Telemetry: view.opened emitted with surface slug "StatusHeader" (StatusHeaderModel.start;
+    unit-tested testStartEmitsViewOpenedOnceWithTheSurfaceSlug).
+
+--------------------------------------------------------------------------------
+BLOCKER ATTRIBUTION
+--------------------------------------------------------------------------------
+The two failing steps ([1] iOS, [2] macOS full-app build test) are blocked by PRE-EXISTING,
+UNRELATED, repo-wide conditions — identical to those already recorded for prior P4 surfaces in
+apps/macos-pending-verifications.md:
+  • 225 co-located *.Tests.swift/*.ViewTests.swift/*.ModelTests.swift importing XCTest into the
+    app target (app-target source globs include the per-surface test files).
+  • `struct DashboardWidgetSize` redefined in 15 files (duplicate declaration in the app module).
+  • macOS development-signing identity required by the macOS app/widget entitlements.
+None of these are caused by, or fixable within, the StatusHeader surface (allowed files:
+apps/apple/TeslaSync/feature-views/StatusHeader.*). Zero StatusHeader/feature-views errors in
+any full-app build. The full-app build+test is therefore DEFERRED to the macOS CI acceptance
+gate (p4-apple/P99-0001-apple-acceptance-gate) on a macos-latest runner with signing identities
+and the canonical (non-parallel-merge) source tree, per the documented Resolution protocol.
+
+Deferred verification command (CI / macOS runner, canonical tree):
+  cd apps/apple && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+Surface StatusHeader is production-complete and verified GREEN in isolation (SwiftPM 31/31
+tests under Swift 6 strict concurrency, iOS-18 + macOS-15 swiftc -typecheck, swiftlint --strict
+0, swiftformat --lint 0, placeholder 0, adapter parity 15/15). The full-app xcodebuild build+test
+steps are red ONLY due to pre-existing, unrelated, repo-wide infrastructure (XCTest-in-app-target,
+DashboardWidgetSize duplicates, macOS dev-signing) and are deferred to the macOS CI gate.
+
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SWIFT_TEST_EXIT=0
+IOS_TYPECHECK_EXIT=0
+MAC_TYPECHECK_EXIT=0
+PARITY_EXIT=0
+IOS_EXIT=65   (pre-existing XCTest-in-app-target; 0 StatusHeader errors; deferred to CI)
+MAC_EXIT=65   (pre-existing macOS dev-signing; 0 StatusHeader errors; deferred to CI)
+
+EXIT=65
+STATUS=BLOCKED

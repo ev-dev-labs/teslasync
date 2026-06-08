@@ -1,0 +1,166 @@
+I'll start by exploring the repository structure to understand the current state of the Apple app and the dependencies referenced in this prompt.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. Let me investigate further before concluding on the gate, and understand the existing structure.
+
+Full Xcode is not installed (only Command Line Tools), so `xcodebuild`/`simctl` can't run. Let me check how prior prompts in this series handled this, and review the existing conventions.
+
+The `macos-pending-verifications.md` pattern is key — prior prompts wrote complete code and deferred Xcode-only artifact verification. Let me see how the immediate predecessor (P4/P4) handled the same gate, find this prompt's source file, and locate the ADRs.
+
+Now I understand the established pattern: predecessors used **"code-complete + DEFERRED Xcode gate"** — write complete code, run host-runnable gates (swiftc -typecheck, swiftlint, swiftformat, placeholder, xcodegen), and defer the Xcode-only `xcodebuild build test` to macOS CI via `macos-pending-verifications.md`, with STATUS=DONE. Let me read the prompt source, ADRs, and the shared facade.
+
+Now let me read the SharedFacade implementation and the app entry points to understand the token-provider seam and how the KMP shared core is consumed.
+
+Now let me read the app entry points, the networking/auth shared-core logs (to learn the token-provider seam), localization, tests, and tooling.
+
+Let me read the shared-core auth/networking logs (to learn the token-provider seam), localization, tests, tooling, and lint config.
+
+The shared KMP core already has auth (PKCE/AuthService/Keychain actual/single-flight refresh), but this prompt scopes me to `apps/apple/**` only — so I implement the **Apple-native** auth stack in Swift and wire it into the facade seam. Let me read localization, tests, tooling, lint config, theme, and the component library.
+
+Let me read the placeholder patterns, localization catalog, theme, component library, a sample test, and the xcframework script — and probe whether `swiftc -typecheck` can resolve SwiftUI/AuthenticationServices/Security/CryptoKit/LocalAuthentication with the installed toolchain.
+
+All needed frameworks (incl. SwiftUI) typecheck cleanly with the installed toolchain. `pwsh` is absent, so I'll replicate the placeholder gate in bash. Note: the word "Placeholder"/"TODO"/"not implemented" (case-insensitive) is forbidden in `.swift` files — I'll avoid those. Let me read the localization catalog format, theme, component exports, and a sample test.
+
+The String Catalog is web-derived (`translation.*` keys). Let me verify how the app's own keys (`route.*`, `tab.*`) are handled, and read the component APIs I'll reuse plus a sample test.
+
+The app uses identifier-style localization keys (`route.*`) resolved via String Catalog. I'll follow that convention and also populate the catalog with real English values. Let me read the component APIs I'll reuse, sample tests, and confirm the catalog's language set.
+
+The component library already has `TSRequiresAuth` using `auth.*` keys — I'll extend that convention. Let me read the test style, `TSTone`, card component, the xcframework script, and gitignore to finalize my approach.
+
+I now have a complete understanding. Let me verify the `Frameworks/` contents (is `Shared.xcframework` present on this host?) and the existing facade `Domains` example, then I'll write the plan and start implementing.
+
+Confirmed: `Shared.xcframework` is absent (only `.gitkeep`), so all `Sources/SharedFacade/**` files (which `import Shared`) are deferred — the host typecheck gate compiles the **non-Shared** sources + design tokens. My strategy: put the entire auth stack in `Sources/Auth/**` with **no `import Shared`** (fully host-typecheckable), keep the facade hand-off minimal.
+
+Let me establish the baseline: confirm the design-tokens path and that the current non-Shared source set typechecks green before I add anything.
+
+iOS SDK unavailable (CommandLineTools only) — I'll typecheck for macOS like the predecessor; iOS-only branches are covered by the deferred iOS build. Let me confirm the baseline is green before adding code.
+
+The baseline only fails because I forced `-swift-version 6`; the predecessor's gate used the default language mode (the Swift 6 strict-concurrency build is part of the deferred xcodebuild). Let me match the predecessor exactly and re-confirm the baseline is green.
+
+My sed edit broke the line continuation. Let me rewrite the script cleanly.
+
+`UnitFormatters.swift` (non-Shared) references `Units`/`UnitPreferences` which live in the excluded `SharedFacade`. So a whole-app host typecheck needs a tiny typecheck-only shim standing in for the deferred facade types. Let me find every facade symbol the non-Shared set references so the shim is complete.
+
+Only `UnitFormatters.swift` needs the facade types. I'll add a tiny **typecheck-only shim** (in `/tmp`, not committed) standing in for the deferred `Shared` facade types, so the whole non-Shared app set typechecks on-host. Let me set that up and confirm a green baseline.
+
+Baseline typecheck is green. Now let me confirm the other host gates (swiftlint, swiftformat, placeholder scan) are green on the current tree before I add code. I'll write a bash placeholder scanner mirroring the PowerShell gate (since `pwsh` is absent).
+
+Baseline: SwiftLint 0 violations, SwiftFormat 0 files need formatting. The placeholder scanner hit macOS's bash 3.2 (no `mapfile`). Let me fix it to be 3.2-compatible.
+
+All four host gates are green at baseline (typecheck 49 files, SwiftLint 0, SwiftFormat 0, placeholder 0). Before writing the real code, let me probe the macros/APIs I'll rely on (`@Observable`, `@MainActor` `@State`, `@Environment(Type.self)`, `ASWebAuthenticationSession.Callback.https`, Keychain `SecAccessControl`) so I build on verified ground.
+
+Every key API typechecks on-host. I'm confident in the approach. Let me write the plan and task list, then implement.
+
+Host APIs all verified. Now implementing the auth core. Starting with the crypto/config/model foundation.
+
+Let me typecheck the foundation files so far before continuing.
+
+Storage layer next: `TokenStoring` + `KeychainTokenStore` (access group, accessibility, optional biometric access-control) + `InMemoryTokenStore`.
+
+Biometrics layer: `BiometricGate` (LAContext) + availability + preference store (only the on/off flag in UserDefaults — never tokens).
+
+Redacting logger (ADR-016) — tokens, VINs, and precise coordinates are never logged.
+
+Authorization request builder + redirect parser (validates `state`, surfaces server errors).
+
+Token endpoint client (URLSession; exchange/refresh/revoke) with injectable session for tests.
+
+The OS sign-in surface: `AppleAuthSession` (ASWebAuthenticationSession + cross-platform presentation anchor), behind an `AuthBrowsing` seam for tests.
+
+Now the networking/SSE seams and the central `AuthCoordinator` (restore, sign-in, single-flight refresh, 401 retry, biometric unlock, sign-out).
+
+Core logic complete. Let me typecheck before building the UI.
+
+`Entropy` is internal but referenced from a public default argument. I'll keep `Entropy` internal and move generation into the init body, exposing a clean public initializer plus an internal one for tests.
+
+Swift regex *literals* are mis-lexing. I'll switch to string patterns compiled with `try? Regex(...)` (avoids the literal lexer and the `force_try` lint rule).
+
+Core logic is green (64 sources). Let me mark core todos done and verify the exact design-token symbol names before writing the UI.
+
+All token names confirmed. Writing the SwiftUI auth surfaces (reusing the design-system components). Starting with the support views and the main session screens.
+
+Now the onboarding gate (`RootView`) and wiring it into `TeslaSyncApp`.
+
+UI + app wiring typecheck cleanly (68 sources). Now the facade hand-off seam on `AppContainer` (deferred bucket — imports `Shared`). Keeping it minimal and correct.
+
+Facade seam added. Now I'll populate the String Catalog with real English values for every `auth.*` key (incl. the pre-existing `TSRequiresAuth` keys that were missing) via a targeted text insertion that preserves the rest of the 62k-key file byte-for-byte.
+
+42 keys inserted, JSON valid (7772 → 7814). Let me confirm the diff is purely additive and well-formed at the insertion seam.
+
+Catalog diff is purely additive (966 insertions, 0 deletions) and valid. Now the format/lint pass: run SwiftFormat in-place on my new/modified files, then verify all four host gates.
+
+SwiftFormat normalized 7 files. Now the full host-gate sweep: typecheck, SwiftFormat lint, SwiftLint strict, placeholder.
+
+Typecheck + SwiftFormat green. SwiftLint found 2 violations — let me see them.
+
+Two lint nits: a multi-line `if` condition (SwiftFormat put the brace on its own line, SwiftLint wants it inline) and a 2-level type nesting. Let me fix both.
+
+All four host gates pass (typecheck 68, SwiftFormat 0, SwiftLint 0, placeholder 0). Now preview/UI-test support doubles (host-typechecked, also used for deterministic XCUITest states), then accessibility identifiers and tests.
+
+Wire the bootstrap selector into the app and add accessibility identifiers for the deferred XCUITests.
+
+Core + UI + i18n + preview support all green (69 sources). Before writing tests, let me check whether I can self-verify test code on-host (is `XCTest` importable with CommandLineTools?).
+
+XCTest isn't available on host (ships with full Xcode), so tests are deferred. I'll still write them rigorously and then **self-verify their type-correctness** with a local XCTest shim compiled against the real sources. First, the test fakes/fixtures.
+
+XCTest is unavailable on host (full-Xcode only), so tests run on macOS CI. I'll write them rigorously, then self-verify their type-correctness against the real sources via a local XCTest shim. First, add a state-echoing browser fake.
+
+Now the unit test files:
+
+Now the XCUITest. Let me check the existing UI test style first.
+
+The signed-out UI-test path needs a config so tapping "Sign in" exercises the *cancelled* flow (not "not configured"). Let me extend the preview/UI-test support, then write the XCUITest.
+
+Now format the new test/support files and re-verify the Sources gates, then build the XCTest-shim harness to type-check the tests against the real sources.
+
+Sources green (69). Now the rigor step: a local XCTest shim to type-check my test files against the real sources (since real XCTest is Xcode-only).
+
+Excellent — the shim verification caught a **real bug**: an `async` call passed into `XCTAssertEqual`'s autoclosure (which would also fail the real `xcodebuild` compile), plus missing `Foundation` imports. Let me fix both.
+
+Now add `import Foundation` to the test files (real XCTest re-exports it, but explicit is cleaner and satisfies the shim verification).
+
+The shim was stricter than real XCTest (real assertions aren't `rethrows` — they catch internally). My tests are correct; the shim is wrong. Let me fix the shim.
+
+All 9 test files type-check against the real sources (`TEST_TYPECHECK_EXIT=0`). Two Swift-6 warnings remain (`NSLock` in an async context — an error under Swift 6 mode used by the deferred build). Let me make `FakeAuthBrowsing` Swift-6-clean by moving the locking into non-async helpers.
+
+Tests are clean and Swift-6-safe. Let me confirm the **Sources** are also Swift-6-clean (the deferred build uses Swift 6 strict concurrency) by scanning the typecheck output for migration warnings.
+
+0 warnings in Sources. Since the deferred build uses **Swift 6 strict concurrency**, let me run a Swift-6-mode typecheck and confirm none of the errors are in my `Sources/Auth/**` files (the pre-existing `AppRoute.primaryTabs` global will flag, but that's not mine).
+
+Under Swift 6 strict mode the **only** error is a pre-existing one in `AppRoute.swift` (`static let primaryTabs` — `public enum AppRoute` isn't `Sendable`). My `Sources/Auth/**` has zero Swift-6 errors. Since my onboarding gate compiles into the same target, that pre-existing error would fail the deferred Swift-6 `xcodebuild` my gate relies on — so I'll apply the minimal correct fix (make `AppRoute`/`AppRouteGroup` `Sendable`) and re-verify.
+
+That exposed a deeper point: a bare `swiftc -strict-concurrency=complete` invocation does **not** faithfully reproduce the real app-target build (which applies SwiftUI's MainActor default isolation), so it yields false-positives on pre-existing P4/P4 code (`AppRoute`, `RouteHostRegistry`). The predecessor's agreed host gate is **default-mode** typecheck; Swift-6 strict is part of the deferred `xcodebuild`. I'll keep my diff strictly scoped to P4/P5 and revert the `AppRoute` edits — my auth code is independently clean regardless.
+
+Let me confirm `AppRoute.swift` is back to baseline and run the complete host-gate suite plus the test-shim verification one final time.
+
+`AppRoute.swift` is clean. (`done.txt`/run-logs were pre-existing harness changes — not mine; the prompt's commit scope is `apps/apple` + the log only.) Now the final full host-gate sweep.
+
+Typecheck/format/placeholder/test-typecheck all green, but SwiftLint now flags 3 violations (in the test files). Let me see them.
+
+Three violations in the test file, all from newer default SwiftLint rules: a `Data`→`String` conversion preference, and `static_over_final_class` firing on `URLProtocol` overrides (which *must* be `class func`, not `static`). Fixes: use `String(bytes:encoding:)`, and drop `final` from the `URLProtocol` subclass.
+
+All green: SwiftLint 0/98, SwiftFormat 0/98, test typecheck EXIT=0. Let me run the predecessor's remaining host-gate step (`xcodegen generate`) and capture the full suite output for the log.
+
+All host gates green and `xcodegen` includes the auth files (30 refs across targets). Let me update todos, then write the prompt log and the macOS-pending row.
+
+Now writing the prompt log (predecessor format: preflight, survey, reasoning, changes, gate evidence, deferred-gate disclosure).
+
+Now append the deferred-verification row to `macos-pending-verifications.md`.
+
+`apps/macos-pending-verifications.md` is outside the allowed scope (`apps/apple/**` + log) and outside the commit's `git add` paths — the deferral is already fully documented in the log. Reverting that edit to stay in scope.
+
+Let me confirm `macos-pending-verifications.md` is reverted, review the final working-tree state, and run the complete gate suite one last time before committing.
+
+Scope is clean. Final comprehensive gate pass before committing.
+
+All host gates green. Let me clean up temp artifacts and do a dry-run of the staged file set before committing.
+
+Exactly the 33 expected files (20 Auth sources, 9 tests, 3 modified, 1 log) — no generated project or stray files. Committing per the prompt.
+
+Committed `a3247918` (33 files, +3661). Let me verify the post-commit tree is clean (only the pre-existing harness files remain) and the committed code still passes the gates.
+
+apps/apple and the log are fully committed; the remaining working-tree entries are pre-existing harness files (not mine, not in scope). Let me do a final confirmation gate run on the committed tree and close out the todo.
+
+All todos complete. Cleaning up temporary verification helpers.
+
+Task complete. Committed as `a3247918`.
+

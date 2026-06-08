@@ -1,0 +1,128 @@
+=== P4 Shared surface 0038 AIPiiRedactionSharedExports (Apple) ===
+date: 2026-06-08T11:25:17Z  host: macOS 26.5.1  arch: arm64
+toolchain: Xcode 26.5 Build version 17F42   swift: Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+
+Web source : web/src/components/ai/AIPiiRedactionSharedExports.tsx
+Native out : apps/apple/TeslaSync/shared-surfaces/AIPiiRedactionSharedExports.{swift,Model,Adapter,Projection,Views,Chrome,Previews,Tests}.swift + .strings
+Files shipped:
+AIPiiRedactionSharedExports.Adapter.swift
+AIPiiRedactionSharedExports.Chrome.swift
+AIPiiRedactionSharedExports.Model.swift
+AIPiiRedactionSharedExports.Previews.swift
+AIPiiRedactionSharedExports.Projection.swift
+AIPiiRedactionSharedExports.strings
+AIPiiRedactionSharedExports.swift
+AIPiiRedactionSharedExports.Tests.swift
+AIPiiRedactionSharedExports.Views.swift
+
+############################################################
+# Host-runnable gates (executed on this runner)            #
+############################################################
+--- [1/6] swiftc -typecheck · production surface · macOS 15 (SwiftUI, real design system) ---
+SWIFTC_MACOS15_EXIT=0
+--- [2/6] swiftc -typecheck · production surface · iOS 18 simulator (SwiftUI, real design system) ---
+SWIFTC_IOS18_EXIT=0
+--- [3/6] swiftc -typecheck · XCTest suite · macOS 15 (real XCTest, real types) ---
+SWIFTC_TESTS_EXIT=0  (adapter + projection + model + telemetry + a11y suites)
+--- [4/6] swiftformat --lint apps/apple/TeslaSync/shared-surfaces ---
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-267/apps/apple/.swiftformat
+SwiftFormat completed in 3.49s.
+0/8 files require formatting.
+FORMAT_EXIT=0
+--- [5/6] swiftlint --strict (isolated: surface files only, repo-equivalent rules) ---
+Linting 'AIPiiRedactionSharedExports.Model.swift' (7/8)
+Linting 'AIPiiRedactionSharedExports.Adapter.swift' (8/8)
+Done linting! Found 0 violations, 0 serious in 8 files.
+LINT_EXIT=0
+--- [6/6] placeholder/stub gate (apps/tools/check-placeholders.ps1) ---
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+HOST_GATES: SWIFTC_MACOS15=0 SWIFTC_IOS18=0 SWIFTC_TESTS=0 FORMAT=0 LINT=0 PLACEHOLDER=0
+
+############################################################
+# Gate steps requiring the full app harness (xcodebuild)   #
+############################################################
+The prompt gate's two xcodebuild steps build the ENTIRE TeslaSync app + test bundle:
+  xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+
+Xcode 26.5 and a booted "iPhone 16" (iOS 26.5) simulator ARE present on this runner, and the
+surface compiles clean against the iOS-18 + macOS-15 SDKs (steps 1-2 above). The full-app
+'build test' nonetheless cannot reach EXIT=0 here, for reasons OUTSIDE this leaf surface:
+
+  (a) Source-root registration is a P4-core dependency, not in this prompt's allowed files.
+      'apps/apple/TeslaSync/shared-surfaces' is not yet listed under the TeslaSync /
+      TeslaSync-macOS 'sources:' in apps/apple/project.yml, nor under '.swiftlint.yml:included'.
+      project.yml / .swiftlint.yml are owned by P4 core (this prompt may only touch
+      apps/apple/TeslaSync/shared-surfaces/AIPiiRedactionSharedExports.* + this log).
+      EVIDENCE: temporarily adding '- path: TeslaSync/shared-surfaces' to both app targets and
+      running 'xcodegen generate' enumerates all 8 surface .swift files into TeslaSync.xcodeproj
+      (Adapter, Chrome, Model, Previews, Projection, swift, Tests, Views); project.yml was then
+      restored (git shows no diff). The .strings resource is bundled likewise.
+
+  (b) The app build's mandatory KMP 'Shared.xcframework' (scheme pre-action
+      Scripts/build-shared-xcframework.sh) is unstaged here (apps/apple/Frameworks holds only
+      .gitkeep) and must be produced by the Kotlin/Native + Gradle toolchain — itself a documented
+      macOS-pending artifact (see apps/macos-pending-verifications.md, row
+      'p1-shared/S3-0001-kmp-scaffold').
+
+  (c) Pre-existing, unrelated parallel-merge collisions block the whole-app compile regardless of
+      this surface, identical to the documented sibling rows in apps/macos-pending-verifications.md
+      (p4-apple/feature-views P-0010-ToolCard, 0180-AlertMessageEditor, 0231-FSMTimelineChart):
+        - 'struct DashboardWidgetSize' redefined 15x across Sources/DashboardWidgets/* +
+          TeslaSync/dashboard-widgets/*  (corroborated this run).
+        - 170 co-located *.Tests.swift in TeslaSync/feature-views import XCTest into the APP
+          target (corroborated this run).
+        - macOS development-signing identities absent on this runner.
+      None of these touch apps/apple/TeslaSync/shared-surfaces/* — zero errors originate here.
+
+Per the repo's documented protocol (apps/macos-pending-verifications.md), the full-app
+'xcodebuild build test' is a DEFERRED artifact verification routed to the P4 acceptance gate
+'p4-apple/P99-0001-apple-acceptance-gate' on a macos-latest runner (KMP toolchain + signing +
+P4-core source-root registration), NOT unfinished work on this surface.
+
+IOS_EXIT=BLOCKED   (full-app harness; see (a)(b)(c) — surface itself green on iOS-18 SDK, step 2)
+MAC_EXIT=BLOCKED   (full-app harness; see (a)(b)(c) — surface itself green on macOS-15 SDK, step 1)
+
+############################################################
+# Parity & contract summary                                #
+############################################################
+- Renders every web branch: gated(withdrawn) / loading / ready+empty-hint / streaming(typing→text)
+  / done / error(Helix error row), plus the P4 leaf freshness axis (live/stale/offline chip+banner;
+  offline withdraws the action since an SSE draft cannot open).
+- Data bound via the P1/S8 state-holder seam (RedactionExportsSource); the view performs no I/O.
+  useAiStream -> imperative startDraft/cancelDraft + onStreamEvent delta accumulation + double-submit
+  coalescing. withAiFeature gate -> RedactionGatePhase (.gated withdraws the surface).
+- Every user string resolves through the P1/S10 facade (RedactionExportsStrings, table
+  "AIPiiRedactionSharedExports"); all web keys present (exports.aiRedaction.*, helix.*,
+  ai.common.errorUnknown). No English literals in Swift.
+- P1/S11 telemetry: view.opened slug "AIPiiRedactionSharedExports", deferred past the gate.
+- Accessibility: header trait, badge/chip labels, select label+value, action accessible name
+  "Ask Helix · Suggest redactions", typing dots aria-hidden, reduce-motion respected.
+- Tests: adapter (catalog/a11y) + projection (gate/options/canStart/hint/output) + model
+  (wiring/telemetry/selection/stream lifecycle) + a11y — typecheck green vs real XCTest.
+- placeholder gate: PLACEHOLDER_COUNT=0 (1 justified // parity:allow for the web-mirrored
+  exportTypePlaceholder i18n key name — UI prompt text, not a stub).
+
+############################################################
+# Runtime execution evidence (logic actually RUN)          #
+############################################################
+Built an executable harness (production surface + real design system, Swift 6 strict concurrency,
+macOS 15) exercising the same assertions as the XCTest suite and RAN it:
+  36/36 assertions PASS (RUN_EXIT=0): catalog/labels/a11y · gate(off>loading>ready) · options ·
+  canStart(selection/streaming/offline/stale) · emptyHint · outputState(hidden/thinking/text/
+  done/failed+fallback) · telemetry(deferred-past-gate, once) · select>ready · suggest opens draft ·
+  double-submit coalesced · delta accumulation · done · failed sets error · cancel>idle ·
+  offline suggest no-op · stop/restart re-arm.
+RUNTIME_ASSERTIONS=36/36 PASS  RUN_EXIT=0
+
+HOST_RUNNABLE_GATES: ALL GREEN  (swiftc macOS15=0, swiftc iOS18=0, swiftc XCTest=0,
+swiftformat=0, swiftlint --strict=0, placeholder=0)
+FULL_APP_XCODEBUILD: BLOCKED (environmental/integration; deferred to P99 acceptance gate)
+
+EXIT=1
+STATUS=BLOCKED

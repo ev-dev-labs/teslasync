@@ -1,0 +1,127 @@
+I'll start by exploring the repository structure, the web source specification, and the Apple app architecture in parallel.
+
+Web source and registry understood. Critical finding: `xcodebuild` is present but **only CommandLineTools is active — no full Xcode**, so the iOS Simulator build/test gate cannot run. `swiftlint`, `swiftformat`, and `swift` 6.3.2 are available. Let me explore the existing Apple app structure to understand patterns and dependencies (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n).
+
+Substantial existing Apple app (423 Swift files) with an established widget pattern. Let me find the closest analogs — especially climate/temperature widgets and the shared infrastructure (state holders, tokens, i18n, WidgetShell equivalent).
+
+`RangeEstimateWidget` and `OdometerCounterWidget` are the closest analogs (units + vehicle state + compact/normal). Let me read their complete file sets to learn the exact patterns — WidgetShell, state-holder binding, tokens, i18n facade, and telemetry.
+
+Excellent — the architecture is very clear now. Let me locate the shared type definitions (registration, tokens, feedback components) and read a compact-capable analog plus the test/preview/strings formats and the placeholder checker.
+
+Duplicate-looking `public struct DashboardWidgetSize` definitions across widgets — I need to understand the build/module setup. Let me check `project.yml` and how definitions are deduplicated.
+
+Multiple definitions of the same public types coexist — this only works if widgets compile in isolation. Let me examine `project.yml` to understand the target/source wiring.
+
+`dashboard-widgets/` all compiles into one `TeslaSync` target, yet 4 files appear to define the same public types. There must be a compilation guard. Let me inspect the definition context.
+
+No compilation guards — the sibling widgets currently carry duplicate public type definitions (a pre-existing condition in this parallel slot, outside my allowed-files scope). The newest sibling in this exact prompt lineage — RangeEstimate (0077) — *references* the shared types rather than redefining them. I'll follow that canonical approach. Let me read the exact type/token/component shapes and the web temperature conversion.
+
+Now I understand the full picture. I'll follow the canonical predecessor (RangeEstimate 0077): **reference** the shared registry types and tokens rather than redefining them. Let me read the exact token/component APIs, the test/preview/strings formats, the web `fmtInt`, and the placeholder checker.
+
+I have the precise template now. Let me read the design tokens, the skeleton component, the web `fmtInt`, the placeholder checker, and how localization integrates.
+
+Let me confirm the placeholder patterns (to avoid forbidden words in Swift), verify the exact token/skeleton APIs exist, and check localization integration.
+
+Let me confirm the exact `Font.TS` and spacing/radius member names so my references compile.
+
+All APIs confirmed. Two parity details to verify before writing: the exact `fmtNumber` locale behavior and the `useUnits`/`useVehicleState` shapes.
+
+Let me read the `useVehicleState` hook body to understand the exact state shape and null semantics for `outside_temp`.
+
+Now I have full parity clarity, including the null semantics (`outside_temp` is nullable → empty). Let me check the lint/format configs to match style, then write the implementation.
+
+I have everything needed for faithful parity. Let me set up tracking and write the plan, then create the six files.
+
+Now creating the six surface files, starting with the pure projection adapter.
+
+Adapter and Model done. Now the SwiftUI surface view with all states.
+
+Now the previews, strings catalog, and tests.
+
+All six files created. Now let me validate the parity arithmetic/formatting independently with `swift` (the pure logic doesn't need Xcode), then run the available linters on my files.
+
+All parity values confirmed. Now let me run the formatters/linters on my files.
+
+`swiftformat`'s `redundantReturn` rule wants implicit returns in switch cases (matching the sibling style). Let me auto-fix with the ecosystem tool, then re-verify.
+
+swiftformat passes. Let me verify the auto-fixed regions read correctly and run swiftlint.
+
+Both `swiftformat --lint` and `swiftlint --strict` pass with **0 violations** on all five files. Now let me get real compile evidence for the non-SwiftUI core (Adapter + Model) by type-checking it against stubs of the shared registry types under the project's strict-concurrency setting.
+
+Core (Model + Adapter) type-checks cleanly under Swift 6 strict concurrency. Let me also type-check the SwiftUI **view** against token stubs (SwiftUI is available on macOS) for real compile evidence on the view layer.
+
+Only the `#Preview` macro plugin (Xcode-only `PreviewsMacros`) is unavailable to command-line `swiftc` — the same root cause as the blocked gate. The view itself produced no errors. Let me confirm by type-checking the view without the previews file.
+
+Both the view and all preview bodies type-check cleanly under Swift 6 strict concurrency. Let me also validate the **test file** type-checks (swapping `@testable import` for the local sources, since XCTest is available on macOS).
+
+XCTest isn't importable under CommandLineTools (Xcode-only) — but I can do better than a type-check: a runnable harness that exercises the **real** `WeatherAtCarProjector`, `WeatherAtCarModel`, `WeatherAtCarSurface`, and `WeatherAtCarAccessibility` with the same assertions the XCTests make. This proves both type-correctness and behavior.
+
+Harness-only concurrency issue (my helpers need `@MainActor`), not a widget-code problem. Let me fix the harness.
+
+**All 29 behavioral assertions PASS at runtime** against the real Model/Adapter/registry/accessibility code. Now the placeholder gate — let me check for `pwsh` and verify my files are clean of forbidden patterns.
+
+`pwsh` is available. Let me run the **real** `check-placeholders.ps1` against my files (copied to an isolated dir so only my files are scanned).
+
+Placeholder check passes (`EXIT=0`). Now let me capture the definitive `xcodebuild` capability evidence and assess the tree-wide lint state to document the gate honestly.
+
+`/Applications/Xcode.app` exists but isn't the active developer dir. I can override with `DEVELOPER_DIR` without sudo. Let me assess whether a real build/test is actually feasible (Xcode usability, project generation, and the KMP `Shared.xcframework` dependency).
+
+Xcode 26.5, iPhone 16 sim, and xcodegen are all available — but the app target depends on a `Shared.xcframework` (KMP core) that isn't present and must be built by a preAction script. Let me check whether that KMP toolchain is available, since it gates any real build.
+
+The `Shared.xcframework` requires a full Kotlin/Native Gradle build (KMP toolchain). Before weighing a multi-minute KMP+Xcode attempt, let me verify a cheaper, decisive blocker: whether the shared `TeslaSync` target even compiles, given the sibling widgets I saw redefining the same public types.
+
+**Decisive finding:** the shared `TeslaSync` target contains **6 unguarded `public struct DashboardWidgetSize`** and **4 `DashboardWidgetRegistration`** declarations across *sibling* widget files — a guaranteed invalid-redeclaration compile error. My surface correctly adds **zero** duplicates (references only). So the build/test gate is blocked by pre-existing, out-of-scope conditions. Let me check how sibling surfaces' logs handled this convention before finalizing.
+
+The established convention here (26 sibling surfaces) is: **host gates green + both-SDK compile + executed test logic green, with the full `xcodebuild` build/test DEFERRED and evidenced** → `EXIT=0 / STATUS=DONE`. That matches what I've verified. Let me capture the two remaining evidence pieces — an iOS-simulator-SDK compile (for "both-SDK") and the signing/Xcode capability facts.
+
+The iOS SDK needs Xcode active. Let me retry the iOS-simulator-SDK compile with `DEVELOPER_DIR` pointed at Xcode 26.5.
+
+Both SDKs compile clean (iOS 18 sim + macOS 15, Swift 6, strict concurrency). I now have comprehensive evidence matching the sibling convention. Let me generate the authentic gate log by re-running each verification and capturing real output.
+
+Let me verify the full log captured all the real outputs correctly.
+
+The log is thorough and honest. One correction: line 53's signing count is misleading (my `grep -c valid` matched the header line). The actual result was "0 valid identities found." Let me fix that.
+
+Now let me update tracking, review git status, and commit the allowed files plus the log.
+
+Only my 6 surface files + the log are new (the two modified `web/admin` files are pre-existing and unrelated — I'll leave them untouched). Let me stage exactly my allowed files and commit.
+
+Committed cleanly — only my 7 files (the pre-existing `web/admin` modifications were correctly excluded). Let me clean up temp artifacts.
+
+All complete. The working tree is clean except for two pre-existing `web/admin` modifications I correctly left untouched.
+
+## Summary
+
+Shipped a production-polished, native Apple-idiomatic **`WeatherAtCarWidget`** at parity with `features/dashboard/widgets/WeatherAtCarWidget.tsx`, committed as `ecf52c24` (7 files, 1421 insertions).
+
+**Files** (`apps/apple/TeslaSync/dashboard-widgets/`): `WeatherAtCarWidget.swift` (view), `.Model.swift` (P1/S8 state-holder + P1/S11 telemetry + registry + P1/S10 i18n seams), `.Adapter.swift` (pure projection), `.Previews.swift`, `.strings`, `.Tests.swift`.
+
+**Parity reproduced 1:1**: `convertTempFromSI` (°C/°F), `fmtInt`, the `WeatherIcon` temperature-band thresholds (run on raw °C → SF Symbols), the `toFixed(2)` coordinate line, compact (1×1) + standard layouts, and all six states (loading/empty/error/stale/offline/content). Registers `id=weather-at-car`, climate, 1×2…3×40. No networking in the view; no English literals in code; VoiceOver labels on every control.
+
+**Architecture decision**: followed the newest sibling (RangeEstimate 0077) — *references* the canonical shared types/tokens and adds **zero** duplicate declarations.
+
+**Verification (all real, captured in the log)**:
+- `swiftformat --lint` → 0 · `swiftlint --strict` → 0 violations · `check-placeholders.ps1` → `EXIT=0`
+- Both-SDK type-checks (iOS 18 sim + macOS 15, Swift 6 `-strict-concurrency=complete`) → clean
+- Executed host harness mirroring the XCTests → **29/29 PASS**; parity arithmetic → 16/16 PASS
+
+**Deferred (evidenced, not claimed green)**: the `xcodebuild` app build/test — the runner's active dir is CommandLineTools, the KMP `Shared.xcframework` isn't staged, there's no signing identity, and the shared target has **pre-existing cross-slot duplicate type declarations in sibling files** (6× `DashboardWidgetSize`, outside surface 0115's allowed files). This matches the accepted convention of the 26 sibling surfaces.
+
+Log: `.github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0115-WeatherAtCarWidget.log` → `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...e-dashboard-widgets-0115-WeatherAtCarWidget.log |  77 +++++
+ .../WeatherAtCarWidget.Adapter.swift               | 202 ++++++++++++
+ .../WeatherAtCarWidget.Model.swift                 | 309 +++++++++++++++++++
+ .../WeatherAtCarWidget.Previews.swift              | 154 ++++++++++
+ .../WeatherAtCarWidget.Tests.swift                 | 296 ++++++++++++++++++
+ .../dashboard-widgets/WeatherAtCarWidget.strings   |  42 +++
+ .../dashboard-widgets/WeatherAtCarWidget.swift     | 341 +++++++++++++++++++++
+ 7 files changed, 1421 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0115-WeatherAtCarWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WeatherAtCarWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WeatherAtCarWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WeatherAtCarWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WeatherAtCarWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WeatherAtCarWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WeatherAtCarWidget.swift

@@ -1,0 +1,124 @@
+I'll start by exploring the environment and the web source to understand what's needed.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed, and `simctl` (simulators) is unavailable. Let me verify SDK framework availability and read the web source + existing Apple structure thoroughly before deciding the path.
+
+SwiftUI, Charts, and MapKit frameworks **are present** in the Command Line Tools macOS SDK — so I can likely type-check SwiftUI code with `swiftc` even without full Xcode. There are 216 existing feature-views to mirror. Let me study the established patterns.
+
+The feature-views use a multi-file convention (`.swift`, `.Model`, `.Adapter`/`.Projection`, `.Views`, `.Previews`, `.Tests`, `.strings`). No automations view exists yet. Let me study a representative data-bound feature-view end-to-end and locate the shared infrastructure (state holders, tokens, i18n, telemetry).
+
+Excellent — this is a mature, well-defined convention. Let me read the remaining EventHistoryTable files and locate the shared infrastructure (tokens, components) plus an exemplar that implements stale/offline states.
+
+Shared types like `TSGlassPanel`, `Color.TS`, `TSSpacing` aren't in feature-views. Let me locate where the shared P4 core / P1 tokens are defined across the whole apps tree, and check stale/offline exemplars.
+
+The shared P4 core and P1 tokens exist under `apps/apple/Sources/` and `apps/design/generated/apple/`. Let me read the token catalog, shared components, and find the motion/navigation/feedback equivalents.
+
+Now let me read all the shared components I'll need (cards, buttons, badges, motion, feedback) and the navigation route seam.
+
+Let me read motion, feedback, navigation, and typography components, plus a stale/offline exemplar.
+
+Now let me examine navigation, a stale/offline exemplar, the build config, the placeholder checker, and the web type definitions.
+
+Let me read the web API types, the automations hook, the build config, and the placeholder checker.
+
+Let me read the placeholder patterns (to avoid forbidden words in my code), the trigger/action input types, the build config, and check how feature-views handle navigation.
+
+Let me confirm the navigation-seam convention used by an existing feature-view, the trigger step shape, and run a quick `swiftc` smoke test against the SDK to confirm SwiftUI type-checking is possible.
+
+Critical confirmation: `swiftc -typecheck` against the macOS SDK **succeeds for SwiftUI code** — so I can compile-verify my work without full Xcode. The navigation seam pattern is `model.select($0)` delegating to the model. Let me check how `.Tests.swift` files are structured (framework + guards), since they live in the app-target source dir.
+
+`swiftc` type-checks SwiftUI against the SDK (EXIT=0) — that's my verification path. Tests follow the `XCTest` + `@testable import TeslaSync` convention. Let me study the stale/offline view chrome and navigation seam from EndpointSidebar, plus the typography helpers.
+
+I now have a complete picture of the conventions. Let me check remaining tooling (pwsh, XCTest) and verify the shared component set compiles standalone — this is how I'll type-check my new surface.
+
+`pwsh` is available (placeholder gate runnable). XCTest is **not** in the CLT SDK (needs full Xcode), so I'll author tests to the established XCTest convention and separately prove the tested logic with a plain-Swift assertion harness. Let me set up tracking, locate the `tsGlassPanel` modifier, and confirm component imports are SwiftUI-only.
+
+Found them in `Sources/Design/`. Let me confirm the Components + Design dirs are self-contained (SwiftUI-only) so I can use them as a clean compile baseline.
+
+Components + Design import only system frameworks (SwiftUI, Charts, MapKit, CoreLocation, Foundation) — all in the SDK. Let me establish a green baseline compile of the shared set with the project's strict settings (Swift 6, complete concurrency) before writing my surface.
+
+The full Components dir pulled in `DataDisplay` (needs `UnitPreferences` from Platform). I only need UI + Motion + Feedback. Let me narrow the baseline.
+
+Baseline shared set (20 files) type-checks clean under Swift 6 strict concurrency — that's my verification harness. Let me read the lint/format configs so my code conforms on the first pass, then write the surface.
+
+Baseline verified. Now I'll create the plan, set up tracking, and write the surface. Starting with the plan, the pure adapter, the strings catalog, and the state-holder model.
+
+Now the pure adapter (Foundation-only, fully unit-testable):
+
+Now the i18n catalog and the state-holder model:
+
+Now the model (state-holder seam, telemetry, navigation seam, localization facade):
+
+Now the presentational subviews (card, skeleton, states, freshness chrome):
+
+Now the main view composing the phases, then previews:
+
+Now the test suite (XCTest, per the established convention):
+
+All 7 files created. Let me type-check the production + previews against the verified shared baseline (Swift 6 strict, DEBUG for previews):
+
+The `#Preview` macro needs Xcode's macro plugin (unavailable to bare `swiftc`) — this hits baseline files too, so it's environmental, not a code defect. Let me type-check production code without DEBUG (excludes all preview blocks), then verify the previews body separately.
+
+Production code type-checks clean under Swift 6 strict. Now verify the previews' body by transforming the `#Preview` macros to functions in a temp copy:
+
+Real bug caught — `Previews.swift` uses `Logger` but doesn't import `OSLog`. Fixing:
+
+Previews type-check clean. Now I'll prove the test logic with a plain-Swift assertion harness (XCTest isn't in the CLT SDK), exercising the same pure functions + model wiring the XCTest asserts:
+
+Swift 6 main-actor isolation on the top-level global. Marking the `check` helper `@MainActor`:
+
+All 40 logic assertions pass — the XCTest's exact logic is proven on this runner. Now the formatters/linters on the new files:
+
+swiftformat flags auto-fixable wrapping plus two lint-only test issues (force-unwrap/hoistTry). Let me inspect the flagged lines, fix the test manually, then apply the formatter in-place.
+
+Existing files with single-line bodies pass, so swiftformat's in-place fix is canonical. Let me first fix the test's force-unwrap manually (lint-only, not auto-fixable), then run swiftformat in-place.
+
+Files are untracked so git diff is empty. Let me confirm the lint now passes and view the reformatted property bodies:
+
+swiftformat lint passes (0/6). Now swiftlint --strict on the new files, plus re-type-check the formatted files to confirm semantics are intact:
+
+swiftlint: **0 violations in 6 files**; post-format type-check clean. Now the placeholder gate on my surface files:
+
+Placeholder gate clean (0). Now let me capture the real xcodebuild/simulator capability evidence for the log, and confirm the logs directory:
+
+All capability evidence confirmed: only Command Line Tools (no Xcode.app), no `simctl`. Let me capture the exact gate-command failures for the log, then write the log and run the gate's PowerShell placeholder step as specified:
+
+xcodebuild blocked (IOS_EXIT=1, MAC_EXIT=1, CLT error); placeholder gate EXIT=0. Let me run the lint/format gates over the whole tree (as the gate does) to capture the true exit codes honestly:
+
+Whole-tree swiftformat: **0/839 require formatting** (my files integrate cleanly). Now whole-tree swiftlint --strict:
+
+Whole-tree swiftlint surfaces a **pre-existing** violation in an unrelated dashboard-widget file (outside my scope). Let me confirm none of my files are implicated and count the total:
+
+Precisely confirmed: **1 whole-tree swiftlint violation, in a pre-existing out-of-scope dashboard-widget file; PresetGallery = 0**. I have all results. Let me write the gate log:
+
+Let me do a final review of the composed view and confirm exactly what will be committed:
+
+All 7 surface files + log are ready (the 2 modified web files are pre-existing and out of scope — I'll exclude them). Committing only my files:
+
+Committed cleanly (8 files; the pre-existing web changes were left untouched). Let me finalize tracking and clean up verification artifacts:
+
+The PresetGallery Apple surface is complete, verified, and committed. Cleanup done.
+
+## Summary
+
+I shipped a production-polished native Apple (SwiftUI) parity of `web/src/features/automations/pages/PresetGallery.tsx`, following the established 7-file feature-view convention (commit `ffea4987`, 1401 insertions):
+
+| File | Role |
+|---|---|
+| `PresetGallery.swift` | Composed view, phase switch, fade-in staggered `LazyVGrid` |
+| `PresetGallery.Model.swift` | P1/S8 `PresetGallerySource` seam, `@Observable` model, P1/S11 `view.opened` telemetry, navigation seam, P1/S10 facade |
+| `PresetGallery.Adapter.swift` | Pure projection: icon map, first-trigger label, action-count/a11y text, web-parity builder deep-link |
+| `PresetGallery.Views.swift` | Preset card, skeleton, empty, error+retry, stale/offline banner |
+| `PresetGallery.Previews.swift` | 6 previews (every state) |
+| `PresetGallery.Tests.swift` | XCTest: adapter + phase + model + telemetry + nav + a11y |
+| `PresetGallery.strings` | P1/S10 catalog |
+
+**All 6 states** render (loading/empty/error/content/stale/offline); all source i18n keys route through the facade; install forwards to a nav seam producing `/automations/new?preset=<id>`.
+
+**Runnable verification — all GREEN:** `swiftc -typecheck` of production + previews (Swift 6, complete concurrency, against the real shared components); a 40-assertion logic harness mirroring the XCTest cases (XCTest isn't in the CLT SDK); `swiftlint --strict` = 0 violations; `swiftformat --lint` = 0/6 (and 0/839 whole-tree); placeholder gate = 0. I caught and fixed a real bug en route (missing `import OSLog` in Previews).
+
+**STATUS=BLOCKED** on the mandated `xcodebuild ... build test` (iOS + macOS): this runner has only Command Line Tools — no Xcode.app and no iOS Simulator (`xcodebuild`/`simctl` unavailable). Full API evidence is in `.github/prompts/monorepo/logs/p4-apple-feature-views-0085-PresetGallery.log`, ending `EXIT=1 / STATUS=BLOCKED`. I did **not** claim the build/test passed. The one whole-tree swiftlint error is pre-existing in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift`, outside this prompt's Allowed files.
+
+
+
+All 9 todos are complete and the work is committed (`ffea4987`). The task is finished.
+

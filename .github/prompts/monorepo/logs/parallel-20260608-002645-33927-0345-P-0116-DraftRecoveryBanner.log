@@ -1,0 +1,90 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Already an important finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me explore the Apple app structure and the existing patterns before deciding on approach.
+
+`shared-surfaces` doesn't exist yet — I'll create it. There's a rich `feature-views` pattern to follow. Let me read the web source and the freshest template (AIUsageCard, currently modified in git).
+
+Case-folding artifact from a sibling task (`AIUsageCard`→`AiUsageCard`) — not my concern, I'll leave it. Let me read the web source and study the template structure.
+
+Now I understand the web source — a presentational info banner with i18n. Let me study the build config and the freshest template (AiUsageCard) plus the shared facades (i18n, diagnostics, tokens, state-holders).
+
+Key finding: `project.yml` includes `TeslaSync/feature-views` but NOT `shared-surfaces` (which doesn't exist), and the prompt restricts me to only `shared-surfaces/DraftRecoveryBanner.*` + the log. Also `xcodebuild` needs full Xcode (only CLT present). Let me investigate the shared facades, the simplest banner template, and lint configs.
+
+Excellent — this is the canonical architecture (i18n facade, telemetry seam, state-holder, model, projection). Let me read the remaining template files, design tokens, web helpers, and lint configs in parallel.
+
+Now let me read the lint configs and confirm how `.Tests.swift` files in `feature-views/` are handled by the build (target membership), plus check the shared `TSButton`/`TSSkeleton`.
+
+Let me inspect the placeholder-check tooling and confirm `pwsh` availability (the gate is PowerShell), then I'll have everything to implement.
+
+Now let me read the model-level test file to mirror conventions, then I'll have full context to implement.
+
+I have complete context now. Let me set up tracking and create the directory.
+
+Toolchain confirmed (Observation/macros compile). Now I'll implement the surface. Starting with the pure-Foundation adapter (the testable projection core).
+
+Now the presentational subviews (SwiftUI), the main surface view, and previews.
+
+Now the XCTest suite — adapter projection, relative-time buckets, model wiring/telemetry, and accessibility labels.
+
+All 7 files created. Now verification — format, lint, placeholder check, and a standalone compile+run of the pure logic.
+
+swiftformat clean (2 files auto-formatted, now 0 require changes). Now swiftlint --strict on the new files.
+
+SwiftLint linted the whole project (config `included` overrode my path) and found 1 violation. Let me locate it.
+
+The only violation is **pre-existing** in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (not my file, not in my allowed scope). My files are clean. Let me confirm with a targeted strict lint using a temp config that mirrors the rules.
+
+My files pass swiftlint --strict (0 violations). Now the placeholder gate.
+
+Placeholder gate clean. Now the strongest honest check I can run here: compile + execute the pure Foundation logic (Adapter + Model) standalone to prove the projection and model behaviour actually work.
+
+All 40 logic assertions pass (HARNESS_FAILURES=0). Now let me attempt a SwiftUI type-check of the view layer against the real design tokens + shared components (bonus evidence, since full `xcodebuild` needs Xcode).
+
+SwiftUI view layer type-checks cleanly against the real tokens/components. Let me also type-check the previews (with `-D DEBUG`).
+
+`#Preview` needs the Xcode-only `PreviewsMacros` plugin (absent in Command Line Tools) — same Xcode dependency that gates `xcodebuild`. My logic + view layer + lint all verify clean. Let me locate the log directory and a sibling log for format, then run the real gate to capture honest evidence.
+
+Sibling logs ran on a full-Xcode runner (iOS/macOS build SUCCEEDED). This runner has only Command Line Tools. Let me inspect a BLOCKED sibling log to match conventions.
+
+Before concluding BLOCKED, let me verify whether a full Xcode is installed anywhere (just not selected) — that would let me run the real gate.
+
+Full **Xcode.app IS installed** (just not selected) and CoreSimulator exists. I can use the real iOS 18 / macOS 15 SDKs. Let me probe the toolchain.
+
+Full Xcode 26.5 + iPhone 16 simulator + xcodegen are all available. The capability is present. Let me check the `Shared.xcframework` (KMP) dependency and the scheme's pre-build script before attempting a real build.
+
+`Shared.xcframework` (KMP) isn't vendored — the scheme's full app build needs a Gradle/Kotlin build. But the capability I need for *this surface* (iOS 18 / macOS 15 SwiftUI SDK) is present. Let me compile-check the surface against both real SDKs, including the `#Preview` macro.
+
+Both SDKs compile the surface clean (incl. previews). The scheme-level `xcodebuild build test` additionally needs the KMP `Shared.xcframework`. Let me probe whether that KMP build is even feasible on this runner.
+
+JDK 17 + gradlew exist, but the full scheme gate would build the entire ~1900-file app + KMP + run the whole suite (the P4 *acceptance* gate) — and this shared tree currently carries an unrelated sibling's in-progress rename. That's not a reliable signal for *this* surface. Instead, let me do something much stronger than a typecheck: build an **isolated throwaway Xcode project** containing only my surface + its real deps, and actually run `xcodebuild build test` (my XCTest suite) on the **iPhone 16 simulator** and macOS.
+
+Harness project generated. Now the real `xcodebuild build test` on the iPhone 16 simulator (this compiles my surface into a `TeslaSync` module and runs my actual XCTest suite).
+
+Harness-config bug (I set `PRODUCT_MODULE_NAME=TeslaSync` globally, so the test target collided). Fixing: module name only on the app targets.
+
+**iOS: `** TEST SUCCEEDED **`, 23/23 tests pass on the iPhone 16 simulator, IOS_EXIT=0.** Now macOS.
+
+macOS auto-scheme lacks a test action. Let me add an explicit scheme and retry.
+
+macOS hosted-app tests are hanging on GUI app launch (a known headless-agent issue noted even in sibling logs). iOS already proved build+test green. Let me switch the macOS path to a host-less framework + test bundle (no GUI launch).
+
+macOS xctest execution is hanging (the same headless-agent launch issue noted in sibling logs), even host-less. Let me stop it and confirm the macOS **build** succeeds (build-only), which is the compile evidence I need.
+
+macOS **BUILD SUCCEEDED** (framework + test bundle compile clean, MAC_BUILD_EXIT=0). The macOS *test execution* hangs on the headless-agent xctest launch (environmental — same issue documented in sibling logs; iOS sim tests ran fine). Let me make one bounded attempt to actually execute the macOS tests, with a hard timeout.
+
+The shell wrapper blocks variable-PID kills. Let me run the macOS test execution as an async process and cap it via `stop_bash`.
+
+macOS test execution confirmed hanging (headless xctest launch — environmental; the macOS **build** of the same test bundle succeeded and the identical platform-agnostic tests pass 23/23 on iOS). Stopping it and finalizing. Let me record the evidence and write the gate log.
+
+Now I'll write the honest, comprehensive gate log.
+
+Log written. Let me clean up temp artifacts and do a final re-verification of the committed file set.
+
+All green, temp cleaned. Now commit — only my surface files + the log (explicitly, to avoid the sibling's unrelated changes).
+
+Exactly the 7 surface files + the log are staged (the sibling's `AiUsageCard` changes are excluded). Committing.
+
+Committed (COMMIT_EXIT=0, HEAD `8df10889b`), exactly the 7 surface files + log. Let me confirm the sibling's unrelated changes remain untouched and close out tracking.
+
+Task complete. All work is committed.
+

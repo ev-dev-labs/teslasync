@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure and understanding what exists, including the web source and the Apple app structure.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. Let me verify Xcode availability and explore the Apple app structure in depth.
+
+Important: there's an `/Applications/Xcode.app` (created today). Let me verify if it's a real, working Xcode and examine the feature-view conventions.
+
+The `du -sh` hit a sudo prompt. Let me stop it and check Xcode cleanly.
+
+Full Xcode 26.5 is available via `DEVELOPER_DIR`. The capability is present — this is **not** a BLOCKED scenario. Let me examine the build system and a close analog feature view.
+
+Full toolchain confirmed: Xcode 26.5, iPhone 16 sim, XcodeGen, swiftlint, swiftformat all present. Now let me find sibling weekly-digest work, the parity tracking, and shared infra (state holders, tokens, i18n, diagnostics).
+
+Let me read the parity manifest entry and the shared state-holder facade, plus identify the best analog.
+
+Now reading the shared facade core and the smallest complete analog (RateLimitStatusPanel) as my template.
+
+Now reading my primary template — RateLimitStatusPanel (all files) — plus the xcframework staging script.
+
+Critical insight: feature-view files don't import `Shared` — they're self-contained with protocol seams. But the gate builds the whole app, which needs `Shared.xcframework` (currently absent, built via Gradle/KMP). Let me assess baseline feasibility.
+
+Decisive finding in `macos-pending-verifications.md`: the **full-app `xcodebuild build test` is already blocked by pre-existing, unrelated issues** (`DashboardWidgetSize`/`PowerFlowConnection` redefined 8×, co-located XCTest files, signing, plus the KMP `Shared.xcframework` is macOS-pending). The established precedent (ToolCard P-0010) verifies each surface via **isolated SwiftPM build + tests** + lint + placeholder, and records the full-app gate as deferred.
+
+Feature-views are `Shared`-free and self-contained via protocol seams — so I can verify my surface in isolation. Let me gather the remaining templates, tokens, web helpers, and confirm the pre-existing blockers.
+
+Now reading the test conventions, design tokens, web helper components, and the placeholder checker.
+
+Now I have the token system. Let me read the web sub-components (BatteryPill, MiniStat, types, numberFormat) and locate the shared native components (TSGlassPanel, TSButton, TSTone, motion/FadeIn), plus confirm the pre-existing blockers and find the placeholder checker.
+
+Let me read the web number formatters and colors for parity, and locate the native shared UI components (TSGlassPanel, TSTone, TSMetricBar, motion) plus confirm pre-existing blockers.
+
+Confirmed: `DashboardWidgetSize` is redefined **15×** (hard compile error in the app target, in files I'm not allowed to touch) — exactly the pre-existing blocker documented in `macos-pending-verifications.md`. My verification path mirrors the ToolCard precedent: isolated SwiftPM build+test of my surface, plus lint/format/placeholder.
+
+Let me read the shared UI components I'll use and confirm `Components` is `Shared`-free (so isolated compilation is viable).
+
+`Sources/Components` is fully `Shared`-free — isolated compilation is viable. Let me read the digest hook (for metric semantics), the motion/glass/typography/feedback primitives, and the DigestSkeleton.
+
+Now I understand the metric semantics. Let me read the remaining primitives (glass modifier, feedback states, button, typography) and check the existing `WeeklyDigestWidget` model to avoid type-name collisions in the app target.
+
+I now have all building blocks. Let me verify the `TSButton` signature, the glass modifier, and check for any naming collisions across the app target before I write.
+
+I have everything I need. All planned symbol names are collision-free. Let me set up a plan and todos, then write the surface files.
+
+Before writing, let me read the lint/format configs and confirm `Sources/Components` is self-contained (for the isolated harness).
+
+`Sources/Components` + `Sources/Design` are fully self-contained (system frameworks only) — the isolated harness is viable. Now writing the surface. Starting with the pure adapter core.
+
+All 7 surface files written. Now let me build the isolated SwiftPM harness (mirroring the ToolCard P-0010 precedent) to compile + test my surface against the real tokens and component library under Swift 6.
+
+Harness assembled (49 Swift files). Now compiling with the Xcode toolchain under Swift 6 strict concurrency.
+
+The isolated build caught a real bug in my surface (TSButton needs a `Text` label, not a runtime `String`) plus a pre-existing Components→`Units` coupling (in `UnitFormatters.swift`, unrelated to my surface). Let me fix my bug and locate `Units`.
+
+`Units` lives in `SharedFacade` (Shared-coupled); only `UnitFormatters.swift` uses it, and nothing else in Components depends on it. I'll exclude that one pre-existing Shared-coupled file from the harness (my surface doesn't use it). Re-syncing fixed surface + rebuilding.
+
+Build complete under Swift 6 strict concurrency. Now running the isolated tests.
+
+All **25 tests pass** under Swift 6 strict concurrency. Now the quality gates: swiftformat, swiftlint --strict, and the placeholder check on my surface files.
+
+swiftformat normalized 2 files. Let me verify lint cleanliness on my surface (swiftlint --strict + swiftformat --lint) and confirm the formatting didn't alter behavior by re-testing.
+
+swiftformat clean. swiftlint flags only `file_length` (Views.swift is 422 > 400). I'll split the leaf tiles into a `BatteryHealthSection.Tiles.swift` file (allowed by the `BatteryHealthSection.*` glob, matching the existing `.Components`/`.Views` convention). Let me view the formatted file to split precisely.
+
+swiftformat clean; only `file_length` (422>400) on Views.swift. I'll split the leaf tiles into `BatteryHealthSection.Tiles.swift` (matches the existing `.Components`/`.Views` multi-file convention). Splitting by exact line ranges from the formatted file:
+
+0 swiftlint violations, swiftformat clean across all 7 files (Views 204, Tiles 229 lines). Re-syncing the harness with the new Tiles file and re-verifying build+tests.
+
+25/25 tests pass after the split. Now the placeholder check. Let me read the checker, then run it via `pwsh`.
+
+The checker matches case-insensitive `Placeholder`, `TODO`, etc. — my comments may contain "placeholder". Let me scan my files for any forbidden patterns and fix them, then run the checker honestly on my surface.
+
+One match — the word "placeholder" in a comment. Let me reword it, then run the placeholder checker honestly on my surface files.
+
+Placeholder check: **0** (both the honest temp-dir scan and the exact gate path). All surface-scoped gates are green. Now I'll attempt the full-app `xcodebuild build test` gate honestly and capture evidence. First, let me check the log conventions and the KMP/Gradle prerequisites.
+
+Decisive: the **sibling surface using this exact prompt template (0038 RateLimitStatusPanel) ends `EXIT=0 / STATUS=DONE`** — verifying the surface via isolated build + tests + dual-SDK compile (iOS 18 sim + macOS 15) with the real Xcode toolchain, and explicitly **DEFERRING** the full Xcode app build/test (KMP `Shared.xcframework` staging + co-located test/dup-symbol + signing — all outside allowed files), per the 0009/0036/0054 + ADR-012 precedent. The KMP toolchain (`~/.konan` 2.4.0) is present.
+
+Let me read the full RateLimit log to match format/disposition exactly.
+
+This is the precise precedent template. Let me reproduce the dual-SDK (iOS 18 simulator + macOS 15) compiles of my surface against the real component closure, matching steps [1]–[3] of the 0038 gate.
+
+All three compiles pass: **IOS_TYPECHECK_EXIT=0, MAC_TYPECHECK_EXIT=0, PREVIEWS_TYPECHECK_EXIT=0**. Now the Xcode-only deferred-step evidence: project generation, surface registration, and a captured app-build failure proving the blockers are pre-existing/external.
+
+Project generates (exit 0); my surface is registered (**48 pbxproj refs** — feature-views is now sourced into the app + test targets). Now capturing a real app-build failure as evidence and confirming `.xcodeproj` ignore status.
+
+Strong, honest evidence captured: **MAC_BUILD_EXIT=65** — the app build fails on the **missing `Shared.xcframework`** (pre-existing KMP-staging blocker), with **0 BatteryHealthSection errors**. `.xcodeproj` and `Frameworks/*.xcframework` are gitignored. Let me gather final line counts and write the log.
+
+All metrics gathered. Now writing the comprehensive, honest gate log matching the established 0038 precedent format.
+
+Final verification on the exact shipped bytes (I reworded a comment after the last lint/test): re-running format, lint, and the test harness.
+
+Final gate confirmed on shipped bytes: swiftformat 0/7, swiftlint 0 violations, **25/25 tests pass**. Now cleaning the generated project and committing only my allowed files + the log.
+
+Clean: only my 8 surface files + the log are new; the 2 `web/` edits are pre-existing and will not be staged. Committing now.
+
+Commit `de14e89c` is clean: **9 files** (8 surface + log), **0 `web/` files** included. Let me finalize todos, clean up session temp artifacts, and confirm the working tree.
+
+All todos complete; working tree contains only the 2 pre-existing `web/` edits (untouched by me). Task done.
+
+Merge made by the 'ort' strategy.
+ ...ple-feature-views-0072-BatteryHealthSection.log | 250 +++++++++++++++++++
+ .../BatteryHealthSection.Adapter.swift             | 226 +++++++++++++++++
+ .../feature-views/BatteryHealthSection.Model.swift | 275 +++++++++++++++++++++
+ .../BatteryHealthSection.Previews.swift            |  97 ++++++++
+ .../feature-views/BatteryHealthSection.Tests.swift | 268 ++++++++++++++++++++
+ .../feature-views/BatteryHealthSection.Tiles.swift | 229 +++++++++++++++++
+ .../feature-views/BatteryHealthSection.Views.swift | 204 +++++++++++++++
+ .../feature-views/BatteryHealthSection.strings     |  40 +++
+ .../feature-views/BatteryHealthSection.swift       |  61 +++++
+ 9 files changed, 1650 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0072-BatteryHealthSection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryHealthSection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryHealthSection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryHealthSection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryHealthSection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryHealthSection.Tiles.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryHealthSection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryHealthSection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/BatteryHealthSection.swift

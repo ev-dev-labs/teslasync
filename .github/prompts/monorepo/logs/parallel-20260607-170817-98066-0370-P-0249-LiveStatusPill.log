@@ -1,0 +1,100 @@
+I'll start by exploring the environment and understanding what's available, then read the web source specification.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Swift 6.3.2, swiftlint, swiftformat, and pwsh are available. Let me investigate thoroughly before concluding anything — reading the web source and the existing Apple app structure.
+
+The web source is a small pure-presentational connection-state badge with three states: `live`, `reconnecting`, `offline`. There's an established `feature-views` pattern with many sibling files. Let me study the conventions and shared infrastructure (tokens, i18n, telemetry, state-holders) before writing code.
+
+Directories are under `apps/apple/` (not `TeslaSync/`). `BatteryPill` looks like the closest analog (a pill with telemetry). Let me study it and the shared infrastructure.
+
+`BatteryPill` is the ideal template. Let me read its entire family plus the design tokens to learn the exact conventions.
+
+Let me read these files individually with the view tool.
+
+Excellent — I now fully understand the 6-file pattern. Let me read the design tokens, the glass-panel component, and the native live-status type (the likely counterpart to the web `StatusLiveState`).
+
+`LiveStatus.swift` is the native live-state counterpart. The web `LiveStatusPill` is pure-presentational (caller supplies `state`), so I'll mirror that with a 3-case enum. Now let me locate the generated design tokens and glass-panel component, plus understand the build/test setup.
+
+The main-app tokens aren't a checked-in Swift file under the usual path — likely generated. Let me inspect the build config, scripts, and token generation.
+
+Now I understand the build topology: design tokens live in `apps/design/generated/apple`, and the gate's authoritative checks use `xcodebuild` (full Xcode), which is NOT installed here (CLT only). Before concluding, let me (a) verify what I *can* compile/test against the CLT macOS SDK, (b) read the tokens, the placeholder checker, and the build docs.
+
+Capability confirmed: macOS SDK + SwiftUI/Charts/MapKit compile via CLT, but **iOS Simulator SDK, `simctl`, and `xcodebuild`/Xcode are absent**, and **XCTest isn't in the CLT SDK**. So the gate's `xcodebuild build test` steps cannot run here — this is the platform-capability case the prompt flags as BLOCKED. I'll still implement the full surface and verify everything verifiable. Let me read the tokens, glass panel, badges, and the placeholder checker.
+
+I now have the tokens, glass-panel, and placeholder-checker. Let me check for any existing shared status-chip/badge to compose with (house style) and confirm no sibling already covers this, then confirm the macOS-SDK typecheck path works for a SwiftUI snippet.
+
+Found the shared `TSTone` enum (success/warning/neutral → exactly the web's green/amber/zinc) and the SwiftUI typecheck passed against the macOS 15 SDK. Let me check the `LiveStatus` companion types (for the binding adapter), then write the surface.
+
+Everything's mapped. `LiveStatus` couples to the KMP `Shared` framework via `LiveConnectionState`, so I'll split the state-holder binding into a thin `LiveStatusPill.Adapter.swift` (pattern-consistent with siblings) and keep the projection pure/standalone-verifiable. Let me record a plan and todos, then build the surface.
+
+Now writing the surface. Starting with the Model (pure projection).
+
+Now the test file. Let me check `LivePresentation`'s cases so the adapter tests construct a valid `LiveStatus`.
+
+`LivePresentation` and `LiveConnectionState` cases are clear. The faithful mapping keys off the connection **phase** (an open-but-briefly-stale stream is still "live", per web intent), not `LiveStatus.isLive` (which excludes stale). Let me refine the Adapter and the Model doc accordingly.
+
+Now the comprehensive XCTest file (gated on `canImport(XCTest)`, matching the sibling pattern).
+
+All 7 files written. The Model/View reference `TSTone` (from `Badges.swift`). Let me confirm `Badges.swift` is self-contained so I can include it in a standalone typecheck against the macOS SDK.
+
+`Badges.swift` is self-contained (only SwiftUI + tokens). Now let me typecheck the full shippable SwiftUI subset against the macOS 15 SDK.
+
+Strict-concurrency caught a real issue: `static let` of non-`Sendable` `LocalizedStringKey` isn't allowed under Swift 6. The sibling pattern returns `LocalizedStringKey` from computed members, never static storage. Fixing by making these computed.
+
+Ship code (Model+Telemetry+View) typechecks **clean** against the macOS 15 SDK under Swift 6 strict concurrency. The `-D DEBUG` preview error is only the `#Preview` macro plugin being unavailable to bare `swiftc` — the identical error fires on the already-shipped `Badges.swift`, so it's a tooling limitation, not a code defect. Now let me build a standalone harness that **runs** the real shipped logic for runtime evidence.
+
+Harness-only concurrency nit (top-level globals are main-actor isolated). Marking `check` `@MainActor`.
+
+The harness caught a **bug in my test expectation** (not the implementation): 5400s = 1.5h → `.hours(1)`, not `.minutes(90)`. The implementation is correct (matches web's `secs < 3600` check). This same wrong assertion exists in my XCTest file — fixing both.
+
+All 48 runtime checks PASS using the real shipped files. Now let me run swiftlint and swiftformat. First the configs, then run on my files.
+
+Now run swiftlint `--strict` and swiftformat `--lint` on the new files.
+
+swiftlint: **0 violations**. swiftformat flagged style (single-line property bodies, redundant `return`, blank lines) — these are auto-fixable. Let me apply swiftformat in write mode (the ecosystem-preferred approach), then re-verify everything.
+
+Both pass now (swiftlint 0 violations, swiftformat 0 require formatting). Let me confirm the auto-format didn't alter behavior by re-typechecking and re-running the harness against the reformatted files.
+
+Post-format: typecheck clean and harness **ALL PASS (48/48)**. Let me review the reformatted regions and read the rest of the placeholder checker to run it correctly.
+
+The placeholder scanner recurses a real path; the gate's `-Path .../LiveStatusPill` (no such dir — files are flat) would scan nothing (false pass). I'll run it honestly against my actual files. Let me read the script's tail (pattern-file resolution + output contract).
+
+Patterns are case-insensitive and scan comments too — I must ensure none of my `.swift` files contain "TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented". Let me check.
+
+No forbidden patterns. Now run the actual placeholder checker (pwsh) against my files (copied to a temp dir so it scans exactly my surface, not 1,200 siblings).
+
+Placeholder check clean (COUNT=0, EXIT=0). Now the full-scope gate lint/format commands to confirm the whole tree (incl. my files) passes.
+
+Full-project swiftlint found 1 violation across 1717 files. My scoped files were clean — let me identify exactly which file it's in.
+
+The single swiftlint violation is in a **pre-existing sibling** (`LifetimeStatsWidget.Adapter.swift:141`, function_body_length) — not my surface, and outside my allowed-file scope. My files pass swiftlint `--strict` cleanly. Now the full-scope swiftformat gate command.
+
+Both full-scope failures are **pre-existing siblings** (`ActionBuilder.Previews.swift`, `LifetimeStatsWidget.Adapter.swift`) — my files are clean and outside my allowed edit scope. Let me check the repo's documented practice for blocked macOS verification and confirm my working tree is limited to my files.
+
+The `macos-pending-verifications.md` confirms the repo's established protocol: surfaces are committed once **host-runnable gates are green**, with the full-app `xcodebuild build test` deferred as "macOS-pending" (exactly the ToolCard/AlertMessageEditor precedent). My working tree shows only my 7 new files (plus 2 pre-existing unrelated web edits I won't touch). Let me check the logs dir and a sibling log's format.
+
+The sibling precedent (AlertMessageEditor) ran **real iOS-18 typecheck + 41/41 XCTest** and marked DONE with only the full-app build deferred. My runner is more constrained — **no Xcode at all** (no iOS SDK, no simulator, no XCTest module), so per the prompt's explicit Capability clause ("unavailable on the runner → STATUS=BLOCKED with API evidence"), the honest terminal state is BLOCKED. I'll still commit the complete, verified surface (per the repo's macOS-pending protocol). Let me generate the gate log with genuine command output.
+
+Now run the actual gate steps and append genuine output.
+
+Now append the host-runnable verification evidence (real-SDK typecheck + logic harness), acceptance checklist, and the EXIT/STATUS trailer.
+
+Let me review the complete log to ensure the captured outputs are genuine and coherent.
+
+I spotted a real honesty bug in the log: `IOS_EXIT`/`MAC_EXIT` captured `head`'s exit (0) via the pipe, not xcodebuild's. The label says non-zero but shows 0 — contradictory. Let me capture the genuine exit codes and fix those lines.
+
+Genuine exit codes are both 1. Fixing the masked values in the log.
+
+Let me verify the remainder of the log (harness output + trailer).
+
+Log is honest and complete (harness 48/48, genuine xcodebuild exit=1). Now commit exactly the surface files + log (not the unrelated pre-existing web edits), per the prompt's commit command.
+
+Staging is exactly the 7 surface files + log; the pre-existing web edits remain unstaged. Committing.
+
+Committed (8 files, commit `395b8f633`). Cleaning up temp artifacts and finalizing todos.
+
+Final state verified. Cleaning done, todos complete, commit landed.
+
+**Summary of outcome:**
+
+I implemented the complete native Apple `LiveStatusPill` surface (7 files, parity with `web/.../LiveStatusPill.tsx`) and committed it (`395b8f633`). Per the prompt's Honesty Covenant, the terminal state is **`STATUS=BLOCKED`** — recorded with full API evidence in the gate log.
+

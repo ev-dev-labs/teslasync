@@ -1,0 +1,200 @@
+=== P4 Feature view 0303 VehicleCharts (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden
+                       non-destructively, no sudo / no xcode-select -s, so the shared runner is
+                       untouched). `xcodebuild -version` under the CommandLineTools dir errors
+                       ("requires Xcode") — hence the DEVELOPER_DIR override, the SAME mechanism every
+                       prior P4 surface used.
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.x · swiftformat 0.61.x · xcodegen 2.45.x · pwsh 7.x
+  Capability         : SwiftUI + Swift Charts + MapKit ALL present; iOS 26.5 simulator runtime
+                       installed; macOS / generic destinations resolve. This surface uses Swift Charts
+                       (the speed AreaMark/LineMark) AND MapKit (the live map) — both available on this
+                       runner → NOT capability-BLOCKED. The iOS 18 / iPadOS 18 / macOS 15 HIG
+                       primitives it relies on (Map(position:), ContentUnavailableView,
+                       chartXSelection) are all present under the 26.5 SDK.
+
+WEB SOURCE (the specification — read end to end)
+  web/src/features/vehicles/components/VehicleCharts.tsx — a presentational component (props
+  state / positions / vehicleConfigData / userPrefData; hooks useTranslation + useUnits) rendering a
+  responsive grid (grid-cols-1 lg:grid-cols-2) of FOUR GlassPanels:
+    1. Location (web `{state.latitude && state.longitude && ...}`): a Leaflet MapContainer centred on
+       the live position with a vehicle Marker, a trail Polyline (positions filtered by
+       `p.latitude && p.longitude`), a MapLayerSwitcher, and a monospaced `fmtNumber(lat), fmtNumber(lon)`
+       footer. Title t('common.location').
+    2. Vehicle Configuration (web `{vehicleConfigData && ...}`): 18 <MetricCard> cells —
+       cleanNil(...) || '—' for the strings, `!= null ? (Yes/No | Active/Off | Present/No) : '—'` for
+       the booleans, `${pct}%` for the SW download/install, sunroof || 'Not Installed',
+       swUpdate || 'None'. Title t('common.vehicleConfig'); lucide Car.
+    3. Car Display Preferences (web `{userPrefData && ...}`): a note paragraph + 5 <MetricCard> cells
+       via parseSettingEnum (distance/temperature/charge/pressure) + the 24h-time Yes/No.
+       Title t('common.carPreferences'); lucide Settings.
+    4. Speed History (always): a Recharts AreaChart of
+       `batteryData = positions.map(p -> { time: formatTime(p.ts),
+        speed: p.speed_mph != null ? convertSpeedFromSI(p.speed_mph, unitPrefs.speed) : null }).reverse()`,
+       else the empty copy t('common.positionDataWillAppear'). Title t('common.speedHistory'); lucide Activity.
+  Helpers reproduced verbatim (arithmetic is the contract): convertSpeedFromSI (km/h = mps*3600/1000;
+  mph = mps*3600/1609.344), fmtNumber (locale grouping, default precision 2, safeNumber 0), cleanNil
+  ('' / '<nil>' / 'nil' / 'null' ⇒ absent), parseSettingEnum (lower-case + strip non-alpha, map; unknown
+  ⇒ raw; nil ⇒ '—'), formatTime (short locale time). The `speed_mph` JSON key carries SI m/s — the
+  ADR-004 telemetry naming paradox; the producer delivers SI and the renderer converts at the boundary.
+  i18n: the web source mixes t() keys (common.location/vehicleConfig/carPreferences/speedHistory,
+  vehicles.detail.europeVehicle/rhd, common.yes/no, common.positionDataWillAppear) with hardcoded
+  English literals (every config / preference label + value). Per the native no-English-literals rule
+  every literal is promoted to a key (table "VehicleCharts").
+
+ARTIFACTS SHIPPED  (allowed files: apps/apple/TeslaSync/feature-views/VehicleCharts.* + this log)
+  VehicleCharts.Adapter.swift     — pure Foundation core: VehicleChartsConvert.speedFromSI (the
+                                    convertSpeedFromSI port), VehicleChartsNumber (fmtNumber port +
+                                    plain JS-number for `${pct}`), VehicleChartsClean.nilSafe (cleanNil),
+                                    VehicleChartsSetting.parse (parseSettingEnum → token/raw/absent),
+                                    VehicleChartsTime (lenient ISO parse + short time), accessibility.
+  VehicleCharts.Types.swift       — the input DTOs (state / position / config / preferences) + the
+                                    resolved section models (metric / location data / speed point) +
+                                    VehicleChartsResolved + the connectivity axis.
+  VehicleCharts.Model.swift       — P1/S10 facade (VehicleChartsStrings, table "VehicleCharts"), P1/S11
+                                    telemetry seam (+ OSLog sink, view.opened surface="VehicleCharts"),
+                                    the input snapshot, the P1/S8 state-holder seam (VehicleChartsSource
+                                    + @Observable VehicleChartsModel + InMemory source).
+  VehicleCharts.Projection.swift  — the pure projection: error → loading → empty → data; the live-map +
+                                    trail truthiness guards, the 18-cell configuration grid, the 5-cell
+                                    preference grid, the SI→display speed series (reverse + null drop).
+  VehicleCharts.Views.swift       — the glass-panel wrapper, the SF-tinted section header, the metric
+                                    cell + adaptive grid, the per-section empty state, and the
+                                    configuration + preferences sections.
+  VehicleCharts.Map.swift         — the live-map section over the shared MapKit components (TSMapView +
+                                    TSMapLayerSwitcher): vehicle annotation, trail polyline, style
+                                    switcher, coordinate footer; friendly empty when no position.
+  VehicleCharts.Chart.swift       — the Swift Charts speed history (AreaMark + LineMark + selection
+                                    tooltip + time/unit axes), the empty state, and the a11y summary.
+  VehicleCharts.Chrome.swift      — P4 leaf chrome: freshness chip, refresh button, stale/offline
+                                    banner, loading skeleton panels, surface empty, retryable error.
+  VehicleCharts.swift             — the surface: header chip + refresh, banner, phase switch, the
+                                    four sections in a responsive LazyVGrid wrapped in TSFadeIn; static
+                                    surfaceSlug = "VehicleCharts"; onAppear start / onDisappear stop.
+  VehicleCharts.Previews.swift    — #if DEBUG #Preview for data / km-h units / partial / loading /
+                                    error / empty / stale / offline.
+  VehicleCharts.strings           — P1/S10 catalog (table "VehicleCharts"): every web literal + the
+                                    native chrome copy.
+  VehicleCharts.Tests.swift       — projection (phases, location+trail guards, 18 config values, 5
+                                    preference values, speed convert/reverse/null-drop) + model
+                                    (wiring, view.opened once, stale auto-refresh, offline no-refresh,
+                                    live re-arm) + accessibility (cell label + chart summary).
+  VehicleCharts.AdapterTests.swift— convertSpeedFromSI (km/h exact + mph divisor), fmtNumber (grouping
+                                    + half-up + non-finite), cleanNil, parseSettingEnum (all categories
+                                    + unknown + nil), plain percent, ISO parse.
+  (13 files; split across Adapter/Types/Model/Projection and Views/Map/Chart/Chrome and
+   Tests/AdapterTests to keep every file within the repo's 400-line SwiftLint file_length budget — the
+   same multi-file decomposition the prior feature-views use, e.g. 0237 AiUsageCard.* and 0176
+   SOCRouteChart.*. Largest file 332 lines.)
+
+PARITY MAPPING  (web → Apple platform tokens; no Tailwind ported, no raw hex)
+  GlassPanel                   → VehicleChartsPanel (.tsGlassPanel()) / map panel clipped to TSRadius.lg
+  Leaflet MapContainer/Polyline→ TSMapView (annotation + route polyline) — Sources/Components/Maps (MapKit)
+  MapLayerSwitcher             → TSMapLayerSwitcher (segmented TSMapStyle: standard/hybrid/imagery)
+  Recharts AreaChart           → Swift Charts AreaMark + LineMark (gradient + 2pt stroke + tooltip),
+                                 the SOCRouteChart.Chart.swift pattern; x = sample time, y = display speed
+  MetricCard                   → VehicleChartsMetricCell (muted label over primary value)
+  FadeIn                       → TSFadeIn(delay:) (web FadeIn delays 0.15/0.18/0.19/0.20 preserved)
+  lucide Navigation/Car/Settings/Activity → SF location.fill / car.fill / gearshape.fill / waveform.path.ecg
+  convertSpeedFromSI           → VehicleChartsConvert.speedFromSI (km/h *3600/1000, mph *3600/1609.344)
+  fmtNumber / cleanNil / parseSettingEnum / formatTime → the verbatim Foundation ports (unit-asserted)
+  i18n                         → every string via VehicleChartsStrings (NSLocalizedString table
+                                 "VehicleCharts", web literal as the fallback value); %@ templates
+  a11y                         → each cell .ignore + "{label}: {value}"; section headers .isHeader; map
+                                 + chart labelled with summaries; Dynamic Type via tokens; Reduce Motion
+                                 via TSFadeIn / chart animation guard
+  telemetry                    → view.opened surface="VehicleCharts" emitted once on first presentation
+
+STATES (every one renders — no hidden surface)
+  loading  → skeleton section panels (P4 leaf; the web is presentational).
+  empty    → no data in any section → one friendly message, never a blank box.
+  error    → retryable error chrome (P4 leaf; the web has no error branch).
+  data     → the four sections, each rendering its content OR a friendly per-section empty state. The
+             web HIDES absent sections (`{vehicleConfigData && ...}`); per ADR-011 / prohibited-pattern
+             #6 the native leaf never hides a surface — it shows a placeholder instead (a sanctioned
+             superset, never a narrowing). The speed section's empty stands in for the web
+             "Position data will appear here" (and for an all-null series, which would render a blank
+             chart — a more covenant-compliant empty than an axes-only box).
+  stale    → header chip + banner + one-shot auto-refresh on the live→stale transition.
+  offline  → header chip + banner over last-known content; no auto-refresh.
+
+GATES  (raw exits below; per-surface scope = the 13 VehicleCharts.* files this prompt owns)
+  [GREEN] swiftformat --lint  (.swiftformat, 12 swift files)   : 0/12 files require formatting   FORMAT_EXIT=0
+  [GREEN] swiftlint --strict  (.swiftlint.yml, 12 swift files) : Found 0 violations, 0 serious
+                                                                 in 12 files                      LINT_EXIT=0
+  [GREEN] check-placeholders.ps1 (-Language swift, VehicleCharts.*) : PLACEHOLDER_ALLOWED=0
+                                                                      PLACEHOLDER_COUNT=0          PLACEHOLDER_EXIT=0
+  [GREEN] ISOLATED build + test — SwiftPM, swift-tools 6.0 (Swift 6 language mode = strict-concurrency
+          complete, same as the app), compiling the EXACT shipped VehicleCharts.* sources (incl. the
+          #Preview macro file) against the REAL repo design system (generated apps/design Tokens +
+          Sources/Design TSDesign/TSMaterial + the full Sources/Components set incl. Maps + Charts) under
+          the Xcode 26.5 toolchain (so the real #Preview macro + Swift Charts + MapKit + XCTest are
+          available):
+              Build complete!  ·  Executed 36 tests, with 0 failures (0 unexpected)               SWIFT_TEST_EXIT=0
+
+  [DEFERRED] Full-app iOS-Simulator + macOS `xcodebuild -scheme TeslaSync(-macOS) … build test`.
+          ATTEMPTED on this runner (xcodegen generate → xcodebuild). RAW result, NOT massaged:
+            • iOS  : XCODEBUILD_IOS_EXIT=65. The scheme's "Stage Shared.xcframework via Gradle" pre-step
+                     DID assemble Shared.xcframework successfully here. The build then failed with 4
+                     errors, ALL `Unable to resolve module dependency: 'XCTest'` — the PRE-EXISTING
+                     co-located-tests-into-app-target config: project.yml adds TeslaSync/feature-views
+                     (171 `*.Tests.swift` files that `import XCTest`) as APP-target sources; the first
+                     failure is AIRestorePanel.Tests.swift:18. ZERO VehicleCharts-attributable errors.
+            • macOS: XCODEBUILD_MAC_EXIT=65. 2 errors, BOTH "has entitlements that require signing with
+                     a development certificate" (TeslaSync-macOS, TeslaSyncWidgets-macOS) — the
+                     PRE-EXISTING macOS development-signing blocker. ZERO VehicleCharts-attributable errors.
+          Both failures are PRE-EXISTING, out-of-allowed-files conditions this prompt neither introduced
+          nor is permitted to touch (project.yml, the 169 sibling test files, signing config). This is
+          the SAME sanctioned "code-complete + DEFERRED full-app Xcode gate" disposition recorded by
+          every prior P4 surface (see p4-apple-feature-views-0237-AiUsageCard.log and -0203-AIUsageCard.log)
+          and is owned by p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported with its RAW exit 65 and
+                           the verified pre-existing-blocker evidence (XCTest-in-app-target / dev-signing)
+                           — never reported as passing.
+  2  No scope narrowing  : every web region + branch reproduced — the location map + trail truthiness
+                           guard + coordinate footer, all 18 configuration cells (incl. the singular
+                           cleanNil/yes-no/active-off/present-no/notInstalled/none/percent values), all 5
+                           preference cells (parseSettingEnum + 24h), the SI→display speed series
+                           (reverse + null drop); all 6 P4 states render.
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; raw exits pasted; the full-app
+                           failures were each re-confirmed by grep of the real build logs (4× XCTest at
+                           AIRestorePanel.Tests.swift; 2× dev-signing), not assumed.
+  4  No stubs as final   : complete production surface + 36 real tests; placeholder scanner COUNT=0; no
+                           TODO/FIXME/stub/Coming-soon/Placeholder/Lorem anywhere (the scanner is clean).
+  5  No parity shortcut  : the convertSpeedFromSI divisors, the fmtNumber grouping/precision/non-finite
+                           guard, the cleanNil literals, the parseSettingEnum normalization + fallback,
+                           and the batteryData reverse are each unit-asserted against the web expressions
+                           (en_US golden values verified empirically — km/h(10)=36.0, mph(10)=36000/1609.344).
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened
+                           telemetry, the shared Maps + Charts + Motion components, and the established P4
+                           "isolated-build + DEFERRED full-app" disposition all honoured; the pre-existing
+                           AIUsageCard.* working-tree edits (a sibling surface) were left untouched.
+  8  No commit on red    : the committed artifact (13 VehicleCharts.* files + this log) is GREEN on every
+                           per-surface gate AND on a real isolated Swift 6 strict-concurrency build + 36/36
+                           XCTest; the deferred full-app gate is blocked only by pre-existing, unrelated
+                           surfaces/config this commit does not touch.
+  9  No silent drift     : changes are confined to feature-views/VehicleCharts.{Adapter,Types,Model,
+                           Projection,Views,Map,Chart,Chrome,Previews,Tests,AdapterTests,swift} +
+                           VehicleCharts.strings and this log; the xcodegen-generated TeslaSync.xcodeproj
+                           was removed after the build attempt (not committed).
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic VehicleCharts shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 36 tests pass under the app's own Swift 6
+  strict-concurrency rules, against the REAL design system (incl. the shared MapKit + Swift Charts
+  components), via the Xcode 26.5 toolchain, with swiftformat / swiftlint / placeholder all green on the
+  12 surface files and the #Preview macro compiling. The full-app iOS-Simulator + macOS xcodebuild
+  build/test gate is DEFERRED (not failed by this code) — iOS exit 65 on the pre-existing
+  co-located-tests-into-app-target config (XCTest unresolvable in the app target, first at
+  AIRestorePanel.Tests.swift), macOS exit 65 on pre-existing development-signing — both out of the
+  allowed-files scope and owned by the P99 acceptance gate on a signed macos-latest runner.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,110 @@
+I'll start by exploring the repository structure, reading the web source specification, and checking the Apple toolchain availability.
+
+
+
+Critical finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Swift, swiftlint, swiftformat, pwsh are available. Let me examine how predecessor surfaces (ChargerSpecsPanel, HeroGauges) handled this, and the existing structure.
+
+Now let me examine the build setup, a recent predecessor log to see how the no-Xcode gate was handled, and the closest analog surface (`DrivingPerformanceCards`, same driving feature).
+
+The predecessor pattern is clear: ship complete code (7 files: `.swift`, `.Adapter`, `.Model`, `.Views`, `.Previews`, `.Tests`, `.strings`) + run host-runnable gates, with xcodebuild deferred. Let me verify whether Xcode is truly absent, check the placeholder script, and read the closest analog (`DrivingPerformanceCards`) fully to match conventions.
+
+Xcode.app **is** present at `/Applications/Xcode.app` but `xcode-select` points to CommandLineTools. I can try overriding with `DEVELOPER_DIR` (no sudo needed). Let me test that and read the rest of the analog surface files + web dependencies.
+
+`DEVELOPER_DIR` override works — **Xcode 26.5 is fully functional**, iPhone 16 simulator is booted, xcodegen present. I'm not blocked. Let me gather the remaining conventions (analog Adapter/Tests/Previews/strings) and web parity dependencies.
+
+Now I understand the architecture. Let me find the design tokens (P1/S9), the remaining web dependencies, and the analog Previews/Tests conventions.
+
+Let me locate the actual token definitions (`Color.TS`, `TSSpacing`, `Font.TS`, `TSRadius`) and read the web unit/formatting hooks plus the analog Tests/Previews.
+
+Tokens live in `apps/design/generated/apple` (auto-included by project.yml). Let me read those token definitions, the web unit conversion, and the analog Previews/Tests to finalize conventions.
+
+Now let me read the full Tokens.swift (spacing/radius/fonts) and the analog Tests file to finalize all conventions before writing.
+
+I now have all conventions. Let me verify there are no symbol collisions for my planned `DriveStatCards*` types, check the placeholder script's rules, and confirm the deployment target.
+
+No collisions, iOS 18/macOS 15, Swift 6.0. Let me read the forbidden-pattern list, then set up tracking and start writing.
+
+I have full parity context. Let me quickly confirm the speed-stat unit semantics (for accurate doc comments) and write the plan, then create the files.
+
+Confirmed: `stats.maxSpd`/`avgSpd` are pre-converted to display units upstream; `AnimatedNumber` renders `prefix + fmtNumber(value,decimals) + suffix`. Writing the plan and all seven surface files now.
+
+Now creating the surface files. Starting with the testable Adapter core:
+
+Now the root view, previews, tests, and strings:
+
+Now the tests. Let me compute exact parity values and write comprehensive coverage:
+
+All seven files created. Let me update tracking and run the fastest reliable verification first: an isolated SwiftPM harness (real `Tokens.swift`, module named `TeslaSync`) to compile my surface and execute the tests.
+
+Harness ready. Building and running the surface tests in isolation against the real tokens:
+
+My surface compiles clean (including `#Preview`). Now executing the test suite:
+
+**29/29 tests pass** in isolation against real tokens — all web-parity golden values verified. Now the host gates (swiftformat, swiftlint, placeholder scan):
+
+Real lint issues to fix (good — gates working). Let me view the configs to fix precisely, then restructure: split `UnitMath` into `DriveStatCards.Format.swift`, extract cost-tile helpers (function body length), split the tests file (file length), and run swiftformat write mode.
+
+Configs understood (file ≤400 lines, function body ≤50, line ≤120, maxwidth 120). Restructuring: extracting `UnitMath` into a new `Format.swift`, slimming the `cards()` body via helpers, and splitting the tests file. Let me rewrite the affected files.
+
+Now the split test files:
+
+Restructured. Now running swiftformat in write mode to auto-fix formatting, then re-checking both linters:
+
+swiftformat clean, all files ≤400 lines. Now re-checking swiftlint --strict:
+
+swiftlint --strict: **0 violations**. Re-syncing the isolated harness with the new layout and running placeholder checks:
+
+All 29 tests green post-refactor. Now the placeholder gate (verbatim command + a meaningful scan of my actual files):
+
+Placeholder gate clean. Now the real xcodebuild gate. First generating the Xcode project and inspecting schemes:
+
+Project generated; both schemes present. Launching the iOS gate (`build test`) — capturing full output to grep for any errors in my files:
+
+The iOS build is large and still compiling. Let me continue waiting:
+
+iOS build failed (EXIT=65) but with **zero errors in my DriveStatCards files**. Let me capture the 4 pre-existing sibling errors as evidence:
+
+**Key finding:** the iOS gate's 4 errors are all `XCTest` module-resolution failures in `AcDcStatsPanel.Tests.swift` — a **sibling I never touched**. This is the known pre-existing structural issue (97 co-located `*.Tests.swift` globbed into the app target, which doesn't link XCTest). Zero errors reference my files.
+
+To get the strongest in-tree proof that my **production** files compile against the real module, I'll rebuild with `*Tests.swift` excluded (non-invasively, via xcconfig — no committed-file edits):
+
+**Conclusive.** With tests excluded, the iOS app build still fails (90 errors) but **every error is in `dashboard-widgets/*` siblings** (pre-existing `invalid redeclaration of WeeklyDigestDTO` / `DashboardWidgetSize` from parallel merges) — **0 reference my files**. Let me categorize the errors precisely for the log:
+
+7 of the errors are in feature-views — let me confirm none are mine and identify which siblings they're in:
+
+All 90 errors are pre-existing sibling breakage (`invalid redeclaration`/ambiguous `DashboardWidgetSize`/`WeeklyDigestDTO`/`WindowState` from parallel merges) — **83 in dashboard-widgets, 7 in `WindowStatusDetail` sibling, 0 in mine**. To avoid assuming, let me confirm the macOS gate hits the identical compile-phase blocker:
+
+**Both platforms confirmed:** identical 90 pre-existing sibling errors (83 dashboard-widgets + 7 WindowStatusDetail), **0 in my surface**. Verification is complete and ironclad. Let me record final line counts and write the honest gate log:
+
+Clean: my 9 files are the only DriveStatCards changes; the generated `.xcodeproj` is git-ignored; the 2 pre-existing modified web files aren't mine (I'll leave them). Now writing the honest gate log:
+
+Now cleaning up throwaway verifiers and the generated project, then verifying the tree is clean before commit:
+
+Tree is clean — only my 9 files + the log are new. Committing exactly those (leaving the unrelated pre-existing web changes alone):
+
+Committed cleanly (only my 9 files + the log; the unrelated pre-existing web changes were left unstaged). Final verification:
+
+Task complete. Commit `21d43a4e6` ships the native Apple **DriveStatCards** surface — 10 files, exactly the allowed `DriveStatCards.*` glob plus the log.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0139-DriveStatCards.log | 150 ++++++++
+ .../feature-views/DriveStatCards.Adapter.swift     | 386 +++++++++++++++++++++
+ .../DriveStatCards.AdapterTests.swift              | 112 ++++++
+ .../feature-views/DriveStatCards.Format.swift      |  69 ++++
+ .../feature-views/DriveStatCards.Model.swift       | 316 +++++++++++++++++
+ .../feature-views/DriveStatCards.Previews.swift    | 107 ++++++
+ .../feature-views/DriveStatCards.Tests.swift       | 317 +++++++++++++++++
+ .../feature-views/DriveStatCards.Views.swift       | 242 +++++++++++++
+ .../TeslaSync/feature-views/DriveStatCards.strings |  42 +++
+ .../TeslaSync/feature-views/DriveStatCards.swift   |  71 ++++
+ 10 files changed, 1812 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0139-DriveStatCards.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/DriveStatCards.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DriveStatCards.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DriveStatCards.Format.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DriveStatCards.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DriveStatCards.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DriveStatCards.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DriveStatCards.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DriveStatCards.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/DriveStatCards.swift

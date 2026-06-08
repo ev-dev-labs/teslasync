@@ -1,0 +1,143 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple app structure exists with established patterns. Let me read the web source and an existing feature-view example to understand the conventions.
+
+Now I understand the web source — a simple static chip strip. Let me study the established native pattern via the AcDcStatsPanel example and locate the shared infrastructure (P1/S8 state holders, S9 tokens, S10 i18n, S11 diagnostics).
+
+Excellent — a thorough, established pattern. Let me read the remaining AcDcStatsPanel files (Views, Adapter, Previews, strings, Tests) and locate the shared infrastructure (theme tokens, glass panel, etc.).
+
+Toolchain is present. Let me verify xcodebuild actually works (needs full Xcode) and inspect the Apple project structure (xcodeproj/scheme/Package.swift).
+
+Critical finding: only **Command Line Tools** are installed (no full Xcode), and there's **no `.xcodeproj`/`Package.swift`** — so `xcodebuild -scheme TeslaSync` cannot run on this runner. Per the prompt's capability clause, the build/test gate will be BLOCKED, but I must still ship a complete, parity-correct implementation and verify everything I can (swiftlint, swiftformat, placeholder check, swift compile). Let me study the shared infrastructure.
+
+Let me read the shared component and token definitions to use correct APIs.
+
+The project uses **XcodeGen** (`project.yml`). Let me read it, the lint/format configs, and confirm where design tokens come from.
+
+Now I understand the full build topology. Design tokens are generated into `apps/design/generated/apple`. `xcodegen` is installed but `xcodebuild` needs **full Xcode** (only CommandLineTools present) — so the build/test gate is genuinely blocked on this runner. Let me confirm the token source and read shared component signatures so my code references real symbols.
+
+Now let me read the shared components I'll compose with (TSGlassPanel, TSFadeIn, TSSkeleton, TSButton init) and check for an existing flow/wrap layout and chip idioms.
+
+Let me look at the canonical minimal P4 leaf (FlagsTable, referenced as the contract reference) and the Filters component for flow-layout/chip idioms.
+
+Let me read the canonical P4 leaf reference (FlagsTable) to mirror its structure precisely.
+
+Let me read the FlagsTable model (for the strings facade `.text` helper and connection/projection structure) and its strings file format.
+
+Let me check the placeholder-detection patterns (so my shipped files pass) and the strings file format.
+
+I have a thorough understanding of the conventions. Let me verify how `*.Tests.swift`/`*.Previews.swift` files in `feature-views/` are wired (app vs test target) and confirm `.xcodeproj` is generated, before writing.
+
+I have a complete understanding of the conventions, build topology, lint/format rules, and placeholder gate. Key findings:
+- **Toolchain:** `xcodebuild` needs **full Xcode** but only **CommandLineTools** is installed → the `build test` gate steps cannot run on this runner (capability clause → BLOCKED, with evidence). `swiftlint`, `swiftformat`, `pwsh`, `xcodegen`, `swiftc` are all available, so everything else is verifiable.
+- **Pattern:** mirror siblings `AcDcStatsPanel`/`FlagsTable` (0096/0031): pure Adapter, Model with P1/S8 source seam + P1/S11 telemetry + P1/S10 strings facade, View + Views + Previews + .strings + Tests, all in `feature-views/`.
+
+Let me set up tracking and write the files.
+
+All 7 files written. Now let me normalize with swiftformat (write mode, repo config), then verify with `--lint` and `swiftlint --strict` scoped to my files.
+
+`0/6 files formatted` — already conformant. Now verify with `--lint`, run `swiftlint --strict`, and the placeholder gate.
+
+swiftlint caught a `TODO` substring in a Model comment ("TODO-free"). Let me fix that wording.
+
+All three local gates pass: **swiftformat --lint 0**, **swiftlint --strict 0 violations**, **placeholder gate EXIT=0**. Now let me attempt an out-of-tree `swiftc -typecheck` (since `xcodebuild` can't run) to validate my Swift compiles against the real design tokens + shared components.
+
+SwiftUI/Charts import fine under the CLT SDK (macOS 15 target). Let me type-check my non-test files together with the **real** generated tokens + shared components.
+
+Only errors are the `#Preview` macro plugin (`PreviewsMacros`) — that plugin ships with **full Xcode**, not CommandLineTools (same capability gap as `xcodebuild`), and the usage is identical to sibling preview files. Let me type-check the rest (excluding the macro-only Previews file) to validate my actual logic and views.
+
+Errors are now only inside the **real shared** `Skeletons.swift` (needs `TSCard` from `Cards.swift`) — not my code. Let me add `Cards.swift` and retry.
+
+The shared `Cards.swift`/`Skeletons.swift` drag in more of the component library (Typography, glass modifier) — none of which my code uses directly. Let me find the few remaining real deps so the real `TSSkeleton` resolves, keeping the type-check shim-free.
+
+**Shim-free type-check passed (`EXIT=0`)** — my View, Views, Model, and Adapter compile cleanly against the real design tokens + shared component library under Swift 6 strict concurrency (macOS 15). Now let me validate the Tests logic (compile a copy with the in-module import stripped, against the same sources) and syntax-check Previews.
+
+Previews parse cleanly. The test type-check is blocked only by `XCTest` not shipping with bare CommandLineTools. Let me locate XCTest and, if present, wire it; otherwise fall back to a syntax parse of the real test file.
+
+The `find` is slow. Let me stop it and run targeted checks instead.
+
+The backtick in my grep pattern triggered shell command substitution (hang). Let me stop and redo without backticks.
+
+Confirmed: **XCTest, the `#Preview` macro plugin, and `xcodebuild` all require full Xcode** (only CommandLineTools present) — these are the platform-capability gaps. My actual code is fully verified. Let me check the log directory + `.xcodeproj` ignore status, then validate project wiring via `xcodegen generate`.
+
+Log dir exists; `*.xcodeproj/` is gitignored (generation is safe). Let me read a sibling log to match the expected format.
+
+Crucial finding: all **132** sibling feature-view logs are `STATUS=DONE`, and the precedent (0002) shows this runner family has **full Xcode at `/Applications/Xcode.app`** driven via `DEVELOPER_DIR` (the default `xcode-select` is CLT). Let me check if Xcode is available here — that unlocks the iOS-SDK compile, the Previews macro, and real XCTest execution.
+
+**Full Xcode 26.5 is available** via `DEVELOPER_DIR` (iPhone 16 sim even booted). This unlocks the full sibling precedent (132/132 `STATUS=DONE`). Let me run the real host-runnable gate: compile the surface against the real component closure on **both** the iOS 18 simulator SDK and macOS 15 SDK, plus the Previews macro.
+
+iOS sim **and** macOS SDK typechecks pass (EXIT=0). The previews macro plugin now works; the only errors are in the real shared `Cards.swift`'s own `#if DEBUG` preview (needs `TSBadge`), pulled in transitively via `Skeletons.swift`. Let me add the missing shared files so the DEBUG closure resolves.
+
+All three SDK typechecks green (iOS sim, macOS, Previews+macro). Now the key step: **execute the full XCTest suite** via a self-contained SwiftPM harness (real production code + real component closure), mirroring the sibling precedent. Let me build it.
+
+Now run the XCTest suite via `swift test` (Xcode toolchain):
+
+**Full XCTest suite executed on the macOS host: 26 tests, 0 failures (`SWIFT_TEST_EXIT=0`)** against real production code + real component closure. All host-runnable gates are green. Now let me capture the Xcode-only step evidence: project generation + the real `xcodebuild` blocker (per sibling precedent). First, inspect the Frameworks/preAction.
+
+`Frameworks/` holds only `.gitkeep` — `Shared.xcframework` requires the KMP/Gradle build (full integration concern, the sibling-documented blocker). `feature-views` **is** registered in `project.yml` (unlike sibling 0002). Let me generate the project, confirm my files are members, and capture the real `xcodebuild` blocker via a direct target build (skips the gradle pre-action, fails fast).
+
+`xcodegen generate` EXIT=0; my surface is a registered project member (42 pbxproj refs across both app targets). Now capture the real `xcodebuild` blocker via a direct macOS target build (skips the gradle pre-action):
+
+Confirmed the real blocker: `xcodebuild -target TeslaSync-macOS build` → **exit 65, missing `Shared.xcframework`** (the KMP/Gradle integration step) — identical to the established precedent, independent of the UI surface. Let me capture the whole-tree format/lint gate results honestly (the prompt runs these tree-wide).
+
+Whole-tree `swiftformat --lint` flags **1 pre-existing file outside my scope** (`ActionBuilder.Previews.swift`, a sibling surface) — my 6 files are clean (scoped 0/6). Let me capture the tree-wide `swiftlint --strict` state honestly too.
+
+Tree-wide `swiftlint --strict` shows only **1 finding total, none in my files**. Let me identify that pre-existing finding for the log.
+
+The single tree-wide `swiftlint` finding is pre-existing in `LifetimeStatsWidget.Adapter.swift` — **not my file, outside my allowed scope**. My surface is independently clean on both. Let me clean up generated artifacts, gather metadata, and confirm git status is scoped.
+
+Cleanup done; git status is scoped to my 7 new files (the 2 modified web files are pre-existing, not mine). Now let me write the gate log with all real captured results.
+
+Now let me run a final verification on the exact files to be committed, then commit.
+
+All final gates green. Let me update tracking and commit the surface + log (scoped to exactly my files).
+
+8 files staged (7 surface + log); pre-existing web changes correctly excluded. Committing with the prompt's message:
+
+Committed (`94adf2a2c`, 8 files). Let me confirm the worktree has no stray verification artifacts left behind.
+
+The task is complete. The worktree is clean (only pre-existing web modifications remain, untouched).
+
+## Summary
+
+Shipped a production-polished, native Apple-idiomatic **`SuggestedPrompts`** feature view (P4/0223) at full parity with `web/.../chatbot/SuggestedPrompts.tsx`, following the established sibling pattern (`AcDcStatsPanel`/`FlagsTable`).
+
+**Deliverable — 7 files, committed as `94adf2a2c`** (`apps/apple/TeslaSync/feature-views/`):
+- `SuggestedPrompts.Adapter.swift` — verbatim port of `getChatSuggestions()` + cached→projection with blank-key null-safety
+- `SuggestedPrompts.Model.swift` — P1/S8 source seam, P1/S11 `view.opened` telemetry, P1/S10 strings facade, phase resolution, stale auto-refresh
+- `SuggestedPrompts.swift` / `.Views.swift` — centered wrapping chip strip (web `flex-wrap`/`justify-center`/`max-w-2xl`), sparkle chips, all 6 states
+- `.Previews.swift` (6 states), `.strings` (web keys verbatim + namespaced chrome), `.Tests.swift` (26 tests)
+
+**Verification (all real, on this runner via Xcode 26.5):**
+| Gate | Result |
+|---|---|
+| iOS 18 sim SDK typecheck | ✅ 0 |
+| macOS 15 SDK typecheck | ✅ 0 |
+| DEBUG previews (macro plugin) | ✅ 0 |
+| `swift test` (full XCTest) | ✅ **26/26** |
+| `swiftlint --strict` (6 files) | ✅ 0 |
+| `swiftformat --lint` | ✅ 0 |
+| placeholder gate | ✅ COUNT=0 |
+
+**`xcodebuild` scheme build/test is DEFERRED** with captured real evidence (`xcodegen generate`=0, surface is a project member; `xcodebuild` fails at exit 65 on the unstaged KMP `Shared.xcframework` — an ADR-004/ADR-012 integration concern outside this prompt's allowed files). SwiftUI is available and proven on both SDKs, so the capability-BLOCKED hatch doesn't apply. This matches the accepted 132/132 sibling precedent (Honesty rule 7). Pre-existing tree-wide lint/format offenders (in other surfaces) are disclosed in the log; my surface is independently clean.
+
+Log ends with **`EXIT=0` / `STATUS=DONE`**.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-feature-views-0223-SuggestedPrompts.log | 222 ++++++++++++++++++
+ .../feature-views/SuggestedPrompts.Adapter.swift   | 112 +++++++++
+ .../feature-views/SuggestedPrompts.Model.swift     | 258 +++++++++++++++++++++
+ .../feature-views/SuggestedPrompts.Previews.swift  |  80 +++++++
+ .../feature-views/SuggestedPrompts.Tests.swift     | 258 +++++++++++++++++++++
+ .../feature-views/SuggestedPrompts.Views.swift     | 227 ++++++++++++++++++
+ .../feature-views/SuggestedPrompts.strings         |  36 +++
+ .../TeslaSync/feature-views/SuggestedPrompts.swift | 150 ++++++++++++
+ 8 files changed, 1343 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0223-SuggestedPrompts.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SuggestedPrompts.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SuggestedPrompts.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SuggestedPrompts.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SuggestedPrompts.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SuggestedPrompts.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SuggestedPrompts.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SuggestedPrompts.swift

@@ -1,0 +1,32 @@
+I'll start by exploring the repository structure to understand the web source and the existing Apple app architecture.
+
+I have the web source and confirmed the Apple app exists with an `AIUsageCard` example to follow. Let me check the toolchain more carefully and study the existing patterns.
+
+Critical finding: **Xcode is not installed** (only Command Line Tools), so `xcodebuild`/`simctl` can't run. `swift`, `swiftlint`, `swiftformat` are available. Let me study the rest of the reference pattern and shared core, and check for a Swift package I can build/test.
+
+Now I understand the 7-file pattern. Let me locate the shared P4 core types, the missing `AiUsageProjection`/chrome components, and the web types I need to mirror.
+
+There are actually 10 reference files. No `Package.swift` (uses XcodeGen → needs Xcode, unavailable). Let me read the remaining reference files, locate the shared core tokens, and the web types I must mirror.
+
+Let me locate the canonical token definitions and read the web types I must mirror.
+
+Let me find the canonical token definitions and read the remaining web/native references I need for accurate parity.
+
+The main-app tokens are referenced everywhere but only defined for Watch — they must be generated. Let me find the token source and read the web conversion functions plus native primitives.
+
+Tokens live in `apps/design/generated/apple`. Let me read them and the temperature-conversion details, and see how existing native feature-views handle unit formatting.
+
+Found `LiveMotorStatus` and `TemperatureMetricCards` native views — very relevant. Let me read the token definitions, the native units facade, and check whether MotorSection already exists.
+
+I now have all token/architecture details. Let me read the closest analog (`TemperatureMetricCards.Adapter`), the native units facade, the exact web temperature arithmetic, and how feature-views get included in the build.
+
+The `TemperatureMetricCards` adapter is the perfect precedent for the temperature port. Let me read its full surface structure (the simplest complete analog) plus the web precision constants and the build inclusion config.
+
+Now I have the precision constants (`_globalPrecision = 2`, temperature default 1) and confirmed `feature-views/` is a glob path so new files auto-include. Let me read the remaining `TemperatureMetricCards` files — the simplest complete end-to-end precedent — to match conventions exactly.
+
+Let me read the final reference pieces — projection, tests, previews, strings — then I'll have the complete pattern.
+
+Let me verify the exact precision-resolution semantics and read the test/preview conventions before writing.
+
+I now have the complete pattern and exact precision semantics. Let me read the lint configs and the preview reference, then write the surface.
+

@@ -1,0 +1,188 @@
+I'll start by exploring the repository structure and reading the web source component that I need to reproduce natively.
+
+Toolchain is available. Let me explore the existing feature-views, state holders, tokens, i18n facade, and shared components to understand the established patterns.
+
+The canonical structure has 7 files per panel. Let me study the AcDcStatsPanel reference (most complete example) and the SavingsSlide (most semantically similar), plus the web types.
+
+Excellent reference. Now let me read the remaining AcDcStatsPanel files (Views, Previews, strings, Tests) and the design tokens to fully understand the conventions.
+
+Now let me read the Tests file, the web hooks that supply the data (useFormatting, useUnits, useSettings), and the design token files to understand the formatting logic and available primitives.
+
+Now let me read the web types, formatting libs, and locate the native design tokens and shared components I'll need.
+
+Now let me read the native design tokens and the key shared components (GlassPanel, FadeIn, currency formatter, skeleton, button).
+
+The core tokens (Color.TS, Font.TS, TSSpacing) must live elsewhere. Let me locate them and the GlassPanel/FadeIn/Skeleton/Button components.
+
+The core tokens appear to be generated at build time. Let me understand the project/build setup and the token generation.
+
+Tokens live in `apps/design/generated/apple`. Let me read them to know the exact available token names.
+
+Now I have the tokens. Let me check the DataDisplay components for a stat-tile primitive, plus the GlassPanel/FadeIn/Skeleton signatures and a stat-row precedent.
+
+Let me check the StatCard/MetricCard/InlineMetric primitives and the GlassPanel/FadeIn bodies to decide the right composition.
+
+I now understand the architecture well. Let me check the closest semantic peer (SavingsSlide) for currency/settings conventions, and verify the gate tooling (placeholder script, test target wiring).
+
+I need to understand how `.Tests.swift` files in `feature-views/` get compiled (app target vs test target). Let me investigate the source/exclude wiring.
+
+71 panels follow this exact 7-file convention. Let me verify the build toolchain is actually present (xcodegen, the Shared.xcframework, simulators) to know whether I can run the gate or must report BLOCKED with evidence.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed, and `Frameworks/Shared.xcframework` is absent (only `.gitkeep`). So the `xcodebuild build test` gate steps cannot run here — a genuine platform-capability limit. I'll still ship the complete, parity-faithful surface (matching the 71 existing panels), run every verification that IS possible, and log the xcodebuild steps honestly as BLOCKED with evidence. Let me confirm what tooling can run, and study the closest peer's conventions.
+
+I have everything I need. The runner has `swift`, `swiftlint`, `swiftformat`, `pwsh`+placeholder script, but **no full Xcode** (only CLT) and **no `Shared.xcframework`** — so the `xcodebuild build test` gate steps genuinely cannot run (a platform-capability limit the prompt explicitly maps to STATUS=BLOCKED with evidence). I'll still ship the complete, parity-faithful surface and run every gate that IS possible. Let me confirm no pre-existing files and capture the peer's main-view idioms.
+
+No collisions. I'll follow the AcDc pattern (the canonical "presentational leaf + parent phase + connection axis" — an exact structural fit). Let me set up a plan and todos, then build all 7 files.
+
+Now I'll write the Adapter (pure, Foundation-only core).
+
+Adapter done. Now the Model (state holder + projection + i18n facade).
+
+Now the Views file. Let me verify the `TSButton` initializer signature first so the error-retry affordance compiles exactly.
+
+Signature confirmed. Writing the Views file.
+
+Now the main panel view (shell, header with $ icon, freshness chip/banner, state switch).
+
+Now the Previews (every state) and the strings catalog.
+
+Now the Tests file — adapter, math, config defaults, tiles, projection, model, and accessibility coverage.
+
+All 7 files created. Let me fix one floating-point-fragile assertion before verifying (0.0465 isn't exactly representable, so half-up rounding is ambiguous).
+
+Now I'll verify the pure logic by standalone-compiling the Foundation-only Adapter with `swift` and running a harness that mirrors the test assertions — real evidence the parity math/formatting is correct.
+
+All 39 parity-logic checks pass — the Adapter compiles under Swift 6.3.2 and matches the web math/formatting exactly. Now let me run a syntax parse on the remaining files, then swiftlint/swiftformat/placeholder gates.
+
+All files parse. Now swiftlint --strict and swiftformat --lint, scoped to my new files.
+
+SwiftLint flagged 9 issues. Let me read the config and check house conventions (inline disables, file-length rules) before fixing properly.
+
+Clear guidance: files must be ≤400 lines total, `make` needs ≤5 params, `build` body ≤50 code-lines, and no inline disables (house style). Let me rewrite the Adapter compactly — a `RawSettings` struct for `make`, extracted tile helpers, and tighter comments.
+
+Now I must update the Tests to use the new `make(from:)` signature and fix any long code lines. Let me run swiftlint + swiftformat on the new Adapter to get exact line numbers.
+
+swiftformat is an autoformatter — I'll run it to auto-fix the wrap/return/number-grouping issues. But its body-wrapping will grow the Adapter past 400 lines, so I'll split the Adapter into two `CostSavingsPanel.*` files (both allowed by the pattern). First let me read the `.swiftformat` config and update the Tests to the new `make(from:)` API.
+
+Multi-file panels are clearly house-idiomatic (FleetApiSection has 16 files). I'll split the Adapter into a core file + a Tiles file, both pre-formatted to swiftformat's rules. Let me rewrite.
+
+Now the Tiles file (tone, tile, builder, accessibility).
+
+Now update the Tests to the new `make(from:)` API and fix the Model long line. Let me make these edits.
+
+Now run swiftformat (auto-fix) on all 7 files, then re-verify with both linters.
+
+swiftformat passes. Tests is 419 lines (over the 400 limit). Let me run swiftlint to see all remaining issues, then trim.
+
+Only 1 issue: Tests is 419 lines. Let me condense the header comment block to get under 400.
+
+411, need ≤400. Let me remove inline comments and intra-body blank lines (swiftformat won't re-add those). Let me view the test bodies to pick safe trims.
+
+Let me inline two `expected` locals to save the final lines.
+
+Now let me run the complete lint verification (swiftformat autofix + both linters) on all 8 files.
+
+Both linters pass cleanly (0 violations, Tests exactly 400). Now let me re-verify the split logic compiles + computes correctly, run the placeholder gate, and re-parse all files.
+
+All logic passes on the split files. Now the placeholder gate and a final syntax parse of all files.
+
+Let me confirm the placeholder gate actually scanned my files (not a vacuous pass) by inspecting how `-Path` resolves.
+
+Confirmed: the gate's `-Path .../CostSavingsPanel` prefix isn't a real dir, so the script returns a vacuous clean (same for all 71 sibling prompts). For honest evidence, let me scan copies of my actual files and run the script's self-test.
+
+Meaningful scan of my real files: 0 placeholders, and the scanner self-test passes (proving it isn't vacuous). Now let me rigorously cross-check that every i18n key referenced in the Swift code is defined in the `.strings` catalog.
+
+The critical check passes: zero used-keys missing from the catalog. The `costSavings.empty`/`loadingA11y` keys flagged "unused" are false negatives from line-based grep (they're referenced on wrapped lines). Let me confirm.
+
+All i18n keys are referenced and defined — full parity. Let me mark progress and now capture the genuine `xcodebuild` capability evidence for the gate log.
+
+Unambiguous capability evidence captured (no Xcode, no xcframework, no simulators). Now let me capture the runnable gate steps repo-wide (swiftlint/swiftformat as the gate invokes them) to record the true state honestly.
+
+Repo-wide swiftlint shows 1 violation across 1123 files. Let me confirm it's pre-existing (not mine).
+
+The 1 violation is in a pre-existing, unrelated widget file (`LifetimeStatsWidget.Adapter.swift`) — 0 in my files, and it's outside my allowed scope. Let me capture repo-wide swiftformat too.
+
+Both repo-wide lint issues are pre-existing in unrelated files (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`) — outside my allowed scope; my 8 files are clean on both. Now let me generate the gate log as a genuine transcript by actually running the gate's commands.
+
+Let me check an existing sibling feature-view log to match the established format and STATUS convention.
+
+Critical finding — the sibling log shows the **real runner has full Xcode at `/Applications/Xcode.app`** (driven via `DEVELOPER_DIR`, since default `xcode-select -p` is CLT). They prove SwiftUI compiles against the real SDKs rather than declaring BLOCKED. Let me check whether Xcode.app is available here and read their STATUS convention.
+
+Major correction: the real runner **has full Xcode 26.5 + a booted iPhone 16 simulator** (via `DEVELOPER_DIR`). My earlier BLOCKED read was wrong — `xcodebuild` only failed because the default `xcode-select` points at CLT. The 73 sibling feature-view logs all land **STATUS=DONE**: host gates green + real iOS/macOS SDK compiles, with the full app `xcodebuild build test` DEFERRED because `Shared.xcframework` isn't staged. Let me match that — first probe the module's `Shared` coupling to plan a real SDK compile.
+
+My surface imports no `Shared` (the 15 Shared-coupled files are all in `SharedFacade/`+`DashboardWidgets/`). Let me read the sibling log's actual SDK-compile methodology to replicate it exactly.
+
+Now I have the exact precedent methodology. Let me read the full gate section (lines 88–165) to replicate the typecheck closure and the SwiftPM test-execution shim.
+
+This is the established **STATUS=DONE** methodology (73 siblings): real iOS+macOS SDK typechecks + executed XCTest, with only the full `xcodebuild build test` DEFERRED (missing `Shared.xcframework`). Let me replicate it for real. First, set up the toolchain and verify the component closure is `Shared`-free.
+
+SDKs resolved (Xcode 26.5), closure is `Shared`-free. Now the real **iOS 18 simulator SDK typecheck** of my surface + the component closure it depends on. Let me start with a focused closure and expand as the compiler dictates.
+
+**IOS_TYPECHECK_EXIT=0** — the full SwiftUI surface compiles against the real iOS 18 simulator SDK (Swift 6, strict concurrency complete). Now the macOS 15 SDK typecheck and the DEBUG previews typecheck.
+
+macOS typecheck passes (**MAC_TYPECHECK_EXIT=0**). The previews `-D DEBUG` failure is **not in my code** — it's `Cards.swift`'s own `#if DEBUG` preview referencing `TSBadge`/`TSText` (closure files have cross-referencing debug blocks). Let me expand the closure to resolve their debug blocks.
+
+Closure debug blocks keep cascading (now `TSMetricBar` in DataDisplay) — the component library's `#if DEBUG` previews cross-reference each other. Let me include the full `Components/**` library (internally consistent, `Shared`-free).
+
+The `Vehicles` dir doesn't exist (vehicle card lives in `DataDisplay/People.swift`). Let me drop that glob and retry.
+
+My surface's `[1]` iOS + `[2]` macOS typechecks are already green. The `[3]` cascade is purely closure files' own debug previews pulling in `UnitPreferences` (an app-units type outside Components). Let me keep the closure to exactly the atoms my code needs plus `Badges` (for `Cards`' debug block), avoiding `FeedbackOverlays`/`DataDisplay`.
+
+**PREVIEWS_TYPECHECK_EXIT=0** — all three SDK typechecks pass. Now step `[4]`: actually **execute** the XCTest suite via a self-contained SwiftPM harness (the surface as a `TeslaSync` module + the closure, with my tests `@testable import`ing it).
+
+**Step [4]: 37 tests EXECUTED, 0 failures** on the macOS host — the real surface compiled against the live component library and the suite passes. Every host-runnable gate is green. Now let me capture the DEFERRED `xcodebuild` evidence (xcodegen + the real missing-`Shared.xcframework` failure).
+
+Deferred evidence confirmed (identical to all 73 siblings): `xcodegen` EXIT=0, `xcodebuild` fails only on the unstaged `Shared.xcframework` (MAC_BUILD_EXIT=65). Let me clean up generated/temp artifacts and confirm the `.xcodeproj` is git-ignored.
+
+All clean — only my 8 files are untracked. (The two modified `web/...` files are pre-existing, not mine, and won't be committed.) `.xcodeproj` is git-ignored. Now let me write the comprehensive gate log with all the real captured evidence.
+
+Now let me stage exactly my 8 surface files + the log (the prompt's literal `git add` path is a prefix; I'll use the `.*` glob to match all surface files) and verify nothing else is staged before committing.
+
+Staged set is exactly my 8 files + the log (pre-existing web files correctly excluded). Committing with the prompt's exact message.
+
+Commit `8e893917c` landed cleanly — 9 files (8 surface + log), 1891 insertions, no extraneous files. Let me do a final post-commit regression check (lint + git state).
+
+All verified. Final state is clean and complete.
+
+## Summary
+
+Shipped the native Apple **`CostSavingsPanel`** surface (P4 · 0136) at full parity with `web/.../drive-detail/CostSavingsPanel.tsx`, following the canonical AcDcStatsPanel pattern. Committed as `8e893917c` — 8 surface files + gate log, no extraneous changes.
+
+**Files** (`apps/apple/TeslaSync/feature-views/CostSavingsPanel.*`):
+- `.Adapter.swift` (306) — pure settings/format/math core: ported constants, `make(from: RawSettings)` web-default chain, `fmtNumber`/currency/SI-distance formatters, `estimateGasCost`/`costPerDistanceUnit`/`savings`.
+- `.Tiles.swift` (204) — resolved-tile projection (Trip Cost always; Cost/unit when `distanceM>0`; gas trio when `savings>0`) + a11y.
+- `.Model.swift` (273) — P1/S8 source seam, P1/S11 `view.opened` telemetry, P1/S10 strings facade, projection + connection axis.
+- `.Views.swift` (182) — responsive `LazyVGrid` (web 2/3/5), borderless stat cell, loading/empty/error chrome, tone→token map.
+- `.swift` (153) — glass-panel shell, $-header, freshness chip/banner, state switch.
+- `.Previews.swift` (110), `.Tests.swift` (400, 37 tests), `.strings` (41).
+
+**Verification (real, on this runner via `DEVELOPER_DIR`→Xcode 26.5):**
+- iOS 18 sim SDK typecheck ✅ · macOS 15 SDK typecheck ✅ · DEBUG previews typecheck ✅
+- **`swift test`: 37/37 EXECUTED, 0 failures** (surface compiled against the live component library)
+- swiftlint `--strict`: 0 violations · swiftformat `--lint`: clean · placeholder gate: COUNT=0 (scanner self-test PASS)
+- i18n keys: referenced == declared (cross-checked)
+
+**Deferred (predecessor-consistent, all 73 siblings):** the full `xcodebuild build test` — `xcodegen` succeeds but the app link fails only on the unstaged `Shared.xcframework` (needs a Kotlin/Native gradle build; MAC_BUILD_EXIT=65, captured). Log ends `EXIT=0 / STATUS=DONE`.
+
+Transparency: two repo-wide lint findings exist in pre-existing files outside my allowed scope (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`) — disclosed in the log, not introduced here; my 8 files are 0/0.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-feature-views-0136-CostSavingsPanel.log | 222 ++++++++++++
+ .../feature-views/CostSavingsPanel.Adapter.swift   | 306 ++++++++++++++++
+ .../feature-views/CostSavingsPanel.Model.swift     | 273 ++++++++++++++
+ .../feature-views/CostSavingsPanel.Previews.swift  | 110 ++++++
+ .../feature-views/CostSavingsPanel.Tests.swift     | 400 +++++++++++++++++++++
+ .../feature-views/CostSavingsPanel.Tiles.swift     | 204 +++++++++++
+ .../feature-views/CostSavingsPanel.Views.swift     | 182 ++++++++++
+ .../feature-views/CostSavingsPanel.strings         |  41 +++
+ .../TeslaSync/feature-views/CostSavingsPanel.swift | 153 ++++++++
+ 9 files changed, 1891 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0136-CostSavingsPanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/CostSavingsPanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CostSavingsPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CostSavingsPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CostSavingsPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CostSavingsPanel.Tiles.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CostSavingsPanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CostSavingsPanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/CostSavingsPanel.swift

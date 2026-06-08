@@ -1,0 +1,82 @@
+I'll start by exploring the environment and the web source that serves as the specification for this native Apple surface.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed, and `simctl` (iOS Simulator) is unavailable. `swift`, `swiftlint`, `swiftformat` ARE available. Let me read the web source spec and explore the existing Apple app structure before deciding how far I can get.
+
+Now let me explore the existing Apple app structure to find sibling surfaces, state-holders, and the i18n/token facades I must reuse.
+
+No `shared-surfaces` dir yet and no prior shared-surface logs — this is the first. The `feature-views/` dir (1436 files) reveals the multi-file convention. Let me locate the native equivalents of the dependencies I must bind to: `AIFeatureCard`, `withAiFeature`, `useAiStream`, plus the i18n/token/diagnostics facades.
+
+Native `AIFeatureCard`/`withAiFeature`/`useAiStream`/`AiOutputPanel` equivalents don't appear to exist yet. Before concluding, let me verify thoroughly — there's a `ToolCardTests.swift` that might be the native AIFeatureCard equivalent, and I must not assume.
+
+The native AI-streaming infrastructure this surface composes (`useAiStream`/`AIFeatureCard`/`AiOutputPanel`/`withAiFeature`) is not found. Let me confirm the dependency gap against the SharedFacade (P1/S8 state holders) and learn the exact native conventions from the closest existing AI surfaces before I conclude.
+
+I now have a clear, evidence-backed picture. Let me gather the full capability evidence and study the exact native file conventions (header style, strings, tests, previews) from the closest existing AI surface before writing anything.
+
+Capability is conclusively unavailable: `xcodebuild` requires full Xcode (only CommandLineTools present) and `simctl` is missing — the gate's iOS+macOS `build test` steps cannot run. Additionally, the predecessor native AI-streaming surfaces (`AIFeatureCard`, `AiOutputPanel`, `useAiStream`, `withAiFeature`) don't exist yet. `swift`, `swiftlint`, `swiftformat`, `pwsh` ARE available.
+
+Let me create a plan and study the test convention before authoring the verifiable parity core.
+
+Native UI primitives (`Buttons`, `Fields`, `Inputs`) exist, but the AI-streaming scaffolding (`AIFeatureCard`/`AiOutputPanel`/`useAiStream`) is confirmed absent. Let me check the lint/format configs (critical for `swiftlint --strict`) before authoring, then create the verifiable parity core.
+
+Configs captured. Key constraints: `swiftlint --strict` (line ≤120, `identifier_name` min 2 — `w`/`h` NOT excluded, so I'll use `width`/`height`), swiftformat (`--self remove`, `--importgrouping testable-bottom`, wrap-before-first). Note: `shared-surfaces/` isn't yet in the swiftlint `included` list or Xcode project — that's integration wiring outside my allowed files (I'll document it). Now creating the verifiable parity core.
+
+Now let me verify the core actually compiles and behaves correctly via a standalone `swift` harness (no Xcode needed), then run swiftformat/swiftlint on the new files.
+
+Excellent — the parity core compiles with `swiftc` and **all 27 logic assertions pass**, including the JS boolean-is-not-a-number edge case. Now let me run swiftformat and swiftlint (strict) on the new files using the app's own configs.
+
+swiftformat passes (4/4). swiftlint reported 1 violation across 1909 files — I need to find whether it's in my files. Let me isolate it.
+
+All 4 of my files are **clean** under `swiftlint --strict`. The single repo-wide violation is pre-existing in `LifetimeStatsWidget.Adapter.swift` (not my code, not in my allowed files). Let me run the placeholder gate check (pwsh is available) on my surface.
+
+Placeholder check passes (0 found). Let me quickly confirm the script actually scanned my files (not zero files) so the evidence is honest.
+
+The directory scan flagged 2 lines in `Adapter.swift` — likely my i18n key name `promptPlaceholder` (from the web key). Let me inspect the matcher and the exact lines to resolve this honestly without breaking i18n parity.
+
+The matcher is a case-insensitive substring scan, and the script provides a documented `// parity:allow <reason>` opt-out for exactly this case: my `promptPlaceholder` is a legitimate web i18n key (faithful parity), not a stub. The `.strings` file isn't scanned. I'll annotate the two lines with the sanctioned marker (config has `ignores_comments: true`, so line-length is unaffected).
+
+Now re-run all verifications: swiftformat, swiftlint strict, the placeholder directory scan, and recompile the harness.
+
+Close — swiftformat likely wrapped my trailing comment off the constant line, separating the marker. Let me inspect.
+
+swiftformat wrapped the over-120 line, separating the marker from the identifier. I'll shorten the marker so value+marker fit on one line (≤120, so swiftformat won't re-wrap).
+
+Now re-verify everything is stable and clean, and recompile the harness:
+
+All clean: swiftformat stable (0/4), swiftlint `--strict` clean on all 4 files, placeholder scan COUNT=0/EXIT=0. Let me recompile the harness one final time to confirm logic integrity after edits.
+
+Everything I can run passes. Now I'll generate the authentic gate log capturing the real capability probe, the runnable gate steps, the predecessor gap, and the verified core — ending with `EXIT`/`STATUS` per the covenant.
+
+The grep returned 1 — that's my own Adapter's header comment referencing the predecessors. Let me correct that line to exclude my own directory for an honest count.
+
+Now append Section E (authored artifact + live harness verification + the intended view-binding plan) and the final `EXIT`/`STATUS`.
+
+The log is complete and authentic — ends with `EXIT=1` / `STATUS=BLOCKED`, with the harness showing 16/16 PASS. Per covenant #8 (no commit on red) the gate's commit step is gated to EXIT=0, so I will not commit. Let me verify the working tree only contains my allowed files and no stray changes.
+
+I'll stop the slow full `git status` and run targeted, scoped checks instead.
+
+`git diff` shows `AIUsageCard.*` feature-view files as modified — but I never touched those. Note the case (`AIUsageCard` vs the `AiUsageCard` I read) on a case-insensitive macOS FS. Let me inspect whether these are real content changes or a pre-existing dirty state in this slot.
+
+This is a **pre-existing case-collision** in the slot checkout, unrelated to my work: the repo tracks two case-only-distinct files — `AIUsageCard.*` (surface 0203) and `AiUsageCard.*` (surface 0237, introduced by the HEAD merge `c9c6fdb9f`). On the case-insensitive macOS FS only one can exist on disk, so git reports the other as "modified." I never touched feature-views (swiftformat was scoped to `shared-surfaces`), and I haven't staged anything. I'll disclose this in the log (before the final EXIT/STATUS) and leave it untouched.
+
+Done. The outcome is **STATUS=BLOCKED** — the sanctioned result given this runner's capabilities, with maximal honest, verified progress delivered.
+
+## Summary
+
+**STATUS=BLOCKED** (per the prompt's own clause: *"If unavailable on the runner → STATUS=BLOCKED with API evidence"*). Two independent, hard blockers — both documented with live evidence in `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0031-AINLDashboardComposer.log`:
+
+1. **Apple build/test toolchain absent.** Only Command Line Tools are installed (no Xcode.app); `xcodebuild` → *"requires Xcode"* and `simctl` is missing. The gate's two primary steps (`IOS_EXIT=1`, `MAC_EXIT=1`) cannot run, so EXIT can never reach 0.
+2. **Predecessor native surfaces absent.** The web spec composes `AIFeatureCard`, `AiOutputPanel`, `useAiStream`, `withAiFeature` — none exist natively (this is the first `AINL*` surface; no AI SSE state-holder exists). Re-creating them in this one surface would violate covenant #7/#4 and the prompt's "Out of Scope".
+
+**What I delivered (verifiable, not stubs)** under the allowed path `apps/apple/TeslaSync/shared-surfaces/`:
+- `Model` / `Adapter` / `Telemetry` / `Tests` `.swift` + `.strings` — the surface's dependency-free **parity core** ported 1:1 from web lines 29–147: the `parseDashboardLayoutDraft` decoder (every guard branch, incl. the JS *boolean-isn't-a-number* edge case), the `canDraft`/`canApply` state machine, the `{prompt: trimmed}` body, the `tool_result` reducer, the 8 i18n keys, and the `view.opened` slug.
+
+**Verification actually run (no fabrication):**
+- `swiftc` compile + assertion harness: **16/16 and 27/27 PASS**.
+- `swiftlint --strict`: **clean** on all 4 files (the one repo-wide violation is pre-existing in `LifetimeStatsWidget.Adapter.swift`).
+- `swiftformat --lint`: **0/4 require formatting**.
+- `check-placeholders.ps1`: **COUNT=0, EXIT=0**.
+
+**Covenant compliance:** no commit (gate commit is gated to EXIT=0), nothing staged, no files touched outside the allowed surface + log. I also disclosed a pre-existing `AIUsageCard`/`AiUsageCard` case-collision in the slot checkout that is unrelated to this work.
+
+To unblock: install full Xcode + an iOS 18 simulator, and land the predecessor shared surfaces (`AIFeatureCard` P-0018, `AiOutputPanel` P-0036, the `useAiStream` S8 state-holder) — then the `AINLDashboardComposer.swift` view binds exactly as sketched in the log.
+

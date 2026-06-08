@@ -1,0 +1,189 @@
+=== P4 Shared surface 0170 LayoutBreadcrumbs (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.x (Darwin arm64, Apple Silicon — Mac Studio), shared host (other slots'
+                       xcodebuild processes observed running concurrently; only this task's own processes were
+                       ever signalled).
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2 · Java 17.0.19
+  Destinations       : iOS Simulator "iPhone 16" (present + Booted) · iOS SDK iphonesimulator26.5 ·
+                       macOS SDK macosx26.5 present.
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 13m12s; release XCFramework
+                       staged to apps/apple/Frameworks/Shared.xcframework, 149 MB).
+  Capability         : SwiftUI + iOS 18 / macOS 15 toolchain + simulators present → NOT capability-BLOCKED.
+                       (Swift Charts + MapKit are not used by this surface — see WEB SOURCE.)
+
+WEB SOURCE (the specification)
+  web/src/components/layout/LayoutBreadcrumbs.tsx — a thin wrapper that composes two SYNCHRONOUS derivations:
+    • useBreadcrumbOverrides()  (components/layout/BreadcrumbOverridesContext.tsx) — the per-route-pattern label
+                                 override map a page registers once its entity loads (e.g. "Drive #4421" →
+                                 "Trip to office").
+    • useBreadcrumbs(overrides) (hooks/useBreadcrumbs.ts) — matches location.pathname against the registered
+                                 route patterns (lib/routeMeta.ts = ROUTE_META derived from routeRegistry.ts +
+                                 PARENT_OVERRIDES) and walks `meta.parent` upward, unshifting each crumb so the
+                                 trail reads [topmost ancestor … matched leaf]. Label precedence is
+                                 override > t(i18nKey, defaultLabel); `{{param}}` is filled in the label and
+                                 `:param` in the href; the matched (current) crumb gets NO href; the walk is
+                                 cycle-guarded; an unmatched path yields [].
+  It renders <Breadcrumbs items=… /> (components/layout/Breadcrumbs.tsx), which:
+    • self-suppresses when items.length <= 1 (top-level pages render an empty slot — the surrounding layout row
+      keeps the "Ctrl+K to jump" hint);
+    • otherwise renders nav[aria-label=t('a11y.breadcrumb','Breadcrumb')] → a leading Home icon link to '/'
+      (aria-label t('a11y.breadcrumbHome','Dashboard')) → chevron-separated crumbs; ancestors are PrefetchLinks
+      (text-muted hover:text-secondary), the leaf is plain text (text-secondary font-medium); middle crumbs
+      collapse to an ellipsis on a narrow width (hidden sm:inline + sm:hidden …); the row scrolls horizontally
+      (overflow-x-auto scrollbar-none).
+  Data sources (prompt): useBreadcrumbOverrides, useBreadcrumbs. Charts/maps used: none. i18n keys extracted:
+  none literal in LayoutBreadcrumbs.tsx itself; the rendered Breadcrumbs resolves a11y.breadcrumb +
+  a11y.breadcrumbHome and the route labels (routes.*). There are NO async / loading / error / stale / offline
+  branches in the web source — the two hooks are a useMemo + a React context read; the surface's only real
+  branches are the matched-route parent walk and the <=1 self-suppression. The P4 leaf contract
+  (loading / error + a live/stale/offline freshness axis) is layered on top, modelled honestly as the
+  navigation host's lifecycle + the freshness of the asynchronously-enriched override labels.
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/shared-surfaces/LayoutBreadcrumbs.*, the only allowed files + this log)
+  LayoutBreadcrumbs.Adapter.swift  (313 L) — PURE, dependency-free port of routeMeta.ts + useBreadcrumbs:
+                                             BreadcrumbCrumb / BreadcrumbLocation / BreadcrumbRouteMeta, the
+                                             BreadcrumbRouteGraph (ROUTE_META + all 12 web PARENT_OVERRIDES,
+                                             labels carried verbatim from routeRegistry.ts) with case-insensitive
+                                             param matching + specificity ordering, the BreadcrumbsProjection
+                                             chain-walk (override>i18n>default, {{param}}/:param substitution,
+                                             no-href leaf, cycle-guard, empty-on-unmatched, collapse rule), and
+                                             BreadcrumbsAccessibility label builders.
+  LayoutBreadcrumbs.Model.swift    (263 L) — P1/S8 state-holder seam (BreadcrumbsModel + BreadcrumbsSource +
+                                             InMemoryBreadcrumbsSource with a navigate seam), P1/S11 telemetry
+                                             seam (BreadcrumbsTelemetry + OSLog default), P1/S10 facade
+                                             (LayoutBreadcrumbsStrings), BreadcrumbsInput, the BreadcrumbsConnection
+                                             (live/stale/offline) axis, the BreadcrumbsPhase + pure
+                                             BreadcrumbsStateResolver (loading/hidden/error/breadcrumbs) +
+                                             stale one-shot auto-refresh.
+  LayoutBreadcrumbs.swift          ( 67 L) — the surface view: onAppear view.opened + the phase switch
+                                             (loading row / hidden empty slot / inline error / trail).
+  LayoutBreadcrumbs.Views.swift    (248 L) — the horizontally-scrolling trail, the Home link, the per-crumb
+                                             link/current split, the chevron separators, the compact ellipsis
+                                             collapse, the hover link, the freshness chip, and the loading /
+                                             error chrome. Tokens only (no shared atomic components — per spec).
+  LayoutBreadcrumbs.Previews.swift ( 72 L) — trail / override-enriched / hidden / loading / error / stale /
+                                             offline previews (DEBUG).
+  LayoutBreadcrumbs.Tests.swift    (367 L) — 34 XCTest cases (graph, projection, state resolver, model wiring +
+                                             telemetry + navigation + stale auto-refresh, accessibility).
+  LayoutBreadcrumbs.strings        ( 52 L) — per-surface i18n table (a11y.* + the 19 routes.* labels + native
+                                             chrome keys).
+  NOT touched (parallel-unsafe / integration scope): the shared Localizable.xcstrings is NOT edited (strings
+  ship per-surface). project.yml + .swiftlint.yml do NOT yet list "TeslaSync/shared-surfaces" (this is the FIRST
+  shared surface); they were TEMP-wired only to capture the xcodegen-enumeration + in-target xcodebuild evidence
+  below and then REVERTED (git checkout) — the committed change stays within the allowed files. Wiring the new
+  directory is P4-core / P99 acceptance-gate scope, the same way "TeslaSync/feature-views" is already wired.
+  Pre-existing dirty files in this snapshot (apps/apple/TeslaSync/feature-views/AiUsageCard.* — a different
+  surface, 0237) are NOT touched and NOT committed.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  nav.flex.overflow-x-auto    → ScrollView(.horizontal, showsIndicators:false) + HStack(spacing: TSSpacing.xs)
+  <Home h-3.5 w-3.5/>         → SF Symbol "house" in a hover link (text-muted → text-secondary)
+  <ChevronRight/>            → SF Symbol "chevron.right" (decorative → a11y-hidden)
+  PrefetchLink (ancestor)    → BreadcrumbHoverLink: Button(.plain) muted→secondary on hover, trait .isLink
+  current text-secondary     → plain Text, Font.TS.body.weight(.medium), Color.TS.textSecondary, trait .isHeader
+  hidden sm:inline + sm:hidden … → horizontalSizeClass==.compact (iOS) collapses middle crumbs to "…"
+  text-[var(--text-muted)]   → Color.TS.textMuted ; --text-secondary → Color.TS.textSecondary
+  truncate max-w-[200px]     → lineLimit(1) + truncationMode(.tail) + frame(maxWidth: 200)
+  ROUTE_META + PARENT_OVERRIDES → BreadcrumbRouteGraph.table (all 12 overrides + parents; routeRegistry labels)
+  useBreadcrumbs chain-walk  → BreadcrumbsProjection.trail (override>i18n>default, {{param}}/:param, no-href leaf,
+                               cycle-guard, [] on unmatched) — unit-tested
+  items.length <= 1 ⇒ null   → BreadcrumbsPhase.hidden ⇒ EmptyView (intentional empty slot)
+  i18n      : every string via the P1/S10 facade (LayoutBreadcrumbsStrings, table "LayoutBreadcrumbs"); zero
+              English literals in Swift. a11y.breadcrumb/a11y.breadcrumbHome carried from web en.json; the 19
+              route labels carried verbatim from routeRegistry.ts.
+  a11y      : the trail is a contained landmark whose label is the localized "Breadcrumb" role + the full trail
+              (so VoiceOver hears every crumb even when middle items are visually collapsed); links carry .isLink,
+              the current crumb carries .isHeader + a "current page" hint; chevrons/ellipsis are decorative;
+              Dynamic Type via the type tokens; hover/press only (no motion to gate).
+  telemetry : view.opened surface="LayoutBreadcrumbs" via BreadcrumbsModel.start (P1/S11), default OSLog sink.
+  states    : loading (nav unresolved) / hidden (web self-suppress) / error (resolution failure, retry) /
+              breadcrumbs (the trail), plus the P4 leaf freshness axis live / stale (tappable chip + one-shot
+              auto-refresh) / offline (informative chip).
+
+GATES
+  [GREEN]    swiftformat --lint apps/apple/TeslaSync/shared-surfaces       : 0/6 files require formatting   (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict  (the 6 shipped LayoutBreadcrumbs sources) : 0 violations, 0 serious        (LINT_EXIT=0)
+             swiftlint --strict  (whole app, FYI)                          : 1 PRE-EXISTING serious — function_body_length
+                                                                             in TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+                                                                             (NOT a LayoutBreadcrumbs file; not introduced here).
+  [GREEN]    check-placeholders.ps1 -Path …/shared-surfaces/LayoutBreadcrumbs (literal gate path) : PLACEHOLDER_COUNT=0 (EXIT=0)
+             check-placeholders.ps1 -Path …/shared-surfaces -Language swift (real dir scan)        : PLACEHOLDER_COUNT=0 (EXIT=0)
+  [GREEN]    LayoutBreadcrumbs build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode =
+             strict-concurrency complete, same as the app), compiling the EXACT shipped LayoutBreadcrumbs.*
+             production sources against the REAL design tokens (apps/design/generated/apple/Tokens.swift):
+                 Build complete!  ·  Executed 34 tests, with 0 failures                            (SWIFT_TEST_EXIT=0)
+  [GREEN]    swiftc -typecheck — REAL iOS 18 SDK (iphonesimulator26.5, -target arm64-apple-ios18.0-simulator,
+             -swift-version 6) over the 5 production sources + Tokens.swift                         (IOS_TYPECHECK_EXIT=0)
+  [GREEN]    swiftc -typecheck — REAL macOS 15 SDK (macosx26.5, -target arm64-apple-macos15.0, -swift-version 6) (MAC_TYPECHECK_EXIT=0)
+  [GREEN]    xcodegen generate (TeslaSync/shared-surfaces TEMP-wired into both app targets, then reverted) :
+             project created; all 7 LayoutBreadcrumbs.* files enumerated into the iOS + macOS app targets.
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO LayoutBreadcrumbs surface-compile errors; all blockers pre-exist this change):
+    iOS   : the only error: lines are `feature-views/AIRestorePanel.Tests.swift:18: error: unable to resolve
+            module dependency: 'XCTest'`. The co-located per-surface *.Tests.swift files (mandated by the
+            allowed-files list) are compiled INTO the app target, because project.yml routes
+            "TeslaSync/feature-views" (and the temp-wired "TeslaSync/shared-surfaces") into the app target while
+            the XCTest test target sources are "Tests/Unit" only. This is the exact "co-located *.Tests.swift
+            importing XCTest into the app target" condition recorded for ToolCard/0010, AlertMessageEditor/0180,
+            FSMTimelineChart/0231 — PRE-EXISTING and baseline-RED on the already-committed AIRestorePanel.Tests.swift
+            (surface ~0026, alphabetically first, in HEAD). The Swift module compile fails on that first XCTest
+            import; grep of the build log for a LayoutBreadcrumbs PRODUCTION ("error:") hit = 0.
+    macOS : the only error: lines are `"TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have entitlements that
+            require signing with a development certificate` — the macOS dev-signing condition this runner does
+            not provision. Zero LayoutBreadcrumbs errors.
+    Both blockers are owned by the P4/P99 Apple acceptance gate (test-target membership + signing/archive, and
+    the first-time wiring of the new TeslaSync/shared-surfaces source path) on a macos-latest CI runner per
+    apps/macos-pending-verifications.md — NOT by a single shared-surface prompt (task rule: do not fix
+    pre-existing unrelated breakage; do not self-register parallel-unsafe shared infra).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65/MAC_EXIT=65) and
+                           explicitly DEFERRED with raw root-causes — never reported as passing.
+  2  No scope narrowing  : every web region + branch reproduced — the Home link, the chevron-separated trail, the
+                           ancestor-link vs current-text split, the compact ellipsis collapse, the horizontal
+                           scroll, the override>i18n>default label precedence, {{param}}/:param substitution, the
+                           no-href leaf, the unmatched-path empty trail, and the <=1 self-suppression; all 12
+                           PARENT_OVERRIDES chains ported.
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; both iOS + macOS failures
+                           confirmed and root-caused (test-target XCTest + macOS signing), not assumed.
+  4  No stubs as final   : complete production surface + 34 real tests; placeholder scanner = 0; no forbidden
+                           markers in any shipped file.
+  5  No parity shortcut  : route graph/labels, link tints, hover, typography, collapse, a11y, telemetry, and the
+                           full state set mapped to platform tokens + verified against the real design-system in
+                           a Swift 6 build+test AND real iOS-18 + macOS-15 typechecks.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry consumed;
+                           did NOT edit the shared Localizable.xcstrings; did NOT commit project.yml/.swiftlint.yml
+                           (temp-wired for evidence only, then reverted).
+  8  No commit on red    : the COMMITTED artifact (LayoutBreadcrumbs.* + this log) is GREEN on every host gate AND
+                           on a real isolated Swift 6 build+test + both-platform typechecks; the deferred full-app
+                           gate is RED only on pre-existing, unrelated conditions this commit neither introduces
+                           nor touches.
+  9  No silent drift     : changes confined to apps/apple/TeslaSync/shared-surfaces/LayoutBreadcrumbs.* + this log.
+                           (Pre-existing unrelated dirty files feature-views/AiUsageCard.* are NOT touched and
+                           NOT committed.)
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic LayoutBreadcrumbs shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 34 tests pass under the app's own Swift 6 strict-concurrency rules against the
+  real design-system, it type-checks against the real iOS 18 + macOS 15 SDKs, swiftlint/swiftformat/placeholder
+  are all green, and xcodegen enumerates all 7 files into both app targets. The full-app iOS-Simulator + macOS
+  xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked by the pre-existing
+  co-located-XCTest app-target condition (baseline-RED on the already-committed AIRestorePanel.Tests.swift) and
+  by macOS development-signing, plus the first-time wiring of the new TeslaSync/shared-surfaces source path —
+  all owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate"
+  disposition used by every P4 surface to date (0010 ToolCard, 0096 AcDcStatsPanel, 0180 AlertMessageEditor,
+  0231 FSMTimelineChart).
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,171 @@
+=== P4 Dashboard widget 0103 TripSummaryWidget (Apple) ===
+Surface: features/dashboard/widgets/TripSummaryWidget.tsx  →  apps/apple/TeslaSync/dashboard-widgets/TripSummaryWidget.*
+Registry: id=trip-summary  category=driving  default=2x4  min=1x2  max=4x40  (registry/driving.ts)
+Date: 2026-06-07
+
+------------------------------------------------------------------------------
+TOOLCHAIN / CAPABILITY EVIDENCE
+------------------------------------------------------------------------------
+Active developer dir at session start was Command Line Tools (xcodebuild absent):
+  $ xcode-select -p
+  /Library/Developer/CommandLineTools
+  $ xcodebuild -version
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+  directory '/Library/Developer/CommandLineTools' is a command line tools instance
+
+Full Xcode IS installed; selected per-process via DEVELOPER_DIR override (no sudo):
+  $ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -version
+  Xcode 26.5
+  Build version 17F42
+  iOS Simulator runtime: iOS 26.5 (23F77); device "iPhone 16" available.
+  swiftc: Apple Swift 6.3.2 ; swiftlint, swiftformat, xcodegen, pwsh, OpenJDK 17 present.
+
+KMP shared core (ADR-004) — app target links Frameworks/Shared.xcframework, which was
+absent (Frameworks/ held only .gitkeep). Built + staged it via the project's own script:
+  $ bash apps/apple/Scripts/build-shared-xcframework.sh
+  > Task :core:assembleSharedXCFramework
+  BUILD SUCCESSFUL in 7m 15s
+  ✓ Shared.xcframework staged → apps/apple/Frameworks/Shared.xcframework
+  $ xcodegen generate → Created TeslaSync.xcodeproj (all 8 TripSummary files registered)
+
+------------------------------------------------------------------------------
+GATE STEPS (exact commands from the prompt, run with DEVELOPER_DIR=Xcode 26.5)
+------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    IOS_EXIT=65   (FAIL — pre-existing, NOT TripSummary)
+    First blocking error (dependency-scan phase, aborts the whole module compile):
+      TeslaSync/dashboard-widgets/DigitalTwinWidget.Tests.swift:17:8: error:
+        unable to resolve module dependency: 'XCTest'
+    TripSummaryWidget.* compile errors in this run: 0
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    MAC_EXIT=65   (FAIL — identical pre-existing cause)
+    Blocking error: DigitalTwinWidget.Tests.swift:17:8: error: unable to resolve module dependency: 'XCTest'
+    TripSummaryWidget.* compile errors in this run: 0
+
+[3] swiftlint --strict
+    LINT_EXIT=2   (FAIL — 1 serious violation in 389 files, pre-existing, NOT TripSummary)
+    The one violation:
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error:
+        Function Body Length Violation: body spans 78 lines (function_body_length)
+    TripSummaryWidget.* violations: 0
+
+[4] swiftformat --lint apps/apple
+    FORMAT_EXIT=0  (PASS — 0/393 files require formatting; TripSummaryWidget.* included & clean)
+
+[5] check-placeholders.ps1 (apps/apple/TeslaSync/dashboard-widgets, swift)
+    PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0  (PASS)
+
+------------------------------------------------------------------------------
+ROOT-CAUSE ANALYSIS — every gate failure is PRE-EXISTING and OUT-OF-SCOPE
+------------------------------------------------------------------------------
+The repo is in the documented "parallel surface" WIP state. The whole-app
+`xcodebuild ... build test` target cannot link/compile yet for reasons that exist
+independently of this surface and live in files this prompt is NOT allowed to edit
+(Allowed files: TripSummaryWidget.*, the log file):
+
+  A. *.Tests.swift colocated in the app-target source path import XCTest, but XCTest
+     only links into XCTest bundles — so the app target fails dependency resolution
+     on the FIRST such file (DigitalTwinWidget.Tests.swift, alphabetically before
+     TripSummary). This is systemic: EVERY widget (incl. MileageStats, LocationFavorites,
+     and this one) colocates a *.Tests.swift per the house convention; project.yml routes
+     only Tests/Unit to the test bundle. Fixing it requires editing project.yml — out of scope.
+
+  B. Duplicate definitions of the shared grid primitives across sibling surfaces
+     (a redeclaration conflict once the module reaches type-check):
+       public struct DashboardWidgetSize:
+         Sources/DashboardWidgets/DrivetrainHealthWidgetModel.swift:10
+         Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift:13
+         dashboard-widgets/MQTTStatusWidget.Model.swift:226
+         dashboard-widgets/DigitalTwinWidget.Model.swift:222
+         dashboard-widgets/MotorHistoryWidget.Model.swift:208
+       public struct DashboardWidgetRegistration:
+         dashboard-widgets/MQTTStatusWidget.Model.swift:237
+         dashboard-widgets/DigitalTwinWidget.Model.swift:233
+         dashboard-widgets/MotorHistoryWidget.Model.swift:219
+     TripSummaryWidget correctly does NOT redefine these — it consumes them, exactly
+     like the clean reference surfaces MileageStatsWidget / LocationFavoritesWidget.
+     Deduping is integration-time work across other surfaces' files — out of scope.
+
+  C. swiftlint's one serious violation is in LifetimeStatsWidget.Adapter.swift (a sibling).
+
+None of A/B/C is attributable to TripSummaryWidget: across all 8 TripSummary files the
+real Xcode toolchain reports 0 compile errors, 0 lint violations, 0 format issues, 0 placeholders.
+
+------------------------------------------------------------------------------
+SURFACE-SCOPED VERIFICATION (in this prompt's allowed scope) — ALL GREEN
+------------------------------------------------------------------------------
+Compiled the surface with the real Apple swiftc 6.3.2 (Swift 6, -strict-concurrency=complete)
+against the REAL design tokens (apps/design/generated/apple/Tokens.swift) and REAL shared
+component (Sources/Components/UI/Badges.swift → TSTone). The 2 shared grid primitives + the
+TSSkeleton signature were supplied by a faithful, byte-equivalent shim (their canonical
+definitions live in sibling files; see B above):
+
+  • Production typecheck (Models, Builder, Model, Rows, view): swiftc -typecheck → EXIT=0
+  • Tests typecheck (in-module + minimal XCTest surface; CLT/Xcode XCTest not importable by
+    bare swiftc): swiftc -typecheck → EXIT=0  (adapter + model + registry + a11y tests)
+  • swiftlint --strict (7 TripSummary files): 0 violations, 0 serious
+  • swiftformat --lint (7 TripSummary files): 0 require formatting
+  • check-placeholders.ps1 (swift): PLACEHOLDER_COUNT=0, EXIT=0
+
+  BEHAVIORAL TEST RUN (gold-standard) — the surface's full file set (production + Previews +
+  Tests) was compiled AND its XCTest suite EXECUTED with the real Xcode 26.5 toolchain
+  (DEVELOPER_DIR override) via a throwaway SwiftPM package that isolates the surface from the
+  out-of-scope sibling blockers A/B/C above (same source files; the 2 shared primitives + the
+  TSSkeleton signature supplied by the byte-equivalent shim; real Tokens.swift + Badges.swift):
+    $ cd <tmp pkg> && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
+    Test Suite 'TripSummaryBuilderTests'        — Executed 14 tests, 0 failures
+    Test Suite 'TripSummaryModelTests'          — Executed  8 tests, 0 failures
+    Test Suite 'TripSummaryRegistryTests'       — Executed  3 tests, 0 failures
+    Test Suite 'TripSummaryAccessibilityTests'  — Executed  2 tests, 0 failures
+    Test Suite 'All tests' passed — Executed 27 tests, with 0 failures (0 unexpected)
+    SWIFT_TEST_EXIT=0
+  This proves the adapter math (distance/duration/date/name/slice parity with the web source),
+  the state-holder phase logic (loading/empty/error/content + telemetry + source wiring), the
+  registry metadata + size clamping, and the accessibility summary are not just type-correct but
+  behaviorally correct. The #Preview macros expanded cleanly under the Xcode toolchain too.
+
+Parity coverage vs features/dashboard/widgets/TripSummaryWidget.tsx:
+  • Data: useTrips/useUnits/useDateFormat/useTranslation → bound via TripSummarySource (P1/S8);
+    no HTTP in the view. SI total_distance_m converted at the display boundary (km/mi/ft).
+  • States: loading (skeleton), empty ("No trips recorded yet"), error (QueryError + retry),
+    stale + offline (cached + banner/chip), content — all rendered; compact (cols<=1) collapses
+    the recent rows to distance and the hero grid to 2 columns, matching the source.
+  • Composition: last-trip hero card (Last Trip badge + date, name, 4 StatCards: Distance,
+    Duration, Drives, Charge Stops) + recent-trips list (trips[0] hero; trips.slice(0,3).slice(1)).
+  • i18n: every web key resolves via the P1/S10 facade (TripSummaryWidget.strings); no English
+    literals in code. Telemetry: view.opened with slug "TripSummaryWidget" (P1/S11).
+  • Accessibility: VoiceOver labels on every interactive element + a testable summary;
+    Dynamic Type (TSTypeMetrics fonts) and Reduce Motion respected.
+
+------------------------------------------------------------------------------
+FILES DELIVERED (8)
+------------------------------------------------------------------------------
+  TripSummaryWidget.Models.swift     TripSummaryWidget.Builder.swift
+  TripSummaryWidget.Model.swift      TripSummaryWidget.Rows.swift
+  TripSummaryWidget.swift            TripSummaryWidget.Previews.swift
+  TripSummaryWidget.Tests.swift      TripSummaryWidget.strings
+
+------------------------------------------------------------------------------
+CONCLUSION
+------------------------------------------------------------------------------
+The TripSummaryWidget surface is complete, Apple-idiomatic, at parity with the web source,
+and passes every check within this prompt's allowed scope (compile, lint, format, placeholder,
+parity, a11y, i18n, telemetry). The prompt's whole-app `xcodebuild ... build test` gate is RED
+solely because of PRE-EXISTING, OUT-OF-SCOPE repo state (XCTest-in-app-target across all widgets;
+duplicate shared primitives across sibling surfaces; a sibling lint violation) that cannot be
+fixed from the allowed file set (TripSummaryWidget.* + this log). Per the prompt's capability
+clause, this is reported as BLOCKED with full evidence rather than claiming a green build.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=2
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SURFACE_TYPECHECK_EXIT=0  (production + tests, Swift 6 strict concurrency, real tokens)
+SURFACE_TESTS_EXIT=0      (27/27 XCTest cases executed + passed, real Xcode 26.5 toolchain)
+SURFACE_LINT_EXIT=0
+SURFACE_FORMAT_EXIT=0
+SURFACE_PLACEHOLDER_EXIT=0
+EXIT=1
+STATUS=BLOCKED

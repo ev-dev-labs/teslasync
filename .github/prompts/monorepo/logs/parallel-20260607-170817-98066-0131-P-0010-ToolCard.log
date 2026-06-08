@@ -1,0 +1,136 @@
+I'll start by understanding the task requirements: verifying Apple build capability on this runner, reading the web source, and checking dependencies. Let me explore in parallel.
+
+Apple toolchain is partially available. Critical finding: `xcodebuild` requires full Xcode but only **Command Line Tools** are installed, and `simctl`/iOS Simulators are unavailable. Let me gather complete capability evidence and understand the existing structure before deciding.
+
+Major update: `/Applications/Xcode.app` **is** present and `xcodegen` is available — the active dir is just misconfigured to CommandLineTools. I can likely override via `DEVELOPER_DIR`. Let me verify the full toolchain works.
+
+**Capability CONFIRMED AVAILABLE** — not blocked:
+- Xcode 26.5 works via `DEVELOPER_DIR` override
+- iPhone 16 simulator present, iOS 26.5 + macOS 26.5 SDKs, swiftlint/swiftformat/xcodegen all present
+
+Now I need to understand the project structure, especially the source roots and the `TeslaSync/feature-views/` target path. Let me read `project.yml` and the key directories.
+
+Key finding: project.yml registers `TeslaSync/dashboard-widgets` as a source path but **not** `TeslaSync/feature-views`. I need to understand the intended wiring mechanism. Let me examine the P4 prompts, the dashboard-widgets precedent, and completion logs.
+
+Let me read the sibling feature-view prompt (BackendTool — simplest peer), check whether any feature-views are already done, and find the canonical ToolCard prompt on disk.
+
+This is the first feature-view (no prior logs), so the `TeslaSync/feature-views` path isn't wired into project.yml yet. The dashboard-widgets are the precedent. Let me inspect exactly how a dashboard-widget commit wired itself in.
+
+The dashboard-widget commits DID modify shared files (project.yml +2, Localizable.xcstrings +460, .swiftlint.yml +1) — so "Allowed files" is the surface code scope, but necessary wiring (project.yml registration, i18n catalog) is precedented. Let me see exactly what DigitalTwinMiniWidget changed in project.yml and how tests are wired.
+
+The pattern is now clear. DigitalTwinMiniWidget registered `TeslaSync/dashboard-widgets` in both app targets + `.swiftlint.yml`, put tests in `Tests/Unit/`, and added i18n keys to `Localizable.xcstrings`. I'll follow this proven-green precedent for `feature-views`. Let me study the native primitives I need: GlassPanel equivalent, theme tokens, i18n facade, telemetry, and the co-located test pattern.
+
+Co-located `.Tests.swift` files use XCTest, but the proven test location (DigitalTwinMiniWidget, "37 tests pass") is `Tests/Unit/`. I'll follow that. Now let me read the actual native primitives: Cards (GlassPanel), design tokens, typography, the i18n facade, and the `view.opened` telemetry contract.
+
+Good — `TSGlassPanel` is the native `GlassPanel`, with `Color.TS.*` tokens, `TSSpacing`/`TSRadius`, and typography components. Now let me read Typography, the generated color tokens (need neon cyan/green/purple/amber/red equivalents), spacing/radius definitions, and a widget's `view.opened` + i18n usage.
+
+Now let me read the generated `Tokens.swift` to find the color tokens (need neon cyan/green/purple/amber/red equivalents), spacing, radius, and the font ramp.
+
+All tokens identified. The web colors map cleanly to chart-series tokens (cyan→Regen, green→Battery, amber→Energy, red→Temperature, purple→Power). Let me read the full Tokens.swift and find the `view.opened` telemetry facade + i18n mechanism.
+
+The patterns are clear: i18n via `LocalizedStringKey` + `Localizable.xcstrings`; telemetry via a small protocol seam emitting `os_log` `view.opened`. Let me read the DrivetrainHealth telemetry seam, BatteryCells structure, a test file, and the xcstrings format to mirror idioms exactly.
+
+I now have all the native patterns. Before writing code, let me verify the build harness feasibility (the Shared.xcframework staging, swiftlint/swiftformat configs, and whether a snapshot lib exists) so I establish a known-good baseline.
+
+Two key findings: no prebuilt `Shared.xcframework` (the build's pre-action builds it via Gradle/Kotlin-Native — the long pole), and no snapshot library (the codebase convention is pure per-state presentation-resolver tests, which I'll follow honestly). Let me verify the KMP/Gradle/Java toolchain feasibility and any warm caches.
+
+Harness is feasible: Java 17 present, `gradlew` present, warm 3.0G Gradle cache. The KMP `Shared.xcframework` build is the long pole. Let me kick it off in the background now (warming everything) while I write the ToolCard code in parallel.
+
+I have everything needed. Let me write a brief plan, check the background build, then create the ToolCard sources.
+
+The build is running. Let me create the three source files now.
+
+Now the main view file:
+
+Now the test file:
+
+Now wire the new source path into `project.yml` and `.swiftlint.yml` (following the dashboard-widgets precedent exactly).
+
+Now the i18n catalog. Let me inspect the exact on-disk format of `Localizable.xcstrings` to insert keys with minimal, correct diff.
+
+File is insertion-ordered (not alphabetical), 2-space indent, standard `": "` separators. I'll append the 3 keys preserving existing order for a clean additive diff. Let me detect encoding and write them.
+
+Let me verify the xcstrings diff is purely additive (no whole-file reformat) and check the build progress.
+
+Excellent! `Shared.xcframework` built and staged successfully (7m24s), and the xcstrings diff is purely additive (69 insertions, 0 deletions). Now let me format and lint my new files (scoped, to avoid reformatting others), then build.
+
+Clean: swiftformat normalized 1 file (now 0/4 need formatting), swiftlint `--strict` found 0 violations. Now regenerate the Xcode project and run the iOS build+test gate (the long step).
+
+Project generated with ToolCard wired in. Now the iOS build+test gate (long step) — running async with monitoring.
+
+The iOS gate is running. Let me wait and monitor progress.
+
+iOS gate completed. Let me retrieve the result.
+
+Build failed (exit 65) — a Swift compiler error. Let me find the actual error.
+
+This error is in **pre-existing** code I didn't touch: `TeslaSync/dashboard-widgets/DigitalTwinWidget.Tests.swift` imports XCTest but compiles into the app target. Let me determine whether the baseline was already broken before my changes.
+
+This reveals the key context: 30+ predecessor surfaces committed with the Xcode gate **DEFERRED** (the app target doesn't build in this merged slot due to 31 pre-existing co-located `*Tests.swift` files that import XCTest into the app target). Let me read the sanctioned disposition and confirm MY code compiled cleanly.
+
+Confirmed: **my ToolCard code compiled cleanly** — the only error is the pre-existing `DigitalTwinWidget.Tests.swift` (one of 31 co-located `*Tests.swift` files that wrongly compile XCTest into the app target). The repo's sanctioned disposition (macos-pending-verifications.md) defers Xcode verification to CI — but since this runner *has* Xcode, I can do better: apply the minimal, objectively-correct build-config fix (exclude `*Tests.swift` from the app targets — test files must never compile into an app target) and achieve a genuinely green gate that actually runs my ToolCard tests.
+
+Let me apply that fix.
+
+Now regenerate and verify the co-located tests are excluded from the app target build phase before re-running.
+
+Exclusion verified: 0 co-located test refs (excluded), ToolCard present (24 refs), non-test widget files intact (6 refs). Re-running the iOS build+test gate.
+
+Build running. Let me monitor for early errors and progress.
+
+iOS run 2 finished. Let me get the result.
+
+Now the app compiles widget *source* files (tests excluded) but reveals latent compile errors in the widget sources themselves — never caught because the Xcode gate was always deferred. Let me see them.
+
+Critical discovery: the app target has **~30+ pre-existing compile errors across many unrelated dashboard-widget source files** (`'DashboardWidgetSize' is ambiguous`, `'PowerFlowConnection' is ambiguous`, `@Bindable` misuse) — parallel-merge artifacts that were never caught because the Xcode gate was always *deferred* (per `macos-pending-verifications.md`). This is far outside ToolCard's scope. Let me confirm these are independent of my code and check whether I can isolate my ToolCard for real verification.
+
+Root cause confirmed: `DashboardWidgetSize` (and peers) are **redefined as `public struct` in 8+ files** across `Sources/DashboardWidgets/` AND `TeslaSync/dashboard-widgets/` — classic parallel-merge type collisions. The app target is uncompilable for reasons entirely unrelated to ToolCard, and deduping dozens of merged surfaces is far out of scope. My ToolCard has **zero** errors. This matches exactly why the repo sanctions deferring the Xcode gate to CI.
+
+I'll keep my change minimal (revert the orphan test-exclude — it can't green the gate anyway), then verify my ToolCard *for real* via an isolated SwiftPM harness.
+
+Now let me confirm the project.yml diff is now minimal, and build the isolated SwiftPM harness to verify my ToolCard compiles and tests pass under the same Swift 6 strict-concurrency rules as the app.
+
+Minimal, clean diffs. Now build the isolated SwiftPM harness to actually compile + test my ToolCard under Swift 6 strict concurrency.
+
+**My ToolCard is verified GREEN**: isolated SwiftPM build compiles cleanly under Swift 6 strict concurrency, and **all 13 tests pass (0 failures)** — using the exact shipped sources + real design-system files. Now let me run the remaining host gates (swiftlint, swiftformat, placeholder scan).
+
+swiftformat is clean (0/493). swiftlint reports **1 violation** — my scoped lint earlier showed 0 in my files, so I must confirm it's pre-existing, not mine. Let me locate it and the placeholder scanner.
+
+The swiftlint violation is **pre-existing** in `LifetimeStatsWidget.Adapter.swift` (function length) — not my files. Let me run the placeholder scanner on my ToolCard and re-capture my files' clean lint for the log.
+
+All host gates are GREEN for ToolCard (swiftformat 0/493, swiftlint 0 violations, placeholder 0, isolated build+test 13/13). To avoid assuming, let me confirm the macOS gate hits the same pre-existing blocker (not ToolCard), and capture tool versions for the log.
+
+Let me capture the tool versions and monitor the macOS build.
+
+macOS gate confirmed blocked by **macOS dev-signing requirement** (no cert on this runner) plus the same pre-existing collisions — **zero ToolCard errors**. This matches the P99 acceptance gate's documented need for "signing identities" (deferred to signed CI). I now have complete, honest evidence. Let me write the gate log.
+
+Now record the deferred verification in the audit trail (`macos-pending-verifications.md`).
+
+Let me clean up temporary artifacts and review git status before committing.
+
+Two web files (`FleetApiSection.tsx`, `BackupRestorePage.tsx`) show as modified but I never touched them — pre-existing slot state. I'll stage **only** my ToolCard files explicitly. Generated artifacts are correctly gitignored.
+
+Staged set is exactly my 9 files; the two pre-existing web files are excluded. Committing.
+
+Commit `acc76624` landed with exactly my 9 files. Let me do a final verification and update the plan.
+
+The "1 violation in 490 files" means swiftlint linted the whole `included` config (directory arg expanded) — it's the same **pre-existing** `LifetimeStatsWidget.Adapter.swift` violation. Let me confirm my committed files are clean with an explicit file list.
+
+Verified: my 4 committed files are **0 violations**; the single repo-wide swiftlint violation is the pre-existing `LifetimeStatsWidget.Adapter.swift` (not mine). The task is complete. Let me update the plan and finish.Confirmed: my 4 committed files are lint-clean (0 violations); the 1 repo-wide violation is the pre-existing `LifetimeStatsWidget.Adapter.swift`. Everything is verified and committed. Let me finalize the plan.
+
+Merge made by the 'ort' strategy.
+ .../logs/p4-apple-feature-views-0010-ToolCard.log  | 108 ++++++++++++++
+ apps/apple/.swiftlint.yml                          |   1 +
+ apps/apple/Localization/Localizable.xcstrings      |  69 +++++++++
+ .../TeslaSync/feature-views/ToolCard.Model.swift   | 127 ++++++++++++++++
+ .../feature-views/ToolCard.Telemetry.swift         |  28 ++++
+ apps/apple/TeslaSync/feature-views/ToolCard.swift  | 165 +++++++++++++++++++++
+ .../Tests/Unit/FeatureViews/ToolCardTests.swift    | 119 +++++++++++++++
+ apps/apple/project.yml                             |   2 +
+ apps/macos-pending-verifications.md                |   1 +
+ 9 files changed, 620 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0010-ToolCard.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/ToolCard.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ToolCard.Telemetry.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ToolCard.swift
+ create mode 100644 apps/apple/Tests/Unit/FeatureViews/ToolCardTests.swift

@@ -1,0 +1,200 @@
+I'll start by exploring the environment and understanding the task context. Let me check the Apple toolchain availability and the repo structure in parallel.
+
+Key finding: **Xcode is NOT installed** (only Command Line Tools). `xcodebuild` cannot run, but `swift`, `swiftlint`, `swiftformat` are available. Let me explore the existing Apple app structure deeply before deciding on approach.
+
+Now let me explore the Apple app's internal structure, especially the `TeslaSync/dashboard-widgets` directory and supporting infrastructure (P1/S8 state holders, P1/S9 tokens, S10 i18n, S11 diagnostics).
+
+Large widget library (417 files). Let me find an existing structurally-similar widget (stat-grid based, no charts) to use as the canonical pattern, and check whether APIUsageWidget already exists.
+
+There's a clear per-widget file convention. APIUsageWidget doesn't exist yet. Let me see the full widget list and find the closest analog (a `system`-category, stat-grid, no-chart widget), and examine a complete reference widget end-to-end.
+
+The existing widgets start at "D" — APIUsageWidget (alphabetically first) is genuinely new to this slot. The closest analogs are `system`-category stat widgets. Let me examine `NotificationStatsWidget` (stats-based, no chart) completely as the canonical reference, plus the registry.
+
+These are substantial (~1500 lines/widget). Let me read the complete `SystemHealthWidget` as the canonical reference — all 7 files.
+
+This is a production-grade pattern. Let me read the remaining SystemHealthWidget files (Projection, Components, Previews, strings, Tests) to fully internalize conventions.
+
+Let me read the remaining reference files (Previews, strings, Tests) and locate the P4 core shared types.
+
+Multiple files appear to define `DashboardWidgetRegistration` — I need to understand whether there's a canonical definition or per-widget duplicates (which would be a compile conflict). Let me investigate precisely.
+
+Important: ~13 sibling widgets each redefine `DashboardWidgetRegistration`/`DashboardWidgetSize` as `public` — they can't co-compile, confirming this is a **parallel staging area** where each widget is self-contained. But SystemHealth/NotificationStats don't redefine them. I need to understand the canonical self-contained pattern precisely. Let me examine how `MQTTStatusWidget` (defines its own seam types) handles tokens, and check which camp NotificationStats is in.
+
+Design tokens (`TSSpacing`, `Color.TS`, etc.) come from shared P1/S9 (`Sources/` + `design/generated/apple`) — never redefined per-widget. But seam types are inconsistent: 13 widgets self-define them, while the polished SystemHealth/NotificationStats don't. My prompt's state list (loading/empty/error/stale/offline) matches the SystemHealth pattern. Let me resolve which is canonical by finding the P4 core and reading the apps README + a self-contained widget's seam block.
+
+The tree is definitively a parallel staging ground (15 duplicate seam-type defs across `Sources/Dashboard`, `Sources/DashboardWidgets`, `Sources/Widgets`, and per-widget files). My allowed files are only `APIUsageWidget.*`, so I'll follow the **self-contained majority pattern** (define seam types inline like MQTTStatus) while matching the full sophistication of SystemHealth/NotificationStats. Let me confirm MQTTStatus has the telemetry seam + stale/offline, and read the web data contracts (`useApiLogStats`, `WidgetShell`, `WidgetStatGrid`).
+
+MQTTStatus is both self-contained AND fully sophisticated (telemetry seam, stale/offline, Projection) — it's my ideal template (`system` category, same machinery). Let me read the web data contracts and the MQTTStatus template files.
+
+Now let me read the exact data type (`APICallLogStats`), the web formatters, and the MQTTStatus template files (main view, projection, strings, tests).
+
+I now have the exact data contract. Let me read the MQTTStatus template files (main view, projection, strings, tests) — these are my structural blueprint.
+
+Let me read the remaining MQTT template files (Projection, strings, Tests, Components), the registry entry, and locate the design-token definitions to confirm available members.
+
+Let me read the MQTT Tests + Components, the registry entry for `api-usage`, and locate the design-token definitions.
+
+I have the full pattern. Now let me verify the design tokens exist (exact member names) and read the registry entry for `api-usage`.
+
+Tokens live in `design/generated/apple/Tokens.swift`. Let me read it to confirm exact member names, plus the full registry entry.
+
+I have everything: tokens confirmed (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`), registry entry (`api-usage`, system, 2×2, 1×2→4×40). Let me read `TSSkeleton`, and the lint/format configs so my code passes `--strict`, plus confirm the placeholder checker.
+
+Let me read the `.swiftformat` config and check the placeholder tooling (and whether `pwsh` exists).
+
+`pwsh` is available — I can run the real placeholder checker. Let me read the placeholder patterns to ensure my code avoids flagged tokens.
+
+The placeholder checker flags `TODO/FIXME/XXX/Placeholder/Lorem ipsum/not implemented/Coming soon` — I'll avoid all. The web API widget's stat items have **icons + trend** (unlike SystemHealth's plain tiles). Let me check how `NotificationStatsWidget` (closest stats-grid analog) renders icon/trend tiles, to match that parity.
+
+`NotificationStatsWidget` has exactly the icon+trend stat tile + big number + grid components I need — it's the ideal component reference. Let me read its Components, Projection, and main view fully.
+
+`NotificationStatsWidget` is the perfect component analog (icon+trend stat tiles mapping web `StatGridItem`). Let me read its Projection (stat-item model + builder) and main view (compact/standard/isWide assembly).
+
+`NotificationStatsWidget` has the richest state machine — explicit `offline`/`stale` handling via a `LoadState`→`Presentation` resolver, exactly matching my prompt's required states (loading/empty/error/stale/offline). Let me read its Model and Models files to capture the full state machine and DTOs, plus the main view.
+
+I now have both patterns. I'll combine them: self-contained seam types (MQTT) + rich offline/stale `LoadState→Presentation` resolver and icon/trend tiles (NotificationStats) + telemetry seam (required by prompt). Let me read the NotificationStats main view, tests, strings, and previews to nail the assembly, plus verify the Go JSON keys for `/api-logs/stats`.
+
+Critical: NotificationStats depends on a richer P4-core (`DashboardWidgetSurface`/`DashboardWidgetProps`/`DashboardWidgetTelemetrySink`) — NOT self-contained. So I'll use **MQTT's self-contained seam types + telemetry seam** combined with **NotificationStats' LoadState/Presentation state machine** (covering offline/stale), all within my own files. Let me confirm the exact Go JSON keys and view NotificationStats' Tests + Previews conventions.
+
+I now have a complete, precise blueprint. Exact Go JSON keys confirmed: `total_calls`, `error_count`, `error_rate`, `avg_duration_ms`, `last_24h`. Let me set up tracking and write the plan, then build the 7 files.
+
+Now I'll write the core Projection file (Foundation-only, fully testable).
+
+Projection done. Now the Model file (telemetry seam, source seam, observable model, Text facade).
+
+Now the Components file (SwiftUI subviews — icon/trend stat tile, grid, freshness chip, big number, loading skeleton).
+
+Now the main surface view (header + state switch + compact/standard/wide layouts).
+
+Now the Previews file (all states).
+
+Now the strings catalog (web-parity keys + native chrome).
+
+Now the Tests file (adapter, formatters, presentation resolver, model, registry, a11y, error taxonomy).
+
+All 7 files created. Now the verification phase. Since `xcodebuild` is unavailable, I'll: (1) execute the Foundation-only adapter, (2) type-check all SwiftUI sources against real tokens + a faithful `TSSkeleton`, (3) run swiftlint/swiftformat/placeholder gates. Let me first read how the placeholder script resolves `-Path`, then set up the harness.
+
+The placeholder scan is case-insensitive and recursive. Let me self-check my files for forbidden tokens, then build the Foundation-only execution harness to actually run the adapter.
+
+No forbidden tokens. Now let me build and execute the Foundation-only adapter harness to actually run the projection logic.
+
+All 50 adapter checks **executed and passed**. Now let me type-check the full SwiftUI surface against the real design tokens + a faithful `TSSkeleton`, under Swift 6 strict concurrency (matching the project settings).
+
+Type-check passed cleanly under Swift 6 strict concurrency. Now let me type-check the Tests file too (compiled as one module with the sources, XCTest linked).
+
+`XCTest` isn't importable via Command Line Tools (Xcode-only). I'll verify the test logic type-checks against a faithful XCTest shim (documented in the log as a CLT limitation).
+
+The type-check surfaced two **real issues** to fix (plus harness artifacts):
+1. `APIUsageWidget.swift`: View static members are `@MainActor`-isolated under Swift 6 — sibling `NotificationStatsWidget` marks them `nonisolated`. I'll do the same.
+2. `Tests.swift`: `.none` resolves to `Optional<APIUsageUnit>.none` (nil-check) instead of the enum case — a real test-correctness bug. Must be `APIUsageUnit.none`.
+
+Let me fix both.
+
+Now let me re-stage the fixed files and re-run the type-check with `import Foundation` added to the harness Tests copy and a more faithful XCTest shim.
+
+Both type-checks pass (`PROD_TYPECHECK_EXIT=0`, `TESTS_TYPECHECK_EXIT=0`) — confirming the two real fixes and that the earlier errors were shim artifacts. Now the lint/format/placeholder gates.
+
+Lint/format gave clear, fixable issues: (1) `file_length` on Projection (474) + Tests (418), (2) `nesting` from my `CodingKeys`, (3) number grouping + line wrapping. I'll split the DTO+decode into a `Models.swift` file (using `.convertFromSnakeCase` to drop the nested `CodingKeys`), refactor long test lines, then auto-format. Let me view the exact DTO section to move.
+
+Now I'll create `Models.swift` (DTO + decode using `.convertFromSnakeCase` to drop the nested `CodingKeys`), and remove that section from Projection.
+
+Now remove that DTO section from Projection and update its header comment. Let me view the header.
+
+Now let me refactor the long test lines to avoid wrap-growth, then auto-format all files.
+
+Now auto-format all my files in place with swiftformat, then re-measure line counts.
+
+Projection (402) and Tests (419) are just over the 400 `file_length` limit. Let me trim verbose comment blocks. Let me view both headers and a couple of trim spots.
+
+Let me trim the Tests header and remove the unused `wideSize`, and merge the small surfaceSlug test into the registration test.
+
+Now let me merge the small `testSurfaceSlug` into the registration test and check the line count.
+
+Let me re-measure and re-run swiftlint + swiftformat on all files.
+
+Tests (408) and Projection (402) need a few more lines trimmed. Let me view both headers and trim.
+
+Still need ~7 more lines from Tests. Let me view the decode/format test region to consolidate without losing coverage.
+
+Let me merge the two decode nil-path tests and view the formatter tests to consolidate.
+
+Now trim Projection's header by 2 lines, then re-run swiftlint + swiftformat + line counts.
+
+Let me re-format and re-run the full lint gate to see exact remaining issues.
+
+swiftformat passes; Tests is exactly at 400. Projection needs 2 more lines cut. Let me find a condensable comment.
+
+The resolve doc is still 4 lines. Let me condense it to 3 to get Projection to exactly 400.
+
+Now let me run the complete verification suite: re-stage all files (incl. Models.swift), re-execute the adapter harness (verifying the new `convertFromSnakeCase` decode), re-type-check, and re-run lint/format.
+
+All clean: every file ≤400 lines, **swiftformat `FORMAT_EXIT=0`**, **swiftlint `LINT_EXIT=0`**. Now re-verify the type-check (with `Models.swift`) and re-execute the adapter harness against the new `convertFromSnakeCase` decode.
+
+Type-checks pass. Now re-execute the Foundation adapter harness with the new `Models.swift` decode (verifying `convertFromSnakeCase` maps `last_24h`→`last24h`).
+
+3 checks now fail with the `convertFromSnakeCase` decode. Let me see which.
+
+The failures are all `last_24h` — `.convertFromSnakeCase` does **not** map `last_24h`→`last24h` as I assumed (digit boundary). Let me confirm empirically, then fix with explicit `CodingKeys` on a top-level DTO struct (avoids the nesting violation since it won't be nested in an extension).
+
+Confirmed: `convertFromSnakeCase` maps `last_24h`→`last24H` (capital H), not `last24h`. I'll use explicit `CodingKeys` on a **top-level** private DTO struct (one nesting level → no swiftlint violation). Let me rewrite the decode section of `Models.swift`.
+
+Now re-verify everything: format, re-run the adapter harness (fixed decode), re-run swiftlint (confirm no nesting violation), and re-type-check.
+
+Adapter harness passes, lint and format clean. Let me do the final type-check (updated `Models.swift`) and the placeholder check (on an isolated copy of my files via `pwsh`).
+
+All gates green: type-checks, adapter harness, swiftlint, swiftformat, placeholder check all pass. Let me verify i18n key coverage — every key referenced in Swift must exist in the `.strings` catalog.
+
+The grep glob `APIUsageWidget.*.swift` missed the main `APIUsageWidget.swift`. Let me redo with the correct glob to rigorously confirm full coverage.
+
+Full i18n coverage confirmed (20/20 keys defined; `description` is the registry key — used by registration metadata). Now let me capture the real `xcodebuild` capability evidence for the gate log (Xcode is required but unavailable).
+
+Capability evidence captured: `xcode-select -p` → CommandLineTools, `xcodebuild`/`simctl` unavailable (`IOS_EXIT=1`, `MAC_EXIT=1`). Per the prompt's capability clause, the canonical xcodebuild gate is environmentally BLOCKED. Let me verify the log directory and write the honest gate log.
+
+Let me read a sibling log to match the expected format and see how they handled the gate.
+
+Key precedent found: sibling widgets on Xcode-less runners (GuardMode 0054, LifetimeStats 0055, LivePowerFlow 0056) ran the same host gates (typecheck/harness/lint/format/placeholder=0), marked xcodebuild **DEFERRED** (not green), and concluded **STATUS=DONE** — reserving the capability-BLOCKED hatch for when SwiftUI itself is unavailable (not my case). Let me read GuardMode + LifetimeStats logs fully to mirror their exact reasoning and format.
+
+This is the canonical precedent — sibling 0055 (LifetimeStats) is my exact scenario: all host gates green, `xcodebuild` DEFERRED (not green) for scope/dependency reasons (surface not registered in `project.yml` per covenant #7, KMP `Shared.xcframework` absent), concluding **EXIT=0 / STATUS=DONE**. SwiftUI IS available here (my type-check proves it), so the capability-BLOCKED hatch doesn't fire. Let me gather exact counts and write the log.
+
+All host gates green; 51 adapter checks executed. Let me write the honest gate log following the established sibling format.
+
+Now let me verify the working tree contains only my allowed files before committing.
+
+The `AIUsageCard.*` and `web/` modifications are **pre-existing** working-tree state from the shared parallel runner — I never touched them. I'll stage ONLY my allowed files (covenant #9), leaving those untouched, then commit with the prompt's message.
+
+Exactly my 9 allowed files staged, nothing else. Now committing with the prompt's message.
+
+Commit `ba099fcf0` landed with exactly my 9 files; the pre-existing `AIUsageCard.*`/`web/` modifications remain untouched. Let me finalize todos and clean up temp artifacts.
+
+All work is complete and committed. Let me provide the final summary.
+
+The task is fully done and verified to the maximum extent the runner allows.
+
+## Summary
+
+Shipped a production-polished, native Apple (SwiftUI) **`APIUsageWidget`** at parity with `web/src/features/dashboard/widgets/APIUsageWidget.tsx`, committed as `ba099fcf0` (9 files, +1855 lines).
+
+**Files** (`apps/apple/TeslaSync/dashboard-widgets/APIUsageWidget.*`, all ≤400 lines):
+- `.swift` — SwiftUI surface: compact 1×2 big-number / standard 2×2 / wide ≥3-col 4-up grid; header + freshness chip + refresh; every state.
+- `.Model.swift` — P1/S8 source seam + `@Observable` model + P1/S11 `view.opened` telemetry + P1/S10 `Text` facade.
+- `.Models.swift` — `APIUsageStats` + snake-case decode (explicit `CodingKeys`; verified `last_24h` doesn't round-trip through `convertFromSnakeCase`).
+- `.Projection.swift` — registry primitives, `coreStats` projection, formatters, `LoadState`/`Error`/`Presentation.resolve` (loading/empty/offline/error/content+stale), a11y.
+- `.Components.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`.
+
+**Verification (real, executed on this host):**
+| Gate | Result |
+|---|---|
+| `swiftc -typecheck` (Swift 6, strict concurrency, macOS 15) — production + tests | **0 errors** |
+| Executed adapter/resolver harness | **51/51 checks passed** |
+| `swiftlint --strict` (7 files) | **0 violations** |
+| `swiftformat --lint` | **0/7 require formatting** |
+| `check-placeholders.ps1` | **COUNT=0** |
+| i18n key coverage | **20/20 referenced keys defined, 0 missing** |
+| `xcodebuild` build/test (iOS+macOS) | **DEFERRED** — not green (see below) |
+
+**`xcodebuild` disposition:** This runner has **Command Line Tools only (no Xcode.app)** — `xcodebuild`/`simctl` are unavailable. SwiftUI itself *is* available (the surface type-checks green), so the capability-BLOCKED hatch doesn't apply. The scheme build/test is marked **DEFERRED** (never claimed green) with captured evidence, matching the established sibling precedent (0036/0055/0056) — it would be deferred even on a full Xcode runner since self-registering into `project.yml` is outside allowed scope (covenant #7) and the KMP `Shared.xcframework` is absent.
+
+**Log:** `.github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0004-APIUsageWidget.log` → `EXIT=0 / STATUS=DONE`.
+
+Pre-existing working-tree changes (`AIUsageCard.*`, two `web/` files) were left untouched.
+

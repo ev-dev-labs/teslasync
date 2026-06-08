@@ -1,0 +1,205 @@
+I'll start by exploring the repository structure and understanding the task. Let me investigate the key areas in parallel.
+
+Let me explore the Apple app structure and the web source page in parallel.
+
+Let me read the web source in sections and explore the Apple Features directory more.
+
+The output directory doesn't exist yet. Let me understand the actual Apple project structure, how existing pages are implemented, and find the parity manifest/ledger.
+
+This is a large, mature codebase. Components live in `feature-views/` but there are no page-level files yet. Let me examine the parity manifest, ledger, README gate contract, and existing related components.
+
+Let me read the p4-apple README gate contract and extract the manifest record for this page.
+
+Let me check the actual toolchain availability and whether the Xcode project exists — this is critical for the honesty covenant.
+
+`xcodebuild -version` produced no output — likely Command Line Tools only, no full Xcode. The project uses XcodeGen (`project.yml`), not a committed `.xcodeproj`. Let me verify the toolchain situation precisely.
+
+Clear picture now: **full Xcode is NOT installed** (only Command Line Tools), so `xcodebuild build/test` genuinely cannot run → per the prompt's own rule that portion is BLOCKED. But `swiftlint`, `swiftformat`, `xcodegen`, `swift 6.3.2`, `pwsh`, and the placeholder script ARE available. I'll implement the page completely and correctly, run every gate I can, and write an honest log.
+
+Let me read the full web source and the existing Swift component patterns.
+
+Let me read the final portion of the web source.
+
+I now fully understand the web page (836 lines): 4 form sections (General, When/Trigger, Only If/Conditions, Then/Actions), 3 GlassPanels, banners, and action buttons. It composes existing child components (`TriggerConfigurator`, `ConditionBuilder`, `ActionBuilder`, `ConflictWarnings`) which already exist as Apple feature-views. Let me study the project structure, navigation, design tokens, and the canonical component pattern.
+
+Excellent — the component pattern is clear (multi-file: `.swift`/`.Model`/`.Adapter`/`.Views`/`.strings`/`.Previews`/`.Tests`, using `TSSpacing`, `Color.TS`, `TSButton`, `.tsGlassPanel()`, per-component `*Strings` helper). Now let me locate the design tokens, strings helper, child component APIs, navigation registration, and the string catalog.
+
+Let me read the routing/navigation files and the child component public APIs.
+
+Let me understand how routes get registered and how sub-navigation (deep links like `/automations/:id/edit`) works.
+
+Let me read the AppShell and the one existing registration example (SettingsScene) to learn the registration + navigation pattern.
+
+Now let me study the model/adapter (facade-binding) pattern, the child component public APIs, and the app entry point that composes the registry.
+
+The architecture is now clear. The page needs to **fetch** data via the KMP shared facade (unlike the controlled-form child components). Let me study the SharedFacade, a data-fetching model example, the child component public APIs, and ConflictWarnings.
+
+Let me read the facade core (container, state holder, loadable state), a domain model example, and the child component public APIs.
+
+The facade defers concrete KMP wiring to the macOS build; data-fetching models bind through injected seams/ports + `LoadableState`. Let me study a real data-fetching domain model and the AutomationActivityFeed (which fetches), plus the child component public APIs and the Automation domain types.
+
+This `AutomationFeedSource` seam pattern (protocol + `InMemory*` + `@Observable` model, concrete KMP wiring deferred) is exactly the established convention for a data-fetching surface. I'll follow it. Now let me read the child component public APIs and the shared domain types I'll compose.
+
+Child component APIs are clear. Now I need the exact domain types and model constructors I'll compose. Let me read the trigger/condition/conflict adapters and models, plus the notification channel type and trigger catalog.
+
+Let me read the remaining domain types (conditions, conflicts, notification channels, trigger catalog) and locate the shared UI form components.
+
+Let me read the shared UI components (inputs, buttons, pickers, banners, states) and the remaining domain types (conditions, conflicts, channels, trigger catalog).
+
+Now I understand the shared UI kit. Two key things to resolve: (1) the string catalog approach, and (2) `TeslaSync/Features` is NOT yet in `project.yml` sources. Let me check the xcstrings format, a component `.strings` file, how `.Tests.swift` files compile, and read the remaining domain models.
+
+Let me check which of the 41 keys already exist in `Localizable.xcstrings`, and read the remaining domain models I'll compose (conditions/geofence model, conflicts, channels, trigger catalog).
+
+Confirmed: none of the 41 keys exist yet. The catalog is in generation order (not alphabetical), so I can append cleanly. Now let me read the final domain models I'll compose: the condition/geofence model, conflicts model, notification channel type, and trigger catalog.
+
+Let me read the final API pieces: conflict model, channel/action catalog, trigger catalog, design tokens, TSButton, and banners.
+
+Let me read the trigger catalog, design tokens, TSButton, Banners, and find the app entry point that composes the route registry.
+
+I now have nearly all APIs. Let me confirm the design tokens, glass panel modifier, motion + banner components, and grab the catalog tail for safe string insertion.
+
+All tokens and components confirmed. Let me read the alert banner API, glass panel modifier, fade-in, and the catalog tail for safe insertion.
+
+Let me confirm the last few types (TSTone, AutomationConditionInput, AutomationConflict, defaultCondition) and grab the catalog tail for safe insertion.
+
+I now have a complete understanding of every API. Let me read the `ConditionBody` enum (needed for validation parity) and the action catalog tail, then write the plan and implement.
+
+I have a complete understanding of all APIs. Let me read the lint/format config (to conform), then write the plan and begin implementation.
+
+I have everything needed. Key constraints locked: lines ≤120 (swiftlint `--strict`), avoid the words TODO/FIXME/placeholder in code (use `// parity:allow <reason>` for the 2 required `*Placeholder` web keys), follow the sibling seam pattern (protocol source + `InMemory*` + `@Observable` model). Let me write the plan and todo list, then implement.
+
+Now let me create the directory and the Adapter file (pure types, validation, projections).
+
+Now the Model file — the `@Observable` page model, the `AutomationBuilderSource` seam, the in-memory source, telemetry seam, and the strings facade.
+
+Views file — the section subviews, the 3 GlassPanels, action bar, banners, and the data-state views. Let me update the todo and create it.
+
+I need to wire the draft-recovery, edit-conflict, and unsaved-guard affordances (3 of the required strings). Let me add `hasDraft`/`hasEditConflict` to the input + model, then build the main page view.
+
+Now let me add the draft-recovery and edit-conflict banner subviews (which genuinely render `draft.noun.automation` and `editConflict.resource.automation`) to the Views file.
+
+Now add the `editBreadcrumb` helper to the model, then create the main page view.
+
+Now the main page view that assembles the scaffold, 4 data states, header, banners, sections, and discard dialog.
+
+Now the route registration that wires the page into the navigation shell.
+
+Now the SwiftUI previews demonstrating all data states and the banner affordances.
+
+Now the unit tests, mirroring the sibling `.Tests.swift` convention. Let me update the todo and create it.
+
+All seven source files are created. Now let me wire them into the build: add `TeslaSync/Features` to `project.yml` (both app targets) and the lint config.
+
+Now chain the route registration in `TeslaSyncApp.swift`.
+
+Now the biggest edit — adding the 41 web keys (+7 native) to `Localizable.xcstrings`. Let me do a surgical, verified insertion with Python.
+
+48 keys inserted, JSON valid (8121→8169). Let me verify the diff is purely additive, then run the gates.
+
+Diff is perfectly additive (528 insertions, 0 deletions). Now let me run the gates. First swiftformat (autofix to match project style), then swiftlint --strict.
+
+Format is clean. Now the lint gate — `swiftlint --strict` on the page directory (matching the gate command).
+
+swiftlint linted the whole project (1916 files) and found 6 violations. Let me see exactly which files and rules — I need to know if they're mine.
+
+Five of my files have fixable lint issues (2 file-length, 2 trailing-closure, 1 brace) plus one pre-existing violation in `dashboard-widgets` (not mine). Let me view the exact problem lines.
+
+Clear fixes: explicit `label:` on two `TSButton`s, typealiases to keep signatures one-line (fixes the brace + shortens), and split the two oversized files (>400 lines). Let me start with the closure + signature fixes.
+
+Now let me split the two oversized files. First, let me find the section boundaries in the Model file.
+
+Let me create the `Seam.swift` file (extracted seam types) with the typealias improvement, then trim `Model.swift` to just the model class.
+
+Now let me read the rest of the model class so I can cleanly recreate `Model.swift` with just the model.
+
+Now let me recreate `Model.swift` cleanly with just the model class (the seam types now live in `Seam.swift`).
+
+Now split `Views.swift`. Let me find the boundary to move the conflicts/banners/states/action-bar into a separate file.
+
+Both files are now under 400 lines. Let me re-run swiftformat and swiftlint to confirm my files are clean.
+
+My files are lint-clean. Let me confirm format is clean and check the overall swiftlint count (only the pre-existing non-mine violation should remain).
+
+My files are fully clean. The only remaining violation is pre-existing (`dashboard-widgets`, not mine). The gate runs from repo root — let me verify swiftlint behavior there (it should lint only my dir with default config).
+
+Lint gate passes (0 violations, 9 files) when run as the gate does. Now the placeholder gate and xcodegen validation.
+
+The placeholder gate flagged 2 lines — my `parity:allow` markers aren't both on the same line as the match. Let me view and fix.
+
+The doc comment itself contains "placeholder", and the second marker is on the wrong line. Let me fix both (reword comment, put markers inline on the key lines).
+
+The `cd` went wrong. Let me re-run from the repo root.
+
+Placeholder gate passes (COUNT=0, EXIT=0). Let me re-confirm lint after the edit, then validate the project generation with xcodegen.
+
+Lint passes (0 violations, exit 0). Now xcodegen to validate the project manifest includes my new directory.
+
+xcodegen succeeded. Let me verify my files are included in the generated project and that the `.xcodeproj` is gitignored (so it won't be committed).
+
+All 9 files are in the generated project; `.xcodeproj` is gitignored. Now a syntax check with `swiftc -parse`.
+
+`swiftc -parse` passes (syntax OK), but it doesn't catch type/init errors. I spot a real issue: `BuilderSection`'s optional properties have no defaults, yet the General section omits them. Let me review and fix the scaffolding helpers with explicit initializers.
+
+Confirmed compile issue — `BuilderSection`'s optionals lack defaults but the General section omits them. Let me give all three helpers explicit initializers.
+
+More init-signature issues to fix: the `Picker(selection:label:)` form (label must be a closure, not Text) and the description `TextField(text:prompt:axis:)` (needs a label). Let me view the current General/Trigger sections and fix them.
+
+Now the trigger picker. Let me view and fix it.
+
+Let me improve the save-error banner (the overlay approach is fragile) and then re-run all checks. Let me view it first.
+
+Let me verify I didn't leave dangling braces after that replacement.
+
+Dangling braces confirmed (lines 65-66). Let me remove them.
+
+Now let me re-run the full gate suite after these fixes: format, syntax parse, lint, and placeholder scan.
+
+All gates green. Now let me proactively fix Swift 6 strict-concurrency issues I can see (the preview factory calls `@MainActor` initializers from a non-isolated function). Let me view and fix the Previews.
+
+One more strict-concurrency hardening: the model's factory closures build `@MainActor` types, so their types should be `@MainActor`. Let me annotate them explicitly.
+
+Let me verify the exact `Font.TS` / `Color.TS` token names I use exist (to avoid a symbol error I can't catch via `-parse`), then re-run the gates.
+
+`Font.TS` tokens all confirmed. Let me re-run the full gate suite after all the fixes.
+
+All gates green. Let me verify the specific enum cases I reference in previews/tests exist (these would be compile errors `-parse` can't catch).
+
+All enum cases confirmed. Let me clean up the generated project and review the full set of changes.
+
+All verifications pass. `xcodebuild` cannot run (CommandLineTools only) → build/test is genuinely BLOCKED per the prompt's rule. Let me create the apple ledger and write the honest gate log. First the ledger.
+
+Now the gate log. Let me capture the exact `xcodebuild` unavailability message for honesty, then write the complete log with the `=== PARITY ===` section.
+
+Let me validate the JSON files and do a final consolidated gate run before committing.
+
+All green. Let me do a final review of the main page view and the action bar to catch any last issues.
+
+The page view and action bar are correct. Everything is verified. Let me do a final git status review, then stage and commit.
+
+All correct. Let me stage and commit with an honest message.
+
+Committed. Let me finalize the todos and confirm the working tree is clean.
+
+Working tree clean, no generated artifacts committed. Let me do a final syntax check on the one app-file I edited (`TeslaSyncApp.swift`) to be safe.
+
+All verification complete. Final syntax check passes and the navigation wiring is correct.
+
+## Summary
+
+I implemented the native **SwiftUI/HIG `AutomationBuilderPage`** at full web parity and committed it (`8d38754af`).
+
+**Delivered (9 files in `apps/apple/TeslaSync/Features/Automations/`):** Adapter (pure FormState + validation ladder + payload/hydration), Seam (i18n facade, telemetry, `AutomationBuilderSource` + `InMemory`), `@Observable` Model, Views (4 form sections), States (banners/action-bar/data-states), the page View, Previews, Tests, and the route Registration. It composes the existing `TriggerConfigurator`/`ConditionBuilder`/`ActionBuilder`/`ConflictWarnings` surfaces inside the three glass panels.
+
+**Parity = 48/48:** 3 panels + 4 data states (loading/empty/error/success) + 41 strings — every item bound to the model with file+symbol evidence in the log.
+
+**Wiring:** registered the `.automations` host with a typed `navigationDestination` for `/automations/:id/edit`; added `TeslaSync/Features` to `project.yml` + `.swiftlint.yml`; chained the registration in `TeslaSyncApp.swift`; added 48 keys (41 web + 7 native) to `Localizable.xcstrings` (additive, JSON-validated 8121→8169); created `apps/parity/apple-ledger.json`.
+
+**Gates — all runnable ones GREEN:**
+- placeholder scan: `COUNT=0 EXIT=0`
+- `swiftlint --strict`: **0 violations** (9 files)
+- `swiftformat --lint`: 0/9
+- `swiftc -parse`: 0
+- `xcodegen generate`: success (all 9 files included)
+
+**⚠️ BLOCKED (honestly reported, per the prompt's own rule):** `xcodebuild build`/`test` cannot run — this runner has **Command Line Tools only, no full Xcode**. The log ends `EXIT=1 / STATUS=BLOCKED` and the ledger rows are `blocked`. Per the Honesty Covenant I did **not** claim a green build I couldn't execute. The implementation itself is complete; only the Xcode build+test gate is environmentally blocked.
+

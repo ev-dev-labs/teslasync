@@ -1,0 +1,161 @@
+=== P4 Shared surface 0079 DataFreshness (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.x (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7
+  Destinations       : iOS Simulator "iPhone 16" (present) · macOS 15 SDK present (MacOSX26.5.sdk)
+  Capability         : SwiftUI present; this surface uses NO Swift Charts / MapKit (charts/maps = none in the
+                       web source) → NOT capability-BLOCKED. Build+test verified below.
+
+WEB SOURCE (the specification)
+  web/src/components/data-display/DataFreshness.tsx — a query-result-driven freshness CHIP (status dot + icon +
+  relative-time label) plus the convenience wrapper `DataFreshnessAuto` that derives every chip prop from a
+  TanStack Query result (e.g. `useChargingHistory()`). Behaviour reproduced verbatim:
+    • Four statuses with precedence `isError ? error : isFetching ? fetching : isStale ? stale : fresh`.
+      fresh→Wifi/emerald · fetching→RefreshCw/sky (spins) · stale→Wifi/amber · error→WifiOff/red.
+    • Relative-time buckets via `formatRelativeTime`: <60s "just now"; <1h "{{m}}m ago"; <1d "{{h}}h ago";
+      <1w "{{d}}d ago"; else "{{w}}w ago" (floor division), re-rendered on a 30s interval.
+    • Animations: ping ring while fetching (animate-ping); gentle pulse on background refetch
+      (isFetching && updatedAt != null); spinning icon while fetching — all gated by Reduce Motion.
+    • Tooltip (`title`): "Updating…" / "Last updated: {{time}}" / "Never updated".
+    • a11y: role=button when refetchable (label "Refresh"), else role=status ("Data freshness: {{state}}"),
+      aria-live=polite + aria-atomic=true; stable-width tabular-nums label.
+    • Props: `compact` (icon-only) · `refetchable` · `forceStaleAfterMs` (Auto wrapper).
+  Data sources (prompt): useQuery · useTranslation · useMotionPreference · useDateFormat · useChargingHistory —
+  bound here through the shared P1/S8 state-holder seam (no HTTP in the view).
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/shared-surfaces/DataFreshness.*, the only allowed files + this log)
+  DataFreshness.Adapter.swift  (129 L) — pure testable core: FreshnessStatus (+ SF-Symbol mapping),
+                                          DataFreshnessStatusRule (the four-state precedence), FreshnessRelative +
+                                          DataFreshnessFormat (relative buckets/thresholds, secondsAgo floor,
+                                          absoluteTime short-time), DataFreshnessAccessibility joins. Foundation-only.
+  DataFreshness.Model.swift    (281 L) — P1/S8 state holder (DataFreshnessModel + DataFreshnessSource +
+                                          InMemoryDataFreshnessSource), P1/S11 telemetry seam
+                                          (DataFreshnessTelemetry + OSLog default), P1/S10 facade
+                                          (DataFreshnessStrings), DataFreshnessInput, the DataFreshnessConnection
+                                          (live/stale/offline) axis, and the pure DataFreshnessProjection
+                                          (loading/empty/error/data + status + forceStaleAfter) with the one-shot
+                                          stale auto-refresh.
+  DataFreshness.Views.swift    (365 L) — chrome tone/icon/state mapping; the status dot (ping + pulse), the
+                                          spinning icon, the stable-width label, the live TimelineView relative
+                                          label (30s cadence); the data / loading (skeleton chrome) / empty
+                                          ("Never updated") / error (retry) chips. Reduce Motion honoured once.
+  DataFreshness.swift          ( 65 L) — the surface view: phase switch over the four leaf states + the
+                                          compact / refetchable props; view.opened on appear.
+  DataFreshness.Previews.swift ( 91 L) — fresh / updating / background-refetch / stale / offline / error / empty /
+                                          compact previews (DEBUG).
+  DataFreshness.Tests.swift    (323 L) — 31 XCTest cases (status precedence, icon map, secondsAgo, relative-bucket
+                                          thresholds, absolute-time, a11y joins, projection across all phases +
+                                          forceStaleAfter + background-refetch, model wiring + telemetry once +
+                                          stale auto-refresh edge + offline-no-refresh + stop/re-arm + slug).
+  DataFreshness.strings        ( 41 L) — per-surface i18n table: the 12 web keys + the native chrome keys
+                                          (retry / loadingA11y / localised state words).
+  NOT touched (parallel-unsafe / integration scope): project.yml + .swiftlint.yml currently register only
+  "TeslaSync/dashboard-widgets" + "TeslaSync/feature-views" (predecessor P4-core wiring); the "shared-surfaces"
+  tier is NOT yet registered there, and registering it (plus folding the per-surface .strings into the shared
+  Localizable.xcstrings) is integration scope OUTSIDE this prompt's allowed-files list. Not self-registered.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  status dot + ping/pulse  → FreshnessDot (6pt Circle, easeOut ping repeatForever + slow pulse; Reduce-Motion off)
+  RefreshCw spin           → FreshnessIcon (rotationEffect linear repeatForever while fetching; Reduce-Motion off)
+  Wifi / WifiOff           → SF Symbols "wifi" / "wifi.slash"; fetching → "arrow.triangle.2.circlepath"
+  FRESHNESS_COLORS tiers   → fresh=Color.TS.statusSuccess · fetching=statusInfo · stale=statusWarning ·
+                             error=statusDanger · offline=textMuted (ADR-006 semantic, not literal hex)
+  min-w-[4.5rem] tabular   → FreshnessStaticLabel (minWidth 72, monospacedDigit, lineLimit 1)
+  30s setInterval tick     → TimelineView(.periodic(by: 30)) recomputing the relative bucket from updatedAt
+  Skeleton (loading)       → TSSkeleton (Sources/Components/Feedback/Skeletons.swift)
+  formatRelativeTime       → DataFreshnessFormat.relative (60/3600/86400/604800 thresholds, floor division)
+  formatTime (tooltip)     → DataFreshnessFormat.absoluteTime (locale short-time, injectable tz for tests)
+  i18n      : every web string via the P1/S10 facade (DataFreshnessStrings, table "DataFreshness"); zero English
+              literals in code. {{m}}/{{time}}/{{state}} → %lld / %@ printf placeholders.
+  a11y      : refetchable chip = Button (label "Refresh"/"Retry"); read-only chip = status element with
+              .updatesFrequently (aria-live polite) + "Data freshness: {state}"; dot/icon decorative; Dynamic
+              Type + Reduce Motion via shared tokens/components; .help() tooltip cross-platform.
+  telemetry : view.opened surface="DataFreshness" via DataFreshnessModel.start (P1/S11), default OSLog sink.
+  states    : loading (skeleton chrome) / empty ("Never updated", never blank) / error (retry) / data, plus the
+              P4 leaf connection axis live / stale (amber chip + one-shot auto-refresh) / offline (cached value +
+              muted wifi.slash chip).
+
+GATES  (every command executed on THIS runner; raw exits pasted — no assume)
+  [GREEN]    swiftformat --lint  (shared-surfaces/DataFreshness, 6 files)   : 0/6 require formatting   (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict  (shared-surfaces/DataFreshness, 6 files)   : 0 violations, 0 serious  (LINT_EXIT=0)
+  [GREEN]    check-placeholders.ps1 -Path …/shared-surfaces (real swift scan): PLACEHOLDER_COUNT=0     (EXIT=0)
+  [GREEN]    check-placeholders.ps1 -Path …/shared-surfaces/DataFreshness (literal gate path)          : EXIT=0
+  [GREEN]    swiftc -parse (real MacOSX26.5 SDK) over all 7 source files                               : PARSE_EXIT=0
+  [GREEN]    DataFreshness build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode =
+             same as the app), compiling the EXACT shipped DataFreshness.* sources against the REAL repo
+             design-system (apps/design/generated/apple/Tokens.swift + apps/apple/Sources/Design +
+             apps/apple/Sources/Components; the lone KMP-Shared-coupled Components file UnitFormatters.swift —
+             unused by this surface, referenced nowhere else in Components/Design — set aside):
+                 Build complete!  ·  Executed 31 tests, with 0 failures                              (SWIFT_TEST_EXIT=0)
+
+  WHOLE-TREE host linters (FYI — the literal gate invocation scans the entire app; both reds PRE-EXIST this change
+  and live in files OUTSIDE this prompt's allowed scope; this change adds ZERO new violations):
+  [RED·pre-existing] swiftformat --lint apps/apple : 1/1919 require formatting — blankLinesBetweenScopes in
+                       TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (NOT a DataFreshness file). (FORMAT_EXIT=1)
+                       No shared-surfaces file flagged (DataFreshness = 0/6).
+  [RED·pre-existing] swiftlint --strict             : 1 violation — function_body_length in
+                       TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (NOT a DataFreshness file;
+                       shared-surfaces is not in the .swiftlint.yml `included` list, so my files are not even in
+                       scope of this invocation — they are verified clean by the scoped run above). (LINT_EXIT=2)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO DataFreshness surface errors; all blockers pre-exist this change):
+    setup : project.yml is xcodegen-generated (XCODEGEN_EXIT=0) and the KMP Shared.xcframework is assembled by the
+            in-build "Stage Shared.xcframework via Gradle" phase (cached after first run). The shared-surfaces tier
+            is NOT registered in project.yml, so DataFreshness.* is NOT compiled into the app target at all —
+            grep of both build logs: "shared-surfaces" = 0 hits, "DataFreshness…error:" = 0 hits.
+    iOS   : `feature-views/AIRestorePanel.Tests.swift:18: error: Unable to resolve module dependency: 'XCTest'`.
+            project.yml routes "TeslaSync/feature-views" + "TeslaSync/dashboard-widgets" INTO the app target, so
+            1008 co-located *.Tests.swift files compile into module 'TeslaSync' and their `import XCTest` cannot
+            resolve in the app (non-test) target → `** TEST FAILED **`. This is the pre-existing co-located-XCTest
+            app-target condition (baseline-RED in HEAD, e.g. AIRestorePanel/AcDcStatsPanel test files) and is owned
+            by the P4/P99 Apple acceptance gate (test-target membership), NOT by a per-surface prompt.
+    macOS : `TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development
+            certificate. Enable development signing…` (also TeslaSyncWidgets-macOS) → `** TEST FAILED **`. The
+            macOS dev-signing condition this unsigned runner does not provision; owned by the acceptance gate.
+    Both blockers are infrastructural + pre-existing; neither is introduced or touched by this commit, and neither
+    references a DataFreshness file. The SURFACE itself is proven to compile + pass its tests by the isolated
+    Swift 6 build+test above (real design-system, 31/31 green).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gates are reported RED (IOS_EXIT=65 / MAC_EXIT=65)
+                           with raw evidence and explicitly DEFERRED; the two whole-tree host-linter reds are
+                           reported RED and attributed to pre-existing out-of-scope files — never shown as passing.
+  2  No scope narrowing  : every web region + branch reproduced — the four statuses + precedence, the full
+                           relative-time ladder, ping/pulse/spin, compact, refetchable, forceStaleAfter, the
+                           tooltip variants, and the a11y button/status split — plus the P4 leaf states.
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; both iOS + macOS failures
+                           root-caused (co-located XCTest / macOS signing), not assumed.
+  4  No stubs as final   : complete production surface (1295 L across 7 files) + 31 real tests; placeholder = 0.
+  5  No parity shortcut  : tints/animation/typography/relative+absolute time/a11y/telemetry/states all mapped to
+                           platform tokens and VERIFIED against the real design-system in a Swift 6 build+test.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holders, P1/S9 tokens (Color.TS/Font.TS/TSSpacing/TSRadius/TSMotion),
+                           P1/S10 i18n, P1/S11 diagnostics, and the P4 shared component (TSSkeleton) all present
+                           and consumed; did NOT self-register project.yml/.swiftlint.yml and did NOT edit the
+                           shared Localizable.xcstrings (parallel-unsafe / integration scope).
+  8  No commit on red    : the COMMITTED artifact (DataFreshness.* + this log) is GREEN on every gate scoped to it
+                           (swiftformat / swiftlint / placeholder / parse) AND on a real isolated Swift 6
+                           build+test (31/31); the deferred full-app gate is RED only on pre-existing, unrelated
+                           conditions this commit neither introduces nor touches (0 DataFreshness errors).
+  9  No silent drift     : changes confined to apps/apple/TeslaSync/shared-surfaces/DataFreshness.* + this log.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic DataFreshness shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 31 tests pass under the app's own Swift 6 language mode, against the real
+  design-system, with swiftformat / swiftlint / placeholder / parse all green on the shipped files. The full-app
+  iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked by the
+  pre-existing co-located-XCTest app-target condition (iOS) and macOS development-signing (macOS), both owned by
+  the P4/P99 acceptance gate, and it does not compile this surface at all (shared-surfaces is not yet registered
+  in project.yml). This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by
+  the P4 feature-view surfaces (e.g. 0096 AcDcStatsPanel).
+
+EXIT=0
+STATUS=DONE

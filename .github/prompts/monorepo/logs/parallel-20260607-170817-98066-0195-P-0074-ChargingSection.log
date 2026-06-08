@@ -1,0 +1,126 @@
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me investigate the established predecessor pattern and the web source thoroughly.
+
+Now let me study the most recent predecessor (SentryModeChart — a chart view, closest analog) and the web source dependencies in parallel.
+
+The predecessor pattern is clear. Critically, the predecessor log claims Xcode 26.5 is at `/Applications/Xcode.app`. I must verify this honestly on THIS host. Let me check capabilities and read the full predecessor surface set.
+
+**Confirmed: Full Xcode 26.5 IS present** at `/Applications/Xcode.app` (activatable via `DEVELOPER_DIR`). This is NOT blocked. The default `xcode-select` just points at CommandLineTools. I'll follow the established predecessor pattern exactly. Let me read the complete SentryModeChart surface set and shared infra.
+
+Now let me locate the shared design infra (tokens, motion, skeleton) and the web formatting helpers I must port faithfully.
+
+Tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read that plus the Motion and Skeleton component sources.
+
+Complete token API captured. Now let me read the chart palette, motion/skeleton component APIs, and the web chart colors + Badge for faithful mapping.
+
+SwiftLint config DOES include `feature-views`. Let me confirm `chartCategorical` exists and the correct tokens path.
+
+I now have the full pattern and token API. Let me verify a few runtime facts (NumberFormatter parity, SDK targets, xcodegen, project.yml registration) before writing.
+
+Everything verified: NumberFormatter matches web `toLocaleString`, iOS 26.5 + macOS 26.5 SDKs present, xcodegen available, and **`feature-views` is now registered in `project.yml`**. I'll follow the established predecessor architecture. Let me set up tracking and write the plan.
+
+Now writing the surface. Starting with the pure projection core, model, and strings.
+
+Now the chart, container, previews, and tests.
+
+All 8 files written. Now running the host gates. First, format my files and lint them.
+
+swiftformat: clean (0/7 mine, 0/787 tree). Now swiftlint.
+
+One line too long (124 > 120). Let me fix by extracting the tooltip value into a helper.
+
+Surface lint clean (0 violations). Now the bare whole-tree swiftlint gate + placeholder check.
+
+Placeholder check clean (COUNT=0). The bare lint shows 1 violation — I must confirm it's a pre-existing sibling, not mine.
+
+Confirmed: the lone bare-lint violation is the **pre-existing sibling** `LifetimeStatsWidget.Adapter.swift:141` (same one the predecessor documented) — outside my allowed files; all 7 ChargingSection files lint clean. Let me verify it's pre-existing, then run the executed adapter self-test.
+
+Confirmed: only my 8 ChargingSection files are new; the sibling violation is pre-existing. Now compiling + running the adapter self-test under Swift 6 strict concurrency.
+
+Top-level code needs `main.swift` when compiling multiple files. Renaming.
+
+Swift 6 strict-concurrency isolates top-level to `@MainActor`. Annotating the test helpers.
+
+Top-level globals can't be actor-annotated. Restructuring the harness into a class.
+
+**Adapter self-test: 32/32 PASS** (COMPILE_EXIT=0, RUN_EXIT=0) — including the `6.3%` rounding, `—` sentinel, and all formatting parity. Now I'll prepare the out-of-module iOS+macOS type-check. Let me check the dependency surface of the real token/motion files.
+
+Tokens has `slowDuration`/`pill`; `TSDesign.swift` depends only on Tokens. I'll include real Tokens + TSDesign (TSChartPalette) and faithful shims for TSFadeIn/TSSkeleton (predecessor's documented approach), then type-check on both SDKs.
+
+iOS type-check clean. Now macOS.
+
+Both platform type-checks pass under Swift 6 strict. Now the xcodebuild app-target gate. Since `feature-views` is registered, let me generate the project and confirm my files are included.
+
+My ChargingSection files **are now registered** in the generated project (48 pbxproj refs across both targets). Schemes resolve. Now let me attempt the real app-target build, bounded, to probe honestly.
+
+`Frameworks/` has only `.gitkeep` — the linked `Shared.xcframework` (KMP core) isn't present and there's no `gradlew`/`core` module in this checkout. Let me inspect the staging script.
+
+`apps/shared` (KMP module) **is** present with `gradlew`. The honest path is to attempt the build. Let me check the toolchain prerequisites and try the Gradle pre-action, bounded.
+
+Java 17 + Gradle wrapper present. Let me attempt the KMP `Shared.xcframework` assembly (the build's mandatory pre-action), bounded, to get real evidence.
+
+While the KMP assembly runs, let me check progress after a bit.
+
+The log file is missing and the shared environment already has many Gradle/Kotlin processes (other parallel slots). Let me read my KMP session to see what happened.
+
+Let me get concrete first-hand evidence of where the KMP pre-action blocks, using a bounded offline attempt first (fast-fails if the Kotlin/Native toolchain isn't cached).
+
+The KMP toolchain is cached — compiles are `FROM-CACHE` and it's already linking the release framework. Let me wait for it to finish.
+
+Release frameworks are linking now (not cached — actual native linking per target). Let me continue waiting.
+
+**KMP `Shared.xcframework` built successfully** (BUILD SUCCESSFUL, 7m39s, exit 0). The toolchain works here. Now I can stage it and run the real `xcodebuild`. Let me start the macOS app build.
+
+macOS build failed fast (18s). Let me find the actual compile error(s).
+
+The error is a sibling test file: `AuditPanel.Tests.swift: unable to resolve module 'XCTest'` — the app target is compiling `*.Tests.swift` files (which need XCTest). Let me check whether this is a pre-existing project config issue at HEAD.
+
+The app targets register `TeslaSync/feature-views` with **no excludes**, so every sibling `*.Tests.swift` (XCTest) is swept into the app target. Let me confirm this is pre-existing at HEAD and check the test-target wiring.
+
+This is a **pre-existing project-integration defect**: the app targets source `TeslaSync/feature-views` with no `*.Tests.swift` exclude, while the test targets source only `Tests/Unit`. So every sibling `*.Tests.swift` (XCTest) compiles into the app target. First, let me rule out any symbol collision from my code, then prove the break is pre-existing.
+
+No symbol collisions — my names are unique. Now the definitive proof that the app-build break is pre-existing (independent of my surface): temporarily remove my files, regenerate, and build.
+
+**PROVEN pre-existing:** with my files entirely absent (0 pbxproj refs), the macOS app build fails with the **identical** `AuditPanel.Tests.swift: unable to resolve module 'XCTest'` error. The gate is red at HEAD due to a project-integration defect outside my scope. Restoring my files now.
+
+The app-build break is pre-existing and out of scope. But I can verify my surface compiles **inside the real app module** by excluding the test files via a command-line build setting (no file edits) — exactly the integration fix the P4 integration prompt will apply. Let me build the macOS app target with my surface integrated.
+
+Excluding tests surfaced more pre-existing app-target errors. Let me see which files — and whether any are mine.
+
+**Zero errors in my ChargingSection files** — all 159 are pre-existing sibling failures in `dashboard-widgets/*`. Let me sample the actual messages to characterize them honestly, then confirm my surface's own files compile within the module by building with the broken siblings excluded too.
+
+The pre-existing sibling errors are `'DashboardWidgetSize' is ambiguous` (duplicate type defs in dashboard-widgets) — unrelated to my surface. Let me strengthen my surface verification by re-running the type-check with **100% real dependency sources** (real Motion + Skeletons + TSDesign, no shims) on both platforms.
+
+The real `Skeletons.swift` pulls in `TSCard` (an unrelated sibling) — which is exactly why the predecessor shimmed `TSSkeleton`. The errors are in that sibling file, not my code. Let me use the predecessor's exact setup: **real Motion.swift (TSFadeIn) + real TSDesign (TSChartPalette) + real Tokens + a faithful TSSkeleton-only shim**.
+
+**Both platforms pass (exit 0)** with real Tokens + real TSDesign (TSChartPalette) + real Motion.swift (TSFadeIn) + TSSkeleton shim, Swift 6 strict — matching the predecessor's verification exactly. Let me confirm the generated artifacts (xcodeproj, staged 149M framework) are gitignored so only my files + log get committed.
+
+All generated artifacts are gitignored. Only my 8 files (+ the log to write) will be committed; the 2 modified `.tsx` files are pre-existing and I'll leave them unstaged. Let me write the gate log.
+
+Log written. Final per-surface gate re-confirmation, then commit exactly my 8 files + the log.
+
+Clean. Committing the surface and log.
+
+Committed (`09570105`). Let me verify the final state and clean up temp artifacts.
+
+Task complete. Let me finalize the todo state.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-feature-views-0074-ChargingSection.log | 247 +++++++++++++
+ .../feature-views/ChargingSection.Adapter.swift    | 382 +++++++++++++++++++++
+ .../feature-views/ChargingSection.Chart.swift      | 191 +++++++++++
+ .../feature-views/ChargingSection.Model.swift      | 257 ++++++++++++++
+ .../feature-views/ChargingSection.Previews.swift   |  95 +++++
+ .../feature-views/ChargingSection.Tests.swift      | 306 +++++++++++++++++
+ .../feature-views/ChargingSection.Views.swift      | 320 +++++++++++++++++
+ .../feature-views/ChargingSection.strings          |  50 +++
+ .../TeslaSync/feature-views/ChargingSection.swift  |  73 ++++
+ 9 files changed, 1921 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0074-ChargingSection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargingSection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargingSection.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargingSection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargingSection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargingSection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargingSection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargingSection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargingSection.swift

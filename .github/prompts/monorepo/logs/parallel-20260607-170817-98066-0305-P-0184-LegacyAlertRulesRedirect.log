@@ -1,0 +1,96 @@
+I'll start by exploring the repository structure and reading the web source component, while checking what Apple tooling is available on this runner.
+
+The web source is a tiny redirect component (`/alert-rules` → `/notifications/rules` preserving search params). The toolchain (xcodebuild, swift 6.3, swiftlint, swiftformat) is available. Let me explore the existing Apple project structure, conventions, and the prior feature-views to understand how to build this idiomatically.
+
+There's already a `feature-views/` directory with existing examples. Let me study the conventions in detail — file structure, naming, the routing/nav system (critical since this is a redirect), i18n facade, and an existing simple feature view.
+
+Substantial established project with `AppRoute`, `AppRouteParser` (has alias redirects), `RouteHostRegistry`, `AppShell`. Since my allowed files are ONLY `feature-views/LegacyAlertRulesRedirect.*`, I must build a self-contained redirect surface. Let me study the routing system, i18n facade, state holders, and the location data source.
+
+Now I understand the routing architecture. Since I can't modify `AppRouteParser`, I'll build a self-contained redirect surface. The data source `useLocation` is React Router's location (current URL + search params). Let me find the equivalent native state holder (P1/S8), the design tokens (P1/S9), i18n facade (P1/S10), diagnostics contract (P1/S11), and study a representative small feature view's file composition.
+
+Let me read the core infrastructure (state holders, loadable state, design tokens) and a representative small feature view to learn the file composition pattern.
+
+`Base64Tool` is an ideal template — a pure-local transform (no networking), exactly like a redirect. Note the repo precedent: it reproduces the **web source's actual states** (empty/content/invalid), not the generic template list. Let me read the rest of that feature view's files plus design tokens and shared components.
+
+I now understand the file composition pattern. Let me confirm the exact design token names, shared components (`TSButton`, `TSEmptyState`), and how `project.yml` routes files to targets (app vs test).
+
+Now the critical question: can the gate actually run here (xcodegen, simulators, the Shared.xcframework KMP build), and how does `project.yml` keep `*.Tests.swift` out of the app target? Let me investigate the toolchain reality and build config.
+
+Key findings: no iPhone 16 simulator, no `Shared.xcframework` (KMP build needed), but xcodegen/swiftlint/swiftformat exist. Let me probe the full toolchain reality to determine DONE vs BLOCKED, and inspect the KMP build script + test routing.
+
+Now I have the runner reality: **no iOS Simulator runtimes exist** (hard blocker for the iOS gate), and `Shared.xcframework` must be Gradle-built. `pwsh`, `java 17`, `swiftlint`, `swiftformat`, `xcodegen` are present. Let me read the design tokens, shared components, and verify how `.Tests.swift` files are routed by generating the project.
+
+I have what I need for idiomatic code. Now let me confirm the spacing/radius/font tokens and definitively establish the build reality (SDKs, runtimes) plus how `.Tests.swift` files are routed — by generating the project.
+
+`xcodebuild -showsdks` and `simctl list runtimes` are **both empty** — strong signal that only Command Line Tools are installed (no full Xcode SDK), which makes app builds/simulators impossible. Let me confirm the Xcode situation definitively and view the Font tokens.
+
+Definitive finding: the active developer dir is **Command Line Tools, not Xcode** (`xcodebuild` refuses to run), there are **no iOS simulator runtimes**, and **no staged `Shared.xcframework`**. The iOS gate (`platform=iOS Simulator,name=iPhone 16`) therefore cannot run — this is a genuine platform-capability block. However, a macOS SDK exists via CLT, so I can headlessly compile/run the core logic with `swift`, and run swiftlint/swiftformat/placeholder checks. Let me verify SwiftUI compiles headlessly, then build the complete artifact.
+
+SwiftUI compiles headlessly on the CLT macOS SDK (the only error was the intentional top-level `print` under `-parse-as-library`). I can verify core logic for real. Let me read the lint/format configs and the closest analog (`ToolCard` — a no-data presentational surface) before writing, to match conventions exactly.
+
+`ToolCard` reveals more shared primitives (`TSGlassPanel`, `TSPanelTitle`, `TSCaption`, `TSText`). Let me confirm their signatures, then I'll write the complete artifact.
+
+I now have all conventions confirmed. Let me verify one open question — how `xcodegen` routes the co-located `*.Tests.swift` files (app vs test target) — by generating the project (xcodegen needs no Xcode). Then I'll write the artifact.
+
+Confirmed: `xcodegen` regenerates membership from the directory glob (so my new files auto-include), `.strings` → Resources, and `.Tests.swift` are co-located per the established 106-surface pattern (rule 7: I'll match it exactly). Now I'll write the complete artifact. First a plan, then the 7 source files.
+
+Now the artifact. Starting with the pure projection core:
+
+Now the presentational subviews:
+
+Now the strings catalog and the tests:
+
+Now let me build a headless verification harness to validate the core logic against the real macOS SDK (and probe the empty-`?` URL edge case) before finalizing the tests:
+
+All 30 logic checks pass against the real macOS SDK (including `@Observable`/`@MainActor` macro expansion), and the empty-`?` URL edge yields `search = "?"` (matching web `location.search`). Now I'll finalize the XCTest file mirroring these verified cases:
+
+Logic verified. Now let me attempt a stronger check: type-check the **View layer** too by compiling my view files against the real macOS SDK with their actual component dependencies. Let me inspect what `TSGlassPanel`/`TSButton` pull in.
+
+`TSGlassPanel` only needs `TSMaterial`; `TSButton` needs only tokens. Let me type-check my production view layer against the real component APIs (using a verbatim `TSGlassPanel` copy to avoid `Cards.swift`'s unrelated cascade):
+
+View layer type-checks cleanly (RC=0) against real component APIs. Now the static gates — swiftformat, swiftlint, and the placeholder check on the actual files:
+
+swiftformat flagged only the Tests file (force-unwraps, a hoistable `try`, and two long lines). Let me view those exact spots and fix them precisely:
+
+Let me fix the Tests file: replace the force-unwrap with `XCTUnwrap` and wrap the long assertion lines.
+
+swiftformat passes (0/6 need formatting), no force-unwraps. Now swiftlint --strict and the placeholder gate:
+
+swiftlint --strict: **0 violations in 6 files**. Now the placeholder gate. Let me first scan my files for any forbidden tokens, then run the actual `check-placeholders.ps1` exactly as the gate specifies:
+
+I need to (1) remove the word "stub" from a Model doc comment (acceptance criteria forbids it in shipped code, even though the Swift scanner wouldn't catch it), and (2) understand how the script handles the gate's extension-less `-Path`. Let me read the relevant script section and fix the comment:
+
+Key findings: the scanner is case-insensitive but only flags "stub" in **C#** files (not Swift), and a non-existent `-Path` returns a *clean* result (so the gate's extension-less path always passes). Still, the acceptance criteria forbids "stub" in shipped code, so I'll reword it. Then I'll run both the exact gate command and a proper temp-dir scan of my files.
+
+All static gates pass on real files (swiftformat 0, swiftlint 0 violations, placeholder 0). Let me re-verify the final code (post-edit) with the headless compile/run + type-check, regenerate the project to confirm integration, and capture the real `xcodebuild` blocker — gathering all evidence for the log.
+
+Both green on final files. Now regenerate the project, confirm my files integrate, and capture the real `xcodebuild` gate outcome:
+
+xcodebuild fails identically on iOS + macOS: `tool 'xcodebuild' requires Xcode, but active developer directory is a command line tools instance` — the definitive platform block. Let me confirm all 6 source files integrated and run the gate's whole-tree swiftlint/swiftformat:
+
+swiftlint whole-tree found **1 pre-existing violation among 1388 files** — but my 6 files are clean (verified 0 earlier). Let me pinpoint that violation to confirm it's not mine, and run the whole-tree swiftformat:
+
+The swiftlint violation is **pre-existing** in `LifetimeStatsWidget.Adapter.swift` (not my file, not in scope to fix). I ran swiftformat from the wrong cwd — let me re-run it from repo root as the gate specifies:
+
+Excellent — all evidence gathered. The 2 whole-tree lint/format issues are both **pre-existing in other surfaces** (not my files, out of scope). Now let me generate the honest log by actually running each gate + verification step and capturing real output:
+
+The whole-tree swiftlint run is slow (1388 files). Let me wait for completion.
+
+The `${MINE#...}` substitution only stripped the prefix from the first path, leaving the two scoped lines empty. Let me re-run those scoped checks correctly and capture the real summaries:
+
+swiftlint scoped: "Found 0 violations, 0 serious in 6 files" (it's on stderr). Let me patch the two empty lines in the log and append the final sections:
+
+Now append the final sections — artifact summary, states, compliance, honesty covenant, and the terminal EXIT/STATUS:
+
+The log is complete (117 lines, ends with `EXIT=1` / `STATUS=BLOCKED`). Now let me verify git state, clean up build artifacts, and confirm the generated project is ignored before committing:
+
+git status shows my 7 files + log (untracked) plus **two pre-existing modified web files** (`FleetApiSection.tsx`, `BackupRestorePage.tsx`) that are NOT mine — I'll leave those untouched and stage only my artifact + log:
+
+Exactly 8 files staged (7 surface + log); the pre-existing web changes stay unstaged. Committing with an honest message:
+
+Commit `7377274` created with all 8 files (997 insertions). Let me do a final sanity check on the tree state:
+
+Let me update the session plan status to reflect completion:
+
+Task complete. Final summary below.
+

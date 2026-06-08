@@ -1,0 +1,191 @@
+================================================================================
+ p4-apple · P7 · page:admin/AuditLog — SwiftUI / HIG parity
+ Output: apps/apple/TeslaSync/Features/Admin/AuditLogPage*.swift  (+ nav reg, xcstrings)
+ Web source: web/src/features/admin/pages/AuditLogPage.tsx
+ Host: Darwin arm64 · Xcode 16 toolchain (Apple Swift 6.3.2) at /Applications/Xcode.app
+================================================================================
+
+--- Files created (apps/apple/TeslaSync/Features/Admin/) ---
+  AuditLogPage.swift            page View + AdminRouteRegistration (nav)         104
+  AuditLogPage.Model.swift      error/load/verify states, DTOs, query, AuditTime 253
+  AuditLogPage.Decode.swift     snake-case wire structs + decode                115
+  AuditLogPage.ViewModel.swift  AuditLogSource seam (P1/S8) + @Observable model  215
+  AuditLogPage.Strings.swift    i18n facade + 50 web keys + a11y                 114
+  AuditLogPage.Projection.swift row projection + list/chain presentation         288
+  AuditLogPage.Table.swift      adaptive table + expandable detail (macOS+iOS)   375
+  AuditLogPage.Components.swift  status chips, copy, chain status, list states   338
+  AuditLogPage.Panels.swift     GlassPanel1/2/3 + nullable date filter           275
+  AuditLogPage.Previews.swift   #Preview for every state                         132
+  AuditLogPage.Tests.swift      XCTest: query/decode/projection/resolvers/model  342
+--- Files edited ---
+  apps/apple/Sources/TeslaSyncApp.swift   wire AdminRouteRegistration onto routeHosts
+  apps/apple/project.yml                  add TeslaSync/Features source (iOS + macOS targets)
+  apps/apple/Localization/Localizable.xcstrings   +53 keys (50 web + 3 supplementary)
+  apps/parity/apple-ledger.json           new ledger (page:admin/AuditLog rows)
+
+--- Architecture (mirrors the AuditPanel P4 feature-view disposition) ---
+  • Shared-free surface: binds through the `AuditLogSource` seam (P1/S8), so it
+    host-compiles without the KMP `Shared` framework and every branch is testable.
+  • Adaptive: regular columnar table on macOS/iPad, card list on compact iPhone
+    (ADR-002/ADR-006). Design tokens only (Color.TS/Font.TS/TSSpacing/TSRadius, P2).
+  • Shared P3 components: TSGlassPanel, TSPanelTitle, TSButton, TSTextField,
+    TSSelect, TSDatePickerBridge, TSEmptyState, TSSkeleton, TSAlertBanner.
+  • i18n (ADR-014): every literal via AuditLogStrings facade → Localizable.xcstrings.
+  • No charts / no map on this surface (web source has none). No SI quantities on
+    this surface (timestamps/counts/strings only) — SI converters not applicable.
+  • No live/SSE source on this surface (all four feeds are polled REST) — no
+    staleness banner required; the load state still carries the ADR-013 stale flag.
+
+================================================================================
+ === GATE RUN 2026-06-08 (apps/apple) ===
+================================================================================
+
+[1] PLACEHOLDER / STUB SCAN (ADR-011)
+    $ pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Admin -Language swift
+    PLACEHOLDER_ALLOWED=2   (2× `// parity:allow` on the web *Placeholder i18n key names)
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0                                                      [PASS]
+
+[2] SWIFTLINT (--strict)
+    $ swiftlint lint --strict TeslaSync/Features/Admin/*.swift
+    violations in Features/Admin = 0
+    LINT_EXIT=0                                                             [PASS]
+    (Note: the repo .swiftlint.yml `included:` lints the whole app; the only
+     other-file violation is pre-existing — dashboard-widgets/LifetimeStatsWidget
+     .Adapter.swift function_body_length — and is outside this prompt's scope.)
+
+[3] PROJECT GENERATION
+    $ xcodegen generate
+    XCODEGEN_EXIT=0  — TeslaSync.xcodeproj written; 66 AuditLogPage refs (all 11
+    files wired into iOS + macOS app targets via the new TeslaSync/Features path). [PASS]
+
+[4] ISOLATED COMPILE (Swift 6, strict concurrency = complete, macOS 15 SDK)
+    $ xcrun --sdk macosx swiftc -typecheck -swift-version 6 \
+        -strict-concurrency=complete -target arm64-apple-macos15.0 \
+        <design tokens + TS component library + App route infra> \
+        TeslaSync/Features/Admin/*.swift
+    TYPECHECK_EXIT=0  — all 10 production files type-check clean.
+    TYPECHECK_WITH_TESTS_EXIT=0  — re-run incl. AuditLogPage.Tests.swift (module
+    TeslaSync, XCTest framework path) also clean.                          [PASS]
+
+[5] XCODEBUILD (build) — BLOCKED on predecessor artifact
+    $ xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS \
+        -configuration Debug CODE_SIGNING_ALLOWED=NO build
+    error: There is no XCFramework found at
+      '.../apps/apple/Frameworks/Shared.xcframework'. (target 'TeslaSync-macOS')
+    ** BUILD FAILED **
+    BUILD_EXIT=65                                                          [BLOCKED]
+    Cause: Shared.xcframework is the KMP shared core packaged by Gradle
+      (apps/apple/Scripts/build-shared-xcframework.sh → :core:assembleSharedXCFramework).
+      It is git-ignored and, per apps/parity/shared-ledger.json (S3), its native
+      packaging is "deferred to macOS CI" — it is NOT staged in this slot, and no
+      Kotlin/Native + Gradle toolchain is provisioned here. Honesty covenant #7
+      (No predecessor bypass) forbids faking the framework, so this is recorded as
+      a genuine environmental block, not a code failure.
+
+[6] XCODEBUILD (test) — BLOCKED (depends on [5])
+    The TeslaSync(/-macOS) test scheme cannot build its app host without
+    Shared.xcframework, so the XCTest bundle cannot run here.
+    TEST_EXIT=blocked                                                      [BLOCKED]
+    (The new suite — AuditLogPage.Tests.swift — is compile-verified in [4]; it
+     covers query building, snake-case decode, projection formatting, the list +
+     chain presentation resolvers across every state, the model paging/reset/verify
+     behavior, and the VoiceOver row summary.)
+
+================================================================================
+ === PARITY ===
+ PARITY_REQUIRED=57   (3 panels + 4 states + 50 strings)
+================================================================================
+
+-- PANELS (3) — web GlassPanel ×3 --
+[x] panel  GlassPanel1  ->  AuditLogIntegrityPanel  (AuditLogPage.Panels.swift:16)
+       web "Hash chain integrity": TSGlassPanel + Verify-chain button + AuditChainStatusView
+[x] panel  GlassPanel2  ->  AuditLogFiltersPanel    (AuditLogPage.Panels.swift:45)
+       web "Filters": since/until/category/action/actor/entity/limit + Reset/Search
+[x] panel  GlassPanel3  ->  AuditLogEntriesPanel     (AuditLogPage.Panels.swift:203)
+       web "Entries": pagination (prev/next/pageInfo) + the state-switched table
+
+-- DATA STATES (4) — every state for the useAuditLog source --
+[x] state  loading  ->  AuditListLoadingView (AuditLogPage.Components.swift:222)
+       via AuditLogListPresentation.resolve → .loading (Projection.swift:230),
+       rendered by AuditLogEntriesPanel.content (Panels.swift:257)
+[x] state  empty    ->  AuditListEmptyView   (AuditLogPage.Components.swift:240)  (.empty)
+[x] state  error    ->  AuditListErrorView   (AuditLogPage.Components.swift:254)  (.error,
+       incl. 503 subsystem-missing branch + top-of-page TSAlertBanner, AuditLogPage.swift:62)
+[x] state  success  ->  AuditLogTable        (AuditLogPage.Table.swift:40)        (.content)
+       Data sources bound through @Observable AuditLogPageModel (ViewModel.swift:80):
+         useAuditLog→listState · useAuditCategories/useAuditActions→facets · useAuditChainVerify→verifyState
+
+-- STRINGS (50) — every web i18n key, ported verbatim, resolved from Localizable.xcstrings --
+[x] string  admin.auditLog.actionLabel            AuditLogStrings.Key.actionLabel · Panels.swift:77
+[x] string  admin.auditLog.actorLabel             AuditLogStrings.Key.actorLabel · Panels.swift:84
+[x] string  admin.auditLog.actorPlaceholder       AuditLogStrings.Key.actorPrompt · Panels.swift:82
+[x] string  admin.auditLog.allActions             AuditLogStrings.Key.allActions · Panels.swift:134
+[x] string  admin.auditLog.allCategories          AuditLogStrings.Key.allCategories · Panels.swift:129
+[x] string  admin.auditLog.applyFilters           AuditLogStrings.Key.applyFilters · Panels.swift:119
+[x] string  admin.auditLog.categoryLabel          AuditLogStrings.Key.categoryLabel · Panels.swift:70
+[x] string  admin.auditLog.chainBroken            AuditLogStrings.Key.chainBroken · Components.swift:135
+[x] string  admin.auditLog.chainIntact            AuditLogStrings.Key.chainIntact · Components.swift:126
+[x] string  admin.auditLog.colAction              AuditLogStrings.Key.colAction · Table.swift:100
+[x] string  admin.auditLog.colActor               AuditLogStrings.Key.colActor · Table.swift:98
+[x] string  admin.auditLog.colCategory            AuditLogStrings.Key.colCategory · Table.swift:99
+[x] string  admin.auditLog.colDetail              AuditLogStrings.Key.colDetail · Table.swift:102
+[x] string  admin.auditLog.colEntity              AuditLogStrings.Key.colEntity · Table.swift:101
+[x] string  admin.auditLog.colSuccess             AuditLogStrings.Key.colSuccess · Table.swift:104
+[x] string  admin.auditLog.colTrace               AuditLogStrings.Key.colTrace · Table.swift:103
+[x] string  admin.auditLog.colTs                  AuditLogStrings.Key.colTs · Table.swift:97
+[x] string  admin.auditLog.detailAfter            AuditLogStrings.Key.detailAfter · Table.swift:299
+[x] string  admin.auditLog.detailBefore           AuditLogStrings.Key.detailBefore · Table.swift:296
+[x] string  admin.auditLog.detailHash             AuditLogStrings.Key.detailHash · Table.swift:302
+[x] string  admin.auditLog.detailIp               AuditLogStrings.Key.detailIP · Table.swift:284
+[x] string  admin.auditLog.detailTrace            AuditLogStrings.Key.detailTrace · Table.swift:293
+[x] string  admin.auditLog.detailUa               AuditLogStrings.Key.detailUA · Table.swift:286
+[x] string  admin.auditLog.emptyMessage           AuditLogStrings.Key.emptyMessage · Components.swift:244
+[x] string  admin.auditLog.emptyTable             AuditLogStrings.Key.emptyTable · Components.swift:270
+[x] string  admin.auditLog.emptyTitle             AuditLogStrings.Key.emptyTitle · Components.swift:243
+[x] string  admin.auditLog.entityTypeLabel        AuditLogStrings.Key.entityTypeLabel · Panels.swift:91
+[x] string  admin.auditLog.entityTypePlaceholder  AuditLogStrings.Key.entityTypePrompt · Panels.swift:89
+[x] string  admin.auditLog.filtersTitle           AuditLogStrings.Key.filtersTitle · Panels.swift:53
+[x] string  admin.auditLog.firstBadId             AuditLogStrings.Key.firstBadID · Components.swift:210
+[x] string  admin.auditLog.hideDetails            AuditLogStrings.Key.hideDetails · Table.swift:181
+[x] string  admin.auditLog.integrityTitle         AuditLogStrings.Key.integrityTitle · Panels.swift:23
+[x] string  admin.auditLog.limitLabel             AuditLogStrings.Key.limitLabel · Panels.swift:98
+[x] string  admin.auditLog.nextPage               AuditLogStrings.Key.nextPage · Panels.swift:238
+[x] string  admin.auditLog.notConfigured          AuditLogStrings.Key.notConfigured · Components.swift:265
+[x] string  admin.auditLog.pageInfo               AuditLogStrings.Key.pageInfo · Panels.swift:250
+[x] string  admin.auditLog.pageTitle              AuditLogStrings.Key.pageTitle · AuditLogPage.swift:53
+[x] string  admin.auditLog.prevPage               AuditLogStrings.Key.prevPage · Panels.swift:224
+[x] string  admin.auditLog.resetFilters           AuditLogStrings.Key.resetFilters · Panels.swift:112
+[x] string  admin.auditLog.rowsChecked            AuditLogStrings.Key.rowsChecked · Components.swift:206
+[x] string  admin.auditLog.showDetails            AuditLogStrings.Key.showDetails · Table.swift:181
+[x] string  admin.auditLog.sinceLabel             AuditLogStrings.Key.sinceLabel · Panels.swift:56
+[x] string  admin.auditLog.subtitle               AuditLogStrings.Key.subtitle · AuditLogPage.swift:54
+[x] string  admin.auditLog.tableTitle             AuditLogStrings.Key.tableTitle · Panels.swift:211
+[x] string  admin.auditLog.untilLabel             AuditLogStrings.Key.untilLabel · Panels.swift:62
+[x] string  admin.auditLog.verifyButton           AuditLogStrings.Key.verifyButton · Panels.swift:28
+[x] string  admin.auditLog.verifyErrorTitle       AuditLogStrings.Key.verifyErrorTitle · Components.swift:169
+[x] string  admin.auditLog.verifyHint             AuditLogStrings.Key.verifyHint · Components.swift:150
+[x] string  admin.auditLog.verifying              AuditLogStrings.Key.verifying · Panels.swift:27
+[x] string  admin.subsystem.unavailableTitle      AuditLogStrings.Key.subsystemUnavailableTitle · AuditLogPage.swift:66
+
+  (All 50 keys verified present in apps/apple/Localization/Localizable.xcstrings
+   AND referenced in code. +3 native-only supplementary keys localize affordances
+   the web gets from shared components: admin.auditLog.statusOk / statusFail
+   (web hardcoded OK/Fail chips) and admin.auditLog.copy (web CopyButton).)
+
+PARITY_COVERED=57
+PARITY_REQUIRED=57
+PARITY_RESULT=COVERED (57/57)
+
+================================================================================
+ SUMMARY
+   PLACEHOLDER_EXIT=0   LINT_EXIT=0   XCODEGEN=0   TYPECHECK=0   TYPECHECK_TESTS=0
+   BUILD_EXIT=65 (BLOCKED: Frameworks/Shared.xcframework absent — P1 KMP/Gradle
+                  artifact deferred to macOS CI; cannot be faked, covenant #7)
+   TEST_EXIT=blocked (depends on build)
+   PARITY_COVERED==PARITY_REQUIRED (57)
+   Implementation complete; build+test triad blocked on the missing predecessor
+   framework only. No red reported as green.
+================================================================================
+EXIT=65
+STATUS=BLOCKED

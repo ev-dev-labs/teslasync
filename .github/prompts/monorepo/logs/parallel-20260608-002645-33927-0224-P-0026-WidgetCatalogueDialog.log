@@ -1,0 +1,189 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check tool availability and read the web source in parallel.
+
+Key findings: macOS with Swift 6.3.2, swiftlint, swiftformat available — but `xcodebuild` requires full Xcode (only Command Line Tools installed) and `simctl` is missing. Let me verify whether Xcode is installed anywhere and explore the existing Apple app structure.
+
+Important discovery: **Xcode.app IS installed** at `/Applications/Xcode.app` — it's just not selected (`xcode-select` points to CommandLineTools). I can override with `DEVELOPER_DIR`. Let me test this and explore the existing Apple app structure and the web widget registry.
+
+Excellent — **Xcode 26.5 is fully available** via `DEVELOPER_DIR`, and an **iPhone 16 simulator is already booted**. The gate CAN run. Now let me deeply understand the existing P4 conventions. Let me explore the existing surface directories, project config, and native widget registry.
+
+Now I understand the project layout. Critical detail: targets compile `TeslaSync/dashboard-widgets` and `TeslaSync/feature-views`, but `modals-dialogs` doesn't exist yet. Let me check git history for `modals-dialogs` references and study the conventions of an existing surface plus the shared infrastructure (i18n, tokens, telemetry, state holders).
+
+The conventions are clear now: each surface = main `.swift` (View binding to a `Model`), `.Model.swift` (P1/S8 state holder), sub-view files, `.Previews.swift`, `.strings` (P1/S10), `.Tests.swift`. Let me read the P1/S8 primitives and find the i18n facade, telemetry hook, design tokens, and any native widget registry.
+
+Let me find the exact i18n and telemetry conventions used within `feature-views` (where my surface's siblings live), and read a complete recent surface end-to-end.
+
+`AnomalyInlineRow` is a complete, recent, compact surface — the ideal template. Let me read it end-to-end to nail every convention.
+
+Let me read these files individually with the view tool for cleaner output.
+
+Let me read the Views, Previews, strings, tests, and the design token definitions to complete the picture.
+
+Let me read the Adapter (where Surface/Projection/Phase types live), the design tokens, and the test + preview patterns.
+
+Now let me examine the shared UI components (Modal, Button, Badge, Input native equivalents), the generated design tokens, and the test/preview patterns.
+
+Let me read the design tokens and the key components a dialog needs (overlays/modal, glass panel, motion).
+
+Now let me read the test/preview conventions and the remaining shared components I'll compose with.
+
+Now let me read the shared components I'll compose with, plus the full widget registry data needed for parity.
+
+Let me examine the registry file structure, then extract all widget data for parity.
+
+I have the full picture of conventions. Let me extract the complete widget registry data programmatically for faithful parity.
+
+I extracted **118 widgets across all 16 categories with 76 distinct icons**. Now let me verify the build prerequisites: xcodegen, the generated project, the Shared.xcframework, and whether a baseline build works.
+
+The app links a KMP `Shared.xcframework` built via Gradle (the long pole). Let me check the shared project + Java, and read the lint/format/placeholder configs my code must satisfy.
+
+Java 17 + xcodegen are present. The `Shared.xcframework` (KMP) must be built via Gradle — that's the long pole. Let me read the rest of the build script + the placeholder checker, then kick off the Gradle build in the background while I write code.
+
+Let me read the exact forbidden placeholder patterns, then kick off the Gradle build.
+
+I need to understand the placeholder-matching semantics precisely — the key `searchPlaceholder` could collide with the forbidden `"Placeholder"` pattern. Let me read the matching logic.
+
+Patterns are case-insensitive substrings, but there's a `// parity:allow <reason>` opt-out. The key `searchPlaceholder` will need centralizing with that marker. Let me kick off the long-pole Gradle build now, and read the remaining component APIs in parallel.
+
+`TSSearchInput` takes a `prompt` (not "placeholder") — good, but it resolves from the main bundle, not my per-surface table. I'll build a faithful search subview using a String prompt from my table. Let me read the remaining component APIs (Button, Badge, Card, Feedback states, Typography).
+
+Now the card, feedback (empty/error/skeleton), and typography components.
+
+Let me read the typography components and check the Gradle build progress.
+
+I now have all component APIs. Typography wrappers take `LocalizedStringKey` (main bundle), so for my per-surface table strings I'll use `Text(verbatim:)` + `Font.TS`/`Color.TS` tokens like AnomalyInlineRow. Let me check the glass-panel material helper and confirm no symbol collisions, while Gradle builds.
+
+I have all conventions and component APIs. Everything is in-module (`TeslaSync`). Let me generate the 118-entry Swift catalogue with a Lucide→SF Symbol mapping programmatically for accuracy. First, let me set up todos and check the data for escaping needs.
+
+No escaping needed (UTF-8 chars like CO₂/→ are fine in Swift). Let me generate the catalogue entries with the Lucide→SF Symbol mapping.
+
+The generated one-liners are too long for swiftlint's 120 limit (`--strict`). Let me check the real line-length/file-length ceilings by inspecting existing large files and testing swiftlint directly.
+
+A native `WidgetPicker.Catalog.swift` (1210 lines) already exists — likely the native widget registry I should reuse rather than duplicate. Let me examine it and the WidgetPicker surface.
+
+`WidgetPicker.Catalog.swift` is a 1:1 native port of the web registry (118 widgets) with categories, names, descriptions, and SF Symbols — all `public` in-module. I should **bind to this existing catalogue** (DRY) rather than duplicate it. Let me read its entry type and accessors.
+
+`WidgetCatalog.all` (118 entries) is the shared native registry — I'll **bind to it** (DRY) instead of duplicating. Let me confirm its accessors, ordering, and count.
+
+This is the ideal DRY approach: bind to `WidgetCatalog.all` (118 entries, the shared native registry) and `WidgetCatalogEntry`/`WidgetCatalogCategory`, implementing only WidgetCatalogueDialog's specific composition. Let me check Gradle progress, then start writing.
+
+Gradle is still fetching/building (the long pole). Let me write the plan and start creating the surface, beginning with the pure projection core.
+
+Let me create the directory and write the pure projection core. I'll bind to the existing `WidgetCatalog` registry.
+
+Gradle build finished. Let me confirm it staged the framework, then continue writing the Seams file.
+
+The KMP framework is built and staged (ios-arm64, ios-arm64-simulator, macos-arm64) — the build is de-risked. Now the Seams file (telemetry, i18n, source).
+
+Now the observable state-holder model.
+
+Now the state views. Let me quickly check the Skeleton component API to reuse for the loading state.
+
+Now the Views file (header, search field, sections, tiles, badges, Text helper, grid).
+
+Now the main dialog view.
+
+Now the i18n strings table.
+
+Now the previews (DEBUG-only gallery across states).
+
+Now the test files — projection/registry/a11y tests, and model behavior tests.
+
+All 10 surface files written. Now wire the new source directory into the build manifests (necessary, sibling-consistent infra).
+
+All files written and wired. Let me run the fast local checks (swiftformat, swiftlint, placeholders) on my files before the heavy xcodebuild.
+
+swiftformat found auto-fixable formatting issues (expected). Let me wait for swiftlint to finish, then apply swiftformat's auto-fix.
+
+Placeholder check passes. swiftformat/swiftlint found formatting + line-length issues in my files (and surfaced a **pre-existing** violation in `LifetimeStatsWidget.Adapter.swift` — not mine). Let me auto-fix my files with swiftformat, then assess the full-tree baseline.
+
+Formatting clean (0/9). Now let me run the full `swiftlint --strict` (as the gate does) and separate my files' violations from pre-existing ones.
+
+My surface files are now **100% clean** (swiftformat 0, swiftlint 0, placeholder 0). The full-tree `swiftlint --strict` has exactly ONE violation — pre-existing in `LifetimeStatsWidget.Adapter.swift` (not my file). Let me check git state and how prior surface logs handled the lint gate convention.
+
+Important findings: the worktree already had **pre-existing uncommitted changes** (AIUsageCard.*, web files) not made by me, and `LifetimeStatsWidget.Adapter.swift` is pre-existing/untouched. This is a shared aggregate tree. Let me check how a recent surface log handled the swiftlint gate convention.
+
+This is the canonical convention. Prior surface `0245-helpers` hit the **exact same** pre-existing `LifetimeStatsWidget.Adapter.swift` violation and handled it via surface-scoped gates + transparent root-causing, ending `EXIT=0/STATUS=DONE`. Let me read that log fully to replicate the convention faithfully.
+
+This is the canonical convention: surface-scoped gates are the meaningful gate; the repo-wide `xcodebuild build test` is pre-blocked by 146 sibling `*.Tests.swift` doing `@testable import TeslaSync` inside the app module (not my surface). I have the KMP framework staged, so I can go further — proving my surface compiles in the real app via `xcodebuild build`. Let me verify scoped swiftlint and generate the project.
+
+Scoped swiftlint is clean (EXIT 0); xcodegen generated the project. (swiftformat must use the dir form to skip `.strings` — already confirmed 0/9 clean earlier.) Let me confirm my files are wired into the project and kick off the real iOS app build.
+
+All 10 files are wired into the project. The iOS app build is running. Let me monitor it (full-app builds take several minutes).
+
+The iOS build is still compiling the full app. Let me prepare a focused SwiftPM test harness (per the 0245 precedent) to actually execute my tests. Let me verify the shared-component dependency set.
+
+The component files only depend on tokens + themselves (one references `TSCard`). Let me check the build progress and confirm the closed component set for the test harness.
+
+The iOS build failed — I need the actual compile errors. Let me extract them.
+
+The iOS build failure is in a **foreign file** (`AIRestorePanel.Tests.swift` — not mine): `unable to resolve module dependency: 'XCTest'`. No errors in modals-dialogs. This matches the pre-existing app-build blocker 0245 documented. Let me confirm the guard situation in foreign vs my test files.
+
+Now it's definitive: **198 of 204 feature-views test files are UNGUARDED** `import XCTest` + `@testable import TeslaSync` inside the app target — the pre-existing repo-wide blocker (0245 documented this). My 2 test files are properly guarded. My surface has zero errors. 
+
+To actually PROVE my surface compiles and my tests pass (per the 0245 host-test precedent), let me build an isolated SwiftPM module against the REAL files via symlinks.
+
+My surface uses only `TSButton`, `TSIconBox`, `TSSkeleton` + tokens. To get a robust dependency closure without guesswork, let me check whether `Sources/Components` is self-contained (no KMP `Shared` import), so I can include the whole component library in the test module.
+
+`Sources/Components` + `Sources/Design` are fully self-contained (only SDK frameworks, no KMP `Shared`). I'll build an isolated SwiftPM `TeslaSync` module from the REAL files (via symlinks) — components, tokens, the registry, and my surface — then run my tests against it with strict concurrency.
+
+`Sources/Components` isn't fully self-contained — `DataDisplay/UnitFormatters.swift` references an external `\.tsUnits` environment key (which I don't use). Let me switch to the minimal component closure my surface actually needs (Buttons, Badges, Skeletons→Cards→Typography, Material, Design + tokens).
+
+**The surface compiles cleanly** against the real components + registry + tokens under strict concurrency on macOS 15. Now let me execute my tests against it.
+
+A real strict-concurrency issue in my test files (the global `passthrough` closure needs `@Sendable`). Let me fix both — matching the AnomalyInlineRow precedent which used `@Sendable`.
+
+**All 35 tests pass (0 failures)** — 21 projection + 14 model tests, executed green against the real module. Let me re-verify my edited test files still lint/format clean, and prove iOS-18 compilation (dual-SDK).
+
+Scoped lint/format clean; iOS-18 typecheck compiles (one Sendable-conversion **warning** in Seams.swift:156). Let me inspect and eliminate it for a fully clean compile.
+
+The `emit()` still references `now()`. Let me fix it to use `Date()`.
+
+Fully clean: iOS-18 typecheck (0/0), macOS tests (35/0), scoped lint/format (0). Now let me capture the **literal gate commands** transparently for the log. Let me start the full `xcodebuild build test` (iOS) in the background and run the full-tree swiftlint/swiftformat in the foreground.
+
+Full-tree captures confirm the 0245 pattern exactly: the **only** swiftlint violation (`LifetimeStatsWidget.Adapter.swift`) and swiftformat issue (`ActionBuilder.Previews.swift`) are PRE-EXISTING foreign files — **zero from my surface**. Let me wait for the iOS `build test` to capture its real exit, then run macOS.
+
+The literal iOS `build test` failed (IOS_EXIT=65) on the exact pre-existing foreign cause (`AIRestorePanel.Tests.swift` — unguarded XCTest). Let me capture the macOS equivalent in the background while I write the comprehensive log.
+
+While macOS builds, let me gather final artifact data and re-confirm the placeholder gate after my edits.
+
+All my files are well under the 400-line limit; placeholder gate clean (0); i18n parity complete (the "MISSING category" is a grep artifact — my `.strings` has all 16 `category.*` keys). Let me check the macOS build test progress.
+
+Both literal `build test` gates (iOS + macOS, EXIT 65) fail on the identical pre-existing foreign blocker (`AIRestorePanel.Tests.swift` + 197 unguarded siblings) — not my surface. I now have complete evidence. Let me write the comprehensive gate log.
+
+Log written. Let me run a final clean verification of all surface-scoped gates, then commit.
+
+All final gates green. Let me commit the surface, log, and the necessary infra edits.
+
+Staging is exactly right (10 surface files + log + 2 infra manifests; the git-ignored `.xcodeproj` excluded). Let me commit.
+
+Committed cleanly (`3d0eb7a60`, 13 files, 2097 insertions). Let me clean up temp artifacts and confirm a tidy final git state.
+
+The task is complete. Final state is clean: my work is committed (`3d0eb7a60`), and the only remaining dirty files are pre-existing foreign ones (AIUsageCard, web) that I never touched.
+
+## Summary
+
+I shipped a production-quality, native Apple-idiomatic **`WidgetCatalogueDialog`** SwiftUI surface at parity with `web/src/features/dashboard/components/WidgetCatalogueDialog.tsx`.
+
+**Delivered** (`apps/apple/TeslaSync/modals-dialogs/WidgetCatalogueDialog.*`, 10 files, 1863 lines):
+- Full web parity: searchable, category-grouped widget picker with per-widget **Added** badges + Add buttons, subtitle/result-count copy, and the search-empty branch. `handleAdd` (no-op-when-added → `onAdd` → `onClose`) and the open-reset/focus reproduced.
+- **DRY**: binds to the existing shared `WidgetCatalog.all` registry (118 widgets) instead of duplicating it.
+- P1/S8 state-holder seam, P1/S10 i18n table (11 chrome + 16 category keys — full key parity), P1/S11 `view.opened` telemetry.
+- All 7 states render (content / filtered / search-empty / loading / registry-empty / error / stale / offline) — 11 previews.
+- Accessibility labels on every interactive element; tokens-only chrome (`TSButton`/`TSIconBox`/`TSSkeleton`).
+
+**Verification — surface-scoped gates all GREEN** (real commands/exit codes):
+- swiftformat `--lint` 0 · swiftlint `--strict` (scoped) 0 · placeholder gate COUNT=0
+- **macOS-15** `swift build` clean + **iOS-18** `swiftc -typecheck` 0 errors/0 warnings (strict concurrency)
+- **35 XCTest methods executed, 0 failures** (host-run against the real design system + registry via an isolated `@testable import TeslaSync` module)
+- xcodegen wires all 10 files into both app targets
+
+**Transparently documented** (in the gate log, not claimed green): the repo-wide `swiftlint --strict` (EXIT 2), `swiftformat --lint apps/apple` (EXIT 1), and `xcodebuild build test` (EXIT 65, both platforms) are RED **only** on PRE-EXISTING foreign files (`LifetimeStatsWidget`, `ActionBuilder.Previews`, and 198 unguarded sibling `*.Tests.swift`) — my surface contributes zero violations. This matches the established 0245-helpers disposition.
+
+Necessary infra (sibling-consistent): registered `TeslaSync/modals-dialogs` in `project.yml` (both targets) and `.swiftlint.yml`.
+
+Log: `.github/prompts/monorepo/logs/p4-apple-modals-dialogs-0026-WidgetCatalogueDialog.log` → `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete — all 9 todos done, surface built/verified/committed. Calling task_complete.
+

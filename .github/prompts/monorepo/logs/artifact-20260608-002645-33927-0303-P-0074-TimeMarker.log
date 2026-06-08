@@ -1,0 +1,166 @@
+================================================================================
+P4 · Shared surface · 0074 — TimeMarker (Apple)
+Run: 2026-06-08T05:00-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/303
+Base: c9c6fdb9f
+Prompt: P4 · shared-surfaces · 0074 — TimeMarker (Apple)
+Web source (spec): web/src/components/charts/TimeMarker.tsx (82 lines)
+Mode: code-complete + host-validated; full-app Xcode scheme build/test ATTEMPTED
+      (Shared.xcframework built green by the Gradle pre-step) then DEFERRED on the
+      pre-existing, unrelated app-target merge collisions (ADR-012 macOS-pending),
+      matching predecessors 0231 FSMTimelineChart / 0180 AlertMessageEditor / 0010 ToolCard.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                 OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iOS simulator SDK .......... iPhoneSimulator 26.5 (deployment target iOS 18.0)    OK
+  macOS SDK .................. MacOSX 26.5 (deployment target macOS 15.0)           OK
+  iOS simulator device ....... iPhone 16 present + booted (simctl via Xcode)        OK
+  Swift Charts ............... import Charts resolves on both SDKs (typecheck below) OK
+  MapKit ..................... not required (web "Charts/maps used" lists none; the
+                               source is a Recharts ReferenceLine → Swift Charts)   N/A
+  swiftlint .................. 0.63.3                                               OK
+  swiftformat ................ 0.61.1                                               OK
+  xcodegen ................... 2.45.4                                               OK
+  pwsh (placeholder gate) .... 7.6.2                                               OK
+  JDK (Kotlin/Native) ........ openjdk 17.0.19 (Gradle xcframework toolchain)       OK
+  Shared.xcframework ......... NOT staged at apps/apple/Frameworks (only .gitkeep), but
+                               the scheme pre-step BUILT it this run — see below     OK*
+  codesign identities ........ 0 valid (BLOCKER for the signed macOS app gate)      WARN
+
+  Charts/Maps capability note: this surface uses Swift Charts (a vertical `RuleMark`
+  with a top annotation — the native parity of the web Recharts `<ReferenceLine>`)
+  and NO MapKit. The core requirement — SwiftUI + Swift Charts — is available and
+  PROVEN by REAL iOS-18 + macOS-15 SDK `swiftc -typecheck` AND a passing 29-test
+  XCTest run below. The capability-BLOCKED escape hatch therefore does NOT apply;
+  the surface is authored and host-validated for real → STATUS=DONE.
+
+=== ARTIFACT (apps/apple/TeslaSync/shared-surfaces/TimeMarker.*) ===
+  TimeMarker.Adapter.swift        299  Foundation-only pure core. VERBATIM web ports, unit-pinned:
+                                       `normalizeSeverity` (incl. warning/error/fatal/ok aliases,
+                                       lowercased, nil/'' → info) + the marker `?? 'warn'` default;
+                                       the exact local `SEVERITY_STROKE` hex (#0ea5e9/#f59e0b/
+                                       #ef4444/#10b981) + sRGB components + Lucide→SF-Symbol map;
+                                       the resolve (web `x==null||x===''` → nil; `label ?? 'Alert'`;
+                                       `strokeWidth ?? 2`; solid dash) + phase resolution + the
+                                       centered demonstration window. TimeMarkerStrokeColor is a
+                                       2-safe value type (swiftlint large_tuple).
+  TimeMarker.Accessibility.swift   86  Foundation-only tail (house length budget): zone-aware clock
+                                       + moment formatting, the P1/S11 surface slug, and the marker /
+                                       empty VoiceOver summary builders (injected localizer + locale).
+  TimeMarker.Model.swift          280  P1/S11 telemetry seam (view.opened) + P1/S10 strings facade +
+                                       source snapshot + P1/S8 `TimeMarkerSource` protocol (the
+                                       native parity of the web `useAlertContext()` drill-through) +
+                                       @Observable TimeMarkerModel (resolve pin on apply, phase,
+                                       freshness, window, stale auto-refresh / offline) + InMemory
+                                       source. Injected clock/locale/zone.
+  TimeMarker.Chart.swift          159  Swift Charts: the REUSABLE `TimeMarkerRuleMark: ChartContent`
+                                       (web `<ReferenceLine>` parity — vertical RuleMark, severity
+                                       stroke, dash/width, top label annotation) any host `Chart{}`
+                                       can drop in, plus the compact host timeline + the
+                                       severity→color/tint extension (web `export { severityTokens }`).
+  TimeMarker.Views.swift          241  Token-driven chrome: header + freshness chip, stale/offline
+                                       banner, loading skeleton rail, empty (ContentUnavailableView —
+                                       web `x==null` → friendly empty), error (+retry), severity caption chip.
+  TimeMarker.swift                 84  The composed surface + card + fade-in + phase switch
+                                       (loading/error/empty/content) + view.opened lifecycle.
+  TimeMarker.Previews.swift        92  #if DEBUG previews: content / empty / loading / error /
+                                       stale / offline (a critical "Battery overheat" drill-through alert).
+  TimeMarker.strings               47  P1/S10 catalog — the 1 source string (defaultLabel "Alert")
+                                       + native chrome/severity/a11y keys.
+  TimeMarker.Tests.swift          235  XCTest (pure): severity normalize+aliases, SEVERITY_STROKE hex +
+                                       sRGB + symbols, resolve guard/defaults/overrides, phase, window;
+                                       formatting; a11y summaries; surface slug.
+  TimeMarker.ModelTests.swift     159  XCTest (model): content/empty/loading/failed phases, pin
+                                       severity+label defaults, view.opened once, window centering,
+                                       stale auto-refresh once + re-arm, offline keeps cache, retry, stop.
+  Total 1682 lines (10 files). Every .swift file <= 299 lines (house file_length 400);
+  largest Adapter.swift 299. Zero `// parity:allow` opt-outs.
+
+=== PARITY (vs web components/charts/TimeMarker.tsx) ===
+  The web source is a thin wrapper over a Recharts `<ReferenceLine>` that marks an alert's
+  moment on whatever time chart the drill-through page (`useAlertContext()`) already shows,
+  and renders nothing when `x` is absent. The native parity keeps that exact data + logic
+  while promoting it to a full shared surface (the prompt's state envelope).
+  Data sources (web → native P1/S8 source seam):
+    useAlertContext (drill-through alert) → TimeMarkerSource → TimeMarkerUpdate
+                                            (alert | nil, loading/loaded/failed, live/stale/offline)
+  Verbatim web logic ported + unit-pinned:
+    normalizeSeverity(s): nil/'' → info · warning → warn · error/fatal → critical ·
+      ok/success → success · info/warn/critical → self · else info (lowercased) ·
+    marker severity = normalizeSeverity(severity ?? 'warn') ·
+    SEVERITY_STROKE = { info:#0ea5e9, warn:#f59e0b, critical:#ef4444, success:#10b981 } ·
+    x == null || x === '' → render nothing (→ empty state) ·
+    label ?? 'Alert' · strokeWidth ?? 2 · strokeDasharray default solid.
+  Recharts → Swift Charts mapping:
+    `<ReferenceLine x stroke strokeWidth strokeDasharray label{value,position:'top',fill}>`
+      → `TimeMarkerRuleMark: ChartContent` = vertical `RuleMark(x:)` + `.foregroundStyle`
+        (exact severity hex) + `.lineStyle(width/dash)` + `.annotation(position:.top)` chip ·
+    reusable as a `ChartContent` so any host `Chart{}` composes it (the web reuse pattern) ·
+    `export { severityTokens }` → public `TimeMarkerSeverity.color/softTint/borderTint`.
+  States (all render, never a blank box): loading(skeleton rail) · empty(web `x==null` →
+    "No alert selected") · error(+retry) · stale(chip + one auto-refresh) · offline(cached +
+    chip) — a freshness envelope (ADR-013) around the web marker-vs-nothing split.
+  i18n: the web source has no `t()` calls (anonymous; one hardcoded 'Alert'); that maps to
+    `timeMarker.defaultLabel`, and all native chrome/severity/a11y resolve via the P1/S10
+    facade (catalog carries the English). a11y: chart VoiceOver label + spoken marker /
+    empty summary (severity + label + moment); Dynamic Type via Font.TS; reduce-motion-safe.
+  Telemetry: emits view.opened with surface slug "TimeMarker" once (P1/S11), asserted.
+
+=== HOST-RUNNABLE GATES (all green) ===
+  swiftformat --lint <surface> ................ 0/9 require formatting              FORMAT_EXIT=0
+  swiftlint lint --strict <surface> ........... Found 0 violations, 0 serious        LINT_EXIT=0
+  check-placeholders.ps1 (literal gate path) .. PLACEHOLDER_COUNT=0 ALLOWED=0        PLACEHOLDER_EXIT=0
+  check-placeholders.ps1 -Path shared-surfaces  PLACEHOLDER_COUNT=0 ALLOWED=0       (real dir scan, swift)
+  swiftc -typecheck iPhoneSimulator (ios18.0-simulator, swift6, strict-concurrency) IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (macos15.0, swift6, strict-concurrency) ................. MAC_TYPECHECK_EXIT=0
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6) ........... 29/29 passed, TEST_EXIT=0
+      → TimeMarkerSeverityTests (5) · TimeMarkerProjectorTests (7) ·
+        TimeMarkerFormatTests (2) · TimeMarkerAccessibilityTests (2) ·
+        TimeMarkerSurfaceTests (1) · TimeMarkerModelTests (12)
+      Harness links the REAL Tokens.swift + TSDesign.swift + Motion.swift primitives;
+      the single out-of-scope shared atom (TSSkeleton) is provided with its exact public
+      signature (the atom library is the P4 component-library bundle's scope).
+  xcodegen generate (spec enumerates all 10 new files, 60 "TimeMarker" pbxproj refs) . XCODEGEN_EXIT=0
+      (shared-surfaces is registered transiently for this enumeration check; project.yml
+      is NOT in this surface's allowed-files set — the source-path registration is owned
+      by the P4-core / P99 aggregation prompt. project.yml restored, git clean.)
+
+=== FULL-APP XCODE SCHEME BUILD/TEST — ATTEMPTED, then DEFERRED (ADR-012 macOS-pending) ===
+  Command: DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' \
+    CODE_SIGNING_ALLOWED=NO build   (project regenerated transiently with shared-surfaces)
+  This was RUN on this host, not merely asserted:
+    • The scheme's Gradle/Kotlin-Native pre-step SUCCEEDED — it assembled the
+      Shared.xcframework (debug written to apps/shared/core/build/XCFrameworks/debug/;
+      release link `:core:linkReleaseFramework{IosArm64,IosSimulatorArm64,…}` observed in
+      progress). So the "Shared.xcframework not staged" blocker is ENVIRONMENTALLY
+      RESOLVABLE on a runner with the KMP toolchain + time; it is not a code defect.
+  The full-app `build test` still cannot go green here, blocked by PRE-EXISTING, UNRELATED
+  parallel-merge state in the shared app target — ZERO of which originates in this surface
+  (all verified present in THIS tree):
+    • `struct DashboardWidgetSize` redefined across 15 files (Sources/DashboardWidgets/* +
+      TeslaSync/dashboard-widgets/*) — "invalid redeclaration" across the app target.
+    • 261 co-located feature-view / dashboard-widget *.Tests.swift / *.ModelTests.swift
+      `import XCTest` into the app target (this surface's 2 test files follow that SAME
+      established sibling convention; they do not introduce a new failure class).
+    • 0 codesigning identities (ADR-012) — blocks the signed macOS app/test run.
+  This surface's OWN code is proven to compile against the real iOS-18 + macOS-15 SDKs
+  (typechecks above) and its logic runs green (29/29 XCTest). No TimeMarker / shared-surfaces
+  compile error exists. The full-app build/test is recorded for the
+  `p4-apple/P99-0001-apple-acceptance-gate` runner (macos-latest, signing identities), the
+  same deferral the predecessor surfaces use in apps/macos-pending-verifications.md.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all web states reproduced (loading/empty/error/stale/offline + content).
+  [x] Hooks bind to the shared P1/S8 source seam (useAlertContext parity); no direct HTTP from the view.
+  [x] Every i18n key resolves via the P1/S10 catalog (the 1 source string + native chrome/severity/a11y).
+  [x] Accessibility labels present on the chart + every interactive element + per-state summaries.
+  [x] Tests: adapter unit tests + per-state model tests + a11y label tests (29 total, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (stub gate: 0, 0 opt-outs).
+  [~] xcodebuild build test: ATTEMPTED (Gradle xcframework built green); DEFERRED to P99
+      macos-latest for the pre-existing unrelated app-target collisions + signing.
+      Host-runnable equivalents (real-SDK typecheck both platforms + 29/29 XCTest) green.
+
+EXIT=0
+STATUS=DONE

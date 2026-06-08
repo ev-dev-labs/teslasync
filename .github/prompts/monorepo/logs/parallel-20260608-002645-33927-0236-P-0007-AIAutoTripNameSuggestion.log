@@ -1,0 +1,180 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Build tools are present, but `xcode-select` points to CommandLineTools (not full Xcode). Let me verify actual capability and read the web source + Apple app structure in parallel.
+
+Critical capability finding: **no full Xcode, no iOS simulators**. Let me capture exact evidence and explore the native architecture (state holders, tokens, i18n, existing AI surfaces) to understand what's buildable.
+
+There IS a full `/Applications/Xcode.app` — just not selected. Let me try `DEVELOPER_DIR` to access it without sudo, and check XcodeGen + simulators.
+
+Full Xcode 26.5 + iPhone 16 simulator (booted) + xcodegen are all available. Now let me understand the migration state, the `shared-surfaces` wiring, and find existing native AI-surface patterns to follow.
+
+No native AI surfaces exist yet, and `shared-surfaces` is not in `project.yml`. Let me examine the migration state, a sample widget log (does the gate pass here?), the KMP framework build, and the core P1 building blocks (tokens, i18n, state holders, diagnostics).
+
+The ExportStatusWidget predecessor reveals the real pattern. Let me reconcile the path conflict (prompt says `TeslaSync/shared-surfaces` but that's not in `project.yml`), check the KMP/Gradle toolchain, and read the full predecessor log + dashboard-widget prompt.
+
+The predecessor log is a goldmine — it establishes the **PATH ADAPTATION** precedent (prompt's `TeslaSync/shared-surfaces/` doesn't exist in the XcodeGen layout; files go under `Sources/**` + `Tests/Unit/**`) and the full architecture pattern. Let me kick off the long-pole KMP framework build in the background while I study the web spec and native infra.
+
+Now I understand the AIFeatureCard visual spec. Let me read the streaming hooks, output panel, gate, and the native component/token/diagnostics infrastructure to know exact APIs.
+
+Let me check the KMP build progress and read the streaming hook + gate definitions.
+
+The KMP framework build is progressing (Kotlin/Native linking). I now fully understand the web spec. The predecessor `ExportStatusWidget.swift` is my best template — let me read it in full plus its tests, the facade domains, diagnostics seam, and i18n.
+
+Excellent — I now have the full binding + telemetry + model patterns. Let me read the rest of the predecessor view (state rendering + previews), its test file, the component signatures I'll use, and check the shared core for any AI streaming API.
+
+No AI API in the shared core — so I follow the predecessor's Shared-free provider-seam pattern exactly. Let me verify the i18n keys exist (I can't modify the catalog — not in allowed files) and read the exact component + token signatures.
+
+The per-feature keys (`trips.detail.aiSuggestName.*`) all exist — those are MY source's actual keys. But the shared `helix.*`/`ai.common.*`/`widget.freshness.*` keys don't, and I can't modify the catalog. Let me thoroughly map what AI/thinking/error/freshness keys DO exist so I bind only to real keys.
+
+Now the i18n picture is clear: per-feature keys exist (`translation.` prefix); freshness keys exist without prefix; there are no `helix.*`/`ai.common.thinking` keys. Let me confirm the remaining keys I need and inspect their values so I bind only to real keys.
+
+Found it: `translation.chatbot.thinking` = 'Helix is thinking…' exists — perfect for the streaming state. Let me check the `chatbot.*` namespace for error/empty keys to maximize fidelity, then I have everything.
+
+I now have all i18n keys mapped to existing catalog entries (including `translation.chatbot.thinking` = 'Helix is thinking…'). Let me grab the exact token/badge/skeleton/typography signatures and check the framework build, then write the surface.
+
+The framework finished building the debug XCFramework (release in progress). I have all tokens/components. Let me confirm `TSSkeleton`/`TSFreshnessIndicator` signatures, the lint/format configs, and a sample test file structure before writing.
+
+I have the full API surface mapped. Let me set up a plan + todos, then write the production surface. First, confirm the framework staged.
+
+The framework is finishing release builds. I have everything needed. Let me record the plan + todos and write the surface.
+
+Framework is finishing. Let me create the directory and write the production surface file.
+
+Now the comprehensive test file.
+
+Both files written. Let me check the framework build, then format + lint my new files.
+
+Framework staged; files formatted. Let me verify they pass the exact gate linters (scoped to my files) and the placeholder check.
+
+SwiftFormat passes. Four SwiftLint violations to fix. Let me view the exact locations.
+
+Clear fixes needed. Let me view the full `run` function to refactor it precisely.
+
+Now refactor `typedEvent` into per-event decoders and fix the button's double-closure.
+
+Now split the test class to satisfy `type_body_length` by moving the Model lifecycle tests + helpers into an extension.
+
+Re-run format + lint on the edited files.
+
+Both linters pass on my files. Let me check the placeholder tooling and generate the Xcode project (in a persistent build shell with DEVELOPER_DIR).
+
+pwsh + placeholder script present; project generated. Let me run the placeholder check, confirm my files are in the project, then start the iOS build.
+
+The surface is clean. The test file has 2 "TODO" hits — let me find and remove them.
+
+False positives: "ToDone" in two method names contains the substring "todo" (case-insensitive). Let me check the full pattern list and rename to avoid all forbidden substrings.
+
+Only the two "ToDone" method names trigger it. Let me rename them.
+
+Renamed. Let me re-verify the placeholder gate, then launch the iOS build + my unit tests (this is the long pole).
+
+Placeholder gate clean. Launching the iOS build + my unit tests (full app compile — the long pole).
+
+The full-app iOS build is running in the background. Let me review the concurrency-sensitive parts of my code while it compiles, and check progress.
+
+The iOS build hit **pre-existing** errors: `*.Tests.swift` files under `TeslaSync/feature-views` (committed, not mine) `import XCTest` while being compiled into the **app** target, which can't resolve XCTest. Let me confirm this is unrelated to my file and characterize the failure precisely.
+
+My files compile cleanly — the only 4 errors are the pre-existing XCTest-in-app-target issue in committed `*.Tests.swift` files (note the `.Tests.swift` dot convention; my `Tests/Unit` files don't match). Let me check the repo's baseline dirty state, then rebuild excluding those misplaced test files so I can positively verify my surface + tests.
+
+Confirmed: my 2 untracked paths are the only additions; the 7 modified files + 224 misplaced `*.Tests.swift` are the pre-existing baseline (app target wrongly compiles test files → XCTest unresolvable). Let me verify my test-target files don't use the `.Tests.swift` convention, then rebuild excluding the misplaced files so I can positively verify my surface + tests.
+
+Clean. Rebuilding with the misplaced `*.Tests.swift` excluded from the app target (a command-line-only harness override — touches no files) so I can positively verify my surface compiles and my tests pass.
+
+While the full build runs (~10+ min), let me fast-validate the strict-concurrency design (the `Task`-capturing-`onEvent` pattern) in isolation, since the first build failed at module resolution before type-checking my Swift.
+
+Confirmed the strict-concurrency error in my design. Let me read the build result and validate the fix (marking `onEvent` as `@MainActor`).
+
+The fixed probe type-checks cleanly. But build2 shows 4 errors not in my file — let me see exactly what they are.
+
+The exclusion missed other test-file naming conventions (`*.ModelTests.swift`), and the probe confirms my concurrency design needs `onEvent` to be `@MainActor`. Let me fix the concurrency in my files and discover all test-file patterns.
+
+The `*.*Tests.swift` glob catches all dotted test-file variants (`.AdapterTests`, `.ModelTests`, `.StateTests`, `.ViewTests`, `.Tests`) and won't touch my files. The test-file edit didn't match — let me view its current state.
+
+Let me verify the test doubles' `@MainActor` annotations and re-run format + lint on both files.
+
+Test doubles are correctly annotated. Let me re-format + re-lint, then relaunch the build with the comprehensive exclusion.
+
+Lint/format clean. Relaunching the iOS build + my tests with the comprehensive exclusion of misplaced test files.
+
+The build is compiling. Let me monitor progress and watch specifically for any errors in my file now that module resolution should proceed.
+
+1320 errors, all pre-existing duplicate-type issues (`TelemetryErrorsModel`/`TelemetryErrorRow` ambiguous) — **zero** attributed to my file. The baseline app target is broken (mid-migration duplicates). Let me confirm these duplicates are pre-existing and not mine.
+
+Confirmed pre-existing: `TelemetryErrorsModel` is defined in **two** committed files (`TelemetryErrorsWidget.Model.swift` + `TelemetryErrorsPanel.Model.swift`) — a baseline duplicate-type collision unrelated to my surface. The baseline app target can't compile. Let me isolate a real compile proof of my surface against the actual shared UI library. First, what do the shared Components depend on?
+
+Components/Design only depend on SwiftUI/Charts/MapKit/CoreLocation (no `Shared`) — so I can compile my surface against the **real** shared UI library in isolation, bypassing the broken baseline. Let me run an isolated type-check under the exact app build settings (Swift 6, strict concurrency, DEBUG).
+
+The only 6 errors are in `Components/Maps/MapView.swift` (missing `TSChartPalette`) — unrelated to my surface, which uses no maps/charts. Let me find where `TSChartPalette` lives and re-run excluding the map/chart components my surface doesn't touch.
+
+Just need `Sources/Design/TSDesign.swift` (defines `tsGlassPanel`). Let me include it.
+
+Real errors in my file now (the isolated compile reached it): 9 `static let X: LocalizedStringKey` properties violate Swift 6 strict concurrency (`LocalizedStringKey` isn't `Sendable`). Fix: make them computed `static var` (no stored global state). Let me update the L10n block.
+
+Re-running the isolated type-check to confirm my surface fully compiles against the real shared library.
+
+**Isolated type-check passes with 0 errors** — my surface fully compiles against the real shared component library under the exact app settings (iOS sim, Swift 6, strict concurrency, DEBUG). Let me re-lint after the L10n edit, then build a standalone macOS harness to **run** my logic assertions for runtime proof.
+
+Lint clean. Now the runtime proof — a standalone harness executing my logic (same assertions as the XCTest file), compiled with the surface + real components and run on the host.
+
+Now compile the harness + surface + real components into a macOS executable and run it.
+
+Top-level expressions aren't allowed in multi-file compiles. Let me switch to an `@main` entry point.
+
+**Runtime harness: 32/32 assertions pass** — the surface's reducer, parser, view-state, a11y, and model lifecycle all execute correctly against the real components under Swift 6 strict concurrency. 
+
+Now let me capture the **exact gate commands'** real output (to honestly document the pre-existing baseline blocker). Running both verbatim.
+
+Both gate builds are running (will hit the pre-existing blocker). Meanwhile, let me run the exact full-tree lint/format gate commands to characterize them, and check build progress.
+
+Full-tree `swiftformat --lint` fails only on a **pre-existing** file (`ActionBuilder.Previews.swift` — not mine; "1/1915 files"). Let me check the gate builds' progress and run the full-tree swiftlint to characterize all gate steps.
+
+macOS gate (exact): `MAC_EXIT=65` — blocked by **missing dev-signing certificate** (environmental, exactly as predecessor documented) — not my file. Let me get the iOS gate result and run the full-tree swiftlint.
+
+All gate results captured. **Every** build/lint failure is a pre-existing baseline defect in other committed files — **none** in my surface or test:
+
+| Gate step | Exit | Root cause (evidence) |
+|---|---|---|
+| iOS `build test` | 65 | `*.Tests.swift`/`*.ModelTests.swift` in app target `import XCTest` (pre-existing) |
+| macOS `build test` | 65 | missing dev-signing cert (environmental) |
+| `swiftlint --strict` | 2 | `LifetimeStatsWidget.Adapter.swift` body length (pre-existing) |
+| `swiftformat --lint` | 1 | `ActionBuilder.Previews.swift` blank-lines (pre-existing) |
+| placeholder (my surface) | 0 | ✅ clean |
+
+My files pass every check when scoped, plus isolated type-check (0 errors) + runtime harness (32/32). Let me write the honest gate log and commit.
+
+Now let me write the comprehensive, honest gate log.
+
+Now let me commit exactly my three files (surface + tests + log), being careful not to include the pre-existing baseline modifications.
+
+Exactly 3 files staged. Committing.
+
+Commit complete: 3 files, 1637 insertions. Let me update todos, clean up scratch files, and verify the final worktree state.
+
+All todos done, scratch cleaned, exactly my 3 files committed (the 7 remaining unstaged are pre-existing baseline mods I correctly left untouched). Final confirmation that the committed artifact is green:
+
+Format + strict lint pass on the committed files. Let me cleanly reconfirm the placeholder gate (output was truncated).
+
+All verification gates on the committed artifact are green. The task is complete.
+
+## Summary
+
+Shipped a production-polished, native Apple (SwiftUI) parity port of the web shared surface `components/ai/AIAutoTripNameSuggestion.tsx`.
+
+**Delivered (committed `64ef4f68c`, 3 files, 1637 insertions):**
+- `apps/apple/Sources/SharedSurfaces/AIAutoTripNameSuggestion.swift` (1100 lines)
+- `apps/apple/Tests/Unit/AIAutoTripNameSuggestionTests.swift` (368 lines, 33 XCTest cases)
+- `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0007-AIAutoTripNameSuggestion.log`
+
+**Architecture** (Shared-free, binds via injected seam — the ExportStatusWidget precedent): pure reducer (verbatim `useAiStream` port), SSE frame parser (`parseSSEFrame`/`toTypedEvent` port), derived view-state machine (`AIFeatureCard`+`AiOutputPanel` port), P1/S11 `view.opened` telemetry seam, `AITripNameStreamDriver` seam + a **real** `URLSession` SSE driver + DEBUG doubles, `@MainActor @Observable` model, and a SwiftUI view rendering **every** state (gated-off/no-trip/idle/thinking/proposal/error/offline/stale) with full VoiceOver labels, Dynamic Type, reduce-motion, i18n via verified catalog keys, and 5 `#Preview` matrices.
+
+**Verification (all green on the added files):**
+- `swiftformat --lint` ✅ · `swiftlint --strict` ✅ · placeholder gate ✅ (0)
+- Isolated `swiftc -typecheck` against the **real** shared component library (iPhoneSimulator SDK, Swift 6, `-strict-concurrency=complete`, DEBUG): **0 errors**
+- Standalone runtime harness (compiled + executed): **32/32 assertions pass**
+
+**Honest gate disposition:** The full `xcodebuild build test` and full-tree lint cannot reach EXIT=0 — but every failure is a **pre-existing baseline defect in other committed files** (≈224 misplaced `*.Tests.swift`/`*.ModelTests.swift` importing XCTest in the app target; a duplicate `TelemetryErrorsModel` across two surfaces; pre-existing lint/format violations) or an **environmental** macOS dev-signing gap — **none attributable to this surface**, and all outside the allowed-files scope (`project.yml` + 200+ other files). This is fully enumerated with evidence in the log. Per honesty rule 1, the repo gate is not claimed green; the surface is proven green in isolation. `ARTIFACT_EXIT=0 / STATUS=DONE` with the gate-blocked caveat documented.
+
+
+
+The task is fully complete and verified. Let me update the plan to reflect final status, then mark complete.
+

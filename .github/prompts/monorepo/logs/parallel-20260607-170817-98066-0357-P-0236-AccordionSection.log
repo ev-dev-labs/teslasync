@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure, reading the web source, and checking platform capabilities — all in parallel.
+
+Toolchain finding is critical: `xcodebuild` requires full Xcode but only **CommandLineTools** is active (`/Library/Developer/CommandLineTools`). Swift 6.3.2, swiftlint, swiftformat are present. Let me explore the existing Apple app structure deeply to match conventions before writing code.
+
+`feature-views` exists. Critically: **no iOS simulators, no full Xcode** — `simctl` and `xcodebuild -showsdks` both fail. Let me examine existing feature-views and core conventions to match them precisely.
+
+1151 entries — each feature-view follows a 7-file pattern. Let me check if `AccordionSection.*` already exists and study a representative example end-to-end.
+
+Now let me study the conventions deeply. I'll read a complete data-driven example (AcDcStatsPanel) AND search for the closest presentational/disclosure analog to AccordionSection.
+
+Good — I understand the 7-file pattern. AccordionSection is **pure presentational** (children/composition). Let me find the closest presentational+children analog, locate the i18n facade, diagnostics contract, motion (FadeIn) equivalent, and TSGlassPanel.
+
+Let me read the core shared infrastructure and a complete example's Model/Views/Tests in parallel.
+
+`ToolCard` is the exact precedent — a pure presentational container with children that documents *"It owns no data — exactly like the web component — so the cache/loading/error/stale/offline states belong to whatever content the caller embeds, not to the card itself."* Let me examine ToolCard's companion files, a presentational example with Tests (HighlightCard), and the design tokens.
+
+ToolCard has a 3-file pattern (`swift`, `Model`, `Telemetry`); HighlightCard has the full presentational set with Tests + strings. Let me read all of HighlightCard's set plus ToolCard's Telemetry/Model and the design tokens.
+
+Now let me read HighlightCard's Model, strings, Tests, Previews, and the design tokens + typography components.
+
+I have the full pattern. Now let me read the design tokens and typography components to use exact token names.
+
+Tokens are generated elsewhere. Let me locate their definitions and read the project.yml to understand the build target layout.
+
+Now I understand the build layout. Let me check the design tokens source, the placeholder checker, PowerShell availability, whether SwiftUI typechecks under CommandLineTools, and a sibling log's format — all key to executing the gate honestly.
+
+Major findings: **SwiftUI typechecks under CommandLineTools (macOS target)**, `pwsh` is available, and sibling logs exist. Let me read a sibling log to match format/precedent, the tokens, and the placeholder checker.
+
+I now have everything: exact tokens, the sibling log format, and the verification strategy (isolated SwiftPM harness — the sibling's actual GREEN proof). Critically, I must check whether **this** runner has `/Applications/Xcode.app` (the sibling overrode `DEVELOPER_DIR` to it). Let me check that plus read TSMaterial, Badges, and the swiftlint config.
+
+**`/Applications/Xcode.app` exists** — so this is NOT capability-blocked; I can run the real gate via a non-destructive `DEVELOPER_DIR` override (like the sibling). `tsGlassPanel()` clips to rounded corners (overflow-hidden parity). Let me verify the override works and read the sanctioned-deferral doc + swiftformat config.
+
+Confirmed: **Xcode 26.5 + iPhone 16 simulator (booted) + macOS SDK all present** via the `DEVELOPER_DIR` override — not capability-blocked. Tokens, materials, lint/format configs all understood. Let me read the Badges component (for previews) then start building.
+
+Everything is validated. The repo's sanctioned disposition (per `apps/macos-pending-verifications.md`) is **code-complete + isolated SwiftPM/typecheck green, full-app xcodebuild DEFERRED** to the P99 gate due to pre-existing collisions. `AccordionSection` is a pure presentational disclosure container — `ToolCard`/`HighlightCard` are my exact precedents. Let me set up tracking and write the plan.
+
+Now I'll write all six source files, following the HighlightCard/ToolCard conventions precisely.
+
+The convenience init can't reassign a `let` after delegation. Let me refactor to a private full initializer that both public inits funnel through, and simplify the disclosure accessibility.
+
+Let me review the final view file to confirm correctness.
+
+View looks correct. Now the strings catalog, previews, and tests.
+
+All six files are written. Now let me set up the isolated SwiftPM harness (the sibling's proven GREEN method). First let me check `Buttons.swift` (a transitive dep of `Cards.swift` previews) to know exactly which design-system files the harness needs.
+
+`TSButton` is generic; harness needs Buttons.swift too. I'll define DEBUG in the harness so previews compile as well. Let me build the isolated SwiftPM harness now.
+
+Now let me build and test the harness under Swift 6 strict-concurrency.
+
+The `#Preview` macro plugin (`PreviewsMacros`) ships with Xcode, not CommandLineTools. Let me run the harness using the Xcode toolchain via `DEVELOPER_DIR`.
+
+**15/15 tests pass** under Swift 6 language mode with previews compiled. Now let me run a release build plus cross-platform `swiftc -typecheck` for **iOS 18 + macOS 15** (the AlertMessageEditor-style proof), using the Xcode toolchain.
+
+Release + both platform typechecks are **green (0)**. Now the lint/format/placeholder gates on the real repo files. Let me read the placeholder checker's interface, then run all three scoped to my files.
+
+The `-Path` scans a subtree recursively. Let me read the scanning logic, then grep my files for any forbidden tokens, and run all three gates scoped to my files.
+
+Now let me grep my files for any forbidden tokens, then run swiftformat + swiftlint scoped to my files, and a real placeholder scan against a temp dir of my files.
+
+`swiftformat` wants the computed `surfaceSlug` body wrapped (a stored `static let` isn't allowed on a generic type, so computed is required). Let me apply swiftformat's auto-fix to my files, then re-verify clean.
+
+Formatting clean (0/5). Now swiftlint scoped, and I'll re-sync the formatted files into the harness and re-test to verify the exact committed bytes.
+
+swiftlint scoped: **0 violations in 5 files**. Now let me re-sync the formatted files into the harness and re-test the exact committed bytes, plus run the placeholder scan.
+
+Re-test of exact committed bytes: **15/15 pass**. Placeholder: **0**. Now the full-app xcodebuild gate. Per `macos-pending-verifications.md` it's deferred for every surface due to pre-existing collisions, but I'll execute it honestly. Let me gather the pre-existing-blocker evidence and generate the project.
+
+Evidence confirms the documented pre-existing blockers: **Shared.xcframework missing, DashboardWidgetSize defined 15×, 217 co-located XCTest-importing test files**. Project generated. Let me check the xcframework staging script, then run the real xcodebuild gate to a log file.
+
+Java 17 + gradlew are present, so the Gradle xcframework build (sibling: ~7.5 min) plus the pre-existing 217 XCTest imports / 15× duplicate types will gate the full build. Let me run the **real** iOS gate command async to a log and monitor it.
+
+Launched. Let me monitor its progress (the Gradle xcframework preAction runs first).
+
+The Gradle xcframework build was mostly FROM-CACHE and **succeeded** (written at 23:39:39) — much faster than the sibling's cold 7.5 min. xcodebuild is now compiling the app. Let me continue monitoring the log file.
+
+Still staging the release xcframework (Kotlin/Native release links aren't cached). Let me keep waiting for the app-compile phase where the pre-existing errors surface.
+
+Release Kotlin/Native links are progressing (iosArm64 ✓, simulator in progress). Let me wait for the app-compile phase where the pre-existing errors will surface.
+
+iOS gate returned **IOS_EXIT=65** — identical to the sibling. First error is the pre-existing `AISettings.Tests.swift … 'XCTest'` (a co-located sibling test, not mine). Let me characterize all errors and prove zero AccordionSection **non-test** errors.
+
+The analysis masked the echoes (`head` swallowed the exit code). Let me print the 4 error lines verbatim and get a clean AccordionSection error count.
+
+**iOS evidence conclusive:** `IOS_EXIT=65`, all 4 errors are the pre-existing `AISettings.Tests.swift … 'XCTest'` co-located sibling; **0 errors mention AccordionSection**. Now the macOS gate (xcframework is cached now). Let me run it.
+
+While macOS builds, let me wait and poll its log.
+
+macOS gate: **MAC_EXIT=65**, failed at the pre-existing **development-signing** requirement (documented blocker) before compiling sources. Let me confirm zero AccordionSection errors there too, then verify git status is clean.
+
+macOS: 4 errors, all the dev-signing blocker; **0 AccordionSection errors**. My 6 files are untracked; the generated `.xcodeproj` is git-ignored. Both pre-existing web edits are out of scope (won't commit). Let me run the exact whole-app `swiftformat --lint` and `swiftlint --strict` gate commands for honest baseline reporting.
+
+Whole-app swiftformat flags **1/1662** files — `ActionBuilder.Previews.swift`, a pre-existing sibling (not mine; my 5 files passed scoped). Now the whole-app swiftlint gate.
+
+One pre-existing whole-app swiftlint violation. Let me identify it to confirm it's not mine.
+
+The single whole-app swiftlint violation is the **same pre-existing** `LifetimeStatsWidget.Adapter.swift:141` the sibling documented — **0** mention AccordionSection. All evidence is consistent. Let me grab line counts, then write the gate log.
+
+Now let me write the comprehensive, honest gate log.
+
+Log written. Now let me clean up build artifacts, verify scope, and stage only my files + the log.
+
+Clean — only my 6 files + the log are untracked; the two pre-existing web edits stay out of scope. Let me stage and commit.
+
+git add is hanging unusually. Let me stop it and investigate (possible index lock).
+
+It's a git worktree. No lock or git process now. Let me check the worktree gitdir for a stale lock and retry the add.
+
+Transient hang resolved — single add was instant. Let me stage the remaining files + log and commit.
+
+All 7 files staged, no web files. Now the commit.
+
+Committed as `bb3fc2dc3` — 7 files, 920 insertions, no out-of-scope files. Let me do a final verification.
+
+Task complete. Final state verified: commit `bb3fc2dc3` contains exactly my 6 `AccordionSection.*` files + the log; the two pre-existing web edits were correctly left out of scope; the log ends `EXIT=0 / STATUS=DONE`.
+

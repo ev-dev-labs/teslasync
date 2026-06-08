@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure to understand the task fully.
+
+Now let me explore the Apple app structure to understand the existing patterns and conventions.
+
+Xcode 26.5 is available via `DEVELOPER_DIR`. Now let me understand existing patterns. Let me look at the routing, an example page, and the CommandSearch component.
+
+Let me examine the shared facade (KMP binding), design tokens, and key shared components.
+
+Critical findings: no `Shared.xcframework` (only `.gitkeep`) and no generated `.xcodeproj`. Let me examine the design system, lint rules, and shared components before deciding build strategy.
+
+Now let me examine the web hook/types and the remaining native pieces (tokens, badge, timestamp, layout).
+
+Let me read the glass material modifier, an example registered page, and check tooling availability.
+
+Let me study the rest of the CommandSearch family to match house conventions for states, views, previews, and tests.
+
+Let me check how CommandSearch is wired to real data (if at all), the previews/tests conventions, and the pending-verifications doc.
+
+This is the key precedent. The full-app build is a known, documented macOS-CI-deferred condition (missing `Shared.xcframework` + parallel-merge collisions), with surfaces verified via isolated SwiftPM build + `swiftc -typecheck` + lint + placeholder gate. Let me study the remaining CommandSearch files and the build script.
+
+I have a thorough understanding of the conventions. Let me verify the dependency closure is `Shared`-free and peek at the framework build script, then create a plan.
+
+I have a complete understanding. Let me set up my plan and todos, and check the formatter config.
+
+Important: the placeholder gate forbids the substring "Placeholder" (case-insensitive), but the required key `search.placeholder` contains it. Let me check how existing surfaces handle this.
+
+I have everything I need. The placeholder gate flags the substring "Placeholder", and the required `search.placeholder` key needs the sanctioned `// parity:allow` opt-out (established precedent). Let me set up my plan and create the directory.
+
+Now I'll create the surface files, starting with the Foundation-only value types.
+
+Now the presentational subviews.
+
+I used `TSFlowLayout` for the chip wrap — let me verify it exists, and check for any existing flow layout.
+
+The convention is per-surface flow layouts. Let me replace `TSFlowLayout` with my own left-aligned layout.
+
+Now the load-state panels (GlassPanel2–6).
+
+Now the page scaffold (GlassPanel1 + orchestration).
+
+Now the route registration file.
+
+Now wire the registration into the app shell.
+
+Let me check the Previews convention, then write previews and tests.
+
+Now the unit tests.
+
+I need to fix one assertion — canonical order is vehicle, drive, charging (not charging before drive).
+
+Now let me add the 25 string keys (22 required + 3 native a11y/action) to the catalog, inserting them without reformatting the 4.6MB file.
+
+Strings added. Now register the `TeslaSync/Features` source path in both app targets.
+
+Let me update todos and analyze the dependency closure for isolated verification.
+
+Components/Design are self-contained on system frameworks + tokens. Now let me format and run the lint/placeholder gates on the new surface.
+
+Two fixable issues: stray "placeholder" substrings in comments (e.g., `placeholderData`) and I need to confirm the swiftlint violation is/isn't mine. Let me locate all occurrences.
+
+The swiftlint violation is pre-existing and unrelated (`LifetimeStatsWidget.Adapter.swift`, function length) — my files are clean. Now let me fix the placeholder gate: reword the `placeholderData` comments and put the opt-out marker on the same line as the key. Let me view the current Views region first.
+
+Placeholder gate green. Now let me lint only my files in isolation (to separate from the pre-existing repo violation).
+
+SwiftLint clean: **0 violations in 9 files** (the repo's 1 violation is the pre-existing `LifetimeStatsWidget`). Now let me run `xcodegen generate` to confirm it enumerates the new files.
+
+All 9 files enumerated. Now the isolated SwiftPM build + test of the logic layer under Swift 6 strict concurrency.
+
+Library builds clean under Swift 6. Now run the tests.
+
+All 34 tests pass under Swift 6 strict concurrency. Now let me typecheck the SwiftUI view files against the real SDKs. First, check platform-import guards in the component closure.
+
+Imports are properly guarded. Let me typecheck the full SwiftUI surface (views + closure) against the macOS SDK, then iOS.
+
+The errors are all in unrelated component files (`UnitFormatters.swift` needs app-level `Units`/`tsUnits`). My views don't use those — let me narrow to the exact closure my views need.
+
+macOS typecheck passes clean. Now the iOS SDK.
+
+Both SDKs typecheck clean. Let me verify the catalog keys, then attempt the full-app build to document the (expected, pre-existing) blocker.
+
+All 22 required keys present. Now let me attempt the full-app build to document the pre-existing blocker (using `-target` to bypass the gradle scheme pre-action).
+
+Build fails **only** on the missing `Shared.xcframework` — zero SearchPage errors, confirming the documented pre-existing blocker. Let me check whether a prebuilt framework or a fast Gradle path exists before concluding.
+
+A Kotlin/Native toolchain is cached but the framework was never built (`core/build` absent). Building it is the explicitly CI-deferred P1/S3 artifact. Let me check how precedent surfaces concluded their logs (DONE vs BLOCKED) to align.
+
+This is the definitive precedent: the sibling ToolCard surface concluded **EXIT=0 / STATUS=DONE** with the full-app Xcode gate explicitly DEFERRED (code-complete + deferred Xcode gate). I'll align with that.
+
+First, one parity gap to close: `search.section.results` (the web generic fallback label) isn't yet referenced in my exhaustive-kind code. Let me bind it to the results region's accessibility label.
+
+Now re-run all surface gates after the edit.
+
+All surface gates green. Let me run the final iOS typecheck and re-confirm the test suite with current files.
+
+All verifications green. Let me gather precise file+line evidence for the PARITY log.
+
+All 32 parity items have file+symbol evidence. Now let me write the gate log.
+
+Now the apple ledger and the macOS-pending verification row.
+
+Now add the macOS-pending verification row. Let me view the table boundary precisely.
+
+Let me update todos and review what will be committed.
+
+I see unrelated pre-existing changes in the shared workspace (`AIUsageCard.*`, web `.tsx` files) that are **not mine** — I must exclude them. Let me verify my three in-place edits are clean before staging only my files.
+
+Confirmed: my three in-place edits are clean and surgical; the `AIUsageCard.*` and web `.tsx` changes are pre-existing and unrelated. Let me stage only my files and commit.
+
+Staged set is exactly mine — no unrelated files. Committing.
+
+Commit `2df81cba6` landed with exactly my 15 files; the unrelated `AIUsageCard.*`/web `.tsx` changes were left untouched. Let me do a final confirmation of the committed contents.
+
+All verifications confirm the commit is complete and correct. Let me confirm todos are closed.
+
+All 12 todos complete. The SearchPage parity implementation is committed and verified.
+

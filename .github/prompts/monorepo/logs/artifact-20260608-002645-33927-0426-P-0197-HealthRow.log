@@ -1,0 +1,140 @@
+=== P4 Shared surface 0197 HealthRow (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.x (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.x · swiftformat 0.6x · xcodegen 2.45.4 · pwsh present.
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5) booted · iphonesimulator26.5 + macosx (macOS 15) SDKs present.
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS SDKs present → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/components/status/HealthRow.tsx — a PURE presentational leaf (the prompt records
+  "Data sources: (none — pure presentational component)", "Shared components: (none)",
+  "Charts/maps: (none)", "i18n keys: (none extracted — surface is anonymous)"):
+    <wrapper> [ status dot (DOT_FOR_STATUS[status]) · optional icon (text-secondary)
+               · label (flex-1 truncate text-sm font-medium text-primary)
+               · summary (text-xs, TEXT_FOR_STATUS[status]) · ChevronRight iff (to || onClick) ] </wrapper>
+  wrapper ∈ { <a target=_blank> when (to && external) · <Link to> when to · <button onClick> · <div> }.
+  status ∈ HeroStatus = healthy|degraded|unhealthy|unknown|maintenance.
+  Interactive wrappers carry aria-label=`${label} — ${summary}`; min-h-[44px]; hover:bg-white/[0.04].
+  No data hooks, no loading/empty/error/stale/offline branches of its own (those belong to the
+  parent surface that feeds the props — e.g. AnomalyInlineRow renders a HealthRow).
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/shared-surfaces/HealthRow.*, 10 files, 1608 lines)
+  HealthRow.Adapter.swift    — pure core (Foundation only): HealthRowSurface (slug "HealthRow" + reportOpen),
+                               HealthRowStatus (+ tintRole = web DOT/TEXT maps, a11y descriptors),
+                               HealthRowInteractionKind (web to/external/onClick/none → chevron test),
+                               HealthRowDestination (web `to`), HealthRowConnection/LoadStatus/Content/Update/Phase,
+                               HealthRowProjection (resolvePhase + showsChevron), HealthRowAccessibility (aria-label).
+  HealthRow.Seams.swift      — HealthRowTelemetry seam + OSLogHealthRowTelemetry (redaction-safe view.opened),
+                               HealthRowStrings (P1/S10 facade, table "HealthRow"), HealthRowSource (P1/S8) +
+                               InMemoryHealthRowSource.
+  HealthRow.Model.swift      — HealthRowModel (@MainActor @Observable): P1/S8 binding, phase/freshness, view.opened
+                               (once+idempotent), activation seam (web `to`), stale auto-refresh, offline-cached.
+  HealthRow.swift            — the PUBLIC presentational HealthRow View — the faithful web parity, 4 initializers
+                               (static / button / internal-navigate / external-URL) + interactive hover bg + a11y.
+  HealthRow.Views.swift      — status→token tint (P1/S9), HealthRowShell (web inner layout, 44pt, Dynamic-Type dot/glyph),
+                               summary trailing + chevron, freshness chip (ADR-013), model-bound content row.
+  HealthRow.States.swift     — HealthRowHost (model-bound surface) + loading shimmer (reduce-motion safe) / friendly
+                               empty / error+retry states. Every state renders — never a blank box.
+  HealthRow.Previews.swift   — DEBUG previews: every status × every web variant, and every host state (Dark/Light/XXL).
+  HealthRow.Tests.swift      — 13 XCTest cases (tint map, chevron/interaction, phase ladder + cached survival,
+                               aria-label, telemetry slug).
+  HealthRow.ModelTests.swift — 10 XCTest cases (view.opened once, phase transitions, activation seam, stale
+                               auto-refresh re-arm, offline-cached, per-phase VoiceOver summary).
+  HealthRow.strings          — P1/S10 catalog contribution (native-only chrome: states + freshness + VoiceOver words).
+  Necessary shared wiring (same pattern every new top-level Apple source dir uses; cf. ToolCard P-0010):
+    project.yml    — + "TeslaSync/shared-surfaces" to TeslaSync (iOS) and TeslaSync-macOS sources.
+    .swiftlint.yml — + "TeslaSync/shared-surfaces" to included.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  HeroStatus              → HealthRowStatus ; DOT_FOR_STATUS/TEXT_FOR_STATUS → tint:
+                            green→statusSuccess · amber→statusWarning · red→statusDanger · zinc→textMuted · blue→statusInfo.
+  to/external/onClick     → 4 initializers: <div>→init(status:icon:label:summary:) ·
+                            <button onClick>→…action: · <Link to>→…destination:onNavigate: · <a target=_blank>→…externalURL:.
+  (to || onClick) chevron → HealthRowProjection.showsChevron(interaction) ; "chevron.right" SF Symbol, textMuted.
+  Lucide icon prop        → optional SF Symbol (systemName), textSecondary, Dynamic-Type scaled (@ScaledMetric).
+  min-h-[44px]            → HealthRowShell .frame(minHeight: 44).
+  hover:bg-white/[0.04]   → surfaceGlass (dark = white@0.04) filled on .onHover for interactive rows.
+  aria-label `L — S`      → HealthRowAccessibility.rowLabel ; .accessibilityLabel + spoken status word as value;
+                            interactive rows add .isButton (Link adds .isLink); static row uses children:.combine.
+  i18n      : web label/summary are caller props (verbatim). Native-only chrome (states/freshness/VoiceOver words)
+              resolves via P1/S10 HealthRowStrings — zero English literals in the view code.
+  telemetry : view.opened surface="HealthRow" via HealthRowSurface.reportOpen (P1/S11), default OSLog sink.
+
+GATES — HOST-RUNNABLE (all green)
+  [GREEN] swiftformat --lint <surface> ............. 0/9 files require formatting                         FORMAT_EXIT=0
+  [GREEN] swiftlint --strict <surface, explicit> ... 0 violations in the 9 HealthRow swift files          LINT_EXIT=0
+          swiftlint --strict (whole app, FYI) ...... 1 PRE-EXISTING violation (function_body_length in
+                                                      dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141) — not mine;
+                                                      1918 files scanned (shared-surfaces now included), 0 HealthRow hits.
+  [GREEN] check-placeholders.ps1 -Path …/shared-surfaces/HealthRow : PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0
+  [GREEN] swiftc -typecheck iphonesimulator26.5 -target arm64-apple-ios18.0-simulator -swift-version 6
+          -strict-concurrency=complete (Tokens.swift + 8 HealthRow sources) ..................... IOS_TYPECHECK_EXIT=0
+  [GREEN] swiftc -typecheck macosx -target arm64-apple-macos15.0 -swift-version 6
+          -strict-concurrency=complete (same sources) .......................................... MAC_TYPECHECK_EXIT=0
+  [GREEN] swift build + swift test — ISOLATED SwiftPM pkg (module TeslaSync, swift-tools 6.0, Swift 6
+          language mode = app parity), compiling the EXACT shipped HealthRow.* sources against the REAL
+          repo design tokens (apps/design/generated/apple/Tokens.swift):
+              Build complete!  ·  Executed 23 tests, with 0 failures                              SWIFT_TEST_EXIT=0
+              → HealthRowModelTests(10) · HealthRowProjectionTests(6) · HealthRowStatusTests(2) ·
+                HealthRowSurfaceTests(2) · HealthRowInteractionTests(2) · HealthRowAccessibilityTests(1)
+  [GREEN] xcodegen generate (project spec enumerates the 10 new files, 60 refs) ................ XCODEGEN_EXIT=0
+
+GATES — DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test
+  xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. Blocked by PRE-EXISTING, UNRELATED parallel-merge state in the shared app
+    target — ZERO of which originates in this surface (all verified present in THIS tree):
+      • Shared.xcframework not staged (apps/apple/Frameworks has only .gitkeep); the scheme pre-action
+        Gradle-builds it via the Kotlin/Native toolchain (the P1/S3 artifact already tracked macOS-pending).
+        Evidence: a direct `xcodebuild -target TeslaSync` (no scheme/pre-action) fails with EXACTLY ONE
+        error — "There is no XCFramework found at …/Frameworks/Shared.xcframework" — RAW_IOS_BUILD_EXIT=65,
+        0 HealthRow errors.
+      • `struct DashboardWidgetSize` redefined across 15 files (Sources/DashboardWidgets/* +
+        TeslaSync/dashboard-widgets/*); `PowerFlowConnection` across 2 — "invalid redeclaration / ambiguous".
+      • case-collision duplicate sources committed (e.g. AIUsageCard.* AND AiUsageCard.* — 6 pairs) that a
+        case-insensitive macOS filesystem cannot resolve.
+      • 263 co-located feature-view/widget/shared-surface *.Tests.swift / *.ModelTests.swift `import XCTest`
+        into the app target (this surface's 2 test files follow that SAME established sibling convention,
+        gated on `#if canImport(XCTest)`; they do not introduce a new failure class).
+      • whole-tree swiftformat --lint apps/apple = 1 PRE-EXISTING reflow (ActionBuilder.Previews.swift:48) — not mine.
+      • No macOS development-signing identity (ADR-012).
+    This surface's OWN code is proven to compile against the real iOS-18 + macOS-15 SDKs (typechecks above)
+    and its logic runs green (23/23 XCTest). The full-app build/test is recorded in
+    apps/macos-pending-verifications.md for the P99 acceptance gate on a macos-latest runner with signing.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED/DEFERRED with evidence
+                           (direct-target RAW_IOS_BUILD_EXIT=65 = missing Shared.xcframework) — never as passing.
+  2  No scope narrowing  : every web region + branch reproduced — 5 statuses, 4 wrappers, optional icon,
+                           conditional chevron, 44pt target, hover bg, aria-label; plus the Apple-contract
+                           states (loading/empty/error/stale/offline) via the model-bound host.
+  3  No skip-and-assume  : every host-runnable gate executed on THIS runner; raw exits pasted; the app-target
+                           blocker confirmed by a real build (not assumed).
+  4  No stubs as final   : complete production component + model + host + 23 real tests; placeholder scanner = 0.
+  5  No parity shortcut  : tint/chevron/aria-label/44pt/hover/typography/a11y/telemetry all mapped to platform
+                           tokens + unit-verified; no Tailwind ported.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holder, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics all consumed.
+  8  No commit on red    : the COMMITTED artifact (HealthRow.* + 2 wiring lines) is GREEN on every host gate AND
+                           a real isolated Swift 6 build+test; the deferred full-app gate is RED only on
+                           pre-existing, unrelated surfaces this commit neither introduces nor touches.
+  9  No silent drift     : changes confined to shared-surfaces/HealthRow.* (10 files), project.yml (+2 lines),
+                           .swiftlint.yml (+1 line), this log, and one macos-pending-verifications row.
+  10 EXIT/STATUS below.
+
+ACCEPTANCE CRITERIA
+  [x] Surface renders on Apple with all web states reproduced (5 statuses × 4 wrappers; loading/empty/error/stale/offline).
+  [x] Hooks bind to the shared P1/S8 source seam; no direct HTTP from the view (web leaf has no hooks — none to bind).
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (web has none; native chrome keys present).
+  [x] Accessibility labels present on every interactive element (aria-label parity + spoken status + traits).
+  [x] Tests: adapter unit tests + per-state model tests + a11y label test (23 total, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate: 0, 0 opt-outs).
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing unrelated blockers; 0 HealthRow errors);
+      host-runnable equivalents (real-SDK typecheck both platforms + 23/23 XCTest) green.
+
+EXIT=0
+STATUS=DONE

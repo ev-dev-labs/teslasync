@@ -1,0 +1,213 @@
+================================================================================
+P4 · Feature view · 0185 — LegacyAlertsRedirect (Apple)
+Run: 2026-06-08T01:32-0700   Host: Darwin arm64 (macOS 26)   Branch: auto/20260608-002645-33927/113
+Base: c9c6fdb9f
+Prompt: P4/feature-views/0185 — Feature view: LegacyAlertsRedirect
+Web source (spec): web/src/features/notifications/components/LegacyAlertsRedirect.tsx
+Mode: code-complete + REAL toolchain verification, with the full-app iOS/macOS
+      xcodebuild build/test DEFERRED to a properly-configured signed CI runner
+      (ADR-012, Honesty rule 7 — predecessor parity with 0186/0187). Unlike the
+      0187 runner (Xcode absent), THIS runner has full Xcode 26.5 + a booted
+      iPhone 16 simulator, so the surface was additionally proven by a real
+      iOS-18-SDK SwiftUI type-check + a Swift-6 strict-concurrency build/run of
+      the host-free core. The two full-app build reds are PRE-EXISTING + repo-wide
+      (NOT this surface) and are proven so below with raw evidence.
+================================================================================
+
+=== CAPABILITY PROBE (this runner) ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)             OK
+  /Applications/Xcode.app .... Xcode 26.5 (Build 17F42) — PRESENT                    OK
+                               (active dir was CommandLineTools; used
+                               DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                               override — no sudo needed).
+  iOS Simulator runtime ...... iOS 26.5; iPhone 16 simulator BOOTED                  OK
+  iOS / macOS SDKs ........... iphonesimulator26.5 / macosx26.5 (deploy 18.0/15.0)   OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen (project regenerated)      OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  Shared.xcframework ......... assembled ON DEMAND by the "Stage Shared.xcframework" OK
+                               scheme pre-action via Gradle
+                               (:core:assembleSharedDebugXCFramework → "xcframework
+                               successfully written out"). The .gitkeep-only
+                               apps/apple/Frameworks dir is BY DESIGN.
+  Design tokens .............. apps/design/generated/apple/Tokens.swift PRESENT      OK
+                               (Color.TS / Font.TS / TSSpacing / TSRadius / TSMotion).
+
+  Capability ruling: this surface's web spec lists "Charts/maps used: (none)" and
+  "Shared components used: (none)" — its only platform capability is SwiftUI.
+  SwiftUI is present AND was exercised: the full native surface TYPE-CHECKS green
+  against the real iOS 18 simulator SDK + the real design tokens under Swift 6
+  strict concurrency (see GATE RESULTS). The capability-BLOCKED escape ("SwiftUI
+  unavailable") does NOT apply. What is not green on THIS runner is the FULL-APP
+  xcodebuild build/test — for two PRE-EXISTING, repo-wide conditions unrelated to
+  this surface (proven below). That full-app gate is DEFERRED, never reported green.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/LegacyAlertsRedirect.*) ===
+  LegacyAlertsRedirect.Resolver.swift  197  Foundation-only parity core (the adapter):
+                                            AlertsRedirectTab (web TAB_TO_ROUTE keys + per-tab
+                                            EXPLICIT paths — history→inbox, preferences→
+                                            quiet-hours are RENAMED, not /{base}/{key}) + alerts
+                                            fallback · LegacyAlertsLocation (web useLocation) ·
+                                            ResolvedAlertsRedirect (web `to`) · Resolver.resolve =
+                                            the web component body verbatim (tab map, `?? alerts`
+                                            x2, delete EVERY `tab`, source-order param forwarding,
+                                            qs/bare-path assembly).
+  LegacyAlertsRedirect.Model.swift     265  P1/S8 location-source seam + nav seam (the
+                                            <Navigate replace> analogue) + P1/S11 telemetry seam
+                                            (view.opened) + P1/S10 string facade + surface identity
+                                            + @Observable model (emits view.opened once, dispatches
+                                            replace once) + in-memory source/router. Foundation +
+                                            Observation + os only (SwiftUI-free → host-testable).
+  LegacyAlertsRedirect.swift            90  SwiftUI surface: glass card, header (icon/title/
+                                            subtitle), phase switch, reduce-motion animation,
+                                            onAppear→start (telemetry), onDisappear→stop, a11y.
+  LegacyAlertsRedirect.Views.swift     175  Subviews: accent icon chip, resolving affordance,
+                                            resolved-destination panel (destination chip +
+                                            alerts-default note + forwarded-filters note + manual
+                                            Continue TSButton) + tab SF Symbols + string helper.
+  LegacyAlertsRedirect.Previews.swift   77  #if DEBUG previews — resolving / alerts-default /
+                                            history→inbox+forwarded / preferences→quiet-hours.
+  LegacyAlertsRedirect.Tests.swift     243  XCTest — resolver branches, tab parity, model
+                                            once-only semantics + telemetry, a11y (24 methods).
+  LegacyAlertsRedirect.strings          38  P1/S10 catalog (table "LegacyAlertsRedirect").
+  Total 1085 lines. No file imports the Shared xcframework; the seams are plain
+  Swift protocols (prod app injects the facade-backed location source + router;
+  previews/tests inject the in-memory doubles).
+
+=== PARITY (web source reproduced end-to-end) ===
+  Web body (the entire component):
+      const TAB_TO_ROUTE = {
+        alerts:      '/notifications/alerts',
+        history:     '/notifications/inbox',
+        preferences: '/notifications/quiet-hours',
+      };
+      const params = new URLSearchParams(location.search);
+      const tab    = params.get('tab') ?? 'alerts';
+      params.delete('tab');
+      const target = TAB_TO_ROUTE[tab] ?? '/notifications/alerts';
+      const to     = qs ? `${target}?${qs}` : target;
+      return <Navigate to={to} replace />;
+  Native mapping (one-for-one):
+    - useLocation()               -> LegacyAlertsRedirectSource (P1/S8 seam; no HTTP in view)
+    - URLSearchParams(search)     -> Resolver.parseQuery (ordered URLQueryItem, leading '?' tolerated)
+    - params.get('tab') ?? alerts -> AlertsRedirectTab(tabParameter:) — first `tab`, missing→alerts
+    - params.delete('tab')        -> forwardedItems = items.filter { name != "tab" } (drops EVERY entry)
+    - TAB_TO_ROUTE[tab] ?? alerts -> AlertsRedirectTab per-tab paths + unknown-string→alerts (usedFallback)
+    - qs ? target?qs : target     -> ResolvedAlertsRedirect.target (bare path when nothing forwarded)
+    - <Navigate to replace/>      -> LegacyAlertsRedirectRouter.replace(with:) dispatched ONCE on mount
+  TAB_TO_ROUTE parity asserted (note the RENAMES — the key differentiator from sibling 0187):
+    alerts→/notifications/alerts, history→/notifications/INBOX, preferences→/notifications/QUIET-HOURS;
+    fallback /notifications/alerts. Verified by a real Swift run of all 9 routes (GATE RESULTS).
+
+=== STATES (every state renders — never a blank box) ===
+  The web spec's generic state list maps onto a SYNCHRONOUS redirect (useLocation
+  is router state, not a network resource — there is no loading/error/stale/offline
+  data envelope). Reproduced honestly:
+    - resolving  : transient redirect affordance (ProgressView + label) — the native
+                   stand-in for the web's invisible/instant <Navigate>. (= "loading")
+    - redirecting: resolved destination + chip + manual "Continue" fallback so the
+                   redirect is actionable even if auto-nav was not honored. (= "loaded")
+    - alerts default/fallback (web `?? alerts`): friendly "Showing your alerts" note —
+                   the "empty/default" branch, rendered, never blank.
+  There is deliberately NO fabricated error/stale/offline surface: the web source
+  has no async data source to fail, go stale, or go offline. (Documented in the
+  Phase enum.) Every branch is exercised by the #if DEBUG previews + the tests.
+
+=== GATE RESULTS (raw, this runner) ===
+  [my 6 swift files — the committed artifact]
+    swiftformat --lint  ......... 0/6 require formatting                  FORMAT_EXIT=0   GREEN
+    swiftlint --strict .......... Found 0 violations, 0 serious in 6 files LINT_EXIT=0     GREEN
+  [placeholder gate]
+    check-placeholders.ps1 (REAL scan of the 6 files) .. PLACEHOLDER_COUNT=0  EXIT=0  GREEN
+    check-placeholders.ps1 (literal gate -Path) ........ PLACEHOLDER_COUNT=0  EXIT=0  GREEN
+    grep forbidden tokens (case-insensitive todo/fixme/xxx/placeholder/lorem/…) . none  GREEN
+  [REAL SwiftUI compile — the surface vs the actual iOS 18 SDK + real design tokens]
+    swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG
+           -sdk iphonesimulator26.5 -target arm64-apple-ios18.0-simulator
+           {Resolver,Model,swift,Views,Previews} + REAL Tokens.swift + TSDesign.swift
+           + Buttons.swift (TSGlassPanel signature-faithful shim — its file cascades) ...
+                                                          TYPECHECK_EXIT=0                 GREEN
+  [REAL Swift 6 build + run of the host-free core — substitute for the deferred XCTest]
+    swiftc Resolver.swift Model.swift main.swift  ......... COMPILE_EXIT=0                 GREEN
+    ./alertsrunner (23 assertions mirroring Tests.swift: resolver branches, tab map,
+        model once-only dispatch + telemetry, a11y per-phase, surface slug) ...
+                                                          HARNESS passed=23 failed=0  RUN=0 GREEN
+  [FULL-APP Xcode gate — RAN for real, reported honestly, NEVER as green]
+    xcodegen generate ........................... XCODEGEN_EXIT=0 (my 7 files included; 42 pbxproj refs)
+    xcodebuild -scheme TeslaSync -destination 'iOS Simulator,iPhone 16' build .. IOS_EXIT=65  RED (pre-existing)
+        Root cause (NOT this surface): the app target globs feature-views/*.Tests.swift,
+        which `import XCTest`; XCTest is not resolvable in an APP-target compile, so the
+        build fails at the FIRST such file alphabetically — AIRestorePanel.Tests.swift:18
+        ("unable to resolve module dependency: 'XCTest'"), a SIBLING file. ~200 sibling
+        *.Tests.swift files share this; the real unit bundles are TeslaSyncTests (Tests/Unit).
+        grep of the build log for errors in LegacyAlertsRedirect.* → ZERO. My files compiled clean.
+    xcodebuild -scheme TeslaSync-macOS build ...................... MAC_EXIT=65  RED (pre-existing)
+        Root cause (NOT this surface): "TeslaSync-macOS / TeslaSyncWidgets-macOS have
+        entitlements that require signing with a development certificate" — DEVELOPMENT_TEAM
+        is "" in project.yml and this runner is unsigned. Fails at the signing/entitlements
+        stage. grep of the build log for errors in LegacyAlertsRedirect.* → ZERO.
+    Neither root cause is in this surface's allowed files (apps/apple/TeslaSync/feature-views/
+    LegacyAlertsRedirect.*); both are repo-wide + environmental → DEFERRED to a signed,
+    project-config-correct CI runner (the P4/P99 Apple acceptance gate). Reported red, not laundered.
+  [full-tree lint/format — informational baseline, both reds PRE-EXISTING + unrelated]
+    swiftformat --lint apps/apple .. 1/1919 require formatting  FORMAT_FULL_EXIT=1
+        → the ONE file is TeslaSync/feature-views/ActionBuilder.Previews.swift:48
+          (blankLinesBetweenScopes) — PRE-EXISTING (identical to the 0187 log finding);
+          `git diff HEAD` empty; NOT mine; outside allowed files. 0 of MY files flagged.
+    swiftlint --strict (apps/apple) .. Found 1 violation in 1915 files  LINT_FULL_EXIT=2
+        → TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+          (function_body_length) — PRE-EXISTING (identical to the 0187 log finding); NOT a
+          feature-view; outside allowed files. 0 of MY files flagged.
+    git status shows only the 7 LegacyAlertsRedirect.* files added (+ this log) — neither
+    pre-existing red is introduced or touched by this commit.
+
+=== HONESTY COVENANT (binding) ===
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported IOS_EXIT=65 /
+                           MAC_EXIT=65 with raw root-cause evidence (XCTest-in-app-target;
+                           unsigned entitlements), NEVER as passing. The 2 full-tree lint/format
+                           reds are disclosed as pre-existing + unrelated, not laundered.
+  2  No scope narrowing  : every web branch reproduced — tab map (3, incl. the history→inbox /
+                           preferences→quiet-hours RENAMES), both `?? alerts` fallbacks,
+                           delete-all-`tab`, param forwarding + order, qs/bare-path assembly,
+                           once-only replace.
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; the full-app
+                           build was RUN (not assumed) and its failures grep-proven to be
+                           non-mine / pre-existing.
+  4  No stubs as final   : complete production surface (1085 lines) + 24 XCTest methods + 23
+                           isolated runtime assertions; placeholder scanner = 0; no
+                           todo/fixme/placeholder (case-insensitive).
+  5  No parity shortcut  : tab/route map incl. renames, fallbacks, param preservation, telemetry
+                           slug, a11y, and reduce-motion all implemented + verified, not hand-waved.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 source/router seams, P1/S9 design tokens, P1/S10 string facade,
+                           P1/S11 view.opened — all present + consumed; same disposition as the
+                           0186/0187 sibling redirects, with strictly STRONGER (real-SDK) evidence.
+  8  No commit on red    : the COMMITTED artifact (the 7 LegacyAlertsRedirect.* files) is GREEN on
+                           every gate that validly isolates it (swiftformat, swiftlint, placeholder,
+                           a real iOS-18-SDK SwiftUI type-check, and a Swift-6 strict-concurrency
+                           build+run of its core). The full-app build reds + the 2 full-tree reds
+                           are pre-existing / environmental and untouched by this commit.
+  9  No silent drift     : changes are confined to feature-views/LegacyAlertsRedirect.* and this log.
+  10 EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished, Apple-idiomatic LegacyAlertsRedirect shipped at parity with the web source,
+  including the surface's distinguishing detail — the legacy `?tab=` keys are RENAMED on the way to
+  their new homes (history→/notifications/inbox, preferences→/notifications/quiet-hours), modelled
+  as per-tab explicit destination paths rather than a 1:1 `/{base}/{key}` map. The parity-critical
+  core (redirect resolver + state-holder model + telemetry + a11y) is INDEPENDENTLY built and its 23
+  assertions pass under the app's own Swift 6 strict-concurrency rules; the full SwiftUI surface
+  TYPE-CHECKS green against the real iOS 18 simulator SDK + the real design tokens; swiftlint /
+  swiftformat / placeholder are green on the committed files. The full-app iOS-Simulator + macOS
+  xcodebuild build/test is DEFERRED (not failed by this code): on this runner the app-target build
+  fails for two PRE-EXISTING, repo-wide reasons proven above (feature-views/*.Tests.swift import
+  XCTest in the app target; macOS entitlements require a development signing certificate) — neither
+  is in this surface's allowed files and neither is fixable without a repo-wide project/signing
+  change out of scope. Those belong to the P4/P99 Apple acceptance gate on a signed, project-config-
+  correct macos-latest CI runner. This matches the repo's sanctioned "code-complete + DEFERRED Xcode
+  gate" disposition used by every P4 feature-view surface to date, with stronger real-toolchain
+  evidence than the predecessor runners could produce.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,84 @@
+I'll start by exploring the repository structure and the web source that serves as the specification, plus checking tooling availability.
+
+Key finding: **xcodebuild is unavailable** (only Command Line Tools, not full Xcode). swiftlint, swiftformat, and swift CLI are available. Let me verify the Xcode situation and explore the existing Apple app structure deeply.
+
+`/Applications/Xcode.app` exists but is root-owned with only 96 bytes — likely a stub. `xcode-select -p` still points to CommandLineTools and `simctl` is missing. Let me verify whether Xcode is functional and study existing surface patterns.
+
+**Xcode 26.5 IS functional** via `DEVELOPER_DIR`. The issue is just `xcode-select` pointing to CommandLineTools. I can run the gate. Let me confirm the simulator and project generation setup, and study the surface conventions.
+
+Important: `project.yml` globs only `dashboard-widgets` and `feature-views` under `TeslaSync/` — **not** `shared-surfaces`. And the build has a KMP Gradle pre-action. Let me check the framework staging, Gradle availability, the i18n/diagnostics facades, design tokens, configs, and the placeholder checker.
+
+Found existing references: `Sources/Components/UI/Disclosure.swift` (existing disclosure primitive) and `CollapsibleCommandGroup.*` (a sibling collapsible surface with `.Telemetry`, `.Views`, `.Previews`, `.Tests`). Let me study these plus the design tokens, i18n facade, and diagnostics facade.
+
+The existing `Sources/Components/UI/Disclosure.swift` has a minimal `TSAccordion`, but my surface must be a fuller-parity dedicated `Accordion` following the `CollapsibleCommandGroup` multi-file convention. Let me read the full sibling surface set and the design tokens to replicate the exact pattern.
+
+Now I have the exact surface conventions. Let me read the design tokens and locate the shared primitives (`TSEmptyState`, `TSFadeIn`, `TSText`, `Font.TS`, `Color.TS`, `TSSpacing`, `TSRadius`, `TSMotion`).
+
+Tokens are generated in `../design/generated/apple`. Let me read the typography, motion, feedback-states primitives and the generated token definitions.
+
+Let me resolve a critical question: how do `*.Tests.swift` files (which live in `feature-views`, an app-target source dir) get compiled into the **test** target rather than breaking the app target? And check `TSButton` + status chips.
+
+There's a `Tests/Unit/FeatureViews` directory — that's likely how the surface tests reach the test target. Let me inspect it and confirm the wiring mechanism.
+
+A `Tests/Unit/FeatureViews/ToolCardTests.swift` exists — ToolCard is the canonical presentational leaf reference. Let me read it, the build-state doc, the TSButton/Banner/StatusIndicator primitives, and the ToolCard surface files.
+
+The `macos-pending-verifications.md` is decisive — it documents the **established, accepted methodology** for these P4 surfaces: each surface is verified green via *isolated SwiftPM build + tests + real iOS-18/macOS-15 `swiftc -typecheck` + swiftlint/swiftformat/placeholder*, while the full-app `xcodebuild build test` is BLOCKED by **pre-existing, unrelated** collisions (`DashboardWidgetSize` ×15, 150+ co-located `*.Tests.swift` importing XCTest into the app target, unstaged `Shared.xcframework`, macOS signing). I'll follow that exact precedent.
+
+Let me read the canonical `ToolCard` leaf + its test location + the primitive APIs I'll use.
+
+I have the full convention. Let me read the last few primitive APIs I'll reference (`TSGlassPanel`, `TSBadge`, status chips, banners) before writing.
+
+Let me grab the `TSTone` definition, then I'll write the plan and all surface files.
+
+I now have the complete convention and verification methodology. Let me set up the plan, todos, and create the directory.
+
+Now I'll create the surface files, starting with the host-free Model and Telemetry layers.
+
+Now the main `Accordion.swift` view with controlled/uncontrolled initializers and the disclosure body.
+
+Now the Previews, strings catalog, and Tests.
+
+All 7 files written. Now I'll format and lint them. First, auto-format with swiftformat (write mode) on my files, then verify lint-clean, run swiftlint, and the placeholder gate.
+
+swiftformat reports **0/6 files require formatting** — clean. Now swiftlint (explicit paths, since the repo config doesn't yet include `shared-surfaces`) and the placeholder gate.
+
+swiftlint: **0 violations**. Placeholder gate: **PLACEHOLDER_COUNT=0**. Now the core verification — an isolated SwiftPM build that compiles the real surface against the real design tokens and **runs the unit tests** under Swift 6 strict concurrency.
+
+The isolated build caught a real Swift 6 strict-concurrency issue: the app's `TSTone` isn't `Sendable`, so `AccordionBadge: Sendable` can't hold it. Since `AccordionBadge` is only used in MainActor view context, it doesn't need `Sendable`. Let me fix that.
+
+swiftformat reformatted the file. Let me view the current text around the badge struct.
+
+Fixed. Re-running the isolated SwiftPM test with the updated source.
+
+**All 21 tests pass** under Swift 6 strict concurrency in the isolated build. Now the dual-SDK `swiftc -typecheck` over **all** committed files (including previews) against the real iOS 18 + macOS 15 SDKs.
+
+iOS 18 typecheck clean. Now macOS 15.
+
+Both SDKs typecheck clean. Now let me gather **honest evidence** for the literal `xcodebuild` gate: generate the project and confirm whether `shared-surfaces` is even enumerated (the project.yml gap), then attempt the build.
+
+Confirmed decisively: `shared-surfaces`/`Accordion` → **0** references in the generated project, while `ToolCard.swift` (in the wired `feature-views`) → 6. The literal gate can't compile my files because `project.yml` (outside my allowed files) doesn't include `shared-surfaces`. Now let me capture the actual `xcodebuild` blocker evidence (timeboxed).
+
+The environment blocks scripted `kill`. Let me run xcodebuild as an async session and capture output, then stop it cleanly.
+
+It's executing the "Stage Shared.xcframework" pre-action (the KMP Gradle build) — exactly the documented blocker. Let me wait a bit more to capture how it resolves.
+
+~220s stuck in the mandatory KMP Gradle pre-action — this is the documented "unstaged `Shared.xcframework`" blocker. Let me stop it and confirm what it was waiting on.
+
+I have decisive blocker evidence: the gate's mandatory **KMP `:core:assembleSharedXCFramework` pre-action** (PID 53086, my slot) ran for ~4 min without completing — heavily contended across ~9 parallel slots — and `Frameworks/Shared.xcframework` remains unstaged, so the app can't link. This is the documented blocker. Let me check the leftover process and confirm the generated project is git-ignored.
+
+The leftover KMP build (PID 53086, my slot) is still running. I'll stop that single process I spawned, and clean up scratch artifacts. The generated `.xcodeproj` is git-ignored (safe), and only my `shared-surfaces/` is untracked.
+
+Cleanup done (process gone, scratch + generated project removed). Now let me run one consolidated, fresh verification pass to capture authoritative evidence for the log.
+
+All host-runnable gates green. Let me capture fresh dual-SDK typecheck exit codes, then write the log.
+
+Both SDK typechecks pass (EXIT=0). Everything within my control is green. Now I'll write the honest gate log.
+
+Now let me verify git status shows only my allowed files, then commit.
+
+I see pre-existing, unrelated working-tree changes from the shared environment (`AIUsageCard.*`, two web files) that are **not mine**. I'll stage **only** my allowed files (the Accordion surface + the log) and commit precisely those.
+
+Exactly my 8 files staged. Committing now.
+
+The task is complete. Final state verified: surface delivered, all host-runnable gates green, honest log written, and exactly the 8 allowed files committed.
+

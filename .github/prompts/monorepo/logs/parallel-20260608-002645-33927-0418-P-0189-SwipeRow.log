@@ -1,0 +1,86 @@
+I'll start by exploring the repository structure, reading the web source, and checking runner capabilities in parallel.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed; `simctl` is unavailable. However `swift`, `swiftlint`, `swiftformat` all work. Let me read the web source and understand the existing Apple structure before deciding on approach.
+
+Now I understand the web component — it's a swipe-to-action row (iOS Mail style). No `shared-surfaces` dir exists yet. Let me explore the existing Apple project structure deeply to match conventions: state holders, tokens, i18n, telemetry, and build setup.
+
+There's an existing `TeslaSync/feature-views/` and `TeslaSync/dashboard-widgets/` — these are precedent shared-surface outputs. Let me study the exact pattern used, plus the build config and facades.
+
+The pattern is clear: each surface is a multi-file bundle (`.swift`, `.Model`, `.Adapter`, `.Views`, `.States`, `.Previews`, `.strings`, `.Tests`). Let me read a representative "Row" surface end-to-end plus the build config and facades to nail conventions.
+
+`project.yml` registers `TeslaSync/feature-views` and `dashboard-widgets` but not `shared-surfaces` (not in my allowed files — the P4 gate handles registration). `AnomalyInlineRow` is data-driven; `SwipeRow` is a pure interaction primitive. Let me find the closest precedent (other `components/mobile/` primitives) and read the facades.
+
+`PullToRefresh.tsx` is the sibling mobile primitive. Native motion uses `@Environment(\.accessibilityReduceMotion)` + `TSMotion`/`TSSpacing`/`Color.TS` tokens. Let me read the swipe precedent (`InboxBody`), the i18n + telemetry facades, design tokens, and check for a `PullToRefresh` native parity.
+
+No native swipe/pull-to-refresh precedent exists yet — SwipeRow will be the first mobile interaction primitive, so I'll implement a faithful custom `DragGesture` container. `localize(key, fallback)` is the i18n facade. Let me read the P1/S8 state-holder base, i18n + telemetry facades, and design tokens.
+
+Let me read the full `AnomalyInlineRow` bundle — it's the closest "Row" precedent with telemetry, i18n, state-holder, and the standard file split I must mirror.
+
+Excellent precedent. Let me read the remaining `AnomalyInlineRow` files (Views, States, Previews, strings, Seams, Tests, ModelTests) plus the design tokens to capture the full convention set.
+
+Now I have the full convention set. Let me read the Previews, Tests, strings, design tokens, and the lint/placeholder configs to finalize exact token names and test patterns.
+
+Let me read the design tokens, ModelTests, lint configs, and check the placeholder-checker + pwsh availability.
+
+`pwsh` and the placeholder checker are available. Let me locate the exact design-token definitions (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSMotion`) which appear to be in generated sources.
+
+I now have all conventions and tokens. Let me verify deeper toolchain capabilities: whether a real Xcode exists anywhere, whether `xcodegen` is present, and whether SwiftUI can type-check with the available Command Line Tools `swiftc` (for offline compile evidence).
+
+Major update: **Xcode.app is installed** at `/Applications/Xcode.app` (xcode-select just points at CLT), and **xcodegen** is available. SwiftUI type-checks cleanly. Let me verify I can drive the real Xcode via `DEVELOPER_DIR`, check simulators, and assess the heavy KMP `Shared.xcframework` dependency.
+
+Decisive findings: **Xcode 26.5 works**, iPhone 16 simulator is booted — but the app/test targets link a KMP `Shared.xcframework` that is **absent** (only `.gitkeep`) and must be assembled by the Kotlin/Native Gradle toolchain, and my new `shared-surfaces` dir isn't registered in `project.yml` (outside my allowed files). So the literal xcodebuild gate can't exercise this surface in-scope. I'll deliver complete code + lint/format/placeholder + a standalone SwiftPM build/test that actually runs the surface's tests on macOS, plus an iOS-SDK typecheck. Let me confirm the log dir and read the web test + barrel.
+
+The web test confirms the peek-vs-autofire behavior. Let me read the remaining web tests to capture every behavioral branch for faithful reducer test parity.
+
+I have the complete behavioral spec. Let me check the placeholder-checker patterns (to avoid flagged words) before writing, and set up a session plan.
+
+I have everything I need: full conventions, design tokens, behavioral spec from web tests, toolchain capabilities, and placeholder constraints. Let me set up the plan and create the directory.
+
+Directory ready. Now I'll create the bundle, starting with the pure core (Adapter), the seams, and the model.
+
+Now the test files. First the pure adapter/reducer tests.
+
+Now the model lifecycle tests.
+
+All 10 files created. Now let me format, lint, and run the placeholder check on the new files.
+
+swiftformat clean (0/9 require formatting). Now swiftlint `--strict` and the placeholder gate on the new files.
+
+swiftlint scanned the whole repo (config `included`) and found 1 serious violation. Let me locate it.
+
+The only violation is **pre-existing** in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (not my files, not in my allowed scope). Let me confirm my files are clean by linting them explicitly.
+
+My 9 files: **0 violations**. Now the placeholder gate.
+
+My files pass swiftlint (0), swiftformat (0), and the placeholder gate (0). Now the strongest compensating evidence: a standalone SwiftPM harness that compiles the real bundle + design tokens and **runs** the adapter/model/a11y tests on macOS under Swift 6 strict concurrency.
+
+Now build and run the harness tests on macOS (Swift 6 strict concurrency).
+
+All production sources compiled cleanly — the only failure is the `#Preview` macro plugin, which ships with full Xcode (not the CLT `swift` I used). Let me rerun the harness using Xcode's toolchain.
+
+All sources (including Previews) now compile under Xcode's toolchain. One test-only error: `Color` isn't in scope in the pure test file (no SwiftUI import). Let me fix that reference.
+
+**All 43 tests pass** on macOS (Swift 6, strict concurrency), and every production source + Previews compiled. Now the iOS-SDK typecheck to validate the iOS 18 path (incl. the UIKit haptic branch).
+
+iOS 18 typecheck passes (EXIT=0) — validates the iOS path including UIKit haptics. Let me re-verify the edited test file lints clean, then gather precise evidence for the xcodebuild gate (KMP framework + registration blockers).
+
+Clean: format 0/9, lint 0, and the KMP project exists (so the xcodebuild gate would trigger a heavy Kotlin/Native Gradle build). Critically, registering `shared-surfaces` requires editing `project.yml` (outside my allowed files). Let me prove this concretely by generating the project and checking whether my files are even included.
+
+Concrete proof of blocker #1: the generated Xcode project has **0 references** to SwipeRow/shared-surfaces (registration lives in `project.yml`, outside my allowed files), while `feature-views` has 3. Now let me capture the real xcodebuild failure for the log (bounded, target-level to fail fast on the missing KMP framework).
+
+Captured the real xcodebuild blocker: `error: There is no XCFramework found at .../Frameworks/Shared.xcframework` → `BUILD FAILED` (exit 65). Let me capture the iOS target equivalently, then clean up the generated artifact.
+
+Both iOS and macOS xcodebuild fail identically on the missing KMP `Shared.xcframework` (exit 65); generated project cleaned up. Now I'll write the honest gate log.
+
+Now let me update the plan, verify the working tree is clean (only my files), and commit per the prompt's Commit section.
+
+I did **not** modify those `AIUsageCard.*` files — the shared (non-sandboxed) working tree has unrelated changes from another process. I'll stage **only** my surface files + the log, exactly per the Commit section, leaving everything else untouched.
+
+Exactly my 10 files + the log are staged; the unrelated `AIUsageCard.*` changes are left alone. Committing with the prompt's message.
+
+Committed: 11 files, 1735 insertions, scoped exactly to my surface + log. Let me clean up the temporary harness and confirm no stray repo artifacts.
+
+A `build/XCBuildData` artifact remains from the xcodebuild run. Let me confirm it's git-ignored and remove it to keep the tree tidy.
+
+Everything in my scope is committed and clean; the build artifact was git-ignored and removed; the only remaining working-tree changes are the unrelated `AIUsageCard.*` files from another process (intentionally untouched). Let me record final status in the plan and complete.
+

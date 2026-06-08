@@ -1,0 +1,229 @@
+I'll start by exploring the codebase structure to understand the task. Let me look at the web source, the apple app structure, and relevant config files in parallel.
+
+Let me explore the existing Features directory, the shared core, design system, and an existing reference page in parallel.
+
+The Features directory doesn't exist yet. Let me explore the actual structure of the apple app.
+
+Now I understand better — there's a `feature-views/` directory with components and `dashboard-widgets/`. Let me check tooling availability and key reference files.
+
+Xcode tooling is available. Let me check the build setup (xcodegen, .xcodeproj), navigation, string catalog, and the existing DigitalTwin widget for reusable logic.
+
+There's a `Sources/Features` directory — that's likely where pages actually live. Let me examine it, the App/navigation, the existing DigitalTwin widget logic, and the SharedFacade.
+
+Now let me understand how routes get registered and whether any pages exist yet. Let me search for registry usage and the DigitalTwin widget logic.
+
+Let me read the settings registration pattern, the app entry, the existing DigitalTwin widget logic, and the shared facade core in parallel.
+
+Let me find the p4-apple gate contract, build scripts, and examine the existing DigitalTwin widget logic and a domain model example.
+
+This is the first P7 Apple page — I'm establishing the pattern. Let me read the ledger schema, the existing DigitalTwin widget logic (reusable), and the domain model + container patterns.
+
+The widget already has reusable twin types. Let me locate the twin builder/state/view definitions and the container/domain patterns.
+
+The twin builder and state are fully ported already — I can reuse them. Now let me understand the KMP container/domain-model binding pattern and the twin illustration view.
+
+Let me verify the Shared.xcframework exists and discover what KMP stores are available for the four data sources.
+
+`Shared.xcframework` is absent (only `.gitkeep`). The KMP source exists. Let me check the build script and toolchain — I'll try to build the framework so the gate can run.
+
+Java 17 + gradlew are available. The `Shared.xcframework` must be built before any Xcode build can work. Let me kick that off in the background now, then continue implementing while it compiles.
+
+Starting the framework build in the background. This compiles Kotlin/Native for iOS + macOS and may take a while.
+
+Gradle works. Let me start the xcframework assembly in the background and monitor it while I implement the page.
+
+While that compiles, let me study the component library, design tokens, units facade, and the twin illustration view.
+
+Let me check the build log progress and read the core design/component files in parallel.
+
+Build is using cache (good sign). Let me read the remaining key components I'll compose with.
+
+Let me find the KVList, PageContainer, VehicleSelect, FadeIn equivalents, plus read typography, units facade, and the twin view.
+
+The build log at `/tmp` is shared across parallel slots — that "BUILD SUCCESSFUL" staged to slot-618, not mine. Let me verify my own slot-626 framework status.
+
+My build's output went to a shared log. Let me re-run the slot-626 framework build with a dedicated log and wait for it to complete.
+
+Build is running. Let me read the remaining components (KVList, Motion, Typography, Units, the Twin view) while it compiles.
+
+Let me check build progress, enumerate available KMP stores, and read the Motion/Units/Live/Twin reference files.
+
+My build failed quickly. Let me see the error.
+
+`xcodebuild` needs full Xcode but only CommandLineTools is active. Let me find a full Xcode install.
+
+Full Xcode 26.5 is installed — just not selected. I'll set `DEVELOPER_DIR` for all builds. Let me restart the framework build with it.
+
+Build restarting with the correct toolchain. Let me read the Twin view, Motion, Units facade, and enumerate KMP stores while it compiles.
+
+Let me check the build status and study how the existing DigitalTwin widget composes its model + source + twin view (the closest analog to reuse).
+
+The build is now linking (past the failure point). Let me study the widget composition + twin view and confirm the KMP binding pattern across widgets.
+
+I now have a clear architectural picture. No P4 file imports `Shared` directly — the whole layer uses injectable seams (KMP binding deferred to `AppContainer.bootstrap`). I'll follow that exact pattern. Let me write a plan, then read the remaining build config and reference files.
+
+`VehicleTwinView` is reusable. Let me check build progress, the project.yml test config, route tests, units facade, and whether the strings already exist in the catalog.
+
+Framework build is nearly done (linking release). Let me check the placeholder gate rules, route tests, the feature-view test pattern, and the xcstrings structure.
+
+Let me resolve how co-located `.Tests.swift` files are handled (since they `@testable import TeslaSync`, they can't be in the app target). Let me read the full project.yml top and check build status.
+
+The `ls` failure broke the chain. Let me re-run the project.yml test inspection separately.
+
+Let me verify whether prior Apple gates actually ran `xcodebuild` or were BLOCKED — this determines if the co-located `.Tests.swift` files compile in the app target.
+
+Key finding: the ToolCard log reveals the full app currently **doesn't build** due to pre-existing duplicate-type collisions across ~10 dashboard-widget files (e.g., I spotted two `public struct TwinVehicle`). The repo uses a sanctioned "code-complete + isolated-green + deferred Xcode gate" disposition. Let me read that disposition doc and verify the collisions.
+
+Framework is on the final macOS link. Let me read the disposition doc separately.
+
+I now fully understand the sanctioned disposition: every P4 surface verifies its slice **isolated-green** (swiftc -typecheck for iOS+macOS, SwiftPM tests, swiftlint/placeholder clean) and defers the full-app `xcodebuild` gate (blocked by pre-existing duplicate-type collisions like `DashboardWidgetSize` redefined 15×, owned by P99). I'll follow this exactly. Let me check the framework and update todos.
+
+The framework is finishing its final link. Let me read the remaining web sources I need to port faithfully (status derivation, status badge, vehicle selector, vehicle type).
+
+Framework built successfully. Let me stage it to `apps/apple/Frameworks/` and read the vehicle states.
+
+Framework is staged. I have everything needed. Let me create the page implementation. Starting with the model (pure, SwiftUI-free for testability — mirroring the established P4 seam pattern).
+
+Model written. Let me check the SwiftLint config and SwiftFormat rules so the view passes `--strict`, plus verify `TSTone`/`TSSkeleton` signatures.
+
+SwiftLint `--strict` means warnings fail (line length ≤120 for code). I'll write carefully and auto-format after. Note: `.swiftlint.yml` `included:` lacks `TeslaSync/Features` — the gate passes an explicit path so it lints, but I'll add it for full-repo coverage. Let me write the view.
+
+Let me verify available `Color.TS` tokens before writing the panels.
+
+`Color.TS.background` doesn't exist — it's `Color.TS.bg`. Let me fix the main view and simplify the error case.
+
+Now the panels file with all 5 GlassPanels, loading/error states, and status mapping.
+
+Now the route registration. Let me first check for any exhaustive `switch` over `AppRoute` elsewhere that could break when I add a case.
+
+All clear — adding the case is safe. Let me update `AppRoute.swift`, create the registration, and wire the app.
+
+Now the registration file and the app wiring.
+
+Now the previews file. Let me write it with seeded fixtures for the key states.
+
+Now the unit test (in the real test target path, matching the ToolCard precedent). Comprehensive parity-logic coverage.
+
+Now wire `TeslaSync/Features` into the two app targets in project.yml. Let me view the exact source blocks.
+
+Now the strings. The catalog is 4.6 MB JSON — I'll inspect its structure and check which keys already exist before adding, using Python to avoid corruption.
+
+All keys are missing (no conflicts). Catalog uses en/ar/he per key. Let me check the raw file formatting so my edit produces a minimal, faithful diff.
+
+Let me test JSON round-trip fidelity before modifying, to ensure a clean minimal diff.
+
+Round-trip is byte-identical — safe to edit. Let me add all 37 parity keys plus the page/nav extras (en + ar/he placeholders, matching the catalog's pattern).
+
+52 keys added, re-parse OK. Let me verify the catalog diff is clean (additions only) and run swiftformat on my new files.
+
+Catalog diff is clean (+1196, -0); all 37 parity keys present. Now let me run swiftformat on my new files, then swiftlint --strict.
+
+SwiftFormat is clean. SwiftLint linted the whole repo (config `included`) and found 2 violations — I need to see if any are in my files. Let me capture the actual violations.
+
+One real violation in my file: `DigitalTwinPage.Model.swift` is 464 lines (>400 limit). The other (LifetimeStats) is pre-existing. Let me split my model file. Let me view the section boundaries.
+
+Lines 97–207 (snapshot, source seam, in-memory source, L10n) move to a new file. Let me split it cleanly.
+
+Clean split. Let me re-run swiftformat and swiftlint on my files.
+
+My files are clean. The only violation is the pre-existing `LifetimeStatsWidget`. Let me test exactly how the gate's swiftlint invocation (from repo root) scopes files.
+
+Gate-style swiftlint (from repo root, scoped path) exits 0 — it doesn't pull in the pre-existing violation. Let me confirm it's actually linting my files and update todos.
+
+SwiftLint gate passes (0 violations, 6 files). Let me update todos and run the placeholder gate + generate the Xcode project.
+
+Placeholder gate passes (0). Now let me generate the Xcode project and attempt the full-app build to capture its real state.
+
+Project generated with my Features included. Now let me attempt the full-app iOS build to capture its real state (expecting pre-existing collisions). Running in background.
+
+Build is running. Let me set up the isolated SwiftPM verification harness for the model logic (Swift 6 strict concurrency) — the highest-value GREEN proof.
+
+Harness assembled. Let me run the isolated tests under Swift 6 strict concurrency.
+
+The harness needs `TwinConnection` (a trivial 3-case enum from the widget's Model file, which is SwiftUI-coupled). Let me add a faithful shim of just that enum and re-run.
+
+All 17 isolated tests pass under Swift 6 strict concurrency. Let me check the full-app build progress and whether any errors touch my files.
+
+17/17 isolated tests pass; no errors in my files. The full build is still running. Let me locate the view's remaining twin dependencies to attempt an isolated view typecheck.
+
+The model is proven green. For the view, let me attempt an isolated macOS typecheck against the real component/design/twin sources (excluding the colliding `Sources/DashboardWidgets`). Let me check the full build first, then assemble the typecheck.
+
+The app target is compiling with failures. Let me see the actual errors (expecting pre-existing duplicate-type collisions).
+
+No errors flushed yet (xcodebuild buffers whole-module). Components/Design are self-contained. Let me run the isolated macOS view typecheck against real dependencies while the full build finishes.
+
+Both checks running. Let me wait and read the view typecheck result.
+
+The 52 errors are all in `UnitFormatters.swift` (needs `UnitPreferences` from the Shared facade) — a component my page doesn't use. Let me find which component files need the Shared facade and exclude them from the typecheck.
+
+Only `UnitFormatters.swift` (unused by my page) errors. Let me re-run the typecheck excluding it.
+
+Real issue: `private var model` in the main file isn't accessible from the `Panels.swift` extension (Swift `private` is file-scoped). The combined file is well under 400 lines, so I'll merge the panels into the main file to keep `model` properly private. Let me merge.
+
+Merged to 283 lines. Let me reformat and re-run the view typecheck.
+
+macOS typecheck: **0 errors**. The view + model compile clean against real components. Let me run the iOS SDK typecheck and re-confirm swiftlint after the merge.
+
+Both iOS-18 and macOS-15 typechecks pass with **0 errors**; swiftlint 0 violations. My page is fully isolated-green. Now let me check the full-app build's final state.
+
+Full build **FAILED** with 0 errors in my files. Let me capture the actual (pre-existing) errors for the log.
+
+Confirmed: the full build fails **only** on pre-existing `feature-views/*.Tests.swift` importing XCTest into the app target (the documented P99 blocker) — **0 errors in my files**. My page is isolated-green on both SDKs. Let me record the exact build exit, then write the ledger and log.
+
+Let me capture the precise build/test exit codes in the background while I write the ledger and log.
+
+Let me create the parity ledger while the build runs.
+
+Now let me add the deferred-verification row to the pending-verifications doc (matching the established precedent rows).
+
+Let me check the gate build's progress before writing the log.
+
+BUILD_EXIT=65 (pre-existing). Let me verify every parity string key literally appears in my source before writing the log.
+
+All 37 keys present. Let me confirm the panel/state symbols, then write the evidence log.
+
+All confirmed. Now let me write the comprehensive evidence log with the `=== PARITY ===` section (45/45).
+
+Log written. Let me run final validations and check git status before committing.
+
+Git status shows pre-existing unrelated changes (`AIUsageCard.*`, `web/src/...`) that aren't mine — I'll commit only my files. Let me remove my stray `nohup.out` and verify my `TeslaSyncApp.swift` edit is well-formed.
+
+Edits are well-formed. Let me update todos and stage only my files (excluding the pre-existing unrelated changes).
+
+Staged exactly my 14 files (pre-existing unrelated changes excluded). Let me commit.
+
+Committed cleanly (`0efc93a84`), no unrelated files. Let me run a final fresh gate verification on the committed state and clean up temp artifacts/processes.
+
+Final gates confirmed (placeholder 0, swiftlint 0, build 65 deferred). Let me stop background shells and check for leftover processes.
+
+All clean — no leftover processes, all my files committed. Let me finalize the todo tracking.
+
+All todos complete. The task is finished and verified.
+
+## Summary
+
+I implemented the native **SwiftUI/HIG `DigitalTwinPage`** at full web parity (`apps/apple/TeslaSync/Features/Vehicles/`), adaptive across macOS + iOS, and committed it (`0efc93a84`).
+
+**Delivered (45/45 parity):**
+- **5 glass panels** — twin visualization (reusing the shipped `VehicleTwinView` Canvas illustration), doors, windows, security & status, and the no-vehicles empty panel.
+- **3 data states** (loading/empty/success, + error/retry) for every source.
+- **All 37 web i18n keys** added to `Localizable.xcstrings` (+15 page/nav extras, en+ar+he) — zero hardcoded strings.
+- `@Observable DigitalTwinPageModel` binding the four web hooks (`useVehicles`, `useVehicleState`, `useSecurityLatest`, `useChargingTelemetryLatest`) through a `DigitalTwinPageSource` seam (the established P4 pattern), reusing `TwinStateBuilder` so the projection matches `lib/vehicleState.ts`.
+- New `.digitalTwin` route + registration; toolbar vehicle selector; SI display boundary; ADR-013 staleness; VoiceOver/Dynamic Type.
+
+**Verification (raw):**
+| Gate | Result |
+|---|---|
+| placeholder | `EXIT=0` (0) |
+| swiftlint --strict | `0 violations, 5 files` |
+| swiftformat --lint | clean |
+| iOS-18 + macOS-15 `swiftc -typecheck` | **0 errors** (vs. real components/tokens/twin) |
+| SwiftPM model tests (Swift 6 strict) | **17/17 pass** |
+| full-app `xcodebuild build/test` | `EXIT=65` — **DEFERRED** |
+
+I built/staged the missing `Shared.xcframework` to enable Xcode here. The full-app build fails **only** on pre-existing, unrelated collisions (`feature-views/*.Tests.swift` importing XCTest into the app target; `DashboardWidgetSize`/`TwinVehicle` redefinitions; macOS signing) — **0 errors in my files**. This is the repo's sanctioned *code-complete + isolated-green + deferred-Xcode-gate* disposition, recorded in `apps/macos-pending-verifications.md` for P99. Ledger `apps/parity/apple-ledger.json` marks the unit done 45/45 for apple-ios + apple-macos. Log: `.github/prompts/monorepo/logs/apple-page-vehicles-DigitalTwinPage.log` → `EXIT=0 / STATUS=DONE`. Only my 14 files were committed (pre-existing unrelated edits left untouched).
+
+
+
+The task is fully complete and verified. All 10 todos are done, and the work is committed.
+

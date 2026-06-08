@@ -1,0 +1,142 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure and parity manifest to understand the existing patterns.
+
+Let me check tool availability (critical for the gate) and examine existing patterns in parallel.
+
+Key finding: `/Applications/Xcode.app` exists — the issue is just `xcode-select`. Let me test if I can use it via `DEVELOPER_DIR`, and study a representative feature-view in depth.
+
+Xcode 26.5 is available via `DEVELOPER_DIR` and simulators exist. Let me find the closest analog feature-views that use the same data sources.
+
+This is a clear pattern. Let me read the rest of the AnomalyInlineRow files and the SharedFacade core to understand the full architecture.
+
+Let me understand the app shell, navigation, and the shared container.
+
+Let me read the navigation/shell files to understand route registration.
+
+The web `/quick-stats` is a standalone route (not in the main nav). Let me examine the deep-link parser and how the route registry gets populated.
+
+Let me study the app entry, the one existing page registration (Settings), and the component library.
+
+Let me read the complete AnomalyInlineRow unit (Model, entry, Views, States, Seams, Previews, strings) to fully internalize the pattern.
+
+Now let me study the design tokens and the component library (GlassPanel, MetricCard/StatCard, EmptyState).
+
+Let me read the SI units facade, EmptyState component, design tokens, and check the shared-framework build situation.
+
+Let me check how feature-views handle SI conversion, the shared-framework build, and the web formatting helpers.
+
+No feature-view imports `Shared` — they do pure Swift SI math. Let me see the exact conversion/formatting helpers used.
+
+Let me confirm the design tokens and read the DriveStatCards Model (strings-with-args helper) and Views (grid layout).
+
+I have the architecture. Before writing, I must verify how the feature-view `.Tests.swift` files are compiled (app target vs test target), since that affects my approach.
+
+I need to understand the build baseline. Let me check the test wiring empirically and kick off the long-pole KMP framework build in the background.
+
+JDK 17 and gradlew are present. Let me start the long-pole KMP `Shared.xcframework` build in the background, then generate the Xcode project and inspect the test wiring.
+
+Let me settle the baseline-build question precisely and check whether the component/design layer is `Shared`-free (so I can isolate-typecheck my view layer).
+
+Good — Components/Design/App are `Shared`-free, so I can isolate-typecheck my view layer. Let me definitively determine whether the app target compiles the co-located test files.
+
+Let me definitively trace which targets own the test-file build references (the crux of whether the baseline builds).
+
+Definitive: 261 pre-existing `*Tests.swift` files are mis-compiled into each **app** target (`@testable import TeslaSync` inside the module) — the baseline app build is structurally red, independent of my page. I'll wire my slice correctly, deliver the full page per convention, and verify everything I can. Let me record findings and read a few final references.
+
+KMP framework partially built (debug XCFramework written; release assembly had an issue). Regardless, the app build is blocked by the 261 mis-targeted test files. Let me read the tile/grid view pattern and `TSTone`, then start implementing.
+
+I now have a complete understanding. Let me record the plan and findings, then implement.
+
+Findings recorded. Now implementing the pure projection core (Adapter).
+
+I need to create the directory first.
+
+Now the Seams file (telemetry, strings table, source protocol, in-memory source).
+
+The model needs `formatting` per snapshot (metric vs imperial), matching the `DriveStatCards` pattern. Let me add it to the update struct, then write the Model.
+
+I referenced `QuickStatsAccessibility` in the model. Let me add it to the Adapter (pure).
+
+Let me typecheck the pure-logic trio (Adapter + Seams + Model) standalone before building the view layer.
+
+Pure logic compiles cleanly under Swift 6. Now the SwiftUI view layer. Let me update todos and write the entry + views.
+
+Now the Views file (header, content, vehicle card, metric grid + tile, footer, and the `text` string helper).
+
+Now the States file (loading skeleton, no-vehicle empty, error, freshness chip).
+
+Now the strings catalog (per-surface table), previews, navigation registration, and tests.
+
+Now the navigation registration for the standalone `/quick-stats` route.
+
+Now the test suite.
+
+Let me fix the awkward double-optional in one test.
+
+Let me independently verify the parity numbers by compiling the pure core with a small driver.
+
+Parity numbers verified exactly against the web. Now wire `project.yml` (app targets get the page; test targets get the test file).
+
+Now regenerate the project and verify my files land in the correct targets, then run the lint gate.
+
+Target membership is correct. Now run the lint gate (swiftlint --strict) and swiftformat lint on the new directory.
+
+SwiftLint linted the whole tree (config `included` dominates). Let me isolate the single violation and confirm whether it's in my files.
+
+The only violation is pre-existing in `dashboard-widgets/` — my files are clean. Let me run the exact gate invocation (from repo root) to confirm scoping.
+
+Gate command (from repo root) scopes to my 9 files — 1 line-length violation in the test helper. Let me fix it.
+
+Let me scan all my files for any other >120-char lines, then re-run both lint gates.
+
+swiftlint gate passes (0 violations). swiftformat wants canonical formatting on 2 files — let me auto-fix with the repo formatter and re-verify.
+
+Both clean. Let me verify the formatter's edits to the test doubles preserved correctness.
+
+swiftlint/swiftformat/typecheck/parity all green for my files. Now let me attempt the real `xcodebuild` to confirm (a) my view-layer files compile in-context and (b) the precise baseline blocker. First, why did the release framework assembly fail?
+
+The KMP framework built successfully and is staged in my slot. Before the full app build (which is blocked by the 261 pre-existing test files), let me verify my **view layer** typechecks in-context against the real component library via a focused compile.
+
+The only error was a bogus shell glob (no `Layout` dir). Let me re-run cleanly to confirm exit 0.
+
+All 52 errors are confined to one Shared-coupled component file (`UnitFormatters.swift`) that my page doesn't use — **zero** errors in my files. Let me confirm a clean exit excluding that one unrelated file.
+
+My view layer typechecks cleanly in-context against the real components (exit 0, 0 errors). Now let me empirically demonstrate the baseline blocker with a real `xcodebuild`, confirming my files add no errors. I'll build the macOS target directly (framework already staged, skipping the 11-min pre-action).
+
+The build is running. Meanwhile, let me run the placeholder gate and prepare the ledger. Let me check the placeholder script and tooling.
+
+pwsh is available and the build finished. Let me run the placeholder gate and inspect the build result.
+
+Placeholder gate passes (0 violations). Now the build result.
+
+The `-target` flag rejected `-derivedDataPath`. Let me rebuild via `-scheme` (pre-action gradle is now cached) and capture the real compile errors.
+
+While the build runs, let me create the parity ledger. Let me verify no ledger exists, then create it.
+
+The build finished. Let me inspect the result, then create the ledger.
+
+The build fails — **zero errors in my files**; failures are all in pre-existing `feature-views/*.Tests.swift`. Let me capture the exact baseline error message to document the blocker precisely.
+
+Definitive: the blocker is `error: unable to resolve module dependency: 'XCTest'` in 261 pre-existing `feature-views/*.Tests.swift` files mis-compiled into the app target — **zero** errors in my files. Let me create the ledger and write the parity log.
+
+Let me validate the ledger JSON/schema and re-run the gate legs to capture final numbers for the log.
+
+Ledger valid; all green legs confirmed. Now let me write the parity log with full evidence.
+
+Let me update todos, then do a final review of the test file and a consolidated verification.
+
+Let me verify the test file's signatures compile by building it (minus the SwiftUI-coupled route test) against the pure module with XCTest linked.
+
+All files verified (test file typechecks against the module + XCTest, exit 0). Let me clean up temp artifacts and review the final git status.
+
+I see modified `AIUsageCard.*` files I never touched. Let me investigate whether these are pre-existing or something I caused.
+
+Confirmed: the `AIUsageCard.*` changes are pre-existing (mtime 08:17, repo-setup time) — not mine. My footprint is only the page dir, `project.yml`, the ledger, and the log. Let me run a final consolidated verification.
+
+Let me run the gate legs cleanly and separately for unambiguous final confirmation.
+
+All gate legs that can pass are green (swiftlint 0, swiftformat clean, placeholder 0). Let me finalize todos and confirm deliverables.
+
+All 13 todos complete; all deliverables present; the log honestly ends with `EXIT=65 / STATUS=BLOCKED`. The task is complete to the fullest extent the environment allows.
+

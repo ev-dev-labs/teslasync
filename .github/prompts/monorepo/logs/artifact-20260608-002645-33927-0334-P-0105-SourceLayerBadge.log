@@ -1,0 +1,157 @@
+=== P4 Shared surface 0105 SourceLayerBadge (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26 (Darwin arm64, Apple Silicon) — shared parallel runner, slot-334.
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.x (--strict) · swiftformat (--lint) · xcodegen 2.45.4 · pwsh.
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5) present · iOS 26.5 + macOS 26.5 SDKs present.
+  Capability         : SwiftUI present; this surface uses NO Swift Charts / MapKit (web "Charts/maps used: none").
+                       => NOT capability-BLOCKED. The surface is verified on this runner; the full-app xcodebuild
+                       is DEFERRED on PRE-EXISTING unrelated breakage (see DEFERRED below), per the repo's
+                       sanctioned macos-pending disposition.
+
+WEB SOURCE (the specification)
+  web/src/components/data-display/SourceLayerBadge.tsx — a PURE presentational atom (a debugger-only
+  badge showing which live-state layer a signal value came from). Its ONLY hook is useTranslation; there is
+  NO data query (the prompt itself records "Data sources: useTranslation" and "Charts/maps used: none").
+    key   = (source ?? 'unknown').toLowerCase(); style = STYLE[key] ?? STYLE.unknown
+    STYLE : l1 (emerald "L1") · l2 (blue "L2") · log (neutral "LOG") · stale (amber "STALE") · unknown ("—")
+    formatAge(ms): null/!finite => null · <1000 => "{round(ms)} ms" · <60_000 => "{(ms/1e3)→1dp} s"
+                   · <3_600_000 => "{round(ms/6e4)} min" · <86_400_000 => "{(ms/3.6e6)→1dp} h" · else "{(ms/8.64e7)→1dp} d"
+    tooltip = ageText ? `${t(descKey,descFallback)} (${t('sourceLayer.age','age')}: ${ageText})` : t(descKey,descFallback)
+    <Tooltip content={tooltip}><span data-source={key} className=… min-w 1.5rem|2.5rem>{style.label}</span></Tooltip>
+  Quirk reproduced verbatim (NOT "fixed"): showLabel only WIDENS the badge (min-w 2.5rem vs 1.5rem); it does
+  NOT change the glyph text — the rendered label is always style.label (the web doc-comment claims otherwise;
+  the CODE is the contract, per the predecessor "do NOT fix the arithmetic" discipline).
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/shared-surfaces/)
+  SourceLayerBadge.Adapter.swift   — SourceLayerNumber (plainInt / POSIX 1dp), SourceLayerLayer (web STYLE key
+                                     + ?? unknown fallback, lowercased raw-key preserved = web data-source),
+                                     SourceLayerAge (formatAge bucketing), SourceLayerBadgeInput / …Resolved.
+  SourceLayerBadge.Model.swift     — SourceLayerStrings (P1/S10 i18n facade), SourceLayerProjection (cached →
+                                     resolved adapter incl. tooltip + VoiceOver composition), SourceLayerBadgeTelemetry
+                                     seam + OSLog default (P1/S11 view.opened), SourceLayerBadgeSource (P1/S8 state
+                                     holder) + SourceLayerBadgeModel + InMemorySourceLayerBadgeSource.
+  SourceLayerBadge.Views.swift     — SourceLayerMetrics (web Tailwind dims → pt), SourceLayerStyle (web tint → tokens),
+                                     SourceLayerBadgePill (mono glyph + tinted pill + .help tooltip + a11y).
+  SourceLayerBadge.swift           — public SourceLayerBadge view (init(model:) + value-driven init(source:ageMs:
+                                     showLabel:), onAppear/onDisappear → model.start/stop). surfaceSlug="SourceLayerBadge".
+  SourceLayerBadge.Previews.swift  — #if DEBUG previews: variants · age tooltip · showLabel width · dense table cell.
+  SourceLayerBadge.Tests.swift     — 24 XCTest cases (adapter formatters, layer resolution, age bucketing + localized
+                                     templates, projection tooltip/a11y, model wiring + view.opened-once telemetry).
+  SourceLayerBadge.strings         — P1/S10 catalog table: variant glyphs + descriptions (verbatim web descFallback),
+                                     age templates, age word, tooltip/a11y composition. Zero English literals in code.
+  Necessary shared wiring (same pattern ToolCard/feature-views used; validated by xcodegen — see GATES):
+    apps/apple/project.yml         — + "TeslaSync/shared-surfaces" to TeslaSync & TeslaSync-macOS sources
+                                     (excludes "**/*.Tests.swift" so the co-located test does NOT enter the app
+                                     target), and the test glob to TeslaSyncTests & TeslaSync-macOSTests.
+    apps/apple/.swiftlint.yml      — + "TeslaSync/shared-surfaces" to included.
+    apps/macos-pending-verifications.md — + one row deferring the full-app iOS/macOS xcodebuild to a CI runner.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported, no raw hex)
+  Tooltip (web)            → .help(Text(tooltip)) (macOS hover + accessibility) + .accessibilityLabel.
+  span tint classes        → SourceLayerStyle: l1→statusSuccess · l2→statusInfo · stale→statusWarning ·
+                             log/unknown→surfaceGlass fill + border (web emerald/blue/amber/neutral, 0.15 fill / 0.30 ring).
+  text-[10px] font-mono uppercase tracking-wider  → .system(size:10,.medium,.monospaced) .textCase(.uppercase) .tracking(0.5).
+  px-1.5 / py-px / rounded / min-w 1.5–2.5rem      → 6 / 1 / 4 pt · @ScaledMetric minWidth 24|40 (Dynamic Type aware).
+  cn(...) / data-testid                            → SwiftUI modifiers · .accessibilityIdentifier("source-layer-badge").
+  i18n  : every glyph/description/age unit/word via SourceLayerStrings (P1/S10) — zero English string literals in code.
+  a11y  : .accessibilityElement(children:.ignore) + spoken "L1. {description} (age: …)"; Dynamic Type via @ScaledMetric.
+  telemetry : view.opened surface="SourceLayerBadge" emitted exactly once per presentation (P1/S11), default OSLog sink.
+
+STATES (every web render branch reproduced — the badge ALWAYS renders, never a blank/hidden surface)
+  l1 / l2 / log         : the layer tint variants.
+  stale                 : the web `stale` variant (Redis value past the 2-minute window) = the prompt's "stale" state.
+  unknown (source=nil)  : the web `STYLE.unknown` "—" fallback = the prompt's "empty / never blank box" state.
+  × showLabel           : the wide vs glyph width axis.   × ageMs : the optional "(age: …)" tooltip clause.
+  Scope note (honest, no narrowing): SourceLayerBadge.tsx is a PURE presentational atom whose only hook is
+  useTranslation — it has NO async data query, so the generic P4 leaf data-fetch states (loading / error / offline)
+  have NO counterpart in the web source and are deliberately NOT fabricated (that would be silent drift). The web's
+  own `unknown` and `stale` variants ARE the empty and stale states; all five variants + both axes are reproduced.
+
+GATES
+  [GREEN]    swiftformat --lint  (TeslaSync/shared-surfaces)            : 0/6 files require formatting   (FORMAT_EXIT=0)
+             swiftformat --lint apps/apple (whole tree, FYI)           : 1/1919 PRE-EXISTING — (blankLinesBetweenScopes)
+                                                                          in TeslaSync/feature-views/ActionBuilder.Previews.swift
+                                                                          (NOT a shared-surfaces file; not introduced here).
+  [GREEN]    swiftlint --strict  (TeslaSync/shared-surfaces, repo cfg) : 0 violations, 0 serious in 6 files  (LINT_EXIT=0)
+             swiftlint --strict  (whole app, FYI)                      : 1 PRE-EXISTING — function_body_length in
+                                                                          TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+                                                                          (NOT a shared-surfaces file; not introduced here).
+  [GREEN]    check-placeholders.ps1 -Path …/shared-surfaces/SourceLayerBadge : PLACEHOLDER_COUNT=0, 0 opt-outs (PLACEHOLDER_EXIT=0)
+  [GREEN]    xcodegen generate                                          : GEN_EXIT=0; pbxproj membership VERIFIED —
+                                                                          TeslaSync & TeslaSync-macOS get the 5 shipped sources
+                                                                          (NOT the test); TeslaSyncTests & TeslaSync-macOSTests
+                                                                          get ONLY SourceLayerBadge.Tests.swift.
+  [GREEN]    SourceLayerBadge build — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode,
+             strict-concurrency complete = same as the app), compiling the EXACT shipped SourceLayerBadge.*
+             sources (incl. #if DEBUG previews) against the REAL generated design tokens (Tokens.swift):
+                 Build complete!                                                                       (BUILD_EXIT=0)
+  [GREEN]    SourceLayerBadge tests — the EXACT shipped SourceLayerBadge.Tests.swift run as a host XCTest bundle
+             (XCTest resolved via DEVELOPER_DIR=Xcode), Swift 6 strict concurrency:
+                 Executed 24 tests, with 0 failures (0 unexpected)                                     (TEST_EXIT=0)
+  [GREEN]    Cross-platform compile of the shipped sources against the REAL SDKs (swiftc -typecheck,
+             -swift-version 6 -strict-concurrency=complete):
+                 iOS  : -sdk iphonesimulator -target arm64-apple-ios18.0-simulator                    (IOS_TYPECHECK_EXIT=0)
+                 macOS: -sdk macosx          -target arm64-apple-macos15.0                            (MAC_TYPECHECK_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT (deferred)
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT (deferred)
+
+  WHY DEFERRED (full-app Xcode gate — ZERO shared-surfaces errors; ALL blockers pre-exist this change, VERIFIED
+  on THIS worktree, not assumed):
+    1. Duplicate types in the app module — `public struct DashboardWidgetSize` is DEFINED 15× across
+       Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/* (and `PowerFlowConnection` 2×). Swift forbids this:
+       a 2-file reproduction `swiftc -typecheck` of two `public struct DashboardWidgetSize {}` files prints
+       "error: invalid redeclaration of 'DashboardWidgetSize'" (exit 1) — so the app target CANNOT compile,
+       a language guarantee independent of this surface, the framework, or the runner.
+    2. 224 co-located *.Tests.swift under feature-views/ + dashboard-widgets/ import XCTest into the APP target.
+       This surface's test is the ONLY co-located test correctly EXCLUDED from the app target (project.yml excludes,
+       verified via xcodegen membership above), so it adds ZERO to that pre-existing pile.
+    3. Frameworks/Shared.xcframework is not staged on this worktree (the scheme pre-action runs a long Kotlin/Native
+       Gradle assemble; ADR-004). macOS additionally requires a development SIGNING certificate (ENABLE_HARDENED_RUNTIME).
+    A faithful `xcodebuild -scheme TeslaSync … build test` WAS launched on this runner; it advanced through the
+    Gradle Shared.xcframework pre-action under heavy parallel-slot contention (Gradle reported 15 busy daemons),
+    and the shared /tmp capture file was reaped by a concurrent slot before completion, so a final exit code is not
+    pasted here — but the failure is conclusively PRE-EXISTING per (1)–(3) and matches the predecessor
+    p4-apple/feature-views/0010-ToolCard log (same Xcode 26.5 runner: IOS_EXIT=65 / MAC_EXIT=65 on the SAME
+    DashboardWidgetSize collisions + signing). These are owned by the P4/P99 Apple acceptance gate on a signed
+    macos-latest CI runner per apps/macos-pending-verifications.md (row added) — NOT by a single shared-surface prompt
+    (task rule: do not fix pre-existing unrelated breakage). The xcodegen-generated .xcodeproj is git-ignored.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED (RED), never as passing; the
+                           whole-tree swiftformat/swiftlint pre-existing reds are named with their owning files.
+  2  No scope narrowing  : every web variant (l1/l2/log/stale/unknown), the showLabel width axis, and the age tooltip
+                           are reproduced; the absent loading/error/offline states have no web counterpart (pure atom).
+  3  No skip-and-assume  : every surface gate executed on THIS runner with pasted results; the deferral is PROVEN
+                           (15× duplicate type grep + a real `swiftc` "invalid redeclaration" reproduction), not assumed.
+  4  No stubs as final   : complete production view + 24 real XCTest; placeholder scanner = 0, 0 opt-outs.
+  5  No parity shortcut  : tint/opacity/width/typography/age-formatting/tooltip/a11y/telemetry all mapped to platform
+                           tokens + the P1/S10 facade and verified against the exact web logic.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened all present
+                           and consumed; the ToolCard wiring + isolated-harness + macos-pending convention followed.
+  8  No commit on red    : the COMMITTED artifact (SourceLayerBadge.* + wiring) is GREEN on every surface-scoped host
+                           gate AND on a real isolated Swift 6 build + 24-test XCTest run + iOS/macOS typecheck; the
+                           deferred full-app gate and the whole-tree lint/format reds are PRE-EXISTING and unrelated —
+                           neither introduced nor touched by this commit (which only adds files + 3 wiring lines).
+  9  No silent drift     : changes confined to shared-surfaces/SourceLayerBadge.* (7 files), project.yml (+3 source
+                           entries), .swiftlint.yml (+1 include), this log, and one macos-pending row — all enumerated.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic SourceLayerBadge shipped at full parity with the web source and INDEPENDENTLY
+  VERIFIED on this runner: it compiles for iOS 18 + macOS 15 and its 24 tests pass under the app's own Swift 6
+  strict-concurrency rules, against the real design tokens, with swiftformat / swiftlint (--strict) / placeholder all
+  green for the surface and the xcodegen target membership validated. The full-app iOS-Simulator + macOS xcodebuild
+  build/test gate is DEFERRED (not failed by this code): it is blocked by pre-existing duplicate-type collisions
+  (DashboardWidgetSize ×15), 224 pre-existing co-located app-target XCTest files, an unstaged Kotlin/Native
+  Shared.xcframework, and macOS development-signing — all owned by the P4/P99 acceptance gate on a signed
+  macos-latest CI runner per apps/macos-pending-verifications.md. This matches the repo's sanctioned
+  "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,126 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the codebase structure, the web source, and Apple tooling availability.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swift`, `swiftlint`, `swiftformat`, `pwsh` are available. Let me explore the existing Apple project structure deeply and read the web source before deciding anything.
+
+Now let me read the web dependencies and explore the existing Apple feature-views structure to understand the patterns I must follow.
+
+The `feature-views` directory doesn't exist yet, but `dashboard-widgets` does. Let me explore the existing Apple structure comprehensively to understand the established patterns (predecessor P4 work, state holders, tokens, i18n).
+
+The project uses XcodeGen; `dashboard-widgets` (194 files) is the predecessor P4 bundle pattern. Now let me definitively probe the Apple build capability — this is critical "API evidence" for the honesty covenant.
+
+Definitive capability evidence captured:
+- **`xcodebuild`**: unavailable (`requires Xcode`, only CommandLineTools active)
+- **`xcrun simctl`**: unavailable (no iOS Simulator)
+- **iOS SDK**: absent (only macOS SDKs in CLT)
+- **macOS SDK**: ✅ has SwiftUI, Charts, MapKit frameworks → I *can* typecheck SwiftUI against it with `swiftc`
+
+So the full `xcodebuild build test` gate cannot run here, but I can still write the complete real implementation and verify it compiles + lints + formats. Per the covenant, I do the full work (no stubs), verify everything runnable, and document the genuine platform blocker with evidence. Let me study the established widget pattern and shared facade deeply.
+
+Let me read the shared facade (state-holder layer / P1/S8) and a representative complete widget to learn the exact established pattern.
+
+The facade imports `Shared` (the KMP xcframework). I need to see how widgets decouple their Model/View from `Shared` so I understand what can typecheck standalone. Let me read a full representative widget set plus the one widget that has a `Store`.
+
+Excellent — critical insight: widget files are **self-contained** (import only `Foundation`/`SwiftUI`/`Observation`/`OSLog`), modeling the P1/S8 seam as a Swift `protocol` rather than importing `Shared`. The `GuardModeWidget` pattern (local state enums, no `LoadableState`/`FacadeError` dependency) is fully typecheckable standalone against the macOS SDK. Let me read the design tokens, UI primitives, and the preview/test/strings conventions.
+
+The conventions are now clear. I need to confirm the exact design tokens (`Color.TS.*`, `TSSpacing`, `TSRadius`, `Font.TS.*`, `TSTone`, `TSSkeleton`) exist and locate the placeholder-check script. Let me find these definitions.
+
+Let me read the design tokens, the placeholder-check script, and the UI primitives I must map to (Button, Badge, Cards/GlassPanel, States, Typography).
+
+Now let me read the forbidden-pattern list and the native UI primitives (Button, Badge, Cards, States) that I must map the web components to.
+
+Let me read the rest of `project.yml` (to understand target/source/test wiring), plus the remaining primitives I'll compose with (Cards/GlassPanel, Feedback States, Skeletons, CopyButton/Utility, Typography).
+
+Let me see how `*.Tests.swift`/`*.Previews.swift` in `dashboard-widgets` are assigned to targets (critical for where my test file goes), and read the remaining primitives (Typography, Skeletons, CopyButton, glass material).
+
+Now I understand the architecture. Let me confirm which source files import `Shared` (so I can build a standalone `swiftc` typecheck set), and read the remaining pieces I'll compose with (glass material, CopyButton, the `view.opened` telemetry slug convention).
+
+`Components`/`Design`/tokens are all `Shared`-free — so I can build a real standalone `swiftc` typecheck set. Let me read the CopyButton API and glass material, and confirm `TSInlineCallout` exists.
+
+I have all the primitives I need. Let me quickly resolve the test-file convention (how `dashboard-widgets/*.Tests.swift` map to a target) so I place `BackendTool.Tests.swift` correctly, then start implementing.
+
+I now have a complete understanding. Let me set up tracking, verify the `swiftc`/SwiftUI/XCTest toolchain works against the macOS SDK (smoke test), and record the plan.
+
+Toolchain confirmed: **SwiftUI + Charts + MapKit typecheck against the macOS SDK passes** (exit 0). **XCTest is absent** (ships with Xcode only) — so the test file's compile is part of the Xcode-only gate, but I'll lint/format it. Let me record the plan and seed todos.
+
+Let me establish the dependency-set baseline compiles standalone (Components + Design + tokens) against the macOS SDK with Swift 6 + strict concurrency — this validates my verification harness before I write code. Seeding todos in parallel.
+
+Including the whole `Components` tree pulls in `UnitFormatters.swift` (needs `Shared`). I'll narrow to the minimal Shared-free set I actually use. Let me verify that set compiles cleanly.
+
+Minimal dependency set compiles cleanly (exit 0, Swift 6 + strict concurrency). That's my verification harness. Let me read the lint/format configs to comply, then write the files.
+
+Dependency harness is green. Now I'll write all seven `BackendTool.*` files, following the established `GuardModeWidget` conventions exactly. Starting with the Model (seams + view-model + i18n + telemetry) and Adapter (pure projections).
+
+Let me typecheck Model + Adapter against the dependency harness early to catch issues before writing the views.
+
+One fix needed: the `static let hidden` global requires `Sendable`. I'll make it a computed `static var` (avoids the global-state requirement without forcing `TSTone: Sendable`).
+
+Model + Adapter typecheck clean. Now the Views (subviews) and the main View.
+
+Now let me typecheck the full shipped surface (Model + Adapter + Views + View) against the macOS SDK before writing previews/tests.
+
+Shipped surface typechecks clean (0 errors, 0 warnings, Swift 6 strict concurrency). Now the Previews (one per state) and the XCTest suite.
+
+Now the i18n catalog contribution (`.strings`).
+
+All 7 files written. Now the verification pass: auto-format, re-typecheck (incl. DEBUG previews), format-lint, swiftlint, placeholder check.
+
+swiftformat adjusted 4 files. Let me re-typecheck (including DEBUG previews) and run format-lint + swiftlint + placeholder check together.
+
+Format-lint ✅ (0/6 need formatting) and swiftlint --strict ✅ (0 violations). The typecheck-with-DEBUG failure is the `#Preview` macro needing Xcode's `PreviewsMacros` plugin — it fails identically on the repo's own `Typography.swift:220`, confirming it's an Xcode-only tooling gate, not a code defect. Let me re-confirm the non-preview surface still compiles post-format, syntax-parse the preview/test files, and run the placeholder gate.
+
+All runner-available checks pass: **surface typecheck EXIT 0**, previews/tests parse EXIT 0, **swiftformat --lint EXIT 0**, **swiftlint --strict EXIT 0**, **placeholder gate EXIT 0**. Let me do a final self-audit (no raw English literals / forbidden words) and locate the canonical log directory + precedent.
+
+Audit clean: no raw English literals, no forbidden words, all referenced keys declared. One tidy-up: `devtools.tool.copy` is declared but unused — I'll wire it as the copy button's VoiceOver label (improves a11y, removes the dead key). Let me also inspect a precedent log's format.
+
+**Critical discovery.** The precedent log reveals the dashboard-widgets runner had **full Xcode installed but not selected**, driven via `DEVELOPER_DIR=/Applications/Xcode.app/...` (its `xcode-select -p` was *also* CommandLineTools). I only checked `xcode-select` — I must check for `Xcode.app` directly. This could change BLOCKED → DONE.
+
+**Xcode IS installed** at `/Applications/Xcode.app` — just not selected. I can drive it via `DEVELOPER_DIR` (no sudo), exactly like the precedent. This likely shifts the outcome toward DONE. Let me verify xcodebuild works, read the closest precedent (GuardMode 0054), and re-examine project wiring for the colocated `.Tests.swift` mechanism.
+
+This is the authoritative precedent (GuardMode 0054 — the exact pattern my prompt cites). The **accepted methodology** is: author the surface, run **host-runnable gates green** (iOS-sim + macOS SDK typechecks, **execute the XCTest suite via a SwiftPM harness**, lint/format/placeholder), and **DEFER** `xcodebuild build test` with documented evidence (project.yml not wired for the new dir = outside allowed files; `Shared.xcframework` not staged; signing) → **STATUS=DONE**.
+
+Xcode 26.5 + iOS 18-compatible SDKs + iPhone 16 simulator are all available here. Let me run the real host gates the way the precedent did.
+
+Confirmed: `Shared.xcframework` is **not staged** (only `.gitkeep`) — the documented blocker (b) for the full app build, exactly as the precedent. iOS-sim + macOS SDK typechecks both **EXIT 0**. Now the DEBUG-previews typecheck (Xcode has the macro plugin) and the SwiftPM test-execution harness.
+
+**[4] swift test: 18/18 PASS, 0 failures, EXIT 0** — the full XCTest suite executed on the macOS host against the real production + component code. ✅
+
+But **[3] previews typecheck (now reachable under Xcode's macro plugin) surfaced a real concurrency error**: the file-scope `previewDescriptor` global isn't concurrency-safe. Good catch — let me fix it (the CLT couldn't reach this error earlier due to the missing macro plugin).
+
+**[3] previews typecheck: EXIT 0.** Now let me re-run the complete verification battery after all edits (format, lint, both SDK typechecks, placeholder) to confirm everything is green together.
+
+**Every host gate is green:** format 0, lint 0, iOS-sim typecheck 0, macOS typecheck 0, previews typecheck 0, **swift test 18/18 = 0**, placeholder 0. Now let me capture the deferred-`xcodebuild` evidence the way the precedent did (project generation + the `Shared.xcframework`-missing build error, plus confirming `feature-views` isn't yet registered in project.yml).
+
+Captured evidence matches the precedent exactly: `feature-views` has **0** references in project.yml (not yet registered — editing it is outside allowed files), `xcodegen generate` EXIT 0, and `xcodebuild` fails only on the un-staged `Shared.xcframework` (exit 65, a KMP-core/integration blocker independent of this surface). Let me confirm the generated project is git-ignored, gather final artifact facts, and clean up temp.
+
+Clean: generated `.xcodeproj` removed, only `feature-views/` is untracked. Artifacts total ~1,212 Swift lines across 6 files (largest 309 ≤ 400 file-length limit) — substantial parity, not a stub. Let me grab the base SHA and write the gate log mirroring the precedent format.
+
+Log written. Now let me commit exactly the allowed files (the `feature-views/` surface + the log) — taking care **not** to include the two pre-existing unrelated `web/` modifications that were already dirty in the tree.
+
+Staging is exactly right — the 7 `BackendTool.*` files + the log; the two pre-existing `web/` edits are correctly excluded. Committing now.
+
+Committed as `7498dd11` (8 files, 1447 insertions); tree clean apart from the pre-existing `web/` edits. Let me do one final consolidated re-run of the entire gate suite against the committed tree to be airtight (no fabrication — real output).
+
+All static gates green on the committed tree. Let me re-execute the XCTest suite once more from the committed files to be fully airtight.
+
+All verifications pass from the committed tree. Let me finalize tracking and clean up.
+
+All todos complete, temp cleaned, and the working tree contains only the two pre-existing (unrelated) `web/` edits I deliberately left untouched.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0002-BackendTool.log    | 198 +++++++++++++
+ .../feature-views/BackendTool.Adapter.swift        | 168 +++++++++++
+ .../feature-views/BackendTool.Model.swift          | 237 ++++++++++++++++
+ .../feature-views/BackendTool.Previews.swift       | 146 ++++++++++
+ .../feature-views/BackendTool.Tests.swift          | 244 ++++++++++++++++
+ .../feature-views/BackendTool.Views.swift          | 309 +++++++++++++++++++++
+ .../TeslaSync/feature-views/BackendTool.strings    |  37 +++
+ .../TeslaSync/feature-views/BackendTool.swift      | 108 +++++++
+ 8 files changed, 1447 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0002-BackendTool.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackendTool.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackendTool.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackendTool.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackendTool.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackendTool.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackendTool.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackendTool.swift

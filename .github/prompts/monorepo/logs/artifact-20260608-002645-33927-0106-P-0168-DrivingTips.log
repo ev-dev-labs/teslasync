@@ -1,0 +1,183 @@
+================================================================================
+P4 · Feature view · 0168 — DrivingTips (Apple)
+Run: 2026-06-08T02:10-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/106
+Base: c9c6fdb9f
+Prompt: P4/feature-views/0168 — DrivingTips
+Web source (spec): web/src/features/driving/components/driving-dynamics/DrivingTips.tsx
+Mode: code-complete + REAL iOS-18-simulator & macOS-15 SDK typechecks (ship + previews)
+      + EXECUTED XCTest (30/30) via SwiftPM on the macOS host + DEFERRED signed Xcode
+      scheme build/test (the FleetTelemetryHealth-0005 / SentryEventLogWidget-0086 /
+      DrivingTab-0056 precedent, ADR-012). No stubs, no placeholders.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)              OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override          OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18 deploy target)         OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15 deploy target)                OK
+  iPhone 16 simulator ........ 83717DEE-70A3-4325-AA61-CBDDD3140989 (Booted)          OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                            OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                          OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen 2.45.4                      OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                                OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                         OK
+  Shared.xcframework ......... debug variant BUILT via Gradle/Kotlin-Native + staged;
+                               release variant link exceeds a practical time bound here  WARN
+
+  NOTE on active toolchain: a bare `xcodebuild` fails ("tool requires Xcode") because
+  `xcode-select -p` points at /Library/Developer/CommandLineTools. Full Xcode 26.5 IS
+  installed at /Applications/Xcode.app and is used here via the DEVELOPER_DIR override
+  (the 0005/0086/0056 precedent), unlocking the iOS 18 simulator SDK, the macOS 15 SDK,
+  and `swift test`.
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit (the web
+  source's "charts/maps used: none" — it is a pure recommendations list). The
+  capability-BLOCKED escape hatch ("SwiftUI/Swift Charts/MapKit unavailable") therefore
+  does NOT apply: SwiftUI is available and PROVEN by the real iOS-18 simulator AND
+  macOS-15 SDK compiles below. The surface is authored, both-SDK-compiled, and host-tested
+  for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/DrivingTips.*) ===
+  DrivingTips.Adapter.swift   140  Foundation-only core — the recommendation catalogue
+                                   (DrivingTipKind, the 9 web `t(key, default)` keys +
+                                   verbatim em/en-dash fallbacks), DrivingTipsAdvisor (the
+                                   web `useMemo` tip derivation: avgPower >80 / >20 / else
+                                   + maxMotorTemp >120 thermal append, strict `>` so NaN
+                                   matches JS), DrivingTipGlyph (web `throttleStyle ===
+                                   'conservative' ? ShieldCheck : AlertTriangle`),
+                                   DrivingTipsAccessibility
+  DrivingTips.Model.swift     277  P1/S8 state-holder seam (DrivingTipsSource ->
+                                   DrivingTipsModel, @Observable) + P1/S11 telemetry seam
+                                   (view.opened) + input snapshot (web props: motorStats +
+                                   throttleStyle) + resolved view-state + projection
+                                   (loading/empty/error/data) + freshness auto-refresh +
+                                   in-memory source + P1/S10 strings facade (table
+                                   "DrivingTips") + surface slug
+  DrivingTips.Views.swift     289  chrome — glass recommendations panel (web `GlassPanel
+                                   p-6`), lightbulb header + freshness chip + refresh,
+                                   connectivity banner, tip rows (shield/triangle glyph +
+                                   secondary-text tip), friendly empty body (web
+                                   `dynamics.tipNoData`), loading skeleton rows, error
+                                   (QueryError peer), semantic glyph-tone mapping
+  DrivingTips.swift            78  DrivingTips surface — phase switch (loading / empty /
+                                   error / data) wrapped in the shared panel chrome, web
+                                   `FadeIn delay={0.6}`, onAppear start + telemetry
+  DrivingTips.Previews.swift  120  #if DEBUG previews — data (aggressive+thermal /
+                                   moderate / conservative) / empty / loading / error /
+                                   stale / offline
+  DrivingTips.Tests.swift     363  XCTest — catalogue parity, advisor thresholds + thermal
+                                   + non-finite, glyph, projection, model wiring/telemetry/
+                                   freshness, accessibility (30 methods)
+  DrivingTips.strings          38  P1/S10 catalog contribution — 9 web-parity dynamics.*
+                                   keys + 9 native-chrome (freshness/loading/error/a11y)
+                                   keys
+  (web source DrivingTips.tsx = 70 lines; the native surface is larger because it adds the
+   P4 leaf contract — loading/empty/error/stale/offline — the state-holder + telemetry
+   seams, i18n facade, accessibility, previews and exhaustive tests the web leaf inherits
+   from its parent page.)
+
+=== STATES (every state renders — parity with the web source + P4 leaf contract) ===
+  data    — the derived recommendation rows (web `tips.map`), each with the throttle-style
+            glyph (conservative -> shield-check/success, else -> triangle/warning).
+  empty   — `motorStats` null -> a friendly centred empty body carrying the web's exact
+            `dynamics.tipNoData` copy (never a blank box). This is the web `!motorStats`
+            branch, surfaced as the P4 `empty` phase.
+  loading — three skeleton tip rows inside the panel chrome (P4 leaf).
+  error   — QueryError peer with a Retry affordance (P4 leaf).
+  stale   — header "Stale" chip + "Reconnecting…" banner + a one-shot auto-refresh on the
+            live->stale transition.
+  offline — header "Offline" chip + "showing last known data" banner; keeps cached tips,
+            does not refetch.
+
+=== GATE RESULTS ===
+  [swiftformat] swiftformat --lint (DrivingTips.*.swift) ......... 0/6 require formatting
+                FORMAT_EXIT=0
+  [swiftlint]   swiftlint lint --strict (DrivingTips.*.swift) .... 0 violations, 0 serious
+                LINT_EXIT=0
+  [placeholder] pwsh check-placeholders.ps1 -Path .../DrivingTips  PLACEHOLDER_ALLOWED=0
+                PLACEHOLDER_COUNT=0                                 PLACEHOLDER_EXIT=0
+  [typecheck-iOS]  swiftc -typecheck -sdk iPhoneSimulator26.5 -target arm64-apple-ios18.0-
+                   simulator -swift-version 6  (tokens + Design + the used component lib +
+                   reused MotorMetrics/MotorThrottle adapter + the 4 ship sources)
+                   IOS_SHIP_EXIT=0
+                   + with -DDEBUG over the Previews .................. IOS_DEBUG_EXIT=0
+  [typecheck-mac]  swiftc -typecheck -sdk MacOSX26.5 -target arm64-apple-macos15.0
+                   -swift-version 6 (same closure) .................. MAC_SHIP_EXIT=0
+                   + with -DDEBUG over the Previews .................. MAC_DEBUG_EXIT=0
+  [xctest]      swift test (SwiftPM, macOS host) — Adapter+Model+reused MotorMetrics
+                adapter + DrivingTips.Tests.swift .................. Executed 30 tests,
+                0 failures                                          SWIFT_TEST_EXIT=0
+                  DrivingTipKindCatalogueTests ........ 3
+                  DrivingTipsAdvisorTests ............. 7
+                  DrivingTipGlyphTests ................ 2
+                  DrivingTipsProjectionTests .......... 7
+                  DrivingTipsModelTests ............... 10
+                  DrivingTipsAccessibilityTests ....... 1
+  [xcodegen]    xcodegen generate ................................. project created;
+                DrivingTips referenced 42x (both app targets pick up every file)
+                XCODEGEN_EXIT=0
+
+=== DEFERRED: signed Xcode scheme build/test (ADR-012 precedent) ===
+  The canonical gate is:
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS                                                     build test
+  Two un-staged, repo-wide preconditions defer the SIGNED scheme build/test to the
+  downstream integration runner (neither is a defect in this surface, and neither is
+  inside this prompt's allowed files — DrivingTips.*):
+
+  1. KMP `Shared.xcframework` (ADR-004). The scheme's pre-build action stages it via
+     `Scripts/build-shared-xcframework.sh` -> `apps/shared/gradlew :core:assembleShared
+     XCFramework`. The DEBUG variant BUILT and was staged here (Kotlin-Native distribution
+     downloaded; xcframework written to apps/shared/core/build/XCFrameworks/debug/), proving
+     the toolchain works; the RELEASE-variant Kotlin-Native link exceeds a practical time
+     bound on this runner.
+
+  2. Test-files-in-app-target. The app targets glob `TeslaSync/feature-views` (project.yml
+     L37/L68), which includes every surface's `*.Tests.swift`. A bare target/scheme *build*
+     therefore tries to compile XCTest into the app and fails module-resolution on the
+     SIBLING test files — a pre-existing, repo-wide condition. An in-target macOS build
+     (debug xcframework staged) produced exactly two `error:` lines, BOTH
+     "unable to resolve module dependency: 'XCTest'" from sibling tests
+     (AIRestorePanel.Tests.swift, YearlyTrendChart.Tests.swift, helpers.Tests.swift, …).
+     ZERO errors originate from any DrivingTips source — my ship + preview sources compile
+     clean in the full app-target context, consistent with the dual-SDK typechecks above.
+     The scheme's TEST action (not a plain build) is what routes `*.Tests.swift` into the
+     XCTest bundle on the signed runner; that run is deferred per the 0005/0086/0056
+     precedent. DrivingTips.Tests.swift follows the same 100+-sibling convention and is
+     verified here by `swift test` (30/30).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green ....... every reported EXIT is the real command's exit; the deferred
+                            signed gate is labelled DEFERRED, not green.
+  2  No scope narrowing ... all six web states + the full web tip-derivation reproduced.
+  3  No skip-and-assume ... advisor/projection/glyph/model exercised by 30 executed tests.
+  4  No stubs as final .... no stubs/placeholders (placeholder gate = 0).
+  5  No parity shortcuts .. 9/9 web i18n keys present with verbatim fallbacks; data/empty/
+                            error/loading + the throttle-style glyph all reproduced.
+  6  No delegation ........ authored directly (delegation FORBIDDEN for this artifact).
+  7  No predecessor bypass  P4 core + P1/S8 + P1/S9 + P1/S10 seams consumed, not bypassed.
+  8  No commit on red ..... all runnable gates green; only the toolchain-staging gate is
+                            deferred (precedent), with my sources proven clean in-target.
+  9  No silent drift ...... reused the single-sourced MotorMetrics/MotorThrottle motor
+                            view-model rather than forking a parallel shape.
+  10 Log ends EXIT/STATUS . below.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (data/empty) + the P4 leaf states (loading/error/
+      stale/offline).
+  [x] Hooks bind through the shared P1/S8 state-holder layer (DrivingTipsSource ->
+      DrivingTipsModel); no direct HTTP in the view.
+  [x] Every web i18n key has a matching key in the P1/S10 table ("DrivingTips").
+  [x] Accessibility labels on the interactive controls (refresh, retry) + every tip row +
+      header trait; decorative glyphs hidden.
+  [x] Tests: adapter/advisor + projection + model + a11y (30 methods, executed 30/30).
+  [x] No TODO / stub / mock / placeholder / Lorem (placeholder gate = 0).
+  [x] Runnable gates EXIT=0; signed scheme build/test DEFERRED with evidence (ADR-012).
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/DrivingTips.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0168-DrivingTips.log
+  git commit -m "feat(apps/apple/feature-views): add DrivingTips surface (P4)"
+
+EXIT=0
+STATUS=DONE

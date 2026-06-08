@@ -1,0 +1,133 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Toolchain is present. Let me read the web source and explore the Apple app structure in parallel.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me investigate the existing structure deeply before deciding on approach—there may be predecessor widgets to follow.
+
+No predecessor widget logs exist, and the target path `apps/apple/TeslaSync/dashboard-widgets/` isn't in `project.yml` (which uses `Sources/`). Let me understand the shared facade, components, i18n, and diagnostics layers, plus check the parity manifest.
+
+Let me read the core facade, component, and infrastructure files to understand the conventions I must follow.
+
+Let me read the reference implementations, i18n/telemetry/design-token infrastructure, and the placeholder checker to match house conventions precisely.
+
+House style is clear: `TS`-prefixed components, `Color.TS.*`/`Font.TS.*`/`TSSpacing.*` tokens, `LocalizedStringKey` i18n, `@Observable` models over KMP `Shared`. Let me read design tokens, typography, telemetry, an example view, and test conventions.
+
+Let me read the design tokens, typography, telemetry pattern, a representative state-rendering view, and the localization catalog format.
+
+Let me find the diagnostics/telemetry contract, a representative state-rendering view, freshness logic, and the test framework convention.
+
+Let me probe the toolchain capabilities (can I typecheck SwiftUI against the macOS SDK? is full Xcode or pwsh available?) and read the lint/format/placeholder configs.
+
+Big findings: full Xcode exists at `/Applications/Xcode.app` (just not selected), and `pwsh` is available. Let me test whether I can drive `xcodebuild` via `DEVELOPER_DIR` override, and check the KMP `Shared.xcframework` + xcodegen dependencies that the real build needs.
+
+Excellent — full Xcode 26.5, iOS simulators, `pwsh`, and `xcodegen` are all available; `DEVELOPER_DIR` override works. But the app build needs the KMP `Shared.xcframework` (not staged) and my file isn't in `project.yml` (editing it is outside allowed files). My surface itself is SwiftUI-only, so I can verify it independently against both SDKs. Let me read the web shell/types/registry/hook and a couple of native references for parity.
+
+Let me read the climate data shape, unit conversion, number formatting, and native panel/container references.
+
+The catalog already has 17 `widget.climatePanel.*` keys (a predecessor added them). Let me read them verbatim and the native freshness indicator to reuse exact keys and chrome.
+
+The climatePanel keys exist as `translation.widget.climatePanel.*`, while sibling widgets use `widget.alerts.*` (no prefix). Let me understand the catalog's key convention definitively before choosing keys.
+
+I now have a complete picture. Let me set up tracking and write the plan, then build the surface.
+
+**Summary of constraints discovered:**
+- Full Xcode 26.5 + iOS 18/macOS 15 SDKs + simulators are available (via `DEVELOPER_DIR`), `pwsh` + `xcodegen` present.
+- The full `xcodebuild -scheme TeslaSync build test` gate is blocked: it needs the KMP `Shared.xcframework` (not staged; requires Gradle/Kotlin) **and** my surface isn't in `project.yml` (editing it is outside this slot's allowed files — that's the P4 integration gate's job).
+- My surface is SwiftUI-only (no charts/maps), so I can verify it **independently** against both SDKs + run its logic tests natively. The 17 `translation.widget.climatePanel.*` i18n keys already exist in the catalog.
+
+Now I'll create the surface. Let me set the first todo in progress and write the production SwiftUI file.
+
+Now let me typecheck the surface against both the macOS 15 and iOS 18 SDKs (Swift 6 mode, matching the project) to catch any errors.
+
+The only error: Swift 6 rejects `static let` of non-Sendable `LocalizedStringKey`. Fix: make those computed `static var` (no stored global state). Let me update both string facades.
+
+One error left (same on both SDKs): `label` is already a `Text`, so I shouldn't re-wrap it. Let me fix.
+
+Both SDKs typecheck clean. Now the quality gates — let me run swiftformat and swiftlint on the file (using their configs in `apps/apple`).
+
+swiftlint flags `file_length` (1297 lines), plus a few concrete issues. swiftformat's auto-wrapping would grow the file further. Since the allowed glob `ClimateControlPanelWidget.*` matches multiple files (e.g. `ClimateControlPanelWidget.Model.swift`), I'll split into focused files. First let me confirm the file_length threshold by checking existing large files.
+
+Existing files stay ≤390 lines, so the convention is ≤400/file. The allowed glob `ClimateControlPanelWidget.*` matches multiple files, so I'll split into focused files (also better SoC). Let me check the long line first, then restructure.
+
+Convention is ≤400 lines/file. I'll split into focused files (all match `ClimateControlPanelWidget.*`). Let me remove the monolith and create partitioned files, applying the lint fixes (rename `content`→`stateContent` + explicit `content:` label, wrap long lines, drop trailing comma).
+
+Now let me auto-format with swiftformat (house config), then check line counts and typecheck all files together.
+
+All files ≤284 lines now. Let me typecheck all together on both SDKs and run swiftlint --strict.
+
+Both SDKs typecheck clean and swiftlint reports 0 violations. Let me confirm swiftlint actually covered my 8 files (explicitly) and that swiftformat --lint is clean.
+
+All 8 surface files pass: typecheck (iOS 18 + macOS 15), swiftlint --strict (0 violations), swiftformat --lint (0 diffs). Now the tests.
+
+Now the strongest verification: I'll run the actual XCTest suite natively on macOS via a throwaway SwiftPM package (the surface is SwiftUI-only, macOS-compatible, no KMP dependency). Let me set that up.
+
+Test compiled; one Swift 6 error: the diagnostics spy mutates a captured `var` in a `@Sendable` closure. Let me fix with a thread-safe box (matching the house `ReloadCounter` pattern).
+
+That edit was wrong — it deleted a line. Let me view and fix properly.
+
+Fixed. Let me re-copy the test file and re-run the suite.
+
+All 34 XCTest tests pass natively on macOS (0 failures). Now the placeholder check and honest gate evidence. Let me run the placeholder checker, check the KMP/JDK situation, and generate the xcodeproj to document the wiring gap.
+
+Placeholder check passes (0 placeholders). JDK 17 is present but the KMP `Shared.xcframework` is unstaged, and the xcodeproj may not be gitignored. Let me check the ignore rules before generating anything.
+
+The xcodeproj contents are gitignored (safe to generate). Let me generate it and capture concrete evidence of the wiring gap + the missing KMP framework (the real blockers for the full app gate).
+
+The wiring gap and missing KMP framework are confirmed. Let me make one bounded real attempt at the gate's macOS build to capture honest `xcodebuild` output (with a hard timeout to avoid a long Gradle hang).
+
+The sandbox blocks `kill` with a variable PID. Let me run xcodebuild in an async session instead and stop it cleanly via `stop_bash`.
+
+The macOS scheme build is running its "Stage Shared.xcframework" pre-action (Gradle/KMP). Let me inspect the log file directly to capture the pre-action evidence, then give it a little more time.
+
+The KMP `Shared.xcframework` actually built (Gradle cache hit) and the app is now compiling — so the toolchain is fully capable. My surface is self-contained with mirror types (`Palette`, `Metrics`, `TemperatureUnit`, etc.); compiling it *into* the app module could clash with existing types. Let me check the build progress and scan for potential name clashes.
+
+No name clashes exist, so the surface could be wired in cleanly. The build output is buffered; let me gauge real progress via DerivedData and the on-disk staged framework.
+
+I have comprehensive surface-scoped verification already. The scheme build is bottlenecked on Gradle compiling *all* KMP release variants (slow, and re-runs every scheme build) — and critically, my surface isn't in `project.yml`, so this whole-app build can't validate it anyway. Let me stop it and capture the honest evidence.
+
+Let me clean up generated/scratch artifacts, then run the canonical verification suite fresh to capture authoritative exit codes for the log.
+
+Cleanup done (note: the two modified `web/*` files are pre-existing, not mine — I won't touch them). Let me run the canonical verification sweep and capture authoritative exit codes.
+
+The test file (created after my earlier auto-format pass) has trailing commas that swiftlint forbids and swiftformat removes. Let me auto-format and re-verify. (Note: my earlier `SWIFTLINT_EXIT=0` was a pipe-capture artifact — swiftlint actually flagged 2.)
+
+swiftlint is now clean (0 violations, 9 files). The swiftformat path was wrong (double `apps/apple`). Let me re-run it correctly and re-run the test suite to confirm green after the format fix.
+
+All surface-scoped checks are now green: iOS 18 + macOS 15 typecheck (0), swiftlint --strict 9 files (0), swiftformat --lint whole tree (0), check-placeholders (0), and 34 XCTest tests pass. 
+
+Key insight: my surface is self-contained and shares **zero** symbols with the app module (verified by grep), so the isolated dual-SDK verification is equivalent to an in-app build. The whole-app `xcodebuild build test` can't include the surface in this slot because that requires editing `project.yml` (outside allowed files — it's the P4 integration gate's job). Let me write the honest log.
+
+Let me write the comprehensive, honest gate log.
+
+Let me strengthen the evidence further: build the surface with the gate's actual tool (`xcodebuild`) via a throwaway framework project for **both** iOS and macOS — cheap (8 files), zero repo changes.
+
+iOS framework build via `xcodebuild` succeeded. Now the macOS build.
+
+Both `xcodebuild` framework builds (iOS + macOS) succeeded with EXIT=0. So the surface builds under the gate's actual tool on both platforms. Let me update the log to record this stronger evidence, then clean up scratch dirs.
+
+Parity is complete. Let me clean up scratch artifacts and verify the working tree before committing.
+
+Working tree is clean except my new files (the two modified `web/*` files are pre-existing — I won't touch them). Let me confirm my file set and commit only the allowed files + log.
+
+Committed (df8b73ee) — exactly my 9 surface/test files + the log; no web files. Let me do a final defensive re-typecheck of the committed files and update tracking.
+
+Done. The committed surface typechecks clean and the working tree shows only the pre-existing `web/*` modifications (untouched by me).
+
+## Summary
+
+Shipped a production-polished native **SwiftUI** port of `ClimateControlPanelWidget` at full parity with the web source, committed as **df8b73ee** (9 source/test files + gate log; no unrelated files).
+
+**Implementation** (`apps/apple/TeslaSync/dashboard-widgets/ClimateControlPanelWidget.*`, split into 8 focused files ≤284 lines each for the ≤400-line house rule):
+- **All states render**: loading (redacted skeleton), empty ("No climate data"), error (retry), stale (chip), offline (cached + chip), content.
+- **Compact + full** parity: HVAC on/off badge + kW, Cabin/Outside temps, Fan Speed, Wheel Heat (n/3 · Off), seat-heater chips FL/FR/RL/RC/RR, defrost + battery-heater chips, "No seat heaters active" fallback.
+- **P1/S8 binding** via `ClimateControlFeed` seam (no HTTP in the view); `@Observable` model with 5s poll + cached-on-failure behavior.
+- **i18n**: 17 `translation.widget.climatePanel.*` catalog keys (already present in `Localizable.xcstrings`); no English literals in views.
+- **Registry** `climate-control-panel` (2×4 / 1×2 / 4×40 + clamp), **`view.opened`** telemetry (P1/S11), VoiceOver/Dynamic Type/reduce-motion/high-contrast a11y.
+- **34-test XCTest suite** (adapter, state machine, freshness, registry, i18n, diagnostics, a11y).
+
+**Verification (all GREEN, real output):** `xcodebuild` framework build **iOS EXIT=0 + macOS EXIT=0**; `swift test` **34/34**; `swiftlint --strict` 0; `swiftformat --lint apps/apple` 0; `check-placeholders` 0; dual-SDK `swiftc -typecheck` 0/0.
+
+**Honest status — `STATUS=BLOCKED`:** The literal whole-app `xcodebuild -scheme TeslaSync build test` can't include this surface in this slot because wiring it into `project.yml` is outside the allowed-files set — that's the **P4 acceptance gate** this surface unblocks (verified: 0 references in the generated `pbxproj`). The surface itself is complete and fully verified by the gate's own tools (it shares zero symbols with the app module, so the isolated builds are equivalent to an in-app build). The full toolchain was confirmed capable (Xcode 26.5, both SDKs, the KMP `Shared.xcframework` builds). I did not fabricate the two whole-app exits as green.
+
+
+

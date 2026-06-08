@@ -1,0 +1,132 @@
+I'll start by exploring the codebase structure to understand the web source, the Apple app layout, and the shared infrastructure I need to bind to.
+
+Tools: `swiftlint`, `swiftformat`, `swift` are available, but `xcodebuild` requires full Xcode (only Command Line Tools installed). Let me check for a full Xcode install and read the existing widget patterns + the rest of the web source.
+
+Full Xcode IS installed at `/Applications/Xcode.app` but `xcode-select` points to CommandLineTools. Let me test whether I can use Xcode via `DEVELOPER_DIR`, and read the GuardModeWidget pattern (the closest analog: Adapter+Model+Views+Previews+strings+Tests).
+
+Full **Xcode 26.5** works via `DEVELOPER_DIR` with iOS 26.5 + macOS 26.5 SDKs (exceeds the iOS 18 / macOS 15 minimum) — capability is met. Now let me read the rest of the GuardModeWidget pattern, the shared tokens/registry infrastructure, project.yml, and find a Swift Charts example.
+
+Now let me locate the shared infrastructure (tokens, registration types, skeleton), find an existing Swift Charts example to follow, and read the Previews + strings + project.yml.
+
+Let me read project.yml (build config), the shared chart components, and the design tokens to understand exactly what primitives I must use.
+
+project.yml is at `apps/apple/project.yml`. Let me read it plus the registration struct definition, the shared chart components, and locate the design tokens.
+
+The `Sources` path is `apps/apple/Sources`, but the widgets live in `apps/apple/TeslaSync/dashboard-widgets/`. I need to understand how these get compiled. Let me investigate the build wiring, check for an existing xcodeproj/xcodegen, the Shared.xcframework dependency, and read the design tokens.
+
+The widgets live in a staging dir (`TeslaSync/dashboard-widgets/`) separate from the build `Sources/`, and the full build needs a KMP `Shared.xcframework` (only `.gitkeep` present) built via Gradle/Kotlin-Native. I'll mirror the committed GuardModeWidget pattern exactly for high compile-confidence. Let me read all the exact dependency APIs: design tokens, skeleton, badge, and the chart components.
+
+Now let me read the shared chart components to find the area/stacked-area chart API and container conventions.
+
+I now have the tokens, badges, skeletons, and chart APIs. Let me read the web energy hooks (exact field names/types), the placeholder checker, lint configs, and confirm `TSChartPalette` + `pwsh` availability.
+
+`pwsh` is available. Key insight: the `TeslaSync/dashboard-widgets/` staging dir is NOT in any build target's `sources` (note `Sources/DashboardWidgets/` also defines `DashboardWidgetSize`, which would collide if both were compiled together). Let me read the placeholder patterns and the `Sources/DashboardWidgets/` registry to fully map the architecture.
+
+The architecture is now clear: `TeslaSync/dashboard-widgets/` is a self-contained staging tier (defines its own registry types in `DigitalTwinWidget.Model.swift`, doesn't import the KMP `Shared` module), separate from the build's `Sources/DashboardWidgets/`. My files join the staging tier and reuse DigitalTwin's registry types. Let me read the web `WidgetShell`, `shared`, and `types` to faithfully reproduce the chrome/composition.
+
+Let me read the `shared` widget module (`WidgetChartSummary`, `ChartSummaryStat`) and the `DataFreshness` component to reproduce the stats/chart/empty composition and freshness chrome.
+
+Let me confirm the exact API field names for the history entry and site types, then I'll write the implementation.
+
+I have everything needed. There are two parallel widget tiers; my files join the self-contained **staging tier** (`TeslaSync/dashboard-widgets/`) reusing DigitalTwin's registry types, mirroring the proven GuardModeWidget multi-file pattern. Let me set up a plan and todos.
+
+Now I'll write the implementation, starting with the Model (seams + observable model + i18n facade), mirroring the GuardModeWidget pattern.
+
+Now the Adapter — the pure, testable projection (series catalog, point/summary projection, formatting, accessibility).
+
+Now the Views — subviews and the stacked-area Swift Chart.
+
+Now the main widget view with registration, header chrome, and all content states.
+
+Now the i18n strings catalog, previews, and tests.
+
+I need to fix a number-rounding determinism issue: `NumberFormatter` defaults to half-even, so `4.25`→`4.2`. I'll set explicit half-up rounding (matching web `Intl`/`toFixed` behavior) so the tests are deterministic and web-faithful.
+
+All 7 files written. Let me update todos and begin verification — first scrub for forbidden placeholder words, then run swiftformat.
+
+swiftformat found auto-fixable issues (trailing commas, property-body wrapping, line wraps). Let me apply the formatter to my files, then re-verify.
+
+swiftformat lint passes (0/6 require formatting). Now swiftlint on my files, then I'll verify the formatter didn't alter semantics.
+
+One swiftlint violation: a 5-member tuple in the preview data. Let me view the formatted preview section and refactor it to use a helper instead of a large tuple.
+
+Now re-run both linters to confirm clean.
+
+swiftformat and swiftlint agree (no trailing commas); my manual edit re-added one. Let me re-apply swiftformat (removes it) and confirm both pass.
+
+Both linters pass cleanly. Now the placeholder check via `pwsh` — I'll run it on the real directory (meaningful scan including my files) plus the gate's exact path form.
+
+Linters + placeholder check all green. Now the strongest verification: a standalone `swiftc` typecheck of the full staging widget tier (including my files) + the design system against the iOS Simulator SDK. Let me set that up.
+
+No KMP imports in the design system — only system frameworks. Let me run the standalone typecheck of the staging tier + design system against the iOS Simulator SDK with Swift 6 strict concurrency.
+
+The errors are all in the **pre-existing `DigitalTwinWidget.Previews.swift`** (its `previewModel` isn't marked `@MainActor`), not my files — which indicates the app target builds with Xcode 26's "main actor by default" isolation. My own previews already mark `@MainActor` (mirroring GuardMode). Let me replicate that isolation mode with `-default-isolation MainActor`.
+
+Including all of Components drags in app-coupled files (`UnitFormatters` needs `UnitPreferences`). The `-default-isolation MainActor` flag worked (DigitalTwin preview errors gone). Let me scope precisely to my files + the exact design primitives they use. First, check those primitives' dependencies.
+
+I'll validate against the **real** registry types and components by compiling the whole staging tier + all design components, supplying the few app-level types Components references (e.g. `UnitPreferences`). Let me locate those.
+
+`UnitPreferences` lives in the KMP-coupled `SharedFacade` (only `DataDisplay/UnitFormatters.swift` needs it — my widget doesn't). I'll do the targeted compile: my files + the real primitives I use (Tokens, Skeletons→Cards→Design) + an exact-copy registry shim. Let me check the Design files have no external deps, then compile.
+
+Design files are self-contained. Let me create an exact-copy registry shim and run the targeted compile (my files + real primitives I use).
+
+Cards.swift's own `#Preview` references `TSBadge`/`TSButton`. Let me add those component files (Badges, Buttons) and re-run.
+
+The 5 surface files compile cleanly (EXIT=0) against the iOS Simulator SDK with Swift 6 strict + main-actor-default isolation. Now let me verify the **Tests** file typechecks too (stripping the `@testable import` for standalone, compiling against my real public API + XCTest).
+
+That error is an artifact of forcing `-default-isolation MainActor` onto `XCTestCase` (its `init` overrides are nonisolated) — a real test target doesn't apply app-target isolation to test classes. Let me recompile the tests the way a normal test bundle builds them: without the default-isolation flag and without `-D DEBUG` (so dependency `#Preview` blocks are skipped).
+
+Only the `XCTAssert*` **C macros** are unresolved — a known limitation of raw `swiftc` vs `xcodebuild` (the macros come from Xcode's test build). Every reference to my production API resolved. To confirm the full test body typechecks, I'll supply lightweight shims for the assertion functions and recompile.
+
+Tests fully typecheck (EXIT=0). Only **warnings** remain: `PowerFlowHistoryWidget.registration`/`surfaceSlug` are MainActor-isolated (because `View` is a `@MainActor` protocol), accessed from the plain `PowerFlowRegistryTests`. I'll mark that test class `@MainActor` (consistent with `PowerFlowModelTests`) to be strictly correct under Swift 6 strict concurrency.
+
+Let me regenerate the standalone test copy, re-typecheck (expecting zero warnings now), and re-lint the test file.
+
+All checks green: surface + tests typecheck (EXIT=0, no warnings), swiftformat + swiftlint + placeholder all clean. Now let me capture honest evidence for the full `xcodebuild` gate — generate the project and confirm the staging-wiring + KMP framework status.
+
+Confirmed: the generated `TeslaSync.xcodeproj` contains **0** references to `PowerFlowHistoryWidget` AND **0** to the existing `GuardModeWidget` — the staging tier isn't wired into the XcodeGen target (wiring requires editing `project.yml`, outside my allowed files). Let me capture the second blocker (KMP framework) by checking the toolchain and attempting a bounded build.
+
+JDK 17 + gradlew exist, but `Shared.xcframework` is absent (only `.gitkeep`) and must be built via Kotlin/Native. The decisive blocker remains: my files aren't in the xcodeproj target. Let me capture a real `xcodebuild` failure line (target build, which skips the slow Gradle pre-action and fails fast on the missing KMP framework/module).
+
+Concrete blocker captured: `error: There is no XCFramework found at '.../Frameworks/Shared.xcframework'`. Combined with the 0-reference wiring finding, both full-gate blockers are evidenced. Let me check the logs dir and a predecessor log to match format.
+
+Very informative — but note `BatteryCellsWidget` (0010) lives in the **integrated** `Sources/DashboardWidgets/` tier. My direct predecessors `GuardModeWidget` (0054) and `DigitalTwinWidget` are in the **staging** `TeslaSync/dashboard-widgets/` tier like mine. Let me read the GuardModeWidget log — the most relevant precedent for how the staging tier handles this gate.
+
+This is the canonical precedent: the staging tier uses **"code-complete + host-verified, with the Xcode app build/test DEFERRED"** (capability is present, so not BLOCKED), reaching `EXIT=0 / STATUS=DONE`. GuardMode even **executed** its XCTest suite via a SwiftPM harness. I'll match that rigor: add a macOS-SDK compile and actually run my tests. First, the macOS 15 SDK typecheck.
+
+Surface compiles on **both** iOS 18 and macOS 15 SDKs (EXIT=0). Now I'll match the precedent's strongest step: actually **execute** the XCTest suite via a SwiftPM harness using the real surface sources.
+
+**24 tests executed, 0 failures** against the real surface sources. Let me capture the per-suite breakdown for the log.
+
+Per-suite: Adapter 10/10, Model 10/10, Registry 2/2, Accessibility 2/2 = **24/24**. Now let me gather line counts, confirm git status, and run the consolidated host gate for the log.
+
+All files ≤331 lines; xcodeproj is git-ignored. Let me run a final consolidated host-gate to capture exact numbers for the log.
+
+All host gates green: lint 0 violations, format clean, placeholder COUNT=0. Let me grab the base commit/branch, then write the comprehensive gate log.
+
+Now let me clean up build artifacts and the temp harness, then commit.
+
+Clean — only my 7 files + the log. Committing as specified.
+
+Committed cleanly. Let me do a final verification.
+
+All todos complete, working tree clean, commit `41bdbcb8` contains exactly the 7 surface files + the log.
+
+Merge made by the 'ort' strategy.
+ ...shboard-widgets-0073-PowerFlowHistoryWidget.log | 206 +++++++++++++
+ .../PowerFlowHistoryWidget.Adapter.swift           | 251 ++++++++++++++++
+ .../PowerFlowHistoryWidget.Model.swift             | 273 +++++++++++++++++
+ .../PowerFlowHistoryWidget.Previews.swift          | 170 +++++++++++
+ .../PowerFlowHistoryWidget.Tests.swift             | 331 +++++++++++++++++++++
+ .../PowerFlowHistoryWidget.Views.swift             | 191 ++++++++++++
+ .../PowerFlowHistoryWidget.strings                 |  53 ++++
+ .../dashboard-widgets/PowerFlowHistoryWidget.swift | 262 ++++++++++++++++
+ 8 files changed, 1737 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0073-PowerFlowHistoryWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/PowerFlowHistoryWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/PowerFlowHistoryWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/PowerFlowHistoryWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/PowerFlowHistoryWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/PowerFlowHistoryWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/PowerFlowHistoryWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/PowerFlowHistoryWidget.swift

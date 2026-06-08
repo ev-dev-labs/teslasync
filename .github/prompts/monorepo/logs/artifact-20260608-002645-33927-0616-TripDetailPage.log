@@ -1,0 +1,136 @@
+================================================================================
+p4-apple · P7 · page:trips/TripDetail — SwiftUI / HIG parity
+Prompt: .github/prompts/monorepo/p4-apple/pages/trips/TripDetailPage.prompt.md
+Web src: web/src/features/trips/pages/TripDetailPage.tsx  (route /trips/:id)
+Output:  apps/apple/TeslaSync/Features/Trips/**
+Host:    macOS (Darwin), Command Line Tools only (no full Xcode / no iOS SDK)
+================================================================================
+
+SUMMARY
+-------
+Implemented the native SwiftUI TripDetailPage at full web parity, adaptive across
+macOS + iOS/iPadOS (ADR-002/006), following the shipped feature-view architecture
+(state-holder seam P1/S8 + @Observable model + pure display core + shared P3
+components + P2 tokens). All host-runnable gates are GREEN. The literal
+`xcodebuild build` / `xcodebuild test` legs CANNOT run in this environment — the
+active developer dir is Command Line Tools, not a full Xcode (no iOS SDK, no
+simulator). Per the prompt's own rule ("If no Xcode runner is available, the gate
+→ STATUS=BLOCKED") the build/test legs are BLOCKED and deferred to the macOS
+P99 acceptance gate. The parity implementation itself is COMPLETE (21/21).
+
+FILES (apps/apple/TeslaSync/Features/Trips/)
+-------------------------------------------
+  TripDetailPage.Model.swift       TripDetail (SI) · Input · Resolved · Projection ·
+                                   TripDetailSource seam · @Observable TripDetailPageModel ·
+                                   InMemoryTripDetailSource · useTrip(_:) hook factory
+  TripDetailPage.Adapter.swift     pure SI→display core: convertDistanceFromSI,
+                                   Wh/km·Wh/mi efficiency, fmtInt/fmtNumber, currency,
+                                   date → TripDetailDisplay (mirrors web helpers)
+  TripDetailPage.swift             scaffold: ScrollView + navigationTitle + phase switch
+  TripDetailPage.Views.swift       5 panels (4 StatCards + GlassPanel5/KVList) + 4 states
+  TripDetailPage.Navigation.swift  TripDetailRoute(Hashable) + .tripDetailDestination()
+  TripDetailPage.Previews.swift    success(metric/imperial) · loading · empty · error
+  TripDetailPage.Tests.swift       XCTest: projection · display · model · route (24 cases)
+Wiring:
+  project.yml                      add `TeslaSync/Features` to iOS + macOS app targets
+  .swiftlint.yml                   add `TeslaSync/Features` to included
+  Sources/App/AppShell.swift       RouteHost applies .tripDetailDestination() (nav reg)
+  Localization/Localizable.xcstrings  add 12 bare web-named trips.detail.* keys
+
+DATA SOURCE (web hook ported — name preserved)
+----------------------------------------------
+  useTrip → GET /trips/{id}
+    Swift: `useTrip(_ id:)` factory (TripDetailPage.Model.swift) → TripDetailPageModel
+    bound to the `TripDetailSource` seam (production source binds the shared-core trips
+    state holder at the composition root; previews/tests use InMemoryTripDetailSource).
+    Not a live source (no SSE) → no >2min staleness axis required (ADR-013 n/a).
+
+=== PARITY ===
+PARITY_REQUIRED=21
+[x] panel  Distance        TripDetailPage.Views.swift :: TripDetailStatGrid
+                           TSStatCard(title: TripDetailStrings.distance, value: display.distanceText)
+[x] panel  Energy-Used     TripDetailPage.Views.swift :: TripDetailStatGrid
+                           TSStatCard(title: TripDetailStrings.energy, value: display.energyText)
+[x] panel  Efficiency      TripDetailPage.Views.swift :: TripDetailStatGrid
+                           TSStatCard(title: TripDetailStrings.efficiency, value: display.efficiencyText)
+[x] panel  Cost            TripDetailPage.Views.swift :: TripDetailStatGrid
+                           TSStatCard(title: TripDetailStrings.cost, value: display.costValue)
+[x] panel  GlassPanel5     TripDetailPage.Views.swift :: TripDetailDetailsPanel
+                           TSGlassPanel { TSKVList(rows: 6 × TSKVRow) }
+[x] state  loading         TripDetailPage.swift case .loading → TripDetailLoadingView
+                           (TSStatGridSkeleton + TSGlassPanel/TSSkeleton)
+[x] state  empty           TripDetailPage.swift case .empty → TripDetailEmptyView
+                           (TSEmptyState/ContentUnavailableView, trips.detail.notFound)
+[x] state  error           TripDetailPage.swift case .error → TripDetailErrorView
+                           (TSQueryError + Retry + raw message)
+[x] state  success         TripDetailPage.swift case .success → TripDetailContent
+[x] string trips.detail.charges     TripDetailStrings.charges    (Views.swift) + xcstrings key
+[x] string trips.detail.cost        TripDetailStrings.cost       (Views.swift) + xcstrings key
+[x] string trips.detail.distance    TripDetailStrings.distance   (Views.swift) + xcstrings key
+[x] string trips.detail.drives      TripDetailStrings.drives     (Views.swift) + xcstrings key
+[x] string trips.detail.efficiency  TripDetailStrings.efficiency (Views.swift) + xcstrings key
+[x] string trips.detail.ended       TripDetailStrings.ended      (Views.swift) + xcstrings key
+[x] string trips.detail.energy      TripDetailStrings.energy     (Views.swift) + xcstrings key
+[x] string trips.detail.name        TripDetailStrings.name       (Views.swift) + xcstrings key
+[x] string trips.detail.notFound    TripDetailStrings.notFound   (Views.swift) + xcstrings key
+[x] string trips.detail.started     TripDetailStrings.started    (Views.swift) + xcstrings key
+[x] string trips.detail.title       TripDetailStrings.title  (TripDetailPage.swift navigationTitle)
+[x] string trips.detail.tripId      TripDetailStrings.tripID     (Views.swift) + xcstrings key
+PARITY_COVERED=21
+=== END PARITY ===
+
+a11y / units / adaptivity
+-------------------------
+  • SI only on the wire: TripDetail stores meters + watt-hours; conversion happens only
+    in TripDetailDisplay at the render boundary via @Environment(\.tsUnits) (P1/S5).
+  • Adaptive: LazyVGrid(.adaptive minimum:150) → 2-up compact iPhone, 4-up iPad/macOS;
+    #if os(iOS) navigationBarTitleDisplayMode. Dark mode + Dynamic Type via P2 tokens.
+  • a11y: StatCards/KVList combine; skeleton + ContentUnavailableView labelled; Retry button.
+  • i18n: every visible literal resolves from Localizable.xcstrings; keys = web keys.
+
+GATE RESULTS
+------------
+[GREEN] PLACEHOLDER  ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Trips -Language swift
+        PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0
+[GREEN] LINT         swiftlint --strict apps/apple/TeslaSync/Features/Trips   (repo root)
+        Done linting! Found 0 violations, 0 serious in 7 files.  LINT_EXIT=0
+[GREEN] FORMAT       swiftformat --lint apps/apple/TeslaSync/Features/Trips
+        0/7 files require formatting.  FORMAT_EXIT=0
+[GREEN] TYPECHECK    xcrun --sdk macosx swiftc -typecheck -swift-version 6
+                     -target arm64-apple-macos15.0  (Trips shipping files vs real P2/P3
+                     components, Swift 6 complete concurrency)   TYPECHECK_MACOS_EXIT=0
+[GREEN] UNIT (run)   isolated SwiftPM module build (TripsKit: real components + Trips) +
+                     29 runtime assertions over the 4 states, km/mi SI conversion,
+                     Wh/km·Wh/mi efficiency, currency, em-dash nil-safety, /trips/:id
+                     parser, model+useTrip wiring → ALL_CHECKS_PASS  (XCTest mirror:
+                     TripDetailPage.Tests.swift, runs on the P99 macOS Xcode runner)
+[GREEN] PROJECT      xcodegen generate → TeslaSync.xcodeproj created; all 7 Trips files
+                     enumerated in iOS + macOS app targets.  XCODEGEN_EXIT=0
+[BLOCKED] BUILD      xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync build
+        xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+        directory '/Library/Developer/CommandLineTools' is a command line tools instance.
+        BUILD_EXIT=blocked  (no full Xcode runner; also Shared.xcframework unstaged —
+        Kotlin/Native, macOS-pending — and pre-existing unrelated collisions, below)
+[BLOCKED] TEST       xcodebuild ... -scheme TeslaSync test   TEST_EXIT=blocked (same cause)
+
+WHY BUILD/TEST ARE BLOCKED (all causes are environmental / pre-existing, none in Trips)
+--------------------------------------------------------------------------------------
+  1. No full Xcode: active dir is Command Line Tools → xcodebuild cannot build app
+     schemes and there is no iOS SDK / simulator. (Prompt rule → STATUS=BLOCKED.)
+  2. Shared.xcframework not staged (apps/apple/Frameworks/ empty); building it needs the
+     Kotlin/Native Apple toolchain — itself a macOS-pending artifact (S3 / H8).
+  3. Pre-existing parallel-merge collisions compiled into the app target, unrelated to
+     this page: `struct DashboardWidgetSize` defined 15× across Sources/DashboardWidgets/*
+     + TeslaSync/dashboard-widgets/*, and 257 co-located *.Tests.swift / *.ModelTests.swift
+     importing XCTest into the app target. (See apps/macos-pending-verifications.md.)
+  Zero Trips/Features errors in any host-runnable check. Deferred to
+  p4-apple/P99-0001-apple-acceptance-gate on a macos-latest runner with signing.
+
+LEDGER
+------
+  apps/parity/apple-ledger.json — page:trips/TripDetail rows (apple-macos, apple-ios):
+  status=blocked, coveredCount=21, requiredCount=21 (parity implemented; build/test gate
+  deferred to P99). evidenceLog = this file.
+
+EXIT=1
+STATUS=BLOCKED

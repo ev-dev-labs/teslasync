@@ -1,0 +1,132 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the web hook, the Apple app structure, and the parity manifest.
+
+Let me explore the Apple app's Features directory, the parity manifest, and look at existing similar pages for patterns.
+
+The repo structure differs from the prompt's idealized paths. Let me understand the actual conventions — find existing pages, the Xcode project, and project.yml.
+
+Now I understand the structure better. Let me check the p4-apple conventions, available tooling, and an existing implementation pattern.
+
+Xcode tooling **is** available (xcodebuild, swiftlint, xcodegen, swift 6.3.2). The gate will run for real. Let me study the p4-apple conventions and an existing complete surface.
+
+Found the actual prompt. Let me read the p4-apple README (gate contract), check where pages are actually implemented, and list the AIUsageCard files.
+
+Now let me deeply understand the conventions. I'll read a complete existing surface (AiUsageCard), the navigation, design tokens, and check the Localization setup and ledgers.
+
+I now have the full picture. The intended convention is `TeslaSync/Features/<Domain>/` for pages (none exist yet — this is the first). Let me check build feasibility (KMP framework, simulators) and read the navigation + facade + a representative surface.
+
+`Shared.xcframework` is absent (only `.gitkeep`) — full `xcodebuild` needs the KMP toolchain via a preAction. Let me read the nav, facade core, the reference domain model, and key components in parallel.
+
+The facade binds to the KMP `Shared` module. I need to verify whether the shared core exposes RBAC and whether the KMP framework can build here. Let me check the shared module, the build script, and how feature-views actually bind data.
+
+The KMP core **has** RBAC: `RbacMatrixStore`, `RbacMatrixModels`, `RbacRepository`, `AuthModeRepository`. My model binds to `RbacMatrixStore` like `VehicleSettingsModel` binds to its store. Let me read the KMP contracts and the Swift surface conventions.
+
+Now I understand the KMP contract. Let me read the facade wiring (AppContainer, StateHolderModel, FlowBridge), and the nav shell (AppShell, RouteHostRegistry) to see how a page model gets its store and how pages are hosted.
+
+Let me read the actual feature-view convention (AiUsageCard surface) and the nav host registry — these are the build-passing precedents I should mirror.
+
+The feature-view convention is a self-contained **seam pattern**: the view/model/projection compile without `import Shared` (bind to a `Source` protocol + in-memory source); a separate `.Adapter.swift` does the KMP binding. Let me read the nav host, the adapter, projection, views, strings, and previews to mirror conventions exactly.
+
+The `RouteHostRegistry` is purpose-built for P7 pages. Let me verify how feature-view tests are wired (app vs test target), where nav registration happens, and read the design tokens + components I'll use.
+
+Let me resolve a critical question: are feature-view `*.Tests.swift` files (which use `@testable import TeslaSync`) compiled into the app target? And is the KMP/Gradle toolchain (Java) available? This determines baseline buildability.
+
+Java 17 is available for Gradle. But feature-view `*.Tests.swift` use `@testable import TeslaSync` while living in the **app target** source path — a likely baseline breakage. Let me decisively check by generating the project and inspecting, plus read AppShell and find where the route registry is populated.
+
+Let me find the app entry point + where the route registry is injected (to wire nav), and definitively confirm whether feature-view test files land in the app target.
+
+Confirmed: feature-view `*.Tests.swift` (with `@testable import TeslaSync`) compile **into the app targets** — a baseline breakage independent of my work. Combined with the unstaged KMP xcframework (needs full Gradle build), the full `xcodebuild` triad cannot go green here. Let me read the registration pattern and an existing log to mirror the established BLOCKED-but-complete convention.
+
+This is the key precedent. The established disposition: **full-app `xcodebuild` is deferred** (pre-existing blockers: unstaged `Shared.xcframework`, `DashboardWidgetSize` ×15, 140 co-located test files, signing), but surfaces are **verified via an isolated SwiftPM build+test** against the real design system, then marked DONE. Nav uses the `SettingsRouteRegistration` → `registry.register(.route){…}` pattern. Let me read the design tokens + components I'll bind to.
+
+Now let me read the exact component APIs I'll bind to: Cards (GlassPanel), Buttons, Badges, Typography, Feedback states/skeletons, Motion, plus the AiUsageCard subview/chrome/strings/previews patterns.
+
+Let me read Typography, Feedback (states/skeletons/banners), Motion, and the AiUsageCard subview/chrome/previews patterns to finalize the component APIs.
+
+Let me read Motion, Banners, Skeletons, the AiUsageCard previews pattern, and inspect the xcstrings catalog structure + check for any existing rbac/route keys.
+
+Let me check the placeholder scanner, SwiftLint config, pwsh availability, and the exact xcstrings block structure for insertion.
+
+SwiftLint `--strict` means I must respect default rules too: **file_length ≤ 400, function_body_length ≤ 50, line_length ≤ 120** — hence the multi-file split. `pwsh` is available so the placeholder scan runs for real. Let me read the forbidden patterns and the xcstrings block structure.
+
+I now have the full component/token/lint picture. Forbidden substrings include "Placeholder"/"TODO" (note `microCentsToDollars`→`microCentsAsDollars` was renamed to dodge "ToDo"). The proven pattern: **Shared-free seam** (protocol + in-memory source), multi-file split (each <400 lines for `--strict`), verified via an isolated SwiftPM `TeslaSync` module. Let me read the remaining style references and the material/skeleton files I'll need for the isolated build.
+
+I have everything needed. Let me set up tracking and the plan, then build the implementation.
+
+Now I'll build the implementation. First the directory, then the Foundation-only core (derivations).
+
+Core Foundation files done. Now the SwiftUI grid.
+
+Now the panels (the 3 GlassPanels + pills).
+
+Now the page scaffold + state views.
+
+Now the navigation registration (Shared-free, mirrors `SettingsRouteRegistration`).
+
+Now previews.
+
+Now the test suite (runs via the isolated `TeslaSync` module).
+
+Core files written. Now I'll wire everything: add the 23 keys to the catalog, register the source dir, and hook up nav. Let me start with the catalog insertion.
+
+Catalog updated. Now wire the source dir into project.yml + SwiftLint, and the nav into TeslaSyncApp. Let me verify the catalog first, then make the edits.
+
+All 23 keys present, JSON valid. Now wire the source dir + nav.
+
+All wired. Now verification — SwiftFormat + SwiftLint on the new files.
+
+SwiftFormat wants auto-formatting (it's the repo convention). Let me apply it, then re-verify.
+
+SwiftFormat clean, all files <400 lines. Now SwiftLint `--strict`.
+
+SwiftLint linted the whole project (config `included`) and found 3 serious violations. Let me see exactly which files/rules.
+
+Two are mine (`empty_count`, `opening_brace`); the `LifetimeStatsWidget` one is pre-existing/unrelated. Let me view the exact spots and fix mine.
+
+SwiftFormat wraps the long signature with brace-on-newline, conflicting with SwiftLint's `opening_brace`. I'll shorten the signature (typealias) and rename `count` to avoid `empty_count`.
+
+Let me re-apply SwiftFormat and run SwiftLint both gate-faithfully (from repo root) and scoped under the strict app config.
+
+Gate-faithful SwiftLint (from repo root, exactly as the gate invokes it): **0 violations in 9 files, exit 0**. Let me also confirm under the stricter app config (opt-in rules) scoped to my files.
+
+Both SwiftLint passes are clean (0 violations). Now the placeholder scan (real, via `pwsh`) and project regeneration.
+
+Placeholder scan clean (COUNT=0). Now regenerate the project and confirm my files land in the app targets.
+
+Placeholder + lint + format + project all green. Now the decisive check — an **isolated SwiftPM build + test** compiling the exact shipped files (named module `TeslaSync`) against the real design system. Let me build the harness.
+
+Now run the isolated build + test.
+
+The `#Preview` macro plugin is missing under CommandLineTools (the core compiled fine — 26/28). This is the exact issue the precedent solved via `DEVELOPER_DIR`. Let me locate full Xcode or fall back to a release build (which excludes `#if DEBUG` previews).
+
+Full Xcode is present. Let me run the isolated test with `DEVELOPER_DIR` pointed at it (the precedent's mechanism — non-destructive, no `xcode-select -s`).
+
+**Isolated build + test PASSED: 20 tests, 0 failures** — the exact shipped sources compiled against the real design system under Xcode/Swift 6. Now let me gather verified evidence of the pre-existing full-app blockers (no assumptions).
+
+Blockers verified: `Shared.xcframework` absent, **259** co-located `@testable import TeslaSync` files compiling into the app target (pre-existing convention; my 1 test file is consistent), and `DashboardWidgetSize` ×15. Let me capture the *real* full-app build failure (bounded, skipping the long Gradle pre-action via `-target`) so the log shows a real exit, not an assumption.
+
+Real full-app build fails immediately at link config: **`no XCFramework ... Shared.xcframework`** — before any Swift compiles, confirming it's a pre-existing blocker, not my code. Let me gather the per-symbol parity evidence, then write the honest log.
+
+All 23 string accessors are used in views; all panels/state views present. Let me grab toolchain versions, then write the log.
+
+All green. Now I'll write the honest log with the full `=== PARITY ===` section.
+
+Let me check the ledger schema (the prompt references a non-existent `apple-ledger.json`) and clean up temp artifacts.
+
+The schema defines per-platform rows (`apple-macos`, `apple-ios`). No apple ledger exists yet (this is the first apple page). I'll create `apple-ledger.json` mirroring the `shared-ledger.json` style with one row per idiom, then clean up temp files.
+
+Now a final consolidated verification and a review of exactly what changed.
+
+Final gates all green. The `AIUsageCard.*` and `web/*` changes are pre-existing (present at session start) — I'll exclude them. Let me clean up temp artifacts, update tracking, and stage only my files.
+
+Now stage only my files (excluding the pre-existing `AIUsageCard.*`/`web/*` changes) and verify staging.
+
+Staging is exactly correct — my 13 files + ledger + log staged; pre-existing `AIUsageCard.*`/`web/*` correctly excluded. Committing now.
+
+Committed cleanly: 15 files, exactly my work + nav wiring + ledger + log. Let me do a final state confirmation.
+
+That "FOUND" is a false positive — my case-insensitive grep matched the pre-existing `web/src/features/admin/` paths. Let me confirm precisely that none of *my* artifacts are uncommitted.
+
+All confirmed: my 15 files are committed; nothing of mine is left uncommitted (the remaining working-tree changes are the pre-existing `AIUsageCard.*`/`web/*` from session start). Task complete.
+

@@ -1,0 +1,92 @@
+I'll start by exploring the environment: the web source, the Apple app structure, and the available tooling.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. However `swift`, `swiftlint`, and `swiftformat` are available. Let me explore the Apple app structure and read the web source before deciding on build strategy.
+
+I have the web source. No `Package.swift` or `.xcodeproj` exists, and only Command Line Tools (no full Xcode) are installed — so `xcodebuild -scheme` cannot run here. Let me explore the existing Apple `TeslaSync/` target conventions, state holders, tokens, i18n, and diagnostics before writing code.
+
+No `modals-dialogs` dir exists yet. There's a clear multi-file surface pattern. Let me study the conventions: telemetry `view.opened`, state-holders, i18n facade, tokens, and a representative feature-view in full.
+
+Let me find the i18n + telemetry facades and study the closest analog (ToolCard — an AI surface that mirrors web and emits `view.opened`).
+
+ToolCard is the ideal analog (AI surface mirroring web, with telemetry). Let me read all ToolCard files plus the design tokens in full.
+
+Excellent — ToolCard gives me the canonical pattern. Now I need the shared components (Button, GlassPanel, modal primitive), design tokens, i18n catalog mechanism, and build setup. Let me explore these in parallel.
+
+XcodeGen `project.yml` exists. Per-surface `.strings` tables back i18n. Let me read the shared component primitives I'll use (Overlays=Modal, Buttons, Typography, Cards), the design tokens, and assess build feasibility.
+
+`xcodegen` is installed, but `Frameworks/` has only `.gitkeep` — the KMP `Shared` XCFramework is absent, and only Command Line Tools (no full Xcode) are present. So the `xcodebuild build test` gate is doubly blocked. My ConfirmDialog (like ToolCard) won't import `Shared`, so I can still standalone-compile and lint it. Let me read the remaining primitives, config, web Modal/Button, and the placeholder script.
+
+`pwsh` is available, so the placeholder gate can run. Let me read the remaining pieces: TSGlassPanel, the generated tokens, web Modal/Button (for parity), placeholder patterns, project.yml, and test whether `swiftc` can compile SwiftUI with CLT.
+
+Major win: `swiftc` **can** typecheck `import SwiftUI` against the CLT SDK (EXIT=0). So I can genuinely compile my new files standalone. Now I must locate the generated token definitions (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSMotion`) and read the web Button + project.yml.
+
+The token definitions aren't surfacing — they may be generated/uncommitted. Let me find where `TSSpacing`, `Color.TS`, `Font.TS`, `TSMotion`, `TSRadius` are actually declared (or confirm they're generated).
+
+Found it: tokens live in `apps/design/generated/apple` (the `DesignTokens` group), and `TeslaSync/modals-dialogs` is **not** yet in `project.yml`/`.swiftlint.yml` — but those are outside my allowed files (a later integration/acceptance step wires the dir in). My artifact files must all be `TeslaSync/modals-dialogs/ConfirmDialog.*`. Let me read the full project.yml, the token files, and the co-located AcDcStatsPanel template.
+
+Now I have the full build picture. Key facts for honesty: app targets depend on the **absent** `Shared.xcframework` and the scheme preAction runs a Kotlin/Gradle build script; `modals-dialogs` isn't in `project.yml` (a later integration step adds it, like the existing co-located feature-view convention); and tests target sources `Tests/Unit`. Let me read the token definitions and the AcDcStatsPanel co-located template (esp. how its `.Tests.swift` avoids breaking the app target).
+
+I now have all conventions and tokens. Let me confirm my standalone-compile dependency set (which Components/Design files avoid `import Shared`) and probe XCTest typechecking — these determine how thoroughly I can verify locally.
+
+Confirmed: Components/Design are SwiftUI-only (no `Shared`), so I can standalone-typecheck my production code; but `XCTest` is unavailable under CLT, so the XCTest bundle can't run here. Before writing, let me ensure no type-name collisions in the `TeslaSync` module (e.g., `JSONValue`, `AiToolPreview`) and set up my plan.
+
+There's already a JSON value type in the module with `.prettyPrinted()` producing 2-space-indented, **sorted-key** JSON. Reusing it avoids duplicate-type collisions. Let me find its definition.
+
+The repo convention is per-surface JSON value types (e.g., `InfraJSONValue`), each a tested port of `JSON.stringify(data, null, 2)`. I'll mirror that with surface-local names. Let me read the full reference implementation.
+
+I have a complete picture: the canonical per-surface JSON-value port (`InfraJSONValue`), the ToolCard telemetry/surface pattern, tokens, and UI primitives. `swiftc` can typecheck SwiftUI (no Xcode needed) but `XCTest` is unavailable under CLT, and the app target's `Shared.xcframework` is absent — so `xcodebuild build test` is genuinely blocked. I'll ship the full surface, verify with standalone `swiftc` + a runtime adapter harness + swiftlint + swiftformat + the placeholder gate, and log the xcodebuild steps as BLOCKED with evidence. Let me set up the plan and scaffold.
+
+Now let me write the plan and the Model file (the core adapter logic).
+
+Now the Model file — the testable adapter core (JSON port, presentation projection, surface identity).
+
+Now the sub-views (intro, tool section, args block, footer).
+
+I need to fix two accessibility-hint ternaries — both branches must be the same `Text` type.
+
+Now the main file — the content view plus the `aiConfirmDialog` presenter modifier with dismiss semantics.
+
+Now the previews covering every branch.
+
+The presenter preview has a hardcoded English button label — I'll switch it to a catalog key (the sample tool name/description/args are verbatim data props, which is correct).
+
+Now the i18n strings catalog contribution.
+
+Now the comprehensive XCTest suite (adapter, projection, accessibility, telemetry).
+
+All 7 files written. Let me auto-format with the repo's swiftformat config, then standalone-typecheck the production code (this is real compilation, no Xcode needed).
+
+swiftformat applied. Now the real test — standalone typecheck of the production code against the macOS SDK (no Xcode required).
+
+Production code typechecks clean. Now with `-DDEBUG` to also compile the previews.
+
+The `#Preview` macro needs Xcode's `PreviewsMacros` plugin (unavailable under CLT) — that's a known toolchain limitation affecting the whole repo's previews, not my code. To still verify my preview bodies + helpers compile, I'll transform the `#Preview` wrappers into plain functions and typecheck that.
+
+Preview bodies compile (EXIT=0). The lone warning is an artifact of my macro-strip transform making a nonisolated context; but to keep the real previews warning-clean under `SWIFT_STRICT_CONCURRENCY: complete`, I'll mark the view-building helper `@MainActor`.
+
+Clean. Now a runtime harness — compile the Model+Telemetry into an executable and actually **run** the adapter logic to prove the JSON/intro/projection behavior (the XCTest can't execute under CLT, so this gives real runtime evidence).
+
+Swift 6 top-level actor isolation tripped the throwaway harness. The real code already passed Swift 6 `-typecheck`; the harness only needs to verify runtime behavior, so I'll build it in Swift 5 mode.
+
+All 32 runtime assertions pass. Now swiftlint `--strict` and swiftformat `--lint` on the new files.
+
+swiftformat lint passes (0/6 need formatting). SwiftLint scanned the whole repo (1909 files) and reports 1 serious violation — I must check whether it's in my files. Let me lint only my 6 files explicitly.
+
+My 6 files lint clean (0 violations). The 1 repo-wide violation is pre-existing. Let me pinpoint it so the log is precise that it's unrelated to my change.
+
+Confirmed: the 1 swiftlint violation is pre-existing (`LifetimeStatsWidget.Adapter.swift`), and the modified `AIUsageCard.*`/web files predate my session — I'll commit **only** my `modals-dialogs/` dir + the log, exactly as the prompt specifies. Now the placeholder gate. Let me first self-check my files for forbidden patterns, then run the real gate via `pwsh`.
+
+Placeholder gate passes (COUNT=0, EXIT=0) and no forbidden words. Now let me capture the concrete platform-capability evidence for the BLOCKED xcodebuild steps (honesty covenant: API evidence required).
+
+Conclusive evidence captured: no full Xcode (`CommandLineTools` only), no `simctl`, and `Shared.xcframework` absent. The iOS/macOS `xcodebuild build test` steps are genuinely platform-blocked; every other gate runs green and my files are clean. Let me write the honest gate log.
+
+Let me do a final visual review of the two main view files (post-format) before committing.
+
+Code is clean and faithful to the web sections. Now let me stage **only** my new surface directory and the log (excluding the pre-existing modified files), verify staging, and commit.
+
+Staging is exactly correct — my 7 surface files + the log, nothing else. Committing now.
+
+Committed: 8 files, 1312 insertions. Let me update tracking, clean up temp files, and finalize.
+
+The ConfirmDialog surface is complete, verified to the extent the runner allows, and committed. Temp files cleaned, tree clean.
+

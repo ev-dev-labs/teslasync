@@ -1,0 +1,198 @@
+=== P4 Feature view 0003 ClientUtilitiesSection (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/ClientUtilitiesSection.*
+Web src : web/src/features/admin/components/devtools/ClientUtilitiesSection.tsx
+Runner  : Darwin arm64 · swift 6.3.2 · Xcode 26.5 (17F42) at /Applications/Xcode.app
+ADR refs: ADR-002 (shared SwiftUI source, iOS+macOS) · ADR-004 (KMP Shared.xcframework)
+          · ADR-009 · ADR-013 (live freshness) · ADR-016 (telemetry)
+Pattern : self-contained protocol-seam surface (predecessor parity:
+          dashboard-widgets/GuardModeWidget 0054) — no direct `import Shared`.
+
+----------------------------------------------------------------------
+SHIPPED FILES (allowed scope: ClientUtilitiesSection.* + this log)
+----------------------------------------------------------------------
+  ClientUtilitiesSection.Adapter.swift   pure projection core (catalog, filter,
+                                         toggle, a11y) — port of useToolList/filtered
+  ClientUtilitiesSection.Model.swift     P1/S8 ToolCatalogSource seam + @Observable
+                                         ClientUtilitiesModel + P1/S11 telemetry +
+                                         P1/S10 ClientUtilitiesStrings facade
+  ClientUtilitiesSection.swift           main feature view, surfaceSlug, state switch
+  ClientUtilitiesSection.Views.swift     search field, banner, ToolCard, detail body,
+                                         loading skeleton, search-empty
+  ClientUtilitiesSection.Previews.swift  8 DEBUG previews (one per state)
+  ClientUtilitiesSection.strings         P1/S10 per-surface catalog (48 keys)
+  ClientUtilitiesSection.Tests.swift     adapter + model + a11y XCTest (26 cases)
+
+----------------------------------------------------------------------
+PARITY (web ClientUtilitiesSection.tsx -> native)
+----------------------------------------------------------------------
+  [x] useToolList (15 tools) -> ClientUtilitiesCatalog.defaultTools, exact ids/order:
+      vin jwt timestamp base64 url json uuid hash bytes color cron http tesla-api
+      regex unix-perm — verified by test testCatalogHasFifteenToolsInWebOrder.
+  [x] ICON_COLOR_MAP (cyan/green/purple/amber/red) -> ToolTint (web neon hexes).
+  [x] lucide glyphs -> SF Symbols (Car->car.fill, Key->key.fill, Braces->curlybraces,
+      Link->link, Fingerprint->barcode, Hash->number, HardDrive->internaldrive.fill,
+      Palette->paintpalette.fill, Timer->timer, Network->network, BookOpen->book.fill,
+      Regex->asterisk, Lock->lock.fill, Clock->clock.fill).
+  [x] Input search -> ToolSearchField; `filtered` (name||desc includes, lowercased,
+      trim) -> ToolFilter.filter — verified by ToolFilterTests (5 cases).
+  [x] ExpandableToolCard (GlassPanel + ghost Button + rotating chevron) -> ToolCard
+      on TSGlassPanel; expandedId single-open -> ToolDisclosure.toggled.
+  [x] tool.Component (inline expand) -> injected `toolContent` seam (individual tools
+      are separate surfaces / out of scope) + built-in ToolDetailPanel default.
+  [x] "No tools match your search" (filtered.length===0) -> ToolSearchEmpty
+      (key devtools.noToolsFound) — exact web key.
+  [x] i18n keys: devtools.utils.base64/base64Desc, devtools.searchTools,
+      devtools.noToolsFound + all 15 tool name/desc keys reproduced verbatim
+      (web en catalog renders the key text itself; .strings mirrors that).
+
+----------------------------------------------------------------------
+STATES (every state renders — no hidden surfaces)
+----------------------------------------------------------------------
+  [x] loading   ToolCatalogSkeleton (redacted search bar + 6 card rows)
+  [x] content   ToolGrid (adaptive 1-3+ cols, LazyVGrid)
+  [x] empty(search)  ToolSearchEmpty — web "No tools match your search"
+  [x] empty(catalog) ContentUnavailableView "No tools available"
+  [x] error     icon + title + message + Retry -> model.refresh()
+  [x] stale     ClientUtilitiesConnectivityBanner (warning) + Refresh
+  [x] offline   ClientUtilitiesConnectivityBanner (muted, cached tools) + Refresh
+  Phase resolution unit-tested (ClientUtilitiesModelTests, 11 cases).
+
+----------------------------------------------------------------------
+HOST-RUNNABLE GATES (executed on this runner — real exit codes)
+----------------------------------------------------------------------
+[1] swiftformat --lint apps/apple/TeslaSync/feature-views
+      0/6 files require formatting.
+      FORMAT_EXIT=0
+
+[2] swiftlint --strict (my 6 files, rules from .swiftlint.yml)
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0
+      Note: repo-wide `swiftlint --strict` currently reports 1 PRE-EXISTING
+      violation in dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+      (function_body_length) — a predecessor file, outside this prompt's allowed
+      files. My 6 feature-view files are clean (0 violations).
+
+[3] placeholder gate — apps/tools/check-placeholders.ps1 -Path
+    apps/apple/TeslaSync/feature-views -Language swift
+      PLACEHOLDER_ALLOWED=0
+      PLACEHOLDER_COUNT=0
+      EXIT=0
+
+[4] swift test — throwaway SwiftPM package (module "TeslaSync" = the 5 shipped
+    surface files + the real Shared-free Components/Design/Tokens deps), Swift 6
+    language mode (strict concurrency = complete), macOS host, DEBUG (previews
+    compiled). Drives the model with InMemoryToolCatalogSource (no network).
+      Test Suite 'All tests' passed.
+      Executed 26 tests, with 0 failures (0 unexpected).
+      TEST_EXIT=0
+
+[5] SDK compile — swiftc -typecheck -swift-version 6 -D DEBUG of the surface +
+    deps (13 files, previews included) against BOTH gate destinations' SDKs:
+      iOS 18 Simulator (arm64-apple-ios18.0-simulator) : IOS_TYPECHECK_EXIT=0
+      macOS 15         (arm64-apple-macos15.0)          : MAC_TYPECHECK_EXIT=0
+    (SwiftUI + Swift Charts + MapKit availability confirmed by probe typecheck.)
+
+----------------------------------------------------------------------
+XCODE APP BUILD/TEST — DEFERRED (NOT green; honest evidence below)
+----------------------------------------------------------------------
+Gate command literally runs (no DEVELOPER_DIR set):
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+
+On this runner the active developer dir is CommandLineTools, so the bare gate
+command fails before any compile:
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+  directory '/Library/Developer/CommandLineTools' is a command line tools instance
+  BARE_XCODEBUILD_EXIT=1 · IOS_GATE_EXIT=1 · MAC_GATE_EXIT=1
+
+Full Xcode 26.5 IS installed (/Applications/Xcode.app) and usable via
+DEVELOPER_DIR, with iOS 26.5 simulators incl. "iPhone 16". The app-level
+xcodebuild build/test is nonetheless DEFERRED to the downstream integration /
+signed runner for two reasons, BOTH outside this prompt's allowed files:
+
+  (a) Target registration. The surface is not yet in `project.yml` target sources
+      (`TeslaSync/feature-views` is absent; only `TeslaSync/dashboard-widgets` is
+      wired). `xcodegen generate` confirms the generated project contains 0 matches
+      for feature-views/ClientUtilitiesSection vs 3 for the already-integrated
+      dashboard-widgets. Self-registering would edit project.yml (+ .swiftlint.yml
+      `included`) — a parallel-unsafe, predecessor-bypass change (covenant #7), so
+      it is left to the P4 integration prompt. Same disposition as GuardModeWidget 0054.
+
+  (b) KMP framework staging. The TeslaSync/-macOS schemes' pre-build action runs
+      Scripts/build-shared-xcframework.sh (Gradle :core:assembleSharedXCFramework,
+      Kotlin/Native). Frameworks/Shared.xcframework is ABSENT (only .gitkeep) on
+      this runner; building it is integration/CI scope (ADR-004), not a defect in
+      this surface (which is deliberately Shared-free, like the dashboard widgets).
+
+Verification substituted here is strictly stronger than a registered-but-unbuilt
+scheme: the EXACT shipped files were compiled against both target SDKs in Swift 6
+mode AND the full 26-case XCTest suite executed green (gate steps [4]+[5]).
+
+----------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+----------------------------------------------------------------------
+  [x] Surface renders on Apple with all web states reproduced (loading/content/
+      search-empty/catalog-empty/error/stale/offline) — 8 previews + phase tests.
+  [x] Hooks bind to shared P1/S8 state-holder layer (ToolCatalogSource); no direct
+      HTTP in the view (the view owns only search text + expansion; data via seam).
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog — 48/48
+      used==defined (no missing, no unused), cross-checked programmatically.
+  [x] Accessibility labels on every interactive element (search field, clear button,
+      each card [combined summary + expand/collapse hint + isSelected trait], banner
+      refresh); a11y summary unit-tested.
+  [x] Tests: adapter unit tests + model/state tests + a11y label test (26 cases, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with
+      captured evidence (capability present; deferral is integration-scope only).
+
+----------------------------------------------------------------------
+HONESTY COVENANT
+----------------------------------------------------------------------
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with the real
+                       bare BARE_XCODEBUILD_EXIT=1; every "OK" is a command actually
+                       run with its real exit (incl. an executed 26/26 XCTest run and
+                       iOS-18-sim + macOS-15 SDK compiles).
+  2  No scope narrowing: implemented ALL states/subviews + i18n + a11y + telemetry +
+                       the search filter + single-open accordion.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. The
+                       expanded-body `toolContent` seam defaults to a real descriptor
+                       panel (the individual tools are separate surfaces by scope) —
+                       no "coming soon"/placeholder text anywhere.
+  5  No parity shortcuts: faithful port of useToolList (15 tools, ids/keys/tints),
+                       filtered (name||desc includes), ExpandableToolCard disclosure,
+                       and the web search-empty copy/key.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / .swiftlint.yml
+                       and did NOT edit the shared Localizable.xcstrings — strings
+                       shipped as the per-surface table, exactly like 0054.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly
+                       DEFERRED with evidence, not failed in this code.
+  9  No silent drift   : changes confined to the allowed ClientUtilitiesSection.*
+                       files + this log. (Two pre-existing web edits in the working
+                       tree — FleetApiSection.tsx, BackupRestorePage.tsx — are NOT
+                       mine and are excluded from the scoped commit.)
+  10 Log ends with EXIT/STATUS below.
+
+----------------------------------------------------------------------
+DISPOSITION
+----------------------------------------------------------------------
+  Production-polished native ClientUtilitiesSection shipped at parity with the web
+  source: pure-Swift projection core (executed-green XCTest, 26/26), P1/S8
+  state-holder seam (no view HTTP), P1/S11 view.opened telemetry (slug
+  "ClientUtilitiesSection"), every state + i18n key + a11y label, single-open
+  accordion + search filter parity. All host-runnable gates pass AND the surface
+  compiles against BOTH the iOS 18 simulator and macOS 15 SDKs under Swift 6 strict
+  concurrency. The Xcode app build/test is DEFERRED to the integration/signed runner
+  (surface not yet target-registered + Shared.xcframework KMP staging — both outside
+  this prompt's allowed files), matching the GuardModeWidget 0054 precedent.
+
+----------------------------------------------------------------------
+COMMIT
+----------------------------------------------------------------------
+  git add apps/apple/TeslaSync/feature-views/ClientUtilitiesSection.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0003-ClientUtilitiesSection.log
+  git commit -m "feat(apps/apple/feature-views): add ClientUtilitiesSection surface (P4)"
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,126 @@
+I'll start by understanding the task: read the web source, explore the existing Apple app structure, and check platform capability.
+
+
+
+Toolchain is available. Let me read the web source and explore the Apple app structure.
+
+Now let me read the web dependencies and explore the Apple app's shared infrastructure (state holders, tokens, i18n, telemetry) plus an example surface to learn conventions.
+
+The `shared-surfaces` directory is new. Let me study conventions from an existing feature-view surface and the shared infrastructure (state holders, i18n, tokens, telemetry).
+
+Critical finding: `shared-surfaces` is NOT in `project.yml` sources. Let me check build capability (xcodegen, KMP framework, simulators) and study the existing native Playback primitives + a representative feature-view.
+
+Major capability finding: only Command Line Tools is installed, not full Xcode — so `xcodebuild` cannot run. Let me probe deeper before concluding, and study conventions in parallel.
+
+`/Applications/Xcode.app` exists — the active dir is just pointed at CLT. I can override with `DEVELOPER_DIR`. Let me verify xcodebuild works and check simulators.
+
+`apps/apple/Frameworks` and `Scripts` are siblings of project.yml (my earlier path was wrong). Xcode 26.5 + iPhone 16 sim are available. Now let me check the KMP framework dependency (build risk) and study conventions.
+
+Shared.xcframework is absent and requires a Gradle/KMP build. Let me assess the KMP toolchain, read the pending-verifications doc, and locate the i18n/token/telemetry/state-holder infrastructure.
+
+KMP toolchain (JDK 17 + gradlew) is present. Recent commits show the exact P4 surface pattern. Let me study the most recent analog (LiveControls) and the core infra.
+
+LiveControls is the ideal template (recent, interactive controls surface). Let me read its full file set to learn the exact conventions.
+
+Excellent template. Let me read the remaining LiveControls files (Views, States, Previews, Tests, strings) and the design tokens to complete my understanding.
+
+Let me read the test/preview/strings patterns, design tokens, and verify how `.Tests.swift` files in feature-views are compiled.
+
+Let me verify the test-target membership mechanism — critical for getting my Tests file to actually run. I'll inspect the Tests directory and how feature-view test files are wired.
+
+`Tests/Unit/FeatureViews` exists. Let me check how feature-view tests/previews are wired (symlinks?) and whether the app target excludes them — I'll inspect and grep the generator config.
+
+Let me read the pending-verifications doc and check what STATUS prior surface gate logs reported — this establishes the honest precedent for this runner.
+
+Now I have the full picture and the audited precedent: the full-app `xcodebuild` gate is **macOS-pending/deferred** for every prior surface (pre-existing collisions: `DashboardWidgetSize` ×15, co-located XCTest-in-app, unstaged KMP framework, signing). Prior surfaces ship **STATUS=DONE** verified via **isolated SwiftPM build + tests + swiftc -typecheck (iOS+macOS) + lint/format/placeholder**. I'll follow that exact pattern.
+
+Let me write a plan and read the design tokens + component signatures I'll compose with.
+
+Design tokens live elsewhere (generated). Let me locate `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius` definitions and read the exact `TSButton`/`TSSkeleton`/`TSCode` signatures.
+
+I now have all token names and component signatures. Let me verify the `Components`+`Design` layer is self-contained (so I can compile my surface against the REAL design system in isolation), and read the `TSButtonStyle` deps + the rest of the web TimelineScrubber for scrubber/marker parity.
+
+The `Components`+`Design` layer is fully self-contained (only SwiftUI/Charts/MapKit/CoreLocation/Foundation) — I can compile my surface against the REAL design system in an isolated SwiftPM package. Let me read the lint/format configs, then start writing.
+
+Let me read the placeholder checker to know exactly what's scanned (it gates a step), then I'll write the surface.
+
+I have everything I need. Key insight: the placeholder checker matches case-insensitively on "todo/placeholder/xxx/etc." in `.swift` files — I'll avoid those tokens. Let me set up tracking and create the surface directory.
+
+Now writing the surface. Starting with the pure projection core (Adapter):
+
+Now the Model (state-holder seam, telemetry, i18n facade):
+
+Now the Views layer (transport, scrubber with markers, speed menu, keyboard help, toast, key catchers). First, let me add a scrubber-position i18n key to the catalog:
+
+Now the States layer (loading, error, empty timeline, status chips):
+
+Now the View entry point:
+
+Now the Previews:
+
+Now the comprehensive unit tests:
+
+Now the strings catalog:
+
+All 8 files written. Let me update tracking and start verification: format, lint, then the isolated build/test.
+
+swiftformat is clean. SwiftLint found 1 violation across the tree — let me locate it (is it mine?):
+
+The only tree-wide violation is **pre-existing** in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` — not my code. Let me confirm my files lint clean in isolation by passing explicit file paths:
+
+Linting my files explicitly reveals real issues: file_length (>400), cyclomatic_complexity on `resolveShortcut`, and an opening-brace nit. The gate's `included:` doesn't cover `shared-surfaces`, but I'll make the files genuinely clean. I'll split files (the `PlaybackControls.*` glob allows more files) and reduce complexity. Let me view exact boundaries:
+
+Refactoring `resolveShortcut` into helpers to cut complexity:
+
+Now let me view the rest of the Adapter (the Copy/hints/tone/format section to relocate):
+
+The lint issues are real (the gate's `included:` skips `shared-surfaces`, but I'll make the code genuinely clean). The `PlaybackControls.*` glob lets me split into more files. Let me split Adapter→Copy, Views→Scrubber, Tests→ModelTests:
+
+The BSD `sed` trailing-blank trick failed and blanked Adapter.swift, Tests.swift, and Scrubber.swift's body (these are untracked, so I'll recreate from my known content). Copy.swift (176), Views.swift (273), ModelTests.swift (159) survived. Let me verify the survivors, then recreate the three:
+
+Survivors are intact. Let me recreate the three blanked files from my known content:
+
+Now recreate Scrubber.swift (scrubber + time readout + keyboard help + toast + catchers):
+
+Now recreate Tests.swift (adapter tests only, with the one-lined `outcome` helper):
+
+All files recreated and split. Let me re-format, check line counts, and lint:
+
+All 10 files ≤400 lines, swiftlint --strict **0 violations**. Let me confirm format-lint, then build the isolated SwiftPM harness against the real design system:
+
+Format-lint clean. Now the isolated SwiftPM harness — compiling my surface + tests against the **real** Components+Design layer as module `TeslaSync` (so `@testable import TeslaSync` works unchanged):
+
+A Component file (`DataDisplay/UnitFormatters.swift`) references `Units` (an app-layer/SharedFacade symbol my surface doesn't use). I'll drop the unneeded `DataDisplay` group from the harness and scan for other external refs:
+
+Maps→DataDisplay→Units is a chain my surface doesn't need. Let me trim the harness to the **minimal real closure** my surface actually uses (Tokens + `TSButton` + `TSSkeleton`/`TSCard`):
+
+The UI closure (Skeletons→Cards→Typography→…) is the whole UI layer. Let me go back to **full Components+Design** but exclude exactly the files that reference the app-layer `Units` symbol. Let me find them all:
+
+Only `UnitFormatters.swift` needs the app-layer `Units`. Let me use full Components+Design with that one file excluded, then build and test:
+
+**Build complete** — the surface compiles against the real design system. Now run the tests under Swift 6 strict concurrency:
+
+**All 36 tests pass** under Swift 6 strict concurrency. Now let me prove **both-platform** compilation (the gate targets iOS 18 + macOS 15) via `swiftc -typecheck` of the surface + real design system against each SDK:
+
+Both SDKs typecheck clean (EXIT=0). Now the placeholder gate (scanning the actual surface directory):
+
+Placeholder gate passes. All host-runnable gates are green. Now let me capture concrete evidence that the full-app `xcodebuild` gate is blocked by **pre-existing** issues (not my surface), matching the audited `macos-pending-verifications.md` precedent:
+
+Pre-existing blockers confirmed: `DashboardWidgetSize` redefined **15×**, **261** co-located XCTest-in-app files, **empty** `Frameworks/` (KMP unstaged) — my surface introduces **0** of these. Let me run the exact tree-wide gate lint/format commands to record coverage of my files:
+
+My files are clean on both tree-wide gates; the 1 swiftformat + 1 swiftlint issues are pre-existing/non-mine. Let me identify the pre-existing swiftformat file for the record, then update tracking:
+
+Confirmed: the pre-existing swiftformat issue is in `ActionBuilder.Previews.swift` (not mine). All evidence gathered. Now I'll generate the gate log with **real, tee'd command output** for authenticity:
+
+The log captured real green output for all 7 host-runnable checks. Let me append the parity summary, Honesty Covenant compliance, and final EXIT/STATUS:
+
+Log complete (128 lines, ends `EXIT=0 / STATUS=DONE`). Final pre-commit checks — verify file inventory, no stray temp files, no hardcoded English `Text("…")`, no forbidden tokens:
+
+All clean — the `Text("…")` matches are all i18n **catalog** entries in Copy.swift (key + English fallback pairs, exactly like LiveControls); the views use `Text(verbatim:)` + facade. The "stray" hit is just the legit entry file `PlaybackControls.swift`. Let me commit:
+
+Committed cleanly (12 files, 2330 insertions) — only my surface + log staged; the pre-existing dirty files (AIUsageCard.*, web files) were correctly left untouched. Let me clean up the temp harness and finalize tracking:
+
+Everything is complete and verified. Let me do a final confirmation of the commit's full file list:
+
+All 12 files committed (the grep elided ModelTests/Previews/Scrubber rows but the earlier `--stat` confirmed all 12). The task is complete.
+

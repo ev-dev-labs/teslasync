@@ -1,0 +1,137 @@
+=== P4 Dashboard widget 0004 APIUsageWidget (Apple) ===
+Date: 2026-06-07
+Surface: apps/apple/TeslaSync/dashboard-widgets/APIUsageWidget.*
+Web source of truth: web/src/features/dashboard/widgets/APIUsageWidget.tsx
+Registry: id=api-usage, category=system, default 2x2, min 1x2, max 4x40
+
+------------------------------------------------------------------
+ARTIFACTS SHIPPED (Allowed files only — APIUsageWidget* + this log)
+------------------------------------------------------------------
+  APIUsageWidget.swift          344 LOC  — surface (registry descriptor,
+                                            diagnostics seam, View + all states,
+                                            compact/standard/wide layouts,
+                                            freshness chrome, a11y)
+  APIUsageWidgetData.swift       176 LOC  — domain model + pure presentation
+                                            adapter (cache-then-network → render
+                                            model); unit-testable in isolation
+  APIUsageWidgetPreviews.swift    76 LOC  — one #Preview per rendered state
+  APIUsageWidgetTests.swift      229 LOC  — adapter/state/registry/telemetry/a11y
+                                            XCTest coverage (24 tests)
+
+Parity reproduced from the web source:
+  - data: useApiLogStats → last24h, avgDurationMs, errorRate, errorCount
+  - 4-stat grid (Total Calls / Avg Response[ms] / Error Rate[%] / Errors) with
+    the same thresholds (errorRate>5 → danger + "High" chip; errorCount>0 →
+    danger), cols=4 when wide else 2
+  - compact (cols<=1) big-number layout + "X% errors" sub-line when errorRate>5
+  - states: loading (skeleton) / empty / error (QueryError+retry) / stale chip /
+    offline (cached value + offline chip) — every branch rendered
+  - i18n: all strings resolve through the P1/S10 catalog keys
+    translation.widget.apiUsage.{title,totalCalls,avgResponse,errorRate,
+    highErrors,totalErrors,calls24h,errors,noData} (+ shared freshness/common
+    keys); zero English literals in code
+  - telemetry: view.opened emitted with surface slug "APIUsageWidget" (P1/S11)
+  - a11y: header trait, combined VoiceOver elements per stat, refresh button
+    label, Dynamic Type via Font.TS ramp, reduce-motion-aware update pulse
+
+------------------------------------------------------------------
+CAPABILITY ASSESSMENT (this runner)
+------------------------------------------------------------------
+  Xcode .................. 26.5 (17F42) via DEVELOPER_DIR=/Applications/Xcode.app
+  iOS Simulator ......... iOS 26.5 runtime present; "iPhone 16" device present
+  swiftlint ............. /opt/homebrew/bin/swiftlint  (present)
+  swiftformat ........... /opt/homebrew/bin/swiftformat (present)
+  pwsh .................. /opt/homebrew/bin/pwsh (present)
+  xcodegen .............. /opt/homebrew/bin/xcodegen (present)
+  JDK / Kotlin-Native ... openjdk 17; ~/.konan kotlin-native-prebuilt 2.4.0 cached
+
+------------------------------------------------------------------
+GATE STEPS
+------------------------------------------------------------------
+
+[swiftformat --lint apps/apple]   (runnable — RAN)
+  0/264 files require formatting, 2 files skipped.
+  FORMAT_EXIT=0
+
+[swiftlint --strict] (runnable — RAN against the 4 surface files)
+  NOTE: apps/apple/.swiftlint.yml `included:` lists Sources/Tests/TeslaSync*
+  only, so the project gate does not scan TeslaSync/dashboard-widgets/. The
+  surface was therefore linted explicitly under the same strict ruleset:
+    swiftlint lint --no-cache --strict apps/apple/TeslaSync/dashboard-widgets/
+    Done linting! Found 0 violations, 0 serious in 4 files.
+  (file_length<400 and type_body_length<250 both satisfied.)
+  LINT_EXIT=0
+
+[check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets]  (RAN)
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  EXIT=0
+  PLACEHOLDER_EXIT=0
+  (No TODO/FIXME/stub/placeholder/Lorem/"not implemented" tokens.)
+
+[swiftc -typecheck — extra positive validation, RAN]
+  Because the surface is authored out-of-tree (see BLOCKED below), it cannot be
+  compiled by the app target here. To prove the code is type-correct it was
+  type-checked in isolation against faithful stub declarations of its
+  dependencies (LoadableState/FacadeError facade types copied verbatim from
+  Sources/SharedFacade/*, design tokens, shared feedback components) plus XCTest
+  shims for the tests:
+    xcrun --sdk macosx swiftc -typecheck -swift-version 6 \
+      -strict-concurrency=complete -target arm64-apple-macos15.0 \
+      Stubs.swift APIUsageWidget.swift APIUsageWidgetData.swift \
+      APIUsageWidgetPreviews.swift  ->  EXIT 0, 0 warnings
+    (+ APIUsageWidgetTests.swift with XCTest shims)             ->  EXIT 0, 0 warnings
+  This caught and fixed two real Swift-6 strict-concurrency issues before ship:
+    (1) the adapter no longer calls the @MainActor `TSFormattedNumber.format`
+        (a View) from a nonisolated context — it formats via NumberFormatter;
+    (2) the View's pure static constants are `nonisolated` and the test case is
+        `@MainActor` for view construction.
+  TYPECHECK_EXIT=0
+
+[xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test]
+[xcodebuild -scheme TeslaSync-macOS build test]
+  STATUS: BLOCKED — cannot validate THIS surface, for two reasons:
+
+  (1) WIRING (decisive, out-of-scope to fix): the prompt's canonical output path
+      apps/apple/TeslaSync/dashboard-widgets/ is NOT referenced by
+      apps/apple/project.yml `sources:` (which lists only `Sources`,
+      `Localization`, `../design/generated/apple`). Verified by generating the
+      project (`xcodegen generate`) and confirming the surface is absent from the
+      target:
+          "dashboard-widgets NOT referenced by generated project (expected)"
+      Therefore `xcodebuild ... build test` would compile and test the EXISTING
+      app WITHOUT these files — a green run would NOT exercise APIUsageWidget.
+      Reporting that as success would violate the Honesty Covenant (#1 no
+      red-as-green). Wiring the path requires editing project.yml, which is
+      OUTSIDE the prompt's Allowed files (APIUsageWidget.* + this log). A
+      separate P4 integration/host step owns that wiring.
+
+  (2) SHARED FRAMEWORK + SHARED RUNNER: the app/test targets link a KMP
+      `Shared.xcframework` that is unbuilt here (apps/apple/Frameworks/ holds
+      only .gitkeep). It is produced by a pre-build Gradle step
+      (`apps/shared/gradlew :core:assembleSharedXCFramework`, Kotlin/Native).
+      A bounded attempt of `xcodebuild -scheme TeslaSync-macOS build` was started;
+      its pre-action Kotlin/Native compile was observed running (konan clang++ +
+      Gradle daemons) but did not complete within the window and the runner is
+      shared with other concurrent builds. Even on completion it would not
+      include the surface (see #1), so it was stopped rather than chase a
+      non-attributable green.
+
+  IOS_EXIT=blocked
+  MAC_EXIT=blocked
+
+------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------
+  Surface + tests authored complete (no stubs), parity-faithful to the web
+  source, and proven type-correct under Swift 6 strict concurrency.
+  Runnable gates GREEN: FORMAT_EXIT=0, LINT_EXIT=0, PLACEHOLDER_EXIT=0,
+  TYPECHECK_EXIT=0.
+  The `xcodebuild build test` steps are BLOCKED as a validator of this isolated
+  surface (out-of-tree path not wired into project.yml — out of allowed scope;
+  plus the heavyweight KMP Shared.xcframework on a shared runner). Per the
+  prompt's Capability clause, the honest terminal state is BLOCKED — not a
+  red-as-green DONE.
+
+EXIT=1
+STATUS=BLOCKED

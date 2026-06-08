@@ -1,0 +1,102 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Key finding: full Xcode is **not** installed (`xcodebuild` requires Xcode, only CommandLineTools present), though `swift`, `swiftlint`, `swiftformat`, `xcodegen`, and `pwsh` are. Per the prompt, the build/test gate cannot run → likely BLOCKED, but I must still produce a complete, real implementation. Let me study conventions deeply.
+
+Now let me check the SwiftLint config (to pass `--strict`) and whether common strings already exist.
+
+Let me investigate how feature-view `.Tests.swift` files are wired into targets, since this affects where my test file should live.
+
+Let me create a plan and todos, then study a full-screen scaffold for conventions.
+
+I have a complete understanding of the component library, tokens, conventions, and gate constraints. Key constraint: the placeholder scanner forbids the substring "Placeholder" (case-insensitive) — the `backup.configNamePlaceholder` key needs a `// parity:allow` marker. Let me start writing the implementation.
+
+Domain parses clean. Now the SwiftUI strings extension and the `@Observable` model with its data seam and providers.
+
+Now the Views file — metric grid, config/runs tables, recent errors, states, and shared chrome.
+
+Now the sheets (editor + restore preview):
+
+Now the main page view + navigation registration:
+
+Now add DEBUG preview seams to the model and write the previews + tests.
+
+Now the test suite (mirrors peer XCTest convention):
+
+Let me syntax-check all new Swift files together.
+
+Excellent — all parse clean. Let me attempt a deeper type-check by compiling against the real components. First, check what `Sources` imports.
+
+`Sources` pulls in the `Shared` xcframework (unavailable), so I can't type-check the whole target. But `Components`/`Design` don't — let me type-check my page against the real shared components + tokens.
+
+The 26 errors are all in `UnitFormatters.swift` (references `UnitPreferences`, defined outside my curated set) — not my code. Let me exclude unrelated files and re-check.
+
+Two real errors in my Model — the `seedConfigs`/`seedRuns` static defaults are MainActor-isolated but referenced from nonisolated default arguments. Fix: mark them `nonisolated`.
+
+`compare` used two independent `some Comparable` opaque types. Make it a single generic parameter.
+
+Type-check passes clean (0 errors, 0 warnings) against the real components. Now verify under the project's Swift 6 / strict-concurrency mode.
+
+Swift 6 strict-concurrency clean. Now format with swiftformat, then lint.
+
+SwiftLint's `included:` config caused it to lint the whole repo (that error is a **pre-existing** violation in `dashboard-widgets`, not mine). Let me lint only my files explicitly.
+
+8 real lint violations under `--strict`: file lengths > 400, one cyclomatic-complexity, one function-length, and trailing-closure issues. Let me find the MARK boundaries to split files cleanly.
+
+Let me check whether existing feature-views routinely exceed 400 lines or use disable comments.
+
+Existing convention: files ≤400 lines (peers split into `.Model`/`.Adapter`/`.Views`). I'll split mine to match. Let me check all my file sizes.
+
+The convention is files ≤400 lines (peers split similarly). I'll split my three large files. Let me extract sections preserving exact content.
+
+All files ≤366 lines now. Now fix the remaining 3 violations. Let me view the toast spec and runs-columns builder.
+
+Now fix the 3 logic violations: toast complexity (→ dictionary), and the runs-columns function length + trailing closures.
+
+Now re-format and re-verify: swiftformat, type-check (all split files), swiftlint on my files, and placeholder scan.
+
+One violation left: a 3-member tuple (`large_tuple`). Replace with a small struct.
+
+Two "Placeholder" matches: a doc comment and the test asserting the literal key. Let me fix both.
+
+The `// parity:allow` marker must be on the **same line** as the match. Let me fix that.
+
+Line is 145 chars (comments still count). Let me move the literal to a shorter `let` line carrying the marker.
+
+All my files: typecheck clean, swiftlint --strict clean (0), placeholder scan clean (0). Let me confirm typecheck once more, then add the catalog strings.
+
+Typecheck clean. Now insert the 81 parity keys + 2 native-chrome keys into `Localizable.xcstrings` via a minimal, validated JSON insertion.
+
+Let me verify the catalog formatting is consistent and all parity keys resolve.
+
+All 83 keys inserted in the file's existing style. Let me verify every parity string from the manifest resolves.
+
+All 81 parity keys present. Now wire navigation: add the `/backup` deep-link alias and compose the route registration into the app.
+
+Now add `TeslaSync/Features` to the build (project.yml app targets) and lint config so the page is compiled and linted like its peers.
+
+Let me validate the YAML edits and run a final format + full verification pass.
+
+Both YAML files valid. Let me confirm XcodeGen accepts the spec end-to-end (it can generate the project even without the framework present).
+
+XcodeGen accepted the spec (exit 0). Let me confirm my files are in the project, the `.xcodeproj` is git-ignored, and capture the exact `xcodebuild` blocked state for the log.
+
+All 14 files are in the project; `.xcodeproj` is git-ignored; `xcodebuild` is confirmed unavailable (CLT only). Let me run the exact gate steps from the repo root to record honest results.
+
+Gate results captured. Now let me build the PARITY evidence: map each of the 81 string keys to its symbol and verify each is actually referenced in the views.
+
+All 81 strings map to symbols and every one is referenced in the page (0 unused). Now generate the evidence log.
+
+Log written (91/91 covered, EXIT=1/STATUS=BLOCKED). Let me review the full changeset and run one consolidated final verification.
+
+I notice pre-existing working-tree changes (`AIUsageCard.*`, two `web/` files) that I did **not** touch — this is a shared parallel environment. Let me confirm they're not mine and verify my scoped changes are intact.
+
+Confirmed: `AIUsageCard.*` and the `web/` files are pre-existing changes from the shared environment (113-line and 2-line diffs I never authored) — outside my commit scope. My nav edits are in place. Final consolidated verification:
+
+The verification is running (typecheck takes ~30s). Let me wait for it.
+
+All checks green: typecheck 0, swiftlint --strict 0, placeholder 0, max file 382 lines. Let me finalize the plan/todos.
+
+Let me confirm the log structure is well-formed and clean up validation temp files.
+
+All deliverables verified. Task complete.
+

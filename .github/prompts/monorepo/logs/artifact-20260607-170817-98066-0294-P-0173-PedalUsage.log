@@ -1,0 +1,147 @@
+=== P4 Feature view 0173 PedalUsage (Apple) ===
+Runner: Darwin (Apple Silicon). Date: 2026-06-07.
+Web source (spec): web/src/features/driving/components/driving-dynamics/PedalUsage.tsx
+Native output:     apps/apple/TeslaSync/feature-views/PedalUsage.{swift,Adapter.swift,Model.swift,Views.swift,Previews.swift,Tests.swift,strings}
+
+------------------------------------------------------------------------------
+CAPABILITY (prompt requires SwiftUI + Swift Charts + MapKit, iOS18/macOS15 HIG)
+------------------------------------------------------------------------------
+  Xcode 26.5 (Build 17F42) ......... PRESENT  (DEVELOPER_DIR=/Applications/Xcode.app)
+  iPhone 16 Simulator (iOS) ........ PRESENT
+  xcodegen 2.45.4 .................. PRESENT
+  swiftlint / swiftformat .......... PRESENT
+  JDK 17 (KMP shared core) ......... PRESENT
+  => NOT blocked on platform capability. The surface uses SwiftUI only (no Charts/MapKit needed;
+     web source has no chart/map). Built with the project's documented toolchain.
+
+------------------------------------------------------------------------------
+BUILD INFRA (this runner)
+------------------------------------------------------------------------------
+  KMP Shared.xcframework (apps/apple/Scripts/build-shared-xcframework.sh
+    -> gradlew :core:assembleSharedXCFramework):
+      BUILD SUCCESSFUL in 8m 30s; staged Frameworks/Shared.xcframework
+      (slices: ios-arm64, ios-arm64-simulator, macos-arm64).   [git-ignored binary]
+  xcodegen generate: OK (TeslaSync.xcodeproj created).          [git-ignored]
+
+------------------------------------------------------------------------------
+PER-FILE VERIFICATION OF THE DELIVERABLE  (apps/apple/TeslaSync/feature-views/PedalUsage.*)
+All checks below are GREEN for every file this prompt is allowed to touch.
+------------------------------------------------------------------------------
+  swiftformat --lint PedalUsage.*  ............................. PASS  (0/6 require formatting)
+  swiftlint  --strict PedalUsage.*  ............................ PASS  (0 violations, 0 serious in 6 files)
+  check-placeholders.ps1 -Path .../PedalUsage  ................. PASS  (PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 EXIT=0)
+  swiftc -typecheck Adapter+Model
+    (-swift-version 6 -strict-concurrency=complete, macOS SDK) .. PASS  (exit 0)
+  Executable logic harness (Adapter+Model compiled & RUN,
+    27 assertions: clamp 0..100, fmtNumber int/2dp, "%"/"—" unit,
+    fraction=value/100, brakeActive->danger/success, resolvePhase
+    matrix, a11y summary, surface slug) ........................ PASS  (ALL 27 PASSED, exit 0)
+  swiftc -typecheck PedalUsage.swift + .Views vs the REAL shared
+    component library (Sources/Components/* + Sources/Design/* +
+    design/generated/apple/Tokens.swift), macOS SDK ............ PASS  (exit 0, 0 errors)
+  swiftc -typecheck Previews (-DDEBUG), macOS SDK ............... PASS  (exit 0, 0 errors)
+  swiftc -typecheck Tests vs XCTest (XCTest.framework +
+    Developer/usr/lib), macOS SDK .............................. PASS  (exit 0, 0 errors)
+  swiftc -typecheck production + previews + components,
+    iphoneos SDK (-target arm64-apple-ios18.0, -DDEBUG) ........ PASS  (exit 0, 0 errors)
+
+  => The PedalUsage surface compiles clean on BOTH the iOS and macOS SDKs, its
+     projection logic executes to the exact web-parity values, and it is lint/format/
+     placeholder clean. PedalUsage compile errors across ALL build attempts: 0.
+
+------------------------------------------------------------------------------
+GATE COMMANDS (verbatim from prompt) + RESULTS ON THIS RUNNER
+------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+[2] xcodebuild -scheme TeslaSync-macOS build test
+      RESULT: BLOCKED — the whole-app target fails to compile due to PRE-EXISTING defects
+      in SIBLING files that are OUTSIDE this prompt's allowed scope
+      (allowed: apps/apple/TeslaSync/feature-views/PedalUsage.* only). Two independent causes:
+
+      (a) project.yml test-target wiring gap (not an allowed file):
+          The TeslaSync / TeslaSync-macOS app targets source `TeslaSync/feature-views`,
+          which globs EVERY sibling *Tests.swift / *.ModelTests.swift into the app module.
+          The app target cannot resolve XCTest:
+             AcDcStatsPanel.Tests.swift:19:8: error: unable to resolve module dependency: 'XCTest'
+             ActionBuilder.ModelTests.swift:11:8: error: unable to resolve module dependency: 'XCTest'
+          The test bundles (TeslaSyncTests / TeslaSync-macOSTests) source `Tests/Unit` only,
+          so feature-view tests are never routed to a bundle that links XCTest. Fixing this
+          needs an `excludes:` in project.yml — not editable under this prompt's allowed files.
+
+      (b) Duplicate top-level type declarations across independently-generated SIBLING
+          surfaces (parallel-generation collisions in the shared `TeslaSync` module), e.g.:
+             dashboard-widgets/WeeklyDigestWidget.Model.swift: invalid redeclaration of 'WeeklyDigestDTO'
+             dashboard-widgets/WeeklyDigestWidget.Model.swift: invalid redeclaration of 'DashboardWidgetSize'
+             dashboard-widgets/{DigitalTwin,MQTTStatus,MotorHistory,Uptime,VehicleHero,...}Widget*: 'DashboardWidgetSize' is ambiguous
+             feature-views/RequestBuilder.Model.swift: 'ParsedEndpoint' is ambiguous
+             feature-views/RequestBuilder.Views.swift:  'HTTPMethod' is ambiguous
+             feature-views/ResultPanel.JSON.swift:      invalid redeclaration of 'JSONValue' (+ 'JSONMember' Equatable)
+             feature-views/ChargerTypeBreakdown.Model.swift: 'ChargerTypeConnection' is ambiguous
+          None authored by this prompt.
+
+      EVIDENCE that PedalUsage itself is clean: excluding the mis-globbed sibling test files
+      (EXCLUDED_SOURCE_FILE_NAMES=*Tests.swift) the whole-module compile proceeds through the
+      ENTIRE feature-views layer with ZERO PedalUsage errors and fails only inside the
+      pre-existing sibling collisions above (dashboard-widgets, then RequestBuilder/ResultPanel).
+      Build logs: /tmp/ts-mac-build{,2,3,4}-294.log.
+
+      SIGNING NOTE (environment, not code): this runner has no Apple development certificate
+      (DEVELOPMENT_TEAM=""), so the macOS app/widgets fail entitlement signing. Compilation was
+      validated with CODE_SIGNING_ALLOWED=NO (the gate's intent is build+test, not signing).
+
+      Per ADR-002 the iOS and macOS app targets share ONE SwiftUI source group (Sources/ +
+      feature-views/), so the macOS compile result applies identically to the iOS scheme; both
+      schemes hit the same sibling blockers. The PedalUsage SwiftUI files additionally pass a
+      direct iphoneos-SDK typecheck (above).
+
+      IOS_EXIT=BLOCKED (pre-existing sibling compile defects; outside allowed files)
+      MAC_EXIT=BLOCKED (pre-existing sibling compile defects; outside allowed files)
+
+[3] swiftlint --strict
+      Done linting! Found 1 violation, 1 serious in 1334 files.
+      The single violation is PRE-EXISTING and in a sibling, not PedalUsage:
+        dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: Function Body Length (78>50)
+      PedalUsage.* violations: 0.
+      LINT_EXIT=0 for the deliverable (PedalUsage.*); repo-wide=2 due to the sibling above.
+
+[4] swiftformat --lint apps/apple
+      1/1338 files require formatting (a pre-existing sibling; 2 generated files skipped).
+      PedalUsage.* require formatting: 0.
+      FORMAT_EXIT=0 for the deliverable (PedalUsage.*); repo-wide=1 due to the sibling above.
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/PedalUsage
+      PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------------------
+CI REFERENCE
+------------------------------------------------------------------------------
+  .github/workflows/apps-apple.yml runs the xcodebuild triad only `if buildable` (i.e. only
+  once a committed Package.swift/.xcodeproj exists). It is currently a documented no-op
+  ("P4 not landed"), consistent with the un-integrated sibling state observed here: the P4
+  Apple program has not yet been integrated into a single compilable project, so sibling
+  surfaces still carry colliding type names and the project.yml test wiring is incomplete.
+
+------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------
+  The PedalUsage surface is implemented to production parity with the web source
+  (throttle/brake radial gauges with %/— units + value/100 fill, the Footprints + active/inactive
+  brake badge, and the data-or-empty split widened to loading/empty/error/stale/offline/content),
+  binds through the shared P1/S8 state-holder seam (no networking in the view), resolves every
+  i18n key through the P1/S10 facade (PedalUsage.strings), emits the P1/S11 `view.opened`
+  diagnostics event, and carries adapter + per-state + a11y tests.
+
+  It passes EVERY check applicable to this prompt's allowed files: swiftformat, swiftlint --strict,
+  placeholder, Swift-6 strict-concurrency typecheck of all six Swift files (incl. Tests & Previews)
+  on BOTH SDKs, and an executable run of the projection logic (27/27).
+
+  The literal app-level `xcodebuild ... build test` gate cannot reach EXIT=0 in this
+  un-integrated parallel checkout because of PRE-EXISTING compile defects in SIBLING surfaces
+  (duplicate type declarations) and a project.yml test-target wiring gap — both strictly outside
+  apps/apple/TeslaSync/feature-views/PedalUsage.* and therefore not remediable within this
+  prompt's allowed files. No red is attributable to the PedalUsage surface (0 PedalUsage errors
+  in every compile).
+
+EXIT=1
+STATUS=BLOCKED

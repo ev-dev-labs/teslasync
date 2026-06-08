@@ -1,0 +1,78 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Key findings: web source exists, Apple app exists, but `xcodebuild` requires full Xcode (only Command Line Tools installed). `swift`, `swiftlint`, `swiftformat` are available. Let me explore the structure deeply.
+
+The `dashboard-widgets` directory has 418 entries. Let me check for existing FleetStatsBarWidget files and find a similar widget to use as a pattern template.
+
+No existing FleetStatsBarWidget. `LifetimeStatsWidget` is the closest pattern (Adapter, Model, Previews, strings, Tests). Let me read it fully as a template, plus the web shared files it depends on.
+
+Excellent template. Now let me read the Model, Adapter, Previews, Tests, and strings files.
+
+`DashboardWidgetSize`/`DashboardWidgetRegistration` appear in many Model files, and the `TS` tokens (TSSpacing, Color.TS, etc.) weren't found under TeslaSync. Let me understand how duplicates are avoided and where shared tokens live.
+
+Let me examine the web dependencies for perfect parity, the project structure, and tooling availability.
+
+Let me read StatCard (to confirm trend rendering parity) and numberFormat, plus check tooling versions.
+
+I now understand the web source fully. Key parity details captured. Let me verify the exact shared-primitive APIs (tokens, skeletons, registration) used by siblings, and establish the lint/format baseline.
+
+Let me check `project.yml` to resolve whether widgets are separate modules (determines if I define or reuse `DashboardWidgetSize`).
+
+project.yml confirms all widgets compile into one `TeslaSync` module, and tokens come from `design/generated/apple`. The duplicate `DashboardWidgetSize` defs are a parallel-staging artifact — I'll **use** the shared types (like LifetimeStats), not redefine them. Let me verify the tokens source and lint/format configs.
+
+Tokens dir is absent in this slot and Xcode isn't installed — confirming the compile/test gate is capability-blocked. Let me read the correct lint/format configs and baseline-test them on the canonical sibling.
+
+Canonical sibling passes `swiftformat --lint`. Let me baseline `swiftlint --strict` on the sibling, and set up my plan and todos.
+
+Critical finding: the canonical sibling itself **fails** `swiftlint --strict` (function_body_length: 78 lines). So the gate's lint step is already red from sibling-slot code. I must keep MY functions ≤50 lines and ensure MY files pass individually. Let me read the placeholder patterns to avoid banned tokens.
+
+I have a complete picture. Let me record the plan and todos, then create all six files following the canonical sibling pattern with full web parity.
+
+Now creating the six files, starting with the Model (state-holder seam, registry, i18n facade).
+
+I made an error in `FleetStatsLayout.isCompact` — it should return `Bool` (`rows < 2`), not `Int`. Fixing:
+
+Now the SwiftUI view file:
+
+Now the Previews, Tests, and strings files:
+
+All six files created. Now let me normalize with swiftformat, then verify against swiftlint and the placeholder gate.
+
+Both gates pass on my files: **swiftformat --lint = 0/5 require formatting**, **swiftlint --strict = 0 violations**. Now let me validate the pure adapter logic by actually compiling and running it against a stub (the parity-critical numeric pipeline), since the full module can't compile here.
+
+All 30 assertions pass — the parity-critical numeric pipeline, phase logic, registry clamp, a11y summary, and layout all compile (Swift 6.3) and produce exact expected output. Now the placeholder gate. Let me inspect how the script handles `-Path` and run it.
+
+Missing paths return Count=0 (clean). Let me run a genuine scan of my files (temp dir) plus the exact gate command, and grep for forbidden tokens.
+
+Forbidden tokens: none. Genuine placeholder scan of my files: **PLACEHOLDER_COUNT=0, EXIT=0**. Now let me capture the xcodebuild capability evidence and confirm no Xcode.app exists to switch to.
+
+`/Applications/Xcode.app` exists but `xcode-select` points to CommandLineTools. Let me check if I can use Xcode via `DEVELOPER_DIR`, and gather concrete evidence of the whole-module build blockers (which are outside my allowed file scope).
+
+Xcode 26.5 is available via `DEVELOPER_DIR`, but the whole-module build is blocked by **out-of-scope** issues: the `design/generated/apple` tokens dir is absent (P1/S9 dependency) and there are **15 duplicate `DashboardWidgetSize` definitions** from sibling slots — and I'm restricted to `FleetStatsBarWidget.*`. Let me prove MY full surface type-checks against the documented token contract (high-value evidence), then capture real xcodebuild output.
+
+My entire surface type-checks cleanly under SwiftUI + Swift 6 strict concurrency (exit 0). Now let me make a genuine best-effort xcodebuild attempt to capture the real structural blocker as evidence.
+
+xcodegen generated the project. Now the actual xcodebuild — time-boxed, capturing real errors:
+
+The build is blocked before reaching my sources — the KMP `Shared.xcframework` scheme pre-action (ADR-004) didn't complete in 300s. Combined with the absent tokens dir and 15 duplicate sibling defs, the whole-module build is definitively blocked by out-of-scope state. I have conclusive evidence. Let me clean up the generated project and confirm it's git-ignored.
+
+Cleanup done — only my 6 files are untracked. Now let me generate the gate log with authentic command outputs and honest BLOCKED evidence.
+
+Now appending the runnable gate steps with authentic output, plus the isolated verification evidence:
+
+Now appending the isolated-verification evidence (SwiftUI typecheck + pure-logic compile/run), which proves my surface is correct despite the blocked whole-module build:
+
+Now the footer with the summary and final EXIT/STATUS, then I'll review the full log:
+
+Let me review the full log to verify accuracy (especially the real captured outputs and assertion count):
+
+One fix: the footer says "38/38" but the actual run printed "36 passed". Let me correct that mismatch for accuracy.
+
+Let me update todos, run a final consolidated verification, and commit only my files.
+
+All green. Committing my six files plus the gate log (excluding the pre-existing unrelated working-tree changes):
+
+Committed. Let me verify the working tree is clean of my artifacts and confirm only the pre-existing unrelated changes remain.
+
+Working tree is clean — only the pre-existing unrelated changes (AIUsageCard, web files) remain untouched, no stray build artifacts. Let me finalize the todo.
+

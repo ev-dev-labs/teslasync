@@ -1,0 +1,91 @@
+=== P4 Dashboard widget 0006 AutomationHistoryWidget (Apple) ===
+date: 2026-06-08T01:42:07Z
+host: Darwin 25.5.0 arm64
+
+## Capability / environment
+Xcode: Xcode 26.5 Build version 17F42 
+active xcode-select (persistent, no DEVELOPER_DIR): /Library/Developer/CommandLineTools  (full Xcode reached only via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer in the invoking shell)
+swiftlint: 0.63.3   swiftformat: 0.61.1   pwsh: PowerShell 7.6.2
+iOS Simulator: iPhone 16 (iOS 26.5)  |  SwiftUI + Swift Charts + MapKit available (SDK-bundled)
+NOTE: no passwordless sudo -> cannot 'xcode-select -s' to Xcode; active dir stays CommandLineTools.
+      KMP Shared.xcframework built via Gradle (apps/shared) and staged to apps/apple/Frameworks.
+
+## Path adaptation (documented)
+Prompt nominal path apps/apple/TeslaSync/dashboard-widgets/ does not exist in the repo.
+Buildable source root is apps/apple/Sources (project.yml 'sources: Sources'). Files placed at:
+  apps/apple/Sources/Dashboard/Widgets/AutomationHistoryWidget*.swift  (compiled into iOS + macOS app targets)
+  apps/apple/Tests/Unit/Dashboard/AutomationHistoryWidgetTests.swift   (TeslaSyncTests / TeslaSync-macOSTests)
+All files carry the AutomationHistoryWidget* prefix per the allowed-files glob.
+
+## Static gates (green) ============================================
+$ swiftlint --strict (apps/apple)
+Done linting! Found 0 violations, 0 serious in 262 files.
+LINT_EXIT=0
+$ swiftformat --lint apps/apple
+0/266 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+$ check-placeholders.ps1 -Path apps/apple/Sources/Dashboard/Widgets
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+## iOS build + tests (iPhone 16 / iOS 26.5) =======================
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+** BUILD SUCCEEDED **
+IOS_BUILD_EXIT=0   (app + extensions + TeslaSyncTests + my 5 surface files compile; links Shared.xcframework)
+
+$ xcodebuild ... -only-testing:TeslaSyncTests/AutomationHistoryWidgetTests test   (my surface suite)
+	 Executed 23 tests, with 0 failures (0 unexpected) in 0.032 (0.045) seconds
+** TEST EXECUTE SUCCEEDED **
+IOS_MY_UNIT_EXIT=0   (all 23 AutomationHistoryWidgetTests pass: adapter, per-state, freshness, descriptor, a11y, diagnostics)
+
+$ xcodebuild ... build test   (FULL scheme: TeslaSyncTests + TeslaSyncUITests)
+IOS_FULL_EXIT=65   <-- BLOCKED (environment, not this surface). Evidence:
+    - Build succeeds; every executed unit test reports 0 failures.
+    - Individual UI tests/suites PASS warm, e.g.:
+        /tmp/ios-authui2.log:Test Suite 'AuthOnboardingUITests' passed at 2026-06-07 18:34:19.604.
+    - The test SESSION exit is poisoned at teardown by xcodebuild's diagnostic helper:
+        xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+      Root cause: active xcode-select dir = CommandLineTools (lacks simctl); xcodebuild's
+      IDETestOperationsObserver spawns 'xcrun simctl' without DEVELOPER_DIR -> kills/restarts the
+      multi-launch test session and marks it failed even though the tests pass. Fix requires
+      'sudo xcode-select -s /Applications/Xcode.app/...' (no passwordless sudo available).
+      This is the predecessor-documented blocker (HEAD: 'P9-0001 XCTest unit gate BLOCKED').
+
+## macOS build + tests ============================================
+$ xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' build test
+MAC_EXIT=70   <-- BLOCKED (environment, not this surface). Evidence:
+        TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+        TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+      The macOS app + widget extension entitlements (App Groups / Hardened Runtime) require a
+      development certificate; DEVELOPMENT_TEAM is empty and none is provisioned here.
+      (the predecessor 'macOS dev-cert' blocker).
+
+$ xcodebuild -scheme TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO   (compile-only proof)
+** BUILD SUCCEEDED **
+MAC_COMPILE_EXIT=0   (my surface compiles cleanly for macOS too -> cross-platform verified)
+
+## Deliverable (complete, no stubs) ===============================
+Source (apps/apple/Sources/Dashboard/Widgets/):
+  AutomationHistoryWidget.swift
+  AutomationHistoryWidgetDiagnostics.swift
+  AutomationHistoryWidgetModel.swift
+  AutomationHistoryWidgetProjection.swift
+  AutomationHistoryWidgetRegistry.swift
+     886 total
+Tests (apps/apple/Tests/Unit/Dashboard/):
+  AutomationHistoryWidgetTests.swift
+i18n: 18 keys added to apps/apple/Localization/Localizable.xcstrings (en translated; ar/he seeded).
+Registry: id=automation-history, category=automations, default 2x4, min 1x2, max 4x40 (parity w/ web registry/automations.ts).
+States rendered: loading / empty / error(retry) / stale / offline(cached) + compact(<=1 col) & full layouts.
+Telemetry: view.opened slug=AutomationHistoryWidget (P1/S11 seam).
+
+## Verdict ========================================================
+Surface COMPLETE and validated: iOS build OK, macOS compile OK, 23/23 unit tests pass,
+swiftlint(0) + swiftformat(0) + placeholder(0). The two xcodebuild 'build test' steps are
+BLOCKED by pre-existing, surface-unrelated environment limits (iOS: CommandLineTools-active /
+no-sudo simctl; macOS: missing dev certificate) — both documented by predecessor P9-0001.
+
+EXIT=65
+STATUS=BLOCKED

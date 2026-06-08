@@ -1,0 +1,158 @@
+=== P4 Shared surface 0224 RangeSlider (Apple) ===
+artifact: apps/apple/TeslaSync/shared-surfaces/RangeSlider.*
+web source (spec): web/src/components/ui/RangeSlider.tsx
+delegation: FORBIDDEN — all work performed directly (no sub-agents)
+date: 2026-06-08
+
+────────────────────────────────────────────────────────────────────────
+RUNNER CAPABILITY (platform evidence)
+────────────────────────────────────────────────────────────────────────
+swift                : Apple Swift 6.3.2
+swiftlint            : present (/opt/homebrew/bin/swiftlint)
+swiftformat          : present (/opt/homebrew/bin/swiftformat)
+xcodegen             : present (/opt/homebrew/bin/xcodegen)
+pwsh                 : present (/opt/homebrew/bin/pwsh)
+xcode-select -p      : /Library/Developer/CommandLineTools   (active dir = CLT)
+/Applications/Xcode.app : PRESENT
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -version
+                     : Xcode 26.5 (Build 17F42)
+SDKs                 : iphonesimulator26.5, macosx26.5
+simulator            : iPhone 16 (booted)  →  SwiftUI + Swift Charts + MapKit available
+
+Capability requirement (SwiftUI + Swift Charts + MapKit, iOS 18 / macOS 15 HIG)
+IS satisfied. (Web source uses no chart/map — Swift Charts/MapKit not needed here.)
+
+────────────────────────────────────────────────────────────────────────
+SURFACE-SCOPED VERIFICATION — the RangeSlider deliverable (ALL GREEN)
+────────────────────────────────────────────────────────────────────────
+Files (all match allowed glob RangeSlider.*, all <= swiftlint file_length 400):
+   RangeSlider.Model.swift     101  value / math / format (pure, Shared-free)
+   RangeSlider.Adapter.swift   181  config / adapter / strings / accessibility
+   RangeSlider.State.swift     132  view-state / provider seam / model / telemetry
+   RangeSlider.swift           191  RangeSlider control (dual-thumb parity port)
+   RangeSlider.Surface.swift   199  RangeSliderSurface (data-bound, all states)
+   RangeSlider.Previews.swift   99  #Preview gallery (8 previews, every state)
+   RangeSlider.Tests.swift     390  XCTest (math/adapter/model/view/a11y/telemetry)
+
+[1] iOS 18 simulator SDK compile (real Xcode 26.5, -D DEBUG → #Preview macros):
+    DEVELOPER_DIR=…Xcode… xcrun --sdk iphonesimulator swiftc -typecheck \
+      -swift-version 6 -target arm64-apple-ios18.0-simulator -D DEBUG \
+      <6 surface files + real Shared-free token/component deps>
+    → IOS_SDK_TYPECHECK_EXIT=0   PASS
+
+[2] macOS 15 SDK compile (real Xcode 26.5, -D DEBUG → #Preview macros):
+    DEVELOPER_DIR=…Xcode… xcrun --sdk macosx swiftc -typecheck \
+      -swift-version 6 -target arm64-apple-macos15 -D DEBUG <same set>
+    → MAC_SDK_TYPECHECK_EXIT=0   PASS
+
+[3] XCTest suite EXECUTED (real Xcode 26.5, SwiftPM, macOS host):
+    DEVELOPER_DIR=…Xcode… xcrun swift test   (RangeSlider.Tests.swift retargeted
+      to a package module that vendors the surface + real Shared-free deps)
+    → Executed 30 tests, with 0 failures (0 unexpected)   SWIFT_TEST_EXIT=0   PASS
+      Suites: RangeSliderMathTests(8) RangeSliderAdapterTests(7) RangeSliderModelTests(6)
+              RangeSliderViewTests(3)  RangeSliderContractTests(6)
+      Covers: cached→projection adapter, thumb-swap math, model state machine,
+              EVERY view-state renders (loading/loaded/empty/error/stale/offline +
+              degenerate domain), a11y thumb labels (interpolated + overrides),
+              i18n key namespacing, view.opened telemetry slug "RangeSlider".
+
+[4] swiftlint --strict (the 7 surface files):
+    swiftlint lint --strict --no-cache --config .swiftlint.yml RangeSlider.*
+    → Found 0 violations, 0 serious in 7 files   LINT_EXIT=0   PASS
+
+[5] swiftformat --lint (the surface dir):
+    swiftformat --lint TeslaSync/shared-surfaces/
+    → 0/7 files require formatting   FORMAT_EXIT=0   PASS
+
+[6] check-placeholders.ps1 (real scan of the surface files):
+    pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces
+    → PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0   PASS
+
+[7] (corroborating) CommandLineTools host-compile + runtime assertion harness:
+    swiftc -typecheck (no DEBUG) <surface + real deps>            → EXIT=0
+    executable runtime harness mirroring the XCTest assertions    → pass=55 fail=0  HARNESS_OK
+
+Net: the RangeSlider surface compiles on iOS 18 + macOS 15 and its full test
+suite passes (30/30) on the real Apple toolchain. No stubs / no placeholder /
+no skeleton-only (rule 4 honoured). Parity items reproduced from the web source:
+dual-thumb value tuple normalised low<=high, thumb-swap (settingLow/High),
+formatValue, step snapping, showLabel, disabled, degenerate-range guard,
+per-thumb a11y names slider.thumbMin / slider.thumbMax with {label} interpolation
+and caller overrides, adjustable actions (VoiceOver/keyboard). States loading /
+loaded / empty / error / stale / offline all render. Telemetry view.opened slug
+"RangeSlider". Tokens via Color.TS/Font.TS/TSSpacing/TSRadius (no ported Tailwind).
+
+────────────────────────────────────────────────────────────────────────
+LITERAL GATE COMMANDS (as written in the prompt) — status in THIS snapshot
+────────────────────────────────────────────────────────────────────────
+xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcodebuild -scheme TeslaSync-macOS build test
+    → CANNOT be driven to EXIT=0 in this repo snapshot. NOT a platform-capability
+      gap (Xcode 26.5 is present) — the whole-app scheme cannot compile/verify
+      this surface here for two reasons, BOTH outside this prompt's allowed files
+      (allowed: RangeSlider.* + this log):
+
+      (a) project wiring: `shared-surfaces` is NOT listed under the app targets'
+          `sources:` in apps/apple/project.yml. Proven concretely:
+            xcodegen generate            → exit 0
+            grep -c RangeSlider …pbxproj → 0 references (vs DrivetrainHealthWidget = 6)
+          So the scheme build excludes every RangeSlider file; the test bundle
+          (Tests/Unit) likewise does not include RangeSlider.Tests.swift.
+          Editing project.yml / .swiftlint.yml `included:` is OUT OF SCOPE for
+          this prompt (P4-core / harness responsibility per "Depends on: P4 core").
+
+      (b) KMP prerequisite: the scheme pre-action builds Shared.xcframework via
+          apps/shared/gradlew :core:assembleSharedXCFramework (Kotlin/Native,
+          "runs on CI" per Scripts/build-shared-xcframework.sh). Frameworks/ holds
+          only .gitkeep and `gradle` is not on PATH — the framework is not prebuilt.
+
+    IOS_EXIT=BLOCKED   (xcodebuild -scheme TeslaSync … build test — see (a)+(b))
+    MAC_EXIT=BLOCKED   (xcodebuild -scheme TeslaSync-macOS build test — see (a)+(b))
+
+swiftlint --strict        (config-driven, global)
+    → GLOBAL_LINT_EXIT=2 — PRE-EXISTING, unrelated:
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19
+        Function Body Length Violation (function_body_length).
+      The config `included:` does not list shared-surfaces, so this global run
+      does not even lint the new files (they are verified GREEN in step [4]).
+
+swiftformat --lint apps/apple   (global)
+    → GLOBAL_FORMAT_EXIT=1 — PRE-EXISTING, unrelated:
+      TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes)
+      1/1920 files require formatting. The new files are GREEN in step [5].
+
+check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/RangeSlider
+    → EXIT=0 (the literal path is the RangeSlider.* glob stem, not a directory, so
+      this resolves to an empty scan; the meaningful scan of the real files is
+      step [6] = PLACEHOLDER_COUNT=0).
+
+────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT
+────────────────────────────────────────────────────────────────────────
+1 No red-as-green   : honoured — the literal scheme gate is reported BLOCKED, not DONE.
+2 No scope narrowing: honoured — full surface + all states + tests shipped.
+3 No skip-and-assume: honoured — every state implemented and test-exercised.
+4 No stubs as final : honoured — production control + data-bound surface, 0 placeholders.
+5 No parity shortcut: honoured — data/composition/states/i18n keys from the web source.
+6 No delegation     : honoured — performed directly.
+7 No predecessor bypass: n/a / honoured.
+8 No commit on red  : the surface itself is GREEN on every applicable check; the commit
+                      persists the completed artifact + this BLOCKED log as evidence.
+9 No silent drift   : honoured — blockers attributed precisely; i18n/catalog note below.
+10 EXIT + STATUS     : present below.
+
+Note (i18n catalog, P1/S10): the new keys slider.thumbMin / slider.thumbMax (web
+verbatim) and the slider.range.* chrome keys are referenced with inline dev-language
+defaultValue / LocalizedStringKey fallbacks. Registering them in
+Localization/Localizable.xcstrings is owned by P1/S10 and is OUTSIDE this prompt's
+allowed files (matching the existing convention where component keys such as
+range.lowerBound and error.queryTitle ship absent from the catalog and fall back).
+
+TO FLIP THIS GATE TO DONE (no RangeSlider code change required): on a runner where
+(1) apps/apple/project.yml app targets include `- path: TeslaSync/shared-surfaces`,
+(2) .swiftlint.yml `included:` adds shared-surfaces, and
+(3) Shared.xcframework is prebuilt (Gradle KMP), then re-run the two xcodebuild
+scheme commands — the surface already compiles (steps 1–2) and tests pass (step 3).
+
+EXIT=1
+STATUS=BLOCKED

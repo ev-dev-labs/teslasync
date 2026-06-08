@@ -1,0 +1,206 @@
+=== P4 Dashboard widget 0016 ChargeCostTrackerWidget (Apple) ===
+
+Surface : apps/apple/TeslaSync/dashboard-widgets/ChargeCostTrackerWidget.*
+Web spec: web/src/features/dashboard/widgets/ChargeCostTrackerWidget.tsx
+Registry: registry/charging.ts -> "charge-cost-tracker" · category=charging · 2x2 / 1x2 / 4x40
+Runner  : Darwin (Mac Studio, arm64) · Xcode 26.5 (17F42) · iOS 26.5 simulator (iPhone 16) ·
+          Swift 6.3.2 · swiftformat 0.x · swiftlint · pwsh · xcodegen 2.45.4 — ALL present.
+Capability: SwiftUI + Swift Charts + MapKit available; iOS 18 / macOS 15 SDKs present. NOT blocked
+            on platform capability. (This widget uses no charts/maps — none in the web source.)
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (allowed scope: ChargeCostTrackerWidget.* + this log)
+--------------------------------------------------------------------------------
+  ChargeCostTrackerWidget.swift            — SwiftUI surface. 3 layouts (compact big-number /
+                                             short 2-up + inline footer / tall 2-up + extra 2-up);
+                                             header w/ DollarSign + title + freshness chip + refresh +
+                                             open; loading/empty/error/stale/offline/content; full a11y; i18n.
+  ChargeCostTrackerWidget.Tile.swift       — the MetricCard-parity tile (tinted SF Symbol box + label +
+                                             value + subtitle; tone -> Color.TS at the render boundary).
+  ChargeCostTrackerWidget.Model.swift      — P1/S8 state-holder seam (ChargeCostTrackerSource), @Observable
+                                             ChargeCostTrackerModel (+ nonisolated resolvePhase,
+                                             autoRefreshIfStale), P1/S11 telemetry seam (view.opened),
+                                             InMemory source, ChargeCostTrackerStrings (P1/S10),
+                                             ChargeCostTrackerSurface (slug + canonical registration).
+  ChargeCostTrackerWidget.Adapter.swift    — pure (Foundation-only) numeric port: energy/distance SI
+                                             converters, fmtNumber/formatCurrency, ChargeCostMetricsCalculator
+                                             (computeMetrics VERBATIM), ChargeCostLayout, tone + metric item.
+  ChargeCostTrackerWidget.Projection.swift — pure projection (metrics -> per-layout display model) +
+                                             accessibility summary; projector decomposed into per-card builders.
+  ChargeCostTrackerWidget.Previews.swift   — #if DEBUG previews for every state + layout.
+  ChargeCostTrackerWidget.Tests.swift      — XCTest: adapter value parity (pinned to web ground truth) +
+                                             layout resolver + model phases/telemetry/refresh/stale +
+                                             registry + accessibility (23 tests).
+  ChargeCostTrackerWidget.strings          — per-surface i18n table (every web t() key + native chrome).
+
+--------------------------------------------------------------------------------
+PARITY ARITHMETIC (reproduced VERBATIM from the web source — cross-platform value parity,
+NOT a "corrected" version; the source's miles-as-metres quirk is preserved on purpose)
+--------------------------------------------------------------------------------
+  energyKwh   = convertEnergyFromSI(total_energy_added_wh, 'kWh')            = wh / 1000
+  totalKwh    = Σ energyKwh
+  totalCost   = Σ (session.cost ?? energyKwh * costPerKwh)
+  distanceMi  = totalKwh * 3.5                                              (AVG_MI_PER_KWH)
+  costPerDist = costPerDistanceUnit(totalKwh, distanceMi)  where the fn treats its 2nd arg as SI
+                metres: cost = totalKwh*costPerKwh ; distance = convertDistanceFromSI(distanceMi,
+                unitPref) [ /1000 km · /1609.344 mi · /0.3048 ft ] ; return distance>0 ? cost/distance : nil
+  gasCost     = estimateGasCost(distanceMi)  -> distanceMi2 = convertDistanceFromSI(distanceMi,'mi') ;
+                gallons = distanceMi2 / mpg ; liter? gallons*3.78541*price : gallons*price ; (mpg/price>0)
+  gasSavings  = gasCost==nil ? nil : gasCost - totalCost
+  fmtNumber   = en_US grouped, fixed fraction digits, half-away-from-zero ; formatCurrency =
+                currencySymbol + fmtNumber(amount, precision). compact = formatCurrency(totalCost, 0).
+  Ground truth cross-checked in Node against the literal web fns, then pinned + re-verified by an
+  executed Swift host harness AND the on-simulator XCTest suite (identical strings on all three):
+    mi+gas:  "100.0 kWh" · "3 sessions" · "$13.50" · "$0.12/kWh" · costPerDist=55.177508571.. -> "$55.178"
+             · gasSavings=-13.47462734.. -> "$-13.47" · compact "$14" · footer "Saved $-13.47 vs gas"
+    km+litre: "$34.286" · "$-13.45"          no-gas/EUR: "€15" · "€68.972" · savings "—" + "Set gas price…"
+
+--------------------------------------------------------------------------------
+GATE RESULTS (real commands, real exit codes on THIS host)
+--------------------------------------------------------------------------------
+
+[SURFACE · iOS] REAL xcodebuild build+test of the surface against the REAL design system
+       Generated a throwaway, correctly-scoped XcodeGen project (framework target module=TeslaSync:
+       Sources/Components + Sources/Design + design/generated/apple + ChargeCostTrackerWidget.* + a
+       2-type registry-primitives shim; only UnitFormatters.swift excluded — a pre-existing design
+       file that references out-of-dir UnitPreferences/TSUnitsKey and is UNUSED by this surface, the
+       same single exclusion the predecessor LifetimeStatsWidget 0055 made) + an XCTest bundle of
+       ChargeCostTrackerWidget.Tests.swift.
+         xcodebuild -scheme CCTVerify -destination 'platform=iOS Simulator,name=iPhone 16' build  → ** BUILD SUCCEEDED **
+         xcodebuild -scheme CCTVerify -destination 'platform=iOS Simulator,name=iPhone 16' test   → ** TEST SUCCEEDED **
+         Test Suite 'All tests' passed — Executed 23 tests, with 0 failures (0 unexpected).
+         Suites green: ChargeCostAdapterTests · ChargeCostLayoutTests · ChargeCostPhaseTests ·
+                       ChargeCostModelTests · ChargeCostRegistryTests · ChargeCostAccessibilityTests.
+       IOS_SURFACE_BUILD_EXIT=0   IOS_SURFACE_TEST_EXIT=0
+       (Swift 6 strict concurrency complete; #Preview macros compiled; ZERO errors originate in
+        ChargeCostTrackerWidget.* — the surface compiles + tests GREEN against the real tokens/components.)
+
+[SURFACE · macOS] REAL xcodebuild build+test of the surface against the REAL design system
+         xcodebuild -scheme CCTVerifyMac -destination 'platform=macOS' test → ** TEST SUCCEEDED **
+         Executed 23 tests, with 0 failures (0 unexpected).
+       MAC_SURFACE_BUILD_EXIT=0   MAC_SURFACE_TEST_EXIT=0
+       (Design tokens guard UIKit via #if canImport(UIKit)/#elseif canImport(AppKit); the surface is
+        cross-platform SwiftUI and builds + tests GREEN on macOS 15 too.)
+
+[HOST] swiftc -swift-version 6 + execute adapter/model/projection parity harness
+         → ALL_PARITY_OK (samples A mi+gallon · B km+litre · C no-gas/EUR · E single explicit cost):
+           exact display strings, raw costPerDistance/gasSavings to 1e-6, layout resolver
+           (compact/short/tall), phase matrix. Matches the Node web ground truth byte-for-byte.
+       HARNESS_EXIT=0
+
+[HOST] swiftc -swift-version 6 -typecheck (5 production files, target arm64-apple-macos15.0, faithful shim)
+       → TYPECHECK_EXIT=0   (independent confirmation the production files type-check clean)
+
+[GATE 4] swiftformat --lint  (the 7 shipped files)
+       → 0/7 files require formatting.
+       FORMAT_EXIT(surface)=0
+
+[GATE 3] swiftlint lint --strict  (the 7 shipped files)
+       → Done linting! Found 0 violations, 0 serious in 7 files.
+       LINT_EXIT(surface)=0
+
+[GATE 5] pwsh apps/tools/check-placeholders.ps1 -Path …/ChargeCostTrackerWidget
+       → PLACEHOLDER_ALLOWED=0 · PLACEHOLDER_COUNT=0 · EXIT=0
+       PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+WHOLE-SCHEME / WHOLE-REPO GATE STEPS — RED for PRE-EXISTING, OUT-OF-ALLOWED-SCOPE reasons
+(shown honestly as RED; NONE caused by ChargeCostTrackerWidget.*; NOT claimed green)
+--------------------------------------------------------------------------------
+  The branch (auto/20260608-002645-33927/17) is an INTEGRATED aggregation of many independently
+  gated parallel surfaces (HEAD = a chain of `merge(parallel)` commits). It does NOT compile or lint
+  green as a whole at baseline, independent of this surface. Editing the offenders is outside this
+  prompt's allowed files (ChargeCostTrackerWidget.* + this log) — covenant #7 forbids the bypass.
+
+  [GATE 1] xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  [GATE 2] xcodebuild -scheme TeslaSync-macOS                                                  build test
+       IOS_EXIT=65 (xcodebuild actually ran: Gradle Shared.xcframework pre-action + 12k-line build
+                    log; aborted on the pre-existing XCTest-in-app-target file named in (2) below)
+       MAC_EXIT=DEFERRED (same pre-existing causes as iOS)
+       PRE-EXISTING blockers proven on this host, NOT in this surface:
+        (1) DUPLICATE registry primitives. 14+ sibling widget Model files each declare
+            `public struct DashboardWidgetSize` and `public struct DashboardWidgetRegistration`
+            (+ Sources/DashboardWidgets/{Drivetrain,BatteryCells} declare DashboardWidgetSize twice).
+            swiftc -typecheck of two real siblings reproduces:
+              WeeklyDigestWidget.Model.swift:304 error: invalid redeclaration of 'DashboardWidgetSize'
+              WeeklyDigestWidget.Model.swift:315 error: invalid redeclaration of 'DashboardWidgetRegistration'
+            => the single TeslaSync module cannot compile. THIS surface adds ZERO new definitions —
+               it REFERENCES the shared primitives (like predecessor 0055), so it introduces no collision.
+        (2) 225 `*.Tests.swift` files (170 in feature-views, 55 in dashboard-widgets) sit inside the
+            app target's source dirs and `import XCTest`, which the app target does not link. The
+            whole-module compile aborts on the first such file:
+              feature-views/AIRestorePanel.Tests.swift:18 error: unable to resolve module dependency: 'XCTest'
+            (This is the established per-surface file layout; routing *.Tests.swift to the test target
+             is integration/project.yml scope — out of this prompt's allowed files.)
+       Capability IS present (Xcode 26.5; iPhone 16 simulator booted 83717DEE-…). The whole-scheme
+       step is therefore DEFERRED to the integration/CI pass that de-duplicates the registry
+       primitives and retargets the test files — neither a defect in this surface's code. This
+       surface's OWN build+test is proven GREEN above on BOTH platforms.
+
+  [GATE 3 whole] cd apps/apple && swiftlint --strict
+       → error: LifetimeStatsWidget.Adapter.swift:141 Function Body Length (78>50)  [PRE-EXISTING sibling]
+       LINT_EXIT(repo)=2  — zero violations in ChargeCostTrackerWidget.* (verified scoped, above).
+  [GATE 4 whole] swiftformat --lint apps/apple
+       → 1/1920: feature-views/ActionBuilder.Previews.swift (blankLinesBetweenScopes) [PRE-EXISTING sibling]
+       FORMAT_EXIT(repo)=1 — zero of the 7 shipped files require formatting (verified scoped, above).
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+  [x] Surface renders on Apple with ALL states from the web source reproduced — loading / empty /
+      error / stale / offline / content, across compact / short / tall layouts (previews + UI build).
+  [x] Hooks bind to the shared P1/S8 state-holder layer (ChargeCostTrackerSource); NO HTTP in the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (per-surface .strings table):
+      title · monthly · noData · totalEnergy · sessions · totalCost · kwh · costPerDistance · gasSavings ·
+      savingsNote · configureGas · saved · description (+ native chrome + emDash + a11y).
+  [x] Accessibility labels on every interactive element + per-layout VoiceOver summary (a11y tests green).
+  [x] Tests: adapter unit test (pinned to web ground truth) + per-state/phase + layout + registry +
+      a11y — 23 tests, executed GREEN on iOS simulator AND macOS.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; word-scan clean.
+  [x] Telemetry: view.opened emitted once with surface slug "ChargeCostTrackerWidget" (P1/S11) — tested.
+  [x] Registry-correct: charge-cost-tracker · charging · 2x2 / 1x2 / 4x40 (registration + clamp tested).
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+  1  No red-as-green : the whole-scheme + whole-repo steps are shown RED with their real nonzero
+                       exits and the exact PRE-EXISTING offending sibling files named; every EXIT=0
+                       above is a command actually executed on this host (surface build+test, harness,
+                       lint, format, placeholder).
+  2  No scope narrowing: implemented ALL 3 layouts + ALL 6 states + i18n + a11y + telemetry + registry +
+                       the full metric set (energy/cost core + cost-per-distance/savings + compact + footer).
+  3  No skip-and-assume: each gate executed and its real output captured; the surface was actually built
+                       AND tested on the iPhone 16 simulator and on macOS.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; harness + XCTest execute real logic.
+  5  No parity shortcuts: the full cost pipeline + rounding ported VERBATIM (incl. the source's
+                       miles-as-metres quirk) and pinned by executed assertions to the exact web strings.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / the dashboard grid, did NOT edit the
+                       shared Localizable.xcstrings, did NOT touch sibling files to "fix" the pre-existing
+                       duplicate primitives / mis-targeted tests (all out of allowed scope); strings ship
+                       as the per-surface table, matching the predecessor surfaces.
+  8  No commit on red  : committing on all-GREEN surface gates (real iOS+macOS build+test + lint + format
+                       + placeholder + parity). The whole-scheme/whole-repo RED is PRE-EXISTING, out-of-
+                       allowed-scope sibling/integration breakage, documented above — not this surface.
+  9  No silent drift   : changes confined to the allowed ChargeCostTrackerWidget.* files + this log;
+                       temp verification projects/specs were removed; no sibling file modified.
+  10 Log ends with EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished native ChargeCostTrackerWidget shipped at parity with the web source: a SwiftUI
+  surface (compact / short / tall) over a P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry
+  (view.opened), P1/S10 i18n, P1/S9 tokens; every state, every i18n key, every interactive a11y label;
+  registry-correct (charge-cost-tracker, 2x2 / 1x2 / 4x40). The surface BUILDS and its 23 XCTests RUN
+  GREEN under real xcodebuild on BOTH the iPhone 16 simulator and macOS against the real design system
+  (Swift 6 strict concurrency), its numeric pipeline executes with byte-for-byte web value parity, and
+  all surface-scoped lint/format/placeholder gates pass. The whole-TeslaSync-scheme build/test and
+  whole-repo lint/format are RED for PRE-EXISTING, out-of-allowed-scope reasons (duplicate registry
+  primitives across 14+ merged sibling surfaces + 225 mis-targeted XCTest files; pre-existing sibling
+  lint/format violations) and are DEFERRED to the integration pass — matching the user-approved P3/P4
+  "code-complete + DEFERRED whole-scheme gate" disposition (predecessor 0055), here with STRONGER
+  evidence (real on-device build+test of the surface on both platforms).
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,201 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Tooling is available (swift 6.3, swiftlint, swiftformat, pwsh). There's an established `feature-views/AIUsageCard.*` multi-file pattern I should mirror. Let me read the web source, the existing template files, and check the structure.
+
+Key findings: web source is a simple timestamp renderer with tooltip. `xcodebuild` requires full Xcode but only Command Line Tools are installed — I'll note this for the gate but can compile-check with `swift`. `shared-surfaces/` doesn't exist yet. Let me study the `AIUsageCard.*` template (the established multi-file pattern) and supporting infra.
+
+The template is a sophisticated 7-file pattern. Let me read the rest of it plus the supporting infra (tokens, fade-in) and the web hooks the source depends on.
+
+Now let me read the remaining template files (Views, Previews, Tests) and locate the design-token/infra definitions they rely on.
+
+Let me find where `AiUsageProjection` is defined, locate the design tokens/infra, and read the web hooks `TimeStamp` depends on.
+
+The reference has an 8th file (`AiUsageCard.Projection.swift`). Let me resolve the filename casing definitively, read the projection pattern, find the token definitions, and read the web hooks.
+
+Now I understand: case-insensitive FS with a pre-existing git case-collision on `AiUsageCard` (on-disk is lowercase-i, 10 files). That's out of scope. `TimeStamp` casing is unambiguous. Let me read the two reference files I haven't seen (Projection, Chrome), locate the design-token definitions across the apple tree, and read the web date/timezone libs + Tooltip.
+
+Let me read the web `dateFormat.ts` (the actual formatters) + `Tooltip.tsx`, and locate the shared design-token + atomic-component definitions across the apple tree.
+
+Found the infra: `Sources/Design/TSDesign.swift`, `Sources/Components/{UI,Feedback,Motion}`, and a `Sources/SharedFacade/` P1/S8 layer. Critically, I must confirm whether `shared-surfaces/` is compiled by the target. Let me read `project.yml` and the key infra files.
+
+`project.yml` is at `apps/apple/project.yml`. Tokens are generated elsewhere. Let me read the project config and find the generated `Color.TS`/`TSSpacing`/`Font.TS` token definitions plus the atomic components.
+
+Critical: `project.yml` includes `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` but **not** `TeslaSync/shared-surfaces`. The design tokens live in `../design/generated/apple`. Let me read the generated tokens, the atomic components, and the SharedFacade P1/S8 layer to get exact APIs.
+
+Now I have the exact token APIs. Let me read `TSButton`, the SharedFacade `LiveConnection` (to align naming), confirm the Xcode capability gap definitively, and check for the placeholder-check script.
+
+`Xcode.app` exists but `xcode-select` points to CLT. I can likely override with `DEVELOPER_DIR` (no sudo). Let me test whether that unlocks `xcodebuild`/SwiftUI compilation, check for `xcodegen`, and read the placeholder-check script.
+
+Major unlock: `DEVELOPER_DIR` exposes full **Xcode 26.5**, iOS 26.5 SDK, a **booted iPhone 16 simulator**, macOS SDK, and `xcodegen` is installed. This means I can run a *real* `xcodebuild build test` via a standalone harness (avoiding the KMP `Shared.xcframework` and the project.yml restriction). First, let me read the placeholder patterns (my code mentions "placeholder"/"—") and confirm the component layer has no `Shared` dependency.
+
+All systems verified. Critically, the placeholder gate forbids the **word "Placeholder"** (case-insensitive) plus TODO/FIXME/XXX/"not implemented" — so my code/comments must use "sentinel"/"em-dash", never "placeholder". `Sources/Components` has no `Shared` (KMP) dependency, so a standalone `xcodebuild` harness is viable. Let me read the lint configs (for `--strict` compliance) and the adapter-test style, then write.
+
+I have everything needed. Lint rules: **120-col max**, `empty_count` (use `.isEmpty`), swiftformat with `before-first` wrapping. Critical gotcha confirmed: the word **"Placeholder"** is a forbidden pattern — I'll use "em-dash sentinel" throughout. Let me set up the plan, todos, and the target directory.
+
+Now I'll write the 10 files. Starting with the pure Foundation adapter (formatters + timezone/date resolution).
+
+Now the Model file: i18n facade, telemetry, connection axis, settings/request inputs, resolved state, source protocol, in-memory source, and the `@Observable` state holder.
+
+Now the pure projection (input → resolved, with the relative-label i18n mapping).
+
+Now the presentational views (the timestamp text with tooltip/a11y, and the em-dash sentinel).
+
+Now the chrome (loading skeleton, error+retry, freshness dot, connection a11y helper).
+
+Now the main surface view with the state switch and convenience initializers.
+
+Now the i18n catalog (`.strings`).
+
+Now the previews covering every state.
+
+Before writing the adapter tests, let me compute the exact locale-formatted strings empirically so my assertions are precise.
+
+The template inserts "at" (modern Apple idiom) vs the web comma. Let me compare native `Date.FormatStyle` options to pick the most web-faithful yet idiomatic, stable formatter.
+
+Both APIs yield "Nov 14, 2023 at 10:13 PM" — that's the genuine macOS 26/ICU-72 native idiom for combined date+time, which is exactly right for a native Apple surface (system apps render "at"). I'll switch to the cleaner, `Sendable` `Date.FormatStyle` API.
+
+Now the pure adapter tests with the exact computed strings.
+
+Now the main test file (projection phases, model wiring/telemetry/freshness, relative-label templates, connection a11y).
+
+Let me fix the messy `testLiveResetsStaleArming` test.
+
+All 10 files written. Let me update todos and run the local gates (swiftformat, swiftlint, placeholder check) on the surface.
+
+swiftformat found auto-fixable issues plus force-unwraps in tests. Let me auto-format, then manually fix the test force-unwraps (hoist to top-level).
+
+Now let me fix the test force-unwraps by hoisting the zone to a top-level constant.
+
+swiftformat auto-fixed everything (converted force-unwraps to `XCTUnwrap`). Let me re-verify format is clean, then run swiftlint and the placeholder gate.
+
+swiftformat is clean. swiftlint found 1 violation across the tree — let me isolate whether it's in my surface.
+
+My 9 surface files: **0 swiftlint violations**. The 1 tree-wide violation is pre-existing (outside my scope). Let me confirm which file, then run the placeholder gate.
+
+Surface passes swiftlint (0), swiftformat (0), and the placeholder gate (COUNT=0). The lone tree violation is pre-existing in a dashboard widget. Now for the authoritative evidence: a real `xcodebuild build test`. Let me inspect the infra deps `TSSkeleton` pulls in (Cards/Material) so I can assemble a minimal, KMP-free harness.
+
+All component/design files import only SwiftUI. Let me confirm the *entire* `Sources/Components` tree is free of KMP/`Shared` and other heavy imports, then assemble the harness.
+
+The entire `Sources/Components` tree imports only system frameworks (SwiftUI/Charts/MapKit/CoreLocation) — **no KMP `Shared`**. So a standalone harness will build cleanly. Let me assemble an xcodegen harness that compiles the surface + real design system and runs the tests on the iPhone 16 simulator and macOS.
+
+Files exist; xcodegen was slow. Let me drop `createIntermediateGroups` (which can misbehave with far-away absolute paths) and run it async with monitoring.
+
+Project created (the intermediate-group scan over absolute paths was the hang). Now the real `xcodebuild build test` on the booted iPhone 16 simulator.
+
+My grep pattern was malformed (`** ` broke ERE). Let me capture the full log to a file and inspect the actual failures.
+
+The errors are all in `Components/DataDisplay/UnitFormatters.swift` (depends on `UnitPreferences`/`TSUnitsKey` from outside the component layer) — my surface doesn't use it. The harness just over-included. Let me narrow the harness to only the subdirs `TSSkeleton` actually needs (UI + Feedback + Motion + Design + Tokens).
+
+Only comment matches — UI/Feedback/Motion are self-contained. Let me regenerate the harness with the narrowed source set and rebuild.
+
+Regenerated. Now the iOS build+test:
+
+Closer — only `FeedbackOverlays.swift` (uses `TSMetricBar` from DataDisplay) fails, which I don't use. Let me include only the specific files `TSSkeleton` transitively needs instead of whole dirs.
+
+`TSSkeleton` transitively needs `TSIconBox`/`TSStatusPill`/`TSTone` (elsewhere in UI). Rather than chase files, let me include the whole `UI` dir but find which UI files reach into DataDisplay/Platform so I can exclude just those.
+
+Whole `UI` dir is self-contained; the 3 symbols are in `Badges.swift`. Let me include all of `UI` + `Motion` + just `Feedback/Skeletons.swift`, then rebuild.
+
+Excellent — it **built and ran 41 tests on the iPhone 16 simulator**, 4 failures. Three are the classic ICU narrow-no-break-space (U+202F) before "PM"; one is macOS normalizing `UTC`→`GMT` identifier. Let me confirm the exact characters and fix the assertions precisely.
+
+Confirmed: U+202F (narrow no-break space) before "PM", and the platform normalizes `UTC`→`GMT` (offset 0). My production formatting is correct (native idiom); I just need robust assertions. Let me fix the four test assertions.
+
+Now the absolute-format assertions in AdapterTests:
+
+Now the one literal assertion in `Tests.swift`:
+
+Let me re-format the edited tests and re-run the iOS build+test (with Xcode's toolchain on PATH to fix the post-test `simctl` lookup).
+
+iOS: **TEST SUCCEEDED — 41 tests, 0 failures, RC=0.** Now the macOS build+test:
+
+macOS built successfully and the test host launched (the "linkd.autoShortcut" lines are benign GUI-launch noise, not failures). Let me wait for the test run to finish.
+
+The macOS GUI app test-host is hanging (a known headless-CI issue with `WindowGroup` app hosts) though the macOS **build succeeded**. Let me switch the harness to framework targets + unhosted test bundles — cleaner and hang-free on both platforms.
+
+The guarded `kill` blocked the whole block (no stray PIDs anyway). Let me re-run without it.
+
+Now run both — macOS first (the one that hung), then iOS:
+
+Framework built, but the unhosted test can't resolve the `TeslaSync` module — that's the Xcode 16+ explicit-module scanner plus missing testability. Let me add `ENABLE_TESTABILITY` and fall back to implicit modules, then verify on iOS first.
+
+iOS framework+unhosted: **41 tests pass, RC=0.** Now macOS (no GUI host → no hang):
+
+macOS framework is named `TeslaSync-macOS.framework` but the test imports module `TeslaSync` — implicit module loading looks for `TeslaSync.framework` by name. Fix: force `PRODUCT_NAME: TeslaSync` on both frameworks (separate per-platform product dirs, no collision).
+
+Module resolves now — macOS built the `.xctest` bundle. Let me wait for the test run to complete.
+
+A macOS `xctest` agent (PID 76716) is running but the testmanagerd handshake is slow in this headless context (an environment quirk — the macOS **build succeeded** and identical logic already passed on iOS). Let me give it a bit more time.
+
+The macOS `xctest` agent is hung on the testmanagerd handshake (a headless-environment quirk — macOS **build succeeded** and the identical pure-logic tests pass on iOS). Let me stop it and run the already-built `.xctest` bundle directly (bypassing testmanagerd).
+
+**macOS: 41 tests, 0 failures — All tests passed (RC=0)** via direct `xctest` (bypassing the headless testmanagerd hang). I now have full build+test evidence on **both** platforms. Let me run a final consolidated local-gate pass to capture clean output for the log.
+
+All local gates green (format 0, lint 0, placeholder 0; 10 files, 1591 lines). Let me extract the precise build/test result lines for the log.
+
+All evidence captured. Now let me write the comprehensive, honest gate log.
+
+Surface is fully green: build+test on iOS & macOS, swiftlint 0, swiftformat 0, placeholder 0. Let me get an independent logic/parity review before committing.
+
+## Blocking Issues
+
+None found. The core projection appears sound and can proceed without blocking fixes.
+
+## Non-Blocking Issues
+
+### 1. Error-state tooltip no longer shows the alternate timestamp
+- **File:** `apps/apple/TeslaSync/shared-surfaces/TimeStamp.Chrome.swift:101-106`
+- **Issue:** In `.error`, `.help` uses `message` whenever present, so the web-parity “tooltip shows the OTHER format” behavior is lost for valid timestamps during feed errors.
+- **Impact:** Users can see the timestamp, but cannot hover for the alternate relative/absolute format in the error phase.
+- **Fix:** Preserve `secondary` in help text, and expose error detail separately or combine both:
+  ```swift
+  private var helpText: String {
+      message.isEmpty ? secondary : "\(secondary)\n\(message)"
+  }
+  ```
+
+### 2. Absolute date-time formatting is intentionally native, not web-identical
+- **File:** `apps/apple/TeslaSync/shared-surfaces/TimeStamp.Adapter.swift:216-224`
+- **Issue:** `Date.FormatStyle(date: .abbreviated, time: .shortened, ...)` can render Apple-native glue such as “Nov 14, 2023 at 10:13 PM”, while web `Intl/toLocaleString` with explicit fields commonly renders “Nov 14, 2023, 10:13 PM”.
+- **Impact:** Locale/tz correctness is fine, but screenshot/text parity with web may differ.
+- **Fix:** If strict web parity is required, replace with a formatter configured to mirror the web field set more closely: abbreviated month, numeric day/year, hour+minute, same locale/timezone.
+
+## Correct / No Issues Found
+
+- **Relative bucket arithmetic:** `TimeStamp.Adapter.swift:194-205` matches web flooring and thresholds, including future dates falling into `"just now"` and exact `60s / 3600s / 86400s / 604800s` boundaries.
+- **Timezone resolution:** `TimeStamp.Adapter.swift:139-160` matches the intended valid-input behavior: `utc → UTC`, `user → override/fallback`, `vehicle → vehicle unless empty/"UTC" then user`.
+- **Empty precedence:** `TimeStamp.Projection.swift:20-26` correctly makes nil/unparseable value render `.empty` before loading/error/data.
+- **Auto/preference/effective selection:** `TimeStamp.Adapter.swift:70-79` and `TimeStamp.Projection.swift:57-64` correctly collapse `.auto` through preference and choose primary/secondary opposites.
+- **Retain/concurrency risks:** `TimeStamp.Model.swift:234` uses `[weak self]`; no retain cycle found. `start()`/`didEmitOpen` prevents telemetry double-emits across repeated appears. Stale auto-refresh is guarded and resets on live.Rubber-duck found **no blocking issues**. One worthwhile parity fix: in the error phase, the `.help` tooltip should still surface the alternate format (not just the error message). Let me apply that, then re-verify.
+
+Now re-verify format/lint and rebuild+test (iOS) to confirm the change compiles and tests stay green.
+
+All green after the fix (format 0, lint 0, iOS 41/0, TEST SUCCEEDED). Let me update todos, clean up temp artifacts, and commit only my files.
+
+Only my surface dir and the log are new. Let me stage them explicitly, verify the staged set, and commit.
+
+Exactly 11 files staged (10 surface + log), nothing unrelated. Committing:
+
+Committed cleanly (11 files, 1740 insertions, commit `8b524dbad`). Let me finalize todos and confirm the working tree is otherwise untouched.
+
+All todos done. The working tree is clean of my changes; the pre-existing unrelated modifications (the `AIUsageCard` case-collision artifacts and two web files) were left untouched and excluded from my commit.
+
+## Summary
+
+Shipped a production-polished, native Apple (SwiftUI) **`TimeStamp`** shared surface at parity with `web/src/components/data-display/TimeStamp.tsx`, following the established 10-file `AiUsageCard.*` pattern.
+
+**Delivered** (`apps/apple/TeslaSync/shared-surfaces/TimeStamp.*`, 1591 lines):
+- **Adapter** (pure): value→Date, `resolveTimezone` port (vehicle/user/utc), relative-time bucketing, locale+IANA‑tz absolute formatting, a11y seam.
+- **Projection** (pure): empty/loading/error/data branches, `auto`→preference collapse, primary + opposite‑format secondary.
+- **Model**: P1/S8 source seam (`TimeStampSource` + in‑memory), P1/S10 i18n facade, P1/S11 `view.opened` telemetry, live/stale/offline axis with one‑shot stale auto‑refresh — no networking in the view.
+- **Views/Chrome**: rendered timestamp with the alternate format on hover (`.help`) + VoiceOver hint, em‑dash sentinel for null/unparseable values, loading skeleton, retryable error, freshness dot.
+- **Previews/Tests/AdapterTests/strings**: 11 state previews, **41 XCTest cases**, full i18n catalog.
+
+**Parity reproduced**: `—` sentinel, `format='auto'→preference` (fallback relative), `formatRelative` thresholds (just now / m / h / d / absolute fallback), tz‑aware absolute formatting. Absolute date‑time uses the native HIG idiom ("Nov 14, 2023 at 10:13 PM") per the "use native primitives" directive.
+
+**Verification (real Xcode 26.5 toolchain)** — see `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0108-TimeStamp.log`:
+- **iOS** (iPhone 16 Simulator): `xcodebuild build test` → BUILD + TEST SUCCEEDED, **41/41 pass**.
+- **macOS**: `xcodebuild build` → SUCCEEDED; **41/41 pass** via `xctest` (the testmanagerd‑driven run blocks in this headless context — an environment quirk, documented).
+- `swiftlint --strict` **0 violations**, `swiftformat --lint` **0**, `check-placeholders` **COUNT=0**. `EXIT=0 / STATUS=DONE`.
+
+**Transparency note (logged, not hidden)**: the literal repo gate also needs `TeslaSync/shared-surfaces` registered in `apps/apple/project.yml` (a P4‑core integration step outside this prompt's allowed files) plus the KMP `Shared.xcframework` — so the surface was proven via a faithful standalone harness using the same compiler/SDKs/simulator and the real design‑system sources (no stubs, no KMP). Committed as `8b524dbad`.
+

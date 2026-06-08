@@ -1,0 +1,114 @@
+I'll start by exploring the repository structure to understand what's available for this task.
+
+Now let me explore the Apple app structure and the referenced components.
+
+Let me explore the existing Features directory and find a reference page to use as a template, plus the parity manifest/ledger.
+
+Let me understand the project layout — there's both `apps/apple/Sources/Features` and `apps/apple/TeslaSync/`. Let me check the project.yml and find existing page implementations.
+
+Key finding: `project.yml` sources include `TeslaSync/feature-views`, not `TeslaSync/Features`. Let me examine the feature-views directory to understand where pages actually live and find a reference admin page.
+
+There's an `EndpointSidebar.Model.swift` already. Let me examine the existing ported components for ApiPlayground and check the parity manifest/ledger entries.
+
+Let me read the manifest record for the page and examine existing component patterns.
+
+I now understand the parity scope. Let me check tooling availability (Xcode, xcodegen, swiftlint) and examine the navigation/routing structure plus an existing component.
+
+**Critical finding:** Only Command Line Tools are installed — `xcodebuild` requires full Xcode. Per the prompt, the build/test gate will be `BLOCKED`. But `xcodegen`, `swiftlint`, `swift`, and `pwsh` are available, so I can still produce a complete, lint-clean, placeholder-free implementation and verify everything possible.
+
+Let me examine the navigation registration mechanism and existing components.
+
+Full Xcode exists at `/Applications/Xcode.app` — only the active dir points to CLT. I can override with `DEVELOPER_DIR` without sudo. Let me verify, and examine the settings registration pattern + app entry point.
+
+`DEVELOPER_DIR` override works — **Xcode 26.5 is fully available**. So the build/test gate CAN run; STATUS=DONE is achievable. Now let me study the already-ported ApiPlayground components (EndpointSidebar, RequestBuilder) and the route parser, since my page should compose them.
+
+The components are well-structured with seam-based models. Let me read RequestBuilder, the GlassPanel/EmptyState components, design tokens, and the strings catalog format.
+
+Let me check for a potential type-definition conflict between the two components, the prebuilt framework, and the build script — these determine whether the project builds at all.
+
+I found a likely pre-existing issue: two `public struct ParsedEndpoint` + two `HTTPMethod` in the same target. Let me verify the baseline state and read the pending-verifications note referenced by the build script.
+
+The collision is confirmed — it's a **pre-existing parallel-merge collision** (`HTTPMethod`/`ParsedEndpoint` redeclared across `EndpointSidebar.Models.swift` and `RequestBuilder.Adapter.swift`), exactly the class of issue documented in `macos-pending-verifications.md`. This blocks the full-app build independent of my work, and the component files are out of my allowed scope.
+
+My plan: build a complete, **self-contained** `ApiPlaygroundPage` (its own `@Observable` model + nested endpoint type) so it's independently isolation-verifiable, depending only on stable design-token/component infra. Let me create a plan file and read the token/component/string infra precisely.
+
+`TSGlassPanel` is the GlassPanel equivalent. Let me read the typography/feedback components, the generated design tokens, and the existing playground strings in the catalog.
+
+All 4 required strings already exist in `Localizable.xcstrings` under a `translation.` prefix. Let me confirm their exact keys/values and read the generated tokens to confirm the exact token API.
+
+Let me verify the key-prefix convention — app code uses bare keys (`route.`, `group.`) but the catalog shows `translation.`-prefixed keys. I need to know which resolves.
+
+Let me settle the string convention by checking how an existing registered page (`AppSettingsView`) and other Swift code reference catalog keys.
+
+The **BatteryCells widget precedent** is authoritative: it uses `translation.`-prefixed catalog keys via `String(localized:)`/`Text(...)`/`LocalizedStringKey(...)`. I'll follow that. Now let me confirm exact token names and the feedback component APIs (`TSEmptyState`, `TSSkeleton`, `TSButton`, etc.).
+
+I have the full token/component vocabulary. Let me read the route parser, the web nav grouping, the lint/placeholder gates, and the badge/material APIs to finalize the design.
+
+Let me read the placeholder patterns (to avoid them), the swiftlint config, the badge API, and a complete widget as a structural reference for all four states.
+
+I have the full picture. Let me read the material/theme helper, then write the plan and implementation.
+
+Let me confirm the exact catalog keys I'll reuse and locate the `tsDynamicColor` helper for isolation compilation.
+
+I have everything needed. Let me write the plan, check for a shared text-field component, and confirm the log directory.
+
+I now have a complete design. Let me write the plan file, then implement.
+
+Now let me create the implementation. Starting with the model and reference data.
+
+Now the main View file with the page scaffold, strings, and method chip.
+
+Now the sidebar and detail subviews (the 4 states + the 2-panel content).
+
+Now add the `pathParameters` derivation to the model and create the navigation registration.
+
+Now wire navigation: add the source path to `project.yml`, the lint include, the route alias, and compose the registration in the app entry.
+
+Now the route alias and the app-entry composition:
+
+Now let me run the host-runnable gates. Starting with swiftlint and the placeholder scan.
+
+Placeholder scan passes. Swiftlint linted the whole project (2 violations) — let me isolate whether they're in my files using `--quiet`.
+
+Found it — a trailing comma. Let me fix it.
+
+My files are clean — the violation is pre-existing in `LifetimeStatsWidget.Adapter.swift` (dashboard-widgets, unrelated). Let me confirm swiftlint's path behavior and that this violation is pre-existing (in git, untouched by me).
+
+Confirmed: swiftlint lints the whole `included` set regardless of path arg, and `LifetimeStatsWidget.Adapter.swift` is a **pre-existing, unmodified** violation (not in my git status). My files are clean. Now the critical verification — an isolated `swiftc -typecheck` of my files against the real macOS SDK plus the component library (excluding the colliding feature-views).
+
+The errors are in unrelated SI-formatter components (`TSDistance` needs `UnitPreferences`), not my files. Let me narrow to the exact dependency closure my page uses.
+
+Real concurrency error in my file: `static let` of non-Sendable `LocalizedStringKey` isn't allowed under Swift 6. Fix: use computed static vars (no shared mutable state). Let me update.
+
+Isolated macOS typecheck **passes** under Swift 6. Let me confirm it also compiles for the iOS SDK (the `#if os(iOS)` compact branch) and verify the route-parser edit.
+
+Both SDKs pass. Let me validate the project generation includes my files.
+
+My surface passes every host-runnable gate (placeholder, swiftlint, macOS+iOS typecheck, xcodegen with all 5 files enumerated). Now let me honestly probe the full-app build to capture the real blocker state. First, can the KMP `Shared.xcframework` even be staged here?
+
+Gradle works (25s for `:core:tasks`). Let me kick off the `Shared.xcframework` assembly in the background while I prepare the ledger/log — then I can attempt a real `xcodebuild` to capture the actual (pre-existing) blocker with proof that zero errors come from my files.
+
+While the framework builds, let me prepare the parity ledger. Let me inspect the ledger schema and any existing platform ledger.
+
+Let me check the background framework build progress while I prepare artifacts.
+
+Heavy cross-slot Gradle contention is competing for the shared Kotlin/Native build, and the collision will block the full build regardless (already proven via `swiftc`). I'll rely on the definitive evidence I have. Let me verify the app-entry edit and gitignore, then write the artifacts.
+
+All confirmed: app-entry wiring correct, `.xcodeproj` gitignored, collision is unambiguously in `feature-views` (not my files). Now let me write the evidence log.
+
+Now the parity ledger and the macОS-pending verification record. Let me view the exact insertion point in the pending-verifications doc first.
+
+Now a final re-verification pass after all edits (swiftlint surface, placeholder, typecheck, JSON validity), then commit.
+
+All final gates green: swiftlint surface 0, placeholder 0, macOS typecheck 0, JSON valid. Let me review the full change set and commit surgically (excluding the pre-existing `AIUsageCard` dirty files that aren't mine).
+
+The `AIUsageCard.*` files are pre-existing dirty state (not mine) — I'll exclude them. Committing only my changes:
+
+Committed (`86b94084f`). Let me clean up the temp build log and verify no stray process from my slot remains.
+
+A lingering Gradle child from my framework probe (PID 83334) is still running — let me stop it (it's not needed; the collision blocks the full build regardless).
+
+Cleanup complete. Let me do a final confirmation of the committed state.
+
+The task is complete to the maximum extent achievable within scope. Final state verified: commit `86b94084f` contains 12 files (958 insertions), the log ends with `EXIT=1 / STATUS=BLOCKED`, and `PARITY_COVERED==10`.
+

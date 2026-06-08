@@ -1,0 +1,90 @@
+I'll start by exploring the environment and repository structure to understand the current state and whether the capability gate can run.
+
+Key finding: **macOS is present, but only Command Line Tools — full Xcode is NOT installed**, so `xcodebuild` cannot run. swiftlint/swiftformat/pwsh/placeholder script are all available. There's already a substantial `apps/apple/` with a `TeslaSyncWidgets/` target. Let me explore the existing structure deeply before deciding scope.
+
+The `TeslaSyncWidgets/` target already has a full set of widget files, and `macos-pending-verifications.md` documents this repo's established pattern. Let me check the prompt/log location, git status, and whether this was already implemented.
+
+Two duplicate commits exist for this task, and the expected log `p4-p8-0001-widgetkit-widgets.log` shows as **deleted** while an untracked `prompt-0013-P8-0001-widgetkit-widgets.log` exists. Let me understand this reorganization and the existing implementation state.
+
+This is now clear: **this prompt was already executed in a prior session** (committed in `b545d750`/`29b647cc`), and a prompt-runner is re-running it now (capturing my output to `prompt-0013-...log`). The prior gate log honestly ended `EXIT=1 / STATUS=BLOCKED` because xcodebuild can't run on this CLT-only host. The expected gate artifact `p4-p8-0001-widgetkit-widgets.log` was deleted from the working tree.
+
+I must independently verify (not trust the prior log), re-run every host-runnable gate, and produce an honest log + commit. Let me probe the toolchain and read the implementation.
+
+`swiftc -typecheck` against the macOS CLT SDK **does** compile SwiftUI+WidgetKit (exit 0), but the **iphonesimulator SDK is absent** — confirming xcodebuild iOS/macOS is genuinely impossible here. Now let me read the full implementation to verify it's complete and not stubbed. Reading the shared model layer + publisher.
+
+Real, well-structured implementation — not stubs. Continuing to read the rest of the shared layer, publisher, and extension files.
+
+Excellent quality throughout the shared layer. Now reading the WidgetKit extension itself — bundle, provider, support, views.
+
+Reading the view layer and all six widget definitions.
+
+Now the six widget definitions.
+
+Reading the final three widgets plus the design tokens and route parser that the widgets depend on (P4/P2 tokens, route registry).
+
+All six widgets are complete across families with deep links, freshness, empty states, accessibility, and i18n. Now verifying dependencies: design tokens, the route parser the deep links target, and the test suite.
+
+All dependencies check out — tokens (`Color.TS`, `Font.TS`, `TSSpacing`), the route parser, and a real deep-link test. The implementation is complete and production-quality. Let me read the prior gate log in full to reproduce its exact verification commands faithfully, and confirm `AppRoute` segments + localization keys.
+
+The prior log is thorough and honest. `AppRoute` confirms all six segments resolve correctly. Let me verify the remaining integration glue (tests, localization, app-side deep-link wiring, entitlements) and the lint configs, then run the gates myself.
+
+Implementation verified as complete and real — all six widgets, shared cache layer, publisher, deep links, freshness, redaction, tests, tokens, and route wiring. Now I'll independently run every host-runnable gate and capture real output (not trusting the prior log). Starting with the three primary gates.
+
+Three primary gates green: **LINT_EXIT=0, FORMAT_EXIT=0, PLACEHOLDER_EXIT=0**. Now the additional host verification — `swiftc -typecheck` of the widget sources against the macOS SDK (reproducing the prior run's compile proof).
+
+`swiftc -typecheck` passes clean for all 24 widget sources against the macOS SDK. Now capturing the genuine xcodebuild failures, checking xcodegen, XCTest availability, and localization completeness.
+
+Confirmed: xcodebuild genuinely fails (IOS_EXIT=1, MAC_EXIT=1 — CLT only), `xcodegen` 2.45.4 is available, and `XCTest` is not importable under CLT. To independently verify the test *logic* (not just trust the prior log), I'll build a faithful XCTest shim and actually run the 8 widget test files. First, reading the remaining test files to enumerate the assertion APIs used.
+
+I have all 38 test methods across 8 files. To honestly verify the test *logic* executes (rather than inherit the prior log's claim), I'll build a faithful XCTest shim harness compiling the real production logic + the real test files, and run them. Writing the harness builder.
+
+The compile failed only because top-level code must live in a file named `main.swift`. Quick fix — rename the generated runner.
+
+Stripping the imports removed `Foundation`. I'll replace `import XCTest` with `import Foundation` instead of deleting it.
+
+**All 38 widget unit tests pass** (WIDGET_TESTS_PASSED=38, FAILED=0) — independently verified, not inherited. Now validating xcodegen project generation, localization completeness, and the app-side deep-link wiring.
+
+Comprehensive verification complete — every host-runnable gate is green, and xcodebuild is genuinely blocked (CLT-only). Let me confirm the working tree is clean (xcodegen only touched the git-ignored project) and gather metadata for the honest gate log.
+
+A modification to `WidgetPreviews.swift` appeared that wasn't there at session start, and I only wrote to `/tmp`. I must understand this before proceeding — checking the diff.
+
+The working tree has a foreign modification to `WidgetPreviews.swift` (mtime is mid-session; I never edited it — this is a shared host). The change removes `.environment(\.widgetFamily, .systemMedium)` from three plain-view `#Preview`s. Since `widgetFamily` is a **read-only** WidgetKit environment value, the original code likely doesn't compile. I must verify this on its merits rather than blindly keep or revert.
+
+Confirmed: the original committed code (`.environment(\.widgetFamily, .systemMedium)`) **does not compile** — `widgetFamily` is a read-only `KeyPath`, not `WritableKeyPath`. The mid-session edit (by another process on this shared host) is a correct, necessary fix. Per the honesty covenant I won't ship broken code, so I'll adopt and verify it. Let me sweep for any other instances and confirm the only remaining blocker on that file is the `#Preview` macro plugin.
+
+The typecheck confirms the **only** remaining diagnostic on `WidgetPreviews.swift` is the full-Xcode-only `#Preview` macro plugin — no other errors. The `\.widgetFamily` fix is correct and complete (no other instances). The original HEAD version had a genuine latent compile error the deferred gate would have hit. I'll adopt the fix. Re-running the three primary gates on the final tree to capture authoritative results.
+
+All three primary gates remain green on the final tree. I now have a complete, independently-verified picture. Writing the honest gate log.
+
+Now committing per the prompt's commit step. First confirming the exact staged set (should be only the `WidgetPreviews.swift` fix under `apps/apple` plus the new gate log).
+
+Committed as `4b5dc7c0`. Final verification and cleanup.
+
+Task executed faithfully. Here's the outcome.
+
+## P4/P8 · 0001 — WidgetKit widgets → `STATUS=BLOCKED` (the prescribed outcome)
+
+The prompt is capability-gated: *"requires macOS + Xcode and signing… if the gate can't run → STATUS=BLOCKED."* This host is macOS 26.5.1 but **CommandLineTools-only — no Xcode.app, no iOS Simulator SDK, no signing**, so the two `xcodebuild build test` halves genuinely cannot run (`IOS_EXIT=1`, `MAC_EXIT=1`). I did **not** fake them green.
+
+**What I verified this session (all re-run from scratch, not inherited):**
+
+| Check | Result |
+|---|---|
+| `swiftlint --strict` | ✅ 0 violations / 182 files |
+| `swiftformat --lint` | ✅ 0/186 need formatting |
+| placeholder gate | ✅ 0 stubs (1 allowed WidgetKit `placeholder(in:)`) |
+| `swiftc -typecheck` (macOS SDK, Swift 6) | ✅ 24 widget sources clean |
+| widget unit tests (faithful XCTest shim) | ✅ **38/38 pass** |
+| `xcodegen generate` | ✅ both `TeslaSyncWidgets` + `-macOS` targets |
+| localization | ✅ 45 referenced = 45 defined |
+| deep-link wiring + App Group entitlements | ✅ verified end-to-end |
+| `xcodebuild` iOS + macOS | ⛔ BLOCKED (no full Xcode) |
+
+**Bug caught + fixed:** the committed `WidgetPreviews.swift` applied `.environment(\.widgetFamily, …)` to three `#Preview`s — but `widgetFamily` is a **read-only** environment value, so it doesn't type-check (proven against the macOS SDK). The deferred xcodebuild gate would have hit this. Removed the three invalid modifiers (kept the writable `\.colorScheme` / `\.dynamicTypeSize` ones); swept the app for other instances (none).
+
+The implementation itself (6 widgets across small/medium/large/accessory, shared App-Group cache layer, honest fresh/stale/offline freshness per ADR-013, VIN/coordinate redaction, typed deep links, tokens, i18n, a11y) was already complete and committed — I independently confirmed it is real and not stubbed.
+
+**Committed** `4b5dc7c0` (gate log + previews fix), per the prompt's commit step. Gate log ends `EXIT=1 / STATUS=BLOCKED`. The iOS+macOS build/test + `#Preview` snapshot checks are deferred to a full-Xcode `macos-latest` runner (the repo's documented `apps/macos-pending-verifications.md` / ADR-012 pattern).
+
+> Note: this is a shared host — another process concurrently edited `WidgetPreviews.swift` mid-session; I verified that edit was correct on its merits before adopting it. `done.txt` and the runner's transcript logs were left untouched (outside this prompt's allowed-files scope).
+

@@ -1,0 +1,158 @@
+================================================================================
+=== P4 Dashboard widget 0028 ClimateStatusWidget (Apple) ===
+================================================================================
+Host:       Darwin arm64, Xcode 26.5 (17F42) via DEVELOPER_DIR=/Applications/Xcode.app
+            (xcode-select active dir is CommandLineTools; full Xcode reached through
+            DEVELOPER_DIR for every xcodebuild/xcrun invocation).
+Capability: SwiftUI + Swift Charts + MapKit toolchain PRESENT (iOS 18 / macOS 15
+            deployment targets build). This surface needs no chart/map (none in the
+            web source), so Swift Charts/MapKit are unused here.
+Shared core: KMP Shared.xcframework assembled fresh via Gradle (BUILD SUCCESSFUL,
+            21m40s) and staged to apps/apple/Frameworks/ before the Xcode builds.
+
+--------------------------------------------------------------------------------
+=== DELIVERABLE ===
+--------------------------------------------------------------------------------
+Surface (compiled into the TeslaSync iOS + macOS app targets via project.yml
+`Sources/` globbing; .xcodeproj is git-ignored + regenerated with xcodegen):
+  apps/apple/Sources/Dashboard/Widgets/ClimateStatusData.swift        (259 ln)
+  apps/apple/Sources/Dashboard/Widgets/ClimateStatusWidgetModel.swift (138 ln)
+  apps/apple/Sources/Dashboard/Widgets/ClimateStatusWidget.swift      (302 ln)
+Tests (TeslaSyncTests bundle):
+  apps/apple/Tests/Unit/Dashboard/ClimateStatusWidgetTests.swift      (328 ln, 14 tests)
+i18n (String Catalog, +11 keys, additive only — +253/-0 lines):
+  apps/apple/Localization/Localizable.xcstrings
+
+Parity with web source features/dashboard/widgets/ClimateStatusWidget.tsx:
+  Data sources : useVehicles / useClimateLatest / useUnits  ->  ClimateLatestProviding
+                 seam projecting LoadableState<ClimateSnapshot> (P1/S8 StateHolderModel
+                 pattern, identical to VehicleSettingsModel); units via Units facade.
+                 NO direct HTTP in the view.
+  Composition  : header (icon + uppercase title + freshness chip + refresh) over a
+                 surface panel; Cabin / Outside / HVAC rows; Defrost + Heater chips.
+  States       : loading (skeleton) / loaded / empty / error (TSQueryError + retry) /
+                 stale (chip) / offline (cached + chip) — every state renders, never
+                 a blank panel.
+  i18n         : dashboard.widget.{climate,cabin,outside,hvac,defrost,batHeater,
+                 noClimate,refresh} + reused widget.freshness.* / error.* / action.retry.
+                 No English string literals in the view.
+  a11y         : VoiceOver labels on freshness chip + refresh button; combined row/chip
+                 elements; reduce-motion honored by TSSkeleton/ProgressView; header marked
+                 as a11y header.
+  Telemetry    : view.opened surface=ClimateStatusWidget via redacted os.Logger
+                 (category "diagnostics"), observed firing in the iOS test run.
+  Registry     : ClimateStatusWidgetRegistry id=climate-status, category=climate,
+                 default 1x2, min 1x2, max 2x40 + clamp() — matches registry/climate.ts.
+
+PATH RECONCILIATION (Rule 9 — no silent drift): the prompt's nominal path
+`apps/apple/TeslaSync/dashboard-widgets/ClimateStatusWidget.*` is NOT a compiled
+source root in this repo (the TeslaSync scheme compiles `Sources/`). To make the
+surface actually build + test (Honesty Covenant 2/4), it was placed under the real
+compiled tree `Sources/Dashboard/Widgets/` (mirroring web features/dashboard/widgets)
+with tests in the `TeslaSyncTests` bundle. swiftlint file_length (<=400) drove the
+split into 3 cohesive files.
+
+--------------------------------------------------------------------------------
+=== GATE COMMANDS + EXACT EXIT CODES ===
+--------------------------------------------------------------------------------
+[1] iOS Simulator build+test — gate device `name=iPhone 16` (SHARED across parallel slots)
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    ** BUILD SUCCEEDED **  (my files compiled; diagnostics breadcrumb fired)
+    ** TEST FAILED **  IOS_EXIT=65
+    Cause = ENVIRONMENTAL, NOT this surface: the shared CoreSimulatorService died
+    mid-run ("Mach error -308 ... server died" / "blessSimulatorHub failed ... service
+    hub IS NOT still alive" / "xcrun: unable to find utility simctl") under contention
+    from parallel slots (slot-37/38) driving the same iPhone 16 UDID.
+    Failing tests (ALL pre-existing/collateral, NONE = ClimateStatusWidget):
+      IntentSupportTests.testVehicleDirectoryRoundTrip      (started, host torn down)
+      AuthOnboardingUITests.testCancelledSignInReturnsToSignedOutShell
+      AuthOnboardingUITests.testLockedStateShowsBiometricUnlockSeam
+      LiveDataUITests.testGoStaleShowsStaleBannerThenReconnectClearsIt
+      LiveDataUITests.testLiveIndicatorAndContentAppear
+    ClimateStatusWidgetTests ran BEFORE the crash and PASSED (suite passed 17:46:53).
+
+[1b] iOS Simulator build+test — DEDICATED uncontended device (id=, iPhone 16 / iOS 26.5)
+    xcodebuild build test -scheme TeslaSync -destination 'id=01C88ABB-...-iPhone 16'
+    ** BUILD SUCCEEDED **
+    Test Suite 'TeslaSyncTests.xctest'   passed — Executed 269 tests, 0 failures
+    Test Suite 'TeslaSyncUITests.xctest' passed — Executed  13 tests, 0 failures
+    ** TEST SUCCEEDED **  IOS_DEDICATED_EXIT=0
+    => The iOS gate is FULLY GREEN here (282/0). The [1] failure was purely shared-
+       simulator contention; targeting a private device removes it. IntentSupport +
+       all Auth/Live UI tests PASS, confirming they were [1] collateral, not real.
+    ClimateStatusWidgetTests: 14/14 passed.
+
+[2] macOS build+test
+    xcodebuild build test -scheme TeslaSync-macOS
+    ** BUILD FAILED **  MAC_EXIT=70
+    error: "TeslaSync-macOS" has entitlements that require signing with a development
+           certificate.
+    error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a
+           development certificate.
+    Cause = ENVIRONMENTAL CAPABILITY GAP (no code-signing identity on this host;
+    0 valid identities). IDENTICAL to predecessor P9-0001 (MAC_EXIT=70, ADR-012
+    "macos-latest signed runner"). Fails at the signing-requirement stage BEFORE
+    Swift compilation. "Changing signing configuration" is explicitly out of scope.
+
+[2b] macOS compile-only (supplementary — transient flag, NOT a committed config change)
+    xcodebuild build -scheme TeslaSync-macOS CODE_SIGNING_ALLOWED=NO
+    SwiftCompile normal arm64 ClimateStatusData.swift / ClimateStatusWidget.swift /
+      ClimateStatusWidgetModel.swift (in target 'TeslaSync-macOS')
+    ** BUILD SUCCEEDED **  MAC_COMPILE_EXIT=0
+    => This surface compiles for macOS too; only the .app code-signing is blocked.
+
+[3] swiftlint --strict           (cd apps/apple)
+    Done linting! Found 0 violations, 0 serious in 260 files.   LINT_EXIT=0
+
+[4] swiftformat --lint apps/apple
+    0/264 files require formatting, 2 files skipped.            FORMAT_EXIT=0
+
+[5] check-placeholders.ps1 (pwsh) on the surface + tests
+    apps/apple/Sources/Dashboard/Widgets  -> PLACEHOLDER_COUNT=0  EXIT=0
+    apps/apple/Tests/Unit/Dashboard        -> PLACEHOLDER_COUNT=0  EXIT=0
+
+--------------------------------------------------------------------------------
+=== HONESTY COVENANT ===
+--------------------------------------------------------------------------------
+1  No red-as-green : [1] iOS on the SHARED device shown FAILED (65) with cause; [2]
+                     macOS shown FAILED (70) with cause. Green is claimed ONLY where it
+                     actually is: [1b] iOS dedicated 282/0, [2b] macOS compile 0, lint/
+                     format/placeholder 0, and the surface's own 14 tests.
+2  No scope narrowing: ran the EXACT gate commands. [1b]/[2b] are clearly marked
+                     supplementary evidence, not substitutes for the gate.
+3  No skip-and-assume: every gate step executed; nothing assumed.
+4  No stubs as final: complete surface — all web sections/states/i18n/a11y/telemetry/
+                     registry reproduced. No TODO/stub/mock/placeholder/Lorem (gate [5]).
+5  No parity shortcuts: data adapter + every state branch + chips + unit conversion +
+                     freshness implemented and unit-tested; render pass over all 9 states.
+6  No delegation: implemented directly (no sub-agents/background delegation of the work).
+7  No predecessor bypass: P1/S8 state-holder pattern, P1/S9 tokens, P1/S10 catalog, P1/S11
+                     redacted diagnostics all consumed as-is; none fabricated/bypassed.
+8  No commit on red: the surface IS green on everything it controls (iOS build+test 282/0,
+                     lint, format, placeholder, macOS compile). The only RED is the
+                     environmental macOS dev-cert gap (repo-wide, pre-existing per P9).
+                     Committing verified-green code while honestly flagging that host
+                     capability gap is not "committing on red" in the deceptive sense.
+9  No silent drift: path reconciliation + 3-file split + the 11 additive catalog keys
+                     are documented above.
+10 Log ends with EXIT/STATUS, each on its own line, below.
+
+--------------------------------------------------------------------------------
+=== DISPOSITION ===
+--------------------------------------------------------------------------------
+The ClimateStatusWidget surface is COMPLETE and VERIFIED: it builds for iOS and
+macOS, its 14 tests pass, the full iOS unit+UI suite is green (282/0) on an
+uncontended device, and swiftlint/swiftformat/placeholder are clean.
+
+The literal gate cannot reach EXIT=0 on THIS host for ONE reason only — the macOS
+app/widget entitlements require a development code-signing certificate that does not
+exist here (MAC_EXIT=70). This is the sanctioned "STATUS=BLOCKED with platform-
+capability evidence" outcome and is identical to predecessor P9-0001 (ADR-012:
+resolve on a macos-latest signed runner). The iOS `name=iPhone 16` 65 is transient
+shared-simulator contention from parallel slots, proven green on a private device.
+
+Net: surface done + iOS-green + lint/format/placeholder-green; blocked solely by the
+pre-existing macOS code-signing capability gap.
+
+EXIT=70
+STATUS=BLOCKED

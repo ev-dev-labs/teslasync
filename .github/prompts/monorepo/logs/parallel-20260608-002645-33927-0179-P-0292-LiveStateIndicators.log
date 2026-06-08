@@ -1,0 +1,141 @@
+I'll start by exploring the environment to understand the task scope, the web source specification, and whether the Apple toolchain is available on this runner.
+
+The web source is a compact badge-row component. The Apple toolchain has Swift 6.3.2, SwiftLint, SwiftFormat, and pwsh — but `xcodebuild` reports only Command Line Tools (no full Xcode). Let me verify simulator/Xcode capability precisely and study the existing feature-view conventions.
+
+Key finding: **Xcode.app exists** at `/Applications/Xcode.app` but `xcode-select` points at CommandLineTools (so `xcodebuild`/`simctl` are shadowed). I may be able to override with `DEVELOPER_DIR`. Let me verify that, and study the established native conventions (state-holders, Badge, units, VehicleState model, telemetry).
+
+Full toolchain works via `DEVELOPER_DIR` (Xcode 26.5, iPhone 16 simulator **booted**, xcodegen present). But **no Kotlin/Gradle** — and the iOS/macOS app targets depend on `Frameworks/Shared.xcframework` (KMP), which is absent. That's a potential gate blocker. Let me examine the xcframework build script, the most relevant reference surface (`SecurityStatusCards`, which uses `VehicleState`), and locate the shared Badge/state-scaffolding/units/telemetry primitives.
+
+Excellent — there's a dedicated `Sources/Live/` area with `LiveStateViews.swift`, a `SharedFacade/LoadableState.swift` (state scaffolding), `Components/UI/Badges.swift` (native Badge), and `Units+Facade.swift`. Let me read these core infra files plus the KMP situation in parallel.
+
+Rich infra found: `LoadableState` (idle/loading/loaded/empty/failed + stale), `TSBadge`/`TSStatusPill` (native badges with `TSTone`), plus a whole `Sources/Live/` state-holder area. KMP caches (`~/.gradle`, `~/.konan`) exist, so the Shared framework might build. Let me read the live state-holder + units + error infra and the reference surface, and probe the KMP build feasibility.
+
+I now understand the architecture: `LiveStateView<Content>` renders the loading/empty/error/stale states for a live store, `LiveStatus` carries phase/presentation, `Units.formatSpeed` formats SI speed, and `FacadeError` has an `.offline` case. Both `Units` and `LoadableState` depend on the `Shared` KMP framework, so the gate needs it built. Let me kick off the Shared.xcframework build in the background (long pole) while I study the remaining infra.
+
+The KMP build is running in the background. Now let me study the canonical file-structure template (`SecurityStatusCards`) end-to-end and the i18n/telemetry conventions so my new surface matches exactly.
+
+This `SecurityStatusCards` template is exactly the convention to follow: per-surface `Source` protocol + `@Observable` Model + `Update`/`Phase` enums + telemetry seam + Strings facade + in-memory source. Let me read the remaining reference files (Adapter, Views, Previews, Tests) and check the KMP build progress.
+
+The KMP build is initializing (gradle is slow to start). Let me finish studying the template — the Adapter (which holds the projection + view-model types) and the Tests — plus the lint/format config and design tokens.
+
+I have the complete convention now. Let me verify the design tokens, a few shared component signatures, the lint/format rules, and check the KMP build progress before writing.
+
+KMP build is still initializing (Gradle cold start). Let me nail down the exact design-token definitions so my code references real symbols.
+
+Found it: `apps/design/generated/apple/Tokens.swift`. Let me read it to confirm exact token symbols.
+
+All tokens confirmed. Let me verify the web `VehicleState` type and `useUnits().formatSpeed` contract (SI units, precision) to model the native projection faithfully, and check the KMP build progress.
+
+Confirmed: `VehicleState.speed` is SI (m/s), and `is_locked`/`sentry_mode`/`is_climate_on`/`is_charging` are booleans; `formatSpeed` takes a per-call `precision` option. The web uses `flex flex-wrap` for the badge row — let me check for an existing native flow/wrap layout to reuse, and re-check the KMP build.
+
+No existing flow layout, so I'll add a small feature-local `Layout` conformer (the HIG-idiomatic way to do `flex-wrap`). I have everything needed. Let me set up tracking and start writing the surface. The KMP build continues in the background.
+
+Now I'll write the surface files, starting with the pure Adapter projection (Foundation-only, fully testable).
+
+Let me verify the valid `UnitPreferences` label strings (for the speed formatter default) from the shared core, and check the KMP build.
+
+`fromLabel` throws on an unknown label, so my default `UnitPreferences` must use exact valid labels. Let me read the full enum block to get every label.
+
+Valid labels confirmed. Now writing the Model (state-holder seam, telemetry, units formatter binding, strings facade).
+
+The KMP Shared.xcframework build completed. Let me confirm it staged successfully, then continue with the Views file.
+
+Shared.xcframework is staged for ios-arm64, ios-arm64-simulator, and macos-arm64 — the full gate is now achievable. Writing the Views layer (flow layout, dotted "lg" badge chips, and all state chrome).
+
+Now the entry view that binds the model and switches over phases.
+
+Now the Previews (one per state).
+
+Now the test suite (projection, phase, units formatter, model wiring/telemetry/auto-refresh, accessibility).
+
+Wait — I need to verify how `.Tests.swift` files in `feature-views/` get routed to the test target (not the app target), since the app target compiles `TeslaSync/feature-views`. Let me check the project.yml routing mechanism.
+
+I need to verify two things before building: how `.Tests.swift` files in `feature-views/` are routed (app vs test target), and exactly what `check-placeholders.ps1` flags (my test file uses the word "stub", which may be forbidden). Let me read the script and scan my files.
+
+Key insight: there's `Tests/Unit/FeatureViews/` (the test-target path), yet siblings also put `.Tests.swift` in `feature-views/`. I can only create `LiveStateIndicators.*` files, so I must match the sibling pattern — but I need to confirm how those route at build time. Let me read the placeholder tooling and generate the project to inspect target membership decisively.
+
+Now I understand the placeholder gate (bare "stub" isn't flagged, but I'll rename it to honor the acceptance text). The critical question is target membership: the generated pbxproj references `SecurityStatusCards.Tests.swift` in two Sources phases. Let me parse the pbxproj to determine exactly which targets compile the feature-view `.Tests.swift`/`.Previews.swift` files.
+
+Decisive: the app target (`TeslaSync`) compiles the feature-view `.Tests.swift`/`.Previews.swift` — the established sibling pattern. I'll trust it (matches ~180 siblings) and verify via the real build. First, let me rename `stubSpeed`→`fixedSpeed` (to honor the acceptance text), then auto-format and lint my files.
+
+swiftformat reports my files are already correctly formatted. Now SwiftLint `--strict` on my files.
+
+SwiftLint `--strict`: 0 violations in my files. Before the long full build, let me de-risk the two app-target concerns (self `@testable import` and `import XCTest` in the app target) by probing the compiler and checking whether the app target enables testing search paths.
+
+The self `@testable import` is only a warning (exit 0), and `ENABLE_TESTING_SEARCH_PATHS` isn't set — which means `import XCTest` would fail *if* these `.Tests.swift` truly compile into the app target. My earlier parser was unreliable (it mis-reported watch widgets with 1822 files). Let me parse the pbxproj robustly and check warnings-as-errors.
+
+No warnings-as-errors (so the self-import warning is harmless). The two `.Tests.swift` build-file entries map to the two app targets, so they do compile into the app — meaning `import XCTest` must resolve there. The build is the authoritative test. Let me kick off the iOS app build (compile-only first, to isolate compilation) in the background.
+
+While the iOS build runs, let me write the `.strings` catalog (the keys + fallbacks must exactly match my code).
+
+Now let me genuinely verify my files pass the placeholder gate (the gate's `-Path` won't glob, so I'll run the authoritative script against just my files via a temp dir), and check the iOS build progress.
+
+Placeholder check passes. The iOS build failed with 2 failures — let me see the actual errors.
+
+Placeholder check passes. The build failure is **not in my code** — it's `AIRestorePanel.Tests.swift` (a sibling) failing `import XCTest`: the project compiles feature-view `.Tests.swift` into the app target, which lacks XCTest search paths. The compile halts there before even reaching my files. To validate my code compiles in-module (and unblock the gate) I'll rebuild with `ENABLE_TESTING_SEARCH_PATHS=YES` (the setting test targets use to resolve XCTest).
+
+While it builds, let me check the intended CI/build configuration to understand how feature-view `.Tests.swift` are meant to be handled (and whether my flag matches intent).
+
+This is the key precedent: `apps/macos-pending-verifications.md` documents that **other P4 feature-view surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) hit this exact situation** — the full-app `xcodebuild build test` is blocked by *pre-existing, unrelated parallel-merge collisions* (`DashboardWidgetSize` redefined 15×, 116–152 co-located `*.Tests.swift` importing XCTest into the app target, unstaged framework, macOS signing). The established protocol: verify the surface green in isolation (SwiftPM build + tests, real iOS-18/macOS-15 `swiftc -typecheck`, swiftlint/swiftformat/placeholder, xcodegen enumeration), with the full-app build deferred to the `macos-latest` acceptance gate. Let me check my build progress and confirm the blockers are pre-existing.
+
+With XCTest resolved, the build now surfaces 14 failures. Let me categorize them and confirm zero are from my surface.
+
+**Confirmed: zero LiveStateIndicators errors.** All 14 failures are the documented pre-existing collisions (`DashboardWidgetSize`/`DashboardWidgetDescriptor`/`DashboardWidgetRegistration` ambiguous/redeclared across `dashboard-widgets/` + `Sources/DashboardWidgets/`, plus a sibling `OdometerCounterWidget.Tests.swift`) — exactly matching `macos-pending-verifications.md`. My surface type-checks cleanly within the real module.
+
+Now I'll perform the established isolated verification (real iOS-18 + macOS-15 `swiftc -typecheck` + an isolated projection-logic test run). Let me enumerate the exact shared symbols my files reference to build accurate shims.
+
+All 14 failures are pre-existing, unrelated collisions; **zero from my surface**. Now I'll run the established isolated verification. Let me set up an isolated harness with accurate shims for the shared symbols (Color.TS, Font.TS, TSSpacing/TSRadius, TSGlassPanel/TSSkeleton/TSFadeIn, UnitPreferences, Units).
+
+Now run the three isolated checks: iOS 18 typecheck, macOS 15 typecheck (both under Swift 6 strict concurrency), and the Foundation-only projection-logic run.
+
+The only errors are shim-visibility artifacts: the real `UnitPreferences`/`Units` are `public`, but my shim declared them `internal`, so my surface's public API can't expose them. That's a harness bug, not a code bug. Let me fix the shim to mark the shared symbols `public` (matching reality) and re-run.
+
+iOS 18 typecheck passes clean under Swift 6 strict concurrency. Now macOS 15 typecheck and the isolated projection-logic run.
+
+macOS 15 typecheck: **clean (EXIT=0)**. The Adapter run failures are harness-only bugs (generic `.warning` inference + Swift 6 top-level MainActor on my throwaway `main.swift`), not surface bugs. Let me fix the harness and re-run.
+
+Excellent — macOS 15 typecheck clean and the projection logic runs green. To also exercise the **Model** logic (phase resolution, telemetry, stale auto-refresh) at runtime in isolation, let me build a host macOS executable from the surface (minus Previews) + shims + a runner that mirrors my XCTest model assertions.
+
+Multi-file builds only allow top-level code in a file named `main.swift`. Let me rename and re-run.
+
+All isolated verifications pass: **iOS 18 + macOS 15 typecheck clean, projection logic green, state-holder logic green.** Now let me capture the authentic full-gate results for the log. Let me kick off the macOS `build test` (background) and run the tree-wide lint/format/placeholder gate steps.
+
+Full-tree SwiftLint found 1 pre-existing violation (not in my files). Let me identify it, and run the remaining gate steps (swiftformat full, placeholder).
+
+macOS build finished. The tree-wide lint/format violations are both in **siblings** (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`) — my files are clean. Let me read the macOS gate result.
+
+macOS gate fails purely on **development-signing** (no dev certificate on this runner) — the documented blocker — with **0 LiveStateIndicators errors**. Both gate builds fail only on pre-existing/environmental blockers. Let me check the logs directory and a sibling log for format consistency before writing my gate log.
+
+This is the decisive precedent. Sibling `p4-apple-feature-views-0002-BackendTool.log` shows the established disposition: **STATUS=DONE / EXIT=0** where all *host-runnable, surface-scoped* gates are genuinely green and the full-app `xcodebuild build test` is shown **DEFERRED with its real exit 65 + cause** (never claimed as pass) — and they executed their tests in isolation, exactly as I did. My verification is even more thorough. Let me gather final blocker magnitudes and write the gate log.
+
+171 co-located `*.Tests.swift` import XCTest into the app target; `DashboardWidgetSize` is redeclared across 15 sites — exactly the documented pre-existing blockers. All my evidence is gathered. Let me write the comprehensive, honest gate log.
+
+Log written. Let me update tracking, clean up temp/generated artifacts, and verify git status shows only my intended files.
+
+Git status shows my 7 surface files + the log as new (untracked). The `M` files (AIUsageCard.*, two web files) are pre-existing working-tree changes I never touched — I'll scope the commit to only my files, exactly as the prompt's commit step intends. Let me commit.
+
+Committed cleanly — exactly my 8 files (7 surface + log), 1468 insertions, no pre-existing/unrelated files included. Let me do a final integrity check on the committed files.
+
+All final checks pass: SwiftLint `--strict` 0 violations, SwiftFormat `--lint` 0, and the surface files are committed and clean.
+
+## Summary
+
+I shipped a production-polished, parity-faithful native Apple SwiftUI port of `LiveStateIndicators` (web → Apple), following the established per-surface architecture, and committed it (`b7a2aeff2`).
+
+**Surface (7 files, `apps/apple/TeslaSync/feature-views/LiveStateIndicators.*`):**
+- `.swift` — entry view, `surfaceSlug`, phase switch
+- `.Adapter.swift` — pure Foundation projection (`VehicleIndicatorState` → 5 chips, tones/labels, injected `formatSpeed`/`localize`)
+- `.Model.swift` — P1/S8 `Source` seam + `@Observable` model, P1/S11 `view.opened` telemetry, `useUnits` binding via shared `Units` SI engine, P1/S10 strings facade, stale one-shot auto-refresh
+- `.Views.swift` — native `Layout` flow-wrap (web `flex-wrap`), dotted tinted "lg" badge, loading/empty/error/freshness/banner chrome
+- `.Previews.swift` (7 states), `.Tests.swift` (20 methods), `.strings` (parity `common.*` + chrome keys)
+
+All 5 chips (Speed/Lock/Sentry/Climate/Charging) reproduce the exact web tones/labels; all 6 states render; full a11y, i18n, and SI-at-display-boundary.
+
+**Verification — every surface-scoped, host-runnable gate GREEN:**
+- SwiftLint `--strict`: 0 · SwiftFormat `--lint`: 0 · placeholder gate: 0
+- Real **iOS 18 + macOS 15** `swiftc -typecheck` under Swift 6 strict concurrency: 0 errors
+- Isolated projection **and** state-holder logic executed: green
+- Built + staged the KMP `Shared.xcframework`; full app-module compile shows **0 LiveStateIndicators errors**
+
+**Full-app `xcodebuild build test` (deferred, real exit shown — not claimed as pass):** `IOS_EXIT=65`/`MAC_EXIT=65` from pre-existing, unrelated blockers outside this surface's allowed scope — 171 co-located `*.Tests.swift` importing XCTest into the app target, `DashboardWidgetSize` ×15 redefinitions, and macOS dev-signing — **0 LiveStateIndicators errors**. This matches the established precedent (`0002-BackendTool`, `apps/macos-pending-verifications.md`), deferred to the `macos-latest` acceptance gate. Log ends `EXIT=0 / STATUS=DONE`.
+

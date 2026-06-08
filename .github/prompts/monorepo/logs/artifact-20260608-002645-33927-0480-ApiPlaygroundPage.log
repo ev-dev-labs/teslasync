@@ -1,0 +1,195 @@
+================================================================================
+p4-apple · P7 · page:admin/ApiPlayground — SwiftUI / HIG parity
+Artifact: apps/apple/TeslaSync/Features/Admin/ApiPlaygroundPage.swift (+ model,
+          views, reference data, route registration)
+Web source: web/src/features/admin/pages/ApiPlaygroundPage.tsx
+Host: macOS (Darwin, arm64) · Xcode 26.5 (DEVELOPER_DIR=/Applications/Xcode.app)
+      swiftc Apple Swift 6.x · swiftlint --strict · pwsh placeholder gate
+================================================================================
+
+SUMMARY
+-------
+Native SwiftUI implementation of the API Playground page at page-level parity:
+two glass panels (sidebar + main), the four catalogue data states, and the four
+i18n strings, adaptive across macOS (regular) and iOS (compact/regular). All
+state is driven by an @Observable `ApiPlaygroundPageModel` through an injectable
+`ApiPlaygroundCatalog` seam (production wires the shared KMP OpenAPI source,
+ADR-004; previews/tests inject a static catalogue). The page is self-contained
+so it does not depend on the two colliding feature-view types (see BLOCKERS).
+
+Navigation registration: `ApiPlaygroundRouteRegistration.register(into:)` folds
+the page into the shared `AppRouteHostRegistry` (rendered by the AppShell
+NavigationSplitView/TabView) under the `.admin` route; `TeslaSyncApp` composes it
+into the environment registry; `AppRouteParser` maps the `/api-playground` deep
+link to `.admin` (alongside the existing `/devtools` alias family).
+
+FILES ADDED (apps/apple/TeslaSync/Features/Admin/)
+  ApiPlaygroundPage.swift              View: header + adaptive 2-pane + panels
+  ApiPlaygroundPageViews.swift         Sidebar (4 states) + detail subviews
+  ApiPlaygroundPageModel.swift         DataState, endpoint type, seam, model, query
+  ApiPlaygroundReference.swift         Real TeslaSync REST surface (router.go mirror)
+  ApiPlaygroundRouteRegistration.swift Route registry registration (.admin)
+FILES TOUCHED (navigation/build registration — allowed)
+  Sources/TeslaSyncApp.swift           compose ApiPlayground registration
+  Sources/App/AppRouteParser.swift     /api-playground -> .admin deep-link alias
+  project.yml                          + TeslaSync/Features source path (iOS + macOS)
+  .swiftlint.yml                       + TeslaSync/Features to included
+Strings: all 4 parity keys already present in Localization/Localizable.xcstrings
+  under the catalog `translation.playground.*` namespace (BatteryCells widget
+  precedent). No catalog mutation required.
+
+================================================================================
+GATES (host-runnable)
+================================================================================
+
+[1] PLACEHOLDER (ADR-011) — apps/tools/check-placeholders.ps1
+    cmd: pwsh check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Admin -Language swift
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0   PASS
+
+[2] SWIFTLINT --strict — surface (the 5 Features/Admin files)
+    cmd: swiftlint lint --strict --quiet --no-cache <5 Admin files>
+    (after fixing one self-introduced trailing_comma in ApiPlaygroundReference.swift)
+    violations=0
+    LINT_SURFACE_EXIT=0  PASS
+    NOTE: a no-path `swiftlint` reads `included:` from .swiftlint.yml and lints the
+    whole tree; the repo currently has ONE pre-existing, unrelated violation —
+    TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+    function_body_length (78 lines) — introduced by a parallel feature-view merge,
+    NOT in scope here and NOT in any file this prompt authored or edited.
+    LINT_REPO_PREEXISTING=1 (LifetimeStatsWidget.Adapter.swift, out of scope)
+
+[3] SWIFTC -typecheck — surface + real component library, macOS SDK
+    cmd: swiftc -typecheck -sdk MacOSX26.5 -target arm64-apple-macos15.0
+         -swift-version 6 <component library> <5 Admin files + parser>
+    errors=0
+    TYPECHECK_MACOS_EXIT=0  PASS
+
+[4] SWIFTC -typecheck — surface + real component library, iOS Simulator SDK
+    cmd: swiftc -typecheck -sdk iPhoneSimulator26.5
+         -target arm64-apple-ios18.0-simulator -swift-version 6 <deps> <Admin + parser>
+    errors=0  (exercises the #if os(iOS) compact-size-class branch)
+    TYPECHECK_IOS_EXIT=0  PASS
+
+[5] XCODEGEN — project enumerates the new files
+    cmd: xcodegen generate
+    XCODEGEN_EXIT=0
+    pbxproj references for ApiPlayground*.swift: 5 distinct files across the
+    iOS (TeslaSync) and macOS (TeslaSync-macOS) targets  PASS
+
+================================================================================
+GATE (full-app) — BLOCKED by pre-existing, out-of-scope conditions
+================================================================================
+
+[6] xcodebuild -scheme TeslaSync{,-macOS} build / test
+    STATUS: BLOCKED — not reachable to green on this host, for reasons that are
+    pre-existing and entirely outside this prompt's allowed scope. ZERO errors
+    are attributable to any file this prompt authored or edited.
+
+    BLOCKER A (build-blocking DEFECT, cross-runner):
+      `public enum HTTPMethod` and `public struct ParsedEndpoint` are each
+      redeclared in TWO files in the same target module:
+        TeslaSync/feature-views/EndpointSidebar.Models.swift
+        TeslaSync/feature-views/RequestBuilder.Adapter.swift
+      Reproduction (real SDK, this host):
+        swiftc -typecheck EndpointSidebar.Models.swift RequestBuilder.Adapter.swift
+        -> error: invalid redeclaration of 'HTTPMethod'
+        -> error: 'HTTPMethod' is ambiguous for type lookup in this context
+      This is a parallel-merge collision between the P3 EndpointSidebar (0029)
+      and RequestBuilder (0040) component prompts. It fails the TeslaSync target
+      compile on ANY runner (incl. macos-latest) until those component owners
+      de-duplicate the type. It is NOT in this prompt's allowed file set
+      (apps/apple/TeslaSync/Features/Admin/**, nav registration, the string
+      catalog, this log). The page was therefore implemented self-contained and
+      does NOT depend on either colliding type.
+
+    BLOCKER B (host capability, macOS-pending):
+      Frameworks/Shared.xcframework is not staged (only .gitkeep). It is produced
+      by a Kotlin/Native Gradle build (scheme pre-action). 15 app files
+      `import Shared`, so the full target cannot compile without it. On this host
+      the build is also contended by many parallel slots assembling the same
+      XCFramework. This mirrors the existing macos-pending row for
+      p1-shared/S3-0001 (Shared.xcframework binary deferred to macOS CI).
+
+    Recorded in apps/macos-pending-verifications.md; deferred to
+    p4-apple/P99-0001-apple-acceptance-gate (macos-latest, signing identities) —
+    which additionally requires BLOCKER A to be resolved by the component owners.
+
+    BUILD_EXIT=BLOCKED
+    TEST_EXIT=BLOCKED
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=10
+================================================================================
+[x] panel  — GlassPanel1 (endpoint sidebar)
+      ApiPlaygroundPage.swift :: ApiPlaygroundPage.sidebarPanel
+      -> TSGlassPanel { ApiPlaygroundSidebar(model:) }   (web `<GlassPanel w-72>`)
+[x] panel  — GlassPanel2 (request / empty panel)
+      ApiPlaygroundPage.swift :: ApiPlaygroundPage.mainPanel
+      -> TSGlassPanel { ApiPlaygroundDetail(model:) }     (web `<GlassPanel p-8>`)
+[x] state  — loading
+      ApiPlaygroundPageModel.swift :: ApiPlaygroundPageModel.DataState.loading
+      rendered ApiPlaygroundPageViews.swift :: ApiPlaygroundSidebar.loadingState (TSSkeleton rows)
+[x] state  — empty
+      DataState.empty (load() -> loaded.isEmpty)
+      rendered ApiPlaygroundSidebar.emptyState (TSEmptyState, translation.common.noData)
+[x] state  — error
+      DataState.error(String) (load() catch -> message)
+      rendered ApiPlaygroundSidebar.errorState(_:) (icon + message + retry -> model.refresh())
+[x] state  — success
+      DataState.success (load() -> non-empty)
+      rendered ApiPlaygroundSidebar.contentList (grouped, selectable rows)
+[x] string — playground.endpointCount
+      ApiPlaygroundPage.swift :: ApiPlaygroundStrings.endpointCount(_:)
+      -> String(localized: "translation.playground.endpointCount") (= "%1$@ endpoints available")
+      rendered ApiPlaygroundDetail.emptySelection (count caption when success & count>0)
+[x] string — playground.selectEndpoint
+      ApiPlaygroundStrings.selectEndpoint -> "translation.playground.selectEndpoint"
+      rendered ApiPlaygroundDetail.emptySelection (TSEmptyState title)
+[x] string — playground.subtitle
+      ApiPlaygroundStrings.subtitle -> "translation.playground.subtitle"
+      rendered ApiPlaygroundPage.header (TSText)
+[x] string — playground.title
+      ApiPlaygroundStrings.title -> "translation.playground.title"
+      rendered ApiPlaygroundPage.header (TSPageTitle)
+
+PARITY_COVERED=10
+PARITY_REQUIRED=10
+(10/10 implemented and verified by isolated swiftc -typecheck on macOS + iOS SDKs)
+
+================================================================================
+ADR / spec conformance
+================================================================================
+ADR-002  one SwiftUI source set, adaptive macOS+iOS (horizontalSizeClass branch).
+ADR-004  KMP core consumed through the `ApiPlaygroundCatalog` seam (no networking
+         in the view; production injects the shared OpenAPI source).
+ADR-005  glass surfaces via TSGlassPanel / system materials (design tokens).
+ADR-006  HIG-native: ContentUnavailableView (TSEmptyState), ScrollView/LazyVStack,
+         Button rows >= 44pt, monospaced verbs/paths, no web cloning.
+ADR-011  no placeholders/stubs (placeholder gate = 0; no "Coming soon"/empty pages).
+ADR-013  no live data source on this page (manifest: renders from local state);
+         catalogue load surfaces loading/empty/error/success explicitly.
+ADR-014  every visible literal via LocalizedStringKey / String(localized:) from
+         Localizable.xcstrings; web key names preserved (playground.* in the
+         catalog `translation` namespace).
+ADR-015  a11y labels/traits on rows, panels .accessibilityElement(children:),
+         method chips hidden (label carries verb+path), light/dark via tokens.
+
+DESIGN-TOKEN / COMPONENT REUSE (no ad-hoc styling, no raw direct lib imports)
+  TSGlassPanel, TSEmptyState, TSSkeleton, TSButton, TSTextField, TSBadge/TSTone,
+  TSPageTitle/TSText/TSCaption/TSLabel/TSCode, Color.TS.*, Font.TS.*, TSSpacing,
+  TSRadius, AppRouteHostRegistry.
+
+================================================================================
+EXIT=1
+STATUS=BLOCKED
+================================================================================
+(The ApiPlayground SURFACE is complete and green on every host-runnable gate —
+placeholder, swiftlint(surface), swiftc -typecheck on macOS + iOS SDKs, xcodegen
+— with PARITY_COVERED==PARITY_REQUIRED==10. The full-app xcodebuild build/test is
+BLOCKED solely by pre-existing, out-of-scope conditions (feature-views
+HTTPMethod/ParsedEndpoint redeclaration collision + un-staged Kotlin/Native
+Shared.xcframework), with zero errors attributable to this prompt's files;
+deferred and recorded in apps/macos-pending-verifications.md.)

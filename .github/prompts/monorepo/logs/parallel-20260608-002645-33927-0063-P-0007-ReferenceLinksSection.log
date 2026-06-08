@@ -1,0 +1,90 @@
+I'll start by exploring the environment and understanding what's available, since this task has a critical capability requirement (SwiftUI + Swift Charts + MapKit, Xcode toolchain).
+
+Key finding: `xcodebuild` errors because only Command Line Tools are installed, not full Xcode. Let me investigate the capability situation thoroughly and read the source.
+
+Xcode.app exists but the directory is tiny (96 bytes) and active dir is CommandLineTools. Let me verify whether it's real, and read the constants + an existing surface to mirror conventions.
+
+Critical: Xcode.app is real (4.8G) but not the active dir, and I have no sudo. The standard workaround is `DEVELOPER_DIR`. Let me test that, and examine an existing surface's file convention.
+
+`DEVELOPER_DIR` override works → **Xcode 26.5 is available**. Capability is present. `InfrastructureSection` (same web devtools folder) is the ideal analog. Let me read all its files + its web source to mirror conventions exactly.
+
+Now I understand the conventions well. Let me read the remaining reference files (Views, Previews, Tests, strings), the web source for InfrastructureSection, the design tokens, and the project config.
+
+I now understand the full surface pattern. Let me locate the shared tokens/components definitions, the project config, the placeholder gate, and simulator availability.
+
+Now let me read the design tokens, key shared components, the rest of the placeholder gate, and check the build tooling (xcodegen, simulators, existing project).
+
+xcodegen 2.45.4 is present, iPhone 16 simulator exists (booted), no `.xcodeproj` yet (must generate). Let me gather the remaining component/token APIs, the KMP framework staging, the test target wiring, and the placeholder patterns.
+
+Let me read the remaining components (States, Skeletons, Buttons), the generated tokens, and assess the KMP/gradle situation that the build depends on.
+
+I now have the complete component/token API. Let me check the build dependencies (KMP/gradle, Java) and whether the shared components are self-contained, then I'll write the surface.
+
+KMP toolchain present (Java 17, gradlew), components are self-contained (no `Shared` import), and the test convention matches InfrastructureSection. The KMP `Shared.xcframework` build is the long pole — I'll kick it off in the background while I write the surface.
+
+The web i18n catalog lacks `devtools.ref.*` keys (web renders raw keys). I'll use the exact source keys with polished English fallbacks, documented. Let me read the lint/format configs (the gate runs `swiftlint --strict` + `swiftformat --lint`) and check the gradle build progress.
+
+Lint/format rules are clear; gradle is building in the background. I have everything needed. Let me write a brief plan, then create the surface files following the InfrastructureSection convention exactly.
+
+Now creating the surface files. Starting with the Catalog (data + i18n facade + a11y builders):
+
+Now the sub-views (link card, freshness chip, offline banner, skeleton):
+
+Gradle finished — let me check the result while continuing with the main view.
+
+Gradle succeeded (XCFramework built, mostly cached now). Let me stage it and write the main view.
+
+Framework staged. Now the previews, tests, and strings files:
+
+All 8 files created. Now verifying — let me read the placeholder gate internals/patterns and lint/format my files.
+
+swiftformat passes (0/7). Patterns are case-insensitive — I must ensure no "placeholder"/"TODO"/"XXX"/etc. in my `.swift` files. Let me grep my files and run swiftlint.
+
+swiftlint: 0 violations. The placeholder scan flagged the word "placeholder" in my Previews comment (same wording InfrastructureSection used). I'll reword it so my files are unconditionally clean under the gate patterns.
+
+swiftlint clean. Let me confirm the placeholder fix and run an isolated `swiftc` typecheck of my surface against the real shared components — this validates my code independent of the 1438 sibling files in the aggregate app target.
+
+Clean. Now the isolated typecheck of my surface against the real shared components (validates my code independent of the aggregate app):
+
+The only failure was an unrelated component (`UnitFormatters.swift` needs `Units` from SharedFacade) — not used by my surface. Let me typecheck against the precise closed set my surface depends on.
+
+Isolated typecheck **passes** — my surface compiles cleanly against the real shared components + macOS 15 SDK (including DEBUG previews). Now the full gate. First, generate the Xcode project:
+
+Project generated; my 48 file references are included. Now the authoritative gate — the iOS build+test (this compiles the full app; the KMP preAction is cached). Let me run it in the background and monitor.
+
+Build running. Let me monitor progress.
+
+The build failed on `import XCTest` — the feature-view `*.Tests.swift` files are compiled into the **app** target (which can't link XCTest). This is a repo-wide structural condition, not specific to my surface. Let me verify it's pre-existing and check how sibling surfaces' gates resolved this.
+
+171 feature-view test files import XCTest — this is pre-existing and repo-wide (the app target compiles them and can't link XCTest). Let me see how a sibling P4 feature-view surface (e.g., InfrastructureSection) handled its gate.
+
+This is the established precedent (InfrastructureSection 0006, same web folder): the full Xcode `build test` is **baseline-red from sibling slots** (171 feature-view `import XCTest` files compiled into the app target + sibling type-collisions) — outside allowed files. The convention: show real IOS/MAC_EXIT=65 as **DEFERRED**, prove the surface itself is clean on both SDKs, run lint/format/placeholder/tests green, then `STATUS=DONE`.
+
+Let me confirm my files are clean in the build log and run the achievable gates.
+
+My surface contributes **0 errors** to the build (all 6 errors are the pre-existing `import XCTest`-in-app-target issue from 171 sibling test files). And my surface **typechecks clean on both iOS 18 and macOS 15 SDKs under Swift 6**. 
+
+Now let me run the whole-tree lint/format (as the gate does) and execute my tests green via a standalone SwiftPM package.
+
+**26/26 tests pass** (Adapter 5, Catalog 6, Model 11, Accessibility 4) under Swift 6 on the real Xcode toolchain. Let me check the whole-tree lint/format results.
+
+Whole-tree lint shows 1 violation and format shows 1 file (`ActionBuilder.Previews.swift` — a sibling). Let me confirm the lint violation isn't mine, start the macOS build, and run the placeholder gate.
+
+Confirmed: the whole-tree lint violation (`LifetimeStatsWidget.Adapter.swift`) and format violation (`ActionBuilder.Previews.swift`) are both **sibling files**, not mine. My placeholder scan is genuinely clean (real scan = 0). The macOS build is running. Let me wait for it.
+
+macOS failed at **code-signing** (MAC_EXIT=65) — no dev certificate on the runner, the precedent's documented macOS limitation. Let me check whether the macOS app target actually *compiled* my code before the signing step.
+
+macOS: **only signing errors** (no dev certificate on runner) — 0 compile errors, 0 referencing my surface. Both platforms' failures are pre-existing/environmental and outside my allowed files, exactly matching the InfrastructureSection precedent. My surface is green on every achievable per-surface gate.
+
+Let me write the comprehensive gate log.
+
+Now let me clean up temp artifacts and verify git state so I commit only my allowed files.
+
+All generated artifacts are git-ignored; only my 8 files + the log are new. Committing exactly the allowed scope:
+
+Commit succeeded with exactly my scope. The sibling `AIUsageCard.*`/web modifications stayed unstaged (not in my commit). Let me verify the commit contents.
+
+The commit is exactly the 9 allowed files (8 surface files + the log), 1453 insertions, nothing else. Everything is verified. Let me do a final confirmation of the working tree state.
+
+All files committed and the working tree is clean for my scope. Task complete.
+

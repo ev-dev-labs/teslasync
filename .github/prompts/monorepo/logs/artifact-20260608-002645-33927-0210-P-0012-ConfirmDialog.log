@@ -1,0 +1,165 @@
+=== P4 Modal / dialog 0012 ConfirmDialog (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (active dir was /Library/Developer/CommandLineTools; overridden non-destructively for this
+                       session only — no sudo / no `xcode-select -s`, so the shared runner is untouched).
+  Toolchain          : Apple Swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 ·
+                       pwsh 7.6.2 · OpenJDK 17.0.19 · Gradle (wrapper, apps/shared)
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5, booted) present · macOS 26.5 SDK present ·
+                       iPhoneSimulator26.5 SDK present
+  Shared.xcframework : assembled + staged via the scheme preAction Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 9m17s; "✓ Shared.xcframework
+                       staged" to apps/apple/Frameworks/Shared.xcframework).
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS simulators + KMP/Kotlin-Native toolchain all
+                       present → NOT capability-BLOCKED. The surface itself uses neither Swift Charts nor MapKit
+                       (web source uses neither).
+
+WEB SOURCE (the specification)
+  web/src/components/ui/ConfirmDialog.tsx — a controlled confirmation modal (named export `ConfirmDialog`),
+  mounted by destructive call sites. It composes the shared Modal + Button + Input and reproduces these branches:
+    • variant danger→critical (AlertOctagon, danger token) / warning→warn (AlertTriangle, warn token) banner
+      over the message (severityTokens bg/border/fg).
+    • loading: both buttons inert, the confirm button shows a spinner, and backdrop-click + Escape dismissal are
+      suppressed (handleModalClose / keydown both early-return while loading).
+    • requireTypedConfirmation: renders an Input; confirm stays disabled until `typed === requireTypedConfirmation`
+      (an empty required string is falsy → no gate). inputLabel falls back to `Type "<phrase>" to confirm`.
+    • silenceKey (+ "Don't ask again" checkbox): honored ONLY when `variant !== 'danger' && !requireTypedConfirmation`.
+      When the action was previously silenced the component fires onConfirm immediately and `return null` (never
+      renders). On confirm it persists the silence BEFORE bubbling onConfirm (lib/confirmSilence.ts / localStorage).
+  Data sources (prompt)        : `useTranslation` only — there is NO data fetch. The lone t() call is
+                                 t('confirm.silence.checkbox', "Don't ask again for this action").
+  Shared components (prompt)   : "(none)" listed, but the source clearly composes Modal + Button + Input — mapped to
+                                 native counterparts (covenant pt 5: no parity shortcut). Documented below.
+  States                       : the prompt's generic loading/empty/error/stale/offline template does NOT apply to a
+                                 controlled, fetch-free presentational dialog. The source's ACTUAL branches
+                                 (default danger/warning · in-flight loading · typed-confirmation gate · silence /
+                                 auto-resolve) are each reproduced 1:1 (covenant pt 2: no scope narrowing, no
+                                 fabricated offline/stale chips that the source does not have).
+
+ARTIFACTS SHIPPED  (allowed scope: apps/apple/TeslaSync/modals-dialogs/ConfirmDialog.* + this log)
+  ConfirmDialog.Model.swift     — the P1/S8 state holder + seams: ConfirmDialogConfiguration (the web controlled
+                                  props + pure derivation silenceHonored / typedMatches / effectiveTypedConfirmation),
+                                  ConfirmDialogVariant→severity tokens, @Observable ConfirmDialogModel
+                                  (open→present/autoConfirm, confirmResolution, canCancel, silence persistence),
+                                  ConfirmSilenceStore seam + UserDefaultsConfirmSilenceStore (web confirmSilence.ts),
+                                  ConfirmDialogTelemetry seam + OSLogConfirmDialogTelemetry (P1/S11 redaction-safe
+                                  "view.opened"), ConfirmDialogSurface.slug, ConfirmDialogStrings (P1/S10 key facade).
+  ConfirmDialog.swift           — the SwiftUI surface: the `.tsConfirmDialog(isPresented:configuration:…)` presenter
+                                  (scrim + centered modal, silence auto-resolve, loading-aware dismissal, Escape/
+                                  Return keyboard actions, reduce-motion transition) + the ConfirmDialog card (severity
+                                  banner, typed-confirmation field, silence checkbox, cancel/confirm actions) + the
+                                  severity-tinted ConfirmActionButton (web confirmButtonClasses amber override).
+  ConfirmDialog.Previews.swift  — #if DEBUG previews for danger / warning(+silence) / typed-gate / loading.
+  ConfirmDialog.strings         — the "ConfirmDialog" P1/S10 table (the extracted web key + button/typed/a11y keys).
+  ConfirmDialog.Tests.swift     — 21 XCTest cases (configuration derivation, model open/confirm/cancel + telemetry,
+                                  silence store roundtrips, surface slug + extracted-key parity).
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  Modal (open/size=sm)          → custom centered modal over a 0.45 scrim (HIG dialog) via `.tsConfirmDialog` —
+                                  centered on iOS + macOS, and fully controllable so dismissal is suppressed while
+                                  loading (the shared bottom-sheet tsModal cannot suppress its close affordance).
+  Button (secondary / danger)   → TSButton(.secondary) for cancel; ConfirmActionButton (token-driven ButtonStyle,
+                                  Color.TS.statusDanger / statusWarning) for confirm — reproduces the web amber
+                                  override the shared Button has no variant for. Loading → spinner; disabled → dim.
+  Input (typed confirmation)    → TSTextField (+ autocorrectionDisabled, .never autocapitalization on iOS).
+  Checkbox ("Don't ask again")  → TSCheckbox.
+  severityTokens / icons        → ConfirmDialogVariant: octagon/triangle SF Symbols + Color.TS.status{Danger,Warning}
+                                  banner bg .opacity(0.1) / border .opacity(0.3) / fg accent (matches web bg/border/fg).
+  lib/confirmSilence (localStorage) → ConfirmSilenceStore / UserDefaultsConfirmSilenceStore (namespaced keys).
+  i18n                          : zero English literals in runtime code paths; every string is a LocalizedStringKey /
+                                  NSLocalizedString key resolved through the per-surface "ConfirmDialog" table
+                                  (ConfirmDialog.strings), folded into the master catalog at integration time. The web
+                                  source key confirm.silence.checkbox is present verbatim.
+  a11y                          : dialog card is `.accessibilityAddTraits(.isModal)` + contain + hint; banner combines
+                                  icon(label)+message; scrim is `.accessibilityHidden`; confirm exposes a loading
+                                  accessibilityValue; cancel/confirm carry explicit labels + .cancelAction/.defaultAction
+                                  keyboard shortcuts (Escape/Return). Dynamic Type via the Font.TS ramp; reduce-motion
+                                  honored on the present/dismiss transition.
+  telemetry                     : view.opened surface="ConfirmDialog" emitted once on present via
+                                  ConfirmDialogModel.open (NOT on the silenced auto-resolve, which never shows); default
+                                  OSLog sink, redaction-safe (no title/message/typed/silence key logged).
+
+GATES
+  [GREEN]    swiftformat --lint  (ConfirmDialog scope, 4 swift files)        : 0/4 require formatting     (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict  (ConfirmDialog scope, 4 swift files)        : 0 violations, 0 serious    (LINT_EXIT=0)
+  [GREEN]    check-placeholders.ps1 (apps/apple/TeslaSync/modals-dialogs)    : PLACEHOLDER_ALLOWED=0,
+                                                                                PLACEHOLDER_COUNT=0        (PLACEHOLDER_EXIT=0)
+  [GREEN]    ConfirmDialog build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode =
+             strict-concurrency complete, the app's own setting), compiling the EXACT shipped ConfirmDialog.* sources
+             (incl. all #if DEBUG previews via the preview-macro plugin) against the REAL repo design system
+             (Tokens · Typography · Buttons · Fields):
+                 Build complete!  ·  Executed 21 tests, with 0 failures                            (SWIFT_BUILD/TEST_EXIT=0)
+             (strict concurrency caught + fixed a real issue: the nonisolated preview helper now @MainActor.)
+  [GREEN]    iOS 18 SDK typecheck  — xcrun swiftc -typecheck -target arm64-apple-ios18.0-simulator -swift-version 6
+             (surface + design system; exercises the #if os(iOS) autocapitalization branch)        (IOS_TYPECHECK_EXIT=0)
+  [GREEN]    macOS 15 SDK typecheck — xcrun swiftc -typecheck -target arm64-apple-macos15.0 -swift-version 6
+             (surface + design system)                                                             (MAC_TYPECHECK_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO ConfirmDialog errors; every blocker pre-exists & is unrelated to this change):
+    Shared.xcframework : built + staged successfully by the scheme preAction (BUILD SUCCESSFUL in 9m17s) — not a blocker.
+    iOS  : the app target fails to resolve `import XCTest` — first error
+           "TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: Unable to resolve module dependency:
+           'XCTest'". Root cause is the repo-wide composition: project.yml adds the WHOLE TeslaSync/feature-views +
+           TeslaSync/dashboard-widgets directories (261 co-located *.Tests.swift across peer surfaces) to the APP
+           target's sources, and XCTest is not available to an iOS-sim app target. The compile aborts there; grep of
+           the iOS build log for "ConfirmDialog…error:" / "modals-dialogs…error:" = 0 hits.
+    macOS: the app code COMPILED (XCTest resolves for a macOS target); the ONLY errors are development-signing —
+           "'TeslaSync-macOS' / 'TeslaSyncWidgets-macOS' has entitlements that require signing with a development
+           certificate", which this runner does not provision. grep of the macOS build log for any ConfirmDialog
+           compile error = 0 hits.
+    wiring: the new TeslaSync/modals-dialogs source group is NOT yet in project.yml sources nor the swiftlint
+           `included` list (only Sources / feature-views / dashboard-widgets / … are). Adding that group + re-homing
+           the co-located *.Tests.swift into the test target is owned by P4 core / the P4/P99 Apple acceptance gate
+           (a project.yml membership change), NOT a single modal-dialog prompt, and is OUTSIDE this prompt's allowed
+           scope (task rule: do not fix pre-existing unrelated breakage; do not edit out-of-scope files). The shipped
+           surface is therefore proven to compile INDEPENDENTLY of that wiring — the isolated SwiftPM harness + the iOS
+           18 and macOS 15 swiftc -typecheck both compile the EXACT shipped files against the real design system.
+    Both full-app blockers (XCTest-in-app-target across peers; macOS dev-signing) plus the staged Shared.xcframework
+    are exactly the artifacts apps/macos-pending-verifications.md defers to the ADR-012 signed macos-latest CI runner
+    (p4-apple/P99-0001-apple-acceptance-gate), matching the sanctioned "code-complete + DEFERRED Xcode gate"
+    disposition used by every P4 surface to date (cf. feature-views 0010 ToolCard, 0180 AlertMessageEditor,
+    0088 LoadingSkeleton).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                           explicitly DEFERRED with its real exits + root causes — never reported as passing.
+  2  No scope narrowing  : every web branch reproduced (danger/warning banner, loading spinner + dismissal-suppress,
+                           typed-confirmation gate + empty-phrase parity, silence checkbox + auto-resolve + persist-
+                           before-confirm). The source's fetch-free / no-offline-state nature is documented, not hidden.
+  3  No skip-and-assume  : web source read end-to-end; every derivation + telemetry path asserted in 21 tests; every
+                           gate EXECUTED on THIS runner with raw exits pasted (incl. the 9m17s xcframework + both xcodebuilds).
+  4  No stubs as final   : complete production surface (5 files) + 21 real tests; placeholder scanner = 0 (0 opt-outs).
+  5  No parity shortcut  : Modal/Button/Input/Checkbox/severity-tokens/silence-store/i18n/a11y/telemetry all mapped to
+                           platform counterparts + verified; the "(none)" shared-components note was not taken at face value.
+  6  No delegation       : authored directly; delegation FORBIDDEN; none used.
+  7  No predecessor bypass: P1/S8 state holder (ConfirmDialogModel), P1/S9 tokens (Color.TS/Font.TS/TSSpacing/TSRadius/
+                           TSMotion), P1/S10 i18n facade (ConfirmDialog.strings table), P1/S11 view.opened, P4-core
+                           design system (TSButton/TSCheckbox/TSTextField/TSPanelTitle/TSText) — all present + consumed.
+  8  No commit on red    : the COMMITTED artifact (ConfirmDialog.* + this log) is GREEN on every in-scope gate AND on a
+                           real isolated Swift 6 strict-concurrency build+test (21/21) + iOS 18 + macOS 15 SDK typechecks;
+                           the deferred full-app gate is RED only on pre-existing, repo-wide conditions (XCTest-in-app
+                           across peers; macOS dev-signing; the not-yet-wired modals-dialogs group) this commit neither
+                           introduces nor touches.
+  9  No silent drift     : changes confined to TeslaSync/modals-dialogs/ConfirmDialog.{Model,swift,Previews,strings,Tests}
+                           + this log. The generated TeslaSync.xcodeproj, DerivedData, and staged Frameworks/Shared.xcframework
+                           are build artifacts (gitignored) and are NOT committed. Pre-existing unrelated working-tree
+                           edits (AIUsageCard.*, two web files) are left untouched and NOT staged.
+  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic ConfirmDialog shipped at parity with the web source and INDEPENDENTLY VERIFIED:
+  it compiles under the app's own Swift 6 strict-concurrency rules against the real design system, its 21 tests pass,
+  it typechecks against BOTH the iOS 18 simulator and macOS 15 SDKs, and lint / format / placeholder are all green.
+  The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked by
+  the pre-existing repo-wide XCTest-in-app-target source composition (261 peer *.Tests.swift) on iOS, by macOS
+  development-signing, and by the not-yet-wired modals-dialogs source group — all owned by the P4/P99 acceptance gate on
+  a signed macos-latest CI runner per apps/macos-pending-verifications.md. Zero ConfirmDialog/modals-dialogs errors
+  appear in either full-app build log.
+
+EXIT=0
+STATUS=DONE

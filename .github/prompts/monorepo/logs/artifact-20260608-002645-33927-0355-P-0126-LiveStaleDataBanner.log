@@ -1,0 +1,149 @@
+=== P4 Shared surface 0126 LiveStaleDataBanner (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/LiveStaleDataBanner.*
+Web src  : web/src/components/feedback/LiveStaleDataBanner.tsx (THE specification)
+Date     : 2026-06-08
+Honesty covenant: acknowledged (1 No red-as-green … 10 Log ends with EXIT/STATUS). Every result
+below is the actual command output, not a summary of intent.
+
+------------------------------------------------------------------------------------------------
+SURFACE DELIVERED (8 files — production, no stubs)
+------------------------------------------------------------------------------------------------
+  LiveStaleDataBanner.swift            — the SwiftUI surface (binds model; TSFadeIn on visible)
+  LiveStaleDataBanner.Adapter.swift    — pure core: LiveLinkPhase, reasons, presentation, a11y
+  LiveStaleDataBanner.Projection.swift — pure resolve(phase, offlineSince, now) threshold logic
+  LiveStaleDataBanner.Model.swift      — i18n facade (P1/S10), telemetry seam (P1/S11),
+                                         source seam + in-memory, @Observable model,
+                                         LiveStatus→LiveLinkPhase boundary map (P1/S8)
+  LiveStaleDataBanner.Views.swift      — warning banner subview (web <AlertBanner variant=warning>)
+  LiveStaleDataBanner.Previews.swift   — per-state previews + Dynamic Type + Reduce Motion
+  LiveStaleDataBanner.Tests.swift      — projection + mapping + model + telemetry + a11y (23 tests)
+  LiveStaleDataBanner.strings          — i18n catalog (table "LiveStaleDataBanner")
+
+Parity with the web source:
+  • Data: useLiveConnection (→ shared LiveStatus, P1/S8) + useTranslation (→ P1/S10 facade). No HTTP
+    in the view; the model binds through a LiveStaleConnectionSource seam.
+  • Threshold: STALE_BANNER_THRESHOLD_MS = 2*60_000 → staleBannerThreshold = 120s, sustained-offline
+    countdown + the web setTimeout reproduced as a scheduled one-shot promotion.
+  • Render: web `<AlertBanner variant="warning" icon={WifiOff}>` vs `return null`. `hidden` reproduces
+    the web null branch (intended absence while healthy — NOT a hidden-data anti-pattern); a native
+    ADR-013 `stale` sibling reason is added for the open-but-aged phase.
+  • i18n keys: live.staleBanner.title ("Live data unavailable") + live.staleBanner.message
+    (verbatim web copy) + live.staleBanner.staleMessage (native sibling). No English literals in code.
+  • Telemetry: view.opened emitted once on mount with slug "LiveStaleDataBanner" (P1/S11).
+  • States exercised: connecting/healthy/reconnecting → hidden; stale → banner; offline(≥2m)/terminal
+    error → banner. Every state has a preview and a test.
+
+------------------------------------------------------------------------------------------------
+CAPABILITY ASSESSMENT (runner)
+------------------------------------------------------------------------------------------------
+  swift 6.3.2 ............................. present
+  Xcode 26.5 (Build 17F42) ............... present at /Applications/Xcode.app (xcode-select pointed
+                                           at CommandLineTools; used via DEVELOPER_DIR override)
+  iOS 26.5 simulator + iPhone 16 ......... present (booted)  → satisfies gate destination
+  macOS 15 SDK ........................... present
+  swiftlint / swiftformat / pwsh ......... present
+  xcodegen 2.45.4 ........................ present
+  Frameworks/Shared.xcframework .......... NOT staged (only .gitkeep) — needs the KMP/Gradle
+                                           Kotlin-Native stage (apps/shared/gradlew); heavy toolchain
+  project.yml app-target sources ......... TeslaSync/dashboard-widgets, TeslaSync/feature-views —
+                                           does NOT include TeslaSync/shared-surfaces (P4-core wiring;
+                                           outside this prompt's allowed files)
+
+------------------------------------------------------------------------------------------------
+SURFACE VERIFICATION (real toolchain — actual outputs)
+------------------------------------------------------------------------------------------------
+[1] swiftc -typecheck, iOS 18 simulator target (iPhoneSimulator26.5 SDK), -swift-version 6
+      surface (5 core files) + minimal stubs for the out-of-scope P1/S8 live types & P1/S9 tokens
+      => IOS_TYPECHECK_EXIT=0
+
+[2] swiftc -typecheck, macOS SDK, -swift-version 6
+      => MAC_TYPECHECK_EXIT=0
+
+[3] xcodebuild test — scoped surface project (xcodegen), the REAL surface files + the REAL
+    LiveStaleDataBanner.Tests.swift, destination 'platform=iOS Simulator,name=iPhone 16'
+      Test Suite 'All tests' passed
+      Executed 23 tests, with 0 failures (0 unexpected)
+      ** TEST SUCCEEDED **
+      => SURFACE_IOS_TEST_EXIT=0
+      (only the out-of-scope deps — P1/S9 tokens, P1/S8 LiveStatus/LiveConnectionState/LivePresentation,
+       motion — are stubbed; all surface + test code is verbatim.)
+
+[4] xcodebuild build-for-testing + xctest — same surface+tests, destination 'platform=macOS' (15)
+      ** TEST BUILD SUCCEEDED **
+      xcrun xctest SurfaceMacTests.xctest: Executed 23 tests, with 0 failures (0 unexpected)
+      => SURFACE_MAC_TEST_EXIT=0
+
+[5] swiftformat --lint TeslaSync/shared-surfaces   (config apps/apple/.swiftformat)
+      0/7 files require formatting
+      => FORMAT_EXIT=0
+
+[6] swiftlint --strict, surface files in isolation (config rules, included=shared-surfaces)
+      Done linting! Found 0 violations
+      => LINT_EXIT=0   (surface)
+
+[7] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces -Language swift  (pwsh)
+      PLACEHOLDER_ALLOWED=0
+      PLACEHOLDER_COUNT=0
+      => PLACEHOLDER_EXIT=0
+    (Also ran the gate's literal -Path .../LiveStaleDataBanner → EXIT=0; note that literal path is a
+     file-prefix, not a dir, so it scans nothing — the directory scan above is the meaningful check.)
+
+[8] standalone compiled+run of the pure projection (Adapter+Projection, Foundation only)
+      LOGIC_OK all assertions passed  => 0
+
+------------------------------------------------------------------------------------------------
+CANONICAL WHOLE-APP GATE (as written in the prompt) — BLOCKED (out-of-scope integration)
+------------------------------------------------------------------------------------------------
+  xcodebuild -scheme TeslaSync  -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+      => IOS_EXIT / MAC_EXIT = BLOCKED. The whole-app scheme cannot build on this runner without
+         changes outside this prompt's allowed files:
+           (a) Frameworks/Shared.xcframework is not staged; the scheme preAction builds it from the
+               KMP core via apps/shared/gradlew (Kotlin/Native — heavy toolchain, not provisioned).
+           (b) TeslaSync/shared-surfaces is not in project.yml's app-target sources, so the surface
+               would not be compiled into the app (P4-core wiring; "Depends on: P4 core").
+           (c) The whole-app compile also includes unrelated in-progress worktree edits
+               (AiUsageCard.* are modified in this slot) outside this surface's scope.
+         The surface itself is instead verified by a REAL iOS+macOS xcodebuild test of the verbatim
+         surface + tests on the exact gate destination (steps [3][4] above): 23/23 passing.
+
+  swiftlint --strict  (repo-wide, apps/apple)
+      => Repo-wide BLOCKED on PRE-EXISTING debt outside allowed files:
+         TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body
+         Length Violation (function_body_length). Not my file (git status: unmodified). The surface
+         files themselves are clean (step [6]).
+
+  swiftformat --lint apps/apple   => surface clean (step [5]); repo-wide not asserted here.
+  check-placeholders               => surface clean (step [7]).
+
+------------------------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------------------------------------------
+  [x] Surface renders all states from the web source (hidden/healthy/connecting/reconnecting +
+      stale/offline banner) — previews + tests cover each.
+  [x] Hooks bind to the shared P1/S8 state-holder layer (LiveStatus→LiveLinkPhase); no HTTP in view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (.strings).
+  [x] Accessibility labels present (combined banner label; Dynamic Type; Reduce Motion via TSFadeIn).
+  [x] Tests: adapter/projection unit + per-state + mapping + a11y — 23 tests, green on iOS & macOS.
+  [x] No TODO / stub / mock / placeholder / Lorem in shipped code (placeholder gate = 0).
+  [~] Canonical whole-app EXIT=0 not achievable on this runner → STATUS=BLOCKED with evidence above;
+      surface itself PASSES a real scoped iOS+macOS xcodebuild test.
+
+------------------------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------------------------
+The LiveStaleDataBanner surface is implemented to production quality and INDEPENDENTLY VERIFIED:
+real xcodebuild test on the iPhone 16 simulator (23/23) and macOS (23/23), plus swiftformat,
+swiftlint, and placeholder gates all green for the surface. The canonical whole-app gate is blocked
+only by out-of-scope integration (KMP Shared.xcframework stage, P4-core project.yml wiring, and a
+pre-existing repo swiftlint violation) — none of which are within this prompt's allowed files.
+
+SURFACE_IOS_TEST_EXIT=0
+SURFACE_MAC_TEST_EXIT=0
+FORMAT_EXIT=0
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+IOS_EXIT=BLOCKED
+MAC_EXIT=BLOCKED
+EXIT=1
+STATUS=BLOCKED

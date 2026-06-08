@@ -1,0 +1,109 @@
+=== P4 Shared surface 0196 ActionItem (Apple) ===
+host: Darwin 25.5.0 arm64  date: 2026-06-08T13:42:58Z
+swift: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+swiftlint: 0.63.3  swiftformat: 0.61.1  pwsh: PowerShell 7.6.2
+
+############################################################
+# CAPABILITY PRE-CHECK (prompt: 'requires SwiftUI + Swift Charts + MapKit,
+# iOS 18 / iPadOS 18 / macOS 15 HIG. If unavailable on the runner -> STATUS=BLOCKED
+# with API evidence.')
+############################################################
+--- xcode-select -p ---
+/Library/Developer/CommandLineTools
+--- xcodebuild -version (API evidence) ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+xcodebuild_exit=1
+--- iOS simulators available (API evidence) ---
+(none — no iOS Simulator runtimes/devices installed)
+--- canImport(XCTest) under active toolchain (API evidence) ---
+xctest-absent
+VERDICT: full Xcode + iOS Simulator + XCTest runtime are ABSENT on this runner;
+the gate's 'xcodebuild build test' steps below CANNOT execute.
+
+############################################################
+# GATE STEP 1 — iOS: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+############################################################
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1  (BLOCKED — requires Xcode; only CommandLineTools present)
+
+############################################################
+# GATE STEP 2 — macOS: xcodebuild -scheme TeslaSync-macOS build test
+############################################################
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1  (BLOCKED — requires Xcode; only CommandLineTools present)
+
+############################################################
+# GATE STEP 3 — swiftlint --strict   (scoped to the surface's files)
+############################################################
+swiftlint: 0 violations in shared-surfaces/ActionItem.*
+LINT_EXIT=0  (ActionItem files clean; note: repo-wide 'swiftlint --strict' also surfaces 1 PRE-EXISTING,
+             unrelated violation in TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift — outside this surface's allowed scope)
+
+############################################################
+# GATE STEP 4 — swiftformat --lint apps/apple   (scoped to the surface's files)
+############################################################
+SwiftFormat completed in 5.63s.
+0/8 files require formatting.
+FORMAT_EXIT=0
+
+############################################################
+# GATE STEP 5 — check-placeholders.ps1 -Path .../shared-surfaces/ActionItem
+############################################################
+--- literal gate path ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+--- directory scan of the surface's ActionItem.* files (meaningful) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+############################################################
+# SUPPLEMENTARY VERIFICATION (what the runner CAN prove — the code is real, not a stub)
+# Swift 6 / macOS 15 SDK at /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+############################################################
+--- (a) Shipping logic typecheck vs real macOS 15 SDK (Adapter/Seams/Model/Views/main + design Tokens) ---
+PROD_TYPECHECK_EXIT=0  (0 = clean; @Observable macro + SwiftUI + OSLog all resolved)
+--- (b) Emit module 'TeslaSync' with -enable-testing (proves @testable import TeslaSync resolves) ---
+MODULE_EMIT_EXIT=0
+--- (c) Semantic typecheck of test bodies vs the real public API (XCTest shimmed; bundle exec needs Xcode) ---
+TEST_SEMANTIC_TYPECHECK_EXIT=0  (0 = test bodies reference real symbols/signatures, 0 warnings)
+--- (d) Previews parse (the #Preview macro plugin is Xcode-only; logic+syntax verified) ---
+PREVIEWS_PARSE_EXIT=0
+
+Files delivered (apps/apple/TeslaSync/shared-surfaces/):
+       215 ActionItem.Adapter.swift
+       118 ActionItem.Model.swift
+       123 ActionItem.ModelTests.swift
+        96 ActionItem.Previews.swift
+        54 ActionItem.Seams.swift
+        25 ActionItem.strings
+        63 ActionItem.swift
+       167 ActionItem.Tests.swift
+       146 ActionItem.Views.swift
+      1007 total
+
+INTEGRATION NOTE: the 'TeslaSync/shared-surfaces' source path must be registered in
+apps/apple/project.yml (alongside the existing 'feature-views' / 'dashboard-widgets'
+entries) for the scheme to compile these files. That single shared wiring is owned by
+the P4 shared-surfaces core/bundle (a declared predecessor; project.yml is outside THIS
+surface's allowed-files list, kept per-surface-isolated so the ~226 parallel surface
+prompts never conflict-edit the same manifest).
+
+############################################################
+# RESULT
+############################################################
+Implementation: COMPLETE (9 files, full web parity, no stubs). All runner-executable
+gates GREEN: swiftlint(0), swiftformat(0), placeholder(0), SDK typecheck(0), test
+semantics(0). The authoritative xcodebuild iOS+macOS build/test gate is BLOCKED by
+missing platform capability (no full Xcode, no iOS Simulator, no XCTest runtime) —
+API evidence captured above.
+
+IOS_EXIT=1
+MAC_EXIT=1
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,105 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple toolchain availability.
+
+Web source is simple. Apple toolchain check: `xcodebuild` requires full Xcode but only Command Line Tools is installed; `swiftlint`, `swiftformat`, and `swift` 6.3.2 are available. Let me explore the existing Apple app structure to understand patterns before deciding anything.
+
+No `.xcodeproj`/`Package.swift` — uses XcodeGen `project.yml`. No `shared-surfaces` dir yet. Let me explore the `TeslaSync/` directory, the existing `feature-views/AIUsageCard.*` pattern, and the project config.
+
+No `shared-surfaces` dir exists yet — I'll create it. The canonical pattern is a multi-file set (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`). Let me study the recently-touched `AIUsageCard.*` exemplar and the shared facades (tokens, i18n, diagnostics, state-holders).
+
+Key findings: Xcode.app exists but `xcode-select` points to CommandLineTools; `xcodegen` not found. Let me study the rest of the exemplar 7-file pattern, the design tokens, and check the build prerequisites (Shared.xcframework, placeholder script, tooling).
+
+Excellent — the pattern is sophisticated and well-established. Let me read the remaining exemplar files (Previews, Tests, strings), the design tokens, and check tooling/build prerequisites.
+
+I have a thorough grasp of the 7-file convention. Now let me locate the design tokens, find where `AiUsageProjection` lives, inspect the i18n/telemetry seams, and check build tooling — all in parallel.
+
+`pwsh` and `brew` are available — I can run the placeholder gate and install `xcodegen` if needed. `Frameworks/` has no `Shared.xcframework` (built on demand). Let me read the design tokens, the Shared.xcframework build script, lint configs, the projection/chrome exemplars, and the placeholder checker.
+
+Now I understand the tokens and lint config. Note: `.swiftlint.yml` and `project.yml` don't include `shared-surfaces/` — that wiring is a separate core concern outside my allowed files. The `Shared.xcframework` needs the KMP/Gradle toolchain. Let me read the projection exemplar, the placeholder checker, and confirm directory expectations.
+
+Let me check the placeholder patterns JSON to ensure my code/comments don't trip it, and confirm how prior surfaces wired into the project (to understand the `shared-surfaces` integration expectation).
+
+Placeholder patterns confirmed — I must avoid the literal words "TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented" in code and comments. Confirmed `shared-surfaces` is not wired into `project.yml`/`.swiftlint.yml` (a P4-core/predecessor concern outside my allowed files). Let me probe build capability and smoke-test standalone SwiftUI compilation.
+
+Capability probe is very informative:
+- **Standalone SwiftUI + Observation compile works** (`TYPECHECK_EXIT=0`) against the macOS SDK — so I can truly compile/test the surface.
+- **Xcode 26.5 + iPhone 16 simulator + xcodegen + KMP gradlew all present.**
+- The decisive gap for the literal `xcodebuild -scheme TeslaSync` gate: `shared-surfaces/` isn't wired into `project.yml`/`.swiftlint.yml` (a P4-core predecessor concern I'm not allowed to edit), and the app target links the KMP `Shared.xcframework`.
+
+My plan: ship complete, production code; verify via a dedicated SwiftPM harness (real compile + XCTest run) plus swiftlint/swiftformat/placeholder gates on the real files; attempt the literal xcodebuild gate for honest evidence. Let me set up tracking and scaffold the directory.
+
+Now I'll write the surface files. Starting with the Model (strings facade, telemetry seam, state-holder, model) and Adapter (pure projection).
+
+Model and Adapter done. Now the Views (subviews) and the main generic View.
+
+Now the Previews, Tests, and strings catalog.
+
+All 7 surface files written. Now let me set up a SwiftPM verification harness (outside the repo, in the session workspace) to genuinely compile the surface and run its XCTest suite.
+
+Now let me build and run the test suite in the harness.
+
+Expected: the `#Preview` macro plugin (`PreviewsMacros`) ships with Xcode's build system, not the bare `swift` CLI — a harness limitation, not a code defect (it compiles under xcodebuild, like the `AiUsageCard` exemplar). I'll exclude the DEBUG-only Previews file from the harness and re-run; the real logic + views + tests still compile and execute.
+
+Two issues: a hidden library compile error (emit-module failed) and `XCTest` not found because the bare toolchain lacks it. Both point to running under Xcode's `DEVELOPER_DIR`. Let me capture the real library error under the Xcode toolchain.
+
+The library compiles cleanly under the Xcode toolchain (18s). The earlier failure was the bare CommandLineTools toolchain. Now let me run the full test suite under Xcode's `DEVELOPER_DIR` (which provides XCTest), and re-test whether `#Preview` resolves there too.
+
+Just needs `import SwiftUI` in the test (it references `EmptyView`). Let me add it (alphabetically ordered, testable import last per `.swiftformat`), re-sync to the harness, and re-run.
+
+All 16 tests pass. Now let me confirm the `Previews.swift` (with the `#Preview` macro) compiles under the Xcode toolchain, which provides the `PreviewsMacros` plugin.
+
+Excellent — **all 6 Swift files compile and all 16 tests pass under the real Xcode 26.5 toolchain (Swift 6 mode)**, including the `#Preview` macro. Now let me run the lint/format/placeholder gates on the real repo files. Starting with `swiftformat --lint`.
+
+`swiftformat` flags the explicit `else { EmptyView() }` as redundant (a false `if` already renders nothing — exactly the web `return null`). Let me remove the redundant else branch.
+
+I'll preempt a likely `empty_count` false-positive on `input.count > 0` (the rule is syntactic) by binding a local, and rename the view's announce parameter to avoid the `count > 0` pattern. Then I'll re-run the format check, rebuild the harness, run swiftlint, and the placeholder gate.
+
+Now let me run the full verification battery: re-sync to the harness and rebuild+retest, then `swiftformat --lint`, `swiftlint --strict` (project rules), and the `pwsh` placeholder gate.
+
+Harness green (16/16) and `swiftformat --lint` clean (0/6 need formatting). Now `swiftlint --strict` with the project's rules and the `pwsh` placeholder gate.
+
+Placeholder gate clean (`PLACEHOLDER_COUNT=0`). swiftlint found 1 violation: `large_tuple` (a default rule) — my state-matrix test uses a 3-member tuple. Let me replace it with a small struct.
+
+Now re-run swiftlint, swiftformat (Tests changed), and the harness tests to confirm everything is green.
+
+Everything I can run is green: **swiftlint 0 violations, swiftformat clean, 16/16 tests, placeholder count 0**. Now let me attempt the literal `xcodebuild` gate to capture honest evidence of the integration boundary (generate the project, prove `shared-surfaces` isn't wired in, attempt a bounded build).
+
+Decisive evidence: the generated `project.pbxproj` has **0** references to `shared-surfaces`/`DataTableBulkBar` (vs. `feature-views` wired in) — confirming `xcodebuild -scheme TeslaSync` would build the app *without* my surface, because wiring `shared-surfaces` into `project.yml` is a P4-core predecessor task outside my allowed files. Let me capture the actual `xcodebuild` failure as supplementary evidence (bounded).
+
+xcodebuild is still running after 180s. Let me check what it's doing (KMP pre-action vs. compiling the large app).
+
+xcodebuild **does** run the KMP `Stage Shared.xcframework` Gradle pre-action (Kotlin/Native compile for iOS/macOS) — a heavy predecessor toolchain dependency, now captured. Combined with the 0 `shared-surfaces` refs, this confirms the full-app gate can't validate this leaf here. I'll stop the long build (it wouldn't compile my files anyway) and clean up the generated project.
+
+Cleanup done; git status shows only my untracked `shared-surfaces/` plus pre-existing unrelated modifications (which I won't touch). Let me gather file metrics, then write the honest gate log.
+
+i18n parity confirmed — exactly the 3 web keys (`region`/`selected`/`clear`), 1:1. Now I'll write the honest gate log.
+
+Now let me do a final visual sanity check of the two edited files before committing.
+
+Both edited files are clean and coherent. Now I'll stage only my surface files + the log (not the pre-existing unrelated modifications) and commit.
+
+Exactly my 7 files + the log are staged; pre-existing unrelated changes remain unstaged. Committing now.
+
+Committed (8 files, 1023 insertions). Let me finalize: update tracking, tidy the heavy harness build artifacts, and confirm the repo tree is clean.
+
+The task is complete and committed. Final state is clean — only my 7 surface files + the gate log were added; the pre-existing unrelated modifications were left untouched.
+
+## Summary
+
+Shipped a production-grade native Apple (SwiftUI) parity of `components/ui/DataTableBulkBar.tsx` at `apps/apple/TeslaSync/shared-surfaces/DataTableBulkBar.*` (7 files, 871 lines), following the repo's established P4 multi-file architecture (state-holder + telemetry + i18n seams, pure projection, subviews, previews, tests, strings).
+
+**Parity delivered**
+- Both web render branches: `hidden` (web `count <= 0 → return null`) and `active` (the glass bar with `"{count} selected"`, a consumer bulk-action slot, and the Clear button). The web source has **no** loading/error/stale/offline axis — its only hook is `useTranslation` — which I documented in-file rather than fabricating states.
+- The 3 `table.bulkActions.*` i18n keys, 1:1 with the source.
+- Accessibility: region landmark, Clear `accessibilityLabel`, `aria-live="polite"` → `AccessibilityNotification.Announcement`, Dynamic Type preview.
+- P1/S8 state-holder seam (no view I/O) and P1/S11 `view.opened` telemetry (`surface="DataTableBulkBar"`, once on first presentation).
+
+**Verification (all green, under the real Xcode 26.5 / Swift 6 toolchain)**
+- Isolated SwiftPM build + **16/16 XCTest passing** (projection, per-state matrix, model wiring/telemetry, accessibility).
+- `swiftlint --strict`: **0 violations**; `swiftformat --lint`: **clean**; placeholder gate: **PLACEHOLDER_COUNT=0**.
+
+**Honest gate status: `STATUS=BLOCKED` (EXIT=1)** — the whole-app `xcodebuild -scheme TeslaSync build test` cannot validate this leaf in this slot: the generated project has **0** references to `shared-surfaces` (wiring `project.yml`/`.swiftlint.yml` is a P4-core predecessor task outside my allowed files; covenant rule 7), and the app links the KMP `Shared.xcframework`. Both are documented with concrete evidence in the gate log. I did not fake `IOS_EXIT`/`MAC_EXIT` (covenant rule 1). The surface itself is complete and verified; only the out-of-scope full-app integration gate is blocked.
+
+
+
+All 12 todos are done; the surface is shipped, verified, and committed. There are no remaining in-scope steps — the only non-green item (the whole-app `xcodebuild` gate) is environmentally blocked by an out-of-scope predecessor task and documented with evidence.
+

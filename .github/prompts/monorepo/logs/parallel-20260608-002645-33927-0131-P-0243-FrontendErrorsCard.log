@@ -1,0 +1,119 @@
+I'll start by assessing the runner's Apple toolchain capability and exploring the repo structure, since this task requires SwiftUI/Xcode tooling.
+
+Key finding: only Command Line Tools are installed (no full Xcode), and `simctl` is unavailable. Let me verify the project layout (SPM vs xcodeproj) and whether SwiftUI/Charts/MapKit SDKs are reachable, since that determines DONE vs BLOCKED.
+
+Good. The project uses XcodeGen (`project.yml`) — no checked-in `.xcodeproj`, and only Command Line Tools are present (no full Xcode/simulators). `pwsh`, `swiftlint`, `swiftformat` are available. Let me explore the Apple sources to learn the established patterns (state-holders, tokens, i18n, diagnostics, existing feature-views) and the web hook's data shape.
+
+1436 feature-view files already exist. I need to mirror the exact established conventions. Let me find the `WebErrorsSummary` type, check whether a predecessor already created `FrontendErrorsCard.*`, and locate the shared P1/S8 state-holders, S9 tokens, S10 i18n, S11 diagnostics.
+
+The shared infra lives elsewhere (likely `apps/apple/Sources` or `apps/apple/shared`). Let me read the `WebErrorsSummary` type and find how existing feature-views bind to `useAdmin` data, plus locate the shared state-holder/tokens/i18n/diagnostics.
+
+Now I have the data shape. Let me explore the shared infrastructure (`SharedFacade`, `Design`/`Theme`, `Components`) and find a representative simple "card" feature-view to mirror exactly.
+
+`BackendStatusSection` is the ideal exemplar — same web source directory (`features/system/components/status`) and described as the sibling of this card. Let me read the shared infra and the full `BackendStatusSection` set to mirror conventions exactly.
+
+This is a sophisticated KMP-bridged architecture. Let me read the rest of the `BackendStatusSection` set plus the shared facade/diagnostics/i18n/theme to fully internalize the conventions before writing.
+
+The pattern is crystal-clear and high-quality. Let me read the remaining exemplar files (Views, Sections, strings, Tests, ModelTests, Previews) plus the design tokens, lint config, and project.yml to ensure my files compile, lint clean, and get picked up by the build.
+
+Excellent — I now fully understand the chrome and tokens. Let me read the strings, tests, previews of the exemplar, plus the design tokens, lint config, and project.yml.
+
+Now let me locate the exact token definitions and shared components I'll use, and read the exemplar's tests plus the lint/build config.
+
+Let me read the token source (`TSMaterial.swift`), the shared UI/feedback/motion components, the exemplar's `.Tests.swift`, and the lint/build configs.
+
+Let me read the shared components I'll use and locate the spacing/color/font token definitions, plus the lint/build configs.
+
+The tokens are generated. Let me find their definitions to confirm exact member names (`TSSpacing.x2xl`, `Font.TS.panel`, `Color.TS.*`, `TSRadius`, `TSMotion`).
+
+The main-app tokens appear to be code-generated (not statically committed). Let me confirm by inspecting `project.yml`, the codegen tooling, the Watch token mirror, and `Cards.swift`, so I use exact member names and ensure my files are auto-included.
+
+Found it — tokens live at `apps/design/generated/apple` (the `DesignTokens` group), and `TeslaSync/feature-views` is a folder path so new files auto-include. Let me read the generated tokens to confirm exact member names, and check the test target + Cards.swift.
+
+I have all tokens confirmed. Let me read the test target config, lint/format rules, the placeholder-check patterns (to avoid forbidden words), and `Cards.swift`.
+
+The test files live in `feature-views/` but the test target points at `Tests/Unit` — let me confirm the exact source-filtering mechanism so my `.Tests.swift`/`.ModelTests.swift` land in the right target.
+
+I need to resolve how `.Tests.swift` files in `feature-views/` reach the test target (they can't compile in the app target with `@testable import`). Let me check for exclusion rules and the `Tests/Unit` wiring.
+
+170 test files exist in `feature-views/`, and there's a `Tests/Unit/FeatureViews` dir. Let me see how the exemplar's tests are wired into the test target (likely symlinks), which confirms I just mirror placement in `feature-views/`.
+
+I now have everything needed. Let me confirm the Swift toolchain's SDK reach (does `import SwiftUI` work under CLT?), check the web `fmtInt` for formatting parity, and record the capability evidence. This determines how much real verification I can perform.
+
+Major finding: `import SwiftUI` **typechecks** under this CLT toolchain (the macOS 26 SDK bundles SwiftUI). That lets me do real verification beyond lint. Let me scope a genuine module typecheck by checking the shared components' dependencies.
+
+I have a complete understanding. Key facts: `xcodebuild` needs full Xcode (only CLT present) → the build/test gate steps cannot run, but `import SwiftUI` **does** typecheck under this toolchain, so I can do a genuine module typecheck against the real design system. Let me set up tracking and start building the surface, mirroring the `BackendStatusSection` exemplar exactly.
+
+Now I'll write the surface, starting with the pure Adapter core (Foundation-only, fully testable).
+
+Let me typecheck the Adapter (Foundation-only) immediately to validate the core before building on it.
+
+Adapter typechecks clean under Swift 6. Now the Model (state-holder seam + i18n facade + telemetry).
+
+Now the presentational chrome (`Views`).
+
+I introduced an invalid stored-property declaration (`var body content:`) in the panel. Let me fix it to a proper `@ViewBuilder` closure property and rename the generic for clarity.
+
+Now the root View, the loading/error States, and the Previews.
+
+Now the tests and the i18n strings catalog.
+
+All 9 files created. Now the real verification. First, a genuine **module typecheck** of the SwiftUI surface against the real design system (generated tokens + shared components) under Swift 6 language mode.
+
+The errors are in an unrelated component file (`UnitFormatters.swift` needs `UnitPreferences` from outside Components) — over-inclusion noise, not my code. Let me narrow to the exact closed dependency set my surface references. First, enumerate the external symbols my files use.
+
+`TSBadge` only appears in a comment; my real deps are `TSFadeIn`, `TSSkeleton`, and tokens. Let me typecheck against the precise closed set (Tokens + Material + Motion + Skeletons + Cards + Typography), excluding DEBUG previews.
+
+Surface typechecks clean under Swift 6 strict concurrency. Now validate the **test logic** by compiling tests in-module with the sources (stripping the cross-module `@testable import` for the standalone harness).
+
+`import XCTest` isn't resolvable — XCTest.framework ships with full Xcode, not CLT (same root cause as the xcodebuild block). Let me confirm XCTest's absence and then syntax-check (`-parse`) all 9 files, which doesn't require the XCTest module.
+
+Confirmed: XCTest is absent from the CLT SDK (only `Python3.framework`) — this is the same Xcode-capability gap that blocks `xcodebuild`. All 8 Swift files parse cleanly. Let me also typecheck the Previews logic (stripping the `#if DEBUG` guard in a temp copy so it compiles against the real types without pulling the dependency files' own previews).
+
+The only errors are the `#Preview` macro's external plugin (`PreviewsMacros`) missing — another Xcode-only component, not a code defect (the macro is declared but its plugin ships with Xcode). Let me validate the preview **bodies** by rewriting the macro into plain functions in a temp copy.
+
+Everything that can be typechecked is green. Now run the formatters/linters. First, apply `swiftformat` to my files (scoped), then verify with `--lint`.
+
+`0/8 files formatted` — my files were already format-compliant. Now verify with `swiftformat --lint`, `swiftlint --strict`, and the placeholder check (exactly as the gate invokes them).
+
+swiftformat and swiftlint both clean (0 issues). Now the placeholder check. Let me read how it interprets `-Path` then run it exactly as the gate does.
+
+The gate's `-Path` ends in `FrontendErrorsCard` (no extension), which `Test-Path` treats as non-existent → a trivial pass. To be honest, I'll run **both** the gate's literal invocation **and** a real scan over copies of my actual files.
+
+All placeholder checks are clean. Let me verify i18n key coverage (every key referenced exists in the catalog), ensure the log directory exists, and capture the real `xcodebuild` failures for the log.
+
+i18n coverage complete (no missing keys), and both `xcodebuild` invocations fail identically (CLT, not Xcode) → `IOS_EXIT=1`, `MAC_EXIT=1`. Now let me capture the repo-wide `swiftformat --lint` and `swiftlint --strict` exit codes that the gate uses (to report honestly whether pre-existing files affect them).
+
+Repo-wide `swiftformat --lint` flags exactly **1 pre-existing file** (not mine). Let me identify it to document honestly, then capture `swiftlint --strict` baseline.
+
+Repo-wide `swiftlint --strict` also reports exactly 1 serious violation. Let me identify it (my scoped run was already 0).
+
+The single `swiftlint`/`swiftformat` violations are both in **pre-existing sibling files** (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`) — never my files, and outside my allowed edit scope. My 8 files are 100% clean. Now I'll generate the authentic gate log by executing every runnable step and recording real exit codes.
+
+Log written (118 lines). Let me review it to confirm accuracy and the required terminal markers.
+
+The log is authentic and complete, ending with the required `EXIT=1` / `STATUS=BLOCKED`. Let me do a final self-review of the edited Views file and confirm the working tree contains only my intended new files before committing.
+
+The working tree has **pre-existing unrelated changes** (`AIUsageCard.*`, two web files) from this shared parallel slot — I must stage only my files. Let me stage exactly the 9 surface files + the log, verify the staged set, and commit.
+
+Staged set is exactly my 9 files + the log; the pre-existing changes remain unstaged. Committing now with the prescribed message plus a transparent BLOCKED note.
+
+Committed as `cd7b2448d` — exactly 10 files (9 surface + log), pre-existing changes untouched. Let me clean up temp probe files and do a final confirmation.
+
+All checks complete. Temp files cleaned, commit isolated to my 9 files + log, pre-existing changes untouched, all todos done.
+
+## Summary
+
+I built **`FrontendErrorsCard`** — the native Apple/SwiftUI parity of `web/src/features/system/components/status/FrontendErrorsCard.tsx` — mirroring the committed `BackendStatusSection` exemplar exactly. Committed as `cd7b2448d` (10 files, 1,473 insertions).
+
+**Delivered (`apps/apple/TeslaSync/feature-views/FrontendErrorsCard.*`):**
+- `.Adapter.swift` — pure, Foundation-only DTOs + projection (offenders with `—` fallbacks, `${name}|${route}|${idx}` ids, `fmtInt` parity), phase resolution, surface slug, VoiceOver builders
+- `.Model.swift` — P1/S8 source seam, P1/S10 i18n facade, P1/S11 `view.opened` telemetry (slug `FrontendErrorsCard`), `@Observable` model, in-memory source
+- `.swift` / `.Views.swift` / `.States.swift` — root phase switch + panel/header/total/offender-list/name-badge/freshness-chip/banner + loading & error states
+- `.Previews.swift`, `.Tests.swift`, `.ModelTests.swift`, `.strings`
+- All 6 states (loading/content/empty/error/stale/offline), VoiceOver labels, Dynamic Type + Reduce Motion via tokens/shared components, full i18n (0 missing keys), no placeholders.
+
+**Verification (real, on this runner):** `swiftc -typecheck` of the full surface against the **real** generated design tokens + shared components under Swift 6 strict concurrency ✅, adapter + preview-body typecheck ✅, all 8 files parse ✅, scoped `swiftlint --strict` 0 violations ✅, `swiftformat --lint` 0 ✅, placeholder scan 0 ✅.
+
+**Status: `BLOCKED`** (per the prompt's Capability clause). The authoritative `xcodebuild build test` (iOS + macOS) and XCTest **cannot run** — the runner has Command Line Tools only, no full Xcode (no `xcodebuild`, no `simctl`, no `XCTest.framework`, no Preview-macro plugin). The repo-wide `swiftlint`/`swiftformat` non-zero exits trace to **pre-existing sibling files** (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`), never this surface and outside the allowed-files scope. Full capability evidence and every exit code are in the committed log, which ends with `EXIT=1` / `STATUS=BLOCKED`.
+

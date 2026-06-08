@@ -1,0 +1,125 @@
+I'll start by investigating the repository structure and the capability requirements for this task.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me investigate the Apple app structure deeply before concluding anything.
+
+Found: no `.xcodeproj` (uses XcodeGen `project.yml`), no `shared-surfaces` dir yet, no existing Toast. Let me gather capability evidence and read the spec + conventions in parallel.
+
+Critical update: `/Applications/Xcode.app` **is** present — it's just not selected (`xcode-select` points to CLT). `xcodebuild`/`xcrun` honor `DEVELOPER_DIR`, so I may be able to build/test for real. Let me verify, and explore native conventions.
+
+This is a fully working Apple environment: **Xcode 26.5 usable via `DEVELOPER_DIR`**, iPhone 16 simulator already booted, iOS 26.5 SDK, xcodegen 2.45.4. So a real build+test → `STATUS=DONE` is achievable. Now I must learn the native conventions precisely.
+
+The convention is clear: surfaces are split into `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`. Let me study the canonical template + core infra, and check test wiring + pwsh.
+
+`pwsh` is available, and feature-view `.Tests.swift` use `import XCTest` + `@testable import TeslaSync` yet live in the app-target path. I must understand the build wiring (esp. the `Shared.xcframework` pre-action, which could need a Kotlin toolchain) before committing to an approach.
+
+Two critical risks surfaced: (1) `Shared.xcframework` is **not** prebuilt — the scheme builds it via a **KMP/Gradle** pre-action needing a Kotlin toolchain; (2) `shared-surfaces` is absent from both `project.yml` sources and `.swiftlint.yml`. Let me set up a persistent shell and assess the KMP/build feasibility + test wiring.
+
+JDK 17 + gradlew present, but the KMP `Shared.xcframework` must be built on demand (potentially slow). Before deciding build strategy, I need the actual code conventions. Let me read the canonical template + core infra (tokens, state-holder, telemetry, i18n).
+
+Now I understand the surface convention well. Let me read the remaining template files and settle the test-target wiring empirically by generating the project and inspecting membership.
+
+I now see the full convention (state-holder + telemetry seam + projection + i18n facade + in-memory source). Crucially, `AcDcStatsPanel.Tests.swift` compiles into the **app** targets (4 entries = iOS+macOS app). Let me confirm how those inline tests actually run, read the remaining template files, and locate the design tokens.
+
+Important: `AcDcStatsPanel.Tests.swift` is owned by the **app** targets (not test bundles), and `ENABLE_TESTING_SEARCH_PATHS` is absent — so I must verify whether this inline-XCTest-in-app-target pattern even compiles (baseline health). Let me read the macOS verification-state doc, finish the template, locate token definitions, and run a definitive self-import experiment — while kicking off the KMP framework build.
+
+The `apps/macos-pending-verifications.md` doc is the key: it documents the **established precedent** for exactly this situation. Predecessors (ToolCard, AlertMessageEditor, FSMTimelineChart) verify each surface **in isolation** (SwiftPM build + tests + real iOS-18/macOS-15 `swiftc -typecheck` + swiftlint/swiftformat/placeholder), because the **full-app `xcodebuild build test` is blocked by pre-existing, unrelated collisions** (`DashboardWidgetSize` redefined 8–15×, 116+ co-located `*.Tests.swift` importing XCTest into the app target, unstaged `Shared.xcframework`, macOS signing). I'll follow that exact methodology. Let me confirm the pre-existing blockers and finish reading the template + token/motion/feedback files.
+
+All pre-existing blockers confirmed (`DashboardWidgetSize` ×15, **261** co-located XCTest files, unstaged xcframework) — identical to the documented precedent. Token/component files are KMP-free, so I can verify Toast in isolation against the real design system. Final research batch: exact token + component APIs.
+
+I have the exact tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSMotion`) and typography APIs. Toast is a self-contained overlay (no charts/maps/data-fetch), so its only hard repo dependency is `Tokens.swift` — ideal for isolated verification. Let me check for symbol collisions, then set up the plan and write the surface.
+
+No collisions. Let me confirm the repo's `EnvironmentValues` injection style and `TSButton` API, then I'll write the plan and the full surface.
+
+I now have all conventions. Before writing, I need the placeholder-gate's exact forbidden tokens (to avoid them in shipped code) and the swiftformat config.
+
+The placeholder gate's `-Path .../Toast` (no extension) means the intended layout is a **directory** `shared-surfaces/Toast/` containing the `Toast.*` files — that makes the scan (and `git add .../Toast`) meaningful. I'll use that layout. Now I need the exact forbidden token list.
+
+Forbidden substrings (case-insensitive): `TODO, FIXME, XXX, Coming soon, Placeholder, Lorem ipsum, not implemented` + swift `fatalError("unimpl/"not`, `Text("TODO`. I'll avoid all of these in code, comments, tests, and previews. Now let me set up the plan, todos, and directory, then write the surface.
+
+Plan set. Now I'll write the surface, starting with the foundation: the model/state-holder and the pure presentation adapter.
+
+Now the view layer (single-toast card) and the surface entry (overlay + host modifier).
+
+All 7 surface files written. Now wire `shared-surfaces` into the build (project.yml iOS + macOS app targets) and swiftlint.
+
+Wired into both app targets + swiftlint. Now I'll set up the **isolated SwiftPM package** (real `Tokens.swift` + the Toast sources + tests in a proper test target) to verify build + tests under Swift 6, per the documented precedent.
+
+Now build + test the isolated package under the Xcode toolchain (Swift 6 mode).
+
+Isolated build is **green** under Swift 6 strict concurrency (all 6 sources + previews compiled). Now run the tests.
+
+**19/19 tests pass** under Swift 6, 0 failures. Now prove the surface typechecks on the real **iOS 18** and **macOS 15** SDKs (strict concurrency).
+
+Both iOS 18 and macOS 15 typechecks pass (0 errors, strict concurrency). Now the host-runnable gates: swiftformat, swiftlint, placeholder.
+
+swiftformat: 2/6 files auto-formatted, now `--lint` reports **0/6 require formatting** (clean). Waiting on swiftlint.
+
+swiftlint linted all 1915 files (config `included`) and found 2 serious violations — I must determine whether any are in **my** files. Let me capture the actual violation lines.
+
+One pre-existing violation (`LifetimeStatsWidget.Adapter.swift`) and **one in my file**: `Toast.Tests.swift:99` large_tuple (3-member return tuple). I'll fix mine properly with a struct (no opt-out). Let me view the current text to edit precisely.
+
+The fix is a real refactor (struct fixture instead of a 3-member tuple) — no opt-out. Applying edits:
+
+Now re-verify: swiftformat, placeholder gate, swiftlint scoped to my files, and re-run the isolated tests after the refactor.
+
+All host gates **green** for my files (swiftformat 0/6, swiftlint 0 violations, placeholder COUNT=0). swiftformat reformatted source files after my first build, so I'll re-sync the package with the final files and re-run build + tests + both typechecks to ensure committed == verified.
+
+Re-verified after refactor: **19/19 tests, iOS 18 + macOS 15 typecheck all green.** Now regenerate the Xcode project (prove enumeration) and attempt the full gate to capture real evidence.
+
+All 7 Toast files are enumerated in the regenerated project. Now I'll attempt the actual full-app gate. First, a bounded probe of the KMP `Shared.xcframework` pre-action (the gate's first step) to characterize the blocker.
+
+The environment disallows that `kill` form. I'll run the KMP build to a log file with a bounded wait and let the tool background it if needed.
+
+KMP build still running after 200s. Let me peek at its progress.
+
+KMP is actually progressing (downloading Kotlin/Native, linking iOS frameworks) — the toolchain works, it's just slow. Letting it finish.
+
+KMP is linking each platform (iOS arm64/sim, macOS arm64) — progressing steadily. Waiting for it to finish so I can then capture the real full-app compile result.
+
+Release framework now linking (debug XCFramework already assembled). Nearly done. Waiting for the release `Shared.xcframework`.
+
+Release linking continues per-platform (slow but steady). Waiting for completion.
+
+Release macOS linking — final platform before assembly. Waiting for completion.
+
+KMP `Shared.xcframework` built successfully (`KMP_EXIT=0`). Now stage it and run the actual full-app `xcodebuild` to capture the real compile result — confirming whether failures are my surface or the documented pre-existing collisions.
+
+Full-app iOS build failed (exit 65, as documented). Let me confirm the failures are the pre-existing collisions and that **none** reference my Toast surface.
+
+Confirmed: the full-app build fails with exactly **2 errors, both the pre-existing XCTest-in-app-target blocker** (`AIRestorePanel.Tests.swift` — a different surface), and **zero errors reference the Toast surface**. Let me capture the exact context for the log and confirm the baseline cause is pre-existing.
+
+Ironclad: the full-app failure is **2 pre-existing errors in `AIRestorePanel.Tests.swift`** (a different surface; XCTest module resolution), with **261 pre-existing co-located XCTest files** and **15 `DashboardWidgetSize` redefinitions** — zero Toast errors. This matches the documented macOS-pending precedent exactly. Let me clean derived data, then write the log and tracking row.
+
+Unexpected: `AIUsageCard.*` (a different surface) shows as modified — I didn't touch those. Let me confirm I didn't cause this and exclude them from my commit.
+
+Confirmed — the `AIUsageCard.*` changes are **pre-existing, unrelated** working-tree edits (a different surface, content rename `0203→0237`), not caused by me. I'll commit only my explicit files. Now writing the honest gate log.
+
+Now append the tracking row to the macOS-pending ledger (matching the predecessor rows), then commit only my explicit files.
+
+Now commit — explicitly staging only my files (excluding the pre-existing `AIUsageCard` changes and git-ignored generated artifacts).
+
+All 11 intended files staged correctly; `AIUsageCard` excluded. Committing.
+
+Committed (`cfdc7f823`). Final verification of the committed surface and log.
+
+All work is complete and committed (`cfdc7f823`). Final status:
+
+## P4 · Shared surface · 0144 — `Toast` (Apple) — delivered
+
+**Shipped** a production, no-stub SwiftUI parity of `web/src/components/feedback/Toast.tsx` in `apps/apple/TeslaSync/shared-surfaces/Toast/` (7 files, 1,129 LOC), following the repo's surface conventions exactly:
+
+- **`ToastCenter`** — `@MainActor @Observable` state holder (P1/S8): `post`/`success`/`error`/`info`/`warning`/`dismiss`, web's 5‑toast cap + 4s auto‑dismiss, `runMutation` (= `useMutationToast`), injectable telemetry + scheduler seams.
+- **`ToastOverlay`** + `.toastLayer(_:onNavigate:)` — bottom‑trailing stack; emits P1/S11 `view.opened`; touches pass through the empty layer.
+- **`ToastPresentation`** — pure icon/tint/assertive‑role/a11y/action‑kind/cap projections.
+- Hooks bound: `useToast`/`useOptionalToast` → `@Environment(ToastCenter.self)`; `useMotionPreference` → `accessibilityReduceMotion`. All copy via the P1/S10 facade; VoiceOver assertive/polite announcements; Reduce‑Motion aware.
+
+**Per‑surface gates — all GREEN** (isolated, per the documented `apps/macos-pending-verifications.md` methodology): SwiftPM build + **19/19 tests** under Swift 6 strict concurrency, real **iOS‑18 + macOS‑15 `swiftc -typecheck`**, `swiftlint --strict` (0 violations), `swiftformat --lint` (0/6), placeholder gate (`PLACEHOLDER_COUNT=0`, 0 opt‑outs), `xcodegen generate` enumerates all 7 files.
+
+**Full‑app `xcodebuild build test` — honestly RED (`IOS_EXIT=65`), STATUS=BLOCKED.** I built the KMP `Shared.xcframework` (`KMP_EXIT=0`) and ran the real gate: it fails with **2 errors, both pre‑existing and unrelated** (`AIRestorePanel.Tests.swift` — XCTest module resolution), rooted in repo‑wide collisions outside this prompt's allowed files (**261** co‑located XCTest‑in‑app‑target files, `DashboardWidgetSize` ×**15**, macOS signing). **Zero Toast errors.** This matches the documented ToolCard/AlertMessageEditor/FSMTimelineChart precedent and is deferred to the P99 macOS acceptance gate; a tracking row was appended to `apps/macos-pending-verifications.md`. Per the honesty covenant, the red build is reported as red — not green.
+
+Pre‑existing unrelated working‑tree edits (`AIUsageCard.*`) were left untouched and excluded from the commit. Log: `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0144-Toast.log` (ends `EXIT=65` / `STATUS=BLOCKED`).
+
+
+
+The task is fully complete and verified — all 12 todos done, surface committed (`cfdc7f823`), every per-surface gate green, and the full-app gate honestly reported as blocked by documented pre-existing issues outside my allowed scope.
+

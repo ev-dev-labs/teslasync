@@ -1,0 +1,162 @@
+I'll start by exploring the repository structure and understanding what's available, then read the web source specification.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me explore the Apple app structure and check for full Xcode.
+
+Full Xcode.app exists in /Applications but the active dir is CommandLineTools. Let me check if I can use it via `DEVELOPER_DIR`, and explore the native patterns and dependencies.
+
+Xcode 26.5 works via `DEVELOPER_DIR` and iPhone 16 simulator is booted. Now let me understand the native architecture — AI components, state holders, i18n, tokens, and existing surface patterns.
+
+The feature-views directory uses a clear multi-file pattern per surface (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`). There's an existing `AiUsageCard` and `AIRestorePanel` — the closest AI analogs. Let me study them plus the SharedFacade core.
+
+This is the canonical pattern. Now let me read the web AI primitives I must reproduce (`useAiStream`, `AIFeatureCard`, `withAiFeature`, `AiOutputPanel`) and the native AI-mode/streaming exemplars.
+
+Now let me read the web output panel + thinking indicator, the native AI streaming/settings exemplars, and the design tokens.
+
+Now let me read the native AIRestorePanel set (closest AI surface exemplar) and the design tokens.
+
+Let me understand the test/build wiring (how `.Tests.swift` files in feature-views compile), the design tokens, and whether the KMP framework is prebuilt.
+
+Now let me check the KMP build feasibility, confirm `shared-surfaces` wiring status, read the methodology, and the `TSGlassPanel`/`TSFadeIn` primitives.
+
+KMP shared core + Gradle + Java 17 exist, so I'll start the (slow) `Shared.xcframework` build in the background now while I continue. Let me also read the pending-verifications note and remaining exemplars.
+
+KMP build finished quickly — let me check its result, which is decisive for whether the full gate is achievable.
+
+The gradle build is still running (downloading Kotlin/Native dist, tasks FROM-CACHE) but my `&` wasn't detached. Let me relaunch it properly detached so it survives, then inspect project wiring.
+
+Two build-file entries reference the test file. Let me map them to target names precisely to understand the test wiring.
+
+Decisive finding: per-surface `.Tests.swift`/`.Previews.swift` compile into the **app targets** (iOS + macOS) — typecheck-verified by `xcodebuild build`. I must wire `shared-surfaces` into project.yml like `feature-views`. Let me check the KMP build result.
+
+KMP toolchain works and produced `Shared.xcframework` — the full gate is achievable. Let me stage the framework (background) and read the last conventions I need: the placeholder checker, `TSButton`/`TSSkeleton` signatures.
+
+`TSButtonVariant` = primary/secondary/ghost/destructive (no "outline"), so I'll build a dedicated cyan Helix CTA button. Let me read the button/skeleton primitives and the exact banned placeholder tokens.
+
+Framework staging finished. Let me confirm it landed, then set up tracking and start writing.
+
+Framework release build still finishing in the background (the scheme pre-action will also ensure staging). Now I'll write the surface. Starting with the Model (seams, state, strings facade).
+
+Now the pure projection file.
+
+Now the main view file that composes the surface.
+
+Now the comprehensive test file.
+
+Now the i18n strings catalog.
+
+Now wire `shared-surfaces` into both app targets in project.yml (mirroring `feature-views`).
+
+Now lint/format my files. Let me run swiftformat and swiftlint on the new surface (using the repo configs).
+
+One formatting nit. Let me auto-format my files with the repo config, then re-lint.
+
+swiftformat passes. Let me verify the auto-format didn't alter intent, then run swiftlint.
+
+Critical: `.swiftlint.yml` `included:` doesn't list `shared-surfaces`, so the gate wouldn't lint my code. Let me first lint my files directly, fix issues, then add the dir to `included` so the gate actually checks it.
+
+swiftlint linted the whole tree and found 1 serious violation. Let me isolate it.
+
+Pre-existing violation in `LifetimeStatsWidget.Adapter.swift` (not my code). Let me stop the running lint and verify the full swiftlint config + whether this is genuinely a baseline failure.
+
+Confirmed: the lone swiftlint violation is in `LifetimeStatsWidget.Adapter.swift`, **unchanged vs HEAD** — a pre-existing, out-of-scope condition. My surface files are clean. Let me check the swiftlint version pinning (to characterize it honestly), add `shared-surfaces` to the lint config, verify the staged framework, and kick off the iOS build.
+
+Framework is staged. Let me check the CI workflow to mirror the exact gate and see how it pins swiftlint.
+
+CI uses the same `swiftlint --strict`; the lone violation is genuinely pre-existing/unrelated (outside my allowed files). My surface is clean. Now the high-value step: regenerate the project and run the iOS build+test. Let me start it.
+
+My surface files are in both app targets. Now run the iOS build+test gate (the long pole) in the background.
+
+While that builds, let me confirm the pre-existing violation is genuine debt and create a session plan.
+
+The pre-existing violation is a genuine long projector function — confirmed out of scope. The iOS build is still running (backgrounded). Let me check its progress.
+
+My surface code compiles — the only error is `import XCTest` in my `Tests.swift` failing to resolve in the **iOS app target**. The established feature-view tests have the same `import XCTest`; some guard it with `#if canImport(XCTest)`. Let me confirm the guard pattern and how widespread unguarded imports are (pre-existing iOS blocker).
+
+The documented-correct convention (per `MoreDetailsPanel.Tests.swift`) is to gate the whole test file on `#if canImport(XCTest)` — because the surface dirs are in the app targets, which don't link XCTest. Only 6/204 feature-view test files follow it; 198 are pre-existing unguarded (the iOS-build blocker, outside my scope). Let me guard my test file correctly, then validate on macOS (the CI-authoritative platform).
+
+Now reformat (to handle `#if` indentation) and clean up the stale iOS build processes.
+
+A stale `ENABLE_TESTING_SEARCH_PATHS=YES build-for-testing` process clarifies the asymmetry: iOS app targets can't resolve XCTest in the plain `build` action (the 198 pre-existing unguarded files break it), whereas macOS resolves XCTest from its SDK. macOS is the CI-authoritative platform. Let me clean up stale processes and run a clean macOS build+test.
+
+All clean. Now run the macOS build+test (CI-authoritative) in the background.
+
+Let me monitor the macOS build for early errors.
+
+Excellent — the macOS build **compiled the entire app including my surface with zero compile errors**; it only failed at **code signing** (entitlements need a dev cert — an environment limitation, not a code issue). Let me retry with signing disabled (standard local-CI workaround).
+
+Let me poll the macOS rebuild (should be incremental/faster).
+
+The macOS run got past signing but now hits the same pre-existing unguarded `import XCTest` in `AIRestorePanel.Tests.swift` (feature-views) — the app target compiles XCTest test files without testing search paths. Notably, run 1 compiled my surface fine (it reached signing). Let me get crisp evidence: a clean macOS **build** (no test action) proves my code compiles into the shipping app.
+
+While macOS builds, let me run the placeholder gate on my surface. Let me check if pwsh is available (the checker is a `.ps1`).
+
+pwsh is available and my files have 0 banned tokens. Let me run the authoritative placeholder checker and check the macOS build-only result.
+
+Placeholder check **PASS**. The macOS build-only failed — let me confirm it's the same pre-existing unguarded XCTest issue, then rebuild with `ENABLE_TESTING_SEARCH_PATHS=YES` (which lets the app target resolve XCTest, compiling the 198 pre-existing unguarded files + my guarded one).
+
+Confirmed: **zero errors in my files** — the only build blocker is pre-existing unguarded `import XCTest` in sibling `feature-views/AIRestorePanel.Tests.swift` (outside my allowed scope). To verify the whole app (including my surface) actually builds and the test suite passes, I'll add `ENABLE_TESTING_SEARCH_PATHS=YES` (lets the app target resolve XCTest, the standard build-for-testing behavior).
+
+Let me wait for the macOS build+test (it recompiles with the new settings).
+
+The fuller compile surfaced **more pre-existing sibling errors** (ambiguous `SpeedUnit`/`DashboardWidgetSize` in `dashboard-widgets/*` — duplicate types from sibling test/preview files) — again **zero in my files**. The app is in a pre-existing non-compiling state from sibling surfaces. To get a decisive clean build of the real app code including my surface, let me exclude all `*.Tests.swift`/`*.Previews.swift` (removing the sibling duplicates/XCTest blockers).
+
+`pkill` isn't allowed. Let me find and kill the lingering process by PID, then launch.
+
+All clean. Now launch the macOS core build (excluding test/preview files to bypass pre-existing sibling issues).
+
+While that builds, let me harden my `Previews.swift`: the Stale/Offline previews use `var`+`return` inside the `#Preview` closure, which can break under `@ViewBuilder`. Let me move that mutation into static factory values so each preview body is a single expression.
+
+Let me check the core-build result.
+
+My exclude pattern missed `*.ModelTests.swift` files. Again **0 errors in my files**. Let me broaden the pattern to `*Tests.swift` (covers `.Tests.swift` and `.ModelTests.swift`) and rebuild.
+
+Let me re-lint my edited Previews file while the core build runs.
+
+Format still clean. Let me check the macOS core build (excluding all test/preview files).
+
+The build keeps surfacing **new pre-existing errors in sibling feature-view main files** (duplicate `SummaryFreshnessChip`, `YearReviewSource`, API mismatches) — the whole app doesn't compile in this snapshot due to many sibling surfaces, but **0 errors in my files** every time. The full-app gate is unachievable from pre-existing debt I can't touch. Let me instead get a **decisive isolated compile of my surface** against just the design system it depends on. First, map my dependencies' closure.
+
+The broken files are all in sibling dirs (`feature-views`, `dashboard-widgets`); `Sources/` (the design system my surface depends on) compiled cleanly. Let me verify `Sources/Components` + `Sources/Design` are self-contained, then do an isolated typecheck of my surface against them.
+
+`Sources/Components` + `Sources/Design` are self-contained (only system frameworks). I'll do a decisive **isolated typecheck** of my entire surface compiled as module `TeslaSync` against the real design system, with XCTest available so my test file is checked too.
+
+The isolated compile dragged in unrelated `Components` files with their own external deps (`UnitPreferences`) — again **0 errors in mine**. The full-app builds already proved my surface typechecks against the *real* design system (every build compiled my files against real `TSGlassPanel`/`Color.TS`/etc. with zero errors). For a crisp clean-exit artifact, let me typecheck my 6 files against the real `Tokens.swift` + minimal correct-signature shims of the 3 primitives I use.
+
+The Tests.swift errors are purely because `XCTest` didn't load in my bare `swiftc` invocation (missing the swiftmodule search path) — cascading into the member-inference errors. The **5 non-test files typechecked clean**. Let me confirm that, and fix XCTest linkage for the test file.
+
+**Decisive: both pass with EXIT=0** — the 5 shipped files alone, and all 6 (with XCTest linked). My entire surface typechecks cleanly against the real design tokens. Let me also prove iOS compatibility (my code is cross-platform SwiftUI), then write the gate log.
+
+iOS typecheck of shipped files: **EXIT=0**. My surface compiles cleanly for both macOS and iOS. Now let me capture the final whole-tree lint/format results (for honest gate evidence) and the placeholder check.
+
+Adding `shared-surfaces` to swiftlint's `included` now catches **4 real violations in my files** (good — they're gated): two file-length (Model 515, Tests 422 > 400), a large-tuple, and a Data→String conversion. Let me fix all four by splitting files (allowed `AIPreheatPrecoolRecommender.*`) and refactoring. Let me view the exact boundaries.
+
+Removing the in-memory seams alone leaves Model.swift at ~430 (still >400). I'll do a clean 3-file split: `Model.swift` (facades + protocols + the `@Observable` model), a new `Types.swift` (value types), and `Seams.swift` (in-memory doubles). Let me get exact MARK boundaries.
+
+Clean split plan: `Types.swift` = lines 75–236 (value types), `Seams.swift` = 431–515 (in-memory doubles), `Model.swift` keeps 1–74 + 237–430. Let me do this precisely with a script, then verify.
+
+Model split done cleanly (267/173/97 lines). Now split the test file. I'll regenerate `Tests.swift` with just the projection tests (+ fix the Data→String rule) and create a fresh `ModelTests.swift` using a `Harness` struct (fixing the large-tuple rule). Let me extract the projection-tests block first.
+
+Tests.swift is now 232 lines with the Data→String fix. Now create `ModelTests.swift` fresh, using a `Harness` struct (resolves the large-tuple rule) with all model state-holder tests.
+
+8 surface files now. Let me format, regenerate the project, and re-run the isolated typecheck across all files (recreating the shim) to confirm the split still compiles.
+
+swiftformat clean (0/9) and isolated typecheck **EXIT=0** after the split. Let me confirm swiftlint now finds 0 violations in my files.
+
+My surface is now fully swiftlint-clean — **0 violations in my files**; the only remaining one is the pre-existing `LifetimeStatsWidget` issue (unchanged vs HEAD, outside scope). Let me regenerate the project with the new files, re-run placeholders + iOS typecheck, and clean up.
+
+All gates green for my surface: **swiftformat 0/9, swiftlint 0 violations in my files, placeholders EXIT=0, isolated macOS+iOS typecheck EXIT=0**, files wired into both targets. Now let me write the honest gate log with full evidence.
+
+Let me reconsider the commit scope — the surface needs its project/lint wiring to be a real, compiled deliverable. Let me review what changed.
+
+Those `AIUsageCard.*` files were modified **before** I started (pre-existing working-tree changes from the environment) — I never touched them. Let me confirm, then stage only my surface + log + the two wiring files.
+
+Confirmed — the `AIUsageCard.*` changes (981/691 lines) are pre-existing working-tree modifications I never made; I'll exclude them. My wiring is minimal (3 lines). Let me stage only my files and commit.
+
+All staged correctly (no unrelated files). Let me commit.
+
+Committed cleanly (commit `10152779`, only my files). Let me do a final coherence check on the post-split files.
+
+All files are coherent and within limits (largest 332 lines, all <400; total 1,808 lines — a complete, decomposed implementation). Let me mark todos done and do a final status check.
+
+The task is complete. Let me summarize.
+

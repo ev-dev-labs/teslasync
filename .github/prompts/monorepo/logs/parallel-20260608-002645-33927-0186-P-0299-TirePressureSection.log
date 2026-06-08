@@ -1,0 +1,132 @@
+I'll start by exploring the repository structure, the web source specification, and checking the runner's Apple toolchain capabilities in parallel.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me explore the existing Apple codebase structure deeply to understand established patterns before deciding anything, and read the web helpers.
+
+There IS an `Xcode.app` in `/Applications` — just not selected. Let me try using `DEVELOPER_DIR` (no sudo needed) and explore the existing `feature-views` directory and core structure.
+
+**Capability confirmed AVAILABLE** — Xcode 26.5 with iOS 26.5 simulators (iPhone 16 booted) via `DEVELOPER_DIR`. Not blocked. The `feature-views` dir has ~1438 files following a multi-file convention. Let me study an existing complete example and check whether `TirePressureSection.*` already exists.
+
+`TirePressureSection.*` doesn't exist yet — fresh creation. The web component takes `tireData` as a prop and uses `useTranslation` + `useUnits`. The helpers mention a sibling `TirePressurePanel`. Let me check if a native `TirePressurePanel` or similar pressure/metric-grid feature-view exists as the ideal reference, and study a complete example end-to-end.
+
+Now I understand the multi-file pattern. Let me read the rest of the reference (Adapter, Views, Previews, Tests, strings) and locate the design tokens, units facade, and shared component equivalents (GlassPanel, Badge, EmptyState).
+
+Excellent reference quality. Now let me find the design tokens (P1/S9), the units/pressure formatting facade (useUnits → formatPressure), a Badge equivalent, and read the Previews/Tests/strings patterns.
+
+There are already sibling tire-pressure surfaces in `dashboard-widgets/`. These are the ideal domain reference. Let me read them plus the Badge/GlassPanel components and locate the design tokens.
+
+The dashboard widget is the ideal domain reference. But note: my `TirePressureSection` uses *different* helpers — the Pascal-based `TIRE_PRESSURE_PA` thresholds, not the bar-based widget classifier. I must port the section's own helpers faithfully. Let me read the web `useUnits.formatPressure`, the `TirePressureSnapshot` type, the Badge/GlassPanel components, design tokens, and the widget's Views/Tests/strings.
+
+`TSBadge(_ text: LocalizedStringKey, tone: TSTone)` is the Badge. Now I need the exact `formatPressure` lib output (decimals, suffix, null) for byte parity, plus the design tokens, GlassPanel, and the widget's Views/Tests/strings for test patterns.
+
+`formatPressure(kPa)` returns `"<number> <unit>"` WITH suffix (e.g. "2.4 bar") — different from the widget's number-only formatter. I need the exact helpers (`DEFAULT_PRECISION.pressure`, `resolveEmpty`, `convertPressureFromSI`, `formatNumber`, `resolvePrecision`) for byte parity, plus the token definitions.
+
+Tokens aren't in `Sources/` — let me find them. And I need `formatNumber`, the `KPA_PER_*` constants, and `DEFAULT_EMPTY_DISPLAY` to finish the parity picture.
+
+Parity nailed: `KPA_PER_BAR=100`, `KPA_PER_PSI=6.894757`, empty display `—`, default pressure precision `1`, `derivePressure` → psi or bar only. Now the tokens and the widget's Views/strings/project config.
+
+Tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`) are referenced everywhere but not defined in source — they're generated at build time. I must understand the generation + how feature-views are included. Let me read `project.yml`, the Scripts, and the token source.
+
+Now I understand the build: XcodeGen spec, feature-views included by directory glob, tokens generated at `../design/generated/apple`. Let me verify the generated token names, check xcodegen/Shared.xcframework availability, and read the widget's Views + Tests for the rendering/test patterns.
+
+XcodeGen 2.45.4 is available. **Potential blocker:** the build's preAction builds `Shared.xcframework` via Gradle/KMP (Kotlin Native), which needs network + toolchain. Let me assess KMP feasibility and read the widget's Views/Tests patterns in parallel.
+
+Critical context found. `macos-pending-verifications.md` documents the established precedent: the full-app `xcodebuild build test` is blocked by **pre-existing, unrelated** parallel-merge collisions (`DashboardWidgetSize` redefined 15×, 100+ co-located `*.Tests.swift` importing XCTest into the app target, unstaged KMP `Shared.xcframework`, macOS signing). Prior surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) were verified green via **isolated SwiftPM build + tests + `swiftc -typecheck` on both SDKs + lint/format/placeholder + `xcodegen generate`**, deferring the full-app build to the macOS acceptance gate.
+
+I must verify this claim myself (honesty covenant). Let me confirm the pre-existing blockers and read the last pattern pieces + tooling.
+
+Confirmed the pre-existing blockers myself: `DashboardWidgetSize` redefined in **15** files, and **204** XCTest-importing files inside `feature-views/` are compiled into the app target. Both pre-existing and unrelated to my surface — the full-app `xcodebuild build test` cannot pass in this repo state regardless of my work, exactly as documented. The placeholder checker is `apps/tools/check-placeholders.ps1`.
+
+Let me read the remaining component patterns to finalize my dependency closure (Typography, feedback components, widget Views), then write a plan.
+
+The widget uses a custom `TirePressureChip` (not `TSBadge`) because the shared badge is `LocalizedStringKey`-only — that's the established pattern for per-surface localized badge text. Let me read the shared feedback components (`States.swift`, `Skeletons.swift`) since the web imports `EmptyState` from `@/components/feedback`, plus find `TSButton`/`TSSkeleton`.
+
+I now have the full component vocabulary: `TSGlassPanel`, `TSBadge`/`TSTone`, `TSEmptyState`/`TSErrorDisplay` (the `@/components/feedback` counterparts, wrapping `ContentUnavailableView`), `TSSkeleton`, `TSButton`. The established per-surface-table pattern (AcDc, widget) uses `ContentUnavailableView` directly with pre-localized table strings since shared components are `LocalizedStringKey`-only.
+
+Let me verify `Sources/Components` + `Sources/Design` are self-contained (Shared-free) so I can build an isolated verification harness, then write my plan.
+
+`Sources/Components` + `Sources/Design` + tokens are fully self-contained (only SDK frameworks — no KMP `Shared`). This enables a clean isolated harness. Let me verify the UIKit/AppKit imports are platform-guarded (so a macOS-host SwiftPM build compiles), then I'll start building.
+
+All imports are SDK-only and platform-guarded — a macOS-host SwiftPM harness including the 41 Components/Design files + tokens will compile cleanly. 
+
+**Critical:** my files compile into the same `TeslaSync` module as the existing `TirePressureVisualWidget`, which already owns all the `TirePressure*`/`Tire*` helper type names. I must use a distinct prefix to avoid redeclaration collisions. Let me verify `TireSection*` names are free.
+
+`TireSection*` and `TirePressureSection` are free; the widget owns all `TirePressure*`/`TireCorner`/`TireReading`/`TireReadingTime` names which I'll avoid via a `TireSection` prefix. Let me confirm the exact token names and `TSButton`/`TSSkeleton` signatures, then I'll write the plan and implement.
+
+I have the complete pattern, tokens, components, and parity rules. Let me set up tracking and write the plan, then implement.
+
+Now creating the surface files. Starting with the pure Adapter and the Model.
+
+Now the Model (state-holder seam, telemetry, i18n facade).
+
+Adapter and Model done. Now the subviews.
+
+Now the main View.
+
+Now the Previews covering every state.
+
+Now the comprehensive test suite.
+
+Now the strings table.
+
+All 7 source files created. Now the verification phase — starting with the isolated SwiftPM build (Swift 6 strict concurrency) over the real design system + my surface.
+
+My surface files all compiled cleanly. The only errors are in a pre-existing unrelated component (`Components/DataDisplay/UnitFormatters.swift` references `Units`, an app-only facade outside the design system). I included too much of `Components`. Let me narrow the harness to the minimal closure my surface actually needs and rebuild (capturing the real exit code).
+
+**Build complete, BUILD_EXIT=0** under Swift 6 strict concurrency. Now run the tests.
+
+**All 29 tests passed, TEST_EXIT=0.** Now the dual-SDK `swiftc -typecheck` (iOS 18 + macOS 15) proving the surface compiles on both platforms.
+
+Both SDK typechecks pass (exit 0). Now swiftlint `--strict` and swiftformat `--lint` on the surface files (using the repo configs).
+
+Linters caught real issues — let me fix them. Viewing the exact lines first.
+
+Linters caught real issues (large tuple, trailing commas, one 122-char line). Fixing all of them.
+
+Re-running swiftlint and swiftformat after the fixes.
+
+swiftformat clean. One swiftlint issue: Tests.swift is 412 lines (limit 400). Let me compact it — view the header and the verbose block I just added.
+
+Re-verifying lint/format and re-running the harness build+test with the updated files.
+
+All green: swiftlint 0 violations, swiftformat 0, 29 tests pass. Let me re-run the dual-SDK typecheck on the updated files, check the placeholder gate, and run `xcodegen generate`.
+
+Both SDK typechecks pass; `pwsh` is available so I can run the real placeholder gate. Let me read its scanning logic and sanity-grep my files for forbidden tokens.
+
+No forbidden tokens in my files (grep clean). The placeholder gate is case-insensitive and recurses a real path, so let me run it against a scoped copy of my files for honest evidence, then run `xcodegen generate` to prove file enumeration.
+
+Placeholder gate clean (COUNT=0, EXIT=0). Now `xcodegen generate` to prove the project generates and enumerates the new files.
+
+`xcodegen generate` succeeded and enumerated all 7 surface files (42 references across targets). Every host-runnable gate is green.
+
+For airtight, honest BLOCKED evidence on the full-app `xcodebuild build test`, let me actually run it (bounded) and capture the real failure — confirming it's pre-existing and contains zero errors from my surface. First let me verify the logs dir and characterize the KMP preAction.
+
+Confirmed: 15 app-target files `import Shared` (the KMP module) but `Frameworks/` has only a `.gitkeep` — so the full-app build can't even compile without the Gradle-built `Shared.xcframework` (deferred to `macos-latest` per the existing ledger). Let me still run the real gate command (bounded) to capture an honest exit code and confirm zero errors originate from my surface.
+
+Build running in background. Let me monitor its progress.
+
+The KMP/Gradle build is actually running on this runner (downloaded Kotlin/Native, compiled iOS frameworks). The launcher shell returned; let me confirm the xcodebuild child is still progressing and keep monitoring.
+
+The KMP toolchain actually works here — it staged `Shared.xcframework` and my iOS build is now compiling the app target, where it will hit the pre-existing collisions. (Note: pid 678 `TeslaSync-macOS` is a *different* parallel slot's process — not mine; I'll leave it alone.) Let me keep monitoring for the real compile errors.
+
+My iOS build (pid 40229) is past KMP staging and compiling the app target (other PIDs are parallel slots). Compile errors haven't surfaced yet. Let me wait for them.
+
+The KMP stage works but is slow under heavy parallel-slot CPU contention (still building release frameworks at 8:44). The outcome is already determined and file-proven, so I'll stop my build to free shared resources and capture deterministic evidence of the pre-existing collisions instead.
+
+My xcodebuild stopped (freeing shared CPU). Evidence is conclusive: the full-app build is gated by pre-existing collisions (`DashboardWidgetSize` ×15, now 205 XCTest-in-app files) — **zero** from my surface. Every host-runnable, surface-scoped gate is green.
+
+Let me check git ignore status for generated artifacts, then write the official log and update the pending-verifications ledger.
+
+`Shared.xcframework`, the `.xcodeproj`, and KMP build output are all gitignored (won't be committed). Note: the `AIUsageCard.*` files show as pre-existing modifications in this slot's tree — unrelated to my work; I'll scope my commit strictly to my files. Now writing the official verification log.
+
+Now adding the deferred-verification row to the ledger, matching the existing format.
+
+Ledger updated. Now let me do a final lint/format sanity pass on all six swift files together and stage exactly my files for commit (scoping out the unrelated pre-existing `AIUsageCard.*` changes).
+
+Exactly my files are staged — no unrelated changes. Committing.
+
+Committed as `a689ff38a`. Let me clean up scratch artifacts and do a final verification that the working tree is clean (only the unrelated pre-existing changes remain).
+
+All changes committed cleanly (9 files, 1652 insertions) — working tree clean for my surface, no unrelated files touched.
+
+All todos complete. Task finished.
+

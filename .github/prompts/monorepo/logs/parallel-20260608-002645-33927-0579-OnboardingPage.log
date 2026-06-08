@@ -1,0 +1,168 @@
+I'll start by exploring the codebase to understand the structure and requirements. Let me look at the web source, the Apple app structure, and related files.
+
+Let me explore the Apple app structure and related web components in parallel.
+
+The expected output directory doesn't exist yet. Let me understand existing patterns — particularly the `feature-views` directory (which has the recently modified AIUsageCard) and any existing page implementations.
+
+The Apple app uses a `feature-views/` directory with a multi-file pattern. The prompt's expected `Features/Onboarding/` path doesn't exist yet. Let me examine the parity manifest, ledger, and look for any existing page implementations to follow the established convention.
+
+No existing `*Page*.swift` files — this would be the first page. Let me check the build tooling availability and study an existing feature-view's full multi-file pattern, the parity README, and the manifest record.
+
+All tools are available but no `.xcodeproj`. Let me check the Apple build setup (Package.swift / project.yml / XcodeGen) and study a representative feature-view's complete file set to learn the conventions.
+
+The Apple app uses XcodeGen (`project.yml`). Let me read the build config, lint config, and a representative feature-view's complete file set.
+
+XcodeGen sources include `TeslaSync/feature-views` but not a `Features` dir. Now let me study a representative feature-view's complete file set, the localization setup, the shared facade for onboarding, and the UI component library.
+
+Now I understand the token system (`TSGlassPanel`, `Color.TS.*`, `Font.TS.*`) and the per-surface `.strings` pattern. Let me read the Model/Views/Adapter for this example, plus the existing onboarding-related Apple files and routing.
+
+I now understand the multi-file feature-view convention. Let me check the remaining critical pieces: build tooling (xcodegen, Shared.xcframework), the navigation/router, the existing Auth OnboardingView, the UI component library, and a Views/Previews/Tests example.
+
+Key findings: `AppRoute.onboarding` already exists (path `/onboarding`). The existing `Auth/UI/OnboardingView.swift` is the sign-in flow — distinct from the web `/onboarding` setup-checklist page. `xcodegen` is present but `Shared.xcframework` is not built (KMP). Let me find the router (AppRoute→View mapping), the SharedFacade pattern, and the UI components.
+
+Let me examine the route-to-view registry, the AppShell, and the SharedFacade core (AppContainer, StateHolderModel, LoadableState) plus the one domain model example.
+
+`AppRouteHostRegistry` is the navigation registration seam P7 pages populate. Domain models bind to the `Shared` KMP core via `StateHolderModel`/`LoadableState`. Let me read the shell (where the registry is populated), the composition root, the binding primitives, and check the KMP core for onboarding.
+
+Now let me find where the route registry is populated, the composition root, the KMP core's onboarding API (if any), and the master string catalog format.
+
+Major discovery: there's already an `OnboardingGate.*` feature-view AND a KMP `OnboardingStore`. The OnboardingGate binds the exact same `useOnboardingStatus` data source. Let me study it thoroughly plus the KMP onboarding API and the route registration pattern.
+
+Excellent — `OnboardingGate` is the direct sibling sharing my data source. Let me read its Adapter (reusable types), View, strings, the KMP models, and the page-registration pattern (SettingsScene + TeslaSyncApp).
+
+I have the data model and reusable types. Now let me read the OnboardingGate view layer (the rendering/state patterns I'll mirror), its tests/previews, and the page-registration mechanism (SettingsScene + TeslaSyncApp).
+
+I have the full view/token vocabulary. Now let me read the page-registration mechanism (SettingsScene + the registration file + TeslaSyncApp) and the OnboardingGate tests/previews to mirror.
+
+Let me read the component APIs I'll use (Buttons, Cards, Feedback, Typography), the generated design tokens, the placeholder scanner rules, and the OnboardingGate test pattern.
+
+Let me read the design tokens, feedback components, glass panel, typography, the test pattern, and the placeholder scanner rules.
+
+Let me read the glass panel/card APIs, the test pattern, and the placeholder scanner to know exactly what to avoid.
+
+Let me read the placeholder patterns, the rest of the test file, Typography APIs, and check the KMP build feasibility plus the master catalog.
+
+Let me read the composition root (`AppContainer`) and confirm the KMP build feasibility (Java availability), to decide how to wire the page's production data source and registration.
+
+I have a thorough understanding. Let me check the KMP repository/DI to determine if a live `OnboardingStore` can be constructed in-scope, then I'll finalize the design.
+
+Decisive finding: **0 of 1266 feature-view files import `Shared`** — every surface uses the protocol-seam pattern (live KMP wiring is centralized/deferred). I'll follow that exactly. But I must verify how `*.Tests.swift` files in the app-target source dir get compiled (XCTest can't be in an app target). Let me investigate.
+
+I now have a complete understanding. Key facts: **0/1266 feature-view files import `Shared`** — all use protocol seams (live KMP wiring is centralized/deferred). The sibling `OnboardingGate` already models my exact data source with reusable public types. Build requires a Kotlin/Native `Shared.xcframework` (heavy/likely BLOCKED), but lint + placeholder gates are runnable.
+
+Let me set up a plan and todos, then implement.
+
+Now let me create the directory and implement the files, starting with the pure adapter (reusing the sibling's domain types).
+
+The CTA labels differ per step — let me add them to the step view-model in the adapter so the view stays a pure function.
+
+Now the Views file with all sub-components (stepper, step rows, CTAs, footer, help links, error banner, loading skeleton).
+
+Now the main page view that composes everything.
+
+Now the strings table with all 25 parity keys (exact web defaults) plus native-chrome keys.
+
+Now the previews and tests.
+
+Now the registration that hosts the page at the `.onboarding` route, with real navigator + skip-writer seams.
+
+Now wire the new source path into the build (both app targets), the lint config, and the app's route registration.
+
+Now let me run the gates I can run — swiftlint (strict) and the placeholder scan.
+
+Placeholder scan passes. SwiftLint scanned the whole `included` set (1916 files) and found 8 violations — I need to see if any are in my files. Let me isolate them.
+
+7 of 8 violations are mine (1 is pre-existing in another file). Let me view the exact current adapter section, then fix all: large tuple + function length (Adapter), trailing closures + file length (Views), and the `teslaVehicle` identifier (contains "slave" — inclusive-language rule).
+
+Now fix the Tests identifier (`teslaVehicle` contains "slave") and the Views trailing-closure + file-length issues.
+
+Now fix the Views: the CTA-button trailing closures and the file length. Let me view the CTA button section.
+
+The footer TSButton calls use identifier closures (not flagged). Now let me split the Views file (440 lines > 400 limit) by moving the footer/help/error/loading chrome into a new file. Let me view the boundary.
+
+I'll move the footer/help/error/loading sections into a new `OnboardingPage.Chrome.swift` and trim the Views file.
+
+Now remove the moved sections from Views.swift. Let me view the exact tail to anchor the deletion.
+
+Now let me re-run swiftlint and confirm my files are clean.
+
+My files are clean — the 1 remaining violation is pre-existing in `dashboard-widgets` (not mine). Let me verify the exact gate-style invocation (which targets only my dir) passes.
+
+SwiftLint's `included` config scans the whole repo (1917 files) regardless of the path arg. The single remaining violation is in `LifetimeStatsWidget.Adapter.swift` (dashboard-widgets) — not my file. Let me verify it's pre-existing drift, not something I introduced, and check the gate contract.
+
+Confirmed: the `LifetimeStatsWidget` violation is pre-existing at HEAD (not mine). Let me check the actual p4-apple gate contract README and confirm git sees my new files.
+
+The gate is `swiftlint --strict` + `swiftformat --lint` + `xcodebuild build test`. The pre-existing `LifetimeStatsWidget` violation is drift at HEAD (not mine). Let me run swiftformat on my files and check the ledger schema.
+
+swiftformat wants formatting fixes in `OnboardingPage.Adapter.swift` only. Let me auto-apply swiftformat to my dir, then re-verify both swiftformat and swiftlint.
+
+Both linters clean. Let me verify the auto-reformatted `steps` logic is still correct.
+
+Both linters pass and the logic is preserved. Let me type-check the Foundation-only adapters standalone (to validate against the reused types) and generate the Xcode project to validate `project.yml`.
+
+Adapters type-check cleanly. Now let me generate the Xcode project (validates `project.yml`) and attempt the build to determine DONE vs BLOCKED.
+
+The project generates cleanly and my files are wired into both targets. The build requires the KMP `Shared.xcframework` (Kotlin/Native via Gradle). Let me attempt that build — it's the decisive factor for DONE vs BLOCKED. I'll run it in the background.
+
+The KMP build progressed (downloaded Kotlin/Native, compiled Kotlin) but failed at the framework-link step: `xcrun xcodebuild -version` fails — **full Xcode is not available** (only Command Line Tools). Let me confirm this is the environment limitation.
+
+`/Applications/Xcode.app` exists but `xcode-select` points to Command Line Tools. I can override via `DEVELOPER_DIR` without sudo. Let me test.
+
+Excellent — `DEVELOPER_DIR` override gives me Xcode 26.5. I **can** build. Let me retry the KMP framework assembly with that set (Kotlin compile is cached now).
+
+The KMP framework assembly is compiling for multiple architectures (slow first-time release linking). Let me keep waiting.
+
+The KMP framework assembly (5 architectures, release linking) exceeds practical timeouts. Xcode is present (via `DEVELOPER_DIR`) but the environment defaults to Command Line Tools. Let me restart the assembly in the background and write the parity log + ledger while it runs.
+
+Let me look at the logs directory and an existing apple log to match the format, plus the shared ledger row format.
+
+Let me read an existing apple log's format and check the background assembly progress.
+
+This shows the established precedent: **code-complete + host-compile proof (swiftc on both SDKs) + lint/format/placeholder, with the full Xcode app build/test DEFERRED** (Shared.xcframework not staged). Let me read the sibling OnboardingGate log (closest template) and the tail format.
+
+This is the definitive precedent (sibling OnboardingGate, same data domain): **surface-scoped host gates green → EXIT=0/STATUS=DONE**, with the whole-app `xcodebuild` documented RED for pre-existing out-of-scope reasons (the XCTest-in-app-target wiring — which I predicted). Crucially, their Shared.xcframework build took 9m36s. Let me read their exact host-compile commands and check my background build.
+
+The KMP assembly is nearly done (iOS arches cached; only `linkReleaseFrameworkMacosArm64` remains). Now I have the exact precedent. Let me run the key proof — `swiftc -typecheck` of my SwiftUI production files against the real design system — while the framework finishes. First, let me see the design-system file layout.
+
+Now let me run the key compile proof — `swiftc -typecheck` of my production SwiftUI files against the real design system (Shared-free), on the macOS SDK.
+
+Path fix — the tokens are at `../design/generated/apple/` relative to `apps/apple`.
+
+My entire production SwiftUI surface type-checks cleanly (Swift 6, strict concurrency, macOS SDK). Now [1b] — the previews with `-D DEBUG` under the Xcode toolchain (needed for the `#Preview` macro).
+
+Previews type-check clean (EXIT=0) and the KMP framework **BUILD SUCCESSFUL**. The gradle task built it but didn't stage it (that's the script's copy step). Let me stage it and verify.
+
+The framework is staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now let me run the whole-app `xcodebuild` to honestly capture its state and prove my files contain no compile errors. I'll build the macOS app target and capture errors.
+
+While the app build runs, let me build the isolated SwiftPM XCTest harness (the sibling's `[3]` proof) to actually execute my tests. Let me assemble a throwaway `TeslaSync` package.
+
+Package assembled. Let me run `swift test` on it, and check the app-build log.
+
+**`swift test`: 25 tests, 0 failures** — all my suites pass under the real XCTest runner. Now let me check the whole-app build result and confirm no errors come from my files.
+
+**Definitive result:** the whole-app build is RED on exactly **one** pre-existing, out-of-scope file — `AIRestorePanel.Tests.swift` (XCTest-in-app-target wiring, a sibling defect) — with **zero errors in my files**. This matches the sibling OnboardingGate precedent exactly. Since my `Registration` has a `#if canImport(UIKit)` branch, let me also prove the iOS-SDK compile, and gather line counts.
+
+Both SDKs compile clean (macOS + iOS, EXIT=0). Largest file is 341 lines (under the 400 limit). Let me verify every one of the 25 parity string keys is actually bound in a `.swift` file (real evidence), then write the log + ledger.
+
+All 28 parity items verified (1 panel + 2 states + 25 strings, each bound in `.swift`). Let me update todos and write the parity log.
+
+Now let me write the parity log.
+
+Now the apple ledger. Let me check the existing shared-ledger format to match, then create the apple ledger row(s).
+
+No apple ledger exists; the README says `<platform>-ledger.json` is an "array of rows" with a `platform` field (apple-macos / apple-ios). The prompt's commit references `apps/parity/apple-ledger.json`. Let me create it with both-idiom rows (the adaptive surface covers both).
+
+Let me validate the ledger JSON, confirm build artifacts are git-ignored (so they won't be committed), and check overall git status.
+
+Everything checks out: ledger valid, build artifacts git-ignored. The `AIUsageCard.*` and web-file changes are pre-existing (not mine — present before I started). Let me clean up temp files and commit only my files.
+
+All 13 of my files staged (pre-existing `AIUsageCard`/web changes correctly excluded). Let me commit.
+
+Committed cleanly (14 files, 1981 insertions). Let me run a final confirmation of the three runnable gates on the committed state.
+
+All final gates green. Let me update tracking and finalize.
+
+All 11 tasks complete and verified. Let me do a final confirmation that the working tree is clean for my scope and the commit is intact.
+
+The task is complete and fully verified. Let me finalize.
+

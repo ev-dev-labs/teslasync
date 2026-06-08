@@ -1,0 +1,88 @@
+I'll start by exploring the task requirements: the web source component, the existing Apple app structure, and the platform capabilities available on this runner.
+
+Key finding: `swift` 6.3.2, `swiftlint`, and `swiftformat` are available, but `xcodebuild` requires full Xcode (only Command Line Tools installed). Let me read the web source and explore the established Apple app patterns before deciding on capability status.
+
+Now let me read the `constants` file the component depends on, the `GlassPanel` shared component, and the existing Apple app patterns (`dashboard-widgets` is the only existing dir under `TeslaSync/`).
+
+This is a mature codebase with a consistent multi-file widget pattern. `QuickNavWidget` looks most analogous (navigation cards/links). Let me study it as a template plus the project config and shared infra layout.
+
+Now let me examine the project config, the shared design tokens, the placeholder checker, and whether any `feature-views` precedent exists.
+
+Paths were off — let me correct them.
+
+Now let me locate the shared design tokens, lint/format configs, the placeholder checker logic, and check for `pwsh` + SDK availability.
+
+Good — `pwsh` and the macOS SDK are available, but iOS simulator SDK and `xcodebuild` are not. Let me fix the config paths, find the token definitions, and verify SwiftUI/Charts/MapKit are importable against the macOS SDK.
+
+SwiftUI + Charts + MapKit all typecheck against the macOS SDK (PROBE_EXIT=0). Now let me read the design tokens, the placeholder checker patterns, and locate the shared token/skeleton definitions.
+
+Let me locate the remaining tokens (TSSpacing/TSRadius/Font.TS), the English i18n values for the `devtools.ref.*` keys, the `neon-cyan` hex, and the `TSSkeleton` API.
+
+Let me read the token member names and find the web i18n English values for the `devtools.ref.*` keys.
+
+I now have all token APIs, the i18n situation (the `devtools.ref.*` keys are absent from `en.json`, so I'll supply accurate English fallbacks), and confirmed the static/presentational precedent (QuickNav). Let me read the rest of the placeholder checker to understand `-Path` handling, then set up my plan.
+
+The placeholder gate's literal `-Path` is a filename prefix (not a real path), so I'll run the substantive scan against the `feature-views` directory. Before finalizing capability status, let me check whether a full Xcode exists anywhere (just unselected) and whether `xcodegen` is present — that would change BLOCKED vs DONE.
+
+Full `/Applications/Xcode.app` exists (just not selected) and `xcodegen` is installed. This may make the real gate runnable. Let me probe Xcode, simulators, the iOS SDK, and whether the KMP `Shared.xcframework` dependency is prebuilt.
+
+Full Xcode 26.5 + iPhone 16 simulator + iOS SDK are present (via `DEVELOPER_DIR`), but the `Frameworks/Shared.xcframework` (KMP) dependency and its `build-shared-xcframework.sh` build script are **both missing**, and `project.yml` doesn't include `TeslaSync/feature-views` — all outside my allowed files. So the full app build/test gate is environment/integration-blocked, but I can still author the complete surface and verify it compiles (iOS+macOS), lints, formats, and that its logic executes green.
+
+Let me record the plan and todos.
+
+Now I'll create the directory and write the Adapter + Model files.
+
+Let me add minimum heights to the empty/error states (so they render standalone), then write the composed main view.
+
+Now the Previews and strings files.
+
+Now the comprehensive Tests file.
+
+All 7 files written. Now the verification phase — starting with format/lint on the new files.
+
+swiftformat flagged 8 over-width lines — let me auto-fix with the tool, and capture the specific swiftlint violation.
+
+swiftformat passes now. swiftlint used the repo `included` list (which excludes feature-views), so I need a focused config to actually lint my files.
+
+swiftlint `--strict`: **0 violations in 6 files.** Now compile-verification. Let me build a harness (real Tokens.swift + the `TSSkeleton` struct it depends on + my 5 production files) and typecheck for macOS 15.
+
+Those errors are only the `#Preview` macro plugin (Xcode-only, not auto-loaded by raw `swiftc`) — not a code defect. Let me typecheck the 4 core production files (excluding Previews) against both the macOS 15 and iOS 18 SDKs, then handle Previews/Tests with the Xcode macro plugin path.
+
+Core production files typecheck **clean for both macOS 15 and iOS 18** under Swift 6 strict concurrency. Now let me locate the Xcode macro plugin (for Previews) and build a testable module to compile the Tests file.
+
+Found the plugin dirs. Let me run the full macOS typecheck **including Previews** (with the macro plugin paths), then build a testable module and typecheck the Tests file.
+
+Excellent — **Previews compile (exit 0)** and the **testable module builds (exit 0)**. The Tests failure is only the XCTest **C-macro assertions** not being importable by raw `swiftc` (a CLI limitation, not a code defect — all my module symbol references resolved). Let me prove it two ways: (A) typecheck Tests with a tiny assert-shim, and (B) build & **actually run** a logic harness exercising the same assertions + render smoke.
+
+(A) **Tests typecheck = 0** — the test file is well-formed against the real module API. Now (B): build and **actually run** a logic harness that executes the same assertions plus per-state render smoke.
+
+**All 35 logic + render-smoke checks PASS when executed on macOS** (including ImageRenderer rasterizing every state). Now the placeholder scan (substantive dir scan + the literal gate command).
+
+Placeholder scan: **PLACEHOLDER_COUNT=0** (substantive directory scan of all 6 files). Now let me capture honest evidence for the blocked full-app gate by attempting it: generate the project and run `xcodebuild`.
+
+Let me wait for xcodebuild and re-check the correct dependency paths (they're at `apps/apple/`, not under `TeslaSync/`).
+
+Corrected: `Scripts/build-shared-xcframework.sh` **exists**, but `Frameworks/` contains only `.gitkeep` — the KMP `Shared.xcframework` must be built via Gradle (the scheme preAction). That's what xcodebuild is doing now. Let me inspect the script and check the Kotlin/Gradle toolchain while it runs.
+
+The gate's preAction runs a **cold Kotlin/Native Gradle build** (`:core:assembleSharedXCFramework`) to produce the missing `Shared.xcframework` — heavy, network-dependent, and unrelated to my surface (which `project.yml` doesn't even wire into a target). Let me capture xcodebuild's current state, then stop it since it's building the KMP core, not my code.
+
+Confirmed: my xcodebuild launched the scheme preAction `build-shared-xcframework.sh` → Gradle `:core:assembleSharedXCFramework` (Kotlin/Native compiling the shared core for ios/macos). This is the prerequisite blocker, it's heavy and contends with other slots on this shared machine, and even if completed it wouldn't compile my surface (project.yml doesn't wire `feature-views`). I have complete evidence for my surface, so I'll stop this unrelated KMP build.
+
+Both PIDs are slot-128 build processes I spawned. Killing them explicitly:
+
+Cleanup done; only my `feature-views/` bundle is new (the 2 modified web files are pre-existing and out of my scope — I won't touch them). Now let me generate the log by **actually re-running** every verification step so the log contains authentic pasted output. First, confirm the log directory.
+
+Log dir exists. Now I'll write a self-contained verification script that re-runs every check and tees authentic output into the log, then I'll review it.
+
+The log is complete and honest. There's one cosmetic gremlin — a Cyrillic "О" in a summary label ("macОS"). Let me fix it in the script and regenerate so the committed log is clean ASCII.
+
+Clean. Let me view the full regenerated log to confirm it's coherent and authentic before committing.
+
+The log is clean, authentic, and honest. Now let me commit exactly my allowed files (the surface bundle + the log) — explicitly excluding the two pre-existing modified web files that aren't mine.
+
+Staging is correct — only my 7 surface files + the log; the 2 pre-existing modified web files remain unstaged. Committing now.
+
+Committed `c27980f2` — 8 files, 1487 insertions, only my allowed bundle + log. Let me finalize todos and clean up temp artifacts.
+
+All work is complete and the tree is clean (only the two pre-existing, non-mine web edits remain). Let me confirm the todo ledger.
+

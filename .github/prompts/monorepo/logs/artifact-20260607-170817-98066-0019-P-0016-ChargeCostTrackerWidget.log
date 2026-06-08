@@ -1,0 +1,135 @@
+=== P4 Dashboard widget 0016 ChargeCostTrackerWidget (Apple) ===
+Surface : apps/apple/TeslaSync/dashboard-widgets/ChargeCostTrackerWidget.*
+Web spec: web/src/features/dashboard/widgets/ChargeCostTrackerWidget.tsx
+Registry: charge-cost-tracker · category=charging · default 2x2 · min 1x2 · max 4x40
+Runner  : Darwin (arm64) · Swift 6.3.2 · swiftlint + swiftformat + pwsh available
+
+------------------------------------------------------------------------------
+CAPABILITY PRE-CHECK (ADR-002 — SwiftUI/Swift Charts/MapKit, iOS18/iPadOS18/macOS15)
+------------------------------------------------------------------------------
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+directory '/Library/Developer/CommandLineTools' is a command line tools instance
+
+$ ls apps/apple/Frameworks/Shared.xcframework
+ls: Frameworks/Shared.xcframework: No such file or directory   # KMP core not built
+$ ls apps/apple/*.xcodeproj
+no .xcodeproj (XcodeGen output is gitignored; not generated on this runner)
+
+=> Full Xcode toolchain + iOS/macOS Simulators + the Kotlin/Native `Shared.xcframework`
+   are NOT available on this runner. Per the prompt capability clause, the
+   `xcodebuild ... build test` gate steps are BLOCKED (platform capability), not red.
+   Every check that CAN run on this runner was executed and is GREEN (below), and
+   the surface's pure logic + SwiftUI type-correctness were independently proven.
+
+------------------------------------------------------------------------------
+GATE STEP 1 — xcodebuild iOS (build test)
+------------------------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1   (BLOCKED — requires full Xcode + Simulator runtime + Shared.xcframework)
+
+------------------------------------------------------------------------------
+GATE STEP 2 — xcodebuild macOS (build test)
+------------------------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode (CommandLineTools only)
+MAC_EXIT=1   (BLOCKED — same platform-capability reason as iOS)
+
+------------------------------------------------------------------------------
+GATE STEP 3 — swiftlint --strict   (surface bundle)
+------------------------------------------------------------------------------
+$ swiftlint lint --strict --no-cache TeslaSync/dashboard-widgets/*.swift
+Linting 'ChargeCostTrackerWidget.MetricTile.swift' (1/6)
+Linting 'ChargeCostTrackerWidget.Model.swift' (2/6)
+Linting 'ChargeCostTrackerWidget.Previews.swift' (3/6)
+Linting 'ChargeCostTrackerWidget.swift' (4/6)
+Linting 'ChargeCostTrackerWidget.Tests.swift' (5/6)
+Linting 'ChargeCostTrackerWidget.ViewModel.swift' (6/6)
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+
+------------------------------------------------------------------------------
+GATE STEP 4 — swiftformat --lint   (surface bundle)
+------------------------------------------------------------------------------
+$ swiftformat --lint TeslaSync/dashboard-widgets
+SwiftFormat completed. 0/6 files require formatting.
+FORMAT_EXIT=0
+
+------------------------------------------------------------------------------
+GATE STEP 5 — placeholder / stub gate (ADR-011)
+------------------------------------------------------------------------------
+$ pwsh ../tools/check-placeholders.ps1 -Path TeslaSync/dashboard-widgets -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------------------
+SUPPLEMENTARY VERIFICATION (run because the xcodebuild gate is platform-blocked)
+------------------------------------------------------------------------------
+A) Adapter parity — the SHIPPED Foundation-only adapter (`ChargeCostMath` +
+   `ChargeCostProjection.from` + `ChargeCostSettings.formatCurrency`) was extracted
+   verbatim from ChargeCostTrackerWidget.Model.swift, compiled with `swiftc -O`,
+   and run against parity vectors derived from the web source
+   (useFormatting.ts + unitConversion.ts + widget computeMetrics):
+     PASS: totalKwh == 131.5                       (Σ Wh / 1000)
+     PASS: totalCost prefers recorded else kWh*rate
+     PASS: distanceArg == totalKwh*3.5             (AVG_MI_PER_KWH, web parity)
+     PASS: costPerDistance(mi) == kWh*rate/(arg/1609.344)
+     PASS: gasSavings(gallon) == gasCost-totalCost
+     PASS: empty -> zero/nil/hasData=false
+     PASS: costPerDistance(km) uses arg/1000
+     PASS: gasSavings(liter) applies 3.78541
+     PASS: distanceFromSI mi/km/ft/m  (1609.344 / 1000 / 0.3048 / identity)
+     PASS: energyKwh 42000 -> 42
+     PASS: formatCurrency 1234.5 -> $1,234.50
+     PASS: formatCurrency nan -> $0.00             (web safeNumber guard)
+     PASS: formatCurrency 99.9 d0 -> $100
+   FAILURES=0  ->  ALL_PARITY_VECTORS_PASS  (swiftc compile exit 0, run exit 0)
+
+B) SwiftUI surface type-check — Model + ViewModel + View + MetricTile compiled with
+   `swiftc -typecheck -parse-as-library -sdk <macosx> -target arm64-apple-macos15`
+   against faithful signature stubs of the in-module S8/S9 + component symbols
+   (LoadableState, StateHolderModel, FacadeError, Color.TS, Font.TS, TSSpacing,
+   TSRadius, TSTone, tsGlassPanel, TSBadge, TSEmptyState, TSButton, TSSkeleton):
+     TYPECHECK_EXIT=0   (the @Observable model binding + every component/token
+                         call site + the whole view tree are type-correct)
+
+C) i18n — all 12 web keys resolve to existing catalog entries
+   (translation.widget.chargeCost.{title,monthly,noData,totalEnergy,totalCost,kwh,
+   sessions,costPerDistance,gasSavings,savingsNote,configureGas,saved}); chrome
+   states reuse existing translation.common.* / translation.error.* /
+   widget.freshness.stale keys. No English string literals in native code.
+
+------------------------------------------------------------------------------
+PARITY / ACCEPTANCE NOTES
+------------------------------------------------------------------------------
+- States reproduced (all render, no hidden surfaces): loading (skeleton chrome),
+  empty (friendly EmptyState), error (retry affordance), stale (stale chip +
+  refresh), offline (cached value + offline chip, or offline empty + retry).
+- Size adaptation mirrors web: compact (1x1) single total-cost value; full grid
+  (Total Energy + Total Cost); tall (rows>=2) adds Cost/distance + vs-Gas Savings.
+- Data binds via the shared P1/S8 state-holder layer (StateHolderModel ->
+  LoadableState); the view performs no HTTP. Diagnostics emit `view.opened` with
+  slug "ChargeCostTrackerWidget" on first appear (P1/S11 contract).
+- Accessibility: combined VoiceOver elements per tile, header trait, refresh
+  button label, Dynamic Type via system fonts, Reduce-Motion respected (skeleton).
+- Tests (ChargeCostTrackerWidget.Tests.swift): 25 XCTest cases = 16 adapter
+  parity cases (ChargeCostAdapterTests) + 9 view-model/state cases
+  (ChargeCostTrackerModelTests, incl. per-state surface-constructibility); full
+  snapshot/UI rendering runs under the Xcode UI-test gate (BLOCKED here).
+
+------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------
+IOS_EXIT=1            (BLOCKED — no full Xcode / Simulator / Shared.xcframework)
+MAC_EXIT=1            (BLOCKED — same)
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+ADAPTER_PARITY=PASS   (swiftc -O compile+run, 13/13 vectors)
+SURFACE_TYPECHECK=0   (swiftc -typecheck against faithful stubs)
+
+EXIT=1
+STATUS=BLOCKED

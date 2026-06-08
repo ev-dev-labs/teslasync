@@ -1,0 +1,179 @@
+=== P4 Shared surface 0089 Temperature (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/Temperature.*
+Web spec : components/data-display/format/Temperature.tsx
+Host     : Darwin arm64 (Apple Silicon), command-line Swift 6.3.2 (swiftlang-6.3.2.1.108)
+Date     : 2026-06-08
+ADRs     : ADR-002 (single SwiftUI source, iOS+macOS), ADR-005, ADR-009
+
+=== PREFLIGHT (platform capability probe) ===
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+'/Library/Developer/CommandLineTools' is a command line tools instance
+$ xcrun simctl list devices
+xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+$ ls apps/apple/Frameworks/Shared.xcframework
+(absent — only .gitkeep; the KMP static xcframework is produced on-demand by
+ Scripts/build-shared-xcframework.sh, which requires the Kotlin/Native + macOS link toolchain)
+
+CONCLUSION: this runner has the Command Line Tools only — NOT a full Xcode. The gate's
+`xcodebuild ... build test` steps (iOS Simulator + macOS) cannot execute here: there is no
+xcodebuild, no Simulator runtime (simctl), and no staged Shared.xcframework. Per this prompt's
+capability clause ("requires SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG.
+If unavailable on the runner -> STATUS=BLOCKED with API evidence") the build/test gate is BLOCKED
+and deferred to the macOS CI runner (ADR-012 matrix: macos-latest, Apple-silicon, full Xcode).
+Every host-runnable step below is GREEN, and the surface is additionally proven via headless
+swiftc compilation + execution (see HOST-COVERAGE).
+
+=== FILES SHIPPED (7 .swift + 1 .strings; one exported component per file) ===
+Temperature.Adapter.swift   — pure Foundation projection core: TemperatureScale (°C/°F + fromSI,
+                              port of convertTempFromSI), TemperatureNumber (port of fmtNumber +
+                              safeNumber guard + toFixed(1) title), TemperatureFormat (source
+                              precedence c>f, reading no-space, em-dash), TemperatureAccessibility.
+Temperature.Model.swift     — P1/S10 i18n facade (TemperatureStrings), P1/S11 telemetry seam
+                              (TemperatureTelemetry + OSLogTemperatureTelemetry), connectivity axis,
+                              TemperatureInput snapshot, TemperatureResolved, TemperatureProjection
+                              (loading/empty/error/data + spoken a11y), P1/S8 state-holder
+                              (TemperatureModel @Observable @MainActor + TemperatureSource +
+                              InMemoryTemperatureSource).
+Temperature.swift           — the surface View: header (title + freshness chip + refresh), the
+                              not-live banner, and the state switch; emits view.opened on present.
+Temperature.Views.swift     — reading hero ("{value}{unit}"), raw-value source caption (web hover
+                              `title`, also `.help`), friendly empty state (em-dash preserved).
+Temperature.Chrome.swift    — freshness chip, refresh button, stale/offline banner, loading
+                              skeleton, retryable error (retry stays an actionable a11y element).
+Temperature.Previews.swift  — DEBUG #Preview per state (°C / °F pref / °F source / empty / loading
+                              / error / stale / offline / de_DE grouping).
+Temperature.Tests.swift     — XCTest: adapter (scale/number/source/reading), projection (phases +
+                              precision + locale + a11y), model (wiring/telemetry-once/auto-
+                              refresh), accessibility join. Driven by InMemoryTemperatureSource.
+Temperature.strings         — P1/S10 catalog (table "Temperature"): title, source caption, spoken
+                              a11y units, and the P4 leaf chrome (freshness/connectivity/error).
+
+=== GATE STEP 1: xcodebuild -scheme TeslaSync (iOS Simulator) build test ===
+NOT EXECUTED — xcodebuild requires full Xcode (see PREFLIGHT). 
+IOS_EXIT=BLOCKED  (deferred to macOS CI runner with Xcode 16 + iOS 18 simulator)
+
+=== GATE STEP 2: xcodebuild -scheme TeslaSync-macOS build test ===
+NOT EXECUTED — xcodebuild requires full Xcode (see PREFLIGHT).
+MAC_EXIT=BLOCKED  (deferred to macOS CI runner with Xcode 16 + macOS 15 SDK)
+
+=== GATE STEP 3: swiftlint --strict ===
+Surface scope (this prompt's files) — swiftlint 0.63.3, repo rules, included=shared-surfaces:
+  Done linting! Found 0 violations, 0 serious in 7 files.
+  LINT_EXIT(surface)=0   ✅
+Whole-tree `swiftlint --strict` reports exactly ONE violation, which is FOREIGN + pre-existing and
+untouched by this surface (outside this prompt's Allowed files):
+  TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error:
+    Function Body Length Violation (function_body_length) — currently 78 lines.
+  `git status --porcelain` for that file is empty (baseline, not modified here).
+LINT_EXIT(surface)=0 ; the lone whole-tree red predates this surface and is out of scope.
+
+=== GATE STEP 4: swiftformat --lint ===
+Surface scope (this prompt's files):
+  $ swiftformat --lint TeslaSync/shared-surfaces
+  0/7 files require formatting.
+  FORMAT_EXIT(surface)=0   ✅
+Whole-tree `swiftformat --lint .` reports exactly ONE file needing formatting, which is FOREIGN +
+pre-existing and untouched by this surface:
+  TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1: error: (blankLinesBetweenScopes)
+  1/1920 files require formatting  (that 1 file = ActionBuilder.Previews.swift; `git status` empty)
+FORMAT_EXIT(surface)=0 ; the lone whole-tree red predates this surface and is out of scope.
+
+=== GATE STEP 5: check-placeholders.ps1 -Path .../shared-surfaces/Temperature ===
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  EXIT=0
+PLACEHOLDER_EXIT=0   ✅  (no TODO/FIXME/stub/mock/placeholder/Lorem/not-implemented in shipped code)
+
+=== HOST-COVERAGE SUMMARY (no red-as-green) ===
+Because xcodebuild cannot run here, the surface was proven headlessly with the command-line Swift
+6 compiler against the real macOS SDK (SwiftUI included):
+
+A) Adapter compile + EXECUTE (pure Foundation; web-arithmetic parity):
+   $ swiftc -O main.swift Temperature.Adapter.swift -o ts_adapter_check && ./ts_adapter_check
+   -> ALL_OK, RUN_EXIT=0. 32 assertions pass, reproducing the web source EXACTLY, incl.:
+      convertTempFromSI: °F(0)=32, °F(100)=212, °F(21.5)=70.7 ; fmtNumber grouping "1,234.5",
+      precision p2 "21.50"/p0 "71", non-finite NaN->"0.00"/Inf->"0.0", de_DE "1.234,5" ;
+      toFixed(1) title "21.5"/"21.0"/"98.6"/"1234.5" ; source precedence c-wins title "21.5 °C",
+      f->°C source title "98.6 °F" celsius 37.0, NaN-c falls through to f, both-missing -> nil ;
+      reading NO space "21.5°C" vs title WITH space "21.5 °C", display-scale "70.7°F"/p0 "71°F",
+      em-dash "—" when no source, de_DE reading "1.234,5°C".
+
+B) State-holder + projection typecheck (Swift 6, -strict-concurrency=complete):
+   $ swiftc -typecheck -strict-concurrency=complete -swift-version 6 \
+            Temperature.Adapter.swift Temperature.Model.swift shim(surfaceSlug).swift
+   -> TYPECHECK_EXIT=0. The @Observable @MainActor model, Sendable seams, and projection
+      type-check clean under complete strict concurrency (the app target's setting).
+
+C) FULL surface (all 4 SwiftUI view files) typecheck vs REAL SwiftUI (Swift 6, complete):
+   $ swiftc -typecheck -strict-concurrency=complete -swift-version 6 \
+            Temperature.{Adapter,Model,swift,Views,Chrome,Previews} tokens_shim.swift
+   (tokens_shim declares Color.TS / Font.TS / TSSpacing / TSRadius / TSButton / TSSkeleton /
+    TSFadeIn with the EXACT signatures verified in Sources/ + design/generated/apple/Tokens.swift)
+   -> TYPECHECK_EXIT=0. Every SwiftUI modifier (.help, .accessibilityValue, .background(_:in:),
+      .strokeBorder, #Preview, LazyVGrid, etc.) and every token reference resolves against the
+      real SDK. In the app build the shims are replaced by the real tokens (identical signatures).
+
+=== INTEGRATION DEPENDENCY (No silent drift — owned by P4 core, NOT this prompt) ===
+`apps/apple/TeslaSync/shared-surfaces` is a NEW source group. For xcodebuild on the macOS runner to
+COMPILE + TEST these files, the P4-core wiring (this prompt's declared "Depends on: P4 core") must
+add the path to:
+  • project.yml  — `sources:` of targets TeslaSync and TeslaSync-macOS (next to `feature-views`),
+                   and the Tests group already globs Tests/Unit (the surface tests live beside the
+                   surface, mirroring feature-views; if the test bundle scopes by path, add it).
+  • .swiftlint.yml — `included:` += TeslaSync/shared-surfaces (so the strict lint also covers it).
+These two files are OUTSIDE this prompt's Allowed files (apps/apple/TeslaSync/shared-surfaces/
+Temperature.* + this log), so they are intentionally NOT edited here; the wiring is a P4-core /
+integration step. The surface itself is complete and self-consistent.
+
+=== ACCEPTANCE CRITERIA ===
+[x] Surface renders every state from the web source (loading/data/empty/error) + the orthogonal
+    stale/offline freshness axis; no hidden surfaces (empty is a friendly state, never blank).
+[x] Hooks bind via the shared P1/S8 state-holder (TemperatureModel/TemperatureSource); the view
+    issues no HTTP — `useUnits` (unit label + locale) + the reading arrive as a coalesced snapshot.
+[x] Every native string resolves through the P1/S10 facade (table "Temperature"); the web source is
+    anonymous (no t()), so its only prose-bearing additions (title/source/a11y/chrome) are keyed.
+[x] Accessibility: VoiceOver label+value on the reading, header trait, hidden decorative glyphs,
+    spoken unit names ("degrees Celsius/Fahrenheit"), Dynamic Type fonts, reduce-motion via TSFadeIn,
+    retry stays an actionable element. iOS 18 / iPadOS 18 / macOS 15 minimums (project.yml).
+[x] Tests: adapter unit tests + projection per-state tests + model wiring/telemetry/auto-refresh +
+    a11y label test (Temperature.Tests.swift). Adapter parity additionally executed headlessly (A).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate COUNT=0).
+[~] EXIT=0 on host-runnable gates; the xcodebuild build/test is BLOCKED on Xcode availability with
+    API evidence (PREFLIGHT) and deferred to the macOS CI runner.
+[i] Charts/maps: none in the web source (pure formatter) — Swift Charts / MapKit not applicable.
+
+=== HONESTY COVENANT ===
+ 1 No red-as-green ...... xcodebuild is reported BLOCKED (not passed); the two whole-tree
+                          format/lint reds are named as FOREIGN + pre-existing, not hidden.
+ 2 No scope narrowing ... full surface shipped (7 .swift + strings): all states, all three seams
+                          (S8/S10/S11), telemetry, previews, and an XCTest suite — not a stub span.
+ 3 No skip-and-assume ... Temperature.tsx read end-to-end; the c>f precedence, the (f-32)*5/9
+                          conversion, the toFixed(1) source title, the NO-space reading, and the
+                          em-dash branch are all reproduced and pinned (executed in HOST-COVERAGE A).
+ 4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+ 5 No parity shortcuts .. SI-canonical input (°C) converted only at the display boundary; fmtNumber
+                          grouping + precision + non-finite guard ported with locale correctness.
+ 6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+ 7 No predecessor bypass  same disposition as the Windows-host P1/S3 KMP log: host-proven green +
+                          documented xcodebuild deferral to the macOS runner; the project.yml /
+                          swiftlint wiring is named as a P4-core integration dependency, not bypassed.
+ 8 No commit on red ..... committed work is GREEN on every gate scoped to it (swiftlint 0,
+                          swiftformat 0/7, placeholder 0) AND introduces ZERO new tree-wide
+                          violations (the two foreign reds predate this surface and are untouched).
+ 9 No silent drift ...... the temperature NO-space convention, the title-uses-source-unit semantics,
+                          and the project.yml/swiftlint integration wiring are documented here + in
+                          code; the deferral cause (no Xcode) is named precisely with API evidence.
+10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=BLOCKED
+BLOCKED_REASON=xcodebuild build+test requires a full Xcode (this runner has Command Line Tools
+only: no xcodebuild, no iOS Simulator/simctl, no staged Shared.xcframework). The surface is complete
+and GREEN on every host-runnable gate (swiftlint 0, swiftformat 0/7, placeholder 0) and is proven
+headlessly via swiftc compile+execute (32/32 web-arithmetic assertions) plus a full real-SwiftUI
+typecheck under Swift 6 complete strict concurrency. Promote to DONE once the macOS CI runner (full
+Xcode, after the P4-core project.yml/swiftlint wiring of shared-surfaces) runs the iOS + macOS
+build/test green.

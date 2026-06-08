@@ -1,0 +1,108 @@
+I'll start by exploring the environment and understanding the task structure. Let me check capabilities and read the web source in parallel.
+
+Key finding: **Xcode is NOT installed** (only Command Line Tools), and `simctl` is unavailable. Swift 6.3.2, swiftlint, swiftformat, and pwsh ARE available. This means `xcodebuild build test` cannot run, but I can still write complete production code and run partial gates. Let me explore the Apple app structure and web source thoroughly.
+
+Now let me deeply explore the Apple app structure to understand the conventions I must follow.
+
+The web source is clear. Now I need to study the existing Apple feature-view conventions deeply. There are 1438 entries — let me find a complete, similar example (a chart-based feature view) and understand the full file set per view.
+
+`BatteryLevelChart` is the closest analog (single area/line chart). Let me study its complete file set to learn the exact conventions.
+
+Excellent, very well-structured. Let me read the rest of the BatteryLevelChart set plus the cost-analysis ChargerTypeChart to learn Swift Charts usage and shared primitives.
+
+Now let me read the Previews, Tests, strings, and locate the shared P1/S9 tokens (TSSpacing, Color.TS, Font.TS, TSFadeIn, etc.) plus the web formatting/palette hooks.
+
+Now let me locate the shared P1/S9 tokens and find any existing AreaMark usage and currency formatting patterns.
+
+`CostForecastSection` is the ideal template — same cost-analysis feature, uses AreaMark + currency. Let me read it and locate the exact token definitions.
+
+`CostForecastSection` is the perfect sibling. Let me read its full set and find the `TSChartPalette` / formatting protocol / token definitions.
+
+Let me read the CostForecastSection Model (formatting seam), main view, strings, and the design token files.
+
+I have a thorough understanding. Let me confirm the exact design tokens and read the CostForecastSection Views/strings/Tests for the EmptyState/banner patterns and cost-analysis i18n keys.
+
+Let me read the design token definitions to confirm exact APIs.
+
+Let me locate the generated token definitions (TSSpacing, TSRadius, TSMotion, Color.TS, Font.TS).
+
+The tokens live in `apps/design/generated/apple/Tokens.swift`. Let me read it to confirm exact token names.
+
+I have all design tokens confirmed. Now let me understand the web `ChartContainer`, annotations, palette, and formatting hooks, plus the Xcode project config.
+
+Now let me check the Xcode project config, the placeholder checker, and lint configs to ensure my files integrate and pass the runnable gates.
+
+Let me read the full project.yml and placeholder patterns to ensure correct test-target wiring and avoid forbidden patterns.
+
+Let me check the placeholder patterns, lint/format configs, and how `.Tests.swift` files are wired (Scripts), to ensure full compliance.
+
+Let me verify the `TSFadeIn`/`TSSkeleton` signatures, the logs directory, and confirm no existing MonthlyCostChart files.
+
+Let me check a sample prior log and `done.txt` to match the established logging format and see prior surfaces' status.
+
+This is the key precedent. Let me read a full prior log to understand exactly how predecessors handled the Xcode-capability limitation and test execution.
+
+This is the established, accepted disposition: predecessors drove Xcode via `DEVELOPER_DIR` override (not the default CLT) and ran real host gates (`swiftc -typecheck` against both SDKs + a SwiftPM test harness), while deferring `xcodebuild build test`. Let me probe whether full Xcode is available here.
+
+Full Xcode 26.5 is available via `DEVELOPER_DIR`. This matches the predecessor's environment exactly — I can run real `swiftc -typecheck` against both SDKs plus a SwiftPM test harness, while `xcodebuild build test` stays deferred (unregistered feature-views + unstaged xcframework). Let me check the annotation color categories, then write all code.
+
+I now have complete understanding. Let me set up tracking and write the plan, then create all files.
+
+Now I'll write all the source files. Starting with the pure Adapter core.
+
+Now the Swift Charts area-chart file.
+
+Now the chrome (header, freshness chip, banner, loading, empty, error states).
+
+Now the main surface file.
+
+Now the Previews and the Tests files.
+
+Now the strings catalog contribution.
+
+All 8 files written. Let me update tracking and run the host gates, starting with swiftformat/swiftlint/placeholder on my files.
+
+swiftformat flagged style issues — let me auto-format my files (they're my allowed files) and re-verify.
+
+swiftformat passes. Let me verify the auto-formatted changes are sound, then run swiftlint and the placeholder gate.
+
+swiftformat clean. Now swiftlint on my files plus the placeholder gate.
+
+swiftlint clean (0 violations). The placeholder COUNT=19 is from **other slots' files** in the shared directory — let me confirm **my** files are clean by scanning them in isolation.
+
+My files are placeholder-clean (COUNT=0). The 19 violations are all in other slots' files. Now the high-value validation: real `swiftc -typecheck` against both SDKs via the Xcode toolchain.
+
+The closure needs a few more real component files (Skeletons.swift uses `TSCard`). Let me find the minimal real closure by checking dependencies.
+
+All SwiftUI-only. Let me typecheck the surface against this complete component closure on both SDKs.
+
+The full-directory closure pulls unrelated components. Let me build the **minimal** transitive closure my surface actually needs (Skeletons→TSCard).
+
+Predecessor closure used specific files (not whole dirs). Let me assemble the precise transitive set and iterate.
+
+iOS typecheck passes (exit 0). Let me run all three typechecks cleanly (iOS, macOS, and DEBUG previews) capturing true exit codes.
+
+All three typechecks pass cleanly on both SDKs. Now the SwiftPM harness to **execute** the XCTest suite (the meaningful test validation, since `xcodebuild` is blocked).
+
+**All 26 tests EXECUTED and PASSED** (0 failures) against the real production code + design tokens + component closure. Now let me capture the honest `xcodebuild` deferral evidence (predecessor parity). First checking xcodegen + xcframework state.
+
+Confirmed: xcframework unstaged (only `.gitkeep`), no `.xcodeproj`. Let me capture the honest `xcodebuild` deferral evidence: generate the project, then attempt the build to record the real failure.
+
+Project generated cleanly; my files are registered (48 refs). Now capture the real `xcodebuild` failure (the deferral evidence).
+
+Captured the honest deferral evidence: **MAC_BUILD_EXIT=65** — two infrastructure blockers (Shared.xcframework not staged + dev-signing required), both unrelated to my surface. This matches the predecessor disposition. Let me clean up generated artifacts and verify git state.
+
+Clean: only my 8 files are new, both linters green. Let me do a final honest i18n referenced==declared cross-check before writing the log.
+
+i18n verified: all 17 referenced keys are declared; the lone declared-but-unreferenced key is the source CSV column `col.cost` (catalog parity). Let me gather line counts and write the comprehensive log.
+
+Now I'll write the comprehensive log file following the established format.
+
+Now let me commit exactly my 8 surface files plus the log (not other slots' changes), using the prompt's commit message.
+
+Exactly 9 files staged. Committing.
+
+Committed (exit 0). Let me finalize tracking and do a last sanity check on the commit contents.
+
+The task is complete. The commit contains exactly my 9 files and the log ends with `EXIT=0 / STATUS=DONE`.
+

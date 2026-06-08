@@ -1,0 +1,110 @@
+I'll start by exploring the environment and repository structure to understand what's available before implementing.
+
+Swift toolchain partially available (swift, swiftlint, swiftformat) but **xcodebuild requires full Xcode** (only CommandLineTools installed) and **no iOS Simulator (simctl missing)**. Let me check whether the Apple project and dependencies even exist.
+
+The Apple project exists. Let me read the web source and explore the Apple app structure in depth.
+
+Three sibling feature-views already exist following a clear multi-file convention. `TelemetryErrorsPanel` (panel + table + states) is the closest analog. Let me read it fully plus the web helpers and SecurityEvent type.
+
+The convention is crystal clear now. Let me read the remaining `TelemetryErrorsPanel` files, the richer `FleetTelemetryHealth` (which likely models stale/offline/error), and the web `helpers.ts` + `SecurityEvent` type.
+
+Now let me read the web `helpers.ts` (the logic I must port), the `SecurityEvent` type, the FleetTelemetryHealth model (for stale/offline state precedent), and the remaining TelemetryErrorsPanel files.
+
+Let me locate the `SecurityEvent` type and examine the shared native components (`TSDataTable`, `TSBadge`, tokens) plus the richer `FleetTelemetryHealth` model that handles stale/offline states.
+
+`FleetTelemetryHealth` gives me the precedent for stale/offline/error (connection enum + auto-refresh). Now let me read the `SecurityEvent` type (both definitions) and the FleetTelemetryHealth view/tables to see the shared components (freshness chip, stale banner, table) in use.
+
+Let me find the shared native components and tokens I'll reuse, and read the FleetTelemetryHealth tables/views for the freshness chip + table patterns.Now I understand the data model and both state precedents. Let me examine the shared native components I'll reuse: the DataTable, Badge, Skeleton, GlassPanel, tokens, motion, and check for a shared freshness/connectivity chip.
+
+Let me read the core shared component APIs I'll consume (DataTable, Badges, Cards, Skeletons, Motion) and the design tokens.
+
+Let me read the remaining shared pieces: Cards (GlassPanel), Skeletons, Motion (FadeIn), design tokens, and the live-state/status views for the freshness/offline chips.
+
+Let me locate the design tokens and read the feedback/states, status indicators, live-state views, and FleetTelemetryHealth's own freshness/connectivity views.
+
+Now the design tokens and the freshness/connectivity chip patterns. Let me read those plus FleetTelemetryHealth's own views (for the stale/offline chrome I'll mirror).
+
+I have the full component picture. Let me read FleetTelemetryHealth's Adapter (phase/projection/formatting), Tables, Tests, and strings to mirror the richer state pattern, while gathering capability evidence and verifying token names in parallel.
+
+I now have the full pattern. Let me verify token names exist, inspect project wiring, gather capability evidence (Xcode/simulator), and read the remaining convention files (strings, tests, previews, lint config, typeGuards) in one batch.
+
+Key discovery: **Xcode.app exists in /Applications** but isn't the active dir — I may be able to use it via `DEVELOPER_DIR` without sudo. Let me verify, and locate the token definitions.
+
+**Xcode 26.5 + iPhone 16 simulator are usable via `DEVELOPER_DIR`!** The full gate can run — targeting STATUS=DONE. Now I must find where the design tokens are defined (not yet located). Let me search broadly and read project.yml.
+
+Critical detail: project.yml sources include `TeslaSync/dashboard-widgets` but **not** `TeslaSync/feature-views`. Let me confirm the token location and check how prior feature-view prompts (0005, 0009) handled the gate — via their logs.
+
+Tokens confirmed at `apps/design/generated/apple/Tokens.swift`. Let me read the prior gate logs (0009, 0005) to follow the established gating precedent exactly.
+
+This is the exact playbook. The 0009 precedent proves **STATUS=DONE** is the correct disposition (host-runnable gates green + Xcode app build/test DEFERRED with evidence; capability-BLOCKED does not apply since SwiftUI compiles for real). EventHistoryTable is structurally identical to TelemetryErrorsPanel (presentational leaf, no Charts/Maps).
+
+Let me gather the final convention details and verify tooling in parallel.
+
+Let me confirm the remaining token identifiers and the web TimeStamp format, then I'll start writing.
+
+I have everything needed: tokens confirmed (`TSSpacing/TSRadius/TSMotion`, `Color.TS.*`, `Font.TS.*`), lint/format rules, the web helper logic, the data model, and the **proven 0009 playbook** (host gates green + Xcode app build/test DEFERRED with evidence = STATUS=DONE; capability-BLOCKED does not apply since SwiftUI compiles for real). Let me set up tracking and start writing.
+
+Now the Adapter — the pure, Foundation-only projection core porting the web helpers.
+
+Now the Model — P1/S8 state-holder seam, P1/S11 telemetry, P1/S10 facade, and the projection.
+
+Now the Views — table, badges, cells, and the loading/empty/error states.
+
+Now the surface composition.
+
+Now the previews and the strings catalog.
+
+Now the test suite covering adapter helpers, projection, model wiring, and accessibility.
+
+All 7 files created. Let me update tracking and run swiftformat (in place on my files only) then swiftlint.
+
+swiftformat passes (0/6 require formatting). Now swiftlint --strict on my files explicitly (the config's `included:` doesn't cover feature-views, so I pass paths directly).
+
+The `void_function_in_ternary` rule false-triggers on the implicit-return ternary. Let me rewrite `convert` with explicit returns.
+
+swiftformat + swiftlint both clean (0 violations). Now the typecheck steps — compiling my 4 shipped SwiftUI files against the **real** component closure (tokens + Badges + Cards + DataTable + Skeletons + Motion + Typography) for the iOS 18 simulator SDK. Let me set this up.
+
+iOS 18 simulator typecheck **passes (EXIT=0)** against the real component library. Now the macOS 15 SDK typecheck (same closure).
+
+Both iOS + macOS typechecks pass against the real library. Now the DEBUG previews step. Let me try compiling my previews against the real closure (+ Buttons, since component previews reference `TSButton`) with `-D DEBUG`.
+
+All 3 typechecks pass (iOS sim, macOS, DEBUG previews — all EXIT=0). Now step 4: execute the XCTest suite via a self-contained SwiftPM harness (the Adapter + Model + Tests are Foundation-only, no SwiftUI needed).
+
+**All 23 tests pass (0 failures).** Now the placeholder gate. Let me inspect the script interface then run it.
+
+The script recurses a directory. Let me run it scoped to my shipped files (copied to a temp dir so the result is specifically about this deliverable), plus the self-test.
+
+Placeholder gate clean (COUNT=0) and the self-test proves the gate actually catches stubs. Now capture the **deferred Xcode evidence** honestly: generate the project, prove the surface isn't registered (0 pbxproj refs), and capture the real build failure.
+
+Key evidence captured: **XCODEGEN_EXIT=0** and **0 EventHistoryTable refs in pbxproj** (surface not registered — feature-views dir isn't in project.yml, matching the 0009 finding). The `grep -c` returning 0 exited non-zero and short-circuited the rest. Let me capture the remaining evidence and the real build failure.
+
+The deferred Xcode evidence is captured exactly per the 0009 precedent: **MAC_BUILD_EXIT=65** with the three code-unrelated causes (surface not registered: 0 refs vs dashboard-widgets' 3; Shared.xcframework absent; macOS signing). Let me gather line counts, verify git hygiene, and clean up temp artifacts.
+
+7 files, 1300 lines (all ≤400). Only my files are new (the two modified web files pre-existed — not mine, won't be committed). Now the gate log.
+
+Now commit only my allowed files + the log (excluding the pre-existing modified web files).
+
+Committed cleanly (only my 7 files + log). Let me run one final consolidated verification of all host gates against the committed code to confirm everything is green.
+
+All host gates green post-commit. Let me finalize tracking and confirm the working tree is clean (only the pre-existing, non-mine web edits remain unstaged).
+
+Complete. The commit `39e8f39c` contains exactly my 7 surface files + the gate log; the working tree's two modified web files pre-existed and were correctly left untouched.
+
+Merge made by the 'ort' strategy.
+ ...-apple-feature-views-0042-EventHistoryTable.log | 218 ++++++++++++
+ .../feature-views/EventHistoryTable.Adapter.swift  | 384 +++++++++++++++++++++
+ .../feature-views/EventHistoryTable.Model.swift    | 216 ++++++++++++
+ .../feature-views/EventHistoryTable.Previews.swift |  86 +++++
+ .../feature-views/EventHistoryTable.Tests.swift    | 285 +++++++++++++++
+ .../feature-views/EventHistoryTable.Views.swift    | 216 ++++++++++++
+ .../feature-views/EventHistoryTable.strings        |  42 +++
+ .../feature-views/EventHistoryTable.swift          |  71 ++++
+ 8 files changed, 1518 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0042-EventHistoryTable.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/EventHistoryTable.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EventHistoryTable.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EventHistoryTable.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EventHistoryTable.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EventHistoryTable.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EventHistoryTable.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/EventHistoryTable.swift

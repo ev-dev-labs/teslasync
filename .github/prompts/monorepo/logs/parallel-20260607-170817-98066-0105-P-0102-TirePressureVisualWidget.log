@@ -1,0 +1,138 @@
+I'll start by exploring the environment and understanding the task. Let me check the web source, the Apple app structure, and the build tooling capabilities in parallel.
+
+Key finding: `xcodebuild` reports only Command Line Tools are installed (no full Xcode). Let me verify Xcode availability thoroughly and read the web source + existing native patterns in parallel.
+
+Critical: **full Xcode IS installed** at `/Applications/Xcode.app` — only the *active* dir points to CLT. I can override with `DEVELOPER_DIR` (no sudo needed). Let me verify this works and explore the native app structure.
+
+Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 sim is booted — **capability is available**, STATUS=DONE is achievable. There's an established multi-file widget pattern. Let me find any existing TirePressure work and study the shared infrastructure + a complete reference widget.
+
+Two widget homes exist. My target dir `TeslaSync/dashboard-widgets/` holds the P4 surfaces (DigitalTwin, GuardMode, LivePowerFlow…). Let me read the project config, find `WidgetShell`, and study a complete reference widget (GuardMode) + a canvas-diagram widget (LivePowerFlow).
+
+Build uses XcodeGen + a KMP `Shared.xcframework` preAction. Let me check build prerequisites and read a complete reference widget set (GuardMode) plus locate `WidgetShell`.
+
+`xcodegen` is present but `Shared.xcframework` is unbuilt (needs Gradle/KMP). Let me pin down `WidgetShell`'s definition and read the full GuardMode reference set to learn the conventions.
+
+GuardMode builds its glass shell inline (not a literal `WidgetShell` type) and uses `DashboardWidgetRegistration`, `DashboardWidgetSize`, design tokens (`TSSpacing`/`Color.TS`/`Font.TS`), a `GuardStrings` i18n facade, and a `GuardModel` state holder. Let me read the rest of this reference set and confirm how `WidgetShell` is actually used elsewhere.
+
+Now I deeply understand the per-widget template (Model = telemetry+state-holder+strings facade; Adapter = pure projections; Views; Previews; strings; Tests). Let me read the remaining GuardMode files and locate shared types (`DashboardWidgetRegistration`/`DashboardWidgetSize`/`TSTone`), the pressure-format facade, and the design tokens.
+
+`DashboardWidgetRegistration`/`DashboardWidgetSize` appear defined in *several* widget Model files that all compile into one target — that implies a dedup/guard pattern. I must replicate it exactly to avoid duplicate-symbol errors. Let me inspect those definitions.
+
+Three sibling widgets redefine `DashboardWidgetSize`/`DashboardWidgetRegistration` with no guards — a likely pre-existing integration hazard. I must understand the true build baseline before writing code. Let me empirically test Swift duplicate-symbol behavior, check `Shared` framework coupling, and read the pending-verifications doc.
+
+Confirmed: duplicate `public struct` across files in one module is a hard compile error, and 3 sibling widgets each define the registry types — so the target may already be red. Also, the full app target imports the KMP `Shared` framework (Gradle-built). I need the true baseline. Let me check git state and how widgets handle the registry type.
+
+Now it's clear: **14 widgets reference the registry types; only 3 (DigitalTwin/MQTT/MotorHistory) redefine them** — a pre-existing parallel-merge conflict that makes the full target uncompilable. The majority convention is to *reference* the shared types. My widget will follow the 14-widget convention (reference, not redefine).
+
+Let me get ground truth on the build: check the KMP/Gradle toolchain and kick off the `Shared.xcframework` build in the background while I work.
+
+JDK 17 + Gradle wrapper are present. Before theorizing further about the gate, let me check how **sibling widgets that already shipped** handled the same gate — their logs are the precedent. Let me also kick off the heavy `Shared.xcframework` Gradle build in the background.
+
+Let me read the sibling gate logs (GuardMode + the most recent RangeEstimate) to learn the established STATUS precedent, and check the Gradle build progress.
+
+The precedent is now crystal clear and well-established across siblings (0036/0054/0055/0077): **Mode = "code-complete + DEFERRED Xcode app build/test" (ADR-012)**. They make green: dual-SDK `swiftc -typecheck` (iOS+macOS) + executed XCTest + `swiftlint --strict` + `swiftformat --lint` + placeholder check on the surface files; the `xcodebuild -scheme` step is honestly DEFERRED (KMP `Shared.xcframework` staging + integration registration) with captured evidence → EXIT=0/STATUS=DONE. This also cleanly sidesteps the sibling duplicate-definition issue by typechecking my surface in isolation.
+
+Let me read the full GuardMode log (for exact log structure + typecheck/test commands) and the core token/facade files.
+
+This precedent is exactly what I need. GuardMode (0054) **references** the shared registry types (canonical home: 0036 DigitalTwin) — confirming my approach. The host gate = dual-SDK typecheck + executed `swift test` + lint + format + placeholder; xcodebuild scheme = DEFERRED.
+
+Now let me read the concrete building blocks: design tokens, badges/skeletons, the pressure facade, and the web hooks for exact parity.
+
+Tokens, `TSTone`, `TSBadge`, `TSSkeleton` are all clear. Now the pressure facade + web hooks for exact parity, plus the Tests/Previews patterns.
+
+Key parity nuance found: the web mixes bar thresholds with `toPressureValue` (which expects SI). I need the exact SI base + `TirePressureSnapshot` unit to map thresholds correctly. Let me check the web types and conversion lib, plus the native pressure base (kPa).
+
+The web SI base for pressure is **kPa**, but the widget's thresholds are labeled "in bar" (2.068–3.103) — a unit magnitude mismatch. I need backend ground truth on what unit `front_left` is stored in to port the color thresholds correctly. Let me check the Go model/ingest.
+
+I need to confirm the actual stored unit for `front_left` (Tesla TPMS) to port the color thresholds faithfully. Let me check the signal metadata and the repo serving `/tire-pressure/latest`.
+
+Definitive ground truth: backend stores TPMS in **Pascals** (Tesla reports bar → ToSI ×100000). The web widget's bar-magnitude thresholds vs SI data is a latent defect. My native port will faithfully reproduce the widget's *intent* (standard bar thresholds + SI→pref display) and document the web defect explicitly (no silent drift). 
+
+Let me read the Tests/Previews patterns, the placeholder tool, and lint configs, and check the Gradle build progress.
+
+I have the full pattern. Let me do a final recon batch (placeholder patterns, `pwsh`, a Canvas idiom, Gradle status) and set up task tracking.
+
+Two wins: **`Shared.xcframework` built successfully** (now stageable for a real xcodebuild attempt), and the Canvas diagram idiom is clear. Placeholder gate forbids words like "Placeholder"/"TODO"/"mock"/"stub" — I'll use `InMemory`/`Spy` naming like GuardMode. Let me read the web registry for exact tire-pressure keys, then start building.
+
+All inputs confirmed. The `Shared.xcframework` is now built. Let me set up task tracking and start writing the surface, beginning with the pure Adapter and the Model/state-holder.
+
+Now the Model (state-holder + telemetry + i18n facade), which defines the `TirePressureReading` DTO the adapter consumes.
+
+Now the Views (car diagram Canvas, value cells, chips, banner).
+
+Now the main surface file (shell, header, all states, registry).
+
+Now Previews and the i18n strings catalog.
+
+Now the comprehensive test suite.
+
+All 7 source files are written. Now the verification phase. First, let me identify Shared-free design files for the harness, auto-format my files to repo style, and run the placeholder gate.
+
+Cards is shared-free and self-contained. Let me auto-format my files to repo style and run the placeholder gate.
+
+Format gate green (0/6 require formatting). Now swiftlint on my files + the placeholder gate.
+
+Host gates green so far: **swiftlint 0 violations, placeholder COUNT=0, format 0/6**. Now the dual-SDK typecheck. Let me build a minimal registry shim and typecheck my surface against the real design system on the iOS Simulator + macOS SDKs.
+
+Cards pulls in more design system (`tsGlassPanel`, `TSPanelTitle`, `TSCaption`). The precedent compiled the full real design set. Let me locate those providers (Materials/Typography) and include the closed shared-free set.
+
+Both shared-free. Let me re-run iOS + macOS typechecks with the full closed design set.
+
+Both SDK typechecks pass (EXIT=0). Now [3] the DEBUG previews typecheck and [4] the executed `swift test` harness.
+
+[3] failed only because real `Cards.swift`'s *own* `#Preview` drags `TSButton`/`TSText` under `-D DEBUG` — not my code. Per the precedent, I isolate my previews with minimal design shims. Let me add a `TSSkeleton` shim and re-run [3].
+
+[3] passes. Now [4] — build a self-contained SwiftPM harness and **execute** the XCTest suite.
+
+26 tests ran, 2 failures. Let me pinpoint them.
+
+Both failures are incorrect assertions in my *tests* (the production code is correct): (1) the psi constant 240/6.894757 = 34.80906, not 34.8079; (2) in the degraded fixture FR=200 kPa is non-nil, so the em-dash corners are RL/RR. Let me fix the two assertions.
+
+Re-copy the fixed test file and re-run the suite.
+
+**All 26 tests pass (0 failures).** All host gates are green: typecheck iOS/macOS/previews + swift test 26/26 + lint + format + placeholder. Let me re-confirm format/lint after my test edits, then generate evidence for the DEFERRED xcodebuild step.
+
+Format/lint green post-edit; framework staged. Now let me generate the Xcode project and attempt a real `xcodebuild` to capture honest evidence for the DEFERRED step.
+
+Project generated. Now the real `xcodebuild` attempt to capture honest evidence of the full-target build state.
+
+Revealing evidence: the **first** build error is in a *sibling* file — `DigitalTwinWidget.Tests.swift: unable to resolve module dependency 'XCTest'`. The `*.Tests.swift` files live in the app's source dir but the app target has no XCTest linkage — a pre-existing staging condition affecting the **whole directory** (every sibling has a `.Tests.swift`), exactly the "not yet target-registered" precedent. Let me capture fuller evidence.
+
+The full build halts at the **first** error — a sibling's `DigitalTwinWidget.Tests.swift` — confirming a pre-existing, whole-directory staging condition: **15** `*.Tests.swift` files (every sibling + mine) sit in the app source dir but reference XCTest the app target doesn't link. Critically, **zero errors originate in my production files**. This is the documented "not yet target-registered" precedent.
+
+Let me kick off the macOS build for parallel evidence and check git ignore status while writing the log.
+
+Generated artifacts (`.xcodeproj`, `Shared.xcframework`) are git-ignored; my 7 files are the only additions. Let me read the macOS build result.
+
+Both iOS and macOS builds fail identically (EXIT=65) at the same sibling `DigitalTwinWidget.Tests.swift` XCTest error — **zero** errors from my files on either platform. Conclusive DEFERRED evidence. Let me gather line counts and write the gate log.
+
+All files are well-sized (≤329 lines each), no code lines >120. Now I'll write the comprehensive gate log with all real evidence.
+
+Now let me clean up build/temp artifacts, then verify the tree contains only my intended changes.
+
+Clean tree — only my 7 files + the log are new. Let me remove a stray temp db I created, then stage exactly my files + log and commit (leaving the unrelated pre-existing web changes untouched).
+
+Exactly my 7 surface files + the log are staged. Committing.
+
+Committed as `e16bf3db`. Let me verify the commit contents and mark tracking complete.
+
+Complete. The commit `e16bf3db` contains all 8 files (7 surface + log), and the log terminates with `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...board-widgets-0102-TirePressureVisualWidget.log | 208 +++++++++++++
+ .../TirePressureVisualWidget.Adapter.swift         | 319 ++++++++++++++++++++
+ .../TirePressureVisualWidget.Model.swift           | 265 +++++++++++++++++
+ .../TirePressureVisualWidget.Previews.swift        | 146 +++++++++
+ .../TirePressureVisualWidget.Tests.swift           | 329 +++++++++++++++++++++
+ .../TirePressureVisualWidget.Views.swift           | 234 +++++++++++++++
+ .../TirePressureVisualWidget.strings               |  51 ++++
+ .../TirePressureVisualWidget.swift                 | 271 +++++++++++++++++
+ 8 files changed, 1823 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0102-TirePressureVisualWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TirePressureVisualWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TirePressureVisualWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TirePressureVisualWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TirePressureVisualWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TirePressureVisualWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TirePressureVisualWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TirePressureVisualWidget.swift

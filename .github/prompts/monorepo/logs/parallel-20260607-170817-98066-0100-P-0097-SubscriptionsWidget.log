@@ -1,0 +1,117 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Swift toolchain is available but full Xcode (xcodebuild/simctl) is not — only Command Line Tools. Let me explore the existing Apple app structure to understand patterns.
+
+Now let me explore the Apple app structure, looking for existing dashboard widgets and the shared infrastructure (state holders, tokens, i18n, diagnostics).
+
+`MaintenanceTrackerWidget` looks like the closest analog (list-based with status badges). Let me read it completely along with the shared infrastructure.
+
+Excellent, very clear pattern. Let me read the rest of MaintenanceTrackerWidget files plus the shared dashboard types.
+
+Now let me read the shared dashboard types, design tokens, and the web hooks for the exact data shapes.
+
+This is the established disposition. Let me read the web shared widget components and the Apple shared components I'll reference, to build at parity.
+
+I have the full parity picture. Let me check the lint config, placeholder gate, and TSBadge body before writing code.
+
+I have everything I need. Let me set up a plan and create the SQL todos, then write the files. Let me also confirm the DigitalTwin bundle's shared-type dependencies for the typecheck.
+
+Shared types are isolated to `DigitalTwinWidget.Model.swift`. Let me set up tracking and start writing the surface files.
+
+Now creating the source files. Starting with the value types:
+
+Now the test suite:
+
+Now the i18n catalog contribution:
+
+All 8 files created. Now let me run the host gates, starting with syntax parse and the executed adapter harness.
+
+All files parse. Now the executed adapter harness (compiles the real Models + Builder and runs assertions):
+
+41/41 adapter checks pass against the real source. Now the typecheck against the real component library. Let me assemble the file set.
+
+No facade deps in components or the DigitalTwin bundle. Let me run the full typecheck against the real library.
+
+All 52 errors are confined to `UnitFormatters.swift` (the facade-dependent file the predecessor also excluded). Excluding it:
+
+`BUNDLE_TYPECHECK_EXIT=0` — zero errors, zero warnings against the real library. Let me also test whether the `#Preview` macro is available in this CLT (to validate the Previews file too) and run swiftlint.
+
+Confirmed: the `#Preview` macro plugin is Xcode-only (the error is in an existing file `Typography.swift`, not mine) — Previews are validated as `#if DEBUG`, matching the predecessor. Now swiftlint:
+
+One line too long. Let me view and fix it:
+
+My 7 files are clean, but the full gate shows 1 violation elsewhere. Let me locate it:
+
+The single violation is pre-existing in `LifetimeStatsWidget.Adapter.swift` (widget 0055), outside my allowed-files scope. Let me verify it predates my changes:
+
+Confirmed: the lone full-tree violation is pre-existing in predecessor `LifetimeStatsWidget.Adapter.swift` (0055), unmodified by me and outside my allowed-files scope. My 7 files are clean. Now swiftformat:
+
+swiftformat wants its own wrapping/number style. Let me auto-apply the repo's swiftformat config to my files:
+
+swiftformat normalized `86_400.0`→`86400.0` and the array wrapping. Let me re-verify all gates after formatting:
+
+The full-gate command must run from repo root. Let me re-run it correctly, plus re-verify typecheck and harness still pass post-format:
+
+Post-format: full swiftformat gate **0/362**, typecheck **0/0**, harness **41/41**. Now the placeholder gate:
+
+All gates green. Now let me verify i18n key coverage — every key referenced in code must exist in the catalog:
+
+Complete i18n coverage — all 25 code keys (incl. `openA11y`, truncated by the regex) resolve in the catalog. Let me gather final metrics and update tracking:
+
+All files ≤400 lines (largest 310). Now let me gather environment details and write the gate log:
+
+Log written. Now let me clean up temp files, stage only my files (excluding the 2 unrelated pre-existing web changes), and commit:
+
+Staging is correct — only my 8 files + log. The 2 pre-existing web changes are left unstaged. Committing:
+
+Committed. Let me do a final consolidated verification of the committed state:
+
+The task is complete. Here's what I shipped.
+
+## SubscriptionsWidget (Apple, P4/0097) — STATUS=DONE
+
+Built a production-polished native SwiftUI surface at parity with `features/dashboard/widgets/SubscriptionsWidget.tsx`, following the established dashboard-widget architecture (8 files, 1588 lines, each ≤400):
+
+- **`.Models`** — JSON envelope value type + formatting context + projection
+- **`.Builder`** — pure cached→projection adapter (asString, ceil `daysUntil`, known-type extraction, generic `subscriptions[]` fallback with case-insensitive dedup, expiry-vs-status active rules, next-expiry)
+- **`.Model`** — P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, P1/S10 i18n facade, a11y summary
+- **`.swift` / `.Content`** — shell + freshness/refresh/open chrome + all states; compact (count + next-expiry chip) and standard (detail list + success/danger status chips)
+- **`.Previews` / `.Tests` / `.strings`** — per-state previews, full XCTest suite, 26-key catalog
+
+**Host gates (all executed, real output):**
+| Gate | Result |
+|---|---|
+| Bundle typecheck vs real component library | `EXIT=0`, 0 errors / 0 warnings |
+| Executed adapter harness | **41/41 PASS** |
+| `swift -parse` ×7 | OK |
+| swiftlint --strict (surface) | 0 violations |
+| swiftformat --lint (whole tree) | 0/362 |
+| placeholder gate | COUNT=0 |
+| i18n key coverage | 25/25 code keys present, 0 missing |
+
+**Honestly deferred / disclosed:** `xcodebuild` iOS/macOS build+test is DEFERRED (host has Command Line Tools only, no full Xcode — capability evidence in log), matching the accepted 0036/0061 disposition. The whole-tree `swiftlint --strict` has **one pre-existing violation in predecessor `LifetimeStatsWidget.Adapter.swift` (0055)** — unmodified by me, outside my allowed-files scope, not introduced by this change; documented rather than bypassed.
+
+Committed as `6c9c1761` (9 files); the 2 unrelated pre-existing web edits were left unstaged.
+
+
+
+Merge made by the 'ort' strategy.
+ ...-dashboard-widgets-0097-SubscriptionsWidget.log | 218 +++++++++++++++
+ .../SubscriptionsWidget.Builder.swift              | 237 ++++++++++++++++
+ .../SubscriptionsWidget.Content.swift              | 145 ++++++++++
+ .../SubscriptionsWidget.Model.swift                | 265 ++++++++++++++++++
+ .../SubscriptionsWidget.Models.swift               | 199 +++++++++++++
+ .../SubscriptionsWidget.Previews.swift             | 125 +++++++++
+ .../SubscriptionsWidget.Tests.swift                | 310 +++++++++++++++++++++
+ .../dashboard-widgets/SubscriptionsWidget.strings  |  52 ++++
+ .../dashboard-widgets/SubscriptionsWidget.swift    | 255 +++++++++++++++++
+ 9 files changed, 1806 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0097-SubscriptionsWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SubscriptionsWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SubscriptionsWidget.Content.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SubscriptionsWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SubscriptionsWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SubscriptionsWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SubscriptionsWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SubscriptionsWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SubscriptionsWidget.swift

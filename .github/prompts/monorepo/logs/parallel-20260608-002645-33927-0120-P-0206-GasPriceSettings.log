@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure and understanding what exists, then read the web source spec.
+
+Key findings: `apps/apple/TeslaSync/feature-views/` exists with a sibling `AIUsageCard.*` set (my template). Swift 6.3.2, swiftlint, swiftformat available. Let me check xcodebuild properly and read the web source + sibling pattern.
+
+Critical capability finding: **only Command Line Tools are installed, not full Xcode** — so `xcodebuild`/simulator gate steps cannot run. Per the prompt's capability clause, build/test steps will be BLOCKED with evidence, but I must still ship full-parity native code and run what's available (swiftlint, swiftformat, placeholder check, swift typecheck). Let me study the established sibling pattern (AIUsageCard) and the diff on those modified files.
+
+macOS case-insensitive FS — the `AIUsageCard`→`AiUsageCard` rename is a *different* prompt's in-flight work (0237), not mine. I'll only stage `GasPriceSettings.*` + the log. Now let me study the established architecture deeply: read the full AiUsageCard set (canonical recent example) plus a settings sibling, and locate the shared P1 infrastructure.
+
+`AISettings` is my closest template — a settings card with toggle + config mutations. Let me read its full set plus AiUsageCard's leaf/freshness pattern.
+
+Excellent — clear, sophisticated pattern. Let me read the remaining AISettings files and locate the shared P1 tokens/components (TSGlassPanel, TSSpacing, Color.TS, Font.TS).
+
+Now let me locate the shared P1/S9 tokens/components and study how siblings handle Select/Picker, currency formatting, and toasts.
+
+Found the shared infra: `apps/design/generated/apple/Tokens.swift` (tokens), `apps/apple/Sources/Components/UI/` (TSButton, TSGlassPanel). Let me read these plus the Select/currency patterns.
+
+I have the full pattern. Let me check the toast/feedback components, TSGlassPanel, TSFadeIn, TSSkeleton, metric cards, and how siblings surface mutation toasts.
+
+Let me read the web hooks/formatting to nail data shapes, plus the remaining shared component signatures (TSGlassPanel, TSFadeIn, TSSkeleton).
+
+Now I have full data fidelity. Let me confirm the `.tsGlassPanel()` modifier and how `project.yml` includes feature-views (sources, tests, strings).
+
+I have everything needed. Let me check the lint/format configs and the placeholder checker patterns to ensure compliance, then create a plan and build.
+
+Now I understand all constraints. Let me set up a plan, create todos, and kick off baseline lint/format checks in the background while I build.
+
+Pre-existing baseline violation found in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (not my file). Let me capture full baseline (lint + format) in the background while I write the code — this lets me honestly separate pre-existing issues from mine.
+
+Baseline: exactly **1 pre-existing** `swiftlint --strict` violation in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (not my file, not in scope). My files must be clean. Now I'll build all 8 files. Starting with the pure logic core.
+
+Both `swiftlint` and `swiftformat` are pre-red at baseline from files outside my scope (`ActionBuilder.Previews.swift`, `LifetimeStatsWidget.Adapter.swift`). I'll prove my files clean via scoped runs. Now building all 8 files.
+
+Now the Views (subcomponents) and the entry view.
+
+Now the entry view file.
+
+Now the Previews and strings catalog.
+
+Now the test file covering adapter, projection, model, and accessibility.
+
+All 8 files created. Now the verification phase. First, auto-format my files to the project's swiftformat spec, then review what changed.
+
+One real violation: `Views.swift` is 421 lines (>400 limit). I'll split the loading/empty/error/toast chrome into a focused `GasPriceSettings.States.swift` — matching the sibling `.States.swift` convention. Let me view the exact boundaries.
+
+I'll extract the chrome into a focused `GasPriceSettings.States.swift` (matching the sibling `.States.swift` convention) and trim `Views.swift`.
+
+Now re-format and re-lint all my files (now 9 swift files).
+
+My files pass `swiftlint --strict` (0 violations) and `swiftformat --lint` (0 changes). Now real type-check evidence. First, the pure logic core standalone (Foundation-only), then a broader scoped attempt.
+
+Pure logic core type-checks cleanly under Swift 6. Let me check whether the Command Line Tools SDK even provides SwiftUI/Charts (it usually doesn't) to determine how far I can type-check.
+
+All three frameworks are available in this SDK. I can attempt a real scoped type-check of the full surface. Let me identify the minimal shared dependency set (files that don't import the KMP `Shared` framework) and compile together.
+
+Both Tokens files are needed by the real target (they define different symbols). Let me attempt a scoped type-check of the full surface (8 non-test files) plus the minimal shared SwiftUI dependency set.
+
+`Sources/Components/UI/Tokens.swift` doesn't exist (only the design-generated one). Re-running without it.
+
+The `#Preview` macro needs Xcode's macro plugin (unavailable to raw `swiftc`). Compiling without `-D DEBUG` excludes preview blocks, letting all production code type-check.
+
+The **entire production surface type-checks cleanly** under Swift 6 strict concurrency against the real shared components. Now let me verify the test logic compiles too (by compiling tests in-module, dropping the self `@testable import`).
+
+XCTest ships only with Xcode (genuinely unavailable here) — so the test *file* can't be run on this runner. But I can execute the **real pure-logic code** via a standalone harness that calls my actual Adapter/Projection (no copies, no drift) to prove the arithmetic at runtime.
+
+Harness needs `main.swift` naming and a local (not global) counter under Swift 6. Quick fix.
+
+All 32 core-logic checks pass at runtime against the real code. Now the placeholder check — let me see if `pwsh` is available and inspect the checker.
+
+`pwsh` 7.6.2 is available — I can run the real placeholder gate. Let me run it on my files (trying both the exact gate path and the directory).
+
+Let me independently verify (the prefix could have matched zero files) by grepping my files for all forbidden markers, and confirm the checker actually scans them.
+
+Let me see exactly which token matched (using `-o`) — the function name shouldn't contain a marker.
+
+The match is the accidental substring "**ToDo**llar" in a test name. The real checker is case-sensitive ("TODO") so it passed — but I'll rename to eliminate all doubt.
+
+All markers clean and the real placeholder gate passes (COUNT=0, EXIT=0). Let me re-verify my files still pass lint/format after the rename, then re-run the scoped typecheck once more for the record.
+
+Lint/format clean (0 violations). Waiting for the typecheck to finish.
+
+Everything passes on my files: **scoped typecheck EXIT=0, swiftlint 0 violations, swiftformat 0 changes, placeholder COUNT=0, 32/32 core-logic checks pass**. Now I'll generate the honest gate log, running the real gate commands to capture true exit codes (xcodebuild will be BLOCKED — no Xcode).
+
+I have the capability evidence. Now I'll generate the complete, honest gate log — running the real gate commands plus my supplementary proofs.
+
+Let me review the complete log for accuracy.
+
+The log is honest and complete, ending with `EXIT=1` / `STATUS=BLOCKED` (per the capability clause — no Xcode), while documenting that my surface passes every runnable check. Let me clean up temp files and stage precisely my files (not the unrelated in-flight changes).
+
+Confirmed: my 9 files + the log are untracked; the AiUsageCard/web changes are pre-existing and not mine. Staging only my files + the log.
+
+All 9 files + log staged, nothing unrelated. Committing with the prompt's exact message.
+
+Committed as `c79dc894a` (10 files, 1922 insertions) — no unrelated changes included. Final verification that the working tree's pre-existing changes remain untouched.
+
+Task complete. Here's the summary.
+
+## P4 · Feature view · 0206 — `GasPriceSettings` (Apple) — delivered
+
+Built the production-polished, Apple-idiomatic SwiftUI parity of `features/settings/components/GasPriceSettings.tsx`, following the established sibling decomposition (AISettings/PrivacySection). Committed as `c79dc894a` (10 files, 1922 insertions) — **no unrelated in-flight changes were touched**.
+
+**Files** (`apps/apple/TeslaSync/feature-views/GasPriceSettings.*`): `.swift` (entry), `.Model`, `.Adapter`, `.Projection`, `.Views`, `.States`, `.Previews`, `.Tests`, `.strings`.
+
+**Parity highlights**
+- Binds all 8 web hooks via a P1/S8 `GasPriceSettingsSource` state-holder seam (status feed + toggle/config/poll command seam + toast) — **no HTTP in the view**.
+- Faithful ports of `formatCurrency`/`fmtNumber` (symbol-prefix, grouping, half-away), `formatDateTime` + Go zero-time "Never" sentinel, and the `poll_interval || '7d'` default.
+- Every state renders: loading / empty / error / data **plus** the P4 stale/offline freshness axis with one-shot auto-refresh; auto-dismissing toasts; full VoiceOver labels/values/hints; `view.opened` telemetry.
+- All web i18n keys in `.strings`; no hardcoded literals, no placeholders/stubs/mocks.
+
+**Verification (everything runnable on this runner — real results)**
+- `swiftlint --strict` (8 files): **0 violations** · `swiftformat --lint`: **0 changes**
+- `swiftc -typecheck` Swift 6 strict-concurrency of the **full production surface against the real shared components**: **EXIT=0**
+- Executed core-logic harness against the real Adapter+Projection: **32/32 checks pass**
+- `check-placeholders.ps1`: **COUNT=0**
+
+**Why `STATUS=BLOCKED` (logged honestly, per the prompt's capability clause)**: this runner has **Command Line Tools only — no Xcode**, so the gate's `xcodebuild build test`, the iOS Simulator, and the XCTest bundles cannot run (real error evidence captured in the log). The two whole-tree `swiftlint`/`swiftformat` gate violations are **pre-existing and outside this prompt's allowed files** (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`) — this surface itself is clean. The log ends with `EXIT=1` / `STATUS=BLOCKED`; I did not mark it green.
+

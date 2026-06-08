@@ -1,0 +1,70 @@
+I'll start by exploring the repository structure, reading the web source, and checking platform capabilities.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Swift 6.3.2 CLI is available. Let me explore the existing Apple app structure and patterns, plus read the web source.
+
+No `shared-surfaces` directory exists yet. Let me study the canonical multi-file pattern via the recently-modified AIUsageCard files and a similar widget.
+
+The AIUsageCard pattern is sophisticated. Let me read the remaining files in that set, the web `useVersionWatcher` hook, and locate the shared tokens/infra.
+
+Now let me find the shared P1/S9 tokens (Color.TS, Font.TS, TSSpacing, TSRadius), the P4 core sub-views (TSFadeIn, freshness chip, banner, loading, error views), and read the rest of the AIUsageCard set.
+
+Let me read the shared design tokens, the Chrome (state views) file, the Previews/Tests patterns, the Button component, and check how the build includes sources.
+
+Let me find the token/component definitions (TSButton, TSSkeleton, Color.TS, Font.TS, TSSpacing, TSRadius), and read the Previews/Tests patterns plus build config.
+
+Now let me read the full project.yml (esp. test targets), the component APIs I'll use (TSButton, TSSkeleton, TSFadeIn), the generated tokens, the Previews pattern, and the lint/placeholder configs.
+
+Critical detail: the gate requires `xcodebuild` but only Command Line Tools are installed. Let me check how prior P4 surfaces in this repo documented their gate logs to follow the established convention.
+
+This is the key reference. Prior P4 surfaces ship complete code + tests, pass swiftlint/swiftformat/placeholder + an **isolated SwiftPM build/test**, and defer the full-app `xcodebuild` gate. Let me verify exactly what MY runner can do — honesty requires testing, not assuming.
+
+Excellent — `/Applications/Xcode.app` IS present, plus `pwsh`, `xcodegen`, and SwiftUI/Charts/MapKit compile. Let me verify the Xcode override works and map where my dependencies (Color.TS, Font.TS, TSSpacing, TSRadius, TSButton, TSFadeIn, TSSkeleton) are defined.
+
+Tokens live in one file (`apps/design/generated/apple/Tokens.swift`). Let me read it plus the component APIs (TSButton, TSFadeIn, TSSkeleton), the lint configs, and the placeholder checker.
+
+I now have all dependencies mapped (all tokens in `Tokens.swift`; `TSButton`, `TSFadeIn`, `TSSkeleton` each depend only on tokens). Let me read the lint configs and the placeholder checker before writing code.
+
+Let me read the exact forbidden patterns so my naming avoids them (e.g., the prior surface renamed an identifier to dodge a "ToDo" substring).
+
+I have a complete picture. Key facts:
+- Full Xcode 26.5 is available via `DEVELOPER_DIR` override; `pwsh`, `xcodegen`, swiftlint, swiftformat all present.
+- Tokens, `TSButton`, `TSFadeIn` depend only on `Tokens.swift` → tractable isolated build.
+- Forbidden placeholder substrings: `TODO`(incl. any "ToDo" substring), `FIXME`, `XXX`, `Coming soon`, `Placeholder`, `Lorem ipsum`, `not implemented`, swift `fatalError("unimpl/"not`.
+- Established convention (from AiUsageCard 0237): ship complete multi-file surface + tests, pass swiftlint/swiftformat/placeholder + isolated SwiftPM build/test, defer full-app xcodebuild with verified pre-existing-blocker evidence, end `STATUS=DONE`.
+
+Let me set up tracking and scaffold the directory.
+
+Now I'll write the surface. Starting with the pure projection core, the i18n catalog, and the state-holder/model.
+
+Now the surface view and its subviews.
+
+Now the test suite.
+
+All 7 files written. Now let me format and lint them (note: the repo `.swiftlint.yml` `included:` list doesn't yet cover `shared-surfaces`, so I'll lint my files explicitly for honest coverage; `swiftformat` does scan all of `apps/apple`).
+
+swiftformat clean (0/6). Now swiftlint on my files explicitly (the gate's `included:` list omits `shared-surfaces`, so I verify directly).
+
+swiftlint clean (0 violations). Now the placeholder gate.
+
+All three per-surface gates green (swiftformat 0/6, swiftlint 0 violations, placeholder COUNT=0). Now the real verification — an **isolated SwiftPM build + test** of my exact sources against the real design-system files, under the Xcode 26.5 toolchain (same approach as prior P4 surfaces). Let me scaffold it.
+
+Package scaffolded against the Xcode 26.5 toolchain + macOS 26.5 SDK. Running the isolated build + test.
+
+Isolated build + test is GREEN: **30 tests, 0 failures** under Swift 6 strict-concurrency, compiling my exact sources (incl. the `#Preview` file) against the real `Tokens`/`Buttons`/`Motion`. Now let me verify the pre-existing full-app blockers (to document the deferred `xcodebuild` honestly) and confirm project generation.
+
+All four blockers verified (Shared.xcframework absent, `DashboardWidgetSize` ×15, **224** co-located test files in the app target, plus shared-surfaces not yet wired). Now let me run the gate's runnable full-scope commands for real: `xcodegen generate` and `swiftformat --lint apps/apple`.
+
+`xcodegen generate` succeeds (EXIT=0). The full-scope `swiftformat --lint apps/apple` fails (EXIT=1) on a **pre-existing** file I didn't touch (`feature-views/ActionBuilder.Previews.swift:48` — blankLinesBetweenScopes), confirming the full scope has RED independent of my surface. Let me capture one concrete `xcodebuild` failure as evidence, bounded, by building the app target directly (skipping the 7-min Gradle preAction).
+
+Captured a definitive, real `xcodebuild` failure: **`error: There is no XCFramework found at '.../Frameworks/Shared.xcframework'`** — the pre-existing blocker that halts the full-app build before any of my code, entirely unrelated to this surface. Let me clean up generated artifacts and confirm git ignores the xcodeproj.
+
+xcodeproj is git-ignored; artifacts cleaned. The `AIUsageCard.*` modifications were present before this session (not mine) — I'll commit only my `shared-surfaces/` files + the log. Let me grab exact tool versions, then write the gate log.
+
+Now I'll write the comprehensive gate log.
+
+Now final pre-commit verification: re-run the placeholder gate and grep my files for any forbidden token, then commit only my files.
+
+All clean (`PLACEHOLDER_COUNT=0`, no forbidden tokens). Committing only my files (leaving the pre-existing `AIUsageCard.*` worktree edits untouched).
+
+Committed cleanly (8 files, 1305 insertions; the pre-existing `AIUsageCard.*` edits correctly excluded). Final state check.
+

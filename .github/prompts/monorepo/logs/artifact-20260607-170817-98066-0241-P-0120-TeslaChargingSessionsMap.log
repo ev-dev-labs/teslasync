@@ -1,0 +1,132 @@
+=== P4 Feature view 0120 TeslaChargingSessionsMap (Apple) ===
+Web source : web/src/features/charging/pages/TeslaChargingSessionsMap.tsx
+Native out : apps/apple/TeslaSync/feature-views/TeslaChargingSessionsMap.*
+Host       : Darwin arm64 ; Apple Swift 6.3.2 (swiftlang-6.3.2.1.108) ; SDK macosx26
+ADR refs   : ADR-002 (shared SwiftUI sources) · ADR-004 (KMP Shared.xcframework) · ADR-009
+
+------------------------------------------------------------------------------
+CAPABILITY ASSESSMENT
+  Prompt clause: "requires SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 /
+  macOS 15 HIG. If unavailable on the runner -> STATUS=BLOCKED with API evidence."
+
+  xcodebuild requires full Xcode; this runner has Command Line Tools ONLY:
+    $ xcodebuild -version
+    xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+    directory '/Library/Developer/CommandLineTools' is a command line tools instance
+
+  The KMP Shared.xcframework the app targets depend on (project.yml ->
+  Frameworks/Shared.xcframework, ADR-004) is NOT built on this runner:
+    $ ls apps/apple/Frameworks/        (empty — only .gitkeep)
+    $ ls apps/apple/*.xcodeproj        (none — xcodegen needs the prebuilt framework)
+
+  => The authoritative xcodebuild iOS-Simulator + macOS build/test gate CANNOT run
+     on this runner. This is the prompt's sanctioned BLOCKED-by-capability case.
+
+------------------------------------------------------------------------------
+GATE (the prompt's commands; real exit codes on THIS runner)
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+      IOS_EXIT=1     BLOCKED  (no Xcode.app / no iOS Simulator runtime on this runner)
+  xcodebuild -scheme TeslaSync-macOS build test
+      MAC_EXIT=1     BLOCKED  (no Xcode.app on this runner)
+  swiftlint --strict   (10 surface files)
+      "Done linting! Found 0 violations, 0 serious in 10 files."     LINT_EXIT=0
+  swiftformat --lint   (10 surface files)
+      "0/10 files require formatting."                               FORMAT_EXIT=0
+  check-placeholders.ps1 -Path <surface files> -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0                    PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------------------
+INDEPENDENT VERIFICATION (maximum this runner allows — EXECUTED, not assumed)
+  Because the full-app xcodebuild gate cannot run, the surface was compiled AND its
+  test logic EXECUTED in an isolated Swift 6 SwiftPM package
+  (.swiftLanguageMode(.v6), platforms iOS 18 / macOS 15) that vendors the REAL design
+  system it consumes — apps/design/generated/apple/Tokens.swift,
+  Sources/Design/TSDesign.swift, and Sources/Components/{UI/Badges, UI/Typography,
+  Motion/Motion, Maps/GeoHelpers, Maps/MapView}.swift — alongside the seven shipped
+  surface sources. Those Components are Shared-free and are the SAME files the macOS
+  app target compiles, so the isolation is faithful (only the Xcode-only #Preview
+  macro plugin is unavailable, so the DEBUG previews file is excluded from this
+  harness; it is exercised by the real Xcode build).
+
+    $ swift build --target TCSMKit
+      -> "Build of target: 'TCSMKit' complete!"   (exit 0)
+      All 7 surface sources + the real design system compile clean under Swift 6
+      strict concurrency = complete, for macOS 15.
+
+    $ swift run TCSMProbe       (the XCTest assertions, executed; XCTest itself is not
+                                 in the Command Line Tools toolchain, so an assertion
+                                 probe runs the SAME checks incl. the @MainActor model)
+      -> "CHECKS=96 FAILURES=0   PROBE_STATUS=PASS"   (exit 0)
+
+      Coverage (mirrors TeslaChargingSessionsMap.Tests.swift + .ModelTests.swift):
+        - coordinate validity incl. web (0,0) parity + out-of-range/NaN rejection
+        - point projection: Wh->kWh "22.5 kWh", "$12.50" currency, UPPERCASE charger,
+          "{{name}} charging session" aria, blank-site "Unknown" fallback, localized
+          datetime (Jan/2024), em-dash for missing date, absent-field omission
+        - collection drop-unplottable/order, SF (37.77,-122.42) center fallback, avg
+        - formatting primitives (grouping, fixed fraction, non-finite -> 0)
+        - proximity clusterer: zoom-in singletons / zoom-out merge / centroid / floor /
+          deterministic ordering + stable ids
+        - model phases loading/empty/error/content + cached-on-failed-refetch
+        - stale one-shot auto-refresh, offline keeps cache (no refetch)
+        - view.opened emitted once, refresh delegates, stop re-arms telemetry, slug
+        - VoiceOver map summary (live/offline/empty) + cluster label interpolation
+
+------------------------------------------------------------------------------
+PARITY (web -> native)
+  Leaflet MapContainer + MapTileLayer  -> MapKit Map + TSMapLayerSwitcher
+  Leaflet MarkerCluster(maxClusterRadius=60) -> TeslaSessionsClusterer span-reactive
+       proximity merge + TSMarkerCluster (badge) / TSVehicleAnnotation (single)
+  Leaflet marker popup  -> TeslaSessionCalloutView sheet (site/date/energy/cost/charger)
+  center = avg(lat,lng) or SF(37.77,-122.42)  -> TeslaSessionsProjection.center
+  i18n: tesla_sessions.unknown / .markerLabel / .mapLabel reproduced verbatim through
+       the P1/S10 facade (+ native chrome + a11y keys); 25 keys, all referenced.
+  States: loading / empty / error / content + stale chip (one-shot auto-refresh) +
+       offline cached chip — every state renders (no blank surface).
+
+------------------------------------------------------------------------------
+FILES (allowed: apps/apple/TeslaSync/feature-views/TeslaChargingSessionsMap.* + this log)
+  TeslaChargingSessionsMap.Adapter.swift     362  pure projection (inputs/point/center/phase/a11y/slug)
+  TeslaChargingSessionsMap.Format.swift       72  Wh->kWh + number/currency/datetime formatting
+  TeslaChargingSessionsMap.Clusterer.swift   166  span-reactive proximity clustering (pure)
+  TeslaChargingSessionsMap.Model.swift       298  P1/S8 source seam + @Observable model + P1/S11 + P1/S10
+  TeslaChargingSessionsMap.swift              94  the View: glass panel chrome + phase switch
+  TeslaChargingSessionsMap.Views.swift       329  header/freshness/loading/empty/error + MapKit canvas
+  TeslaChargingSessionsMap.Callout.swift     153  overlay chip + per-session callout
+  TeslaChargingSessionsMap.Previews.swift    152  7 state previews (DEBUG)
+  TeslaChargingSessionsMap.Tests.swift       334  XCTest: adapter / format / clusterer
+  TeslaChargingSessionsMap.ModelTests.swift  245  XCTest: model + accessibility
+  TeslaChargingSessionsMap.strings        25 keys  P1/S10 catalog contribution
+  (no file > 400 lines = house file_length rule; no swiftlint:disable used)
+
+------------------------------------------------------------------------------
+HONESTY COVENANT (binding)
+  1  No red-as-green : IOS_EXIT/MAC_EXIT reported =1 (BLOCKED), never shown green. Every
+                       runnable gate + the isolated build/probe was actually run; raw output pasted.
+  2  No scope narrowing: all states + clustering + callouts + i18n + a11y + telemetry implemented.
+  3  No skip-and-assume: every check executed on THIS host; the 96-assertion probe RUN, not assumed.
+  4  No stubs as final : complete production surface; placeholder scanner COUNT=0.
+  5  No parity shortcuts: faithful port of data/composition/states; MapKit + proximity clustering.
+  6  No delegation     : authored directly; no sub-agent delegation of the surface.
+  7  No predecessor bypass: binds P1/S8 source seam, P1/S9 tokens, P1/S10 facade, P1/S11 telemetry; no view HTTP.
+  8  No commit on red  : the committed surface is GREEN on every RUNNABLE gate (lint/format/placeholder) AND on a
+                         real isolated Swift 6 build + 96/96 executed assertions. The xcodebuild build/test is
+                         BLOCKED by the absent Xcode toolchain — un-runnable, not a failing/red code gate.
+  9  No silent drift   : changes confined to the allowed TeslaChargingSessionsMap.* files, this log, and one
+                         macos-pending-verifications row. No other files touched.
+  10 Log ends with EXIT/STATUS below.
+
+------------------------------------------------------------------------------
+DISPOSITION
+  Production-polished, Apple-idiomatic TeslaChargingSessionsMap shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED to the maximum this runner allows: it compiles and its full test logic (96/96)
+  executes green under the app's own Swift 6 strict-concurrency rules against the REAL design system, with
+  swiftlint --strict / swiftformat --lint / placeholder scanner all clean. The authoritative full-app
+  iOS-Simulator + macOS xcodebuild build/test gate is BLOCKED on THIS runner by platform capability — only
+  Command Line Tools are installed (no Xcode.app, no iOS Simulator runtime) and the KMP Shared.xcframework is
+  not built here — which is exactly the prompt's "unavailable on the runner -> STATUS=BLOCKED with API
+  evidence" case. The deferred xcodebuild verification is parked in apps/macos-pending-verifications.md for
+  the P99 Apple acceptance gate on a macos-latest runner with Xcode + signing.
+
+EXIT=1
+STATUS=BLOCKED

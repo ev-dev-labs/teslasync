@@ -1,0 +1,163 @@
+=== P4 Feature view 0290 ChargingTelemetrySection (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Darwin arm64, Apple Silicon, Build 25F80) — SHARED parallel-build host.
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden NON-DESTRUCTIVELY per
+                       invocation — no sudo, no `xcode-select -s` — so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2 · Java 17.0.19
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5, Booted) present · macOS 26.5 SDK present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 12m36s; release XCFramework staged
+                       to apps/apple/Frameworks/Shared.xcframework with ios-arm64 + ios-arm64-simulator + macos-arm64
+                       slices — SHARED_BUILD_EXIT=0).
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS SDKs + iPhone-16 simulator all present and EXERCISED
+                       (both xcodebuild gates were actually run, below) → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/features/vehicles/components/vehicle-detail/ChargingTelemetrySection.tsx — a PURE presentational leaf fed a
+  `chargingTelemetry: ChargingTelemetry | null | undefined` prop by its parent (the Vehicle Detail page) and the
+  distance/speed preference from `useUnits()`. It renders:
+    GlassPanel(p-6) → header[ <Zap/> (neon-green) + {t('vehicles.detail.chargingTelemetry','Charging Telemetry')} ]
+                    → grid-cols-2 / sm:3 / lg:4 of eight <MetricCard>s (muted 10px label, bold text-primary value, a
+                      tinted icon chip), each with a per-field em-dash fallback:
+        1 Charger Power  (green , Zap)            : charger_power_w != null ? `${fmtNumber(v)} kW`  : '—'
+        2 Voltage        (cyan  , Activity)       : charger_voltage != null ? `${fmtNumber(v)} V`   : '—'
+        3 Current        (purple, Activity)       : charger_actual_current != null ? `${fmtNumber(v)} A` : '—'
+        4 Energy Added   (green , BatteryCharging): charge_energy_added_wh != null ? `${fmtNumber(v)} kWh` : '—'
+        5 Charging State (cyan  , Battery)        : charging_state ?? '—'
+        6 Battery Level  (green , Battery)        : battery_level != null ? `${fmtNumber(v)}%` : '—'
+        7 Charge Rate    (cyan  , Activity)       : range_added_meters_per_hour != null ? formatSpeed(v / 3600) : '—'
+        8 Range Added    (purple, Zap)            : range_added_meters != null ? formatDistance(v) : '—'
+                    OR (chargingTelemetry == null) → <EmptyState Zap> {t('vehicles.detail.noChargingTelemetry',
+                      'No charging telemetry available')}.
+  Data sources (prompt): useTranslation + useUnits. No data-fetching hook — it is a presentational leaf; the only
+  branches are the per-field em-dash fallbacks + the null→EmptyState branch (all reproduced verbatim). fmtNumber default
+  = 2-decimal locale format, safeNumber coerces non-finite → 0. formatDistance = DEFAULT_PRECISION.distance(1dp), SI
+  metres ÷1000 (km) / ÷1609.344 (mi); formatSpeed = DEFAULT_PRECISION.speed(0dp), SI m/s ×3600÷1000 (km/h) /
+  ×3600÷1609.344 (mph). Charge Rate divides metres/hour by 3600 to an SI m/s before formatSpeed (reproduced exactly).
+
+ARTIFACTS SHIPPED (apps/apple/TeslaSync/feature-views/ChargingTelemetrySection.*)
+  ChargingTelemetrySection.Adapter.swift  — ChargingTelemetryData (the 8 SI ChargingTelemetry fields), ChargingTelemetry
+                                            Format (number/distance/speed + the 8 per-field expressions — ports of
+                                            numberFormat.ts fmtNumber + unitConversion.ts formatDistance/formatSpeed),
+                                            ChargingTelemetryTint, ChargingTelemetryMetric + MetricsBuilder (the eight-up
+                                            grid projection), ChargingTelemetryAccessibility (VoiceOver seam), Units consts
+  ChargingTelemetrySection.Model.swift     — ChargingTelemetryTelemetry seam + OSLog default (redaction-safe "view.opened"),
+                                            ChargingTelemetryConnection (live/stale/offline), ChargingTelemetryInput
+                                            snapshot (data + MeasurementSystem + load/error/connection), Resolved + Phase,
+                                            ChargingTelemetryProjection (pure resolve), ChargingTelemetrySource seam,
+                                            @MainActor @Observable ChargingTelemetrySectionModel, InMemory source,
+                                            ChargingTelemetryStrings (P1/S10 facade)
+  ChargingTelemetrySection.swift           — ChargingTelemetrySection SwiftUI surface (TSGlassPanel + header + freshness
+                                            chip + refresh + connectivity banner + content phase switch);
+                                            surfaceSlug = "ChargingTelemetrySection"
+  ChargingTelemetrySection.Views.swift     — ChargingTelemetryContent (TSFadeIn + adaptive LazyVGrid), the metric tile
+                                            (web MetricCard: label/value + tinted icon chip), the loading skeleton grid /
+                                            empty (ContentUnavailableView) / error (retry) chrome, Tint→chart-series map
+  ChargingTelemetrySection.Previews.swift  — #if DEBUG previews: data(metric), data(imperial), data(sparse), empty,
+                                            loading, error, stale, offline
+  ChargingTelemetrySection.strings         — the P1/S10 table "ChargingTelemetrySection": the 10 web vehicles.detail.* keys
+                                            + 9 native chrome keys
+  ChargingTelemetrySection.Tests.swift     — 37 XCTest cases (formatter ports, builder order/values/tints/icons,
+                                            projection, model wiring/telemetry/freshness, accessibility)
+  No shared-wiring edits were required: project.yml + .swiftlint.yml already include TeslaSync/feature-views (whole-dir
+  glob), and the per-surface .strings table is the i18n contribution (the same pattern every sibling P4 feature-view uses
+  — no edit to the shared Localizable.xcstrings). Commit set = ChargingTelemetrySection.* + this log only (prompt
+  "Allowed files").
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  GlassPanel              → TSGlassPanel (Sources/Components/UI/Cards.swift)
+  FadeIn                  → TSFadeIn      (Sources/Components/Motion/Motion.swift; honours Reduce Motion)
+  title                   → Font.TS.panel + Color.TS.textPrimary, .isHeader
+  Lucide <Zap> (header)   → SF Symbol "bolt.fill", tinted Color.TS.chartSeriesBattery, decorative (hidden)
+  MetricCard color prop   → chart-series tokens (ADR-006 semantic): green→chartSeriesBattery · cyan→chartSeriesRegen ·
+                            purple→chartSeriesPower. Only the icon chip is tinted; the value is Color.TS.textPrimary
+                            (exactly as the web `text-[var(--text-primary)]` value over a `text-{color}-300` icon).
+  Lucide icons            → SF Symbols: Zap→"bolt.fill" · Activity→"waveform.path.ecg" · BatteryCharging→"battery.100.bolt"
+                            · Battery→"battery.100"
+  fmtNumber               → ChargingTelemetryFormat.number (2-dp default, locale grouping, non-finite→0; injectable locale)
+  formatDistance/Speed    → ChargingTelemetryFormat.distance(1dp, ÷1000|÷1609.344) / speed(0dp, ×3600÷1000|÷1609.344) +
+                            chargeRate(metresPerHour/3600 → speed); MeasurementSystem.{distanceLabel,speedLabel}
+  i18n      : every label/chrome string via ChargingTelemetryStrings facade (web keys vehicles.detail.chargingTelemetry /
+              chargerPower / voltage / current / energyAdded / chargingState / batteryLevel / chargeRate / rangeAdded /
+              noChargingTelemetry) — zero English prose literals in Swift; only unit symbols (kW/V/A/kWh/%/km/mi/km/h/mph)
+              are inline, exactly as the web source hardcodes them.
+  a11y      : each metric tile is one combined VoiceOver element ("{label}: {value}"); title carries .isHeader; icons are
+              .accessibilityHidden; motion respects Reduce Motion via TSFadeIn; Dynamic Type via system fonts.
+  telemetry : view.opened surface="ChargingTelemetrySection" via ChargingTelemetrySectionModel.start (P1/S11), OSLog sink.
+  states    : loading (skeleton grid) · empty (ContentUnavailableView — the web null→EmptyState branch) · error
+              (QueryError peer + Retry) · data (the eight-up grid, per-field em-dash fallbacks) · stale/offline (freshness
+              chip + banner + one-shot auto-refresh on the stale transition). Every state renders + is previewed + tested.
+
+GATES
+  [GREEN]    swiftformat --lint (the 6 shipped ChargingTelemetrySection*.swift)     : 0/6 files require formatting   (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict (the 6 shipped ChargingTelemetrySection*.swift)     : 0 violations, 0 serious        (LINT_EXIT=0)
+  [GREEN]    check-placeholders.ps1 (real per-surface scan of the 7 shipped files)  : PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 (PLACEHOLDER_EXIT=0)
+             (dir-wide scan attributes 0 of its pre-existing violations to ChargingTelemetrySection — grep = 0)
+  [GREEN]    ChargingTelemetrySection build + tests — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode =
+             the app's own -strict-concurrency=complete), compiling the EXACT shipped ChargingTelemetrySection.* sources
+             against the REAL MeasurementSystem + minimal token/component stand-ins:
+                 swift build (library)                                : Build complete!                              (BUILD_EXIT=0)
+                 swift test (the shipped .Tests.swift, XCTest via the Xcode toolchain) : Executed 37 tests, 0 failures (TEST_EXIT=0)
+                 Verify executable (redundant runtime re-assertion)   : CHECKS=57 FAILURES=0                         (VERIFY_EXIT=0)
+  [GREEN]    xcodegen generate                                                       : project written; the 7 files are
+             enumerated in BOTH the iOS + macOS app targets (63 pbxproj refs)        (XCODEGEN_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS                                                       build test : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO ChargingTelemetrySection errors; every blocker pre-exists this change and lives
+                OUTSIDE the prompt's allowed files = ChargingTelemetrySection.* + this log):
+    iOS  : the app target compiles the shipped ChargingTelemetrySection.{swift,Adapter,Model,Views,Previews} (11 compile
+           refs, 0 errors). The build then fails because the co-located feature-views `*.Tests.swift` are members of the
+           app target and `import XCTest`, which the app target does not link. The ONLY `error:` lines in the 12k-line log
+           are 4 identical hits on the FIRST such file alphabetically —
+           TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: "Unable to resolve module dependency: 'XCTest'" —
+           a SYSTEMIC project-configuration issue affecting every co-located test, not introduced here.
+           grep of the log for "ChargingTelemetrySection … error:" = 0 hits.
+    macOS: BUILD FAILED at signing — `"TeslaSync-macOS" / "TeslaSyncWidgets-macOS" has entitlements that require signing
+           with a development certificate`, which this runner does not provision. The only `error:` lines are those two
+           signing errors; grep for "ChargingTelemetrySection … error:" = 0 hits.
+    Both are exactly the artifacts apps/macos-pending-verifications.md (origin p4-apple/feature-views/P-0010-ToolCard)
+    already defers to the ADR-012 macos-latest CI runner under the P4/P99 Apple acceptance gate (signing/archive) + a
+    feature-views test-target-membership pass — NOT a single feature-view prompt (task rule: do not fix pre-existing
+    unrelated breakage; allowed files forbid touching project.yml / sibling *.Tests.swift / signing). The shipped
+    ChargingTelemetrySection.Tests.swift is PROVEN to compile + pass 37/37 in the isolated Swift-6 XCTest harness above.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and explicitly
+                          DEFERRED with raw exits + grep evidence — never reported as passing. STATUS=DONE rests on the
+                          per-surface gates + the 37/37 shipped XCTest run, with the deferral sanctioned by the repo.
+  2  No scope narrowing : all 8 web tiles + both fallback branches (every per-field em-dash, the null→EmptyState branch,
+                          the SI distance/speed conversion, the charge-rate /3600 step) reproduced; all P4 leaf states render.
+  3  No skip-and-assume : every gate executed on THIS runner; raw exits pasted; the iOS XCTest + macOS signing failures were
+                          confirmed by reading the build logs, not assumed.
+  4  No stubs as final  : complete production surface + 37 real tests; placeholder scanner = 0; no TODO/stub/placeholder.
+  5  No parity shortcut : formatter rounding/precision, the ÷1000 / ÷1609.344 conversions, the metres-per-hour ÷3600 charge
+                          rate, tint/typography/a11y/telemetry all mapped to platform tokens and unit-asserted vs the web.
+  6  No delegation      : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened telemetry, and the
+                          P4 ToolCard "isolated-build + DEFERRED full-app" disposition all honoured.
+  8  No commit on red   : the COMMITTED artifact (ChargingTelemetrySection.* + this log) is GREEN on every per-surface gate
+                          AND on a real isolated Swift 6 strict-concurrency build + 37/37 XCTests; the deferred full-app gate
+                          is RED only on pre-existing, unrelated surfaces (sibling co-located tests + macOS signing) which
+                          this commit neither introduces nor is permitted to touch.
+  9  No silent drift    : changes are confined to feature-views/ChargingTelemetrySection.{swift,Adapter,Model,Views,Previews,
+                          Tests}.swift + ChargingTelemetrySection.strings and this log — all enumerated above; git status
+                          shows exactly those new files (the generated .xcodeproj is git-ignored and was removed).
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic ChargingTelemetrySection shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 37 tests pass under the app's own Swift 6 strict-concurrency rules against the real
+  MeasurementSystem, with swiftformat / swiftlint / placeholder all green on the surface, and it compiles cleanly into BOTH
+  the full iOS and macOS app targets (0 ChargingTelemetrySection errors in either xcodebuild run). The full-app iOS-Simulator
+  + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): iOS is blocked by the pre-existing
+  co-located-`*.Tests.swift`-into-app-target configuration (first triggered alphabetically by AIRestorePanel.Tests.swift) and
+  macOS by development-signing — both owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per
+  apps/macos-pending-verifications.md, and both outside this prompt's allowed files. This matches the repo's sanctioned
+  "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

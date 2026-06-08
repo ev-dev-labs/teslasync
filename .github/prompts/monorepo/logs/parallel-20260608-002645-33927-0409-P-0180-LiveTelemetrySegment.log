@@ -1,0 +1,100 @@
+I'll start by exploring the repository structure and reading the web source specification, then check the Apple toolchain availability.
+
+Xcode is not available (only Command Line Tools), but Swift 6.3.2, swiftlint, and swiftformat are. Let me examine how predecessor surfaces were built and check the web source.
+
+Now let me read the web source spec and study the predecessor surface structure in detail.
+
+The pattern is clear: each surface has `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`. The git "modified" entries are a pre-existing casing artifact (`AIUsageCard` vs `AiUsageCard`), unrelated to my task. Let me study the most relevant predecessor (LiveControls — uses live connection) in full.
+
+This is a high-quality, well-structured pattern. Let me read the remaining LiveControls files to fully understand the Model/Views/States/Tests/strings conventions.
+
+Now let me understand the shared tokens/components, the `useLiveConnection` web hook, the build system, and how predecessors logged their gate results.
+
+Let me read a predecessor's gate log to understand how the xcodebuild constraint was handled, and locate the shared token/component definitions.
+
+The predecessor pattern is clear: ship the surface, verify via an isolated SwiftPM harness against the real design system, run swiftlint/swiftformat/placeholder gates green on surface scope, and defer the full-app xcodebuild gate (pre-existing XCTest-membership + signing issues). Let me check Xcode availability and locate the real design tokens/components.
+
+`/Applications/Xcode.app` IS present — the earlier failure was just the active-dir setting. Let me verify the `DEVELOPER_DIR` override works and read the real design tokens (TSDesign), TSButton, and locate TSSkeleton.
+
+Xcode 26.5 works via the override and iPhone 16 simulator is booted. Now let me read the web `useLiveConnection` hook (the data contract), the generated design tokens, and the shared components I'll use.
+
+I now have the full design system. Let me read the lint/format configs to ensure compliance, and confirm the placeholder-check script behavior before writing.
+
+All tooling is present (pwsh 7.6.2, swiftlint 0.63.3, swiftformat 0.61.1, Xcode 26.5, iPhone 16 booted). Forbidden words noted (incl. "Placeholder", "TODO"). Note: `shared-surfaces/` is the mandated output dir but isn't yet in `project.yml` sources — and project.yml is outside my allowed-files scope. I'll mirror the predecessor disposition: ship the mandated files, verify via an isolated SwiftPM harness against the real design system, scope-lint, and defer the full-app gate with honest evidence. Let me set up the plan and todos.
+
+Now I'll write the surface, starting with the pure Adapter (projection core).
+
+Now the Model — the state-holder seam (P1/S8), telemetry seam (P1/S11), and i18n facade (P1/S10).
+
+Now the Views — the presentational core (dot, icon, label, the tappable segment button).
+
+Now the States — the P4 chrome (loading skeleton, error + retry, stale/offline chips).
+
+Now the surface entry point.
+
+Now the Previews — every state.
+
+Now the strings catalog (P1/S10 contribution).
+
+Now the comprehensive test suite.
+
+All 8 files written. Let me update todos and verify file sizes, then run the gates.
+
+All files are under 400 lines. The only forbidden-word hit is "placeholder" in a `.strings` comment — the placeholder gate doesn't scan `.strings` files, but I'll reword it to keep shipped code fully clean.
+
+Now let me run swiftformat (auto-fix) on my files, then verify with `--lint` and `swiftlint --strict`.
+
+swiftformat is clean (0/7 require formatting, FORMAT_EXIT=0). Now swiftlint `--strict` on the surface files.
+
+swiftlint `--strict`: **0 violations in 7 files (LINT_EXIT=0)**. Now the placeholder gate — both the literal prompt path and a substantive true scan of the directory.
+
+Placeholder gate clean (COUNT=0, EXIT=0) on both the literal path and a true directory scan. Now the substantive proof: an isolated SwiftPM harness compiling the **exact shipped files** against the **real design system** + running the tests under Swift 6 strict concurrency. Let me determine the minimal real design-system dependency closure.
+
+Cards pulls in a broader closure (Typography, Badges, Buttons). Let me map the exact transitive closure of real design-system files so the harness compiles against unmodified originals.
+
+All design-system files import only SwiftUI — no KMP/Shared deps. The closure is {Tokens, Typography, Badges, Buttons, Cards, Skeletons, TSDesign, TSMaterial}. Let me build an isolated SwiftPM harness that symlinks the **real** design files + my **real** surface files and runs the tests under Swift 6 strict concurrency.
+
+The main-file symlink got a `.swift.swift` suffix (harmless — still compiles the real file). Let me fix it for cleanliness, then build the harness under a slot-unique path with the Xcode toolchain.
+
+Harness builds cleanly under Swift 6 strict concurrency (including the `#Preview` macro). Now run the tests.
+
+**All 35 tests pass, 0 failures** under Swift 6 strict concurrency against the real design system (TEST_EXIT=0). To explicitly satisfy the "per-state a11y label test" acceptance item at the unit level, let me add a concise per-status accessibility assertion. First I'll confirm the insertion point and line budget.
+
+Now re-verify format/lint on the updated test file and re-run the harness tests.
+
+The tests pass (36, 0 failures), but swiftlint flagged a `large_tuple` (3-member). Let me refactor to use `CaseIterable` + a dictionary (no 3-tuple) and keep it compact.
+
+Now re-run the full gate suite on all 7 files plus the harness tests.
+
+All host-runnable gates are green: **swiftformat 0/7, swiftlint 0 violations, swift build OK, 36 tests pass, placeholder COUNT=0**. Now let me assess the full-app `xcodebuild` gate feasibility (it's deferred per predecessor, but I'll capture honest raw evidence). Let me check the project tooling state.
+
+`Shared.xcframework` is not staged (only `.gitkeep`); it's assembled by a heavyweight KMP Gradle pre-action, and `shared-surfaces` isn't in `project.yml` (outside my allowed-files scope). Let me capture concrete wiring evidence via `xcodegen generate` (fast) — proving my files are absent from the app target and the pre-existing XCTest-membership glob is present — then make the deferral call.
+
+Decisive, honest evidence captured:
+- `xcodegen generate` succeeds, but my `LiveTelemetrySegment` files have **0 references** in the generated project — they're unwired because `shared-surfaces/` isn't in `project.yml` (outside my allowed-files scope), so the full-app gate **cannot compile my code**.
+- The pre-existing app-target XCTest-membership glob is confirmed: **224 distinct `*.Tests.swift`** files are swept into the app target (the predecessor 0233 documented this same blocker at 138).
+
+This is a clear DEFER for the full-app `xcodebuild` gate (won't exercise my code + pre-existing infra blockers + heavy shared KMP Gradle assembly). My substantive proof is the isolated SwiftPM harness (real design system, Swift 6 strict concurrency, 36 passing tests). Let me clean up generated artifacts and confirm a pristine tree.
+
+Git status is clean — only my new `shared-surfaces/` files (untracked) plus the pre-existing `AIUsageCard` casing changes (which I will NOT touch). Let me capture exact environment details for the log preflight.
+
+All gates captured. Now let me write the comprehensive, honest gate log.
+
+Log written. Let me do a final cross-check that every catalog key matches the `.strings` file exactly, then run the complete gate suite once more before committing.
+
+The diff is just a regex artifact (trailing `"`), but it revealed the Adapter grep found only 11 keys — `offlineChip` appears missing. Let me verify it's actually defined in the catalog.
+
+`offlineChip` is defined (lines 120-121) — swiftformat wrapped it across lines, so my single-line grep missed it. Let me do a multi-line-aware key comparison to confirm a perfect 12/12 match.
+
+All 12 i18n keys match exactly. Now a final consolidated gate run before committing.
+
+The brace-expansion caused swiftlint to fall back to the whole repo (1915 files) and surface **1 pre-existing** violation. My earlier explicit-path run was clean (0 in 7). Let me re-confirm my files are clean and identify that the 1 violation is pre-existing (not mine).
+
+My 7 files: **0 violations**. The 1 whole-tree violation is pre-existing (`LifetimeStatsWidget.Adapter.swift` — the same one predecessor 0233 noted), not mine. Everything is green on my scope. Let me stage **only** my files + the log (never the pre-existing AIUsageCard casing changes) and verify staging before committing.
+
+Staged exactly my 8 files + the log — no pre-existing AIUsageCard changes. Committing.
+
+Committed (HEAD `e082c4bc1`). The pre-existing AIUsageCard casing changes remain untouched/unstaged as required. Let me clean up the temp harness and finalize todos.
+
+All 10 todos complete. The task is finished and verified.
+

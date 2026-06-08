@@ -1,0 +1,38 @@
+I'll start by exploring the repository structure and reading the key files to understand the task.
+
+Now let me explore the Apple app structure, the parity infrastructure, and related components.
+
+Let me explore the Apple app structure, parity infrastructure, and the manifest.
+
+Let me explore the Apple TeslaSync app structure and the parity manifest/ledger details.
+
+There's a large existing structure under `apps/apple/Sources/`, not `apps/apple/TeslaSync/Features`. Let me understand the real layout and find existing page patterns.
+
+Let me study the existing patterns: App shell/routing, design tokens, components library, and the selected-vehicle state holder.
+
+The recent work uses `apps/apple/TeslaSync/feature-views/`. Let me examine that structure and a recent example to follow the established pattern.
+
+The real layout puts parity surfaces flat under `TeslaSync/feature-views/` with multi-file naming. Let me study a complete example surface and the routing system.
+
+Let me study a complete reference surface (LiveControls) and the localization system.
+
+Let me read the rest of the LiveControls surface to fully understand the model, adapter, views, previews, and tests patterns.
+
+I have a strong grasp of the surface pattern. Now let me check critical environment factors: build tooling availability and the p4-apple gate contract/README.
+
+Xcode.app exists but isn't selected. I can point tools at it via `DEVELOPER_DIR` without sudo. Let me verify.
+
+Xcode 26.5 works via `DEVELOPER_DIR` — the gate can run. Let me read the remaining reference files: adapter, previews, tests, routing, README, and design tokens.
+
+Let me read the routing system, the gate contract README, and the design tokens.
+
+Let me understand how pages register for navigation and how `/signal-gaps` maps. Let me find registration call sites and the route parser.
+
+Now let me read the gate contract README, localization setup, design tokens, the test pattern, and check for a PageContainer/header equivalent.
+
+Let me examine the shared-core data layer (live data store, state holders, loadable state, container) to determine the real binding for signals data.
+
+Let me efficiently extract the public APIs of the components I'll use, plus the design tokens, test pattern, and gate README.
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: DCD2:14269C:E280CF:EEDBA5:6A26EE67)

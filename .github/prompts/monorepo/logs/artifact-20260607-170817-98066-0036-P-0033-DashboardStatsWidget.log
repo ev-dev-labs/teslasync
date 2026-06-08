@@ -1,0 +1,50 @@
+=== P4 Dashboard widget 0033 DashboardStatsWidget (Apple) ===
+date: 2026-06-08T01:10:30Z
+xcode (full, via DEVELOPER_DIR): Xcode 26.5 Build version 17F42 
+
+--- capability probe (system default toolchain) ---
+system xcode-select -p: /Library/Developer/CommandLineTools
+system xcrun simctl: MISSING — launchd test/sim daemons inherit this
+macOS code-signing identities: 0 valid identities found
+passwordless sudo (xcode-select -s): UNAVAILABLE
+
+--- xcodebuild -scheme TeslaSync ... build test ---
+	TeslaSync encountered an error (Early unexpected exit, operation never finished bootstrapping - no restart will be attempted. (Underlying Error: Test crashed with signal kill before establishing connection.))
+ xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+** BUILD SUCCEEDED **
+** TEST FAILED **
+IOS_EXIT=65
+
+--- xcodebuild -scheme TeslaSync-macOS build test ---
+** BUILD FAILED **
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-36/apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-36/apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+xcodebuild: error: Failed to build project TeslaSync with scheme TeslaSync-macOS.: Could not find test host for TeslaSync-macOSTests: TEST_HOST evaluates to "/Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-36/apps/apple/build/DDmac/Build/Products/Debug/TeslaSync-macOS.app/Contents/MacOS/TeslaSync-macOS"
+MAC_EXIT=70
+
+--- swiftlint --strict ---
+Done linting! Found 0 violations, 0 serious in 263 files.
+LINT_EXIT=0
+
+--- swiftformat --lint apps/apple ---
+0/267 files require formatting, 3 files skipped.
+FORMAT_EXIT=0
+
+--- check-placeholders (surface) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- supplementary positive evidence ---
+iOS  build-only : SUCCEEDED (surface + KMP +Shared conformer compile vs real Shared.xcframework)
+macOS build-only: SUCCEEDED with CODE_SIGNING_ALLOWED=NO (Dashboard files compile on macOS toolchain)
+logic harness (real adapter/merge/derive/descriptor/format/FSM/model): 52/52 checks passed HARNESS_RESULT=PASS 
+
+--- verdict ---
+static+compile gates: LINT_EXIT=0 FORMAT_EXIT=0 PLACEHOLDER_EXIT=0; iOS build=0; macOS build(signing-off)=0; logic harness=PASS
+test-execution (IOS_EXIT=65 / MAC_EXIT=70) BLOCKED by runner capability, not by code:
+  * iOS sim: launchd CoreSimulator/testmanagerd resolve the SYSTEM developer dir (CommandLineTools => no simctl); host app killed before establishing the test connection. Cannot 'sudo xcode-select -s' (no passwordless sudo).
+  * macOS: TeslaSync-macOS / widgets entitlements require a development signing certificate; runner has 0 valid identities.
+EXIT=65
+STATUS=BLOCKED

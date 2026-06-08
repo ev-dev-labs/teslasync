@@ -1,0 +1,130 @@
+========================================================================
+p4-apple · P7 · page:system/MyActivity — SwiftUI / Apple HIG parity
+Log: .github/prompts/monorepo/logs/apple-page-system-MyActivityPage.log
+Honesty Covenant acknowledged (1 no-red-as-green … 8 no-commit-on-red
+  9 no-silent-drift  10 log ends with EXIT=<int> + STATUS=<DONE|BLOCKED>)
+========================================================================
+
+TARGET
+  Parity unit : page:system/MyActivity   (kind=page, requiredCount=12)
+  Web source  : web/src/features/system/pages/MyActivityPage.tsx   (route /me/activity)
+  Data source : useMyRecentActivity → GET /users/me/activity{buildActivityQuery(params)}
+  Hook ported : useMyRecentActivity  (call-site name preserved on the model seam)
+
+ENVIRONMENT (gate-runner availability — measured, not assumed)
+  swift        : Apple Swift 6.3.2  (swiftc available)
+  swiftlint    : present  (/opt/homebrew/bin/swiftlint)
+  pwsh         : present  (placeholder gate runnable)
+  macOS SDK    : /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk  (CLT-only)
+  xcodebuild   : NOT AVAILABLE — full Xcode is not installed:
+                 "xcode-select: error: tool 'xcodebuild' requires Xcode, but active
+                  developer directory '/Library/Developer/CommandLineTools' is a
+                  command line tools instance"
+  => the BUILD + TEST gates cannot execute on this host. Per the prompt contract
+     ("If no Xcode runner is available, the gate → STATUS=BLOCKED") the terminal
+     status is BLOCKED, not DONE. The implementation is nonetheless COMPLETE and
+     non-placeholder (ADR-011); every runnable gate is green (below).
+
+CONVENTION NOTES (no silent drift — covenant #9)
+  1. Layout: files placed in the repo's real, project.yml-wired source group
+     apps/apple/TeslaSync/feature-views/MyActivityPage.*  — this is the group the
+     iOS (TeslaSync) and macOS (TeslaSync-macOS) app targets compile (1400+ sibling
+     parity units live here). The prompt's aspirational path
+     apps/apple/TeslaSync/Features/System/ does not exist in this tree and is not a
+     target source; using it would not compile. feature-views/ is the faithful home.
+  2. Strings: shipped as the per-surface table "MyActivityPage"
+     (MyActivityPage.strings), the established convention for every sibling surface;
+     resolved via NSLocalizedString(tableName:"MyActivityPage", value:<en fallback>)
+     in the P1/S10 facade (MyActivityStrings). These fold into the app
+     Localizable.xcstrings master catalog at integration time (the 187k-line catalog
+     is intentionally NOT hand-edited per the per-surface contract).
+  3. Navigation: deep-link aliases /me and /me/activity → .settings added to
+     AppRouteParser (account-scoped, mirroring the existing /account → .settings),
+     plus a NavigationStack host (MyActivityScreen) and a deep-link NavigationDestination
+     (MyActivityRoute.Destination + View.myActivityNavigationDestination). RouteTests
+     extended with the alias assertions.
+  4. SI units: N/A for this unit — the audit-log feed has 0 charts, 0 maps, and no
+     unit-bearing (distance/speed/energy/temperature/pressure) fields. The only
+     display-boundary formatting is relative time, a faithful port of the web
+     lib/dateFormat formatRelative buckets.
+
+FILES ADDED (apps/apple/TeslaSync/feature-views/)
+  MyActivityPage.Types.swift      value types, tone, phase/status, range, surface slug
+  MyActivityPage.Visuals.swift    getActivityVisual registry + prefix-walk (port of activityIcons.ts)
+  MyActivityPage.Adapter.swift    formatRelative + subtitle + entry→row + status→phase + a11y
+  MyActivityPage.Model.swift      @Observable MyActivityPageModel + MyActivitySource seam (P1/S8)
+                                  + telemetry seam (P1/S11) + InMemory source + strings facade (P1/S10)
+  MyActivityPage.Views.swift      glass panel, adaptive header, date-range control, feed rows
+  MyActivityPage.States.swift     loading / empty / disabled(503) / unauthorized(401) / error+Retry
+  MyActivityPage.swift            MyActivityPage View + nav registration (Screen/Destination)
+  MyActivityPage.Previews.swift   one #Preview per state (+ en/de locale)
+  MyActivityPage.Tests.swift      XCTest: visuals, format, projection, range, a11y, model
+  MyActivityPage.strings          i18n table "MyActivityPage" (8 required + empty/relative/range/a11y/actions)
+FILES EDITED (navigation registration — allowed scope)
+  apps/apple/Sources/App/AppRouteParser.swift     /me, /me/activity deep-link aliases
+  apps/apple/Tests/Unit/App/RouteTests.swift      alias assertions
+
+GATES RUN (raw outcomes)
+  [placeholder]  pwsh apps/tools/check-placeholders.ps1 -Path <isolated copy of my 9 swift files> -Language swift
+                 PLACEHOLDER_ALLOWED=0
+                 PLACEHOLDER_COUNT=0
+                 PLACEHOLDER_EXIT=0
+  [lint]         swiftlint lint --strict (9 page files + AppRouteParser.swift + RouteTests.swift)
+                 "Done linting! Found 0 violations, 0 serious in 11 files."
+                 LINT_EXIT=0
+  [syntax]       swiftc -parse (all 9 page .swift files) → no diagnostics
+                 PARSE_EXIT=0
+  [typecheck-core] swiftc -typecheck -sdk <macOS SDK> Types+Visuals+Adapter (Foundation-only)
+                 → no diagnostics — the pure logic core FULLY type-checks
+                 TYPECHECK_CORE_EXIT=0
+  [typecheck-model] swiftc -typecheck -sdk <macOS SDK> -swift-version 6
+                 -strict-concurrency=complete  Types+Visuals+Adapter+Model
+                 → no diagnostics — the @MainActor @Observable model, the @Sendable now
+                 closure, the MainActor source.onUpdate seam, and the Sendable telemetry
+                 protocol all pass under the project's complete-strict-concurrency setting
+                 TYPECHECK_MODEL_STRICT_EXIT=0
+  [typecheck-ui] swiftc -typecheck -sdk <macOS SDK> Model+Views+States+swift
+                 → 48 errors, and EVERY one is an unresolved app-module design token:
+                   26 × cannot find 'TS<token>' in scope (TSSpacing/TSRadius/TSFadeIn/TSSkeleton…)
+                   16 × type 'Color' has no member 'TS'
+                    6 × type 'Font'  has no member 'TS'
+                 0 × SwiftUI-API-misuse errors. The tokens live in Sources/Design,
+                 ../design/generated/apple/Tokens.swift, and Sources/Components, and
+                 resolve in the Xcode build (used identically by sibling surfaces that
+                 compile). This isolates the unverifiable surface to the missing
+                 app-module link + KMP Shared.xcframework, i.e. the Xcode build only.
+  [build]        xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync build
+                 → CANNOT RUN (no full Xcode; .xcodeproj is xcodegen-generated + git-ignored)
+                 BUILD_EXIT=BLOCKED
+  [test]         xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync test
+                 → CANNOT RUN (no full Xcode)
+                 TEST_EXIT=BLOCKED
+
+=== PARITY ===
+unit=page:system/MyActivity  platform=apple (macOS + iOS, adaptive)
+PARITY_REQUIRED=12
+[covered] panel  GlassPanel1                                  → MyActivityGlassPanel  (MyActivityPage.Views.swift) wrapping every phase via MyActivityPage.content (MyActivityPage.swift)
+[covered] state  loading                                      → MyActivityLoadingState (MyActivityPage.States.swift) ← MyActivityPhase.loading (MyActivityProjection.resolvePhase, Adapter)
+[covered] state  empty                                        → MyActivityEmptyState   (States) ← MyActivityPhase.empty (.loaded && entries.isEmpty)
+[covered] state  success                                      → MyActivityFeed         (Views) ← MyActivityPhase.content([MyActivityRow]); failure sub-states Disabled/Unauthorized/Error also render
+[covered] string activity.myActivity.disabled.description     → MyActivityDisabledState     (States) + MyActivityPage.strings:L20
+[covered] string activity.myActivity.disabled.title           → MyActivityDisabledState     (States) + MyActivityPage.strings:L19
+[covered] string activity.myActivity.error.title              → MyActivityErrorState        (States) + MyActivityPage.strings:L23
+[covered] string activity.myActivity.subtitle                 → MyActivityHeader.titleBlock (Views)  + MyActivityPage.strings:L18
+[covered] string activity.myActivity.title                    → MyActivityHeader.titleBlock + MyActivityPage.navigationTitle + MyActivityPage.strings:L17
+[covered] string activity.myActivity.unauthorized.description → MyActivityUnauthorizedState (States) + MyActivityPage.strings:L22
+[covered] string activity.myActivity.unauthorized.title       → MyActivityUnauthorizedState (States) + MyActivityPage.strings:L21
+[covered] string common.retry                                 → MyActivityErrorState Retry Button (States) + MyActivityPage.strings:L24
+PARITY_COVERED=12
+=== END PARITY ===
+
+RESULT
+  Implementation COMPLETE + non-placeholder (ADR-011). All runnable gates GREEN:
+  placeholder=0, swiftlint --strict=0, swiftc -parse=0, Foundation-core -typecheck=0,
+  SwiftUI -typecheck shows only missing-app-module-token errors (0 API misuse).
+  PARITY_COVERED == PARITY_REQUIRED (12).
+  BUILD + TEST are unverifiable on this host (no Xcode runner) → BLOCKED, never
+  reported as DONE (covenant #1, #4; README §4 "a gate that cannot run is BLOCKED").
+
+EXIT=1
+STATUS=BLOCKED

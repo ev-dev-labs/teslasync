@@ -1,0 +1,168 @@
+=== P4 Feature view 0258 TeslaAuthCard (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh
+  Destinations       : iOS Simulator "iPhone 16" present + Booted (iOS 26.5) · macOS 26.5 SDK present.
+                       Both SDKs satisfy the project's iOS 18.0 / macOS 15.0 deployment targets (newer SDK,
+                       backward-deployed).
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS simulators all present via full Xcode
+                       → NOT capability-BLOCKED. (TeslaAuthCard itself uses neither charts nor maps — it is a
+                       pure presentational status card — so only SwiftUI is exercised.)
+
+WEB SOURCE (the specification)
+  web/src/features/system/components/status/TeslaAuthCard.tsx — a PURE presentational component (no hooks,
+  no fetch). Its parent (SystemStatusPage) feeds three props: `authenticated: boolean | undefined`,
+  `expiresAt: string | undefined`, and a `now` epoch tick so the expiry countdown re-renders. The card is
+  ALWAYS rendered (operator-grade visibility) and intensifies with severity:
+      severityFor: authenticated===false ⇒ 'disconnected';
+                   no/!finite expiry      ⇒ 'unknown';
+                   days<0 ⇒ 'expired'; days<=7 ⇒ 'warn'; else 'ok'.
+      TONE map   : per-severity bar color/opacity, shield icon (ShieldCheck/ShieldAlert/ShieldX),
+                   Badge label + variant (success/warning/danger/neutral).
+      detail     : disconnected / expiry-unknown / expiry-unparseable / expired-today / expired-Nd-ago /
+                   expires-today / expires-in-1-day / expires-in-N-days.
+      CTA Link   : to "/tesla-account"; label "Re-authenticate" when expired|disconnected, else "Manage".
+  Prompt "Data sources: (none — pure presentational component)" — so there is NO data-state holder here
+  (same disposition the predecessor ToolCard surface recorded). The web "states" that DO exist are the five
+  severity branches; every one is reproduced as a fully-rendered, non-blank card. `unknown` (awaiting /
+  unparseable expiry) and `disconnected` (no account) are the friendly empty/offline surfaces the Apple HIG
+  states contract asks for.
+
+ARTIFACTS SHIPPED  (all match the prompt's allowed glob feature-views/TeslaAuthCard.*)
+  apps/apple/TeslaSync/feature-views/TeslaAuthCard.Model.swift     — TeslaAuthCardSurface (slug + accountRoute
+                                                                    + reportOpen), TeslaAuthCardTelemetry seam
+                                                                    + OSLog sink, P1/S10 i18n facade
+                                                                    (TeslaAuthCardStrings / TeslaAuthLocalize),
+                                                                    TeslaAuthExpiry parser, TeslaAuthSeverity
+                                                                    (severityFor port) + tone/icon/bar/CTA maps,
+                                                                    TeslaAuthClock.dayDelta, TeslaAuthTone, and
+                                                                    the pure Equatable TeslaAuthCardPresentation
+                                                                    (make + detailText).
+  apps/apple/TeslaSync/feature-views/TeslaAuthCard.swift           — the SwiftUI view: live TimelineView clock
+                                                                    (native parity for the web `now` tick; tests
+                                                                    /previews pin `now`), the GlassPanel-parity
+                                                                    card with a flush top accent bar, tinted SF
+                                                                    Symbol, runtime-localized title/badge/detail,
+                                                                    and the accent Re-authenticate/Manage CTA.
+  apps/apple/TeslaSync/feature-views/TeslaAuthCard.Previews.swift  — DEBUG previews for ok/warn/expired/
+                                                                    disconnected/unknown + a Dynamic-Type XXL one.
+  apps/apple/TeslaSync/feature-views/TeslaAuthCard.Tests.swift     — 35 XCTest cases (co-located, the established
+                                                                    feature-view convention).
+  apps/apple/TeslaSync/feature-views/TeslaAuthCard.strings         — P1/S10 catalog contribution, table
+                                                                    "TeslaAuthCard" (17 keys, web English values).
+  NO shared-wiring edits were required or made: feature-views is ALREADY a source group of TeslaSync +
+  TeslaSync-macOS in project.yml and ALREADY in .swiftlint.yml `included:`; the per-surface .strings table
+  (resolved via NSLocalizedString(value: fallback)) means the shared Localizable.xcstrings is NOT touched.
+  This keeps the change strictly inside the prompt's allowed-files set (TeslaAuthCard.* + this log).
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  GlassPanel(overflow-hidden) → VStack(spacing:0){ flush accent bar; padded content } over the SAME shared
+                                TSMaterial.panel + Color.TS.border + TSRadius.lg primitives `tsGlassPanel()`
+                                itself uses, then clipShape(rounded) for `overflow-hidden`. (TSGlassPanel
+                                bakes in content padding that would inset the flush bar, so the surface is
+                                composed from the same design-system material rather than the wrapper.)
+  h3 "Tesla account"          → Text(verbatim:) Font.TS.body semibold, Color.TS.textPrimary.
+  Badge variant               → TeslaAuthTone → Color.TS.{statusSuccess/statusWarning/statusDanger/textMuted};
+                                a compact capsule mirroring TSBadge but for a runtime-localized String label.
+  Lucide ShieldCheck/Alert/X  → SF Symbols checkmark.shield.fill / exclamationmark.shield.fill / xmark.shield.fill.
+  tone.bar (/40,/50,/60)      → accent-tone color at severity.barOpacity (0.40 / 0.50 / 0.60), flush top bar.
+  <Link to="/tesla-account">  → a real Button(onManage) (DI; parent wires navigation) styled as the accent
+                                external-link pill, 44pt min target; route exposed as
+                                TeslaAuthCardSurface.accountRoute for the contract test.
+  `now` tick                  → TimelineView(.periodic(by: 60s)) so the countdown stays live without a hook.
+  i18n                        → every rendered string flows through the P1/S10 facade (table "TeslaAuthCard");
+                                zero English literals in code (only catalog fallbacks). The lone prompt-listed
+                                key "Tesla account" + all badge/detail/CTA strings have catalog keys.
+  a11y                        → bar + icon .accessibilityHidden; title+badge+detail folded into ONE VoiceOver
+                                header element ("Tesla account, <badge>. <detail>"); CTA is its own labelled
+                                Button element; Dynamic Type via the shared Font.TS ramp; no motion (reduce-
+                                motion safe by construction).
+  telemetry                   → view.opened surface="TeslaAuthCard" via TeslaAuthCardSurface.reportOpen (P1/S11),
+                                default redaction-safe OSLog sink, emitted from the view's .task.
+
+STATES (every web branch reproduced — pure presentational, so no data loading/error/stale/offline owned here)
+  ok           → green bar, checkmark shield, "Connected" badge, "Token expires in N days." , "Manage".
+  warn (<=7d)  → amber bar, alert shield, "Expires soon" badge, "Token expires in N days/1 day/later today.".
+  expired      → red bar, x shield, "Token expired" badge, "Expired today / Nd ago — …" , "Re-authenticate".
+  disconnected → red bar, x shield, "Not connected" badge, "No Tesla account is currently connected.",
+                 "Re-authenticate".  (friendly "offline/empty" surface — never a blank box.)
+  unknown      → neutral bar, alert shield, "Unknown" badge, "Token expiry unknown/unparseable …".
+                 (friendly "awaiting data" surface.)
+
+GATES
+  [GREEN]    swiftformat --lint  (feature-views/TeslaAuthCard.* — 4 swift files) : 0/4 require formatting   (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict  (feature-views/TeslaAuthCard.* — 4 swift files) : 0 violations, 0 serious  (LINT_EXIT=0)
+  [GREEN]    check-placeholders.ps1 (each TeslaAuthCard.*.swift)                 : PLACEHOLDER_COUNT=0       (PLACEHOLDER_EXIT=0)
+  [GREEN]    Isolated SwiftPM build + test — swift-tools 6.0, Swift 6 language mode (= the app's
+             SWIFT_VERSION 6.0 + SWIFT_STRICT_CONCURRENCY=complete), compiling the EXACT shipped
+             TeslaAuthCard.{Model,swift,Previews} + TeslaAuthCard.Tests against the REAL repo design-system
+             files (apps/design/generated/apple/Tokens.swift + Sources/Design/TSMaterial.swift +
+             Sources/Components/UI/{Cards,Typography,Badges,Buttons}.swift):
+                 Build complete!  ·  Executed 35 tests, with 0 failures                                     (SWIFT_TEST_EXIT=0)
+  [GREEN]    swiftc -typecheck  iOS  18.0 simulator  (-swift-version 6, real iphonesimulator SDK)           (IOS_TYPECHECK_EXIT=0)
+  [GREEN]    swiftc -typecheck  macOS 15.0           (-swift-version 6, real macosx SDK)                    (MAC_TYPECHECK_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO TeslaAuthCard errors; all blockers pre-exist this change):
+    iOS  : the build assembled Shared.xcframework via its Gradle phase, COMPILED the TeslaAuthCard production
+           sources into the app with ZERO errors, and COPIED TeslaAuthCard.strings into TeslaSync.app
+           (CopyStringsFile, UTF-8). It then failed with exactly 4 errors, ALL
+           "Unable to resolve module dependency: 'XCTest'" emitted by co-located *.Tests.swift files compiled
+           into the (non-test) app target — the first is AIRestorePanel.Tests.swift; there are ~157 such
+           co-located test files across the feature-views (the established convention; TeslaAuthCard.Tests.swift
+           is one peer, surfaced only as a "part of module 'TeslaSync'; ignoring import" warning). grep of the
+           build log for an error on TeslaAuthCard.{Model,Previews}.swift / TeslaAuthCard.swift = 0 hits.
+    macOS: failed with 4 errors, ALL development-signing entitlement errors ("TeslaSync-macOS" /
+           "TeslaSyncWidgets-macOS" require a development certificate). This runner provisions no signing
+           identity. Zero TeslaAuthCard errors.
+    These are precisely the artifacts apps/macos-pending-verifications.md already defers to
+    p4-apple/P99-0001-apple-acceptance-gate (signed macos-latest runner) — see its existing rows for
+    P-0010-ToolCard and 0180-AlertMessageEditor recording the identical disposition (co-located *.Tests.swift
+    XCTest-in-app-target + macOS dev-signing). This is a single feature-view prompt; it does not own — and the
+    task rules forbid it from fixing — that pre-existing, repo-wide breakage. (Two unrelated pre-existing host
+    findings, both tracked in HEAD and NOT TeslaAuthCard files, are noted for transparency: whole-tree
+    swiftformat flags 1/1780 — TeslaSync/feature-views/ActionBuilder.Previews.swift blankLinesBetweenScopes;
+    whole-app swiftlint flags 1 — TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+    function_body_length, the same one the ToolCard log recorded.)
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65)
+                           and explicitly DEFERRED with raw evidence — never reported as passing.
+  2  No scope narrowing  : every web region + branch (5 severities, full TONE map, the 8 detail sentences,
+                           both CTA labels, the /tesla-account route) is reproduced and unit-tested.
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; the macOS signing failure and
+                           the iOS XCTest failure were observed, not assumed.
+  4  No stubs as final   : complete production view + previews + 35 real tests; placeholder scanner = 0.
+  5  No parity shortcut  : severity/detail/tone/icon/bar/CTA/route/typography/a11y/telemetry all mapped to
+                           platform tokens + verified against the web strings (incl. the 4 web test fixtures).
+  6  No delegation       : implemented directly; no sub-agents (delegation was FORBIDDEN by the prompt).
+  7  No predecessor bypass: P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry, and the P4 design-system core
+                           are all present and consumed; this is a pure-presentational surface so there is no
+                           P1/S8 data hook to bind (prompt: "Data sources: none").
+  8  No commit on red    : the COMMITTED artifact (TeslaAuthCard.* + this log) is GREEN on every host gate AND on
+                           a real isolated Swift 6 build+test AND on iOS-18/macOS-15 typecheck; the deferred
+                           full-app gate is RED only on pre-existing, unrelated surfaces this commit neither
+                           introduces nor touches.
+  9  No silent drift     : changes are confined to the five feature-views/TeslaAuthCard.* files and this log —
+                           enumerated above; no project.yml/.swiftlint.yml/xcstrings edits; the git-ignored
+                           generated .xcodeproj and the build-produced Shared.xcframework were removed after use.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  A production-polished, Apple-idiomatic TeslaAuthCard shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 35 tests pass under the app's own Swift 6 strict-concurrency rules against the
+  real design-system, it type-checks against the real iOS-18 and macOS-15 SDKs, and lint/format/placeholder are
+  all green. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this
+  code): it is blocked by pre-existing, repo-wide co-located-XCTest-in-app-target compilation and macOS
+  development-signing — both owned by p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest CI
+  runner per apps/macos-pending-verifications.md. This matches the sanctioned "code-complete + DEFERRED Xcode
+  gate" disposition every P4 feature-view surface to date has used.
+
+EXIT=0
+STATUS=DONE

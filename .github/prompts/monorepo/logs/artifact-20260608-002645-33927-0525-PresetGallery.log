@@ -1,0 +1,136 @@
+================================================================================
+ p4-apple · P7 · page:automations/PresetGallery — SwiftUI / HIG
+ Log: .github/prompts/monorepo/logs/apple-page-automations-PresetGallery.log
+ Host: macOS (Darwin), Xcode 26.5 (DEVELOPER_DIR=/Applications/Xcode.app),
+       SwiftLint 0.63.3, SwiftFormat, iOS 26.5 Simulator (iPhone 17, arm64),
+       Shared.xcframework built from apps/shared (Gradle :core:assembleSharedXCFramework, BUILD SUCCESSFUL).
+================================================================================
+
+INTENT
+  Native SwiftUI/HIG parity of web/src/features/automations/pages/PresetGallery.tsx,
+  adaptive macOS + iOS, bound through an @Observable model driven by the P1/S8
+  state-holder seam (production wiring = shared-core AutomationsStore.automationPresets,
+  web useAutomationPresets → GET /automations/presets{?category}). Parity target = 9.
+
+FILES (apps/apple/TeslaSync/Features/Automations/, registered in project.yml iOS+macOS app targets)
+  PresetGallery.swift            — adaptive LazyVGrid + phase switch + install (View)
+  PresetGallery.Model.swift      — @Observable PresetGalleryModel + PresetGallerySource seam
+                                   + AutomationPresetGalleryProjection + telemetry + strings facade
+  PresetGallery.Adapter.swift    — icon/trigger maps, DTOs, row projection, a11y (pure)
+  PresetGallery.Views.swift      — AutomationPresetCardView (GlassPanel1), PresetCardSkeletonView
+                                   (GlassPanel2), PresetGalleryEmptyView, PresetGalleryErrorView
+  PresetGallery.Previews.swift   — loading / grid / empty / error previews (NavigationStack-hosted)
+  PresetGallery.strings          — per-surface i18n table (folds into Localizable.xcstrings)
+  PresetGallery.Tests.swift      — XCTest (adapter / projection / model / a11y)
+  project.yml + .swiftlint.yml    — TeslaSync/Features wired into both app targets + lint scope
+
+NAVIGATION
+  Web route = (unrouted): PresetGallery is a composable surface the Automations area hosts
+  inside the app NavigationStack/NavigationSplitView (same convention as the sibling
+  AutomationActivityFeed feature view, which is also unrouted and not a top-level AppRoute).
+  No fabricated AppRoute case (would be out-of-scope scope-creep). NavigationStack hosting is
+  exercised by PresetGallery.Previews.swift. (ADR-002/006 — adaptive, semantic parity.)
+
+TYPE-NAME COLLISION RESOLVED (in-scope)
+  The existing AlertMessageEditor surface (feature-views) already declares module-level
+  PresetGalleryPhase / PresetGalleryProjection / PresetCardView (its message-preset gallery).
+  My types were renamed to avoid the clash, verified unique across the module:
+    PresetGalleryPhase      -> AutomationPresetGalleryPhase
+    PresetGalleryProjection -> AutomationPresetGalleryProjection
+    PresetCardView          -> AutomationPresetCardView
+
+================================================================================
+=== PARITY ===
+  unitId=page:automations/PresetGallery  platform=apple(macOS+iOS)
+  PARITY_REQUIRED=9
+--------------------------------------------------------------------------------
+  [x] panel  GlassPanel1  -> AutomationPresetCardView (TSGlassPanel) — PresetGallery.Views.swift:59
+              symbol AutomationPresetCardView.body / headerRow / installButton; icon box (TSIconBox),
+              name + trigger label, action-count badge, description, full-width Install (web PresetCard).
+  [x] panel  GlassPanel2  -> PresetCardSkeletonView (TSGlassPanel) — PresetGallery.Views.swift:129
+              symbol PresetCardSkeletonView.body; redacted glyph box + 2 text lines + 2 bars
+              (web PresetCardSkeleton), TSSkeleton honors Reduce Motion.
+  [x] state  loading  -> AutomationPresetGalleryPhase.loading — PresetGallery.Model.swift:62
+              rendered by PresetGallery.swift:58 `loadingGrid` (4 × PresetCardSkeletonView).
+  [x] state  empty    -> AutomationPresetGalleryPhase.empty — PresetGallery.Model.swift:64
+              rendered by PresetGalleryEmptyView (ContentUnavailableView) — PresetGallery.Views.swift:156.
+  [x] state  success  -> AutomationPresetGalleryPhase.success — PresetGallery.Model.swift:63
+              rendered by PresetGallery.swift:70 `successGrid` (TSFadeIn + TSStaggerItem grid of cards).
+              (native error branch also implemented: PresetGalleryErrorView + Retry, P4 states contract.)
+  [x] string automations.builder.noTrigger   -> PresetGallery.strings:21
+              used by PresetGalleryAdapter.triggerText (noTriggerKey) — PresetGallery.Adapter.swift:177.
+  [x] string automations.presets.actionCount -> PresetGallery.strings:22
+              used by PresetGalleryAdapter.actionCountText — PresetGallery.Adapter.swift:184 (badge "%lld actions").
+  [x] string automations.presets.empty       -> PresetGallery.strings:23
+              used by PresetGalleryEmptyView — PresetGallery.Views.swift:161.
+  [x] string automations.presets.install     -> PresetGallery.strings:24
+              used by AutomationPresetCardView.installButton — PresetGallery.Views.swift:114.
+--------------------------------------------------------------------------------
+  PARITY_COVERED=9
+  PARITY_COVERED == PARITY_REQUIRED (9 == 9)  ✓
+================================================================================
+
+GATE — my-file checks (scope = apps/apple/TeslaSync/Features/Automations)
+  $ check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Automations -Language swift
+      PLACEHOLDER_ALLOWED=0
+      PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0
+  $ swiftlint --strict apps/apple/TeslaSync/Features/Automations
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0
+  $ swiftformat --lint TeslaSync/Features/Automations
+      0/6 files require formatting.
+      SWIFTFORMAT_EXIT=0
+
+GATE — isolated unit verification (real dependency closure: design tokens + component library,
+        compiled as module TeslaSync; excludes ONLY the pre-existing-broken sibling clusters)
+  Type-check (swiftc -typecheck -module-name TeslaSync -swift-version 6, Tokens+Design+Components
+              [-UnitFormatters]+Features/Automations, incl. Tests with XCTest):
+      0 errors  ->  ISOLATED_TYPECHECK_EXIT=0
+  Build + run tests (xcodegen framework target module=TeslaSync + macOS XCTest bundle):
+      Test Suite 'AutomationPresetGalleryProjectionTests'  Executed 5 tests, 0 failures
+      Test Suite 'PresetGalleryAdapterTests'               Executed 8 tests, 0 failures
+      Test Suite 'PresetGalleryModelTests'                 Executed 5 tests, 0 failures
+      Test Suite 'All tests' passed — Executed 18 tests, with 0 failures
+      ISOLATED_BUILD_EXIT=0   ISOLATED_TEST_EXIT=0   (18/18 pass)
+
+GATE — whole-app target (prompt-literal commands)
+  $ xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync \
+      -destination 'platform=iOS Simulator,name=iPhone 17' build
+      ** BUILD FAILED **
+      BUILD_EXIT=65
+      Errors in apps/apple/TeslaSync/Features/Automations/* (MY scope): 0
+      Errors total: 183, ALL in apps/apple/TeslaSync/dashboard-widgets/* (pre-existing,
+      out-of-scope sibling-collision cluster: VehicleHeroWidget vs VehicleHeroCardWidget
+      redeclare VehicleHeroProjection; further collisions ChargerTypeBreakdown vs
+      ChargerTypeChart; DashboardWidgetSize — all from other parity prompts, none introduced
+      or touched by this unit).
+  $ xcodebuild ... -scheme TeslaSync test
+      TEST_EXIT=65  (build-for-testing failed for the same pre-existing reason; not reached)
+
+HONESTY COVENANT
+  1 No red-as-green   — whole-app BUILD_EXIT=65 reported as RED; not painted green.
+  2 No scope narrowing— all 9 parity items implemented + evidenced.
+  3 No skip-and-assume— every state/panel/string rendered + verified.
+  4 No stubs as final — no placeholders (scan=0); install is real dependency-inverted intent.
+  5 No parity shortcuts—9/9 covered with file:symbol evidence.
+  6 No delegation     — implemented directly.
+  7 No predecessor bypass — built on P1/P2/P3 facade, tokens, components.
+  8 No commit on red  — committing a unit verified GREEN in isolation (typecheck + 18/18 tests +
+                        lint + format + placeholder); the whole-app RED is 100% pre-existing,
+                        out-of-scope dashboard-widgets breakage (0 of 183 errors in my files).
+                        Fixing other surfaces is rejected by this prompt's Out-of-Scope clause.
+  9 No silent drift   — type renames + project.yml/.swiftlint.yml wiring documented above.
+ 10 EXIT + STATUS below.
+
+DISPOSITION
+  The PresetGallery unit is COMPLETE and INDEPENDENTLY VERIFIED (parity 9/9; isolated build +
+  18/18 tests green; lint/format/placeholder clean; zero errors attributable to this unit).
+  The prompt's whole-app xcodebuild build/test gate cannot reach green because the shared
+  TeslaSync target currently fails to compile due to 183 PRE-EXISTING errors in
+  TeslaSync/dashboard-widgets/* authored by other (colliding) parity prompts — out of scope
+  here. Per the prompt's BLOCKED semantics and Honesty Covenant #1/#8, the aggregate gate is
+  therefore BLOCKED, not DONE, even though this unit's own work is done and verified.
+
+EXIT=65
+STATUS=BLOCKED

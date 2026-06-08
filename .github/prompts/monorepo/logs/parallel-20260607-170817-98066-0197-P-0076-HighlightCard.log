@@ -1,0 +1,110 @@
+I'll start by exploring the repository structure to understand the web source and the existing Apple app infrastructure.
+
+Let me read the web source and explore the Apple app structure in parallel.
+
+The web source is a pure presentational card. Now let me study the established native conventions. Let me look at the simplest analogous component (ToolCard - a presentational card) and the shared infrastructure.
+
+Now I understand the established pattern. Let me check the build toolchain availability (critical for DONE vs BLOCKED), the shared Theme/components, the strings/tests conventions, and the parity tracking.
+
+Critical finding: `xcodebuild` requires full Xcode but only CommandLineTools is installed. Let me verify Xcode availability thoroughly and study the shared infrastructure (theme tokens, GlassPanel, telemetry, test conventions).
+
+Excellent — full Xcode IS at `/Applications/Xcode.app`, and `pwsh` is available. The active dir is CommandLineTools, but I can point xcodebuild at Xcode via `DEVELOPER_DIR`. Let me verify this works and the simulators exist.
+
+This is **NOT a BLOCKED scenario** — Xcode 26.5, iPhone 16 simulator, macOS SDK, swiftlint, swiftformat, xcodegen, and pwsh are all present. I can build and test. Let me study the remaining conventions: project.yml test wiring, typography/tokens, glow support, telemetry sharing, and web usage.
+
+Let me read the glow material, design tokens, web GlassPanel + usage, and project.yml test wiring.
+
+Now the data semantics are clear. Let me read the trend helper, design tokens, project.yml test wiring, and a complete Tests/Previews example.
+
+Let me read the project.yml (test/scheme wiring) and the complete UuidGenerator surface (view, model, previews) to finalize the pattern.
+
+I need to understand a critical detail: the test target sources from `Tests/Unit`, but `.Tests.swift` files live in `feature-views/` (which is in the *app* target). Let me investigate how tests are wired and check the Shared.xcframework build dependency.
+
+Let me resolve the test-wiring mystery — checking `Tests/Unit/FeatureViews` and whether feature-view test files are symlinked or excluded from the app target.
+
+The key question: do the existing `*.Tests.swift` files in `feature-views/` (app target path) break the build, or is there a mechanism? Let me empirically establish the baseline. First, check the KMP dependency and generate the project.
+
+Key insight: surfaces are staged per-prompt (`.strings`/`.Tests.swift` fold in "at integration time"). ToolCard is the clean reference. Let me definitively check how the generated project treats `feature-views/*.Tests.swift` — generate the project (fast, no Gradle) and inspect the pbxproj.
+
+`UuidGenerator.Tests.swift` is in the app target's compile sources (6 refs across targets). I must verify whether `import XCTest` + `@testable import TeslaSync` inside the app target actually breaks compilation. Let me run a decisive standalone experiment.
+
+Definitive: `import XCTest` fails in a non-test module ("no such module 'XCTest'"), and 40+ pre-existing `feature-views/*.Tests.swift` are in the app target's compile sources. So the full app-build gate has a pre-existing baseline issue outside my file scope. Let me read the intended verification model and finalize conventions.
+
+The documented precedent is decisive: `apps/macos-pending-verifications.md` confirms the sibling **ToolCard** prompt used "isolated SwiftPM build + tests + swiftlint/swiftformat/placeholder clean" as its green gate, with the full-app `xcodebuild` deferred to macOS CI (`P99-0001`) due to **pre-existing** parallel-merge collisions (XCTest-in-app-target, `DashboardWidgetSize` 8× redefinition, signing). I'll follow that exact model. Let me corroborate the baseline breakage and check the placeholder patterns + component deps before building.
+
+Fully corroborated: **80 XCTest-importing files** in app-target paths + `DashboardWidgetSize` redefined 8×. The full-app gate is pre-existing-red, exactly as documented. Let me read the placeholder checker and establish swiftlint/swiftformat baselines.
+
+Matching is **case-insensitive** — so I must avoid the word "placeholder" (any casing), "TODO", "not implemented", etc. in my Swift files. Now let me establish swiftlint/swiftformat baselines on the untouched repo (to distinguish pre-existing violations from any I might introduce).
+
+swiftformat baseline is **green** (0/792 need formatting). Now swiftlint baseline:
+
+swiftlint baseline has **1 pre-existing violation**. Let me identify it so I can distinguish it from my work.
+
+I now have complete context. Baseline: swiftformat green, swiftlint has 1 pre-existing out-of-scope violation, full-app build pre-existing-red (80 XCTest-in-app files). I'll follow the documented ToolCard precedent exactly: build the surface + verify green via isolated SwiftPM build/tests + swiftlint/swiftformat/placeholder clean. Let me write the plan and create the surface.
+
+Now I'll create the surface files. Starting with the Model (foundation types):
+
+Now the main view:
+
+Now the Previews and strings catalog:
+
+Now the test suite (adapter + presentation + a11y + telemetry):
+
+All 6 files created. Let me check for forbidden placeholder words in my files and auto-format them.
+
+Clean of forbidden words, and already swiftformat-compliant (0/5 needed formatting). Now confirm swiftlint is clean on my files, then set up the isolated SwiftPM build+test (the documented green gate).
+
+swiftlint: my files are **clean** — the only violation is the same pre-existing out-of-scope one (`LifetimeStatsWidget`). Now the isolated SwiftPM build+test (the documented green gate, matching ToolCard). Let me set up the package with symlinks to the real source files.
+
+Now build + run the tests in the isolated package under Swift 6 strict concurrency (release strips DEBUG previews):
+
+Real compiler caught two issues (exactly why I verify): the test file needs `import SwiftUI` for `Color`, and `HighlightCard.surfaceSlug` is `@MainActor`-isolated (because `View` is `@MainActor` in Swift 6) so it can't be read from a nonisolated test. Let me fix both — make the slug `nonisolated` (it's a compile-time constant) and import SwiftUI in tests.
+
+All **24 tests pass** under Swift 6 strict concurrency. The library (view + model + telemetry + real tokens/components) compiles cleanly. Now let me verify the DEBUG previews compile too (release stripped them). I'll add the components that `Cards.swift`'s debug preview needs and do a debug build.
+
+`Badges.swift`/`Buttons.swift` only depend on TS tokens. Let me add them so `Cards.swift`'s debug preview resolves, then do a DEBUG build to prove my Previews compile.
+
+DEBUG build compiles `HighlightCard.Previews.swift` cleanly. Surface fully green in isolation. Let me run the debug tests too (real targets build debug), re-lint my edited files, and run the placeholder gate (with a genuine scoped scan).
+
+Every host-runnable surface gate is **green**: 24/24 tests (debug+release), previews compile, swiftformat clean (0/5), swiftlint clean (mine), placeholder count 0. Now let me capture honest evidence of the full-app gate. First check the log dir, then attempt the real xcodebuild (time-boxed, since it runs the KMP Gradle pre-action).
+
+The app-target build fails immediately: **`Shared.xcframework` is absent** (BUILD FAILED, exit 65) — it's produced by the KMP Gradle build, itself a documented macOS-pending item. Let me read the sibling ToolCard log to match the established log format, then attempt the literal scheme gate.
+
+This is the canonical template. The sibling ToolCard log (prompt 0010) ends `EXIT=0 / STATUS=DONE` — surface verified green in isolation, full-app xcodebuild reported RED + DEFERRED with evidence. ToolCard's runner assembled `Shared.xcframework` via Gradle (7m24s) then captured the real compile-stage failure. Let me do the same for full fidelity — assemble the KMP framework, then run the literal gate.
+
+Gradle is running (ToolCard's took ~7m24s). Let me wait for it to complete.
+
+`BUILD SUCCESSFUL in 7m33s` — `Shared.xcframework` staged. Now the literal gate can reach the compile stage. Let me run the actual iOS gate command to capture the genuine exit code and the pre-existing blockers.
+
+IOS_EXIT=65 — fails at the app-target compile exactly as documented. The output is swamped by `@testable import TeslaSync` lines from the pre-existing co-located test files. Let me capture the precise `error:` diagnostics to a file and confirm zero are from HighlightCard.
+
+Decisive evidence: the iOS gate fails with exactly **`AuditPanel.Tests.swift:19: error: Unable to resolve module dependency: 'XCTest'`** — a pre-existing co-located sibling test file (alphabetically first), and **ZERO HighlightCard errors**. Now capture the macOS gate exit:
+
+Both gate steps captured honestly: **IOS_EXIT=65** (pre-existing co-located sibling `AuditPanel.Tests.swift` importing XCTest), **MAC_EXIT=65** (macOS dev-signing), **zero HighlightCard errors** in either. Note I assembled `Shared.xcframework` successfully, so that's not a blocker in my run. Let me get clean scoped lint/format numbers for the log.
+
+All green where it counts: **scoped swiftlint 0 violations in 5 files**, **whole-repo swiftformat 0/797**, isolated **24/24 tests**, placeholder 0. Now I'll write the honest gate log (matching the established ToolCard format).
+
+Now let me verify git status shows only my intended files (and that build artifacts are gitignored), then clean up temp artifacts.
+
+Clean — my 6 `HighlightCard.*` files + the log are untracked; the generated xcodeproj and `Shared.xcframework` are gitignored. (Two pre-existing web `.tsx` modifications exist in the slot but are outside my scope — I won't stage them.) Let me stage exactly my files and commit, then clean up temp artifacts.
+
+Committed cleanly (`b7c9eed9`) — only my 6 files + log; the two pre-existing web `.tsx` mods remain untouched. Let me clean up temp artifacts and do a final verification.
+
+The commit contains exactly my 7 files (992 insertions); the working tree shows only the two pre-existing web modifications (correctly untouched). Let me mark the plan complete and finish.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0076-HighlightCard.log  | 145 ++++++++++++
+ .../feature-views/HighlightCard.Model.swift        | 221 ++++++++++++++++++
+ .../feature-views/HighlightCard.Previews.swift     | 127 +++++++++++
+ .../feature-views/HighlightCard.Telemetry.swift    |  38 ++++
+ .../feature-views/HighlightCard.Tests.swift        | 248 +++++++++++++++++++++
+ .../TeslaSync/feature-views/HighlightCard.strings  |  27 +++
+ .../TeslaSync/feature-views/HighlightCard.swift    | 186 ++++++++++++++++
+ 7 files changed, 992 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0076-HighlightCard.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/HighlightCard.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HighlightCard.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HighlightCard.Telemetry.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HighlightCard.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HighlightCard.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/HighlightCard.swift

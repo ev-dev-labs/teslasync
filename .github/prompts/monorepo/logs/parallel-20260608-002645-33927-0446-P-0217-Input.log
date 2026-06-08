@@ -1,0 +1,132 @@
+I'll start by understanding the task: examining the web source, the Apple app structure, and the required tooling availability.
+
+The web source is a pure presentational form input. Key tooling finding: **`xcodebuild` requires full Xcode but only Command Line Tools are installed** — that affects the gate. Let me examine the existing Apple app structure and conventions before deciding the approach.
+
+The `shared-surfaces/` directory doesn't exist yet — I'll create it. There's a well-established 7-file pattern in `feature-views/`. Critical: I need to confirm whether full Xcode exists anywhere and whether SwiftUI compiles with the available toolchain.
+
+**Full Xcode IS installed** at `/Applications/Xcode.app` — the active dir is just pointed at CommandLineTools. I can use `DEVELOPER_DIR` to target it without sudo. SwiftUI type-checks cleanly. Let me verify the Xcode toolchain works.
+
+Full **Xcode 26.5 + iPhone 16 simulator (already booted)** are available. The build capability exists — I just need `DEVELOPER_DIR` set. Now let me study the project config and conventions. Let me create a plan file and explore the shared infrastructure.
+
+project.yml sources do **not** include `TeslaSync/shared-surfaces` — only `dashboard-widgets` and `feature-views`. I need to understand the test wiring and conventions deeply before implementing. Let me examine a representative simple feature-view's full 7-file set and the shared infrastructure (i18n, tokens, diagnostics, state-holders), plus tooling.
+
+`SettingField` is the closest presentational analog and has a `.Telemetry.swift` (view.opened). Let me study its full file set, the native Components library, and the i18n approach.
+
+Excellent — `SettingField` is the exact template I need. Let me read its remaining files, the design tokens, and check whether a native text-field component exists in the shared library.
+
+Now I fully understand the convention. Let me read the web `Label` and `HelpIcon` sub-components (for faithful parity), the design tokens, and check the native Components library for existing field primitives.
+
+There's a native `Forms/Inputs.swift` and `UI/Fields.swift` (the atomic library). Let me inspect them and locate the exact design-token definitions so my surface uses the right names.
+
+Now let me read the generated design tokens and the native typography/field primitives to get exact token names (error color, focus ring, text roles).
+
+I have the full token vocabulary. Before implementing, I must verify the build baseline is viable (the `Shared.xcframework` staging could need a KMP toolchain) and check for symbol collisions. Let me write a plan and run these critical checks.
+
+Critical: **`Shared.xcframework` doesn't exist** — the scheme's pre-build step builds it via Gradle/Kotlin-Native (`apps/shared/gradlew`). That's a heavy dependency. Let me check the documented verification status and whether the KMP toolchain is viable here.
+
+The `macos-pending-verifications.md` documents the **exact accepted methodology** for these P4 Apple surfaces: isolated SwiftPM build + tests, `swiftc -typecheck` on both SDKs, swiftlint/swiftformat/placeholder clean, and `xcodegen generate` — with the full-app `xcodebuild build test` deferred to `macos-latest` CI because it's blocked by **pre-existing, unrelated** parallel-merge collisions (e.g. `DashboardWidgetSize` redefined 15×, XCTest-in-app-target, unstaged `Shared.xcframework`, signing). Let me confirm those blockers still exist in the current tree and check the web keys.
+
+All blockers confirmed in the current tree: `DashboardWidgetSize` redefined **15×** (a hard app-target redeclaration error), **261** XCTest-in-app-target files, `Shared.xcframework` unstaged. Web i18n keys confirmed (`a11y.helpFor`, `help.tooltip.iconLabel`, `form.required`). This matches the documented precedent exactly. Let me read the lint configs, then implement.
+
+Lint rules: 120 width, `@testable` imports at bottom, `--self remove`. I have everything needed. Let me create the directory and implement all 7 files. Starting with the testable core (Model), Telemetry, then the views.
+
+Now let me refine `InputFieldRow` to accept accessibility name/hint (the web `htmlFor`/`aria-describedby` linkage), then write the main view.
+
+Now the main view with generic leading/trailing slots and convenience initializers:
+
+Now the previews, strings catalog, and the test suite:
+
+All 7 files created. Now let me wire `shared-surfaces` into the two app targets in `project.yml` so the surface (and its colocated tests) actually compile into the app — the minimal infra change that makes the gate real.
+
+Now format and lint the new files:
+
+swiftformat clean (0/6). swiftlint found 1 serious violation across the full set — I need to determine if it's in my files. Let me isolate violations:
+
+The single violation is **pre-existing** in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (function_body_length) — not my files. The shared-surfaces grep returned empty (zero violations in my code). Let me stop the second scan and confirm my files lint clean in isolation.
+
+Let me definitively lint only my files with a scoped config:
+
+My 6 Swift files: **0 violations under swiftlint --strict**, swiftformat clean. Now the placeholder gate and `xcodegen generate`:
+
+Placeholder gate clean (0 count, 0 opt-outs). Now `xcodegen generate` to confirm the project includes the new surface:
+
+`xcodegen generate` succeeded — all 7 `Input.*` files enumerated in the project. Now the core real-verification: an **isolated SwiftPM build + test** (real test execution under Swift 6) and **`swiftc -typecheck` on both SDKs**. Let me set up the isolated package.
+
+Build compiling — let me wait for it to complete.
+
+The build failures are both in `Input.Previews.swift` and stem from one cause: the **`#Preview` macro plugin isn't available in the Command-Line-Tools `swift`** (`PreviewsMacros` plugin not found), which cascades into the `ScrollView` ambiguity. The fix: use **Xcode's toolchain** (which ships the preview macro plugin) via `DEVELOPER_DIR`. Let me rebuild/test with Xcode's Swift.
+
+Two real findings from the isolated build (Xcode toolchain — `#Preview` macro now resolves):
+1. **`TSAnimation` missing** — it lives in `Sources/Design/TSDesign.swift`, which I didn't copy into the isolated package (it's in the module in the real app).
+2. **`ScrollView` ambiguity** in Previews — need to confirm whether it's a cascade from #1 or real.
+
+Let me add `TSDesign.swift` to the package and rebuild.
+
+`TSAnimation` now resolves — the module compiles cleanly. The **`ScrollView` ambiguity is real** under Swift 6 language mode (both `ScrollView` initializers match a bare trailing closure). The fix is to disambiguate with `showsIndicators:` (the deprecation is tvOS/watchOS-only, so it's clean on iOS/macOS). Let me fix the real file and re-verify.
+
+ScrollView fixed. New real finding: my **two single-slot convenience inits are ambiguous under a bare trailing closure** (a `{ ... }` matches both `leading:` and `trailing:`). The clean fix: callers use explicit `leading:`/`trailing:` labels. Let me update the preview call sites.
+
+Isolated build **green** under Swift 6 strict concurrency. Now run the actual test suite:
+
+**All 31 tests pass, 0 failures** under Swift 6 strict concurrency — real execution. The isolated build also caught two real ambiguity bugs (now fixed) that would have broken the Xcode build too. Let me re-verify lint/format on the edited Previews, then run `swiftc -typecheck` on both iOS 18 and macOS 15 SDKs.
+
+Format + lint clean after edits. Now the cross-platform `swiftc -typecheck` on **iOS 18** and **macOS 15** SDKs (Swift 6 mode):
+
+Both **iOS 18 and macOS 15 `swiftc -typecheck` pass clean** (Swift 6 mode), including Previews. The surface is fully verified green by the isolated methodology. 
+
+Now I'll attempt the literal full-app gate (`xcodebuild build test`) to capture **real evidence** of the documented pre-existing blockers. First, let me attempt staging `Shared.xcframework` via Gradle (bounded), since the scheme pre-action requires it.
+
+The Gradle build got far (downloaded Kotlin/Native, compiled Kotlin) but failed at the framework link because **Kotlin/Native's `xcrun` used the CommandLineTools default**, not Xcode. I forgot to export `DEVELOPER_DIR` for that command. Let me retry with it set.
+
+Gradle is linking Kotlin/Native frameworks for multiple architectures — this takes time. Let me continue waiting.
+
+**Gradle build SUCCEEDED** — `Shared.xcframework` is now built. That removes the framework blocker. Now let me stage it and run the actual iOS gate to capture **real evidence** of the remaining pre-existing collision (`DashboardWidgetSize` 15×).
+
+Build running. Let me wait and inspect the log for the expected pre-existing collision errors.
+
+The PID check says finished but 0 errors logged — let me inspect the actual log content and any running xcodebuild.
+
+The previous build's log is empty and the environment is **shared with other parallel agents** (multiple `xcodebuild` processes from other slots are running — `TeslaSync-macOS`, `TooltipGate`, etc.). My build likely lost the resource contention. Let me run a clean, isolated iOS build in a managed shell with a unique derivedData path so I can capture real output.
+
+**Definitive real evidence captured.** The iOS build `** BUILD FAILED **` on:
+```
+TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'
+```
+This is exactly the documented pre-existing blocker — **261 co-located `*.Tests.swift` files import XCTest into the app target** (the per-surface test convention, which my `Input.Tests.swift` also follows). It fails on `AIRestorePanel` (alphabetically early), unrelated to my surface. Combined with `DashboardWidgetSize` redefined 15×, the full-app `build test` cannot be green here — matching the precedent.
+
+Let me capture the macOS build evidence too (bounded), while I write the gate log.
+
+Let me check the log directory and prepare the swiftlint coverage edit while the macOS build runs.
+
+Let me look at an existing p4-apple log to match format, and check the macOS build progress.
+
+This is the exact precedent format — and ToolCard also edited `project.yml` + `.swiftlint.yml`, confirming my approach. Let me see how the precedent log handles the full-app `xcodebuild` step and its final STATUS.
+
+Decisive precedent: the repo's **sanctioned disposition** for every P4 Apple surface is **`EXIT=0 / STATUS=DONE`** with the full-app `xcodebuild` gate explicitly **DEFERRED** (reported RED, never green) to the macos-latest CI per `macos-pending-verifications.md` — because the surface is independently verified green and the full-app redness is exclusively pre-existing/unrelated (`DashboardWidgetSize` ×15, XCTest-in-app-target, signing). My case is identical. Let me retrieve the macOS build evidence.
+
+The macOS build writes to a file (its launcher shell already returned). Let me read that result directly.
+
+The shared-env contention starved that background build. Let me run the macOS build in a managed shell to capture real evidence, as I did successfully for iOS.
+
+Both iOS **and** macOS full-app builds fail identically on the pre-existing **XCTest-in-app-target** blocker (`AIRestorePanel.Tests.swift`, one of 261), before even reaching the `DashboardWidgetSize` ×15 collision — both unrelated to Input. Evidence complete (IOS_EXIT/MAC_EXIT=65). 
+
+Now let me wire `shared-surfaces` into `.swiftlint.yml` (gate coverage), add the macos-pending row, and start a whole-repo `swiftformat --lint` for the honest FORMAT_EXIT.
+
+Now let me get the honest whole-repo `swiftformat --lint apps/apple` result (the gate command) and confirm my files stay lint-clean after the config change:
+
+`swiftformat --lint apps/apple` is RED (FORMAT_EXIT=1) — but on a **pre-existing** file (`ActionBuilder.Previews.swift`), not mine (my files: 0 require formatting). This mirrors the pre-existing swiftlint violation. Every gate my surface owns is green; the whole-repo aggregates are red only on pre-existing unrelated files — exactly the precedent pattern. Let me grab toolchain versions and write the gate log.
+
+All evidence collected. Now let me write the comprehensive gate log following the precedent format:
+
+Now let me review exactly what changed before committing — I must stage only my work (Input.* + the 3 wiring files + log), not the pre-existing `AIUsageCard` modifications that were already in the worktree.
+
+Confirmed: the 7 `AIUsageCard.*` files are **pre-existing** modifications (present in the very first `git status` before I touched anything) — I'll leave them unstaged. Let me verify my wiring diffs are exactly the intended one-line additions, then stage precisely and commit.
+
+Diffs are exactly the intended additions. Let me stage precisely (excluding the pre-existing `AIUsageCard` changes) and commit.
+
+Exactly my 11 files staged (7 `Input.*` + 3 wiring + log); the pre-existing `AIUsageCard` changes are excluded. Committing:
+
+Committed as `1b0283486`. Let me clean up temporary artifacts and do a final verification.
+
+The task is complete and verified. Let me update the session plan to reflect completion.
+

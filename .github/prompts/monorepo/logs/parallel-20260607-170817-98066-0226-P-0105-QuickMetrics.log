@@ -1,0 +1,128 @@
+I'll start by exploring the repository structure, the web source, and checking the Apple toolchain availability.
+
+Apple toolchain is available (Xcode, Swift 6.3.2, swiftlint, swiftformat). Let me read the web source and examine the existing Apple app structure and recently-added sibling surfaces.Apple toolchain is present. Let me verify xcodebuild works and read the web source plus existing feature-view examples to follow conventions.
+
+Key finding: `xcodebuild` requires full Xcode but only CommandLineTools is active — so the simulator build/test steps can't run. Let me check how prior surfaces (OverviewTab, AlertsSection) handled this and study the established multi-file conventions.
+
+Let me read the prior logs (for gate/status handling) and the full AlertsSection multi-file set to follow conventions exactly.
+
+The established pattern is clear, and the prior surface reported `STATUS=DONE` with xcodebuild `DEFERRED` (CLT-only host). Let me read the remaining AlertsSection files, the web `helpers.ts`/`formatDuration`/`fmtWithUnit`, and locate shared infra (Tokens, Motion, Feedback, UI).
+
+Now let me read the web data sources (`helpers.ts`, `formatDuration`, `fmtWithUnit`, `Currency`, `AnimatedNumber`) and locate the shared Swift infra (Tokens, Motion, Skeletons).
+
+Let me find the shared token definitions, the `formatDuration`/`getChargerCategory`, `fmtWithUnit`, and `Currency`.
+
+Let me read `formatDurationMinutes` and the shared Swift design tokens/motion/skeleton APIs.
+
+Let me read the design token definitions and the duration `FALLBACK`/`formatRoundedInt` helpers.
+
+The tokens are in `apps/design/generated/apple/Tokens.swift`. Let me read it for the exact API surface, and the duration FALLBACK is confirmed as `—`.
+
+Now I have the token API. Let me check `AnimatedNumber` formatting, confirm no existing `QuickMetrics` symbol collision, and read the lint/format configs.
+
+`AnimatedNumber` defaults to 0 decimals → grouped integers. No symbol collision. Now let me locate `TSCard` (skeleton dependency) and the shared UI sources for the type-check driver, and peek at a grid-based surface for layout conventions.
+
+`DrivingPerformanceCards` is the ideal template — a 6-tile metric grid surface. Let me read its full file set to mirror conventions exactly.
+
+Let me read the DrivingPerformanceCards Adapter, Model, and Tests to mirror the full structure.
+
+Let me read the DrivingPerformanceCards Model and Tests to complete my understanding.
+
+Let me read the DrivingPerformanceCards Previews and Tests, then I'll have everything to write QuickMetrics.
+
+I now have a complete understanding of the conventions. Let me check for symbol collisions and set up tracking before writing.
+
+No collisions. Now I'll write the surface, starting with the pure adapter (projection core).
+
+Let me check whether a shared native count-up/AnimatedNumber component exists before implementing one.
+
+There's a shared `DataDisplay/Metrics.swift` referencing AnimatedNumber. Let me inspect it to reuse rather than reinvent.
+
+A shared `TSAnimatedNumber(formatted:)` exists — the native parity of web `AnimatedNumber`. Let me view it to reuse correctly.
+
+I'll reuse the shared component's native idiom (`.contentTransition(.numericText())`) but keep uniform tile sizing per the web. Let me add an explicit `animatesValue` flag to `QuickMetric` for the three count tiles.
+
+Now the Views file with the tile, grid, animated value, states, and chrome.
+
+Now the main view that binds the model.
+
+Now the i18n strings catalog.
+
+Now the previews (one per state).
+
+Now the tests with parity-verified expected values.
+
+All 7 files written. Now let me run the host gates — starting with swiftformat (apply, then lint) and swiftlint.
+
+swiftformat clean (0/6 require formatting). Now swiftlint --strict.
+
+Two swiftlint issues in the Adapter (function length + `empty_count` false-positive on `stats.count`). Let me refactor the projection into smaller helpers and avoid the `.count > 0` pattern.
+
+Re-run swiftformat + swiftlint to confirm clean.
+
+Format + lint clean (0 violations). Now the placeholder check — let me verify `pwsh` and the script's behavior.
+
+pwsh is available. Let me check my files for forbidden markers and run the placeholder gate (both the literal gate path and a meaningful scan).
+
+No forbidden markers. Now run the placeholder gate — both the literal gate path and a meaningful scan with a negative control.
+
+Placeholder gate clean (COUNT=0), scanner proven live by the negative control. Now the strongest verification: compile + **run** the pure adapter logic against the macOS SDK to prove parity values.
+
+The Adapter compiled fine — only my driver's top-level helpers needed `@MainActor` (Swift 6 isolation). Let me fix the driver and re-run.
+
+Top-level Swift 6 isolation again — I'll annotate the harness helpers `@MainActor` and also separately type-check the Adapter standalone under Swift 6.
+
+Adapter is Swift‑6 clean (typecheck EXIT=0). Now run the runtime harness under Swift 5 mode (valid for runtime proof; Swift‑6 cleanliness already shown separately).
+
+`ALL_ADAPTER_CHECKS_PASS` (RUN_EXIT=0) — parity values verified at runtime. Now the SwiftUI type-check of the full view set against the macOS SDK, linking the real shared sources.
+
+The errors are all in the shared `Cards.swift` pulling its own dependency chain (Typography/Badges/glass-panel), not in my code. Let me locate those shared definitions and include the same set the AlertsSection gate used.
+
+Let me include the full shared chain (Design + Typography + Badges + Cards) as the AlertsSection gate did.
+
+The only failure is the `#Preview` macro plugin (ships with Xcode, absent on CLT) — affecting shared `Cards.swift` too, not my logic. Re-running without `-D DEBUG` (preview blocks are `#if DEBUG`-gated, compiled by the Xcode target at integration).
+
+Production view set type-checks cleanly (EXIT=0). Now emit the testable module (prerequisite for `@testable import`) and run a model-behavior driver for real.
+
+Module emits cleanly. Now the model-behavior driver — compiled with the real Model/Views/View and run for real.
+
+`ALL_MODEL_DRIVER_CHECKS_PASS`. Now verify i18n key coverage — every key the code resolves must exist in the catalog.
+
+The catalog extraction left a ` =` artifact (BSD `sed` doesn't support `\s`). Let me redo the comparison cleanly.
+
+i18n coverage complete (MISSING=0, UNUSED=0). Let me confirm `project.yml` already globs `feature-views` for both app targets (so no out-of-scope project edits are needed).
+
+Both app targets glob `feature-views`. Let me confirm how `*.Tests.swift` / `*.Previews.swift` are routed (so my test file lands in the test target, not the app target) — mirroring the existing surfaces.
+
+Confirmed — my file set matches the established convention exactly (Tests/Previews/strings routing is a pre-existing, repo-wide integration concern, identical for every surface; `project.yml` is out of scope). Final lint pass + line counts.
+
+All files < 400 lines; format 0/6, lint 0 violations. Let me gather fresh host-probe evidence for the log.
+
+All gates verified. Now I'll write the comprehensive gate log.
+
+Now commit exactly the allowed files (excluding the two pre-existing unrelated modified files).
+
+Exactly my 8 files staged; the two pre-existing unrelated changes are excluded. Committing.
+
+Committed as `9c51c55a` (8 files, 1735 insertions). Final confirmation run of the lint + placeholder gates on the committed tree.
+
+All gates green on the committed tree. Let me finalize the todo tracking.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0105-QuickMetrics.log   | 276 +++++++++++++++
+ .../feature-views/QuickMetrics.Adapter.swift       | 377 +++++++++++++++++++++
+ .../feature-views/QuickMetrics.Model.swift         | 244 +++++++++++++
+ .../feature-views/QuickMetrics.Previews.swift      |  96 ++++++
+ .../feature-views/QuickMetrics.Tests.swift         | 370 ++++++++++++++++++++
+ .../feature-views/QuickMetrics.Views.swift         | 263 ++++++++++++++
+ .../TeslaSync/feature-views/QuickMetrics.strings   |  41 +++
+ .../TeslaSync/feature-views/QuickMetrics.swift     |  68 ++++
+ 8 files changed, 1735 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0105-QuickMetrics.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuickMetrics.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuickMetrics.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuickMetrics.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuickMetrics.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuickMetrics.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuickMetrics.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/QuickMetrics.swift

@@ -1,0 +1,148 @@
+=== P4 Dashboard widget 0048 EnergyStatsWidget (Apple) ===
+
+Surface : EnergyStatsWidget (registry id `energy-stats`, category `energy`)
+Web spec: web/src/features/dashboard/widgets/EnergyStatsWidget.tsx
+Native  : apps/apple/Sources/Features/Dashboard/Widgets/EnergyStatsWidget*.swift
+Tests   : apps/apple/Tests/Unit/Widgets/EnergyStatsWidgetTests.swift
+i18n    : apps/apple/Localization/Localizable.xcstrings (+16 `widget.energyStats.*` keys)
+
+--------------------------------------------------------------------------------
+PATH RECONCILIATION (documented — NOT silent drift, covenant #9)
+--------------------------------------------------------------------------------
+The prompt's literal output path `apps/apple/TeslaSync/dashboard-widgets/` is NOT
+a compiled source root in this repo. project.yml compiles the app target from
+`Sources/`, the unit-test target from `Tests/Unit/`, and i18n from
+`Localization/Localizable.xcstrings`. A file under `apps/apple/TeslaSync/...`
+would never be seen by `xcodebuild build test`, i.e. it would be dead, unverified
+code (a "stub as final", covenant #4). To produce a REAL building + testable
+artifact the surface was placed in the actual compiled tree, grouped as a
+dashboard-widgets feature:
+  apps/apple/Sources/Features/Dashboard/Widgets/EnergyStatsWidget.swift
+  apps/apple/Sources/Features/Dashboard/Widgets/EnergyStatsWidgetContent.swift
+  apps/apple/Sources/Features/Dashboard/Widgets/EnergyStatsWidgetData.swift
+  apps/apple/Sources/Features/Dashboard/Widgets/EnergyStatsWidgetLayout.swift
+  apps/apple/Sources/Features/Dashboard/Widgets/EnergyStatsWidgetModel.swift
+  apps/apple/Tests/Unit/Widgets/EnergyStatsWidgetTests.swift
+
+--------------------------------------------------------------------------------
+RUNNER CAPABILITY
+--------------------------------------------------------------------------------
+Full Xcode 26.5 (Build 17F42) present at /Applications/Xcode.app — used via
+`DEVELOPER_DIR` (system `xcode-select` is pinned to CommandLineTools and cannot be
+changed: passwordless sudo is unavailable on this runner).
+KMP shared core built + staged:
+  ▸ apps/shared/gradlew :core:assembleSharedXCFramework  → BUILD SUCCESSFUL in 6m
+  ✓ Shared.xcframework staged → apps/apple/Frameworks/Shared.xcframework
+SwiftUI + Swift Charts + MapKit available (SDK iphonesimulator26.5 / macOS 26.5).
+
+--------------------------------------------------------------------------------
+GATE RESULTS (each step's real outcome)
+--------------------------------------------------------------------------------
+
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+    ** BUILD SUCCEEDED **
+    All five EnergyStatsWidget*.swift + EnergyStatsWidgetTests.swift compiled
+    against the real Shared.xcframework with ZERO errors and ZERO warnings.
+    IOS_BUILD_EXIT=0
+
+[2] iOS UNIT TESTS  (xcodebuild -only-testing:TeslaSyncTests -destination id=<dedicated sim> test)
+    Run on a dedicated, non-contended simulator (TS-slot51) to avoid the shared
+    CoreSimulator instability described in [4]. Verified GREEN 3x:
+      Test Suite 'EnergyStatsWidgetTests' passed
+           Executed 20 tests, with 0 failures (0 unexpected)
+    Every other TeslaSyncTests suite also reported 0 failures.
+    IOS_UNIT_EXIT=0
+
+[3] swiftlint --strict        (full apps/apple project)
+    Done linting! Found 0 violations, 0 serious in 262 files.
+    LINT_EXIT=0
+
+[4] swiftformat --lint apps/apple
+    0/266 files require formatting, 2 files skipped.
+    FORMAT_EXIT=0
+
+[5] check-placeholders.ps1 -Path apps/apple/Sources/Features/Dashboard/Widgets
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    EXIT=0
+    PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+BLOCKED gate steps (runner INFRASTRUCTURE — not code defects)
+--------------------------------------------------------------------------------
+
+[B1] iOS FULL `build test` (TeslaSyncTests + TeslaSyncUITests on the simulator)
+     ** TEST FAILED **
+       The operation couldn't be completed. (Mach error -308 - (ipc/mig) server died)
+       TeslaSyncUITests-Runner ... Error retrieving daemon unix domain socket from
+       simulator, failed after 30 attempts.; Unable to getenv("TESTMANAGERD_SIM_SOCK")
+       while not booting or booted. Current state: Shutdown
+     Cause: this host runs many parallel slots sharing CoreSimulator; booted
+     simulators from sibling slots were observed (e.g. `DTM-slot38`) and the
+     simulator backing this run was shut down externally mid-session, collapsing
+     testmanagerd. A PRE-EXISTING token test (TSDesignTokensTests, not this
+     surface) was reported as collateral when the session died — confirming a
+     session collapse, not a logic failure. The TeslaSyncTests unit bundle (incl.
+     this surface's 20 tests) passes when run in isolation on a dedicated sim [2].
+     IOS_FULL_TEST_EXIT=65
+
+[B2] xcodebuild -scheme TeslaSync-macOS build test
+     ** BUILD FAILED **
+       "TeslaSync-macOS" has entitlements that require signing with a development
+       certificate. Enable development signing ... (DEVELOPMENT_TEAM is "").
+     With signing disabled (CODE_SIGNING_ALLOWED=NO) the macOS app + Shared link
+     ** BUILD SUCCEEDED **, but the generated macOS test bundle then fails to
+     resolve its TEST_HOST (PRODUCT_NAME `TeslaSync` vs TEST_HOST `TeslaSync-macOS.app`,
+     a pre-existing project.yml configuration mismatch).
+     MAC_TEST_EXIT=65
+
+These two are exactly the class of "deferred artifact verification" the repo
+documents in apps/macos-pending-verifications.md: signed Apple build + on-device/
+simulator launch are deferred to a `macos-latest` CI runner; the code is written,
+host-runnable gates are green. No sudo / no signing identity / shared-simulator
+contention on this runner are environmental, not properties of this surface.
+
+--------------------------------------------------------------------------------
+PARITY / ACCEPTANCE NOTES
+--------------------------------------------------------------------------------
+- Data binds the shared `EnergyStore.energyStats` holder (P1/S8) via
+  StateHolderModel → LoadableState<EnergyStatsProjection>; no HTTP in the view.
+- Raw KMP JsonElement decoded via String(describing:)+JSONSerialization (same
+  technique as SharedLiveStreamProvider).
+- States reproduced: loading (skeleton), empty, error (TSQueryError+retry),
+  stale (TSFreshnessIndicator chip), offline (cached value + TSBadge chip), plus
+  compact (1xN big number) / standard (2x4) / wide (3x4+) layouts.
+- i18n: all strings via `widget.energyStats.*` LocalizedStringKeys added to the
+  P1/S10 catalog (16 keys; en + ar/he placeholders). No English literals in code.
+- A11y: per-tile combined VoiceOver elements (label+value+unit), container label,
+  chart accessibilityLabel, hidden decorative icons; Dynamic Type via tokens;
+  Reduce-Motion respected by the shared TS components.
+- Diagnostics: `view.opened` emitted on appear through the injected
+  DashboardWidgetTelemetry seam with surface slug "EnergyStatsWidget" (P1/S11).
+- Registry: id `energy-stats`, default 2x4, min 1x2, max 4x40, with a clamp()
+  enforcing the bounds — verified by tests.
+- Tests (20): adapter (full payload / null-safety / raw-token / non-object /
+  numeric coercion), presentation per-state, registry + clamp, formatters,
+  KPI layout (a11y label/value presence), telemetry seam.
+
+--------------------------------------------------------------------------------
+VERDICT
+--------------------------------------------------------------------------------
+Code complete and committed. Every code-level + host-runnable gate is GREEN
+(iOS build, iOS unit tests 20/20, swiftlint --strict, swiftformat --lint,
+placeholder check). The full `xcodebuild build test` cannot return 0 on THIS
+runner because of (B1) shared-simulator/testmanagerd contention across parallel
+slots and (B2) absent macOS signing identity — both runner-infrastructure limits
+documented as CI-deferred in apps/macos-pending-verifications.md. Reported
+honestly per the covenant (no red-as-green).
+
+IOS_BUILD_EXIT=0
+IOS_UNIT_EXIT=0
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+IOS_FULL_TEST_EXIT=65
+MAC_TEST_EXIT=65
+
+EXIT=65
+STATUS=BLOCKED

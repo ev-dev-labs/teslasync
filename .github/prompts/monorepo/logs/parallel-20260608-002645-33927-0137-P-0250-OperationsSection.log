@@ -1,0 +1,136 @@
+I'll start by exploring the repository structure, reading the web source specification, and checking platform capabilities.
+
+I have the web source. Key findings so far:
+- **`xcodebuild` is BLOCKED**: only Command Line Tools installed, not full Xcode. No iOS Simulator (`simctl` missing).
+- **Available**: `swift` 6.3.2, `swiftlint`, `swiftformat`.
+
+Let me explore the existing Apple app structure to understand conventions before writing native code, and check the dependencies (AccordionSection, helpers, state holders, i18n).
+
+Existing `feature-views/` has 1438 files following a multi-file pattern (`.Adapter.swift`, `.Model.swift`, `.Previews.swift`, etc.). `pwsh` IS available. Let me study a complete reference feature-view set and check for existing OperationsSection files.
+
+No existing OperationsSection. Clear multi-file convention. Let me read a complete reference set and the shared infrastructure (state holders, tokens, i18n, native shared components).
+
+Excellent reference architecture. Let me read the rest of the AlertsSection set (Adapter, Views, Chart, Previews, Tests, strings) and the ActiveOrdersSection table/state patterns in parallel.
+
+Let me read the remaining reference files and locate the shared design-system primitives (TSSpacing, Color.TS, Font.TS, TSFadeIn, TSSkeleton) plus a native RadialGauge and table/row pattern.
+
+Let me locate the exact token definitions and the native gauge component.
+
+Found the shared component library. Let me read the token definitions and the key shared components I'll map to (Disclosure, DataTable, Badge, MetricCard, PieGauge, EmptyState, Skeleton, Motion).
+
+Tokens are generated in `design/generated/apple/Tokens.swift`. Let me read it plus the key shared components.
+
+Now the key shared components. Let me read DataTable, Badges, Metrics, PieGauge, States, Skeletons, and Motion to learn their exact APIs.
+
+Let me check how feature-views actually consume these shared components (to match conventions) and read the remaining shared APIs.
+
+`DataPipelineSection` is the ideal template — same web folder (system/status), uses TSDataTable + TSRadialGauge + TSMetricCard + TSBadge. Let me study its full set plus the remaining shared APIs (MetricCard, EmptyState, Skeleton, FadeIn).
+
+`DataPipelineSection` is the perfect template (same folder, same shared components, AccordionSection wrapper). Let me read its complete set and the web source side-by-side.
+
+This is the gold-standard blueprint. Let me read the remaining DataPipelineSection files (Table, Adapter, Model, Tests, Previews, strings) to complete my understanding.
+
+Let me read the Model, Tests, Previews, and strings to complete the blueprint.
+
+I have the full blueprint. Let me read the template Tests + Previews, confirm remaining shared component signatures, and extract the exact web data shapes (NotificationStats, NotificationLog, AuditLog).
+
+Let me confirm the remaining shared component signatures and extract the exact web data shapes.
+
+All signatures confirmed. Now the exact web data shapes for the three queries.
+
+Now I have the complete data model. Let me check the web `RadialGauge` rendering and `fmtPercent`/`formatDateTime` to faithfully reproduce the gauge center + formatting.
+
+I have the full data model. Let me check the build/lint config (project.yml, swiftlint, swiftformat, placeholder patterns) so my new files comply and are picked up.
+
+`feature-views` is globbed into the app targets, but test targets source from `Tests/Unit`. Let me read the full `project.yml` to learn how `.Tests.swift` and `.strings` files are routed.
+
+Let me confirm how `*.Tests.swift`/`*.Previews.swift` in feature-views are routed (there must be an exclude/link mechanism) so I place files correctly.
+
+`Tests/Unit/FeatureViews` confirms the convention: per-surface files (incl. `.Tests.swift`/`.Previews.swift`) live in `TeslaSync/feature-views/` with the surface prefix — exactly the allowed-files scope. Let me read the web MetricCard layout and the native Typography signatures, then start building.
+
+I now have a complete, precise blueprint mirroring `DataPipelineSection` (same web folder, same shared components). Let me set up the plan and todos, then start creating the surface files.
+
+Now let me create the foundational files — the pure Adapter core and the strings catalog.
+
+Adapter and strings created. Now the Model (state holder + projection + source + telemetry + i18n facade).
+
+Now the main view.
+
+Now the Views file (subviews, bespoke metric card + success gauge, sections, states).
+
+Let me verify the `TSButton` initializer signature before writing the tables.
+
+TSButton confirmed. Now the two DataTables.
+
+Now the previews and the unit tests.
+
+Now the comprehensive unit tests.
+
+All 8 files created. Now let me run the available verification gates — starting with `swiftformat` and `swiftlint` on the new files.
+
+swiftformat passes (0/7 require formatting). Now swiftlint --strict on the new files.
+
+One swiftlint violation: `Views.swift` exceeds the 400-line `file_length` limit (432 lines). I'll split the metric/gauge visuals into a focused `OperationsSection.Metrics.swift`. Let me view the exact blocks to move.
+
+I'll move the metric card + success gauge into a focused `OperationsSection.Metrics.swift` to bring `Views.swift` under the 400-line limit. Removing the two structs and creating the new file, then normalizing with swiftformat.
+
+Now create the focused `OperationsSection.Metrics.swift` with the moved structs, then normalize and re-lint.
+
+Now normalize with swiftformat and re-run both linters across all 8 files.
+
+Views.swift is now 351 lines. Let me run the full lint suite on all 8 Swift files.
+
+Both linters pass clean (0 violations). Now the placeholder gate, run exactly as the gate specifies plus a manual safety grep.
+
+The placeholder gate passes (COUNT=0) and manual grep confirms clean. Let me verify the script actually scanned my files (so the log is honest about coverage).
+
+Line 132 suggests a non-existent path is skipped — the gate's `-Path .../OperationsSection` (a prefix, not a real path) likely scans nothing. Let me confirm and run a meaningful scan of my actual files.
+
+Confirmed — the gate's prefix path scans nothing (vacuous clean). Let me run a real per-file placeholder scan of my Swift files so the result is meaningful.
+
+All files clean of placeholders (real scan). Now let me attempt a supplementary syntax-only parse with the available `swiftc` (full build needs Xcode, but `-parse` validates syntax) as extra evidence.
+
+Core files parse clean. Let me parse the remaining files.
+
+All 8 files parse clean. Now a critical build-safety check the parser can't catch: type-name collisions with the rest of the module (170 sibling surfaces). Let me grep for any duplicate declarations of my public/internal type names.
+
+No collisions detected (no `COLLISION:` lines, reached `=== done ===`). Let me confirm the shell finished.
+
+Confirmed: zero type-name collisions. Let me verify the post-edit structure of `Views.swift` is intact (the section that referenced the moved structs).
+
+Structure intact. Let me attempt a real type-check of the SwiftUI-free core (Adapter + Model are self-contained, importing only Foundation/Observation/OSLog) — this gives genuine compile evidence for the projection + state-holder logic the tests exercise.
+
+The type-check caught a real error `-parse` missed: `globalPrecision` is `internal` but referenced in `public` function default arguments. Fixing by making it public, then re-checking.
+
+Core compiles clean under Swift 6 strict mode. Let me attempt a curated type-check of the SwiftUI view layer together with the shared components it depends on — this would give real compile evidence for the parity-critical view code.
+
+All deps present. Running the curated view-layer type-check.
+
+Those errors are inside a *shared* component file (`States.swift` references `TSInlineCallout` from another file I didn't include) — not my code. Let me broaden the dependency set to the full UI/Feedback/Motion/DataDisplay/Charts/Design component library so intra-library references resolve.
+
+All errors are in *shared* files (`UnitFormatters.swift` needs app-level `UnitPreferences`/`Units` types) — none in my code. Let me narrow to exactly the components I use plus `Banners.swift` (which `States.swift` needs), and isolate any errors in my files.
+
+**Outstanding** — the full view layer + core (7 files) type-checks with **0 errors** under Swift 6 strict concurrency against the *real* shared components. That's genuine compile evidence. Now let me check the gate log directory and write an honest, evidence-backed gate log.
+
+Let me look at how existing feature-view gate logs record status (especially any BLOCKED on xcodebuild) to match conventions.
+
+Key insight: the sibling `DataPipelineSection` log records `STATUS=DONE` by using host-runnable **real-SDK `swiftc -typecheck`** as the compile evidence and **deferring** full `xcodebuild` to a separate P99 acceptance gate. Let me check whether any sibling is `STATUS=BLOCKED` and how iOS-SDK availability is handled, to pick the honest status for this runner.
+
+Decisive finding: all 174 sibling feature-views ended `STATUS=DONE`, but each relied on a **real iOS-SDK typecheck** (`IOS_TYPECHECK_EXIT=0`) on a runner that *had Xcode*. This runner has **only Command Line Tools** — no Xcode, no iOS SDK, no simulator — so I cannot reproduce the iOS-side compile or run `xcodebuild`. Per the prompt's explicit capability clause, that makes this an honest `STATUS=BLOCKED` case. Let me generate the gate log with real command output (not fabricated).
+
+Now appending the gate steps and all host-runnable evidence with real output.
+
+Now appending the supplementary compile evidence (parse + macOS-SDK type-checks) and the final summary.
+
+Let me review the complete gate log for accuracy.
+
+The gate log is complete, honest, and ends with `EXIT=1` / `STATUS=BLOCKED` (rule 10 satisfied) with verbatim API evidence. Let me verify the working-tree state and confirm I haven't touched anything outside scope.
+
+Working tree shows my OperationsSection.* files + log as untracked (the `AIUsageCard.*` modifications are pre-existing, not mine — shared environment). Before finalizing, let me empirically verify a subtle Swift typing concern in my tests: comparing an optional array/count against a literal via `XCTAssertEqual`.
+
+XCTest isn't bundled with Command Line Tools. Let me replicate `XCTAssertEqual`'s exact generic signature to test the type behavior without needing XCTest.
+
+All three optional-vs-literal patterns compile cleanly — my tests are type-correct. Let me clean up temp probes and finalize the todos.
+
+All work is complete and verified to the maximum extent this runner allows. Let me provide the final summary.
+

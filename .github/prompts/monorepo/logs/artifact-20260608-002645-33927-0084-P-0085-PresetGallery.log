@@ -1,0 +1,222 @@
+================================================================================
+P4 · Feature view · 0085 — PresetGallery (Apple)
+Run: 2026-06-08T01:43-0700   Host: Darwin arm64 (macOS 26.x)   Slot: slot-84
+Prompt: P4/feature-views/0085 — Feature view: PresetGallery
+Web source (spec): web/src/features/automations/pages/PresetGallery.tsx
+Mode: code-complete + REAL iOS-18/macOS-15 SDK typechecks + EXECUTED XCTest (24/24) +
+      DEFERRED Xcode app build/test (0005/0009/0039/0084 feature-view precedent, ADR-012). No stubs as final.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift                        swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+  Xcode (DEVELOPER_DIR)        Xcode 26.5 Build version 17F42 
+  iPhoneSimulator SDK          iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)
+  macOS SDK                    MacOSX26.5.sdk (macOS 15.0 deploy target)
+  iPhone 16 simulator          iPhone 16 (83717DEE-70A3-4325-AA61-CBDDD3140989) (Booted) 
+  swiftlint                    /opt/homebrew/bin/swiftlint
+  swiftformat                  /opt/homebrew/bin/swiftformat
+  xcodegen                     /opt/homebrew/bin/xcodegen (Version: 2.45.4)
+  pwsh (placeholder gate)      /opt/homebrew/bin/pwsh
+  swift test (SwiftPM)         runs XCTest on the macOS host — OK
+  KMP Shared.xcframework       BUILDS on this runner (Gradle :core:assembleSharedXCFramework → debug/Shared.xcframework); app-target STAGING + feature-view test-bundle wiring are integration-runner scope (project.yml/Scripts, outside allowed files) → Xcode app build/test DEFERRED
+
+  NOTE on active toolchain: a bare `xcodebuild`/`xcrun simctl` fails because
+  `xcode-select -p` points at /Library/Developer/CommandLineTools (no SDKs). Full
+  Xcode 26.5 IS installed at /Applications/Xcode.app and is used here via the
+  DEVELOPER_DIR override (the 0005/0009/0039/0084 precedent), which unlocks the iOS 18
+  simulator SDK, the macOS 15 SDK, the iPhone 16 simulator, and `swift test`.
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, available and
+  PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles below. The capability-
+  BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT apply.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/PresetGallery.*) ===
+     256 PresetGallery.Adapter.swift
+     250 PresetGallery.Model.swift
+      93 PresetGallery.Previews.swift
+      46 PresetGallery.strings
+      63 PresetGallery.swift
+     317 PresetGallery.Tests.swift
+     334 PresetGallery.Views.swift
+    1359 total
+  Every .swift file <= 334 lines (house file_length 400). Shared tokens (Color.TS /
+  Font.TS / TSSpacing / TSRadius), TSTone, TSButton, TSSkeleton, TSFadeIn/TSStaggerItem,
+  tsGlassPanel, and ContentUnavailableView are REUSED from the P4 core (no redeclaration).
+
+=== PARITY (vs web PresetGallery.tsx) ===
+  Data source -> useAutomationPresets(category) bound via the shared state-holder seam
+    (PresetGallerySource -> PresetGalleryModel). The view performs NO HTTP. useNavigate ->
+    the parent-supplied onInstall closure (web navigate('/automations/new?preset=${id}')).
+    useTranslation -> P1/S10 PGStrings facade. useAutomations is the parent list-surface
+    holder the same S8 layer feeds; this surface only needs the presets query.
+  Projection -> PresetGalleryProjection.cards is a 1:1 port of `presets.map((p) => <PresetCard/>)`:
+    stable key `preset.id`, the icon lookup `iconMap[preset.icon] ?? Shield` (eight SF-Symbol
+    tokens + shield default), the first-trigger label `triggers[0] ? triggerLabels[kind] :
+    noTrigger` (incl. the absent/unknown-kind fallback), and the action count `actions.length`.
+  Composition -> each card mirrors the web GlassPanel(hover, glow=cyan): a cyan-tinted icon
+    tile, the name + trigger subtitle, a neutral `{{count}} actions` badge (TSBadge look,
+    facade-resolved), the 2-line description, and a secondary "Install" button (TSButton) with
+    the plus glyph. The grid is TSFadeIn over a responsive LazyVGrid whose cells cascade with a
+    TSStaggerItem delay (web FadeIn > StaggerContainer > StaggerItem). Recharts/Leaflet -> none.
+  States (all render) ->
+      loading -> a grid of FOUR skeleton cards (web `Array.from({length: 4})`);
+      empty   -> a friendly ContentUnavailableView with the web clock glyph + message
+                 (web `EmptyState`), never a blank box;
+      error   -> the presets-query failure (TSQueryError equivalent + native retry -> refresh)
+                 — the P4 treatment of the web hook's error (the leaf folds it into empty);
+      presets -> the faithful web card grid;
+      stale   -> a "Preset list may be out of date" chip + one auto-refresh per rising edge;
+      offline -> an "Offline — showing cached presets" chip over the cached grid.
+    Each state has a #if DEBUG preview + a unit test.
+  i18n -> ALL EIGHT web-source t() keys resolve through the P1/S10 facade with the web English
+    fallback (the 4 trigger labels + noTrigger + actionCount + install + empty), coverage 8/8;
+    the i18next `{{count}}` interpolation is the native `%lld`. Plus 7 native chrome/a11y keys
+    (empty message, loading, error, retry, stale, offline, install spoken label). No English
+    literal in Swift (Text(verbatim:) over the facade; inline English lives only in PGText fallbacks).
+  a11y -> each card body is one composed VoiceOver element (name, trigger, count, description);
+    the Install control is a SEPARATE focusable element with a "Install {name}" label; the icon
+    tile + count badge are hidden; the retry button + each status chip carry an accessibilityLabel;
+    the loading grid is one labeled element; Dynamic Type via tokens; Reduce Motion gates the
+    card hover lift, the FadeIn/stagger, and the TSSkeleton shimmer.
+  Telemetry -> PresetGalleryModel.start() emits viewOpened(surface:"PresetGallery") -> bridges
+    the shared Telemetry.track (P1/S11). Asserted by a spy test (fires exactly once, idempotent start).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (4 production files + the REAL apps/apple
+    component closure: generated Tokens + Design/TSMaterial + Badges/Buttons/Cards/
+    Typography/Skeletons/Motion), Swift 6 language mode:
+      IOS_TYPECHECK_EXIT=0
+
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+      MAC_TYPECHECK_EXIT=0
+
+[3] swiftc -typecheck — DEBUG previews (-D DEBUG; production + Previews + real closure):
+      PREVIEWS_TYPECHECK_EXIT=0
+
+[4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained
+    SwiftPM harness (real Adapter/Model/Views/surface/Previews + real tokens + real
+    Badges/Buttons/Cards/Typography/Skeletons/Motion, module "TeslaSync"), Swift 6:
+Test Suite 'All tests' started at 2026-06-08 01:44:37.810.
+Test Suite 'PresetActionCountTests' passed at 2026-06-08 01:44:37.814.
+Test Suite 'PresetGalleryAccessibilityTests' passed at 2026-06-08 01:44:37.815.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Test Suite 'PresetGalleryCopyTests' passed at 2026-06-08 01:44:37.816.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Test Suite 'PresetGalleryModelTests' passed at 2026-06-08 01:44:37.817.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'PresetGalleryProjectionTests' passed at 2026-06-08 01:44:37.817.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Test Suite 'PresetGalleryRenderTests' passed at 2026-06-08 01:44:37.818.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Test Suite 'PresetIconTests' passed at 2026-06-08 01:44:37.818.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'PresetTriggerLabelTests' passed at 2026-06-08 01:44:37.819.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+	 Executed 24 tests, with 0 failures (0 unexpected) in 0.005 (0.007) seconds
+Test Suite 'All tests' passed at 2026-06-08 01:44:37.819.
+	 Executed 24 tests, with 0 failures (0 unexpected) in 0.005 (0.009) seconds
+      SWIFT_TEST_EXIT=0
+
+[5] swiftlint --strict on the 6 surface .swift files (config apps/apple/.swiftlint.yml):
+Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0
+
+[6] swiftformat --lint on the 6 surface .swift files (config apps/apple/.swiftformat):
+SwiftFormat completed in 2.62s.
+0/6 files require formatting.
+      FORMAT_EXIT=0
+
+[7] check-placeholders.ps1 — prompt form (literal -Path) + a REAL recursive scan of the
+    shipped files (the literal path has no extension, so the prompt form scans nothing —
+    a clean-but-vacuous pass; the real scan below proves the 7 shipped files are clean):
+  -- prompt form --
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+      PLACEHOLDER_PROMPTFORM_EXIT=0
+  -- real scan of shipped files --
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+      PLACEHOLDER_REALSCAN_EXIT=0
+
+=== GATE — DEFERRED STEP (signed Xcode app build/test) ===
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    DEFERRED to the downstream integration/signed runner (ADR-012; the 0005/0009/0039/0084
+    precedent). Captured real evidence on THIS runner:
+      • xcodegen generate -> TeslaSync.xcodeproj created; the generated pbxproj references all
+        seven PresetGallery.* files (42 refs) across the app + test targets (parity with the
+        0084 ConflictWarnings 42-ref result) — surface is correctly project-wired.
+      • The KMP Shared.xcframework BUILDS here: the project's own pre-build Run Script
+        (Scripts/build-shared-xcframework.sh) ran Gradle :core:assembleSharedXCFramework to
+        "xcframework successfully written out to .../XCFrameworks/debug/Shared.xcframework".
+      • Two integration-runner couplings remain — BOTH outside this prompt's allowed files
+        (apps/apple/TeslaSync/feature-views/PresetGallery.* + this log), so fixing them is
+        out of scope (rule 9 no silent drift, rule 7 no predecessor bypass):
+          (a) Scripts/build-shared-xcframework.sh stages from .../XCFrameworks/release/ but the
+              Gradle task emitted .../debug/ under xcodebuild's Debug CONFIGURATION;
+          (b) project.yml sources feature-views/*.Tests.swift into the APP target, while the
+              unit-test bundles (TeslaSync(/-macOS)Tests) source only Tests/Unit — so the
+              XCTest-importing surface tests need test-bundle wiring the integration runner owns.
+    The surface itself is NOT the blocker: it compiles against BOTH the iOS 18 simulator and
+    macOS 15 SDKs (steps [1]/[2]/[3]) and its full XCTest suite EXECUTES green (24/24, step [4]).
+    Under the integration runner these same tests run in the TeslaSync(/-macOS) test bundle.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source reproduced — the preset card grid (icon +
+      name + trigger label + action-count badge + description + Install) plus the P4 loading/
+      empty/error/stale/offline chrome; each has a #if DEBUG preview + a unit test.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (PresetGallerySource->Model); no
+      view HTTP. Install routes through the parent onInstall closure (web navigate()).
+  [x] Every i18n key from source has a matching catalog key — 8/8 web keys (4 trigger labels +
+      noTrigger + actionCount + install + empty) + 7 native chrome/a11y keys.
+  [x] Accessibility labels on every interactive element (the Install button names the preset;
+      retry button + stale/offline chips labeled; each card carries a composed VoiceOver summary).
+  [x] Tests: adapter/projection + icon-map + trigger-label + action-count + per-state render +
+      model/telemetry/stale + install-dispatch + a11y + copy — 24 methods, EXECUTED green via SwiftPM.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (check-placeholders EXIT=0, real scan).
+  [~] EXIT=0 / STATUS=DONE for all host-runnable gates; the signed Xcode app build/test is
+      DEFERRED with real captured evidence (integration-runner project wiring), per ADR-012.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green   : every EXIT pasted from the real command; the Xcode app build is reported
+                         as DEFERRED with its real couplings, never as green.
+  2  No scope narrowing: every web branch (loading/empty/grid) + ALL EIGHT t() keys (incl. the 4
+                         trigger labels the headline list omits) + the full P4 states contract shipped.
+  3  No skip-and-assume: web source read end-to-end (iconMap ?? Shield, the triggerLabels lookup,
+                         the {{count}} badge, the install navigate, the empty EmptyState) and reproduced.
+  4  No stubs as final : full projection + state holder + views + 24 tests; no placeholder/TODO (gate [7]).
+  5  No parity shortcuts: faithful port of the map() key, the icon fallback, the trigger-label
+                         selection incl. the absent/unknown-kind fallback, and the action-count format.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit project.yml / Scripts/build-shared-xcframework.sh / the
+                         shared Localizable.xcstrings; strings shipped as the per-surface table.
+  8  No commit on red  : committing on green host gates + iOS/macOS+previews compiles + executed
+                         24/24 tests; Xcode app build/test explicitly DEFERRED (captured evidence).
+  9  No silent drift   : changes confined to the allowed PresetGallery.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native PresetGallery shipped at parity with the web source: a pure-Swift
+  projection core (EXECUTED-green XCTest, 24/24) reproducing the iconMap?? Shield lookup, the
+  triggers[0]?triggerLabels[kind]:noTrigger selection, and the {{count}} actions format; the
+  P1/S8 state-holder seam (no view HTTP); the P1/S11 telemetry; the parent-owned install
+  navigation; every state (card grid + loading + empty + error + stale + offline) with a preview
+  and a test; the eight web i18n keys + 7 native keys; a11y labels on every interactive element.
+  All host-runnable gates pass AND the surface compiles against BOTH the iOS 18 simulator and
+  macOS 15 SDKs with the real Xcode 26 toolchain under Swift 6 strict concurrency. The signed
+  Xcode app build/test is DEFERRED to the downstream integration runner (KMP Shared.xcframework
+  release-vs-debug staging in Scripts/* + feature-view test-bundle wiring in project.yml — both
+  outside this prompt's allowed files, not a defect in this surface), matching the
+  0005/0009/0039/0084 "code-complete + DEFERRED Xcode gate" precedent (ADR-012).
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/PresetGallery.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0085-PresetGallery.log
+  git commit -m "feat(apps/apple/feature-views): add PresetGallery surface (P4)"
+
+EXIT=0
+STATUS=DONE

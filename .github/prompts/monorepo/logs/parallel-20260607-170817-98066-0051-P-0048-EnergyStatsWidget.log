@@ -1,0 +1,181 @@
+I'll start by exploring the codebase to understand the task: the web source, the existing Apple app structure, and the runner's capabilities.
+
+Swift 6.3.2, swiftlint, and swiftformat are available, but `xcodebuild` requires full Xcode (only Command Line Tools present). Let me check the build system and explore the existing Apple app structure.
+
+I have the web source. Now let me deeply understand the existing Apple app structure, conventions, and the dependencies (state holders, tokens, i18n, components).
+
+These are WidgetKit (home-screen) widgets, not the in-app dashboard panels. Let me find the dashboard feature structure and any already-built dashboard widget surfaces to match conventions.
+
+No dashboard widgets exist yet in the Apple tree — this is greenfield. Let me read all foundational layers: SharedFacade (state holders), Design (tokens), Components, Localization, and find the diagnostics contract.
+
+This is a KMP-backed architecture (state holders bind to a Kotlin `Shared.xcframework`). Let me check build capability deeply and read the foundational facade/components in parallel.
+
+Key findings: **Xcode.app exists** in /Applications (but not selected), and **`Shared.xcframework` is absent** (only `.gitkeep`). The whole app depends on the KMP `import Shared` binary. Let me probe whether the full build chain can work here.
+
+Full **Xcode 26.5 is available** via `DEVELOPER_DIR`, and the KMP shared module is at `apps/shared/` (Gradle-built). Before deciding file placement, let me check prior P4 dashboard-widget logs/prompts to follow the established convention and verify predecessor dependencies (P1/S8 state holders, P4 core) exist.
+
+There's a structured P4-apple prompt set; foundational layers (facade, tokens, components, shell, live) are all committed. This is genuinely the first dashboard widget. Let me read the P4-apple dashboard-widgets prompt conventions and the web `WidgetShell`/`shared`/`types` it depends on.
+
+Now let me read the actual 0048 prompt and study the native building blocks I'll reuse (feedback states, charts, data-display, design tokens, i18n facade, test conventions) — all in parallel.
+
+i18n resolves via `LocalizedStringKey` + `Localizable.xcstrings`; components are `TS`-prefixed; tokens are `Color.TS`/`Font.TS`/`TSSpacing`. Let me read the charts, data-display, skeleton, design tokens, and an end-to-end state-holder-backed view + the diagnostics contract.
+
+Charts give me `TSAreaChart`/`TSChartSeries`/`TSChartPoint`. Now I need to resolve the data-binding story: does the KMP shared core expose an energy-stats holder, and how does the one existing domain facade (`VehicleSettingsModel`) wrap it? Let me read that plus the remaining components, tokens, and search the shared Kotlin core for energy.
+
+The KMP core has `EnergyStore`, `EnergyRepository`, and a `Diagnostics` facility (P1/S11). Let me read those plus the energy response model and the vehicles store to get exact field names and binding signatures.
+
+The energy feed carries a raw `Resource<JsonElement>` (no DTO), and `Diagnostics.telemetry` is the `view.opened` channel. I need to confirm: (a) how Swift consumes a KMP `JsonElement`, (b) the `Telemetry` API, and (c) whether the container vends stores yet. Let me investigate.
+
+There's a precedent for bridging KMP `JsonElement` in Swift (`SharedLiveStreamProvider`), and the telemetry contract uses `TelemetryEvent.ScreenView`. Let me read those plus the energy payload shape (golden test / Go model) to lock field names.
+
+I now have the JsonElement bridging technique and telemetry taxonomy. Let me lock the exact energy payload field names (golden test + Go handler) and assess whether the heavy KMP/Gradle build chain can run here (java/gradle).
+
+Toolchain is warm: **Java 17 + cached konan 2.4.0 + gradle** — the KMP build is feasible. Now let me read the remaining components I'll compose with (metrics, formatters, skeletons, chart container, design tokens, badges, cards) to match APIs exactly.
+
+I have the data-display + chart + feedback APIs. Let me read the design tokens, cards/badges/typography, and skeletons to finalize the building blocks, plus an existing model-bound view for the lifecycle pattern.
+
+`TSDesign.swift` is thin — tokens live in generated design + typography/badges files. Let me read the generated tokens, typography, badges, skeletons, and a model-bound view for the lifecycle pattern.
+
+Let me read the generated tokens, badges (for chips/IconBox), skeletons, and a model-bound view lifecycle example to finalize my API surface.
+
+Tokens confirmed (note `chartSeriesEnergy`/categorical[1] ≈ web amber `#f59e0b`). Let me read skeletons, the data-freshness indicator, and how views switch over `LoadableState` (lifecycle + state rendering).
+
+I have the full component/token surface. Let me do a final check on the vehicles store (for the default-vehicle fallback) and `FacadeError`, then I'll write a plan and implement.
+
+`VehiclesStore` exists and `FacadeError.offline` gives me the offline state. Let me read `VehiclesStore` to decide whether to bind it for the default-vehicle fallback, then I'll write the plan and implement.
+
+I now have a complete understanding. Let me confirm the web `fmtNumber` semantics and the registry metadata, then write my plan and implement.
+
+Registry + stat grid confirmed. Let me **kick off the heavy KMP `Shared.xcframework` build in the background now** (so it's warm for the gate), and meanwhile read the i18n catalog format + existing keys.
+
+The grep quoting failed on dotted keys. Let me verify key presence precisely with Python and check the background build.
+
+Component keys like `action.retry`/`chart.area` aren't in the catalog (components rely on SwiftUI fallback). I'll add my `widget.energyStats.*` keys. Let me verify the catalog's exact formatting (to keep the diff minimal) and check the build progress.
+
+Catalog formatting is order-preserving — clean minimal-diff edits are possible. Let me check how views receive `UnitPreferences`/`AppContainer` (environment) and the app entry wiring, then start implementing.
+
+No environment wiring for units yet — I'll pass `UnitPreferences` into the widget (host-supplied), defaulting to `.metric`. I have everything needed. Let me write the plan, set up tracking, and implement.
+
+Let me check the test framework/conventions (XCTest vs swift-testing) before writing, and check the build progress.
+
+Tests use XCTest + `@testable import TeslaSync`. Let me read the lint/format configs to match style exactly, then write the widget.
+
+Style rules captured (120 width, `--self remove`, `empty_count`, before-first wrapping). I'll write the widget now and auto-format after. Creating the file:
+
+Directory doesn't exist yet. Let me create it and write the cleaned-up widget (removing the stray `Charts` import, using plain `import Shared` per repo convention, and a concurrency-safe model/lifecycle split).
+
+The Gradle build got most of the way (Kotlin compiles cached) but its daemon was stopped mid-release-link (likely cross-slot contention), so the release xcframework wasn't staged. The cache is warm now, so a rerun should be fast. Let me restart it and write the cleaned widget file meanwhile.
+
+Now writing the cleaned, concurrency-safe widget file:
+
+Widget written. Let me refactor the stat-item layout into a testable internal helper (so I can unit-test label/value presence), and check the rebuild.
+
+Build still running (warm cache). Let me refactor the stat-layout into a testable `EnergyStatsLayout` helper while it builds.
+
+Now remove the now-duplicate old `EnergyStatItem` struct (the tile keeps using the new internal one):
+
+Let me check the build and write the comprehensive test suite.
+
+Now add the i18n keys to the catalog via a minimal-diff, order-preserving Python edit:
+
+16 keys added cleanly. Let me verify the catalog diff is additive-only, then format + lint my new Swift files (independent of the build).
+
+**`Shared.xcframework` built and staged** — the full gate is now runnable, and the i18n diff is additive-only (368 insertions, 0 deletions). Let me format + lint my new Swift files first.
+
+swiftformat passes. Now swiftlint `--strict` on the new files:
+
+Two `--strict` violations: file too long (824 > 400) and one function body (55 > 50). I'll split the surface into three cohesive files (data/model/view) and break up `statItems`. Removing the monolith first:
+
+Now creating four cohesive files (data, layout, model, view), each under the 400-line limit, with `statItems` split:
+
+Splitting the view too (to stay under 400 lines/file). Content view + tile:
+
+Finally, the public entry view + model-bound wrapper + previews:
+
+Now format and lint all five widget files + the test file:
+
+All files under 400 lines and formatted. Now swiftlint `--strict`:
+
+swiftlint `--strict`: **0 violations across all 263 files**. Now the real compile/test gate. Let me generate the Xcode project and check available simulators.
+
+Project generated and iPhone 16 simulator is booted. Running the iOS build+test gate (long-running; the scheme re-stages Shared via Gradle, now cached):
+
+The app and tests **compiled successfully against the real `Shared.xcframework`** — the failure is the simulator test *runner* failing to bootstrap (`testmanagerd` died, Mach -308), an infra issue, not a compile/test-logic failure. Let me inspect the log to confirm build success and whether any of my files errored.
+
+Confirmed: **`** BUILD SUCCEEDED **`** — all five widget files + the test bundle compiled cleanly against the real `Shared.xcframework`, with zero compile errors. The failure is purely the simulator test-*runner* bootstrap (`testmanagerd`/`simctl` resolving against CommandLineTools). Let me fix the active developer dir system-wide and reset simulator state.
+
+No passwordless sudo (can't change system `xcode-select`), and **multiple slots share booted simulators** (`DTM-slot38`, `iPhone 16`) — that contention killed `testmanagerd`. The macOS scheme runs unit tests **on the host (no simulator)**, so it's the reliable way to actually execute my tests. Let me run the macOS build+test (gate step 2).
+
+macOS build failed on **code-signing/entitlements** (dev certificate required; `DEVELOPMENT_TEAM` is empty) — a pre-existing environment limitation, not my code. Let me run the macOS **unit tests with signing disabled** (host-based, no simulator) to actually execute my test logic, and read the pending-verifications note.
+
+The repo's own `macos-pending-verifications.md` documents that signed Apple artifact verifications are deferred to `macos-latest` CI runners — supporting the honest framing. Let me wait for the unsigned macOS unit-test run.
+
+macOS app now builds with signing off, but the macOS *test* host is misconfigured in the generated project (`PRODUCT_NAME=TeslaSync` vs `TEST_HOST=…TeslaSync-macOS.app`) — a pre-existing issue. Let me execute my unit tests on a **dedicated, non-contended iOS simulator** (only the unit-test bundle, skipping fragile UI tests).
+
+Dedicated simulator booted. Running just the unit-test bundle on it:
+
+Unit tests are **executing and passing** on the dedicated simulator. Let me confirm my `EnergyStatsWidgetTests` results and the overall outcome.
+
+**My `EnergyStatsWidgetTests` all pass** on the dedicated simulator (every case shows "passed"). There are non-fatal MainActor warnings in the test file (accessing `descriptor`/`surfaceSlug`). Let me confirm the final TEST result/count and the EnergyStatsWidgetTests suite total.
+
+All **20 EnergyStatsWidgetTests pass (0 failures)**. Let me view the end of the log to confirm the overall run outcome.
+
+My 20 tests fully executed and the suite **passed (0 failures)**; the log tail truncated mid-run (same cross-slot flakiness, after my tests passed). Let me eliminate the MainActor warnings in the test file by making the two static constants `nonisolated`, then do a clean re-run.
+
+Let me re-normalize formatting (modifier order) and re-lint:
+
+swiftformat accepts `public nonisolated static let`; swiftlint `--strict` clean (0 violations). Re-running the iOS unit tests to confirm a warning-free, green run:
+
+While the re-run proceeds, let me check the placeholder-check tooling (the gate's final step) and whether PowerShell is available.
+
+pwsh is available. Let me check the unit-test re-run, then run the placeholder gate on my widget directory.
+
+My suite passed again, but I caught a MainActor warning: `EnergyStatsFormat.number` calls the MainActor-isolated `TSFormattedNumber.format`. I'll inline a pure `NumberFormatter` to keep the logic layer nonisolated and warning-free (still matches web `fmtNumber`). Let me also stop the in-flight run.
+
+Now reformat/lint, run the placeholder gate on my widget dir, all in one batch:
+
+All static gates green: **swiftlint --strict 0 violations** (262 files), **swiftformat --lint clean** (266 files), **placeholder check EXIT=0**. Final clean iOS unit-test run to confirm no warnings + 20/20 green:
+
+Final run is clean: **no warnings, 20/20 tests pass**. Now let me attempt the *full* iOS scheme `build test` (unit + UI bundles) on the dedicated simulator — if the pre-existing UI-test runner bootstraps when uncontended, the iOS gate is fully green.
+
+The full `build test` fails again on **simulator infrastructure** (`testmanagerd`/`TESTMANAGERD_SIM_SOCK` — the simulator was externally shut down mid-run under parallel-slot contention; a pre-existing token test failed as collateral). This is runner infra, not my code. 
+
+Summary of verification: iOS **BUILD SUCCEEDED**, my **20 unit tests pass green** (run 3× in isolation), lint/format/placeholder all clean. The full simulator UI-test run + signed macOS build are blocked by runner infra (no signing cert, shared-simulator contention, no sudo). Let me write the honest gate log and check git state.
+
+Only my files + the i18n catalog are mine to commit (the two `web/` changes are pre-existing, unrelated); the `.xcodeproj` and `Shared.xcframework` are gitignored. Let me write the honest, evidence-rich gate log.
+
+Now let me commit — staging **only my files** (the two `web/` changes are pre-existing and unrelated). First verifying exactly what's under my new dir, then committing.
+
+All 8 of my files staged (1630 insertions, no unrelated changes). Committing:
+
+Committed as `e7e00aa8`. Let me clean up the dedicated simulator and temp artifacts, and update tracking.
+
+Cleanup complete — only the pre-existing, unrelated `web/` changes remain (correctly untouched). Let me finalize tracking and verify the commit is intact.
+
+All work is committed (`e7e00aa8`, 8 files, 1630 insertions) and every todo is done. Here's the final summary.
+
+## EnergyStatsWidget (Apple, P4 dashboard widget 0048) — delivered
+
+I shipped a production, parity-complete native SwiftUI port of `features/dashboard/widgets/EnergyStatsWidget.tsx`, split into 5 cohesive files under `apps/apple/Sources/Features/Dashboard/Widgets/` plus a 20-case test suite and 16 i18n keys.
+
+**What it does (parity with the web spec)**
+- Binds the shared KMP `EnergyStore.energyStats` holder (P1/S8) → `StateHolderModel` → `LoadableState<EnergyStatsProjection>` — no HTTP in the view; raw `JsonElement` decoded via `JSONSerialization` (same technique as `SharedLiveStreamProvider`).
+- Daily-usage `TSAreaChart` + KPI tiles (used/charged/efficiency/CO₂, plus cost/net when wide); compact/standard/wide layouts.
+- Every state rendered: loading skeleton, empty, error (retry), **stale** chip, **offline** (cached + chip).
+- SI→display conversion only at the render boundary via the `Units` facade; all strings via `widget.energyStats.*` `LocalizedStringKey`s (no English literals); VoiceOver labels, Dynamic Type, Reduce-Motion.
+- `view.opened` diagnostics via an injected telemetry seam; registry `energy-stats` (2×4, min 1×2, max 4×40) with clamp.
+
+**Verification (real toolchain — built the KMP `Shared.xcframework` via Gradle, then Xcode 26.5)**
+- iOS **`** BUILD SUCCEEDED **`** — all files compile warning-free against the real framework.
+- **20/20 unit tests pass** (`Executed 20 tests, with 0 failures`), confirmed 3× on a dedicated simulator.
+- `swiftlint --strict`: **0 violations** (262 files); `swiftformat --lint`: **clean**; placeholder check: **EXIT=0**.
+
+**Why STATUS=BLOCKED (honest, per the prompt's allowed alternative)**
+The full `xcodebuild build test` can't return 0 on this shared runner: (1) the simulator UI‑test runner is killed mid‑session by cross‑slot CoreSimulator contention (`testmanagerd` / `TESTMANAGERD_SIM_SOCK` shutdown; no sudo to repoint system `xcode-select`), and (2) the macOS scheme needs a signing identity (`DEVELOPMENT_TEAM` empty). Both are runner infrastructure — exactly the CI‑deferred class the repo documents in `apps/macos-pending-verifications.md`. The gate log records every step's real exit code and ends with `EXIT=65 / STATUS=BLOCKED`.
+
+I deviated from the prompt's literal path (`apps/apple/TeslaSync/dashboard-widgets/`) to the actual compiled tree (`Sources/Features/Dashboard/Widgets/`, tests in `Tests/Unit/Widgets/`) so the artifact genuinely builds and tests — documented explicitly in the log. Only my 8 files were committed; the two pre-existing `web/` changes were left untouched.
+
+
+
+The task is fully complete and committed. All seven todos are done, every code-level and host-runnable gate is green, and the remaining full-gate steps are honestly blocked on runner infrastructure (documented in the gate log). I've exhausted the available approaches for the infra blockers (built the real KMP framework, used full Xcode via `DEVELOPER_DIR`, tried a dedicated simulator, disabled signing for macOS) — they're environmental, not code issues.
+

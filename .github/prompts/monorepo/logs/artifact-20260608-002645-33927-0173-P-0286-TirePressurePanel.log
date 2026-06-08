@@ -1,0 +1,151 @@
+================================================================================
+P4 · Feature view · 0286 — TirePressurePanel (Apple)
+Run: 2026-06-08T02:46-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/173
+Base: c9c6fdb9f
+Prompt: P4 · feature-views · 0286 — TirePressurePanel (Apple)
+Web source (spec): web/src/features/vehicles/components/telemetry-panels/TirePressurePanel.tsx (103 lines)
+Mode: code-complete + host-validated; DEFERRED full-app Xcode scheme build/test
+      (ADR-012 macOS-pending), matching predecessors 0231 FSMTimelineChart /
+      0180 AlertMessageEditor / 0096 AcDcStatsPanel / 0010 ToolCard.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (Xcode) .............. Apple Swift 6.3.2, Target arm64-apple-macosx          OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override         OK
+  iOS simulator SDK .......... iPhoneSimulator 26.5 (deployment target iOS 18.0)     OK
+  macOS SDK .................. MacOSX 26.5 (deployment target macOS 15.0)            OK
+  iOS simulator device ....... iPhone 16 present + booted (simctl via Xcode)         OK
+  swiftlint .................. 0.63.x                                               OK
+  swiftformat ................ 0.61.x                                               OK
+  xcodegen ................... 2.45.x                                               OK
+  pwsh (placeholder gate) .... 7.6.x                                                OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks has only .gitkeep) WARN
+  codesign identities ........ none (BLOCKER for signed app gate, ADR-012)          WARN
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used" lists none; the web source is a CSS-grid of four value
+  cards + a status pill — no Recharts, no Leaflet). The core requirement — SwiftUI —
+  is available and PROVEN by REAL iOS-18 + macOS-15 SDK `swiftc -typecheck` AND a
+  passing 40-test XCTest run below. The capability-BLOCKED escape hatch therefore
+  does NOT apply; the surface is authored and host-validated for real, STATUS=DONE.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/TirePressurePanel.*) ===
+  TirePressurePanel.Adapter.swift   336  Foundation-only pure core: the four `TireCorner`
+                                         identities (FL/FR/RL/RR keys), the SI-Pascal band
+                                         thresholds (verbatim `TIRE_PRESSURE_PA`), `paToKpa`,
+                                         the variant + safe/critical predicates + verdict
+                                         selector (web getColor/getBorder/tirePressureVariant
+                                         + the allGood/anyBad badge), the display-unit prefs,
+                                         the `convertPressureFromSI` + `formatPressure` +
+                                         locale `formatNumber` ports, and the readings builder.
+  TirePressurePanel.Model.swift     247  P1/S11 telemetry seam (OSLog `view.opened`) + P4
+                                         connectivity axis + input snapshot (tireData + useUnits
+                                         prefs + lifecycle) + pure projection (loading/empty/
+                                         error/data) + P1/S8 `TirePressureSource` protocol +
+                                         @Observable `TirePressureModel` (project on apply,
+                                         stale one-shot auto-refresh) + InMemory source +
+                                         P1/S10 strings facade.
+  TirePressurePanel.Views.swift     291  Token-driven chrome: variant→semantic-token map, the
+                                         2×2 `LazyVGrid` of corner cards (tinted value + border),
+                                         the verdict badge (SF Symbol + localized word), loading
+                                         skeleton grid, empty (ContentUnavailableView), error
+                                         (+retry). VoiceOver labels on every cell + badge.
+  TirePressurePanel.swift           150  The composed surface + TSGlassPanel card + gauge header +
+                                         freshness chip + refresh + stale/offline banner + phase
+                                         switch (loading/empty/error/data) + view.opened lifecycle.
+  TirePressurePanel.Previews.swift  128  #if DEBUG previews: all-normal / warning / critical /
+                                         partial(bar) / empty / loading / error / stale / offline.
+  TirePressurePanel.strings          62  P1/S10 catalog — the web `common.tirePressure` key + the
+                                         "no data" copy + corner abbreviations/names + verdict
+                                         labels + a11y band names + P4 freshness/loading/error.
+  TirePressurePanel.Tests.swift     370  XCTest (40): classifier (paToKpa, band variants incl.
+                                         inclusive boundaries, safe/critical predicates), verdict
+                                         (allGood precedence, attention, check, missing-corner),
+                                         format (psi/bar/kPa convert, grouping, precision override,
+                                         nil sentinel, formatPascals), readings builder, projection
+                                         (error/loading/empty/data), model (telemetry once, push,
+                                         stale auto-refresh once + re-arm, offline no-refresh,
+                                         manual refresh, stop/re-arm, slug), accessibility content.
+  Total 1584 lines (7 files). Every .swift file <= 370 lines (house file_length 400);
+  largest Tests.swift 370, Adapter.swift 336. Zero `// parity:allow` opt-outs.
+
+=== PARITY (vs web TirePressurePanel.tsx) ===
+  Data sources (web → native P1/S8 source seam):
+    tireData prop (parent-owned)            → TirePressureSource → TirePressureInput.snapshot
+    useTranslation                          → TirePressureStrings facade (P1/S10)
+    useUnits().formatPressure               → TirePressureUnitPrefs in the input + the
+                                              TirePressureFormat port (no KMP/Shared dep)
+  Verbatim web logic ported + unit-pinned:
+    TIRE_PRESSURE_PA = {206800, 241300, 310300, 344700} Pa · paToKpa = pa/1000 (null/NaN→nil) ·
+    variant: <LOW_CRITICAL||>HIGH_CRITICAL→danger; <LOW_WARNING||>HIGH_WARNING→warning; else
+    success; nil→neutral (web getColor/getBorder) · verdict: allGood(every corner finite & in
+    [LOW_WARNING,HIGH_WARNING]) ? allNormal : anyBad(any finite & outside critical) ? attention :
+    checkPressure (web ternary precedence) · formatPressure: convertPressureFromSI(kPa,unit)
+    {kPa|psi=/6.894757|bar=/100}, precision 1, locale grouping, null→'—' (web default unit 'bar').
+  Web Tailwind → native tokens (ADR-006 semantic): green→statusSuccess, amber→statusWarning,
+    red→statusDanger, --text-muted→textMuted; card border = same tone @30% (web border-*-500/30);
+    glass card → TSGlassPanel. Badge symbols ✓/✗/⚠ → SF Symbols (checkmark.circle.fill /
+    xmark.octagon.fill / exclamationmark.triangle.fill) + localized word (no glyph in i18n).
+  States (all render, never a blank box): loading(skeleton 2×2 + badge) · empty(web "No tire
+    pressure data available") · error(+retry) · data(grid+verdict) · stale(chip+one auto-refresh)
+    · offline(cached+chip) — the P4 freshness envelope around the web `tireData ? grid : noData`.
+  i18n: the source title key (common.tirePressure) + the no-data copy + corner/verdict/a11y/
+    chrome (29 keys) all resolve via the P1/S10 facade; catalog carries the verbatim web English.
+  a11y: per-corner VoiceOver label (name, formatted pressure, band) + verdict spoken summary +
+    header trait + refresh/retry labels; Dynamic Type via Font.TS; reduce-motion-safe (TSFadeIn).
+  Telemetry: emits view.opened with surface slug "TirePressurePanel" once (P1/S11), asserted.
+
+=== HOST-RUNNABLE GATES (all green) ===
+  swiftformat --lint <surface> ................ 0/6 require formatting              FORMAT_EXIT=0
+  swiftlint lint --strict <surface> ........... Found 0 violations, 0 serious       LINT_EXIT=0
+  check-placeholders.ps1 -Language swift ...... PLACEHOLDER_COUNT=0 ALLOWED=0       PLACEHOLDER_EXIT=0
+  swiftc -typecheck iPhoneSimulator (ios18.0-simulator, swift6, strict-concurrency) IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (macos15.0, swift6, strict-concurrency) ................. MAC_TYPECHECK_EXIT=0
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6) ........... 40/40 passed, TEST_EXIT=0
+      → TirePressureClassifierTests (8) · TirePressureVerdictTests (5) ·
+        TirePressureFormatTests (8) · TirePressureReadingsTests (3) ·
+        TirePressureProjectionTests (5) · TirePressureModelTests (8) ·
+        TirePressureAccessibilityTests (3)
+      Harness links the REAL generated Tokens.swift (Color.TS/Font.TS/TSSpacing/TSRadius);
+      the out-of-scope shared atoms (TSGlassPanel/TSFadeIn/TSSkeleton/TSButton) are provided
+      with their exact public signatures (the atom library is the P4 component-library
+      bundle's scope). The surface imports `Shared`/KMP ZERO times.
+  xcodegen generate (project spec enumerates the 7 new files across iOS+macOS targets) . XCODEGEN_EXIT=0
+
+=== DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test ===
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. Direct target builds were attempted to capture honest evidence
+    (skipping the scheme's Gradle pre-action):
+      • xcodebuild -target TeslaSync-macOS build → EXIT 65, root error:
+        "There is no XCFramework found at .../Frameworks/Shared.xcframework" — ZERO TirePressurePanel errors.
+      • xcodebuild -target TeslaSync (iphonesimulator) build → EXIT 65, SAME root error — ZERO TirePressurePanel errors.
+    The build fails at dependency resolution before compiling ANY Swift source. The blockers are
+    PRE-EXISTING, UNRELATED parallel-merge state in the shared app target — ZERO of which
+    originates in this surface (all verified present in THIS tree):
+      • Shared.xcframework not staged (apps/apple/Frameworks has only .gitkeep); the scheme
+        pre-action builds it via the Kotlin/Native Gradle toolchain (the P1/S3 artifact already
+        tracked macOS-pending in apps/macos-pending-verifications.md).
+      • `struct DashboardWidgetSize` redefined across 15 files (Sources/DashboardWidgets/* +
+        TeslaSync/dashboard-widgets/*) — "invalid redeclaration" across the app target.
+      • 205 co-located feature-view *.Tests.swift `import XCTest` into the app target (this
+        surface's 1 test file follows that SAME established sibling convention; it does not
+        introduce a new failure class).
+      • No macOS development-signing identity (ADR-012).
+    This surface's OWN code is proven to compile against the real iOS-18 + macOS-15 SDKs
+    (typechecks above) and its logic runs green (40/40 XCTest). The full-app build/test is
+    recorded in apps/macos-pending-verifications.md for the P99 acceptance gate on a
+    macos-latest runner with signing identities + the staged Shared.xcframework.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all web states reproduced (loading/empty/error/data/stale/offline).
+  [x] Hooks bind to the shared P1/S8 source seam; no direct HTTP from the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (title + no-data + 27 chrome).
+  [x] Accessibility labels present on every corner cell + the verdict badge + every interactive control.
+  [x] Tests: adapter unit tests + per-state model tests + a11y label tests (40 total, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (stub gate: 0, 0 opt-outs).
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing unrelated blockers,
+      evidenced above); host-runnable equivalents (real-SDK typecheck both platforms + 40/40 XCTest) green.
+
+EXIT=0
+STATUS=DONE

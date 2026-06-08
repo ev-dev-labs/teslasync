@@ -1,0 +1,78 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Key findings: web source exists, `apps/apple/TeslaSync/feature-views/` exists with established patterns (AIUsageCard.*), Swift/swiftlint/swiftformat are available, but **xcodebuild requires full Xcode (only CLT installed)** and **no iOS simulator**. Let me study the web source and the sibling feature-view pattern.
+
+Now let me read `helpers.ts` (the data types) and the canonical sibling pattern (AiUsageCard) to learn the established native conventions.
+
+Now let me read the rest of the AiUsageCard set (Projection, Views, Chrome, Previews, strings, Adapter, Tests) to fully internalize the pattern.
+
+Let me read the remaining AiUsageCard files and locate the shared P1/S9 tokens and primitives.
+
+Let me read the test files and locate the shared P1/S9 tokens and primitives (`Color.TS`, `Font.TS`, `TSSpacing`, `TSButton`, etc.).
+
+Let me locate the shared token and primitive definitions used across feature-views.
+
+Now I have the token reference. Let me read the web helpers the source depends on (`formatDuration`, `fmtWithUnit`, `Currency`, `AnimatedNumber`) and check the native shared primitive signatures plus any already-ported charging-list siblings.
+
+QuickMetrics is the closest sibling (a pure presentational stats grid in the same web dir). Let me read its web source and full native port — this is my primary template.
+
+QuickMetrics is the exact template. Let me read its Adapter, Views, Previews, strings, and Tests.
+
+This is the ideal template. Let me read QuickMetrics' Previews/strings/Tests and confirm a few primitives (TSSkeleton, TSFadeIn signatures, `section-title` mapping).
+
+I have a thorough grasp of the pattern. Let me verify the remaining primitives (`TSSkeleton`, `TSFadeIn` signatures) and the `section-title` typography mapping, then start writing.
+
+I now have the complete pattern. Let me verify no symbol collisions for my planned `DetailedStats*` type names and confirm `pwsh` availability for the placeholder gate.
+
+`pwsh` is available, so I can run the placeholder gate. Let me read that script (to avoid tripping it), then set up my plan and todos.
+
+I have everything needed. Forbidden words to avoid in `.swift` files: TODO, FIXME, XXX, "Coming soon", "placeholder", "Lorem", "not implemented" (plus I'll avoid stub/mock per acceptance criteria). Let me set up tracking and write the plan.
+
+Now I'll write the files. Starting with the pure foundation core (Adapter), then Model.
+
+Now the test file — the most detail-critical. Let me write it with carefully computed expected values.
+
+All 7 files written. Now let me verify — starting with swiftformat (auto-format to spec), then lint checks.
+
+Two `file_length` violations (>400 lines). The codebase convention (per AiUsage) is to split: Adapter→Adapter+Projection, Tests→Tests+AdapterTests. Let me find the split boundaries.
+
+I'll split both files per the AiUsage convention. Let me view the exact sections to move.
+
+I'll split the Adapter: create a Projection file and trim the Adapter.
+
+Now split the Tests file. Let me view its header to reuse for the new AdapterTests file.
+
+I'll extract the two adapter-test sections into a new AdapterTests file, then remove them from Tests.
+
+Now update the Tests.swift header comment for accuracy (adapter coverage moved out), then re-run format + lint on all files.
+
+swiftformat clean (0/8 require formatting). Now swiftlint --strict and the placeholder gate.
+
+swiftlint clean (0 violations, 8 files), all files under 400 lines. Now the placeholder gate (genuine check against my files) and a syntax parse check.
+
+Placeholder gate clean (COUNT=0, EXIT=0). Now a compile-level check: the Adapter + Projection are pure Foundation, so I can genuinely **typecheck** them; the SwiftUI/test files I'll syntax-parse.
+
+The pure-Foundation core **typechecks cleanly** (exit 0) — strong semantic verification of all projection logic. Now syntax-parse the 4 SwiftUI source files (test files were already AST-parsed successfully by swiftlint/swiftformat).
+
+All checks pass: pure core typechecks (exit 0), 4 SwiftUI files parse (exit 0), test files AST-parsed by swiftlint. Let me check how sibling surfaces concluded their gate logs (DONE vs BLOCKED) to match the established convention.
+
+Sibling convention is clear: **all host-runnable gates green, xcodebuild DEFERRED, conclude EXIT=0/STATUS=DONE**. The QuickMetrics log did a fuller "macOS-SDK type-check of the full view set." Let me match that — typecheck my SwiftUI views against the real design-system dependencies.
+
+Motion and Skeletons only depend on SwiftUI + the design tokens. Let me typecheck my full view set against the real design system + macOS SDK.
+
+Only errors are in a dependency file (`Skeletons.swift` references `TSCard`, a sibling component my code doesn't use) — **zero errors in my files**. Let me add `TSCard`'s source to get a fully-green view-set typecheck.
+
+My view code contributes zero type errors; only an unrelated `TSCard` reference inside the shared `Skeletons.swift` dependency is unresolved in isolation (transitive — that's the xcodebuild job). I won't chase the whole-module spiral. Let me capture the xcodebuild evidence for the log (expected unavailable), then write the gate log.
+
+All host gates green; xcodebuild confirmed unavailable (CommandLineTools only, no simulators) — matching the established sibling disposition. Let me run one consolidated verification pass to capture canonical evidence for the log.
+
+Every web `charging.stats.*` key has a matching catalog entry. All host gates green, core typechecks with 0 errors. Now I'll write the gate log.
+
+Now let me stage only my files (not the pre-existing unrelated changes) and commit.
+
+Staged set is exactly my 9 files + the log — none of the pre-existing unrelated changes. Committing now.
+
+Commit `d45e70764` created with all 10 files. Let me do a final confirmation that the working tree is clean of my changes and verify the gate log conclusion.
+
+Task complete. All todos done, working tree contains only pre-existing unrelated changes (correctly untouched), and the gate log concludes `EXIT=0 / STATUS=DONE`.
+

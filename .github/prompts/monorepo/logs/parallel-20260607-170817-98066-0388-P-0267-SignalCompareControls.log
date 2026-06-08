@@ -1,0 +1,128 @@
+I'll start by exploring the task requirements: the web source spec, the existing Apple app structure, and tooling availability.
+
+Tools are available (xcodebuild, swiftlint, swiftformat, pwsh). Now let me study the established Apple patterns. The `feature-views` dir has 1332 entries — I'll find sibling examples and the shared infrastructure (P1/S8 state holders, S9 tokens, S10 i18n, S11 diagnostics).
+
+A clear 7-file pattern per feature view: `.swift`, `.Adapter.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`. Let me find a controls/filter sibling (closest analog to a pure-controls component) and read the shared infrastructure.
+
+`NotificationFilterBar` is the closest analog (a filter/controls bar). Let me read it completely along with the project tooling situation.
+
+`NotificationFilterBar` is the ideal template — a pure filter/controls bar. Let me read its complete file set to learn the exact conventions.
+
+Excellent architecture clarity. Let me read the rest of the template: Adapter, Views, Controls, Seams, Previews, strings, and both test files.
+
+Now the View/Controls layer, the strings, and the test files to complete my understanding of conventions.
+
+Let me read the previews, strings, both test files, and locate the shared design-token/component definitions (TSFadeIn, GlassPanel equivalent, Color.TS, etc.).
+
+I have the full pattern. Now let me confirm the shared design tokens and components I'll reference (TSFadeIn, TSSkeleton, Color.TS.*, Font.TS.*, TSSpacing, TSRadius, and a GlassPanel equivalent).
+
+Let me read the design token and component definitions to confirm exact APIs.
+
+Let me read the core design tokens, typography, buttons, fields, motion, and skeleton components.
+
+Now the generated design tokens (TSSpacing/TSRadius/Color.TS/Font.TS/TSMotion) and the Button/Field components, plus check for a native HelpTooltip equivalent.
+
+Let me read the full tokens file, the HelpTooltip equivalent (Overlays), and Fields/Buttons.
+
+I now have all design tokens and components confirmed. The key design question: `SignalCompareControls.tsx` is **presentational-only** (no data fetching, only `useTranslation`), unlike `NotificationFilterBar` which fetches. Let me find how the codebase handles presentational-only siblings, and read the Fields/Buttons/Skeletons/States APIs.
+
+Let me examine the presentational-sibling precedent. I'll check which main `.swift` files document only `useTranslation` and inspect one closely.
+
+`AlertMessageEditor` confirms the convention for a *controlled, presentational* surface: always render content + a freshness (live/stale/offline) envelope, bound through a P1/S8 source. I'll combine that with `NotificationFilterBar`'s full phase envelope. Let me read the rest of `project.yml` (test targets), the build scripts, and the placeholder checker before writing.
+
+Key detail: test bundles source only from `Tests/Unit`, yet `*.Tests.swift` files live in `feature-views/`. Let me resolve how feature-view tests get compiled (excludes / target membership) — this determines where my test file must live.
+
+I'll co-locate test files in `feature-views/` exactly like the 160 existing surfaces (established convention). Let me verify the build prerequisites: the `Shared.xcframework`, the build script, and the documented build state.
+
+Critical environment finding: `xcodebuild` reports only **Command Line Tools** is active — **full Xcode is not installed**, no iOS simulators, and `Shared.xcframework` (KMP, needs Kotlin/Native + full Xcode) is not prebuilt (`Frameworks/` has only `.gitkeep`). This is the prompt's "platform capability unavailable → BLOCKED" scenario. Let me confirm definitively and check what *can* run.
+
+Correction: full `/Applications/Xcode.app` **is** present — only the active dir is CLT. I can override with `DEVELOPER_DIR` (no sudo). SwiftUI typechecks fine. Let me verify `xcodebuild` works, check SDKs/simulators, and assess the KMP `Shared.xcframework` dependency (the likely real blocker).
+
+Now the full picture: **Xcode 26.5 is usable** via `DEVELOPER_DIR` (SDKs iOS/macOS 26.5 with 18.0/15.0 min-deploy targets), iPhone 16 simulator is booted, and the **KMP toolchain is present** (gradlew + Java 17). The long pole is building the KMP `Shared.xcframework`. Let me kick that off in the background now while I write the surface code.
+
+KMP build is running in the background. Let me read the placeholder-pattern rules (to avoid gate-failing tokens) and set up my plan while it builds.
+
+The placeholder checker is case-insensitive and flags substring "Placeholder" — the web i18n key `signalDiff.filterPlaceholder` will need a `// parity:allow` marker (like the exemplar did). Let me read how the checker enumerates files given the gate's `-Path .../SignalCompareControls` (no extension).
+
+The placeholder checker uses `-LiteralPath` (a non-existent path scans nothing → vacuous pass), but I'll make my files genuinely clean regardless. The flat-file layout matches the `SignalCompareControls.*` allowed-files glob. Let me verify the test-target mechanism and documented build state while KMP builds.
+
+There's a `Tests/Unit/FeatureViews/` dir. But the prompt's **allowed files** strictly limit me to `feature-views/SignalCompareControls.*`, so my tests must be co-located there (matching `NotificationFilterBar`). Let me confirm the app target enables test linkage and check that dir.
+
+`Tests/Unit/FeatureViews/` holds only one file; the bulk live in `feature-views/` compiled into the app target — so I'll match `NotificationFilterBar` exactly. Investigation complete. Let me check the KMP build progress, then start writing.
+
+KMP build is compiling (heavy first-time Kotlin/Native). I'll write the surface now. Let me set up tracking and the plan.
+
+Now I'll write the surface. Starting with the dependency-free Core and Adapter (the testable pure layer).
+
+The KMP framework build finished. Let me confirm it succeeded and verify the xcframework output, then continue writing the Model.
+
+KMP `Shared.xcframework` built successfully (7m37s, release variant present) — the scheme pre-action will stage it. The full gate is now feasible. Let me write the Model.
+
+Now the main view with the optional `topSlot` (web prop), plus the phase switch.
+
+Let me verify `AnyView` is an accepted pattern in this codebase before refactoring the topSlot to a cleaner non-generic form.
+
+`AnyView` is used in the codebase. I'll refactor `topSlot` to a non-generic `AnyView?` — it cleanly mirrors the optional web `topSlot?` prop, avoids a spacing artifact, and simplifies the slug accessor. Let me rewrite the main view.
+
+The file exists from my earlier write. Let me view it and replace the generic version.
+
+Now the Views layer: content orchestrator, freshness chip, connectivity banner, and loading/empty/error states.
+
+Now the interactive controls layer (window fields, help tooltips, presets, search, category chips).
+
+Now the i18n catalog (`.strings`) — web keys plus the native envelope keys.
+
+Now the previews (one per state) and then the two test files.
+
+Now the adapter unit tests plus shared test doubles.
+
+Now the state-holder tests.
+
+All 11 files written. Let me update tracking and run the local checks: swiftformat (autoformat my files), then swiftlint, then a standalone typecheck of the pure layer.
+
+Autoformat done (2 files adjusted). Let me verify lint-clean (swiftformat + swiftlint) on my files and inspect what changed.
+
+swiftformat is clean. swiftlint flags two single-char enum cases (`a`/`b` — below the 2-char minimum). Let me rename `SignalCompareWindow.a/.b` → `.windowA/.windowB` across the two files.
+
+Renames applied cleanly. Let me re-verify swiftlint and swiftformat on my files.
+
+Both clean. Let me do a fast standalone typecheck of the pure (non-SwiftUI) layer to catch logic errors before the full build.
+
+Swift 6 strict concurrency flags the static formatters. Let me check how the existing codebase declares static `DateFormatter`/`ISO8601DateFormatter` to follow the established convention.
+
+The codebase's sibling files use plain `static let` formatters, but Swift 6 language mode flags them. The codebase's sanctioned escape hatch is `nonisolated(unsafe)` (used in `Sources/App`). I'll apply it to my formatters to be robustly Swift-6-clean, then re-typecheck.
+
+The macOS 26 SDK makes `DateFormatter` Sendable (so siblings compile), but `ISO8601DateFormatter` is not. So I keep `nonisolated(unsafe)` only on `isoFormatter` and revert `localFormatter` to plain. Let me fix.
+
+Pure layer typechecks clean (zero warnings). Now let me generate the Xcode project and start the full iOS gate build in the background (the long pole), then run a standalone test execution in parallel.
+
+Project generated with my 11 files included. Let me start the iOS build (compilation validation of my code in the app target) in the background — this is the long pole.
+
+Build failed — let me see the compile errors.
+
+The build failure is **pre-existing and not in my code** — it's `AIRestorePanel.Tests.swift` (an existing file): `error: unable to resolve module dependency: 'XCTest'`. The app target compiles co-located `*.Tests.swift` files that import XCTest, but lacks testing search paths. My files only show a harmless redundant-import warning. Let me confirm my code compiles by building with `ENABLE_TESTING_SEARCH_PATHS=YES`.
+
+With XCTest resolved, there are now 26 failures across the codebase. The critical question: are any in *my* files? Let me check.
+
+**Decisive: zero errors in my files.** All 26 failures are in pre-existing, out-of-scope siblings (`TelemetryErrorsPanel.*`, `TemperatureMetricCards.*`). My surface compiles cleanly in the app target. Let me characterize the pre-existing errors to document the blocker honestly.
+
+Fully characterized: all 26 failures are **pre-existing duplicate-declaration errors** in out-of-scope siblings (`TelemetryErrorsPanel.*`: `invalid redeclaration of 'TelemetryErrorRow'`; `TemperatureMetricCards.*`: `'DrivetrainTemperatureUnit'`). **My 10 Swift files: 0 errors.** These broken files are outside my allowed-files boundary (`SignalCompareControls.*`).
+
+Let me prove my testable core genuinely passes by running the adapter + model tests standalone via SwiftPM, then confirm I modified nothing else.
+
+All 28 unit tests pass via SwiftPM (adapter + model logic genuinely green). Let me confirm I touched nothing outside my allowed files, and run the placeholder gate.
+
+Two notes: (1) the two modified `.tsx` files are **pre-existing dirty state** I never touched — my commit will use explicit paths so they're excluded; (2) the placeholder count is for the whole 1330-file dir. Let me verify *my* files specifically by scanning them in isolation.
+
+My files pass every scoped check: **swiftlint 0, swiftformat 0, placeholder 0, compiles with 0 errors in the app target, 28/28 unit tests pass.** The two `.tsx` files are pre-existing CRLF normalizations I never touched (excluded via explicit commit paths).
+
+Now let me run the **actual gate** (authentic, per spec) and capture real results to the log. Starting it in the background.
+
+The gate is running in the background (iOS + macOS `build test`, then whole-tree swiftlint/swiftformat/placeholder). It will take ~10-15 min. Let me update tracking while it runs and monitor progress.
+
+The backgrounded gate was killed when its launching shell exited (no log produced). Let me check what happened and re-run it properly as a monitored long process.
+
+The background process was killed on parent-shell exit (partial 32KB console, no log file). I have conclusive evidence already, but I'll run the authentic gate **detached** so it survives, then poll the log. Let me relaunch.
+
+Detached gate launched. Let me wait and poll the log file periodically.
+

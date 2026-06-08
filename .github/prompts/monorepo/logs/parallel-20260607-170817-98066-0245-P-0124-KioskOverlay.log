@@ -1,0 +1,106 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+The Apple toolchain is fully available. Now let me study the existing feature-views structure and the most recent similar implementation (BatteryPill) to follow the established pattern.
+
+Let me read the complete BatteryPill implementation as my pattern reference.
+
+Now let me read the remaining BatteryPill files and the shared infrastructure (telemetry, tokens, i18n facade).
+
+Now let me understand the shared infrastructure: tokens, i18n facade, the Button component, and the date format hook equivalent. Let me search for these.
+
+Let me read the shared component definitions and design tokens.
+
+Let me read the design tokens, i18n facade, and look at how date formatting is handled in feature-views.
+
+The tokens are generated. Let me find their definitions and how date formatting works in the native app.
+
+The tokens come from `apps/design/generated/apple`. Let me verify the token definitions and check build tooling (xcodegen, the Shared.xcframework).
+
+Important finding: `xcodebuild` requires full Xcode but only Command Line Tools are present, and no iOS simulators are available. Let me check whether Xcode exists anywhere and how predecessor surfaces handled this.
+
+The predecessor log is very informative. Xcode IS installed at `/Applications/Xcode.app` — I need `DEVELOPER_DIR` set. The established methodology defers the full `xcodebuild` app target (pre-existing baseline breakage) but proves the surface via host-runnable gates. Let me verify the toolchain and read the web date-format hook plus the token catalog.
+
+I now have the full token catalog. Let me read the web `formatTime`/`formatDateWithDay` implementations and check for an existing native date-format helper, plus the lint/format configs.
+
+I have the exact formatter specs. Let me map the remaining web CSS vars to native tokens, check for existing native i18n/date facades to bind to, and assess the KMP/Gradle build path.
+
+Key findings: feature-views use an `NSLocalizedString(tableName:)` i18n facade (P1/S10), and CSS vars map cleanly (`--text-muted`→`textMuted`, `--text-secondary`→`textSecondary`, `--surface-2`→`surface`, `--surface-overlay`→material). Let me study the i18n helper and a native date-format example to match conventions.
+
+I now have a complete understanding. Let me set up tracking and write the plan, then implement. Key decisions:
+- KioskOverlay is a **presentational overlay** (props-driven, no data fetch) — like the merged BatteryPill precedent. I'll reproduce **every branch the source carries** (dim, cursor-hide, clock×4 positions, rotation dots, exit reveal) and document the loading/empty/error/stale/offline disposition honestly.
+- i18n via the `NSLocalizedString(tableName:)` facade (P1/S10), telemetry via `view.opened` seam (P1/S11).
+- Full `xcodebuild` deferred per precedent (pre-existing app-target baseline breakage) — I'll **verify** that baseline, then prove the surface via host-runnable gates.
+
+Now I'll create the implementation files. Starting with the Model (pure, host-free projection + i18n facade + clock formatters).
+
+Now the main SwiftUI view — the most complex file. It composes all overlay layers with accessibility, reduce-motion, the macOS pointer-hide modifier, and the reveal/auto-hide interaction.
+
+Now the previews (all branches) and the strings catalog.
+
+Now the test suite. It covers the projection branches, clock formatters (locale-aware, dynamic weekday symbol to avoid brittleness), position→alignment mappings, exit timing, slug, and telemetry.
+
+All six files created. Now let me run the gates. First, auto-format with swiftformat, then verify with `--lint` and swiftlint.
+
+All three pass (format/lint/placeholder = 0). Now the typecheck gate against real shared deps for both SDKs under Swift 6 strict concurrency. Let me resolve SDK paths and run.
+
+macOS typecheck passes. Now iOS-sim typecheck plus the DEBUG closures (including Previews) for both SDKs.
+
+All typechecks pass on both SDKs (release + DEBUG). Now I'll build a standalone SwiftPM module to actually **run** the unit tests against the real Model/Telemetry under Swift 6.
+
+All 21 tests pass. Now, per the Honesty Covenant ("no skip-and-assume"), I must **verify** — not assume — the pre-existing app-target baseline state that the precedent deferred on. Let me check the documented baseline breakage still exists at HEAD and assess the KMP/xcframework build path.
+
+Baseline confirmed structurally: **120** sibling `*Tests.swift` files are swept into the app targets (project.yml L36-37/67-68), while the `TeslaSyncTests` bundle only includes `Tests/Unit` — and the duplicate `DashboardWidgetSize` decl still exists. Let me directly prove (a) my guarded test file does NOT contribute to that breakage and (b) the pre-existing breakage is real, by compiling in an app-target config (no XCTest search path).
+
+Decisive evidence captured:
+- **(1)** `canImport(XCTest)`=false in app-target builds → my `#if canImport(XCTest)` guard excludes my test file there.
+- **(2)** My guarded `KioskOverlay.Tests.swift` compiles to nothing in the app target (exit 0) — it can't break the app build.
+- **(3)** A pre-existing sibling (`AlertsSection.Tests.swift`) fails with `no such module 'XCTest'` — the documented baseline breakage, outside my scope.
+
+Let me confirm the project still generates with my files, and kick off a best-effort KMP xcframework build in the background to attempt the real `xcodebuild`.
+
+xcodegen succeeds — my files integrate (36 refs in the project). Gradle xcframework build is running in the background. Let me write the comprehensive log while it builds.
+
+Gradle is progressing well (Kotlin compile cached, now linking release frameworks). Let me wait for it to finish.
+
+Release frameworks still linking. Let me continue waiting for completion.
+
+Gradle hit the 8-min cap on the very last task (`linkReleaseFrameworkMacosArm64`) — Kotlin compile is cached, so a re-run will finish fast. Let me complete it.
+
+`BUILD SUCCESSFUL` — the Shared.xcframework is built. Now I'll stage it and run the **real `xcodebuild`** gate to capture the actual current outcome (expected: pre-existing app-target failure, outside my scope).
+
+Staged. Now the real `xcodebuild` build for the iOS scheme (expected to fail on the pre-existing app-target issues). Capturing full output.
+
+Build failed (exit 65) in the app-target Swift compile. Let me extract the actual errors and confirm none are from my KioskOverlay files.
+
+The real `xcodebuild` gate fails (exit 65) on **`ActionBuilder.ModelTests.swift` → `Unable to resolve module dependency: 'XCTest'`** — a pre-existing sibling test file swept into the app target. **Zero** errors come from my KioskOverlay files. The XCTest dependency-scan failure aborts the module compile before the duplicate-decl errors surface, exactly the documented baseline.
+
+Let me verify git cleanliness (only my files should be new) and check what's git-ignored.
+
+Working tree is clean: generated `.xcodeproj` and staged xcframework are git-ignored; only my 6 files are new; the 2 pre-existing `.tsx` modifications are not mine. Now I'll write the comprehensive gate log with all verified evidence.
+
+Now let me clean up temporary artifacts, restore the working tree to pristine state, and verify the prompt path referenced in the log is accurate.
+
+Prompt path confirmed accurate; working tree is pristine (only my 6 files + log are new; the 2 pre-existing `.tsx` edits are untouched). Let me do a final consolidated gate re-check on the exact files to be committed, then commit.
+
+All green. Committing the 6 surface files + the log (excluding the unrelated pre-existing `.tsx` edits).
+
+Committed as `08614512`. Let me confirm the final state and close out the todos.
+
+Complete and verified. The commit `08614512` contains exactly the 6 surface files + the log; the working tree's only remaining changes are the 2 pre-existing `.tsx` edits (not mine, correctly untouched); the log ends with `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0124-KioskOverlay.log   | 218 +++++++++++++++++
+ .../feature-views/KioskOverlay.Model.swift         | 256 +++++++++++++++++++
+ .../feature-views/KioskOverlay.Previews.swift      | 110 +++++++++
+ .../feature-views/KioskOverlay.Telemetry.swift     |  40 +++
+ .../feature-views/KioskOverlay.Tests.swift         | 254 +++++++++++++++++++
+ .../TeslaSync/feature-views/KioskOverlay.strings   |  28 +++
+ .../TeslaSync/feature-views/KioskOverlay.swift     | 271 +++++++++++++++++++++
+ 7 files changed, 1177 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0124-KioskOverlay.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/KioskOverlay.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/KioskOverlay.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/KioskOverlay.Telemetry.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/KioskOverlay.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/KioskOverlay.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/KioskOverlay.swift

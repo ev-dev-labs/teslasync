@@ -1,0 +1,116 @@
+I'll start by exploring the environment and repository structure to understand what's available and what the task requires.
+
+Xcode is not fully installed (only Command Line Tools), but Swift 6.3, swiftlint, swiftformat, and pwsh are available. There's an existing `AIUsageCard` precedent in `feature-views/`. Let me examine the web source, the existing Apple structure, and the established pattern.
+
+The `shared-surfaces` directory doesn't exist yet. The `AIUsageCard` files in `feature-views/` are the established precedent. Let me study them thoroughly along with the supporting infrastructure (state holders, tokens, i18n, telemetry).
+
+There are many feature-views. Let me focus on the AIUsageCard precedent files and understand the structure pattern.
+
+The git status referenced `AIUsageCard` (case-insensitive FS); actual base is `AiUsageCard`. Let me read the complete file set for a representative feature-view to learn the exact 7-file pattern.
+
+AiUsageCard uses a 10-file pattern (2085 lines total). Let me read all of them to learn the exact conventions, plus the supporting infrastructure (facade, tokens, i18n, telemetry).
+
+Excellent, this is a rich, well-structured pattern. Let me read the remaining AiUsageCard files to fully internalize the conventions.
+
+Now let me read the Views, Chrome, Previews, strings, and the two test files to complete my understanding.
+
+Let me read the Previews, strings, and tests, plus locate the shared design tokens and components referenced (TSSpacing, Color.TS, Font.TS, TSButton, TSSkeleton, TSFadeIn).
+
+Let me read the main Tests file and locate the shared design tokens/components and the build setup.
+
+I now fully understand the AiUsageCard pattern. Let me examine the build config (`project.yml`), the design tokens, and the shared components (TSButton, GlassPanel peer, etc.) that BulkActionsToolbar will need.
+
+Key finding: `project.yml` includes `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` but **not** `TeslaSync/shared-surfaces`. Let me check for full Xcode, the SDK, the design tokens/shared components, and whether `shared-surfaces` is referenced anywhere.
+
+`/Applications/Xcode.app` exists but isn't selected. Let me test whether xcodebuild can actually run via `DEVELOPER_DIR`, check for xcodegen and simulators, and understand how `shared-surfaces` is meant to be wired into the project.
+
+Critical: **xcodebuild works via `DEVELOPER_DIR` (Xcode 26.5), xcodegen is installed, and the iPhone 16 simulator exists and is booted.** Platform capability IS available. Now let me verify the build chain (KMP Shared.xcframework) and how `shared-surfaces` is wired into project.yml.
+
+Let me check the pending-verifications doc and how prior feature-views (like AiUsageCard) actually completed their gate — did xcodebuild run, or was it deferred?
+
+This is the key insight. Prior surfaces (AiUsageCard, ToolCard, etc.) follow an established disposition: build the surface green on all per-surface gates (swiftlint/swiftformat/placeholder + **isolated SwiftPM build + XCTest** + `swiftc -typecheck` on iOS18/macOS15), while the full-app `xcodebuild` is DEFERRED on pre-existing unrelated blockers (unstaged Shared.xcframework, DashboardWidgetSize 15× redefinition, co-located tests). Let me read the web dependencies (`useConfirm`, `ConfirmDialog`, `Button`, `GlassPanel`) and the real native tokens/components.
+
+Now let me read the real native design tokens and the components my surface needs (TSButton, GlassPanel peer, TSFadeIn, ConfirmDialog/modal peer, skeleton, states).
+
+Let me read the generated design tokens (Color.TS, Font.TS, TSSpacing, TSRadius), and the GlassPanel/Material, Motion, Skeleton, and Overlays (modal) components.
+
+Let me read the GlassPanel peer (Cards), the modal/ConfirmDialog peer (Overlays), the glass material, and States/Skeletons.
+
+Let me read the Overlays (modal peer), States (EmptyState), Typography, and Skeletons components.
+
+I now have all the native infrastructure I need. Let me check how an existing **presentational** (non-data-fetching) feature-view handled the generic loading/stale/offline states, to follow the honest established convention rather than fabricating a data axis.
+
+~88 of 171 feature-views have **no** connectivity axis — confirming the honest convention: presentational/controlled surfaces don't fabricate a data-freshness axis. Let me read `ToolCard` (a known-good, presentational, pending-verifications reference) to follow its exact state-disposition precedent.
+
+`ToolCard` confirms the sanctioned disposition for a presentational surface: *"It owns no data — exactly like the web component — so the cache/loading/error/stale/offline states belong to whatever content the caller embeds, not to the card itself."* That's the honest convention I'll follow. Let me read the lint configs and the typography/badge/skeleton component signatures before writing.
+
+I have a complete picture of the conventions and constraints. Let me quickly check the Badge and Skeleton primitives, then set up a tracking plan and start writing.
+
+I have everything needed. Let me set up the plan, todos, and the target directory, then implement.
+
+Baseline established: the whole-tree `swiftformat --lint` is already red on 1 pre-existing unrelated file (`ActionBuilder.Previews.swift`) — I'll scope my checks to my files and document this. Now let me set up tracking and write the implementation.
+
+Now I'll write the implementation. Starting with the Adapter (pure value types + projection, Foundation-only).
+
+I added a string-provider injection that complicates things — the AiUsageCard precedent calls the i18n facade directly (test bundle returns the `value:` fallback deterministically). Let me simplify to match that precedent.
+
+Adapter written. Now the Model (i18n facade, telemetry + confirm seams, the closure-carrying `BulkAction`, and the `@Observable` state holder).
+
+Now the Chrome file — the `useConfirm` peer (an `@Observable` presenter that suspends on a continuation) plus the native confirmation-dialog modifier.
+
+Now the Views file — the visual toolbar bar, selection summary chip, action button, clear button, and empty-actions caption.
+
+Now the main surface view.
+
+Now the Previews covering every state (model-driven for realistic flows, bar-driven with crafted resolved states for pending/failed/disabled/empty determinism).
+
+Now the two test files. First the pure adapter/projection tests.
+
+I left a broken stray line in `testEmptyActionsHint`. Let me fix it.
+
+Now the model/integration tests (telemetry, run/pending/failed, confirm seam, presenter, clear/prune).
+
+Now the i18n strings catalog.
+
+All 9 files written. Now the verification phase — starting with swiftformat (scoped to my files).
+
+Auto-fixable formatting issues in 2 files. Let me run the formatter (ecosystem tool) on my directory, then re-verify.
+
+swiftformat clean. Now swiftlint (scoped to my files, since `.swiftlint.yml` `included` doesn't list `shared-surfaces` yet) and the placeholder scan on the real directory.
+
+One serious violation found across the tree — let me identify exactly which file (mine or pre-existing).
+
+The 1 swiftlint violation is pre-existing and unrelated (`LifetimeStatsWidget.Adapter.swift`, a dashboard-widget). My files weren't scanned because `included` omits `shared-surfaces`. Let me lint my files explicitly to confirm they're clean.
+
+My files have 1 violation: `BulkActionButton` uses a trailing `label` closure while also passing an `action` closure literal. Let me pass `label:` explicitly (the Clear button is fine since `onClear` is a value reference, not a literal).
+
+Now re-run swiftformat + swiftlint on my files, plus the placeholder scan (both the real directory and the literal gate path).
+
+Per-surface static gates are **all green on my files**: swiftformat `0/8 require formatting`, swiftlint `0 violations in 8 files`, placeholder `COUNT=0` (0 opt-outs). Now the strong verification — an isolated Swift 6 SwiftPM build + XCTest against the **real** design tokens + components.
+
+Harness ready (4 real design-system files + 6 surface files + 2 test files). Now build + test under Swift 6 strict concurrency using Xcode 26.5's toolchain.
+
+**Isolated build + 28 tests passed, 0 failures** under Swift 6 strict concurrency against the real design system. Now the iOS 18 + macOS 15 `swiftc -typecheck` of the shipped surface (proving cross-platform compile for the actual deployment targets).
+
+Both typechecks pass (macOS 15 + iOS 18, Swift 6 strict concurrency, 0 errors). The surface is independently verified green. Now the full-app gate attempt + re-confirming the documented pre-existing blockers.
+
+All four pre-existing blockers re-confirmed with raw counts (not assumed): Shared.xcframework absent, `DashboardWidgetSize` redefined **15×**, **261** co-located XCTest files compiled into the app target, and shared-surfaces not yet in project.yml. Let me capture real compiler output proving these are pre-existing and that my surface produces zero errors. I'll build the macOS target directly (bypassing the Gradle scheme pre-action) to get compile evidence efficiently.
+
+Let me wait for compile output to accumulate, then inspect it.
+
+The real xcodebuild output confirms the pre-existing blockers (macOS dev-signing + **missing `Shared.xcframework`**) and **zero `BulkActionsToolbar` errors**. Let me capture the final exit and full blocker evidence for the log.
+
+All confirmed: xcodebuild exits 65 on **pre-existing** blockers (macOS dev-signing + missing `Shared.xcframework`), **zero** `BulkActionsToolbar` errors, my files aren't in the generated project (shared-surfaces unwired). Generated project cleaned; `git status` shows only my new files. Let me gather tool versions and write the gate log.
+
+Now I'll write the comprehensive gate log with the honesty covenant and all real evidence.
+
+Log written. Now a final airtight verification (re-copy exact on-disk bytes into the harness, re-test, re-run all static gates, and grep for forbidden words) before committing.
+
+All final gates green: 28/28 tests, swiftformat clean, swiftlint clean, placeholder COUNT=0, no forbidden words. Committed bytes == tested bytes. Now staging only my 9 files + the log (excluding the pre-existing unrelated working-tree changes) and committing.
+
+Exactly 10 files staged (9 surface + log); pre-existing unrelated changes excluded. Committing.
+
+Committed (`0cf7c7f1a`, 10 files, 1964 insertions). Let me clean up the temp harness and do a final sanity check.
+
+Working tree is clean — only the **pre-existing, unrelated** changes (AiUsageCard.*, 2 web files) remain untouched and excluded from my commit. The temp harness is cleaned up. The task is complete and verified.
+

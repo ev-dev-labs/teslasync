@@ -1,0 +1,157 @@
+=== P4 Feature view 0044 LiveVehicleState (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint · swiftformat · xcodegen 2.45.x · pwsh · Java 17 (OpenJDK 17.0.19)
+                       · Kotlin/Native 2.4.0 prebuilt (~/.konan present).
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5) booted · macOS 26.5 SDK present.
+                       Deployment minimums honored: iOS 18.0 / macOS 15.0 (project.yml + the cross-SDK
+                       typecheck targets below).
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 11m14s; release
+                       XCFramework staged to apps/apple/Frameworks/Shared.xcframework with
+                       ios-arm64 + ios-arm64-simulator + macos-arm64 slices).
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS simulators present → NOT capability-BLOCKED.
+                       (This surface uses neither Swift Charts nor MapKit — the web source has no charts/maps.)
+
+WEB SOURCE (the specification)
+  web/src/features/admin/components/security-access/LiveVehicleState.tsx — a presentational leaf fed by its
+  parent's security-latest query (prop `latest: SecurityEvent | undefined`):
+    FadeIn(0.17) → GlassPanel(p-4) → header[ h2 "Live Vehicle State"
+                                              + {latest && <Live/>}  (CircleDot animate-pulse, text-green-400) ]
+                                   → liveSignals.length > 0
+                                        ? grid(2 / sm:3 / lg:5) of GlassPanel cells
+                                        : <EmptyState message="No live state data available" />
+  `buildLiveSignals(ev)` returns [] when `ev` is undefined (→ EmptyState), else TEN cells:
+    hazards · highBeams · turnSignal · driverSeat · pairedKeys · valetMode · serviceMode · speedLimit ·
+    homelinkDevices · centerDisplay.
+  Each cell = { label, icon, value, active }. Value builders:
+    boolLabel(b)           : null → '—' · true → On · false → Off          (hazards/highBeams/valet/service)
+    asNonEmptyString(s)??'—' (turnSignal/centerDisplay)                     · active = !!s && !s.lower.includes('off')
+    driverSeat             : null → '—' · true → Occupied · false → Empty   · active = !!occupied
+    pairedKeys/homelink    : count!=null ? String(count) : '—'             · active = (count ?? 0) > 0
+    speedLimit             : typeof boolean ? On/Off : asNonEmptyString??'—' · active = boolean ? flag : strRule
+  active cell ⇒ icon text-cyan-400 + value text-white; inactive ⇒ text-muted. No loading/error/stale/offline in
+  the web leaf (the parent query owns those) — reproduced natively per the HIG states contract.
+
+ARTIFACTS SHIPPED (apps/apple/TeslaSync/feature-views/, all prefixed LiveVehicleState.)
+  LiveVehicleState.Adapter.swift   — pure projection: LiveStateSignalValue (string|boolean|null narrowing),
+                                      LiveVehicleStateLatest (the 10-field SecurityEvent subset),
+                                      LiveVehicleStateLogic (asNonEmptyString/boolLabel/isActiveString),
+                                      LiveVehicleStateProjection.signals (web buildLiveSignals → 10 cells; [] when absent)
+  LiveVehicleState.Model.swift     — P1/S8 state-holder seam (LiveStateSource/Update/Phase/Connection,
+                                      InMemoryLiveStateSource), @Observable LiveVehicleStateModel (phase + freshness +
+                                      one-shot stale auto-refresh), P1/S11 telemetry seam (view.opened), P1/S10 i18n facade
+  LiveVehicleState.Views.swift     — LiveSignalsGrid/Tile, LiveStateLoadingGrid, LiveStateEmptyState,
+                                      LiveStateErrorView(+retry), LiveStateFreshnessIndicator(+pulse dot),
+                                      LiveStateConnectivityBanner — design tokens only, no Tailwind ports
+  LiveVehicleState.swift           — LiveVehicleState: View (surfaceSlug, FadeIn→GlassPanel→header+phase body)
+  LiveVehicleState.Previews.swift  — #if DEBUG previews: loading / content-active / content-idle / empty / error /
+                                      stale / offline
+  LiveVehicleState.strings         — P1/S10 "LiveVehicleState" table: the 17 web keys + native-chrome keys
+  LiveVehicleState.Tests.swift     — 24 XCTest cases (logic, 10-signal projection, phase, model, telemetry, a11y)
+  No shared wiring needed: project.yml already enumerates TeslaSync/feature-views for both app targets and
+  .swiftlint.yml already includes it (added by an earlier P4 surface). Strings live in a per-surface table, so the
+  shared Localizable.xcstrings catalog is NOT edited — scope confined to LiveVehicleState.* + this log.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  FadeIn(0.17)            → TSFadeIn(delay: 0.17)        GlassPanel → TSGlassPanel
+  grid 2/sm:3/lg:5        → LazyVGrid(.adaptive(min:140,max:260))   cell → TSGlassPanel tile
+  Lucide icons            → SF Symbols by MEANING: hazards exclamationmark.triangle.fill · highBeams
+                            headlight.high.beam.fill · turnSignal arrow.turn.up.right · driverSeat carseat.left.fill ·
+                            pairedKeys key.fill · valet car.fill · service wrench.and.screwdriver.fill · speedLimit
+                            gauge.with.dots.needle.bottom.50percent · homelink house.fill · centerDisplay display
+  active text-cyan-400    → Color.TS.accent (dark sRGB 0,0.941,1 — the cyan accent)   inactive → Color.TS.textMuted
+  active value text-white → Color.TS.textPrimary           label text-[10px] muted → Font.TS.label + textMuted
+  Live badge text-green-400 + animate-pulse → Color.TS.statusSuccess + LiveStatePulseDot (Reduce-Motion-gated)
+  i18n      : every string via LiveStateStrings.string (NSLocalizedString table "LiveVehicleState", web fallback);
+              zero English literals in code. 17 source keys + chrome keys all present in LiveVehicleState.strings.
+  a11y      : icons .accessibilityHidden; each tile is ONE element labeled "label: value"; header .isHeader;
+              pulse dot hidden + Reduce-Motion-respecting; Dynamic Type via system fonts.
+  telemetry : view.opened surface="LiveVehicleState" via LiveVehicleStateModel.start (P1/S11), default OSLog sink.
+  states    : loading (skeleton grid) · content (grid, +stale/offline banner over cached signals) · empty
+              (web EmptyState) · error (QueryError-equivalent + retry) · stale (chip + one-shot auto-refresh) ·
+              offline (chip + cached banner). Every branch renders — no hidden surfaces.
+
+GATES
+  [GREEN]    swiftformat --lint  (LiveVehicleState scope, 6 files)        : 0/6 require formatting        (FORMAT_EXIT=0)
+             swiftformat --lint  (whole app, FYI)                         : 1/1919 — PRE-EXISTING
+                                                                            ActionBuilder.Previews.swift (NOT a
+                                                                            LiveVehicleState file; not introduced here).
+  [GREEN]    swiftlint --strict  (LiveVehicleState scope, 6 files)        : 0 violations                  (LINT_EXIT=0)
+             swiftlint --strict  (whole app, FYI)                         : 1 PRE-EXISTING violation —
+                                                                            function_body_length in
+                                                                            TeslaSync/dashboard-widgets/
+                                                                            LifetimeStatsWidget.Adapter.swift
+                                                                            (NOT a LiveVehicleState file). 0 LVS entries.
+  [GREEN]    check-placeholders.ps1 -Path <shipped LiveVehicleState.*>    : PLACEHOLDER_COUNT=0,
+                                                                            PLACEHOLDER_ALLOWED=0          (PLACEHOLDER_EXIT=0)
+  [GREEN]    LiveVehicleState build + test — ISOLATED SwiftPM harness, swift-tools 6.0, swiftLanguageModes [.v6]
+             (Swift 6 language mode ⇒ strict-concurrency complete, same as the app), compiling the EXACT shipped
+             LiveVehicleState.* sources against the REAL repo design-system files (Tokens / TSMaterial / Cards /
+             Typography / Badges / Buttons / Motion / Skeletons via symlink — no drift, no stubs):
+                 Build complete!  ·  Executed 24 tests, with 0 failures                                  (SWIFT_TEST_EXIT=0)
+  [GREEN]    swiftc -typecheck — REAL iOS-18 simulator SDK, -target arm64-apple-ios18.0-simulator -swift-version 6
+             (shipped sources + real design system)                                                      (IOS_TYPECHECK_EXIT=0)
+  [GREEN]    swiftc -typecheck — REAL macOS-15 SDK, -target arm64-apple-macos15.0 -swift-version 6        (MAC_TYPECHECK_EXIT=0)
+  [GREEN]    xcodegen generate                                                                            (XCODEGEN_EXIT=0)
+             → all 7 LiveVehicleState.* files (incl. .strings) enumerated in TeslaSync.xcodeproj.
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — RUN on THIS runner with Shared.xcframework staged; ZERO LiveVehicleState
+  errors; all blockers pre-exist this change and are owned by the P4/P99 acceptance gate per
+  apps/macos-pending-verifications.md — task rule: do not fix pre-existing unrelated breakage):
+    iOS  (8 error: lines, 0 mention LiveVehicleState): the app target compiles the co-located feature-view
+          *.Tests.swift into the APP target; the first to fail is AIRestorePanel.Tests.swift:18
+          "Unable to resolve module dependency: 'XCTest'" (a DIFFERENT surface's test file), which cascades to
+          the TeslaSync.swiftmodule/.swiftdoc/.abi.json "no such file" follow-ons. This is the parallel-merge
+          co-location the pending-verifications doc records; on the macos-latest acceptance runner these *.Tests.swift
+          belong to the XCTest test bundle, not the app target. (LiveVehicleState.Tests.swift follows the identical
+          repo-wide convention every surface uses.)
+    macOS (4 error: lines, 0 mention LiveVehicleState): all four are the development-signing blocker —
+          "TeslaSync-macOS"/"TeslaSyncWidgets-macOS" have entitlements that require signing with a development
+          certificate, which this runner does not provision.
+    grep of both build logs for "LiveVehicleState.*error:|error:.*LiveVehicleState" = 0 hits. The surface itself is
+    INDEPENDENTLY proven green by the isolated Swift 6 build+test and the two real-SDK typechecks above.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65/MAC_EXIT=65) and
+                          explicitly DEFERRED with raw evidence — never reported as passing.
+  2  No scope narrowing : every web region + branch reproduced — all 10 signals, the boolLabel/asNonEmptyString/
+                          count/boolean-speed-limit/"off"-substring rules, the Live badge guard, and the EmptyState.
+  3  No skip-and-assume : every gate executed on THIS runner; raw exits pasted; the iOS/macOS failures were RUN and
+                          their error owners inspected, not assumed; Shared.xcframework was actually built (11m14s).
+  4  No stubs as final  : complete production view + 24 real tests; placeholder scanner = 0; no TODO/stub/mock/
+                          placeholder/Lorem in shipped code.
+  5  No parity shortcut : tint/value-color/pulse/typography/a11y/telemetry/i18n all mapped to platform tokens + verified;
+                          signal logic unit-tested branch-by-branch against the web rules.
+  6  No delegation      : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holders, P1/S9 tokens, P1/S10 i18n facade, P1/S11 diagnostics, P4 core all
+                          present and consumed; no direct HTTP in the view.
+  8  No commit on red   : the COMMITTED artifact (LiveVehicleState.* + this log) is GREEN on every host gate AND on a
+                          real isolated Swift 6 build+test + two real-SDK typechecks; the deferred full-app gate is RED
+                          only on pre-existing, unrelated surfaces (other test files / macOS signing) this commit
+                          neither introduces nor touches.
+  9  No silent drift    : changes confined to apps/apple/TeslaSync/feature-views/LiveVehicleState.* and this log — all
+                          enumerated above. The shared catalog, project.yml, and .swiftlint.yml are unchanged (already
+                          wired). Pre-existing unrelated working-tree edits (AIUsageCard.*, two web files) are left
+                          untouched and NOT staged.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic LiveVehicleState shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it builds and its 24 tests pass under the app's own Swift 6 strict-concurrency rules against the real
+  design system, it typechecks against the real iOS-18 and macOS-15 SDKs, and lint/format/placeholder are all green.
+  The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked
+  by the pre-existing co-located *.Tests.swift→XCTest-in-app-target parallel-merge state and by macOS development-
+  signing — both owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate"
+  disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,146 @@
+I'll start by exploring the environment, the web source spec, and the existing Apple app structure in parallel.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Swift 6.3.2, swiftlint, swiftformat, and pwsh ARE available. Let me read the web source and explore the Apple app structure.
+
+Now let me explore the Apple app's structure, especially the `dashboard-widgets` directory and existing widget patterns.
+
+There's a rich, established pattern. No `VampireDrain` exists yet. The web source uses StatCard + Sparkline + WidgetEventFeed + EmptyState. Let me study the closest analog widgets (MediaHistoryWidget has a feed; LiveSignalSparklinesWidget has sparklines) and find the shared infrastructure.
+
+Excellent, the pattern is clear. Now let me study the data adapter, models, tests, previews, strings, plus a Swift Charts example (for the Sparkline), and the web data hooks/registry for exact shapes.
+
+Let me read the tests, previews, strings format, the web data hooks, and the registry in parallel.
+
+Now let me examine the web data hooks (exact data shapes), the registry, the shared web components, and the native design tokens.
+
+Let me read the exact VampireDrain type definitions and the web shared components (WidgetEventFeed, StatCard, Sparkline, WidgetShell, types).
+
+Let me find the shared widget components and the native design tokens.
+
+Let me check the placeholder patterns, an existing widget's gate log (to see how the xcodebuild limitation was handled), the native TSSparkline, and the web TimelineItem.
+
+This is the exact precedent I need. SwiftUI is available (proven by host compile); the Xcode-only build/test steps are DEFERRED with evidence → `EXIT=0 STATUS=DONE`. Let me gather the remaining details: the native sparkline, the web TimelineItem, fmtNumber, and a native StatCard-equivalent tile.
+
+I have nearly everything. Let me check the number-format helper pattern, the swiftlint/swiftformat configs (to respect file-length and style limits), and how the freshness chip handles all states.
+
+The dashboard-widgets dir IS in the swiftlint `included` list, so my files must pass `swiftlint --strict` directly. Let me verify a few dependencies before writing: `tsDynamicColor`, `TSSkeleton` API, and whether `DigitalTwinWidget.Model.swift` is self-contained.
+
+I now have a complete understanding of the pattern, tokens, gate approach, and data shapes. Let me set up tracking and write a plan, then build all 8 files following the MediaHistoryWidget precedent.
+
+Now let me write the files. Starting with the pure domain layer (Models + Builder).
+
+Now the state-holder Model file (telemetry, phases, source seam, i18n facade, accessibility).
+
+Let me check the web `WidgetShell` to faithfully reproduce its header chrome, help affordance, and loading/freshness behavior.
+
+Now the surface view file (registration, glass shell, header, freshness, help, state switch).
+
+Now the internal composition (stat card, Swift Charts sparkline, feed, compact stat, empty states).
+
+Let me fix the long sparkline line in the surface file (>120 chars), then write the previews, tests, and strings.
+
+Now the previews file (one per state).
+
+Now the test suite (adapter + model + registry + accessibility).
+
+Now the i18n strings catalog.
+
+All 8 files written. Now let me run the host gates. First, format my files and check swiftformat/swiftlint.
+
+swiftformat wants auto-fixes (line wrapping + redundant returns). Let me apply them with swiftformat write mode on my files, then re-lint.
+
+The gate command runs from repo root. Let me run it correctly.
+
+swiftformat passes (0/393 need formatting). Now swiftlint --strict.
+
+0 violations on my files. Now the full-tree `swiftlint --strict` (the gate command):
+
+The single violation is **pre-existing** in `LifetimeStatsWidget.Adapter.swift` (sibling widget 0055), not my code. Let me confirm I didn't touch it, then proceed to the typecheck.
+
+Confirmed: my changes are only the 8 new files; the lint violation is pre-existing in a sibling file (committed at b7fffb07), and the 2 modified web files aren't mine. Now the SwiftUI typecheck against the real component library. Let me find the token deps and run it.
+
+I need to determine the minimal real dependency closure for the registry types. Let me check what `DigitalTwinWidget.Model.swift` references externally.
+
+The registry types live in the DigitalTwin sibling whose `surfaceSlug` pulls in its full view graph. Following the precedent, I'll typecheck my 5 source files against the **real** Tokens + Skeletons components, supplying the two trivial shared registry value-types via a faithful standalone copy. Let me set that up and run.
+
+Now run the SwiftUI typecheck of all 5 source files against the real Tokens + Skeletons.
+
+Skeletons.swift needs `TSCard` (Cards.swift). Let me add the UI component closure the precedent used (Badges, Typography, Buttons, Cards) and re-run.
+
+Dependencies cascade within the component library. Let me compile the whole self-contained `Sources/Components/` tree at once (after confirming it has no Shared.xcframework imports).
+
+My files only need `TSSkeleton` (→ TSCard → tsGlassPanel). I don't need DataDisplay/Charts/Motion (those drag in app-level `Units`). Let me trim to the minimal real closure: Tokens + Design + UI + Feedback.
+
+The library is interdependent (Feedback→DataDisplay→`Units`). Like the precedent, I'll pick the **specific** files my code needs (not whole dirs): Tokens + Design + UI{Badges,Typography,Buttons,Cards} + Feedback/Skeletons.
+
+Real typecheck now reaches my code — one genuine bug: SwiftUI `frame` requires `minHeight` before `maxHeight`. Let me fix it.
+
+TYPECHECK_EXIT=0 — the full surface typechecks against the real component library. Now strict Swift 6 concurrency (matches the app target's `SWIFT_STRICT_CONCURRENCY: complete`).
+
+STRICT_EXIT=0. Now the strongest evidence — compile the pure domain layer (Models + Builder) into a **native binary and run it** to verify the cached→projection logic for real.
+
+Top-level code requires the file be named `main.swift` when compiling multiple files. Let me rename and re-run.
+
+38/38 harness checks PASSED (real execution). Now the placeholder gate. Let me run it on my files (copied to a temp dir for an exact scan), plus the literal prompt path, plus the self-test.
+
+All placeholder gates pass (COUNT=0). I edited Views.swift after formatting, so let me re-verify format + lint on the final state, plus a manual forbidden-word scan.
+
+Word-scan clean, format clean. Final swiftlint re-check on my files after the edit:
+
+All host gates green. Now let me verify i18n key parity — every key my code resolves must exist in the catalog, and all 10 source keys must be present.
+
+Perfect i18n parity — every resolved key exists in the catalog; all 10 source keys + help present. Let me capture line counts and the final git/lint facts for the log.
+
+All files compile, lint, format clean; harness 38/38; placeholder 0; i18n parity verified. Now writing the gate log (following the precedent's structure).
+
+Now commit — staging only my files + the log (not the unrelated pre-existing web changes).
+
+Staged set is exactly correct. Let me check the pre-commit config before committing (to anticipate hook behavior).
+
+No Swift-targeting hooks (they filter to Go/web). Let me commit.
+
+Committed (1dee3578, 9 files). Let me finalize: update tracking, verify clean state, and clean up temp files.
+
+All verification complete. The task is finished.
+
+**Summary of what shipped** (commit `1dee3578`, 9 files, +1857):
+
+I built a production-polished native Apple SwiftUI port of `VampireDrainWidget.tsx` following the established `MediaHistoryWidget` (0062) precedent, across 8 files in `apps/apple/TeslaSync/dashboard-widgets/`:
+
+- **Models / Builder** — pure Foundation domain layer: `drainColor`→`DrainTone`, `formatDuration`→`DrainDuration`, `×24` per-day scaling, `eventItems`/`sparklineData` memos, feed sort+cap 5, relative-time buckets.
+- **Model** — P1/S8 state-holder seam (`VampireDrainSource`→`VampireDrainModel`, no view HTTP), P1/S11 telemetry, P1/S10 i18n facade, accessibility composers.
+- **swift / Views** — glass shell + header (freshness chip, refresh, help popover), all states (loading/empty/error/stale/offline/content) and compact/standard/wide branches, Swift Charts sparkline, StatCard, event feed.
+- **Previews / Tests / strings** — per-state previews, 21 XCTest methods, 10 source keys + help.
+
+**Host gates (all green, real output):**
+| Step | Result |
+|---|---|
+| `swiftc -typecheck` (vs real component library) | EXIT=0 (found+fixed a real `.frame` arg-order bug) |
+| strict Swift 6 concurrency | EXIT=0 |
+| **adapter harness (compiled native binary, executed)** | **38/38 PASSED** |
+| `swiftlint --strict` (my 7 files) | 0 violations |
+| `swiftformat --lint apps/apple` | 0/393 need formatting |
+| placeholder gate + word-scan | COUNT=0 |
+| i18n code-key↔catalog diff | empty (full parity) |
+
+**Honest caveats:** the `xcodebuild` iOS-sim/macOS app build+test steps are **DEFERRED** (only Command Line Tools active, no Xcode toolchain) — SwiftUI+Charts are proven available via real macOS-SDK compile, so this is not capability-BLOCKED. The whole-tree `swiftlint` shows 1 **pre-existing** violation in sibling `LifetimeStatsWidget.Adapter.swift` (out of scope, not mine). Log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...e-dashboard-widgets-0105-VampireDrainWidget.log | 211 +++++++++++++
+ .../VampireDrainWidget.Builder.swift               | 117 +++++++
+ .../VampireDrainWidget.Model.swift                 | 335 +++++++++++++++++++++
+ .../VampireDrainWidget.Models.swift                | 152 ++++++++++
+ .../VampireDrainWidget.Previews.swift              | 127 ++++++++
+ .../VampireDrainWidget.Tests.swift                 | 304 +++++++++++++++++++
+ .../VampireDrainWidget.Views.swift                 | 290 ++++++++++++++++++
+ .../dashboard-widgets/VampireDrainWidget.strings   |  51 ++++
+ .../dashboard-widgets/VampireDrainWidget.swift     | 270 +++++++++++++++++
+ 9 files changed, 1857 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0105-VampireDrainWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VampireDrainWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VampireDrainWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VampireDrainWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VampireDrainWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VampireDrainWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VampireDrainWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VampireDrainWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VampireDrainWidget.swift

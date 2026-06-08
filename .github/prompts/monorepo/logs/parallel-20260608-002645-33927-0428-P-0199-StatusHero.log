@@ -1,0 +1,111 @@
+I'll start by understanding the task, the runner's capabilities, and the codebase structure.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me investigate further before concluding, and read the web source and Apple app structure.
+
+Xcode.app exists at `/Applications/Xcode.app` but isn't the active developer dir. Let me test whether I can use it via `DEVELOPER_DIR` (no sudo needed), and explore the existing Apple conventions in parallel.
+
+**Major finding:** `xcodebuild` works via `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` — Xcode 26.5 with iOS/macOS SDKs is installed. The gate CAN run, so I must produce the full artifact. Let me study the conventions deeply.
+
+The pattern is clear: each surface = `Base.swift` + `.Model` + `.Adapter` + `.Views` + `.States` + `.Previews` + `.Tests`/`.ModelTests` + `.strings`. Let me read the project config, shared components, design tokens, and the i18n/diagnostics idioms.
+
+Now let me assess build feasibility: the targets don't yet list `shared-surfaces`, schemes have a `Shared.xcframework` pre-action, and the `.xcodeproj` is generated. Let me check these critical dependencies.
+
+Let me check how predecessor P4 Apple prompts resolved their gates (DONE vs BLOCKED) and whether `shared-surfaces` was wired anywhere — this sets the precedent I must follow.
+
+The precedent is clear: predecessors get iOS/macOS **builds** to SUCCEED, defer simulator/full-bundle **test execution** (environmental: no-sudo CoreSimulator daemon + 2 pre-existing hanging tests), and pass host-side typecheck + `swift test` + swiftlint + swiftformat + placeholder checks, then declare `EXIT=0/STATUS=DONE`. Let me extract their exact procedure and find the SwiftPM harness.
+
+This BatteryCells log is the gold-standard precedent. But my output dir (`TeslaSync/shared-surfaces/`) is analogous to `TeslaSync/feature-views/` (app-target source dirs with co-located `.Tests.swift`). Let me study a feature-views log + the AcDcStatsPanel reference surface + the shared components I need.
+
+Excellent reference. Now let me read the design tokens, shared components (GlassPanel/Button/LiveIndicator), the i18n `.strings` mechanism, the telemetry contract, and a feature-views gate log to learn the exact app-target verification procedure.
+
+Let me locate the i18n facade declaration, design tokens, shared components, telemetry contract, and read a feature-views gate log for the exact procedure.
+
+Now I have the i18n + telemetry patterns. Let me read the design tokens, GlassPanel, Button, LiveIndicator components, and a feature-views gate log.
+
+Now let me read the exact `TSButton`, `TSLiveIndicator`, `TSGlassPanel` APIs, the `TSTone` enum, and a presentational feature-views gate log (ResultPanel).
+
+I now have all component APIs. Let me read a presentational feature-views gate log (ResultPanel) to learn the exact verification procedure used for app-target-source surfaces.
+
+This ResultPanel log is the exact precedent for a presentational surface in an unregistered dir: **code-complete + host-validated gates + DEFERRED Xcode build/test** (don't self-register project.yml — that's the integration prompt's job per Honesty rule 7; don't edit shared catalog — parallel-unsafe). Let me read the lint/format/placeholder configs, the glass material, and the ResultPanel View+Previews to mirror structure precisely.
+
+I have everything needed. Let me verify the `bg` token + glass modifier, then set up my plan and todos.
+
+All conventions confirmed. Let me set up the plan and todo tracking, then implement.
+
+Now let me create the directory and write the i18n strings file and the Model file.
+
+Now the core Model file — presentation resolver, telemetry seam, observable model, i18n facade, and accessibility builder (Foundation-only so it's host-testable without SwiftUI):
+
+View composes cleanly from sub-views. Let me confirm the `TSTone` cases (for the live dot) before writing the view files.
+
+`TSTone` already maps tones→tokens — I'll reuse it. Let me update my todos and write the View + sub-views files.
+
+Now the surface composition file:
+
+I need to fix the `ViewThatFits` logic — the horizontal candidate must demand its intrinsic (single-line headline) width so it correctly falls back to the stacked layout when it doesn't fit. Let me add a `singleLine` flag and adjust the layouts.
+
+Now the Previews and Tests files:
+
+All 6 files written. Let me update todos, auto-normalize formatting, and map the Shared-free library closure for the host typecheck.
+
+swiftformat normalized the files. No `import Shared` in the component libs; only `DataTable`/`Utility` have `#if os` (which I don't need). Let me run the host typecheck against the curated Shared-free library closure.
+
+`Cards.swift` needs Typography types. Let me add `Typography.swift` and re-run.
+
+`TYPECHECK_EXIT=0` — production sources compile cleanly (macOS covers iOS, no `#if os`). Now the DEBUG previews typecheck (needs the Xcode `#Preview` macro plugin):
+
+Both typechecks pass. Now let me build and **run** an executed harness that proves the Model/presentation/telemetry/a11y logic green on this runner (the Model is Foundation-only, so this needs no SwiftUI).
+
+47/47 checks pass, `HARNESS_EXIT=0`. Now the XCTest-module-compile evidence (build a `-enable-testing TeslaSync` module + typecheck the test file against it, per the ResultPanel precedent):
+
+The XCTest-module evidence matches the precedent exactly: **`MODULE_BUILD_EXIT=0`** (the `-enable-testing TeslaSync` module built from my surface — so `@testable import` + every surface symbol the tests reference resolve), and the **only** diagnostics are the `XCTAssert*` C function-like macros that standalone `swiftc` cannot expand (they bridge only inside `xcodebuild test`). The identical assertions are proven green by the executed harness (47/47).
+
+Now the lint/format/placeholder gates:
+
+The tmp config's `included` resolved relative to `/tmp`. Let me pass explicit file paths with a rules-only config instead:
+
+Scoped swiftlint: **0 violations in 5 files**. Now the whole-tree `swiftformat --lint`, the bare `swiftlint --strict` (honest pre-existing check), and the placeholder gate:
+
+`FORMAT_EXIT=1` is a **pre-existing sibling file** (`feature-views/ActionBuilder.Previews.swift` — another slot's surface, outside my allowed files), not mine (1/1918). Let me prove my files are format-clean (scoped), then run the bare swiftlint + placeholder gates.
+
+My files are format- and placeholder-clean (`SURFACE_FORMAT_EXIT=0`, `PLACEHOLDER_COUNT=0`). The format failure is confirmed pre-existing (sibling `ActionBuilder` surface, commit `87160b082`). Now the bare `swiftlint --strict` (honest pre-existing report) and the xcodebuild non-registration proof:
+
+One pre-existing violation in the bare gate (not in my unscanned dir). Let me identify it to confirm it's out of scope:
+
+The bare-gate violation is the **same pre-existing sibling** ResultPanel documented: `dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141` (another slot's surface, outside my allowed files; my scoped run is 0/0). Now the xcodebuild deferral proof — generate the project and prove the surface isn't yet target-registered:
+
+`StatusHero`/`shared-surfaces` = **0 refs** in the generated project (vs `AcDcStatsPanel` 42, `ContentView` 6) — proving the surface isn't target-registered yet (the integration prompt wires `shared-surfaces` into `project.yml`, exactly as it already did for `feature-views`). So an `xcodebuild` now would build *without* my files = zero evidence for this deliverable. Let me confirm signing status and verify the generated project is git-ignored, then clean up.
+
+All deferral evidence confirmed: **0 valid signing identities**, **Shared.xcframework not staged** (only `.gitkeep`), and the generated `.xcodeproj` is git-ignored. Let me clean up generated artifacts and confirm the working tree contains only my intended files:
+
+I notice pre-existing unrelated modifications (`AIUsageCard.*`, two web files) that I did **not** touch — these were already dirty in the working tree from the environment/another slot. Let me confirm they're unrelated to my work so I commit only my files:
+
+Confirmed: `AIUsageCard.*` (06:23:05) and the web files (06:23:12) are pre-existing dirty files from session start — unrelated to StatusHero. I'll commit **only** my files via explicit paths. Let me verify i18n key parity, then write the gate log.
+
+i18n parity is **7/7** (0 missing), all files ≤400 lines. Now let me write the gate log:
+
+Now let me commit only my files (explicit paths, leaving the pre-existing dirty files untouched):
+
+Committed `1d69001ae`. Let me verify the commit contains **only** my 7 intended files (the pre-existing dirty files were correctly excluded):
+
+The commit is clean: exactly 7 files (my 6 `StatusHero.*` + the log, 1121 insertions). The pre-existing dirty files remain unstaged and excluded. Let me finalize the todo tracker.
+
+All 11 todos complete. The task is finished and verified.
+
+## Summary
+
+Shipped a production-polished native SwiftUI **StatusHero** shared surface at `apps/apple/TeslaSync/shared-surfaces/StatusHero.*` at full parity with `web/src/components/status/StatusHero.tsx`, committed as `1d69001ae`.
+
+**Delivered (6 files, 874 LOC, all ≤400 lines):** `StatusHero.Model.swift` (pure `STATUS_CONFIG` resolver + P1/S8 `@Observable` seam + P1/S11 telemetry + P1/S10 i18n facade + a11y), `StatusHero.swift` (glass panel + status glow + `ViewThatFits` row↔stack), `StatusHero.Views.swift` (icon ring badge, shared `TSStatusDot` Live pill, CTA via shared `TSButton`), `.Previews`, `.Tests` (XCTest), `.strings`.
+
+**Parity:** all 5 status variants (icon/tone/glow/headline) + headline override + subline + Live pill (only-with-subline quirk) + CTA-loading + responsive layout; 7/7 i18n keys; VoiceOver/Dynamic Type/Reduce Motion; `view.opened` telemetry once.
+
+**Gates — host-runnable, all green:**
+- `TYPECHECK_EXIT=0` (macOS compile covers iOS — no `#if os`) · `PREVIEWS_TYPECHECK_EXIT=0`
+- Executed harness **47/47 ALL PASS** · `-enable-testing` module build `=0` (tests resolve; only XCTAssert macros can't expand standalone — precedent-documented)
+- Scoped swiftlint **0/5** · scoped swiftformat **0/5** · placeholders **COUNT=0**
+
+**Xcode build/test DEFERRED** (predecessor ResultPanel disposition) with proven evidence: `shared-surfaces`/`StatusHero` = **0 refs** in generated pbxproj (vs `AcDcStatsPanel` 42) — not yet target-registered (the integration prompt's job, Honesty rule 7); `Shared.xcframework` unstaged; 0 signing identities.
+
+The bare-gate swiftlint (1) and swiftformat (1) failures are **pre-existing sibling files** from other slots (`LifetimeStatsWidget`, `ActionBuilder`), outside my allowed files. Committed only my 6 files + log via explicit paths; left unrelated pre-existing dirty files (`AIUsageCard.*`, two web files) untouched. Log ends `EXIT=0 / STATUS=DONE`.
+

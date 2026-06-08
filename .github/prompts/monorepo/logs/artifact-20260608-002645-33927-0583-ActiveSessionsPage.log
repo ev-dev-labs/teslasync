@@ -1,0 +1,179 @@
+=== P4-Apple · P7 · page:settings/ActiveSessions — ActiveSessionsPage (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6 (Xcode 26.5) · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen · pwsh · Gradle (JDK 17)
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5) present · macOS 26.5 SDK present
+  Shared.xcframework : assembled (Gradle :core:assembleSharedXCFramework BUILD SUCCESSFUL) + staged to
+                       apps/apple/Frameworks/Shared.xcframework (release).
+  Capability         : SwiftUI + iOS/macOS simulators present → NOT capability-BLOCKED. This page uses no
+                       charts/maps; it has no API data sources of its own (renders from local nav state).
+
+WEB SOURCE (the specification)
+  web/src/features/settings/pages/ActiveSessionsPage.tsx — route /account/sessions.
+  A thin page: <PageContainer title={t('account.sessions.title','Active sessions')}
+  subtitle={t('account.sessions.subtitle','Devices currently signed in to TeslaSync. Revoke individual
+  sessions or sign out everywhere else.')} copyLink> wrapping <ActiveSessionsSection />. usePageTitle sets
+  the document title. The page promotes the device-management section out of /settings into a first-class
+  Account page; it has NO API data sources of its own — it renders from navigation values / local state,
+  and the embedded ActiveSessionsSection (its own already-shipped parity unit, 0197) owns the session list
+  query + the two destructive revokes + every loading / open-mode / empty / error / content state.
+
+  Parity unit record (apps/parity/parity-manifest.json):
+    kind=page · route=/account/sessions · data sources=NONE · panels=0 (reproduce the web regions) ·
+    charts=0 · maps=0 · states=0 declared · strings=2 → PARITY_REQUIRED=2
+    strings: account.sessions.title · account.sessions.subtitle
+
+ARTIFACTS SHIPPED
+  apps/apple/TeslaSync/Features/Settings/  (the prompt's primary allowed area — NEW directory)
+    ActiveSessionsPage.swift          — @MainActor @Observable ActiveSessionsPageModel (title + subtitle as
+                                        local nav state LocalizedStringKeys + the embedded ActiveSessionsModel)
+                                        and the ActiveSessionsPage View: ScrollView → header (display title +
+                                        secondary subtitle, the two parity strings) + ActiveSessionsSection.
+                                        Adaptive macOS/iOS, capped reading measure, dark-mode + Dynamic Type
+                                        via Font.TS/Color.TS tokens, .navigationTitle + a11y header/contain.
+    ActiveSessionsPage.Previews.swift — #if DEBUG previews: forward-auth-required (default) + populated content.
+    SettingsRouteSurface.swift        — navigation glue: hosts AppSettingsView inside the shell NavigationStack
+                                        and registers the /account/sessions push (navigationDestination) → page.
+
+  Navigation registration (allowed: "navigation registration") — enumerated, no silent drift:
+    Sources/App/AppRouteParser.swift         — added deep-link alias "/account/sessions" → .settings.
+    Sources/Platform/Settings/AppSettingsView.swift — added optional onOpenActiveSessions closure (default nil,
+                                        so the macOS Settings ⌘, scene + existing call sites are unchanged) and,
+                                        when present, an "Active sessions" TSButton + TSHelperText in the
+                                        Security section (the web mounted ActiveSessions under <section id=
+                                        "security">). Identical shape to the existing onOpenNotifications button.
+    Sources/Platform/Settings/SettingsScene.swift — SettingsRouteRegistration now registers .settings →
+                                        SettingsRouteSurface (was AppSettingsView directly), wiring the page.
+
+  String catalog (allowed: "the platform string catalog"):
+    Localization/Localizable.xcstrings — added account.sessions.title="Active sessions" and
+                                        account.sessions.subtitle="Devices currently signed in to TeslaSync.
+                                        Revoke individual sessions or sign out everywhere else." (web values).
+
+  Build wiring (required so the new directory compiles into the app targets):
+    project.yml        — added `- path: TeslaSync/Features` to the TeslaSync (iOS) + TeslaSync-macOS targets.
+    .swiftlint.yml     — added `- TeslaSync/Features` to `included`.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind/HTML ported)
+  PageContainer            → ScrollView + VStack(spacing: TSSpacing.x2xl), capped maxWidth 720 (reading measure),
+                             Color.TS.bg background — the page scaffold.
+  title (h1)               → header Text(model.title) Font.TS.display / Color.TS.textPrimary + .isHeader trait,
+                             AND .navigationTitle(model.title) (the usePageTitle document-title equivalent),
+                             .navigationBarTitleDisplayMode(.inline) on iOS so the chrome title isn't a duplicate.
+  subtitle                 → header Text(model.subtitle) Font.TS.body / Color.TS.textSecondary, fixedSize vertical.
+  <ActiveSessionsSection/> → ActiveSessionsSection(model: model.sessions) — the shipped 0197 surface, embedded 1:1.
+  i18n                     → both literals resolve from Localizable.xcstrings via LocalizedStringKey, web key
+                             names preserved (account.sessions.title / account.sessions.subtitle); zero hardcoded.
+  a11y                     → title carries .isHeader; header is an .combine element; page is .contain; the
+                             embedded section keeps its own VoiceOver labels; Dynamic Type via Font.TS; light/dark
+                             + increased-contrast via the Color.TS dynamic tokens.
+  state holder             → @MainActor @Observable ActiveSessionsPageModel; the 2 strings render from it.
+  default data             → the embedded section is injected a forward-auth-required (AUTH_MODE_OPEN) source by
+                             default (a real, documented rendered branch — never blank) until the production
+                             P1/S8 session source is injected; ActiveSessionsPageModel(sessions:) is the DI seam.
+
+=== PARITY ===
+  PARITY_REQUIRED=2
+  [x] string — account.sessions.title
+        evidence: apps/apple/TeslaSync/Features/Settings/ActiveSessionsPage.swift
+                  symbol ActiveSessionsPageModel.title : LocalizedStringKey = "account.sessions.title";
+                  rendered by ActiveSessionsPage.header `Text(model.title)` + `.navigationTitle(model.title)`.
+                  catalog: Localization/Localizable.xcstrings key "account.sessions.title" = "Active sessions".
+  [x] string — account.sessions.subtitle
+        evidence: apps/apple/TeslaSync/Features/Settings/ActiveSessionsPage.swift
+                  symbol ActiveSessionsPageModel.subtitle : LocalizedStringKey = "account.sessions.subtitle";
+                  rendered by ActiveSessionsPage.header `Text(model.subtitle)`.
+                  catalog: Localization/Localizable.xcstrings key "account.sessions.subtitle" = "Devices
+                  currently signed in to TeslaSync. Revoke individual sessions or sign out everywhere else."
+  PARITY_COVERED=2
+  PARITY_COVERED == PARITY_REQUIRED (2 == 2) ✓
+
+GATES
+  [GREEN]  check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Settings -Language swift
+             → PLACEHOLDER_ALLOWED=0 · PLACEHOLDER_COUNT=0 · PLACEHOLDER_EXIT=0
+  [GREEN]  swiftlint --strict (apps/apple/TeslaSync/Features/Settings — my 3 shipped files)
+             → Found 0 violations, 0 serious in 3 files · MYLINT_EXIT=0
+           swiftlint --strict (whole included tree, FYI) → 1 PRE-EXISTING serious violation, NOT mine:
+             function_body_length in TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+             (0 findings in Features/Settings).
+  [GREEN]  swiftformat --lint (Features/Settings + the 3 edited nav/registration files) → 0/6 require
+             formatting · FORMAT_EXIT=0
+  [GREEN]  Isolated SwiftPM harness — swift-tools 6.0, Swift 6 language mode (strict-concurrency complete =
+           the app's settings), Xcode-26.5 toolchain — compiling the shipped ActiveSessionsPage.swift against
+           the REAL ActiveSessionsSection.* (0197) + design tokens (apps/design/generated/apple/Tokens.swift)
+           + Motion.swift: "Build complete! (12.22s)" · SWIFT_BUILD_EXIT=0
+  [GREEN]  Route harness — AppRoute.swift + AppRouteParser.swift (with my alias) compiled + asserted:
+             parse("/account/sessions") == .settings, parse("/account") == .settings, parse("/charging") ==
+             .charging, parse("/nonexistent") == nil → ROUTE_CHECKS_OK · ROUTE_EXIT=0 (existing RouteTests
+             cases still hold; only an alias was added).
+  [GREEN]  Nav-glue harness — Swift 6 strict-concurrency clean build of the REAL AppSettingsView.swift (my
+           onOpenActiveSessions edit), SettingsRouteSurface.swift, SettingsScene.swift (my registration edit),
+           AppRouteParser.swift, ActiveSessionsPage.swift + the full ActiveSessionsSection.* + the component
+           library (Components/UI, Forms, Motion + Design/TSMaterial + Tokens + Theme) + RouteHostRegistry:
+           "Build complete! (13.47s)" · NAVGLUE_CLEAN_EXIT=0. Proves every edited file integrates + the
+           SettingsRouteRegistration capture compiles under complete concurrency.
+
+  [DEFERRED] xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build                                                     : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO errors attributable to this change; both blockers pre-exist it):
+    iOS  : the app target fails at the explicit-module dependency scan on the FIRST co-located feature-view
+           test file — "AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'".
+           EVERY feature-views surface co-locates a *.Tests.swift / *.ModelTests.swift (import XCTest +
+           @testable import TeslaSync) in the app-target source group (AcDcStatsPanel, ActionBuilder,
+           ActiveOrdersSection, ActiveSessionsSection, AddressInput, AdvancedSettings, AIRestorePanel, …).
+           Xcode 26's explicit-modules scan aborts before any app source is type-checked. This page adds NO
+           co-located test files, so it neither introduces nor worsens the blocker.
+           grep "(ActiveSessionsPage|SettingsRouteSurface|AppSettingsView|SettingsScene|AppRouteParser).*error:"
+           /tmp/ios-build.log = 0 hits.
+    macOS: additionally fails before compilation on development SIGNING — "'TeslaSync-macOS' has entitlements
+           that require signing with a development certificate" (also TeslaSyncWidgets-macOS), which this
+           runner does not provision. 0 hits for my files in /tmp/mac-build.log.
+    These are exactly the artifacts apps/macos-pending-verifications.md defers to the signed macos-latest CI
+    runner, owned by the P4/P99 Apple acceptance gate (test-target/app-target separation + signing) — NOT by a
+    single page prompt (task rule: do not fix pre-existing unrelated breakage). The same two deferrals are
+    recorded by every predecessor P4 Apple surface (e.g. ActiveSessionsSection 0197). Because the explicit-
+    module scan aborts before type-checking, the authoritative POSITIVE compile proof for this change is the
+    isolated + nav-glue SwiftPM harnesses above (same Swift 6 strict-concurrency settings, real sources).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65)
+                          and explicitly DEFERRED with raw evidence — never reported as passing.
+  2  No scope narrowing  : the web page is reproduced in full — the page chrome (title + subtitle) AND the
+                          embedded ActiveSessionsSection; the two parity strings render from the bound model;
+                          the page is registered in navigation + as a /account/sessions deep link.
+  3  No skip-and-assume  : every owned gate executed on THIS runner; raw exits pasted; both xcodebuild failures
+                          confirmed + grep'd (0 errors attributable to my files), not assumed.
+  4  No stubs as final   : complete production page; placeholder scanner = 0; the default embedded source renders
+                          the section's REAL forward-auth-required branch (a documented state), not a blank box.
+  5  No parity shortcut  : both strings mapped to the catalog with web key names; tokens/typography/a11y/i18n/
+                          adaptive layout all honored; SwiftUI-native (no web cloning).
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: builds on P1/S8 state-holder shape, P1/S9 design tokens, P1/S10 i18n, the P3
+                          component library, P4 shell/nav (AppRoute/AppShell/RouteHostRegistry) + the shipped
+                          0197 ActiveSessionsSection.
+  8  No commit on red    : the COMMITTED artifact is GREEN on every owned gate (lint/format/placeholder) AND on
+                          two real Swift 6 strict-concurrency harness builds covering every shipped + edited
+                          file; the deferred full-app gate is RED only on pre-existing, unrelated infrastructure
+                          this commit neither introduces nor touches.
+  9  No silent drift     : all touched files enumerated above (3 new Features/Settings files + AppRouteParser +
+                          AppSettingsView + SettingsScene + Localizable.xcstrings + project.yml + .swiftlint.yml
+                          + apple-ledger.json + this log).
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic ActiveSessionsPage shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it and every edited navigation/registration file compile under the app's own Swift 6
+  strict-concurrency rules against the real design system + component library, with swiftlint / swiftformat /
+  placeholder all green on the shipped files and PARITY_COVERED == PARITY_REQUIRED (2 == 2). The full-app
+  iOS-Simulator + macOS xcodebuild gate is DEFERRED (not failed by this code): it is blocked by the pre-existing
+  co-located-test/app-target XCTest collision and by macOS development signing — both owned by the P4/P99
+  acceptance gate on a signed macos-latest CI runner per apps/macos-pending-verifications.md. This matches the
+  repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4 Apple surface to date.
+
+EXIT=0
+STATUS=DONE

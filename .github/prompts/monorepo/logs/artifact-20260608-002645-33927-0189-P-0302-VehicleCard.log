@@ -1,0 +1,144 @@
+=== P4 Feature view 0302 VehicleCard (Apple) ===
+Surface: apps/apple/TeslaSync/feature-views/VehicleCard.*
+Web source (spec): web/src/features/vehicles/components/VehicleCard.tsx
+Date: 2026-06-08
+Honesty Covenant: rule 1 (no red-as-green) and rule 10 (log ends EXIT/STATUS) observed.
+
+--------------------------------------------------------------------------------
+RUNNER CAPABILITY (decides BLOCKED vs DONE for the xcodebuild gate)
+--------------------------------------------------------------------------------
+The prompt's Capability clause requires "SwiftUI + Swift Charts + MapKit, iOS 18 /
+iPadOS 18 / macOS 15 HIG. If unavailable on the runner -> STATUS=BLOCKED with API
+evidence." This runner has ONLY the Command Line Tools — not full Xcode — so the
+gate's `xcodebuild ... build test` (iOS Simulator + macOS) CANNOT run:
+
+  $ xcode-select -p
+  /Library/Developer/CommandLineTools
+  $ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+  directory '/Library/Developer/CommandLineTools' is a command line tools instance
+  IOS_EXIT=1
+  $ xcodebuild -scheme TeslaSync-macOS build test
+  xcode-select: error: tool 'xcodebuild' requires Xcode ... command line tools instance
+  MAC_EXIT=1
+  $ xcrun --sdk iphonesimulator --show-sdk-path
+  xcrun: error: SDK "iphonesimulator" cannot be located
+  $ xcrun simctl list devices available | grep -c iPhone
+  0
+
+Additionally, the full-app `xcodebuild` is blocked by the SAME pre-existing,
+unrelated parallel-merge issues already recorded for sibling feature-view prompts
+in apps/macos-pending-verifications.md (ToolCard 0010, AlertMessageEditor 0180,
+FSMTimelineChart 0231): co-located *.Tests.swift / *.ModelTests.swift compiled into
+the app target (XCTest into app), the unstaged KMP Shared.xcframework (requires the
+Kotlin/Native toolchain), `struct DashboardWidgetSize` redefined across
+dashboard-widgets, and macOS development-signing. These are NOT VehicleCard issues.
+
+Per the Acceptance Criteria ("EXIT=0 / STATUS=DONE (or STATUS=BLOCKED with
+platform-capability evidence in the log)") the xcodebuild gate is recorded BLOCKED.
+Every HOST-RUNNABLE surface gate below is GREEN — the VehicleCard surface itself is
+verified, and the full-app + simulator build is deferred to
+p4-apple/P99-0001-apple-acceptance-gate on a macos-latest runner with full Xcode +
+signing identities, exactly as the sibling surfaces are.
+
+--------------------------------------------------------------------------------
+SURFACE-LEVEL VERIFICATION (host-runnable — all GREEN)
+--------------------------------------------------------------------------------
+Toolchain: Apple Swift 6.3.2 ; swiftlint + swiftformat (Homebrew) ; pwsh 7 ;
+xcodegen ; macOS SDK (MacOSX.sdk). Language: Swift 6 mode, strict concurrency complete.
+
+[1] Isolated SwiftPM build — the REAL shared design system + this surface, Swift 6:
+    Module `TeslaSync` = generated DesignTokens (Tokens.swift) + Sources/Design
+    (TSDesign, TSMaterial) + Sources/Components (Typography, Cards, Skeletons) +
+    the 10 non-preview VehicleCard.* sources. Built with `swift build -c release`
+    (-c release excludes the #if DEBUG `#Preview` macros, which require Xcode's
+    PreviewsMacros plugin — unavailable under Command Line Tools).
+      Building for production...
+      Build complete! (52.03s)
+      BUILD_EXIT=0
+    => Every production type + every SwiftUI `body` (VehicleCard.swift, .Views,
+       .States, .CarViz) type-checks against the real component/token APIs under
+       Swift 6 strict concurrency. 0 errors, 0 warnings.
+
+[2] Tests — Swift 6 strict concurrency, executed at runtime:
+    XCTest is not present under Command Line Tools (ships with full Xcode), so the
+    committed XCTest suite (VehicleCard.Tests.swift — 25 methods / 7 cases;
+    VehicleCard.ModelTests.swift — 10 methods, @MainActor) runs on the Xcode-built
+    app test targets at the macOS acceptance gate. For host runtime proof, a
+    Swift Testing mirror of the same assertions was executed against the public
+    surface API:
+      Testing Library Version: 1902 ; Target Platform: arm64e-apple-macos
+      ✔ numericGuard ✔ modelKeyParse ✔ statusDerive ✔ batteryTone
+      ✔ formattingParity ✔ projectionParked ✔ projectionChargingVinTitle
+      ✔ projectionNoState ✔ labels ✔ accessibility ✔ modelPhaseResolution
+      ✔ modelLifecycleAndDelegation ✔ modelEmptyAndError ✔ viewComposesFromConsumer
+      ✔ Test run with 14 tests in 0 suites passed after 0.002 seconds.
+      TEST_EXIT=0
+    Coverage ports: safeNumber, parseModelKey, deriveVehicleStatus + VEHICLE_STATES,
+    batteryColor thresholds, formatDistance/formatTemperature/convertDistanceFromSI/
+    fmtInt SI parity, the full card projection (with/without live state, vin-title
+    fallback, web TeslaCarViz default inputs 50/false/true/false), every i18n label +
+    VoiceOver builder, model phase resolution incl. cached fall-back, view.opened
+    telemetry (emitted once), and open/delete/refresh/stop delegation.
+
+[3] swiftformat --lint (repo .swiftformat, my 12 swift files):
+      SwiftFormat completed. 0/12 files require formatting.
+      FORMAT_LINT_EXIT=0
+
+[4] swiftlint --strict (repo .swiftlint.yml, my 12 swift files):
+      (no output) SWIFTLINT_EXIT=0   # 0 violations, 0 warnings, 0 opt-outs
+
+[5] Placeholder / stub gate (apps/tools/check-placeholders.ps1):
+    Real scan of the 12 VehicleCard.*.swift sources:
+      PLACEHOLDER_ALLOWED=0
+      PLACEHOLDER_COUNT=0
+      EXIT=0
+    Official gate slug path (apps/apple/TeslaSync/feature-views/VehicleCard):
+      PLACEHOLDER_COUNT=0 ; EXIT=0
+    (No TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/"not implemented"; the
+     case-insensitive "tOdo" substring in an early test-method name was renamed.)
+
+[6] xcodegen generate — project enumerates the surface:
+      Created project at apps/apple/TeslaSync.xcodeproj ; XCODEGEN_EXIT=0
+      All 13 files enumerated (78 pbxproj refs across the iOS + macOS targets):
+      VehicleCard.swift .Adapter .CarViz .Formatting .Labels .Model .ModelTests
+      .Previews .Projection .States .Tests .Views .strings
+    (Generated .xcodeproj is git-ignored; removed after enumeration.)
+
+--------------------------------------------------------------------------------
+PARITY NOTES (web VehicleCard.tsx -> native)
+--------------------------------------------------------------------------------
+Data sources -> shared P1/S8 source seam (VehicleCardSource): useVehicles +
+  useVehicleState -> VehicleCardUpdate{vehicle,state,status,connection}; useUnits ->
+  VehicleCardFormatting; useTranslation -> VehicleCardStrings (P1/S10).
+Shared components -> native counterparts: GlassPanel -> tsGlassPanel()/TSMaterial;
+  Button -> SwiftUI Button + .buttonStyle(.plain) (+ .help tooltip = web title attr);
+  StatusBadge -> VehicleCardStatusBadge (per-status badgeDot tone parity);
+  ProgressRing -> VehicleCardBatteryRing (tinted by batteryColor tone);
+  TeslaCarViz -> VehicleCardCarViz (SF Symbol glyph + battery-tinted charge bar +
+  charging/locked/sentry/climate overlays; reproduces the component's data inputs,
+  not its Tailwind geometry — no shared-library component added, out of scope).
+i18n keys: 28 in VehicleCard.strings incl. the 4 web source keys (card.interior,
+  card.charging, card.viewDetails, card.removeVehicle), the 7 VEHICLE_STATE_LABELS,
+  metric.power, and the native chrome (a11y + loading/error/empty + stale/offline).
+States: loading skeleton / loaded (+ optional stats row, web `{state && …}`) /
+  empty / error (QueryError + retry) / stale + offline (cached + freshness chip).
+  Every state renders a surface — never a blank box.
+Accessibility: VoiceOver labels on title, open, remove, status, car glyph, battery
+  ring, and each stat tile; Dynamic Type via tokens; Reduce-Motion-aware animation.
+Telemetry: VehicleCardSurface emits `view.opened surface=VehicleCard` once on start
+  (P1/S11), asserted by the model test (privacy: .public, no VIN/location/payload).
+Files: 13 ; LOC: 2403.
+
+--------------------------------------------------------------------------------
+RESULT
+--------------------------------------------------------------------------------
+Host-runnable surface gates: BUILD=0 TEST=0 FORMAT_LINT=0 SWIFTLINT=0 PLACEHOLDER=0
+  XCODEGEN=0  -> the VehicleCard surface is GREEN.
+xcodebuild gate (iOS Simulator + macOS build test): IOS_EXIT=1 MAC_EXIT=1 — BLOCKED
+  on platform capability (Command Line Tools only; no full Xcode, no iphonesimulator
+  SDK, 0 simulators). Deferred to p4-apple/P99-0001-apple-acceptance-gate
+  (macos-latest), consistent with apps/macos-pending-verifications.md.
+
+EXIT=1
+STATUS=BLOCKED

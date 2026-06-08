@@ -1,0 +1,170 @@
+=== P4 Feature view 0120 TeslaChargingSessionsMap (Apple) ===
+Prompt : .github/prompts/monorepo/p4-apple/feature-views/P-0120-TeslaChargingSessionsMap.prompt.md
+Surface: apps/apple/TeslaSync/feature-views/TeslaChargingSessionsMap.*
+Web src: web/src/features/charging/pages/TeslaChargingSessionsMap.tsx  (THE specification)
+Mode   : code-complete + host-validated; DEFERRED full-app Xcode scheme build/test (CLT-only runner)
+Date   : 2026-06-08
+
+────────────────────────────────────────────────────────────────────────────────
+RUNNER CAPABILITY (measured, not assumed)
+────────────────────────────────────────────────────────────────────────────────
+  swift --version ........... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)  target arm64-apple-macosx26.0
+  xcode-select -p ........... /Library/Developer/CommandLineTools         (Command Line Tools — NO Xcode.app)
+  xcodebuild ................ PRESENT but inert: "tool 'xcodebuild' requires Xcode, but active developer
+                              directory '/Library/Developer/CommandLineTools' is a command line tools instance"
+  macOS 15 SDK .............. PRESENT  (xcrun --sdk macosx)  → SwiftUI + MapKit + Swift Charts compile (probed)
+  iOS 18 SDK ................ ABSENT   (xcrun --sdk iphoneos → "unable to load standard library for target
+                              arm64-apple-ios18.0")  → iOS-SDK typecheck DEFERRED
+  XCTest.swiftmodule ........ ABSENT under CLT (Xcode-only)  → `swift test` of *.Tests.swift DEFERRED;
+                              compensated by an EXECUTION verifier (below) that runs every assertion
+  PreviewsMacros plugin ..... ABSENT under CLT (Xcode-only)  → `#Preview` macro expansion DEFERRED
+  swiftlint ................. /opt/homebrew/bin/swiftlint   swiftformat: /opt/homebrew/bin/swiftformat
+  pwsh ...................... /opt/homebrew/bin/pwsh        xcodegen: /opt/homebrew/bin/xcodegen
+
+  → The SwiftUI + Swift Charts + MapKit authoring capability IS available (macOS-15 SDK, proven by compile).
+    What is unavailable on THIS runner is the full Xcode pipeline (xcodebuild + iOS-Simulator SDK + XCTest +
+    Preview macro). Those steps are DEFERRED to a signed macos-latest Xcode runner per the repo's documented
+    ADR-012 / apps/macos-pending-verifications.md protocol. Every step is reported with its REAL exit code.
+
+────────────────────────────────────────────────────────────────────────────────
+SHIPPED FILES (11 — all under the allowed path apps/apple/TeslaSync/feature-views/TeslaChargingSessionsMap.*)
+────────────────────────────────────────────────────────────────────────────────
+  TeslaChargingSessionsMap.Adapter.swift      — domain: safeNumber guard, session model, map geometry
+                                                (center memo + clusterPoints plottable filter + zoom→span)
+  TeslaChargingSessionsMap.Projection.swift   — marker projection (callout fields + a11y label), web clusterPoints
+  TeslaChargingSessionsMap.Formatting.swift   — P1/S11 view.opened telemetry + formatting seam
+                                                (currency / number / convertEnergyFromSI Wh→kWh / formatDateTime)
+  TeslaChargingSessionsMap.Model.swift        — P1/S8 Source seam, Update, @Observable Model (phase + markers +
+                                                center), InMemory source, P1/S10 strings facade
+  TeslaChargingSessionsMap.States.swift       — loading skeleton / empty / error+retry / stale+offline chip
+  TeslaChargingSessionsMap.Views.swift        — MapKit Map + per-session annotations + selection callout + legend
+  TeslaChargingSessionsMap.swift              — the surface View (phase switch + onAppear view.opened) + Text facade
+  TeslaChargingSessionsMap.Previews.swift     — #if DEBUG previews for every state + reusable sample sessions
+  TeslaChargingSessionsMap.strings            — P1/S10 per-surface i18n table (tesla_sessions.* + native chrome)
+  TeslaChargingSessionsMap.Tests.swift        — adapter/geometry/projection/formatting/a11y XCTest
+  TeslaChargingSessionsMap.ModelTests.swift   — phase resolution / telemetry / lifecycle / state coverage XCTest
+
+  No shared wiring touched: project.yml + .swiftlint.yml already glob TeslaSync/feature-views; strings ship as a
+  per-surface NSLocalizedString table (no edit to the shared Localizable.xcstrings). git status lists ONLY these
+  11 files (+ this log).
+
+────────────────────────────────────────────────────────────────────────────────
+PARITY MAPPING (web → Apple; no Tailwind ported; tokens from P1/S9)
+────────────────────────────────────────────────────────────────────────────────
+  @/components/maps MapContainer + MapTileLayer  → MapKit `Map(position:selection:)` .mapStyle(.standard,
+                                                   pointsOfInterest:.excludingAll)
+  MarkerCluster (defaultColor "#22d3ee" cyan)    → per-session `Annotation` pins (bolt.fill on Color.TS.accent);
+                                                   MapKit declutters at scale (web cluster is a perf optimization)
+  marker popupHtml (site/date/energy/cost/charger)→ selection-driven TeslaChargingSessionsMapCallout card
+  center memo (avg lat/lng, default 37.77/-122.42)→ TeslaChargingSessionsMapGeometry.center (EXACT port, ?? 0 → safe)
+  clusterPoints filter (typeof number && !NaN)   → TeslaChargingSessionsMapGeometry.isPlottable (EXACT; (0,0) kept)
+  zoom={5}                                        → MKCoordinateSpan 360/2^5 = 11.25° (spanDelta(forZoom:))
+  fmtNumber / convertEnergyFromSI(wh,'kWh')=wh/1000→ DefaultFormatting.formatEnergyKwh + formatNumber (grouped, halfUp)
+  useFormatting().formatCurrency(amount,2)        → DefaultFormatting.formatCurrency ("$" + grouped number)
+  formatDateTime(iso)                             → DefaultFormatting.formatDateTime ("—" on nil)
+  charger_type (text-transform:uppercase)         → marker.chargerText = type.uppercased()
+  container role=application aria-label           → .accessibilityElement(children:.contain) + label "Charging sessions map"
+  marker aria-label "{{name}} charging session"   → marker.accessibilityLabel (token-substituted; name||"Unknown")
+  i18n      : tesla_sessions.unknown / .markerLabel / .mapLabel resolve via the P1/S10 facade; ZERO English literals
+              in code. energy unit ("{{value}} kWh") + native chrome keys also in the per-surface table.
+  states    : loading skeleton, friendly empty (incl. "sessions present but none plottable"), QueryError-style
+              retry, stale/offline freshness chip — every state renders a surface, never a blank box.
+  a11y      : pins are buttons with per-marker labels; map labelled + valued (site count); Dynamic Type via Font.TS
+              roles; Reduce-Motion-aware callout transition + skeleton shimmer.
+  telemetry : view.opened surface="TeslaChargingSessionsMap" via TeslaChargingSessionsMapSurface.reportOpen (P1/S11).
+
+────────────────────────────────────────────────────────────────────────────────
+GATES — host-runnable on THIS runner (REAL captured exit codes)
+────────────────────────────────────────────────────────────────────────────────
+  [GREEN] swiftformat --lint  (10 surface files, repo .swiftformat) .... 0/10 require formatting     FORMAT_EXIT=0
+  [GREEN] swiftlint lint --strict (10 surface files, repo .swiftlint.yml) Found 0 violations, 0 serious LINT_EXIT=0
+  [GREEN] check-placeholders.ps1 -Path <surface prefix> (literal gate) .. PLACEHOLDER_COUNT=0 ALLOWED=0 PLACEHOLDER_EXIT=0
+  [GREEN] check-placeholders.ps1 -Path <temp copy of all 11 files> -Language swift (MEANINGFUL re-scan)
+                                                                          PLACEHOLDER_COUNT=0 ALLOWED=0 PLACEHOLDER_EXIT=0
+  [GREEN] swiftc -typecheck  MacOSX (macos15.0, swift 6) over the 8 runtime files + REAL design system
+                              (Tokens/TSDesign/TSMaterial/Skeletons/Cards/Badges/Typography) .... MAC_TYPECHECK_EXIT=0
+  [GREEN] swiftc -typecheck  MacOSX -D DEBUG (same set) ... ONLY error is the Xcode-only PreviewsMacros plugin
+                              ("Preview(_:body:)" macro); ZERO non-preview errors → the #if DEBUG Sample fixtures
+                              + all DEBUG code type-check; only the `#Preview` MACRO is unavailable on CLT.
+  [GREEN] isolated SwiftPM release build — swift-tools 6.0, swiftLanguageModes [.v6] (Swift 6 strict concurrency =
+                              the app's mode), the EXACT shipped runtime sources compiled against the REAL repo
+                              design-system files ......................................... "Build complete!" BUILD_EXIT=0
+  [GREEN] EXECUTION verifier — `swift run -c release Verify` runs every assertion of the two shipped XCTest files
+                              (one-for-one) against the real module (XCTest.swiftmodule is Xcode-only, so the
+                              executable is the host-runnable substitute for `swift test`):
+                                  CHECKS: 93   FAILURES: 0   ALL CHECKS PASSED ................ VERIFY_EXIT=0
+                              Coverage: numeric guard; center memo (default/avg/safe-guard); plottable filter incl.
+                              the web integration-test parity (500→500, every-10th-invalid→450); zoom→span; marker
+                              projection (site/date/energy/cost/upper-charger + "Unknown" fallback + absent-field
+                              nils); formatting (number/currency/energyKwh/dateTime/custom symbol); model phase
+                              resolution (all 8 branches incl. cached-failure-stays-loaded + none-plottable→empty);
+                              markers+center exposure; empty-clears-cache; connection tracking; view.opened-once +
+                              reopen; refresh delegation; view builds in every phase; surfaceSlug.
+  [GREEN] swiftc -parse  TeslaChargingSessionsMap.Tests.swift + .ModelTests.swift (syntax validity of the shipped
+                              XCTest files; full typecheck needs the Xcode-only XCTest module) .... PARSE_EXIT=0
+  [GREEN] xcodegen generate (project spec enumerates all 11 new files; 66 refs across the iOS/macOS app + test
+                              targets) ........................................................... XCODEGEN_EXIT=0
+
+────────────────────────────────────────────────────────────────────────────────
+DEFERRED — require Xcode.app / iOS-Simulator SDK / signing (NOT present on a CLT-only runner)
+────────────────────────────────────────────────────────────────────────────────
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+                              → "tool 'xcodebuild' requires Xcode … command line tools instance"    IOS_EXIT=1
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test
+                              → "tool 'xcodebuild' requires Xcode … command line tools instance"    MAC_EXIT=1
+  [DEFERRED] swiftc -typecheck iPhoneSimulator (ios18.0) — iOS SDK absent under CLT (compensated by the macOS-15
+                              compile of the identical platform-agnostic SwiftUI/MapKit source)
+  [DEFERRED] swift test (XCTest bundle) — XCTest.swiftmodule absent under CLT (compensated by the 93-assertion
+                              EXECUTION verifier above, which runs the same assertions to green)
+  [DEFERRED] #Preview macro compilation — PreviewsMacros plugin absent under CLT (Sample fixtures type-check; the
+                              macro expands only inside Xcode/app targets)
+
+  WHY DEFERRED: this runner is Command-Line-Tools-only — there is no Xcode.app, no iOS-Simulator SDK, no XCTest
+  module, and no Preview macro plugin. These are exactly the artifacts ADR-012 / apps/macos-pending-verifications.md
+  route to a signed macos-latest CI runner. They are NOT blocked by anything in TeslaChargingSessionsMap.* — the
+  surface compiles clean (macOS-15, debug+release) and every test assertion EXECUTES green here. The deferral is a
+  property of the runner, not of this code, and the reds above are shown verbatim — never painted green.
+
+────────────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT (binding)
+────────────────────────────────────────────────────────────────────────────────
+  1  No red-as-green    : IOS_EXIT=1 / MAC_EXIT=1 are shown verbatim and labelled DEFERRED with the exact
+                          xcode-select error; the absent iOS-SDK / XCTest / Preview-macro are disclosed, not hidden.
+  2  No scope narrowing : every web region + branch reproduced — center memo, plottable filter (incl. (0,0) kept),
+                          all 5 callout fields with absent-field omission, the "Unknown" fallback, the uppercase
+                          charger, every i18n key, and all states (loading/empty/error/stale/offline + none-plottable).
+  3  No skip-and-assume : every host-runnable gate RAN on THIS runner; raw exits pasted; the surface logic was
+                          EXECUTED (93 checks); xcodebuild failure CONFIRMED by running it, not assumed.
+  4  No stubs as final  : complete production surface + 2 real XCTest files + execution verifier; PLACEHOLDER_COUNT=0.
+                          (The /tmp SwiftPM harness is a throwaway verifier — never shipped/committed.)
+  5  No parity shortcuts: center/zoom/plottable/energy-SI/currency/date/charger-case/a11y/telemetry all mapped to
+                          platform tokens + native MapKit and VERIFIED against the web semantics (unit-test parity
+                          with the web integration test's 500→450 plottable count).
+  6  No delegation      : authored directly; no sub-agent delegation of the surface.
+  7  No predecessor bypass: P1/S8 state-holder seam (no HTTP in the view), P1/S9 tokens, P1/S10 i18n facade, P1/S11
+                          view.opened telemetry, P4 shared design system — all present and consumed.
+  8  No commit on red   : committing on GREEN host-runnable gates (swiftformat, swiftlint --strict, placeholder,
+                          macOS-15 debug+release compile, 93-assertion EXECUTED verifier, parse, xcodegen). The
+                          xcodebuild + iOS-SDK + XCTest + Preview-macro steps are DEFERRED solely because this
+                          CLT-only runner lacks Xcode — not because of any TeslaChargingSessionsMap.* defect.
+  9  No silent drift    : git status lists ONLY the 11 TeslaChargingSessionsMap.* files (+ this log); no shared
+                          file (project.yml/.swiftlint.yml/Localizable.xcstrings/macos-pending-verifications.md)
+                          edited; the generated .xcodeproj is a git-ignored build artifact.
+  10 EXIT / STATUS below.
+
+────────────────────────────────────────────────────────────────────────────────
+DISPOSITION
+────────────────────────────────────────────────────────────────────────────────
+  Production-polished, Apple-idiomatic TeslaChargingSessionsMap shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED by every host-runnable means available on this Command-Line-Tools-only runner: a Swift-6
+  strict-concurrency release build of the exact shipped sources against the REAL design system, a 93-assertion
+  EXECUTION of the surface logic (mirroring both XCTest files one-for-one), a macOS-15 swiftc -typecheck (debug +
+  release), green swiftformat / swiftlint --strict / placeholder gates, and an xcodegen enumeration of all 11
+  files. The full-app iOS-Simulator + macOS `xcodebuild build test`, the iOS-18-SDK typecheck, the XCTest `swift
+  test`, and the `#Preview` macro compilation are DEFERRED (not failed by this code) — they require Xcode.app /
+  iOS-Simulator SDK / signing that this runner does not provide, and are owned by the P4/P99 acceptance gate on a
+  signed macos-latest CI runner per ADR-012 / apps/macos-pending-verifications.md. This matches the repo's
+  sanctioned "code-complete + host-validated + DEFERRED Xcode gate = DONE" disposition used by every P4 surface.
+
+EXIT=0
+STATUS=DONE

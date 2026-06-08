@@ -1,0 +1,116 @@
+=== P4 Shared surface 0226 Slider (Apple) ===
+Prompt : .github/prompts/monorepo/p4-apple/shared-meaningful/P-0226-Slider.prompt.md
+Web src: web/src/components/ui/Slider.tsx
+Output : apps/apple/TeslaSync/shared-surfaces/Slider/Slider.*
+Host   : macOS (Darwin), Xcode 26.5 (DEVELOPER_DIR=/Applications/Xcode.app), Swift 6.3.2,
+         xcodegen, swiftlint, swiftformat, pwsh — all present. iPhone 16 simulator available.
+
+----------------------------------------------------------------------------------------
+SURFACE DESIGN (parity with the web source)
+----------------------------------------------------------------------------------------
+The web <Slider> is a controlled single-thumb `<input type=range>` primitive: required `label`
+(visible + a11y name), optional `formatValue` readout (`aria-valuetext`), `showLabel` + `disabled`
+flags, `min`/`max`/`step`, `onChange`. Its only "data source" is React `useId` (label↔input id
+association) — SwiftUI associates a control with its label automatically, so no explicit id is
+modelled. Files (7 swift + 1 strings), collision-free names (TSSlider + SwiftUI.Slider already exist):
+  Slider.swift          — SliderSurface host (state machine) + surfaceSlug="Slider"      (101 loc)
+  Slider.Model.swift    — SliderStrings(i18n S10), SliderTelemetry+OSLog(S11), SliderValueFormat,
+                          SliderConfig, SliderConnection, SliderInput, SliderSource+SliderModel(S8) (355)
+  Slider.Source.swift   — InMemorySliderSource (preview/test seam)                         (56)
+  Slider.Adapter.swift  — SliderProjection.resolve -> SliderResolved (error→loading→empty→ready) (98)
+  Slider.Views.swift    — SliderControl (primitive parity) + loading/error/empty chrome +
+                          freshness chip + connectivity banner (self-contained)            (266)
+  Slider.Previews.swift — #if DEBUG previews per state + format/disabled/no-label variants  (144)
+  Slider.Tests.swift    — XCTest: projection / formatter / snap / model wiring / a11y       (283)
+  Slider.strings        — i18n catalog (P4 leaf chrome + demo labels)
+Every state renders: loading (skeleton), empty (unusable bounds), error (retry), ready
+(interactive control), + the live/stale/offline freshness axis (chip + banner + one-shot stale
+auto-refresh). view.opened telemetry emitted once on first presentation (slug "Slider").
+Bound through SliderSource (P1/S8); no view-side I/O. All chrome strings via SliderStrings (P1/S10).
+a11y: SwiftUI Slider carries label + aria-valuetext-equivalent accessibilityValue + native
+adjustable action; visible label row hidden from VO to avoid duplication; Dynamic Type via tokens;
+Reduce-Motion respected (TSFadeIn + skeleton pulse).
+
+----------------------------------------------------------------------------------------
+HOST-RUNNABLE GATES (the surface itself)
+----------------------------------------------------------------------------------------
+[xcodegen]  xcodegen generate ......................................... EXIT=0
+            project.pbxproj enumerates all 8 Slider files:
+              Slider.Adapter.swift Slider.Model.swift Slider.Previews.swift Slider.Source.swift
+              Slider.strings Slider.swift Slider.Tests.swift Slider.Views.swift
+
+[SwiftPM]   isolated package (real Tokens.swift + Motion.swift + the 7 Slider sources),
+            -strict-concurrency=complete, swift-tools 6.0:
+              swift build ............................................. BUILD_EXIT=0
+              swift test ............................................. TEST_EXIT=0  (23/23 passed, 0 failures)
+                SliderProjectionPhaseTests (6) · SliderProjectionMathTests (4) ·
+                SliderValueFormatTests (7) · SliderModelTests (6)
+
+[swiftc]    real-SDK typecheck, -swift-version 6 -strict-concurrency=complete:
+              iOS 18 simulator (arm64-apple-ios18.0-simulator) .......  IOS_TYPECHECK_EXIT=0
+              macOS 15 (arm64-apple-macos15.0) .......................  MAC_TYPECHECK_EXIT=0
+
+[swiftlint] swiftlint --strict (repo .swiftlint.yml; shared-surfaces added to `included`):
+              Slider files .......................................... 0 violations  ✓
+            (Whole-tree --strict is non-zero ONLY from a pre-existing, unrelated violation:
+             TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length.)
+
+[swiftformat] swiftformat --lint apps/apple/TeslaSync/shared-surfaces/Slider .. 0/7 require formatting  ✓
+
+[placeholder] ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/Slider
+              PLACEHOLDER_ALLOWED=0
+              PLACEHOLDER_COUNT=0
+              EXIT=0   ✓  (no TODO/FIXME/Placeholder/stub/mock/Lorem; 0 opt-outs)
+
+----------------------------------------------------------------------------------------
+FULL-APP GATE  (xcodebuild build test — iOS Simulator + macOS)
+----------------------------------------------------------------------------------------
+Attempted: DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+
+Status: BLOCKED — macOS-pending, by PRE-EXISTING, UNRELATED parallel-merge collisions in the app
+target (identical to the deferrals already recorded in apps/macos-pending-verifications.md for
+ToolCard / AlertMessageEditor / FSMTimelineChart). ZERO Slider/shared-surfaces errors.
+
+Evidence:
+  1. Shared.xcframework absent (Frameworks/ holds only .gitkeep). The scheme pre-action
+     (Scripts/build-shared-xcframework.sh → Gradle :core:assembleSharedXCFramework, Kotlin/Native)
+     DID run here and produced the debug XCFramework, but the release-variant link across all KMP
+     targets is very slow under concurrent multi-slot CPU contention and the build was
+     INTERRUPTED before the framework staged / before app sources compiled (log: "** BUILD
+     INTERRUPTED **" during :core:linkReleaseFrameworkMacosArm64). Other slots' xcodebuilds were
+     observed running concurrently on the shared host.
+  2. Even with the framework staged, the app target does not compile due to pre-existing collisions:
+       • `struct DashboardWidgetSize` defined 15× across app-target source paths
+         (Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/*) → invalid redeclaration.
+       • 261 co-located *.Tests.swift files under TeslaSync/feature-views + TeslaSync/dashboard-widgets
+         `import XCTest` + `@testable import TeslaSync` into the APP target (module imports itself).
+     These are the same blockers ADR-010/012 defers to the macos-latest acceptance gate
+     (P99-0001). The Slider surface adds one co-located test file, consistent with that precedent;
+     it is validated above via the isolated SwiftPM build (23/23) + dual-SDK swiftc typecheck.
+
+Deferred verification recorded in apps/macos-pending-verifications.md (new row).
+
+----------------------------------------------------------------------------------------
+BUILD-SYSTEM WIRING (apps/apple/** — README binding rule 1)
+----------------------------------------------------------------------------------------
+Foundational registration of the new shared-surfaces category (the P4-core dependency had not yet
+wired it; required so xcodegen enumerates + swiftlint lints the surface):
+  • apps/apple/project.yml      — added `TeslaSync/shared-surfaces` to the TeslaSync (iOS) and
+                                  TeslaSync-macOS app target sources.
+  • apps/apple/.swiftlint.yml   — added `TeslaSync/shared-surfaces` to `included`.
+
+----------------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+----------------------------------------------------------------------------------------
+[x] Surface renders every state from the web source (+ P4 leaf states) — loading/empty/error/ready
+    + live/stale/offline. Reproduced as self-contained subviews (surface may touch only its files).
+[x] Bound through the shared P1/S8 state-holder (SliderSource/SliderModel); no direct I/O in views.
+[x] Every i18n key resolved through P1/S10 (SliderStrings → "Slider" table); no English literals.
+[x] Accessibility labels/values on every interactive element; native adjustable action.
+[x] Tests: adapter/projection unit tests + per-state model tests + a11y/value content + formatter.
+[x] No TODO/stub/mock/Placeholder/Lorem in shipped code (placeholder gate EXIT=0).
+[ ] Full-app xcodebuild build test green — BLOCKED (macOS-pending; pre-existing collisions, not Slider).
+
+EXIT=1
+STATUS=BLOCKED

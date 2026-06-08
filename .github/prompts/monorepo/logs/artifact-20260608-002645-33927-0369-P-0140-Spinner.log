@@ -1,0 +1,179 @@
+=== P4 Shared surface 0140 Spinner (Apple) ===
+Prompt: .github/prompts/monorepo/.../p4-apple-shared-surfaces-0140-Spinner.prompt.md
+Web source (THE spec): web/src/components/feedback/Spinner.tsx
+Native output: apps/apple/TeslaSync/shared-surfaces/Spinner.*
+Run host: Darwin arm64 (macOS 26). Xcode 26.5 (Build 17F42) via
+          DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer.
+          Default xcode-select is /Library/Developer/CommandLineTools, so every
+          xcodebuild/xcrun/simctl invocation below sets DEVELOPER_DIR explicitly.
+Date: 2026-06-08
+
+------------------------------------------------------------------------------
+CAPABILITY PROBE (prompt: "requires SwiftUI + Swift Charts + MapKit, iOS 18 /
+iPadOS 18 / macOS 15 HIG; if unavailable on the runner → STATUS=BLOCKED")
+------------------------------------------------------------------------------
+xcodebuild -version (DEVELOPER_DIR=Xcode) ............ Xcode 26.5 / 17F42      OK
+xcrun simctl ... 'iPhone 16' ........................ present + Booted (iOS 26.5) OK
+swift --version ..................................... 6.3.2 (swiftlang-6.3.2)  OK
+swiftlint / swiftformat ............................. 0.x present              OK
+xcodegen ............................................ 2.45.4                   OK
+java (for Shared.xcframework via Gradle) ............ openjdk 17.0.19          OK
+iOS 18 simulator SDK ................................ iPhoneSimulator26.5.sdk  OK
+macOS 15 SDK ........................................ MacOSX26.5.sdk           OK
+
+SwiftUI + Swift Charts + MapKit are present. The Spinner surface uses SwiftUI
+only (no Charts, no MapKit — the web source has neither; see prompt
+"Charts / maps used: (none)").
+
+------------------------------------------------------------------------------
+DELIVERABLE — apps/apple/TeslaSync/shared-surfaces/Spinner.*
+------------------------------------------------------------------------------
+Spinner.swift            main View — VStack(mark + optional label); role="status"
+                         (accessibilityLabel = label ?? localized "Loading",
+                         .updatesFrequently); Reduce-Motion swap; .task emits
+                         P1/S11 view.opened.
+Spinner.Model.swift      host-free spec: SpinnerSize/Metrics (web sizeMap),
+                         SpinnerGeometry (SVG path → 6 vertices + viewBox 200),
+                         SpinnerAnimation (boltDraw 5 stops + segment timing +
+                         reduced-motion stop), SpinnerSurface slug, SpinnerStrings
+                         P1/S10 facade + resolvedStatusLabel().
+Spinner.Views.swift      SpinnerBoltShape, BoltAnimationValues, SpinnerBolt,
+                         AnimatedSpinnerBolt (KeyframeAnimator, repeating),
+                         StaticSpinnerBolt, glow (Color.TS.accent + statusSuccess),
+                         SpinnerLabel.
+Spinner.Telemetry.swift  P1/S11 SpinnerTelemetry seam + OSLogSpinnerTelemetry.
+Spinner.Previews.swift   #Preview: 3 sizes, with-label, light/dark, Dynamic Type.
+Spinner.Tests.swift      XCTest — 28 host-free cases (metrics, geometry, keyframes,
+                         telemetry, i18n, status-label).
+Spinner.strings          P1/S10 table "Spinner": spinner.accessibilityLabel="Loading".
+
+States note: the web Spinner owns no data (its only input is useMotionPreference,
+mapped to @Environment(\.accessibilityReduceMotion)). Like the sibling
+LoadingSkeleton surface, the generic leaf empty/error/stale/offline states belong
+to the PARENT that swaps the spinner out once its query resolves — there is nothing
+to fetch here. Every branch that exists in the source IS reproduced: animated draw
+cycle vs reduced-motion static mark, the three sizes, and label / no-label.
+
+Build wiring (REQUIRED — shared-surfaces is a NEW source directory; without it the
+deliverable is not part of the project and cannot be built/linted/gated):
+  project.yml   — added `TeslaSync/shared-surfaces` to TeslaSync + TeslaSync-macOS
+  .swiftlint.yml — added `TeslaSync/shared-surfaces` to `included`
+
+------------------------------------------------------------------------------
+SURFACE VERIFICATION (host-runnable; all green)
+------------------------------------------------------------------------------
+[1] swiftformat --lint apps/apple/TeslaSync/shared-surfaces
+    → "0/6 files require formatting."                         FORMAT_EXIT=0
+
+[2] swiftlint --strict (the 6 Spinner .swift files, full repo config)
+    → "Done linting! Found 0 violations, 0 serious in 6 files."  LINT_EXIT=0
+
+[3] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces
+    → PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0             PLACEHOLDER_EXIT=0
+
+[4] Isolated SwiftPM build + tests (Swift 6 language mode = complete strict
+    concurrency; library target named TeslaSync so @testable import resolves;
+    real design Tokens.swift included; DEVELOPER_DIR=Xcode):
+    swift test → "Executed 28 tests, with 0 failures"         ISO_TEST_EXIT=0
+      SpinnerMetricsTests       6/6
+      SpinnerGeometryTests      6/6
+      SpinnerAnimationTests     8/8
+      SpinnerTelemetryTests     3/3
+      SpinnerLocalizationTests  5/5
+    (Build compiled all 5 shipped sources incl. SwiftUI Views + KeyframeAnimator
+     + #Preview under DEBUG — proving the rendering layer type-checks, not just
+     the host-free core.)
+
+[5] swiftc -typecheck — real iOS 18 simulator SDK
+    xcrun -sdk iphonesimulator swiftc -typecheck -swift-version 6
+      -target arm64-apple-ios18.0-simulator -D DEBUG
+      Spinner.{swift,Model,Views,Telemetry,Previews}.swift Tokens.swift
+    → (no diagnostics)                                        IOS_TYPECHECK_EXIT=0
+
+[6] swiftc -typecheck — real macOS 15 SDK
+    xcrun -sdk macosx swiftc -typecheck -swift-version 6
+      -target arm64-apple-macos15.0 -D DEBUG  (same sources)
+    → (no diagnostics)                                        MAC_TYPECHECK_EXIT=0
+
+[7] xcodegen generate (DEVELOPER_DIR=Xcode)
+    → "Created project at .../TeslaSync.xcodeproj"            XCODEGEN_EXIT=0
+    All 7 files enumerated under the new `shared-surfaces` group and added to the
+    TeslaSync + TeslaSync-macOS Sources build phases:
+      Spinner.swift, Spinner.Model.swift, Spinner.Views.swift,
+      Spinner.Telemetry.swift, Spinner.Previews.swift, Spinner.Tests.swift,
+      Spinner.strings
+
+------------------------------------------------------------------------------
+FULL-APP GATE (faithful command, attempted live)
+------------------------------------------------------------------------------
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  xcodebuild -scheme TeslaSync \
+  -destination 'platform=iOS Simulator,name=iPhone 16' build test
+
+Pre-action (Scripts/build-shared-xcframework.sh → Gradle/Kotlin-Native):
+  > Task :core:assembleSharedDebugXCFramework / ...ReleaseXCFramework
+  "xcframework successfully written out to .../release/Shared.xcframework"
+  "✓ Shared.xcframework staged"                               <-- SUCCEEDED
+  (The KMP shared core built + staged from scratch on this host — the toolchain
+   itself is NOT the blocker.)
+
+App target compile (TeslaSync) then FAILED:
+  .../TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error:
+    Unable to resolve module dependency: 'XCTest'
+    import XCTest
+           ^ (in target 'TeslaSync' from project 'TeslaSync')
+  ... (repeated for the co-located *.Tests.swift files compiled into the app)
+  Testing cancelled because the build failed.
+  ** TEST FAILED **
+  The following build commands failed:
+    SwiftDriver TeslaSync normal arm64 ... (in target 'TeslaSync')
+                                                              IOS_GATE_EXIT=65
+
+ROOT CAUSE — PRE-EXISTING, UNRELATED, REPO-WIDE (not this surface):
+  * 262 co-located *.Tests.swift files under TeslaSync/feature-views (e.g.
+    AIRestorePanel.Tests.swift, shown above — authored long before this prompt)
+    `import XCTest` + `@testable import TeslaSync` while sitting in the APP
+    target's source set. The app target does not link XCTest, so module
+    resolution fails and the whole app compile dies before any test host runs.
+    This is the established convention for these P4 surfaces (AIUsageCard.Tests,
+    LoadingSkeleton.Tests, … all do the same); the test/app split is performed by
+    the P99 acceptance gate, not per-surface.
+  * struct DashboardWidgetSize is redefined 15× across Sources/DashboardWidgets/*
+    + TeslaSync/dashboard-widgets/* (invalid redeclaration) — also pre-existing.
+  Both are catalogued in apps/macos-pending-verifications.md as deferred to
+  `p4-apple/P99-0001-apple-acceptance-gate` (macos-latest + signing). The three
+  prior surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) reached the
+  identical conclusion.
+
+  Zero Spinner / shared-surfaces errors appear anywhere in the 12,000-line gate
+  log; the Spinner surface is independently proven green by steps [1]–[7].
+
+macOS gate (DEVELOPER_DIR=Xcode; Gradle pre-action re-staged the cached
+Shared.xcframework OK):
+  xcodebuild -scheme TeslaSync-macOS build test
+  .../TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require
+    signing with a development certificate. Enable development signing ...
+  .../TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that
+    require signing with a development certificate. ...
+  (and the same XCTest-in-app-target compile failure shared via the common
+   TeslaSync/feature-views source set) → ** TEST FAILED **   MAC_GATE_EXIT=65
+  Pre-existing macOS development-signing blocker, also catalogued in
+  apps/macos-pending-verifications.md. Zero Spinner/shared-surfaces errors.
+
+------------------------------------------------------------------------------
+VERDICT
+------------------------------------------------------------------------------
+Surface `Spinner`: COMPLETE and verified green in isolation — full web parity
+(self-drawing bolt + glow + Reduce-Motion + 3 sizes + label), P1/S8 motion seam,
+P1/S9 tokens, P1/S10 i18n, P1/S11 view.opened; 28/28 tests; iOS 18 + macOS 15
+type-check; swiftlint/swiftformat/placeholder clean (0 opt-outs); xcodegen wires
+all 7 files into both app targets.
+
+The faithful full-app `xcodebuild build test` gate is RED (IOS_GATE_EXIT=65) due
+to PRE-EXISTING, UNRELATED repo-wide breakage (XCTest-in-app-target ×262,
+DashboardWidgetSize ×15), already deferred to the P99 macOS acceptance gate.
+Per Honesty Covenant rule 1 (no red-as-green) this is reported as BLOCKED rather
+than DONE, with the captured evidence above.
+
+EXIT=65
+STATUS=BLOCKED

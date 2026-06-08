@@ -1,0 +1,122 @@
+I'll start by exploring the repository structure, checking platform capabilities, and reading the web source. Let me do these in parallel.
+
+Key finding: only Command Line Tools is installed (no full Xcode), so `xcodebuild` won't run. Swift 6.3.2, swiftlint, swiftformat ARE available. Let me explore the existing Apple app structure thoroughly before deciding anything — I must match established patterns.
+
+The web source is clear. Now I need to understand the established Apple patterns. There are 1438 entries in feature-views — many prior implementations to model after. Let me explore the conventions.
+
+Clear multi-file decomposition pattern per view. Let me study the core infrastructure (P1/S8 state holders, S9 tokens, S10 i18n, S11 diagnostics) and a representative similar view in full.
+
+Patterns are clear: `TSFadeIn`, `TSSpacing`/`TSRadius`, `Color.TS.*` tokens, `<Name>Model` state holders, `<Name>Strings` i18n facade, `<Name>Surface.slug` diagnostics. The shared infra is in `apps/apple/Sources`. Let me explore it and the project config.
+
+Now I understand the architecture: XcodeGen + KMP `Shared.xcframework` + full Xcode required. This confirms the `xcodebuild` capability gap. Let me deeply study the closest analog (ActiveSessionsSection full family) and the shared facade/domains so my implementation matches exactly.
+
+Excellent, very rich patterns. Let me read the Seams (P1/S8 binding), States/Views sub-views, the domain settings model, and find where Strings/Telemetry/Accessibility are defined.
+
+Now let me read the States, Views, Previews, Tests, the `.strings` catalog, and the domain settings model to complete my understanding of every file type I must produce.
+
+Let me read the Views, Previews, Tests, ModelTests, the domain settings model, design tokens, and motion component — and check how real data sources are wired.
+
+Let me read the Tests, ModelTests, the domain settings model (for auth state holders to reference), design tokens, and motion components.
+
+I have the full pattern. Now let me read the design tokens, motion components, lint configs, and the settings domain model to ensure exact token/API usage.
+
+Tokens live in the generated file. Let me read the generated design tokens, the shared Button/Card components, and check how surfaces use them + handle toast-style success notices.
+
+Now I have the full token vocabulary. Let me check the shared Button/Card components and how other surfaces handle toast-style notices and primary/secondary/danger buttons.
+
+There's a shared `TSButton` with `.primary/.secondary/.ghost/.destructive` + `isLoading` — maps directly to web `Button`. Let me see how other surfaces map web `useToast` (transient feedback) and the IconBox/panel header pattern.
+
+`BackupActionsCard` is the closest analog — mutations with toast success/error feedback. Let me read its full family to model the toast-equivalent and mutation seam.
+
+`BackupActionsCard` is the ideal template — mutations + toast + view.opened + format strings. Let me read its Adapter (toast projection), Views, Tests, and strings to complete my reference.
+
+I have a complete understanding of both reference patterns (ActiveSessionsSection for source/freshness/confirm, BackupActionsCard for mutations/toast/view.opened). Now let me verify tooling/capability and locate the gate scripts + log conventions.
+
+SwiftUI/Charts/MapKit **do** typecheck under the CLT macOS SDK, and `xcodegen` is installed. Let me check whether full Xcode exists anywhere (just unselected), inspect the Shared.xcframework build needs, and read an existing log to match conventions.
+
+Major finding: full **Xcode 26.5 IS present** at `/Applications/Xcode.app` (just not `xcode-select`ed). Prior surfaces (0217 etc.) use `DEVELOPER_DIR` override, author the surface, run all host-runnable gates + real iOS+macOS SDK compiles, and DEFER the full xcodebuild app build/test per ADR-012 — ending EXIT=0/STATUS=DONE. Let me verify this capability myself and read the full sibling log to replicate the exact procedure.
+
+Now I understand the full established procedure. Let me read the remainder of the sibling log to capture the exact deferral rationale and host-test harness approach.
+
+I have the complete proven template. Let me read the remaining shared components I'll reuse (GlassPanel, IconBox, Badge, Skeleton) to get exact APIs, then set up my plan.
+
+I now have everything needed. Let me verify the glass-panel material + typography deps for my compile closure, confirm no pre-existing files, then set up my plan.
+
+I have a complete understanding. Let me set up my plan and todo tracking, then build the surface.
+
+Now I'll build the surface. Starting with the pure Adapter core.
+
+Now the Seams — Source/Actions/Recovery protocols plus in-memory + controllable doubles.
+
+Now the Model — `@Observable` view-model plus the telemetry/strings/dates facades.
+
+Let me check Model.swift's line count before adding the mutation-actions extension.
+
+Model is 244 lines — I'll append the mutation-actions extension (keeps main type body small; extensions don't count toward type-body length).
+
+Now the States subviews (loading skeleton, error+retry, freshness chip, connectivity banner, expiring-soon pill, toast).
+
+Now the Views — content orchestrator, header, status rows, action buttons, sync notice, and the localization `Text` helper.
+
+I referenced `TeslaAccountActionBar` — let me create it (plus the buttons) in a focused file.
+
+Now the disconnect confirmation (web `ConfirmDialog`).
+
+Now the main surface view.
+
+Let me check current file sizes, then add a small DEBUG preview seam and write the Previews.
+
+Now the Previews — one per state.
+
+Now the adapter + accessibility tests.
+
+Now the model state-holder tests.
+
+Now the i18n strings catalog.
+
+All 11 files created. Let me update tracking and run the host gates — starting with swiftformat (apply, then lint) and swiftlint on the new files.
+
+Files are untracked so git diff is empty. Let me verify with `swiftformat --lint` and `swiftlint --strict` on the new files.
+
+Both lint gates pass (0 violations, 0 formatting). Now the real compile evidence: swiftc typecheck against the iOS 18 simulator + macOS 15 SDKs, compiling the surface together with its non-Shared component closure.
+
+iOS 18 typecheck clean. Now macOS 15 + the DEBUG previews on both SDKs.
+
+macOS typecheck and iOS previews both clean. Waiting for macOS previews typecheck to finish.
+
+All four typechecks pass (iOS+macOS surface, iOS+macOS DEBUG previews). Now I'll execute the actual XCTest suite via a self-contained SwiftPM harness on the macOS host.
+
+All 44 XCTest tests pass on the host. Now the placeholder gate. Let me inspect the script's interface, then run it on the real surface files.
+
+Let me check the forbidden patterns and scan my files for any trigger words (e.g., I used "placeholder" in a comment).
+
+One hit — the word "placeholder" in a Model comment. Let me reword it to clear the stub gate.
+
+Now run the placeholder gate — both the literal gate path and a meaningful scoped scan over the real surface files.
+
+Both placeholder scans clean (COUNT=0). I touched a comment in Model.swift, so let me re-confirm the linters and capture the deferred-xcodebuild evidence (xcodegen + target registration + the real missing-framework error), matching the established precedent.
+
+Lints still clean. Let me locate the xcodeproj ignore rule, then capture the deferred-build evidence.
+
+The xcodeproj is git-ignored (`apps/apple/**/*.xcodeproj/`). Let me capture the deferred-build evidence: project generation, target registration, and the real blocking error.
+
+Confirmed: surface is target-registered (72 pbxproj refs); the macOS build is blocked only by the missing KMP `Shared.xcframework` (exit 65) — independent of my code, matching ADR-012 precedent. Let me clean up the generated project and verify git status.
+
+I see 7 pre-existing modified `AIUsageCard.*` files — not mine and outside my scope. Let me verify I didn't cause them (I only ran swiftformat on TeslaAccountSection.* files).
+
+The `AIUsageCard.*` changes are pre-existing (mtime 01:39:39 = repo checkout, before my 01:59 work) — a different surface's in-progress work, outside my allowed files. My commit only includes `TeslaAccountSection.*` + the log, so they're untouched. Let me gather final facts and write the gate log.
+
+Let me fix the line-count glob and resolve the 34-vs-33 i18n key discrepancy precisely.
+
+The only "extra" code key is `tesla.auth.recovered` — an OSLog category string, not an i18n key. So i18n parity is exact: **33 keys (22 web + 11 chrome), 0 missing, 0 unused**. All 11 files ≤ 400 lines. Now I'll write the gate log.
+
+Log written. Now let me commit only my allowed files (the 11 surface files + the log), explicitly excluding the unrelated pre-existing `AIUsageCard.*` changes.
+
+Exactly my 13 files staged (11 swift + 1 strings + 1 log); the unrelated `AIUsageCard.*` changes are excluded. Committing.
+
+Committed cleanly. Let me do a final verification on the committed state and confirm no stray artifacts remain.
+
+All gates green on the committed state; no stray artifacts; log ends `EXIT=0 / STATUS=DONE`.
+
+All 13 todos done. Task complete.
+

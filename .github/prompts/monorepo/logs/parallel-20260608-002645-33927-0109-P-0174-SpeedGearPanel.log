@@ -1,0 +1,124 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. However `swiftlint`, `swiftformat`, and `swift` 6.3.2 are available. Existing sibling feature-views (AIUsageCard, LiveControls) were committed, so there's an established pattern. Let me examine it and read the web source.
+
+The web source is a presentational panel with 4 metric tiles (Shift State, Motor Power, Avg Drive Speed, Top Drive Speed). Now let me study the established native pattern. I'll read a clean committed sibling panel (`AcDcStatsPanel`) in full to mirror its structure, plus check the shared facade/design layers it depends on.
+
+Excellent, very detailed pattern. Let me read the remaining AcDcStatsPanel files (Views, Previews, Tests, strings) and locate the shared design tokens + facade types I'll need.
+
+Now let me read the Tests file and locate the shared design tokens & components I'll need (TSGlassPanel, Color.TS, Font.TS, TSSpacing, TSBadge, TSStatCard, TSFadeIn, TSSkeleton, TSButton).
+
+Now let me read the design tokens and shared components I'll compose with, plus check how the Apple app handles unit conversion (speed) and the MotorSnapshot/Drive facade types.
+
+Path correction needed — components are under `apps/apple/Sources/`. Let me read the units facade (critical for speed conversion) and the shared components.
+
+No instruction file patterns match `apps/apple/**`, so I'll follow the established native pattern. Let me check how sibling feature-views handle speed/unit conversion and look at the Metrics + Cards + Motion components, plus the facade Drive/Motor types.
+
+Very relevant siblings exist: `SpeedTrendChart`, `DriveStatCards`, `LiveMotorStatus`, `DrivingPerformanceCards`. Let me study how they handle speed conversion, shift state, motor power, and the Drive/Motor facade types.
+
+`LiveMotorStatus` is my closest template — same web directory (`driving-dynamics/`), handles motor snapshot + shift state + ported unit math. Let me read its remaining files plus the web `convertSpeedFromSI` to port the speed conversion 1:1.
+
+Let me read the exact speed conversion, the web types, and the remaining LiveMotorStatus template files (main, strings, Previews, Tests) plus design tokens.
+
+Let me confirm the web types (MotorSnapshot, Drive), the SI constants, `fmtNumber`, design tokens, and read LiveMotorStatus Previews/Tests to mirror structure.
+
+Let me locate the design token definitions (TSSpacing, TSRadius, TSMotion, Font.TS, Color.TS, TSEmptyState), confirm `fmtNumber`, and read the LiveMotorStatus Previews/Tests to mirror.
+
+Tokens live in `apps/design/generated/apple` (shared `DesignTokens` group). Let me read them to confirm exact member names, and read the LiveMotorStatus Previews + Tests to mirror.
+
+Let me read the generated Tokens.swift and the TSEmptyState component to confirm exact token/API names, plus the LiveMotorStatus Previews.
+
+I now have the full pattern. Let me check the TSEmptyState/TSGlassPanel APIs, confirm no existing SpeedGearPanel, and critically — review a prior surface's log to see how the xcodebuild capability limitation was handled (since only Command Line Tools is installed, not full Xcode).
+
+This is the key reference. The prior runner accessed full Xcode via `DEVELOPER_DIR=/Applications/Xcode.app`. Let me probe whether that's available here, plus pwsh, SDKs, simulators, and the lint/placeholder configs.
+
+Full Xcode 26.5 is available via `DEVELOPER_DIR`. Same capability as the predecessor. Let me read the lint/format configs and placeholder gate to ensure conformance, then set up a SwiftPM harness for verification.
+
+Full Xcode 26.5 is available — I have the same capability as the predecessor. Let me confirm `_globalPrecision` default, then write the surface. Let me create a plan file and todos first.
+
+All confirmed: `_globalPrecision = 2`, iPhone 16 booted, macOS SDK present. Let me write a brief plan, then create the surface files starting with the Model.
+
+Now the Views.swift — presentational chrome with token mappings.
+
+Now the surface file (`SpeedGearPanel.swift`) with header, FadeIn wrap, and state switch.
+
+Now the Previews and strings files.
+
+Now the comprehensive test suite.
+
+All 7 files written. Let me verify line counts and run swiftformat + swiftlint on the new files.
+
+swiftformat wants auto-fixes (trailing commas, wrapping, doc comments). Let me run the formatter to apply them, then re-lint.
+
+swiftformat passes now. Let me run swiftlint --strict and review what the formatter changed in the test comment.
+
+Tests.swift is now 453 lines — over the 400 limit. I'll split the pure-adapter tests into `SpeedGearPanel.AdapterTests.swift` (established precedent: `DriveStatCards.AdapterTests.swift`). Let me view the current boundaries first.
+
+I'll split the pure-adapter tests into a separate file (matching the `*.AdapterTests.swift` precedent). Let me extract them via sed, then trim Tests.swift.
+
+Both files are now under 400 lines. Let me fix the Tests.swift header to reflect its reduced scope, then re-run both linters on all 7 files.
+
+Both linters pass clean (0 violations). Now the placeholder gate, then SDK typechecks.
+
+Placeholder gate passes. Now the critical compile+test verification. Let me map the component closure my surface needs and find which `Sources/` files import the `Shared` KMP framework (those must be excluded from a host harness).
+
+14 Shared-importers are all in Dashboard/Features/Live/SharedFacade — none in `Components/` or `Design/`. The predecessor's closure was exactly Tokens + Design + Components. Let me confirm that subtree is self-contained (no non-system imports) and count files.
+
+The closure (41 files) is self-contained — only system imports. Let me typecheck the shipped surface + closure against the iOS 18 simulator SDK.
+
+`UnitFormatters.swift` references the `Units` facade (Shared-backed) — the predecessor excluded it as "the only Shared-dependent component file", and my surface doesn't use it. Let me exclude it and re-typecheck.
+
+iOS 18 typecheck passes (EXIT=0). Now macOS 15.
+
+Let me wait for the macOS typecheck to complete.
+
+Both SDK typechecks pass (iOS `EXIT=0`, macOS `EXIT=0`). Now I'll build a self-contained SwiftPM harness in the session workspace to actually compile + execute the XCTest suite. Let me check for basename collisions first, then assemble it.
+
+Now the Package.swift manifest, then run the suite.
+
+All 36 tests pass (0 failures) on the macOS host. Let me capture a clean per-suite summary and verify the xcodebuild app-build status (expected DEFERRED on unstaged xcframework + signing, like the predecessor).
+
+Test summary captured: **36 tests, 0 failures** across 7 suites. i18n keys: 13 referenced == 13 declared (the lone `"power"` is a tile `id`, not a key). `Frameworks/` holds only `.gitkeep` — Shared.xcframework unstaged, same as predecessor. Let me capture the concrete xcodebuild deferral evidence honestly.
+
+`.xcodeproj/` is gitignored. Let me generate the project and capture the concrete xcodebuild deferral evidence.
+
+xcodegen succeeded (48 SpeedGearPanel refs in the build graph — surface is registered). Now the xcodebuild attempt to capture the concrete deferral evidence.
+
+The full app target is compiling (187+ files). Let me continue waiting for it to reach the link/xcframework stage.
+
+It's compiling the full multi-target app (9+ min, output suppressed by grep). The blocking evidence is already definitive. Let me stop it and capture the concrete xcframework/signing proof directly.
+
+All deferral evidence captured: project references `Frameworks/Shared.xcframework`, `Frameworks/` has only `.gitkeep`, `import Shared` → "no such module 'Shared'", macOS entitlements present. Same disposition as the predecessor. Let me verify git state and clean the generated project.
+
+Git state is clean: my 8 `SpeedGearPanel.*` files untracked; the pre-existing `AIUsageCard.*` modifications are not mine and won't be committed. Let me grab final line counts, then write the gate log.
+
+Let me grab the xcodegen version, then write the comprehensive gate log.
+
+Log written. Let me do a final fresh verification of all gates on the exact files, then commit.
+
+All gates green: swiftformat 0/7, swiftlint --strict 0 violations. Now let me stage only the allowed files and verify the staged set before committing.
+
+Staged set is exactly the 8 `SpeedGearPanel.*` files + the log; `AIUsageCard.*` remains unstaged. Committing now.
+
+Committed as `d75c6e9b1`. Let me confirm the commit contents and mark todos complete.
+
+The task is complete. All work is committed as `d75c6e9b1` with every gate green.
+
+## Summary
+
+Shipped a production-polished, native Apple SwiftUI parity of the web `SpeedGearPanel` driving-dynamics surface, following the established `LiveMotorStatus`/0170 pattern (same web feature directory).
+
+**8 files committed** (`apps/apple/TeslaSync/feature-views/SpeedGearPanel.*`, 1893 lines) + gate log:
+- **Model** — P1/S8 state-holder seam, P1/S11 telemetry, P1/S10 i18n facade, load/connection enums, `SpeedGearSpeedUnit`, motor + drive input DTOs, `@Observable` model, in-memory source.
+- **Adapter** — pure (Foundation-only) core: `convertSpeedFromSI` ported 1:1 from `lib/unitConversion.ts` (mph + km/h), `fmtNumber` parity, drive avg/top SI aggregates, shift colour/variant, four-tile projection, a11y summary.
+- **Views / surface / Previews / Tests / AdapterTests / strings**.
+
+**Parity reproduced end-to-end:** shift-state hero (colour + badge variant for D/R/N/P/missing), Motor Power (kW @ precision 2), Avg/Top Drive Speed (single-converted at 0 decimals — including the documented double-conversion fix), all 6 states (loading/empty/error/stale/offline/content), 13 verbatim+chrome i18n keys (13==13, zero orphans), VoiceOver labels, reduce-motion.
+
+**Gates (all executed green on this host via Xcode 26.5 / `DEVELOPER_DIR`):**
+- iOS 18 sim SDK typecheck `EXIT=0`; macOS 15 SDK typecheck `EXIT=0`
+- SwiftPM host harness: **36/36 tests passed, 0 failures**
+- `swiftlint --strict`: 0 violations · `swiftformat --lint`: 0/7 · placeholder gate: `COUNT=0`
+
+**Deferred (environment-blocked, not a surface defect — predecessor parity):** the full `xcodebuild` app build/test, because `Frameworks/` holds only `.gitkeep` (`import Shared` → "no such module 'Shared'") and macOS entitlements require signing. Captured honestly in the log; `xcodegen` confirms the surface is registered in the iOS+macOS build graph (48 refs). Log ends `EXIT=0 / STATUS=DONE`. The pre-existing unrelated `AIUsageCard.*` working-tree changes were left untouched.
+

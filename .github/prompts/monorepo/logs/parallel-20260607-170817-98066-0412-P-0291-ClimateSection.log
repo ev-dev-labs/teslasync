@@ -1,0 +1,30 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me verify the xcodebuild situation and explore the existing Apple app structure.
+
+Critical finding: **only Command Line Tools are installed — `xcodebuild` and `simctl` are unavailable.** But `swift` 6.3.2, `swiftlint`, `swiftformat`, and `xcodegen` are present. The `feature-views` directory already exists with an established pattern. Let me examine the existing structure and check for ClimateSection.
+
+Established pattern: 7 files per surface (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`). ClimateSection doesn't exist yet. Let me read the canonical reference set and find a MetricCard-based sibling.
+
+Now I understand the 3-file core pattern. Let me find the closest sibling already ported (vehicle-detail sections with MetricCard grids) and gather the shared native primitives.
+
+`AutopilotSection` (10 files) is the closest analog — a ported vehicle-detail section. Let me study it fully along with the web types and MetricCard.
+
+`AutopilotSection` uses a 10-file decomposition. Let me read its complete set as the primary template for a vehicle-detail section.
+
+Excellent template. Let me read the remaining AutopilotSection files to complete my understanding.
+
+Feature-views directory is auto-globbed into both app targets. Let me confirm token names and how the Tests files are targeted.
+
+Test targets source from `Tests/Unit`, but the `.Tests.swift` files live in `feature-views/`. Let me understand how Tests/Previews files are handled to avoid breaking the app target build.
+
+Now I have the full token vocabulary. Let me check the native data-display Metrics component and how tones (green/cyan/purple) map, to keep my tile consistent.
+
+Let me find the `TSTone` enum and `TSIconBox`, and see how an existing surface builds colored metric tiles.
+
+I now have the full pattern. Let me read the lint configs and establish a baseline by running the tools I *can* run (swiftlint/swiftformat) against the reference surface.
+
+Lint passes clean. Let me verify swiftformat baseline and check the placeholder-checker tooling, then start building.
+
+`pwsh` is available — so I can run the placeholder check too. Only the two `xcodebuild` steps are truly blocked (CommandLineTools only, no simulator). Let me read the placeholder checker constraints, then build.
+

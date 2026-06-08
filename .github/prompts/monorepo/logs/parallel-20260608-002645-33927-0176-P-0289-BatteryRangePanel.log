@@ -1,0 +1,120 @@
+I'll start by exploring the repository structure, the web source file, and the existing Apple app setup.
+
+Key finding: `xcodebuild` requires full Xcode but only CommandLineTools is active — so the iOS/macOS build+test gate can't run. But `swift`, `swiftlint`, `swiftformat` are available. Let me explore the existing Apple project structure thoroughly before deciding on BLOCKED vs. doing the full implementation.
+
+Substantial existing Apple project. Let me find the best reference feature-view that uses a radial gauge + metric cards + vehicle state, and check whether BatteryRangePanel files already exist.
+
+`HeroGauges` and `BatteryHealthSection` look like the closest references. Let me read the complete `HeroGauges` set (uses RadialGauge + VehicleState) and `BatteryHealthSection` (a complete file-set example) to learn the conventions.
+
+`HeroGauges` is the ideal reference. Let me read the rest of its set plus the design tokens, and look for the native MetricCard equivalent and the VehicleState model.
+
+Now let me read the remaining HeroGauges files (Previews, Tests, strings) and locate the shared design tokens + a native MetricCard equivalent.
+
+The HeroGauges set is a perfect template. Now I need the design tokens, the native MetricCard/empty/skeleton components, and the exact web semantics. Let me gather these in parallel.
+
+Now let me read the design tokens and the native shared components (GlassPanel, EmptyState, Skeleton), plus the web MetricCard/RadialGauge/useUnits/VehicleState for exact parity.
+
+Now let me read `useUnits` (formatDistance), the `VehicleState` type, the numberFormat helpers, and the native design tokens + shared components.
+
+Let me read the web unit-conversion + numberFormat helpers, the VehicleState type, the native EmptyState/Skeleton, and locate the token definitions (Color.TS, Font.TS, TSSpacing).
+
+Token definitions live elsewhere. Let me locate the actual declarations of `Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSMotion`, and `.tsGlassPanel()`.
+
+The tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read that to confirm exact token names (Color.TS, Font.TS, TSSpacing, TSRadius, TSMotion).
+
+I have all the design tokens. Now the exact web formatting semantics + VehicleState type + how files/strings are wired into the build.
+
+The whole `feature-views` dir is compiled in. Let me see how `*.Tests.swift` files in feature-views get routed to the test target (excludes/includes) by reading the full project.yml.
+
+Now let me read the exact web `formatDistance`/`fmtNumber` implementations, check for a native MetricCard to reuse, and probe the toolchain capabilities (Xcode, xcodegen, simulators, pwsh, SwiftUI compile).
+
+Let me read the remaining web helpers (`resolveEmpty`, `DEFAULT_PRECISION`, `resolvePrecision`, `formatNumber`), check for a reusable native MetricCard, and probe the full toolchain capability.
+
+Major finding: `/Applications/Xcode.app` exists, and `xcodegen`/`pwsh` are available — Xcode is just not selected. Setting `DEVELOPER_DIR` may make the gate runnable. Let me verify Xcode works, check simulators, the Shared.xcframework dependency, the native MetricCard, and the remaining web precision helpers.
+
+Xcode 26.5 is fully functional (iPhone 16 simulator booted). But `Shared.xcframework` isn't vendored (needs a Gradle/Kotlin-Native build). Let me read the project's own stance on the build gate and the native MetricCard before implementing.
+
+The repo's own `macos-pending-verifications.md` confirms the established methodology precisely: implement the surface to full quality, verify it in isolation (SwiftPM build + tests, `swiftc -typecheck` on both SDKs, swiftlint/swiftformat/placeholder), and the full-app `xcodebuild` is macOS-pending due to **pre-existing, unrelated** collisions. I'll follow this exact precedent. Let me confirm the VehicleState fields and write a plan.
+
+Let me read the placeholder patterns (to keep comments clean) and confirm SwiftPM availability for isolated verification.
+
+I now have everything needed. This matches the established repo precedent exactly (ToolCard, AlertMessageEditor, FSMTimelineChart): implement the surface fully, verify in isolation (SwiftPM tests + `swiftc -typecheck` on both SDKs + swiftlint/swiftformat/placeholder), with the full-app `xcodebuild` deferred as macOS-pending due to pre-existing unrelated collisions. Let me record a plan and todos.
+
+Now I'll create the surface files, starting with the Model (state-holder seam, telemetry, i18n facade).
+
+Now the Adapter — the pure projector reproducing the web numeric pipeline verbatim.
+
+Now the Views file — the SwiftUI presentational chrome (radial gauge, metric tile, responsive layout, freshness chip, skeleton).
+
+Now the composable surface file with the state machine and lifecycle.
+
+Now the Previews and the strings catalog.
+
+Now the comprehensive test suite.
+
+All 7 files created. Let me start verification with the fast linters (swiftformat, swiftlint) on the new files.
+
+swiftformat flagged a few wrap/comma issues. Let me auto-format with the ecosystem tool, then re-lint.
+
+swiftformat passes. Let me verify the auto-formatted regions look right, then run swiftlint --strict.
+
+One violation: Tests.swift is 405 lines (limit 400). Following the `HealthGaugeGrid` precedent (which has both `.Tests.swift` and `.ViewTests.swift`), I'll split the view-render tests into a separate `BatteryRangePanel.ViewTests.swift`. Let me view the exact block boundaries.
+
+I'll extract the view-render tests into `BatteryRangePanel.ViewTests.swift` (matching the `HealthGaugeGrid` precedent), then trim `Tests.swift`.
+
+Now remove the view-render block from `Tests.swift` and trim its header.
+
+Now re-run swiftformat + swiftlint on all 7 files.
+
+swiftformat **FORMAT_EXIT=0** and swiftlint --strict **LINT_EXIT=0** on all 7 files. Now the placeholder gate — let me read how the script enumerates `-Path` so I invoke it correctly.
+
+The gate's literal `-Path .../BatteryRangePanel` (no extension) scans nothing. For meaningful evidence I'll scan a temp copy of my files. First, self-audit for forbidden patterns, then run the real script.
+
+**Placeholder gate: PLACEHOLDER_COUNT=0, EXIT=0** (0 opt-outs) and self-audit clean. Now the strongest evidence — an isolated SwiftPM build that actually **runs** all tests under Swift 6 strict concurrency. Let me scaffold a harness (outside the repo) with my sources + the real design Tokens + minimal shared-component shims matching the real public API.
+
+Now the shared-component shims (matching the real public API exactly) and the Package manifest.
+
+Now build + run the harness tests with the Xcode toolchain (Swift 6 strict concurrency).
+
+Library builds clean under Swift 6. Now run the full test suite.
+
+**34/34 tests pass** (7 view-render + 27 logic) under Swift 6 strict concurrency. Now the cross-SDK proof: `swiftc -typecheck` against iOS 18 and macOS 15 deployment targets.
+
+iOS 18 typecheck **IOS_TC_EXIT=0**. Now macOS 15.
+
+Both typechecks pass (**IOS_TC_EXIT=0, MAC_TC_EXIT=0**) with strict concurrency + DEBUG previews. Now confirm the project enumerates the new files via `xcodegen generate`.
+
+`xcodegen generate` succeeded and **all 8 files are enumerated**. But `git check-ignore` returned nothing — let me verify the generated `.xcodeproj` won't be accidentally committed.
+
+`.gitignore` line 379 ignores the generated `*.xcodeproj/`, and `git status` confirms it's not tracked. My 8 files show as untracked (the `AIUsageCard.*` modifications are pre-existing, not mine). Now let me capture concrete evidence of the documented pre-existing full-app blockers.
+
+Concrete evidence captured: **Shared.xcframework unstaged** (only `.gitkeep`), **`DashboardWidgetSize` redefined in 15 files**, **263 co-located `*.Tests.swift` importing XCTest** into app-target source dirs. To avoid assuming, let me run a bounded full-app compile to capture the actual pre-existing error (skipping the Gradle scheme pre-action via `-target`).
+
+While that builds, let me check its progress.
+
+Build failed (exit 65) but my grep patterns didn't match. Let me read the full short log to capture the actual error.
+
+The bounded build failed at exactly the documented blocker: **`error: There is no XCFramework found at '.../Frameworks/Shared.xcframework'`** — the unstaged KMP core (Gradle/Kotlin-Native pre-build, a macOS-CI step I deliberately skipped). Zero BatteryRangePanel errors. This is concrete (not assumed) evidence. Let me locate the logs directory and sibling logs.
+
+This confirms the exact format and the sanctioned conclusion (`EXIT=0` / `STATUS=DONE` with the full-app build deferred as macOS-pending). Let me view the log header to mirror the structure precisely.
+
+I have the full template. Let me gather git context, then write the gate log mirroring the established format with my actual captured evidence.
+
+The leftover sleep shell can be ignored — I have all evidence. Now writing the gate log.
+
+Now append the macOS-pending row per the resolution protocol, mirroring the sibling entries.
+
+Now a final consolidated verification on the actual repo files, then commit only my files.
+
+All final gates green (FORMAT/LINT/PLACEHOLDER = 0). Let me commit only my files (the log, the 8 surface files, and the macOS-pending row), excluding the pre-existing `AIUsageCard` changes and the generated `.xcodeproj`.
+
+All 10 intended files staged (no `AIUsageCard`, no generated `.xcodeproj`). Committing.
+
+Committed as `78908fc8f`. Let me verify the commit contents and confirm no build artifacts leaked into tracking.
+
+The commit is clean: **10 files, 1826 insertions** (8 surface files + log + pending row). No `.xcodeproj`/`build/` artifacts tracked; the only remaining working-tree changes are the 7 pre-existing `AIUsageCard` files (untouched). Let me clean up generated/temp artifacts.
+
+All cleanup done. The remaining unstaged changes (`AIUsageCard.*`, `FleetApiSection.tsx`, `BackupRestorePage.tsx`) are all pre-existing and not mine. Let me finalize the todos and do a last integrity check on the committed surface.
+
+The task is complete. All work is committed (`78908fc8f`), verified, and the gate log ends with `EXIT=0 / STATUS=DONE`.
+

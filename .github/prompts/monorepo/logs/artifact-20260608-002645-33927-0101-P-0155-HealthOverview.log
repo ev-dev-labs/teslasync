@@ -1,0 +1,108 @@
+=== P4 Feature view 0155 HealthOverview (Apple) ===
+Date: 2026-06-08
+Surface: HealthOverview  (web src: features/driving/components/drivetrain-health/HealthOverview.tsx)
+Allowed files: apps/apple/TeslaSync/feature-views/HealthOverview.* + this log
+Honesty covenant: results below are real command output, not asserted. No red reported as green.
+
+--------------------------------------------------------------------------------
+0. RUNNER CAPABILITY (the prompt's BLOCKED clause is about capability — recording it explicitly)
+--------------------------------------------------------------------------------
+Xcode .................. 26.5 (17F42)   [full Xcode via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer]
+iOS Simulator runtime .. iOS 26.5; device "iPhone 16" present (booted)
+Swift toolchain ........ Apple Swift 6.3.2
+swiftlint .............. 0.63.3        swiftformat: present
+xcodegen ............... present        pwsh: present        Java 17; Kotlin/Native 2.4.0 prebuilt
+KMP Shared.xcframework . BUILT from source via apps/apple/Scripts/build-shared-xcframework.sh
+                         -> "BUILD SUCCESSFUL in 13m 54s"; staged to apps/apple/Frameworks/Shared.xcframework
+CONCLUSION: SwiftUI + Swift Charts + MapKit + iOS18/macOS15 toolchain is FULLY AVAILABLE and was exercised.
+            The capability-BLOCKED branch does NOT apply. The block below is a *pre-existing repo-state*
+            condition affecting all 200+ parallel surfaces, not a platform-capability gap and not this surface.
+
+--------------------------------------------------------------------------------
+1. SURFACE DELIVERABLE — files written (production, no stubs)
+--------------------------------------------------------------------------------
+HealthOverview.swift ............ View + surfaceSlug + lifecycle + phase switch
+HealthOverview.Adapter.swift .... pure core: HealthOverviewStatus(score/keys), NumberFormat(clamp), MotorState, a11y summary
+HealthOverview.Model.swift ...... telemetry seam (P1/S11), Input snapshot, Resolved+Phase, Projection,
+                                  state-holder seam (P1/S8), @Observable HealthOverviewModel, InMemory source, HOStrings facade (P1/S10)
+HealthOverview.Views.swift ...... HOAlertBanner, HOHealthPanel, HOStatusBadge, HOChip, HOLoading/Empty/Error bodies + status->tone tint
+HealthOverview.Previews.swift ... #Preview x8 (good/warning/critical, loading, empty, error, stale, offline)
+HealthOverview.strings .......... parity keys (drivetrain.*) + native chrome
+HealthOverview.Tests.swift ...... XCTest: status/format/motor/a11y/projection/model+telemetry
+Parity reproduced: 3 health branches (good/warning/critical), optional warning|critical AlertBanner,
+glass status panel (glyph + heading + "Motor State: x" + dotted status badge + animated %score), HEALTH_SCORE map (95/60/25),
+getAlertVariant ladder, HEALTH_GLOW tint. P4 states added: loading skeleton, empty, error+retry, stale chip, offline chip.
+Names are collision-free (HealthOverview*/HO*/HOStrings) — deliberately NOT the shared `DrivetrainHealthStatus`.
+
+--------------------------------------------------------------------------------
+2. SURFACE-SCOPED VERIFICATION (achievable + decisive — this is the proof of THIS deliverable)
+--------------------------------------------------------------------------------
+[A] swiftformat --lint (6 surface .swift, config .swiftformat) ........ 0/6 require formatting   -> FORMAT(surface)_EXIT=0
+[B] swiftlint --strict  (6 surface .swift, config .swiftlint.yml) ..... 0 violations, 0 serious  -> LINT(surface)_EXIT=0
+[C] check-placeholders.ps1 (self-test SELFTEST_EXIT=0; scan of my files) PLACEHOLDER_COUNT=0     -> PLACEHOLDER_EXIT=0
+[D] isolated typecheck iOS  (Tokens + 40 design-system files + 5 surface files,
+      -sdk iphonesimulator26.5 -target arm64-apple-ios18.0-simulator -swift-version 6) .. 0 errors -> IOS_TYPECHECK_EXIT=0
+[E] isolated typecheck macOS (same set, -sdk macosx -target arm64-apple-macos15.0 -swift-version 6) 0 errors -> MAC_TYPECHECK_EXIT=0
+[F] host-run unit tests (real HealthOverview.Adapter.swift + HealthOverview.Model.swift compiled with
+      swiftc -swift-version 6 and EXECUTED; 51 assertions across adapter/format/motor/a11y/projection/model+telemetry)
+      ............................................................................. HOST_TESTS=PASS  -> HOSTTEST_EXIT=0
+(Note: design-system file Sources/Components/DataDisplay/UnitFormatters.swift was excluded from [D]/[E] — it
+ references an out-of-scope `UnitPreferences` type and is unrelated to this surface; every other component compiles.)
+
+--------------------------------------------------------------------------------
+3. LITERAL WHOLE-APP GATE (as specified) — real results
+--------------------------------------------------------------------------------
+xcodegen generate ............................................... EXIT=0  (project generated; "HealthOverview" appears 42x in pbxproj)
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+   -> FAILS at: SwiftDriver TeslaSync (app target) compiling a sibling test file:
+      TeslaSync/feature-views/AIRestorePanel.Tests.swift:18: error: unable to resolve module dependency: 'XCTest'
+   -> Root cause (PRE-EXISTING, repo-wide): project.yml globs `TeslaSync/feature-views` (ALL files) into the
+      app target, but 205 sibling `*Tests.swift` files `import XCTest` (the test target uses `Tests/Unit`, not
+      feature-views). The app build dies on the first one alphabetically (AIRestorePanel), long before HealthOverview.
+      No HealthOverview.* file is implicated. ............................................. IOS_EXIT=65
+xcodebuild -scheme TeslaSync-macOS build
+   -> FAILS first at: "TeslaSync-macOS" has entitlements that require signing with a development certificate
+      (no signing identity in this headless env — environmental, pre-existing). No HealthOverview.* implicated. .. MAC_EXIT=65
+swiftformat --lint apps/apple (whole tree) .. 1/1919 require formatting -> offender TeslaSync/feature-views/ActionBuilder.Previews.swift (sibling; NOT mine) .. FORMAT_EXIT=1
+swiftlint --strict (whole tree) ............. 1 serious in 1915 files   -> offender TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift (sibling; NOT mine) .. LINT_EXIT=2
+check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/HealthOverview .... PLACEHOLDER_COUNT=0 .. PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+4. PRE-EXISTING, OUT-OF-SCOPE BLOCKERS (proved with real repo files — none are HealthOverview.*)
+--------------------------------------------------------------------------------
+B1. Test files compiled into the app target (repo-wide):
+    205 `TeslaSync/feature-views/*Tests.swift` (every surface ships one; HealthOverview.Tests.swift follows the
+    identical established convention `import XCTest` + `@testable import TeslaSync`) are globbed into the app
+    target by project.yml -> `unable to resolve module dependency: 'XCTest'`. Fixing requires editing project.yml
+    or relocating every surface's tests — outside this prompt's allowed files.
+B2. Duplicate public type names across sibling surfaces (34 collisions):
+    e.g. `public enum DrivetrainHealthStatus` is declared in ALL of:
+       TeslaSync/feature-views/HealthGaugeGrid.Model.swift:69
+       TeslaSync/feature-views/TemperatureMetricCards.Adapter.swift:60
+       Sources/DashboardWidgets/DrivetrainHealthWidgetModel.swift:156
+    Real compiler output over those three files:
+       HealthGaugeGrid.Model.swift:69:13: error: invalid redeclaration of 'DrivetrainHealthStatus'
+       HealthGaugeGrid.Model.swift:90:45: error: 'DrivetrainHealthStatus' is ambiguous for type lookup in this context
+    (This is exactly why this surface deliberately uses collision-free `HealthOverviewStatus`.)
+B3. macOS dev-signing/entitlements (environmental; no certificate on a headless runner).
+
+--------------------------------------------------------------------------------
+5. VERDICT
+--------------------------------------------------------------------------------
+- HealthOverview surface is production-complete and INDEPENDENTLY VERIFIED on both Apple platforms:
+  iOS + macOS isolated typecheck = 0 errors; host-run unit tests = PASS; swiftlint/swiftformat/placeholder = clean.
+- The literal whole-app `xcodebuild build test` gate CANNOT reach EXIT=0 on this repo state due solely to
+  pre-existing, repo-wide, out-of-scope conditions (B1/B2/B3) that affect all 200+ parallel surfaces equally.
+  Per the Honesty Covenant (no red-as-green, no scope narrowing, no predecessor bypass) this is reported as BLOCKED,
+  NOT DONE — even though the surface itself passes every check that isolates it from the unrelated sibling state.
+- Once the integration step de-duplicates the shared symbols and moves/excludes the per-surface test files,
+  this surface drops into a green whole-app build with no further changes.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=2
+FORMAT_EXIT=1
+PLACEHOLDER_EXIT=0
+SURFACE_VERIFICATION=PASS (format=0 lint=0 placeholder=0 ios_typecheck=0 macos_typecheck=0 host_tests=PASS)
+EXIT=65
+STATUS=BLOCKED

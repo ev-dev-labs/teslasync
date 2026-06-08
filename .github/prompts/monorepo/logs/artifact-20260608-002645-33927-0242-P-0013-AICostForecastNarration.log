@@ -1,0 +1,193 @@
+=== P4 Shared surface 0013 AICostForecastNarration (Apple) ===
+
+Artifact : apps/apple/TeslaSync/shared-surfaces/AICostForecastNarration.*
+Web src  : web/src/components/ai/AICostForecastNarration.tsx
+            (composes components/ai/AIFeatureCard.tsx + withAiFeature.tsx +
+             components/ai/AiOutputPanel.tsx + AIThinkingIndicator.tsx, driven by
+             hooks/useAiStream.ts)
+Date     : 2026-06-08
+
+----------------------------------------------------------------------
+RUNNER CAPABILITY ASSESSMENT (binding per the prompt's capability clause)
+----------------------------------------------------------------------
+The prompt requires SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15
+HIG, and the Gate runs `xcodebuild ... build test` for an iOS Simulator + the macOS
+scheme. This runner is Command-Line-Tools only — Xcode.app is NOT installed:
+
+  $ uname / sw_vers
+    macOS 26.5.1 (build 25F80), arm64 (Apple Silicon)
+  $ xcodebuild -version
+    xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+    directory '/Library/Developer/CommandLineTools' is a command line tools instance
+  $ xcrun --sdk iphonesimulator --show-sdk-path
+    xcrun: error: SDK "iphonesimulator" cannot be located
+  $ xcrun simctl list devices
+    xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+  $ swift --version
+    Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+  $ swiftlint / swiftformat / pwsh   → present
+  macOS SDK present (/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk) and DOES
+  contain SwiftUI.framework, Charts.framework, MapKit.framework.
+
+=> The two `xcodebuild` Gate steps CANNOT execute on this runner (no Xcode, no
+   iphonesimulator SDK, no simulator). XCTest is likewise absent from the CLT
+   toolchain (`no such module 'XCTest'`) and `#Preview` needs Xcode's
+   `PreviewsMacros` plugin. Per the prompt — "If unavailable on the runner →
+   STATUS=BLOCKED with API evidence" — the terminal status is BLOCKED. The full
+   production surface is nonetheless implemented and EVERY host-runnable gate is
+   executed for real below (no red shown as green; no fabricated xcodebuild zeros).
+
+----------------------------------------------------------------------
+GATE STEPS (as defined in the prompt) — real exits
+----------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    IOS_EXIT=BLOCKED  (xcodebuild requires Xcode; iphonesimulator SDK cannot be located — evidence above)
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    MAC_EXIT=BLOCKED  (xcodebuild requires Xcode — evidence above)
+[3] swiftlint --strict
+    Scoped to THIS surface's 9 Swift files:
+      $ swiftlint lint --strict --config apps/apple/.swiftlint.yml --no-cache \
+          apps/apple/TeslaSync/shared-surfaces/*.swift
+      Done linting! Found 0 violations, 0 serious in 9 files.
+    LINT_EXIT(scope)=0
+    Whole `included` set (1909 files): 1 PRE-EXISTING violation, NOT in my allowed
+    files and out of scope to fix (rule 7 / predecessor bypass):
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length
+[4] swiftformat --lint apps/apple
+    Scoped to THIS surface:
+      $ swiftformat --lint apps/apple/TeslaSync/shared-surfaces
+      0/9 files require formatting.
+    FORMAT_EXIT(scope)=0
+    Whole `apps/apple` (1922 files): 1 PRE-EXISTING file requires formatting, NOT
+    mine and out of scope (rule 7):
+      TeslaSync/feature-views/ActionBuilder.Previews.swift:48 blankLinesBetweenScopes
+[5] check-placeholders.ps1
+      $ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces
+      PLACEHOLDER_ALLOWED=0
+      PLACEHOLDER_COUNT=0
+      EXIT=0
+    PLACEHOLDER_EXIT=0
+
+----------------------------------------------------------------------
+ADDITIONAL HOST-RUNNABLE VERIFICATION (executed — to maximise evidence under BLOCK)
+----------------------------------------------------------------------
+A) Non-UI core compiles against the macOS SDK under Swift 6 (SwiftPM library of the
+   pure Adapter + Model + Strings + Doubles):
+      $ swift build --target AINCore
+      Build of target: 'AINCore' complete!         (exit 0)
+
+B) Executed the surface logic green via a CLT-runnable harness that mirrors the
+   shipped XCTest assertions 1:1 (XCTest itself is Xcode-only on this runner, so the
+   identical checks were run as a plain executable instead of being claimed):
+      $ swift run AINCheck
+      CHECKS passed=62 failed=0
+      ALL PURE-CORE CHECKS PASSED               (exit 0)
+   Coverage: request-body shaping (web `body` useMemo) · `haveInputs` gate · SSE
+   frame parser (web parseSSEFrame/toTypedEvent: delta/done/error/tool/confirm,
+   comment-skip, no-event, malformed-JSON, unknown-event, CRLF, no-space) · stream
+   accumulator (web useAiStream reducer: start-coalesce, delta-append, done, error,
+   confirm-pause, tool-no-change, finish, cancel) · projection (gated/loading/ready,
+   canStart, no-vehicle vs offline empty-hint) · model (view.opened deferred-past-gate
+   + emitted once, narrate() body + coalescing, no-op when not ready, streamer event
+   accumulation, error surfacing, context-only refresh, stale one-shot auto-refresh,
+   cancel→idle) · accessibility label composition.
+
+C) SwiftUI view layer type-checks against the REAL design tokens/primitives + the
+   macOS SDK under Swift 6 (entry + Views + Chrome + core, compiled together with the
+   actual apps/design generated Tokens + Cards/Buttons/Typography/Skeletons/Motion/
+   TSDesign/TSMaterial):
+      $ xcrun --sdk macosx swiftc -typecheck -swift-version 6 \
+          -target arm64-apple-macos14.0 -sdk <macosx> <surface views + real tokens>
+      TYPECHECK_EXIT=0
+   With -D DEBUG the ONLY diagnostics are the `#Preview` macro expansion
+   ("plugin for module 'PreviewsMacros' not found") — an Xcode-only macro plugin, the
+   same capability gap; all non-macro preview code type-checks.
+
+----------------------------------------------------------------------
+INTEGRATION DEPENDENCIES (documented; out of this prompt's allowed files)
+----------------------------------------------------------------------
+The `shared-surfaces` group is not yet wired into the app build or the linter config.
+These must be extended by the P4 core / acceptance bundle (NOT edited here — rule 7,
+allowed files are only AICostForecastNarration.* + this log):
+  • apps/apple/project.yml          → add `- path: TeslaSync/shared-surfaces` to the
+                                       TeslaSync and TeslaSync-macOS `sources:` lists.
+  • apps/apple/.swiftlint.yml       → add `TeslaSync/shared-surfaces` to `included:`.
+Once wired, the surface compiles into both app targets and is covered by the gate.
+
+----------------------------------------------------------------------
+WHAT SHIPPED (production-polished, no stubs)
+----------------------------------------------------------------------
+10 files under apps/apple/TeslaSync/shared-surfaces/ (parity with the AiUsageCard
+multi-file convention):
+  AICostForecastNarration.swift          entry View: gate (withAiFeature → withdrawn),
+                                         TSGlassPanel card, header chrome, action row,
+                                         output panel; onAppear/onDisappear lifecycle;
+                                         surfaceSlug "AICostForecastNarration".
+  AICostForecastNarration.Adapter.swift  pure Foundation: request body, SSE event enum,
+                                         SSE frame parser, stream accumulator, haveInputs,
+                                         a11y compose.
+  AICostForecastNarration.Model.swift    @Observable @MainActor model + connection axis +
+                                         context snapshot + projection + source/streamer
+                                         seams (P1/S8) + telemetry (P1/S11).
+  AICostForecastNarration.Strings.swift  i18n facade (P1/S10).
+  AICostForecastNarration.Doubles.swift  InMemory source + Scripted streamer (previews+tests).
+  AICostForecastNarration.Views.swift    Helix badge, header, Ask-Helix CTA (streaming-aware
+                                         label + thinking dots), output panel, thinking
+                                         indicator.
+  AICostForecastNarration.Chrome.swift   freshness chip, connectivity banner, refresh button,
+                                         loading skeleton.
+  AICostForecastNarration.Previews.swift 9 previews: ready/empty/streaming/streamed/error/
+                                         loading/stale/offline/gated.
+  AICostForecastNarration.Tests.swift    XCTest: adapter + projection + model + a11y (runs in
+                                         the app XCTest targets at the Xcode runner).
+  AICostForecastNarration.strings        en catalog (parity keys + shared Helix keys + leaf
+                                         chrome keys).
+
+States reproduced: gated (AI off → withdrawn), loading (context resolving → skeleton),
+ready idle (Ask Helix), streaming (thinking dots + indicator), streamed text, error
+(inline "Helix error" + retry-by-reopening), empty (no vehicle / offline → disabled CTA +
+hint), stale & offline (freshness chip + banner + one-shot context auto-refresh — the paid
+LLM stream is NEVER auto-fired). Data bound only via the P1/S8 seams (no HTTP in the view).
+i18n: every string from the P1/S10 facade. A11y: VoiceOver labels on every interactive
+element, Dynamic Type (token fonts), Reduce-Motion respected. Telemetry: view.opened with
+slug "AICostForecastNarration", deferred past the gate, emitted once.
+
+----------------------------------------------------------------------
+HONESTY COVENANT
+----------------------------------------------------------------------
+  1  No red-as-green : the two xcodebuild steps are shown BLOCKED with the real
+                       xcode-select / xcrun capability errors — never a fabricated 0.
+  2  No scope narrowing: every web state + the i18n keys + a11y + telemetry + the full
+                       AIFeatureCard/AiOutputPanel/AIThinkingIndicator composition shipped.
+  3  No skip-and-assume: every host-runnable gate executed; the macOS-SDK compile +
+                       62/62 executed checks + the SwiftUI typecheck are real runs.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of the body useMemo, parseSSEFrame/toTypedEvent,
+                       the useAiStream reducer, AIFeatureCard CTA, AiOutputPanel branches,
+                       and the exact source strings.
+  6  No delegation     : authored directly (delegation FORBIDDEN — honored).
+  7  No predecessor bypass: did NOT edit project.yml / .swiftlint.yml / .swiftformat /
+                       sibling surfaces / the shared catalog; the pre-existing whole-app
+                       swiftlint+swiftformat findings and the working-tree AiUsageCard.*
+                       edits are NOT mine and are excluded from the scoped commit.
+  8  No commit on red  : there is no red of mine — every gate within my allowed scope is
+                       green; the xcodebuild steps are BLOCKED by missing Xcode (a
+                       capability gap, not a failing test), so the scoped source + this
+                       log are committed for the Xcode/integration runner to run [1][2].
+  9  No silent drift   : changes confined to AICostForecastNarration.* + this log.
+  10 Log ends with EXIT/STATUS below.
+
+----------------------------------------------------------------------
+DISPOSITION
+----------------------------------------------------------------------
+Production-polished native AICostForecastNarration shipped at parity with the web source.
+All host-runnable gates pass within the allowed scope (swiftlint 0/9, swiftformat 0/9,
+placeholder COUNT=0), the non-UI core COMPILES and EXECUTES green on the macOS SDK
+(62/62 checks mirroring the XCTest suite), and the SwiftUI view layer type-checks against
+the real design tokens + macOS SDK. The iOS-Simulator + macOS `xcodebuild build test`
+(and the bundled XCTest run + `#Preview` macro) are BLOCKED solely by the absence of
+Xcode / the iphonesimulator SDK on this Command-Line-Tools runner — deferred to the
+Xcode/integration runner with the capability evidence above.
+
+EXIT=1
+STATUS=BLOCKED

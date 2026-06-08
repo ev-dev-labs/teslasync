@@ -1,0 +1,121 @@
+I'll start by exploring the environment and understanding what's available, then read the web source specification.
+
+`apps/apple` exists. Let me read the web source and explore the Apple app structure.
+
+Critical finding: `xcodebuild` requires full Xcode, but only Command Line Tools is installed — so iOS Simulator builds/tests cannot run. `swift`, `swiftlint`, `swiftformat` ARE available. Let me explore the existing Apple app structure to understand patterns before deciding implementation + gate strategy.
+
+The established pattern is clear: each surface has `.Model`, `.Adapter`, `.Views`, `.Previews`, `.Tests`, `.strings`, and main `.swift` files. Let me examine predecessors, the state-holder layer, design tokens, and i18n facade.
+
+`shared-surfaces` dir doesn't exist yet — this is the first. Let me examine the prompt sequence, logs, the project config, and the native Select + state-holder I'll bind to.
+
+Let me examine the project config, the UI Select component, the native selected-vehicle holder, the i18n + diagnostics facades, and a representative existing surface to model the full pattern.
+
+Key finding: `project.yml` registers `dashboard-widgets` and `feature-views` but NOT `shared-surfaces`, and full Xcode is absent. Let me read the actual 0164 prompt, the state/diagnostics/i18n facades, find the selected-vehicle holder, and check pwsh.
+
+Now let me study the diagnostics contract, the vehicles/selected-vehicle holder, the i18n facade, and a representative existing surface (NoVehicleSelected is directly related).
+
+`FleetStatsBar` is an ideal model — a small surface bound to fleet/vehicle state. Let me read its complete file set plus the diagnostics contract usage.
+
+Let me read these files individually to see them clearly.
+
+Excellent, this is the canonical pattern. Let me read the remaining FleetStatsBar files and then find the selected-vehicle holder.
+
+Let me read the web hook, the strings/previews format, the design tokens, and the native Select/Picker primitive.
+
+Now let me read the design tokens, the native picker/typography primitives, the feedback components, and the swiftlint config to nail conventions.
+
+`TSSelect` exists as the native `@/components/ui` Select counterpart. Let me verify the exact design-token members and feedback/typography primitives I'll reference.
+
+Let me confirm the spacing/radius scales and read the feedback + typography component APIs I'll compose with.
+
+I have the full token + component vocabulary. Let me confirm the signatures of the few remaining primitives I'll compose with (button, skeleton, stagger/fade, badge/chip).
+
+Let me confirm the button/badge signatures, capability evidence, and how co-located `*.Tests.swift` files are wired into the test target.
+
+Capability is definitively absent (no iOS SDK, `xcodebuild` requires full Xcode). Let me read the placeholder checker (to avoid tripping it) and the web Vehicle type, then start implementing.
+
+Now I understand the forbidden patterns (avoid "TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented"). Let me read the swiftformat config to match formatting exactly, then set up tracking and implement.
+
+I now have the complete pattern, tokens, components, formatting rules, and forbidden-word list. Let me record findings, set up tracking, and create the surface directory.
+
+Let me write a brief plan, then create the core files (Adapter, Projection, Model, strings).
+
+The Model uses `Text`, which needs SwiftUI. Let me add that import (matching FleetStatsBar.Model).
+
+Now the Views file. Let me also align the empty-hint fallback string with a shorter form for line-length safety.
+
+Now the main view and previews.
+
+Now the Tests file with adapter, model, and accessibility coverage.
+
+All 8 files created. Now let me verify formatting, linting, and placeholder compliance on the new files.
+
+swiftformat passes (0/7 need formatting). Now swiftlint on the new files (explicit paths bypass the `included` scoping).
+
+swiftlint linted the `included` set (1909 files); the single violation is a **pre-existing** dashboard-widget, not mine. But my files are outside `included`, so they weren't checked. Let me lint them specifically with a temp config mirroring the project rules.
+
+swiftlint --strict: **0 violations** in my 7 files. Now the placeholder check and a real compile-typecheck of the pure core (Foundation-only files) against the macOS SDK.
+
+Placeholder check passes (0), and the pure core **typechecks against the macOS SDK**. Let me confirm the exact `Color.TS`/`Font.TS` container shape so I can typecheck the SwiftUI files against a faithful shim.
+
+Confirmed `Color.TS`/`Font.TS` are nested enums (my usage is valid). Let me typecheck the SwiftUI files (Model, Views, main) against a faithful shim of the external tokens/components to catch any SwiftUI-level type errors.
+
+The SwiftUI files (Model, Views, main, Adapter, Projection) **typecheck cleanly** against the macOS 15 SDK + faithful shim — including the `@Observable`/`@MainActor` macros, the `Picker`/`Binding`/`.tag(Int64)` selection match, and the `unnamed:` function reference. Let me also validate the Tests file by building a testable module.
+
+The module built cleanly (MODULE_EXIT=0) — proving all my types/signatures are valid and accessible. The Tests file fails **only** on `import XCTest` (XCTest ships with Xcode, not CLT — same capability gap). Let me validate the Tests logic against an XCTest shim to confirm the assertions typecheck.
+
+The Tests file **typechecks cleanly** against the real module + XCTest shim. Every offline-verifiable check passes. The only unrunnable steps are the `xcodebuild` iOS/macOS build+test (full Xcode absent). Let me check how the directory-registration wiring is handled across prompts before finalizing.
+
+Confirmed: per-surface prompts never touch `project.yml` (the scaffold/core owns it). Let me verify the workspace-scaffold prompt owns the source-path registration to cite it precisely.
+
+Confirmed: the scaffold prompt (P0-0001) owns `project.yml`; it registered `feature-views` + `dashboard-widgets` but not `shared-surfaces` — a genuine predecessor/core gap, not a per-surface responsibility. Now let me generate the honest gate log by running every step with real output capture.
+
+Whole-tree swiftformat shows `1/1920` pre-existing file needs formatting (not mine — my 7 are clean). Now let me append the capability evidence, offline compile-verification, predecessor note, and the final status.
+
+Wait — `Xcode.app` **exists** in /Applications, but `xcode-select -p` points at CommandLineTools. I must not assume — let me verify whether a real Xcode toolchain is usable via `DEVELOPER_DIR`, and whether the build's heavier deps (xcodegen, KMP Shared.xcframework) are present.
+
+Correction: a **full Xcode 26.5 is present** (4.8G, real SDKs + simulators) via `DEVELOPER_DIR` — I must not assume BLOCKED. Let me check the remaining build prerequisites: xcodegen, the KMP `Shared.xcframework`, and any pre-generated project.
+
+Xcode + xcodegen are present, but `Frameworks/` has **no `Shared.xcframework`** (only `.gitkeep`), and there's no `gradle`/`gradlew`. The app + test targets depend on that KMP framework. Let me inspect the build script and whether its inputs exist.
+
+Major correction: a **full Xcode 26.5 IS available** (via `DEVELOPER_DIR`), and the KMP shared module (`apps/shared`) + xcodegen exist. My earlier "no Xcode" framing was wrong — I must fix that. Let me verify my surface compiles against the **real** shared component library + design tokens (KMP-free, since my surface doesn't depend on the KMP core).
+
+Confirmed: the real component library + tokens are KMP-free. Let me compile my surface against the **real** 42 component/token files using the Xcode 26.5 toolchain — definitive integration proof.
+
+Those errors are in an unrelated `UnitFormatters.swift` (cross-deps into Platform), not my surface. Let me compile against the **real design tokens** + real `TSSkeleton`/`TSCard` (the actual files my surface uses) to get a clean real-dependency proof.
+
+The Components files are interdependent (Cards needs Typography/Material). Let me isolate the cleanest real-dependency proof: my surface + the **real** `Tokens.swift` (real `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius`) with only `TSSkeleton` stubbed.
+
+My surface **compiles cleanly against the real design tokens targeting iOS 18 Simulator** (Xcode 26.5). I now have an accurate, complete picture. My earlier log contained an incorrect "no Xcode" claim — I must regenerate it accurately. Let me write the definitive, honest log.
+
+Now the real-compile verification section (using the Xcode 26.5 toolchain) and the final status.
+
+All real compiles pass under Xcode 26.5. Let me append the deliverable summary and the final status block.
+
+The log is complete and ends with `EXIT=1` / `STATUS=BLOCKED` (covenant #10 satisfied). Let me do a final integrity sweep (forbidden words across all 8 files incl. `.strings`) and check git state before committing.
+
+The 7 modified `AIUsageCard.*` files are **pre-existing** working-tree changes (not mine — I never touched them); I'll scope my commit to only my files + the log. Let me clean temp artifacts, stage precisely, and verify the staged set.
+
+Staged set is exactly my 8 files + the log. Committing with the prompt's message.
+
+Commit `cfbf3a7f4` created with exactly my 8 surface files + the log (1254 insertions); the pre-existing `AIUsageCard.*` changes remain untouched. Let me finalize tracking.
+
+The VehicleSelect Apple surface is complete, verified, committed, and the honest gate log is finalized. Here's the outcome.
+
+## Summary
+
+I built the production-complete native Apple `VehicleSelect` shared surface (P4/0164) at parity with `web/src/components/forms/VehicleSelect.tsx`, modeled on the canonical `FleetStatsBar` multi-file pattern.
+
+**Delivered (8 files, committed `cfbf3a7f4`, 1254 insertions):**
+- `VehicleSelect.swift` (main View), `.Adapter` (data types + `display_name‖vin‖"Vehicle {id}"` label port), `.Projection` (effective-selection precedence, phase, slug, a11y), `.Model` (P1/S8 source seam, P1/S10 i18n facade, P1/S11 `view.opened` telemetry, `@Observable` model with `select()`), `.Views` (native menu `Picker` = `@/components/ui` Select counterpart, `withIcon`, loading/empty/error/banner), `.Previews` (8 states), `.Tests`, `.strings`.
+- Full parity: `useSelectedVehicle` binding, `withIcon`, `ariaLabel`, `onChange` guard, `data-testid`→`accessibilityIdentifier`. All P4 states render (loading·content·empty·error·stale·offline). No hardcoded English; `view.opened` slug `VehicleSelect`.
+
+**Verification (all green):** swiftlint `--strict` 0 violations · swiftformat 0/7 · placeholders 0 · **real Xcode 26.5 compiles**: surface vs REAL design tokens for `arm64-apple-ios18.0-simulator` = 0, pure core = 0, testable module build = 0, Tests typecheck = 0.
+
+**STATUS = BLOCKED** (log ends `EXIT=1 / STATUS=BLOCKED`). The surface itself is DONE-quality, but the literal aggregate `xcodebuild build test` gate cannot reach `EXIT=0` from this prompt's **Allowed-files** scope — and notably **not** for a platform-capability reason (a full Xcode 26.5 + simulators + xcodegen + the KMP module are all present). The blockers are predecessor/aggregate:
+- **B1** — `TeslaSync/shared-surfaces` isn't registered in `project.yml`/`.swiftlint.yml`. The scaffold/core prompt (P0-0001) owns those and already wired `feature-views`+`dashboard-widgets`; 0164 is the *first* shared-surface, so the category was never wired. Registering it here is a predecessor bypass + outside Allowed files.
+- **B2** — the whole-app build+test needs the KMP `Shared.xcframework` staged + every predecessor surface to compile/pass = P4 acceptance-gate (P99) scope.
+- **B3** — `swiftlint --strict` and `swiftformat --lint apps/apple` are already non-zero on **pre-existing predecessor files** outside my Allowed files.
+
+I committed the verified artifact + the transparent BLOCKED log (the framework's intended handoff for a blocked runner), and left the unrelated pre-existing `AIUsageCard.*` working-tree changes untouched.
+

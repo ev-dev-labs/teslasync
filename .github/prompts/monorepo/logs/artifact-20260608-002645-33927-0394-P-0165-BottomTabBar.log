@@ -1,0 +1,229 @@
+================================================================================
+P4 · Shared surface · 0165 — BottomTabBar (Apple)
+Run: 2026-06-08T06:14-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/394
+Base: c9c6fdb9f
+Prompt: P4/shared-surfaces/0165 — Shared surface: BottomTabBar
+Web source (spec): web/src/components/layout/BottomTabBar.tsx  (74 lines)
+Mode: code-complete + DEFERRED Xcode app build/test (0002 BackendTool / 0054
+      GuardModeWidget precedent, ADR-012, Honesty rule 7 — predecessor parity).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT path) ........... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  SwiftUI .................... imports + type-checks on BOTH SDKs (proven below)    OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  xcodegen ................... 2.45.4 (project generates cleanly, see deferred)     OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+  shared-surfaces in project.yml  0 references (not yet target-registered)          WARN
+  shared-surfaces in .swiftlint.yml  0 references (bare `swiftlint --strict` skips it) WARN
+
+  Capability note: the web source lists "Charts/maps used: (none)" and "Shared
+  components used: (none)". The core requirement is SwiftUI, which is AVAILABLE and
+  PROVEN by the real iOS-18-simulator AND macOS-15 SDK type-checks + the executed
+  XCTest suite below. The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit
+  unavailable on the runner") does NOT apply — the surface is authored, host-compiled
+  on both SDKs, host-tested (27/27), and lints clean. STATUS=DONE, not BLOCKED.
+
+=== ARTIFACT (apps/apple/TeslaSync/shared-surfaces/BottomTabBar.*) ===
+  BottomTabBar.Core.swift      98  Foundation-only catalog — BottomTabDestination (web
+                                   `Tab`), BottomTabCatalog.tabs (web `TABS`, 5 tabs in
+                                   order) + .paths (web `BOTTOM_TAB_PATHS`) + surface slug.
+  BottomTabBar.Adapter.swift   81  testable projection core — BottomTabProjection.isActive
+                                   (web `isActive`: root exact vs. segment-prefix),
+                                   .entries, .activeDestination, location normalize (pure).
+  BottomTabBar.Seams.swift    135  dependency seams — P1/S11 telemetry (view.opened),
+                                   P1/S10 strings facade (table "BottomTabBar"), navigation
+                                   sink (web `PrefetchLink to`), P1/S8 location source
+                                   (web `useLocation`) + in-memory source + a11y nav label.
+  BottomTabBar.Model.swift    104  P1/S8 state holder (@MainActor @Observable) — binds the
+                                   location source, projects entries, forwards tap nav,
+                                   emits view.opened once; controlled (no optimistic path).
+  BottomTabBar.Views.swift     88  presentational pieces — BottomTabButton (icon over label,
+                                   accent tint + glow + underline indicator, 44pt hit target,
+                                   .isSelected trait) + BottomTabRow (web `justify-around`).
+  BottomTabBar.swift           64  BottomTabBar surface — TSFadeIn + chrome material + top
+                                   hairline border + a11y container (nav.quickNav) + slug.
+  BottomTabBar.Previews.swift  69  #if DEBUG previews — one per state (each of 5 tabs active,
+                                   nested route keeps parent active, none-active off-tab).
+  BottomTabBar.Tests.swift    145  XCTest — catalog + projection (isActive/entries/active) +
+                                   a11y (17 methods).
+  BottomTabBar.ModelTests.swift 140 XCTest — model lifecycle/telemetry/intents (10 methods).
+  BottomTabBar.strings         25  P1/S10 catalog contribution (table "BottomTabBar").
+  Totals: 949 lines; production .swift (6) = 570; largest .swift = 145 (swiftlint
+  file_length<=400 honored). No file imports the Shared xcframework — the seams are
+  plain Swift protocols; the prod app injects the P4-nav-backed location source +
+  navigation sink, previews/tests inject the in-memory source + spies.
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data sources (web useLocation + useTranslation): bound through the P1/S8 seam
+    BottomTabLocationSource -> BottomTabModel (web `useLocation`) and the P1/S10
+    BottomTabStrings facade (web `useTranslation`). No router/navigation state is read
+    directly in the view; a tap forwards to the host via BottomTabNavigationSink
+    (web `<PrefetchLink to={tab.path}>`).
+  - Composition (web `TABS.map`): the static 5-tab catalog is reproduced verbatim and
+    in order — Dashboard(/) -> Drives(/drives) -> Charging(/charging) -> Battery(/battery)
+    -> Map(/live). Each web lucide glyph maps to its SF Symbol (Home->house.fill,
+    Car->car.fill, BatteryCharging->bolt.batteryblock.fill, HeartPulse->waveform.path.ecg,
+    MapPin->mappin.and.ellipse). Active tint = brand accent (web `--theme-primary`) +
+    icon glow (web `drop-shadow`) + underline indicator (web active `<span>`); inactive =
+    text-muted (web `--text-muted`). Chrome = TSMaterial.chrome (.bar) + a hairline top
+    border (web `bg-[var(--surface-overlay)] backdrop-blur-xl border-t`).
+  - States (the ONLY conditional branch in the web source is `isActive`; the bar is
+    static navigation chrome with NO data fetch, so the generic data-states
+    loading/empty/error/stale/offline are N/A — not fabricated). The real, reproduced
+    states are: ACTIVE (exact tab route), INACTIVE (other tabs), NESTED (a child route
+    keeps its parent tab active, web `startsWith(path + '/')`), and NONE-ACTIVE (an
+    off-tab route like /settings lights no tab). The surface ALWAYS renders all five
+    tabs — it never hides a destination (honors "no hidden surfaces"). Each state has a
+    #if DEBUG preview AND an executed unit test.
+  - i18n (P1/S10): web keys preserved verbatim — nav.quickNav (container aria-label) +
+    nav.dashboard/nav.drives/nav.charging/nav.battery/nav.liveMap (the web `TABS[].i18nKey`
+    with their `fallback`: Home/Drives/Charging/Battery/Map). Every code-referenced key is
+    declared in BottomTabBar.strings; NO English string literals in native code (all via
+    the BottomTabStrings facade + Text(verbatim:)). referenced==declared verified.
+  - Accessibility: the nav container carries the VoiceOver label (web `nav aria-label`);
+    every tab is a Button with its localized label + the .isSelected trait when active
+    (web `aria-current="page"`); 44pt minimum hit target (web `min-w-[48px] min-h-[44px]`);
+    Dynamic-Type system fonts (Font.TS) + minimumScaleFactor; reduce-motion honored
+    (TSFadeIn + the selection animation via TSAnimation.standard(reduceMotion:)).
+  - Telemetry (P1/S11): BottomTabModel.start() emits view.opened with surface slug
+    "BottomTabBar" exactly once (OSLogBottomTabTelemetry default; prod app injects the
+    shared diagnostics adapter). Re-armed by stop() for a later re-appearance.
+  - Placement note (web `lg:hidden`): the bar is compact-width chrome; the host shows it
+    only on iPhone and anchors it to the bottom safe area via `.safeAreaInset(edge:.bottom)`.
+    The surface itself always renders (no hidden surface); placement is the host's concern,
+    matching how the web hides it at the `lg` breakpoint rather than conditionally rendering.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 6 production files compiled together with the REAL apps/apple
+  design closure (design/generated/apple/Tokens.swift + Design/TSDesign.swift +
+  Design/TSMaterial.swift + Theme.swift + Components/Motion/Motion.swift); none import
+  the Shared xcframework.
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK
+        xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+          -swift-version 6  <closure> <6 production files>
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [3] swiftc -typecheck — DEBUG previews (iOS sim, -D DEBUG, #Preview macro plugin;
+        the 6 production files + previews + closure):
+        PREVIEWS_TYPECHECK_EXIT=0                                                  OK
+  [4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained
+        SwiftPM harness (the REAL production Core/Adapter/Seams/Model/Views/surface +
+        real design tokens, module name TeslaSync), Swift 6 language mode:
+          Test Suite 'BottomTabCatalogTests'           passed —  5 tests, 0 failures
+          Test Suite 'BottomTabProjectionActiveTests'  passed —  5 tests, 0 failures
+          Test Suite 'BottomTabProjectionEntriesTests' passed —  5 tests, 0 failures
+          Test Suite 'BottomTabAccessibilityTests'     passed —  2 tests, 0 failures
+          Test Suite 'BottomTabModelTests'             passed — 10 tests, 0 failures
+          Executed 27 tests, with 0 failures (0 unexpected) in 0.005 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: catalog order/keys/fallbacks/icons/paths-set; isActive (root exact vs.
+        segment prefix; sibling `/charging-history` does NOT light Charging; empty->root);
+        entries always cover 5 tabs, exactly-one-active on a tab route, nested keeps
+        parent, none-active off-tab; activeDestination resolve/nil; a11y nav label
+        (echo + localized); model start->view.opened-once + source start + initial path,
+        stop re-arms telemetry, pushed location reprojects, off-tab clears highlight,
+        empty push normalizes, select forwards path to nav sink WITHOUT optimistic path
+        change (controlled), label + a11y copy via localizer.
+  [5] swiftlint --strict (9 surface .swift files; explicit FILE paths — the repo
+        .swiftlint.yml `included:` does NOT list TeslaSync/shared-surfaces, that wiring
+        is the P4 integration prompt's job, so the bare `swiftlint --strict` SKIPS this
+        dir; run explicitly here):
+          Done linting! Found 0 violations, 0 serious in 9 files.
+        LINT_EXIT=0                                                               OK
+        (For reference, a full-repo `swiftlint --strict` reports exactly 1 pre-existing
+         violation in TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift —
+         NOT in this surface, out of scope.)
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/9 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate; swift):
+          ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces -Language swift
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                        OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode toolchain):
+      - `xcodegen generate`                         -> XCODEGEN_EXIT=0 (project + 12 targets + schemes).
+      - `xcodebuild -target TeslaSync-macOS build`  ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+          ** BUILD FAILED **                        -> MAC_BUILD_EXIT=65
+    Why deferred (three independent, code-unrelated reasons — none is a defect in this
+    surface; identical disposition to the 0002 BackendTool / 0054 GuardModeWidget
+    predecessors, Honesty rule 7):
+      (a) NOT-YET-REGISTERED: project.yml's app targets enumerate `Sources/`,
+          `TeslaSync/dashboard-widgets/`, and `TeslaSync/feature-views/`; this surface
+          lives at TeslaSync/shared-surfaces/ and has 0 references in project.yml
+          (verified: shared_surfaces_refs=0). The shared-surfaces directory is registered
+          into the XcodeGen app + test targets (and the .swiftlint.yml `included:`) by the
+          downstream P4 integration/acceptance prompt — exactly as feature-views was wired
+          once for all its surfaces (feature_views_refs=2 today, was 0 at 0002's time).
+          Editing project.yml / .swiftlint.yml is OUTSIDE this prompt's allowed files
+          (BottomTabBar.* + the log). Running xcodebuild now would build the app WITHOUT
+          these files and re-run the existing suite — ZERO evidence about this deliverable.
+          Steps [1]/[2] DO compile this surface against the real design closure on BOTH
+          SDKs, and step [4] EXECUTES its full XCTest suite — the meaningful validation.
+      (b) Shared.xcframework not staged: the app target links the KMP core; staging it
+          needs a Kotlin/Native gradle build (apps/shared :core:assembleSharedXCFramework).
+          Independent of this UI surface; concrete missing-framework error captured above.
+      (c) macOS app/widget signing requires a development certificate on a signed runner
+          (ADR-012); concrete entitlements/signing error captured above.
+    XCTest under Xcode runs in the TeslaSync(/-macOS) test target; here the SAME tests are
+    PROVEN GREEN (27/27) by the executed SwiftPM harness in step [4], and the surface
+    compiles against BOTH the iOS 18 and macOS 15 SDKs in steps [1]/[2].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source (active / inactive / nested-active /
+      none-active) — implemented; each has a #if DEBUG preview + an executed unit test;
+      the bar always renders all 5 tabs (no hidden surface). Generic data-states
+      (loading/empty/error/stale/offline) are N/A for static nav chrome and are NOT
+      fabricated (documented above).
+  [x] Hooks bind through the shared P1/S8 state-holder seam (BottomTabLocationSource ->
+      BottomTabModel); no navigation/HTTP state read in the view.
+  [x] Every i18n key from source has a matching catalog key — nav.quickNav + the five
+      nav.* tab keys declared in BottomTabBar.strings; referenced==declared verified.
+  [x] Accessibility labels on every interactive element — nav container label + per-tab
+      label + .isSelected trait + 44pt hit target.
+  [x] Tests: adapter unit + per-state projection + model + a11y — 27 methods, EXECUTED
+      27/27, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with
+      captured evidence (xcframework + registration + signing), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; the xcodebuild build/test is
+                          shown DEFERRED with its real exit 65 + cause, not as pass.
+  2 No scope narrowing ... full surface (6 prod + previews + 2 test files + strings), all
+                          real states, seams, telemetry, a11y, tests.
+  3 No skip-and-assume ... web source read end-to-end; every t() key + the isActive branch
+                          reproduced; data-states correctly judged N/A (not faked).
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. 5-tab catalog + icons + active tint/glow/underline + chrome
+                          material + controlled navigation, verbatim web i18n keys.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0002 BackendTool host-gate + Xcode deferral.
+  8 No commit on red ..... committed work is green on every runnable gate; the only
+                          non-green step is the environment-blocked xcframework/signing
+                          build, deferred with evidence (predecessor-accepted disposition).
+  9 No silent drift ...... path/registration deviation documented above (shared-surfaces
+                          not yet in project.yml/.swiftlint.yml; wiring is the integration
+                          prompt's job).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

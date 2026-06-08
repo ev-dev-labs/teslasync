@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure and existing conventions.
+
+Xcode situation is critical — let me verify whether a full Xcode (not just CLT) is available, and study the navigation + component conventions.
+
+Full Xcode exists at `/Applications/Xcode.app` — let me check if I can use it via `DEVELOPER_DIR` override (no sudo needed), and study the nav shell + how P7 pages register.
+
+Full Xcode 26.5 works via `DEVELOPER_DIR` — the real gate is runnable. Now studying the component library, facade, and app registration.
+
+Now studying an exemplar feature-view (seam pattern) and localization setup.
+
+Now reading the core P3 building blocks (Maps, Cards, States, Metrics, Units facade).
+
+Let me probe the KMP shared build feasibility (the long pole) in the background while I continue studying components.
+
+KMP core is real (503 Kotlin files). Let me check Java and kick off the Shared.xcframework build in the background — it's the long pole.
+
+Existing Gradle + Konan caches suggest the KMP build has run here before. Kicking it off in the background now.
+
+Build running. Continuing to study routing registration and remaining components.
+
+Let me check build progress and read the remaining key components (design tokens, Views/Previews/Tests pattern, DataTable, Buttons, Banners).
+
+Build still running (didn't fail fast — good). Let me locate the core design tokens and read DataTable/Buttons/Banners/Motion/Previews/Tests.
+
+Let me check the build and read the typography/DataTable/Buttons/Banners APIs.
+
+Let me read the precise init signatures for the components I'll use (DataTable, Button, AlertBanner, Badge, TSTone).
+
+Got all building blocks. Let me verify how the project wires tests vs app sources (critical for where `.Tests.swift` go).
+
+Let me resolve how feature-view tests are wired (critical for test placement) and check the build.
+
+Convention resolved: co-locate all files (matching 100+ existing surfaces). Let me check build progress, then set up tracking and start writing.
+
+The KMP framework build is nearly done (debug XCFramework written, release linking). Let me set up tracking and start implementing.
+
+Release framework nearly linked. Let me read the SwiftLint config (for `--strict` compliance) then start writing files.
+
+SwiftLint config understood (line ≤120 for code under `--strict`, opt-in rules). Now writing the implementation. Starting with the pure projection core.
+
+The Shared.xcframework build completed. Let me verify it staged, then continue writing files.
+
+Build succeeded — the framework needs staging to `Frameworks/`. Let me stage it (the gate's preAction also does this, but I'll verify now).
+
+Framework staged. Now writing the seams (strings, source protocol, telemetry, date/accessibility facades).
+
+Now the `@Observable` model.
+
+The model uses `CLLocationCoordinate2D` — adding the CoreLocation import.
+
+Now the data-state views (loading/empty/error/GPS warning/freshness/connectivity banner).
+
+Now the panel views. Writing the metrics/header/badges file first.
+
+Now the location-details, quick-links, and history-table panels.
+
+Now the map panel, playback panel, and vehicle popup (the 7 map parity items).
+
+Now the page entry view that composes everything.
+
+Now the route registration + production source, then wiring into the app.
+
+Wiring the registration into the app's route host environment.
+
+Now the per-surface strings table (all 35 web keys + native-envelope keys).
+
+Now the previews (one per state).
+
+Now the unit tests (pure projection/accessibility/model coverage).
+
+Now registering the new directory in the build (project.yml) for both app targets.
+
+Let me fix two likely compile issues before building (onChange form, and `LocalizedStringKey` from runtime strings).
+
+Now running the fast gates (SwiftLint + placeholder scan) before the heavy build.
+
+Placeholder scan clean. SwiftLint found 1 violation — let me locate it (filtering progress noise).
+
+The 1 violation is pre-existing in `dashboard-widgets` (untouched by me) — SwiftLint fell back to the config's `included` set because `TeslaSync/Features` isn't listed. Let me check the real gate contract and lint my files in isolation.
+
+Let me verify my files are clean in isolation (config without `included`, explicit path).
+
+Found 7 real violations in my files (trailing commas, 2 long lines, 1 param-count). Let me view the exact spots and fix them.
+
+Fixing all 7 violations.
+
+Now the Previews (param count + trailing comma) and Tests (line length + trailing comma).
+
+Re-running the isolated lint to confirm my files are now clean.
+
+My 11 files are clean. Let me confirm the dashboard-widgets violation is pre-existing (not mine) and test the gate command exactly as the prompt specifies (from repo root).
+
+My 11 files lint clean via the exact gate command (0 violations), and the other violation is pre-existing/unrelated. Now regenerating the Xcode project and building.
+
+Project regenerated with my files included. Now building the macOS target to validate compilation (framework already staged, so building the target directly to save time).
+
+Let me check build progress and proactively fix two issues I spotted (optional defaults + button closure form).
+
+Build had failures. Let me get the exact errors and fix the optional defaults.
+
+The 2 failures are pre-existing (`AIRestorePanel.Tests.swift` — XCTest not resolvable in the app target). The co-located `.Tests.swift` convention needs `ENABLE_TESTING_SEARCH_PATHS=YES`. Let me rebuild with that flag to confirm my code compiles.
+
+While it builds, let me make the quick-link button's closure form unambiguous.
+
+Build running. Let me monitor it (full app compile takes several minutes).
+
+Let me extract the errors, focusing on my files.
+
+Zero errors in my files — my code compiles. The failures are all pre-existing (`DashboardWidgetSize` ambiguous in dashboard-widgets, XCTest in feature-views). Let me confirm `DashboardWidgetSize` is a pre-existing duplicate (not caused by me).
+
+`DashboardWidgetSize` is declared as `public struct` in **15 untouched committed files** — a pre-existing duplicate-definition that makes the whole app target ambiguous, independent of my change. Let me confirm my files have zero errors/warnings and verify the baseline is red without my change.
+
+My files show only the expected self-import warning. There's a second error signature — let me verify it's not in my code, and remove the self-import to clean up the warning.
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: D71D:1E7F:75B7E:81E80:6A26EAAF)

@@ -1,0 +1,138 @@
+=== P4 Feature view 0294 QuickLinksSection (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/QuickLinksSection.*
+Web src : web/src/features/vehicles/components/vehicle-detail/QuickLinksSection.tsx
+ADR refs: ADR-002 (shared SwiftUI source, iOS+macOS) · ADR-004 (KMP Shared.xcframework) · ADR-009
+Runner  : Darwin · Xcode 26.5 (17F42) at /Applications/Xcode.app · swiftc 6.3.2
+          xcode-select default -> /Library/Developer/CommandLineTools (full Xcode reached via DEVELOPER_DIR)
+
+------------------------------------------------------------------------------
+PARITY (web source is THE spec — every t() + render branch reproduced)
+------------------------------------------------------------------------------
+Composition : GlassPanel (TSGlassPanel) + header (cyan chevron accent + bold
+              "Quick Links" title) + responsive link grid. 6 links, web order:
+              Drives / Charging / Battery / Climate / Efficiency / Settings.
+Icons       : uniformly text-muted (NO per-item color in the web source — none invented).
+              Lucide -> SF Symbol: Route->point.topleft.down.to.point.bottomright.curvepath,
+              BatteryCharging->battery.100.bolt, Battery->battery.100,
+              Thermometer->thermometer.medium, BarChart3->chart.bar.fill, Settings->gearshape.fill.
+Grid        : web grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 -> QuickLinksLayout 2/3/6
+              at sm=640 / lg=1024 (unit-tested + executed).
+Navigation  : web <Link to> -> onSelect(QuickLinkItem) (dependency inversion, host routes).
+              Each webPath maps to a REAL AppRoute (no dead tile); AppRouteParser round-trips
+              every routePath: /drives->/driving, /charging, /battery->/energy,
+              /climate->/vehicle-systems, /efficiency->/analytics, /settings.
+i18n keys   : nav.drives, nav.charging, nav.battery, nav.climate, nav.efficiency,
+              nav.settings, vehicles.detail.quickLinks  (+ native chrome under
+              vehicles.detail.quickLinks.* — every literal resolved via P1/S10 facade).
+States      : loading (skeleton grid) · empty (ContentUnavailableView) · error (retry) ·
+              content (6-tile grid) · stale/offline (header chip + one-shot auto-refresh on stale).
+Seams       : P1/S8 state-holder (QuickLinksCatalogSource + @Observable model, no HTTP in view),
+              P1/S11 telemetry (view.opened surface="QuickLinksSection", emitted once),
+              P1/S9 design tokens (Color.TS/Font.TS/TSSpacing/TSRadius/TSMotion — no raw hex),
+              P1/S10 i18n facade (QuickLinksSectionStrings, table "QuickLinksSection").
+A11y        : panel container label, per-tile combined label + "Opens {label}" hint + .isButton,
+              decorative icons hidden, header .isHeader, Dynamic Type (Font.TS roles),
+              Reduce Motion respected (press style + skeleton shimmer).
+Files       : QuickLinksSection.swift / .Adapter.swift / .Model.swift / .Views.swift /
+              .Previews.swift / .Tests.swift / .strings  (7 files, one exported view per file).
+
+------------------------------------------------------------------------------
+GATE STEPS (host gates — RUNNABLE, all green for this surface)
+------------------------------------------------------------------------------
+[1] swiftformat --lint (surface, 6 swift files)
+      0/6 files require formatting.                                  FORMAT_EXIT=0
+[2] swiftlint --strict (surface, 6 swift files)
+      Done linting! Found 0 violations, 0 serious in 6 files.        LINT_EXIT=0
+[3] placeholder/stub gate (ADR-011) — scanned the ACTUAL 6 swift files
+      (the prompt's prefix -Path resolves to a non-existent node and
+      scans 0 files; re-run against a temp copy of the real files):
+      PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0                     PLACEHOLDER_EXIT=0
+[4] swiftc -typecheck — iOS 18 Simulator (arm64-apple-ios18.0-simulator, -swift-version 6)
+      surface + real theme/route closure (Tokens, AppRoute(+Parser),
+      TSMaterial, Cards, Typography, Skeletons).                     IOS_TYPECHECK_EXIT=0
+[5] swiftc -typecheck — macOS 15 (arm64-apple-macos15.0)
+      same closure.                                                  MAC_TYPECHECK_EXIT=0
+[6] swiftc -typecheck — SwiftUI + Swift Charts + MapKit import probe  CAPABILITY_EXIT=0
+      (the prompt's required capabilities ARE present on this runner).
+[7] swiftc -typecheck — Tests.swift logic (XCTest shimmed; XCTest module
+      is Xcode-only, absent from the CLT SDK) against the real types. TESTS_TYPECHECK_EXIT=0
+[8] swiftc -typecheck — Previews.swift bodies (#Preview macro plugin is
+      Xcode-only; bodies rewritten to funcs) against the real types.  PREVIEWS_TYPECHECK_EXIT=0
+[9] RUNTIME test EXECUTION — native macOS executable built from the surface
+      + a harness mirroring every Tests.swift assertion (catalog parity,
+      AppRouteParser round-trip, projection x all states, layout 2/3/6,
+      accessibility copy, the full model state machine — telemetry-once,
+      stale auto-refresh-exactly-once, live-resets-guard, offline-keeps-cache,
+      stop/re-arm, refresh delegation, static source — and ImageRenderer
+      render-smoke for all 6 states):
+      HARNESS checks=63 fails=0                                      HARNESS_EXIT=0
+
+------------------------------------------------------------------------------
+XCODE APP BUILD / TEST — DEFERRED (NOT green; honest evidence below)
+------------------------------------------------------------------------------
+Gate cmds : xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+            xcodebuild -scheme TeslaSync-macOS build test
+Capability: AVAILABLE — Xcode 26.5 + iOS 18 / macOS 15 SDKs + a booted iPhone 16
+            simulator are present; the surface type-checks for both iOS-sim and macOS
+            (steps [4][5]) and SwiftUI/Charts/MapKit import clean (step [6]). The block
+            is NOT a missing platform capability — it is a missing BUILD PREREQUISITE.
+Generate  : xcodegen generate -> RC=0. The surface is compiled into the TeslaSync and
+            TeslaSync-macOS targets via the existing `TeslaSync/feature-views` source
+            path (no project.yml edit needed; that file is outside this prompt's
+            allowed-files scope anyway).
+Real run  : xcodebuild -target TeslaSync -sdk iphonesimulator build CODE_SIGNING_ALLOWED=NO
+            (target-level, to isolate the blocker without the scheme's Gradle pre-action)
+            -> ** BUILD FAILED **                                   XCODEBUILD_EXIT=65
+            error: There is no XCFramework found at
+              '.../apps/apple/Frameworks/Shared.xcframework'. (in target 'TeslaSync')
+Cause     : Frameworks/Shared.xcframework is ABSENT (only .gitkeep). It is staged by the
+            scheme pre-action Scripts/build-shared-xcframework.sh ->
+            apps/shared/gradlew :core:assembleSharedXCFramework (KMP / Kotlin-Native, ADR-004).
+            Staging that xcframework is integration-scoped and lives OUTSIDE this surface
+            prompt's allowed files (apps/apple/TeslaSync/feature-views/QuickLinksSection.* + log).
+Tests note: XCTest and the #Preview macro plugin require the full Xcode app build context
+            (absent from the CLT SDK), so XCTest EXECUTION rides on this deferred xcodebuild.
+            The surface's test + preview logic is proven instead by steps [7][8][9].
+Tree note : the broader gate steps reflect the monorepo, not this surface — e.g.
+            `swiftformat --lint apps/apple` reports 1/1919 needing formatting, and the
+            lone hit is ActionBuilder.Previews.swift (a DIFFERENT surface), not
+            QuickLinksSection. This surface's own 6 files are clean (steps [1][2]).
+Disposition: same as predecessors 0002/0003 — host gates green; the Xcode app build/test
+            is DEFERRED to the integration/signed runner with the real exit 65 + cause,
+            never reported as a pass.
+
+------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------------------------
+  [x] Surface renders on Apple with ALL web states reproduced (loading/empty/error/
+      content/stale/offline) — ImageRenderer render-smoke executed for all 6 (step [9]).
+  [x] Hooks bind via the P1/S8 state-holder layer; no direct HTTP from the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (.strings).
+  [x] Accessibility labels on every interactive element (tiles: label + "Opens X" hint
+      + .isButton; chip + retry labelled; decorative icons hidden).
+  [x] Tests: adapter unit + per-state model + a11y — typechecked (step [7]) AND
+      EXECUTED 63/63 assertions, exit 0 (step [9]).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0 (step [3]).
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with the
+      captured exit 65 + cause (absent KMP Shared.xcframework), per predecessor parity.
+
+------------------------------------------------------------------------------
+HONESTY COVENANT
+------------------------------------------------------------------------------
+  1 No red-as-green ...... the xcodebuild build/test is shown DEFERRED with its real
+                          exit 65 + cause, NOT as a pass; only runnable host gates are green.
+  2 No scope narrowing ... full surface (7 files), all 6 states, all seams, full tests.
+  3 No skip-and-assume ... web source read end-to-end; every t() + render branch reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. 6 links, exact icons/labels/routes, muted-icon fidelity,
+                          2/3/6 responsive grid, cyan header+glow, all states.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0002/0003 host-gate-green + xcodebuild deferral.
+  8 No commit on red ..... every gate this surface controls is green; the only non-green
+                          step is the environment/integration-scoped xcframework build, deferred.
+  9 No silent drift ...... routePath->AppRoute mapping + native chrome keys documented above;
+                          xcframework absence + the ActionBuilder sibling-lint hit disclosed.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

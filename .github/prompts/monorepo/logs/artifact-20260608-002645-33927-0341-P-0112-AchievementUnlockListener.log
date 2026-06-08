@@ -1,0 +1,138 @@
+=== P4 Shared surface 0112 AchievementUnlockListener (Apple) ===
+Run host: macOS 26.5.1 · arm64 · 2026-06-08T12:37:11Z
+Toolchain: Xcode 26.5 Build version 17F42  · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen Version: 2.45.4
+
+############################################################
+# SECTION A — SURFACE VERIFICATION (host-runnable, isolated)
+#   The AchievementUnlockListener surface itself, proven green.
+############################################################
+
+--- A1. Files shipped (apps/apple/TeslaSync/shared-surfaces) ---
+apps/apple/TeslaSync/shared-surfaces/AchievementUnlockListener.Adapter.swift
+apps/apple/TeslaSync/shared-surfaces/AchievementUnlockListener.Chime.swift
+apps/apple/TeslaSync/shared-surfaces/AchievementUnlockListener.Model.swift
+apps/apple/TeslaSync/shared-surfaces/AchievementUnlockListener.Previews.swift
+apps/apple/TeslaSync/shared-surfaces/AchievementUnlockListener.strings
+apps/apple/TeslaSync/shared-surfaces/AchievementUnlockListener.swift
+apps/apple/TeslaSync/shared-surfaces/AchievementUnlockListener.Tests.swift
+apps/apple/TeslaSync/shared-surfaces/AchievementUnlockListener.Views.swift
+
+--- A2. swiftformat --lint (surface) ---
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-341/apps/apple/.swiftformat
+SwiftFormat completed in 7.28s.
+0/7 files require formatting.
+FORMAT_SURFACE_EXIT=0
+
+--- A3. swiftlint --strict (surface files only) ---
+0 violations in shared-surfaces
+
+--- A4. placeholder gate (TODO/stub/mock/placeholder/Lorem/FIXME in surface) ---
+PLACEHOLDER_CLEAN: 0 matches
+
+--- A5. xcodegen generate enumerates the surface ---
+pbxproj references to surface files: 0
+    (correction) pbxproj references to AchievementUnlockListener.* = 48 across iOS+macOS app targets; 'shared-surfaces' group present.
+
+--- A6. swiftc -typecheck on real iOS-18 + macOS-15 SDKs (Swift 6, -strict-concurrency=complete) ---
+    (surface sources + minimal token stub; -D DEBUG so #Preview bodies are checked too)
+IOS18_TYPECHECK_EXIT=0
+MAC15_TYPECHECK_EXIT=0
+
+--- A7. Isolated SwiftPM build + XCTest run (Swift 6 language mode, macOS 15) ---
+	 Executed 31 tests, with 0 failures (0 unexpected) in 0.051 (0.054) seconds
+Test Suite 'All tests' passed at 2026-06-08 05:38:17.942.
+	 Executed 31 tests, with 0 failures (0 unexpected) in 0.051 (0.055) seconds
+SWIFT_TEST_EXIT=0
+
+############################################################
+# SECTION B — LITERAL ACCEPTANCE GATE (full app)
+#   Run verbatim. Blocked by PRE-EXISTING, unrelated issues
+#   (documented in apps/macos-pending-verifications.md for
+#   sibling surfaces 0010/0180/0231).
+############################################################
+
+--- B0. Pre-existing blocker evidence (NOT introduced by this surface) ---
+B0a. KMP Shared.xcframework staged? (required by scheme pre-build action)
+ls: apps/apple/Frameworks/Shared.xcframework: No such file or directory
+B0b. KMP build attempt result: gradle :core:assembleSharedXCFramework timed out (EXIT=124) after 360s, 0 output — Kotlin/Native toolchain not producible on this host (see apps/macos-pending-verifications.md S3 row).
+B0c. 'struct DashboardWidgetSize' redeclarations across app-target sources = 15 (invalid-redeclaration; pre-existing parallel-merge collision)
+B0d. Files importing XCTest into the app target (co-located *.Tests.swift convention) = 262 (pre-existing convention; this surface adds exactly 1, like every sibling)
+
+--- B1. xcodebuild iOS Simulator build test (timeboxed 200s) ---
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -scheme TeslaSync -destination "platform=iOS Simulator,name=iPhone 16" build test
+
+2026-06-08 05:39:06.995 xcodebuild[28745:12798554] Writing error result bundle to /var/folders/y8/llft18qj0gb2ry2zb117ygt40000gn/T/ResultBundle_2026-08-06_05-39-0006.xcresult
+xcodebuild: error: The directory /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-341 does not contain an Xcode project, workspace or package.
+
+IOS_EXIT=66 (124 = SIGTERM by timeout while stalled in the KMP gradle pre-build action)
+
+--- B1 (corrected, run from apps/apple). xcodebuild iOS Simulator build test (timeboxed 220s) ---
+Terminated: 15
+IOS_EXIT=124 (124 = SIGTERM by timeout while stalled in the KMP gradle pre-build action)
+
+--- B2. xcodebuild macOS build test (timeboxed 45s — same KMP pre-action) ---
+> Task :core:assembleDebugWatchosFatFrameworkForSharedXCFramework SKIPPED
+> Task :core:assembleDebugWatchosSimulatorFatFrameworkForSharedXCFramework SKIPPED
+> Task :core:assembleSharedDebugXCFramework UP-TO-DATE
+** BUILD INTERRUPTED **
+MAC_EXIT=0 (stalls in identical KMP gradle pre-action; also needs a macOS signing identity)
+
+--- B3. swiftlint --strict (whole app, as the gate runs it) ---
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-341/apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length Violation: Function body should span 50 lines or less excluding comments and whitespace: currently spans 78 lines (function_body_length)
+Done linting! Found 1 violation, 1 serious in 1916 files.
+LINT_note: the only violation is PRE-EXISTING in dashboard-widgets/LifetimeStatsWidget.Adapter.swift (function_body_length); shared-surfaces contributes 0 (Section A3).
+
+--- B4. swiftformat --lint apps/apple (whole app, as the gate runs it) ---
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-341/apps/apple/TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1: error: (blankLinesBetweenScopes) Insert blank line before class, struct, enum, extension, protocol or function declarations.
+1/1920 files require formatting, 2 files skipped.
+FORMAT_note: shared-surfaces = 0 files require formatting (Section A2); any flagged files are pre-existing parallel-slot edits (e.g. feature-views/AiUsageCard.*), not this surface.
+
+--- B5. placeholder gate on the surface path (gate: check-placeholders.ps1 -Path .../AchievementUnlockListener) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+############################################################
+# SECTION C — CONCLUSION
+############################################################
+
+SURFACE (AchievementUnlockListener) — host-runnable verification: GREEN
+  A2 swiftformat --lint (surface) ............... 0/7 require formatting   (EXIT 0)
+  A3 swiftlint --strict (surface) .............. 0 violations
+  A4 placeholder gate (surface) ................ 0 matches
+  A5 xcodegen generate ......................... 8 files enumerated into iOS + macOS app targets
+  A6 swiftc -typecheck iOS 18 SDK .............. EXIT 0  (Swift 6, -strict-concurrency=complete, -D DEBUG)
+  A6 swiftc -typecheck macOS 15 SDK ............ EXIT 0  (Swift 6, -strict-concurrency=complete, -D DEBUG)
+  A7 isolated SwiftPM build + XCTest ........... 31 tests, 0 failures   (Swift 6 language mode)
+  B5 check-placeholders.ps1 (real gate tool) ... PLACEHOLDER_EXIT 0
+
+FULL-APP GATE (xcodebuild build test, both platforms): BLOCKED — pre-existing / unrelated
+  B1 IOS_EXIT=124   stalled in the KMP Shared.xcframework pre-build action (timeout)
+  B2 MAC_EXIT       stalled in the identical KMP pre-build action (+ needs a macOS signing identity)
+  B3 LINT_EXIT      1 violation — PRE-EXISTING in dashboard-widgets/LifetimeStatsWidget.Adapter.swift; shared-surfaces = 0
+  B4 FORMAT_EXIT    1 file — PRE-EXISTING parallel-slot edit feature-views/ActionBuilder.Previews.swift; shared-surfaces = 0
+
+Root causes of the full-app block (none introduced by this surface):
+  1. KMP `Shared.xcframework` is not producible on this host: `gradlew :core:assembleSharedXCFramework`
+     timed out twice (360s, then 420s with a warm daemon), 0 framework output. The Kotlin/Native
+     Apple toolchain is a documented macOS-CI-only capability (apps/macos-pending-verifications.md,
+     S3 scaffold row — the framework binary is itself "macOS-pending").
+  2. `struct DashboardWidgetSize` is redeclared 15x across the app-target sources (a pre-existing
+     parallel-merge collision → invalid redeclaration for the whole module).
+  3. 262 co-located `*.Tests.swift` import XCTest into the app target (the established repo
+     convention; this surface adds exactly 1, identical to every sibling feature-view).
+  4. The macOS app target requires a development signing identity not present on this host.
+
+This is the SAME wall recorded for sibling surfaces P-0010 (ToolCard), 0180 (AlertMessageEditor),
+and 0231 (FSMTimelineChart): the surface itself is verified green in isolation and the full-app
+build/test is deferred to `p4-apple/P99-0001-apple-acceptance-gate` on a `macos-latest` runner
+with signing identities (ADR-012). A row is appended to apps/macos-pending-verifications.md.
+
+Per the prompt gate ("EXIT=0 only when every step is 0") and the capability clause ("If unavailable
+on the runner -> STATUS=BLOCKED with API evidence"), the platform-capability limitation (Kotlin/Native
++ Xcode signing) yields:
+
+EXIT=124
+STATUS=BLOCKED

@@ -1,0 +1,87 @@
+I'll start by investigating the environment and repository structure to understand what exists and what tooling is available, since this task has strict capability requirements and an honesty covenant.
+
+macOS with Swift 6.3.2, swiftlint, swiftformat, and pwsh are present. Critically, `xcodebuild` is installed but **broken** — only Command Line Tools are active, not full Xcode. There's a real `apps/apple/TeslaSync` directory with existing feature-views. Let me investigate the structure, the web source, and precedent from prior surfaces.
+
+Key findings: full **Xcode.app IS installed** (xcode-select just points to CommandLineTools), the Apple app uses **XcodeGen** (`project.yml`), and `shared-surfaces/` doesn't exist yet — I'll create it. Let me verify I can override DEVELOPER_DIR to get a working toolchain, and read the web source plus the shared AI components it depends on.
+
+Toolchain confirmed working with `DEVELOPER_DIR` override: **Xcode 26.5, iPhone 16 simulator booted, iOS 26.5 runtime**. Capability is available — not blocked. Now I understand the web source (an AI streaming feature card). Let me read the remaining web dependencies and find the established native pattern for AI-card surfaces.
+
+Native feature-views don't use the web component names directly. Let me examine the most recent AI-card precedent (`AIUsageCard`, just merged at HEAD) at its committed state, read the `useAiStream` hook, and map out the native infrastructure (state-holders, tokens, i18n, diagnostics).
+
+Now I deeply understand the web contract. Let me examine the native AIUsageCard precedent structure, the project.yml build globs, and locate the native state-holder/i18n/token/diagnostics infrastructure (P1/S8–S11).
+
+The iOS/macOS targets glob `TeslaSync/feature-views` but **not** `shared-surfaces` — I need to understand how that dir gets compiled. Let me check whether `shared-surfaces` is referenced anywhere, find the native AI-card scaffold (the `AIFeatureCard`/`useAiStream` equivalent), and read the AiUsageCard scaffold as my template.
+
+**Major discovery:** prior shared-surfaces exist in git history on other branches — including **AIDriveCoaching** (`0f6098833`), which is the *exact same pattern* (a `withAiFeature` + `AIFeatureCard` + `useAiStream` streaming card). That's my precise template. Let me inspect that commit's file list, whether project.yml was wired, and how the gate/log was handled.
+
+The precedent is clear: AIDriveCoaching has 9 Swift files + `.strings` + log, and **three sibling commits wired `shared-surfaces` into project.yml** (parallel branches each added it). My branch lacks both. I'll mirror AIDriveCoaching exactly and wire project.yml as precedent requires. Let me extract the full template and the project.yml diff.
+
+This confirms the precedent completely. Key insight from the AiLimitBanner commit message: full signed `xcodebuild build test` is **environmentally deferred** (KMP `Shared.xcframework` staging + signing), and surfaces are verified green via `swift test` + `swiftc -typecheck` (iOS+macOS) + `swiftlint --strict` + `swiftformat --lint` + placeholder gate + xcodegen enumeration. Let me extract the full AIDriveCoaching template + its log + the .swiftlint.yml wiring + the pending-verifications doc.
+
+Template extracted. Now let me read the AIDriveCoaching log (verification methodology + how STATUS was reported) and the core template files to understand the exact native conventions.
+
+This is an extremely detailed, directly-matching precedent. The sanctioned disposition is crystal clear:
+- **Ship 9 files** (Adapter/Projection/Model/Views/Chrome/main/Previews/Tests/strings) under the 400-line budget
+- **Verify green** via swiftformat --lint, swiftlint --strict, placeholder gate, and an **isolated SwiftPM package** compiling the exact sources against the real design tokens + shared components → `swift test`
+- **DEFER** the full-app xcodebuild gate (pre-existing blockers: unstaged `Shared.xcframework`, co-located XCTest, project.yml wiring owned by P99) — do **not** touch project.yml (Rule 9 / allowed-files)
+
+Let me read all template files and the real design-system APIs.
+
+Now the larger template files — Model, Views, Chrome, main, Previews, Tests.
+
+I have the complete template. Now let me verify the real design-system APIs the surface depends on (so my isolated build compiles against the real tokens/components), and confirm the placeholder-check script + a SwiftPM harness approach.
+
+All tokens exist. Now the `TSButton` + `TSFadeIn` APIs and the placeholder checker.
+
+I now have the full picture. Let me confirm `TSButtonStyle` (rest of Buttons.swift) is self-contained so my isolated harness compiles against the real components, then I'll set up a todo plan and start writing.
+
+I have everything needed: the exact template, real token/component APIs (all present), the placeholder patterns, and the verification methodology. Let me set up a plan and todos, then build the surface.
+
+Now creating the directory and writing the 9 surface files, starting with the pure layers (Adapter, Projection, strings).
+
+Let me write the main surface file, then check line lengths (my type name is 6 chars longer than the template's, so some lines may exceed the 120 limit).
+
+Now the Previews and strings files.
+
+All 9 files written. Now let me check line lengths (>120) and file line counts, then run swiftformat.
+
+All files are well under 400 lines. One code line exceeds 120 chars. Let me run swiftformat (auto-format) on my directory to normalize everything per the repo config, then verify.
+
+No long lines remain; `swiftformat --lint` passes (0/8). Now swiftlint --strict on the surface (per-surface scope, using the repo config).
+
+SwiftLint linted the whole `included` tree (1909 files) and found **1 serious violation** — matching exactly what the AIDriveCoaching precedent documented (a pre-existing violation outside shared-surfaces). Let me confirm the violation is NOT in my files and that shared-surfaces is clean.
+
+Confirmed: the **only** violation is the pre-existing `dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141` (a file I didn't touch) — exactly what the precedent documented. **Zero** in shared-surfaces. Let me get a clean per-surface lint count via a scoped temp config for the log.
+
+swiftlint --strict: **0 violations in 8 files**. Now the placeholder gate (with self-test to prove detection works), then the isolated SwiftPM build+test.
+
+Placeholder gate: self-test PASS (detection proven), scan **COUNT=0**. Now the critical verification — an **isolated SwiftPM harness** compiling the exact shipped sources against the **real** design tokens + shared components, then `swift test`. Let me set it up.
+
+Harness scaffolded. Now building and running the tests under the Xcode 26.5 toolchain (Swift 6 strict-concurrency mode).
+
+Build complete (0 errors, Swift 6 strict-concurrency). Now running the test suite.
+
+**33 tests pass, 0 failures** under Swift 6 strict concurrency against the real design system. macOS compilation is proven by `swift build`. Now let me prove **iOS-18** compilation too (the surface is shared by both app targets) via a `swiftc -typecheck` pass against the iOS Simulator SDK.
+
+Both **iOS 18 and macOS 15 typechecks pass** (Swift 6, strict concurrency complete) against the SDKs. Now let me verify the deferred-gate blockers concretely (so the log states facts, not assumptions) and confirm the worktree scope.
+
+Everything verified green. The generated xcodeproj is git-ignored and the harness is outside the repo. Now let me write the gate log. First confirm the logs directory.
+
+The prompt exists and the log path is confirmed. Let me quickly verify the actual prompt's key fields match, then write the log.
+
+All fields match the prompt. Let me grab exact tool versions for an accurate log, then write it.
+
+Now writing the comprehensive gate log with the real verified results.
+
+Log written. Now a final consolidated re-verification (covenant: "no commit on red"), re-syncing the harness from the current repo files, then I'll commit only my files.
+
+Format, placeholder, and 33/33 tests all green. Let me re-confirm the scoped swiftlint line (it didn't surface in the grouped output).
+
+All gates green: **swiftformat 0/8 · swiftlint 0 violations/8 files · placeholder COUNT=0 · 33/33 tests · iOS18+macOS15 typecheck**. Now staging only my 9 surface files + the log (leaving the pre-existing AIUsageCard mods untouched).
+
+Staged scope is exactly correct: 9 surface files + 1 log; the pre-existing AIUsageCard mods remain unstaged. Committing now.
+
+Committed as `050e105c1` (10 files, 1929 insertions). The pre-existing AIUsageCard mods remain untouched/unstaged. Let me finalize tracking.
+
+Task complete. Final summary below.
+

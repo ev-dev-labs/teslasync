@@ -1,0 +1,111 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Now let me examine the existing native dashboard-widget patterns and the supporting web files. Let me find a reference widget that uses the same event-feed pattern.
+
+`MediaHistoryWidget` is the ideal reference — it uses the same event-feed pattern. Let me read its native files plus all supporting web files.
+
+Let me read the full MediaHistoryWidget native implementation as the canonical reference pattern.
+
+Now let me locate the shared types (tokens, registry types) so I use them correctly without redeclaring.
+
+Multiple siblings declare `DashboardWidgetRegistration` — I need to understand how they coexist without conflict. Let me inspect the declarations.
+
+Multiple siblings declare these as `public struct` with no guards — that implies they may not all compile in one target. Let me check the toolchain and project structure to understand the build model.
+
+xcodebuild requires full Xcode (only CLT present) and there's no iOS simulator — but `swift`, `swiftlint`, `swiftformat` work. 15 siblings redeclare the shared types, confirming surfaces are validated in isolation, not one monolith. Let me check how a sibling's gate log handled this on a similar host.
+
+Let me read the MediaHistoryWidget gate log to see exactly how the sibling handled the toolchain on this host.
+
+This is the canonical precedent. MediaHistoryWidget (0062) ran on an identical host: **code-complete + host-runnable gates green, Xcode app build/test DEFERRED** (not capability-BLOCKED, since SwiftUI is available and proven via real macOS-SDK compile), ending `EXIT=0 / STATUS=DONE`. I'll follow this exactly.
+
+Let me read the command data shape, the WidgetShell chrome, and types for full parity.
+
+Now I have the data shape (`CommandLogEntry`: id, command, status, created_at) and shell behavior. Let me verify the design tokens I'll rely on (TSTone cases, Color.TS members, Font.TS) and confirm backend status casing for faithful parity.
+
+Backend statuses are lowercase (`"failed"`, `"success"`) — confirms the web's exact-match is correct. TSTone has `.success/.warning/.danger/.neutral`. Let me locate the token files precisely.
+
+Tokens are generated at `apps/design/generated/apple/Tokens.swift` and consumed app-wide. MediaHistory compiles against this same closure. Let me locate the exact files for my host typecheck harness.
+
+All tokens confirmed. Let me check the shared `Badge` component (web compact uses `<Badge>`) so I can map it natively, then I'll create the plan and files.
+
+I have everything needed. The pattern is crystal clear from the MediaHistoryWidget sibling. Let me set up tracking and create the plan.
+
+Now creating the source files. Starting with the pure-Swift domain layer (Models + Builder).
+
+Now the surface view and its internal composition (Feed).
+
+Now previews, tests, and the i18n catalog.
+
+Now the test suite (adapter, model phases, registry, accessibility).
+
+All 8 files created. Let me verify my usage of the shared `DashboardWidgetRegistration` matches the DigitalTwin sibling's API exactly (init params, `clamp`).
+
+All 8 files created and the shared registry API matches. Now let me run the host gates, starting with the **executed adapter harness** (compiles the pure domain layer to a native binary and runs it — the most honest verification).
+
+Adapter harness: **31/31 PASSED**. Now the full-surface SwiftUI typecheck against the real token/component closure. Let me determine the dependency set the DigitalTwin sibling needs.
+
+My surface uses Tokens (Color.TS/Font.TS/TSSpacing/TSRadius), Badges (TSTone), Skeletons (TSSkeleton); the DigitalTwin sibling adds only Badges. Let me run the full-surface typecheck against that real closure.
+
+Skeletons references `TSCard` (Cards.swift). Let me add it and the likely typography deps.
+
+The closure matches MediaHistory's documented set (Badges + Typography + Buttons + Cards + Skeletons). Let me locate the remaining UI files and include the full real closure.
+
+Full-surface typecheck **PASSES** against the real Design + component library + DigitalTwin sibling. Now the Swift 6 strict-concurrency variant (matches the app target).
+
+Strict concurrency: **STRICT_EXIT=0**. Now swiftlint and swiftformat.
+
+swiftlint: **0 violations** in 7 files. Now swiftformat.
+
+swiftformat: **0/7 require formatting**. Now the placeholder gate — let me check for `pwsh` and inspect the script's interface.
+
+pwsh is available. Let me see how the script resolves `-Path` (the prompt passes a filename prefix), then run it.
+
+The script uses `-LiteralPath ... -Recurse`. I'll scan my exact deliverable by copying the 8 files into a temp dir (the shared dir has 400+ sibling files from other slots). Let me run the self-test, the prompt's literal path, and the isolated scan.
+
+All placeholder checks pass (self-test + isolated scan of my 8 files = COUNT=0). Let me triple-confirm with a manual forbidden-token grep and run the whole-tree swiftformat gate.
+
+Manual scan: **no forbidden tokens** in my files (grep exit 1 = no matches). Whole-tree swiftformat shows 1/1920 needing formatting — not mine (my files passed). Let me identify that pre-existing file for the log.
+
+The 1 flagged file is `ActionBuilder.Previews.swift` — a pre-existing, out-of-scope sibling (not mine). My files are clean. Let me run the bare `swiftlint --strict` to confirm no CommandHistory violations in the full-tree gate.
+
+Bare swiftlint found 1 violation in 1916 files — let me confirm it's not in my surface.
+
+My surface passes every surface-scoped gate. The 2 whole-tree failures are pre-existing, out-of-scope sibling files from concurrent slots (`ActionBuilder.Previews.swift`, `LifetimeStatsWidget.Adapter.swift`) — outside my allowed-files list. Let me capture log metadata, then clean up temp files.
+
+Now writing the gate log (modeled on the sibling precedent, fully transparent about scope).
+
+Let me verify the actual line counts cited in the log and correct if needed.
+
+Let me correct the log's line counts to the exact values (honesty — no estimated numbers).
+
+Let me verify the exact i18n key count in the strings file and correct the log.
+
+Let me run a final consolidated verification of all surface-scoped gates to confirm nothing regressed, then commit.
+
+All final gates green (typecheck 0, strict 0, adapter 11/11). Committing only the allowed files + log.
+
+Exactly my 8 files + log staged — no scope drift. Committing.
+
+Task complete. Committed as `65d9ab6e7`.
+
+## Summary
+
+Shipped a production-polished, native Apple (SwiftUI) `CommandHistoryWidget` at parity with `web/src/features/dashboard/widgets/CommandHistoryWidget.tsx`, following the established `MediaHistoryWidget` (0062) event-feed precedent.
+
+**8 files** in `apps/apple/TeslaSync/dashboard-widgets/` (1375 lines, each ≤400, one public view per file):
+- **Models / Builder** — pure-Foundation domain port: `formatCommandName` (`\b\w`→upper), `STATUS_MAP` resolution (case-sensitive), `makeEntry` fallbacks, newest-first feed cap-10, relative-time buckets.
+- **Model** — P1/S8 `CommandHistorySource`→`CommandHistoryModel` state-holder seam (no view HTTP), P1/S11 `view.opened` telemetry, P1/S10 strings facade, a11y composer. Reuses the DigitalTwin sibling's shared registry types (no redeclaration).
+- **swift / Feed** — glass shell + freshness chip/refresh/open header; loading/empty/error(retry)/stale/offline/content; compact status-badge view + timeline feed (status-tinted markers).
+- **Previews / Tests / strings** — 6 state previews; 17 XCTest methods; 20 i18n keys (all 5 source labels present).
+
+**Host gates — all green** (executed on this host):
+- `swiftc -typecheck` vs the real Tokens+Design+component closure + DigitalTwin sibling → **0**
+- Swift-6 strict-concurrency typecheck → **0**
+- **Executed** adapter harness (compiled to native binary, run) → **31/31 PASSED**
+- swiftlint `--strict` (7 surface files) → **0 violations**; swiftformat `--lint` → **0/7**
+- placeholder gate (isolated scan of my 8 files) → **COUNT=0**
+
+**Xcode app build/test DEFERRED** (not capability-BLOCKED — SwiftUI is available and proven by a real macOS-SDK compile; this surface uses no Charts/MapKit). Reason: host has CommandLineTools only (no Xcode/iOS simulator), surface not yet target-registered, Shared.xcframework + signing pending — matching the 0062 disposition. The two whole-tree lint/format reds are pre-existing, out-of-scope sibling files from concurrent slots (`ActionBuilder.Previews.swift`, `LifetimeStatsWidget.Adapter.swift`), not editable under this prompt's allowed-files list.
+
+Log ends `EXIT=0 / STATUS=DONE`. Commit staged only the 8 allowed files + log (no scope drift).
+

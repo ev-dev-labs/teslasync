@@ -1,0 +1,167 @@
+I'll start by exploring the repository structure to understand what exists and what I need to build.
+
+Let me explore the Apple app structure and parity tooling in detail.
+
+Let me clarify the exact directory layout — there seem to be multiple source roots.
+
+Now I understand the layout. Let me check tooling availability and read key reference files in parallel.
+
+Key finding: `xcodebuild` requires full Xcode (only CommandLineTools present) → build/test gates will be BLOCKED. But `swift`, `swiftlint`, `swiftformat`, `xcodegen`, `pwsh` are all available. Let me study the existing patterns deeply before implementing.
+
+The feature is wired via `TeslaSync/feature-views`. I'll need to add `TeslaSync/Features` to project.yml sources. Let me study the AIUsageCard pattern (already in this session's diff) and the VehicleSettings facade — these are the most directly relevant references.
+
+The pattern is very clear and consistent. Let me read the directly-relevant facade (VehicleSettings), the remaining AIUsageCard parts, design tokens, routing, and the string catalog.
+
+Now I understand the manifest scope: the page is a composition host whose 19 strings are the page-level `t()` calls (16 section-failure titles + title + wake success/fail). Let me read the placeholder gate rules and remaining reference files.
+
+Let me read the remaining facade internals, design tokens, routing, and the AIUsageCard view/adapter/test files in one batch.
+
+Let me read the design tokens, routing, container, and the AIUsageCard previews/tests to complete my understanding of conventions.
+
+Let me locate the token definitions and read the routing/container plus a shared component (GlassPanel/EmptyState/FadeIn).
+
+The `SettingsRouteRegistration` is the established navigation-registration pattern. Let me read it, the app wiring, and the shared components I'll reuse.
+
+Rich shared components exist (`TSEmptyState`, `TSErrorDisplay`, `TSSectionErrorBoundary`, `TSPageErrorBoundary`). Let me read GlassPanel, FadeIn, the container/facade error types, and the web `useVehicleSettings`/`findEffectiveSetting` source to port faithfully.
+
+Let me read the web settings types, the container, GlassPanel/Button APIs, and check how `VehicleSettingsModel` is consumed.
+
+Let me read the UI component APIs I'll reuse and the lint configs before implementing.
+
+Let me verify how co-located `.Tests.swift` files get into a test target (affects where I place tests) and confirm the glass-panel modifier.
+
+Let me resolve the test-target membership empirically and check the framework, then I'll have everything needed to implement.
+
+Confirmed: feature-view files (incl. `.Tests.swift`) compile into the app targets. The newest pattern is `AiUsageCard` with `.Projection`/`.Chrome`/`.Previews` files. Let me read those canonical references.
+
+I have a complete picture of the conventions. Let me read the full lint/format configs so my code passes `--strict` on the first try, and confirm the logs dir exists.
+
+Let me look at an existing feature-view log to match the exact `=== PARITY ===` / EXIT/STATUS format, then I'll set up my plan and start implementing.
+
+The 0237 log reveals the disposition: per-surface gates (format/lint/placeholder) GREEN + an isolated Swift build/test — but that runner had full Xcode 26.5. Let me check whether full Xcode or SwiftUI is available here, which determines DONE vs BLOCKED.
+
+Big discovery: **full Xcode IS installed** at `/Applications/Xcode.app` (the active dir is just CommandLineTools), and SwiftUI/Charts/MapKit typecheck cleanly. This matches the 0237 precedent (DEVELOPER_DIR override). Let me verify xcodebuild works and map the Shared-free dependency set.
+
+Full Xcode 26.5 + iOS 26.5 simulator are available via `DEVELOPER_DIR` (matching the 0237 precedent), and Components/Design are Shared-free. I can do real isolated verification. Let me set up my plan and todos, then implement.
+
+Directory setup and first file. Let me create the Model (the foundation), marking it in progress.
+
+Let me remove the genuinely-unused `locale` parameter (no number formatting on this page) to avoid swiftformat churn.
+
+Now update the Model to drop the unused `locale`:
+
+That edit accidentally removed the `phase` property. Let me fix the Model's computed properties and `locale` removal properly.
+
+Projection done. Before writing Views, I must avoid `.redacted(reason: .placeholder)` (the gate flags "Placeholder"). Let me read the skeleton/typography/button/banner/card-header APIs I'll use.
+
+Skeleton/typography/button APIs are clear. I'll follow AiUsageCard's `Text(verbatim:)` + token approach and avoid `.redacted(.placeholder)`. Writing the Views file:
+
+Now let me add the header-failure and wake-message helpers to the Projection so all 19 strings bind at testable call sites:
+
+Now the main page View. Marking views done, view in progress.
+
+The `headerSection` has a broken `Text(...).isEmpty` expression. Let me refactor: extract a reusable boundary fallback and a header boundary in Views.swift, then fix the View.
+
+Now fix the `headerSection` in the main View to use the clean header boundary:
+
+Route file (navigation registration). Marking view done, route in progress.
+
+Adapter file (the Shared integration boundary). Marking route done, adapter in progress.
+
+Let me check the KMP-side `VehicleSettingsResponse`/`EffectiveSetting` shape so the Adapter mapping is accurate.
+
+Exact KMP shapes confirmed (`EffectiveSetting{key, value: JsonElement, source: EffectiveSettingSource}`, `VehicleSettingsStore.vehicleSettings`). Writing the Adapter as the Shared integration boundary, reusing the verified `VehicleSettingsModel` facade:
+
+Two fixes for the Adapter: `@ObservationIgnored` is only valid in `@Observable` types (this source isn't one), and the unused `error` param. Let me correct:
+
+Previews file. Marking adapter done, previews in progress.
+
+Tests file. Marking previews done, tests in progress.
+
+All 8 Swift files written. Now add the 48 string keys to `Localizable.xcstrings` via a minimal text insertion (preserving the large file's order), and validate JSON.
+
+48 keys added and JSON re-validated. Let me verify my inserted blocks match the catalog's exact colon-spacing style (Xcode `" : "` vs `": "`) for a clean, consistent diff.
+
+`cat -A` isn't on macOS. Let me confirm the exact separator style of existing vs my inserted keys:
+
+Confirmed: existing keys use `": "` (no space before colon); my 192 inserted separators wrongly use `" : "`. Let me restore from git and re-insert with the matching style.
+
+Good — 0 space-colon now (grep exit 1 = no matches, expected). Let me confirm the no-space count and my key style, then validate JSON.
+
+xcstrings diff is now clean (528 insertions, matching style). Now wire the new source path into both app targets in `project.yml`.
+
+project.yml wired (the gate lints via explicit path, so `.swiftlint.yml` `included` isn't required). Now the gates: regenerate the project, then run format/lint/placeholder on my dir.
+
+Project regenerated; my files are in the app targets. Now run the formatter (lint mode) on my dir to catch style issues:
+
+swiftformat flagged fixable issues (wrap, hoistTry, redundantViewBuilder) plus force-unwraps in the URL test. Let me hand-fix the force-unwrap test, then auto-apply the formatter for the rest.
+
+Now auto-apply the formatter for the remaining mechanical fixes, then re-lint:
+
+Formatter clean (0/8). Now swiftlint --strict and the placeholder gate:
+
+swiftlint linted the whole project (via config `included`) and found 1 serious violation. Let me locate it:
+
+The 1 violation is pre-existing in `LifetimeStatsWidget.Adapter.swift` (not my file — the repo config's `included` makes swiftlint lint the whole project). Let me lint **only my files** with the same rules to prove they're clean:
+
+The scoped config resolved paths relative to `/tmp`. Let me run swiftlint with a no-`included` config and the explicit path so it lints only my files:
+
+Now I can see my files' real violations (the repo config's `included` omits `TeslaSync/Features`, so the repo-wide run didn't lint them — and the baseline already has a pre-existing `LifetimeStatsWidget` violation). I have 4 to fix: 2 trailing-closure + 2 file-length (>400). Let me check exact line ranges to split the two large files.
+
+I'll split the two large files. First, view the `VehicleDetailSection` block in Model to extract it:
+
+I'll split the two oversized files. Extracting the `VehicleDetailSection` enum and the lower section-views into two new files:
+
+Splits done — all four files now under 400 lines. Let me verify the cut boundaries are clean and fix the trailing-closure violations, then re-run format+lint:
+
+Let me verify Views.swift didn't lose the struct's closing brace at the cut:
+
+Views.swift lost the struct's closing brace in the cut. Let me restore it:
+
+Now fix the 2 trailing-closure violations by labeling the `content:` argument:
+
+Now re-run the formatter and the scoped linter across all 10 files:
+
+Format clean (0/10) and swiftlint clean (0 violations in 10 files). Now the placeholder gate:
+
+Placeholder gate clean (COUNT=0). Now the isolated compile verification — typecheck my Shared-free page files against the **real** design system (Components/Design/AppRoute) using the full Xcode SDK:
+
+The isolated typecheck reached the real components but hit `UnitFormatters.swift` referencing the Shared `UnitPreferences` type. Let me identify which component files leak Shared types so I can compile a clean subset:
+
+`UnitPreferences` is a native facade struct; only `UnitFormatters.swift` (which my page doesn't use) references it. Let me exclude that one file and re-run the isolated typecheck:
+
+Isolated typecheck of all 7 Shared-free SwiftUI page files against the **real** components/design passed with **0 errors** (iOS 18, Swift 6, DEBUG). Now let me actually **execute** the logic tests via an isolated SwiftPM package:
+
+Package assembled (route copy has no View extension, as intended). Now run the isolated tests:
+
+Isolated tests: **29/29 passed**. Now let me check whether the full-app blocker (`Shared.xcframework`) can be built here or must be deferred (as in prior P4 surfaces):
+
+The disposition is confirmed by `macos-pending-verifications.md`: the full-app `xcodebuild` is **deferred to P99** (Shared.xcframework absent + pre-existing `DashboardWidgetSize` 15× + co-located tests + signing), with per-surface verification = isolated SwiftPM build/tests + real `swiftc -typecheck` + lint/format/placeholder. I've matched that bar exactly. Let me grab tool versions and write the evidence log.
+
+All files are well under the 400-line limit. Now I'll write the evidence log with the full `=== PARITY ===` section (23 items):
+
+Log written with the full 23-item PARITY section. Now the ledger:
+
+Now a final consolidated verification pass and a check of exactly what will be committed (ensuring the generated `.xcodeproj` is gitignored):
+
+That was a path bug in my chained `cd` (format + lint already showed green: 0/10, 0 violations). Let me re-run placeholder, JSON checks, and git status from the repo root:
+
+All green (format 0/10, lint 0 violations, placeholder COUNT=0); the generated `.xcodeproj` is gitignored. One robustness fix before committing: the Adapter's `JsonElement`/`JsonPrimitive` casts reference uncertain KMP-bridged Swift names (it's the deferred-compile boundary). Let me make `stringify` name-agnostic via `String(describing:)` to de-risk the CI compile:
+
+Now re-verify format/lint after the Adapter edit, then clean temp files:
+
+All gates green after the edit; temp cleaned. Let me do a final isolated typecheck of the committed page files, then commit:
+
+The `grep -c` returned exit 1 (0 matches = 0 errors), which broke the `&&` chain. Let me confirm the typecheck result cleanly:
+
+Final typecheck: **0 errors**. Everything is verified green. Now committing my files explicitly (excluding the pre-existing session changes):
+
+Staged exactly my files (pre-existing session changes excluded). Committing:
+
+Committed. Let me update the tracker and do a final integrity check (log ends with EXIT/STATUS; working tree only has the untouched pre-existing changes):
+
+All todos complete. Final state verified:
+- **Log** ends with `EXIT=0` / `STATUS=DONE`; `PARITY_REQUIRED=23` → `PARITY_COVERED=23`.
+- **Working tree** shows only the pre-existing session changes (AIUsageCard, FleetApiSection, BackupRestorePage) — correctly untouched and not in my commit.
+- **HEAD** = my commit `efcd7bea4`.
+

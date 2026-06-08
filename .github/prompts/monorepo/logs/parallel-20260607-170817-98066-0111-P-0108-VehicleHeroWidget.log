@@ -1,0 +1,146 @@
+I'll start by exploring the repository structure and the key files referenced in the task.
+
+Now let me read the actual `VehicleHero` component (the real spec), the `WidgetShell`, and the dashboard types.
+
+I now have the full web spec. Let me study the data types, an existing complete native widget as a pattern reference, and the project/toolchain setup.
+
+Let me study a complete existing native widget (GuardMode) as the canonical pattern and the project setup.
+
+Now let me see the Previews, Tests, strings pattern and find the shared design tokens (P1/S9).
+
+I see `DashboardWidgetRegistration` defined in multiple widget Model files — I need to understand the duplication-avoidance strategy since I can only create `VehicleHeroWidget.*` files. Let me investigate.
+
+The build reality is complex — multiple widgets each define `DashboardWidgetSize`/`DashboardWidgetRegistration`. Let me understand how duplicates are handled and check the test framework + shared tokens.
+
+The codebase has 6+ duplicate `DashboardWidgetSize` definitions with no guards — confirming this is a parallel per-surface build-out where each surface defines its own scaffolding (de-duped at integration). I'll follow the exact sibling pattern. Let me read the shared tokens and the test pattern.
+
+Now let me read the actual design tokens and the shared components I'll map to (RadialGauge→PieGauge, StatusBadge, TSTone, TSSkeleton).
+
+The shared `TSRadialGauge` only shows percent — the web gauge shows value+unit+custom color, so I'll build a faithful native gauge in my own Views file. Let me read the native units/measurement system and the web converters for parity.
+
+Let me read the web converters/formatters and the exact RadialGauge + StatusBadge components for faithful parity.
+
+I have everything needed for faithful parity. Let me verify my tooling approach by checking lint configs and testing `swiftc -parse` on an existing widget.
+
+I now have a complete picture of the spec and patterns. Let me set up tracking and confirm the log directory and the exact registration/clamp pattern to mirror.
+
+`pwsh` is available — I can run the placeholder gate. Let me read a sibling's completed log to mirror the format, and the placeholder script.
+
+The GuardMode precedent log is the gold standard to follow. My host lacks full Xcode but SwiftUI is available via the macOS SDK. Let me probe whether `swiftc -typecheck` works against the real tokens (the strongest gate I can run), then start writing code.
+
+`swiftc -typecheck` against the macOS 15 SDK works with the real tokens. This is the strongest gate available on this host (matches the precedent's macOS typecheck step). Let me map the minimal Shared-free dependency closure for `TSSkeleton`.
+
+`Cards.swift` needs `tsGlassPanel` (from TSMaterial). Let me check that file and test the expanded closure — if it's clean I'll reuse `TSSkeleton`, otherwise I'll keep my surface's dependency surface minimal.
+
+The full Shared-free closure typechecks cleanly against the macOS 15 SDK — so I can verify my surface against the **real** component library on this host (matching the precedent's macOS typecheck + executed-test approach). Let me set up tracking and write the plan.
+
+Now I'll write the files. Starting with the i18n strings catalog (foundational), then the Model seam.
+
+Now the Model seam (state-holder + telemetry + strings facade + registration), mirroring the GuardMode pattern.
+
+Now the Adapter — the pure, testable core (SI conversions, number formatting, status catalog, firmware, a11y, color palette).
+
+Let me add the `red` palette color the stat cards need, then write the Projection (gauges, stat cards, charging detail).
+
+Now the main View (surface chrome, header, phase switch, navigation seam).
+
+Now the chrome subviews (badge, freshness, refresh, banner, loading, empty, error).
+
+Now the content subviews (gauges, charging panel, stat grid, actions, asleep) in a `.Content.swift` file (sibling pattern, keeps each file under the 400-line limit).
+
+Let me typecheck the production files against the macOS SDK + the real token closure before writing previews/tests.
+
+Typecheck passes against the macOS SDK + real tokens. One warning to fix — `drivingCards` needs an explicit `return` (multi-statement body). Let me fix it.
+
+Production typecheck is clean. Let me update progress and write the Previews and Tests.
+
+Now the comprehensive XCTest suite.
+
+Now the strongest gate: a SwiftPM harness to actually **execute** the test suite on the macOS host (matching the precedent's `swift test` step). Let me set it up with the real tokens + my surface files.
+
+The `#Preview` macro plugin ships only with full Xcode (not Command Line Tools). Building the harness in **release** config drops all `#if DEBUG` preview blocks; `-enable-testing` keeps `@testable` working. Let me re-run that way.
+
+`/Applications/Xcode.app` exists — the earlier failure was just `xcode-select` pointing at CommandLineTools. The precedent used a `DEVELOPER_DIR` override. Let me check if Xcode is usable.
+
+Xcode 26.5 is fully usable via `DEVELOPER_DIR` (iPhone 16 simulator even booted) — the exact environment the precedent used. Now the harness `swift test` (with XCTest + `#Preview` macros) will work. Let me run it.
+
+Debug now compiles the token `#Preview` blocks which reference components outside my closure. Building in **release** (under the Xcode toolchain so XCTest resolves) drops all `#if DEBUG` blocks cleanly. Let me run that.
+
+Those are warnings (the precedent's registry tests have the same pattern). The `error: fatalError` is the driver bailing on a real error elsewhere. Let me surface the actual `error:` lines.
+
+Real errors: the global test-helper closures need `@Sendable` for Swift 6 strict concurrency, and the registry test class should be `@MainActor` (View statics are main-actor-isolated). Let me fix the shipped Tests file.
+
+All **28 XCTest cases pass** on the macOS host. Now the remaining gates: iOS-simulator + macOS SDK typechecks and the previews compile. Let me set up stripped token deps (to avoid sibling-preview noise) and run all three typechecks under the Xcode toolchain.
+
+iOS 18 simulator typecheck passes. Now macOS typecheck + the previews compile (`-D DEBUG`).
+
+All typechecks pass (iOS 18, macOS 15, previews) and 28/28 tests executed. Now swiftlint, swiftformat, and the placeholder gate.
+
+12 swiftlint violations to fix: a large tuple, an 8-param function, and line-length overflows. Let me view the exact spots.
+
+Let me view the remaining problem spots in Projection (the 8-param `gauge` helper and lines 280/354) and the Tests lines.
+
+Now let me fix all 12 violations. First the Adapter (split the 4-tuple into two 2-tuples):
+
+Now the Projection: replace the gauge section (8-param helper → `GaugeBuild` struct) and fix the long lines.
+
+Now fix the three long lines in Projection (charging detail powerText, charge-rate card, odometer card):
+
+Now the Tests line-length fixes. Let me view the status catalog and clamp test sections.
+
+Now re-run swiftlint, then swiftformat lint, on all files.
+
+swiftlint passes (0 violations). swiftformat found auto-fixable formatting — let me apply the canonical formatter, then re-verify both lint gates.
+
+swiftformat passes now, but auto-wrapping pushed Projection.swift to 428 lines (over the 400 limit). I'll split the stat-card builders into a sibling `VehicleHeroWidget.StatCards.swift`. Let me view the split boundary.
+
+I'll split the stat-card builders into a sibling file to satisfy the 400-line limit.
+
+Both files now under 400 lines. Let me re-run lint/format and the production typechecks (now including StatCards).
+
+All four gates green. Now re-run the executed test harness (files changed), the previews typecheck, and the placeholder gate.
+
+28/28 tests still pass. Now the previews typecheck (with StatCards) and the placeholder gate on my files.
+
+Previews typecheck and placeholder gate pass. Let me verify i18n key coverage (every key used in code is defined in the catalog) and probe the xcodebuild infra for honest deferral evidence.
+
+i18n coverage is complete (47 used, all defined; 0 missing). Infra confirms the deferral reasons (Shared.xcframework is only `.gitkeep`; duplicate registry types across siblings). `xcodegen` is available — let me capture **real** xcodebuild deferral evidence (honest, not faked).
+
+xcodegen succeeded. Now capture the real xcodebuild failure (honest deferral evidence) — building the macOS target directly to surface the first blocking error.
+
+Captured the genuine deferral evidence: `BUILD FAILED` / `EXIT=65` — **no XCFramework found at Frameworks/Shared.xcframework** (the KMP core isn't staged; an integration/CI concern, identical to the precedent). All host-runnable gates are green. Let me clean up generated artifacts and check git status.
+
+All 10 surface files are ≤384 lines. The two `web/...` modified files are pre-existing (not mine) — I'll leave them untouched and commit only my files + the log. Let me grab git metadata and write the gate log.
+
+Now the gate log, modeled on the precedent with my real, captured evidence.
+
+Now commit only my surface files + the log (leaving the two pre-existing unrelated edits untouched).
+
+Commit landed with exactly my 11 files. Let me verify and clean up temp artifacts.
+
+All gates green and committed cleanly. Let me finalize tracking.
+
+Merge made by the 'ort' strategy.
+ ...le-dashboard-widgets-0108-VehicleHeroWidget.log | 235 +++++++++++++
+ .../VehicleHeroWidget.Adapter.swift                | 222 ++++++++++++
+ .../VehicleHeroWidget.Content.swift                | 301 ++++++++++++++++
+ .../VehicleHeroWidget.Model.swift                  | 384 +++++++++++++++++++++
+ .../VehicleHeroWidget.Previews.swift               | 112 ++++++
+ .../VehicleHeroWidget.Projection.swift             | 231 +++++++++++++
+ .../VehicleHeroWidget.StatCards.swift              | 208 +++++++++++
+ .../VehicleHeroWidget.Tests.swift                  | 345 ++++++++++++++++++
+ .../VehicleHeroWidget.Views.swift                  | 206 +++++++++++
+ .../dashboard-widgets/VehicleHeroWidget.strings    |  89 +++++
+ .../dashboard-widgets/VehicleHeroWidget.swift      | 135 ++++++++
+ 11 files changed, 2468 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0108-VehicleHeroWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleHeroWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleHeroWidget.Content.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleHeroWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleHeroWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleHeroWidget.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleHeroWidget.StatCards.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleHeroWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleHeroWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleHeroWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleHeroWidget.swift

@@ -1,0 +1,154 @@
+I'll start by exploring the repository structure to understand the task fully.
+
+Now let me explore the Apple app structure and existing patterns.
+
+Let me look at the Features directory and existing System pages to understand patterns.
+
+The project uses a multi-file per-feature pattern under `feature-views/`. Let me check the build tooling, project config, and a representative example.
+
+Key finding: `xcodebuild` requires full Xcode but only CommandLineTools is active — so the build/test gates cannot run. swiftlint, swift, and pwsh ARE available. Let me examine the parity infrastructure, conventions, and a representative example.
+
+There's `apps/apple/Sources/Features` — let me examine the real page structure there and the manifest record.
+
+Let me find where full pages/screens live and how navigation is registered.
+
+Now let me understand the registry wiring, component library, and shared facade (KMP core).
+
+Let me study the component library, theme/design tokens, and shared facade.
+
+Let me examine the shared facade (KMP core), design tokens, and SI converters.
+
+Let me check the KMP shared core for any data-repair capability, the AppContainer wiring, and FacadeError.
+
+The KMP core has no data-repair repository — confirming "no API data sources". The page renders from local state. Let me study a representative feature-view, the lint config, the placeholder gate, and string formats.
+
+The sample log reveals the host-based verification convention (swiftc typecheck + harness) used when full Xcode isn't the runner. Let me verify my toolchain capabilities.
+
+SwiftUI typechecks via CLT SDK — I can verify on-host like the sample log did. Now let me identify which design files import `Shared` (to exclude from typecheck), and study the strings format plus a representative Model/Tests example.
+
+Design/Components don't import `Shared` directly — good for on-host typecheck. Let me test `String(localized:)` behavior with special chars and study the closest page precedent (Settings) plus a representative seam/model/test set.
+
+This `ActiveSessionsSection` is the ideal template — a list with destructive mutations, confirm dialogs, seams, telemetry, localize, phases. Let me read its full file set.
+
+Now let me read the state subviews, tests, previews, and the confirmation-dialog modifier to match idioms precisely.
+
+There's a `.text(key:fallback:)` helper too. Let me verify how the existing catalog handles `%`/percent strings (to de-risk "End Battery %") and find the `.text` helper definition.
+
+Key insight: catalog uses bare `%` values fine (e.g., "Degradation %"), and keys are namespaced. Let me check how the web's raw-English keys map and whether my strings already exist.
+
+The convention is clear: web `t()` keys map to catalog keys prefixed `translation.`, and bare `%` values are fine. Let me determine precisely which of the 41 `translation.<key>` entries already exist vs. need adding.
+
+Let me read the design tokens, glass-panel modifier, and the remaining view/test/preview patterns.
+
+Now let me read the test, preview, views, and row patterns to finalize my conventions.
+
+I have all conventions. Before implementing, let me resolve the output-path question by checking where prior P4-apple page/section prompts shipped and how the gate referenced paths.
+
+These P7 page prompts use the new `Features/<Group>/` convention (none executed yet — I'm establishing it). Let me read the p4-apple gate contract/README and confirm the prompt file.
+
+`/Applications/Xcode.app` exists — just not selected. I can use `DEVELOPER_DIR` to run the real gate. Let me verify.
+
+Full Xcode 26.5 works via `DEVELOPER_DIR` with iOS simulators — I can run the real gate and target STATUS=DONE. Let me check the Shared.xcframework staging and establish a build baseline plan.
+
+Building the app requires the `Shared.xcframework` via Gradle (Kotlin/Native) — the long pole. Let me probe feasibility and kick it off in the background while I implement.
+
+Kotlin/Native 2.4.0 is already cached and Gradle caches exist — the toolchain is warm. Let me kick off the `Shared.xcframework` build in the background now while I implement.
+
+Let me check the Gradle build started, then proceed to implement while it runs.
+
+Gradle failed because Kotlin/Native's linker used the CLT `xcrun`. I need `DEVELOPER_DIR` set. Let me relaunch with it.
+
+Let me create my plan and todos while the build runs, then check progress.
+
+Build is progressing well (DEVELOPER_DIR fixed it). Let me check the route parser and feedback/banner components before writing code.
+
+I have everything I need. The Gradle build is running in the background. Let me start implementing — beginning with the pure Adapter (types + projection).
+
+Directory created and the Gradle build is nearly done (release framework linking). Let me create the Adapter file.
+
+Adapter created. The Gradle build is wrapping up. Let me create the i18n facade and seams.
+
+The release framework is still linking. Let me continue creating files — the Strings facade next.
+
+Now the `@Observable` model.
+
+Let me rename the `feedback(_:)` method to avoid collision with the `feedback` property.
+
+Let me check the Gradle build and the staging script result, then continue with the view files.
+
+Let me verify which generic component catalog keys exist (error/retry/loading) so I can reuse them in the state views.
+
+The component generic keys aren't in the catalog. Let me find existing reusable keys for Retry/Loading and the empty-state messages so I avoid hardcoded text.
+
+Good — `translation.common.retry`, `translation.common.loading`, `translation.common.dismiss` exist for reuse. I'll add the two empty-state messages. Let me extend the Strings facade with supporting native-chrome keys.
+
+Now the edit forms (GlassPanel1 + GlassPanel2). Let me check the Gradle build status first, then write.
+
+The `Shared.xcframework` built successfully. Let me stage it (as the build script does), then continue writing the forms.
+
+Now the rows, stats grid, and tab bar (GlassPanel7 + GlassPanel8 + the 4 metric tiles).
+
+Now the main page view that orchestrates everything.
+
+Now navigation registration. Let me check for any exhaustive switches over `AppRoute` before adding a case.
+
+Only `systemImage` and `group` are exhaustive. Let me add the `dataRepair` route case.
+
+Now the route registration file and wiring into the app.
+
+Let me understand how the existing feature-view `.Tests.swift` files map to test targets before placing mine.
+
+I need to understand how `.Tests.swift` files (which use `@testable import TeslaSync`) are assigned to targets. Let me generate the project and inspect membership.
+
+The app target compiles `.Tests.swift` files (which `@testable import TeslaSync` + `import XCTest`) — a pre-existing aggregate issue. Let me check how the sample log handled the gate and its final STATUS.
+
+This is the key finding: predecessor `.Tests.swift` files (`@testable import TeslaSync` + `import XCTest`) are compiled into the **app target** — a pre-existing aggregate build issue. The sample log handled this by DEFERRING xcodebuild. Since my prompt allows navigation registration + a runner exists, I'll properly configure the build (exclude test files from app targets, register my page) and attempt a real build. Let me update `project.yml`.
+
+Now add `Features` to the swiftlint config.
+
+Now the catalog strings. Let me verify exactly which keys to add (avoid duplicates), then insert them surgically.
+
+All 35 keys are absent. Let me insert them surgically and validate the JSON.
+
+Catalog updated (+35 keys, valid JSON). Now the previews and tests.
+
+All 11 files created. Let me run the placeholder gate and swiftlint on my files.
+
+The word "placeholder" appears in a comment. Let me find and reword it.
+
+Placeholder gate passes. Now swiftlint --strict on my files and the edited nav files.
+
+swiftlint linted the whole project (config `included`). Let me isolate the 2 violations.
+
+Two violations: one pre-existing (LifetimeStatsWidget), one mine (`chargingEdit` has 6 params, limit 5). Let me refactor to pass form structs (initializers are exempt from the param-count rule). First the Adapter.
+
+Let me move the form structs to top level (cleaner call sites). Let me view current state.
+
+Now add the form structs at top level after `DataRepairDriveEdit`:
+
+Now update the Forms to bind through the new structs, and update the Tests. Let me view the current Forms.
+
+I left orphaned lines from the old `buildEdit`. Let me view and fix.
+
+Now update the Tests to use the new form-struct signatures.
+
+Let me re-run swiftlint to confirm my files are clean now.
+
+More violations from the refactor: Adapter is now 418 lines (>400), and two Forms lines are 123 chars. Let me move the form structs to their own file and shorten the save closures.
+
+Now shorten the two over-length save closures in Forms.
+
+Two `TSTextField` ISO-date lines are 123 chars. Let me break them across lines.
+
+Both lines are identical (charging + drive forms). Let me break both via a script.
+
+No lines over 120 now. Let me confirm swiftlint is clean on my files.
+
+My files + nav files are swiftlint-clean (only a pre-existing LifetimeStats violation remains). Now let me regenerate the project and start the real macOS build in the background (the long pole), then run an isolated host typecheck in parallel.
+
+Project regenerated with DataRepairPage registered. Let me start the macOS build in the background.
+
+Build running. Let me run an isolated host typecheck of my files against the real design system. First, identify design files that pull in `Shared`.
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: F47A:339A31:267D24:292163:6A26F531)

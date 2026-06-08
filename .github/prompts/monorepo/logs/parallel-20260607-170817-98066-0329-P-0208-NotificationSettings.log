@@ -1,0 +1,185 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is available. Now let me find the existing feature-views pattern and read the web source.
+
+Now let me examine the existing native feature-views pattern. Let me look at the directory and recent examples (TemperatureSection, AutopilotSection).
+
+Let me read the complete AutopilotSection set (simplest recent example) and find settings-related analogs.
+
+Let me read the Adapter, Previews, Tests, and strings to complete my understanding of the pattern.
+
+Let me read the Previews, Tests, project.yml, and explore the shared component/token library.
+
+Now let me examine the design tokens, motion components, and project.yml to understand the build setup.
+
+Let me check the predecessor logs, build tooling availability, and the pending-verifications note to understand what's achievable on this runner.
+
+I now understand the established disposition: code-complete surface + isolated Swift verification, with the full-app `xcodebuild` gate deferred (pre-existing blockers: no iOS simulators, KMP `Shared.xcframework`, co-located test files, signing). Let me read the token/motion definitions and shared UI components to build faithfully.
+
+I have the full token vocabulary. Let me check the Localization setup, the placeholder checker, and lint/format configs before writing.
+
+Excellent. Now let me read the web hooks/lib to get exact data shapes (sound categories, prefs, permission, settings).
+
+I have all the data shapes. Let me verify tooling (pwsh) and check for any native symbol collisions before writing, plus confirm the settings field names.
+
+pwsh 7.6.2 is available (placeholder gate runnable), settings fields confirmed, no symbol collisions. Let me set up tracking and write the surface. I'll start with the Foundation-only core.
+
+Now writing the Foundation-only core (Models, Projection, Adapter).
+
+Now the Model.swift — the state-holder seam, i18n facade, telemetry, @Observable model with actions, and in-memory source.
+
+Now the Views.swift — presentational chrome (panel, header, permission area, toggle rows, sounds, slider, freshness chip, banner).
+
+Now the States.swift (loading/empty/error chrome) and the root view.
+
+Now the Previews and the strings catalog.
+
+I need to fix the empty-state reachability: with 7 always-present channels, `hasContent` is always true for a present input, so the empty phase must come from a nil input (loaded with no payload), mirroring the AutopilotSection precedent. Let me make the in-memory source's input optional.
+
+Now the i18n strings catalog.
+
+Now the comprehensive test suite.
+
+All 10 files written. Now let me set up an isolated Swift 6 strict-concurrency build+test harness (the sanctioned per-surface verification, since the full-app `xcodebuild` gate is blocked by pre-existing issues).
+
+Two findings: (1) `#Preview` macro needs Xcode's plugin (unavailable in SwiftPM CLI) — I'll exclude Previews from the harness only; (2) a Sendable-closure warning on the binding setters I should fix cleanly. Let me mark the stored action closures `@MainActor`.
+
+A Swift 6.3.2 **compiler IRGen crash** (`SmallVector unable to grow` while emitting the `@MainActor (Bool)->Void` → `@isolated(any) @Sendable` thunk) — a compiler bug triggered by my `@MainActor` closure annotation, not a code defect. The idiomatic fix is to pass `Binding<Bool>` (capturing the Sendable `@MainActor` model inline avoids both the warning and the crash). Let me refactor.
+
+Now update the tab-signals callers, the master toggle, and the volume slider. Let me view those sections.
+
+Now the master toggle and volume slider in the sounds section. Let me view that part.
+
+Now re-copy updated files to the harness and rebuild + test.
+
+Build is clean (zero warnings, zero errors) under Swift 6 strict concurrency. Now run the tests.
+
+`XCTest` isn't in the CommandLineTools-only toolchain (no full Xcode → no iOS runtimes, no XCTest for `swift test`, no `xcodebuild` build). Let me confirm the toolchain situation precisely.
+
+There **is** a full `/Applications/Xcode.app` — just not the active developer dir. Let me use `DEVELOPER_DIR` to access XCTest and check iOS runtimes/simulators.
+
+Full **Xcode 26.5** with an iOS 26.5 runtime and a **booted iPhone 16 simulator** are available via `DEVELOPER_DIR`. This means I can run the real gate. First, let me run the isolated XCTest suite (now that XCTest is reachable).
+
+All **33 tests pass** under Swift 6 strict concurrency. Now let me run the lint/format/placeholder gates. First, format my files in place, then lint them.
+
+Two lint rules to address: `inclusive_language` flags the term "master" (web's term for the sounds gate), and `file_length` (>400 lines) on Views and Tests. Let me check the sibling convention for file length.
+
+Siblings stay under 400 lines, so I'll split Views and Tests. First, let me see every "master" occurrence to rename precisely (the `inclusive_language` rule flags that web term).
+
+Let me see the exact code lines (not comments) containing "master" to rename surgically.
+
+Now I'll rename the `master` identifier (the `inclusive_language` rule flags that web term) to `enabled`/`soundsEnabled`, keeping the parity i18n key and web-referencing comments intact.
+
+Let me verify the rename is complete, then plan the file splits.
+
+Rename is clean. Now let me split Views.swift (493→ two files) and Tests.swift (457→ two files) to honor the ≤400-line convention. Let me check the exact cut boundaries.
+
+Now let me perform both splits via extraction.
+
+All files now under 400 lines. Let me re-sync the harness (now with Sections + ModelTests), rebuild, and retest.
+
+All 33 tests still pass. Now re-run the full lint/format/placeholder gates on all 11 files.
+
+All gates green: **swiftformat --lint = 0**, **swiftlint --strict = 0 violations**. Now the placeholder gate. The literal gate path is a filename-prefix (not a dir), so I'll run both the literal gate and a real scan of my files for an honest result.
+
+Placeholder gate: **0 placeholders, EXIT 0**. All host-runnable gates pass. Now let me attempt the full-app `xcodebuild` gate (full Xcode + iPhone 16 sim are available). First, check the KMP framework dependency and xcodegen.
+
+`Shared.xcframework` is unstaged (only `.gitkeep`); the scheme's pre-build step runs a heavy Kotlin/Native Gradle build (the documented `macOS-pending` blocker). I'll still attempt the real gate for honest evidence. First, `xcodegen generate` to prove the project generates with my files.
+
+Project generates cleanly with all my files referenced (72 refs across iOS+macOS targets). Now let me attempt the actual iOS `xcodebuild` gate (it triggers the KMP Gradle pre-build step). I'll bound it and capture real evidence.
+
+The sync session was discarded, killing the background job. Let me run the iOS gate properly in an async session.
+
+iOS gate running async. Let me monitor the log (the KMP Gradle pre-build runs first).
+
+The KMP `Shared.xcframework` built successfully (Kotlin/Native toolchain is available + cached). The build is proceeding to app compilation. Let me continue monitoring.
+
+The KMP release framework is still linking. Let me wait for the app-compilation phase where my surface (and the pre-existing co-located-test issue) would surface.
+
+Still in the KMP release-link phase (slow). Let me keep waiting for the app-compile phase.
+
+The definitive evidence: **BUILD FAILED** — the root error is the **pre-existing** co-located-test blocker (`AcDcStatsPanel.Tests.swift:19: unable to resolve module dependency: 'XCTest'` — the alphabetically-first co-located `*.Tests.swift` importing XCTest into the non-test app target). **Zero `NotificationSettings` errors** — my surface is not the cause. Let me get the exact exit code.
+
+**IOS_EXIT=65** — matching the precedent exactly (pre-existing co-located-test blocker, not my surface). Now let me run the macOS gate and gather the iOS evidence stats in parallel.
+
+Confirmed: **4 total `error:` lines, all the pre-existing XCTest issue; 0 NotificationSettings errors.** Let me gather the remaining stats (the `&&` chain short-circuited on a zero grep count).
+
+iOS evidence is conclusive: the **only** errors are 4 `'XCTest'` module-resolution failures from `AcDcStatsPanel.Tests.swift` (first of **121** pre-existing co-located test files in the app target). The macOS gate finished — let me read its result.
+
+**MAC_EXIT=65.** Let me confirm the macOS failure cause and that my surface is clean there too.
+
+Both full-app gates fail **only** on pre-existing, out-of-scope blockers (iOS: 121 co-located test files → XCTest-in-app-target; macOS: unprovisioned signing cert), with **zero NotificationSettings errors** — matching the precedent exactly. Let me write the log, then verify git scope before committing.
+
+Clean scope: my 12 files are untracked; build artifacts (`.xcodeproj`, `Shared.xcframework`, `core/build`) are git-ignored; the 2 modified web files are pre-existing and out of scope. Now let me write the gate log.
+
+Now a final consolidated verification of the exact files to be committed (re-sync harness → build+test, lint, format, placeholder), then commit.
+
+All 33 tests pass, zero warnings/errors. Final lint/format/placeholder check then commit.
+
+All final gates green. Now commit only my 12 files + the log (leaving the pre-existing web changes untouched).
+
+All 13 items (12 surface files + log) staged; pre-existing web changes left alone. Committing now.
+
+Committed as `26d58a539`. Let me clean up temporary scratch files and verify the final working-tree state.
+
+Working tree is clean — only the 2 pre-existing web files remain (out of scope). Let me mark todos complete.
+
+The task is complete. Here's the summary.
+
+## P4 · Feature view · 0208 — NotificationSettings (Apple) — ✅ DONE
+
+Shipped a production-polished, Apple-idiomatic `NotificationSettings` at parity with the web source `features/settings/components/NotificationSettings.tsx`, committed as `26d58a539`.
+
+**12 files** (all within the allowed `NotificationSettings.*` scope), following the established AutopilotSection/TemperatureSection pattern:
+- **Models / Projection / Adapter** — Foundation-only core: 4-way authorization, the 7 sound channels (web order + default gates), event/tab/sound prefs, pure projector + volume math (`Math.round(volume*100)`, `[0,1]` clamp), `resolvePhase`.
+- **Model** — P1/S8 source seam + 9 mutations, P1/S10 i18n facade, P1/S11 `view.opened` telemetry, `@Observable` model, in-memory source.
+- **Views / Sections / States** — glass panel, header+freshness chip, stale/offline banner, permission branch (unsupported/enable/enabled/blocked + "Notify me about"), tab-signal toggles, sounds (master + autoplay hint + 7 channel rows with Test + volume slider), loading/empty/error chrome.
+- **Previews / Tests / ModelTests / strings** — 9 previews, 33 XCTest cases, full i18n catalog (web-verbatim parity keys + native-envelope keys).
+
+**Every web branch + the full native state envelope reproduced** (loading/empty/error/stale/offline/content); native `Toggle`/`Slider`/`Button` give VoiceOver, Dynamic Type, Reduce-Motion for free.
+
+**Gate results (all executed on this runner):**
+| Gate | Result |
+|---|---|
+| swiftformat --lint | **0/11** need formatting |
+| swiftlint --strict | **0 violations** |
+| check-placeholders | **PLACEHOLDER_COUNT=0** |
+| isolated Swift 6 strict-concurrency build | **0 warnings/errors** |
+| isolated XCTest (real tokens+motion) | **33/33 pass** |
+| iOS xcodebuild | IOS_EXIT=65 — **pre-existing** co-located-`*.Tests.swift`→XCTest-in-app-target (first offender `AcDcStatsPanel`, 121 such files); **0 NotificationSettings errors** |
+| macOS xcodebuild | MAC_EXIT=65 — **pre-existing** unprovisioned signing cert; **0 NotificationSettings errors** |
+
+The two full-app failures are pre-existing, out-of-scope blockers (deferred to P99 per `apps/macos-pending-verifications.md`), matching precedents 0010/0150/0165. The committed artifact is green on every host-runnable gate and a real isolated build+tests. Working tree left clean (pre-existing web changes untouched). **EXIT=0 / STATUS=DONE.**
+
+
+
+The task is fully complete and verified — all work is committed (`26d58a539`), every gate executed, working tree clean. Marking complete.
+
+Merge made by the 'ort' strategy.
+ ...ple-feature-views-0208-NotificationSettings.log | 118 +++++++
+ .../NotificationSettings.Adapter.swift             | 119 +++++++
+ .../feature-views/NotificationSettings.Model.swift | 391 +++++++++++++++++++++
+ .../NotificationSettings.ModelTests.swift          | 220 ++++++++++++
+ .../NotificationSettings.Models.swift              | 245 +++++++++++++
+ .../NotificationSettings.Previews.swift            | 110 ++++++
+ .../NotificationSettings.Projection.swift          | 175 +++++++++
+ .../NotificationSettings.Sections.swift            | 300 ++++++++++++++++
+ .../NotificationSettings.States.swift              | 124 +++++++
+ .../feature-views/NotificationSettings.Tests.swift | 250 +++++++++++++
+ .../feature-views/NotificationSettings.Views.swift | 205 +++++++++++
+ .../feature-views/NotificationSettings.strings     |  71 ++++
+ .../feature-views/NotificationSettings.swift       |  64 ++++
+ 13 files changed, 2392 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0208-NotificationSettings.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationSettings.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationSettings.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationSettings.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationSettings.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationSettings.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationSettings.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationSettings.Sections.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationSettings.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationSettings.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationSettings.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationSettings.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationSettings.swift

@@ -1,0 +1,120 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Swift toolchain, swiftlint, swiftformat, and pwsh are available. Let me check xcodebuild more carefully and read the web source + explore the Apple app structure.
+
+Key finding: **xcodebuild is unavailable** (only Command Line Tools installed, no full Xcode, no simctl). But Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me check whether there's a Swift Package (which would allow `swift build`/`swift test` without Xcode) and examine sibling widget-primitive implementations and dependencies.
+
+No Swift Package or xcodeproj exists — this is a source-tree-only Apple app. The `widget-primitives` dir doesn't exist yet; I must create it. There's an existing `dashboard-widgets` dir with established Swift conventions. Let me examine sibling patterns, the shared facade (P1/S8–S11), and the prompt ecosystem.
+
+The web `WidgetComparisonCard` uses a `Delta` component — and there's a `WeeklyDigestWidget.Delta.swift` already. Let me examine sibling prompts (0001/0002), the existing Delta implementation, and the shared layer prompts.
+
+Let me read the sibling prompt (0001), check for any completed P4 widget-primitive logs, read the web `Delta` component for full parity, and examine the shared layer (tokens/i18n/diagnostics) and existing widget conventions.
+
+No widget-primitive logs exist yet — this is among the first in that tier, but `dashboard-widgets` has rich established conventions (esp. `WeeklyDigestWidget` which uses the same Delta/comparison pattern). Let me study the shared layer (Design tokens, i18n, diagnostics facades), the placeholder checker, and the WeeklyDigest reference implementation.
+
+Let me read the core reference files: WeeklyDigest implementation (uses the exact Delta/comparison pattern), design tokens, and locate the i18n + diagnostics facades.
+
+Excellent reference. Now let me read the WeeklyDigest main view, model (Strings facade), tests, and the design tokens + diagnostics facade to learn the exact conventions.
+
+This is a rich, complete reference pattern. Let me read the remaining reference pieces: the Adapter (delta/percent/a11y projector), Tests, Previews, the design tokens, and the web `fmtNumber`/`metricSemantics` for exact parity.
+
+Now let me read the design tokens, the Previews pattern, the lint configs, and confirm the web `fmtNumber`/`metricSemantics` for exact parity.
+
+Color tokens, `TSSpacing`, `TSRadius`, `Font.TS`, and `TSSkeleton` are defined elsewhere (likely generated). Let me locate their definitions.
+
+`TSSkeleton` confirmed. Critically: there's **no `.xcodeproj`, no `Package.swift`** (loose source tree assembled at integration time), and main-app design tokens like `TSSpacing` don't appear as `enum TSSpacing` in `Sources`. Let me locate the main-app token definitions and confirm the build model, since this determines what verification is even possible.
+
+Let me confirm the build model (generated tokens, README) and test whether SwiftUI/Charts/MapKit are importable with the available Command Line Tools Swift — this determines my verification options.
+
+Key findings: design tokens ARE generated at `design/generated/apple/Tokens.swift` (so `Color.TS`/`TSSpacing`/`Font.TS` resolve at integration build). And SwiftUI/Charts/MapKit/XCTest at least parse. Let me test a real SwiftUI **typecheck** (module resolution) to see how much I can genuinely compile, and inspect the generated token names.
+
+**Breakthrough:** SwiftUI typecheck works with the CLT macOS SDK (exit 0) — I can genuinely compile SwiftUI code without Xcode. Tokens confirmed. Let me check `Font.TS` members and, crucially, how the 234 existing p4-apple widget logs reported STATUS (to follow the established convention honestly).
+
+This is the key precedent. The established, user-approved disposition is **"code-complete + DEFERRED Xcode gate" → STATUS=DONE**, requiring: real SwiftPM harness typecheck GREEN + pure-logic tests GREEN + format/lint/placeholder GREEN, with `xcodebuild` DEFERRED (no `.xcodeproj`/KMP xcframework in checkout). I must replicate this rigorously. Let me see how predecessors built the harness.
+
+I now have the complete, user-approved playbook (real harness typecheck + logic tests GREEN; `xcodebuild` DEFERRED due to absent KMP `Shared.xcframework`/no active Xcode). Before writing, let me read the lint/format configs, the placeholder patterns, and check for any symbol collisions in the module.
+
+`ComparisonProjection` already exists (SessionComparisonChart) — I'll namespace ALL my types with `WidgetComparison` prefix to avoid collisions. Let me confirm my chosen names are collision-free and identify which design-system files import the absent KMP `Shared` (to exclude from the typecheck harness).
+
+All `WidgetComparison` hits are just comments — no type collisions. Let me find any `Shared` (KMP) references in the design system to exclude from the typecheck harness.
+
+No collisions (all `WidgetComparison` hits are comments); I'll namespace every type with `WidgetComparison`. No KMP `Shared` imports in the design system, so the typecheck harness can use the real `Sources/Components/**` + `Sources/Design/**` + generated `Tokens.swift`. 
+
+Let me record the plan and create the directory.
+
+Now I'll write the production files. Starting with the Foundation-only Model (seams, i18n facade, telemetry).
+
+Now the Foundation-only Adapter: the `Delta` port, number formatting, projection, and accessibility — all reproduced verbatim from the web source.
+
+Now the SwiftUI subviews — token bridges and the presentational building blocks for every state.
+
+Now the main primitive view that ties the states together, with web-parity convenience init and `view.opened` telemetry.
+
+Now the previews (every state) and the i18n strings table.
+
+Now the comprehensive XCTest suite. First I'll add a small testable state-mapping helper to the model (used by the convenience init) so the web-parity empty mapping is host-testable.
+
+All 7 files are written. Now the verification pipeline. Let me start with the host typecheck against the real design system (most likely to surface real errors).
+
+Only 2 errors, both pre-existing in `Sources/Components/UI/Typography.swift` — the `#Preview` macro needs the `PreviewsMacros` compiler plugin (ships with Xcode, absent under CLT). **Zero errors originate in my files.** Let me identify which design-system files use `#Preview` (a plugin limitation, not a code defect) and re-run excluding them, to get a clean typecheck of my surface against the real design system.
+
+`Cards.swift` (defines `TSCard`, needed by `Skeletons.swift`) uses `#Preview`. Let me check whether these `#Preview` blocks are wrapped in `#if DEBUG` — if so, typechecking without `-D DEBUG` skips them entirely (clean solution).
+
+All `#Preview` blocks are `#if DEBUG`-guarded — so typechecking without `-D DEBUG` cleanly excludes the macro (a plugin that requires Xcode). Let me re-run the main typecheck of my 4 core files against the full real design system.
+
+All 52 errors are confined to `Sources/Components/DataDisplay/UnitFormatters.swift` — it resolves KMP `Shared` types (`Units`/`UnitPreferences`) absent in this checkout, and is UNUSED by my surface (exactly the file the predecessor excluded). Excluding it:
+
+TYPECHECK_EXIT=0 — my 4 core files typecheck GREEN under Swift 6 strict concurrency against the real design system (excluding only the KMP-`Shared` `UnitFormatters.swift`, same as predecessor). Now let me typecheck the Previews bodies by transforming the `#Preview` macro (Xcode-only plugin) into plain view-returning functions.
+
+PREVIEW_TYPECHECK_EXIT=0 — all 5 SwiftUI files typecheck GREEN against the real design system. Now the **host harness**: compile the real shipped Model + Adapter with a driver and execute the parity logic.
+
+Top-level expressions require the file be named `main.swift`. Let me rename and recompile.
+
+Swift 6 top-level `main.swift` is `@MainActor`-isolated; the helper funcs need the same isolation. Let me fix the harness driver.
+
+HARNESS_OK — 54/54 checks pass; the real shipped parity logic executes GREEN. Now formatting and linting. Let me first see what swiftformat wants (dry-run), then apply.
+
+Only 2 long lines in Tests.swift. Let me apply swiftformat (write mode) to my files, then re-verify.
+
+swiftformat passes (0/6 require formatting). Now swiftlint `--strict` on my files (explicit paths, since `widget-primitives` isn't yet in the lint `included` list).
+
+swiftlint `--strict`: **0 violations in 6 files.** Let me re-verify typecheck + harness on the final (post-format) files and run the placeholder gate. Let me also confirm what swiftformat changed in Tests.swift.
+
+Format change was just argument wrapping; typecheck 0 errors, harness 54/54 still green. Now the placeholder gate via pwsh.
+
+PLACEHOLDER_COUNT=0, EXIT=0 — gate passes (self-test confirms the tool works). Let me run the manual forbidden-word scan (as the predecessor did) across all 7 shipped files to be thorough.
+
+All clean — 7 files, 1360 lines, zero forbidden markers. Let me syntax-check the Tests file (it needs `@testable import TeslaSync`, so it only fully compiles in the app test target) and update progress.
+
+Tests parse clean; master catalog exists (keys fold in at integration, out of my edit scope). Let me confirm the established convention — whether sibling per-surface keys live only in `.strings` tables vs. the master catalog.
+
+Convention confirmed: 54 per-surface `.strings` tables — my `WidgetComparisonCard.strings` follows it (master catalog folds them at integration, out of my edit scope). Let me gather precise evidence for the DEFERRED `xcodebuild` step (no Xcode, no `.xcodeproj`, absent KMP `Shared.xcframework`).
+
+Xcode.app exists but is **inactive** (active dir = CommandLineTools); there's no generated `.xcodeproj` (only `project.yml`), and critically the KMP `Frameworks/Shared.xcframework` is **absent** (only `.gitkeep`) while 14 app sources `import Shared`. Let me cite the exact linkage from `project.yml`.
+
+Ironclad DEFERRED evidence confirmed: all app + test targets link the absent `Frameworks/Shared.xcframework` (KMP, built via Gradle/Kotlin-Native; only `.gitkeep` here), with a "Stage Shared.xcframework" scheme step. Xcodegen is present but generating an `.xcodeproj` would create out-of-scope files. Let me capture one more honest data point — that Xcode *can* be selected (so the blocker is the missing xcframework, not Xcode).
+
+All evidence gathered. Xcode 26.5 is selectable (exit 0) — so the sole `xcodebuild` blocker is the absent KMP `Shared.xcframework`, matching the predecessor's DEFERRED disposition. Let me update progress and write the gate log.
+
+Now a final consolidated verification pass on the exact committed files, then commit.
+
+All five host gates GREEN: TYPECHECK=0, HARNESS 54/54, FORMAT=0, LINT=0, PLACEHOLDER=0. Let me clean up scratch files I left in the repo root, verify git status, and commit.
+
+There are pre-existing modifications to `AIUsageCard.*` (feature-views) — outside my scope. Let me verify I didn't cause them and confirm they predate my work.
+
+Confirmed — the `AIUsageCard.*` changes have the checkout mtime (06:54, before my session) — they're pre-existing working-tree changes from another surface, unrelated to my task. I'll commit ONLY my in-scope files (the `widget-primitives/` dir + the log), leaving those untouched.
+
+git add is hanging unusually long. Let me stop it and investigate (possible index lock or hook).
+
+It's a git **worktree** (shared object store across parallel slots) — the hang was likely lock contention. Let me check for a stale lock in the worktree gitdir and retry.
+
+The safety wrapper rejected my `kill`-based timeout. Let me clear any lock and run git add directly (the tool backgrounds long commands).
+
+No locks present. Let me retry git add directly (single attempt, longer wait).
+
+Staged exactly my 7 files + log (no AIUsageCard leak). The earlier hang was transient cross-slot lock contention. Now committing.
+
+Committed `21988a564` (8 files, 1544 insertions) — only my in-scope files. Let me verify the commit, confirm the pre-existing changes remain untouched, and clean up temp scratch.
+
+All clean and committed. Let me finalize the task tracking.
+

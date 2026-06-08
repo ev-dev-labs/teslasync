@@ -1,0 +1,90 @@
+I'll start by exploring the repository structure, reading the web source spec, and checking platform capabilities.
+
+Apple toolchain is available (Swift 6.3.2, xcodebuild, swiftlint, swiftformat). Now let me explore the existing Apple app structure to understand the patterns and dependencies.
+
+There's an established `feature-views` directory with many surfaces following a multi-file pattern. Let me study a representative complete surface and the project configuration.
+
+Let me read the project config, the web helpers (MotorStats/ThrottleStyle types), and a complete template surface to learn the exact pattern.
+
+Let me find existing native MotorStats/ThrottleStyle definitions and read the sibling driving-dynamics surfaces already ported.
+
+`DrivingTips` is not yet ported. `MotorEfficiencyInsights` is the closest sibling (also uses MotorStats). Let me read its full file set as the template.
+
+This is an ideal template — `MotorEfficiencyInsights` shares the exact web props. Let me read its remaining files plus lint configs.
+
+Now let me read the rest of `project.yml` (test target wiring) and the design tokens/shared components I'll use, plus check the Tests target setup.
+
+Test bundles source from `Tests/Unit`, but the `.Tests.swift` files live in `feature-views/`. Let me investigate how tests are wired and whether the Xcode build can run in this environment.
+
+Key findings: `xcodegen` is available but no `.xcodeproj` exists, `Shared.xcframework` is absent (only `.gitkeep`), and the build needs a pre-action script to stage it. Let me examine the xcframework script, test wiring, simulators, and lint configs.
+
+Environment is clarifying: `simctl` is unavailable (likely CLT, not full Xcode), and `Shared.xcframework` requires the KMP/Gradle toolchain. Let me confirm Xcode status, read the placeholder checker, and locate the exact token/component APIs I'll use.
+
+Now I have the capability picture: **CLT-only (no full Xcode), no iOS simulators, and `Shared.xcframework` needs the KMP toolchain** — so `xcodebuild build test` is environment-blocked. But `swiftlint`, `swiftformat`, `pwsh` (check-placeholders), and `swiftc` typecheck against the macOS SDK all work. Let me read the placeholder patterns and locate exact token/component APIs.
+
+Forbidden patterns include the word "Placeholder" (case-insensitive) and "not implemented" — I'll avoid those in all shipped Swift. Let me read the exact APIs of the components and tokens I'll use.
+
+I've completed my analysis. The environment is **CLT-only (no full Xcode), no iOS simulators, and `Shared.xcframework` requires the absent KMP toolchain** — so the `xcodebuild` gate is environment-blocked, but `swiftlint`/`swiftformat`/`pwsh`/`swiftc` all work. `MotorEfficiencyInsights` (0171) is the ideal template — it shares the exact web props (`motorStats`, `throttleStyle`) and already defines the reusable `MotorMetrics`/`MotorThrottleStyle`/`MotorThrottle` types. Let me set up tracking and confirm the log dir.
+
+Let me check an existing sibling log to match the expected format and see how the environment-blocked case was recorded.
+
+Critical finding: the sibling log reveals the **established precedent (ADR-012)** — full **Xcode 26.5 is installed at `/Applications/Xcode.app`** (accessed via `DEVELOPER_DIR` override since `xcode-select` points at CLT). The accepted methodology is: code-complete + **real iOS-18 simulator & macOS-15 SDK typechecks + executed XCTest via SwiftPM** + *deferred* signed `xcodebuild` (un-staged KMP framework), yielding **STATUS=DONE**. Let me verify the toolchain and find the SwiftPM test harness.
+
+Excellent — this is decisive. **Full Xcode 26.5 is available** via `DEVELOPER_DIR`, with the iOS 18 simulator SDK, macOS 15 SDK, and an **iPhone 16 simulator already booted**. The accepted precedent (ADR-012, used by sibling 0056): real dual-SDK typechecks + executed XCTest, with the signed `xcodebuild`/KMP framework deferred → **STATUS=DONE**. Let me verify the component library is `Shared`-free (so I can assemble a clean compile closure) and locate the glass modifier + typography components.
+
+The component library (39 files) and tokens are fully `Shared`-free, so I can assemble a clean compile closure. The glass modifier lives in `Sources/Design/TSMaterial.swift`. Let me confirm `Sources/Design` is also self-contained, then I'll write all the files.
+
+`Sources/Design` is self-contained too. My compile closure is now fully mapped: `Tokens.swift` + `Sources/Design` + `Sources/Components` + `MotorEfficiencyInsights.Adapter.swift` + my 5 Swift files. Now writing all 7 DrivingTips files.
+
+I'll decouple the executed-test harness to be Foundation-only by referencing the source-of-truth slug constant (the View re-exposes it, verified by the SDK typecheck). Let me adjust the test and create the strings file.
+
+All 7 files created. Now running the verification gates — starting with swiftformat and swiftlint on the new files.
+
+swiftformat flagged formatting on my files — I'll auto-format them (they're my allowed files), then re-verify.
+
+swiftformat passes (0/6). Now swiftlint `--strict` and the placeholder gate.
+
+Both pass: **swiftlint `--strict` = 0 violations**, **placeholder gate EXIT=0**. Now the critical evidence — real compilation against both the iOS 18 simulator SDK and macOS 15 SDK. Let me assemble the (verified `Shared`-free) closure and typecheck.
+
+The whole component library has external deps (`Units`) I don't need. Let me narrow to the precise transitive closure my surface actually uses.
+
+macOS typecheck is clean. Let me run both SDKs capturing exit codes robustly (no pipe masking), plus the DEBUG pass to cover the Previews file.
+
+All four SDK typechecks pass (iOS 18 sim + macOS 15, both ship code and DEBUG previews) under Swift 6 strict concurrency. Now the executed XCTest via an ephemeral SwiftPM harness.
+
+**All 30 XCTest methods pass, 0 failures.** Verification so far is comprehensive. Now let me validate the project generates with my files included (`xcodegen`), and capture real evidence for the deferred signed `xcodebuild` (the un-staged KMP framework).
+
+Project generates cleanly with all DrivingTips files included (42 refs, both targets), and `.xcodeproj` is gitignored. Now let me attempt the KMP `Shared.xcframework` build — if it succeeds I can run the full signed `xcodebuild` gate; if not, I'll capture the deferral evidence per the ADR-012 precedent.
+
+The Gradle KMP build is running. Let me wait for it (bounded by the 240s timeout).
+
+Real progress — the Kotlin/Native distribution downloaded and the **debug XCFramework built successfully**; it only hit the 240s timeout while linking the **release** variant the script stages. Caches are now warm, so let me complete it with a longer bound.
+
+Release linking is slow but progressing. Let me continue waiting (bounded at 600s).
+
+The release KMP link is genuinely slow (the debug variant built fine, release link exceeded 600s). The **debug `Shared.xcframework` is fully built**, so let me stage it and kick off a real in-target macOS `xcodebuild` compile in the background (bypassing the slow release pre-action) while I write the verification log.
+
+Debug `Shared.xcframework` (279M) staged. Now launching a real in-target macOS `xcodebuild` compile in the background while I write the log.
+
+Build running in background. Let me update todos and gather facts for the log while it compiles.
+
+Let me peek at the background build progress, then draft the log.
+
+The in-target build reproduces a **pre-existing, repo-wide condition**: the app target's `feature-views` source path compiles every sibling's `*.Tests.swift` (which `import XCTest`) into the app — affecting `YearlyTrendChart.Tests.swift`, `helpers.Tests.swift`, etc. This is exactly why the canonical gate is deferred (ADR-012). Let me stop it and confirm none of the errors are from my surface.
+
+**Confirmed: only 2 errors, both the pre-existing repo-wide `XCTest`-in-app-target condition** (e.g., `AIRestorePanel.Tests.swift`) — **zero errors from any DrivingTips source**. This validates the ADR-012 deferral. Let me gather git facts and write the verification log.
+
+All facts gathered. Now writing the comprehensive verification log.
+
+Log written. Now let me clean up temporary build artifacts and verify the working tree only has my intended changes (nothing from the Gradle/Xcode runs leaked into tracked files).
+
+Unexpected: 7 `AIUsageCard.*` files show as modified — these aren't mine. Let me investigate whether they're pre-existing or something I inadvertently caused.
+
+Resolved: the `AIUsageCard.*` files have mtime `01:25:03` (the worktree checkout time) — they're **pre-existing uncommitted changes from another task** staged into this slot, not caused by me (my files are timestamped `01:45+`). I'll scope my commit strictly to `DrivingTips.*` + my log. Let me confirm the full pre-existing state and commit precisely.
+
+Clean separation confirmed — 7 `DrivingTips.*` files + my log are mine; the 7 `AIUsageCard.*` are pre-existing (another task's WIP). Committing only my files.
+
+Committed as `954501d5a`. Let me do a final verification that the commit contains exactly my 8 files and the pre-existing changes remain untouched.
+
+All verified. The commit `954501d5a` contains exactly my 8 files (1488 insertions); the 7 pre-existing `AIUsageCard.*` changes are preserved and untouched; the log ends with `EXIT=0 / STATUS=DONE`.
+

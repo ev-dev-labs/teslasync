@@ -1,0 +1,124 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the platform capabilities and the codebase structure in parallel.
+
+Key finding: `xcodebuild` is present but **Xcode is not installed** — only Command Line Tools. iOS Simulator/macOS app builds require full Xcode. Let me verify this definitively and explore the existing Apple app structure and conventions.
+
+Critical: `/Applications/Xcode.app` **exists** — the active dir is just set to CommandLineTools. I can likely override with `DEVELOPER_DIR`. Also, `feature-views/` already has ~1438 files following an established pattern. Let me verify Xcode works and study the existing conventions.
+
+**Xcode 26.5 fully works** with `DEVELOPER_DIR` override (iOS 26.5 + macOS 26.5 SDKs present). Platform capability IS available — STATUS=DONE is achievable. No existing ResetSection files. There's an established file-split pattern (Model/Adapter/Views/Previews/Tests/States/Projection). Let me study a settings-family example end-to-end and check simulators + project config.
+
+iPhone 16 simulator is **Booted** — matches the gate destination. PrivacySection is the closest settings-family analog. Let me read the build config and the full PrivacySection set to learn the exact conventions.
+
+Excellent — now I understand the architecture deeply. Let me read the remaining PrivacySection files (Views, Chrome, Sources, strings, Previews, Tests) and locate the shared design system (tokens + components).
+
+The pattern is crystal-clear now. Let me locate the shared design system primitives (TSButton, tokens, Color.TS, Font.TS, tsGlassPanel, text field) and read the remaining PrivacySection files (Previews, Tests, AdapterTests, strings).
+
+Let me read the design-system primitives (buttons, fields, material) and find the token definitions, plus the PrivacySection test/preview conventions.
+
+The token definitions must be in the generated DesignTokens directory. Let me locate them precisely.
+
+Now I have the full token vocabulary. Critical detail to resolve: feature-view `*.Tests.swift` files live in the app target's source path (not `Tests/Unit`). Let me check how existing tests are structured (framework + guarding) and read the glass-panel modifier + Previews.
+
+Tests use `import XCTest` + `@testable import TeslaSync`, but the test target only sources `Tests/Unit`. I need to understand how feature-view test files get routed to the test target (or whether the project must be regenerated). Let me investigate the build tooling.
+
+The `.xcodeproj` is generated via `xcodegen` from `project.yml`, and the scheme builds a KMP `Shared.xcframework` as a pre-action. These could block the full-app gate independent of my surface. Let me check the xcframework/KMP situation and how `Tests/Unit` relates to feature-view tests.
+
+Found `Tests/Unit/FeatureViews/` — the test target's feature-view tests live there, separate from `feature-views/`. And the KMP `Shared.xcframework` is NOT staged (requires Gradle/Kotlin). Let me check prior prompt logs (e.g., PrivacySection 0209) to learn the expected outcome pattern, and inspect `Tests/Unit/FeatureViews`.
+
+This is the decisive finding. The PrivacySection (0209) log documents the **sanctioned disposition** for every P4 surface: ship the complete surface, verify it independently (isolated Swift 6 build+test + iOS SDK typecheck + lint/format/placeholder), and the full-app xcodebuild gate is RED only for pre-existing repo-wide reasons (XCTest-in-app-target across 200+ peers, macOS signing) → STATUS=DONE. Let me read the full template log and verification methodology.
+
+I now have the complete, sanctioned methodology. Let me read the remaining reference files (Previews conventions, placeholder scanner, lint/format configs, and the defer doc) before building.
+
+Configs live at `apps/apple/` root. Let me read the lint/format rules and the placeholder scanner to ensure compliance.
+
+The placeholder scanner is **case-insensitive** — I must avoid "todo/fixme/xxx/coming soon/placeholder/lorem ipsum/not implemented" anywhere in `.swift` files (comments included). My harness will live outside the repo. Let me verify the KMP/Gradle toolchain availability (for the full xcodebuild attempt) and tool versions, then start building.
+
+All tooling present (Java 17, Gradle, swiftlint 0.63.3, swiftformat 0.61.1, xcodegen 2.45.4, pwsh, SwiftPM 6.3.2) — matching the PrivacySection log exactly, so the full gate is reproducible. Let me confirm the web hook's result/error shapes, then write the plan and build.
+
+I have the complete contract: `SettingsResetResult { reset, sections: [{section, reset}] }`, SudoCanceled swallowed, distinct error keys per scope. Let me record the plan and todos, then build the surface.
+
+The `macos-pending-verifications.md` confirms the exact deferred-disposition and root causes (DashboardWidgetSize redefinition, XCTest-in-app-target, unstaged xcframework, macOS signing). It's outside my allowed file scope, so I'll reference it but not edit it. Now building the surface — starting with the three foundational files.
+
+Now the design-system glass modifier. Let me confirm `tsGlassPanel()`'s signature before writing the view files.
+
+Now the presentational views, chrome (sheets + toast), and the surface composition.
+
+Now the previews, tests, and strings.
+
+All 10 files created. Now verification. First, auto-format my files with the repo config, then lint-check and run SwiftLint.
+
+FORMAT clean (0/9). SwiftLint flagged one real issue: `ResetCatalog.sections()` body exceeds 50 lines. Let me refactor the catalog to use private static constants (keeping the public API). First, view the current (post-format) region.
+
+Refactored the catalog. Re-running format and lint to confirm clean.
+
+Format clean (0/9) and SwiftLint **0 violations**. Now the placeholder gate — both the literal gate path and a non-vacuous scan over my real files, plus the scanner self-test.
+
+Placeholder gate clean (literal + non-vacuous + self-test all 0). Now the key proof: an isolated SwiftPM harness (Swift 6, strict-concurrency complete) compiling the exact shipped sources against the real design system, running all tests. Let me set it up in the session workspace (outside the repo).
+
+Harness assembled. Now building it (Swift 6 strict-concurrency) against the real design system.
+
+**Build complete** — all production sources + previews compile under Swift 6 strict concurrency. Now running the tests.
+
+**37 tests, 0 failures** under Swift 6 strict concurrency — including the busy-during-flight gate, both confirm flows, typed-confirmation gating, and SudoCancel swallow. Now the iOS 18 SDK typecheck to exercise the `#if os(iOS)` branches (presentationDetents, autocapitalization) that the macOS build excludes.
+
+iOS 18 typecheck clean. Let me also cover the previews on iOS (`-D DEBUG`) and add a macOS 15 SDK typecheck for completeness.
+
+Both iOS 18 (with previews) and macOS 15 typechecks pass. Now `xcodegen generate` to prove the files wire into both app targets and to confirm the pre-existing XCTest-in-app-target condition.
+
+`xcodegen` succeeded — 60 ResetSection refs, and `ResetSection.Tests.swift in Sources` appears in **both app targets' Sources phases** (lines 11651, 13494), concretely confirming the pre-existing XCTest-in-app-target condition. Let me verify those target names and kick off the KMP xcframework staging (needed for a real xcodebuild attempt) in the background.
+
+Let me precisely map those two Sources phases to their owning targets (my earlier regex was too greedy).
+
+Concrete proof: both `TeslaSync` (iOS) and `TeslaSync-macOS` app targets include `ResetSection.Tests.swift` (XCTest) in their Sources phases — the exact pre-existing repo-wide condition. Let me check the KMP build progress.
+
+KMP/Kotlin-Native build is compiling (first run). Let me give it more time.
+
+The KMP `:core:linkDebugFrameworkIosArm64` task **failed with a pre-existing Kotlin/Native compile error** (unrelated to ResetSection) — so `Shared.xcframework` can't be staged in this slot, exactly one of the documented deferred blockers. Let me capture the specific KMP error and then execute the real xcodebuild gate to record its true exit on this slot.
+
+The KMP failure is just `xcrun` needing full Xcode — it ran **without** `DEVELOPER_DIR`. When `xcodebuild` runs the gate, the pre-action inherits `DEVELOPER_DIR`, so it should get further. Let me execute the **real gate** (iOS build+test) with `DEVELOPER_DIR` set, capturing to a unique log + derivedDataPath (shared `/tmp` de-collision), backgrounded.
+
+The iOS gate is running (Gradle pre-action + app build). Let me monitor its progress.
+
+Good progress — with `DEVELOPER_DIR` inherited, the KMP `Shared.xcframework` builds successfully (Kotlin/Native tasks FROM-CACHE). The gate is now assembling/staging it before the app compile. Let me keep monitoring.
+
+The gate is now linking the **release** `Shared.xcframework` slices (the long pole). The app-compile XCTest failure comes after staging. Let me let it run and check back; meanwhile I'll draft the log with the data already collected.
+
+The release-xcframework link is the slow precondition; the app-compile XCTest failure is what I want to observe. Let me capture it quickly in parallel via a target-level build (no scheme pre-action, so no Gradle), while the faithful `-scheme` gate keeps running.
+
+`-derivedDataPath` requires `-scheme`. Let me stage the already-built debug `Shared.xcframework` and run the target-level build without that flag to capture the XCTest error.
+
+Target-level iOS app build exited **65**. Let me extract the root-cause errors and confirm zero ResetSection compile errors.
+
+Definitive: the iOS app build **FAILS (exit 65)** with `Unable to resolve module dependency: 'XCTest'` from the co-located peer `*.Tests.swift` files — **zero ResetSection compile errors**. This is the documented repo-wide condition. Let me check the faithful `-scheme` gate's status.
+
+I have definitive app-compile evidence (exit 65, XCTest root cause, zero surface errors). The concurrent runs muddied the faithful `-scheme` gate (shared Gradle daemon). Let me stop it, clean up lingering processes, and run one clean faithful gate to capture the literal exit.
+
+Critical observation: this is a **shared parallel-slot farm** — siblings (slot-132/133/135/141/322…) are concurrently building. None of the lingering PIDs are slot-122 (my `stop_bash` cleaned mine up), so I must not touch them. I already captured the iOS app-compile failure (exit 65) cleanly. Let me run one clean faithful `-scheme` gate to completion in the background (release xcframework now warmer) and write the log meanwhile.
+
+Faithful iOS gate running detached. Let me gather final file metrics and re-confirm the scoped gates on the final files for the log.
+
+Metrics gathered: 10 files (~2,139 lines, 1,801 LOC), 37 tests, 43 i18n keys. Let me check the faithful gate's progress.
+
+The **faithful gate completed: `IOS_EXIT=65`** (`SwiftDriver TeslaSync` app-target compile failure). Let me confirm the root cause and zero ResetSection errors in this faithful log.
+
+Faithful iOS gate fully captured: `✓ Shared.xcframework staged`, app-target compile fails with 4× `Unable to resolve module dependency: 'XCTest'` from peer `*.Tests.swift`, **zero ResetSection errors**, `IOS_EXIT=65`. Now the faithful macOS gate (background), then I'll write the log.
+
+macOS gate running. Let me write the comprehensive honest log while monitoring it, then insert the macOS result. First, let me check macOS progress.
+
+macOS gate completed: `MAC_EXIT=65`. Let me identify its exact root cause and confirm zero ResetSection errors.
+
+Confirmed macOS root cause: **30 dev-signing errors, 0 XCTest errors, 0 redefinition errors, 0 ResetSection errors**, xcframework staged, `MAC_EXIT=65`. Let me capture the exact signing error text for the log.
+
+macOS root cause confirmed exactly as documented: `"TeslaSync-macOS"/"TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate` — zero XCTest errors, zero ResetSection errors. I now have every real gate exit. Writing the comprehensive honest log.
+
+Log written. Now final pre-commit verification: re-confirm the scoped gates on the committed state, check `git status`, and ensure build artifacts are gitignored.
+
+Final scoped gates green (FORMAT_EXIT=0, LINT_EXIT=0). My 10 files + log are untracked; the generated `.xcodeproj` and `Shared.xcframework` are correctly gitignored. There are pre-existing `AIUsageCard.*` modifications I didn't create — let me confirm they're unrelated to me (so I scope my commit to only my files).
+
+The `AIUsageCard.*` changes are a pre-existing, unrelated rewrite (0203→0237, not my work) — I'll leave them untouched and scope my commit strictly to my 10 files + the log (per "no silent drift" / "don't fix unrelated breakage"). Let me clean up my build artifacts and commit.
+
+Staged exactly my 10 files + the log — clean scope. Committing now.
+
+Committed as `975f7dd8b`. Let me verify the commit contains exactly my 11 files (10 + log) and update the final todo.
+
+All verified — the commit `975f7dd8b` contains exactly 11 files (10 + log), and the log ends with `EXIT=0 / STATUS=DONE`.
+

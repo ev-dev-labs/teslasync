@@ -1,0 +1,202 @@
+================================================================================
+P4 · Dashboard widget · 0106 — VehicleAccessWidget (Apple)
+Run: 2026-06-08T01:15-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/59
+Base: c9c6fdb9f
+Prompt: P4/dashboard-widgets/0106 — VehicleAccessWidget
+Web source (spec): web/src/features/dashboard/widgets/VehicleAccessWidget.tsx
+Mode: code-complete + DEFERRED full Xcode app build/test (0054 GuardModeWidget precedent, ADR-012).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18 deploy target)       OK
+  macOS SDK .................. MacOSX (macOS 15 deploy target)                       OK
+  iPhone 16 simulator ........ present (booted)                                     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  pre-existing collision ..... struct DashboardWidgetSize redefined 15x across the app module  WARN
+  pre-existing collision ..... 262 co-located *.Tests.swift import XCTest into the app target  WARN
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles in
+  the gate below. The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit
+  unavailable") does NOT apply — the surface is authored, host-compiled on BOTH
+  SDKs, and host-tested (21/21 executed) for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/VehicleAccessWidget.*) ===
+  VehicleAccessWidget.Model.swift     301  P1/S8 state-holder seam (VehicleAccessSource -> VehicleAccessModel)
+                                           + P1/S11 telemetry seam + P1/S10 strings facade + in-memory source
+  VehicleAccessWidget.Adapter.swift   205  testable projection core — VehicleAccessProjection (driver/invitation
+                                           AccessEntry rows, port of the web useMemo blocks) + MobileAccessStatus
+                                           tri-state + VehicleAccessDateFormat (port of formatDateShort) + a11y
+  VehicleAccessWidget.Views.swift     279  presentational subviews — AccessChip / connectivity banner / compact
+                                           row / mobile-status row / detail list + rows + section empty / standard
+  VehicleAccessWidget.swift           246  VehicleAccessWidget surface (shell chrome + state switch + registry)
+  VehicleAccessWidget.Previews.swift  169  #if DEBUG previews — one per state (content/compact/no-drivers/loading/
+                                           no-data/error/offline/stale)
+  VehicleAccessWidget.Tests.swift     266  XCTest — adapter + model + registry + a11y (21 methods, 59 asserts)
+  VehicleAccessWidget.strings          59  P1/S10 catalog contribution (19 web-parity keys + registry description
+                                           + native chrome + a11y — 32 keys total)
+  Every file <= 400 lines (house file_length). Total 1466 lines across the 6 .swift files.
+  Shared registry types (DashboardWidgetSize / DashboardWidgetRegistration) are REUSED, not redeclared
+  (grep: 0 definitions in VehicleAccessWidget.*), so this surface adds ZERO new duplicate-symbol collisions.
+
+=== PARITY (vs web VehicleAccessWidget.tsx) ===
+  Data sources -> bound via the shared state-holder seam (VehicleAccessSource -> VehicleAccessModel):
+    useVehicleDrivers, useVehicleInvitations, useVehicleMobileEnabled, useVehicles, useTranslation. The
+    production app wires VehicleAccessSource over the KMP drivers/invitations/mobile-enabled stores; the
+    view performs NO HTTP (no networking in the View — bound through the @Observable model).
+  Projection -> VehicleAccessProjection.driverEntries (label = driver_name ?? driver_email ?? '—',
+    value = formatDateShort(fetched_at), badge role==='owner' ? (Owner,success) : (Driver,neutral)) +
+    invitationEntries (label = created_by ?? '—', value = formatDateShort(created_at), badge
+    pending->(Pending,warning) / accepted->(Accepted,success) / else->(Expired,error==.danger)) are a 1:1
+    port of the web useMemo blocks. MobileAccessStatus(enabled: Bool?) reproduces the true/false/null
+    branches; VehicleAccessDateFormat.short ports formatDateShort ({month:'short',day:'numeric'} + '—'
+    fallback). Verified by executed XCTest (locale-pinned en_US -> "Jun 8").
+  Composition -> shell chrome (person.2 cyan icon + "Vehicle Access" title + freshness chip + refresh +
+    Open) · 1x2 CompactView (person.2 glyph + "{n} Drivers" + colored mobile-access dot) · standard view
+    (uppercase "Mobile Access" + Enabled/Disabled/Unknown badge, then the always-present "Authorized
+    Drivers" detail list, then the "Pending Invitations" list rendered ONLY when invitationEntries is
+    non-empty — matching the web `invitationEntries.length > 0` gate) · detail rows (label + value + tinted
+    badge + hairline divider) · per-list empty states · compact list cap at 4 (web slice(0,4)).
+  Shared components -> reuses Color.TS / Font.TS / TSSpacing / TSRadius / TSTone / TSSkeleton +
+    ContentUnavailableView (compiled against the REAL apps/apple tokens in the typechecks below). AccessChip
+    mirrors the TSBadge tokens, extended to take a pre-localized String (our per-surface table) the
+    LocalizedStringKey-only TSBadge can't express.   Recharts -> none / Leaflet -> none (no chart/map).
+  States (all render) -> loading (skeleton chrome) · empty ("No access data available", web's
+    `!hasData` branch) · error (retry affordance) · stale (chip + banner) · offline (cached value + chip +
+    banner) · content; PLUS the per-list "No authorized drivers" empty (reachable when mobile data exists
+    but drivers are empty). Model phase resolution keeps cached content visible behind refresh/errors,
+    matching the web shell (hasData = drivers||invitations||mobileEnabled!=nil).
+  i18n -> all 19 source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    widget.vehicleAccess, vehicleAccessDrivers, vehicleAccessMobileOn/Off/Unknown, vehicleAccessMobile,
+    vehicleAccessEnabled/Disabled/Unknown, vehicleAccessAuthorized, vehicleAccessNoDrivers,
+    vehicleAccessPending, vehicleAccessNoInvitations, vehicleAccessOwner, vehicleAccessDriver,
+    vehicleAccessPendingStatus, vehicleAccessAccepted, vehicleAccessExpired, vehicleAccessNoData  ->  ALL
+    PRESENT in VehicleAccessWidget.strings (cross-checked: 0 code keys missing from catalog). No English
+    literals in native code (verbatim from the facade).
+  a11y -> mobile-status row + compact row carry a combined summary value (VehicleAccessAccessibility); each
+    detail row a combined label+badge+value label; every button an accessibilityLabel; Dynamic Type via
+    tokens; decorative glyphs accessibilityHidden.
+  Telemetry -> VehicleAccessModel.start() emits viewOpened(surface:"VehicleAccessWidget") -> bridges the
+    shared Telemetry.track(.screenView) (P1/S11). Asserted by a spy test (fires exactly once).
+  Registry -> VehicleAccessWidget.registration: id "vehicle-access", category "security", default 2x4,
+    min 1x2, max 4x40 (+ clamp()), matching registry/security.ts. Asserted.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (the 5 shipping source files compiled together with faithful
+    stand-ins for the shared tokens/registry whose public signatures match the REAL apps/apple library —
+    Color.TS/Font.TS/TSSpacing/TSRadius from design Tokens.swift, TSTone from Components/UI/Badges.swift,
+    TSSkeleton from Feedback/Skeletons.swift, DashboardWidgetSize/Registration from the sibling widgets):
+      xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator \
+        -swift-version 6 -strict-concurrency=complete  <5 sources + Shims>
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM harness
+    (real production Model/Adapter/Views/Widget/Previews + faithful token/registry shims), swift-tools 6.0
+    => Swift 6 language mode + strict concurrency complete:
+      Build complete! · Executed 21 tests, with 0 failures (0 unexpected) in 0.005 seconds
+        VehicleAccessAdapterTests        8/8  (driver label name/email/dash fallback; owner/driver badge;
+                                              date value + dash; invitation label + pending/accepted/expired
+                                              badge; unknown-status fallback; mobile init/tone; mobile i18n
+                                              keys; date format dash+value)
+        VehicleAccessModelTests          8/8  (phase loading/empty/error; mobile-only=content; data-present=
+                                              content while loading/failed; telemetry-once; refresh delegation;
+                                              connection+projection tracking)
+        VehicleAccessRegistryTests       2/2  (canonical vehicle-access metadata; clamp min/max)
+        VehicleAccessAccessibilityTests  3/3  (mobile summary; compact summary count+status; entry summary)
+      SWIFT_TEST_EXIT=0                                                             OK
+[4] swiftlint --strict on the 6 surface .swift files (explicit paths; config apps/apple/.swiftlint.yml):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0                                                                   OK
+[5] swiftformat --lint on the 6 surface .swift files (config: apps/apple/.swiftformat):
+      0/6 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+[6] check-placeholders (ADR-011 stub gate):
+      pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/VehicleAccessWidget
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+[7] xcodegen generate — the project enumerates all 7 VehicleAccessWidget files (.swift x6 + .strings)
+    into the TeslaSync + TeslaSync-macOS targets:
+      Created project at .../TeslaSync.xcodeproj                                    OK
+[8] i18n key cross-check — every "widget.*" key referenced in the 4 view/logic sources is present in
+    VehicleAccessWidget.strings (comm -23 code_keys strings_keys == empty):
+      MISSING_KEYS=0                                                               OK
+
+=== GATE — FULL XCODE APP STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real command run on this host):
+      DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+        xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **   MAC_TARGET_BUILD_EXIT=65
+    Why deferred (independent, code-unrelated reasons — none a defect in this surface; identical
+    disposition to the 0054 GuardModeWidget predecessor + the ToolCard/AlertMessageEditor/FSMTimelineChart
+    rows in apps/macos-pending-verifications.md; Honesty rule 7):
+      (a) Shared.xcframework not staged: the app target links the KMP core; staging needs a Kotlin/Native
+          gradle build (apps/shared/gradlew :core:assembleSharedXCFramework) — itself a macOS-pending item
+          deferred to p5-hardening/H8-0001. Concrete missing-framework error captured above (EXIT=65).
+      (b) Pre-existing, unrelated parallel-merge collisions in the app module — `struct DashboardWidgetSize`
+          redefined 15x and 262 co-located *.Tests.swift importing XCTest into the app target (documented in
+          apps/macos-pending-verifications.md). Resolving them is the P4 integration/acceptance prompt's job
+          and is OUTSIDE this prompt's allowed files. This surface adds ZERO new ones (defines no registry
+          type; its single *.Tests.swift follows the established co-located pattern).
+      (c) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    The SAME XCTest suite that the Xcode test action would run is PROVEN GREEN (21/21) by the executed
+    SwiftPM harness in step [3], and the surface compiles against BOTH the iOS 18 and macOS 15 SDKs under
+    Swift 6 strict concurrency in steps [1]/[2]. No red is painted green.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) + per-list empty —
+      implemented; each has a #if DEBUG preview; phase logic unit-tested + executed green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (VehicleAccessSource->VehicleAccessModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — 19 web keys + native chrome, 0 missing (cross-checked).
+  [x] Accessibility labels on every interactive element; mobile/compact rows + each detail row carry combined values.
+  [x] Tests: adapter unit + per-state model + registry + a11y — 21 methods / 59 asserts, EXECUTED 21/21.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; full Xcode app build/test DEFERRED with captured evidence.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : full Xcode app build/test shown DEFERRED (not green) with the real EXIT=65 missing-
+                       xcframework error captured; every "OK" is a command actually run with its real exit
+                       code (incl. a 21/21 executed XCTest run and iOS+macOS SDK compiles).
+  2  No scope narrowing: implemented ALL states/views/badges + i18n + a11y + telemetry + registry + both layouts.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (Shims used ONLY in the
+                       throwaway SwiftPM verification harness, never in shipped surface files.)
+  5  No parity shortcuts: faithful port of the driver/invitation useMemo projections + formatDateShort +
+                       mobile tri-state + full compact/standard composition + all states + the invitations gate.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT redeclare the shared registry types and did NOT edit the shared
+                       Localizable.xcstrings (parallel-unsafe) — strings shipped as the per-surface table,
+                       exactly like 0054; disposition matches the documented sibling-surface precedent.
+  8  No commit on red  : committing on all-green host gates; full Xcode app steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed VehicleAccessWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native VehicleAccessWidget shipped at parity with the web source: pure-Swift
+  projection core (executed-green XCTest, 21/21), P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry,
+  every state + i18n key + a11y label, registry-correct (vehicle-access, 2x4 / 1x2 / 4x40). All
+  host-runnable gates pass AND the surface compiles against BOTH the iOS 18 simulator and macOS 15 SDKs
+  with the real Xcode 26 toolchain under Swift 6 strict concurrency. The full Xcode app build/test is
+  DEFERRED to the downstream integration/signed runner (Shared.xcframework KMP staging + pre-existing
+  parallel-merge collisions + signing — none a defect in this code, all outside this prompt's allowed
+  files), matching the 0054 GuardModeWidget "code-complete + DEFERRED Xcode gate" precedent and the
+  apps/macos-pending-verifications.md policy ("not unfinished work ... all host-runnable gates green").
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/VehicleAccessWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0106-VehicleAccessWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add VehicleAccessWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,181 @@
+=== P4 Feature view 0307 VehiclePhotoUpload (Apple) ===
+
+Surface:    VehiclePhotoUpload  (feature view, vehicles domain)
+Web source: web/src/features/vehicles/components/VehiclePhotoUpload.tsx (reproduced end-to-end)
+            + its hook web/src/api/hooks/useVehiclePhoto.ts (validation + URL builder ported)
+Date:       2026-06-08
+Delegation: FORBIDDEN — implemented in-process, no sub-agents (honesty covenant #6).
+
+------------------------------------------------------------
+CAPABILITY VERIFICATION (runner)  ——  honesty covenant #1/#10
+------------------------------------------------------------
+The prompt's capability clause: "requires SwiftUI + Swift Charts + MapKit, iOS 18 /
+iPadOS 18 / macOS 15 HIG. If unavailable on the runner -> STATUS=BLOCKED with API
+evidence." The build/test gate (xcodebuild on an iOS Simulator + the macOS scheme,
+then an XCTest run) is NOT runnable here. Hard API evidence:
+
+  $ xcode-select -p
+      /Library/Developer/CommandLineTools          # Command Line Tools, NOT full Xcode
+  $ xcodebuild -version
+      xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+      directory '/Library/Developer/CommandLineTools' is a command line tools instance
+  $ xcrun --sdk iphonesimulator --show-sdk-path
+      xcrun: error: SDK "iphonesimulator" cannot be located      # no iOS Simulator SDK
+  $ xcrun simctl list devices
+      xcrun: error: unable to find utility "simctl", not a developer tool   # no simulators
+  $ echo 'import XCTest' | (compile on macOS SDK)
+      error: no such module 'XCTest'                 # XCTest ships with Xcode, absent here
+
+  => xcodebuild (iOS Simulator build+test AND macOS scheme build+test) and the XCTest
+     RUN cannot execute on this runner. This is the documented capability gap -> BLOCKED.
+
+What IS available, and used to verify the delivered code as far as the runner allows:
+  $ swift --version
+      Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108)  Target: arm64-apple-macosx26.0
+  $ xcrun --sdk macosx --show-sdk-path
+      /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+  - SwiftUI + Charts (Swift Charts) + MapKit + PhotosUI all TYPE-CHECK against the macOS
+    SDK with the CLT toolchain (probe compiled clean) -> the frameworks the prompt
+    requires are present for compilation, only the Xcode *build/test driver* is missing.
+  - xcodegen, swiftlint, swiftformat, pwsh: all present (/opt/homebrew/bin/*).
+
+------------------------------------------------------------
+DELIVERED ARTIFACTS (allowed-files: apps/apple/TeslaSync/feature-views/VehiclePhotoUpload.* + this log)
+------------------------------------------------------------
+A production surface, NO stubs / skeletons (honesty covenant #4). Split to honor the
+swiftlint file_length<=400 rule; all share the `VehiclePhotoUpload` prefix:
+
+  VehiclePhotoUpload.swift            175  the composed surface (glass panel, fileImporter,
+                                           drop routing, confirmationDialog, toast auto-dismiss)
+  VehiclePhotoUpload.Adapter.swift    214  PURE core: validation (port of validateVehiclePhotoFile),
+                                           MIME derivation, cache-busting URL (port of vehiclePhotoUrl),
+                                           constraints, choose/replace label, a11y builders
+  VehiclePhotoUpload.Projection.swift 233  identity/telemetry (P1/S11), connection axis, action error,
+                                           toast, input snapshot, resolved state + projection, store seam (P1/S8)
+  VehiclePhotoUpload.Model.swift      305  @Observable @MainActor view-model + i18n facade (P1/S10)
+  VehiclePhotoUpload.Sources.swift    163  InMemory + Controllable VehiclePhotoStore (previews/tests; no I/O)
+  VehiclePhotoUpload.Views.swift      223  dropzone (drag-drop + picker), preview thumbnail,
+                                           cross-platform PlatformImageView, choose/remove buttons
+  VehiclePhotoUpload.Chrome.swift     210  header + freshness chip, connectivity banner, toast view,
+                                           loading skeleton, error (QueryError peer) chrome
+  VehiclePhotoUpload.Previews.swift    90  #Preview for every state (no-photo/has-photo/loading/
+                                           error/uploading/stale/offline)
+  VehiclePhotoUpload.Tests.swift      207  XCTest: validator/constraints/MIME/URL/label/a11y/projection
+  VehiclePhotoUpload.ModelTests.swift 210  XCTest: model wiring, telemetry, upload/delete actions,
+                                           toasts, confirm flow, in-flight flags, stale auto-refresh
+  VehiclePhotoUpload.strings           58  P1/S10 catalog (table "VehiclePhotoUpload")
+
+------------------------------------------------------------
+PARITY MAPPING (web -> native; honesty covenant #2/#5 — no scope narrowing)
+------------------------------------------------------------
+Data sources (web hooks -> one P1/S8 seam `VehiclePhotoStore`, view does NO HTTP):
+  useVehiclePhoto        -> store.onUpdate snapshot (has_photo + uploaded_at + photoURL + loading/error)
+  useUploadVehiclePhoto  -> store.upload(PickedPhoto) async throws -> VehiclePhotoMeta
+  useDeleteVehiclePhoto  -> store.delete() async throws
+  useToast               -> model.toast (VehiclePhotoToast: success/danger) + .task(id:) auto-dismiss
+  useTranslation         -> VehiclePhotoStrings facade (NSLocalizedString, web `t(key, default)` fallbacks)
+
+Shared components (web -> native, no direct library imports):
+  GlassPanel    -> TSGlassPanel          Spinner -> ProgressView/TSSkeleton
+  Button        -> TSButton              Toast   -> VehiclePhotoToastView (Chrome)
+  ConfirmDialog -> .confirmationDialog (destructive role) — Apple-idiomatic, per ActiveSessionsSection precedent
+  Charts/Maps   -> none used by this surface (web source has none)
+
+File selection (web hidden <input type=file> + drag/drop) -> SwiftUI `.fileImporter`
+  (allowedContentTypes [.jpeg,.png]) + `.dropDestination(for: URL.self)`; bytes read via a
+  security-scoped resource, MIME derived from the extension; preview via AsyncImage
+  (current photo) or a cross-platform Image(data:) (in-flight pick).
+
+States — every one renders (no hidden surface; honesty covenant #2):
+  loading (skeleton dropzone) · error (QueryError peer + Retry) · content-no-photo
+  (friendly drop prompt, never blank) · content-has-photo (preview + Replace + Remove) ·
+  uploading (preview + "Uploading…" disabled button) · stale/offline (freshness chip +
+  banner + one-shot auto-refresh on the stale transition).
+
+i18n keys: 32 keys referenced in code == 32 keys in the catalog (0 missing, 0 orphan).
+  All 14 web-source strings present (title, confirm title/message, 4 toast results,
+  previewAlt, dropPrompt, constraints {{max}}, uploading, replace, choose, remove, Remove).
+
+------------------------------------------------------------
+GATE EXECUTION (real exit codes captured on this runner)
+------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+      xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+      directory '/Library/Developer/CommandLineTools' is a command line tools instance
+                                                                  -> IOS_EXIT=1   [BLOCKED: no Xcode/iOS sim]
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+      xcode-select: error: tool 'xcodebuild' requires Xcode, ... command line tools instance
+                                                                  -> MAC_EXIT=1   [BLOCKED: no Xcode]
+
+[3] swiftlint --strict
+      THIS SURFACE (VehiclePhotoUpload.* — 10 files):
+          Done linting! Found 0 violations, 0 serious in 10 files   -> 0  [PASS]
+      Repo-wide (1919 files, as the bare gate runs it):
+          Found 1 violation, 1 serious in 1919 files               -> LINT_EXIT=2
+          The single violation is PRE-EXISTING and OUT OF SCOPE (not editable under this
+          prompt's allowed-files):
+          TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141: function_body_length
+          (0 of the violations are in any VehiclePhotoUpload file — verified by grep).
+
+[4] swiftformat --lint apps/apple
+      THIS SURFACE (VehiclePhotoUpload.* — 10 files):
+          0/10 files require formatting                             -> 0  [PASS]
+      Repo-wide (1923 files, as the bare gate runs it):
+          1/1923 files require formatting                          -> FORMAT_EXIT=1
+          The single violation is PRE-EXISTING and OUT OF SCOPE:
+          TeslaSync/feature-views/ActionBuilder.Previews.swift:48: blankLinesBetweenScopes
+          (a different surface; git status confirms it is unmodified by this task).
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/VehiclePhotoUpload
+          PLACEHOLDER_ALLOWED=0
+          PLACEHOLDER_COUNT=0                                       -> PLACEHOLDER_EXIT=0  [PASS]
+      Real per-file scan of the shipped sources (copied to a temp dir, -Language swift):
+          PLACEHOLDER_COUNT=0  EXIT=0   (no TODO/FIXME/stub/mock/Placeholder/Lorem;
+          grep for those words across all VehiclePhotoUpload.* + .strings: none found)
+
+------------------------------------------------------------
+COMPILE VERIFICATION SUBSTITUTE (since xcodebuild is unavailable; honesty covenant #1/#3)
+------------------------------------------------------------
+All performed with `xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15`:
+
+  (a) Pure core (Adapter + Projection + Model + Sources):                0 errors  [PASS]
+  (b) SwiftUI surface (swift + Views + Chrome + Previews) compiled AGAINST THE REAL
+      design system — apps/design/generated/apple/Tokens.swift + Sources/Design/TSMaterial.swift
+      + TSDesign.swift + Sources/Components/UI/{Cards,Buttons,Typography}.swift +
+      Feedback/Skeletons.swift + Motion/Motion.swift (TSGlassPanel, TSButton, TSSkeleton,
+      TSFadeIn, Color.TS, Font.TS, TSSpacing, TSRadius, TSMotion all resolved):
+                                                                          0 errors  [PASS]
+  (c) Both XCTest files type-checked against the real surface types via a local XCTest
+      shim (XCTest itself is unavailable without Xcode — see capability evidence):
+                                                                          0 errors  [PASS]
+  These confirm the delivered code compiles against the genuine shared components + tokens
+  and that the tests reference only real public API; what cannot run here is the Xcode
+  build/test DRIVER and the on-device/simulator + XCTest execution.
+
+------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------
+Delivered surface is COMPLETE (no stubs, every web state + i18n key reproduced, all hooks
+bound through the P1/S8 seam, a11y labels on every interactive element, adapter/projection/
+model unit tests + per-state previews authored) and VERIFIED to the runner's ceiling:
+  - swiftlint --strict (this surface):   0 violations
+  - swiftformat --lint (this surface):   0/10 require formatting
+  - placeholder/stub gate:               PLACEHOLDER_COUNT=0
+  - macOS-SDK type-check (sources vs REAL components, and tests vs real types): 0 errors
+  - i18n: 32/32 keys mapped (0 missing, 0 orphan)
+
+The ONLY gate steps that do not reach a clean process exit on THIS runner are the two
+`xcodebuild` build+test steps (IOS_EXIT=1, MAC_EXIT=1) and the XCTest *run* — all three
+require full Xcode + an iOS Simulator runtime, which are ABSENT here (API evidence above).
+The repo-wide swiftlint/swiftformat reds (LINT_EXIT=2, FORMAT_EXIT=1) are PRE-EXISTING
+violations in OTHER surfaces (LifetimeStatsWidget.Adapter.swift, ActionBuilder.Previews.swift)
+that are outside this prompt's allowed-files and were not introduced or modified by this task.
+
+Per the prompt's capability clause and honesty covenant (#1 no red-as-green, #8 no commit
+on red, #10 log ends with EXIT/STATUS), this is reported as BLOCKED on platform capability,
+NOT as DONE. The surface is ready to build/test verbatim on any runner with Xcode 16+ and
+an iOS 18 simulator.
+
+EXIT=1
+STATUS=BLOCKED

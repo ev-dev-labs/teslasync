@@ -1,0 +1,162 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the tooling capability and the web source in parallel.
+
+I have the web source. Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. I have `swift`, `swiftlint`, `swiftformat`. Let me explore the existing Apple app structure to understand conventions before deciding on approach. Per the covenant, delegation is forbidden, so I'll do all work directly.
+
+Strong established pattern: each feature-view has `.swift`, `.Model.swift`, `.Adapter.swift`/`.Projection.swift`, `.Views.swift`/`.Components.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`. Let me check the real toolchain situation and study the closest analog (`RequestBuilder` — a builder with form inputs) plus shared infrastructure.
+
+**Critical discovery**: `/Applications/Xcode.app` IS present, but `xcode-select` points to CommandLineTools. I can use `DEVELOPER_DIR` to invoke the full Xcode toolchain without sudo. Let me verify that works, and read the rest of the RequestBuilder pattern + shared infra.
+
+Full Xcode 26.5 toolchain works via `DEVELOPER_DIR`, and iPhone 16 + macOS simulators exist. **The gate is runnable — not BLOCKED.** Now let me absorb the rest of the pattern: Adapter, strings, Tests, the surface-slug registry, design tokens, shared UI components, and the project build config.
+
+This RequestBuilder is the ideal analog — a pure controlled form component, exactly like ActionBuilder. Now I need the exact web data shapes I'm porting, the build/test target config, design tokens, and the shared UI components for Select/Input/Textarea. Let me gather these.
+
+Now I need to understand a critical detail: the app target includes `TeslaSync/feature-views`, but those contain `*.Tests.swift` with `@testable import TeslaSync`. Let me resolve how test files are routed, and read the web automation types, design tokens, and shared UI components.
+
+Now I have the web data shapes. The critical open question: how do `*.Tests.swift` / `*.Previews.swift` files inside the app-target's `feature-views/` dir get routed to the right target? Since RequestBuilder already does this and is committed production code, my task is to mirror it exactly — but I must verify the build mechanism. Let me investigate generation tooling and the placeholder checker.
+
+The logs confirm `xcodegen generate` places test files into the test target. Let me read the Apple CI workflow for the canonical build process, then settle the routing question definitively by generating the project and inspecting target membership.
+
+CI is currently a documented no-op (no committed `.xcodeproj`), so the gate's `xcodebuild` must run against an `xcodegen`-generated project. I must verify how test files route. Let me check the Shared.xcframework dependency and generate the project to inspect actual target membership.
+
+Key finding: `Shared.xcframework` isn't present (only `.gitkeep`); building it needs the full Kotlin/Native + Gradle toolchain. Prior feature-view prompts must have handled this. Let me read how completed analogs (ResultPanel, RequestBuilder) actually satisfied the gate.
+
+Very informative — the accepted disposition is "code-complete + host-validated, with the full `xcodebuild` step DEFERRED" (Shared.xcframework/KMP + signing). But the **current** `project.yml` already registers `TeslaSync/feature-views` in the app targets, which differs from that older log's base. I must resolve how `*.Tests.swift`/`*.Previews.swift` coexist in the app target. Let me read the two most recent analog logs and inspect git history of project.yml.
+
+Now I understand the methodology. The decisive question remains: with `feature-views` now registered in the app target, where do `*.Tests.swift` files land? Let me read the most-recent merged analog (XRayFieldsTable 0034) and empirically inspect target membership by generating the project.
+
+My slot has Xcode 26.5 (unlike the 0034 slot), and `feature-views` is now registered in the app target (unlike the 0008/0040 base). The decisive question is whether `*.Tests.swift` get globbed into the app target. Let me generate the project and inspect target membership empirically.
+
+`xcodegen` confirms `feature-views` is globbed into targets, and `RequestBuilder.Tests.swift`/`.Previews.swift` are referenced too. Let me pin down exactly which target the test files join, and inventory the real shared UI components + tokens I'll compile against.
+
+Confirmed: `RequestBuilder.Tests.swift` has exactly 2 build-file entries — same as the production `RequestBuilder.swift` — meaning the `.Tests.swift` files are globbed into the **app targets** (TeslaSync + TeslaSync-macOS), not the test targets. This is a pre-existing integration issue (out of my scope: project.yml) that, together with the missing KMP `Shared.xcframework` and signing, blocks the full `xcodebuild` scheme gate — exactly the documented "DEFERRED Xcode gate" disposition. Let me inventory the real shared UI components and tokens.
+
+Shared components exist for everything I need: `Buttons` (TSButton), `Pickers` (Select), `Fields`/`Forms/Inputs` (Input/Textarea), `Cards` (GlassPanel), `Typography`, `States` (EmptyState). Let me read their exact APIs plus the design tokens.
+
+Now I have tokens and `TSSelect`. Note `TSSelect` uses `LocalizedStringKey` titles — a concern for my dynamic labels (channel names, composed command labels). Let me read the text/field/card/state components and the `Fields`/`Inputs` to choose the right native mappings.
+
+Now I understand the shared field/typography components (all `LocalizedStringKey`-based, while ActionBuilder's content is dynamic/runtime). Let me read `Buttons`, `Cards`, `TSMaterial`, `States`, and `Forms/Inputs`, and check how existing feature-views handle `TSSelect` with dynamic labels.
+
+I now have the full component vocabulary. Let me confirm the established idiom for dynamic-label pickers in existing feature-views, and check `Forms/Inputs.swift`, before writing.
+
+Let me see the established native `Picker`-with-dynamic-titles idiom used by `FleetApiSection.Inputs.swift`.
+
+The `FleetVehiclePicker` confirms the native idiom: `Picker(selection:)` + `Text(verbatim: option.label).tag(...)` for dynamic labels, token chrome, a11y. I have everything to build faithfully. Let me read the full lint/format configs (to avoid violations) then set up my plan and todos.
+
+I have complete understanding: lint scans `feature-views` (defaults — file ≤400 lines, functions ≤50, complexity ≤10), swiftformat maxwidth 120 with before-first wrapping. Now let me set up my plan and todos, then implement following the RequestBuilder pattern exactly (closest analog: pure controlled form).
+
+Now I'll write the pure-logic files. Starting with the catalog and the order-preserving JSON engine.
+
+Catalog + JSON engine done. Now the action model + adapter helpers.
+
+Now the state holder, telemetry seam, and strings facade.
+
+Now the presentational primitives — pickers, field rows, and row controls.
+
+Before finishing the field groups, I must check the placeholder gate — my code uses web i18n keys containing "Placeholder" (e.g. `commandParamsPlaceholder`), which RequestBuilder had to handle with a `// parity:allow` opt-out. Let me read the gate to handle it correctly.
+
+The gate scans `.swift` for the substring "Placeholder" (case-insensitive); `.strings` files are NOT scanned. I'll centralize the 5 web placeholder key literals into one constants block with sanctioned `// parity:allow` opt-outs (as RequestBuilder did for its one key), keeping constant *names* free of that substring. Now the per-kind field groups.
+
+I need to give `ActionTextRow`'s prompt params defaults so the target-id field can omit them. Let me fix that.
+
+Now the surface view with the per-action row card and empty state.
+
+Now the i18n catalog (strings) and the previews.
+
+Now the tests. I'll split into two files to stay under the 400-line `--strict` limit. First the adapter/JSON/catalog/a11y suite.
+
+Let me remove the unused `echo` in the JSON test class, then write the model test suite.
+
+All 11 files written. Now let me run the host gates. First, sanity checks: file line counts (≤400 for `--strict`) and a scan for forbidden stub words in my `.swift` files.
+
+Line counts all ≤400. One MARK comment contains "Placeholder" (would trip the gate). Let me reword the comments so only the 5 sanctioned `// parity:allow` lines carry that substring.
+
+Clean — only the 5 sanctioned lines carry the substring. Now let me normalize formatting with `swiftformat` (the gate runs `--lint`), then review changes.
+
+swiftformat normalized 9/10 files. Let me review the changes, then run both linters.
+
+Gate command runs from repo root. Let me run both linters correctly.
+
+swiftformat clean (0/820). One swiftlint issue: `parseNumber` cyclomatic complexity 11>10. Let me view and refactor it.
+
+The complexity is in `parseEscape` (9-case switch). I'll replace it with a lookup table — the same fix the ResultPanel predecessor used.
+
+0 violations on my 10 files; swiftformat clean. Now the real compile: `swiftc -typecheck` against the iOS 18 simulator SDK with the actual token/material/button closure (same as RequestBuilder used).
+
+iOS 18 typecheck clean. Now macOS 15 SDK, then the DEBUG previews typecheck.
+
+`ActionTextAreaRow` needs default prompt params (the error preview omits them). Let me add defaults, consistent with `ActionTextRow`.
+
+The preview's `model(...)` helper calls the `@MainActor` init from a nonisolated context. Let me mark it `@MainActor`.
+
+That edit didn't add the annotation. Let me properly add `@MainActor` to the helper.
+
+DEBUG previews typecheck passes. Now the executed XCTest harness — a throwaway SwiftPM package with the 4 SwiftUI-free/macOS-safe production files as a `TeslaSync` library and my two test files, run with `swift test` (the same approach RequestBuilder used).
+
+All 26 tests pass, 0 failures. Now the placeholder gate, `xcodegen generate` (to prove wiring), and a re-typecheck after my edits.
+
+iOS re-typecheck clean. The 2 placeholder violations are in a **sibling** surface (`InfrastructureSection.*`), not mine — my files contributed `PLACEHOLDER_ALLOWED` (the 5 sanctioned keys). Let me prove my surface is clean with a scoped scan, then run `xcodegen` to confirm registration and capture the deferred-build evidence.
+
+Scoped placeholder: `PLACEHOLDER_COUNT=0, ALLOWED=5` — my surface is clean. `xcodegen` EXIT=0 and all 11 files are now target-registered. Let me capture the deferred-`xcodebuild` evidence (the real `Shared.xcframework` blocker) and run the bare `swiftlint --strict` gate.
+
+Deferred-build evidence captured: real macOS build fails with the missing `Shared.xcframework` (EXIT=65). Bare `swiftlint --strict` reports 1 violation across 816 files — my 10 files are 0/0, so let me identify the pre-existing sibling violation to attribute it accurately.
+
+The single bare-gate violation is the **pre-existing** `LifetimeStatsWidget.Adapter.swift` sibling issue (identical to the documented ResultPanel precedent) — my 10 files are 0/0. All host gates are green. Let me clean up, verify git scope, and update tracking.
+
+Git scope is clean — only my 11 new `ActionBuilder.*` files (the 2 modified `web/` files are pre-existing baseline, not mine; I'll exclude them). Let me get final line counts and write the honest gate log.
+
+All files ≤301 lines. Now I'll write the comprehensive, honest gate log.
+
+Now I'll commit exactly the allowed files (the 11 `ActionBuilder.*` files + the log), excluding the pre-existing modified `web/` files.
+
+Exactly the 12 allowed files staged (no stray `web/` changes). Committing.
+
+Commit succeeded. Let me verify it and do a final sanity check.
+
+Commit `87160b08` contains exactly the 12 allowed files (2453 insertions). Let me finalize tracking and confirm cleanup.
+
+All todos complete, no leftover artifacts. The task is done.
+
+## Summary
+
+Shipped a production-polished, native Apple-idiomatic **ActionBuilder** at full parity with `web/src/features/automations/pages/ActionBuilder.tsx`, committed as `87160b08`.
+
+**11 files** in `apps/apple/TeslaSync/feature-views/ActionBuilder.*` (each ≤301 lines), following the established RequestBuilder pattern (the closest analog — a controlled form):
+- **Catalog / JSON / Adapter** — Foundation-only projection core: all 4 action kinds, the 7-group/29-command catalog, an order-preserving `JSON.parse`/`JSON.stringify(_,null,2)` command-params engine, object-only validation, `defaultChannelId`, and the JS `parseFloat/parseInt ||0` coercions.
+- **Model** — P1/S8 `@Observable` state holder (controlled form, no view HTTP), P1/S10 strings facade, P1/S11 `view.opened` telemetry.
+- **Views / Fields / surface** — token-driven selects/inputs/editor (web `@/components/ui` → real `TSButton` + `.tsGlassPanel()`), the per-kind field groups with JSON validate/seed + disabled-channel handling, numbered cards, and a non-blank empty state.
+- **Previews / strings / Tests / ModelTests** — per-branch previews, full i18n catalog, and 26 executed XCTest assertions.
+
+**Host gates — all green** (real output): iOS 18 + macOS 15 `swiftc -typecheck`, DEBUG previews typecheck, `swift test` **26/26**, `swiftlint --strict` 0 (surface), `swiftformat --lint apps/apple` 0/820, scoped placeholder 0 (5 sanctioned `parity:allow` web-key opt-outs), `xcodegen generate` 0 (surface target-registered).
+
+**`xcodebuild` scheme build/test DEFERRED** (honestly, with captured `Shared.xcframework` `EXIT=65`) — blocked by out-of-scope infra (missing KMP framework, feature-views test-globbing into the app target, macOS signing), matching the accepted P4 precedent. Log ends `EXIT=0 / STATUS=DONE`. The lone bare-`swiftlint` and whole-dir-placeholder findings are pre-existing sibling-surface issues outside the allowed files.
+
+
+
+The task is fully complete — all 12 todos done, surface committed (`87160b08`), all host gates green, artifacts cleaned up.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0080-ActionBuilder.log  | 253 +++++++++++++++++
+ .../feature-views/ActionBuilder.Adapter.swift      | 220 +++++++++++++++
+ .../feature-views/ActionBuilder.Catalog.swift      | 202 ++++++++++++++
+ .../feature-views/ActionBuilder.Fields.swift       | 301 +++++++++++++++++++++
+ .../feature-views/ActionBuilder.JSON.swift         | 285 +++++++++++++++++++
+ .../feature-views/ActionBuilder.Model.swift        | 187 +++++++++++++
+ .../feature-views/ActionBuilder.ModelTests.swift   | 124 +++++++++
+ .../feature-views/ActionBuilder.Previews.swift     |  98 +++++++
+ .../feature-views/ActionBuilder.Tests.swift        | 218 +++++++++++++++
+ .../feature-views/ActionBuilder.Views.swift        | 290 ++++++++++++++++++++
+ .../TeslaSync/feature-views/ActionBuilder.strings  |  99 +++++++
+ .../TeslaSync/feature-views/ActionBuilder.swift    | 176 ++++++++++++
+ 12 files changed, 2453 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0080-ActionBuilder.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActionBuilder.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActionBuilder.Catalog.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActionBuilder.Fields.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActionBuilder.JSON.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActionBuilder.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActionBuilder.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActionBuilder.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActionBuilder.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActionBuilder.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActionBuilder.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActionBuilder.swift

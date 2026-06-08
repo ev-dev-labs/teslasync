@@ -1,0 +1,131 @@
+I'll start by exploring the environment and reading the web source that defines this component's spec.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. However, `swift`, `swiftlint`, `swiftformat`, and `pwsh` are all available. Let me explore the apps/apple structure to understand the build system (SPM vs xcodeproj) and read the web source.
+
+Now let me understand the native project structure, existing feature-views patterns, and the shared infrastructure (P1/S8 state holders, S9 tokens, S10 i18n, S11 diagnostics).
+
+The project uses XcodeGen + xcodebuild against a KMP `Shared.xcframework`. Since only Command Line Tools (not full Xcode) are present, I need to assess the exact capability gap AND still ship production code. Let me explore the native patterns, shared infra, and toolchain in depth.
+
+Capability is now clear: **no full Xcode** (only Command Line Tools), **no `simctl`/simulators** → the `xcodebuild ... build test` gate steps genuinely cannot run. But `swift`, `swiftlint`, `swiftformat`, `xcodegen`, `pwsh` are present. Per the Honesty Covenant I'll still ship complete production code and run every check that CAN run. Let me study the native patterns to build true parity. There's no existing xray native code, so I'll model on the closest "feature view" exemplars.
+
+Now let me read the state-holder layer (P1/S8), feedback states, the closest feature-view exemplars (dashboard widgets with diagnostics + all states), design tokens, and the web type/format helpers — all in parallel.
+
+The DrivetrainHealthWidget is the gold-standard "feature view" template: Shared-free, with a Provider seam (P1/S8), a `view.opened` telemetry seam (P1/S11), and freshness (fresh/stale/offline). Let me read the full widget view, locate the reusable types (`WidgetFreshness`, `TSTone`, telemetry, palette, tokens), the web type, and i18n catalog.
+
+Clear pattern now. Each surface defines its own telemetry seam + OSLog sink (per-surface, avoids collisions); `WidgetFreshness` and `TSTone` are shared. Let me nail the remaining APIs and—critically—the i18n catalog setup, since my allowed files are only `XRayBucketChart.*` (I must check whether the catalog already has the keys or how per-surface strings are declared).
+
+The xray chart i18n keys **already exist** in the shared `Localizable.xcstrings` catalog (provisioned by P1/S10) — I don't need to modify it. Let me confirm the exact key strings, how surfaces reference them, and read the remaining token/badge/format APIs.
+
+The catalog stores web-mirrored keys with a `translation.` prefix (`translation.admin.xray.chart.title`) while native-authored keys are bare (`widget.freshness.live`). All 6 xray chart keys exist. Let me read the badge/tone, design tokens, freshness keys, lint/format/placeholder config, and an existing widget test to mirror conventions.
+
+All required shared keys exist. Let me read the test exemplar, lint/format/placeholder configs, and the skeleton/card/button signatures to match conventions exactly.
+
+Let me read the placeholder patterns (to avoid forbidden words) and the `TSSkeleton`/`TSCard` signatures, then I'll have everything to write the surface.
+
+I have the full pattern. Let me do a final check for any existing native date-format facade to bind to (the web uses `useDateFormat`), so I reuse rather than reinvent.
+
+No shared date facade exists; `ExportStatusWidget` has the established ISO8601-with-fractional-fallback parse idiom. Let me read it to mirror, then write the surface.
+
+I now have the complete pattern. Let me verify the log directory, a sibling log's format, and confirm the generic a11y keys I'll reference exist in the catalog.
+
+Generic keys (`action.retry`, `loading`) aren't in the catalog — they're runtime-fallback in shared components, consistent with the existing widgets. My 6 required xray keys + freshness keys are all present. Let me read a sibling feature-view log to match the expected log format.
+
+I have a complete picture, including the crucial precedent: the sibling DrivetrainHealthWidget log documents that prompt paths like `TeslaSync/feature-views/` are **not in the compiled `Sources/` tree**, so files are placed in the compiled tree (`Sources/...` + `Tests/Unit/...`) with a documented "path reconciliation" honesty note. My environment also lacks full Xcode (only Command Line Tools), so the `xcodebuild build test` gate is genuinely BLOCKED — I'll ship complete code, run every check that CAN run, and document capability evidence.
+
+Let me set up tracking and create the surface.
+
+Baseline is clean (0/591 need formatting). Let me write the plan, then create the surface file.
+
+Now the main surface file:
+
+Now the test suite, mirroring the established widget-test conventions:
+
+Now let me format and lint. First auto-format my two files, then verify the whole-tree lint stays clean.
+
+Whole tree formatting clean (0/593). Now swiftlint on my files first for fast feedback, then the full gate run.
+
+Two violations: file too long (592 > 400) and `CodingKeys` nested 2 levels deep. The sibling precedent splits into prefix-named files (`DrivetrainHealthWidget*`), so I'll split into three cohesive files and un-nest the JSON helpers. Let me restructure.
+
+File 2 — view state, freshness presentation, provider seam, observable model, and telemetry:
+
+File 3 — the SwiftUI view (Swift Charts + all states + selection tooltip + a11y) and previews:
+
+Now re-format all four files and re-run swiftlint on them:
+
+All four files are clean and well under the 400-line limit. Now the full gate-form checks — whole-tree format lint and the placeholder gate:
+
+Format and placeholder gates pass. Now the full-project `swiftlint --strict` (gate form) — this validates baseline + my files together:
+
+One violation surfaced in the whole-project run. Let me identify exactly where it is:
+
+The single violation is **pre-existing and unrelated** — `TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141` (a file I never touched, outside my allowed `XRayBucketChart.*` scope). My four files lint clean (0 violations). Let me confirm git status shows only my additions, then proceed.
+
+Confirmed: the lint violation is pre-existing (`LifetimeStatsWidget.Adapter.swift`, unmodified), and the two `M` web files are pre-existing slot changes I won't commit. My additions are clean.
+
+Now a real verification I *can* run without Xcode: execute the pure adapter/format logic via `swift` (the same assertions as my XCTest suite, against real Swift 6.3 Foundation).
+
+All 19 logic assertions pass against real Swift 6.3 Foundation. Now prove project integration via `xcodegen`, then capture the `xcodebuild` capability evidence.
+
+xcodegen integrates all 4 files (24 pbxproj refs across iOS+macOS app/test targets). Now capture the genuine `xcodebuild` capability block — the API evidence for STATUS=BLOCKED:
+
+Capability block is conclusively evidenced (`xcode-select -p` = CommandLineTools; xcodebuild + simctl both fail). STATUS=BLOCKED is the honest outcome for the build/test gate.
+
+Let me attempt one more real check — a curated type-check of the actual SwiftUI view against the macOS SDK. First, see whether my view's dependency closure is `Shared`-free (which would make a standalone compile feasible):
+
+The dependency closure is **Shared-free** (only system frameworks). Let me attempt a real type-check of the actual SwiftUI view against the macOS SDK — excluding only iOS-only (`UIKit`) files, since the Command Line Tools ship a macOS SDK with SwiftUI + Charts:
+
+`Tokens.swift` defines the design tokens my view needs, so I can't exclude it — let me check whether its `UIKit` import is platform-guarded (which would let it compile against the macOS SDK):
+
+`Tokens.swift` guards `UIKit`/`AppKit` with `canImport`, so it compiles on macOS; `Utility.swift` (bare UIKit, unused by my view) I'll exclude. Let me attempt the real macOS-SDK type-check of the view + its Shared-free dependency closure:
+
+Only error is `TSClipboard` (from the excluded `Utility.swift`) — and it's in a dependency, not my code. Let me locate `TSClipboard` and check its platform guarding:
+
+`Utility.swift` also guards `UIKit` with `#if os(iOS)`/`AppKit` — so it's macOS-compatible too. No exclusions needed. Let me re-run the type-check with the full dependency closure:
+
+The cascade is from `Components/DataDisplay/UnitFormatters.swift` (coupled to the units facade) — which my view doesn't use. I pulled in too much. Let me narrow to exactly my view's dependency dirs (Charts, UI, Feedback, Design, tokens, WidgetFreshness):
+
+0 errors in my files; 2 remain in dependencies. Let me see exactly which dependency files (to confirm they're not my code):
+
+The 2 errors are in `FeedbackOverlays.swift` (which my view doesn't use) needing `TSMetricBar` from the excluded DataDisplay dir. Excluding that one unrelated file should yield a clean type-check of my view + its real deps:
+
+**0 errors** — the SwiftUI view + its real dependency closure (40 files) type-checks cleanly against the real macOS 26 SDK in Swift 6 strict mode. Combined with the executed logic asserts, this is strong evidence the code is correct. Let me confirm the generated `.xcodeproj` is gitignored and clean up:
+
+No output after 65s — likely a git index lock in this shared environment. Let me stop and run steps individually.
+
+Cleanup done. Let me check for a git lock and get repo state with a guard:
+
+No lock now (was transient). `.gitignore:379` ignores the generated `.xcodeproj`. Let me get git status:
+
+Git is clean — only my two new dirs are staged for addition (the `M web/` files are pre-existing and I won't commit them). Let me grab host details, then write the gate log.
+
+Now I'll write the gate log, mirroring the sibling's format with full honesty about the capability block:
+
+Log written. Let me update tracking and commit exactly the surface files + log (not the unrelated pre-existing web changes):
+
+Exactly the right 5 files staged (no unrelated web changes). Committing:
+
+The task is complete. Final state is clean: my 5 files are committed (b86ef79b), and only the two pre-existing, unrelated web changes remain unstaged (correctly untouched).
+
+## Summary
+
+I shipped a complete, production-quality native Apple port of `XRayBucketChart` and verified everything the runner permits. The mandated `xcodebuild build test` gate is genuinely **BLOCKED** (this runner has Command Line Tools only — no Xcode.app, no iOS Simulator), so per the prompt's escape clause the honest terminal state is **STATUS=BLOCKED** with API evidence — not a stub or scope cut.
+
+**Shipped (committed):**
+- `Sources/FeatureViews/XRayBucketChart.swift` — SwiftUI view: Swift Charts `BarMark` over a time axis in `TSChartContainer`, with loading/empty/error/stale/offline/loaded states, `chartXSelection` tooltip (the Recharts `<Tooltip>` equivalent), per-bar VoiceOver, freshness chip + auto-refresh, 7 previews.
+- `XRayBucketChartModel.swift` — view-state, P1/S8 provider seam, `@Observable` model, P1/S11 `view.opened` telemetry seam (Shared-free, host-testable).
+- `XRayBucketChartAdapter.swift` — data model, ISO decode/sort/drop-invalid adapter, pure format helpers, i18n keys.
+- `Tests/Unit/FeatureViews/XRayBucketChartTests.swift` — 19 test methods (adapter, format, state, freshness, model, a11y/i18n, telemetry).
+- The gate log.
+
+**Verified green (real, executed):**
+- `swiftformat --lint` whole tree = 0
+- `swiftlint --strict` on the 4 new files = 0
+- placeholder gate = 0
+- `xcodegen generate` integrates all files (24 pbxproj refs across iOS+macOS targets)
+- **Real macOS-SDK `swiftc -typecheck`** of the view + its dependency closure (40 files, Swift 6) = **0 errors**
+- **Real `swift` execution** of the adapter/format logic = **19/19 asserts pass**
+
+**Honestly disclosed reds:** the `xcodebuild` iOS/macOS gate (capability-blocked, evidenced), and one pre-existing, unrelated whole-project swiftlint violation (`LifetimeStatsWidget.Adapter.swift`) outside this surface's scope — left untouched.
+
+The committed XCTest suite + the deferred `xcodebuild build test` will run on an Xcode 16+/iOS 18 + macOS 15 runner to clear the BLOCKED steps.
+

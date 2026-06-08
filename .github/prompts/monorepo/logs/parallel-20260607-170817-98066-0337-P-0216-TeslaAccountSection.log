@@ -1,0 +1,198 @@
+I'll start by exploring the repository structure and checking platform capabilities, since this task requires Apple toolchain (Xcode, SwiftLint, SwiftFormat).
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. SwiftLint, SwiftFormat, and Swift 6.3.2 compiler ARE available. Let me explore the existing Apple structure deeply before deciding on approach.
+
+The `feature-views/` directory exists with ~996 entries following a multi-file pattern (`.Adapter`, `.Model`, `.Previews`, etc.). Let me study the existing conventions thoroughly by examining a complete sibling feature view and checking for any existing TeslaAccountSection files.
+
+Clear multi-file convention. Our web source has no charts/maps, so the file set is: `.swift` (entry view), `.Adapter.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`. Let me read a complete canonical example fully to match conventions exactly.
+
+Excellent — I now understand the 7-file pattern deeply. Let me read the remaining reference files (Views, Previews, strings, Tests) and locate the shared theme tokens plus an interactive sibling (with buttons/confirm/toast/mutations, since our source is action-heavy).
+
+Let me read the Tests reference and locate the shared theme/component tokens plus an interactive sibling that performs mutations/confirm/toast (closest to our action-heavy source).
+
+Now let me locate the design tokens (P1/S9) and the shared component APIs I'll need: `TSButton`, `TSGlassPanel`, `TSFadeIn`, Toast, confirm dialog, and an `IconBox`/badge equivalent.
+
+The main-app tokens aren't in `apps/apple/Sources`. Let me check `apps/shared` and the `project.yml` to understand target composition and where `TSSpacing`/`Color.TS`/`Font.TS` come from for the main target.
+
+There's a `Sources/Theme.swift`. Let me read it — it likely defines all the core tokens.
+
+Generated tokens live at `apps/design/generated/apple/Tokens.swift`. Let me read it to learn the exact token accessors available.
+
+Now I have the full token vocabulary. Let me read the shared component APIs I'll use (Button, Card, Motion, Feedback/Toast, Badges, States, Skeletons) and find an interactive sibling feature view that performs mutations + confirm + toast.
+
+`TSButtonVariant` is `.primary/.secondary/.ghost/.destructive`. Now let me read the feedback/badge/states/skeleton components and find how an interactive sibling models mutations + confirm + toast.
+
+Now let me find the Toast system, confirmation dialog patterns, and read States/Skeletons. Also search for any interactive sibling feature view with actions.
+
+No shared Toast manager — toasts are likely modeled as transient model state. Let me study the interactive siblings (confirm + actions) and look for any settings/auth-domain feature view.
+
+`UserImpersonateButton` is the ideal analog: status axis + a confirm-gated action with action phases, offline/stale, and `view.opened`. Let me read its full file set to learn the action/confirm/feedback modeling.
+
+This is the exact interactive blueprint I need. Let me read the rest of UserImpersonateButton (Adapter, Views, Previews, strings, Tests) plus the chrome components (States, Skeletons, Banners) to complete my understanding.
+
+Let me read the remaining UserImpersonateButton files (Previews, strings, Tests), the Skeleton component, and the web data hooks/formatters to get exact data shapes.
+
+Let me read the strings reference, Skeleton API, web data hooks/formatter, the project.yml (to confirm file globbing), and the placeholder checker.
+
+Now let me read the web date formatter (to port `formatDateTime`), the project.yml (to confirm file globbing + targets), the placeholder checker, and the States component.
+
+Confirmed: `feature-views/` is globbed into both app targets. Let me verify how `.Tests.swift` files (which `import XCTest`) are handled, and read the placeholder checker that the gate runs.
+
+Let me resolve the test-compilation question by checking the README/pending notes and how feature-view tests are wired into targets.
+
+Critical finding from `macos-pending-verifications.md`: the established precedent verifies each surface via an **isolated SwiftPM build + tests + swiftlint/swiftformat/placeholder**, with the full-app `xcodebuild` deferred to a macOS CI runner (co-located `*.Tests.swift` importing XCTest into the app target is a known pre-existing condition). Since this runner has only Command Line Tools (no Xcode.app), `xcodebuild` is genuinely unavailable, but `swift`, `swiftlint`, `swiftformat` are. This dictates my verification strategy.
+
+Let me read Typography + States APIs and check component import surface for the isolated build.
+
+Everything I need is confirmed. `Sources/Components` + `Sources/Design` import only system frameworks (SwiftUI/Charts/MapKit/CoreLocation/Foundation), so an isolated SwiftPM build is viable. Let me read the lint/format configs so my code complies on the first pass.
+
+I have a complete understanding of the conventions, tokens, components, data shapes, constraints, and verification strategy. Let me set up tracking and write a session plan.
+
+Now I'll write the surface. Starting with the pure Adapter (projections + formatters), then Model, Views, entry, Previews, strings, Tests.
+
+Adapter done. Now the Model — the core state holder with two P1/S8 seams, the observable model, in-memory seams, telemetry, and i18n facade.
+
+Now the Views — all the presentational subviews (header, status card, action grid, feedback banner, freshness/connectivity, and loading/empty/error chrome).
+
+Now the entry view — `TeslaAccountSection` with `surfaceSlug`, state switch, confirm alert, and the stale ticker.
+
+Now the i18n catalog and the previews.
+
+Now the test suite — the primary host-runnable verification evidence.
+
+All 7 files created. Let me update tracking and begin verification — formatting, linting, placeholder check.
+
+swiftformat found auto-fixable issues (wrap/indent/count-where) plus force-unwraps in tests. Let me auto-format, then manually fix the force-unwraps (which need `XCTUnwrap`).
+
+Two force-unwraps to fix. Let me replace them with non-force-unwrap equivalents.
+
+swiftformat can't auto-wrap some long lines (un-breakable expressions). Let me inspect them and wrap manually.
+
+Several long lines swiftformat can't break. Let me view the regions and refactor them with helpers/wrapping.
+
+Let me refactor the expiry test class with a helper, then fix the remaining long lines.
+
+Let me fix all remaining long lines with targeted edits.
+
+Now re-run swiftformat lint on all files to confirm clean.
+
+Two files still flagged — `swiftformat` write didn't fix these specific rules. Let me look and fix manually.
+
+Both fixed now. Let me verify what changed (especially the `count(where:)` rewrite) and run the full swiftformat lint across all 6.
+
+swiftformat passes (0/6). Now swiftlint --strict on my files.
+
+swiftlint enforces a 400-line file limit and 250-line type-body limit (default rules under `--strict`). The siblings split concerns across multiple files to stay under. Let me confirm the ceiling and check the largest siblings.
+
+Confirmed: ≤400 lines/file is the convention (the 400/399 cluster). I need to split Model (489), Views (444), Tests (565), and break up the large test class (type_body 291). The `TeslaAccountSection.*` glob permits additional files. Let me check all my files' sizes precisely.
+
+I'll split the oversized files into additional `TeslaAccountSection.*` files (matching the allowed glob and the sibling multi-file convention). Let me view the current Model to plan precise cuts.
+
+I'll create `TeslaAccountSection.Seams.swift` to hold the two P1/S8 seams + in-memory implementations, then trim `Model.swift`.
+
+Now trim `Model.swift` — remove the two seams and the in-memory implementations (now in Seams.swift).
+
+Now let me check line counts and split Views into status-side and actions-side files.
+
+Model is now 333 lines. Now split Views.swift (444) — move the action grid + feedback + chrome to a new `Actions.swift`.
+
+Now create `Actions.swift` with the action grid, feedback banner, and chrome, then remove that block from Views.swift.
+
+Now remove the moved block (lines 214–444) from Views.swift.
+
+Views.swift is 213 lines. Let me update its header comment (it described actions now moved out), then tackle the Tests split.
+
+Now the Tests split. Let me find the boundaries between adapter tests, the model test class, and the test doubles.
+
+Now I'll split Tests. Let me view the current model test class to reproduce it accurately in a new file.
+
+I have the full content. Let me create `ModelTests.swift` with file-scope helpers and the model tests split into 3 classes (to satisfy `type_body_length`).
+
+Now remove the model tests + doubles from Tests.swift (now in ModelTests.swift). Let me check the boundary and delete.
+
+Tests.swift is now 215 lines. Let me update its header comment (model coverage moved out).
+
+All files split. Let me check line counts and re-run swiftformat + swiftlint on the full set.
+
+All files ≤400 lines. Now run swiftformat + swiftlint on the full set.
+
+Both pass (FORMAT_EXIT=0, LINT_EXIT=0). Now the placeholder gate. Let me check for `pwsh` and run the real checker; also do a manual scan of my files.
+
+`pwsh` is available and the manual scan found nothing. Let me check how the script resolves `-Path`, then run it exactly as the gate does.
+
+The gate's `-Path` is a file *prefix* (not a real path), so the script returns clean vacuously. For an honest, meaningful check I'll run the real scanner against a temp dir holding only my surface files.
+
+Placeholder scan clean (COUNT=0, EXIT=0). Now the key compile/test verification: an isolated SwiftPM build + XCTest of the surface (the documented precedent). Let me assemble a self-contained package with the tokens + the shared components my surface uses + my files.
+
+The isolated build surfaced two things — exactly its purpose:
+1. A **real Swift 6 strict-concurrency bug in my code**: `public static let` of non-`Sendable` `TeslaAccountFeedback`/`TeslaStatusCard` is a global-state error (would also fail the real app build). Siblings avoid this by using static *computed* members.
+2. A harness-only issue: `#Preview` needs Xcode's macro plugin (unavailable to `swift build`).
+
+Let me see the full error list, then fix the real bug.
+
+Confirmed: 5 static-let constants are the only real errors. I'll convert them to static *computed* members (the sibling pattern). Let me view and fix them in the real Adapter.
+
+Real bug fixed (static→computed). Now re-sync the harness: copy the fixed Adapter, drop the preview-only file (Xcode-macro dependent), and strip the shared components' `#Preview` blocks (also Xcode-macro dependent). Then rebuild + test.
+
+Build complete under Swift 6 strict concurrency. Now run the test suite.
+
+Tests can't run: `XCTest` module is missing (it ships with Xcode, not Command Line Tools). The library itself builds cleanly. Let me check whether XCTest is available anywhere on this runner before concluding.
+
+Important: full `XCTest` is unavailable in Command Line Tools, but **Swift Testing (`Testing.framework`) IS available**. The committed XCTest files are canonical (run by Xcode CI), but to get real *runtime* evidence on this runner, I'll port the assertions to a throwaway Swift Testing harness and execute them against the production code.
+
+`swift test` needs XCTest scaffolding even for Testing, and neither module is on SwiftPM's path under CLT. My surface API is fully `public`, so I'll run the assertions via a plain **executable** target (`import TeslaSync`, no XCTest/Testing, no SwiftPM test infra) — a hand-rolled runner. Let me restructure.
+
+Harness-only issue (its own global counters). Let me make them `@MainActor`.
+
+**92/92 runtime checks pass, exit 0** — the production logic compiles under Swift 6 strict concurrency and every assertion (mirroring the committed XCTest suites) passes. Let me re-verify the committed files still pass lint/format after the static→var bug fix.
+
+Committed files remain green (FORMAT=0, LINT=0). Now let me build the gate log honestly. First, run the real gate's `xcodebuild` steps to capture genuine capability evidence, and confirm the log directory.
+
+The log directory exists and `xcodebuild` genuinely fails (CLT, not Xcode). Let me check an existing sibling log to match the established format/precedent for BLOCKED.
+
+The sibling log reveals the precedent runs drove Xcode via `DEVELOPER_DIR=/Applications/Xcode.app/...` (default `xcode-select` is CLT, but Xcode.app may be installed!). Let me check if Xcode.app exists on this runner.
+
+**Xcode 26.5 IS installed** — the default `xcode-select` is CLT, but Xcode.app is available via `DEVELOPER_DIR`. This means I can run the **actual committed XCTest suites** (and `xcodebuild`) via the Xcode toolchain — far stronger than the Swift Testing harness. Let me rebuild the isolated package with the real XCTest test target and run it under `DEVELOPER_DIR`.
+
+**The committed XCTest suites ran and passed: 49 tests, 0 failures, EXIT=0** — via the real Xcode 26.5 toolchain (production code + previews + tests all compile). Let me check how the precedent logs concluded (DONE vs BLOCKED, and how they framed the deferred full-app xcodebuild).
+
+Precedent confirmed: the sanctioned disposition is **EXIT=0 / STATUS=DONE** when the surface is code-complete + isolated build/tests pass + lint/format/placeholder green, with the full-app `xcodebuild` reported honestly as RED+DEFERRED (blocked by pre-existing unrelated issues). I have stronger evidence (49 real XCTests pass). Let me now prove the **iOS-SDK compile** (cross-platform) and capture the **real `xcodebuild` deferral evidence**.
+
+iOS-SDK typecheck passes (exit 0) — cross-platform proven. Let me do the macOS-SDK typecheck for symmetry and check `xcodegen` for the full-app attempt.
+
+macOS typecheck passes too; xcodegen 2.45.4 + iPhone 16 sim are present. Let me attempt the real full-app `xcodebuild` to capture honest deferral evidence. First, check the xcframework preAction risk, then generate the project.
+
+Confirmed pre-existing blocker: `Shared.xcframework` is unstaged and its scheme preAction runs a heavy Kotlin/Native Gradle build (the documented macOS-CI-deferred dependency). Let me generate the project (a real check) and capture honest evidence, then attempt a bounded `xcodebuild`.
+
+Project generates cleanly (exit 0) and my surface is registered (60 refs across iOS/macOS app + test targets). Now let me run the real gate `xcodebuild` (bounded) to capture honest deferral evidence.
+
+It's still running (likely in the Gradle/Kotlin-Native xcframework preAction — the heavy pre-existing dependency). Let me check where it is.
+
+The Kotlin/Native toolchain is actually working — `Shared.xcframework` built successfully and it's now linking the release framework. **0 TeslaAccountSection errors so far.** The build is progressing, not hung. Let me keep waiting for it to reach the app/test compile stage.
+
+The log path isn't visible from this shell (the running build holds shell 71). Let me read shell 71 directly for its status/output.
+
+Each in-flight bash session has a private `/tmp`, so the running build's log isn't visible here. The Gradle build wrote `Shared.xcframework` to a *repo* path (shared/persisted) though. Let me check whether it's cached/staged so a re-run (logging to a repo path) skips the slow Gradle step.
+
+The debug `Shared.xcframework` is cached (repo path), release is still building, staging pending. The build is genuinely progressing. Let me wait for shell 71 to complete and capture its exit code.
+
+The full-app `xcodebuild` was externally terminated at ~9 min (heavy long-running build: Kotlin/Native `Shared.xcframework` + hundreds of app files) — **0 TeslaAccountSection errors throughout**. This is the documented, sanctioned macOS-CI deferral. My surface-scoped evidence is comprehensive and green (iOS+macOS SDK compiles, 49 real XCTests pass, lint/format/placeholder clean). Let me verify git status and clean up build artifacts before writing the log.
+
+All 11 new files are present (untracked); the two `M` web files are pre-existing (not mine — I'll exclude them). Generated `.xcodeproj`/build dirs are git-ignored. Let me gather final stats for the log, then clean up.
+
+All 49 XCTest methods confirmed, all 22 web source i18n keys present, largest file 394 lines. Let me clean up build artifacts, then write the comprehensive gate log.
+
+Now let me write the comprehensive, honest gate log.
+
+Now a final verification pass on the committed files before committing.
+
+All host gates pass (FORMAT=0, LINT=0, strings valid). Let me correct a file-count detail in the log (9 swift + 1 strings = 10 files), then commit.
+
+Now commit only my surface files + the log (explicitly, excluding the pre-existing web changes).
+
+Exactly the 10 surface files + the log are staged (no pre-existing web changes). Committing:
+
+Committed (d257020fd): 10 surface files + the log, 2496 insertions, pre-existing web changes excluded. Let me confirm the working tree state and close out tracking.
+
+The task is complete and verified. The working tree shows only the two pre-existing web changes (correctly excluded from my commit); my commit `d257020fd` contains exactly the 10 surface files + the gate log.
+

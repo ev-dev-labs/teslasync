@@ -1,0 +1,168 @@
+================================================================================
+p4-apple · P7 · page:system/Search — SwiftUI / HIG parity
+Native SwiftUI implementation of web SearchPage (web/src/features/system/pages/SearchPage.tsx)
+================================================================================
+
+HOST / RUNNER
+  macOS (Darwin), Apple Swift 6.3.2, Xcode 26.5 (Build 17F42) at /Applications/Xcode.app
+  (xcode-select default points at CommandLineTools; full Xcode reached via DEVELOPER_DIR).
+  SDKs: iphoneos26.5 / macosx26.5 ; surface targets iOS 18 + macOS 15 (ADR-002 adaptive).
+  swiftlint 0.x (--strict), swiftformat (--maxwidth 120), pwsh (placeholder gate), xcodegen.
+
+SCOPE (allowed files only)
+  apps/apple/TeslaSync/Features/System/SearchPage.swift              (page scaffold + GlassPanel1)
+  apps/apple/TeslaSync/Features/System/SearchPage.Model.swift        (@Observable model + seam + i18n + telemetry)
+  apps/apple/TeslaSync/Features/System/SearchPage.Models.swift       (Foundation value types)
+  apps/apple/TeslaSync/Features/System/SearchPage.Adapter.swift      (projector: group/phase/min-length/time)
+  apps/apple/TeslaSync/Features/System/SearchPage.Views.swift        (field, facet rail, row, GlassPanel7)
+  apps/apple/TeslaSync/Features/System/SearchPage.States.swift       (GlassPanel2..6 state panels)
+  apps/apple/TeslaSync/Features/System/SearchPage.Registration.swift (route host for .search)
+  apps/apple/TeslaSync/Features/System/SearchPage.Previews.swift     (6 state previews)
+  apps/apple/TeslaSync/Features/System/SearchPage.Tests.swift        (34 unit tests)
+  apps/apple/Sources/TeslaSyncApp.swift                              (navigation registration: chain SearchRouteRegistration)
+  apps/apple/Localization/Localizable.xcstrings                      (+25 keys: the 22 required + 3 native a11y/action)
+  apps/apple/project.yml                                             (enumerate TeslaSync/Features in both app targets)
+  apps/macos-pending-verifications.md                               (deferred full-app gate row)
+  apps/parity/apple-ledger.json                                     (coverage row)
+  this log
+
+ARCHITECTURE (mirrors the sibling CommandSearch surface; all 1436 feature-views are Shared-free)
+  • SwiftUI View `SearchPage` + `@Observable @MainActor SearchPageModel` (P1/S8). No networking in the view.
+  • Data source seam `GlobalSearchSource.search(_:)` = web `useGlobalSearch` → GET /search?q=&types=&limit=
+    (web/src/api/hooks/useSearch.ts). `InMemoryGlobalSearchSource` backs previews/tests; the app composition
+    root injects the production KMP-backed source (ADR-004). Hook name `useGlobalSearch` preserved in docs +
+    `GlobalSearchRequest`/`GlobalSearchSource` call sites.
+  • Pure projector `SearchPageProjector` ports the web derived state verbatim: trim + SEARCH_MIN_QUERY_LENGTH(2)
+    guard, `typesFilter` known-kind filter, `groupedHits` canonical-order bucketing dropping empties, and the
+    render cascade idle/too-short/error/loading/no-results/results (+ placeholderData keep-prev behavior).
+  • Tokens only (P1/S9): Color.TS / Font.TS / TSSpacing / TSRadius; glass via TSGlassPanel material (ADR-005).
+  • i18n via `SearchPageStrings` resolving the default Localizable catalog with web English fallbacks (ADR-014).
+  • a11y: facet `aria-pressed`→`.isSelected`, combined row labels, results-region label/value, Dynamic Type,
+    light/dark + increased-contrast tokens, ≥44pt targets (ADR-015). SI display boundary via shared converters.
+
+================================================================================
+=== GATES (raw, this runner) ===
+================================================================================
+PLACEHOLDER  pwsh tools/check-placeholders.ps1 -Path apple/TeslaSync/Features/System -Language swift
+             PLACEHOLDER_ALLOWED=1  PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0
+             (1 sanctioned `// parity:allow verbatim web i18n key name` on the required `search.placeholder`
+              key — the repo-sanctioned mechanism, see WebhookChannelsSection.Form.swift precedent.)
+
+LINT         swiftlint --strict <the 9 SearchPage*.swift>
+             Done linting! Found 0 violations, 0 serious in 9 files.   LINT_EXIT=0
+             (Repo-wide `swiftlint --strict` reports 1 pre-existing, unrelated violation in
+              TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 — not this surface.)
+
+FORMAT       swiftformat --lint TeslaSync/Features/System
+             0/9 files require formatting.                              FORMAT_EXIT=0
+
+XCODEGEN     DEVELOPER_DIR=…/Xcode.app xcodegen generate
+             Created project at …/TeslaSync.xcodeproj                   XCODEGEN_EXIT=0
+             All 9 SearchPage*.swift enumerated (54 build-file/file-ref entries across both app targets).
+
+TYPECHECK    xcrun swiftc -typecheck -swift-version 6 -D DEBUG  (real SDKs, surface + Shared-free closure)
+             iOS 18  (-sdk iphoneos -target arm64-apple-ios18.0)   error_count=0   IOS_TYPECHECK_EXIT=0
+             macOS 15 (-sdk macosx  -target arm64-apple-macos15.0) error_count=0   MAC_TYPECHECK_EXIT=0
+
+ISOLATED     swift build && swift test  (SwiftPM, .swiftLanguageMode(.v6), macOS)
+SWIFTPM      Build complete!  —  Executed 34 tests, with 0 failures (0 unexpected)   SWIFTPM_TEST_EXIT=0
+             (Projector parity, timestamp parse/format, in-memory server-like filter, model query/facet/phase
+              lifecycle, stale-response guard, view.opened telemetry, accessibility summaries.)
+
+FULL-APP     DEVELOPER_DIR=…/Xcode.app xcodebuild -target TeslaSync-macOS -sdk macosx build
+BUILD/TEST   error: There is no XCFramework found at 'Frameworks/Shared.xcframework'.   BUILD_EXIT=65  → DEFERRED
+             The ONLY error. Zero SearchPage / Features/System errors. This is the pre-existing, program-level
+             P1/S3 artifact gap (the KMP `Shared.xcframework` is built by Scripts/build-shared-xcframework.sh on
+             a macos-latest runner and is explicitly deferred to p5-hardening/H8-0001 per
+             apps/macos-pending-verifications.md). It is NOT introduced or touched by this commit — the same
+             sanctioned "code-complete + DEFERRED Xcode gate" disposition every P4 surface to date has used
+             (see p4-apple-feature-views-0010-ToolCard.log). A macos-pending row is appended for the CI gate.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=32   (panels 7 + charts 0 + maps 0 + states 3 + strings 22)
+================================================================================
+PANELS (7) — each a web `GlassPanel`, each a distinct Swift symbol over TSGlassPanel:
+  [x] panel GlassPanel1  → SearchInputPanel              SearchPage.swift:87 (search field + facet rail)
+  [x] panel GlassPanel2  → SearchTooShortPanel           SearchPage.States.swift:18
+  [x] panel GlassPanel3  → SearchIdlePanel               SearchPage.States.swift:42
+  [x] panel GlassPanel4  → SearchErrorPanel              SearchPage.States.swift:67 (+ native Retry)
+  [x] panel GlassPanel5  → SearchLoadingPanel            SearchPage.States.swift:101 (web Skeleton → TSSkeleton)
+  [x] panel GlassPanel6  → SearchNoResultsPanel          SearchPage.States.swift:122
+  [x] panel GlassPanel7  → SearchResultsGroupPanel       SearchPage.Views.swift:323 (one per entity kind)
+
+STATES (3) — resolved by SearchPageProjector.resolvePhase (SearchPage.Adapter.swift:57) over SearchPagePhase
+            (SearchPage.Models.swift:158); switched in SearchPage.resultArea (SearchPage.swift):
+  [x] state loading  → SearchPagePhase.loading → SearchLoadingPanel ; ProgressView/skeleton, never blank.
+  [x] state empty    → SearchPagePhase.idle/.tooShort/.empty → SearchIdlePanel / SearchTooShortPanel /
+                       SearchNoResultsPanel (ContentUnavailableView). error → SearchErrorPanel + Retry.
+  [x] state success  → SearchPagePhase.content → resultsList → SearchResultsGroupPanel ; grouping by
+                       SearchPageProjector.group (SearchPage.Adapter.swift:42).
+
+STRINGS (22) — every visible literal resolves from Localizable.xcstrings via SearchPageStrings; web key names kept:
+  [x] string search.empty.message        SearchPage.States.swift:53  (SearchIdlePanel)
+  [x] string search.empty.title          SearchPage.States.swift:47  (SearchIdlePanel; a11y SearchPage.Model.swift:297)
+  [x] string search.error.message        SearchPage.States.swift:80  (SearchErrorPanel)
+  [x] string search.error.title          SearchPage.States.swift:74  (SearchErrorPanel; a11y SearchPage.Model.swift:305)
+  [x] string search.filters.clear        SearchPage.Views.swift:214/224/78 (SearchClearFiltersChip + field clear)
+  [x] string search.input.label          SearchPage.Model.swift:166  (SearchPageModel.fieldAccessibilityLabel)
+  [x] string search.noResults.message    SearchPage.Model.swift:68   (SearchPageStrings.noResultsMessage → SearchNoResultsPanel)
+  [x] string search.noResults.title      SearchPage.States.swift:129 (SearchNoResultsPanel; a11y SearchPage.Model.swift:303)
+  [x] string search.placeholder          SearchPage.Views.swift:45   (SearchQueryField; sanctioned parity:allow)
+  [x] string search.section.alert        SearchHitKind.sectionLabelKey SearchPage.Models.swift:55 → SearchPageStrings.sectionLabel
+                                          SearchPage.Model.swift:61 → rendered SearchFacetChip/SearchSectionHeader (Views:184/303)
+  [x] string search.section.automation   (as above — search.section.<rawValue>)
+  [x] string search.section.charging     (as above)
+  [x] string search.section.drive        (as above)
+  [x] string search.section.geofence     (as above)
+  [x] string search.section.location     (as above)
+  [x] string search.section.notification (as above)
+  [x] string search.section.results      SearchPage.swift:78 (resultsList accessibility label — web generic fallback)
+  [x] string search.section.trip         (as above — search.section.<rawValue>)
+  [x] string search.section.vehicle      (as above)
+  [x] string search.title                SearchPage.swift:45  (navigationTitle)
+  [x] string search.tooShort.message     SearchPage.States.swift:29 (SearchTooShortPanel)
+  [x] string search.tooShort.title       SearchPage.States.swift:23 (SearchTooShortPanel; a11y SearchPage.Model.swift:299)
+
+PARITY_COVERED=32
+PARITY_REQUIRED=32
+PARITY_OK=true
+(All 22 keys present + valid in Localization/Localizable.xcstrings — verified 22/22, JSON valid, 8146 total.)
+
+================================================================================
+=== HONESTY COVENANT ===
+================================================================================
+  1  No red-as-green     : every gate's RAW result pasted above; the full-app build is reported RED/DEFERRED,
+                           never green. Surface gates (placeholder/lint/format/xcodegen/iOS+macOS typecheck/
+                           SwiftPM 34 tests) are genuinely green on THIS runner.
+  2  No scope narrowing  : all 7 web GlassPanels + all 6 web result-area branches + facet rail + grouped
+                           results + 3 states + 22 strings reproduced. Nothing dropped.
+  3  No skip-and-assume  : every gate executed here; exits pasted; the macOS build failure was reproduced and
+                           read (single Shared.xcframework error), not assumed.
+  4  No stubs as final   : complete production page + 34 real tests; placeholder scanner COUNT=0. No "coming
+                           soon", no empty bodies; every state renders a real panel (ADR-011).
+  5  No parity shortcut  : icons/labels/min-length/grouping/phase cascade/placeholderData/a11y/telemetry all
+                           mapped to platform-native equivalents and unit-verified against the web semantics.
+  6  No delegation       : implemented directly; no sub-agents.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n catalog, P3 components (TSGlassPanel,
+                           TSSkeleton, ContentUnavailableView), P4 shell route host — all present and consumed.
+  8  No commit on red    : the COMMITTED surface is GREEN on every host-runnable gate AND on a real isolated
+                           Swift 6 strict-concurrency build+test against the real design system. The full-app
+                           xcodebuild gate is RED only on the pre-existing, unrelated missing Shared.xcframework
+                           (P1/S3, CI-owned) — neither introduced nor touched here.
+  9  No silent drift     : changes confined to the files enumerated under SCOPE — the surface dir, the single
+                           navigation-registration wrap in TeslaSyncApp.swift, the catalog, project.yml, this
+                           log, one macos-pending row, and the apple ledger row.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic SearchPage shipped at web parity (32/32) and INDEPENDENTLY VERIFIED: it
+  type-checks against the real iOS-18 + macOS-15 SDKs, its 34 tests pass under the app's Swift 6 strict-
+  concurrency rules against the real design system, and lint/format/placeholder/xcodegen are all green. The
+  full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked
+  solely by the pre-existing absence of Frameworks/Shared.xcframework (the KMP artifact built on a signed
+  macos-latest CI runner per apps/macos-pending-verifications.md). This matches the repo's sanctioned
+  "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

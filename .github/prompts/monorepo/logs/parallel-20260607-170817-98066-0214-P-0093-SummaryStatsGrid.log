@@ -1,0 +1,126 @@
+I'll start by exploring the repository structure and checking the runner's Apple toolchain capability, while reading the web source spec.
+
+Key capability findings: `xcodebuild` requires full Xcode but only Command Line Tools is installed; no iOS Simulator (`simctl` missing). `swift`, `swiftlint`, `swiftformat` are available. Let me explore existing Apple patterns to match conventions before writing code.
+
+There's a rich existing structure with established conventions. Let me examine a complete sibling example and the shared facade layer (state holders, tokens, formatting) to match patterns precisely.
+
+`SummaryStatsRow` is a near-identical sibling with the full file layout pattern. This is my template. Let me read all its files plus the ToolCard telemetry pattern.
+
+Excellent template. Now let me read the remaining sibling files (Previews, strings, Tests, Telemetry) and the design-token/facade support files plus the web formatting hooks and types.
+
+Now the design tokens, the FadeIn/Skeleton primitives, web formatting hooks, the `SummaryStats` type, and tooling configs.
+
+The `Sources/` tree is at `apps/apple/Sources`, separate from `apps/apple/TeslaSync/`. Let me check `project.yml` for target/source mapping and locate the design-token definitions.
+
+Now I understand the target layout. My files in `TeslaSync/feature-views/` compile into both iOS + macOS app targets alongside `Sources/` (Components, Design tokens) and the generated DesignTokens. Let me inspect the token definitions, the FadeIn/Skeleton primitives, and any GlassPanel component.
+
+Let me read the generated tokens, Cards (GlassPanel equivalent), Typography, and Feedback States (EmptyState/QueryError).
+
+Now the `.tsGlassPanel()` modifier, Typography components, Feedback States (for completeness), and the placeholder gate config.
+
+The placeholder gate forbids the literal words "placeholder", "TODO", "FIXME", "XXX", etc. in `.swift` files (even comments) — I'll avoid them. Let me read the Typography structs, the glass modifier, and check `pwsh` availability.
+
+All tooling present except full Xcode (`xcodebuild`) and `simctl`. Let me confirm the glass modifier, then start building.
+
+I now have a complete picture of the conventions. Let me write a short plan, then create the seven `SummaryStatsGrid.*` files mirroring the established `SummaryStatsRow` sibling (renamed types to avoid same-module collisions), faithfully reproducing the web `SummaryStatsGrid.tsx`.
+
+Key capability note up front: `xcodebuild` requires full Xcode but only Command Line Tools is installed, and there's no iOS Simulator — so the `xcodebuild build test` gate steps cannot run here. I'll build/verify everything possible (swiftlint, swiftformat, placeholder check, and an actual SwiftPM compile+unit-test harness on macOS), and record the xcodebuild steps honestly as BLOCKED with evidence.
+
+Now let me format and lint my files. First, run swiftformat (fix) on the new files, then verify with the lint gates.
+
+swiftformat passes; swiftlint flags one issue: `resolve` exceeds the 50-line function-body limit (54 lines). Let me view the current formatted region and refactor by extracting a `makeCards` helper.
+
+swiftformat and swiftlint both pass cleanly on all six files. Now the placeholder gate — I'll scan my actual files (copied to a temp dir so the scan targets exactly them).
+
+The placeholder gate flags a "TODO" substring match at Tests.swift:76. Let me find it.
+
+The match is the accidental substring "ToDo" inside `...FallsBackToDollar`. Renaming the test to avoid it.
+
+All three static gates pass on my files. Now the real value-add: a SwiftPM macOS harness to actually **compile the SwiftUI views and run the unit tests** (since `xcodebuild` can't run here). Let me build it with copies of my files plus the minimal shared dependencies.
+
+Lint is clean. Now let me construct the SwiftPM harness in `/tmp` (copies only — doesn't touch repo files) to actually compile the SwiftUI views and run the unit tests under Swift 6 strict concurrency.
+
+Now compile and run the harness — this actually builds the SwiftUI views under Swift 6 strict concurrency and runs the unit tests.
+
+Only the `#Preview` macro fails — that macro plugin ships with Xcode, not the bare CLI toolchain. My actual code (Adapter, Model, Views, main view) compiled. I'll exclude the preview-only file from the harness and run the tests.
+
+`swift test` can't find XCTest (it ships with Xcode, absent here). Let me first confirm the production library itself compiles cleanly under Swift 6 strict concurrency (library-only build), then I'll run the test logic via a small executable that exercises the same public API.
+
+Library compiles cleanly under Swift 6 strict concurrency (`Build complete!`). The `emit-module` error was just a cascade from the XCTest-less test target. Since `swift test`'s XCTest is Xcode-only, I'll run the **same assertions** via an executable that imports the compiled module — proving the test logic holds against real compiled code.
+
+Those three card helpers are `internal` — visible to the real XCTest target via `@testable import`, but not to a plain executable import. Let me build the checker with `@testable import` (enabling testability), exactly as the real test target does.
+
+All 54 assertions pass against the real compiled module under Swift 6 strict concurrency. Now let me capture the xcodebuild capability evidence and run the whole-tree lint gates (as the gate does), to record everything honestly.
+
+Whole-tree swiftformat is clean (0/868). Now the whole-tree swiftlint --strict (the gate's LINT step).
+
+One pre-existing violation somewhere in 864 files (mine pass in isolation). Let me identify it.
+
+The single whole-tree violation is pre-existing in `LifetimeStatsWidget.Adapter.swift` (a sibling widget, outside my allowed scope) — my files pass cleanly in isolation. Now let me confirm the project still generates with my files included (validates the spec + target membership), then clean up.
+
+xcodegen regenerates cleanly and all 7 files are picked up. Let me quickly confirm how the sibling's `.Tests.swift` is wired (informational, since my test file mirrors it), then clean up the generated project and temp harness.
+
+Mine is wired identically to the gate-passing sibling (4 build-file entries each). Cleanup done. Now let me check the log directory and a sibling log for format, then write my log.
+
+Critical insight from the sibling log: that run drove `xcodebuild` via `DEVELOPER_DIR=/Applications/Xcode.app/...` even though the default `xcode-select -p` was CommandLineTools. **Xcode.app may actually be installed** — let me check.
+
+**Xcode 26.5 is installed** at `/Applications/Xcode.app` — just not the default `xcode-select` dir. I can drive the real gate via `DEVELOPER_DIR`. Let me probe the simulator, the `Shared.xcframework` dependency, and the stage script to plan the real build.
+
+Important: only the **iOS 26.5** runtime is present (no iOS 18 runtime, but deployment target 18.0 runs fine on 26.5), the iPhone 16 sim exists, but **`Shared.xcframework` is absent** (built via a heavy gradle KMP pre-action). Let me read how the gate-passing sibling framed its build approach and final STATUS.
+
+This is the gold-standard precedent: the sibling ran a **surface-scoped** `xcodebuild build test` on a real iPhone 16 simulator AND macOS (tests executed green), and deferred only the full-app aggregate (pre-existing unrelated break + Shared.xcframework/gradle). It ended `EXIT=0 / STATUS=DONE`. I'll mirror it exactly: build a scoped Xcode project (module named `TeslaSync` so the test's `@testable import` works unchanged) and run the real iOS + macOS tests.
+
+Scoped project generated. Now run the real **macOS** build+test (faster), then the **iOS simulator** build+test.
+
+Framework **BUILD SUCCEEDED** on macOS (my surface compiles via real xcodebuild), but the test target couldn't resolve `@testable import TeslaSync` because the framework's product name differs from its module name. Let me align `PRODUCT_NAME` = `TeslaSync` on the framework targets and re-run.
+
+macOS real test: **TEST SUCCEEDED — Executed 21 tests, 0 failures, MAC_EXIT=0**. Now the iOS simulator build+test on iPhone 16.
+
+**Both platforms green via real `xcodebuild`:** iOS Simulator (iPhone 16) BUILD + TEST SUCCEEDED (21/21, IOS_EXIT=0) and macOS (21/21, MAC_EXIT=0). Let me gather final metadata (line counts, git base) and clean up temp artifacts before writing the log.
+
+All real gates are green. Cleaning done. Now I'll write the comprehensive, honest gate log (mirroring the 0048 precedent format) and end with `EXIT=0 / STATUS=DONE`.
+
+Log written. Final verification pass on the actual repo files before committing.
+
+All final gates pass and only my 7 surface files + the log are new. Let me confirm no stray artifacts elsewhere, then commit exactly the allowed files.
+
+Two pre-existing `web/` modifications are unrelated to my task — I'll exclude them and commit only my allowed deliverables (the 7 surface files + the log).
+
+Committed as `cbc5d7ee` — exactly the 7 surface files + the log (pre-existing unrelated `web/` changes excluded). Task complete.
+
+## Summary
+
+Shipped a production-polished, native Apple-idiomatic **`SummaryStatsGrid`** surface at parity with the web source `features/charging/components/charging-curve/SummaryStatsGrid.tsx`, mirroring the gate-passing `0048 SummaryStatsRow` predecessor's architecture.
+
+**Delivered** (`apps/apple/TeslaSync/feature-views/SummaryStatsGrid.*`, 1048 lines):
+- `.Adapter.swift` — pure projection core: `fmtInt`/`fmtNumber`/`formatCurrency` + `useFormatting` (currency symbol/precision), 2/3/6 responsive column math, six-card model, a11y join.
+- `.Model.swift` — P1/S8 state-holder seam + P1/S11 `view.opened` telemetry + P1/S10 facade; loading/data projection (null `stats` → zeros, faithful to web).
+- `.Views.swift` — web `SummaryCard` (GlassPanel + uppercase label + bold value + unit suffix; nil value → skeleton), responsive grid via `onGeometryChange`, `FadeIn(delay 0.05)`.
+- `.swift` / `.Previews.swift` / `.strings` / `.Tests.swift` (21 XCTest methods).
+
+**Verification (all real, nothing faked):**
+- **iOS Simulator (iPhone 16):** `xcodebuild build test` → BUILD + TEST SUCCEEDED, 21/21, `IOS_EXIT=0`
+- **macOS 15:** `xcodebuild build test` → BUILD + TEST SUCCEEDED, 21/21, `MAC_EXIT=0`
+- `swiftlint --strict` 0 violations · `swiftformat --lint` 0/6 · placeholder gate `COUNT=0` · Swift-6 strict-concurrency compile clean
+- Full-app `-scheme TeslaSync` aggregate **deferred** with real evidence (unbuilt KMP `Shared.xcframework` + a pre-existing, surface-unrelated `LifetimeStatsWidget` break outside allowed scope) — documented, not masked.
+
+Log ends `EXIT=0 / STATUS=DONE`. Temp build harnesses cleaned up.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-feature-views-0093-SummaryStatsGrid.log | 172 ++++++++++++
+ .../feature-views/SummaryStatsGrid.Adapter.swift   | 183 +++++++++++++
+ .../feature-views/SummaryStatsGrid.Model.swift     | 257 ++++++++++++++++++
+ .../feature-views/SummaryStatsGrid.Previews.swift  |  93 +++++++
+ .../feature-views/SummaryStatsGrid.Tests.swift     | 302 +++++++++++++++++++++
+ .../feature-views/SummaryStatsGrid.Views.swift     | 142 ++++++++++
+ .../feature-views/SummaryStatsGrid.strings         |  30 ++
+ .../TeslaSync/feature-views/SummaryStatsGrid.swift |  41 +++
+ 8 files changed, 1220 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0093-SummaryStatsGrid.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummaryStatsGrid.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummaryStatsGrid.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummaryStatsGrid.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummaryStatsGrid.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummaryStatsGrid.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummaryStatsGrid.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummaryStatsGrid.swift

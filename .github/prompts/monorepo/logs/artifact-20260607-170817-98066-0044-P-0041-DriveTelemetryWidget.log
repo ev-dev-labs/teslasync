@@ -1,0 +1,141 @@
+=== P4 Dashboard widget 0041 DriveTelemetryWidget (Apple) ===
+
+Surface : DriveTelemetryWidget (registry id: drive-telemetry)
+Web spec: web/src/features/dashboard/widgets/DriveTelemetryWidget.tsx
+Native  : apps/apple/Sources/Dashboard/Widgets/DriveTelemetryWidget*.swift
+Tests   : apps/apple/Tests/Unit/Dashboard/DriveTelemetryWidget*Tests.swift
+
+----------------------------------------------------------------------
+RUNNER CAPABILITY PROBE
+----------------------------------------------------------------------
+swift --version            : Apple Swift version 6.3.2 (arm64-apple-macosx)
+SwiftUI+Charts+MapKit      : swiftc -typecheck vs MacOSX.sdk -> PROBE_EXIT=0 (frameworks present)
+swiftlint                  : /opt/homebrew/bin/swiftlint  (present)
+swiftformat                : /opt/homebrew/bin/swiftformat (present)
+xcodegen                   : /opt/homebrew/bin/xcodegen   (present)
+xcode-select -p            : /Library/Developer/CommandLineTools   <-- Command Line Tools ONLY
+xcodebuild                 : error: tool 'xcodebuild' requires Xcode (CLT instance)
+xcrun simctl               : error: unable to find utility "simctl" (no iOS Simulator)
+Frameworks/Shared.xcframework : MISSING (KMP/Kotlin-Native build needs full Xcode)
+
+=> SwiftUI/Swift Charts/MapKit capability IS present; the full Xcode toolchain
+   (xcodebuild + iOS Simulators) and the KMP Shared.xcframework are NOT. The two
+   `xcodebuild ... build test` gate steps therefore cannot execute on this runner.
+   Per the prompt capability clause this is a STATUS=BLOCKED outcome with API
+   evidence; every other gate + a standalone type-check were run and pass.
+
+----------------------------------------------------------------------
+PATH DECISION (recorded — deviates from the template's nominal path)
+----------------------------------------------------------------------
+Template "Native output" path apps/apple/TeslaSync/dashboard-widgets/ does NOT
+exist in this repo. project.yml compiles the shared SwiftUI group `Sources/` into
+both the iOS (TeslaSync) and macOS (TeslaSync-macOS) app targets, and `Tests/Unit`
+into the test bundles. Build-correct location used:
+  Sources/Dashboard/Widgets/   (8 source files)
+  Tests/Unit/Dashboard/        (2 test files)
+Verified wired into the generated project below.
+
+----------------------------------------------------------------------
+FILES ADDED
+----------------------------------------------------------------------
+Sources/Dashboard/Widgets/DriveTelemetryWidgetModels.swift      (pure value types + view-state)
+Sources/Dashboard/Widgets/DriveTelemetryWidgetProjection.swift  (web useMemo logic, pure)
+Sources/Dashboard/Widgets/DriveTelemetryWidgetRegistry.swift    (descriptor id/sizes + i18n keys + slug)
+Sources/Dashboard/Widgets/DriveTelemetryWidgetShell.swift       (WidgetShell chrome: loading/error/freshness)
+Sources/Dashboard/Widgets/DriveTelemetryWidgetChart.swift       (Swift Charts composed chart)
+Sources/Dashboard/Widgets/DriveTelemetryWidgetView.swift        (value-driven view, compact + standard/wide)
+Sources/Dashboard/Widgets/DriveTelemetryWidgetViewModel.swift   (binding contract + pure preview fixtures)
+Sources/Dashboard/Widgets/DriveTelemetryWidgetModel.swift       (@Observable shared-core binding + container)
+Tests/Unit/Dashboard/DriveTelemetryWidgetProjectionTests.swift  (adapter: cached -> projection)
+Tests/Unit/Dashboard/DriveTelemetryWidgetViewStateTests.swift   (registry/size/state/a11y/slug)
+
+----------------------------------------------------------------------
+PARITY WITH WEB SOURCE
+----------------------------------------------------------------------
+Data sources (P1/S8 state holders):
+  useVehicles      -> VehiclesStore.vehicles()        (resolve default vehicle id)
+  useDrives        -> DrivingStore.drives(vehicleId:)  (latest drive)
+  useDriveTelemetry-> DrivingStore.driveTelemetry(driveId:)
+  useUnits         -> SI converted at display via shared Units engine
+  useThemeChartPalette -> Color.TS.chartSeries* tokens
+Composition reproduced:
+  - compact (cols<=1): stat-only summary, freshness overlay, empty -> "No recent drives"
+  - standard/wide (cols>=3 adds elevation + start-address): header stats
+    (Distance/Duration/Efficiency) + composed chart + legend
+  - chart: Speed line, Power area, Battery dashed line, Elevation backdrop (wide)
+States reproduced: loading (skeleton), error (retry), empty, stale chip,
+  offline chip (cached), no-telemetry empty.
+i18n (P1/S10): all 11 source keys resolve from Localizable.xcstrings
+  (translation.widget.driveTelemetry.{title,distance,duration,min,efficiency,
+  elevation,power,speed,battery,empty,noTelemetry}); shell reuses existing
+  widget.freshness.* / translation.queryError.* / translation.common.* keys.
+  Zero catalog edits required (keys already present).
+Telemetry (P1/S11): handleViewOpened() emits typed TelemetryEvent.ScreenView(
+  screen:"DriveTelemetryWidget") — sealed ADR-016 taxonomy maps web view.opened.
+Accessibility: VoiceOver labels on stats/legend/chart, Dynamic Type fonts,
+  Reduce-Motion respected (no custom chart animation), refresh control labelled.
+
+----------------------------------------------------------------------
+VERIFICATION RESULTS (steps that CAN run on this runner)
+----------------------------------------------------------------------
+[1] Standalone type-check — production code
+    swiftc -typecheck -sdk MacOSX.sdk -swift-version 6 -strict-concurrency=complete
+    Tokens.swift + Sources/Components(-UnitFormatters) + Sources/Design + 7 pure widget files
+    => TYPECHECK_EXIT=0
+
+[2] Standalone type-check — test logic (XCTest shim, types from production)
+    => TESTS_TYPECHECK_EXIT=0
+
+[3] swiftformat --lint apps/apple  (whole tree, 270 files)
+    => 0/270 require formatting ; FORMAT_EXIT=0
+
+[4] swiftlint lint --strict  (whole project)
+    => no violations ; LINT_EXIT=0
+
+[5] placeholder/stub gate (apps/tools/check-placeholders.ps1)
+    Sources/Dashboard : PLACEHOLDER_COUNT=0 EXIT=0
+    Tests/Unit/Dashboard : PLACEHOLDER_COUNT=0 EXIT=0
+    => PLACEHOLDER_EXIT=0
+
+[6] xcodegen generate  => XCODEGEN_EXIT=0
+    All 10 new files referenced in TeslaSync.xcodeproj (iOS + macOS app/test targets):
+    DriveTelemetryWidget{Models,Projection,Registry,Shell,Chart,View,ViewModel,Model}.swift
+    DriveTelemetryWidget{Projection,ViewState}Tests.swift
+
+----------------------------------------------------------------------
+GATE STEPS THAT ARE BLOCKED (platform capability — evidence)
+----------------------------------------------------------------------
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  -> xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+     directory '/Library/Developer/CommandLineTools' is a command line tools instance
+  IOS_EXIT=1
+xcodebuild -scheme TeslaSync-macOS build test
+  -> (same CLT error)
+  MAC_EXIT=1
+
+Root cause: full Xcode.app is not installed (Command Line Tools only) -> no
+xcodebuild, no iOS Simulator runtimes (simctl absent), and the KMP
+Shared.xcframework (required by the app targets) cannot be assembled. The model
+binding file (DriveTelemetryWidgetModel.swift) names shared-core symbols and is,
+per the repo convention (see AppContainer.swift / VehicleSettingsModel.swift
+"finalized against the built Shared.xcframework on the macOS Xcode build"), pinned
+to the macOS Xcode build. All non-shared code is type-checked above.
+
+----------------------------------------------------------------------
+SUMMARY
+----------------------------------------------------------------------
+Deliverable complete and parity-correct. Every gate executable on a Command-Line-
+Tools-only runner passes (type-check, swiftlint --strict, swiftformat --lint,
+placeholder gate, project generation). The two xcodebuild build/test steps are
+blocked solely by the absence of full Xcode + iOS Simulators + the KMP
+Shared.xcframework on this runner.
+
+IOS_EXIT=1
+MAC_EXIT=1
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+TYPECHECK_EXIT=0
+
+EXIT=1
+STATUS=BLOCKED

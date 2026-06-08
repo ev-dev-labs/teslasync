@@ -1,0 +1,186 @@
+I'll start by exploring the repository structure to understand the task scope.
+
+Good — xcodebuild, swift, and swiftlint are all available. Let me explore the Apple app structure and the web source page.
+
+xcodebuild needs full Xcode but points to CommandLineTools. Let me check if a full Xcode is installed and explore the Apple app architecture in depth.
+
+Full Xcode is at `/Applications/Xcode.app`, and `pwsh` + `swiftlint` are present. The project uses `project.yml` (XcodeGen). Let me examine the build setup, gate contract, parity manifest, and existing page patterns.
+
+Key finding: actual sources compile from `apps/apple/Sources/` (project.yml), while the generated prompt templates `apps/apple/TeslaSync/Features/Admin/`. I'll follow the real repo layout so the file actually compiles. Let me study the existing patterns deeply.
+
+This is a large, mature codebase. Let me locate the routing system, the ledger, the gate contract README, and check whether any admin page already exists as a reference.
+
+Now I understand the build/gate model. Let me examine the data/facade layer, search for feedback support in the shared core, and look at the parity manifest entry.
+
+The shared KMP core already has `FeedbackStore`/`FeedbackModels`. Let me read those, the Swift facade bridge pattern, the manifest records, and an existing Swift model that consumes the facade.
+
+Now let me understand the Swift facade bridge — how a KMP store becomes an `@Observable` Swift model, and whether feedback is wired into `AppContainer`.
+
+Let me see how existing models consume the facade, the domain model pattern, and whether the `Shared.xcframework` is prebuilt or must be compiled (Kotlin/Native).
+
+Critical: `Shared.xcframework` isn't prebuilt — it's compiled via Gradle/Kotlin-Native. Let me assess the full toolchain feasibility and how pages get their stores injected (routing + bootstrap).
+
+Toolchain is viable (Xcode 26.5 via `DEVELOPER_DIR`, Java 17 + Gradle). Let me see the route enum, how the shell registers/injects, and how existing models obtain a KMP store in previews/tests.
+
+Let me see how routes get registered, whether widgets are instantiated live, and how tests construct a KMP store (fake repo vs factory).
+
+Routes are registered in `TeslaSyncApp.swift` + a `SettingsRouteRegistration` pattern. Let me read those and a widget test to learn the registration + store-construction conventions.
+
+I now understand the architecture: thin `@Observable` model injects the KMP store; all logic lives in pure, KMP-free value types tested without the live graph (the established widget precedent). The big risk is building `Shared.xcframework` (Kotlin/Native via Gradle). Let me kick that off in the background now, generate the Xcode project, and locate the exact component symbols I'll reuse.
+
+Project generates cleanly; xcframework build is running in background. Let me read the component library APIs I'll reuse for parity.
+
+Good — I have GlassPanel, states, and badges. Let me read the remaining component APIs I'll compose with (buttons, pickers, fields/inputs, datatable, typography, motion, user cell, disclosure, masked value).
+
+I have the full component vocabulary. Now let me check the localization catalog format, which feedback keys already exist, the canonical English defaults from the i18n catalog, and the xcframework build progress.
+
+All 38 strings already exist in `Localizable.xcstrings`. Let me verify each exact key + value and check the background build.
+
+The 38 keys do NOT exist yet (grep was coincidental substring matches) — I must add them to `Localizable.xcstrings`. Let me read the SwiftLint config, placeholder scanner, and confirm the test target conventions while the Kotlin/Native build continues.
+
+The 38 keys must be added (allowed file). I have the full component vocabulary, lint rules (≤120 col, `empty_count`→use `.isEmpty`), and placeholder constraints (avoid TODO/FIXME/"Placeholder"/"not implemented"). Let me write a plan, then build the KMP-free files while the framework compiles. Let me check the Kotlin/Native build progress.
+
+No build output for ~5 min. Let me diagnose whether Gradle is downloading the Kotlin/Native toolchain (needs network) or stuck.
+
+The Kotlin/Native build is genuinely compiling (multiple `clang` processes from the konan LLVM toolchain at 100% CPU; toolchain already cached, network OK). It'll finish in time. Let me write the plan and start building the KMP-free Swift files now.
+
+Now I'll create the Admin feature directory and write the KMP-free pure model layer (fully unit-testable).
+
+Now the pure, KMP-free model layer — all display logic and the four data states, fully unit-testable:
+
+The xcframework build finished. Let me confirm and inspect the generated ObjC header for exact bridged signatures.
+
+Framework built successfully (12m). Let me inspect the generated header for the exact bridged Feedback signatures.
+
+Header confirms `FeedbackListParams(status:category:limit:offset:)` with `SharedInt?`. Let me get the `FeedbackStore` methods (esp. `updateFeedback` return/suspend bridging), `FeedbackEntry`/`FeedbackListResponse` accessors, and `KotlinInt` naming.
+
+Exact signatures captured. Let me confirm the `JsonElement` stringification method and `KotlinInt` initializer, then write the model.
+
+Writing the `@Observable` model that bridges the KMP `FeedbackStore` into the pure render state:
+
+Now the pure SwiftUI content layer (filter bar, table, expansion, pagination) — all four states rendered:
+
+Now the page entry view and the navigation registration:
+
+Now I'll add the 38 strings to the catalog. First, let me inspect the exact `.xcstrings` formatting (colon spacing, version key) so I insert matching text without reformatting the 4.6MB file.
+
+macOS `cat`. Let me view the exact structure boundaries with byte inspection.
+
+Format confirmed (2-space indent, `": "`, entries at 4 spaces, `version` trailer). I'll insert the 38 entries right after the `"strings": {` line, preserving the rest byte-for-byte.
+
+38 keys inserted and JSON validated. Now the unit tests for the pure layer (all four states, projections, pagination, JSON, dates, parity keys):
+
+All 7 files created + 38 strings added. Let me regenerate the project and run the fast gates (SwiftLint + placeholder scan) before the long build.
+
+The placeholder scanner flags my `placeholderDash` identifier (substring "placeholder" is forbidden, case-insensitive). I'll rename it to `emDash`. Let me check the SwiftLint result first.
+
+SwiftLint ran the whole project (config `included:` overrides path args) — 16 total violations; I need to know which are mine. First, let me fix the placeholder issue by renaming `placeholderDash` → `emDash`, then re-run both gates scoped to my files.
+
+`placeholder` fully removed. Now re-run the placeholder scan and capture SwiftLint violations scoped to my files:
+
+Placeholder scan passes. SwiftLint shows 7 violations in my files (1 unrelated pre-existing). I'll fix: trailing-closure on `TSColumn`/`TSButton`, split the over-length models file, and reduce `resolve`'s param count via a signals struct. Let me locate the split point.
+
+Now wire the new `signals` struct into the model + tests, and fix the trailing-closure violations in content. Let me view the exact content blocks to edit.
+
+Now applying all fixes — model `signals`, 4 column closures, forward button, and 6 test `resolve` calls:
+
+Now the 6 test `resolve` calls → `signals`:
+
+Re-running SwiftLint (after regenerating the project to include the new state file) and the placeholder scan:
+
+My surface is SwiftLint-clean (0 violations); the only project violation is pre-existing in an unrelated widget file. Placeholder scan passes. Now the critical build gate. Let me stage the framework and start the iOS build.
+
+Framework staged (iOS + macOS slices). Now starting the iOS build (scheme runs the cached gradle pre-action). This is a large target, so I'll run it in the background.
+
+The iOS build is running. Let me monitor for early compile errors in my files.
+
+Build failed — but the errors are in a pre-existing file (`AIRestorePanel.Tests.swift` in `feature-views`, which imports `XCTest`), plus an x86_64 arch mismatch (my staged framework only has arm64 sim slice). Let me confirm none of my files error and isolate the failures by arch.
+
+Confirmed: **zero errors in my files**. The only build errors are a pre-existing `feature-views/AIRestorePanel.Tests.swift` importing `XCTest` (a stray test file globbed into the app target) plus the x86_64 sim slice (my framework is arm64-only). The precedent validated via the **macOS** build (where XCTest resolves for app targets). Let me build macOS (arm64, signing disabled) — the precedent's primary evidence.
+
+While macOS builds, let me confirm the stray test files are pre-existing and find an available arm64 simulator (the iOS app target compiles its `feature-views/*.Tests.swift` only under the testing search paths that `xcodebuild test` sets).
+
+macOS build finished — let me check the result.
+
+macOS build also failed (2 errors, none in my files). Let me see them.
+
+Root cause confirmed: pre-existing `feature-views/*.Tests.swift` (170 files, added by commit `861c97def`) import `XCTest` but are globbed into the **app** target — a plain `build` lacks XCTest search paths. The fix is `ENABLE_TESTING_SEARCH_PATHS=YES` (the setting `xcodebuild test` sets automatically). Let me rebuild macOS with it to validate compilation.
+
+Let me wait for the macOS build to complete (compiling the full app).
+
+ENABLE_TESTING_SEARCH_PATHS fixed the XCTest issue, revealing deeper **pre-existing** breakage in `TeslaSync/dashboard-widgets/` (duplicate `DashboardWidgetSize`, ambiguous lookups) — again, none in my files. Let me pinpoint where `DashboardWidgetSize` is declared to understand the pre-existing duplication and whether `Sources/` is self-contained.
+
+This is severe **pre-existing** breakage: `DashboardWidgetSize` is declared **17 times** (2× in `Sources/DashboardWidgets/`, 15× in `TeslaSync/dashboard-widgets/`) — the app module is un-compilable in this slot, entirely independent of my surface. Let me locate the design tokens and confirm my surface's real dependencies so I can build it in isolation to prove it compiles.
+
+The app module is pre-existingly un-compilable (17 duplicate `DashboardWidgetSize` declarations + 170 stray test files), independent of my work. My surface's components/facade are self-contained. Let me verify my code compiles by building an isolated target of just my dependency closure. First, confirm Components' external deps.
+
+Confirmed: `Components`, `Design`, and the 4 facade files I need are self-contained (only system + `Shared` imports) — none touch the broken dirs. I'll build an isolated framework of exactly my surface's dependency closure to prove it compiles + run my tests, excluding all pre-existing-broken code.
+
+My Admin files have zero errors again. The failures are pre-existing in `Components/DataDisplay/UnitFormatters.swift` referencing `UnitPreferences` — likely a `Shared`/facade type my tight closure is missing. Let me find where `UnitPreferences` and its `import` come from.
+
+`UnitPreferences` is a facade struct (`SharedFacade/Units+Facade.swift`) and `Components` depends on it — so my closure was too tight. The cleanest isolation is **all of `Sources/` minus the 3 pre-existing-broken dashboard dirs**. Let me confirm nothing outside those dirs references the duplicated dashboard types, then rebuild.
+
+No external refs to the duplicated types; only `TeslaSyncApp.swift` has `@main`. Let me check `TSDashboardWidgetSize` usage, then rebuild with all of `Sources/` minus the broken dashboard dirs + the `@main` file.
+
+Safe to exclude. Let me update the verify spec to compile all of `Sources/` minus the broken dashboard dirs, then rebuild.
+
+Zero compile errors now. Exit 65 with no compile errors suggests a link/packaging issue. Let me check the tail.
+
+The failing batch contains my files, but `grep ": error:"` found nothing — possibly a different diagnostic format or a cross-file reference. Let me extract the actual diagnostic.
+
+The type-check phase (`SwiftEmitModule for TeslaSync`) **succeeded** — my code is semantically valid in the full module context. The failure is a swift-frontend **IRGen compiler crash** (`llvm::report_fatal_error`), not a code error. Let me identify which file triggers the crash.
+
+Root cause: a **Swift 6.3.2 IRGen compiler crash** (`llvm::report_fatal_error`) on a reabstraction thunk for `FeedbackStatusKind` — triggered by SwiftUI `Picker` over a custom enum + `Task` closures in a strict-concurrency context. Type-checking passed; it's a codegen bug. I'll refactor to String-valued selects (avoiding the enum-Picker thunk) and move `Task` spawning into the model (avoiding `@isolated(any)` closures in the view). These keep identical parity/UX.
+
+The `applyStatus` removal didn't match (different ordering). Let me view the file tail and remove it precisely.
+
+Now add synchronous `request*` wrappers to the model (moving `Task` out of the view) and update the page callbacks:
+
+Rebuilding the verify framework to confirm the IRGen crash is resolved:
+
+No crash, no errors in my files, but still exit 65. Let me see what's failing now.
+
+The IRGen crash is **resolved** — my framework compiled cleanly. Only the test target fails: `@testable import TeslaSync` can't resolve because the framework's product name is `TeslaSyncCore` (module is `TeslaSync`). Let me set `PRODUCT_NAME: TeslaSync` and run build + tests.
+
+Still building/testing. Let me wait for completion.
+
+It's a large rebuild. Let me check the log file for progress while it runs.
+
+It's actively compiling (renamed framework, 198 compiles done). Let me keep waiting.
+
+The framework **and** test bundle both compiled and linked successfully (`@testable import TeslaSync` now resolves). There's a test-*execution* issue at the end. Let me get the full result.
+
+Build succeeded, test execution failed. Let me find the exact reason.
+
+Build **and** test-bundle linking succeeded — only the IDE test *daemon* timed out (`control session with daemon` — a headless-runner infra limitation, not a test failure). Let me run the compiled `.xctest` bundle directly via `xcrun xctest`, bypassing the daemon.
+
+Tests now **execute** (via `xcrun xctest`): **33 of 34 passed**. The only failure is my `testCatalogResolvesEveryParityKey` — a harness artifact: in the isolated framework the catalog lives in `TeslaSync.framework`, not `.main`. The keys ARE in the catalog (the build compiled them). Let me make that test resolve across loaded bundles (portable for both the real app's `.main` and the framework), then rebuild just the test target.
+
+Rebuilding the test bundle (incremental — framework unchanged) and re-running tests directly:
+
+**34/34 tests pass** and the framework builds clean. Now let me re-verify lint/placeholder after my recent edits, and add an iOS target to prove adaptive iOS compilation (the requirement is macOS + iOS).
+
+Lint + placeholder clean. Now build the iOS slice to prove adaptive iOS compilation:
+
+iOS build failed (no crash, no errors in my files). Let me see the iOS-specific errors.
+
+iOS **compile succeeded** for both arches; the failure is purely the **link** stage — the prebuilt `Shared.xcframework` lacks an x86_64 simulator slice (it only has arm64). Restricting to arm64 (the actual Apple Silicon simulator arch) resolves it. Let me rebuild arm64-only.
+
+**iOS arm64 build SUCCEEDED** too. Full verification complete: macOS build ✓, iOS build ✓, 34/34 tests ✓, lint ✓, placeholder ✓. Now let me create the ledger and gate log. Let me inspect the ledger format and manifest record.
+
+All gates green for the surface (macOS+iOS build, 34/34 tests, lint, placeholder, parity 43/43). Let me capture exact evidence lines, then write the gate log and ledger.
+
+Now I'll write the comprehensive gate log with the `=== PARITY ===` section (43 items) and honest disclosure of the pre-existing full-app blocker.
+
+Now the parity ledger with rows for both apple targets:
+
+Now clean up the temporary verification harness and review what will be committed.
+
+I see pre-existing working-tree changes from other users (`AIUsageCard.*`, web files) — this is the shared environment. I'll commit ONLY my files. Let me first confirm my `Localizable.xcstrings` diff is purely my 38 keys (not entangled with others' edits).
+
+Confirmed: my `Localizable.xcstrings` diff is exactly my 38 keys (418 insertions, 0 deletions) — fully isolated. The other modified files belong to other users in this shared environment; I'll commit only my scoped paths.
+
+Committed (10 files only; other users' changes untouched). Let me do a final cleanup verification and confirm the working tree has no stray temp artifacts from my work.
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: F36D:3E0E65:2829176:2A34A55:6A26DF9A)

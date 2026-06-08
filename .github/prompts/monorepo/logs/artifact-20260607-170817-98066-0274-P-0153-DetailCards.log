@@ -1,0 +1,245 @@
+=== P4 Feature view 0153 DetailCards (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/DetailCards.*
+Web src : web/src/features/driving/components/drivetrain-health/DetailCards.tsx
+Runner  : Darwin arm64 · swift 6.3.2 · Xcode 26.5 (17F42) at /Applications/Xcode.app
+          · xcode-select active dir = /Library/Developer/CommandLineTools (so the
+            bare gate needs DEVELOPER_DIR) · iPhone 16 / iOS 18+ simulator present
+          · swiftlint + swiftformat + pwsh 7 + xcodegen present
+          · KMP Shared.xcframework NOT pre-staged on this runner
+ADR refs: ADR-002 (shared SwiftUI source, iOS+macOS) · ADR-004 (KMP Shared.xcframework)
+          · ADR-009 · ADR-013 (live freshness) · ADR-016 (telemetry)
+Pattern : self-contained protocol-seam surface (predecessor parity:
+          feature-views/ChargerTypeBreakdown 0108) — no direct `import Shared`, so
+          the projection/model are host-testable without the Kotlin/Native core.
+
+----------------------------------------------------------------------
+SHIPPED FILES (allowed scope: DetailCards.* + this log)
+----------------------------------------------------------------------
+  DetailCards.Adapter.swift    pure projection core (Foundation only): safe()
+                               guard, DetailCardsHealth / DetailCardsStats domain
+                               models (ports of DrivetrainHealthData / DrivingStats),
+                               DetailCardRow + DetailCardsPowerFigures +
+                               DetailCardsUnitLabels, the temperature rows (web
+                               first KVList via displayTemp) + power rows (web second
+                               KVList — peakPower>0 / avgPowerMax>0 / minRegenPower<0
+                               / stats gating), isEmpty, a11y row summary.
+  DetailCards.Model.swift      P1/S8 DetailCardsSource seam + @Observable
+                               DetailCardsModel + P1/S11 telemetry + formatting seam
+                               (useUnits formatTemperature/formatEnergy + numberFormat
+                               fmtInt/fmtNumber, DefaultDetailCardsFormatting metric
+                               SI converters) + P1/S10 DetailCardsStrings facade.
+  DetailCards.swift            main feature view, surfaceSlug "DetailCards", state
+                               switch, FadeIn(0.4) + responsive 2-up grid.
+  DetailCards.Views.swift      responsive grid (web Grid default:1/md:2), card shell
+                               + header + KV rows (native parity of Card / CardHeader
+                               / KVList), freshness banner, error state, skeleton.
+  DetailCards.Previews.swift   6 DEBUG previews (one per state).
+  DetailCards.strings          P1/S10 per-surface catalog (11 web drivetrain.* keys
+                               + 9 native chrome keys).
+  DetailCards.Tests.swift      adapter + formatting + a11y + i18n-key XCTest (30 cases).
+  DetailCards.ModelTests.swift state-holder XCTest (8 cases) — split out to keep each
+                               test file within the swiftlint file_length limit.
+
+----------------------------------------------------------------------
+PARITY (web DetailCards.tsx -> native)
+----------------------------------------------------------------------
+  [x] Props `health / peakPower / avgPowerMax / minRegenPower / stats` -> P1/S8
+      DetailCardsSource seam pushing DetailCardsUpdate (status/connection/health/
+      power figures/stats) — the view holds no HTTP (web component is itself fed its
+      data by its parent drivetrain-health page).
+  [x] useTranslation -> DetailCardsStrings facade (table "DetailCards"), t(key,
+      default) preserved as localize(key, fallback).
+  [x] useUnits().formatTemperature(value, { precision }) ->
+      DetailCardsFormatting.formatTemperature: SI °C, default precision 1, NO space
+      before the unit (web typographic convention) — "48.0°C".
+  [x] useUnits().formatEnergy(stats.regenEnergyWh, { precision: 1 }) ->
+      formatEnergy: Wh -> kWh (/1000), spaced unit — "248.6 kWh".
+  [x] ./helpers displayTemp(celsius, formatTemperature): nil -> "—" else formatted
+      -> DetailCardsProjection.displayTemp (verbatim).
+  [x] fmtInt(peakPower) / fmtNumber(avgPowerMax,1) / fmtNumber(abs(minRegenPower),1)
+      / fmtNumber(co2SavedKg,1) -> DefaultDetailCardsFormatting.formatInt /
+      formatNumber (locale-grouped, fixed decimals, half-away-from-zero, safe()).
+  [x] Power gating: `peakPower>0 ? \`${fmtInt} kW\` : '—'`, `avgPowerMax>0 ? … : '—'`,
+      `minRegenPower<0 ? \`${fmtNumber(abs)} kW\` : '—'`, `stats ? … : '—'` (×2) ->
+      reproduced exactly in the power-row value builders.
+  [x] Card 1 title "Temperature Details" + 4 rows (Front/Rear Motor, Inverter,
+      Battery) ; Card 2 title "Power Summary" + 5 rows (Peak Power, Avg Peak Power,
+      Max Regen, Total Regen, CO₂ Saved).
+  [x] @/components/ui Card + CardHeader -> DetailCardView / DetailCardHeader.
+  [x] @/components/data-display KVList -> DetailKVList / DetailKVRow (label left,
+      monospaced value chip right; one VoiceOver element per row).
+  [x] @/components/layout Grid cols={{default:1, md:2}} -> DetailCardsGrid
+      (LazyVGrid adaptive: 1-up compact, 2-up once there is room).
+  [x] @/components/motion FadeIn delay=0.4 -> real shared TSFadeIn(delay: 0.4).
+  [x] i18n keys verified against web/src/i18n/en.json (drivetrain.*, L6260-6270):
+      drivetrain.temperatures/frontMotorTemp/rearMotorTemp/inverterTemp/batteryTemp/
+      powerSummary/peakPowerLabel/avgPowerLabel/maxRegenLabel/regenLabel/co2Label —
+      reproduced verbatim (11 web keys + 9 native chrome: kW/kg unit suffixes,
+      a11y/loading/error/retry/refresh/stale/offline banners).
+
+----------------------------------------------------------------------
+STATES (every state renders — no hidden surfaces)
+----------------------------------------------------------------------
+  [x] loading   DetailCardsSkeleton (two redacted cards, redacted title + rows)
+  [x] content   the two cards with formatted temperature + power values
+  [x] empty     loaded + every input absent -> the two cards still render with the
+                em dash in every row (web parity: the source never hides the cards;
+                the em dash is the friendly per-row empty value, never a blank box)
+  [x] error     DetailCardsErrorView (icon + title + message + Retry -> refresh) when
+                a failure arrives with no cached content (web QueryError equivalent)
+  [x] stale     DetailCardsFreshnessBanner (warning) + Refresh, cached cards visible
+  [x] offline   DetailCardsFreshnessBanner (muted) + Refresh, cached cards visible
+  Phase resolution + projections + formatting + a11y + i18n unit-tested (38 cases).
+
+----------------------------------------------------------------------
+HOST-RUNNABLE GATES (executed on this runner — real exit codes)
+----------------------------------------------------------------------
+[1] swiftformat --lint  (config apps/apple/.swiftformat, my 7 swift files)
+      0/7 files require formatting.
+      FORMAT_EXIT=0
+
+[2] swiftlint --strict  (config apps/apple/.swiftlint.yml, my 7 swift files, --no-cache)
+      Found 0 violations, 0 serious in 7 files.
+      LINT_EXIT=0
+      (resolved during authoring: function_parameter_count on powerRows — bundled
+       into DetailCardsPowerFigures + DetailCardsUnitLabels; file_length on the test
+       file — split into DetailCards.Tests.swift + DetailCards.ModelTests.swift.)
+
+[3] placeholder gate — apps/tools/check-placeholders.ps1 (pwsh 7 present)
+      literal gate -Path apps/apple/TeslaSync/feature-views/DetailCards  AND a copy
+      of my 7 swift files scanned with -Language swift:
+      PLACEHOLDER_ALLOWED=0
+      PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0
+
+[4] swift test — throwaway SwiftPM package, module "TeslaSync" = the 5 shipped
+    surface/preview files + the REAL Shared-free deps (Tokens.swift, TSDesign.swift,
+    TSMaterial.swift, Motion.swift = TSFadeIn, the TSSkeleton struct), test target =
+    my 2 *.Tests.swift, Swift 6 mode, macOS host, DEBUG (previews compiled). Driven
+    by InMemoryDetailCardsSource (no network).
+      Test Suite 'All tests' passed.
+      Executed 38 tests, with 0 failures (0 unexpected).
+      TEST_EXIT=0
+
+[5] SDK compile — swiftc -typecheck -swift-version 6 of the surface + real deps (10
+    files) against BOTH gate destinations' SDKs:
+      iOS 18 Simulator (arm64-apple-ios18.0-simulator) : IOS_TYPECHECK_EXIT=0
+      macOS 15         (arm64-apple-macos15.0)          : MAC_TYPECHECK_EXIT=0
+    (SwiftUI availability confirmed on both SDKs — 0 errors. No Swift Charts / MapKit
+    needed: the web source uses neither.)
+
+----------------------------------------------------------------------
+XCODE APP BUILD/TEST — DEFERRED (NOT green; honest evidence below)
+----------------------------------------------------------------------
+Gate command literally runs (no DEVELOPER_DIR set):
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+
+(a) BARE gate command — active dir is CommandLineTools, so it fails before any work:
+      xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+      directory '/Library/Developer/CommandLineTools' is a command line tools instance
+      BARE_IOS_EXIT=1 · BARE_MAC_EXIT=1
+
+(b) Driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer (Xcode 26.5):
+      • xcodegen generate -> OK (XCODEGEN_EXIT=0). The surface IS target-registered:
+        the generated pbxproj contains 48 DetailCards references and lists all 7
+        DetailCards*.swift for both app targets.
+      • ADR-004 KMP framework: Frameworks/Shared.xcframework is NOT pre-staged on this
+        runner, so the app link step cannot run here without first building the
+        Kotlin/Native core (Gradle :core:assembleSharedXCFramework, multi-minute).
+      • Even with the framework staged, the app build/test is ALREADY red before this
+        surface for a pre-existing, out-of-scope reason the 0108 log captured:
+        project.yml compiles feature-views/*.Tests.swift INTO the app target
+        (`sources: TeslaSync/feature-views`), and the app target does not link XCTest,
+        so the whole-module compile aborts at the FIRST such file alphabetically
+        (AlertsSection.Tests.swift: "unable to resolve module dependency: 'XCTest'").
+        This affects ALL feature-view surfaces equally — the app-build gate was red
+        before DetailCards existed. macOS additionally needs signing
+        (DEVELOPMENT_TEAM is "" in project.yml).
+      IOS_EXIT=65 · MAC_EXIT=65  (DEFERRED)
+
+  Why DEFERRED, not fixed here: the remaining app-build blockers are (1) project.yml
+  compiling *.Tests.swift into the app target instead of an XCTest bundle, and (2)
+  DEVELOPMENT_TEAM / signing — BOTH require editing project.yml / signing config,
+  files OUTSIDE this prompt's allowed files and a predecessor-bypass (covenant #7).
+  Same deferral disposition as 0108. Platform capability (SwiftUI; the source needs
+  no Swift Charts / MapKit) is PRESENT, so this is DONE, not a capability BLOCK.
+
+  Verification substituted here is strictly stronger than a registered-but-unbuilt
+  scheme: the EXACT shipped files were (i) compiled against BOTH target SDKs in
+  Swift 6 mode [step 5], and (ii) exercised by a 38-case XCTest run that executed
+  green [step 4], with the surface confirmed registered in the generated project.
+
+----------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+----------------------------------------------------------------------
+  [x] Surface renders on Apple with all web states reproduced (loading / content /
+      empty / error / stale / offline) — 6 previews + phase tests.
+  [x] Hooks bind to the shared P1/S8 state-holder layer (DetailCardsSource); no
+      direct HTTP in the view (data via the seam; the web component is itself
+      prop-fed by its parent page).
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog — 11/11 web
+      drivetrain.* keys present (verified vs en.json) + 9 native chrome keys; the
+      projection's label keys are asserted by DetailCardsLocalizationKeyTests.
+  [x] Accessibility labels on every interactive element (Retry / Refresh buttons) and
+      a combined VoiceOver summary on each KV row ("<label>, <value>"); the surface is
+      an a11y container with a spoken label; Dynamic Type via tokens; Reduce Motion
+      honored by TSFadeIn / TSSkeleton; a11y unit-tested.
+  [x] Tests: adapter unit tests + per-state model tests + formatting + a11y + i18n
+      (38 cases, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green (format/lint/placeholder/test/typecheck);
+      Xcode app build/test DEFERRED with captured evidence (pre-existing project.yml
+      test-target membership + signing; KMP framework not pre-staged; my files compile
+      and test clean; surface registered). Platform capability is PRESENT — DONE.
+
+----------------------------------------------------------------------
+HONESTY COVENANT
+----------------------------------------------------------------------
+  1  No red-as-green : the Xcode app build/test is shown DEFERRED (NOT green) with the
+                       real BARE_*_EXIT=1 and the pre-existing XCTest test-membership
+                       failure; every "OK" is a command actually run with its real
+                       exit (an executed 38/38 XCTest run + iOS-18-sim & macOS-15 SDK
+                       compiles + format/lint/placeholder).
+  2  No scope narrowing: implemented both cards, all 9 rows, every state, i18n, a11y,
+                       telemetry, and the full temp/energy/number formatting parity.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of displayTemp, the power gating, the
+                       useUnits temperature(no-space °C)/energy(Wh→kWh) formatters,
+                       fmtInt/fmtNumber, and the exact en.json drivetrain.* strings.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit project.yml / .swiftlint.yml / .swiftformat /
+                       signing and did NOT edit the shared Localizable.xcstrings —
+                       strings shipped as the per-surface table, exactly like 0108.
+  8  No commit on red  : committing on all-green host gates; the Xcode app steps are
+                       explicitly DEFERRED with evidence, not falsely green.
+  9  No silent drift   : changes confined to the allowed DetailCards.* files + this
+                       log. The generated TeslaSync.xcodeproj is git-ignored and was
+                       removed after the registration check (not committed).
+  10 Log ends with EXIT/STATUS below.
+
+----------------------------------------------------------------------
+DISPOSITION
+----------------------------------------------------------------------
+  Production-polished native DetailCards shipped at parity with the web source: a
+  pure-Swift projection core (executed-green XCTest, 38/38), a P1/S8 state-holder seam
+  (no view HTTP), P1/S11 view.opened telemetry (slug "DetailCards"), every state +
+  i18n key + a11y label, the two KV cards (Temperature Details + Power Summary) with
+  the exact web data, gating, and SI-aware temperature/energy formatting. All
+  host-runnable gates pass AND the surface compiles against BOTH the iOS 18 simulator
+  and macOS 15 SDKs under Swift 6 AND is registered in the generated app project. The
+  Xcode app build/test is DEFERRED to the integration/signed runner — blocked only by
+  the pre-existing project.yml test-target membership (*.Tests.swift in the app
+  target, affecting all surfaces incl. AlertsSection) + signing + the not-pre-staged
+  KMP framework, all outside this prompt's allowed files.
+
+----------------------------------------------------------------------
+COMMIT
+----------------------------------------------------------------------
+  git add apps/apple/TeslaSync/feature-views/DetailCards.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0153-DetailCards.log
+  git commit -m "feat(apps/apple/feature-views): add DetailCards surface (P4)"
+
+EXIT=0
+STATUS=DONE

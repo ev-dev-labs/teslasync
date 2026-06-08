@@ -1,0 +1,128 @@
+I'll start by exploring the repository structure and understanding the task requirements. Let me look at the web source, the Apple app structure, and check tooling availability.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. swiftlint/swiftformat/swift ARE available. Let me dig deeper into the web source and existing widget patterns before concluding anything about capability.
+
+The web source uses `WidgetShell`, `WidgetFlowDiagram`, and `FlowNode`/`FlowArrow` types. Let me read those, examine an existing Apple widget as a template, and look at the AIUsageCard pattern (recently modified, likely the canonical multi-file pattern).
+
+Excellent — there's already a native `LivePowerFlowWidget` (with a `.Diagram.swift`) and `PowerFlowHistoryWidget` (Adapter pattern). These are perfect references. Let me read the web shared components and the closest native analog in parallel.
+
+The native `LivePowerFlowWidget` is the closest analog (it has a flow diagram). Let me read its full file set to learn the established native pattern.
+
+This is a well-established, rich pattern. Let me read the rest of the `LivePowerFlowWidget` file set to fully understand the shared primitives (DashboardWidgetRegistration, tokens, diagram rendering, tests).
+
+Let me read the remaining reference files and locate the shared primitives (registration, tokens, skeleton).
+
+Now let me read the Tests reference and locate the shared P4/P1 primitives (registration, tokens, skeleton) plus understand the project structure.
+
+Key insight: `DashboardWidgetSize`/`DashboardWidgetRegistration` are defined *per-widget* (UptimeMonitor, TelemetryErrors, MQTTStatus, etc.) — yet `LivePowerFlowWidget` defines neither and relies on a shared one. This means these files can't all be in one compile target. Let me understand the project structure and build setup.
+
+Full Xcode IS at `/Applications/Xcode.app` — just not selected. I can likely use `DEVELOPER_DIR` override. And 13 widgets define their own `DashboardWidgetSize`, confirming these files aren't all in one target. Let me read the real `project.yml` and test xcodebuild.
+
+Xcode 26.5 works via `DEVELOPER_DIR`. The project uses XcodeGen (`.xcodeproj` is git-ignored). Both app targets compile ALL of `dashboard-widgets`. But 13 files define `DashboardWidgetSize` — I need to understand the baseline. Let me check tooling and whether the canonical type lives in a shared core.
+
+The referenced paths are at `apps/apple/` (project.yml's dir), not `apps/apple/TeslaSync/`. There are many duplicate `DashboardWidgetSize` defs across widgets — the designated sibling `LivePowerFlowWidget` defines none (relies on shared). Let me assess the real baseline: framework, build script, and whether xcodegen+build even work here.
+
+Now the baseline is clear and decisive:
+- **`Shared.xcframework` is absent** (only `.gitkeep`); it's built by a Gradle/KMP pre-build script (`apps/shared/gradlew :core:assembleSharedXCFramework`) requiring the Kotlin/Native toolchain.
+- **15 duplicate `DashboardWidgetSize`/`DashboardWidgetRegistration` definitions** exist across the single `TeslaSync` app target (`Sources/` + `dashboard-widgets/`) — a pre-existing parallel-staging condition that prevents the target from compiling, outside my allowed-files scope.
+
+The designated sibling `LivePowerFlowWidget` (prompt 0056) defines neither type — it relies on the shared one. I'll mirror that canonical pattern exactly. Let me confirm the web VehicleState field shape/units before writing.
+
+Confirmed: `VehicleState.power` and `charger_power` are kW, `battery_level` is %, `is_charging` Bool; `useVehicleState` returns `{ state, live }`. I have full parity detail. Let me verify the exact shared token names I'll depend on (same ones LivePowerFlow uses) so I avoid typos.
+
+I have all exact token names now. Let me view the canonical `DashboardWidgetRegistration`/`DashboardWidgetSize` shape (to mirror the contract `LivePowerFlowWidget` binds to) and set up my plan/todos.
+
+I have the exact registration contract. Let me read the lint/format configs so my code passes `swiftlint --strict` and `swiftformat --lint`, then I'll start writing files.
+
+I now have the full contract: tokens, lint config (maxwidth 120, `--self remove`, `--importgrouping testable-bottom`), and forbidden placeholder words (`TODO/FIXME/XXX/Placeholder/Lorem ipsum/not implemented`, plus swift stubs). `pwsh` is available so I can run the real placeholder + gate scripts. Let me write the plan and the first batch of files.
+
+Now the leaf files (Models, Builder, Palette, strings):
+
+Now the Model file (state-holder seam, i18n facade, formatters, accessibility):
+
+Now the Diagram file (SwiftUI flow diagram + compact view + node views):
+
+Now the main widget surface file:
+
+Now the Previews and Tests files:
+
+Now the comprehensive Tests file:
+
+All 9 files created. Let me update todos and verify — starting with swiftformat (normalize my files, then lint).
+
+swiftformat normalized 5/8 files. Now verify format compliance, run swiftlint scoped to my files, and the placeholder gate:
+
+Format and lint both pass with **0 violations**. Now the placeholder gate (official script per file + a direct forbidden-pattern grep):
+
+Placeholder gate clean (0) and direct grep finds nothing. Now an isolated `swiftc -typecheck` of the production files against the **real** design tokens plus a small shim for the two shared P4 symbols (`DashboardWidgetSize`/`DashboardWidgetRegistration`/`TSSkeleton`), in Swift 6 mode:
+
+The isolated type-check caught a real Swift 6 concurrency issue in Previews.swift (the canonical `LivePowerFlow` sibling has the same latent pattern, but I'll fix mine correctly). `previewModel` calls `@MainActor`-isolated APIs, so it must be `@MainActor`:
+
+Production files type-check cleanly under Swift 6. Now let me also type-check the **Tests** file (compiled into the same ad-hoc module, with XCTest on the framework path):
+
+The only errors are XCTest's C assertion *macros* (`XCTAssertTrue` etc.) being unavailable under raw `swiftc` — a known module-bridging limitation, not a defect in my test logic. To genuinely type-check my test bodies against my production APIs, I'll swap XCTest for a tiny Swift shim of the assertion functions:
+
+Another genuine Swift 6 finding: `View` types are `@MainActor`-isolated, so `static let registration`/`surfaceSlug` are too — but registry metadata is pure Sendable data that the dashboard infra may read off-main. Marking them `nonisolated` is the correct design (and lets nonisolated tests read them):
+
+The only 2 remaining errors are `Date` not in scope — purely because I stripped `import XCTest` (which transitively imports Foundation) for the isolated compile. My real Tests file gets Foundation via XCTest. Adding `import Foundation` to the stripped copy confirms:
+
+Both production **and** tests type-check cleanly under Swift 6 / macOS 15 against the real design tokens. Now I'll attempt the actual gate to capture honest evidence. First, assess the build prerequisites:
+
+15 files define `DashboardWidgetSize` in the single target — a guaranteed "invalid redeclaration" that blocks compilation regardless of my widget (which correctly defines neither). Let me set up the log location and run the real gate sequence (xcodegen → xcodebuild) to capture authentic blocker evidence, time-boxed.
+
+Let me check how the canonical sibling (LivePowerFlowWidget 0056) handled its gate log — this shows the expected format and whether prior runs hit the same build blockers:
+
+The sibling log establishes the exact precedent: **"code-complete + DEFERRED Xcode app build/test (P4 precedent 0036, ADR-012 macOS-pending)"** — it ran host-runnable steps (typecheck against the real component library, lint, format, placeholder, an executed test harness) and deferred only the full `xcodebuild`. Let me read the rest to match its format and final status:
+
+This is the authoritative precedent: sibling **LivePowerFlowWidget (0056) ended EXIT=0 / STATUS=DONE** under the user-approved P4 disposition "code-complete + host-gates-green + DEFERRED Xcode app build/test" (ADR-012 macOS-pending; established by 0036). It deferred `xcodebuild` for 4 code-unrelated reasons and proved the surface via: typecheck against the **real** component library + a sibling widget (reusing the shared types), an **executed** adapter harness, lint, format, placeholder.
+
+I'll match that rigor. Let me (a) reuse the **real** `TSSkeleton` + a **real** sibling's `DashboardWidgetSize/Registration` to prove no-redeclaration, and (b) build an **executed** adapter harness. First, inspect those real sources:
+
+Key finding: the repo has **two conflicting conventions** for these types — `Sources/DashboardWidgets/*` use `DashboardWidgetDescriptor` + `let`-based `DashboardWidgetSize`, while `TeslaSync/dashboard-widgets/*` (my convention, matching LivePowerFlow) use `DashboardWidgetRegistration` + `var`-based `DashboardWidgetSize`. Same type name, different shapes → hard redeclaration, confirming the target can't compile. My widget correctly defines **neither**.
+
+Let me strengthen verification to match precedent: use the **real** `TSSkeleton`, confirm my files redeclare nothing, and build+run an **executed** adapter harness. First, drop TSSkeleton from the shim:
+
+Now re-run the production type-check using the **real** `Skeletons.swift` (TSSkeleton) + real tokens + registration-only shim, and prove my files redeclare nothing:
+
+Skeletons.swift depends on `TSCard` (more of the component library) — not my code. Let me pull in the minimal real components it needs (Cards) so I compile against the **real** library like the precedent did:
+
+The component library cascades (Cards→Badges/Typography/Buttons). My core checks are already conclusive (the real `TSSkeleton` init signature is byte-identical to my shim's). The highest-value remaining step is the **executed** adapter harness (precedent step [2]) — the adapter imports only Foundation, so I can compile and **run** it for real:
+
+Multi-file builds require the entrypoint file to be named exactly `main.swift`. Let me rename and rerun:
+
+Swift 6 isolates top-level globals. I'll wrap the harness in a function with local state (nested funcs can mutate enclosing locals) — keeping the adapter under full Swift 6:
+
+**Executed adapter harness: 21/21 passed** under Swift 6 using the real `Models.swift` + `Builder.swift` — real runtime proof of parity logic. Let me make one attempt at the precedent's strongest check: compile my surface against the **whole real component library**:
+
+Zero errors in **my** files — the only cascade error is `TSChartPalette` (needed by `MapView.swift`, which I don't use). Let me add that real source to close the library compile:
+
+Down to one library-internal error in `Cards.swift` (not mine). Let me include the full `Sources/Design` dir to resolve the remaining library cross-refs:
+
+The cascade now terminates at the KMP `Units` type (`UnitFormatters.swift` → `Shared.xcframework`) — exactly the documented framework deferral, and **never my files**. Let me exclude that KMP-dependent file (unused by my path) for a fully-green real-component compile:
+
+Conclusive: **0 errors in my files in every configuration** — the 52 library errors all terminate at KMP `Units`/`UnitPreferences` types from the absent `Shared.xcframework`. My code is clean; the blockers are purely environmental. Let me add two final data points for the log — does the project even generate, and confirm the duplicate-type blocker concretely:
+
+The project generates cleanly (`XCODEGEN_EXIT=0`) — so the blocker is strictly downstream. Let me concretely demonstrate the duplicate-type blocker with real repo files (compiling two siblings that both define the type):
+
+**Executed proof of the pre-existing blocker**: compiling two real siblings yields `invalid redeclaration of 'DashboardWidgetSize'`/`'DashboardWidgetRegistration'` — the target can't compile regardless of my surface, which correctly defines neither. I have a complete, fully-executed evidence base. Let me gather final facts and write the gate log:
+
+All files ≤400 lines (largest 331). Let me capture the exact whole-tree gate numbers for format/lint before writing the log:
+
+My 8 files are 0/8 (format) and 0 lint violations; the lone whole-tree format issue is a pre-existing file in another slot (`ActionBuilder.Previews.swift`), not mine. Let me run the placeholder self-test to cite it, then write the log:
+
+Self-test passes. The dir-wide count of 24 is from **other** widgets (pre-existing); my per-file scans were all 0. Let me confirm none of the 24 are mine, then write the log:
+
+Confirmed clean. I now have a complete, fully-executed evidence base. Let me write the gate log:
+
+Now let me run a final consolidated verification of the committed state, check git status for stray artifacts, and clean up temp files:
+
+The "FAIL" is just because my final command used the registration-only shim **without** TSSkeleton (I'd moved that to the real-Skeletons path earlier) — not a code regression. Let me reconfirm green with a TSSkeleton stub included (its real signature is known-identical):
+
+Committed state is green. Let me clean up temp files and commit **only** my 9 surface files + the log (not the pre-existing unrelated modifications):
+
+Exactly my 9 surface files + the log are staged (pre-existing unrelated changes excluded). Now commit:
+
+Committed as `a2105c38c`. The pre-existing unrelated changes remain untouched. Let me finalize todos and confirm the commit contents:
+
+Task complete. Let me provide the final summary.
+

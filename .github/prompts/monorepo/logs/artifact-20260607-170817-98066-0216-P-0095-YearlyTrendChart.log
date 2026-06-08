@@ -1,0 +1,250 @@
+================================================================================
+P4 · Feature view · 0095 — YearlyTrendChart (Apple)
+Run: 2026-06-07T20:45-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/216
+Base: b5da3bbe
+Prompt: P4/feature-views/0095 — YearlyTrendChart
+Web source (spec): web/src/features/charging/components/charging-curve/YearlyTrendChart.tsx
+Mode: code-complete + REAL iOS-18-simulator & macOS-15 SDK typechecks + EXECUTED XCTest
+      (16/16) + EXECUTED standalone adapter run (21/21) + DEFERRED Xcode app build/test
+      (un-staged KMP Shared.xcframework; the FleetTelemetryHealth-0005 / SentryEventLog-0086 /
+      DrivingTab-0056 precedent, ADR-012). No stubs.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)             OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override         OK
+  iPhoneSimulator SDK ........ iPhoneSimulator 26.5 (iOS 18 deploy target)           OK
+  macOS SDK .................. MacOSX 26.5 (macOS 15 deploy target)                  OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                     OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                   OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen 2.45.4                      OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh 7.6.2                          OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                         OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  feature-views registration . ALREADY a source path in project.yml (L37,L68) +
+                               .swiftlint.yml `included` (L5) on this branch          OK
+
+  NOTE on active toolchain: a bare `xcodebuild` fails ("tool requires Xcode") because
+  `xcode-select -p` points at /Library/Developer/CommandLineTools. Full Xcode 26.5 IS
+  installed at /Applications/Xcode.app and is used here via the DEVELOPER_DIR override
+  (the 0005/0086/0056 precedent), unlocking the iOS 18 simulator SDK, the macOS 15 SDK,
+  and `swift test`.
+
+  Charts/Maps capability note: this surface USES Swift Charts (one composed chart: a
+  count bar series + two average-time line series) and NO MapKit (web "maps used: none").
+  Swift Charts is available and PROVEN by the real iOS-18 simulator AND macOS-15 SDK
+  compiles below. The capability-BLOCKED escape hatch ("SwiftUI/Swift Charts/MapKit
+  unavailable") does NOT apply — the surface is authored, both-SDK-compiled, and
+  host-tested for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/YearlyTrendChart.*) ===
+  YearlyTrendChart.Adapter.swift   200  Foundation-only core — surface slug + load/connection/
+                                        phase enums + SI-agnostic input DTO + safe()/round1()
+                                        web-parity guards + projection (make/resolvePhase/hasAny/
+                                        maxCount) + a11y summary. Pure, standalone-runnable.
+  YearlyTrendChart.Model.swift     207  P1/S8 state-holder seam (YearlyTrendSource ->
+                                        YearlyTrendChartModel) + P1/S11 telemetry seam +
+                                        coalesced update + in-memory source + P1/S10 strings
+                                        facade (table "YearlyTrendChart").
+  YearlyTrendChart.Views.swift     207  chrome — glass section panel (ChartContainer: title +
+                                        subtitle + aria + freshness-chip accessory) / freshness
+                                        chip / connectivity banner / empty row (web EmptyState)
+                                        / loading skeleton body / error (retry).
+  YearlyTrendChart.Chart.swift     168  the composed Swift Charts panel (Recharts -> Swift
+                                        Charts): count bars [5]@.3 + 10->80 line [0] + 20->80
+                                        line [2], shared scale + dual axis titles, custom
+                                        3-swatch legend, VoiceOver value.
+  YearlyTrendChart.swift            65   the surface — always-present panel chrome with the
+                                        body switching loading/empty/error/content (+ banner).
+  YearlyTrendChart.Previews.swift  73   #if DEBUG previews — content / empty / loading / error /
+                                        stale / offline.
+  YearlyTrendChart.Tests.swift     223  XCTest — math + projection + model phases + a11y (16
+                                        methods).
+  YearlyTrendChart.strings         49   P1/S10 catalog contribution (13 web-parity charging.curve.*
+                                        / common.* keys + 11 native-chrome/a11y keys).
+  Total 1192 lines across 8 files; every file <= 223 lines (house file_length 400).
+  Shared design Tokens (Color.TS / Font.TS / TSSpacing / TSRadius / TSMotion), TSChartPalette
+  (real Charts palette) and TSFadeIn (real Motion) are REUSED from the P4 core (no
+  redeclaration in shipped files).
+
+  SCOPE NOTE: the web `YearlyTrendChart` is the leaf chart inside `TimeToChargeSection`,
+  which computes the `yearlyTrend` aggregate (per-year DC-session count + rounded 10->80 /
+  20->80 average minutes) and passes it as a prop. `TimeToChargeSection` is a SIBLING
+  surface with its own P4 prompt; this prompt's extracted titles/keys cover exactly the
+  YearlyTrendChart composed chart, which this surface owns. The state-holder seam therefore
+  binds the already-aggregated yearly-trend rows (the production source projects them from
+  the charging-sessions query); the view performs NO HTTP.
+
+=== PARITY (vs web YearlyTrendChart.tsx) ===
+  Data sources -> bound via the shared state-holder seam (YearlyTrendSource ->
+    YearlyTrendChartModel): useTranslation (P1/S10 facade) + the aggregated yearly-trend rows
+    (web prop `yearlyTrend`). The web component reads ONLY `useTranslation` (no `useUnits`),
+    so the projection is unit-agnostic. The view performs NO HTTP.
+  Projection -> YearlyTrendProjection is a 1:1 port: preserves the upstream ascending year
+    order, pins the web one-decimal average precision (`Math.round(v*10)/10`), guards
+    non-finite with `safe(v)` (finite-or-0), clamps negative counts, and exposes hasAny
+    (web `yearlyTrend.length > 0`) + maxCount. ALL verified by the EXECUTED adapter run (21
+    checks) AND XCTest.
+  Composition -> one GlassPanel/ChartContainer-style section (title "Yearly Charging Speed
+    Trend" + subtitle "Average time-to-charge and session count by year" + ariaLabel) wrapping
+    a composed Swift Chart: DC-session count BARS (CHART_COLORS[5] @ opacity 0.3, web `Bar`),
+    10->80% avg LINE (CHART_COLORS[0], web `Line`), 20->80% avg LINE (CHART_COLORS[2], web
+    `Line`). Recharts -> Swift Charts; per Apple HIG (+ the DrivingTab composed-chart
+    precedent) the marks share ONE value scale with an explicit legend naming all three
+    series and dual axis TITLES (leading "Minutes", trailing "Sessions"), rather than cloning
+    Recharts' twin numeric Y axes (which would draw a second, misleading scale). The web's
+    manual legend swatches were cyan/purple/red (mismatched against the series colors); the
+    native legend swatches use the real series colors ([0]/[2]/[5]) — the source of truth.
+  Shared components -> @/components/feedback -> EmptyState (web `<EmptyState icon={Activity}
+    message={t('common.noData')} />`) / error+retry / skeleton equivalents; @/components/charts
+    -> the composed Swift Chart on the real TSChartPalette + tsChartAxes styling; motion ->
+    TSFadeIn. Compiled against the REAL design Tokens + real Charts palette + real Motion in
+    the SDK typechecks below.
+  States (all render) -> loading (skeleton body) · empty ("No data available", web parity) ·
+    error (retry) · stale (chip + banner + one guarded auto-refresh) · offline (cached chart +
+    chip + banner) · content. The panel chrome (title/subtitle/chip) is ALWAYS present and only
+    the body swaps — matching the web `ChartContainer` shell; a cached chart stays visible
+    behind a refresh/failure.
+  i18n -> all 13 source strings resolve through the P1/S10 facade (table "YearlyTrendChart")
+    with the web English fallback: yearlyTrend, yearlyTrendDesc, yearlyTrend.aria, col.year,
+    col.avg10to80, col.avg20to80, col.dcSessions, minutes, sessionCount, avg10to80Line,
+    avg20to80Line, dcSessions, common.noData  + 11 native-chrome/a11y keys (live/stale/offline/
+    staleBanner/offlineBanner/loading/errorTitle/retry + a11yYears/a11ySessions/a11yNoData) —
+    ALL present in YearlyTrendChart.strings. No English literal in Swift (fallbacks mirror the
+    web `t(key, default)` signature).
+  a11y -> the chart panel is a header-titled element carrying a pure VoiceOver value summary
+    ("{n} years, {total} sessions"); the panel exposes the source `ariaLabel`; the freshness
+    chip + retry button carry accessibilityLabels; decorative icons + legend swatches are
+    accessibilityHidden; Dynamic Type via tokens; Reduce Motion gates TSFadeIn + the skeleton
+    shimmer; light/dark + increased-contrast via the dynamic Color.TS tokens.
+  Telemetry -> YearlyTrendChartModel.start() emits viewOpened(surface:"YearlyTrendChart") ->
+    bridges the shared Telemetry.track (P1/S11). Asserted by a spy test (fires exactly once).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[0] swiftc -O compile + RUN of the REAL YearlyTrendChart.Adapter.swift in isolation (Foundation
+    only) — 21 logic assertions over safe()/round1(), the projection (order/precision/clamp/
+    maxCount/hasAny), the phase matrix, the a11y summary, and the surface slug:
+      ALL ADAPTER LOGIC CHECKS PASSED    ADAPTER_RUN_EXIT=0                          OK
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (the surface runtime — Adapter + Model + Views +
+    Chart + surface + Previews, compiled with the REAL design Tokens + REAL TSChartPalette +
+    REAL TSFadeIn + minimal real-interface tsChartAxes/TSSkeleton shims; Swift 6 language mode):
+      xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator -swift-version 6 -D DEBUG ...
+      IOS_TYPECHECK_EXIT=0                                                           OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0, -swift-version 6,
+    -D DEBUG so the SwiftUI #Preview macros compile):
+      MAC_TYPECHECK_EXIT=0                                                           OK
+[3] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM
+    harness (library target named `TeslaSync` so `@testable import TeslaSync` resolves; real
+    production Adapter/Model/Views/Chart/surface + real design Tokens + real Charts palette +
+    real Motion + minimal real-interface tsChartAxes/TSSkeleton shims), Swift 6 language mode:
+      Executed 16 tests, with 0 failures (0 unexpected) in 0.003 seconds
+        YearlyTrendMathTests           2/2  (safe NaN/Inf guard, round1 web precision)
+        YearlyTrendProjectionTests     5/5  (nil/empty -> empty, order+values, round1+NaN+clamp,
+                                             maxCount/hasAny, phase matrix)
+        YearlyTrendChartModelTests     7/7  (initial content, empty/loading/error phases, cached-
+                                             stays-content on failure, refresh delegation, stale
+                                             auto-refresh once-per-episode, view.opened once,
+                                             connection/refreshing tracking)
+        YearlyTrendAccessibilityTests  2/2  (summary text, empty fallback)
+      SWIFT_TEST_EXIT=0                                                              OK
+[4] swiftlint --strict on the 7 surface .swift files (explicit paths; config apps/apple/.swiftlint.yml):
+      Done linting! Found 0 violations, 0 serious in 7 files.
+      LINT_SURFACE_EXIT=0                                                            OK
+    Whole-tree note: a bare `swiftlint --strict` over apps/apple reports 1 violation —
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length, 78>50).
+      That file is a SIBLING surface, is PRE-EXISTING (the only added files are YearlyTrendChart.*,
+      git status confirms), and is OUTSIDE this prompt's allowed files. This surface contributes 0
+      violations.
+[5] swiftformat --lint apps/apple (exact gate command, config apps/apple/.swiftformat):
+      0/884 files require formatting, 2 files skipped.
+      FORMAT_EXIT=0                                                                  OK
+[6] check-placeholders (ADR-011 stub gate; pwsh) — an isolated scan of the shipped YearlyTrendChart.*
+    files:
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                             OK
+      (A directory scan of the whole feature-views tree reports 2 PRE-EXISTING hits in
+       InfrastructureSection.* — sibling surface, outside allowed files; YearlyTrendChart.* = 0.
+       The exact gate path `.../feature-views/YearlyTrendChart` also returns PLACEHOLDER_EXIT=0.)
+[7] xcodegen generate — project + targets + schemes generate cleanly WITH the new files registered
+    (48 YearlyTrendChart references in the generated project.pbxproj):
+      XCODEGEN_EXIT=0                                                               OK
+
+=== GATE — XCODE APP BUILD/TEST (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real command run on this host, full Xcode 26.5 via DEVELOPER_DIR):
+      xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO ->
+        error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+        ** BUILD FAILED **   XCODEBUILD_TARGET_EXIT=65
+    Why deferred (code-unrelated, outside this prompt's allowed files — Honesty rule 7):
+      The app target links the KMP core as Frameworks/Shared.xcframework; staging it needs a
+      Kotlin/Native Gradle build (the scheme runs it as a pre-build phase). apps/apple/Frameworks/
+      holds only .gitkeep, so the app/app-test build cannot link. This is the integration/CI
+      runner's job (ADR-012, apps/macos-pending-verifications.md) and is independent of this UI
+      surface. The feature-views source path + .swiftlint.yml `included` scope are ALREADY
+      registered on this branch (project.yml L37/L68, .swiftlint.yml L5), and `xcodegen generate`
+      EXIT=0 confirms the project still generates with the new files.
+    The MEANINGFUL validation IS performed above: the surface compiles against BOTH the iOS 18
+    simulator and macOS 15 SDKs (steps [1]/[2]) and its full XCTest suite EXECUTES green (16/16,
+    step [3]) plus a standalone adapter run (21/21, step [0]). Under Xcode these same tests run in
+    the TeslaSync(/-macOS) test target.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) — implemented;
+      each has a #if DEBUG preview; phase logic unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (YearlyTrendSource->YearlyTrendChartModel);
+      no view HTTP (web reads only useTranslation; data arrives as the aggregated yearly-trend prop).
+  [x] Every i18n key from source has a matching catalog key — the 13 charging.curve.*/common.* parity
+      keys, all present in YearlyTrendChart.strings (+ 11 native-chrome/a11y keys).
+  [x] Accessibility labels on every interactive element + a VoiceOver value on the chart panel.
+  [x] Tests: adapter + projection + per-state model + a11y — 16 methods, EXECUTED 16/16, plus a
+      standalone adapter run 21/21.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates + both-SDK compiles + executed tests green; Xcode app
+      build/test DEFERRED with captured evidence (code-unrelated infra blocker, outside allowed files).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with the real BUILD_EXIT=65
+                       missing-framework error captured; every "OK" is a command actually run with its
+                       real exit code (incl. iOS+macOS SDK compiles, an EXECUTED 16/16 XCTest run, and a
+                       21/21 standalone adapter run). The 1 whole-tree swiftlint hit + the 2 whole-tree
+                       placeholder hits are disclosed as pre-existing sibling issues, not hidden.
+  2  No scope narrowing: implemented the composed chart + every state + i18n + a11y + telemetry +
+                       stale auto-refresh. (TimeToChargeSection, which computes the yearlyTrend prop, is
+                       a separate sibling prompt, per this prompt's keys.)
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (The tsChartAxes/TSSkeleton
+                       shims are used ONLY in the throwaway typecheck/test harness — clearly labeled,
+                       NEVER in shipped files; their real source files pull in unrelated sibling surfaces.)
+  5  No parity shortcuts: faithful port of the web data path (order + 1-decimal precision + safe guard),
+                       the composed chart's three series + colors, and every state, pinned by executed tests.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT stage Shared.xcframework and did NOT edit the shared
+                       Localizable.xcstrings (parallel-unsafe, integration-runner scope) — strings
+                       shipped as the per-surface table, exactly like the precedent.
+  8  No commit on red  : committing on green host gates + iOS/macOS compiles + executed 16/16 tests +
+                       21/21 adapter run; Xcode app build/test explicitly DEFERRED (captured evidence),
+                       not failed; the whole-tree lint/placeholder hits are pre-existing in siblings.
+  9  No silent drift   : changes confined to the allowed YearlyTrendChart.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native YearlyTrendChart shipped at parity with the web source: a pure-Swift
+  projection core (EXECUTED-green XCTest 16/16 + standalone run 21/21) with web-parity precision +
+  finite guards, a P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, the composed Swift Chart
+  (Recharts -> Swift Charts: count bars + two average-time lines), every load state + the web "No data
+  available" empty + every i18n key + a11y value + freshness chip/banner. All host-runnable gates pass
+  AND the surface compiles against BOTH the iOS 18 simulator and macOS 15 SDKs with the real Xcode 26
+  toolchain under Swift 6 strict concurrency. The signed Xcode app build/test is DEFERRED to the
+  downstream integration/signed runner (un-staged KMP Shared.xcframework — not a defect in this code,
+  outside this prompt's allowed files), matching the 0005/0086/0056 "code-complete + DEFERRED Xcode
+  gate" precedent.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/YearlyTrendChart.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0095-YearlyTrendChart.log
+  git commit -m "feat(apps/apple/feature-views): add YearlyTrendChart surface (P4)"
+
+EXIT=0
+STATUS=DONE

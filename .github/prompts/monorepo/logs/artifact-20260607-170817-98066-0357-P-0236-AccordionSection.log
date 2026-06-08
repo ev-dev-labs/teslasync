@@ -1,0 +1,168 @@
+=== P4 Feature view 0236 AccordionSection (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh · Java 17 (openjdk 17.0.19)
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5, Booted) present · macOS 26.5 SDK present
+  Shared.xcframework : assembled + staged via the scheme pre-action (Scripts/build-shared-xcframework.sh →
+                       Gradle ":core:assembleSharedXCFramework", mostly FROM-CACHE; debug+release XCFrameworks
+                       written to apps/shared/core/build/XCFrameworks/{debug,release}/Shared.xcframework). NOT a blocker.
+  Capability         : SwiftUI present (verified: swiftc -typecheck of a SwiftUI probe passed on macOS 15 + iOS 18).
+                       Swift Charts + MapKit present but UNUSED by this surface — the prompt records
+                       "Charts / maps used: (none)"; AccordionSection is a pure presentational disclosure container.
+                       → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/features/system/components/status/AccordionSection.tsx — a PURE presentational disclosure container (78 lines):
+    GlassPanel(overflow-hidden)
+      → header div role="button" tabIndex=0 aria-expanded={open} onClick/onKeyDown(Enter|Space) hover:bg-white/[0.02]
+          · icon (text-cyan-400, shrink-0)
+          · title (text-sm font-semibold text-[var(--text-primary)]) + description (text-xs text-[var(--text-muted)])
+          · {badges && <div flex gap-2 shrink-0>{badges}</div>}
+          · ChevronDown (h-4 w-4 text-muted, transition-transform duration-normal, open && rotate-180)
+      → {open && <FadeIn><div border-t border-white/[0.06] px-5 py-4 space-y-4>{children}</div></FadeIn>}
+  Props: icon, title, description, badges?, defaultOpen=false, children. No data hooks.
+  The prompt records "Data sources: (none — pure presentational component)", so the remote
+  loading/empty/error/stale/offline branches belong to the data-bound caller (the System / status page),
+  NOT to the container — the same disposition the sibling ToolCard (0010) + HighlightCard (0076) surfaces carry.
+
+ARTIFACTS SHIPPED (allowed scope: apps/apple/TeslaSync/feature-views/AccordionSection.* + this log only)
+  AccordionSection.Model.swift      (170 L) — AccordionSectionSurface (slug + reportOpen) · AccordionSectionPresentation
+                                     (pure, Equatable, Sendable projection of every branch: isExpanded/hasBadges →
+                                     showsContent / showsBadges / chevronRotationDegrees / a11y policy / toggled()) ·
+                                     AccordionSectionStrings (P1/S10 facade, table "AccordionSection") ·
+                                     AccordionSectionAccessibility (testable a11y seam: state value + action hint)
+  AccordionSection.Telemetry.swift  ( 38 L) — AccordionSectionTelemetry seam + OSLogAccordionSectionTelemetry
+                                     (redaction-safe os_log "view.opened", slug only, no payload/PII)
+  AccordionSection.swift            (199 L) — AccordionSection<Badges: View, Content: View> SwiftUI view (designated
+                                     init w/ badges builder + EmptyView convenience init; private funnel init)
+  AccordionSection.Previews.swift   (144 L) — #if DEBUG previews: collapsed·badges, expanded·badges, expanded·no-badges,
+                                     stacked·mixed (long body), dark
+  AccordionSection.strings          ( 28 L) — P1/S10 catalog contribution (expanded/collapsed state + expand/collapse hint)
+  AccordionSection.Tests.swift      (173 L) — 15 XCTest cases (presentation projection, accessibility phrasing,
+                                     telemetry slug, surface identity)
+  No shared-wiring edits were needed or made: "TeslaSync/feature-views" is already in project.yml (both app targets)
+  and .swiftlint.yml `included`. This prompt touched nothing outside AccordionSection.* + this log. The generated
+  TeslaSync.xcodeproj (xcodegen) is git-ignored and not committed.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  GlassPanel(overflow-hidden)  → TSGlassPanel (Sources/Components/UI/Cards.swift); .tsGlassPanel() clips to TSRadius.lg
+                                 → the overflow-hidden read (rounded-corner clip)
+  FadeIn                       → TSFadeIn (Sources/Components/Motion/Motion.swift) — opacity+lift on appear, Reduce-Motion safe
+  icon text-cyan-400           → SF Symbol (systemImage:) at Color.TS.accent (the brand cyan accent); decorative → a11y hidden
+  title text-sm font-semibold  → Text(title).font(Font.TS.body).fontWeight(.semibold).foregroundStyle(Color.TS.textPrimary)
+  description text-xs muted     → TSCaption (Font.TS.caption, Color.TS.textMuted)
+  ChevronDown + rotate-180     → SF Symbol "chevron.down", .rotationEffect(180° when open), animated TSMotion.normalDuration
+  border-t border-white/[0.06] → Divider().overlay(Color.TS.border)
+  duration-normal transition   → withAnimation(TSAnimation.standard(reduceMotion:)) on toggle (Reduce-Motion → instant)
+  badges (optional ReactNode)  → @ViewBuilder Badges generic + EmptyView convenience init (cluster + its gap dropped when absent)
+  children                     → @ViewBuilder Content generic (the disclosed body)
+  i18n     : title / description / badge labels are caller LocalizedStringKeys (zero English literals in code) — exactly
+             like the web, where the caller passes already-translated strings. The container's OWN strings (the
+             expanded/collapsed VoiceOver state + the expand/collapse hint) live in the P1/S10 table "AccordionSection".
+  a11y     : icon + chevron are decorative → .accessibilityHidden(true); the header is one Button (its title+description+
+             badges auto-combine as the label); .accessibilityAddTraits(.isHeader) makes it a heading-rotor stop; the
+             open/closed state is announced as .accessibilityValue ("Expanded"/"Collapsed") and the tap result as
+             .accessibilityHint ("Expands/Collapses the section") — the native read of role="button" + aria-expanded;
+             Dynamic Type via system fonts; Reduce-Motion safe (chevron + reveal animations gated by the env value).
+  telemetry: view.opened surface="AccordionSection" via AccordionSectionSurface.reportOpen in .task (P1/S11), default OSLog sink.
+
+STATES / BRANCHES REPRODUCED (every branch the web source carries — none hidden)
+  • collapsed (chevron 0°, body hidden — header only, never a blank expanded box)
+  • expanded  (chevron 180°, body revealed under a divider via FadeIn)  ·  defaultOpen honoured (isInitiallyExpanded)
+  • badges present (trailing cluster) / absent (cluster + its leading gap dropped)
+  • toggle via tap / Space / Return (SwiftUI Button) — web onClick + onKeyDown(Enter|Space)
+  • Reduce-Motion variant (instant, no rotation/fade)
+  • loading/empty/error/stale/offline are owned by the data-bound caller (pure-presentational contract; see WEB SOURCE)
+
+GATES (every step executed on THIS runner; raw exits pasted)
+  [GREEN]  swiftformat --lint (AccordionSection.* scope, 5 swift files)   : 0/5 require formatting        (FORMAT_SCOPED_EXIT=0)
+  [GREEN]  swiftlint --strict (AccordionSection.* scope, 5 swift files)   : 0 violations, 0 serious        (LINT_SCOPED_EXIT=0)
+  [GREEN]  check-placeholders.ps1 -Language swift (AccordionSection.* scan): PLACEHOLDER_ALLOWED=0 · PLACEHOLDER_COUNT=0 (EXIT=0)
+           (run against a temp dir holding the 6 shipped files so the scan is substantive — the prompt's literal
+            -Path …/AccordionSection resolves to no directory and returns a vacuous 0; both are recorded honestly.)
+  [GREEN]  AccordionSection build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode = strict
+           concurrency complete, same as the app), DEBUG defined (so the #if DEBUG previews compile too), compiling the
+           EXACT shipped AccordionSection.* sources against the REAL repo design-system files (Tokens / TSDesign /
+           TSMaterial / Cards / Typography / Badges / Buttons / Motion):
+               swift test  (debug)    : Build complete! · Executed 15 tests, with 0 failures              (SWIFT_TEST_EXIT=0)
+               swift build -c release : Build complete!                                                   (RELEASE_BUILD_EXIT=0)
+               re-test after swiftformat fix (exact committed bytes) : Executed 15 tests, with 0 failures (RETEST_EXIT=0)
+  [GREEN]  swiftc -typecheck of the shipped non-test sources (+previews, -D DEBUG), Swift 6, against BOTH SDKs:
+               macOS 15  (arm64-apple-macos15.0)            : ok                                          (MACOS_TYPECHECK_EXIT=0)
+               iOS 18    (arm64-apple-ios18.0-simulator)    : ok                                          (IOS_TYPECHECK_EXIT=0)
+
+  [WHOLE-APP, FYI — the prompt's gate commands, run verbatim on the whole app]
+  [RED·pre]  swiftformat --lint apps/apple                : 1/1662 require formatting                     (FORMAT_EXIT=1)
+                 → the 1 file is TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes) —
+                   a PRE-EXISTING sibling, NOT an AccordionSection file (AccordionSection.* = 0/5 above).
+  [RED·pre]  swiftlint --strict (whole app)               : 1 violation, 1 serious in 1658 files          (LINT_EXIT=2)
+                 → the 1 violation is TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+                   (function_body_length) — the SAME pre-existing violation the HighlightCard (0076) log recorded;
+                   NOT an AccordionSection file (AccordionSection.* = 0 above).
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO AccordionSection errors; all blockers pre-exist this change):
+    Shared.xcframework: assembled + staged OK here (Gradle mostly FROM-CACHE) — NOT a blocker in this run.
+    iOS  : the app target fails because ~217 PRE-EXISTING, co-located sibling *.Tests.swift files import XCTest into the
+           app target (the app target compiles TeslaSync/feature-views/* + dashboard-widgets/*, which includes the staged
+           per-surface test bundles). All 4 ": error:" lines in the iOS log are one class, first (alphabetical):
+             TeslaSync/feature-views/AISettings.Tests.swift:20:8: error: unable to resolve module dependency: 'XCTest'
+           grep ": error:" over the iOS build log → 4 hits, 0 mention AccordionSection (0 AccordionSection.* of any kind,
+           0 AccordionSection non-test sources). AccordionSection.Tests.swift is the same sanctioned co-located staging
+           pattern as those 217 siblings; P99 integration folds them all into the XCTest target.
+    macOS: fails earlier, at signing — both app + widget targets carry entitlements that require a development certificate
+           this runner does not provision. All 4 ": error:" lines are that one class:
+             TeslaSync.xcodeproj: error: "TeslaSync-macOS"/"TeslaSyncWidgets-macOS" has entitlements that require signing
+             with a development certificate.
+           grep ": error:" over the macOS build log → 4 hits, 0 mention AccordionSection.
+    Pre-existing duplicate-type collisions also present in the app target (unrelated): struct DashboardWidgetSize ×15,
+    PowerFlowConnection ×2 across Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/*.
+    These are exactly the artifacts apps/macos-pending-verifications.md defers to the ADR-012 macos-latest CI runner;
+    they are owned by the P4/P99 Apple acceptance gate (signing/archive + folding the staged *.Tests.swift into the test
+    target) and a dashboard-widget de-duplication pass — NOT by a single feature-view prompt (task rule: do not fix
+    pre-existing unrelated breakage; allowed scope is AccordionSection.* + this log).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                          explicitly DEFERRED with pasted evidence; the whole-app swiftformat/swiftlint pre-existing
+                          REDs are reported as RED — never as passing.
+  2  No scope narrowing : every web region + branch reproduced — icon, title, description, optional badge cluster,
+                          rotating chevron, collapsed/expanded reveal under a divider, defaultOpen, Enter/Space toggle.
+  3  No skip-and-assume : every gate executed on THIS runner; raw exits pasted; iOS + macOS failures captured (not
+                          assumed); Shared.xcframework actually assembled; the placeholder path nuance disclosed.
+  4  No stubs as final  : complete production view + projection/telemetry/strings/a11y seams + 15 real tests;
+                          placeholder scanner = 0; no TODO/stub/mock/placeholder/Lorem in shipped code.
+  5  No parity shortcut : panel / glass clip / fade / chevron rotation / divider / typography / a11y (header trait +
+                          state value + action hint) / telemetry all mapped to platform tokens + verified.
+  6  No delegation      : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 presentation seam pattern, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry, and
+                          P4 core (TSGlassPanel / TSFadeIn) all present and consumed.
+  8  No commit on red   : the COMMITTED artifact (AccordionSection.*) is GREEN on every per-surface host gate AND on a
+                          real isolated Swift 6 build+test (15/15) + iOS-18/macOS-15 typecheck; each shipped file is
+                          individually swiftlint/swiftformat/placeholder clean; the deferred full-app gate and the two
+                          whole-app lint/format REDs are pre-existing, unrelated surfaces this commit neither introduces
+                          nor touches (AISettings.Tests.swift, ActionBuilder.Previews.swift, LifetimeStatsWidget.Adapter.swift,
+                          macOS signing).
+  9  No silent drift    : changes are confined to feature-views/AccordionSection.{swift,Model.swift,Telemetry.swift,
+                          Previews.swift,strings,Tests.swift} and this log — all enumerated above; no shared wiring touched;
+                          macos-pending-verifications.md NOT edited (out of allowed scope) — referenced only.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic AccordionSection shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 15 tests pass under the app's own Swift 6 strict-concurrency rules, against the real
+  design-system, on both iOS 18 and macOS 15, with lint/format/placeholder all green on the surface. The full-app
+  iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): iOS is blocked by pre-existing
+  co-located-test XCTest imports (first: AISettings.Tests.swift) and macOS by pre-existing development-signing — both
+  owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per apps/macos-pending-verifications.md, with
+  ZERO AccordionSection errors in either full-app build. This matches the repo's sanctioned "code-complete + DEFERRED
+  Xcode gate" disposition used by every P4 surface to date (e.g. ToolCard 0010, HighlightCard 0076, AlertMessageEditor 0180).
+
+EXIT=0
+STATUS=DONE

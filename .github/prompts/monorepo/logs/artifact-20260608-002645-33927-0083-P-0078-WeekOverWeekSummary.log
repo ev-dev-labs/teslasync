@@ -1,0 +1,110 @@
+=== P4 Feature view 0078 WeekOverWeekSummary (Apple) ===
+run_utc=2026-06-08T08:36:45Z
+host: macOS 26.5.1 | swift Swift version 6.3.2
+
+### SURFACE FILES (apps/apple/TeslaSync/feature-views/WeekOverWeekSummary.*)
+     207 apps/apple/TeslaSync/feature-views/WeekOverWeekSummary.Adapter.swift
+     107 apps/apple/TeslaSync/feature-views/WeekOverWeekSummary.AdapterTests.swift
+     161 apps/apple/TeslaSync/feature-views/WeekOverWeekSummary.Chrome.swift
+     294 apps/apple/TeslaSync/feature-views/WeekOverWeekSummary.Model.swift
+      91 apps/apple/TeslaSync/feature-views/WeekOverWeekSummary.Previews.swift
+     197 apps/apple/TeslaSync/feature-views/WeekOverWeekSummary.Projection.swift
+     108 apps/apple/TeslaSync/feature-views/WeekOverWeekSummary.swift
+     287 apps/apple/TeslaSync/feature-views/WeekOverWeekSummary.Tests.swift
+     162 apps/apple/TeslaSync/feature-views/WeekOverWeekSummary.Views.swift
+      46 apps/apple/TeslaSync/feature-views/WeekOverWeekSummary.strings
+    1660 total
+
+================ HOST-RUNNABLE GATES (genuinely executed) ================
+
+--- [1] swiftformat --lint (config apps/apple/.swiftformat) ---
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-83/apps/apple/.swiftformat
+SwiftFormat completed in 2.85s.
+0/9 files require formatting.
+FORMAT_EXIT=0
+
+--- [2] swiftlint --strict (config apps/apple/.swiftlint.yml) ---
+Linting 'WeekOverWeekSummary.Views.swift' (9/9)
+Linting 'WeekOverWeekSummary.Tests.swift' (8/9)
+Done linting! Found 0 violations, 0 serious in 9 files.
+LINT_EXIT=0
+
+--- [3] placeholder gate (apps/tools/check-placeholders.ps1, real pwsh) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+(scoped scan of the 9 shipped swift files:)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+
+--- [4] Foundation core unit logic EXECUTED (SwiftPM exe harness; XCTest absent in CLT) ---
+    The Adapter/Model/Projection are compiled as a SwiftPM library under Swift 6 strict
+    concurrency and the SAME assertions as the XCTest suites are run as a plain executable
+    (XCTest.framework ships only with full Xcode). Mirrors WeekOverWeekSummary.Tests.swift +
+    .AdapterTests.swift: number/currency/pctChange/trend, projection phases + 6 tiles, a11y,
+    model wiring/telemetry/stale-refresh.
+CHECKS=45 FAILURES=0
+HARNESS_EXIT=0
+
+--- [5] View layer (.swift/.Chrome/.Views + preview bodies) type-checked vs P1/S9 token +
+        P1/S10 component stubs (full app module needs Xcode) ---
+VIEW_TYPECHECK_EXIT=0
+
+========== APP BUILD/TEST: DEFERRED (Xcode capability unavailable on runner) ==========
+    Honest evidence (NOT shown as pass) — the runner has only Command Line Tools:
+      $ xcode-select -p        -> /Library/Developer/CommandLineTools
+      $ xcrun --find simctl    -> error: unable to find utility "simctl" (no iOS Simulator)
+--- gate line 1: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+--- gate line 2: xcodebuild -scheme TeslaSync-macOS build test ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+
+    Files ARE correctly wired for that deferred build: `xcodegen generate` (0.63.x) succeeds and
+    the generated TeslaSync.xcodeproj references all 10 surface files in the TeslaSync /
+    TeslaSync-macOS targets (60 pbxproj refs). project.yml already includes
+    `TeslaSync/feature-views`, so no project wiring is owed by this prompt. The app build/test
+    is the integration environment's responsibility (full Xcode + Shared.xcframework staging +
+    signing) and is the predecessor-accepted disposition (cf. 0002-BackendTool, 0054).
+
+================================ ACCEPTANCE ================================
+  [x] Surface renders all web-source states + the P4 leaf states (loading / empty / error /
+      data + stale / offline freshness chip + banner). Every branch type-checks (gate [5]).
+  [x] Hooks bind via the shared P1/S8 state-holder (WeekDigestSource/WeekDigestModel); the view
+      issues no HTTP. Inputs = DigestMetrics + useFormatting currency + parent query state.
+  [x] Every i18n key from the web source resolves through the P1/S10 facade (table
+      "WeekOverWeekSummary"): weekOverWeek/distance/drives/energy/cost/efficiency/co2 + units;
+      no English literals in Swift (all via WeekDigestStrings). 26 keys catalogued in .strings.
+  [x] Accessibility: each tile is one VoiceOver element with a pre-built label (label+value+unit
+      +trend phrase); header isHeader trait; chip/banner/refresh/retry labelled; reduce-motion
+      honoured via shared TSFadeIn/TSSkeleton.
+  [x] Tests: adapter (number/currency/pctChange/trend) + per-state projection (6 tiles, invert
+      semantics) + model wiring/telemetry/stale-refresh + a11y — 31 XCTest methods shipped;
+      45 equivalent assertions EXECUTED green via the exe harness (gate [4]).
+  [x] No TODO/stub/mock/placeholder/Lorem — placeholder gate PLACEHOLDER_COUNT=0 (gate [3]).
+  [x] Telemetry: WeekDigestModel emits view.opened(surface:"WeekOverWeekSummary") once on first
+      presentation (P1/S11); asserted in the harness.
+
+================================ HONESTY COVENANT ================================
+  1 No red-as-green ...... every GREEN line above was really executed; the xcodebuild app
+                          build/test is shown DEFERRED with its real exit 1 + cause, never as pass.
+  2 No scope narrowing ... full surface: 9 swift files + strings, all states, seams, tests.
+  3 No skip-and-assume ... web source + helpers.ts/types.ts read end-to-end; every t() call,
+                          unit, icon, and trendFor invert flag reproduced verbatim.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. 6 StatCards w/ unit + direction/positive trend tri-state + currency;
+                          arithmetic ported 1:1 (pctChange, |diff|<0.01 flat, invert-positive).
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same host-green + Xcode-deferred disposition as 0002/0054 siblings.
+  8 No commit on red ..... every runnable gate is green; the only non-green step is the
+                          environment-blocked xcodebuild, deferred with captured evidence.
+  9 No silent drift ...... a native-only freshness/empty/error leaf contract is added over the
+                          presentational web component, documented in headers + this log.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

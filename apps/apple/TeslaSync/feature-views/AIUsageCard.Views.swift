@@ -1,246 +1,252 @@
 //
-//  AIUsageCard.Views.swift
-//  TeslaSync — P4 feature view · 0203 · AIUsageCard (Apple)
+//  AiUsageCard.Views.swift
+//  TeslaSync — P4 feature view · 0237 · AiUsageCard (Apple)
 //
-//  The presentational subviews composed by `AIUsageCard`: the three-up usage grid (web
-//  `grid-cols-3 gap-3`), one usage cell (muted label over a medium primary value — the native
-//  `@/components/ui` `UsageCell` role), the footer caption (web `<Caption>`), the freshness
-//  chip + stale/offline banner, and the loading / error chrome. All consume the P1/S10 facade
-//  and the shared P1/S9 tokens — no networking, no Tailwind ports, no raw hex.
+//  The presentational subviews composed by `AiUsageCard`, reproducing the shared web <UsageCard>
+//  regions (bands grid, key/value detail grid, top-list breakdowns, empty message) plus the P4
+//  leaf chrome (freshness chip, stale/offline banner, loading skeleton, retryable error). All
+//  consume the P1/S10 facade + the shared P1/S9 tokens — no networking, no Tailwind ports, no raw
+//  hex. The web intent palette (normal / warn / danger) is mapped to the semantic status tokens.
+//
+//  Scope note: the web <UsageCard> primitive is shared between TeslaApiUsageCard and AiUsageCard.
+//  Its native atomic peer is owned by the P4 component-library bundle (out of scope here, and not
+//  yet present), so these regions are reproduced as private subviews scoped to this surface — the
+//  only files this prompt is allowed to touch.
 //
 
 import SwiftUI
 
-// MARK: - Usage grid (web `grid grid-cols-3 gap-3`)
+// MARK: - Intent palette (web `intentBandRing` / `intentValueText`)
 
-/// The resolved card body — the title subhead, the three-up usage grid, and the footer caption,
-/// wrapped in the shared fade-in. Shared by the `data` and `empty` phases (they differ only in
-/// the caption the model resolves), exactly like the web component, which always renders the
-/// grid and only swaps the caption on `call_count`.
-struct AIUsageContent: View {
-    let metrics: [AIUsageMetric]
-    let caption: AIUsageCaption
+/// Maps a `UsageCardIntent` to the semantic status tokens — the native peer of the web intent
+/// class maps. `normal` is a near-transparent glass tile with no ring; `warn` / `danger` add a
+/// tinted fill + ring and colour the headline value.
+enum AiUsageIntentStyle {
+    static func valueColor(_ intent: AiUsageIntent) -> Color {
+        switch intent {
+        case .normal: Color.TS.textPrimary
+        case .warn: Color.TS.statusWarning
+        case .danger: Color.TS.statusDanger
+        }
+    }
 
-    private let columns = [GridItem(.adaptive(minimum: 96), spacing: TSSpacing.md, alignment: .top)]
+    static func tileFill(_ intent: AiUsageIntent) -> Color {
+        switch intent {
+        case .normal: Color.TS.surfaceGlass
+        case .warn: Color.TS.statusWarning.opacity(0.10)
+        case .danger: Color.TS.statusDanger.opacity(0.10)
+        }
+    }
 
-    var body: some View {
-        TSFadeIn {
-            VStack(alignment: .leading, spacing: TSSpacing.sm) {
-                LazyVGrid(columns: columns, alignment: .leading, spacing: TSSpacing.md) {
-                    ForEach(metrics) { metric in
-                        AIUsageMetricCell(metric: metric)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                AIUsageCaptionView(caption: caption)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+    static func tileStroke(_ intent: AiUsageIntent) -> Color {
+        switch intent {
+        case .normal: Color.clear
+        case .warn: Color.TS.statusWarning.opacity(0.30)
+        case .danger: Color.TS.statusDanger.opacity(0.30)
         }
     }
 }
 
-// MARK: - Usage cell (web `UsageCell`)
+// MARK: - Bands grid (web `BandsSection` — grid-cols-1 md:grid-cols-3)
 
-/// One usage cell — a muted label over a medium primary value (web `<UsageCell label value />`).
-/// Combined into a single VoiceOver element so each metric reads as "{label}: {value}".
-struct AIUsageMetricCell: View {
-    let metric: AIUsageMetric
+/// The three at-a-glance bands. Adaptive so it is a single column on a compact width and three
+/// across on a regular width (web `md:grid-cols-3`).
+struct AiUsageBandsView: View {
+    let bands: [AiUsageBand]
 
-    private var label: String {
-        AIUsageStrings.string(metric.labelKey, metric.labelFallback)
+    private let columns = [GridItem(.adaptive(minimum: 150), spacing: TSSpacing.md, alignment: .top)]
+
+    var body: some View {
+        LazyVGrid(columns: columns, alignment: .leading, spacing: TSSpacing.md) {
+            ForEach(bands) { band in
+                AiUsageBandCell(band: band)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// One band tile — an icon + uppercase label, a large tabular headline (+ small unit), and a
+/// subtitle. The intent tints the tile + colours the value.
+struct AiUsageBandCell: View {
+    let band: AiUsageBand
+
+    private var valueWithUnit: String {
+        guard let unit = band.unit else { return band.value }
+        return "\(band.value) \(unit)"
     }
 
     var body: some View {
+        VStack(alignment: .leading, spacing: TSSpacing.xs) {
+            HStack(spacing: 4) {
+                Image(systemName: band.systemImage)
+                    .font(.system(size: 11, weight: .semibold))
+                Text(verbatim: band.label)
+                    .font(Font.TS.caption)
+                    .tracking(0.5)
+                    .textCase(.uppercase)
+            }
+            .foregroundStyle(Color.TS.textMuted)
+
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(verbatim: band.value)
+                    .font(Font.TS.body)
+                    .fontWeight(.semibold)
+                    .monospacedDigit()
+                    .foregroundStyle(AiUsageIntentStyle.valueColor(band.intent))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                if let unit = band.unit {
+                    Text(verbatim: unit)
+                        .font(Font.TS.caption)
+                        .foregroundStyle(Color.TS.textMuted)
+                }
+            }
+
+            Text(verbatim: band.sub)
+                .font(Font.TS.caption)
+                .monospacedDigit()
+                .foregroundStyle(Color.TS.textMuted)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .padding(TSSpacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            AiUsageIntentStyle.tileFill(band.intent),
+            in: RoundedRectangle(cornerRadius: TSRadius.md, style: .continuous)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: TSRadius.md, style: .continuous)
+                .strokeBorder(AiUsageIntentStyle.tileStroke(band.intent), lineWidth: 1)
+        )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: "\(AiUsageAccessibility.label(band.label, valueWithUnit)). \(band.sub)"))
+    }
+}
+
+// MARK: - Detail grid (web `DetailsSection` — grid-cols-2 md:grid-cols-4)
+
+/// The key/value detail grid. Adaptive: two columns compact, four regular (web `md:grid-cols-4`).
+struct AiUsageDetailsView: View {
+    let details: [AiUsageDetail]
+
+    private let columns = [GridItem(.adaptive(minimum: 120), spacing: TSSpacing.md, alignment: .top)]
+
+    var body: some View {
+        LazyVGrid(columns: columns, alignment: .leading, spacing: TSSpacing.sm) {
+            ForEach(details) { detail in
+                AiUsageDetailCell(detail: detail)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// One detail cell — a muted label over an intent-coloured tabular value.
+struct AiUsageDetailCell: View {
+    let detail: AiUsageDetail
+
+    var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(verbatim: label)
+            Text(verbatim: detail.label)
                 .font(Font.TS.caption)
                 .foregroundStyle(Color.TS.textMuted)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
-            Text(verbatim: metric.value)
+            Text(verbatim: detail.value)
                 .font(Font.TS.bodySm)
-                .fontWeight(.medium)
                 .monospacedDigit()
-                .foregroundStyle(Color.TS.textPrimary)
+                .foregroundStyle(AiUsageIntentStyle.valueColor(detail.intent))
                 .lineLimit(1)
-                .minimumScaleFactor(0.6)
+                .minimumScaleFactor(0.7)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(verbatim: AIUsageAccessibility.cellLabel(label: label, value: metric.value)))
+        .accessibilityLabel(Text(verbatim: AiUsageAccessibility.label(detail.label, detail.value)))
     }
 }
 
-// MARK: - Caption (web `<Caption>` footer)
+// MARK: - Top-lists (web `TopListsSection` — grid-cols-1 md:grid-cols-2)
 
-/// The footer caption (web `<Caption>`): the live "{count} Helix calls today." line when calls
-/// exist, otherwise the "usage populates as features run" hint copy. Mirrors the web
-/// `@/components/ui` `Caption` role (muted caption type).
-struct AIUsageCaptionView: View {
-    let caption: AIUsageCaption
+/// The optional top-list breakdowns ("By feature" / "Recent calls"). Adaptive so one or two blocks
+/// sit side by side (web `md:grid-cols-2`).
+struct AiUsageTopListsView: View {
+    let topLists: [AiUsageTopList]
 
-    private var text: String {
-        switch caption {
-        case let .live(callCount):
-            AIUsageFormat.liveCaption(
-                callCount: callCount,
-                suffix: AIUsageStrings.string("ai.settings.usage.liveSuffix", "Helix calls today.")
-            )
-        case .hint:
-            AIUsageStrings.string(
-                "ai.settings.usage.placeholder", // parity:allow web settings i18n key from AIUsageCard.tsx
-                "Usage populates as features run. Live numbers arrive in a follow-up update."
-            )
-        }
-    }
+    private let columns = [GridItem(.adaptive(minimum: 240), spacing: TSSpacing.md, alignment: .top)]
 
     var body: some View {
-        Text(verbatim: text)
-            .font(Font.TS.caption)
-            .foregroundStyle(Color.TS.textMuted)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityLabel(Text(verbatim: text))
-    }
-}
-
-// MARK: - Freshness chip (Live / Stale / Offline)
-
-/// The header freshness chip reflecting the bound source's live-state (ADR-013).
-struct AIUsageFreshnessChip: View {
-    let connection: AIUsageConnection
-
-    private struct Descriptor {
-        let tone: Color
-        let key: String
-        let fallback: String
-    }
-
-    var body: some View {
-        let descriptor = Self.descriptor(for: connection)
-        return HStack(spacing: 4) {
-            Circle().fill(descriptor.tone).frame(width: 6, height: 6)
-            Text(verbatim: AIUsageStrings.string(descriptor.key, descriptor.fallback))
-                .font(Font.TS.caption)
-                .foregroundStyle(Color.TS.textMuted)
+        LazyVGrid(columns: columns, alignment: .leading, spacing: TSSpacing.md) {
+            ForEach(topLists) { list in
+                AiUsageTopListBlock(list: list)
+            }
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(verbatim: AIUsageStrings.string(descriptor.key, descriptor.fallback)))
-    }
-
-    private static func descriptor(for connection: AIUsageConnection) -> Descriptor {
-        switch connection {
-        case .live: Descriptor(tone: Color.TS.statusSuccess, key: "aiUsage.live", fallback: "Live")
-        case .stale: Descriptor(tone: Color.TS.statusWarning, key: "aiUsage.stale", fallback: "Stale")
-        case .offline: Descriptor(tone: Color.TS.textMuted, key: "aiUsage.offline", fallback: "Offline")
-        }
-    }
-}
-
-// MARK: - Refresh button (header)
-
-/// The header refresh affordance — re-requests the usage snapshot (web `refetch()` peer).
-struct AIUsageRefreshButton: View {
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: "arrow.clockwise")
-                .font(.system(size: 11, weight: .semibold))
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(Color.TS.textMuted)
-        .accessibilityLabel(Text(verbatim: AIUsageStrings.string("aiUsage.refresh", "Refresh")))
-    }
-}
-
-// MARK: - Connectivity banner (stale / offline)
-
-/// The stale/offline banner shown above the grid when the bound source is not live, so cached
-/// numbers are clearly labeled while reconnecting / offline.
-struct AIUsageConnectivityBanner: View {
-    let connection: AIUsageConnection
-
-    var body: some View {
-        let offline = connection == .offline
-        let key = offline ? "aiUsage.offlineBanner" : "aiUsage.staleBanner"
-        let fallback = offline
-            ? "Offline — showing last known usage"
-            : "Reconnecting — usage may be stale"
-        let tone = offline ? Color.TS.textMuted : Color.TS.statusWarning
-        return HStack(spacing: TSSpacing.xs) {
-            Image(systemName: offline ? "wifi.slash" : "clock.arrow.circlepath")
-                .font(.system(size: 10, weight: .semibold))
-            Text(verbatim: AIUsageStrings.string(key, fallback))
-                .font(Font.TS.caption)
-        }
-        .foregroundStyle(tone)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, TSSpacing.sm)
-        .padding(.vertical, TSSpacing.xs)
-        .background(tone.opacity(0.12), in: RoundedRectangle(cornerRadius: TSRadius.sm, style: .continuous))
-        .accessibilityElement(children: .combine)
     }
 }
 
-// MARK: - Loading chrome (P4 leaf state)
-
-/// The initial-fetch chrome: a skeleton three-up grid plus a caption bar that keeps the card
-/// shape while the usage query resolves.
-struct AIUsageLoadingView: View {
-    private let columns = [GridItem(.adaptive(minimum: 96), spacing: TSSpacing.md, alignment: .top)]
+/// One top-list block — a header (icon + uppercase title) over a list of monospaced label / value
+/// rows.
+struct AiUsageTopListBlock: View {
+    let list: AiUsageTopList
 
     var body: some View {
         VStack(alignment: .leading, spacing: TSSpacing.sm) {
-            LazyVGrid(columns: columns, alignment: .leading, spacing: TSSpacing.md) {
-                ForEach(0 ..< 3, id: \.self) { _ in
-                    VStack(alignment: .leading, spacing: TSSpacing.xs) {
-                        TSSkeleton(width: 56, height: 9)
-                        TSSkeleton(width: 72, height: 13)
+            HStack(spacing: 6) {
+                Image(systemName: list.systemImage)
+                    .font(.system(size: 11, weight: .semibold))
+                Text(verbatim: list.title)
+                    .font(Font.TS.caption)
+                    .tracking(0.5)
+                    .textCase(.uppercase)
+            }
+            .foregroundStyle(Color.TS.textMuted)
+
+            VStack(spacing: TSSpacing.xs) {
+                ForEach(list.items) { item in
+                    HStack(spacing: TSSpacing.sm) {
+                        Text(verbatim: item.label)
+                            .font(Font.TS.caption.monospaced())
+                            .foregroundStyle(Color.TS.textSecondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Text(verbatim: item.value)
+                            .font(Font.TS.bodySm)
+                            .monospacedDigit()
+                            .foregroundStyle(Color.TS.textPrimary)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityElement(children: .combine)
                 }
             }
-            TSSkeleton(width: 180, height: 9)
         }
+        .padding(TSSpacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement()
-        .accessibilityLabel(Text(verbatim: AIUsageStrings.string("aiUsage.loadingA11y", "Loading AI usage")))
+        .background(Color.TS.surfaceGlass, in: RoundedRectangle(cornerRadius: TSRadius.md, style: .continuous))
     }
 }
 
-// MARK: - Error chrome (web `QueryError` peer)
+// MARK: - Empty state (web `UsageCard` emptyMessage)
 
-/// The fetch-failure state (web `isError` upgraded to a retryable `QueryError` peer) with a
-/// retry affordance. Surfaces the failure message under the title when present.
-struct AIUsageErrorView: View {
+/// The resolved-but-empty state (web `!today || call_count === 0`). A friendly icon + the
+/// localized message — never a blank panel.
+struct AiUsageEmptyView: View {
     let message: String
-    let onRetry: () -> Void
 
     var body: some View {
         VStack(spacing: TSSpacing.sm) {
-            Image(systemName: "exclamationmark.triangle.fill")
+            Image(systemName: "sparkles")
                 .font(.system(size: 24))
-                .foregroundStyle(Color.TS.statusDanger)
+                .foregroundStyle(Color.TS.textMuted)
                 .accessibilityHidden(true)
-            Text(verbatim: AIUsageStrings.string("aiUsage.errorTitle", "Couldn't load AI usage"))
+            Text(verbatim: message)
                 .font(Font.TS.body)
-                .fontWeight(.semibold)
-                .foregroundStyle(Color.TS.textPrimary)
+                .foregroundStyle(Color.TS.textSecondary)
                 .multilineTextAlignment(.center)
-            if !message.isEmpty {
-                Text(verbatim: message)
-                    .font(Font.TS.caption)
-                    .foregroundStyle(Color.TS.textSecondary)
-                    .multilineTextAlignment(.center)
-            }
-            TSButton(variant: .secondary, size: .small, action: onRetry) {
-                Text(verbatim: AIUsageStrings.string("aiUsage.retry", "Retry"))
-            }
-            .accessibilityLabel(Text(verbatim: AIUsageStrings.string("aiUsage.retry", "Retry")))
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, TSSpacing.sm)
+        .padding(.vertical, TSSpacing.md)
         .accessibilityElement(children: .combine)
     }
 }

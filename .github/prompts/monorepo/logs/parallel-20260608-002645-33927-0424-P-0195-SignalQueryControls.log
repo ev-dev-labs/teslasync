@@ -1,0 +1,128 @@
+I'll start by assessing the environment capability (this task requires Xcode/Swift toolchain) and locating the web source and existing Apple app structure.
+
+Key finding: the runner has **Command Line Tools only, not full Xcode**, and `xcodebuild`/`simctl` are unavailable. `swift`, `swiftlint`, `swiftformat`, `pwsh` are present. Let me explore the existing Apple app patterns and read the web source before deciding how to proceed.
+
+Now I understand the web source. Let me explore the existing Apple Swift patterns deeply to understand the established conventions (state holders, tokens, i18n, telemetry, tests).
+
+Each surface is split into multiple files (`.swift`, `.Model`, `.Adapter`, `.Views`, `.Previews`, `.Tests`, `.strings`). Let me read a complete representative example and the shared infrastructure (state holders, tokens, i18n, telemetry).
+
+Let me read a complete representative surface (`ActiveOrdersSection`) and list the shared infrastructure dirs to learn the established conventions.
+
+Excellent, high-quality established pattern. Let me read the remaining `ActiveOrdersSection` files and locate the shared primitives (`TSGlassPanel`, `TSFadeIn`, `TSSpacing`, tokens).
+
+Now let me read the design tokens, shared components, and the test/preview patterns. These define the vocabulary I must reuse.
+
+Design tokens are generated. Let me locate them and read the remaining key shared components plus the test/preview patterns.
+
+Now let me check the lint configs, the placeholder checker, and whether I can do any Swift verification given Command Line Tools only. Also reading the remaining example files (Previews/Tests/Cards) and form components.
+
+Good — `swiftc -frontend -parse` works for SwiftUI on this runner. The `.Adapter` layer is Foundation-only (fully testable here). Let me read the form components, the data table, the view-test pattern, and the placeholder checker.
+
+I now have the full design vocabulary. Let me read the placeholder checker (to avoid forbidden tokens) and the web constants the source depends on (`TIME_RANGE_PRESETS`, `matchTimeRangePreset`, `fmtInt`), plus check how `swiftlint` can scope to my files.
+
+Now let me read the web constants the source depends on (`TIME_RANGE_PRESETS`, `matchTimeRangePreset`) and confirm how to scope swiftlint to my files.
+
+I have a complete understanding of the architecture, design tokens, components, test conventions, and the placeholder gate. Key environment finding: **no full Xcode** (Command Line Tools only), so `xcodebuild`/`simctl` can't run — but `swift`, `swiftlint`, `swiftformat`, `pwsh` are available for real verification, and the pure adapter layer is fully compile+run testable.
+
+Let me set up a plan and todos.
+
+Now I'll write the pure Foundation adapter core — the fully testable heart of the surface.
+
+Let me immediately validate the adapter by compiling and running it standalone (real evidence the core logic works).
+
+Top-level code needs to be in `main.swift` when compiling multiple files. Let me fix and rerun.
+
+All adapter logic verified by compile+run. Now the Model (P1/S8 state holder + seams).
+
+Now the control sub-views.
+
+Now the results table with server pagination and typed cells.
+
+I introduced a typo with a non-ASCII character in an identifier (`paginationФooter`). Let me fix it.
+
+Now the load/empty/error chrome (catalog inline + results region states).
+
+Now the composed surface view.
+
+Now the per-state previews.
+
+Now the test files — pure adapter/a11y tests and state-holder tests.
+
+Now the state-holder tests.
+
+Now let me extract every i18n key used in the Swift files so the `.strings` catalog is complete.
+
+All 41 keys identified. Now the i18n catalog.
+
+All 10 surface files written. Now the verification phase — formatting, linting, syntax parse, placeholder gate, and re-running the adapter. Let me start with swiftformat.
+
+All auto-fixable formatting issues. Let me apply swiftformat, then re-lint.
+
+swiftformat clean. Let me re-verify the adapter still behaves correctly after formatting, run swiftlint scoped to the files, syntax-parse every file, and run the placeholder gate.
+
+Adapter logic intact (35/35). swiftlint linted the whole repo (config `included`) and found 1 violation — I need to know if it's mine. Let me locate it and also lint my files in isolation with the same rules.
+
+The full-repo violation is **pre-existing** (`LifetimeStatsWidget.Adapter.swift`), not mine — but that run didn't lint my files (shared-surfaces isn't in the config's `included`). Let me build a clean scoped config with identical rules and lint my files properly.
+
+swiftlint resolves `included` relative to the config file's location. Let me use an absolute path.
+
+swiftlint now lints my 9 files: 4 violations — all default rules (`file_length` >400, `type_body_length` >250) amplified by `--strict`. The established split-file design keeps each file small. Let me confirm the existing files respect this, then split mine to match.
+
+Confirmed: the split-file design caps files at ≤400 lines (type bodies ≤250). My larger files need splitting to match. Let me view the formatted Adapter to split it precisely.
+
+Now let me split the adapter: create `Format.swift` with the formatting/paging/a11y helpers and truncate the adapter.
+
+Now truncate the adapter to remove the moved sections (keep lines 1–225).
+
+Adapter split done (225 + 279). Now split the Model. Let me find the section boundaries.
+
+Model split: let me view the imports and the model class boundaries precisely.
+
+Now split Views (550) into Views + Controls. Let me find the boundaries.
+
+Views split done. Now split the ModelTests class (body 257 > 250) into a shared base + two test classes. Let me view the anchor points.
+
+Now let me restructure the ModelTests into a shared base + two test classes (fixes `type_body_length`).
+
+All splits done. Let me re-format, re-lint, and re-run the adapter+format compile/run (now across both core files).
+
+swiftformat **0/12** and swiftlint **0 violations** — both pass. Let me re-verify the pure core (now Adapter + Format) compiles and runs, then syntax-parse all files.
+
+Core runs clean (35/35), all files parse. Now the placeholder gate via pwsh.
+
+Placeholder gate passes (COUNT=0). Now let me attempt a stronger check than parse-only: type-check the SwiftUI layer against the real design tokens + shared components.
+
+The Components tree depends on other app modules (e.g., `UnitPreferences`). Let me narrow to exactly the components my code uses and type-check that curated set.
+
+Curated set is clean of external refs. Let me type-check my SwiftUI layer against exactly those components + tokens.
+
+**Type-check passed with 0 errors** under Swift 6 + strict concurrency — the entire SwiftUI production layer resolves correctly against the real tokens and shared components. Let me extend this to the Previews (DEBUG) and the test files (compiled as sources, since I can't host XCTest).
+
+Both remaining failures are pure toolchain limitations (no Xcode): the `#Preview` macro plugin and `XCTest` aren't in Command Line Tools — and the Previews error is in a *dependency* file, not mine. My full production layer type-checks at 0 errors. Let me capture the toolchain evidence for the log and confirm the gate context.
+
+All evidence confirms the BLOCKED capability (no Xcode/simctl/XCTest) and that `shared-surfaces` needs one-line P4-core integration into `project.yml`/`.swiftlint.yml` (outside this surface's allowed files). Let me generate the honest gate log with real captured results.
+
+Let me view the log so far to verify the captured exits are honest, then append the supplementary evidence and final markers.
+
+I see a correctness problem: `IOS_EXIT=0`/`MAC_EXIT=0` captured the `head` pipe's exit, not xcodebuild's real failure — that would be "red-as-green," which I must not do. Let me regenerate the log with honest exit-code capture (no pipe masking).
+
+Honest exits: **IOS=1, MAC=1** (no Xcode), **LINT=0, FORMAT=0, PLACEHOLDER=0**. Now let me capture the supplementary evidence and write the complete, honest log.
+
+All green: PARSE=0, TYPECHECK=0, ADAPTER_RUN=0 (35/35). Now let me write the complete, honest log.
+
+Let me review the full log to confirm it's clean and accurate.
+
+The log is honest and accurate. Let me run a stricter forbidden-word scan (the acceptance criteria also forbid "mock"/"stub" which the gate script doesn't catch), then clean up temp files.
+
+Clean — no forbidden words. Let me verify git status, clean up temp files, and commit the surface + log.
+
+Pre-existing unrelated `AIUsageCard.*` edits exist in the tree (not mine — I never ran a modify command on `feature-views`). I'll stage **only** my surface files + the log, per the commit scope.
+
+All 14 intended files staged (13 surface files + log), `AIUsageCard` correctly excluded. Committing.
+
+Committed (`baff5b12a`). Let me do a final consolidated verification and update tracking.
+
+All checks green. Let me finalize tracking.
+
+All 11 todos complete. Task finished.
+

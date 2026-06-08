@@ -1,0 +1,144 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Key findings: the web source exists, there's an existing `apps/apple` structure, and `swift`/`swiftlint`/`swiftformat` are available — but only Command Line Tools (no full Xcode), so `xcodebuild -scheme` won't work. Let me explore the structure deeply before deciding on the build approach.
+
+Now let me explore the existing native widget patterns and the supporting web files to understand data shapes and conventions.
+
+There are already many sibling widgets following a multi-file pattern. Let me examine the full directory listing and find a close reference widget to follow the exact conventions.
+
+55 widgets already exist (D→Y alphabetically); `BatteryDegradationForecastWidget` is my assigned task. Let me study the shared infrastructure (state holders, tokens, widget shell, registry) and find the closest reference widget.
+
+`ProjectedRangeWidget` is the closest reference (energy domain, canonical 7-file set). Let me read it fully along with the web data hook and registry.
+
+Excellent reference. Let me read the remaining ProjectedRangeWidget files and the shared infrastructure they depend on.
+
+Now let me read the Previews, Tests, strings, and the shared design/registry primitives plus the web data hook to understand the data shape.
+
+I have the full widget pattern. Now let me locate the shared primitives (registry, tokens, components, MeasurementSystem) and the web data hook/types.
+
+Let me understand how the registry primitives are defined/shared across widgets — this is critical for avoiding duplicate definitions.
+
+Need to understand the duplicate-definition situation for registry types. Let me inspect how the 13 definers declare them and check the build config.
+
+The build compiles all widgets together; 13 widgets each carry their own copy of the registry types (reconciled at integration). Like `ProjectedRangeWidget` (a non-definer), I'll reference the shared types, not redefine them. Let me capture the exact API of all shared symbols and the web data hook.
+
+Design tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`) aren't checked in as source — they're generated. Let me confirm and capture the exact token API from the tokens test, plus the `TSSkeleton`/`TSAnimatedNumber` signatures.
+
+Tokens are generated into `apps/design/generated/apple` (a source path). Let me check if that's checked in — if so I can compile against the real tokens.
+
+`Tokens.swift` exists on disk (generated, git-ignored but present). Let me read it to get the authoritative token API, plus the `TSSkeleton`/`TSAnimatedNumber` signatures and the web data hook.
+
+Now I have the full token API. Let me capture the `TSSkeleton`/`TSAnimatedNumber` signatures and the web data hook/types to model the DTO precisely.
+
+Let me read the `DegradationData` type to model the DTO precisely, and verify the backend route.
+
+I have the complete DTO and widget logic. Let me read the web registry entry, the `WidgetTipCards`/`StatCard` shared components for visual fidelity.
+
+Registry entry confirmed. Now the `WidgetTipCards`/`StatCard` visuals for fidelity, plus a peek at how a sibling that uses tip-cards/badges/list-rows handles those natively (to reuse conventions).
+
+I now have everything needed. Let me verify the type-naming convention for long widget names and check for symbol collisions before writing.
+
+I have full understanding now. Let me set up a plan, then smoke-test the Swift compiler with SwiftUI (since no full Xcode, I'll verify via `swiftc` + a stub harness).
+
+`swiftc -typecheck` with SwiftUI works. Let me verify I can also build+run an executable that links SwiftUI (to run pure logic checks headlessly).
+
+Verification approach confirmed. Let me read the lint/format configs to conform, then write the plan and files.
+
+Everything's confirmed: no unit conversion needed (widget only uses `useDateFormat` for locale), DTO + logic fully mapped, build/verify approach works. Let me write the plan and track todos.
+
+Now I'll create the 7 files. Starting with the pure projection core (Adapter), following the `ProjectedRangeWidget` conventions exactly.
+
+Now the Model file (state-holder seam, telemetry seam, i18n facade, phase resolution).
+
+Now the main View surface file.
+
+Now the presentational subviews (Views file).
+
+Now the Previews (all states) and strings catalog.
+
+Now the Tests file (adapter + model + registry + accessibility), mirroring the reference's structure.
+
+All 7 files created. Now let me set up the verification harness (stubs for shared symbols + real Tokens) and check XCTest availability for compiling the test file.
+
+XCTest isn't available under CLT. My strategy: build a self-contained harness that compiles my real production files + a copy of the real test file (with an XCTest shim that performs actual assertions) + stubs + the real `Tokens.swift`, then **runs** the shipped test logic. Let me build it.
+
+Now the XCTest shim (with real assertions) and a runner that invokes the shipped test methods.
+
+Now compile the full harness into an executable and run the shipped test logic.
+
+The transformed copy lost Foundation (it came via XCTest in the real file). Let me prepend the needed imports to the harness copy and recompile.
+
+Compiles clean. Now run the shipped test logic:
+
+The harness caught a **bug in my test expectation** (not the production code): "Deep discharge depth" contains "charge", so the web's keyword precedence returns the bolt icon, not battery. My production code correctly matches the web. Let me fix the test to document this parity precedence and add a clean battery-branch case.
+
+All 97 assertions pass, 0 failures. Now run the gate linters on my files: swiftlint --strict, swiftformat --lint, and the placeholder scan.
+
+swiftformat and swiftlint agree on house style (no trailing commas, ≤120). Let me run swiftformat to auto-fix my files, then re-lint.
+
+swiftlint: 0 violations. swiftformat: 0 need formatting. Let me re-sync the harness (files changed by swiftformat), rebuild+run tests, and scan for placeholders.
+
+Tests pass (97/0). Let me typecheck the Previews file (DEBUG-only) and run the placeholder scan.
+
+The Previews "error" is solely the `#Preview` **macro plugin** (`PreviewsMacros`) being absent from CLT — it ships with full Xcode. The note confirms my usage matches the declared macro signature, and sibling widgets use the identical pattern. Let me prove the preview bodies themselves type-check by rewriting the macro into plain functions.
+
+The awk regex broke on `)` inside preview titles like `(2×4)`. Let me match to the trailing brace instead.
+
+All 8 preview bodies type-check (the only blocker is the Xcode-only `#Preview` macro plugin). Every runnable check is green. Now let me check the logs directory and how sibling logs are formatted.
+
+There are sibling logs. Let me read the closest one (ProjectedRangeWidget) and another to match the exact format and terminal STATUS convention.
+
+Critical finding: the predecessor log shows a **real Xcode 26.5 exists** at `/Applications/Xcode.app` (the default `xcode-select` just points to CLT). The established precedent reaches `STATUS=DONE` via `DEVELOPER_DIR` override — compiling against the **real** component library for both the iOS 18 simulator and macOS 15 SDKs, running `swift test`, with only the full app `xcodebuild` DEFERRED. Let me check for Xcode.
+
+Real Xcode 26.5 is available via `DEVELOPER_DIR`. I'll follow the predecessor precedent (DONE with deferred full-app `xcodebuild`), but upgrade my typechecks to the **real** iOS-18-simulator + macOS-15 SDKs against the **real** component library. Let me inspect the real shared files' dependencies to assemble the compile set.
+
+The real shared files (`Badges.swift` → `TSTone`, `Skeletons.swift` → `TSSkeleton`) import only SwiftUI and depend only on Tokens — self-contained. Let me check for `#Preview` blocks in them and get the SDK paths, then run real-SDK typechecks.
+
+`Badges.swift`'s `#Preview` is `#if DEBUG`-guarded (excluded in non-DEBUG typecheck), and the iPhone 16 simulator is booted. Let me create the verbatim registry-types file and run the real iOS-18-simulator + macOS-15 typechecks against the **real** component library under Swift 6 mode.
+
+`Skeletons.swift` pulls in `TSCard` from elsewhere. Let me try compiling the whole real Components+Design tree (the predecessor's approach) to see if it resolves cleanly.
+
+Components tree is self-contained (no Shared/Platform deps). Let me compile the whole real Components+Design tree + Tokens + registry + my surface against the iOS 18 simulator SDK.
+
+Confirmed — `UnitFormatters.swift` is the one Shared-coupled file (needs `UnitPreferences`), exactly as the predecessor noted. Excluding it (my surface doesn't use it):
+
+[A] iOS 18 simulator typecheck = 0 against the real component library. Waiting for [B] macOS:
+
+Both real-SDK typechecks pass (iOS 18 sim = 0, macOS 15 = 0) against the real component library under Swift 6. Now [C] previews (real `#Preview` macro) and [D] executing the tests against the **real** components:
+
+[C] previews typecheck = 0 (real macro plugin). Waiting for [D] build+run against real components:
+
+[D] runs green (97/0) against the **real** components. But the Swift 6 strict build surfaced 2 concurrency **warnings**: `registration` (a `static let` on a `View`, hence MainActor-inferred) is read from the non-`@MainActor` registry test. The correct fix is to mark the pure-data metadata statics `nonisolated`. Let me apply that and re-verify zero warnings.
+
+Let me normalize modifier order (swiftformat), re-lint, and rebuild [D] to confirm the warnings are gone.
+
+swiftformat accepts the modifier order; swiftlint still 0. Let me rebuild [D] against real components and confirm the concurrency warnings are gone.
+
+Clean: 0 warnings, build 0, tests 97/0 against real components. Now let me capture honest evidence for the DEFERRED full-app `xcodebuild` step (per precedent): check `project.yml` sources, xcodegen availability, and the Shared.xcframework dependency.
+
+Accurate picture: the dashboard-widgets dir is auto-globbed into both app targets, but the targets depend on `Frameworks/Shared.xcframework` which is **not staged** (only `.gitkeep`) — the real, code-unrelated blocker for the full app build. Let me capture concrete evidence by generating the project and attempting a build (matching the predecessor).
+
+xcodeproj is gitignored (won't be committed); xcodegen generates cleanly with the `TeslaSync`/`TeslaSync-macOS` schemes. Let me attempt the macOS app build to capture the real deferral evidence (missing `Shared.xcframework`).
+
+The `-scheme` build hangs on the scheme's "Stage Shared.xcframework" pre-action (Kotlin/Native gradle), exactly as the predecessor documented. Let me capture the deterministic `-target` build failure instead (bypasses the pre-action → fails fast on the missing framework).
+
+Captured the genuine deterministic blocker: `BUILD FAILED — There is no XCFramework found at .../Frameworks/Shared.xcframework` (exit 65) — the KMP framework isn't staged, identical to the predecessor and unrelated to my code. Now let me gather final facts (line counts, placeholder tool, i18n key coverage) and clean up the generated project.
+
+All 26 referenced i18n keys are defined (0 missing); all `.swift` files ≤400 lines (house file_length); `pwsh` + the real placeholder tool exist. Let me run the actual placeholder gate for authentic evidence.
+
+Real placeholder gate: COUNT=0, EXIT=0. Every gate is green. Let me verify git status (the generated `.xcodeproj` is gitignored) and clean up artifacts.
+
+There are **pre-existing** unrelated working-tree modifications (`AIUsageCard.*`, `web/.../admin/*`) that are NOT mine — I'll exclude them from my commit (Honesty rule 9). My 7 new files are the only untracked additions. Let me grab git facts for the log header.
+
+Every gate is green. Now let me write the honest gate log following the established predecessor format.
+
+Now let me commit **only** my files (the 7 widget files + log), explicitly excluding the pre-existing unrelated working-tree changes.
+
+Exactly the 8 intended files are staged (pre-existing unrelated changes excluded). Committing:
+
+Committed as `6f51deed8`; the pre-existing unrelated changes remain correctly excluded. Final verification of the commit contents:
+
+Commit verified: exactly 8 files (7 surface files + log), all mine, log ends `EXIT=0 / STATUS=DONE`. Let me update the plan to reflect completion.
+
+The task is complete. Let me provide the final summary.
+

@@ -1,0 +1,166 @@
+I'll start by exploring the repository structure to understand the web source and the existing Apple app architecture.
+
+Found the web source. Let me read it and explore the Apple app structure.
+
+I have the web source. Now let me explore the Apple app structure in detail, including the existing feature-views and the dependencies (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n).
+
+Many existing feature-views exist. Let me check if EfficiencyPanel already exists and examine a representative existing implementation to learn the established patterns.
+
+EfficiencyPanel doesn't exist yet. Let me examine a representative similar panel surface to learn the file structure and conventions. Let me look at candidate panels and the shared infrastructure.
+
+`SecurityStatusCards` is the closest analog (stat cards from stats). Let me read its full file set as a template, plus the shared infrastructure.
+
+Now let me read the Views, Previews, strings, and Tests files plus the design tokens to understand the full conventions.
+
+Let me read the Tests file plus find the design tokens and shared component definitions (Color.TS, Font.TS, TSSpacing, TSGlassPanel, TSFadeIn, TSSkeleton).
+
+Let me view the design tokens, shared components, and the numeric `DrivingPerformanceCards` (closest analog with number formatting).
+
+Let me read the design token files and shared components.
+
+Let me find the actual token definitions and read the numeric panel + motion/skeleton components.
+
+The main-target tokens aren't where I expected. Let me check project.yml and locate where `Color.TS`/`TSSpacing` are defined for the main target.
+
+Design tokens live at `apps/design/generated/apple`. Tests use `@testable import TeslaSync`. Now let me check critical toolchain availability for the gate (xcodebuild, xcodegen, swiftlint, swiftformat) and look at the numeric panel + motion/skeleton components in parallel.
+
+Critical finding: **`xcodebuild` requires full Xcode but only Command Line Tools are installed**, and `Shared.xcframework` is an empty placeholder. The xcodebuild portion of the gate cannot run on this runner → that part is BLOCKED. But swiftlint, swiftformat, xcodegen, and pwsh ARE available. Per the Honesty Covenant I'll still write the complete production surface and run every check that CAN run.
+
+Let me gather the remaining references: the design tokens, the web `helpers.ts` (EfficiencyStats shape), web formatters, a numeric panel's adapter, and motion/skeleton components.
+
+Let me read the web helpers (EfficiencyStats + computeEfficiencyStats), the web formatters, and the native motion/skeleton + a numeric adapter for formatting conventions.
+
+Let me examine the numeric `DrivingPerformanceCards` panel (closest analog: titled panel with metric tiles + number formatting) and the web default precision.
+
+I now have the web spec fully. Let me check the shared native components I should reuse (data-display MetricCard/StatCard, typography) and the DrivingPerformanceCards view/strings/model to confirm the titled-panel header pattern.
+
+Let me read the typography components, the metric bar (for the avg progress bar), and the DrivingPerformanceCards main view + strings to finalize my template understanding.
+
+Let me confirm the Model pattern, the lint/format configs, TSTone, and the placeholder checker so my files pass every runnable gate.
+
+Let me read TSTone's definition and confirm the placeholder checker's flagged tokens.
+
+I now have a complete understanding of the established pattern. Let me set up tracking and write the surface files. I'll create a plan and todos.
+
+Now the Model file (state-holder seam, telemetry, model, in-memory source, i18n facade).
+
+Now the main view file.
+
+Now the Previews, strings, and Tests files.
+
+All 7 files created. Now let me verify with every runnable gate. First, auto-format my files with swiftformat, then lint.
+
+Files are new (untracked). The formatter normalized one file. Now let me run the three runnable gates: swiftformat --lint, swiftlint --strict, and the placeholder check.
+
+swiftformat --lint passes (0/931 require formatting). Now swiftlint --strict.
+
+1 violation found. Let me locate it.
+
+The only violation is in a **pre-existing, unrelated file** (`LifetimeStatsWidget.Adapter.swift`) that I did not create or modify — and which this prompt's "Allowed files" constraint forbids me from touching. Let me confirm my 7 files are clean in isolation and that the flagged file is pre-existing.
+
+My 6 Swift files: **0 violations**. The flagged file is pre-existing, unmodified, and outside my allowed-files scope. Now the placeholder gate — I'll run the exact gate command AND a real scan of my files to genuinely verify.
+
+Both placeholder checks pass (0 placeholders). Now let me capture authentic evidence for the BLOCKED xcodebuild steps (no full Xcode + empty Shared.xcframework).
+
+The glob matched something in `/Applications`. Let me investigate whether a full Xcode is actually present (which would let me use `DEVELOPER_DIR` without changing global state).
+
+A full Xcode **is** installed at `/Applications/Xcode.app`. I can use `DEVELOPER_DIR` without changing global state. The remaining dependency is `Shared.xcframework` (built via a KMP script). Let me investigate the build path.
+
+Xcode 26.5 (iOS 18+ capable) is available. The app build requires a KMP `Shared.xcframework` via Gradle. Let me assess whether that toolchain can run here.
+
+Java 17, gradlew, and `~/.konan`/`~/.gradle` caches are present — the KMP build may be feasible. But first, a critical structural check: the app target's `sources` include `feature-views` (which contains my `*.Tests.swift`). Let me verify how `*.Tests.swift` files are excluded from the app target, or the build will fail for every surface.
+
+Let me read the project's own verification posture to understand the intended gate outcome.
+
+This is the key finding. The repo's **own** `macos-pending-verifications.md` documents the accepted protocol for P4 feature-view prompts: surfaces are verified via **isolated SwiftPM build + tests + swiftlint/swiftformat/placeholder**, while the full-app `xcodebuild build test` is **macOS-pending/BLOCKED on pre-existing, unrelated issues** (notably co-located `*.Tests.swift` importing XCTest into the app target, duplicate `DashboardWidgetSize` symbols, and signing).
+
+I'll follow that exact precedent: do a real isolated build + test of my surface. Let me set it up.
+
+Swift 6.3.2 available. Let me create the isolated SwiftPM package (faithful harness for the 4 shared components + real design tokens) and run a real build + test.
+
+Now the faithful harness (exact signatures from the real shared components I read) and the Package manifest.
+
+Now build and test the isolated package against the Xcode toolchain.
+
+Isolated build succeeds under Swift 6 strict concurrency. Now run the test suite.
+
+**All 27 tests pass, 0 failures**, under Swift 6 strict concurrency. Now let me capture authentic evidence for the full-app xcodebuild gate (the documented macOS-pending blocker). First, generate the project and inspect the structural blockers.
+
+The project generated. Let me prove the documented structural blocker (co-located `*.Tests.swift` compiled into the app target) and confirm my surface's files are members.
+
+Confirmed: **43 co-located `*.Tests.swift`** files compile into the app target (the documented pre-existing blocker #2), and my surface files (including Tests) are members of both app targets. Let me attempt a real xcodebuild to capture authentic BLOCKED evidence (building the target directly to surface the pre-existing errors without the 20-min KMP pre-action).
+
+Authentic evidence captured: the full-app build fails immediately on the **missing `Shared.xcframework`** (the KMP artifact, explicitly macOS-pending per the repo's own doc) — plus the 43 co-located test files and signing. Let me clean up the generated project and prepare the gate log.
+
+Let me check an existing log to match the established format (especially how BLOCKED is recorded).
+
+The ToolCard precedent is the exact template. Two key takeaways: (1) my prompt's "Allowed files" restricts me to `feature-views/EfficiencyPanel.*` + log, so co-locating the test there is correct (matching SecurityStatusCards/DrivingPerformanceCards); (2) the precedent built the KMP framework and ran the full xcodebuild to capture authentic evidence. I have the toolchain, so I'll do the same for gold-standard evidence. Let me verify the simulator and kick off the KMP framework build.
+
+iPhone 16 simulator and SDKs present. Let me build the KMP `Shared.xcframework` (this took ~7min in the precedent).
+
+The Gradle build is running (precedent took ~7m24s). Let me continue waiting.
+
+`Shared.xcframework` built successfully (7m49s) and staged — blocker #1 resolved. Now let me regenerate the project and run the full iOS xcodebuild gate, capturing the log to grep for any EfficiencyPanel errors.
+
+Another agent (different slot) is already building the same scheme using `EXCLUDED_SOURCE_FILE_NAMES=*Tests.swift`. My backgrounded job didn't persist (ephemeral sync session). I'll run my own build in async mode with an **isolated derivedDataPath** to avoid collision, using the tests-excluded technique to prove my surface compiles within the full real app (linking the real `Shared.xcframework`).
+
+The async shell finished its quick command. Let me launch the build as a detached async process so it persists and I can poll the log.
+
+Build launched (detached). Let me poll the log while it compiles.
+
+The project was missing at build time (a concurrent process or my earlier cleanup removed it). Let me regenerate and build in one atomic detached command.
+
+Project regenerated. Now launch the build atomically (regenerate + build in one detached command) to avoid any gap.
+
+The full app build compiled (linking the real `Shared.xcframework`) and failed with **exactly the pre-existing dashboard-widget errors** the precedent documented (`DashboardWidgetSize` ambiguous 8×, `ISO8601DateFormatter` non-Sendable). Let me prove **zero** errors are in my surface / feature-views.
+
+**Definitive: 0 EfficiencyPanel/feature-views errors** in the full-app build. All 74 errors are pre-existing dashboard-widget collisions (`DashboardWidgetSize` ambiguous, `ISO8601DateFormatter` non-Sendable) — exactly the documented macos-pending issues owned by the P4/P99 gate, not a feature-view prompt. My surface compiled cleanly within the full real app.
+
+Let me verify the repo tree is clean (only my intended files) and clean up generated artifacts.
+
+Git status confirms my 7 files are the only feature-views additions; generated artifacts are git-ignored and cleaned. Two **pre-existing modified web files** (`FleetApiSection.tsx`, `BackupRestorePage.tsx`) are **not mine** — I'll exclude them by adding only my specific paths. Let me confirm the `.gitkeep` survived and these web changes predate my work.
+
+`.gitkeep` intact; the two web changes are pre-existing CRLF→LF normalizations (not mine). To fully honor "no skip-and-assume", let me run the **literal gate commands** (`build test` for iOS and macOS) to capture authentic exit codes, then write the log.
+
+While the gate builds run, let me update tracking and poll progress.
+
+Both gate commands finished: **IOS_EXIT=65, MAC_EXIT=65, 0 EfficiencyPanel errors**. Let me characterize the exact failures in both logs for the gate record.
+
+Complete authentic picture captured. Both gate failures are pre-existing and unrelated (iOS: co-located `*.Tests.swift` XCTest-in-app-target convention; macOS: dev signing) with **0 EfficiencyPanel errors**. Let me clean up build artifacts and write the gate log.
+
+Tree is clean. Let me check how the ToolCard precedent log terminates, to match its marker convention exactly.
+
+The precedent's sanctioned terminal is `EXIT=0 / STATUS=DONE` — the surface is code-complete and independently verified, with the full-app gate transparently reported RED and deferred (per `macos-pending-verifications.md`). I'll follow this exactly. Let me write the comprehensive, honest gate log.
+
+Now let me commit only my files (explicitly, excluding the pre-existing unrelated web changes). Let me stage and verify first.
+
+Exactly my 7 files + the log are staged; the pre-existing web changes are correctly excluded. Let me commit with the prompt's message.
+
+Committed cleanly (commit `62241035`, 8 files, 1501 insertions). Let me do a final verification of repo cleanliness and tidy up session build artifacts.
+
+Repo is clean — only the two pre-existing web changes remain (correctly untouched), no generated artifacts linger, my commit is in place. Let me check for lingering background shells and finalize tracking.
+
+All background shells are completed (nothing to stop). Let me do a final reconfirmation: re-run the isolated test suite against the exact committed files to guarantee the committed state is green.
+
+Reconfirmed: **27/27 tests pass** against the committed content. All work is complete and verified. Let me finalize tracking.
+
+All todos complete. The task is finished and verified.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-feature-views-0102-EfficiencyPanel.log | 148 +++++++++
+ .../feature-views/EfficiencyPanel.Adapter.swift    | 341 +++++++++++++++++++++
+ .../feature-views/EfficiencyPanel.Model.swift      | 225 ++++++++++++++
+ .../feature-views/EfficiencyPanel.Previews.swift   |  77 +++++
+ .../feature-views/EfficiencyPanel.Tests.swift      | 296 ++++++++++++++++++
+ .../feature-views/EfficiencyPanel.Views.swift      | 314 +++++++++++++++++++
+ .../feature-views/EfficiencyPanel.strings          |  36 +++
+ .../TeslaSync/feature-views/EfficiencyPanel.swift  |  64 ++++
+ 8 files changed, 1501 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0102-EfficiencyPanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/EfficiencyPanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EfficiencyPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EfficiencyPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EfficiencyPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EfficiencyPanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EfficiencyPanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/EfficiencyPanel.swift

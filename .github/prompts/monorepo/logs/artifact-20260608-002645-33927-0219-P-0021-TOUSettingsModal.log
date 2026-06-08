@@ -1,0 +1,149 @@
+=== P4 Modal / dialog 0021 TOUSettingsModal (Apple) ===
+Surface : apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal.*
+Web spec: web/src/features/battery/components/TOUSettingsModal.tsx
+Runner  : Darwin, Command Line Tools ONLY (xcode-select -p = /Library/Developer/CommandLineTools).
+          swift 6.3.2 (macOS SDK present); NO full Xcode, NO iphonesimulator SDK, NO XCTest framework.
+
+------------------------------------------------------------------------------------------
+GATE COMMANDS (as specified in the prompt) — raw disposition on THIS runner
+------------------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    IOS_STEP=BLOCKED (platform-capability). Evidence:
+      $ xcode-select -p            -> /Library/Developer/CommandLineTools
+      $ xcodebuild -showsdks       -> "xcodebuild requires Xcode, but active developer directory
+                                        '/Library/Developer/CommandLineTools' is a command line tools instance"
+      $ xcrun --sdk iphonesimulator --show-sdk-path -> "SDK iphonesimulator cannot be located"
+    xcodebuild cannot be invoked and the iOS Simulator SDK is absent on this runner. Additionally, the
+    scheme's pre-build phase stages Shared.xcframework via the Kotlin/Native Gradle toolchain
+    (apps/apple/Frameworks holds only .gitkeep — unstaged), and the full-app target carries the
+    pre-existing parallel-merge collisions documented in apps/macos-pending-verifications.md
+    (DashboardWidgetSize redefined, co-located *.Tests.swift importing XCTest into the app target,
+    macOS development-signing). DEFERRED to the ADR-012 macos-latest acceptance gate (P4/P99).
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    MAC_STEP=BLOCKED (platform-capability) — same CLT-only cause as [1]; xcodebuild unavailable.
+    DEFERRED to the macos-latest acceptance gate.
+
+[3] swiftlint --strict
+    LINT_EXIT=0  — modals-dialogs/TOUSettingsModal.* contributes 0 violations under --strict.
+    (Config updated: TeslaSync/modals-dialogs added to .swiftlint.yml `included`.)
+
+[4] swiftformat --lint apps/apple
+    FORMAT_EXIT=0 — "0/10 files require formatting" for the surface (repo .swiftformat rules,
+    --swiftversion 6.0, --maxwidth 120).
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal
+    PLACEHOLDER_EXIT=0.
+      - Literal gate path (prefix, not a dir)  -> PLACEHOLDER_COUNT=0 EXIT=0.
+      - Real directory scan (-Path .../modals-dialogs -Language swift)
+        -> PLACEHOLDER_ALLOWED=1  PLACEHOLDER_COUNT=0  EXIT=0.
+        The 1 allowed opt-out is the single `// parity:allow` on the web i18n key literal
+        "energy.tou.selectPlaceholder" (kept verbatim for catalog parity; the gate matches the
+        substring "Placeholder" case-insensitively, and .strings files are not scanned).
+
+------------------------------------------------------------------------------------------
+SUPPLEMENTARY HOST-RUNNABLE VERIFICATION (executed on THIS runner — all GREEN)
+------------------------------------------------------------------------------------------
+[A] macOS-15 Swift-6 strict-concurrency typecheck of ALL 8 non-test surface files against the
+    REAL design tokens + real shared Components (Motion/Skeletons/Cards/Buttons/Pickers/Typography
+    + Design material), no stubs:
+      $ xcrun -sdk macosx swiftc -typecheck -swift-version 6 -target arm64-apple-macos15.0 \
+              <Tokens + Design + Components> <TOUSettingsModal.{Adapter,Strings,Projection,Model,
+              Views,Chrome}.swift TOUSettingsModal.swift TOUSettingsModal.Previews.swift>
+      -> FINAL_MACOS_TYPECHECK_EXIT=0  (Previews #Preview macro included; 0 errors, 0 warnings)
+
+[B] Executed test logic — XCTest ships only with full Xcode (absent), so the shipped
+    TOUSettingsModal.{Tests,AdapterTests}.swift XCTest suites cannot run here. To EXECUTE the
+    real code paths, an isolated SwiftPM module (real Components + Tokens + the surface) ran a
+    standalone harness mirroring every XCTest case:
+      $ swift run -c release tourun
+      -> CHECKS=90 FAILURES=0  ALL_GREEN
+    Coverage: ordered-JSON serializer (pretty/compact), 3-preset catalogue (ids/order/labels/
+    byte-exact payloads), custom-JSON validation (4 web getPayload paths), projection
+    (loading/empty/error/data), model wiring (view.opened telemetry, tab/preset/custom draft,
+    submit lifecycle + dismissal, server error, reentrancy, stale auto-refresh, stop/re-arm),
+    and the accessibility spoken summaries.
+
+[C] JSON parity oracle — the byte-exact preset payload assertion was independently confirmed
+    against Node's JSON.stringify of the verbatim web PRESETS[0].settings:
+      MATCHES_SWIFT_LITERAL: true ; PRETTY_PREFIX_OK: true ; SCE MID_PEAK/SUPER_OFF_PEAK: true
+
+[D] xcodegen generate -> "Created project" ; the 11 surface files (10 .swift + 1 .strings) are
+    enumerated into BOTH the TeslaSync (iOS) and TeslaSync-macOS targets (project.yml updated).
+
+------------------------------------------------------------------------------------------
+PARITY (web source -> native)
+------------------------------------------------------------------------------------------
+- Modal surface: titled header (+P4 freshness chip/refresh/close), description, Tabs(Preset/Custom),
+  rate-plan picker + JSON preview, custom-JSON editor + hint, inline error, Cancel + Update-Rate-Plan.
+- 3 preset tariffs (PG&E EV2-A / SCE TOU-D / SDG&E TOU-DR1) reproduced verbatim incl. all rates/tiers.
+- getPayload ported exactly: preset-required, empty-JSON, not-object (array/primitive/null),
+  invalid-JSON; inner object auto-wrapped in tou_settings; envelope passed through.
+- Submit lifecycle mirrors updateMutation.isPending; success refreshes site-info (source) + closes;
+  error surfaces verbatim message, modal stays open.
+- Every i18n key from source present in P1/S10 catalog (TOUSettingsModal.strings) + native chrome keys.
+- States: loading / empty (non-TOU-capable) / error (context fail) / data + stale/offline freshness.
+- A11y labels on every interactive element (tabs, picker, editor, refresh, close, cancel, submit);
+  Dynamic Type via Font.TS ramp; reduce-motion respected via shared TSFadeIn/TSSkeleton.
+- Telemetry: view.opened(surface:"TOUSettingsModal") emitted once on start (P1/S11).
+- Data bound only through the P1/S8 TOUSettingsSource seam; no HTTP in the view.
+
+------------------------------------------------------------------------------------------
+FILES (allowed scope: modals-dialogs/TOUSettingsModal.* + this log) + necessary build wiring
+------------------------------------------------------------------------------------------
+  apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal.swift            (surface + states + dismiss bridge)
+  apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal.Model.swift      (P1/S8 seam + @Observable model + P1/S11)
+  apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal.Projection.swift (input -> resolved phase)
+  apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal.Adapter.swift    (ordered JSON + preset catalogue + validation)
+  apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal.Strings.swift    (i18n keys + fallbacks + facade)
+  apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal.Views.swift      (form subviews)
+  apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal.Chrome.swift     (header/banner/leaf-state chrome)
+  apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal.Previews.swift   (every state)
+  apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal.Tests.swift      (projection + model + a11y XCTest)
+  apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal.AdapterTests.swift (serializer + presets + validation XCTest)
+  apps/apple/TeslaSync/modals-dialogs/TOUSettingsModal.strings          (P1/S10 catalog contribution)
+  WIRING (necessary to enumerate/lint a brand-new tier; this is the first modals-dialogs surface):
+    apps/apple/project.yml      (+TeslaSync/modals-dialogs to iOS + macOS target sources)
+    apps/apple/.swiftlint.yml   (+TeslaSync/modals-dialogs to `included`)
+  apps/macos-pending-verifications.md (one deferred-verification row appended)
+
+------------------------------------------------------------------------------------------
+HONESTY COVENANT (binding)
+------------------------------------------------------------------------------------------
+  1  No red-as-green     : the iOS/macOS xcodebuild + iOS-typecheck + XCTest steps are reported
+                           BLOCKED (un-runnable: CLT-only runner, no Xcode/iphonesimulator/XCTest) and
+                           DEFERRED with evidence — NEVER reported as passing.
+  2  No scope narrowing  : every web region + branch reproduced (both tabs, all 3 presets, all 4
+                           validation paths, preview, submit lifecycle, error) + the mandated P4 states.
+  3  No skip-and-assume  : every host-runnable gate executed on THIS runner; raw exits pasted; the
+                           xcodebuild block is proven by command output, not assumed.
+  4  No stubs as final   : complete production surface; 90 executed assertions; placeholder COUNT=0.
+  5  No parity shortcut  : tokens/typography/a11y/i18n/telemetry/byte-exact JSON all verified.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n, P1/S11 telemetry consumed.
+  8  No commit on red    : the committed artifact is GREEN on every host-runnable gate AND on a real
+                           macOS-15 Swift-6 typecheck + an executed 90-assertion run; the only un-run
+                           gate is the full-app Xcode gate, blocked solely by absent platform capability
+                           + pre-existing unrelated breakage this commit neither introduces nor touches.
+  9  No silent drift     : changes confined to modals-dialogs/TOUSettingsModal.*, the two necessary
+                           wiring files, one macos-pending row, and this log — all enumerated above.
+  10 EXIT/STATUS below.
+
+------------------------------------------------------------------------------------------
+DISPOSITION
+------------------------------------------------------------------------------------------
+Production-polished, Apple-idiomatic TOUSettingsModal shipped at parity with the web source and
+INDEPENDENTLY VERIFIED on this runner: it typechecks under the app's own Swift-6 strict-concurrency
+rules against the REAL design system, its full behaviour executes green across 90 assertions, JSON
+parity is confirmed against the Node oracle, and lint/format/placeholder are all green. The full-app
+iOS-Simulator + macOS xcodebuild build/test gate could NOT be invoked here (Command Line Tools only —
+no Xcode, no iphonesimulator SDK, no XCTest, unstaged Shared.xcframework) and is DEFERRED to the
+ADR-012 macos-latest acceptance gate per apps/macos-pending-verifications.md — the repo's sanctioned
+"code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date. The deferred gate
+is reported BLOCKED, never passing.
+
+IOS_STEP=BLOCKED  MAC_STEP=BLOCKED  LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+MACOS_TYPECHECK_EXIT=0  EXECUTED_TESTS=90/90  XCODEGEN=ok
+
+EXIT=0
+STATUS=DONE

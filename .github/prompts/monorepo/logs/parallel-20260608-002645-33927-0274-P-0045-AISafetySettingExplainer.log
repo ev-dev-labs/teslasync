@@ -1,0 +1,112 @@
+I'll start by exploring the repository structure and verifying the platform capabilities required for this task.
+
+Darwin runner. Key finding: `xcodebuild` is present but **full Xcode is NOT installed** (only Command Line Tools). `swift`, `swiftlint`, `swiftformat` are available. Let me explore the Apple app structure and the existing conventions before drawing conclusions.
+
+Confirmed: no full Xcode (only CLT), no iOS SDK, no simulators (`simctl` missing). The project uses XcodeGen (`project.yml`), not SPM. This is the documented "capability unavailable" scenario — but per the Honesty Covenant I must still produce the complete, production-quality surface and run every verification the runner *can* execute. Let me deeply study the existing Apple conventions and the web source.
+
+Now I have the web spec. Let me read the remaining web dependencies (`AiOutputPanel`, `AIThinkingIndicator`) and deeply explore the existing Apple app structure to find the native conventions (state-holders, tokens, i18n, diagnostics, and any already-ported AI surfaces to mirror).
+
+Main app sources live elsewhere. `apps/apple/TeslaSync/` currently holds `dashboard-widgets` + `feature-views`. Let me map the full structure and find already-ported AI surfaces to use as templates, plus the core P1/S8–S11 layers.
+
+Large, well-structured project with a clear multi-file convention per surface. Let me locate the native AI scaffold (AIFeatureCard/Helix/AiStream equivalents), the state-holder layer (P1/S8), tokens (P1/S9), i18n facade (P1/S10), and diagnostics (P1/S11).
+
+No native AI streaming scaffold exists yet — but `AISettings`, `AiUsageCard`, `AIRestorePanel` exist. The web surface centrally depends on `useAiStream` (SSE). Let me examine the existing AI surfaces' conventions, the state-holder layer (SharedFacade), and search for any streaming infrastructure.
+
+This is a KMP-backed native app: Swift facades bind Kotlin `StateFlow`s via `StateHolderModel`, projected into `LoadableState`. There's no native AI-stream scaffold yet, so my surface must be self-contained within the allowed `AISafetySettingExplainer.*` files, composed from existing native primitives. Let me study a representative AI card surface (`AiUsageCard`) as the canonical template, plus the build config.
+
+This `AiUsageCard` is the ideal template — it shows the exact P1/S8 (state-holder seam), P1/S9 (tokens), P1/S10 (i18n facade), P1/S11 (telemetry) conventions. Let me read the rest of its file set plus the design tokens and motion primitives to get exact API names.
+
+Now I understand the full convention. Let me locate the design tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`), the shared primitives (`TSButton`, `TSSkeleton`, `TSFadeIn`), and read the remaining `AiUsageCard` files (Adapter, Tests, Previews, strings) plus where `AiUsageIntent`/`AiUsageNumber`/`AiUsageAccessibility` live.
+
+Let me read the actual token file (correct path under `apps/design/`), the shared UI primitives (`TSButton`, `TSSkeleton`, `TSFadeIn`), and the remaining `AiUsageCard` test/preview/strings files to nail every convention.
+
+Now I have the tokens and button API. Let me read the motion/skeleton primitives and the `AiUsageCard` Tests/AdapterTests/Previews/strings to mirror those conventions, plus confirm the test target wiring in `project.yml`.
+
+I now have the full convention. Two structural blockers are emerging: (1) no full Xcode, and (2) `shared-surfaces` isn't registered in `project.yml` sources (only `feature-views`/`dashboard-widgets` are), and I'm not allowed to edit `project.yml`. Let me confirm the test-target wiring and read the lint/format configs I must satisfy.
+
+The test bundles source from `Tests/Unit`, yet `.Tests.swift` files live in `feature-views` (which is in the app target) and import XCTest. There must be an `excludes`/wiring detail. Let me read the full `project.yml` and the lint/format configs.
+
+The `macos-pending-verifications.md` and prior P4 logs will tell me the established build/verification status. Let me read those, the lint/format configs, and confirm the app-target source block.
+
+`shared-surfaces` is not in `.swiftlint.yml` `included` either (I can't edit it), so I'll lint my new dir explicitly. The lint/format rules match the `AiUsageCard` style I'll mirror. Let me read the apps-level pending-verifications doc and check the prior P4 log convention (DONE vs BLOCKED) plus the logs directory.
+
+Critical context: `macos-pending-verifications.md` documents the **sanctioned methodology** — each surface is verified green via **isolated SwiftPM build + `swiftc -typecheck` against iOS-18/macOS-15 SDKs + swiftlint/swiftformat/placeholder**, with the full-app `xcodebuild` deferred to the macOS acceptance gate. Let me read a prior AI-surface log for the exact format, and empirically test whether SwiftUI/`swiftc -typecheck` even works on this CLT-only runner.
+
+Decisive findings. The prior `AIRestorePanel` log reveals the **exact established methodology**: surfaces are verified via EXECUTED logic harness + **iOS-18 AND macOS-15 SDK `swiftc -typecheck`** + scoped swiftlint/swiftformat/placeholder/plutil, with whole-tree `xcodebuild` deferred — ending **STATUS=DONE**. That runner had full Xcode 26.5.
+
+My runner's capability probe:
+- ✅ **macOS SDK SwiftUI `swiftc -typecheck` works (EXIT=0)** — I can actually type-check the SwiftUI surface.
+- ❌ **iOS SDK absent** (`iphoneos cannot be located`), no simulators, no full Xcode.
+
+So I can verify substantially (macOS-SDK typecheck + executed logic + lint/format/placeholder/plutil) but the **iOS 18 simulator + `xcodebuild build test`** legs are genuinely unavailable. Let me read the motion/skeleton primitives, then probe remaining tools.
+
+All tooling I need is available: `pwsh`, `plutil`, and a working **macOS-15 SDK** that type-checks SwiftUI/Charts/MapKit (`EXIT=0`). Only the **iOS 18 SDK + full Xcode** (for the iOS-sim + `xcodebuild build test` legs) are absent. I'll implement the complete surface, verify everything the runner supports, and document the iOS/xcodebuild block honestly.
+
+Let me verify the `TSCard` container API, then set up my plan and start building.
+
+I have everything needed. Let me set up tracking, create the directory, and start building the surface. I'll mirror the established `AiUsageCard`/`AIRestorePanel` conventions exactly.
+
+Now the pure Foundation projection core (`.Adapter.swift`):
+
+Now the `.Model.swift` (i18n facade, telemetry seam, P1/S8 source seam, `@Observable` model):
+
+Now the `.Views.swift` (presentational subviews — Helix badge, freshness chip, connectivity banner, explain button, thinking indicator, output panel):
+
+Now the main View (`.swift`) — composes the card chrome and binds lifecycle:
+
+The `.Previews.swift` (one `#Preview` per state):
+
+Now the `.Tests.swift` (XCTest — projection, model wiring, telemetry, accessibility):
+
+The `.strings` i18n catalog:
+
+All 7 files written. Now let me verify — starting with `swiftformat` (auto-format then lint) and `swiftlint --strict` scoped to my new files.
+
+Scoped **swiftformat `0/6`** and **swiftlint `0 violations`** — both clean. Now `plutil -lint` on the strings and the PowerShell placeholder gate:
+
+All host gates green so far: **swiftformat 0/6, swiftlint 0 violations, plutil OK, placeholder COUNT=0**. Now the strongest correctness proof available — compile **and execute** the Foundation-only logic core (Adapter + Model) against the macOS-15 SDK under Swift 6:
+
+The errors are only in my throwaway harness (Swift 6 global-mutable-state) — **Adapter.swift + Model.swift compiled clean**. Let me fix the harness and rerun:
+
+**EXECUTED 26 assertions, 0 failures** under Swift 6 strict concurrency. Now the SwiftUI typecheck of the full surface (Views + main + Previews) against the macOS-15 SDK, compiled with its real token/component dependencies:
+
+All component deps import only SwiftUI — self-contained. Let me typecheck the full surface (incl. `#Preview`) against the macOS-15 SDK with its real dependencies:
+
+Only error is in a sibling dep file (`FeedbackOverlays.swift` needs `TSMetricBar` from DataDisplay) — not my surface. Let me typecheck with just the **minimal real deps my surface actually uses** (Tokens, Cards, Typography, Skeletons):
+
+Dependency whack-a-mole — `Cards.swift` pulls in `TSBadge`/`TSButton`/`.tsGlassPanel()`. Let me include the **entire real shared component library** (as the precedent did) so all cross-refs resolve. Let me locate `tsGlassPanel`/`TSMetricBar` and include everything.
+
+All component/design files import only SwiftUI/Charts/MapKit/CoreLocation/Foundation (all in the macOS SDK). Let me typecheck my surface against the **complete real component library** (Tokens + Design + all Components):
+
+Only remaining error is the `#Preview` **macro plugin** (`PreviewsMacros`) — that ships with Xcode, not CLT, and it's hit in a *dependency* file too. The clean fix: compile **without `-DDEBUG`** so all `#if DEBUG { #Preview }` blocks (mine and deps') are stripped, proving the shipped production surface type-checks against the real library:
+
+The whole-tree include drags in `UnitFormatters.swift` which needs `UnitPreferences` from the KMP `Shared` framework — unrelated to my surface. Let me typecheck against just my surface's **real transitive deps** (Tokens, Design materials, Typography, Cards, Skeletons), previews stripped:
+
+**PASS A clean (EXIT=0)** — the production surface type-checks against the real component library under Swift 6. Now Pass B: the `#Preview` macro can't expand on CLT, so I'll mechanically rewrite each `#Preview {…}` into a `-> some View` function to type-check the preview **bodies** against the real library:
+
+**PASS B clean (EXIT=0)** — preview bodies type-check too. Every host-runnable verification is green. Now let me capture the hard evidence for the BLOCKED legs (no Xcode / no iOS SDK), run the whole-tree gates the prompt specifies, and confirm no file drift.
+
+Hard evidence captured: **no Xcode (CLT only), no `iphoneos`/`iphonesimulator` SDK, no `simctl`** → `IOS_EXIT=1`, `MAC_EXIT=1`. Now the whole-tree `swiftlint --strict` and `swiftformat --lint` (the gate's steps 3–4):
+
+Both whole-tree gates fail **only** on pre-existing siblings — `swiftformat` names `ActionBuilder.Previews.swift:48` (the exact file the precedent log cited). Let me identify the 1 swiftlint violation and confirm zero file drift:
+
+Unexpected: `git status` shows pre-existing modifications to `AIUsageCard.*` and two `web/*.tsx` files that I did **not** touch (this is a shared parallel worktree). Let me verify these are pre-existing drift, not caused by me, before committing only my files:
+
+Confirmed: the `AIUsageCard.*`/`*.tsx` modifications are **pre-existing parallel-merge drift** (a case-collision between prompt 0203 `AIUsageCard` and 0237 `AiUsageCard` on the case-insensitive filesystem) — not mine. I'll commit only my 7 files + log. 
+
+Every host-runnable gate is green; only iOS/Xcode legs are blocked. Let me write the honest gate log:
+
+Log written. Let me do a final scoped re-verification (lint/format/placeholder on all 7 files) and stage **only** my files:
+
+The official placeholder gate returned `COUNT=0`, but the acceptance criterion explicitly lists "placeholder" as a forbidden token — and my comments use that word (describing the thinking-state UI). To remove any ambiguity, I'll reword those comments to "thinking indicator/state":
+
+Now re-verify (placeholder grep, scoped format/lint, official gate) and re-stage:
+
+All green: **placeholder NONE, swiftformat 0/6, swiftlint 0, official gate COUNT=0**. Re-staging and committing only my files:
+
+Committed. Let me verify the commit contains exactly my 8 files and left the pre-existing drift untouched:
+
+Commit `44e061a1` is clean — exactly my 8 files (1334 insertions), pre-existing drift untouched, log ends `EXIT=1 / STATUS=BLOCKED`. Let me clean up temp artifacts and finalize tracking:
+
+Task complete. Final summary below.
+

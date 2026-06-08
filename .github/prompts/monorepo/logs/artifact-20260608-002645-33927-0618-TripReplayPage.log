@@ -1,0 +1,159 @@
+================================================================================
+ p4-apple · P7 · page:trips/TripReplay — SwiftUI / HIG parity
+ Artifact: apps/apple/TeslaSync/Features/Trips/TripReplayPage.swift (+ 10 peers)
+ Web source: web/src/features/trips/pages/TripReplayPage.tsx
+ Generated: 2026-06-08
+================================================================================
+
+SUMMARY
+-------
+Native SwiftUI implementation of the web TripReplay page, adaptive across macOS +
+iOS/iPadOS (ADR-002/006). A `@State TripReplayPageModel` (`@Observable`, P1/S8 seam)
+owns the `useDrive(id)` query + the single playhead index threaded through the map,
+scrubber, current-position stats, elevation profile, speed+power timeline, and drive
+summary. SI is converted only at the display boundary (P1/S5 converters reproduced
+in TripReplayUnitMath); every string resolves from Localizable.xcstrings (verbatim
+web `replay.*` keys); every color/font is a P2 design token.
+
+FILES (apps/apple/TeslaSync/Features/Trips/)
+  TripReplayPage.swift             — adaptive page View + scaffold + 4-state switch
+  TripReplayPage.Types.swift       — SI value inputs + load/connection/update + phase + tiles
+  TripReplayPage.Model.swift       — @Observable model + source seam + InMemory source + Strings
+  TripReplayPage.Projection.swift  — pure projection (tiles / phase / charts / playhead timing)
+  TripReplayPage.Format.swift      — SI→display converters + fmt + duration + haversine
+  TripReplayPage.Views.swift       — freshness chip, banner, current-stats panel, summary panel
+  TripReplayPage.Sections.swift    — route map, playback bar, elevation, timeline
+  TripReplayPage.States.swift      — loading / empty / error data states
+  TripReplayPage.Navigation.swift  — TripReplayRoute + deep-link parser + navigationDestination
+  TripReplayPage.Previews.swift    — content/empty/loading/error/stale/offline × metric/imperial
+  TripReplayPage.Tests.swift       — projection + model + deep-link XCTest
+Integration: project.yml (TeslaSync/Features registered in iOS + macOS app targets),
+  .swiftlint.yml (Features included), Localization/Localizable.xcstrings (+37 keys).
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=42
+--------------------------------------------------------------------------------
+[panel  01] GlassPanel1        ✓ TripReplayCurrentStatsPanel (Views.swift) — TSGlassPanel + "replay.currentStats"
+[panel  02] Speed              ✓ TripReplayProjection.currentStats id="speed" (Projection.swift) → TripReplayStatTile
+[panel  03] Power              ✓ TripReplayProjection.currentStats id="power" (Projection.swift) → fmtNumber(_,1)+" kW"
+[panel  04] Battery            ✓ TripReplayProjection.currentStats id="battery" (Projection.swift) → fmtInt+"%"
+[panel  05] Elevation          ✓ TripReplayProjection.currentStats id="elevation" (Projection.swift) → fmtInt+" m"
+[panel  06] Range              ✓ TripReplayProjection.currentStats id="range" (Projection.swift) → convertDistanceFromSI
+[panel  07] Temperature        ✓ TripReplayProjection.currentStats id="temp" (Projection.swift) → convertTempFromSI
+[panel  08] GlassPanel8        ✓ TripReplaySummaryPanel (Views.swift) — TSGlassPanel + "replay.summary.title"
+[panel  09] Distance           ✓ TripReplayProjection.summaryStats id="distance" (Projection.swift) → convertDistanceFromSI
+[panel  10] Duration           ✓ TripReplayProjection.summaryStats id="duration" (Projection.swift) → driveTime "Xh Ym"
+[panel  11] Efficiency         ✓ TripReplayProjection.summaryStats id="efficiency" (Projection.swift) → ((Δsoc/dist)*1000)
+[panel  12] Elevation-Gain     ✓ TripReplayProjection.summaryStats id="elevGain" (Projection.swift) → em-dash (web parity)
+[panel  13] Elevation-Loss     ✓ TripReplayProjection.summaryStats id="elevLoss" (Projection.swift) → em-dash (web parity)
+[panel  14] Max-Speed          ✓ TripReplayProjection.summaryStats id="maxSpeed" (Projection.swift) → convertSpeedFromSI
+[panel  15] Avg-Speed          ✓ TripReplayProjection.summaryStats id="avgSpeed" (Projection.swift) → convertSpeedFromSI
+[panel  16] Battery-2          ✓ TripReplayProjection.summaryStats id="battery" (Projection.swift) → "start% → end%"
+[chart  17] Sparkline          ✓ TripReplayPlaybackBar→TSSparkline (Sections.swift) + Projection.speedSparkline (80-pt downsample)
+[chart  18] ElevationProfile   ✓ TripReplayElevationSection→TSElevationProfile (Sections.swift) + Projection.elevationPoints
+[state  19] loading            ✓ TripReplayLoadingState (States.swift) — phase .loading (Projection.resolvePhase)
+[state  20] empty              ✓ TripReplayEmptyState (States.swift) — phase .empty (web "No GPS data")
+[state  21] error              ✓ TripReplayErrorState (States.swift) — phase .error + Retry → model.refresh()
+[state  22] success            ✓ TripReplayPage.sections (TripReplayPage.swift) — phase .content
+[string 23] replay.backToDrive ✓ Localizable.xcstrings + TripReplayPage.backButton (TripReplayPage.swift)
+[string 24] replay.currentStats✓ Localizable.xcstrings + TripReplayCurrentStatsPanel heading (Views.swift)
+[string 25] replay.drive       ✓ Localizable.xcstrings + TripReplayPageModel.subtitle → Projection.subtitle
+[string 26] replay.noGps       ✓ Localizable.xcstrings + TripReplayEmptyState (States.swift)
+[string 27] replay.stat.battery✓ Localizable.xcstrings + currentStats labelKey (Projection.swift)
+[string 28] replay.stat.elevation ✓ Localizable.xcstrings + currentStats labelKey (Projection.swift)
+[string 29] replay.stat.power  ✓ Localizable.xcstrings + currentStats labelKey (Projection.swift)
+[string 30] replay.stat.range  ✓ Localizable.xcstrings + currentStats labelKey (Projection.swift)
+[string 31] replay.stat.speed  ✓ Localizable.xcstrings + currentStats labelKey (Projection.swift)
+[string 32] replay.stat.temp   ✓ Localizable.xcstrings + currentStats labelKey (Projection.swift)
+[string 33] replay.summary.avgSpeed   ✓ Localizable.xcstrings + summaryStats labelKey (Projection.swift)
+[string 34] replay.summary.battery    ✓ Localizable.xcstrings + summaryStats labelKey (Projection.swift)
+[string 35] replay.summary.distance   ✓ Localizable.xcstrings + summaryStats labelKey (Projection.swift)
+[string 36] replay.summary.duration   ✓ Localizable.xcstrings + summaryStats labelKey (Projection.swift)
+[string 37] replay.summary.efficiency ✓ Localizable.xcstrings + summaryStats labelKey (Projection.swift)
+[string 38] replay.summary.elevGain   ✓ Localizable.xcstrings + summaryStats labelKey (Projection.swift)
+[string 39] replay.summary.elevLoss   ✓ Localizable.xcstrings + summaryStats labelKey (Projection.swift)
+[string 40] replay.summary.maxSpeed   ✓ Localizable.xcstrings + summaryStats labelKey (Projection.swift)
+[string 41] replay.summary.title      ✓ Localizable.xcstrings + TripReplaySummaryPanel heading (Views.swift)
+[string 42] replay.title              ✓ Localizable.xcstrings + TripReplayPage header + navigationTitle (TripReplayPage.swift)
+--------------------------------------------------------------------------------
+PARITY_COVERED=42
+=== /PARITY ===
+
+================================================================================
+GATE (apple triad: placeholder + build + lint + test)
+================================================================================
+Runner: macOS (Darwin), Xcode 26.5 (DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer),
+        xcodegen 2.x, swiftlint, swiftformat, pwsh 7. Shared.xcframework built from
+        apps/shared via Scripts/build-shared-xcframework.sh and staged to Frameworks/.
+
+[1] PLACEHOLDER SCAN  (./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Trips -Language swift)
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0                                                          → PASS
+
+[2] SWIFTLINT  (swiftlint --strict apps/apple/TeslaSync/Features/Trips)
+    Done linting! Found 0 violations, 0 serious in 11 files.
+    LINT_EXIT=0                                                                 → PASS
+    (also: swiftformat --lint apps/apple/TeslaSync/Features → 0/11 require formatting → PASS)
+
+[3] BUILD  (xcodebuild -scheme TeslaSync build, iOS Simulator)
+    BUILD_EXIT=65                                                              → BLOCKED
+    BLOCKER (pre-existing, OUT OF SCOPE): the app target fails to compile on a
+    duplicate-symbol defect that predates this prompt and lives outside the
+    allowed file set (apps/apple/TeslaSync/Features/Trips/**):
+        'DashboardWidgetSize' is ambiguous for type lookup in this context
+    `public struct DashboardWidgetSize` is declared 15× across committed files:
+        Sources/DashboardWidgets/*  (2)   TeslaSync/dashboard-widgets/*  (13)
+    These collide in the single app module and abort compilation BEFORE any
+    Features/Trips file is reached. None of these files are mine (git diff shows
+    my changes are confined to Features/Trips/** + project.yml + .swiftlint.yml +
+    Localizable.xcstrings). Fixing dashboard-widgets is explicitly out of scope
+    ("Out of Scope (reject): Other pages …"), so the full-app build/test triad
+    cannot go green from within this prompt's allowed files.
+
+[3b] ISOLATED COMPILE OF THIS PAGE (proves the 11 Features/Trips files compile
+     against the REAL P3 component library + P2 design tokens, bypassing the
+     unrelated dashboard-widget defect):
+        temporary framework target {Sources/Components (−UnitFormatters, which
+        needs the SharedFacade), Sources/Design, design/generated/apple,
+        TeslaSync/Features} as module TeslaSync, ENABLE_TESTING_SEARCH_PATHS=YES
+        → ** BUILD SUCCEEDED **  (0 errors, 0 warnings in Features/Trips)
+     (the temporary target was removed from project.yml after verification.)
+
+[4] TEST  (xcodebuild -scheme TeslaSync test)
+    TEST_EXIT=blocked-by-[3]                                                    → BLOCKED
+    The XCTest target hosts on the app target, which does not build (see [3]).
+
+[4b] ISOLATED LOGIC TEST (the highest-risk parity assertions — SI conversions,
+     number/locale formatting, efficiency + duration formulas, em-dash fallbacks,
+     phase resolution, sparkline downsample, elevation cumulative distance, and
+     useTripReplay playhead timing — compiled from the actual Foundation-only
+     sources Format.swift + Types.swift + Projection.swift and executed):
+        SELFTEST_OK all assertions passed
+     (mirrors TripReplayPage.Tests.swift expected values; the full XCTest suite —
+     31 cases across TripReplayCurrentStatsTests / TripReplaySummaryTests /
+     TripReplayProjectionTests / TripReplayPageModelTests / TripReplayDeepLinkTests
+     — compiles in the isolated target per [3b] and runs once the app target's
+     pre-existing dashboard-widget defect is resolved.)
+
+================================================================================
+ACCEPTANCE
+================================================================================
+  [x] Every named panel implemented; current-stats + summary tiles + map + playback
+      + elevation + timeline regions reproduced from the web source.
+  [x] All 42 parity items render from the bound @Observable TripReplayPageModel.
+  [x] loading / empty / error / success implemented for the useDrive data source.
+  [x] All visible strings from Localizable.xcstrings; web key names preserved; no
+      hardcoded literals (swiftlint/grep clean).
+  [x] Dark mode + Dynamic Type + a11y labels + SI units; SwiftUI-native (Swift Charts +
+      MapKit wrappers; no web cloning).
+  [x] placeholder + lint (+ swiftformat) gates green; isolated compile + logic tests green;
+      PARITY_COVERED == PARITY_REQUIRED (42).
+  [ ] full-app build + test green — BLOCKED by a pre-existing, out-of-scope duplicate
+      `DashboardWidgetSize` symbol in committed dashboard-widgets/ (see GATE [3]).
+
+================================================================================
+EXIT=1
+STATUS=BLOCKED
+================================================================================

@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure and checking platform capabilities, since this task requires SwiftUI + Swift Charts + MapKit which may not be available on the runner.
+
+Key capability findings:
+- `xcodebuild` requires full Xcode but only **Command Line Tools** is installed → cannot build/test
+- `simctl` (iOS Simulator) is **not available** → cannot run iOS Simulator destination
+- `swiftlint` and `swiftformat` **are** available
+- `swift` 6.3.2 is available
+
+Let me explore the `apps/apple` structure and the web source thoroughly before deciding the approach.
+
+Established pattern: each feature view is split into `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`. Let me study the shared infrastructure (P1/S8 state holders, S9 tokens, S10 i18n, S11 telemetry) and a chart-using exemplar, plus the web source's dependencies.
+
+`Sources` is at `apps/apple/Sources`. No feature-view yet imports Charts/MapKit — ChargingTab will introduce Swift Charts. Let me map the shared infrastructure and read the web dependencies.
+
+Now I understand the scope boundary: the prompt's i18n key list and "Out of Scope" note scope THIS surface to ChargingTab's own content (6 metric cards + 3 charts), while `ChargingDetailSection` is a sibling surface with its own prompt. Let me confirm capabilities definitively and study the exemplar pattern + shared infrastructure.
+
+Major update: **Xcode.app exists** at `/Applications/Xcode.app`, `pwsh` is available, and SwiftUI+Charts typecheck against the SDK. Let me check whether `xcodebuild` can run via `DEVELOPER_DIR`, whether xcodegen + the Shared.xcframework + simulators are present, and study the exemplar conventions in parallel.
+
+Critical finding: `Frameworks/Shared.xcframework` is only a `.gitkeep` placeholder — the KMP shared core (ADR-004 predecessor) isn't built in this slot, and "Allowed files" forbids me from creating it. Xcode 26.5 + iPhone 16 sim + xcodegen are all present, so the *only* build blocker is that predecessor framework. Let me confirm the app depends on `import Shared` and study the conventions I must follow.
+
+Good — feature-views go through the SharedFacade (not `import Shared` directly), and ship their own `.strings` file. Let me read the exemplar feature-view set (FleetTelemetryHealth — the most data-viz-like) and the shared components I'll consume.
+
+Excellent exemplar. The file-set convention is crystal clear. Let me read the remaining exemplar files (Views, Previews, Tests, strings) and the shared components I'll consume (Charts, Metrics, States, Motion, Cards, Typography, Design tokens).
+
+I now fully understand the 7-file convention. Let me read the shared components I'll consume to get exact API names — Charts, Metrics, States, Motion, Cards, Typography, and the design tokens.
+
+Now the chart primitives are clear: `TSPieChart`, `TSBarChart`, `TSComposedChart` with `TSChartSlice`/`TSChartSeries`/`TSChartPoint`. Let me read the remaining shared components and the design tokens (TSChartPalette, TSSpacing, Color.TS, Font.TS, TSTone, MetricCard, EmptyState, FadeIn, GlassPanel, typography).
+
+The shared APIs are now clear. Let me read the UI cards, typography, motion, and the design tokens, plus verify the web `charging_analytics` data shape.
+
+Let me read the UI Cards (GlassPanel/TSCard), locate `TSTone`/`Color.TS`/`Font.TS`/`TSSpacing` definitions, and verify the web `charging_analytics` data shape.
+
+Now let me read the design tokens (correct path is `apps/design/generated/apple/Tokens.swift`) and the rest of `project.yml` to understand how `.Tests.swift` files are split from the app target.
+
+I now have all the design tokens and data shapes. Let me check the critical build dependency (`build-shared-xcframework.sh`), whether the KMP toolchain/sources exist, how `.Tests.swift` files are routed, and the lint configs — these determine whether the full gate can run.
+
+Let me read the pending-verifications doc (which likely documents this exact build constraint) and confirm how `feature-views/*.Tests.swift` is handled relative to the app target.
+
+The pending-verifications doc confirms the established precedent precisely: for P4 apple feature-views, the **surface is verified green via isolated SwiftPM build + tests + swiftlint/swiftformat/placeholder**, while the **full-app `xcodebuild build test` is BLOCKED** by (1) the missing `Shared.xcframework` (KMP predecessor S3-0001, macOS-pending) and (2) pre-existing parallel-merge collisions (`DashboardWidgetSize` ×8, co-located `*.Tests.swift`) in files outside my allowed scope. I'll follow that exact methodology. Let me confirm the collision evidence and the shared-symbol locations for my isolated build.
+
+All confirmed: `DashboardWidgetSize` is defined 15× (pre-existing collision, outside my scope), Components/Design are `Shared`-free (isolated build viable), and all helper symbols live in `Components/**` + `Design/**`. Let me read the web number-format helpers for faithful parity, then set up my plan and todos.
+
+Faithful parity confirmed for formatters (`fmtNumber`/`fmtInt` use `safeNumber`→0, em-dash only via the stats ternaries). Now let me check whether in-repo native surfaces render Swift Charts directly (house style) before finalizing my chart approach.
+
+Decisive house-style evidence: sibling native surfaces (dashboard-widgets) render Swift Charts **directly** (`BarMark`/`LineMark`, categorical `.value(label, string)`, custom `.chartYAxis`), explicitly documenting "web `<BarChart>` → Swift Charts `BarMark`", and do *not* use the TS* wrappers. I'll match that. Let me read two exemplar chart files + check for a donut precedent.
+
+I have the complete house style for native Swift Charts (categorical bars via `WallConnectorBarChart`, dual-axis via `MotorChartScale`). Let me read the lint configs (to pass `--strict`) and the exemplar's Views file (chip/banner idioms), then write the plan.
+
+I now have everything needed: the full file-set convention, shared component APIs, design tokens, native Swift Charts house style (categorical bars + dual-axis scale technique), lint configs, and the documented BLOCKED precedent for the full-app `xcodebuild`. Let me set up the plan and todos, then write the deliverable.
+
+Baseline swiftlint shows 1 pre-existing violation. Let me identify it and get the swiftformat baseline so I can distinguish pre-existing issues from any I introduce.
+
+Baselines captured: `swiftformat --lint` is **clean**; `swiftlint --strict` has **1 pre-existing** violation in `LifetimeStatsWidget.Adapter.swift` (outside my scope). My files must add zero. Now writing the deliverable, starting with strings, Model, and Adapter.
+
+Now the Adapter — the pure, testable projection core.
+
+Now the Model — the state-holder seam, observable model, telemetry, and i18n facade.
+
+Now the three Swift Charts views (donut, categorical bar, dual-axis composed), matching the dashboard-widgets house style.
+
+Now the Views file — panels, summary grid, chip, banner, and the loading/error/empty states (resolving my table strings via `ChargingStrings`, reusing shared `TSCard`/`TSGlassPanel`/`TSMetricValue`/`TSSkeleton`).
+
+Now the main `ChargingTab` view — chrome + phase switch + content composition.
+
+Now the Previews and Tests files.
+
+Now the comprehensive test suite (adapter + model + accessibility).
+
+All 8 files written. Let me update todos and auto-format my Swift files, then verify formatting and lint scoped to my files.
+
+Swiftformat adjusted 2 files. Let me confirm the whole-tree format lint is clean and run swiftlint strict scoped to my files.
+
+Host gates green so far: **swiftformat --lint whole tree = clean (rc=0)**, **swiftlint --strict on my 7 files = 0 violations**. Now the key positive verification — an isolated SwiftPM build + test of the surface against the real shared components (the ToolCard precedent's method). Let me set up the package.
+
+My ChargingTab files **all compiled** (Adapter/Charts/Model/Views/Previews/swift). The only error is in a shared component `Components/DataDisplay/UnitFormatters.swift` referencing `\.tsUnits` — an EnvironmentKey defined outside Components/Design (which I didn't include). My surface doesn't use it. Let me locate that definition and include it.
+
+`tsUnits` is defined inside `UnitFormatters.swift` itself but its type `UnitPreferences` lives outside Components/Design. My surface doesn't use it. Let me check what `UnitFormatters.swift` needs and whether excluding it from the isolated build is safe.
+
+`UnitPreferences` comes from `SharedFacade/Units+Facade.swift` (which `import Shared`) — a pre-existing coupling in the shared component lib, unused by my surface, and referenced by no other Components/Design file. I'll exclude that one shared file from the isolated build and run build + tests.
+
+Isolated build **succeeded** under Swift 6 strict concurrency. Now running the tests.
+
+**Isolated build + 26/26 tests PASS** under Swift 6 strict concurrency (13 adapter + 9 model + 4 accessibility). Now the placeholder gate, then I'll capture the full-app `xcodebuild` evidence.
+
+Placeholder gate clean (count=0, EXIT=0). Now let me capture real evidence for the full-app `xcodebuild` block: generate the project, then attempt the build (bounded) to surface the predecessor + pre-existing-collision blockers.
+
+Project generates; predecessor `Shared.xcframework` is absent (`.gitkeep` only) and `DashboardWidgetSize` collides 15×. Now a bounded real `xcodebuild` attempt (exactly the gate command) to capture the actual failure evidence.
+
+Bounded xcodebuild launched. While it runs, let me verify the log directory exists and re-confirm my file set.
+
+The gradle preAction is genuinely building the KMP `Shared.xcframework` (downloading Kotlin/Native, compiling iOS arm64 + simulator). It will then hit the pre-existing `DashboardWidgetSize` collisions during the app compile. Let me let it run and poll for the real failure.
+
+The KMP `Shared.xcframework` is genuinely building (debug written, release in progress). Once staged, the app-target compile will hit the pre-existing collisions. Let me keep polling for that phase.
+
+The build was interrupted (EXIT=143) during the gradle release-framework phase — the KMP framework genuinely builds here but takes long; the run got SIGTERM'd before the app-target compile. The framework tasks are now cached. Let me relaunch **detached** so it survives and reaches the app-target compile where the pre-existing collisions surface.
+
+Detached build relaunched (framework cached now → staging → app compile). Let me wait and capture the app-target collision errors.
+
+Build **FAILED (EXIT=65)** in the `TeslaSync` app-target Swift compile (framework staged fine). Let me extract the actual error lines to confirm they're the pre-existing collisions — and crucially that **none** reference ChargingTab.
+
+Decisive evidence captured. The full-app build fails (EXIT=65) on a **pre-existing** structural blocker — co-located `*.Tests.swift` importing `XCTest` into the app target (first failure: `BackendTool.Tests.swift`, an existing file, not mine) plus the `DashboardWidgetSize` ×15 collisions. **Zero errors reference ChargingTab.** The KMP `Shared.xcframework` predecessor now builds via gradle. This matches the documented ToolCard macOS-pending precedent exactly.
+
+Let me check git status to scope my commit precisely, then write the log.
+
+Clean scoping: my 8 ChargingTab files are untracked; `Shared.xcframework` and `.xcodeproj` are gitignored (won't be committed); two unrelated `web/` files were pre-modified by the environment (I won't touch them). Now let me write the comprehensive, honest gate log.
+
+Now committing — adding only my ChargingTab files + the log (not the gitignored build artifacts, not the pre-existing unrelated `web/` changes), following the documented macOS-pending precedent for this prompt family.
+
+Exactly the 8 deliverable files + log staged. Committing.
+
+Committed (5a74e36f, 9 files, 2011 insertions). Let me do a final post-commit re-confirmation of the host gates on my files and clean up temp artifacts.
+
+Final host gates confirmed clean (swiftformat 0/7 need formatting, swiftlint 0 violations). Let me verify the working tree is clean (only pre-existing unrelated changes remain) and finalize tracking.
+
+Working tree clean (only 2 pre-existing unrelated `web/` files remain, untouched by me); all 12 todos done. Let me finalize the plan note.
+
+Done. Here's the final summary.
+

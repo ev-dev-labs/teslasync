@@ -1,0 +1,229 @@
+=== P4-APPLE · P7 · page:admin/TeslaFeatureFlags (SwiftUI / HIG) ===
+
+Artifact : TeslaFeatureFlagsPage  (web route /tesla-features)
+Web src  : web/src/features/admin/pages/TeslaFeatureFlagsPage.tsx
+Runner   : Darwin 25.5.0 arm64
+Toolchain: Xcode 26.5 (17F42) via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+           iPhone 16 simulator (booted); swiftlint 0.63.3; swiftformat 0.61.1; pwsh 7;
+           xcodegen; JDK 17 + Gradle wrapper 8.14.5 (KMP Shared.xcframework).
+
+------------------------------------------------------------------------------
+SUMMARY (read first)
+------------------------------------------------------------------------------
+The page is IMPLEMENTED AT FULL PARITY and VALIDATED in isolation:
+  • swiftformat / swiftlint --strict / placeholder scan : all green on the new files
+  • xcodebuild ... build  : ** BUILD SUCCEEDED **  (the page + its FeatureToggles
+                            dependency + the app shell compile into the iOS target)
+  • xcodebuild ... test   : ** TEST SUCCEEDED **   (11/11 new unit tests pass,
+                            including BOTH parity-string resolutions)
+  • PARITY_COVERED == PARITY_REQUIRED == 2
+
+The full-app gate `xcodebuild -scheme TeslaSync ... build test` over the WHOLE
+committed tree is BLOCKED — NOT by this page — by a pre-existing, repo-wide,
+out-of-scope app-target compile breakage from prior parallel P4 work (duplicate
+type declarations + XCTest files in app-target source paths). Evidence below.
+Per the Honesty Covenant (no red-as-green / no commit on red) this run ends
+EXIT=65 / STATUS=BLOCKED, with the page fully delivered + validated under a
+documented neutralization of the unrelated pre-existing breakage.
+
+------------------------------------------------------------------------------
+PATH RECONCILIATION (no silent drift)
+------------------------------------------------------------------------------
+Prompt Output path `apps/apple/TeslaSync/Features/Admin/TeslaFeatureFlagsPage.swift`
+is a NEW source group. The Apple app compiles `Sources/`, `TeslaSync/dashboard-widgets`,
+and `TeslaSync/feature-views` into the iOS + macOS app targets (project.yml). The new
+group was registered the same way:
+  project.yml  TeslaSync (iOS) + TeslaSync-macOS  sources += `- path: TeslaSync/Features`
+  .swiftlint.yml  included += `TeslaSync/Features`
+This is the only project-config change (2-line diff in project.yml).
+
+------------------------------------------------------------------------------
+FILES (created / changed by THIS task)
+------------------------------------------------------------------------------
+NEW  apps/apple/TeslaSync/Features/Admin/TeslaFeatureFlagsPage.swift
+       - struct TeslaFeatureFlagsPage: View            (adaptive scaffold; macOS + iOS)
+       - @Observable final class TeslaFeatureFlagsPageModel  (P1/S8 binding seam)
+       - final class TeslaFeatureConfigAccountSource   (default FeatureTogglesSource)
+       - enum TeslaFeatureFlagsPageMetrics             (layout constant)
+NEW  apps/apple/TeslaSync/Features/Admin/TeslaFeatureFlagsRouteRegistration.swift
+       - enum TeslaFeatureFlagsRouteRegistration       (registers .teslaFeatures host)
+NEW  apps/apple/TeslaSync/Features/Admin/TeslaFeatureFlagsPage.Previews.swift
+       - #Preview Content / Empty / Loading            (DEBUG only)
+NEW  apps/apple/Tests/Unit/Features/Admin/TeslaFeatureFlagsPageTests.swift
+       - 4 suites / 11 cases (strings, route, registration, binding)
+EDIT apps/apple/Sources/App/AppRoute.swift             (+ case teslaFeatures → /tesla-features, .system group, flag.fill)
+EDIT apps/apple/Sources/TeslaSyncApp.swift             (chain TeslaFeatureFlagsRouteRegistration onto routeHosts)
+EDIT apps/apple/Localization/Localizable.xcstrings     (+ featureConfig.title, featureConfig.subtitle, route.teslaFeatures)
+EDIT apps/apple/project.yml                            (+ TeslaSync/Features source group, both app targets)
+EDIT apps/apple/.swiftlint.yml                         (+ TeslaSync/Features to included)
+NEW  apps/parity/apple-ledger.json                     (ledger rows for this unit)
+
+------------------------------------------------------------------------------
+PARITY APPROACH (web → SwiftUI)
+------------------------------------------------------------------------------
+The web page is a thin `PageContainer` wrapper (title + subtitle) around the shared
+`<FeatureToggles />` surface. The native parity composes the already-shipped P4
+`FeatureToggles` feature view (apps/apple/TeslaSync/feature-views/FeatureToggles*.swift)
+inside a titled, adaptive ScrollView scaffold:
+  • Header  : TSPageTitle(featureConfig.title) over a muted subtitle(featureConfig.subtitle)
+  • Body    : FeatureToggles(model:) — owns loading / empty / error / stale / offline /
+              content states (no state is hidden behind a blank region; ADR-011).
+  • Nav     : AppRoute.teslaFeatures (path /tesla-features), hosted via the
+              AppRouteHostRegistry the shell renders; deep-link parses through
+              AppRouteParser (segment match) — covered by tests.
+Data sources: per the parity manifest the PAGE has none of its own ("renders from
+navigation values / local state"); the embedded surface binds through its own P1/S8
+seam (FeatureTogglesSource). The page's default `TeslaFeatureConfigAccountSource`
+resolves the genuine pre-fetch empty state (web "No feature config data yet. Click
+Refresh to fetch from Tesla.") and services Refresh; the shared KMP feature-config
+store swaps in through the same seam once AppContainer.bootstrap lands (the deferral
+VehicleSettingsModel already documents). No stubs, no hardcoded data.
+Units/i18n/a11y: all copy via the catalog (String(localized:) / LocalizedStringKey);
+SI handled inside the embedded surface; design tokens only (Color.TS / Font.TS /
+TSSpacing / TSRadius); accessibility traits on the title + combined header.
+
+------------------------------------------------------------------------------
+KMP Shared.xcframework (prerequisite for the Apple build)
+------------------------------------------------------------------------------
+$ DEVELOPER_DIR=.../Xcode.app/... JAVA_HOME=$(/usr/libexec/java_home -v 17) \
+    ./gradlew :core:assembleSharedXCFramework
+BUILD SUCCESSFUL ; GRADLE_EXIT=0
+Slices: ios-arm64, ios-arm64-simulator, macos-arm64.
+
+------------------------------------------------------------------------------
+swiftformat (apps/apple/TeslaSync/Features , Tests/Unit/Features)
+------------------------------------------------------------------------------
+SwiftFormat: new files conform (formatted to the repo .swiftformat).
+FORMAT_EXIT=0
+
+------------------------------------------------------------------------------
+swiftlint --strict apps/apple/TeslaSync/Features/Admin
+------------------------------------------------------------------------------
+Done linting! Found 0 violations, 0 serious in 3 files.
+(Tests/Unit/Features: 0 violations in 1 file.)
+LINT_EXIT=0
+Note: a full-tree `swiftlint --strict` reports 1 PRE-EXISTING violation in
+TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift (function_body_length) —
+not this task's file; left untouched.
+
+------------------------------------------------------------------------------
+check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Admin -Language swift
+------------------------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------------------
+PRE-EXISTING, OUT-OF-SCOPE BLOCKER (documented, not a defect in this page)
+------------------------------------------------------------------------------
+The committed app target does not compile, independent of this page. Two distinct
+pre-existing defects (both tracked at HEAD; `git ls-files` confirms; none modified
+by this task) were introduced by prior parallel P4 widget/feature-view work:
+
+(1) XCTest files compiled into the app product. 261 `*Tests.swift` files under the
+    app-target source paths `TeslaSync/feature-views` + `TeslaSync/dashboard-widgets`
+    `import XCTest` (+ `@testable import TeslaSync`). The first full build fails on the
+    first of them:
+      feature-views/AIRestorePanel.Tests.swift:18: error: unable to resolve module
+      dependency: 'XCTest'
+    (They belong in the XCTest bundle, not the app target.)
+
+(2) Duplicate type declarations (parallel-collision). `public struct
+    DashboardWidgetSize` (and `DashboardWidgetRegistration`) is declared in 16+ files
+    that all compile into the one app module — e.g. BOTH
+      Sources/DashboardWidgets/DrivetrainHealthWidgetModel.swift:10
+      Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift:13
+    (each commented "first native dashboard-widget surface"), plus 14 more under
+    TeslaSync/dashboard-widgets/*. Result:
+      WallConnectorWidget.Model.swift:235: error: invalid redeclaration of 'DashboardWidgetSize'
+      ...:251: error: 'DashboardWidgetSize' is ambiguous for type lookup ...
+    Excluding the widget tier then surfaces a third cluster of duplicate-enum
+    collisions across other feature-view surfaces (ElevationChart/FleetApiSection/...
+    `cannot infer contextual base in reference to member 'loaded'/'live'/...`).
+
+Fixing these requires de-duplicating shared primitives across hundreds of files from
+other surfaces — explicitly out of scope for this single-page parity task ("Out of
+Scope: other pages; new product features"). Crucially, ZERO of these errors are in
+this page's files or in its sole dependency (FeatureToggles):
+  $ grep -c 'Features/Admin/.*error:'         <build log>  → 0
+  $ grep -c 'feature-views/FeatureToggles.*error:' <log>   → 0
+
+------------------------------------------------------------------------------
+VALIDATION of THIS page (pre-existing breakage neutralized; git-ignored project only)
+------------------------------------------------------------------------------
+To prove the page itself compiles + tests green, the unrelated pre-existing-broken
+surfaces were excluded from the regenerated (git-ignored) .xcodeproj ONLY — the
+committed project.yml is unchanged except the +1 `TeslaSync/Features` source line.
+The probe target = Sources (minus the broken widget tiers) + FeatureToggles*.swift +
+TeslaSync/Features + Localization + Shared.xcframework.
+
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+** BUILD SUCCEEDED **
+  Compiled: TeslaFeatureFlagsPage.swift, TeslaFeatureFlagsRouteRegistration.swift,
+            TeslaFeatureFlagsPage.Previews.swift, FeatureToggles*.swift, AppRoute.swift,
+            TeslaSyncApp.swift (the shell's reference to TeslaFeatureFlagsRouteRegistration
+            + AppRoute.teslaFeatures resolves → the new types are correct).  0 errors.
+BUILD_EXIT=0
+
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' \
+      -only-testing:TeslaSyncTests test
+** TEST SUCCEEDED **
+  Test Suite 'TeslaFeatureFlagsPageStringTests'   passed   (3 cases)
+  Test Suite 'TeslaFeatureFlagsRouteTests'        passed   (3 cases)
+  Test Suite 'TeslaFeatureFlagsRegistrationTests' passed   (2 cases)
+  Test Suite 'TeslaFeatureFlagsBindingTests'      passed   (3 cases)
+  Executed 11 tests, with 0 failures.
+TEST_EXIT=0
+
+------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=2
+------------------------------------------------------------------------------
+[x] string — featureConfig.title
+      catalog : apps/apple/Localization/Localizable.xcstrings  key "featureConfig.title"
+                = "Feature Flags" (en)
+      bound   : TeslaFeatureFlagsPageModel.titleKey  (TeslaFeatureFlagsPage.swift) →
+                rendered by TSPageTitle(model.titleKey) + .navigationTitle(model.titleKey)
+      proof   : TeslaFeatureFlagsPageStringTests.testTitleStringResolvesFromCatalog
+                XCTAssertEqual(String(localized:"featureConfig.title"), "Feature Flags") — PASS
+                + testModelExposesParityStringKeys — PASS
+[x] string — featureConfig.subtitle
+      catalog : apps/apple/Localization/Localizable.xcstrings  key "featureConfig.subtitle"
+                = "Tesla account feature configuration" (en)
+      bound   : TeslaFeatureFlagsPageModel.subtitleKey (TeslaFeatureFlagsPage.swift) →
+                rendered in the header subtitle Text(model.subtitleKey)
+      proof   : TeslaFeatureFlagsPageStringTests.testSubtitleStringResolvesFromCatalog
+                XCTAssertEqual(String(localized:"featureConfig.subtitle"),
+                               "Tesla account feature configuration") — PASS
+PARITY_COVERED=2
+------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------------------------
+[x] Every region of the web source reproduced (PageContainer title+subtitle + the
+    full <FeatureToggles/> surface, all its states).
+[x] All 2 parity items render from the bound @Observable state holder (proven by tests).
+[x] loading / empty / error states present (owned by the embedded FeatureToggles surface;
+    the page itself has no API data source per the manifest).
+[x] All visible strings from Localizable.xcstrings; zero hardcoded literals; web key names.
+[x] Dark mode + Dynamic Type + a11y + SI honored; SwiftUI-native (no web cloning).
+[x] PARITY_COVERED(2) == PARITY_REQUIRED(2).
+[~] build + lint + test + placeholder green for THIS surface (validated under documented
+    neutralization). The FULL-tree `build test` is BLOCKED by pre-existing, out-of-scope
+    repo breakage (above) — not committed on red.
+[ ] ledger row set "done": recorded as "blocked" (covered 2/2) pending the repo-wide
+    duplicate-type / test-target cleanup that is outside this task.
+
+------------------------------------------------------------------------------
+GATE RESULT
+------------------------------------------------------------------------------
+FORMAT_EXIT=0
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+THIS_SURFACE_BUILD_EXIT=0
+THIS_SURFACE_TEST_EXIT=0   (11/11 pass; PARITY 2/2 proven)
+FULL_TREE_BUILD_TEST_EXIT=65   (pre-existing, out-of-scope app-target breakage)
+
+EXIT=65
+STATUS=BLOCKED

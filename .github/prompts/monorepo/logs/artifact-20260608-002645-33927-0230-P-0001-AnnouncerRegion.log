@@ -1,0 +1,109 @@
+=== P4 Shared surface 0001 AnnouncerRegion (Apple) ===
+date: 2026-06-08T10:39:01Z
+web source: web/src/components/a11y/AnnouncerRegion.tsx (+ hooks/useAnnouncer.ts)
+native output: apps/apple/TeslaSync/shared-surfaces/AnnouncerRegion.*
+
+--- Capability probe ---
+Xcode: Xcode 26.5 (Build version 17F42)
+iPhone 16 sim: 1 available
+swiftlint: 0.63.3 | swiftformat: 0.61.1 | xcodegen: Version: 2.45.4
+SwiftUI AccessibilityNotification + accessibilitySpeechAnnouncementPriority: probed OK on iOS18+macOS15 SDKs
+
+--- Files shipped (8) ---
+  AnnouncerRegion.Adapter.swift
+  AnnouncerRegion.Model.swift
+  AnnouncerRegion.Previews.swift
+  AnnouncerRegion.Store.swift
+  AnnouncerRegion.strings
+  AnnouncerRegion.swift
+  AnnouncerRegion.Tests.swift
+  AnnouncerRegion.Views.swift
+  line counts:
+        90 apps/apple/TeslaSync/shared-surfaces/AnnouncerRegion.Adapter.swift
+        89 apps/apple/TeslaSync/shared-surfaces/AnnouncerRegion.Model.swift
+       118 apps/apple/TeslaSync/shared-surfaces/AnnouncerRegion.Previews.swift
+       157 apps/apple/TeslaSync/shared-surfaces/AnnouncerRegion.Store.swift
+        27 apps/apple/TeslaSync/shared-surfaces/AnnouncerRegion.strings
+        39 apps/apple/TeslaSync/shared-surfaces/AnnouncerRegion.swift
+       259 apps/apple/TeslaSync/shared-surfaces/AnnouncerRegion.Tests.swift
+        85 apps/apple/TeslaSync/shared-surfaces/AnnouncerRegion.Views.swift
+       864 total
+
+--- STEP swiftc -typecheck (Swift 6 / complete concurrency) ---
+MAC_TYPECHECK_EXIT=0
+IOS_TYPECHECK_EXIT=0
+MAC_RELEASE_TYPECHECK_EXIT=0
+
+--- STEP swiftformat --lint ---
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-230/apps/apple/.swiftformat
+SwiftFormat completed in 7.71s.
+0/7 files require formatting.
+FORMAT_EXIT=0
+--- STEP swiftlint --strict (shipped surface) ---
+AnnouncerRegion (shared-surfaces) violations: 0
+SWIFTLINT_MYFILES_EXIT=0
+note: repo-wide 'swiftlint --strict' reports 1 PRE-EXISTING violation unrelated to this surface:
+  apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length Violation: Function body should span 50 lines or less excluding comments and whitespace: currently spans 78 lines (function_body_length)
+
+--- STEP check-placeholders.ps1 ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- STEP unit tests (swift test, macOS host, Swift 6) ---
+	 Executed 17 tests, with 0 failures (0 unexpected) in 0.407 (0.409) seconds
+	 Executed 17 tests, with 0 failures (0 unexpected) in 0.407 (0.409) seconds
+Test Suite 'All tests' passed at 2026-06-08 03:40:01.224.
+	 Executed 17 tests, with 0 failures (0 unexpected) in 0.407 (0.411) seconds
+SWIFT_TEST_EXIT=0 (17/17 passed; adapter+hub+model+a11y+telemetry)
+
+--- STEP xcodebuild -scheme TeslaSync (iOS) / TeslaSync-macOS  build test ---
+STATUS: BLOCKED on predecessor build inputs (NOT a surface defect, NOT a capability gap).
+Evidence:
+  * Xcode 26.5 + iPhone 16 (iOS 26.5) simulator ARE present and usable on this runner.
+  * Frameworks/Shared.xcframework is ABSENT (only .gitkeep). Every app/widget target in
+    project.yml declares `framework: Frameworks/Shared.xcframework`; the xcodegen-generated
+    project references "Shared.xcframework" 16x. This is the KMP static core (ADR-004),
+    produced by the shared-module build — out of scope for this surface prompt.
+  * `shared-surfaces` is NOT wired into apps/apple/project.yml (grep count = 0). The
+    generated TeslaSync.xcodeproj therefore contains 0 references to AnnouncerRegion, so the
+    app scheme cannot compile/run this surface. project.yml is owned by P4 core and is NOT in
+    this prompt's allowed files (allowed = AnnouncerRegion.* + this log), so wiring it here is
+    forbidden (Honesty Covenant #6 delegation / #7 predecessor-bypass).
+  * Consequence: `xcodebuild ... build test` of the app scheme cannot return 0 in isolation;
+    it is gated on P4-core project wiring + the KMP Shared.xcframework. Faking a pass would be
+    red-as-green (Covenant #1). Hence BLOCKED with evidence, per the prompt capability clause.
+IOS_EXIT=BLOCKED
+MAC_EXIT=BLOCKED
+
+--- In-scope verification performed in lieu of the predecessor-gated xcodebuild (all green) ---
+  MAC_TYPECHECK_EXIT=0           swiftc -typecheck, macOS 15 SDK, Swift 6 (complete concurrency), DEBUG
+  IOS_TYPECHECK_EXIT=0           swiftc -typecheck, iOS 18 simulator SDK, Swift 6, DEBUG
+  MAC_RELEASE_TYPECHECK_EXIT=0   swiftc -typecheck, macOS 15 SDK, Swift 6, release (harness compiled out)
+  FORMAT_EXIT=0                  swiftformat --lint  (0/7 files require formatting)
+  SWIFTLINT_MYFILES_EXIT=0       swiftlint --strict  (0 violations in shared-surfaces; 1 pre-existing
+                                 repo violation in dashboard-widgets/LifetimeStatsWidget is unrelated)
+  PLACEHOLDER_EXIT=0             check-placeholders.ps1 (PLACEHOLDER_COUNT=0)
+  SWIFT_TEST_EXIT=0              swift test 17/17 passed (adapter padding/skip/routing, hub
+                                 fan-out/drop-before-mount/dedup/unsubscribe/reset, model
+                                 lifecycle + view.opened telemetry + slot routing + posting,
+                                 web data-testid -> accessibilityIdentifier parity, system poster smoke)
+
+--- Parity notes (faithful reproduction of web/src/components/a11y/AnnouncerRegion.tsx) ---
+  * Two live regions (polite + assertive) -> AnnouncerSlot {.polite,.assertive}, exposed as
+    accessibilityIdentifier "announcer-polite"/"announcer-assertive" (web data-testid parity).
+  * useAnnouncer module (announce/subscribeAnnouncer/counter) -> Announcer @MainActor hub (P1/S8).
+  * ARIA aria-live -> AccessibilityNotification.Announcement with accessibilitySpeechAnnouncementPriority
+    (.high for assertive = interrupt; .default for polite = queued).
+  * Empty-skip + rotating zero-width-space (counter % 4) de-dup ported exactly (AnnouncerAdapter).
+  * Drop-before-mount with counter still advancing: reproduced + tested.
+  * view.opened (P1/S11) emitted on model.start(); i18n via AnnouncerStrings facade (P1/S10).
+  * The web surface is anonymous (no data fetch): loading/error/stale/offline/empty-DATA states do
+    not exist in the source and are not invented; the real states are idle vs announcing per slot,
+    both rendered (idle = empty hidden region; announcing = posted announcement + mirrored text).
+
+EXIT=1
+STATUS=BLOCKED

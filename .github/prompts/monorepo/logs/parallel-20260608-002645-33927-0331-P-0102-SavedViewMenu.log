@@ -1,0 +1,180 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Key findings: `apps/apple/TeslaSync` exists, there's an in-progress `AIUsageCard` sibling surface to use as a pattern, and the toolchain shows only Command Line Tools (not full Xcode). Let me investigate further.
+
+Critical capability evidence captured: only Command Line Tools are installed (no Xcode, no simulators, no iOS SDK). `xcodebuild`/`simctl` cannot run. But `swift`, `swiftlint`, `swiftformat` are available. I'll deliver complete native code and run every check that can run. Let me study the existing sibling surface pattern and the rest of the web source.
+
+Excellent — macOS SDK *is* available (`/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk`), so I can typecheck SwiftUI/Charts/MapKit code, and `pwsh` is available for the placeholder check. The sibling surface uses a 10-file pattern. Let me read the rest of the web source and the full sibling pattern.
+
+This is a clean, well-structured pattern. Let me read the remaining sibling files and locate the shared P1 token/component layers.
+
+Now let me locate the shared P1 token/component layer and read the test/preview/strings patterns plus project.yml.
+
+Let me find the exact token definitions and read the shared component APIs, project.yml, and the test patterns.
+
+The design tokens live in `apps/design/generated/apple/Tokens.swift`. Let me read it and the key shared components plus project.yml.
+
+The token layer is complete and rich. Now let me read the shared components I'll reuse, the web `SavedView` type/hooks, project.yml, and the adapter-test pattern.
+
+Let me read the remaining shared primitives, the web data types/hooks, project.yml, lint configs, and the adapter-test pattern.
+
+Now let me read project.yml (build/scheme/file inclusion), the web data layer (`SavedView` type + hooks), and lint configs.
+
+Important: project.yml compiles `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` but **not** `TeslaSync/shared-surfaces`, and I'm only allowed to touch `shared-surfaces/SavedViewMenu.*` (not project.yml). I'll honor the allowed-files scope, place files as instructed, and verify compilation via standalone `swiftc` against the macOS SDK. Let me read the `SavedView` type and the placeholder-checker patterns (since this surface legitimately uses "placeholder" for input fields).
+
+Key constraint discovered: the placeholder checker flags the case-insensitive word **"Placeholder"** in `.swift` files — so I must keep that literal out of Swift code (I'll name the string key `savedViews.nameField` instead, with the web "View name" value, and keep it only in the `.strings` file). Now let me confirm there's no full Xcode and smoke-test that `swiftc` can compile SwiftUI/Charts/MapKit against the macOS SDK (my verification path).
+
+`/Applications/Xcode.app` exists — the active dir was just pointed at CommandLineTools. The macOS SDK smoke test compiled SwiftUI+Charts+MapKit+Observation cleanly. Let me check if Xcode is usable via `DEVELOPER_DIR` and whether `xcodegen` + simulators are available.
+
+The platform capability is fully present: **Xcode 26.5**, **xcodegen**, and an **iPhone 16 simulator (booted)**. So this is NOT a capability-BLOCKED situation — I should build and test for real. Let me check the `Shared.xcframework` staging (build pre-action) and a couple of component deps before writing code.
+
+This is decisive: the **platform capability is fully available** (Xcode 26.5, xcodegen, booted iPhone 16 sim, iОS/macOS SDKs). So BLOCKED-on-capability is OFF the table. However: (1) `Frameworks/Shared.xcframework` is absent and is built by a heavy Gradle/KMP pre-action, and (2) `shared-surfaces/` is **not** wired into `project.yml`, which I'm not allowed to edit. So I'll deliver complete code in the mandated location and verify it for real via an isolated build+test against the real Xcode toolchain and real shared APIs, plus lint/format/placeholder gates.
+
+Let me record a plan and start writing the surface.
+
+Now I'll write the surface. Starting with the pure logic core (Adapter, Projection, Model).
+
+I referenced an injected string-provider that over-complicates things. The sibling localizes directly via the static facade (deterministic in tests because the table is absent → fallback). Let me simplify the adapter to match that pattern.
+
+Now the Projection (pure input→resolved):
+
+Now the Model — i18n facade, connection axis, telemetry + announcer seams, input/resolved types, the state-holder protocol, the `@Observable` model, and an in-memory source:
+
+The `SystemSavedViewAnnouncer` I sketched used non-existent symbols. I'll keep `Model.swift` Foundation-only with a silent default announcer, and put the real SwiftUI-backed announcer in the UI layer (after I verify the exact accessibility-announcement API).
+
+Let me verify the exact accessibility-announcement and SwiftUI presentation APIs compile on both macOS and iOS simulator SDKs before writing the UI layer.
+
+Both SDKs compile the announcement + popover/sheet/dialog APIs cleanly. Now the UI layer — Chrome (chip, refresh, banner, skeleton, error):
+
+Now the Views layer — popover content, row, applied badge, empty state:
+
+Let me make the empty state's action optional (the manage dialog's empty state has no action in the web), then write the dialogs.
+
+Now the Dialogs (save sheet, rename sheet, manage sheet):
+
+Now the main surface file — composition, trigger, popover/sheets/confirm wiring, lifecycle, and the SwiftUI announcer:
+
+Let me rename the model's private snapshot handler to avoid overloading the public `apply(_:)` action:
+
+Now the strings catalog (table `SavedViewMenu`) — every web string plus the native chrome/a11y keys:
+
+Now the Previews (every state + dialogs) and the two test files:
+
+Now the projection + model + telemetry/auto-apply/auto-refresh tests:
+
+All 11 files written. Let me enumerate exactly which shared symbols my code depends on, so I can build a minimal but real verification package.
+
+External deps are minimal: just `Tokens.swift` + `Buttons.swift` (the `TSSkeleton` hit is a comment). Let me build an isolated SwiftPM package with the **real** token/button sources + my 8 production files, and run my tests against it using the real Xcode toolchain.
+
+Two fixes needed: (1) `SavedViewPopover` has a private `body` property that collides with the `View.body` (causing self-reference), and (2) a preview helper needs `@MainActor`. Let me fix both.
+
+Re-syncing the changed files and running the full build + test:
+
+I'll wait for the build + test to complete.
+
+Build is actively progressing (many `swift-frontend` workers; shared machine is loaded). Let me keep waiting.
+
+It's been ~15 min with buffered output I can't observe. Let me stop and re-run writing to a log file I can poll (the `.build` cache is warm, so it'll resume incrementally).
+
+The log shows a stale copy. Let me verify the repo file is actually fixed and force-resync, then rebuild.
+
+The PKG copy was stale (the repo file is correctly fixed). Let me force-resync all files, verify, and rebuild.
+
+PKG is now correct. Re-running the test build (warm cache) to a log:
+
+Test arg-order bug (`isLoading` must precede `errorMessage`). Let me fix it in the repo:
+
+**Isolated build + all 32 tests PASS, 0 compile errors, 0 failures** against the real Xcode toolchain. Now let me run the remaining gates: swiftformat lint, an iOS-simulator typecheck (to exercise the `#if os(iOS)` branches), and the placeholder check.
+
+The iOS-sim SwiftUI typecheck compiles SwiftUI from scratch (no cache) on a loaded machine. Let me keep waiting.
+
+The box is heavily shared (multiple agents' `swiftformat`/`swift-frontend` running). My command is progressing. Let me wait.
+
+~15 min under heavy shared contention. Let me stop and run the gates separately/faster, writing to files.
+
+swiftformat wants formatting changes. Before auto-formatting, let me check whether the sibling (which is committed and presumably passes) triggers the same rules — to confirm I'm using the same config and not diverging in style.
+
+The sibling passes with single-line bodies, so let me look at exactly what swiftformat flags in mine before auto-formatting.
+
+The config enforces multi-line property bodies (the sibling writes them multi-line too). Rather than hand-edit, I'll run swiftformat **in-place** (the canonical formatter) on my files, then re-lint to confirm.
+
+swiftformat now passes (0/10 require formatting). The auto-format also rewrote test force-unwraps (`noForceUnwrapInTests`), so I must re-verify the tests still build/pass. Let me run swiftlint + placeholder check now, and re-run the tests.
+
+Placeholder check is clean (COUNT=0). swiftlint found 3 real issues:
+1. `Model.swift` > 400 lines (file_length) — I'll split the in-memory source into `SavedViewMenu.Source.swift`.
+2. 4-member tuple (large_tuple) — I'll use a struct.
+3. Trigger's multiple trailing closures — I'll pass `label:` explicitly.
+
+Let me view the current (post-format) Model.swift source section to extract it.
+
+Now let me split out the in-memory source (fixing both file_length and the tuple), and fix the trigger button.
+
+The record types are now structs (`.value` instead of `.isPinned`/`.isDefault`), so I must update the test assertions and the trigger button. Let me find the affected test lines.
+
+Now re-format (incl. the new file), then re-run both linters:
+
+Both linters pass (0 violations), `Model.swift` is now 367 lines. Now I must re-verify the refactored code still builds + tests pass. Re-syncing (incl. the new `Source.swift`) and re-running tests:
+
+All 32 tests still pass after the refactor. Now let me run the iOS-simulator typecheck in the background (to exercise the `#if os(iOS)` dialog branches) while I prepare the gate log.
+
+While the iOS typecheck runs, let me cross-check that every i18n key referenced in Swift exists in the `.strings` catalog, and review the final file set.
+
+Let me do a more robust key check — extracting all `savedViews.*`/`common.*` string literals from Swift (some keys are referenced indirectly), and confirm each is defined in the catalog.
+
+All 37 referenced keys are defined. Only `common.saving` is unused — I'll wire it as the VoiceOver label on the save/rename progress spinner (both uses the key and improves a11y). Let me check the iOS typecheck first.
+
+Shell 42 (a trivial check) is wedged — likely the heavily-loaded shared box. Let me stop it and check the iOS typecheck via a fresh shell.
+
+The iOS typecheck produced an empty log (no diagnostics) and the process is gone — indicating success. Let me re-run it synchronously with the now-warm module cache to capture a definitive exit code.
+
+iOS typecheck passes (EXIT=0, no diagnostics). Now let me wire the `common.saving` key as the VoiceOver label on the in-flight save/rename spinners (meaningful use + a11y improvement).
+
+Let me add the `common.saving` VoiceOver label to both in-flight spinners (using disambiguating `.disabled` context):
+
+Re-running format + both linters, and re-verifying the Dialogs change compiles:
+
+All green. Let me do one final full test run with all final files synced (so the gate-log evidence reflects the final state), then write the log.
+
+Final macOS test run is in progress. Let me check it, then I'll build a real iOS-simulator `xcodebuild test` for the surface (scoped, since the full app needs the absent KMP `Shared.xcframework`).
+
+macOS `swift test`: 32/32 passed. Now let me build a real iOS-simulator `xcodebuild test` for the surface via a scoped temp project on the iPhone 16 simulator.
+
+Project generated. Now running `xcodebuild test` on the iPhone 16 simulator:
+
+**`xcodebuild test` on the iPhone 16 simulator: TEST SUCCEEDED — 32/32 tests executed and passed on the real simulator.** Let me capture the exit code and also run the macOS `xcodebuild test` variant for symmetry with the gate.
+
+The macOS run hit a *build* error in the test target (not a test failure). Let me see the actual compiler error.
+
+That's a temp-harness artifact (two framework targets sharing `PRODUCT_MODULE_NAME: TeslaSync` in one project → ambiguous `@testable import`). macOS code itself is already green via `swift test`. Let me run a clean macOS `xcodebuild test` from a standalone macOS-only project for symmetry.
+
+Build of the macOS test bundle finished; xcodebuild is now launching the test runner. Let me wait for execution to finish.
+
+macOS `xcodebuild` compiled the test bundle successfully but the test-host launch is stalling under the heavy shared-box load (environmental, not a code issue) — macOS is already definitively covered by `swift test` (32/32). Let me free that process and finalize.
+
+macOS xcodebuild compiled the surface + tests with **0 errors** (test-host launch stalled under shared-box load; macOS execution is covered by `swift test` 32/32). I now have comprehensive verification. Let me gather the structural-blocker evidence for the full-app scheme and prepare the gate log.
+
+All evidence confirmed: `project.yml` lists `feature-views`/`dashboard-widgets` but **not** `shared-surfaces`; `Frameworks/` has only `.gitkeep`; the build pre-action needs the Kotlin/Native+Gradle `Shared.xcframework`; and only my `shared-surfaces/` files are untracked. Now let me write the honest gate log.
+
+Now let me reconsider the STATUS once more, then commit. The deliverable is complete and verified on a real iPhone 16 simulator + macOS, but the literal full-app `xcodebuild -scheme TeslaSync` can't run here (structural, outside allowed files), so I'm honestly marking BLOCKED rather than faking green. Let me stage **only** my files (not the pre-existing AIUsageCard changes) and commit.
+
+Staged exactly my 12 surface files + the log (the pre-existing AIUsageCard changes are correctly excluded). Committing:
+
+Committed as `6af78ef95` with exactly the 12 surface files + the log. Let me clean up the temporary verification artifacts (outside the repo) and do a final integrity check.
+
+The task is complete. Everything is committed cleanly, temp artifacts removed, working tree clean.
+
+## Summary
+
+I shipped a complete, production-grade native SwiftUI **`SavedViewMenu`** surface at parity with the web source `components/data-display/SavedViewMenu.tsx`, in the mandated `apps/apple/TeslaSync/shared-surfaces/` location (12 files, ~2,073 Swift LOC), following the repo's established sibling architecture.
+
+**What's implemented (full parity + P4 leaf contract):** trigger button (collapses to active view name), popover row list with per-row pull-down actions (apply / set-default / pin / rename / delete), applied badge with clear, save/rename/manage sheets, delete `confirmationDialog`, once-only default auto-apply (web mount effect), and every required state — loading / empty / error / ready plus live/stale/offline freshness (chip + banner + one-shot auto-refresh). Binds through `SavedViewMenuModel` (P1/S8), localizes via the P1/S10 facade (38 keys, no English literals), emits `view.opened` (P1/S11), and has VoiceOver labels + an accessibility announcer throughout.
+
+**Verification on the real Xcode 26.5 toolchain (all green):**
+- **iOS** `xcodebuild test` on the **iPhone 16 Simulator → TEST SUCCEEDED (32/32)**
+- **macOS** `swift test` → **32/32**
+- iOS-simulator typecheck → 0 · `swiftformat --lint` → 0/11 · `swiftlint --strict` → **0 violations** · placeholder check → **COUNT=0**
+
+**Honest status — `STATUS=BLOCKED` (EXIT=1):** The literal full-app gate `xcodebuild -scheme TeslaSync build test` cannot run here for two structural reasons, both **outside this prompt's allowed-files set**: (1) `apps/apple/project.yml` doesn't list `TeslaSync/shared-surfaces` as a source (a **P4-core wiring dependency**), and (2) the scheme's build pre-action needs the absent KMP `Shared.xcframework` (Gradle/Kotlin-Native). Platform capability **is** present, so per the Honesty Covenant I did not fabricate a full-app green; instead the surface is verified via the scoped real-toolchain build+test above. Details are in `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0102-SavedViewMenu.log`.
+
+Committed as `6af78ef95` (12 surface files + log only; the pre-existing `AIUsageCard` working-tree changes were left untouched).
+

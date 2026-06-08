@@ -1,0 +1,102 @@
+I'll start by exploring the repository structure to understand the task and verify the environment capabilities.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. Let me gather more evidence and understand the existing patterns before deciding on approach.
+
+SwiftUI/Charts/MapKit typecheck against the macOS SDK appears to work. Let me verify that properly and explore the project's foundational facades (tokens, i18n, diagnostics) plus a reference presentational component pattern.
+
+`swiftc -typecheck` against the macOS SDK works (real EXIT=0) — I can verify SwiftUI compilation on this runner. But full Xcode is absent, so the gate's `xcodebuild` iOS/macOS build+test steps cannot run. Let me confirm no Xcode.app exists and study the canonical multi-file pattern + foundation facades.
+
+`/Applications/Xcode.app` **exists** — `xcode-select` just points to CommandLineTools. I can override with `DEVELOPER_DIR`. This could make the full gate runnable. Let me test.
+
+**Xcode 26.5 is installed and fully functional** via `DEVELOPER_DIR` — iOS 26.5 simulator (iPhone 16 booted), macOS SDK, and `xcodegen` all present. The full gate is runnable. The canonical pattern is `AiUsageCard.*` multi-file. Let me study the pattern, foundation facades, and project.yml source globbing.
+
+The app targets in `project.yml` include `TeslaSync/feature-views` but **not** `shared-surfaces` — I'll need to wire that in. Critically, I must understand how `.Tests.swift` files (which live alongside sources in `feature-views`) get routed to test targets vs the app target. Let me read the canonical Model/Views/Tests/Previews and the design tokens + diagnostics facade.
+
+I see the testing pattern (`import XCTest` + `@testable import TeslaSync`), but these test files live in `feature-views/` which `project.yml` maps to the **app** target — I need to understand how they're routed to a test target, and whether the full app build is even feasible (Shared.xcframework pre-action, KMP toolchain). Let me investigate the build pipeline feasibility.
+
+The build pre-action requires a **KMP/Gradle Kotlin-Native** toolchain to assemble `Shared.xcframework` (which doesn't exist yet), and there's an `apps/macos-pending-verifications.md`. This strongly suggests xcodebuild gates are CI-deferred here. Let me confirm and read the remaining canonical files + tokens.
+
+The precedent is now crystal clear. `apps/macos-pending-verifications.md` documents the **exact established methodology** for P4 Apple surfaces: write the surface, verify it **in isolation** (SwiftPM build + tests, real iOS-18 + macOS-15 `swiftc -typecheck`, swiftlint/swiftformat/placeholder clean), and defer the **full-app** `xcodebuild` to `macos-latest` CI because of pre-existing parallel-merge collisions (`DashboardWidgetSize` redefined 15×, 100+ co-located `*.Tests.swift` importing XCTest into the app target, unstaged `Shared.xcframework`, dev-signing). Java 17 is present but the KMP Kotlin-Native build is heavy. Let me read the remaining canonical files, tokens, and the Windows sibling for parity.
+
+Tokens and the Windows sibling confirm my parity read: this is a focused, presentational column-resize handle (idle/dragging/focused/disabled states), not a data surface — the Windows version reproduces exactly those, with `KeyboardStep=8` and min-clamping. Let me read the canonical Views/Previews/Tests and the tooling (placeholder check + any isolated SwiftPM harness).
+
+Let me read the placeholder-check tool, the canonical UI/state test file, and confirm the tools layout before writing code.
+
+I have the complete picture and the sanctioned precedent (ToolCard) showing the exact disposition: ship the surface, verify via isolated SwiftPM + lint/format/placeholder + real `swiftc -typecheck`, and document the full-app `xcodebuild` as DEFERRED (pre-existing collisions + signing). Let me record a plan and start building.
+
+Now I'll write the surface. Starting with the Model file (i18n facade, telemetry seam, pure resize math, and the observable state-holder).
+
+Now the main view (the handle: gesture, keyboard, VoiceOver adjustable, hover cursor, focus, telemetry).
+
+Let me update the idle/disabled style so the divider is always faintly visible (better touch affordance), then write the Views file (handle visual + header-cell host + multi-column showcase).
+
+The showcase has hardcoded English sample strings and a global `Array` extension that could collide if ever app-linked. Let me make all showcase text resolve through the i18n facade with locale-formatted numbers, and remove the global extension.
+
+Now the i18n strings table.
+
+Let me refine the model's `apply` so `onResize` fires on every interaction (web parity, even at boundaries) while still guarding the observable write.
+
+Now the ModelTests (pure resize math + style projection + model state machine):
+
+Now the Tests file (telemetry once, accessibility, strings facade, and per-state view render of the pure handle):
+
+All seven surface files are written. Let me harden the two conditional `ViewModifier` bodies with explicit `@ViewBuilder`, then stand up an isolated SwiftPM harness to actually build + run the tests under Swift 6.
+
+Now standing up the isolated SwiftPM harness against the real repo design tokens, building + testing under Swift 6 language mode:
+
+Surface compiles clean under Swift 6 strict concurrency. Now running the tests:
+
+All **46 tests pass** under Swift 6 strict concurrency. Now the real both-SDK typecheck (iOS 18 + macOS 15) on the exact shipped sources:
+
+Both SDKs typecheck clean with DEBUG previews. Now formatting + lint + placeholder gates. First apply swiftformat (write) then lint to confirm zero diffs:
+
+Formatting clean (0/6 require formatting). Now swiftlint --strict and the placeholder gate on the surface:
+
+swiftlint's `included:` caused a whole-repo lint (1909 files) with 1 pre-existing violation. Let me locate that violation and confirm it's not in my surface, then lint my files in isolation with the same rules.
+
+Confirmed: the sole violation is the **pre-existing** `function_body_length` in `LifetimeStatsWidget.Adapter.swift` (exactly as the ToolCard precedent noted) — **zero** in my surface. Let me lint my files in isolation with the same rules for clean evidence:
+
+Now scoped correctly: 2 `opening_brace` violations in my files (swiftformat wrapped long signatures, leaving the brace on a new line). Let me view and fix them.
+
+The repo style wraps long signatures params-before-first (brace attached to `) -> Type {`); swiftformat orphaned the brace by wrapping only the return type. Let me restructure both to the canonical form.
+
+swiftformat already rewrote that block; let me re-read the current text before editing.
+
+Now the Tests helper — view current state and rewrite to params-before-first form.
+
+Re-running format + lint on the surface after the fixes:
+
+Format and lint both clean (0 violations). Let me re-verify the harness build+test after the refactor, and run the placeholder gate.
+
+Every host-runnable gate is green: **46/46 tests** (Swift 6 strict concurrency), iOS 18 + macOS 15 typecheck clean, swiftformat clean, swiftlint 0 violations, **placeholder EXIT=0**. 
+
+To honor the covenant's "executed, not assumed" rule, I'll now (a) verify the exact gate placeholder-path, and (b) prove my files enumerate into the real Xcode project + attempt the full-app build to capture real exit codes — all via a temp spec, without touching the committed `project.yml`.
+
+Exact gate placeholder path is `EXIT=0`, and **my surface files enumerate into the real generated Xcode project** (tests correctly excluded from the app target). Now staging `Shared.xcframework` via Gradle (KMP) so I can attempt the full-app build for real exit codes — this is slow, so I'll background it.
+
+Gradle KMP build is running (the documented ~7min step). Let me wait for it.
+
+`Shared.xcframework` staged (BUILD SUCCESSFUL, 7m56s). Now attempting the real full-app iOS-Simulator build to capture actual exit codes and prove my surface isn't the blocker:
+
+The build log confirms the documented pre-existing blocker (co-located feature-views `*.Tests.swift` importing XCTest into the app target). Let me extract the exit code and prove zero errors originate from my surface.
+
+**IOS_EXIT=65 (real, captured)** — and the failure is the documented pre-existing blocker: co-located `feature-views/*.Tests.swift` importing `XCTest` into the app target (`error: Unable to resolve module dependency: 'XCTest'`). **Zero errors from my surface** — my `excludes` kept my test files out of the app target, and my surface files compiled clean within the real app module. Now the macOS build:
+
+**MAC_EXIT=65 (real)** — blocked solely by the pre-existing macOS dev-signing requirement; **0 errors from my surface**. Both full-app builds fail only on documented, pre-existing, unrelated blockers — exactly matching the sanctioned precedent. Let me clean up temp artifacts and confirm the working tree only shows my files.
+
+Working tree is clean: only my new `shared-surfaces/` files are untracked; `project.yml`/`.swiftlint.yml` are unmodified; `Shared.xcframework` is gitignored; the pre-existing `AIUsageCard.*` changes are untouched. Let me grab tool versions and write the gate log.
+
+Now writing the comprehensive gate log:
+
+Now appending the pending-verification ledger row (the repo's sanctioned place to record the deferred full-app build):
+
+Pending-verification ledger updated. Let me run a final consolidated verification of the committed state before committing.
+
+All final gates green on the committed state (**46/46 tests**, swiftformat 0/6, swiftlint 0 violations, placeholder EXIT=0). Committing the surface, log, and pending-verification row:
+
+Staged set is exactly right (7 surface files + log + pending row); the pre-existing `AIUsageCard.*` changes are excluded. Committing:
+
+Committed (`1a27c64a5`, 9 files, 1447 insertions). Let me clean up temp artifacts and update task tracking.
+
+Task complete. The working tree now shows only the pre-existing `AIUsageCard.*` changes (not mine — a sibling slot's case-rename), my commit is HEAD with all 7 surface files, and temp artifacts are cleaned up.
+

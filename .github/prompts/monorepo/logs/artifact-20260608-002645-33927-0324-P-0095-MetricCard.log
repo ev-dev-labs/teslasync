@@ -1,0 +1,213 @@
+=== P4 Shared surface 0095 MetricCard (Apple) ===
+
+Surface: MetricCard (shared cross-feature presentational metric card)
+Web source: web/src/components/data-display/MetricCard.tsx (+ its <Delta> footer,
+            web/src/components/data-display/Delta.tsx, and the neonColorMap tokens
+            in web/src/lib/tokens.ts) — reproduced end-to-end.
+Native output: apps/apple/TeslaSync/shared-surfaces/MetricCard.* (8 files, this prompt's only scope)
+Date: 2026-06-08
+
+------------------------------------------------------------
+CAPABILITY VERIFICATION (runner)
+------------------------------------------------------------
+- Full Xcode present: /Applications/Xcode.app -> Xcode 26.5 (Build 17F42)
+  (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is driven via
+   DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo needed.)
+- macOS SDK MacOSX26.5 (back-compatible with the project's iOS 18.0 / macOS 15.0 targets)
+  -> SwiftUI + Swift Charts + MapKit available. Surface is pure SwiftUI (no Charts/MapKit needed).
+- Toolchain: swift 6.3.2, xcodegen 2.45.4, swiftlint, swiftformat, pwsh all present.
+- KMP shared core: konan 2.4.0 + java present; Shared.xcframework BUILT here (see below).
+=> Native Apple capability is AVAILABLE on this runner. The surface itself is COMPLETE and
+   independently VERIFIED GREEN (see GATE RESULTS). The templated full-app `xcodebuild build test`
+   does NOT reach a clean exit on THIS checkout — blocked by PRE-EXISTING, out-of-scope duplicate
+   symbols + mislocated tests in OTHER parallel surfaces (documented with raw output below). None
+   of that involves MetricCard.
+
+------------------------------------------------------------
+PATH MAPPING / INTEGRATION NOTE (documented — no silent drift)
+------------------------------------------------------------
+The prompt's native-output path is apps/apple/TeslaSync/shared-surfaces/MetricCard.* and this
+prompt's Allowed-files are exactly those files + this log. The committed project.yml currently
+registers `TeslaSync/dashboard-widgets` and `TeslaSync/feature-views` as app-target source paths
+but NOT the sibling `TeslaSync/shared-surfaces`. Registering that path (app targets) + routing
+`*Tests.swift` to the TeslaSync(/-macOS)Tests bundles + adding it to swiftlint `included:` is a
+P4-core / integration step (this prompt "Depends on: P4 core"). It is OUTSIDE this prompt's
+allowed files, so project.yml/.swiftlint.yml are NOT edited here.
+
+For BUILD VERIFICATION ONLY (never committed), a throwaway project.yml that adds
+`TeslaSync/shared-surfaces` to the app targets (production files; `*Tests.swift` excluded) and the
+two `*Tests.swift` to the TeslaSync-macOSTests / TeslaSyncTests bundles was generated with
+xcodegen, used to drive xcodebuild, then RESTORED (git diff on project.yml is empty; the generated
+.xcodeproj is git-ignored and was removed).
+
+------------------------------------------------------------
+PARITY (web source reproduced)
+------------------------------------------------------------
+- Tier: pure presentational leaf (web has NO hooks / NO fetch). Per the P4 leaf contract the
+  surface is wrapped in the shared state-holder seam (P1/S8) so it binds through MetricCardModel
+  (no HTTP in the view) and renders every leaf state.
+- Props reproduced 1:1 (MetricCardInput): label, value (string|number -> .text/.number/.absent),
+  icon (SF Symbol), color (NeonColor -> MetricCardAccent), legacy `change` pill, direction-aware
+  `delta`, subtitle, help (HelpTooltip).
+- Delta footer = a line-by-line port of Delta.tsx: deltaCurrent = delta.current ?? numericValue;
+  missing inputs -> em-dash/no colour/no arrow; zero delta -> flat arrow + muted; neutral direction
+  -> secondary; (higher_better & up)||(lower_better & down) -> success else danger; percent with
+  previous==0 -> em-dash; absolute/percent/both forms; prefix/suffix formatting; arrow encodes the
+  sign, magnitude always positive. Legacy `change` pill only when `change && !delta`.
+- NeonColor -> theme-aware semantic tokens (Color.TS.accent/statusSuccess/statusDanger/
+  statusWarning/statusInfo/chartSeriesPower) so the icon tile inverts correctly in light mode.
+- States (all rendered — no hidden surface): loading (skeleton), data (value + change/delta footer
+  + icon + help), empty (em-dash + friendly note, never blank), error (retryable). The orthogonal
+  connection axis (live/stale/offline) drives a corner freshness chip with a one-shot auto-refresh
+  on the stale transition.
+- i18n (P1/S10): all native chrome prose via the MetricCardStrings facade -> "MetricCard" table
+  (MetricCard.strings): metricCard.empty/loadingA11y/errorTitle/retry/help.moreInfo/live/stale/
+  offline. label/value/subtitle/help-body are caller-provided DATA (rendered verbatim), not
+  literals. No English string literals in Swift.
+- Accessibility: composed VoiceOver label "{label}: {value}. {subtitle}. {change}" on the value
+  element; help button + freshness chip stay independently reachable; icon hidden; Dynamic Type
+  (Font.TS), reduce-motion honored (TSFadeIn / TSSkeleton gate their animation).
+- Telemetry (P1/S11): emits view.opened with surface slug "MetricCard" once on first presentation
+  (OSLogMetricCardTelemetry default; production injects the shared diagnostics sink).
+
+Files (8; mirror the AiUsageCard 8-file split; each <= the lint file_length<=400 budget):
+  MetricCard.Adapter.swift      ~330 lines  number/value formatting, NeonColor mapping, Delta
+                                            computation (port of Delta.tsx), a11y summary
+  MetricCard.Model.swift        ~300 lines  strings facade, telemetry seam, connection axis,
+                                            input snapshot, resolved state, source seam, @Observable model
+  MetricCard.Projection.swift   ~165 lines  input -> resolved phase machine
+  MetricCard.Views.swift        ~300 lines  icon tile, delta footer, change pill, help button,
+                                            freshness chip, loading/empty/error regions
+  MetricCard.swift              ~165 lines  the surface View (chrome + phase switch + telemetry)
+  MetricCard.Previews.swift     ~150 lines  #Preview per state (data/delta up/down/change+help/
+                                            empty/loading/error/stale/offline)
+  MetricCard.Tests.swift        367 lines   adapter + value + delta + a11y + projection tests
+  MetricCard.ModelTests.swift   118 lines   model wiring + telemetry-once + stale auto-refresh
+  MetricCard.strings                        P1/S10 catalog contribution (table "MetricCard")
+
+------------------------------------------------------------
+GATE RESULTS (actual command output)
+------------------------------------------------------------
+[surface scope — ALL GREEN]
+
+[A] swiftformat --lint (apps/apple/TeslaSync/shared-surfaces)
+    0/8 files require formatting                                  -> FORMAT_EXIT(surface)=0
+
+[B] swiftlint --strict (MetricCard files only, repo rules)
+    Linting 8 files ... Done linting! Found 0 violations, 0 serious -> LINT_EXIT(surface)=0
+
+[C] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/MetricCard  (exact gate path)
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    EXIT=0                                                        -> PLACEHOLDER_EXIT=0
+
+[D] swiftc -typecheck — MetricCard PRODUCTION (5 files) + the REAL shared library
+    (Sources/Components/** + Sources/Design/** + ../design/generated/apple/Tokens.swift)
+    -swift-version 6 -strict-concurrency=complete -target arm64-apple-macos15.0 (Xcode 26.5 SDK)
+    (only UnitFormatters.swift excluded — it is app-unit-coupled and unused by this surface)
+    -> 0 errors                                                   -> REAL_LIB_PROD_TYPECHECK=0
+    This proves the surface compiles against the REAL tokens + REAL shared components under the
+    app's exact Swift-6 strict-concurrency settings (not shims).
+
+[E] swiftc -typecheck — MetricCard.Tests + MetricCard.ModelTests + the same REAL library + the
+    REAL XCTest.framework (Xcode platform path), -swift-version 6 -strict-concurrency=complete
+    -> 0 errors                                                   -> REAL_LIB_TESTS_TYPECHECK=0
+
+[F] Runtime logic harness (compiled executable exercising the REAL Adapter/Projection/Model code;
+    XCTest can't host-run because the app target won't link — see [2] — so the identical assertions
+    were executed standalone): 35/35 PASS, FINAL_FAILURES=0, exit 0      -> RUNTIME_LOGIC=0
+    Covers: number formatting (grouped/halfUp/plain-trim), value display/numeric coercion, the full
+    Delta port (up/down/flat, success/danger/muted/secondary, percent/absolute/both, previous==0,
+    missing inputs, hideArrow), the projection phase machine (error precedence / loading / empty /
+    data / change&&!delta / deltaCurrent fallback / help default a11y / composed a11y label), and
+    the @MainActor model wiring (telemetry-once, idempotent start, stale auto-refresh once, live
+    re-arm, surface slug).
+    NOTE: [F] also CAUGHT + FIXED two real defects before commit — (i) MetricCardValue.numeric()
+    needed explicit `return`s (statement-switch), and (ii) a wrong test expectation ("50%" -> the
+    web-correct "50.0%", since fmtNumber(v, precision ?? 1) keeps 1 fraction digit). Lint/format do
+    not type-check, so these were only catchable by compiling+running.
+
+[xcodebuild — full-app gate steps: BLOCKED by PRE-EXISTING, out-of-scope repo debt]
+
+[0] Shared.xcframework (scheme pre-action) — BUILT OK on this runner
+    `Scripts/build-shared-xcframework.sh` -> Gradle :core:assembleSharedXCFramework
+    "BUILD SUCCESSFUL in 15m 43s" -> staged macos-arm64 / ios-arm64 / ios-arm64-simulator slices.
+    (Confirms the KMP/Apple build capability is genuinely present.)
+
+[1] iOS build/test  (xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test)
+    NOT separately executed. The iOS app target compiles the IDENTICAL TeslaSync module sources as
+    the macOS target, so it would fail on the same pre-existing duplicate symbols in [2]; and this
+    runner has no installed iOS Simulator runtime (xcrun simctl is the CLT one) so simulator TEST
+    execution is unavailable regardless. The surface is platform-agnostic SwiftUI and is fully
+    verified in [D]/[E]/[F].                                      -> IOS_EXIT=(not run)
+
+[2] macOS build  (xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' build,
+                  CODE_SIGNING_ALLOWED=NO for the unsigned CI verification)
+    ** BUILD FAILED **                                           -> MAC_BUILD_EXIT=65
+    Root cause = PRE-EXISTING duplicate type definitions ACROSS OTHER parallel surfaces (NOT this
+    surface). Raw diagnostics (representative):
+      TelemetryErrorsPanel.Adapter.swift:112: error: invalid redeclaration of 'TelemetryErrorRow'
+      TelemetryErrorsPanel.Model.swift:139:   error: invalid redeclaration of 'TelemetryErrorsModel'
+      TelemetryErrorsPanel.Model.swift:127:   error: invalid redeclaration of 'TelemetryErrorsSource'
+      TelemetryErrorsPanel.Model.swift:23:    error: invalid redeclaration of 'TelemetryErrorsTelemetry'
+      ... 'DashboardWidgetSize' is ambiguous for type lookup
+    Duplicate definers (committed snapshot, OUTSIDE this prompt's scope):
+      TelemetryErrors* : TeslaSync/dashboard-widgets/TelemetryErrorsWidget.*  AND
+                         TeslaSync/feature-views/TelemetryErrorsPanel.*
+      TelemetryErrorRow: TeslaSync/feature-views/TelemetryErrorsPanel.Adapter.swift AND
+                         TeslaSync/feature-views/FleetApiSection.Models.swift
+    Also pre-existing: 224 `*Tests.swift` files under the app source paths TeslaSync/feature-views
+    (170) + TeslaSync/dashboard-widgets (54) `import XCTest`, which the app target cannot resolve
+    (first build attempt: "AIRestorePanel.Tests.swift: error: unable to resolve module dependency:
+    'XCTest'"). The verification wiring excludes `*Tests.swift` from the app targets to isolate the
+    surface; the residual blocker is the duplicate symbols above.
+    ** ZERO diagnostics reference MetricCard / shared-surfaces ** (grep of the full build log).
+    => the full-app build is blocked by pre-existing out-of-scope integration debt, not by this
+       surface. Fixing those files is outside this prompt's Allowed-files; forcing a "green" build
+       by hand-excluding ever more broken out-of-scope files would be dishonest gaming and is NOT
+       done.
+
+[2b] macOS test — this surface's bundle could not host-run because [2] (the app target it would be
+     hosted in) does not link. The identical adapter/projection/model assertions are runtime-proven
+     in [F] (35/35) and the test sources are compile-clean against the real library + real XCTest in
+     [E].                                                         -> MAC_TEST_EXIT=(blocked by [2])
+
+[3] swiftlint --strict  (repo-wide, as the gate runs it: cd apps/apple; swiftlint lint --strict)
+    Found 1 violation, 1 serious in 1909 files                   -> LINT_EXIT(repo)=2
+    The ONE violation is PRE-EXISTING and OUTSIDE this surface:
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141: Function Body Length (78>50)
+    MetricCard's own 8 files: 0 violations (see [B]).
+
+[4] swiftformat --lint apps/apple  (repo-wide)
+    1/1921 files require formatting                              -> FORMAT_EXIT(repo)=1
+    The ONE file is PRE-EXISTING and OUTSIDE this surface:
+      TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes)
+    MetricCard's own 8 files: 0/8 require formatting (see [A]).
+
+[5] check-placeholders.ps1 (this surface)                        -> PLACEHOLDER_EXIT=0  (see [C])
+
+------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------
+Delivered surface is COMPLETE and independently VERIFIED:
+  - MetricCard files: swiftformat 0/8, swiftlint --strict 0 violations, placeholders 0.
+  - Production + tests TYPECHECK against the REAL shared component library + REAL generated tokens
+    (+ REAL XCTest) under the app's exact Swift-6 / strict-concurrency=complete settings: 0 errors.
+  - Runtime logic harness over the REAL adapter/projection/@MainActor model: 35/35 PASS.
+  - In the real whole-module Xcode build, MetricCard produced ZERO diagnostics.
+  - Full parity with the web source: all props, the Delta footer arithmetic, all states, i18n,
+    a11y, and telemetry reproduced. No stubs / TODO / placeholder / mock in shipped code.
+
+The templated full-app `xcodebuild build test` gate does NOT reach EXIT=0 on THIS checkout. The
+blockers are PRE-EXISTING and OUTSIDE this prompt's Allowed-files (MetricCard.* + this log):
+  (a) duplicate type definitions across OTHER parallel surfaces (TelemetryErrorsWidget vs
+      TelemetryErrorsPanel; FleetApiSection vs TelemetryErrorsPanel; DashboardWidgetSize), and
+  (b) 224 mislocated `*Tests.swift` under the app source paths, plus 1 pre-existing swiftlint and
+      1 pre-existing swiftformat issue in other surfaces.
+Per the Honesty Covenant (no red-as-green, no commit-on-red of a faked build), the full-app build
+is reported as BLOCKED with raw evidence rather than claimed green. Registering
+`TeslaSync/shared-surfaces` in project.yml + the test bundles + swiftlint `included:`, and resolving
+the pre-existing duplicate symbols, are P4-core / integration steps outside this prompt's scope.
+
+EXIT=1
+STATUS=BLOCKED

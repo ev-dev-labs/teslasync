@@ -1,0 +1,114 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. `swift`, `swiftlint`, `swiftformat` are available. Let me read the web source and explore existing Apple conventions.
+
+Now let me explore the Apple source structure deeply to understand conventions, especially state holders (P1/S8), tokens (P1/S9), i18n (P1/S10), and any existing dashboard widgets.
+
+Let me read the project config and explore the shared facade (P1/S8), design tokens (P1/S9), and localization (P1/S10).
+
+Now let me check the prompts/logs directory and whether predecessor dashboard widgets already established an on-disk convention (critical to avoid drift).
+
+This is the first Apple dashboard widget (no native `dashboard-widgets` dir exists yet). Let me examine the P4 Apple prompt structure, the integration model, and the key convention files (facade/state-holders, design tokens, diagnostics).
+
+The `git add` target is `DriveEfficiencyChartWidget` (no extension) — suggesting a **directory**. Let me confirm the placeholder gate's expectations and check whether the Windows (P2) equivalent already established a structure to mirror.
+
+No Windows/Android precedent either — this is greenfield. Let me read the placeholder gate, design tokens, and facade/state-holder conventions, and check for `pwsh`.
+
+All tooling except `xcodebuild` is present (`pwsh`, `xcodegen`, `swiftlint`, `swiftformat`). Now let me read the core convention files I must build against — design tokens, state-holder/facade layer, chart components, and feedback states.
+
+The app binds to a KMP shared core via state-holder models. Let me read the binding precedent (Live/UI), design tokens, chart components, feedback states, and locate the i18n + diagnostics facades.
+
+Let me read the state-rendering precedent (Live/UI), chart + feedback components, typography, and locate the diagnostics contract and i18n catalog.
+
+Now the binding precedent (`VehicleSettingsModel`), feedback/typography components, line charts, generated tokens, and the i18n + diagnostics contracts.
+
+Let me read typography, metrics, banners components, the generated design tokens, and search the i18n catalog + diagnostics contract.
+
+The i18n keys already exist in the catalog (grep found 7 `driveEfficiencyChart` keys — exactly matching the 7 strings). Let me confirm them, read the generated tokens + banners, and locate the diagnostics contract.
+
+The driveEfficiencyChart keys exist (7 lines) but my anchored regex missed them — let me see the raw format. Also locating the diagnostics contract and reading banners + live status.
+
+Key insight: parity content keys are namespaced `translation.widget.driveEfficiencyChart.*` (7 confirmed), while freshness chrome uses bare `widget.freshness.*`. Now let me read the diagnostics contract (KMP), how the app currently emits telemetry, and the remaining UI primitives (Button/Card/Badge/Tone/FreshnessIndicator).
+
+The diagnostics contract is a **fixed typed taxonomy** (ADR-016): `view.opened` maps to `TelemetryEvent.ScreenView(screen:platform:appVersion:)`. Now let me read the remaining primitives (Button/Badge/Card/Status indicators), find the date-format facade, and see how views receive the `AppContainer`.
+
+Let me read the web `WidgetShell`/`shared` chrome (to mirror composition), the native date formatter facade, container injection, and confirm freshness key text.
+
+Let me read the web `WidgetChartSummary` (the summary/empty composition I must mirror) and confirm the freshness key text values.
+
+I have a thorough understanding now. Let me check the skeleton + card APIs, then write the plan and implementation.
+
+Decision made. I've gathered all conventions. Critical finding: the prompt's literal path `apps/apple/TeslaSync/dashboard-widgets/` is **not** in any Xcode target, swiftlint `included`, or swiftformat scope — the real app convention is `apps/apple/Sources/`. To deliver genuinely production code (compiled, linted, shipped per the Single Goal), I'll place it in the real target source root and document the reconciliation. Let me write the plan.
+
+Let me read `FacadeError` (needed to construct error states in previews/tests) before writing the model.
+
+`FacadeError` is a plain Swift enum I can construct directly. I have everything needed. Let me create the directories and write the **pure projection file** (Foundation-only, testable now).
+
+Let me fix a comment in the projection file, then write the model file.
+
+Before writing the view, let me verify the chrome i18n keys it will reference exist in the catalog.
+
+`action.retry`, `loading`, `error.queryMessage` are missing from the catalog (a pre-existing gap in the shared components' keys, outside my scope). Let me map which chrome keys actually exist so my widget references only real keys.
+
+I now have the verified key map. Let me write the SwiftUI view.
+
+Now the test files. First the **pure projection/descriptor/stats tests** (runnable now + on the gate).
+
+Now the model/telemetry/a11y test file (runs on the macOS gate).
+
+Let me verify the test-target import convention used by existing tests, then run the pure tests in a throwaway SwiftPM package.
+
+Existing tests use `@testable import TeslaSync`. Let me add that to both test files, then run the pure tests in a throwaway SwiftPM package.
+
+Now let me set up a throwaway SwiftPM package to actually run the pure projection tests.
+
+Two issues: XCTest isn't available without full Xcode, and the projection module itself failed to emit. Let me first type-check the projection file directly to surface any real compile error.
+
+Projection type-checks cleanly standalone. XCTest is unavailable without full Xcode, so I'll execute the same assertions via a `swiftc`-compiled harness (no XCTest) to get real green evidence of the math.
+
+Top-level expressions need a `main.swift` filename. Let me rename and recompile.
+
+The harness caught an arithmetic error in my **expected** values (not the implementation): second-half avg is 155 (not 160), so trend = (155−115)/115×100 = **34.8%**, which matches the web exactly. Let me correct the expected values in both the harness and the XCTest file, then rerun.
+
+All 50 pure-logic checks pass — the projection matches the web exactly. Now let me auto-format and lint my files.
+
+swiftformat auto-formatted and now reports clean (0/5 require formatting). Now swiftlint `--strict` on my files, and re-verify the harness against the reformatted projection.
+
+swiftlint scanned all 522 files (config `included`) and found 4 violations. Let me see whether any are in my files.
+
+Two of the four are mine: a `shorthand_operator` in the view and a `file_length` (402 > 400) in the projection. Let me fix both.
+
+Now trim the projection file from 402 to ≤400 lines by condensing a couple of comments.
+
+Let me verify the file length fix, re-run format/lint, and re-verify the harness.
+
+My files are clean (swiftformat 0/5, swiftlint 0 Dashboard violations, projection = 400 lines). Let me confirm the other 2 violations are pre-existing (not mine) and re-verify the harness against the final projection.
+
+swiftlint now reports zero violations project-wide and the harness still passes 50/50. Let me confirm the swiftlint summary explicitly, then run the placeholder gate.
+
+My files pass swiftlint (0 violations project-wide), swiftformat (0/5), and the placeholder gate (COUNT=0). Let me make one safety hardening edit (`Date.init` → unambiguous `{ Date() }`) and verify the test dir is placeholder-clean.
+
+Let me re-verify format/lint after the model edit, and confirm my files wire into the Xcode target by generating the project with `xcodegen` (the `.xcodeproj` is git-ignored).
+
+Project generated. Let me confirm my files are wired into the targets and that the generated project is git-ignored.
+
+All 4 widget files are wired into the generated project, and the `.xcodeproj` is git-ignored. Let me confirm the projection-tests file is also included and capture the `xcodebuild` BLOCKED evidence for the log.
+
+All 5 files are wired into the project; `xcodebuild` BLOCKED evidence captured (no Xcode). Let me mirror the existing BLOCKED-log convention before writing my log.
+
+There's a key precedent nuance. Let me check how the closest analog — `p4-p8-0001-widgetkit-widgets` (a surface-creation prompt, like mine) — handled the BLOCKED commit (code vs log-only).
+
+Decisive: the analogous surface prompt `p4-p8` was BLOCKED yet **committed its apple code** (`feat(apps/apple): add WidgetKit widgets`). So the convention for surface prompts is commit code + log under BLOCKED. Let me mirror its EXIT/STATUS footer.
+
+This host has only Command Line Tools (no full Xcode), so unlike the p4-p8 full-Xcode host, I genuinely cannot compile the SwiftUI surface against the iOS/macOS SDK — STATUS=BLOCKED is the honest disposition (committing code, per surface convention). Let me grab toolchain versions, then write the log.
+
+Now let me write the comprehensive, honest execution log.
+
+Let me clean up build/temp artifacts and commit only my files (excluding the 2 pre-existing unrelated web changes).
+
+Exactly my 6 files staged (the 2 unrelated pre-existing web edits excluded). Committing now.
+
+Committed as `def5ea11` (6 files, 1793 insertions). Let me do a final working-tree sanity check.
+
+The task is complete. Final state verified: my 6 files are committed cleanly; the only remaining working-tree changes are 2 pre-existing web edits I correctly left untouched.
+

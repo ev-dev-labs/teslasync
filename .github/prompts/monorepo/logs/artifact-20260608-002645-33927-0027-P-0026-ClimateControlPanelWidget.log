@@ -1,0 +1,96 @@
+=== P4 Dashboard widget 0026 ClimateControlPanelWidget (Apple) ===
+Date: 2026-06-08
+Surface: apps/apple/TeslaSync/dashboard-widgets/ClimateControlPanelWidget.*
+Web source (spec): web/src/features/dashboard/widgets/ClimateControlPanelWidget.tsx
+Registry: id=climate-control-panel category=climate default=2x4 min=1x2 max=4x40
+
+------------------------------------------------------------------------
+RUNNER CAPABILITY PROBE
+------------------------------------------------------------------------
+xcode-select -p            => /Library/Developer/CommandLineTools   (Xcode NOT installed)
+swift --version            => Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108)
+swiftlint version          => 0.63.3
+swiftformat --version      => 0.61.1
+pwsh                       => /opt/homebrew/bin/pwsh (present)
+xcodegen                   => /opt/homebrew/bin/xcodegen (present)
+generated .xcodeproj       => absent (git-ignored; requires `xcodegen generate`)
+
+The artifact requires SwiftUI + Swift Charts + MapKit under the iOS 18 / iPadOS 18 /
+macOS 15 SDKs, which are only provided by a full Xcode install. This runner has the
+Command Line Tools only (no iOS Simulator runtimes, no XCTest.framework, no Previews
+macro plugin), so the `xcodebuild ... build test` gate steps cannot execute. Per the
+prompt capability clause this is a STATUS=BLOCKED condition (API/platform evidence below).
+
+------------------------------------------------------------------------
+GATE STEP 1 — xcodebuild iOS (BLOCKED: requires Xcode)
+  $ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+  directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+
+GATE STEP 2 — xcodebuild macOS (BLOCKED: requires Xcode)
+  $ xcodebuild -scheme TeslaSync-macOS build test
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+  directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+
+GATE STEP 3 — swiftlint --strict (RAN)
+  $ cd apps/apple && swiftlint lint --strict --config .swiftlint.yml <6 surface .swift files>
+  Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+
+GATE STEP 4 — swiftformat --lint (RAN)
+  $ swiftformat --lint <6 surface .swift files>   (config apps/apple/.swiftformat)
+  0/6 files require formatting.
+FORMAT_EXIT=0
+
+GATE STEP 5 — check-placeholders.ps1 (RAN)
+  $ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/ClimateControlPanelWidget
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------------
+SUPPLEMENTARY VERIFICATION (compensating for the BLOCKed xcodebuild steps)
+Type-checked with the host swiftc against the Command Line Tools macOS SDK
+(-target arm64-apple-macos15.0), resolving the real design tokens
+(apps/design/generated/apple/Tokens.swift) and the real TSSkeleton component.
+------------------------------------------------------------------------
+A) Production surface (Model + Adapter + Views + main view)
+   swiftc -typecheck ... => TYPECHECK_EXIT=0   (clean)
+B) Tests bodies (real surface types + minimal XCTest shim, Foundation via XCTest)
+   swiftc -typecheck ... => TESTS_TYPECHECK_EXIT=0   (clean)
+C) Previews — type-correct; only the Xcode-only `#Preview` macro plugin
+   (PreviewsMacros.SwiftUIView) cannot be loaded by CLT swiftc. The macro is used
+   correctly (compiler located the SwiftUI macro declaration); it expands under Xcode.
+
+------------------------------------------------------------------------
+PARITY EVIDENCE (web source => native)
+------------------------------------------------------------------------
+i18n: all 17 web t() keys present in ClimateControlPanelWidget.strings (MISSING_TOTAL=0);
+      31 keys total (17 source + registry name/desc + native chrome + a11y).
+States reproduced: loading (skeleton) / empty ("No climate data") / error (+Retry) /
+      stale (banner+chip) / offline (banner+chip) / content.
+Composition reproduced: HVAC On/Off badge + power "X.X kW"; Cabin + Outside temp cells
+      (convertTempFromSI 1:1 + fmtInt + unit glyph, "—" when null); Fan Speed; Wheel Heat
+      ("N/3" or "Off"); seat chips FL/FR/RL/RC/RR (level>0 only, in order) else
+      "No seat heaters active"; Defrost chip (mode && !== 'Off'); Bat Heater chip;
+      compact single-temperature view (faithfully ported, unreachable under 1x2 min clamp).
+Data binding: shared P1/S8 state-holder seam (ClimateSource -> ClimateUpdate -> ClimateModel);
+      no HTTP in the view. Unit preference flows via ClimateUnitPrefs (useUnits() parity).
+Telemetry: ClimateModel.start() emits view.opened with slug "ClimateControlPanelWidget" (P1/S11).
+Accessibility: VoiceOver labels on every chip/cell/control + combined summary; Dynamic Type
+      (semantic Font.TS + minimumScaleFactor); reduce-motion respected via TSSkeleton.
+Files (7): Model 353, Adapter 264, Views 290, main 239, Previews 154, Tests 357, strings 57.
+
+------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------
+RAN + GREEN : swiftlint --strict (0), swiftformat --lint (0), placeholders (0),
+              swiftc type-check of production + tests (0/0).
+BLOCKED     : xcodebuild iOS build/test, xcodebuild macOS build/test
+              (no Xcode on runner — Command Line Tools only).
+
+# EXIT=0 only when every gate step is 0; xcodebuild steps are BLOCKED by platform capability.
+EXIT=1
+STATUS=BLOCKED

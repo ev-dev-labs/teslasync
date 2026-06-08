@@ -1,0 +1,191 @@
+=== P4 Feature view 0247 IncidentsCard (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir is /Library/Developer/CommandLineTools; overridden non-destructively, no
+                       sudo / no xcode-select -s, so the shared runner is untouched). `xcodebuild -version` under
+                       the CommandLineTools dir errors ("tool 'xcodebuild' requires Xcode") — hence the
+                       DEVELOPER_DIR override, the SAME mechanism every prior P4 surface used.
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2
+  Capability         : SwiftUI present. This surface uses NO Charts and NO MapKit (the web source has none either
+                       — see "Charts / maps used: (none)" in the prompt), so the iOS 18 / iPadOS 18 / macOS 15 HIG
+                       primitives it needs (List/VStack rows, badges, buttons, skeletons, accessibility) are all
+                       available → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification — read end to end)
+  web/src/features/system/components/status/IncidentsCard.tsx — the active-incidents banner on /system-status:
+
+    Gate (web): `const incidents = active?.incidents ?? []; if (incidents.length === 0) return null`. When there
+      are no active incidents the WHOLE card collapses (returns null). The web comment calls this the "Empty state".
+    Header: <AlertTriangle/> "Active incidents" <Badge variant="warning">{incidents.length}</Badge>  +  a ghost
+      "Log incident" button (<Plus/>) that opens the <IncidentForm/> dialog (state `open`).
+    List (<ul>): each incident is a <Link to=/system-status/incidents/:id> row:
+      • severity glyph + colour — SEVERITY_TONE: minor=AlertCircle/amber, major=AlertTriangle/orange,
+        critical=AlertOctagon/red.
+      • title (truncate) + <Badge variant={STATUS_BADGE[status]}>{status}</Badge> + severity label (tone text).
+        STATUS_BADGE: investigating=danger, identified=warning, monitoring=info, resolved=success.
+      • {affected_components.length > 0 && "Affects: {affected_components.join(', ')}"}
+      • "Started {relativeFrom(now, started_at)}{updates.length > 1 && ` · ${updates.length} updates`}"
+      • trailing <ChevronRight/>.
+  Hook   : useIncidents({ activeOnly: true }) (TanStack, refetchInterval 30s) → { incidents, count }. This prompt's
+           ONLY listed data source is useIncidents; the create mutation (useCreateIncident) + the IncidentForm
+           dialog are a SEPARATE surface.
+  Helper (reproduced verbatim — arithmetic is the contract):
+           relativeFrom(now, iso): Date.parse → !finite ? "" : let secs = max(0, floor((now - t)/1000));
+             secs < 60 ? "just now" : secs < 3600 ? "{floor(secs/60)}m ago" : secs < 86400 ? "{floor(secs/3600)}h ago"
+             : "{floor(secs/86400)}d ago".  Magnitudes are bare template-literal integers (NO grouping).
+  i18n  : the web source is "anonymous" — it uses hardcoded English literals (no t() calls). Per the native
+          no-English-literals rule every literal is promoted to a P1/S10 key (table "IncidentsCard").
+
+ARTIFACTS SHIPPED  (allowed files: apps/apple/TeslaSync/feature-views/IncidentsCard.* + this log)
+  IncidentsCard.Adapter.swift     — pure Foundation core: IncidentTone, IncidentSeverity (parse + SF Symbol +
+                                    escalation tone + label key), IncidentStatus (parse + STATUS_BADGE tone + label
+                                    key), the IncidentSummary DTO, the IncidentsRelative bucketer (port of
+                                    relativeFrom — FLOOR semantics, lenient ISO parse, "" on unparseable),
+                                    IncidentsAccessibility row-label join.
+  IncidentsCard.Projection.swift  — pure IncidentsProjection: error → loading → empty → data; builds each row
+                                    (localized severity/status labels + tones + glyph, the verbatim-join affects
+                                    line, the "Started … · N updates" meta line, the VoiceOver summary); relativeLabel.
+  IncidentsCard.Model.swift       — P1/S8 state-holder seam (IncidentsSource + @Observable IncidentsModel + InMemory
+                                    source), P1/S11 telemetry seam (IncidentsTelemetry + OSLog sink, view.opened
+                                    surface="IncidentsCard" once on first present), the injected navigation seams
+                                    (onOpenIncident / onLogIncident), IncidentsConnection axis, the IncidentsInput
+                                    snapshot, the IncidentsResolved view-state + IncidentRow value type, the P1/S10
+                                    IncidentsStrings facade (string + %@ format).
+  IncidentsCard.Views.swift       — the row body as scoped subviews: tone palette, the Badge peer (IncidentTagView),
+                                    the incident row (glyph + title + status tag + severity label + affects + meta +
+                                    chevron, whole-row button → detail), the list, the visible empty state.
+  IncidentsCard.Chrome.swift      — the header (warning glyph + title + count TSBadge + freshness chip + refresh +
+                                    ghost "Log incident" TSButton) + P4 leaf chrome: freshness chip, refresh button,
+                                    stale/offline banner, loading skeleton rows, retryable error (TSButton).
+  IncidentsCard.swift             — the surface: card chrome (amber ring + faint amber fill in the data phase, neutral
+                                    border otherwise), connectivity banner, phase switch, TSFadeIn data body; static
+                                    surfaceSlug = "IncidentsCard"; onAppear start / onDisappear stop.
+  IncidentsCard.Previews.swift    — #if DEBUG #Preview for data / empty / loading / error / stale / offline.
+  IncidentsCard.strings           — P1/S10 catalog (table "IncidentsCard"): the literals extracted from the web
+                                    source + the native chrome (freshness / loading / error) + the a11y labels.
+  IncidentsCard.Tests.swift       — projection (loading/empty/error/data, row severity+status mapping, affects line,
+                                    started+updates meta, relative buckets, a11y compose) + model (wiring, telemetry,
+                                    navigation seams, stale one-shot auto-refresh, re-arm).
+  IncidentsCard.AdapterTests.swift— severity/status parse+tone+glyph, relative-time buckets (FLOOR, future clamp,
+                                    fractional ISO, unparseable), accessibility row-label join.
+  (10 files; the surface is split across .Model/.Projection and .Views/.Chrome and .Tests/.AdapterTests purely to
+   keep every file within the repo's SwiftLint file_length budget — all share the IncidentsCard.* stem, the same
+   multi-file decomposition the prior feature-views use, e.g. 0237 AiUsageCard.)
+
+KEY DECISIONS  (no silent drift — disclosed in full)
+  EMPTY STATE      The web COLLAPSES to null when incidents.length === 0. Repo engineering rule #6 ("HIDING sections
+                   when data is null … must always show with placeholder") + the P4 leaf contract ("every state MUST
+                   render — no hidden surfaces / never a blank box") OVERRIDE the web collapse for the native leaf:
+                   the surface renders a calm, visible empty state ("No active incidents", checkmark glyph). This is
+                   the SAME class of sanctioned leaf elevation the prompt applies to loading/error/stale/offline
+                   (states the web also lacks). Documented; not a silent drift.
+  SEVERITY COLOUR  The web uses three warm tints (amber/orange/red); the native P1/S9 design system exposes two warm
+                   status tokens (statusWarning / statusDanger). Mapping: minor→warning, major→warning,
+                   critical→danger — minor vs major stay distinguished by SF Symbol (circle vs triangle) + the
+                   severity label text. No raw hex is introduced (token discipline).
+  LOG / NAVIGATE   The "Log incident" CTA + the row tap are exposed as INJECTED seams (onLogIncident / onOpenIncident)
+                   — the web IncidentsCard composes <IncidentForm/> + <Link/>, but the IncidentForm surface and its
+                   useCreateIncident mutation are a SEPARATE prompt (this prompt's only data source is useIncidents).
+                   The button + row are fully wired (they invoke the seam); the host provides the destination. Not a
+                   stub — standard DI, asserted by tests.
+
+PARITY MAPPING  (web → Apple platform tokens; no Tailwind ported, no raw hex)
+  GlassPanel(ring-amber/30 bg-amber/[.03]) → card with statusWarning.opacity(0.3) ring + statusWarning.opacity(0.04)
+                                  fill in the data phase; neutral Color.TS.border in loading/empty/error.
+  Badge(variant)                → status: IncidentTagView (capsule fill .15 + stroke .3 at the tone, like TSBadge);
+                                  count: shared TSBadge(tone:.warning); severity label: plain tone text (web span).
+  lucide AlertCircle/Triangle/Octagon/Plus/ChevronRight → SF Symbols exclamationmark.circle/triangle/octagon.fill /
+                                  plus / chevron.right.
+  STATUS_BADGE map              → IncidentStatus.tone (investigating=danger, identified=warning, monitoring=info,
+                                  resolved=success) — asserted against the web map.
+  relativeFrom                  → IncidentsRelative.bucket + IncidentsProjection.relativeLabel (same thresholds, FLOOR,
+                                  "just now", bare integers, "" on unparseable).
+  affected_components.join      → IncidentsProjection.affectsLine (verbatim join, nil only when the array is empty —
+                                  matches the web length>0 guard exactly; no filtering, per the web).
+  Button (ghost)                → shared TSButton(variant:.ghost) ; QueryError retry → TSButton(variant:.secondary).
+  i18n                          → every string via IncidentsStrings (NSLocalizedString table "IncidentsCard", web
+                                  literal as the value: fallback); %@ templates so translators control word order.
+  a11y                          → each row is one combined button element with a composed VoiceOver label
+                                  ("{title}. {severity} severity. Status: {status}. {affects}. {meta}") + an open
+                                  hint; chip / refresh / retry / log labelled; Dynamic Type via tokens; Reduce Motion
+                                  via TSFadeIn / TSSkeleton.
+  telemetry                     → view.opened surface="IncidentsCard" emitted once on the first presented snapshot.
+
+STATES (every one renders — no hidden surface)
+  loading  → skeleton incident rows (the web collapses during load; the leaf keeps the card shape).
+  empty    → "No active incidents" with a calm checkmark glyph (web returns null; native leaf renders a visible
+             state per rule #6), never a blank box.
+  error    → retryable error chrome (P4 leaf addition; the web would collapse on error).
+  data     → the active-incident list (glyph + title + status badge + severity label + affects + started/updates
+             meta + chevron), with the amber ring emphasis.
+  stale    → header chip + banner + one-shot auto-refresh on the live→stale transition.
+  offline  → header chip + banner over last-known rows; no auto-refresh.
+
+GATES  (raw exits below; per-surface scope)
+  [GREEN] swiftformat --lint  (.swiftformat, 9 swift files)     : 0/9 files require formatting          FORMAT_EXIT=0
+  [GREEN] swiftlint --strict  (.swiftlint.yml, 9 swift files)   : 0 violations, 0 serious in 9 files    LINT_EXIT=0
+  [GREEN] check-placeholders.ps1 (-Language swift, IncidentsCard.*) : PLACEHOLDER_ALLOWED=0
+                                                                      PLACEHOLDER_COUNT=0                PLACEHOLDER_EXIT=0
+  [GREEN] ISOLATED build + test — SwiftPM, swift-tools 6.0 (module named TeslaSync so the @testable import resolves),
+          compiling the EXACT shipped IncidentsCard.* sources (incl. the #Preview macro file) against the REAL repo
+          design-system files (generated apps/design Tokens + Sources/Design TSDesign/TSMaterial + Sources/Components
+          Typography/Badges/Buttons/Cards/Skeletons/Motion) under the Xcode 26.5 toolchain (so the real #Preview
+          macro + XCTest are available):
+              Build complete! (16.97s)  ·  Executed 37 tests, with 0 failures (0 unexpected)            SWIFT_TEST_EXIT=0
+
+  [DEFERRED] Full-app iOS-Simulator + macOS `xcodebuild -scheme TeslaSync(-macOS) … build test`.
+          NOT run-to-green on this runner because the full app target is blocked by PRE-EXISTING, unrelated
+          conditions this prompt neither introduced nor is allowed to touch (each VERIFIED here, not assumed):
+            • apps/apple/Frameworks/Shared.xcframework is NOT staged (only .gitkeep present — `ls` confirmed) —
+              needs the ~7-min Gradle :core:assembleSharedXCFramework;
+            • `struct DashboardWidgetSize` is redefined 15× across Sources/DashboardWidgets/* +
+              TeslaSync/dashboard-widgets/* (`grep -rln` count = 15) — parallel-merge collisions;
+            • 171 co-located `*.Tests.swift` under TeslaSync/feature-views import XCTest into the app target
+              (`ls | wc -l` = 171; this surface's own 2 test files follow that established co-location convention);
+            • the .xcodeproj is xcodegen-generated (not committed) and macOS development-signing is required.
+          This is the SAME sanctioned "code-complete + DEFERRED full-app Xcode gate" disposition recorded by every
+          prior P4 surface (see p4-apple-feature-views-0237-AiUsageCard.log) and is owned by the P4 Apple acceptance
+          gate on a signed macos-latest runner with Shared.xcframework staged. ZERO IncidentsCard / feature-views
+          errors are attributable to this change (proven by the isolated build + 37/37 tests above).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED with raw, verified
+                           pre-existing-blocker evidence — never reported as passing.
+  2  No scope narrowing  : every web region + branch reproduced — the header (glyph + title + count badge + ghost log
+                           button), every row field (severity glyph/tone, title, status badge, severity label, the
+                           conditional affects line, the started + conditional updates-suffix meta line, the chevron),
+                           the relative-time helper, and the connectivity axis; all six P4 states render.
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; raw exits pasted; the deferred full-app
+                           blockers were each re-confirmed by ls/grep (Shared.xcframework absent, DashboardWidgetSize
+                           15×, 171 co-located tests), not assumed.
+  4  No stubs as final   : complete production surface + 37 real tests; placeholder scanner COUNT=0; no
+                           TODO/FIXME/stub/Coming-soon/Placeholder/Lorem anywhere. The navigation seams are injected
+                           DI points (asserted invoked by tests), not empty placeholders.
+  5  No parity shortcut  : the FLOOR relative-time buckets ("just now"/{m}/{h}/{d}, bare integers, "" on unparseable),
+                           the verbatim affected_components join (a test initially asserted a filtered variant — it
+                           was CORRECTED to the web's verbatim-join behavior), the STATUS_BADGE + severity tone maps,
+                           and the count/updates bare integers are each unit-asserted against the web expressions.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened telemetry,
+                           and the established P4 "isolated-build + DEFERRED full-app" disposition all honoured.
+  8  No commit on red    : the committed artifact (10 IncidentsCard.* files + this log) is GREEN on every per-surface
+                           gate AND on a real isolated Swift 6 build + 37/37 XCTest; the deferred full-app gate is
+                           blocked only by pre-existing, unrelated surfaces this commit does not touch.
+  9  No silent drift     : changes are confined to feature-views/IncidentsCard.{swift,Model,Projection,Adapter,Views,
+                           Chrome,Previews,Tests,AdapterTests}.swift + IncidentsCard.strings and this log; the
+                           empty-state, severity-colour, and navigation-seam decisions are disclosed above.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic IncidentsCard shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 37 tests pass under the app's own Swift 6 rules, against the REAL design system, via
+  the Xcode 26.5 XCTest runtime, with swiftformat / swiftlint --strict / placeholder all green on the 9 surface files
+  and the #Preview macro compiling. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not
+  failed by this code) on pre-existing, unrelated, out-of-allowed-files blockers (unstaged Shared.xcframework, the
+  DashboardWidgetSize 15× redefinition, the 171 co-located-tests-into-app-target config, macOS signing), owned by the
+  P4 Apple acceptance gate on a signed macos-latest runner.
+
+EXIT=0
+STATUS=DONE

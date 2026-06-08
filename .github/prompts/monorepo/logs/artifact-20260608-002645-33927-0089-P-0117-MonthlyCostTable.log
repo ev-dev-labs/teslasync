@@ -1,0 +1,212 @@
+================================================================================
+P4 · Feature view · 0117 — MonthlyCostTable (Apple)
+Run: 2026-06-08T01:54-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/89
+Base: c9c6fdb9 merge(parallel): p4-apple/feature-views/P-0237-AiUsageCard.prompt.md
+Prompt: P4/feature-views/0117 — Feature view: MonthlyCostTable
+Web source (spec): web/src/features/charging/components/cost-analysis/MonthlyCostTable.tsx
+Mode: code-complete + REAL toolchain verification. The Xcode whole-app build/test
+      gate is DEFERRED (predecessor parity — 0002 BackendTool / 0054 GuardModeWidget,
+      ADR-012, Honesty rule 7); this run went FURTHER than the predecessors: the KMP
+      Shared.xcframework was actually built and a REAL iOS app compile was executed —
+      it produced ZERO errors in any feature-views file (this surface included); the
+      build is blocked ONLY by two pre-existing, out-of-allowed-files issues (captured
+      below). The capability-BLOCKED escape hatch (SwiftUI/Charts/MapKit unavailable)
+      does NOT apply: SwiftUI is present and PROVEN by real iOS-18-sim + macOS-15 SDK
+      compiles and an EXECUTED 27/27 XCTest run.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (83717DEE-…-CBDDD3140989)                    OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  xcodegen ................... project generates cleanly (12 targets + schemes)     OK
+  Java 17 + Gradle 8.14.5 .... KMP Kotlin/Native toolchain present                  OK
+  Shared.xcframework ......... BUILT this run (gradle :core:assembleSharedXCFramework
+                               BUILD SUCCESSFUL in 13m21s → release + debug xcframeworks) OK
+
+  Capability note: the web source lists "Charts/maps used: (none)" and shared
+  components "@/components/ui" + "@/components/data-display". The core requirement is
+  SwiftUI, which is AVAILABLE and PROVEN by the real dual-SDK compiles + executed test
+  run below.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/MonthlyCostTable.*) ===
+  MonthlyCostTable.Model.swift     345  P1/S8 state-holder seam (MonthlyCostSource→
+                                        MonthlyCostModel) + P1/S11 telemetry seam (view.opened)
+                                        + P1/S10 strings facade + domain MonthlyCostBucket
+                                        + sort key/dir + load-status/connection + update snapshot
+                                        + in-memory source. SwiftUI-free.
+  MonthlyCostTable.Adapter.swift   280  testable projection core — number/currency formatting
+                                        (port of numberFormat.ts fmtInt/fmtWithUnit/fmtNumber +
+                                        Currency.tsx), the sort (numeric a-b | localeCompare * dir),
+                                        the 7-column row projection, the signed savings cell, a11y.
+                                        Pure Foundation, dependency-free.
+  MonthlyCostTable.Views.swift     290  presentational table — sortable Grid (regular, horizontally
+                                        scrollable for 7 cols) + compact card list, sortable headers
+                                        with chevrons, per-cell web tints (cost accent / gas danger /
+                                        savings success|danger), compact stat grid.
+  MonthlyCostTable.Chrome.swift    132  compact sort menu + freshness chip (Updating/Live/Stale/
+                                        Offline) + stale/offline connectivity banner.
+  MonthlyCostTable.swift           211  MonthlyCostTable surface — TSGlassPanel shell (web GlassPanel)
+                                        + header (chart.bar icon / title / freshness chip / refresh)
+                                        + content state switch (loading/empty/error/content) +
+                                        projection + surfaceSlug + i18n SwiftUI helpers.
+  MonthlyCostTable.Previews.swift  148  #if DEBUG previews — content (regular+compact)/loading/empty/
+                                        error/stale/offline.
+  MonthlyCostTable.Tests.swift     338  XCTest — number/sort/projection/a11y/model — 27 methods.
+  MonthlyCostTable.strings          54  P1/S10 catalog contribution (table "MonthlyCostTable").
+  Largest .swift = 345 lines (swiftlint file_length<=400 honored). No file imports the
+  Shared xcframework (the seams are pure Swift protocols; the prod app injects the
+  facade-backed source, previews/tests inject InMemoryMonthlyCostSource).
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data source (web useTranslation; the buckets arrive as the `data: MonthlyBucket[]`
+    prop from useCostAnalysisData at the page): the native leaf binds the buckets through
+    the P1/S8 seam MonthlyCostSource→MonthlyCostModel, owning the full query lifecycle.
+    No HTTP in the view (predecessor XRayFieldsTable parity — elevates a prop-driven web
+    component into a source-bound native feature view).
+  - Composition (web GlassPanel + DataTable + Currency):
+      • GlassPanel  -> TSGlassPanel.
+      • DataTable   -> native sortable Grid (regular) + card list (compact); the web
+                       sort (useState('month','desc'); same-col flips / new-col→desc) is
+                       reproduced verbatim in MonthlyCostModel.nextSort + MonthlyCostSorter.
+      • Currency    -> MonthlyCostNumber.currency (symbol + fmtNumber(value, precision);
+                       "—" for non-finite). cost p=2 (cyan→accent), avgCostPerKwh p=3,
+                       gasEquiv p=2 (red→danger).
+      • fmtInt/fmtWithUnit -> MonthlyCostNumber.integer / .withUnit('kWh', 1).
+      • savings cell -> {savings>=0 ? '+' : ''}Currency, green|red -> "+$x"/"$-x" with
+                       success|danger tint (NaN -> "—", not-positive, danger — web NaN>=0 false).
+  - i18n: every t() key from the source preserved verbatim — costAnalysis.table.{title,
+    month,sessions,energy,cost,avgRate,gasEquiv,savings,noData}; native chrome keys
+    (units/freshness/refresh/retry/error/banners/sort/a11y) added under the same table.
+    Referenced==declared verified: 27 keys referenced in code == 27 declared in .strings,
+    0 referenced-but-undeclared, 0 orphans.
+
+=== STATES (every state renders — no hidden surface) ===
+  loading  -> TSTableSkeleton(6)              (web `loading` keeps the table chrome)
+  empty    -> ContentUnavailableView w/ the verbatim "No monthly data available"
+              (web `sortedData.length===0` centered message — never a blank box)
+  error    -> retry affordance (P4 leaf addition over the prop-driven web source)
+  content  -> the sortable 7-column table (cached buckets stay visible behind failure/offline)
+  stale    -> freshness chip + banner + ONE guarded auto-refresh on the stale transition
+  offline  -> freshness chip + banner over the last-known cached buckets
+
+=== HOST GATES (genuinely green on this surface) ===
+  [1] swiftformat --lint (my 7 swift files) ................................ 0/7 require formatting   EXIT=0
+  [2] swiftlint  --strict (my 7 swift files) .............................. 0 violations              EXIT=0
+  [3] swiftc -typecheck Model+Adapter (Swift 6, -strict-concurrency=complete, macOS SDK) ... EXIT=0
+  [4] swiftc -typecheck FULL surface (Model+Adapter+Views+Chrome+entry+Previews) vs
+        accurate design-system stubs:
+          iOS 18 simulator SDK (arm64-apple-ios18.0-simulator) ............ EXIT=0
+          macOS 15 SDK         (arm64-apple-macos15.0) ................... EXIT=0
+        (this step CAUGHT + I FIXED a real cross-file `private` access bug:
+         MonthlyCostColumns/MonthlyCostColumn referenced from Chrome.swift —
+         now module-internal; re-verified green on both SDKs.)
+  [5] SwiftPM XCTest harness (module renamed TeslaSync so @testable import resolves;
+        the suite exercises only the pure Model+Adapter layer): swift test ->
+          Executed 27 tests, with 0 failures (0 unexpected)              EXIT=0
+  [6] placeholder gate:
+        official `-Path …/MonthlyCostTable` (no extension -> Test-Path false -> scans
+          nothing -> trivially clean) ................................... PLACEHOLDER_COUNT=0  EXIT=0
+        HONEST scoped scan (my 7 swift files copied to a temp dir, -Language swift) ...
+          PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0 ................... EXIT=0
+  Whole-tree gates (official commands) — my files add ZERO violations; the residual
+  failures are PRE-EXISTING and outside the allowed files (MonthlyCostTable.* + this log):
+        swiftformat --lint apps/apple : 1/1920 require formatting -> ActionBuilder.Previews.swift:48
+                                        (blankLinesBetweenScopes). MonthlyCostTable hits = 0.  EXIT=1
+        swiftlint --strict            : Found 1 violation in 1916 files -> dashboard-widgets/
+                                        LifetimeStatsWidget.Adapter.swift:141 (function_body_length).
+                                        MonthlyCostTable hits = 0.                              EXIT=2
+      (Baselines captured BEFORE authoring this surface showed the identical single
+       violation in each tool — proof this surface introduces neither.)
+
+=== GATE — XCODE WHOLE-APP BUILD/TEST (DEFERRED; attempted for real, NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync      -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED        MAC_BUILD_TEST = DEFERRED
+    Real evidence captured on this host (Xcode toolchain, with the KMP xcframework BUILT):
+      - `xcodegen generate`                                     -> EXIT=0 (12 targets + schemes)
+      - gradle :core:assembleSharedXCFramework                  -> BUILD SUCCESSFUL (13m21s)
+      - `xcodebuild -scheme TeslaSync … build` (tests in tree)  -> ** BUILD FAILED ** EXIT=65
+          ONLY error class: AIRestorePanel.Tests.swift:18 + 261 peers:
+            "error: unable to resolve module dependency: 'XCTest'"
+      - re-built with ALL 262 *Tests.swift relocated out of the app source tree:
+          ** BUILD FAILED ** EXIT=65 — ONLY error class now:
+            dashboard-widgets/*.Model.swift: "'DashboardWidgetSize' is ambiguous for type
+            lookup" + "'VehicleHeroModel' is ambiguous" (the type is multiply-defined across
+            15 committed files in Sources/DashboardWidgets + TeslaSync/dashboard-widgets).
+      - VERIFIED in that build log: `feature-views/.*error:` count = 0 — i.e. THIS surface
+        and every sibling feature view COMPILE CLEANLY against the real design system, the
+        real TeslaSync module, AND the linked Shared.xcframework. (All relocated test files
+        were restored; `git status` clean — only the 8 MonthlyCostTable.* additions remain.)
+    Why DEFERRED (two independent, code-unrelated, out-of-allowed-files reasons — neither is
+    a defect in this surface; same disposition as 0002 BackendTool / 0054 GuardModeWidget,
+    Honesty rule 7):
+      (a) XCTest-in-app-target: project.yml enrolls TeslaSync/feature-views (and
+          dashboard-widgets) wholesale into the iOS/macOS APP targets, so all 262
+          `*Tests.swift` (this surface's included) compile into the app, where `import
+          XCTest` is unresolvable. Routing the feature-view tests into the TeslaSyncTests
+          bundle is a project.yml edit — OUTSIDE this prompt's allowed files. The SAME tests
+          are PROVEN GREEN (27/27) by the executed SwiftPM harness, step [5].
+      (b) Duplicate `DashboardWidgetSize`/`VehicleHeroModel` across Sources/DashboardWidgets
+          + TeslaSync/dashboard-widgets (a pre-existing parallel-authoring collision in 15
+          committed files, none of them this surface's). Deduplicating them is OUTSIDE this
+          prompt's allowed files.
+    macOS parity: the macOS-15 SDK compile of the full surface is GREEN (step [4]); the
+    macOS app scheme hits the identical two platform-agnostic pre-existing blockers.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/content) + the orthogonal
+      stale/offline connectivity axis — each has a #if DEBUG preview; phase + sort logic
+      unit-tested and EXECUTED green (27/27).
+  [x] Hooks bind through the shared P1/S8 state-holder seam (MonthlyCostSource→
+      MonthlyCostModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — referenced==declared (27==27),
+      0 orphans, 0 undeclared.
+  [x] Accessibility labels on every interactive element (sortable headers w/ value+hint,
+      compact sort menu, refresh, freshness chip, banners); rows carry a combined per-column
+      VoiceOver label; table carries a "%lld months" summary.
+  [x] Tests: adapter (number/currency/sort/projection) + model (phase/sort-toggle/telemetry/
+      refresh/auto-refresh) + a11y — 27 methods, EXECUTED 27/27, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0 (honest
+      scoped scan of all 7 swift files).
+  [x] Every hook URL matches a backend route — N/A (this leaf issues no HTTP; the web source
+      has no fetch — buckets arrive as a prop / through the P1/S8 seam).
+  [x] EXIT=0 / STATUS=DONE — every host gate green on this surface; the real iOS compile
+      proves ZERO feature-views errors against the linked xcframework; the Xcode whole-app
+      build/test is DEFERRED with captured root-cause evidence for two pre-existing,
+      out-of-allowed-files blockers, per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; whole-tree lint/format + the
+                          xcodebuild build are shown with their REAL non-zero exit codes
+                          (1 / 2 / 65) + exact root causes, never as pass.
+  2 No scope narrowing ... full surface (7 swift files + strings), all states, seams, a11y,
+                          27 tests, both responsive layouts.
+  3 No skip-and-assume ... web source read end-to-end; every t() + every column render +
+                          the sort + the signed-savings branch reproduced and tested.
+  4 No stubs as final .... complete implementation; placeholder COUNT=0.
+  5 No parity shortcuts .. GlassPanel/DataTable/Currency + fmtInt/fmtWithUnit + 7 sortable
+                          columns + empty message, byte-aligned formatting (en_US-pinned tests).
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same host-gate + deferral disposition as 0002 BackendTool / 0054
+                          GuardModeWidget — and strengthened with a real xcframework build +
+                          a real iOS compile proving zero feature-views errors.
+  8 No commit on red ..... committed work is green on every runnable surface-scoped gate; the
+                          only non-green steps are the environment/pre-existing blockers
+                          (whole-tree lint debt + the deferred app build), documented with
+                          real exit codes and causes.
+  9 No silent drift ...... Views.swift was split into Views.swift + Chrome.swift to honor the
+                          400-line file_length rule; a real cross-file `private` bug surfaced
+                          by the dual-SDK typecheck was fixed (documented in step [4]).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

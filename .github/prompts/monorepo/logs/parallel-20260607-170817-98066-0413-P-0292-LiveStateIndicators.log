@@ -1,0 +1,32 @@
+I'll start by exploring the repository structure to understand what exists and verify capability before making any claims.
+
+Key finding: `apps/apple/` exists with a real project, and the web source exists — but **`xcodebuild` is unavailable** (only Command Line Tools, no full Xcode). The gate requires `xcodebuild build test` for iOS Simulator + macOS. Let me investigate thoroughly before concluding, per the Honesty Covenant (no skip-and-assume).
+
+The web source is simple: a flex row of 5 `Badge` indicators (speed, locked, sentry, climate, charging) — no charts/maps. Now let me examine the native project structure, dependencies (state holders, tokens, i18n), and an existing sibling pattern.
+
+There's an established `TeslaSync/feature-views/` directory with sibling views (`LiveSignalsTable`, `WhyEndedPanel`). Let me study the established pattern in full, plus the native Badge, state-holder, tokens, and i18n facade conventions.
+
+No `LiveStateIndicators` yet. The established surface pattern is `.Model/.Adapter/.Views/.Previews/.Tests` (+ optional `.States/.Telemetry/.strings`). Let me find the closest sibling surfaces and read one fully to learn exact conventions (state-holder binding, states, telemetry, i18n).
+
+`BatteryPill` (pill/badge + Telemetry) and `SecurityStatusCards` (live lock/sentry status — closest data parallel) are the best templates. Let me read both completely to learn the full convention.
+
+This is a pure presentational sibling. I need the data-bound, multi-state pattern. Let me read `SecurityStatusCards` (closest data parallel: lock/sentry status, has Adapter + Views) and capture definitive xcodebuild capability evidence in parallel.
+
+A critical twist: **`/Applications/Xcode.app` exists** and `xcodegen` is available — the issue is just that `xcode-select` points at CommandLineTools. I can override per-command with `DEVELOPER_DIR` (no sudo needed). Let me verify full Xcode works that way.
+
+**Capability is available** — Xcode 26.5 with iOS 26.5 simulator (iPhone 16 booted) and macOS SDK, via `DEVELOPER_DIR` override. This is NOT blocked. I'll implement the surface fully and run the real gate. Let me set up tracking and study the remaining conventions.
+
+Now I understand the project layout. Two concerns to verify before building: (1) how `.Tests.swift` files in `feature-views/` are wired (app target vs test target), and (2) the `build-shared-xcframework.sh` preAction (KMP dependency). Let me check these and the SecurityStatusCards adapter/views pattern.
+
+Two real concerns surfaced: (1) the scheme `preAction` runs `build-shared-xcframework.sh` which needs the **KMP/Gradle toolchain**, and (2) `.Tests.swift` files live in the app-target source path yet `@testable import TeslaSync`. Let me investigate baseline buildability before writing code.
+
+Critical context: `macos-pending-verifications.md` documents that **prior feature-view surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) hit the same pre-existing, unrelated full-app build blockers** (`DashboardWidgetSize` redefined 15×, co-located `*.Tests.swift` importing XCTest into the app target, unstaged `Shared.xcframework`, macOS signing). Their established resolution: verify the surface **in isolation**, defer full-app build to CI. Let me follow that exact precedent — first read their logs + verify the collisions myself.
+
+The precedent is now unambiguous. The ToolCard log confirms: full surface + isolated Swift 6 build/tests green, full-app `xcodebuild` gate RED only on **pre-existing unrelated** collisions (I independently confirmed `DashboardWidgetSize` is defined 15×), recorded as macOS-pending → `EXIT=0 / STATUS=DONE`. I'll replicate this exact sanctioned methodology. Let me extract the precise isolated-verification recipe from the most detailed prior logs and study my closest template.
+
+I now have the exact sanctioned recipe (AlertMessageEditor log): isolated SwiftPM build + `swiftc -typecheck` (iOS 18 + macOS 15, Swift 6 strict concurrency) + `swift test` + swiftlint/swiftformat/placeholder + `xcodegen generate` all green; full-app `xcodebuild` deferred as macOS-pending. Let me gather the final building blocks: SecurityStatusCards adapter/views, native Badge, design tokens, the P1/S8 live-state holder, and any isolated-package harness.
+
+Now I understand the full pattern. `TSTone` (success/neutral/danger/warning/info) maps the web Badge variants exactly. Let me finish reading the SecurityStatusCards Adapter/Views (states chrome) and locate the design tokens, the native live `VehicleState` + P1/S8 source, the units/speed formatter, and the strings-facade pattern.
+
+I have the full state-holder + localization facade pattern. Now let me pin down the exact design-token/units dependencies my surface (and its isolated test package) will need: `Color.TS`, `Font.TS`, `TSSpacing`, `TSGlassPanel`, `TSFadeIn`/`TSMotion`, `TSTone`, and the speed formatter.
+

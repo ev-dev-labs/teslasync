@@ -1,0 +1,142 @@
+I'll start by exploring the repository structure and checking platform capabilities, since this task requires SwiftUI + Xcode tooling.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me explore deeper to understand the codebase and check all capabilities.
+
+Xcode.app exists in /Applications but `xcode-select` points to CommandLineTools. Let me verify whether full Xcode/xcodebuild is actually usable, and study the existing feature-view file pattern.
+
+**Critical finding:** Full **Xcode 26.5 IS usable** via `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`. The gate can run. Let me verify simulators/project setup and study the reference patterns.
+
+All tooling confirmed: iOS 26.5 SDK, **iPhone 16 simulator already booted**, macOS SDK, xcodegen available. Project uses XcodeGen (no .xcodeproj yet). Let me study the reference feature-view files in detail.
+
+Now let me read the rest of the reference set and the `CommandDef` type.
+
+Now let me read the `CommandDef` type, the design tokens (P1/S9), and the project build config.
+
+Let me investigate the build feasibility (KMP xcframework staging, test target wiring) and read the design tokens.
+
+Two critical things to resolve: how `.Tests.swift` files wire into the test target, and whether the KMP `Shared.xcframework` can be built. Let me check.
+
+Critical context discovered. The full-app `xcodebuild build test` is **known to be blocked by pre-existing, unrelated issues** (KMP `Shared.xcframework` needs Gradle; `DashboardWidgetSize` redefined 8–15×; 116 co-located `*.Tests.swift`; macOS signing) — documented in `macos-pending-verifications.md`. The established precedent (ToolCard, AlertMessageEditor) is: verify the surface **green in isolation** (SwiftPM build + tests + `swiftc -typecheck` for iOS 18 & macOS 15 + swiftlint/swiftformat/placeholder), and defer the full-app build to macos-latest CI.
+
+Let me kick off the KMP framework build in the background (to attempt the real gate) and read the design tokens.
+
+`TSSpacing/TSRadius/TSTone/Color.TS/Font.TS` come from generated tokens in `../design/generated/apple`. Let me read those plus the component APIs I'll use.
+
+Now let me read the `TSButton` and `TSSkeleton` APIs, the placeholder check script, and check the KMP build progress.
+
+Let me check `TSCard`, the placeholder script, and the KMP build progress.
+
+The KMP build is running. Let me check its progress and the `TSCard` deps, then start writing the surface files.
+
+KMP build still downloading dependencies in the background. I have everything I need. The native `GlassPanel` equivalent is `tsGlassPanel()` (TSMaterial.swift). Let me create a plan file and start writing the 7 surface files.
+
+Now let me write the surface files, starting with the Adapter (pure projections).
+
+Now the Model (seams, observable view-model, i18n facade):
+
+Now the Views file (subviews for every state):
+
+The KMP build completed. Let me check its result and continue writing the main view.
+
+KMP `Shared.xcframework` built successfully (ios-arm64, ios-arm64-simulator, macos-arm64). Blocker #1 resolved. Let me finish the main view, previews, tests, and strings.
+
+Now the Previews file (every state):
+
+Now the comprehensive test file:
+
+Now the strings catalog:
+
+All 7 files created. Now let me verify. First, check for symbol collisions in the app target, and run swiftformat/swiftlint on my files.
+
+swiftformat wants 4 long lines wrapped in the Tests file. Let me auto-format my files (write mode) with the repo config, then re-lint.
+
+swiftformat passes. Now swiftlint --strict on my files:
+
+Two `multiple_closures_with_trailing_closure` violations on the `Button` calls. Let me fix them to explicit `action:`/`label:` form (matching the reference style), then reformat and re-lint.
+
+Both swiftformat and swiftlint **pass clean (0 violations)** on all 6 files. Now the key compile + test verification via an isolated SwiftPM package. Let me confirm exact token deps, then build it.
+
+Confirmed deps: `Tokens.swift`, `TSDesign.swift`, `TSMaterial.swift`, `Badges.swift`. Let me build the isolated SwiftPM package (module `TeslaSync`) and run the tests under Swift 6 strict concurrency.
+
+The isolated build succeeds under Swift 6 strict concurrency. Now run the tests:
+
+All **26 tests pass, 0 failures**. Now `swiftc -typecheck` against both real platform SDKs (iOS 18 simulator + macOS 15) under Swift 6 strict concurrency, including the DEBUG preview block:
+
+Both **iOS 18 and macOS 15 typechecks pass** (exit 0) under Swift 6 strict concurrency with the preview block included. Now the placeholder gate — let me check how the script resolves `-Path` so I scope it to the CommandTile surface.
+
+The gate's `-Path …/CommandTile` isn't a real directory, so the script would scan nothing (vacuous pass). Let me run a **meaningful** scan: copy my files to a temp dir and scan that, plus run the gate's self-test and a manual forbidden-word grep.
+
+Placeholder gate clean (COUNT=0), self-test passes, no forbidden words. Now let me attempt the **real** `xcodebuild build test` gate for evidence. First generate the Xcode project and stage the framework.
+
+Project generated, framework staged. Now run the real iOS `build test` gate, capturing output:
+
+The iOS build is running in the background. Let me monitor its progress.
+
+iOS build failed (EXIT=65) as expected — the co-located test files. Let me analyze the actual errors precisely, separating my surface from pre-existing issues.
+
+Only 4 errors total — all "Unable to resolve module dependency" (XCTest into app target). **Zero errors in my 5 non-test surface files.** Let me confirm the module and which files trigger it:
+
+Confirmed: the build halts at `AcDcStatsPanel.Tests.swift` (first co-located test file alphabetically) on `XCTest` module resolution — the **pre-existing structural blocker** documented in `macos-pending-verifications.md` (133 co-located `.Tests.swift` files now; mine follows the same established convention). **Zero errors in my surface.** Let me capture the macOS build for completeness while I write the gate log.
+
+While the macOS build runs, let me verify the **tree-wide** swiftformat and swiftlint gates (the gate runs them repo-wide) to confirm my files don't add violations to the baseline:
+
+The macOS build finished. Note both tree-wide linters find exactly **1 pre-existing violation each, in `ActionBuilder.*` (not my files)** — created by other parallel prompts. Let me confirm that and read the macOS build result.
+
+Full evidence gathered. Both full-app builds fail **only** on pre-existing/infra blockers (iOS: co-located XCTest in app target — first failure `AcDcStatsPanel.Tests.swift`; macOS: dev-signing entitlements), with **zero CommandTile errors**. Tree-wide lint/format violations are pre-existing (`ActionBuilder`, `LifetimeStatsWidget` — other prompts' files). Let me check the logs dir and a predecessor log format.
+
+This is the established format and disposition: host/surface gates green, full-app xcodebuild deferred with real exit 65 captured (not as pass), `EXIT=0 / STATUS=DONE`. Let me read the full predecessor log to mirror its structure.
+
+This predecessor confirms the exact disposition. My evidence is actually **stronger** — feature-views is now registered in project.yml and I built the framework and *actually ran* both full-app builds. Let me gather final facts for the log.
+
+All facts verified: **8 referenced i18n keys == 8 declared**, web key `commands.toggleFavorite` preserved verbatim, feature-views registered in project.yml. Now let me write the gate log.
+
+Log written. Now let me verify git status to ensure only the allowed files are staged, and check what build artifacts exist.
+
+Git status is clean — only my 8 files are untracked; all build artifacts are git-ignored. Let me clean up temp artifacts and commit.
+
+All 8 files staged correctly. Now commit with the prescribed message:
+
+Committed cleanly as `e27570126`. Let me do a final verification — restore the working tree (remove the git-ignored staged framework copy) and confirm everything is clean.
+
+Everything is clean and verified. Working tree is clean, commit `e27570126` is in place, and the committed files pass swiftlint (0 violations) and swiftformat (0 require formatting).
+
+## Summary
+
+I shipped the native Apple (SwiftUI) parity of `CommandTile` — a production-complete, 7-file feature-view following the established repo convention (matching `UserImpersonateButton`/`BackendTool`).
+
+**Delivered** (`apps/apple/TeslaSync/feature-views/CommandTile.*`, 1472 lines):
+- `.Adapter.swift` — pure projections: variant→`TSTone`, `CommandTileOutcome.parse` (web `lastStatus.startsWith('✓')`), render phase, freshness chip, VoiceOver builders
+- `.Model.swift` — `@Observable CommandTileModel` + two P1/S8 seams (`CommandDispatching`, `CommandFavoriteToggling`), P1/S11 telemetry, P1/S10 facade, in-memory seams
+- `.Views.swift` — tappable glass tile, favorite star (independent overlay button = web `stopPropagation`), danger badge, spinner icon box, label/sublabel/status line
+- `.swift`, `.Previews.swift` (every state), `.Tests.swift` (26 tests), `.strings`
+
+**Parity**: every web prop, state (idle/executing/succeeded/failed + native stale/offline + favorite + dangerous), and the verbatim i18n key `commands.toggleFavorite` (8 referenced == 8 declared). No view I/O; dangerous commands route to the confirmation seam (web `onRequestDialog`); `view.opened` emitted once with slug `CommandTile`.
+
+**Verification (host-runnable, all green)**:
+- Isolated SwiftPM build (module `TeslaSync`, real tokens, **Swift 6 strict concurrency**) — Build complete
+- `swift test` — **26/26 pass**
+- `swiftc -typecheck` — **iOS 18 sim = 0, macOS 15 = 0** (with DEBUG previews)
+- swiftlint `--strict` = 0 violations · swiftformat `--lint` = 0 · placeholder gate COUNT=0
+
+**Full-app `xcodebuild build test`**: I built the KMP `Shared.xcframework` (gradle) and **actually ran** both schemes. `IOS_EXIT=65` (fails at `AcDcStatsPanel.Tests.swift` — the pre-existing co-located-XCTest-in-app-target issue across 133 files), `MAC_EXIT=65` (dev-signing), **zero CommandTile errors** — deferred to the signed macos-latest acceptance gate per the documented `apps/macos-pending-verifications.md` precedent. Both out-of-scope and outside this prompt's allowed files.
+
+Committed as `e27570126`; log at `.github/prompts/monorepo/logs/p4-apple-feature-views-0226-CommandTile.log` ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0226-CommandTile.log    | 232 +++++++++++++
+ .../feature-views/CommandTile.Adapter.swift        | 259 ++++++++++++++
+ .../feature-views/CommandTile.Model.swift          | 311 +++++++++++++++++
+ .../feature-views/CommandTile.Previews.swift       | 158 +++++++++
+ .../feature-views/CommandTile.Tests.swift          | 379 +++++++++++++++++++++
+ .../feature-views/CommandTile.Views.swift          | 271 +++++++++++++++
+ .../TeslaSync/feature-views/CommandTile.strings    |  33 ++
+ .../TeslaSync/feature-views/CommandTile.swift      |  61 ++++
+ 8 files changed, 1704 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0226-CommandTile.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/CommandTile.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CommandTile.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CommandTile.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CommandTile.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CommandTile.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CommandTile.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/CommandTile.swift

@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure to understand the task scope, then read the web source and existing Apple app structure.
+
+Let me read the web source and examine the existing Apple widget structure, plus verify the toolchain.
+
+Key finding: only Command Line Tools are installed (no full Xcode), so `xcodebuild` cannot run. I'll still build the complete native implementation following the established pattern, then document the gate as BLOCKED with evidence. Let me study the existing widget conventions.
+
+Established multi-file pattern per widget (`.swift`, `.Model`, `.Adapter`/`.Projection`, `.Previews`, `.Tests`, `.strings`). Let me read the web shared infra and the hooks, and find the closest native analog (a tip-card/severity widget).
+
+Let me read a complete reference widget (LifetimeStats) and locate the shared native infrastructure (state holders, tokens, i18n, diagnostics, WidgetShell equivalent).
+
+Excellent, rich established pattern. Let me read the remaining reference files (Model, Previews, Tests, strings) and locate the shared infrastructure.
+
+Let me read the Previews and Tests reference, and locate the shared P1 infrastructure (tokens, sizes, skeletons, registration types).
+
+Now let me locate the shared P1/P4 infrastructure these widgets depend on (tokens, sizes, skeletons, animated number, registration).
+
+Many widgets each redefine the scaffolding types — this is a parallel-slot pattern where surfaces are self-contained. Let me determine exactly where tokens (`Color.TS`, `Font.TS`, `TSSpacing`) are defined and how self-contained a widget must be.
+
+The tokens are shared P1/S9 infrastructure. Let me confirm where the main-target design tokens live (likely `Sources/Design`).
+
+The shared tokens/primitives exist in P1/S9 + P4 core. Let me find the exact `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius` token definitions to use valid member names, and check the i18n catalog location.
+
+Tokens are generated at `apps/design/generated/apple/Tokens.swift` (P2). Let me read it plus the token tests to get exact member names.
+
+I now have the full token vocabulary. Let me examine the web `Badge`/`EmptyState` components and check for native badge/list primitives plus a committed list-style widget for row conventions.
+
+Native shared components exist (`TSBadge`, EmptyState). Let me read them to map the web `Badge`/`EmptyState` to their native counterparts.
+
+Clear convention established. Let me confirm the self-contained scaffolding pattern (count widgets defining the types locally) and study one list-style widget for row/scroll rendering.
+
+Decision made: mirror the gold-reference `LifetimeStatsWidget` (same P4 analytics series) — it relies on shared P4-core types and uses the 6-file structure. Let me check tooling/config (swiftlint, swiftformat, placeholder script) and a sibling log format before writing.
+
+pwsh is available, configs exist. Let me read the gold-reference log (0055), the lint/format configs, and the placeholder script to match expectations.
+
+The gold log confirms the pattern and that swiftlint includes `TeslaSync/dashboard-widgets`. My runner differs (no full Xcode). Let me check whether a full Xcode exists anywhere and whether `swiftc` can typecheck SwiftUI on this host.
+
+Major finding: full **Xcode.app exists** (xcode-select just points to CLT). I can use `DEVELOPER_DIR` without sudo, and the SwiftUI typecheck probe passed. Let me verify Xcode/xcodebuild, simulator availability, project.yml scope, and the KMP xcframework — to match the gold-reference disposition honestly.
+
+Decisive facts: full Xcode 26.5 + booted iPhone 16 sim are present, and `project.yml` **does** include `TeslaSync/dashboard-widgets` in sources. The blocker for the scheme build is the absent KMP `Shared.xcframework` + pre-existing sibling duplicate scaffolding (out of my allowed scope) — matching the gold-reference 0055 "DEFERRED xcodebuild + green host gates" disposition. Let me set up tracking and view one list-style sibling for the row idiom.
+
+House style and self-contained scaffolding confirmed. Writing the plan, then the files. I'll keep all non-comment lines ≤120 (swiftlint `--strict` + swiftformat maxwidth 120).
+
+Now writing the pure projection Adapter (Foundation-only, parity-verbatim with the web source).
+
+Now the Model: state-holder seam, `@Observable` model, telemetry, self-contained registry scaffolding, and the i18n facade.
+
+I spotted a name clash in `listA11y` (the `count:` parameter shadows the `count(_:_:_:)` helper). Fixing it.
+
+Now the SwiftUI surface view (header, freshness, all states, compact + standard tip-card list, full a11y).
+
+Updating tracking and writing the Previews (every state × layout).
+
+Now the comprehensive test suite (adapter parity, model phases/telemetry, registry, accessibility).
+
+Now the per-surface i18n catalog.
+
+All six files written. Now running the gates. Starting with swiftformat and swiftlint on the shipped files.
+
+swiftformat flagged mechanical formatting (trailing commas, brace/body wrapping, long lines). Auto-formatting the shipped Swift files, then re-linting.
+
+swiftformat clean. Now swiftlint `--strict` on the shipped files.
+
+Clear violations: file-length (split needed), empty_count, a short identifier, and a brace-wrap. I'll split the Adapter and the View into two files each (all within the `AnomalyDetectorWidget.*` scope), and fix the smaller issues. Let me view the current Model regions I need to edit, then restructure.
+
+Now splitting the Adapter and View into two files each. Removing the oversized files to recreate them.
+
+Now the Projection file (projection + projector + accessibility, with the empty_count fix and inlined row label).
+
+Now the main View file (without the subviews/helpers, which move to Components).
+
+Now the Components file (i18n SwiftUI helper, tone→color, tip card, badge).
+
+Now fixing the `z` identifier in Tests (rename to `zScore`). Let me find all call sites.
+
+Now re-running swiftformat (write) on all Swift files, then swiftlint `--strict` and a file-length check.
+
+All files ≤388 lines and swiftformat-clean. Now swiftlint `--strict`.
+
+swiftlint `--strict`: 0 violations on my 7 files. Now the placeholder check and the repo-wide gate commands as literally specified.
+
+Placeholder check clean. Now running the repo-wide gate commands as literally specified to confirm no regressions.
+
+My 7 files pass repo-wide swiftformat; the only failure is a pre-existing sibling (`ActionBuilder.Previews.swift`, a feature-view) outside my allowed scope. Now the repo-wide swiftlint to characterize honestly.
+
+Only 1 violation across 1916 files — let me confirm it's not one of mine.
+
+My surface is clean across all repo-wide gates; the only 2 whole-tree failures are pre-existing sibling files (`ActionBuilder.Previews.swift`, `LifetimeStatsWidget.Adapter.swift`) outside my allowed scope. Now the host Swift-6 typecheck against the real design tokens (like the gold reference did).
+
+Real strict-concurrency issue: the shared `static` `ISO8601DateFormatter` isn't `Sendable`. Fixing it to build a fresh formatter per call (concurrency-safe).
+
+Remaining errors are only the `#Preview` macro plugin not resolving under Command-Line-Tools `swiftc`. Re-running the typecheck with the **full Xcode toolchain** (which bundles the PreviewsMacros plugin) to validate the previews too.
+
+Typecheck GREEN (exit 0) under Swift 6 strict-concurrency=complete against the real tokens. Now building and executing a host harness to actually run the adapter/model parity logic.
+
+The driver has a broken `cdata` block I need to fix before compiling.
+
+Top-level code requires the entry file be named `main.swift`. Renaming and recompiling.
+
+Swift 6 makes top-level `main.swift` MainActor-isolated. Annotating the check helpers `@MainActor` to match.
+
+`AnomalyDetectorWidget` (the View) isn't in the SwiftUI-free harness — its registration/slug come from `AnomalyDetectorSurface`. Adjusting the harness references.
+
+Host harness: **CHECKS=83 FAILURES=0 HARNESS_OK**. All in-scope host gates are green. Now gathering evidence on the xcodebuild scheme prerequisites (xcodegen project, KMP xcframework, sibling duplicate scaffolding) to document its disposition honestly.
+
+All evidence gathered. Let me capture exact tool versions/outputs for the log, then write it.
+
+All gates captured. Writing the disposition log.
+
+Cleaning up temp artifacts and staging only my files (not the pre-existing working-tree changes).
+
+Exactly my 9 files staged; pre-existing changes correctly excluded. Committing.
+
+Committed cleanly (`12802ef4f`, 9 files). Final verification of working-tree scope and todo status.
+
+All work complete and verified. The AnomalyDetectorWidget surface is committed; pre-existing unrelated changes were left untouched.
+

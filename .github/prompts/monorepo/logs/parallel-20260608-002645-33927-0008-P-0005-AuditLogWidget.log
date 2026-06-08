@@ -1,0 +1,114 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Now let me understand the existing Apple patterns and supporting web components. Let me look at the structure and an existing similar widget.
+
+Key findings: Swift 6.3.2 is available but `xcodebuild` requires full Xcode (only CLT installed). `SentryEventLogWidget` is the closest analog. Let me study the reference patterns and supporting infrastructure in parallel.
+
+XcodeGen-based project (`project.yml`, no checked-in xcodeproj). Let me read the closest analog (SentryEventLogWidget) in full plus project config and the web shared components.
+
+Excellent reference. Let me read the rest of the analog files and the web-side supporting components in parallel.
+
+Let me read the remaining reference files and locate the shared native infrastructure plus the web-side hooks/components.
+
+Now let me read the strings format, locate the shared native infrastructure (tokens, registration), and read the web-side hooks and shared components.
+
+Let me locate the exact definitions of the shared P4 core types and design tokens.
+
+Each widget file appears to define `DashboardWidgetSize`/`DashboardWidgetRegistration`, yet SentryEventLogWidget does not. Let me understand how duplicate-symbol conflicts are avoided.
+
+The `project.yml` is at the apps/apple root. Let me read it to understand target/source membership.
+
+The whole `dashboard-widgets` dir compiles into the `TeslaSync` target. The closest analog (SentryEventLogWidget) relies on P4-core/P1-token types rather than redefining them — I'll follow that. Now let me read the web shell, shared feed components, types, and the hooks to nail data-shape parity.
+
+Now the shared feed components, types, and the hooks for data-shape parity.
+
+I now have full web parity context. Let me read the native design tokens and lint config so my code uses real token APIs and passes lint.
+
+I now have everything needed. Let me read the placeholder script to invoke it correctly, then write a plan and start building.
+
+I have complete context now: web parity logic, the gold-standard Apple analog (SentryEventLogWidget), design tokens, lint configs, and gate tooling. The runner is CLT-only (no `xcodebuild`), but `swiftlint`, `swiftformat`, `pwsh`, and `swiftc` are available. Let me set up tracking and a plan.
+
+Now I'll build the surface. Starting with the i18n table and the pure adapter (the core logic).
+
+Now the pure adapter — the core projection logic ported from the web source (severity inference, security-title builder, signal-value union, feed projection, 24h stats, layout, a11y).
+
+Now the state-holder, telemetry seam, registry, and i18n facade.
+
+Now the presentational subviews (feed, rows, empty state, connectivity banner, compact big-number).
+
+Now the main SwiftUI surface with header, freshness chip, and all state branches.
+
+Now the per-state DEBUG previews.
+
+Now the comprehensive XCTest suite (adapter, layout, stats, model, registry, accessibility).
+
+All 7 files created. Let me update tracking and begin verification — first canonicalize formatting with swiftformat, then lint.
+
+swiftformat reformatted 4 files. Now confirm `--lint` is clean and run `swiftlint --strict`.
+
+Two `swiftlint --strict` issues: `securityTitle` has 6 params (max 5), and Tests.swift exceeds 400 lines. Let me refactor `securityTitle` to take the event DTO, update the builder call, then split the tests into two files (matching the `AuditLogWidget.*` convention, as `RecentDrivesListWidget` does).
+
+Now I'll split the tests into two files (under the 400-line limit) and update the `securityTitle` call sites to the new event-based API. Let me remove the oversized file and recreate both.
+
+Now re-run swiftformat and swiftlint on all 7 Swift files (now including the split tests).
+
+Format clean (0/7) and `swiftlint --strict` reports **0 violations**. Now the placeholder/stub gate — both the literal gate form and a real scoped scan of the actual files.
+
+All gates green: `swiftlint --strict` 0 violations, `swiftformat --lint` 0/7, placeholder `EXIT=0`, manual grep clean. Now the strongest correctness check available without full Xcode: a real `swiftc` type-check of the production code against a stub harness for the P4-core/token symbols.
+
+SwiftUI is present. Let me build a stub harness for the P4-core/token symbols and type-check the production surface code against the real SwiftUI SDK.
+
+The only errors are the `#Preview` macro plugin (`PreviewsMacros`) — that plugin ships with Xcode, not CLT, so it's an environmental limitation of the preview macro, not my code. Let me confirm the production code type-checks cleanly (excluding the DEBUG previews), then separately verify the preview bodies by de-macroing them.
+
+Production code type-checks cleanly (`EXIT=0`). Now verify the preview bodies are type-correct by de-macroing the `#Preview` blocks into functions.
+
+The regex missed previews whose names contain parentheses. Let me fix the de-macro transform (greedy match to the last `)` on the line).
+
+All 8 preview bodies type-check cleanly. Now let me verify the two test files. First check whether XCTest is importable under CLT, then type-check the tests as part of the module.
+
+XCTest ships with Xcode (not CLT), as expected. To still type-check the test bodies against my real API, I'll add a minimal XCTest shim to the harness and compile the tests as part of the module.
+
+Tests type-check cleanly (`EXIT=0`). The single MainActor warning on `registration` is inherent to the shared `View`+`static let` pattern used by every sibling surface (e.g. `SentryRegistryTests`), is a warning—not error—under Swift 6, and doesn't fail `xcodebuild`. Now let me verify i18n key coverage: every key referenced in code must exist in the `.strings` catalog.
+
+Perfect — all 31 code-referenced keys exist in the catalog (zero missing, zero unused), including all 7 web-source keys. Let me check whether a full Xcode.app exists anywhere (the SignalLog precedent overrode `DEVELOPER_DIR`) before finalizing the xcodebuild gate status.
+
+`/Applications/Xcode.app` exists. The SignalLog precedent overrode `DEVELOPER_DIR` to use it. Let me confirm xcodebuild becomes functional, check the project-generation toolchain, and assess whether the aggregate repo can build the full scheme (cross-surface state).
+
+Decisive finding: Xcode 26.5 is available, but the **aggregate repo cannot build the full `TeslaSync` scheme** — 13 sibling files each redefine `DashboardWidgetSize`/`DashboardWidgetRegistration` (duplicate symbols) and **260** files carry `@testable import TeslaSync`/XCTest *inside the app-target source dirs*. That's the known parallel-generation state, reconciled later outside any single surface's allowed-files scope. My surface correctly follows the convention (adds no 14th duplicate; mirrors sibling test placement).
+
+The highest-value honest evidence is a **real isolated compile of my surface on the actual Xcode 26.5 toolchain for both iOS and macOS**. Let me run that.
+
+Real Xcode 26.5 iOS typecheck: production+previews **EXIT=0**, tests **EXIT=0**. Now the strongest possible evidence — actually **executing** the XCTest suite. I'll spin up a throwaway SwiftPM package (library named `TeslaSync` + harness, tests with their real `@testable import`) and run `swift test`.
+
+The XCTest suite **ran for real** — 34/35 passed, **1 genuine failure** caught. This is exactly why real execution matters. Let me find the failing assertion.
+
+Real bug caught — but in the **test**, not the code. `"Profile modified"` does not contain the substring `"modify"` (it's `modif-ied`), so `auditSeverity` correctly returns `.info` — exactly matching the web `lower.includes('modify')`. The implementation is right; the test expectation was wrong. Let me fix the test to actually exercise the `modify` keyword.
+
+Now re-copy the fixed test into the package and re-run the full suite.
+
+All **35 tests pass** (`EXIT=0`). Let me re-confirm format/lint are still clean after the test edit, then capture the full gate evidence for the log.
+
+Everything green on the real toolchain: **swiftformat 0/7, swiftlint 0 violations, 35/35 tests executed and passing, isolated iOS 18 + macOS 15 compiles clean**. Let me confirm my git working state so I commit only my files (not the pre-existing unrelated changes), then write the gate log.
+
+My 8 files are clean/untracked; the 3 pre-existing modifications are untouched. Now I'll write the honest gate log. Let me grab tool versions first.
+
+Now I'll write the comprehensive, honest gate log.
+
+Let me strengthen the BLOCKED evidence from structural-certainty to observed reality: generate the project and attempt the real `xcodebuild`, capturing the genuine cross-surface errors (time-boxed). The generated `.xcodeproj` is gitignored, and I only ever stage my specific files.
+
+The generated `.xcodeproj` is **not** gitignored — I'll clean it up before finishing and never stage it. Now attempt the real build (time-boxed) to capture genuine cross-surface errors.
+
+Ironclad: the real `xcodebuild` fails immediately at the missing KMP `Shared.xcframework` dependency — it can't even reach Swift compilation. That's an observed (not assumed) block. Let me record this captured error in the log.
+
+Now clean up the throwaway build artifacts and verify the working tree before committing.
+
+Working tree is clean — exactly my 9 files untracked, the 3 pre-existing changes untouched. Staging only my files and committing.
+
+Only my 9 files staged; pre-existing edits excluded. Committing with the prescribed message.
+
+Committed (`04e2bff5e`). Let me do a final integrity check — confirm exactly 9 files in the commit (no stray artifacts, no pre-existing edits) and that the unrelated changes remain untouched.
+
+All verified: the commit holds exactly the 9 intended files, the 3 pre-existing unrelated changes are untouched, and no build artifacts leaked. The task is complete.
+
+All 8 work items are done. The AuditLogWidget Apple surface is delivered, verified, and committed.
+

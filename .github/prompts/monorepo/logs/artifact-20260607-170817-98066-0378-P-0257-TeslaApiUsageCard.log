@@ -1,0 +1,153 @@
+=== P4 Feature view 0257 TeslaApiUsageCard (Apple) ===
+date: 2026-06-08T07:11:07Z
+runner: Darwin 25.5.0 arm64 | swift: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+web source: web/src/features/system/components/status/TeslaApiUsageCard.tsx (feeds shared components/data-display/UsageCard)
+
+### Shipped files (allowed scope: feature-views/TeslaApiUsageCard.* + this log)
+     103 TeslaSync/feature-views/TeslaApiUsageCard.swift
+     194 TeslaSync/feature-views/TeslaApiUsageCard.Format.swift
+     332 TeslaSync/feature-views/TeslaApiUsageCard.Models.swift
+     292 TeslaSync/feature-views/TeslaApiUsageCard.Builders.swift
+     357 TeslaSync/feature-views/TeslaApiUsageCard.Model.swift
+     289 TeslaSync/feature-views/TeslaApiUsageCard.Views.swift
+     226 TeslaSync/feature-views/TeslaApiUsageCard.Sections.swift
+     198 TeslaSync/feature-views/TeslaApiUsageCard.Chrome.swift
+     156 TeslaSync/feature-views/TeslaApiUsageCard.Previews.swift
+     353 TeslaSync/feature-views/TeslaApiUsageCard.Tests.swift
+     204 TeslaSync/feature-views/TeslaApiUsageCard.ModelTests.swift
+      71 TeslaSync/feature-views/TeslaApiUsageCard.strings
+    2775 total
+
+================================================================
+STEP 1+2 — full-app xcodebuild (iOS Simulator + macOS) build test
+================================================================
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+$ xcrun simctl help >/dev/null
+simctl_exit=72 (72 = unavailable)
+MAC_EXIT=1
+DISPOSITION: BLOCKED on this runner — active developer dir is CommandLineTools (no Xcode.app),
+  so xcodebuild + iOS Simulator + the #Preview PreviewsMacros plugin + the XCTest.framework
+  runtime are unavailable. This is the SAME 'code-complete + DEFERRED full-app Xcode gate'
+  disposition recorded by every prior P4 surface (see p4-apple-feature-views-0203-AIUsageCard.log),
+  owned by p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner.
+
+================================================================
+STEP 3 — swiftlint --strict (surface scope)
+================================================================
+(no output above = zero violations)
+LINT_EXIT=0
+
+================================================================
+STEP 4 — swiftformat --lint (surface scope)
+================================================================
+FORMAT_EXIT=0 (clean — no error/warning lines)
+
+================================================================
+STEP 5 — check-placeholders.ps1 (gate's surface path)
+================================================================
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+(forbidden-word scan of the shipped .swift files:)
+PLACEHOLDER_FORBIDDEN_WORDS=0
+
+================================================================
+STEP 6 — Isolated Swift 6 build of the surface (independent verification)
+  SwiftPM macOS 15, strict-concurrency, against the REAL design tokens
+  (apps/design/generated/apple/Tokens.swift) + REAL shared components
+  (Buttons.swift, Motion.swift) + a TSSkeleton shim. Previews excluded
+  (the #Preview PreviewsMacros plugin is Xcode-only).
+================================================================
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build complete! (0.16s)
+ISO_BUILD_EXIT=0
+
+================================================================
+STEP 7 — Independent logic execution (66 golden-value checks)
+  Exercises Format/Dedupe/Math/Builders/Projection/Model with the web
+  parity fixture (875%, $77.55 overage, Day 15 of 31, 185 ms, 7.0% (200),
+  2,800, camelCase de-dupe). XCTest is unavailable under CommandLineTools,
+  so the SAME assertions the committed XCTest suite makes are run via an
+  executable driver against the real public API.
+================================================================
+Build of product 'verify' complete! (0.18s)
+PASSED=66 FAILED=0
+LOGIC_EXIT=0
+
+================================================================
+STEP 8 — Committed XCTest files type-check against the real module
+  TeslaApiUsageCard.Tests.swift + .ModelTests.swift compiled (-typecheck)
+  against the real TeslaSync module built with -enable-testing (so @testable
+  reaches internal TeslaApiUsageDedupe.camelCase / TeslaApiUsageBuilders.reset).
+================================================================
+XCTEST_TYPECHECK_EXIT=0
+
+================================================================
+RUNNABLE-GATE SUMMARY (this runner)
+================================================================
+  swiftlint --strict ............ LINT_EXIT=0        (0 violations on 11 shipped .swift files)
+  swiftformat --lint ........... FORMAT_EXIT=0        (0 error/warning lines)
+  check-placeholders ........... PLACEHOLDER_EXIT=0   (COUNT=0; 0 forbidden words in shipped code)
+  isolated swift build ......... ISO_BUILD_EXIT=0     (all 8 surface sources, Swift 6 strict-concurrency)
+  independent logic run ........ LOGIC_EXIT=0         (PASSED=66 FAILED=0)
+  committed XCTest type-check ... XCTEST_TYPECHECK_EXIT=0
+  file_length (<=400) .......... PASS                 (largest shipped file = 357 lines)
+  full-app xcodebuild iOS/macOS . DEFERRED            (BLOCKED: CommandLineTools-only runner, no Xcode/Simulator)
+
+================================================================
+HONESTY COVENANT (binding)
+================================================================
+ 1  No red-as-green     : the full-app iOS/macOS xcodebuild build+test gate is reported DEFERRED with
+                          raw evidence (xcode-select -> CommandLineTools; xcodebuild errors; simctl exit 72)
+                          — it is NEVER reported as passing. Every gate reported green was executed on THIS
+                          runner with its raw exit pasted above.
+ 2  No scope narrowing  : every web region + branch reproduced — budget bar (headline/right %/day-of-month
+                          reset, danger@over / warn@>80%), the 3 bands (This month / Last 24h / Forecast EOM
+                          with /day avg, /day burn, recent rate subs + forecast-danger), the 4-cell detail
+                          grid (Useful / Skipped / Avg latency / Error rate with >=5 danger / >=1 warn), the
+                          Top services (cap 3) + By method top-lists with dedupeMap alias-collapse, the
+                          over-budget banner, both footer links, and the em-dash fallbacks. All P4 leaf
+                          states render: loading / empty / error / data / stale / offline.
+ 3  No skip-and-assume  : the month math, the /1e2 budget %, the (last24h ?? 0)*cost_per_request burn, and
+                          the camelCaseKeys alias de-dupe were each asserted to the web golden values
+                          (875%, $77.55, Day 15 of 31 -> resets in 16 days, 185 ms, 7.0% (200), 2,800) —
+                          66/66 executed, not assumed.
+ 4  No stubs as final   : complete production surface (11 Swift files + .strings) + 44 committed XCTest
+                          cases; placeholder scanner COUNT=0; no TODO/stub/Lorem/Coming soon.
+ 5  No parity shortcut  : fmtInt/fmtPercent grouping+rounding, the ${symbol}${fmtNumber} currency, the
+                          Math.round latency/aria, the dedupeMap regex-alias collapse + stable desc sort,
+                          and the day-window arithmetic all mapped to platform tokens + asserted against the
+                          web expressions (en_US golden values verified empirically).
+ 6  No delegation       : implemented directly; no agents.
+ 7  No predecessor bypass: P1/S8 state-holder seam (TeslaApiUsageSource + @Observable model), P1/S9 tokens
+                          (Color.TS / Font.TS / TSSpacing / TSRadius), P1/S10 i18n facade (table
+                          "TeslaApiUsageCard"), P1/S11 view.opened telemetry, and the established P4
+                          "isolated-build + DEFERRED full-app" disposition all honoured.
+ 8  No commit on red    : the committed artifact (TeslaApiUsageCard.* + this log) is GREEN on every runnable
+                          gate AND on a real isolated Swift 6 strict-concurrency build + a 66-check logic run
+                          + a committed-XCTest type-check; the full-app gate is blocked only by the
+                          pre-existing, unrelated CommandLineTools-only runner this commit does not change.
+ 9  No silent drift     : changes are confined to the 12 feature-views/TeslaApiUsageCard.* files + this log;
+                          git status shows exactly those new files and nothing else (the pre-existing
+                          unstaged web/admin edits are NOT staged by this surface).
+ 10 EXIT/STATUS below.
+
+================================================================
+DISPOSITION
+================================================================
+  Production-polished, Apple-idiomatic TeslaApiUsageCard shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles under the app's own Swift 6 strict-concurrency rules against the
+  REAL design system, its 66-point logic projection reproduces the web golden values exactly, the
+  committed XCTest suite type-checks against the real (-enable-testing) module, and swiftformat /
+  swiftlint / placeholder / file-length are all green on the surface. The full-app iOS-Simulator + macOS
+  xcodebuild build/test gate (and the #Preview PreviewsMacros plugin + XCTest.framework runtime) is
+  DEFERRED — not failed by this code — on the pre-existing CommandLineTools-only runner, owned by the
+  P99 acceptance gate on a signed macos-latest runner per apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

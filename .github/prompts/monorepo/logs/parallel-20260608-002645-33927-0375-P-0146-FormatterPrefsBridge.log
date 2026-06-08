@@ -1,0 +1,119 @@
+I'll start by exploring the repository structure, finding the web source, and checking the Apple tooling availability.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. However, `swift`, `swiftlint`, and `swiftformat` are available. Let me explore the Apple app structure and read the web source before deciding on approach.
+
+The web source is a **headless, side-effect-only bridge** — it returns `null` and has no visual UI, no i18n keys, no charts. It keeps formatter globals (locale + decimal precision) synced with settings, maintains a permanent settings-query subscriber, and listens for a settings-changed broadcast to force refetch. The native parity must reproduce this *behavior*, not invent fake visual states.
+
+Let me check the full Xcode availability and explore the Apple app conventions.
+
+Critical finding: **Xcode.app IS at `/Applications/Xcode.app`** but `xcode-select` points to CommandLineTools. I may be able to use `DEVELOPER_DIR` to access it without sudo. Let me verify, and check XcodeGen, the Shared.xcframework, and the project source registration.
+
+Major update: **Xcode 26.5 works via `DEVELOPER_DIR`**, simctl lists a booted iPhone 16, and `xcodegen` is available. The platform capability IS present. However, `Shared.xcframework` (the KMP core) is missing (only `.gitkeep`), which the app target depends on. Let me assess whether that framework can be built, and study the established surface patterns.
+
+Now I understand the build topology: the `TeslaSync` scheme has a pre-build step that builds the KMP `Shared.xcframework` via Gradle (Java 17 present). The full gate is heavy but feasible. Let me study the established surface conventions — state holders (P1/S8), tokens (P1/S9), i18n (P1/S10), diagnostics/`view.opened` (P1/S11) — and find a settings/formatter reference, plus check for existing shared-surfaces work.
+
+Good map. Let me read the core infrastructure: the state-holder base, the settings models/store, and the DI container.
+
+Let me examine the web globals/broadcast libs the bridge syncs, plus the native diagnostics seam and a complete reference surface to model the multi-file structure.
+
+Now I have the full web behavior. There's **no existing native global formatter-prefs holder** — the bridge must introduce one (self-contained, allowed). Let me study the canonical native surface patterns: the diagnostics seam, the data-provider seam (so the view does no direct HTTP), the model, and tests.
+
+The `DrivetrainHealthWidget` family gives me the canonical pattern: a Shared-free **provider seam** (no HTTP in view), an `@Observable` model, a `DashboardWidgetTelemetry` `view.opened` diagnostics seam, `WidgetFreshness` (fresh/stale/offline), design tokens (`Color.TS`, `Font.TS`, `TSSpacing`), and feedback components. 
+
+Now a critical question: how do `feature-views/*.Tests.swift` get compiled/run when project.yml's test target only references `Tests/Unit`? Let me resolve the test-compilation model and study the per-surface file set (Adapter/Tests/strings).
+
+The header claims these run in XCTest targets, but project.yml only lists `Tests/Unit` for test targets — `feature-views/*.Tests.swift` are in the **app** target. I must resolve this definitively. Let me generate the project and inspect actual target membership, and read the build-status context.
+
+This is decisive. `macos-pending-verifications.md` documents the established methodology: the full-app `xcodebuild build test` is **blocked by pre-existing, unrelated parallel-merge collisions** (`DashboardWidgetSize` redefined 8–15×, 116–152 co-located `*.Tests.swift` importing XCTest into the app target, unstaged `Shared.xcframework`, macOS signing). Prior surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) were verified **green in isolation** (SwiftPM build + tests, `swiftc -typecheck` iOS18/macOS15, swiftlint/swiftformat/placeholder) and the full-app gate deferred to macOS CI.
+
+My headless bridge can be **fully self-contained / Shared-free / token-free** (it renders nothing), making isolated verification robust. Let me confirm tooling and study the `.strings` format and placeholder gate.
+
+All tooling is present (`pwsh`, `xcodegen`, Xcode 26.5, swiftlint, swiftformat). The established methodology is clear: verify the surface **green in isolation** (SwiftPM + `swiftc -typecheck` iOS18/macOS15 + swiftlint/swiftformat/placeholder), with the full-app `xcodebuild` deferred to macOS CI (pre-existing unrelated breakage). `ToolCard` is my model: self-contained, `view.opened` telemetry seam, `slug`. 
+
+Let me read the lint configs and the ToolCard.Telemetry seam to match conventions precisely, then write.
+
+I have everything I need. Key conventions: swiftlint `--strict` (line ≤120, type names ≤50), swiftformat (`--self remove`, maxwidth 120, `@testable` import at bottom), telemetry seam is `Sendable` with non-isolated `viewOpened`. 
+
+Let me write a plan file and create the directory, then build the surface.
+
+Now I'll write the surface files. Starting with the core: the global formatter-preferences holder and the pure adapter logic.
+
+Now the Model file: provider seam, change-signal seam, telemetry seam, and the `@Observable` model.
+
+Now the providers/signals file: the default system provider, the NotificationCenter change signal, and reusable in-memory doubles for previews/tests.
+
+Now the headless View file.
+
+I need to expose a `nonisolated` pure formatting entry so the inspector/tests can format without the main actor. Let me refactor the Globals formatting statics.
+
+Now the Previews file: a pure (testable) inspector content model plus the DEBUG inspector view and per-state previews.
+
+Let me fix a stray character I introduced in the preview text.
+
+Now the strings file (anonymous surface — documented, no parity keys), then the test file.
+
+Now the comprehensive test file.
+
+All 7 files are written. Now let me set up the **isolated SwiftPM verification** (the host-runnable gate the methodology uses) — a temp package with the production files as a `TeslaSync` library and the test file as the test target, built under Swift 6 with the Xcode SDK.
+
+The build is compiling (first SwiftPM build downloads/compiles). Let me wait for it.
+
+Two strict-concurrency issues caught (exactly what isolated verification is for): the `@MainActor` class's `static let` constants are main-actor-isolated (can't be read from the nonisolated adapter), and the NotificationCenter token is non-Sendable in the `@Sendable` cancel closure. Let me fix both.
+
+Now re-sync the updated files and run build + tests.
+
+Build succeeds (`BUILD_EXIT=0`). Two main-actor warnings remain: `surfaceSlug` (on a `View` struct, inferred `@MainActor`) is read from nonisolated contexts, and the DEBUG `inspector` helper calls a `@MainActor` View init. Let me make `surfaceSlug` nonisolated and mark the helper `@MainActor` for a clean compile.
+
+Clean build, zero warnings/errors. Now run the test suite.
+
+A test-only Swift 6 sending error: the `waitUntil` helper crosses isolation domains. Let me replace it with isolation-correct inline waits (main-actor poll for the model test; RunLoop spin for the NotificationCenter test).
+
+All **35 tests pass, 0 failures** under Swift 6 strict concurrency. Now the dual-SDK `swiftc -typecheck` (iOS 18 simulator + macOS 15) to prove cross-platform compilation of the shipped surface.
+
+Both SDK typechecks pass (exit 0). Now swiftlint `--strict`, swiftformat `--lint`, and the placeholder gate on the surface files.
+
+swiftformat found auto-fixable style issues (loop/property body wrapping, numeric grouping). Let me auto-format the surface files, then isolate the single swiftlint violation.
+
+swiftformat now passes (`0/6 require formatting`), and the swiftlint CSV shows **zero violations in my surface files** (the 1 pre-existing violation is elsewhere in the repo, out of scope). Let me confirm the formatting didn't change behavior — re-sync and re-run the full test suite — and run the placeholder gate + `xcodegen generate`.
+
+35 tests still green, placeholder gate clean (`EXIT=0`, 0 opt-outs). Let me re-run the dual-SDK typecheck post-format, confirm `xcodegen generate` succeeds, and locate the one pre-existing swiftlint violation to confirm it's outside my surface.
+
+All host-runnable gates are green; the lone swiftlint violation is in a pre-existing file (`LifetimeStatsWidget.Adapter.swift`), not my surface. Let me capture concrete evidence of the documented full-app blockers, then write the log.
+
+Evidence confirms the full-app blockers are pre-existing and unrelated: `Shared.xcframework` unstaged (only `.gitkeep`), `DashboardWidgetSize` redefined in 15 files, **253** co-located `*.Tests.swift` importing XCTest into the app target. Let me do a final review of the formatted surface files.
+
+swiftformat cleanly normalized the literals (`12345.678`, semantically identical — tests still pass) and wrapped bodies. The surface is complete and clean. Let me make one bounded live attempt at the actual full-app gate command to capture honest evidence of the block, before writing the log.
+
+The build entered the "Stage Shared.xcframework" pre-action (the Gradle/Kotlin-Native step the repo defers to macOS CI). Let me wait to capture how it resolves.
+
+`RC=124` — the `timeout` killed it after 150s while still stuck in the **"Stage Shared.xcframework"** pre-action (the Kotlin/Native Gradle step the repo explicitly defers to macOS CI per S3-0001). This is concrete, live confirmation of the documented block. Let me clean up any lingering Gradle/xcodebuild processes.
+
+`RC=124` confirms it hung in the Kotlin/Native xcframework pre-action. The many `java` processes belong to other parallel slots in this shared environment — I won't touch them (the `timeout` already terminated my invocation). Now let me write the comprehensive evidence log.
+
+Log written. Let me do a final review of the two most logic-heavy files (post-format) and check git status before committing.
+
+`git status` shows pre-existing uncommitted changes (`AIUsageCard.*`, two web files) that are **not mine** — they were already in the slot when I started. The `.xcodeproj` is correctly git-ignored. I'll stage **only** my surface directory + the log. Let me stage precisely and verify before committing.
+
+Exactly my 7 surface files + the log are staged, nothing else. Now commit.
+
+Committed cleanly (commit `7f2ab7624`, 8 files, 1563 insertions). Let me clean up the temporary artifacts I generated (the `/tmp` isolated package and the git-ignored `.xcodeproj` that didn't exist before).
+
+The task is complete. The working tree now shows only the pre-existing changes that were present when I started (`AIUsageCard.*` and two web files — correctly left untouched); my commit `7f2ab7624` contains only my surface + log.
+
+## Summary
+
+I shipped a production-polished, Apple-idiomatic **`FormatterPrefsBridge`** shared surface at faithful parity with the web source `components/FormatterPrefsBridge.tsx`.
+
+**Key parity insight:** the web source is a *headless, side-effect-only* component (`return null`) — no visual UI, no i18n keys, no charts. So the native surface reproduces its **data + behavior**, not invented chrome:
+- `FormatterPreferences` — process-wide holder = native analog of the `numberFormat` `_globalLocale`/`_globalPrecision` globals + a locale-aware `number/integer/percent/withUnit` facade ported from `numberFormat.ts`.
+- Pure `FormatterPrefsAdapter` projecting settings → state across **loading / empty / applied / failed × fresh / stale / offline** (every web query state), deduped exactly like the web `lastLocale`/`lastDecimals` guards.
+- Provider + change-signal + telemetry **seams** (no HTTP in the view; P1/S8), a NotificationCenter analog of the `settings.changed` broadcast, auto-refresh on stale, and the P1/S11 `view.opened` diagnostic (slug `FormatterPrefsBridge`).
+- Fully **Shared-free / token-free** → host-compiles and host-tests in isolation.
+
+**Verification — all host-runnable gates GREEN:**
+- Isolated SwiftPM build: 0 errors / 0 warnings · **35/35 tests pass** (Swift 6 strict concurrency)
+- `swiftc -typecheck` on **iOS 18 + macOS 15** SDKs: pass
+- `swiftlint --strict` (surface): 0 violations · `swiftformat --lint`: clean · `check-placeholders.ps1`: `COUNT=0, EXIT=0` · `xcodegen generate`: pass
+
+**Honest status: `EXIT=1` / `STATUS=BLOCKED`.** The full-app `xcodebuild build test` cannot run green here — blocked by **pre-existing, unrelated** factors (unstaged `Shared.xcframework` Kotlin/Native step — live attempt hit `RC=124` in the "Stage Shared.xcframework" pre-action; `DashboardWidgetSize` ×15 + 253 co-located XCTest-in-app collisions; macOS signing) plus the one-line `project.yml` integration wiring that belongs to the P4 acceptance gate. This is the exact deferral pattern documented in `apps/macos-pending-verifications.md` for the prior surfaces. The surface deliverable itself is complete and verified.
+

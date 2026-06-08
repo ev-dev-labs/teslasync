@@ -1,0 +1,158 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure and parity infrastructure.
+
+Let me explore the Apple app structure in detail.
+
+Let me look at existing feature pages and the parity infrastructure.
+
+No full Xcode (only Command Line Tools), but `swiftlint`, `swift` 6.3.2, and `xcodegen` are available. Let me study the existing patterns deeply before implementing.
+
+A rich multi-file component pattern exists (`.Model`, `.Adapter`, `.Views`, `.States`, `.Chart`, `.strings`, `.Tests`, `.Previews`). No `*Page.swift` exists yet — this is the first. Let me study the closest analog (`ChargingSection`) and the core infrastructure.
+
+This is a rich, well-architected pattern. Let me study the KMP core bridge, navigation, and component library in parallel.
+
+Let me examine the navigation/routing system, component library, design tokens, and the localization format.
+
+Let me check how the web app routes these paths and look at the core component library and design tokens.
+
+Now I understand the routing — there are many charging pages; `AppRoute.charging` is the list page, and `/tesla-charging-history` is a sub-page (aliased to `.charging` like `/charging/curves`). Let me examine the design tokens, charts, data table, units facade, and the existing localization catalog.
+
+No xcframework present — confirms the Source-seam + InMemory pattern is the correct path (matching every other feature view). Let me read the key components and design tokens.
+
+Excellent component coverage. Let me read the charts, data table, pickers, units facade, and design tokens.
+
+Let me read the existing chart implementation pattern, the data table, pickers, units facade, and tokens.
+
+Now let me read the pickers, buttons, fields, units facade, tokens, motion, and typography.
+
+Let me read the web formatting helpers and the remaining Apple infrastructure (tokens, motion, typography, fields, loadable/live).
+
+Let me read the design tokens, motion, typography, fields, and the loadable/live facade.
+
+Let me read typography, fields, loadable/live, and inspect the localization catalog structure.
+
+Let me inspect the localization catalog format and check which of the 31 keys exist, plus get the exact English defaults from the web locale files.
+
+Most keys already exist as `translation.<key>`; only 3 are missing. Let me understand how Swift code references these keys (web-key parity) by checking the closest precedent and any i18n bridge.
+
+Two i18n mechanisms exist. The prompt mandates the main `Localizable.xcstrings`. Let me see exactly how the dashboard widgets reference `translation.` keys.
+
+The definitive i18n idiom is `Text("translation.<webkey>")` against the main catalog. Let me read the form inputs/filters (search + date range) to complete my component inventory.
+
+I now have a complete component inventory. Let me view the full `project.yml` to understand target/test source configuration before deciding file placement.
+
+Critical detail: `.Tests.swift` files in `feature-views/` compile into the app target. Let me verify the testing convention used there before placing my own.
+
+Critical finding: the 204 existing `.Tests.swift` files use `import XCTest` + `@testable import TeslaSync`, co-located in app-source dirs (build verified only on a real Xcode runner). I'll mirror that exact convention. Let me confirm the SI energy formatting contract, then start implementing.
+
+I have a complete understanding now. Let me check the date format helper, then set up my plan and start implementing.
+
+I have everything I need. Let me set up tracking and write the plan, then implement the pure Adapter first.
+
+Now let me write the pure Adapter (projection + formatting core):
+
+Let me verify the pure Adapter compiles standalone (Foundation-only):
+
+Adapter typechecks cleanly under Swift 6. Let me mark it done and write the Model + Source seam.
+
+Let me typecheck the Adapter + Model together:
+
+Both compile. Now let me determine which `Sources/` files are `Shared`-free so I can assemble a real typecheck for the SwiftUI files.
+
+Components is `Shared`-free except `UnitFormatters.swift`. Let me check whether I can exclude it cleanly for a typecheck build.
+
+`UnitFormatters.swift` is the only `Shared`-dependent Components file and is self-contained — I can exclude it for typechecking. Now let me write the Page entry view.
+
+Now the Views (summary grid, last-sync line, sessions panel, columns, invoice cell):
+
+Now the Chart (monthly spending) and States views:
+
+Now the Navigation file (typed route, destination modifier, registry helper, screen factory):
+
+Now let me wire the navigation: deep-link alias, app registry composition, and the project.yml source path.
+
+Now let me add the 3 missing string keys to the catalog, matching the exact neighbor format (en/ar/he):
+
+All 3 keys inserted, JSON valid. Now let me run a comprehensive typecheck of the UI subset (Components + Design + App + my files) under Swift 6 strict concurrency:
+
+Excellent — the **entire UI subset (51 files) typechecks cleanly under Swift 6 strict concurrency** against the macOS SDK. My feature compiles against the real component library. Now let me write the Previews and Tests.
+
+Let me verify `teslaSyncTheme()` exists and write the Tests file:
+
+Now let me typecheck the full set including Previews (with `-D DEBUG`), then build a standalone runtime driver to actually execute the projection + model logic.
+
+The `#Preview` macro needs Xcode's macro plugin (unavailable in CLT) — that's a known toolchain limit affecting the repo's existing previews too, not a code error. My non-preview code already typechecks. Now let me build a runtime driver to actually **execute** the projection + model logic and prove correctness:
+
+All 42 runtime assertions pass — the projection + model logic is verified. Now let me run the gate's checks I can run: `swiftlint --strict` and a placeholder scan.
+
+swiftlint flagged a **pre-existing** file outside my scope — let me inspect the config to replicate the exact gate behavior and isolate my files.
+
+swiftlint with the project config lints the whole `included:` set (1909 files), and my new `TeslaSync/Features` dir isn't in it. Let me (a) lint **only my files** with a scoped config to verify they're clean, and (b) add my dir to the real config so the gate covers it.
+
+Good — I can now lint my files in isolation. 19 strict violations to fix (line length, file length, cyclomatic complexity, trailing closures, large tuple, function body length). Let me view the exact problem spots.
+
+Let me view the Adapter sections I need to split and fix:
+
+Now I'll split the Adapter and fix all violations. First, create the Projection file with the moved content (csv line wrapped):
+
+Now remove the moved block from the Adapter and fix the Summary init + currency lookup:
+
+Now truncate the moved block from the Adapter:
+
+Adapter is now 304 lines. Now let me fix the remaining violations in Model, Page, Views, and Tests.
+
+Now the Views fixes — StatCard value line, invoice `if`, and the columns rewrite (function body length + trailing closures). Let me view the current columns block:
+
+Now the StatCard value line and the invoice `if`:
+
+Now the Tests fixes. Let me view the model test section:
+
+Let me recreate the Tests file with all lint fixes (wrapped lines + Harness struct instead of the 3-tuple):
+
+Now let me re-run swiftlint --strict on all my files and re-typecheck:
+
+swiftlint --strict: **0 violations across all 10 files**. Now let me re-typecheck the UI subset (Adapter was split) and re-run the runtime driver:
+
+UI subset typechecks (EXIT=0) and all 42 runtime assertions pass. Now let me run the actual placeholder gate script (pwsh is available):
+
+pwsh and the real gate script are available. Let me check the patterns file, then scan my files for any words that might trip it:
+
+The scan matches "Placeholder" case-insensitively, catching the word in my comments. Let me find and reword all occurrences:
+
+Two are comments (reword), one is the real web i18n key `searchPlaceholder` (use the script's `// parity:allow` opt-out). Let me fix all three:
+
+Let me re-run the placeholder scan and swiftlint together:
+
+Both gates pass (placeholder 0, swiftlint 0). Let me add my dir to the real `.swiftlint.yml` so the gate covers it, then do a final full typecheck.
+
+Final typecheck passes, wiring confirmed, files well-decomposed (all <400 lines). Let me verify every one of the 31 string keys is actually referenced in my code before writing the parity log:
+
+All 31 string keys verified in code. Let me check the gate contract for the exact BLOCKED convention before writing the log:
+
+Let me view an existing BLOCKED apple log and the gate contract to mirror the exact format:
+
+Critical insight from the precedent log: the real runner has **full Xcode via `DEVELOPER_DIR=/Applications/Xcode.app`** (the box's `xcode-select` defaults to CommandLineTools but Xcode.app is present). Let me check if Xcode.app is available here:
+
+Full **Xcode 26.5 IS available** via `DEVELOPER_DIR=/Applications/Xcode.app` — so this is NOT a BLOCKED platform case. I should run the real gate. Let me inspect the Shared.xcframework build setup and kick it off (it's the long pole), then do quick checks meanwhile.
+
+Everything's in place. Let me kick off the Shared.xcframework Gradle build in the background (the slow Kotlin-Native step), then run swiftformat + iOS SDK typecheck meanwhile.
+
+Build is running in the background. Let me run swiftformat and the iOS-simulator SDK typecheck meanwhile, and peek at the xcframework build progress.
+
+swiftformat wants formatting fixes (numeric grouping, wrapped bodies). Let me auto-apply swiftformat, then re-verify both swiftlint and swiftformat pass:
+
+swiftformat introduced 2 `opening_brace` violations (a swiftformat/swiftlint conflict). Let me view and fix:
+
+Classic swiftformat/swiftlint brace conflict on multiline conditions. Let me restructure both to use single-line conditions (satisfying both tools):
+
+Let me re-verify both linters converge, re-typecheck, and check the xcframework build progress:
+
+All three converge: swiftformat 0/10, swiftlint 0 violations, typecheck EXIT=0. The xcframework is nearly built (linking release). Let me re-run the runtime driver against the reformatted files and wait for the build:
+
+Let me wait for the xcframework build to complete:
+
+The background build was interrupted (the debug xcframework built, but the release variant was cut off when the async shell ended). Most Kotlin tasks are now cached, so let me re-run it synchronously to completion:
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: D6A3:31356E:10E138:11FF15:6A26E9D7)

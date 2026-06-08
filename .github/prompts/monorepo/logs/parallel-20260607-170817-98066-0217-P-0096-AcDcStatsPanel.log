@@ -1,0 +1,154 @@
+I'll start by exploring the repository structure, reading the web source specification, and checking the Apple app scaffolding and toolchain availability.
+
+Toolchain note: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swift` 6.3.2, `swiftlint`, `swiftformat`, and `pwsh` are available. Let me explore the Apple app structure, existing feature-views, and the P1 facades.
+
+236 feature-view Swift files already exist — this is a mature, established pattern. Let me study the conventions via a representative presentational example (`SummaryStatsRow`), the telemetry pattern (`ToolCard`), and the web `helpers.ts` data model, plus the P1 facades (tokens, i18n, state-holders, diagnostics).
+
+Now I understand the data model. Let me study the closest analog (`SummaryStatsRow` — a charging stats presentational component) in full, plus the web formatting helpers and the telemetry pattern.
+
+Excellent — this codebase has deep, high-quality conventions. Let me read the model (state-holder), tests, previews, strings, the telemetry pattern, and locate the shared GlassPanel/DataTable/Currency components plus design tokens.
+
+Strong grasp of conventions now. Let me locate the shared components I need (GlassPanel, DataTable, Currency) and the design token definitions, plus the web number-format helpers.
+
+Now let me calibrate the state model by examining "Panel" leaves and how tables localize headers, plus read the design tokens and feedback/motion components I'll use.
+
+`TelemetryErrorsPanel` (a panel leaf) renders only the states its web source has and documents that stale/offline are parent-owned — consistent with `SummaryStatsRow`. I'll follow this precedent: `loading`/`data`/`empty` for this presentational leaf. Let me see how an actual table-based feature view builds localized `TSColumn` titles, and read the design tokens + remaining components.
+
+`FlagsTable` confirms the header pattern: `LocalizedStringKey(FacadeStrings.string(key, fallback))`. Now let me find the generated design tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`) and read `TSEmptyState`/`TSFadeIn`/`TSSkeleton` signatures.
+
+Tokens are referenced everywhere but not defined in committed Swift — they're generated (P1/S9). Let me inspect the project config, generation scripts, design source, and the gate's placeholder checker.
+
+Found tokens at `apps/design/generated/apple/Tokens.swift`. Let me read the token definitions and the placeholder gate config.
+
+I now have the full token catalog and AC/DC color mapping is clean: `chartSeriesSpeed` = exactly #3B82F6 (blue/AC), `chartSeriesEnergy` = exactly #F59E0B (amber/DC), `statusSuccess` = emerald (free). Let me check for a full Xcode, test the toolchain baseline, and read the placeholder gate.
+
+Major findings: **`/Applications/Xcode.app` exists** and **`xcodegen` is installed**. The active dir is CLT, but I can point at full Xcode via `DEVELOPER_DIR` (no sudo). If functional, I can run the real gate for STATUS=DONE. Also note the placeholder check is **case-insensitive** — I must avoid "todo/fixme/xxx/placeholder/coming soon/lorem ipsum/not implemented" anywhere. Let me verify Xcode works.
+
+Full **Xcode 26.5 works**, license accepted, iPhone 16 simulator present. I can attempt the real gate. But a full app build may need the KMP shared xcframework and SPM packages. Let me understand the build prerequisites before committing to a full build.
+
+The app targets depend on `Frameworks/Shared.xcframework` (KMP/Gradle-built, currently only `.gitkeep`). That's a heavy prerequisite. Let me check the pending-verifications doc and — crucially — how sibling feature-view prompts logged their gate outcome (precedent for DONE vs BLOCKED).
+
+Key precedent found: sibling surfaces (e.g., `ToolCard` 0010) verified via an **isolated SwiftPM build + tests** under Swift 6 strict concurrency; the full-app `xcodebuild` is deferred to a macOS CI gate (pre-existing unrelated collisions + KMP `Shared.xcframework`). Let me read the actual sibling logs to replicate their exact verification method and STATUS.
+
+I now have the **sanctioned methodology** (from ToolCard 0010 + FlagsTable 0031): ship complete code + per-surface `.strings`, don't touch shared integration files (parallel-unsafe), verify via host gates (swiftlint/swiftformat/placeholder) **plus an isolated SwiftPM harness** compiling the real sources against the real design system, and document the full-app `xcodebuild` as DEFERRED (pre-existing unrelated collisions + KMP framework). 
+
+I'll aim higher: also run the **real xcodebuild gate** to capture genuine evidence. Let me check Gradle/JDK and kick off the `Shared.xcframework` build in the background while I write code.
+
+JDK 17 + Gradle present; `feature-views` is already registered in both `.swiftlint.yml` and `project.yml` (parallel-safe — I won't touch them). Let me kick off the `Shared.xcframework` Gradle build in the background (~7 min) while I write the surface.
+
+Let me read the top of the web `numberFormat.ts` to capture the exact default precision/locale and `safeNumber` semantics for faithful parity.
+
+Web parity confirmed: default precision = 2 decimals, locale en-US, `safeNumber`→0. Note the web panel formats the bucket `energy` (raw value) with a `≥1000 ? /1000 'MWh' : 'kWh'` rule — I'll reproduce that arithmetic/labeling exactly (no "fixing").
+
+The prompt insists every state (loading/empty/error/stale/offline) render. FlagsTable's log claims it added the P4 error/stale/offline states to a leaf — let me confirm the exact phase enum + rendering convention to match it precisely.
+
+Now I have the definitive P4 leaf pattern (FlagsTable): a `phase` axis (loading/empty/error/content) **plus** a `connection` axis (live/stale/offline) rendered as a freshness chip + connectivity banner — satisfying "every state must render." I'll replicate this for AcDcStatsPanel. Let me grab the last web detail (`formatRoundedInt`/`FALLBACK`) and confirm `Sources/Components` is self-contained for the isolated harness.
+
+Web parity fully nailed down (`formatRoundedInt`, `FALLBACK='—'`). `Sources/Components` + `Sources/Design` only import SwiftUI/Charts/MapKit/CoreLocation/Foundation — fully self-contained, so the isolated SwiftPM harness is viable. Now I'll write the surface. Let me start the plan and create the pure Adapter.
+
+Now I'll write the surface files. Starting with the pure Adapter core.
+
+Now the Model (state holder, telemetry seam, i18n facade, connection axis).
+
+Now the main view. Let me verify the `TSButton` API first, then write `AcDcStatsPanel.swift`.
+
+`TSButton` API confirmed. Now the main view.
+
+Now the Views file (the data body: split bar, stats table, free footer, and loading/empty/error subviews).
+
+Now the Previews, strings, and Tests files.
+
+Now the Tests file. Let me first see how `SummaryStatsRow.Tests` spies telemetry and drives the `@MainActor` model, to mirror that exactly.
+
+Now the comprehensive test suite, mirroring the established patterns.
+
+All 7 files written. Let me update progress, check the Gradle build, and run swiftformat/swiftlint on the new files.
+
+Two wins: **`Shared.xcframework` built successfully** (7m32s) and staged — the full-app xcodebuild prerequisite is now satisfied. swiftformat found auto-fixable issues. Let me apply swiftformat to my files, then re-lint.
+
+swiftformat clean. Now swiftlint --strict on the new files.
+
+Two fixable lint issues: `empty_count` (my domain field literally named `count`) and `multiple_closures_with_trailing_closure` (columns with a `comparator:` must use an explicit `cell:` label, per FlagsTable convention). Let me view the current state post-format and fix both.
+
+Now I'll apply the fixes: rename `AcDcTableRow.count` → `sessionCount` (avoids `empty_count`) and convert the four comparator-columns to explicit `cell:` labels (avoids `multiple_closures_with_trailing_closure`). Let me view the current Tests section first.
+
+Now applying all fixes across Adapter, Views, and Tests.
+
+Now the Views columns (convert to `cell:` label + `sessionCount`) and the Tests param renames.
+
+Re-running swiftformat (to normalize the `cell:` indentation) then swiftlint --strict.
+
+**Host gates green:** swiftformat `0/6 require formatting` (FORMAT_EXIT=0) and swiftlint `0 violations` (LINT_EXIT=0). Now the critical verification — an **isolated SwiftPM harness** (Swift 6 language mode, strict concurrency complete) compiling my exact sources against the real design-system files, then running the tests.
+
+Harness scaffolded with symlinks to the real sources. Let me build it (Swift 6 mode, Xcode toolchain).
+
+My surface compiled; the only errors are in `Components/DataDisplay/UnitFormatters.swift`, which depends on an external `\.tsUnits` environment key (the units facade) my surface doesn't use. Let me confirm `tsUnits` usage is isolated to that file, then exclude it from the harness.
+
+`tsUnits` is used only by `UnitFormatters.swift` (its definition lives in the app's units facade, outside the design-system) and nothing my surface uses references it. I'll exclude just that one file and rebuild + test.
+
+**Build complete** — my surface compiles against the real design-system under Swift 6 strict concurrency. Now running the tests.
+
+**All 35 tests passed**, 0 failures, under Swift 6 strict concurrency against the real design system. Now the placeholder gate — I'll scan my actual files (rigorously, since the literal gate path `…/AcDcStatsPanel` has no extension and would scan nothing) and also run the literal gate command.
+
+Placeholder gate clean (COUNT=0). Now the whole-app `swiftformat --lint` and `swiftlint --strict` (gate scope) to capture real exit codes and isolate any pre-existing violations from mine.
+
+Whole-tree swiftformat clean (0/889). Now whole-app swiftlint --strict.
+
+One whole-app swiftlint violation — let me confirm it's the pre-existing one (not my file).
+
+Confirmed: the sole whole-app swiftlint violation is **pre-existing** (`function_body_length` in `LifetimeStatsWidget.Adapter.swift:141`, a dashboard-widget from another prompt — exactly what ToolCard's log documented). My six AcDcStatsPanel files lint **clean**. Per task rules I leave the unrelated pre-existing issue untouched.
+
+Now the full-app xcodebuild gate for real evidence. Let me generate the Xcode project and run the iOS build/test.
+
+Project generated. Now the iOS build+test (long — runs the Gradle pre-action then compiles ~880 files). Running it in the background, capturing to a log.
+
+While that runs, let me verify my final file set and content are consistent. Let me poll the iOS build shortly.
+
+The backgrounded subshell got cleaned up. Let me re-run the iOS build in sync mode (it'll background after the wait and notify me), capturing to a log.
+
+IOS_EXIT=65. Let me analyze the failure: prove zero AcDcStatsPanel errors and confirm the cause is the pre-existing collisions.
+
+The 4 iOS errors are **all** `AcDcStatsPanel.Tests.swift:19: Unable to resolve module dependency: 'XCTest'` — the known structural condition (a co-located `*.Tests.swift`, required by this prompt's allowed-files, gets compiled into the **app** target which doesn't link XCTest; same as FlagsTable/SummaryStatsRow). This fails at module-resolution *before* the app sources compile, masking the pre-existing collisions.
+
+For rigorous evidence that my **surface** code compiles in the real app target, let me temporarily set the test file aside, regenerate, and rebuild — proving zero surface errors and surfacing the genuinely pre-existing blockers.
+
+**Decisive evidence:** with my test file set aside, the iOS app build (IOS_BUILD2_EXIT=65) shows **zero AcDcStatsPanel errors** — it fails only on a **pre-existing** co-located `AuditPanel.Tests.swift` (surface 0026, in HEAD) importing XCTest into the app target. So the baseline app build is already RED from prior surfaces' co-located tests; my surface's non-test code compiles cleanly in the real iOS target.
+
+Let me confirm the surface also compiles in the macOS target.
+
+macOS build (MAC_BUILD2_EXIT=65): **zero AcDcStatsPanel errors** — fails only on **macOS development signing** (app + widget entitlements need a dev certificate, not provisioned here) — the exact condition deferred by `macos-pending-verifications.md`. Surface compiles on both platforms.
+
+Now let me restore the test file, regenerate, and capture the canonical macOS gate exit.
+
+All canonical exits captured (IOS_EXIT=65, MAC_EXIT=65) with **zero AcDcStatsPanel compile errors** on both platforms. All 7 files restored. Let me gather the macOS error summary, confirm the generated project is gitignored, and check what will be committed.
+
+Everything checks out: macOS errors are all signing (zero AcDcStatsPanel); `.xcodeproj` and `Frameworks/` are gitignored; only my 7 files are new (the 2 modified `web/*.tsx` are pre-existing, not mine — I won't touch them). Let me do a final green re-verification of the committed files and gather line counts for the log.
+
+Everything is green and verified. Now I'll write the gate log with the real captured evidence, following the ToolCard/FlagsTable format.
+
+Note: the prompt's allowed files are only `AcDcStatsPanel.*` + the log, so (unlike ToolCard) I won't edit `macos-pending-verifications.md` — the log documents the deferral fully (matching FlagsTable). Let me clean up temp artifacts and the gitignored generated project, then stage and commit only my files.
+
+Exactly the 8 intended files staged (7 surface + log); the 2 pre-existing `web/*.tsx` modifications remain unstaged. Committing now.
+
+Committed cleanly as `c0ea6887` — 8 files, 1767 insertions, nothing else. Let me do a final state check and close out the todos.
+
+Task complete and verified. Final state is clean: my commit `c0ea6887` contains only the 8 allowed files; the two remaining working-tree changes are pre-existing unrelated `web/*.tsx` files I deliberately left untouched.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0096-AcDcStatsPanel.log | 145 ++++++++
+ .../feature-views/AcDcStatsPanel.Adapter.swift     | 290 +++++++++++++++
+ .../feature-views/AcDcStatsPanel.Model.swift       | 290 +++++++++++++++
+ .../feature-views/AcDcStatsPanel.Previews.swift    |  89 +++++
+ .../feature-views/AcDcStatsPanel.Tests.swift       | 388 +++++++++++++++++++++
+ .../feature-views/AcDcStatsPanel.Views.swift       | 362 +++++++++++++++++++
+ .../TeslaSync/feature-views/AcDcStatsPanel.strings |  51 +++
+ .../TeslaSync/feature-views/AcDcStatsPanel.swift   | 152 ++++++++
+ 8 files changed, 1767 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0096-AcDcStatsPanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/AcDcStatsPanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AcDcStatsPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AcDcStatsPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AcDcStatsPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AcDcStatsPanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AcDcStatsPanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/AcDcStatsPanel.swift

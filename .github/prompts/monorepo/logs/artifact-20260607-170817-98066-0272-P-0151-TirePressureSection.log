@@ -1,0 +1,67 @@
+=== P4 Feature view 0151 TirePressureSection (Apple) ===
+date: 2026-06-08T05:09:24Z
+host: Darwin 25.5.0 arm64
+
+----- CAPABILITY PROBE (Apple build toolchain) -----
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+$ xcrun --sdk iphonesimulator --show-sdk-path
+xcrun: error: SDK "iphonesimulator" cannot be located
+xcrun: error: SDK "iphonesimulator" cannot be located
+xcrun: error: unable to lookup item 'Path' in SDK 'iphonesimulator'
+$ xcrun simctl list devices available (iPhone 16)
+simctl unavailable (not a developer tool)
+$ which xcodegen
+/opt/homebrew/bin/xcodegen
+FINDING: active developer dir is CommandLineTools (no full Xcode). iphoneos/iphonesimulator SDKs absent; simctl absent; xcodebuild non-functional. Swift 6 compiler, swiftlint, swiftformat ARE present.
+
+----- GATE STEP 1: xcodebuild iOS (scheme TeslaSync, iPhone 16) build test -----
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+
+----- GATE STEP 2: xcodebuild macOS (scheme TeslaSync-macOS) build test -----
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+
+----- GATE STEP 3: swiftlint --strict (shipped surface files) -----
+LINT_EXIT=0
+NOTE: full-project 'swiftlint --strict' currently reports 1 violation in a PRE-EXISTING, unrelated file (TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift: function_body_length); 0 violations are in the TirePressureSection surface.
+
+----- GATE STEP 4: swiftformat --lint (shipped surface files) -----
+SwiftFormat completed in 0.53s.
+0/7 files require formatting.
+FORMAT_EXIT=0
+
+----- GATE STEP 5: placeholder gate (shipped surface) -----
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+----- SUPPLEMENTARY COMPILE EVIDENCE (Swift 6 + macOS SDK; substitutes for the blocked xcodebuild) -----
+Pure adapter core (Foundation-only) standalone typecheck:
+  ADAPTER_TYPECHECK_EXIT=0
+Full surface (6 source files) typechecked vs REAL generated design tokens (apps/design/generated/apple/Tokens.swift) + Swift Charts/SwiftUI + signatured component shims (TSFadeIn/TSSkeleton):
+  SURFACE_TYPECHECK_EXIT=0
+Grammar parse of the XCTest file (compiled by the TeslaSync(/-macOS) test targets via @testable import):
+  TESTS_PARSE_EXIT=0
+
+----- DELIVERABLE -----
+Files (8): TirePressureSection.{swift,Model.swift,Adapter.swift,Views.swift,Chart.swift,Previews.swift,Tests.swift,strings}
+States rendered: loading, empty, error(+retry), data, stale(chip+one-shot auto-refresh), offline(cached+chip).
+Data binding: P1/S8 TirePressureSectionSource state-holder seam; no HTTP in the view.
+i18n (P1/S10): TirePressureSection.strings; web-parity keys driveDetail.tirePressure(.aria), .frontLeft/.frontRight/.rearLeft/.rearRight, .noChartData + state-envelope/legend/axis keys. No English literals in code.
+Charts: web Recharts LineChart -> Swift Charts Chart{LineMark} (monotone, no dots, width 2, connect-nulls per AREA_DEFAULTS), 4 wheels FL/FR/RL/RR with exact brand-token colours, selection tooltip + legend. (No maps in this surface.)
+a11y: VoiceOver labels on header/refresh, freshness chip, tiles, legend, chart (aria + per-wheel range value), retry; ContentUnavailableView empty; Reduce Motion honoured.
+Telemetry (P1/S11): model.start() emits view.opened surface=TirePressureSection.
+Tests: adapter (fmtNumber port, wheel min/max over positive readings, plotted-wheel/row derivation, hasAnyReading, axis bounds), resolver per-state (loading/empty/error/data), model wiring/telemetry-once/stale-once/offline, accessibility summary. Per-state surfaces also exercised via #Preview x6.
+Namespacing: all surface types prefixed TirePressureSection* to avoid collision with the pre-existing TirePressure* dashboard-widget types in the same module.
+
+----- VERDICT -----
+Code is COMPLETE and verified to the limit of the runner: typechecks against the real SDK + tokens, swiftlint --strict clean (0 surface violations), swiftformat --lint clean, placeholder gate clean.
+The gate's mandatory xcodebuild build+test (iOS Simulator + macOS) CANNOT execute: this runner has Apple Command Line Tools only, not full Xcode (no iphoneos/iphonesimulator SDK, no simctl). This is the prompt's documented BLOCKED capability condition.
+
+EXIT=1
+STATUS=BLOCKED

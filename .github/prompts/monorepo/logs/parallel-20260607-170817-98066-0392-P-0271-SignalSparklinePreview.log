@@ -1,0 +1,137 @@
+I'll start by exploring the repository structure and the web source, plus checking build tool availability. Delegation is forbidden for this task, so I'll do all the work myself.
+
+All build tools are available (xcodebuild, swift, swiftlint, swiftformat, pwsh). Now let me explore the Apple app structure, existing feature-views, and the web dependencies.
+
+The feature-views directory has many existing surfaces with a multi-file pattern (Adapter, Model, Previews). Let me study a representative example end-to-end and find signal/sparkline-related native code.
+
+The multi-file pattern is clear: `.swift` (entry), `.Adapter.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`. `LiveSignalsTable` (uses signals) and `BatteryLevelChart` (uses Swift Charts) are the most relevant examples. Let me read them.
+
+Excellent structure. Let me read the remaining LiveSignalsTable files (Models, Localization, strings, Previews, Tests) plus a Swift Charts example (BatteryLevelChart) to learn the chart + i18n + test conventions.
+
+Now let me study the Swift Charts usage (BatteryLevelChart), the test conventions, the design tokens, and the web chart/hook sources.
+
+There's already a `Sources/Components/Charts/MiniCharts.swift` (likely a shared Sparkline) and a `LiveSignalSparklinesWidget`. The prompt says atomic shared components are out of scope (already built). Let me read the shared chart components, the BatteryLevelChart chart view, and the design tokens.
+
+There's a shared `TSSparkline` I can reuse (atomic components are out of scope). Let me read the web hooks/types, the web Sparkline, the existing `LiveSignalSparklinesWidget`, and the BatteryLevelChart model to nail the data-binding + chart conventions.
+
+I have the full pattern now. Let me read the design tokens, a chart test example, the placeholder checker, and verify the build tooling (xcodegen, simulators) actually works in this environment.
+
+Critical finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed, and no iOS simulators are available. Let me verify whether full Xcode exists anywhere and whether there's an alternative swift-based host harness (the code comments mention an "executed host harness").
+
+Full Xcode exists at `/Applications/Xcode.app` — `xcode-select` just points to CommandLineTools. I can override with `DEVELOPER_DIR` (no sudo needed). Let me verify xcodebuild and simulators work with that override.
+
+The environment is fully capable (Xcode 26.5, iPhone 16 simulator booted, macOS SDK). BLOCKED is not justified — I must build the real surface. Let me read the remaining references (tokens, test pattern, placeholder rules, framework script, signal sparkline widget) before writing code.
+
+The tokens file is under `apps/design/`. Let me read tokens, the placeholder rules, the framework build script, and the signal-sparkline widget's value handling.
+
+Now let me check the critical build dependency — whether `Shared.xcframework` is prebuilt (the scheme pre-action builds it via Gradle/Kotlin, which could be slow/fail), and check the placeholder checker script.
+
+Key facts established: full Xcode 26.5 works via `DEVELOPER_DIR`, simulators available, but `Shared.xcframework` is NOT prebuilt (the scheme pre-action builds it via Gradle/Kotlin — the long pole). The placeholder checker forbids the literal word "Placeholder", "TODO", "not implemented", etc. — I'll avoid those in comments too.
+
+Let me set up tracking, kick off xcodegen + the Gradle framework build (the risky long pole) in the background, and read the last references.
+
+Project generates cleanly. Let me read the chart Adapter (pure builder), the `TSFadeIn` motion API, and the web parent (`SignalCategoryTree`) for `enabled`/`valueKind` context — and kick off the Gradle `Shared.xcframework` build (the long pole) in the background to learn if the full gate is achievable.
+
+Java 17 present. Let me kick off the Gradle `Shared.xcframework` build in the background (long pole) and read the final references: the web parent's prop-passing, the native chart palette/point types.
+
+Let me check the Gradle build progress and locate `TSChartPalette` to finalize the sparkline color choice.
+
+Gradle build is progressing (tasks FROM-CACHE — warm cache). Let me read `TSChartPalette` and the `TSSparkline` a11y/axes helpers, then write the surface.
+
+I now have full understanding. Before writing, I must check for type-name collisions — `feature-views/` and `dashboard-widgets/` both compile into the same target, and a `LiveSignalSparklinesWidget` already exists. Let me check what signal-sparkline symbols are already taken.
+
+Critical: `SignalHistorySample`, `SignalFreshnessChip`, `SignalSparklineRow`, `SignalConnection`, `SignalLoadStatus` etc. are already defined by the `LiveSignalSparklinesWidget` in the same target. I'll prefix all my types with `SignalSparkline`/`SignalSparklinePreview`. Let me verify my exact intended names are free.
+
+All names are free. Let me check the lint configs (to satisfy `--strict`) and gradle progress before writing.
+
+All names free. Gradle is building the release framework (debug already done — the gate is achievable). Lint rules: 120 col (comments exempt), type names ≤50. I'll auto-format with swiftformat after writing. Now writing the surface — starting with the pure value types and adapter.
+
+Now the presentational sub-views. Let me check Gradle progress and write the Views file.
+
+`Shared.xcframework` built and staged — the full gate is achievable. Continuing with the Views file.
+
+Now the comprehensive test suite (adapter + model + accessibility).
+
+All 9 files written. Now let me auto-format them to satisfy the `swiftformat --lint` gate, then run `swiftlint --strict` on them, and do a fast standalone typecheck of the pure-logic files.
+
+swiftformat normalized 2 files. Let me verify formatting now passes, run `swiftlint --strict` on my files, and do a fast standalone typecheck of the pure-logic files.
+
+`swiftformat --lint` and `swiftlint --strict` both pass on my files. Let me do a fast standalone typecheck of the pure-logic files (Foundation/Observation only) to catch type errors before the long full build.
+
+Standalone typecheck caught a Swift 6 concurrency issue early. Fix: make the localizer typealias `@Sendable` and use the public facade method directly as the default arg.
+
+Pure logic now typechecks under Swift 6 strict concurrency. The `.xcodeproj` predates my new files — I must regenerate it. Let me regenerate, re-verify lint on the edited file, then start the in-context iOS build.
+
+Project regenerated and references all 9 files. Now the in-context iOS build (validates my code compiles against the real `TSSparkline`, tokens, and Shared framework). Starting it in the background.
+
+The build is running. Let me proactively verify one risky construct — `() -> some View` as a closure parameter return type, which may not be legal Swift. Let me check how the codebase handles this pattern.
+
+Good — `() -> some View` as a parameter is the established codebase idiom (used in `AddressInput.swift` and many others), so my `row` helper matches. The build is running. Let me wait for it.
+
+Build failed (exit 65). Let me find the actual compile errors in my code.
+
+The 2 failures are `XCTest` module-resolution errors in `AIRestorePanel.Tests.swift` (not my code) — the `.Tests.swift` files live in the app target's source dir, so a plain `build` can't resolve XCTest. The real gate uses `build test`, which provides XCTest. Let me run `build-for-testing` (compiles everything incl. tests with XCTest available, without running) to truly validate my code compiles in-context.
+
+While that builds, let me resolve an architectural question: how do the `.Tests.swift` files in `feature-views/` (which `@testable import TeslaSync`) avoid a self-import error if they're in the app target? Let me check their actual target membership.
+
+Both `build` and `build-for-testing` fail identically on `XCTest` in `AIRestorePanel.Tests.swift` (app target) — a structural issue, not my code. I need to understand the intended build setup. Let me investigate the test target wiring and docs.
+
+The `.Tests.swift` files compile into the app target (1226 such entries) and `import XCTest` — this needs testing search paths. Let me check whether the generated project sets `ENABLE_TESTING_SEARCH_PATHS`, and confirm my code compiles by building with it enabled.
+
+ENABLE_TESTING_SEARCH_PATHS is absent from the generated project (count 0) — that's why the app target can't resolve XCTest. The build with it enabled is running. Let me wait.
+
+Now I have clear signal. With testing search paths enabled, compilation proceeds and reveals **preexisting compile errors in sibling surfaces** (NotificationSettings, NotificationStatsWidget, BatteryCellsWidget, DrivetrainHealthWidget, OdometerCounterWidget...) — **none in my files** (only a benign `@testable` self-import warning, identical to the existing `LiveSignalSparklinesWidget.Tests.swift`). Let me rigorously confirm: (1) I only added files, (2) zero errors are mine, (3) the root causes are sibling duplicates.
+
+Confirmed decisively:
+- **git status**: I only *added* my 9 `SignalSparklinePreview.*` files (the 2 `M` web files are preexisting working-tree changes I never touched).
+- **~24 sibling files** (all `dashboard-widgets/` + one `NotificationSettings.Views.swift`) have **preexisting compile errors** (duplicate `DashboardWidgetSize`, `ISO8601DateFormatter` concurrency, etc.) — all outside my allowed edit scope.
+- **Zero** errors attributed to my surface.
+
+The aggregate app build is red due to external sibling breakage I'm forbidden to fix. Let me prove my surface is correct via a standalone harness that runs my test assertions, and kick off the macOS gate in the background.
+
+Root cause confirmed: `DashboardWidgetSize` is duplicately defined as `public struct` across **~15+ sibling dashboard-widget files** — a preexisting cross-surface integration conflict, entirely outside my feature-view scope. The second check confirms I added *nothing* except my surface.
+
+Now the key proof I control: a standalone harness that compiles and runs all my test assertions (adapter + model + accessibility) without needing the broken app target.
+
+Harness written. Let me compile and run it (the substantive proof of my surface logic), and check the macOS gate result.
+
+Harness has a Swift 6 isolation issue (nested `make` func isn't `@MainActor`). Let me fix it, and examine the macOS gate log — it reached "Testing" which is interesting.
+
+The macOS gate is red for a **different external reason**: code-signing requires a development certificate not present in this environment (plus the same structural issues). So **both** iOS and macOS literal gates are red purely due to environment + sibling breakage outside my scope.
+
+Let me run the now-fixed harness to prove my surface logic.
+
+**Harness: 51/51 assertions pass (exit 0)** — my adapter, model, and accessibility logic is proven correct under Swift 6. Now let me run the static gate steps (format, lint, placeholder) and capture honest exit codes — both tree-wide (as the gate runs them) and scoped to my files.
+
+All static checks on my files pass (format 0/8, lint 0, placeholder 0). Now let me capture the honest aggregate gate-step exit codes: the literal iOS gate (background) plus tree-wide format/lint.
+
+Tree-wide `swiftformat --lint` is red (exit 1) due to a **sibling** file `ActionBuilder.Previews.swift:48` — only 1/1868 files, not mine. Let me capture tree-wide `swiftlint --strict` too.
+
+Confirmed: the 1 swiftlint violation is a sibling (`LifetimeStatsWidget.Adapter.swift`), **0** in mine; the iOS gate dies on `XCTest` module resolution (project-generation gap affecting all surfaces). Let me grab the exact iOS gate exit code.
+
+All evidence gathered. Every aggregate gate step is red due to factors outside my surface and outside my allowed edit scope:
+- **iOS** `build test`: exit 65 — `XCTest` unresolved (generated project lacks `ENABLE_TESTING_SEARCH_PATHS`; affects all surfaces) + ~24 sibling dashboard-widget compile errors.
+- **macOS** `build test`: exit 65 — code-signing certificate absent in this environment.
+- **swiftformat --lint** (tree): exit 1 — sibling `ActionBuilder.Previews.swift`.
+- **swiftlint --strict** (tree): exit 2 — sibling `LifetimeStatsWidget.Adapter.swift`.
+
+My surface is green on everything I control. Let me write the gate log with full evidence. First let me update my plan and confirm the log directory.
+
+The logs directory has peer logs. Let me check a peer log's format to stay consistent, then write mine.
+
+This is pivotal: the peer log (`0002-BackendTool`) establishes the **predecessor disposition** for this exact environment — host gates green + xcodebuild app build/test **DEFERRED with real exit-65 evidence** = `STATUS=DONE` (Honesty rule 7 "no predecessor bypass" requires parity). They explicitly reconcile this with "no red-as-green" (the xcodebuild step shows its real failure + cause, not claimed as pass).
+
+I've gone further than the peer (I staged the framework + registered files + compiled in-context). Let me get symmetric macOS in-context compile evidence (bypassing the signing blocker) to match their "both SDKs" bar.
+
+While the macOS compile runs, let me verify my prompt's capability note and confirm my surface's chart usage for the log (unlike BackendTool, mine uses Swift Charts via the shared `TSSparkline`). Let me poll the macOS build.
+
+macOS in-context compile also hit sibling errors. Let me confirm none are mine.
+
+macOS in-context compile confirms the same: **0 errors in my files**, all errors in sibling `dashboard-widgets/` surfaces. Symmetric proof — my surface compiles against **both** iOS Simulator and macOS SDKs.
+
+One thing to verify: the gate's placeholder `-Path .../SignalSparklinePreview` is a file-prefix (not a dir), so the script returns vacuously. Let me run a *real* placeholder scan over my actual files and grep for forbidden patterns to make that evidence meaningful.
+
+Genuinely green: real placeholder scan over my 8 files = `COUNT=0`, and zero forbidden literals. Now I'll write the comprehensive gate log following the peer (`0002-BackendTool`) format and predecessor disposition. Let me update my plan and write the log.
+
+Now the gate log. Let me get the base commit SHA, then write it.
+

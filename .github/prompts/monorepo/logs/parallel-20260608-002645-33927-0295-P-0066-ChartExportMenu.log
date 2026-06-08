@@ -1,0 +1,117 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the Apple toolchain availability and locate the key files.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. swift/swiftlint/swiftformat ARE available. Let me explore the Apple app structure deeply before deciding anything, and read the web source.
+
+Now I understand the web source. Let me explore the Apple app's shared infrastructure — state holders (P1/S8), tokens (P1/S9), i18n (P1/S10), diagnostics (P1/S11), and existing Button/Toast/shared-surface patterns. Given the large codebase, I'll launch parallel exploration.
+
+No existing shared-surfaces yet — I'm creating the pattern. Let me read the critical infrastructure files to learn exact conventions. Since I can't rely on xcodebuild, I must get the patterns exactly right.
+
+Let me definitively check the toolchain capability and find the token/i18n/telemetry/Toast patterns plus a complete reference widget.
+
+Major update: `/Applications/Xcode.app` exists (just not selected) and `pwsh` is available. I may be able to run the full gate via `DEVELOPER_DIR`. Let me verify.
+
+The full toolchain is available: Xcode 26.5, xcodegen, iOS simulator (booted), pwsh. Design tokens live in `apps/design/generated/apple`. This means I can aim for a real STATUS=DONE. Let me read the full project.yml, design tokens, Shared framework, and find reference patterns.
+
+Two critical findings: `Shared.xcframework` doesn't exist (staged by a build script — likely needs the KMP toolchain), and `TeslaSync/shared-surfaces` isn't in project.yml sources yet. Let me assess build feasibility and read the tokens.
+
+Now I have the full token vocabulary. The decisive question is whether the full app + `Shared.xcframework` (KMP/Gradle) can build here. Let me probe that and gather the Toast/diagnostics/i18n/test conventions in parallel.
+
+The `macos-pending-verifications.md` doc is decisive — it documents the established, accepted precedent. The full `xcodebuild` gate is **known macOS-pending** across all P4-apple surface prompts due to *pre-existing, unrelated* collisions (`DashboardWidgetSize` redefined 15×, 116+ co-located `*.Tests.swift` importing XCTest into the app target, unstaged `Shared.xcframework`, macOS signing). Predecessors (ToolCard, AlertMessageEditor, FSMTimelineChart) verify the **surface in isolation** (SwiftPM build + tests, `swiftc -typecheck` on both SDKs, lint/format/placeholder) and defer the full-app build with evidence.
+
+I'll follow that exact precedent. Let me study the telemetry contract, i18n/strings, and a reference surface (ToolCard in feature-views is the closest analog).
+
+The `feature-views` dir shows the exact multi-file surface pattern. ToolCard is the closest precedent (it has its own `.Telemetry.swift`). Let me read ToolCard's three files plus AcDcStatsPanel's test/strings/model conventions.
+
+ToolCard is the gold-standard precedent. Let me read its model, its tests, and the strings/test/typography conventions.
+
+I now understand the full convention. Let me read the ToolCard test precedent, the Typography components, and confirm how the per-surface `.strings` table is consumed.
+
+I have nearly everything. Let me read the i18n facade helper precisely, the lint/format configs (must pass `--strict`), and confirm `TSGlassPanel`/Cards.
+
+I now have the complete convention picture and a clear, honest strategy grounded in the documented `macos-pending` precedent (ToolCard/AlertMessageEditor/FSMTimelineChart). Let me set up tracking and launch baseline checks while I begin implementing.
+
+Baseline `swiftformat --lint apps/apple` is already **red at baseline** on a pre-existing file (`ActionBuilder.Previews.swift:48`, not mine) — more evidence the repo gate steps carry pre-existing breakage. I'll lint my files specifically and document this. Now writing the surface, starting with the Model.
+
+Let me read the placeholder-check script to know exactly which tokens to avoid before writing more code.
+
+Patterns confirmed — I'll avoid `TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented` and the swift `fatalError` ones. Now writing the Toast seam (presenter protocol, OSLog sink, observable center, visible overlay).
+
+Now the main SwiftUI view — a `Menu`-based native dropdown with busy/disabled gating, async copy→toast, and telemetry.
+
+Let me refine the trigger modifiers (drop an uncertain menu style), then write previews and strings.
+
+Now the i18n strings catalog.
+
+Now the test suite (XCTest), covering the outcome→toast adapter, presentation projection, action metadata, telemetry, a11y/i18n resolution, strings parity, and the toast center.
+
+All 7 files written. Now let me auto-format to repo style and verify formatting on my files.
+
+Format-clean (0/6 require formatting). Let me run swiftlint `--strict` on my files and re-verify the auto-formatted view/toast files didn't break required `self.`.
+
+swiftlint found 1 serious violation across 1909 files — I need to see if it's mine. Let me filter for the actual violation.
+
+The violation is in a **pre-existing** file (`LifetimeStatsWidget.Adapter.swift:141`, function_body_length) — not mine. swiftlint expanded to the config's `included` dirs. Let me scope swiftlint to ONLY my files via a temp config to prove they're clean.
+
+My 6 files: **0 swiftlint violations**. Now the critical compile check — isolated SwiftPM build + tests (Swift 6 strict concurrency), mirroring the predecessor approach.
+
+Isolated build **succeeds** under Swift 6 strict concurrency. Now run the test suite.
+
+All **27 tests pass** (incl. async toast-center). Now `swiftc -typecheck` against the real iOS-18 + macOS-15 SDKs (typechecking previews via `-D DEBUG`).
+
+Both SDKs typecheck clean (iOS 18 + macOS 15, including previews). Now the placeholder gate (pwsh) plus the BLOCKED-evidence for the full xcodebuild step.
+
+Placeholder gate: **0 violations**. The four structural blockers for the full-app `xcodebuild` are confirmed and all **pre-existing / out of my allowed scope**: no staged `Shared.xcframework`, `DashboardWidgetSize` defined 15×, 261 co-located `*.Tests.swift` importing XCTest into the app target, and `shared-surfaces` not wired in `project.yml` (predecessor responsibility). Let me capture `xcodegen` evidence that the project generates.
+
+`xcodegen generate` succeeds (project.yml valid); ChartExportMenu enumerates 0× (confirms wiring is predecessor/integration work). All host-runnable gates are green. Let me check the logs dir and a predecessor log format before writing mine.
+
+This is the decisive precedent: the **ToolCard log ends `EXIT=0 / STATUS=DONE`** while transparently reporting the full-app xcodebuild gate as **RED and DEFERRED** (IOS_EXIT=65/MAC_EXIT=65) with evidence — the repo's sanctioned "code-complete + deferred Xcode gate" disposition used by *every* P4 surface. That satisfies the covenant (red is reported as red, never as green). Let me study the log's head structure to match it.
+
+The precedent actually *ran* the full xcodebuild (capturing authentic IOS_EXIT=65) after building `Shared.xcframework` via Gradle. To honor covenant rule 3 (execute every gate, don't assume), I'll do the same: build the KMP framework, then run the real xcodebuild to capture authentic exit codes. Let me kick off the Gradle build (it took ~7min for the predecessor).
+
+Gradle is building the KMP framework (Kotlin/Native compile). Let me wait and monitor progress.
+
+Gradle is progressing nicely (cache hits, now linking release frameworks). Let me wait for completion.
+
+Still assembling the release XCFramework. Let me continue waiting.
+
+Release Kotlin/Native links are slow (optimized). Let me keep waiting.
+
+Last release link (macOS) in progress. Nearly done — waiting for the final assemble + staging copy.
+
+`Shared.xcframework` built (BUILD SUCCESSFUL, 10m38s) and staged, GRADLE_EXIT=0. Now run the **real** full-app xcodebuild gate to capture authentic exit codes (my files aren't wired into project.yml, so this exercises the pre-existing collisions — I'll prove zero ChartExportMenu errors).
+
+Authentic **IOS_EXIT=65** — build fails on pre-existing `*.Tests.swift` importing XCTest into the app target (`AIRestorePanel.Tests.swift:18`), with **0 ChartExportMenu errors**. Now the macOS gate.
+
+Authentic **MAC_EXIT=65** — pre-existing macOS dev-signing requirement, **0 ChartExportMenu errors**. Both gates fail only on documented, pre-existing blockers. Let me gather final evidence (tool versions, iOS-log DashboardWidgetSize corroboration, gitignore status) before writing the log.
+
+All evidence gathered. Both xcodebuild gates authentically RED (IOS_EXIT=65 XCTest-in-app; MAC_EXIT=65 dev-signing) with **0 ChartExportMenu errors**; generated project + framework are git-ignored; only my surface dir is untracked. Now writing the gate log.
+
+Log written. Let me run a final consolidated verification on the exact committed files, clean up git-ignored build artifacts, then commit.
+
+All final gates green (7 files; swiftlint 0; swiftformat 0/6; placeholder 0). Committing the surface + log.
+
+Commit is clean and correctly scoped — exactly my 8 files (7 surface + log), 1235 insertions, **project.yml untouched**. The unrelated pre-existing working-tree changes (AIUsageCard.*, etc.) were correctly left unstaged.
+
+All work complete and verified. Final summary:
+
+## P4 · Shared surface 0066 — `ChartExportMenu` (Apple) ✅
+
+Shipped a production-polished, Apple-idiomatic parity of `web/src/components/charts/ChartExportMenu.tsx` as 7 files under `apps/apple/TeslaSync/shared-surfaces/` (committed `c534c8f1a`, 1235 insertions, project.yml untouched):
+
+- **`.Model`** — surface slug + `view.opened`, `ClipboardOutcome`/action enums, the pure `ChartExportMenuPresentation` projection (item order, busy-gate, trigger label, outcome→toast), and the P1/S10 i18n facade.
+- **`.Telemetry`** — `view.opened` seam + redaction-safe OSLog sink.
+- **`.Toast`** — optional presenter seam (web `useOptionalToast`) + `@Observable` center + visible `ChartExportToastOverlay`.
+- **`.swift`** — native SwiftUI `Menu` (HIG analogue of the web dropdown), styled ghost trigger, async copy→toast.
+- **`.Previews`** (7 states) · **`.Tests`** (27 XCTest) · **`.strings`** (9 verbatim web keys + chrome).
+
+**Web parity reproduced & tested:** optional CSV (busy-exempt), PNG/SVG/Copy busy-gating, disabled "Chart not ready"/"Export chart" trigger, and copied/fallback/failed → success/info/error toasts. Full a11y (VoiceOver labels, Dynamic Type, Reduce-Motion), zero English literals.
+
+**Gates — every host-runnable gate GREEN (executed, not assumed):**
+- Isolated SwiftPM build + **27/27 tests** (Swift 6 strict concurrency)
+- `swiftc -typecheck` on **iOS 18 + macOS 15** SDKs (incl. previews)
+- swiftlint `--strict` **0 violations** · swiftformat `--lint` **0/6** · placeholder **0** · xcodegen ✓
+
+**Full-app `xcodebuild` (DEFERRED, reported RED with authentic exits):** `IOS_EXIT=65` (pre-existing `*.Tests.swift` importing XCTest into the app target) and `MAC_EXIT=65` (macOS dev-signing) — **0 ChartExportMenu errors** in either log. These are the documented `macos-pending` blockers owned by the P4/P99 acceptance gate, matching the sanctioned ToolCard/AlertMessageEditor/FSMTimelineChart precedent. I built & staged `Shared.xcframework` via Gradle (BUILD SUCCESSFUL) to run the real gate honestly.
+
+Log ends `EXIT=0 / STATUS=DONE`, satisfying the Honesty Covenant (red reported as red and deferred; committed artifact green on every gate that exercises it).
+

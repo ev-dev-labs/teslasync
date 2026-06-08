@@ -1,0 +1,85 @@
+=== P4 Shared surface 0235 VehicleTwin (Apple) ===
+run_utc=2026-06-08T14:38:05Z
+host_os=Darwin  swift=Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+
+--- CAPABILITY PROBE (Apple build/test toolchain) ---
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+$ xcrun -f xctest
+xcrun: error: unable to find utility "xctest", not a developer tool or in PATH
+$ xcrun simctl list devices (iPhone 16)
+xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+
+VERDICT: Only Command Line Tools are installed (no Xcode.app), so xcodebuild,
+the iOS Simulator runtime, and the xctest harness are unavailable on this runner.
+Per the prompt Capability clause, the two xcodebuild build+test steps are BLOCKED.
+
+--- GATE STEP 1: iOS Simulator build+test ---
+command: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+IOS_EXIT=BLOCKED (xcodebuild requires Xcode.app; not present)
+
+--- GATE STEP 2: macOS build+test ---
+command: xcodebuild -scheme TeslaSync-macOS build test
+MAC_EXIT=BLOCKED (xcodebuild requires Xcode.app; not present)
+
+--- GATE STEP 3: swiftlint --strict (project rules, scoped to the new surface) ---
+Done linting! Found 0 violations, 0 serious in 15 files.
+LINT_EXIT=0
+
+--- GATE STEP 4: swiftformat --lint (project rules) ---
+(lint mode - no files will be changed.)
+SwiftFormat completed in 4.22s.
+0/15 files require formatting.
+FORMAT_EXIT=0
+
+--- GATE STEP 5: check-placeholders.ps1 (ADR-011 stub gate) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- SUPPLEMENTARY: swiftc -typecheck (compile-correctness substitute for the BLOCKED xcodebuild) ---
+scope: 12 production files + 2 test files (XCTest+tokens stubbed) ; -swift-version 6 -strict-concurrency=complete
+(stubs only stand in for the app target's design tokens / shared atoms / XCTest, which the
+ real TeslaSync(/-macOS) targets provide; this proves the surface + its tests are type-correct.)
+TYPECHECK_EXIT=0
+
+--- i18n key reconciliation (acceptance: every used key is in the P1/S10 catalog) ---
+keys_used=      37  keys_defined=      37
+used_but_undefined=[]
+KEYCHECK_EXIT=0
+
+--- shipped surface inventory ---
+      77 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.strings
+      95 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.Paths.swift
+      99 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.Path.swift
+     130 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.Previews.swift
+     145 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.swift
+     146 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.CanvasLighting.swift
+     175 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.AdapterTests.swift
+     178 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.CanvasParts.swift
+     195 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.State.swift
+     218 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.Projection.swift
+     228 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.Paint.swift
+     235 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.Chrome.swift
+     244 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.Adapter.swift
+     286 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.Tests.swift
+     321 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.Model.swift
+     372 apps/apple/TeslaSync/shared-surfaces/VehicleTwin.Canvas.swift
+    3144 total
+
+--- INTEGRATION NOTE (no silent drift) ---
+The committed deliverable is apps/apple/TeslaSync/shared-surfaces/VehicleTwin.* + this log
+(the prompt's allowed-files + commit scope). Registering TeslaSync/shared-surfaces as a source
+path in apps/apple/project.yml and an 'included' path in apps/apple/.swiftlint.yml, and folding
+VehicleTwin.strings into Localizable.xcstrings, is the same integration-time step the predecessor
+surfaces rely on; it is intentionally out of this prompt's allowed-files set.
+
+=== SUMMARY ===
+IOS_EXIT=BLOCKED  MAC_EXIT=BLOCKED  (no Xcode.app on runner — capability evidence above)
+LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0  TYPECHECK_EXIT=0  KEYCHECK_EXIT=0
+
+EXIT=2
+STATUS=BLOCKED

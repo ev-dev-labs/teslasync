@@ -1,0 +1,154 @@
+=== P4 Shared surface 0177 BackgroundWorkSegment (Apple) ===
+Prompt:  .github/prompts/monorepo/p4-apple/shared-surfaces/0177-BackgroundWorkSegment.prompt.md
+Web src: web/src/components/layout/status-bar/BackgroundWorkSegment.tsx (+ hooks/useBackgroundJobs.ts)
+Native:  apps/apple/TeslaSync/shared-surfaces/BackgroundWorkSegment.{swift,Model,Adapter,Projection,Chrome,Views,Previews,Tests,strings}
+Host:    Darwin arm64 · Xcode 26.5 (17F42) · iOS SDK 26.5 · iPhone 16 simulator present · JDK 17 · swiftlint/swiftformat/xcodegen/pwsh present
+
+------------------------------------------------------------------------------
+0. CAPABILITY ASSESSMENT (per prompt "If unavailable on the runner -> BLOCKED")
+------------------------------------------------------------------------------
+SwiftUI + Swift Charts + MapKit + iOS 18 / macOS 15 toolchain: AVAILABLE (Xcode 26.5).
+  - This surface uses SwiftUI only (no Charts/Maps) — see prompt "Charts / maps used: (none)".
+The FULL-APP `xcodebuild ... build test` (the gate's IOS/MAC steps) is BLOCKED by PRE-EXISTING,
+predecessor-owned infrastructure that this surface-scoped prompt does not own and may not fix:
+  (a) KMP shared core `apps/apple/Frameworks/Shared.xcframework` is UNSTAGED (only `.gitkeep`
+      present). Staging requires the Kotlin/Native Gradle step `:core:assembleSharedXCFramework`,
+      which apps/macos-pending-verifications.md ITSELF lists as `macos-pending` (deferred to
+      p5-hardening/H8-0001-store-packaging). The app targets link it (embed:false), so the build
+      halts before compiling any sources — see step 6 for the captured error.
+  (b) 225 co-located `*.Tests.swift` are compiled into the app target (they `import XCTest`) — the
+      same documented blocker recorded for p4-apple/feature-views ToolCard / AlertMessageEditor /
+      FSMTimelineChart.
+  (c) macOS development code-signing identities are absent on this host.
+Per the established protocol (apps/macos-pending-verifications.md), the surface is verified GREEN in
+ISOLATION here and the full-app build is DEFERRED to the macos-latest acceptance gate
+(p4-apple/P99-0001-apple-acceptance-gate). A deferral row was appended to that ledger.
+
+------------------------------------------------------------------------------
+1. SURFACE-SCOPED FORMAT  —  swiftformat --lint TeslaSync/shared-surfaces
+------------------------------------------------------------------------------
+0/8 files require formatting.
+SURFACE_FORMAT_EXIT=0
+
+------------------------------------------------------------------------------
+2. SURFACE-SCOPED LINT  —  swiftlint --strict (rules-only config, positional path)
+------------------------------------------------------------------------------
+Linting 'BackgroundWorkSegment.Adapter.swift' ... (8/8)
+Done linting! Found 0 violations, 0 serious in 8 files.
+SURFACE_LINT_EXIT=0
+
+------------------------------------------------------------------------------
+3. PLACEHOLDER / STUB GATE  —  apps/tools/check-placeholders.ps1 -Path .../shared-surfaces
+------------------------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------------------
+4. ISOLATED SwiftPM BUILD + TEST  (module named TeslaSync so @testable import resolves)
+   Toolchain: Xcode 26.5 default; Swift 6 language mode (strict concurrency = complete).
+   Sources: the 6 production surface files + the real UI kit (Sources/Components/{UI,Feedback/
+   Skeletons,Motion} + Sources/Design/TSMaterial + design/generated/apple/Tokens). Previews are
+   excluded from the CLI SwiftPM target only (the #Preview macro plugin is Xcode-IDE-bound; the
+   Previews file IS typechecked in step 5 with -D DEBUG, and IS compiled by the Xcode app target).
+------------------------------------------------------------------------------
+swift build:  Build complete!
+swift test:   Test Suite 'All tests' passed.
+              Executed 25 tests, with 0 failures (0 unexpected).
+              - BackgroundWorkAdapterTests      7/7  passed
+              - BackgroundWorkModelTests       10/10 passed
+              - BackgroundWorkProjectionTests   8/8  passed
+ISOLATED_BUILD_EXIT=0
+ISOLATED_TEST_EXIT=0
+
+------------------------------------------------------------------------------
+5. REAL-SDK TYPECHECK  —  swiftc -typecheck -swift-version 6 -D DEBUG  (Previews included)
+------------------------------------------------------------------------------
+iOS 18  (-target arm64-apple-ios18.0-simulator, -sdk iphonesimulator):  0 errors
+macOS 15 (-target arm64-apple-macos15.0,        -sdk macosx):           0 errors
+IOS_TYPECHECK_EXIT=0
+MACOS_TYPECHECK_EXIT=0
+
+------------------------------------------------------------------------------
+6. PROJECT WIRING  —  xcodegen generate  (validates the project.yml shared-surfaces registration)
+------------------------------------------------------------------------------
+Created project at apps/apple/TeslaSync.xcodeproj
+XCODEGEN_EXIT=0
+All 9 surface files enumerated into the iOS + macOS app + test targets:
+  BackgroundWorkSegment.swift / .Adapter / .Projection / .Model / .Chrome / .Views / .Previews
+  / .Tests.swift / .strings
+
+------------------------------------------------------------------------------
+7. FULL-APP GATE STEPS  (the prompt's IOS/MAC/LINT/FORMAT commands, run whole-tree)
+------------------------------------------------------------------------------
+# iOS — `xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator -arch arm64
+#        CODE_SIGNING_ALLOWED=NO build`  (target-level, to isolate the blocker WITHOUT triggering the
+#        deferred Gradle KMP pre-action; the prompt's `-scheme ... build test` is identically blocked
+#        and additionally invokes the macos-pending `:core:assembleSharedXCFramework`):
+error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+       (in target 'TeslaSync' from project 'TeslaSync')
+=> Build halts at the KMP dependency before compiling any sources.
+   shared-surfaces/BackgroundWorkSegment.* errors in this build: 0
+IOS_EXIT=65
+MAC_EXIT=65   (macOS app target shares the same unstaged Shared.xcframework + dev-signing blocker)
+
+# swiftlint --strict   (whole `included:` set, 1921 files):
+Found 1 violation, 1 serious in 1917 files.
+  -> dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length)  [PRE-EXISTING,
+     unrelated to this surface — 0 violations in shared-surfaces; see step 2]
+LINT_EXIT=2
+
+# swiftformat --lint apps/apple   (whole tree, 1921 files):
+1/1921 files require formatting, 3 files skipped.
+  -> feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes)  [PRE-EXISTING,
+     unrelated — 0/8 in shared-surfaces; see step 1]
+FORMAT_EXIT=1
+
+PLACEHOLDER_EXIT=0   (see step 3)
+
+------------------------------------------------------------------------------
+8. ACCEPTANCE CRITERIA
+------------------------------------------------------------------------------
+[x] Surface renders every web state: idle (bar withdrawn — web `if(!hasJobs) return null`), active
+    (trigger spinner+summary + popover job list), and — inside the popover — loading (skeleton rows),
+    empty ("All background work complete"), error (message + Retry), stale + offline (chip + banner).
+[x] Hooks (useTranslation, useBackgroundJobs) bound through the P1/S8 BackgroundWorkSource seam; no
+    direct HTTP in the view. The web export filter + composite "Saving…" mutation row + custom merge
+    are ported verbatim in BackgroundWorkProjection.
+[x] Every i18n key from source resolves through the P1/S10 facade (BackgroundWorkStrings, table
+    "BackgroundWorkSegment"): one / many / tooltip / aria / heading (parity) + promoted hook labels +
+    leaf chrome. No English literals in Swift code.
+[x] Accessibility: trigger has label+hint+isButton; freshness chip / banner / job rows / empty / error
+    carry VoiceOver labels; reduce-motion respected by the spinner + TSSkeleton + TSFadeIn.
+[x] Tests: adapter unit tests (ordering, kind map, status filter, a11y) + projection tests (exports,
+    mutation singular/plural, merge/sort, summary, feed, idle/active) + model tests (wiring, deferred
+    view.opened telemetry, stale auto-refresh) — 25/25 green.
+[x] Telemetry: `view.opened` slug "BackgroundWorkSegment" emitted once on first present (P1/S11).
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (placeholder gate COUNT=0).
+[ ] Full-app `xcodebuild build test` EXIT=0 — DEFERRED (BLOCKED): unstaged KMP Shared.xcframework +
+    225 co-located XCTest-in-app files + macOS dev-signing (pre-existing, predecessor-owned). The
+    surface itself is GREEN on every host-runnable gate (steps 1-6).
+
+------------------------------------------------------------------------------
+9. INFRASTRUCTURE REGISTRATIONS (required — `shared-surfaces/` is a NEW directory no predecessor created)
+------------------------------------------------------------------------------
+- apps/apple/project.yml         : added `- path: TeslaSync/shared-surfaces` to the TeslaSync (iOS)
+                                   and TeslaSync-macOS app target `sources:` (mirrors how
+                                   `TeslaSync/feature-views` is registered). xcodegen validated (step 6).
+- apps/apple/.swiftlint.yml      : added `TeslaSync/shared-surfaces` to `included:` so the surface is
+                                   actually linted by the gate.
+- apps/macos-pending-verifications.md : appended the deferral row for the full-app build (protocol
+                                   documented in that file).
+
+==============================================================================
+SUMMARY: The BackgroundWorkSegment Apple surface is production-complete and verified GREEN in
+isolation — isolated SwiftPM Swift-6 build + 25/25 tests, iOS-18 & macOS-15 swiftc -typecheck clean,
+swiftlint --strict / swiftformat --lint / placeholder gate clean for the surface (0 issues),
+xcodegen enumerates all 9 files. The whole-tree gate steps are red ONLY due to pre-existing, unrelated
+issues this prompt does not own: the unstaged KMP Shared.xcframework (IOS_EXIT/MAC_EXIT=65), one
+pre-existing swiftlint violation and one pre-existing swiftformat drift elsewhere in the tree. Per
+apps/macos-pending-verifications.md the full-app xcodebuild build+test is DEFERRED to the macos-latest
+acceptance gate. Honest aggregate gate exit is therefore non-zero.
+==============================================================================
+EXIT=65
+STATUS=BLOCKED

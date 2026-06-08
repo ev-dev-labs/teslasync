@@ -1,0 +1,266 @@
+================================================================================
+P4 · Dashboard widget · 0050 — FleetStatsBarWidget (Apple)
+Run: 2026-06-07T17:53–18:30-0700   Host: Darwin arm64 (Atuls-Mac-Studio)
+Branch: auto/20260607-170817-98066/53
+Prompt: .github/prompts/monorepo/p4-apple/dashboard-widgets/P-0050-FleetStatsBarWidget.prompt.md
+Web source (spec): web/src/features/dashboard/widgets/FleetStatsBarWidget.tsx
+Registry: web/src/features/dashboard/widgets/registry/analytics.ts  (id=fleet-stats-bar)
+================================================================================
+
+The gate was RUN FOR REAL on this host (Xcode 26.5 present; iPhone 16 simulator
+present). The capability "no macOS/Xcode runner" escape hatch does NOT apply, so
+both xcodebuild gates were executed and their true exit codes captured below.
+STATUS=BLOCKED is forced by THREE independent, evidence-backed blockers (A host
+capability, B missing predecessor, C allowed-files / build-integration), any one
+of which is sufficient. No code is shipped (Rule 8 → commit only this log).
+
+================================================================================
+=== PREFLIGHT ===
+================================================================================
+Predecessors (Honesty Covenant Rule 7 — STATUS=DONE verified in logs/):
+  p4-p4-0001-app-structure-navigation .... STATUS=DONE
+  p4-p1-0001-shared-facade ............... STATUS=DONE
+  p4-p2-0001-design-tokens ............... STATUS=DONE
+  p1-s10-0001-i18n ....................... STATUS=DONE
+  p1-s11-0001-diagnostics ................ STATUS=DONE
+  p1-s8-0006-analytics ................... STATUS=DONE
+  >>> PREDECESSOR GAP (see BLOCKER B): the dashboard-widget PRIMITIVES this
+      surface composes are NOT done and NOT present:
+        p4-apple/widget-primitives/P-0013-WidgetShell    → NOT in done.txt, absent from Sources/
+        p4-apple/widget-primitives/P-0010-WidgetStatGrid → NOT in done.txt, absent from Sources/
+      done.txt contains ZERO dashboard-widgets and ZERO widget-primitives entries.
+
+Clean tree: working tree contains ONLY two pre-existing, unrelated, already-modified
+  web files (web/src/features/admin/components/devtools/FleetApiSection.tsx,
+  web/src/features/admin/pages/BackupRestorePage.tsx) that predate this prompt and
+  are outside its scope. No apps/apple tracked files were modified. Generated
+  TeslaSync.xcodeproj and staged Frameworks/Shared.xcframework are git-ignored
+  (git status --untracked-files=all -- apps/apple → empty).
+
+Toolchain on this host (Darwin, arm64):
+  /Applications/Xcode.app ...... PRESENT → DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+  xcodebuild ................... Xcode 26.5 (17F42)                         [OK, via DEVELOPER_DIR]
+  active xcode-select -p ....... /Library/Developer/CommandLineTools        (CLT default)
+  iPhone 16 simulator .......... present (Booted)                           [OK]
+  swift ........................ 6.3.2                                       [OK]
+  swiftlint .................... 0.63.3                                      [OK]
+  swiftformat .................. 0.61.1                                      [OK]
+  xcodegen ..................... 2.45.4                                      [OK]
+  pwsh ......................... present                                     [OK]
+  java ......................... OpenJDK 17.0.19   ~/.konan warm (1.6G)      [OK]
+  xcrun simctl ................. NOT on default PATH (CLT)  → resolves only under DEVELOPER_DIR;
+                                 test-runner diagnostics still failed to find it (see GATE/iOS).
+  security find-identity -v -p codesigning ... 0 valid identities found     [BLOCKER A]
+
+================================================================================
+=== SURVEY ===
+================================================================================
+Web source of truth (FleetStatsBarWidget.tsx) — read end-to-end:
+  Composition: <WidgetShell title icon loading error updatedAt isFetching isStale
+    isError onRefresh>  { hasData ? <WidgetStatGrid stats cols=4 compact> : <EmptyState> }
+  Data sources (hooks): useVehicles, useFleetAnalytics(30), useUnits (useTranslation
+    for i18n). Derived stats: vehicleCount, onlineCount (state==='online'),
+    totalDistance (convertDistanceFromSI of analytics.total_distance_km),
+    totalEnergy (analytics.total_energy_kwh). onlinePct = online/total*100.
+  4 StatGridItem: Vehicles (icon Car, trend "<n> online"), Online Now (icon Wifi,
+    trend "<pct>%"), Distance (30d) (icon Route, unit=distanceUnit), Energy (30d)
+    (icon Zap, unit kWh). hasData = vehicles.length>0 || analytics. Empty →
+    EmptyState(icon Car, message "No fleet data available").
+  States exercised by the source: loading (WidgetShell.loading), error
+    (WidgetShell.error), fetching/stale/freshness chrome (DataFreshness via
+    isFetching/isStale/isError/updatedAt + onRefresh refetch), empty (EmptyState),
+    data (StatGrid). Prompt's required state set: loading, empty, error, stale, offline.
+  i18n namespace 'dashboard', 7 keys: widget.fleetStatsBar.{title, vehicles, online,
+    onlineNow, distance30d, energy30d, noData}.
+
+Existing native code inspected (apps/apple):
+  project.yml (XcodeGen) — app targets TeslaSync (iOS) and TeslaSync-macOS compile
+    sources ONLY from: Sources/, Localization/, ../design/generated/apple. There is
+    NO source root for apps/apple/TeslaSync/  (the prompt's Native-output path).
+  Sources/ tree: App, Auth, Components/{UI,Charts,DataDisplay,Feedback,Forms,Maps,
+    Motion}, Design, Live, Notifications, Platform, SharedFacade, WatchBridge,
+    Widgets/Shared. NO Dashboard/ feature, NO dashboard-widget host, NO widget grid.
+  grep Sources for WidgetShell|WidgetStatGrid|StatGridItem|WidgetProps|WidgetSize|
+    WidgetRegistry|registerWidget|fleet-stats-bar  → NONE FOUND.
+  SharedFacade/Domains/ → ONLY VehicleSettingsModel.swift. NO Vehicles state holder,
+    NO FleetAnalytics state holder to bind useVehicles/useFleetAnalytics against.
+  grep Sources for view.opened|viewOpened  → NONE (no native P1/S11 diagnostics
+    surface-open emitter to satisfy the telemetry requirement).
+  Components/Feedback/States.swift → EmptyState/QueryError equivalents DO exist (would
+    have covered the empty/error chrome IF a host surface existed to host them).
+  Localization/Localizable.xcstrings → all 7 widget.fleetStatsBar.* keys PRESENT
+    (P1/S10 already generated them) — i18n is NOT a blocker.
+  apps/apple/TeslaSync/  → directory DOES NOT EXIST.
+
+================================================================================
+=== REASONING ===
+================================================================================
+Goal: ship a production-polished native FleetStatsBarWidget at parity (WidgetShell
+chrome + 4-cell stat grid + empty/error/loading/stale states), bound to shared
+state holders, registered in the dashboard grid as id=fleet-stats-bar (4x2 / 3x2 /
+4x40), emitting view.opened. Evaluated three routes; all dead-end on this prompt's
+scope or this host's capability:
+
+  Route 1 — Author FleetStatsBarWidget.swift at the literal Allowed path
+    apps/apple/TeslaSync/dashboard-widgets/FleetStatsBarWidget.swift.
+    REJECTED: project.yml compiles Sources/, not TeslaSync/. The file would be
+    orphaned — never compiled, never tested, never rendered. A "green" xcodebuild
+    that never sees the file is red-as-green (Rule 1) and skip-and-assume (Rule 3).
+    It also cannot compile: it composes WidgetShell + WidgetStatGrid + WidgetProps/
+    WidgetSize and binds Vehicles/FleetAnalytics state holders — none of which exist
+    natively. Making it self-contained by inlining those primitives = stubs / parity
+    shortcut (Rules 4, 5) and duplicates shared infra owned by other prompts.
+
+  Route 2 — Place the file under Sources/ (globbed, would compile) and build the
+    missing primitives (WidgetShell, WidgetStatGrid, WidgetProps/WidgetSize, a widget
+    registry + dashboard grid host) and the Vehicles/FleetAnalytics facade holders.
+    REJECTED: those are separate, not-yet-run predecessors
+    (p4-apple/widget-primitives/P-0010, P-0013 + P1/S8 facade holders) and are
+    explicitly Out of Scope here ("Atomic shared components … covered by the P4
+    component-library bundle prompt"). Authoring them = predecessor bypass (Rule 7).
+    Every file touched would be outside this prompt's Allowed-Files
+    (apps/apple/TeslaSync/dashboard-widgets/FleetStatsBarWidget.*) = silent drift (Rule 9).
+
+  Route 3 — Wire apps/apple/TeslaSync/ into project.yml so the Allowed-path file
+    compiles. REJECTED: project.yml is outside Allowed-Files (Rule 9); and even wired,
+    the surface still cannot bind to the absent primitives/holders (Route 2 problem).
+
+Chosen disposition: STATUS=BLOCKED. Run both xcodebuild gates for real (no
+skip-and-assume), record true exit codes, ship NO code, commit only this log (Rule 8).
+
+================================================================================
+=== CHANGES ===
+================================================================================
+NONE. No source files created or modified. The native output
+  apps/apple/TeslaSync/dashboard-widgets/FleetStatsBarWidget.*  was deliberately
+NOT produced (see REASONING — it could not be a real, compiled, parity-covered,
+in-scope surface). Only this log file is written. Per Rule 8 (BLOCKED → commit only
+the log), no code is committed.
+
+================================================================================
+=== PARITY ===
+================================================================================
+PARITY_UNIT=panel:dashboard/FleetStatsBarWidget (registry id=fleet-stats-bar)
+Required parity elements vs the web source / manifest:
+  [ ] WidgetShell chrome (title, icon, freshness/refresh)   — native primitive ABSENT (P-0013)
+  [ ] WidgetStatGrid 4-cell body                            — native primitive ABSENT (P-0010)
+  [ ] Stat: Vehicles (+ "<n> online" trend)                 — depends on missing host + holders
+  [ ] Stat: Online Now (+ "<pct>%" trend)                   — depends on missing host + holders
+  [ ] Stat: Distance (30d) (useUnits conversion)            — depends on missing host + holders
+  [ ] Stat: Energy (30d) (kWh)                              — depends on missing host + holders
+  [ ] State: loading                                        — no surface to render
+  [ ] State: empty (EmptyState "No fleet data available")   — no surface to render
+  [ ] State: error (QueryError + retry)                     — no surface to render
+  [ ] State: stale (freshness chip + auto-refresh)          — no surface to render
+  [ ] State: offline (cached + offline chip)                — no surface to render
+  [ ] Binding: useVehicles                                  — Vehicles facade holder ABSENT
+  [ ] Binding: useFleetAnalytics(30)                        — FleetAnalytics facade holder ABSENT
+  [ ] Binding: useUnits (distance)                          — (Units+Facade exists; host absent)
+  [ ] i18n: 7x widget.fleetStatsBar.* keys                  — keys present, but no view consumes them
+  [ ] Telemetry: view.opened slug=FleetStatsBarWidget       — native emitter ABSENT
+  [ ] Registry: register id=fleet-stats-bar (4x2/3x2/4x40)  — native registry ABSENT
+PARITY_COVERED=0
+PARITY_REQUIRED=17
+PARITY_COVERED < PARITY_REQUIRED → STATUS=BLOCKED (methodology parity gate).
+
+================================================================================
+=== GATE (exact prompt commands; run for real on this host) ===
+================================================================================
+$ export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+$ xcodegen generate --spec apps/apple/project.yml      → Created TeslaSync.xcodeproj (git-ignored)
+
+[iOS] xcodebuild -scheme TeslaSync \
+        -destination 'platform=iOS Simulator,name=iPhone 16' build test
+      ** BUILD SUCCEEDED **
+      ** TEST FAILED **
+        TeslaSyncUITests-Runner encountered an error (Early unexpected exit,
+          operation never finished bootstrapping — Test crashed with signal term
+          while preparing to run tests.)
+        xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+        CoreSimulatorService connection interrupted. (headless/shared-host sim instability)
+        Failing tests: TSDesignTokensTests.testChartPaletteMatchesTokenSourceCount(),
+                       UnitsGoldenVectorTests.testConversionAndFormattingMatchKotlinGoldenVectors()
+      IOS_EXIT=65                                                            [FAIL]
+      NOTE: this run compiled the BASELINE app only; it did NOT compile or exercise
+      any FleetStatsBarWidget native file (none exists; the Allowed path is not a
+      project source root). A green iOS run would NOT certify this surface.
+
+[macOS] xcodebuild -scheme TeslaSync-macOS build test
+      ** BUILD FAILED **
+        Run custom shell script 'Stage Shared.xcframework' failed — the Kotlin/Native
+          Gradle daemon received an external "stop command" mid release-link
+          (shared/headless host); and
+        Could not find test host for TeslaSync-macOSTests: TEST_HOST .../TeslaSync-macOS.app
+        Underlying capability gap: CODE_SIGNING_REQUIRED=YES with SigningCert= (empty);
+          security find-identity -v -p codesigning → 0 valid identities. The macOS
+          app/widget entitlements require a development certificate (cannot ad-hoc sign).
+      MAC_EXIT=70                                                           [FAIL]
+
+[swiftlint --strict] .................. Found 0 violations, 0 serious in 256 files
+      LINT_EXIT=0   (lints the 256 EXISTING files; no FleetStatsBarWidget file to lint)
+
+[swiftformat --lint apps/apple] ....... 0/260 files require formatting, 2 skipped
+      FORMAT_EXIT=0 (formats the 260 EXISTING files; no FleetStatsBarWidget file)
+
+[check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/FleetStatsBarWidget]
+      target path does not exist → scans 0 files → vacuously clean.
+      PLACEHOLDER_EXIT=0  (VACUOUS — no native output was produced; not a positive signal)
+
+Gate formula: EXIT=0 only when IOS+MAC+LINT+FORMAT+PLACEHOLDER are all 0.
+  IOS_EXIT=65  MAC_EXIT=70  LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+  → two non-zero sub-gates ⇒ overall gate EXIT is NON-ZERO ⇒ STATUS=BLOCKED.
+
+================================================================================
+=== HONESTY COVENANT ===
+================================================================================
+1  No red-as-green : IOS_EXIT=65 and MAC_EXIT=70 shown FAILED with causes; host
+                     lint/format/placeholder=0 explicitly flagged as exercising the
+                     existing tree / vacuous (no widget file), not this surface.
+2  No scope narrowing: ran the EXACT gate commands (both xcodebuild schemes, no
+                     -only-testing, no --filter).
+3  No skip-and-assume: both gates executed for real on this host; true exit codes captured.
+4  No stubs as final: shipped nothing; refused to inline fake primitives/holders.
+5  No parity shortcuts: PARITY_COVERED=0/17; made NO parity claim.
+6  No delegation : performed directly; no sub-agents / parallel / background prompt work.
+7  No predecessor bypass: widget-primitives P-0010 WidgetStatGrid & P-0013 WidgetShell
+                     (and Vehicles/FleetAnalytics facade holders) absent → respected,
+                     not fabricated.
+8  No commit on red: committing ONLY this log; zero code committed.
+9  No silent drift : no apps/apple tracked changes; generated project/xcframework are
+                     git-ignored; the two modified web files pre-existed this prompt
+                     and are NOT touched or staged.
+10 Log ends with EXIT=<int> and STATUS=<...>, each on its own line, below.
+
+================================================================================
+=== DISPOSITION ===
+================================================================================
+THREE independent, evidence-backed blockers — each sufficient for BLOCKED:
+  A. CAPABILITY (host) — macOS gate cannot pass: 0 valid code-signing identities;
+     macOS app/widget entitlements require a development certificate (MAC_EXIT=70).
+     iOS test run additionally unstable on this shared headless host (simctl missing
+     to the test runner; CoreSimulator connection interrupted; UI-runner term crash
+     → IOS_EXIT=65). Class = ADR-012 macos/Xcode-signed-runner pending.
+  B. PREDECESSOR (Rule 7) — the native dashboard-widget primitives this surface
+     composes do not exist: WidgetShell (P-0013) and WidgetStatGrid (P-0010) are not
+     done and absent from Sources/; no WidgetProps/WidgetSize/registry/grid host; no
+     Vehicles/FleetAnalytics Swift facade state holders. Building them is Out of Scope
+     and would be predecessor bypass.
+  C. ALLOWED-FILES / BUILD-INTEGRATION (Rule 9) — the sole Allowed path
+     apps/apple/TeslaSync/dashboard-widgets/FleetStatsBarWidget.* is not a project
+     source root (project.yml globs Sources/). A real, build-verified surface cannot
+     be produced without editing project.yml and/or shared infra files outside the
+     Allowed-Files list.
+Unblock path: run p4-apple/widget-primitives/P-0010 + P-0013 (and the dashboard-grid
+host + Vehicles/FleetAnalytics facade holders), wire a compiled source root for the
+dashboard widgets, and execute the macOS/iOS gates on a code-signed macos-latest
+Xcode runner (ADR-012). Then this surface can be authored at parity and re-gated.
+
+================================================================================
+=== COMMIT ===
+================================================================================
+Per Rule 8 (BLOCKED → commit ONLY the log file, never code):
+  git add .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0050-FleetStatsBarWidget.log
+  git commit -m "chore(monorepo): BLOCKED p4-apple/dashboard-widgets/0050 FleetStatsBarWidget — macOS dev-cert + missing widget-primitives predecessors + out-of-scope build integration"
+
+EXIT=65
+STATUS=BLOCKED

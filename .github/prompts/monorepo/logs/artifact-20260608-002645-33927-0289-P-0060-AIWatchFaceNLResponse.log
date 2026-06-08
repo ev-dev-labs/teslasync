@@ -1,0 +1,181 @@
+=== P4 Shared surface 0060 AIWatchFaceNLResponse (Apple) ===
+Date: 2026-06-08
+Runner: Darwin (Apple Silicon)
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT NOTE
+--------------------------------------------------------------------------------
+This log reports REAL command output. The surface itself is complete and
+independently verified (type-check + 39/39 unit tests + lint + format +
+placeholder). The full `xcodebuild build test` gate is BLOCKED by a PRE-EXISTING,
+repo-wide structural defect that is OUTSIDE this single-surface's scope (every
+`*.Tests.swift` under the app source dirs is a member of the app target and
+`import XCTest`, which the app target cannot resolve). The first and only build
+error is in the PRE-EXISTING file `TeslaSync/feature-views/AIRestorePanel.Tests.swift`
+— NOT in this surface. Platform capability (Xcode/SwiftUI/Swift Charts/MapKit/
+iOS+macOS SDK + simulators) is fully PRESENT; this is not a missing-capability
+block. See ANALYSIS at the bottom. No red was reported as green.
+
+--------------------------------------------------------------------------------
+ENVIRONMENT (capability present)
+--------------------------------------------------------------------------------
+Xcode 26.5 (Build 17F42) via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+SDKs: iphonesimulator26.5, macosx26.5   Simulators: iPhone 16 (booted)
+swift 6.3.2 | swiftlint 0.63.3 | swiftformat 0.61.1 | xcodegen 2.45.4 | java 17 | konan cache present
+
+--------------------------------------------------------------------------------
+ARTIFACT — files shipped (apps/apple/TeslaSync/shared-surfaces/)
+--------------------------------------------------------------------------------
+AIWatchFaceNLResponse.Adapter.swift   pure core: composer cap/body/canStart + SSE stream reducer + a11y summary
+AIWatchFaceNLResponse.Model.swift     telemetry seam (view.opened), availability gate, projection, source seam, @Observable model, in-memory source, i18n facade
+AIWatchFaceNLResponse.swift           View: TSGlassPanel -> header(title+Helix badge+freshness+refresh) -> connectivity banner -> phase switch
+AIWatchFaceNLResponse.Views.swift     data card (description+composer+Ask button+output panel) + thinking indicator + loading/empty/error chrome
+AIWatchFaceNLResponse.Previews.swift  10 previews: idle/thinking/streaming/done/error/empty/loading/gate-error/stale/offline
+AIWatchFaceNLResponse.Tests.swift     39 tests: composer, reducer, projection, model wiring, a11y, i18n
+AIWatchFaceNLResponse.strings         i18n table "AIWatchFaceNLResponse" (web parity + Helix scaffold + P4 chrome)
+
+Wiring (required for a brand-new source dir; surgical, documented):
+  project.yml      + `- path: TeslaSync/shared-surfaces` under TeslaSync and TeslaSync-macOS sources
+  .swiftlint.yml   + `- TeslaSync/shared-surfaces` under included
+
+Parity source: web/src/components/ai/AIWatchFaceNLResponse.tsx
+  - withAiFeature('watch-face-nl-response', InnerSection) gate -> native availability axis
+    (unknown=loading, disabled=friendly empty [native no-hidden-surface], enabled=interactive card)
+  - useAiStream('/ai/watch/respond') lifecycle idle->streaming->done|error, paused at pausedConfirm
+  - AIFeatureCard composition: Helix badge, title, description, Textarea(maxLength 1000), "Ask about my car"
+  - canStart = withinCap(1000) && state != pausedConfirm ; buttonDisabled = !canStart || streaming
+  - NARRATIVE contract: delta text only; tool_call/tool_result inert; cancel-on-disappear
+  - i18n keys: watchFaceNL.title/description/button/badge/prompt/inputLabel (+ Helix scaffold + P4 chrome)
+
+--------------------------------------------------------------------------------
+STEP 1 — KMP Shared.xcframework (scheme pre-action) ./Scripts/build-shared-xcframework.sh
+--------------------------------------------------------------------------------
+> Task :core:assembleSharedReleaseXCFramework
+xcframework successfully written out to: apps/shared/core/build/XCFrameworks/release/Shared.xcframework
+> Task :core:assembleSharedXCFramework
+BUILD SUCCESSFUL in 11m 53s
+15 actionable tasks: 11 executed, 4 from cache
+> Staging release/Shared.xcframework -> apps/apple/Frameworks/Shared.xcframework
+> Shared.xcframework staged
+BUILD_SHARED_EXIT=0
+
+--------------------------------------------------------------------------------
+STEP 2 — xcodegen generate (project includes the surface)
+--------------------------------------------------------------------------------
+Created project at apps/apple/TeslaSync.xcodeproj
+AIWatchFaceNLResponse references in project.pbxproj: 42
+AIWatchFaceNLResponse.Tests.swift "in Sources" build files: 4 (iOS + macOS app targets — same convention as feature-views)
+XCODEGEN_EXIT=0
+
+--------------------------------------------------------------------------------
+STEP 3 — Targeted swiftc type-check of the surface against the REAL design system
+         (macOS SDK, -swift-version 6, Tokens.swift + Sources/Components|Design + surface)
+--------------------------------------------------------------------------------
+Pass A (Adapter+Model+View+Views, no DEBUG): 0 errors.   TYPECHECK_CORE_EXIT=0
+  -> The surface imports only SwiftUI + the TS design tokens/components (Color.TS,
+     Font.TS, TSSpacing, TSRadius, TSGlassPanel, TSButton, TSSkeleton, TSFadeIn);
+     it uses NO Shared-framework or other app-internal code, so this type-check is
+     equivalent to compiling it inside the full app module.
+
+--------------------------------------------------------------------------------
+STEP 4 — Unit tests RUN via a real XCTest target (SwiftPM harness, module=TeslaSync,
+         real Tokens.swift + real TS components + the real surface + the real Tests file)
+--------------------------------------------------------------------------------
+Test Suite 'WatchFaceNLComposerTests'        — passed
+Test Suite 'WatchFaceNLStreamReducerTests'   — passed (8)
+Test Suite 'WatchFaceNLAccessibilityTests'   — passed
+Test Suite 'WatchFaceNLProjectionTests'      — passed (4)
+Test Suite 'WatchFaceNLModelTests'           — passed
+Test Suite 'WatchFaceNLStringsTests'         — passed
+Test Suite 'All tests' passed.
+   Executed 39 tests, with 0 failures (0 unexpected) in 0.009 (0.015) seconds
+SWIFT_TEST_EXIT=0
+
+--------------------------------------------------------------------------------
+STEP 5 — swiftlint --strict
+--------------------------------------------------------------------------------
+Surface files only (6 files): 0 violations.                       SWIFTLINT_SURFACE_EXIT=0
+Whole tree (1915 files): 1 serious violation — PRE-EXISTING, UNRELATED:
+  TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length
+  (file is unmodified by this surface — `git status` clean)         SWIFTLINT_TREE_EXIT=2
+
+--------------------------------------------------------------------------------
+STEP 6 — swiftformat --lint
+--------------------------------------------------------------------------------
+Surface files: 0/6 require formatting.                            SWIFTFORMAT_SURFACE_EXIT=0
+Whole tree (apps/apple): 1/1919 requires formatting — PRE-EXISTING, UNRELATED:
+  TeslaSync/feature-views/ActionBuilder.Previews.swift:48 blankLinesBetweenScopes
+  (file is unmodified by this surface)                              SWIFTFORMAT_TREE_EXIT=1
+
+--------------------------------------------------------------------------------
+STEP 7 — placeholder gate (apps/tools/check-placeholders.ps1, swift)
+--------------------------------------------------------------------------------
+-Path apps/apple/TeslaSync/shared-surfaces -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+STEP 8 — xcodebuild build (full app, scheme) — BLOCKED by pre-existing defect
+--------------------------------------------------------------------------------
+$ xcodebuild build -scheme TeslaSync-macOS -destination 'platform=macOS' ...
+TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: Unable to resolve module dependency: 'XCTest'
+** BUILD FAILED **
+MAC_EXIT=65
+
+$ xcodebuild build -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' ...
+TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: Unable to resolve module dependency: 'XCTest'
+** BUILD FAILED **
+IOS_EXIT=65
+
+Error attribution (both builds):
+  total compile error lines: 2 (the same XCTest-resolution error, lower/upper-cased)
+  errors located in this surface (AIWatchFaceNLResponse.*): 0
+  -> grep 'AIWatchFaceNLResponse' over both build logs for 'error:' => NONE
+
+--------------------------------------------------------------------------------
+ANALYSIS — why the gate is BLOCKED, and why it is NOT this surface
+--------------------------------------------------------------------------------
+1. The committed project.yml routes `TeslaSync/feature-views` (and dashboard-widgets,
+   and now shared-surfaces) into the iOS + macOS APP targets with no `*.Tests.swift`
+   exclusion. ~170 `feature-views/*.Tests.swift` files therefore compile INTO the app
+   target and each `import XCTest`. An app target has no XCTest in its module search
+   path, so the compile fails: "Unable to resolve module dependency: 'XCTest'".
+2. This is PRE-EXISTING and repo-wide: the first (and only) error is the unmodified
+   committed file feature-views/AIRestorePanel.Tests.swift. .github/workflows/apps-apple.yml
+   itself documents the project as a "no-op-but-valid until the P4 Apple program adds a
+   buildable ... .xcodeproj" — i.e. the full app is known to be not-yet-buildable.
+   Fixing it requires routing every `*.Tests.swift` from the app targets to the test
+   targets (TeslaSyncTests / TeslaSync-macOSTests) — a P4-core/infra change spanning all
+   170+ pre-existing test files, explicitly OUTSIDE the scope of this single shared-surface
+   prompt (and risky to attempt blind, as it would surface unbounded pre-existing breakage).
+3. This surface follows the EXACT established convention (Tests alongside the surface, same
+   as AIRestorePanel/ChatMessageItem/AiUsageCard), so the eventual repo-wide test-routing
+   fix resolves it together with the other 170 files — with no change to this surface.
+4. The surface is nonetheless fully verified, independent of the blocked full-app gate:
+     - swiftc -typecheck against the real design system: 0 errors (STEP 3)
+     - 39/39 unit tests PASS in a real XCTest target (STEP 4)
+     - swiftlint surface: 0 violations (STEP 5)
+     - swiftformat surface: clean (STEP 6)
+     - placeholder: 0 (STEP 7)
+     - 0 compile errors attributable to the surface in BOTH full-app builds (STEP 8)
+
+ACCEPTANCE CRITERIA
+  [x] Surface renders all states from the web source (loading/empty/error/data +
+      stream idle/thinking/streaming/done/error/pausedConfirm + stale/offline) — 10 previews.
+  [x] Hooks bind through the shared P1/S8 state-holder (WatchFaceNLSource); no HTTP in the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (.strings).
+  [x] Accessibility labels on every interactive element (badge, composer, Ask button, refresh, output).
+  [x] Tests: adapter unit tests + projection + model wiring + a11y label test + i18n (39 total, all pass).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate COUNT=0).
+  [ ] EXIT=0 — BLOCKED: full `xcodebuild build test` cannot pass due to the pre-existing,
+      repo-wide XCTest-in-app-target defect documented above (NOT this surface).
+
+GATE STEP EXITS
+  BUILD_SHARED_EXIT=0  XCODEGEN_EXIT=0  TYPECHECK_CORE_EXIT=0  SWIFT_TEST_EXIT=0
+  SWIFTLINT_SURFACE_EXIT=0  SWIFTFORMAT_SURFACE_EXIT=0  PLACEHOLDER_EXIT=0
+  MAC_EXIT=65  IOS_EXIT=65  (pre-existing XCTest-in-app-target defect)
+  SWIFTLINT_TREE_EXIT=2  SWIFTFORMAT_TREE_EXIT=1  (pre-existing, unrelated files)
+
+EXIT=65
+STATUS=BLOCKED

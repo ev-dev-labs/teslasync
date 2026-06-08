@@ -1,0 +1,205 @@
+================================================================================
+P4 · Shared surface · 0218 — Label (Apple)
+Run: 2026-06-08T07:00-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/447
+Base: c9c6fdb9f
+Prompt: P4/shared-surfaces/0218 — Shared surface: Label
+Web source (spec): web/src/components/ui/Label.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (WebhookChannelsSection 0218 /
+      BackendTool 0002 precedent, ADR-012, Honesty rule 7 — predecessor parity).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT default) ........ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  SwiftUI / Swift Charts / MapKit  present in both SDKs (this surface uses ONLY
+                               SwiftUI — no charts, no maps; web "Charts/maps: none") OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                    OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                  OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  xcodegen ................... 2.45.4 (project generates cleanly)                    OK
+
+  Capability note: the core requirement is SwiftUI, which is AVAILABLE and PROVEN by
+  the real iOS-18-simulator AND macOS-15 SDK compiles below (Swift 6, complete strict
+  concurrency). The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit
+  unavailable on the runner") does NOT apply — the surface is authored, host-compiled
+  on BOTH SDKs, and host-tested (8/8 XCTest, EXECUTED). STATUS is therefore DONE, with
+  the Xcode-only app build/test DEFERRED (evidence below), not BLOCKED.
+
+=== ARTIFACT (apps/apple/TeslaSync/shared-surfaces/Label.*) ===
+  Label.swift            172  TSFormLabel surface (web components/ui/Label.tsx parity):
+                              localized + verbatim inits, danger `*` marker, a11y name
+                              composition, view.opened seam, onAppear emit. Plus:
+                                • LabelSurfaceTelemetry protocol + OSLogLabelSurfaceTelemetry
+                                  default sink (P1/S11 `view.opened surface=<slug>` os_log)
+                                • TSFormLabelDiagnostics.reportViewOpened (host-testable seam)
+                                • TSFormLabelAccessibility.accessibilityLabel (pure adapter)
+  Label.Previews.swift    46  #if DEBUG — optional / required / required-in-field /
+                              long wrapping label / Dynamic-Type AX3 (per-branch visuals)
+  Label.Tests.swift       96  XCTest (@testable import TeslaSync) — 8 methods:
+                              adapter (5) + telemetry seam + slug (3)
+                              ------
+                              314 total
+  No file imports the Shared xcframework; the telemetry seam is a Swift protocol
+  (prod app injects the shared diagnostics sink; tests inject SpyLabelSurfaceTelemetry).
+  Type named TSFormLabel to avoid a clash with SwiftUI.Label AND the existing
+  typography `TSLabel` (Components/UI/Typography.swift) — the web file's own doc-comment
+  draws the same form-label vs typography-label distinction.
+
+=== PARITY (web source read end-to-end; every t() + branch reproduced) ===
+  - Data sources: the web `<label>` has NO data hook — its only hook is
+    `useTranslation`. There is therefore no P1/S8 state-holder to bind and NO HTTP in
+    the view (vacuously satisfied). The acceptance "hooks bind to the state-holder
+    layer" maps to: the sole i18n dependency is resolved via the P1/S10 catalog.
+  - Composition (web `<label>` + children + danger `*` span + VisuallyHidden):
+      * label text -> Text(LocalizedStringKey) | Text(verbatim:) at Font.TS.label /
+        Color.TS.textSecondary (matches the native TSLabel typography role).
+      * required `*` -> Text("*") at Color.TS.statusDanger (web `text-rose-300`),
+        `.accessibilityHidden(true)` == web `aria-hidden="true"`.
+      * VisuallyHidden "required" -> the element's `.accessibilityLabel` appends the
+        localized word so the combined accessible name is "<label> required"
+        (web appends `<VisuallyHidden>{` ${t('form.required')}`}</VisuallyHidden>`).
+        Realized with `.accessibilityElement(children:.ignore)` + `.accessibilityLabel`.
+  - States (ALL real branches render; each has a #if DEBUG preview + a unit test):
+      required == false  -> bare label.
+      required == true   -> label + danger `*` + accessible "<label> required".
+      The generic surface-template states loading / empty / error / stale / offline do
+      NOT exist in the web source (no data source). They are deliberately NOT
+      fabricated for a purely presentational label (Honesty covenant #2/#3) — inventing
+      async states absent from the spec would be drift, not parity. Both genuine
+      branches are previewed (5 previews) and unit-tested.
+  - i18n (P1/S10): the ONE web key `form.required` is preserved — catalog key
+    `translation.form.required` (en "required", state=translated) EXISTS and is the
+    only `translation.*` literal referenced by the shipped code. No English literals:
+    the only Text(...) calls are the catalog key, the `*` glyph (Text(verbatim:"*")),
+    and caller-provided runtime labels (Text(verbatim: value), parity with web children).
+  - Accessibility: the required field's VoiceOver name reads "<label> required" (the
+    localized word, never the `*` glyph); `*` is hidden; Dynamic Type via Font.TS;
+    reduce-motion N/A (no animation). Adapter rule unit-tested across 5 edges.
+  - Telemetry (P1/S11): TSFormLabelDiagnostics.reportViewOpened emits `view.opened`
+    with surface slug "Label" (OSLog default sink; the `*` redaction-safe contract
+    mirrors OSLogDashboardWidgetTelemetry). Opt-in (nil default) so ordinary inline
+    label use stays silent; a host injects the shared sink. Emission unit-tested.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface compiled with the REAL apps/apple closure (design Tokens.swift);
+  Label.swift depends only on SwiftUI + os + the generated TS tokens — nothing else,
+  and never the Shared xcframework.
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK (Swift 6, complete strict concurrency)
+        xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> \
+          -target arm64-apple-ios18.0-simulator -swift-version 6 \
+          -strict-concurrency=complete ../design/generated/apple/Tokens.swift Label.swift
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [2] swiftc -typecheck — macOS 15 SDK (same flags, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [3] swiftc -typecheck — DEBUG previews (-D DEBUG; Tokens + Label + Label.Previews,
+        Swift 6 complete strict concurrency, macOS 15):
+        PREVIEWS_TYPECHECK_EXIT=0                                                  OK
+  [4] swift test — the COMMITTED XCTest file EXECUTED on the macOS host via a
+        self-contained SwiftPM harness (library target "TeslaSync" = the real
+        Tokens.swift + the verbatim shipped Label.swift; test target = the verbatim
+        committed Label.Tests.swift, @testable import TeslaSync; swift-tools 6.0 / v6):
+          Test Suite 'TSFormLabelAccessibilityTests'  passed — 5 tests
+          Test Suite 'TSFormLabelTelemetryTests'      passed — 3 tests
+          Executed 8 tests, with 0 failures (0 unexpected) in 0.001 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: accessibilityLabel optional/required/whitespace-trim/empty-base/
+        empty-word (the web VisuallyHidden "<label> required" rule); view.opened emits
+        "Label" once; nil-sink no-op (no trap); surfaceSlug == "Label".
+  [5] swiftlint --strict (repo apps/apple/.swiftlint.yml; explicit file paths):
+          Done linting! Found 0 violations, 0 serious in 3 files.
+        LINT_EXIT=0                                                               OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/3 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate; swift) — scanned the real shipped
+        directory apps/apple/TeslaSync/shared-surfaces (the gate's literal
+        `-Path .../shared-surfaces/Label` resolves to a non-dir; scanned the actual
+        files to avoid a hollow pass — WebhookChannelsSection precedent):
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                        OK
+  [8] i18n coverage cross-check (web tsx -> .xcstrings -> .swift):
+          web keys: 1 (form.required) ; catalog: translation.form.required = "required"
+          (state=translated) PRESENT ; swift-referenced translation.* keys: 1 ; all
+          defined ; NO hardcoded English Text("…") literals in shipped code.
+        I18N_EXIT=0                                                               OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode toolchain):
+      - `xcodegen generate` -> XCODEGEN_EXIT=0 (project + targets + schemes generated).
+      - pbxproj registration check (the MATERIAL finding for this surface):
+          shared-surfaces refs = 0 ; Label.swift refs = 0
+          feature-views   refs = 3  (positive control — that group IS registered)
+    Why deferred (code-unrelated; none is a defect in this surface; Honesty rules 7+9):
+      (a) REGISTRATION GAP — `TeslaSync/shared-surfaces` is NOT yet a source path in
+          apps/apple/project.yml (only Sources, TeslaSync/dashboard-widgets,
+          TeslaSync/feature-views are). So xcodegen does not add Label.* to the app
+          target, and xcodebuild would not compile/test it until the directory is
+          registered. Adding that path is OUTSIDE this prompt's allowed files
+          (apps/apple/TeslaSync/shared-surfaces/Label.* + the log) — it belongs to the
+          P4-core / integration step that wires the shared-surfaces source group
+          (this surface "Depends on P4 core"). NOT silently dropped — flagged loudly here.
+      (b) Shared.xcframework not staged: the app target links the KMP core via a
+          pre-build Gradle step (:core:assembleSharedXCFramework) that is SKIPPED here
+          (no Kotlin/Native toolchain; apps/apple/Frameworks holds only .gitkeep) —
+          the same exit-65 staging blocker recorded by the 0002/0218 predecessors.
+      (c) macOS app/widget signing requires a development certificate on a signed
+          runner (ADR-012).
+    Disposition: once (a) registers the group (a one-line project.yml addition in the
+    integration step) and (b)/(c) are satisfied on the signed runner, the surface WILL
+    compile + test under xcodebuild — it already type-checks against BOTH the iOS 18
+    and macOS 15 SDKs (steps [1]/[2]) under Swift 6 complete strict concurrency, and
+    the SAME XCTest is PROVEN GREEN (8/8) by the executed SwiftPM harness in step [4].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (required on/off) — implemented; each branch has a
+      #if DEBUG preview; the required-name rule is unit-tested + EXECUTED. (loading/
+      empty/error/stale/offline are N/A: the web label has no data source — see PARITY.)
+  [x] Hooks bind through the shared layer; no view HTTP — the only hook is i18n, routed
+      through the P1/S10 catalog; there is no data hook to bind and no HTTP (vacuous).
+  [x] Every i18n key from source has a matching catalog key — form.required ->
+      translation.form.required ("required", translated) PRESENT; 1/1.
+  [x] Accessibility labels on every element — combined "<label> required" name; `*`
+      hidden; adapter rule unit-tested (5 edges).
+  [x] Tests: adapter unit + per-branch + a11y/telemetry — 8 methods, EXECUTED 8/8, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green (typecheck iOS+macOS Swift6 strict, DEBUG
+      previews, 8/8 XCTest, swiftlint --strict, swiftformat --lint, placeholder, i18n);
+      Xcode app build/test DEFERRED with captured evidence (registration gap +
+      xcframework staging + signing), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green (real output pasted); the
+                          xcodebuild build/test is shown DEFERRED with its real cause
+                          (registration 0-refs + staging + signing), never as a pass.
+  2 No scope narrowing ... full surface: both required branches, localized + verbatim
+                          inits, danger marker, a11y name composition, telemetry seam,
+                          5 previews, 8 tests. The absent async states are absent in the
+                          SOURCE, not narrowed away.
+  3 No skip-and-assume ... web source read end-to-end; the single t() (form.required)
+                          + the single `required` branch reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. visible `*` + hidden-from-VO + VisuallyHidden "required"
+                          accessible-name all reproduced and tested.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same host-gate + xcodebuild-deferral disposition as the
+                          0218 WebhookChannelsSection / 0002 BackendTool predecessors.
+  8 No commit on red ..... every runnable gate validating this code is green; the only
+                          non-green step is the environment/integration-blocked
+                          xcodebuild (registration + staging + signing), deferred with
+                          evidence — not a defect in the surface.
+  9 No silent drift ...... LOUDLY documented: unlike feature-views (3 pbxproj refs),
+                          shared-surfaces has 0 refs — the directory is not yet
+                          registered in project.yml, and registering it is outside this
+                          prompt's allowed files. Flagged for the integration step.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

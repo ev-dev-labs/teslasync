@@ -1,0 +1,186 @@
+I'll start by exploring the repository structure to understand the task fully.
+
+Xcode, swiftlint, and pwsh are all available. The web page wraps `PrivacySection`. Let me read that component and explore the Apple app structure.
+
+The web `PrivacyPage` wraps `PrivacySection` 1:1, which has real content (recently-viewed-pages clearing + cookie consent). Per the anti-stub/anti-scope-narrowing covenant, I must reproduce the full section. Let me explore the Apple app structure deeply.
+
+There's already a `PrivacySection.swift` in feature-views. Let me examine it and the navigation infrastructure, plus find existing Page patterns.
+
+There's already a full native `PrivacySection` (created by a prior P4 task). My job is the **page shell** that wraps it — exactly like the web `PrivacyPage` wraps `PrivacySection`. Let me study the navigation infra, the PrivacyModel construction, and the page-scaffold/PageContainer equivalent.
+
+Now let me understand the routing/deep-link mechanism, the page scaffold (PageContainer equivalent), and find any existing P7 page examples to follow the established pattern.
+
+Route registration is centralized. Let me find `SettingsRouteRegistration`, the settings scene, and any existing sibling sub-pages (2FA, Sessions) to follow the exact established pattern.
+
+Privacy is a sub-route (`/account/privacy`). I need to understand how the Apple target compiles sources and how sub-pages attach. Let me read `project.yml`, `AppSettingsView.swift`, and check for the xcodeproj/xcodegen.
+
+Key finding: `TeslaSync/Features/` is **not** in `project.yml` sources, so I'll need to wire it into the build. Let me examine the remaining `PrivacySection.*` files to understand production seam construction and the page-scaffold/component library.
+
+Let me examine how settings hosts sections, whether a production version/consent state-holder exists, the section's remaining files, and the string catalog format.
+
+Now let me examine the parity ledger/manifest, routing tests, the placeholder checker, and find the page-scaffold component (PageContainer equivalent).
+
+The ledger doesn't exist yet. Let me explore the parity directory, placeholder patterns, and the manifest's privacy record.
+
+Let me find a ledger template, the page-scaffold/header component, and the design-token/component definitions I'll reuse.
+
+Let me find the page-header/scaffold component and the design-token definitions I'll build on.
+
+Let me check `PrivacySection.Chrome.swift` (possible production factory), the existing `RecentRoutesStore`, and the `tsGlassPanel` modifier.
+
+I have a thorough understanding now. Let me check how the co-located `*.Tests.swift` files in the app-target source dir are structured (XCTest vs. not), since that dictates where my tests go.
+
+The co-located `*.Tests.swift` files import XCTest yet live in the app-target source path — there must be a generation/exclusion mechanism. Let me resolve this empirically by checking the gate contract, scripts, and how xcodegen handles them.
+
+Let me verify the build toolchain feasibility (full Xcode, Shared.xcframework, the shared-framework script) before/while implementing.
+
+Decisive finding: only **Command Line Tools** are installed (`/Library/Developer/CommandLineTools`), not full Xcode — so `xcodebuild` cannot run, and `Shared.xcframework` is an empty `.gitkeep` (needs Gradle/Kotlin-Native + Xcode to build). Let me confirm there's no full Xcode anywhere before concluding the build/test gate is BLOCKED.
+
+`/Applications/Xcode.app` exists! The active dir is just CommandLineTools. I can point xcodebuild at full Xcode via `DEVELOPER_DIR` (no sudo needed). Let me verify it works and assess whether the KMP `Shared.xcframework` can be built.
+
+Full Xcode 26.5 works via `DEVELOPER_DIR`, with macOS + iOS-sim SDKs and Java 17 for Gradle. The KMP `Shared.xcframework` must be built (slow, Kotlin/Native). Let me kick that off in the background now while I implement the page.
+
+The Gradle KMP build is running in the background. Let me set up a plan and todos, inspect the `Localizable.xcstrings` format, and check the build's early progress.
+
+The xcstrings is large (8121 strings). I'll script edits carefully. First, let me confirm the background Gradle build is alive and check xcstrings round-trip stability for safe edits.
+
+The Gradle KMP build is progressing well (downloading Kotlin/Native, linking iOS frameworks, hitting build cache). xcstrings round-trips identically, so edits will be clean. Let me read the web `PageContainer` to match the header/copy-link parity, then set up my plan.
+
+I now have full parity context. The copy-link uses web keys `common.copyLink.{action,copied,label,success}`. Let me set up my plan and todos, then implement.
+
+Now I'll create the directory and implement the Swift files. Starting with the page, seams, and route.
+
+Let me add the platform imports needed for the pasteboard.
+
+Now the route/destination file with deep-link parsing and the settings host wrapper.
+
+Now the production seams + composition factory.
+
+Now let me add the strings to the catalog. First check which keys already exist, then add the missing ones via a safe JSON script.
+
+All 6 are missing. Let me add them with the catalog's standard structure.
+
+Strings added cleanly (66 insertions, 0 deletions). Now let me refine the navigation to use a single, clean `navigationDestination(item:)` mechanism (works for both the in-app toolbar entry and the deep link without threading a path through the shared shell).
+
+Now wire the registration in `SettingsScene.swift` and `TeslaSyncApp.swift`.
+
+Now update `TeslaSyncApp.swift` — add the navigator, pass it to the registry, and handle the deep link.
+
+Let me find any other callers of the changed `registry(...)` signature (tests, demos).
+
+Only one caller — updated. Now add `TeslaSync/Features` to the app targets in `project.yml`.
+
+`TeslaSync/Features` wired into both app targets. Let me check the Gradle build progress and run the lint + placeholder gates (which don't need the framework).
+
+Placeholder scan passes (COUNT=0). Gradle still building. Let me generate the xcodeproj and resolve how the co-located `*.Tests.swift` files are targeted (critical for whether the build succeeds), while I write the test file.
+
+xcodegen generated cleanly. Let me definitively determine how co-located `*.Tests.swift` files are assigned to targets (app vs test bundle) — this dictates where my tests go and whether the app build tolerates XCTest imports.
+
+No source exclusions — co-located `*.Tests.swift` compile into the app target but only `Tests/Unit` runs in the test action. So I'll put **runnable** tests in the test bundle for real verification. Let me write them, then check the Gradle build.
+
+Now let me run swiftlint on the new page files and check the Gradle build status.
+
+Swiftlint linted the whole project (config `included:` overrides the path) and found 1 serious violation. Let me locate it — I need to know if it's in my code.
+
+The lone violation is pre-existing (`LifetimeStatsWidget.Adapter.swift`, untouched by me); my 3 files are clean. Let me verify the exact gate invocation scopes correctly to my directory.
+
+Swiftlint scoped to the gate's path (from repo root) is **clean (0 violations, EXIT=0)**; the lone project-wide violation is pre-existing and outside my scope. Let me update todos and monitor the Gradle framework build (its log vanished — I'll poll the artifact/process).
+
+The host is shared by many parallel slots all building the same KMP framework — my earlier `&`-in-sync-command build was torn down (hence the vanished log). Let me start the build properly via `xcodebuild` (its pre-action builds the framework), detached with a controlled log. I'll do the host-native macOS target first for the fastest full compile check of my code.
+
+Let me verify the detached build is actually running and progressing (the framework pre-action takes time).
+
+The environment tears down processes backgrounded from sync commands. Let me use the proper async/detached bash mode for the long-running build.
+
+Build launched in async detached mode. Let me wait for it to progress (framework pre-action + compile take time on this contended host).
+
+The build is progressing well — Kotlin tasks are UP-TO-DATE (shared cache from parallel slots), now linking release frameworks. Let me wait for the framework assembly + macOS app compile.
+
+Release-mode Kotlin/Native linking is the slow part (contended host). Let me keep waiting for framework assembly + macOS compile.
+
+Gradle is on the final release link (`linkReleaseFrameworkMacosArm64`), then it assembles + stages the xcframework, then the app compiles. Let me keep waiting.
+
+The macOS build shell completed. Let me read its result.
+
+Framework is now staged (future builds fast), but the build failed with 2 errors — none in my files. Let me see them.
+
+The 2 failures are **code-signing/entitlements errors on the macOS targets** (no dev certificate on this host) — not compilation errors; the build aborted before Swift even compiled. The gate uses the **iOS** scheme, and iOS *Simulator* builds need no signing. The framework is now staged. Let me pivot to the iOS Simulator (what the gate actually targets) and find a simulator.
+
+An iPhone 16 simulator (iOS 26.5) is already booted. The framework is staged, so the iOS build's pre-action will be fast. Let me run the iOS Simulator build (the gate's target).
+
+The iOS build is running detached. Let me wait for it (framework staged, so just app compilation now).
+
+iOS build already completed. Let me read the result.
+
+Root cause: the iOS app build fails on a **pre-existing** file — `feature-views/AIRestorePanel.Tests.swift` imports `XCTest` but those co-located `*.Tests.swift` files leak into the app target (never build-tested because P4 Apple ran on a non-Xcode host). This pre-dates my change. Let me confirm the test-file suffixes and verify MY code compiles by excluding those pre-existing test files at build time (no repo change).
+
+Confirmed pre-existing: `AIRestorePanel.Tests.swift` is in git HEAD. The co-located app-target test files all use a **dotted** suffix (`.Tests.swift`, `.ModelTests.swift`, etc.) which my `PrivacyPageTests.swift` does not — so I can exclude exactly those (and nothing in `Tests/Unit`) to verify my code compiles. Let me run the iOS build with that exclusion.
+
+Build running. Let me wait for the result (framework already staged, so this is the app Swift compile).
+
+The exclusion build completed. Let me read the result.
+
+Now I'm hitting **extensive pre-existing compile errors** (59 errors: `'DashboardWidgetSize'`/`'VehicleHeroModel' is ambiguous for type lookup`) all in `dashboard-widgets/` — none in my files. This confirms the Apple app target has **never been compiled on a real Xcode host** (P4 ran on Windows per the shared-ledger note; xcodebuild was SKIPPED). Let me map the full scope of pre-existing errors and confirm none are mine.
+
+Definitive: **all 59 errors are pre-existing duplicate-type declarations in `dashboard-widgets/` (`invalid redeclaration of 'DashboardWidgetSize'`/`DashboardWidgetRegistration`); ZERO errors in my files or any file I touched.** My code type-checks. Let me locate the pre-existing duplicates to get a clean positive build signal by excluding them too.
+
+This is conclusive: the Apple **app target is pervasively pre-broken** — `DashboardWidgetSize` is declared in **15 files** and `DashboardWidgetRegistration` in **13 files** (parallel-generation collisions across the `dashboard-widgets` feature), plus co-located XCTest files leak into the app target. The app has never compiled on a real Xcode host (confirmed by the shared-ledger note that Apple native build/test was SKIPPED on the Windows host). This is entirely outside my single-page scope.
+
+My page is verified correct. Let me capture clean evidence and do a standalone runtime check of my parsing logic.
+
+My files compiled with **0 errors** inside the 494-file module build; all 59 errors are pre-existing `dashboard-widgets` duplicates; my test file lints clean. Since the app target can't execute tests (pre-existing breakage), let me give genuine **runtime** evidence for my most algorithmic new logic via a standalone Swift check mirroring my XCTest assertions.
+
+Excellent — **17/17 runtime assertions pass** for my core logic. My page is fully verified at the unit level. The full `xcodebuild` gate is blocked by pre-existing app-target breakage. Let me model the log after an existing P4 Apple log for format consistency.
+
+This log is from a sibling Apple prompt that ran on this same farm. Let me read how its gate concluded (build/test + EXIT/STATUS) — this tells me whether a green app build was ever achieved here.
+
+This is the key precedent: the sibling **0209 PrivacySection** prompt hit the *identical* blockers (XCTest-in-app-target IOS_EXIT=65, macOS signing) and resolved to **EXIT=0/STATUS=DONE** by (a) green runnable gates, (b) **independent verification via an isolated SwiftPM harness** (Swift 6 build + tests) since the full app is pre-broken repo-wide, and (c) honestly DEFERRING the full-app gate. Let me find the harness method they used.
+
+There's a **sanctioned, well-documented disposition** here: `apps/macos-pending-verifications.md` shows multiple P4 surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) hit the *exact* same pre-existing blockers (`DashboardWidgetSize` redefined 15×, co-located XCTest files, signing) and reached EXIT=0/STATUS=DONE by verifying the surface via an **isolated SwiftPM harness + `swiftc -typecheck`** and deferring the full-app gate. Let me build that harness for my page. First, map the dependency closure.
+
+Dependency closure mapped. Let me run an iOS-SDK `swiftc -typecheck` (Swift 6, strict concurrency — same as the project) over my files + their real dependency closure. This is the precedent's verification method.
+
+**iOS 18 SDK `swiftc -typecheck` passes with EXIT=0** under Swift 6 strict concurrency. Now the macOS SDK typecheck (exercises my `#if os(macOS)` NSPasteboard branch + adaptive layout).
+
+**Both iOS 18 and macOS 15 SDK typechecks pass (EXIT=0)** under Swift 6 strict concurrency. Now the final precedent step: an isolated SwiftPM harness to actually **build + run my tests**. Let me assemble it from the real dependency closure.
+
+Harness assembled. Let me build and run the tests in it.
+
+Harness builds clean under Swift 6. Now run the tests.
+
+**All 15 tests pass** in the isolated SwiftPM harness (Swift 6 strict concurrency), plus both SDK typechecks are green. This is the complete sanctioned verification matching every prior P4 surface. Let me update todos and gather final numbers for the log/ledger.
+
+I see foreign `AIUsageCard.*` modifications I didn't make (shared host artifact). I must commit **only my files**. Let me review the complete working-tree state to commit precisely.
+
+The working tree contains **foreign changes from parallel slots** (`AIUsageCard.*`, web admin files) that are NOT mine — I'll commit only my files explicitly. Let me capture the final gate numbers (including swiftformat) before writing the log.
+
+swiftformat flagged 5 formatting issues in my files (the program's exit criteria require swiftformat-clean). Let me auto-fix with swiftformat, then re-verify swiftlint + typecheck + harness still pass.
+
+swiftformat is now clean, but it introduced 1 swiftlint violation. Let me find and resolve it so both pass.
+
+The reported violation is the pre-existing `LifetimeStatsWidget` (whole-project lint via local config). But the repo-root gate run also showed 1 — I need the exact violation in MY files. Let me run the precise gate command and capture it.
+
+swiftformat's brace-wrapping conflicts with swiftlint's `opening_brace`. Let me view and fix it to satisfy both.
+
+swiftformat's multiline-brace-wrap conflicts with swiftlint's `opening_brace`. Let me collapse the condition to one line so both pass.
+
+Let me re-verify both formatters/linters and the typecheck pass after the fix.
+
+All clean: swiftformat 0/3, swiftlint 0 violations, iOS typecheck EXIT=0. Let me re-sync my (now-formatted) files into the harness and re-run the tests to confirm nothing broke.
+
+All 15 tests still pass. Let me re-confirm the macOS typecheck post-format, then write the log.
+
+All verification green (macOS typecheck EXIT=0). Now let me write the gate log.
+
+Now the parity ledger.
+
+Now append the deferred-gate row to the macOS-pending-verifications tracker (per its resolution protocol).
+
+Let me validate the ledger JSON, confirm my edits to shared files are clean (not contaminated by parallel slots), and clean up temp artifacts.
+
+All diffs surgical and clean; temp removed. Let me update the plan/todos and check git context before the precise commit.
+
+I'm on my isolated worktree branch `auto/...585`. The dirty `AIUsageCard.*`/web files are from the parallel-merge base — I'll exclude them and stage only my files explicitly.
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: F508:BA556:1183BD2:127A501:6A26F556)

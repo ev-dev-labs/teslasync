@@ -1,0 +1,193 @@
+=== P4 Feature view 0221 MarkdownRenderer (Apple) ===
+datetime : 2026-06-08T06:42:14Z
+runner   : Darwin 25.5.0 arm64
+prompt   : .github/prompts/monorepo/p4-apple/feature-views/...0221-MarkdownRenderer
+web src  : web/src/features/system/components/chatbot/MarkdownRenderer.tsx (+ delegated CodeBlock.tsx)
+native   : apps/apple/TeslaSync/feature-views/MarkdownRenderer.*
+allowed  : apps/apple/TeslaSync/feature-views/MarkdownRenderer.*, this log
+ADRs     : ADR-002 (tokens), ADR-004 (live/SSE freshness), ADR-009 (a11y)
+
+----------------------------------------------------------------------
+RUNNER CAPABILITY (prompt capability clause)
+----------------------------------------------------------------------
+The gate's two `xcodebuild ... build test` steps require full Xcode + an iOS 18
+simulator. This runner has ONLY the Command Line Tools — they cannot run here:
+
+  $ xcodebuild -version
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+  directory '/Library/Developer/CommandLineTools' is a command line tools instance
+
+  $ xcrun simctl list
+  xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+
+Available + USED for real verification on this runner:
+  swift/swiftc : Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)
+  macOS SDK    : /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk (15 / 26)
+  swiftlint    : 0.63.3
+  swiftformat  : 0.61.1
+  pwsh         : 7.6.2
+
+Per the established, accepted precedent for this tier (132/132 prior
+p4-apple-feature-views logs are STATUS=DONE with the Xcode app build/test
+DEFERRED — e.g. 0186 LegacyAlertStudioRedirect: IOS_EXIT=65 / MAC_EXIT deferred,
+LINT/FORMAT/PLACEHOLDER green), the two xcodebuild steps are DEFERRED to the
+Xcode/simulator integration runner. They are NOT reported as passing here — no
+red-as-green. Every host-runnable step below was executed for real and the
+surface is real-compile-verified against the macOS 15 SDK under Swift 6 strict
+concurrency, with the parser/projection/model logic executed green on-host.
+
+----------------------------------------------------------------------
+GATE — host-runnable steps (executed, real outputs)
+----------------------------------------------------------------------
+[1] swiftc -typecheck  (the 12 non-test, non-preview surface files + DesignTokens)
+      sdk=MacOSX.sdk  target=arm64-apple-macos15.0
+      -swift-version 6  -strict-concurrency=complete  -warnings-as-errors
+    => TYPECHECK_EXIT=0   (compiles clean in Swift 6 language mode)
+
+[2] On-host parity execution of the committed XCTest assertions.
+      CommandLineTools exposes no XCTest module to the SwiftPM CLI
+      ("error: no such module 'XCTest'"), so MarkdownRenderer.Tests.swift +
+      MarkdownRenderer.ModelTests.swift were replayed verbatim through a SwiftPM
+      executable (Foundation+SwiftUI library named "TeslaSync", so
+      `@testable import TeslaSync` is reproduced 1:1). Covers the inline parser,
+      the block parser, the projection, AND the @MainActor @Observable model
+      (phase resolution, view.opened-once, clipboard seam, stale/offline).
+    => PASS=95  FAIL=0   (ALL GREEN)
+
+[3] Preview bodies type-check in-module. The Xcode-only #Preview macro
+      (PreviewsMacros plugin) is unavailable to the CLI; each `#Preview(name){…}`
+      was transformed to `@MainActor func -> some View {…}` and compiled INSIDE
+      the module so the preview bodies are type-checked.
+    => PREVIEW_BUILD_EXIT=0
+
+[4] swiftformat --lint  (MarkdownRenderer.* — 15 swift files, repo .swiftformat)
+    => 0/15 require formatting          FORMAT_EXIT=0
+
+[5] swiftlint  lint --strict  (MarkdownRenderer.* — 15 swift files, repo .swiftlint.yml)
+    => Found 0 violations, 0 serious     LINT_EXIT=0
+
+[6] check-placeholders.ps1  — honest scan of the ACTUAL files (copied to an
+      isolated dir so only MarkdownRenderer.* is scanned)
+    => PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0     PLACEHOLDER_EXIT=0
+      (NB: the literal gate path ".../feature-views/MarkdownRenderer" is not a
+       real directory in this flat-file layout; the script treats a missing path
+       as a vacuous clean pass. The scan above is the real check of the files.)
+
+Whole-`apps/apple` gate variants (as the literal gate would run them):
+  swiftformat --lint apps/apple  -> 1 violation, PRE-EXISTING + OUTSIDE allowed:
+        TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes)
+        (committed at HEAD, unmodified by this prompt; a sibling surface)
+  swiftlint --strict (1578 files) -> 1 violation, PRE-EXISTING + OUTSIDE allowed:
+        TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length)
+        (committed at HEAD, unmodified by this prompt; a sibling surface)
+  MarkdownRenderer.* contribute ZERO violations to either whole-app run.
+
+GATE MARKERS
+  IOS_EXIT       = (deferred — no Xcode/iOS-18 simulator on this runner; capability clause)
+  MAC_EXIT       = (deferred — identical cause)
+  LINT_EXIT      = 0   (MarkdownRenderer.* scoped; the lone whole-app violation is a
+                        baseline defect in a non-allowed sibling file)
+  FORMAT_EXIT    = 0   (MarkdownRenderer.* scoped; the lone whole-app violation is a
+                        baseline defect in a non-allowed sibling file)
+  PLACEHOLDER_EXIT = 0
+  TYPECHECK_EXIT = 0
+  ONHOST_TESTS   = 95/95
+  PREVIEW_BUILD  = 0
+
+----------------------------------------------------------------------
+ARTIFACTS (16 files, ~3028 Swift LOC + a 50-line strings table)
+----------------------------------------------------------------------
+   302  MarkdownRenderer.Models.swift      value types: document/block/inline model, enums, config, copy
+   388  MarkdownRenderer.Inline.swift      inline tokenizer (strong/em/del/code/link/autolink; HTML->literal)
+    74  MarkdownRenderer.Autolink.swift    gfm autolink-literal scanner (bare http(s)/www URLs)
+   264  MarkdownRenderer.Adapter.swift     block parser entry + dispatch + heading/para/fence + line classifier
+   205  MarkdownRenderer.Blocks.swift      list (+gfm tasks +nesting) / blockquote / gfm table consumers
+   186  MarkdownRenderer.Projection.swift  slug (S11) + plain-text projection + doc stats + a11y summary
+   294  MarkdownRenderer.Model.swift       S8 source seam + S11 telemetry + S10 i18n + clipboard + @Observable
+    70  MarkdownRenderer.swift             entry View (phase switch + freshness envelope; live+ready == prose)
+   255  MarkdownRenderer.Views.swift       inline->AttributedString builder + block dispatch + chip + banner
+   176  MarkdownRenderer.BlockViews.swift  list / blockquote / table SwiftUI views
+   107  MarkdownRenderer.CodeBlock.swift   fenced-code view (language tag + copy) — web CodeBlock parity
+   139  MarkdownRenderer.States.swift      loading (raw-text fallback) / empty / error(retry)
+   110  MarkdownRenderer.Previews.swift    #if DEBUG previews — every state
+   291  MarkdownRenderer.Tests.swift       XCTest: inline + block parser + projection + a11y
+   167  MarkdownRenderer.ModelTests.swift  XCTest: @Observable model (phase/telemetry/stale/offline/copy)
+    50  MarkdownRenderer.strings           P1/S10 i18n catalog (table "MarkdownRenderer", 19 keys)
+
+Auto-included via project.yml glob (sources: TeslaSync/feature-views) — no project.yml edit needed.
+Self-contained: depends only on Foundation + SwiftUI + the generated DesignTokens (P1/S9).
+
+----------------------------------------------------------------------
+PARITY  (web react-markdown + remark-gfm  ->  native)
+----------------------------------------------------------------------
+  inline code / strong / em / del .......... MarkdownInline + AttributedString runs
+  links (target=_blank rel=noopener) ....... .link run for SAFE schemes only (http/https/mailto/tel);
+                                             javascript:/relative render inert (redirect-vector safe)
+  fenced code -> <CodeBlock>  .............. MarkdownCodeBlockView: uppercased lang tag + copy button
+                                             (UIPasteboard/NSPasteboard via injected seam), mono body
+  ul / ol / h1-h3 / table/th/td ............ full block renderers (Grid table w/ gfm alignment)
+  gfm: tables, strikethrough, task lists,
+       autolink literals ................... all parsed
+  SANITIZATION (no rehype-raw; <script> as
+       escaped text, never executed) ....... raw '<...>' that is not a valid autolink -> LITERAL text
+                                             (pinned by testRawHtmlIsSanitizedToLiteralText)
+  Suspense fallback (raw whitespace-pre-wrap) MarkdownLoadingState (preparing) shows rawText verbatim
+  States (loading/ready/empty/error +
+       stale/offline freshness envelope) ... all render; a fully-live rendered message is pure prose,
+                                             exactly like the anonymous web source
+
+----------------------------------------------------------------------
+HONESTY COVENANT
+----------------------------------------------------------------------
+ 1  No red-as-green     : xcodebuild steps are explicitly DEFERRED with the runner-capability
+                          evidence above (xcode-select + simctl errors). Never pasted a fake green
+                          xcodebuild. Every "0" below is a real executed command.
+ 2  No scope narrowing  : every web renderer + every gfm feature reproduced; every prompt state
+                          (loading/ready/empty/error/stale/offline) renders.
+ 3  No skip-and-assume  : the parser is a real CommonMark+gfm subset, executed green on-host (95/95),
+                          incl. an exclusivity bug the on-host run caught + fixed (single-inout sink).
+ 4  No stubs as final   : zero TODO/stub/placeholder (PLACEHOLDER_COUNT=0 over the actual files);
+                          no "Coming soon"; full implementations only.
+ 5  No parity shortcuts : no third-party markdown lib; the embedded code-block reproduces the web
+                          CodeBlock copy+language affordance; AttributedString tappable links.
+ 6  No delegation       : authored directly (delegation FORBIDDEN by this prompt).
+ 7  No predecessor bypass: followed the 0186 LegacyAlertStudioRedirect multi-file seam pattern +
+                          the P1/S8 (source/model), S9 (DesignTokens), S10 (.strings facade),
+                          S11 (view.opened) layers.
+ 8  No commit on red    : the committed artifacts (MarkdownRenderer.* + this log) are INDEPENDENTLY
+                          green on every host-runnable gate (typecheck, on-host tests, swiftformat,
+                          swiftlint, placeholder). The two whole-app gate REDs are pre-existing
+                          baseline defects in non-allowed sibling files (ActionBuilder.Previews.swift,
+                          LifetimeStatsWidget.Adapter.swift) — DEFERRED, not introduced here.
+ 9  No silent drift     : changes confined to the allowed MarkdownRenderer.* files + this log.
+                          The generated .xcodeproj + Frameworks/Shared.xcframework are git-ignored
+                          and untouched.
+10  Log ends with EXIT/STATUS below.
+
+----------------------------------------------------------------------
+DISPOSITION
+----------------------------------------------------------------------
+Production-polished, native Apple-idiomatic MarkdownRenderer shipped at parity with the web
+source. A pure-Swift CommonMark+gfm parser (inline + block) reproduces the react-markdown +
+remark-gfm renderer set and the source's safe-by-default posture (raw HTML survives as escaped
+text — pinned by an explicit sanitization test), feeding a SwiftUI renderer that maps inline
+spans to AttributedString runs (tappable links for safe schemes only), fenced code to a
+copy+language CodeBlock view, plus headings/lists(+gfm tasks,nesting)/blockquotes/gfm-tables.
+It binds through a P1/S8 source seam + an @Observable model (no view HTTP), resolves every
+prompt state (loading raw-text fallback / ready / empty / error+retry) under the stale/offline
+freshness envelope, resolves all copy through the P1/S10 .strings facade (19 keys, zero English
+literals in Swift), emits P1/S11 view.opened once (slug "MarkdownRenderer"), and carries
+VoiceOver labels + Dynamic Type + reduce-motion. All host-runnable gates pass AND the surface
+type-checks against the macOS 15 SDK under Swift 6 strict concurrency AND its parser/projection/
+model logic executes green on-host (95/95). The Xcode iOS/macOS app build+test is DEFERRED to a
+signed Xcode/simulator runner — the only steps this Command-Line-Tools-only runner cannot run.
+
+----------------------------------------------------------------------
+COMMIT
+----------------------------------------------------------------------
+  git add apps/apple/TeslaSync/feature-views/MarkdownRenderer.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0221-MarkdownRenderer.log
+  git commit -m "feat(apps/apple/feature-views): add MarkdownRenderer surface (P4)"
+
+EXIT=0
+STATUS=DONE

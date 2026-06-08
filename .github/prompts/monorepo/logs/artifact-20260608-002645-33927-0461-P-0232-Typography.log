@@ -1,0 +1,143 @@
+=== P4 Shared surface 0232 Typography (Apple) ===
+
+Surface:    Typography  (P4 · shared surface · 0232)
+Web source: web/src/components/ui/Typography.tsx  (reproduced — see PARITY below)
+Native out: apps/apple/TeslaSync/shared-surfaces/Typography.*
+Date:       2026-06-08
+
+------------------------------------------------------------
+CAPABILITY VERIFICATION (runner)
+------------------------------------------------------------
+- Full Xcode present: /Applications/Xcode.app  ->  Xcode 26.5 (Build 17F42)
+  (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is driven via
+   DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer)
+- Toolchain: Apple Swift 6.3.2, swiftlint 0.63.3, swiftformat 0.61.1, pwsh 7 — all present.
+- SDKs: iPhoneSimulator26.5 / MacOSX26.5 (backward-compatible with the project's iOS 18.0 /
+  macOS 15.0 deployment targets). iPhone 16 simulator available (booted).
+  => Native Apple capability (SwiftUI + Swift Charts + MapKit) is AVAILABLE on this runner.
+  This surface is purely presentational and uses neither Swift Charts nor MapKit.
+
+------------------------------------------------------------
+SCOPE / PATH NOTE (documented — no silent drift)
+------------------------------------------------------------
+The web source `components/ui/Typography.tsx` is a PURE PRESENTATIONAL primitive library
+(Heading / Text + 11 convenience roles) driven by @/lib/tokens `typography.role`. It has no
+data sources, no t() calls, and no conditional render branches.
+
+The atomic typography PRIMITIVES are already ported to
+  apps/apple/Sources/Components/UI/Typography.swift
+  (TSPageTitle, TSSectionTitle, TSText, TSCaption, TSLabel, TSMetricValue, TSCode, ...)
+and the prompt explicitly places "Atomic shared components" OUT OF SCOPE ("covered by the P4
+component-library bundle prompt"). This surface therefore does NOT re-declare those primitives.
+
+This shared SURFACE is delivered as the native type-specimen / showcase surface
+(`TypographyShowcase`) that reproduces every web `typography.role` (page/section/panel titles,
+subhead, body, captions, label, metric value/label, code, helper, error) at its true
+size / weight / tracking / colour / case, grouped into specimen sections — meaningful
+cross-feature design-system chrome (the "Shared surface" tier). It consumes the P1/S9 tokens
+(Font.TS / Color.TS / TSTypeMetrics / TSSpacing / TSRadius / TSMaterial) exactly as the existing
+AiUsageCard surface does (Text(verbatim:) + tokens), so the specimen can never drift from the
+role identities.
+
+BUILD-WIRING GAP (the integration seam, OUTSIDE this prompt's allowed files):
+  This prompt's allowed files are `apps/apple/TeslaSync/shared-surfaces/Typography.*` + this log.
+  `apps/apple/TeslaSync/shared-surfaces` is a NEW directory and is NOT yet listed in the app/test
+  target `sources:` of apps/apple/project.yml, nor in apps/apple/.swiftlint.yml `included:`.
+  Wiring it in (project.yml + .swiftlint.yml) is the "Depends on: P4 core" integration seam and is
+  outside this prompt's allowed-files set. It was therefore NOT edited (also to avoid disturbing
+  sibling parallel-surface work). Consequence: the templated `xcodebuild -scheme TeslaSync build
+  test` builds the integrated app scheme, which does not yet include this surface — see GATE below.
+  To compensate, the surface was built + its shipped XCTests were EXECUTED on the same Xcode 26.5
+  toolchain via an isolated, throwaway SwiftPM package (no repo mutation) — 35/35 passing.
+
+------------------------------------------------------------
+PARITY (web source reproduced)
+------------------------------------------------------------
+- Roles: all 13 web `typography.role` entries decomposed into native metric specs (point size,
+  weight, tracking, semantic colour, uppercase / monospaced / tabular-figures traits), modelled as
+  a data table (the native port of the web `typography.role` object). pageTitle / metricValue use
+  the largest responsive step (30 pt) = Font.TS.display; tracking-tight = TSTypeMetrics tracking
+  tokens; error = danger status token (web text-rose-300).
+- Composition: 4 specimen sections (Headings / Body & supporting / Labels & metrics / Inline),
+  every role covered exactly once, each rendered in its real role style via the Dynamic-Type-aware
+  `TypographyRoleStyle` modifier (@ScaledMetric, anchored to .body).
+- States (all render — no hidden surface): loading (redaction skeleton), empty (friendly message),
+  error (retry), data (the specimen). Orthogonal connection axis live / stale / offline -> header
+  freshness chip + banner with a one-shot auto-refresh on the stale transition (P4 leaf contract,
+  same framing as AiUsageCard; the source-less web component genuinely has none of these, so they
+  are reachable through the P1/S8 source seam and exercised by tests, not fabricated in the
+  default path).
+- Data binding: bound through `TypographyModel` over the `TypographySource` P1/S8 seam; no HTTP in
+  the view. Default `InMemoryTypographySource` emits a fresh, ready catalog.
+- i18n (P1/S10): the web source is anonymous (no t()); per the native no-English-literals rule all
+  49 strings the surface renders are promoted to the "Typography" table (Typography.strings).
+  Swift<->catalog cross-check: 49 keys referenced, 49 defined, 0 missing, 0 unused.
+- Accessibility: combined VoiceOver labels on every specimen row + chips, header trait, Dynamic
+  Type (ScaledMetric role scaling), reduce-motion honoured (TSFadeIn).
+- Telemetry (P1/S11): `view.opened` emitted once on first presentation, surface slug "Typography".
+
+------------------------------------------------------------
+SURFACE-SCOPED VERIFICATION (all green)
+------------------------------------------------------------
+Files (apps/apple/TeslaSync/shared-surfaces/, 1672 lines, no stubs):
+  Typography.swift            103   (TypographyShowcase surface + header chrome + phase switch)
+  Typography.Model.swift      395   (i18n facade, telemetry seam, projection, @Observable model, source)
+  Typography.Adapter.swift    302   (pure role data table, sections, accessibility, i18n keys)
+  Typography.Views.swift      354   (role-style modifier, specimen rows/sections, skeleton/empty/error/chip/banner)
+  Typography.Previews.swift    54   (8 previews: data/dark/large/empty/loading/error/stale/offline)
+  Typography.Tests.swift      378   (35 XCTest cases)
+  Typography.strings           86   (49 i18n keys)
+
+[swiftformat --lint TeslaSync/shared-surfaces]            -> 0/6 require formatting          EXIT=0
+[swiftlint --strict (rules cfg) TeslaSync/shared-surfaces] -> 0 violations, 0 serious in 6   EXIT=0
+[swiftc -typecheck -swift-version 6 -strict-concurrency=complete, macOS 15, vs real tokens]  EXIT=0
+[swiftc -typecheck -swift-version 6 -strict-concurrency=complete, iOS 18 sim, incl #Preview] EXIT=0
+[swift test  (shipped Typography.Tests.swift, @testable import TeslaSync, Xcode 26.5)]
+    Executed 35 tests, with 0 failures (0 unexpected)                                        EXIT=0
+[standalone projection harness (runtime)]                 -> 20/20 PASS                      EXIT=0
+[check-placeholders.ps1 -Path .../shared-surfaces -Language swift] -> PLACEHOLDER_COUNT=0    EXIT=0
+[i18n key parity (swift refs vs .strings)] -> 49 referenced / 49 defined / 0 missing / 0 unused
+
+------------------------------------------------------------
+GATE (templated commands — honest results)
+------------------------------------------------------------
+# xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+IOS_EXIT=BLOCKED
+    Capability is present (Xcode 26.5). NOT run against the surface: `TeslaSync/shared-surfaces`
+    is not in project.yml app/test target `sources:`, and project.yml is outside this prompt's
+    allowed-files set. Wiring it is the P4-core integration seam. The surface was instead compiled
+    for the iOS 18 simulator (typecheck EXIT=0 above) and its shipped XCTests executed via an
+    isolated SwiftPM package on the same toolchain (35/35 passing).
+# xcodebuild -scheme TeslaSync-macOS build test
+MAC_EXIT=BLOCKED   (same reason; macOS typecheck of the surface EXIT=0; shipped XCTests 35/35 on host)
+# swiftlint --strict
+LINT_EXIT=1
+    PRE-EXISTING repo failure, NOT this surface: 1 violation in
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length).
+    This surface's own files: 0 violations (verified with the same rule set).
+# swiftformat --lint apps/apple
+FORMAT_EXIT=1
+    PRE-EXISTING repo failure, NOT this surface: 1 file requires formatting —
+      TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes).
+    This surface's 6 files: pass (0/6 require formatting).
+# check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/Typography
+PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------
+CONCLUSION
+------------------------------------------------------------
+The Typography shared surface is COMPLETE and independently verified GREEN by every
+surface-scoped check on the full Xcode 26.5 toolchain, including real execution of all 35 shipped
+XCTests and an iOS-18-simulator compile (incl. #Preview macros).
+
+The templated integrated gate cannot reach EXIT=0 in this repo state for reasons OUTSIDE this
+prompt's allowed files: (1) `TeslaSync/shared-surfaces` is not yet wired into project.yml /
+.swiftlint.yml (the P4-core integration seam), and (2) the repo-wide `swiftlint --strict` and
+`swiftformat --lint apps/apple` steps are already red on PRE-EXISTING files unrelated to this
+surface (LifetimeStatsWidget.Adapter.swift, ActionBuilder.Previews.swift). Wiring the surface in
+would still not yield EXIT=0 because of (2). Per the Honesty Covenant (no red-as-green, no commit
+on red of one's own work), the integrated gate is reported BLOCKED with full evidence rather than
+claimed green; the surface code itself is red-free.
+
+EXIT=1
+STATUS=BLOCKED

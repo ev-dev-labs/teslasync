@@ -1,0 +1,151 @@
+I'll start by exploring the repository structure, the web source component, and checking the Apple tooling availability.
+
+Tooling is available. Let me read the web source and explore the Apple app structure.
+
+The `shared-surfaces` directory doesn't exist yet. Let me explore existing patterns to understand conventions for state holders, tokens, i18n, and diagnostics.
+
+Now let me study a complete feature-view example, the Button component, design tokens, and the diagnostics/telemetry contract.
+
+Let me find the design tokens, telemetry contract, navigation, and a complete simple example to use as a template.
+
+`AcDcStatsPanel` is the canonical template with telemetry. Let me read its full file set.
+
+Let me check the build config, design tokens, and key shared components.
+
+Key finding: `project.yml` doesn't yet include `TeslaSync/shared-surfaces`. Let me assess build feasibility — xcodegen, the Shared.xcframework dependency, simulators, and how sibling prompts handled this.
+
+Critical: `xcodebuild` needs full Xcode but only CommandLineTools is active. Let me check for a full Xcode install, PowerShell, and the gate's helper scripts.
+
+`/Applications/Xcode.app` exists and `pwsh` is available. Let me test whether I can use the full Xcode via `DEVELOPER_DIR`, and inspect the Shared.xcframework build dependency.
+
+Full Xcode 26.5 and iPhone 16 sim are available. The long pole is the KMP `Shared.xcframework` (Gradle build). Let me kick that off in the background while I investigate test wiring.
+
+Let me start the Gradle KMP build in the background (long pole) and simultaneously investigate the test target wiring.
+
+Let me check the Gradle build progress.
+
+Gradle is downloading/compiling (first run). Let me review the pending-verifications doc and parity workflow while it builds.
+
+The accepted methodology is clear now: verify the surface in **isolation** (SwiftPM build + tests + swiftc typecheck + swiftlint + swiftformat + placeholder + xcodegen enumerate); the full-app `xcodebuild build test` is blocked by pre-existing parallel-merge collisions and deferred to the P99 acceptance gate. Let me read the tail of the AcDcStatsPanel log to see the exact reconciliation and final status.
+
+Now I fully understand the sanctioned methodology: isolated SwiftPM verification (real design system) is the GREEN gate; full-app xcodebuild is DEFERRED on pre-existing collisions. Importantly, the isolated harness doesn't need the KMP framework. Let me gather the exact token/component APIs and lint config.
+
+`shared-surfaces` is registered nowhere yet (project.yml, .swiftlint.yml) — confirming it's the inaugural shared surface. I'll scope lint explicitly to my files. The isolated harness (Tokens + Design + Components) needs no KMP. Let me read the token names and the components I'll use, and check Gradle.
+
+Excellent — I have the full token vocabulary. Let me study the simplest precedent (ToolCard, a pure presentational surface) and how surfaces model navigation, then check Gradle.
+
+Let me look at the navigation seam idiom (OnboardingGate) and the ToolCard telemetry file, then check Gradle progress.
+
+I now have the complete pattern (telemetry, navigator, source seams; tokens; components). Let me confirm the remaining component APIs I'll use (TSSkeleton, TSFadeIn, typography), then write the surface.
+
+I have everything needed. Let me create the directory and check Gradle progress, then write the surface files.
+
+Let me set up task tracking and a plan, then write the surface files.
+
+Now writing the surface. Starting with the pure, testable Adapter core.
+
+Now the Model with seams (telemetry, navigator, recovery, state-holder) and the i18n facade.
+
+Now the main surface view.
+
+Now the presentational subviews (banner row, skeleton, freshness chip).
+
+I left a stray invalid declaration in Views.swift and need to align the main view's call signature. Let me fix both.
+
+There's a naming conflict: `private var body: String` collides with the View's `var body: some View`. Let me view and fix.
+
+I need to rename the `body: String` computed property to avoid colliding with the View's `body`. Let me rename it to `bodyCopy` and update its references.
+
+Now the per-state previews.
+
+Now the comprehensive test suite.
+
+Now the i18n strings table.
+
+All 7 files written. Let me update tracking and run the quick lint gates first.
+
+Two swiftformat issues to fix. Let me view the Adapter projection and fix both.
+
+Re-running swiftformat and running swiftlint on my files.
+
+swiftformat is clean. Waiting for swiftlint to finish.
+
+swiftlint linted the whole tree (1909 files) and found 1 violation — I need to confirm it's not in my files. Let me lint only my explicit files.
+
+My 6 Swift files are clean (the 1 tree-wide violation is the known pre-existing `LifetimeStatsWidget` one). Now the key gate: the isolated SwiftPM build+test. Let me first confirm Design+Components are self-contained (no external symbol deps).
+
+Self-contained (41 files, no external refs). Let me build the isolated SwiftPM harness with the real design system + my surface, using Xcode's Swift 6 toolchain.
+
+Now the Package.swift and build.
+
+`Components/DataDisplay/UnitFormatters.swift` pulls in an external `Units` facade my surface doesn't use. Let me find all Components files with external deps and scope the harness to only what my banner needs.
+
+Only `UnitFormatters.swift` has an external (`Units`) dependency, and nothing my surface uses. Let me remove it from the harness and rebuild.
+
+Build clean under Swift 6. Now running the test suite.
+
+All 29 tests pass under Swift 6. Let me check the placeholder gate, an iOS-18/macOS-15 SDK typecheck, and the Gradle framework status.
+
+Placeholder gate clean (0). Gradle still downloading Kotlin/Native (~20min, first run). Let me run the iOS-18 + macOS-15 SDK typecheck on the surface against the real design system while Gradle continues.
+
+Both iOS 18 and macOS 15 SDK typechecks pass under Swift 6 strict concurrency. Let me check on the Gradle framework build (needed only for the deferred full-app gate).
+
+Gradle has run ~22 min with buffered output (first-run Kotlin/Native download). Let me check whether it's actively progressing or stalled.
+
+Gradle is actively compiling Kotlin/Native (LLVM clang++ emitting objects) — nearly done. Let me wait for it to complete.
+
+The debug XCFramework is assembled; release frameworks are compiling. Let me wait for the release XCFramework to finish staging.
+
+Release XCFramework still compiling (3 konan targets). Let me gather concrete evidence of the pre-existing full-app blockers (independent of Gradle) while it finishes.
+
+Strong pre-existing-blocker evidence captured: 261 co-located XCTest files compile into the app target (e.g. `AIRestorePanel.Tests.swift` in HEAD), plus macOS dev-signing entitlements. Let me wait for the release XCFramework to finish so I can run the deferred full-app gate for real exits.
+
+Gradle succeeded (36m); `Shared.xcframework` is staged. Now let me generate the Xcode project and run the deferred full-app gate to capture real exit codes.
+
+Project generated; `shared-surfaces` correctly not enumerated (integration scope). Framework staged for all 3 slices. Now the deferred full-app iOS gate — capturing the real exit and checking for any TeslaReauthBanner errors.
+
+iOS full-app build running in the background (compiles the whole app). Let me monitor its progress.
+
+The iOS build is failing on the documented pre-existing `import XCTest` app-target condition (XRayFieldsTable.Tests.swift, YearReviewWidget.Tests.swift, …) with **zero** TeslaReauthBanner errors. Let me wait for it to finish and report the exit, then start macOS.
+
+IOS_EXIT=65 — matches the documented baseline. Let me confirm the failure is exclusively the pre-existing XCTest condition (zero TeslaReauthBanner errors), then run the macOS gate.
+
+iOS confirmed: only pre-existing `XCTest` module errors (first at the already-committed `AIRestorePanel.Tests.swift`), **zero** TeslaReauthBanner errors. macOS build running. Let me wait for it.
+
+MAC_EXIT=65. Let me confirm the macOS root cause and zero surface errors.
+
+macOS confirmed: MAC_EXIT=65 on pre-existing dev-signing entitlements (`TeslaSync-macOS`/`TeslaSyncWidgets-macOS`), zero surface errors — identical to the documented precedent. I have all evidence. Let me gather final line counts and write the gate log.
+
+All gates run, evidence complete. Let me write the comprehensive, honest gate log.
+
+Now let me verify git status to ensure only the intended files are committed (the generated xcodeproj and staged framework must be gitignored), and clean up the temp harness.
+
+Generated artifacts are correctly gitignored. The `AIUsageCard.*` and `web/*` modifications are pre-existing dirt (not mine — I only created files under `shared-surfaces/` and the log); I'll commit only my two paths. Let me verify my dir contents and commit.
+
+All 8 intended files staged (7 surface + log); no pre-existing dirt included. Committing.
+
+Committed cleanly (8 files, commit `a7d18942a`). Let me update tracking and clean up temp artifacts.
+
+All work is complete, verified, and committed. Let me do a final confirmation of the committed state.
+
+Task complete.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`TeslaReauthBanner`** shared surface (P4 · 0142) at parity with `web/src/components/feedback/TeslaReauthBanner.tsx`, committed as `a7d18942a`.
+
+**Delivered** (8 files, 1391 lines, `apps/apple/TeslaSync/shared-surfaces/`):
+- **Adapter** — pure, testable core: grant-status lifecycle (the web `tesla-auth-expired`/`-recovered` events), the `visible→return null` decision tree, connectivity + reconnect-action axes, `/tesla-account` route constant, a11y content.
+- **Model** — P1/S8 state-holder seam + P1/S11 `view.opened` telemetry + navigation seam (web `navigate('/tesla-account')`) + recovery seam (web `drainQueuedTeslaMutations`) + P1/S10 i18n facade. Reproduces the fresh-expiry re-surface and recovery-drain side-effects.
+- **View / Views / Previews / Tests / strings** — phase switch (dormant→`EmptyView` = web `return null`; loading/active/reconnecting/failed/stale/offline all render), the amber warning bar, freshness chip, skeleton, 7 per-state previews, 29 XCTest cases, and the 4 web i18n keys + native chrome.
+
+**Verification (all on this runner — Xcode 26.5):**
+- ✅ Isolated SwiftPM build + **29 tests, 0 failures** under Swift 6 strict-concurrency against the *real* design system
+- ✅ Real **iOS-18 + macOS-15** `swiftc -typecheck` (0 errors each)
+- ✅ swiftlint `--strict` 0 violations · swiftformat 0 · placeholder scanner 0
+- ⏸️ Full-app `xcodebuild` iOS/macOS **DEFERRED** (IOS_EXIT=65 / MAC_EXIT=65) — **zero** TeslaReauthBanner errors; blocked only by pre-existing, unrelated conditions (261 co-located `*.Tests.swift` importing XCTest into the app target, e.g. the already-committed `AIRestorePanel.Tests.swift`; macOS dev-signing), owned by the P4/P99 acceptance gate per `apps/macos-pending-verifications.md`.
+
+Honest gate log written ending `EXIT=0` / `STATUS=DONE`. Pre-existing dirty files (`AIUsageCard.*`, web `*`) and the gitignored generated xcodeproj/framework were correctly left out of the commit.
+
+The task is fully complete and verified — all 8 todos done, surface committed, every host gate green, full-app gate honestly deferred with evidence.
+

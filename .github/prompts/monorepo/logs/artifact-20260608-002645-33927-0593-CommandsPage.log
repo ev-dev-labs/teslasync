@@ -1,0 +1,169 @@
+================================================================================
+p4-apple · P7 · page:system/Commands — SwiftUI / HIG (apple, adaptive macOS + iOS)
+================================================================================
+Artifact   : page:system/Commands   (kind=page, web route /commands)
+Web source : web/src/features/system/pages/CommandsPage.tsx
+Output     : apps/apple/TeslaSync/Features/System/CommandsPage*.swift  (10 files)
+ADR refs   : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Prompt     : .github/prompts/monorepo/p4-apple/P7-page-system-CommandsPage.prompt.md
+PARITY     : PARITY_REQUIRED=21  (5 panels + 3 states + 13 strings)
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT — verbatim compliance
+--------------------------------------------------------------------------------
+1 No red-as-green ....... build/test are reported BLOCKED, never green.
+2 No scope narrowing .... all 5 panels + 3 states + 13 strings implemented.
+3 No skip-and-assume .... every gate below was actually executed; raw exits shown.
+4 No stubs as final ..... zero placeholders (placeholder gate green); real chrome
+                          for every state; no "Coming soon"/TODO/fatalError.
+5 No parity shortcuts ... 21/21 enumerated with file+symbol evidence.
+6 No delegation ......... implemented directly (no sub-agents).
+7 No predecessor bypass . binds P1/S8-style source seam, P2 tokens, P3 components,
+                          P4 shell route registry (RouteHostRegistry).
+8 No commit on red ...... all HOST-RUNNABLE gates are green; the Xcode triad is
+                          environmentally BLOCKED (no Xcode.app on host), not red.
+9 No silent drift ....... project.yml/.swiftlint.yml updated for the new P7 group.
+10 EXIT=<int> + STATUS=<DONE|BLOCKED> at footer.
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Darwin host. Toolchain present: swift 6.3.2 (CommandLineTools), swiftlint,
+swiftformat 0.61.1, pwsh, xcodegen 2.45.4.
+NO Xcode.app: `xcodebuild -version` => "xcode-select: error / tool requires Xcode".
+Therefore `xcodebuild build`/`test`, the iOS SDK, the #Preview macro plugin, and the
+XCTest host are UNAVAILABLE. Per the prompt gate contract ("If no Xcode runner is
+available, the gate -> STATUS=BLOCKED"), the build/lint/test triad cannot complete,
+so the terminal status is BLOCKED. Every host-runnable verification was executed and
+is green (below), incl. a real macOS-SDK typecheck of the surface against the REAL
+P2/P3 component library.
+
+--------------------------------------------------------------------------------
+GATES (host-runnable — executed)
+--------------------------------------------------------------------------------
+[EXECUTED] swiftc logic harness (Adapter+Seams+Model, Swift 6 strict, EXECUTED green)
+           projection (online=2/asleep=2 of a 4-vehicle fleet, refresh="15s"),
+           model lifecycle (view.opened once+idempotent, snapshot apply, phases
+           loading/empty/content/error), binary status (web isAsleep), a11y
+           summaries, and all 13 web i18n keys -> English defaults.
+           LOGIC_HARNESS_EXIT=0                                                 OK
+
+[EXECUTED] swiftc -typecheck  (macOS SDK, -swift-version 6, strict concurrency)
+           surface = CommandsPage.{swift,Views,States,Registration,Adapter,Seams,
+           Model}.swift compiled WITH the REAL component library (Sources/Components
+           [-UnitFormatters, the lone Shared-coupled file, unused by this surface],
+           Sources/Design, design-token Tokens.swift, App/AppRoute, App/
+           RouteHostRegistry, Platform/Intents/VehicleEntity, Widgets/Shared/
+           WidgetAppGroup).  0 errors, 0 warnings.
+           MAC_TYPECHECK_EXIT=0                                                 OK
+
+[EXECUTED] swiftc -parse  (every SwiftUI file)
+           CommandsPage{,.Views,.States,.Registration,.Previews,.ModelTests,.Tests}
+           PARSE_EXIT=0                                                         OK
+
+[EXECUTED] swiftlint --strict  (scoped to the 10 new files)
+           "Done linting! Found 0 violations, 0 serious in 10 files."
+           (Project-wide swiftlint --strict reports exactly 1 pre-existing serious
+            violation in dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+            [function_body_length] — outside this prompt's allowed files; the known
+            sibling breakage the P4 precedents record.)
+           LINT_EXIT=0 (this surface)                                          OK
+
+[EXECUTED] swiftformat --lint  (scoped)
+           "0/10 files require formatting."
+           FORMAT_EXIT=0                                                        OK
+
+[EXECUTED] check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/System
+           PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+           PLACEHOLDER_EXIT=0                                                   OK
+
+[EXECUTED] Localizable.xcstrings  — 16 keys added (13 parity + route.commands +
+           commands.loadError + commands.retry), valid JSON, additive-only diff
+           (176 insertions / 0 deletions), 8121 -> 8137 strings.
+           XCSTRINGS_JSON_OK=1                                                  OK
+
+[EXECUTED] xcodegen generate  — validates project.yml; the new TeslaSync/Features
+           source group is picked up: all 10 CommandsPage*.swift files are members
+           of both the TeslaSync (iOS) and TeslaSync-macOS targets in the generated
+           project.pbxproj (60 build-file refs). Generated .xcodeproj is git-ignored.
+           XCODEGEN_EXIT=0                                                      OK
+
+--------------------------------------------------------------------------------
+GATES (require Xcode.app — BLOCKED, not executed)
+--------------------------------------------------------------------------------
+[BLOCKED]  xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync build
+           BUILD_EXIT=BLOCKED  (no Xcode.app; CommandLineTools only)
+[BLOCKED]  xcodebuild ... -scheme TeslaSync test  (incl. CommandsPage.ModelTests/.Tests)
+           TEST_EXIT=BLOCKED   (no Xcode test host)
+[BLOCKED]  #Preview macro expansion (CommandsPage.Previews) — needs Xcode macro plugin
+           PREVIEW_MACRO_EXIT=BLOCKED
+[BLOCKED]  iOS-Simulator SDK typecheck — CommandLineTools has no iOS SDK
+           IOS_TYPECHECK_EXIT=BLOCKED
+NOTE: the surface is proven to COMPILE against the real component library on the
+macOS SDK (MAC_TYPECHECK_EXIT=0); the blocked gates are expected to pass on an
+Xcode runner. Ledger row carries status=blocked until that runner verifies.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=21
+Files (apps/apple/TeslaSync/Features/System/):
+  CommandsPage.swift            — CommandsPage (View scaffold + phase switch)
+  CommandsPage.Adapter.swift    — CommandsVehicle, CommandsVehicleStatus,
+                                  CommandsProjection, CommandsStrings (pure)
+  CommandsPage.Model.swift      — CommandsPageModel (@MainActor @Observable)
+  CommandsPage.Seams.swift      — CommandsVehiclesSource + InMemory*, telemetry, a11y
+  CommandsPage.Views.swift      — CommandsHeader/HeaderActions/StatsGrid/CenterList/
+                                  VehicleCard
+  CommandsPage.States.swift     — StatsEmptyState/StatesErrorPanel/LoadingState/
+                                  NoVehiclesState/ErrorState
+  CommandsPage.Registration.swift — CommandsRouteRegistration (.commands route host)
+  CommandsPage.Previews.swift   — 5 previews (content/states-error/empty/loading/fail)
+  CommandsPage.ModelTests.swift — projection+model+strings XCTest (24 cases)
+  CommandsPage.Tests.swift      — source+registration XCTest (7 cases)
+Nav/strings wiring: Sources/App/AppRoute.swift (.commands case + systemImage + group),
+  Sources/TeslaSyncApp.swift (CommandsRouteRegistration into routeHosts),
+  Localization/Localizable.xcstrings (+16), project.yml + .swiftlint.yml (TeslaSync/Features).
+
+[x] panel  Vehicles    -> Views.CommandsStatsGrid TSStatCard(title:"Vehicles", value: model.total) + Model.total
+[x] panel  Online      -> Views.CommandsStatsGrid TSStatCard(title:"Online", value: model.onlineCount) + Projection.onlineCount (state ∉ {asleep,offline})
+[x] panel  Asleep      -> Views.CommandsStatsGrid TSStatCard(title:"Asleep", value: model.asleepCount) + Projection.asleepCount (total−online)
+[x] panel  Refresh     -> Views.CommandsStatsGrid TSStatCard(title:"Refresh", value: model.refreshLabel="15s") + Projection.refreshIntervalSeconds=15
+[x] panel  GlassPanel5 -> States.CommandsStatesErrorPanel (rendered when model.statesError != nil; web bg-neon-red/5 tinted panel + AlertTriangle)
+[x] state  loading     -> CommandsPage.commandCenterSection .loading => States.CommandsLoadingState (2× TSSkeleton); + Model.isInitialLoading => TSTopProgress
+[x] state  empty       -> .empty => States.CommandsNoVehiclesState (TSEmptyState/ContentUnavailableView); + !hasFleet => States.CommandsStatsEmptyState
+[x] state  success     -> .content => Views.CommandsCenterList(ForEach CommandsVehicleCard) + Views.CommandsStatsGrid
+[x] string Asleep                -> CommandsStrings.asleepLabel ("Asleep") + TSStatCard title; xcstrings "Asleep"
+[x] string Online                -> CommandsStrings.onlineLabel ("Online") + TSStatCard title; xcstrings "Online"
+[x] string Refresh               -> CommandsStrings.refreshLabel ("Refresh") + TSStatCard title; xcstrings "Refresh"
+[x] string Vehicles              -> CommandsStrings.vehiclesLabel ("Vehicles") + TSStatCard title; xcstrings "Vehicles"
+[x] string commands.connectFleet -> CommandsStrings.connectFleet -> States.CommandsNoVehiclesState message; xcstrings
+[x] string commands.noVehicles   -> CommandsStrings.noVehicles   -> States.CommandsNoVehiclesState title; xcstrings
+[x] string commands.pageTitle    -> CommandsStrings.pageTitle    -> Views.CommandsHeader titleBlock (H1 "Vehicle Commands"); xcstrings
+[x] string commands.statesError  -> CommandsStrings.statesError  -> States.CommandsStatesErrorPanel; xcstrings
+[x] string commands.subtitle     -> CommandsStrings.subtitle     -> Views.CommandsHeader titleBlock subtitle; xcstrings
+[x] string commands.title        -> CommandsStrings.title        -> CommandsPage .navigationTitle + route.commands; xcstrings
+[x] string commands.viewHistory  -> CommandsStrings.viewHistory  -> Views.CommandsHeaderActions button; xcstrings
+[x] string common.noData         -> CommandsStrings.noData       -> States.CommandsStatsEmptyState; xcstrings
+[x] string online                -> CommandsStrings.online       -> Views.CommandsHeaderActions onlineTally ("{online}/{total} online"); xcstrings
+PARITY_COVERED=21
+=== END PARITY ===
+
+--------------------------------------------------------------------------------
+HIG / ADR notes
+--------------------------------------------------------------------------------
+ADR-002 adaptive: ViewThatFits header + LazyVGrid(.adaptive) stats => 4-up on macOS/
+  regular, 2-up on compact iPhone; ScrollView + .refreshable retry.
+ADR-004 KMP-core seam: CommandsPageModel binds CommandsVehiclesSource (production =
+  shared vehicles holder via AppContainer on the Xcode build, the same deferral as
+  VehicleSettingsModel); host default = locally-mirrored VehicleDirectoryStore.
+ADR-005 native materials/tokens: TSCard/TSGlassPanel + Color.TS/Font.TS/TSSpacing —
+  no hardcoded colors/fonts; web "glass" => native surface chrome.
+ADR-011 no stubs: every state renders real chrome (skeletons/ContentUnavailableView/
+  error+retry/tinted panel); placeholder gate green.
+ADR-014 i18n: every visible literal via CommandsStrings (LocalizedStringResource) or a
+  LocalizedStringKey resolving from Localizable.xcstrings; web key names preserved.
+ADR-015 a11y: accessibilityLabel/traits on header/stats/cards/panel; ContentUnavailable
+  empty states; Dynamic Type via system fonts; tokens carry light/dark/high-contrast.
+
+EXIT=2
+STATUS=BLOCKED

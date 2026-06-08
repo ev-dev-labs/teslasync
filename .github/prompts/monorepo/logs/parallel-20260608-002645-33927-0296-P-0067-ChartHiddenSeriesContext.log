@@ -1,0 +1,126 @@
+I'll start by understanding the task: porting a web component to native Apple (SwiftUI). Let me first check the environment capabilities and read the web source.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is active. Let me dig deeper into capabilities and read the web source + existing Apple structure before concluding anything.
+
+Critical updates: `/Applications/Xcode.app` **exists** (just not selected), `pwsh`, `xcodegen`, `swiftlint`, `swiftformat` all present. And the web source is a tiny **context bridge** (not a visual UI). Let me verify Xcode works via `DEVELOPER_DIR` and study the hidden-series hook + existing Apple conventions.
+
+Capability **confirmed**: Xcode 26.5 (full), iPhone 16 simulator booted, macOS SDK present, `pwsh`/`swiftlint`/`swiftformat`/`xcodegen` all available. The web source is a **context/state bridge** (`HiddenSeriesState`: hidden set + toggle/isHidden/reset, URL-persisted). Now I must learn the native architecture (state-holders P1/S8, tokens P1/S9, i18n P1/S10, diagnostics P1/S11, nav). Let me map the Apple project structure.
+
+Now I understand the build graph. Critical: `TeslaSync/shared-surfaces` is **not** in `project.yml` sources, and the schemes stage a KMP `Shared.xcframework` via a pre-action — that's a major gate risk I must verify. Let me check build feasibility and the core P1 layers (state holders, tokens, i18n, diagnostics, nav).
+
+The established pattern is clear: each surface is a **multi-file set** (`.swift`, `.Adapter.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`) with **co-located tests**. Biggest gate risk is the KMP `Shared.xcframework` Gradle pre-action. Let me de-risk that and read the canonical example + core P1 layers.
+
+`.Tests.swift` files use `XCTest` + `@testable import TeslaSync` yet feature-views is only in the **app** target sources — a file doing `@testable import TeslaSync` cannot compile into the app module itself. I'm missing how tests are wired. Let me resolve this before designing my file layout, and de-risk the build.
+
+Let me settle the test-wiring question definitively by checking `Tests/Unit/FeatureViews` and generating the project to see which target the co-located `.Tests.swift` files actually land in.
+
+Project generates cleanly. Let me determine empirically which target the co-located `.Tests.swift` files belong to by inspecting the generated project.
+
+Confirmed: co-located `.Tests.swift` files compile into **both app targets** (iOS + macOS), not the test bundles. I need to verify the `@testable import TeslaSync` self-import pattern actually compiles. Quick empirical test:
+
+The pattern works: `@testable import TeslaSync` self-import is a harmless warning (compiles into the app target). Co-located `.Tests.swift` are compile-checked as part of the app build. Now let me study the canonical conventions in depth — one full surface + the core P1 layers (state holders, tokens, i18n, diagnostics, nav).
+
+Let me read the full canonical surface set plus the core P1 layers in one batch.
+
+This is a rich, well-established convention. Let me read the remaining canonical files (Views/Previews/Tests/strings) and the core token/state/nav layers to nail exact APIs.
+
+Let me read the test conventions and the core token/state/nav definitions in one batch.
+
+Now let me read the design tokens and confirm the shared component/token APIs I'll use, plus the nav parser for the URL-state mapping.
+
+The States.swift gives me `TSEmptyState`/`TSErrorDisplay`. Let me read the full token file (correct path) and extract exact public APIs of the components I'll use (panel, motion, toggle, badge, button) plus the chart series model.
+
+There's already a `TSChartFormat.toggleHidden(_ hidden:Set<String>, _ seriesID:)` and `TSChartSeries` — exactly the legend/hidden-series concept my surface bridges. Let me read the chart model + container + the toggle/panel/motion component APIs to align precisely.
+
+I have the full picture. Let me confirm lint/format rules and the exact `TSGlassPanel`/`TSFadeIn` usage, and check for existing `EnvironmentKey` conventions before writing.
+
+`--disable environmentEntry` + `--self remove` noted. Let me read the canonical `EnvironmentKey` example to match the context-injection pattern exactly.
+
+I now have a complete understanding of the conventions. Let me set up tracking and verify the remaining gate tooling (placeholder check) before writing.
+
+All gate tooling present. Forbidden words to avoid in my code (incl. comments): TODO, FIXME, XXX, "Coming soon", "Placeholder", "Lorem ipsum", "not implemented", plus stub/mock per acceptance. Let me record the plan and start building.
+
+Now I'll write the surface files. Starting with the pure adapter (param encode/decode, projection, a11y).
+
+Before finalizing the SwiftUI context/provider, I need certainty on Swift 6 strict-concurrency for constructing the `@Observable` model conditionally inside a View. Let me probe empirically with the exact compiler settings (`-swift-version 6`, complete concurrency).
+
+Approach A compiles cleanly under Swift 6 complete concurrency. I'll make the store + model non-isolated (constructed in `View.init`). Let me update the Model file accordingly.
+
+The model is now non-isolated. Now the main `.swift` — the SwiftUI environment context, provider, namespace, and host surface.
+
+Now the presentational subviews (header, body, row, and the unavailable/empty states).
+
+Now the previews for each state.
+
+Now the test suite — adapter, projection, model (persistence + telemetry), and accessibility.
+
+Now the i18n catalog (`.strings`).
+
+Now wire the new directory into the build (project.yml) and lint inclusion (.swiftlint.yml), mirroring `feature-views`.
+
+Files written and wired. Now fast verification: format my files, then lint them. Let me also kick off the heavy KMP framework build in the background (it's the long pole for `xcodebuild`).
+
+Formatting passes. Let me run swiftlint on the new files while the KMP build runs in the background.
+
+One violation found. Let me isolate it (filter out the progress noise).
+
+The violation is in a **pre-existing** file (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`), not mine. Let me confirm it predates my work and isn't something I touched.
+
+Confirmed: that single `function_body_length` violation exists at committed HEAD in an unrelated dashboard-widget file — it's pre-existing baseline debt, outside my surface's scope. My files are clean. Let me check the KMP build progress.
+
+Gradle still warming up (first-run download). Let me regenerate the Xcode project so it picks up the new files + project.yml changes.
+
+Project regenerated; all 6 Swift files are members of both app targets and the strings resource is included. Let me wait for the KMP framework build to finish.
+
+While the framework builds, let me re-poll Gradle (first run downloads the toolchain, so it's slow).
+
+6 minutes, no output (`--console=plain` hides progress). Let me check whether it's genuinely progressing (Kotlin/Native toolchain download) via a separate shell.
+
+Good — it's genuinely progressing: `~/.gradle` (3.1G) + `~/.konan` (1.6G) downloaded, Kotlin/Native `clang++` actively compiling, daemon at 94% CPU. A debug XCFramework already exists. Let me keep waiting for the release assembly.
+
+Timeout (124) killed it at 10 min — first run is slow but the toolchain is now cached. Let me check what completed and resume with a longer budget.
+
+Release slice not built yet. Let me resume the build (toolchain now cached) in the background without a timeout cap.
+
+While the framework builds, let me re-verify my code compiles in isolation where possible — the pure Adapter has no app dependencies, so I can type-check it standalone to catch errors early.
+
+Pure Adapter type-checks clean. Let me attempt a broader subset compile (my files + their in-module dependencies) to catch errors before the expensive full build. First, check what those dependency files import.
+
+None import KMP — a subset compile is viable. Let me type-check my 5 non-test files together with their in-module dependencies (tokens + the components they use) to catch errors before the full build.
+
+All 8 errors are in `Cards.swift` (missing `TSBadge`/`TSText` from files I didn't include) — **zero** errors in my files. Let me add those deps to get a fully clean subset that definitively includes my files.
+
+**0 errors** — my full surface (provider, model, views, previews) type-checks cleanly under Swift 6 strict concurrency. High confidence. Now let me check the framework build progress.
+
+KMP release framework built successfully. Let me stage it and start the iOS build (build-only first to validate compilation fast).
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now the iOS build — the critical compile validation. Starting it in the background.
+
+The iOS build is running (compiling ~1900 files). Let me wait and monitor.
+
+The iOS app build compiled my surface code cleanly — but failed on `import XCTest` in `.Tests.swift` files compiled into the **app** target. Notably the *first* error is a **pre-existing** file (`AIRestorePanel.Tests.swift`), with mine only a secondary note. This is the app-target/XCTest resolution issue. Let me test whether `ENABLE_TESTING_SEARCH_PATHS=YES` resolves it (it lets non-test targets import XCTest).
+
+Now with the test-search-paths fix, the XCTest errors are gone — but **different pre-existing errors** surface: duplicate/ambiguous `DashboardWidgetSize` and `DashboardWidgetRegistration` in `dashboard-widgets/*` (a parallel-merge collision in another surface's files). My surface compiled fine. Let me gather hard evidence that this is pre-existing baseline breakage outside my scope.
+
+**Definitive evidence**: `DashboardWidgetSize` and `DashboardWidgetRegistration` are each declared in ~10+ **committed, unmodified** dashboard-widget files — duplicate public types that collide in one module. I touched only `.swiftlint.yml`, `project.yml`, and added `shared-surfaces/`. This is pre-existing, batch-wide baseline breakage in other surfaces, outside my scope. My surface compiled cleanly.
+
+Now let me prove my tests actually **pass** via a decoupled SwiftPM harness (since the full app can't build at baseline).
+
+**All 20 unit tests pass** (0 failures) under Swift 6 strict concurrency. My surface logic is verified correct. Now the remaining per-surface gate checks (placeholder, lint, format) scoped to my files.
+
+Every my-surface-scoped check is green: placeholder (0), swiftformat (0/6), swiftlint (0 violations in my files), and 20/20 tests pass. Let me capture the macOS gate's actual state (for honest log evidence) while I assemble the log.
+
+While the macOS build runs, let me record progress and check the result.
+
+Both gate builds fail with the **first error in a pre-existing file** (`AIRestorePanel.Tests.swift` — XCTest in app target), confirming the baseline gate is red independent of my surface. I now have complete evidence. Let me write the gate log honestly.
+
+I have all the evidence. The macOS build's first error is the pre-existing `AIRestorePanel.Tests.swift` XCTest issue; **zero** errors in my files on both platforms. Let me write the comprehensive, honest gate log.
+
+Let me update the plan, do a final working-tree sanity check, and then commit the deliverable.
+
+My footprint is exactly: `shared-surfaces/` (7 files), the log, and the two wiring edits (`project.yml`, `.swiftlint.yml`). The `AIUsageCard.*`/`web/src` changes were pre-existing at session start (not mine). Let me commit the deliverable with a fully transparent message.
+
+Committed (10 files, 1229 insertions). Let me clean up temp artifacts and do a final state check.
+
+The surface is delivered and committed; the working tree's only remaining changes are pre-existing (not mine). All temp artifacts cleaned. Task complete.
+

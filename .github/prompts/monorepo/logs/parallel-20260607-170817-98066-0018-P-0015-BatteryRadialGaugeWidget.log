@@ -1,0 +1,230 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me investigate the existing Apple architecture deeply before deciding on build strategy.
+
+Now I understand the web spec. Let me deeply explore the native architecture — state holders, design tokens, i18n, existing widgets, and the project structure.
+
+Now let me examine the key architectural pieces: state holders, feedback components, the existing gauge, design tokens, diagnostics, and check for sibling dashboard-widget conventions.
+
+This is a KMP-backed architecture. Let me examine the i18n facade, diagnostics (P1/S11), the gauge component, feedback states, design tokens, and find a representative view that binds a state holder.
+
+Let me examine the diagnostics contract (P1/S11), the i18n catalog, the AppContainer (DI), design tokens, and a representative state-bound view + model.
+
+Let me read the diagnostics contract, i18n catalog format, the design tokens location, and a representative model+view pair.
+
+Let me read the Telemetry API, the i18n catalog, the design tokens, and check for a Vehicles store and any native diagnostics usage.
+
+There's a `presentation/vehicles/` directory. Let me read the vehicle state envelope, the vehicles presentation stores/models, and how the existing widget/live views are structured.
+
+Let me read the VehiclesStore (S8 state holder), the generated VehicleState/Vehicle DTOs, and the i18n catalog format.
+
+The generated DTOs are build-time artifacts (KMP). Let me read the web sub-components that define the parity surface: `WidgetShell`, `shared` (gauge hero), `types`, the registry, and the `useVehicles` hook for the state shape.
+
+I have a thorough picture. Let me check the toolchain reality (full Xcode? pwsh? xcodegen?), the web RadialGauge + VehicleState type, the i18n catalog keys, and a native state-bound view idiom.
+
+Critical findings: **Xcode.app exists** (just not selected), **pwsh + xcodegen are installed**, and the i18n catalog uses `translation.<key>` (web keys are pre-mirrored). Let me verify Xcode works via `DEVELOPER_DIR`, confirm the i18n keys exist, find the i18n facade pattern, and check the KMP toolchain.
+
+Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 sim exists, Java 17 + gradlew present, and all 6 i18n keys already exist. Let me check whether `Shared.xcframework` is prebuilt (decides build feasibility) and gather the remaining native idioms.
+
+Let me read the view-binding idiom (LiveDataModifier, RootView), the typography/skeleton/banner components, the app bootstrap, and search for any native diagnostics seam.
+
+Let me read the web RadialGauge (parity target), an existing test's format, the lint/format configs, Cards/Banners components, and FacadeError.
+
+I have a complete understanding of the component library and idioms. Let me read FacadeError, the app bootstrap, and RootView to finalize the wiring idiom, then kick off the KMP framework build in the background while I write code.
+
+I have what I need on idioms. Let me kick off the long-pole KMP framework build in the background, and simultaneously confirm the canonical native path convention from the parity tooling.
+
+Xcode project generated. Let me check the authoritative parity manifest for this surface's canonical native path, then start the framework build.
+
+Decision made: the repo's Apple module is `Sources/` (the prompt's `apps/apple/TeslaSync/...` path is a template placeholder with no matching Xcode target). I'll place code in the real compiled roots and document this in the log. Let me start the KMP framework build (long pole) in the background.
+
+Gradle is running (daemon + workers active). Let me write the plan, then start authoring the pure (testable) logic while the framework builds. Let me check build progress and read the Cards component I'll reference.
+
+The framework build is spinning up (logs still warming). Let me find the source-of-truth for the generated `VehicleState` field names (OpenAPI/codegen input) so I can write the Shared mapping deterministically without guessing.
+
+Found the OpenAPI spec. Let me read the `VehicleState` schema and the codegen config to learn exact field naming.
+
+Key finding: the frozen OpenAPI `VehicleState` has `battery_level`, `is_charging`, `state` — but **no `charge_limit_soc`** (the web reads it as an untyped extended field). So natively the charge-limit ring is inert until the contract adds it. Let me confirm the codegen's property naming.
+
+Let me read the codegen naming logic and check whether the generated `VehicleState.kt` has materialized yet (the build runs codegen first).
+
+Confirmed: Kotlin properties are camelCase with `@SerialName` (so Swift sees `batteryLevel`, `isCharging`, `state`; no `chargeLimitSoc`). Let me check the `Vehicle.id` type and build progress, then write the code.
+
+I have a complete, verified design. Let me confirm the remaining i18n keys exist, check build progress, then write the plan and code.
+
+Two fixes needed: the background build died with its session (only the daemon lingers), and the app-native keys (`error.queryTitle`, etc.) aren't in the catalog — only `translation.*` keys are. Let me find the right existing `translation.*` keys and restart the build properly detached.
+
+Good keys found: `translation.common.{retry,refresh,offline}`, `translation.error.loadFailed`. Let me verify their English values and start the build via the sanctioned detached-async mechanism so it survives.
+
+All keys verified with correct English values, and the detached build is alive (compiling). Let me write the plan and the production widget now.
+
+Now let me create the directory structure and write the production widget.
+
+Now let me refactor the telemetry emission into a testable helper, then write the tests.
+
+Now the test file covering all pure logic, every render state, metadata/size constraints, telemetry, and i18n keys.
+
+Both files written. Let me update todos, format/lint the new files, and check build progress.
+
+swiftformat applied formatting. The build log file keeps getting cleaned from `$HOME` (but a build process is alive). Let me verify lint compliance and redirect the build log to a stable in-repo path. First, lint the new files.
+
+swiftformat passes, but swiftlint `file_length` (≤400 lines, `--strict`) fails — the formatter reflowed to 796 lines. The codebase convention is one concern per file. Let me split into 4 cohesive files. First remove the monolith.
+
+The KMP toolchain (kotlin-native 2.4.0) downloaded and is compiling — the build environment works. Now let me split the widget into 4 cohesive files (each under the 400-line limit).
+
+Now let me format and strict-lint all 5 new files, and check the KMP build artifact.
+
+Both lint gates pass on all 5 files. Let me run the placeholder check and check the KMP build status.
+
+Let me read the actual placeholder patterns and verify my files are clean, then run the checker.
+
+All files clean of forbidden patterns. Let me run the actual placeholder checker, and check the build.
+
+Placeholder check passes. The KMP build is still compiling (Kotlin/Native release for all Apple targets is slow). Let me run the full-project lint/format gates (as the real gate does) while it builds.
+
+Both full-project lint + format gates pass (FMT_EXIT=0, LINT_EXIT=0). Let me verify the XCFramework config includes simulator slices (needed for the iPhone 16 sim gate) while the build runs.
+
+XCFramework includes `iosSimulatorArm64` (matches the iPhone 16 sim on this Apple Silicon host) and `macosArm64`. Both gate platforms are covered. Let me wait for the build to finish.
+
+Still compiling (~17 min in). Let me verify it's actively progressing (not stuck) and keep waiting.
+
+Build is actively compiling (multiple Kotlin/Native workers + konan LLVM `clang++` at full CPU). Let me wait for completion via a polling loop that exits when the XCFramework appears.
+
+Still compiling (~24 min). Let me check progress in parallel and keep waiting.
+
+31 active compiler workers — heavy codegen ongoing. Let me keep waiting for the poller to detect completion.
+
+Still building (~30 min). Kotlin/Native release codegen is genuinely slow. Let me continue waiting.
+
+~35 min elapsed. Let me check whether framework slices are starting to appear (indicates the linking phase is near).
+
+The project `build/` is still empty but 21 compilers are active — this is Kotlin/Native's first-run cache warming under `~/.konan`. Let me confirm cache progress, then keep waiting.
+
+Confirmed: Kotlin/Native is building first-run dependency caches (ktor, serialization, sqliter…) for `ios_simulator_arm64`, then will do device + macOS. This is the one-time cold-cache cost. It's progressing legitimately. Let me keep waiting.
+
+~44 min. Let me check which targets have completed their dependency caches (progress indicator).
+
+The poller completed — let me read its result.
+
+The poller hit its 25-min cap (build still running — 49 workers active, all 3 targets' dependency caches now built). The cold-cache tax is essentially paid; the framework link is next. Let me relaunch the poller.
+
+~53 min. Let me check if the framework binary has started linking (bin/ directory).
+
+Workers dropped to 2 (cache phase done — likely final link). But the project `build/` is empty — outputs may be redirected. Let me locate where the framework is being written.
+
+The build is now in the final whole-program LLVM link phase (`out.bc` → codegen) — the last and slowest step of a release Kotlin/Native build. All lint/format/placeholder gates are already green. Let me keep waiting for the framework.
+
+~62 min. Let me check link progress (whether the first target's framework binary has materialized).
+
+Progress: framework object files (`Shared.framework.o`) are being emitted per target — one already done, others in LLVM codegen. The link + xcframework assembly is next. Let me keep waiting.
+
+The poller's 20-min window elapsed (still linking, ~67 min total). Let me check current state and relaunch.
+
+Two of three targets' framework objects are done; the third is compiling, then link + xcframework assembly. ~68 min in, near completion. Let me relaunch the poller.
+
+~77 min. Let me check whether the link/assemble stage has produced the build directory yet.
+
+The task builds BOTH debug and release variants — it finished the debug link and is now building release dependency caches (84 workers), then the release link. This is a long cold build. Let me confirm the release-cache theory and start a single long-cap poller that notifies on completion.
+
+The release path uses whole-program compilation (no per-dep caches). The reliable signal is the artifact appearing. Let me start a single long-cap poller that backgrounds and notifies me on completion.
+
+The KMP `Shared.xcframework` is a heavyweight cold build (it compiles both debug and release variants for 3 Apple targets via Kotlin/Native + LLVM). It's been running ~80 min and is in the final link/assembly phase. My controllable gates are already green:
+
+- ✅ `swiftformat --lint` (full project, 0/265 need formatting)
+- ✅ `swiftlint --strict` (full project, 0 violations)
+- ✅ `check-placeholders.ps1` (0 placeholders)
+
+I've started a poller that will notify me when the framework finishes, after which I'll run the real `xcodebuild build test` for iOS + macOS. Waiting on the build now.
+
+~90 min. Let me check the actual build state to confirm forward progress.
+
+Release link phase is nearly done (3 framework objects emitted, 1 finishing). The xcframework assembly is imminent. Let me keep waiting.
+
+Release LLVM codegen for the framework objects is the final slow step (3 of 4 done). The xcframework build happens once; both xcodebuild runs will then find it up-to-date. Let me keep waiting.
+
+~103 min. Let me check whether the framework binaries / xcframework have started materializing.
+
+Still in release LLVM codegen (3 of the release framework objects done, more emitting). The build is real and progressing but this cold release Kotlin/Native build is very slow. I'll keep waiting for the framework — the poller will notify me on completion. Let me wait in a longer block.
+
+~113 min. Let me verify continued progress and check for the framework.
+
+~113 min with 21 active compilers — let me check whether my earlier build attempts left **multiple competing gradle builds** running (which would explain the pathological slowness).
+
+**Critical finding:** the gradle build I've been watching is from a **parallel sibling worktree (`slot-20`)**, not my `slot-18` — this is a multi-slot harness sharing 20 cores and the `~/.konan` cache. Let me check whether my own slot-18 build is actually running.
+
+My slot-18 build died with its session — I was watching a sibling slot's build. The shared `~/.konan` debug caches are warm (reusable), which speeds up a restart. Let me relaunch my build as a properly **detached** process that survives session shutdown.
+
+Launched detached. Let me verify my slot-18 build is now actually running.
+
+My slot-18 build is running — and crucially the Kotlin compile steps are hitting the shared gradle cache (`FROM-CACHE`), plus `generateApiClient` just created the DTOs. Let me confirm my field assumptions against the freshly generated `VehicleState.kt` and check progress.
+
+All my field assumptions are confirmed (`batteryLevel: Long`→`Double(...)` ✓, `isCharging: Bool` ✓, no `chargeLimitSoc` ✓, `Vehicle.id: Long` ✓). Compile steps are cache hits; the link is the remaining work. Let me start a poller for my slot-18 artifact and watch the log.
+
+Debug links are done; release links (the slow whole-program opt step) are next, then xcframework assembly. Compiles are cached, so this is the remaining work. Let me start a long poller that notifies me when my slot-18 artifact is ready.
+
+The poller will notify me when my build finishes (BUILD SUCCESSFUL/FAILED or artifact present). Let me wait.
+
+**My slot-18 build succeeded in 7m9s** (cache hits made it fast — the 2h was a sibling slot's build). The xcframework has `ios-arm64`, `ios-arm64-simulator`, and `macos-arm64` slices. Now let me run the real xcodebuild gate. First stage the framework and confirm the scheme.
+
+Framework staged; both gate schemes (`TeslaSync`, `TeslaSync-macOS`) exist. Now let me run the real iOS gate (`build test` on the iPhone 16 simulator), capturing output for the log.
+
+🎉 **iOS gate: TEST SUCCEEDED (exit 0)** — the app (including my widget) compiled and all tests passed. Let me confirm my specific tests ran, then run the macOS gate.
+
+BUILD + TEST SUCCEEDED on iOS with 0 failures. Let me explicitly confirm my test classes executed (honest evidence), then run the macOS gate.
+
+The xcodeproj was generated **before** I created my files — so the iOS build compiled the app *without* my widget/tests. I must regenerate the project and re-run. Let me verify and regenerate.
+
+All 5 of my files are now in the regenerated project (previously 0). Let me re-run the iOS gate so my code actually compiles and my tests run.
+
+iOS re-run: TEST SUCCEEDED (exit 0). Let me confirm my test suites executed this time.
+
+**All 8 of my test suites passed and all 5 files compiled on iOS.** Now the macOS gate.
+
+macOS failed (MAC_EXIT=70) on a **pre-existing code-signing/entitlements config** issue (`DEVELOPMENT_TEAM` is empty; macOS targets need a signing cert) — unrelated to my code (which compiled fine for iOS). Let me re-run macOS with ad-hoc signing to validate my code actually builds + tests on macOS.
+
+Need to fully disable signing (the entitlements demand a provisioning profile). Let me retry with `CODE_SIGNING_ALLOWED=NO`.
+
+macOS **BUILD SUCCEEDED** (my code compiles for macOS too). The test phase can't find the test host — let me check whether the unsigned `.app` was produced and try running just the unit tests.
+
+My 4 source files compiled for macOS (✓), but the macOS **test host** is misconfigured pre-existing: the app's `PRODUCT_NAME` is `TeslaSync` (→ `TeslaSync.app`) while the test target's `TEST_HOST` expects `TeslaSync-macOS.app`. Let me run my macOS unit tests with a corrected TEST_HOST to fully validate.
+
+The global override broke sibling targets. Let me try a cleaner scoped run (TEST_HOST only, unit tests only) — and if the pre-existing config still blocks it, I'll confirm the macOS test bundle at least compiled.
+
+The macOS UI-test target rejects a global `TEST_HOST`. Since the `.xcodeproj` is git-ignored (regenerated), let me inspect the generated `TEST_HOST` and patch it **target-scoped** for the macOS unit-test target only.
+
+Clear pre-existing bug: the macOS test target's `TEST_HOST` points to `TeslaSync-macOS.app/...` but `PRODUCT_NAME` makes it `TeslaSync.app/Contents/MacOS/TeslaSync` (iOS uses the correct path, which is why iOS passed). Let me patch the git-ignored pbxproj (target-scoped) and run the macOS unit tests.
+
+Patch applied (2 TEST_HOST occurrences). The macOS unit-test run is compiling/linking — let me wait for it.
+
+~12 min — let me check the log to see whether it's compiling, running, or stuck (e.g., on an unsigned-host launch).
+
+The macOS unit tests **are running and passing** (`TSDashboardWidgetSizeTests passed`, and many others). Let me grep the full result for all my suites and the final status.
+
+**All 8 of my test suites pass on macOS too** (with the pre-existing TEST_HOST mismatch patched in the git-ignored project + signing disabled). xcodebuild is hanging post-tests (unsigned-host finalize quirk) — the tests already completed. Let me stop it and confirm counts.
+
+iOS: 24 of my test cases passed (8 suites). Let me get the clean macOS tally, verify what's git-ignored, and check git status before writing the log + committing.
+
+Both platforms validated: **24/24 of my tests pass on iOS AND macOS**, all 5 files compile on both. Let me clean up the build log, write the honest gate log, then commit. First the gate log:
+
+Now clean up the temporary build log and commit only my surface files + the gate log (not the pre-existing web changes or git-ignored artifacts).
+
+Exactly my 6 files staged (pre-existing web changes excluded). Let me commit.
+
+Committed (e0d54553). Let me do a final verification of the commit contents and confirm the working tree state.
+
+All done and verified. Let me mark the final todo complete.
+
+Merge made by the 'ort' strategy.
+ ...board-widgets-0015-BatteryRadialGaugeWidget.log | 136 +++++++++
+ .../Dashboard/Widgets/BatteryGaugeProjection.swift | 197 +++++++++++++
+ .../Widgets/BatteryRadialGaugeContent.swift        | 321 +++++++++++++++++++++
+ .../Widgets/BatteryRadialGaugeModel.swift          | 135 +++++++++
+ .../Widgets/BatteryRadialGaugeWidget.swift         | 145 ++++++++++
+ .../Dashboard/BatteryRadialGaugeWidgetTests.swift  | 265 +++++++++++++++++
+ 6 files changed, 1199 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0015-BatteryRadialGaugeWidget.log
+ create mode 100644 apps/apple/Sources/Features/Dashboard/Widgets/BatteryGaugeProjection.swift
+ create mode 100644 apps/apple/Sources/Features/Dashboard/Widgets/BatteryRadialGaugeContent.swift
+ create mode 100644 apps/apple/Sources/Features/Dashboard/Widgets/BatteryRadialGaugeModel.swift
+ create mode 100644 apps/apple/Sources/Features/Dashboard/Widgets/BatteryRadialGaugeWidget.swift
+ create mode 100644 apps/apple/Tests/Unit/Dashboard/BatteryRadialGaugeWidgetTests.swift

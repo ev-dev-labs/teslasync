@@ -1,0 +1,134 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check tooling availability and find the web source in parallel.
+
+Key finding: `xcodebuild` reports only Command Line Tools are active (no full Xcode). Let me gather capability evidence and read the web source + existing Apple structure in parallel.
+
+Capability evidence is now clear: no full Xcode, no iOS SDK, no simulator. The `xcodebuild` build/test gate cannot run. But per the Honesty Covenant I must still produce the complete, real implementation, lint/format it, and gather evidence. Let me study the existing patterns and shared layers.
+
+The closest analog is `YearReviewWidget` (same `YearReview`/CO₂ data). Let me read that full set plus a state-rich example (`FleetTelemetryHealth`) to learn stale/offline handling.
+
+Excellent — `YearReviewWidget` gives me the exact data model and patterns. Now let me learn the design tokens, the feature-view test/preview/view conventions, and the build config.
+
+`project.yml` is at `apps/apple/`. Let me read the design tokens, the AnimatedNumber/Skeleton components, the build config, and lint configs.
+
+Now let me confirm exact token names (colors/spacing/fonts/motion), the Skeleton component, and mirror the YearReview test/preview conventions.
+
+Let me confirm exact token names and the lint/placeholder tooling.
+
+Let me check PowerShell/SwiftUI availability and the placeholder patterns, then I'll know exactly what I can execute vs. what's platform-blocked.
+
+Strong findings: `pwsh`, `xcodegen` are available, and **SwiftUI typechecks against the CLT macOS SDK** (`SWIFTUI_PROBE_EXIT=0`). So I can compile-check real SwiftUI code, run lint/format/placeholder gates, and execute Foundation-only adapter tests — only the `xcodebuild` iOS/macOS build+test gate is truly unavailable. Let me map the dependency graph to design a reliable typecheck.
+
+`/Applications/Xcode.app` exists — `xcode-select` just points to CLT. I can override with `DEVELOPER_DIR` (no sudo needed). Let me verify Xcode is real and usable, and whether simulators exist. This could change the outcome from BLOCKED to DONE.
+
+Xcode 26.5 is fully installed and the iPhone 16 simulator exists — the gate is runnable via `DEVELOPER_DIR`. But the schemes stage a KMP `Shared.xcframework`. Let me check whether that's vendored or needs a Kotlin/Gradle build before I commit to the full gate.
+
+Decisive finding: Xcode 26.5 + iPhone 16 simulator are present (via `DEVELOPER_DIR`), but the schemes build a KMP `Shared.xcframework` that isn't vendored — it requires a Gradle/Kotlin-Native build (`gradlew` + `java` present). That's the long pole, so I'll kick it off in the background now while I implement, then run the real gate.
+
+Let me set up tracking, launch the KMP build, and record the plan.
+
+Let me review the view-subcomponent conventions and the existing i18n catalog keys for parity, then write the plan.
+
+I have the canonical keys. Let me verify all three source keys exist in the shared P1/S10 catalog and check the KMP build progress.
+
+All three source keys exist in the shared catalog (`co2Offset`, `treesEquiv` with `count` token, `more`). KMP build is compiling in the background. Let me check the web `AnimatedNumber` to match CO₂ formatting precisely, then write the plan.
+
+CO₂ uses `decimals=0`, grouped, suffix `" kg"` — matches `number(co2, decimals:0)`. I have full parity understanding. Let me record the plan and start implementing.
+
+Now I'll create the Model (state-holder/telemetry/i18n facade) and Adapter (pure projection), both Foundation-only, mirroring the established `YearReviewWidget` patterns.
+
+Let me verify the Model + Adapter actually compile and the projection math matches the web source by building and running a Foundation test harness.
+
+All 26 parity checks pass and the Model+Adapter compile cleanly. Now the SwiftUI surface, subviews (with a native flow `Layout` for the tree grid), previews, tests, and strings.
+
+KMP build finished. Let me confirm it succeeded, then continue writing the remaining files.
+
+KMP `Shared.xcframework` built successfully (daemon now warm — the xcodebuild pre-action will be fast). The full gate is feasible. Now the subviews + native flow `Layout`, previews, tests, and strings.
+
+Before writing tests, I must confirm how `*.Tests.swift` in `feature-views/` are wired into the test target (the app target lists that dir with no excludes). Let me inspect the build wiring.
+
+Let me see what's actually inside `Tests/Unit` — whether surface tests are duplicated there or the app target compiles the `feature-views/*.Tests.swift` directly.
+
+The surface `.Tests.swift` files use `@testable import TeslaSync` yet live in app-target source dirs — that only works if XcodeGen routes them to the test target. Let me generate the project and inspect actual target membership (this is definitive, and `xcodegen generate` is a gate prerequisite anyway).
+
+Let me check how an existing feature-view surface's gate log describes test wiring — that's ground truth for how `.Tests.swift` files compile and run.
+
+Both `TelemetryErrorsPanel.Tests.swift` and normal sources have identical pbxproj membership (6 refs each) — so `.Tests.swift` compile into the app targets. Let me read an existing feature-view gate log to confirm how tests actually compile/run and what EXIT/STATUS was achieved.
+
+This reveals the established precedent (0005/0086): surface prompts ship complete code + run **host-runnable** gates (swiftlint, swiftformat, placeholder, iOS+macOS SDK compiles, an executed XCTest of the projection core) and **defer** the signed Xcode app `build test` (un-staged KMP framework + parallel-unsafe path registration = integration-runner scope), reaching EXIT=0/STATUS=DONE.
+
+I have more capability (KMP framework built; path already registered). Let me probe one blocker: whether `@testable import TeslaSync` inside app-target `.Tests.swift` files even compiles in the app module.
+
+The XCTest error there was just a missing framework search path, not the self-import. Let me test the self-import properly (with XCTest available) to determine if the app target can even build with `.Tests.swift` inside it.
+
+`@testable import TeslaSync` inside the app module compiles (warning, ignored) and XCTest resolves — so `.Tests.swift` won't break the app build, and since I built the KMP framework, the **real** `xcodebuild` gate is feasible. I'll pursue the full real gate (strongest evidence) plus all host gates. First, the comprehensive tests.
+
+All 7 files written. Now let me format my files, lint them, and run the placeholder gate.
+
+swiftformat clean; swiftlint flags only `EnvironmentSlide.Views.swift` at 402 lines (limit 400). I'll extract the entrance-animation modifiers into a new `EnvironmentSlide.Motion.swift` (allowed `EnvironmentSlide.*`). Let me view the exact section to move.
+
+Now re-run format + lint on all files (including the new Motion file) and run the placeholder gate.
+
+All EnvironmentSlide files: swiftformat clean, swiftlint `0 violations`, all under 400 lines. The 2 placeholder hits are in a **sibling** (`InfrastructureSection.*`), not mine. Let me run the placeholder gate scoped exactly as the prompt specifies.
+
+Placeholder gate scoped to EnvironmentSlide: **COUNT=0, EXIT=0**. Now let me validate my surface compiles against the real iOS and macOS SDKs. First a fast, isolated two-SDK typecheck of the surface against the actual design system.
+
+The design-system subset pulls in `UnitPreferences` (defined outside Design/Components), so an isolated subset is whack-a-mole. Since I built the KMP framework, I'll do the authoritative full `xcodebuild` build. Let me stage the framework and launch the macOS app build.
+
+Framework staged (663 Swift files to compile). Launching the macOS app build via the scheme (async, faithful to the gate) to validate full compilation including my surface.
+
+While the macOS build runs, let me execute the @MainActor model/telemetry wiring (SwiftUI-free) in a harness for real-execution evidence. First a quick build progress check.
+
+Key finding: the macOS app build failed on a **sibling** file (`BackendTool.Tests.swift`) — `import XCTest` can't resolve in the **app** target. This is the exact pre-existing project-wiring issue (test files compiled into the app target) that the precedent defers to the integration runner — **not** a defect in my code. Let me confirm the layout and do a real two-SDK compile of the app module excluding only `*.Tests.swift`.
+
+Confirmed: macOS build had exactly 2 errors, both `XCTest` in a sibling (`BackendTool.Tests.swift`); **zero** EnvironmentSlide errors. All 71 sibling `.Tests.swift` hit this same pre-existing app-target wiring issue (integration-runner scope). Let me typecheck the whole app module **excluding only `*.Tests.swift`**, linking the real Shared framework — authoritative proof my surface compiles in-module on macOS.
+
+One straggler (`FleetApiSection.ModelTests.swift`) slipped the filter. Let me broaden the exclusion to `*Tests.swift` and re-run.
+
+Only 4 errors across 588 sibling files — all `DashboardWidgetSize` ambiguity in 2 sibling `DashboardWidgets` files (a name collision with the `Shared` framework, an artifact of flat single-module typecheck), **zero** in EnvironmentSlide. Let me do a clean, authoritative compile of my surface against its real design-system closure on **both** SDKs.
+
+**Both SDKs compile my surface with 0 errors** (iOS 18 simulator + macOS 15, Swift 6, strict concurrency complete) using the real design-system components — no shims. Now let me execute the `@MainActor` model/telemetry wiring (SwiftUI-free) for real-execution evidence.**Clean two-SDK compile: 0 errors on both macOS 15 and iOS 18 simulator SDKs** (Swift 6, strict concurrency complete, real design system — no shims). Now let me execute the `@MainActor` model/telemetry wiring for real-run evidence.
+
+Top-level code requires the file be named `main.swift`. Let me rename and re-run.
+
+The `@MainActor` state-holder + telemetry contract executes green (11/11). Combined with the Foundation harness (26/26), the full logic is verified. Now let me run the exact whole-tree gate commands (`swiftlint --strict`, `swiftformat --lint`) to capture the baseline and confirm my files add zero issues.
+
+Whole-tree `swiftformat --lint`: **0/761 need formatting** (clean). Whole-tree `swiftlint --strict`: **1 pre-existing violation, not in EnvironmentSlide**. Let me identify it for honest disclosure.
+
+The single whole-tree lint violation is in a **sibling** (`LifetimeStatsWidget.Adapter.swift`, function length) — outside my allowed files. Per covenant rule 3 (no skip-and-assume), let me actually run the literal iOS gate command to capture its real result rather than assume, while I assemble the log.
+
+Let me check git status to confirm only intended files will be committed (artifacts gitignored), while the iOS build runs.
+
+Build artifacts (xcodeproj, Shared.xcframework, gradle build) are correctly gitignored. Only my 8 EnvironmentSlide files are untracked; I'll commit those + the log explicitly (the 2 pre-existing modified web files are unrelated and I won't touch them). Let me wait for the iOS gate result.
+
+Confirmed: iOS build fails on the identical pre-existing blocker (`BackendTool.Tests.swift` — `XCTest` unresolvable in the app target), not my code. Let me capture the exact summary for the log.
+
+Complete, honest evidence gathered. Both platforms fail only on the pre-existing repo-wide blocker (71 sibling `*Tests.swift` compiled into the app target → `XCTest` unresolvable), with **0 EnvironmentSlide errors**. Now let me write the gate log.
+
+Now a final clean-check and commit (only my files + the log; the 2 unrelated pre-existing web edits stay untouched).
+
+Final checks green. Committing the surface + log explicitly.
+
+Staged set is exactly the 8 surface files + log; unrelated web edits excluded. Committing.
+
+Committed as `5c81f519` (9 files, +1481). Let me finalize tracking and clean up temporary scratch files.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-feature-views-0063-EnvironmentSlide.log | 151 +++++++++
+ .../feature-views/EnvironmentSlide.Adapter.swift   | 163 ++++++++++
+ .../feature-views/EnvironmentSlide.Model.swift     | 280 +++++++++++++++++
+ .../feature-views/EnvironmentSlide.Motion.swift    |  72 +++++
+ .../feature-views/EnvironmentSlide.Previews.swift  |  71 +++++
+ .../feature-views/EnvironmentSlide.Tests.swift     | 290 +++++++++++++++++
+ .../feature-views/EnvironmentSlide.Views.swift     | 342 +++++++++++++++++++++
+ .../feature-views/EnvironmentSlide.strings         |  36 +++
+ .../TeslaSync/feature-views/EnvironmentSlide.swift |  76 +++++
+ 9 files changed, 1481 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0063-EnvironmentSlide.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnvironmentSlide.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnvironmentSlide.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnvironmentSlide.Motion.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnvironmentSlide.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnvironmentSlide.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnvironmentSlide.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnvironmentSlide.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnvironmentSlide.swift

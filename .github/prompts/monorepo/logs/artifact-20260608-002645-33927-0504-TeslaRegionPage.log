@@ -1,0 +1,192 @@
+================================================================================
+p4-apple · P7 · page:admin/TeslaRegion — SwiftUI / HIG parity
+log: .github/prompts/monorepo/logs/apple-page-admin-TeslaRegionPage.log
+host: macOS (Darwin, arm64) · Xcode 26.5 (17F42) via DEVELOPER_DIR
+================================================================================
+
+OBJECTIVE
+---------
+Native SwiftUI/HIG parity of the web page TeslaRegionPage
+(web/src/features/admin/pages/TeslaRegionPage.tsx, route /tesla-region),
+adaptive across macOS + iOS/iPadOS (ADR-002/006).
+
+Parity unit (apps/parity/parity-manifest.json → page:admin/TeslaRegion):
+  requiredCount = 2 (strings only). No API data sources, no panels, no charts,
+  no maps, no declared data states at the page level — the web source is a thin
+  PageContainer (title + subtitle) hosting the shared <RegionSettings/> surface.
+  Strings: region.title, region.subtitle.
+
+--------------------------------------------------------------------------------
+DELIVERABLE (files)
+--------------------------------------------------------------------------------
+CREATED
+  apps/apple/Sources/Features/Admin/TeslaRegionPage.swift
+     - public struct TeslaRegionPage: View  (adaptive ScrollView scaffold,
+       reading-column max width 720, Color.TS.bg background, .task { load() }).
+     - public final class TeslaRegionPageModel  (@MainActor @Observable):
+       titleKey="region.title", subtitleKey="region.subtitle" (the two parity
+       items), owns the embedded RegionSettingsModel, exposes load()/refresh().
+     - header renders TSPageTitle(titleKey) + muted Text(subtitleKey).
+     - DEBUG #Preview Data/Empty/Loading.
+  apps/apple/Sources/Features/Admin/TeslaRegionRouteRegistration.swift
+     - registers TeslaRegionPage for AppRoute.teslaRegion in the shell route host.
+  apps/parity/apple-ledger.json   (rows for apple-macos + apple-ios)
+MODIFIED
+  apps/apple/Sources/App/AppRoute.swift
+     - +case teslaRegion; pathSegment "tesla-region"; systemImage "globe";
+       group .account (all switches updated; enum stays CaseIterable/Hashable).
+  apps/apple/Sources/TeslaSyncApp.swift
+     - chains TeslaRegionRouteRegistration.registry(base: SettingsRouteRegistration…)
+       into the \.routeHosts environment (navigation registration).
+  apps/apple/Localization/Localizable.xcstrings
+     - +region.title, +region.subtitle, +route.teslaRegion (en translated;
+       ar/he needs_review English fallback, matching existing route.* entries +
+       the shared i18n catalog apps/shared/i18n where region.* are en-only so far).
+
+--------------------------------------------------------------------------------
+DECISIONS (stated assumptions)
+--------------------------------------------------------------------------------
+1. OUTPUT PATH NORMALIZED. The generator template named
+   apps/apple/TeslaSync/Features/Admin/**, but that path is NOT a source root in
+   apps/apple/project.yml (sources: Sources, TeslaSync/dashboard-widgets,
+   TeslaSync/feature-views, Localization) NOR in .swiftlint.yml `included`. A file
+   there would neither compile into the app targets nor be linted. The repo's real
+   compiled feature root is Sources/Features/<Domain>/ (Sources/Features/Dashboard/
+   already exists). The page was therefore placed at
+   apps/apple/Sources/Features/Admin/ so it actually builds + lints. Per
+   p4-apple/README binding rule 1 the only hard constraint is apps/apple/**.
+2. FIRST-CLASS ROUTE. The shell route host (Sources/App/RouteHostRegistry.swift)
+   is keyed by AppRoute, so a first-class, deep-linkable, testable destination
+   (matching web's first-class /tesla-region page) requires an AppRoute case.
+   Added .teslaRegion. AppRouteParser resolves /tesla-region automatically by
+   pathSegment (no parser edit needed). Group: web's "Integrations" sidebar group
+   has no Apple peer; .account (Settings/Onboarding) is the closest semantic
+   bucket and the underlying surface is features/settings/components/RegionSettings.
+3. DEFERRED LIVE SOURCE. The embedded RegionSettings surface (P4 feature view 0211,
+   already in-repo) binds through RegionSettingsModel ← RegionSettingsSource. The
+   production live source (shared-core useTeslaUserRegion()) is wired centrally in
+   AppContainer.bootstrap(baseURL:), which is deferred app-wide (see AppContainer.swift;
+   precedent: UnavailableVehicleCommanding in TeslaSyncApp). The composition root
+   therefore builds the child model on InMemoryRegionSettingsSource() — the surface
+   shows its initial loading state until that wiring lands. The page is a pure
+   function of its injected model; no networking added here. This is the page-level
+   parity unit (2 strings); the RegionSettings data-binding is a separate unit (0211).
+
+--------------------------------------------------------------------------------
+GATE RESULTS
+--------------------------------------------------------------------------------
+[1] PLACEHOLDER SCAN (ADR-011) — pwsh apps/tools/check-placeholders.ps1
+    -Path apps/apple/Sources/Features/Admin -Language swift
+        PLACEHOLDER_ALLOWED=0
+        PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0   ✔ PASS
+    (also clean against the generator-template path apps/apple/TeslaSync/Features/Admin → 0.)
+
+[2] SWIFTLINT --strict (cd apps/apple; swiftlint config .swiftlint.yml)
+    Scoped to this surface (the prompt's lint gate target) + the two edited nav files:
+        Sources/Features/Admin/TeslaRegionPage.swift
+        Sources/Features/Admin/TeslaRegionRouteRegistration.swift
+        Sources/App/AppRoute.swift
+        Sources/TeslaSyncApp.swift
+        → "Found 0 violations, 0 serious in 4 files."   LINT_EXIT=0  ✔ PASS
+    Whole-project --strict surfaces exactly ONE pre-existing, unrelated violation
+    NOT introduced by this change:
+        TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19
+        Function Body Length (78 > 50) — a P3 widget surface, untouched here.
+
+[3] SHARED.XCFRAMEWORK (ADR-004) — apps/shared/gradlew :core:assembleSharedXCFramework
+        > Task :core:assembleSharedReleaseXCFramework
+        xcframework successfully written out to …/XCFrameworks/release/Shared.xcframework
+        BUILD SUCCESSFUL in 9m 31s
+    Staged → apps/apple/Frameworks/Shared.xcframework (ios-arm64, ios-arm64-simulator,
+    macos-arm64). xcodegen generate → TeslaSync.xcodeproj created.   ✔ PASS
+
+[4] xcodebuild build + test (iOS Simulator, iPhone 17, Debug, signing off)
+        xcodebuild -scheme TeslaSync -sdk iphonesimulator
+          -only-testing:TeslaSyncTests/RouteTests test …
+        → ** BUILD FAILED **  /  ** TEST FAILED **   BUILD_EXIT=65   ✖ BLOCKED
+
+    ROOT CAUSE = PRE-EXISTING, CROSS-SURFACE BREAKAGE IN THE AGGREGATE APP TARGET,
+    NOT THIS PAGE. This is a parallel-execution snapshot in which many other P3/P4
+    surfaces co-exist and the TeslaSync app target does not currently compile as a
+    whole. Three independent, pre-existing categories (all in files NOT touched here):
+      (a) 261 mis-placed unit-test files in app-target source dirs
+          (TeslaSync/feature-views + TeslaSync/dashboard-widgets) — suffixes
+          .Tests.swift (224), .ModelTests.swift (32), .AdapterTests.swift (3),
+          .StateTests.swift (1), .ViewTests.swift (1) — each `import XCTest`, which
+          is unavailable to the app target (project.yml compiles them into the app
+          rather than the XCTest targets). Neutralized for verification WITHOUT
+          touching committed config (the .xcodeproj is git-ignored / regenerated)
+          via EXCLUDED_SOURCE_FILE_NAMES, the same documented technique earlier
+          apple surfaces used for the macOS signing / test-host blockers.
+      (b) ~150 source files emit compile errors from duplicate type definitions
+          ("'DashboardWidgetSize' is ambiguous for type lookup",
+           "'DrivetrainTemperatureUnit' is ambiguous …") across
+          Sources/DashboardWidgets/* vs Sources/Features/Dashboard/Widgets/* vs
+          TeslaSync/dashboard-widgets/* — a definition conflict between sibling
+          widget surfaces. Not excludable without breaking their dependents.
+      (c) 216 macro-expansion errors from a single stale inline #Preview in
+          TeslaSync/feature-views/ToolCard.swift (feature view 0010) and other
+          *.Previews.swift files with out-of-date call sites.
+    Fixing (b)/(c) means editing other prompts' surfaces — out of scope (ADR-006:
+    parity only; this prompt's allowed files are the Admin dir + nav registration +
+    the string catalog + this log).
+
+    THIS CHANGE COMPILES CLEAN. Across the entire whole-module compile, ZERO
+    `error:` diagnostics reference any of the four files in this change. Evidence
+    from the build log (/tmp/ios-test2.log):
+      - `SwiftCompile … apps/apple/Sources/Features/Admin/TeslaRegionPage.swift
+         (in target 'TeslaSync')` is present (the file was compiled).
+      - `grep error: … | grep TeslaRegionPage|TeslaRegionRouteRegistration|
+         App/AppRoute.swift|TeslaSyncApp.swift` → empty.
+    The 26 SwiftCompile failures are all attributable to (a)/(b)/(c) above.
+
+    CONCLUSION: the build/test gate is BLOCKED by pre-existing aggregate-repo
+    breakage external to this parity unit, not by this change. Per p4-apple/README
+    ("prompts that can't run their gate are BLOCKED, not DONE") + the Honesty
+    Covenant ("No red-as-green"), this unit is recorded BLOCKED rather than DONE,
+    with the in-scope gates (placeholder, surface lint, xcframework) green and the
+    two parity items implemented + compiled.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=2
+--------------------------------------------------------------------------------
+[1] string — region.title
+      bound state : TeslaRegionPageModel.titleKey  (LocalizedStringKey "region.title")
+                    apps/apple/Sources/Features/Admin/TeslaRegionPage.swift
+      rendered by : TeslaRegionPage.header → TSPageTitle(model.titleKey)
+      catalog     : apps/apple/Localization/Localizable.xcstrings
+                    "region.title".en = "Region & API"  (key matches web namespace)
+      COVERED ✔
+[2] string — region.subtitle
+      bound state : TeslaRegionPageModel.subtitleKey (LocalizedStringKey "region.subtitle")
+                    apps/apple/Sources/Features/Admin/TeslaRegionPage.swift
+      rendered by : TeslaRegionPage.header → Text(model.subtitleKey)
+                    .font(Font.TS.bodySm).foregroundStyle(Color.TS.textMuted)
+      catalog     : apps/apple/Localization/Localizable.xcstrings
+                    "region.subtitle".en = "Tesla account region and Fleet API endpoint"
+      COVERED ✔
+--------------------------------------------------------------------------------
+PARITY_COVERED=2
+PARITY_REQUIRED=2
+(PARITY_COVERED == PARITY_REQUIRED)
+================================================================================
+
+ACCEPTANCE CRITERIA
+-------------------
+[✔] Every named panel implemented; every anonymous web region reproduced — the web
+    page has none of its own; it hosts <RegionSettings/>, embedded here verbatim.
+[✔] All 2 parity items render from the bound @Observable TeslaRegionPageModel.
+[n/a] loading/empty/error per data source — the page declares 0 data sources; the
+    embedded RegionSettings surface (unit 0211) owns all three states.
+[✔] All visible strings from Localizable.xcstrings; key names match web
+    (region.title / region.subtitle); zero hardcoded literals.
+[✔] Dark mode + Dynamic Type + a11y + SI honored — design tokens (Color.TS/Font.TS),
+    scalable fonts, TSPageTitle .isHeader + combined header a11y element; SwiftUI-native.
+[partial] build + lint + test + placeholder gates — placeholder ✔, surface lint ✔,
+    xcframework ✔; build/test BLOCKED by pre-existing cross-surface breakage (above).
+[✔] PARITY_COVERED == PARITY_REQUIRED (2 == 2).
+
+EXIT=65
+STATUS=BLOCKED

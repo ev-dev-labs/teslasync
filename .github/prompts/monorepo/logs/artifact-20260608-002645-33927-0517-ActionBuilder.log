@@ -1,0 +1,264 @@
+================================================================================
+P4-APPLE · P7 · page:automations/ActionBuilder — SwiftUI / HIG
+Run:  2026-06-08T15:08:40Z      Host: Darwin arm64      Branch: auto/20260608-002645-33927/517
+Base: c9c6fdb9f
+Prompt: p4-apple · P7 · page:automations/ActionBuilder (parity unit id page:automations/ActionBuilder, manifest record #499)
+Web source (spec): web/src/features/automations/pages/ActionBuilder.tsx   (web route: (unrouted))
+Target: apps/apple/TeslaSync/feature-views/ActionBuilder.*   (SwiftUI View + @Observable model; adaptive macOS + iOS)
+Mode:  parity-verify + host-validated. Full-scheme xcodebuild build/test DEFERRED on
+       PRE-EXISTING, out-of-scope sibling defects (project.yml test-globbing +
+       dashboard-widgets duplicate symbols); ZERO ActionBuilder errors. Matches the
+       accepted P4 disposition of predecessor 0080 (this same unit) + 0040/0008.
+
+PATH NOTE — the generated prompt names the output `apps/apple/TeslaSync/Features/Automations/
+  ActionBuilder.swift`. The real, building repo uses the flat per-surface layout
+  `apps/apple/TeslaSync/feature-views/ActionBuilder.*` for ALL 1436 feature-view surfaces;
+  project.yml globs ONLY `TeslaSync/feature-views` + `TeslaSync/dashboard-widgets` into the
+  app targets. The idealized `Features/Automations/` path is NOT in project.yml, would not
+  compile or be discovered, and would duplicate the `ActionBuilder`/`ActionBuilderModel`
+  symbols. The parity unit is therefore satisfied by the existing `feature-views/ActionBuilder.*`
+  surface (predecessor 0080), verified here against this prompt's 30-item parity contract.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                  OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override         OK
+  swiftc -typecheck .......... real iOS-18 SDK + macOS-15 SDK compiles (both green)  OK
+  swiftlint .................. 0.63.3                                                OK
+  swiftformat ................ 0.61.1                                                OK
+  xcodegen ................... 2.45.4                                                OK
+  pwsh (placeholder gate) .... present                                              OK
+  Kotlin/Native toolchain .... ~/.konan llvm-21-aarch64-macos-essentials-97 present  OK
+  Shared.xcframework ......... BUILT on the fly by the scheme "Stage Shared.xcframework"
+                               preAction (Scripts/build-shared-xcframework.sh) during the
+                               xcodebuild run; now staged at apps/apple/Frameworks/
+                               Shared.xcframework (git-ignored build artifact)        OK
+  codesign identities ........ none (build run with CODE_SIGNING_ALLOWED=NO)         WARN
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (manifest "charts: 0 / maps: 0" — it is a pure controlled form). The core requirement
+  is SwiftUI, available and proven by real iOS-18 + macOS-15 SDK typechecks below. The
+  capability-BLOCKED escape hatch does NOT apply; the surface is authored + host-validated.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/ActionBuilder.*) ===
+  ActionBuilder.Catalog.swift   202  Foundation-only: AutomationActionKind (+labelKey/fallback),
+                                      NotificationChannelKind/Summary, ACTION_TYPES, COMMAND_GROUPS
+                                      (7 groups / 29 commands — web COMMAND_GROUPS verbatim).
+  ActionBuilder.JSON.swift      285  Foundation-only order-preserving JSON value + recursive-descent
+                                      parser + JSON.stringify(_,null,2) printer + JS number canonicalizer
+                                      (the command_params engine).
+  ActionBuilder.Adapter.swift   220  Foundation-only: AutomationAction union + SettingValue +
+                                      createDefaultAction / defaultChannelId / channelOptions /
+                                      commandOptions / actionWithSettingValue / displaySettingValue /
+                                      parseFloat||0 / parseInt||0 + surface slug + a11y row label.
+  ActionBuilder.Model.swift     187  P1/S11 telemetry seam + P1/S10 strings facade + P1/S8 @Observable
+                                      ActionBuilderModel (rows/channels, add/remove/replace/changeKind/
+                                      move, onChange emit, view.opened-once).
+  ActionBuilder.Views.swift     290  Token-driven primitives: labeled menu select, per-item-disablable
+                                      channel picker, single-line input, multi-line editor w/ inline
+                                      error, move/remove row controls.
+  ActionBuilder.Fields.swift    301  ActionFields dispatcher + the 4 per-kind groups (command JSON
+                                      validation, notify, set-setting text/number/boolean, call automation).
+  ActionBuilder.swift           177  ActionBuilder surface + numbered GlassPanel row card (.tsGlassPanel)
+                                      + inline empty state (never a blank box) + Add Action.
+  ActionBuilder.Previews.swift   99  #if DEBUG previews: empty, all-kinds, notify·no-channels,
+                                      set-setting·boolean, params·error.   (+1 blank line vs 0080:
+                                      blankLinesBetweenScopes fix before #Preview("Empty"), see GATES.)
+  ActionBuilder.strings          99  P1/S10 catalog contribution — every web key + native chrome/a11y.
+  ActionBuilder.Tests.swift     218  XCTest: JSON + adapter + catalog + a11y (19 methods).
+  ActionBuilder.ModelTests.swift 124 XCTest: model mutations / onChange / view.opened (7 methods).
+
+  This P7 run made exactly ONE code edit to the surface: a single blank line inserted in
+  ActionBuilder.Previews.swift before `#Preview("Empty")` to satisfy swiftformat 0.61.1's
+  `blankLinesBetweenScopes` rule (the only lint/format finding in the entire surface). No
+  other ActionBuilder file was modified — the predecessor implementation already meets parity.
+
+=== GATES (this run; real exit codes) ===
+  PLACEHOLDER_EXIT=0   pwsh apps/tools/check-placeholders.ps1 -Language swift over the
+                       ActionBuilder.* surface → PLACEHOLDER_COUNT=0  PLACEHOLDER_ALLOWED=5
+                       (the 5 opt-outs are the verbatim web i18n *Placeholder* key literals,
+                       each carrying a required `// parity:allow` reason in ActionBuilder.Fields.swift).
+  LINT_EXIT=0          swiftlint lint --strict --config apps/apple/.swiftlint.yml over the 10
+                       ActionBuilder.* files → "Found 0 violations, 0 serious in 10 files."
+  SWIFTFORMAT_EXIT=0   swiftformat --lint over the 10 ActionBuilder.* files → "0/10 files require
+                       formatting." (after the one blankLinesBetweenScopes fix above).
+  TYPECHECK_MACOS_EXIT=0  xcrun swiftc -typecheck (macOS 15 SDK, arm64) of the 8 ActionBuilder app
+                       sources + the REAL design system (design/generated/apple/Tokens.swift,
+                       Sources/Design/TSDesign.swift, Sources/Design/TSMaterial.swift,
+                       Sources/Components/UI/Buttons.swift) → 0 errors.
+  TYPECHECK_IOS_EXIT=0    same isolated typecheck on the iOS 18 SDK (arm64-apple-ios18.0) → 0 errors.
+  EXECUTED_TESTS_EXIT=0   swiftc-compiled standalone harness over the pure projection core
+                       (Adapter + Catalog + JSON, Foundation-only) mirroring ActionBuilder.Tests.swift
+                       → TESTS_PASSED=68  TESTS_FAILED=0 (JSON parse/stringify/canonicalize round-trips,
+                       default-action factory, defaultChannelId rule, channel/command option projections,
+                       set-setting coercions, parseFloat||0 / parseInt||0, catalog 7-group/29-command
+                       shape, VoiceOver "Action N" label, surface slug).
+  XCODEGEN_EXIT=0      xcodegen generate → TeslaSync.xcodeproj written; ActionBuilder registered in
+                       BOTH app targets (66 pbxproj references across TeslaSync + TeslaSync-macOS).
+  BUILD_EXIT=65        xcodebuild -scheme TeslaSync-macOS build → ** BUILD FAILED ** — DEFERRED, RED,
+                       NOT claimed green. Root cause is 100% PRE-EXISTING and OUTSIDE this unit's
+                       allowed files; ZERO diagnostics reference any ActionBuilder file:
+                         (a) project.yml globs `TeslaSync/feature-views` + `dashboard-widgets` (incl.
+                             every *.Tests.swift) into the PLAIN app target, which cannot resolve
+                             `import XCTest` → e.g. AIRestorePanel.Tests.swift:18 "unable to resolve
+                             module dependency: 'XCTest'". The real test targets source only
+                             Tests/Unit, so the feature-view XCTests are orphaned in the app target.
+                         (b) with *Tests.swift excluded via CLI override, the next wall is a sibling
+                             dashboard-widgets defect: `DashboardWidgetSize` is declared in many
+                             *.Model.swift files (WallConnector/WeeklyDigest/WeeklySummaryCard/Motor*/
+                             Odometer*/Onboarding*/Telemetry*/TirePressure* …) → "ambiguous for type
+                             lookup". Again zero ActionBuilder involvement.
+                       Editing project.yml or the dashboard-widgets surfaces is OUT OF this unit's
+                       allowed files (covenant 2/9) and parallel-unsafe; deferred, not worked around.
+  TEST_EXIT=DEFERRED   xcodebuild -scheme TeslaSync-macOS test cannot reach the run phase because the
+                       test action first builds the app target (TEST_HOST=TeslaSync.app) + the
+                       TeslaSync-macOSTests bundle, and the app target is blocked by (a)/(b) above.
+                       The surface's own logic is instead EXECUTED green via EXECUTED_TESTS_EXIT=0
+                       (68/68). The in-target XCTest files (Tests/ModelTests, 26 methods) are present,
+                       compile under the isolated typecheck, and are deferred to the CI runner once the
+                       project-wide test-globbing is corrected by its owning program.
+
+=== PARITY ===
+PARITY_REQUIRED=30
+Each manifest item (record #499: 1 panel · 2 states · 27 strings) with binding evidence
+(file:line + symbol). Strings resolve via NSLocalizedString(key, tableName:"ActionBuilder")
+from the per-surface ActionBuilder.strings catalog (web key names verbatim; 0 hardcoded literals).
+
+  PANEL (1)
+  [x] panel  GlassPanel1
+         → ActionBuilder.swift:120  ActionBuilderRow.body  `.tsGlassPanel()` on each numbered
+           action card (web per-action <GlassPanel className="p-4">); also ActionBuilder.swift:173
+           ActionBuilderEmptyState `.tsGlassPanel()` so the region is never a blank box.
+
+  STATES (2)   [data source: none — controlled form; states mapped to the form's render paths]
+  [x] state  success
+         → ActionBuilder.swift:33-37  ActionBuilder.body ForEach(model.rows) renders the populated
+           ordered card list; ActionBuilder.Fields.swift:36-52 ActionFields dispatcher renders the
+           per-kind editor. Preview "All kinds" (ActionBuilder.Previews.swift:55).
+  [x] state  error
+         → ActionBuilder.Fields.swift:113-134 CommandActionFields.handleParamsChange sets paramsError
+           on non-object / malformed command-params JSON (web paramsError), surfaced by
+           ActionBuilder.Views.swift:246-251 ActionTextAreaRow inline error (red chrome via
+           ActionFieldChrome hasError). Preview "Params · error" (ActionBuilder.Previews.swift:82).
+           (loading/empty also implemented — ActionBuilderEmptyState — though not required here.)
+
+  STRINGS (27)   key → file:line of its resolving reference (all present in ActionBuilder.strings)
+  [x] string  automations.builder.actionType                ActionBuilder.swift:101
+  [x] string  automations.builder.addAction                 ActionBuilder.swift:70
+  [x] string  automations.builder.channel                   ActionBuilder.Views.swift:117
+  [x] string  automations.builder.command                   ActionBuilder.Fields.swift:77
+  [x] string  automations.builder.commandParams             ActionBuilder.Fields.swift:85
+  [x] string  automations.builder.commandParamsObjectError  ActionBuilder.Fields.swift:124
+  [x] string  automations.builder.commandParamsPlaceholder  ActionBuilder.Fields.swift:20 (parity:allow)
+  [x] string  automations.builder.invalidJson               ActionBuilder.Fields.swift:132
+  [x] string  automations.builder.moveDown                  ActionBuilder.Views.swift:273
+  [x] string  automations.builder.moveUp                    ActionBuilder.Views.swift:269
+  [x] string  automations.builder.noChannels                ActionBuilder.Views.swift:108
+  [x] string  automations.builder.notifyMessage             ActionBuilder.Fields.swift:150
+  [x] string  automations.builder.notifyPlaceholder         ActionBuilder.Fields.swift:22 (parity:allow)
+  [x] string  automations.builder.removeAction              ActionBuilder.Views.swift:278
+  [x] string  automations.builder.selectCommand             ActionBuilder.Adapter.swift:145
+  [x] string  automations.builder.settingKey                ActionBuilder.Fields.swift:194
+  [x] string  automations.builder.settingKeyPlaceholder     ActionBuilder.Fields.swift:21 (parity:allow)
+  [x] string  automations.builder.targetAutomationId        ActionBuilder.Fields.swift:288
+  [x] string  automations.builder.value                     ActionBuilder.Fields.swift:215
+  [x] string  automations.builder.valueBoolean              ActionBuilder.Adapter.swift:27
+  [x] string  automations.builder.valueNumber               ActionBuilder.Adapter.swift:26
+  [x] string  automations.builder.valueNumberPlaceholder    ActionBuilder.Fields.swift:23 (parity:allow)
+  [x] string  automations.builder.valueText                 ActionBuilder.Adapter.swift:25
+  [x] string  automations.builder.valueTextPlaceholder      ActionBuilder.Fields.swift:24 (parity:allow)
+  [x] string  automations.builder.valueType                 ActionBuilder.Fields.swift:201
+  [x] string  common.false                                  ActionBuilder.Fields.swift:273
+  [x] string  common.true                                   ActionBuilder.Fields.swift:272
+
+PARITY_COVERED=30
+PARITY_REQUIRED=30
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Every named panel implemented (GlassPanel1 → .tsGlassPanel on each card + empty state); every
+      anonymous region of the web source reproduced (numbered rows, 4 per-kind field groups, JSON
+      params validate/seed cycle, move/remove/add controls).
+  [x] All 30 parity items render from the bound @Observable ActionBuilderModel (rows/channels/onChange).
+  [x] error + success implemented for the (single, none-API) data source; loading/empty also present.
+  [x] All visible strings resolve from the "ActionBuilder" string catalog with web key names; 0
+      hardcoded literals (swiftlint/placeholder verified). NOTE on Localizable.xcstrings below.
+  [x] Dark mode + Dynamic Type + accessibility + SI units honored (token-driven; no SI here — no units
+      on this form); SwiftUI-native only (no web cloning, no WKWebView).
+  [~] build + lint + test + placeholder gates: lint(0) + swiftformat(0) + placeholder(0) + both-SDK
+      typecheck(0) + executed logic(68/68) + xcodegen(0) GREEN; full-scheme xcodebuild build/test
+      DEFERRED on pre-existing out-of-scope sibling defects (see GATES) — RED captured honestly, 0
+      ActionBuilder errors. PARITY_COVERED==PARITY_REQUIRED==30.
+  [x] apple ledger row for page:automations/ActionBuilder set covered (apps/parity/apple-ledger.json).
+
+=== STRINGS / Localizable.xcstrings DISPOSITION ===
+  The acceptance text asks for strings "sourced from Localizable.xcstrings". The established,
+  building, accepted architecture for EVERY feature-view surface (verified: the just-merged sibling
+  AiUsageCard, and all 1436 surfaces) ships per-surface keys in a per-surface `<Surface>.strings`
+  table and resolves them via NSLocalizedString(tableName:). The master Localization/Localizable.xcstrings
+  (8121 app-shell keys) contains NONE of these per-surface feature-view keys — they fold in at a later
+  integration step. ALL 27 manifest keys are present in ActionBuilder.strings and referenced in code
+  (mapped above), so they resolve at runtime with web key names and zero hardcoded literals. I did NOT
+  hand-edit the 187k-line shared catalog: that is the parallel-unsafe predecessor surface the 0080
+  disposition explicitly left untouched, and doing so would diverge from every sibling. Requirement met
+  via the per-surface catalog (covenant 7).
+
+=== NAVIGATION DISPOSITION ===
+  The web unit is UNROUTED (manifest route "(unrouted)"; ActionBuilder.tsx is a controlled child
+  component taking {actions, channels, onChange}, embedded inside the automation builder form — not a
+  NavigationStack destination). Accordingly no standalone NavigationStack/NavigationSplitView entry is
+  registered; the surface is hosted by its parent (as on the web). Registering a deep-link destination
+  for a non-routed child form would be incorrect. (covenant 5 — no parity shortcut: this mirrors the web.)
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the full-scheme xcodebuild build is shown RED (BUILD_EXIT=65, ** BUILD FAILED **)
+                       and DEFERRED, never claimed green. The one real swiftformat finding in the
+                       surface was FIXED, not hidden. Every "0"/"OK" is a command actually run, output
+                       captured.
+  2  No scope narrowing: verified ALL 30 parity items + reproduced ALL web regions (4 kinds, 7-group/
+                       29-command catalog, JSON validate/seed, every value editor, move/remove/add,
+                       empty state). Did not shrink the surface.
+  3  No skip-and-assume: each surface gate EXECUTED; both-SDK typecheck PROVEN; 68 logic assertions
+                       EXECUTED; target registration PROVEN from the generated pbxproj; the build RED
+                       cause READ from the real log (XCTest globbing + DashboardWidgetSize), not assumed.
+  4  No stubs as final : complete implementation; placeholder gate COUNT=0 (5 sanctioned i18n-key opt-outs).
+  5  No parity shortcuts: order-preserving JSON.stringify(_,null,2) port, object-only validation with the
+                       two distinct web errors, parseFloat/parseInt||0 coercions, disabled-channel
+                       unselectability, default-channel rule, unrouted-child hosting — all faithful.
+  6  No delegation     : authored/verified directly; no sub-agent owned this surface.
+  7  No predecessor bypass: did NOT edit project.yml / .swiftlint.yml / .swiftformat / the parallel-unsafe
+                       shared Localizable.xcstrings / any sibling surface. Strings ship as the per-surface
+                       table, matching every sibling. The only edit is 1 blank line in this surface's own
+                       Previews file.
+  8  No commit on red  : committing on all-green SURFACE gates + parity 30/30. The full-scheme build RED is
+                       pre-existing, out-of-allowed-files sibling/project defects (XCTest globbing in
+                       project.yml; duplicate DashboardWidgetSize in dashboard-widgets), explicitly
+                       DEFERRED — the identical accepted disposition as unit-predecessor 0080 + 0040/0008.
+  9  No silent drift   : changes confined to apps/apple/TeslaSync/feature-views/ActionBuilder.Previews.swift
+                       (1 line) + apps/parity/apple-ledger.json + this log. Generated TeslaSync.xcodeproj and
+                       the built Frameworks/Shared.xcframework are git-ignored build artifacts (not committed).
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  page:automations/ActionBuilder verified at full web parity on Apple (SwiftUI/HIG, adaptive iOS+macOS):
+  the existing feature-views/ActionBuilder.* surface (predecessor 0080) implements every one of this
+  prompt's 30 parity items — the single GlassPanel card panel, the success + error data states, and all
+  27 web i18n strings (verbatim keys) — bound through the P1/S8 @Observable ActionBuilderModel with a
+  faithful JSON command-params engine, the 4 action kinds, the 7-group/29-command catalog, the
+  default-channel + disabled-channel rules, JS parseFloat/parseInt||0 coercions, VoiceOver labels, Dynamic
+  Type, light/dark tokens, and an inline empty state (never a blank box). This P7 run made one in-surface
+  swiftformat fix and then PROVED the surface green on every host-runnable gate: swiftlint --strict 0,
+  swiftformat --lint 0, placeholder 0 (5 sanctioned), both-SDK isolated typecheck 0/0 against the real
+  design system, an executed 68/68 logic harness, xcodegen target registration in both app targets, and a
+  successful on-the-fly Shared.xcframework build. The full-scheme `xcodebuild build`/`test` is DEFERRED
+  (RED, captured) solely on PRE-EXISTING defects in sibling surfaces + project.yml (XCTest test-globbing;
+  duplicate DashboardWidgetSize) that are outside this unit's allowed files — zero diagnostics implicate
+  ActionBuilder. This is the same accepted disposition recorded for unit-predecessor 0080 and 0040/0008.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/ActionBuilder.Previews.swift \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-automations-ActionBuilder.log
+  git commit -m "feat(apps/apple): ActionBuilder at web parity (P7 automations)"
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,100 @@
+I'll start by exploring the repository structure and reading the relevant files to understand what needs to be built.
+
+All Apple tooling is present — the gate can actually run. Let me read the component library, design tokens, and navigation infrastructure to follow conventions precisely.
+
+Critical context gathered. The full-app `xcodebuild` is known to be macOS-pending due to pre-existing collisions + unstaged `Shared.xcframework`. Let me read the navigation shell, string catalog, lint configs, and placeholder script.
+
+Now let me study a complete existing feature-view set to mirror conventions exactly. `RedisDiagnosticEmptyState` is the most relevant.
+
+Now I have the full design system. Let me set up tracking and verify the component library is self-contained for isolated type-checking.
+
+A full Xcode.app exists; `xcode-select` just points to CLT. I can use `DEVELOPER_DIR`. Let me verify the Xcode version and available SDKs/simulators.
+
+Full Xcode 26.5 with iOS/macOS SDKs and simulators is available. Let me check how the precedent prompts (ToolCard, FSMTimelineChart) terminated their logs to match the honest convention.
+
+I now have the exact precedent convention: isolated SwiftPM build+test, real-SDK typecheck, xcodegen, lint/format/placeholder green; full-app `xcodebuild` deferred (macOS-pending) → `EXIT=0 / STATUS=DONE`. Let me set up tracking and verify a few component details.
+
+I have a thorough understanding of the component library. Let me check the shared-core client for the diagnostic endpoint and the string-catalog JSON structure, then start implementing.
+
+There's a real KMP `SystemDiagnosticStore` for this page. Let me read the shared-core diagnostic API to bind the adapter and value types correctly.
+
+I have the canonical formatter and the KMP store API. Let me check for a page scaffold/header component, then create the plan and start implementing.
+
+I have everything needed. Let me set up the plan and todos, then implement.
+
+Now implementing. Starting with the Foundation-only models + golden formatter.
+
+Now the i18n helper.
+
+Now the observable model with the runner seam.
+
+Now the 5 panels + actions bar + presentation mapping.
+
+Now the main page scaffold. Let me first check how an existing view wires a `@MainActor @Observable` model to mirror the concurrency pattern.
+
+Confirmed the wiring pattern. Now the main page scaffold.
+
+Now the previews with sample data.
+
+Let me verify the `teslaSyncTheme()` modifier location before writing the adapter and registration.
+
+Now the navigation registration (Shared-free) and the KMP adapter (the only Shared-importing file).
+
+Now add the 16 strings to the catalog. Let me inspect the exact JSON formatting first to minimize the diff.
+
+`json.dumps(..., ensure_ascii=False)` roundtrips identically — I can append cleanly. Adding the 16 keys.
+
+16 keys added cleanly. Let me verify the diff is minimal and wire navigation + project.yml.
+
+Clean diff (16 keys × 11 lines). Now wiring navigation and the build source path.
+
+xcodegen + project.yml wired. Now the strongest host check first: a real-SDK `swiftc -typecheck` of the Shared-free surface with the real components. Let me set that up.
+
+One concurrency fix needed in previews. Fixing it.
+
+macOS typecheck clean under Swift 6 strict concurrency. Now iOS.
+
+Both SDKs typecheck clean. Now format + lint + placeholder gates on the feature directory.
+
+Auto-formatting with swiftformat, then re-verifying.
+
+swiftformat clean. Now swiftlint --strict, placeholder scan, and a re-typecheck post-format.
+
+Placeholder clean. swiftlint linted the whole project (1 violation somewhere) — let me locate it.
+
+Pre-existing violation elsewhere is not mine. My files have 2 fixable issues (nesting + Data→String). Fixing both.
+
+All scoped gates green (swiftlint 0, swiftformat 0, typecheck 0). Now the isolated SwiftPM build + XCTest harness (the precedent's strongest evidence). Setting it up with symlinks to the real files.
+
+Now build + test the harness.
+
+Build succeeds including previews. Now the tests.
+
+All 11 tests pass including the golden formatter. Now xcodegen to confirm the project enumerates the files.
+
+xcodegen clean; all 8 files enumerated. Let me verify the documented pre-existing blockers (to cite accurately), then attempt the full `xcodebuild`.
+
+All documented blockers confirmed; my dir adds zero XCTest files. Now the bounded full `xcodebuild` attempt to capture the pre-existing blocker.
+
+Full `xcodebuild` fails exactly on the pre-existing unstaged `Shared.xcframework` (exit 65) — before compilation, zero errors in my files. This is the documented macOS-pending blocker. Let me read the ledger schema to format the coverage row.
+
+All blockers confirmed pre-existing. Let me align the panel-mapping comment to web source order, then write the log, ledger, and macOS-pending row.
+
+Now writing the parity log.
+
+Now the apple ledger and the macOS-pending row.
+
+Now the macOS-pending row. Let me view the exact table tail to insert cleanly.
+
+All artifacts written. Now a final consolidated verification pass on the final code to confirm every claimed exit is real.
+
+11/11 tests green on final code. Let me review git status before committing.
+
+Some files (`AIUsageCard.*`, two `web/` files) were already dirty before my session — not mine. I'll stage only my files. Let me confirm my non-new edits are clean first.
+
+All my edits are minimal and correct. Staging only my files (leaving the pre-existing dirty files untouched) and committing.
+
+Committed cleanly (`a12ecd47a`, 14 files, +1468). Let me finalize todos and clean up the temp build log.
+
+All 16 todos done, working tree clean of my changes, temp removed. Task complete.
+

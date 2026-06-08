@@ -1,0 +1,174 @@
+=== P4 Feature view 0041 ResponseViewer (Apple) ===
+Surface: apps/apple/TeslaSync/feature-views/ResponseViewer.*
+Web source (spec): web/src/features/admin/components/ResponseViewer.tsx
+Template precedent: feature-views/TelemetryErrorsPanel.* (0009) — presentational
+leaf fed by ApiPlaygroundPage / FleetApiSection props (no view-level HTTP).
+ADR refs: ADR-002, ADR-004, ADR-009.
+
+------------------------------------------------------------------------------
+RUNNER CAPABILITY PROBE (binding for disposition)
+------------------------------------------------------------------------------
+  xcode-select -p            => /Library/Developer/CommandLineTools   (NOT Xcode)
+  xcodebuild -version        => error: tool 'xcodebuild' requires Xcode, but
+                                active developer directory is a command line
+                                tools instance
+  xcrun simctl list devices  => error: unable to find utility "simctl", not a
+                                developer tool or in PATH  (exit 72)
+  swiftc                     => Apple Swift 6.3.2 (present)
+  macOS SDK SwiftUI          => PRESENT
+     (/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/
+      Frameworks/SwiftUI.framework)
+  XCTest module              => ABSENT under Command Line Tools
+  swiftlint 0.63.3           => present
+  swiftformat 0.61.1         => present
+  pwsh                       => present
+
+  => The mandated xcodebuild gate (iOS 18 Simulator + macOS 15 build/test) and
+     the iOS Simulator CANNOT run on this runner: full Xcode is not installed
+     (Command Line Tools only). Per the prompt capability clause
+     ("requires SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15
+     HIG; if unavailable on the runner -> STATUS=BLOCKED with API evidence")
+     and the gate rule ("EXIT=0 only when every step above is 0"), the terminal
+     state is STATUS=BLOCKED. ResponseViewer uses neither Swift Charts nor
+     MapKit (web "Charts / maps used" = none), so the block is solely the
+     absent Xcode app/simulator toolchain, not a missing capability of the code.
+
+------------------------------------------------------------------------------
+MANDATED GATE STEPS (verbatim from prompt)
+------------------------------------------------------------------------------
+  [1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,
+        name=iPhone 16' build test
+      => xcode-select: error: tool 'xcodebuild' requires Xcode ...
+      IOS_EXIT=1            (BLOCKED — no Xcode/iOS 18 simulator on runner)
+
+  [2] xcodebuild -scheme TeslaSync-macOS build test
+      => xcode-select: error: tool 'xcodebuild' requires Xcode ...
+      MAC_EXIT=1            (BLOCKED — no Xcode/macOS 15 SDK on runner)
+
+  [3] swiftlint --strict          (run on the 9 shipped surface files)
+      => Done linting! Found 0 violations, 0 serious in 9 files.
+      LINT_EXIT=0
+
+  [4] swiftformat --lint apps/apple
+      => 0/645 files require formatting, 2 files skipped.
+      FORMAT_EXIT=0
+
+  [5] check-placeholders.ps1 -Path .../feature-views/ResponseViewer*
+      => PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  (all 9 files)
+      PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------------------
+COMPENSATING HOST-RUNNABLE VERIFICATION (all GREEN)
+------------------------------------------------------------------------------
+Because xcodebuild cannot run, the surface was verified against the Command Line
+Tools macOS SDK (which ships SwiftUI) to the maximum extent the runner permits:
+
+  A) Full-surface type-check vs macOS SDK (swiftc -typecheck), 6 surface Swift
+     files compiled together with their shared dependency closure (generated
+     P1/S9 Tokens.swift + Design/{TSMaterial,TSDesign} + Components/UI/{Cards,
+     Buttons,Typography,Badges} + Feedback/Skeletons + Motion):
+        ResponseViewer.Adapter / .Model / .Projection / .swift / .Views / .Snippet
+        => SURFACE_EXIT=0   (compiles clean; caught + fixed a real `body`
+           property/`var body` collision in ResponseSnippetPanel during this run)
+
+  B) #Preview bodies type-checked (macros rewritten to functions so the CLT
+     swiftc — which lacks Xcode's PreviewsMacros plugin — can resolve them):
+        => PV_EXIT=0
+
+  C) Pure-logic runtime harness — Adapter + Model + Projection compiled to a
+     native macOS binary and executed, asserting EVERY golden value used by the
+     XCTest suite (formatBytes boundaries, status/method tone ladders, all four
+     generateSnippet dialects x GET/POST/empty/nil-body, ResponseJSON pretty +
+     escape + key-sort parse, ApiResponse.displayBody stringify-vs-raw, the
+     projection panel/meta/statusLine/body/tone, history rows, a11y summaries):
+        => FAILURES=0
+     Snippet output confirmed BYTE-IDENTICAL to the web generateSnippet
+     (cURL line-continuation ` \`, JS headers/body block, Python json= arg,
+     Go GET vs strings.NewReader(`{}`) fallback).
+
+  D) XCTest files syntax-parse (swiftc -parse; XCTest module absent on runner so
+     full compile is deferred to the Xcode target):
+        ResponseViewer.Tests.swift, ResponseViewer.ProjectionTests.swift
+        => parse exit 0, 0 errors.
+
+------------------------------------------------------------------------------
+SHIPPED FILES (9; all <= 400 lines, matching sibling feature-view convention)
+------------------------------------------------------------------------------
+  ResponseViewer.Adapter.swift        326  pure transforms: ResponseTone,
+                                           status/method classifiers, formatBytes,
+                                           SnippetFormat/SnippetGenerator (4 dialects),
+                                           ResponseJSON (parse + JSON.stringify(.,null,2))
+  ResponseViewer.Model.swift          281  telemetry seam (P1/S11 view.opened),
+                                           i18n facade (P1/S10 RVStrings), domain
+                                           models (ApiResponse/HistoryEntry/ResponseHeader),
+                                           Source seam (P1/S8), @Observable model,
+                                           InMemory source
+  ResponseViewer.Projection.swift     151  pure projection (loading/empty/loaded +
+                                           history rows) + a11y summaries
+  ResponseViewer.swift                 42  composable entry view
+  ResponseViewer.Views.swift          327  glass panel, loading skeleton, empty,
+                                           loaded (status bar/body/headers disclosure),
+                                           history strip + chips + method badge
+  ResponseViewer.Snippet.swift        163  exported SnippetPanel parity + CopyButton
+  ResponseViewer.Previews.swift       137  loading/empty/loaded-success/loaded-error/
+                                           with-history + snippet GET/POST
+  ResponseViewer.strings               31  i18n catalog contribution (table
+                                           "ResponseViewer")
+  ResponseViewer.Tests.swift          268  adapter/snippet/json/displayBody coverage
+  ResponseViewer.ProjectionTests.swift 174 projection/model/telemetry/a11y coverage
+
+------------------------------------------------------------------------------
+PARITY CHECKLIST
+------------------------------------------------------------------------------
+  States reproduced (every branch the web source renders; no hidden surfaces):
+    - loading  -> TSSkeleton (web <Skeleton h-48>)
+    - empty    -> ContentUnavailableView (web EmptyState "Send a request...")
+    - loaded   -> FadeIn { status bar (success<300 / warning<400 / danger tone) +
+                  monospaced body + collapsible Response Headers }
+    - history strip (hidden when empty, web `if length===0 return null`)
+    Note: the web leaf has no separate fetch-error / stale / offline chrome — it
+    only ever receives a finished `response` (or null); an errored request
+    surfaces as the danger-toned status response. Documented in Model header
+    (matches the 0009 TelemetryErrorsPanel precedent's same finding).
+  i18n keys (every web t() key resolves through P1/S10 facade, no literals):
+    playground.response, playground.noResponse, playground.responseHeaders,
+    playground.history, playground.codeSnippet, playground.copy
+    (+ native chrome: responseViewer.loadingA11y/.copied/.replayHint)
+  Accessibility: status bar + history chips carry VoiceOver labels; disclosure +
+    format-tab + copy controls labelled with isButton/isSelected traits;
+    Dynamic Type via system fonts; Reduce Motion via TSSkeleton/TSFadeIn.
+  Telemetry: ResponseViewerModel.start() emits view.opened(surface:"ResponseViewer")
+    exactly once (P1/S11 diagnostics contract).
+  Charts/maps: none (web source uses neither) — no Swift Charts / MapKit needed.
+
+------------------------------------------------------------------------------
+DISPOSITION
+------------------------------------------------------------------------------
+  Production-polished native ResponseViewer shipped at parity with the web
+  source: pure-Swift transforms + snippet generators (byte-identical to web,
+  runtime-verified FAILURES=0), P1/S8 state-holder seam (no view HTTP), P1/S10
+  i18n facade, P1/S11 telemetry, P1/S9 tokens, every web state + i18n key + a11y
+  label, and a full XCTest + ProjectionTests suite. Every HOST-RUNNABLE gate is
+  GREEN (swiftlint --strict 0/9, swiftformat --lint 0/645, placeholders 0, full
+  macOS-SDK type-check of surface + previews, executed runtime harness).
+
+  The two mandated xcodebuild steps (iOS 18 Simulator + macOS 15 build/test) are
+  BLOCKED by the runner: full Xcode is not installed (Command Line Tools only),
+  so xcodebuild and the iOS Simulator are unavailable (evidence above). This is
+  an environment-capability limitation, NOT a defect in the shipped code, which
+  compiles clean against the macOS SDK and is lint/placeholder clean. Per the
+  prompt's explicit capability clause, the honest terminal state is
+  STATUS=BLOCKED with API evidence rather than red-as-green DONE. Re-run the gate
+  on a full-Xcode runner (with the surface registered in apps/apple/project.yml +
+  Shared.xcframework staged — both outside this prompt's allowed files) to clear
+  steps [1]/[2] to DONE.
+
+------------------------------------------------------------------------------
+COMMIT
+------------------------------------------------------------------------------
+  git add apps/apple/TeslaSync/feature-views/ResponseViewer.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0041-ResponseViewer.log
+  git commit -m "feat(apps/apple/feature-views): add ResponseViewer surface (P4)"
+
+EXIT=1
+STATUS=BLOCKED

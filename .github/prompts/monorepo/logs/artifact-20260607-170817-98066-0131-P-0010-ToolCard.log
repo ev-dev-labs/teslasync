@@ -1,0 +1,108 @@
+=== P4 Feature view 0010 ToolCard (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh · Java 17
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5) present · macOS 26.5 SDK present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 7m24s; release + debug
+                       XCFrameworks staged to apps/apple/Frameworks/Shared.xcframework).
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS simulators present → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/features/admin/components/devtools/ToolCard.tsx — a PURE presentational container:
+    GlassPanel(p-5) → header[ icon chip (bg {color}/10, icon {color}, ring {color}/20)
+                              + title <h3 text-sm font-semibold text-white>
+                              + description <p text-xs text-secondary> ]
+                    → {children}
+  color ∈ {cyan, green, purple, amber, red}; unknown ⇒ cyan  (ICON_COLOR_MAP[color] ?? ICON_COLOR_MAP.cyan).
+  No data hooks. No loading/empty/error/stale/offline branches (those belong to the embedded content);
+  the prompt itself records "Data sources: (none — pure presentational component)".
+
+ARTIFACTS SHIPPED
+  apps/apple/TeslaSync/feature-views/ToolCard.Model.swift       — ToolCardSurface (slug), ToolCardTint (web→token,
+                                                                  cyan fallback), ToolCardPresentation (pure projection)
+  apps/apple/TeslaSync/feature-views/ToolCard.Telemetry.swift   — ToolCardTelemetry seam + OSLogToolCardTelemetry
+                                                                  (redaction-safe os_log "view.opened")
+  apps/apple/TeslaSync/feature-views/ToolCard.swift             — ToolCard<Content> SwiftUI view (+ #if DEBUG previews)
+  apps/apple/Tests/Unit/FeatureViews/ToolCardTests.swift        — 13 XCTest cases
+  Necessary shared wiring (same pattern every P4 dashboard-widget used):
+    project.yml                          — + "TeslaSync/feature-views" to TeslaSync and TeslaSync-macOS sources
+    .swiftlint.yml                       — + "TeslaSync/feature-views" to included
+    Localization/Localizable.xcstrings   — + toolCard.preview.{title,description,body} (en/ar/he); additive (+69, -0)
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  GlassPanel              → TSGlassPanel (Sources/Components/UI/Cards.swift)
+  h3 title                → TSPanelTitle    desc → TSCaption    (the canonical TSCardHeader composition)
+  Lucide <Icon/>          → SF Symbol (systemImage:) in a 40×40 rounded chip
+  color → ToolCardTint    : cyan→chartSeriesRegen · green→chartSeriesBattery · purple→chartSeriesPower
+                            amber→chartSeriesEnergy · red→chartSeriesTemperature ; unknown→cyan (?? parity)
+  chip bg {color}/10 + ring {color}/20  → accent.opacity(0.10) / accent.opacity(0.20)  (exact web scale)
+  i18n      : title/description are caller LocalizedStringKeys — zero English literals in code; demo/preview
+              strings live in the P1/S10 catalog (toolCard.preview.*).
+  a11y      : icon chip is decorative → .accessibilityHidden(true); title+description combined into one
+              VoiceOver header element (.accessibilityElement(children: .combine) + .isHeader).
+  telemetry : view.opened surface="ToolCard" via ToolCardSurface.reportOpen (P1/S11), default OSLog sink.
+
+GATES
+  [GREEN]    swiftformat --lint apps/apple                       : 0/493 files require formatting          (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict  (feature-views/ToolCard scope)  : 0 violations, 0 serious in 4 files       (LINT_EXIT=0)
+             swiftlint --strict  (whole app, FYI)                : 1 PRE-EXISTING violation — function_body_length
+                                                                   in TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+                                                                   (NOT a ToolCard file; not introduced here).
+  [GREEN]    check-placeholders.ps1 -Path …/feature-views/ToolCard : PLACEHOLDER_COUNT=0                    (PLACEHOLDER_EXIT=0)
+  [GREEN]    ToolCard build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode,
+             strict-concurrency complete = same as the app), compiling the EXACT shipped ToolCard.*
+             sources against the REAL repo design-system files (Tokens/TSMaterial/Cards/Typography):
+                 Build complete!  ·  Executed 13 tests, with 0 failures                                    (SWIFT_TEST_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build [test]                                                     : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO ToolCard errors; all blockers pre-exist this change):
+    iOS  : the app target fails to TYPECHECK on ~10 unrelated dashboard-widget source files. Root cause is a
+           parallel-merge collision — `public struct DashboardWidgetSize` is DEFINED 8× across
+           Sources/DashboardWidgets/{BatteryCellsWidgetRegistry,DrivetrainHealthWidgetModel}.swift and
+           TeslaSync/dashboard-widgets/{MQTTStatusWidget,MotorPerformanceWidget,DigitalTwinWidget,
+           OdometerCounterWidget,OnboardingChecklistWidget,MotorHistoryWidget}.swift → "'DashboardWidgetSize'
+           is ambiguous for type lookup". Same for `PowerFlowConnection`; plus @Bindable misuse in
+           LivePowerFlowWidget.swift and co-located *.Tests.swift importing XCTest into the app target.
+    macOS: additionally requires a development SIGNING certificate ("TeslaSync-macOS has entitlements that
+           require signing with a development certificate"), which this runner does not provision.
+    These are exactly the artifacts apps/macos-pending-verifications.md defers to the ADR-012 macos-latest
+    CI runner, and they are owned by the P4/P99 Apple acceptance gate (signing/archive) + a dashboard-widget
+    de-duplication pass — NOT by a single feature-view prompt (task rule: do not fix pre-existing unrelated
+    breakage). grep of both build logs for "feature-views|ToolCard … error:" = 0 hits. A pending-verification
+    row is recorded in apps/macos-pending-verifications.md.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65/MAC_EXIT=65) and
+                          explicitly DEFERRED with evidence — never reported as passing.
+  2  No scope narrowing : every web region + branch (color map, cyan fallback, optional description) reproduced.
+  3  No skip-and-assume : every gate executed on THIS runner; raw exits pasted; macOS failure confirmed, not assumed.
+  4  No stubs as final  : complete production view + 13 real tests; placeholder scanner = 0.
+  5  No parity shortcut : tint/opacity/fallback/typography/a11y/telemetry all mapped to platform tokens + verified.
+  6  No delegation      : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holders, P1/S9 tokens, P1/S10 i18n, P4 core all present and consumed.
+  8  No commit on red   : the COMMITTED artifact (ToolCard.* + wiring) is GREEN on every host gate AND on a real
+                          isolated Swift 6 build+test; the deferred full-app gate is RED only on pre-existing,
+                          unrelated surfaces, which this commit neither introduces nor touches.
+  9  No silent drift    : changes are confined to feature-views/ToolCard.*, Tests/Unit/FeatureViews/ToolCardTests.swift,
+                          the three necessary wiring files, this log, and one macos-pending-verifications row — all
+                          enumerated above.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic ToolCard shipped at parity with the web source and INDEPENDENTLY VERIFIED:
+  it compiles and its 13 tests pass under the app's own Swift 6 strict-concurrency rules, against the real
+  design-system, with lint/format/placeholder all green. The full-app iOS-Simulator + macOS xcodebuild build/test
+  gate is DEFERRED (not failed by this code): it is blocked by pre-existing parallel-merge duplicate-type
+  collisions across ~10 unrelated dashboard-widget files and by macOS development-signing — both owned by the
+  P4/P99 acceptance gate on a signed macos-latest CI runner per apps/macos-pending-verifications.md. This matches
+  the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

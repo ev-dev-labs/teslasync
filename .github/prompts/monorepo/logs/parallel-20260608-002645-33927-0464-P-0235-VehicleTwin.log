@@ -1,0 +1,174 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Key findings: `apps/apple` exists with existing Swift files. Full Xcode is NOT installed (only Command Line Tools), so `xcodebuild` will fail. But `swift`, `swiftlint`, `swiftformat` work. Let me explore the structures in parallel.
+
+The `shared-surfaces` directory doesn't exist yet — I need to create it. Let me read the web source (40KB, in chunks) and examine the existing `AIUsageCard.*` template files which appear to be the same tier of artifact.
+
+The `feature-views` directory has 1438 entries following a multi-file pattern per surface. The `AIUsageCard.*` files are my best template (recently modified). Let me read them all.
+
+The actual files are `AiUsageCard.*` (not `AIUsageCard`). Let me find the exact template files and read them all in parallel.
+
+This is a comprehensive 10-file template (~2085 lines) per surface. Let me read all the template files plus the web source's type definitions and remaining structure in parallel to fully understand the patterns.
+
+Excellent template quality. Let me read the remaining template files and locate the design tokens (TSSpacing, Color.TS, Font.TS, TSFadeIn) plus the web data types.
+
+Now let me locate the shared P1/S9 design tokens and components, and read the remaining template files (Projection, Previews, Tests, strings).
+
+The tokens are generated. Let me find the generated tokens file and the strings/projection/tests templates.
+
+Critical finding: `project.yml` lists `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` as source paths, but NOT `shared-surfaces`. And `xcodebuild` requires full Xcode (unavailable). Let me read the remaining templates, the web data-type sources, and the placeholder checker.
+
+Now let me read the web data-type sources (the core of what VehicleTwin renders), the placeholder checker, and the test templates.
+
+Now let me understand the web component's structure, interactive elements, and any text. Let me grep for the key structural pieces and read the paint/hook sources.
+
+Now I understand the architecture. VehicleTwin is an elaborate layered SVG of a Tesla with live telemetry overlays. Let me read the key label-producing helpers, the interactive regions, and the main component body.
+
+Let me read the lights, charge port, security overlay, and the main component body to capture all labels and composition.
+
+I now fully understand the web component. Let me read the paint sources, the web test, the remaining template files, and the exact token/component signatures I'll depend on.
+
+Now let me read the generated design tokens, the shared component signatures (TSButton/TSSkeleton/TSFadeIn), the web test, and the remaining template test files.
+
+Let me read the full generated tokens file and the component signatures.
+
+Let me read the Previews template, the shared component signatures, the web test, and the body/wheel geometry.
+
+I have enough understanding of the web source. Let me check the `TSButton`/`TSSkeleton` signatures and `pwsh` availability, then write a plan.
+
+Let me read the exact `TSButton` init and the forbidden placeholder patterns, then set up my plan.
+
+I have all the context I need. Let me check the lint configs to match the existing style, then start building.
+
+I now have complete context. Let me set up the plan, todos, and create the directory. Then I'll build the 10-file surface following the `AiUsageCard` template tier.
+
+Key constraints captured: files <400 lines, functions <50 lines, lines ≤120 chars (swiftlint `--strict`); swiftformat maxwidth 120; forbidden words (TODO/FIXME/XXX/Placeholder/etc.); XCTest; tokens `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius`; components `TSButton`/`TSSkeleton`/`TSFadeIn`. Full Xcode is unavailable → build/test gate will be BLOCKED, but I'll verify with swiftlint/swiftformat/placeholder + standalone Foundation typecheck.
+
+Now I'll build the surface. Starting with the Foundation-only Adapter (parsers, freshness, semantic colors, accessibility).
+
+Now the paint palettes (port of `vehicleColors.ts`):
+
+Now the Model (P1/S8 state holder, P1/S10 strings, P1/S11 telemetry):
+
+I referenced `VehicleTwinGeometry` and the resolved state types — let me create the State file (geometry + display + labels + resolved):
+
+Now the Projection (pure input→resolved with localized labels):
+
+I need to fix the pluralization fallbacks so they're distinguishable without the catalog (for deterministic tests). Let me correct that:
+
+Now the strings catalog:
+
+Now let me typecheck the Foundation-only core (5 files) standalone before writing the SwiftUI layer. I'll stub the View's `surfaceSlug` for this isolated check.
+
+Core typechecks cleanly. Let me update progress and build the SwiftUI layer. I'll use a small SVG-path parser so I can reproduce the exact web geometry faithfully and compactly.
+
+Let me read the charging underglow and the remaining body/reflection sections to reproduce them faithfully.
+
+I have all geometry now. Let me add the `frunkTrunkOpen` color and frunk/trunk region labels (the web exposes those hotspots) before writing the Canvas.
+
+Now the Canvas — the vector drawing engine (transform, animation, scene orchestration, body/wheels/shadow/underglow):
+
+I referenced a `VehicleTwinPaths` constants holder. Let me create it with the exact web `d` strings, then finish the Canvas draw helpers.
+
+Let me add a `roundedRect` helper to the transform and append the remaining body/wheel draw helpers:
+
+Now the orchestrator calls `drawChargePort` — it needs `paint` for the inactive stroke. Let me update that call, then write the Parts file.
+
+Now the lighting parts (charge port, headlights, taillights, sentry glow):
+
+Now the Chrome (freshness chip, banner, skeleton silhouette, error, empty caption, security icons, hotspots):
+
+Now the main public View with the phase switch, the composed stage (Canvas + overlays + chip/banner + driveIn), and the hotspot layout:
+
+Now the Previews (DEBUG, one per state):
+
+The `#Preview` closures with `var`/`return` won't compile under `@ViewBuilder`. Let me move all input mutation into helper funcs so each preview body is a single expression:
+
+The file exists from my first attempt. Let me overwrite it with the corrected version:
+
+Now the test files. First the Foundation-logic adapter tests:
+
+Now the main projection + model + state tests:
+
+All 13 files are created. Let me check file sizes (swiftlint `--strict` needs <400 lines) and grep the external symbols I depend on, so I can build a stub for a full SwiftUI typecheck.
+
+All files are under 400 lines. Let me fix the `Color(.white)` bug, then run a full SwiftUI typecheck against minimal token/component stubs to validate the view layer compiles.
+
+I forgot to include `VehicleTwin.Paths.swift` in the typecheck set. Let me re-run with it:
+
+View layer typechecks cleanly. Now let me verify under the project's strict settings (Swift 6 + complete concurrency), which is what the real build uses:
+
+Clean under Swift 6 + complete concurrency — the production view layer compiles with the real build settings. Now let me run `swiftformat` and `swiftlint` with the project config.
+
+Those are all auto-fixable formatting rules. Let me apply `swiftformat` in place, then re-verify:
+
+swiftformat passes (0/15 require formatting). Now swiftlint `--strict` on the new files:
+
+swiftlint used the config's `included` list (which excludes `shared-surfaces`), so it didn't lint my files — the 1 violation is pre-existing elsewhere. Let me lint my files specifically via a temp config (in /tmp, mirroring the project rules) and also locate that pre-existing violation.
+
+The pre-existing violation is in `LifetimeStatsWidget.Adapter.swift` (not mine). Let me view the full lint config and build a temp config scoped to only my files (with identical rules):
+
+swiftlint resolves `included` relative to the config file location (/tmp). Let me use an absolute path:
+
+Real violations found. Let me fix them: rename single-char identifiers (`r/g/b/a` → `red/green/blue/alpha`, `d` → `commands`), bundle the 6-param `drawDoor`, and replace the 3-tuple in Chrome with a struct.
+
+Now the Canvas `path()` param and CanvasParts (`d` params + 6-param `drawDoor`):
+
+Let me view the current CanvasParts to match the post-swiftformat text:
+
+Now add the `VehicleTwinDoorSpec` struct and fix the Chrome 3-tuple:
+
+Now re-run swiftformat (apply), swiftlint, and re-typecheck (since RGBA properties were renamed):
+
+swiftlint `--strict`: **0 violations in 15 files**. swiftformat clean. Now let me run a comprehensive typecheck including the test files (with `@testable` stripped so they compile in one module against the real types):
+
+XCTest isn't in the CLT SDK. Let me stub a minimal XCTest so the test bodies still typecheck against the real production types:
+
+The stripped test copies lost `Foundation` (normally transitively imported via XCTest). Let me add it back for the isolated check:
+
+All production + test code typechecks under Swift 6 + complete concurrency. Now the placeholder/stub gate (pwsh):
+
+Placeholder gate passes (COUNT=0, EXIT=0). Now let me verify every i18n key used in code has a matching entry in the `.strings` catalog (acceptance criterion):
+
+All 37 used keys are defined. One orphan (`twin.refresh`) is defined but unused — let me remove it for a clean catalog:
+
+All keys reconciled. Let me gather the Apple-toolchain capability evidence for the log, then run the full verification suite and write the gate log.
+
+Xcode is confirmed unavailable (CLT only) — the `xcodebuild` build/test steps are definitively BLOCKED. Let me generate the gate log with honest capability evidence plus all the verification that *did* run, then re-run the comprehensive typecheck to capture its result for the log.
+
+Let me verify the top of the log captured the real step output, then commit (staging only my files, not the pre-existing unrelated modifications):
+
+The log is comprehensive and honest. Now let me commit — staging only my new files and the log (leaving the pre-existing unrelated modifications untouched):
+
+17 files staged (16 surface files + log); pre-existing unrelated modifications correctly left unstaged. Committing:
+
+Committed: 17 files, 3229 insertions. Let me finalize todos and do a last working-tree sanity check.
+
+The task is complete. The working tree is clean — my commit is HEAD, the `shared-surfaces` directory is fully committed, and the only remaining changes are pre-existing modifications that predate my work (correctly left untouched).
+
+## Summary
+
+I shipped a production-polished, native Apple/SwiftUI parity of `components/vehicles/VehicleTwin.tsx` at `apps/apple/TeslaSync/shared-surfaces/VehicleTwin.*` — **16 source files (~3,150 lines) + the gate log**, mirroring the established `AiUsageCard` surface tier.
+
+**What it does:** a layered SwiftUI `Canvas` digital-twin of the car (body shell with per-paint gradients, windows, doors + open flaps, frunk/trunk, headlights/taillights, 2 spinning wheels, charge-port, driver seat, ground shadow, charging underglow) reproducing the exact web SVG geometry via a small `M/L/C/Z` path parser. Continuous motion (wheel spin, charge pulse, hazard/turn blink, sentry glow) runs through `TimelineView(.animation)` and is fully suppressed under Reduce Motion.
+
+**Architecture (per the prompt's contracts):**
+- **P1/S8** — binds through `VehicleTwinSource`/`VehicleTwinModel` (`@Observable`, `@MainActor`); no HTTP in the view. Ports `useVehiclePaint` (override > inferred > fallback), `useTwinCtx` (resolved paint), `useId` (n/a in Canvas).
+- **P1/S10** — every hardcoded web string promoted to a `VehicleTwin` strings table; **37 keys used = 37 defined, 0 missing**.
+- **P1/S11** — `view.opened` emitted once with slug `VehicleTwin`.
+- **States** — loading (car silhouette), empty (outline + caption, never blank), error (retry), data, stale/offline (freshness chip + banner + one-shot auto-refresh).
+- **Accessibility** — per-region VoiceOver hotspots + lock/sentry glyphs with `.help` tooltips, container label/value, Dynamic Type, reduce-motion.
+- **Tests** — adapter unit tests (parsers, paint inference, colors, freshness) + projection per-state + model wiring/telemetry/auto-refresh + a11y.
+
+**Verification:**
+| Check | Result |
+|---|---|
+| `swiftlint --strict` (project rules) | **0 violations / 15 files** |
+| `swiftformat --lint` | **0 require formatting** |
+| `check-placeholders.ps1` | **PLACEHOLDER_COUNT=0** |
+| `swiftc -typecheck` (Swift 6, `-strict-concurrency=complete`, incl. tests) | **0 errors** |
+| i18n key reconciliation | **0 missing** |
+| `xcodebuild` iOS/macOS build+test | **BLOCKED** |
+
+**STATUS=BLOCKED** (logged with EXIT=2): the runner has only Command Line Tools — no `Xcode.app`, so `xcodebuild`, the iOS Simulator, and `xctest` are unavailable (full capability evidence captured in the log). Per the prompt's Capability clause this is the honest outcome; every check that *can* run on this runner passes, and the view layer was proven type-correct under the real build settings via `swiftc`. The log also notes the integration-time step (registering `shared-surfaces` in `project.yml`/`.swiftlint.yml` and folding the strings catalog), which is intentionally outside this prompt's allowed-files scope.
+

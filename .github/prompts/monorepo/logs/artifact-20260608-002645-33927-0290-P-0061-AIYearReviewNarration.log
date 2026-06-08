@@ -1,0 +1,106 @@
+=== P4 Shared surface 0061 AIYearReviewNarration (Apple) ===
+
+Artifact : apps/apple/TeslaSync/shared-surfaces/AIYearReviewNarration.*
+Web src  : components/ai/AIYearReviewNarration.tsx  (withAiFeature('yir-narration') → AIFeatureCard → useAiStream)
+Runner   : Darwin arm64 · Xcode 26.5 (17F42) · Swift 6.3.2 · macOS 26.5 SDK
+Date     : 2026-06-08
+
+----------------------------------------------------------------------
+SECTION A — Surface deliverable (files shipped)
+----------------------------------------------------------------------
+AIYearReviewNarration.Adapter.swift   — pure core: endpoint, {vehicle_id,year} body, previous-year
+                                        rule, canStart guard, "Ask Helix · <verb>" a11y label, summary.
+AIYearReviewNarration.Model.swift     — P1/S8 state-holder seam (generate/cancel/refresh + stream
+                                        snapshot), P1/S10 i18n facade, P1/S11 view.opened telemetry,
+                                        projection (gated/loading/empty/ready/streaming/done/error),
+                                        live/stale/offline axis + one-shot stale auto-refresh.
+AIYearReviewNarration.Views.swift     — AIFeatureCard scaffold (Helix badge, description, universal
+                                        "Ask Helix" action, AiOutputPanel: thinking indicator / prose /
+                                        Helix error), loading chrome, connectivity banner.
+AIYearReviewNarration.swift           — surface view: withAiFeature gate (→ EmptyView when off),
+                                        header + freshness chip + refresh, accessibilityIdentifier
+                                        "ai-feature-yir-narration-root", VoiceOver summary.
+AIYearReviewNarration.Previews.swift  — 10 previews (every state).
+AIYearReviewNarration.Tests.swift     — adapter + projection + model + i18n + a11y unit tests.
+AIYearReviewNarration.strings         — P1/S10 catalog: web source keys + AIFeatureCard/AiOutputPanel
+                                        scaffold keys + native chrome keys (no English literals in code).
+
+Every web i18n key resolved: yearReview.aiNarration.{title,description,generateButton,badge},
+helix.{askHelix,thinking,badge,ariaLabel,tooltip,errorLabel}, ai.common.errorUnknown.
+Every web render branch reproduced (gate→null, canStart hint, stream idle/streaming/done/error) plus
+the P4 leaf freshness contract (loading/stale/offline).
+
+----------------------------------------------------------------------
+SECTION B — Surface verification (executed on this runner)
+----------------------------------------------------------------------
+[1] swiftformat --lint TeslaSync/shared-surfaces       -> 0/6 files require formatting    FORMAT_EXIT=0  PASS
+[2] swiftlint  (new files, --strict, --no-cache)       -> 0 violations in the 6 surface files            PASS
+[3] check-placeholders.ps1 -Path .../shared-surfaces   -> PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0  EXIT=0 PASS
+[4] swiftc -parse  (all 6 .swift files)                -> PARSE_EXIT=0                                    PASS
+[5] swiftc -typecheck  (surface + REAL token/component sources: Tokens, TSMaterial, Buttons, Cards,
+    Typography, Badges, Skeletons, Motion)             -> TYPECHECK_EXIT=0                                PASS
+    (caught + fixed one real bug: Phase has no `.idle` case in the output-panel switch.)
+[6] swift test  (isolated SwiftPM module, real Xcode toolchain, Swift 6 strict concurrency, macOS 15):
+        AIYearReviewNarrationAdapterTests       8 tests
+        AIYearReviewNarrationProjectionTests    9 tests
+        AIYearReviewNarrationStringsTests       1 test
+        AIYearReviewNarrationModelTests        10 tests
+        ----------------------------------------------------
+        Executed 28 tests, with 0 failures (0 unexpected)   SWIFT_TEST_EXIT=0  PASS
+
+Capability probe (prompt requires SwiftUI + Swift Charts + MapKit, iOS 18 / macOS 15):
+    xcodebuild -version            -> Xcode 26.5 (17F42)                          AVAILABLE
+    simctl list (iPhone 16)        -> iPhone 16 (…CBDDD3140989) Booted            AVAILABLE
+    Swift Charts / MapKit          -> present in macOS 26.5 / iOS 18 SDKs         AVAILABLE
+  => Platform capability is SATISFIED. The block below is NOT a capability gap.
+
+----------------------------------------------------------------------
+SECTION C — Literal gate (xcodebuild build test) — BLOCKED
+----------------------------------------------------------------------
+xcodegen generate (apps/apple)                         -> Created TeslaSync.xcodeproj   XCODEGEN_EXIT=0
+grep -c shared-surfaces project.yml                    -> 0
+
+BLOCKER 1 (project wiring, outside this prompt's allowed files):
+    `TeslaSync/shared-surfaces` is NOT a source path of any target in apps/apple/project.yml
+    (targets compile Sources + TeslaSync/dashboard-widgets + TeslaSync/feature-views only).
+    Wiring shared-surfaces into the app + test targets is the downstream P4 acceptance-gate's job.
+    This prompt's Allowed-files list is {shared-surfaces/AIYearReviewNarration.*, this log}, so
+    project.yml / .swiftlint.yml are intentionally NOT modified. Consequently the app target cannot
+    yet compile or run this surface, and the co-located *.Tests.swift cannot be discovered by the
+    app test bundle. (Verified independently via the SwiftPM rig in [6].)
+
+BLOCKER 2 (KMP Shared.xcframework, unavailable on this local runner):
+    xcodebuild -scheme TeslaSync(-macOS) build test runs the scheme pre-action
+    Scripts/build-shared-xcframework.sh -> apps/shared/gradlew :core:assembleSharedXCFramework
+    (Kotlin/Native via Gradle, "Requires the Kotlin/Native Apple toolchain (full Xcode); on CI this
+    runs on macos-latest" — see apps/macos-pending-verifications.md). apps/apple/Frameworks/ holds only
+    .gitkeep; the xcframework is not present and the Gradle assembly does not complete on this shared,
+    heavily-contended runner (multiple parallel slots invoking the same KMP build; observed running
+    > 5 min, terminated). Both app schemes therefore cannot reach build/test here.
+        xcodebuild -scheme TeslaSync-macOS build      -> BLOCKED (KMP xcframework assembly did not finish)  MAC_EXIT=BLOCKED
+        xcodebuild -scheme TeslaSync (iOS Sim) build test -> BLOCKED (same KMP pre-action)                  IOS_EXIT=BLOCKED
+
+PRE-EXISTING repo debt surfaced by the gate's repo-wide lint/format (NOT in this surface, NOT in
+allowed files — left untouched per scope):
+    swiftlint --strict   : 1 serious — TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+                           (function_body_length, 78>50).                                 LINT_EXIT=2
+    swiftformat --lint . : 1 file    — TeslaSync/feature-views/ActionBuilder.Previews.swift
+                           (blankLinesBetweenScopes). 1/1919 files require formatting.     FORMAT_EXIT=1
+    The 6 AIYearReviewNarration surface files are clean under BOTH tools.
+
+----------------------------------------------------------------------
+SECTION D — Acceptance criteria
+----------------------------------------------------------------------
+[x] Surface renders all web states (+P4 leaf states): gated/loading/empty/ready/streaming/done/error/stale/offline.
+[x] Hooks bind through the P1/S8 state-holder seam (AIYearReviewNarrationSource); no HTTP in the view.
+[x] Every i18n key from the web source has a matching P1/S10 catalog key (.strings); no English literals in code.
+[x] Accessibility labels on every interactive element (generate, refresh) + container summary + a11y identifier.
+[x] Tests: adapter unit + per-state projection + model/telemetry + i18n + a11y — 28/28 PASS via real toolchain.
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (placeholder gate EXIT=0).
+[ ] Literal xcodebuild build test EXIT=0 — BLOCKED (Section C: KMP xcframework + pending project wiring,
+    both outside this prompt's allowed files). Platform capability itself is AVAILABLE; surface verified
+    equivalently via swift test (28/28) + full type-check against the real design-token/component sources.
+
+----------------------------------------------------------------------
+EXIT=1
+STATUS=BLOCKED

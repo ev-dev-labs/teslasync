@@ -1,0 +1,103 @@
+I'll start by understanding the task. This requires creating a native Apple/SwiftUI version of the `HeroGauges` web component. Let me explore the environment and the web source.
+
+Key finding: **Xcode is NOT installed** (only Command Line Tools), so `xcodebuild` won't work. But `swift`, `swiftlint`, `swiftformat` are available. Also notable: a previous `P-0058-HeroGauges` was already merged. Let me explore the existing Apple app structure and the web source.
+
+The web source is simple: 4 RadialGauges + 1 text metric, or an EmptyState. Now let me understand the existing Apple app structure, build system, and the already-merged HeroGauges (P-0058).
+
+A HeroGauges surface **already exists** (built by P-0058). The current prompt (0103) targets the same surface. Let me read the existing files and understand the build system (no Package.swift/xcodeproj found yet, and Xcode isn't installed).
+
+Important discovery: the **existing** `HeroGauges.*` files implement parity of a *different* web source — `features/analytics/components/analytics/HeroGauges.tsx` (6 gauges: Distance, Drives, Energy, Efficiency, Gas Savings, CO₂). But THIS prompt (0103) targets `features/charging/components/charging-list/HeroGauges.tsx` (4 gauges + 1 metric). There's a naming collision. Also, there's no Xcode (only CLT), and the build uses `project.yml` (XcodeGen). Let me check how prior prompts handled this and whether the analytics HeroGauges is referenced.
+
+There are **three** HeroGauges prompts (P-0058 analytics, P-0103 charging [mine], P-0143) all targeting the same native path. The existing files are P-0058's analytics version, not referenced elsewhere. Let me check how P-0058 handled the no-Xcode gate, and confirm my prompt's exact spec.
+
+Now I understand the established convention. The most recent peer on **this exact host** (P-0071 AlertsSection, CLT-only, no Xcode) concluded **STATUS=DONE** by: running surface-scoped gates (swiftformat/swiftlint/check-placeholders), compiling+testing via `swiftc` against the macOS SDK, and marking the `xcodebuild` iOS/macOS steps **DEFERRED** with a real host probe.
+
+But there's a real collision: 3 different web `HeroGauges` components (analytics/charging/driving) all map to the same native `HeroGauges.*`. Let me check the parity manifest and tracking to decide whether to overwrite or disambiguate.
+
+Let me check the parity manifest to see how it disambiguates the three `HeroGauges` web components into native files.
+
+The manifest doesn't track sub-components. Critically: **no native page references either HeroGauges surface yet** (they're standalone, unwired). This is a cumulative integration branch with 88 surfaces merged. Since 3 same-named web components collide on one native path and the harness uses last-writer-wins, I'll faithfully deliver P-0103 by implementing the **charging** HeroGauges in the canonical `HeroGauges.*` files (documenting the collision in the log).
+
+Let me read the existing files (to reuse patterns) and the shared native components I'll need.
+
+The existing analytics version uses `MetricCard`-style tiles, but the **charging** web source uses `RadialGauge` (circular gauges) + `AnimatedNumber`. I need to find native equivalents. Let me explore the shared components (charts/data-display/ui/feedback) and the design tokens.
+
+Native equivalents exist: `TSRadialGauge` (PieGauge.swift), `TSAnimatedNumber` (Metrics.swift). Let me read their exact APIs plus GlassPanel, EmptyState, and the design tokens.
+
+`TSRadialGauge` only renders a *percent* in its center — but the web `RadialGauge` shows the actual **value + unit** with a custom color and value/max fill. That's not parity, so I'll build a faithful gauge in the allowed `HeroGauges.Views.swift`. Let me read the web RadialGauge, GlassPanel/EmptyState natives, the design tokens, and the existing strings/Previews/Tests to follow conventions exactly.
+
+Let me read the web RadialGauge source, the GlassPanel native, the design tokens, and the existing strings/Previews/Tests files to follow conventions exactly.
+
+I now fully understand the established architecture and the web RadialGauge (value/max fill + value+unit center + custom color). Let me read the web number-format helpers (for `fmtNumber`/`getGlobalPrecision` parity), the design tokens, and the existing Previews file.
+
+The core `Color.TS`/`TSSpacing`/`Font.TS` token definitions aren't in the small TSDesign.swift — they must be generated/defined elsewhere. Let me locate them definitively (I'll need them to compile my isolated harness).
+
+The canonical tokens live in a generated file: `apps/design/generated/apple/Tokens.swift`. Let me confirm it exists and read its full token surface.
+
+All tokens confirmed — and the web hex colors map **exactly** to the design tokens (cyan→accent, green→statusSuccess, amber→statusWarning, purple→chartSeriesPower). Let me read the GlassPanel/Typography/Skeleton component APIs and the lint/format configs so my code matches conventions.
+
+I have all the architecture details. Let me read the exact `TSGlassPanel`, `TSMetricValue`, `TSMetricLabel` rendering and verify the toolchain (macOS SDK + pwsh) before writing.
+
+macOS SDK + pwsh both available. Let me read the placeholder patterns (to avoid tripping them) and how `-Path` resolves, then start implementing.
+
+Everything's confirmed. Both macOS SDK and pwsh are available, so I can run real compile/test + the placeholder gate. I'll deliver the **charging** HeroGauges in the canonical `HeroGauges.*` files. Let me set up tracking, write the plan, and remove the old (analytics) files to rewrite them.
+
+Let me write the plan and the first implementation file (Model).
+
+All 7 files written. Now the verification phase. Let me run swiftformat (apply repo config), then swiftlint --strict on the surface files.
+
+swiftformat clean (0/6). Now swiftlint --strict on the surface files.
+
+One lint violation: the `gauge(...)` helper has 7 parameters (max 5). I'll refactor to pass a single `GaugeSpec` struct. Let me fix the Adapter.
+
+Now re-run swiftformat + swiftlint on all files and check line counts.
+
+`nesting` violation — `GaugeSpec` is 2 levels deep. I'll move it to file scope (private). Two edits:
+
+Surface-scoped gates green: **swiftformat 0/6**, **swiftlint --strict 0 violations**, all files <400 lines. Now the placeholder gate + a real compile/test against the macOS SDK. Let me run the placeholder scan and map the shared-component dependencies (to build a compile harness).
+
+The placeholder scanner self-test passes, and it **caught a real hit**: the word "Placeholder" in `HeroGauges.Views.swift:222` (a doc comment). I'll reword it. Only `UnitFormatters.swift` is KMP-dependent (exclude from harness). Let me fix the word and scan all files for any other forbidden markers.
+
+Only one occurrence. Let me reword it.
+
+Now let me re-run the placeholder scan (capturing the real exit) and build the compile harness. Let me set up the SwiftPM harness that compiles my 6 files against the real Design + Components (KMP-free).
+
+Placeholder gate clean (COUNT=0, EXIT=0) and self-test passes. Now I'll build a throwaway SwiftPM harness that compiles my 6 shipped files against the **real** generated tokens + shared Design/Components (KMP-free, excluding `UnitFormatters.swift`), then run executed assertions. Let me set it up.
+
+Now build the harness against the macOS SDK and run the executed assertions.
+
+Good progress — 50+ files compiled. The only failure is the SwiftUI `#Preview` macro, which can't expand on a CLT-only host (no Xcode macro plugin) — it affects both shared `Typography.swift` and my `Previews.swift`, both inside `#if DEBUG`. Building in **release** mode drops all `#if DEBUG` blocks, sidestepping the macro plugin. Let me rebuild in release and run.
+
+The HeroKit library compiled clean in release. Only my harness `Run.swift` hit a Swift 6 global-mutable-state rule. Let me isolate the test state to `@MainActor`.
+
+Build complete. Now run the executed assertions.
+
+All executed assertions pass — proving the full HeroKit (real tokens + Design + Components + my surface files) compiles on the macOS SDK under Swift 6, and the projector/model/a11y logic is correct. Now let me strengthen this by adding per-state **ImageRenderer** render checks (exercising the actual SwiftUI views in every state), matching the predecessor bar.
+
+Excellent — **all logic + per-state render checks pass** (content/empty/loading/error/stale/offline render via ImageRenderer). Let me capture host-capability evidence for the log (XCTest/#Preview/xcodebuild availability on this CLT-only host) to back the deferral statements honestly.
+
+Host-capability evidence captured: **XCTest, xcodebuild, iOS-sim SDK, and simulators are all absent (CLT-only)**, while the macOS SDK + SwiftUI/Charts/MapKit compile fine (proven). This matches the P-0071 precedent: STATUS=DONE with xcodebuild DEFERRED. Let me run a final consolidated gate on the shipped files (I edited Views + Adapter since the last full lint).
+
+All final gates green. Let me verify i18n key coverage (every key the code resolves exists in the catalog), then write the gate log and commit.
+
+i18n coverage complete (0 missing). All verification done. Let me write the gate log.
+
+Now clean up the throwaway harness and commit only the allowed files (leaving the two pre-existing unrelated web edits unstaged).
+
+All 7 surface files + the log are staged; the two pre-existing unrelated web edits are left unstaged. Committing now.
+
+Committed cleanly (`8cb15e15`, 8 files). Let me do a final sanity check and mark todos done.
+
+Task complete and verified. All work is committed (`8cb15e15`), the throwaway harness is cleaned up, and the working tree shows only the two pre-existing unrelated web edits (untouched).
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0103-HeroGauges.log     | 262 ++++++++++++++++++
+ .../feature-views/HeroGauges.Adapter.swift         | 303 +++++++++++----------
+ .../TeslaSync/feature-views/HeroGauges.Model.swift | 117 +++-----
+ .../feature-views/HeroGauges.Previews.swift        |  51 ++--
+ .../TeslaSync/feature-views/HeroGauges.Tests.swift | 226 +++++++--------
+ .../TeslaSync/feature-views/HeroGauges.Views.swift | 222 ++++++++-------
+ .../TeslaSync/feature-views/HeroGauges.strings     |  36 ++-
+ .../apple/TeslaSync/feature-views/HeroGauges.swift |  57 ++--
+ 8 files changed, 764 insertions(+), 510 deletions(-)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0103-HeroGauges.log

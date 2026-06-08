@@ -1,0 +1,197 @@
+================================================================================
+P4-APPLE · P7 · page:system/DataExport — SwiftUI / Apple HIG parity
+Artifact: apps/apple/TeslaSync/Features/System/DataExportPage.swift (+ split files)
+Web source: web/src/features/system/pages/DataExportPage.tsx (route /data-export)
+ADR refs: ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+================================================================================
+
+--- ENVIRONMENT ASSESSMENT -----------------------------------------------------
+xcodebuild  : PRESENT but UNUSABLE — `xcode-select` points at
+              /Library/Developer/CommandLineTools (Command Line Tools, not a full
+              Xcode). `xcodebuild -version` errors. => no Xcode runner.
+Shared.xcfw : apps/apple/Frameworks/Shared.xcframework is a .gitkeep stub (the KMP
+              core is not staged on this host), so the app target cannot link.
+swiftlint   : PRESENT (/opt/homebrew/bin/swiftlint)        -> RAN
+swiftformat : PRESENT (/opt/homebrew/bin/swiftformat)      -> RAN
+swiftc      : PRESENT (/usr/bin/swift, -frontend -parse)   -> RAN (syntax-only)
+pwsh        : PRESENT (/opt/homebrew/bin/pwsh)             -> RAN placeholder gate
+
+Per the prompt gate contract ("If no Xcode runner is available, the gate ->
+STATUS=BLOCKED"), the xcodebuild build + test steps are BLOCKED on this host. All
+other gate steps (placeholder scan, swiftlint --strict) were executed and PASS.
+Honesty Covenant rule 1 (no red-as-green): the build/test were NOT run, so they
+are reported BLOCKED, not green.
+
+--- ARCHITECTURE (Shared-free page + protocol seam; precedent: CostSavingsPanel,
+    LiveDrivetrainHealthProvider, VehicleSettingsModel) -------------------------
+* The page binds an @Observable DataExportPageModel through a DataExportService
+  seam (web hooks ported verbatim at the Swift call sites: useExportColumns,
+  useCreateAccountExport, + useExportJobs, useVehicles, useCreateExport).
+* Reads in the live adapter use the proven FlowBridge + ResourceSuccess projection
+  over the real KMP ExportsStore/VehiclesStore (P1/S8). Kotlin suspend+Result
+  mutation interop has NO Swift precedent in this repo (only CoreSpotlight uses
+  `try await`), so to avoid fabricated interop the two write paths are injected
+  closures, finalized at bootstrap on the macOS gate (the same CI-pinning the
+  facade documents). The live adapter is behind `#if canImport(Shared)`.
+* Navigation: added AppRoute.dataExport (pathSegment "data-export", group .system)
+  so AppRouteParser resolves /data-export; DataExportRouteRegistration hosts the
+  page in the route-host registry, wired in TeslaSyncApp (mirrors Settings).
+* Units: bytes/counts/durations are non-unit-bearing; formatting at the display
+  boundary via the pure DataExportProjection. SI rule (ADR-014) honored.
+
+--- FILES (apps/apple/TeslaSync/Features/System/**) ----------------------------
+     164 DataExportPage.Account.swift
+     159 DataExportPage.Badges.swift
+     169 DataExportPage.Columns.swift
+     188 DataExportPage.History.swift
+      62 DataExportPage.Layout.swift
+     163 DataExportPage.LiveService.swift
+     339 DataExportPage.Model.swift
+     139 DataExportPage.PreviewSupport.swift
+     225 DataExportPage.Projection.swift
+      32 DataExportPage.Registration.swift
+     209 DataExportPage.Stats.swift
+      36 DataExportPage.Strings.swift
+     141 DataExportPage.swift
+     264 DataExportPage.ViewModel.swift
+     239 DataExportPage.Wizard.swift
+    2529 total
+
+--- FILES (navigation registration + catalog + build wiring) -------------------
+  M apps/apple/Sources/App/AppRoute.swift        (+ .dataExport case/path/icon/group)
+  M apps/apple/Sources/TeslaSyncApp.swift         (chain DataExportRouteRegistration)
+  M apps/apple/project.yml                         (+ TeslaSync/Features source path, both app targets)
+  M apps/apple/.swiftlint.yml                      (+ TeslaSync/Features included)
+  M apps/apple/Localization/Localizable.xcstrings  (+101 keys: 59 parity + route + completeness)
+  + apps/parity/apple-ledger.json                  (page:system/DataExport rows, both platforms)
+  + apps/parity/apple-macos-ledger.json            (apple-macos row — README/P99 per-platform ledger)
+  + apps/parity/apple-ios-ledger.json              (apple-ios row — README/P99 per-platform ledger)
+
+--- VERIFICATION (raw results) -------------------------------------------------
+$ pwsh check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/System -Language swift
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  EXIT=0                                              [PASS]
+
+$ cd apps/apple && swiftlint lint --strict --config .swiftlint.yml --no-cache TeslaSync/Features
+  Features/System: 0 violations (15 self-introduced violations were found + fixed).
+$ swiftlint --strict apps/apple/TeslaSync/Features/System   (the literal gate command)
+  Done linting! Found 0 violations, 0 serious in 15 files.   EXIT=0           [PASS]
+  (A whole-tree lint also surfaces ONE pre-existing violation in
+   TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 — git-unmodified
+   by this task, outside the gate's path scope and out of this prompt's scope; not fixed.)
+
+$ cd apps/apple && swiftformat --lint TeslaSync/Features
+  0/15 files require formatting.                      [PASS]
+
+$ swiftc -frontend -parse <each non-Shared file>
+  14/14 OK (syntax valid). LiveService is behind #if canImport(Shared)
+  (inactive on this host) and is swiftlint-clean.     [PASS]
+
+$ npx? n/a (no JS). TypeScript reference page read for parity only.
+
+--- STRING PARITY (Localizable.xcstrings) --------------------------------------
+  All 59 required parity keys present with web English values (verified).
+  Resolved via String(localized:) in DataExportStrings (ADR-014); key names match
+  web verbatim. Zero hardcoded user-facing literals (fallbacks mirror web
+  `t(key, default)` defaults, same as the web source).
+
+=== PARITY ===
+PARITY_REQUIRED=75
+
+[x] panel  · GlassPanel1    → DataExportTypeSelector / DataExportTypeCard  [DataExportPage.Wizard.swift]
+[x] panel  · GlassPanel2    → DataExportFormatInfo.csvCard → DataExportPreviewCard  [DataExportPage.Stats.swift]
+[x] panel  · GlassPanel3    → DataExportFormatInfo.jsonCard → DataExportPreviewCard  [DataExportPage.Stats.swift]
+[x] panel  · GlassPanel4    → DataExportOverviewCard  [DataExportPage.Stats.swift]
+[x] panel  · Total-Exports  → DataExportStatsRow.totalExports (TSMetricCard)  [DataExportPage.Stats.swift]
+[x] panel  · Total-Size     → DataExportStatsRow.totalSize (TSMetricCard)  [DataExportPage.Stats.swift]
+[x] panel  · Most-Exported  → DataExportStatsRow.mostExported (TSMetricCard)  [DataExportPage.Stats.swift]
+[x] panel  · Last-Export    → DataExportStatsRow.lastExport (TSMetricCard)  [DataExportPage.Stats.swift]
+[x] panel  · GlassPanel9    → DataExportWizard  [DataExportPage.Wizard.swift]
+[x] panel  · GlassPanel10   → DataExportHistory.loadingPanel (TSTableSkeleton)  [DataExportPage.History.swift]
+[x] panel  · GlassPanel11   → DataExportHistory.panel + DataExportHistoryTable  [DataExportPage.History.swift]
+[x] panel  · GlassPanel12   → DataExportAccountPanel  [DataExportPage.Account.swift]
+[x] state  · loading        → TSStatGridSkeleton/TSTableSkeleton/TSSkeleton + submit spinner  [DataExportPage.Stats.swift / .History.swift / .Columns.swift]
+[x] state  · empty          → DataExportHistory.emptyState TSEmptyState + columns 'unsupported' + overview 'Unavailable'  [DataExportPage.History.swift / .Columns.swift / .Stats.swift]
+[x] state  · error          → DataExportHistory TSQueryError + DataExportColumnsError + exportFailed banner  [DataExportPage.History.swift / .Columns.swift / .ViewModel.swift]
+[x] state  · success        → DataExportHistoryTable + DataExportColumnsGrid + stats loaded + exportStarted banner  [DataExportPage.History.swift / .Columns.swift]
+[x] string · All Vehicles  → Localizable.xcstrings + Account.swift/Wizard.swift (vehicle options)
+[x] string · By Count  → Localizable.xcstrings + Stats.swift (mostExported caption)
+[x] string · Download  → Localizable.xcstrings + History.swift (row action)
+[x] string · Duration  → Localizable.xcstrings + History.swift (header)
+[x] string · End  → Localizable.xcstrings + Wizard.swift (custom range)
+[x] string · Export Failed  → Localizable.xcstrings + ViewModel.swift (banner)
+[x] string · Export Failed Msg  → Localizable.xcstrings + ViewModel.swift (banner)
+[x] string · Export Started  → Localizable.xcstrings + ViewModel.swift (banner)
+[x] string · Export Started Msg  → Localizable.xcstrings + ViewModel.swift (banner)
+[x] string · Format  → Localizable.xcstrings + History.swift (header)
+[x] string · Last Export  → Localizable.xcstrings + Stats.swift (metric)
+[x] string · Most Exported  → Localizable.xcstrings + Stats.swift (metric)
+[x] string · Records  → Localizable.xcstrings + History.swift (header)
+[x] string · Size  → Localizable.xcstrings + History.swift (header)
+[x] string · Start  → Localizable.xcstrings + Wizard.swift (custom range)
+[x] string · Start Export  → Localizable.xcstrings + Wizard.swift (submit)
+[x] string · Status  → Localizable.xcstrings + History.swift (header)
+[x] string · Time  → Localizable.xcstrings + History.swift (header)
+[x] string · Total Exports  → Localizable.xcstrings + Stats.swift (metric)
+[x] string · Total Size  → Localizable.xcstrings + Stats.swift (metric)
+[x] string · Type  → Localizable.xcstrings + History.swift (header)
+[x] string · Vehicle  → Localizable.xcstrings + History.swift (header)
+[x] string · dataExport.account.allVehicles  → Localizable.xcstrings + Account.swift
+[x] string · dataExport.account.endDate  → Localizable.xcstrings + Account.swift
+[x] string · dataExport.account.start  → Localizable.xcstrings + Account.swift
+[x] string · dataExport.account.startDate  → Localizable.xcstrings + Account.swift
+[x] string · dataExport.account.subtitle  → Localizable.xcstrings + Account.swift
+[x] string · dataExport.account.title  → Localizable.xcstrings + Account.swift
+[x] string · dataExport.account.vehicle  → Localizable.xcstrings + Account.swift
+[x] string · dataExport.account.warning  → Localizable.xcstrings + Account.swift
+[x] string · dataExport.active  → Localizable.xcstrings + History.swift
+[x] string · dataExport.allVehicles  → Localizable.xcstrings + Account.swift (wizard options)
+[x] string · dataExport.chargingSessions  → Localizable.xcstrings + Stats.swift
+[x] string · dataExport.columns.alwaysIncluded  → Localizable.xcstrings + Columns.swift
+[x] string · dataExport.columns.clear  → Localizable.xcstrings + Columns.swift
+[x] string · dataExport.columns.helperText  → Localizable.xcstrings + Columns.swift
+[x] string · dataExport.columns.selectAll  → Localizable.xcstrings + Columns.swift
+[x] string · dataExport.columns.title  → Localizable.xcstrings + Columns.swift
+[x] string · dataExport.csvDesc  → Localizable.xcstrings + Stats.swift
+[x] string · dataExport.csvPreview  → Localizable.xcstrings + Stats.swift
+[x] string · dataExport.customRange  → Localizable.xcstrings + Wizard.swift
+[x] string · dataExport.dataOverview  → Localizable.xcstrings + Stats.swift
+[x] string · dataExport.drives  → Localizable.xcstrings + Stats.swift
+[x] string · dataExport.exportHistory  → Localizable.xcstrings + History.swift
+[x] string · dataExport.jsonDesc  → Localizable.xcstrings + Stats.swift
+[x] string · dataExport.jsonPreview  → Localizable.xcstrings + Stats.swift
+[x] string · dataExport.noExports  → Localizable.xcstrings + History.swift
+[x] string · dataExport.noExportsMessage  → Localizable.xcstrings + History.swift
+[x] string · dataExport.noJobs  → Localizable.xcstrings + History.swift (DataTable empty)
+[x] string · dataExport.refresh  → Localizable.xcstrings + swift/History.swift
+[x] string · dataExport.scheduled.feature  → Localizable.xcstrings + History.swift
+[x] string · dataExport.subtitle  → Localizable.xcstrings + DataExportPage.swift
+[x] string · dataExport.title  → Localizable.xcstrings + DataExportPage.swift
+[x] string · dataExport.unavailable  → Localizable.xcstrings + Stats.swift
+[x] string · dataExport.wizard.step1  → Localizable.xcstrings + Wizard.swift
+[x] string · dataExport.wizard.step2  → Localizable.xcstrings + Wizard.swift
+[x] string · dataExport.wizard.step3  → Localizable.xcstrings + Wizard.swift
+[x] string · dataExport.wizard.step4  → Localizable.xcstrings + Wizard.swift
+[x] string · dataExport.wizardTitle  → Localizable.xcstrings + Wizard.swift
+
+PARITY_COVERED=75
+--- GATE (apple triad) ---------------------------------------------------------
+PLACEHOLDER_EXIT=0
+LINT_EXIT=0            (swiftlint --strict, Features/System scope; 0 violations)
+FORMAT_EXIT=0         (swiftformat --lint; 0/15 require formatting)
+PARSE_EXIT=0          (swiftc -frontend -parse; 14/14 non-Shared files OK)
+BUILD_EXIT=BLOCKED    (xcodebuild requires full Xcode; host has Command Line Tools only)
+TEST_EXIT=BLOCKED     (xcodebuild test cannot run without an Xcode runner)
+PARITY_REQUIRED=75
+PARITY_COVERED=75
+
+--- DECISION -------------------------------------------------------------------
+Parity is fully implemented and every runnable gate (placeholder, swiftlint
+--strict, swiftformat --lint, swiftc -parse) passes. The build + test gate cannot
+run on this host (no Xcode runner / Shared.xcframework stub), which the prompt
+defines as a BLOCKED outcome. Per Honesty Covenant rule 8 (no commit on red) the
+work is left staged and NOT committed while the build/test gate is unrun.
+
+EXIT=2
+STATUS=BLOCKED

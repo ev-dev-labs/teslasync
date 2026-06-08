@@ -1,0 +1,94 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Key finding: `xcode-select -p` returns `/Library/Developer/CommandLineTools`, not a full Xcode. Let me verify xcodebuild capability and read the web source + Apple app structure in parallel.
+
+xcodebuild requires full Xcode (only CommandLineTools present) — that's a capability constraint I'll document. The actual Apple source root is `apps/apple/` (no `TeslaSync` subdir yet). Let me explore the structure, project.yml, and the web shared components that form the full spec.
+
+Now let me understand the established native patterns: state holders (P1/S8), tokens (P1/S9), i18n (P1/S10), diagnostics (P1/S11), feedback components, and the sibling prompts for convention.
+
+No native dashboard widgets exist yet — this is greenfield. Let me read the core infrastructure files I must bind to: state holders, design tokens, feedback components, and find the i18n + diagnostics facades. Let me also read the p4-apple methodology.
+
+Let me read the core infrastructure files and an existing view to learn the exact APIs for state holders, i18n, design tokens, feedback, and diagnostics.
+
+Let me re-list the Domains dir and read the design tokens, feedback states, typography, and an existing screen to learn the real composition, i18n, and diagnostics patterns.
+
+Now let me read the domain facade pattern, design tokens, an existing screen, the diagnostics/log pattern, and the web shared components (WidgetShell, WidgetFlowDiagram, types) that complete the spec.
+
+The patterns are clear. Now let me capture the full web spec: `WidgetShell`, the flow diagram, `types`, the registry entry, plus the canonical i18n strings and the native xcstrings conventions.
+
+Now the two key visual specs — `WidgetShell` (chrome) and `WidgetFlowDiagram` (the animated diagram) — plus the native test conventions and xcstrings format.
+
+I have the full visual spec. Now let me gather the remaining specifics: lint/format config, the generated color tokens, freshness chip API, an existing XCTest pattern, and tool availability.
+
+`pwsh` and the placeholder script are available — I can run that gate. Let me read the full token file, the freshness/badge chip APIs, a sample test, and the placeholder checker.
+
+Let me read the test conventions, the badge/tone API, and the placeholder checker to ensure full compliance.
+
+Let me read the placeholder patterns (to know forbidden words) and the reusable freshness policy.
+
+I now have everything needed. Let me verify what Swift verification is possible on this runner (parse-only, since the module + Xcode aren't available), then write the plan.
+
+Both `swiftc -parse` and `-typecheck` work against the macOS SDK — so I can syntax-check my real files and type-check the logic via a temporary shim harness. Let me read `FacadeError` (to faithfully reuse `LoadableState`) and the skeleton component.
+
+I have the complete spec and verified toolchain limits. Let me set up tracking, check for native name collisions, and write the plan.
+
+All APIs confirmed, no collisions. Writing the plan, then the three source files. Let me start with the plan and the model layer.
+
+Now the main view file with the animated diagram, compact fallback, all six states, and accessibility.
+
+Now the tests file covering the adapter, every state, i18n coverage, accessibility labels, arrows, registration, and diagnostics emission.
+
+Files written. Let me update tracking and verify — starting with a syntax parse of all three files.
+
+Parse is clean. Now a type-check harness with faithful shims for the module dependencies, to verify the real Model + View compile-correctly against the macOS SDK.
+
+Typecheck passes (exit 0). The only warnings are deprecated `Text + Text` on the new SDK. Let me refactor i18n to resolve strings with embedded defaults (renders correct English now, still keyed/translatable) and eliminate the deprecated `Text +` concatenation.
+
+Now re-verify the refactored View + Model typecheck cleanly (and that deprecation warnings are gone), then attempt a test-file typecheck.
+
+Excellent — clean typecheck under Swift 6 + complete concurrency, no warnings. Now let me attempt to type-check the test file (checking XCTest availability).
+
+XCTest isn't bundled with CommandLineTools. Let me type-check the test logic via a minimal XCTest shim compiled against the real Model/View.
+
+Good — the harness caught a real error: `.loaded` is a factory on the concrete provider, not the existential. It also revealed previews aren't checked without `-D DEBUG`. Let me fix both call sites and re-check with DEBUG on.
+
+B_EXIT=0 — all test logic type-checks against the real Model/View. The A failure is purely the `#Preview` macro plugin missing under CommandLineTools (environmental, not a code error). Let me verify the preview *bodies* by rewriting the macro to plain functions in a throwaway copy.
+
+All preview bodies type-check (8/8). Full code is type-correct. Now the official linters — first see what swiftformat wants, then swiftlint.
+
+All issues are auto-fixable formatting. Let me apply swiftformat in-place, then confirm clean and re-verify typecheck.
+
+swiftformat clean. Now swiftlint --strict on the files (explicit paths, since the dir isn't in the default `included:` set), plus re-verify typecheck after formatting.
+
+Re-typecheck still clean. swiftlint flags file-length (split needed), a type-body-length on the test class, and 3 `void_function_in_ternary` in the model. Let me inspect the ternary issue and current file sizes.
+
+Re-typecheck clean after formatting. Now I'll fix the `void_function_in_ternary` (enum-case ternaries) and split the oversized files (all under the `EnergyFlowAnimatedWidget.*` glob) to satisfy `file_length`/`type_body_length`. Let me map the current structure to split precisely.
+
+Let me verify the exact split boundaries before cutting.
+
+Boundaries are clean. Let me split into focused files (all matching the allowed glob), with correct per-file imports.
+
+All source files now ≤319 lines. Now fix the enum-case ternaries in Presentation and split the test class. Let me view the presentation `make` and fix the ternaries.
+
+Now split the test class into two (to satisfy `type_body_length`), with shared fixtures. Let me recreate the test file.
+
+All files split. Now re-normalize with swiftformat, then run swiftlint --strict across all seven files.
+
+swiftformat clean (0/7) and **swiftlint --strict: 0 violations**. Now re-run the typecheck harness across all split files to validate per-file imports + types under Swift 6 strict concurrency.
+
+A) and B) pass. C) caught a real Swift 6 concurrency error: my free `energyFlowWaitUntil` helper calls a `@MainActor` closure from a nonisolated context. Let me annotate it `@MainActor`.
+
+C) passes under Swift 6 strict concurrency. All type checks green. Now re-confirm linters after the edit and run the placeholder gate.
+
+All runnable gates pass (swiftlint 0, swiftformat 0, placeholder 0; self-test confirms the gate works). Now capture xcodebuild capability evidence for the log.
+
+All clean. Let me capture the precise xcodebuild exit code, then write the gate log.
+
+Now I'll write the gate log with full evidence, then commit.
+
+Log written. Let me clean up the temp harness, update tracking, and commit only my widget files + the log.
+
+Staged exactly my 7 files + the log (pre-existing unrelated web changes left untouched). Committing.
+
+All work is complete and committed. Final summary:
+

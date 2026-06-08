@@ -1,0 +1,165 @@
+I'll start by exploring the repository structure to understand the task, the web source page, and the existing Apple app architecture.
+
+Now let me explore the Apple app structure, the parity manifest, and related web components.
+
+Let me explore the Apple app structure in detail and existing patterns.
+
+The existing structure is flat in `feature-views`, but the prompt wants `Features/Charging/`. Let me investigate existing page conventions, the parity manifest, and the ledger.
+
+Let me check tooling availability and examine an existing feature-view to understand the established conventions.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed — so the build/test gate cannot run (→ STATUS=BLOCKED per the prompt). But `swift` 6.3.2, `swiftlint`, `swiftformat`, and `pwsh` are available. I must still produce a complete, parity-complete, non-placeholder implementation and verify everything I can.
+
+Let me study the established conventions by reading a representative charging feature-view set.
+
+This is a large, well-structured codebase. Let me map the core infrastructure (design tokens, components, data wiring, navigation, strings) precisely. I'll read key files directly and dispatch parallel exploration for the broad data-layer wiring.
+
+The repo has two feature locations: `Sources/Features/` (e.g. Dashboard) and the flat `TeslaSync/feature-views/`. The prompt wants `TeslaSync/Features/Charging/`. Let me map the design tokens, components, shared facade (charging domain), navigation, and SI converters.
+
+Design tokens live in the generated catalog. Let me read the generated tokens and the core components I'll use.
+
+Now the key components. Reading them in parallel.
+
+Now reading typography, buttons, form controls, motion, and formatters.
+
+Now the form controls, badges/utility, and formatters.
+
+Now the form filters, badges/utility components, and the formatters (SI converters at display boundary).
+
+Now the critical data layer. Let me explore the SharedFacade (charging domain), the SI `Units` converters, and the remaining UI utilities.
+
+The feature-views use a `Source` protocol to stay free of the `Shared` xcframework (testable). Let me see the rest of that pattern (States/Views/strings/Tests/Previews) and how navigation wires a live source.
+
+No feature-view imports `Shared` — they're fully decoupled via `Seams`. Let me read the Seams, States, Views, strings, Previews, and the App navigation files.
+
+Now the navigation host wiring, an existing Features page, the state/view patterns, and the string catalog.
+
+Let me find where the route registry is composed, the string catalog, and check an existing `Sources/Features` page for a page-level template.
+
+Now the state/view/preview/test patterns, the string catalog format, ledger schema, and placeholder checker.
+
+I have the conventions. Let me verify the `.text` strings helper, the xcstrings format, ledger schema, placeholder checker, and the manifest entry.
+
+Let me check the ledger format, swiftformat config, and the rest of project.yml (macOS + test targets).
+
+The catalog already has 44 `chargePlanner` occurrences. Let me check exactly which keys exist.
+
+The catalog already has these keys under a `translation.chargePlanner.*` namespace. Let me check how Swift code references catalog keys and verify the existing values.
+
+The app convention references catalog keys with the `translation.` prefix (60 usages), and the `translation.chargePlanner.*` entries already exist (except `cost_decimal`). Let me confirm the `windowInfo` value, check for layout components (PageContainer/Grid), the selected-vehicle pattern, and a feature-view that pairs a query with mutations.
+
+Let me confirm `cost_decimal` is the only missing key, verify the other required keys exist, and check the Tests target config.
+
+`cost_decimal` is the only missing key. Let me check the test file convention (framework + imports) so I match it.
+
+I now have a complete picture of the architecture. Let me set up a plan and todos, then build the implementation.
+
+Now I'll build the implementation. Starting with the pure-logic Adapter (Foundation-only types + projection).
+
+Now the Seams file (Source protocol, snapshot, in-memory source, telemetry + date seams).
+
+Now the `@Observable` model.
+
+Let me verify the P3 component-level string keys exist in the catalog before using them in state views.
+
+The P3 components reference keys not yet in the catalog. I'll use catalog-backed `chargePlanner` keys directly and avoid injecting un-catalogued keys. Let me find existing common retry/error keys in the catalog.
+
+I have catalog-backed envelope keys (`common.retry`, `common.loading`, `error.loadFailed`). Now the States file.
+
+Now the Views file — the panels (settings, schedule, history) plus shared header and pickers.
+
+Now the Timeline file — rate timeline visualization, legend, and the three cost cards.
+
+Now the main page View that composes the scaffold and all panels.
+
+Now the navigation registration file.
+
+Let me run swiftformat and swiftlint on the files created so far to catch issues early.
+
+swiftformat wants single-line property bodies wrapped. Let me check whether existing repo files have the same finding (to understand the baseline), then auto-format my files.
+
+Existing files already wrap property bodies — I just need to match. Let me auto-format my files with swiftformat (write mode), then re-lint.
+
+swiftformat clean. Now swiftlint --strict.
+
+swiftlint linted the whole project (1909 files) and found 1 violation. Let me locate it.
+
+My new files are clean — the only swiftlint violation is pre-existing (`LifetimeStatsWidget.Adapter.swift`, not mine). Let me verify the swiftformat auto-changes didn't alter semantics.
+
+My files pass swiftformat and swiftlint cleanly. Since I can't run xcodebuild, let me attempt a real Swift type-check of my page against the actual design tokens + components to gain compile confidence. First, check which dependencies import `Shared`.
+
+None of my dependencies import `Shared`. Let me test whether SwiftUI can be type-checked under Command Line Tools.
+
+SwiftUI type-checks under CLT. Let me run a real type-check of my page against the actual design tokens, components, and app routing files.
+
+Those errors are in a component I don't use (`UnitFormatters.swift`, which depends on `UnitPreferences` from the `Shared`-importing facade). Let me identify all components that depend on the facade and exclude them from the isolated type-check.
+
+Only `UnitFormatters.swift` depends on the facade, and I don't use it. Let me re-run the type-check excluding it.
+
+The first pass showed no errors. Let me wait for the exit code from the second pass.
+
+Type-check passes with **exit 0, zero errors** — the page compiles against the real tokens and components. Let me update progress and write the Previews and Tests.
+
+Let me decide test placement carefully — XCTest files in the app-target source path would break the app build. Let me verify XCTest availability and the test-target location.
+
+Key finding: XCTest is unavailable under Command Line Tools, and XCTest files placed in the app-target source path would break the app build. The repo's proper test location is the separate `Tests/Unit/` target (P9's scope), outside this prompt's allowed files and parity set. I'll rely on the passing `swiftc -typecheck` plus the 5 state previews for verification, and document this. Now the navigation + build wiring.
+
+Now the navigation, app wiring, and build config edits:
+
+Now add the missing `cost_decimal` string to the catalog. Let me view the exact insertion point.
+
+Let me validate the catalog JSON and confirm the new key.
+
+Catalog is valid. Now let me re-run the full verification suite — type-check (including the DEBUG previews), swiftformat, and the placeholder gate.
+
+The `-D DEBUG` errors are all `#Preview` macro-plugin limitations (unavailable under CLT) — not my code, and they affect existing component previews too. The non-preview code already type-checked at exit 0. Let me verify my Previews' support code (data + host) compiles by checking it without the `#Preview` macro wrapper.
+
+Preview support code type-checks cleanly (exit 0). Now let me verify the AppRouteParser edit, re-run swiftformat lint, and run the placeholder gate.
+
+Placeholder gate passes (0 placeholders). The new Previews file needs formatting. Let me format and re-verify lint + format.
+
+swiftformat clean (0/9), swiftlint 0 violations in my files. Let me confirm how swiftlint scopes (for an honest gate signal) and check the exit behavior.
+
+My files are swiftlint-clean (explicit-file form → exit 0); the dir-form only fails on a pre-existing violation elsewhere. Now let me run the actual gate commands (xcodebuild, etc.) to capture honest exit codes for the log.
+
+The exit capture was masked by the pipe. Let me get the true xcodebuild exit and validate my `project.yml` edits with xcodegen (which is available).
+
+Strong validation: `xcodegen generate` succeeds (exit 0) and wires my page into the project (54 `SmartChargePage` refs in the generated project). The only blocker is `xcodebuild` requiring full Xcode (exit 1). Let me clean up the generated project and temp files.
+
+I see pre-existing/external modifications (`AIUsageCard.*`, two `web/...` files) that I did **not** touch — those belong to the shared worktree and I'll leave them alone. My changes are isolated: `Localizable.xcstrings`, `AppRouteParser.swift`, `TeslaSyncApp.swift`, `project.yml`, and the new `TeslaSync/Features/`. Let me verify all 33 required string keys are actually referenced in my code (parity evidence).
+
+All 33 required keys referenced (0 missing). Now let me write the parity log with full evidence, then the ledger.
+
+Now the parity ledger.
+
+Let me validate the ledger JSON, re-run the final gate checks to confirm no regressions, and launch a logic review in parallel.
+
+All gates green (1947 lines across 9 decomposed files vs. ~527 web). Let me run a focused logic/parity review against the web source to catch any subtle mismatches before finishing.
+
+## Blocking Issues
+
+1. **Native route is wired to an in-memory/pre-wire source, so the page cannot actually load live data or optimize/apply schedules**
+   - **File:** `/apps/apple/TeslaSync/Features/Charging/SmartChargePage.Registration.swift:23,37-49`
+   - **Divergence:** Web uses real hooks: `useRatePlans`, `useChargePlans(vehicleIdNum)`, `useOptimizeCharge`, `useApplySchedule` (`SmartChargePage.tsx:50-68,85-111`). Native default registration uses `InMemorySmartChargeSource` with fallback plans, no vehicles, empty history, and default optimize failure.
+   - **Impact:** In normal navigation with no injected source, `selectedVehicleID` stays nil, optimize is disabled, history never loads, and apply/optimize are not backed by real mutations.
+   - **Recommended fix:** Wire `makeDefaultSource()` to the production KMP/API-backed `SmartChargeSource` adapter, or ensure app composition always injects one before registering this route.
+
+## Non-Blocking Issues
+
+1. **AI schedule suggestion section from web is missing**
+   - **File:** `/apps/apple/TeslaSync/Features/Charging/SmartChargePage.swift:30-37`
+   - **Divergence:** Web renders `AISmartChargeScheduleSuggestion` before settings and passes `vehicleId`, `targetSoc`, `departBy`, `ratePlanId`, `maxAmps`, and `batteryCapacityKwh` (`SmartChargePage.tsx:122-132`). Native page goes directly from `header` to `settingsSection`.
+   - **Impact:** When AI mode is enabled, native lacks a visible web feature and cannot provide the same smart-charge recommendation UX.
+   - **Recommended fix:** Add a native equivalent AI suggestion section, or explicitly gate/render it according to the same AI-mode behavior.
+
+No issues found in the checked optimize reset/request projection, charge-window hour containment, cost-card trend behavior, history table value logic, default depart-by, or rate timeline projection.The review confirms all implemented logic matches the web (optimize reset/request, charge-window containment, cost-card trend, history table, depart-by, timeline — "no issues found"). The two flagged items are both intentional, documented scoping decisions:
+
+1. **In-memory seam** — the deliberate P4 integration boundary (the entire app defers live KMP wiring; `AppContainer.bootstrap` is "future", no feature-view has a live source yet). Documented in `Registration.swift` + the log.
+2. **AISmartChargeScheduleSuggestion** — a separate shared component (`@/components/ai/...`), **not** in this page's parity manifest (not among the 7 panels / 33 strings / 4 data sources). Adding it would be out-of-scope scope-creep.
+
+Both align with the manifest as the source of truth. Let me finalize todos and confirm the complete deliverable set.
+
+All todos complete. Let me do a final consolidated verification and confirm the full deliverable set.
+
+All deliverables are in place and every runnable gate is green. The build/test gate is BLOCKED solely because `xcodebuild` requires full Xcode (this runner has only Command Line Tools) — which the prompt explicitly sanctions as `STATUS=BLOCKED`. Per the honesty covenant (no commit on a non-green gate), I did **not** commit; the work is in the working tree ready to build on an Xcode runner.
+

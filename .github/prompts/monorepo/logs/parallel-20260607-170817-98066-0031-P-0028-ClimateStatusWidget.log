@@ -1,0 +1,165 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Found key info: we're on branch `auto/20260607-170817-98066/31`, and **Xcode is not installed** (only Command Line Tools). Let me investigate the toolchain capability and explore the existing structure in parallel.
+
+Important: **Xcode IS installed** at `/Applications/Xcode.app`, but `xcode-select` points to CommandLineTools. Let me test if I can use the full Xcode toolchain, and explore the project structure & web source.
+
+**Capability confirmed available**: Full Xcode 26.5 toolchain works via `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`, with iPhone 16 simulator. I am NOT blocked. Now let me understand the existing Apple project structure, the WidgetShell composition, and the shared facade (P1/S8 state holders).
+
+Now let me read the project.yml (XcodeGen) to understand targets/schemes/source paths, and explore the shared facade, design tokens, and i18n.
+
+Now let me check whether prior dashboard-widget surfaces (0001–0027) already exist to establish the pattern/location, and explore the shared facade, design tokens, and i18n.
+
+No prior dashboard-widget surfaces exist — I'm establishing the pattern. Let me deeply understand the shared facade (state holders), design tokens, feedback components, and i18n by reading the key files.
+
+Let me read the P9-0001 gate log to understand known blockers, check tooling, and read the remaining facade/design/i18n files.
+
+Critical findings from the P9-0001 gate log:
+- **iOS Simulator build+test is FULLY GREEN** here (255 unit + 13 UI, 0 failures). Shared.xcframework builds fine.
+- **macOS gate is environmentally BLOCKED** (`MAC_EXIT=70`, 0 code-signing identities) — pre-existing host capability gap, not code-related.
+- Host lint/format/placeholder gates are green.
+
+So iOS is my primary verifiable gate. Let me read the facade, design tokens, feedback components, i18n, and telemetry, plus an existing view + test for conventions.
+
+The facade pattern is clear: `@Observable` domain models project a shared-core `StateFlow<Resource<T>>` into `LoadableState<T>` via `StateHolderModel`. Now let me read the design tokens, feedback components, and locate the i18n + telemetry (diagnostics) facades.
+
+Let me check exactly which i18n keys already exist in the catalog, read the design tokens and feedback states component, and find the telemetry/diagnostics facade.
+
+Now let me examine the i18n catalog conventions, read the design tokens, find the telemetry/diagnostics facade (P1/S11), and study an existing composed view for conventions.
+
+I can see the catalog has a `widget.freshness.*` namespace (stale/offline/updated/live) ideal for the freshness chrome, and `translation.*` mirrors web keys. Let me read the design tokens, the freshness component, the logging convention, and hunt for the S11 diagnostics facade + the web locale source.
+
+Let me read the web WidgetShell (the chrome I must reproduce), the generated design tokens, LiveConnection, and the logging convention — plus a broader hunt for the S11 diagnostics facade.
+
+I have the full token set and feedback components. Now let me locate the diagnostics facade (S11 `view.opened`), study a representative existing screen + its tests, and confirm the web locale key path.
+
+The web i18n confirms `dashboard` namespace has `widget.climate`/`widget.batHeater`/`widget.noClimate`. No dedicated analytics SDK exists — diagnostics is the redacted `os.Logger` pattern (LiveLog/AuthLog). Let me confirm the web `dashboard.widget` block, study a full screen + how AppContainer is injected, and check the "Diagnostics" references.
+
+The web `dashboard` namespace maps the 7 strings. There's no analytics SDK — "diagnostics" = redacted `os.Logger` (LiveLog/AuthLog pattern). Views are thin over `@Observable` models. Let me check the shared App Group snapshot model (a real cached data source) and read existing tests to mirror conventions.
+
+Let me confirm the exact freshness/unavailable i18n values to reuse, check whether a snapshot-testing lib exists, and see how existing view-layer tests are structured (the repo uses "LogicTests" conventions).
+
+The convention is native short dotted keys added to the catalog (with some pre-existing gaps). I'll add 7 `dashboard.widget.*` keys and reuse `widget.freshness.*`. Let me inspect the catalog's exact opening/closing and a key block's formatting for a safe, minimal textual insertion.
+
+Catalog confirmed: literal UTF-8, keys are top-level under `"strings"`, blocks use ar/en/he. I'll add 7 `dashboard.widget.*` keys via safe textual insertion. 
+
+Now the critical step: establish the iOS build baseline (the long pole — Kotlin/Native xcframework + Xcode). Let me read the xcframework build script and kick off project generation + baseline build in the background while I write code.
+
+Let me stop that filesystem scan and kick off the baseline build pipeline in the background (Kotlin/Native xcframework is the long pole). JDK 17 + gradlew are present.
+
+Baseline build running in background. Let me read the UI components I'll compose with (GlassPanel, typography, badges/chips, skeleton) while it builds.
+
+Good — I have typography + badges (`TSBadge`, `TSTone`, `TSCaption`). Let me read GlassPanel (Cards) + Skeleton, and check the baseline build progress.
+
+I now have all component APIs (`TSGlassPanel`, `TSCard`, `TSSkeleton`, `TSBadge`/`TSTone`, typography, `TSEmptyState`, `TSQueryError`, `TSButton`). Let me record the plan/todos and check the build progress.
+
+The Kotlin/Native xcframework is still compiling (first-run, several minutes). Let me write the widget source while it builds. Creating the directory and file now.
+
+Let me fix a redundant branch and improve the error-freshness mapping in the freshness classifier.
+
+Now let me make the freshness label key introspectable (for the a11y/i18n tests) by exposing a raw key string.
+
+Let me check the baseline build progress before writing tests.
+
+The Kotlin/Native build is still going (first run). Let me write the comprehensive test file while it compiles.
+
+Now let me add the 11 i18n keys to the catalog via safe textual insertion (preserving the rest byte-for-byte), then validate the JSON.
+
+Keys inserted and JSON validates. But I should verify the colon-spacing style matches the file's existing convention. Let me compare my inserted blocks against the original formatting.
+
+Inconsistent colon spacing — the file uses `"key":` (no space) but I wrote `"key" :`. Let me revert and re-insert matching the file's exact style.
+
+Style matches now. Let me verify the catalog diff is purely additive and check the baseline build.
+
+Catalog diff is purely additive (+253/−0). The xcframework is still compiling (~6 min, first Kotlin/Native run). Let me lint my new files now (independent of the build) — first reading the lint configs.
+
+Now let me auto-format my new files with swiftformat (deterministic, guarantees `--lint` passes) and then lint them, while the xcframework finishes.
+
+swiftformat is clean. swiftlint flags two issues: `file_length` (699 > 400) and `multiple_closures_with_trailing_closure` (the `Button`). I'll split into 3 cohesive files (under the same `Dashboard/Widgets/` dir) and fix the Button. Let me delete the monolith and re-author.
+
+Let me remove the now-unused `reduceMotion` env var (components handle reduce-motion internally), then format and lint all four files.
+
+All linters pass (swiftformat clean, swiftlint --strict 0 violations), files well under 400 lines. Let me check the xcframework build status.
+
+The xcframework build has run ~9 min with buffered output. Let me verify Gradle is actively progressing (not deadlocked) via a separate check.
+
+Gradle is actively linking the Kotlin/Native release frameworks (clang++ + Kotlin compiler at high CPU) — near completion. Let me wait for it to finish.
+
+Build is in the final Kotlin/Native object-emission stage (3 targets) — contended with other parallel slots. Let me wait for it to complete.
+
+The Shared.xcframework built successfully (21m 40s) and is staged. Now let me regenerate the project (to include my new files) and run the iOS build+test gate.
+
+New files are referenced in the project. Now let me run the iOS build+test gate (the primary verification). This compiles the whole app + Shared and runs the test suite — several minutes.
+
+iOS build+test is running. Let me monitor it.
+
+Let me check the build log file directly for progress.
+
+My `ClimateStatusWidgetTests` suite **passed** (including the render-all-states and metric/imperial formatting tests), and the diagnostics breadcrumb `view.opened surface=ClimateStatusWidget` fired. Unit tests are green; now the pre-existing UI tests run. Let me wait for full completion.
+
+iOS exited 65 (test failure). My unit tests passed, so this is likely a pre-existing UI test. Let me identify exactly what failed.
+
+The 5 failures are all **pre-existing/unrelated** (Auth/Live UI tests + one IntentSupport unit test) — my `ClimateStatusWidgetTests` all passed and the build succeeded. The UI failures stem from a simulator service-hub crash (`simctl` not found in the automation harness). Let me confirm the nature of each failure.
+
+This is definitive: `testVehicleDirectoryRoundTrip` (line 8429) **started but never failed on logic** — the UI-test runner began interleaving (8430) and the CoreSimulator **service hub crashed** (contended shared iPhone 16 simulator across parallel slots), tearing down the unit process and the UI tests. All 5 failures are environmental collateral; my `ClimateStatusWidgetTests` passed earlier (17:46:53). 
+
+Let me get clean positive evidence by running the unit bundle in isolation (no UI automation).
+
+While the unit run proceeds, let me run the host gates (swiftlint, swiftformat, placeholder) for real — these are simulator-independent.
+
+Host gates are green (swiftlint 0/260, swiftformat 0/264). `pwsh` is available. Let me run the placeholder check on my files and check the unit-test progress.
+
+Two findings: (1) the placeholder checker forbids the literal word "placeholder" — my `placeholder` constant + comments trip it; I must rename. (2) the unit-only run also exited 65 (likely the same contended-simulator crash). Let me inspect both.
+
+Two fixes needed. Let me read the full unit-only log and the forbidden-pattern list to fix naming correctly.
+
+Both issues are clear: (1) the checker forbids the word "Placeholder" — I must rename my `placeholder` constant; (2) the iOS failures are the shared **CoreSimulatorService dying** (`Mach error -308 server died`) under multi-slot contention — purely environmental (my unit tests passed in the first run). Let me rename to remove the forbidden word.
+
+Renamed `placeholder` → `emDash`. Let me re-verify the placeholder check + linters pass on my files.
+
+Placeholder check passes (0 count). Since I changed code, let me set up a **dedicated, uncontended simulator** and run the unit bundle on current code to get clean, authoritative evidence (the shared iPhone 16 keeps dying under multi-slot load).
+
+Dedicated simulator created and booting. Let me wait for boot to complete.
+
+bootstatus is hanging (service under load). Let me stop it and run the scoped unit test directly against the dedicated device's UDID — xcodebuild will handle boot readiness.
+
+While the dedicated unit run builds, let me re-verify the linters on my (renamed) files.
+
+Linters still clean. Let me monitor the dedicated-simulator unit run.
+
+**Definitive: 269 unit tests, 0 failures, `TEST SUCCEEDED`** on the dedicated simulator (current code). This confirms my surface is green AND that `IntentSupportTests` + all others pass — the earlier 5 failures were purely casualties of the contended shared simulator's service crash. 
+
+Let me attempt the full `build test` (incl. UI tests) on the dedicated device to see if the iOS gate is fully achievable here.
+
+While that runs, let me capture the macOS gate result honestly (expected: codesign-blocked, per P9). Running it in parallel.
+
+Both iOS-full (dedicated) and macOS gates are running. Let me wait and check progress.
+
+**iOS gate FULLY GREEN on the dedicated simulator: 269 unit + 13 UI = 282 tests, 0 failures, `TEST SUCCEEDED`.** This proves the earlier `name=iPhone 16` failure was pure multi-slot contention on the shared CoreSimulatorService — not my code. Let me check the macOS result.
+
+macOS is **MAC_EXIT=70** — the exact pre-existing codesign capability gap from P9 (`entitlements require signing with a development certificate`), failing at the signing stage (after compilation). Let me confirm my code actually compiled for macOS (signing is post-compile) and check git state.
+
+Let me verify whether the macOS build compiled Sources or fast-failed at signing, to phrase the log accurately.
+
+The macOS build fast-failed at the signing-requirement stage (0 compile markers) — it never reached Swift compilation. Let me run a **supplementary** macOS compile-only check (`CODE_SIGNING_ALLOWED=NO`, a transient flag — not a committed config change) to prove my code compiles for macOS.
+
+While macOS compiles, let me review the exact git state to prepare a precise commit (only my files, not the pre-existing unrelated changes).
+
+Git state is clean: my untracked `Dashboard/` dirs + the `Localizable.xcstrings` edit are mine; the two `web/` files are pre-existing parallel work I'll leave untouched. Let me check the macOS compile-only result.
+
+Still compiling the macOS app. Let me wait for it.
+
+**My code compiles for macOS** (`ClimateStatusData/Widget/WidgetModel.swift` in target `TeslaSync-macOS` → `BUILD SUCCEEDED`). The macOS gate is blocked solely at codesign (no dev cert). Let me get my suite's exact test count, then write the honest gate log and clean up.
+
+Dedicated sim cleaned up. My suite: 14 test methods, all passed. Now let me write the honest gate log.
+
+The honest gate log is written (STATUS=BLOCKED on the macOS dev-cert capability gap; everything else green). Let me update todos and commit my files precisely (excluding the unrelated pre-existing `web/` changes).
+
+Staged exactly the right 6 files (no `web/` or `xcodeproj`). Let me commit.
+
+Committed cleanly (740d2a82): 6 files, 1438 insertions, 0 deletions. Let me verify the working tree is clean (only the pre-existing unrelated `web/` changes remain) and no stray artifacts.
+
+The working tree is clean — my commit excludes the pre-existing `web/` changes (correctly left untouched) and the git-ignored xcodeproj. Let me confirm no stray background processes remain.
+
+All background shells completed cleanly; the dedicated simulator and temp file were removed. The task is complete.
+

@@ -1,0 +1,192 @@
+I'll start by exploring the environment and understanding what's actually available, since this task requires Apple-specific tooling (Xcode, SwiftUI, swiftlint, swiftformat) and a native app structure.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. However, `swift`, `swiftlint`, `swiftformat`, and `pwsh` ARE available. Let me explore the Apple app structure deeply before deciding anything — it may be an SPM package buildable with `swift build`.
+
+This is an XcodeGen project (`project.yml`), no `Package.swift`, no checked-in `.xcodeproj`. Let me explore the source tree, existing dashboard widgets, and the shared infrastructure (P1/S8 state holders, S9 tokens, S10 i18n, S11 diagnostics).
+
+`ChargeCostTrackerWidget` does not exist natively yet — I'm creating it. Let me read the web source end-to-end (the spec), the registry entry, and the shared instruction files.
+
+Now let me study the native infrastructure: an existing stats-style widget as a template, the shared facade (state holders), design tokens, i18n, and diagnostics. Reading these in parallel.
+
+Excellent, the pattern is very clear. Let me read the Model (state holder + surface registration), strings, Tests, Previews, and the shared facade core files in parallel.
+
+Now let me read the Tests, Previews, the shared `DashboardWidgetRegistration`/`DashboardWidgetSize` types, design tokens, and the native MetricCard equivalent.
+
+The pattern is crystal clear. Now I need the web numeric pipeline (to port verbatim) and the native shared types/tokens. Reading these in parallel.
+
+Critical parity detail spotted: the web widget passes `totalDistanceMi` (miles) into `costPerDistanceUnit`/`estimateGasCost`, which treat their arg as SI meters via `convertDistanceFromSI`. I must reproduce this verbatim (no "correcting"). Let me read the conversion lib, constants, numberFormat, ChargingSession type, and useSettings.
+
+Let me get the exact distance constants, the registration/clamp type, and check how existing native widgets handle the `compact`/`tall` layout idiom to match house style.
+
+Two registry systems exist; LifetimeStats uses `DashboardWidgetRegistration` (with `.clamp()`). Let me read its definition, the design tokens, the MetricCard equivalent, and skeletons.
+
+I see potential duplicate type names across `Sources/` files — this implies multiple targets. I must understand the target layout precisely. Let me read `project.yml` and locate the exact `DashboardWidgetRegistration` definition used by the `TeslaSync/dashboard-widgets/` widgets.
+
+The app target compiles `Sources/` + `TeslaSync/dashboard-widgets/` into one module. I noticed possible duplicate registry types (parallel-slot bootstrapping). Let me locate the exact `DashboardWidgetRegistration` definition my sibling uses, and critically check whether a full Xcode is installed anywhere (which would unblock xcodebuild).
+
+Major finding: **full Xcode exists at `/Applications/Xcode.app`** — I can redirect via `DEVELOPER_DIR` without touching the shared system `xcode-select`. Also there are many duplicate registry-type definitions across sibling widgets (parallel-slot state). Let me verify Xcode works and check for `xcodegen`.
+
+This is a game-changer: **Xcode 26.5 + iOS 26.5 simulator (iPhone 16, booted) + xcodegen 2.45.4 are all available.** The gate CAN run. Now I must resolve the duplicate-types question. Let me check the visibility modifiers (private types are file-scoped and don't collide) and the Shared.xcframework situation.
+
+Now I have the architectural picture. Key decisions:
+- **Platform IS capable** (Xcode 26.5, iOS 26.5 sim) — so a capability-BLOCKED claim would be dishonest.
+- **Pre-existing global duplication**: 14+ sibling widgets each define `public struct DashboardWidgetSize`/`DashboardWidgetRegistration` → guaranteed module-wide redeclaration errors I'm forbidden to fix (out of allowed-files scope).
+- **Shared.xcframework missing** (needs Gradle/KMP build).
+
+My widget will **reference** shared primitives (like LifetimeStats), defining none — so it introduces zero new collisions. Let me read the native MetricCard, confirm tokens, check the Gradle/Shared feasibility, and generate the project.
+
+`TSMetricCard` lacks icon/color/subtitle, so (like LifetimeStats built its own tile) I'll build a faithful private metric tile. Let me read the web `MetricCard` for exact composition + color palette, enumerate available `Color.TS` tokens, check Gradle feasibility, and generate the Xcode project (in parallel).
+
+I have the web MetricCard structure (tinted icon box + label + value + subtitle). Let me confirm color token values (cyan/green/amber mapping), read the `TSTone`/`TSIconBox` helpers, check Gradle feasibility, and generate the Xcode project — in parallel.
+
+Color mapping confirmed (cyan→accent, green→statusSuccess, amber→statusWarning; `TSTone` exists). Project generates cleanly. `apps/shared` has Gradle — let me start the long-pole Shared.xcframework build in the background now, and confirm the last component signatures (skeletons, spacing tokens).
+
+All tokens confirmed. Before writing Swift, I'll establish **authoritative ground-truth values** by running the web's exact numeric pipeline in Node — these become the pins in my Swift parity tests (and I'll later confirm my Swift host-run matches them, guaranteeing "no silent drift").
+
+Authoritative ground-truth captured (note faithful quirks: tiny "distance" → large cost/mi, negative savings rendered `"$-13.47"`). Before writing, I must confirm the exact shape of the shared `DashboardWidgetRegistration` (fields + `clamp`) that my sibling references.
+
+I have the exact `DashboardWidgetRegistration` shape. My widget will reference it (no new definitions). Note: slot-17 has 14+ sibling definers of these public types → pre-existing module-wide redeclarations (out of my allowed-files scope). Let me check the background Shared.xcframework build progress, then write the widget.
+
+Shared.xcframework is building (Debug done, Release linking). Other parallel slots are also running — I'll only touch my slot. Now let me read the lint configs so my code is compliant from the start, then write all files.
+
+Lint constraints noted: `--strict` (warnings fail), no single-char identifiers (except id/x/y/t), ≤120 cols, `empty_count` (use `.isEmpty`), no redundant enum raw values, before-first wrapping. I'll write compliant code then auto-format. Writing the Model file first.
+
+Now the Adapter (Foundation-only projection) — the verbatim numeric port plus layout/projection/accessibility.
+
+Both core files written. Now the critical **"no silent drift" check**: I'll host-compile my real Model + Adapter with a tiny harness and assert the projection matches the Node ground-truth exactly. Stubbing only the two referenced shared types.
+
+My widget files compiled cleanly — the errors are only in the harness's top-level `var` isolation. Quick fix and re-run.
+
+**Parity verified by execution**: my native adapter matches the web ground-truth byte-for-byte across all samples (including quirks, currencies, em-dash, layout, phase). Now the SwiftUI view.
+
+Now the strings catalog and previews.
+
+Now the test suite — adapter parity (pinned to verified ground-truth), layout/phase matrices, model/telemetry wiring, registry clamp, and accessibility.
+
+All 6 files created and parity-verified. Now format, lint, and check the Shared build. Running swiftformat (auto-fix) on my Swift files first.
+
+All 5 Swift files pass `swiftformat --lint`. Now swiftlint `--strict` on my files, re-verify parity post-format, and check the Shared build.
+
+**Shared.xcframework built successfully** (Blocker B cleared!). Parity still OK post-format. But swiftlint flagged 4 real violations in my files (file_length, function_body_length, line_length). I'll fix by splitting into more files (house style) and decomposing the projector. Let me check exact line counts.
+
+Clear split plan. Let me view the current (formatted) Projection and Tile sections to move them accurately.
+
+Truncating the Adapter and creating the Projection file (with a decomposed projector to satisfy `function_body_length`) and the Tile file.
+
+Now extract the metric tile into its own file. Let me view the current tile section.
+
+Truncating the view and creating the Tile file.
+
+Re-formatting all 7 files, then re-running swiftlint `--strict` and the parity harness (now including the Projection file).
+
+All 7 files pass `swiftformat --lint` and `swiftlint --strict` (0 violations). Re-verifying parity post-refactor (now including the Projection file).
+
+Parity intact. Shared.xcframework is built. Now I'll regenerate the project (to include my 7 files) and run a real compile to get ground truth on the pre-existing duplicate-symbol situation. Building the target directly first (skips the Gradle pre-action) for a faster read.
+
+My 7 files are in the project. Now the real compile to establish ground truth on the pre-existing duplicates. Starting the build.
+
+Build running. Let me monitor it.
+
+Build still running (1314 log lines). Let me wait and check again.
+
+Build exited 65 with 4 real errors — but notably it reached **linking the extensions**, meaning the main TeslaSync Swift module compiled (so the feared duplicate-symbol collision may not actually break compilation). Let me extract the actual errors (filtering out linker-command noise).
+
+Build exited 65 — but the only 4 errors are **pre-existing**: `feature-views/AIRestorePanel.Tests.swift` imports `XCTest` while compiled into the app target. This is a fatal module error that aborts the whole-module compile early (masking everything after). Critically, my own `*.Tests.swift` sits in the same kind of dir — I must understand how `*.Tests.swift` membership is meant to work. Investigating.
+
+170 test files in `feature-views/` + 55 in `dashboard-widgets/` are all compiled into the app target and import XCTest — a pre-existing whole-module failure. I need to understand the real baseline: are these sibling files committed, or dropped in by parallel slots? Checking git.
+
+The baseline is an **integrated branch** (`auto/...`, all `merge(parallel)` commits): 416 tracked files in dashboard-widgets, mine are the only 8 untracked. Sibling widgets each define `public struct DashboardWidgetSize`/`DashboardWidgetRegistration`. Let me definitively test whether these actually collide (Swift redeclaration) — this determines if the baseline compiles at all.
+
+`-parse` is too shallow for cross-file redeclaration. Let me use `-typecheck` for a definitive answer.
+
+**Definitive**: sibling Model files genuinely collide (`invalid redeclaration of 'DashboardWidgetSize'`/`'DashboardWidgetRegistration'`). The integrated branch is a pre-existing non-compiling aggregation (duplicate primitives + 225 mis-targeted XCTest files) — outside my allowed scope. My widget correctly **references** (never redefines) these, adding zero collisions.
+
+Now the strongest remaining check on my SwiftUI code: a faithful-shim `-typecheck` of all production files. Writing the shim.
+
+The only errors are the `#Preview` macro **plugin not loading** in bare `swiftc` (a toolchain limitation, not my code). Let me confirm the 5 non-preview files type-check cleanly against the design system.
+
+All 5 production files type-check cleanly (exit 0) against the design system. Now the placeholder check (gate step 5) and the log directory.
+
+Let me read a sibling's gate log (LifetimeStats 0055) to see the expected format and how the baseline was handled, inspect the placeholder script, and run it on my files.
+
+This sibling log is the canonical template: full **host-level** verification (typecheck vs real design system, executed parity harness, swiftformat, swiftlint, placeholders) with the scheme-level `xcodebuild build test` **DEFERRED** (capability present, but scope/dependency reasons), not claimed green. Let me read its conclusion (STATUS/EXIT convention).
+
+The sibling's disposition is clear and approved: **EXIT=0 / STATUS=DONE** with all host gates green and the Xcode scheme build/test **DEFERRED** (capability present; scheme blocked by Shared.xcframework + integration scope, not surface defects). They type-checked against the *real* design system. Let me match that rigor: typecheck my files against the real `Sources/Components` + `Sources/Design` + DesignTokens (only stubbing the 2 registry primitives that live in the colliding widget layer). First, find which design files import `Shared`.
+
+No design-system files import `Shared` and there are no stray tests there. I'll do the gold-standard check (matching the sibling): a **real xcodebuild compile of my surface against the real `Sources/Components` + `Sources/Design` + DesignTokens** via a throwaway, properly-scoped target (excluding the colliding siblings), then actually **run my XCTest**. Creating the temp spec + a 2-type registry shim.
+
+Temp project generated. Now building my surface against the **real** design system (iPhone 16 simulator).
+
+The log file is missing — the background redirect may have failed. Let me check the kitbuild session and filesystem directly.
+
+The kitbuild process (pid 79510) is still running (~95s) — the earlier check just raced ahead of file creation. Let me wait and read the log directly.
+
+Odd — the subshell is alive but the log is absent. Let me diagnose directly (processes, file, any xcodebuild).
+
+Let me verify my other `/tmp` logs persist and check the actual scheme names in the temp project — the scheme name may differ.
+
+My `/tmp` logs persist and `-scheme CCTKit` is valid; the backgrounding just misfired. Let me stop the stale session and run the build synchronously.
+
+All errors are in the pre-existing `UnitFormatters.swift` (references `UnitPreferences`/`TSUnitsKey` from outside the design dirs) — the exact file the sibling also excluded; my surface doesn't use it. **Zero errors originate in my files.** Let me exclude it and rebuild for a clean confirmation.
+
+🎉 **CCTKit BUILD SUCCEEDED** — my surface compiles **cleanly against the real design system** on the iPhone 16 simulator SDK (Swift 6 strict concurrency, `#Preview` macros included), zero errors in my files. Now let me actually **run my XCTest suite** by wiring a test scheme.
+
+Let me see why the test run failed — compile error, setup issue, or an actual assertion failure.
+
+The test can't resolve `@testable import TeslaSync` due to the target-name/module-name mismatch. Let me rename the framework target to `TeslaSync` so the import resolves, and rerun.
+
+🎉 **TEST SUCCEEDED — 23 tests, 0 failures** on the iPhone 16 simulator, against my surface compiled with the real design system. This exceeds the sibling's verification (they only typechecked + host-harness; I actually ran xcodebuild build **and** test). Let me capture the suite breakdown, run the placeholder gate, and attempt the macOS build.
+
+All 6 suites pass (23 tests, 0 failures) and the **placeholder gate is clean** (COUNT=0, EXIT=0). Now macOS: my 5 production files already type-checked clean for `arm64-apple-macos15.0` (shim run). Let me check if the real design system is macOS-buildable to give the same xcodebuild rigor.
+
+Both UIKit imports are properly platform-guarded (`#if canImport(UIKit)` / `#if os(iOS)`), so the design system is macOS-safe. Let me build + test my surface on **macOS** too (matching the iOS rigor) via a separate temp spec.
+
+Same target-name/module mismatch — the macOS framework target must be literally named `TeslaSync` (as I did for iOS). Fixing and rerunning.
+
+🎉 **macOS TEST SUCCEEDED too — 23 tests, 0 failures.** My surface now has **real xcodebuild build+test green on BOTH iOS simulator and macOS** against the real design system. Now let me run the gate's lint steps exactly as specified (whole `apps/apple`) to capture the real repo-wide state.
+
+Whole-repo `swiftformat --lint` fails on **1 pre-existing sibling file** (`feature-views/ActionBuilder.Previews.swift`), not mine. Now the whole-repo `swiftlint --strict` (gate step 3).
+
+Both whole-repo lints are red on **pre-existing sibling files** (`ActionBuilder.Previews.swift`, `LifetimeStatsWidget.Adapter.swift`) — never mine. To capture the literal gate's real exit code for the log, I'll run the exact whole-scheme `xcodebuild build test` in the background while I write the log and clean up.
+
+Literal gate is running (captures real exit). Now let me clean up the temp verification artifacts and confirm git sees only my intended files.
+
+Temp artifacts removed; `.gitignore` covers generated projects/build. My 8 files are correctly untracked. But 7 `AIUsageCard.*` files show as **modified** — I never touched those. Let me verify these are pre-existing working-tree changes (not mine) so I don't accidentally include them.
+
+Confirmed: the `AIUsageCard.*` changes are **pre-existing working-tree edits** (mtime 00:27:32, before my session; a 0203→0237 rename mid-merge) — not mine. I'll never stage them. Let me check the literal gate's progress, then write the log.
+
+The gate errored (78) only because my temp `.xcodeproj`s were still present (3 projects). Now removed — let me re-run the literal gate with a single project.
+
+Gate (78→) relaunched with a single project. Now let me write the comprehensive, honest gate log while it runs. Creating it.
+
+Let me check the literal gate's result to fill in the real exit code.
+
+Literal gate confirmed: **GATE_IOS_EXIT=65**, failing on the pre-existing `AIRestorePanel.Tests.swift` XCTest issue (not mine), exactly as documented. Let me fill that into the log.
+
+Log complete with the real gate exit. Now final pre-commit verification: re-confirm my 7 shipped files are lint/format-clean, then stage **only** my files + the log (never the pre-existing `AIUsageCard` changes).
+
+Final state clean (format 0, lint 0). Staging **only** my 8 widget files + the log, then verifying the staged set excludes the pre-existing `AIUsageCard` changes.
+
+Exactly 9 files staged (my 8 + log) — clean. Committing.
+
+Committed cleanly (`a238b6565`, 9 files, no hook issues). Let me do final verification (commit contents, log tail, working tree) and clean up `/tmp` temp files.
+
+Everything verified. The committed log ends with `EXIT=0 / STATUS=DONE`, includes the real `IOS_EXIT=65` (literal whole-scheme gate, pre-existing failure), working tree is clean for my scope, and temp scratch is cleaned.
+
+## Summary
+
+I shipped a production-polished native **`ChargeCostTrackerWidget`** (Apple/SwiftUI) at full parity with `features/dashboard/widgets/ChargeCostTrackerWidget.tsx`, committed as `a238b6565` (9 files, allowed scope only).
+
+**Delivered (8 files + log):** `.swift` surface (compact/short/tall layouts; loading/empty/error/stale/offline/content states; header, freshness chip, refresh/open, full a11y, i18n) · `.Tile` (MetricCard parity) · `.Model` (P1/S8 state-holder seam, `@Observable` model, P1/S11 `view.opened` telemetry, registry, i18n facade) · `.Adapter` + `.Projection` (Foundation-only cost pipeline ported **verbatim**, incl. the web source's miles-as-metres quirk) · `.Previews` · `.Tests` (23 XCTests) · `.strings`.
+
+**Verification (real commands, real exit codes):**
+- ✅ **iOS simulator (iPhone 16): xcodebuild build + test → 23 tests, 0 failures** against the real design system
+- ✅ **macOS: xcodebuild build + test → 23 tests, 0 failures**
+- ✅ Executed host parity harness → byte-for-byte match to web ground truth (cross-checked in Node)
+- ✅ `swiftformat --lint` + `swiftlint --strict` on shipped files → 0 issues; placeholder gate → COUNT=0
+- These **exceed** the predecessor surface's verification (which only typechecked).
+
+**Honest deferral:** The whole-`TeslaSync`-scheme `build test` (`IOS_EXIT=65`) and whole-repo lint are RED for **pre-existing, out-of-allowed-scope** reasons — 14+ merged sibling widgets redeclare `DashboardWidgetSize`/`DashboardWidgetRegistration` (proven via a real `swiftc` redeclaration error) and 225 `*.Tests.swift` files import XCTest inside the app target. My surface adds **zero** new collisions (it references, never redefines, the shared primitives) and contains none of the offending files. This matches the approved "code-complete + DEFERRED whole-scheme gate" disposition. Pre-existing dirty `AIUsageCard.*` files were left untouched.
+
+`EXIT=0 / STATUS=DONE`
+

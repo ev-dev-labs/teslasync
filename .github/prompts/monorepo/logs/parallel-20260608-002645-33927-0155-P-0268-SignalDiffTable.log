@@ -1,0 +1,100 @@
+I'll start by exploring the repository structure, the web source component, and checking tooling availability.
+
+Swift tooling is available. Let me read the web source and examine the existing AIUsageCard feature-view as a template (it's the most recent completed surface).
+
+Let me check whether SignalDiffTable already exists, and study the most recent template (AiUsageCard) plus a table-based example. Let me also read the key instruction files.
+
+`LiveSignalsTable` is the ideal template — same domain (telemetry signal table). Let me study it thoroughly along with the recent AiUsageCard entry point.
+
+Let me read the remaining LiveSignalsTable files to understand the full pattern (models, table view, localization, strings, previews, tests).
+
+Let me read the strings, previews, and tests for LiveSignalsTable, plus check how files are registered in project.yml.
+
+Now let me understand the theme tokens (P1/S9), how files are included in project.yml, the web `SourceLayerBadge`/`SignalDiffRow` types, and whether a native source-badge already exists.
+
+project.yml includes the whole `feature-views` directory, so new files are auto-included. Let me read the token definitions, the web `SourceLayerBadge`, and the `SignalDiffRow` type.
+
+I have the full pattern and tokens. Let me check `fmtNumber` formatting semantics and the `PinButton`/selection details from the web side to port them faithfully.
+
+I now have all tokens and patterns. Let me check the build toolchain situation (xcodegen, existing xcodeproj, simulators) and how prior surfaces were actually gated, since `xcodebuild` on a full monorepo app may be heavy.
+
+The pattern is clear: prior surfaces verify via an **isolated swiftc host harness + swiftlint + swiftformat + placeholder scan**, with the full-app xcodebuild gate DEFERRED on pre-existing monorepo blockers. Let me read the full 0237 log to replicate the exact verification approach, and confirm tooling specifics.
+
+I now have the complete methodology. Let me check the lint configs (esp. file_length budget), the placeholder script, and whether the Xcode toolchain is present for the isolated build.
+
+Everything's available (Xcode.app, pwsh, placeholder script). Let me read the placeholder patterns (to avoid forbidden substrings) and confirm the tokens file is self-contained.
+
+Let me confirm the matching is case-insensitive (the AiUsageCard log implied it) by viewing the match logic.
+
+Matching is case-insensitive — I'll avoid all forbidden substrings (incl. "todo" inside identifiers). Let me confirm deployment targets / Swift version in project.yml, then start building.
+
+I have everything I need. Let me set up tracking and write the plan, then build the surface.
+
+Now I'll create the surface files. Starting with the Foundation-only core (Models, Adapter).
+
+Now the Model.swift — the P1/S8 state-holder seam, P1/S11 telemetry seam, the `@Observable` view-model (with selection + pinning), and the in-memory source.
+
+Now the Localization facade (P1/S10) + accessibility summary.
+
+Now the native source-layer badge and the legend help chip.
+
+Now the shared row cells (select toggle, pin button, value text, Δ cell, sort header).
+
+I referenced `SignalDiffTableStrings.select` — let me add it to the localization facade.
+
+Now the table content — regular grid, compact cards, legend, and connectivity banner.
+
+Now the main surface file with state branches and retry.
+
+Now the i18n catalog (strings file).
+
+Now the previews for each state.
+
+Now the test suites. First the adapter tests (pure logic parity).
+
+Now the model + accessibility tests.
+
+All 11 files created. Let me check line counts and run the formatters/linters on just my files.
+
+Line counts are all under 400. The formatter flagged fixable style issues (redundant returns, number grouping, wrapping). Let me auto-format my files, then re-lint.
+
+swiftformat passes. Let me run swiftlint on my files and confirm the number literals survived auto-format correctly.
+
+swiftlint + swiftformat both pass (0 violations). Now the placeholder gate. I'll scan my files in isolation (the literal gate path doesn't resolve to a file, so I copy them to a temp dir for a real scan) and cross-check with grep.
+
+All static gates pass (swiftformat 0, swiftlint 0, placeholder COUNT=0). Now the key verification: an **isolated SwiftPM build + XCTest** of the exact shipped sources against the real `Tokens.swift`, under the Xcode toolchain. Let me assemble the harness.
+
+Harness assembled. Now build + test under the Xcode toolchain (Swift 6 strict concurrency).
+
+Build succeeded. There's one preview warning (a nonisolated helper constructing a `@MainActor` view) — I'll fix it for cleanliness. First let me run the tests.
+
+All **33 tests pass, 0 failures** under Swift 6 strict concurrency. Let me fix the one preview warning (nonisolated helper building a `@MainActor` view) for a fully clean build.
+
+Let me do a clean rebuild to definitively confirm zero warnings/errors.
+
+Clean build: **0 warnings, 0 errors**. Let me capture the final test count and gather real evidence about the full-app xcodebuild gate's pre-existing blockers (so the DEFERRED disposition is honest, not assumed).
+
+There **is** a booted iPhone 16 simulator under the Xcode toolchain. The pre-existing blockers are confirmed (Shared.xcframework absent, DashboardWidgetSize ×15, 171 co-located test files). To be rigorous rather than assume, let me actually attempt the real xcodebuild gate and capture genuine evidence.
+
+xcodeproj generated (and git-ignored). Now let me run the actual gate's iOS build and capture the genuine blocker evidence.
+
+The build is compiling the large app target (output is buffered through grep). Let me continue waiting for it to hit the pre-existing blocker.
+
+I now have **genuine, definitive evidence**. The build auto-staged `Shared.xcframework` (via a Gradle pre-build script, ~10 min) then **BUILD FAILED** on a pre-existing, non-mine file:
+
+```
+AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'
+```
+
+This is the exact co-located-tests-in-app-target blocker prior surfaces documented — the app target globs all 171 `*.Tests.swift` files which `import XCTest`, failing on the first one alphabetically (not mine; my code is never reached). Let me clean up generated artifacts and verify the tree.
+
+The tree is clean — only my 12 new files (the `AIUsageCard.*`/web modifications are pre-existing, not mine — I'll exclude them from the commit). All generated build artifacts are git-ignored. Now let me write the gate log.
+
+Now let me update tracking and commit exactly my 12 files + the log (excluding the pre-existing unrelated worktree edits).
+
+Exactly the 12 files + log are staged. Let me commit.
+
+Committed. Let me verify the commit contents and confirm the working tree is clean of my artifacts, then tidy up the harness.
+
+Task complete and verified. The working tree shows only pre-existing unrelated edits (which I correctly left untouched); my commit `9ef4bb62e` contains exactly the 12 `SignalDiffTable.*` files + the gate log (2436 insertions).
+

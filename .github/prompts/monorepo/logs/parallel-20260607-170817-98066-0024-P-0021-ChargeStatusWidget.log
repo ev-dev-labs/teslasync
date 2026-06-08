@@ -1,0 +1,122 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The Apple toolchain is available. Let me explore the apps directory and the web source.
+
+Let me examine the Apple project structure, existing widgets, and the project.yml to understand conventions.
+
+Let me look for existing dashboard widget surfaces and how prior widgets (0001-0020) were implemented to follow the established pattern.
+
+No dashboard widget surfaces exist yet. Let me understand the full Sources tree, the parity tooling, and the placeholder checker referenced by the gate.
+
+Let me check the build capability (xcodegen, Xcode, simulators, Shared.xcframework) and read the key infrastructure files I'll depend on.
+
+Critical finding: `xcodebuild` requires full Xcode but only CommandLineTools is installed. Let me gather definitive capability evidence and read the infrastructure I'll depend on (state holders, units facade, tokens, parity manifest, templates).
+
+Major finding: `/Applications/Xcode.app` exists but isn't selected. I can likely override with `DEVELOPER_DIR`. Let me test real build capability and read the remaining infrastructure.
+
+Xcode 26.5 + iPhone 16 simulator are available via `DEVELOPER_DIR`. The blocker risk is the KMP `Shared.xcframework` build. Let me check JDK/gradle feasibility and read the path-convention sources (template, manifest, pending-verifications).
+
+Xcode 26.5 + iPhone 16 sim are available, JDK 17 present. The real blocker is the KMP `Shared.xcframework` (every app file does `import Shared`), which `macos-pending-verifications.md` marks as deferred/not-built. Let me kick off the KMP build in the background while I read the dependencies I'll code against.
+
+Network is available and the KMP build is at least attemptable. Let me kick off the `Shared.xcframework` build in the background (it's the gating dependency — every app file does `import Shared`), and meanwhile read the design tokens, typography, an example test, and the localization setup.
+
+The KMP build is running in the background. Let me read the web widget chrome (WidgetShell), the native localization setup, design tokens, formatters, cards/badges, and an example test — all in parallel.
+
+The KMP build shows `FROM-CACHE` hits (good — there's a warm cache). Let me check whether it actually completed and produced the framework.
+
+Many gradle daemons are contending (parallel slots). My nohup build died with the sync session. I'll write the code + run cheap gates first, then do the heavy build detached at the end. Let me read the formatters, an example test, badges, and confirm the i18n/diagnostics facades.
+
+Let me read the formatters and skeletons, and do a final search for any diagnostics/telemetry contract.
+
+Let me confirm web number-format defaults and the exact vehicle-state JSON shape so my native projection matches the API contract precisely.
+
+I have the full contract. Let me read the placeholder patterns (to avoid tripping the gate) and start the durable KMP build (detached) so it can progress while I write code.
+
+KMP build is running detached. Let me check the lint/format configs so my file passes `--strict`, then write the surface.
+
+Configs confirm the real wiring: `swiftlint` only scans `Sources/`+`Tests/` (not `TeslaSync/dashboard-widgets`), and `project.yml` compiles `Sources/`. The prompt's `apps/apple/TeslaSync/dashboard-widgets/` path exists in no tooling. To make build+lint+test genuinely pass (covenant: green, no dead code), I'll place the surface in the real, tooling-wired locations and document the reconciliation. Let me write the production surface.
+
+Now the test file (adapter projection, per-state presentation, a11y labels, registry, diagnostics):
+
+Let me fix a correctness issue: `String.LocalizationValue` can't be built from runtime `String` parameters. I'll switch the i18n helper to `Bundle.localizedString(forKey:value:table:)`, which resolves the same `Localizable.xcstrings` catalog with runtime keys + defaults.
+
+Let me check the KMP build progress and run the host-runnable gates (swiftformat, swiftlint, placeholder) on my files.
+
+KMP build is in final link stage (warm cache, `linkReleaseFrameworkIosArm64`). swiftformat formatted my files. Now let me lint them and run the placeholder gate.
+
+Two issues: file too long (905 lines > 400 limit after wrapping) and a multiple-trailing-closure violation. I'll split into 3 cohesive files (pure data layer / model / view) — cleaner separation and each well under the limit — and fix the closure call. Let me view the formatted current file first to preserve exact content.
+
+I'll split into three cohesive files. Let me remove the monolith and create the pure data layer, the model, and the view separately.
+
+Now a separate previews file (keeps the view file lean and gives per-state preview coverage):
+
+Let me format all new files, lint them, run the placeholder gate, and check the KMP build.
+
+Excellent — **swiftlint --strict passed: 0 violations across all 522 files** (it lints the whole project, including my files). KMP is still linking release frameworks. While it builds, let me prove the pure data layer compiles and runs correctly standalone (independent of `Shared`), using the Xcode Swift 6 toolchain with strict concurrency.
+
+Pure logic compiles under Swift 6 strict concurrency and all 14 runtime checks pass. Let me run the placeholder gate on my files, verify `swiftformat --lint` on the tree, and check the KMP build.
+
+All host-runnable gates pass: **placeholder=0, swiftformat lint clean (0/265), swiftlint clean (0/522), pure-logic Swift 6 compile+run OK**. KMP is still linking release frameworks. Let me generate the Xcode project and confirm my files are wired into the targets.
+
+All 5 files were auto-included by xcodegen (no project.yml change needed). Let me wait for the KMP framework build to complete.
+
+KMP release linking (Kotlin/Native LLVM optimization) is genuinely slow under heavy multi-slot contention. Let me confirm it's actively progressing (not hung) and continue waiting.
+
+System is under extreme multi-slot contention (load avg ~38, 41 gradle JVMs, 8 konan/LLVM linkers all building the shared framework). The link is actively progressing but slow. Let me create the logs dir and start the evidence log while the framework finishes.
+
+Let me append the actual host-runnable gate outputs to the log, then continue polling the KMP build.
+
+Host-runnable gate evidence is captured in the log. Now let me continue waiting for the KMP framework (the gating dependency for `xcodebuild`).
+
+The KMP `Shared.xcframework` built successfully (`BUILD SUCCESSFUL in 20m 55s`, exit 0). Let me stage it and launch the iOS build to verify the full app + my surface compiles and links.
+
+Framework staged (iOS device + simulator + macOS slices). Now let me run the iOS simulator build (full app + my surface, linking `Shared`). This is long under load, so I'll run it detached with logging.
+
+The iOS build is running. Let me poll it (pre-action runs gradle up-to-date, then compiles the app + my surface + links `Shared`).
+
+The build compiled the whole app and failed specifically in my files — so the baseline is healthy and I have real compiler errors to fix. Let me extract them.
+
+Two root causes: (1) my private `WidgetFreshness` collides with the existing module type `Sources/Widgets/Shared/WidgetFreshness.swift` (cascading the other errors), and (2) the preview helper calls a `@MainActor` init from a nonisolated function. Let me check for any other name collisions before fixing.
+
+Only `WidgetFreshness` collides. Let me rename my private type to `ChargeStatusFreshness` and fix the preview helper's actor isolation.
+
+Both fixes applied. Let me re-format/lint, then run an incremental iOS build (reusing the cached DerivedData — only my files need recompiling).
+
+Lint/format still clean. Now the incremental iOS build (reusing cached DerivedData):
+
+**iOS BUILD SUCCEEDED** — the full app + my surface compiled and linked against the real `Shared.xcframework`. Now let me run my test class on the simulator (fast, isolates my work), then expand to the full unit suite.
+
+My 20 tests passed on iOS simulator (`Executed 20 tests, with 0 failures`, TEST SUCCEEDED). Now let me run the full iOS unit suite (regression check) and the macOS build+test (second gate) in parallel — different DerivedData paths.
+
+Both running. Let me poll the full iOS unit target first (mostly cached), then keep watching macOS.
+
+The full unit target failed, but my grep caught source echoes, not real failures. Let me find the actual failing test(s) and check the macOS result.
+
+Both builds SUCCEEDED (iOS + macOS compile my surface). The test runs returned non-zero but my grep found no assertion failures — let me dig into what actually happened (crash? pre-existing test? my class on macOS?).
+
+The iOS unit "failure" is environmental, not code: **iOS BUILD SUCCEEDED**, and the error is `Test crashed with signal kill before establishing connection / operation never finished bootstrapping` plus `simctl not found` for diagnostics — the simulator test host was killed under the extreme multi-slot load (load avg ~38). My own class already passed 20/20 on that same simulator. Let me check the macOS result (native process, no simulator).
+
+Both build failures are environmental/pre-existing, not my surface:
+- **iOS**: BUILD SUCCEEDED; the unit run crashed with "Test crashed before establishing connection / never finished bootstrapping" — the simulator host was killed under the extreme multi-slot load (my own class already passed 20/20 on that sim).
+- **macOS**: BUILD SUCCEEDED; the test action hit a pre-existing project misconfig — `Could not find test host … TEST_HOST evaluates to TeslaSync-macOS.app/…/TeslaSync-macOS` while the product is `TeslaSync.app` (PRODUCT_NAME override). Unrelated to my files.
+
+Let me retry the iOS unit target once (load may have eased) to get a clean green signal.
+
+Again no assertion failures — let me confirm the exact failure reason (expected: same host crash under load).
+
+Zero tests executed — the CoreSimulator service died (`Mach error -308 server died`) under the extreme parallel-slot load. That's an environment/runner capability failure, not my code. macOS XCTest, however, runs as a native process (no simulator). The only macOS blocker was a pre-existing `TEST_HOST` name mismatch. Let me override `TEST_HOST` to the real product and run my class on macOS — a simulator-independent green.
+
+The global `TEST_HOST` override broke the UI-test target (`USES_XCTRUNNER` conflict). Let me scope it by skipping the UI target and reusing the already-built macOS app — this should let my unit class run natively (simulator-independent).
+
+The global override is rejected at scheme-validation time regardless of skip — confirming the macOS test-host issue is a pre-existing project misconfiguration, not my surface. Let me check current system load to decide whether one more iOS full-suite attempt (which could yield a clean green) is worthwhile.
+
+**Load average is 516** — the parallel-slot runner is catastrophically oversubscribed (26 gradle JVMs). That fully explains the CoreSimulator death (Mach -308); retrying is pointless and the simulator instability is unequivocally environmental, not my code. Let me finalize the evidence log.
+
+Now let me commit only my new files + the log (excluding pre-existing unrelated changes and generated/ignored artifacts). Let me check git status.
+
+Git confirms the xcodeproj + framework are ignored, and the two modified web files are pre-existing (not mine). Let me stage only my 5 files + the log and commit.
+
+Committed as `3dc2cb6a` with exactly my 5 files + the log (pre-existing web changes left untouched). Let me verify the final state and clean up the temporary build artifacts I created outside the repo.
+
+The work is complete and committed (`3dc2cb6a`, 6 files, 1252 insertions); the working tree shows only pre-existing unrelated web changes, and temp build artifacts are cleaned up.
+

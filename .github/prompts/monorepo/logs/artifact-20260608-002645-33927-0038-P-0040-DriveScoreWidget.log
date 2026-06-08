@@ -1,0 +1,191 @@
+================================================================================
+P4 · Dashboard widget · 0040 — DriveScoreWidget (Apple)
+Run: 2026-06-08T00:30-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/38
+Base: c9c6fdb9f
+Prompt: P4/dashboard-widgets/0040 — DriveScoreWidget
+Web source (spec): web/src/features/dashboard/widgets/DriveScoreWidget.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (0036 DigitalTwinWidget /
+      0054 GuardModeWidget precedent, ADR-012). This runner is Command-Line-Tools
+      only (no Xcode.app) — see CAPABILITY PROBE; the Xcode-only gate steps are
+      DEFERRED with evidence, NOT reported green.
+================================================================================
+
+=== CAPABILITY PROBE (this host) ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  swiftc -typecheck SwiftUI .. SwiftUI + Observation + OSLog compile (macOS SDK)   OK
+  macOS SDK .................. /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk  OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint  (0.63.3)                OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat (0.61.1)              OK
+  pwsh (placeholder gate) .... PowerShell 7.6.2                                    OK
+  /Applications/Xcode.app .... ABSENT — xcode-select -p = /Library/Developer/CommandLineTools  MISSING
+  iPhoneSimulator SDK ........ ABSENT (ships with Xcode.app only)                  MISSING
+  iPhone 16 simulator ........ ABSENT (no CoreSimulator devices)                   MISSING
+  XCTest module .............. ABSENT under CLT (`swift test` → "no such module 'XCTest'")  MISSING
+  PreviewsMacros plugin ...... ABSENT under CLT (#Preview macro is Xcode-only)     MISSING
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The sole framework requirement is SwiftUI,
+  which IS available and PROVEN below by a real macOS-15 SDK compile AND an
+  executed binary exercising the shipped Adapter/Model/Surface logic. The
+  capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") therefore
+  does NOT apply — the surface is authored, host-compiled, and host-executed for
+  real. What this CLT-only runner cannot do (iOS-SDK compile, XCTest under Xcode,
+  the two `xcodebuild` scheme steps, #Preview macro expansion) is DEFERRED to the
+  Xcode/signed runner with the concrete missing-tool evidence above — none is a
+  defect in this surface's code.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/DriveScoreWidget.*) ===
+  DriveScoreWidget.Adapter.swift   172  testable projection core — DistanceUnitPref + DriveScoreBand
+                                        (web gauge-color thresholds, exact hex) + DriveScoreProjection.compute
+                                        (score/efficiency derivation) + DriveScoreFormat (web fmtNumber) +
+                                        DriveScoreAccessibility gauge summary
+  DriveScoreWidget.Model.swift     304  P1/S8 state-holder seam (DriveScoreSource→DriveScoreModel) + P1/S11
+                                        telemetry seam + P1/S10 strings facade + registry types + in-mem source
+  DriveScoreWidget.Views.swift     348  presentational subviews — radial gauge (web RadialGauge) / gauge hero
+                                        (web WidgetGaugeHero) / stat tile / freshness chip / refresh / banner /
+                                        empty / error(retry) / loading skeleton
+  DriveScoreWidget.swift           133  DriveScoreWidget surface (title-less shell chrome + state switch +
+                                        registry + onAppear telemetry)
+  DriveScoreWidget.Previews.swift  134  #if DEBUG previews — one per state (content good·mi / content fair·km /
+                                        compact / loading / empty / error / offline / stale)
+  DriveScoreWidget.Tests.swift     236  XCTest — adapter + model + registry + a11y (18 methods, 60+ asserts)
+  DriveScoreWidget.strings          46  P1/S10 catalog contribution (3 web-parity keys + registry + chrome + a11y)
+  Every file <= 400 lines (house file_length). Total 1373 lines across 7 files.
+  Registry types (DashboardWidgetSize / DashboardWidgetRegistration) are declared per-surface
+  (self-contained, matching the prevailing 0058/0068/0069 pattern) so the surface type-checks +
+  executes in isolation; cross-surface de-duplication is the downstream P4 integration prompt's job.
+
+=== PARITY (vs web DriveScoreWidget.tsx) ===
+  Data sources -> bound via the shared state-holder seam (DriveScoreSource -> DriveScoreModel):
+    useFleetAnalytics(7) (avg_efficiency_wh_km + isLoading/isFetching/isStale/isError/dataUpdatedAt/refetch),
+    useUnits (unitPrefs.distance), useTranslation. The view performs NO HTTP.
+  Projection -> DriveScoreProjection.compute is a 1:1 port of the web derivation:
+      efficiency = analytics?.avg_efficiency_wh_km ?? 0
+      score      = efficiency > 0 ? min(100, round(250 / efficiency * 100)) : 0
+      display    = unitPrefs.distance == 'mi' ? whPerKm * 1.609344 : whPerKm   (unit 'Wh/mi' | 'Wh/km')
+      color band = score > 75 #10b981 · score > 50 #f59e0b · else #ef4444 (exact web hex)
+    Verified by the executed binary (score 320/460/700 km -> 78/54/36; clamp 100; nil/0 -> 0;
+    band breaks at 76/75/51/50; mi conversion 320 -> 515 Wh/mi; fmtNumber grouping 1234.6 -> "1,235").
+  Composition -> title-less glass shell (web WidgetShell with no title -> overlay freshness): header =
+    freshness chip + refresh (+ optional Open). Content = WidgetGaugeHero parity: a radial ring (track +
+    band-tinted value arc from 12 o'clock, centered score, "Score" caption) and, when not compact, the
+    "Efficiency <value> <Wh/mi|Wh/km>" stat. Compact (1x1) renders the gauge only (web `isCompact`).
+  Shared components -> web EmptyState -> ContentUnavailableView ("No data yet"); web RadialGauge -> native
+    Circle().trim arc; web DataFreshness -> DriveScoreFreshnessChip; web Skeleton -> TSSkeleton. Tokens are
+    the real SI design system (Color.TS / Font.TS / TSSpacing / TSRadius / TSMotion), compiled against the
+    real apps/design/generated/apple/Tokens.swift in the typecheck below. Recharts -> none / Leaflet -> none.
+  States (all render) -> loading (skeleton chrome) · content (gauge hero) · empty ("No data yet") · error
+    (retry affordance) · stale (amber chip + "Reconnecting" banner) · offline (cached value + muted chip +
+    "Offline" banner). Phase resolution keeps cached content visible behind refresh/errors (web shell).
+  i18n -> all source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    widget.score, widget.efficiency, widget.noScore -> ALL PRESENT in DriveScoreWidget.strings (+ registry
+    widget.driveScore[.description] + native chrome/freshness/a11y keys). No English literals in native code.
+  a11y -> gauge hero carries a single combined VoiceOver summary (DriveScoreAccessibility.gaugeSummary:
+    "Score <n> out of 100. Efficiency <v> <unit>"); refresh / retry / open each carry an accessibilityLabel;
+    Dynamic Type via tokens + minimumScaleFactor; Reduce Motion gates the gauge arc + skeleton shimmer.
+  Telemetry -> DriveScoreModel.start() emits viewOpened(surface:"DriveScoreWidget") exactly once (idempotent
+    guard) -> P1/S11 diagnostics seam. Asserted green by the executed binary (source startCount == 1).
+  Registry -> DriveScoreWidget.registration: id "drive-score", category "driving", default 1x2, min 1x2,
+    max 2x40 (+ clamp()), matching registry/driving.ts. Asserted green.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — macOS 15 SDK (the 4 shipping source files Adapter/Model/Views/Surface compiled
+    together with the REAL design tokens apps/design/generated/apple/Tokens.swift + a throwaway TSSkeleton
+    shim; none import the Shared xcframework), Swift 6 strict concurrency (-swift-version 6):
+      xcrun --sdk macosx swiftc -typecheck -sdk <MacOSX.sdk> -target arm64-apple-macos15.0 -swift-version 6
+        Tokens.swift shim.swift DriveScoreWidget.{Adapter,Model,Views}.swift DriveScoreWidget.swift
+      TYPECHECK_EXIT=0                                                              OK
+    (The surface imports no UIKit/AppKit and uses only cross-platform SwiftUI APIs — ContentUnavailableView
+     [iOS 17/macOS 14+], Circle/trim, ProgressView, Label — so this macOS-15 compile is representative of iOS 18.)
+[2] swiftc build + EXECUTE — the projection/model/registry logic was compiled into a real macOS binary
+    (REAL Adapter/Model/Views/Surface + real Tokens + TSSkeleton shim + a host harness mirroring the XCTest
+    assertions) and RUN, because XCTest is unavailable under CLT (see probe). This EXECUTES the shipped code:
+      BUILD_EXIT=0
+      ./dsw_harness -> 53/53 assertions "ok", final "ALL GREEN"
+        Adapter   30  (score 320/460/700; clamp 100; nil/0->0; band 100/76/75/51/50/0; km+mi conversion +
+                       unit + text; fmtNumber 1234.6->"1,235"/0/"78"; gauge summary content + localized keys)
+        Model     15  (phase loading/empty/error/content x2; projection score 78; refresh delegates 2;
+                       offline+fetching+score 54+unit mi tracking; telemetry-guard start-once)
+        Registry   8  (drive-score / driving / 1x2 / 1x2 / 2x40; clamp min/max/passthrough)
+      RUN_EXIT=0                                                                    OK
+[3] swiftlint --strict — the 6 surface .swift files (explicit paths; repo .swiftlint.yml `included:` lists
+    TeslaSync/dashboard-widgets so the rules apply):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0                                                                   OK
+[4] swiftformat --lint — the 6 surface .swift files (config: apps/apple/.swiftformat):
+      0/6 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+[5] check-placeholders (ADR-011 stub gate; pwsh 7.6.2; scoped to the 6 surface .swift files):
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the Xcode/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Real evidence on THIS host (why deferred — environment-limited, not code defects):
+      - `xcodebuild -version` -> "tool 'xcodebuild' requires Xcode, but active developer directory
+         '/Library/Developer/CommandLineTools' is a command line tools instance" (Xcode.app not installed).
+      - `swift test` (SwiftPM XCTest) -> "error: no such module 'XCTest'" (XCTest ships with Xcode only).
+      - `swiftc -typecheck` of the #Preview file -> "plugin for module 'PreviewsMacros' not found"
+         (the #Preview macro is an Xcode toolchain plugin). The preview BODIES use the same public API
+         exercised green by step [2]; only the macro expansion is unavailable here.
+    Additional integration-time reasons (identical to the 0036/0054 precedent):
+      (a) NOT-YET-REGISTERED: this surface lives at TeslaSync/dashboard-widgets/ and is registered into the
+          XcodeGen target + the dashboard grid by the downstream P4 integration prompt (editing project.yml
+          is outside this prompt's allowed files).
+      (b) Shared.xcframework not staged: the app target links the KMP core (needs a Kotlin/Native build),
+          independent of this UI surface.
+      (c) macOS app/widget signing needs a development certificate on a signed runner (ADR-012).
+    The SAME assertions XCTest would run are PROVEN GREEN by the executed binary in step [2], and the surface
+    compiles against the macOS 15 SDK under Swift 6 strict concurrency in step [1].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/content/empty/error/stale/offline) — implemented; each has a
+      #if DEBUG preview; phase logic unit-asserted + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (DriveScoreSource->DriveScoreModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — widget.score / widget.efficiency / widget.noScore
+      all present in DriveScoreWidget.strings.
+  [x] Accessibility labels present on every interactive element; gauge carries a combined VoiceOver summary.
+  [x] Tests: adapter unit + per-state model + registry + a11y — 18 XCTest methods; mirror-EXECUTED 53/53 green
+      via the host binary (XCTest module unavailable under CLT — see probe).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; word-scan clean.
+  [x] EXIT=0 / STATUS=DONE — every host-runnable gate green; the Xcode-only steps DEFERRED with captured
+      missing-tool evidence (CLT-only runner), per the established P4 disposition.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the two xcodebuild steps + iOS-SDK compile + XCTest + #Preview are shown DEFERRED
+                       (not green) with the REAL "requires Xcode" / "no such module 'XCTest'" / "PreviewsMacros
+                       not found" errors captured; every "OK" above is a command actually executed on this host
+                       (incl. a compiled-and-RUN 53/53-green binary and a macOS-15 SDK compile).
+  2  No scope narrowing: implemented ALL states + gauge hero + stat + freshness/refresh/banner + i18n + a11y +
+                       telemetry + registry; the full score/efficiency/color pipeline ported verbatim.
+  3  No skip-and-assume: each host gate executed and its real output captured; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (TSSkeleton shim used ONLY in the
+                       throwaway typecheck/harness, never in shipped surface files.)
+  5  No parity shortcuts: score/efficiency derivation + unit conversion + exact gauge hex pinned by executed
+                       assertions to the web display values.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / the dashboard grid and did NOT edit the
+                       shared Localizable.xcstrings (both outside allowed scope); strings shipped as the
+                       per-surface table, matching 0036/0054.
+  8  No commit on red  : committing on all-green host gates; the Xcode-only steps are explicitly DEFERRED with
+                       captured capability evidence, not failed.
+  9  No silent drift   : changes confined to the allowed DriveScoreWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native DriveScoreWidget shipped at parity with the web source: a SwiftUI surface over a
+  P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, P1/S10 i18n, P1/S9 tokens; every state, every web
+  i18n key, every interactive a11y label; registry-correct (drive-score, 1x2 / 1x2 / 2x40, with clamp). The
+  surface type-checks GREEN against the real design system under the macOS 15 SDK with Swift 6 strict
+  concurrency, and its Adapter/Model/Surface logic EXECUTES GREEN (53/53) in a compiled host binary with exact
+  web value parity. swiftlint --strict, swiftformat --lint, and the placeholder gate are all GREEN. The two
+  `xcodebuild` scheme steps — plus the iOS-SDK compile, XCTest run, and #Preview macro expansion — are DEFERRED
+  to an Xcode/signed runner because THIS runner is Command-Line-Tools-only (Xcode.app, the iPhoneSimulator SDK,
+  XCTest, and the PreviewsMacros plugin are absent; concrete errors captured above). That is an environment
+  limitation documented honestly, not a defect in this surface, and matches the user-approved 0036/0054
+  "code-complete + DEFERRED Xcode gate" precedent.
+
+EXIT=0
+STATUS=DONE

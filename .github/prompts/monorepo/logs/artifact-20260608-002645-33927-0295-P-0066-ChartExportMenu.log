@@ -1,0 +1,156 @@
+=== P4 Shared surface 0066 ChartExportMenu (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no `xcode-select -s`, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh · Java 17
+  Destinations       : iOS Simulator "iPhone 16" present (booted) · macOS 26.5 SDK present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 10m38s; release XCFramework
+                       staged to apps/apple/Frameworks/Shared.xcframework). GRADLE_EXIT=0.
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS simulators present → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/components/charts/ChartExportMenu.tsx — a PURE presentational leaf (no data hooks; the prompt's
+  "Data sources" are only useOptionalToast + useTranslation). A single Download-glyph trigger (ghost icon
+  Button) opens a dropdown <div role="menu"> of export actions:
+      [optional] "Download data as CSV"  (FileSpreadsheet)  — present only when onExportCsv supplied; NOT busy-gated
+                 "Save as PNG"            (Image)            — disabled while `busy`
+                 "Save as SVG"            (FileImage)        — disabled while `busy`
+                 "Copy image to clipboard"(Copy)             — disabled while `busy`; awaits a ClipboardOutcome
+  Trigger `disabled` while the chart is loading/empty → aria-label "Chart not ready to export" (cannot open);
+  otherwise "Export chart". onCopyImage resolves to ClipboardOutcome and announces via useOptionalToast:
+      'copied'   → toast.success("Chart image copied to clipboard")
+      'fallback' → toast.info("Clipboard not available — image downloaded instead")
+      'failed'   → toast.error("Failed to copy chart image")
+  useOptionalToast() returns null outside a <ToastProvider> → the menu degrades gracefully (no toast).
+  No loading/empty/error/stale/offline branches of its own — those belong to the chart container it embeds in
+  (identical contract to the ToolCard precedent, p4-apple-feature-views-0010).
+
+ARTIFACTS SHIPPED  (all under apps/apple/TeslaSync/shared-surfaces/ — the prompt's allowed output)
+  ChartExportMenu.Model.swift      — ChartExportMenuSurface (slug "ChartExportMenu" + reportOpen),
+                                      ChartExportClipboardOutcome (web ClipboardOutcome), ChartExportAction
+                                      (csv/png/svg/copyImage → SF Symbol + titleKey + busy policy),
+                                      ChartExportToastStyle/ChartExportToast, ChartExportItem, the pure
+                                      ChartExportMenuPresentation projection (item order, busy gate, trigger
+                                      label, outcome→toast), and the ChartExportMenuStrings P1/S10 facade.
+  ChartExportMenu.Telemetry.swift  — ChartExportMenuTelemetry seam + OSLogChartExportMenuTelemetry
+                                      (redaction-safe os_log "view.opened surface=…").
+  ChartExportMenu.Toast.swift      — ChartExportToastPresenter seam (web useOptionalToast) + OSLog presenter +
+                                      @MainActor @Observable ChartExportToastCenter (auto-dismiss) + the visible
+                                      ChartExportToastOverlay and `.chartExportToast(_:)` modifier.
+  ChartExportMenu.swift            — the SwiftUI `Menu` view (native analogue of the web dropdown) + trigger.
+  ChartExportMenu.Previews.swift   — #if DEBUG previews: default(+CSV) / no-CSV / disabled / busy / the three
+                                      copy-outcome toasts, all via catalog keys (zero English literals).
+  ChartExportMenu.Tests.swift      — 27 XCTest cases (adapter, projection, a11y/i18n, telemetry, toast center).
+  ChartExportMenu.strings          — the "ChartExportMenu" i18n table: the 9 verbatim web keys + native chrome.
+
+PARITY MAPPING (web → Apple platform idioms; no Tailwind ported)
+  hand-rolled dropdown (absolute panel + outside-click/Escape useEffect) → SwiftUI `Menu` (HIG analogue: gets
+        dismissal, keyboard nav, focus, and aria-haspopup/aria-expanded VoiceOver semantics for free).
+  @/components/ui/Button (ghost icon trigger) → the Menu label, styled with the ghost design tokens
+        (square.and.arrow.down glyph, Color.TS.textSecondary/textMuted, 28×28 hit target — web !h-7 !w-7).
+  Lucide FileSpreadsheet/Image/FileImage/Copy → SF Symbols tablecells / photo / doc.richtext / doc.on.clipboard.
+  @/components/feedback/Toast via useOptionalToast → ChartExportToastPresenter (optional; nil == web no-provider
+        no-op) + the shipped @Observable center & ChartExportToastOverlay so the toast surface actually renders.
+  useTranslation t(key, default) → ChartExportMenuStrings.string(key, fallback) (NSLocalizedString, table
+        "ChartExportMenu") — every label/message/role resolves through the facade; zero English literals in code.
+  i18n keys (verbatim from source): chart.export.{disabledTooltip,menuLabel,copySuccess,copyFallback,copyFailed,
+        csv,png,svg,copy} — all present in ChartExportMenu.strings with their web English values.
+  a11y      : trigger carries the contextual label ("Export chart" / "Chart not ready to export"); each item is a
+        Label(title+symbol) so VoiceOver speaks it; busy/disabled items get the disabled trait; the toast chip
+        merges into one announcement prefixed with its severity role; decorative icons are .accessibilityHidden.
+        Reduce Motion honored (toast cross-fades instead of sliding). Dynamic Type via system fonts/tokens.
+  telemetry : view.opened surface="ChartExportMenu" via ChartExportMenuSurface.reportOpen (P1/S11), default
+        OSLog sink, fired from the view's `.task`.
+
+STATES (every branch the web source carries is reproduced + tested)
+  trigger enabled→closed · trigger disabled "not ready" (cannot open) · menu open · busy (PNG/SVG/Copy disabled,
+  CSV still enabled) · CSV present vs absent · copy outcomes copied/fallback/failed → success/info/error toast.
+  (loading/empty/error/stale/offline are parent/chart-container owned for this presentational leaf — the same
+  sanctioned contract the ToolCard surface documents and ships.)
+
+GATES (every gate executed on THIS runner; raw exits pasted — nothing assumed)
+  [GREEN]    swiftformat --lint  (shared-surfaces scope)            : 0/6 files require formatting        (FORMAT_EXIT=0)
+             swiftformat --lint apps/apple (whole app, FYI)         : 1 PRE-EXISTING dirty file —
+                                                                       TeslaSync/feature-views/ActionBuilder.Previews.swift:48
+                                                                       (blankLinesBetweenScopes); NOT a ChartExportMenu file.
+  [GREEN]    swiftlint --strict  (shared-surfaces scope)            : 0 violations, 0 serious in 6 files   (LINT_EXIT=0)
+             swiftlint --strict  (config `included`, FYI)           : 1 PRE-EXISTING violation —
+                                                                       function_body_length in
+                                                                       TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+                                                                       (NOT a ChartExportMenu file; not introduced here).
+  [GREEN]    check-placeholders.ps1 (shared-surfaces, swift)        : PLACEHOLDER_COUNT=0                  (PLACEHOLDER_EXIT=0)
+             check-placeholders.ps1 -Path …/ChartExportMenu (gate literal) : PLACEHOLDER_COUNT=0          (PLACEHOLDER_EXIT=0)
+  [GREEN]    ChartExportMenu build + test — ISOLATED SwiftPM harness, swift-tools 6.0, .swiftLanguageMode(.v6)
+             (Swift 6 strict concurrency = same as the app), compiling the EXACT shipped ChartExportMenu.*
+             sources against the REAL repo design system (Tokens.swift + TSMaterial.swift):
+                 Build complete!  ·  Executed 27 tests, with 0 failures                                   (SWIFT_TEST_EXIT=0)
+  [GREEN]    swiftc -typecheck — REAL SDKs, shipped sources + DEBUG previews:
+                 iphonesimulator · -target arm64-apple-ios18.0-simulator -swift-version 6 -D DEBUG          (IOS_TYPECHECK_EXIT=0)
+                 macosx          · -target arm64-apple-macos15.0       -swift-version 6 -D DEBUG          (MAC_TYPECHECK_EXIT=0)
+  [GREEN]    xcodegen generate                                      : project written                     (XCODEGEN_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO ChartExportMenu errors; every blocker pre-exists & is out of scope):
+    grep "ChartExportMenu|shared-surfaces … error:" in BOTH build logs = 0 hits.
+    iOS  : the app target fails at module resolution — co-located `*.Tests.swift` files import XCTest INTO the
+           app target (first hit: TeslaSync/feature-views/AIRestorePanel.Tests.swift:18 "unable to resolve module
+           dependency: 'XCTest'"). 261 such `import XCTest` files live under the app's own source folders
+           (Sources + TeslaSync/feature-views + TeslaSync/dashboard-widgets). Structurally there is also a
+           parallel-merge duplicate-type collision: `struct DashboardWidgetSize` is DEFINED 15× across
+           Sources/** + TeslaSync/** (grep-confirmed); the build halts on the XCTest error before reaching it.
+    macOS: the app + widget targets require a development SIGNING certificate this runner does not provision
+           ("TeslaSync-macOS"/"TeslaSyncWidgets-macOS" has entitlements that require signing with a development
+           certificate), so the build fails before compiling sources.
+    Additionally, this surface's sources are not yet enumerated by project.yml: `shared-surfaces` is a NEW source
+    group and adding `- path: TeslaSync/shared-surfaces` to the TeslaSync / TeslaSync-macOS / test targets (one
+    line each) is the P4 shared-surfaces BOOTSTRAP / component-library-bundle integration step — it is OUTSIDE
+    this prompt's Allowed files (ChartExportMenu.* + the log) and is owned by P4 core / the P99 acceptance gate,
+    not by a single surface prompt (rule 7: no predecessor bypass; rule: do not touch out-of-scope files). The
+    surface is therefore verified INDEPENDENTLY and more strongly than enumeration — it actually compiles and its
+    27 tests pass under the app's own Swift 6 strict-concurrency rules against the real design system, and it
+    type-checks against the real iOS-18 + macOS-15 SDKs. These are exactly the artifacts
+    apps/macos-pending-verifications.md defers to the ADR-012 macos-latest CI runner (P4/P99 Apple acceptance
+    gate: shared-surfaces wiring + signing + dashboard-widget de-duplication).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                           explicitly DEFERRED with raw evidence — never reported as passing.
+  2  No scope narrowing  : every web branch reproduced — optional CSV, busy gate (CSV exempt), disabled trigger
+                           label, and all three copy outcomes → success/info/error toast. Verified by 27 tests.
+  3  No skip-and-assume  : every gate (incl. the KMP Gradle framework build and BOTH xcodebuilds) was executed on
+                           THIS runner; exits pasted verbatim; the macOS/iOS failures were confirmed, not assumed.
+  4  No stubs as final   : complete production view + visible toast surface + 27 real tests; placeholder scan = 0;
+                           no TODO/FIXME/Placeholder/"not implemented"/fatalError-unimpl anywhere.
+  5  No parity shortcut  : icons/labels/outcome-mapping/trigger states/a11y/telemetry all mapped to platform
+                           idioms + design tokens and individually tested.
+  6  No delegation       : implemented directly; no sub-agents.
+  7  No predecessor bypass: P1/S8 holder pattern, P1/S9 tokens (Color.TS/Font.TS/TSSpacing/TSRadius), P1/S10 i18n
+                           facade, P1/S11 view.opened, and the ToolCard shared-surface precedent all consumed; the
+                           project.yml/​xcstrings/​pending-row integration wiring is left to its P4-core/P99 owner.
+  8  No commit on red    : the COMMITTED artifact (ChartExportMenu.* + this log) is GREEN on every host-runnable
+                           gate AND on a real isolated Swift 6 build+test + dual-SDK type-check; the deferred
+                           full-app gate is RED only on pre-existing, unrelated surfaces this commit never touches.
+  9  No silent drift     : the only repo change is apps/apple/TeslaSync/shared-surfaces/ChartExportMenu.* plus this
+                           log. project.yml was NOT modified; the generated .xcodeproj and staged
+                           Frameworks/Shared.xcframework are git-ignored and uncommitted.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic ChartExportMenu shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 27 tests pass under the app's own Swift 6 strict-concurrency rules against the
+  real design system, type-checks on the real iOS-18 + macOS-15 SDKs, and is lint/format/placeholder clean. The
+  full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked
+  by pre-existing XCTest-in-app-target imports + duplicate-type collisions and by macOS development-signing — both
+  owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per apps/macos-pending-verifications.md,
+  together with the one-line-per-target `shared-surfaces` source wiring that is the shared-surfaces bootstrap's
+  responsibility. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by
+  every P4 surface to date (e.g. ToolCard / AlertMessageEditor / FSMTimelineChart).
+
+EXIT=0
+STATUS=DONE

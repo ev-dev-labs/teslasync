@@ -1,0 +1,142 @@
+=== P4 Feature view 0149 SpeedHistogramChart (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/SpeedHistogramChart.*
+Web spec : web/src/features/driving/components/drive-detail/SpeedHistogramChart.tsx
+Run host : macOS (Darwin arm64), Xcode 26.5 (17F42), Swift 6.x, iOS 26.5 sim (iPhone 16)
+Tooling  : swiftlint, swiftformat, pwsh, xcodegen, gradle (KMP) all present.
+
+----------------------------------------------------------------------
+DELIVERABLE (7 files, mirrors sibling SpeedTrendChart pattern)
+----------------------------------------------------------------------
+  SpeedHistogramChart.swift           composed view, phase switch (loading/error/empty/content)
+  SpeedHistogramChart.Model.swift     P1/S8 @Observable state holder + P1/S10 i18n facade + P1/S11 telemetry
+  SpeedHistogramChart.Adapter.swift   pure projection: display-unit speeds -> buckets (web useMemo parity)
+  SpeedHistogramChart.Views.swift     header/freshness-chip/banner + single-series Swift Charts BarMark + tooltip + states
+  SpeedHistogramChart.Previews.swift  one #Preview per state (content/empty/loading/error/stale/offline)
+  SpeedHistogramChart.Tests.swift     adapter + format + model + accessibility XCTest
+  SpeedHistogramChart.strings         i18n catalog contribution (table "SpeedHistogramChart")
+
+Web->native mapping decisions:
+  - Recharts BarChart (single pct series over range) -> SwiftUI `Chart { BarMark }`.
+  - Web bar fill #a855f7 -> design token Color.TS.chartSeriesPower (exact sRGB match; no ad-hoc literal).
+  - FadeIn + ChartContainer card -> TSFadeIn + GlassPanel-equivalent surface/border (P1/S9 tokens).
+  - Parent `useDriveDetailData` bucketing reproduced in the adapter (7 half-open [min,max) bands,
+    empty-band drop, pct = round(count / TOTAL_samples * 100)) so the "cached -> projection" core is testable.
+  - States widened to full envelope: loading / content / empty / error / stale / offline (every state renders).
+  - i18n keys extracted from source all resolve via the facade (no English literals in code):
+      driveDetail.speedHistogram / .aria / col.range / col.pct / ofDrive / noChartData.
+
+======================================================================
+A. SURFACE-SCOPED GATES (all green on this runner)
+======================================================================
+
+[A1] swiftformat --lint (6 swift files)
+     > 0/6 files require formatting.
+     FORMAT_EXIT=0
+
+[A2] swiftlint --strict (6 swift files)
+     > Done linting! Found 0 violations, 0 serious in 6 files.
+     LINT_EXIT=0
+
+[A3] check-placeholders.ps1 (ADR-011 stub/placeholder gate)
+     Exact gate invocation (-Path .../SpeedHistogramChart):
+        PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+     Meaningful scan of the actual 7 staged files (temp dir, -Language swift):
+        PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+     PLACEHOLDER_EXIT=0
+
+[A4] Adapter standalone compile + run (Foundation-only, swiftc -O)  -- web parity proof
+     19/19 checks PASS, e.g.:
+        buckets([5,10,25,30,35,65,130])      -> 0-20=29,20-40=43,60-80=14,120+=14
+        buckets([0,20,40,60,80,100,120])     -> 7 bands, half-open boundaries, each 14
+        buckets([10,-5,10000,30])            -> 0-20=25,20-40=25 (out-of-range counts in denominator)
+        percentage rounding == JS Math.round (1/8->13, 3/8->38, 1/3->33)
+        rangeLabel open-ended -> "120+"; mid -> "100-120"
+        a11y summary -> "Speed Histogram: 4 speed ranges. Most of drive at 20-40 - 43% of drive"
+     ALL_ADAPTER_CHECKS_PASS  (RUN_EXIT=0)
+
+[A5] Production type-check vs REAL shared deps (no test/Preview), Xcode SDK, target arm64-apple-macos15, -swift-version 6
+     Files: SpeedHistogramChart.{swift,Model,Adapter,Views} + real
+            Tokens/TSDesign/TSMaterial/Motion/Skeletons/Cards/Buttons/Typography/Badges
+     TYPECHECK_PROD_EXIT=0   (clean; only the #Preview macro needs Xcode's PreviewsMacros plugin)
+
+[A6] Isolated SwiftPM build + tests (the established ToolCard methodology), DEVELOPER_DIR=Xcode, Swift 6 language mode
+     swift build : Build complete!  (Surface lib = my 4 prod files + 9 real dep files)
+     swift test  : Executed 26 tests, with 0 failures
+        SpeedHistogramProjectionTests   11/11
+        SpeedHistogramFormatTests        2/2
+        SpeedHistogramChartModelTests   10/10  (phases, view.opened-once, stale auto-refresh-once, offline-keeps-cache)
+        SpeedHistogramAccessibilityTests 3/3
+     ISOLATED_BUILD_EXIT=0  ISOLATED_TEST_EXIT=0
+
+[A7] Symbol-collision check across whole Apple app
+     SpeedHistogramChart / SpeedHistogramBucket / SpeedBand / SpeedHistogramProjection /
+     SpeedHistogramChartModel / SpeedHistogramSurface / SpeedHistogramConnection
+     -> 0 pre-existing definitions outside my files (no collision with the 80+ sibling surfaces).
+
+======================================================================
+B. FULL-APP xcodebuild GATE (BLOCKED by pre-existing, unrelated repo state)
+======================================================================
+The KMP Shared.xcframework was built fresh on this host and staged
+(apps/apple/Frameworks/Shared.xcframework: ios-arm64 + ios-arm64-simulator + macos-arm64),
+and the .xcodeproj was generated (xcodegen). The full-app build/test still cannot
+return 0 because of THREE documented, pre-existing collisions that live OUTSIDE the
+allowed files (feature-views/SpeedHistogramChart.*) and that this prompt is not
+permitted to fix. See apps/macos-pending-verifications.md (ToolCard row, same tier).
+
+[B1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+     FAILS at SwiftDriver module-dependency resolution:
+        TeslaSync/feature-views/AcDcStatsPanel.Tests.swift: error: Unable to resolve module dependency: 'XCTest'
+     Cause: 142 co-located *Tests.swift files importing XCTest into the APP target
+            (convention across all 80+ surfaces; my SpeedHistogramChart.Tests.swift follows it
+            and emits only the same benign "part of module 'TeslaSync'; ignoring import" warning).
+     SpeedHistogramChart errors: 0
+     IOS_EXIT=65 (non-zero)
+
+[B2] xcodebuild -scheme TeslaSync-macOS build
+     FAILS at signing:
+        error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+        error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+     SpeedHistogramChart errors: 0
+     MAC_EXIT=65 (non-zero)
+
+[B3] Proof my surface compiles INSIDE the real full-app module
+     Re-ran B1 with EXCLUDED_SOURCE_FILE_NAMES='*Tests.swift' (drops the XCTest blocker only).
+     The app module then compiled through ALL feature-views (incl. SpeedHistogramChart) and failed
+     with 90 errors localized entirely to dashboard-widgets:
+        TeslaSync/dashboard-widgets/*.swift: error: 'DashboardWidgetSize' is ambiguous for type lookup
+        TeslaSync/dashboard-widgets/WeeklyDigestWidget.Model.swift: error: invalid redeclaration of '...'
+     i.e. the documented "DashboardWidgetSize / PowerFlowConnection redefined 8x" parallel-merge collision.
+     SpeedHistogramChart errors across this build: 0
+     => The SpeedHistogramChart surface builds clean in the real app (iOS, Xcode 26.5, Swift 6,
+        linking the real Shared.xcframework). The only blockers are pre-existing and unrelated.
+
+----------------------------------------------------------------------
+PER-STEP EXIT SUMMARY
+----------------------------------------------------------------------
+  FORMAT_EXIT=0
+  LINT_EXIT=0
+  PLACEHOLDER_EXIT=0
+  ADAPTER_HARNESS_EXIT=0        (19/19 web-parity checks)
+  TYPECHECK_PROD_EXIT=0
+  ISOLATED_BUILD_EXIT=0
+  ISOLATED_TEST_EXIT=0          (26/26)
+  COLLISION_CHECK=0
+  IOS_EXIT=65                   (pre-existing: XCTest-in-app-target; 0 SpeedHistogramChart errors)
+  MAC_EXIT=65                   (pre-existing: macOS dev signing; 0 SpeedHistogramChart errors)
+
+Acceptance criteria status:
+  [x] All states from the web source reproduced (loading/content/empty/error/stale/offline).
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP in the view.
+  [x] Every i18n key from source has a matching key in the per-surface catalog.
+  [x] Accessibility labels on the chart, bars, chips, banner, retry control.
+  [x] Tests: adapter unit + per-state model + a11y label tests (26 total, all pass isolated).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate = 0).
+  [~] EXIT=0/STATUS=DONE -> the full-app xcodebuild step cannot be 0 on this repo snapshot due to
+      pre-existing, unrelated blockers outside the allowed files. Per the honesty covenant
+      (no red-as-green) this is reported as STATUS=BLOCKED with full evidence; the SURFACE itself
+      is complete and green on every surface-scoped gate, matching the documented p4-apple
+      feature-views precedent (deferred to p4-apple/P99-0001-apple-acceptance-gate on a
+      provisioned macos-latest runner with signing + the duplicate-symbol/test-target fixes).
+
+EXIT=65
+STATUS=BLOCKED

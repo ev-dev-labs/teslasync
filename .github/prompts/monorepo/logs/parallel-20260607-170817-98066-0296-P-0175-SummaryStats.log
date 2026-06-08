@@ -1,0 +1,102 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Swift toolchain is present (swift 6.3.2, swiftlint, swiftformat), but **`xcodebuild` requires full Xcode** — only Command Line Tools are installed. Let me read the web source and examine how predecessor surfaces handled this.
+
+Now I understand the landscape. The web source is a 6-card stat grid. Predecessors completed with `STATUS=DONE`, deferring only `xcodebuild` (host is CLT-only) while passing all host-runnable gates. Let me study the established conventions and the `MotorStats` type.
+
+Two nearly-identical predecessor surfaces exist: `SummaryStatsGrid` and `SummaryStatsRow`. These are the ideal templates. Let me read the full `SummaryStatsGrid` implementation.
+
+Excellent template. Let me read the remaining `SummaryStatsGrid` files plus the web `StatCard`/motion components and the sibling `SummaryStatsRow` to fully internalize conventions.
+
+Let me examine the previews, the sibling row, the web shared components, and verify the shared P1/S9 tokens (including motion/stagger primitives) exist.
+
+The P1/S9 token primitives (`TSGlassPanel`, `Color.TS`, etc.) aren't in the feature-views dir — they're external P4-core/P1-S9 dependencies. Let me locate them and check how the predecessor `SummaryStatsGrid` was type-checked on this host.
+
+P4 core lives in `apps/apple/Sources/Design/`. Let me read the design tokens and motion/skeleton primitives to get exact APIs, plus the project structure.
+
+Shared component library is in `apps/apple/Sources/Components/`. The web source uses the **shared** `StatCard` (data-display) — so a native counterpart likely exists to reuse. Let me read the key primitives and find the native StatCard.
+
+Found the native `TSStatCard` and primitives. I still need the generated tokens (`Color.TS`, `TSSpacing`, `Font.TS`, etc.) and the web formatting/temperature logic. Let me read those plus the sibling `SummaryStatsRow`.
+
+Both sibling leaves (0048, 0093) use the same `Phase { loading, data }` pattern and document error/stale/offline as parent-owned. The generated tokens (`Color.TS`, `TSSpacing`, etc.) aren't grep-able — likely build-generated. Let me confirm how predecessors type-checked on this CLT-only host.
+
+Design tokens live at `apps/design/generated/apple`. Let me read them to get exact APIs.
+
+Now I have the full token API. Let me read the web temperature logic, native temp formatters to reuse, the card/typography primitives, and the predecessor's exact host-verification approach from its log.
+
+Let me read the web temperature conversion details, the native `Units` converter, and the predecessor's full verification log to mirror the accepted host-gate approach.
+
+Now let me read the native `Units` facade and the full predecessor log to mirror the accepted verification approach.
+
+I now have everything needed. Let me check the lint configs, confirm the macOS SDK, and glance at the row sibling's view style before writing.
+
+The sibling `SummaryStatsRow` (0048) already claims the bare `SummaryStats*` type names (`SummaryStatsModel`, `SummaryStatsLayout`, `SummaryStatsAccessibility`, etc.) in the same module. I must avoid all collisions. Let me enumerate every type name taken by both siblings.
+
+Confirmed: `SummaryStatsRow` claims the bare `SummaryStats*` support-type namespace in the same module. I'll prefix all my support types with `DynamicsSummaryStats` and view structs with `SSD`, keeping the main view as `SummaryStats` (free). Let me verify these prefixes are unused, then set up tracking.
+
+All prefixes are free. The web source renders icons in muted color (not color-coded) and bakes units into the value — I'll faithfully map that. Let me set up tracking and write the plan.
+
+Now I'll write all 7 source files, mirroring the proven sibling conventions exactly.
+
+Now the comprehensive test suite:
+
+All 7 files written. Now let me run the host gates, starting with swiftformat and swiftlint.
+
+swiftformat wants implicit returns in the single-expression switch. Let me fix:
+
+swiftformat 0/6, swiftlint --strict 0 violations. Now the Swift-6 type-check against the real shared design/components chain (macOS 15 SDK). Let me locate the chain files and run it.
+
+Type-check passes clean (EXIT=0) — SwiftUI + my code compile against the real shared chain. Now the executed drivers. First, a Foundation-only adapter driver with web-parity golden vectors.
+
+Top-level expressions require the entry file to be named `main.swift`. Let me rename and rerun.
+
+Swift 6 concurrency: mark `check` `@MainActor`. Let me fix and rerun.
+
+Driver A passes. Now Driver B — full SwiftUI link exercising the projection, model wiring, telemetry, a11y, and View construction.
+
+Both drivers pass green. Now check-placeholders (real scan + negative control) and i18n coverage. Let me inspect the placeholder scanner first.
+
+The scanner recursively scans a subtree. Let me check the forbidden patterns, then run a meaningful scan on my files plus a negative control.
+
+My files are clean (NONE_FOUND). Now run the placeholder gate three ways: literal command, meaningful real-file scan, and a negative control.
+
+Placeholder gate proven live (control COUNT=1/EXIT=1; real scan COUNT=0/EXIT=0). Now i18n coverage — every `dynamics.*` key used in code must be defined in the catalog.
+
+The regex missed `dynamics.loadingValueA11y` (contains digits). Let me fix the pattern to include digits for an accurate count.
+
+i18n coverage complete (12 used = 12 defined, no gaps, no orphans). Now record the xcodebuild capability evidence for the DEFERRED gate.
+
+All capability evidence captured — xcodebuild/iOS-sim/macOS build genuinely cannot run on this CLT-only host. Let me record line counts (all must be < 400 for swiftlint) and write the gate log.
+
+All files < 400 lines. Now writing the gate log.
+
+Log written. Let me update tracking, do a final clean re-verification, clean up temp files, and commit only my files.
+
+The glob `SummaryStats.*.swift` matched 5 (not the main `SummaryStats.swift`). Let me lint all 6 explicitly to confirm, then commit only my files.
+
+All 6 files lint clean. Now commit only my surface files + log (leaving the pre-existing unrelated `web/` changes untouched).
+
+Exactly 8 files staged; the unrelated pre-existing `web/` changes remain unstaged. Committing:
+
+Committed cleanly as `e1ee5dfa9`. Let me finalize tracking and confirm the commit contents.
+
+All 10 todos done; commit contains exactly the 8 files (7 surface + log). Task complete.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0175-SummaryStats.log   | 266 ++++++++++++++++
+ .../feature-views/SummaryStats.Adapter.swift       | 269 ++++++++++++++++
+ .../feature-views/SummaryStats.Model.swift         | 297 ++++++++++++++++++
+ .../feature-views/SummaryStats.Previews.swift      |  80 +++++
+ .../feature-views/SummaryStats.Tests.swift         | 338 +++++++++++++++++++++
+ .../feature-views/SummaryStats.Views.swift         | 186 ++++++++++++
+ .../TeslaSync/feature-views/SummaryStats.strings   |  33 ++
+ .../TeslaSync/feature-views/SummaryStats.swift     |  43 +++
+ 8 files changed, 1512 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0175-SummaryStats.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummaryStats.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummaryStats.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummaryStats.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummaryStats.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummaryStats.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummaryStats.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummaryStats.swift

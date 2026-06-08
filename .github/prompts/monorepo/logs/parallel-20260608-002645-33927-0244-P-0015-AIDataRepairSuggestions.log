@@ -1,0 +1,135 @@
+I'll start by exploring the repository structure, reading the web source, and checking platform capabilities.
+
+Swift toolchain (swiftlint, swiftformat, swift 6.3) is available, but **xcodebuild requires full Xcode** (only Command Line Tools installed). Let me read the web source and the established native pattern.
+
+The web source is a thin AI surface: `useAiStream` → `AIFeatureCard`, wrapped by `withAiFeature` HOC. The `shared-surfaces/` dir doesn't exist yet. Let me study the recently-modified `AIUsageCard` (closest AI-surface analog) and find native equivalents for `AIFeatureCard`, `withAiFeature`, and `useAiStream`.
+
+`AIRestorePanel` matches my AI-stream search — likely a sibling AI panel. Let me read the full AIUsageCard set plus AIRestorePanel to internalize the architecture.
+
+`AIRestorePanel` is the closest analog — an AI streaming panel. Let me read its full set to model my surface on it.
+
+Now let me read the web `useAiStream`, `AIFeatureCard`, `withAiFeature` to capture the streaming contract, plus the rest of the `AIRestorePanel` native set.
+
+Now let me check for established native equivalents of the AI streaming primitives (AiOutputPanel, AIThinkingIndicator, HelixMark, Ask Helix) and read the rest of the AIRestorePanel set.
+
+No native AI streaming primitives exist yet — this is the first. Since allowed files are restricted to `AIDataRepairSuggestions.*`, I'll build self-contained sub-views. Let me read the rest of the AIRestorePanel set, the project.yml source globbing, and locate the design tokens.
+
+Let me locate the design tokens and shared primitives I'll reuse, and read the Previews/Tests conventions plus project.yml.
+
+project.yml sources list `feature-views` but **not** `shared-surfaces` — and project.yml isn't in my allowed files. Combined with no Xcode, the xcodebuild gate will be BLOCKED. I'll mirror the proven patterns precisely and verify via swiftlint/swiftformat + a standalone compile harness. Let me read the design tokens and primitives to match their exact APIs.
+
+The generated tokens are at `apps/design/generated/apple/Tokens.swift`. Let me read it plus the primitive component APIs.
+
+Now let me read the primitive component APIs (TSButton, TSGlassPanel, TSSkeleton, TSFadeIn) and the AIRestorePanel Previews/Tests for conventions.
+
+I have the full picture. Let me check a couple more things: the `AIThinkingIndicator` web strings, `pwsh` availability for the gate, and confirm the macos-pending-verifications note.
+
+pwsh 7.6.2 is available — the placeholder gate can actually run. Let me read the full `AIThinkingIndicator` to capture its exact structure (skeleton lines + dots + status role).
+
+pwsh is available, so the placeholder gate runs. I now have the complete web contract (AIFeatureCard, AiOutputPanel, AIThinkingIndicator/Dots, withAiFeature, useAiStream) and the native conventions (tokens, primitives, Model/Adapter/Views/Previews/Tests/strings pattern). Let me set up tracking and create the surface.
+
+Let me write a brief plan, then create the Adapter (pure projection core).
+
+Now I'll create the Adapter (pure projection core, fully unit-testable).
+
+Now the main surface view.
+
+Now the Views file with all subviews (badge, action button, thinking indicator, output, loading/error chrome, freshness chip/banner).
+
+Now the Previews and the strings table.
+
+Now the unit tests.
+
+All 7 files created. Now verification. First, run swiftformat in lint mode against my new files using the app's config.
+
+Only two long lines in the test file. Let me auto-format my own files (they're mine), then re-lint to confirm clean.
+
+swiftformat passes (0/6 require formatting). Now swiftlint `--strict` on my files (gate config excludes `shared-surfaces`, so I lint explicitly).
+
+swiftlint scanned the whole project (config's `included`) and found **1 serious violation**. Let me locate it.
+
+The only violation is in a **pre-existing, unmodified file** (`LifetimeStatsWidget.Adapter.swift`) — not mine. Let me confirm my files are individually clean by linting them explicitly with a temp config scoped to my dir.
+
+My Views file is 424 lines, over swiftlint's 400 `file_length`. I'll split the output-area + chrome subviews into a second allowed file (`AIDataRepairSuggestions.OutputViews.swift`). Let me find the split point.
+
+I'll move the output-area and chrome sections into a new allowed file. Let me extract that content and create the file, then trim the Views file.
+
+Split done (Views 267 lines, OutputViews 170). Let me re-run swiftformat and the scoped swiftlint to confirm all 7 files are clean.
+
+All 7 files pass swiftformat and swiftlint `--strict` (0 violations). Now the highest-value check: actually compiling the code and running the unit tests via a standalone SwiftPM harness (since xcodebuild needs full Xcode). Let me check the project's Swift version first.
+
+Real project is **Swift 6.0 with `SWIFT_STRICT_CONCURRENCY: complete`**. I'll build a standalone SwiftPM harness in that exact mode (with token/primitive stubs) to compile my code and run the unit tests.
+
+Now compile the harness (my real surface code + stubs) in Swift 6 strict-concurrency mode.
+
+Expected — the `#Preview` macro plugin ships only with Xcode, not the standalone toolchain (a harness limitation, not a code issue; the Previews file is already format/lint-clean and matches the proven pattern). Let me exclude it from the harness and rebuild.
+
+Build is clean in Swift 6 strict-concurrency mode. Now run the unit tests.
+
+`XCTest` isn't available to the standalone toolchain (it ships with Xcode). Let me confirm, then run the test *logic* at runtime via a small executable that exercises my real Adapter/Model code (proving the assertions hold without XCTest).
+
+Confirmed: XCTest ships only with Xcode. The XCTest file will run under `xcodebuild` in CI. To still prove the test *logic* at runtime here, I'll add an executable validator to the harness that exercises my real Adapter + Model code with the same assertions.
+
+The validator caught a real bug (50/51 passed): my model emitted `view.opened` during the gate-`loading` phase, but the web marker is only present once the feature is confirmed enabled — and my own tests expect telemetry only on `.ready`. Let me fix `maybeEmitOpen` to fire on `.ready`, not merely "not gated".
+
+Now re-copy the fixed Model into the harness and re-run the validator.
+
+All 51 checks pass. The runtime validator caught and confirmed the fix. Let me re-verify formatting/lint on the edited files.
+
+swiftformat clean (0/7). The scoped config path got mangled by an earlier sed. Let me regenerate it and re-run swiftlint.
+
+swiftlint and swiftformat both clean on all 7 files. Now the placeholder gate. Let me check how the script resolves the `-Path` argument (the gate passes a path prefix without extension).
+
+The script returns "clean" for a non-existent literal path, so the gate's exact prefix-path scans nothing. I'll run it the gate's way **and** against the actual directory (authoritative), plus grep for forbidden words.
+
+Clean. Now run the placeholder check against the **actual directory** (authoritative — the gate's prefix path scans nothing since files have extensions).
+
+Placeholder check passes (COUNT=0). Now let me validate the `.strings` file and capture the real gate-step results, starting with the `xcodebuild` capability evidence and the strings lint.
+
+Strings valid; xcodebuild is the BLOCKED step (only Command Line Tools, no Xcode). Now capture the remaining gate steps that *can* run — `swiftformat --lint apps/apple` and `swiftlint --strict` (gate config) — to record real exit codes.
+
+Both have pre-existing baseline issues, but **0 in my files**. Let me identify the 1 swiftformat file and confirm it's not mine (and pre-existing).
+
+Both baseline issues are confirmed pre-existing and untouched by me; **my files are clean on every tool**. Now I'll generate the gate log with real captured output. Since `xcodebuild` is the blocked step, STATUS will be BLOCKED with evidence — but I'll record the full supplementary verification (Swift 6 compile + 51/51 test-logic assertions).
+
+Let me review the full log for accuracy.
+
+The log is accurate and honest. Let me do a final quality pass: confirm no `mock`/`stub` wording in shipped files (acceptance criterion) and re-read the main view for coherence.
+
+Perfect 1:1 key coverage. Let me confirm the referenced and defined key *sets* match exactly (not just counts).
+
+Exact i18n match. Let me do a final read of the main view and OutputViews to confirm coherence before committing.
+
+Code is coherent and complete. Let me finalize: update tracking, and clean up temp harness files.
+
+All deliverables are in the working tree. 
+
+**Decision on committing:** The mandated gate (`xcodebuild build test` for iOS + macOS) cannot run on this runner — only Command Line Tools are installed, not full Xcode. That makes the gate **red/BLOCKED**, and the Honesty Covenant rule 8 ("No commit on red") + rule 1 ("No red-as-green") bind me. The prompt itself sanctions `STATUS=BLOCKED` with platform-capability evidence as a terminal outcome. So I will **not** fabricate a green commit — the verified files + evidence log remain in the working tree for a Xcode-equipped runner to gate and commit.
+
+Final confirmation of the deliverables and log tail:
+
+## Summary
+
+Built the production native-Apple parity of `components/ai/AIDataRepairSuggestions.tsx` as **8 files** in `apps/apple/TeslaSync/shared-surfaces/` (all `AIDataRepairSuggestions.*`, the only allowed paths), following the established `AIRestorePanel`/`AiUsageCard` architecture.
+
+**What shipped**
+- **Adapter** — pure projection core: `AIDataRepairStreamPhase` (web `AiStreamState` parity incl. `webValue`), gate `Phase` (gated/loading/error/ready), and the `AiOutputPanel` output cascade (empty/thinking/proposal/error) + a11y seam.
+- **Model** — `AIDataRepairSource` seam (start/stop/refresh/**draft**), `@Observable` model with telemetry-once, draft double-submit guard, stale auto-refresh, connectivity axis, i18n facade, in-memory source.
+- **swift / Views / OutputViews** — gate→`EmptyView`; glass-panel card; cyan Helix badge; "Ask Helix" action (thinking dots, disabled-while-streaming); `AIThinkingIndicator`; output area; loading/error chrome; freshness chip + banner. Reduce-Motion + VoiceOver throughout.
+- **Previews** (9 states), **Tests** (XCTest: stream parity, projection, model, telemetry, draft guard, freshness, i18n, a11y), **strings** (21 keys: 4 web-parity + 6 Helix scaffold + 11 leaf chrome).
+
+**Every state renders**: gated · loading · error(+retry) · ready{resting-hint · thinking · proposal · stream-error} · stale · offline(cached). i18n keys are an **exact 1:1 match** (21 referenced = 21 defined).
+
+**Verification (all green except the capability-blocked step):**
+- swiftformat `--lint`: **0/7 clean**; swiftlint `--strict`: **0 violations** in my files; placeholder scan: **COUNT=0**; `plutil` strings: **OK**.
+- Compiled the real surface code in a SwiftPM harness under **Swift 6.0 + strict-concurrency=complete** → build clean; ran the unit-test logic → **51/51 pass**. This caught and fixed a real bug: `view.opened` was firing during the gate-`loading` phase instead of only on `.ready`.
+- The two pre-existing baseline lint/format issues (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`) are unmodified and unrelated.
+
+**STATUS=BLOCKED (EXIT=1)** — `xcodebuild build test` (iOS + macOS) cannot run: only Command Line Tools are installed, no full Xcode/Simulators. This is the platform-capability block the prompt anticipates; `xcode-select` API evidence is captured in the gate log. Per Honesty Covenant rule 8 ("No commit on red"), I did **not** commit — the verified files + log remain staged in the working tree for an Xcode-equipped runner to gate and commit.
+
+**Note:** wiring `TeslaSync/shared-surfaces` into `project.yml` `sources:` and `.swiftlint.yml` `included:` is a P4-core dependency — both files are outside this prompt's allowed-files scope, so I documented rather than edited them.
+
+
+
+All 8 todos are done and the work is fully complete and verified to the extent the runner allows. The task is finished.
+

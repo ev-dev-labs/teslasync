@@ -1,0 +1,215 @@
+=== P4 Feature view 0228 FSMHealthPanel (Apple) ===
+run-utc=2026-06-08T09:12:12Z
+host=Darwin 25.5.0 arm64
+
+--- Shipped files (allowed scope: apps/apple/TeslaSync/feature-views/FSMHealthPanel.*) ---
+  apps/apple/TeslaSync/feature-views/FSMHealthPanel.Adapter.swift
+  apps/apple/TeslaSync/feature-views/FSMHealthPanel.AdapterTests.swift
+  apps/apple/TeslaSync/feature-views/FSMHealthPanel.Model.swift
+  apps/apple/TeslaSync/feature-views/FSMHealthPanel.Previews.swift
+  apps/apple/TeslaSync/feature-views/FSMHealthPanel.strings
+  apps/apple/TeslaSync/feature-views/FSMHealthPanel.swift
+  apps/apple/TeslaSync/feature-views/FSMHealthPanel.Tests.swift
+  apps/apple/TeslaSync/feature-views/FSMHealthPanel.Views.swift
+
+============================================================
+CAPABILITY PROBE (prompt: requires SwiftUI+SwiftCharts+MapKit, iOS18/iPadOS18/macOS15
+Xcode toolchain. If unavailable on the runner -> STATUS=BLOCKED with API evidence.)
+============================================================
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version   (the gate's build+test tool)
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+  -> rc=1
+$ xcrun --sdk iphonesimulator --show-sdk-path   (iOS simulator SDK)
+xcrun: error: SDK "iphonesimulator" cannot be located
+xcrun: error: SDK "iphonesimulator" cannot be located
+xcrun: error: unable to lookup item 'Path' in SDK 'iphonesimulator'
+  -> rc=1
+available toolchain:
+  swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+  Target: arm64-apple-macosx26.0
+  swiftlint 0.63.3
+  swiftformat 0.61.1
+  PowerShell 7.6.2
+FINDING: This runner is a Command Line Tools instance (no Xcode.app). 'xcodebuild' and the
+iphonesimulator SDK cannot be located, so the iOS+macOS app build/test gate steps and the
+#Preview macro / XCTest execution cannot run here. All other gates run and are GREEN below.
+
+============================================================
+GATE STEPS (as specified in the prompt)
+============================================================
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1   (BLOCKED: requires Xcode.app; not green, not claimed green)
+
+$ xcodebuild -scheme TeslaSync-macOS build test
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1   (BLOCKED: requires Xcode.app; not green, not claimed green)
+
+$ swiftlint --strict   (run on the shipped FSMHealthPanel.* sources, config apps/apple/.swiftlint.yml)
+  Linting Swift files at paths apps/apple/TeslaSync/feature-views/FSMHealthPanel.Adapter.swift, apps/apple/TeslaSync/feature-views/FSMHealthPanel.AdapterTests.swift, apps/apple/TeslaSync/feature-views/FSMHealthPanel.Model.swift, apps/apple/TeslaSync/feature-views/FSMHealthPanel.Previews.swift, apps/apple/TeslaSync/feature-views/FSMHealthPanel.swift, apps/apple/TeslaSync/feature-views/FSMHealthPanel.Tests.swift, apps/apple/TeslaSync/feature-views/FSMHealthPanel.Views.swift
+  Linting 'FSMHealthPanel.Adapter.swift' (1/7)
+  Linting 'FSMHealthPanel.AdapterTests.swift' (2/7)
+  Linting 'FSMHealthPanel.Model.swift' (3/7)
+  Linting 'FSMHealthPanel.Previews.swift' (4/7)
+  Linting 'FSMHealthPanel.swift' (5/7)
+  Linting 'FSMHealthPanel.Tests.swift' (6/7)
+  Linting 'FSMHealthPanel.Views.swift' (7/7)
+  Done linting! Found 0 violations, 0 serious in 7 files.
+LINT_EXIT=0
+
+$ swiftformat --lint   (shipped FSMHealthPanel.* sources, config apps/apple/.swiftformat)
+  Running SwiftFormat...
+  (lint mode - no files will be changed.)
+  SwiftFormat completed in 2.36s.
+  0/7 files require formatting.
+FORMAT_EXIT=0
+
+$ check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/FSMHealthPanel  (literal gate path)
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  EXIT=0
+PLACEHOLDER_EXIT=0
+
+  (corroborating REAL scan of the actual shipped files copied to a temp dir:)
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  EXIT=0
+  PLACEHOLDER_REAL_EXIT=0
+
+============================================================
+HOST-RUNNABLE VERIFICATION (compensating for the BLOCKED Xcode steps; all GREEN)
+============================================================
+[1] Compile + EXECUTE the SHIPPED FSMHealthPanel.Adapter.swift pure parity logic
+    (swiftc shipped-file + assertion harness; mirrors the XCTest adapter cases):
+  ADAPTER_COMPILE_EXIT=0
+  == timestamp ==
+    [PASS] plain ISO parses
+    [PASS] fractional ISO parses
+    [PASS] garbage -> NaN
+  == flap ==
+    [PASS] 6-in-60s flags all
+    [PASS] 5-in-60s below threshold
+    [PASS] spread > window no flap
+    [PASS] 60s boundary inclusive
+    [PASS] unparseable never flaps
+  == stuck ==
+    [PASS] latest active >4h is stuck
+    [PASS] recent active not stuck
+    [PASS] terminal latest not stuck
+    [PASS] non-session ignored
+  == analyze ==
+    [PASS] empty -> no alerts
+    [PASS] order flap/stuck/recovery
+    [PASS] flap count captured at first detection (6)
+    [PASS] full flap set is 12
+    [PASS] recovery counts all recovered
+  == count format ==
+    [PASS] 1234 -> 1,234
+    [PASS] 1234567 -> 1,234,567
+    [PASS] 5 -> 5
+  == text + labels + a11y ==
+    [PASS] fill {{count}}
+    [PASS] stuck message raw count
+    [PASS] recovery title
+    [PASS] a11y label join
+  
+  ALL_ADAPTER_CHECKS_PASSED
+  ADAPTER_RUN_EXIT=0
+
+[2] Typecheck the SHIPPED runtime SwiftUI surface against the REAL design system
+    (throwaway SwiftPM target: generated Tokens.swift + Design/{TSMaterial,TSDesign} +
+     Components/{Typography,Cards,Badges,Buttons,Skeletons,Motion} + the 4 shipped
+     FSMHealthPanel runtime files; macOS 15 platform, Swift 6 strict concurrency):
+  Building for debugging...
+  [0/2] Write sources
+  [1/2] Write swift-version--1AB21518FC5DEDBE.txt
+  [3/16] Emitting module FSMHealthKit
+  [4/16] Compiling FSMHealthKit Badges.swift
+  [5/16] Compiling FSMHealthKit FSMHealthPanel.Model.swift
+  [6/16] Compiling FSMHealthKit FSMHealthPanel.Adapter.swift
+  [7/16] Compiling FSMHealthKit Buttons.swift
+  [8/16] Compiling FSMHealthKit Cards.swift
+  [9/16] Compiling FSMHealthKit FSMHealthPanel.Views.swift
+  [10/16] Compiling FSMHealthKit Motion.swift
+  [11/16] Compiling FSMHealthKit FSMHealthPanel.swift
+  [12/16] Compiling FSMHealthKit TSMaterial.swift
+  [13/16] Compiling FSMHealthKit Skeletons.swift
+  [14/16] Compiling FSMHealthKit TSDesign.swift
+  [15/16] Compiling FSMHealthKit Tokens.swift
+  [16/16] Compiling FSMHealthKit Typography.swift
+  Build complete! (132.38s)
+  BUILD_EXIT=0
+
+    Note: with the DEBUG #Preview blocks included, the ONLY compile errors are
+    'PreviewsMacros plugin not found' — an Xcode-app-only macro plugin, emitted equally
+    by the shared components' own previews (Badges/Buttons/Typography). The shipped
+    runtime surface itself typechecks clean (BUILD_EXIT=0 above).
+
+============================================================
+ACCEPTANCE CRITERIA
+============================================================
+  [x] Surface renders every web state: alerts grid + 'all clear' (web branches) plus the
+      P4 leaf loading/error and the stale/offline connection axis (chip+banner+auto-refresh).
+  [x] Hooks bind through the shared P1/S8 state-holder (FSMHealthSource -> FSMHealthModel);
+      no direct HTTP in the view.
+  [x] Every i18n key from the web source has a matching key in the P1/S10 catalog
+      (FSMHealthPanel.strings: title/flapTitle/stuckTitle/recoveryTitle/flapping/stuck/
+      recoveries/allClear) — no English literals in Swift.
+  [x] Accessibility: header isHeader trait, per-card combined VoiceOver label, freshness
+      chip + refresh + retry labels, Reduce-Motion-safe skeletons, Dynamic Type fonts.
+  [x] Tests: adapter unit tests (AdapterTests) + projection/model/a11y tests (Tests) — the
+      adapter logic was COMPILED + EXECUTED green here (24/24); the XCTest target itself
+      runs on an Xcode runner (BLOCKED below).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — PLACEHOLDER_COUNT=0 (real scan).
+  [~] EXIT=0/STATUS=DONE -> host gates GREEN, but the iOS+macOS xcodebuild build/test gate
+      cannot run on this Command Line Tools-only runner => STATUS=BLOCKED with the API
+      evidence captured above (per the prompt's capability clause).
+
+============================================================
+HONESTY COVENANT
+============================================================
+  1  No red-as-green : xcodebuild iOS+macOS build/test shown BLOCKED with the real
+                       xcode-select/xcrun errors (rc=1) captured; never claimed green.
+  2  No scope narrowing: implemented ALL web states/branches + flap/stuck/recovery parity
+                       + computeFlapIds + i18n + a11y + telemetry.
+  3  No skip-and-assume: each host gate executed with its real exit code pasted.
+  4  No stubs as final: complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port incl. the flap count captured-at-first-detection
+                       quirk (alert=6 while full flapIds=12), the 60s/>5 window, the 4h
+                       stuck cutoff, the NaN timestamp semantics, and fmtInt grouping.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml and did NOT edit the
+                       shared Localizable.xcstrings; strings ship as the per-surface table.
+  8  No commit on red  : committing with host gates green; the Xcode build/test is BLOCKED
+                       by a missing platform tool (Xcode.app), not by a code defect.
+  9  No silent drift   : changes confined to apps/apple/.../FSMHealthPanel.* + this log.
+ 10  Log ends with EXIT/STATUS below.
+
+============================================================
+DISPOSITION
+============================================================
+  Production-polished native FSMHealthPanel shipped at parity with the web source:
+  a pure, dependency-free analysis core (flap/stuck/recovery + computeFlapIds) that was
+  COMPILED + EXECUTED green on this runner (24/24 assertions), a P1/S8 state-holder seam
+  (no view HTTP), P1/S11 view.opened telemetry, every web state + i18n key + a11y label,
+  and a SwiftUI surface that TYPECHECKS clean against the real generated design tokens and
+  shared components (SwiftPM BUILD_EXIT=0). swiftlint --strict, swiftformat --lint and the
+  placeholder gate are all green.
+
+  BLOCKED strictly on Xcode.app-only capability: this runner is a Command Line Tools
+  instance, so 'xcodebuild' (iOS-simulator + macOS app build/test), the #Preview macro
+  plugin, and XCTest execution cannot run here. None is a defect in the shipped code — all
+  are external toolchain availability, exactly the case the prompt's capability clause
+  designates as STATUS=BLOCKED with API evidence.
+
+============================================================
+COMMIT
+============================================================
+  git add apps/apple/TeslaSync/feature-views/FSMHealthPanel.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0228-FSMHealthPanel.log
+  git commit -m 'feat(apps/apple/feature-views): add FSMHealthPanel surface (P4)'
+
+EXIT=1
+STATUS=BLOCKED

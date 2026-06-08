@@ -1,0 +1,215 @@
+=== p4-apple · P7 · page:automations/AutomationList — SwiftUI / HIG ===
+
+Surface: AutomationListPage (web route /automations/list)
+Web source: web/src/features/automations/pages/AutomationListPage.tsx (reproduced end-to-end)
+Date: 2026-06-08
+
+------------------------------------------------------------
+CAPABILITY VERIFICATION (runner)
+------------------------------------------------------------
+- Full Xcode present: /Applications/Xcode.app -> Xcode 26.5 (Build 17F42)
+  (xcode-select default is /Library/Developer/CommandLineTools; Xcode is driven via
+   DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo needed to build.)
+- SDKs: iphonesimulator26.5 / macosx26.5 (backward-compatible with iOS 18 / macOS 15 targets).
+- Toolchain: xcodegen 2.45.x, swiftlint 0.63.3, swiftformat 0.61.1, pwsh 7 all present.
+- KMP shared core: Java 17 + ~/.konan kotlin-native 2.4.0 + ~/.gradle caches warm.
+  => Native Apple capability is AVAILABLE on this runner. The Shared.xcframework was
+     assembled fresh (BUILD SUCCESSFUL in 11m 27s) and staged to apps/apple/Frameworks/.
+
+------------------------------------------------------------
+PATH MAPPING (documented — no silent drift)
+------------------------------------------------------------
+The prompt's templated native-output path `apps/apple/TeslaSync/Features/Automations/`
+maps, in this repo's ADR-002 shared-source-group layout (project.yml: ONE `Sources/`
+group feeds both the iOS `TeslaSync` and macOS `TeslaSync-macOS` app targets), to:
+
+  apps/apple/Sources/Features/Automations/   <- surface (8 cohesive files, all < 400 lines)
+  apps/apple/Tests/Unit/Automations/         <- XCTest bundle
+
+This is the same convention the landed `Sources/Features/Dashboard/Widgets/**` surface and
+every p4-apple dashboard-widget log use (`TeslaSync/dashboard-widgets/` -> `Sources/DashboardWidgets/`).
+It is the only location compiled into BOTH app targets without bespoke project surgery.
+
+Files (Sources/Features/Automations/):
+  AutomationListStrings.swift        89  i18n key catalog (22 mandated + 5 supporting) + formatters
+  AutomationListModels.swift        171  pure value types: AutomationRow, BulkSelection,
+                                         SelectAllState, AutomationListPhase, AutomationBulkOperation
+  AutomationListPageModel.swift     157  @MainActor @Observable model binding AutomationsStore
+  AutomationListPage.swift           75  the SwiftUI View (adaptive macOS/iPad/iPhone)
+  AutomationListContent.swift       114  GlassPanel phase switch (loading/error/empty/success)
+  AutomationListTable.swift         163  adaptive table (grid on regular, cards on compact)
+  AutomationBulkBar.swift           115  bulk toolbar + delete confirm dialog
+  AutomationsRouteRegistration.swift 39  navigation registration for the .automations route
+Test: AutomationListLogicTests.swift 206  (21 tests, pure logic + key parity + deep link + registration)
+
+------------------------------------------------------------
+ARCHITECTURE (mirrors the landed BatteryRadialGauge precedent)
+------------------------------------------------------------
+- The View + model take an injected `Shared.AutomationsStore` (KMP S8 holder, ADR-004) and
+  compile against the staged Shared.xcframework. No HTTP / query-key logic in the view.
+- Data sources bound through the @Observable model (web hook names preserved at call sites):
+    useAutomations          -> store.automations() : StateFlow<Resource<List<Automation>>>
+                               -> StateHolderModel -> LoadableState<[Automation]> -> [AutomationRow]
+    useBulkAutomationsUpdate -> store.bulkAutomationsUpdate(ids:op:) (async throws)
+- KMP interop pinned against the generated Shared.h header (verified, not assumed):
+    AutomationsStore.automations()                          swift_name("automations()")
+    AutomationsStore.bulkAutomationsUpdate(ids:op:)          async (completionHandler bridge)
+    AutomationBulkOp.enable / .disable / .delete_           (delete -> delete_, ObjC keyword)
+    Automation.id / .name / .description_ / .enabled / .executionCount   (description_ = NSObject clash)
+    KotlinLong(longLong:)                                   for NSArray<SharedLong *>
+- All display/selection logic lives in pure, KMP-free value types so it is unit-tested without
+  the live graph (same strategy as the dashboard widgets): AutomationRow projection,
+  BulkSelection (web useBulkSelection), AutomationListPhase.resolve, AutomationBulkOperation.
+- SI: this surface carries no unit-bearing fields (the Automations domain is unit-free), so no
+  conversion is required; formatting stays at the render boundary per P1/S5.
+- Live SSE: GET /automations is a polled query (no SSE source), so no live subscription /
+  staleness indicator is required for this page (4 data states only: loading/empty/error/success).
+
+------------------------------------------------------------
+GATE — THIS SURFACE (isolated, green)
+------------------------------------------------------------
+[1] check-placeholders.ps1 (pwsh) — apps/apple/Sources/Features/Automations
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0                                            -> PLACEHOLDER_EXIT=0
+    (Tests/Unit/Automations also scanned: PLACEHOLDER_COUNT=0.)
+
+[2] swiftlint --strict (cd apps/apple; config .swiftlint.yml)
+    Violations in Sources/Features/Automations + Tests/Unit/Automations: 0
+    (The ONLY project-wide --strict violation is PRE-EXISTING and unrelated to this surface:
+     TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length.)
+                                                                  -> LINT_EXIT=0 (this surface)
+
+[3] swiftformat --lint  Sources/Features/Automations Tests/Unit/Automations
+    0/9 files require formatting.                                  -> FORMAT_EXIT=0
+
+[4] xcodebuild build — macOS (this surface + its real curated deps, isolated framework)
+    ** BUILD SUCCEEDED **                                          -> BUILD_EXIT(macOS)=0
+[4b] xcodebuild build — iOS Simulator arm64 (#if os(iOS) adaptive branch)
+    ** BUILD SUCCEEDED **                                          -> BUILD_EXIT(iOS)=0
+    (Default iphonesimulator link also tried x86_64; the staged Shared sim slice is arm64-only
+     on this Apple-Silicon runner, so the x86_64 LINK step warns/fails — an environment/packaging
+     artifact, NOT a code defect. Swift EmitSwiftModule succeeded for arm64 AND x86_64; arm64-only
+     link is clean.)
+
+[5] xcodebuild test — macOS (AutomationListLogicTests)
+    Test Suite 'All tests' passed. Executed 21 tests, with 0 failures (0 unexpected).
+    ** TEST SUCCEEDED **                                           -> TEST_EXIT=0
+    Covers: AutomationRow projection (desc '—' fallback / runs / status key); BulkSelection
+    (toggle, toggleAll symmetry, outside-slice preservation, tri-state select-all, selectedAmong,
+    clear); AutomationListPhase.resolve for all 4 states incl. error-over-cache + cache-during-refetch;
+    AutomationBulkOperation label/confirm/destructive descriptors; the 22 mandated i18n keys verbatim;
+    noun pluralization; /automations/list deep link -> .automations; route registration round-trip.
+
+  Isolation method (honest disclosure): the surface + its real dependencies
+  (Sources/Components, Sources/Design, Sources/SharedFacade, Sources/Auth/AuthSeams.swift,
+  Sources/App/{AppRoute,RouteHostRegistry,AppRouteParser}.swift, the design tokens, and the
+  Shared.xcframework) were compiled and tested via a temporary framework+test target. That
+  scaffolding was added to project.yml ONLY for this verification and was fully REVERTED
+  afterward (git status for apps/apple/project.yml is clean; the committed baseline is untouched).
+
+------------------------------------------------------------
+GATE — AGGREGATE (full TeslaSync app scheme): BLOCKED by pre-existing baseline breakage
+------------------------------------------------------------
+`xcodebuild -scheme TeslaSync[-macOS] build/test` CANNOT run cleanly on this merged baseline
+for reasons WHOLLY OUTSIDE this surface's allowed scope (apps/apple/.../Automations/** + nav +
+xcstrings + log). HEAD c9c6fdb9f is a large `merge(parallel)` of ~hundreds of independently
+generated p4-apple surfaces; that merge left the app target broken:
+
+  (a) 224 XCTest test files are compiled INTO the app source group (not a test target):
+      TeslaSync/feature-views/*Tests.swift (170) + TeslaSync/dashboard-widgets/*Tests.swift (54),
+      e.g. feature-views/AIRestorePanel.Tests.swift:18 -> "Unable to resolve module dependency: 'XCTest'".
+  (b) Duplicate type definitions across the merged surfaces, e.g.
+      TelemetryErrorsModel  in dashboard-widgets/TelemetryErrorsWidget.Model.swift
+                            AND feature-views/TelemetryErrorsPanel.Model.swift   ("ambiguous for type lookup"),
+      DashboardWidgetSize   ambiguous within Sources/DashboardWidgets/.
+  These are tracked baseline files; none are mine; none are in my allowed scope; fixing them
+  would be unrequested cross-surface changes touching 200+ files. They are documented here rather
+  than worked around (no red-as-green, no silent drift). Per p4-apple/README.md
+  ("prompts that can't run their gate are BLOCKED, not DONE"), the aggregate gate is BLOCKED.
+
+  What this means: this surface is COMPLETE and INDEPENDENTLY VERIFIED (build macOS+iOS, 21/21
+  tests, lint/format/placeholders all green, 27/27 parity). The BLOCKED status reflects ONLY the
+  un-runnable aggregate app gate caused by the pre-existing merge breakage — not any defect in,
+  or any missing part of, the AutomationList surface.
+
+=== PARITY ===
+PARITY_REQUIRED=27
+
+[x] panel  — GlassPanel1
+       AutomationListContent.swift: `AutomationListPanel.body` -> `TSGlassPanel { content }`
+[x] state  — loading
+       AutomationListModels.swift: `AutomationListPhase.loading` + `.resolve(isLoading,rows.isEmpty)`;
+       AutomationListContent.swift: `case .loading: TSTableSkeleton(rows: 5)`
+[x] state  — empty
+       AutomationListPhase.empty; AutomationListContent.swift: `emptyState` -> `TSEmptyState`
+[x] state  — error
+       AutomationListPhase.error (error-over-cache precedence); AutomationListContent.swift: `errorState`
+[x] state  — success
+       AutomationListPhase.success([AutomationRow]); AutomationListContent.swift: `case .success -> AutomationListTable`
+[x] string — automationList.bulk.delete
+       AutomationListStrings.bulkDelete; AutomationBulkOperation.delete.labelKey; AutomationBulkBar.actionButton(.delete)
+[x] string — automationList.bulk.deleteConfirm.body
+       AutomationListStrings.deleteConfirmBody; AutomationBulkBar.body `.alert(... message:)`
+[x] string — automationList.bulk.deleteConfirm.title
+       AutomationListStrings.deleteConfirmTitle; AutomationBulkBar.body `.alert(title:)`
+[x] string — automationList.bulk.disable
+       AutomationListStrings.bulkDisable; AutomationBulkOperation.disable.labelKey; AutomationBulkBar.actionButton(.disable)
+[x] string — automationList.bulk.enable
+       AutomationListStrings.bulkEnable; AutomationBulkOperation.enable.labelKey; AutomationBulkBar.actionButton(.enable)
+[x] string — automationList.col.desc
+       AutomationListStrings.colDesc; AutomationListTable.columnHeader(colDesc)
+[x] string — automationList.col.name
+       AutomationListStrings.colName; AutomationListTable.columnHeader(colName)
+[x] string — automationList.col.runs
+       AutomationListStrings.colRuns; AutomationListTable.columnHeader(colRuns) (regular + compact)
+[x] string — automationList.col.status
+       AutomationListStrings.colStatus; AutomationListTable.columnHeader(colStatus)
+[x] string — automationList.empty.body
+       AutomationListStrings.emptyBody; AutomationListContent.emptyState message
+[x] string — automationList.empty.cta
+       AutomationListStrings.emptyCta; AutomationListContent.emptyState `TSButton`
+[x] string — automationList.empty.title
+       AutomationListStrings.emptyTitle; AutomationListContent.emptyState title
+[x] string — automationList.noun.one
+       AutomationListStrings.nounOne; AutomationListStrings.nounKey(for:1); AutomationBulkBar.summary
+[x] string — automationList.noun.other
+       AutomationListStrings.nounOther; AutomationListStrings.nounKey(for:!=1); AutomationBulkBar.summary
+[x] string — automationList.selectAutomation
+       AutomationListStrings.selectAutomation + selectAutomationLabel(name); AutomationListTable.rowCheckbox a11y label
+[x] string — automationList.subtitle
+       AutomationListStrings.subtitle; AutomationListPage.header `TSText`
+[x] string — automationList.title
+       AutomationListStrings.title; AutomationListPage.header `TSPageTitle`
+[x] string — bulk.selectAll
+       AutomationListStrings.selectAll; AutomationListTable.selectAllCheckbox accessibilityLabel
+[x] string — bulk.selectRow
+       AutomationListStrings.selectRow; AutomationListTable.rowCheckbox accessibilityHint
+[x] string — common.delete
+       AutomationListStrings.commonDelete; AutomationBulkBar delete-confirm destructive button;
+       AutomationBulkOperation.delete.confirm.confirmKey
+[x] string — common.disabled
+       AutomationListStrings.commonDisabled; AutomationRow.statusKey(enabled=false); AutomationListTable.statusBadge
+[x] string — common.enabled
+       AutomationListStrings.commonEnabled; AutomationRow.statusKey(enabled=true); AutomationListTable.statusBadge
+
+PARITY_COVERED=27
+
+All 22 mandated keys (+5 supporting page-scoped chrome keys: bulk.clear, bulk.selectedCount,
+deleteConfirm.cancel, error.title, error.retry) were added verbatim to
+apps/apple/Localization/Localizable.xcstrings (8121 -> 8148 keys; +297/-0 lines, no reordering).
+
+------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------
+The AutomationList surface is COMPLETE and VERIFIED in isolation:
+  - macOS build: SUCCEEDED        - iOS (arm64 sim) build: SUCCEEDED
+  - Tests: 21/21 PASS, ** TEST SUCCEEDED **, clean exit 0
+  - swiftlint --strict: 0 violations (this surface)   - swiftformat --lint: clean   - placeholders: 0
+  - PARITY_COVERED == PARITY_REQUIRED == 27
+The aggregate `-scheme TeslaSync build/test` gate is BLOCKED by PRE-EXISTING, out-of-scope
+baseline breakage from the parallel merge (224 misplaced XCTest files + duplicate types in
+TeslaSync/feature-views + TeslaSync/dashboard-widgets), documented above and NOT worked around.
+No baseline files were modified (the temporary verification scaffolding in project.yml was reverted).
+
+EXIT=1
+STATUS=BLOCKED

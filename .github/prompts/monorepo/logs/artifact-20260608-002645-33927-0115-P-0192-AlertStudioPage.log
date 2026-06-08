@@ -1,0 +1,180 @@
+================================================================================
+P4 · Feature view · 0192 — AlertStudioPage (Apple)
+Run: 2026-06-08  Host: Darwin arm64 (Mac Studio)  Branch: (worktree slot-115)
+Prompt: P4 · feature-views · 0192 — AlertStudioPage (Apple)
+Web source (spec): web/src/features/notifications/pages/AlertStudioPage.tsx (2343 lines / 112 KB)
+Mode: code-complete + host-validated on a COMMAND-LINE-TOOLS-ONLY host.
+      The canonical iOS-Simulator/macOS `xcodebuild build test` gate and the
+      XCTest/swift-testing framework runners require full Xcode, which is NOT
+      installed on this runner (see capability probe). Those steps are therefore
+      STATUS=BLOCKED with platform-capability evidence below; every host-runnable
+      gate is green, including a standalone runner that EXECUTES the surface
+      logic (22/22 assertions) since the CLT test-runner cannot report results.
+================================================================================
+
+=== CAPABILITY PROBE (honest) ===
+  swift (CLT) ................. Apple Swift 6.3.2, target arm64-apple-macosx26   OK
+  macOS SDK .................. MacOSX15.sdk + MacOSX26.sdk present                OK
+  SwiftUI compile ............ `swift build` against macOS SDK, Swift 6 strict   OK
+  Swift Charts / MapKit ...... compile-probed OK (this surface uses NEITHER —
+                               web "Charts/maps used: (none)"; core req is SwiftUI) OK
+  swiftlint .................. 0.63.3                                            OK
+  swiftformat ................ 0.61.1                                            OK
+  xcodegen ................... 2.45.4                                            OK
+  pwsh (placeholder gate) .... 7.6.2                                            OK
+  /Applications/Xcode.app .... NOT installed — active dir is CommandLineTools   BLOCKER
+  iOS / iPadOS 18 SDK ........ NOT present (ls SDKs → MacOSX only, no iPhoneOS)  BLOCKER
+  iOS Simulator (simctl) ..... NOT available ("unable to find utility simctl")  BLOCKER
+  XCTest module .............. NOT present in CLT (`import XCTest` → no module)  BLOCKER
+  swift-testing runner ....... Testing.framework present but CLT swiftpm-testing-
+                               helper does NOT report results (exits 0 even on a
+                               deliberately-failing test → cannot be trusted)    BLOCKER
+
+  Conclusion: SwiftUI itself is available and the surface compiles + its logic
+  runs for real on the macOS-15 SDK. But the prompt's canonical gate
+  (`xcodebuild -destination 'platform=iOS Simulator,name=iPhone 16' build test`
+  + `xcodebuild -scheme TeslaSync-macOS build test`) and framework-driven test
+  EXECUTION cannot run without full Xcode + the iOS-18 SDK. Per the prompt's
+  capability clause ("iOS 18 / iPadOS 18 … If unavailable on the runner →
+  STATUS=BLOCKED with API evidence") this surface is BLOCKED on those steps and
+  DEFERRED to the P99 macos-latest acceptance gate, recorded in
+  apps/macos-pending-verifications.md.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/AlertStudioPage.*) — 34 files, 6631 lines ===
+  Foundation model layer (SwiftUI-free, host-tested):
+    AlertStudioPage.Models.swift          enums (Severity/Op/Kind/MetricOp/ValueKind/TriggerMode/
+                                          SignalValueType) + channel/vehicle/metric DTOs + test
+                                          target + discriminated vehicle selection + config + load
+                                          status / connection.
+    AlertStudioPage.Rule.swift            AlertStudioRuleDTO (web AlertRule) + AlertStudioRuleInput
+                                          (web AlertRuleInput) + AlertStudioEditorState (web EditorState).
+    AlertStudioPage.Templates.swift       RuleTemplate type + templateKey + signal-type inference +
+                                          categories + buildSignalCatalog + signalsByName.
+    AlertStudioPage.TemplateCatalogA/B.swift  the 47 curated starter rules (web ruleTemplates),
+                                          ported VERBATIM, split to respect the 400-line file budget.
+    AlertStudioPage.Adapter.swift         pure projector: signal-type / allowed-op / coercion /
+                                          value-kind, ruleToEditor + templateToEditor, recommendedTrigger,
+                                          selectedSignal, numberToInput (JS String(number) parity).
+    AlertStudioPage.Save.swift            parse helpers, buildVehiclePayload, buildEscalationPayload,
+                                          buildSavePayload (signal+metric, throws on unset),
+                                          hasRequiredTypedValue, hasComputedMetricInputs, canSave,
+                                          buildTestTarget.
+    AlertStudioPage.Projection.swift      surface slug (P1/S11), display view models (rule row /
+                                          template card / select option / category chip / conflict
+                                          group / row context), filters, row+card a11y projection.
+  State holder (P1/S8) + facades (P1/S10, S11):
+    AlertStudioPage.Strings.swift         localization facade (web t(key,default) + {{var}}) +
+                                          telemetry seam (view.opened).
+    AlertStudioPage.Model.swift           @Observable AlertStudioModel: source seam, snapshot apply,
+                                          mutation lifecycle, stale auto-refresh, bulk pruning, start
+                                          (view.opened once).
+    AlertStudioPage.Editing.swift         editor mutations: select/new/clone, coupled signal/op/
+                                          severity/trigger/escalation, save/delete/test/snooze/toggle/
+                                          bulk, discard guard, AI tuning patch, editor bindings.
+    AlertStudioPage.Derived.swift         list/label projections (titles, filtered rules/templates,
+                                          rows, cards, category chips, counts).
+    AlertStudioPage.Options.swift         option arrays (severity/status/behaviour/bool/signal/
+                                          operator/escalation), recommend banner, selected signal,
+                                          preview vehicle, snooze target, AI gating, conflict groups,
+                                          canSave.
+    AlertStudioPage.InMemorySource.swift  preview/test source (records mutations; optional auto-complete).
+  SwiftUI views (token-driven P1/S9; every state renders):
+    AlertStudioPage.swift                 composed surface: header + AI builder slot + template gallery
+                                          + rules|editor columns + snooze sheet + discard/delete dialogs;
+                                          onAppear→start (view.opened).
+    AlertStudioPage.Components.swift      StudioPanel/Button/FieldLabel/HelpButton/SeverityBadge/Badge.
+    AlertStudioPage.Inputs.swift          StudioSearchField/TextField/MenuSelect/ToggleRow/Checkbox.
+    AlertStudioPage.States.swift          skeleton, empty, error+retry, form-error/info banner,
+                                          freshness chip, connectivity banner.
+    AlertStudioPage.RulesList.swift       rules panel (count/search/loading/empty/search-empty/error,
+                                          bulk toolbar, scroll).
+    AlertStudioPage.RuleRow.swift         one rule row (bulk checkbox, severity, once/snoozed badges,
+                                          condition+updated, snooze/toggle/delete actions).
+    AlertStudioPage.TemplateGallery.swift gallery (header/search/category chips/card grid/empty).
+    AlertStudioPage.Editor.swift          editor container + name/status + vehicles/kind + kind toggle.
+    AlertStudioPage.EditorOperands.swift  signal/operator row, allowed-operators panel, typed-value
+                                          editor (range/text/bool/any-change/number).
+    AlertStudioPage.ComputedMetric.swift  inline computed-metric editor (metric/window/op/threshold).
+    AlertStudioPage.EditorBehavior.swift  cooldown + alert behaviour + recommend banner + force-choose
+                                          + max-fires + escalation block.
+    AlertStudioPage.MessageEditor.swift   per-rule message template + include-title (web AlertMessageEditor slot).
+    AlertStudioPage.TestTarget.swift      test delivery target (toast/history + channel chips +
+                                          loading/error/empty) + Save/Delete/Test/Reset action bar.
+    AlertStudioPage.VehicleSelect.swift   discriminated vehicle scope control (web VehicleMultiSelect).
+    AlertStudioPage.AISlots.swift         the 3 AI composition seams (NL builder / conflict / tuning)
+                                          with web-exact gating; off by default = manual baseline.
+    AlertStudioPage.Snooze.swift          snooze sheet (1h/4h/24h + cancel).
+  i18n + previews + tests:
+    AlertStudioPage.strings               P1/S10 catalog — 185 keys (every web string + native chrome).
+    AlertStudioPage.Previews.swift        PreviewProvider: content/empty/loading/error/stale/offline/AI.
+    AlertStudioPage.Tests.swift           adapter unit tests (swift-testing).
+    AlertStudioPage.SaveTests.swift       save + validation unit tests (swift-testing).
+    AlertStudioPage.ModelTests.swift      model lifecycle + state-branch tests (swift-testing, @MainActor).
+  Every file <= 400 lines (house file_length); largest Editing.swift 332.
+
+=== PARITY (vs web AlertStudioPage.tsx) ===
+  Data sources (web hooks → native P1/S8 source seam / model):
+    useAlertRules / useNotificationChannels / useVehicles / useAlertMetrics → AlertStudioUpdate snapshot
+    useSaveAlertRule/useDeleteAlertRule/useToggleAlertRule/useTestAlertRule/useSnoozeAlertRule/
+      useBulkEnableRules/useBulkDisableRules → AlertStudioSource mutations + AlertStudioMutationResult
+    useConfirm (delete/discard) → .confirmationDialog + showDiscardConfirm/pendingDelete
+    useDirtyForm + useNavigationGuard → isDirty + guardedSwitch discard staging
+    useUrlString('q') → model.ruleSearch ; useSelectedVehicle → model.aiVehicleID
+    useFormDraft (recovery banner) → AlertStudioUpdate.hasDraft/draftSavedAt + discardDraft
+    usePageTitle/useTranslation → AlertStudioStrings facade (P1/S10)
+  Composition reproduced 1:1: header(Templates/New Rule) · AI NL builder slot · template gallery
+    (search + category chips + 47 cards) · rules panel (search>3, bulk toolbar, rows with once/snoozed
+    badges + snooze/enable/delete) · AI conflict slot (>=2 rules) + AI tuning slot (rule selected) ·
+    editor (name/status · vehicles/kind · signal+operator OR computed-metric · severity+allowed-ops ·
+    typed value range/text/bool/any-change/number · cooldown · alert behaviour + recommend banner +
+    force-choose + max-fires + escalation · message template + include-title · test target · Save/
+    Delete/Test/Reset) · snooze sheet.
+  Verbatim web logic ported + executed-green: freshEditor, ruleToEditor, templateToEditor,
+    buildSavePayload (+ escalation/vehicle payload), canSave (force-choose + escalation rank + empty-
+    specific + metric shape), valueKindForState, coerceOperatorForSignalType, recommendedTriggerMode,
+    buildSignalCatalog, filteredRules/Templates, buildTestTarget, handleToggleTestChannel,
+    normalizeMsgTemplate, parseOptionalNumber/MaxFires, isSnoozeActive.
+  States (all render, never a blank box): loading(skeleton/page loader) · empty(rules / templates /
+    channels / metrics) · error(+retry) · stale(chip + one auto-refresh) · offline(cached + banner) ·
+    search-empty · force-choose · draft-recovery — across the page envelope (ADR-013).
+  i18n: every listed source string resolves via the P1/S10 facade; the .strings catalog carries 185
+    keys with the verbatim web English; native code holds no English literal beyond sanctioned fallbacks.
+  a11y: VoiceOver labels on every interactive element (checkbox/select/buttons/chips) + composed rule-
+    row + template-card summaries; Dynamic Type via Font.TS; reduce-motion-safe (no custom animation).
+  Telemetry: emits view.opened with surface slug "AlertStudioPage" once (P1/S11), asserted by the
+    standalone runner + the model tests.
+
+=== HOST-RUNNABLE GATES (all green) ===
+  swiftformat --lint  <34 files> ........................ 0/34 require formatting   FORMAT_EXIT=0
+  swiftlint lint --strict <34 files> .................... 0 violations, 0 serious   LINT_EXIT=0
+  check-placeholders.ps1 -Language swift (surface copy) . COUNT=0 ALLOWED=0         PLACEHOLDER_EXIT=0
+  swift build (module TeslaSync, macOS 15, Swift 6 strict-concurrency) .. compiles  BUILD_EXIT=0
+  swift build --build-tests (surface + 3 swift-testing files compile) ... compiles  BUILD_TESTS_EXIT=0
+  standalone runner `swift run AlertStudioSmoke` (EXECUTES adapter+save+model) ...
+       SMOKE_RESULT passed=22 failed=0  SMOKE_OK ........................ EXECUTED  SMOKE_EXIT=0
+  xcodegen generate (project spec enumerates all 34 files; 210 pbxproj refs) ...... XCODEGEN_EXIT=0
+
+=== BLOCKED (platform-capability — full Xcode + iOS-18 SDK absent on this runner) ===
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    → "xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+       '/Library/Developer/CommandLineTools' is a command line tools instance"          IOS_EXIT/MAC_EXIT != 0
+  iOS-18 SDK swiftc -typecheck → NO iPhoneOS SDK under CommandLineTools/SDKs          (cannot run)
+  XCTest / swift-testing framework EXECUTION → CLT swiftpm-testing-helper does not report results
+    (verified: a deliberately-failing test still exits 0). The surface logic is instead proven by the
+    standalone runner above (22/22). Framework-driven execution is DEFERRED to macos-latest with Xcode.
+  These are recorded in apps/macos-pending-verifications.md for the P99 acceptance gate.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all web states reproduced (loading/empty/error/stale/offline + force-choose/draft).
+  [x] Hooks bind to the shared P1/S8 source seam; no direct HTTP from the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (185 keys).
+  [x] Accessibility labels present on every interactive element + composed VoiceOver summaries.
+  [x] Tests: adapter + save + model swift-testing suites (compile green; logic executed green via runner).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate: COUNT=0, 0 opt-outs).
+  [~] xcodebuild build test (iOS Simulator + macOS): BLOCKED — full Xcode + iOS-18 SDK unavailable on
+      this CLT-only runner; DEFERRED to P99 macos-latest. All host-runnable equivalents are green and
+      the surface logic is executed green by the standalone runner.
+
+EXIT=1
+STATUS=BLOCKED

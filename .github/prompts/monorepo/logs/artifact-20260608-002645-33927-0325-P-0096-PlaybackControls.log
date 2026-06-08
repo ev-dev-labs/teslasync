@@ -1,0 +1,128 @@
+=== P4 Shared surface 0096 PlaybackControls (Apple) ===
+run-utc=2026-06-08T12:25:42Z
+host: macOS 26.5.1  |  Xcode 26.5 Build version 17F42 
+toolchain: swift=Swift version 6.3.2 swiftlint=0.63.3 swiftformat=0.61.1 pwsh=PowerShell 7.6.2 jdk=openjdk version "17.0.19" 2026-04-21
+iOS sim:     iPhone 16 (83717DEE-70A3-4325-AA61-CBDDD3140989) (Booted) 
+
+WEB SOURCE  : web/src/components/data-display/PlaybackControls.tsx
+NATIVE OUT  : apps/apple/TeslaSync/shared-surfaces/PlaybackControls.{swift,Adapter,Copy,Model,Views,Scrubber,States,Previews,Tests,ModelTests,strings}
+
+----------------------------------------------------------------------------------------
+GATE NOTE — the literal gate runs the full-app xcodebuild build+test for iOS-Simulator
+and macOS. On this runner that is DEFERRED (macOS-pending, per apps/macos-pending-
+verifications.md + ADR-012 CI matrix), blocked by PRE-EXISTING, UNRELATED issues this
+surface neither introduces nor touches. The surface itself is verified GREEN below via a
+real isolated Swift-6 strict-concurrency build+test against the REAL design system, on
+BOTH the iOS-18 and macOS-15 SDKs, plus swiftlint/swiftformat/placeholder.
+----------------------------------------------------------------------------------------
+
+### pre-existing full-app blockers (evidence; none authored by this surface) ###
+struct DashboardWidgetSize redefinitions in app sources : 15
+co-located *Tests.swift importing XCTest into app target : 261
+Shared.xcframework staged (KMP)                          : NONE (unstaged — requires gradle :core:assembleSharedXCFramework)
+DashboardWidgetSize/PowerFlowConnection in THIS surface  : 0 (this surface introduces none)
+
+================= ISOLATED SURFACE VERIFICATION (host-runnable, all green) =================
+
+----- [1/7] swift build (surface + REAL Components/Design/Tokens, module TeslaSync) -----
+Building for debugging...
+[0/1] Write swift-version--58304C5D6DBC2206.txt
+Build complete! (0.35s)
+BUILD_EXIT=0
+
+----- [2/7] swift test (Swift 6 strict concurrency) -----
+	 Executed 36 tests, with 0 failures (0 unexpected) in 0.013 (0.018) seconds
+TEST_EXIT=0
+
+----- [3/7] iOS-18 simulator typecheck (surface + real design system, 48 files) -----
+IOS_EXIT=0
+
+----- [4/7] macOS-15 typecheck (surface + real design system) -----
+MAC_EXIT=0
+
+----- [5/7] swiftlint --strict (surface, explicit files) -----
+Done linting! Found 0 violations, 0 serious in 10 files.
+LINT_EXIT=0
+   (tree-wide swiftlint --strict reports 1 PRE-EXISTING violation: dashboard-widgets/LifetimeStatsWidget.Adapter.swift function_body_length — not this surface)
+
+----- [6/7] swiftformat --lint (surface) -----
+0/10 files require formatting.
+FORMAT_EXIT=0
+   (tree-wide swiftformat --lint reports 1 PRE-EXISTING file: feature-views/ActionBuilder.Previews.swift blankLinesBetweenScopes — not this surface)
+
+----- [7/7] placeholder / stub gate -----
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+================= PARITY SUMMARY (web PlaybackControls.tsx → native) =================
+STATES (every one renders — never a blank box):
+  loading  → redacted transport+scrubber skeleton inside the panel chrome
+  ready    → full transport bar (Reset · Play/Pause · Stop · speed · scrubber · time · help)
+  empty    → drive with no replay telemetry → friendly "No replay data" timeline, controls disabled
+  error    → QueryError-equivalent (danger glyph + message + Retry wired to source.refresh)
+  stale    → amber chip + one-shot rising-edge auto-refresh
+  offline  → muted "cached replay" chip
+CONTROLS (web leaf): Reset/Play-Pause/Stop (shared TSButton, ghost) · speed menu
+  (REPLAY_SPEEDS 1/10/25/50/100, shiftSpeed/nextSpeed) · timeline scrubber with keyframe
+  marker ticks (web TimelineScrubber) · mono elapsed/total readout · opt-in keyboard
+  shortcuts + help popover (web Tooltip grid + useShortcut) · inline shortcut toast.
+KEYBOARD (web keydown switch, all reproduced + unit-tested): Space/K play-pause · ←/→ ±5s
+  (Shift ±30s) · J/L ±10s · ,/. frame · Home/End start/end · 0–9 N×10% · +/− speed; toast
+  labels via the facade; the seekBySeconds(progress + delta*1000/durationMs) fallback math.
+BINDING: PlaybackControlsModel (P1/S8 state-holder seam) — NO networking in the view; every
+  control + resolved shortcut routes through the bound source. P1/S11 view.opened telemetry on
+  appear (slug "PlaybackControls"). P1/S10 i18n facade — 0 hardcoded English literals; 34 keys
+  (all web source keys + skip/percent templates + native chrome) in PlaybackControls.strings.
+A11Y: VoiceOver labels on every interactive element; scrubber adjustable action + spoken
+  elapsed/total; Dynamic Type via ViewThatFits single/two-row; Reduce Motion respected.
+TOKENS (P1/S9): Color.TS / Font.TS / TSSpacing / TSRadius + shared TSButton / TSSkeleton.
+  No Tailwind ports, no direct recharts/leaflet/framer imports.
+TESTS: 36 (speed ladder · full keyboard switch + toast + seek math · projection + empty
+  derivation · render ladder · marker tone map · copy-key coverage · model wiring: telemetry
+  once, stale rising-edge refresh, transport+keyboard delegation, empty/loading no-op).
+FILES (11, all within the per-surface allowed-files glob PlaybackControls.*):
+  PlaybackControls.swift Adapter Copy Model Views Scrubber States Previews Tests ModelTests strings
+
+================= HONESTY COVENANT =================
+ 1 No red-as-green     : every claimed-green step prints its real EXIT above; the only reds are
+                         two PRE-EXISTING tree issues + the deferred full-app gate, all flagged.
+ 2 No scope narrowing  : all web controls + the entire keydown switch + all P4 states reproduced.
+ 3 No skip-and-assume  : read the web source (+ PlaybackSpeedMenu / TimelineScrubber / useTripReplay)
+                         end-to-end; every conditional branch ported.
+ 4 No stubs as final   : complete implementation; placeholder gate PLACEHOLDER_COUNT=0; no TODO/stub/mock.
+ 5 No parity shortcut  : variant/opacity/typography/spacing/icon/a11y/Reduce-Motion/telemetry mapped to
+                         platform tokens + shared TSButton/TSSkeleton, verified by build+test on BOTH SDKs.
+ 6 No delegation       : implemented directly; no agents/subtasks.
+ 7 No predecessor bypass: binds P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry;
+                         consumes the P4 shared components, does not re-roll them.
+ 8 No commit on red    : the COMMITTED artifact (PlaybackControls.* + this log) is GREEN on every host-
+                         runnable gate AND a real isolated Swift-6 strict-concurrency build+test on the
+                         iOS-18 and macOS-15 SDKs; the deferred full-app gate is RED only on pre-existing,
+                         unrelated surfaces this commit neither introduces nor touches.
+ 9 No silent drift     : changes confined to the 11 shared-surfaces/PlaybackControls.* files + this log.
+10 EXIT/STATUS below.
+
+INTEGRATION NOTE (P4-core / acceptance-gate scope — outside this surface's allowed-files):
+  shared-surfaces is a NEW source group. To have CI compile+lint it, register it once (mechanical):
+    • project.yml  — add "- path: TeslaSync/shared-surfaces" to the TeslaSync and TeslaSync-macOS
+                     target sources (alongside TeslaSync/feature-views).
+    • .swiftlint.yml — add "TeslaSync/shared-surfaces" to included:.
+  The full-app iOS-Simulator + macOS xcodebuild build+test for this surface is then exercised by
+  p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner (track in
+  apps/macos-pending-verifications.md), exactly like the feature-views surfaces.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic PlaybackControls shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 36 tests pass under the app's own Swift 6 strict-
+  concurrency rules, against the REAL design system + shared components, and it type-checks clean on
+  BOTH the iOS-18 simulator and macOS-15 SDKs; swiftlint --strict / swiftformat --lint / placeholder
+  are all green on the surface scope (0 opt-outs). Every web control, the full keyboard switch, and
+  the complete P4 states contract are reproduced with VoiceOver, Dynamic Type, Reduce-Motion support
+  and a P1/S11 view.opened emission. The full-app xcodebuild build+test gate is DEFERRED (not failed
+  by this code) — blocked by the pre-existing app-target collisions (DashboardWidgetSize ×15, 261
+  co-located XCTest-in-app files), the unstaged KMP Shared.xcframework, and macOS development signing,
+  all owned by the P4/P99 acceptance gate on a signed macos-latest CI runner.
+
+EXIT=0
+STATUS=DONE

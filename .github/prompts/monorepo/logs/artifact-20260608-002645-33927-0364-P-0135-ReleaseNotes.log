@@ -1,0 +1,135 @@
+=== P4 Shared surface 0135 ReleaseNotes (Apple) ===
+
+SURFACE
+  Native Apple-idiomatic parity of web/src/components/feedback/ReleaseNotes.tsx — the compact,
+  collapsible release-notes accordion that consumes the auto-generated @/generated/changelog module.
+  Shipped at apps/apple/TeslaSync/shared-surfaces/ReleaseNotes.* (10 files), bound through the P1/S8
+  state-holder seam, the P1/S9 design tokens, the P1/S10 i18n facade, and the P1/S11 diagnostics
+  contract. No networking lives in the view.
+
+FILES (apps/apple/TeslaSync/shared-surfaces/)
+  ReleaseNotes.swift            — container view (header + banner + content switch), accordion @State,
+                                  default-open-newest, view.opened on appear.
+  ReleaseNotes.Model.swift      — i18n facade (table "ReleaseNotes"), telemetry seam + OSLog default,
+                                  connection axis, input snapshot, resolved state, @Observable model,
+                                  InMemoryReleaseNotesSource.
+  ReleaseNotes.Adapter.swift    — pure DTOs (ReleaseNotesEntry/Change/badge/type), tone mapping
+                                  (web ICON_TINT/BADGE_VARIANT/DOT_TINT), ISO-date formatter, a11y join.
+  ReleaseNotes.Projection.swift — pure resolve(input)->resolved (slice/limit, newest-first, item map).
+  ReleaseNotes.Views.swift      — accordion list/row (glass panel + header button + badge + chevron),
+                                  change row (tinted dot + text), empty state, tone->token palette.
+  ReleaseNotes.Chrome.swift     — freshness chip, refresh button, connectivity banner, loading
+                                  skeleton, retryable error (TSButton).
+  ReleaseNotes.Previews.swift   — #Preview per state (data / single / empty / loading / error /
+                                  stale / offline).
+  ReleaseNotes.Tests.swift      — projection phases + content, model wiring, telemetry-once,
+                                  stale auto-refresh, a11y (XCTest).
+  ReleaseNotes.AdapterTests.swift — date formatting, badge/type tone maps, label key/fallback, a11y.
+  ReleaseNotes.strings          — parity keys + change-type a11y keys + native chrome keys.
+
+PARITY (reproduced from the web source — verified, not assumed)
+  data           → CHANGELOG.slice(0, limit) newest-first; single-open accordion defaulting to
+                   releases[0].version (web useState); tap-open-row collapses all (setExpanded(
+                   isExpanded ? null : version)).
+  per release    → gift glyph tinted by badge, v{version}, <Badge> variant, date, chevron up/down;
+                   expanded body = "What's New" heading + change list (dot tinted by change type + text).
+  BADGE_VARIANT/ICON_TINT : latest→success(emerald), stable→info(cyan), beta→warning(amber).
+  DOT_TINT       : added→success, changed→info, fixed→warning, removed→danger, deprecated→purple,
+                   security→danger (web rose==danger for removed AND security).
+  i18n keys      : changelog.badges.{latest,stable,beta}, changelog.releaseNotes.heading — present
+                   verbatim in the P1/S10 catalog (ReleaseNotes.strings) with the web English values.
+
+STATES (every one renders — no hidden surface)
+  loading  → skeleton release panels keeping the accordion shape (P4 leaf over the static web import).
+  empty    → "No release notes yet" friendly glyph+message (web limit<=0 / empty CHANGELOG), never blank.
+  error    → retryable error chrome (P4 leaf; the static web import has no error path).
+  data     → newest-first accordion of release panels (the parity body).
+  stale    → header chip + banner + one-shot auto-refresh on the live→stale transition.
+  offline  → header chip + banner over cached content; no auto-refresh.
+
+GATES  (raw exits below; per-surface scope)
+  [GREEN] swiftformat --lint  (.swiftformat, 9 swift files)      : 0/9 files require formatting    FORMAT_EXIT=0
+  [GREEN] swiftlint --strict  (.swiftlint.yml, 9 swift files)    : 0 violations in 9 surface files LINT_EXIT=0
+  [GREEN] check-placeholders.ps1 (-Language swift, ReleaseNotes.*) : PLACEHOLDER_ALLOWED=0
+                                                                     PLACEHOLDER_COUNT=0            PLACEHOLDER_EXIT=0
+  [GREEN] ISOLATED build + test — SwiftPM, swift-tools 6.0 (Swift 6 language mode = strict-concurrency
+          complete, same as the app), compiling the EXACT shipped ReleaseNotes.* sources (incl. the
+          #Preview macro file) against the REAL repo design-system files (generated apps/design Tokens +
+          Sources/Design TSDesign/TSMaterial + Sources/Components Typography/Badges/Buttons/Cards/Motion/
+          Skeletons) under the Xcode 26.5 toolchain (real #Preview macro + XCTest available):
+              Build complete!  ·  Executed 28 tests, with 0 failures (0 unexpected)                SWIFT_TEST_EXIT=0
+  [GREEN] swiftc -typecheck — iOS 18 Simulator SDK (arm64-apple-ios18.0-simulator, -swift-version 6)
+          over the same surface+design source set:                                                 IOS_TYPECHECK_EXIT=0
+  [GREEN] swiftc -typecheck — macOS 15 SDK (arm64-apple-macos15.0, -swift-version 6):               MAC_TYPECHECK_EXIT=0
+  [GREEN] xcodegen generate — the surface is wired into the iOS + macOS app targets; the generated
+          project enumerates all 10 ReleaseNotes.* files (60 file/build refs):                      XCODEGEN_EXIT=0
+
+  [DEFERRED] Full-app iOS-Simulator + macOS `xcodebuild -scheme TeslaSync(-macOS) … build test`.
+          NOT run-to-green on this runner because the full app target is blocked by PRE-EXISTING, unrelated
+          conditions this prompt neither introduced nor is allowed to touch (each VERIFIED here, not assumed):
+            • apps/apple/Frameworks/Shared.xcframework is NOT staged (only .gitkeep present) — needs the
+              ~7-min Gradle :core:assembleSharedXCFramework (a macOS-pending row for p1-shared/S3 in
+              apps/macos-pending-verifications.md);
+            • `struct DashboardWidgetSize` is declared in 15 files across Sources/DashboardWidgets/* +
+              TeslaSync/dashboard-widgets/* (parallel-merge redefinition collision);
+            • 204 co-located `*.Tests.swift` under TeslaSync/feature-views import XCTest into the app target;
+            • macOS development-signing.
+          This is the SAME sanctioned "code-complete + DEFERRED full-app Xcode gate" disposition recorded by
+          every prior P4 surface (see p4-apple-feature-views-0237-AiUsageCard.log and the ToolCard /
+          AlertMessageEditor / FSMTimelineChart rows in apps/macos-pending-verifications.md) and is owned by
+          p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner. ZERO ReleaseNotes /
+          shared-surfaces errors are attributable to this change (the isolated build + both-SDK typechecks prove it).
+
+DISCLOSURES (honesty covenant #9 — no silent drift)
+  • project.yml: added one additive source path `TeslaSync/shared-surfaces` to the TeslaSync (iOS) and
+    TeslaSync-macOS targets — the irreducible wiring for a NEW surface directory to ship + be enumerated
+    (mirrors how feature-views/dashboard-widgets are wired). No other surface's code is touched.
+  • .swiftlint.yml: added `TeslaSync/shared-surfaces` to `included` so the project's lint gate covers the
+    new directory. Additive; lints clean today.
+  • Date: the web renders the raw ISO `release.date`; the native peer formats the SAME datum with the device
+    locale's medium date style (idiomatic, as the AiUsageCard peer localizes numbers), with a raw-string
+    fallback when the value is not a YYYY-MM-DD calendar date. Unit-asserted (en_US → "Mar 29, 2026").
+  • Change-type category is spoken via VoiceOver (changelog.changeType.* keys); the web conveys it by dot
+    colour ALONE. This is an accessibility enhancement, not a parity regression.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED with raw, ls/grep-verified
+                           pre-existing-blocker evidence — never reported as passing.
+  2  No scope narrowing  : every web region + branch reproduced — the slice(0,limit) cap, newest-first order,
+                           the single-open accordion default + toggle, the gift glyph + badge + date + chevron,
+                           the "What's New" heading, the typed change rows with the full DOT_TINT map; all 6
+                           P4 states render.
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; raw exits pasted; the deferred full-app
+                           blockers were each re-confirmed by ls/grep (Shared.xcframework absent;
+                           DashboardWidgetSize in 15 files; 204 co-located XCTest files), not assumed.
+  4  No stubs as final   : complete production surface + 28 real tests; placeholder scanner COUNT=0; no
+                           TODO/FIXME/stub/mock/placeholder/Lorem/Coming-soon anywhere in shipped code.
+  5  No parity shortcut  : the badge/dot tint maps, the slice/limit cap, the newest-first order, the version
+                           prefix, the localized date, and the single-open toggle are each unit-asserted against
+                           the web expressions (en_US golden values verified empirically).
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: the P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened
+                           telemetry, and the established P4 "isolated-build + DEFERRED full-app" disposition
+                           are all honoured.
+  8  No commit on red    : the committed artifact (10 ReleaseNotes.* files + the two additive wiring edits +
+                           this log) is GREEN on every per-surface gate AND on a real isolated Swift 6
+                           strict-concurrency build + 28/28 XCTest + iOS-18 + macOS-15 typechecks; the deferred
+                           full-app gate is blocked only by pre-existing, unrelated surfaces this commit does not touch.
+  9  No silent drift     : changes are confined to shared-surfaces/ReleaseNotes.* + the two disclosed additive
+                           wiring edits (project.yml, .swiftlint.yml) + this log; the date-localization and
+                           change-type-a11y enhancements are disclosed above.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic ReleaseNotes shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 28 tests pass under the app's own Swift 6 strict-concurrency rules, against the
+  REAL design system, via the Xcode 26.5 XCTest runtime, and type-checks clean against BOTH the iOS-18 and
+  macOS-15 SDKs; swiftformat / swiftlint / placeholder are all green on the 9 surface files and the #Preview
+  macro compiles; xcodegen enumerates all 10 files into both app targets. The full-app iOS-Simulator + macOS
+  xcodebuild build/test gate is DEFERRED (not failed by this code) on pre-existing, unrelated, out-of-allowed-
+  files blockers (unstaged Shared.xcframework, the DashboardWidgetSize 15× redefinition, the co-located-tests-
+  into-app-target config, macOS signing), owned by the P99 acceptance gate on a signed macos-latest runner per
+  apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

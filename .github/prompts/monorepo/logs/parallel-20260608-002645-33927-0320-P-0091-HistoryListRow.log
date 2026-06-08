@@ -1,0 +1,102 @@
+I'll start by exploring the repository structure and understanding what's available for this task.
+
+Key finding: `xcode-select -p` points to `/Library/Developer/CommandLineTools`, not a full Xcode. Let me verify simulator capability and study the existing patterns.
+
+Critical capability finding: only **Command Line Tools** are installed (no full Xcode), so `xcodebuild` and `simctl` cannot run. Per the prompt's capability clause, the build/test gate will be BLOCKED — but I must still produce the complete, production-quality surface and verify with all available tooling (swiftlint, swiftformat, placeholder check). Let me study the existing patterns thoroughly.
+
+The case-insensitive FS confused the earlier `ls` — files are `AiUsageCard.*`. Those modified files are pre-existing work, not mine. Let me study the patterns and supporting infrastructure in depth.
+
+The conventions are clear: `Color.TS.*`/`Font.TS.*`/`TSSpacing`/`TSRadius` tokens (P1/S9), `*Strings` i18n facade (P1/S10), `*Surface.slug` diagnostics (P1/S11). Let me read the rest of the template set and find the GlassPanel native equivalent.
+
+Let me find the GlassPanel native definition, token definitions, the diagnostics/telemetry pattern, and study the two real consumers (DriveCard, ChargingSessionCard).
+
+Found a `HistoryListRow` mention in `Sources/Components/DataDisplay/Lists.swift`. Let me examine that, the native `GlassPanel`, the design tokens, and a real consumer.
+
+Path correction — `Sources/` is at `apps/apple/Sources`. Let me read the real locations.
+
+There's an atomic `TSHistoryListRow` already (out of scope — that's the component-library version). My task is the **shared surface** `HistoryListRow` at `shared-surfaces/`. Let me study the existing atomic row, the native `GlassPanel`/glow, and the design tokens.
+
+Tokens come from the generated `Tokens.swift`. Let me read it and `TSDesign.swift` to get exact token names.
+
+Now I have the tokens. Let me find the shared i18n facade base, the diagnostics/telemetry (P1/S11) pattern, and how `*Strings`/`*Surface`/`*Telemetry` are defined.
+
+Let me read the Surface/telemetry wiring (`reportOpen`, slug) and confirm how a view emits `view.opened`.
+
+I have the full pattern. Let me check the app's navigation model and how a real consumer composes/navigates, plus confirm the telemetry-on-appear wiring for a view.
+
+`AutomationCard` is the ideal template — presentational, parent-composed, emits `view.opened` via `.task`, renders loading/empty/error/loaded. Let me read its full set plus the lint/format/placeholder configs.
+
+Let me read the placeholder patterns (to avoid forbidden words) and mirror the `AutomationCard` Model/Localizer/States/Tests/strings precisely.
+
+Critical: the placeholder scanner matches `Placeholder` case-insensitively in `.swift` files — so I must avoid `.redacted(reason: .placeholder)` and build skeletons manually. Let me read the rest of the `AutomationCard` set to mirror exactly.
+
+Let me read the `Localizer` pattern, the state chrome (loading/empty/error), the strings, and the test structure to mirror precisely.
+
+I have the shared building blocks. Let me confirm `TSButton`/`TSBadge`/typography signatures and read the strings + test structure to finalize conventions.
+
+I now have all conventions and building blocks. Let me verify there are no type-name collisions for my planned types and check the real consumer's row composition before writing.
+
+`ChargingSessionRowView` is the exact native consumer pattern. Let me read it fully to mirror its layout + accessibility approach precisely.
+
+I have everything needed. This is the canonical native consumer pattern. Let me set up a plan and create the directory, then write the surface. First, recording the plan and todos.
+
+Now I'll write the surface. Starting with the Model (seams), Adapter (pure projection), and strings.
+
+Now the main View with content/state model and telemetry-on-appear.
+
+Now the Views file — the layout, actions overlay, freshness chip, glow color, and the loading/empty/error envelopes.
+
+Now the Previews (all states/variants) and the Tests (projection, glow, a11y, slug, telemetry).
+
+All 7 files created. Now let me apply the repo's formatting and run the available verification gates (swiftformat, swiftlint, placeholder check) scoped to my files.
+
+swiftformat reports my 6 Swift files already conform. Now let me run the lint, strict lint, and placeholder verifications scoped to my files.
+
+swiftlint linted the whole project (ignored my path arg, used config `included:`) — 1 serious violation among 1909 files. Let me locate it to determine if it's mine.
+
+The single violation is in `LifetimeStatsWidget.Adapter.swift` — a pre-existing issue, not my code. Let me verify my files in isolation using a scoped config mirroring the repo rules.
+
+4 violations in Previews — `multiple_closures_with_trailing_closure` (passing `onActivate:` closure + trailing `primary:` closure). I'll make `primary:` an explicit argument. Let me view and fix those call sites.
+
+I'll convert all 5 content-row calls to use an explicit `primary:` argument (avoids the multiple-trailing-closure rule).
+
+Now re-running format + scoped strict lint to confirm clean.
+
+My files: swiftformat clean, swiftlint strict 0 violations. Now the placeholder gate on my directory.
+
+My surface passes all runnable gates: swiftformat (0/6), swiftlint --strict (0 violations), placeholder (0). The only pre-existing project violation is in `LifetimeStatsWidget.Adapter.swift` (not mine). Now let me capture honest evidence for the build/test gate (which requires full Xcode) and generate the gate log.
+
+Capability is definitively unavailable (Command Line Tools only — no Xcode.app, no iOS Simulator). Let me capture the full-tree formatter baseline, then generate the honest gate log.
+
+Both full-tree failures are pre-existing and unrelated (`ActionBuilder.Previews.swift` format drift, `LifetimeStatsWidget.Adapter.swift` lint). My 6 files are clean on both. Now generating the honest gate log with real captured output.
+
+The gate log is complete and honest. Let me verify git sees my files correctly (and the log isn't ignored), then stage only my allowed files.
+
+Let me do a final critical review of the most complex sections before committing.
+
+The complex sections are correct — `let` bindings in `@ViewBuilder` match the repo's own `AutomationCard.highlight` pattern, and the platform `#if` guards are coherent. Let me stage exactly my files + log and commit.
+
+Exactly the 7 surface files + log staged (no unrelated files). Committing.
+
+Committed as `d1220c0ae`, with the unrelated pre-existing changes left untouched. Final verification of the commit contents.
+
+All 9 todos complete; the commit contains exactly the 8 allowed files (1400 insertions). Cleaning up the temporary lint config.
+
+I've completed the surface to the maximum extent this runner allows.
+
+## Summary
+
+Built the **`HistoryListRow` shared surface** (P4/0091) — the native SwiftUI parity of `web/src/components/data-display/HistoryListRow.tsx` — as 7 files in `apps/apple/TeslaSync/shared-surfaces/` (1,400 lines), committed as `d1220c0a`.
+
+**What was delivered (faithful to the web source):**
+- Generic, slot-based row: optional checkbox, fixed-width leading badge (`w-9`→36pt), required primary line, optional route/metrics/insight lines, hover-revealed quick actions, trailing chevron — inside a glass panel.
+- Web branches reproduced: `href` XOR `onClick` activation, `selected` ring, the `cyan/green/purple/none` glow accent, `hideChevron`, and propagation-stop on the checkbox + actions (composed *outside* the tap target, so they never navigate).
+- macOS reveals actions on hover (web `group-hover`); touch idioms keep them reachable.
+- **Native widening** (surface contract, documented as native-only): `loading` shimmer / `empty` / `error+retry` envelopes and an opt-in stale/offline freshness chip (ADR-013, default hidden).
+- Binds no data (web parity); emits `view.opened` (slug `HistoryListRow`) via `.task`; copy through the P1/S10 facade; chrome via P1/S9 tokens; VoiceOver label/hint/value + Dynamic Type + reduce-motion. Pure projection, glow, freshness, accessibility, and telemetry unit tests included.
+
+**Verification (real output in the gate log):**
+- `swiftformat --lint`: 0/6 · `swiftlint --strict`: 0 violations · placeholder gate: 0 — all clean for the surface files (the only full-tree lint/format failures are pre-existing and unrelated: `LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`).
+
+**Honest status — `STATUS=BLOCKED`:** the `xcodebuild` build+test gate cannot run on this runner — it has **Command Line Tools only** (`/Library/Developer/CommandLineTools`), no Xcode.app and no iOS Simulator (`xcrun simctl` unavailable). Per the prompt's capability clause, this is recorded as BLOCKED with the real failure output as evidence in `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0091-HistoryListRow.log`. I did not fabricate a passing build. I committed only the allowed files; the unrelated in-flight changes (AiUsageCard, FleetApiSection, BackupRestorePage) were left untouched.
+

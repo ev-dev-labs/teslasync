@@ -1,0 +1,188 @@
+=== P4 Shared surface 0048 AISoftwareUpdateChangelogSummarizer (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched). Bare `xcodebuild -version`
+                       under the CommandLineTools dir errors ("requires Xcode") — hence the DEVELOPER_DIR override,
+                       the SAME mechanism every prior P4 surface used (see p4-apple-feature-views-0237-AiUsageCard.log).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2
+  Capability         : SwiftUI present; iOS 26.5 simulator runtime installed (iPhone 16 booted:
+                       83717DEE-70A3-4325-AA61-CBDDD3140989). This surface uses NO Charts and NO MapKit (the web
+                       source has none either — see the prompt "Charts / maps used: (none)"), so the iOS 18 /
+                       iPadOS 18 / macOS 15 HIG primitives it needs are all available → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification — read end to end)
+  web/src/components/ai/AISoftwareUpdateChangelogSummarizer.tsx. The opt-in, read-only Helix narration
+  layer above the deterministic software-update history on SoftwareUpdatesPage (/software-updates and the alias
+  /vehicle-systems/software). It NEVER replaces the canonical update timeline (ADR-015 §I3).
+
+    Composition: `AISoftwareUpdateChangelogSummarizer = withAiFeature('software-update-changelog-summarizer',
+      InnerSection)`. The HOC gate returns null when the feature is disabled (ADR-015 §I5 / §I6) — no
+      data-ai-feature marker enters the DOM. `InnerSection` calls `useAiStream` unconditionally
+      (Hooks-rules-safe) and renders the shared `AIFeatureCard`:
+        title       = t('softwareUpdates.aiNarration.title', 'Summarize my software update history')
+        description = t('softwareUpdates.aiNarration.description', 'Ask Helix to walk through your firmware …')
+        buttonLabel = t('softwareUpdates.aiNarration.button', 'Summarize updates')
+        badgeLabel  = t('softwareUpdates.aiNarration.badge', 'Helix')
+        emptyHint   = haveInputs ? undefined : t('…noVehicleHint', 'Pick a vehicle above to enable Helix.')
+        canStart    = haveInputs ; stream = useAiStream({ url:'/ai/software-updates/summarize', body:{vehicle_id} })
+      where numericVehicleId = (vehicleId>0 ? vehicleId : 0) and haveInputs = numericVehicleId > 0.
+    AIFeatureCard scaffold (web components/ai/AIFeatureCard.tsx): GlassPanel → header (title + Helix AIBadge +
+      description + emptyHint when !canStart) → the universal CTA Button ("Ask Helix" idle / "Helix is thinking…"
+      streaming, disabled = !canStart || streaming, aria-label = "Ask Helix · {buttonLabel}") → AiOutputPanel.
+    AiOutputPanel branches (web components/ai/AiOutputPanel.tsx):
+      state==='error'                         → "Helix error: {error ?? t('ai.common.errorUnknown','unknown')}"
+      text==='' && state==='streaming'        → AIThinkingIndicator (shimmer skeleton + dots)
+      otherwise (any accumulated delta text)  → the narration (whitespace-pre-wrap)
+      idle && text===''                       → the panel renders nothing (the card title/description/action stay).
+  Hooks  : useSelectedVehicle (vehicle_id), useTranslation, useAiStream (SSE lifecycle: state + delta text + error).
+  i18n   : every user-visible key says "Helix", not "AI" (HX addendum). The shared Helix vocabulary
+           (helix.askHelix / helix.thinking / helix.errorLabel / ai.common.errorUnknown) lives in AIFeatureCard /
+           AiOutputPanel; reproduced in this surface's table because those atomic peers are out of scope here.
+
+ARTIFACTS SHIPPED  (allowed files: apps/apple/TeslaSync/shared-surfaces/AISoftwareUpdateChangelogSummarizer.* + this log)
+  AISoftwareUpdateChangelogSummarizer.swift            (168 L) — the SwiftUI surface: the withAiFeature gate
+        (isGated → EmptyView, web null) + the card chrome (Helix badge + freshness chip + refresh) + the
+        phase switch (loading skeleton / ready body) + the title/description/no-vehicle-hint block + the
+        action row, wrapped in TSFadeIn. surfaceSlug = "AISoftwareUpdateChangelogSummarizer".
+  AISoftwareUpdateChangelogSummarizer.Model.swift      (355 L) — P1/S8 state-holder seam (UpdateSummarizerSource
+        + @Observable UpdateSummarizerModel + InMemoryUpdateSummarizerSource), P1/S11 telemetry seam
+        (UpdateSummarizerTelemetry + OSLog sink, view.opened surface="AISoftwareUpdateChangelogSummarizer"
+        deferred until the first .ready apply), the P1/S10 facade (UpdateSummarizerStrings, table
+        "AISoftwareUpdateChangelogSummarizer"), the stream-state mirror (idle/streaming/pausedConfirm/done/error),
+        the connection axis (live/stale/offline), the output-phase value type, the input snapshot, and the
+        resolved view-state.
+  AISoftwareUpdateChangelogSummarizer.Adapter.swift     (94 L) — the pure, Foundation-only projection core
+        (cached input → resolved): isResolving→loading, !enabled→gated, else ready with haveInputs
+        (vehicleId>0) + canStart (haveInputs && !offline) + the AiOutputPanel branch selection
+        (error→failed, open+no-delta→thinking, any text→streaming/complete, idle/empty→never-blank stand-in) +
+        the unknown-error fallback + UpdateSummarizerAccessibility label builders.
+  AISoftwareUpdateChangelogSummarizer.Views.swift      (270 L) — the AIFeatureCard scaffold subviews: the
+        bordered output panel, the universal "Ask Helix" / "Helix is thinking…" action button (per-surface verb
+        as the a11y label), and the AiOutputPanel render branches (idle stand-in, thinking skeleton, streamed
+        narration, retryable failure) + the initial-load skeleton.
+  AISoftwareUpdateChangelogSummarizer.Chrome.swift     (126 L) — the Helix brand badge (web AIBadge), the
+        live/stale/offline freshness chip, the header refresh button, and the stale/offline connectivity banner.
+  AISoftwareUpdateChangelogSummarizer.Previews.swift   (126 L) — #Preview per state (gated / loading /
+        idle-no-vehicle / idle-ready / thinking / streaming / complete / failed / stale / offline). DEBUG-only.
+  AISoftwareUpdateChangelogSummarizer.strings           (44 L) — the P1/S10 catalog contribution: the web parity
+        keys + the shared Helix vocabulary + the native chrome copy, each with the web English value.
+  AISoftwareUpdateChangelogSummarizer.Tests.swift      (164 L) — state-holder coverage: model wiring, the
+        gated→ready telemetry transition (once), loading-defers-telemetry, the stale one-shot auto-refresh
+        (offline does not, live re-arms), summarize/refresh/stop delegation, isStreaming, surfaceSlug.
+  AISoftwareUpdateChangelogSummarizer.AdapterTests.swift (183 L) — projection coverage: resolving/gated/ready,
+        haveInputs + canStart, every AiOutputPanel branch, the unknown-error fallback, the a11y label builders,
+        the in-flight stream flag.
+  Total: 9 files, 1530 lines (no stub, no skeleton-only, no "Coming soon").
+
+  Binding (no direct HTTP from the view): useSelectedVehicle → input.vehicleID; useAiStream → input.stream +
+        streamText + streamError (and model.summarize() = stream.start()); withAiFeature → input.aiFeatureEnabled.
+  Tokens (P1/S9): Color.TS.* / Font.TS.* / TSSpacing / TSRadius / TSButton / TSSkeleton / TSFadeIn — no Tailwind
+        ports, no raw hex; the Helix accent chip is the sanctioned short-label-in-tinted-chip exception.
+  a11y           : card is one contained element titled by the surface name; the action button announces
+        "Ask Helix · Summarize updates" + the verb hint; the output region announces "{title}. {narration}";
+        the thinking + streaming regions carry .updatesFrequently; Dynamic Type via tokens; Reduce Motion via
+        TSFadeIn / TSSkeleton.
+  telemetry      : view.opened surface="AISoftwareUpdateChangelogSummarizer" emitted once on the first .ready
+        projection (mirrors the web data-ai-feature marker, absent in off mode).
+
+STATES (every non-gated one renders — no hidden surface)
+  gated    → feature disabled → the whole surface is withdrawn (EmptyView), reproducing web withAiFeature null
+             (ADR-015 §I5). NOT a hidden section: when the feature is on but no stream has run, the idle stand-in
+             renders.
+  loading  → pre-first-snapshot skeleton chrome (badge/title/description/panel stand-ins) while the gate +
+             active vehicle resolve.
+  empty    → the never-blank idle stand-in ("Run Helix to summarize your firmware update history.") + the
+             "Pick a vehicle above to enable Helix." hint when no vehicle is in scope (web emptyHint).
+  error    → the AiOutputPanel "Helix error: {message}" line + a P4 leaf Retry affordance.
+  ready    → title + Helix badge + description + the "Ask Helix" / "Helix is thinking…" action + the output
+             region (idle / thinking skeleton / streamed narration / terminal narration).
+  stale    → header chip + banner + one-shot auto-refresh on the live→stale transition.
+  offline  → header chip + banner over the last Helix summary (cached); the action is held (the SSE cannot open).
+
+GATES  (raw exits below; per-surface scope)
+  [GREEN] swiftformat --lint  (.swiftformat, 8 swift files)        : 0/8 files require formatting        FORMAT_EXIT=0
+  [GREEN] swiftlint --strict  (.swiftlint.yml, 8 swift files)      : 0 violations, 0 serious in 8 files   LINT_EXIT=0
+            (repo-wide swiftlint --strict surfaces exactly 1 PRE-EXISTING violation in
+             dashboard-widgets/LifetimeStatsWidget.Adapter.swift — function_body_length — NOT this surface and
+             NOT in the allowed-files scope; disclosed, not introduced here.)
+  [GREEN] check-placeholders.ps1 (-Language swift, shared-surfaces) : PLACEHOLDER_ALLOWED=0
+                                                                       PLACEHOLDER_COUNT=0                 PLACEHOLDER_EXIT=0
+  [GREEN] ISOLATED build + test — SwiftPM, swift-tools 6.0 (Swift 6 language mode = strict-concurrency complete,
+          the app's own setting), compiling the EXACT shipped AISoftwareUpdateChangelogSummarizer.* sources
+          (incl. the #Preview macro file) against the REAL repo design-system files (generated apps/design
+          Tokens + Sources/Design TSDesign/TSMaterial + Sources/Components Typography/Badges/Buttons/Cards/
+          Motion/Skeletons) under the Xcode 26.5 toolchain (so the real #Preview macro + @Observable + XCTest
+          are available):
+              Build complete!  ·  Executed 34 tests, with 0 failures (0 unexpected)                    SWIFT_TEST_EXIT=0
+  [GREEN] xcodegen generate + xcodebuild -list (project integrity) : project + 12 targets + TeslaSync /
+                                                                       TeslaSync-macOS schemes generate cleanly
+                                                                       (the gate command would dispatch)    XCODEGEN_EXIT=0
+
+  [DEFERRED] Full-app iOS-Simulator + macOS `xcodebuild -scheme TeslaSync(-macOS) … build test`.
+          NOT run-to-green on this runner because the full app target is blocked by PRE-EXISTING, unrelated
+          conditions this prompt neither introduced nor is allowed to touch (each VERIFIED here, not assumed):
+            • apps/apple/Frameworks/Shared.xcframework is NOT staged (only .gitkeep is git-tracked) — the app +
+              test targets depend on it; staging needs the ~7-min Gradle :core:assembleSharedXCFramework via the
+              scheme pre-action (a macOS-pending row for p1-shared/S3 in apps/macos-pending-verifications.md);
+            • `struct DashboardWidgetSize` is redefined 15× across Sources/DashboardWidgets/* +
+              TeslaSync/dashboard-widgets/* (parallel-merge collisions);
+            • 261 co-located `*.Tests.swift` under TeslaSync/{feature-views,dashboard-widgets} import XCTest into
+              the app target (the config first triggered by AcDcStatsPanel.Tests.swift);
+            • macOS development-signing (DEVELOPMENT_TEAM is empty);
+            • the new `TeslaSync/shared-surfaces` tier is not yet a project.yml `sources` entry — registering the
+              tier is owned by the P99 aggregation step and is outside this prompt's allowed files; the full-app
+              build is already blocked by the four conditions above regardless.
+          This is the SAME sanctioned "code-complete + DEFERRED full-app Xcode gate" disposition recorded by
+          every prior P4 surface (see p4-apple-feature-views-0237-AiUsageCard.log) and is owned by
+          p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner. ZERO
+          AISoftwareUpdateChangelogSummarizer errors are attributable to this change — the surface compiles and
+          its 34 tests pass under the app's own Swift 6 strict-concurrency rules (the ISOLATED gate above).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED with raw, verified
+                           pre-existing-blocker evidence (ls/grep) — never reported as passing. Every gate marked
+                           GREEN was executed on THIS runner with the raw exit pasted.
+  2  No scope narrowing  : every web region + branch reproduced — the withAiFeature gate, the AIFeatureCard
+                           header (title + Helix badge + description + no-vehicle hint), the universal
+                           Ask-Helix/thinking CTA with the per-surface verb a11y label + the !canStart||streaming
+                           disable, and all AiOutputPanel branches (error / thinking / streamed / terminal); all
+                           prompt states render (gated/loading/empty/error/ready/stale/offline).
+  3  No skip-and-assume  : every runnable gate executed here; raw exits pasted; the deferred full-app blockers
+                           were each re-confirmed by ls/grep (Shared.xcframework absent, DashboardWidgetSize 15×,
+                           261 co-located XCTest tests), not assumed.
+  4  No stubs as final   : complete production surface + 34 real tests; placeholder scanner COUNT=0; no
+                           TODO/FIXME/stub/Coming-soon/Placeholder/Lorem anywhere (the scanner also rejects the
+                           "todo" substring, so the projection helper is named errorMessage, not a *ToD* form).
+  5  No parity shortcut  : the gate-null, the numericVehicleId>0 haveInputs, the AiOutputPanel conditional, the
+                           error ?? unknown fallback, the universal CTA labels, and the Helix-not-AI i18n are each
+                           unit-asserted against the web expressions.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened
+                           telemetry, and the established P4 "isolated-build + DEFERRED full-app" disposition all
+                           honoured; no prior surface file touched (the working-tree AiUsageCard.* edits predate
+                           this session and are NOT part of this commit).
+  8  No commit on red    : the committed artifact (9 surface files + this log) is GREEN on every per-surface gate
+                           AND on a real isolated Swift 6 strict-concurrency build + 34/34 XCTest; the deferred
+                           full-app gate is blocked only by pre-existing, unrelated surfaces this commit does not
+                           touch.
+  9  No silent drift     : changes are confined to shared-surfaces/AISoftwareUpdateChangelogSummarizer.{swift,
+                           Model,Adapter,Views,Chrome,Previews,Tests,AdapterTests}.swift +
+                           AISoftwareUpdateChangelogSummarizer.strings and this log; the new-tier project.yml
+                           wiring gap is disclosed above.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic AISoftwareUpdateChangelogSummarizer shipped at parity with the web source
+  and INDEPENDENTLY VERIFIED: it compiles and its 34 tests pass under the app's own Swift 6 strict-concurrency
+  rules, against the REAL design system, via the Xcode 26.5 XCTest runtime, with the #Preview macro compiling and
+  swiftformat / swiftlint / placeholder all green on the 8 swift files. The full-app iOS-Simulator + macOS
+  xcodebuild build/test gate is DEFERRED (not failed by this code) on pre-existing, unrelated, out-of-allowed-files
+  blockers (unstaged Shared.xcframework, the DashboardWidgetSize 15× redefinition, the 261-co-located-tests-into-
+  app-target config, macOS signing, and the new-tier project.yml registration), owned by the P99 acceptance gate
+  on a signed macos-latest runner per apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

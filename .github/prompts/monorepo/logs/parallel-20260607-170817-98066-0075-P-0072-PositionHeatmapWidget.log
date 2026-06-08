@@ -1,0 +1,104 @@
+I'll start by exploring the repository structure to understand both the web source and the Apple app architecture.
+
+Let me read the web source and the existing Apple dashboard widget implementations to understand the patterns.
+
+Now let me study the existing native dashboard widget implementations — these are my templates. The `DigitalTwinWidget` is in the exact target directory, and `BatteryCellsWidget` has a registry/data/model/test split.
+
+Let me read the full DigitalTwinWidget file set (the exact-directory template) plus the shared facade and maps primitives.
+
+This is an excellent template. Now let me understand the maps primitives, the web data hook, design tokens, and check build capability.
+
+Key finding: `xcodebuild` needs full Xcode but only Command Line Tools are present. Let me confirm simulator availability and understand the project/target structure, plus read the remaining templates.
+
+Xcode.app exists but `xcode-select` points to CommandLineTools. Let me test whether I can drive the real toolchain via `DEVELOPER_DIR`, and read the project config + design tokens + web data hook.
+
+Major finding: the full **Xcode 26.5** toolchain works via `DEVELOPER_DIR`, the **iPhone 16 simulator** exists, and `pwsh` is available — so I can run the real gate. But note the target dir `apps/apple/TeslaSync/dashboard-widgets/` is **not** under `Sources/` in `project.yml`. Let me check how the predecessor `DigitalTwinWidget` (same dir) handled this.
+
+Now I understand the precedents. The same-directory predecessor (0036 DigitalTwin) placed files literally in `TeslaSync/dashboard-widgets/` and verified via real-SDK host compile + executed adapter, deferring the app-target xcodebuild. I'll follow that established pattern. Let me gather the exact token/maps/data APIs I need.
+
+Let me confirm the web data hook shape and the shared native feedback/UI primitives I'll reference.
+
+I have the full picture. Let me read the badge styling and skeleton API, then I'll start building.
+
+Let me confirm the skeleton component's dependency closure and the swiftformat config so my files match house style exactly.
+
+I have everything I need. Let me set up tracking and write the plan, then build the 8 files following the established `DigitalTwinWidget.*` pattern.
+
+Now I'll write the files. Batch 1: domain models, the pure adapter, the state-holder model, and the strings catalog.
+
+Batch 2: the SwiftUI surface, the MapKit renderer, previews, and tests.
+
+Let me refine the Map view (remove an unneeded modifier) and write the previews + tests.
+
+All 8 files created. Now let me run the host gate. First, format + lint on the new files.
+
+swiftformat wants a few wraps. Let me auto-apply the formatter (the canonical fix) to my files, then re-lint.
+
+swiftformat passes. Now swiftlint --strict on the new files.
+
+Two `large_tuple` violations (3-member tuples). Let me replace them with small structs — the idiomatic fix.
+
+swiftlint **0 violations**, swiftformat **clean**. Now the real-SDK host typecheck — compiling my surface against the real DesignTokens + a faithful shim for the shared dashboard-tier types, using full Xcode 26.5.
+
+Pass A (runtime surface) is **clean (exit 0)**. Pass B caught a real Swift 6 concurrency bug in the preview helper — the free function must be `@MainActor` (it builds `@MainActor` types). Let me fix it.
+
+Both typecheck passes are **green (exit 0)**. Now the executed adapter harness — compile the pure `Models`+`Builder` to a native binary and **run** it to prove the clustering/centroid/colour math matches the web (not just typecheck).
+
+Top-level vars are `@MainActor` in Swift 6. Let me annotate the harness's `check` helper and re-run.
+
+Top-level vars can't take a global actor. Let me hold the counters in a class instance instead.
+
+**Adapter harness: 37/37 passed, exit 0.** Now the placeholder gate (pwsh) — both the literal gate path and a real per-file scan of my files.
+
+Every host gate is green. Now let me attempt a **stronger** verification than the shim: compile my surface together with the **real** `DigitalTwinWidget` files (which define the shared dashboard-tier types) plus the real component/design library — proving both real-library integration and coexistence (no duplicate symbols).
+
+`Components` as a whole depends on the KMP `Units` facade (needs Shared.xcframework). Let me use the curated `DigitalTwin` closure instead and confirm I don't redefine the shared types (coexistence proof).
+
+Crucial result: the **only** errors are in the *pre-existing* `DigitalTwinWidget.Previews.swift` (the same latent Swift-6 concurrency bug — predecessor 0036 never typechecked its previews). **Zero** errors are attributed to any `PositionHeatmapWidget` file. That file is out of my allowed-files scope, so I won't touch it — I'll exclude it and confirm a fully-green strong compile (proves real-library integration + coexistence).
+
+**STRONG_EXIT=0** — definitive: my widget compiles against the real component library and coexists with the real `DigitalTwinWidget` (no duplicate symbols), under Swift 6 strict concurrency. Now let me verify the Tests file type-checks (sans app module) and confirm the factual basis for deferring the app-target xcodebuild.
+
+The Tests failure is only that `XCTest` needs the platform framework search path. Let me add it; the deferral facts are all confirmed (dir not in project.yml, `Frameworks/` only has `.gitkeep`, 0 signing identities).
+
+Only the XCTest assertion *macros* are missing (a known bare-`swiftc` limitation — they're C macros surfaced only in a real test target); every reference to **my** symbols resolved. Let me prove the Tests file's API usage with a minimal XCTest shim.
+
+Need to strip both imports. Let me fix the sed.
+
+Tests bodies type-check (exit 0). There's one strict-concurrency **warning**: the registry test touches `PositionHeatmapWidget.registration`, which is `@MainActor` (SwiftUI `View`). Let me make that test class `@MainActor` to keep it clean under strict concurrency.
+
+Now let me run the **complete consolidated host gate** in one pass to capture canonical output for the log.
+
+All passes green: format, lint, core typecheck, previews, **strong (real lib + coexistence)**, Tests-logic, placeholders. Let me re-run the executed adapter harness once more in the final state for a consistent record, then write the log.
+
+**All host gates green.** Let me capture file metrics, then write the gate log.
+
+Files are within house limits (largest 314 lines, max width 120). Now I'll write the gate log.
+
+Now let me verify a clean, scoped git state and commit.
+
+Clean and scoped — only my 8 files and the log. Committing.
+
+Committed cleanly (9 files, 1545 insertions). Let me confirm a clean working tree and finalize tracking.
+
+Task complete. All work is committed (`d1883ae4`), the working tree is clean, and the gate log ends with `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...ashboard-widgets-0072-PositionHeatmapWidget.log | 225 +++++++++++++++
+ .../PositionHeatmapWidget.Builder.swift            | 180 ++++++++++++
+ .../PositionHeatmapWidget.Map.swift                |  93 ++++++
+ .../PositionHeatmapWidget.Model.swift              | 195 +++++++++++++
+ .../PositionHeatmapWidget.Models.swift             | 103 +++++++
+ .../PositionHeatmapWidget.Previews.swift           | 117 ++++++++
+ .../PositionHeatmapWidget.Tests.swift              | 275 ++++++++++++++++++
+ .../PositionHeatmapWidget.strings                  |  43 +++
+ .../dashboard-widgets/PositionHeatmapWidget.swift  | 314 +++++++++++++++++++++
+ 9 files changed, 1545 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0072-PositionHeatmapWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/PositionHeatmapWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/PositionHeatmapWidget.Map.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/PositionHeatmapWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/PositionHeatmapWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/PositionHeatmapWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/PositionHeatmapWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/PositionHeatmapWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/PositionHeatmapWidget.swift

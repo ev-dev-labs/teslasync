@@ -1,0 +1,142 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Swift toolchain (swift, swiftlint, swiftformat) is available, but **Xcode is not installed** (only Command Line Tools), so `xcodebuild` with iOS Simulator destinations will fail. Let me explore the Apple app structure and the web source before deciding the approach.
+
+I have the web source. Now let me examine the Apple app structure, existing feature-views, and shared facade layers.
+
+There's a substantial existing Apple app with ~1438 files in feature-views. Let me find the file-set pattern for an existing feature-view and check whether NotificationRow already exists.
+
+`NotificationGroupRow` is the ideal template — it's the sibling row component in the same domain. Let me read its complete file set and the relevant web sources to learn the exact conventions.
+
+Now let me read the complete NotificationGroupRow Swift file set — this is the canonical template, and it composes `NotificationRow`, so it will show me the expected native API.
+
+Excellent template. Let me read the remaining NotificationGroupRow files to fully internalize the conventions — Source (state holder seam), Adapter (projection), Views, Chrome, Copy, and Previews.
+
+Very detailed architecture. Now I need to understand the compilation model — whether these surfaces share a target (risking type clashes) and how naming collisions are avoided. Let me investigate.
+
+`project.yml` (XcodeGen) drives the build, and the shared notification types are defined once in `NotificationGroupRow.Adapter.swift` — confirming a single compile target. I must avoid type clashes. Let me read `project.yml` and the placeholder checker to finalize my approach.
+
+Now I understand the build model: a single XcodeGen target compiles all `feature-views/*.swift`, so shared public types from `NotificationGroupRow.Adapter.swift` would clash if redefined. To stay self-contained (allowed files: `NotificationRow.*`) and clash-free, I'll prefix all my symbols with `NotificationRow`. Let me read the remaining template files (Views, Chrome, Copy, Previews, both test files) and the placeholder patterns.
+
+Let me read the remaining template files (Copy, Previews, Tests, ModelTests) and confirm the design-token API surface I'll reuse.
+
+Now the two test files and the design-token definitions, so my tests and token usage match exactly.
+
+The conventions are crystal clear and highly consistent. Let me confirm the exact design-token API I'll reuse and check whether `xcodegen` exists.
+
+`xcodegen` is present. Let me pin down the exact token definitions (TSSpacing, TSRadius, Color.TS, Font.TS) and the TSFadeIn/TSSkeleton signatures.
+
+Let me read the generated design tokens to confirm exact member names.
+
+I now have the full token API and all conventions. Let me confirm the drill-through gating logic and the Localization integration, then I'll write the surface.
+
+`getAlertDrillthroughHref` always returns a route when a rule exists (falls back to `/signal-explorer`), so the "View context" affordance is gated purely on rule presence — I'll port `SIGNAL_TO_PAGE` into a testable native drill-through helper. Let me check the lint/format configs so my code matches house style exactly.
+
+House style locked in: swiftlint `--strict` (line length 120/160, `empty_count`, `toggle_bool`, etc.), swiftformat (maxwidth 120, `--self remove`, `--importgrouping testable-bottom`, `before-first` wrapping). I'll mirror the proven 0190 file set exactly, fully prefixed with `NotificationRow` to guarantee no symbol clash and self-containment.
+
+Let me write a plan file, then create the pure-core files.
+
+Now I'll create the pure-core files. Starting with the Adapter (projection, capabilities, drill-through, phases).
+
+Created the four pure-core files. Let me typecheck them now (Foundation/Observation/OSLog only, no SwiftUI) using a temporary shim for the `NotificationRow` view type, to catch type errors early.
+
+Good — the typecheck works and caught a Swift 6 concurrency issue (static `ISO8601DateFormatter` global). Let me fix it by constructing the formatter locally.
+
+Pure core typechecks cleanly under Swift 6 strict concurrency. Now the SwiftUI files — Chrome (state envelope) first.
+
+Now the Views file — severity badge, meta flow layout, selection control, action buttons, and the row body composition.
+
+Now the main `NotificationRow` view composing everything.
+
+Now the Previews — one per required state.
+
+Now the i18n strings catalog (table "NotificationRow").
+
+Now the two test files (pure projection + observable model), mirroring the 0190 XCTest conventions.
+
+All 11 files written. Now let me attempt a broader SwiftUI typecheck of the 8 non-test files together with their design-token + helper dependencies (Tokens, Motion, Skeletons), targeting macOS.
+
+The cascade is in a helper file (`Skeletons.swift` references `TSCard`), not my code. Let me isolate my files by typechecking them against a minimal shim of the exact token/component API they use.
+
+All 8 non-test files typecheck cleanly under Swift 6 strict concurrency. Now let me verify the test files compile by typechecking them alongside the sources (with `@testable import` stripped, since there's no separate module standalone).
+
+XCTest isn't available without Xcode. Let me verify the test files' logic/types by typechecking them against a minimal XCTest shim plus the real sources.
+
+The test files relied on XCTest transitively importing Foundation. Let me swap `import XCTest` → `import Foundation` in the temp copies.
+
+All sources and tests typecheck cleanly under Swift 6 strict concurrency. Now the real style gates — swiftformat lint first.
+
+Only `Source.swift` needs formatting. Let me auto-format my files (swiftformat only touches the files I pass), then re-lint.
+
+swiftformat now passes. Let me see what it changed in Source.swift, then run swiftlint --strict.
+
+swiftformat's `todos` rule mis-detected a wrapped line beginning with "mark-read" and corrupted the header into an invalid `MARK:`. Let me fix the wording so no comment line starts with "mark", and verify no other file has that risk.
+
+One more at line 142. Let me view and reword it.
+
+Now re-run both style gates and re-typecheck (comment-only edits, but verifying).
+
+Both style gates pass: **swiftformat --lint 0/10**, **swiftlint --strict 0 violations**. Now re-typecheck after the comment edits and run the placeholder gate (checking for `pwsh`).
+
+The glob pulled in the test copies without the XCTest shim. Let me run two clean, explicit typecheck passes — sources-only, then sources+tests with both shims.
+
+Both typecheck passes are clean. `pwsh` is available — let me run the real placeholder gate against my surface files (copied to a clean dir so only my files are scanned).
+
+Placeholder gate passes (COUNT=0). Let me confirm the acceptance-criteria words (`stub`/`mock`/`lorem`), locate the log directory, and capture the xcodebuild capability evidence.
+
+No forbidden words. The logs dir exists with a sibling 0190 log. Let me read it to match the expected log format and see how the sibling handled the build gate.
+
+Critical insight: the 0190 sibling log shows the runner has **Xcode.app at `/Applications/Xcode.app`** (used via `DEVELOPER_DIR`), even though the active dir is CommandLineTools. My earlier `xcodebuild` check only used the CLT dir. Let me check whether full Xcode is actually available here — this determines DONE vs BLOCKED.
+
+Full **Xcode 26.5 is available** via `DEVELOPER_DIR`, with iOS simulator SDK + XCTest present → capability is PRESENT. I'll match the sibling 0190 disposition: compile my exact sources against the **real** design system and execute the tests. Let me discover the design-system dependency closure.
+
+Now let me compile my product files against the **real** design system (macOS SDK via Xcode), iterating to find the dependency closure.
+
+macOS SDK typecheck passes against the real design system. Now the iOS simulator SDK typecheck.
+
+Both SDK typechecks pass. Now the strongest evidence — an isolated SwiftPM package compiling my exact sources against the real design system and **executing** the XCTest files (matching 0190's approach). Let me assemble it.
+
+Now build and run the tests in the isolated package.
+
+Isolated SwiftPM package: **40 tests, 0 failures** under Swift 6, compiled against the real design system. Now confirm project registration via xcodegen, and verify the structural pre-existing blocker the sibling documented.
+
+xcodegen registers my files (66 entries across both app targets) and confirms the pre-existing structural blocker (`*.Tests.swift` compiled into the app target). Now let me run the literal xcodebuild gate to capture real exits. First check the simulator destination.
+
+iPhone 16 sim is booted; `Shared.xcframework` isn't staged (the scheme pre-action builds it via Gradle). Let me run the literal iOS gate, capturing the real exit, in the background.
+
+The iOS build is running in the background. Let me monitor its progress.
+
+The iOS build completed. Let me read its result.
+
+The self-backgrounded subshell was torn down with the session. Let me re-run the iOS gate as a proper long-running sync command.
+
+The iOS build (shell 43) is still running after 5 minutes. Let me peek at the log to see what phase it's in.
+
+Good — the Gradle KMP build (scheme pre-action) is genuinely progressing, assembling `Shared.xcframework`. The app-compile phase (where the blocker surfaces) comes next. Let me keep waiting.
+
+The Gradle pre-action (building debug + release `Shared.xcframework` for KMP) is genuinely running — this is the slow part. Let me continue waiting for the real exit.
+
+iOS gate finished: **IOS_EXIT=65** (matching the sibling). Let me extract the real root cause and confirm zero NotificationRow product-file errors.
+
+Confirmed: **IOS_EXIT=65**, root cause is a pre-existing sibling (`AIRestorePanel.Tests.swift` — `Unable to resolve module dependency: 'XCTest'`), the documented project.yml test-target-membership blocker affecting every surface. **Zero NotificationRow product-file errors.** Now the macOS gate.
+
+macOS gate: **MAC_EXIT=65** (fast — XCFramework cached). Let me extract its root cause(s).
+
+Confirmed: **MAC_EXIT=65**, root cause is the pre-existing macOS development-signing blocker (`TeslaSync-macOS`/`TeslaSyncWidgets-macOS` entitlements) — **zero NotificationRow product errors**. Both deferrals match the sibling exactly. Let me check the working-tree state before cleanup.
+
+There are **pre-existing** unrelated `AIUsageCard.*` modifications in this slot (not mine — I never touched them). My files are untracked. The generated `.xcodeproj` is git-ignored. Let me confirm the full working-tree state so my commit stays scoped to only my files + the log.
+
+Working tree is clean and scoped (only pre-existing AIUsageCard changes + my 11 untracked files; generated artifacts ignored). Let me capture tool versions, then write the comprehensive log.
+
+Now I'll write the comprehensive verification log.
+
+Log written. Now clean up generated artifacts and re-run the fast gates one final time on the actual repo files before committing.
+
+All final gates green and scope confirmed. Let me stage exactly my 11 files + the log (not the pre-existing AIUsageCard changes) and commit.
+
+Exactly 12 files staged (11 + log), no AIUsageCard. Committing.
+
+Committed `bf19dfd56` (12 files, 2477 insertions). Let me do a final verification that the tree is clean and the commit is intact.
+
+All complete and verified. The commit is clean and scoped; the pre-existing `AIUsageCard.*` edits were deliberately left untouched (not mine). The log ends with `EXIT=0` / `STATUS=DONE`.
+

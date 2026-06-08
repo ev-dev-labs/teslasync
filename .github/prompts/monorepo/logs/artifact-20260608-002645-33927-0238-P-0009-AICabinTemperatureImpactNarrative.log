@@ -1,0 +1,119 @@
+=== P4 Shared surface 0009 AICabinTemperatureImpactNarrative (Apple) ===
+Date: 2026-06-08
+Runner: macOS (Darwin), Xcode 26.5 (Build 17F42) via DEVELOPER_DIR=/Applications/Xcode.app,
+        xcodegen 2.45.4, swiftlint + swiftformat (Homebrew), JDK 17 (KMP toolchain).
+Capability: SwiftUI + Swift Charts + MapKit + iOS 18 / macOS 15 toolchain IS available.
+            (This surface uses no charts/maps — per the web source.)
+
+--------------------------------------------------------------------------------
+DELIVERABLE (complete, production-polished, no stubs)
+--------------------------------------------------------------------------------
+Native parity of web/src/components/ai/AICabinTemperatureImpactNarrative.tsx, following
+the established AIRestorePanel feature-view pattern. 7 files under
+apps/apple/TeslaSync/shared-surfaces/:
+  - AICabinTemperatureImpactNarrative.swift            (main SwiftUI View)
+  - AICabinTemperatureImpactNarrative.Adapter.swift    (pure gate/output/a11y core)
+  - AICabinTemperatureImpactNarrative.Model.swift      (P1/S8 state holder, P1/S11 telemetry, P1/S10 i18n facade)
+  - AICabinTemperatureImpactNarrative.Views.swift      (subviews: header, Helix badge, freshness chip/banner, Ask Helix CTA, output region)
+  - AICabinTemperatureImpactNarrative.Previews.swift   (8 state previews)
+  - AICabinTemperatureImpactNarrative.Tests.swift      (28 unit tests: gate, output projection, model wiring, telemetry, a11y, i18n)
+  - AICabinTemperatureImpactNarrative.strings          (i18n catalog contribution)
+
+Web composition reproduced faithfully:
+  - useAiStream lifecycle (idle/streaming/done/error) -> CabinTempNarrativeStreamState.
+  - AIFeatureCard scaffold -> GlassPanel + Helix header + "Helix" badge + description +
+    universal "Ask Helix"/"Helix is thinking…" CTA (disabled = !canStart || streaming || offline).
+  - AiOutputPanel branches -> idle hint / thinking indicator / streamed prose / empty-result / "Helix error:".
+  - Gate: web haveInputs = Number.isFinite(id) && id>0; body { vehicle_id }.
+  - withAiFeature root testID mirrored as accessibilityIdentifier
+    "ai-feature-cabin-temperature-impact-narrative-root".
+States rendered (every one, no hidden surface): idle / thinking(loading) / text / empty-result /
+error(+retry) / stale (chip+banner) / offline (chip+banner, button disabled, cached narrative kept).
+i18n: every string via NSLocalizedString facade (table "AICabinTemperatureImpactNarrative").
+Source i18n keys present: tempImpact.aiNarrative.title/description/generateButton/badge (+ shared helix.*).
+A11y: VoiceOver labels on every element, Dynamic Type fonts, reduce-motion-safe (symbolEffect, TSSkeleton,
+TSFadeIn, ProgressView). Telemetry: view.opened emitted with slug AICabinTemperatureImpactNarrative.
+
+--------------------------------------------------------------------------------
+VERIFICATION OF THIS SURFACE — ALL GREEN (commands run, real output)
+--------------------------------------------------------------------------------
+[1] swiftformat --lint TeslaSync/shared-surfaces      -> 0/6 files require formatting.   EXIT 0
+[2] swiftlint --strict TeslaSync/shared-surfaces/*.swift -> 0 violations, 0 serious in 6 files. EXIT 0
+[3] check-placeholders.ps1 -Path .../AICabinTemperatureImpactNarrative
+        -> PLACEHOLDER_COUNT=0  EXIT 0  (no TODO/stub/mock/placeholder/Lorem)
+[4] swiftc -typecheck Adapter.swift (Foundation only)  -> EXIT 0
+[5] swiftc -typecheck (5 non-test files vs signature-accurate token/component stubs) -> EXIT 0
+[6] REAL APP-MODULE COMPILE (xcodebuild build -scheme TeslaSync-macOS, full TeslaSync module
+        incl. the staged KMP Shared.xcframework, real design tokens + components):
+        the Swift compiler processed all ~1,919 module files including this surface's 5 non-test
+        files and reported ZERO errors attributable to shared-surfaces/AICabinTemperatureImpactNarrative*.
+        (grep -ci 'shared-surfaces/AICabinTemperature' over the 608 compiler errors = 0.)
+[7] swift test (SwiftPM, this surface's REAL Adapter.swift + Model.swift + the 28-test suite verbatim;
+        headless shim supplies only the View's 2 contract constants):
+        "Executed 28 tests, with 0 failures (0 unexpected)."   EXIT 0
+
+KMP prerequisite: apps/shared :core:assembleSharedXCFramework BUILD SUCCESSFUL in 24m15s (slow due
+to shared-runner contention, load avg peaked ~83); Shared.xcframework staged to apps/apple/Frameworks.
+
+--------------------------------------------------------------------------------
+GATE COMMANDS — RESULTS (honest; tree-level steps are RED from PRE-EXISTING defects)
+--------------------------------------------------------------------------------
+xcodebuild build test -scheme TeslaSync (iOS Simulator,iPhone 16) : NOT RUN TO COMPLETION.       IOS_EXIT=n/a
+        (The iOS app target compiles the IDENTICAL source set as TeslaSync-macOS — same Sources +
+         TeslaSync/feature-views + TeslaSync/dashboard-widgets + TeslaSync/shared-surfaces — so it
+         fails on the same pre-existing sibling errors in (A). macOS was run as the executed proof.)
+xcodebuild build test -scheme TeslaSync-macOS                     : BUILD FAILED (executed).        MAC_EXIT=65
+swiftlint --strict (apps/apple, full tree)                        : 1 violation.              LINT_EXIT=2
+swiftformat --lint apps/apple (full tree)                         : 1/1919 require formatting. FORMAT_EXIT=1
+check-placeholders.ps1 (this surface)                             : 0.                        PLACEHOLDER_EXIT=0
+
+ROOT CAUSES — all PRE-EXISTING and OUTSIDE this surface + its allowed files:
+
+(A) App target does not compile: 608 pre-existing errors, ALL in sibling code, NONE in this surface.
+    Representative:
+      Sources/DashboardWidgets/DrivetrainHealthWidget.swift: 'DashboardWidgetSize' is ambiguous
+        for type lookup in this context  (duplicate type defined in both Sources/DashboardWidgets/
+        and TeslaSync/dashboard-widgets/), cascading "cannot infer contextual base in reference to
+        member 'loaded'/'fresh'/'stale'/'offline'/'fahrenheit'/…" across ~80 sibling .Previews/.Model files
+        in TeslaSync/dashboard-widgets/ and TeslaSync/feature-views/.
+    Error file breakdown (top): *.Previews.swift in dashboard-widgets & feature-views, DrivetrainHealthWidget.swift.
+    Owned by other P4 prompts; out of this surface's allowed-file scope.
+
+(B) Structural test-routing defect (pre-existing, tree-wide): 225 inline *Tests.swift files
+    (224 siblings + this one) live in the APP target source paths and `import XCTest`, but the
+    pbxproj links XCTest 0 times -> "unable to resolve module dependency: 'XCTest'". This surface's
+    Tests file follows the identical, established sibling convention. A correct fix (route *Tests.swift
+    to the unit-test targets) is shared infrastructure owned by no single surface prompt and was
+    intentionally NOT shipped here to keep the change surgical; it also does not yield a green build
+    because of (A). It was applied temporarily only to PROVE [6] above, then reverted.
+
+(C) swiftlint --strict full-tree: pre-existing dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+    function_body_length (78 > 50). Not this surface.
+
+(D) swiftformat --lint full-tree: pre-existing feature-views/ActionBuilder.Previews.swift:48
+    blankLinesBetweenScopes. Not this surface.
+
+CI note: .github/workflows/apps-apple.yml currently guards as a documented no-op (no checked-in
+.xcodeproj), so this tree has never been compiled in CI; the pre-existing defects accumulated unnoticed.
+
+--------------------------------------------------------------------------------
+CHANGES (surgical; allowed-files + minimal necessary wiring)
+--------------------------------------------------------------------------------
+  apps/apple/TeslaSync/shared-surfaces/AICabinTemperatureImpactNarrative.*   (NEW — the surface)
+  apps/apple/project.yml       (+2 lines: add TeslaSync/shared-surfaces to both app targets — mirrors feature-views)
+  apps/apple/.swiftlint.yml     (+1 line: lint TeslaSync/shared-surfaces)
+Generated TeslaSync.xcodeproj and built Frameworks/Shared.xcframework are git-ignored (not committed).
+
+--------------------------------------------------------------------------------
+CONCLUSION
+--------------------------------------------------------------------------------
+The AICabinTemperatureImpactNarrative surface is COMPLETE, faithful to the web source, renders every
+state, is fully i18n'd + accessible, and is INDEPENDENTLY VERIFIED: it formats clean, lints clean,
+has zero placeholders, compiles cleanly inside the real TeslaSync app module, and its 28 unit tests
+execute and pass. The prompt's xcodebuild build+test gate cannot reach EXIT=0 solely because of
+PRE-EXISTING, tree-wide sibling defects (608 dashboard-widgets/feature-views compile errors + a
+structural *Tests.swift routing issue + pre-existing lint/format violations) that are outside this
+surface and its allowed files. Per the Honesty Covenant (no red-as-green), this is reported as BLOCKED.
+
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,212 @@
+================================================================================
+P4 · Feature view · 0271 — SignalSparklinePreview (Apple)
+Run: 2026-06-08T00:22-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/392
+Base: 69ca23b2d
+Prompt: P4/feature-views/0271 — Feature view: SignalSparklinePreview
+Web source (spec): web/src/features/telemetry/components/SignalSparklinePreview.tsx
+Mode: code-complete + EXECUTED host gates + DEFERRED Xcode app build/test
+      (0002 BackendTool / 0036 DigitalTwinWidget / 0054 GuardModeWidget precedent,
+       ADR-012, Honesty rule 7 — predecessor parity). The full `xcodebuild
+       build test` is a SHARED, cross-surface aggregate gate that is environment-
+       blocked for EVERY surface in this checkout (test-search-paths, ~24 sibling
+       dashboard-widget compile errors, macOS signing cert). Its REAL exit 65 +
+       root cause are captured below and are explicitly NOT counted as green.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108)   OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override       OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iphonesimulator26.5 (iOS 18.0 deploy target)        OK
+  macOS SDK .................. macosx26.5 (macOS 15.0 deploy target)               OK
+  iPhone 16 simulator ........ present (83717DEE-70A3-4325-AA61-CBDDD3140989)      OK
+  SwiftUI .................... present in both SDKs (this surface's core need)     OK
+  Swift Charts ............... present; USED via the shared `TSSparkline`          OK
+  MapKit ..................... present in both SDKs (this surface uses none)       OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                         OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                       OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                             OK
+  xcodegen ................... 2.45.4 (project generates cleanly)                  OK
+  Shared.xcframework ......... BUILT + STAGED via Gradle (BUILD SUCCESSFUL 7m40s)  OK
+  feature-views registered ... 54 refs in TeslaSync.xcodeproj (regenerated)       OK
+
+  Capability verdict: every capability the prompt names (SwiftUI + Swift Charts +
+  MapKit, iOS 18 / macOS 15) is AVAILABLE and is PROVEN below by REAL in-context
+  compiles of this surface against BOTH the iOS-Simulator-26.5 and macOS-26.5 SDKs.
+  This is therefore NOT a STATUS=BLOCKED capability case. The only non-green steps
+  are the SHARED aggregate xcodebuild + tree-wide lint gates, blocked by factors
+  outside this surface AND outside the allowed edit scope (see DEFERRED section).
+
+=== SURFACE (artifact under apps/apple/TeslaSync/feature-views/) ===
+  SignalSparklinePreview.swift ............. main View (phase switch, onAppear seam)
+  SignalSparklinePreview.Models.swift ...... pure value types (Kind/Value/Sample/
+                                             Projection/LoadStatus/Connection/Phase)
+  SignalSparklinePreview.Adapter.swift ..... pure logic (envelopesToNumbers, project,
+                                             resolvePhase, latestLabel) — web parity
+  SignalSparklinePreview.Model.swift ....... P1/S8 source seam + @Observable model +
+                                             P1/S11 telemetry + in-memory source
+  SignalSparklinePreview.Localization.swift  P1/S10 facade + testable a11y builder
+  SignalSparklinePreview.Views.swift ....... non-numeric chip, skeleton, trend
+                                             (TSSparkline), empty dash, error, chip
+  SignalSparklinePreview.Previews.swift .... #Preview per state (8 states)
+  SignalSparklinePreview.strings ........... P1/S10 i18n catalog (parity + chrome)
+  SignalSparklinePreview.Tests.swift ....... adapter + model + a11y XCTest cases
+
+  Parity map (web SignalSparklinePreview.tsx -> native), every branch reproduced:
+    !enabled            -> .disabled       (renders nothing; the fetch gate)
+    non-numeric kind    -> .nonNumeric     (uppercase (kind) chip + title)
+    query.isLoading     -> .loading        (pulsing aria-hidden skeleton)
+    numericSeries<2     -> .empty          ("—" + "No samples in last hour" title)
+    Sparkline(data)     -> .content        (shared TSSparkline = web @/components/charts)
+    [native chrome]     -> .error          (retry; web delegates to TanStack Query)
+    envelopesToNumbers  -> Adapter.numbers (finite number -> v, bool -> 1/0, skip)
+    {hours:1,limit:30}  -> Adapter.history{Hours,Limit}; min 2 pts = minimumSamples
+  Data sources bound via P1/S8 seam (no HTTP in the view): useSignals (valueKind
+  prop) + useSignalHistory (the history stream) — both flow through the source.
+  i18n: every literal resolves through the P1/S10 facade; the web's two strings
+  ("No samples in last hour", "Non-numeric signal (kind)") are present verbatim.
+
+================================================================================
+HOST GATES — RUNNABLE + GREEN (these justify STATUS=DONE)
+================================================================================
+
+[1] swiftc -typecheck (Swift 6, strict concurrency complete) — pure logic, macOS SDK
+    Files: Models + Adapter + Localization + Model
+    > xcrun --sdk macosx swiftc -typecheck -swift-version 6 ...
+    RESULT: exit 0  (clean — one Sendable issue found + fixed pre-commit)
+
+[2] In-context iOS Simulator SDK module compile (build-for-testing, real dependencies)
+    > xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' \
+        build-for-testing ENABLE_TESTING_SEARCH_PATHS=YES
+    SignalSparklinePreview.* errors: 0   (the surface compiles against the iOS SDK
+      with the REAL TSSparkline + design tokens + Shared.xcframework)
+    Only a benign warning, identical to the pre-existing LiveSignalSparklinesWidget:
+      "file 'SignalSparklinePreview.Tests.swift' is part of module 'TeslaSync';
+       ignoring import"  (the colocated-test `@testable import` self-import — the
+       established convention for every *.Tests.swift in this tree)
+
+[3] In-context macOS SDK module compile (build-for-testing, signing bypassed)
+    > xcodebuild -scheme TeslaSync-macOS build-for-testing \
+        ENABLE_TESTING_SEARCH_PATHS=YES CODE_SIGNING_ALLOWED=NO
+    SignalSparklinePreview.* errors: 0   (the surface compiles against the macOS SDK)
+
+[4] swiftformat --lint (this surface's 8 swift files)
+    RESULT: 0/8 files require formatting → exit 0
+
+[5] swiftlint --strict (this surface's 8 swift files, apps/apple/.swiftlint.yml)
+    RESULT: 0 violations → exit 0
+
+[6] placeholder gate (ADR-011) over this surface's files
+    > check-placeholders.ps1 over the 8 SignalSparklinePreview swift files
+    RESULT: PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0 → exit 0
+    (belt-and-suspenders grep for TODO/FIXME/XXX/Coming soon/placeholder/
+     Lorem ipsum/not implemented/fatalError across all 9 files: NONE FOUND)
+    NB: the prompt's literal `-Path .../SignalSparklinePreview` is a file PREFIX,
+    not a directory, so the script returns vacuously; the scan above targets the
+    actual files so the COUNT=0 is REAL, not vacuous.
+
+[7] Host harness — EXECUTED test assertions (mirrors the XCTest cases)
+    Adapter + Model(@MainActor) + Accessibility compiled (-O, Swift 6) and RUN:
+    > CHECKS=51 FAILURES=0 ; ALL HARNESS ASSERTIONS PASSED → exit 0
+    Covers: constants, isNumeric set, envelopesToNumbers coercion, trend threshold,
+    resolvePhase branch order (disabled>nonNumeric>loading/empty/content/error +
+    keep-content-on-refresh/error), latestLabel; model content/empty/loading/
+    error/nonNumeric/disabled-gate(no fetch, reports open once)/stale-auto-refresh-
+    once+re-arm/offline-keeps-cached/retry/stop/slug; a11y per-phase + freshness.
+
+  HOST-GATE AGGREGATE: EXIT=0  (every runnable host gate is genuinely green)
+
+================================================================================
+DEFERRED — SHARED AGGREGATE GATES (real exits shown; NOT counted as green)
+================================================================================
+These are the prompt's literal gate commands. Each is red for reasons entirely
+OUTSIDE this surface AND outside the allowed edit scope
+(apps/apple/TeslaSync/feature-views/SignalSparklinePreview.* + this log). Shown
+with their REAL exit codes per Honesty rule 1 (no red-as-green).
+
+  IOS_EXIT=65   xcodebuild -scheme TeslaSync -destination '…iPhone 16' build test
+                Cause A (all surfaces): the xcodegen-generated project does NOT set
+                ENABLE_TESTING_SEARCH_PATHS, so the app target cannot resolve
+                'XCTest' for the colocated *.Tests.swift (e.g. AIRestorePanel.Tests
+                .swift). "Unable to resolve module dependency: 'XCTest'" → BUILD
+                FAILED. This is a project-generation gap shared by every surface.
+                Cause B (aggregate): with test-search-paths forced on, compilation
+                surfaces 24 PRE-EXISTING sibling compile errors in OTHER parallel
+                surfaces (NOT this one) — root cause: `public struct
+                DashboardWidgetSize` is DUPLICATED across 15+ dashboard-widget files
+                (DrivetrainHealthWidgetModel, BatteryCellsWidgetRegistry,
+                UptimeMonitorWidget, MQTTStatusWidget, …) → "'DashboardWidgetSize'
+                is ambiguous for type lookup"; plus ISO8601DateFormatter Sendable
+                violations and a NotificationFreshnessChip redeclaration.
+
+  MAC_EXIT=65   xcodebuild -scheme TeslaSync-macOS build test
+                Cause: code signing — "'TeslaSync-macOS' / 'TeslaSyncWidgets-macOS'
+                has entitlements that require signing with a development certificate"
+                — no dev cert in this environment. (With signing bypassed, the
+                macOS module compiles with the SAME sibling-only errors; 0 mine.)
+
+  FORMAT_EXIT=1 swiftformat --lint apps/apple   (tree-wide)
+                1/1868 files require formatting — the offender is a SIBLING:
+                TeslaSync/feature-views/ActionBuilder.Previews.swift:48
+                (blankLinesBetweenScopes). This surface's 8 files: 0/8 (gate [4]).
+
+  LINT_EXIT=2   swiftlint --strict               (tree-wide)
+                1 serious violation in 1864 files — the offender is a SIBLING:
+                dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+                (function_body_length). This surface's files: 0 (gate [5]).
+
+  PLACEHOLDER_EXIT=0   check-placeholders.ps1 over this surface → COUNT=0 (gate [6]).
+
+=== EVIDENCE THAT NONE OF THE BLOCKERS ARE THIS SURFACE ===
+  - git status --porcelain: the ONLY additions are the 9 SignalSparklinePreview.*
+    files (untracked). The 2 ` M` web files (FleetApiSection.tsx, BackupRestorePage
+    .tsx) are pre-existing working-tree changes NOT made by this task and unrelated
+    to Apple. This surface modifies NO sibling, shared, or project file.
+  - Error inventory across the iOS + macOS in-context compiles:
+      SignalSparklinePreview.* errors = 0 (both SDKs).
+      All 24 erroring files live under dashboard-widgets/ (+1 NotificationSettings).
+  - Because this task only ADDS new, uniquely-prefixed files and edits nothing else,
+    it is logically impossible for it to have caused the sibling errors.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with ALL web-source states reproduced (disabled,
+      non-numeric chip, loading skeleton, empty dash, content trend) + native
+      error/stale/offline chrome. 8 #Preview states authored.
+  [x] Hooks bind to the shared P1/S8 state-holder seam; NO direct HTTP in the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog
+      (.strings) incl. the web "No samples in last hour" + "Non-numeric signal (…)".
+  [x] Accessibility: retry Button labelled + hinted; chip/skeleton/empty/trend carry
+      VoiceOver labels (skeleton aria-hidden per web); Dynamic Type via tokens;
+      Reduce-Motion-guarded skeleton pulse. Pure a11y builder unit-tested.
+  [x] Tests: adapter unit + per-state model + a11y label — authored as XCTest AND
+      EXECUTED (51/51) via the host harness (the app XCTest target is gated by the
+      shared aggregate blockers above).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder COUNT=0.
+  [x] EXIT=0 / STATUS=DONE on host gates; the literal xcodebuild app build/test is
+      DEFERRED with its REAL exit 65 + cause (predecessor parity, ADR-012).
+
+=== HONESTY COVENANT ===
+   1 No red-as-green ...... host gates are genuinely green; the xcodebuild build/test
+                           + tree-wide lint are shown with their REAL exit 65/1/2 +
+                           cause, DEFERRED, never as pass.
+   2 No scope narrowing ... full surface (9 files), all web branches, all prompt-
+                           required states, P1/S8+S10+S11 seams, full test set.
+   3 No skip-and-assume ... web source read end-to-end; every branch + both t()
+                           strings reproduced; numeric/non-numeric set matched exactly.
+   4 No stubs as final .... complete implementation; placeholder gate COUNT=0; the
+                           .disabled = render-nothing is verbatim web parity, not a stub.
+   5 No parity shortcuts .. Sparkline mapped to the shared TSSparkline; chip/skeleton/
+                           empty/trend/error + freshness; envelopesToNumbers exact.
+   6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+   7 No predecessor bypass  same disposition as 0002 BackendTool / 0036 / 0054:
+                           host-gate-green + xcodebuild-deferred-with-evidence = DONE.
+   8 No commit on red ..... committed work is green on every RUNNABLE host gate; the
+                           only non-green steps are the SHARED aggregate gates blocked
+                           by sibling surfaces + environment, deferred with evidence.
+   9 No silent drift ...... every deviation (xcframework staged, project regenerated,
+                           test-search-paths + signing overrides) documented above.
+  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

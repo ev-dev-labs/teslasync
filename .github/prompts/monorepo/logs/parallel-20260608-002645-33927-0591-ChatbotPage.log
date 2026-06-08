@@ -1,0 +1,120 @@
+I'll start by exploring the repository structure to understand what exists and what I need to build.
+
+The web source is large. Let me read it in sections and explore the Apple app structure in parallel.
+
+Let me explore the Apple app's structure and read more of the web page in parallel.
+
+The Apple `TeslaSync` dir seems sparse. Let me understand the actual project layout — check `project.yml`, existing Sources, and Features structure.
+
+The real SwiftUI sources live in `apps/apple/Sources/` and `apps/apple/TeslaSync/feature-views`. The prompt's target path differs from `project.yml` source paths. Let me investigate the actual conventions by examining the parity ledger, manifest, and existing completed pages.
+
+The `feature-views` dir uses a flat `<Name>.Adapter.swift` / `.Model.swift` / `.Previews.swift` / `.strings` convention. Let me find existing PAGE-level examples and understand navigation. There's no `apple-ledger.json` yet either.
+
+All 1436 files in `feature-views` are panels/components (`<Name>.swift` + `.Model`/`.Adapter`/`.Views`/`.Previews`/`.strings`/`.Tests`). Pages are a separate concern. Let me read the navigation system and the one existing real feature page (Dashboard).
+
+Let me read the shell and find how pages register, plus check whether any page has been built yet.
+
+The pattern is clear now: `SettingsScene.swift` registers via `registry.register(.settings) {...}`. There's no `chatbot` route yet. Let me read the registration wiring and check how `/chatbot` is grouped in the web app.
+
+Now I understand the registration pattern. Let me extract the chatbot manifest record, check tooling availability, and read the rest of the web page in parallel.
+
+All tooling is present (xcodebuild, xcodegen, swiftlint, pwsh) — the gate can actually run. Let me extract the chatbot manifest record and read the web page's render section.
+
+Now I have the full parity spec. Let me read the web page's render section and the i18n string defaults.
+
+I now have the full web structure. Let me verify the two GlassPanels, examine the shared facade, the KMP chat surface, an existing Model/Adapter example, and the localization setup.
+
+Confirmed: GlassPanel1 (line 751, conversation panel) and GlassPanel2 (line 813, thinking bubble). Localization is a single `Localizable.xcstrings`. Let me understand the SharedFacade/KMP binding pattern and whether a chat surface exists.
+
+There's a full KMP chat surface: `ChatRepository`, `ChatStore`, `ChatModels`. Let me read those plus the SwiftUI binding pattern (AppContainer, StateHolderModel, the one existing Domains model).
+
+Now I understand the KMP chat surface. Let me read the SwiftUI binding layer to learn the exact conventions: ChatStore, AppContainer, StateHolderModel, LoadableState, and the existing Domains model.
+
+Now let me read the Swift facade layer that bridges KMP to SwiftUI — this is the critical binding pattern.
+
+Critical detail: `AppContainer.bootstrap` is "future" and the build stages `Shared.xcframework`. Let me check whether the framework/toolchain is present and how the existing 171 panels actually bind data (protocol port vs direct KMP).
+
+Key insight: the P3 chat components already exist (`SessionList`, `ChatMessageItem`, `SuggestedPrompts`) and feature-views do NOT import Shared — they use Swift-native ports/adapters. My page composes these. Let me read all the chat component files.
+
+Let me read these files individually to stay within limits.
+
+The `ChatSessionList` view binds to a `ChatSessionListModel`. Let me read the model files for all three components to learn their public init signatures.
+
+The component architecture uses Swift seams (ports) with no direct KMP imports at the view layer. Critical question: can the app build at all (it links `Shared.xcframework`)? Let me check the build script + toolchain, and read the SessionList seams.
+
+Architecture is now clear: Swift seams + Swift-native models, no KMP imports at the view layer (production wiring deferred to `bootstrap`). The build stages `Shared.xcframework` via gradle (Kotlin/Native) — feasibility uncertain. Let me read the remaining component public APIs (ChatMessageItem, SuggestedPrompts) and the design-token/components surface.
+
+Let me read the remaining component models/adapters and locate the shared UI primitives (glass panel, button, page header, text input, tokens).
+
+Let me read the SuggestedPrompts model/seam, the ChatMessageData type, and locate the shared UI primitives + design tokens.
+
+Let me pin down the exact public APIs of the primitives I'll use (glass panel, button, empty state, fade, text field, page header) and the design tokens.
+
+Let me confirm tokens, the text-input field, page header/scaffold, the placeholder scanner, and swiftlint rules.
+
+Two critical constraints to verify: (1) the scanner forbids "Placeholder" — is it case-insensitive (affecting `TSTextArea(placeholder:)`)? (2) `swiftlint --strict` turns the 120-col warning into an error. Let me check the matcher, the rest of swiftlint config, and `TSTextArea`.
+
+`TSTextArea` has no `placeholder` param (good). But the scanner forbids "Placeholder" and I must reference the key `chatbot.placeholder`. Let me read the exact matching logic to determine case sensitivity and the opt-out mechanism.
+
+Confirmed: matching is **case-insensitive** (`RegexOptions::IgnoreCase`), so the substring "placeholder" (including the key `chatbot.placeholder` and `.redacted(reason:.placeholder)`) would be flagged. The scanner supports a `// parity:allow <reason>` opt-out. I'll avoid `.placeholder` (use skeletons/ProgressView) and put one allow-marker on the unavoidable `chatbot.placeholder` key line. Let me read the design tokens and check the xcstrings catalog for existing chatbot keys.
+
+Let me inspect the actual token definitions and xcstrings format directly.
+
+All 13 page strings **already exist** in `Localizable.xcstrings` — I just reference them. Design tokens come from generated files. Let me confirm exact token member names and key values to ensure parity.
+
+Let me confirm the token namespacing and verify a few xcstrings values match the web.
+
+The keys appear in the file but not as top-level `strings` keys. Let me inspect the raw structure around a chatbot key.
+
+The catalog namespaces web keys under `translation.` (e.g., `translation.chatbot.title`). Let me verify all 13 exist with correct English values.
+
+All 13 strings exist in the catalog with exact English values — no catalog edit needed for them. Now I must add a `.chatbot` AppRoute (which has exhaustive switches). Let me find all exhaustive switches over `AppRoute`, the route parser, and `route.*` key conventions.
+
+`AppRouteParser` auto-resolves by `pathSegment`, so `/chatbot` deep-links work once the case is added. I need to handle exhaustive switches. Let me check `WatchDeepLink.swift`, find all AppRoute switches, and locate `RootView`.
+
+I now have a complete understanding. Key facts:
+- The 13 strings already exist in `Localizable.xcstrings` under the `translation.chatbot.*` namespace with exact English values.
+- The P3 chat components (`ChatSessionList`, `ChatMessageItem`, `SuggestedPrompts`) exist with Swift seams (no KMP imports at view layer).
+- I must add a `.chatbot` AppRoute (exhaustive switches in `AppRoute.swift` only) + register it.
+- The build stages `Shared.xcframework` via gradle/Kotlin-Native (slow/uncertain).
+
+Let me kick off the KMP framework build in the background (so it's ready for the build gate), generate the Xcode project, and set up my plan.
+
+Gradle + JDK work, and the Xcode project generates. Let me start the KMP `Shared.xcframework` assembly in the background (the long pole) while I write the code.
+
+The KMP build is bootstrapping its daemon in the background. Let me set up my plan and todos, then build the implementation.
+
+Let me confirm `ChatRole`, `TSButtonSize`, and the `TSLabel`/typography helpers I'll use, then start writing files.
+
+I have all the APIs (typography, tokens, button/textarea, ChatRole). Critical detail: `swiftlint --strict` turns default warnings (file_length 400, type_body_length 250, function_body_length 50, line_length 120) into errors. Let me verify how feature-view `.Tests.swift` files are wired (app target vs test target) before deciding on my test file.
+
+The feature-view `.Tests.swift` files import XCTest + `@testable import TeslaSync` but live in an app-target source path — suggesting a pre-integration state. Let me read `macos-pending-verifications.md` for the authoritative gate status.
+
+This is the authoritative context. The full-app `xcodebuild build test` is **known-blocked by pre-existing, unrelated collisions** (`DashboardWidgetSize` redefined 15×, 152 co-located `*.Tests.swift` importing XCTest into the app target, unstaged framework, signing). The established methodology (3 precedent feature-view rows) treats surfaces as **DONE** when: isolated build/tests green + `swiftlint --strict`/`swiftformat`/placeholder gates clean + `xcodegen generate` enumerates, with the full-app build recorded **macOS-pending**.
+
+I'll follow that precedent exactly. Let me update my plan and start writing the implementation.
+
+KMP build failed in 55s (confirming the framework can't be staged here — full-app build is blocked regardless, per the pending-verifications doc). `swiftformat` is available. Let me note the KMP failure reason briefly, then write the implementation.
+
+KMP linking (`linkDebugFrameworkIosArm64`) fails here — confirming the unstaged framework blocker from the pending-verifications doc. I have full context now. Let me write the implementation, starting with the strings facade and seams.
+
+Now the bridges that connect the page model to the child P3 component models (`ChatSessionList`, `ChatMessageItem`).
+
+Now the core `@Observable ChatbotPageModel` plus the pure projection.
+
+Now the composer subview (text field + send/stop) and the conversation/log subviews.
+
+Now the conversation log, message rows, welcome (empty) state, thinking panel (GlassPanel2), and loading/error states.
+
+The error-state retry button has an awkward hack. Let me check for a generic retry/refresh catalog key and fix it cleanly.
+
+`translation.common.retry` exists. Let me fix the error-state retry button cleanly.
+
+Now the header (with title/subtitle/History/staleness) and the GlassPanel1 conversation panel, then the root view. Let me check for a staleness catalog key first.
+
+Now the root `ChatbotPage` view with adaptive macOS/iOS layout (sidebar inline on regular width, sheet on compact).
+
+Now the route registration and previews.
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: DB04:1E640C:308A554:32EA08A:6A26EE66)

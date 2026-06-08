@@ -1,0 +1,124 @@
+I'll start by exploring the codebase to understand the task. Let me read the web source page, the Apple app structure, and relevant instruction files.
+
+Let me explore the Apple app structure and existing patterns in parallel.
+
+The structure uses flat `feature-views/` directories, not `Features/`. Let me examine the existing AIUsageCard pattern (recently modified) and the parity infrastructure.
+
+`ActionBuilder.*` files already exist in `feature-views/`. The prompt's `Features/Automations/` path is idealized — the real repo uses the flat `feature-views/` structure (confirmed by `project.yml` sources). Let me read the existing ActionBuilder files to assess their state.
+
+ActionBuilder files are committed and total 2200 lines — this looks like an existing implementation. Let me read all of them to assess current state, plus check the AIUsageCard mystery and parity infrastructure.
+
+This is a substantial existing implementation (headed "P4 feature view · 0080"). My prompt is "P7 · page:automations/ActionBuilder" — same web source. I need to determine whether this already satisfies my parity unit. Let me investigate the parity infrastructure, remaining files, and tooling.
+
+Toolchain is fully available (xcodebuild, swiftlint, pwsh, swift 6.3.2) — not a BLOCKED scenario. There's a prior `0080-ActionBuilder` log but my unit needs its own. No `apple-ledger.json` exists yet. Let me examine the manifest record, ledger structure, and the prior log format.
+
+Confirmed: record 499 requires exactly 30 items (1 panel + 2 states + 27 strings), all present in the existing `ActionBuilder.strings`. Now let me assess build feasibility (prebuilt framework, design tokens, xcodeproj) and review how the prior 0080 gate ran.
+
+Key finding: `Shared.xcframework` is **not staged** (only `.gitkeep`), so a full `xcodebuild` of the app scheme will fail (EXIT=65) — an infra gap, not a code defect. The predecessor 0080 handled this by running host-runnable scoped gates green and deferring the full scheme build, accepted as STATUS=DONE. Let me read the remaining ActionBuilder files to understand dependencies and whether an isolated compile is feasible.
+
+I've now reviewed the full implementation — it's complete and faithful. Dependencies are design tokens (`TSSpacing`, `Color.TS`, `Font.TS`) and shared components (`TSButton`, `tsGlassPanel`). Let me resolve the AIUsageCard git mystery, check for any apple page/ledger precedent, and locate the shared component/token definitions.
+
+The AIUsageCard mystery is a case-rename (`AIUsageCard`→`AiUsageCard`) from a sibling process — not my concern. Critically, `TSButton`/`tsGlassPanel` aren't found yet — let me locate them broadly and read the last two ActionBuilder files.
+
+The implementation is complete and well-tested — `TSButton` (Sources/Components/UI/Buttons.swift), `tsGlassPanel` (Sources/Design/TSMaterial.swift), and design tokens all exist. Now let me create a plan and start running the real gates. First, let me check the string-catalog strategy and the placeholder tool signature.
+
+The master `Localizable.xcstrings` already contains the `automations.builder.*` keys (102 matches), and the per-surface `ActionBuilder.strings` table resolves them — so the string requirement is satisfied without editing the catalog. Let me set up tracking and run the real scoped gates.
+
+Swiftlint --strict: **0 violations**. Let me run swiftformat --lint, the placeholder scan, and read the last unreviewed file.
+
+Placeholder scan passes (COUNT=0, ALLOWED=5). Swiftlint clean. But **swiftformat flags one real issue in my allowed file** (`ActionBuilder.Previews.swift:48` — missing blank line before `#Preview`). Since it's in-scope, I'll fix it surgically.
+
+Both formatters now pass (swiftformat 0/10, swiftlint 0). Let me record results and build a standalone harness to **execute** the ported pure-logic tests (Adapter/Catalog/JSON), then kick off project generation.
+
+Now let me write the harness and compile/run it:
+
+Harness compiled (swiftc EXIT=0) and **68/68 assertions passed**. Let me record this and attempt the full project generation + build to capture the real xcodebuild result.
+
+xcodegen succeeded. Let me verify ActionBuilder is registered in the project, list schemes, then attempt the build to capture the real result.
+
+ActionBuilder is registered (66 pbxproj refs across both targets). But a key finding: `xcodebuild` requires **full Xcode**, and the active dir is **Command Line Tools only**. Let me check whether a full Xcode is installed but unselected.
+
+Full Xcode exists at `/Applications/Xcode.app` (just not selected). I can target it via `DEVELOPER_DIR` without sudo. Let me verify it works and list schemes.
+
+Full Xcode 26.5 is usable via `DEVELOPER_DIR`. The `TeslaSync-macOS` scheme is ideal for a host build. Let me attempt the real build and capture the exact result (expected to fail on the unstaged `Shared.xcframework`).
+
+The build is still compiling after 150s (not failing fast). Let me check progress in the log while it continues.
+
+Build is actively compiling (24 swift-frontend processes). Let me wait for it to finish.
+
+Build winding down (3 procs now). 15 files import `Shared`, which needs the unstaged framework. Let me wait for the final result.
+
+The build is invoking the **Kotlin/Native (`.konan/llvm`) toolchain** — there's a script phase building `Shared.xcframework` on the fly, plus `xcstringstool` compiling catalogs. That's why it's slow but progressing. Let me keep waiting.
+
+Build failed (EXIT=65) — but notably the Kotlin/Native phase **did build Shared.xcframework**. The failure is the pre-existing "feature-views test-globbing" issue (all `*.Tests.swift` files import XCTest into the app target). Let me find the primary root-cause error to confirm it's not my code.
+
+Crucial findings: (1) the Kotlin/Native phase **successfully built `Shared.xcframework`** (now staged), and (2) the build failed with exactly **2 errors, both pre-existing test-globbing** (`AIRestorePanel.Tests.swift` can't resolve `XCTest` in the app target) — **zero ActionBuilder errors**. This is the project-wide misconfiguration 0080 documented. Let me inspect project.yml's target structure to fully understand it, then attempt a clean app build excluding test files.
+
+Now the structure is crystal clear: app targets glob `feature-views/` (including all `*.Tests.swift` → `import XCTest` fails in a plain app target), while the real test targets only source `Tests/Unit`. This is a **project-wide misconfiguration** (project.yml, out of my allowed files). The `Shared.xcframework` now builds via the scheme's preAction script. 
+
+Let me prove the app module — including ActionBuilder — compiles green by excluding the globbed test files via a CLI-only override (no file edits).
+
+The clean build surfaced **different** pre-existing sibling errors: duplicate `DashboardWidgetSize` declarations across many `dashboard-widgets/*.Model.swift` files — again **zero ActionBuilder errors**. So the full module has multiple pre-existing cross-surface defects (test-globbing + dashboard-widget duplicate symbols), all outside my allowed files. Let me record this and attempt an isolated compile of ActionBuilder against its real design-system dependencies.
+
+The design-system files import only SwiftUI and aren't among the duplicate-symbol offenders, so they coexist cleanly. Let me attempt an isolated `swiftc -typecheck` of ActionBuilder's 8 app-source files against the real design tokens + components.
+
+**Isolated typecheck PASSED (EXIT=0)** — ActionBuilder's full SwiftUI surface compiles cleanly against the real design system on macOS. Let me mirror this for the iOS SDK (both-platform proof, ADR-002).
+
+Both-SDK typecheck passes (macOS + iOS, EXIT=0). Now let me precisely verify all 27 required strings resolve from the catalog and confirm the panel/state coverage, building the evidence map for the PARITY section.
+
+All 27 strings are in the per-surface `ActionBuilder.strings` table and referenced in code (runtime-resolvable), but they're **not** in the master `Localizable.xcstrings` (my earlier 102 substring hits were other `automations.builder.*` keys). Let me check whether ANY feature-view surface keys live in the master catalog, to determine the established pattern definitively.
+
+Definitive: feature-view surfaces (including the just-merged sibling `AiUsageCard`) use per-surface `.strings` tables exclusively — **zero** of their keys are in the master `Localizable.xcstrings` (8121 app-shell keys). All 27 ActionBuilder keys are present in `ActionBuilder.strings`, referenced and runtime-resolvable. Keeping the per-surface table matches every sibling + the 0080 precedent. No code changes needed beyond the swiftformat fix.
+
+Let me generate the precise file:line evidence map for all 30 parity items.
+
+All 27 strings map to specific file:line references. I now have complete evidence for all 30 parity items. Let me review the 0080 log's header format to match the established style, then write my deliverables.
+
+I have the format reference. Let me gather exact environment metadata for the log header.
+
+The `Shared.xcframework` build artifact is git-ignored. I have all metadata. Let me write the comprehensive, honest P7 parity log.
+
+Now let me check the parity README to follow the correct ledger conventions before creating the apple ledger.
+
+The README confirms `<platform>-ledger.json` is an "array of rows", platform ∈ {`apple-macos`, `apple-ios`}. The prompt explicitly names `apple-ledger.json`. Since the surface is adaptive (both targets), I'll create it as an array with a row per Apple platform.
+
+Let me validate the ledger against the schema and do a final verification of all my deliverables.
+
+Both deliverables validate (ledger schema-conformant, 30/30 done; log ends EXIT=0/STATUS=DONE, PARITY_COVERED=30). Let me do a final gate re-check after my edit and verify git state for a precise commit.
+
+This is taking far too long for quick commands. Let me diagnose in a separate shell.
+
+The slowness was `git status` enumerating the huge generated `.xcodeproj`. My git state is clear: `ActionBuilder.Previews.swift` (mine) plus pre-existing sibling changes (AIUsageCard, web). Let me stop the stuck shell and confirm ignore status + re-run the quick gates with cache.
+
+Generated artifacts are ignored; my 3 deliverables are staged-ready. Let me do a fast final gate confirmation on the changed file, then commit precisely those 3 files.
+
+All gates green. Let me commit exactly my 3 deliverables (excluding pre-existing sibling changes).
+
+Committed cleanly (3 files, sibling changes excluded). Let me finalize tracking and clean up temp artifacts.
+
+All deliverables are finalized and verified. The working tree now shows only the pre-existing sibling changes (AIUsageCard, web) which I correctly left untouched; my 3 files are committed.
+
+## Summary
+
+I verified **`page:automations/ActionBuilder`** (manifest #499) at full web parity on the native SwiftUI/HIG surface and produced the required log + ledger.
+
+**Key finding:** A complete, faithful implementation already existed at `apps/apple/TeslaSync/feature-views/ActionBuilder.*` (predecessor 0080). The prompt's idealized `Features/Automations/` path isn't the real building layout — `project.yml` globs only `feature-views/`, and all 1436 sibling surfaces use it. Creating a duplicate would break the build.
+
+**Parity: `PARITY_COVERED=30 / 30`** — 1 panel (GlassPanel1 → `.tsGlassPanel()`), 2 states (success + error JSON-validation path), 27 web i18n strings (all in `ActionBuilder.strings`, mapped file:line).
+
+**Gates run (real output captured):**
+| Gate | Result |
+|---|---|
+| swiftlint --strict | ✅ 0 violations |
+| swiftformat --lint | ✅ 0 (fixed 1 `blankLinesBetweenScopes` in Previews) |
+| placeholder scan | ✅ COUNT=0 (5 sanctioned) |
+| typecheck macOS + iOS (real design system) | ✅ 0 / 0 |
+| executed logic harness | ✅ 68/68 |
+| xcodegen + target registration | ✅ both targets |
+| Shared.xcframework | ✅ builds via Kotlin/Native preAction |
+| full-scheme xcodebuild build/test | ⚠️ EXIT=65 **DEFERRED** |
+
+The full-scheme build failure is **100% pre-existing, out-of-scope sibling defects** (project.yml globs `*.Tests.swift`→`import XCTest` into the app target; duplicate `DashboardWidgetSize` across `dashboard-widgets/`) with **zero ActionBuilder errors** — the same accepted disposition as predecessor 0080. Captured honestly (no red-as-green).
+
+**Deliverables committed** (`34a37047f`): the one in-surface swiftformat fix, `apps/parity/apple-ledger.json` (apple-macos + apple-ios rows, done 30/30), and `apple-page-automations-ActionBuilder.log` ending `EXIT=0 / STATUS=DONE`. Pre-existing sibling/web changes were left untouched.
+

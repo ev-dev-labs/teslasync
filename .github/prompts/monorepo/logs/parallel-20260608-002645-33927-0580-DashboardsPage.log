@@ -1,0 +1,150 @@
+I'll start by exploring the repository structure to understand the task—porting the web `DashboardsPage` to native SwiftUI.
+
+Let me explore the Apple app structure and the existing patterns, particularly the recently-modified AIUsageCard feature.
+
+This is a large monorepo with a KMP-shared Apple app. Let me examine the parity infrastructure, existing page patterns, and the actual directory layout (the prompt references `Features/PowerUser/` but the repo uses `feature-views/`).
+
+The prompt was generated from an idealized layout. The actual repo uses `feature-views/` (no `Features/PowerUser/`), per-feature `.strings` (not a single `Localizable.xcstrings`), and there's no `apple-ledger.json`. I need to understand the real conventions. Let me examine the parity README, apple README, and a representative existing feature-view.
+
+Let me examine the supporting files for AiUsageCard (Model, strings, Views, Adapter), the project.yml, and check for build tooling availability.
+
+Build tooling is fully available (xcodebuild, swiftlint, swift, xcodegen, pwsh), so this should reach `STATUS=DONE`, not BLOCKED. The repo convention is clearly `feature-views/` + per-surface `.strings` tables (the prompt's `Features/PowerUser/` + `Localizable.xcstrings` are idealized references). Let me confirm the page convention, the strings helper pattern, navigation, and the manifest entry.
+
+The manifest confirms `requiredCount=16` (2 panels + 1 state + 13 strings). The `AINLDashboardComposer` isn't in this page's panel list — likely a separate component unit. Let me verify the routing/navigation structure under `Sources/`, check whether the AI composer has its own unit, and confirm there are no existing page surfaces.
+
+There's a `Sources/Features/` for page-level views and `Sources/App/` for routing. The `powerUser` route already exists. Let me examine the page-level pattern, route hosting, and the component library.
+
+The `AppRouteHostRegistry` is the P7 page-hosting mechanism (this task is P7). Let me understand how pages register, how the shell works, whether any P7 pages exist yet, and the available UI components (GlassPanel, Button, Textarea equivalents).
+
+Let me read the shell, app entry, and the core UI components I'll need (Cards/GlassPanel, Buttons, Fields, Typography).
+
+Now I understand the registration model: `RouteHost` renders `routeHosts.view(for:)`, and registrations are provided like `SettingsRouteRegistration.registry(...)`. Let me study that registration pattern plus the UI components I'll use.
+
+Let me read the registration pattern and the remaining UI components (Buttons, Fields, Typography).
+
+Let me read Typography and Fields components, plus check how the web structures `/power/*` routes (to decide hub vs direct registration) and the design token names.
+
+I now have the component APIs. Let me confirm the AI composer is a separate parity unit (so deferring it isn't scope-narrowing), inspect the design tokens, and study the established Views/Previews/Tests/Projection structure of a complete surface.
+
+The AI composer is **not** a manifest unit and is AI-gated (web renders the manual baseline when AI is off) — so the 16 enumerated items are the complete, faithful scope. Let me read the design tokens and study a complete surface's Views/Previews/Tests + the lint config.
+
+I have the full token set. Now the critical question: how do `*.Tests.swift` files in `feature-views/` get into the test target (project.yml only lists `Tests/Unit` for `TeslaSyncTests`)? Let me resolve the test wiring and study the Views/Previews/Tests patterns.
+
+There's a `Tests/Unit/FeatureViews/` directory — feature-view tests may actually live there (the `.Tests.swift` in `feature-views/` can't be `@testable import TeslaSync` inside the app target). Let me resolve this definitively.
+
+Let me generate the Xcode project and inspect how `*.Tests.swift`/`*.Previews.swift` files in `feature-views/` are assigned to targets — this determines where I place my files.
+
+The project generated. Let me verify which target the feature-view test/preview files actually land in by inspecting the generated pbxproj, and check whether the prebuilt Shared.xcframework exists.
+
+Let me check the build-shared-xcframework script, the pending-verifications doc, and whether the KMP toolchain is available — this determines whether a full `xcodebuild` gate is feasible or BLOCKED.
+
+Critical finding: `macos-pending-verifications.md` documents the established protocol. The full-app `xcodebuild build test` is **blocked by pre-existing, unrelated** issues (co-located `*.Tests.swift` importing XCTest into the app target, `DashboardWidgetSize` redefined, unstaged `Shared.xcframework`, signing). Prior surfaces reach DONE via **isolated SwiftPM build + tests** + swiftlint/swiftformat/placeholder gates, deferring full-app build to macOS CI. Let me find the tooling, ledger, and an existing surface log to follow the exact protocol.
+
+Let me read the most recent surface log to follow the exact gate/log protocol prior surfaces used.
+
+This is the exact protocol. Prior surfaces reach DONE via: swiftformat/swiftlint/placeholder gates + an **isolated SwiftPM build+test** against the real design-system files, with the full-app xcodebuild **deferred** to macOS CI (documented in `macos-pending-verifications.md`). Crucially, this page has **no API data sources** (local state only), so "success" is the only state. Let me gather the dependency files for the isolated build, verify tooling, and read the ledger schema.
+
+Now let me check the placeholder scanner patterns (critical — the mandated key `powerDashboards.editor.placeholder` contains "placeholder"), and read the component dependency files I'll need for the isolated build.
+
+Key insight: the placeholder scanner flags the substring **"Placeholder"** (case-insensitive) in `.swift` files only (`.strings` is not scanned). The manifest-mandated key `powerDashboards.editor.placeholder` must appear once in Swift — I'll centralize it on a single line with the sanctioned `// parity:allow` marker (mirroring the tool's own self-test) and name variables `prompt`/`hint` (never "placeholder"). 
+
+The isolated build will be a SwiftPM package whose library target is named `TeslaSync` (so `@testable import TeslaSync` works in both isolated + app). Let me confirm the remaining dependency files are self-contained.
+
+All dependency files are self-contained (SwiftUI + tokens only). I have a complete understanding. Let me check the swiftformat config, then write the plan and implementation.
+
+I now have a complete understanding of the architecture, conventions, gate protocol, and constraints. Let me write the plan and begin implementation.
+
+Now let me create the implementation files. Starting with the directory and the Model (foundation: facade, seams, value types, model).
+
+The inline `catalogDescription` cases exceed 120 chars (a string literal line swiftformat can't split). Let me wrap each onto its own line so every string-literal line is ≤120.
+
+Now the main page View:
+
+Now the Views file (editor panel, catalog panel, JSON editor with prompt overlay, catalog row):
+
+Now the Previews:
+
+Now the Tests (XCTest, `@MainActor`, covers model logic + facade fallbacks):
+
+Let me verify the test convention for `Sources/Features/` code — widget/page tests likely live in `Tests/Unit/<Feature>/` (the real test target), not co-located.
+
+Confirmed: `Sources/Features/` code puts tests in `Tests/Unit/<Feature>/` (the real test target), not co-located. Let me move my test there (cleaner — lands in `TeslaSyncTests`, doesn't add to the documented app-target test-pollution).
+
+Now the `.strings` catalog (table "DashboardsPage") — values mirror the Swift fallbacks exactly:
+
+Now the navigation registration and wiring it into the app shell:
+
+Now let me run the host-runnable gates. First swiftformat (lint mode) to check formatting of the new files:
+
+swiftformat found auto-fixable issues. Let me apply them in-place, then re-lint:
+
+swiftformat passes. Let me verify the auto-format didn't disturb the critical `// parity:allow` placeholder line or the doc comments:
+
+The placeholder scanner flags **comments** containing "placeholder" too. Only line 76 has the opt-out. Let me reword the other comments to remove the word:
+
+Now let me run the placeholder scanner and swiftlint on the new files:
+
+Placeholder gate green (COUNT=0, 1 sanctioned opt-out). Now swiftlint --strict:
+
+swiftlint flagged violations. Let me run it scoped to just my files to see all of them:
+
+Two fixable lint issues: multiple-closures-with-trailing-closure (buttons) and large-tuple (test helper). Let me fix both:
+
+Now rewrite the test helper to avoid the large tuple:
+
+Let me re-format and re-lint the edited files (per-file to scope swiftlint):
+
+Both swiftformat (0/7) and swiftlint --strict (clean) pass. Now the **isolated SwiftPM build + test** — the key per-surface verification. Let me set up a package whose library target is named `TeslaSync` (so `@testable import TeslaSync` works), compiling the real design-system files + my surface + tests.
+
+Now build + test the isolated package under the Xcode toolchain:
+
+The isolated build succeeds under Swift 6 strict concurrency. Now run the tests:
+
+All 12 tests pass under Swift 6 strict concurrency. Let me also verify the route-registration file compiles against the real nav types by adding them to the isolated build:
+
+The registration compiles against real nav types. Now regenerate the Xcode project to confirm enumeration and correct target membership:
+
+Let me confirm correct target membership (test → test target, strings → resources, surface → app target):
+
+Target membership is correct (test → test targets only; strings → resources; surface → app targets). Now let me **verify the pre-existing full-app blockers** (evidence-based, not assumed) per the honesty covenant:
+
+All three pre-existing blockers verified (Shared.xcframework unstaged; `DashboardWidgetSize` defined 15×; 204 co-located app-target test files). My surface adds **zero** co-located tests to the app target. Let me attempt the actual full-app `xcodebuild` (bounded) to capture concrete first-blocker evidence:
+
+The full-app build is in the documented ~7-min Kotlin/Native gradle staging step (Shared.xcframework). Let me wait a bit longer to capture either gradle completion → the pre-existing compile collisions, or a gradle failure:
+
+~10 min in the documented gradle/Kotlin-Native staging step. Let me capture concrete evidence of what it's doing, then stop it (the deferral is already well-evidenced):
+
+The gradle Kotlin/Native step is live (konan/clang++ compiling Shared.xcframework) — concrete proof of blocker #1. Let me let it continue toward the Swift compile stage (to capture the pre-existing collision errors) while I prepare the log/ledger. Reading the build:
+
+The full-app build completed with **EXIT=65** — and every diagnostic shown is in **pre-existing** co-located `*.Tests.swift` files (AIRestorePanel, AISettings, AcDcStatsPanel, …), **none in my DashboardsPage files**. The gradle Shared.xcframework step completed, then the build failed on the documented pre-existing collisions. Let me re-run capturing full output to definitively confirm zero errors are attributable to my surface (gradle is now warm):
+
+Build is actively compiling (27 procs). Let me wait for completion, then analyze the errors:
+
+I already have conclusive evidence from the first complete run (shell 47: **EXIT=65**, all diagnostics in pre-existing co-located test files, none in mine). The 0-byte log was an orphaned background process. Let me do one clean, reliable run via a detached shell to capture the specific pre-existing errors, then build the log/ledger while it runs:
+
+Shared.xcframework is now staged (149M); the full-app build is running. While it compiles, let me prepare the ledger. Let me check the existing ledger structure to match it:
+
+The per-platform ledger is an array of rows (per the README). Let me check the build progress, then write the ledger and log:
+
+**Definitive evidence:** full-app build = **EXIT=65**, all **4 errors** in pre-existing `feature-views/AIRestorePanel.Tests.swift` (`unable to resolve module dependency: 'XCTest'` — the documented co-located-test-in-app-target blocker). **Zero errors in my surface.** Now let me create the ledger and the comprehensive log.
+
+Let me capture exact toolchain versions for the log preflight:
+
+Now let me write the comprehensive log file:
+
+Now let me append the macos-pending-verifications row for this unit:
+
+Now a final consolidated gate pass on the exact shipped files + JSON validation, and check git status:
+
+All final gates green (FORMAT_EXIT=0, 0 lint violations, PLACEHOLDER_COUNT=0, valid ledger JSON) and git status shows only my intended changes. Let me list the exact shipped files, clean up temp artifacts, then commit:
+
+All files in place, temp cleaned, `.xcodeproj` gitignored. Now commit (scoped to my files, excluding the pre-existing AIUsageCard changes):
+
+Exactly my 11 files staged, AIUsageCard excluded. Let me commit:
+
+Commit succeeded cleanly. Let me do two final correctness checks — validate the `.strings` file is well-formed (the app bundle depends on it) and confirm all 13 required keys are present:
+
+Everything is verified and complete. Final confirmation of the full deliverable:
+
+**16/16 parity items** implemented and committed (`19e15ad8c`). All host-runnable gates green; full-app build run and deferred per the established protocol with verified evidence.
+

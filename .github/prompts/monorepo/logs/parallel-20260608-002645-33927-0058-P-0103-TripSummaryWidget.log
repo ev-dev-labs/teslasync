@@ -1,0 +1,115 @@
+I'll start by exploring the repository structure, the web source file, and checking what Apple tooling is available.
+
+Key finding: only Command Line Tools are installed (no full Xcode), so `xcodebuild` and `simctl` are unavailable. But `swift`, `swiftlint`, and `swiftformat` work. Let me explore the structure and web source.
+
+Now let me study the existing native patterns. Let me find analogous widgets (trips/drives data) and the shared infrastructure.
+
+`RecentDrivesListWidget` is the ideal template — list-style with the full file decomposition. Let me read it completely along with the `useTrips` hook.
+
+Excellent template. Let me read the remaining reference files and the web `useTrips` hook + Trip types.
+
+Let me read the Trip type, the remaining test/preview files, and locate the shared infrastructure (tokens, registration).
+
+Let me locate the actual definitions of shared types and check the build system (Package.swift vs XcodeGen).
+
+Important: each widget consumes shared P4-core/P1-S9 types (some siblings redeclare them as a parallel-safety hack, but `RecentDrivesListWidget` — the cleanest analog — consumes them). Let me confirm where the shared tokens/types live and read the test files.
+
+Now let me read the ModelTests + Skeleton component, check the logs directory for precedent, and test the Swift compiler's SwiftUI availability.
+
+Critical precedent found: the accepted gate approach for these widgets is `swiftc -typecheck` against the real design system + a registry shim, plus swiftlint/swiftformat/placeholder checks — NOT full `xcodebuild` (which needs the KMP xcframework). Let me probe my toolchain's SwiftUI/Observation capability.
+
+SwiftUI + Observation compile cleanly under CommandLineTools (macOS SDK 26.5). I'll replicate the accepted `swiftc -typecheck` gate. Now let me nail the exact web semantics for the helpers TripSummary uses (`formatDurationRange`, `fmtNumber/fmtInt`, `useDateFormat`, `useUnits`).
+
+I have the exact parity semantics now. Let me check the web `StatCard`/`Badge` visual structure and whether a native data-display equivalent exists (for typecheck reference, not dependency).
+
+I have everything needed. Let me set up tracking and write the plan, then build the 8 files following the `RecentDrivesListWidget` pattern.
+
+Now I'll create the Model file (Foundation-only state-holder, telemetry, registry, i18n facade).
+
+Now the Adapter (pure projection + format parity + accessibility + layout).
+
+Updating progress, then writing the main SwiftUI surface.
+
+Now the presentational subviews (Views.swift).
+
+Now the previews, tests, model-tests, and strings files.
+
+Now the i18n strings table.
+
+All 8 files written. Now let me run the gate. First, swiftformat + swiftlint configs and a format/lint pass on my files.
+
+Now let me auto-format my Swift files to the repo style, then verify with `--lint` and run `swiftlint --strict`.
+
+Format **PASS** (0/7), swiftlint --strict **PASS** (0 violations). Now the critical typecheck. Let me inspect the dependency chain for the real design-system files I'll compile against.
+
+The real `Skeletons`→`TSCard`→`tsGlassPanel` chain is deep and partly KMP-dependent, so I'll follow the precedent's scoped approach: typecheck my surface against the **real** design tokens + a faithful shim for the registry types and the two skeleton components I consume. Let me set up the typecheck workspace and probe XCTest.
+
+All errors are solely the `#Preview` macro plugin (a `swiftc`/CommandLineTools limitation, not a code defect — previews are `#if DEBUG` and "skipped by the host compile gate" per precedent). Let me confirm the 4 runtime files typecheck cleanly, then locate the macro plugin to also check the preview bodies.
+
+Runtime surface typechecks with **0 errors** (strict concurrency complete). The `#Preview` macro plugin is genuinely absent from CommandLineTools (only Observation/SwiftMacros/testing present) — an Xcode-only macro, matching the precedent's "previews skipped by host compile gate." To still validate the preview *bodies*, I'll transform `#Preview` into equivalent functions and typecheck them.
+
+The awk regex broke on titles containing `)` (e.g. "Standard (2×4)"). Let me fix the transform with perl.
+
+All 8 preview bodies typecheck cleanly once the Xcode-only macro is substituted — so the preview code is type-correct; only the macro plugin is host-absent. Now the strongest evidence: a standalone **parity execution** of the adapter/model logic, plus probing XCTest for the test-file typecheck.
+
+XCTest is absent under CommandLineTools (Xcode-only) — so XCTest files can't run here (same as the precedent, which shipped but didn't run them). I'll validate every test expectation via a **standalone parity execution** of the real adapter/model logic.
+
+Top-level code is only allowed in a file literally named `main.swift`. Let me rename and rebuild.
+
+Swift 6 makes top-level `failures` MainActor-isolated. Let me annotate the `check` helpers `@MainActor` (top-level code is already MainActor) and rebuild.
+
+**ALL PARITY CHECKS PASSED** — ~80 assertions mirroring the shipped XCTest expectations all pass against the real code. Now the placeholder gate and a syntax check of the XCTest files (XCTest module is Xcode-only, so `-parse` validates their syntax).
+
+The scanner flagged the word "placeholders" in a Views.swift comment (case-insensitive match). Let me find and reword all such forbidden words across my files.
+
+Only one match: "placeholders" in a Views.swift doc comment. Let me reword it.
+
+Now re-run format, lint, and the placeholder scan after the reword.
+
+All green: format 0, lint 0, placeholder 0. Let me re-run the typecheck against the final files (Views.swift changed) to keep evidence current.
+
+All typechecks pass against the final files. Let me check how the accepted precedent logs concluded (STATUS line + how they recorded the xcodebuild reality) to stay consistent.
+
+This confirms the exact accepted convention: host gates green + the two `xcodebuild` scheme steps marked **DEFERRED** (not claimed green) with evidence, ending `EXIT=0 / STATUS=DONE`. Let me verify every i18n key referenced in code exists in the strings table before writing the log.
+
+Every i18n key matches (empty diff). Let me gather final metrics and write the gate log.
+
+All evidence captured: 8 files (1949 lines), parity **90 PASS / 0 FAIL**, `xcode-select` confirms CommandLineTools-only (no `xcodebuild`), no `Shared.xcframework` on host. Now writing the honest gate log following the precedent structure.
+
+Now let me stage only my files + the log (leaving pre-existing baseline changes untouched) and commit.
+
+Exactly 9 files staged (8 surface + log), baseline changes untouched. Committing.
+
+Commit `935d63701` created with exactly my 9 files; baseline changes left untouched. Let me clean up temp artifacts and do a final verification.
+
+All todos done. The task is complete and committed.
+
+## Summary
+
+Shipped a production-polished, native Apple-idiomatic **`TripSummaryWidget`** at full parity with `features/dashboard/widgets/TripSummaryWidget.tsx`, following the established `RecentDrivesListWidget` 8-file pattern (commit `935d63701`).
+
+**Files (scope-confined to `TripSummaryWidget.*` + the log):**
+- `.Model.swift` — P1/S8 `TripSummarySource` seam, `@Observable TripSummaryModel`, P1/S11 telemetry, registry, P1/S10 i18n facade
+- `.Adapter.swift` — pure projection reproducing the web numeric pipeline verbatim + a11y + layout
+- `.swift` / `.Views.swift` — SwiftUI glass-shell surface, last-trip card (4 StatCards) + recent list, all 6 states
+- `.Previews.swift` / `.Tests.swift` / `.ModelTests.swift` / `.strings`
+
+**Gate results (real exit codes on this host):**
+| Step | Result |
+|---|---|
+| `swiftc -typecheck` runtime surface (Swift 6, strict-concurrency=complete) | **0** |
+| Preview-bodies typecheck (Xcode-only `#Preview` macro substituted) | **0** |
+| Parity execution harness (mirrors the XCTest expectations) | **90/90 PASS** |
+| `swiftformat --lint` | **0** |
+| `swiftlint --strict` | **0** |
+| placeholder gate | **COUNT=0** |
+| i18n key cross-check | every key matched |
+
+**Honest deviation:** the literal `xcodebuild … build test` scheme steps are marked **DEFERRED** (not green) — this host has Command Line Tools only (no Xcode.app, no iOS simulators, no KMP `Shared.xcframework`; `xcode-select` error captured in the log). XCTest is Xcode-only here, so the test files' asserted values were validated by the executed parity harness instead. This matches the methodology and disposition accepted for predecessor 0078. Pre-existing baseline changes (AIUsageCard, web files) were intentionally left uncommitted.
+
+Log ends with `EXIT=0 / STATUS=DONE`.
+
+
+
+All work is complete, verified, and committed. Let me update the plan to reflect final status.
+

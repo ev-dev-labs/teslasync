@@ -1,0 +1,130 @@
+I'll start by exploring the environment and codebase to understand what's available and what the web source looks like.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me check if Xcode exists anywhere, and read the web source + explore the Apple app structure.
+
+Xcode.app exists at `/Applications/Xcode.app` even though `xcode-select` points to CommandLineTools. Let me test if I can use it, and explore the Apple app structure + existing patterns thoroughly.
+
+Major findings: **Xcode 26.5 + iPhone 16 simulator are available** via `DEVELOPER_DIR` override, and the `feature-views/` directory already has an established multi-file pattern (`.Adapter`, `.Model`, `.Previews`). Let me examine sibling chart implementations and check if SessionCurveChart already exists.
+
+171 surfaces already exist; `SessionCurveChart` is the missing one. The closest template is `SpeedTrendChart` (single-series trend/area chart with X/Y axes). Let me read its complete file set as the primary pattern reference.
+
+This is a sophisticated, well-established pattern. Let me read the remaining SpeedTrendChart files to fully understand all seams (Adapter, Views, Previews, Tests).
+
+Let me read the Previews + Tests for SpeedTrendChart, and find how AreaMark is used elsewhere (since SessionCurveChart is an area chart) plus locate the design tokens.
+
+I have the full pattern. Before finalizing the data model, let me confirm how the web parent supplies `curveData`, view the web `SpeedTrendChart.tsx` (to see what the Adapter precedent reproduces), check an AreaMark reference, and verify the design tokens exist.
+
+Now I understand the parity scope: `SessionCurveChart.tsx` receives already-computed `curveData` (from parent `generateChargingCurve`) and just renders an area chart — minimal internal logic. Let me verify exact design-token names and view an AreaMark reference before implementing.
+
+Let me locate exact token definitions and understand the project build setup (how files get included, whether xcodegen is needed).
+
+`feature-views` is included by directory (XcodeGen auto-picks new files), and `xcodegen` is available. Let me read the design token definitions and the test-target wiring in project.yml.
+
+The test files live in `feature-views/` but the test target points to `Tests/Unit`. I need to understand the source inclusion/exclusion rules. Let me view the full project.yml middle section.
+
+I need to understand how `.Tests.swift` files in `feature-views/` reach the test bundle while staying out of the app target. Let me investigate the source membership convention.
+
+Let me verify the mechanism that routes `.Tests.swift` files into the test bundle — checking if `Tests/Unit/FeatureViews` uses symlinks.
+
+`Tests/Unit/FeatureViews` has only an unrelated test, and the feature-views `.Tests.swift` are real files (not symlinks) with no excludes — so how they build is unclear. Let me read the Apple README, the pending-verifications doc, and the xcframework script to understand the real build setup.
+
+The doc is at `apps/` level. Let me read it, the Apple README, and check whether a prebuilt `Shared.xcframework` already exists (to avoid the Gradle/KMP prerequisite).
+
+Now I understand the real situation. The `macos-pending-verifications.md` documents the established precedent: the full-app `xcodebuild build test` is **blocked by pre-existing, unrelated parallel-merge collisions** (`DashboardWidgetSize` redefined 15×, 152 co-located `*.Tests.swift` importing XCTest into the app target, unstaged `Shared.xcframework` requiring Kotlin/Native, macOS signing). Per-surface prompts are verified green **in isolation** (SwiftPM build+tests, `swiftc -typecheck` on both SDKs, swiftlint/swiftformat/placeholder clean, xcodegen enumerates files), and the full-app gate is deferred to the acceptance-gate prompt.
+
+These pre-existing collisions are **outside my allowed files** (`SessionCurveChart.*` + log). Let me write the plan, then gather exact configs/tokens needed to write correct code.
+
+`pwsh` is available so the placeholder gate runs natively. Let me read the placeholder patterns and pin down exact design-token member names (Color.TS, Font.TS, TSSpacing, TSRadius, TSMotion).
+
+I now have all exact tokens. Let me create a plan, check for type-name collisions, and study a numeric-X-axis area chart (SOCRouteChart, where SOC is also the X axis) before writing.
+
+`SOCRouteChart` is an ideal numeric-X SOC area-chart reference. No name collisions. Let me confirm the `TSFadeIn`/`TSSkeleton` init signatures, then write all 7 files.
+
+Confirmed all signatures. No collisions, all tokens known. Now writing the 7 files. Starting with the pure projection core (`Adapter`):
+
+Now the Model (state-holder seam, telemetry, i18n facade, source):
+
+Now the Views file (header, chip, banner, area chart, tooltip, loading/empty/error):
+
+Now the main View file composing the surface:
+
+Now the Previews file (one per state):
+
+Now the Tests file (adapter + format + model + accessibility):
+
+Now the i18n strings catalog, and I'll refactor a wrapped expression in the tooltip to keep swiftformat clean:
+
+All 7 files written. Now the verification pipeline. Starting with swiftformat, swiftlint, and the placeholder gate on the new files:
+
+Two fixes needed: (1) swiftformat wants an if-expression in Previews; (2) Views.swift exceeds the 400-line limit — the established pattern extracts the chart into a `.Chart.swift` file. Let me view the current Views.swift to split it precisely.
+
+I'll extract the chart + palette + tooltip into a `.Chart.swift` file (matching the established pattern) and fix the Previews if-expression.
+
+Now remove the moved sections from Views.swift. Let me verify the boundary lines first.
+
+Boundary confirmed. Removing moved sections via line-range deletion and fixing the Previews if-expression:
+
+Views.swift is now 206 lines. It no longer uses `Charts` — removing that now-unused import, then re-running the format/lint gates:
+
+**swiftformat: 0/7 require formatting. swiftlint --strict: 0 violations.** All files under 400 lines. Now the placeholder gate (exactly as the prompt specifies) and xcodegen:
+
+Placeholder gate: **PLACEHOLDER_COUNT=0, EXIT=0.** Now `xcodegen generate` to confirm the project enumerates the new files:
+
+**Placeholder gate clean, xcodegen generated, all 8 files enumerated.** Now the strongest verification: isolated SwiftPM build + run the tests, plus `swiftc -typecheck` against real iOS/macOS SDKs. Let me inspect the exact token namespace declarations to build an accurate isolated harness.
+
+All real token/component files import only SwiftUI (no KMP deps) — so I can verify against the **real** design sources, not shims. Let me build an isolated SwiftPM harness (Swift 6 language mode, macOS 15) using the real design deps + my 7 files, and run the tests.
+
+All 7 SessionCurveChart files **compiled successfully** — the only error is `TSCard` missing, referenced by the copied real `Skeletons.swift` (a card-skeleton variant my surface doesn't use). Let me add the `TSCard` definition to the harness.
+
+The design files' `#Preview` blocks cascade into the whole component library. My surface only uses the trivial `TSSkeleton` view — I'll keep the **real tokens + TSChartPalette + TSFadeIn** and swap just the skeleton/card files for a minimal `TSSkeleton` matching its real signature.
+
+**31/31 tests passed** under Swift 6 strict concurrency (macOS). Now `swiftc -typecheck` against the real **iOS 18** and **macOS 15** SDKs to prove the SwiftUI/Charts views compile on both platforms:
+
+Both iOS 18 and macOS 15 typechecks pass (**EXIT=0**). All surface-scoped, host-runnable gates are green. Now I'll honestly attempt the full-app `xcodebuild` gate. First, let me characterize the `Shared.xcframework` pre-action (Kotlin/Native via Gradle):
+
+The Gradle/Kotlin-Native build is actually progressing (downloading the K/N distribution, compiling for iOS). Let me let it continue.
+
+The Gradle build assembled the debug XCFramework and is still running (the script expects the release variant). Let me continue waiting.
+
+Now linking the release framework. Let me wait for it to finish staging.
+
+The Gradle build is genuinely working (slow K/N release linking). While it continues, let me gather the concrete pre-existing-collision evidence in parallel — this documents that the full-app blockers are unrelated to my surface.
+
+Concrete evidence captured: `DashboardWidgetSize` is redefined across **15** app-target files, and **171** co-located `*.Tests.swift` (169 importing XCTest into the app target) — both pre-existing, structural, and unrelated to my surface (which adds 0 such definitions). Let me check the Gradle progress:
+
+The Shared.xcframework build completed (exit 0). Let me verify it's staged, then run the actual full-app `xcodebuild` gate and capture where it fails:
+
+The script was likely SIGPIPE-terminated by the `head` pipe before the final copy. Let me check what XCFrameworks were actually produced and stage one manually:
+
+Both release and debug XCFrameworks fully built — the script was just SIGPIPE-cut before its final copy. Let me stage it manually and run the full-app `xcodebuild build` gate (to a log file this time), async:
+
+The iOS build is running. While it compiles, let me verify git hygiene (the generated project, staged framework, and build artifacts must not be committed — only my allowed files):
+
+Git hygiene confirmed: the generated `.xcodeproj`, staged `.xcframework`, and build dirs are git-ignored. Note there are **pre-existing modified files** (`AIUsageCard.*`) in this parallel slot that aren't mine — I'll commit *only* my `SessionCurveChart.*` files + the log. Let me check the iOS build progress:
+
+The iOS build finished. Let me read the result and analyze the failures:
+
+Full-app iOS build **EXIT=65**, failing exactly on the documented pre-existing collision: `XCTest` module unresolvable (the 169 co-located `*.Tests.swift` in the app target). Let me confirm zero SessionCurveChart errors and capture the exact failure context:
+
+Confirmed: **0 SessionCurveChart errors** — the build fails in the app target on pre-existing co-located `*.Tests.swift` (e.g. `AIRestorePanel.Tests.swift`) importing `XCTest`. For gate completeness, let me run the macOS build too (same blocker expected) while I prepare the log:
+
+While macOS builds, let me check the logs directory and existing log conventions:
+
+macOS build done. Let me read its result and study an existing feature-views log to match the established format:
+
+Both full-app builds fail only on documented pre-existing blockers (iOS: XCTest-in-app-target; macOS: dev-signing) with **0 SessionCurveChart errors**. Let me read the sibling `SpeedTrendChart` log (my template surface) to match the exact established log format:
+
+That sibling log is the exact template — and crucially it ends **`EXIT=0 / STATUS=DONE`** with the full-app xcodebuild marked `[DEFERRED]` (red but pre-existing/unrelated, owned by the P99 acceptance gate). My situation is identical. Note: editing `macos-pending-verifications.md` is outside my allowed files (and the SpeedTrend precedent didn't either), so the DEFERRED disposition lives in my log. Let me gather final evidence (plist lint, whole-tree format, line counts):
+
+Everything green: `.strings` plist OK, my files pass whole-tree format (the 1 flagged file `ActionBuilder.Previews.swift` is pre-existing, not mine). Let me grab tool versions and write the comprehensive gate log:
+
+All evidence gathered (31 tests = 13+4+11+3). Now writing the comprehensive, honest gate log matching the established format:
+
+Log written. Let me do a final green re-confirmation on the committed files, then stage **only** my files (avoiding the pre-existing modified files and generated artifacts):
+
+All final gates green; exactly 9 files staged (8 surface + 1 log), nothing else. Committing with the prescribed message:
+
+Committed cleanly as `230c298e9` — 9 files (8 surface + log), 1567 insertions, pre-existing modified files untouched. Let me do a final confirmation and tidy temp artifacts:
+
+Everything is clean: my commit is HEAD, the 7 pre-existing modified files were left untouched, and no stray staged changes remain. Let me mark the plan complete:
+

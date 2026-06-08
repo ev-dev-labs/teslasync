@@ -1,0 +1,106 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the toolchain availability and the existing structure in parallel.
+
+Key finding: **xcodebuild requires full Xcode but only Command Line Tools are installed.** Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me investigate the capability situation further and explore the existing Apple app structure.
+
+Critical discovery: **`/Applications/Xcode.app` EXISTS** (owned by root). I may be able to use it via `DEVELOPER_DIR`. Also, the `feature-views` directory already has 889 files with an established pattern. Let me probe Xcode and study the existing sibling pattern.
+
+**Excellent news:** Full **Xcode 26.5 works via `DEVELOPER_DIR`**, and an **iPhone 16 simulator is already booted**. So the gate is runnable → STATUS=DONE is achievable. `NoVehicleSelected` doesn't exist yet. The established per-surface pattern is 7 files: `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`.
+
+Let me study the project config and a complete reference surface, plus locate the core infrastructure.
+
+Now I understand the project layout. XcodeGen globs `TeslaSync/feature-views` into both app targets. Let me check tooling (xcodegen, existing project), find the simplest sibling surface to model after, and locate the core infra (state holders, tokens, i18n, telemetry).
+
+Found the ideal analog: **`RedisDiagnosticEmptyState`** (an empty-state surface) and **`LayoutSwitcher`** (uses SelectedVehicle). `xcodegen` is available. Let me study the closest analog end-to-end and the selected-vehicle binding pattern.
+
+The pattern is clear and rich. `RedisDiagnosticEmptyState` is the ideal template. Let me read its remaining files plus the core infra (LoadableState, StateHolderModel, native Feedback states) to understand state handling, testing framework, and the navigation/layout seams.
+
+Now I need to understand a critical detail: the `.Tests.swift` files use `@testable import TeslaSync`, but `feature-views` appears to be in the app target. A self-`@testable`-import would fail to compile. There must be a generation mechanism that routes files to the right targets. Let me investigate the build wiring before writing any code.
+
+I see `Tests/Unit/FeatureViews` exists separately. Let me reconcile how `feature-views/*.Tests.swift` (which use `@testable import TeslaSync`) get compiled — there must be an exclusion/routing mechanism. Let me check the CI workflow and the actual test directory.
+
+`Tests/Unit/FeatureViews` has just one file, and CI is currently a guarded **no-op** (no checked-in `.xcodeproj`). So the baseline build is unverified. I must empirically determine whether the project builds. Let me check the staged framework, generate the project, and read the remaining reference files in parallel.
+
+Design tokens are generated; `Shared.xcframework` is NOT staged (only `.gitkeep`), so the build pre-action would invoke Gradle/Kotlin. The critical unknown is whether the baseline even compiles (the `.Tests.swift` self-`@testable`-import concern). Let me empirically generate the project and inspect target membership + check the Kotlin toolchain.
+
+Project generated successfully; Java 17 + gradlew are present. Now the decisive question: are the `feature-views/*.Tests.swift` files (which `import XCTest`) placed in the app target or a test target? Let me parse the generated pbxproj definitively.
+
+Confirmed: **165 `*.Tests.swift` files (which `import XCTest` + `@testable import TeslaSync`) are compiled into the app target**, not a test target. This is a critical baseline concern. Let me read the project's own verification-status docs and run a decisive isolated test of the `@testable import` + XCTest-in-app-target compilation.
+
+The project's own `macos-pending-verifications.md` is decisive. It documents the **exact precedent** (ToolCard, P-0010): a P4 feature-view surface is verified via an **isolated SwiftPM build + tests + swiftlint/swiftformat/placeholder**, while the **full-app `xcodebuild build test` is macOS-pending/BLOCKED by pre-existing, unrelated parallel-merge collisions** (165 `*.Tests.swift` importing XCTest into the app target, `DashboardWidgetSize` redefined 8×, signing, plus the KMP `Shared.xcframework`). These are all **outside my allowed files** (`NoVehicleSelected.*` + log), so I follow the documented protocol exactly.
+
+Let me record my plan and gather the final API details (tokens, adapter/copy idiom, navigation seam, selected-vehicle binding).
+
+I now have the token API and the full idiom. I need the `RDText`/`RDInterpolate`/`RDCTA` definitions (in the Adapter) and the navigation + selected-vehicle binding patterns. Let me read those, then write the plan.
+
+I now have the complete idiom. `LayoutSwitcher` is the ideal structural template — it explicitly models the `loading/empty/error/loaded` state matrix, the `live/stale/offline` connection freshness, and the `useSelectedVehicle` projection (`nil` = no vehicle). Let me read its main view + the lint/format configs to ensure style conformance, then start building.
+
+I have the complete idiom and style rules (line length ≤120 under `--strict`, `@testable` at bottom, type names ≤50). Now let me check for name collisions (single module), the placeholder checker, and pwsh availability before writing.
+
+No collisions, `pwsh` is available. Let me read the exact forbidden patterns so my code (esp. loading skeletons, test doubles) avoids them, then record my plan.
+
+Everything's confirmed: no collisions, `pwsh` available, forbidden words known (must avoid "Placeholder" entirely — so no `.redacted(.placeholder)`; use `ProgressView` skeletons). `car.fill` is the established native counterpart to lucide `Car`. Let me record the plan and start building.
+
+Now I'll create the surface files. Starting with the pure, testable Adapter core.
+
+Now the Model — the P1/S8 state-holder seam, P1/S11 telemetry seam, P1/S10 i18n facade, and the observable view-model.
+
+Now the presentational layer — the scaffold and per-state sub-views (HIG-native via `ContentUnavailableView`).
+
+Now the main View that binds the model, emits `view.opened`, and wires stale auto-refresh.
+
+Now the previews (one per state) and the i18n strings table.
+
+Let me write the tests, then fix the override semantics to exactly match web `??` (nil-only fallback, not empty-string).
+
+Two fixes: simplify the convoluted unwrap in the projection test, and align the Adapter's override precedence to web `??` (nil-only fallback, empty string honored).
+
+All 7 files created. Now let me set up the **isolated SwiftPM verification** (the documented precedent) using the full Xcode toolchain — this proves the surface compiles + tests pass under Swift 6 strict concurrency.
+
+Isolated build is **green** (Swift 6.3.2, strict concurrency, all surface files + previews compile). Now the tests:
+
+**Isolated verification GREEN: build clean + 18/18 tests pass** under Swift 6 strict concurrency. Now swiftformat + swiftlint + placeholder checks on my files.
+
+Two style fixes: swiftformat wants implicit returns in the `resolve` switch, and swiftlint flags the 3-member tuple in the freshness chip. Let me fix both.
+
+Re-running format/lint on my files plus the placeholder gate:
+
+All clean: **swiftformat 0, swiftlint 0 violations, placeholder 0**. Now re-verify the isolated build+tests with the edited files:
+
+**Isolated verification fully green: 18/18 tests, swiftformat/swiftlint/placeholder clean.** Now I'll attempt the full-app `xcodebuild` gate to capture real evidence of the documented pre-existing block (and confirm my surface isn't the cause). First regenerate so my files are included.
+
+All 7 files are in the project. Now the full-app iOS build (gate step) to capture real evidence:
+
+The background process was torn down with the sync session. Let me run it as a detached async process that persists, then poll.
+
+xcodebuild runs the scheme pre-action — it's now building the KMP `Shared.xcframework` via Gradle (downloading Kotlin/Native, compiling for iOS). This is the macOS-pending dependency. Let me let it proceed to the app-compile phase where the documented pre-existing errors surface.
+
+Gradle is compiling the KMP framework (no `NoVehicleSelected` errors — expected). Let me continue polling until the app-compile phase surfaces the documented pre-existing errors.
+
+**Build failed exactly as documented** — but I notice the log paths reference `slot-309`, not my `slot-314`: the shared `/tmp/ios_build.log` was clobbered by a parallel slot. I need a slot-local log and isolated DerivedData for clean, authoritative evidence. Let me check state and re-run cleanly.
+
+My slot's framework isn't staged and no build is running — the earlier log was a parallel slot's (shared `/tmp`). The observed failure (`XCTest` unresolvable in `AcDcStatsPanel.Tests.swift`, `BUILD FAILED`, zero `NoVehicleSelected` errors) is structurally identical to what my slot produces. Let me run one clean, slot-local build with isolated DerivedData for authoritative evidence.
+
+My slot-314 build is now running with Gradle tasks cached (UP-TO-DATE). Let me wait for the app-compile phase and the failure.
+
+The build is stalled at framework staging — heavy Gradle-daemon contention from parallel slots (earlier: "11 busy and 43 stopped Daemons"). Let me give it more time to clear the framework step.
+
+Framework now staged — the app-compile phase will start. Let me wait for it to surface the compile result.
+
+My clean slot-314 build finished: **`XCODEBUILD_EXIT=65`, `BUILD FAILED`, 2 errors**. Let me extract the exact errors and confirm none are in my surface.
+
+**Conclusive, clean evidence (my slot-314 build):** the ONLY errors are `AcDcStatsPanel.Tests.swift:19: error: unable to resolve module dependency: 'XCTest'` — the documented pre-existing co-located-`*.Tests.swift`-into-app-target collision. **Zero `NoVehicleSelected` errors.** The fix requires `project.yml` (outside my allowed files), deferred to the acceptance gate per `macos-pending-verifications.md`.
+
+Let me capture evidence, clean build artifacts, and verify git status.
+
+All clean — only my 7 files are new; `.xcodeproj`/`Shared.xcframework` are gitignored. Now let me write the gate log with full, honest evidence.
+
+Let me do a final sanity check on the shipped files, then commit.
+
+Complete and clean: 1101 lines, no forbidden patterns, one exported view per file (matching the `RedisDiagnostic` sibling convention). Let me commit the surface + log.
+
+Commit landed. Let me verify it contains exactly my 7 surface files + the log (the two unrelated modified web files were correctly excluded).
+
+Commit verified — exactly 8 files (7 surface + log), 1228 insertions, log ends `EXIT=65 / STATUS=BLOCKED`. Let me clean up remaining temp artifacts.
+
+The task is complete. Here's my summary.
+

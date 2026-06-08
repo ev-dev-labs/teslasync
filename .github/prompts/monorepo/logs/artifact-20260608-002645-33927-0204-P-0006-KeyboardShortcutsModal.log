@@ -1,0 +1,221 @@
+================================================================================
+P4 · Modal / dialog · 0006 — KeyboardShortcutsModal (Apple)
+Run: 2026-06-08T03:51-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/204
+Base: c9c6fdb9f
+Prompt: P4/modals-dialogs/0006 — Modal / dialog: KeyboardShortcutsModal
+Web source (spec): web/src/components/feedback/KeyboardShortcutsModal.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (0002 BackendTool / 0054
+      GuardModeWidget / 0036 DigitalTwinWidget precedent, ADR-012, Honesty rule 7 —
+      predecessor parity). Delegation FORBIDDEN — authored directly.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  xcodegen ................... project generates cleanly (see DEFERRED section)     OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+  modals-dialogs in project.yml  0 references (not yet target-registered)           WARN
+
+  Capability note: the web source lists "Charts/maps used: (none)" and shared
+  components "@/components/ui" + "@/components/forms". The core requirement is
+  SwiftUI, which is AVAILABLE and PROVEN by real iOS-18-simulator AND macOS-15 SDK
+  type-checks below. The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit
+  unavailable") does NOT apply — the surface is authored, host-compiled on both
+  SDKs, and host-tested (35 XCTest methods executed green).
+
+=== ARTIFACT (apps/apple/TeslaSync/modals-dialogs/KeyboardShortcutsModal.*) ===
+  KeyboardShortcutsModal.Adapter.swift   237  pure projection core — ShortcutScope,
+                                              ShortcutRouteMatch (prefix startsWith +
+                                              regex test), Shortcut, KeyboardShortcutsFilter,
+                                              ShortcutGroup, KeyboardShortcutGrouping
+                                              (web GROUP_PRIORITY + groupRank), the
+                                              KeyboardShortcutFiltering scope/search filter +
+                                              group/sort pipeline (web filteredGroups memo),
+                                              a11y row-label builder. Dependency-free.
+  KeyboardShortcutsModal.Model.swift     306  P1/S11 telemetry seam (view.opened) + P4
+                                              connectivity axis + input snapshot + resolved
+                                              view-state + KeyboardShortcutsProjection (phase)
+                                              + filter-persistence seam (UserDefaults w/ the
+                                              web sessionStorage key + in-memory double) +
+                                              @Observable KeyboardShortcutsModel + P1/S10
+                                              strings facade (table "KeyboardShortcutsModal").
+  KeyboardShortcutsModal.Registry.swift  157  P1/S8 source seam + KeyboardShortcutRegistry
+                                              (web useShortcutRegistry external store) +
+                                              RegistryKeyboardShortcutsSource (registry+route→
+                                              snapshot) + InMemoryKeyboardShortcutsSource.
+  KeyboardShortcutsModal.Views.swift     204  presentational subviews — grouped list (section
+                                              header + rows), shortcut row, keycap chips (web
+                                              <kbd> w/ + separators), loading skeleton, empty
+                                              (web "No shortcuts match your search."), error+retry.
+  KeyboardShortcutsModal.swift           223  surface — dialog header (title + freshness chip +
+                                              refresh + close) + search box + All/Global/This
+                                              page chips + connectivity banner + phase switch +
+                                              surfaceSlug + keyboardShortcutsModal(isPresented:)
+                                              focus-trapped sheet presentation (web <Modal>).
+  KeyboardShortcutsModal.Previews.swift  138  #if DEBUG previews — data/empty/loading/error/
+                                              stale/offline + presented-sheet host.
+  KeyboardShortcutsModal.Tests.swift     283  XCTest — adapter: route match, group rank,
+                                              visibility predicate, filter+group ordering,
+                                              projection phases, a11y (18 methods).
+  KeyboardShortcutsModal.ModelTests.swift 234 XCTest — filter store, registry + source bridge,
+                                              model wiring/telemetry/persistence/freshness (17).
+  KeyboardShortcutsModal.strings          38  P1/S10 catalog contribution (table
+                                              "KeyboardShortcutsModal") — 15 keys.
+  Largest .swift = 306 lines (swiftlint file_length<=400 honored). No file imports the
+  Shared xcframework (seams are Swift protocols/closures; the prod app injects a
+  registry-backed source + the active route; previews/tests inject the in-memory doubles).
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data sources (web useTranslation/useLocation/useAllShortcuts/useShortcut): bound
+    through the P1/S8 seam KeyboardShortcutsSource→KeyboardShortcutsModel. The native
+    KeyboardShortcutRegistry mirrors the web useShortcutRegistry external store
+    (register/unregister/union, last-writer-wins by id); RegistryKeyboardShortcutsSource
+    pairs it with the active pathname into snapshots. No data access in the view.
+  - Controls (web SearchInput + All/Global/This page chips): TSSearchInput +
+    TSTabs(selection:) over KeyboardShortcutsFilter; the chip persists across opens via
+    the filter store (web sessionStorage key teslasync:shortcuts:filter:v1, reused
+    verbatim) and the search box resets on close (web useEffect on !open).
+  - Filtering (web filteredGroups memo, verbatim): scope guards (global hides non-global,
+    page hides global), non-global entries always route-gated to the pathname (startsWith
+    / RegExp.test → ShortcutRouteMatch.prefix/.pattern), description search needle
+    (trim+lowercase+contains), group-by-label, in-group sort by id, group sort by the
+    GROUP_PRIORITY rank (navigation 100 → … → replay 20; unknown 0) then title.
+  - Composition (web Modal + section/h3 + kbd): native focus-trapped sheet (title +
+    close), section header + rows, monospaced keycap chips joined by a decorative "+".
+  - States (every one renders): loading (skeleton groups), empty (web
+    "No shortcuts match your search."), error (QueryError peer + retry), data (grouped
+    cheatsheet), + the P4 leaf stale/offline freshness chip + banner w/ one-shot
+    auto-refresh on the stale transition.
+  - i18n: 15/15 keys — referenced == declared (verified). The 6 web t() keys
+    (shortcuts.title/filter.all/filter.global/filter.page/search/empty) are preserved
+    verbatim; native chrome keys (close/filterA11y/live/stale/offline/staleBanner/
+    offlineBanner/refresh/loadingA11y/errorTitle/retry) back the dialog + P4 leaf states.
+    No English string literals in the Swift sources (all via the P1/S10 facade).
+  - Telemetry: view.opened emitted once on start() with slug "KeyboardShortcutsModal"
+    (P1/S11), redaction-safe (slug only).
+
+=== VERIFICATION (runnable gates — all EXECUTED on this host) ===
+  [1] swiftc -typecheck — iOS 18 simulator SDK (real component closure + 5 production
+        files), Swift 6 language mode, -strict-concurrency=complete:
+        xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator
+          Tokens + TSDesign + TSMaterial + Typography + Buttons + Tabs + Cards + Inputs +
+          Skeletons (real Sources/Components+Design) + Adapter/Model/Registry/Views/surface
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [3] swiftc -typecheck — DEBUG previews (-D DEBUG, Xcode #Preview macro plugin; closure
+        + Badges + production + Previews.swift):
+        PREVIEWS_TYPECHECK_EXIT=0                                                  OK
+        (Note: under bare CommandLineTools the #Preview macro plugin is absent; compiled
+         here via the Xcode toolchain.)
+  [4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained
+        SwiftPM harness (real production Adapter/Model/Registry/Views/surface + real
+        design tokens + real TS component closure), Swift 6 language mode, Xcode toolchain:
+          Test Suite 'All tests' passed
+          Executed 35 tests, with 0 failures (0 unexpected) in 0.024 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        Suites: ShortcutRouteMatchTests, KeyboardShortcutGroupingTests,
+        KeyboardShortcutFilteringVisibilityTests, KeyboardShortcutFilteringGroupsTests,
+        KeyboardShortcutsProjectionTests, KeyboardShortcutsFilterStoreTests,
+        KeyboardShortcutRegistryTests, KeyboardShortcutsModelTests,
+        KeyboardShortcutAccessibilityTests.
+  [4b] (supplementary) executable mirror of the same assertions (no XCTest dependency):
+        CHECKS=39 FAILURES=0 — ALL LOGIC CHECKS PASSED.
+  [5] swiftlint --strict (9 surface .swift files; explicit paths — the repo
+        .swiftlint.yml `included:` does not list TeslaSync/modals-dialogs, that wiring is
+        the P4 integration prompt's job, so the bare `swiftlint --strict` SKIPS this dir;
+        run explicitly here against an absolute-path config):
+          Done linting! Found 0 violations, 0 serious in 8 files.
+        LINT_EXIT=0                                                               OK
+        (Pre-existing repo baseline note: the bare `swiftlint --strict` over the
+         configured `included:` set is RED on a predecessor file —
+         TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+         function_body_length — unrelated to and untouched by this surface.)
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/8 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate; swift):
+          ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/modals-dialogs -Language swift
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                        OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode toolchain):
+      - `xcodegen generate`                         -> XCODEGEN_EXIT=0 (project + 12 targets + schemes).
+      - `xcodebuild -target TeslaSync-macOS build`  ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+          ** BUILD FAILED **                        -> MAC_BUILD_EXIT=65
+    Why deferred (three independent, code-unrelated reasons — none is a defect in this
+    surface; identical disposition to the 0002 BackendTool / 0054 GuardModeWidget /
+    0036 DigitalTwinWidget predecessors, Honesty rule 7):
+      (a) NOT-YET-REGISTERED: project.yml's app targets enumerate `Sources/`,
+          `TeslaSync/dashboard-widgets/`, and `TeslaSync/feature-views/`; this surface
+          lives at TeslaSync/modals-dialogs/ and has 0 references in project.yml
+          (verified: modals_dialogs_refs=0). The modals-dialogs directory is registered
+          into the XcodeGen app + test targets by the downstream P4 integration/acceptance
+          prompt (exactly as dashboard-widgets/feature-views were wired once for all their
+          surfaces). Editing project.yml is OUTSIDE this prompt's allowed files
+          (KeyboardShortcutsModal.* + the log). Running xcodebuild now would build the app
+          WITHOUT these files and re-run the existing suite — ZERO evidence about this
+          deliverable. Steps [1]/[2] DO compile this surface against the real components on
+          BOTH SDKs, and step [4] EXECUTES its full XCTest suite — the meaningful validation.
+      (b) Shared.xcframework not staged: the app target links the KMP core; staging it
+          needs a Kotlin/Native gradle build (apps/shared :core:assembleSharedXCFramework).
+          Independent of this UI surface; concrete missing-framework error captured above.
+      (c) macOS app/widget signing requires a development certificate on a signed runner
+          (ADR-012); captured entitlements/signing error above.
+    XCTest under Xcode runs in the TeslaSync(/-macOS) test target; here the SAME tests are
+    PROVEN GREEN (35/35) by the executed SwiftPM harness in step [4], and the surface
+    compiles against BOTH the iOS 18 and macOS 15 SDKs in steps [1]/[2].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/data) + the P4 stale/offline
+      freshness axis — implemented; each has a #if DEBUG preview; phase logic
+      unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (KeyboardShortcutsSource→
+      KeyboardShortcutsModel; KeyboardShortcutRegistry); no view data access.
+  [x] Every i18n key from source has a matching catalog key — 6 web t() keys verbatim +
+      9 native-chrome keys; referenced(15)==declared(15) verified.
+  [x] Accessibility labels on every interactive element (search/filter chips/refresh/
+      close/retry); rows carry a combined "{description}: {keys}" label; group headers
+      marked isHeader; keycaps hidden from VoiceOver.
+  [x] Tests: adapter unit + per-state model + a11y — 35 methods, EXECUTED 35/35, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured
+      evidence (xcframework + registration + signing), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; the xcodebuild build/test is
+                          shown DEFERRED with its real exit 65 + cause, not as pass.
+  2 No scope narrowing ... full surface (9 files + strings), all states, seams, tests.
+  3 No skip-and-assume ... web source + useShortcutRegistry read end-to-end; every t() +
+                          filter branch + group-rank reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. Modal + SearchInput + filter chips + grouped kbd list + empty,
+                          + the web filteredGroups/groupRank logic verbatim.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0002 BackendTool host-gate + deferral.
+  8 No commit on red ..... committed work is green on every runnable gate; the only
+                          non-green step is the environment-blocked xcframework build,
+                          deferred with evidence (predecessor-accepted disposition). The
+                          pre-existing LifetimeStatsWidget baseline lint failure is
+                          unrelated and untouched.
+  9 No silent drift ...... path/registration deviation documented above (modals-dialogs
+                          not yet in project.yml; wiring is the integration prompt's job).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,103 @@
+I'll start by exploring the codebase structure and reading the web source that I need to reproduce natively.
+
+Swift toolchain is present (swiftlint, swiftformat, swift 6.3.2), but `xcodebuild` only has Command Line Tools — no full Xcode. There are predecessor P4 Apple feature-views already committed. Let me study the established structure and patterns.
+
+Clear multi-file pattern per feature view. Let me examine the most recent predecessor (`BackupActionsCard`), the placeholder checker, a recent log, and how the project is built (Package.swift / scheme).
+
+Now let me read the most recent predecessor's full fileset and the log to mirror conventions exactly, plus the native Forms components (which contain `ComboboxMulti`).
+
+The predecessor disposition is clear: `xcodebuild` is environment-DEFERRED (not BLOCKED) since SwiftUI typechecks under CLT and logic is executed via a SwiftPM harness → STATUS=DONE. Now let me read the web components I must reproduce (`ComboboxMulti`, `HelpTooltip`), the native `ComboboxMulti`, and the rest of the BackupActionsCard fileset to learn the conventions.
+
+Excellent context. Now the web spec components, native Forms primitives, and the Views/Tests conventions.
+
+Now the native Forms primitive (`ComboboxMulti`), the Views + Tests conventions, and the design tokens.
+
+Now the design tokens, native tooltip/skeleton/button primitives, the Tests convention, and tooling availability.
+
+Let me read the design system and the primitives I'll compose with (tooltip, typography, states, skeleton, buttons).
+
+There's a shared `TSHelpTooltip`, but it lacks a custom aria-label (which the web source requires). Now let me locate the token definitions and read the typography, states, skeleton, and button primitives.
+
+Token definitions aren't in Design/. Let me locate the generated tokens (P1/S9) and read the Button/Skeleton primitives.
+
+The tokens are generated (P1/S9), not committed. Let me read the token tests (which reveal the API surface), the project spec, the build scripts, and the Button primitive.
+
+The generated tokens live at `apps/design/generated/apple` (sourced from `apps/design/tokens.json`). Let me confirm and read them, plus study a presentational predecessor (`SettingField`) to see how non-async surfaces handle the state list.
+
+SettingField is the ideal analog — a pure presentational wrapper that "owns no data," with an inline help trigger (exactly like SignalSelector's HelpTooltip). Let me read its full fileset to mirror the pattern precisely.
+
+SettingField confirms the exact disposition for a data-less leaf. Let me read its tests/previews/strings and the placeholder checker, then I'll have everything needed to build SignalSelector.
+
+Let me read the placeholder checker and locate the lint/format configs so my code passes cleanly.
+
+Now I understand the gates precisely. Critical: the placeholder gate forbids the word "Placeholder" (case-insensitive) in `.swift` files — I'll use "prompt" instead. Let me check for an existing flow/wrap layout to reuse for chips and confirm the test-target wiring.
+
+Important: the unit-test targets source only from `Tests/Unit`, while predecessor `.Tests.swift` files live in `feature-views/`. Let me verify how test files are wired (app-target exclude? duplicated under `Tests/Unit/FeatureViews`?).
+
+I have a complete picture of all conventions. Key constraints locked in:
+- 7-file co-located pattern (like `BackupActionsCard`/`SettingField`)
+- Generated tokens API (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSTypeMetrics`)
+- Placeholder gate forbids the word "Placeholder" in `.swift` (use "prompt")
+- swiftformat maxwidth 120, swiftlint strict (empty_count, first_where, etc.)
+- `xcodebuild` is DEFERRED (no Xcode); logic proven via SwiftPM harness
+
+Let me set up a plan and todos, then write the core files.
+
+Now I'll write the pure projection core (Adapter).
+
+Now the i18n catalog (`.strings`).
+
+Core logic written. Before building the Views, let me validate the Adapter + Model logic by executing them in a throwaway SwiftPM harness (outside the repo), mirroring the planned tests — this catches logic errors early.
+
+Top-level `let`s are MainActor-isolated in Swift 6; the free test functions are nonisolated. I'll annotate them `@MainActor`.
+
+Logic executes green: **50 checks, 0 failures**. Now the Views and main view.
+
+Now the composed main view.
+
+Now the DEBUG previews covering every state.
+
+Now the co-located XCTest suite (same assertions as the executed harness).
+
+All 7 files written. Let me typecheck the runtime views against the **real** generated tokens + macOS SDK (more honest than a shim).
+
+Runtime views typecheck clean (strict concurrency, EXIT=0). Now the Previews — I'll strip the Xcode-only `#Preview` macro (transform to functions) and typecheck the bodies.
+
+Both runtime and preview bodies typecheck clean (EXIT=0). Now the format + lint gates on the actual shipped files.
+
+swiftformat will auto-fix these (wrap, blank lines, unused-arg underscores). Let me apply it.
+
+swiftformat passes (0/6 require formatting). Now swiftlint --strict.
+
+swiftlint: **0 violations, 0 serious**. Let me confirm the swiftformat changes are sane (FlowLayout args, Tests tail) and scan my files for any forbidden placeholder words.
+
+The placeholder gate matches "placeholder" case-insensitively **including in comments** — I have 5 such occurrences referencing the web prop name. I must remove the literal word from `.swift` files. Let me rephrase them.
+
+Now let me re-run the full verification: confirm no "placeholder" remains, re-format/lint, and run the placeholder gate (literal gate command + an honest per-file scan).
+
+No "placeholder" remains; format/lint still clean. Now the placeholder gate — both the literal gate command and an honest per-file scan — plus re-running the harness/typecheck against the edited files.
+
+Placeholder gate clean both ways (COUNT=0). Let me re-run the harness + typecheck against the edited files to keep the evidence current.
+
+All green: harness 50/0, full typecheck (runtime+previews) EXIT=0. Now let me capture the real `xcodebuild` exit (DEFERRED evidence) and confirm `xcodegen` includes my files in the targets.
+
+`xcodebuild` confirmed DEFERRED (no Xcode; IOS_EXIT=1/MAC_EXIT=1). `xcodegen` is available — let me confirm my files are picked up into the targets.
+
+xcodegen: **EXIT=0**, 42 SignalSelector refs in the generated project (matches predecessor parity), and the project is git-ignored. Now let me capture the whole-tree lint/format status honestly (to document any pre-existing out-of-scope reds vs. my clean surface).
+
+swiftformat whole-tree: only **1 pre-existing** red (`ActionBuilder.Previews.swift:48` — the same file predecessor 0241 flagged), and **0** SignalSelector files. Now the whole-tree swiftlint.
+
+Whole-tree swiftlint: exactly **1 pre-existing** violation (`LifetimeStatsWidget.Adapter.swift:141` — the same one predecessor 0241 documented), and **0** in SignalSelector. Predecessor parity confirmed. Let me grab the summary line, then write the log.
+
+All evidence gathered. Let me update todos and write the honest gate log.
+
+Log written. Now let me commit — staging only my 7 surface files + the log (not the pre-existing modified files, not the gitignored xcodeproj).
+
+All 7 files + log are new; xcodeproj is gitignored. Staging and committing exactly the surface files + log.
+
+The `git add` succeeded but my status check used an invalid flag, halting the chain before commit. Let me verify staging and commit.
+
+Committed as `7df3a796e`. Let me verify the commit contents and confirm the working tree is clean of unintended changes, then clean up throwaway build dirs.
+
+The commit is clean: **8 files, 1451 insertions** (7 surface files + log). The working tree shows only the 2 pre-existing modified files (which I never touched); no SignalSelector files left uncommitted, no xcodeproj (gitignored). Temp dirs cleaned.
+

@@ -1,0 +1,127 @@
+=== P4 Feature view 0193 NoVehicleSelected (Apple) ===
+Run host: Darwin arm64 (Apple Silicon, shared parallel-slot runner: slot-314)
+Date: 2026-06-07
+Web source (spec): web/src/features/onboarding/components/NoVehicleSelected.tsx
+Native output:     apps/apple/TeslaSync/feature-views/NoVehicleSelected.*
+
+--------------------------------------------------------------------------------
+CAPABILITY PROBE (prompt requires SwiftUI + Swift Charts + MapKit, iOS18/macOS15 HIG)
+--------------------------------------------------------------------------------
+xcodebuild -version (DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer):
+  Xcode 26.5  Build 17F42
+swift --version: Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108)
+simctl: iPhone 16 (83717DEE-70A3-4325-AA61-CBDDD3140989) (Booted)
+Tooling present: swiftlint, swiftformat, pwsh, xcodegen.
+Capability AVAILABLE. Charts/maps: none used by this surface (web source uses neither).
+
+--------------------------------------------------------------------------------
+FILES SHIPPED (canonical 7-file per-surface layout; 1 exported view per file)
+--------------------------------------------------------------------------------
+NoVehicleSelected.swift           — View; surfaceSlug; @State model; start/stop; stale auto-refresh
+NoVehicleSelected.Model.swift     — P1/S11 telemetry seam + OSLog default; P1/S10 i18n facade (NVSStrings);
+                                    NoVehicleSelectedInput; P1/S8 Source protocol; @Observable Model; InMemory source
+NoVehicleSelected.Adapter.swift   — NVSText; Selection/Connection/Content/State; Copy catalog; Projection; a11y (pure)
+NoVehicleSelected.Views.swift     — scaffold + header + GlassPanel + empty(ContentUnavailableView)/loading/error + freshness chip
+NoVehicleSelected.Previews.swift  — #Preview per state: empty/loading/error/stale/offline/overrides
+NoVehicleSelected.strings         — 3 web keys (common.noVehicleSelected.title/desc/action) + native chrome (table "NoVehicleSelected")
+NoVehicleSelected.Tests.swift     — projection + model+telemetry + copy-coverage + a11y (18 tests)
+
+Data sources bound via P1/S8 state-holder seam (no HTTP/router in the view):
+  useSelectedVehicle -> NoVehicleSelectedSource.onUpdate(NoVehicleSelectedInput.selection/connection)
+  useTranslation     -> NVSStrings (P1/S10) ; every string resolves by key, no English literals in the view
+  useNavigate('/onboarding') -> NoVehicleSelectedSource.setUp()
+States rendered (every one, no hidden surfaces): loading / ready(empty=web render) / error(+retry) ;
+  freshness axis live/stale/offline as a chip on ready (stale auto-refreshes, offline shows cached).
+P1/S11 diagnostics: Model.start() emits view.opened surface="NoVehicleSelected" exactly once (asserted).
+
+--------------------------------------------------------------------------------
+SURFACE VERIFICATION — isolated SwiftPM build + tests (the documented P4 method;
+see apps/macos-pending-verifications.md, ToolCard P-0010 precedent)
+Swift 6 language mode, strict concurrency complete; full Xcode 26.5 toolchain.
+--------------------------------------------------------------------------------
+$ swift build
+  [9/9] Compiling TeslaSync Tokens.swift
+  Build complete! (10.43s)                                   => SURFACE BUILD: PASS
+
+$ swift test
+  Test Suite 'NoVehicleSelectedCopyTests'          passed (2 tests)
+  Test Suite 'NoVehicleSelectedModelTests'         passed (5 tests)
+  Test Suite 'NoVehicleSelectedProjectionTests'    passed (7 tests)
+  Test Suite 'NVSTextTests'                        passed (2 tests)
+  Test Suite 'NoVehicleSelectedAccessibilityTests' passed (2 tests)
+  Executed 18 tests, with 0 failures (0 unexpected) => SURFACE TESTS: 18/18 PASS
+  (adapter unit tests + per-state state-resolution + a11y label seam + telemetry contract)
+
+--------------------------------------------------------------------------------
+GATE STEP: swiftlint --strict  (config apps/apple/.swiftlint.yml, on the 6 surface .swift files)
+--------------------------------------------------------------------------------
+Done linting! Found 0 violations, 0 serious in 6 files.            LINT_EXIT=0
+
+--------------------------------------------------------------------------------
+GATE STEP: swiftformat --lint  (config apps/apple/.swiftformat, on the 6 surface .swift files)
+--------------------------------------------------------------------------------
+0/6 files require formatting.                                     FORMAT_EXIT=0
+
+--------------------------------------------------------------------------------
+GATE STEP: check-placeholders.ps1 -Path .../feature-views/NoVehicleSelected
+--------------------------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0                                               PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+GATE STEP: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+(full clean run on this slot: xcodegen generate -> stage Shared.xcframework via Gradle -> build)
+--------------------------------------------------------------------------------
+Shared.xcframework staged OK (KMP Gradle pre-action completed for this slot).
+The app target then FAILS TO COMPILE. The only errors:
+
+  apps/apple/TeslaSync/feature-views/AcDcStatsPanel.Tests.swift:19:8:
+      error: unable to resolve module dependency: 'XCTest'
+  ** BUILD FAILED **
+  Failing command: SwiftDriver TeslaSync normal arm64 ... (in target 'TeslaSync')
+  IOS_EXIT=65
+
+Diagnosis (PRE-EXISTING, UNRELATED, OUT OF SCOPE):
+  • project.yml routes TeslaSync/feature-views into the app targets with no excludes, so all
+    165 co-located *.Tests.swift files (which `import XCTest` + `@testable import TeslaSync`)
+    are compiled INTO the app target, where XCTest is not linkable. The module-resolution
+    failure halts the app compile at the first such file alphabetically (AcDcStatsPanel.Tests.swift).
+  • grep "NoVehicleSelected.*error:" on the full build log = 0. This surface contributes ZERO
+    compile errors. NoVehicleSelected.Tests.swift follows the same co-location convention as the
+    other 111 surfaces (and is required to by this prompt's allowed-files), but it is NOT the
+    cause — any one of the 165 files triggers the same failure.
+  • The systemic fix is a project.yml change (exclude *.Tests.swift from the app targets / route
+    them to TeslaSyncTests). project.yml is OUTSIDE this prompt's allowed files
+    (apps/apple/TeslaSync/feature-views/NoVehicleSelected.* + this log). It is explicitly deferred
+    to p4-apple/P99-0001-apple-acceptance-gate per apps/macos-pending-verifications.md, which
+    already records this same deferral for ToolCard (P-0010): "Full-app ... build test ... blocked
+    by pre-existing, unrelated parallel-merge collisions — ... co-located *.Tests.swift importing
+    XCTest into the app target ... Zero ToolCard/feature-views errors."
+
+GATE STEP: xcodebuild -scheme TeslaSync-macOS build test
+  Not separately re-run: the macOS app target compiles the identical source set
+  (Sources + TeslaSync/feature-views), so it fails on the same XCTest-in-app-target module
+  resolution (plus the documented macOS development-signing gap). MAC_EXIT=non-zero (blocked,
+  same pre-existing cause).
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+Surface (this prompt's deliverable): COMPLETE and GREEN on every host-runnable, in-scope gate.
+  - isolated SwiftPM build: PASS
+  - isolated tests: 18/18 PASS (adapter + per-state + a11y + telemetry)
+  - swiftlint --strict: 0 violations (LINT_EXIT=0)
+  - swiftformat --lint: clean (FORMAT_EXIT=0)
+  - check-placeholders: 0 (PLACEHOLDER_EXIT=0)
+  - no TODO/stub/mock/placeholder/Lorem; all i18n via P1/S10; null-safe; a11y labels/Dynamic Type/reduce-motion.
+
+Full-app iOS+macOS `xcodebuild build test`: BLOCKED by a pre-existing, unrelated, out-of-scope
+project-structure collision (165 co-located *.Tests.swift compiled into the app target import
+XCTest). Not fixable within this prompt's allowed files; deferred to P99-0001 per the project's
+own macos-pending tracker. Zero errors attributable to the NoVehicleSelected surface.
+
+Per the Honesty Covenant (no red-as-green): the literal gate's xcodebuild steps return non-zero,
+so this run is reported BLOCKED — NOT DONE — with the platform/repo-state evidence above.
+
+EXIT=65
+STATUS=BLOCKED

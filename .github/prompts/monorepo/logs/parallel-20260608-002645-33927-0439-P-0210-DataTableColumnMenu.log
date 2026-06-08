@@ -1,0 +1,135 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me read the web source, explore the Apple project structure, and gather hard evidence on the Apple toolchain capability.
+
+Xcode.app exists but the active developer dir is CommandLineTools. Let me test whether I can use Xcode via `DEVELOPER_DIR`, and explore the existing native patterns to mirror.
+
+Xcode 26.5 is fully available via `DEVELOPER_DIR`, a booted iPhone 16 simulator exists, and `xcodegen` is present. **Capability is available — I am not blocked.** Now let me study the established conventions by reading `project.yml` and a complete exemplar surface.
+
+`project.yml` is at `apps/apple/project.yml`. Let me read it and the full exemplar surface set.
+
+Now I understand the multi-file convention. Two critical questions remain: (1) how `shared-surfaces` gets wired into the build (project.yml lists explicit dirs and does NOT include `shared-surfaces`), and (2) how the inline `.Tests.swift` files are compiled. Let me investigate.
+
+The exemplar's tests use `import XCTest` + `@testable import TeslaSync`, yet the test targets only reference `Tests/Unit`, and `shared-surfaces` isn't globbed in `project.yml`. I need to understand the real build wiring before proceeding. Let me check the build infra and read the remaining exemplar files.
+
+Critical infra facts emerging: the iOS/macOS build requires a KMP `Shared.xcframework` staged via Gradle (Frameworks/ holds only `.gitkeep`), and `check-placeholders.ps1` needs `pwsh`. Let me read the pending-verifications doc and check toolchain availability decisively.
+
+Decisive finding: `apps/macos-pending-verifications.md` documents the **established precedent** — the full-app `xcodebuild build test` is blocked by *pre-existing, unrelated* parallel-merge collisions (`DashboardWidgetSize` redefined 15×, 150+ co-located `*.Tests.swift` importing XCTest, unstaged `Shared.xcframework`, macOS signing). Prior surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) were each verified green **in isolation** (SwiftPM build + tests, real `swiftc -typecheck` on iOS 18 + macOS 15, swiftlint/swiftformat/placeholder clean, `xcodegen generate` enumeration) and deferred the full-app gate to the macOS acceptance gate.
+
+`pwsh`, `java 17`, `gradlew`, and `~/.konan` (kotlin-native 2.4.0) are all present. I'll follow the exact precedent. Let me read the remaining exemplar files, the web `columnOrderStore`, and locate the design-system tokens/components.
+
+Now let me read the Adapter and Tests exemplars, and locate the design-system tokens/components I'll need (glass panel, toggle, buttons, typography, spacing, radius).
+
+I have the adapter/test patterns. Now let me ground my implementation in the real design system by reading the tokens and key components.
+
+The token system is clear. There are `TSCheckbox` and `TSToggle` components. Let me read the key components I'll compose with.
+
+Let me read the feedback states, typography, skeletons, and the full test exemplar to finalize my component vocabulary and test structure.
+
+I now have the full component vocabulary. Let me read the lint/format configs, the skeleton API, the placeholder patterns, and the full test exemplar so my code passes all host-runnable gates.
+
+I have a complete picture of the conventions, tokens, components, lint/format rules, and placeholder gate. Let me set up tracking and check two remaining symbol locations before writing code.
+
+I now have everything needed. Let me record a plan and start creating the surface. I'll follow the exemplar's exact multi-file conventions.
+
+Now I'll create the surface. Starting with the pure Adapter core (faithful port of `columnOrderStore.ts`).
+
+Now the Model — state-holder seam (P1/S8), telemetry (P1/S11), i18n facade (P1/S10), and projection.
+
+Now the subviews — panel, rows, and every state's chrome.
+
+Now the main view — the trigger button + popover presentation.
+
+Now the previews and the i18n strings catalog.
+
+Now the comprehensive XCTest suite covering the adapter, projection, model, telemetry, and accessibility.
+
+All six files created. Now wire `shared-surfaces` into the build manifests (both app targets) and the lint config so the new directory is a first-class, built + linted part of the project.
+
+Now format and lint my new files. First auto-format with swiftformat, then verify with `--lint`, then `swiftlint --strict`.
+
+swiftformat is clean (0/6). swiftlint linted the whole project and found 2 violations — I need to know whether they're in my files. Let me isolate them.
+
+One violation is mine (`large_tuple` in the test helper); the other is pre-existing in `dashboard-widgets`. Let me fix mine by replacing the 3-tuple helper.
+
+Fixed. Let me re-verify my files are lint- and format-clean.
+
+My files are fully swiftformat- and swiftlint-clean (the only other violation is pre-existing in `dashboard-widgets`, untouched by me). Now the placeholder gate via `pwsh`.
+
+The gate caught the literal word "placeholder" in a doc comment. Let me find and reword any forbidden terms across all my files.
+
+Only one occurrence. Let me reword it.
+
+Placeholder gate is clean. Now the high-value isolated verification: a SwiftPM package that compiles the pure Adapter+Model and runs the full test suite under Swift 6 strict concurrency.
+
+All 32 isolated tests pass under Swift 6 strict concurrency. Now the real-SDK typecheck of the **view layer** (Views + main view + Previews) against the actual iOS 18 and macOS 15 SDKs, compiled together with the real design-system components.
+
+macOS typecheck passes (EXIT=0). Two compiler warnings flag dead locals I left in `resolve()`. Let me remove them, then re-run macOS + iOS typechecks.
+
+Both SDKs typecheck cleanly (EXIT=0) under Swift 6. Let me re-verify the edited files: re-run the isolated tests and the lint/format gates.
+
+All host-runnable gates are green (32/32 tests, format 0/6, lint 0, both SDK typechecks EXIT=0, placeholder 0). Now confirm `xcodegen generate` enumerates the new surface into the project.
+
+`xcodegen generate` succeeds and enumerates all 7 surface files. Now let me capture honest first-hand evidence of the full-app gate state. First confirm the documented pre-existing blockers, then attempt a bounded `xcodebuild`.
+
+Pre-existing blockers confirmed: `DashboardWidgetSize` defined 15×, 262 co-located XCTest files in app-target dirs, `Shared.xcframework` unstaged. My surface's type names are all unique (no collisions). Let me attempt the real gate to capture first-hand evidence (bounded).
+
+The KMP `Shared.xcframework` built successfully (cached) — the build is now compiling the app, where the pre-existing collisions live. Let me wait for the compile wall.
+
+Gradle is staging multiple xcframework configs (slow). Let me continue waiting to reach the app-compile phase where the collisions surface.
+
+Gradle is nearly through release-framework linking. Let me wait once more to reach app compilation and capture the actual redeclaration error.
+
+The full-app gate failed with `XCODEBUILD_EXIT=65`. Let me capture the exact failure cause from the log.
+
+The first failure is the documented blocker: `AIRestorePanel.Tests.swift: error: unable to resolve module dependency: 'XCTest'` — the app target compiles co-located `*.Tests.swift` files that import XCTest. Let me verify the 11 `shared-surfaces` mentions are the same XCTest issue (from my co-located Tests.swift) and not real defects in my view code.
+
+Decisive evidence: my **5 shipped surface files compiled with zero errors inside the real app target**, and my `.strings` validated/copied successfully. The build failed (EXIT=65) on the documented pre-existing blocker — `AIRestorePanel.Tests.swift` (a feature-views file I never touched) importing `XCTest` into the app target. My only `shared-surfaces` log entries are the benign self-import warning (same convention as all 262 pre-existing co-located tests) and a successful `.strings` copy.
+
+To honor "no skip-and-assume," let me kick off the macOS build in the background while I write the gate log, then capture its real exit.
+
+Let me extract the precise iOS evidence for the log while the macOS build runs.
+
+iOS failure is unambiguously the pre-existing blocker (`AIRestorePanel.Tests.swift` XCTest-in-app), with **zero errors in my shipped files**. Let me check the logs directory and monitor the macOS build.
+
+The macOS build finished. Let me capture its exit code and root cause.
+
+Both full-app gate steps fail on documented **pre-existing, unrelated** blockers (iOS: XCTest-in-app-target; macOS: development-signing), with **zero errors in my shipped files**. To report the gate's exact commands honestly, let me run the repo-wide `swiftformat --lint` and `swiftlint --strict` to capture real global numbers.
+
+One pre-existing format issue and one pre-existing lint issue remain repo-wide — let me confirm neither is mine by identifying the swiftformat-flagged file.
+
+Confirmed: the swiftformat issue is pre-existing (`ActionBuilder.Previews.swift`), zero in my surface. I now have complete evidence. Let me write the gate log.
+
+Now append the tracking row to `apps/macos-pending-verifications.md`, following the established format.
+
+Now let me clean up the generated project and review git status before committing.
+
+The `AIUsageCard.*` changes are pre-existing (present before I started — they belong to a separate effort) and must not be included. Let me stage only my files and commit.
+
+All my files staged correctly; `AIUsageCard` (pre-existing) excluded. Committing.
+
+Committed cleanly (11 files, AIUsageCard correctly excluded). Let me do a final post-commit verification of the surface-scoped gates and update the plan.
+
+The `grep -c` returning 0 (exit 1) short-circuited the chain — but the values are correct (swiftformat 0/6, swiftlint 0). Let me run the remaining two checks independently.
+
+Everything is verified and clean. The task is complete.
+
+## Summary
+
+I shipped a production-complete, Apple-native `DataTableColumnMenu` shared surface at full parity with `web/src/components/ui/DataTableColumnMenu.tsx`.
+
+**Capability check (honest):** Xcode 26.5 + iPhone 16 simulator + xcodegen + swiftlint/swiftformat + pwsh are all present via `DEVELOPER_DIR` — so I did **not** declare a capability BLOCK; I built and verified the real thing.
+
+**Delivered** (`apps/apple/TeslaSync/shared-surfaces/`, 7 files, following the `AcDcStatsPanel` exemplar conventions):
+- **Adapter** — verbatim port of `columnOrderStore.ts` (effective order, visibility filter + never-zero fallback, move-clamp, toggle, default-layout seeding) + per-row menu projection with the `required` / last-visible guardrails.
+- **Model** — P1/S8 state-holder seam, P1/S11 `view.opened` telemetry, P1/S10 i18n facade, projection, and toggle/move/reset edit round-trips.
+- **Views + main** — icon trigger + popover, `[checkbox] header [↑ ↓]` rows, Reset, the P4 leaf states (loading/empty/error/data + live/stale/offline chip & banner), VoiceOver labels, Dynamic Type, reduce-motion.
+- **Previews, Tests (32 cases), strings** (all 9 web keys + native chrome).
+- Wired `shared-surfaces` into both app targets (`project.yml`) and `.swiftlint.yml`.
+
+**Verification (every isolatable gate GREEN):** swiftformat `0/6`, swiftlint `0`, placeholder `0`, `xcodegen` enumerates 7 files, isolated SwiftPM **32/32 tests under Swift 6 strict concurrency**, real **iOS-18 + macOS-15 `swiftc -typecheck` EXIT 0**, and the real `TeslaSync` app target compiled all 5 shipped files + validated the `.strings` with **zero errors**.
+
+**Full-app gate — STATUS=BLOCKED (honest):** `xcodebuild build test` fails on **pre-existing, unrelated** repo state — iOS: 262 co-located `*.Tests.swift` importing XCTest into the app target (first hit `AIRestorePanel.Tests.swift`, which I never touched); macOS: development-signing. Zero failures attributable to this surface. This matches the documented precedent (ToolCard/AlertMessageEditor/FSMTimelineChart); I added a tracking row to `apps/macos-pending-verifications.md` and recorded everything in the gate log ending `EXIT=65 / STATUS=BLOCKED`.
+
+Committed as `93777e044` (pre-existing `AIUsageCard.*` working-tree changes correctly left untouched).
+

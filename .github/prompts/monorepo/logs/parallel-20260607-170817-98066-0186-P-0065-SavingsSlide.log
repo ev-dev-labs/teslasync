@@ -1,0 +1,100 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Now let me examine the existing Apple app structure and a recently-added feature view as a reference for conventions.
+
+Let me look for related "review/slide" feature views already ported, and understand the shared infrastructure.
+
+Let me study the conventions by reading a reference feature view (AuditPanel) and the shared infrastructure.
+
+Let me read the AuditPanel model, projection, strings, and the shared state-holder/telemetry/design infrastructure.
+
+Let me read the i18n strings format, telemetry sink, design tokens, state-view components, and tests pattern.
+
+Let me read the telemetry contract, design tokens, tests/previews patterns, and the web YearReview type.
+
+Let me locate the design token definitions and read the test/preview patterns.
+
+Let me read the remaining shared components (Badges/Tone, Cards, Typography, Feedback) and the test/preview patterns.
+
+Let me read the test/preview patterns, check the project.yml build config, and verify toolchain availability.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are present. Let me check how prior surfaces handled this and find the host-compile gate.
+
+Full Xcode.app exists. Let me test if it's usable and examine how feature-views are wired into the build.
+
+Full Xcode 26.5 is usable and `feature-views/` is globbed into the build. Let me read the full prior log to learn the exact host-compile gate commands, plus the framework staging script and pending-verifications doc.
+
+I now have the established precedent. Let me read the placeholder gate, lint/format configs, the Models adapter pattern, and the pending-verifications doc before writing code.
+
+Let me verify which shared files are `Shared`-free (for the host typecheck), check the telemetry file's imports, and read the web number formatter to match formatting.
+
+I have a complete understanding of the architecture and the established host-gate precedent. Let me set up tracking and write the plan.
+
+Now I'll write the pure-logic files (Models, Projection, Model) and the strings catalog.
+
+Now the Components and Content files (the visual pieces and the assembled slide).
+
+Now the main surface view.
+
+Now the previews and tests.
+
+All 9 files written. Let me update tracking and run the host-compile typecheck gate — starting with the pure-logic layer.
+
+Step 1 green. Now the full-surface typecheck against the **real** design tokens, component library, and telemetry registry.
+
+Real Swift 6 strict-concurrency finding (good — the gate is working). Let me verify the compiler-suggested isolated-conformance fix compiles before applying it.
+
+The isolated-conformance fix compiles. Applying it.
+
+Those errors are in unrelated SI-formatter components (`UnitFormatters.swift` needs `UnitPreferences` from outside Components) — not my code. I included too broad a dependency set. Let me scope the typecheck to exactly the shared files my surface references.
+
+Step 2 green — the full surface compiles against the real design system. Now the in-module test typecheck (strip the self-import, use the Xcode toolchain for XCTest).
+
+XCTest needs its framework search path added. Let me supply `-F` to the platform frameworks dir.
+
+The assertion macros aren't importable in a bare typecheck (expected — the prior gate noted an "XCTest shim"). Let me add a minimal in-module XCTest shim to typecheck the test logic against the real types.
+
+The stripped test copy lost Foundation (it came via `import XCTest`). Let me swap `import XCTest` → `import Foundation` instead of removing it.
+
+Step 3 green — all three typecheck passes succeed. Now swiftlint and swiftformat on the surface files.
+
+swiftlint and swiftformat both clean. Now the placeholder gate — let me read the script to invoke it correctly.
+
+I'll scan a SavingsSlide-scoped temp dir (the script recurses a directory) plus the real feature-views directory. First, a quick self-check for forbidden tokens.
+
+SavingsSlide-scoped placeholder gate: `COUNT=0`. (The 2 directory-scan hits are pre-existing `InfrastructureSection.*` files — another surface, outside my allowed files.) Now let me capture the real, verbatim outcome of the Xcode gate commands for the log.
+
+All gates resolved. The verbatim Xcode commands fail under the active CLT toolchain, and `Frameworks/` has only `.gitkeep` (Shared.xcframework unstaged) — exactly the documented DEFERRED disposition. Let me confirm my changes are scoped correctly before writing the log.
+
+Everything is scoped and green. Now I'll write the gate log capturing the real results, then commit.
+
+Now a consolidated final verification before committing.
+
+All gates green. Committing the surface and log.
+
+Committed as `acbf520a`. Let me finalize tracking and confirm a clean tree.
+
+Task complete. The native SavingsSlide surface is shipped, verified, and committed.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0065-SavingsSlide.log   | 179 ++++++++++++
+ .../feature-views/SavingsSlide.Components.swift    | 322 +++++++++++++++++++++
+ .../feature-views/SavingsSlide.Content.swift       |  69 +++++
+ .../feature-views/SavingsSlide.Model.swift         | 198 +++++++++++++
+ .../feature-views/SavingsSlide.Models.swift        |  57 ++++
+ .../feature-views/SavingsSlide.Previews.swift      |  63 ++++
+ .../feature-views/SavingsSlide.Projection.swift    | 170 +++++++++++
+ .../feature-views/SavingsSlide.Tests.swift         | 228 +++++++++++++++
+ .../TeslaSync/feature-views/SavingsSlide.strings   |  40 +++
+ .../TeslaSync/feature-views/SavingsSlide.swift     | 115 ++++++++
+ 10 files changed, 1441 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0065-SavingsSlide.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SavingsSlide.Components.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SavingsSlide.Content.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SavingsSlide.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SavingsSlide.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SavingsSlide.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SavingsSlide.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SavingsSlide.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SavingsSlide.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SavingsSlide.swift

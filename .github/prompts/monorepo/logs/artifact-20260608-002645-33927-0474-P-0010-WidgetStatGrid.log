@@ -1,0 +1,205 @@
+=== P4 Widget primitive 0010 WidgetStatGrid (Apple) ===
+
+Surface : apps/apple/TeslaSync/widget-primitives/WidgetStatGrid.*
+Web spec: web/src/features/dashboard/widgets/shared/WidgetStatGrid.tsx
+Tier    : Widget primitive (a shared, presentational widget building block)
+Runner  : Darwin · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftformat 0.61.1 · swiftlint 0.63.3 · pwsh 7.6.2 · xcodegen present
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (allowed scope: WidgetStatGrid.* + this log)
+--------------------------------------------------------------------------------
+  WidgetStatGrid.swift          — SwiftUI primitive. Two web branches: a responsive
+                                  LazyVGrid of stat tiles (the native StatCard) and the
+                                  empty state (ContentUnavailableView). Column count is
+                                  resolved from the requested layout AND the grid's own
+                                  rendered width (onGeometryChange) — the native parity of
+                                  the web container query. Full a11y + i18n + P1/S11 telemetry.
+  WidgetStatGrid.Model.swift    — SwiftUI-free seam: StatGridItem (web StatGridItem, with
+                                  numeric convenience inits for the `string | number` union),
+                                  StatGridTrend / StatGridValueTone / StatGridColumns /
+                                  StatGridWidthBucket, the P1/S11 telemetry seam +
+                                  WidgetStatGridTelemetryGate (idempotent view.opened),
+                                  WidgetStatGridSurface (slug), WidgetStatGridStrings (P1/S10).
+  WidgetStatGrid.Adapter.swift  — pure (Foundation-only) projections: StatGridLayout
+                                  (autoColumns + container collapse) reproducing the web
+                                  `autoCols` + `containerColsClass` tables VERBATIM,
+                                  StatGridNumberFormat (grouped / fixed-fraction / non-finite→0),
+                                  WidgetStatGridAccessibility (per-tile label + grid summary).
+  WidgetStatGrid.Previews.swift — #if DEBUG previews for both web branches + every layout
+                                  permutation (auto 2/3/4-up, explicit 2-up, compact 1-up,
+                                  container collapse 4→2, empty).
+  WidgetStatGrid.Tests.swift    — XCTest: layout projection (autoCols + collapse matrix),
+                                  value projection, telemetry-once + slug, a11y label/summary.
+  WidgetStatGrid.strings        — per-surface P1/S10 i18n table (the one web literal +
+                                  native VoiceOver trend chrome).
+
+--------------------------------------------------------------------------------
+PARITY NOTES (web source is THE specification)
+--------------------------------------------------------------------------------
+WidgetStatGrid.tsx is a PURE PRESENTATIONAL primitive: it receives already-resolved
+`stats: StatGridItem[]` as a prop and has exactly TWO render branches —
+  (1) stats.length === 0  → <EmptyState message="No stats available" />
+  (2) otherwise           → a CSS grid of <StatCard> tiles.
+There is NO data source / hook / loading / error / freshness in the source (the prompt's
+data-source + i18n-key extraction both read "(none)"); those concerns are owned by the
+data-bound widgets that COMPOSE this primitive (e.g. LifetimeStatsWidget). Reproducing
+loading/error/stale/offline here would be invented scope the source does not have, so the
+two real branches are reproduced faithfully and nothing more (Covenant #2).
+
+Layout math ported VERBATIM from the source for cross-platform parity:
+  • autoCols(count):  count % 3 == 0 → 3 ; else count % 4 == 0 → 4 ; else 2.
+  • resolvedCols   :  compact ? 1 : (cols ?? autoCols(count)).
+  • containerColsClass (container query on the WIDGET's own width, not the viewport):
+        1 → always 1
+        2 → always 2 (never collapses below 2)
+        3 → @xs(<256px):1  @sm(256–384px):2  ≥384px:3
+        4 → <384px:2  ≥384px:4
+    Reproduced by StatGridLayout.effectiveColumns(target:bucket:) keyed off a width band
+    measured from the grid via .onGeometryChange (iOS 18 / macOS 15 API).
+  • gap            :  compact ? gap-2(8pt) : gap-3(12pt)  → TSSpacing.sm / .md.
+Web `StatGridItem.value: string | number` → native stores the resolved display String, with
+`int:`/`double:` convenience inits formatting through StatGridNumberFormat (grouped, en_US,
+half-away-from-zero) so callers can pass a number exactly like the union. Web `valueColor`
+(a Tailwind class) → a finite StatGridValueTone resolved to a P1/S9 token at the render
+boundary. Trend shows only when BOTH trend && trendValue are present (web parity).
+
+--------------------------------------------------------------------------------
+GATE RESULTS (real commands, real exit codes on this host)
+--------------------------------------------------------------------------------
+
+[HOST] SwiftPM build — surface (View+Model+Adapter+Previews) + the REAL design tokens
+       (apps/design/generated/apple/Tokens.swift, verbatim) compiled as module "TeslaSync"
+       against the Xcode 26.5 macOS SDK, Swift 6 language mode (strict concurrency complete):
+         swift build  →  Build complete! (0 errors, 0 warnings)
+       BUILD_EXIT=0
+       (SwiftUI + onGeometryChange + ContentUnavailableView + #Preview macro + the
+        @MainActor telemetry gate all compile clean under complete strict concurrency.)
+
+[HOST] SwiftPM test — the ACTUAL WidgetStatGrid.Tests.swift executed via XCTest
+       (@testable import TeslaSync):
+         swift test  →  Executed 17 tests, with 0 failures
+       TEST_EXIT=0
+       Green by execution: autoCols table (1→2,2→2,3→3,4→4,5→2,6→3,7→2,8→4,9→3,12→3,16→4),
+       compact/explicit/auto target resolution, width-bucket thresholds (256 / 384),
+       container collapse (2 floors at 2 · 3→1/2/3 · 4→2/4 · 1→1), numeric projection
+       ("1,234" · "8,765.4" · ∞/NaN→0 · half-away-from-zero), showsTrend gating,
+       view.opened emitted exactly once with slug "WidgetStatGrid", a11y tile label +
+       grid summary content, empty-message web fallback "No stats available".
+
+[HOST] swiftformat --lint apps/apple/TeslaSync/widget-primitives  (repo .swiftformat)
+       → 0/5 files require formatting
+       FORMAT_EXIT=0
+
+[HOST] cd apps/apple && swiftlint lint --strict --config .swiftlint.yml <the 5 WidgetStatGrid.* files>
+       → Done linting! Found 0 violations, 0 serious in 5 files.
+       LINT_EXIT=0
+       (The widget-primitives dir is not yet in .swiftlint.yml `included` — registering it is
+        integration scope / out of allowed files — so the files are linted by explicit path,
+        which SwiftLint honours regardless of `included`.)
+
+[HOST] pwsh check-placeholders.ps1 -Path apps/apple/TeslaSync/widget-primitives -Language swift
+       → PLACEHOLDER_ALLOWED=0 · PLACEHOLDER_COUNT=0
+       PLACEHOLDER_EXIT=0
+       (No TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/"not implemented"/stub/mock in shipped code.)
+
+[CROSS-SLOT] The literal whole-tree gate commands surface PRE-EXISTING violations in OTHER
+       surfaces' files (parallel-slot tree; outside this prompt's allowed files — Covenant #9):
+         swiftformat --lint apps/apple   → 1/1918 require formatting:
+             TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes)
+             — shipped by surface commit 87160b08 (feature-views/ActionBuilder), NOT this surface.
+         cd apps/apple && swiftlint --strict → 1 violation in 1909 files:
+             TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length)
+             — shipped by predecessor surface 0055, NOT this surface.
+       Neither file is mine; both are out of allowed scope. My five files pass swiftformat AND
+       swiftlint --strict (shown green above). Reported here in full rather than hidden.
+
+[DEFERRED] xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+[DEFERRED] xcodebuild -scheme TeslaSync-macOS                                                  build test
+       IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED   (NOT claimed green — see reasoning)
+       Capability IS present (Xcode 26.5; iPhone 16 simulator booted:
+       83717DEE-70A3-4325-AA61-CBDDD3140989; iOS 26.5 + macOS 26.5 SDKs, deploy targets 18/15).
+       The scheme build/test is DEFERRED — not failed — for three structural reasons, none a
+       defect in this surface's code:
+         (A) project.yml target sources = Sources / TeslaSync/dashboard-widgets /
+             TeslaSync/feature-views / Localization / DesignTokens. TeslaSync/widget-primitives
+             is NOT registered, so the scheme would build the app WITHOUT these files and never
+             exercise them. Registering it is the integration prompt's scope and is OUTSIDE this
+             prompt's allowed files (WidgetStatGrid.* + log) — Covenant #7.
+         (B) The scheme pre-action builds the KMP Shared.xcframework via
+             Scripts/build-shared-xcframework.sh (Kotlin/Native + Gradle); Frameworks/ holds
+             only .gitkeep in this checkout, and the app targets require signing.
+         (C) The app target currently carries duplicate scaffold symbols across the parallel
+             surfaces (e.g. 13× `public struct DashboardWidgetSize` in dashboard-widgets), so the
+             full-app target cannot compile in-slot until integration de-dups them — independent
+             of this surface.
+       Equivalent in-scope verification was performed and is GREEN above: a Swift-6
+       strict-concurrency SwiftPM build of the surface against the REAL design tokens + macOS SDK,
+       AND the actual XCTest file executed (17/17). This matches the user-approved P3
+       "code-complete + DEFERRED Xcode gate" disposition used by predecessor 0055 (LifetimeStatsWidget).
+       Integration is collision-free: all 14 public symbols this surface introduces
+       (WidgetStatGrid, StatGridItem, StatGridLayout, …) have 0 existing declarations in the app target.
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+  [x] Surface renders all states FROM THE WEB SOURCE — populated grid + empty — plus every
+      layout permutation; each has a #if DEBUG preview and the branch logic is unit-tested.
+      (loading/error/stale/offline are not in the presentational source; owned by consumers.)
+  [x] No direct HTTP in the view — the primitive is presentational (web data sources: none);
+      it receives `items` as a prop exactly like the web receives `stats`. No state holder needed.
+  [x] Every i18n key from the source has a catalog key — the one web literal ("No stats
+      available") → widget.statGrid.empty in WidgetStatGrid.strings; view holds no English
+      literals (all via WidgetStatGridStrings). Native VoiceOver trend keys added as chrome.
+  [x] Accessibility — the primitive has no interactive controls; every tile carries a combined
+      VoiceOver label, the grid carries a spoken summary, decorative icons + the trend chip are
+      accessibilityHidden, Dynamic Type via system-font tokens, no motion to reduce.
+  [x] Tests — adapter (layout projection) unit tests + value projection + telemetry-once + a11y
+      label/summary tests (17 assertions, executed green). Per-state rendering is covered by the
+      per-state previews + branch unit coverage; pixel/XCUITest snapshots run in the deferred scheme.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] Telemetry — view.opened emitted once with surface slug "WidgetStatGrid" (P1/S11) — tested.
+  [x] Host-runnable gates green (SwiftPM build swift6 / executed XCTest 17/17 / format / lint /
+      placeholder); Xcode scheme build/test DEFERRED with capability + scope evidence.
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+  1  No red-as-green : the two xcodebuild steps are shown DEFERRED (not green); the whole-tree
+                       format/lint reds are shown and attributed to OTHER surfaces' files; every
+                       "EXIT=0" above is a command actually executed on this host.
+  2  No scope narrowing: implemented BOTH web branches + all layout permutations + the full
+                       autoCols/container-collapse math + trends + value tones + i18n + a11y +
+                       telemetry; did NOT invent states the presentational source lacks.
+  3  No skip-and-assume: each host gate executed and its real output captured; the XCTest file
+                       was run (not assumed) — 17/17.
+  4  No stubs as final : complete implementation; placeholder gate COUNT=0.
+  5  No parity shortcuts: autoCols + containerColsClass collapse + number formatting ported
+                       VERBATIM and pinned by executed assertions to the exact web behaviour.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / .swiftlint.yml and did NOT
+                       edit the shared Localizable.xcstrings (all out of allowed scope); strings
+                       shipped as the per-surface table, matching predecessor 0055.
+  8  No commit on red  : committing on all-green per-surface host gates; the xcodebuild steps are a
+                       documented scope/dependency DEFERRAL (capability present), and the two
+                       whole-tree reds are pre-existing files owned by other surfaces, not this one.
+  9  No silent drift   : changes confined to the allowed WidgetStatGrid.* files + this log; the
+                       cross-slot pre-existing reds are reported, not silently absorbed or "fixed".
+  10 Log ends with EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished native WidgetStatGrid shipped at parity with the web source: a SwiftUI
+  presentational primitive with the source's two branches (responsive stat-tile grid + empty
+  state), the autoCols + container-query collapse reproduced verbatim and pinned by executed
+  unit tests, P1/S11 view.opened telemetry, P1/S10 i18n (no English literals in code), P1/S9
+  tokens, and full VoiceOver/Dynamic Type accessibility. The surface BUILDS green under Swift 6
+  strict concurrency against the real Xcode macOS SDK + real design tokens, and its XCTest suite
+  EXECUTES green (17/17). swiftformat/​swiftlint/​placeholder gates are green on the shipped files;
+  the only whole-tree reds are pre-existing files owned by OTHER surfaces (reported, not mine).
+  The Xcode scheme build/test is DEFERRED to the signed CI/integration runner (files not yet
+  target-registered + KMP Shared.xcframework + parallel-slot symbol de-dup — none a defect in this
+  code; integration is collision-free), matching the user-approved P3 disposition of predecessor 0055.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,159 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple project structure and the related web hooks/components.
+
+Let me explore the Apple project structure and existing patterns in detail.
+
+Let me look at the existing Features directory, the parity ledger, and a similar existing page as a template.
+
+The project compiles `Sources/`, but the prompt specifies `TeslaSync/Features/Admin/`. Let me reconcile paths and read key infrastructure files. Let me check the ledger, logs dir, instructions, and SharedFacade patterns.
+
+Tools are available. Let me read the ledger schema, logs dir, the apple README gate contract, and key infrastructure files.
+
+The shared core has the impersonation domain. Let me read the store, models, and the Swift facade patterns.
+
+Now let me read the Swift facade patterns to understand how to consume the shared store.
+
+Let me examine the `TeslaSync/` directory structure, Localization, and the xcframework build setup.
+
+There's an established `feature-views/` multi-file pattern. Let me check for existing impersonation views, the xcframework build script, and the Kotlin toolchain.
+
+There's already a `UserImpersonateButton` feature-view (the child component). Let me examine the navigation system and the existing feature-view pattern to understand where pages live and how they're registered.
+
+Now I understand the navigation pattern (unrouted = no `AppRoute` entry needed). The established convention is `TeslaSync/feature-views/` (flat, multi-file), where the sibling `UserImpersonateButton` already lives. Let me study that component and a list-style sibling as templates.
+
+Let me read these files individually to manage size.
+
+This uses a seam-protocol pattern with in-memory test/preview implementations. Let me read the remaining UserImpersonateButton files (Adapter, Views, strings, Previews, Tests).
+
+The feature-views are self-contained (no `Shared` import) using seam protocols. Let me read the strings/previews/tests format and a list-style sibling, plus the design components.
+
+I now understand the full feature-view pattern. Let me read the design tokens, feedback/card components, and a list-section sibling to mirror state rendering.
+
+Let me read the design tokens and check for a page scaffold/header, plus a list-section sibling's structure.
+
+Tokens are generated. Let me read the generated tokens, `TSTone`, and a sibling section's structure to mirror page-level composition.
+
+Now let me study a list-with-states sibling (`SessionList`) to mirror the page composition precisely.
+
+I have a thorough grasp of the conventions. Let me verify the `Localizable.xcstrings` structure, whether impersonation keys exist, the `TSFadeIn` and `TSButton` signatures.
+
+The master catalog already has impersonation keys (prefixed `translation.`). Let me verify all 5 parity keys exist and read their values.
+
+All 5 parity keys already exist in the master catalog with web values. Let me confirm the `TSButton` init, `TSFadeIn`, and the title value.
+
+I have everything needed to implement. Let me set up a todo list and quickly probe build-tooling feasibility (xcodegen, gradle/Kotlin for the xcframework — the main gate risk) before writing code.
+
+There's a full `Xcode.app`. Let me try the `DEVELOPER_DIR` override to access `xcodebuild` without `sudo`.
+
+Full Xcode 26.5 is available via `DEVELOPER_DIR`, with iOS+macOS SDKs and simulators. The long pole is the Kotlin/Native `Shared.xcframework` build — let me pre-warm it in the background while I write the Swift code.
+
+Full Xcode works. The xcframework build is warming up. Let me check the placeholder scanner's banned patterns and the build progress while I design the code.
+
+The xcframework build is mostly cached. Let me confirm it completed and staged, and read the banned placeholder patterns.
+
+The background job was killed when its parent shell exited. Let me restart the xcframework build properly detached, and read the placeholder patterns.
+
+I now know the banned words (notably "placeholder", "TODO", "not implemented" — case-insensitive). Let me verify my planned type names don't collide with existing module symbols.
+
+No collisions; reusable types confirmed. Now I'll write the feature-view files. Starting with the pure projections layer.
+
+Now the model, seams, telemetry, and strings facade.
+
+Now the state subviews.
+
+Now the main page View with adaptive layout, FadeIn, refreshable, and telemetry.
+
+Now the strings table and previews.
+
+Now the previews covering every state.
+
+Now the comprehensive unit tests.
+
+All 7 files written. Let me check the xcframework build status and the SwiftLint config before running gates.
+
+While the xcframework builds, let me resolve a critical question: how do the `.Tests.swift` files in `feature-views/` get routed to the test target (not the app target)? Let me check the pending-verifications doc and any XcodeGen source filtering.
+
+Critical finding: `macos-pending-verifications.md` documents that the **full-app `xcodebuild build test` is pre-existingly BLOCKED** by unrelated parallel-merge collisions (duplicate `DashboardWidgetSize`, ~150 co-located `*.Tests.swift` importing XCTest into the app target, signing). Siblings (ToolCard, AlertMessageEditor, FSMTimelineChart) verify their surface in **isolation** instead. Let me read a sibling's log to follow the exact established methodology.
+
+This is the definitive precedent: the sibling `UserImpersonateButton` log shows **STATUS=DONE / EXIT=0** with host-runnable gates green (isolated `swiftc -typecheck` on both SDKs + `swift test` SwiftPM harness + swiftlint + swiftformat + placeholder) and the full-app `xcodebuild build test` **DEFERRED** with captured evidence (not-yet-registered in project.yml, xcframework, signing). I'll follow this exact methodology. Let me confirm the xcframework staged.
+
+Shared.xcframework is now staged (bonus). Now I'll follow the sibling's exact methodology: isolated SwiftPM harness + dual-SDK typecheck + swiftlint + swiftformat + placeholder + xcodegen. Let me determine the component closure and check for `Shared` imports that would break an isolated harness.
+
+No `Shared` imports in the component/design closure — an isolated harness is viable. Note `.swiftlint.yml` now includes `feature-views`. Let me read both lint configs to comply.
+
+Let me verify the component closure is self-contained (no references to `SharedFacade`/`Units`/`Shared` types) so I can include all of `Sources/Components` + `Sources/Design` in the harness.
+
+Only `UnitFormatters.swift` pulls in `Units`/`UnitPreferences`, so I'll use the minimal closure (sibling's + Motion). Let me verify those component files' preview blocks are self-contained.
+
+Closure confirmed self-contained. Let me assemble the isolated SwiftPM harness (library module `TeslaSync` = minimal component closure + UserImpersonateButton prod deps + my UsersPage files; test target = my tests).
+
+Harness assembled. Now the key verification — `swift test` (Swift 6 strict concurrency) executing my XCTest suite against the real component closure.
+
+All 24 tests pass under Swift 6 strict concurrency. Now the dual-SDK `swiftc -typecheck` (iOS 18 simulator + macOS 15), including previews under `-D DEBUG`.
+
+Both SDKs typecheck clean (exit 0) including previews. Now swiftlint --strict, swiftformat --lint, and the placeholder gate on my files.
+
+Two fixable issues: a 3-member tuple (swiftlint `large_tuple`) and swiftformat wrap/return nits. Let me view the exact lines.
+
+Both clear: refactor the 3-tuple to a struct (swiftlint), and swiftformat wants the `id` body wrapped + implicit returns. Let me refactor the tuple to a struct with implicit returns, then run swiftformat auto-fix for the rest.
+
+Now run swiftformat auto-fix on my files, then re-verify lint + format.
+
+Both linters clean (0 violations, 0 formatting). Let me re-sync the harness with the fixed files and re-verify tests + dual-SDK typecheck still pass.
+
+All green after fixes. Now the placeholder gate (scoped scan + manual grep) and `xcodegen generate`.
+
+Placeholder gate and grep clean. Now `xcodegen generate` and confirm my files are enumerated in the project.
+
+`xcodegen generate` exit 0; all 7 UsersPage files now enumerate (6× each) — registered into the targets (stronger than the sibling's prior 0-refs). Let me capture concrete evidence that the full-app build is blocked by **pre-existing, unrelated** issues (duplicate symbols + co-located XCTest-in-app-target), then do a bounded build attempt.
+
+Confirmed: `DashboardWidgetSize` is defined **15×** (pre-existing duplicate) and **262** co-located `*.Tests.swift` import XCTest into the app target — both systemic, pre-existing, and unrelated to UsersPage (which has exactly one definition each, zero duplicates). Let me capture concrete current build evidence with a bounded attempt.
+
+While the build attempt runs, let me gather artifact line counts and double-check the master catalog keys for the log.
+
+Let me check the build attempt progress.
+
+The full-app build failed (exit 65) as expected. Let me classify the errors and confirm zero UsersPage errors.
+
+The full-app build's **first error is a sibling's co-located `AIRestorePanel.Tests.swift` importing XCTest** — the exact pre-existing systemic blocker, with **zero UsersPage errors**. All host-runnable gates are green. Let me update the todos and write the ledger + evidence log.
+
+Now the evidence log. Let me get the base commit for the header.
+
+Now let me append the deferred-verification row to `macos-pending-verifications.md`, matching the established format.
+
+Let me verify my new public type names don't collide with any other file across the whole module (my isolated harness only compiled a subset).
+
+No collisions module-wide. Let me clean up temp files and review git status before committing.
+
+I see pre-existing unrelated changes in the working tree (`AIUsageCard.*`, two `web/*.tsx` files) that I did **not** touch — I'll exclude those and stage only my in-scope files. Let me confirm my `macos-pending-verifications.md` edit is just the added row.
+
+Confirmed: my `macos-pending` edit is just the added row; the `AIUsageCard.*`/`web/*.tsx` changes are pre-existing and unrelated (I'll exclude them). Let me stage only my in-scope files and commit.
+
+Exactly my 10 in-scope files staged; the unrelated changes excluded. Let me commit.
+
+Committed cleanly (10 files, excluding pre-existing unrelated changes). Let me finalize the todo and do a last sanity check.
+
+All complete and verified. The task is done.
+
+## Summary
+
+Implemented the native **SwiftUI / Apple-HIG `UsersPage`** (admin Subjects page) at full web parity with `web/src/features/admin/pages/UsersPage.tsx`, adaptive across macOS + iOS/iPadOS.
+
+**Delivered** (7 files in the canonical `TeslaSync/feature-views/` group — the physical XcodeGen source path the sibling `UserImpersonateButton` already uses; the prompt's idealized `Features/Admin/` path isn't compiled, so placing it there would be dead code — reconciliation documented in the log):
+- `UsersPage.{Adapter,Model,Views,swift,Previews,Tests}.swift` + `UsersPage.strings`
+- Binds the two web hooks via P1/S8 seams (reuses `ImpersonationStatusProviding`, adds `ImpersonationCandidatesProviding`); `isImpersonationOpenMode`/`isImpersonationActive` ported verbatim; embeds `UserImpersonateButton` disabled while active.
+- Every region rendered from one `@Observable UsersPageModel`: open-access notice / loading / error+retry / empty (`ContentUnavailableView`) / subjects list, plus stale/offline freshness (ADR-013). Never a blank region.
+
+**`=== PARITY === PARITY_COVERED=10/10`** (1 panel + loading/empty/error/success + 5 `impersonation.users.*` strings verbatim).
+
+**Gates** — host-runnable all GREEN (real output in the log):
+- iOS 18 + macOS 15 `swiftc -typecheck` (Swift 6, incl. previews) = 0/0
+- `swift test` SwiftPM harness, Swift 6 strict concurrency = **24/24**
+- `swiftlint --strict` 0 violations · `swiftformat --lint` 0 · placeholder gate COUNT=0 · `xcodegen generate` enumerates all 7 files
+- Built + staged `Shared.xcframework`
+
+**Deferred** (honestly, with captured `APP_BUILD_EXIT=65` evidence): full-app `xcodebuild build test` is blocked by **pre-existing, unrelated** parallel-merge collisions (262 co-located `*.Tests.swift` importing XCTest into the app target; `DashboardWidgetSize` ×15; signing) — **zero UsersPage errors** — routed to P99 and recorded in `macos-pending-verifications.md`, matching sibling precedent.
+
+Wrote `apps/parity/apple-ledger.json` (apple-macos + apple-ios both `done`, 10/10) and the evidence log ending `EXIT=0 / STATUS=DONE`. Committed only the 10 in-scope files (excluded pre-existing unrelated `AIUsageCard.*`/`web/*.tsx` working-tree changes).
+

@@ -1,0 +1,116 @@
+I'll start by exploring the environment to understand what's available and read the web source specification.
+
+Key findings: web source exists, Apple app structure exists, but `xcodebuild` requires full Xcode (only Command Line Tools installed). Let me investigate thoroughly before concluding anything.
+
+Critical discovery: **Xcode.app exists** at `/Applications/Xcode.app` but `xcode-select` points to CommandLineTools. I may be able to override with `DEVELOPER_DIR`. Let me verify and explore the Apple app structure.
+
+Full Xcode 26.5 IS available via `DEVELOPER_DIR` override — platform is capable, so BLOCKED is not warranted yet. The project uses **XcodeGen** (`project.yml`, no `.xcodeproj`). Let me understand the structure and tooling.
+
+Platform is fully capable: Xcode 26.5, xcodegen 2.45.4, iPhone 16 simulator booted. The project uses XcodeGen. Note: `shared-surfaces` is **not** in `project.yml` sources yet, and the web source actually uses `useLocation` + `VisuallyHidden` (not `useAnnouncer`). Let me study the existing structure deeply.
+
+The established pattern is clear from the `AIUsageCard.*` modified files: each surface is a multi-file set (`.swift`, `.Adapter.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`) — matching the `RouteAnnouncer.*` allowed-files glob. Let me read this canonical template and the core infrastructure.
+
+Let me locate the template files correctly and understand the navigation + a11y + telemetry seams.
+
+Now I understand: the native route-announcement concern already exists inline in `AppShell.handle()` via `AccessibilityNotification.Announcement`. My job is to extract a proper, tested, reusable `RouteAnnouncer` shared surface. Let me read the canonical template set and core infra in parallel.
+
+Tests use `XCTest` + `@testable import TeslaSync` and the comment says they "run in the TeslaSync(/-macOS) XCTest targets" — yet `project.yml` only lists `Tests/Unit` for the test target. I must resolve how co-located `.Tests.swift` files build before writing code. Let me inspect the build wiring empirically.
+
+`Shared.xcframework` is **not** prebuilt (only `.gitkeep`); the scheme pre-action builds it via Gradle/Kotlin-Native — a heavy dependency. And `Tests/Unit/**` has its own test tree separate from co-located `*.Tests.swift`. I must see definitive target membership. Let me generate the project and inspect.
+
+Project generates cleanly. Now the two pivotal questions: (1) can the heavy `Shared.xcframework` Gradle build even run here, and (2) which target do co-located `*.Tests.swift` files belong to. Let me check both, plus the tellingly-named `macos-pending-verifications.md`.
+
+Now I have the definitive picture. The generated pbxproj confirms co-located `*.Tests.swift` compile into the **app targets** (not test targets) — exactly the "pre-existing parallel-merge collision" documented in `apps/macos-pending-verifications.md`. That ledger establishes the **honest, covenant-compliant protocol** every prior surface (ToolCard, AlertMessageEditor, FSMTimelineChart) followed: verify the surface **green in isolation** (SwiftPM build + tests + `swiftc -typecheck` for iOS/macOS + swiftlint + swiftformat + placeholder), and mark the full-app `xcodebuild build test` **macOS-pending/BLOCKED** due to pre-existing, unrelated collisions + unstaged framework + signing.
+
+Let me record my plan and read the remaining infra (i18n facade, telemetry seam, lint configs, pwsh availability).
+
+Excellent — `pwsh` IS available, so I can run the PowerShell gate verbatim. The i18n pattern (per-surface `.strings` table + `XxxStrings.string(key,fallback)` helper) and telemetry pattern (`XxxTelemetry` protocol + `OSLog…` default + spy) are clear. Note `shared-surfaces` isn't in `.swiftlint.yml`'s `included` list, so I'll lint my files explicitly. Let me read the exact i18n/telemetry/Observable implementations and preview conventions.
+
+I now have the complete pattern (i18n facade, telemetry protocol+OSLog default, `@MainActor @Observable` model with idempotent `start()`/telemetry-once, in-memory source, `#if DEBUG` previews). Let me write a plan and probe the exact SwiftUI accessibility-announcement API before coding.
+
+Probe confirms `AccessibilityNotification.Announcement` + `accessibilitySpeechAnnouncementPriority` + `@Observable` all compile on macOS 15. Before writing, let me read the exact forbidden-pattern list (so comments/identifiers don't trip the placeholder gate) and confirm iOS-18 typecheck.
+
+Forbidden words noted (I'll avoid "placeholder"/"TODO"/"not implemented"/etc.). Both iOS 18 and macOS 15 typecheck the API. Now writing the surface. Let me create the directory and all files.
+
+All 7 files created. Now let me verify style compliance (swiftformat + swiftlint) on the new files.
+
+swiftformat flagged the Tests file (force-unwraps + a couple auto-fixable wraps). Let me view the exact lines and fix the force-unwraps manually (auto-fix can't make tests `throws`).
+
+The convention wraps property bodies onto multiple lines (matching `AiUsageModel`). Let me fix the force-unwraps manually (lint-only rule), then let swiftformat auto-fix the rest.
+
+swiftformat passes. Now swiftlint with the correct invocation.
+
+swiftlint `--strict`: **0 violations in 6 files**. swiftformat clean. Now the isolated SwiftPM build + test (module named `TeslaSync` so `@testable import` works verbatim), under Swift 6 strict concurrency.
+
+All **15 tests pass** under Swift 6 in the isolated harness (which also proves the full surface — Model, Adapter, Views, entry, Previews — compiles as a library). Now the dual-SDK typecheck and the placeholder gate.
+
+Dual-SDK typecheck passes (Swift 6, strict concurrency). Critical insight on the placeholder script: it uses `Test-Path -LiteralPath` and returns **vacuously clean** if the path doesn't exist. The gate's `-Path .../RouteAnnouncer` and `git add .../RouteAnnouncer` both imply a **`RouteAnnouncer/` subdirectory** (otherwise `git add` errors and the placeholder scan is a false-clean). Let me check how the feature-views precedent wrote its gate to confirm the intended layout.
+
+The precedent (AiUsageCard) uses **flat** files (`feature-views/AiUsageCard.Model.swift`) with `-Path .../AiUsageCard` and `git add .../AiUsageCard`. The placeholder script returns vacuously-clean when the literal path doesn't resolve. To be honest (not vacuous), I'll run BOTH the literal gate command AND a real scan of my files. Let me verify git pathspec behavior and both placeholder invocations empirically.
+
+Definitive findings: `git add .../RouteAnnouncer` **fails** on flat files (pathspec error), and the placeholder `-Path .../RouteAnnouncer` is **vacuously clean** (scans nothing). An honest scan of the actual files returns **0 violations**. To make the prescribed Gate and Commit commands work **verbatim and honestly** (non-vacuous placeholder scan + working `git add`), the correct layout is a **`RouteAnnouncer/` subdirectory**. Let me move the files there.
+
+Both prescribed gate commands now work verbatim and honestly (placeholder actually scans my files → 0 violations; `git add` resolves). Let me re-verify lint/format at the new paths and gather concrete evidence of the documented pre-existing collisions.
+
+swiftformat clean. My 6 files passed swiftlint explicitly (0 violations). The whole-project `swiftlint --strict` shows **1 pre-existing violation in another file** (last-linted was WatchDesignTokens.swift, not mine). Concrete collision evidence confirms the documented blockers: **DashboardWidgetSize defined 15×, 261 `*.Tests.swift` importing XCTest into the app target, PowerFlowConnection 2×**. Let me locate the pre-existing lint violation, then wire shared-surfaces into project.yml temporarily and confirm xcodegen enumerates my files.
+
+The 1 pre-existing swiftlint violation is in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141` (function_body_length) — **not my surface**. My files are clean (0 violations, verified explicitly), and shared-surfaces isn't in the default lint scope. 
+
+Now I'll temporarily wire `shared-surfaces` into `project.yml` to prove xcodegen enumerates my files and to capture the full-gate BLOCKED evidence (then revert to keep the commit scoped, since build-wiring is P4-core/P99-owned per the dependency note).
+
+All 7 files enumerated; `RouteAnnouncer.swift` is a member of both app targets (2 build-file refs) — integration proven. Now attempt the actual full gate `xcodebuild` build and capture the blocking evidence.
+
+The Gradle/Kotlin-Native framework build is actively running (downloading the K/N distribution, compiling `iosArm64`). Let me wait for it to progress to the app-compile phase where the pre-existing collisions surface.
+
+Gradle is linking the K/N frameworks (nearly to XCFramework assembly). Let me continue waiting for the app-compile phase.
+
+The K/N framework is assembling (debug done, release linking now). Once staged, the app compile will surface the pre-existing collisions. Let me keep monitoring.
+
+The K/N framework build is feasible but slow (debug XCFramework done; release linking across all platforms in progress — ~8 min so far). The collisions are already proven by grep. Let me continue waiting for the app-compile phase to capture a concrete redeclaration error.
+
+The release K/N link is grinding through all platforms (~11 min). Rather than block indefinitely, let me capture the pre-existing app-compile failure **directly** (fast, equally authoritative) by compiling the colliding files, while xcodebuild continues in the background.
+
+**Direct proof captured**: compiling two app-target files yields `error: invalid redeclaration of 'DashboardWidgetSize'` — a pre-existing collision in `DashboardWidgets`, entirely unrelated to RouteAnnouncer, that blocks the app target compile regardless of my surface. Combined with the 261 XCTest-in-app files and the documented precedent, the full-gate BLOCKED status is established. Let me check the real xcodebuild's progress once more.
+
+The real `xcodebuild` reached the app-compile phase and failed: **`** BUILD FAILED **`, `XCODEBUILD_IOS_EXIT=65`**. Let me confirm the failures are the pre-existing collisions and that **zero** errors are in RouteAnnouncer.
+
+The real iOS build's first failure is `feature-views/AIRestorePanel.Tests.swift:18: error: unable to resolve module dependency: 'XCTest'` — a **pre-existing** co-located test file importing XCTest into the app target (261 such files repo-wide). **Zero RouteAnnouncer-attributed errors.** This is exactly the documented blocker. Let me capture the macOS gate too (framework now cached, so app compile fails fast on the same condition).
+
+Both full-gate builds are BLOCKED by documented pre-existing/environment conditions — **iOS_EXIT=65** (pre-existing `*.Tests.swift` importing XCTest into the app target + `DashboardWidgetSize` ×15 redeclaration), **MAC_EXIT=65** (macOS development-signing requirement) — with **0 RouteAnnouncer-attributed errors**. This precisely matches the established precedent.
+
+Now let me revert the temporary `project.yml` wiring (build-scaffolding is P4-core/P99-owned per the dependency note) and gather final evidence snippets for the log.
+
+`project.yml` reverted cleanly (0 shared-surfaces references). Let me capture the exact gate commands' results — run the precise `xcodebuild ... build test` (iOS, framework now cached → fails fast at the same pre-existing compile blocker) and the whole-tree `swiftformat --lint` — for a faithful log.
+
+The swiftformat path doubled (I was inside `apps/apple`). Let me re-run it from the repo root (as the gate does) while the iOS build test runs.
+
+FORMAT_EXIT=1 from 1 pre-existing file (not in shared-surfaces — my files pass). Let me identify it and check the iOS build-test progress.
+
+Pre-existing format offender is `feature-views/ActionBuilder.Previews.swift:48` — not mine. The iOS build-test log hasn't flushed yet. Let me wait for it.
+
+The exact `build test` re-run is stuck/buffering (0 bytes after ~4 min, likely Gradle daemon contention) — and it would only reproduce the already-captured `IOS_EXIT=65`. Let me check the process and stop it; I have authoritative evidence from the completed `build` run.
+
+It's actively compiling (recent `.o` files) but xcodebuild is buffering output; it'll reproduce `IOS_EXIT=65`. Let me wait for it to finish and capture the exact exit.
+
+I have authoritative, completed evidence (`IOS_EXIT=65` from the full `build` run + `MAC_EXIT=65` + direct redeclaration proof). The exact `build test` re-run is fully output-buffered by xcodebuild and slow under shared-environment Gradle contention — it only reproduces the same 65. Let me stop it (it owns my unique log file) and finalize.
+
+No stray process remains (the buffered `build test` was terminated without flushing — its output was redundant). My authoritative evidence is the completed `build` run. Let me consolidate all evidence snippets, then write the log.
+
+The dir-path swiftlint invocation expands via the config's `included` list (hence the pre-existing offender). My surface's authoritative result comes from passing explicit **file** paths. Let me re-confirm that cleanly, then write the log.
+
+Confirmed: my 6 Swift files = **0 violations, 0 serious**. I now have all evidence. Let me write the gate log.
+
+Now let me append the precedent-consistent row to the macOS-pending ledger.
+
+Now let me verify the working-tree state is scoped correctly before committing.
+
+The working tree has **pre-existing** unrelated modifications (`AiUsageCard.*`, two `web/` files) that were present before I started — I must not touch those. My changes are the surface dir, the log, and the ledger row. `project.yml` is clean (reverted), `xcodeproj` git-ignored. Let me clean up temp artifacts and stage **only** my three paths.
+
+Staged set is exactly my surface (7 files) + log + the single ledger row — pre-existing modifications excluded. Let me commit with the prescribed message.
+
+Committed cleanly as `fd9c663c3` — exactly my 7 surface files + log + 1 ledger row (990 insertions), pre-existing changes untouched. Let me do a final verification of repo state and the log's terminal lines.
+
+Everything is clean and scoped: working tree shows only **pre-existing, unrelated** changes (which I correctly left untouched), the committed log ends with `EXIT=65` / `STATUS=BLOCKED`, and HEAD is my commit. Let me mark the plan complete.
+
+The task is complete. Here's my summary.
+

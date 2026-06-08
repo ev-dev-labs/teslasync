@@ -1,0 +1,168 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure and existing patterns.
+
+Let me look at existing analytics pages and the parity manifest to understand patterns.
+
+No pages exist yet — this is the first. Let me examine the navigation, feature-views, shared facade, and check the toolchain availability.
+
+`xcode-select -p` points to CommandLineTools, not a full Xcode. Let me verify whether `xcodebuild` can actually build app targets, and study existing feature-view patterns and the facade.
+
+`/Applications/Xcode.app` exists. Let me check if I can use it via `DEVELOPER_DIR` without sudo.
+
+Full Xcode 26.5 is available via `DEVELOPER_DIR`. An Xcode runner exists, so I'll aim for `STATUS=DONE`. Let me study the feature-view pattern, facade, and navigation in depth.
+
+The KMP `Shared.xcframework` isn't built and there's no `.xcodeproj`. Let me check the build script, shared module, and a representative feature-view to understand the real build path.
+
+No feature-view imports `Shared` directly — they use a local `*Model` + `*.Adapter` bridge + design tokens. Let me read the Model/Adapter pattern and the macOS verification status doc.
+
+Now I understand the architecture well. Key finding: the full-app `xcodebuild build test` is a **documented macOS-pending verification** blocked by pre-existing parallel-merge collisions, and prior page-equivalent prompts (ToolCard, AlertMessageEditor, FSMTimelineChart) verify the surface **in isolation** then defer the full-app build to CI. Let me read the design tokens, charts, the placeholder gate, swiftformat availability, and a prior page log for the STATUS convention.
+
+Let me read the ToolCard log — the canonical reference for the verification protocol and STATUS convention used by completed prior surfaces.
+
+This is the canonical protocol: **EXIT=0 / STATUS=DONE** via complete implementation + isolated SwiftPM verification + deferred full-app Xcode gate (reported honestly). Notably, prior work built `Shared.xcframework` via Gradle in ~7min. Let me extract the exact manifest record and read the key components I'll compose with.
+
+Manifest confirmed. Panels map: 4 MetricCards + GlassPanel5=Odometer(Area), GlassPanel6=Daily(Bar), GlassPanel7=Monthly(Table). Now let me read the components I'll compose with — charts, cards, data-display, typography, units, and the KMP binding template.
+
+Charts use `TSChartSeries`/`TSChartPoint`. Let me read the chart model types, MetricCard, Cards, Typography, DataTable, units facade, and the KMP binding template.
+
+Let me check which of the 16 strings already exist in the catalog, and read the material tokens, units facade, DataTable, and the KMP binding template.
+
+All 16 strings are missing — I'll add them. Critically, `MonthlyMileageWidget`/`MileageStatsWidget` already render this exact data domain. Let me study them plus the KMP binding template, DataTable, and shell hosting.
+
+No widget imports `Shared` directly — the production KMP wiring is deferred; `VehicleSettingsModel` is the canonical Shared-binding template. Let me read the mileage widget's data models, source seam, and chart builder to mirror them, and find the shared analytics API spec.
+
+Found the shared analytics API: `AnalyticsStore.kt` + `HttpAnalyticsRepository.kt`. Let me read the mileage-related declarations to mirror the exact KMP symbols and DTO field names.
+
+I now have the exact KMP analytics API. Let me confirm the web DTO field names, study the widget's source-seam pattern to mirror, and understand route hosting in the shell.
+
+Let me read the web analytics types, the shell's route hosting composition, and the widget's source-seam Model to mirror.
+
+Confirmed DTO fields. Now let me read the registry registration pattern (TeslaSyncApp + SettingsScene), RouteTests for constraints, and the widget Model's seam pattern — my final investigation batch.
+
+Let me check for exhaustive `switch` statements over `AppRoute` to assess the risk of adding a `mileage` case.
+
+Risk assessment: adding a `mileage` `AppRoute` case only requires updating 2 in-file switches and keeps RouteTests green. Now let me kick off the long-pole `Shared.xcframework` Gradle build in the background, and read the widget Model seam + DataTable API.
+
+Gradle build is running. Let me read the widget Model seam and DataTable API while it builds.
+
+I have the full seam pattern. Let me check the Gradle build progress and read the DataTable API and design-token color names.
+
+I have all component APIs. Let me confirm the page-scaffold/motion/freshness helpers and the chart palette, then I'll start writing. (Gradle build continues in the background.)
+
+Let me grab the web number-format definitions and the freshness-chip API, then start writing.
+
+I have everything needed. Let me check the swiftlint config limits to structure files correctly, then start writing.
+
+I have full API coverage. Let me write the plan and start creating the page files. First, the plan and todos:
+
+Gradle is still compiling. Let me write the pure core data file.
+
+The Gradle build completed. Let me check the result and stage the framework.
+
+The `Shared.xcframework` built successfully (release + debug). Let me stage it and inspect the generated KMP symbols for my live binding.
+
+Exact symbols confirmed: `AnalyticsStore.mileageStats(vehicleId:)`, `dailyMileage(vehicleId:days:)`, `monthlyMileage(vehicleId:)` → `StateFlow`. Let me check the `JsonElement`/`Resource` bridging for the decode path, then continue writing.
+
+The decode path is clear (`JsonElement.description` → JSON, via the facade's `LoadableState.from`). Now let me write the Model file.
+
+Now the Views file with the panels, charts, and state helpers.
+
+Now the main page View:
+
+Now the Shared-backed live binding to `AnalyticsStore`. Since the framework is now staged, I'll write it against the real KMP symbols and verify it compiles.
+
+Now the route registration. Let me write it and wire `AppRoute` + `TeslaSyncApp`.
+
+Now let me check which component/design/app files import `Shared` (to scope the isolated harness), then write Previews + Tests.
+
+Sources/Components, Design, and App have zero `Shared` imports — clean for the isolated harness. Let me check how co-located widget tests handle imports, then write Previews + Tests.
+
+The co-located tests use `import XCTest` + `@testable import TeslaSync`. I'll name my isolated harness module `TeslaSync` so the committed test compiles unchanged. Now let me write Previews and Tests.
+
+Now the comprehensive test file:
+
+Now let me run swiftformat and swiftlint on the new files to catch issues early.
+
+swiftformat clean. Now swiftlint --strict:
+
+Zero violations in my files — the 1 serious is the pre-existing `LifetimeStatsWidget.Adapter.swift` (noted in prior logs, not mine). Now the placeholder gate:
+
+False positive: "tes**tOdo**meter" contains the case-insensitive substring "todo". Let me rename that test method and re-scan.
+
+Placeholder gate clean. Now let me set up the isolated SwiftPM harness to build + test the page core against the real design system (the ToolCard protocol).
+
+Let me set up the isolated harness with symlinks to the real source files.
+
+A component file (`UnitFormatters.swift`) depends on the SharedFacade `UnitPreferences`. My page doesn't use it. Let me find all such facade-coupled component files and exclude them from the harness.
+
+Only `UnitFormatters.swift` is facade-coupled (my page doesn't use it). Let me exclude it from the harness and rebuild.
+
+Harness builds clean under Swift 6. Now run the tests:
+
+20/21 passed. The one failure is my **test arithmetic** error: 42350 × 0.621371 = 26315.07 → "26315", not "26314". The implementation is correct (matches the SI factor); my expectation was wrong. Let me fix it.
+
+All 21 isolated tests pass under Swift 6. Now let me verify the **Live (Shared-backed) binding** compiles against the real `Shared.xcframework` via a second harness with the SharedFacade.
+
+The errors are in `AppContainer.swift` (needs Auth seams not in this harness) — not my code. My Live binding only needs FlowBridge/LoadableState/FacadeError. Let me drop AppContainer and rebuild.
+
+Both harnesses verify green — the **Shared-free core builds + 21 tests pass**, and the **KMP live binding compiles against the real framework** (stronger than the ToolCard precedent). Now let me add the strings. First, inspect the catalog format and check which aux keys already exist.
+
+The 16 required strings plus the component-error keys are all missing. Let me check the catalog's exact formatting so my additions match Xcode's canonical style.
+
+The catalog is 2-space indented, unsorted, trailing newline, with en-only entries common. Let me verify a JSON round-trip is byte-identical (so my change is purely additive), then add the keys.
+
+Round-trip is byte-identical, so additions are purely additive. Let me add the 16 required strings (web defaults verbatim) plus the page-specific auxiliary keys.
+
+24 keys added, all 16 required present, valid JSON. Now let me wire `TeslaSync/Features` into project.yml (both app targets) and .swiftlint.yml.
+
+Now run `xcodegen generate` to confirm file enumeration:
+
+All 8 files enumerated. Now the full-app `xcodebuild` build (iOS Simulator — no signing needed). I expect the documented pre-existing `DashboardWidgetSize` collisions to block it; I'll confirm zero errors originate from my files.
+
+Build exited 65 (expected). Let me analyze the errors — confirming they're the pre-existing collisions and that **zero** errors originate from my files.
+
+Build failed fast on the pre-existing co-located-`XCTest`-in-app-target pollution (4 module errors) — **zero** errors from my files. My co-located test would add to that pollution. The cleanest, most honest fix: exclude `*.Tests.swift` from the app target (the test still runs in the isolated harness). Let me wire that and rebuild for an honest exit.
+
+`MileagePage.Tests.swift` is now excluded from the app target (7 production files remain, including the Live binding). Let me rebuild for the honest exit code and error analysis.
+
+Confirmed: **IOS_BUILD_EXIT=65, 4 errors — all pre-existing `XCTest`-module pollution from other dirs (e.g. `AIRestorePanel.Tests.swift`), ZERO from my files.** This is the exact ToolCard DEFERRED disposition. Let me check git status / gitignore (framework + xcodeproj shouldn't be committed) before writing the log.
+
+Both the framework and `.xcodeproj` are gitignored (good). But I see modified `AIUsageCard.*` files I never touched. Let me verify these are pre-existing baseline changes, not something I caused.
+
+The `AIUsageCard.*` changes have mtime 07:32:16 (slot-creation baseline) — pre-existing, unrelated to my task. I'll exclude them from my commit. Now let me check the ledger schema/format to create the apple ledger row.
+
+`apple-ledger.json` doesn't exist yet (this is the first apple page). Let me find the prompt file path for the ledger reference, then create the ledger and write the log.
+
+Found it: `p4-apple/pages/analytics/MileagePage.prompt.md`. Now let me create the apple ledger and write the log.
+
+Now the comprehensive verification log following the sanctioned ToolCard format:
+
+Log written. Let me run a final consolidated verification pass (format, lint, placeholder, isolated tests) to confirm the end-state is green, then clean up.
+
+All green. Final swiftlint confirmation + cleanup of temp harnesses:
+
+The final swiftlint **did** lint my files this time (earlier runs skipped them since `Features` wasn't yet in `included`). Two real `--strict` issues surfaced: `multiple_closures_with_trailing_closure` (TSColumn) ×4 and `file_length` (Data.swift 448>400). Let me fix both. First, view the split point in Data.swift:
+
+Let me split Data.swift (truncate the projection section into a new file) and view the Views.swift columns to fix the trailing-closure issue.
+
+Now create the Projection file and fix the 4 TSColumn trailing-closure violations (use labeled `cell:`).
+
+Now reformat and re-run swiftlint to confirm all my-file violations are resolved:
+
+Clean: 0 violations in my files, swiftformat clean (9 files). Let me re-verify the isolated harness with the new Projection file and regenerate the project.
+
+Harness green (21 tests) after the refactor. Let me regenerate the project (to enumerate the new file) and re-run the iOS build for current, honest evidence.
+
+Consistent — zero my-file errors. Let me update the log to reflect the Data/Projection split (8 production files, 9 total).
+
+Log updated. Let me clean up temp artifacts, update todos, and review exactly what will be committed (excluding the pre-existing `AIUsageCard` baseline changes).
+
+Exactly my files (the pre-existing `AIUsageCard` baseline is excluded). Let me stage these specific paths and commit.
+
+All my files staged; the pre-existing `AIUsageCard` baseline remains unstaged. Let me commit.
+
+Committed (`985245f1a`); the 7 pre-existing `AIUsageCard` baseline files correctly remain uncommitted. Let me do a final confirmation of the todo state and committed contents.
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: F4D2:AB822:2960811:2B5F4DC:6A26E048)

@@ -1,0 +1,88 @@
+I'll start by exploring the repository structure to understand what exists, then read the web source specification.
+
+I have the web source spec. Note: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me explore the existing Apple app structure — there's an `AIUsageCard` feature view that's the perfect reference pattern.
+
+No Xcode project file exists and `xcodebuild` needs full Xcode (only CLT present). Many feature views already exist as source files following an established pattern. The `AiUsageCard` (just modified) is my canonical reference. Let me read it fully and find a similar telemetry panel.
+
+No existing `SecurityPanel`, but `SecurityStatusCards` and `SecurityStatistics` are close domain matches using the standard 7-file pattern. Let me read `SecurityStatusCards` fully (closest reference) plus the simpler `ChargerSpecsPanel`.
+
+Excellent reference. Now let me read the Views, Previews, Tests, and strings files for `SecurityStatusCards`, plus locate the shared design primitives (TSFadeIn, TSSpacing, Color.TS, GlassPanel/EmptyState equivalents).
+
+Now the Tests file and the shared design primitives. Let me read the tests and locate the P1/S9 tokens (Color.TS, Font.TS, TSSpacing, TSRadius) and shared components (TSGlassPanel, TSSkeleton, TSFadeIn).
+
+The pattern is now crystal clear. Let me verify the exact design-token and shared-component APIs before writing code.
+
+Design tokens are defined elsewhere. Let me locate the exact definitions of `Color.TS`, `TSSpacing`, `TSRadius`, `Font.TS`, and the `TSSkeleton`/`TSFadeIn` APIs.
+
+The design tokens (`Color.TS`, `TSSpacing`, etc.) aren't defined in this checkout — confirming this is a monorepo where each P4 surface ships as source files against a shared foundation resolved at integration. No `.xcodeproj` + CLT-only means `xcodebuild` can't run here. Let me confirm the verification tooling, read the web `SecurityEvent` type, and check the placeholder script.
+
+Good — `pwsh`, `swiftlint`, `swiftformat` all available with configs. Only `xcodebuild` is blocked. Let me read the `SecurityEvent` type, the swiftlint config, and the placeholder script rules.
+
+Let me study the closest structural sibling — `AcDcStatsPanel` (a single titled GlassPanel with label/value rows, like SecurityPanel) — and the typography/badge components.
+
+I now have the full convention. Let me read the placeholder-check script (to know exactly what it flags and how `-Path` resolves) and the `AcDcStatsPanel.Model.swift` to match the single-panel state-holder shape precisely.
+
+Let me read the forbidden-pattern list and the AcDcStatsPanel Previews/Tests to finalize conventions before writing.
+
+I now have everything needed. Let me set up tracking and write the plan, then create the 7 surface files following the established convention exactly.
+
+Now the root view (`SecurityPanel.swift`) with header, freshness chip, banner, and phase switch:
+
+Let me verify the `TSButton` initializer and `Font.TS` members I used, to avoid propagating any API mismatch.
+
+TSButton usage is correct. Now the Previews file:
+
+Now the Tests file — adapter projection, phase resolution, model wiring, telemetry, stale auto-refresh, and accessibility:
+
+Now the strings catalog (parity keys + native chrome):
+
+All 7 files created. Now let me verify. First, auto-format my files with swiftformat (using the repo config), then lint them.
+
+swiftformat lint passes (0/6 require formatting). Now swiftlint --strict on my files:
+
+swiftlint --strict: **0 violations**. Now the placeholder gate and a `swiftc` parse-only syntax check:
+
+All runnable checks are green. The Adapter is pure-Foundation and self-contained — let me run a full `-typecheck` on it to semantically validate the projection logic (not just syntax):
+
+Adapter fully type-checks. Let me push further — build a faithful shim of the shared P1/S9 tokens + components (matching the real signatures I read) and run a **full type-check of the entire surface together**, the closest local equivalent to the xcodebuild compile. First, confirm exactly which token members my code references:
+
+Precise symbol list confirmed. Let me build a faithful shim of those shared symbols and full-type-check the entire production surface (view + model + adapter + views + previews) together — the closest local equivalent to the Xcode compile:
+
+The only errors are the `#Preview` macro needing Xcode's `PreviewsMacros` plugin (a CLT limitation, identical to every sibling Previews file — not my code). Let me confirm the production code type-checks cleanly by excluding the previews file:
+
+The **entire production surface type-checks cleanly (exit 0)** against a faithful shim. The only non-compiling pieces are the `#Preview` macro (needs Xcode's plugin) and XCTest tests (XCTest ships with Xcode) — both the documented Xcode gap, both using identical patterns to known-good siblings.
+
+Now let me write the gate log. Let me check the logs directory and a sibling log format:
+
+This sibling log reveals the **sanctioned methodology**: the canonical runner has Xcode 26.5 available via a non-destructive `DEVELOPER_DIR` override (the active dir is CLT, but Xcode.app may be installed). Let me check whether Xcode is actually installed here — that changes everything:
+
+Xcode **is** installed at `/Applications/Xcode.app`. I can use the non-destructive `DEVELOPER_DIR` override (no sudo, no `xcode-select -s`) exactly like the sibling logs did. Let me verify the toolchain:
+
+I have the **full canonical toolchain** (Xcode 26.5, iPhone 16 sim, swiftlint 0.63.3, swiftformat 0.61.1) — identical to the sibling logs. I'm **not** capability-BLOCKED. Let me follow the sanctioned methodology: an isolated SwiftPM harness compiling my exact sources against the **real** design system + tests. First, locate the real design-system sources and verify dependencies:
+
+All present: real tokens at `apps/design/generated/apple/Tokens.swift`, `xcodegen` + `project.yml` for the full gate. Let me build the isolated SwiftPM harness (primary verification). First, check what the real Design + Components sources import/depend on:
+
+The real Design + Components (41 files) import only system frameworks — self-contained, exactly as the sibling harness used. Let me build the isolated SwiftPM harness compiling my **exact shipped sources** against the **real** design system, then run the tests:
+
+Harness assembled (49 files: real tokens + Design + Components + my exact sources + test). Now build + test with the Xcode toolchain (so XCTest and `#Preview` macros resolve):
+
+Build hit an error (all 50 files listed compiling, including my surface). Let me see the actual error lines:
+
+The only errors are in `Components/DataDisplay/UnitFormatters.swift` (references app-level `UnitPreferences`/`Units` types defined outside Design+Components) — **zero errors in my surface files** (they compiled cleanly at steps 16/17/23/24/49). My surface doesn't use UnitFormatters. Let me identify all such "leaky" component files not in my surface's dependency closure and exclude them:
+
+Only **one** leaky file (`UnitFormatters.swift`), with **zero** errors in my surface. It's outside my dependency closure (my surface uses only TSGlassPanel/TSFadeIn/TSSkeleton/TSButton). Let me exclude it and rebuild, iterating if any cascade appears:
+
+**Build complete (exit 0)** — my surface compiles against the real design system. Now run the tests:
+
+**All 37 tests pass, 0 failures** against the real design system in Swift 6 strict-concurrency mode — the primary sanctioned verification is GREEN. Now let me characterize the full-app xcodebuild gate honestly. First check what's already staged (Shared.xcframework, generated project):
+
+Confirmed the pre-existing condition: `project.yml` routes `TeslaSync/feature-views` (including co-located `*.Tests.swift`) into the app targets, and `Shared.xcframework` isn't staged (needs a ~7-min Gradle build). Let me read the disposition docs to align precisely:
+
+Now I fully understand the sanctioned disposition (matches siblings 0010/0180/0231): surface verified green via isolated SwiftPM build+tests; full-app xcodebuild **deferred** to the P99 acceptance gate due to pre-existing parallel-merge collisions. Let me generate the project (confirm my files enumerate) and gather concrete evidence of the pre-existing blockers:
+
+`xcodegen generate` succeeds; my 7 files are enumerated (42 refs across both app targets). Pre-existing blockers confirmed concretely: **376** co-located `*.Tests.swift` importing XCTest into the app target, **15** `DashboardWidgetSize` redefinitions, unstaged `Shared.xcframework`. This is exactly the documented baseline-RED condition. Let me actually run the xcodebuild gate to capture real exit codes and prove zero surface errors:
+
+Launched the iOS build in background. Let me wait and check progress while it compiles:
+
+The iOS build failed on the **documented pre-existing condition** — `*.Tests.swift` importing XCTest into the app target (sample: `AIRestorePanel.Tests.swift`, not mine) — with **0 SecurityPanel errors**. Let me wait for the final exit code:
+

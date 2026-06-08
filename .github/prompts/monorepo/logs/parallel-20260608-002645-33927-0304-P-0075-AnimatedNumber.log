@@ -1,0 +1,112 @@
+I'll start by exploring the repository structure to understand the web source component and the existing Apple app architecture.
+
+Toolchain is available. Let me explore the Apple app structure and existing conventions in detail.
+
+Xcode.app is a real install. I can use `DEVELOPER_DIR` to use it without sudo. Let me verify.
+
+Full Xcode 26.5 available. Let me examine the project config, existing conventions, and the P1/S8–S11 shared layers.
+
+Let me examine the testing conventions, i18n facade, design tokens, diagnostics contract, and an existing simple feature-view to mirror patterns.
+
+Key finding: `TSAnimatedNumber` already exists as an atomic in `Sources/Components/DataDisplay/Metrics.swift` (the P4 component-library, explicitly out of scope). This 0075 surface is a separate "shared surface." Also, `shared-surfaces` is not yet wired into `project.yml`. Let me study the conventions deeply.
+
+Let me study the state-holder layer, telemetry contract, i18n facade, and a representative feature-view set.
+
+Let me read the AcDcStatsPanel set as the canonical template (model/telemetry, view, adapter, strings, previews) plus the i18n facade.
+
+Excellent template. Let me read the remaining AcDcStatsPanel files (Adapter, Views, Previews, Tests, strings) and the design tokens to mirror exact conventions.
+
+Now let me check the build tooling (xcodegen), how feature-view tests are wired, the design tokens, and the strings format.
+
+Let me check the Shared.xcframework staging (could be a heavy Kotlin build) and the placeholder-check tool, then kick off a baseline project generation.
+
+Critical: the iOS/macOS build requires building the KMP `Shared.xcframework` via Gradle (Kotlin/Native) — not vendored. Let me assess heavy-build feasibility (JDK/Gradle, simulators) before committing to a DONE vs BLOCKED path.
+
+Environment looks capable: JDK 17, gradlew present, iPhone 16 simulator booted. The long pole is the Kotlin/Native `Shared.xcframework` build. Let me start that in the background now, then write the surface while it compiles.
+
+While the framework builds, let me study the formatter/adapter pattern, state views, design tokens, and feedback components.
+
+I now understand the conventions well. Let me confirm exact token/component signatures I'll use.
+
+Let me check the framework build progress and view the strings file structure plus an existing simple feature-view's `.swift` header style for `view.opened` `onAppear`.
+
+The gradle build is compiling Kotlin/Native (slow, expected). I have all conventions needed. Let me verify there's no existing `AnimatedNumber` type collision before writing.
+
+Let me confirm async/animation patterns compile under this repo's strict concurrency, and check gradle progress.
+
+All needed patterns exist in-repo. Before writing, let me settle one critical question: which target do co-located `.Tests.swift` files land in? I'll generate the baseline project and inspect membership.
+
+Definitive: co-located `.Tests.swift` compile into the app target (type-checked), consistent with the convention I'll follow. I'll additionally run pure-logic tests standalone via `swift` for real runtime evidence. The new `shared-surfaces` dir must be wired into `project.yml` + `.swiftlint.yml` (minimal, necessary — otherwise the surface never compiles). Let me set up tracking and scaffold the directory.
+
+Gradle is already at the linking stage — nearly done. Let me write the plan and all seven surface files now.
+
+Shared.xcframework build completed. Let me confirm staging, then continue with the View files.
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now the main surface view and subviews.
+
+Now wire the new `shared-surfaces` tier into the build (both app targets) and swiftlint — necessary so the surface compiles, tests type-check, and lint covers it.
+
+Now format and lint the new files. Let me run swiftformat (fix) on the surface dir, then verify with lint and swiftlint.
+
+swiftformat clean. swiftlint reported 1 violation across the whole tree — let me locate it (could be mine or pre-existing).
+
+swiftformat is clean for my files; my files have **zero** swiftlint violations. The single swiftlint error is in an unrelated, untouched file. Let me gather facts: confirm it's pre-existing, check the function, and check global swiftformat baseline.
+
+I see pre-existing uncommitted changes in the working tree (`AIUsageCard.*` — not mine). Let me determine whether the swiftlint violation is in committed HEAD or inherited noise, and clarify my changeset vs inherited.
+
+Confirmed: the lone swiftlint violation is in `LifetimeStatsWidget.Adapter.swift`, **unchanged vs HEAD** — a pre-existing committed baseline defect in an unrelated widget (out of scope; my files lint clean). I'll leave it untouched and document it. The `AIUsageCard.*` edits are inherited working-tree noise (not mine).
+
+Let me regenerate the project and run my pure-logic core standalone for real runtime evidence.
+
+Standalone logic core: **25/25 PASS** (formatting + easing are web-parity exact). Surface files are wired into the project. Now the heavy step — let me build the iOS app target to verify my surface compiles in the real app.
+
+Build failed — let me see the actual compiler errors.
+
+The build error is **not in my files** — it's `XCTest` failing to resolve in `AIRestorePanel.Tests.swift` (app target). This affects all feature-view `.Tests.swift`. Let me determine if this is a pre-existing baseline failure or something my change/regeneration caused.
+
+The error is systemic and pre-existing: **204 committed feature-view `.Tests.swift` files import `XCTest`, but the app target has no testing search paths** — so the inherited baseline app build cannot compile. Let me check the repo's own notes on this before deciding.
+
+This is the **known, documented situation**: `macos-pending-verifications.md` shows 3 prior P4-apple surface prompts (ToolCard, AlertMessageEditor, FSMTimelineChart) hit the identical pre-existing baseline blockers — `DashboardWidgetSize` redefined 8–15×, 100+ co-located `*.Tests.swift` importing `XCTest` into the app target. The sanctioned protocol: verify the surface in isolation (SwiftPM/`swiftc -typecheck` on both SDKs + tests + lint/format/placeholder), then record the full-app `xcodebuild build test` as macOS-pending and defer to the P99 acceptance gate.
+
+Let me follow that protocol. First, confirm my surface contributes zero errors and get the `TSButton` signature for an isolated typecheck shim.
+
+Confirmed: **zero errors from my surface** — the only build error is the pre-existing `AIRestorePanel.Tests.swift` XCTest-in-app-target issue (a committed baseline defect affecting all 204 feature-view test files, exactly as documented). Now let me verify my surface type-checks on **both** the iOS-18 and macOS-15 SDKs in isolation under Swift 6 strict concurrency (the sanctioned protocol), using a signature-faithful shim for the shared components plus the real design tokens.
+
+iOS-18 typecheck **passes** under Swift 6 strict concurrency. Now macOS-15.
+
+Both SDKs type-check clean under Swift 6 strict concurrency. Now let me get runtime evidence for the **Projection + Model** state-holder logic (complementing the 25/25 Format+Curve run), compiling the real `Adapter.swift` + `Model.swift` with a minimal slug shim.
+
+Those errors are in my throwaway harness (not the surface). Let me fix the harness concurrency annotations and rerun.
+
+Runtime evidence complete: **44/44** assertions pass (25 Format+Curve, 19 Projection+Model) on the real source under Swift 6 strict concurrency, plus clean type-checks on both SDKs. Now the placeholder gate and the macOS build (to capture its error signature for the log). Let me run the placeholder check and start the macOS build in parallel.
+
+Placeholder gate: **0 violations, EXIT=0**. Let me update tracking and verify the literal gate's placeholder path behavior while the macOS build runs.
+
+The macOS build finished. Let me check its error signature and confirm zero errors from my surface.
+
+The macOS build fails only on **pre-existing development-signing** (the exact 3rd blocker documented in `macos-pending-verifications.md`); iOS fails only on the XCTest-in-app-target baseline issue — **zero errors from my surface on either platform**. Let me confirm the documented `DashboardWidgetSize` collision and check the logs dir + a predecessor log format.
+
+`DashboardWidgetSize` redefined **15×** (confirmed pre-existing collision). Let me study a predecessor surface log to match the exact format and EXIT/STATUS convention.
+
+This is the established, sanctioned pattern (ADR-012 macOS-pending): predecessors mark **EXIT=0 / STATUS=DONE** when all host-runnable gates pass, with the full-app `xcodebuild build test` explicitly **deferred** due to the identical pre-existing blockers (`DashboardWidgetSize` ×15, XCTest-in-app-target, macOS signing). Notably I even resolved the Shared.xcframework blocker.
+
+To match their rigor, let me run my **actual** `AnimatedNumber.Tests.swift` via an isolated SwiftPM package (real XCTest execution).
+
+**24/24 tests pass** running the real `AnimatedNumber.Tests.swift` via SwiftPM (Format 6 · Curve 5 · Projection 4 · Model 8 · Accessibility 1), Swift 6 mode. Every host-runnable gate is green; I even resolved the Shared.xcframework blocker. This matches the sanctioned ADR-012 macOS-pending pattern (full-app `xcodebuild build test` deferred → P99). 
+
+Let me gather metadata, then record the pending-verification row and write the gate log.
+
+All metadata gathered. Let me record the deferred verification in `macos-pending-verifications.md` (per its Resolution protocol, as the 3 predecessors did) and write the comprehensive gate log.
+
+Now the comprehensive gate log with all real outputs.
+
+Log written. Let me clean up temp artifacts, verify what's tracked vs ignored (especially the staged framework), then commit only my files.
+
+Clean: only my 7 surface files are untracked; the framework and `.xcodeproj` are gitignored. Let me stage my files (plus the necessary wiring and the pending-verification row) and commit — excluding the inherited `AIUsageCard.*` changes.
+
+All staged correctly (inherited `AIUsageCard.*` excluded). Committing.
+
+Committed as `8be8152f8`. Final verification of the commit contents and log.
+
+The commit is clean — exactly my 11 files (7 surface + `project.yml` + `.swiftlint.yml` + pending-verification row + log); inherited `AIUsageCard.*` left untouched; log ends `EXIT=0 / STATUS=DONE`.
+

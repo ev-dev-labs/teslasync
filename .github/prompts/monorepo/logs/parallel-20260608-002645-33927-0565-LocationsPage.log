@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure to understand the existing state of both the web source and the Apple app.
+
+Now let me explore the Apple app structure to understand existing conventions and components.
+
+xcodebuild, swiftlint, and swift are all available. Let me explore the Apple app's `TeslaSync` structure and existing features.
+
+This is a large monorepo parity effort. Let me understand the build state, components, shared facade, and navigation in parallel.
+
+Critical finding: `Frameworks/` has only `.gitkeep` — no `Shared.xcframework`. Let me check how the build depends on it and whether it can be produced.
+
+The build needs a KMP `Shared.xcframework` via Gradle. Let me assess feasibility and study conventions in parallel.
+
+Java 17, Gradle wrapper, and xcodegen are present. Let me check the KMP core build config and the parity manifest/ledger format, then kick off the long xcframework build in the background.
+
+Good news: Konan toolchain (`~/.konan`) and Gradle caches exist from prior builds, so the xcframework build is feasible. Let me kick it off in the background now while I study conventions.
+
+While the build runs, let me study conventions. Let me find a representative chart+list feature-view and read the core navigation, facade, and component files.
+
+`ChargerTypeChart` is an ideal reference (bar chart + model + adapter + views + tests). Let me read its full set plus the design tokens.
+
+Let me read these reference files individually with the view tool for clarity.
+
+Rich convention established. Let me examine the project.yml target/test wiring, design tokens, and how `.Tests.swift` files are handled.
+
+The xcframework build finished fast (likely cached). Let me check its result and reconcile the test-target wiring puzzle.
+
+The xcframework build **FAILED**. This is decisive for the gate. Let me capture the full failure reason.
+
+The failure is `xcrun xcodebuild -version` failing — an Xcode toolchain configuration issue. Let me diagnose it; this may be fixable.
+
+Found it: `xcode-select` points to CommandLineTools, but full `Xcode.app` exists. I can override with `DEVELOPER_DIR` (no sudo needed). Let me verify.
+
+With `DEVELOPER_DIR` set, Xcode 26.5 + simulators are available — the gate **can** run. Let me rebuild the xcframework (now that xcrun works) in the background and establish a build baseline.
+
+While the xcframework builds, let me study navigation, design tokens, and key components.
+
+Now let me read the app shell, route parser, and the key components (cards, charts, data-display, feedback, forms) I'll compose with.
+
+Let me find the app entry point and how the route-host registry is populated, plus check the i18n/string-catalog setup.
+
+Found the seam: `TeslaSyncApp.swift` injects the registry via `SettingsRouteRegistration.registry(...)`. Let me read both to follow the established registration pattern.
+
+I now understand the navigation seam (`SettingsRouteRegistration` pattern + `RouteHostRegistry`). Let me check the xcframework build and inventory the component library I'll compose with.
+
+Build still running. Let me read the core components I'll use: bar charts, chart container, metrics, states, inputs, filters, and motion.
+
+Components are rich. Let me read the feedback states, forms inputs/filters, motion, typography, cards, and the units facade — and check the build status.
+
+Let me check the build and read typography, cards, motion, skeletons, filters, unit formatters, and the units facade.
+
+Let me read motion, skeletons, filters, unit formatters, the units facade, and locate key helpers (TSFadeIn, TSIconBox, TSTone, TSChartPalette, pagination, DataFreshness).
+
+Let me read badges/icon-box, pagination, the units facade, and the data-display formatters + freshness indicator.
+
+Let me check the build progress and find how pages obtain unit preferences (the `useUnits()` equivalent) and how feature-views format durations.
+
+Let me read the unit formatters, app container defaults, and confirm the chart palette + loadable state, while the build continues.
+
+Let me look at how a feature-view renders a categorical bar chart (the closest precedent), confirm the chart palette, and check the build.
+
+Direct `import Charts` in chart files is an established pattern (ChargerTypeChart uses it). Let me locate `TSChartPalette` and check the build with a longer wait.
+
+`TSChartPalette` is in `TSDesign.swift`. The xcframework link step is still running (expected for cold Kotlin/Native). Let me read the design helpers and the existing locations widget model to align types, while the build continues.
+
+I now have the canonical model/source/strings/a11y template (`LocationFavoritesWidget.Model`). Let me inspect the string catalog format and the placeholder-scan rules, then check the build.
+
+Let me read the placeholder patterns, confirm `pwsh` availability, and check the build (now running several minutes).
+
+The xcframework built successfully (10m30s) and is staged. `pwsh` is available, so the full gate can run. Let me generate the Xcode project and start a baseline build to confirm the project compiles before my changes.
+
+Project generated. Let me resolve the test-wiring question by checking whether `.Tests.swift`/`.Previews.swift` files are compiled into the app target, then start a baseline build.
+
+`.Tests.swift` files are referenced in the pbxproj. I need ground truth — let me start a baseline macOS build (xcframework already staged, using `-target` to skip the 10-min preaction) and watch the first errors.
+
+While the baseline builds, let me record a plan and begin drafting. First the plan file:
+
+Baseline build finished. Let me confirm the result and resolve the test-file question.
+
+My `-target` + `-derivedDataPath` combo was invalid. Let me use `-scheme` (the gate's actual invocation) — the gradle preAction should now be fast since the xcframework is cached/staged.
+
+Baseline build (with preAction) running. Let me study a feature-view's Views and Tests files to mirror their exact style while I wait.
+
+I have full command of the conventions now. Let me check the baseline build progress.
+
+Baseline build is **red** due to pre-existing `.Tests.swift` files in `feature-views/` importing XCTest in the app target. The gradle preAction ran fast (~cached). Let me check how prior feature-view prompts handled their gate/status.
+
+This matches a clear, established precedent: all 234 prior P4 prompts shipped complete surfaces with **scoped-green** verification and **deferred** the whole-tree `xcodebuild build/test` (blocked by pre-existing sibling `.Tests.swift`/widget breakage in forbidden files). Let me empirically test whether excluding the co-located test files yields a green app build in this slot.
+
+Let me check the exclude-tests build result, then begin implementing.
+
+There are also `*.ModelTests.swift`/`*.AdapterTests.swift` files. Let me broaden the exclude glob to `*Tests.swift` and rebuild to find any non-test pre-existing breakage.
+
+While that builds, let me create the feature directory and write the model (pure logic + state seam), following the canonical pattern.
+
+Let me read the SwiftLint/SwiftFormat config before writing (to match line-length and rules), and check the build.
+
+SwiftLint runs `--strict` (warnings→errors): line ≤120, identifiers ≥2 chars, file ≤400 lines. I'll split accordingly and keep the projection Foundation-only so I can execute it standalone. Let me check the build, then write the pure projection.
+
+Confirmed: even excluding all test files, the whole-tree build fails on **pre-existing** duplicate-type breakage (`TelemetryErrorsModel`/`TelemetryErrorRow` ambiguities) in dashboard-widgets/feature-views — files outside my scope. This exactly matches the documented precedent (234 prompts: scoped-green + deferred whole-tree gate). 
+
+I'll ship a complete surface, verify it via a **scoped compile** (isolated module excluding the broken siblings) + executed logic harness + scoped lint, and honestly document the whole-tree deferral. Let me start with the Foundation-only projection.
+
+Now the strings catalog references (all 28 web keys) + accessibility helpers:
+
+Now the model — the `@Observable` state holder, source seam, telemetry, following the canonical `LocationFavoritesModel` pattern:
+
+Now the two Swift Charts horizontal bar charts (direct `import Charts`, the established pattern), token-styled with selection + accessibility:
+
+I need to standardize the string API so it works with both SwiftUI `Text` and composed fragments. Let me rewrite the strings file to use String keys + helpers, and update the charts accordingly.
+
+The file exists from my first version. Let me replace it cleanly.
+
+Now update the charts file to use the new string API:
+
+Now the presentational subviews — header, metric tiles, summary grid, and chart panels:
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: CE7C:1C74BD:B4362C:BDE125:6A26E84C)

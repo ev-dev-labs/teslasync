@@ -1,0 +1,106 @@
+I'll start by exploring the task requirements, the web source, and the Apple app structure. Let me first check the environment capabilities and read key files.
+
+Critical finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. However `swift`, `swiftlint`, `swiftformat` are available. Let me explore the Apple app structure and the rest of the web source before deciding on approach.
+
+275 Swift files exist. Let me examine the existing dashboard-widgets (predecessors), the shared infrastructure, and the build setup.
+
+There's a predecessor `DigitalTwinWidget` in my exact target directory — that's the canonical pattern to follow. Let me study it thoroughly along with the build config.
+
+This is a rich template. The predecessor `DigitalTwinWidget` (0036) defines shared registry types locally. I must check for symbol collisions and understand the target structure. Let me search for where shared types are defined and read the build config + supporting files.
+
+Important: `project.yml` targets only include `Sources/`, `Localization/`, and design tokens — NOT `TeslaSync/dashboard-widgets/`. And `xcodebuild` needs full Xcode (only CLT present). Let me confirm the Xcode/simulator situation and read the remaining predecessor files and supporting infra in parallel.
+
+Xcode.app EXISTS at `/Applications/Xcode.app` but `xcode-select` points to CLT. I may be able to use it via `DEVELOPER_DIR`. Let me test that and read the remaining predecessor test file + tooling.
+
+Major discovery: **the full gate IS runnable** — Xcode 26.5 + iOS 26.5 simulator + iPhone 16 (booted) are available via `DEVELOPER_DIR`. Now I need to understand the integration model and data shapes. Let me read the predecessor test file, the alternative BatteryCells pattern, design tokens, tooling, and the framework build situation.
+
+Two `DashboardWidgetSize` definitions exist — one in compiled `Sources/` (BatteryCells), one in staged `TeslaSync/dashboard-widgets/` (DigitalTwin, not in project.yml). The predecessor log will tell me the real expectation. Let me check predecessor logs, the framework situation, and the build script.
+
+The build needs a KMP `Shared.xcframework` built via Gradle (Kotlin/Native) — currently absent. The predecessor logs are the key evidence for how the gate was actually run and concluded. Let me read both fully.
+
+This is the canonical predecessor disposition: **code-complete + host-validated gates, with the Xcode app build/test DEFERRED** (surface not yet registered in project.yml → building proves nothing about it; Shared.xcframework unstaged; macOS signing absent) — ending `EXIT=0 STATUS=DONE`. I'll follow 0036 exactly. Now let me gather the data shapes, web registry, native chart components, and design tokens.
+
+Registry confirmed: `motor-history`, default 2×4, min 2×4, max 4×40. Now let me read the data type, temp conversion, native chart components, and design tokens in parallel.
+
+Native chart components use Swift Charts with `Color.TS`/`TSChartPalette` tokens. MotorHistory needs a custom dual-axis chart with a danger band, so I'll compose `Chart {}` directly reusing those tokens. Let me read the design tokens, palette, temp conversion, and the web shell/shared composition.
+
+All design tokens are clear, and the web colors map cleanly to semantic `Color.TS` tokens (torque→chartSeriesRegen/cyan, stator→chartSeriesEnergy/orange, danger→statusDanger/red, lateralG→chartSeriesPower/purple, longG→chartSeriesBattery/green). Let me read the temp conversion, the web shell/shared composition, and the native skeleton/feedback/badge primitives.
+
+Let me read the `WidgetChartSummary` composition and the native feedback/skeleton/badge/design primitives I'll compose with.
+
+I have nearly everything. Let me confirm the native temperature-unit type (to avoid drift) and the Feedback primitives, and verify no MotorHistory files exist yet.
+
+Native `TSEmptyState` and `TSQueryError` exist — the direct counterparts of the web `EmptyState`/`QueryError`. I'll use those for better parity. And `MeasurementSystem` is the canonical native unit-pref enum (gives `temperatureLabel`). Let me read their exact APIs.
+
+I now have a complete picture. The canonical disposition (from predecessor 0036) is **code-complete + host-validated gates, with the Xcode app build/test DEFERRED** (surface not yet registered in `project.yml`, `Shared.xcframework` unstaged, macOS signing absent) → `EXIT=0 STATUS=DONE`. Swift Charts/SwiftUI capability IS present, so the surface must be authored for real and host-validated.
+
+Let me set up a plan and todos, then build the implementation.
+
+Now creating the implementation files. Starting with the pure Foundation-only projection (the testable adapter):
+
+Now the Model file (state-holder seam, observable model, registry, i18n facade, telemetry, a11y):
+
+Now the Swift Charts composition (dual-axis torque/stator with danger band and g-force overlays):
+
+Now the main surface view (shell, header, all states, compact/wide):
+
+Now the previews and strings catalog:
+
+Now the test suite (adapter, model phases, registry, scale, a11y, telemetry):
+
+All 7 files created. Let me update todos and run the gates — starting with swiftformat (auto-format my files to the repo config), then verify.
+
+swiftformat reformatted my files. Now let me run the exact format-lint gate and swiftlint on the surface files in parallel.
+
+SwiftLint linted the configured 262-file `included:` set (my staging dir isn't in `included:`), so I must lint my files explicitly to prove they're clean. Let me use a temp config mirroring the repo rules without the `included:` restriction.
+
+SwiftLint passes (0 violations, 6 files). Now the key validation — the host `swiftc -typecheck` of the surface against the real component library. Let me assemble the closure and check which library files are Shared-free.
+
+Good — none import Shared. Let me run the host `swiftc -typecheck` against the macOS 15 SDK with the real component-library closure.
+
+Just need `@AxisContentBuilder` on the multi-statement axis property. Let me fix:
+
+**TYPECHECK_EXIT=0** — the surface compiles cleanly against the real component library + Swift Charts (Swift 6, macOS 15 SDK). Now the executed adapter harness to prove the runtime logic:
+
+Swift 6 top-level actor isolation — let me mark the mutating helpers `@MainActor`:
+
+**27/27 adapter checks passed** (executed binary). Now the placeholder gate. Let me check `pwsh` availability and run the check (plus a manual scan):
+
+pwsh available, manual scan clean. Let me run the actual `check-placeholders.ps1` — both the literal prompt path and a real directory scan:
+
+Placeholder gate clean (COUNT=0). All standard host gates pass. Now, to **exceed** the predecessor's validation, let me actually compile and *run my XCTest suite* via a throwaway SwiftPM package in `/tmp` (the surface + real component-library closure as module `TeslaSync`). This executes the full test suite, not just the adapter harness.
+
+**All 29 XCTest cases executed green** via SwiftPM (13 adapter + 8 model + 2 registry + 3 scale + 3 a11y) — this exceeds the predecessor's harness-only validation. Now let me capture honest evidence for the three Xcode-app-build deferral reasons.
+
+All three deferral reasons verified with real commands. I edited Chart.swift after formatting, so let me re-verify format + lint are still green, and gather line counts for the log.
+
+All green. Let me capture git context and write the comprehensive, honest gate log.
+
+Now writing the comprehensive gate log with all real exit codes:
+
+Log written. Let me clean up temp artifacts, then stage and commit only the allowed files.
+
+Only my 7 surface files + the log are staged (the two unstaged `web/` files are pre-existing modifications, not mine — I'll leave them untouched). Committing:
+
+Committed cleanly as `c46171da`, scoped to only the 7 surface files + the log. Let me mark the final todo done and do a last confirmation that the committed surface still passes the key gates.
+
+All gates green on the committed tree. Task complete.
+
+Merge made by the 'ort' strategy.
+ ...e-dashboard-widgets-0066-MotorHistoryWidget.log | 213 +++++++++++++
+ .../MotorHistoryWidget.Chart.swift                 | 235 +++++++++++++++
+ .../MotorHistoryWidget.Model.swift                 | 279 +++++++++++++++++
+ .../MotorHistoryWidget.Previews.swift              | 105 +++++++
+ .../MotorHistoryWidget.Projection.swift            | 269 +++++++++++++++++
+ .../MotorHistoryWidget.Tests.swift                 | 332 +++++++++++++++++++++
+ .../dashboard-widgets/MotorHistoryWidget.strings   |  51 ++++
+ .../dashboard-widgets/MotorHistoryWidget.swift     | 300 +++++++++++++++++++
+ 8 files changed, 1784 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0066-MotorHistoryWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MotorHistoryWidget.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MotorHistoryWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MotorHistoryWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MotorHistoryWidget.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MotorHistoryWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MotorHistoryWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MotorHistoryWidget.swift

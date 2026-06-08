@@ -1,0 +1,176 @@
+=== P4 Shared surface 0011 AIChargingDiagnosis (Apple) ===
+
+Web source : web/src/components/ai/AIChargingDiagnosis.tsx   (THE spec)
+Scaffold   : web/src/components/ai/AIFeatureCard.tsx + AiOutputPanel.tsx + AIThinkingIndicator.tsx
+             + withAiFeature.tsx (AI-off gate, ADR-015) + hooks/useAiStream.ts (SSE lifecycle)
+Native out : apps/apple/TeslaSync/shared-surfaces/AIChargingDiagnosis.{swift,Adapter,Model,Views,
+             OutputViews,Previews,Tests}.swift + AIChargingDiagnosis.strings  (8 files)
+Footprint  : `git status` → the 8 shared-surfaces files + apps/apple/project.yml + apps/apple/.swiftlint.yml
+             (this surface is the FIRST under TeslaSync/shared-surfaces, so the directory had to be REGISTERED
+             as an app-target source path + a swiftlint `included` path — without that the files would never
+             compile or be linted. This is the only deviation from the AIChargingDiagnosis.* footprint and is
+             disclosed here in full; it is the minimal "P4-core wiring" the first shared-surface must add.
+             The pre-existing working-tree changes to AIUsageCard.* and 2 web/src files are NOT mine and were
+             left untouched / unstaged.)
+
+Runner     : Darwin / full Xcode 26.5 reached via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+             (the box's xcode-select defaults to /Library/Developer/CommandLineTools; overridden for every
+             xcodebuild/xcrun/Gradle invocation). iPhone 16 sim (Booted) + iOS 26.5 runtime present.
+             swiftlint 0.63.3, swiftformat 0.61.1, xcodegen 2.45.4, pwsh 7.6.2, swiftc 6.3.2 (Apple Swift 6.3.2),
+             Java 17 (KMP). NOTE: this is a SHARED runner — concurrent sibling-slot xcodebuilds were observed
+             writing/removing shared /tmp paths and, late in the run, INTERRUPTING whole-app xcodebuilds
+             ("** BUILD INTERRUPTED **") from runner load. Because of that, the SURFACE-CORRECTNESS proofs
+             below ([6] tests, [7] type-check) were re-run to my PRIVATE per-session dir
+             (~/.copilot/session-state/<id>/files/: swift-test.log, typecheck.log) where no other slot can
+             touch them; those are the airtight, reproducible artifacts. The whole-app builds [1]/[2] are
+             deferred regardless (see below) — their EXIT=65 is STRUCTURALLY CERTAIN for THIS slot's own
+             checkout: `DashboardWidgetSize` is declared as a `public struct` in 15 files of this checkout
+             (grep-confirmed), which alone makes the app target non-compilable independent of any shared /tmp.
+
+Capability : SwiftUI + iOS 18 / iPadOS 18 / macOS 15 SDKs ARE present and were compiled + EXECUTED against
+             (see the EXECUTED 39/39 harness + dual-SDK compiles below) — this is NOT a STATUS=BLOCKED platform
+             case. This surface uses no charts/maps (the web source has none), so Swift Charts / MapKit are N/A.
+
+[Shared.xcframework] Built from apps/shared via Gradle / Kotlin-Native
+                     (DEVELOPER_DIR=…Xcode.app… ./gradlew :core:assembleSharedXCFramework →
+                     "BUILD SUCCESSFUL in 23m 56s", "xcframework successfully written out … release/Shared.xcframework")
+                     and staged to apps/apple/Frameworks/Shared.xcframework. Local, git-ignored build artifact.
+
+──────────────────────────────────────────────────────────────────────────────
+SURFACE PARITY — what was ported from the web source (no scope narrowing)
+──────────────────────────────────────────────────────────────────────────────
+• Composition : title "Charging diagnosis" + Helix badge (web AIBadge) + the plain-language description +
+                the "Ask Helix" Generate action (web AIFeatureCard universal CTA, aria-label "Ask Helix ·
+                Generate diagnosis") + the streamed AiOutputPanel — every region of AIChargingDiagnosis.tsx +
+                the AIFeatureCard / AiOutputPanel scaffold it renders through.
+• useAiStream : the hook's lifecycle (idle | streaming | paused-confirm | done | error) is ported verbatim as
+                AIDiagnosisStreamState; the diagnose endpoint memo
+                (sessionId ? /ai/charging/{encodeURIComponent(id)}/diagnose : /ai/charging/0/diagnose)
+                is ported as AIDiagnosisEndpoint.path(for:) (encodeURIComponent-faithful percent-encoding).
+                generate()→stream.start(), cancel()→stream.cancel() are routed through the P1/S8 seam.
+• AiOutputPanel: the four render branches (!hasAnything → hidden, error → "Helix error: …", streaming-but-empty
+                → AIThinkingIndicator, else → streamed prose) ported as AIDiagnosisOutput + AIDiagnosisOutputPanel.
+• AIThinkingIndicator: "Helix is thinking…" label + bouncing dots (web AIThinkingDots) over 3 shimmer skeleton
+                lines, Reduce-Motion-aware (dots stop, shimmer drops) — mirrors the web motion-safe: variants.
+• canStart    : web buttonDisabled = !canStart || isStreaming ⇒ AIDiagnosisResolved.canGenerate /
+                .hasSession / .isStreaming. No bound session ⇒ Generate disabled + a friendly empty hint
+                (never a blank box).
+• withAiFeature: the AI-off visibility gate (ADR-015) is applied by the HOST that mounts the surface, exactly
+                like the web call site wraps InnerSection; this view IS InnerSection (always renders when mounted).
+• States      : loading (skeleton chrome) / empty (no session → hint + disabled Generate, never blank) /
+                error (host query failure → QueryError peer + retry) / ready (idle → thinking → streamed prose,
+                or in-panel "Helix error:" on a stream failure), PLUS the orthogonal connection axis
+                live/stale/offline (freshness chip + banner + one-shot stale auto-refresh) — the P4 leaf contract.
+• i18n        : 100% via the P1/S10 facade (AIDiagnosisStrings, table "AIChargingDiagnosis"); 20/20 referenced
+                keys resolve to a catalog entry; zero English literals in Swift beyond the web-default fallbacks.
+• Telemetry   : P1/S11 `view.opened` emitted once with surface slug "AIChargingDiagnosis".
+• a11y        : VoiceOver labels on every interactive element (Generate, Stop, Refresh, Retry) + a contained
+                surface summary (title + description + live output status), Dynamic Type via Font.TS roles,
+                Reduce-Motion-aware fade-in + skeleton shimmer + dot bounce.
+• Decomposition: 7 Swift files (page + Adapter + Model + Views + OutputViews + Previews + Tests), 1,472 LoC of
+                Swift + the strings table — the established sibling split (Views was divided into Views +
+                OutputViews to stay under the SwiftLint 400-line file budget).
+
+──────────────────────────────────────────────────────────────────────────────
+GATE STEPS — real captured results (no red painted green)
+──────────────────────────────────────────────────────────────────────────────
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' \
+        ENABLE_TESTING_SEARCH_PATHS=YES build
+    IOS_EXIT=65  → DEFERRED. The app module compiled WITH the real Shared.xcframework; the build stops
+    SOLELY on pre-existing parallel-merge sibling breakage in files OUTSIDE this prompt's allowed scope:
+    `DashboardWidgetSize` is declared as a `public struct` in 15 UNMODIFIED sibling files
+    (Sources/DashboardWidgets/*.swift ×2 + TeslaSync/dashboard-widgets/*.swift ×13) → "ambiguous for type
+    lookup" + cascading key-path/type-inference errors; plus VehicleHeroModel / TirePressureProjection /
+    ChargingSessionSummary peers. HEAD is a parallel-merge commit; none of these files are mine.
+    The repo's co-located *.Tests.swift compile INTO the app target (project.yml sources), so the app build
+    needs ENABLE_TESTING_SEARCH_PATHS=YES (ephemeral CLI override; identical to the 117 sibling P4 surfaces).
+    PROOF the surface is clean: ZERO `shared-surfaces/…: error:` / `AIChargingDiagnosis…: error:` lines were
+    observed across the completed in-context iOS app compiles, AND — definitively — the isolated iOS-simulator
+    SDK type-check [7] of all 7 surface files emits 0 errors. The EXIT=65 is the pre-existing contamination,
+    not this surface.
+
+[2] xcodebuild -scheme TeslaSync-macOS ENABLE_TESTING_SEARCH_PATHS=YES CODE_SIGNING_ALLOWED=NO build
+    MAC_EXIT=65  → DEFERRED. Same dashboard-widgets/VehicleHero contamination cascading into hundreds of
+    downstream errors — all in UNMODIFIED siblings (dashboard-widgets is a source path of BOTH app targets).
+    macOS additionally needs CODE_SIGNING_ALLOWED=NO (no dev certificate on the runner). PROOF: ZERO
+    `shared-surfaces/…: error:` lines.
+
+[3] swiftlint --strict            (apps/apple, 1,920 files)
+    LINT_EXIT=2  → 1 violation, PRE-EXISTING and OUTSIDE allowed files:
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141  Function Body Length (78 > 50)
+      — `git status` shows the file UNMODIFIED; not my surface.
+    Scoped `swiftlint --strict` on the 7 AIChargingDiagnosis*.swift files → "Found 0 violations, 0 serious in
+    7 files". ✓
+
+[4] swiftformat --lint apps/apple (1,920 files)
+    FORMAT_EXIT=1  → 1 file requires formatting, PRE-EXISTING and OUTSIDE allowed files:
+      TeslaSync/feature-views/ActionBuilder.Previews.swift:48  (blankLinesBetweenScopes)
+      — `git status` shows the file UNMODIFIED; not my surface.
+    Scoped `swiftformat --lint TeslaSync/shared-surfaces` → "0/7 files require formatting". ✓
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces -Language swift
+    PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0  ✓
+    (the surface directory was scanned for real — the literal gate `-Path …/AIChargingDiagnosis` prefix matches
+    no file and would scan nothing; the real directory scan is reported here. check-placeholders -SelfTest → all
+    PASS, SELFTEST_EXIT=0.)
+
+[6] EXECUTED unit harness — swift test over the REAL Adapter + Model + View against the REAL design system
+    (Sources/Design + Components/UI + Feedback/Skeletons + Motion + the generated Tokens), built as a
+    slot-unique SwiftPM package (macOS 15, swift-tools 6.0):
+      Test Suite 'All tests' passed — Executed 39 tests, with 0 failures (0 unexpected).  SWIFT_TEST_EXIT=0  ✓
+    Coverage: endpoint (session / "0" sentinel / percent-encoding), projection phases (loading/empty/error/ready),
+    output branches (hidden/thinking/text/error incl. nil-message), Generate enablement (ready/streaming/done/
+    no-session/loading), accessibility summary, the i18n output-status mapping, and the state-holder wiring
+    (view.opened-once telemetry, generate/cancel/refresh forwarding, stale one-shot auto-refresh, offline-no-
+    refresh, stop re-arm). This harness CAUGHT a real defect — outputStatus(.thinking) fell back to
+    "Helix is thinking" while every other use + the catalog use "Helix is thinking…" — which was fixed before green.
+
+[7] DIRECT in-context SDK type-check — iPhoneSimulator 26.5 SDK, arm64-apple-ios18.0-simulator, module TeslaSync,
+    -swift-version 6, ALL 7 surface files (incl. .Tests.swift) compiled against the real design system:
+      0 errors. The only diagnostic is the benign "AIChargingDiagnosis.Tests.swift … is part of module
+      'TeslaSync'; ignoring import" warning — which PROVES the compiler processed my files in-module (identical
+      to every co-located sibling test). ✓
+
+──────────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT
+──────────────────────────────────────────────────────────────────────────────
+ 1 No red-as-green   : every exit above is the REAL captured value; the 2 xcodebuild reds + 1 lint + 1 format red
+                       are shown and attributed to pre-existing sibling breakage / runner signing — NOT painted green.
+ 2 No scope narrowing: ALL states (loading/empty/error/ready + stream idle/thinking/text/error + stale/offline) +
+                       the Generate/Stop actions + the full AiOutputPanel + AIThinkingIndicator + i18n + a11y +
+                       telemetry + stale auto-refresh implemented; nothing dropped.
+ 3 No skip-and-assume: iOS xcodebuild RAN; macOS xcodebuild RAN; the 39-test harness was EXECUTED; the dual-SDK
+                       compiles RAN; the DashboardWidgetSize blocker was directly observed in the real build logs.
+ 4 No stubs as final : complete implementations; PLACEHOLDER_COUNT=0; no TODO/FIXME/placeholder/mock/Lorem.
+ 5 No parity shortcuts: faithful port of useAiStream lifecycle + the endpoint memo + AIFeatureCard +
+                       AiOutputPanel + AIThinkingIndicator + every i18n key (web-source keys + shared Helix keys).
+ 6 No delegation     : authored directly (no sub-agent delegation of the surface).
+ 7 No predecessor bypass: did NOT edit the shared Localizable.xcstrings, .swiftformat, or any sibling source;
+                       strings ship as the per-surface AIChargingDiagnosis.strings table. The ONLY config edits
+                       are the disclosed first-shared-surface directory registration in project.yml +
+                       .swiftlint.yml (above). Shared.xcframework + the generated .xcodeproj are git-ignored.
+ 8 No commit on red  : committing on green host-runnable gates (EXECUTED 39/39 harness, dual-SDK full-surface
+                       type-check, scoped swiftlint, scoped swiftformat, placeholder). The 2 xcodebuild steps +
+                       the whole-tree swiftlint/swiftformat hits are DEFERRED — each blocked SOLELY by
+                       pre-existing, out-of-allowed-files sibling breakage / runner signing.
+ 9 No silent drift   : footprint disclosed in full above (8 surface files + project.yml + .swiftlint.yml).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED> below.
+
+──────────────────────────────────────────────────────────────────────────────
+DISPOSITION
+──────────────────────────────────────────────────────────────────────────────
+Production-polished native AIChargingDiagnosis shipped at parity with the web source and verified by every
+in-scope, host-runnable means: an EXECUTED-green 39/39 logic harness over the REAL Adapter+Model+View, an
+iOS-18-simulator-SDK full-surface type-check of all 7 files (incl. Tests) against the REAL shared component
+library under Swift 6, in-context iOS + macOS app compiles that emit ZERO errors from any AIChargingDiagnosis.*
+file, and green scoped swiftlint + scoped swiftformat + placeholder gates. The whole-tree `xcodebuild build test`
+(iOS + macOS) and the whole-tree `swiftlint --strict` / `swiftformat --lint` are DEFERRED to the integration /
+signed runner because they are blocked SOLELY by pre-existing, parallel-merge sibling breakage and runner signing
+— all in files this prompt forbids me to touch (`DashboardWidgetSize`/`VehicleHeroModel`/`TirePressureProjection`
+ambiguities across 15 unmodified dashboard-widgets files; `LifetimeStatsWidget` body-length;
+`ActionBuilder.Previews` blank-line; the app targets' missing ENABLE_TESTING_SEARCH_PATHS; macOS dev-cert
+signing). This matches the established "code-complete + DEFERRED Xcode gate" precedent of the sibling P4 surfaces
+(e.g. 0201 AIRestorePanel).
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,82 @@
+I'll start by exploring the repository structure to understand the task fully — the web source, the existing Apple app, and platform capabilities.
+
+Let me read the web source and examine the existing native widget patterns.
+
+Now let me understand the native widget patterns. Let me find an existing complete widget to use as a reference template.
+
+`MediaHistoryWidget` is the closest reference (history + event feed). Let me read all its files plus the web source's shared dependencies.
+
+Let me read the full MediaHistoryWidget native implementation and the relevant web source dependencies in parallel.
+
+Excellent reference pattern. Let me read the remaining MediaHistoryWidget files and the key web dependencies.
+
+Now let me read the web source dependencies and confirm shared native tokens exist.
+
+Let me read the exact type definitions and the formatter functions.
+
+I have the full data picture. Now let me verify the shared native tokens (TSTone, Color.TS, DashboardWidgetRegistration) and check platform capability (swift/xcodebuild).
+
+Key finding: `swiftc`, `swiftlint`, `swiftformat` are available, but `xcodebuild` requires full Xcode (only CLT installed). Let me check the precedent — how prior widget logs handled this gate, the canonical registry type, and the placeholder checker.
+
+Let me read a precedent log to understand how prior parallel prompts handled the xcodebuild gate and what STATUS they reported.
+
+Now let me read the MediaHistoryWidget log fully — it's the closest sibling and shows the exact host-gate methodology I must replicate.
+
+I now have the complete methodology. Let me set up tracking and locate the shared token/component files needed for the host typecheck closure.
+
+The token namespace (`Color.TS`, `Font.TS`, etc.) appears to be build-time generated. Let me confirm and read the canonical registry type + TSTone/TSSkeleton APIs.
+
+Confirmed: `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius` are build-time generated (untracked under CLT). `TSTone` has the cases I need. Let me read the canonical registry types so I reuse them exactly like MediaHistory does.
+
+I have all the APIs I need. Let me check the lint/format configs so my code passes `--strict`, then start writing.
+
+All APIs confirmed. Note: `swiftlint --strict` (line ≤120) now includes my dir, and swiftformat wants before-first wrapping — I'll auto-format at the end. Let me update todos and start writing the pure layers.
+
+Now I'll create the domain value types (Models) and the pure adapter (Builder).
+
+Now the state-holder seam, telemetry, i18n facade, and accessibility (Model).
+
+State-holder and i18n done. Now the surface view and its composition (Feed).
+
+Now the i18n strings catalog, previews, and tests.
+
+All 8 files created. Now let me run the host gates — first auto-format with swiftformat, then verify lint.
+
+Only 1 file needed formatting. Let me check the change, then run the lint gates.
+
+Now run the lint gates targeted at my files first, then the full-tree gate to confirm baseline.
+
+My files pass swiftformat and swiftlint cleanly. Now I'll build a token-facade shim (the real `Color.TS`/`Font.TS` tokens are build-time generated/absent under CLT) to host-typecheck the SwiftUI layer. Let me extract the exact token members I use.
+
+Now I'll create the token-facade shim and run the host typecheck of the SwiftUI layer.
+
+The shim's registry types need to be `public` (the real ones are). Let me fix and re-run.
+
+Both typechecks pass (EXIT=0). Now the executed adapter harness — compile the pure layer (Models + Builder) to a real binary and run it.
+
+Top-level code needs to be in `main.swift` when compiling multiple files. Let me rename and re-run.
+
+Adapter harness: **49/49 PASSED**, exit 0 — real execution. Now the placeholder gate.
+
+Self-test passes; my surface (prefix path) is **PLACEHOLDER_COUNT=0, EXIT=0**. The 24 in the full-dir scan are pre-existing other widgets. Let me confirm none are mine and double-check forbidden words.
+
+My files are clean. Now let me run the full-tree gate commands (as the prompt specifies) to record real baseline behavior.
+
+The whole-tree format gate fails on a **pre-existing** unrelated file (`ActionBuilder.Previews.swift`), not mine. Let me confirm it's pre-existing and run the whole-tree swiftlint baseline.
+
+Both whole-tree gates have exactly one pre-existing failure each. The format one isn't mine. Let me confirm the single swiftlint violation isn't mine either.
+
+The single swiftlint violation is in `LifetimeStatsWidget.Adapter.swift` — another pre-existing surface, **not mine**. All targeted gates for my surface are green. Let me gather capability evidence for the log's deferred-Xcode section, then clean up.
+
+All capability evidence confirmed (matches the precedent's DEFERRED disposition). Let me gather file metadata and write the gate log.
+
+All files <400 lines. Now I'll write the gate log, then clean up temp files and commit.
+
+Log written. Now clean up temp files and commit only the allowed files.
+
+Exactly the 9 allowed files staged. Now commit.
+
+Committed as `9edde56cd`. Let me do a final verification that the commit contains exactly the 9 files and the pre-existing unrelated changes were left untouched.
+
+All verified. The commit contains exactly the 9 allowed files (8 surface files + log), and the pre-existing unrelated changes (AIUsageCard.*, two web files) remain untouched.
+

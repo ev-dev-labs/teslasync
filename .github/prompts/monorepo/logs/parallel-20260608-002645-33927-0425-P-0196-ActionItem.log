@@ -1,0 +1,66 @@
+I'll start by exploring the environment and the web source to understand what's required.
+
+Swift, swiftlint, swiftformat are present. But `xcodebuild -version` failed despite the binary existing. Let me investigate the toolchain and the Apple app structure.
+
+Critical capability finding: only **Command Line Tools** are installed (no full Xcode), and **no iOS simulators** exist. `xcodebuild` cannot run. Per the prompt's capability clause, the gate's `xcodebuild` steps cannot execute. But I must still do the real work and verify as far as tooling allows. Let me read the web source (the spec) and existing native conventions.
+
+Now let me understand the native conventions: the project structure, design tokens (P1/S9), i18n (P1/S10), diagnostics (P1/S11), and look at an existing ported surface to match patterns exactly.
+
+The `shared-surfaces` dir doesn't exist yet and isn't in `project.yml`, but my allowed files are restricted to `shared-surfaces/ActionItem.*` + the log. Let me examine the SharedFacade (state holders, i18n, diagnostics), Theme tokens, and an existing ported surface to match conventions exactly.
+
+The convention is clear: each surface is a multi-file bundle (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`). Let me study the closest analog (`AnomalyInlineRow` — a row component) and the core infra files.
+
+Now let me read the design tokens, the Model/Previews/Tests conventions, and find where `Surface.slug` and `Accessibility` helpers live. I'll also test whether SwiftUI can even compile under Command Line Tools (no Xcode).
+
+SwiftUI, Charts, and MapKit **typecheck successfully** under Command Line Tools (PROBE_EXIT=0). So I can do real compile verification of the production code, even though the `xcodebuild` simulator/scheme gate cannot run. Let me read the design tokens, the Adapter (Surface/Accessibility/Projection), Previews, and Tests conventions.
+
+Now the design tokens and the Previews/Tests conventions.
+
+Let me locate the exact token definitions (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSMotion`) and read the test conventions + lint configs.
+
+Now the test conventions and lint configs so my code passes `swiftlint --strict` and `swiftformat --lint`.
+
+Let me read the lint configs and the placeholder-check script the gate uses, and probe XCTest availability under CLT.
+
+XCTest is **not** importable under CLT (so test files compile to nothing here, by design), but `swiftc -parse` works for syntax checks. Let me check PowerShell availability, the placeholder patterns, and whether `shared-surfaces` is referenced anywhere.
+
+Everything I need is confirmed: pwsh 7.6.2 is available (I can run the placeholder gate for real), the token/convention patterns are clear, and `ActionItem` is a pure presentational atom (prompt confirms "Data sources: none"). Let me set up tracking and scaffold the directory.
+
+Now I'll write the production files. Starting with the pure, testable core (Adapter), then the seams, model, views, main view, previews, strings, and tests.
+
+Now the two test files (adapter/a11y/telemetry + model behavior), following the established XCTest conventions.
+
+All 9 files written. Now let me verify — first a real typecheck of the production code against the macOS SDK (the strongest evidence the code is real, not a stub).
+
+Only the `#Preview` macro fails — that's an **Xcode-only plugin** (PreviewsMacros) absent from Command Line Tools, not a code error. Notably `@Observable` and all SwiftUI/logic typechecked cleanly. Let me confirm the shipping logic typechecks with zero errors (excluding Previews), then syntax-check Previews + tests.
+
+Shipping logic typechecks with **0 errors** against the real macOS 15 SDK. Now let me run swiftlint, swiftformat, the placeholder gate, and confirm the module builds as `TeslaSync` (so `@testable import` resolves).
+
+swiftformat found real issues in my files (redundant type + test force-unwraps), and swiftlint reported 1 violation — but it linted all 1909 files so I need to isolate whether it's mine. Let me view the exact test regions and re-run swiftlint quietly on just my files.
+
+My shared-surfaces files have **0 swiftlint violations** — the 1 serious violation is a pre-existing issue in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (not my file, not in scope). Now let me fix the real swiftformat issues in my files.
+
+The swiftlint violation is pre-existing (not mine). Now fixing the swiftformat issues in my files: remove redundant type, and use `try XCTUnwrap` instead of force-unwraps in tests.
+
+Re-running swiftformat, re-typechecking the changed Model, confirming the module builds as `TeslaSync` (so `@testable import` resolves), and running the placeholder gate via pwsh.
+
+swiftformat clean (0/8), shipping logic typechecks (0 errors), and the module emits as `TeslaSync` with `-enable-testing`. Now a stronger test verification: semantically typecheck the test bodies against the real symbols using a minimal XCTest shim (parse-only can't catch symbol/signature mismatches).
+
+Excellent — test bodies semantically typecheck (EXIT=0). One Swift 6 warning: `ActionItem.surfaceSlug` is `@MainActor`-isolated (SwiftUI's `View` protocol is main-actor-isolated), so that one assertion must run on the main actor. Let me annotate that test method.
+
+All checks clean: test bodies typecheck with **0 warnings/errors**, swiftformat 0/8, swiftlint no violations. Now the placeholder gate. Let me inspect how the script resolves `-Path` and run it via pwsh.
+
+The script uses `Get-ChildItem -LiteralPath` (no globbing), and files follow the `feature-views` convention (named `ActionItem.*` directly in the dir). Let me run the placeholder gate both ways and grep manually as a backstop.
+
+Placeholder gate passes (`PLACEHOLDER_COUNT=0, EXIT=0`) and manual grep is clean. Every runnable check is green. Now I'll generate the authoritative gate log with real outputs — including honest API evidence that the `xcodebuild` iOS/macOS build+test steps are BLOCKED (no full Xcode, no simulators).
+
+The log generation is finishing (Previews parse + file listing). Let me wait for completion.
+
+The log is complete (109 lines), ending with `EXIT=1` / `STATUS=BLOCKED` and full API evidence. Let me do a final integrity check and review the git state.
+
+Perfect i18n key parity (5/5 referenced = 5/5 defined), placeholder-clean, 9 files delivered. The unrelated modified files (`AIUsageCard.*`, web files) are pre-existing in this shared tree — not mine, untouched. Let me clean up temp probes and finalize tracking.
+
+All work complete and verified to the maximum the runner allows. Final state confirmed: only my 9 surface files + the log are new; no other files touched.
+
+A note on the commit: the prompt's `Commit` block is unconditional, but the **Honesty Covenant rule 8 ("No commit on red")** is binding and the authoritative gate is `EXIT=1 / STATUS=BLOCKED` (the `xcodebuild` build+test steps cannot run without Xcode). Committing a red/BLOCKED gate would risk violating the covenant, and the shared tree also contains unrelated pre-existing edits. So I deliberately did **not** commit — the complete work + BLOCKED log are persisted in the working tree for an Xcode-equipped runner to verify and commit.
+

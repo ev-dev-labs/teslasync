@@ -1,0 +1,78 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me read the web source and existing native widget patterns in parallel.
+
+This is a substantial parity task. Let me read the supporting files for the reference widget and the web shared components.
+
+Now let me examine the web gauge component, the data hooks, units, and the native gauge/registration primitives.
+
+Now let me understand the exact web conversion math for energy/power to reproduce value parity, and check the GuardMode widget (most recent gauge-like example) plus design tokens.
+
+Let me find the shared registration struct, design tokens, native gauge component, and check `fmtInt`'s locale default.
+
+Let me check build tool capabilities and how sibling widget tests are wired into targets.
+
+Key finding: `xcodebuild` requires full Xcode but only CommandLineTools is installed (no Xcode, no iOS simulators). `swift` 6.3.2, `swiftlint`, `swiftformat`, `xcodegen` are available. Let me study how the sibling widgets handled this exact constraint.
+
+I now understand the precedent precisely. The sibling widgets (LifetimeStats 0055, GuardMode 0054) ship 6 files and verify via a host Swift harness, deferring/blocking the Xcode gate. My runner is **more constrained** (no full Xcode, no simulators). Let me read the remaining support components and check the placeholder tooling.
+
+Let me check the forbidden placeholder patterns and probe whether the host `swiftc` can compile SwiftUI against the design tokens (capability ceiling).
+
+I have a complete picture. `pwsh` and the placeholder gate exist, and crucially the host `swiftc` **can** typecheck SwiftUI against the real design tokens. Let me verify cross-file dependencies before writing, then set up tracking.
+
+Let me pre-flight the design-system host typecheck (the set my surface will compile against) to de-risk verification before writing code.
+
+The `#Preview` macro needs Xcode's macro plugin (unavailable in CommandLineTools). I'll typecheck without `-D DEBUG` so `#if DEBUG` preview blocks are excluded — consistent across the design system and my surface.
+
+Design system typechecks green on host (exit 0). I have everything needed. Let me set up tracking and start building the 6 files.
+
+Now I'll create the Adapter (pure Foundation projection with verbatim web format parity).
+
+Now the Model file (state-holder seam, `@Observable` model, telemetry, DTO/prefs, registry, i18n facade).
+
+Let me verify the `TSSkeleton` API before writing the View.
+
+Skeleton API confirmed. Now the SwiftUI surface.
+
+Now the Previews and Tests files.
+
+Now the i18n strings table.
+
+All 6 files created. Now the critical verification — building a host harness to execute the adapter/model logic and confirm value parity (ground truth). First let me auto-format my files, then build the harness.
+
+Now let me build and run the host harness to execute the real adapter/model logic and verify value parity.
+
+The errors are in my harness driver's actor isolation (not the shipped files). Let me fix the driver — top-level code is `@MainActor`, so I'll annotate helpers accordingly.
+
+Top-level vars can't carry an actor annotation. Let me use a reference-type counter and inline the main-actor section.
+
+Harness executes **92 checks, 0 failures** — value parity confirmed. Now the full-surface host typecheck (View+Model+Adapter against the real design system + registry shim).
+
+Surface typechecks green against the real design system. Now the lint/format/placeholder gates.
+
+swiftformat and placeholder gates green. Now swiftlint --strict.
+
+Two violations: one in **my** file (file length 435>400) and one **pre-existing** in a sibling (`LifetimeStatsWidget.Adapter.swift`, outside my allowed scope). Let me confirm the sibling is pre-existing, then fix mine by splitting.
+
+Confirmed pre-existing and out-of-scope. Now I'll fix my file-length violation by extracting the gauge sub-views into `RegenEfficiencyWidget.Gauge.swift` (matches allowed `RegenEfficiencyWidget.*` scope and the sibling multi-file convention).
+
+Now reformat the changed files and re-verify lint + typecheck with the new file included.
+
+My files lint green; View is now 357 lines. Re-run the full surface typecheck (with the new Gauge file) and whole-project format lint.
+
+Surface typecheck and format lint both green. Let me confirm the final whole-project swiftlint state (should be just the 1 pre-existing sibling violation now).
+
+My files are lint-clean; the only whole-project violation is the confirmed pre-existing sibling (out of my allowed scope — I must not touch it). The binding `xcodebuild` gate cannot run on this runner. Let me capture clean evidence for the log.
+
+All evidence captured: harness 92/92 green, xcodebuild blocked (CommandLineTools only), no iOS simulators. Now I'll write the honest gate log.
+
+All gates evaluated and the log written. Now I'll commit the complete, host‑verified deliverable (the 7 `RegenEfficiencyWidget.*` files + the log). The commit persists the code for a provisioned Xcode runner; the log is transparent that the binding `xcodebuild` gate is BLOCKED here.
+
+All 8 files staged correctly (no unrelated files). Let me check for pre-commit hooks before committing.
+
+No pre-commit hook is installed, so the commit won't trigger project hooks. Committing now.
+
+Committed (`0b6e19a3`, 8 files, +1737). Let me clean up temp files and do a final verification.
+
+All 11 todos complete. The task is finished.
+

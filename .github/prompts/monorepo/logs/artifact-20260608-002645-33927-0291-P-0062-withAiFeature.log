@@ -1,0 +1,163 @@
+=== P4 Shared surface 0062 withAiFeature (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/withAiFeature/
+Web src  : web/src/components/ai/withAiFeature.tsx  (+ web/src/hooks/useAiEnabled.ts, web/src/ai/features.ts)
+Runner   : Darwin 25.5.0 arm64 · macOS 26.5.1 (25F80)
+Toolchain: Apple Swift 6.3.2 · SwiftLint 0.63.3 · SwiftFormat 0.61.1 · PowerShell 7.6.2
+
+Summary: the artifact is complete and passes every gate step that this runner can execute
+(placeholder gate, artifact-scoped SwiftLint --strict, artifact-scoped SwiftFormat --lint,
+and full swiftc type-check of production + previews + tests against the macOS SDK). The two
+`xcodebuild ... build test` steps are BLOCKED: this runner has only the Command Line Tools,
+not a full Xcode, so neither the iOS 18 Simulator runtime nor the XCTest targets can be built
+or run here. Per the prompt's capability clause this is a STATUS=BLOCKED outcome, recorded
+below with API/CLI evidence.
+
+------------------------------------------------------------------------------------------
+Runner capability probe (why the two xcodebuild steps are BLOCKED)
+------------------------------------------------------------------------------------------
+$ xcode-select -p
+/Library/Developer/CommandLineTools                         <- Command Line Tools only (no Xcode.app)
+
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+'/Library/Developer/CommandLineTools' is a command line tools instance         (exit 1)
+
+$ xcrun --sdk iphonesimulator --show-sdk-path
+xcrun: error: SDK "iphonesimulator" cannot be located                          (exit 1)
+  -> no iOS / iPadOS Simulator SDK is present, so 'platform=iOS Simulator,name=iPhone 16'
+     cannot be resolved.
+
+$ echo 'import XCTest' | swiftc -typecheck - (macOS SDK)
+error: no such module 'XCTest'
+  -> XCTest ships inside a full Xcode toolchain, not the CLT SDK, so the XCTest unit/UI
+     bundles cannot be compiled or run on this runner.
+
+Present & used for the verification that IS possible on this runner:
+  - swift 6.3.2 host compiler.
+  - macOS SDK with SwiftUI.framework, Charts.framework, MapKit.framework (typecheck-capable).
+  - swiftlint, swiftformat, pwsh (the three non-xcodebuild gate tools).
+
+Conclusion: SwiftUI + Swift Charts + MapKit *runtime* build/test on the iOS 18 Simulator and
+the XCTest targets require a full Xcode install (iOS 18 / iPadOS 18 / macOS 15 SDKs + the
+XCTest + PreviewsMacros plugins). That capability is unavailable here => BLOCKED with evidence.
+
+------------------------------------------------------------------------------------------
+Gate step 1/5 — xcodebuild iOS (scheme TeslaSync, iPhone 16 Simulator) build test
+------------------------------------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+'/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1            [BLOCKED — no full Xcode / no iOS Simulator SDK on this runner]
+
+------------------------------------------------------------------------------------------
+Gate step 2/5 — xcodebuild macOS (scheme TeslaSync-macOS) build test
+------------------------------------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+'/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1            [BLOCKED — no full Xcode on this runner]
+
+------------------------------------------------------------------------------------------
+Gate step 3/5 — swiftlint --strict
+------------------------------------------------------------------------------------------
+$ (cd apps/apple && swiftlint --strict)            # repo-wide gate form
+Done linting! Found 1 violation, 1 serious in 1909 files.
+LINT_EXIT=2
+  NOTE: the single violation is PRE-EXISTING and OUTSIDE this artifact's allowed-files scope:
+    apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19
+    Function Body Length Violation (function_body_length) — 78 lines.
+  This prompt's allowed files are only shared-surfaces/withAiFeature.* + this log, so that file
+  is neither caused nor fixable by this artifact. It is not a regression from this work.
+
+  Artifact-scoped run (the only files this prompt owns):
+  $ swiftlint lint --strict --config <included: shared-surfaces/withAiFeature>
+  Linting 6 files: withAiFeature.{swift,Adapter,Model,Views,Previews,Tests}.swift
+  Done linting! Found 0 violations, 0 serious in 6 files.        [PASS — artifact is clean]
+
+------------------------------------------------------------------------------------------
+Gate step 4/5 — swiftformat --lint apps/apple
+------------------------------------------------------------------------------------------
+$ swiftformat --lint apps/apple                    # repo-wide gate form
+TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1: error: (blankLinesBetweenScopes)
+1/1919 files require formatting, 2 files skipped.
+FORMAT_EXIT=1
+  NOTE: the single formatting error is PRE-EXISTING and OUTSIDE this artifact's allowed-files
+  scope (ActionBuilder.Previews.swift). Not caused or fixable by this artifact.
+
+  Artifact-scoped run:
+  $ swiftformat --lint apps/apple/TeslaSync/shared-surfaces
+  0/6 files require formatting.                                  [PASS — artifact is clean]
+
+------------------------------------------------------------------------------------------
+Gate step 5/5 — check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/withAiFeature
+------------------------------------------------------------------------------------------
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/withAiFeature
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0                                               [PASS]
+
+------------------------------------------------------------------------------------------
+Supplemental artifact verification — what this runner CAN execute (real, not claimed)
+------------------------------------------------------------------------------------------
+swiftc -typecheck (sdk macosx, -target arm64-apple-macos15.0, -swift-version 6,
+                   -strict-concurrency=complete):
+  - production (withAiFeature.{Adapter,Model,swift,Views}.swift + reused AiMode) ..... EXIT=0  PASS
+  - previews   (withAiFeature.Previews.swift; #Preview macro replaced by `some View`
+                funcs because the PreviewsMacros plugin is Xcode-only) ............... EXIT=0  PASS
+  - tests      (withAiFeature.Tests.swift type-checked against the production API via a
+                minimal XCTest shim, because the XCTest module is Xcode-only) ........ EXIT=0  PASS
+  => Every line of the artifact type-checks against the macOS SDK with complete Swift-6
+     concurrency. Only the iOS-Simulator runtime build, the #Preview macro plugin, and the
+     XCTest test *run* need a full Xcode — all three are the BLOCKED capability above.
+
+------------------------------------------------------------------------------------------
+Acceptance criteria
+------------------------------------------------------------------------------------------
+[x] Surface reproduces every branch of the web source. The web HOC has exactly two render
+    outcomes — `<Inner/>` (enabled) and `null` (every fail-closed cause). The native gate
+    renders the inner content when presented and EmptyView() when gated, splitting the web's
+    single `null` into the four diagnostic causes useAiEnabled short-circuits on:
+    unregistered / settingsUnresolved (== the generic "loading": hidden until settings load) /
+    modeOff / featureDisabled. The generic empty/error/stale/offline leaf states are N/A for a
+    pure visibility gate (no data feed of its own) and collapse to the fail-closed gated outcome,
+    exactly as useAiEnabled documents ("any other state ... yields false"). Mapping is spelled
+    out in withAiFeature.swift and exercised by 6 #Preview states.
+[x] Hooks bind through the P1/S8 AiFeatureGateSource state-holder seam (AiFeatureGateModel);
+    the view performs no HTTP and no settings reads. (withAiFeature.Model.swift)
+[x] i18n: the web source is anonymous — zero t(key,default) calls — so there are no strings to
+    localize. withAiFeature.strings declares no keys (documented parity), and the Swift sources
+    contain no user-facing literals.
+[x] Accessibility: the presented surface is stamped with the off-mode-invariant marker
+    (uiTestIds[0] ?? "ai-feature-<id>") via AiFeatureMarkerModifier (the native peer of the web
+    data-ai-feature / data-testid wrapper); the gate adds no interactive elements, no text and no
+    motion, and is transparent to VoiceOver / Dynamic Type / reduce-motion (the wrapped feature
+    owns its own a11y). (withAiFeature.Views.swift)
+[x] Tests: adapter projection across every fail-closed branch + the short-circuit order + marker
+    derivation; the StaticAiFeatureRegistry lookups; the construction-time unknown-id throw and
+    the DevTools display-name + diagnostics-slug parity; the AiFeatureGateModel telemetry-once
+    (deferred past the gate) + gated<->presented transition + start/stop/refresh lifecycle; and
+    the accessibility marker. (withAiFeature.Tests.swift — compiles against the production API
+    here; runs in the TeslaSync(/-macOS) XCTest targets under full Xcode.)
+[x] Telemetry: emits view.opened under the surface slug "withAiFeature" (AiFeatureGateSurface.slug),
+    once, only on the first transition into presented (P1/S11 diagnostics contract).
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (PLACEHOLDER_COUNT=0).
+[ ] EXIT=0 — BLOCKED. The two xcodebuild build+test steps cannot run without a full Xcode +
+    iOS 18 Simulator + XCTest on this runner (capability evidence above). Every gate step this
+    artifact can influence passes; the two non-zero lint/format steps are pre-existing failures
+    in files outside this prompt's allowed-files scope, not regressions from this work.
+
+Files delivered (apps/apple/TeslaSync/shared-surfaces/withAiFeature/):
+  withAiFeature.Adapter.swift   — AiFeatureID, AiFeatureRegistry + StaticAiFeatureRegistry,
+                                  AiFeatureGateError, AiFeatureGateInput/Reason/Decision,
+                                  AiFeatureMarker, AiFeatureGateProjection, AiFeatureGateSurface.
+  withAiFeature.Model.swift     — AiFeatureGateTelemetry (+OSLog default), AiFeatureGateSource
+                                  seam, @Observable AiFeatureGateModel, InMemoryAiFeatureGateSource.
+  withAiFeature.swift           — AiFeatureGate<Content> surface, withAiFeature() free fn,
+                                  .aiFeature() modifier, AiFeatureGate.make() throwing guard.
+  withAiFeature.Views.swift     — AiFeatureMarkerModifier (off-mode-invariant marker).
+  withAiFeature.Previews.swift  — 6 #Preview states (presented x2 + 4 gated causes).
+  withAiFeature.Tests.swift     — adapter + registry + guard + model + a11y unit coverage.
+  withAiFeature.strings         — anonymous-surface i18n table (no keys; documented parity).
+
+EXIT=1
+STATUS=BLOCKED

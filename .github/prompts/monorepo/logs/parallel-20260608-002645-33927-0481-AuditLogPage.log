@@ -1,0 +1,151 @@
+I'll start by exploring the repository structure and understanding the task. Let me look at the key files in parallel.
+
+Let me explore the existing Apple app structure more deeply, particularly existing Feature pages and the shared infrastructure.
+
+Key finding: only CommandLineTools is installed, not full Xcode — so `xcodebuild` cannot run. Let me check for any full Xcode and study the existing feature-views patterns.
+
+Full Xcode is actually installed at `/Applications/Xcode.app` — I can use `DEVELOPER_DIR` to run it. Also, there's an existing `AuditPanel.*` set in feature-views. Let me read those and understand the page conventions.
+
+`AuditPanel` is a different surface (the DLQ replay-audit panel), but it's a great convention reference. Let me gather the full context: navigation registration, design tokens, the string catalog, the KMP framework, the parity manifest entry, and the ledger.
+
+No `Shared.xcframework` is present (it's a build artifact). Let me read the app shell/routing, the facade core, design tokens, and the parity manifest entry.
+
+Now I understand the architecture. Let me read the placeholder scanner, string catalog format, web types/hooks, the rest of the AuditPanel reference files, and design tokens.
+
+Now let me read the exact web type/hook definitions, the rest of the AuditPanel reference files, design tokens, and the parity manifest entry.
+
+The design tokens and component conventions are clear. Let me read the remaining reference files, the project.yml test targets, and find the shared P3 components.
+
+I now understand the full convention. Let me assess build feasibility (Shared.xcframework, test targets, swiftlint config) and read the preview/test patterns.
+
+Build requires a Gradle-built `Shared.xcframework` (KMP/Kotlin-Native) that isn't present. My page (like `AuditPanel`) will avoid importing `Shared` so it host-compiles. Let me locate the shared P3 components I'll reuse and the manifest entry.
+
+Let me read the remaining component APIs (Fields, Pickers, Typography, DataTable, Skeletons), the preview/test conventions, and the manifest entry for this page.
+
+Let me read the ledger format, an example PARITY log, the preview/test conventions, and the Skeletons/Models references.
+
+Let me read the preview/test conventions, Skeletons, Theme, route parser, and check which Sources import `Shared` (to plan an isolated type-check).
+
+Let me read the full project.yml to understand exactly how sources, test targets, and `*.Tests.swift` files are wired.
+
+Let me resolve how `*.Tests.swift` files in app-target source dirs are wired, by reading the schemes and checking for excludes.
+
+The build/test is deferred to macOS CI (needs the Gradle-built `Shared.xcframework`). Let me verify the self-import test pattern and confirm the manifest entry, then start building.
+
+Manifest confirms the spec. The `@testable import TeslaSync` pattern has 170 precedents in app-target source dirs. Let me empirically verify that self-import compiles, then set up my task tracker and start building.
+
+Self `@testable import` only warns (170 precedents confirm the co-location convention). Let me read the production binding pattern (AppContainer, StateHolderModel) and find any layout/page-container component before writing.
+
+No `PageContainer` component exists — I'll compose the header. Let me read Banners (AlertBanner) and Disclosure (expandable rows), then start building.
+
+I have everything needed. Let me set up a task tracker and create a plan, then build the implementation.
+
+Now I'll build the implementation. Starting with the directory and the Model file.
+
+Now the Projection file (pure value logic, all states resolver).
+
+Now the Components file (states, chain status, status chips, copy button).
+
+I referenced a `copy` key — let me add it to the Model's Key enum, then write the Table file.
+
+Now the Panels file (the 3 GlassPanels).
+
+Now the main page view + navigation registration.
+
+Now the Previews and Tests files.
+
+All 8 Swift files written. Now let me add the 50 (+3 supplementary) strings to `Localizable.xcstrings`.
+
+53 keys added and `route.admin` exists (page reachable). Let me validate the JSON and wire navigation + project.yml.
+
+Strings validated. Now wire `AdminRouteRegistration` into `TeslaSyncApp.swift` and add `TeslaSync/Features` to the project sources.
+
+Now add `TeslaSync/Features` to both app targets in `project.yml`.
+
+`apple-ledger.json` I'll finalize after gates. Let me run the definitive gates now: swiftlint and the placeholder scan, in parallel.
+
+Two issues to fix: a placeholder-scan hit at Components.swift:210, and a swiftlint violation (it linted all files — need to isolate). Let me investigate both.
+
+The placeholder hit is my own doc comment containing "placeholder"; the swiftlint violation is a **pre-existing** file (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`), not mine — but the project config's `included:` makes swiftlint lint everything. Let me fix my comment and lint my files in isolation.
+
+Isolated swiftlint found 6 real issues in my files (file length, nesting, param count, line length, superfluous disable). Let me restructure the oversized Model into focused files and fix the others. First, remove the old Model file and recreate as split files.
+
+Now fix the remaining lint issues: remove the superfluous disable in Projection, reduce the param count in Components, and wrap the long line in Previews.
+
+That swap would just create a new superfluous-disable. Let me remove the disable comment entirely instead.
+
+Now fix the Components `chainResult` param count and the Previews long line.
+
+Now add the `AuditChainResultStyle` struct to Components and fix the Previews long line.
+
+Now re-run both gates on all the (now split) files.
+
+Both gates are green (swiftlint: 0 violations in my files; placeholder: COUNT=0). Now the strongest correctness check available without the framework: an isolated Swift 6 type-check of my page against the real design tokens + component library.
+
+All errors are in one **unrelated** Shared-dependent component (`DataDisplay/UnitFormatters.swift`) I pulled in transitively — none in my files. Let me narrow to only the components I actually use and confirm they're Shared-free.
+
+Confirmed clean and `.tsGlassPanel` is in TSMaterial. Re-running the type-check with the precise dependency set.
+
+Just 2 errors, both mine: the `AuditChainResultStyle` static constants need the type to be `Sendable`. Easy fix.
+
+TSTone isn't Sendable and I can't modify that shared file. Let me use computed static presets instead (no global-state concurrency requirement).
+
+`ISO8601DateFormatter` statics aren't Sendable under strict concurrency. Let me check the repo's accepted pattern, then create formatters locally (matching the Projection's local-`DateFormatter` approach).
+
+Confirmed — the repo creates `ISO8601DateFormatter()` locally inside functions (e.g., `AlertCard.Adapter`). Let me match that pattern.
+
+My full page type-checks cleanly under Swift 6 strict concurrency. Now let me validate the Tests file compiles too (as the `TeslaSync` module, with the XCTest framework path).
+
+All 11 files type-check cleanly under Swift 6 strict concurrency (production + tests). Now let me validate the project spec with xcodegen and attempt the build to capture the concrete blocker.
+
+Project generates cleanly (EXIT=0) and my 11 files are wired in (66 references). `Shared.xcframework` is confirmed missing. Let me attempt the actual build to capture the concrete blocker for honest logging.
+
+Confirmed blocker: `error: There is no XCFramework found at '.../Frameworks/Shared.xcframework'` → BUILD FAILED. This is the missing KMP/Gradle-built P1 artifact (deferred to macOS CI), not a code error. Let me re-confirm lint/placeholder are still clean after my last edits, then write the ledger and log.
+
+Both gates clean. Now let me programmatically verify all 57 parity items have binding evidence (panels, states, and every string key referenced in code + present in the catalog) to build the `=== PARITY ===` log section accurately.
+
+All 57 parity items verified (50 strings in catalog + referenced, 3 panels, 4 states). Let me generate precise file+symbol evidence for each item, then write the ledger and log.
+
+All 50 strings have a Key constant + render site. Let me create the `apple-ledger.json` and the parity log.
+
+Now the parity log with the full `=== PARITY ===` section and honest gate results.
+
+Let me verify the cited line numbers for panels/states are accurate, validate the ledger JSON, and check git status.
+
+Let me correct the panel/state line numbers in the log to the exact values and verify the remaining cited lines.
+
+Let me clean up temp artifacts and review the final working-tree state.
+
+I see `AIUsageCard.*` files modified — I never touched those. Let me confirm they're pre-existing worktree changes, not caused by my work.
+
+Confirmed: the `AIUsageCard.*` changes are **pre-existing** (mtime 07:08:23, before my session; unrelated "AI usage" feature) — slot setup artifacts, not mine. My changes are clean: the new `Features/Admin/` page, nav wiring (`TeslaSyncApp.swift`), `project.yml`, `Localizable.xcstrings`, the ledger, and the log.
+
+Let me finalize the todos and plan.
+
+All todos complete. Let me do a final consolidated confirmation of the deliverable and gate state.
+
+The task is fully implemented and verified to the maximum extent the environment allows.
+
+## Summary
+
+I built the native SwiftUI/HIG parity of the web `AuditLogPage` for Apple (adaptive macOS + iOS), at **57/57 parity coverage**.
+
+**Deliverable** — 11 decomposed files (2,552 LOC) under `apps/apple/TeslaSync/Features/Admin/`, following the established `AuditPanel` feature-view convention:
+- **3 panels** (web `GlassPanel`×3): `AuditLogIntegrityPanel` (hash-chain verify), `AuditLogFiltersPanel` (since/until/category/action/actor/entity/limit + reset/search), `AuditLogEntriesPanel` (paged, expandable table).
+- **4 data states** for every source — loading (skeleton) / empty (`ContentUnavailableView`) / error (incl. 503 "subsystem unavailable" banner) / success — resolved by a pure `AuditLogListPresentation` + bound through an `@Observable AuditLogPageModel` over the P1/S8 `AuditLogSource` seam (list / categories / actions / verify).
+- **50 web i18n keys** ported verbatim into `Localizable.xcstrings` (+3 supplementary for the web-hardcoded OK/Fail/Copy affordances), resolved via a facade.
+- Adaptive columnar table (macOS/iPad) ↔ card list (iPhone), Dynamic Type, VoiceOver, light/dark/high-contrast via design tokens; navigation registered (`AdminRouteRegistration` → `.admin`).
+
+**Gates (honest results)**
+- ✅ `swiftlint --strict`: **0 violations** in my files
+- ✅ placeholder/stub scan: **PLACEHOLDER_COUNT=0**
+- ✅ `xcodegen generate`: **0** (all 11 files wired into iOS+macOS targets)
+- ✅ Isolated **Swift 6 strict-concurrency type-check**: **0 errors** (production *and* tests)
+- ⛔ `xcodebuild build`/`test`: **BLOCKED** — `Frameworks/Shared.xcframework` (the KMP/Gradle P1 artifact) is absent and deferred to macOS CI per the repo's own `shared-ledger.json`. Per covenant #7 I did **not** fake it.
+
+Per covenant #8 (**no commit on red**) I left everything in the working tree uncommitted. Log ends with `EXIT=65 / STATUS=BLOCKED`; `apple-ledger.json` records `coveredCount=57/57` with the blocker documented. (Note: pre-existing `AIUsageCard.*` working-tree changes are slot-setup artifacts, not mine.)
+
+
+
+All work is complete and all 13 todos are done. The implementation is finished and verified to the maximum extent the environment permits.
+

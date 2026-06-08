@@ -1,0 +1,152 @@
+I'll start by exploring the repository structure, the web source specification, and checking the Apple toolchain availability.
+
+Swift, swiftlint, swiftformat are available. `xcodebuild` exists but only Command Line Tools is installed (no full Xcode). Let me explore the Apple app structure to understand existing patterns before deciding on approach.
+
+There's a sibling `DigitalTwinWidget` already built in the same directory — that's my canonical pattern. Let me study it and the project structure thoroughly.
+
+This uses XcodeGen + a KMP `Shared.xcframework`, and `xcodebuild` requires full Xcode (only CLT installed). I'll need to build the artifact and verify with available tools. Let me study the sibling `DigitalTwinWidget` pattern in full — it's my canonical reference.
+
+Excellent reference. Now let me read the rest of the DigitalTwin pattern files and the supporting infrastructure (design tokens, charts, facade, formatting) in parallel.
+
+Now let me explore the supporting infrastructure — design tokens, chart components, and the facade layer — to understand the exact APIs available.
+
+Now the design tokens, units facade, formatters, and state-holder layer — these define the exact APIs I must use.
+
+The `Units` facade needs the `Shared` xcframework. Let me check the generated design tokens and the remaining facade/formatter files.
+
+The widget keeps its own pure types (the production source bridges at integration). Let me read the design tokens, feedback components, formatters, and a domain model example.
+
+Now let me read the adapter/models pattern, formatters, and locate `TSTone`/typography components and chart axis helpers.
+
+Let me read the UI components (`TSTone`/badges, typography, cards), the chart axes helper, and the web shared widget composition I'm reproducing.
+
+Let me read the web shared widget helpers and the data hook to nail the composition and data shape precisely.
+
+I have nearly everything. Let me confirm the exact distance unit labels and conversion math, then check the placeholder-check script and macOS verification notes.
+
+Key facts captured: distance labels are `km`/`mi`/`ft`. The `macos-pending-verifications.md` confirms the project's established pattern: write+commit the artifact, run host-runnable gates, defer Xcode/xcframework verification. Let me check for full Xcode, xcodegen, and pwsh.
+
+`/Applications/Xcode.app` **exists** — the active dir is just pointed at CLT. I can override with `DEVELOPER_DIR`. `xcodegen` and `pwsh` are also available. The blocker may be the KMP `Shared.xcframework`. Let me verify.
+
+Critical: Xcode 26.5 is available via `DEVELOPER_DIR`, but `Shared.xcframework` is absent (only `.gitkeep`) — and building it is an explicitly macOS-pending KMP step. Let me assess whether building the framework is feasible, and read the build script.
+
+All pieces are available: Xcode 26.5, xcodegen, pwsh, JDK 17, gradle wrapper. The `Shared.xcframework` is absent but buildable via KMP/Gradle. That build is the long pole — let me kick it off in the background now while I write the artifact, so a fully-green gate is possible.
+
+Let me check the build-graph inclusion of dashboard-widgets and which files are `Shared`-free (for a real standalone type-check), while gradle runs.
+
+Build graph confirms dashboard-widgets are integrated at the P4 acceptance gate (like the sibling DigitalTwin 0036) — and the whole design/components/widgets layer is `Shared`-free, so I can do a real standalone type-check. Let me confirm the exact conversion constants and set up my plan/todos.
+
+Constants confirmed. Let me set up the plan and todos, then write the artifact.
+
+Now I'll write the artifact, starting with the domain value types and the pure adapter.
+
+The KMP build completed. Let me check whether the `Shared.xcframework` was produced.
+
+The KMP toolchain downloaded and the **debug `Shared.xcframework` built successfully** — the release assembly was only interrupted (daemon stopped). Tasks are now cached, so a re-run will be fast. This means a fully-green `xcodebuild` gate (STATUS=DONE) is achievable. Let me re-run the framework assembly in the background and continue writing the remaining files.
+
+Staging build running in background. Let me write the main view, chart, previews, tests, and strings while it completes.
+
+Staging completed. Let me confirm the framework is staged, then finish the remaining files (previews, tests, strings).
+
+Framework built and staged successfully — `BUILD SUCCESSFUL`. A full xcodebuild gate is now achievable. Let me finish the previews, tests, and strings files.
+
+Now let me fix the chart's `PlottableValue` labels (they need `String`/`LocalizedStringKey`, not `Text`) and write the strings catalog.
+
+All 8 files written. Now let me verify. First, I'll identify exactly which shared component symbols the dashboard-widgets reference, to assemble a faithful `Shared`-free type-check set.
+
+Dependencies are minimal: `TSSkeleton`, `TSBadge`, `TSStatusPill`, `TSTone`, `TSCard` — all `Shared`-free. Let me run a faithful standalone type-check of the widget against the real design system (Swift 6, strict concurrency, macOS SDK).
+
+Good — the errors are all in component `#Preview` blocks and DigitalTwin's preview helper (not my production code). The documented host gate skips previews. Let me add `@MainActor` to my preview helper (correctness under strict concurrency), then run the authoritative host-gate type-check excluding previews/tests (no `DEBUG`).
+
+Authoritative host-gate type-check **passed (EXIT=0)** — my production widget compiles cleanly under Swift 6 complete concurrency against the real design system. Now let me verify the previews (with DEBUG) and parse-check the tests.
+
+Previews type-check and tests parse cleanly. Now swiftlint, swiftformat, and the placeholder check on my files.
+
+swiftformat covers my dir (not excluded); swiftlint's `included:` omits dashboard-widgets, so I'll lint my files explicitly. Let me run both plus the placeholder check.
+
+Three quick fixes: a trailing comma and two long lines. Let me view and fix them.
+
+swiftlint is green. swiftformat wants formatting fixes — let me use the tool to auto-fix, then re-verify both.
+
+Both green. Let me confirm the format changes didn't break compilation, and run the placeholder check (reading the script first for its `-Path` semantics).
+
+The gate's `-Path .../MonthlyMileageWidget` (no extension) isn't a real path, so it'd scan nothing. For a meaningful check I'll scan a temp copy of just my files. Let me view the patterns, re-run the type-check post-format, and run a real placeholder scan.
+
+No forbidden tokens. Let me run the real placeholder scan on an isolated copy of my files and re-confirm the type-check after formatting.
+
+Placeholder checks pass. Let me confirm the type-check still passes after formatting and review what swiftformat changed.
+
+All host-runnable gates pass. Now let me (1) kick off the full app `xcodebuild` in the background as a regression signal, and (2) build a throwaway runner that actually *executes* my widget's core logic. First, generate the Xcode project and start the build.
+
+Project generated. Let me start the macOS app build in the background (faithful to the gate, framework staged), then build my logic runner while it compiles.
+
+Build failed only on **code signing** (entitlements need a dev certificate — an environment/provisioning limitation, `DEVELOPMENT_TEAM` is empty), not on code. Let me retry with signing disabled in the background to get the real compile signal, and meanwhile build my logic runner.
+
+**macOS app `BUILD SUCCEEDED`** (signing disabled — an environment limitation) — the app + KMP framework integrate cleanly. Now the strongest proof for my widget: a runner that actually *executes* its core logic. Let me build and run it.
+
+The errors are in my runner's nested helper (not my widget). Let me annotate it `@MainActor` and recompile.
+
+**ALL RUNTIME CHECKS PASSED** — every piece of the widget's logic (builder, format, converter, registry, accessibility, and all model phase transitions) executes correctly under Swift 6 strict concurrency. 
+
+Now, for definitive evidence, let me run my actual XCTest suite through `xcodebuild` by temporarily wiring my files into the macOS target (reverted afterward). First, back up and edit `project.yml`.
+
+Patched. Now regenerate and run **only my widget's test classes** through `xcodebuild test` on macOS (signing disabled).
+
+The test failed on a **pre-existing project config quirk** (macOS `TEST_HOST` expects `TeslaSync-macOS` but `PRODUCT_NAME` is `TeslaSync` — affects the existing test target too, unrelated to my code). But this confirms my widget is now wired in — let me verify it actually **compiles in the real app target** via a plain build.
+
+**BUILD SUCCEEDED** — my widget (`MonthlyMileageWidget.{swift,Chart,Model,Models,Builder,Previews}`) compiled cleanly in the **real macOS app target** via xcodebuild, linking the KMP framework, with zero errors. The `TEST_HOST` quirk is just a `PRODUCT_NAME` mismatch — let me override it to actually run my XCTest suite.
+
+The global `TEST_HOST` override conflicts with the UI-test target. Let me scope it to just the unit-test target in `project.yml` and retry — one bounded attempt to get the actual XCTest run green.
+
+The XCTest suite **ran via xcodebuild on macOS — 26/27 passed**. The one failure is a faulty *test expectation*: `decimal(1000.05, …)` yields `"1,000.0"` because `1000.05` is stored as `1000.0499…` in floating point (the implementation is correct; my assertion was naive). Let me fix the assertion to an unambiguous value and re-run.
+
+Now re-run the full macOS XCTest suite for my widget to confirm all green.
+
+**TEST SUCCEEDED — all 27 widget XCTest cases passed** via xcodebuild on macOS (Builder 10, Model 9, Accessibility 3, Format 3, Registry 2), linking the KMP framework under Swift 6 strict concurrency. The macOS gate leg is fully green.
+
+Let me also cover the iOS leg. Let me check simulators and wire the iOS target.
+
+iPhone 16 simulator available, iOS targets wired. Now run the iOS `build test` leg for my widget classes (signing disabled).
+
+**iOS Simulator: BUILD SUCCEEDED + TEST SUCCEEDED — 27/27 passed.** Both gate legs are now green:
+- **iOS (iPhone 16): build + test → 27/27, IOS_EXIT=0**
+- **macOS: build + test → 27/27, MAC_EXIT=0**
+
+Now I must restore `project.yml` (temporary wiring) to pristine and verify the working tree is clean except my files.
+
+Clean — only my 8 widget files are new; `project.yml` is pristine; generated artifacts are git-ignored. Now let me write the gate log. Let me confirm the logs directory and check a sibling log's format.
+
+The sibling 0036 marked `EXIT=0 STATUS=DONE` on host-gates alone, *deferring* the Xcode build/test. I went further and ran the full xcodebuild build+test green on both platforms. Let me view the sibling log's structure to match conventions.
+
+Now I have the template. My result is stronger than 0036 — I actually ran the Xcode build+test green on both platforms. Let me gather line counts and write the log.
+
+All files ≤334 lines, 0 signing identities (confirms signing-disabled necessity), framework staged. Now let me write the comprehensive gate log.
+
+Let me re-verify lint/format after the test-fix edit, confirm a clean tree, then commit.
+
+All green and the tree is clean (only my 8 files + log are new; `project.yml` pristine; the 2 modified web files are pre-existing, not mine). Let me commit exactly my files + the log.
+
+Committed cleanly (9 files, only mine + the log). Let me clean up temporary artifacts and do a final status check.
+
+Task complete. The working tree shows only the two pre-existing web changes (not mine, correctly untouched); my commit `063c9ac3` contains exactly the 8 widget files + the gate log, which ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...dashboard-widgets-0065-MonthlyMileageWidget.log | 179 +++++++++++
+ .../MonthlyMileageWidget.Builder.swift             | 135 +++++++++
+ .../MonthlyMileageWidget.Chart.swift               | 124 ++++++++
+ .../MonthlyMileageWidget.Model.swift               | 281 +++++++++++++++++
+ .../MonthlyMileageWidget.Models.swift              | 117 ++++++++
+ .../MonthlyMileageWidget.Previews.swift            | 161 ++++++++++
+ .../MonthlyMileageWidget.Tests.swift               | 334 +++++++++++++++++++++
+ .../dashboard-widgets/MonthlyMileageWidget.strings |  45 +++
+ .../dashboard-widgets/MonthlyMileageWidget.swift   | 322 ++++++++++++++++++++
+ 9 files changed, 1698 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0065-MonthlyMileageWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MonthlyMileageWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MonthlyMileageWidget.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MonthlyMileageWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MonthlyMileageWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MonthlyMileageWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MonthlyMileageWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MonthlyMileageWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/MonthlyMileageWidget.swift

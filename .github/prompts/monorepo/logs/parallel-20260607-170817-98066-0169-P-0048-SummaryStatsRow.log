@@ -1,0 +1,166 @@
+I'll start by exploring the environment and understanding what's available, then read the web source specification.
+
+Key finding: `apps/apple` exists with real structure, but **xcodebuild requires full Xcode** (only CommandLineTools installed). `swift`, `swiftlint`, `swiftformat`, `pwsh` are all available. Let me read the web source and explore the native architecture.
+
+Now I understand the pattern. Existing feature-views use a multi-file convention: `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`. Let me study the smallest analog (`TelemetryErrorsPanel`) end-to-end plus the web dependencies.
+
+Excellent — this is a very high-quality, mature codebase. Let me complete my understanding of one full example plus the web context and native shared components.
+
+Now let me read the web parity dependencies (`timeSince`, `fmtInt`, web `MetricCard`) and the native shared components I'll compose with.
+
+Now reading the native shared components and design tokens I'll compose with.
+
+Let me read the design tokens, the supporting data-display primitives, the feedback `States`, and the example's Previews + Tests to nail conventions.
+
+`TSDesign.swift` is thin — the core tokens live elsewhere (likely generated). Let me locate all the token/primitive definitions and read the example's Previews/Tests plus the placeholder checker.
+
+Let me locate the generated design tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`) and read the UI primitives, placeholder checker, and build config.
+
+Tokens aren't in `Sources` via grep — they're likely generated or in a shared location. Let me track down `Color.TS`/`Font.TS`/`TSSpacing` definitions and review the build config.
+
+Tokens are generated into `apps/design/generated/apple` (git-ignored, built via `gen-apple.mjs`). Let me check for any full Xcode, test SwiftUI compilation with CLT, read the remaining UI primitives, and check the pending-verifications note.
+
+A full `/Applications/Xcode.app` exists — `xcode-select` just points to CLT. I can likely use `DEVELOPER_DIR` to access it without sudo. Let me probe this — it determines whether I can reach DONE vs BLOCKED.
+
+Major unlock: **Xcode 26.5 + iPhone 16 simulator + xcodegen + node are all available** via `DEVELOPER_DIR`. The full gate is achievable — STATUS=DONE is in reach. Let me read the remaining primitives and figure out token generation, then establish a build baseline.
+
+I now have the full picture of the native primitives. Let me generate the design tokens (so I can read exact `Color.TS` members), and read the web `neonColorMap` + `fmtNumber` for exact porting. I'll set up a persistent build shell.
+
+Tokens generated. Let me read the generated `Tokens.swift` to see exact `Color.TS` members (especially for the purple mapping) and the web neon color values.
+
+Tokens are comprehensive — I have brand colors for all 5 web accents (incl. `chartSeriesSpeed`=blue, `chartSeriesPower`=purple). Critical check: I must confirm how `feature-views/` and the `.Tests.swift` files are wired into the targets. Let me read the full `project.yml` and Tests layout.
+
+Critical discovery: the app targets compile `Sources`, `TeslaSync/dashboard-widgets`, `Localization`, and tokens — but **not** `TeslaSync/feature-views`. So existing surfaces (and mine) aren't wired into the build yet (integration is deferred). The `.Tests.swift` files live beside the surface, not in `Tests/Unit`. Let me check the `Shared.xcframework`/KMP situation and establish a baseline, since that governs whether the gate can run.
+
+`Shared.xcframework` is absent (built on-demand via gradle/Kotlin-Native — the macOS-CI-deferred step), and feature-views aren't wired into any target. Let me check the KMP-free closure of the shared components my surface needs, and whether gradle/JDK is even available — this determines my verification strategy.
+
+KMP components are clean (only SwiftUI/Foundation/Charts/MapKit/CoreLocation — no `Shared` import), so my surface's dependency closure (tokens + `Sources/Components` + `Sources/Design`) is **KMP-free**. Java 17 + gradlew exist. 
+
+My verification strategy: since the surface doesn't need the KMP `Shared.xcframework`, I'll build a scoped, throwaway `TeslaSync` module (tokens + Components + Design + my files) and run real `build test` on **iPhone 16 simulator + macOS** — actually compiling and testing my code. I'll also probe whether the full-app gradle path is feasible. Let me set up the build shell and probe gradle.
+
+Gradle 8.14.5 works. I'll kick off the KMP `Shared.xcframework` build in the background (stretch goal for the full official gate), while my primary verification is the scoped iOS+macOS harness. Let me launch gradle async and set up my task tracking.
+
+Gradle build is running in background. Let me read the lint/format configs so my code conforms on the first pass, then author all files.
+
+Let me check the gradle result, then author all surface files.
+
+The KMP build failed only at the link step because that async shell lacked `DEVELOPER_DIR` (Kotlin/Native's `xcrun` hit CommandLineTools). The Kotlin compile came from cache — so with `DEVELOPER_DIR` set it should link. Let me relaunch it in the background and begin authoring the surface (my primary verification is the scoped harness, independent of this).
+
+Now I'll author the surface. Starting with the pure, testable Adapter core.
+
+Now the Model: state-holder seam (P1/S8), projection ladder, telemetry seam (P1/S11), and i18n facade (P1/S10).
+
+Now the presentational subviews: accent→token color mapping, the web-`MetricCard`-parity tile, the responsive grid, and the loading skeleton row.
+
+Now the root view binding the model and switching states.
+
+Now the DEBUG previews covering each state.
+
+Now the i18n catalog contribution.
+
+Now the test suite — adapter formatters, layout, projection, model wiring/telemetry, and accessibility.
+
+All 7 files written. Let me update tracking, check the KMP build progress, and start verification with swiftformat/swiftlint on my files.
+
+swiftformat flagged trailing-comma and redundant-return style. Let me auto-fix with swiftformat (write mode), then re-lint and run swiftlint.
+
+swiftformat passes. Now swiftlint on my files (passing paths explicitly since `feature-views` isn't in the config's `included`).
+
+One swiftlint issue: `void_function_in_ternary` at Views.swift:46. Let me inspect.
+
+False-positive heuristic on a ternary-of-calls. I'll move the ternary to the string arguments (literals), which is cleaner and avoids the rule.
+
+swiftlint `--strict`: **0 violations**. swiftformat `--lint`: **0 require formatting**. KMP build still linking. Now the placeholder gate, run exactly as the gate specifies.
+
+Let me confirm the placeholder script actually scanned my files (not a vacuous 0) by checking its path-resolution logic and running its self-test.
+
+Line 132/137 use `Test-Path`/`Get-ChildItem -Recurse` on the literal `-Path`. The gate's `-Path …/SummaryStatsRow` (no extension) isn't a real path, so that scan is vacuous. Let me verify the script's behavior and run a genuine per-file scan plus the self-test for honest evidence.
+
+Confirmed — the gate's no-extension path returns a vacuous 0. I'll scan my real files per-path. The KMP build finished; let me read its result and run the genuine placeholder scan + self-test together.
+
+**KMP `Shared.xcframework` built successfully** — the full official gate is now achievable. The genuine scan also caught a real issue: the word "placeholder" in a Views.swift comment (line 177). Let me find all forbidden words in my files and fix them.
+
+Fixed. Let me re-verify lint/format/placeholder on the edited file, then regenerate the real Xcode project (now that `Shared.xcframework` builds) to pursue the full gate.
+
+All green on my files (lint/format/placeholder). Now I'll pursue the authoritative full gate. Let me set up a persistent build shell, stage the freshly-built `Shared.xcframework`, regenerate the Xcode project, and kick off a baseline iOS build to confirm `Sources/**` compiles.
+
+Framework staged and project generated. Rather than burn a separate baseline build, I'll temp-wire my 6 files into the real app + test targets (reverted before commit) so the authoritative gate actually compiles and tests my surface. Let me write the wiring helper.
+
+PyYAML/pip unavailable. I'll do precise, uniquely-anchored text insertion with Python instead, with assertions that each anchor matches exactly once.
+
+Wired into all 4 targets. Let me regenerate and run the iOS build (full app **including my files**) — the critical compilation proof. I'll start it in the background.
+
+iOS build running in background. Let me wait for it to progress.
+
+The build failed — but the errors are in **pre-existing** `TeslaSync/dashboard-widgets/*.Tests.swift` files (XCTest imported into the app target), not my surface. Let me confirm the failure is pre-existing and my files are clean.
+
+Confirmed: the only errors are pre-existing `dashboard-widgets/*.Tests.swift` files (XCTest unresolvable in the app target) — **my surface produced zero diagnostics**. The full-app gate is blocked by pre-existing repo state I can't touch. I'll revert the temp-wiring and verify my artifact via a scoped harness that compiles my files against the real shared components + tokens and runs my tests on both platforms.
+
+project.yml reverted cleanly. Waiting for harness project generation.
+
+xcodegen is hanging (>80s) — likely the absolute-path group expansion. Let me stop it and switch to symlinked relative paths.
+
+Retrying with symlinked short/relative paths and `createIntermediateGroups: false` to avoid the absolute-path group explosion.
+
+Harness generated. Now build + test the iOS scheme (compiles my files against real Components/Design/tokens, runs my tests).
+
+Template didn't propagate `type`. Let me inline the target types (no templates) and regenerate.
+
+Regenerated cleanly. Running iOS build + test.
+
+The harness pulled in Components files that reference `UnitPreferences`/`TSUnitsKey` (defined outside Components/Design) — not my files. Let me identify the minimal file set my surface actually needs and include only those.
+
+Only one file — `Components/DataDisplay/UnitFormatters.swift` — references the external `UnitPreferences`/`TSUnitsKey` (my surface doesn't use it). I'll exclude just that file from the harness.
+
+Big progress — the **framework with all 5 of my surface files compiled cleanly on iOS** (no diagnostics in my code). The remaining failure is a harness misconfig: I set `PRODUCT_MODULE_NAME: TeslaSync` globally, so the *test* target also became module "TeslaSync" and `@testable import TeslaSync` imported itself. Let me scope the module name to the framework targets only.
+
+Excellent — **23 tests ran on the iOS simulator, 22 passed**. The one failure is a wrong *test expectation*, not a code bug: `13:04:05.250Z` is 250 ms *after* the 2-hour mark, so elapsed floors to `.hours(1)` — the code is correct. Let me fix the assertion to a timestamp cleanly inside the 2-hour bucket.
+
+Test-expectation fixed (code is correct). Let me re-lint/format the test file and rerun the iOS harness (framework is cached, so just the test recompiles).
+
+**iOS harness: TEST SUCCEEDED — 23 tests, 0 failures, EXIT=0.** Lint/format clean. Now the macOS scheme (build + test).
+
+macOS framework **BUILD SUCCEEDED** (my files compile on macOS too). The test failure is a harness artifact: two same-named "TeslaSync" modules sharing DerivedData. Let me isolate the macOS run with its own derivedDataPath.
+
+Isolated DerivedData didn't help — it's the dual-target same-module-name ambiguity (macOS framework target is named `TeslaSyncMac` but emits module `TeslaSync`). Let me use a clean macOS-only project where the target name matches the module (like the working iOS case).
+
+**macOS harness: TEST SUCCEEDED — 23 tests, 0 failures, EXIT=0.** Both platforms green. Let me run a final consolidated lint/format/placeholder pass on all files and check git state for cleanup.
+
+All final checks green: **swiftlint 0, swiftformat 0, placeholder 0**. My 7 files are untracked and ready. `xcodeproj`/`Shared.xcframework` are gitignored. I caused one incidental change (`windows/Tokens.xaml` from token regen) — I'll revert it. Let me revert it, confirm the log dir, and gather evidence for the log.
+
+windows token reverted — only my 7 files remain. Log dir exists. Evidence confirmed: pre-existing `DigitalTwinWidget.Tests.swift` XCTest error, and **0 errors from my files** in the full-app build. Let me match the existing log format by viewing a precedent feature-view log.
+
+This confirms the established convention: "code-complete + host-compiled on both SDKs + host-tested," with full-app build/test **deferred** (feature-views not target-registered, `Shared.xcframework` not staged) — and the capability-BLOCKED escape explicitly does *not* apply. Let me read how the precedent log structures its verification section and final EXIT/STATUS.
+
+I now have the exact established convention: host-runnable gates green + the full-app `xcodebuild build test` shown **DEFERRED with real evidence** (feature-views not yet registered in `project.yml` — out of allowed files; `Shared.xcframework`; signing) → `EXIT=0 / STATUS=DONE`. My evidence exceeds the precedent (I ran real iOS+macOS `build test`). Let me gather final data and write the log.
+
+All data gathered (base `16dacd60`, 23 tests, 11 i18n keys referenced==declared, line counts). Now I'll write the gate log following the established convention, with my real iOS+macOS `build test` evidence.
+
+Log written. Now cleanup of temp artifacts and gitignored build outputs, then verify the working tree contains only my deliverable.
+
+Working tree is clean — exactly my 7 surface files + the log (plus the 2 pre-existing tsx I left untouched). Let me stage and commit.
+
+All 8 files staged (7 surface + log); pre-existing files excluded. Committing with the prompt's message.
+
+Committed as `2637d815`; working tree clean (only pre-existing files remain). Let me do a final confirmation of the committed contents and todo state.
+
+All complete. Commit `2637d815` contains exactly the 7 surface files + the gate log; all todos done.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-feature-views-0048-SummaryStatsRow.log | 202 ++++++++++++++++
+ .../feature-views/SummaryStatsRow.Adapter.swift    | 181 ++++++++++++++
+ .../feature-views/SummaryStatsRow.Model.swift      | 265 +++++++++++++++++++++
+ .../feature-views/SummaryStatsRow.Previews.swift   |  67 ++++++
+ .../feature-views/SummaryStatsRow.Tests.swift      | 265 +++++++++++++++++++++
+ .../feature-views/SummaryStatsRow.Views.swift      | 196 +++++++++++++++
+ .../feature-views/SummaryStatsRow.strings          |  32 +++
+ .../TeslaSync/feature-views/SummaryStatsRow.swift  |  50 ++++
+ 8 files changed, 1258 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0048-SummaryStatsRow.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummaryStatsRow.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummaryStatsRow.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummaryStatsRow.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummaryStatsRow.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummaryStatsRow.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummaryStatsRow.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummaryStatsRow.swift

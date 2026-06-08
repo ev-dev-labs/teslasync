@@ -1,0 +1,66 @@
+I'll start by exploring the repository structure and verifying the key dependencies and runner capabilities for this task.
+
+Key finding: full Xcode is **not** installed (only CommandLineTools), but `swift` 6.3.2, `swiftlint`, and `swiftformat` are available. Let me examine the Apple app structure and the web source before deciding on the build path.
+
+Now let me deeply understand the Apple app structure — feature-views layout, existing examples, the shared P1 layers (state holders, tokens, i18n, telemetry), and the build system.
+
+The `feature-views` directory already exists with many files (prior prompts 0001–0120). `xcodegen` is available but full Xcode is not. Let me check what already exists for AddWidgetButton, look at a representative existing feature-view as a template, and find the P1 shared layers.
+
+`UserImpersonateButton` is the closest analog (a Button surface). Let me study its complete file set as the canonical template, plus the placeholder checker and project.yml.
+
+The template is comprehensive. Let me read the remaining template files (Previews, strings, Tests), the build config, the placeholder checker, and verify `pwsh`/build capability.
+
+I now fully understand the 7-file convention. Let me locate the design-system primitives (TSButton, TSTone, TSSpacing, Color.TS, Font.TS, TSRadius), the build config, and verify `pwsh` + placeholder patterns so my code uses exact valid symbols.
+
+`pwsh` is available. Let me locate the design-system definitions across the whole tree and read the project.yml and placeholder patterns.
+
+The app targets include `TeslaSync/feature-views` automatically, so new files compile without manual registration. Now let me read the exact design-system APIs I'll use, so my code references real symbols.
+
+TSButton is a rounded-rect; the web FAB is circular. I'll build a token-driven circular FAB (native idiom) using the same `Color.TS.accent` the primary variant uses. Let me read the exact token APIs (Color.TS, Font.TS, TSSpacing, TSRadius, TSTone).
+
+I have all token APIs. Now let me read the lint configs and the placeholder checker so my code passes `swiftlint --strict`, `swiftformat --lint`, and the placeholder gate, plus check for any parity-manifest expectations.
+
+Placeholder gate forbids the words `TODO, FIXME, XXX, Coming soon, Placeholder, Lorem ipsum, not implemented` (case-insensitive) — I'll avoid all of these. Before writing, let me probe whether `swiftc` can type-check SwiftUI under CommandLineTools (to get a real compile signal without Xcode).
+
+`swiftc -typecheck` works for SwiftUI/Observation/OSLog under CommandLineTools (PROBE_EXIT=0). This gives me a real compile signal. Let me also probe `#Preview` and `XCTest` so I know what to include.
+
+`#Preview` type-checks under the CLI; `XCTest` is Xcode-only (expected). My plan is set: build the 7-file surface, then verify with a real `swiftc -typecheck` probe (sources+tokens), `swiftlint --strict`, `swiftformat --lint`, and the placeholder gate. The `xcodebuild` gate steps are genuinely blocked (no full Xcode). Let me record the plan and todos, then write the files.
+
+Now I'll create all 7 surface files following the verified conventions and exact token APIs.
+
+All 7 files created. Now let me run the real verification: a `swiftc -typecheck` probe against the actual design tokens (Swift 6 mode, DEBUG so previews are included).
+
+The probe caught two things: (1) the `#Preview` macro plugin isn't in the CLI toolchain (a toolchain limit, not my code) — so I'll typecheck the 4 core files separately; (2) a real issue with the `.environment(\.accessibilityReduceMotion, true)` setter in this SDK. Let me re-run the probe without Previews and check how the codebase handles reduce-motion in previews.
+
+Core 4 files type-check cleanly against real tokens (CORE_TYPECHECK_EXIT=0). The `accessibilityReduceMotion` setter isn't writable in this SDK and isn't used anywhere else in the codebase — I'll drop that preview override (the reduce-motion respect stays in the ButtonStyle). Then I'll type-check the preview bodies via a throwaway harness.
+
+Now a throwaway harness type-checks the preview body expressions (the helpers + bodies verbatim, minus the `#Preview` macro wrapper) against my core files + real tokens.
+
+Clean type-check (exit 0) with one concurrency **warning**: the nonisolated `stage` preview helper calls the main-actor-isolated view modifier. Preview helpers should be `@MainActor` (like `previewButton`). Let me confirm the fix clears the warning, then apply it to the real file.
+
+Applied. Now let me run the format, lint, and placeholder checks on my files.
+
+swiftformat passes (0/6 need formatting). Now swiftlint `--strict` on my files.
+
+swiftlint `--strict`: **0 violations** in all 6 files. Now the placeholder gate (both the exact gate invocation and a real scan of my files), plus a syntax-parse of the Tests file (which can't be type-checked without XCTest).
+
+Placeholder gate passes (COUNT=0, EXIT=0) and the Tests file parses cleanly. To verify the test *logic* compiles against my real API (not just syntax), let me type-check the test bodies against my source via a tiny XCTest shim.
+
+All verification probes pass: core type-check, preview bodies, **test logic against real API**, swiftformat, swiftlint `--strict`, placeholder gate. Now let me capture the exact `xcodebuild` capability evidence (the genuinely blocked steps) for an honest log.
+
+Capability is conclusively blocked: only CommandLineTools (no Xcode), no iPhone 16 simulator, both `xcodebuild` gate steps exit 1 with "requires Xcode". Let me capture the whole-tree `swiftformat`/`swiftlint` gate results too (for honest logging), scoped vs. project-wide.
+
+Whole-tree `swiftformat` fails only on a **pre-existing sibling** (`ActionBuilder.Previews.swift:48`, 1/1034 files) — not my surface (my 6 files: 0/6). Let me capture the whole-project `swiftlint --strict` result similarly.
+
+One violation project-wide (`LINT_EXIT=2`); my scoped files were clean (0). Let me identify the offending file to confirm it's a pre-existing sibling, not mine.
+
+The sole `swiftlint` violation (`LifetimeStatsWidget.Adapter.swift`) and `swiftformat` offender (`ActionBuilder.Previews.swift`) are both **pre-existing siblings** outside my surface scope — my 6 files are clean. I have all evidence. Let me get line counts, then write the honest gate log.
+
+Now let me commit. First verify exactly what's staged (only my surface files + the log), since the prompt's `git add` path needs the actual filenames.
+
+Only my 7 surface files and the log are new — clean. Committing with the prescribed message.
+
+Committed (8 files, 772 insertions). Let me clean up temp probe files and finalize todos.
+
+Done. Cleaned up; all todos complete; tree clean.
+

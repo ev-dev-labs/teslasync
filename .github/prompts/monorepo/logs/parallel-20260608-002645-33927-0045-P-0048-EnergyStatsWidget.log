@@ -1,0 +1,134 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Note: `xcodebuild` requires full Xcode (only CLT installed), but `swift`, `swiftlint`, `swiftformat` are available. Let me explore the web source and existing Apple structure.
+
+Now let me examine the existing Apple app structure, particularly the `AIUsageCard` reference pattern and the dashboard-widgets directory.
+
+EnergyStatsWidget doesn't exist yet. `LifetimeStatsWidget` is the closest analog (stats widget + chart). Let me read its complete bundle to learn the pattern.
+
+Excellent, a complete reference pattern. Let me read the rest of the LifetimeStats bundle and the shared infrastructure.
+
+Let me read the Tests file and locate the shared infrastructure (tokens, components, registration types, and a chart-using widget for Swift Charts reference).
+
+The Tests pattern is comprehensive. Now let me find the shared infrastructure definitions and a Swift Charts area-chart reference.
+
+The shared tokens/types appear per-bundle. Let me find where the design tokens and registration types are actually defined for the main target, and check the build setup.
+
+The per-bundle redeclaration pattern suggests standalone surface bundles. Let me examine the project structure config to understand how sources map to targets.
+
+The `TeslaSync` target compiles all dashboard-widgets together, yet many redeclare `DashboardWidgetSize` — confirming these are parallel, integration-time-deduplicated bundles. Let me locate the actual shared token/component definitions (P1/S9) that LifetimeStats relies on.
+
+There's a generated tokens file and shared components. Let me read the canonical token/component definitions and understand how `DashboardWidgetSize`/`DashboardWidgetRegistration` are shared vs. per-bundle.
+
+There's a generated tokens file referenced in `project.yml` at `../design/generated/apple` but only `Tokens.swift` exists there. Let me read the shared token/component sources, the web data layer for exact DTO shapes, and a chart-using sibling bundle.
+
+Now let me read the shared token/component sources and the web data layer (hooks/types) to nail exact DTO shapes and formatting.
+
+Now let me read the generated design tokens and the web data layer (the exact DTO + formatting) plus how the chart is embedded in a sibling's main view.
+
+Got the tokens (note `Color.TS.chartSeriesEnergy` = amber `#f59e0b`). Now the exact DTO + formatting from the web, plus how a chart embeds in a sibling's main view.
+
+Now the energy formatter math, `fmtNumber`, the `DailyEnergy` type, and the required unit-conversion instructions.
+
+Let me read the energy conversion internals, the web `AnimatedNumber` formatting, and the chart-bearing sibling's main view + model.
+
+Now I have the full math. Let me read the chart sibling's main view (chart+grid composition) and confirm a charging SF Symbol used elsewhere.
+
+Let me study the area-chart pattern from `SolarProductionWidget` (energy-like, area + gradient).
+
+The area-chart pattern is clear. Let me confirm the web `fmt` axis helper and read the Solar main view + model (projection/points/accessibility) to mirror the chart-empty conditional and projection shape.
+
+I have enough to build. Let me probe the Swift toolchain capability (SwiftUI/Charts compile) and read the lint/format configs so my code conforms.
+
+The macOS SDK in Command Line Tools **does** compile SwiftUI + Swift Charts (`-typecheck` EXIT=0). So I can typecheck the full bundle and run the adapter logic, even though `xcodebuild` (full Xcode/iOS simulator) is unavailable. Let me set up tracking and start building.
+
+Now I'll create the bundle. Starting with the Model (seams, DTO, registry, i18n facade — self-contained with `DashboardWidgetSize`/`Registration` like the majority of siblings).
+
+Now the Adapter — the Foundation-only projector that reproduces the web numeric pipeline verbatim (the highest-value parity file).
+
+Now the Swift Charts area chart (mirrors the `SolarProductionChart` pattern, energy series + tap tooltip).
+
+Now the main SwiftUI surface view (header, all states, compact/standard/wide layouts, stat tile, i18n `text()` facade).
+
+Now the DEBUG previews for each state/layout.
+
+Now the i18n catalog (`.strings`).
+
+Now the comprehensive test suite (adapter parity, model phases, registry, accessibility, chart projection).
+
+All 7 files created. Now verification — first swiftformat and swiftlint on the new files, plus an i18n key cross-check.
+
+i18n keys all resolve. swiftformat wants auto-fixable formatting (numeric grouping, property-body wrapping, line wrapping). Let me apply the formatter (ecosystem tool) then re-lint.
+
+swiftformat passes. Let me verify the auto-fix didn't alter numeric values and run swiftlint on the new files.
+
+swiftlint flags: a 125-char line, two files >400 lines, and `project()` body >50 lines. I'll split out registry/views into new `EnergyStatsWidget.*` files (matching the sibling multi-file pattern), refactor `project()` into helpers, and wrap the long line. Let me inspect the exact spots.
+
+I'll split out registry + tile into new `EnergyStatsWidget.*` files (sibling multi-file pattern), refactor `project()`, and wrap the long line. First confirm Model's split point.
+
+Now move `EnergyStatTile` out of the main view file. Let me view its exact block.
+
+Now refactor `project()` into helpers (≤50-line body) and fix the Chart long line. Let me view the current `project()`.
+
+Now fix the Chart long line by precomputing the value string. Let me view the current tooltip.
+
+Now re-run swiftformat autofix and swiftlint --strict across all 8 bundle files.
+
+Lint clean (0 format issues, 0 swiftlint violations). Now the standalone macOS typecheck. Let me confirm exactly which shared components my bundle references.
+
+Only `TSSkeleton` + `TSAnimatedNumber` are external (plus the real `Tokens.swift`). Let me assemble a standalone macOS typecheck harness with the real tokens + accurate stubs for those two.
+
+Path fix — tokens are at `../design/generated/apple/`. Re-running the harness.
+
+The stub file wasn't staged. Let me create it and re-run.
+
+**TYPECHECK_EXIT=0** — the full bundle compiles for macOS with SwiftUI + Swift Charts under Swift 6. Now a runtime harness to execute the projection/model/registry logic (Model/Registry/Adapter are SwiftUI-free) and prove value parity.
+
+Swift 6 actor isolation on the harness helpers — I'll mark them `@MainActor` and add the model-lifecycle tests too.
+
+Top-level vars can't carry an actor annotation (they're implicitly MainActor). Removing that one annotation.
+
+**All 70 runtime assertions PASS (HARNESS_EXIT=0).** Now the placeholder check and locate the gate's checker.
+
+No forbidden tokens, and `pwsh` **is** available. Let me inspect and run the gate's placeholder checker.
+
+Placeholder gate passes (COUNT=0). Now capture the real `xcodebuild` failure (platform-capability evidence) for the log.
+
+`xcodebuild` requires full Xcode (only CLT present) and no simulators exist — the build/test gate is genuinely BLOCKED. Everything else passes. Let me check the log directory and write the gate log.
+
+Let me view the full reference log structure to match the house format.
+
+The reference log shows the original runner had full Xcode at `/Applications/Xcode.app` driven via `DEVELOPER_DIR`. Let me check whether Xcode exists anywhere on this runner — if so I can actually build/test.
+
+Xcode **is** installed at `/Applications/Xcode.app`. This may let me run the real gate. Let me verify the toolchain (Xcode, simulators, KMP shared-framework prerequisites) and assess the pre-existing sibling-duplication situation.
+
+Now the full picture is clear: Xcode 26.5 works, but the official gate is blocked by **pre-existing workspace state** — `Shared.xcframework` (KMP) is absent, and there are **14 duplicate `DashboardWidgetSize`/`Registration` declarations** across sibling parallel-slot bundles (redeclaration errors if compiled as one target). Let me (a) prove my surface compiles against the real **iOS 18 SDK**, and (b) demonstrate the pre-existing sibling conflict as concrete evidence.
+
+**iOS 18 SDK typecheck: EXIT=0** (authoritative for the deployment platform), and I've concretely demonstrated that two sibling bundles **alone** already redeclare `DashboardWidgetSize` — so the whole-target `xcodebuild` is pre-broken independent of my surface. Let me capture the literal gate command output and attempt a real project build for honest evidence.
+
+Project generated. Now let me build the macOS target directly (skips the heavy KMP scheme pre-action) to capture the real compile blocker under `xcodebuild`.
+
+The literal blocker reached first is the absent `Shared.xcframework` (KMP build). Let me check whether the KMP toolchain caches are warm enough to build it (to surface the deeper redeclaration error under real `xcodebuild`), with a bounded attempt.
+
+The KMP framework + sibling redeclaration are pre-existing, out-of-scope blockers; the gate cannot reach green regardless of effort (I can only touch `EnergyStatsWidget.*`). I have authoritative evidence. Let me clean up generated artifacts and confirm git state.
+
+All 9 bundle files staged as untracked; generated `.xcodeproj` removed. Let me verify the workspace is clean of stray artifacts, then write the gate log.
+
+Workspace clean (the AIUsageCard/web modifications are pre-existing, not mine). Now I'll write the honest gate log.
+
+Let me verify the line counts I cited in the log are accurate, and re-run the scoped lint/format as a final confirmation before committing.
+
+Let me correct the line counts in the log to the exact actual values.
+
+Final confirmation: count strings keys, re-run scoped swiftlint + swiftformat, then stage and commit.
+
+28 keys (not 31) — correcting the log, then committing.
+
+Lint/format clean (0/8, 0 violations). Now staging my files + log and committing.
+
+Committed (`8b50e811a`, 10 files). Final sanity check on the working tree.
+
+Working tree shows only the pre-existing (non-mine) changes; temp harnesses cleaned. Let me record completion in the plan and finalize.
+
+The EnergyStatsWidget surface is complete, verified, and committed.
+

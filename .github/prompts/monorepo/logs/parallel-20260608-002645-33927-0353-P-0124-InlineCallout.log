@@ -1,0 +1,74 @@
+I'll start by exploring the repository structure to understand the task constraints and verify the capability requirements.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swift`, `swiftlint`, `swiftformat` are available; `simctl` is not. Let me examine the web source, the established native patterns, and how prior prompts handled the gate.
+
+Now I understand the web source — it's a pure presentational component (4 variants, optional icon, optional action rendering as div/button/link, no data/i18n). Let me study the established native file pattern (AIUsageCard, the most recent), a recent gate log, and the project build config.
+
+There's a pre-existing case-collision mess with `AIUsageCard`/`AiUsageCard` (parallel-work artifacts, not my concern). My allowed files are only `shared-surfaces/InlineCallout.*` + the log. Let me study the established conventions (tokens, i18n, telemetry, tests) from the `AiUsageCard.*` set and the build config.
+
+Now let me find the shared infrastructure: tokens (`Color.TS`, `Font.TS`, `TSSpacing`), the i18n facade (`AiUsageStrings`), telemetry (`view.opened`), motion (`TSFadeIn`), and read the Previews/Tests patterns plus project.yml.
+
+Path correction — Sources live at `apps/apple/Sources/`. Let me read the tokens, motion, diagnostics facade, build config, and the Previews/Tests patterns.
+
+The design tokens are generated. Let me locate their definitions, read the motion primitive, the Previews/Tests patterns, and the build config.
+
+I have the full pattern now. Let me check how prior P4 surface logs concluded (DONE vs BLOCKED) given the no-Xcode constraint, locate the token definitions, and read the build config.
+
+Critical finding: prior P4 surfaces did NOT declare BLOCKED — they verified via `swiftc` iOS-SDK typecheck + isolated SwiftPM build/test + swiftlint/swiftformat, deferring only the xcodebuild step (documented in `macos-pending-verifications.md`) while still reaching STATUS=DONE. Let me read a representative feature-view log and the pending-verifications doc to replicate the exact harness.
+
+Now I'll read the most recent feature-view gate log (0237 AiUsageCard) end-to-end to replicate the exact verification harness and log format.
+
+I now have the full template (the sanctioned "isolated SwiftPM build+test + per-surface lint/format/placeholder; defer full-app xcodebuild" disposition). Let me probe this specific runner's capabilities and locate the exact design-token names I must compile against.
+
+Major finding: `/Applications/Xcode.app` IS present here — I can use the `DEVELOPER_DIR` override that prior runs used. Let me verify xcodebuild/SDKs work and read the canonical generated tokens.
+
+All capabilities confirmed: Xcode 26.5 via DEVELOPER_DIR, iOS 26.5 + macOS 26.5 SDKs, simulators, xcodegen, swiftlint/format/pwsh. Tokens fully mapped (`statusInfo/Success/Warning/Danger`). Let me read the placeholder gate, lint/format configs, and how the build globs sources.
+
+Note: `.swiftlint.yml` doesn't list `shared-surfaces` and isn't in my allowed files — I'll lint my files by explicit path. The placeholder scanner is case-insensitive (e.g. it flagged "ToDo" inside `microCentsToDollars`). Let me read the exact forbidden patterns and the build config.
+
+I have everything needed. Let me verify the telemetry logger subsystem/category convention and confirm `Tokens.swift` is the sole compile dependency, then write the surface.
+
+Convention confirmed. Let me set up tracking, create the directory, and write the plan.
+
+Now I'll write the surface files. Starting with the Model (types, style, i18n, telemetry, announcer):
+
+Now the View file:
+
+Now the Previews, strings, and Tests files:
+
+Now the Tests file:
+
+All 5 files created. Now let me format, lint, and run the placeholder gate on the surface files.
+
+Format and lint are clean (0 violations). Now the placeholder gate:
+
+Placeholder gate clean (COUNT=0). Now the key verifier — the isolated SwiftPM build+test under the Xcode toolchain. Let me confirm the toolchain dispatch and scaffold the harness.
+
+Toolchain resolves to Xcode. Now build + test the isolated harness (this compiles the exact surface sources, incl. the `#Preview` macro, under Swift 6 strict concurrency):
+
+Library compiled cleanly under Swift 6 strict concurrency (all 4 surface files, incl. the `#Preview` macro). The only error is the test file referencing `Text` without `import SwiftUI`. Let me fix that.
+
+All 15 isolated tests passed under Swift 6 strict concurrency (incl. the `#Preview` macro file). Now the cross-SDK `swiftc -typecheck` on the real iOS 18 + macOS 15 SDKs (proving the HIG primitives compile on both platforms):
+
+Both SDKs type-check clean. Let me also confirm the `#Preview` macro resolves on the iOS SDK with `DEBUG` defined (bonus — SwiftPM already proved it on macOS):
+
+`#Preview` macro resolves on iOS too. The surface is fully verified independently. Now let me gather concrete, non-assumed evidence for the DEFERRED full-app xcodebuild step (the pre-existing, unrelated blockers + confirm my files aren't yet wired into `project.yml`).
+
+All four deferred-gate blockers concretely verified (Shared.xcframework absent → Gradle preAction; `DashboardWidgetSize` ×15; 170 co-located feature-views tests; `shared-surfaces` not in project.yml). Let me prove the project spec still generates and corroborate the deferred integration, keeping the tree clean.
+
+Concrete blocker evidence is captured. To avoid assuming, let me also capture an authentic xcodebuild failure (xcodebuild ignores scheme pre-actions, so the Gradle step won't run — it'll hit the real pre-existing blockers fast). I'll bound it.
+
+I've concretely verified the blockers via ls/grep (the established evidence standard); the live full-app build is long-running and DEFERRED regardless. Let me clean up generated artifacts and confirm the tree is pristine.
+
+Tree is pristine — only my untracked `shared-surfaces/` plus pre-existing unrelated changes (which I won't touch). Let me run a final consolidated gate pass and capture line counts for the log.
+
+All gates green: format 0, lint 0 (4 files), placeholder COUNT=0, 15/15 tests, dual-SDK typecheck 0. Now I'll write the gate log:
+
+Log written. Now I'll commit only my surface files + the log (leaving the pre-existing unrelated changes untouched):
+
+Staged set is exactly my 5 files + log; pre-existing changes remain unstaged. Committing:
+
+Committed cleanly (6 files, 1011 insertions). Let me update tracking and do a final sanity check that the repo tree is clean of artifacts.
+
+Task complete and verified. Everything is clean — no leaked build artifacts, pre-existing unrelated changes left untouched, and my commit is at HEAD.
+

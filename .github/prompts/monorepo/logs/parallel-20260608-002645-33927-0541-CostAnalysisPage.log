@@ -1,0 +1,2318 @@
+I'll start by exploring the repository structure to understand the task scope.
+
+This is a complex page with many sub-components. Let me explore the cost-analysis components and the existing Apple app structure in parallel.
+
+Let me explore the Apple app's existing structure and the parity manifest for this page.
+
+The Apple app structure is unusual. Let me investigate `dashboard-widgets` and `feature-views`.
+
+The Apple app uses a flat `feature-views/` structure where each component has multiple files (`.swift`, `.Model.swift`, `.Adapter.swift`, etc.). The cost-analysis sub-components seem to already exist. Let me check which exist and find existing Page examples + the ledger/log locations.
+
+No `*Page.swift` exists yet — this is the first page. Let me check tooling availability (critical for DONE vs BLOCKED) and the project/ledger setup.
+
+Critical finding: **Xcode is not installed** (only Command Line Tools), so `xcodebuild` cannot run → the gate will be `BLOCKED` per the prompt. But `swift` 6.3.2, `swiftlint`, `xcodegen`, and `pwsh` are available. I must still fully implement the page (no stubs/placeholders), run what I can, and honestly report BLOCKED. Let me find the project config and existing patterns.
+
+`project.yml` globs `TeslaSync/feature-views` and `Sources` — but **not** `TeslaSync/Features/`. The prompt's `Features/Charging/` path is a generator template that doesn't match this repo's flat `feature-views/` convention. Let me map the real architecture: navigation, the p4-apple gate contract, an existing feature-view example, and the string catalog.
+
+`Sources/Features/Dashboard` exists — that's the page precedent (compiled via the `Sources` glob, recursively). The prompt's `TeslaSync/Features/Charging` path is a template mismatch; the real convention for pages is `Sources/Features/{Domain}/`. Let me confirm by reading the Dashboard feature, the gate contract, navigation, and the model pattern.
+
+The README confirms: **"prompts that can't run their gate are BLOCKED, not DONE"** and the ledger is split into `apple-macos`/`apple-ios` (neither exists yet). Since Xcode is absent, the final status is BLOCKED — but I must still fully implement (no stubs). Let me read the routing/nav files, the model/adapter pattern, design tokens, and existing string keys.
+
+Now I understand the routing infra: `AppRouteHostRegistry` maps `AppRoute` → page provider; P7 pages register themselves. Let me precisely map the existing cost-analysis component APIs and the model/source/facade pattern. Let me check exact component existence and read the key pattern files.
+
+8 of 12 cost-analysis components exist as feature-views; 4 are missing (`MonthlyCostChart`, `MonthlyCostTable`, `TimeOfUseAnalysis`, `AICostForecastNarration`). The page-level PARITY_REQUIRED is 7 (3 states + 4 strings). Let me read the web data-derivation logic and the existing component model/source patterns to design the page model faithfully.
+
+Let me read the existing component model/adapter/preview patterns and the facade + design tokens to learn exact construction signatures.
+
+The pattern is clear: each feature-view has a `Model(source:)` constructed from an `InMemory{X}Source(initial: {X}Update(...))` carrying `status/stats/context/connection`. Previews demonstrate construction. This is a large composition with 8 reusable components plus the page model. I'll dispatch parallel explore agents to extract exact Swift signatures, design tokens, the facade, and route registration—since I can't compile-verify (no Xcode), precision matters.
+
+I'll map the exact Swift API signatures for these four components. Let me start by exploring the directory structure and then systematically read each component's files.I'll systematically map the shared infrastructure. Let me search the repo structure first.Now let me read the main files for each component:I'll help you extract the exact public Swift API signatures for those four components. Let me start by locating the component files.I'll systematically map the shared infrastructure. Let me search in parallel for all key components.Now let me read the main component files and their related Model, Adapter, and other files:Now let me read the remaining adapter files and the web sources:Now let me read the key design and infrastructure files:Now let me get the remaining files for CostPerKwhChart and the ChargerTypeBreakdown and SavingsCalculator components:Let me search for TSEmptyState, PageContainer, and Observable models:Now let me read the core infrastructure files:I'll now compile the exhaustive mapping of all four Swift component APIs and the web data shape. Let me gather the remaining files needed:Let me search for the generated design tokens and find the complete color/spacing definitions:Perfect. Now I have everything. Here is the exhaustive mapping:
+
+---
+
+## **EXHAUSTIVE SWIFT API SIGNATURE MAPPING**
+
+### **1. CostForecastSection**
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/apple/TeslaSync/feature-views/CostForecastSection.swift:38–47Now let me check for the remaining data types used by SavingsCalculator:`
+
+```swift
+public struct CostForecastSection: View {
+    public init(model: CostForecastModel) {
+        _model = State(initialValue: model)
+    }
+}
+```
+
+**Model Type:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/apple/TeslaSync/feature-views/CostForecastSection.Model.swift:154–188`
+
+```swift
+@MainActor
+@Observable
+public final class CostForecastModel {
+    public init(
+        source: any CostForecastSource,
+        telemetry: any CostForecastTelemetry = OSLogCostForecastTelemetry(),
+        formatting: any CostForecastFormatting = DefaultCostForecastFormatting(),
+        localize: @escaping (String, String) -> String = CostForecastStrings.string
+    ) {
+        self.source = source
+        self.telemetry = telemetry
+        self.formatting = formatting
+        self.localize = localize
+        source.onUpdate = { [weak self] update in self?.apply(update) }
+    }
+}
+```
+
+**Source Protocol:** `CostForecastSection.Model.swift:143–148`
+
+```swift
+@MainActor
+public protocol CostForecastSource: AnyObject {
+    var onUpdate: (@MainActor (CostForecastUpdate) -> Void)? { get set }
+    func start()
+    func stop()
+    func refresh()
+}
+```
+
+**InMemory Source:** `CostForecastSection.Model.swift:272–281`
+
+```swift
+@MainActor
+public final class InMemoryCostForecastSource: CostForecastSource {
+    public init(initial: CostForecastUpdate? = nil) {
+        self.initial = initial
+    }
+}
+```
+
+**Update Struct:** `CostForecastSection.Model.swift:120–137`
+
+```swift
+public struct CostForecastUpdate: Sendable, Equatable {
+    public var status: CostForecastStatus
+    public var connection: CostForecastConnection
+    public var data: CostForecastData?
+    public var updatedAt: Date?
+
+    public init(
+        status: CostForecastStatus = .loading,
+        connection: CostForecastConnection = .live,
+        data: CostForecastData? = nil,
+        updatedAt: Date? = nil
+    ) {
+        self.status = status
+        self.connection = connection
+        self.data = data
+        self.updatedAt = updatedAt
+    }
+}
+```
+
+**Status Enum:** `CostForecastSection.Model.swift:101–106`
+
+```swift
+public enum CostForecastStatus: Sendable, Equatable {
+    case loading
+    case loaded
+    case empty
+    case failed(String)
+}
+```
+
+**Connection Enum:** `CostForecastSection.Model.swift:111–115`
+
+```swift
+public enum CostForecastConnection: Sendable, Equatable {
+    case live
+    case stale
+    case offline
+}
+```
+
+**Phase Enum (in Model):** `CostForecastSection.Model.swift:160–164`
+
+```swift
+public enum Phase: Equatable {
+    case loading
+    case error(String)
+    case loaded
+}
+```
+
+**Data Struct:** `CostForecastSection.Adapter.swift:103–116`
+
+```swift
+public struct CostForecastData: Equatable, Sendable {
+    public var historical: [CostHistoricalMonth]
+    public var forecast: [CostForecastMonth]
+
+    public init(historical: [CostHistoricalMonth] = [], forecast: [CostForecastMonth] = []) {
+        self.historical = historical
+        self.forecast = forecast
+    }
+}
+```
+
+**Historical Month:** `CostForecastSection.Adapter.swift:56–74`
+
+```swift
+public struct CostHistoricalMonth: Identifiable, Equatable, Sendable {
+    public var month: String
+    public var cost: Double
+    public var kwh: Double
+    public var sessions: Double
+    public var costPerKwh: Double
+
+    public init(month: String, cost: Double, costPerKwh: Double, kwh: Double = 0, sessions: Double = 0) {
+        self.month = month
+        self.cost = cost
+        self.costPerKwh = costPerKwh
+        self.kwh = kwh
+        self.sessions = sessions
+    }
+}
+```
+
+**Forecast Month:** `CostForecastSection.Adapter.swift:79–97`
+
+```swift
+public struct CostForecastMonth: Identifiable, Equatable, Sendable {
+    public var month: String
+    public var cost: Double
+    public var costLow: Double
+    public var costHigh: Double
+    public var kwh: Double
+
+    public init(month: String, cost: Double, costLow: Double, costHigh: Double, kwh: Double = 0) {
+        self.month = month
+        self.cost = cost
+        self.costLow = costLow
+        self.costHigh = costHigh
+        self.kwh = kwh
+    }
+}
+```
+
+**Formatting Protocol:** `CostForecastSection.Model.swift:49–59`
+
+```swift
+public protocol CostForecastFormatting {
+    func formatCurrency(_ amount: Double, decimals: Int) -> String
+    func formatCurrencyCompact(_ amount: Double) -> String
+}
+
+public extension CostForecastFormatting {
+    func formatCurrency(_ amount: Double) -> String {
+        formatCurrency(amount, decimals: 2)
+    }
+}
+```
+
+**Default Formatting:** `CostForecastSection.Model.swift:65–94`
+
+```swift
+public struct DefaultCostForecastFormatting: CostForecastFormatting, Sendable {
+    private let currencySymbol: String
+    private let localeIdentifier: String
+
+    public init(currencySymbol: String = "$", localeIdentifier: String = "en_US") {
+        self.currencySymbol = currencySymbol
+        self.localeIdentifier = localeIdentifier
+    }
+    // ...
+}
+```
+
+**Telemetry Protocol:** `CostForecastSection.Model.swift:25–40`
+
+```swift
+public protocol CostForecastTelemetry: Sendable {
+    func viewPerfect! Now I have all the information needed. Let me compile the exact public API signatures for all four components:
+
+---
+
+## **EXACT PUBLIC API SIGNATURES — SwiftUI Components**
+
+### **1. CostSummaryCardsOpened(surface: String)
+}
+
+public struct OSLogCostForecastTelemetry: CostForecastTelemetry {
+    public init() {
+        logger = Logger(subsystem: "io.teslasync.app", category: "diagnostics")
+    }
+    public func viewOpened(surface: String) {
+        logger.info("screen_view surface=\(surface, privacy: .public)")
+    }
+}
+```
+
+---
+
+### **2. LifetimeSummary**
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33**
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/apple/TeslaSync/feature-927/slot-541/apps/apple/TeslaSync/feature-views/LifetimeSummary.swift:19–27`
+
+```swift
+public struct LifetimeSummary: View {
+    public init(model: LifetimeSummaryModel) {
+        _model = State(initialValue: model)
+    }
+}
+```
+
+**Model Type:** `LifetimeSummary.Model.swift:171–189`
+
+```swift
+@MainActor
+@Observable
+public final class LifetimeSummaryModel {
+    public init(
+        source: any LifetimeSummarySource,
+        telemetry: any LifetimeSummaryTelemetry = OSLogLifetimeSummaryTelemetry()
+    ) {
+        self.source = source
+        self.telviews/CostSummaryCards.swift` (L18–23)
+
+```swift
+public struct CostSummaryCards: View {
+    public init(model: CostSummaryModel)
+}
+```
+
+**Model Type:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/apple/TeslaSync/feature-views/CostSummaryCards.Model.swift` (L210–230)
+
+```swift
+@MainActor
+@Observable
+public finalemetry = telemetry
+        source.onUpdate = { [weak self] input in self?.apply(input) }
+    }
+}
+```
+
+**Source Protocol:** `LifetimeSummary.Model.swift:159–164`
+
+```swift
+@MainActor
+public protocol LifetimeSummarySource: AnyObject {
+    var onUpdate: (@MainActor (LifetimeSummaryInput) -> Void)? { get set }
+    func start()
+    func stop()
+    func refresh()
+}
+```
+
+**InMemory Source:** `LifetimeSummary.Model.swift:222–231`
+
+```swift
+@MainActor
+public final class InMemoryLifetimeSummarySource: LifetimeSummarySource {
+    public init(initial: LifetimeSummaryInput? = nil) {
+        self class CostSummaryModel {
+    public init(
+        source: any CostSummarySource,
+        telemetry: any CostSummaryTelemetry = OSLogCostSummaryTelemetry()
+    )
+}
+```
+
+**Source Protocol:** (L197–204)
+
+```swift
+@MainActor
+public protocol CostSummarySource: AnyObject {
+    var onUpdate: (@MainActor (CostSummaryUpdate) -> Void)?.initial = initial
+    }
+}
+```
+
+**Input Struct (NOT "Update"):** `LifetimeSummary.Model.swift:50–79`
+
+```swift
+public struct LifetimeSummaryInput: Sendable, Equatable {
+    public var isLoading: Bool
+    public var isFetching: Bool
+    public var errorMessage: String?
+    public var coreStats: LifetimeCoreStats?
+    public var metrics: LifetimeMetrics?
+    public var formatting: LifetimeFormatting
+    public var isStale: Bool
+    public var isOff { get set }
+    func start()
+    func stop()
+    /// Re-runs the cost-analysis query from the backend (web `refetch()`).
+    func refresh()
+}
+```
+
+**InMemory Source:** (L281–311)
+
+```swift
+@MainActor
+public final class InMemoryCostSummarySource: CostSummarySource {
+    public var onUpdate: (@MainActor (CostSummaryUpdate) -> Void)?
+    public privateline: Bool
+
+    public init(
+        isLoading: Bool = false,
+        isFetching: Bool = false,
+        errorMessage: String? = nil,
+        coreStats: LifetimeCoreStats? = nil,
+        metrics: LifetimeMetrics? = nil,
+        formatting: LifetimeFormatting = LifetimeFormatting(),
+        isStale: Bool = false,
+        isOffline: Bool = false
+    ) {
+        self.isLoading = isLoading
+        self.isFetching = isFetching
+        self.errorMessage = errorMessage
+        self.coreStats = coreStats
+        self.metrics = metrics
+        self.formatting = formatting
+        self.isStale = isStale
+        self.isOffline = isOffline
+    }
+}
+```
+
+**Phase Enum (in LifetimeSummaryRes(set) var startCount = 0
+    public private(set) var stopCount = 0
+    public private(set) var refreshCount = 0
+    
+    public init(initial: CostSummaryUpdate? = nil)
+    
+    public func start()
+    public func stop()
+    public func refresh()
+    public func push(_ update: CostSummaryUpdate)
+}
+```
+
+**Update Struct:** (L167–190)
+
+```swift
+public struct CostSummaryUpdate: Sendable, Equatable {
+    public var status: CostSummaryLoadStatus
+    public var stats: CostSummaryStats?
+    public var contextolved):** `LifetimeSummary.Model.swift:89–94`
+
+```swift
+public enum Phase: Sendable, Equatable {
+    case loading
+    case error(String)
+    case empty
+    case data
+}
+```
+
+**CoreStats:** `LifetimeSummary.Adapter.swift:28–42`
+
+```swift
+public struct LifetimeCoreStats: Equatable, Sendable {
+    public let totalCost: Double
+    public let totalEnergy: Double
+    public let count: Int
+
+    public init(totalCost: Double, totalEnergy: Double, count: Int) {
+        self.totalCost = totalCost
+        self.totalEnergy =: CostSummaryUnitContext
+    public var refreshing: Bool
+    public var connection: CostSummaryConnection
+    public var updatedAt: Date?
+
+    public init(
+        status: CostSummaryLoadStatus = .loading,
+        stats: CostSummaryStats? = nil,
+        context: CostSummaryUnitContext = CostSummaryUnitContext(),
+        refreshing: Bool = false,
+        connection: CostSummaryConnection = .live,
+        updatedAt: Date? = nil
+    )
+}
+```
+
+**Status Enum:** (L49–54)
+
+```swift
+public enum CostSummaryLoadStatus: Sendable, Equatable {
+    case loading
+    case loaded
+    case empty
+    case faile totalEnergy
+        self.count = count
+    }
+}
+```
+
+**Metrics:** `LifetimeSummary.Adapter.swift:46–72`
+
+```swift
+public struct LifetimeMetrics: Equatable, Sendable {
+    public let avgSessionCost: Double
+    public let avgSessionEnergy: Double
+    public let avgDuration: Double
+    public let freeCount: Int
+    public let freeEnergy: Double
+
+    public init(
+        avgSessionCost: Double,
+        avgSessionEnergy: Double,
+        avgDuration: Double,
+        freeCount: Int,
+        freeEnergy: Double
+    ) {
+        self.avgSessionCost = avgSessiond(String)
+}
+```
+
+**Connection Enum:** (L58–62)
+
+```swift
+public enum CostSummaryConnection: Sendable, Equatable {
+    case live
+    case stale
+    case offline
+}
+```
+
+**Phase Enum** (in Adapter): `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/apple/TeslaSync/feature-views/CostSummaryCards.Adapter.swift` (L26–31)
+
+```swift
+public enum CostSummaryPhase: Equatable, Sendable {
+    case loading
+    case empty
+    case errorCost
+        self.avgSessionEnergy = avgSessionEnergy
+        self.avgDuration = avgDuration
+        self.freeCount = freeCount
+        self.freeEnergy = freeEnergy
+    }
+}
+```
+
+**Formatting:** `LifetimeSummary.Adapter.swift:81–96`
+
+```swift
+public struct LifetimeFormatting: Equatable, Sendable {
+    public let currencySymbol: String
+    public let localeIdentifier: String
+
+    public init(currencySymbol: String = "$", localeIdentifier: String = "en-US") {
+        let trimmed = currencySymbol.trimmingCharacters(in: .whitespaces)
+        self.currencySymbol = trimmed.isEmpty ? "$" : curr(String)
+    case content
+}
+```
+
+**Stats Struct:** (L85–126)
+
+```swift
+public struct CostSummaryStats: Sendable, Equatable {
+    public var totalCost: Double
+    public var count: Int
+    public var avgCostPerKwh: Double
+    public var costPerDist: Double
+    public var totalEnergy: Double
+    public var gallonsEquiv: Double
+    public var savings: Double
+    public var savingsPercent: Double
+
+    public init(
+        totalCost: Double = 0,
+        count: Int = 0,
+        avgCencySymbol
+        self.localeIdentifier = localeIdentifier.trimmingCharacters(in: .whitespaces).isEmpty
+            ? "en-US"
+            : localeIdentifier
+    }
+}
+```
+
+**Metric Kind Enum:** `LifetimeSummary.Adapter.swift:142–150`
+
+```swift
+public enum LifetimeMetricKind: String, Sendable, Equatable, CaseIterable {
+    case totalSpent
+    case totalEnergy
+    case totalSessions
+    case avgSessionCost
+    case avgEnergy
+    case avgDuration
+    case freeSessions
+}ostPerKwh: Double = 0,
+        costPerDist: Double = 0,
+        totalEnergy: Double = 0,
+        gallonsEquiv: Double = 0,
+        savings: Double = 0,
+        savingsPercent: Double = 0
+    )
+}
+```
+
+**UnitContext Struct:** (L133–162)
+
+```swift
+public struct CostSummaryUnitContext: Sendable, Equatable {
+    public var gasPrice: Double
+    public var distanceUnit: String
+    public var isMiles: Bool
+    public var currencySymbol: String
+    public var gasUnit: CostGasUnit
+    public var locale: String?
+```
+
+**Metric Projection:** `LifetimeSummary.Adapter.swift:159–173`
+
+```swift
+public struct LifetimeMetricProjection: Identifiable, Equatable, Sendable {
+    public let kind: LifetimeMetricKind
+    public let primaryText: String
+    public let secondaryText: String?
+
+    public init(kind: LifetimeMetricKind, primaryText: String, secondaryText: String? = nil) {
+        self.kind = kind
+        self.primaryText = primaryText
+        self.secondaryText = secondaryText
+    }
+}
+```
+
+**Telemetry Protocol:** `LifetimeSummary.Model.swift:25–40`
+
+```swift
+public protocol LifetimeSummary
+
+    public init(
+        gasPrice: Double = 0,
+        distanceUnit: String = "mi",
+        isMiles: Bool = true,
+        currencySymbol: String = "$",
+        gasUnit: CostGasUnit = .gallon,
+        locale: String? = nil
+    )
+}
+
+public enum CostGasUnit: String, Sendable, Equatable, Codable {
+    case gallon
+    case liter
+}
+```
+
+---
+
+### **2. CostPerKwhChart**
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/apple/TeslaSync/featureTelemetry: Sendable {
+    func viewOpened(surface: String)
+}
+
+public struct OSLogLifetimeSummaryTelemetry: LifetimeSummaryTelemetry {
+    public init() {
+        logger = Logger(subsystem: "io.teslasync.app", category: "diagnostics")
+    }
+    public func viewOpened(surface: String) {
+        logger.info("screen_view surface=\(surface, privacy: .public)")
+    }
+}
+```
+
+---
+
+### **3. EnvironmentalImpact**
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/apple/TeslaSync/feature-views/EnvironmentalImpact.swift:38–73`
+
+```swift
+public struct -views/CostPerKwhChart.swift` (L29–38)
+
+```swift
+public struct CostPerKwhChart: View {
+    public static let surfaceSlug = CostPerKwhSurface.slug
+    
+    public init(model: CostPerKwhModel)
+}
+```
+
+**Model Type:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/apple/TeslaSync/feature-views/CostPerKwhChart.Model.swift` (L142–169)
+
+```swift
+@MainActor
+@Observable
+public final class CostPerKwhModel {
+    public init(
+        source: any CostPerKwhSource,
+        telemetry: any CEnvironmentalImpact: View {
+    /// Designated initialiser (explicit state — used by the load/empty/error
+    /// callers and the previews/tests).
+    public init(
+        state: EnvironmentalImpactState,
+        connection: EnvironmentalImpactConnection = .live,
+        localize: EnvironmentalImpactLocalostPerKwhTelemetry = OSLogCostPerKwhTelemetry(),
+        formatting: any CostPerKwhFormatting = DefaultCostPerKwhFormatting(),
+        localize: @escaping (String, String) -> String = CostPerKwhStrings.string
+    )
+}
+```
+
+**Source Protocol:** (L126–133)
+
+```swift
+@MainActor
+public protocol CostPerKwhSource: AnyObject {
+    var onUpdate: (@MainActor (CostPerKwhUpdate) -> Void)? { get set }
+    func start()
+    func stop()
+    /// Re-runs the underlying query (web parentizer = .bundle,
+        telemetry: any EnvironmentalImpactTelemetry = OSLogEnvironmentalImpactTelemetry(),
+        locale: Locale = .current,
+        onRetry: @escaping () -> Void = {}
+    ) {
+        self.state = state
+        self.connection = connection
+        self.localize = localize
+        self.telemetry = telemetry
+        self.locale = locale
+        self.onRetry = onRetry
+    }
+
+    /// Web-parity convenience: the card for the resolve refetch / the stale auto-refresh).
+    func refresh()
+}
+```
+
+**InMemory Source:** (L246–276)
+
+```swift
+@MainActor
+public final class InMemoryCostPerKwhSource: CostPerKwhSource {
+    public var onUpdate: (@MainActor (CostPerKwhUpdate) -> Void)?
+    public private(set) var startCount = 0
+    public private(set) var stopCount = 0
+    public private(set) var refreshCount = 0
+
+    public init(initial: CostPerKwhUpdate? = nil)
+    
+    public func start()
+    public func stop()
+    public func refresh()
+    public func push(_ update: CostPerKwhUpdate)
+}
+```
+
+**Update Struct:** (L96–117d cost-analysis aggregate
+    /// (web prop `coreStats: CoreStats | null`).
+    public init(
+        coreStats: EnvironmentalImpactData?,
+        connection: EnvironmentalImpactConnection = .live,
+        localize: EnvironmentalImpactLocalizer = .bundle,
+        telemetry: any EnvironmentalImpactTelemetry = OSLogEnvironmentalImpactTelemetry(),
+        locale: Locale = .current,
+        onRetry: @escaping () -> Void = {}
+    ) {
+        self.init(
+            state: Environmen)
+
+```swift
+public struct CostPerKwhUpdate: Sendable, Equatable {
+    public var status: CostPerKwhLoadStatus
+    /// The web `costPerKwhTrend` array (`{ date, costPerKwh }[]`).
+    public var samples: [CostPerKwhSample]
+    public var connection: CostPerKwhConnection
+    public var refreshing: Bool
+    public var updatedAt: Date?
+
+    public init(
+        status: CostPerKwhLoadStatus = .loading,
+        samples: [CostPerKwhSample] = [],
+        connection: CostPerKwhConnection = .live,
+        talImpactProjection.state(from: coreStats),
+            connection: connection,
+            localize: localize,
+            telemetry: telemetry,
+            locale: locale,
+            onRetry: onRetry
+        )
+    }
+}
+```
+
+**State Enum:** `EnvironmentalImpact.Model.swift:144–160`
+
+```swift
+public enum EnvironmentalImpactState: Equatable, Sendable {
+    case loading
+    case empty
+    case error(message: String?)
+    case loaded(EnvironmentalImpactData)
+
+    public var data: EnvironmentalImpactData? {
+        if case let .loaded(value) = self { return value }
+        return nil
+    }
+}
+```
+
+**Data Struct:** `EnvironmentalImpact.Model.swift:95–116`
+
+```swift
+public struct EnvironmentalImpactData: Equatable, Sendable {
+    public let co2SavedKg: Double
+    public let treeEquiv: Double
+    public let gallonsEquiv: Double
+    public let savings: Double
+
+    public init(co2SavedKg: Double, treeEquiv: Double, gallonsEquiv: Double, savings: Double) {
+        self.co2SavedKg = co2refreshing: Bool = false,
+        updatedAt: Date? = nil
+    )
+}
+```
+
+**Status Enum:** (From Adapter `/CostPerKwhChart.Adapter.swift` L85–89)
+
+```swift
+public enum CostPerKwhLoadStatus: Sendable, Equatable {
+    case loading
+    case loaded
+    case failed(String)
+}
+```
+
+**Connection Enum:** (L93–97)
+
+```swift
+public enum CostPerKwhConnection: Sendable, Equatable {
+    case live
+    case stale
+    case offline
+}
+```
+
+**Phase Enum:** (L102–107)
+
+```swift
+public enum CostPerKwhPhase: Sendable, Equatable {
+    case loading
+    case content
+    case empty
+    case error(String)
+}
+```
+
+**Sample Struct:** (L44–54)
+
+```swift
+public struct CostPerKwhSample: Sendable, Equatable {
+    public var date: String
+    public var costPerKwh: Double
+
+    public init(date: String, costPerKwh: Double)
+}
+```
+
+**Point Struct:** (L62–79)
+
+```swift
+public struct CostPerKwhPoint: Sendable, Equatable, Identifiable {
+    public var index: Int
+    public var date: String
+    public var costPerKwh: Double
+
+    public var id: Int { index }
+
+    public init(index: Int, date: String, costPerKwh: Double)
+}
+```
+
+**StatsSavedKg
+        self.treeEquiv = treeEquiv
+        self.gallonsEquiv = gallonsEquiv
+        self.savings = savings
+    }
+
+    public var metricTonsCo2: Double {
+        co2SavedKg / 1000
+    }
+}
+```
+
+**Connection Enum:** `EnvironmentalImpact.Model.swift:125–135`
+
+```swift
+public enum EnvironmentalImpactConnection: Equatable, Sendable {
+    case live
+    case stale
+    case offline
+
+    public var hasUsableData: Bool {
+        true
+    }
+}
+```
+
+**Localizer:** `Environ Struct:** (L113–136)
+
+```swift
+public struct CostPerKwhStats: Sendable, Equatable {
+    public var count: Int
+    public var minimum: Double
+    public var maximum: Double
+    public var average: Double
+    public var first: Double
+    public var latest: Double
+
+    public init(
+        count: Int,
+        minimum: Double,
+        maximum: Double,
+        average: Double,
+        first: Double,
+        latest: Double
+    )
+}
+```
+
+---
+
+### **3. ChargerTypeBreakdown**
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/apple/TeslaSync/feature-views/ChargerTypementalImpact.Adapter.swift:22–45`
+
+```swift
+public struct EnvironmentalImpactLocalizer: Sendable {
+    public let string: @Sendable (String, String) -> String
+    public let format: @Sendable (String, String, String) -> String
+
+    public init(
+        string: @escaping @Sendable (String, String) -> String,
+        format: @escaping @Sendable (String, String, String) -> String
+    ) {
+        self.string = string
+        self.format = format
+    }
+
+    public static let bundle = EnvironmentalImpactLocalizer(
+        string: Breakdown.swift` (L22–31)
+
+```swift
+public struct ChargerTypeBreakdown: View {
+    public static let surfaceSlug = "ChargerTypeBreakdown"
+    
+    public init(model: ChargerTypeModel)
+}
+```
+
+**Model Type:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/apple/TeslaSync/feature-views/ChargerTypeBreakdown.Model.swift` (L168–204)
+
+```swift
+@MainActor
+@Observable
+public final class ChargerTypeModel {
+    public enum Phase: Equatable {
+        case loading
+        case error(String)
+        case loadeEnvironmentalImpactStrings.string,
+        format: EnvironmentalImpactStrings.format
+    )
+
+    public static let echo = EnvironmentalImpactLocalizer(
+        string: { _, fallback in fallback },
+        format: { _, fallbackFormat, argument in String(format: fallbackFormat, argument) }
+    )
+}
+```
+
+**Telemetry Protocol:** `EnvironmentalImpact.Model.swift:48–65`
+
+```swift
+public protocol EnvironmentalImpactTelemetry: Sendable {
+    func viewOpened(surface: String)
+}
+
+public struct OSLogEnvironmentalImpactTelemetry: EnvironmentalImpactTelemetry {
+    public init(subsystem: String =d
+    }
+
+    public init(
+        source: any ChargerTypeSource,
+        telemetry: any ChargerTypeTelemetry = OSLogChargerTypeTelemetry(),
+        formatting: any ChargerTypeFormatting = DefaultChargerTypeFormatting(),
+        localize: @escaping (String, String) -> String = ChargerTypeBreakdownStrings.string
+    )
+}
+```
+
+**Source Protocol:** (L157–163)
+
+```swift
+@MainActor
+public protocol ChargerTypeSource: AnyObject {
+    var onUpdate: (@MainActor (ChargerTypeUpdate) -> Void)? { get set }
+    func start()
+    func stop()
+    func refresh()
+}
+```
+
+**InMemory Source:** (L265–295)
+
+```swift
+@MainA "io.teslasync.app", category: String = "diagnostics") {
+        logger = Logger(subsystem: subsystem, category: category)
+    }
+
+    public func viewOpened(surface: String) {
+        logger.info("view.opened surface=\(surface, privacy: .public)")
+    }
+}
+```
+
+---
+
+### **4. LoadingSkeleton**
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/apple/TeslaSync/feature-views/LoadingSkeleton.swift:37–43`
+
+```swift
+public struct LoadingSkeleton: View {
+    /// - Parametersctor
+public final class InMemoryChargerTypeSource: ChargerTypeSource {
+    public var onUpdate: (@MainActor (ChargerTypeUpdate) -> Void)?
+    public private(set) var startCount = 0
+    public private(set) var stopCount = 0
+    public private(set) var refreshCount = 0
+
+    private let initial: ChargerTypeUpdate?
+
+    public init(initial: ChargerTypeUpdate? = nil)
+    
+    public func start()
+    public func stop()
+    public func refresh()
+    public func push(_ update: ChargerTypeUpdate)
+}
+```
+
+**Update Struct:** (L132–152)
+
+```swift
+public struct ChargerTypeUpdate: Sendable, Equatable {
+    public var status: ChargerTypeStatus
+    public var connection: ChargerTypeConnection
+    public:
+    ///   - layout: the structural projection to render; defaults to the
+    ///     charging-curve layout extracted from the web source.
+    ///   - telemetry: diagnostics sink; defaults to the redaction-safe `os_log`
+    ///     sink.
+    public init(
+        layout: LoadingSkeletonLayout = .chargingCurve,
+        telemetry: any Loading var data: [ChargerTypeDatum]
+    public var totalCost: Double
+    public var updatedAt: Date?
+
+    public init(
+        status: ChargerTypeStatus = .loading,
+        connection: ChargerTypeConnection = .live,
+        data: [ChargerTypeDatum] = [],
+        totalCost: Double = 0,
+        updatedAt: Date? = nil
+    )
+}
+```
+
+**Status Enum:** (L113–118)
+
+```swift
+public enum ChargerTypeStatus: Sendable, Equatable {
+    case loading
+    case loaded
+    case empty
+    case failed(String)
+}
+```
+
+**Connection Enum:** (L123–127)
+
+```swift
+public enum ChargerTypeConnection: Sendable, Equatable {
+    SkeletonTelemetry = OSLogLoadingSkeletonTelemetry()
+    ) {
+        self.layout = layout
+        self.telemetry = telemetry
+    }
+}
+```
+
+**Layout Struct:** `LoadingSkeleton.Model.swift:116–153`
+
+```swift
+public struct LoadingSkeletonLayout: Equatable, Sendable {
+    public let headerTitle: SkeletonBlock
+    public let headerSubtitle: SkeletonBlock
+    public let filters: [SkeletonBlock]
+    public let summaryStats: [SkeletonStatCell]
+    public let summaryColumns: ResponsiveColumns
+    public let primarycase live
+    case stale
+    case offline
+}
+```
+
+**Datum Struct:** (From Adapter L37–53)
+
+```swift
+public struct ChargerTypeDatum: Identifiable, Equatable, Sendable {
+    public var name: String
+    public var cost: Double
+    public var energy: Double
+    public var sessions: Double
+
+    public var id: String { name }
+
+    public init(name: String, cost: Double, energy: Double, sessions: Double)
+}
+```
+
+**Row Struct:** (L64–97)
+
+```swift
+public struct ChargerTypeRow: Identifiable, Equatable, Sendable {
+    public var name: String
+    public var cost: Double
+    public var energy: DoubleChart: SkeletonChartPanel
+    public let secondaryChart: SkeletonChartPanel
+    public let comparisonCharts: [SkeletonChartPanel]
+    public let comparisonColumns: ResponsiveColumns
+    public let footerStats: [SkeletonStatCell]
+    public let footerColumns: ResponsiveColumns
+
+    public init(
+        headerTitle: SkeletonBlock,
+        headerSubtitle: SkeletonBlock,
+        filters: [SkeletonBlock],
+        summaryStats: [SkeletonStatCell],
+        summaryColumns: ResponsiveColumns,
+        primaryChart: SkeletonChartPanel,
+        secondaryChart: SkeletonChartPanel,
+        comparisonCharts: [SkeletonChartPanel],
+    public var sessions: Double
+    public var fraction: Double
+    public var percent: Double
+    public var ratePerKwh: Double?
+    public var colorIndex: Int
+
+    public var id: String { "\(colorIndex)-\(name)" }
+
+    public init(
+        name: String,
+        cost: Double,
+        energy: Double,
+        sessions: Double,
+        fraction: Double,
+        percent: Double,
+        ratePerKwh: Double?,
+        colorIndex: Int
+    )
+}
+```
+
+---
+
+### **4. SavingsCalculator**
+
+**File:** `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/apple/TeslaSync/
+        comparisonColumns: ResponsiveColumns,
+        footerStats: [SkeletonStatCell],
+        footerColumns: ResponsiveColumns
+    ) {
+        self.headerTitle = headerTitle
+        self.headerSubtitle = headerSubtitle
+        self.filters = filters
+        self.summaryStats = summaryStats
+        self.summaryColumns = summaryColumns
+        self.primaryChart = primaryChart
+        self.secondaryChart = secondaryChart
+        self.comparisonCharts = comparisonCharts
+        self.comparisonColumns = comparisonColumns
+        self.footerStats = footerStats
+        self.footerColumns = footerColumns
+    }
+}
+```
+
+**SkeletonBlock:** `LoadingSkeleton.Model.swift:42–60`
+
+```swift
+public struct SkeletonBlock: Equatable, Sendable {
+    public let widthfeature-views/SavingsCalculator.swift` (L28–60)
+
+```swift
+public struct SavingsCalculator: View {
+    public nonisolated static let surfaceSlug = "SavingsCalculator"
+    
+    public nonisolated static var viewOpenedEvent: DashboardWidgetTelemetryEvent {
+        .viewOpened(surface: surfaceSlug)
+    }
+
+    /// Live / preview binding: the production: CGFloat?
+    public let height: CGFloat
+    public let topInset: CGFloat
+
+    public init(width: CGFloat?, height: CGFloat, topInset: CGFloat = 0) {
+        self.width = width
+        self.height = height
+        self.topInset = topInset
+    }
+}
+```
+
+**SkeletonStatCell:** `LoadingSkeleton.Model.swift:65–73`
+
+```swift
+public struct SkeletonStatCell: Equatable, Sendable {
+    public let label: SkeletonBlock
+    public let value: SkeletonBlock
+
+    public init(label: SkeletonBlock, value: SkeletonBlock) {
+        self.label = label
+        self.value = value
+    }
+}
+```
+
+**SkeletonChartPanel:** ` app injects a source-backed model.
+    public init(model: SavingsCalculatorModel, telemetry: (any DashboardWidgetTelemetrySink)? = nil)
+
+    /// Web-prop binding: the source component renders from the page aggregates +
+    /// the assumption inputs. ConstruLoadingSkeleton.Model.swift:77–85`
+
+```swift
+public struct SkeletonChartPanel: Equatable, Sendable {
+    public let title: SkeletonBlock
+    public let chartBody: SkeletonBlock
+
+    public init(title: SkeletonBlock, chartBody: SkeletonBlock) {
+        self.title = title
+        self.chartBody = chartBody
+    }
+}
+```
+
+**ResponsiveColumns:** `LoadingSkeleton.Model.swift:93–106`
+
+```swift
+public struct ResponsiveColumns: Equatable, Sendable {
+    public let compact: Int
+    public let regular: Int
+
+    public init(compact: Int, regular: Int) {
+        self.compact = compact
+        self.regular = regular
+    }cts the bound model so the call site matches
+    /// the web `<SavingsCalculator gasComparison={…} gasPrice={…} … />`.
+    @MainActor
+    public init(
+        data: SavingsCalculatorData,
+        assumptions: SavingsCalculatorAssumptions = .defaults,
+        loading: Bool = false,
+        telemetry: (any DashboardWidgetTelemetrySink)? = nil
+    )
+}
+```
+
+**Model Type:** `/Users
+
+    public func count(isRegularWidth: Bool) -> Int {
+        max(isRegularWidth ? regular : compact, 1)
+    }
+}
+```
+
+**Telemetry Protocol:** `LoadingSkeleton.Telemetry.swift:16–34`
+
+```swift
+public protocol LoadingSkeletonTelemetry: Sendable {
+    func viewOpened(surface: String)
+}
+
+public struct OSLogLoadingSkeletonTelemetry: LoadingSkeletonTelemetry {
+    public init(subsystem: String = "io.teslasync.app", category: String = "diagnostics") {
+        logger = Logger(subsystem/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/apple/TeslaSync/feature-views/SavingsCalculator.Model.swift` (L108–145, L147–159, L165–174)
+
+```swift
+@MainActor
+@Observable
+public final class SavingsCalculatorModel {
+    public private(set) var state: SavingsCalculatorLoadState<SavingsCalculatorData> = .idle
+    public var gasPriceText: String
+    public var mpgText: String
+    public var electricityR: subsystem, category: category)
+    }
+
+    public func viewOpened(surface: String) {
+        logger.info("view.opened surface=\(surface, privacy: .public)")
+    }
+}
+```
+
+---
+
+## **WEB CostForecastSection.tsx & ForecastDetails.tsx — forecastData PROP SHAPE**
+
+**Type from web/src/types/chargingateText: String
+
+    public var assumptions: SavingsCalculatorAssumptions { ... }
+
+    /// Live binding: observe the shared aggregates feed.
+    public init(
+        source: any SavingsCalculatorSource,
+        assumptions: SavingsCalculatorAssumptions = .defaults
+    )
+
+    /// Preview / test binding: render a fixed state without the shared core.ts:20–26**
+
+```typescript
+export interface CostForecastData {
+  historical: CostHistoricalMonth[];
+  forecast: CostForecastMonth[];
+  breakdown: CostBreakdownData;
+  gas_comparison: GasComparisonData;
+  insights: string[];
+}
+```
+
+**Historical Month (web):** `web/src/types/charging.ts:28–34.
+    public init(
+        previewState: SavingsCalculatorLoadState<SavingsCalculatorData>,
+        assumptions: SavingsCalculatorAssumptions = .defaults
+    )
+
+    /// Web-prop binding: the source component renders from `gasComparison` derived
+    /// from the page aggregates.
+    public convenience init(
+        data: SavingsCalculatorData,
+        assumptions: SavingsCalculatorAssumptions = .defaults,
+        loading: Bool = false
+    )
+}
+```
+
+**Source Protocol:** (L60–67)
+
+```swift
+@MainActor
+public protocol SavingsCalculatorSource: AnyObject {
+    var onUpdate: (@MainActor (SavingsCalculatorLoa`
+
+```typescript
+export interface CostHistoricalMonth {
+  month: string;
+  cost: number;
+  kwh: number;
+  sessions: number;
+  cost_per_kwh: number;
+}
+```
+
+**Forecast Month (web):** `web/src/types/charging.ts:36–42`
+
+```typescript
+export interface CostForecastMonth {
+  month: string;
+  cost: number;
+  cost_low: number;
+  cost_high: number;
+  kwh: number;
+}
+```
+
+**Breakdown Data (web):** `web/src/types/charging.ts:44–53`
+
+```typescript
+export interface CostBreakdownData {
+  home: ChargerCdState<SavingsCalculatorData>) -> Void)? { get set }
+    func start()
+    func stop()
+    func refresh()
+}
+```
+
+**InMemory Source:** (L70–100)
+
+```swift
+@MainActor
+public final class InMemorySavingsCalculatorSource: SavingsCalculatorSource {
+    public var onUpdate: (@MainActor (SavingsCalculatorLoadState<SavingsCalculatorData>) -> Void)?
+    public private(set) var startCount = 0
+    public private(set) var stopCount = 0
+    public private(set) var refreshCount = 0
+
+    public init(initial: SavingsCalculatorLoadState<SavingsCalculatorData>? = nil)
+    
+    public func start()
+    public func stop()
+    public func refresh()
+    public func push(_ state: SategoryData;
+  supercharger: ChargerCategoryData;
+}
+
+export interface ChargerCategoryData {
+  pct: number;
+  avg_cost_per_kwh: number;
+  monthly_avg: number;
+}
+```
+
+**Gas Comparison (web):** `web/src/types/charging.ts:55–62`
+
+```typescript
+export interface GasComparisonData {
+  avg_km_per_month: number;
+  gas_cost_per_month: number;
+  ev_cost_per_month: number;
+  monthly_savings: number;
+  annualavingsCalculatorLoadState<SavingsCalculatorData>)
+}
+```
+
+**Load State (generic enum):** (L43–49)
+
+```swift
+public enum SavingsCalculatorLoadState<Value> {
+    case idle
+    case loading(cached: Value?, stale: Bool)
+    case loaded(Value, stale: Bool)
+    case empty(stale: Bool)
+    case failed(SavingsCalculatorError, cached: Value?, stale: Bool)
+}
+
+extension SavingsCalculatorLoadState: Equatable where Value: Equatable {}_savings: number;
+  lifetime_savings: number;
+}
+```
+
+**CostForecastSection.tsx prop consumption:** `web/src/features/charging/components/cost-analysis/CostForecastSection.tsx:15–25`
+
+```typescript
+interface CostForecastSectionProps {
+  forecastData: CostForecastData |
+```
+
+**Error Enum:** (L22–35)
+
+```swift
+public enum SavingsCalculatorError: Equatable, Sendable {
+    case offline
+    case network(message: String)
+    case decode(message: String)
+    case api(status: Int, code: String?, body: String?)
+
+    public var isRetryable: Bool { ... }
+}
+```
+
+**Data Struct:** (From `SavingsCalculator.Models.swift` L38 undefined;
+}
+
+export function CostForecastSection({ forecastData }: CostForecastSectionProps) {
+  const historicalData = forecastData?.historical ??–65)
+
+```swift
+public struct SavingsCalculatorData: Equatable, Sendable {
+    public let energyKwh: Double
+    public let costDollars: Double
+    public let displayDistance: Double
+    public let distanceUnit: String
+    public let monthsCount: Int
+
+    public init(
+        energyKwh: Double = 0,
+        costDollars: Double = 0,
+        displayDistance: Double = 0,
+        distanceUnit: String = "mi",
+        monthsCount: Int = 0
+    )
+}
+```
+
+**Assumptions Struct:** (L [];
+  const forecast = forecastData?.forecast ?? [];
+  const hasForecast = historicalData.length >= 3 && forecast.length > 0;
+  const hasCostPerKwhTrend = historicalData.length > 1;
+}
+```
+
+**ForecastDetails.tsx prop consumption:** `web/src/features/charging/components/cost-analysis/ForecastDetails.tsx:15–70`
+
+```typescript
+interface ForecastDetailsProps {
+  forecastData: CostForecastData | undefined;
+}
+
+export function ForecastDetails({ forecastData102–123)
+
+```swift
+public struct SavingsCalculatorAssumptions: Equatable, Sendable {
+    public let gasPrice: Double
+    public let mpg: Double
+    public let electricityRate: Double
+
+    public init(gasPrice: Double, mpg: Double, electricityRate: Double)
+    
+    public static let defaults = SavingsCalculatorAssumptions(
+        gasPrice: 3.5,
+        mpg: 30,
+        electricityRate: 0.13
+    )
+}
+```
+
+**GasComparison Struct:** (L168–205)
+
+```swift
+public struct GasComparison: Equatable, Sendable {
+    public let ga }: ForecastDetailsProps) {
+  // Accesses forecastData.breakdown.home.pct, forecastData.breakdown.supercharger.pct
+  // Accesses forecastData.gas_comparison.monthly_savings, annual_savings, lifetime_savings
+  // Accesses forecastData.gas_comparison.gas_cost_per_month, ev_cost_per_month, avg_km_per_month
+  // Accesses forecastData.insights (array of strings)
+}
+```
+
+---
+
+## **MAPPING SUMMARY FOR PARENT PAGE CONSTRUCTOR**
+
+To construct these views from a parent page **without a compiler**, wire them as follows:
+
+```swift
+// CostForecastSection
+let costSource = InMemoryCostForecastSource(
+    initial: CostForecastUpdate(
+        status: .loaded,
+        connection: .live,
+        data: CostForecastData(
+            historical: [...sCost: Double
+    public let evCost: Double
+    public let actualCost: Double
+    public let savings: Double
+    public let monthlySavings: Double
+    public let yearlySavings: Double
+    public let costPerDistanceGas: Double
+    public let costPerDistanceEV: Double
+
+    public init(
+        gasCost: Double,
+        evCost: Double,
+        actualCost: Double,
+        savings: Double,
+        monthlySavings: Double,
+        yearlySavings: Double,
+        costPerDistanceGas: Double,
+        costPerDistanceEV: Double
+    )
+}
+```
+
+**Projection Struct:** (From `SavingsCalculator.Projection.swift` L20–37)
+
+```swift
+public struct SavingsCalculatorProjection: Equatable, Sendable {
+    public let gasCostText: String
+    public let gasPerDistanceText: String
+    public let evCostText: String
+    public let evPerDistanceText: String
+    public let totalSavingsText: String
+    public let monthlySavingsText: String
+    public let yearlySavingsText: String
+    public let distanceUnit: String
+}
+```
+
+**Freshness Enum:** (L109],  // array of CostHistoricalMonth
+            forecast: [...]     // array of CostForecastMonth
+        ),
+        updatedAt: Date()
+    )
+)
+let costModel = CostForecastModel(source: costSource)
+let costSection = CostForecastSection(model: costModel)
+
+// LifetimeSummary
+let lifetimeSource = InMemoryLifetimeSummarySource(
+    initial: LifetimeSummaryInput(
+        isLoading: false,
+        coreStats: LifetimeC–113)
+
+```swift
+public enum SavingsCalculatorFreshness: Equatable, Sendable {
+    case live
+    case stale
+    case offline
+}
+```
+
+**Presentation Enum:** (L121–127)
+
+```swift
+public enum SavingsCalculatorPresentation: Equatable, Sendable {
+    case loading
+    case empty
+    case offlineNoData
+    case error(retryable: Bool)
+    case content(SavingsCalculatorProjection, freshness: SavingsCalculatorFreshness, refreshing: Bool)
+}
+```oreStats(totalCost: 1234.56, totalEnergy: 150.0, count: 42),
+        metrics: LifetimeMetrics(
+            avgSessionCost: 29.39,
+            avgSessionEnergy: 3.57,
+            avgDuration: 45.0,
+            freeCount: 5,
+            freeEnergy: 12.5
+        ),
+        formatting
+
+---
+
+## **EXAMPLE INITIALIZATION (Parent Page)**
+
+To construct these views without a compiler, you would use:
+
+```swift
+// CostSummaryCards
+let source = InMemoryCostSummarySource(initial: CostSummaryUpdate(
+    status: .loaded,
+    stats: CostSummaryStats(totalCost: 125: LifetimeFormatting(currencySymbol: "$", localeIdentifier: "en-US")
+    )
+)
+let lifetimeModel = LifetimeSummaryModel(source: lifetimeSource)
+let lifetimeSummary = LifetimeSummary(model: lifetimeModel)
+
+// EnvironmentalImpact
+let envData = EnvironmentalImpactData(
+    co2SavedKg: 2500.0,
+    treeEquiv: 150.5,
+    gallons.50, count: 8, avgCostPerKwh: 0.32),
+    context: CostSummaryUnitContext(gasPrice: 3.50, distanceUnit: "mi", isMiles: true)
+))
+let model = CostSummaryModel(source: source)
+CostSummaryCards(model: model)
+
+// CostPerKwhChart
+let source = InMemoryCostPerKwhSource(initial: CostPerKwhUpdate(
+    status: .loaded,
+    samples: [
+        CostPerKEquiv: 300.0,
+    savings: 1250.00
+)
+let envImpact = EnvironmentalImpact(
+    coreStats: envData,
+    connection: .live,
+    locale: Locale(identifier: "en-US")
+)
+
+// LoadingSkeleton
+let loadingSkeleton = LoadingSkeleton(
+    layout: .chargingCurve,
+    telemetry: OSLogLoadingSkeletonTelemetry()
+)
+```
+
+All four components are now **fully mappable from pure Swift** without compiler assistance.whSample(date: "2024-01", costPerKwh: 0.28),
+        CostPerKwhSample(date: "2024-02", costPerKwh: 0.31)
+    ]
+))
+let model = CostPerKwhModel(source: source)
+CostPerKwhChart(model: model)
+
+// ChargerTypeBreakdown
+let source = InMemoryChargerTypeSource(initial: ChargerTypeUpdate(
+    status: .loaded,
+    data: [
+        ChargerTypeDatum(name: "Supercharger", cost: 45.00, energy: 50.0, sessions: 12)
+    ],
+    totalCost: 45.00
+))
+let model = ChargerTypeModel(source: source)
+ChargerTypeBreakdown(model: model)
+
+// SavingsCalculator (prop-based)
+SavingsCalculator(
+    data: SavingsCalculatorData(energyKwh: 150, costDollars: 20, displayDistance: 500, distanceUnit: "mi", monthsCount: 1),
+    assumptions: SavingsCalculatorAssumptions(gasPrice: 3.5, mpg: 30, electricityRate: 0.13)
+)
+
+// Or model-based
+let source = InMemorySavingsCalculatorSource(initial: .loaded(
+    SavingsCalculatorData(energyKwh: 150, costDollars: 20, displayDistance: 500),
+    stale: false
+))
+let model = SavingsCalculatorModel(source: source)
+SavingsCalculator(model: model)
+```Now let me gather more info on AppRoute and the routing system, plus find example of an Observable model with localize:Perfect! I have found all the information needed. Let me compile the comprehensive report now:
+
+## INFRASTRUCTURE MAPPING FOR COSTANALYSISPAGE
+
+### **A. DESIGN TOKENS**
+
+**TSSpacing (all members with values)** — `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/design/generated/apple/Tokens.swift` (L175–185):
+```swift
+public enum TSSpacing {
+    public static let none: CGFloat = 0
+    public static let xs: CGFloat = 4
+    public static let sm: CGFloat = 8
+    public static let md: CGFloat = 12
+    public static let lg: CGFloat = 16
+    public static let xl: CGFloat = 20
+    public static let x2xl: CGFloat = 24
+    public static let x3xl: CGFloat = 32
+    public static let x4xl: CGFloat = 48
+}
+```
+
+**Color.TS palette** — `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/design/generated/apple/Tokens.swift` (L57–138):
+```swift
+public extension Color {
+    enum TS {
+        static let bg = tsDynamicColor(
+            light: (red: 0.973, green: 0.980, blue: 0.988, alpha: 1.000),
+            dark: (red: 0.039, green: 0.039, blue: 0.059, alpha: 1.000),
+            highContrast: (red: 1.000, green: 1.000, blue: 1.000, alpha: 1.000)
+        )
+        static let surface = tsDynamicColor(
+            light: (red: 1.000, green: 1.000, blue: 1.000, alpha: 1.000),
+            dark: (red: 0.059, green: 0.063, blue: 0.098, alpha: 1.000),
+            highContrast: (red: 1.000, green: 1.000, blue: 1.000, alpha: 1.000)
+        )
+        static let surfaceGlass = tsDynamicColor(
+            light: (red: 1.000, green: 1.000, blue: 1.000, alpha: 0.950),
+            dark: (red: 1.000, green: 1.000, blue: 1.000, alpha: 0.040),
+            highContrast: (red: 1.000, green: 1.000, blue: 1.000, alpha: 1.000)
+        )
+        static let textPrimary = tsDynamicColor(
+            light: (red: 0.059, green: 0.090, blue: 0.165, alpha: 1.000),
+            dark: (red: 1.000, green: 1.000, blue: 1.000, alpha: 1.000),
+            highContrast: (red: 0.000, green: 0.000, blue: 0.000, alpha: 1.000)
+        )
+        static let textSecondary = tsDynamicColor(
+            light: (red: 0.118, green: 0.161, blue: 0.231, alpha: 1.000),
+            dark: (red: 0.612, green: 0.639, blue: 0.686, alpha: 1.000),
+            highContrast: (red: 0.133, green: 0.133, blue: 0.133, alpha: 1.000)
+        )
+        static let textMuted = tsDynamicColor(
+            light: (red: 0.392, green: 0.455, blue: 0.545, alpha: 1.000),
+            dark: (red: 0.541, green: 0.584, blue: 0.651, alpha: 1.000),
+            highContrast: (red: 0.333, green: 0.333, blue: 0.333, alpha: 1.000)
+        )
+        static let accent = tsDynamicColor(
+            light: (red: 0.031, green: 0.569, blue: 0.698, alpha: 1.000),
+            dark: (red: 0.000, green: 0.941, blue: 1.000, alpha: 1.000),
+            highContrast: (red: 0.055, green: 0.455, blue: 0.565, alpha: 1.000)
+        )
+        static let border = tsDynamicColor(
+            light: (red: 0.000, green: 0.000, blue: 0.000, alpha: 0.120),
+            dark: (red: 1.000, green: 1.000, blue: 1.000, alpha: 0.120),
+            highContrast: (red: 0.800, green: 0.800, blue: 0.800, alpha: 1.000)
+        )
+        static let statusSuccess = tsDynamicColor(
+            light: (red: 0.082, green: 0.502, blue: 0.239, alpha: 1.000),
+            dark: (red: 0.063, green: 0.725, blue: 0.506, alpha: 1.000),
+            highContrast: (red: 0.082, green: 0.502, blue: 0.239, alpha: 1.000)
+        )
+        static let statusWarning = tsDynamicColor(
+            light: (red: 0.706, green: 0.325, blue: 0.035, alpha: 1.000),
+            dark: (red: 0.961, green: 0.620, blue: 0.043, alpha: 1.000),
+            highContrast: (red: 0.706, green: 0.325, blue: 0.035, alpha: 1.000)
+        )
+        static let statusDanger = tsDynamicColor(
+            light: (red: 0.863, green: 0.149, blue: 0.149, alpha: 1.000),
+            dark: (red: 0.937, green: 0.267, blue: 0.267, alpha: 1.000),
+            highContrast: (red: 0.725, green: 0.110, blue: 0.110, alpha: 1.000)
+        )
+        static let statusInfo = tsDynamicColor(
+            light: (red: 0.031, green: 0.569, blue: 0.698, alpha: 1.000),
+            dark: (red: 0.000, green: 0.941, blue: 1.000, alpha: 1.000),
+            highContrast: (red: 0.012, green: 0.412, blue: 0.631, alpha: 1.000)
+        )
+        // Chart palette (index-stable across platforms).
+        static let chartCategorical: [Color] = [
+            Color(.sRGB, red: 0.000, green: 0.447, blue: 0.698, opacity: 1.000),
+            Color(.sRGB, red: 0.902, green: 0.624, blue: 0.000, opacity: 1.000),
+            Color(.sRGB, red: 0.000, green: 0.620, blue: 0.451, opacity: 1.000),
+            Color(.sRGB, red: 0.941, green: 0.894, blue: 0.259, opacity: 1.000),
+            Color(.sRGB, red: 0.337, green: 0.706, blue: 0.914, opacity: 1.000),
+            Color(.sRGB, red: 0.835, green: 0.369, blue: 0.000, opacity: 1.000),
+            Color(.sRGB, red: 0.800, green: 0.475, blue: 0.655, opacity: 1.000),
+            Color(.sRGB, red: 0.294, green: 0.294, blue: 0.294, opacity: 1.000),
+        ]
+        static let chartSeriesBattery = Color(.sRGB, red: 0.063, green: 0.725, blue: 0.506, opacity: 1.000)
+        static let chartSeriesEnergy = Color(.sRGB, red: 0.961, green: 0.620, blue: 0.043, opacity: 1.000)
+        static let chartSeriesSpeed = Color(.sRGB, red: 0.231, green: 0.510, blue: 0.965, opacity: 1.000)
+        static let chartSeriesRegen = Color(.sRGB, red: 0.024, green: 0.714, blue: 0.831, opacity: 1.000)
+        static let chartSeriesTemperature = Color(.sRGB, red: 0.937, green: 0.267, blue: 0.267, opacity: 1.000)
+        static let chartSeriesPower = Color(.sRGB, red: 0.659, green: 0.333, blue: 0.969, opacity: 1.000)
+    }
+}
+```
+
+**Typography tokens** — `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/design/generated/apple/Tokens.swift` (L140–173):
+```swift
+public extension Font {
+    enum TS {
+        static let display = Font.system(size: 30, weight: .bold)
+        static let title = Font.system(size: 24, weight: .bold)
+        static let section = Font.system(size: 18, weight: .semibold)
+        static let panel = Font.system(size: 16, weight: .semibold)
+        static let body = Font.system(size: 14, weight: .regular)
+        static let bodySm = Font.system(size: 12, weight: .regular)
+        static let caption = Font.system(size: 12, weight: .regular)
+        static let label = Font.system(size: 12, weight: .medium)
+        static let fontFamilySans = "Inter"
+        static let fontFamilyMono = "JetBrains Mono"
+    }
+}
+
+public enum TSTypeMetrics {
+    public static let displayLineHeight: CGFloat = 36
+    public static let displayTracking: CGFloat = -0.50
+    public static let titleLineHeight: CGFloat = 32
+    public static let titleTracking: CGFloat = -0.25
+    public static let sectionLineHeight: CGFloat = 28
+    public static let sectionTracking: CGFloat = -0.15
+    public static let panelLineHeight: CGFloat = 24
+    public static let panelTracking: CGFloat = 0.00
+    public static let bodyLineHeight: CGFloat = 20
+    public static let bodyTracking: CGFloat = 0.00
+    public static let bodySmLineHeight: CGFloat = 16
+    public static let bodySmTracking: CGFloat = 0.00
+    public static let captionLineHeight: CGFloat = 16
+    public static let captionTracking: CGFloat = 0.00
+    public static let labelLineHeight: CGFloat = 16
+    public static let labelTracking: CGFloat = 0.60
+}
+```
+
+**Radius tokens** — `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/design/generated/apple/Tokens.swift` (L187–192):
+```swift
+public enum TSRadius {
+    public static let sm: CGFloat = 8
+    public static let md: CGFloat = 12
+    public static let lg: CGFloat = 16
+    public static let pill: CGFloat = 9999
+}
+```
+
+**GlassPanel / Material helper** — `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/apple/Sources/Design/TSMaterial.swift`:
+```swift
+public enum TSMaterial {
+    /// Primary elevated panel surface (the web `GlassPanel` equivalent).
+    public static let panel: Material = .regularMaterial
+    /// Lighter overlay surface (popovers, inline chips).
+    public static let overlay: Material = .thinMaterial
+    /// Chrome / toolbar backing.
+    public static let chrome: Material = .bar
+}
+
+public extension View {
+    /// Applies the TeslaSync glass panel: a system material clipped to the panel
+    /// radius with the semantic glass-border stroke.
+    func tsGlassPanel(cornerRadius: CGFloat = TSRadius.lg) -> some View {
+        background(TSMaterial.panel, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .strokeBorder(Color.TS.border, lineWidth: 1)
+            )
+    }
+}
+```
+
+---
+
+### **B. I18N / LOCALIZATION**
+
+**Localization keys exist** for costAnalysis (verified in xcstrings):
+- ✅ `translation.costAnalysis.title` (line 53565)
+- ✅ `translation.costAnalysis.subtitle` (line 53335)
+- ✅ `translation.costAnalysis.empty.title` (line 52231)
+
+**`String(localized:)` usage pattern** — `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/apple/Sources/Platform/Handoff/HandoffActivity.swift`:
+```swift
+private static func localizedTitle(for route: AppRoute) -> String {
+    String(localized: String.LocalizationValue("route." + route.rawValue), bundle: .main)
+}
+```
+
+**Model localize pattern** — Views inject a `localize` closure into models. Example from `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/apple/TeslaSync/feature-views/NotificationFilterBar.Views.swift`:
+```swift
+accessibilityLabel: model.localize("notifications.inbox.filter.vehicle", "Vehicle")
+allLabel: model.localize("notifications.inbox.filter.allVehicles", "All vehicles")
+```
+
+**Localize signature pattern** — Models expose `localize: (String, String) -> String` closure (key, default fallback). The model is injected with this closure via the S10/P1 i18n facade (constructor parameter or property).
+
+**String catalog location**: `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/apple/Localization/Localizable.xcstrings`
+
+---
+
+### **C. PAGE SCAFFOLD + STATES**
+
+**TSEmptyState init signature** — `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/apple/Sources/Components/Feedback/States.swift` (L46–56, L69–72):
+```swift
+public struct TSEmptyState<Actions: View>: View {
+    private let title: LocalizedStringKey
+    private let message: LocalizedStringKey?
+    private let systemImage: String
+    private let actions: () -> Actions
+
+    public init(
+        title: LocalizedStringKey,
+        message: LocalizedStringKey? = nil,
+        systemImage: String = "tray",
+        @ViewBuilder actions: @escaping () -> Actions
+    ) {
+        self.title = title
+        self.message = message
+        self.systemImage = systemImage
+        self.actions = actions
+    }
+}
+
+public extension TSEmptyState where Actions == EmptyView {
+    init(title: LocalizedStringKey, message: LocalizedStringKey? = nil, systemImage: String = "tray") {
+        self.init(title: title, message: message, systemImage: systemImage) { EmptyView() }
+    }
+}
+```
+
+**PageContainer / PageHeader** — NOT FOUND. No dedicated `PageContainer` or `PageHeader` component exists in the shared Components. Page scaffolding uses `VStack` + typography tokens directly (web equivalence verified).
+
+**Loading skeleton / shimmer / redacted** — NOT FOUND by name, but the following loading states exist:
+- `TSSpinner` and `TSPageLoader` (L4–37 of States.swift) — inline + centered loading indicators
+- `.redacted(reason:)` — NOT FOUND (native SwiftUI modifier available, no custom wrapper)
+
+**ContentUnavailableView usage** — `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/apple/Sources/Components/Feedback/States.swift` (L59–65):
+```swift
+public var body: some View {
+    ContentUnavailableView {
+        Label(title, systemImage: systemImage)
+    } description: {
+        if let message { Text(message) }
+    } actions: {
+        actions()
+    }
+}
+```
+
+**ScrollView + section layout** — NOT FOUND as a shared helper. Feature views use native `ScrollView { VStack { Section { } } }` directly with `TSSpacing` for gaps.
+
+---
+
+### **D. KMP SHARED FACADE**
+
+**Charging repository methods** — `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/data/repo/ChargingRepository.kt` (L31–72):
+
+**Paginated charging sessions**:
+```kotlin
+public fun sessionsPaginated(
+    vehicleId: Long,
+    limit: Int = DEFAULT_LIMIT,
+    offset: Int = 0,
+    start: String? = null,
+    end: String? = null,
+): Flow<Resource<List<ChargingSession>>>
+```
+
+**Cost forecast**:
+```kotlin
+public fun costForecast(
+    vehicleId: String,
+    months: Int = DEFAULT_FORECAST_MONTHS,
+): Flow<Resource<JsonElement>>
+```
+
+**Cost forecast response type** — Returns `Flow<Resource<JsonElement>>` (verbatim SI JSON, no Swift model). Decoded on-demand by the adapter layer. Reference model in Apple:
+```swift
+public struct CostForecast: Equatable, Sendable {
+    public var breakdown: ForecastBreakdown
+    public var gasComparison: ForecastGasComparison
+    public var insights: [String]
+}
+
+public struct ForecastBreakdown: Equatable, Sendable {
+    public var home: ForecastCategory
+    public var supercharger: ForecastCategory
+}
+
+public struct ForecastGasComparison: Equatable, Sendable {
+    public var avgKmPerMonth: Double
+    public var gasCostPerMonth: Double
+    public var evCostPerMonth: Double
+    public var monthlySavings: Double
+    public var annualSavings: Double
+    public var lifetimeSavings: Double
+}
+```
+
+**Facade access pattern** — Imported from `Shared` KMP framework as singletons:
+```kotlin
+import io.teslasync.shared.core.api.generated.ChargingSession
+// ChargingRepository is accessed via dependency injection in the KMP store layer
+```
+
+---
+
+### **E. @OBSERVABLE PAGE/STATE-HOLDER PATTERN**
+
+**Representative example** — `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/apple/TeslaSync/feature-views/ChargingDetailSection.Model.swift` (L96–147):
+
+```swift
+// MARK: - State-holder seam (P1/S8 layer)
+
+/// The load lifecycle for the analytics slice, mirroring the shared `LoadableState` cases
+public enum ChargingDetailStatus: Sendable, Equatable {
+    case loading
+    case loaded
+    case empty
+    case failed(String)
+}
+
+/// Live-stream freshness, mirroring `LiveConnectionState` (ADR-013): `live`,
+/// `stale` (older than the freshness window), `offline` (no connectivity — cached
+/// values shown). Drives the freshness banner.
+public enum ChargingDetailConnection: Sendable, Equatable {
+    case live
+    case stale
+    case offline
+}
+
+/// One coalesced snapshot pushed by a `ChargingDetailSource`: the resolved
+/// analytics slice plus its load/connection status. The model turns this into the
+/// render phase.
+public struct ChargingAnalyticsUpdate: Sendable, Equatable {
+    public var status: ChargingDetailStatus
+    public var connection: ChargingDetailConnection
+    public var analytics: ChargingAnalytics?
+    public var updatedAt: Date?
+
+    public init(
+        status: ChargingDetailStatus = .loading,
+        connection: ChargingDetailConnection = .live,
+        analytics: ChargingAnalytics? = nil,
+        updatedAt: Date? = nil
+    ) {
+        self.status = status
+        self.connection = connection
+        self.analytics = analytics
+        self.updatedAt = updatedAt
+    }
+}
+
+/// The seam the view binds through. Production implements this over the shared
+/// P1/S8 analytics state holder; previews/tests use `InMemoryChargingDetailSource`.
+@MainActor
+public protocol ChargingDetailSource: AnyObject {
+    var onUpdate: (@MainActor (ChargingAnalyticsUpdate) -> Void)? { get set }
+    func start()
+    func stop()
+    func refresh()
+}
+```
+
+**Model observability pattern** — `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/apple/Sources/SharedFacade/StateHolderModel.swift`:
+
+```swift
+@MainActor
+@Observable
+public final class StateHolderModel<State> {
+    /// The latest projected state, or `nil` before the first emission.
+    public private(set) var state: State?
+
+    @ObservationIgnored private let flow: Shared.Kotlinx_coroutines_coreStateFlow
+    @ObservationIgnored private let transform: (Any) -> State?
+    @ObservationIgnored private var task: Task<Void, Never>?
+
+    /// - Parameters:
+    ///   - flow: the holder's `StateFlow` (already constructed by the container).
+    ///   - transform: maps each raw Kotlin snapshot to `State` (`nil` is ignored).
+    public init(
+        flow: Shared.Kotlinx_coroutines_coreStateFlow,
+        transform: @escaping (Any) -> State?
+    ) {
+        self.flow = flow
+        self.transform = transform
+        if let initial = flow.value {
+            state = transform(initial)
+        }
+    }
+
+    /// Begins collecting. Idempotent: a second call while running is a no-op.
+    public func start() {
+        guard task == nil else { return }
+        task = Task { [weak self, flow, transform] in
+            do {
+                for try await value in FlowBridge.stream(from: flow) {
+                    if Task.isCancelled { break }
+                    guard let mapped = transform(value) else { continue }
+                    self?.state = mapped
+                }
+            } catch {
+                // A `StateFlow` never completes or fails; this guards the throwing
+                // bridge signature. Terminal errors simply stop the subscription.
+            }
+        }
+    }
+
+    /// Stops collecting and closes the upstream subscription.
+    public func stop() {
+        task?.cancel()
+        task = nil
+    }
+}
+```
+
+**SSE / live updates** — Uses `FlowBridge.stream(from:)` to convert Kotlin `StateFlow` to async/await (`for try await`). No explicit SSE subscription in the model layer; the facade wraps KMP state holders that internally subscribe via `LiveConnection` (ADR-013).
+
+---
+
+### **F. ROUTE REGISTRATION + APP ENTRY**
+
+**Route registration** — `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/apple/Sources/App/RouteHostRegistry.swift`:
+```swift
+public struct AppRouteHostRegistry {
+    private var providers: [AppRoute: () -> AnyView] = [:]
+
+    public init() {}
+
+    public mutating func register(_ route: AppRoute, @ViewBuilder _ provider: @escaping () -> some View) {
+        providers[route] = { AnyView(provider()) }
+    }
+
+    public func view(for route: AppRoute) -> AnyView? {
+        providers[route]?()
+    }
+
+    public var registeredRoutes: Set<AppRoute> {
+        Set(providers.keys)
+    }
+}
+
+private struct AppRouteHostRegistryKey: EnvironmentKey {
+    nonisolated(unsafe) static let defaultValue = AppRouteHostRegistry()
+}
+
+public extension EnvironmentValues {
+    /// The route → page-view registry the shell renders from.
+    var routeHosts: AppRouteHostRegistry {
+        get { self[AppRouteHostRegistryKey.self] }
+        set { self[AppRouteHostRegistryKey.self] = newValue }
+    }
+}
+```
+
+**Registry population** — No central registration file exists. Pages self-register via extension of the registry. Expected pattern: `SettingsRouteRegistration.registry(model:onOpenNotifications:)` (called in `TeslaSyncApp.swift` L72–75).
+
+**App entry point** — `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/apple/Sources/TeslaSyncApp.swift` (L10–95):
+```swift
+@main
+struct TeslaSyncApp: App {
+    #if os(iOS)
+        @UIApplicationDelegateAdaptor(PushAppDelegate.self) private var pushDelegate
+    #elseif os(macOS)
+        @NSApplicationDelegateAdaptor(PushAppDelegate.self) private var pushDelegate
+    #endif
+
+    @State private var selection: AppRoute? = .dashboard
+    @State private var auth: AuthCoordinator
+    @State private var settingsModel: AppSettingsModel
+    @State private var commandActions = AppCommandActions()
+    @State private var commanding: any VehicleCommanding = UnavailableVehicleCommanding()
+
+    init() {
+        let coordinator = AuthCoordinator.bootstrap()
+        _auth = State(initialValue: coordinator)
+        _settingsModel = State(initialValue: AppSettingsModel(
+            biometric: coordinator,
+            onClearCache: {
+                WidgetSnapshotStore().clear()
+                RecentRoutesStore().clear()
+                VehicleDirectoryStore().clear()
+            }
+        ))
+    }
+
+    var body: some Scene {
+        WindowGroup {
+            rootContent
+        }
+        .commands {
+            AppCommands(selection: $selection)
+            AppMenuCommands(selection: $selection, actions: commandActions)
+        }
+    }
+
+    @ViewBuilder private var rootContent: some View {
+        // ... setup ...
+        RootView(coordinator: auth, selection: $selection)
+            .environment(\.routeHosts, SettingsRouteRegistration.registry(
+                model: settingsModel,
+                onOpenNotifications: { selection = .notifications }
+            ))
+            .platformIntegration(selection: $selection, settingsModel: settingsModel, onCommand: runCommand)
+            // ...
+    }
+}
+```
+
+**AppRoute cases** — `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/apple/Sources/App/AppRoute.swift`:
+```swift
+public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
+    case dashboard, vehicles, charging, trips, energy, driving, analytics, maps
+    case vehicleSystems, automations, notifications, telemetry, diagnostics
+    case admin, powerUser, system, settings, onboarding, explore, search, sharing, watch
+    // ...
+}
+
+public static let primaryTabs: [AppRoute] = [.dashboard, .vehicles, .charging, .analytics]
+```
+
+**Deep-link / URL routing** — `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-541/apps/apple/Sources/App/AppRouteParser.swift`:
+```swift
+public enum AppRouteParser {
+    static let aliases: [String: AppRoute] = [
+        "/": .dashboard,
+        "/battery": .energy,
+        "/battery/health": .energy,
+        "/charging/curves": .charging,
+        "/performance": .driving,
+        "/statistics": .analytics,
+        // ...
+    ]
+
+    /// Resolves a custom-scheme (`teslasync://charging`) or universal link.
+    public static func parse(url: URL) -> AppRoute? { /* ... */ }
+}
+```
+
+**NavigationDestination** — NOT FOUND. The app uses environment-injected `routeHosts` registry instead of `@NavigationDestination` modifier. Routes render via `RouteHost(route:)` component that looks up the registry.
+
+---
+
+**SUMMARY FOR COSTANALYSISPAGE AUTHOR:**
+
+1. **Use `TSSpacing`, `Color.TS`, `Font.TS` directly** from generated tokens
+2. **Glass panels**: apply `.tsGlassPanel()` modifier
+3. **I18N**: inject a `localize: (String, String) -> String` closure into your model; use keys from `translation.costAnalysis.*` namespace already in xcstrings
+4. **Empty state**: `TSEmptyState(title:message:systemImage:actions:)` — uses `ContentUnavailableView` under the hood
+5. **Observable pattern**: Use `StateHolderModel<State>` to wrap KMP `StateFlow`; define your state enums (phase/status/connection)
+6. **Data access**: Call `ChargingRepository.sessionsPaginated(vehicleId:limit:offset:start:end:)` and `costForecast(vehicleId:months:)` methods; decode cost forecast JSON using the `ForecastBreakdown`/`ForecastGasComparison` models from the adapter layer
+7. **Route registration**: Extend the registry in the settings/feature initialization; your page will be navigable via `.charging` `AppRoute` caseExcellent detail from agent 1. Let me read the full outputs of agents 2 and 3 from the temp files.
+
+Now the critical infra-map output (tokens, facade, localize, scaffold, route registration).
+
+I now have a thorough API map. Let me examine the navigation-registration precedent (`SettingsRouteRegistration`), the app entry, the lint/placeholder gates, and confirm the exact existing string keys—these determine my wiring and what passes the gate.
+
+The lint and placeholder gates both target `apps/apple/TeslaSync/Features/Charging` — so files must live there (and I'll add that path to `project.yml` for compilation). Let me read the registration pattern, app entry, lint config, placeholder script, and exact string-key format.
+
+Let me confirm the exact string keys, read the placeholder patterns, the app entry point, and check whether feature-views have a production (shared-core) source precedent or only InMemory sources.
+
+Three keys exist; `costAnalysis.empty.message` is **missing** — I must add it. Critical: the placeholder gate forbids the word **"Placeholder"** (case-insensitive), so I must avoid `.redacted(reason: .placeholder)` and that word in comments. Feature-views only define seam + InMemory/Static sources (no shared-core production source yet) — so the page binds through a Source seam, matching precedent. Let me read the facade charging domain, the `ChargingSession` Swift model, and the app entry to finalize wiring.
+
+No Swift-native `ChargingSession` exists in the Apple module — it lives in the unbuildable `Shared` KMP framework. So, matching precedent (feature-views bind to seams with their own value types, never importing `Shared`), the page will define a SI-unit `CostAnalysisSession` value type + a `CostAnalysisSource` seam, and derive all datasets locally. Let me read the container, SI formatting facade, and loadable/connection primitives to finalize.
+
+The facade (`Units`, `AppContainer`, `LoadableState`) all `import Shared` (the unbuildable KMP framework), while feature-views are Shared-free and self-contained. To maximize correctness, my page will be **Shared-free**: define a SI `CostAnalysisSession` value type + `CostAnalysisSource` seam, derive datasets locally (Wh→kWh etc.), and format via Foundation. Let me read the 4 missing components' web sources + the derivation helpers to reproduce them faithfully.
+
+Let me read the final web sources to reproduce the remaining sections faithfully.
+
+I have a complete picture now. This is a large, multi-file SwiftUI page. Key constraints: **Xcode is absent → build/test gate is BLOCKED** (per README), but `swiftlint --strict` and the placeholder scan **can** run and must pass. `swiftlint --strict` enforces ≤400-line files, ≤50-line functions, ≤120-char lines, and the placeholder gate forbids the word "Placeholder". Let me set up a plan and todos, then implement.
+
+Let me confirm the view-body/state patterns for the prop-based components and the string-resolution mechanism before writing.
+
+I have everything needed: string resolution uses per-surface `NSLocalizedString(key, tableName:, bundle:.main, value: fallback)` with un-prefixed web keys + an English fallback. I'll follow this exact convention. Let me create the directory and start writing the foundational files.
+
+Now I'll write the foundational files. Starting with the models/datasets, derivations, and formatting—all Shared-free, swiftlint-strict-clean, using a unique `CA` (Cost Analysis) type prefix to avoid module symbol collisions.
+
+Let me run swiftlint on the foundational files to catch issues early before continuing.
+
+It linted the whole project (config `included:` took over) and found **1 serious violation**. Let me isolate which file/line.
+
+`large_tuple` rule forbids 3-member tuples. Let me replace the bucket tuples with a small internal struct.
+
+Foundational files lint clean. Now the `@Observable` page model.
+
+Now the state views (loading/empty/error/stale)—these carry the 3 data states and the empty strings (parity evidence).
+
+Now the section hosts—thin wrappers that map my datasets into the existing feature-view models. Splitting across two files to stay under 400 lines.
+
+Now shared chrome (panel + chart-empty + insight card + legend) for the 4 local sections, then the sections themselves.
+
+Now the four local sections. Starting with the monthly cost trend chart (Swift Charts).
+
+Now the monthly table with sortable columns (two files).
+
+Now the time-of-use section (chart + legend + insights), split into two files.
+
+Now the forecast narration section (deterministic insights narrative — honest, no dead button).
+
+Let me lint the sections written so far before the main page.
+
+Three line-length violations. Let me fix them.
+
+Let me add an adaptive two-column helper, then the main page that composes everything.
+
+Now the route registration and previews. Let me also read `AppRouteParser.swift` to wire deep links.
+
+Now the route registration and DEBUG previews.
+
+The preview spec lines exceed 120 chars. Let me reformat them to wrap.
+
+Now let me view the `empty.title` xcstrings block to mirror its exact JSON shape when adding `empty.message`.
+
+Let me add `translation.costAnalysis.empty.message` to the master catalog, just before `empty.title` (alphabetical order).
+
+JSON valid. Now the per-surface `.strings` table with all keys and English fallbacks.
+
+Now wire the page into the build and navigation: `project.yml` (both app targets), `.swiftlint.yml`, `AppRouteParser`, and `TeslaSyncApp`.
+
+Now let me run the full lint on the Charging directory plus the edited nav files.
+
+Lint clean across all 25 files. Now let me run the actual gate commands, starting with the placeholder scan and the gate's exact swiftlint invocation.
+
+Placeholder scan passes (COUNT=0). Now the gate's exact swiftlint invocation from repo root.
+
+Even under default config, 0 violations. Now let me attempt the build path to honestly capture the BLOCKED state: first `xcodegen` (validates `project.yml`, no Xcode needed), then `xcodebuild`.
+
+xcodegen succeeded — `project.yml` is valid with the new source path. Let me confirm my files are in the project, then run `xcodebuild` (expected to fail — no Xcode).
+
+Files are in the project; `xcodebuild` confirms **no Xcode** (Command Line Tools only) → build/test gate is BLOCKED. Let me capture the honest gate exit codes and do a best-effort syntax parse of my files.
+
+Let me verify the parse errors are only missing-SDK-module errors (not real syntax issues in my code).
+
+`swiftc -parse` actually does pure syntax checking here (no module load) and CostAnalysisPage.swift parsed clean. Let me parse all files to confirm zero syntax errors.
+
+All 23 files parse cleanly with zero syntax errors. Let me guard against module-level symbol collisions (since no type-checker is available) by checking my public type names aren't declared elsewhere.
+
+No collisions — all type names are unique. Let me wrap the `model.refresh` method references as explicit closures (matching the feature-view precedent and avoiding any strict-concurrency edge), then re-verify.
+
+Let me run a comprehensive final verification: lint, placeholder scan, parse, and file-length check.
+
+All gates I can run are green: swiftlint --strict (0 violations, 23 files), placeholder scan (COUNT=0), syntax parse (0 issues), all files <400 lines. Let me update todos, check git status, and write the honest log.
+
+I notice `AIUsageCard.*` files show as modified — I never touched those. Let me verify these are pre-existing worktree changes unrelated to my work.
+
+Confirmed — the `AIUsageCard` changes are pre-existing, unrelated worktree edits (an `AIUsageCard`→`AiUsageCard` rename), not caused by my work. Since the gate is BLOCKED, I won't commit anything. Now let me write the honest log.
+
+Now let me clean up the generated (git-ignored) Xcode project used for validation, verify the log tail, and confirm final state.
+
+The log correctly ends with `EXIT=1` / `STATUS=BLOCKED`, and git shows my intended changes (no commit). Let me do a final i18n completeness check — every key referenced in code must exist in the `.strings` table.
+
+All 44 referenced i18n keys are defined — complete i18n coverage. Let me finalize the todo state and update the plan.
+
+All todos complete. Let me run one final consolidated verification for clean evidence.
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: C912:2EEF0D:2C7D43E:2EB3489:6A26E64D)

@@ -1,0 +1,180 @@
+=== P4 Feature view 0234 SnapshotInspector (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.x (Darwin arm64, Apple Silicon) — NON-isolated/shared runner
+                       (multiple parallel slots active; slot-373 observed building concurrently —
+                       see the IOS leg contamination below).
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint · swiftformat · xcodegen 2.45.4 · pwsh · Java 17 (OpenJDK)
+  Destinations       : iOS Simulator "iPhone 16" (present, booted, SHARED) · macOS 26.5 SDK · iOS 26.5 SDK
+  Shared.xcframework : built fresh via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 8m50s; release
+                       XCFramework staged to apps/apple/Frameworks/Shared.xcframework — ios-arm64,
+                       ios-arm64-simulator, macos-arm64).
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS SDKs + simulator + Xcode present
+                       → NOT capability-BLOCKED. (The block below is an integration/cross-surface block,
+                       documented honestly per the Honesty Covenant — NOT a platform-capability block.)
+
+WEB SOURCE (the specification)
+  web/src/features/system/components/state-machine/SnapshotInspector.tsx — the FSM-debugger right-rail
+  transition-snapshot inspector. A prop-driven leaf fed by the debugger page
+  (transition / snapshot / previousSnapshot / lastTransition / inWindowCount / loading / onJumpToLast).
+  Render branches:
+    • no transition + loading              → GlassPanel centred "Loading…"
+    • no transition + window-empty + last  → "Nothing in the current window. Last transition {rel}." + Jump button
+    • no transition (default)              → "Select a transition to inspect its snapshot"
+    • transition present                   → PanelTitle "Transition snapshot" + CopyButton("Copy snapshot");
+                                             meta grid From/To (StateBadge) · Trigger · Duration(fmtInt ms);
+                                             "Signals at transition" + Toggle "Diff vs previous";
+                                             signals <ul> (name · formatValue(value) · struck-through previous
+                                             in diff mode · SourceLayerBadge(source, ageMs)); dim unchanged /
+                                             highlight changed in diff mode; "No signals captured…" when empty.
+  Data sources: useTelemetry (SignalSnapshotResponse/Entry) + useTranslation. Helpers consumed:
+  the local formatValue serializer, components/data-display SourceLayerBadge (l1/l2/log/stale/unknown +
+  formatAge tooltip), lib/dateFormat formatRelative, lib/numberFormat fmtInt.
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/feature-views/SnapshotInspector.* — the only allowed files + this log)
+  SnapshotInspector.Adapter.swift   (347 L) — SnapshotTone; SnapshotSourceLayer (l1/l2/log/stale/unknown +
+                                              label/tone/desc); SnapshotValue + formatValue/canonicalJSON/
+                                              foundationValue; FSMTransitionSnapshot; SnapshotSignalEntry;
+                                              SignalSnapshot; SnapshotRow + SnapshotRows (sort + changed);
+                                              SnapshotRowStyle; SnapshotStatePalette; SnapshotAccessibility.
+  SnapshotInspector.Format.swift    (154 L) — SnapshotFormat (jsNumber/relative/int/age — ports of the web
+                                              formatValue numerics, formatRelative, fmtInt, formatAge) +
+                                              SnapshotCopy.payload (the copyPayload JSON). Foundation-only.
+  SnapshotInspector.Model.swift     (325 L) — P1/S8 seam (SnapshotInspectorModel/Source/InMemory…),
+                                              P1/S11 telemetry seam (…Telemetry + OSLog default),
+                                              P1/S10 facade (SnapshotInspectorStrings), SnapshotInspectorInput,
+                                              SnapshotConnection (live/stale/offline), SnapshotDetail, and the
+                                              pure SnapshotInspectorProjection + stale auto-refresh + jumpToLast.
+  SnapshotInspector.swift           (153 L) — the surface view: glass panel + freshness chip + connectivity
+                                              banner + manual refresh + phase switch. view.opened on appear.
+  SnapshotInspector.Views.swift     (308 L) — detail body (copy header + meta grid + signals list), meta item,
+                                              state pill, signal row, the 5-state source badge (+ age a11y),
+                                              no-signals empty.
+  SnapshotInspector.States.swift    (122 L) — loading skeleton, select-empty, outside-window jump, P4 error/retry.
+  SnapshotInspector.Previews.swift  (136 L) — data / no-signals / select / outside-window / loading / error /
+                                              stale / offline previews (DEBUG).
+  SnapshotInspector.Tests.swift     (334 L) — value/source/format/relative/rows/style/palette/copy/projection
+                                              XCTest cases.
+  SnapshotInspector.ModelTests.swift(151 L) — model wiring + P1/S11 telemetry + stale auto-refresh + jump +
+                                              accessibility XCTest cases + the telemetry spy.
+  SnapshotInspector.strings         ( 53 L) — per-surface i18n table (13 web keys + sourceLayer.* + native chrome).
+  NOT touched (parallel-unsafe / integration scope, per the AcDc/0096 precedent): project.yml, .swiftlint.yml,
+  the shared Localizable.xcstrings, and every other surface's files.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  GlassPanel              → TSGlassPanel (Sources/Components/UI/Cards.swift)
+  PanelTitle / Caption    → Font.TS.panel / Font.TS.caption + Color.TS (per-surface strings via Text(verbatim:))
+  Button                  → TSButton ; CopyButton → TSCopyButton (Sources/Components/UI/Utility.swift)
+  Toggle "Diff vs prev"   → SwiftUI Toggle(.switch).tint(Color.TS.accent)
+  SourceLayerBadge        → inline SnapshotSourceBadge (5-state L1/L2/LOG/STALE/— + age a11y; tones via Color.TS)
+  StateBadge              → inline SnapshotStateBadge (pill+dot; scoped SnapshotStatePalette — the full per-FSM
+                            getStateColor registry is a shared atomic component, out of scope)
+  FadeIn → TSFadeIn ; Skeleton → TSSkeleton ; empty → friendly bordered state
+  amber-400/30 diff hl.   → Color.TS.statusWarning ; emerald/blue/neutral source tones → status* tokens
+
+STATES RENDERED (all — no hidden surface): loading · empty(select) · empty(outside-window→Jump) ·
+  empty(no-signals) · data · error(P4 leaf QueryError peer) · stale(chip+banner+auto-refresh) · offline(chip+banner).
+
+I18N (P1/S10): every web key resolves through SnapshotInspectorStrings (table "SnapshotInspector"):
+  debugger.inspector.{title,signalsTitle,loading,emptyOutsideWindow,jumpToLast,empty,copy,from,to,trigger,
+  duration,diffMode,noSignals} + sourceLayer.{l1,l2,log,stale,unknown}.desc + sourceLayer.age + the native
+  chrome keys. No English literals in the Swift sources (verified — Text(verbatim:) only over facade lookups).
+
+================================  VERIFICATION (actual results)  ================================
+
+PER-SURFACE GATES (the allowed-files scope — all GREEN):
+
+  [swiftc -typecheck · iOS Simulator SDK · arm64-apple-ios18.0-simulator · -swift-version 6
+          -strict-concurrency=complete · surface(6) + real shared-component closure(9)]
+      → EXIT 0   (the surface compiles clean against the real Xcode iOS SDK)
+
+  [swiftc -typecheck · macOS SDK · arm64-apple-macos15.0 · -swift-version 6 -strict-concurrency=complete]
+      → EXIT 0   (the surface compiles clean against the real Xcode macOS SDK)
+
+  [swiftlint lint --strict · the 9 SnapshotInspector.swift files]
+      → Found 0 violations, 0 serious in 9 files.   EXIT 0
+        (drove the ≤400-line file-length convention by splitting Adapter→Format, Views→States, Tests→ModelTests.)
+
+  [swiftformat --lint · the 9 SnapshotInspector.swift files (config apps/apple/.swiftformat)]
+      → 0/9 files require formatting.   EXIT 0
+
+  [check-placeholders.ps1 -Language swift · the 10 SnapshotInspector.* files]
+      → PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0   EXIT 0
+        (no TODO/FIXME/stub/mock/Placeholder/Lorem/fatalError-unimpl in shipped code.)
+
+  [REAL XCTest run · built SnapshotInspectorTests.xctest (module TeslaSync, -enable-testing, XCTest linked)
+          and executed it with `xcrun xctest`]
+      → Test Suite 'All tests' passed. Executed 47 tests, with 0 failures (0 unexpected) in 0.012s.   EXIT 0
+        (the surface's own XCTest suite — the adapter/format/rows/copy/projection cases in .Tests.swift and the
+         model-wiring/telemetry/stale-auto-refresh/jump/a11y cases in .ModelTests.swift — runs green under the
+         real XCTest runner, isolated from the broken aggregate module below.)
+
+  [Runtime behavioural harness · compiled surface(6)+deps(9)+a main.swift driver into a host executable and ran
+          41 assertions mirroring the XCTest cases (formatters, value/canonical, rows+changed, copy JSON,
+          projection branches, palette, a11y, and the @MainActor model: telemetry-once, stale one-shot
+          auto-refresh, no-re-trigger, jump delegation)]
+      → ALL HARNESS CHECKS PASSED   EXIT 0
+
+AGGREGATE MONOREPO GATE (the literal prompt Gate — RED, for causes outside this surface's allowed files):
+
+  [xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' build test]   (slot-355, clean log)
+      → ** TEST FAILED **  MAC_EXIT=65
+        Cause A (repo-wide): the committed project.yml routes feature-views/*.Tests.swift + *.ModelTests.swift
+          into the APP targets (TeslaSync / TeslaSync-macOS), not the XCTest bundles. ALL ~280 co-located test
+          files across the 139 shipped surfaces fail `import XCTest` / warn `@testable import TeslaSync` (part of
+          module). FIRST failure is AIUsageCard.Tests.swift — NOT this surface. Fix belongs in project.yml
+          (parallel-unsafe / integration scope; not an allowed file for this prompt).
+        Cause B (cross-surface, revealed after forcing ENABLE_TESTING_SEARCH_PATHS=YES to clear Cause A):
+          invalid redeclaration / ambiguous type lookup between OTHER surfaces —
+            TelemetryErrorRow defined in BOTH TelemetryErrorsPanel.Adapter.swift AND FleetApiSection.Models.swift;
+            TelemetryErrorsFormat / TelemetryErrorsAccessibility redeclared; plus further errors inside
+            TelemetryErrorsPanel.Adapter.swift. 230 error lines, ALL in slot-355 paths, NONE in SnapshotInspector.*.
+          These are other slots' files — out of this prompt's allowed-files scope to fix.
+
+  [xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test]
+      → IOS_EXIT=65 — but the log is INVALID for this slot: 0 references to slot-355, 1996 references to slot-373.
+        The shared, non-isolated runner (a concurrent slot-373 xcodebuild + the SHARED booted iPhone 16 simulator)
+        contaminated the iOS build state, so this leg did not measure slot-355 sources. (The slot-355 iOS compile
+        IS independently proven GREEN by the swiftc iOS-Simulator-SDK typecheck above.) The contamination is itself
+        evidence the literal iOS gate is not runnable in isolation on this shared runner.
+
+  swiftlint --strict / swiftformat --lint over the WHOLE apps/apple, and the literal placeholder -Path,
+  are aggregate steps spanning all 139 surfaces; this prompt verified them at the allowed-files scope (all GREEN
+  above) and did not "fix" other surfaces (out of scope).
+
+GATE EXIT CODES (literal prompt Gate semantics — EXIT=0 only when every step is 0):
+  IOS_EXIT=65 (shared-runner contamination; surface proven green via SDK typecheck)
+  MAC_EXIT=65 (pre-existing cross-surface defects + project.yml test-routing — both out of allowed scope)
+  LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0   (surface scope)
+
+HONESTY COVENANT COMPLIANCE
+  1 No red-as-green   — the aggregate xcodebuild legs are reported RED; STATUS is BLOCKED, not DONE.
+  2 No scope narrowing— every web render branch + state + i18n key is implemented (no section skipped).
+  3 No skip-and-assume— ran the macOS gate (clean slot-355 log) and the iOS gate (found contaminated);
+                        proved the iOS compile via real iOS-SDK typecheck rather than assuming it.
+  4 No stubs as final — 0 placeholders; complete implementations; 47 real XCTest + 41 harness assertions pass.
+  6 No delegation     — implemented directly.
+  7 No predecessor bypass — built on P1/S8/S9/S10/S11 seams + the shared component library (Color.TS/TSGlassPanel/
+                        TSButton/TSCopyButton/TSFadeIn/TSSkeleton/…) exactly as AcDcStatsPanel/0096 established.
+  8 No commit on red  — the aggregate gate is RED for external causes, so NO commit is made; the 10 deliverable
+                        files are left in the working tree (git status: untracked under feature-views/).
+  9 No silent drift   — this log states every deviation (inline source/state badges since the per-FSM registry is
+                        out of scope; ENABLE_TESTING_SEARCH_PATHS used only to reveal Cause B; iOS contamination).
+
+CONCLUSION
+  The SnapshotInspector surface is COMPLETE and verified to parity: it compiles clean against the real Xcode
+  iOS-Simulator and macOS SDKs (Swift 6, strict concurrency), passes swiftlint --strict / swiftformat --lint /
+  the placeholder gate at its allowed-files scope, and its 47-case XCTest suite executes green under the real
+  `xcrun xctest` runner. The literal aggregate `xcodebuild … build test` gate is RED solely because of
+  PRE-EXISTING, cross-surface integration defects (the project.yml co-located-test routing gap affecting all 139
+  surfaces, and duplicate type declarations between TelemetryErrorsPanel and FleetApiSection) plus shared-runner
+  contamination from a concurrent slot — every one of which is OUTSIDE this prompt's allowed files
+  (apps/apple/TeslaSync/feature-views/SnapshotInspector.* + this log). Per Honesty Covenant rules 1 and 8, this is
+  reported as BLOCKED (integration/runner block, not a capability block) and is NOT committed.
+
+EXIT=1
+STATUS=BLOCKED

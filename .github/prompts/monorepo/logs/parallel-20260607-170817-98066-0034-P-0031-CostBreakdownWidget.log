@@ -1,0 +1,122 @@
+I'll start by exploring the repository structure to understand the web source and the existing Apple app architecture.
+
+Apple toolchain is available (xcodebuild, swiftlint, swiftformat, Swift 6.3.2). The `dashboard-widgets` dir doesn't exist yet. Let me explore the existing Apple Sources structure to understand the patterns.
+
+The directory structure is different than I assumed. Let me carefully map it out.
+
+The build only includes `Sources/`, so dashboard widgets must live under `Sources/Widgets`. Let me explore the existing widget conventions and any sibling dashboard widgets already built.
+
+`Sources/Widgets` is WidgetKit (home-screen), not dashboard widgets — this is a new concept. Let me map the full Sources tree and the dependency areas (SharedFacade, Design, Localization, Live, Components).
+
+Now let me read the core facade and component patterns I'll need to follow.
+
+Let me examine the data layer (AppContainer, shared framework stores), key components, design tokens, and check whether the Shared.xcframework / simulator are available for the build.
+
+Two potential blockers found: `Shared.xcframework` is absent (only `.gitkeep`), and no iPhone 16 simulator matched. Let me gather full evidence on the build environment.
+
+Critical: only **Command Line Tools** are installed (not full Xcode), so `xcodebuild`/`simctl` cannot run, and `Shared.xcframework` is absent. This is a platform-capability gap. Before concluding, let me examine the prompt suite for conventions (where sibling widgets/infrastructure go) and check `pwsh`/placeholder tooling.
+
+The P4 core (P0–P8) is done, but no dashboard widgets exist yet and there's no Apple `WidgetShell`/registry prompt — so I'll build self-contained widget chrome atop the existing P3 components. Now I need the shared-core analytics types. Let me read the actual P-0031 prompt and the KMP analytics store/DTOs.
+
+Let me read the KMP analytics store/repository and the web-side types to get exact field names.
+
+The KMP `AnalyticsStore.costBreakdown(vehicleId:)` returns `StateFlow<Resource<JsonElement>>` (raw SI JSON). Now I need to understand the view/environment wiring, components, tokens, and telemetry. Let me read the key files.
+
+Components are clear (`TSPieChart`, `TSStatCard`, `TSEmptyState`, `TSQueryError`, `TSCard`). Now I need the design tokens, chart models/palette, cards, badges, and typography.
+
+Let me read the generated design tokens, badges/typography, telemetry (P1/S11), the i18n catalog, environment wiring, and a sample test.
+
+Tests live under `Tests/Unit/`. Let me read the environment wiring, design tokens, telemetry contract, and i18n catalog structure to finalize the architecture.
+
+Let me resolve the remaining unknowns: telemetry (P1/S11), i18n catalog keys, how views obtain stores/container, and test patterns.
+
+The catalog uses `translation.widget.*` keys. Let me confirm the exact `costBreakdown` keys, read the telemetry contract, and see how Apple code emits diagnostics + obtains the container.
+
+All `translation.widget.costBreakdown.*` keys already exist (params use `%1$@`). Let me read the telemetry contract, how Apple emits events + resolves parameterized strings, and how views obtain the container.
+
+Let me read the Telemetry contract and how the app wires diagnostics + container into the environment.
+
+The telemetry taxonomy uses typed `TelemetryEvent.ScreenView` (no free-form `view.opened`). The app doesn't yet inject `AppContainer`/`Diagnostics` into the environment. Let me read the facade internals, freshness/connectivity, a test sample, and search for any Swift telemetry usage.
+
+Let me read test patterns, the remaining UI components (badges, typography, buttons, formatters), search for Swift telemetry usage, and the web formatting hook.
+
+Let me confirm the token tail (fonts/spacing/radius/motion), check Swift telemetry usage, and read the web formatting/units hooks + cost-breakdown API types to replicate `formatCurrency`.
+
+I have the formatting logic. Let me read `fmtNumber` and the full `CostBreakdown` type to replicate exactly, then I'll have everything needed.
+
+I now have the full data + formatting model. Let me read the lint/format configs (so my code passes `swiftlint --strict`/`swiftformat` first time) and the button signature, then start implementing.
+
+I have everything needed. Let me verify the i18n key values, check the placeholder-check tooling (`pwsh`), then start building.
+
+All i18n values confirmed and `pwsh` is available (I can run the real placeholder gate). Let me check which chrome/a11y keys exist in the catalog (for stale/offline/refresh/retry) so I avoid hardcoded English in the widget shell.
+
+Good — `translation.common.{refresh,retry,offline,loading,noData}` and `translation.widget.ago` exist. Let me find a "stale" key and confirm the `translation.common.*` set.
+
+I now have a complete picture of the architecture, components, data layer, i18n catalog, and toolchain. Key finding: this runner has **only Command Line Tools (no full Xcode), no iOS simulator, and no `Shared.xcframework`** — so `xcodebuild build test` cannot run (a platform-capability gap → `STATUS=BLOCKED` per the prompt). But `swiftlint`, `swiftformat`, and the placeholder gate (`pwsh`) all work, and I'll ship complete, production-quality code + tests.
+
+Let me set up the plan and todos.
+
+Let me quickly read the skeleton + button components so I use them correctly, then write the implementation.
+
+I have everything I need. Let me write the implementation file.
+
+Let me refine the file: replace the heavy boxed icon with a small inline icon (matching web), shorten long lines (for `swiftlint --strict` 120-col), and add the production `SharedWidgetTelemetry` adapter.
+
+Now let me add a small pure accessibility-label helper (so the a11y content is unit-testable without a view-introspection library) and wire the view to use it.
+
+Now wire the view's donut + ranked rows to use the testable a11y helper:
+
+Now the test file — pure-logic coverage of the adapter, projection, formatting, registry, a11y content, the telemetry seam, and per-state view construction:
+
+Let me fix two test artifacts: the confusing `currentMonthCost` expectation and the `.body` assertions (use `AnyView` construction instead, and exercise the provider's refresh).
+
+Now let me run the verification toolchain. First, apply `swiftformat` to my files, then lint.
+
+FORMAT_EXIT=0 (0/262 files need formatting). Now swiftlint `--strict`:
+
+2 violations found. Let me see them (scoped to my files):
+
+Two violations: file too long (978 > 400) and a 2-level nested `CodingKeys`. Let me check how the repo handles large files before deciding to split vs. disable.
+
+The repo strictly keeps every file ≤400 lines (largest is 390) and never uses `swiftlint:disable`. I'll follow that convention and decompose the surface into cohesive files (and fix the nested `CodingKeys`). Let me view the formatted monolith, then split it.
+
+Let me read the full formatted file so I can split it accurately.
+
+I have the full content. Now let me remove the monolith and split it into 5 cohesive, sub-400-line files (fixing the nested `CodingKeys` and adjusting visibility for cross-file use).
+
+Now the main view file (with renamed subview references + the L10n helper):
+
+Now the companion views file (chrome, big number, donut, ranked list, stat tile, L10n helper):
+
+Now let me format all new files, check line lengths, and re-run the full lint gate.
+
+All files are well under 400 lines. Now the full lint gate:
+
+Both lint gates pass (LINT_EXIT=0, FORMAT_EXIT=0). Now the placeholder gate (real `pwsh` script):
+
+The placeholder gate flagged the word "Placeholder" in a doc comment. Let me check all my files for trigger words and fix:
+
+Placeholder gate passes. Now let me add compile-confidence: type-check the Foundation-only logic files, and syntax-parse the SwiftUI/Shared files (full `xcodebuild` can't run here).
+
+Pure-logic files type-check cleanly (TYPECHECK_EXIT=0). Now syntax-parse the SwiftUI/Shared/test files (modules can't be resolved here, but syntax is validated):
+
+Let me verify the parse results cleanly (capture the real exit codes and any genuine syntax errors):
+
+All files parse cleanly (exit=0, zero syntax errors). Verification summary: lint ✅, format ✅, placeholder ✅, type-check (logic) ✅, parse ✅. The only blocker is `xcodebuild`/simulators (Command Line Tools only). Let me capture the exact capability evidence and generate the gate log.
+
+Let me verify the log's head section captured the capability evidence correctly:
+
+The log is honest and complete. Let me verify my test count claim and confirm the final file set before committing.
+
+22 test cases (not 20). Two unrelated pre-existing web files are modified — I'll exclude those and commit only my files. Let me correct the test count in the log first.
+
+Now let me commit only my files (excluding the unrelated pre-existing web changes):
+
+Exactly the right 7 files staged (no unrelated web changes). Now commit:
+
+Committed (8bec9a6b, 7 files). Let me run one final consolidated verification of the runnable gates to confirm the committed state is clean (no red-as-green):
+
+All runnable gates pass on the committed state. Let me clean up temp files and finalize.
+
+Task complete. Here's a summary of what I delivered.
+

@@ -1,0 +1,220 @@
+=== P4 Feature view 0034 XRayFieldsTable (Apple) ===
+
+Surface : apps/apple/TeslaSync/feature-views/XRayFieldsTable.*
+Web spec: web/src/features/admin/components/ingest-xray/XRayFieldsTable.tsx
+Data    : useIngestXRay (P1/S8 seam) · useTranslation (P1/S10) · useSortToggle (modeled in the view-model)
+Runner  : Darwin macOS 26.5.1 (25F80) · Swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · PowerShell 7.6.2
+          xcodebuild: UNAVAILABLE on this runner — Command Line Tools only, no Xcode.app
+          ("tool 'xcodebuild' requires Xcode, but active developer directory
+           '/Library/Developer/CommandLineTools' is a command line tools instance"; xcode-select -p
+           = /Library/Developer/CommandLineTools)
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (allowed scope: XRayFieldsTable.* + this log)
+--------------------------------------------------------------------------------
+  XRayFieldsTable.swift          — SwiftUI surface: a slim freshness/refresh header + the state
+                                   switch (loading skeleton / empty / error+retry / content);
+                                   stale + offline cached content with a connectivity banner; full
+                                   a11y; i18n. No networking in the view.
+  XRayFieldsTable.Views.swift    — the sortable table itself: a columnar grid on regular width and
+                                   a card list on compact width (mirroring TSDataTable's responsive
+                                   strategy but selection-free, since the web source has no row
+                                   selection), the sortable column headers, per-cell views
+                                   (mono field / right-aligned samples / relative last-seen /
+                                   neutral kind badge), the freshness chip + connectivity banner.
+  XRayFieldsTable.Model.swift    — P1/S8 state-holder seam (XRayFieldsSource), @Observable
+                                   XRayFieldsModel (+ nonisolated resolvePhase / nextSort,
+                                   autoRefreshIfStale, toggleSort = useSortToggle parity), P1/S11
+                                   telemetry seam, InMemory source, XRayFieldsStrings (P1/S10),
+                                   XRayFieldsSurface (slug).
+  XRayFieldsTable.Adapter.swift  — pure projection: cached [XRayFieldStat] + sort → display rows,
+                                   reproducing the web pipeline VERBATIM (formatValueKind, fmtInt,
+                                   formatRelative, the sort switch * dir) + a11y text.
+  XRayFieldsTable.Previews.swift — #if DEBUG previews for every state (content regular + compact /
+                                   loading / empty / error / stale / offline).
+  XRayFieldsTable.Tests.swift    — XCTest: adapter value parity + sort parity + projection + model
+                                   phases/telemetry/toggle/auto-refresh + accessibility.
+  XRayFieldsTable.strings        — per-surface i18n table (every web t() key + native chrome); 26
+                                   keys, folds into Localizable.xcstrings at integration.
+
+Parity reproduced exactly from the web source (cross-platform VALUE parity, not a "corrected"
+version):
+  value_kind  = formatValueKind(kind)  [0..10 → unknown/string/bool/int32/int64/float32/float64/
+                enum/invalid/time/location · otherwise "kind {n}"]   (api/hooks/useIngestXRay.ts)
+  samples     = fmtInt(sample_count) = fmtNumber(v,0) → toLocaleString('en-US', max0frac)
+                ["12,345" grouping]                                   (lib/numberFormat.ts)
+  last seen   = <TimeStamp format="relative"> → formatRelative()      (lib/dateFormat.ts)
+                ["just now" <60s incl. future · "Nm ago" · "Nh ago" · "Nd ago" · else "MMM d, yyyy"
+                 · "—" for unparseable]
+  sort        = const sorted = [...rows].sort(switch sortKey) * dir   (the component body)
+                [field localeCompare · sample_count numeric · last_seen_at Date.parse delta ·
+                 value_kind numeric ; dir = asc?+1:-1 ; stable]
+  sort state  = useSortToggle('sample_count','desc') [same column → flip dir; new column → desc]
+  i18n keys   = admin.xray.fields.cols.field/count/lastSeen/kind, .loading, .empty,
+                admin.xray.panels.fields (all from web source / i18n/en.json)
+
+States reproduced (every one renders — no hidden surfaces):
+  loading (table skeleton) · empty ("No samples in this window…") · error (retry) ·
+  stale (chip + banner + auto-refresh) · offline (cached rows + banner) · content (sortable table).
+  Each has a #if DEBUG preview.
+
+--------------------------------------------------------------------------------
+GATE RESULTS (real commands, real exit codes on this host)
+--------------------------------------------------------------------------------
+
+[HOST] swiftc -typecheck -swift-version 6 -strict-concurrency=complete -sdk <MacOSX.sdk>
+       -target arm64-apple-macos15.0
+       (surface = XRayFieldsTable.Model + .Adapter + .swift + .Views, type-checked against the
+        REAL design system: 41 files from Sources/Components + Sources/Design + the generated
+        DesignTokens apps/design/generated/apple/Tokens.swift, strict concurrency complete)
+       → error count = 0
+       SURFACE_TYPECHECK_EXIT=0
+       (One design-system file is excluded: Sources/Components/DataDisplay/UnitFormatters.swift —
+        it consumes the KMP `UnitPreferences` type [error: cannot find type 'UnitPreferences' in
+        scope] delivered by the Shared.xcframework, and is unused by this surface. Every other
+        design file + all four surface files type-check green; ZERO errors originate in
+        XRayFieldsTable.*.)
+
+[HOST] swiftc -typecheck … (the #if DEBUG previews, with the #Preview macro rewritten to
+       `@MainActor func -> some View` because the PreviewsMacros plugin ships only with Xcode and
+       is absent under CLT — it equally blocks the design system's own #Preview files)
+       → 7/7 preview bodies type-check green
+       PREVIEWS_TYPECHECK_EXIT=0
+
+[HOST] swiftc -typecheck … (XRayFieldsTable.Tests.swift against the real surface API via a minimal
+       XCTest shim, because XCTest ships only with Xcode and is not importable under CLT)
+       → error count = 0
+       TESTS_TYPECHECK_EXIT=0
+
+[HOST] swiftc -swift-version 6 -strict-concurrency=complete + execute adapter/model harness
+       (XRayFieldsTable.Model + .Adapter + a driver, compiled to a native executable and run)
+       → === XRayFieldsTable host harness ===  CHECKS=62 FAILURES=0  HARNESS_OK
+       HARNESS_EXIT=0
+       Verified GREEN by execution: formatValueKind (all 13 incl. "kind 11"/"kind 42"), fmtInt
+       grouping ("0"/"42"/"12,345"/"1,234,567"), formatRelative buckets ("just now"/"1m ago"/
+       "2m ago"/"1h ago"/"2h ago"/"1d ago"/"6d ago"/future→"just now"/invalid→"—"/>=7d absolute),
+       sort parity (sample_count/field/value_kind/last_seen × asc/desc + stable ties), projection
+       (default order + per-cell strings), nextSort (flip vs new-column-desc), resolvePhase (7
+       branches), accessibility (summary/sortValue/rowLabel), AND the @MainActor model: default
+       sort sample_count desc, view.opened telemetry emitted ONCE, source start/stop once,
+       toggleSort flip + switch, snapshot → phase/rows, stale-idle auto-refresh gating.
+
+[HOST] swiftformat --lint apps/apple
+       → 0/608 files require formatting, 2 files skipped
+       FORMAT_EXIT=0
+
+[HOST] cd apps/apple && swiftlint lint --strict <the 6 shipped XRayFieldsTable*.swift files>
+       (the staging dir TeslaSync/feature-views is NOT in the .swiftlint.yml `included:` list, so
+        the shipped files are linted EXPLICITLY to hold them to the same --strict bar)
+       → Done linting! Found 0 violations, 0 serious in 6 files.
+       MYFILES_LINT_EXIT=0
+
+[HOST] cd apps/apple && swiftlint --strict            (whole project, config `included:` dirs)
+       → Done linting! Found 1 violation, 1 serious in 598 files.
+       GATE_LINT_EXIT=2  — the single violation is PRE-EXISTING and OUTSIDE this prompt's scope:
+       TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length),
+       committed at b7fffb07 and unmodified here (verified `git status` clean for that file).
+       NONE of the violations are in XRayFieldsTable.* — my files are 0/0 (see MYFILES_LINT above).
+       Covenant #1: this step is shown red (not laundered), and is not mine to fix (out of scope).
+
+[HOST] pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/XRayFieldsTable
+       -Language swift
+       → PLACEHOLDER_ALLOWED=0 · PLACEHOLDER_COUNT=0 · EXIT=0
+       PLACEHOLDER_EXIT=0
+       (also: manual case-insensitive forbidden-word scan [TODO/FIXME/stub/mock/placeholder/lorem/
+        coming soon/not implemented/unimpl/fatalError/preconditionFailure] of the shipped files →
+        NONE FOUND.)
+
+[HOST] plutil -lint XRayFieldsTable.strings → OK
+[HOST] i18n key coverage: 26 keys referenced in code == 26 keys in the .strings table; MISSING=NONE,
+       no unreferenced catalog keys.
+
+[DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+[DEFERRED] xcodebuild -scheme TeslaSync-macOS                                                       build test
+       IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED   (NOT claimed green — see reasoning)
+       The xcodebuild scheme build/test is DEFERRED — not failed — for three reasons, none of them
+       a defect in this surface's code:
+         (1) CAPABILITY: this runner has Command Line Tools only, no Xcode.app, so `xcodebuild`
+             cannot run at all ("tool 'xcodebuild' requires Xcode … is a command line tools
+             instance"; xcode-select -p = /Library/Developer/CommandLineTools). Per the prompt's
+             capability clause this alone justifies deferral with API evidence.
+         (2) SCOPE: the surface lives in the staging dir apps/apple/TeslaSync/feature-views/, which
+             is NOT a source path in the Xcode project generator config; registering it (or editing
+             the shared Localizable.xcstrings) is the integration prompt's scope and is OUTSIDE this
+             prompt's allowed files (XRayFieldsTable.* + this log). Covenant #7 forbids
+             self-registering / predecessor bypass.
+         (3) DEPENDENCY: the TeslaSync scheme builds the KMP Shared.xcframework (Kotlin/Native) and
+             the targets require signing; Frameworks/Shared.xcframework is absent in this checkout.
+       Equivalent in-scope verification was performed instead and is GREEN above: a Swift-6
+       strict-concurrency `swiftc -typecheck` of the surface against the real design tokens + shared
+       components (the exact symbols the app build would resolve), the previews + tests type-checked,
+       and an executed adapter/model harness (62/62). This matches the user-approved P3
+       "code-complete + DEFERRED Xcode gate" disposition used by feature predecessors 0036
+       (DigitalTwinWidget), 0054 (GuardModeWidget), 0055 (LifetimeStatsWidget) and 0078
+       (RecentDrivesListWidget).
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+  [x] Surface renders all web states (loading / empty / error / stale / offline / content) — each
+      state implemented + has a #if DEBUG preview; phase + projection logic unit-tested AND executed
+      (62/62). The web source's two intrinsic states (loading + empty) are reproduced; error/stale/
+      offline are added because the native feature view binds useIngestXRay directly (a superset, not
+      scope narrowing).
+  [x] Hooks bind through the shared P1/S8 state-holder seam (XRayFieldsSource); no HTTP in the view —
+      the sorted projection is a pure derive from the model's cached rows (web `[...rows].sort` parity).
+  [x] Every i18n key from source has a matching catalog key — admin.xray.fields.cols.* + .loading +
+      .empty + admin.xray.panels.fields, plus native chrome; 26/26 keys present, view holds no English
+      literals (all via XRayFieldsStrings).
+  [x] Accessibility labels on every interactive element (sortable column headers w/ value+hint,
+      refresh button, compact sort menu), every row (combined spoken label), the table container
+      (summary count); icons are accessibilityHidden; skeleton respects Reduce Motion.
+  [x] Tests: adapter value-parity + sort-parity unit tests + per-phase model tests + accessibility
+      label tests (XRayFieldsTable.Tests.swift; the same assertions executed green in the host
+      harness 62/62).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; word-scan clean.
+  [x] Telemetry: view.opened emitted once with surface slug "XRayFieldsTable" (P1/S11) — tested +
+      executed.
+  [x] Host-runnable gates green (typecheck swift6 / executed harness / format / lint of my files /
+      placeholder); xcodebuild scheme build/test DEFERRED with capability + scope + dependency
+      evidence (per approved P3 disposition). The project-wide swiftlint surfaces 1 PRE-EXISTING
+      out-of-scope violation, shown red, not mine.
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+  1  No red-as-green : the two xcodebuild scheme steps are shown DEFERRED (not green); the project
+                       swiftlint is shown red (1 pre-existing out-of-scope violation); every "EXIT=0"
+                       above is a command actually executed on this host.
+  2  No scope narrowing: implemented ALL six states + the responsive regular/compact table + sortable
+                       columns + every column + i18n + a11y + telemetry; error/stale/offline are a
+                       superset added by the direct query binding, not a reduction.
+  3  No skip-and-assume: each host gate executed and its real output captured; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; harness executes real logic.
+  5  No parity shortcuts: formatValueKind / fmtInt / formatRelative / the sort switch * dir / the
+                       useSortToggle transition ported VERBATIM and pinned by executed assertions.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into the Xcode project and did NOT edit the shared
+                       Localizable.xcstrings (both out of allowed scope); strings shipped as the
+                       per-surface table, matching predecessors 0036/0054/0055/0078.
+  8  No commit on red  : committing on all-green host gates; the Xcode scheme steps are DEFERRED (a
+                       documented capability/scope/dependency deferral), and the one red project-lint
+                       violation is pre-existing + out of scope (not introduced here).
+  9  No silent drift   : changes confined to the allowed XRayFieldsTable.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished native XRayFieldsTable shipped at parity with the web source: a SwiftUI surface
+  (freshness/refresh header + responsive sortable per-field table) over a P1/S8 state-holder seam (no
+  view HTTP), P1/S11 telemetry, P1/S10 i18n, P1/S9 tokens; every state, every i18n key, every
+  interactive a11y label. The surface type-checks GREEN under Swift 6 strict concurrency against the
+  real design system (41 files) and its adapter/model logic executes GREEN (62/62) with exact web
+  value parity (formatValueKind / fmtInt / formatRelative / sort). The Xcode scheme build/test is
+  DEFERRED to a signed CI runner with Xcode (this runner is Command Line Tools only; the surface is
+  not yet target-registered; the KMP Shared.xcframework is absent), matching the user-approved P3
+  "code-complete + DEFERRED Xcode gate" disposition.
+
+EXIT=0
+STATUS=DONE

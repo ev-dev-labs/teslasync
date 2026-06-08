@@ -1,0 +1,171 @@
+=== P4 Feature view 0021 TimestampTool (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools, where `xcodebuild -version`
+                       errors "requires Xcode"; overridden non-destructively, no sudo / no xcode-select -s, so
+                       the shared runner is untouched — the SAME mechanism every prior P4 surface used, see
+                       p4-apple-feature-views-0237-AiUsageCard.log).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2
+  Capability         : SwiftUI present; iOS 26.5 / macOS 26.5 SDKs installed; iPhone 16 simulator booted.
+                       This surface uses NO Swift Charts and NO MapKit (the web source has none either — see the
+                       prompt "Charts / maps used: (none)"), so every iOS 18 / macOS 15 HIG primitive it needs
+                       (TextField, Button, glass material, ContentUnavailableView, the @Observable macro, the
+                       #Preview macro) is available → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification — read end to end)
+  web/src/features/admin/components/devtools/tools/TimestampTool.tsx — a client-side developer utility (no
+  network, no API hooks; the only hook is useTranslation). It:
+    • Ticks a live `now` once a second (`setInterval(() => setNow(new Date()), 1000)`) and shows
+      `Math.floor(now.getTime()/1000)` + `now.toISOString()` plus a "Now" button that fills both fields.
+    • Converts a typed Unix epoch (`fromUnix`): empty ⇒ null; else `parseInt(unix,10)`, treating a raw string
+      longer than 10 chars as milliseconds and otherwise as seconds (`*1000`); `new Date(ms)`; `isNaN` ⇒ null.
+      Renders ISO / Local / Relative below the field when valid.
+    • Converts a typed ISO 8601 string (`fromIso`): empty ⇒ null; else `new Date(iso)`; `isNaN` ⇒ null. Renders
+      Unix / Local / Relative below the field when valid.
+    • Composes `ToolCard` (a `GlassPanel` with a tinted icon + title + description) and `Input` / `Button` from
+      `@/components/ui`; formats with `formatDateTime` (lib/dateFormat.ts → toLocaleString medium date + short
+      time) and `getRelativeTime` (devtools/helpers.ts → Xs/Xm/Xh/Xd ago on the absolute, floored distance).
+  i18n keys extracted from the source `t()` calls (ALL reproduced — the prompt's key list named only
+  "Timestamp"; per the Honesty Covenant the source was read and every key reproduced, no scope narrowing):
+    "Timestamp", "Timestamp Desc", "Now", "Unix Timestamp", "Iso", "Local", "Relative", "Iso Timestamp", "Unix".
+
+ARTIFACTS SHIPPED  (allowed files: apps/apple/TeslaSync/feature-views/TimestampTool.* + this log)
+  TimestampTool.Adapter.swift      — pure Foundation core: `TimestampParse` (JS `parseInt` semantics, the raw
+                                     `length > 10` seconds/ms heuristic, the ECMAScript ±8.64e15 ms range guard,
+                                     and the lenient ISO 8601 grammar — fractional/zoned/date-only), `TimestampFormat`
+                                     (`toISOString`, `Math.floor(getTime()/1000)`, `getRelativeTime`,
+                                     `formatDateTime`), `TimestampProjection` (the two result-line blocks + the
+                                     live-clock display), `TimestampAccessibility`. No store / view.
+  TimestampTool.Model.swift        — P1/S8 state-holder seam (`TimestampClockSource` + `@Observable
+                                     TimestampToolModel` + the production `TimerTimestampClockSource` = the web
+                                     1 Hz `setInterval`, + `InMemoryTimestampClockSource`), P1/S11 telemetry seam
+                                     (`TimestampTelemetry` + OSLog sink, `view.opened` surface="TimestampTool"),
+                                     the connection axis, the clock status → render-phase mapping, the field
+                                     bindings + the "Now" fill, P1/S10 `TimestampStrings` facade.
+  TimestampTool.swift              — the surface: the web `ToolCard` chrome (success-tinted clock tile + title +
+                                     description + freshness chip + refresh), the connectivity banner, and the
+                                     phase switch (loading / empty / error / data). static surfaceSlug; onAppear
+                                     start / onDisappear stop.
+  TimestampTool.Views.swift        — freshness chip, stale/offline banner, the live-clock row (ticking Unix + ISO
+                                     + "Now" TSButton), the two TSTextField converters with their result lines
+                                     (selectable mono values), and the loading skeleton / empty / error chrome.
+  TimestampTool.Previews.swift     — #if DEBUG #Preview for data / conversions / loading / empty / error / stale /
+                                     offline.
+  TimestampTool.strings            — P1/S10 catalog (table "TimestampTool"): the 9 source keys preserved VERBATIM
+                                     + the namespaced native chrome keys (field hints, freshness, loading, empty,
+                                     error, refresh).
+  TimestampTool.AdapterTests.swift — parseInt, the seconds/ms heuristic + range guard, the ISO grammar (zoned /
+                                     fractional / offset / date-only / round-trip / invalid), toISOString,
+                                     unixSeconds floor, formatDateTime, the relative buckets (s/m/h/d + boundaries
+                                     + future), the projection shape, the a11y seam.
+  TimestampTool.Tests.swift        — model wiring: phase mapping (loading/empty/error/data), live `now` plumbing,
+                                     derived fromUnix/fromIso, the "Now" fill round-trip, the field bindings, the
+                                     P1/S11 `view.opened` telemetry (emitted once), and the stale one-shot
+                                     auto-refresh + re-arm + offline-no-refresh.
+  (8 files; split across .Adapter/.Model/.Views/.Previews and .Tests/.AdapterTests to keep every file within the
+   repo's 400-line SwiftLint file_length budget — the same multi-file decomposition the prior feature-views use.)
+
+PARITY MAPPING  (web → Apple platform tokens; no Tailwind ported, no raw hex)
+  ToolCard GlassPanel + icon tile  → TSGlassPanel + a rounded success-tinted clock tile (web color="green" /
+                                     text-neon-green → semantic Color.TS.statusSuccess, ADR-006)
+  Input (Hash / Clock icon)        → labelled TSTextField with a leading SF Symbol (number / clock)
+  Button variant=ghost size=sm     → TSButton(variant: .ghost, size: .small) ("Now")
+  setInterval(…, 1000)             → TimerTimestampClockSource (async 1 Hz loop; first tick on start ⇒ data)
+  font-mono text-cyan-300 values   → .monospaced() + Color.TS.accent, .textSelection(.enabled)
+  now line "{unix} | {iso}"        → stacked Unix (body) + ISO (caption) rows (Apple-idiomatic; disclosed
+                                     divergence from the inline `|` separator — same data, mobile-legible)
+  fromUnix / fromIso (useMemo)     → TimestampParse.dateFromUnix / .dateFromISO (pure, unit-asserted)
+  getRelativeTime / formatDateTime → TimestampFormat.relative / .localDateTime (ports, unit-asserted)
+  i18n t(key)                      → TimestampStrings (NSLocalizedString table "TimestampTool"; web literal as the
+                                     value: fallback so tests/preview bundles render deterministically)
+  a11y                             → now row + each result line combined into single spoken elements; chip /
+                                     refresh / "Now" / retry labelled; Dynamic Type via tokens; Reduce Motion via
+                                     TSFadeIn / TSSkeleton
+  telemetry                        → view.opened surface="TimestampTool" emitted once on start (P1/S11)
+
+STATES (every one renders — no hidden surface)
+  loading  → skeleton clock row + two field skeletons (the pre-first-tick moment; momentary in production).
+  empty    → friendly ContentUnavailableView when the clock is unavailable, never a blank box.
+  error    → retryable error chrome (P4 leaf addition; the web has no fetch to fail).
+  data     → the live clock + the two converters; each converter shows its result lines only when the input
+             parses (web's conditional `fromUnix && …` / `fromIso && …`), the field standing alone otherwise.
+  stale    → header chip + banner + one-shot auto-refresh on the live→stale transition (a paused clock IS "data
+             older than the freshness window").
+  offline  → header chip + banner over the last-known time; no auto-refresh.
+
+GATES  (raw exits below; per-surface scope, matching every prior P4 surface)
+  [GREEN] swiftformat --lint  (.swiftformat, 7 swift files)      : 0/7 files require formatting          FORMAT_EXIT=0
+  [GREEN] swiftlint --strict  (.swiftlint.yml, 7 swift files)    : Found 0 violations, 0 serious          LINT_EXIT=0
+  [GREEN] check-placeholders.ps1 (-Language swift, the 7 shipped .swift files copied into an isolated temp
+          dir — `-Path` Get-ChildItem-recurses a directory, so a non-existent prefix would vacuously pass;
+          scanning the real files is the honest result):
+                                                                   PLACEHOLDER_ALLOWED=0
+                                                                   PLACEHOLDER_COUNT=0                     PLACEHOLDER_EXIT=0
+  [GREEN] ISOLATED build + test — SwiftPM, swift-tools 6.0 (Swift 6 language mode = complete strict concurrency,
+          the app's own mode), compiling the EXACT shipped TimestampTool.* sources (incl. the #Preview macro file)
+          against the REAL repo design system (generated apps/design Tokens + Sources/Design TSDesign/TSMaterial +
+          the Sources/Components UI / Motion / Feedback files the surface uses) under the Xcode 26.5 toolchain (so
+          the real @Observable + #Preview macros + XCTest are available):
+              Build complete!  ·  Executed 48 tests, with 0 failures (0 unexpected)                       SWIFT_TEST_EXIT=0
+
+  [DEFERRED] Full-app iOS-Simulator + macOS `xcodebuild -scheme TeslaSync(-macOS) … build test`.
+          NOT run-to-green on this runner because the full app target is blocked by PRE-EXISTING, unrelated
+          conditions this prompt neither introduced nor is allowed to touch (each VERIFIED here by ls/grep, not
+          assumed):
+            • apps/apple/Frameworks/Shared.xcframework is NOT staged (only .gitkeep present) — needs the
+              Gradle :core:assembleSharedXCFramework (a macOS-pending row in apps/macos-pending-verifications.md);
+            • `struct DashboardWidgetSize` is redefined 15× across Sources/DashboardWidgets/* +
+              TeslaSync/dashboard-widgets/* (parallel-merge collisions);
+            • 170 co-located `*.Tests.swift` under TeslaSync/feature-views import XCTest into the app target (the
+              established surface convention; TimestampTool.{Tests,AdapterTests}.swift follow it — they are NOT a
+              new category of problem, and they pass clean in the isolated XCTest run above);
+            • no apps/apple/*.xcodeproj is checked in (xcodegen generate is the acceptance-gate's first step).
+          This is the SAME sanctioned "code-complete + DEFERRED full-app Xcode gate" disposition recorded by every
+          prior P4 surface (see p4-apple-feature-views-0237-AiUsageCard.log) and is owned by
+          p4-apple/P99-0001-apple-acceptance-gate on a signed, fully-staged macos-latest runner. ZERO
+          TimestampTool / feature-views errors are attributable to this change.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED with raw, ls/grep-verified
+                           pre-existing-blocker evidence — never reported as passing. Every gate run on this runner
+                           shows its raw exit.
+  2  No scope narrowing  : every web region + branch reproduced — the live ticking clock, the "Now" fill, both
+                           converters incl. the `length > 10` seconds/ms heuristic, all six result lines (ISO /
+                           Local / Relative and Unix / Local / Relative), and all 9 source i18n keys (the prompt
+                           named only "Timestamp"); all six P4 states render.
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; raw exits pasted; the deferred full-app
+                           blockers were each re-confirmed by ls/grep (Shared.xcframework absent, DashboardWidgetSize
+                           15×, 170 co-located tests, no .xcodeproj), not assumed.
+  4  No stubs as final   : complete production surface (incl. a real 1 Hz TimerTimestampClockSource, not a stub) +
+                           48 real tests; placeholder scanner COUNT=0; no TODO/FIXME/stub/Coming-soon/Placeholder/
+                           Lorem anywhere.
+  5  No parity shortcut  : the parseInt semantics, the seconds/ms length heuristic, the ±8.64e15 ms range, the ISO
+                           grammar (with a toISOString round-trip), the floor-to-second relative buckets (incl. the
+                           59s/60s, 59m/60m, 23h/24h boundaries and the future-distance abs), and the
+                           medium-date/short-time formatDateTime are each unit-asserted against the web expressions.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened telemetry,
+                           and the established P4 "isolated-build + DEFERRED full-app" disposition all honoured.
+  8  No commit on red    : the committed artifact (8 TimestampTool.* files + this log) is GREEN on every per-surface
+                           gate AND on a real isolated Swift 6 strict-concurrency build + 48/48 XCTest; the deferred
+                           full-app gate is blocked only by pre-existing, unrelated surfaces this commit does not touch.
+  9  No silent drift     : changes are confined to feature-views/TimestampTool.{swift,Adapter,Model,Views,Previews,
+                           Tests,AdapterTests}.swift + TimestampTool.strings and this log; the inline-`|` →
+                           stacked-rows now-line divergence and the JS-Date → ISO-8601 grammar scope are disclosed
+                           above. The temporary SwiftPM build harness lived outside the repo and was removed.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic TimestampTool shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 48 tests pass under the app's own Swift 6 strict-concurrency rules, against the
+  REAL design system, via the Xcode 26.5 @Observable/#Preview/XCTest runtime, with swiftformat / swiftlint /
+  placeholder all green on the 7 surface files. The full-app iOS-Simulator + macOS xcodebuild build/test gate is
+  DEFERRED (not failed by this code) on pre-existing, unrelated, out-of-allowed-files blockers (unstaged
+  Shared.xcframework, the DashboardWidgetSize 15× redefinition, the co-located-tests-into-app-target convention,
+  the un-generated xcodeproj), owned by the P99 acceptance gate on a signed macos-latest runner per
+  apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

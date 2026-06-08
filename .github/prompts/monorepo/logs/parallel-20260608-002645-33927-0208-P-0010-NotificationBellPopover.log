@@ -1,0 +1,116 @@
+I'll start by understanding the task, the web source, the existing Apple app structure, and runner capabilities.
+
+Note: only Command Line Tools installed (no full Xcode), but `swift`, `swiftlint`, `swiftformat` are available. Let me read the web source and explore the existing Apple app structure to follow established patterns.
+
+The `modals-dialogs` directory doesn't exist yet — I'll create it. Let me read the rest of the web source and study the established native pattern via AIUsageCard reference files.
+
+Let me finish reading the web source and study the full reference pattern.
+
+Now I have the full web source. Let me study the established native pattern (AiUsageCard is the reference) and locate the shared P1 infrastructure.
+
+This is a clear, self-contained pattern. Let me read the remaining reference files and locate the shared design tokens (P1/S9).
+
+Let me read the Views, Chrome, Previews, strings, and test files, plus locate the shared tokens.
+
+Let me read the strings, Previews, and test files, and locate the shared tokens/components.
+
+Now let me examine the design tokens, shared components, the test pattern, and the shared facade for notifications.
+
+Let me locate the exact token and shared-component definitions.
+
+Let me read the design tokens and shared component APIs I'll consume.
+
+Tokens are generated from `apps/design/tokens.json` into a `Tokens.swift` (not committed; needs Xcode build). Let me confirm the exact token + component API surface used across the codebase, and read the shared components I'll consume.
+
+Now I have the token surface. Severity maps: info→statusInfo, warn→statusWarning, critical→statusDanger. Let me read the shared components I'll consume and check the UI test conventions.
+
+Shared component APIs are clear. Let me read `formatRelative` (web), the `TSButton` init, Typography, and check the shared facade + UI test conventions.
+
+`formatRelative` logic captured. Let me confirm the per-surface convention (each surface defines its own Connection/Telemetry) and the test target name.
+
+Convention confirmed: fully per-surface, self-contained, test target `TeslaSync`. Let me check the lint/format configs and whether a project scheme exists, then write a plan.
+
+`pwsh` is available (can run the placeholder gate). Project uses XcodeGen (`project.yml`) — needs full Xcode, unavailable. Let me read the placeholder script and project.yml source globs.
+
+Important: `project.yml` lists explicit source dirs (`feature-views`, `dashboard-widgets`) but **not** `modals-dialogs` — registering that group is a P4-core responsibility, and I'm restricted to `NotificationBellPopover.*` files. Also, full Xcode isn't installed. Let me confirm the generated tokens path and the test-target setup.
+
+Tests live alongside sources in `feature-views/*.Tests.swift`, yet the test targets list `Tests/Unit`. Let me read the full `project.yml` to understand how `*.Tests.swift` are routed and how groups are globbed.
+
+Let me view the app-target source spec fully to check for any `excludes` routing test files.
+
+I now have a complete picture. Let me read the lint/format configs to match style exactly, then write the plan and implement.
+
+Style constraints captured. Key insight: `modals-dialogs` isn't yet registered in `project.yml` sources or `.swiftlint.yml` `included` — those are P4-core responsibilities outside my allowed files. I'll verify my files by invoking the tools with explicit paths, and document the build as BLOCKED (no Xcode on runner). Let me set up the plan and scaffolding.
+
+I now have the complete token API and all conventions. Let me set up the plan/todos and begin creating the surface files, starting with the pure-logic core.
+
+Now the Model file (i18n facade, value types, connection, telemetry, input/resolved, source protocol, observable model, in-memory source).
+
+Now the Projection (pure input→resolved: phases, subtitle, row join, relative/severity labels).
+
+Core logic files written. Let me typecheck the pure-Foundation core early (Adapter + Projection + Model) with a tiny shim for the View-owned slug, to catch errors before building the SwiftUI layer.
+
+Core typechecks clean (exit 0), and `@Observable`/`@MainActor` macros work under CLI swiftc. Now the SwiftUI leaf components — Chrome and Views.
+
+Now the main surface file: trigger + badge + popover presentation + panel composition (header/body/footer) + lifecycle and `view.opened` telemetry.
+
+Let me refactor for cleaner separation and previewability: extract an internal `NotificationBellPanel` view so the dialog content can be previewed and snapshot-tested directly. I'll rewrite `.swift` and `.Views.swift`.
+
+Now the simplified surface file presenting the extracted panel.
+
+I introduced a naming collision: the state-switch property is named `body`, conflicting with the `View.body`. Let me fix it to `content`.
+
+Now the Previews file covering every state.
+
+Now the i18n strings catalog.
+
+Now the two test files: adapter unit tests (pure logic) and projection/model/a11y tests.
+
+All 10 files created. Let me update todos and run the verification toolchain — starting with swiftformat and swiftlint.
+
+swiftformat flagged auto-fixable issues (long lines, indentation, redundant type) in my new files. Let me apply formatting in-place, then re-lint.
+
+swiftformat passes (exit 0). Now swiftlint `--strict` on the new files, plus re-typecheck since files changed.
+
+swiftlint linted the whole project (config `included` overrides the path arg) and found 1 violation. Let me locate it.
+
+The lone violation is pre-existing (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift` — not my file). Let me lint **only** my new files in isolation for clean evidence, then re-typecheck.
+
+My files are clean except `Model.swift` is 410 lines (>400 `file_length` under `--strict`). I'll extract the in-memory test/preview source into a small dedicated file — cleaner separation and brings Model under budget. Let me view the relevant sections.
+
+I'll extract `InMemoryNotificationBellSource` into a dedicated fixtures file. Let me create it and trim Model.swift.
+
+Now re-run format, isolated lint, and re-typecheck (now including Fixtures).
+
+Clean: swiftformat 0/10, swiftlint `--strict` 0 violations, Model.swift now 359 lines. Re-typecheck the core (now incl. Fixtures), then run the placeholder gate and a logic harness.
+
+Core typechecks (exit 0) and placeholder gate passes (COUNT=0). Now a logic harness that actually **runs** the projection/adapter/model and asserts web-parity outputs — the strongest verification possible without Xcode.
+
+Logic harness: **ALL_PASS**, exit 0 — projection, adapter, and model all produce exact web-parity outputs. Now let me attempt a full SwiftUI typecheck of the view layer against the real generated tokens (my views depend only on tokens + SwiftUI, not other shared components — let me confirm and compile).
+
+The only errors are the `#Preview` macro plugin being absent from Command Line Tools (an environment limitation — the macro usage itself is correct, as the compiler note confirms). Let me typecheck the full surface **excluding** Previews to confirm the production views compile against real tokens + SwiftUI.
+
+Outstanding — the entire **production SwiftUI surface typechecks against the real generated tokens, exit 0**. The only blocked compile is the `#Preview` macro (Xcode-only plugin). Let me do final correctness checks (no raw English literals; formatted regions sane) and update todos.
+
+Let me cross-check that every referenced key exists in the catalog (no missing keys) and identify the unused one.
+
+`loadingA11y` contains digits my regex excluded — let me confirm it's actually referenced (so all 29 keys are used).
+
+All 29 i18n keys are both defined and referenced; no missing keys; no raw English literals. Verification is comprehensive. Now let me generate the honest gate log by running the runnable gate steps and capturing real evidence (including the xcodebuild capability check).
+
+Now the final summary + honest EXIT/STATUS block in the log.
+
+Log finalized honestly (EXIT=1, STATUS=BLOCKED with full capability evidence + all compensating checks green). Let me do a final visual review of the formatted surface and the swiftformat-adjusted Adapter region, then commit.
+
+Both formatted regions are clean. Let me check git state and stage only my new files + the log (not the pre-existing AiUsageCard working-tree changes).
+
+The 7 `AIUsageCard.*` modifications are pre-existing (present at session start) and not mine — I'll exclude them. Staging only my new surface files + the log.
+
+Exactly 11 surface files + log staged, nothing else. Committing with the prescribed message.
+
+Committed (`f1dc22004`). Let me verify the commit contents are exactly my files and clean up temp artifacts.
+
+All verified: the commit contains exactly the 11 surface files + log (2145 insertions); the 7 pre-existing `AIUsageCard` changes were correctly left out. Temp files cleaned.
+
+All todos complete. Let me update the plan file to reflect final status.
+

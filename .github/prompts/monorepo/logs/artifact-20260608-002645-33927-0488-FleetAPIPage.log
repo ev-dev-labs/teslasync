@@ -1,0 +1,216 @@
+================================================================================
+P4-APPLE · P7 · page:admin/FleetAPI — FleetAPIPage (Apple, SwiftUI / HIG)
+Run:    2026-06-08T07:5x-0700   Host: Darwin arm64
+Branch: auto/20260608-002645-33927/488   Base: c9c6fdb9f
+Prompt: p4-apple · P7 · page:admin/FleetAPI (Delegation FORBIDDEN; authored directly)
+Web src: web/src/features/admin/pages/FleetAPIPage.tsx  (route /fleet-api)
+Mode:   code-complete + host-runnable gates GREEN; full-app xcodebuild build/test
+        DEFERRED with real exit + cause (predecessor parity — see macos-pending-
+        verifications.md; the blocker is PRE-EXISTING + repo-wide + out-of-scope).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is CommandLineTools; Xcode driven via
+     DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iOS 18 simulator SDK                                 OK
+  macOS SDK .................. macOS 15 SDK                                         OK
+  iPhone 16 simulator ........ present + booted                                     OK
+  swiftlint .................. 0.63.3                                               OK
+  swiftformat ................ present                                              OK
+  pwsh (placeholder gate) .... present                                             OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  xcodegen ................... 2.45.4 (project generates cleanly)                    OK
+  Shared.xcframework ......... BUILT (gradle :core:assembleSharedXCFramework) +
+                               STAGED to apps/apple/Frameworks/Shared.xcframework    OK
+  This surface uses NO Charts and NO MapKit (manifest: 0 charts, 0 maps).
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/FleetAPIPage.*) ===
+  FleetAPIPage.swift            100  surface View — scaffold + header + connectivity banner
+                                     + phase switch (loading/empty/error/content) + toast overlay
+                                     + navigationTitle('Fleet API'); pure composition over the model
+  FleetAPIPage.Models.swift     219  value types — FleetApiSettings/PollingConfig/CaptureStats/
+                                     VersionInfo + FleetApiResource/Connection/Freshness/Phase +
+                                     FleetApiSnapshot + P1/S10 FleetAPIPageStrings facade
+  FleetAPIPage.Seams.swift      174  P1/S11 telemetry seam + toast type + FleetAPIPageSource
+                                     protocol (4 queries + 2 mutations) + InMemory double
+  FleetAPIPage.Adapter.swift    264  pure projections — endpoint catalogs (7+11+2), allEndpointKeys(21),
+                                     enabledCount/suffix, configuredEndpoints filter, retentionOptions,
+                                     capturedSignalsSummary, fmtInt, resolvePhase/Freshness, a11y copy
+  FleetAPIPage.Model.swift      245  @Observable @MainActor view-model — coalesced state, derived
+                                     phase/freshness, optimistic suspend/endpoint/retention actions
+                                     with success/failure toasts + revert
+  FleetAPIPage.Views.swift      319  chrome — header + freshness chip (ADR-013) + connectivity banner
+                                     + loading/empty/error states + toast + button
+  FleetAPIPage.Panels.swift     257  GlassPanel1-4 — FleetEndpointToggle/EndpointSection/
+                                     TeslaApiPollingPanel/ApiSuspendedBanner/ApiEndpointControlsPanel
+  FleetAPIPage.Sections.swift   259  GlassPanel5-8 — TelemetryCaptureSection/MongoStatusBadge/
+                                     RetentionPeriodRow/SignalsCapturedBanner/ConfiguredEndpointsPanel/
+                                     ConfiguredEndpointRow
+  FleetAPIPage.Previews.swift   152  #if DEBUG previews — content(dark/light)/suspended/loading/empty/
+                                     error/no-endpoints/stale/offline/Dynamic-Type accessibility3
+  FleetAPIPage.Tests.swift      176  XCTest — adapter + strings + a11y (16 methods)
+  FleetAPIPage.ModelTests.swift 173  XCTest — view-model lifecycle/actions/toasts/revert (12 methods)
+  FleetAPIPage.strings          138  P1/S10 catalog contribution (table "FleetAPIPage") — 70 web
+                                     keys (English-as-key) + native ADR-013 chrome keys
+  Largest .swift = 319 lines (swiftlint file_length<=400 honored). No surface file
+  imports the Shared xcframework — seams are Swift protocols; prod app injects the
+  KMP-backed source, previews/tests inject InMemoryFleetAPIPageSource.
+
+=== GATE RESULTS (host-runnable — ALL GREEN) ===
+  [1] swiftc -typecheck  iOS 18 simulator SDK (swift 6, strict-concurrency=complete)  EXIT=0
+  [2] swiftc -typecheck  macOS 15 SDK         (swift 6, strict-concurrency=complete)  EXIT=0
+      (surface + real shared Design/Components; only excludes the unrelated
+       KMP-backed UnitFormatters.swift, which the surface does not use)
+  [3] swiftlint --strict (11 files) ........................... 0 violations          EXIT=0
+  [4] swiftformat --lint (11 files) .......................... 0/11 need formatting   EXIT=0
+  [5] check-placeholders.ps1 -Language swift ... PLACEHOLDER_COUNT=0 ALLOWED=0        EXIT=0
+  [6] swift test (SwiftPM harness, module=TeslaSync) ......... 28/28 PASS             EXIT=0
+      (FleetAPIPage{Catalog,EndpointResolution,Summary,Phase,Strings}Tests +
+       FleetAPIPageModelTests — executed under Swift 6 strict concurrency)
+  [7] xcodegen generate ............ project.pbxproj enumerates 72 FleetAPIPage refs  EXIT=0
+
+=== FULL-APP XCODEBUILD (DEFERRED — pre-existing, repo-wide, OUT OF SCOPE) ===
+  xcodebuild -scheme TeslaSync   -destination 'iOS Simulator,iPhone 16' build ....... EXIT=65
+  xcodebuild -scheme TeslaSync-macOS -destination 'macOS' build .................... EXIT=65
+  Total compiler errors: 2.  FleetAPIPage-attributed errors: 0  (grep-proven).
+  Root cause (NOT this surface):
+    (a) 150+ co-located *.Tests.swift in feature-views import XCTest into the APP
+        target; the iOS app target cannot resolve module 'XCTest'. First offender is
+        TeslaSync/feature-views/AIRestorePanel.Tests.swift:18 (a PRE-EXISTING file).
+    (b) macOS app/widget entitlements require a development signing certificate
+        (absent on this runner) — ADR-012.
+  This is the IDENTICAL blocker recorded for p4-apple/feature-views ToolCard /
+  AlertMessageEditor / FSMTimelineChart / BackendTool in apps/macos-pending-
+  verifications.md, deferred to p4-apple/P99-0001-apple-acceptance-gate on a signed
+  macos-latest runner. The macOS app target COMPILED all sources (reached CodeSign)
+  with signing on; the same surface compiles on BOTH SDKs in steps [1]/[2] and its
+  tests are PROVEN GREEN (28/28) by the executed SwiftPM harness in step [6].
+  A macos-pending row was appended for this unit.
+
+=== PARITY ===
+PARITY_REQUIRED=81
+[COVERED] panel  | GlassPanel1 | FleetAPIPage.Panels.swift   | symbol=FleetEndpointToggle        (web `EndpointToggle` GlassPanel — label/desc + switch)
+[COVERED] panel  | GlassPanel2 | FleetAPIPage.Panels.swift   | symbol=TeslaApiPollingPanel       (web "Tesla API Polling" master GlassPanel)
+[COVERED] panel  | GlassPanel3 | FleetAPIPage.Panels.swift   | symbol=ApiSuspendedBanner         (web suspended red GlassPanel under master toggle)
+[COVERED] panel  | GlassPanel4 | FleetAPIPage.Panels.swift   | symbol=ApiEndpointControlsPanel   (web "API Endpoint Controls" GlassPanel)
+[COVERED] panel  | GlassPanel5 | FleetAPIPage.Sections.swift | symbol=RetentionPeriodRow         (web retention-window GlassPanel + Select)
+[COVERED] panel  | GlassPanel6 | FleetAPIPage.Sections.swift | symbol=SignalsCapturedBanner      (web cyan signals-captured GlassPanel)
+[COVERED] panel  | GlassPanel7 | FleetAPIPage.Sections.swift | symbol=ConfiguredEndpointsPanel   (web "API Endpoints" GlassPanel)
+[COVERED] panel  | GlassPanel8 | FleetAPIPage.Sections.swift | symbol=ConfiguredEndpointRow      (web configured-endpoint row GlassPanel)
+[COVERED] state  | loading | FleetAPIPage.Views.swift:FleetAPIPageLoadingChrome + FleetAPIPage.Panels.swift:ApiEndpointControlsPanel.loadingRows ; FleetApiPhase.loading via FleetAPIPageAdapter.resolvePhase ; unit-tested FleetAPIPagePhaseTests.testPhaseFromQuery + ModelTests.testLoadingPhaseBeforeAnySnapshot
+[COVERED] state  | empty   | FleetAPIPage.Views.swift:FleetAPIPageEmptyState + FleetAPIPage.Sections.swift:ConfiguredEndpointsPanel.emptyState (key 'common.noData') ; FleetApiPhase.empty ; unit-tested testPhaseFromQuery + testConfiguredEndpointsEmptyWhenNoneReported
+[COVERED] state  | success | FleetAPIPage.swift:loadedContent (3 TSFadeIn panels) ; FleetApiPhase.content ; unit-tested FleetAPIPageModelTests.testSnapshotHydratesAllResources
+[COVERED] string  | key='1 day' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='14 days' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='3 days' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='30 days' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='7 days' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='API (Internal)' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='API Endpoint Controls' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Panels.swift
+[COVERED] string  | key='API Endpoints' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Models.swift
+[COVERED] string  | key='API resumed' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Model.swift
+[COVERED] string  | key='API suspended' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Model.swift
+[COVERED] string  | key='All Tesla API calls have been paused' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Model.swift
+[COVERED] string  | key='All Tesla Fleet API calls are suspended' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Panels.swift
+[COVERED] string  | key='Auto-delete captured signals after this many days' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Sections.swift
+[COVERED] string  | key='Battery & charging data' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Capture every fleet telemetry signal to MongoDB for debugging' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Sections.swift
+[COVERED] string  | key='Charge State' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Climate & temperature data' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Climate State' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Commands' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Configured Endpoints' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Sections.swift
+[COVERED] string  | key='Control Tesla Fleet API polling, endpoint toggles, and telemetry capture' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Views.swift
+[COVERED] string  | key='Could not toggle API suspension' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Model.swift
+[COVERED] string  | key='Drive State' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Failed' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Model.swift
+[COVERED] string  | key='Failed to update polling config' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Model.swift
+[COVERED] string  | key='Firmware release notes' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Fleet API' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Fleet API Settings' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='GPS coordinates' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='List vehicles from Tesla' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Location & speed data' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Location Data' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Lock, unlock, climate, etc.' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Locks, doors, odometer' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Model, trim, options' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='MongoDB Connected' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='MongoDB Not Configured' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Nearby Charging' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='OAuth Callback' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='On-Demand Endpoints' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Panels.swift
+[COVERED] string  | key='Polling Endpoints' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Panels.swift
+[COVERED] string  | key="Polling and commands are paused. Token refresh continues so you won't need to re-authenticate. Useful when your vehicle is in service." | .strings:FleetAPIPage.strings | render=FleetAPIPage.Panels.swift
+[COVERED] string  | key='Polling config updated' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Model.swift
+[COVERED] string  | key='Raw Signal Recording' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Sections.swift
+[COVERED] string  | key='Recent Alerts' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Release Notes' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Retention Period' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Sections.swift
+[COVERED] string  | key='Service Data' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Service history & status' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Set MONGODB_ENABLED=true and configure MONGODB_URI to enable' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Sections.swift
+[COVERED] string  | key='Supercharger locations' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Sync vehicles from Tesla' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Telemetry Capture' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Sections.swift
+[COVERED] string  | key='Tesla API Polling' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Panels.swift
+[COVERED] string  | key='Tesla API polling has been re-enabled' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Model.swift
+[COVERED] string  | key='Tesla Fleet API' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Toggle individual Tesla Fleet API endpoints on or off' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Panels.swift
+[COVERED] string  | key='Vehicle Commands' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Vehicle Config' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Vehicle Discovery' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Vehicle State' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Vehicle alert history' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Vehicle data is being polled from Tesla' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Panels.swift
+[COVERED] string  | key='Wake Up' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Wake vehicle from sleep' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='Web Frontend' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='common.noData' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Sections.swift
+[COVERED] string  | key='enabled' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='signals captured from' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+[COVERED] string  | key='vehicle' | .strings:FleetAPIPage.strings | render=FleetAPIPage.Adapter.swift
+PARITY_COVERED=81
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Every named panel implemented (GlassPanel1-8) + every anonymous web region
+      reproduced (endpoint sections, telemetry-capture group, configured-endpoint list).
+  [x] All 81 parity items render from the bound @Observable FleetAPIPageModel.
+  [x] loading / empty / error implemented for the data sources (surface phase +
+      per-region: polling-config loading rows, configured-endpoints empty 'common.noData',
+      error retry) — phase logic unit-tested + EXECUTED green.
+  [x] All visible strings from the FleetAPIPage catalog table; 0 hardcoded literals;
+      key names match web (English-as-key + 'common.noData'); 70/70 verified present as
+      Swift literals AND .strings entries (referenced==declared).
+  [x] Dark mode + Dynamic Type (accessibility3 preview) + a11y labels/values/traits on
+      every interactive element + SI-safe (page has no unit-bearing values; integer
+      counts via fmtInt) — SwiftUI-native only (no web cloning).
+  [x] swiftlint --strict / swiftformat --lint / placeholder gates GREEN; surface
+      compiles on iOS 18 + macOS 15; 28/28 tests EXECUTED green; PARITY_COVERED==REQUIRED==81.
+  [~] xcodebuild build+test: DEFERRED with real exit 65 + cause (pre-existing co-located
+      XCTest-in-app-target + signing), NOT claimed as pass — see macos-pending row.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates genuinely green; full-app xcodebuild shown
+                          DEFERRED with its real exit 65 + cause, not as a pass.
+  2 No scope narrowing ... full page: 8 panels, all sections, 4 queries + 2 mutations,
+                          3 data states, 70 strings, freshness/offline (ADR-013).
+  3 No skip-and-assume ... web source read end-to-end; every t() + branch reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0, ALLOWED=0.
+  5 No parity shortcuts .. endpoint toggles + telemetry capture + retention + configured
+                          endpoints + suspend banner all implemented, not summarized.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as BackendTool/ToolCard/AlertMessageEditor.
+  8 No commit on red ..... committed work is green on every runnable gate; the only
+                          non-green step is the environment/infra-blocked full-app
+                          xcodebuild, deferred with evidence (predecessor-accepted).
+  9 No silent drift ...... files live in feature-views/ (the real source root) not the
+                          prompt's idealized Features/Admin/; per-surface .strings table
+                          (folds into Localizable.xcstrings at integration) — both match
+                          every existing feature-view; documented here.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,160 @@
+=== P4 Shared surface 0031 AINLDashboardComposer (Apple) ===
+runner: Darwin 25.5.0 arm64  host-arch: arm64
+timestamp: 2026-06-08T11:04:25Z
+prompt: .github/prompts/monorepo/p4-apple/shared-meaningful/P-0031-AINLDashboardComposer.prompt.md
+web source (spec): web/src/components/ai/AINLDashboardComposer.tsx
+
+############################################################
+# SECTION A — Platform capability probe (API evidence)
+#   The prompt's capability clause: 'requires SwiftUI + Swift
+#   Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG. If
+#   unavailable on the runner -> STATUS=BLOCKED with API evidence.'
+############################################################
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+(xcodebuild rc=1)
+$ xcrun simctl list devices available | head
+xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+(simctl rc=0)
+
+>>> CONCLUSION (Section A): Only Command Line Tools are present
+>>> (no Xcode.app); 'xcodebuild' and 'simctl' are both unavailable.
+>>> The Gate's two PRIMARY steps therefore CANNOT execute:
+
+############################################################
+# SECTION B — Gate steps, executed verbatim where possible
+############################################################
+--- Gate step 1: xcodebuild iOS Simulator build+test ---
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+--- Gate step 2: xcodebuild macOS build+test ---
+$ xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+
+############################################################
+# SECTION C — Runnable gate steps (swiftlint / swiftformat / placeholders)
+#   These DO run on this runner and PASS for the authored files.
+############################################################
+--- swiftlint --strict (per authored file, apple config) ---
+  AINLDashboardComposer.Model.swift: clean
+  AINLDashboardComposer.Adapter.swift: clean
+  AINLDashboardComposer.Telemetry.swift: clean
+  AINLDashboardComposer.Tests.swift: clean
+  NOTE: a full-tree 'swiftlint --strict' reports exactly ONE serious
+        violation, in a PRE-EXISTING file outside this prompt's scope:
+        TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+        (function_body_length). Not introduced here; not an allowed file.
+  LINT_EXIT(authored files)=0   LINT_EXIT(full tree, pre-existing)=2
+
+--- swiftformat --lint (apple config) on authored dir ---
+SwiftFormat completed in 3.65s.
+0/4 files require formatting.
+  FORMAT_EXIT=0
+
+--- check-placeholders.ps1 (scanning the authored directory) ---
+  PLACEHOLDER_ALLOWED=2
+  PLACEHOLDER_COUNT=0
+  EXIT=0
+  PLACEHOLDER_EXIT=0  (2 allowed via // parity:allow — web i18n key 'promptPlaceholder')
+
+############################################################
+# SECTION D — Predecessor dependency gap (second, independent blocker)
+############################################################
+The web spec composes a STREAMING AI surface:
+  - useAiStream (P1/S8 SSE state-holder)   - AIFeatureCard (P-0018)
+  - AiOutputPanel (P-0036)                 - withAiFeature (feature gate)
+None exist natively yet (grep proof):
+  $ grep -rlE 'AIFeatureCard|withAiFeature|AiStream|AiOutputPanel' --include='*.swift' . \
+      | grep -v 'shared-surfaces/AINLDashboardComposer' | wc -l
+  -> 0   (the ONLY tree-wide match is this surface's own Adapter header comment;
+          zero predecessor implementations exist anywhere else)
+  (SharedFacade has LoadableState/LiveConnection only — no AI SSE stream holder;
+   every existing AI surface (AiUsageCard/AISettings/AIRestorePanel) is a
+   non-streaming projection card. This is the FIRST AINL* surface.)
+Building the SwiftUI view + its loading/streaming/empty/error/stale/offline
+states at parity REQUIRES those predecessors. Re-creating them inside this
+single allowed surface would violate Honesty Covenant #7 (no predecessor
+bypass) + #4 (no stubs as final) and the prompt's own 'Out of Scope:
+Atomic shared components'. So the VIEW layer is BLOCKED, not faked.
+
+############################################################
+# SECTION E — Authored artifact (verifiable, no Xcode needed)
+############################################################
+The surface's dependency-free PARITY CORE (web lines 29-147) was authored
+under the allowed path and is swiftc-compiled + asserted here:
+  AINLDashboardComposer.Model.swift                           4501 bytes
+  AINLDashboardComposer.Adapter.swift                        13436 bytes
+  AINLDashboardComposer.Telemetry.swift                       1498 bytes
+  AINLDashboardComposer.strings                               2557 bytes
+  AINLDashboardComposer.Tests.swift                          10628 bytes
+
+--- swiftc compile + run of Model.swift + Adapter.swift (+ assertion harness) ---
+  PASS parser: prompt
+  PASS parser: title
+  PASS parser: valid slot kept
+  PASS parser: non-strings filtered
+  PASS parser: status!=ok -> nil
+  PASS parser: JS boolean!=number -> slot dropped
+  PASS logic: body trims
+  PASS logic: canDraft idle+prompt
+  PASS logic: !canDraft while streaming
+  PASS logic: canApply draft+idle
+  PASS logic: !canApply while streaming
+  PASS reducer: captures matching tool_result
+  PASS reducer: ignores wrong type
+  PASS i18n: 8 parity keys
+  PASS telemetry: surface slug
+  ALL PASS (16/16)
+  HARNESS_EXIT=0
+
+Parity coverage proven above: parseDashboardLayoutDraft (all guard branches
+incl. JS boolean!=number), the canDraft/canApply state machine, the
+{prompt:trimmed} body, the tool_result reducer, the 8 i18n keys, the slug.
+
+BLOCKED (documented, NOT faked) — the SwiftUI view + per-state rendering:
+  Once predecessors land, AINLDashboardComposer.swift binds like the web
+  InnerSection: AIFeatureCard(title/description/buttonLabel:badge:canStart:
+  stream:onAction:inputSlot:) wrapping a prompt editor; useAiStream(url:
+  AINLComposerSurface.draftEndpoint, body: AINLComposerLogic.requestBody,
+  onEvent: { draft = AINLComposerReducer.reduceDraft(current: draft, $0) });
+  an 'Apply to editor' Button gated by AINLComposerLogic.derive(...).canApply;
+  withAiFeature('nl-dashboard-composer', ...) gate; .task emits view.opened.
+
+############################################################
+# SECTION F — Honesty Covenant ledger
+############################################################
+  #1 no red-as-green ......... real xcodebuild rc=1 recorded; not claimed green
+  #2 no scope narrowing ...... BLOCKED declared explicitly + scoped, not hidden
+  #3 no skip-and-assume ...... capability + predecessor gaps probed, not assumed
+  #4 no stubs as final ....... authored core is complete + tested (0 placeholders)
+  #5 no parity shortcuts ..... parser/state-machine ported 1:1 from web source
+  #6 no delegation ........... done inline
+  #7 no predecessor bypass ... streaming stack NOT re-implemented/faked
+  #8 no commit on red ........ Gate commit step is gated to EXIT=0 -> NOT run
+  #9 no silent drift ......... i18n keys match web; SI/units N/A for this surface
+  #10 EXIT + STATUS at end ... below
+
+BLOCKERS (either alone forces BLOCKED):
+  1) Apple build/test toolchain unavailable (no Xcode.app, no iOS Simulator):
+     IOS_EXIT=1, MAC_EXIT=1  -> Gate can never reach EXIT=0 on this runner.
+  2) Predecessor native shared surfaces absent (AIFeatureCard / AiOutputPanel /
+     useAiStream / withAiFeature) -> view layer cannot reach parity w/o bypass.
+
+Runnable-step results (all PASS for authored files): LINT=0  FORMAT=0  PLACEHOLDER=0
+Blocking-step results: IOS_EXIT=1  MAC_EXIT=1  (xcodebuild requires Xcode)
+
+Pre-existing working-tree note (NOT caused by this prompt; disclosed for transparency):
+  `git diff` reports apps/apple/TeslaSync/feature-views/AIUsageCard.* as modified.
+  This is a case-only filename collision baked into the slot checkout — the repo
+  tracks BOTH `AIUsageCard.*` (surface 0203) and `AiUsageCard.*` (surface 0237,
+  added by HEAD merge c9c6fdb9f). On the case-insensitive macOS filesystem only one
+  can exist on disk, so git shows the other as changed. This prompt only ADDED
+  apps/apple/TeslaSync/shared-surfaces/AINLDashboardComposer.* (+ this log); nothing
+  in feature-views was touched and nothing was staged.
+
+EXIT=1
+STATUS=BLOCKED

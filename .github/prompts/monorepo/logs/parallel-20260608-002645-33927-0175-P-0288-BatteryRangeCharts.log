@@ -1,0 +1,158 @@
+I'll start by exploring the repository structure, the web source component, and checking the Apple toolchain availability.
+
+Now let me explore the existing Apple app structure to understand conventions and how predecessors handled the toolchain.
+
+This is a large established monorepo. Let me examine the conventions, build system, and how predecessors handled the toolchain.
+
+The predecessor log reveals Xcode IS available via `DEVELOPER_DIR` override. Let me verify this and study the reference patterns.
+
+Xcode 26.5 is available with a booted iPhone 16 sim — capability escape hatch does NOT apply. Let me find the closest reference components (vehicle-detail siblings + a gauge+chart panel).
+
+There's a `helpers.swift` (mirrors web `helpers.ts`) and `YearlyTrendChart` is a recent chart component. Let me study the full reference set and the shared seam architecture.
+
+Let me read the complete YearlyTrendChart reference set to learn the exact seam conventions.
+
+Let me read the remaining reference files (Views, Chart, Previews, Tests, strings) and a gauge reference.
+
+Let me read the remaining reference files, locate the P1/S9 tokens and shared components, and see how units conversion is handled in Apple feature-views.
+
+Now let me locate the P1/S9 tokens, shared components, units handling, a gauge reference, and the web types.
+
+Let me read the tokens, units facade, gauge reference, and web types.
+
+The tokens are generated at build time. Let me understand how predecessors actually verified (host-compile approach) by reading the cited precedent log and the build setup.
+
+I now have the precise methodology and precedent. Let me set up a plan and examine the units facade, gauge, and shared component names I'll need.
+
+Let me find where the design tokens are actually defined and read the key shared components I'll use (gauge, charts, metrics, cards, states, units).
+
+The tokens are generated. Let me read project.yml and Scripts to find the token-generation source, which the predecessor referenced as "design Tokens".
+
+project.yml now registers `feature-views` and design tokens live at `apps/design/generated/apple`. Let me verify the tokens exist and check the xcframework staging situation.
+
+Now I have the full picture. Let me set up tracking and read the key APIs I'll need (tokens, gauge, metrics, cards, states, charts, units).
+
+Excellent — full token vocabulary acquired. Now let me read the key shared components for exact APIs.
+
+Let me read the remaining APIs: States, Cards, charts, units facade/formatters, motion, skeletons, typography.
+
+Units math lives in the KMP `Shared` core (imported by the facade). I must use a seam, not import `Shared`. Let me see how existing feature-views inject unit conversion/formatting.
+
+`DriveStatCards` has a `.Format.swift` — likely the units pattern. Let me read it and `DriveOverviewChart.Adapter`.
+
+The unit-conversion pattern is clear (pure `distanceFromSI` reproduction). Let me read the Model (formatting/source seam), chart models, motion/skeleton/typography, and lint configs.
+
+Let me read the final APIs (motion, skeleton, typography), the web `formatDate`, and lint configs before writing.
+
+Let me check `formatDate`, the bar chart helper, and the lint configs, then I'll write the files.
+
+I have all APIs. Let me confirm two parity details: web `AnimatedNumber` default decimals, and the exact ICU date output for the chart labels.
+
+Both confirmed: `AnimatedNumber` defaults to 0 decimals; date label "Apr 4, 2025" matches web. Now I'll write the surface. Starting with the Adapter (pure projection core).
+
+Adapter written. Now the Model (P1/S8 source seam + P1/S11 telemetry + P1/S10 strings facade).
+
+Now the Chart file (Swift Charts gauge, battery bar chart, drive-trend area chart).
+
+Now the Views file (panel chrome, metric tiles, freshness chip, banner, loading/empty/error states, trend empty row).
+
+Now the surface shell with adaptive two-column layout.
+
+Now the strings catalog (P1/S10 keys).
+
+Now the Previews (one per state).
+
+Now the comprehensive test suite (adapter + model + a11y).
+
+Files written. Let me verify referenced i18n keys match the catalog, then run swiftformat/swiftlint on the new files.
+
+All 25 keys match. Now let me lint and format-check the new files.
+
+swiftformat found mechanical issues. Let me view the test lines flagged for force-unwrap, then auto-format all files and fix the rest manually.
+
+Now auto-format all new files to fix the mechanical issues, then re-verify.
+
+swiftformat clean. Now swiftlint --strict on the new files.
+
+Adapter is 422 lines (>400 limit). I'll split it cleanly into Adapter (inputs/helpers) + Projection (outputs). Let me find the split point.
+
+I'll split the Adapter: move the projection sections into a new `BatteryRangeCharts.Projection.swift` with a proper header, then truncate the Adapter.
+
+Split done (Adapter 206, Projection 232). Now re-format and lint all 8 files.
+
+All 8 files pass swiftformat + swiftlint. Now the host-compile typecheck. Let me determine the Shared-free component closure (the precedent's approach).
+
+`Sources/Components` + `Sources/Design` are Shared-free (only system frameworks). I'll compile that closure + Tokens + my production files against both SDKs. Let me set up and run the iOS 18 typecheck.
+
+One closure file (`UnitFormatters.swift`) depends on the `Units` SharedFacade (needs the KMP xcframework). My surface doesn't use it. Let me find all such Shared-coupled component files to exclude them.
+
+Only `UnitFormatters.swift` is Shared-coupled (unused by my surface). Excluding it and re-running the iOS 18 typecheck.
+
+iOS 18 typecheck passes. Now macOS 15.
+
+Both SDK typechecks pass. Now the DEBUG previews typecheck (Xcode `#Preview` macro plugin) for my Previews file.
+
+DEBUG previews compile. Now I'll build a self-contained SwiftPM harness to **execute** the XCTest suite.
+
+Now executing the XCTest suite via the harness.
+
+Test compile error: optional with `accuracy:` overload. Let me unwrap in that test.
+
+Let me re-lint the edited test, copy it into the harness, and re-run.
+
+All 23 tests pass (executed). Now the placeholder gate. Let me check the script and pwsh.
+
+pwsh available. Let me run the placeholder gate using the prompt's exact path form.
+
+Let me confirm the scanner actually inspects these files (sanity check it isn't a no-op).
+
+Scanner confirmed working (detected injected TODO; my real files = 0). Now let me assess the full `xcodebuild` path — check if the KMP `Shared.xcframework` can be staged.
+
+All prerequisites present (Java 17, gradlew, xcodegen). Let me generate the Xcode project, then attempt to stage the KMP `Shared.xcframework` for a real `xcodebuild`.
+
+xcodegen succeeded. Now attempting to stage the KMP `Shared.xcframework` via gradle (this can be slow — Kotlin/Native). Starting it in the background.
+
+While gradle builds, let me update progress tracking and check on it shortly.
+
+Gradle is still initializing (likely downloading the Kotlin/Native toolchain). Let me wait longer.
+
+No output yet (`--console=plain` + `tail` buffers until completion). Let me verify it's actively progressing (downloading Kotlin/Native), not deadlocked.
+
+It's actively compiling Kotlin/Native (LLVM clang++ building iOS + macOS binaries; toolchain already cached). Let me wait for it to finish.
+
+Debug xcframework done; release variant (what the script stages) still building. Let me keep waiting.
+
+Gradle BUILD SUCCESSFUL — both xcframeworks assembled. Now let me stage the release framework and check how the app target treats `*.Tests.swift` files in feature-views (critical for the full `xcodebuild`).
+
+Staged. The generated project compiles feature-views `*.Tests.swift` (XCTest + `@testable import`) into the **app target** with no excludes — a pre-existing repo integration gap across all ~345 sibling surfaces. Let me capture real evidence by attempting the macOS build.
+
+Build progressed past framework linking (xcframework resolved) but failed at Swift compilation. Let me extract the actual errors.
+
+Confirmed: the failure is a **pre-existing, repo-wide gap** — a sibling's `AIRestorePanel.Tests.swift:18 import XCTest` can't resolve in the app target (all ~345 feature-view `*Tests.swift` are compiled into the app target with no project.yml exclude). The `Shared.xcframework` linked fine (predecessor's main blocker now resolved). Let me prove my surface integrates into the real app build via a command-line-only source exclusion (no file edit).
+
+Build running. Let me wait and monitor (this compiles the whole app + all feature-view production code).
+
+Much further now (deep into feature-views) but 26 failures. Let me check whether **any** failure is in my files vs pre-existing siblings.
+
+Decisive: **zero errors in my files.** All 26 failures are pre-existing sibling collisions (e.g., duplicate `TelemetryErrorsModel`/`TelemetryErrorRow` type definitions across other surfaces) — outside my allowed files. Let me confirm my production files were actually compiled in that app build.
+
+My files have **zero** errors (count=0); the 26 failures are pre-existing sibling duplicate-type collisions (`TelemetryErrorsModel`, `DrivetrainHealthStatus`, etc.). Let me ensure my own type names don't collide with any existing surface (so I don't add to the problem).
+
+All my type names are unique — no collisions added. Let me gather final metrics and write the gate log.
+
+Now let me write the comprehensive, honest gate log.
+
+Log written. Now let me clean up build artifacts and verify git status so I commit only the allowed files.
+
+Artifacts are git-ignored (won't be committed). Pre-existing sibling changes (AIUsageCard.*, web files) must be excluded. Let me stage **only** my allowed files and verify.
+
+Staged set is exactly my 9 files + the log (sibling changes excluded). Committing.
+
+Committed (b40bd857d) — only my 9 files + log. Let me verify the gradle build didn't dirty any tracked sources and clean up temp artifacts.
+
+Clean — only pre-existing sibling changes remain (correctly excluded); gradle's generated dir is git-ignored. Let me fix a placeholder timestamp in the log and amend.
+
+Final commit `6ea7c4fc6` is clean — exactly the 9 `BatteryRangeCharts.*` files + the log, ending `EXIT=0 / STATUS=DONE`. Let me mark todos complete.
+
+All 11 todos done. The task is complete and verified.
+

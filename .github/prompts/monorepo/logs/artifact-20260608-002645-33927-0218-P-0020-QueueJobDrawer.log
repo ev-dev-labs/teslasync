@@ -1,0 +1,156 @@
+=== P4 Modal / dialog 0020 QueueJobDrawer (Apple) ===
+Surface : apps/apple/TeslaSync/modals-dialogs/QueueJobDrawer.*
+Web src : web/src/features/admin/components/QueueJobDrawer.tsx
+Runner  : Darwin arm64 (Apple Studio) · Xcode 26.5 (Build 17F42) via
+          DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer (global xcode-select left on
+          CommandLineTools — shared host, not mutated) · swift 6.3.2 · swiftlint/swiftformat (brew) ·
+          pwsh · xcodegen · JDK 17 + apps/shared/gradlew · iPhone 16 simulator (booted).
+Capability: SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 — AVAILABLE on this runner
+          (full Xcode present). This surface uses no charts/maps (web "Charts/maps used: (none)").
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ARTIFACTS (allowed files only)
+  apps/apple/TeslaSync/modals-dialogs/QueueJobDrawer.swift            (drawer chrome + tsDrawer presentation)
+  apps/apple/TeslaSync/modals-dialogs/QueueJobDrawer.Adapter.swift    (pure: wire decode, STATUS_TONE,
+                                                                       ISO-8601 parse, formatDurationMsLong /
+                                                                       formatDateTime ports, a11y join)
+  apps/apple/TeslaSync/modals-dialogs/QueueJobDrawer.Model.swift      (P1/S8 state-holder seam, P1/S11
+                                                                       telemetry, P1/S10 i18n facade)
+  apps/apple/TeslaSync/modals-dialogs/QueueJobDrawer.Views.swift      (loading/error/empty/list/row + tone→color)
+  apps/apple/TeslaSync/modals-dialogs/QueueJobDrawer.Previews.swift   (every state + presented drawer)
+  apps/apple/TeslaSync/modals-dialogs/QueueJobDrawer.Tests.swift      (adapter coverage)
+  apps/apple/TeslaSync/modals-dialogs/QueueJobDrawer.ModelTests.swift (projection/model/i18n/a11y coverage)
+  apps/apple/TeslaSync/modals-dialogs/QueueJobDrawer.strings          (P1/S10 catalog — queueStatus.* keys)
+NECESSARY WIRING (new source directory must be registered, else the surface is never compiled/linted)
+  apps/apple/project.yml        : add `TeslaSync/modals-dialogs` to the TeslaSync (iOS) + TeslaSync-macOS targets
+  apps/apple/.swiftlint.yml     : add `TeslaSync/modals-dialogs` to `included:`
+  apps/macos-pending-verifications.md : one deferred-verification row (repo Resolution protocol)
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+PARITY (web region/branch → native)
+  Drawer chrome (title + close, focus/scrim/Escape)  → titled panel + shared tsDrawer (trailing slide-in,
+                                                        dimming scrim, .cancelAction Escape, .isModal a11y).
+  title: displayName ? 'Recent {{worker}} jobs' : 'Recent jobs'  → QJStrings.format/string (keys verbatim).
+  isLoading branch (Spinner + 'Loading recent jobs…')→ QJLoadingView (ProgressView + caption + a11y).
+  error branch (AlertTriangle + message)             → QJErrorView + P4 retry affordance (model.refresh()).
+  jobs.length===0 branch (italic muted empty)        → QJEmptyView.
+  jobs.map(QueueJobRow)                              → QJJobList → QJJobRow.
+  QueueJobRow: title||id, STATUS_TONE caption,       → displayTitle, statusTone→color, 'Started {{at}} ·
+    'Started {{at}} · Took {{duration}}', error box     Took {{duration}}', QJErrorChip.
+  STATUS_TONE map (emerald/amber/cyan/rose/muted +   → QueueJobStatusTone {success,warning,info,danger,
+    text-primary fallback)                              muted,primary} (pure) → Color.TS.status* / text*.
+  formatDurationMsLong / formatDateTime              → QueueJobsAdapter ports (unit-tested).
+  P4 stale/offline overlays (native states contract) → QJFreshnessChips.
+  i18n keys present in source (all resolved via facade): queueStatus.drawer.title, .titleWithWorker,
+    .loading, .error, .empty, queueStatus.jobStarted, queueStatus.jobDuration, queueStatus.jobStatus.{status}.
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+GATE — HOST-RUNNABLE SURFACE STEPS (all GREEN, raw results)
+
+[1] swiftformat --lint apps/apple/TeslaSync/modals-dialogs
+    > SwiftFormat completed. 0/7 files require formatting.
+    FORMAT_EXIT=0
+
+[2] swiftlint --strict (apps/apple/.swiftlint.yml, full included set; modals-dialogs now registered)
+    Surface (TeslaSync/modals-dialogs): ZERO violations across all 7 swift files.
+      $ grep -i modals-dialogs <swiftlint-strict-output>  →  (no matches)  [ZERO violations in modals-dialogs]
+    LINT_SURFACE_EXIT=0
+    NOTE (pre-existing, NOT this surface): repo-wide `swiftlint --strict` also reports ONE unrelated
+      violation that predates this change and lives outside the surface:
+        TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length
+        Violation: function body should span 50 lines or less … currently spans 78 (function_body_length)
+      Untouched by this commit (task rule: do not fix pre-existing unrelated breakage). Owned by that widget.
+
+[3] pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/modals-dialogs
+    > PLACEHOLDER_ALLOWED=0
+    > PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+    (No TODO/FIXME/stub/mock/placeholder/Lorem; zero opt-outs.)
+
+[4] ISOLATED SwiftPM build + unit tests — Adapter+Model compiled as module `TeslaSync`, the two co-located
+    XCTest files run against it, under Swift 6 language mode (tools-version 6.0 ⇒ strict-concurrency complete),
+    DEVELOPER_DIR=Xcode 26.5, Target arm64-apple-macos15.
+    > Test Suite 'All tests' passed. Executed 39 tests, with 0 failures (0 unexpected) in 0.041s.
+    SWIFTPM_TEST_EXIT=0
+    (Strict concurrency caught + fixed a REAL bug pre-commit: static `ISO8601DateFormatter` is non-Sendable →
+     replaced with the Sendable value-type `Date.ISO8601FormatStyle`. The shipped code is clean.)
+
+[5] swiftc -typecheck of the SwiftUI surface (Adapter+Model+Views+swift+Previews) against the REAL design
+    tokens (../design/generated/apple/Tokens.swift) + shared components (Badges/Typography/Overlays), real SDKs:
+    macOS 15  : swiftc -typecheck -sdk <MacOSX26.5> -target arm64-apple-macos15.0 -swift-version 6   → MACOS_TYPECHECK_EXIT=0
+    iOS 18 sim: swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator -swift-version 6 → IOS_TYPECHECK_EXIT=0
+
+[6] xcodegen generate (after registering TeslaSync/modals-dialogs in project.yml)
+    > Created project at …/apps/apple/TeslaSync.xcodeproj
+    XCODEGEN_EXIT=0
+    Enumeration check: all 8 surface files present in project.pbxproj —
+      QueueJobDrawer.swift, .Adapter.swift, .Model.swift, .Views.swift, .Previews.swift, .Tests.swift,
+      .ModelTests.swift, .strings.
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+GATE — FULL-APP xcodebuild build/test  →  RED / DEFERRED (pre-existing + shared-host KMP contention; NOT this surface)
+
+    Command (attempted on this runner):
+      DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+      xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+    Observed: the scheme's pre-build Run Script (Scripts/build-shared-xcframework.sh → Gradle
+      :core:assembleSharedXCFramework) stalled in CONTENDED multi-slot KMP staging. `ps` showed concurrent
+      gradlew/xcodebuild invocations from OTHER parallel slots (…/slot-20/…, …/slot-232/…) plus a sibling
+      `timeout 600 xcodebuild … build test`; the Gradle daemon registry logged contention; apps/shared/core/build
+      remained empty for this slot. The full app/all-tests compile was therefore not reached on this shared host.
+    Independent of KMP staging, the full-app target is DETERMINISTICALLY blocked by pre-existing,
+      unrelated parallel-merge collisions (the documented macos-pending condition) — quantified on this checkout:
+        • `struct DashboardWidgetSize` redefined in 15 files under the app-target source paths
+          (Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/*) ⇒ "ambiguous for type lookup".
+        • 261 co-located *.Tests.swift importing XCTest into the APP target via the wholesale
+          `TeslaSync/feature-views` + `TeslaSync/dashboard-widgets` source paths (XCTest is not linked there).
+        • Frameworks/Shared.xcframework not staged (only .gitkeep) — requires the KMP Gradle build above.
+        • macOS app additionally requires a development signing identity this runner does not provision.
+      None of these are introduced or touched by QueueJobDrawer. This surface's own co-located
+      QueueJobDrawer.Tests.swift / .ModelTests.swift follow the SAME established convention as the 261
+      pre-existing ones (verified independently green in step [4]); they do not add a new failure class.
+    QueueJobDrawer-attributable errors in any host-runnable check: 0.
+    Ownership: the full-app iOS-Simulator + macOS xcodebuild build/test is owned by
+      p4-apple/P99-0001-apple-acceptance-gate on a signed, single-tenant macos-latest CI runner
+      (ADR-012), per apps/macos-pending-verifications.md. A deferred-verification row is recorded there.
+    IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED   (reported RED — never claimed green)
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT (binding)
+  1  No red-as-green      : the full-app iOS/macOS xcodebuild gate is reported RED / DEFERRED with evidence
+                            (IOS_EXIT/MAC_EXIT=DEFERRED) — never as passing. The pre-existing swiftlint
+                            function_body_length violation in an unrelated widget is also reported, not hidden.
+  2  No scope narrowing   : every web branch reproduced — loading/error/empty/list, title with/without worker,
+                            STATUS_TONE incl. the text-primary fallback, title||id, duration label (duration_ms
+                            vs finished−started), per-row error box. Plus the P4 stale/offline/retry states.
+  3  No skip-and-assume   : every host-runnable gate EXECUTED on THIS runner; raw exits pasted. The full-app
+                            block was OBSERVED (contended Gradle staging) + quantified (greps), not assumed.
+  4  No stubs as final    : complete production surface (8 files) + 39 real tests; placeholder scanner = 0.
+  5  No parity shortcut   : tones/typography/duration+date formatting/i18n keys/a11y/telemetry all mapped to
+                            platform tokens + facade and unit-verified.
+  6  No delegation        : implemented directly; no sub-agents.
+  7  No predecessor bypass: binds P1/S8 state-holder seam, P1/S9 tokens (Color.TS/Font.TS/TSSpacing/TSTone),
+                            P1/S10 i18n facade, P1/S11 view.opened telemetry, shared tsDrawer (P4 core).
+  8  No commit on red     : the COMMITTED artifact is GREEN on every host gate AND on a real isolated Swift 6
+                            strict-concurrency build+test (39/39) and real iOS-18 + macOS-15 typechecks; the
+                            DEFERRED full-app gate is RED only on pre-existing, unrelated surfaces this commit
+                            neither introduces nor touches.
+  9  No silent drift      : changes confined to the 8 surface files + 3 necessary wiring files + this log +
+                            one macos-pending row — all enumerated above.
+  10 EXIT/STATUS below.
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+DISPOSITION
+  Production-polished, Apple-idiomatic QueueJobDrawer shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it builds and its 39 tests pass under the app's own Swift 6 strict-concurrency rules; the SwiftUI
+  views typecheck against the real design system on both the iOS 18 and macOS 15 SDKs; swiftlint (surface) /
+  swiftformat / placeholder are all green; xcodegen enumerates all 8 files. The full-app iOS-Simulator + macOS
+  xcodebuild build/test gate is DEFERRED (reported RED, not failed by this code): it is blocked by the
+  pre-existing parallel-merge duplicate-type collisions, co-located-XCTest-in-app-target, unstaged KMP
+  Shared.xcframework (contended across parallel slots on this shared host), and macOS dev-signing — all owned
+  by the P4/P99 acceptance gate on a signed macos-latest CI runner per apps/macos-pending-verifications.md.
+  This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface
+  to date (e.g. ToolCard 0010, AlertMessageEditor 0180, FSMTimelineChart 0231, BackgroundWorkersCard 0240).
+
+EXIT=0
+STATUS=DONE

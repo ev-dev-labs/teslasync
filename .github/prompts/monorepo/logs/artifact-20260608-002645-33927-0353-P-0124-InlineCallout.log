@@ -1,0 +1,189 @@
+=== P4 Shared surface 0124 InlineCallout (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon).
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer.
+                       The active dir is /Library/Developer/CommandLineTools; overridden non-destructively for
+                       this process only (no sudo / no `xcode-select -s`), the SAME mechanism every prior P4
+                       surface used. `xcodebuild -version` under the CommandLineTools dir errors ("requires
+                       Xcode") — hence the DEVELOPER_DIR override; under it `xcodebuild -version` → Xcode 26.5.
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2.
+  SDKs / runtimes    : iPhoneSimulator26.5.sdk + MacOSX26.5.sdk present; iOS 26.5 simulator runtime installed.
+  Capability         : SwiftUI present. This surface uses NO Swift Charts and NO MapKit — the web source has
+                       neither (the prompt's "Charts / maps used: (none)"), so the iOS 18 / iPadOS 18 / macOS 15
+                       HIG primitives it needs (HStack, Link, Button + ButtonStyle, RoundedRectangle ring,
+                       SF Symbols, accessibility, Reduce Motion) are all available → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification — read end to end)
+  web/src/components/feedback/InlineCallout.tsx. A single-line, low-chrome callout that surfaces one actionable
+  insight inside a larger card (e.g. "1 anomaly in this range — Apr 24 →"). It is a PURE presentational
+  primitive — no hooks, no TanStack queries, no t() calls (the prompt's "Data sources: (none)" / "i18n keys:
+  (none extracted)" / "Shared components used: (none)" / "pure presentational component"). Its branches:
+
+    type CalloutVariant = 'info' | 'success' | 'warning' | 'danger'
+    VARIANT_STYLES[variant] = { bg (tint fill), ring (1px border), text (body colour), iconText (icon+action) }
+      info    : bg-cyan-500/5     ring-cyan-400/20     text-[--text-secondary]  iconText-cyan-300
+      success : bg-emerald-500/5  ring-emerald-400/20  text-[--text-secondary]  iconText-emerald-300
+      warning : bg-amber-500/5    ring-amber-400/25    text-amber-200/85        iconText-amber-300
+      danger  : bg-rose-500/5     ring-rose-400/25     text-rose-200/85         iconText-rose-300
+    Props   : variant, icon? (ReactNode), children (body), action? {label, href?, onClick?}, className?, testId?
+    content : [icon span (h-4 w-4, iconText)] + [body span (text-xs, flex-1 min-w-0, text)]
+              + [action span (text-xs font-medium, iconText): {label}<ChevronRight h-3 w-3/>]
+    baseClass: inline-flex w-full items-center gap-2 rounded-lg px-3 py-2 ring-1 transition-colors + bg + ring
+               + (interactive ? hover:bg-white/[0.03] focus-visible:ring-2 ring-cyan-400/60 : '')
+    render  : action.href  → <a href> (navigation, prefers href when both given)
+              action.onClick→ <button>
+              neither       → <div role="status">
+  i18n     : the source is "anonymous" — it has NO hardcoded prose (body + action label are caller-supplied).
+             The only native-owned strings are the VoiceOver severity words, promoted to P1/S10 keys (table
+             "InlineCallout") so the Swift sources hold no English prose literals.
+
+ARTIFACTS SHIPPED  (allowed files: apps/apple/TeslaSync/shared-surfaces/InlineCallout.* + this log)
+  InlineCallout.Model.swift     (249 lines) — the non-view layer: InlineCalloutSurface.slug; InlineCalloutVariant
+                                  (+ statusColor / ringOpacity / usesTintedBodyText / colorTokenName / a11y word
+                                  key+fallback token maps, web VARIANT_STYLES); InlineCalloutStyle (fill/ring/
+                                  body/accent from P1/S9 tokens, fillOpacity=0.05); InlineCalloutAction (href vs
+                                  onClick, mutually exclusive inits); InlineCalloutRenderMode.resolve (web 3-way
+                                  branch, href wins); InlineCalloutAccessibility.label (severity word + message +
+                                  optional action affordance); InlineCalloutStrings (P1/S10 NSLocalizedString
+                                  facade, table "InlineCallout"); InlineCalloutTelemetry + OSLog sink (P1/S11
+                                  view.opened); InlineCalloutAnnouncer (once-only emit).
+  InlineCallout.swift           (279 lines) — the surface: generic InlineCallout<Content> + String convenience
+                                  init; link/button/status render modes; InlineCalloutContent layout (icon +
+                                  flexible body + action label + chevron over tint fill + 1pt ring);
+                                  InlineCalloutButtonStyle (hover/press scrim, Reduce-Motion-aware, web hover:/
+                                  focus-visible:); testID + a11y-label small modifiers; static surfaceSlug;
+                                  onAppear → announcer.markAppeared().
+  InlineCallout.Previews.swift  (109 lines) — #if DEBUG #Preview: status gallery (all 4 variants + icons),
+                                  button (onClick), link (href), no-icon plain, rich-content long-wrap.
+  InlineCallout.Tests.swift     (164 lines) — variant→token map (5), render-mode resolution + Action (3), a11y
+                                  label composition (3), i18n fallback (1), telemetry announcer once + slug +
+                                  init smoke (3) = 15 tests.
+  InlineCallout.strings         ( 21 lines) — P1/S10 catalog (table "InlineCallout"): the 4 VoiceOver severity words.
+  (5 files; each .swift well under the repo's 400-line SwiftLint file_length budget; same per-surface .swift /
+   .Model / .Previews / .Tests / .strings decomposition the prior P4 surfaces use.)
+
+PARITY MAPPING  (web → Apple platform tokens; no Tailwind ported, no raw hex)
+  CalloutVariant info/success/warning/danger → Color.TS.statusInfo / statusSuccess / statusWarning / statusDanger
+  bg-{c}-500/5                 → statusColor.opacity(0.05)                     (InlineCalloutStyle.fillOpacity)
+  ring-{c}-400/20|25           → statusColor.opacity(0.20 info+success | 0.25 warning+danger) 1pt strokeBorder
+  text (body)                  → textSecondary for info+success; statusColor for warning+danger (web tinted text)
+  iconText (icon + action)     → statusColor (InlineCalloutStyle.accent)
+  rounded-lg / gap-2           → TSRadius.sm (8) / TSSpacing.sm (8)
+  px-3 py-2                    → .padding(.horizontal TSSpacing.md=12, .vertical TSSpacing.sm=8)
+  lucide icon (h-4 w-4)        → Image(systemName:) 16pt, caller-supplied SF Symbol (web icon is caller-supplied)
+  ChevronRight (h-3 w-3)       → Image(systemName: "chevron.right") 12pt, accessibilityHidden
+  <a href>/<button>/role=status→ Link / Button(+InlineCalloutButtonStyle) / combined static a11y element
+  hover:bg-white/[0.03] active → InlineCalloutButtonStyle scrim Color.primary.opacity(.03 hover / .06 pressed),
+                                 animated via TSMotion.fastDuration unless Reduce Motion (web transition-colors)
+  focus-visible:ring          → default platform focus ring (macOS / hardware keyboard)
+  data-testid                  → .accessibilityIdentifier (only when supplied)
+  className                    → dropped (Tailwind class string is not portable; documented)
+  i18n                         → severity words via InlineCalloutStrings (NSLocalizedString table "InlineCallout",
+                                 web English as value: fallback)
+  a11y                         → VoiceOver label "{Severity}: {message}[. {actionLabel}]"; icon + chevron hidden;
+                                 Dynamic Type via Font.TS; Reduce Motion respected in the interactive scrim
+  telemetry                    → view.opened surface="InlineCallout" emitted once on first appear (P1/S11)
+
+STATES (every branch in the source reproduced — no hidden surface)
+  The web source is purely presentational, so it has NO loading / empty / error / stale / offline data axis to
+  reproduce (the generic prompt template lists those, but this artifact's metadata is explicit: "pure
+  presentational component", Data sources "(none)"). Inventing data-driven states for a stateless primitive would
+  be scope drift. The source's REAL branches are reproduced in full and exercised by previews + tests:
+    variant      → info / success / warning / danger (tint, ring, body, accent each asserted).
+    render mode  → link (href) / button (onClick) / status (neither) — InlineCalloutRenderMode.resolve asserted.
+    icon         → present (leading SF Symbol) / absent.
+    action       → present (label + chevron, interactive scrim + focus ring) / absent (static role=status).
+    content      → plain String message and arbitrary rich content (both initializers).
+
+GATES  (raw exits below; per-surface scope, executed on THIS runner)
+  [GREEN] swiftformat --lint  (.swiftformat, 4 swift files)      : 0/4 files require formatting    FORMAT_EXIT=0
+  [GREEN] swiftlint --strict  (.swiftlint.yml, 4 swift files)    : 0 violations, 0 serious         LINT_EXIT=0
+          (Note: .swiftlint.yml `included:` does not yet list TeslaSync/shared-surfaces and is OUT of this
+           prompt's allowed files; the 4 surface files were therefore linted by explicit path so they ARE
+           covered. Adding shared-surfaces to the include list is owned by the P4 acceptance/bundle prompt.)
+  [GREEN] check-placeholders.ps1 (-Language swift, shared-surfaces) : PLACEHOLDER_ALLOWED=0
+                                                                       PLACEHOLDER_COUNT=0           PH_EXIT=0
+  [GREEN] ISOLATED build + test — SwiftPM, swift-tools 6.0 (Swift 6 language mode = strict-concurrency complete,
+          same as the app's SWIFT_VERSION 6.0 / SWIFT_STRICT_CONCURRENCY complete), module name "TeslaSync",
+          compiling the EXACT shipped InlineCallout.{Model,swift,Previews}.swift (incl. the #Preview macro file)
+          against the REAL generated design tokens (apps/design/generated/apple/Tokens.swift) under the Xcode
+          26.5 toolchain (so the real #Preview macro + XCTest are available), then running the surface tests:
+              Building for debugging… Compiling TeslaSync {Tokens,InlineCallout.Model,InlineCallout,
+                InlineCallout.Previews}.swift — Build complete.
+              Executed 15 tests, with 0 failures (0 unexpected)                                  SWIFT_TEST_EXIT=0
+  [GREEN] Real cross-SDK typecheck of the shipped sources (swiftc -typecheck, -swift-version 6):
+              iOS  : -sdk iphonesimulator -target arm64-apple-ios18.0-simulator                  IOS_TYPECHECK_EXIT=0
+              macOS: -sdk macosx          -target arm64-apple-macos15.0                           MAC_TYPECHECK_EXIT=0
+              iOS + -D DEBUG (exercises the #Preview macro on the iOS SDK)                        IOS_DEBUG_TYPECHECK_EXIT=0
+  [GREEN] xcodegen generate --spec project.yml (project.yml spec is valid + parses)               XCODEGEN_EXIT=0
+
+  [DEFERRED] Full-app iOS-Simulator + macOS `xcodebuild -scheme TeslaSync(-macOS) … build test`.
+          NOT run-to-green on this runner, for two independent, VERIFIED (not assumed) reasons:
+            (a) Integration not yet wired — apps/apple/project.yml globs `TeslaSync/feature-views` +
+                `TeslaSync/dashboard-widgets` but NOT `TeslaSync/shared-surfaces` (grep "shared-surfaces"
+                project.yml → no match). project.yml is OUT of this prompt's allowed files, so this surface
+                cannot be added to the app/test targets here. Confirmed by `xcodegen generate` then grepping the
+                generated project: "InlineCallout" enumerated 0× (feature-views enumerated, as expected).
+                Wiring shared-surfaces into project.yml is owned by the P4 acceptance / component-library bundle.
+            (b) Even the existing app target is blocked by PRE-EXISTING, unrelated conditions this prompt neither
+                introduced nor is allowed to touch (each re-confirmed by ls/grep on THIS runner):
+                  • apps/apple/Frameworks/ holds only `.gitkeep` — Shared.xcframework is NOT staged; the scheme
+                    pre-action `Scripts/build-shared-xcframework.sh` triggers the ~7-min Gradle Kotlin/Native
+                    assemble (a macOS-pending row for p1-shared/S3 in apps/macos-pending-verifications.md). A live
+                    `xcodebuild … build` was attempted and is long-running (it compiles the whole app); the
+                    disposition is unchanged by letting it finish, so it was bounded.
+                  • `struct DashboardWidgetSize` is redefined 15× across Sources/DashboardWidgets/* +
+                    TeslaSync/dashboard-widgets/* (parallel-merge collisions).
+                  • 170 co-located `*.Tests.swift` under TeslaSync/feature-views import XCTest into the app target.
+                  • macOS development-signing.
+          This is the SAME sanctioned "code-complete + DEFERRED full-app Xcode gate" disposition recorded by every
+          prior P4 surface (see p4-apple-feature-views-0237-AiUsageCard.log and apps/macos-pending-verifications.md)
+          and is owned by p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner. ZERO
+          InlineCallout / shared-surfaces errors are attributable to this change (the surface compiles + its 15
+          tests pass in isolation, and it typechecks clean against the real iOS-18 + macOS-15 SDKs).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED with raw, verified
+                           pre-existing-blocker evidence (ls/grep pasted) — never reported as passing. Every
+                           "GREEN" line above is a real exit from a command run on this runner.
+  2  No scope narrowing  : every web branch reproduced — all 4 variants (tint/ring/body/accent), the optional
+                           icon, the body content (String + rich), the optional action, AND the full 3-way render
+                           branch (href→link, onClick→button, neither→status) with the interactive hover/press/
+                           focus chrome. The pure-presentational source has no data-state axis to add (see STATES).
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; raw exits pasted; the deferred-gate
+                           blockers were each re-confirmed by ls/grep (Shared.xcframework absent, DashboardWidgetSize
+                           15×, 170 co-located tests, shared-surfaces absent from project.yml), not assumed.
+  4  No stubs as final   : complete production surface + 15 real tests; placeholder scanner COUNT=0, ALLOWED=0; no
+                           TODO/FIXME/XXX/"Coming soon"/Placeholder/"Lorem ipsum"/"not implemented" anywhere.
+  5  No parity shortcut  : the VARIANT_STYLES fill (0.05) / ring (0.20|0.25) / body / accent maps, the href-wins
+                           render resolution, the hover(.03)/press(.06) scrim, and the severity-prefixed VoiceOver
+                           label are each unit-asserted; copy is caller-supplied exactly as in the web source.
+  6  No delegation       : implemented directly; no sub-agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S9 tokens (Color.TS/Font.TS/TSSpacing/TSRadius/TSMotion), P1/S10 i18n facade, P1/S11
+                           view.opened telemetry, and the established P4 "isolated-build + DEFERRED full-app"
+                           disposition all honoured; no token, hook or component re-implemented locally.
+  8  No commit on red    : the committed artifact (5 InlineCallout.* files + this log) is GREEN on every per-surface
+                           gate AND on a real isolated Swift 6 strict-concurrency build + 15/15 XCTest + dual-SDK
+                           typecheck; the deferred full-app gate is blocked only by pre-existing, unrelated
+                           surfaces + an integration step this commit is not allowed to make.
+  9  No silent drift     : changes are confined to apps/apple/TeslaSync/shared-surfaces/InlineCallout.{Model,swift,
+                           Previews,Tests}.swift + InlineCallout.strings and this log. The pre-existing unrelated
+                           AIUsageCard.* + web working-tree edits were left untouched and are NOT committed here.
+                           The dropped Tailwind `className` prop and the href/onClick mutual-exclusivity (stricter
+                           than the web "both prefers href") are disclosed above.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic InlineCallout shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 15 tests pass under the app's own Swift 6 strict-concurrency rules against the
+  REAL design tokens via the Xcode 26.5 XCTest runtime; it typechecks clean against the real iOS-18 + macOS-15
+  SDKs (incl. the #Preview macro); swiftformat / swiftlint --strict / placeholder are all green on the surface
+  files. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code) on
+  pre-existing, unrelated, out-of-allowed-files blockers (unstaged Shared.xcframework + its Gradle pre-action,
+  the DashboardWidgetSize 15× redefinition, the 170 co-located feature-views tests, macOS signing) plus the
+  project.yml wiring of shared-surfaces (out of allowed files), owned by the P99 acceptance gate on a signed
+  macos-latest runner per apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

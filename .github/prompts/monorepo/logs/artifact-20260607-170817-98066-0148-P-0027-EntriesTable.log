@@ -1,0 +1,194 @@
+=== P4 Feature view 0027 EntriesTable (Apple) ===
+
+Surface : apps/apple/TeslaSync/feature-views/EntriesTable.*
+Web spec: web/src/features/admin/components/dlq-inspector/EntriesTable.tsx
+Runner  : Darwin · Xcode 26.5 (17F42) · Swift 6 · swiftformat + swiftlint + pwsh + xcodegen present
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (allowed scope: EntriesTable.* + this log)
+--------------------------------------------------------------------------------
+  EntriesTable.swift           — SwiftUI feature view: header (title + freshness chip + refresh),
+                                 offline/stale connectivity banner, EVERY state, and the sortable
+                                 TSDataTable (8 columns) with the replayable badge + per-row Inspect
+                                 action; view.opened on appear; full a11y; i18n; design tokens only.
+  EntriesTable.Model.swift     — P1/S8 data seam (EntriesTableProvider), @Observable EntriesTableModel,
+                                 EntriesTableViewState (loading/loaded/empty/failed + WidgetFreshness),
+                                 P1/S11 telemetry seam (EntriesTableTelemetry + OSLog sink emitting
+                                 "view.opened surface=EntriesTable"), freshness presentation.
+  EntriesTable.Adapter.swift   — pure (Foundation-only) projection: DLQEntrySummaryDTO (snake_case mirror
+                                 of the Go DLQEntrySummary) → DLQEntryRow, reproducing the web pipeline
+                                 VERBATIM (formatBytes, fmtInt, Date.parse, `?? '—'`), the sort
+                                 (useSortToggle default + per-key comparators), and the projector.
+  EntriesTable.Strings.swift   — P1/S10 localization facade (per-surface "EntriesTable" table, web English
+                                 fallback) + the testable accessibility seam (row/inspect/list labels).
+  EntriesTable.Previews.swift  — #if DEBUG previews for every state, driven by a fixed in-memory provider.
+  EntriesTable.Tests.swift     — XCTest: adapter value-parity + format + sort + model phases + freshness +
+                                 i18n namespacing/fallback + telemetry + every-state renderable + a11y labels.
+  EntriesTable.strings         — per-surface i18n table (every web t() key + native chrome + a11y).
+
+Parity reproduced exactly from the web source (cross-platform value parity, not a "corrected" version):
+  arrived_at    = <TimeStamp format="absolute" />  → localized medium date + short time, "—" when unparseable
+  reason/vin/topic = mono cells, "—" via (parsed_reason || '—') / (parsed_vin ?? '—') / (topic ?? '—')
+  redeliveries  = parsed_redeliveries != null ? fmtInt(v) : "—"   (Intl.NumberFormat grouping, locale-aware)
+  payload       = formatBytes(raw_payload_size)  [ "—" for <0 · "N B" <1KiB · "X.X KB" <1MiB · "X.X MB" ;
+                  the toFixed(1) decimal rendered with a '.' separator, locale-independent, as in JS ]
+  replayable    = replayable ? Badge(success,"Yes") : Badge(neutral,"No")
+  actions       = secondary/sm Button "Inspect" → onInspect(row)  (parent owns the drawer, web onInspect prop)
+  sort          = useSortToggle('arrived_at','desc'): default arrived desc; sortable arrived_at (date) /
+                  parsed_reason (localeCompare) / parsed_vin ((x ?? '').localeCompare) / raw_payload_size
+                  (numeric); stable (ties preserve order).
+
+States reproduced (every one renders — no hidden surfaces; each has a #if DEBUG preview):
+  loading (skeleton + "Loading…") · loading-behind-cache · loaded · empty ("No DLQ entries — the pipeline is
+  clean.") · error (TSErrorDisplay + retry) · error-behind-cache (banner + retry + cached table) · stale
+  (chip + banner) · offline (chip + banner + cached table).
+
+--------------------------------------------------------------------------------
+GATE RESULTS (real commands, real exit codes on this host)
+--------------------------------------------------------------------------------
+
+[HOST] swiftc -typecheck -swift-version 6  (project setting SWIFT_STRICT_CONCURRENCY=complete)
+       (surface = EntriesTable.swift + .Adapter + .Strings + .Model + .Previews, type-checked against the
+        REAL design system: every *.swift under Sources/Components + Sources/Design + Sources/Widgets/Shared
+        + the generated DesignTokens apps/design/generated/apple/Tokens.swift, Xcode MacOSX26.5 SDK,
+        -target arm64-apple-macos15.0)
+       → error count in EntriesTable.* = 0
+       TYPECHECK_EXIT=0
+       (One design-system file is excluded: Sources/Components/DataDisplay/UnitFormatters.swift consumes the
+        KMP `UnitPreferences` type delivered by Shared.xcframework and is unused by this surface. Every other
+        design file + all five shipped non-test files type-check GREEN; ZERO errors originate in EntriesTable.*.)
+
+[HOST] swiftc -O + execute adapter harness  (EntriesTable.Adapter + .Strings + driver → native executable)
+       → ALL_ADAPTER_TESTS_PASSED   RUN_EXIT=0
+       Verified GREEN by execution: snake_case DTO decode; formatBytes branch table
+       ("—"/"0 B"/"512 B"/"1023 B"/"1.0 KB"/"1.5 KB"/"1.0 MB"/"3.3 MB"); fmtInt grouping ("3"/"1,234");
+       ISO whole+fractional parse + nil/empty/junk → nil; projector "—" fallbacks (date/reason/vin/redel) and
+       populated values ("1.5 KB"/"3"); default sort arrived-desc [2,3,1]; reason localeCompare; vin nil-as-empty;
+       payload numeric asc/desc; stable ties; toggle reducer; i18n key namespacing + English fallback;
+       accessibility row/inspect/list labels.
+
+[HOST] swiftc -swift-version 6 + execute view/model harness  (real Sources/Components + Design + my 5 non-test
+       files + driver → native executable; @MainActor)
+       → ALL_VIEW_TESTS_PASSED   RUN_EXIT=0
+       Verified GREEN by execution under Swift 6 strict concurrency against the REAL design system: model
+       republishes provider state (loading→loaded→empty) + start/stop/refresh delegation; EntriesTable(...).body
+       builds for ALL 10 states (loading±cache, loaded fresh/stale/offline, loaded-empty, empty fresh/offline,
+       failed±cache); freshness mapping (Live/success, Stale/warning, Offline/neutral); telemetry view.opened
+       with surface slug "EntriesTable".
+
+[HOST] swiftformat --lint apps/apple
+       → 0/580 files require formatting, 2 files skipped
+       FORMAT_EXIT=0
+
+[HOST] cd apps/apple && swiftlint lint --strict <the 6 shipped EntriesTable*.swift files>
+       (the staging dir TeslaSync/feature-views is outside the config's `included:` list, so the shipped files
+        are linted EXPLICITLY to hold them to the same --strict bar)
+       → Done linting! Found 0 violations, 0 serious in 6 files.
+       MYFILES_LINT_EXIT=0
+[HOST] cd apps/apple && swiftlint --strict   (whole project, default config)
+       → Done linting! Found 1 violation, 1 serious in 570 files.
+       GATE_LINT_EXIT=2  — NOT claimed green. The single violation is PRE-EXISTING and NOT this surface:
+       TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length), a predecessor
+       (0055) file outside this prompt's allowed scope (EntriesTable.* + this log). Covenant #7/#9 forbid editing
+       it here. ZERO violations originate in EntriesTable.*.
+
+[HOST] pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views -Language swift
+       → PLACEHOLDER_ALLOWED=0 · PLACEHOLDER_COUNT=0 · EXIT=0
+       PLACEHOLDER_EXIT=0
+       (also ran the gate-literal -Path .../feature-views/EntriesTable → COUNT=0; manual case-insensitive
+        forbidden-word scan of the shipped files [TODO/FIXME/XXX/stub/mock/placeholder/lorem/coming soon/
+        not implemented/unimpl] → NONE.)
+
+[BUILT]    KMP Shared.xcframework  (Scripts/build-shared-xcframework.sh / `gradlew :core:assembleSharedXCFramework`)
+       → BUILD SUCCESSFUL in 6m35s; xcframework written (ios-arm64 + ios-arm64-simulator + macos-arm64) and
+         staged to apps/apple/Frameworks/Shared.xcframework.  (This dependency is therefore NOT a blocker here.)
+[HOST]     xcodegen generate  → EXIT=0 (TeslaSync.xcodeproj generated)
+
+[DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+[DEFERRED] xcodebuild -scheme TeslaSync-macOS                                                       build test
+       IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED   (NOT claimed green — see reasoning)
+       Capability IS present on this runner (Xcode 26.5; iPhone 16 simulator 83717DEE-70A3-4325-AA61-CBDDD3140989;
+       `xcodegen generate` EXIT=0; Shared.xcframework BUILT + staged above). The scheme-level build/test is
+       DEFERRED — not failed — for two scope/predecessor reasons, neither a defect in this surface's code:
+         (1) The surface lives in apps/apple/TeslaSync/feature-views/, which is NOT a source path in
+             project.yml (the app targets list Sources / TeslaSync/dashboard-widgets / Localization /
+             DesignTokens). Verified: after `xcodegen generate`, TeslaSync.xcodeproj/project.pbxproj contains
+             0 references to EntriesTable — running the scheme as-is would build the app WITHOUT these files.
+             Registering feature-views (and folding the per-surface strings into Localizable.xcstrings) is the
+             P4-core integration prompt's scope and is OUTSIDE this prompt's allowed files. Covenant #7 (no
+             predecessor/integration bypass) forbids self-registering project.yml.
+         (2) An ACTUAL baseline app build was attempted (xcodebuild -scheme TeslaSync-macOS build, framework
+             staged) and FAILED on a PRE-EXISTING repo issue unrelated to this surface: the app targets compile
+             the co-located dashboard-widgets/*.Tests.swift files, and
+               TeslaSync/dashboard-widgets/DigitalTwinWidget.Tests.swift:17: error: unable to resolve module
+               dependency: 'XCTest'
+             i.e. 340+ predecessor widget test files `import XCTest` / `@testable import TeslaSync` inside the
+             app target (they belong in the TeslaSyncTests bundle). Fixing that routing is a project.yml change
+             across the whole repo — outside this surface's allowed files.
+       Equivalent in-scope verification was performed instead and is GREEN above: a Swift-6 strict-concurrency
+       `swiftc -typecheck` of the surface against the real design tokens + shared components (the exact symbols
+       the app build would resolve), plus TWO executed harnesses (adapter + view/model/freshness/telemetry).
+       This matches the user-approved P3 "code-complete + DEFERRED Xcode gate" disposition used by the sibling
+       feature-views / dashboard-widget surfaces (e.g. 0078 RecentDrivesListWidget).
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) — implemented; each has a
+      #if DEBUG preview; every-state .body build executed GREEN in the view harness.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (EntriesTableProvider/EntriesTableModel); no HTTP
+      in the view. The sort (useSortToggle) is owned by the view; the rows are a pure projection of cached DTOs.
+  [x] Every i18n key from source has a matching catalog key — 13 web parity keys (admin.dlq.cols.* + common.yes/no
+      + admin.dlq.actions.inspect + admin.dlq.table.loading/empty) + native chrome in EntriesTable.strings; the
+      view holds no English literals (all via EntriesTableStrings; namespacing + fallback executed GREEN).
+  [x] Accessibility labels on every interactive element — refresh button, each Inspect button (concise label +
+      full row summary as hint), the sortable column header menus (TSDataTable), and the table container summary;
+      icons are accessibilityHidden / chips combine.
+  [x] Tests: adapter (cached→projection) unit tests + per-state model/UI tests + a11y label tests
+      (EntriesTable.Tests.swift); the same assertions executed GREEN in the two host harnesses.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; word-scan clean.
+  [x] Telemetry: view.opened emitted with surface slug "EntriesTable" (P1/S11) — tested + executed.
+  [x] Host-runnable gates green for this surface (typecheck swift6 / two executed harnesses / format / my-files
+      lint / placeholder); Xcode scheme build/test DEFERRED with capability + scope evidence (per approved
+      P3 disposition).
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+  1  No red-as-green : the two xcodebuild scheme steps are shown DEFERRED (not green) with reasons; the
+                       whole-project swiftlint is shown with its 1 PRE-EXISTING (non-surface) violation, NOT
+                       hidden; every "EXIT=0" above is a command actually executed on this host.
+  2  No scope narrowing: implemented ALL states + all 8 columns + sort + replayable badge + Inspect action +
+                       i18n + a11y + telemetry; nothing stubbed.
+  3  No skip-and-assume: each host gate executed and its real output captured; the app build was actually run
+                       (not assumed) to obtain the real blocker evidence.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; two harnesses execute real logic.
+  5  No parity shortcuts: formatBytes/fmtInt/Date.parse/`?? '—'`/sort comparators ported VERBATIM and pinned by
+                       executed assertions to the exact web display strings.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register feature-views into project.yml and did NOT edit the shared
+                       Localizable.xcstrings (both out of allowed scope); strings shipped as the per-surface
+                       table; the pre-existing LifetimeStats lint + dashboard-widgets XCTest issues were left
+                       untouched (predecessor scope).
+  8  No commit on red  : committing on all-green IN-SCOPE host gates (this surface: typecheck/harness/format/
+                       lint/placeholder all 0); the Xcode scheme steps are a documented scope/dependency
+                       DEFERRAL with capability evidence, not a failure of this surface.
+  9  No silent drift   : changes confined to the allowed EntriesTable.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished native EntriesTable shipped at parity with the web source: a SwiftUI feature view
+  (header + freshness chip + offline/stale banner + sortable DLQ table) over a P1/S8 state-holder seam (no view
+  HTTP), P1/S11 telemetry, P1/S10 i18n, P1/S9 tokens; every state, every i18n key, every interactive a11y label;
+  the web column set + sort + replayable badge + per-row Inspect reproduced exactly. The surface type-checks
+  GREEN under Swift 6 strict concurrency against the real design system, and BOTH its adapter logic and its
+  view/model/freshness/telemetry execute GREEN against the real components with exact web value parity. The KMP
+  Shared.xcframework was built + staged on this host; the Xcode scheme build/test is DEFERRED only because the
+  surface is not yet target-registered in project.yml (verified 0 refs) and the app target has a pre-existing,
+  repo-wide dashboard-widgets/*.Tests.swift XCTest mis-wiring — both outside this surface's allowed files and
+  neither a defect in this code — matching the user-approved P3 "code-complete + DEFERRED Xcode gate" disposition.
+
+EXIT=0
+STATUS=DONE

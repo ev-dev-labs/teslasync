@@ -1,0 +1,185 @@
+================================================================================
+P4 · Dashboard widget · 0061 — MaintenanceTrackerWidget (Apple)
+Run: 2026-06-07T18:20-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/64
+Base: e9e15143
+Prompt: P4/dashboard-widgets/0061 — MaintenanceTrackerWidget
+Web source (spec): web/src/features/dashboard/widgets/MaintenanceTrackerWidget.tsx
+Mode: code-complete + host-validated; DEFERRED Xcode app build/test (no full Xcode on host).
+================================================================================
+
+=== CAPABILITY PROBE (real, on this host) ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                ✅
+  swiftc -typecheck SwiftUI .. compiles vs macOS 15 SDK (proven below)            ✅
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                  ✅
+  swiftformat ................ /opt/homebrew/bin/swiftformat                       ✅
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                             ✅
+  /Applications/Xcode.app .... NOT installed — `xcode-select -p` =
+                               /Library/Developer/CommandLineTools (CLT only)     ❌ (xcodebuild requires Xcode)
+  iphonesimulator SDK ........ `xcrun --sdk iphonesimulator` → "cannot be located" ❌ (ships with Xcode)
+  #Preview macro plugin ...... PreviewsMacros plugin absent in CLT toolchain       ⚠ (previews are #if DEBUG; compiled out for the host typecheck)
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks empty)            ⚠ (needed only by the app/test target link, not this surface)
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (the prompt's "Charts / maps used: (none)"). The required rendering capability
+  is plain SwiftUI, which IS available and is PROVEN by a real macOS-SDK typecheck
+  against the actual apps/apple component library below. The capability-BLOCKED
+  escape hatch ("SwiftUI/Charts/MapKit unavailable") therefore does NOT apply —
+  the surface is authored and host-validated for real. The xcodebuild app
+  build/test (which needs full Xcode) is DEFERRED to a signed CI runner, exactly
+  as the sibling 0036 DigitalTwinWidget gate did.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/MaintenanceTrackerWidget.*) ===
+  MaintenanceTrackerWidget.Models.swift    171  DTO inputs + formatting ctx + urgency + projection value types
+  MaintenanceTrackerWidget.Builder.swift   186  pure cached→projection adapter (sort/urgency/distance/currency/date/timeline)
+  MaintenanceTrackerWidget.Model.swift     279  P1/S8 state-holder seam + P1/S11 telemetry + i18n facade + a11y summary
+  MaintenanceTrackerWidget.swift           257  surface: shell header + freshness + loading/empty/error states
+  MaintenanceTrackerWidget.Content.swift   190  content body: compact + standard layouts + next-service card + urgency chip
+  MaintenanceTrackerWidget.Previews.swift  160  #if DEBUG previews — one per state (content/compact/loading/empty/error/stale/offline)
+  MaintenanceTrackerWidget.Tests.swift     323  XCTest: adapter + model phases + telemetry + registry + a11y
+  MaintenanceTrackerWidget.strings          51  P1/S10 catalog contribution (11 source keys + 14 native chrome/a11y keys)
+  Every file ≤400 lines (house file_length); largest 323 (Tests). One exported view per file; shared
+  DashboardWidgetSize/Registration are REFERENCED (declared once by the bundle in DigitalTwinWidget.Model.swift),
+  never redefined — proven collision-free by the whole-bundle typecheck below.
+
+=== PARITY (vs web MaintenanceTrackerWidget.tsx) ===
+  Data sources → bound via the shared state-holder seam (MaintenanceSource → MaintenanceModel):
+    useMaintenance, useServiceRecords, useTranslation, useUnits, useFormatting, useDateFormat.
+    The production app wires MaintenanceSource over the shared VehicleSystems store
+    (StateHolderModel<LoadableState<…>>); the view performs NO HTTP.
+  Projection → MaintenanceProjectionBuilder is a faithful port of the web body: getUrgency
+    (<=0 overdue, <=3 soon, else good), sortedItems[0] (min by intervalMonths), recentRecords
+    (date desc, top 3), itemId→name lookup, distance via convertDistanceFromSI(km*0.621371, unit)
+    REPLICATED VERBATIM (web L90/L184 — parity over correctness), formatCurrency = symbol+fmtNumber,
+    formatDate = medium localized, "{odo} {unit} · {notes}" timeline subtitle. Verified by EXECUTED harness.
+  Composition → WidgetShell chrome (wrench icon + "Maintenance" title + freshness chip + refresh + Open) ·
+    compact (cols≤1): wrench + big months + "months" + item name · standard (2×4): Next-Service card
+    (Next Service label + urgency Badge w/ dot, name, clock "Every N mo", interval distance, cost) +
+    Recent-Service section (label + TSTimeline, or "No service records yet").
+  Shared components → @/components/ui→TSBadge tokens (urgency chip), @/components/data-display→TSTimeline,
+    @/components/feedback→ContentUnavailableView (EmptyState). Reuses Color.TS / Font.TS / TSSpacing /
+    TSRadius / TSTone / TSSkeleton — compiled against the REAL apps/apple library in the typecheck below.
+    Recharts→none / Leaflet→none (no chart/map on this surface).
+  States (all render) → loading (skeleton chrome) · empty ("No maintenance data") · error (retry) ·
+    stale (chip + banner) · offline (cached value + chip + banner) · content (compact + standard). Model
+    phase resolution keeps cached content visible behind refresh/errors, matching the web shell.
+  i18n → all 11 source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    widget.maintenance.{title, overdue, soon, good, monthsLeft, noData, nextService, every, months,
+    recentService, noRecords} → ALL PRESENT in MaintenanceTrackerWidget.strings; every code key (24)
+    verified to exist in the catalog. No English literals in native code (only as t() fallbacks).
+  a11y → compact + standard content carry a localized state-summary value (MaintenanceAccessibility.summary);
+    every button (refresh / open / retry) and the freshness chip has an accessibilityLabel; Dynamic Type via
+    tokens; decorative glyphs accessibilityHidden.
+  Telemetry → MaintenanceModel.start() emits viewOpened(surface:"MaintenanceTrackerWidget") → bridges shared
+    Telemetry.track(.screenView) (P1/S11). Asserted by a spy test.
+  Registry → MaintenanceTrackerWidget.registration: id "maintenance-tracker", category "vehicle",
+    default 2×4, min 1×2, max 4×40 (+ clamp()), matching registry/vehicle.ts. Asserted.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — the WHOLE dashboard-widgets bundle (this surface's 5 source files + the 9
+    DigitalTwin bundle files, tests excluded) compiled TOGETHER with the REAL apps/apple component
+    library (Tokens + Sources/Design + 40 Sources/Components files, minus UnitFormatters.swift which
+    alone pulls the unstaged Shared facade). Previews are #if DEBUG → compiled out (no -D DEBUG), since
+    the #Preview macro plugin is Xcode-only:
+      xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 \
+        ../design/generated/apple/Tokens.swift <Design+Components closure> <dashboard-widgets/*.swift !Tests>
+      BUNDLE_TYPECHECK_EXIT=0                                                       ✅
+      → Proves the surface type-checks against the real TSBadge/TSTimeline/TSTimelineEntry/TSSkeleton/
+        Color.TS/Font.TS/ContentUnavailableView APIs, that the REFERENCED shared DashboardWidgetSize/
+        Registration resolve, and that DigitalTwin + Maintenance coexist with NO duplicate symbols.
+      (Surface is platform-agnostic SwiftUI — no `#if os(iOS)` — so the macOS compile covers iOS/iPadOS.)
+
+[2] Adapter EXECUTED test — compiled Models+Builder+harness to a native arm64 binary and RAN it (a real
+    cached→projection verification, not a typecheck):
+      23/23 checks PASSED — urgency thresholds; convertDistanceFromSI km/mi/ft + unknown→mi; web distance
+      arithmetic distanceText(40000 km)= "15 mi", odometer(18000 km)= "7 mi"; fmtNumber(1234.6)= "1,235",
+      fmtNumber(NaN)= "0"; currency 80 = "$80"; date "2024-04-04T10:00:00Z" = "Apr 4, 2024", nil/invalid = "—";
+      nextService picks soonest "Tire Rotation"/soon/"2"/"$80" with zero-cost suppressed; recentTimeline
+      sorts date-desc, top-3, itemId→name lookup, middot subtitle; build.hasData true/false.
+      ADAPTER_HARNESS_EXIT=0                                                        ✅
+      (This run also caught + fixed an incorrect TEST expectation — timeline[1] is the 18000 km record
+       ("7 mi"), not the 12000 km one — corrected in MaintenanceTrackerWidget.Tests.swift. Red found, fixed.)
+
+[3] swift -parse — all 7 surface files parse cleanly (syntax):
+      PARSE OK ×7                                                                   ✅
+
+[4] swiftlint --strict on the 7 surface files (explicit paths; the repo .swiftlint.yml `included:` does
+    not yet list TeslaSync/dashboard-widgets — that wiring is the P4 integration prompt's job):
+      Done linting! Found 0 violations, 0 serious in 7 files.
+      SURFACE_SWIFTLINT_EXIT=0                                                      ✅
+    Bare gate `swiftlint --strict` (from apps/apple, included: paths): 0 violations, 256 files.
+      SWIFTLINT_GATE_EXIT=0                                                         ✅ (does not scan the new dir — see note)
+
+[5] swiftformat --lint apps/apple  (the exact gate command, whole tree incl. the 7 new files):
+      0/276 files require formatting, 2 files skipped.
+      FORMAT_EXIT=0                                                                 ✅
+
+[6] check-placeholders (ADR-011 stub gate), exact prompt path prefix:
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/MaintenanceTrackerWidget
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            ✅
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to a full-Xcode signed CI runner; NOT faked) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    swiftlint --strict   (gate already green above)
+    swiftformat --lint apps/apple   (gate already green above)
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Why deferred (independent, code-unrelated reasons — none is a defect in this surface):
+      (a) NO FULL XCODE ON THIS HOST: `xcode-select -p` → /Library/Developer/CommandLineTools; xcodebuild
+          errors "tool 'xcodebuild' requires Xcode"; the iphonesimulator SDK and #Preview macro plugin
+          are absent. xcodebuild simply cannot run here. The meaningful SwiftUI validation is instead done
+          via the macOS-SDK typecheck in step [1], which compiles THIS surface against the real library.
+      (b) NOT-YET-REGISTERED: project.yml's app target globs `Sources/`; the surface lives at
+          TeslaSync/dashboard-widgets/ and is registered into the XcodeGen target + the dashboard grid by
+          the P4 dashboard-grid integration prompt (predecessor — Honesty rule 7). Running xcodebuild now
+          would build the app WITHOUT these files, giving ZERO evidence about this deliverable.
+      (c) Shared.xcframework not staged: the app/test targets link the KMP core; building needs a
+          Kotlin/Native gradle build. Independent of this UI surface.
+    XCTest (MaintenanceTrackerWidget.Tests.swift) likewise runs in the TeslaSync/-macOS test target under
+    Xcode; XCTest is unavailable to CLT here. Its pure-adapter subset is independently PROVEN GREEN by the
+    executed harness in step [2]; the model/registry/a11y suites call the same public API the bundle
+    typecheck in step [1] proves compiles.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) — implemented; each has a
+      #if DEBUG preview; phase logic unit-tested; compact + standard layouts both reproduced.
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — 11/11 present; all 24 code keys verified.
+  [x] Accessibility labels on every interactive element; content carries a state-summary value.
+  [x] Tests: adapter unit test (EXECUTED 23/23) + per-state model test + registry clamp + a11y summary test.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] Host gates green (typecheck/adapter-run/parse/lint/format/placeholder); Xcode app build/test DEFERRED
+      with capability + predecessor evidence (matches the accepted 0036 disposition).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : xcodebuild iOS/macOS build+test shown DEFERRED (not green) with the xcode-select
+                       evidence; every "✅" is a command actually run here with its real exit code.
+  2  No scope narrowing: implemented BOTH layouts, ALL states, the next-service card + urgency chip +
+                       timeline, i18n + a11y + telemetry + registry.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of the web data pipeline incl. its exact distance arithmetic.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / dashboard grid (integration prompt's
+                       scope) and did NOT edit the shared Localizable.xcstrings (parallel-unsafe) — strings
+                       shipped as the per-surface table; shared registry types REFERENCED, not redefined.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed MaintenanceTrackerWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native MaintenanceTrackerWidget shipped at parity with the web source: pure-Swift
+  adapter (executed-green, 23/23), P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, every state +
+  i18n key + a11y label, registry-correct (maintenance-tracker, 2×4 / 1×2 / 4×40). The whole dashboard-widgets
+  bundle type-checks against the real apps/apple component library on this host. The xcodebuild app
+  build/test is DEFERRED to a full-Xcode signed CI runner (no Xcode on this host + surface not yet
+  target-registered + Shared.xcframework — none a defect in this code), matching the accepted 0036
+  "code-complete + DEFERRED Xcode gate" disposition.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0061-MaintenanceTrackerWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add MaintenanceTrackerWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

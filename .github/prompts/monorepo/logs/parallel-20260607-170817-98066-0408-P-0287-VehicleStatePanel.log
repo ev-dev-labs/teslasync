@@ -1,0 +1,66 @@
+I'll start by exploring the repository structure, the web source component, and checking the Apple toolchain availability.
+
+Good — `apps/apple` exists with an established `feature-views` pattern (AIUsageCard). Let me verify the xcodebuild capability and study the existing AIUsageCard reference files in detail.
+
+Key finding: **Xcode is not installed** (only CommandLineTools) — `xcodebuild` and `simctl` are unavailable, but `swift`, `swiftlint`, and `swiftformat` work. I'll produce production code following the established multi-file pattern, lint/format-check it, and report the build/test gate honestly. Let me study the canonical AIUsageCard reference (recently modified) and check whether VehicleStatePanel already exists.
+
+Both `AIUsageCard` (capital) and `AiUsageCard` (lowercase) are git-tracked but case-insensitive FS keeps only one on disk — a pre-existing situation outside my scope. `VehicleStatePanel` doesn't exist yet. Let me study the closest analog — `AcDcStatsPanel` (a telemetry panel) — as my primary reference.
+
+Excellent — this is a sophisticated, well-established pattern. Let me read the remaining AcDcStatsPanel files and locate the shared design-token/component infrastructure (P1/S9).
+
+Now let me read the test pattern and locate the shared design-system infrastructure (tokens, components) that these views depend on.
+
+I have a deep understanding of the pattern. Now let me locate the shared design-system definitions (P1/S9 tokens and components) to learn their exact APIs.
+
+The shared components live elsewhere. Let me search the whole `apps/apple` tree and check the project structure.
+
+Shared code is in `apps/apple/Sources/`. Let me explore that structure and read the design tokens and key components I'll need.
+
+Let me read the design tokens and the key shared components, and explore the SharedFacade (P1/S8 state-holder layer).
+
+Now let me read the SharedFacade (P1/S8 + units facade + live connection) and find the generated design tokens.
+
+Key insight: feature-views are **self-contained** — they define their own `Source` protocol seam (not importing the KMP `Shared` framework directly), making them compilable/testable standalone. Let me locate the design tokens and read the remaining shared components I'll need.
+
+The token definitions aren't checked in as plain `enum` declarations — they may be generated. Let me find where `Color.TS`, `TSSpacing`, etc. are actually declared, and check the build setup.
+
+Design tokens are generated into `apps/design/generated/apple`. Let me read them to learn the exact token APIs.
+
+I now have the full token palette. Let me read the lint/format configs, the remaining shared components I'll use (Motion, Skeletons, Buttons, States), and confirm the build wiring in project.yml.
+
+Let me read the Button and States components, confirm the build includes feature-views, and check the recently-modified AiUsageCard for the current canonical pattern.
+
+I have the full picture of the design system and the leaf-contract pattern. Let me verify the log directory, confirm the canonical pattern is current (AiUsageCard header), and check whether any sibling telemetry-panel already establishes a live-bag decoding convention.
+
+There's a `SecurityStatusCards` and `LiveSignalsTable` — close analogs that decode live signals. Let me study how they decode the loosely-typed live bag and confirm the leaf-contract convention.
+
+`SecurityStatusCards` (P4·0046) is a near-exact analog — live signal-value decoding, semantic tone enum, `localize` closure. Let me study its full file set (main view, model, views, states, tests, strings) to match the live-surface leaf-contract conventions precisely.
+
+I have the complete pattern. Let me read the final reference pieces — SecurityStatusCards Tests, Previews, and strings — to match test/preview/i18n conventions exactly.
+
+I now have a complete, precise understanding of the canonical live-signal feature-view pattern. Before writing, let me verify there are no name collisions with my planned `VehicleState*` types across the module, and set up my plan.
+
+There are existing `VehicleStateInput` and `VehicleStateKind` types in the module. I must avoid collisions. Let me find exactly what's declared and where.
+
+I now have a complete understanding of the canonical live-signal feature-view pattern (`SecurityStatusCards` is the near-exact analog). Confirmed: only `VehicleStateInput`/`VehicleStateKind` exist in the module — my planned `VehicleState*` type names are collision-free. Let me set up my plan and todos, then build the 7 files.
+
+Now I'll create the Adapter (pure projection core) — the foundation.
+
+Adapter done. Now the Model (state-holder seam, telemetry, strings facade).
+
+Now the main surface View and the presentational subviews.
+
+Views done. Now the Previews and the strings catalog.
+
+Now the comprehensive test suite.
+
+All 7 files created. One lint concern: my test helper `XCTFail2` starts with uppercase (violates `identifier_name`). Let me rename it to `missingRow`, then run the formatter and linters.
+
+Files are intact (~1621 lines total, comparable to sibling surfaces). Now let me auto-format my Swift files with the repo's swiftformat config, then lint-check them.
+
+`0/6 files formatted` — my files were already format-compliant. Now let me run the actual gate checks: `swiftformat --lint` and `swiftlint --strict` on my files, plus the placeholder check.
+
+swiftformat passes. swiftlint --strict found 5 violations (all from `--strict` promoting default warnings to errors): file length >400 (Adapter, Tests), function body >50 (`rows`), and param count >5 (`flagRow`=10, `valueRow`=7). The reference files avoided these. I'll **split** the Adapter (types vs projection) and Tests (two files), and refactor builders to use spec structs (≤5 params). Let me view the projection section boundary first.
+
+The fixes: split the Adapter (types → `Adapter`, projection → new `Projection` file), refactor builders with spec structs (≤5 params), and split Tests into two files. Let me truncate the Adapter to its type definitions and create the Projection file.
+

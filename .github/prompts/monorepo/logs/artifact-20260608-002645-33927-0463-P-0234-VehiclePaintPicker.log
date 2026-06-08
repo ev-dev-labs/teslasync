@@ -1,0 +1,136 @@
+=== P4 Shared surface 0234 VehiclePaintPicker (Apple) ===
+Prompt:  .github/prompts/monorepo/.../p4-apple-shared-surfaces-0234-VehiclePaintPicker
+Web src: web/src/components/vehicles/VehiclePaintPicker.tsx  (THE specification)
+Runner:  Darwin (arm64) · Apple Swift 6.3.2 · swiftlint + swiftformat + pwsh present
+         Toolchain: Command Line Tools ONLY (xcode-select -p = /Library/Developer/CommandLineTools)
+         SDKs present: MacOSX.sdk MacOSX15.sdk MacOSX26.sdk  ·  NO iOS/iPadOS SDK, NO Xcode.app
+
+------------------------------------------------------------------------------------------------
+ARTIFACT (apps/apple/TeslaSync/shared-surfaces/VehiclePaintPicker.*) — 9 files, 1581 lines
+------------------------------------------------------------------------------------------------
+  VehiclePaintPicker.swift              101   the shared surface (header + freshness chip + banner + state body)
+  VehiclePaintPicker.Adapter.swift      212   pure core: PaintPaletteID, swatch hex decode, catalog,
+                                              inferPaintFromTesla, stored-id narrowing, normalizeSelection, a11y
+  VehiclePaintPicker.Projection.swift   100   pure input->resolved projection (loading/empty/error/data)
+  VehiclePaintPicker.Model.swift        341   P1/S8 state-holder + P1/S10 i18n facade + P1/S11 telemetry seam,
+                                              @Observable model (select/reset/refresh, view.opened, stale auto-refresh)
+  VehiclePaintPicker.Views.swift        277   swatch radio button/row, current label, reset link, freshness chip,
+                                              connectivity banner, cold-start skeleton, empty, error (TSButton retry)
+  VehiclePaintPicker.Previews.swift      85   #Preview per state (auto-detected/overridden/stale/offline/loading/error/empty)
+  VehiclePaintPicker.Tests.swift        252   XCTest: projection + state-holder (telemetry, select/reset, freshness)
+  VehiclePaintPicker.AdapterTests.swift 172   XCTest: swatch decode, catalog, inference, override logic, a11y
+  VehiclePaintPicker.strings             41   P1/S10 catalog: every web key + native chrome keys
+
+Parity (web -> native), every branch reproduced:
+  • radiogroup of 5 swatches (pearl-white/midnight-silver/deep-blue/solid-black/red-multicoat) with the
+    EXACT web swatch hexes (#e9ecf2/#5b6675/#1f3a72/#0d1117/#a3001a), decoded in the pure adapter.
+  • selected swatch -> white ring + check + scale (web `border-white scale-110`), VoiceOver `.isSelected`.
+  • inferred (auto-detected) swatch -> "<name> · Auto-detected" spoken/title suffix (web `title=...`).
+  • active-paint label, announced (web `aria-live="polite"`).
+  • "Reset to auto-detected" shown only when overridden (web `{isOverridden && ...}`).
+  • inferPaintFromTesla matching (lower-case, strip [\s_-], prefix/exact rules, fallback pearl) — verbatim.
+  • setPaint normalization: picking the inferred color clears the override (web setPaint) — verbatim.
+  i18n: every web t()-key present in P1/S10 table (paint.pickerLabel/label/detected/reset + 5 paint names);
+        zero English string literals in Swift (NSLocalizedString facade with web-English fallbacks).
+  States: loading / error / empty are sanctioned P4 leaf additions mapped onto the REAL upstream the
+        auto-detect color comes from (the vehicle-config feed); stale/offline = freshness chip + banner with a
+        one-shot auto-refresh; the local override stays editable in every state. No invented network calls.
+
+------------------------------------------------------------------------------------------------
+GATES (raw results on THIS runner)
+------------------------------------------------------------------------------------------------
+  [GREEN]    swiftformat --lint (apps/apple/TeslaSync/shared-surfaces)  : 0/9 files require formatting   FORMAT_EXIT=0
+             swiftformat --lint apps/apple (FULL gate, FYI)             : 1/1921 require formatting — the ONE file is
+                                                                          TeslaSync/feature-views/ActionBuilder.Previews.swift
+                                                                          (blankLinesBetweenScopes), PRE-EXISTING + unrelated,
+                                                                          NOT a VehiclePaintPicker file, NOT in my git changes,
+                                                                          and outside this prompt's allowed-files scope.
+  [GREEN]    swiftlint --strict  (shared-surfaces scope, repo rule set) : 0 violations, 0 serious in 9 files  LINT_EXIT=0
+             swiftlint --strict  (FULL repo gate, FYI)                  : 1 PRE-EXISTING violation —
+                                                                          function_body_length in
+                                                                          TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+                                                                          (same one ToolCard logged; NOT a VehiclePaintPicker file).
+                                                                          NB: the repo .swiftlint.yml `included:` list does not yet
+                                                                          list `shared-surfaces`, so the FULL gate does not even
+                                                                          scan my files; I linted them with the identical rule set
+                                                                          via an explicit-scope config. Wiring `shared-surfaces`
+                                                                          into .swiftlint.yml + project.yml is an integration step
+                                                                          owned by the P4 acceptance gate — both files are OUTSIDE
+                                                                          this prompt's allowed-files set, so they are not touched.
+  [GREEN]    check-placeholders.ps1 -Path .../shared-surfaces (swift)   : PLACEHOLDER_COUNT=0, ALLOWED=0   PLACEHOLDER_EXIT=0
+             check-placeholders.ps1 -Path .../VehiclePaintPicker        : PLACEHOLDER_COUNT=0              PLACEHOLDER_EXIT=0
+             (no TODO/FIXME/Placeholder/stub/Lorem/"not implemented"/fatalError("unimpl"|"not — none of the
+              forbidden markers appear in any shipped source or comment.)
+  [GREEN]    ISOLATED build + checks — SwiftPM, swift-tools 6.0 (Swift 6 language mode ⇒ strict-concurrency
+             complete = same as the app's project.yml), compiling the EXACT shipped VehiclePaintPicker.*
+             sources against the REAL repo design-system files (apps/design/generated/apple/Tokens.swift +
+             Sources/Components/Motion/Motion.swift + Sources/Components/UI/Buttons.swift):
+                 "Build complete!"  ·  VerifyVehiclePaint ⇒ ALL_HARNESS_CHECKS_PASSED PASSED=119 FAILURES=0  EXIT=0
+             (119 assertions = the exact content of the shipped XCTest suite, re-expressed as a runnable
+              executable because Command Line Tools ship neither XCTest nor a SwiftPM-usable Testing host;
+              they exercise the real Adapter/Projection/Model logic on this runner.)
+
+  [BLOCKED]  xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=1
+  [BLOCKED]  xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=1
+
+------------------------------------------------------------------------------------------------
+WHY BLOCKED (platform capability) — not a code failure, no VehiclePaintPicker error involved
+------------------------------------------------------------------------------------------------
+  Both xcodebuild invocations fail BEFORE compiling anything, with:
+      "xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+       '/Library/Developer/CommandLineTools' is a command line tools instance"
+  This runner has the Command Line Tools but no Xcode.app and no iOS/iPadOS SDK (SDKs present:
+  MacOSX.sdk MacOSX15.sdk MacOSX26.sdk only). The full-app iOS-Simulator + macOS `xcodebuild build test`
+  gate therefore CANNOT execute here at all — it is the platform-capability case the prompt names
+  explicitly ("requires SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG. If
+  unavailable on the runner → STATUS=BLOCKED with API evidence"), and which the Acceptance Criteria
+  sanction ("EXIT=0 / STATUS=DONE (or STATUS=BLOCKED with platform-capability evidence in the log)").
+  This is the same gate apps/macos-pending-verifications.md defers to the ADR-012 macos-latest CI runner
+  for every P4 surface to date (ToolCard, AlertMessageEditor, FSMTimelineChart). A pending-verification
+  row belongs in apps/macos-pending-verifications.md, but that file is OUTSIDE this prompt's allowed-files
+  set (allowed: apps/apple/TeslaSync/shared-surfaces/VehiclePaintPicker.* + this log), so it is recorded
+  here and left for the acceptance-gate owner rather than edited out of scope.
+
+  Resolution command on a macos-latest runner with Xcode + signing:
+      cd apps/apple && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+        xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+
+------------------------------------------------------------------------------------------------
+HONESTY COVENANT (binding)
+------------------------------------------------------------------------------------------------
+  1  No red-as-green     : the iOS/macOS xcodebuild gate is reported BLOCKED (IOS_EXIT=1/MAC_EXIT=1) with the
+                           raw xcode-select error — never reported as passing. STATUS is BLOCKED, not DONE.
+  2  No scope narrowing  : every web region + branch reproduced (5 swatches w/ exact hexes, selected/inferred
+                           sub-states, inference rules, setPaint normalization, reset, active label).
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; xcodebuild failure is the
+                           captured error, not an assumption; the 119 logic checks were actually run.
+  4  No stubs as final   : complete production surface (9 files, 1581 lines) + 119 real assertions pass; the
+                           placeholder scanner reports 0. No "coming soon"/skeleton-only content.
+  5  No parity shortcut  : swatch colors, ring/check, inferred suffix, override/reset, freshness, a11y labels,
+                           telemetry, i18n keys all mapped to platform (SwiftUI + P1/S9 tokens), not Tailwind.
+  6  No delegation       : implemented directly; no sub-agents (prompt forbids delegation).
+  7  No predecessor bypass: binds P1/S8 state-holder seam, P1/S9 tokens (real Tokens.swift), P1/S10 i18n facade,
+                           P1/S11 telemetry, P4 core motion (TSFadeIn) — all present and consumed, none reimplemented.
+  8  No commit on red    : the COMMITTED artifact is GREEN on every gate runnable here (swift build, 119 checks,
+                           swiftlint --strict, swiftformat --lint, placeholder) AND on a real Swift-6
+                           strict-concurrency build against the real design system; the only non-green gate is
+                           the xcodebuild step, which is BLOCKED by a missing toolchain (capability), not RED by
+                           this code — exactly the macos-pending disposition the repo already commits.
+  9  No silent drift     : changes are confined to apps/apple/TeslaSync/shared-surfaces/VehiclePaintPicker.* and
+                           this log — the only files this prompt allows. The unrelated working-tree changes
+                           (AIUsageCard.* / BackupRestorePage.tsx from a prior task) are NOT staged or committed.
+ 10  EXIT/STATUS below.
+
+------------------------------------------------------------------------------------------------
+DISPOSITION
+------------------------------------------------------------------------------------------------
+  Production-polished, Apple-idiomatic VehiclePaintPicker shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED on this runner: it compiles and its full assertion suite (119 checks mirroring the
+  shipped XCTest cases) passes under the app's own Swift 6 strict-concurrency rules, against the real
+  design-system, with swiftlint --strict / swiftformat --lint / placeholder all green. The full-app
+  iOS-Simulator + macOS `xcodebuild build test` gate is BLOCKED on this Command-Line-Tools-only runner
+  (no Xcode.app, no iOS SDK) and is deferred to the ADR-012 macos-latest CI runner per
+  apps/macos-pending-verifications.md — the prompt's sanctioned platform-capability outcome.
+
+EXIT=1
+STATUS=BLOCKED

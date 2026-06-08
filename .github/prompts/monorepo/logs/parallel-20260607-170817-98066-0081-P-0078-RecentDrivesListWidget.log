@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure and checking platform capabilities, since this task requires Apple-native tooling (Xcode, SwiftLint, SwiftFormat).
+
+Toolchain status: `swift` 6.3.2, `swiftlint`, `swiftformat`, `pwsh`, `xcrun` are available, but **`xcodebuild` requires full Xcode** (only Command Line Tools present). Let me explore the existing Apple app structure and the web source before deciding on build strategy.
+
+Now I have the web spec. Let me explore the Apple app structure deeply — the dashboard-widgets directory, sibling widgets for conventions, and the shared P1 infrastructure.
+
+Sibling widgets exist (`DigitalTwinWidget`, `GuardModeWidget`, `LifetimeStatsWidget`) — these establish the canonical pattern. Let me study the two most relevant ones in full.
+
+Excellent — the pattern is clear. Now let me read the test/preview/strings files and locate the shared infrastructure (tokens, registry, skeletons) these depend on.
+
+The build is XcodeGen-based (`project.yml`, no `Package.swift`). Shared registry types live in `DigitalTwinWidget.Model.swift`. Let me locate all the design tokens and shared components my widget must reuse, and read the project config.
+
+Critical finding: the iOS/macOS app targets in `project.yml` only compile `Sources/`, `Localization/`, and design tokens — **not** `TeslaSync/dashboard-widgets/`. So sibling widgets aren't wired into the build either. Let me check the established precedent: how sibling widgets (e.g., 0055) resolved their gate, and whether full Xcode/xcodegen exist here.
+
+Full `/Applications/Xcode.app` **exists** (just not `xcode-select`-ed), and `xcodegen` is installed. I may be able to use it via `DEVELOPER_DIR`. Let me read the sibling 0055 gate log for the established precedent and test Xcode availability.
+
+I now understand the established, user-approved disposition (from siblings 0036/0054/0055): implement the full surface, run **host-runnable gates green** (Swift 6 typecheck against the real design system + executed adapter/model harness + swiftformat + swiftlint + placeholder), and **DEFER** the two `xcodebuild` scheme steps (surface not yet registered in `project.yml` — out of allowed scope per covenant #7 — and the KMP `Shared.xcframework` is absent). Full Xcode 26.5 is reachable via `DEVELOPER_DIR`.
+
+Let me write a plan file, then gather the web data/format contracts and the real Apple design tokens/components.
+
+Now let me read the exact web formatting/conversion contracts and the real Apple design tokens/components in parallel.
+
+I now have the full design-system contract. Let me read the list skeleton component and a row-composition precedent (GuardModeWidget) before writing.
+
+I have the complete contract. Let me check the lint/format configs to match house style, then write the six files.
+
+All contracts gathered. Key lint constraints: 120-col lines, before-first wrapping, no trailing commas, `--self remove`. I'll mirror the sibling style exactly and auto-format afterward. Writing the six files now, starting with the Foundation-only Model and Adapter.
+
+Now the parity-critical Adapter (pure projection reproducing the web numeric pipeline verbatim).
+
+Now the SwiftUI surface view.
+
+Now the strings catalog, Previews, and Tests.
+
+Now let me verify and auto-format my files, then run the format-lint gate.
+
+2/5 files got minor formatting fixes. Now run the gate's format-lint over `apps/apple`.
+
+FORMAT_EXIT=0 (0/296 require formatting). Now SwiftLint — the gate's `included:` doesn't cover `dashboard-widgets`, so I'll run the baseline gate **and** lint my files explicitly.
+
+Baseline GATE_LINT_EXIT=0. Now lint my files explicitly (they're outside the config's `included`).
+
+Three SwiftLint issues: two `file_length` (>400) and one `function_parameter_count` (8>5). I'll fix the param count in the Adapter, and split the view and tests into additional `RecentDrivesListWidget.*` files (allowed scope). Let me check current line counts first.
+
+Let me fix the Adapter's parameter-count violation by deriving the a11y label from the built row (2 params). Let me view the current post-format Adapter sections.
+
+Now split the view file — move the row view into `RecentDrivesListWidget.Views.swift`. Let me view the current row-view section.
+
+Creating `RecentDrivesListWidget.Views.swift` with the row view (made `internal`), and removing it from the main file.
+
+Main is 293 lines. Now split the Tests file. First make fixtures shareable, then move Model/Registry/Accessibility tests to a new file.
+
+Now find the section boundaries to move Model/Registry/Accessibility tests + the Spy double into a new file.
+
+All files now ≤400 lines. Re-format and re-lint all seven Swift files.
+
+SwiftLint clean (0 violations, 7 files) and SwiftFormat clean. Now the strongest evidence: actually **executing** the adapter/model logic on-host and **typechecking the view against the real design system**. Let me scope the design-system files (find `import Shared` exclusions).
+
+No `import Shared` in Components/Design (41 self-contained files). Let me create the registry-type shim and run the Swift 6 strict-concurrency typecheck of my view against the **real** design system.
+
+Now run the Swift 6 strict-concurrency typecheck of the surface against the real design system (Sources/Components + Sources/Design + generated tokens).
+
+All 52 errors trace to `Sources/Components/DataDisplay/UnitFormatters.swift` (it uses the KMP `UnitPreferences` type) — exactly the file the precedent excluded. Zero errors in my files. Let me confirm the error locality, then re-run excluding it.
+
+**View type-checks GREEN** under Swift 6 strict concurrency vs the real design system (40 design files + my 5 sources + tokens), `TYPECHECK_EXIT=0`, zero errors in my files. The only exclusion (`UnitFormatters.swift`) uses the KMP `UnitPreferences` type and is unrelated — exactly as the precedent documented.
+
+Now the executed adapter/model harness to prove value parity by running the real logic.
+
+Compile and run the parity harness (real Model + Adapter + shim + driver).
+
+Two fixes: use `RecentDrivesSurface` (the model-layer source of truth, since the SwiftUI `RecentDrivesListWidget` view isn't in the harness compile) and resolve the main-actor isolation by wrapping in a `@MainActor` function with local counters. Rewriting the harness.
+
+**Harness EXECUTES GREEN: CHECKS=105 FAILURES=0, HARNESS_OK.** All parity values, phase logic, telemetry, refresh/auto-refresh, registry, and a11y verified by execution.
+
+Now the placeholder gate. Let me locate and run the script.
+
+Running the placeholder gate (script-driven), both gate-style and across the whole widgets dir.
+
+Placeholder gate **PLACEHOLDER_COUNT=0, EXIT=0**. Let me do a manual forbidden-word scan and capture honest evidence for the deferred `xcodebuild` steps (capability present vs. scope/dependency blockers).
+
+No forbidden words; both deferred-gate blockers confirmed (surface not in `project.yml` sources — out of allowed scope; `Shared.xcframework` absent). Let me check the scheme's pre-action script, then attempt the real `xcodebuild` to capture honest evidence of the blocker.
+
+The scheme pre-action requires a Kotlin/Native **Gradle** build of the absent `Shared.xcframework`. Let me capture bounded, honest evidence: toolchain availability, that the project generates (capability present), and that my files aren't a build input of the app target (scope blocker) — then clean up.
+
+All evidence captured. Now I'll write the gate log (honest, mirroring the user-approved predecessor disposition), then do a final consolidated re-run to confirm reproducibility.
+
+Now a final consolidated re-run of every host gate to confirm reproducibility before committing.
+
+All five host gates reproduce green: FORMAT=0, LINT=0 (7 files), TYPECHECK=0 errors, HARNESS=105/105, PLACEHOLDER COUNT=0. Let me correct the file-count in the log (298 after adding the two split files), then commit.
+
+All gates green and the log is accurate. Let me update the plan, verify git status (ensuring I stage only my allowed files + log, not the pre-existing unrelated web edits), and commit.
+
+Only my 8 new files + the log are untracked; the two `M` web files are pre-existing and unrelated — I'll exclude them. Staging exactly the allowed files + log, then committing.
+
+Commit succeeded. Let me verify the commit and clean up the temp harness directory.
+
+The task is complete and verified. The commit is clean (9 files, 1934 insertions), the only remaining working-tree changes are the two pre-existing unrelated web admin files (correctly untouched), and the temp harness is cleaned up.
+
+Merge made by the 'ort' strategy.
+ ...shboard-widgets-0078-RecentDrivesListWidget.log | 172 +++++++++++
+ .../RecentDrivesListWidget.Adapter.swift           | 319 +++++++++++++++++++
+ .../RecentDrivesListWidget.Model.swift             | 338 +++++++++++++++++++++
+ .../RecentDrivesListWidget.ModelTests.swift        | 198 ++++++++++++
+ .../RecentDrivesListWidget.Previews.swift          | 182 +++++++++++
+ .../RecentDrivesListWidget.Tests.swift             | 259 ++++++++++++++++
+ .../RecentDrivesListWidget.Views.swift             | 128 ++++++++
+ .../RecentDrivesListWidget.strings                 |  45 +++
+ .../dashboard-widgets/RecentDrivesListWidget.swift | 293 ++++++++++++++++++
+ 9 files changed, 1934 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0078-RecentDrivesListWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RecentDrivesListWidget.swift

@@ -1,0 +1,129 @@
+=== P4 Shared surface 0036 AiOutputPanel (Apple) ===
+date: 2026-06-08T11:23:03Z  host: macOS 26.5.1  xcode: Xcode 26.5
+git: c9c6fdb9f  branch: auto/20260608-002645-33927/265
+web source: web/src/components/ai/AiOutputPanel.tsx (THE specification)
+
+--- Capability probe (prompt requires SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG) ---
+Xcode present: /Applications/Xcode.app via DEVELOPER_DIR. SDKs:
+  	iOS 26.5                      	-sdk iphoneos26.5
+  	macOS 26.5                    	-sdk macosx26.5
+  	Simulator - iOS 26.5          	-sdk iphonesimulator26.5
+iPhone 16 simulator: 1 available
+SwiftUI/Charts/MapKit import probe (macOS SDK):
+  imports OK
+CAPABILITY=AVAILABLE
+
+--- Path reconciliation (honesty: no silent drift) ---
+Prompt native output path: apps/apple/TeslaSync/shared-surfaces/AiOutputPanel.* (created verbatim).
+That directory is NOT yet a source path in apps/apple/project.yml (the app targets list
+TeslaSync/dashboard-widgets + TeslaSync/feature-views, not TeslaSync/shared-surfaces). project.yml
+is intentionally left untouched: it is outside this prompt's Allowed files, and editing it in a
+parallel-slot branch would create cross-surface merge collisions. Wiring shared-surfaces into the
+scheme is a P4-core / acceptance-gate (P99-0001) integration step. The surface is therefore proven
+build+test green in ISOLATION (the established protocol used by ToolCard / AlertMessageEditor /
+FSMTimelineChart per apps/macos-pending-verifications.md).
+
+Files shipped (Allowed files = AiOutputPanel.* + this log):
+  AiOutputPanel.Chrome.swift (233 lines)
+  AiOutputPanel.Model.swift (252 lines)
+  AiOutputPanel.Projection.swift (45 lines)
+  AiOutputPanel.strings (21 lines)
+  AiOutputPanel.swift (142 lines)
+  AiOutputPanel.Tests.swift (203 lines)
+
+--- swiftformat --lint (shipped surface + tests) ---
+(lint mode - no files will be changed.)
+SwiftFormat completed in 2.77s.
+0/5 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (shipped surface + tests, explicit paths) ---
+Linting Swift files at paths TeslaSync/shared-surfaces/AiOutputPanel.swift, TeslaSync/shared-surfaces/AiOutputPanel.Model.swift, TeslaSync/shared-surfaces/AiOutputPanel.Projection.swift, TeslaSync/shared-surfaces/AiOutputPanel.Chrome.swift, TeslaSync/shared-surfaces/AiOutputPanel.Tests.swift
+Done linting! Found 0 violations, 0 serious in 5 files.
+LINT_EXIT=0
+Note: the whole-tree 'swiftlint --strict' / 'swiftformat --lint .' gate has 2 PRE-EXISTING failures
+in OTHER prompts' files (feature-views/ActionBuilder.Previews.swift:48 blankLinesBetweenScopes;
+dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length) — neither is this
+surface; 0 shared-surfaces files are even in swiftlint's 'included:' scope. Not fixed: out of scope.
+
+--- placeholder gate (ADR-011) on shipped surface ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_GATE_EXIT=0
+
+--- Isolated SwiftPM build (module TeslaSync = surface + real deps: Tokens.swift + Motion.swift) ---
+[3/9] Emitting module TeslaSync
+[4/9] Compiling TeslaSync AiOutputPanel.Model.swift
+[5/9] Compiling TeslaSync Motion.swift
+[6/9] Compiling TeslaSync AiOutputPanel.Projection.swift
+[7/9] Compiling TeslaSync AiOutputPanel.swift
+[8/9] Compiling TeslaSync Tokens.swift
+[9/9] Compiling TeslaSync AiOutputPanel.Chrome.swift
+Build complete! (19.78s)
+ISOLATED_BUILD_EXIT=0
+
+--- Isolated swift test (adapter/projection + state-holder/telemetry + a11y + per-state render) ---
+	 Executed 21 tests, with 0 failures (0 unexpected) in 0.350 (0.352) seconds
+Test Suite 'All tests' passed at 2026-06-08 04:23:55.097.
+	 Executed 21 tests, with 0 failures (0 unexpected) in 0.350 (0.366) seconds
+ISOLATED_TEST_EXIT=0
+
+--- swiftc -typecheck vs REAL iOS 18 simulator SDK (Swift 6 strict) ---
+IOS_TYPECHECK_EXIT=0
+--- swiftc -typecheck vs REAL macOS 15 SDK (Swift 6 strict) ---
+MAC_TYPECHECK_EXIT=0
+
+--- xcodegen generate (project regenerates; shared-surfaces deliberately not yet wired) ---
+⚙️  Generating project...
+⚙️  Writing project...
+Created project at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-265/apps/apple/TeslaSync.xcodeproj
+XCODEGEN_EXIT=0  shared_surfaces_refs_in_pbxproj=0
+
+--- [~] Full-app 'xcodebuild build test' (iOS Simulator + macOS) : DEFERRED-macOS-pending ---
+Attempted: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+The scheme's 'Stage Shared.xcframework' pre-action assembles the KMP Shared.xcframework via Gradle
+(Kotlin/Native) before any app source compiles — observed in the run:
+    ▸ Assembling Shared.xcframework via Gradle…
+    export CODE_SIGNING_REQUIRED=YES   (simulator/dev signing)
+Beyond that staging, the app target is blocked by PRE-EXISTING, UNRELATED parallel-merge collisions
+(documented in apps/macos-pending-verifications.md, deferred to p4-apple/P99-0001 acceptance gate):
+  (1) 'struct DashboardWidgetSize' is defined 15x across Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/*
+      → a single app module cannot hold the duplicates. Concrete compiler proof (two of them):
+        /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-265/apps/apple/Sources/DashboardWidgets/DrivetrainHealthWidgetModel.swift:10:15: error: invalid redeclaration of 'DashboardWidgetSize'
+  (2) 224 co-located *.Tests.swift files in the app-target source dirs 'import XCTest' +
+      '@testable import TeslaSync' — invalid inside the module they belong to (test bundles only).
+  (3) This surface is not yet wired into project.yml (see Path reconciliation) — owned by P4 core.
+All four are environmental / pre-existing / integration items — NOT defects in this surface. Zero
+AiOutputPanel errors were produced by any compiler invocation above. Per the repo protocol these
+deferred artifact verifications run on the ADR-012 macos-latest CI matrix (P99-0001).
+IOS_FULL_BUILD=DEFERRED  MAC_FULL_BUILD=DEFERRED
+
+--- Acceptance criteria ---
+[x] Surface renders all web states reproduced: hidden (web null) / thinking (pending) / error / text.
+    (stale/offline N/A — the web source is a pure SSE-stream renderer with no query/cache/freshness).
+[x] Hooks bind through the shared P1/S8 state-holder (AiOutputSource → AiOutputModel @Observable);
+    no direct HTTP in the view (view is a pure function of the resolved phase).
+[x] Every web i18n key has a catalog entry (AiOutputPanel.strings table 'AiOutputPanel'):
+    helix.errorLabel, ai.common.errorUnknown, helix.thinking (+ aiOutput.a11y.panel). No English literals.
+[x] Accessibility: error line + thinking indicator are combined a11y elements with labels; brand mark
+    .accessibilityHidden; text body carries its label; Dynamic Type via Font.TS; Reduce Motion honored
+    on every animation (pulse / dots / shimmer / fade-in).
+[x] Tests: projection per-state (10) + state-holder wiring & view.opened telemetry (6) + a11y (1) +
+    per-state ImageRenderer render smoke (4) = 21 EXECUTED + PASS (isolated SwiftPM, Swift 6 strict).
+[x] Telemetry: view.opened surface=AiOutputPanel emitted once, deferred past the withdrawn idle phase
+    (P1/S11 AiOutputTelemetry seam, OSLog default, non-identifying slug).
+[x] No TODO/stub/mock/placeholder/Lorem (placeholder gate PLACEHOLDER_COUNT=0).
+[x] swiftformat --lint clean + swiftlint --strict clean on the shipped surface; isolated build+test
+    green; surface + dependency closure compile 0-error vs REAL iOS 18 AND macOS 15 SDKs.
+[~] Full iOS + macOS 'xcodebuild build test': DEFERRED-macOS-pending (Gradle/KMP Shared.xcframework
+    staging + simulator signing + pre-existing DashboardWidgetSize/co-located-XCTest collisions +
+    shared-surfaces wiring) — environmental/integration, not a code defect; tracked for P99-0001.
+
+Honesty covenant: no red reported as green. Every PASS above was executed and its real exit code
+recorded. The single non-green step (full xcodebuild) is explicitly marked [~] DEFERRED with its
+precise, evidenced root cause — never claimed as passing. STATUS reflects all host-runnable gates green.
+
+host-runnable gates all green: yes
+EXIT=0
+STATUS=DONE

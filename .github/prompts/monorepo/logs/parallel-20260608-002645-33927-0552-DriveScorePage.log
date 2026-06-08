@@ -1,0 +1,178 @@
+I'll start by exploring the codebase to understand the web source page, the existing Apple app structure, and the architecture I need to follow.
+
+The web source is large. Let me read it in sections and explore the Apple app structure in parallel.
+
+Let me continue reading the web source and explore the Apple app structure deeply.
+
+The output path mentions `Features/Driving` but I see a different structure. Let me explore the Apple project layout thoroughly to understand conventions.
+
+The real structure uses `TeslaSync/feature-views` (1436 entries). Let me find existing driving pages and any existing DriveScore implementation to match conventions.
+
+There's a large flat `feature-views` structure. Let me understand conventions, navigation, the parity ledger, and whether the toolchain (xcodebuild/swiftlint) is available — all critical decisions.
+
+Toolchain is available (xcodebuild, xcodegen, swiftlint, swift) — gate is not auto-blocked. The Apple app uses a flat `feature-views` structure with no `*Page*` files yet. Let me understand the web source fully and the Apple conventions. Let me create a plan and gather key context.
+
+Let me read the rest of the web source in parallel chunks to fully understand what I'm porting.
+
+I now fully understand the web source. Let me create a plan and explore the Apple conventions, navigation, KMP core bindings, and build infrastructure in parallel.
+
+Key finding: `Shared.xcframework` is empty (just `.gitkeep`) — the KMP core isn't built. There's also a `Sources/Features/Dashboard` page pattern and `Sources/SharedFacade/Domains`. Let me examine navigation, the facade, the Dashboard feature pattern, and the gate contract.
+
+The app has an `AppRoute` enum (with `.driving`) and a `SharedFacade` layer. Let me study the state/facade pattern and a representative existing feature-view component set to nail the conventions.
+
+The data layer depends on `import Shared` (the empty KMP framework). Let me check whether feature-views import `Shared` directly or use injected adapters, and study a full component set (DriveStatCards) as my template.
+
+Critical: **zero** feature-views import `Shared` — they're self-contained with injected adapters. This is the convention I must follow. Let me read the full DriveStatCards component set as my template.
+
+Excellent — the convention is now clear (Model/Format/Views/Adapter/Previews/strings/Tests split, self-contained with protocol seams). Let me confirm the build situation (empty framework), check the adapter pattern, and locate the component library + design tokens.
+
+pwsh + the placeholder script are available. Feature-views are fully self-contained (Adapter = pure projection, no `Shared` import). Let me confirm build feasibility (KMP framework) and read the component library, design tokens, and the Views/Previews conventions.
+
+KMP source + `build-shared-xcframework.sh` exist. Let me check build feasibility (Java), the gate contract README, the apple ledger, and any page precedent.
+
+Java 17 is available; the KMP framework is built via gradlew (Kotlin/Native — heavy). No apple-ledger or page precedent exists yet. I'll place files in the compiled `feature-views/` path (matching all 1266 siblings). Now let me read the component-library APIs I must call: RadialGauge, ChartContainer, GlassPanel/Card, tokens, Typography.
+
+Now I understand the chart/gauge APIs. Let me read the design tokens, Cards (GlassPanel), Badges, Typography, and the data-display/feedback component listings.
+
+I have a thorough grasp of the architecture. Let me read the remaining convention pieces: strings file, Previews, Tests, Badges/Typography APIs, Localization setup, and the swiftlint config.
+
+The swiftlint config explicitly includes `TeslaSync/feature-views` (not `Features`), confirming my placement. Strings use per-surface `.strings` tables. Let me read the remaining APIs: Badges, Typography, DataDisplay, chart wrappers, and the Tests/Previews conventions.
+
+Let me read the chart wrappers, data-display, feedback components, and the Previews/Tests conventions.
+
+The chart approach uses Swift Charts via TS wrappers + tokens. Let me read the DataDisplay (StatCard/MetricBar/KVList), Feedback (EmptyState), BarCharts API, and a Tests example, then I'll start building.
+
+I now have a complete understanding of all component APIs and conventions. Let me set up tracking, kick off the (long-pole) KMP framework build in the background, and start implementing.
+
+xcodegen works. Now let me kick off the KMP shared framework build in the background (long pole), then start writing code while it runs.
+
+Build kicked off. Let me set up my plan and todos, then start implementing while the framework builds.
+
+The KMP build failed (release), though a parallel slot wrote a debug framework — there's cross-slot Gradle interference. Let me inspect the error and the framework state, then retry cleanly with an isolated Gradle home.
+
+The real blocker: `xcrun xcodebuild -version` fails — Xcode isn't fully configured. Let me confirm definitively, since this determines the build/test gate status.
+
+There IS `/Applications/Xcode.app` but `xcode-select` points to CommandLineTools. I can override per-invocation with `DEVELOPER_DIR` (no sudo needed). Let me test.
+
+`DEVELOPER_DIR` override unlocks Xcode 26.5 + simulators — the build/test gates are achievable. Let me restart the framework build with `DEVELOPER_DIR` set (in background), then focus on writing the implementation.
+
+Build restarted. Now the core work. Let me read the web SI converters, number/date formatting, and unit-conversion instructions to port the math exactly.
+
+I now have all the exact web formatting logic. Let me write the implementation, starting with the pure `Format` file (converters, `scoreDrive`, grade, number/date formatting).
+
+Format file done. Let me check the build progress, then write the Projection (aggregates) file.
+
+The framework build is progressing (debug xcframework built; release linking). Let me write the Projection file (pure aggregates) while it finishes.
+
+Projection done. Let me definitively resolve the framework build by re-running it synchronously (artifacts are now cached), then continue with the Model.
+
+The release link is still running (background). Let me write the Model — the seams, the `@Observable` model with UI state + projections + formatting helpers, the in-memory source, and the Strings facade.
+
+Model done. Let me check the framework build status, then write the Charts file.
+
+**BUILD SUCCESSFUL** — `Shared.xcframework` is now staged. The build/test gates are achievable. Let me start a baseline app build in the background (to warm caches + verify the project compiles with the framework) while I write the remaining UI files.
+
+Let me kick off a baseline build in the background to warm caches while I write the remaining UI files.
+
+Baseline build warming. Now let me write the Charts file (Swift Charts: trend line, category bars, distribution histogram).
+
+The framework is built and baseline build is warming. Now the Views file — palette, primitives (gauge, grade badge, trend), state views, and string helpers (resolving my per-surface table verbatim, matching the DriveStatCards convention).
+
+Let me check the baseline build progress, then write the Sections file (all 29 panels).
+
+Cross-slot `/tmp` collision polluted that log. Let me use slot-unique paths going forward and verify my warming DerivedData exists.
+
+The errors were from slot-560 (cross-slot `/tmp` collision) — but they reveal `.Tests.swift` files hitting `import XCTest` during an app build. I must verify how test files are wired. Let me check project.yml's target source rules.
+
+Let me verify whether my warming build actually succeeded (produced the `.app`) — that tells me if feature-views `*.Tests.swift` compile cleanly into the app target on simulator.
+
+My warming build **succeeded** (`TeslaSync.app` built) — so feature-views `*.Tests.swift` compile cleanly into the app target on simulator, and my files will too. Before writing more, let me run swiftlint on my files so far to catch rule issues early (since `--strict` fails on warnings like `file_length`).
+
+Early lint caught 20 fixable issues (file length, grade-case names, trailing commas, large tuples, param count). Let me fix them systematically. First, rename the `DriveGrade` cases (single letters violate `identifier_name`) in Format.swift.
+
+Now let me rewrite Projection.swift into a smaller core file (fixing trailing commas, large tuple, grade refs, line length) and move tips/achievements/period-stats into a separate extension file to satisfy `file_length` and `type_body_length`.
+
+Now the Periods extension file (tips, achievements with a blueprint to avoid the param-count violation, and period stats):
+
+Now fix Model.swift: split it to satisfy `file_length`, fix the 121-char line. Let me view the regions to split precisely.
+
+Let me split the Model: extract the derived/formatting section into a new extension file and trim Model.swift.
+
+Model.swift is now 388 lines. Now create the derived extension file from the extracted body, then fix the long line.
+
+Now fix the long `weakestCategory` line in the derived file:
+
+Now fix Charts.swift (trailing comma + unused closure param). Let me view the spots.
+
+I accidentally removed the `aria` property. Let me view and restore it correctly while removing the trailing comma.
+
+Now remove the trailing comma after the last `Series` and fix the unused closure parameter:
+
+Let me fix the trailing comma and unused closure param directly with perl:
+
+Trailing comma fixed. Now Views.swift: fix the large tuple and split out the state views. Let me find the section boundaries.
+
+Let me extract the state views (lines 257–420) into a new States file and trim Views.swift:
+
+Now fix the large-tuple in the freshness chip (now in States.swift):
+
+Let me re-run swiftlint on all current files to confirm the fixes before writing the remaining files.
+
+3 left: 2 trailing commas in Periods.swift arrays, 1 trailing newline in Views.swift. Let me view and fix.
+
+Let me confirm all current files pass swiftlint now.
+
+All 8 files are swiftlint-clean. Let me add a shared category-label extension to Views.swift, then write the section composition files.
+
+Now let me simplify the Charts category-label helper to use the shared extension:
+
+Now let me write the main Sections file (chart-panel wrapper, hero, grade, breakdown cards, chart panels, tips).
+
+Now let me add data-column descriptors to the chart panel (web `ChartContainer dataColumns`) so the `col.*` strings are surfaced, then update the chart sections.
+
+Now update the three chart sections to pass their column descriptors:
+
+The `columns` arrays have trailing commas. Let me remove them:
+
+Now let me add a reusable KV row to Views.swift, then write the History and Stats section files.
+
+Now the History section file (best/worst cards + sortable history table + pager):
+
+Now the Stats sections file (summary cards + weekly/monthly period grid):
+
+Now the Achievements + detail KV cards file:
+
+Now the main Page scaffold composing all sections. Let me check the Forms components for a date-range control first, then write it.
+
+There's a `TSDateRangeFilter` / `TSRangePicker` (web RangePicker parity). Let me check its API to reuse it.
+
+`TSDateRangeFilter` is the date-range component I'll use. Now let me write the main Page scaffold.
+
+Now the strings catalog (.strings) with all 116 parity keys + native-chrome keys:
+
+Let me verify the strings file covers all 116 parity keys exactly.
+
+All 116 keys present. Now let me verify each key is actually referenced in the Swift code (so none are unused/hardcoded):
+
+The grep glob missed `DriveScorePage.swift` (title/subtitle) and the 16 achievement keys are built via interpolation in `blueprint`. Let me confirm with a corrected check.
+
+To make every key a literal (cleaner parity evidence), let me rewrite the achievement blueprints with explicit full keys instead of interpolation.
+
+Every key is now a literal (16 achievement keys fixed). Let me write the Previews and Tests, then regenerate and build. First, Previews with sample data:
+
+Now let me check how existing feature-view tests are structured (imports, target) before writing mine.
+
+The tests use `@testable import TeslaSync` and run in the XCTest targets — so the app target must exclude `*Tests*` and the test targets include feature-views tests. Let me verify the exact project.yml source rules.
+
+I'll follow the exact sibling test pattern (`import XCTest` + `@testable import TeslaSync`). Let me write both test files.
+
+All files written. Let me run swiftlint on the complete set, then regenerate and build.
+
+9 issues left (trailing commas, one large tuple, one long line). Let me batch-fix the trailing commas, then handle the tuple and long line.
+
+The `cd ..` landed in the wrong directory. Let me re-run swiftlint from the correct path.
+
+All 16 Swift files pass `swiftlint --strict`. Now let me regenerate the Xcode project (to include the new files) and build the app target.
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: DBAA:1E1AA0:204B9E:22584C:6A26EBF0)

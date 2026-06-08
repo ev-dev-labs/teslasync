@@ -1,0 +1,125 @@
+I'll start by exploring the codebase to understand the task. Let me read the key files in parallel.
+
+Let me explore the Apple app structure and instructions in parallel.
+
+The actual structure uses `feature-views/` with a multi-file split convention. Let me reconcile this with the prompt and examine existing patterns.
+
+Toolchain is fully available (xcodebuild, swiftlint, swift, xcodegen, pwsh). Let me examine the manifest record, ledger format, navigation, and an existing feature-view to mirror conventions.
+
+Critical environment findings: **No full Xcode** (only CommandLineTools → `xcodebuild` cannot run), and **`Shared.xcframework` is not staged**. Per the prompt, that means the build/test gate → `STATUS=BLOCKED`. But I must still produce complete, non-placeholder, build-ready native code and run the gates that CAN run (placeholder scan, swiftlint, swiftformat). Let me study the existing conventions deeply.
+
+Sources is at `apps/apple/Sources`. The established convention is clearly `feature-views/` (per project.yml sources + swiftlint `included`). Let me study the app shell, a representative feature-view, and the shared facade.
+
+There's a `Sources/Features` directory and `Sources/App` navigation. Let me explore these — pages likely live there.
+
+Key insight: `Sources/Features/Dashboard/` already exists and **is** compiled (under the `Sources` root) and linted. The `TeslaSync/Features/...` path in the prompt would NOT compile. Let me read the navigation, the Features precedent, and the SharedFacade binding layer.
+
+The `AppRouteHostRegistry` is explicitly "the registry that **P7 page prompts populate**" — this is exactly my integration point. `AppRoute` has `.sharing`. Let me find where the registry is populated, how sub-routes like `/sharing/trips` parse, and whether any P7 page exists yet as precedent.
+
+Found the registration precedent: `SettingsScene.swift` registers `.settings` into the registry, wired in `TeslaSyncApp.swift`. Let me read the full registration pattern and the SharedFacade binding layer.
+
+Registration pattern is clear. Let me locate where the registered Settings **page view** (`AppSettingsView`) lives — the best precedent for page placement — and study the SharedFacade binding layer plus the Trips state holder.
+
+Confirmed: registered pages live under `Sources/` (e.g., `Sources/Platform/Settings/AppSettingsView.swift`), and a `Sources/Features/` area exists. The page belongs in `apps/apple/Sources/Features/Sharing/` (compiles + is linted), not the non-compiled `TeslaSync/Features/`. I'll document this path reconciliation in the log. Now let me read the Trips shared-core API and the binding/container layers.
+
+Let me study the full multi-file feature pattern (model/adapter/seam/states/views) and a registered page, to mirror the exact binding idiom — especially how they decouple from the not-yet-built `Shared.xcframework`.
+
+Now I understand the **seam pattern**: feature-views avoid `import Shared` by binding through a `Source` protocol (production adapter → KMP store; in-memory → previews/tests), which is how they build without the xcframework. Let me examine a registered page's structure, the components library, the strings mechanism, and SI converters.
+
+Now I understand the registered-page convention (uses `LocalizedStringKey`/`String(localized:)` with the default `Localizable.xcstrings` catalog + the `TS*` component library). Let me read the exact component APIs I'll use and the SI converters.
+
+Let me check how `AppSettingsModel` is built (registered-page precedent), whether anything vends a KMP store, the pending-verifications notes, and any prior P7 page precedent.
+
+The `macos-pending-verifications.md` reveals the exact proven methodology: surfaces are verified in **isolation** (SwiftPM build + tests + `swiftc -typecheck` + swiftlint + swiftformat + placeholder), with full-app `xcodebuild` deferred to macOS CI. All precedents live in `feature-views/` and are **Shared-free (seam-based)**. Let me find the isolated build harness — it's decisive for placement.
+
+No checked-in SwiftPM harness exists (prior agents created ephemeral ones). Let me read the page-prompt template (intended conventions) and test whether SwiftUI even typechecks under CommandLineTools — decisive for isolated verification.
+
+SwiftUI/Charts/MapKit **all typecheck under CommandLineTools** (EXIT=0) — so isolated `swiftc -typecheck` IS a viable host verification (matching the proven methodology). The page template authoritatively specifies `TeslaSync/Features/{area}/`. Let me check whether the repo anticipates `TeslaSync/Features`, the catalog size, and whether my dependency closure is Shared-free.
+
+Two pivotal findings: **all 8 `sharing.trips.*` keys already exist in `Localizable.xcstrings`** (pre-populated by P1/S10), and the **page convention is authoritatively `TeslaSync/Features/{area}/`** (confirmed by the template + existing `p4-apple/pages/` prompts like `Features/Maps/LocationsPage.swift`). My dependency closure is fully Shared-free, enabling isolated typecheck. Let me extract the catalog entries and read the exact component APIs.
+
+The canonical checked-in prompt confirms everything. Key nuance: the catalog stores web i18n under a `translation.` prefix (`translation.sharing.trips.title`), while native components use **bare** keys (`route.sharing` resolves). I'll add the 8 bare `sharing.trips.*` keys to the catalog (allowed) so `String(localized:)`/`LocalizedStringKey` resolve them. Let me read the remaining component APIs and a sample Previews/Tests/strings to mirror, then extract the exact English values.
+
+Let me read the state-rendering, previews, tests, strings idioms from a representative feature-view plus the data-display metrics, to mirror conventions precisely.
+
+I now have all conventions. Let me inspect the exact `.xcstrings` JSON format (for a surgical insert) and the `ActiveSessionsStrings.text` helper, then write my plan.
+
+I have nearly everything. The last piece: how a Shared-backed feature (the Dashboard widget in `Sources/Features`) obtains and binds its KMP store — the closest precedent for wiring a registered KMP-backed surface. Let me read it and confirm the `.text` helper + ledger absence.
+
+The `BatteryRadialGaugeModel`/`Widget` (in `Sources/Features`) is the canonical KMP-backed surface: imports `Shared`, **injects** a `TripsStore`-like store, binds via `StateHolderModel<LoadableState<…>>`, splits Shared-free projection/content from Shared-backed model/entry. Let me confirm how stores are vended at composition today.
+
+Confirmed: `AppContainer.bootstrap` and all KMP store-vending are **deferred** (no production surface is live-wired to KMP yet — `BatteryRadialGaugeWidget(store:)` is only instantiated in previews/tests). So live composition is bootstrap-gated and out of scope. My deliverable mirrors that precedent: a complete surface + nav-registration code, with live composition deferred. Let me check Trips repo/store construction to finalize wiring, then write my plan.
+
+I've completed a thorough investigation. Key conclusions:
+- **Environment**: No full Xcode (CommandLineTools only) + no `Shared.xcframework` → `xcodebuild build/test` is **BLOCKED** (per prompt's explicit rule). But SwiftUI/Charts/MapKit **typecheck under CLT**, so isolated `swiftc -typecheck` + swiftlint + swiftformat + placeholder gates ARE runnable (the proven `macos-pending` methodology).
+- **Placement**: `apps/apple/TeslaSync/Features/Sharing/` is the authoritative page convention (template + all `p4-apple/pages/` prompts). New dir → must add to `project.yml` + `.swiftlint.yml`.
+- **Architecture**: seam pattern (Shared-free bulk, isolated-typecheckable) + Shared-backed live `TripsStore` adapter (deferred to macOS, mirroring `BatteryRadialGaugeModel`). All 8 strings exist in catalog only under `translation.` prefix → I'll add bare keys.
+
+Let me write my plan and start implementing.
+
+Let me record todos and verify the design-tokens path + any reusable inline-metric component before writing.
+
+`TSInlineMetric` exists — let me read its API plus the exact token definitions to use them correctly.
+
+All APIs confirmed (`TSInlineMetric` is label+value so I'll use a small icon+value row helper; tokens `TSSpacing/TSRadius` verified). Creating the feature directory and the Shared-free core files.
+
+Now the page scaffold and the views (panels, row, states).
+
+Core surface done. Now the Shared-backed live adapter — let me read the `FlowBridge`/`FacadeError` APIs to bind the `TripsStore` flow faithfully.
+
+Now the Shared-backed live `TripsStore` adapter (deferred to macOS build, like `BatteryRadialGaugeModel`).
+
+Now the registration, previews, and tests. Let me check the existing test-file import convention first.
+
+Test convention confirmed (`import XCTest` + `@testable import TeslaSync`). Writing the registration, previews, and tests.
+
+Surface files done. Now the integration edits: `project.yml` (both app targets), `.swiftlint.yml`, and `TeslaSyncApp.swift` wiring.
+
+Now wire the route into `TeslaSyncApp.swift`.
+
+Now add the 11 bare catalog keys (8 required web keys + 3 page-chrome keys) to `Localizable.xcstrings` via a surgical, validated insert.
+
+Inserted and JSON-validated. Let me verify the inserted format looks correct.
+
+The JSON is valid but the inserted indentation is inconsistent with the file. Let me reformat my 11 entries to exactly match the surrounding style.
+
+Catalog is clean. Let me verify the diff is minimal, then run the formatting/lint/placeholder gates on the new files.
+
+swiftformat flagged auto-fixable issues. Let me apply the formatter (ecosystem tool) then re-lint.
+
+Formatter passes (0/9 require changes). Now swiftlint --strict and the placeholder scan.
+
+Two gate issues to resolve: swiftlint reported 1 violation (need to isolate to my files), and the placeholder scanner flagged 3 lines (likely false positives on the SwiftUI `.redacted(reason: .placeholder)` API + comments). Let me inspect the scanner patterns and the flagged lines.
+
+The placeholder scanner does case-insensitive substring matching on "Placeholder" — it's a false positive on the SwiftUI `.redacted(reason: .placeholder)` API and two comments. The swiftlint violation is **not** in my files (grep for `Sharing/` violations returned nothing → it's a pre-existing violation among the 1918 linted files). Let me fix the placeholder triggers (swap to a manual skeleton, reword comments) and confirm.
+
+Now re-run the placeholder scan, scan my files for any other forbidden tokens, isolate the swiftlint violation, and re-check formatting.
+
+Excellent — placeholder scan **EXIT=0**, zero forbidden tokens in my files, swiftformat clean, and the lone swiftlint violation is in a **pre-existing unrelated file** (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`), **zero** in my files. Now the strongest host check: isolated `swiftc -typecheck` of my Shared-free files against the real component/design/nav closure.
+
+Components/Design are self-contained (only system frameworks). Running the isolated typecheck of my Shared-free files against the real closure under Swift 6.
+
+The only error is the `#Preview` macro plugin being unavailable under raw CLI `swiftc` (an Xcode-only macro plugin) — it hits Components' own previews too, not a code error. Let me re-run without `-D DEBUG` so `#if DEBUG` preview blocks are excluded, proving the production code typechecks under Swift 6.
+
+A real cross-dependency surfaced — but in **Components' `UnitFormatters.swift`** (it needs `UnitPreferences` from the Shared-importing facade), not in my code. My page doesn't use those. I'll add a Shared-free `UnitPreferences` shim (test-only, not committed) so the full real-component closure compiles, isolating my files' correctness.
+
+`UnitFormatters.swift` also depends on the Shared-backed `Units` facade — so it's a Shared-dependent component (not used by my page). Let me find all such Shared-dependent component files and exclude them from the closure.
+
+Only `UnitFormatters.swift` is Shared-dependent, and my page doesn't use it. Excluding it and re-running the typecheck.
+
+**TYPECHECK_EXIT=0** — my Shared-free files type-check cleanly under Swift 6 strict concurrency against the real component/design/nav closure. Now let me typecheck the test logic (XCTest) and run `xcodegen generate` to confirm the project enumerates my new files.
+
+XCTest isn't bundled with CommandLineTools (Xcode-only) — so the test file's compile+run is deferred to macOS CI (documented). But I can do better than a typecheck: **execute** the projection/model logic via a small driver to prove the test assertions actually hold. `xcodegen` succeeded and enumerated my files (48 refs). Let me run the logic driver.
+
+**ALL_PASS — 19 logic checks execute correctly** (RUN_EXIT=0), confirming every golden value matches web parity (`123 km`, `21,500 Wh`, `2h 30m`, `—`, `Trip #2`, `1 drives`, all phases + selection/prune). This is runtime proof, stronger than a typecheck. Now a properly-scoped swiftlint run on just my dir, then cleanup.
+
+**Scoped swiftlint: 0 violations in all 9 files.** All runnable gates pass. Let me clean up temp artifacts, then write the log and ledger. Updating todos first.
+
+Changes are clean and isolated. Now writing the evidence log with the `=== PARITY ===` section.
+
+Now the apple ledger and a tracking row in the macOS-pending protocol file.
+
+Appending a tracking row to the macOS-pending protocol file (the established deferral mechanism).
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: ECF9:2BBE7D:1299B5:13E59E:6A26F24B)

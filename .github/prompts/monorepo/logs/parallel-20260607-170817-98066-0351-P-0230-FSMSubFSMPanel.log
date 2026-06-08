@@ -1,0 +1,112 @@
+I'll start by exploring the repository structure to understand the web source and the Apple app architecture.
+
+Let me read the web source and explore the Apple app structure.
+
+Let me explore the Apple app directory structure in detail.
+
+The standard pattern is a 7-file set per surface. Let me read a complete example to learn the conventions.
+
+This is a sophisticated, well-established pattern. Let me read the remaining files of the example.
+
+Now I understand the pattern. Let me examine the web types, the `StateBadge` sibling, and locate the shared native design-system components.
+
+The shared design system lives under `apps/apple/Sources/Components`. Let me explore it and the design tokens.
+
+The tokens (`Color.TS`, `TSSpacing`, etc.) appear generated/packaged. Let me check the build toolchain availability and how the Apple app is structured (Xcode project / SPM).
+
+Let me probe the actual capabilities: SwiftUI/Charts/MapKit importability under CLT, and pwsh availability for the gate script.
+
+Big finding: SwiftUI/Charts/MapKit **do** typecheck under CLT, and `pwsh` is available — but `xcodebuild` needs full Xcode. Let me check for an Xcode.app and locate the main-app design tokens, while reading the FSM state maps and shared components.
+
+Xcode.app **is** present — `xcode-select` just points at CLT. I can likely override with `DEVELOPER_DIR`. Let me verify that, check the project/simulators, and read the shared components I need (EmptyState, TimeStamp, Grid, Badge, tokens).
+
+Excellent — **Xcode 26.5 works via `DEVELOPER_DIR`**, and `xcodegen` is available. Let me read `project.yml`, locate the token generator, and read the shared components I'll use.
+
+Now I understand the build wiring: `feature-views/` is a synced folder in both app targets, and design tokens come from `../design/generated/apple`. The app depends on `Shared.xcframework` via a preAction script. Let me check that dependency (likely the real gating factor), the token names, and the shared component APIs.
+
+`Shared.xcframework` is absent (needs Kotlin/Native via Gradle) — that's the likely full-build blocker. Let me read the token names and the exact shared-component APIs I need, then generate the project to learn target membership.
+
+I have the full token set, `TSFadeIn`, and `TSEmptyState`. Now the remaining APIs: `TSGlassPanel`, badge/pill, skeleton, a relative timestamp, and a responsive grid.
+
+`TSStatusPill` and `TSIconBox` look perfect for the state badge + icon chip. Let me read `Badges.swift` fully, find the timestamp + grid idioms, and read the web `TimeStamp`/`Grid` sources.
+
+`TSStatusPill`/`TSIconBox`/`TSBadge` cover the badge + icon chip. Let me confirm there's no shared native timestamp/grid, and read the lint/format configs I must satisfy.
+
+Let me check how siblings render responsive grids and relative timestamps (no shared `TSGrid`/timestamp exists), then I'll have everything.
+
+Let me mirror the house style for relative-time formatting and the adaptive grid by reading the precedents.
+
+I have all the conventions. Let me verify there are no naming collisions for my planned prefixed symbols and confirm the `TSButton`/`TSGlassPanel` APIs, then write the files.
+
+No collisions; APIs confirmed. Let me set up the plan/todos and write the first two files (Adapter + Model).
+
+Now the Adapter (pure logic) and Model (state holder) files.
+
+Now the main view and the subviews (`Views`).
+
+Now the comprehensive test suite.
+
+Now the i18n strings file.
+
+All 7 files created. Now the verification phase — formatting, linting, placeholder check, and a focused typecheck of the pure logic.
+
+Formatting passes. Now SwiftLint (strict) on my files, a standalone typecheck of the pure Adapter, and a look at the placeholder script's interface.
+
+SwiftLint strict: **0 violations**. Adapter typechecks standalone. Now let me run the placeholder gate exactly as specified and attempt a focused real typecheck of my SwiftUI surface against the actual shared design system + tokens.
+
+Placeholder gate passes (COUNT=0). The only typecheck error is the `#Preview` macro plugin missing under the **CLT** `swiftc` — a toolchain limitation, not a code issue (it hits the pre-existing `Typography.swift` too). Let me re-run the focused typecheck using the **Xcode** toolchain (which has the macro plugin) so my Previews are checked too.
+
+My files produced **zero** errors — only an unrelated sibling (`UnitFormatters.swift`, which I don't use) aborted the compile via its app-level deps. Let me get a clean focused typecheck by scoping to the design-system subdirs my surface actually uses (UI/Feedback/Motion + Design + tokens).
+
+One blocker left: `FeedbackOverlays.swift` (which I don't use) needs `TSMetricBar`. Excluding it and adding back Previews + DEBUG (Xcode toolchain has the macro plugin now):
+
+**Clean typecheck: EXIT=0** — my full surface compiles against the real design system. Now let me verify the Tests file typechecks against my sources (copying it without the module import, linking XCTest).
+
+The XCTest *module* resolved, but its assertion symbols need the platform lib search path. Let me retry with `-I`/`-L`, and in parallel generate the Xcode project to confirm target membership and assess the `Shared.xcframework` (KMP) build feasibility.
+
+Tests typecheck cleanly too (**EXIT=0**), the project generates with my files included (42 refs), and an iPhone 16 sim is booted. The remaining gate factor is the KMP `Shared.xcframework`. Let me read the env's own note on this and attempt the Gradle build.
+
+The project's own `macos-pending-verifications.md` is decisive: it documents that for P4 feature-view surfaces (e.g., ToolCard, AlertMessageEditor), the **full-app `xcodebuild build test` is deferred to a `macos-latest` CI gate**, blocked by *pre-existing, unrelated* issues (unstaged `Shared.xcframework`, co-located `*.Tests.swift` importing XCTest into the app target, `DashboardWidgetSize` collisions, signing). The per-surface verification is `swiftc -typecheck` (iOS-18 + macOS-15) + swiftlint/swiftformat/placeholder. Let me check the Gradle attempt, then match that precedent with an iOS-18 typecheck.
+
+The Gradle KMP build won't complete here (consistent with the documented macOS-pending status). I have definitive evidence from the project doc. Let me stop it and run the iOS-18 typecheck to match the precedent.
+
+iOS-18 typecheck also **EXIT=0**. Now let me capture honest evidence of the *pre-existing, unrelated* full-app blockers and run the real `xcodebuild` (bounded) to record where it fails.
+
+Evidence confirms the documented pre-existing blockers exactly (Shared.xcframework absent, `DashboardWidgetSize`×15, 135 co-located `*.Tests.swift` importing XCTest into the app target — the established convention my Tests file follows). Zero errors from my surface. Let me wait for the bounded xcodebuild to record its block point.
+
+Bounded `xcodebuild` timed out (EXIT=124) hung in the `Stage Shared.xcframework` Gradle preAction — never reaching my code. This is the documented macOS-pending block. Let me check the logs dir and a sibling surface's log to match the expected format.
+
+The sibling log is the authoritative template — it ends **EXIT=0 / STATUS=DONE** with the full-app `xcodebuild build test` explicitly **DEFERRED (ADR-012 macOS-pending)**, and the per-surface proof includes a real `swift test` run via an isolated SwiftPM package. Let me run my tests for real the same way (isolated SwiftPM module `TeslaSync`).
+
+Package assembled (25 source + 1 test file). Now the real test run with the Xcode toolchain:
+
+**37/37 tests pass** via the isolated SwiftPM module (macOS 15, Swift 6 strict concurrency) — matching the sibling precedent. Every host-runnable gate is green. Let me write the gate log, clean up temp artifacts, and verify git status.
+
+Now clean up temp artifacts and verify the working tree shows only my intended changes.
+
+Working tree is clean — exactly the 7 surface files + the log (the generated `.xcodeproj` and `apps/shared/core/build/` are gitignored). Now commit per the prompt.
+
+Commit succeeded. Let me confirm the commit landed and do a final green re-check of the host gates on the committed files.
+
+All committed and re-verified green. Let me finalize the todo tracking.
+
+All todos complete. The FSMSubFSMPanel Apple surface is shipped, verified, and committed.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0230-FSMSubFSMPanel.log |  92 ++++++
+ .../feature-views/FSMSubFSMPanel.Adapter.swift     | 210 ++++++++++++
+ .../feature-views/FSMSubFSMPanel.Model.swift       | 290 +++++++++++++++++
+ .../feature-views/FSMSubFSMPanel.Previews.swift    |  98 ++++++
+ .../feature-views/FSMSubFSMPanel.Tests.swift       | 361 +++++++++++++++++++++
+ .../feature-views/FSMSubFSMPanel.Views.swift       | 250 ++++++++++++++
+ .../TeslaSync/feature-views/FSMSubFSMPanel.strings |  35 ++
+ .../TeslaSync/feature-views/FSMSubFSMPanel.swift   | 160 +++++++++
+ 8 files changed, 1496 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0230-FSMSubFSMPanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMSubFSMPanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMSubFSMPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMSubFSMPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMSubFSMPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMSubFSMPanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMSubFSMPanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMSubFSMPanel.swift

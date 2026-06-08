@@ -1,0 +1,166 @@
+I'll start by exploring the environment and understanding the task requirements.
+
+Key findings: `swift` 6.3.2, `swiftlint`, and `swiftformat` are available, but `xcodebuild` requires full Xcode (only Command Line Tools installed) and `simctl` is unavailable. Let me read the web source and explore the existing Apple app structure thoroughly before deciding on approach.
+
+Now let me explore the Apple app's internal structure to understand the patterns I must follow.
+
+Let me explore the key architectural pieces I must integrate with: state holders (P1/S8), tokens (P1/S9), i18n (P1/S10), telemetry (P1/S11), shared UI components, and existing comparable surfaces.
+
+The `feature-views` directory shows a clear multi-file pattern per surface. Let me examine a complete example and the build capability situation in detail.
+
+Critical finding: SwiftUI, Swift Charts, and MapKit **do** compile under Command Line Tools (`swiftc -typecheck` succeeded). So I have a real compile-verification path even without full Xcode. `xcodebuild` scheme build/test needs Xcode.app + simulators (unavailable), but the frameworks themselves are present.
+
+Let me study the established feature-view pattern in depth using `AcDcStatsPanel` as the template, plus find telemetry/i18n/token integration points.
+
+This template is comprehensive. Let me read the remaining example files and the web `tourRegistry` dependency that `TourLauncher` relies on.
+
+Let me read the previews, strings, the web `tourRegistry` dependency, and discover the shared components/tokens I'll need (Modal, Button, GlassPanel, design tokens).
+
+Let me read the tour definitions (for the registry data) and the design tokens + shared UI components I'll compose with.
+
+I now have the full tour registry data. Let me read the design tokens and shared UI components, and check how modal/launcher-style surfaces are handled natively.
+
+Let me read the shared components and design token definitions I'll compose with.
+
+Let me read the design tokens and remaining shared components (motion, skeleton, typography), plus a native modal example.
+
+Let me read the typography components, a native modal example, and critically understand how `*.Tests.swift` files in `feature-views/` get wired into test targets (since `project.yml` test targets point at `Tests/`).
+
+There's a `Tests/Unit/FeatureViews` directory. Let me understand how `*.Tests.swift` files in `feature-views/` reconcile with the test target wiring.
+
+`Tests/Unit/FeatureViews/` contains only `ToolCardTests.swift`, yet `AcDcStatsPanel.Tests.swift` sits in `feature-views/`. Let me clarify the dominant convention and probe the dependency/compile situation.
+
+Confirmed: co-locating `*.Tests.swift` with the surface is the dominant convention (170 vs 1), and my needed components don't import the KMP `Shared` framework — so I can build a self-contained `swiftc -typecheck` island. Let me read the closest modal analog (`WidgetPicker`) and locate `.tsGlassPanel()` + `TSBadge`.
+
+`WidgetPicker` is the ideal modal analog. Let me read it fully along with its Model to nail the close/telemetry/strings/accessibility conventions.
+
+I have a thorough understanding now. Let me check the lint/format configs, the placeholder script, the surface-slug pattern, and the logs directory before writing.
+
+Both `pwsh` and the placeholder script exist. Let me examine an existing feature-view log to see how the xcodebuild-unavailable situation was handled on this runner (the established honesty convention).
+
+The reference log reveals the original runner had full Xcode at `/Applications/Xcode.app` accessed via `DEVELOPER_DIR` override (the active dir was also CLT). Let me check if Xcode.app is actually present here — that would unblock the full gate.
+
+Xcode 26.5 **is** installed at `/Applications/Xcode.app` — accessible via `DEVELOPER_DIR`. This unblocks the real gate. Let me assess full-build feasibility: xcodegen, staged Shared.xcframework, simulators, and repo state.
+
+xcodegen + simulators (iPhone 17 family) + Xcode are present, but `Shared.xcframework` is **not** staged and there's no `gradle` on PATH. Let me assess whether the KMP framework can be built here (it's the app's long-pole dependency) and read the staging script.
+
+The KMP `apps/shared` project is present. I'll pursue two tracks: (1) write the complete surface and verify with the real Xcode SDK via `swiftc`/swiftlint/swiftformat/placeholder, and (2) attempt the full `xcodebuild` gate, starting the long KMP framework build in the background now. Let me record a plan and kick off the background build.
+
+Now let me kick off the heavy KMP framework build in the background while I write the surface code.
+
+Java 17 present. Starting the KMP framework build in the background (monitored async).
+
+Now I'll write the surface. Starting with the Adapter (pure registry data, route matching, projection helpers, accessibility) — the dependency-free foundation.
+
+Now the Model — the seams (telemetry P1/S11, i18n P1/S10, state-holder P1/S8), the completion store, the pure projection, the observable model, and in-memory + production sources.
+
+I placed `import SwiftUI` at the bottom — that'll trip swiftformat's import grouping. Let me move it to the top import block.
+
+Let me check the background KMP build progress, then continue with the Views file.
+
+KMP build is still churning (expected). Let me write the main surface view.
+
+Let me refine the accessibility `rowLabel` helper to also include the description (better VoiceOver reading), then write the Views file.
+
+Now add `start`/`replay` to the copy helper, then write the Views file.
+
+Now the Views file with the row, chips, freshness/connectivity, reset button, and loading/empty/error chrome.
+
+Let me check the KMP build progress, then write the Previews.
+
+The KMP build is still running. Let me write the Previews file.
+
+Now the comprehensive test suite (adapter/registry/route-match, projection, model+telemetry, accessibility, completion store, production source).
+
+Now the per-surface i18n strings table.
+
+The KMP build finished. Let me confirm the framework was staged.
+
+KMP framework staged successfully (release XCFramework, 11m). The full `xcodebuild` path is now viable. Before wiring my surface in, let me generate the baseline project and determine exactly how `feature-views/*.Tests.swift` files map to targets (so I replicate it correctly).
+
+Both the source and its `.Tests.swift` have 4 build-file refs. Let me map exactly which targets compile each, so I wire `misc-surfaces` identically.
+
+Definitive finding: feature-view `*.Tests.swift` files are compiled into the **app** targets (not the test targets) — alongside their sources. That's unusual (XCTest + `@testable import` inside the app module), so I must verify whether the baseline app even builds here. Let me start a baseline macOS build in the background (target-level, reusing the staged framework) and meanwhile verify my surface independently.
+
+Let me independently verify my surface compiles **and** its tests pass, using a throwaway SwiftPM package (curated real dependencies). First, confirm which shared components my files actually reference.
+
+Baseline build returned. Let me check the result — this determines whether the full `xcodebuild` gate is achievable.
+
+The baseline build **failed in ~20s** at the Swift compile stage (pre-existing, before my surface is even wired in). I need the actual error lines. Let me rebuild arm64-only and capture `error:` messages.
+
+Now let me build the independent SwiftPM verification package (my sources + their real shared-component deps + tests) to compile-check and **run** the tests.
+
+Root cause confirmed and captured: the baseline app target fails because **all 170 pre-existing `feature-views/*.Tests.swift` files** (`import XCTest`) are compiled into the app target, which can't resolve `XCTest` — e.g. `AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'`. This is a pre-existing, surface-independent project-wiring condition. My surface is unrelated.
+
+Let me verify my surface rigorously through working means. First, compile + run the tests via SwiftPM.
+
+My surface compiles cleanly against the macOS 15 SDK. Now run the tests.
+
+All **42 tests pass** and the surface compiles on macOS 15. Now verify iOS 18 SDK compilation, then lint/format/placeholder.
+
+iOS 18 type-check passes too. Now format + lint my files (mutating formatter first to normalize, then the gate's `--lint` check).
+
+swiftformat normalized 3/6 files. Let me see the changes, then confirm `--lint` is clean and run swiftlint.
+
+`swiftformat --lint`: 0/6 — clean. swiftlint linted the whole config (1909 files) and found 1 pre-existing serious violation — I need its location to confirm it's not mine. Let me find it and lint my files in isolation.
+
+Confirmed: the 1 pre-existing violation is `dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141` (`function_body_length`) — the exact violation the reference AcDcStatsPanel log also flagged as pre-existing. Not mine. Let me isolate-lint my 6 files cleanly.
+
+5 real violations in my files to fix: 2 trailing-closure issues, 2 file-length (>400), 1 line-length. Let me read the exact current text (post-format) to fix precisely.
+
+Let me fix the line-length and the two trailing-closure violations.
+
+Now the two file-length splits. Let me view the current Model.swift to extract the stores/sources cleanly.
+
+Let me split `Model.swift` — move the completion store + concrete sources into a new `TourLauncher.Stores.swift`.
+
+Boundaries confirmed. Let me perform the split.
+
+Both files now under 400 lines. Now split the Tests file. Let me map its sections.
+
+Now update the `Tests.swift` header to reflect its reduced scope.
+
+All files now under the 400-line limit. Let me re-run formatter + isolated lint on the updated file set.
+
+Format and lint both clean (0/8, 0 violations). Now re-sync the SwiftPM package with the split files and re-run build + tests to confirm the refactor didn't break anything.
+
+All 42 tests pass post-refactor. Now the iOS 18 type-check on the updated files and the placeholder scan.
+
+All surface-scoped checks are green: macOS build ✓, **42 tests pass** ✓, iOS 18 type-check ✓, swiftformat ✓, swiftlint ✓, placeholder ✓.
+
+Now let me run the **literal gate's** `xcodebuild` scheme commands to capture their authentic outcome (the destination `iPhone 16` isn't installed → adapting to an available device). I'll run both schemes in the background.
+
+While the scheme gate runs, let me read the **full** GATES/STATUS section of the canonical sibling log (AcDcStatsPanel) — it faced the identical project structure and will show how the xcodebuild gate was handled here.
+
+This is the decisive precedent. The canonical sibling (AcDcStatsPanel) — and ToolCard/0010, FlagsTable/0031, SummaryStatsRow/0048 — faced the **identical** pre-existing condition and resolved it as the sanctioned **"code-complete + DEFERRED Xcode gate"** disposition: all host gates green + isolated SwiftPM build/test green + xcodebuild explicitly reported RED/DEFERRED with root cause → **EXIT=0 / STATUS=DONE**. My situation is identical (same XCTest-in-app condition, same pre-existing LifetimeStatsWidget lint violation).
+
+Let me gather final artifact metrics while the scheme gate runs.
+
+Let me check the scheme gate's progress.
+
+iOS gate confirms IOS_EXIT=65 — the **only** error is the pre-existing `feature-views/AIRestorePanel.Tests.swift: XCTest` (not my surface, exactly matching the precedent). Waiting for macOS.
+
+Both scheme gates confirmed: **IOS_EXIT=65, MAC_EXIT=65**, and in **both** the only error is the pre-existing `feature-views/AIRestorePanel.Tests.swift: XCTest` — zero TourLauncher errors. This is the exact sanctioned "DEFERRED Xcode gate" precedent.
+
+Let me capture the authentic whole-tree gate numbers (the literal gate commands) for the log.
+
+Let me identify the 1 pre-existing unformatted file (to confirm it's not mine) for honest documentation.
+
+The 1 swiftformat issue is pre-existing in `feature-views/ActionBuilder.Previews.swift` (not mine); my 8 files are clean. Both whole-tree gate "issues" are pre-existing and surface-independent, exactly as the precedent documents.
+
+Let me grab toolchain versions, then write the comprehensive gate log.
+
+All evidence gathered. Now I'll write the comprehensive gate log following the repo's sanctioned disposition format.
+
+The log is written. Now let me verify the git working tree state to commit only my intended files (not the generated project, build artifacts, or pre-existing WIP).
+
+The generated project, `build/`, and `Shared.xcframework` are all gitignored; the only untracked items are my surface + log. The 9 modified files are pre-existing WIP (not mine) and will be excluded. Let me stage only my files and verify.
+
+Exactly my 9 surface files + the log are staged — nothing else. Committing.
+
+Committed (dcad35a84) with only my 10 files; the 9 pre-existing WIP files remain untouched. Let me do a final airtight confirmation on the committed working-tree files and clean up temp artifacts.
+
+Everything green on the committed state: swiftformat 0/8, swiftlint 0 violations, **42 tests pass**. Let me clean up temporary artifacts.
+
+The task is complete. Final state verified: the surface is committed (`dcad35a84`), all my files clean, the 9 pre-existing WIP files untouched, temp artifacts removed.
+

@@ -1,0 +1,160 @@
+I'll start by exploring the environment capabilities and the repository structure to understand what I'm working with.
+
+Key finding: This is macOS but only **Command Line Tools** are installed — no full Xcode, so `xcodebuild` and `simctl` are unavailable. But `swift 6.3.2`, `swiftlint`, and `swiftformat` ARE available. Let me explore the existing Apple app structure to understand patterns before deciding the approach.
+
+Substantial existing structure — `feature-views/` has 740 files following a multi-file pattern (`.Adapter.swift`, `.Model.swift`, `.Previews.swift`, etc.). Let me study the conventions by examining a complete example and the web source.
+
+Clear 7-file convention: `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`. The sibling `DrivingPerformanceCards` (same driving-dynamics feature) is the ideal template. Let me read the web source and the full template set.
+
+Now I understand the main view structure. Let me read the rest of the template (Model, Adapter, Views, Previews, Tests, strings) and the web types for `DrivingCoachData`.
+
+Excellent, high-quality codebase with clear conventions. Let me read the remaining template files (Views, Previews, Tests, strings) and the web type definitions.
+
+Now I have the full web type. Let me read the Previews/Tests templates, the design tokens, and study how sibling feature-views implement charts (RadialGauge, line charts) since this surface needs them.
+
+Let me locate the design tokens and study how sibling feature-views implement gauges, Swift Charts line charts, and tables (since this surface needs all three).
+
+Found tokens in `Sources/Theme.swift`. Let me read the theme tokens, a Swift Charts line-chart sibling, a table sibling, and the gauge model to fully ground my implementation.
+
+Now I have the Swift Charts reference. Let me read the theme tokens, the project.yml (to understand target composition), a table sibling, and the gauge model/adapter.
+
+I have a thorough understanding now. Let me read the build config, lint configs, the placeholder-check script, and a table-rendering sibling to ground the per-drive-scores table.
+
+pwsh IS available (the placeholder check can run). Feature-views auto-compile via XcodeGen globs. Let me resolve how `.Tests.swift` files are wired into the test target, study a table sibling, and confirm shared chart/skeleton helper signatures.
+
+There's a `Tests/Unit/FeatureViews/` dir. Let me confirm how feature-view `.Tests.swift` files are wired (symlink vs glob) so I place my test correctly, and grab the `tsChartAxes`/`axisLabel` details.
+
+Convention confirmed: 94 surfaces use `feature-views/<Name>.Tests.swift`. I'll follow the dominant template exactly. Let me grab the precise chart-helper signatures and a badge/chip rendering example, then write the surface.
+
+Paths clarified (`apps/apple/Sources/...`). Let me read the chart helper internals and the badge component pattern precisely.
+
+I have deep grounding now. Let me verify exact web formatting parity (`fmtNumber` default decimals, `formatDateShort`) and read the placeholder-check script to ensure compliance.
+
+Let me read the exact `fmtNumber` body (default decimals) and the forbidden placeholder patterns JSON.
+
+Critical: the word "Placeholder" and "not implemented" are forbidden patterns (case-insensitive) — I'll avoid them in code and comments. Let me confirm the default `_globalPrecision` for `fmtNumber`.
+
+I now have a complete, thorough understanding of the conventions, web source, data shapes, formatting, tokens, and gate. Let me set up a plan and todos, then implement the 7-file surface.
+
+Now I'll write the surface. Starting with the pure, Foundation-only Adapter (the testable projection core).
+
+Now the Model (state-holder seam, telemetry, strings facade).
+
+Now the main view.
+
+The Views file needs a pure accessibility helper that's testable without SwiftUI. Let me append it to the Adapter (Foundation-only), then write the Views.
+
+Now the Views file (all panels and chrome):
+
+Now the Previews.
+
+Now the i18n strings catalog.
+
+Now the comprehensive test suite.
+
+All 7 files written. Now let me verify. First, normalize formatting with swiftformat, then lint with swiftlint --strict on my files.
+
+Good, 4 files normalized. Now confirm `swiftformat --lint` is clean and run `swiftlint --strict` on the new files.
+
+`--strict` promotes the default 400-line `file_length` warning to an error (my `tail` masked swiftlint's real exit). The Adapter/Views/Tests exceed 400 lines and `previewInput()` exceeds the 50-line function limit. I'll split into more `DrivingCoachSection.*` files (matching sibling multi-file convention) and fix the preview. Let me check exact line counts and any oversized type bodies first.
+
+swiftformat's `before-first` wrapping inflated line counts (each init param on its own line). With `--strict`, the default 400-line `file_length` is a hard error. I'll split the Adapter/Views/Tests into more `DrivingCoachSection.*` files (matching the sibling multi-file convention, e.g. `DrivingSection` uses 11 files) and fix the preview function length. Let me delete the three oversized files and recreate them partitioned.
+
+Now the input value types:
+
+Now the projection output value types:
+
+Now the formatting helper in its own file:
+
+Now the Adapter (projector split across extensions to respect `type_body_length`, plus the accessibility seam):
+
+Now recreate the Views split into chrome (`.Views.swift`) and panels (`.Panels.swift`). First, the chrome:
+
+Now the panels file (the 7 panels + gauge + chart):
+
+Now split the tests into `.Tests.swift` (adapter/format/projection) and `.ModelTests.swift` (model + a11y):
+
+Now fix the Previews function-length violation by decomposing `previewInput()`:
+
+The Previews file already exists — let me remove and recreate it with the decomposed version.
+
+Now re-run swiftformat (in-place) on all files, then check `--lint` and `swiftlint --strict` with REAL exit codes.
+
+`Panels.swift` (500) still exceeds 400. Let me split it: panels 1–4 stay in `Panels.swift`, panels 5–7 move to `Rows.swift`.
+
+Now run the full lint suite with REAL exit codes (no pipe masking):
+
+All 13 files ≤400 lines, `swiftformat --lint` clean (FORMAT_EXIT=0), `swiftlint --strict` clean (LINT_EXIT=0, 0 violations). Now the strongest evidence: actually compile and run the tests in a standalone SwiftPM package (module named `TeslaSync` so `@testable import TeslaSync` resolves unchanged), including the generated tokens.
+
+Build is compiling (SwiftUI/Charts take time). Let me wait for completion.
+
+The entire surface compiled — Views, Panels, Format, Model, Adapter all built. The ONLY failure is the `#Preview` macro in Previews.swift: the `PreviewsMacros` plugin ships with full Xcode, not CLT. That's a known CLT-only tooling limitation, not a code defect (real `xcodebuild` provides it). Let me exclude the preview scaffolding from the harness and run the full build + test suite.
+
+The copy loop missed the main view file (`DrivingCoachSection.swift` — my loop looked for `DrivingCoachSection.swift.swift`). Let me copy it and rebuild.
+
+Build complete — the entire surface type-checks. Now run the full test suite (adapter + model + accessibility):
+
+`swift test` needs XCTest, which (like the `#Preview` macro) ships only with full Xcode, not CLT — another CLT-only limitation. To still get REAL execution evidence, I'll add an executable target that links the compiled `TeslaSync` library and runs the same assertions through the public API (adapter projections + model state machine).
+
+Swift 6 strict-concurrency: top-level globals are MainActor-isolated. Let me annotate the runner functions `@MainActor` and invoke them inside the isolated context.
+
+**58/58 checks PASS** — the entire surface compiled and the adapter projection + model state-machine logic executed correctly with web-parity values. Now the placeholder gate. The gate's `-Path` points at the `DrivingCoachSection` prefix (not a real dir), so I'll run it that exact way AND meaningfully scan my actual files via a temp dir.
+
+Placeholder gate passes both ways (EXIT=0) and no forbidden patterns. Now let me verify i18n completeness — every key referenced in code must exist in the `.strings` catalog.
+
+The "referenced-but-not-defined" set is empty — all referenced keys are defined. `a11yLatest` is a false-positive (my regex excluded the digits in "a11y"); `noDrives` is intentionally retained for web-source parity. Let me re-verify with a digit-inclusive pattern to be certain there's no real gap.
+
+All referenced i18n keys are defined — no gaps. Before finalizing the gate log as BLOCKED, let me check whether a full Xcode is installed anywhere (which would let me run the real `xcodebuild` gate rather than just documenting the CLT limitation).
+
+`/Applications/Xcode.app` exists — full Xcode is installed; `xcode-select` just points at CLT. I may be able to run the real gate via `DEVELOPER_DIR`. Let me assess feasibility (xcodegen, prebuilt Shared.xcframework, simulators).
+
+Full Xcode 26.5, xcodegen, and simulators (iPhone 17 family) are available — but the `Shared.xcframework` (KMP core) is NOT prebuilt and requires a Gradle/Kotlin-Native build. The covenant says "no skip-and-assume," so I'll genuinely attempt the real gate rather than assume it's blocked. First, generate the Xcode project and probe the KMP dependency feasibility (time-boxed).
+
+Project generated and all my files are wired in. gradlew is present. Now the critical step — build the `Shared.xcframework` (KMP core), which the gate's pre-build phase requires. Let me attempt it (async so I can monitor), time-boxed.
+
+Gradle is initializing (likely downloading the wrapper/dependencies). Let me continue monitoring.
+
+Let me check whether Gradle is actively working or stalled (CPU/network/process state) from a separate shell.
+
+The environment is shared — many parallel agents (slots 278, 288, 317, …) are running the same heavy KMP `:core:assembleSharedXCFramework` build concurrently (8+ Gradle daemons at 4–5 GB each). It's online and progressing, but heavily contended. Let me give my build more time and check for the artifact.
+
+Let me check whether the build is progressing toward producing the artifact (Kotlin/Native compile output dirs) or stalling under contention.
+
+The `Shared.xcframework` build **completed** (ios-arm64, ios-arm64-simulator, macos-arm64 slices all present). The KMP prerequisite is satisfied. Let me confirm the build output, then attempt the real `xcodebuild`. I'll start with the macOS target build (no simulator needed, most tractable).
+
+**KMP `Shared.xcframework` build SUCCEEDED** (8m 1s, staged). Now I can run the real `xcodebuild` gate. Before kicking off a long build, let me verify how `.Tests.swift` files are bucketed in the generated project (app target vs test target) — since they `import XCTest`, mis-bucketing would break the app build.
+
+My files show the same target membership pattern as existing surfaces. Let me confirm precisely which targets own the `.Tests.swift` Sources entries — if they're in the app targets (not test targets), the app build will choke on `import XCTest` (a pre-existing project-generation condition affecting all surfaces).
+
+Confirmed: `.Tests.swift` files are globbed into BOTH **app** targets (`TeslaSync`, `TeslaSync-macOS`) — not the test targets — which is a pre-existing project-generation behavior affecting all 95 surfaces identically (mine follows the exact established convention). Per "no skip-and-assume," I'll empirically attempt the real macOS `xcodebuild build` (faithful to the gate, no simulator needed) and capture exactly what happens. Starting it monitored.
+
+The `head -60` prematurely closed the pipe (matching all the `BUILD_*` env vars), sending SIGPIPE and killing xcodebuild during the settings dump — so it didn't actually compile. Let me re-run writing full output to a log (no premature cutoff) and monitor the log separately.
+
+Let me monitor the build via the log file.
+
+The macOS build finished. Let me read the result and inspect the log.
+
+Build failed (exit 65). Let me find the actual errors — critically, whether they're in my surface or the pre-existing test-file-in-app-target condition.
+
+**Definitive finding:** the real macOS `xcodebuild` build failed (exit 65) with exactly **2 errors, both in `AcDcStatsPanel.Tests.swift` (a pre-existing surface, alphabetically first) — "unable to resolve module dependency: 'XCTest'"**. **Zero errors in my `DrivingCoachSection` files.** This is a pre-existing, repo-wide project-generation condition: `*.Tests.swift` files are globbed into the app targets (which can't resolve XCTest), affecting all 95 surfaces identically. It is outside my allowed-file scope (project.yml) and unrelated to my surface's correctness.
+
+Let me run the iOS build too for direct evidence (genuine attempt, not assumption), then finalize.
+
+Let me wait for the iOS build to complete.
+
+Both xcodebuild paths are blocked by conditions outside my surface: macOS by the pre-existing `*.Tests.swift`-in-app-target glob (fails on `AcDcStatsPanel`, not mine; my files have 0 errors), and iOS additionally by a build-DB lock from concurrent builds on this shared runner. My surface is independently verified green. Let me write the honest gate log, then clean up and commit.
+
+Now I'll write the comprehensive, honest gate log.
+
+Now let me clean up generated build artifacts and verify git status shows only my intended changes.
+
+Working tree is clean — only my 14 surface files + the log are untracked; all generated build artifacts are git-ignored. Let me stage exactly my deliverables and commit with the prescribed message.
+
+Committed cleanly (commit `676455cd8`, 15 files, 2818 insertions). Let me clean up the large `/tmp` build artifacts (shared-machine disk hygiene) and confirm no stray processes remain.
+
+Clean working tree, 767 MB freed. Let me confirm no background processes I started are lingering and finalize the todos.
+
+All background processes completed — no stray work. Let me finalize the todo tracking.
+
+The DrivingCoachSection Apple surface is complete, committed, and verified. Final state: clean working tree, commit `676455cd8`, all todos done, no stray processes, 767 MB of build artifacts cleaned up.
+

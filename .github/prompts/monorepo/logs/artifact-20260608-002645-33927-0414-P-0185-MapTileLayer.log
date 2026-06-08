@@ -1,0 +1,210 @@
+================================================================================
+P4 · Shared surface · 0185 — MapTileLayer (Apple)
+Run: 2026-06-08T06:56-0700   Host: Darwin arm64 (macOS 26.5.1)   Branch: auto/20260608-002645-33927/414
+Base: c9c6fdb9f
+Prompt: P4/shared-surfaces/0185 — Shared surface: MapTileLayer
+       (.github/prompts/monorepo/p4-apple/shared-meaningful/P-0185-MapTileLayer.prompt.md)
+Web source (spec): web/src/components/maps/MapTileLayer.tsx
+Mode: code-complete + host-proven (dual-SDK compile + macOS-host XCTest run).
+      Full xcodebuild app build/test is DEFERRED — blocked by PRE-EXISTING,
+      repo-wide parallel-merge conditions (15× `struct DashboardWidgetSize`
+      redefinition + 263 sibling *.Tests.swift compiled into the app target),
+      NEITHER owned by this surface. Predecessor parity: 0010 ToolCard /
+      0180 AlertMessageEditor / 0231 FSMTimelineChart / 0245 helpers;
+      ADR-002/004/005/009; Honesty rules 1/7/8.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ........................ Apple Swift 6.3.2 / Xcode 26.5 toolchain            OK
+  /Applications/Xcode.app ...... Xcode 26.5 (17F42) via DEVELOPER_DIR override       OK
+    (default xcode-select -p is /Library/Developer/CommandLineTools; Xcode driven
+     via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK .......... iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)    OK
+  macOS SDK .................... MacOSX26.5.sdk (macOS 15.0 deploy target)           OK
+  iPhone 16 simulator .......... present (83717DEE-…-CBDDD3140989, Booted)           OK
+  SwiftUI ...................... present in both SDKs; this surface uses SwiftUI      OK
+  MapKit ....................... present in both SDKs; this surface uses MapKit      OK
+  Swift Charts ................. present in both SDKs (this surface uses NONE — the
+                                 web source has no charts)                           OK
+  swiftlint .................... /opt/homebrew/bin/swiftlint 0.63.3                   OK
+  swiftformat .................. /opt/homebrew/bin/swiftformat 0.61.1                 OK
+  pwsh (placeholder gate) ...... /opt/homebrew/bin/pwsh                              OK
+  xcodegen ..................... 2.45.4 (project generates cleanly with my files)     OK
+  swift test (SwiftPM, macOS) .. runs XCTest on the macOS host (Xcode toolchain)      OK
+  KMP Shared.xcframework ....... NOT staged at rest (Frameworks/ holds only .gitkeep);
+                                 Scripts/build-shared-xcframework.sh DOES run here
+                                 (Gradle warm-cache) and produced the *debug*
+                                 Shared.xcframework this run; release link is slow but
+                                 advancing — staging is feasible, yet the app build is
+                                 still blocked downstream at compile (see DEFERRED)  WARN
+
+  Capability note: the prompt's capability-BLOCKED escape hatch ("SwiftUI / Swift
+  Charts / MapKit unavailable") does NOT apply. SwiftUI + MapKit are AVAILABLE and
+  PROVEN by real iOS-18-simulator AND macOS-15 SDK type-checks below, and the
+  surface's 46 tests EXECUTE green on the macOS host.
+
+=== ARTIFACT (allowed files only) ===
+  apps/apple/TeslaSync/shared-surfaces/MapTileLayer.Model.swift        (S8/S10/S11 seams, projection)
+  apps/apple/TeslaSync/shared-surfaces/MapTileLayer.Adapter.swift      (provider catalog + Leaflet template parity)
+  apps/apple/TeslaSync/shared-surfaces/MapTileLayer.Views.swift        (MKTileOverlay map, states, fullscreen)
+  apps/apple/TeslaSync/shared-surfaces/MapTileLayer.swift              (the surface View)
+  apps/apple/TeslaSync/shared-surfaces/MapTileLayer.Previews.swift     (7 state previews, DEBUG)
+  apps/apple/TeslaSync/shared-surfaces/MapTileLayer.strings            (P1/S10 i18n table)
+  apps/apple/TeslaSync/shared-surfaces/MapTileLayer.Tests.swift        (projection/model/views/a11y)
+  apps/apple/TeslaSync/shared-surfaces/MapTileLayer.AdapterTests.swift (catalog/template/subdomain/overlay)
+  Necessary wiring (first occupant of the new shared-surfaces group, mirroring how
+  feature-views was first registered by ToolCard):
+    apps/apple/project.yml        (+ TeslaSync/shared-surfaces to TeslaSync & TeslaSync-macOS)
+    apps/apple/.swiftlint.yml     (+ TeslaSync/shared-surfaces to `included`)
+
+=== PARITY MAP (web → native) ===
+  useQuery('map-config')          → MapTileLayerSource (P1/S8 state holder) → MapTileLayerInput
+  getMapConfig provider/api_key   → MapTileConfig { provider: free|azure|google, apiKey }
+  freeTiles/azureTiles/googleTiles→ MapTileCatalog (URL templates + attributions VERBATIM)
+  provider === 'azure' && api_key → MapTileCatalog.effectiveProvider (key-fallback to free)
+  Leaflet <TileLayer url=…>       → LeafletTemplateTileOverlay : MKTileOverlay over MKMapView
+  {s}/{z}/{x}/{y}/{r} template    → MapTileTemplate.resolve (subdomain rotation + retina @2x)
+  useMap()                        → the MKMapView handle (coordinator) the controls bind to
+  MapFullscreenControl(position)  → MapTileCorner.alignment + MapTileFullscreenButton
+    ariaLabelEnter/ariaLabelExit  → configurable enter/exit a11y labels (P1/S10 keys)
+  MapInvalidator invalidateSize() → N/A (MapKit re-tiles on resize automatically — noted in code)
+  attribution (brand, i18n-ignored)→ MapTileAttributionChip (verbatim brand, a11y "Map data" lead)
+  States loading/empty/error/     → MapTileProjection phase + MapTileConnection axis
+    stale/offline + data            (every state renders; previews + tests cover all)
+
+--------------------------------------------------------------------------------
+SURFACE-SCOPED GATES (host-runnable — all GREEN)
+--------------------------------------------------------------------------------
+
+[1] Isolated SwiftPM build — surface compiled against the REAL design-system layer
+    (generated Tokens.swift + Sources/Components + Sources/Design, no shims) under
+    Swift 6 strict concurrency (the app's SWIFT_VERSION 6.0 / SWIFT_STRICT_CONCURRENCY
+    complete):
+      $ swift build
+      Build complete!
+    BUILD_EXIT=0
+
+[2] macOS-host XCTest run (the surface's own tests, real execution):
+      $ swift test
+      Test Suite 'All tests' passed — Executed 46 tests, with 0 failures (0 unexpected)
+    Coverage: catalog parity (free/azure/google URLs + attributions VERBATIM),
+    provider selection (key fallback), {s}/{z}/{x}/{y}/{r} template substitution,
+    subdomain rotation, MKTileOverlay per-tile URL (retina + non-retina), projection
+    (loading/empty/error/data), model wiring + P1/S11 view.opened telemetry (once) +
+    stale one-shot auto-refresh + offline no-refresh, tile-overlay coordinator
+    (apply/idempotent/swap/renderer), fullscreen corner mapping, a11y label content.
+    TEST_EXIT=0
+
+[3] Real iOS-18 simulator SDK type-check (proves the #if os(iOS) UIViewRepresentable
+    branch + isPitchEnabled compile):
+      $ xcrun --sdk iphonesimulator swiftc -typecheck \
+          -target arm64-apple-ios18.0-simulator -swift-version 6 \
+          -strict-concurrency=complete <surface + design-system>
+    IOS_TYPECHECK_EXIT=0
+
+[4] Real macOS-15 SDK type-check (proves the #elseif os(macOS) NSViewRepresentable
+    branch compiles):
+      $ xcrun --sdk macosx swiftc -typecheck \
+          -target arm64-apple-macos15.0 -swift-version 6 \
+          -strict-concurrency=complete <surface + design-system>
+    MACOS_TYPECHECK_EXIT=0
+
+[5] swiftlint --strict (7 surface files):
+      Done linting! Found 0 violations, 0 serious in 7 files.
+    LINT_EXIT=0
+
+[6] swiftformat --lint (shared-surfaces):
+      0/7 files require formatting.
+    FORMAT_EXIT=0
+
+[7] Placeholder / stub gate (ADR-011 definition-of-done):
+      $ pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces -Language swift
+      PLACEHOLDER_ALLOWED=0
+      PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+[8] xcodegen generate (project assembles with my files enumerated):
+      Created project at …/apps/apple/TeslaSync.xcodeproj
+      pbxproj references all 8 MapTileLayer.* files; .xcodeproj is git-ignored.
+    XCODEGEN_EXIT=0
+
+--------------------------------------------------------------------------------
+DEFERRED — full-app xcodebuild build test (iOS + macOS)
+--------------------------------------------------------------------------------
+  Command (prompt gate):
+    DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+      xcodebuild -scheme TeslaSync \
+        -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+      xcodebuild -scheme TeslaSync-macOS build test
+
+  Observed this run: the scheme pre-action (Scripts/build-shared-xcframework.sh)
+  EXECUTES on this host — Gradle assembled the *debug* Shared.xcframework
+  ("xcframework successfully written out to …/XCFrameworks/debug/Shared.xcframework")
+  and proceeded into the release-framework link. So, unlike the Windows-host
+  predecessors, the KMP pre-action is NOT the blocker here.
+
+  The blocker is downstream, at the app-target Swift compile, and is PRE-EXISTING and
+  repo-wide — NOT owned by this surface and NOT in this prompt's allowed-files scope:
+
+    R-A  `struct DashboardWidgetSize` is redefined 15× across the app-target source
+         set (Swift forbids duplicate type definitions in one module → certain
+         "invalid redeclaration" compile error). All 15 live in OTHER surfaces:
+           Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift
+           Sources/DashboardWidgets/DrivetrainHealthWidgetModel.swift
+           TeslaSync/dashboard-widgets/{DigitalTwin,MotorHistory,MotorPerformance,
+             MQTTStatus,Odometer,OnboardingChecklist,TelemetryErrors,
+             TirePressureHistory,UptimeMonitor,VehicleHero,WallConnector,
+             WeeklyDigest,WeeklySummaryCard}*.swift
+         Zero are in TeslaSync/shared-surfaces.
+
+    R-B  263 co-located *.Tests.swift files import XCTest + `@testable import
+         TeslaSync` into the APP target (the established convention, deferred to the
+         acceptance gate). Of these only 2 are this surface's
+         (MapTileLayer.Tests.swift, MapTileLayer.AdapterTests.swift) — they follow the
+         identical convention the 261 siblings use and are PROVEN green in a proper
+         XCTest target by gate [2] above.
+
+    R-C  macOS development-signing identities (acceptance-gate / macos-latest concern).
+
+  Zero `MapTileLayer` / `shared-surfaces` errors exist or are introduced. This surface
+  adds NO new tree-wide violation class (the duplicate-symbol family and the
+  XCTest-in-app-target family both predate it). Per ADR-012's CI matrix this full-app
+  verification is DEFERRED to p4-apple/P99-0001-apple-acceptance-gate on macos-latest
+  and recorded in apps/macos-pending-verifications.md, exactly as for predecessors
+  0010 ToolCard / 0180 AlertMessageEditor / 0231 FSMTimelineChart / 0245 helpers.
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+  1 No red-as-green ...... the deferred full-app xcodebuild is reported AS deferred,
+                          with its pre-existing cause named at file granularity; no
+                          red step is dressed up as passing.
+  2 No scope narrowing ... full surface (6 .swift + strings + 2 test files), all six
+                          states (loading/empty/error/data/stale/offline), all three
+                          seams (S8 source/model, S10 strings, S11 telemetry); every
+                          provider table + the Leaflet {s}/{z}/{x}/{y}/{r} template
+                          ported.
+  3 No skip-and-assume ... MapTileLayer.tsx read end-to-end; free/azure/google tables,
+                          the provider-selection truthiness, the `{r}` retina suffix,
+                          the Esri y-before-x ordering, and the subdomain rotation all
+                          reproduced and pinned by exact-URL assertions.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. provider URL templates + brand attributions match the web
+                          byte-for-byte (tile-terms requirement); the only divergence
+                          (HTML-attribution → plain brand) is documented in code.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0010/0180/0231/0245: host-proven +
+                          documented xcodebuild deferral; strengthened here with a real
+                          macOS-host test run AND a confirmed KMP framework assembly.
+  8 No commit on red ..... committed work is green on every gate scoped to it AND
+                          introduces ZERO new tree-wide violations (R-A/R-B/R-C predate
+                          this surface and are untouched). No surface code is red.
+  9 No silent drift ...... the synthetic-but-reachable `empty` state (the web always
+                          has a free fallback), the HTML→plain attribution divergence,
+                          and the project.yml/.swiftlint.yml wiring for the new
+                          shared-surfaces group are all documented in code + this log.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

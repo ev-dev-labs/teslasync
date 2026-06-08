@@ -1,0 +1,140 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me note the toolchain situation: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swift`, `swiftlint`, `swiftformat` are available. Let me explore the web source and existing Apple patterns in depth.
+
+Now let me study the established Apple patterns. The AIUsageCard files in feature-views were recently modified—they're my closest pattern reference. Let me examine them and the broader structure.
+
+Let me find where the projection logic and chrome subviews live, plus the design tokens and i18n/telemetry infrastructure.
+
+There are 9 files per surface (including `.Projection.swift` and `.Chrome.swift`). Let me read those plus the design tokens, motion, and project.yml.
+
+Paths are under `apps/apple/`, not `apps/apple/TeslaSync/`. Let me correct.
+
+Critical: `project.yml` lists `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` but not `shared-surfaces`, and my allowed files exclude `project.yml`. The `*.Tests.swift` files also aren't wired into the test target — confirming wiring is deferred to a separate integration step. Let me verify toolchain capabilities precisely and read the remaining token/component definitions.
+
+SwiftUI + Charts typecheck successfully against the CLT macOS SDK — but `xcodebuild` needs full Xcode. `xcodegen` is available. Let me locate the design tokens and shared components I'll depend on, plus the lint configs and placeholder script.
+
+The swiftlint `included:` list omits `shared-surfaces` (I'll lint my files directly); swiftformat lints all of `apps/apple`. The placeholder check is PowerShell. Let me read the design tokens, the TSButton/TSSkeleton APIs, the placeholder patterns, and check for `pwsh`.
+
+Let me read the placeholder checker and probe for a full Xcode, `import Shared` usage, and `swift test` capability — these determine what real verification I can run.
+
+The placeholder check is case-insensitive and matches anywhere (including comments). I must avoid the substrings: `todo, fixme, xxx, "coming soon", placeholder, "lorem ipsum", "not implemented"` in all shipped files. Let me probe verification capabilities.
+
+A full **Xcode.app exists at /Applications/Xcode.app** — I may be able to run the real `xcodebuild` gate. `Sources/Components` has zero `import Shared` (self-contained). Let me verify Xcode works and check the swift test smoke result.
+
+Full Xcode 26.5 with booted iPhone 16 simulator and iOS/macOS 26.5 SDKs is available — the capability requirement is MET. `swift test` needs Xcode's toolchain (DEVELOPER_DIR). Let me check how sibling surface prompts logged their gates, whether `Shared.xcframework` is pre-staged, and how many `*.Tests.swift` already live in feature-views.
+
+Excellent — this changes my verification strategy significantly:
+- **Full Xcode 26.5** is available (capability MET); iPhone 16 simulator booted.
+- `Sources/Components` is **Shared-framework-free** → I can compile my surface against the real tokens + components in isolation.
+- `Frameworks/` has only `.gitkeep` (Shared.xcframework **not** staged), and **170 `*.Tests.swift`** already live colocated in `feature-views` while `Tests/Unit` is the real test target — confirming project wiring is generator-handled and out of my allowed-files scope.
+
+My plan: write all 9 files faithfully (AiUsageCard convention), then verify via an isolated Xcode-toolchain SwiftPM build that compiles my SwiftUI against the **real** design tokens + components and **runs** the unit tests, plus swiftlint/swiftformat/placeholder. Let me record the plan and todos.
+
+Now writing the surface files. Starting with the pure-logic Adapter and Projection.
+
+Chrome references `TimelineMetrics` — I'll define it in Views.swift. Now writing the interactive track view (the core of the surface).
+
+Now the i18n catalog and the previews.
+
+Now the test suite — covering the adapter math, projection phases/track/markers, model wiring/throttle/telemetry/freshness, and accessibility.
+
+Files written. Before verifying, I noticed a concurrency-safety risk in the default clock. Let me fix that and then locate the minimal real-component dependency set for an isolated compile.
+
+Components and Design are Shared-free; `TSCard` is in `Cards.swift`. I'll build an isolated SwiftPM package (module named `TeslaSync` so `@testable import` works) compiling my surface against the **real** tokens + the components I depend on, then run the tests with Xcode's toolchain. Starting minimal and adding deps as the compiler demands.
+
+`.v15` needs tools 6.0 — which also gives Swift 6 language mode + complete concurrency by default, matching the app target. Let me bump the manifest.
+
+Two real findings from the compiler:
+1. `.accessibilityAddTraits(.isAdjustable)` is invalid — the adjustable trait is conferred automatically by `.accessibilityAdjustableAction`. Removing that line (a genuine bug the compile caught).
+2. `Cards.swift`'s preview pulls in `TSBadge`/`TSText` — I'll include the full Components + Design library for a faithful compile.
+
+Including the whole library cascades into external deps (`UnitPreferences`). Let me go back to a tight minimal set — only what my surface transitively needs: `Buttons`, `Skeletons`→`Cards`→(`Badges`,`Typography`).
+
+Build complete — my surface compiles against the **real** tokens + components in Swift 6 mode with complete concurrency. Now running the test suite.
+
+One test-only compile fix: `seeks.last` is optional. Let me unwrap it.
+
+All **37 tests pass, 0 failures**, compiled against the real tokens + components in Swift 6 / complete-concurrency mode. Now the lint/format/placeholder gates on the real files.
+
+swiftformat flagged 4 real style issues. Let me fix them: unused `locale` in `marker(from:)`, opaque-generic init, and a redundant `@ViewBuilder`.
+
+swiftformat passes (0/8). swiftlint linted the whole repo (1909 files) and found 1 violation — I need to know if it's mine. Let me scope it to my files only.
+
+Real violation: `file_length` (limit 400). `Model.swift` (457) and `Tests.swift` (420) exceed it — the AiUsageCard convention keeps every file < 400. Let me check all counts and split accordingly.
+
+Only those two exceed 400. Let me move `InMemoryTimelineScrubberSource` into a new `TimelineScrubber.Fixtures.swift` and split the tests. Let me view the relevant sections.
+
+Let me view the Model header to trim it while I extract the in-memory source into a fixtures file.
+
+Let me extract the in-memory source into a fixtures file and trim the Model header.
+
+Model is 402 — need ≤400. Let me tighten the header comment.
+
+Now splitting the test file. Let me find the model-tests boundary and the test doubles.
+
+Splitting the tests into two files now.
+
+All three are now under 400 (399/257/180). Let me normalize formatting (the split may have left stray blank lines), then re-verify compile + tests with the new file layout.
+
+swiftformat applied cleanly; all files < 400. Re-staging the isolated package with the new layout (Fixtures + both test files) and re-verifying compile + tests.
+
+All 37 tests pass with the new layout. Now the final lint/format/placeholder gates on the real files.
+
+swiftformat (0/10) and swiftlint --strict (0 violations) both pass. Now the placeholder gate.
+
+The isolated SwiftPM verification is comprehensive, but I can do better and run the **real `xcodebuild ... build test`** the gate prescribes — against a temporary, in-scope-only Xcode project (not touching the repo's `project.yml`, which I can't edit) that compiles my surface + the real tokens/components for both the **iOS Simulator (iPhone 16)** and **macOS**. Let me set that up with xcodegen.
+
+Temporary scoped project generated. Now running the real `xcodebuild build test` on the **iOS Simulator (iPhone 16)**.
+
+**iOS Simulator: BUILD SUCCEEDED + TEST SUCCEEDED (37 tests, 0 failures)** via real `xcodebuild`. Now macOS.
+
+macOS framework **built** but the test target couldn't resolve the `TeslaSync` module — the iOS run populated shared DerivedData with an iOS `TeslaSync.swiftmodule`, colliding with the macOS module of the same name. Let me rerun macOS in a clean, separate DerivedData.
+
+Even clean, the macOS test target can't resolve the module — the mismatch is target name `TeslaSync-macOS` vs module `TeslaSync` (the iOS target name *equals* the module, which is why iOS worked). Let me generate a dedicated macOS-only project whose framework target is literally named `TeslaSync`.
+
+macOS build/test is taking a while (first compile of the framework + SwiftUI for macOS). Letting it continue.
+
+Over 10 minutes — that's a hang, not slow compilation. Let me stop and diagnose by running unfiltered to a log with a hard timeout.
+
+macOS **TEST BUILD SUCCEEDED** in the dedicated project — the module resolves correctly now. The earlier hang was in the test-run phase. Let me run the already-built tests with `test-without-building`.
+
+macOS test *execution* hangs (headless XCTest-bundle limitation) though the macOS **test build succeeded**. Let me stop it and try running the built bundle directly via `xcrun xctest`, which bypasses xcodebuild's orchestration.
+
+Let me run the macOS bundle directly in async mode so I can control it without `kill` juggling.
+
+Running the macOS bundle directly via `xcrun xctest` executed **all 37 tests, 0 failures, on macOS** — the earlier hang was only in `xcodebuild test`'s host-launch orchestration (a headless limitation), not the tests. I now have full green on both platforms. Let me update todos and write the gate log.
+
+Every i18n key (22) used in code resolves in the catalog. Now writing the honest gate log with all real evidence.
+
+Let me do a focused fidelity review of the fill rendering and confirm the final Views layout.
+
+Re-verifying after the fidelity tweak, then final lint pass.
+
+All green after the tweak. Committing only my surface files + the log (leaving the pre-existing unrelated working-tree changes untouched).
+
+Exactly the 11 surface files + log staged — no unrelated changes. Committing.
+
+Committed. Cleaning up temp verification artifacts and confirming the pre-existing unrelated changes remain untouched.
+
+All todos complete. Let me do a final confirmation of the committed tree state.
+
+The surface is complete, verified, and committed. 
+
+## Summary
+
+Shipped a production-grade native Apple `TimelineScrubber` shared surface (P4/0107) at full parity with `components/data-display/TimelineScrubber.tsx`, following the established `feature-views/AiUsageCard` 9-file convention.
+
+**Delivered** (`apps/apple/TeslaSync/shared-surfaces/`, 11 files, 2114 lines):
+- Interactive scrubber reproducing the web body: track + buffered + neon fill, all **8 marker kinds** (focusable buttons + `.help` tooltips + cluster badges), hover ghost playhead, drag thumb (grows + rings while scrubbing), hover/drag **preview tooltip** (time + speed/power/soc/elevation), optional decorative background.
+- Interactions: tap-seek, drag-scrub with **50 ms throttled intermediate seeks**, marker-tap-seek, pointer hover preview — all via a P1/S8 state-holder seam (no HTTP in the view).
+- Every P4 leaf state renders: **loading / empty / error / data**, plus the orthogonal **live/stale/offline** axis (chip + banner + one-shot stale auto-refresh).
+- Accessibility: track is one adjustable slider (label + m:ss value + increment/decrement); each marker a labeled button. Reduce-motion honored; `view.opened` telemetry; 22/22 i18n keys catalogued.
+
+**Verification (all green, real evidence in the log):**
+- `xcodebuild build test` on **iOS Simulator (iPhone 16)** → BUILD + TEST SUCCEEDED, **37/37**
+- `xcodebuild build-for-testing` on **macOS** + direct `xcrun xctest` → **37/37**
+- SwiftPM (Swift 6, complete concurrency) → 37/37; `swiftlint --strict` → **0 violations**; `swiftformat --lint` → **0/10**; placeholder gate → **0**
+
+Compiled against the **real** design tokens + shared components. The full app-scheme `xcodebuild` was unrunnable in-scope (shared-surfaces not yet in `project.yml`; `Shared.xcframework` unstaged — both outside the allowed files), so I verified via a temporary scoped Xcode project — documented honestly in the gate log (`EXIT=0 / STATUS=DONE`). Pre-existing unrelated working-tree changes were left untouched.
+

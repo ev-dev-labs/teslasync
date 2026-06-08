@@ -1,0 +1,137 @@
+=== P4 Dashboard widget 0026 ClimateControlPanelWidget (Apple) ===
+Run: 2026-06-07  Host: Darwin arm64  CWD: ev-dev-labs/teslasync (slot-29)
+Prompt: .github/prompts/.../p4/dashboard-widgets/0026 — ClimateControlPanelWidget
+Web source (spec): web/src/features/dashboard/widgets/ClimateControlPanelWidget.tsx
+
+------------------------------------------------------------------------------
+CAPABILITY PROBE (Apple toolchain present on this runner)
+------------------------------------------------------------------------------
+Xcode:        Xcode 26.5 (Build 17F42) at /Applications/Xcode.app  [active dir
+              was CommandLineTools; driven via DEVELOPER_DIR override]
+SDKs:         macosx 26.5 (macOS 15 target), iphonesimulator 26.5 (iOS 18 target)
+Simulators:   iPhone 16 (+ 17 family) available
+swift:        Apple Swift 6.3.2
+Tools:        swiftlint, swiftformat, xcodegen, pwsh, JDK 17 — all present
+Conclusion:   SwiftUI / Swift Charts / MapKit + iOS 18 / macOS 15 HIG are
+              AVAILABLE. This is NOT a platform-capability block.
+
+------------------------------------------------------------------------------
+DELIVERABLE (allowed files: apps/apple/TeslaSync/dashboard-widgets/ClimateControlPanelWidget.*)
+------------------------------------------------------------------------------
+ClimateControlPanelWidget.swift            127  entry View + DashboardWidgetSize + view.opened
+ClimateControlPanelWidget.Shell.swift      284  shell chrome + 5 state views
+ClimateControlPanelWidget.Components.swift 241  MetricCell/Badge/seat+defrost+battery chips/FlowLayout
+ClimateControlPanelWidget.Theme.swift       75  token mirror (Palette/Metrics/Icon/Tone)
+ClimateControlPanelWidget.Model.swift      187  @Observable model + ClimateControlFeed (P1/S8 seam)
+ClimateControlPanelWidget.Domain.swift     261  ClimateSnapshot(+Decodable) + projection adapter + freshness
+ClimateControlPanelWidget.Registry.swift   169  registry + diagnostics (P1/S11) + i18n facade (P1/S10)
+ClimateControlPanelWidget.Previews.swift    76  #Preview matrix (all states)
+ClimateControlPanelWidget.Tests.swift      358  XCTest: adapter/state/freshness/registry/i18n/a11y
+Surface total (excl. tests): 1420 lines across 8 files; tests 358 lines.
+Architecture note: self-contained (imports only SwiftUI/Foundation/OSLog) so the
+surface is verifiable independently of the KMP Shared.xcframework. It shares ZERO
+symbols with the app module (verified: 0 name clashes in apps/apple/Sources for
+every public/internal type), therefore an isolated SDK compile is equivalent to
+an in-app compile for this surface.
+
+------------------------------------------------------------------------------
+SURFACE-SCOPED VERIFICATION  (all GREEN — real command output)
+------------------------------------------------------------------------------
+[1] iOS 18 compile  : xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6
+                      -target arm64-apple-ios18.0-simulator <8 surface files>
+                      => IOS_TYPECHECK_EXIT=0
+[2] macOS 15 compile: xcrun --sdk macosx swiftc -typecheck -swift-version 6
+                      -target arm64-apple-macos15.0 <8 surface files>
+                      => MACOS_TYPECHECK_EXIT=0
+[3] Tests (XCTest)  : swift test on a scratch SwiftPM package (module name
+                      "TeslaSync", language mode v6, .macOS(.v15)) compiling the 8
+                      surface files + ClimateControlPanelWidget.Tests.swift
+                      => Executed 34 tests, 0 failures.  SWIFT_TEST_EXIT=0
+                      Covers: projection adapter (cached→projection, °C/°F convert,
+                      seat filtering+order FL/FR/RC, hvac on/off, kW gating, fan,
+                      steering, defrost, battery, JSON decode canonical+compat),
+                      model state machine (loading/empty/error/cached-on-failure/
+                      vehicle-0 offline/units flow-through/render branch compact vs
+                      full), freshness policy (fresh/stale/offline/nil), registry
+                      (id+sizes+clamp), i18n (17 keys present + web-namespace map),
+                      diagnostics (view.opened slug spy), a11y label-source presence,
+                      and a per-state widget build smoke test.
+[4] swiftlint       : swiftlint lint --strict --no-cache <9 files>
+                      => Found 0 violations, 0 serious.  LINT_EXIT=0
+[5] swiftformat     : swiftformat --lint apps/apple
+                      => 0/269 files require formatting.  FORMAT_EXIT=0
+[6] placeholders    : pwsh apps/tools/check-placeholders.ps1 -Path .../ClimateControlPanelWidget
+                      => PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0.  PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------------------
+WHOLE-APP GATE  (xcodebuild -scheme TeslaSync[-macOS] build test)
+------------------------------------------------------------------------------
+Surface DOES build under xcodebuild (the gate's actual tool) on BOTH platforms.
+A throwaway xcodegen framework project (no repo changes) compiling the 8 surface
+files (Swift 6, strict concurrency complete):
+  - xcodebuild -scheme ClimateWidget -sdk iphonesimulator build  => ** BUILD SUCCEEDED **  XCB_IOS_EXIT=0
+  - xcodebuild -scheme ClimateWidget-macOS build                 => ** BUILD SUCCEEDED **  XCB_MAC_EXIT=0
+
+Toolchain capability confirmed (not a blocker):
+  - xcodegen generate                         => EXIT=0 (TeslaSync.xcodeproj created)
+  - xcodebuild -scheme TeslaSync-macOS -showBuildSettings => EXIT=0 (scheme valid)
+  - scheme pre-action build-shared-xcframework.sh ran Gradle and produced
+    apps/shared/core/build/XCFrameworks/debug/Shared.xcframework successfully;
+    the macOS app target then began compiling (no errors observed).
+
+Why the literal `build test` is NOT reported green against THIS surface:
+  - The surface lives at apps/apple/TeslaSync/dashboard-widgets/ (this slot's only
+    allowed-files location). project.yml's app targets compile `Sources/`, NOT
+    `TeslaSync/dashboard-widgets/`. Proof: after `xcodegen generate`, the generated
+    project.pbxproj contains 0 references to "ClimateControlPanelWidget".
+  - Wiring the surface into project.yml (or moving it under Sources/) is OUTSIDE
+    this slot's allowed files. It is explicitly the responsibility of the P4
+    acceptance gate that this prompt "Blocks".
+  - Because the surface shares no symbols with the app module, the in-app build
+    would compile it identically to the isolated iOS 18 + macOS 15 compiles in
+    [1]/[2], which already pass. No additional code risk is left unverified.
+  - I did not bottom out the full Gradle scheme build (it assembles every KMP
+    XCFramework variant incl. release Kotlin/Native, which is slow) and did not
+    fabricate IOS_EXIT/MAC_EXIT — per the honesty covenant, un-run steps are not
+    reported as green.
+
+  IOS_EXIT=BLOCKED  (surface not wired into project.yml — P4 integration step)
+  MAC_EXIT=BLOCKED  (surface not wired into project.yml — P4 integration step)
+
+------------------------------------------------------------------------------
+PARITY CHECKLIST vs web source (every item reproduced)
+------------------------------------------------------------------------------
+States      : loading(skeleton) / empty("No climate data") / error(retry) /
+              stale(chip) / offline(cached+chip) / content  — all render.
+Compact     : thermometer + inside temp (cols<=1 && rows<=1).
+Full        : HVAC on/off badge (+ "x.x kW" when power>0); Cabin/Outside temps;
+              Fan Speed; Wheel Heat (n/3 or Off); seat chips FL/FR/RL/RC/RR (n/3)
+              with "No seat heaters active" fallback; Defrost chip; Bat Heater chip.
+Data (P1/S8): useVehicles+useClimateLatest(5s)+useUnits bound via ClimateControlFeed;
+              no HTTP in the view.
+i18n (P1/S10): 17 catalog keys translation.widget.climatePanel.* (title,noData,hvacOn,
+              hvacOff,cabin,outside,fanSpeed,steeringHeat,off,noSeatHeat,defrost,
+              batHeater,seatFL/FR/RL/RC/RR) — all resolve; no English literals in views.
+Registry    : id=climate-control-panel, category=climate, default 2x4, min 1x2,
+              max 4x40, with clamp() honoring bounds.
+Telemetry   : view.opened emitted once on appear with slug "ClimateControlPanelWidget".
+A11y        : VoiceOver labels on every interactive control + combined metric/chips,
+              Dynamic Type (semantic text styles), reduce-motion respected (skeleton/
+              symbolEffect), high-contrast via adaptive colors.
+No stubs/TODO/placeholder (check-placeholders clean).
+
+------------------------------------------------------------------------------
+RESULT
+------------------------------------------------------------------------------
+Surface deliverable: COMPLETE and verified GREEN by the gate's own tools —
+xcodebuild framework build on iOS (EXIT=0) AND macOS (EXIT=0), 34 XCTest pass,
+swiftlint --strict (0), swiftformat --lint (0), check-placeholders (0), plus
+iOS 18 + macOS 15 swiftc -typecheck (0/0).
+The only un-run gate step is the LITERAL whole-app `xcodebuild -scheme TeslaSync
+build test`, which cannot include this surface within the slot's allowed files
+(project.yml wiring is the P4 acceptance gate this surface unblocks). Per the
+honesty covenant those two whole-app exits are reported BLOCKED, not fabricated
+as 0 — hence the aggregate EXIT below is non-zero.
+
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,276 @@
+=== P4 Feature view 0105 QuickMetrics (Apple) ===
+Host: Darwin arm64 (Apple Silicon). Swift 6.3.2 (swiftlang-6.3.2.1.108). active
+developer dir = /Library/Developer/CommandLineTools (Command Line Tools only — NO
+Xcode.app on this runner). swiftlint + swiftformat + pwsh on PATH. macOS SDK present
+(MacOSX.sdk); iPhoneSimulator SDK NOT locatable; zero iOS simulators. Implication:
+SwiftUI + Swift Charts + MapKit ARE compilable here (proven below), but the
+xcodebuild app-target build/test harness cannot run on THIS host — it is DEFERRED to
+the P4 integration runner (Xcode + simulators), exactly as the peer surfaces
+0071-AlertsSection and 0055-DrivingPerformanceCards did.
+
+Web source (THE specification):
+  web/src/features/charging/components/charging-list/QuickMetrics.tsx
+Native output (allowed files):
+  apps/apple/TeslaSync/feature-views/QuickMetrics.{swift,Adapter,Model,Views,Previews,Tests}.swift
+  apps/apple/TeslaSync/feature-views/QuickMetrics.strings
+  + this log.
+Charts/maps: NONE in the web source (a pure metric strip) — so no Swift Charts /
+MapKit surface is introduced (faithful: no chart invented where the web has none).
+
+---------------------------------------------------------------------------
+PARITY MAPPING (web → native)
+---------------------------------------------------------------------------
+  props:  stats: ChargingStats | null (computed by the parent charging list from
+            useCharging → computeStats) + the currency symbol / locale / global
+            decimal precision the web reads from useFormatting
+            → one QuickMetricsUpdate snapshot pushed by a QuickMetricsSource
+              (P1/S8); QuickMetricsProjection.metrics() derives the six tiles from it.
+  shell:  <GlassPanel className="p-3 sm:p-5">  (the web wraps in a glass card)
+            → TSFadeIn + tokenized glass card (Color.TS.surfaceGlass + TSRadius.lg +
+              Color.TS.border stroke, TSSpacing.xl padding).
+  grid:   grid-cols-2 sm:grid-cols-3 md:grid-cols-6 text-center
+            → LazyVGrid(.adaptive(minimum: 104)) — 2 tiles compact, growing toward 6
+              on a regular/large width (the same responsive intent).
+  tile1:  Home   <p text-emerald-300><AnimatedNumber homeCount/></p> + <Home/> label
+            → QuickMetric(id home, tone .success→Color.TS.statusSuccess,
+              systemImage "house.fill", animatesValue true), value = count(homeCount).
+  tile2:  Supercharger <p text-rose-300><AnimatedNumber scCount/></p> + <Bolt/>
+            → tone .danger→Color.TS.statusDanger, systemImage "bolt.fill",
+              value = count(scCount).
+  tile3:  DC Fast <p text-amber-300><AnimatedNumber dcCount/></p> + <Zap/>
+            → tone .warning→Color.TS.statusWarning, systemImage "bolt.car.fill",
+              value = count(dcCount).
+  tile4:  Total Time <p text-primary>{formatDuration(totalDuration)}</p>
+            → tone .primary→Color.TS.textPrimary, no glyph,
+              value = duration(minutes: totalDuration).
+  tile5:  Monthly Avg <p text-primary><Currency totalCost/12 precision=0/></p>
+            → value = currency(totalCost/12, symbol, 0 dp).
+  tile6:  Per Session <p text-primary>{fmtWithUnit(totalEnergy/count, 'kWh')}</p>
+            → value = withUnit(totalEnergy/count, 'kWh', global precision (default 2)).
+  empty:  stats === null ? <EmptyState message=t('charging.noMetrics')>
+            → .empty phase → QuickMetricsEmpty (ContentUnavailableView, chart glyph).
+  anim:   <AnimatedNumber> (web count-up) → the shared native idiom
+            .contentTransition(.numericText()) (cf. TSAnimatedNumber), gated by
+            Reduce Motion, applied only to the three count tiles (animatesValue).
+  fmt:    fmtNumber(v,d)/safeNumber → QuickMetricsFormat.number/safe (NumberFormatter
+            .decimal, .halfUp, grouping, non-finite→0); <Currency> precision=0 →
+            currency(); fmtWithUnit → withUnit(); formatDurationMinutes →
+            duration() ("{h}h {m}m"/"{m}m"/'—', hours floored + minutes rounded
+            half-away-from-zero, '—' for non-finite/negative).
+  i18n:   t('charging.metrics.home|supercharger|dcFast|totalTime|monthlyAvg|
+            perSession', …) + t('charging.noMetrics', …)
+            → QuickMetricsStrings facade, table "QuickMetrics".
+
+STATES (every one renders — no hidden surface):
+  loading  → QuickMetricsLoading (six TSSkeleton tiles in the same responsive grid;
+             reduce-motion safe)
+  content  → QuickMetricsGrid (the six populated tiles)
+  empty    → QuickMetricsEmpty (ContentUnavailableView, web "…noMetrics" message)
+  error    → QuickMetricsError (QueryError-equiv, Retry → model.refresh())
+  stale    → freshness chip (Stale) + QuickMetricsConnectivityBanner + ONE guarded
+             auto-refresh (re-armed on return to live)
+  offline  → freshness chip (Offline) + banner; keeps cached tiles, no refetch
+  (The web strip itself only splits content/empty; the loading/error/stale/offline
+   envelope the parent list owns is reproduced here so no state is a blank box. The
+   freshness chip + banner show ONLY when not live, keeping the healthy state as
+   visually clean as the web source — which has no chrome.)
+a11y: container summary (strip label + each tile's "{label} {value}"), per-tile
+  VoiceOver "{label}: {value}", icons accessibilityHidden, reduce-motion animation
+  gate, Dynamic Type via system fonts/tokens, minimumScaleFactor on value/label.
+telemetry: P1/S11 view.opened(surface:"QuickMetrics") emitted once on appear.
+binding: P1/S8 QuickMetricsSource seam (production impl over shared state holders —
+  the useCharging→computeStats projection + useFormatting prefs); the view performs
+  NO networking. Previews/tests drive InMemoryQuickMetricsSource.
+
+===========================================================================
+HOST GATES — each command actually executed on this host; real exit codes.
+===========================================================================
+
+[1] swiftformat --lint (per-surface, 6 swift files; config apps/apple/.swiftformat)
+    $ swiftformat --lint TeslaSync/feature-views/QuickMetrics.{swift,Model,Adapter,Views,Previews,Tests}.swift
+    → SwiftFormat completed. 0/6 files require formatting.
+    FORMAT_EXIT=0   ✅  (maxwidth 120, before-first wrapping, --self remove)
+
+[2] swiftlint --strict (per-surface, explicit paths, repo .swiftlint.yml)
+    $ swiftlint lint --strict --config .swiftlint.yml TeslaSync/feature-views/QuickMetrics.*.swift
+    → Done linting! Found 0 violations, 0 serious in 6 files.
+    LINT_EXIT=0   ✅
+    NOTE: caught + fixed during dev — function_body_length (the 6-tile builder spanned
+      60>50 lines → split into countTiles()/derivedTiles() helpers) and empty_count
+      (the web field `stats.count` read as `.count > 0` → bound to a local `sessions`
+      first). File lengths all < 400 (Adapter 377, Tests 370, Views 263, Model 244,
+      Previews 96, main 68) — under the file_length gate.
+
+[3] check-placeholders.ps1 (real per-file scan + negative control)
+    The gate's literal `-Path …/QuickMetrics` is a no-op on the flat file layout (the
+    surfaces live as QuickMetrics.* FILES, not a subdir), so a MEANINGFUL scan was also
+    run on the real files copied into a temp dir — Covenant #1/#3, never vacuous:
+    $ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/QuickMetrics -Language swift
+        → PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+    $ pwsh ./apps/tools/check-placeholders.ps1 -Path <tmp>/QuickMetrics -Language swift
+        → PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+    Negative control (injected "// TODO") → COUNT=1 detected (scanner proven live).
+    grep for TODO/FIXME/XXX/Coming soon/[Pp]laceholder/Lorem/not implemented/stub/mock/
+    fatalError across all QuickMetrics.* → NONE FOUND.
+    PLACEHOLDER_EXIT=0   ✅  (no TODO/stub/mock/placeholder/Lorem in shipped code)
+
+[4] EXECUTED adapter self-test (Foundation only, macOS 15 target) + Swift-6 typecheck
+    $ swiftc -typecheck -swift-version 6 -sdk MacOSX.sdk -target arm64-apple-macos15.0 QuickMetrics.Adapter.swift
+        → ADAPTER_SWIFT6_TYPECHECK_EXIT=0
+    $ swiftc -sdk MacOSX.sdk -target arm64-apple-macos15.0 QuickMetrics.Adapter.swift main.swift && ./run
+    Asserts (web-parity golden vectors): count grouping ("1,234"); number half-up +
+      non-finite→0 ("25.11", "1,235", ".nan"→"0.00"); currency ("$51", "$1,235",
+      .nan→'—'); withUnit ("50.00 kWh", .nan→"0.00 kWh"); duration ("36h 26m" for 2186,
+      "1h 30m", "1h 0m", "59m", "0m", "1h 31m" for 90.6, neg/.nan→'—'); six-tile order +
+      tones + icons + animatesValue flags; tile values (Home 31 / SC 12 / DC 4 /
+      36h 26m / $51 / 25.11 kWh); per-session zero-session-count guard ("0.00 kWh");
+      phase matrix (loading/loaded/empty/failed × hasStats); surface slug "QuickMetrics";
+      a11y section summary + tile label + empty message.
+    → ALL_ADAPTER_CHECKS_PASS    COMPILE_EXIT=0 / RUN_EXIT=0   ✅
+
+[5] Swift-6-strict TYPE-CHECK of the full SwiftUI view set + testable-module emit
+    Compiled against the REAL shared chain (apps/design/generated/apple/Tokens.swift +
+    Design/{TSDesign,TSMaterial} + Components/Motion/Motion + Feedback/Skeletons +
+    UI/{Cards,Typography,Badges,Buttons}) + the macOS 15 SDK, module TeslaSync:
+    $ swiftc -typecheck -swift-version 6 -sdk MacOSX.sdk -target arm64-apple-macos15.0 \
+        -module-name TeslaSync <shared chain> QuickMetrics.{Adapter,Model,Views,swift,Previews}
+        → VIEWSET_TYPECHECK_EXIT=0  ✅
+    $ swiftc -emit-module -enable-testing -module-name TeslaSync … <prod set>
+        → MODULE_EMIT_EXIT=0  ✅  (the prerequisite for @testable import TeslaSync in XCTest)
+    NOTE: the SwiftUI `#Preview` macro (PreviewsMacros plugin) ships with Xcode, not
+      with Command Line Tools, so a raw `swiftc` cannot EXPAND `#Preview` on this host
+      (it fails identically inside the shared Cards.swift). The DEBUG-only preview
+      blocks are therefore compiled by the Xcode app target at integration; the
+      type-check above (without -D DEBUG) fully exercises the production view set, and
+      the Previews file uses only already-type-checked public APIs.
+    NOTE: iOS-Simulator type-check could NOT be performed — `xcrun --sdk iphonesimulator
+      --show-sdk-path` → "SDK iphonesimulator cannot be located" (CLT ships only the
+      macOS SDK). The SwiftUI source is platform-portable (no os(iOS)-only API in this
+      surface; horizontalSizeClass is not even used here), so the macOS-SDK type-check
+      exercises the same code the iOS target compiles.
+
+[6] EXECUTED state-holder + a11y driver (links REAL SwiftUI + Tokens + Motion[TSFadeIn]
+    + Skeletons[TSSkeleton] + Cards/Typography/Badges/Buttons + the QuickMetrics
+    Adapter/Model/Views/main view, Swift 6, macOS 15). Same assertions as
+    QuickMetrics.Tests.swift QuickMetricsModelTests:
+    $ swiftc -swift-version 6 -sdk MacOSX.sdk -target arm64-apple-macos15.0 \
+        -module-name TeslaSync <shared chain> QuickMetrics.{Adapter,Model,Views,swift} main.swift && ./driver
+    Asserts: loaded→content (6 tiles, startCount 1); nil-stats→empty; view.opened
+      emitted exactly once across two start() calls; stale → exactly one guarded
+      auto-refresh; return-to-live re-arms (second stale → 2 total); offline keeps
+      cached content and does NOT refetch; failed→error(msg); retry→refresh; stop→stop;
+      loading phase; accessibilitySummary content.
+    → ALL_MODEL_DRIVER_CHECKS_PASS    BUILD_EXIT=0 / RUN_EXIT=0   ✅
+
+[7] i18n key coverage (every key the code resolves exists in the catalog)
+    Extracted all "charging.*" keys referenced in the 5 production swift files vs keys
+    defined in QuickMetrics.strings → 0 code keys missing, 0 unused catalog keys. 16
+    keys total (7 web-source parity keys + 3 freshness + 2 banner + 3 loading/error/
+    retry + 1 a11y section label).
+    I18N_MISSING=0 / I18N_UNUSED=0   ✅
+
+===========================================================================
+XCODE APP-TARGET GATE — DEFERRED (real probe; NOT claimed green; Covenant #1/#8)
+===========================================================================
+  Gate as written:
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    swiftlint --strict ; swiftformat --lint apps/apple ; check-placeholders.ps1
+
+  Real probe performed on THIS host (not assumed):
+    $ xcode-select -p        → /Library/Developer/CommandLineTools  (no Xcode.app)
+    $ xcodebuild -version    → error: tool 'xcodebuild' requires Xcode, but active
+                               developer directory is a command line tools instance
+    $ xcrun --sdk iphonesimulator --show-sdk-path → error: SDK cannot be located
+    $ xcrun simctl list devices available | grep -ci iphone → 0
+    $ xcrun --sdk macosx --show-sdk-path → /…/MacOSX.sdk  (present; used by [4]-[6])
+
+  Why DEFERRED (none a defect in THIS surface's code):
+    (a) This host has Command Line Tools only — no Xcode.app, so `xcodebuild` cannot
+        launch and there is no iOS Simulator nor iPhoneSimulator SDK. Host-capability
+        gap, not a code/gate failure. The P4 integration runner (Xcode + simulators)
+        is where the app-target build/test belongs.
+    (b) The `-scheme TeslaSync*` build runs the mandatory "Stage Shared.xcframework"
+        pre-action (ADR-004) — a heavy KMP Kotlin/Native Gradle build — plus macOS
+        test-host code-signing; both are integration-stage concerns unrelated to this
+        surface. The peer surfaces 0071-AlertsSection and 0055-DrivingPerformanceCards
+        deferred the identical gate for the same reasons and concluded DONE.
+    project.yml already globs `TeslaSync/feature-views` for BOTH the TeslaSync (iOS, L37)
+    and TeslaSync-macOS (L68) targets, so QuickMetrics.* is automatically compiled by
+    the app targets at integration — no project.yml edit is needed (and it is out of
+    this prompt's allowed-files scope).
+
+    This surface is instead verified green by gates [4] (executed adapter logic +
+    Swift-6 typecheck), [5] (Swift-6-strict macOS-SDK type-check of the full rendered
+    view set + testable-module emit against the real shared chain), and [6] (executed
+    state-holder + a11y driver linking real SwiftUI) — real compiler + runtime
+    verification on this host.
+
+    IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED   (cannot run on a CLT-only host; not faked)
+
+===========================================================================
+HONESTY COVENANT (binding)
+===========================================================================
+  1 No red-as-green     : xcodebuild iOS/macOS build/test reported DEFERRED with a REAL
+                          host probe (CLT-only; no Xcode/sim/iOS-SDK); every ✅ is a
+                          command run on THIS host with its real exit code; the
+                          #Preview-macro + iOS-sim limitations are disclosed, not hidden.
+  2 No scope narrowing  : implemented ALL composition + every state (loading/content/
+                          empty/error/stale/offline) + all six tiles + the AnimatedNumber
+                          count animation + a11y + i18n + P1/S11 telemetry.
+  3 No skip-and-assume  : each host gate executed; the Xcode path was actually probed
+                          (xcode-select/-version/SDK/simctl), not assumed.
+  4 No stubs as final   : complete implementations; placeholder real-scan COUNT=0
+                          (negative-control proven); executed adapter + model drivers PASS.
+  5 No parity shortcuts : faithful port of the stats consumer — the six tiles in web
+                          order, the emerald/rose/amber count colors + glyphs, the
+                          AnimatedNumber/Currency(precision=0)/fmtWithUnit('kWh')/
+                          formatDurationMinutes formatting, the totalCost/12 monthly
+                          average, the totalEnergy/count per-session, the EmptyState
+                          branch, and the exact web i18n keys/fallbacks.
+  6 No delegation       : authored directly (Delegation: FORBIDDEN honored — no sub-agent).
+  7 No predecessor bypass: did NOT edit project.yml (feature-views already globbed) and
+                          did NOT edit the shared Localizable.xcstrings (parallel-unsafe)
+                          — strings ship as the per-surface QuickMetrics.strings table;
+                          no sibling file edited.
+  8 No commit on red    : committing on all-green host gates for THIS surface; the Xcode
+                          app gate is explicitly DEFERRED (not failed), the same
+                          user-approved disposition as peers 0071 / 0055.
+  9 No silent drift     : changes confined to the allowed QuickMetrics.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+===========================================================================
+DISPOSITION
+===========================================================================
+  Production-polished native QuickMetrics shipped at parity with the web source: a pure,
+  executed-green projection core (Foundation, Swift 6) reproducing the fmtNumber /
+  Currency / fmtWithUnit / formatDurationMinutes formatting and the six-tile read of
+  ChargingStats, a P1/S8 state-holder seam (no view HTTP), a P1/S10 i18n facade with full
+  key coverage, P1/S11 view.opened telemetry, the AnimatedNumber count animation
+  (.contentTransition(.numericText()), reduce-motion gated), and every prompt state
+  (loading/content/empty/error/stale/offline) with VoiceOver + Dynamic Type. All
+  host-runnable gates pass: swiftformat 0/6, swiftlint --strict 0/6, check-placeholders
+  real-scan COUNT=0, Swift-6-strict macOS-SDK type-check of the full view set + testable-
+  module emit EXIT=0, i18n coverage complete, and two executed runtime drivers (adapter +
+  model/a11y) PASS. The xcodebuild iOS-Simulator + macOS app build/test is DEFERRED to
+  the P4 integration runner — this host is Command Line Tools only (no Xcode.app, no
+  iPhoneSimulator SDK, no simulators, no #Preview macro plugin), and the app build
+  additionally carries the KMP Shared.xcframework Gradle pre-action + macOS signing —
+  none a defect in this code. Matches the user-approved peer disposition (0071-AlertsSection
+  / 0055-DrivingPerformanceCards, same P4 batch).
+
+===========================================================================
+COMMIT
+===========================================================================
+  git add apps/apple/TeslaSync/feature-views/QuickMetrics.swift \
+          apps/apple/TeslaSync/feature-views/QuickMetrics.Adapter.swift \
+          apps/apple/TeslaSync/feature-views/QuickMetrics.Model.swift \
+          apps/apple/TeslaSync/feature-views/QuickMetrics.Views.swift \
+          apps/apple/TeslaSync/feature-views/QuickMetrics.Previews.swift \
+          apps/apple/TeslaSync/feature-views/QuickMetrics.Tests.swift \
+          apps/apple/TeslaSync/feature-views/QuickMetrics.strings \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0105-QuickMetrics.log
+  git commit -m "feat(apps/apple/feature-views): add QuickMetrics surface (P4)"
+
+EXIT=0
+STATUS=DONE

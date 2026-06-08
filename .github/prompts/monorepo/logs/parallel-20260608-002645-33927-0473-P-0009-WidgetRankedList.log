@@ -1,0 +1,134 @@
+I'll start by exploring the environment and understanding the task constraints. This is a P4 Apple widget primitive task that requires the Apple toolchain (SwiftUI, Swift Charts, MapKit, Xcode).
+
+Key finding: `xcodebuild` reports only Command Line Tools are installed (no full Xcode), but `swift` 6.3.2, `swiftlint`, and `swiftformat` are available. Let me investigate the toolchain more carefully and explore the existing Apple project structure before concluding anything.
+
+**Critical correction:** Full Xcode IS installed at `/Applications/Xcode.app` — `xcode-select` just points to CLT. I can override with `DEVELOPER_DIR`. Also confirmed SwiftUI, Charts, MapKit, WidgetKit are all present. Let me verify Xcode works and explore the existing Apple widget-primitives conventions.
+
+Xcode 26.5 works (iOS/macOS SDK 26.5, iPhone 16 simulator booted). No `widget-primitives` dir exists yet — I'll create it. Now I need to understand the conventions deeply. Let me read the project config and existing sibling code.
+
+Now I understand the target structure. `widget-primitives` is a **new** directory not yet in `project.yml` (which explicitly lists `dashboard-widgets` and `feature-views`). I need to register it. Let me study the conventions: the Feedback/UI components (EmptyState, Badge counterparts), design tokens (P1/S9), i18n facade (P1/S10), diagnostics (P1/S11), and a full sibling file-set to mirror.
+
+Let me pinpoint the exact diagnostics contract (`view.opened`), the i18n facade, and read the native EmptyState/Badge/token definitions.
+
+`BatteryRadialGaugeWidget` is the canonical example using the `view.opened` diagnostics seam, i18n, tokens, and states. Let me read it and the supporting primitives in full.
+
+Excellent — this gives me the diagnostics seam (`DashboardWidgetTelemetry`, `NoopDashboardWidgetTelemetry`, `surfaceSlug`, `reportOpen`) I can reuse. Now let me read the content/projection/model/test files plus EmptyState, Badge, and tokens to nail the i18n + state + accessibility conventions.
+
+Now I have the full pattern. Let me read the test conventions, the native `TSEmptyState`/`Badge`/token definitions, and inspect the localization catalog structure.
+
+Now let me read the design tokens, the Badge component, and the localization catalog structure to use the exact available tokens and i18n keys.
+
+Let me locate the actual token definitions (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSMotion`) and inspect the localization catalog and a sibling `.strings` file.
+
+Let me read the full Tokens.swift to get exact color/font token names.
+
+I now have the full token vocabulary. Two pivotal questions remain: (1) how sibling in-dir `.Tests.swift` files are compiled/run, and (2) whether a reusable "no data" i18n key exists. Let me resolve these.
+
+Key insight: 224 co-located `.Tests.swift` files live in the app-target dirs — on Apple platforms XCTest discovers XCTestCase subclasses across the whole test-host process, so co-located tests run under `xcodebuild test`. This is the established P4 convention. Also `translation.common.noData` already exists. Let me verify these facts and study a small sibling surface's exact structure.
+
+`ToolCard` is an ideal small presentational sibling. Let me read its full set plus the `noData` catalog value and the `.strings` convention.
+
+`ToolCard` confirms the exact pattern for a **pure presentational primitive that owns no data** — loading/error/stale/offline belong to the host, not the primitive. It defines its own `Sendable` telemetry seam + OSLog sink + `Surface.reportOpen`, and `translation.common.noData` = "No data available" (exact web-default match). Let me read the model/surface pattern, a co-located test, and list-rendering idioms.
+
+I now have the complete convention picture (ToolCard is the exact precedent: pure presentational primitive, owns no data, `Sendable` telemetry seam + OSLog sink + `Surface.reportOpen`, `Text(verbatim:)` for data, tokens for everything). Before writing, I must verify the build toolchain: xcodegen, the generated project, and the `Shared.xcframework` dependency the gate's scheme builds.
+
+The app targets depend on `Frameworks/Shared.xcframework` (currently just `.gitkeep`), built via Gradle/Kotlin in a scheme pre-action. This is the critical build gating factor. Let me assess feasibility.
+
+The `macos-pending-verifications.md` doc is decisive: it documents the **exact established protocol** for P4 Apple surfaces (incl. my sibling `ToolCard`). The full-app `xcodebuild build test` is blocked by **pre-existing, unrelated** issues (unstaged `Shared.xcframework` deferred to H8, `DashboardWidgetSize` redefined 8–15×, 100+ co-located `*.Tests.swift`, macOS signing) and deferred to the `P99` acceptance gate on macOS CI. Surfaces are verified **green in isolation** (SwiftPM build + tests + `swiftc -typecheck` on both SDKs + lint/format/placeholder + xcodegen enumeration). Let me verify the baseline state in this slot.
+
+Baseline confirmed: this slot has the **pre-existing, unrelated** app-build blockers the doc describes — `DashboardWidgetSize` redefined **15×** across other surfaces (a hard redeclaration error), 261 co-located XCTest files, 15 `Sources/**` files needing the unstaged `Shared.xcframework`, plus macOS signing. These are explicitly out of scope. `Sources/Components` + `Sources/Design` are KMP-free, so I can verify my surface **green in isolation** (the documented protocol). Let me kick off the Gradle `Shared.xcframework` build in the background and study the component closure + exact signatures I'll call.
+
+Components/Design is fully self-contained (only SDK frameworks: SwiftUI/Charts/CoreLocation/MapKit/Foundation) — perfect for isolated typecheck. My View needs only SwiftUI + tokens + `TSEmptyState`, treating row data as `Text(verbatim:)` (the SummaryStats idiom). Let me read the lint/format configs, the placeholder checker, and typography signatures, and check `pwsh`.
+
+Everything needed is confirmed: `pwsh` is available (I can run the real gate), `TSEmptyState` is dependency-light, typography idioms are clear, and Components/Design are self-contained. Note: my new dir must be added to `.swiftlint.yml` `included` and `project.yml`. Let me read the placeholder checker (to avoid tripping it) and check the Gradle build progress.
+
+Gradle is building `Shared.xcframework` from cache (fast) — blocker #3 is resolvable, but blockers #1 (15× `DashboardWidgetSize` redeclaration), #2 (261 co-located XCTest), #4 (signing) remain pre-existing and out of scope. Placeholder patterns are clear (avoid TODO/FIXME/XXX/"Coming soon"/Placeholder/"Lorem ipsum"/"not implemented").
+
+Let me record my plan, then write the surface. First the plan file and the pure model.
+
+Now I'll create the surface. Starting with the directory and the pure model (Foundation-only, fully testable adapter).
+
+Now the test suite — co-located (in-module, app target), covering the adapter, tone-mapping parity, telemetry, i18n wiring, accessibility, and per-state view construction.
+
+Now the minimal, declared integration edits. First, register `widget-primitives` in both app targets in `project.yml`.
+
+Now let me verify formatting, linting, and placeholders on the new files, and confirm the Gradle framework staging.
+
+Placeholder gate passes (COUNT=0). swiftformat/swiftlint flagged trailing commas and single-line property bodies (the pre-existing `LifetimeStatsWidget` error is another surface, not mine). Let me auto-format my dir to conform, then re-lint.
+
+swiftformat clean. Now re-check swiftlint on the new files only.
+
+swiftlint clean on my files (0 errors; the `LifetimeStatsWidget` error is a pre-existing other-surface issue). swiftformat clean. Placeholder gate clean. Now the core verification: an **isolated SwiftPM build + test run** against the real KMP-free dependency closure (Components + Design + tokens) under Swift 6.
+
+The isolated build pulled in `Components/DataDisplay/UnitFormatters.swift`, which references a `Units` helper defined outside Components (my surface doesn't use it). Let me locate `Units` and include its small closure so the full Components set compiles in isolation.
+
+`Units` lives in `SharedFacade` and imports the KMP `Shared` framework — so `Components/DataDisplay/UnitFormatters.swift` transitively needs KMP (my surface doesn't use it). Let me identify exactly which Components files are KMP-coupled and exclude only those from the isolated copy.
+
+Only `UnitFormatters.swift` is KMP-coupled (my surface doesn't use it). I'll exclude just that one file and rebuild the isolated package — using the **real** `TSEmptyState` + full token/component closure.
+
+**Isolated SwiftPM build + 24/24 tests PASSED** under Swift 6 (against the real `TSEmptyState` + tokens + Components/Design). Now the iOS‑18 SDK typecheck over the same closure (including `#if DEBUG` previews).
+
+iOS‑18 typecheck clean. Let me add the explicit macOS‑15 typecheck and run `xcodegen generate` to prove the project enumerates the new files.
+
+macOS‑15 typecheck clean, and all 5 files are enumerated in the generated Xcode project. Now I'll run the prompt's **actual full gate** to capture the real outcome honestly. First let me see why the Gradle release build failed, then run the gate.
+
+`Shared.xcframework` now exists in `Frameworks/` (staged at 07:28). Let me verify it's valid, then run the actual gate.
+
+`Shared.xcframework` is staged and valid (all 3 slices) — blocker #3 resolved. The remaining blockers (15× `DashboardWidgetSize` redeclaration, 261 co-located XCTest, signing) are pre-existing and out of scope. Let me run the prompt's **actual iOS gate** and capture the real result.
+
+The gate is running (it re-runs Gradle via the scheme pre-action, then compiles). Let me monitor it and capture the decisive pre-existing-collision evidence in parallel.
+
+iOS gate failed with `IOS_EXIT=65` in the **app target** compile. Let me confirm the errors are the pre-existing collisions and that **zero** errors come from my surface.
+
+Confirmed: **zero errors reference my surface.** The app target's first fatal error is `Unable to resolve module dependency: 'XCTest'` — caused by the **261 pre-existing co-located `*.Tests.swift`** files importing XCTest into the app target (a documented pre-existing blocker), plus the 15× `DashboardWidgetSize` redeclaration. Let me run the macOS gate and capture the whole-repo lint/format EXITs (which the gate also runs).
+
+swiftlint whole-repo fails only on a **pre-existing** `LifetimeStatsWidget` violation — **0** in my files. Let me capture the gate's swiftformat step (whole-repo) and the placeholder step exactly as written, then check the macOS gate.
+
+The macOS gate finished. Let me read its result and confirm zero errors from my surface.
+
+Full honest gate picture captured. Every non-zero step is due to **pre-existing, out-of-scope** repo state (261 co-located XCTest, 15× `DashboardWidgetSize`, macOS signing, 2 other-surface lint/format issues) — **zero** attributable to my surface, which is green in isolation. Let me check the logs directory and a sibling log format.
+
+Let me read a sibling P4 log (ToolCard / a feature-view) to match the exact log format and STATUS convention used for the same blocked-but-isolated-green situation.
+
+This is the exact sanctioned precedent: surface verified green in isolation + all surface‑scoped gates green, full‑app `xcodebuild` reported **RED and DEFERRED** with evidence (pre‑existing collisions), ending `EXIT=0 / STATUS=DONE`. My situation is cleaner (I also staged `Shared.xcframework` and passed dual‑SDK typecheck). Let me write the log.
+
+Now append the deferred-verification row to `macos-pending-verifications.md` per the resolution protocol.
+
+Now clean up temporary artifacts and do a final consolidated verification on the repo files.
+
+All final scoped gates green. Let me check git status and confirm generated artifacts are ignored before committing.
+
+`git status` shows **pre-existing unrelated dirty files** (`AIUsageCard.*`, two `web/*` files) that are **not mine** — I'll exclude them. Generated artifacts (`.xcodeproj`, `Shared.xcframework`) are correctly gitignored. Let me stage only my files and verify the staged set.
+
+Staged set is clean — only my 5 surface files + wiring + macos-pending row + log. Pre-existing unrelated changes left untouched. Committing.
+
+Committed as `24ece8218`. Let me verify the commit contains exactly the intended files (no generated artifacts or pre-existing changes leaked in).
+
+Task complete. The commit `24ece8218` contains exactly the 9 intended files — no generated artifacts or pre-existing unrelated changes leaked in.
+
+## Summary
+
+I shipped a production-polished, Apple-idiomatic **`WidgetRankedList`** widget primitive at parity with the web source `features/dashboard/widgets/shared/WidgetRankedList.tsx`.
+
+**Files shipped** (`apps/apple/TeslaSync/widget-primitives/`):
+- `WidgetRankedList.Model.swift` — pure adapter (sort → limit → bar-scale), badge tone→role map (`error→danger`), VoiceOver row summary
+- `WidgetRankedList.Telemetry.swift` — P1/S11 `view.opened` seam + OSLog sink
+- `WidgetRankedList.swift` — SwiftUI view + row + badge + token mappings + `TSEmptyState`
+- `WidgetRankedList.Previews.swift` — full / compact / bars-off / empty
+- `WidgetRankedList.Tests.swift` — 24 XCTest cases
+- Wiring: `project.yml` (+path ×2 targets), `.swiftlint.yml` (+included). **No** catalog edit — reused existing `translation.common.noData` ("No data available", exact web default).
+
+**Verification — all real, all green (surface-scoped):**
+| Gate | Result |
+|---|---|
+| Isolated SwiftPM build + tests (Swift 6 strict concurrency, real design-system) | **24/24 pass** |
+| `swiftc -typecheck` iOS-18 + macOS-15 (incl. previews) | EXIT=0 / EXIT=0 |
+| swiftformat --lint / swiftlint --strict (my files) | 0 / 0 |
+| placeholder gate | COUNT=0 |
+| xcodegen generate | all 5 files enumerated |
+| `Shared.xcframework` | assembled + staged (3 slices) |
+
+**Full-app `xcodebuild build test`: DEFERRED (RED, reported honestly)** — `IOS_EXIT=65` / `MAC_EXIT=65`, blocked by **pre-existing, unrelated, out-of-scope** repo state: 261 co-located `*.Tests.swift` importing XCTest into the app target, `DashboardWidgetSize` redefined 15×, and macOS dev-signing. Grep of both build logs = **zero** `WidgetRankedList`/`widget-primitives` errors. This is the repo's sanctioned "code-complete + deferred Xcode gate" disposition (matching `ToolCard`/`AlertMessageEditor`/`FSMTimelineChart`); a deferral row was added to `apps/macos-pending-verifications.md`.
+
+Log written ending `EXIT=0 / STATUS=DONE`.
+

@@ -1,0 +1,162 @@
+I'll start by exploring the repository structure, the web source, and checking platform capabilities in parallel.
+
+Key capability finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed, and `simctl` is unavailable. However `swift` 6.3.2, `swiftlint`, and `swiftformat` ARE available. Let me explore the project structure and web source deeply before deciding on the build approach.
+
+The web source is clear. The Apple project uses XcodeGen (no Package.swift, .xcodeproj git-ignored) with a rich multi-file convention per feature-view. Critically, `xcodebuild` needs full Xcode (only CLT installed) and `simctl` is missing — so the iOS/macOS gates can't run here. Let me explore the conventions deeply so I can produce correct, idiomatic native code, then verify with the tools I do have (swift, swiftlint, swiftformat).
+
+`HeroGauges` (gauges) and `SpeedTrendChart`/`SecurityStatusCards` (live "Latest" holders) are the closest analogs. Let me study the data layer (state-holders P1/S8), tokens, i18n facade, diagnostics, and a complete feature-view template.
+
+Excellent — now I understand the file convention. Let me study the shared facade (state-holders P1/S8), the i18n facade, design tokens, diagnostics, and the `HeroGauges` set (closest gauge analog) including its Model and Views.
+
+The data layer is clear: `LoadableState<Value>` (idle/loading/loaded/empty/failed with stale+cached) and `LiveConnectionState` (live/stale/offline) map exactly to the required states. Now let me see how a feature-view binds to a shared holder and renders — reading the full `SpeedTrendChart`, `HeroGauges`, and `SecurityStatusCards` sets plus `AppContainer` and the i18n facade.
+
+Path typo. Let me read the full `SpeedTrendChart` view set, `HeroGauges` gauge set, and locate the i18n facade.
+
+The architecture is crystal-clear now. The i18n facade is a per-surface `<Name>Strings` enum over `NSLocalizedString(tableName:)`. Let me read the design tokens, the gauge/badge/empty native components, and `SpeedTrendChart.Views` + `HeroGauges` view set to nail the rendering conventions.
+
+Now let me study the gauge surface (`HeroGauges`), the shared `Badge`/`EmptyState`/feedback components, the design tokens, and the Previews/Tests/strings patterns to complete my understanding.
+
+`HeroGauges` is the ideal template — a gauge surface ported from a web `RadialGauge` component with a local `HeroRadialGaugeView`. Let me read its Model/Adapter/Previews/Tests/strings plus the shared `Badge`, `EmptyState`, and design tokens.
+
+I have the full architectural picture. Let me read the Previews/Tests/strings patterns plus the design tokens, `Badge`, and `EmptyState` components to lock down exact API names.
+
+The HeroGauges set is the perfect template. Let me confirm the exact token/component APIs I'll reference (design tokens, `TSEmptyState`, `TSBadge`, `TSGlassPanel`, `TSFadeIn`, colors, fonts).
+
+TSDesign.swift is just the palette. The core tokens (Color.TS, Font.TS, TSSpacing) come from generated design tokens. Let me locate all token definitions and the component APIs.
+
+Now I have all tokens. Let me read the remaining shared components I'll compose with: `TSGlassPanel`, `TSEmptyState`, `TSBadge`, `TSFadeIn`, `TSSkeleton`.
+
+Let me confirm `TSEmptyState` and `TSSkeleton` signatures, then I have everything needed.
+
+I have all components confirmed. Let me check the web `RadialGauge` rendering details and the `useDriveDynamicsLatest` hook to ensure faithful data/format parity.
+
+Let me check `getGlobalPrecision` and `fmtNumber` defaults for exact numeric parity, then I'll start building.
+
+I now have full parity details. The gauge clamps to [0,max], formats with integer-aware decimals (0 if whole else global precision 2), and shows unit `%` (present) or `—` (null). Let me check the shared typography components, then build all files.
+
+I have complete understanding. Let me verify the remaining capability facts (no Xcode.app, pwsh availability, lint configs, placeholder patterns) and set up tracking.
+
+Xcode.app IS present — the issue is just `xcode-select` pointing at CommandLineTools. With `DEVELOPER_DIR` I may be able to run the real gates. Let me verify the full toolchain, xcodegen, simulators, and whether `Shared.xcframework` is real.
+
+Full Xcode 26.5 + xcodegen + iPhone 16 simulator are available! But `Shared.xcframework` (the KMP core that the whole app `import Shared`s) is missing — only a `.gitkeep`. Let me investigate whether it can be built.
+
+There's a KMP module at `apps/shared` + a build script. Building `Shared.xcframework` is the key to running the real gate. Let me assess toolchain feasibility.
+
+Everything needed is available: full Xcode 26.5, xcodegen, iPhone 16 simulator, JDK 17, and a Gradle wrapper to build `Shared.xcframework`. This means I can run the REAL gate. Let me kick off the (heavy) KMP xcframework build in the background while I write the PedalUsage files.
+
+Shared.xcframework build is progressing nicely (Gradle cache warm, now linking release frameworks). Let me verify build liveness and start writing the files.
+
+Build is running for my slot (alongside many parallel slots on this shared machine). Let me write the files while it builds. Starting with the plan and the pure projection core.
+
+Now the pure projection core:
+
+Let me immediately typecheck the two pure-logic files against the SDK (a real verification I can run now), while the xcframework builds.
+
+Core logic typechecks cleanly under Swift 6 strict concurrency. Now the entry view:
+
+Now the presentational subviews:
+
+Now the previews (every state):
+
+Now the comprehensive test suite:
+
+Now the i18n strings table:
+
+All 7 files written. Let me update tracking and verify how the test target and resources are wired in project.yml, plus check the xcframework build.
+
+Shared.xcframework built successfully and is staged (ios-arm64, ios-arm64-simulator, macos-arm64)! But I need to understand how `*.Tests.swift` in `feature-views/` reach the test bundle (which sources `Tests/Unit`), not the app target. Let me inspect project.yml carefully.
+
+Critical: app targets glob all of `feature-views/` but test bundles source `Tests/Unit`. I must understand how existing `*.Tests.swift`/`*.Previews.swift` are handled (excludes? symlinks?) before generating. Let me investigate.
+
+There's a `Tests/Unit/FeatureViews/` dir. Let me reconcile how `feature-views/*.Tests.swift` are excluded from the app target and reach the test bundle.
+
+`feature-views/*.Tests.swift` are real files globbed into the app target, yet they use `@testable import TeslaSync` (illegal self-import). There must be an exclude/relocation mechanism in CI. Let me find the canonical Apple gate.
+
+CI is currently a documented no-op (no committed `.xcodeproj`), so these feature-view files have never been compiled together — and `*.Tests.swift` with `@testable import` would break the app target if globbed in. Let me read the harness `run-prompts.ps1` to find the canonical build setup (it matched my search).
+
+The harness doesn't do special generation. Let me empirically generate the project and inspect how test files are wired, then attempt a build.
+
+Project generated. Let me attempt the macOS build and capture the first errors to learn how test files are handled.
+
+The background build died when its launching session ended (0-byte log). Before committing to a long full build, let me quickly (a) confirm whether the in-module `@testable import` self-import actually errors, and (b) check exactly which targets the `*.Tests.swift` files belong to in the generated project.
+
+Decisive finding: in-module `@testable import` is a harmless **warning**, not an error (exit 0). So the globbed test files won't break the build. The test file is a member of the app target (compiled, with warnings). Now let me normalize my files with swiftformat and lint them, then run the real build. First, format + lint my files:
+
+Only 2 long lines in the Tests file. Let me auto-format my files and re-verify:
+
+swiftformat clean. One swiftlint violation: the `gauge` helper has 8 params (max 5). Let me refactor it with a `GaugeSpec` struct (mirroring HeroGauges' pattern). Let me view the current text:
+
+Let me refactor with a `GaugeSpec` struct to reduce the parameter count:
+
+Let me re-verify format, lint, and typecheck after the refactor:
+
+All my-file checks pass (swiftformat clean, swiftlint 0 violations, typecheck clean). Now the real build. Let me list schemes and start the macOS build as a persistent detached process:
+
+Both gate schemes exist. Let me start the macOS build as a detached, persistent process and monitor via its log:
+
+macOS build started detached. While it runs, let me run the placeholder check (the gate's `check-placeholders.ps1`) on my files:
+
+Placeholder check passes (0 placeholders, EXIT=0). The detached wrapper returned immediately — let me check the actual xcodebuild progress:
+
+Build failed only on **code signing** (no dev certificate on this machine) — an environmental issue, not my code. No Swift compile errors appeared. Let me re-run with signing disabled (standard CI approach) to actually validate compilation + tests:
+
+macOS build (signing disabled) running. Let me wait and monitor compilation progress:
+
+Root cause confirmed and it's **pre-existing infra**, not my code: the committed `project.yml` globs ALL `feature-views/*.Tests.swift` into the app target, which can't resolve `XCTest`. The error is on `AcDcStatsPanel.Tests.swift` (a sibling file I didn't author) — it breaks the app build for every surface. The fix belongs in `project.yml` (exclude `*.Tests.swift` from app targets → route to test bundles), which is outside my allowed files.
+
+Let me validate that my production code compiles in the real app module by building with the mis-globbed test files excluded (a command-line override mirroring correct target membership):
+
+While the macOS build runs, let me prepare a focused executable test of the pure projection logic (real execution, not just typecheck) in /tmp. First, let me monitor the build:
+
+I'll wait for the monitor to finish:
+
+The exclude glob `*.Tests.swift` missed sibling files named `*.ModelTests.swift`. There are multiple test-file naming patterns globbed into the app target (further confirming the systemic pre-existing defect). Let me broaden the exclude to `*Tests.swift`:
+
+Build v3 running. While it compiles, let me create an executable harness in /tmp that actually RUNS the projection logic (stronger than typecheck) to prove numeric parity:
+
+Build v3 now compiles real Swift files and got far — but fails on **pre-existing duplicate-type errors in `dashboard-widgets/`** (`WeeklyDigestDTO`, `DashboardWidgetSize` redeclared) — sibling code from other prompts, entirely outside my scope. No errors in PedalUsage or feature-views. 
+
+The full-app build is blocked by pre-existing sibling defects I can't touch. Let me instead run my executable logic test (real execution) and do a focused typecheck of my SwiftUI files against the real shared components:
+
+main.swift wasn't created earlier (dir didn't exist yet). Let me create it now and run:
+
+All 27 logic checks **executed and passed** (real values: "42", "67.50", "—", fractions, clamps, phase matrix, a11y, slug). Now let me typecheck my SwiftUI view files against the real shared component library. First, check whether the component library is SDK-only (no `Shared` dependency):
+
+The component library (41 files) is SDK-only — no `Shared` dependency. Let me typecheck my SwiftUI files against the entire real component library + design tokens (with `-DDEBUG` to also validate previews):
+
+All 52 errors are in component files that reference `Shared`-derived types (e.g., `UnitPreferences` in `UnitFormatters.swift`) — **zero errors in my PedalUsage files**. Let me exclude the few `Shared`-dependent component files and the DEBUG previews so the typecheck of my files + their actual dependencies completes cleanly:
+
+`typecheck_exit=0`, **zero errors** — my 4 production SwiftUI files compile cleanly against the real shared component library. Let me also validate the Previews (`-DDEBUG`) and best-effort typecheck the Tests file (via a /tmp copy against XCTest):
+
+Previews typecheck clean too (0 errors). Now let me validate the Tests file compiles against XCTest (via a /tmp copy with the in-module self-import removed):
+
+The XCTest module isn't loading in this ad-hoc `swiftc` invocation (all 214 errors are cascading "cannot find XCTAssertEqual" — a search-path issue, not a logic issue). Let me check why and add the proper XCTest module path:
+
+With the correct XCTest module path, the Tests file typechecks cleanly: **exit=0, 0 errors**. Every PedalUsage file is now verified. 
+
+Let me get one more strong in-module signal (build the app with the pre-existing-broken `dashboard-widgets` + mis-globbed tests excluded, proving all feature-views incl. mine compile), and concurrently run the repo-wide lint/format gate commands:
+
+While that builds, let me run the actual repo-wide gate lint/format commands and capture honest results:
+
+`swiftlint --strict` on 1334 files: only **1 violation** (and my-files-only run earlier was 0, so it's a sibling). The "6" is just progress lines. Let me pinpoint the violation and check build v4:
+
+The 1 swiftlint violation is a sibling (`dashboard-widgets/LifetimeStatsWidget`), not mine. Build v4 reveals **more pre-existing sibling-surface type collisions** (`RequestBuilder`/`ResultPanel`: `ParsedEndpoint`, `HTTPMethod`, `JSONValue` duplicate declarations) — none in PedalUsage. The whole-app build is blocked by widespread pre-existing sibling defects across independently-generated surfaces, all outside my allowed files.
+
+Let me run the repo-wide swiftformat gate for an honest record, then confirm git-ignore status:
+
+My files are clean in both gate tools (`swiftformat`: 0 of mine need formatting; `swiftlint`: 0 of mine). Only sibling files have the pre-existing issues. The `.xcodeproj`/`Shared.xcframework` are git-ignored. Two unrelated `web/` files were already modified before my work — I'll commit only my files + the log.
+
+Let me confirm zero PedalUsage errors across all build attempts, then write the honest gate log:
+
+**Zero PedalUsage compile errors** across all build attempts. The blockers are pervasive pre-existing duplicate-type collisions in sibling surfaces (`DashboardWidgetSize`, `WeeklyDigestDTO`, `ParsedEndpoint`, `JSONValue`, `ChargerTypeConnection`, …) plus the project.yml test-globbing — all outside my allowed files. Let me also typecheck my SwiftUI files against the **iOS SDK** (to cover the iOS gate), then finalize:
+
+iOS-SDK typecheck also passes (0 errors). My surface is exhaustively verified on both SDKs. Let me write the honest gate log:
+
+Now let me do a final pre-commit verification of all 6 Swift files and commit the deliverable + log:
+
+Final checks clean. Let me update tracking and commit the deliverable + log (staging only my files):
+
+All 8 files staged correctly (7 surface files + log); no sibling/ignored files included. Let me commit:
+
+Committed as `cad8809a0`. Let me clean up the throwaway `/tmp` verification scratch (keeping the git-ignored `.xcodeproj`/`Shared.xcframework` in place as they may aid a later harness gate run):
+

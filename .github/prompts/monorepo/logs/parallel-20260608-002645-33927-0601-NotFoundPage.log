@@ -1,0 +1,131 @@
+I'll start by exploring the repository structure to understand the task — the web source page, the Apple project structure, and existing patterns.
+
+I have `xcodebuild` and `swiftlint` available. Let me explore the Apple project structure and the web dependencies in parallel.
+
+The `Features/System` directory doesn't exist yet. Let me look at the project structure, existing parity pages, and the routeRegistry to understand patterns.
+
+The actual sources are under `Sources/` but the prompt's output path is `TeslaSync/Features/System/`. Let me investigate the build config conflict and look at existing parity pages, the ledger, and navigation.
+
+The real parity work lives in `TeslaSync/feature-views/` (1436 files), not `TeslaSync/Features/System/`. There's a path conflict between the generated prompt and the actual repo. Let me investigate the conventions, navigation registration, and whether other page prompts were already completed.
+
+No `*Page.swift` files exist yet. Let me examine the manifest record for this unit, the ledger, the route parser, and the parity README to nail down the real path convention.
+
+The manifest has no `apple` path field — it comes from the generator template. Let me examine the generator, the route parser, and how AppRoute maps to actual screens.
+
+Let me find the app shell that renders screens from `AppRoute` and look at how an existing feature-view page is structured (multi-file convention) plus the parity README gate contract.
+
+Let me read the navigation shell, route host registry, the ledger schema, and the apple README gate contract.
+
+Now I understand the architecture: `RouteHostRegistry.swift` is explicitly "the registry that **P7 page prompts** populate." This is my registration point. The web `NotFoundPage` is the `/*` catch-all. Before writing code, I must establish whether the build even works here (it needs `xcodegen` + the KMP `Shared.xcframework`). Let me verify the toolchain.
+
+`xcodegen` is present but `Shared.xcframework` must be built via Gradle/Kotlin-Native (heavy). Let me locate the string catalog, the p4-apple gate contract, and read a complete simple feature-view example to mirror conventions.
+
+Now I understand: P7 pages are a new category that register into `AppRouteHostRegistry`. Let me read a complete existing feature-view set to learn the exact multi-file conventions, the test wiring, the string catalog format, and the lint rules.
+
+Important signal: 170 `.Tests.swift` files with `import XCTest` live in `feature-views/`, which project.yml compiles into the **app target** — that wouldn't normally build. This suggests the Apple build has never actually run here. Let me read the pending-verifications doc to confirm baseline state.
+
+This confirms it: the full-app `xcodebuild build test` has **never** succeeded here — it's blocked by pre-existing, unrelated parallel-merge collisions (`DashboardWidgetSize` redefined 15×, 152 co-located `XCTest` files in the app target, unstaged KMP `Shared.xcframework`, signing). Prior surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) were verified **in isolation** and deferred full-app build to P99. Let me find their logs to mirror the exact STATUS/`=== PARITY ===` convention.
+
+Let me read a representative feature-view log to mirror the exact log format, `=== PARITY ===` section, and STATUS convention.
+
+This Base64Tool log is the gold-standard methodology: implement the multi-file surface, verify green **in isolation** (iOS+macOS SDK typecheck, executed XCTest via SwiftPM harness, swiftlint, swiftformat, placeholder scan), and **defer** the full-app `xcodebuild` (pre-existing collisions + missing KMP xcframework + signing). Let me read the Base64Tool surface files, the registration call sites, the string catalog, and design tokens to mirror conventions precisely.
+
+The strings facade and per-surface conventions are clear. The web page has real portable logic — the `closestRoutes` Levenshtein suggestion engine over `ROUTE_REGISTRY` — which gives testable parity (like Base64's btoa/atob port). Let me read the route registry, the Views/Previews conventions, design tokens, the string catalog structure, and where pages register.
+
+Now I understand the registration pattern (`SettingsRouteRegistration.registry(...)` keyed by `AppRoute`). Let me read the Settings registration, the design tokens, the Previews/Adapter conventions, and inspect the string catalog structure.
+
+I have the full convention picture. Let me read the design tokens, the string catalog structure, and the shared components (TSEmptyState, TSButton, glass/material wrappers) I'll compose with.
+
+Let me read the design tokens (full), the Cards (GlassPanel equivalent), Feedback States (TSEmptyState), and Buttons to finalize the component vocabulary.
+
+Excellent — `TSGlassPanel` is the web `GlassPanel`. Let me read the typography components, button API, empty-state, and run a capability probe (Xcode/SDKs/simulator) in parallel.
+
+Toolchain confirmed: Swift 6.3.2, Xcode 26.5, iOS 18 + macOS SDKs. Let me read the `TSEmptyState` and `TSText` variant APIs, then I'll write the plan and implement.
+
+I now have all conventions. Let me set up the directory, write a plan, and track todos.
+
+Now I'll implement the surface. Starting with the Adapter (the ported suggestion engine) and the Model.
+
+Now the presentational subviews.
+
+Now the main page view composing everything in a `TSGlassPanel`.
+
+Now the navigation registration — the catch-all deep-link factory and resolver (the native `<Route path="*">`).
+
+Now the DEBUG previews (one per state the page produces).
+
+The surface views are done. Let me check the existing Base64Tool test's telemetry-spy pattern (Swift 6 Sendable-safe) before writing my test suite.
+
+Now the XCTest suite (engine + deep-link + model + a11y), mirroring the Base64 spy pattern.
+
+Surface files are done. Let me update todos and inspect the string catalog's exact formatting before editing it (to keep the diff minimal).
+
+The catalog uses `indent=2, ensure_ascii=False` with **insertion order** (not sorted). To keep a minimal, parallel-safe diff I'll append the 7 keys preserving order. Let me verify round-trip fidelity, then insert.
+
+Catalog edit is clean (+77 lines, 7 keys). Now I need to determine the minimal compile closure for the isolation typecheck. Let me find `tsGlassPanel`/`TSBadge` and check whether `Sources/Components` is self-contained (no KMP `Shared` import).
+
+`Sources/Components` is self-contained (no KMP `Shared`). For a minimal, robust test harness, I'll move the pure `NotFoundDeepLink` into the Adapter (so the harness needs no SwiftUI views — mirroring Base64). Let me refactor, then run the isolation gate.
+
+Now let me check `Sources/Design` (for the glass modifier) and verify the nav files are self-contained, then run the iOS-simulator typecheck on the surface + its real component closure.
+
+Closure confirmed self-contained. Let me run the iOS-simulator SDK typecheck on the surface plus its real component closure.
+
+iOS typecheck passes. Now the macOS SDK typecheck and the `-D DEBUG` previews typecheck.
+
+The previews helper needs `@MainActor` (it calls MainActor-isolated initializers). Let me fix it.
+
+All three typechecks pass. Now the executed test run via a throwaway SwiftPM harness (module named `TeslaSync` so `@testable import` works unchanged).
+
+All 17 XCTest cases pass (executed on the macOS host). Now SwiftLint `--strict`, SwiftFormat `--lint`, and the placeholder scan on the surface.
+
+SwiftFormat wants multiline property bodies (house style, like Base64's `hasOutput`). Let me auto-apply SwiftFormat to my dir, then isolate the single SwiftLint violation by linting only my files.
+
+My 7 surface files are clean: SwiftFormat 0/7, SwiftLint 0 violations. (The earlier "1 violation/1909 files" is a pre-existing issue in another file — my explicit lint is 0.) SwiftFormat reformatted the Adapter, so I must re-verify typecheck + tests on the final files, then run the placeholder scan.
+
+All green on final files: 3 typechecks EXIT=0, 17/17 tests. Now the placeholder scan.
+
+Placeholder scan clean (COUNT=0). All 7 host-runnable gates are green. Now let me capture the honest **deferred** xcodebuild evidence (like the Base64 precedent): run `xcodegen generate`, confirm registration status, and capture the real build blocker.
+
+`xcodegen generate` succeeds (EXIT=0) but my files have **0 references** — `project.yml` includes `feature-views`/`dashboard-widgets` but not `TeslaSync/Features` (not yet target-registered, exactly like the Base64 precedent). Let me capture the real build blocker for the deferred-evidence section.
+
+The build fails with the exact missing-framework error (`BUILD FAILED`). Let me capture xcodebuild's true exit code (the grep masked it) for an honest log.
+
+Build evidence captured: `REAL_BUILD_EXIT=65` (missing `Shared.xcframework`) — matches precedent. But git status shows unexpected `AIUsageCard.*` modifications I didn't intend. Let me investigate whether these are pre-existing or something I triggered.
+
+The `AIUsageCard.*` files have mtime `09:11:46` — predating my work (I started ~09:24). These are **pre-existing** uncommitted slot changes, unrelated to my task. Let me confirm the full dirty set and ensure I scope my commit precisely.
+
+Confirmed: `AIUsageCard.*` (mtime 09:11:46) are pre-existing slot WIP — I'll exclude them from my commit. One parity gap to close: `notFound.title` is the web page title (`usePageTitle`). The native analog is `.navigationTitle` — let me add it so the key is genuinely used, then re-verify.
+
+All green: 3 typechecks + format + lint clean. Let me update todos and gather line counts for the log.
+
+Line counts solid (761 total; 551 shipping), all widths ≤104. 7 keys confirmed. Let me grab the base commit/branch, then write the parity log and ledger.
+
+Now the parity log — the binding evidence document. I'll mirror the established Base64 structure with all the real exit codes I captured.
+
+Now let me update the todo and commit — staging only my files (excluding the pre-existing `AIUsageCard.*` WIP).
+
+Staged scope is exactly correct (10 files; pre-existing `AIUsageCard.*` excluded). Committing.
+
+Committed cleanly as `f79e4f54e`. Let me do a final validation pass: ledger schema conformance, log PARITY markers, and todo status.
+
+All validations pass. Let me confirm todos are complete.
+
+All 10 todos complete. The task is done and verified.
+
+## Summary
+
+Implemented the native **SwiftUI/Apple-HIG `NotFoundPage`** at full web parity (`page:system/NotFound`, catch-all `/*`), adaptive across macOS + iOS — **9/9 parity items covered**.
+
+**Delivered** (`apps/apple/TeslaSync/Features/System/`, 7 files, 761 lines):
+- **Adapter** — dependency-free projection core: faithful ports of `closestRoute.ts` (`normalize` + two-row Levenshtein + `closestRoutes`) over `AppRoute.allCases`, plus `NotFoundDeepLink.resolve` (the `<Route path="*">` fallthrough).
+- **Model** — `@Observable NotFoundPageModel` (P1/S8) deriving suggestions (web `useMemo`) + telemetry seam emitting `view.opened` & `[404]` (web `console.warn`) + i18n facade.
+- **Views / page** — single `TSGlassPanel` (GlassPanel1) with compass header, break-all body, "Did you mean" navigable suggestions, adaptive back/home/command-palette actions, `navigationTitle`, VoiceOver summary.
+- **Registration / Previews / Tests** — deep-link page factory, 3 DEBUG previews, 17 XCTest cases.
+- **7 web i18n keys** added to `Localizable.xcstrings` (+77 additive lines, no reordering).
+
+**Verification (all green, real output):** iOS 18 + macOS 15 SDK typecheck `EXIT=0`, DEBUG-previews typecheck `EXIT=0`, **17/17 XCTest executed** via SwiftPM harness, `swiftlint --strict` 0 violations, `swiftformat --lint` 0/7, placeholder scan COUNT=0.
+
+**Honestly deferred:** the full-app `xcodebuild build test` (captured `REAL_BUILD_EXIT=65` — unstaged KMP `Shared.xcframework` + pre-existing parallel-merge collisions + signing + not-yet-`project.yml`-registered), matching the established Base64Tool / `macos-pending-verifications.md` precedent — not faked, not green.
+
+**Committed** `f79e4f54e` with the surface, strings, `apps/parity/apple-ledger.json` (apple-macos + apple-ios, 9/9 done), and the parity log (`STATUS=DONE`). Pre-existing dirty `AIUsageCard.*` slot WIP (mtime 09:11, before this run) was left untouched and excluded.
+

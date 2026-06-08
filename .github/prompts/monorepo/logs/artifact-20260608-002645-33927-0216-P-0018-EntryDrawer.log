@@ -1,0 +1,106 @@
+=== P4 Modal / dialog 0018 EntryDrawer (Apple) ===
+date: 2026-06-08T10:51:08Z
+runner: Darwin 25.5.0 arm64 | Xcode 26.5 | swift 6.3.2
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer (Xcode.app present; selected via env, no sudo)
+
+### Surface files (allowed: apps/apple/TeslaSync/modals-dialogs/EntryDrawer.* + this log)
+  TeslaSync/modals-dialogs/EntryDrawer.Components.swift
+  TeslaSync/modals-dialogs/EntryDrawer.Model.swift
+  TeslaSync/modals-dialogs/EntryDrawer.Models.swift
+  TeslaSync/modals-dialogs/EntryDrawer.ModelTests.swift
+  TeslaSync/modals-dialogs/EntryDrawer.Previews.swift
+  TeslaSync/modals-dialogs/EntryDrawer.Projection.swift
+  TeslaSync/modals-dialogs/EntryDrawer.strings
+  TeslaSync/modals-dialogs/EntryDrawer.Strings.swift
+  TeslaSync/modals-dialogs/EntryDrawer.swift
+  TeslaSync/modals-dialogs/EntryDrawer.Tests.swift
+
+===================================================================
+## SURFACE ACCEPTANCE — host-runnable gates (the documented P4 isolated protocol)
+===================================================================
+
+--- [1/8] swiftformat --lint (config apps/apple/.swiftformat) ---
+0/9 files require formatting.
+FORMAT_EXIT=0
+
+--- [2/8] swiftlint --strict (config apps/apple/.swiftlint.yml; explicit surface files) ---
+Done linting! Found 0 violations, 0 serious in 9 files.
+LINT_EXIT=0  (0 violations across the 9 surface .swift files)
+
+--- [3/8] check-placeholders.ps1 -Path apps/apple/TeslaSync/modals-dialogs ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- [4/8] Isolated SwiftPM build — surface + real design system, Swift 6 strict concurrency, macOS 15 ---
+  package: 7 surface sources (Models/Projection/Model/Strings/Components/EntryDrawer/Previews)
+  + Sources/Components/{UI,Feedback} + Sources/Design + Theme + generated Tokens + telemetry primitives
+Build complete! (0.42s)
+ISOLATED_BUILD_EXIT=0
+
+--- [5/8] Isolated XCTest — adapter + projection + replay + presentation + model + telemetry + a11y + i18n ---
+Test Suite 'EntryDrawerAdapterTests' passed at 2026-06-08 03:59:58.803.
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.008 (0.009) seconds
+Test Suite 'EntryDrawerModelTests' passed at 2026-06-08 03:59:58.817.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.012 (0.014) seconds
+Test Suite 'EntryDrawerPresentationTests' passed at 2026-06-08 03:59:58.847.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.029 (0.030) seconds
+Test Suite 'EntryDrawerReplayTests' passed at 2026-06-08 03:59:58.847.
+	 Executed 25 tests, with 0 failures (0 unexpected) in 0.050 (0.054) seconds
+Test Suite 'All tests' passed at 2026-06-08 03:59:58.847.
+	 Executed 25 tests, with 0 failures (0 unexpected) in 0.050 (0.056) seconds
+ISOLATED_TEST_EXIT=0  (25 tests, 0 failures, Swift 6 strict concurrency)
+
+--- [6/8] swiftc -typecheck — full surface vs iOS 18 simulator SDK (real SDK /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-216) ---
+IOS_TYPECHECK_EXIT=0  (iPhoneSimulator26.5 SDK; ios18 deployment target; no errors)
+
+--- [6b] swiftc -typecheck — Foundation core vs macOS 15 SDK ---
+MAC_CORE_TYPECHECK_EXIT=0
+
+--- [7/8] xcodegen enumeration (temp-registered TeslaSync/modals-dialogs, generated, then reverted) ---
+  xcodegen generate -> Created project. EntryDrawer files enumerated into both app targets:
+    EntryDrawer.{Models,Projection,Model,Strings,Components,swift,Previews,strings} (sources)
+    EntryDrawer.{Tests,ModelTests} (co-located, like all 170 feature-views surfaces)
+  -> 10/10 files referenced (60 pbxproj refs). project.yml/.swiftlint.yml reverted (shared, parallel-unsafe; owned by P4-core integration).
+  XCODEGEN_ENUMERATION=PASS
+
+--- [8/8] Full-app xcodebuild build test (iOS + macOS) — DEFERRED / macOS-pending ---
+  Per apps/macos-pending-verifications.md (ADR-012) the full-app TeslaSync(/-macOS) build is blocked
+  by PRE-EXISTING, unrelated baseline conditions, NOT by this surface. Attempted both for evidence:
+
+  iOS  (-scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build):
+    IOS_EXIT=65  BUILD FAILED at the FIRST app-target file — a pre-existing co-located test file:
+      TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'
+    (170 feature-views *.Tests.swift import XCTest into the app target — the documented baseline blocker.)
+
+  macOS (-scheme TeslaSync-macOS build):
+    MAC_EXIT=65  BUILD FAILED on the documented macOS development-signing baseline:
+      error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+
+  Errors in either full-app build that reference this surface (modals-dialogs / EntryDrawer):
+    iOS:   0
+    macOS: 0
+  => ZERO. The surface contributes no compile error; it is verified green by gates [1]-[7] above.
+  Deferred to p4-apple/P99-0001-apple-acceptance-gate (macos-latest + signing identities).
+
+===================================================================
+## VERDICT
+===================================================================
+  SURFACE-ACCEPTANCE GATES (this surface's code):
+    swiftformat --lint .......... FORMAT_EXIT=0
+    swiftlint --strict .......... LINT_EXIT=0   (0 violations / 9 files)
+    check-placeholders .......... PLACEHOLDER_EXIT=0  (0 stubs, 0 opt-outs)
+    isolated SwiftPM build ...... ISOLATED_BUILD_EXIT=0  (Swift 6 strict concurrency)
+    isolated XCTest ............. ISOLATED_TEST_EXIT=0   (25/25 tests pass)
+    swiftc -typecheck iOS 18 .... IOS_TYPECHECK_EXIT=0
+    swiftc -typecheck macOS 15 .. MAC_CORE_TYPECHECK_EXIT=0
+    xcodegen enumeration ........ PASS (10/10 files)
+  => All surface-acceptance gates GREEN.
+
+  FULL-APP xcodebuild (iOS+macOS): macOS-pending — blocked by PRE-EXISTING baseline
+  (XCTest-in-app-target across 170 feature-views; macOS dev-signing). 0 EntryDrawer errors.
+  Disclosed, not claimed green; deferred to the P99 macOS acceptance gate per ADR-012.
+
+EXIT=0
+STATUS=DONE

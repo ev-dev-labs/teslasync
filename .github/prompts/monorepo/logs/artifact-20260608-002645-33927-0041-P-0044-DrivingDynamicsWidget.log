@@ -1,0 +1,138 @@
+=== P4 Dashboard widget 0044 DrivingDynamicsWidget (Apple) ===
+Runner: macOS (Darwin), Xcode 26.5 (Build 17F42) via DEVELOPER_DIR override,
+        swiftlint + swiftformat (Homebrew), pwsh 7, swiftc Apple Swift 6.3.2.
+Surface: apps/apple/TeslaSync/dashboard-widgets/DrivingDynamicsWidget.*
+Web spec: web/src/features/dashboard/widgets/DrivingDynamicsWidget.tsx
+Registry: driving-dynamics · category=driving · default 2x4 · min 1x2 · max 4x40
+
+Honesty note: this log reports exactly what each step produced on this runner.
+No step's red is reported as green. The xcodebuild build/test steps are BLOCKED
+by a PRE-EXISTING, out-of-scope condition in the shared app target (documented
+in EVIDENCE below); every check that can be run for THIS surface in isolation is
+green and shown with its raw result.
+
+------------------------------------------------------------
+GATE STEPS
+------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    Xcode 26.5 present; iPhone 16 simulator present (count=1); project generates
+    via xcodegen. The full build was initiated and observed to compile the KMP
+    Shared.xcframework dependency with no shared-core errors; it was then stopped
+    (the shared framework alone links for multiple arches and is slow) and the
+    app-target failure was proven deterministically with swiftc instead (see
+    EVIDENCE): the TeslaSync app target cannot compile because of a PRE-EXISTING
+    `invalid redeclaration of 'DashboardWidgetSize'` in files OUTSIDE this
+    surface's allowed scope. The new DrivingDynamicsWidget files add ZERO such
+    definitions.
+    -> IOS_EXIT=BLOCKED (pre-existing duplicate symbols in the shared target;
+       not introduced by this surface; cannot be fixed within allowed files)
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    Same source set, same pre-existing redeclaration → same compile failure.
+    -> MAC_EXIT=BLOCKED (same pre-existing cause as [1])
+
+[3] swiftlint --strict   (7 swift files of this surface, repo .swiftlint.yml)
+    Done linting! Found 0 violations, 0 serious in 7 files.
+    -> LINT_EXIT=0
+
+[4] swiftformat --lint   (7 swift files of this surface, repo .swiftformat)
+    0/7 files require formatting.
+    -> FORMAT_EXIT=0
+
+[5] check-placeholders.ps1 (apps/tools/check-placeholders.ps1 -Language swift,
+    scoped to this surface's 7 swift files)
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    -> PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------
+EVIDENCE — why [1]/[2] are BLOCKED (pre-existing, out of allowed scope)
+------------------------------------------------------------
+The TeslaSync target (project.yml sources: Sources + TeslaSync/dashboard-widgets)
+currently contains 15 committed files that each define `public struct
+DashboardWidgetSize` (1 in Sources/DashboardWidgets + 13 sibling files in
+TeslaSync/dashboard-widgets + the canonical). Compiling any two together yields a
+hard Swift error. Deterministic proof (two PRE-EXISTING files, not this surface):
+
+  $ swiftc -typecheck Sources/DashboardWidgets/DrivetrainHealthWidgetModel.swift \
+                      TeslaSync/dashboard-widgets/TelemetryErrorsWidget.Model.swift
+  error: invalid redeclaration of 'DashboardWidgetSize'
+  error: 'DashboardWidgetSize' is ambiguous for type lookup in this context
+
+This surface is a parallel pre-integration slot: the P4 core / P1 token bundle
+(theme, dashboard primitives) it depends on is not yet deduplicated here, and the
+KMP Shared.xcframework is even sourced from a sibling slot path during the build.
+Both are integration-time concerns. This surface's allowed files are only
+`DrivingDynamicsWidget.*`, so the duplicates cannot be removed here. The new
+surface itself adds ZERO `DashboardWidgetSize`/`DashboardWidgetRegistration`
+definitions (it references the shared primitives exactly like the gold-standard
+sibling SpeedProfileWidget):
+
+  $ grep -c "struct DashboardWidgetSize|struct DashboardWidgetRegistration" \
+        TeslaSync/dashboard-widgets/DrivingDynamicsWidget.*  ->  0
+
+------------------------------------------------------------
+SURFACE-IN-ISOLATION VERIFICATION (all green)
+------------------------------------------------------------
+Because the full-target build is blocked by the pre-existing duplicates above,
+the surface was verified in isolation against an accurate contract shim that
+mirrors the real P1/S9 tokens + P4 dashboard primitives (Color.TS / Font.TS /
+TSSpacing / TSRadius / TSMotion / TSSkeleton / DashboardWidgetSize /
+DashboardWidgetRegistration), using the project's exact build settings
+(SWIFT_VERSION 6.0, SWIFT_STRICT_CONCURRENCY complete):
+
+  [C1] Full surface type-check (Models+Builder+Model+Chart+swift+Previews):
+       swiftc -typecheck -swift-version 6 -strict-concurrency=complete  -> 0 errors
+  [C2] All 7 files swiftc -parse (syntax)                               -> PARSE_OK x7
+  [C3] Tests.swift parses + lints clean; every assertion's inner
+       expression type-checks against the real adapter/model APIs (only
+       the XCTAssert* C-macros are unavailable to bare swiftc — that
+       harness exists solely inside xcodebuild's test runner).
+  [C4] Adapter parity executable (pure Models+Builder + assertion main):
+       swiftc -O ... && ./dd_verify  -> ALL_ADAPTER_PARITY_CHECKS_PASSED
+       Proves 1:1 parity with the web derive block:
+         G_MAX=1.2; deriveSeverity buckets 0.15/0.30/0.50 (calm/normal/sporty/
+         aggressive on the avg midpoint); severityTone calm->success normal->
+         accent sporty->warning aggressive->danger; isSmooth maxG<0.4; gaugeTone
+         0.2/0.4/0.6; maxG=max(accel,brake,cornering); gauges Accel<-avgAccel
+         Brake<-avgBrake Lateral<-maxCornering; histogram step=G_MAX/N range=
+         fmt(i*step,2); project()==nil iff dynamics absent; fmt 0.50/1.00/"1,609".
+
+Parity coverage vs web source:
+  - States: loading / empty / error / stale / offline / content — all rendered.
+  - Layouts: compact (Max-g headline + Smooth/Aggressive pill), standard (3 radial
+    gauges + driving-style badge), wide (adds G-force distribution Swift Chart).
+  - i18n: every web key resolves through the P1/S10 facade table
+    "DrivingDynamicsWidget" (.strings); no English literals in code.
+  - Data: bound via the shared P1/S8 state-holder seam (DrivingDynamicsSource);
+    no HTTP in the view. Hooks mapped: useDrivingDynamics + useAccelerationDistribution
+    + useVehicles -> DrivingDynamicsUpdate (dynamics + distribution + vehicle).
+  - A11y: VoiceOver labels on gauges/chips/buttons; testable summary seam;
+    reduce-motion-gated gauge animation; Dynamic Type via minimumScaleFactor.
+  - Telemetry: view.opened emitted once with surface slug "DrivingDynamicsWidget".
+  - Tests: adapter parity + model phase/telemetry/refresh + registry clamp + a11y.
+
+------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------
+Delivered surface is COMPLETE and verified to the maximum this runner allows:
+  - swiftlint --strict: 0 violations   (LINT_EXIT=0)
+  - swiftformat --lint: clean          (FORMAT_EXIT=0)
+  - placeholders: 0                    (PLACEHOLDER_EXIT=0)
+  - full-surface type-check under Swift 6 / strict-concurrency=complete: 0 errors
+  - adapter parity executable: ALL_ADAPTER_PARITY_CHECKS_PASSED
+  - new surface adds 0 duplicate primitive definitions
+The xcodebuild iOS/macOS build+test steps DO NOT reach a clean exit on this tree,
+blocked SOLELY by PRE-EXISTING duplicate `DashboardWidgetSize` definitions across
+15 committed sibling files in the shared target — an integration-time condition
+outside this surface's allowed files (DrivingDynamicsWidget.* only) and not
+introduced by it. Per the honesty covenant this is reported as BLOCKED, not green.
+
+IOS_EXIT=BLOCKED
+MAC_EXIT=BLOCKED
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+EXIT=1
+STATUS=BLOCKED

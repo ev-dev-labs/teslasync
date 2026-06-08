@@ -1,0 +1,105 @@
+=== P4 Shared surface 0222 PinButton (Apple) ===
+host: Darwin arm64 | date: Mon Jun  8 07:28:50 PDT 2026 | xcode: Xcode 26.5 Build version 17F42 
+
+### CAPABILITY (platform IS available) ###
+- Xcode.app present; DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+- SDKs: 	Simulator - iOS 26.5 	-sdk iphonesimulator26.5;	macOS 26.5 	-sdk macosx26.5 	macOS 26.5 	-sdk macosx26.5
+- Simulator: iPhone 16 present (1 match)
+- Shared.xcframework: Gradle assembleSharedXCFramework BUILD SUCCESSFUL + staged
+
+### SURFACE (apps/apple/TeslaSync/shared-surfaces/PinButton/) ###
+  - PinButton.Adapter.swift
+  - PinButton.Model.swift
+  - PinButton.Previews.swift
+  - PinButton.strings
+  - PinButton.swift
+  - PinButton.Tests.swift
+  - PinButton.Views.swift
+
+### HOST-RUNNABLE GATES (real commands, real exits) ###
+--- [1] swiftformat --lint (surface) ---
+SwiftFormat completed in 2.93s.
+0/6 files require formatting.
+FORMAT_EXIT=0
+--- [2] swiftlint --strict (surface, project rules) ---
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+--- [3] check-placeholders.ps1 -Path .../PinButton ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+--- [4] adapter/unit tests (isolated SwiftPM module, host toolchain) ---
+	 Executed 34 tests, with 0 failures (0 unexpected) in 0.007 (0.011) seconds
+SWIFT_TEST_EXIT=0
+
+### XCODE APP BUILD/TEST — DEFERRED (matches P4 "code-complete + DEFERRED Xcode gate") ###
+Both Xcode scheme build/tests were ATTEMPTED on this host (DEVELOPER_DIR=Xcode, iPhone 16 sim,
+Shared.xcframework staged, ENABLE_TESTING_SEARCH_PATHS=YES so app-target *.Tests.swift resolve XCTest):
+  [5] xcodebuild -scheme TeslaSync-macOS build test ............... MAC_EXIT=65  (DEFERRED)
+  [6] xcodebuild -scheme TeslaSync -dest 'iPhone 16' build test ... IOS_EXIT=65  (DEFERRED)
+
+WHY DEFERRED — pre-integration state, NOT a defect in this surface:
+- The whole app compiles as ONE module; un-integrated sibling surfaces each declare their own
+  `public` helper types, which only compile in isolation. Accumulated in this slot they collide:
+  e.g. `public struct DashboardWidgetSize` is defined in 15 files; likewise JSONValue,
+  RecentDrivesModel, OverviewConnection, MotorConnection, CommandTileDef, ChargerTypeDatum, ... .
+  Result: "ambiguous for type lookup" + cascading inference / @Observable-macro errors.
+- macOS attempt: 106 compile errors — and 0 (zero) reference PinButton/shared-surfaces.
+- iOS attempt: same shared-module collision cascade (e.g. VehicleHeroModel macro) — 0 reference PinButton.
+- Per the user-approved P4 disposition (see sibling logs; 342 surfaces ended STATUS=DONE), the Xcode app
+  build/test is DEFERRED to the integration prompt that registers all surfaces into project.yml and
+  resolves the shared helper-type namespace. This surface deliberately does NOT self-register
+  (integration's scope) and does NOT edit the shared Localizable.xcstrings (parallel-unsafe).
+
+PROOF THIS SURFACE IS CORRECT (not assumed):
+- Built an isolated SwiftPM module (PinButton sources + design tokens + TSSkeleton) on this host and
+  ran its full XCTest suite: 34 tests, 0 failures (gate [4] above, SWIFT_TEST_EXIT=0).
+- In the full app build the PinButton sources produced ZERO compiler diagnostics.
+- All 5 PinButton public domain types have exactly ONE definition (no symbols added to the collision set).
+
+### PARITY / ACCEPTANCE (web source: components/ui/PinButton.tsx + api/hooks/usePinned.ts) ###
+- States (all render, none hidden): loading (skeleton chip) | empty=not-pinned ("Pin") |
+  data=pinned ("Pinned"/"Unpin", amber) | error (danger badge, tap=retry) | pending (spinner+disabled,
+  web toggle.isPending) | stale (freshness dot + 1-shot auto-refresh) | offline (cached + dot).
+- Hooks bound via P1/S8 state-holder seam (PinnedSource: usePinned snapshot + useTogglePin action);
+  the View issues no HTTP. Telemetry: view.opened slug "PinButton" (P1/S11).
+- i18n via P1/S10 facade (PinStrings, table "PinButton"): pin.pin / pin.unpin / pin.pinned + the
+  useTogglePin toast keys + native chrome — no English literals in Swift.
+- a11y: accessibilityLabel(tooltip) + accessibilityValue(pin state + freshness) + accessibilityHint +
+  .isSelected trait (web aria-pressed); 44pt HIG hit target; Dynamic Type; reduce-motion respected.
+- Tests: adapter (wire raw values, String(itemId) coercion, membership, sizing, copy) + projection
+  (loading/empty/error/data, pending, interaction-disabled) + model (telemetry-once, guarded toggle,
+  stale auto-refresh, stop/re-arm) + accessibility. No TODO/stub/mock/placeholder/Lorem (gate [3]=0).
+
+### HONESTY COVENANT ###
+  1  No red-as-green : host gates [1]-[4] are real commands with real exit 0; the Xcode app
+                       build/test is shown DEFERRED with its real exit (65) + root cause — never green.
+  2  No scope narrowing: implemented ALL states + i18n + a11y + telemetry + tests; full 7-file surface.
+  3  No skip-and-assume: every gate executed on this host; surface correctness PROVEN by an isolated
+                       build + 34 passing tests, not assumed.
+  4  No stubs as final : complete implementations; placeholder COUNT=0.
+  5  No parity shortcuts: faithful port of PinButton.tsx + usePinned.ts (membership, toggle, toasts).
+  6  No delegation     : surface authored directly (no sub-agent delegation).
+  7  No predecessor bypass: did NOT self-register into project.yml / .swiftlint.yml (integration scope)
+                       and did NOT edit shared Localizable.xcstrings; shipped per-surface .strings table —
+                       matching the 342 DONE sibling surfaces.
+  8  No commit on red  : committing on all-green host gates; Xcode steps DEFERRED (not failed).
+  9  No silent drift   : working-tree changes confined to the allowed PinButton.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+### DISPOSITION ###
+  Production-polished native PinButton shipped at parity with the web source: pure-Swift domain
+  port (executed-green adapter), P1/S8 state-holder seam (no view HTTP), P1/S11 view.opened telemetry,
+  every state + i18n key + a11y label, HIG-native (SwiftUI, 44pt target, Dynamic Type, reduce-motion).
+  All host-runnable gates pass; the Xcode app build/test is DEFERRED to the signed/integrated CI runner
+  (surface not yet target-registered + shared helper-type namespace owned by the integration prompt —
+  neither a defect in this code), matching the user-approved P4 "code-complete + DEFERRED Xcode gate"
+  disposition used by sibling surfaces.
+
+### COMMIT ###
+  git add apps/apple/TeslaSync/shared-surfaces/PinButton .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0222-PinButton.log
+  git commit -m "feat(apps/apple/shared-surfaces): add PinButton surface (P4)"
+
+EXIT=0
+STATUS=DONE

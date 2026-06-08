@@ -1,0 +1,161 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The real Swift sources live under `Sources/`. Let me examine the parity manifest, ledger, existing feature-views, and tooling to understand conventions.
+
+`xcode-select` points to CommandLineTools only — let me verify whether `xcodebuild` can actually build, and study the precedent from existing apple page logs and the ledger.
+
+Confirmed: `xcodebuild` requires full Xcode (only CommandLineTools present), so the build/test gate cannot run. Let me study the log format, ledger schema, and existing implementation patterns.
+
+This is very clarifying. The reference log documents the **path reconciliation convention**: files go in the COMPILED tree (`Sources/`), not the literal prompt path. The reference machine had full Xcode; mine has only CommandLineTools. Let me map the component library, design system, state-holder pattern, and navigation.
+
+Comprehensive component library mapped. Let me read the exact signatures of the components I'll need, plus the feedback/data-display/motion categories.
+
+Let me read the remaining key component signatures I'll use (charts, badges, table, typography, metrics, feedback).
+
+The chart wrappers are clear. Now let me study the **closest precedent** — the existing `Features/Dashboard/Widgets/BatteryRadialGauge*` feature (model + projection + content + binding) — plus the design tokens and the SharedFacade state-holder/units pattern.
+
+The widget template is comprehensive — projection (pure) + `@Observable` model (KMP binding) + content (pure SwiftUI) + render-state. Now I must confirm the KMP shared core exposes tire-pressure data, and understand navigation + units facade + design tokens.
+
+The KMP core has `VehicleSystemsStore` and `VehicleSystemsRepository`. Let me read them to understand the exact tire-pressure API surface I must bind to.
+
+KMP exposes tire-pressure as raw `JsonElement` feeds. I need to see how the Apple side consumes a `JsonElement`-based store (decoding to Swift). Let me find existing precedents and the AppContainer/facade wiring.
+
+The decode pattern is clear (`Decodable` struct + `decode(fromSharedPayload:)`). Let me read the facade primitives (StateHolderModel, LoadableState, Units facade) and how a widget wires the store in production.
+
+Now the facade mechanics are clear. Let me read the Units facade (SI converters), navigation system (AppRoute, RouteHostRegistry, AppShell), and the live provider that constructs stores in production.
+
+Now the data/facade architecture is fully clear. Let me read the navigation system and the design-token definitions to wire the page and use correct token symbols.
+
+Navigation uses an `AppRouteHostRegistry` that "P7 page prompts populate." Let me see where registration happens, how AppShell renders, and how deep-links/sub-routes work.
+
+Let me read the app composition root and the deep-link parser to wire registration and `/tire-pressure` correctly.
+
+Two binding patterns exist; the **DrivetrainHealth provider-seam** (Shared-free model + `#if canImport(Shared)` Live provider, host-testable) is the right fit for a multi-feed page. Let me study it precisely.
+
+I now understand the provider-seam architecture completely. Let me read the Forms components (vehicle select / range picker), design tokens, and the string catalog format.
+
+The catalog uses `translation.<webKey>` for web-sourced strings (e.g. `translation.tirePressure.title` already exists) plus native `widget.*` keys. Let me check exactly which of my 19 keys already exist in both possible forms.
+
+Six of 19 keys already exist. Let me confirm their values/format before adding the other 13.
+
+Catalog format is clear. Now let me capture exact design tokens and the precise `init` signatures of every component I'll use.
+
+Nearly complete. Let me capture the last exact signatures (EmptyState, DataTable, ChartContainer, AlertBanner, RangePicker) and verify the generated design tokens (Color.TS / Font.TS / TSSpacing / TSRadius).
+
+Let me confirm the last two component signatures and the generated design-token members.
+
+I have all component APIs and tokens. Let me verify the remaining tooling (placeholder scanner, swiftformat, pwsh, swiftlint config) before writing code.
+
+All tooling is available except full Xcode. Let me read the rest of the swiftlint config and the placeholder scanner to ensure compliance.
+
+All gates except `xcodebuild` are runnable here. Let me read the formatter config and the widget entry file (for the model-construction + preview pattern), then I'll start building.
+
+I have the full architecture. Let me verify the exact pressure-conversion factors (web converter + shared golden vectors) so my display math matches S5 golden values.
+
+Confirmed factors (psi = kPa/6.894757, bar = kPa/100). Let me check how views read the user's current unit/measurement system so the page converts correctly at runtime.
+
+Let me confirm whether the app currently bootstraps any live shared-core stores, which determines how I wire the page's data provider at the registration site.
+
+I need to resolve how the route registration obtains data dependencies. Let me check `RootView` and whether an `AppContainer`/data context is threaded through the app.
+
+No live data graph exists in the app yet (consistent with widgets being preview-only surfaces). I have enough to build the complete, faithful surface + live provider + registration. Let me verify the `Vehicle` DTO shape for the picker, then start building.
+
+I have everything needed. Let me set up the plan and todos, create the feature directory, then build.
+
+Now building the pure core. File 1 — the DTO, unit converter, corner enum, and decode helpers (Foundation-only, host-testable):
+
+File 2 — pressure status thresholds (Foundation-only):
+
+File 3 — the pure projection (summary, chart series, table rows, range filter, formatting):
+
+File 4 — view state, provider seam, `@Observable` model, and offline default provider (Observation only):
+
+Core + model done. Now the Shared-gated live provider (file 5):
+
+Now the Shared-gated live provider (file 5), mirroring `LiveDrivetrainHealthProvider`:
+
+Now the SwiftUI section views (file 7) — the 9 panels + 2 charts:
+
+Now the page scaffold (file 6) with header, phase switching, and previews:
+
+File 8 — navigation registration helper:
+
+Now wire the registration into the app and add the `/tire-pressure` deep-link alias:
+
+Now let me check which of my referenced strings already exist before adding the missing ones.
+
+Let me verify the exact entry format and re-check the `common.*`/`live.*` keys (the reference widget used them, so they may exist with different spacing).
+
+The format is `    "key": {`. My earlier check used wrong spacing. Let me re-verify corner/status/range keys with a format-agnostic check.
+
+`High` and `Critical` already exist. I need to add 25 keys. Let me insert them via a targeted, JSON-validated script (keeps the diff minimal):
+
+Now the host tests. Let me check the existing test import convention, then write the suite.
+
+Now the host test suite (file 9):
+
+Now let me run the gates. First swiftformat (apply then lint-check) on the new files:
+
+swiftformat is clean. Now the full-project `swiftlint --strict`:
+
+5 violations to fix. Let me see them:
+
+4 are mine, 1 is pre-existing (`LifetimeStatsWidget.Adapter.swift`, not my file). Let me inspect and fix my 4:
+
+These are swiftformat/swiftlint interactions. Let me fix my 4 violations:
+
+Let me verify the 5th violation is pre-existing (not mine), then re-format and re-lint:
+
+Confirmed pre-existing (committed, unmodified by me, in another prompt's widget). Let me re-run the full lint to confirm my 4 are fixed and only the baseline one remains:
+
+My surface is lint-clean (0 violations); the 1 remaining is pre-existing in another prompt's file (out of my scope). Now the placeholder gate + xcodegen + standalone logic execution:
+
+Placeholder gate green (COUNT=0). Now xcodegen integration + standalone logic execution:
+
+xcodegen integrated all 8 source files + the test file (132 refs across targets). Now let me **actually execute** the pure logic via a standalone `swiftc` harness (real evidence, since `xcodebuild` is unavailable):
+
+Pure core compiles clean (0 errors). Now execute the assertions:
+
+All 44 pure-logic assertions pass. Let me capture git context for the log, then write the ledger and log:
+
+Now creating the apple parity ledger:
+
+Now the parity log with the binding `=== PARITY ===` enumeration and honest `STATUS=BLOCKED`:
+
+Let me run a final consolidated verification — confirm all 19 parity strings resolve, JSON is valid, and all runnable gates are still green:
+
+All 19 strings resolve; JSON valid. Final gate re-run to confirm green state after fixes:
+
+Positional-path lint shows 2 — let me see exactly what they are (the full-project run didn't flag these):
+
+Both are the **same** pre-existing `LifetimeStatsWidget` violation (double-counted by the two-path invocation) — my surface is genuinely 0. Now let me review what to stage and confirm the generated `.xcodeproj` is git-ignored:
+
+There are pre-existing unrelated `AIUsageCard.*` modifications I didn't touch — I'll stage only my own files explicitly:
+
+All 14 of my files staged (pre-existing `AIUsageCard.*` correctly excluded). Committing:
+
+Committed (HEAD `230463418`). Let me finalize todos and do a last verification of the committed state:
+
+All 14 files committed cleanly (2,170 insertions); no stray changes from my work remain. The task is complete to the maximum extent the environment allows.
+
+## Summary
+
+I implemented the native **SwiftUI/HIG port of the web `TirePressurePage`** at full parity (34 items: 9 panels · 2 charts · 4 states · 19 strings), following the established provider-seam architecture.
+
+**Delivered** (`apps/apple/Sources/Features/VehicleSystems/`):
+- **Pure core** (Foundation-only, host-testable): `TirePressureReading` (decode + SI `normaliseToPa` + `TirePressureUnit` matching S5 golden vectors), `TirePressureStatus` (thresholds), `TirePressureProjection` (summary/series/table/range filter).
+- **`@Observable TirePressurePageModel`** (Observation-only) + `TirePressureDataProvider` seam + `OfflineTirePressureProvider`.
+- **`LiveTirePressureProvider`** (`#if canImport(Shared)`) binding the KMP `VehiclesStore`/`VehicleSystemsStore.tirePressure[History]` feeds via `FlowBridge`/`LoadableState`.
+- **Views**: `TirePressurePage` scaffold + section views (warning banner, gauges via `TSRadialGauge`, 4 metric cards, history `TSLineChart` + legend, sortable `TSDataTable`) — all loading/empty/error/success states; uses only the P3 components + P2 tokens.
+- **Navigation**: registered at `.vehicleSystems` (`VehicleSystemsRouteRegistration`, wired in `TeslaSyncApp`) + `/tire-pressure` deep-link alias.
+- **i18n**: +25 `translation.*` catalog keys (all 19 page strings). **Host tests** in `Tests/Unit/VehicleSystems`. **Ledger** + **parity log**.
+
+**Gate results** (every Xcode-independent step executed with its real exit code):
+- swiftformat `--lint` 0/11 · swiftlint `--strict` **surface 0 violations** · placeholder `COUNT=0` · xcodegen `EXIT=0` (132 refs integrated) · pure core compiles standalone **0 errors** · **44/44 host-executed asserts pass** (psi golden parity confirmed).
+- **`xcodebuild` build/test = BLOCKED** — this runner has CommandLineTools only (no Xcode.app), so per the gate contract **`STATUS=BLOCKED`**. Reported honestly, not claimed green.
+- One whole-project lint violation exists but is **pre-existing in another prompt's file** (`LifetimeStatsWidget.Adapter.swift`), unmodified by me and outside scope — reported, not hidden.
+
+
+
+All 13 todos are done and the work is committed. Let me update the plan's status line and finalize.
+

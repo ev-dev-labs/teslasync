@@ -1,0 +1,86 @@
+I'll start by exploring the task requirements, reading the web source spec, and understanding the existing Apple app structure.
+
+Key findings: `xcodebuild` requires full Xcode (only CLT installed), but `swiftlint`, `swiftformat`, and `swift` 6.3.2 are available. There are uncommitted AIUsageCard changes (not my task — I'll leave them). Let me explore the existing structure and read the web source + predecessor pattern.
+
+Clear established pattern. Let me read the web source, registry, and a predecessor log to understand the conventions and how the xcodebuild capability gap was handled.
+
+The pattern is clear: predecessors ship complete multi-file Swift surfaces, run host-runnable gates (swift typecheck/test, swiftformat, swiftlint, placeholder check), and DEFER the xcodebuild scheme steps with capability evidence. Let me read the web source and registry.
+
+Now let me read the supporting web pieces (WidgetShell, WidgetGaugeHero, useFleetAnalytics, useUnits, fmtNumber) and examine a gauge-based predecessor for the native structure.
+
+Let me study a complete predecessor (GuardModeWidget — clean 7-file structure) and check for build harness scaffolding.
+
+Let me understand where the shared design-system symbols are defined and how the host test harness works.
+
+Let me read a predecessor log fully to understand the exact host-runnable verification commands and the self-contained pattern.
+
+I now fully understand the established "code-complete + DEFERRED Xcode gate" disposition. Let me read the rest of the GuardModeWidget template files (the canonical pattern) and find an existing native radial-gauge implementation to match.
+
+Now let me read the remaining template files (Views, Previews, Tests, strings) and find existing native gauge + design-token references.
+
+Let me read the design tokens (Theme.swift), an existing native gauge ring, the registry-declaration pattern, and the Views/Previews template.
+
+Let me read the native gauge ring, the Views/Previews template, and locate the exact token definitions (Font.TS, TSSpacing, TSRadius, TSTone, TSSkeleton).
+
+Let me confirm the exact token/symbol definitions I'll reference (Color.TS palette, Font.TS, TSSpacing, TSRadius, TSMotion, TSSkeleton, TSTone).
+
+I have all the token references confirmed. Let me verify the `FleetAnalytics` data shape and the `unitPrefs.distance` value type to model the adapter faithfully.
+
+I have everything needed for parity. Now let me probe the host build capability — specifically whether SwiftUI/Observation compile under the Command Line Tools toolchain (no Xcode).
+
+SwiftUI/Observation/OSLog and the `trim`/`stroke` gauge primitives all compile under CLT (EXIT=0). Let me verify the XCTest (SwiftPM) and placeholder-gate capability.
+
+Critical capability findings: SwiftUI typechecks under CLT (✅), `pwsh` placeholder gate available (✅), but **`swift test`/XCTest is unavailable under CLT** (Xcode-only) — so I'll execute the projection/model logic via a standalone executable harness instead. Let me read the lint/format configs to comply, then write the plan.
+
+Now I have a complete picture. Let me set up tracking and verify `Tokens.swift` is self-contained for my host harness.
+
+`Tokens.swift` is self-contained. Let me write the plan, then build the 7 surface files.
+
+Now I'll build the surface. Starting with the pure projection core (Adapter).
+
+Now the state-holder Model (P1/S8 seam + telemetry + registry + strings facade).
+
+Stat/gauge freshness parity needs an explicit `isError` flag (web `DataFreshness` takes `isStale`+`isError` independently). Let me add it to the Model before writing Views.
+
+Now the Views file — gauge ring, stat tile, gauge hero, freshness chip, banners, and state subviews.
+
+Now the surface file — shell chrome, state switch, registration, telemetry.
+
+Now the Previews and the i18n strings catalog.
+
+Now the i18n strings catalog:
+
+Now the XCTest suite (shipped artifact for the Xcode test target):
+
+All 7 files created. Let me update tracking and run swiftformat (autoformat to repo style) + swiftlint on my files.
+
+swiftformat adjusted 3 files. Let me verify the formatting is now clean (--lint) and run swiftlint --strict on all 6 Swift files.
+
+Format clean (0/6) and **swiftlint --strict: 0 violations**. Now the host typecheck against the real design tokens (macOS 15 SDK, Swift 6) with a throwaway `TSSkeleton` shim.
+
+All errors are the `#Preview` macro needing the Xcode-only `PreviewsMacros` plugin (absent in CLT) — not code defects. Let me typecheck the 4 core shipping files (excluding the preview-macro file).
+
+4 core shipping files **typecheck clean (EXIT=0)** under macOS 15 SDK / Swift 6 strict concurrency against the real tokens. Now the execution harness to prove the logic is green (XCTest unavailable under CLT).
+
+Harness-only Swift 6 actor-isolation issues in my `main.swift` (not the shipped code). Top-level statements are MainActor-isolated but my helper funcs aren't. Let me fix the harness.
+
+Top-level vars can't carry a global actor. Let me nest the helpers/counter inside the `@MainActor` function and return the failure count.
+
+**Execution harness: ALL GREEN (53/53 assertions, RUN_EXIT=0)** — the real shipped Adapter/Model/Surface logic executes correctly. Now the placeholder gate. Let me inspect its `-Path` semantics to scope it to my surface.
+
+Let me scope the placeholder gate to my surface (copy my files to a temp dir) and check the forbidden patterns first.
+
+My shipped files contain zero forbidden patterns. Now running the actual pwsh placeholder gate scoped to my surface files.
+
+All host-runnable gates are green. Let me confirm line counts (house rule ≤400/file) and the final file inventory before writing the log.
+
+All 7 files within limits; all 3 web i18n keys present. Now I'll write the honest verification log.
+
+Log written. Now let me clean up temp files, stage **only** my allowed files (leaving the unrelated AIUsageCard changes untouched), and verify staging before commit.
+
+Staging is correct — only my 8 files; the unrelated AIUsageCard changes remain untouched. Committing now.
+
+Committed as `fbe8abc56`; the unrelated AIUsageCard changes remain untouched. Final confirmation of lint/format on the committed files.
+
+Final state confirmed clean. Marking the task complete.
+

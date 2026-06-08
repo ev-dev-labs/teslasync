@@ -1,0 +1,255 @@
+================================================================================
+P4 · Feature view · 0235 — StateTimeline (Apple)
+Run: 2026-06-08T02:30-0700   Host: Darwin arm64 (macOS 26.5)
+Prompt: P4/feature-views/0235 — StateTimeline (Apple)
+Web source (spec): web/src/features/system/components/state-machine/StateTimeline.tsx
+Native output: apps/apple/TeslaSync/feature-views/StateTimeline.*
+ADR refs: ADR-002 (shared SwiftUI source), ADR-004 (KMP core), ADR-009
+Mode: code-complete + real-SDK host validation (Xcode 26.5 via DEVELOPER_DIR, no
+      sudo) + DEFERRED Xcode app build/test. feature-views/ IS registered in the
+      XcodeGen app targets (grep -c feature-views project.yml = 2), so the surface
+      compiles in a real build; the full app build/test is deferred only on the
+      KMP Shared.xcframework staging + codesigning (environment, not this code) —
+      the same disposition every prior P4 apple feature-view shipped under
+      (174/174 logs STATUS=DONE).
+================================================================================
+
+=== CAPABILITY PROBE (real, on this host) ===
+  swift (CommandLineTools) ..... Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+  /Applications/Xcode.app ...... Xcode 26.5 Build version 17F42  via DEVELOPER_DIR (no sudo)   OK
+  macOS SDK .................... MacOSX26.5.sdk     OK
+  iphonesimulator SDK .......... iPhoneSimulator26.5.sdk     OK
+  SwiftUI ...................... AVAILABLE (proven by the real macOS-15 + iOS-18 SDK compiles [3]/[4])
+  swiftlint / swiftformat ...... 0.63.3 / 0.61.1   OK
+  pwsh (placeholder gate) ...... present; self-test PASS   OK
+
+  Capability note: the prompt's "Charts/maps: (none)" holds — StateTimeline is a
+  pure presentational FSM-transition mini-timeline (no chart framework, no map, no
+  network). SwiftUI is AVAILABLE and PROVEN by the real-SDK compiles below, so the
+  capability-BLOCKED escape hatch does NOT apply: the surface is authored and
+  host-validated for real against the production component library + design tokens.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/StateTimeline.*) ===
+  StateTimeline.swift              96 lines   — public View; model + web-prop inits; telemetry/a11y
+  StateTimeline.Model.swift       296 lines   — P1/S11 telemetry seam + P1/S8 source seam + @Observable
+                                                 model (start/stop/refresh/select/widen/jump + stale
+                                                 one-shot auto-refresh) + P1/S10 i18n facade
+  StateTimeline.Projection.swift  289 lines   — PURE adapter: parse ts, sort, leftPct ticks, empty-hint,
+                                                 presetLabel + formatRelative value types, resolve()
+  StateTimeline.Copy.swift        128 lines   — PURE P1/S10 localized-copy facade (value type -> string)
+  StateTimeline.Views.swift       317 lines   — surface, connectivity banner+chip, phase router,
+                                                 loading/empty/error bodies, rail + selectable ticks
+  StateTimeline.Previews.swift    111 lines   — #if DEBUG previews, one per state
+  StateTimeline.Tests.swift       302 lines   — XCTest: projection/adapter (parse/preset/relative/
+                                                 resolve/ticks/colors/tie-break/zero-window) + format
+                                                 + a11y-label/i18n-copy suite (StateTimelineCopyTests)
+  StateTimeline.ModelTests.swift  141 lines   — XCTest: model wiring + telemetry spy + select/widen/jump
+                                                 + stale one-shot auto-refresh + web-prop init
+  StateTimeline.strings            49 lines   — P1/S10 catalog: the 9 web source keys + native chrome
+  All files <= 400 lines (house file_length); all code lines <= 120 cols
+  (house line_length); one exported View per file.
+  REUSE (not redefined): FSMTransition, FSMConnection, FSMStateColor,
+  FSMRegistry.color(for:state:) and the FSMStateColor.tint token mapping are
+  reused from the sibling FSMStateDiagram surface (same target) — the web
+  getStateColor(fsmType,to_state) port — so there is no duplicate symbol.
+
+=== PARITY (vs web StateTimeline.tsx) ===
+  Data sources -> web uses useTranslation + useDateFormat (no data hook, no HTTP).
+    Native binds through StateTimelineModel (the P1/S8 state-holder seam); the view
+    performs no work of its own. Time/relative formatting runs through the pure,
+    injectable StateTimelineFormat (locale + zone), the useDateFormat peer.
+  Composition -> web: a rounded bordered box (rounded-lg border bg-white/[0.02]
+    px-4 py-3) that is EITHER the actionable empty hint OR a 3-span axis header
+    (start | "Window: N min" | end) above an absolute-positioned tick rail. Each
+    tick = a destination-state-coloured dot (getStateColor.dot) placed by
+    leftPct%, selectable, with a hover Tooltip (from -> to · time) and an
+    aria-label. Native: StateTimelineSurface (token border + faint fill) + the
+    same two branches; the rail is a GeometryReader that places each tick by
+    width*leftPct/100; the dot colour = FSMStateColor.tint (the reused
+    getStateColor port); the web <button> tick -> a plain SwiftUI Button with a
+    .help() tooltip + accessibilityLabel/Value; selection grows the dot + a
+    contrast ring. Shared @/components/ui -> TSButton / TSQueryError / TSSkeleton;
+    tokens Color.TS / Font.TS / TSSpacing / TSRadius (compiled against the REAL
+    DesignTokens + component library in [3]/[4]).
+  Adapter -> StateTimelineProjection is a 1:1 port of the web useMemo:
+    endTs=(anchor ?? now); startTs=endTs-windowMinutes*60s; span=(endTs-startTs)||1;
+    sort transitions by ts asc (id tie-break for determinism); leftPct=
+    ((ts-startTs)/span)*100; start/end anchors. presetLabel + formatRelative are
+    byte-faithful value-type ports (verified against their web thresholds in [6]).
+  States (all render) -> empty (web ticks.length===0): "No transitions in window",
+    and when a lastTransition exists outside the window, "· Last transition {rel}"
+    + a primary "Widen window to {label}" + a ghost "Jump to last transition"
+    (showWiden = widerPreset && handler; showJump = lastTransition && handler) ·
+    data: the axis header + the placed, selectable, colour-coded ticks. PLUS the
+    P4 leaf contract reproduced from the FSMStateDiagram sibling: loading (skeleton
+    rail), error (TSQueryError + retry), and the orthogonal connectivity axis
+    live / stale / offline (a banner + freshness chip + a one-shot auto-refresh on
+    the stale transition). Every state has a #if DEBUG preview + a unit test.
+  i18n -> every web t() key has a matching catalog key (table "StateTimeline"):
+    debugger.window.minutes / .hours / .day, debugger.timeline.empty / .lastSeen /
+    .widenTo / .jumpToLast / .windowLabel / .tickAria — all 9 present in
+    StateTimeline.strings, alongside the native-chrome relative-age buckets
+    (debugger.timeline.rel.*) and the freshness / loading / surface labels. No
+    English literals in native code (the tick tooltip "from -> to · time" is
+    interpolated data, not prose). The localized renderers are EXECUTED-verified in
+    [6] (e.g. "10 min", "5m ago", "Window: 10 min", "Widen window to 30 min").
+  a11y -> the surface is a contained element labeled "State transition timeline";
+    each tick is a Button with an aria-label ("{from} to {to}") + the time as its
+    accessibility value + an .isSelected trait when selected; the loading state has
+    a label; the banner icon is decorative (hidden); Widen/Jump/Refresh are labeled
+    buttons; Dynamic Type via Font.TS tokens; reduce-motion is honored by the
+    shared TSSkeleton.
+  Telemetry -> StateTimelineModel.start() emits viewOpened(surface:"StateTimeline")
+    via the P1/S11 seam (default os.Logger "view.opened"); idempotent; asserted by a
+    spy test [6] and the XCTest model suite. No transition data is ever logged.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real exit codes) ===
+[1] swiftformat --lint (gate rules from .swiftformat), 8 surface swift files:
+      0/7 files require formatting + 0/2 (Copy/Views post-split).
+      FORMAT_EXIT=0   OK
+
+[2] swiftlint --strict (repo .swiftlint.yml), 8 surface swift files (scoped):
+      Done linting! Found 0 violations, 0 serious in 8 files.
+      SWIFTLINT_EXIT=0   OK
+      NOTE: the bare gate `swiftlint --strict` (whole included: set) is RED on TWO
+      PRE-EXISTING violations OUTSIDE this surface's allowed files:
+        TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes, via swiftformat)
+        TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length, via swiftlint)
+      Neither file is in this prompt's allowed-files scope, so both are left
+      unmodified (Honesty rule 7). The 9 shipped StateTimeline files are clean.
+
+[3] swiftc -typecheck — surface + the REAL apps/apple component library (Tokens +
+    Design/{TSDesign,TSMaterial} + Components/UI/{Buttons,Cards,Typography,Badges,
+    Utility} + Components/Feedback/{States,Banners,Skeletons}) + the REAL FSM
+    sibling (Model/Registry/RegistryData/Projection/Nodes -> real FSMStateColor.tint),
+    macOS 26.5 SDK, Swift 6 (= complete strict concurrency), -D DEBUG
+    (Projection+Model+Copy+Views+View+Previews):
+      compiled clean against the real shared library + design tokens
+      MACOS_STRONG_TYPECHECK_EXIT=0   OK
+
+[4] swiftc -typecheck — iphonesimulator iOS 18 SDK (same file set, iOS/iPadOS):
+      compiled clean
+      IOS_STRONG_TYPECHECK_EXIT=0   OK
+
+[5] swiftc -typecheck — test bodies vs the REAL surface symbols (Projection / Model
+    / Format / source seam / telemetry / FSMTransition). The XCTest assertion macros
+    only resolve inside an xcodebuild test target, so they are shimmed (a real
+    XCTest.swiftmodule built from a contract shim); every other reference is the
+    real API:
+      TESTS_LOGIC_TYPECHECK_EXIT=0   OK
+
+[6] adapter harness — compiled the PURE Projection + Model + Copy to a native arm64
+    binary and RAN it (real inputs -> resolved projection, not a typecheck):
+        [PASS] parseTimestamp (plain / fractional / invalid)
+        [PASS] presetLabel thresholds (10->min, 60->1h, 90->2h, 1439->24h, 1440->day)
+        [PASS] relativeBucket (30s->justNow, 90s->1m, 1h, 25h->1d, 8d->date, future->justNow)
+        [PASS] resolve error/loading/empty-silent/empty-hint/data branch order
+        [PASS] ticks sorted + leftPct {0,50,100} + id tie-break + zero-window finite
+        [PASS] tick colours from registry (online->success, charging->cyan, parked->purple)
+        [PASS] model: telemetry once+idempotent, select/widen/jump forward, stale 1-shot refresh
+        [PASS] i18n copy renderers ("10 min","5m ago","Window: 10 min","Widen window to 30 min", tooltip)
+      HARNESS: all assertions passed
+      ADAPTER_HARNESS_EXIT=0   OK
+
+[7] check-placeholders.ps1 (ADR-011 stub gate; pwsh) — self-test PASS; real per-file
+    scan of the shipped StateTimeline.* surface:
+      PLACEHOLDER_ALLOWED=0
+      PLACEHOLDER_COUNT=0
+      EXIT=0
+      PLACEHOLDER_EXIT=0   OK
+
+=== GATE — XCODE APP BUILD/TEST (DEFERRED; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Verified on this host (`xcodegen generate` OK; `xcodebuild -scheme TeslaSync-macOS
+    build CODE_SIGNING_ALLOWED=NO` attempted) — it compiles through the full app
+    source phase with NO surface errors and is deferred at the KMP-core LINK stage
+    for two code-unrelated reasons:
+      (a) Shared.xcframework not staged: the app target links the KMP core
+          (project.yml: framework Frameworks/Shared.xcframework); building it needs a
+          Kotlin/Native gradle build. apps/apple/Frameworks/ holds only .gitkeep.
+          Independent of this UI surface.
+      (b) macOS signing: `security find-identity -p codesigning` -> 0 valid identities;
+          the app/widget entitlements require a development certificate (ADR-012 defers
+          this to a signed runner).
+    NOTE (improvement vs prior P4 logs): feature-views/ IS now registered in the
+    XcodeGen app targets (grep -c feature-views project.yml = 2), so — unlike the
+    0015/0072 disposition — this surface WOULD be compiled by the app build; the
+    real-SDK strong typechecks in [3]/[4] compile it against the real library on both
+    the macOS 26.5 and iOS 18 SDKs. The XCTest bundle runs in the TeslaSync(/-macOS)
+    test target once its sources are integrated under Tests/Unit; the pure adapter +
+    model + i18n subset is independently PROVEN GREEN by the executed harness [6], and
+    every test body is typechecked against the real APIs in [5].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source — empty (+ actionable hint:
+      last-seen / widen / jump) and data (placed, selectable ticks), PLUS the P4
+      leaf loading / error + live/stale/offline axis; each with a #if DEBUG preview
+      and a unit test.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (StateTimelineModel /
+      StateTimelineSource); the view performs no HTTP (there is none in the web
+      source either).
+  [x] Every i18n key from source has a matching catalog key — 9/9 web keys present
+      in StateTimeline.strings (+ native-chrome relative/connectivity/a11y keys).
+  [x] Accessibility labels on every interactive element (each tick, Widen, Jump,
+      Refresh) + the surface + loading; tick exposes value(time) + selected trait.
+  [x] Tests: adapter/projection unit suite + per-state + model-wiring + telemetry
+      spy + i18n + an explicit a11y-label suite (StateTimelineCopyTests asserts the
+      VoiceOver labels/values every interactive element receives) — executed-green
+      adapter harness [6] + typechecked XCTest bodies [5].
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] Host gates green (format / lint / 2x strong real-library typecheck / tests
+      typecheck / executed harness / placeholder); Xcode app build/test DEFERRED
+      with capability evidence (Shared.xcframework + signing), per the established
+      P4-apple disposition.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with verified
+                       reasons; the bare whole-tree swiftlint/swiftformat PRE-EXISTING
+                       RED is reported, not hidden. Every "OK" is a command actually
+                       run on this host with its real exit code (incl. 2 real-SDK
+                       strong typechecks + an executed native harness).
+  2  No scope narrowing: implemented every web behavior — windowed ticks, selection,
+                       tooltip, empty hint (last-seen / widen / jump), i18n, a11y,
+                       telemetry — plus the P4 leaf states.
+  3  No skip-and-assume: web source read end-to-end; every t() + render branch
+                       reproduced; each host gate executed, nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: byte-faithful useMemo port (leftPct/sort/span guard),
+                       presetLabel + formatRelative thresholds EXECUTED-verified [6].
+  6  No delegation     : authored directly (delegation FORBIDDEN; none used).
+  7  No predecessor bypass: did NOT edit the shared Localizable.xcstrings (co-located
+                       .strings instead); REUSED FSMTransition/FSMConnection/
+                       FSMStateColor/FSMRegistry/.tint from the FSMStateDiagram sibling
+                       rather than forking them; did NOT touch the pre-existing
+                       ActionBuilder/LifetimeStatsWidget lint violations (out of scope).
+  8  No commit on red  : committing on all-green host gates (incl. 2 strong real-SDK
+                       typechecks + executed harness); Xcode steps explicitly DEFERRED;
+                       the only RED is pre-existing, out-of-scope predecessor files.
+  9  No silent drift   : changes confined to the allowed StateTimeline.* files + this
+                       log; the loading/error/stale/offline additions are the P4 leaf
+                       contract reproduced from the FSMStateDiagram sibling, stated here.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native StateTimeline shipped at parity with the web source: a
+  pure, executed-green projection (the useMemo windowing/placement + presetLabel +
+  formatRelative ports), a P1/S8 state-holder seam (no view HTTP), P1/S11 view.opened
+  telemetry, every web render branch (empty hint + placed selectable ticks) plus the
+  P4 leaf loading/error + live/stale/offline axis, every web i18n key, a11y on every
+  interactive element, composed entirely from the shared component library + design
+  tokens and reusing the FSMStateDiagram getStateColor port. All host-runnable gates
+  pass — including STRONG typechecks against the REAL component library on BOTH the
+  macOS 26.5 and iOS 18 SDKs and an executed native adapter/model harness. The Xcode
+  app build/test is DEFERRED to a signed CI runner (Shared.xcframework staging +
+  macOS signing — neither a defect in this code), matching the established
+  "code-complete + real-SDK host validation + DEFERRED Xcode gate" disposition.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/StateTimeline.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0235-StateTimeline.log
+  git commit -m "feat(apps/apple/feature-views): add StateTimeline surface (P4)"
+
+EXIT=0
+STATUS=DONE

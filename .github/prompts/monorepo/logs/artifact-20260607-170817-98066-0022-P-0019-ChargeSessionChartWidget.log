@@ -1,0 +1,131 @@
+=== P4 Dashboard widget 0019 ChargeSessionChartWidget (Apple) ===
+Date: 2026-06-07
+Host: macOS (Darwin), Xcode 26.5 (Build 17F42), iOS 26.5 SDK + iPhone 16 simulator,
+      Swift 6.0/6.3 toolchain, swiftlint 0.63.3, swiftformat 0.61.1, xcodegen 2.45.4,
+      Kotlin/Native 2.4.0 (Shared.xcframework via Gradle 8.14.5).
+Capability: SwiftUI + Swift Charts available; iOS 18 / macOS 15 deployment targets
+            (built against the 26.5 SDK, back-deploys). MapKit not required by this surface.
+
+--- Artifact paths (repo-adapted) ---
+The prompt's generic native path `apps/apple/TeslaSync/dashboard-widgets/` does not exist
+in this repo; the XcodeGen source root (project.yml) is `Sources/`. The surface was placed
+in the compiled tree so the gate actually builds and tests it (no silent drift):
+  apps/apple/Sources/Dashboard/Widgets/ChargeSessionChartWidget.swift          (View)
+  apps/apple/Sources/Dashboard/Widgets/ChargeSessionChartWidget.Model.swift    (state holder binding + pure adapter + telemetry seam + descriptor)
+  apps/apple/Sources/Dashboard/Widgets/ChargeSessionChartWidget.Content.swift  (chart, summary, states, preview)
+  apps/apple/Tests/Unit/Dashboard/ChargeSessionChartWidgetTests.swift          (adapter + state + a11y/i18n + telemetry tests)
+  apps/apple/Localization/Localizable.xcstrings                                (added 4 widget keys; 5 already present)
+
+--- Web source parity (features/dashboard/widgets/ChargeSessionChartWidget.tsx) ---
+- Data: useVehicles + useQuery('/charging?vehicle_id=&limit=10') -> bound natively via the shared
+  P1/S8 ChargingStore.sessionsPaginated(limit:10) + VehiclesStore (first-vehicle fallback) through
+  StateHolderModel -> LoadableState (no HTTP in the view).
+- classifyChargerType(): reproduced exactly (supercharger/tesla -> supercharger; non-empty & != "<invalid>"
+  -> dc; else home). CHARGER_COLORS parity via design tokens (home->success #10b981, sc->danger #ef4444,
+  dc->warning #f59e0b).
+- Energy hardcoded to kWh (Wh/1000) and reversed series, matching the web useMemo pipeline.
+- States reproduced: loading (skeleton), content (bar chart + legend + Total/Avg/Sessions), empty
+  ("No charge sessions yet"), error (retry), stale (chip), offline (chip + cached). Compact size -> summary only.
+- i18n: translation.widget.chargeSessionChart.{title,total,avg,sessions,empty} (pre-existing, exact EN values)
+  + added .type.{home,supercharger,dc} + .stale; chrome reuses translation.common.{refresh,retry,loading,offline}
+  + translation.kWh + translation.Error. No hardcoded English in native code.
+- Accessibility: VoiceOver labels/values on every bar, legend item, chip, summary metric; Dynamic Type via
+  Font.TS tokens; reduce-motion honored on chart animation.
+- Telemetry: emits view.opened with surface slug "ChargeSessionChartWidget" via the DashboardWidgetTelemetry
+  seam (ScreenViewWidgetTelemetry forwards to the shared-core P1/S11 Telemetry.ScreenView taxonomy).
+- Registry: descriptor id "charge-session-chart", category "charging", default 2x4, min 1x2, max 4x40
+  (parity with web/src/features/dashboard/widgets/registry/charging.ts), asserted by a unit test.
+
+============================================================
+GATE STEP RESULTS
+============================================================
+
+[1] xcodegen generate
+    -> "Created project at .../apps/apple/TeslaSync.xcodeproj"   GEN_EXIT=0
+
+[2] Stage Shared.xcframework (KMP, Gradle :core:assembleSharedXCFramework)
+    -> "BUILD SUCCESSFUL" ; "Shared.xcframework staged" (ios-arm64, ios-arm64-simulator, macos-arm64)  STAGE_EXIT=0
+
+[3] iOS compile  (xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build-for-testing)
+    -> "** TEST BUILD SUCCEEDED **"   IOS_BUILD_EXIT=0
+    (App target + TeslaSyncTests + TeslaSyncUITests all compile, including the 3 new widget files and the test.)
+
+[4] iOS tests   (test-without-building -only-testing:TeslaSyncTests/ChargeSessionChartWidgetTests, dedicated sim UDID)
+    -> "Test Suite 'ChargeSessionChartWidgetTests' passed"
+       "Executed 26 tests, with 0 failures (0 unexpected)"   EXIT=0
+    Full unit suite (test-without-building -only-testing:TeslaSyncTests):
+    -> "Test Suite 'TeslaSyncTests.xctest' passed"
+       "Executed 49 tests, with 0 failures (0 unexpected)"   (no regressions)
+    NB: a full `... build test` invocation intermittently returns 65 in THIS shared host because the
+    machine-wide CoreSimulatorService daemon dies during post-test diagnostics teardown under ~10-15
+    concurrent slot builds ("Mach error -308 (ipc/mig) server died"). This is a shared-environment
+    contention artifact AFTER the tests pass; on a dedicated/idle window the same tests return EXIT=0
+    (captured above). The 26 widget tests + 49-test unit suite passing is the authoritative result.
+
+[5] macOS compile (xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS,arch=arm64' build, CODE_SIGNING_ALLOWED=NO)
+    -> "** BUILD SUCCEEDED **"   MAC_BUILD_EXIT=0
+    (All 3 widget files compile for the macOS/arm64 target as well.)
+
+[6] macOS tests (xcodebuild -scheme TeslaSync-macOS build test)  ->  BLOCKED (pre-existing repo config / capability)
+    -> error: "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" has entitlements that require signing with a
+              development certificate. Enable development signing in the Signing & Capabilities editor.
+    MAC_EXIT=70
+    Two pre-existing, repo-wide (NOT widget-specific) blockers prevent macOS *test execution* on this host:
+      (a) Signing: the macOS app + widget-extension entitlements (app-group / keychain) require a development
+          signing identity; project.yml pins DEVELOPMENT_TEAM="" and no certificate is available here.
+      (b) Test-host path: even after stripping entitlements (CODE_SIGN_ENTITLEMENTS="" CODE_SIGN_IDENTITY="-"),
+          the app builds + ad-hoc signs successfully ("** BUILD SUCCEEDED **", codesign --sign - on
+          TeslaSync.app + TeslaSyncWidgets-macOS.appex), but `test` then fails:
+          "Could not find test host for TeslaSync-macOSTests: TEST_HOST evaluates to
+           .../Debug/TeslaSync-macOS.app/Contents/MacOS/TeslaSync-macOS".
+          The macOS app target sets PRODUCT_NAME=TeslaSync, so it emits TeslaSync.app, while the
+          TeslaSync-macOSTests TEST_HOST is derived from the target name (TeslaSync-macOS.app) — a project.yml
+          mismatch affecting every macOS unit test, independent of this surface.
+    Both are pre-existing repo configuration / capability limits, consistent with apps/macos-pending-verifications.md
+    (signed macOS artifacts deferred to a signed macos-latest CI runner). The macOS *code* is verified to compile
+    (step [5], twice); the identical Swift logic is verified to run/pass on iOS (step [4]).
+
+[7] swiftlint --strict (apps/apple, config .swiftlint.yml)
+    -> "Done linting! Found 0 violations, 0 serious in 260 files."   LINT_EXIT=0
+
+[8] swiftformat --lint apps/apple
+    -> "0/264 files require formatting, 3 files skipped."   FORMAT_EXIT=0
+
+[9] check-placeholders.ps1 -Path apps/apple/Sources/Dashboard/Widgets/ChargeSessionChartWidget
+    -> "PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0"   PLACEHOLDER_EXIT=0
+
+============================================================
+HONESTY COVENANT
+============================================================
+1 No red-as-green ....... honored: macOS signed build/test is reported BLOCKED (not green); the iOS
+                          full-`build test` 65 teardown artifact is disclosed, not masked. Every "pass"
+                          above is backed by pasted tool output.
+2 No scope narrowing .... all web states/sections reproduced (loading/content/empty/error/stale/offline,
+                          chart+legend+summary, compact mode).
+3 No skip-and-assume .... iOS tests were actually executed (26/26 + 49/49), not assumed.
+4 No stubs as final ..... complete implementation; placeholder gate = 0.
+5 No parity shortcuts ... classify/colors/energy/reverse/i18n/registry verified against the web source.
+6 No delegation ......... implemented directly in SwiftUI + Swift Charts.
+7 No predecessor bypass . binds the shared P1/S8 holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics seam.
+8 No commit on red ...... code-level gates (compile iOS+macOS, lint, format, placeholder) + iOS tests are green.
+9 No silent drift ....... path adaptation (Sources/Dashboard/Widgets) and the macOS-signing block are
+                          documented above.
+10 EXIT/STATUS .......... below.
+
+============================================================
+SUMMARY
+- Implementation: COMPLETE and production-quality (compiles on iOS AND macOS).
+- Host-runnable verification ALL GREEN: iOS compile, iOS unit tests (26 widget + 49 suite, 0 failures),
+  macOS compile, swiftlint --strict (0), swiftformat --lint (0), placeholder gate (0).
+- Only un-runnable step: macOS *signed* `build test` — requires a development certificate not present on
+  this dev host (environment/capability limit; deferred to a signed CI runner per apps/macos-pending-verifications.md).
+============================================================
+EXIT=70
+STATUS=BLOCKED
+BLOCKED_REASON=macOS *test execution* is blocked by two pre-existing, repo-wide config limits unrelated to this
+              surface: (a) entitlements require a development signing certificate (DEVELOPMENT_TEAM=""), and
+              (b) TeslaSync-macOSTests TEST_HOST points at TeslaSync-macOS.app while the target emits
+              TeslaSync.app (PRODUCT_NAME=TeslaSync). The macOS code compiles (BUILD SUCCEEDED) and the
+              identical Swift logic runs green on iOS (26 widget + 49 suite tests, 0 failures). Re-run
+              `xcodebuild -scheme TeslaSync-macOS build test` on a signed macos-latest CI runner (with the
+              TEST_HOST/PRODUCT_NAME config resolved) to clear this deferred verification.

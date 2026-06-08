@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure, the web source component, and checking the Apple toolchain availability.
+
+Xcode is not fully installed (only Command Line Tools), but `swift`, `swiftlint`, `swiftformat`, `pwsh` are available. Let me read the web source and explore the Apple app structure in depth.
+
+There's an `/Applications/Xcode.app` (installed yesterday). Let me check if it's usable and explore the Apple app conventions in parallel.
+
+`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild` works — Xcode 26.5 is usable. The gate is runnable. Let me find native counterparts (AIFeatureCard, withAiFeature, useAiStream), existing shared surfaces, state holders, tokens, i18n, telemetry, and the VampireDrain widget as a model.
+
+No native `AIFeatureCard`/`withAiFeature`/`useAiStream` exist yet, and no `shared-surfaces` dir. I must build a self-contained surface (atomic shared components are out of scope as separate files). Let me understand the build config and foundational infrastructure (tokens, i18n, state-holders, telemetry, SSE/HTTP client) and study the VampireDrain widget as a convention model.
+
+Now I understand the conventions. Let me study the full VampireDrain widget file set and find the foundational infrastructure (tokens, i18n facade, state-holder base, telemetry, SSE/AI client).
+
+The per-surface pattern is fully self-contained (each surface declares its own telemetry/state-holder/i18n seams, reusing only global design tokens). Let me read the web AIFeatureCard, withAiFeature, useAiStream sources, the build config, design tokens, and lint configs.
+
+Now let me read `useAiStream`, `AiOutputPanel`, `useAiEnabled`, the AI features registry, and locate the design tokens + build config.
+
+I now have the full web behavior model. Let me locate the design tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSSkeleton`), the build config (project.yml), and confirm how surfaces are compiled/tested.
+
+`shared-surfaces` is NOT yet in `project.yml` target sources (only `dashboard-widgets` and `feature-views` are). I need to understand the test target wiring too. Let me read the rest of project.yml and the design token / skeleton definitions.
+
+Let me check how colocated `.Tests.swift`/`.Previews.swift` files are handled (excludes?) and review a sibling gate log to see what "DONE" looked like for a prior surface.
+
+No shared-surfaces logs exist yet — this is the first. Let me read a sibling dashboard-widget log to see the expected gate outcome and methodology (especially how they handled xcodebuild/Xcode availability).
+
+Clear precedent established: **code-complete + DEFERRED Xcode app build/test** (siblings author the surface, run host-side gates — swiftlint, swiftformat, placeholder check, real iOS+macOS SDK compiles via `swiftc`, executed XCTest via host harness — then DEFER the full `xcodebuild` app gate with honest evidence, since project.yml registration + Shared.xcframework staging are out of scope). Let me read the exact commands used.
+
+I have the precise, honest methodology (≈50 sibling precedent): author the surface, pass host gates (iOS+macOS `swiftc -typecheck`, executed XCTest via SwiftPM harness, swiftlint/swiftformat/placeholder), and DEFER the full `xcodebuild` app gate with real captured evidence. Let me read the design tokens and key shared components to nail the exact APIs.
+
+The core tokens live in the generated design tokens path. Let me read those plus the key UI components (Cards/TSCard, Badges/TSTone, Typography, Buttons).
+
+Complete token reference acquired. Now let me read the shared UI components I'll compose with (TSCard, TSBadge/TSTone, TSButton, Typography) and the Guard widget's Views/Previews/Builder to mirror structure precisely.
+
+Let me read the button/typography components and the Guard widget's Views/Previews/Builder to finalize my mental model of the per-surface conventions.
+
+Let me read the lint/format configs, the placeholder gate script, and the glass-panel material modifier so my code conforms exactly.
+
+Let me read the rest of the placeholder gate (path resolution) and the forbidden-pattern list so my code avoids all trigger words.
+
+I have everything needed. Let me set up the session plan and todo tracking, then build the surface following the established precedent.
+
+I have full context now. Let me set up tracking and create the surface directory.
+
+Now I'll author the surface. Starting with the Model (state-holder seam + telemetry + request adapter).
+
+Now the localization facade + accessibility composition.
+
+Now the presentational subviews (Views.swift).
+
+Now the main surface card + the AI-feature gate (withAiFeature parity).
+
+Now the previews (one per state) and the strings catalog.
+
+Now the test suite (adapter + model + gate + accessibility/i18n).
+
+All 7 files created. Let me format, then lint the surface files.
+
+swiftlint linted the whole repo (config `included:`) and found 1 violation. Let me isolate whether it's in my files by linting them explicitly.
+
+Each surface file is clean under `--strict`. Let me confirm the 1 repo-wide violation is pre-existing (not from my files).
+
+Confirmed: the lone repo-wide violation is in a sibling (`LifetimeStatsWidget.Adapter.swift`), not my files. My surface is swiftlint-clean. Let me stop the redundant run.
+
+Surface is swiftlint-clean and swiftformat-clean. Now the iOS 18 + macOS 15 SDK typechecks. Let me locate the SDKs and determine the real dependency closure.
+
+SDKs present (iPhoneSimulator26.5 / MacOSX26.5, targeting iOS 18 / macOS 15). Let me typecheck the shipping surface against the real component library closure for iOS first.
+
+iOS 18 typecheck passes against the real library. Now macOS 15 + the DEBUG previews typecheck.
+
+macOS 15 passes. The previews step failed only because the **real library's own** `Cards.swift` `#Preview` references `TSBadge`/`TSButton` (DEBUG-only) which weren't in my closure. Adding those real files resolves it (keeps the "real library" approach).
+
+All three typechecks pass (iOS 18, macOS 15, DEBUG previews). Now let me execute the XCTest suite via a SwiftPM host harness.
+
+The harness surfaced a real Swift 6 isolation issue: `resolvePhase` and the identity constants are `@MainActor`-isolated (via the model's `@MainActor` and View's MainActor inference), so non-`@MainActor` tests can't call them. The correct fix is to mark these pure members `nonisolated`. Let me fix the production code properly.
+
+Now re-sync the harness with the fixed files and re-run the tests.
+
+All 28 tests pass (0 failures): Request 5, Phase 5, Model 9, Gate 3, Accessibility 6. Let me re-verify the static gates after the `nonisolated` edits and run the placeholder gate.
+
+Format/lint clean after edits. Now re-confirm the three SDK typechecks and run the placeholder gate.
+
+All host gates are green. Now I'll capture the honest **deferred** evidence for the Xcode-only app build/test steps (the ~50-surface precedent), verifying: surface is not-yet-registered in `project.yml`, the `Shared.xcframework` staging state, and a real `xcodebuild` attempt.
+
+Deferral conditions confirmed (surface unregistered + `Shared.xcframework` absent — both outside my allowed files). Let me capture the real `xcodegen` + `xcodebuild` evidence.
+
+Deferral evidence captured (identical to precedent): `xcodegen generate` EXIT=0; `xcodebuild` → `BUILD_EXIT=65` from the missing KMP `Shared.xcframework`. Let me clean up artifacts, confirm git-ignore, and gather file stats for the log.
+
+All host gates pass; the surface is clean and untracked. The other dirty files (`AIUsageCard.*`, web admin files) are pre-existing — not touched by me — and I'll exclude them from the commit (Honesty rule 9). All surface files are ≤ 309 lines. Now I'll write the gate log.
+
+Now I'll commit **only** my surface files + the log (explicitly excluding the pre-existing dirty files).
+
+Exactly the 7 surface files + log are staged. Committing.
+
+Commit succeeded (`50b860155`). Final verification of commit contents and working tree.
+
+All complete and verified. The commit contains exactly the 7 surface files + log (1474 insertions); the pre-existing dirty files (`AIUsageCard.*`, web admin) were correctly left untouched and excluded.
+
+All todos complete. 
+
+## Summary
+
+Shipped a production-polished native Apple (SwiftUI) parity of `web/src/components/ai/AIVampireDrainExplanation.tsx` as a self-contained shared surface under `apps/apple/TeslaSync/shared-surfaces/`, following the established ~50-surface precedent (**code-complete + DEFERRED Xcode app gate**).
+
+**Delivered (7 files, 1208 Swift + 47 strings):** Model (P1/S8 state-holder seam → `AINarrationModel`, no view HTTP; P1/S11 `view.opened` telemetry; the `vehicle_id`/`lookback_days` request adapter; `AiStreamState` lifecycle), Strings (P1/S10 i18n facade + a11y), Views (Helix badge, narrate button, output panel, thinking shimmer, freshness chip, banner), the surface card + `withAiFeature` gate, Previews (one per state), Tests, and the `.strings` catalog.
+
+**Parity:** reproduces the `AIFeatureCard` composition + gate inline, the body memo, the AiOutputPanel branch order, every state (idle/thinking/streaming/done/error/stale/offline/gate-off), every i18n key, accessibility labels, and telemetry.
+
+**Gates (all real):**
+- iOS 18 sim `swiftc -typecheck` → `EXIT=0`
+- macOS 15 `swiftc -typecheck` → `EXIT=0`
+- DEBUG previews typecheck → `EXIT=0`
+- `swift test` (SwiftPM host harness) → **28/28 passed**
+- `swiftlint --strict` (6 files) → 0 violations
+- `swiftformat --lint` → 0 require formatting
+- `check-placeholders.ps1` → `COUNT=0`
+- **Deferred:** `xcodebuild build test` — captured real `BUILD_EXIT=65` (missing KMP `Shared.xcframework`) + surface not yet in `project.yml` (integration scope, outside allowed files). Not faked.
+
+I fixed one real Swift 6 isolation bug the harness surfaced (`nonisolated` on the pure `resolvePhase` + identity constants). Committed as `50b860155` — exactly the 7 surface files + log; pre-existing unrelated dirty files left untouched. **EXIT=0 / STATUS=DONE.**
+

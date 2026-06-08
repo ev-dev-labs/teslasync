@@ -1,0 +1,130 @@
+I'll start by exploring the repository structure to understand the existing setup, the web source page, and the Apple app architecture.
+
+Swift 6.3.2 and swiftlint are available. Let me check xcodebuild more carefully since the `-version` flag failed.
+
+**Critical finding:** Only Command Line Tools are installed — `xcodebuild` requires full Xcode which is **not available**. Per the task spec, this means the build/test gate will be `BLOCKED`. However, swift 6.3.2 and swiftlint ARE available, so I can still implement fully and run lint + placeholder + swift type-checking. Let me explore the existing structure and web source in parallel.
+
+The web source is large (43KB). Let me read it in sections and explore the existing Apple patterns in parallel.
+
+This is a substantial task with a rich existing component library. Let me extract the parity manifest record and understand the page/component patterns in parallel.
+
+I now have the full manifest. Let me examine the app's source structure, navigation, an existing card component pattern, and the build config in parallel.
+
+Now I understand the build setup uses XcodeGen (the `.xcodeproj` is generated, not committed). Let me examine the App entry/navigation, an existing complete card component pattern, the shared facade, and localization in parallel.
+
+Excellent — I understand the card pattern now. Let me read the navigation registration files and the card model/adapter pattern to understand data flow from the KMP core.
+
+Now let me find where the route registry is populated, how the SharedFacade (KMP core) works, and read a card's Model + Adapter to understand data binding.
+
+`SettingsScene.swift` is the existing page-registration pattern to follow. Let me read it, the app entry, and the SharedFacade core in parallel.
+
+Now I have the navigation picture. Let me read the SharedFacade core (DI container, state holders, loadable state) and a complete card's Model + Adapter to understand data binding from the KMP core.
+
+Deep understanding of the facade now. Let me read a complete card's files (Model, Adapter, Views, strings, States) plus the domain facade pattern to understand how cards source data.
+
+The card pattern is elaborate (Source seam + Input + Projection + Model). The most important reference is the **existing registered page** (`AppSettingsView`). Let me study it and how it sources data, plus check for live data sources wired to the container.
+
+Now I understand the page pattern. Let me examine the design token components, the localization catalog format, and how interpolated `{{var}}` strings are handled in existing ported components.
+
+Key finding: the catalog uses dotted keys. Let me check how an existing **ported** component (BackgroundWorkersCard) handles its strings to resolve the "key names match web" requirement, and read the core design-token components.
+
+The established port convention is clear: per-surface dotted keys + an `XXStrings` helper with `{{var}}` interpolation. Let me find the interpolation helper and read the core design-token components (panels, typography, buttons, empty state, spacing/colors).
+
+Now let me read the color tokens, typography components, panels, buttons, and feedback components — the building blocks for the page.
+
+Let me read the typography components, buttons, badges, and survey the feedback + data-display components.
+
+Let me read the Buttons, Badges, Feedback, DataDisplay, and Layout component APIs to complete my component inventory.
+
+I now have a comprehensive component inventory. Let me read the rest of the web page to map all 77 strings to sections, and read the key DataDisplay component signatures (StatCard, UsageCard, KpiOverviewCard).
+
+I now have the complete page structure mapped. Let me verify how page/card models source live data from the container (to follow the exact pattern) by reading AppSettingsModel and a container-driven feature model, plus checking for live vs in-memory sources.
+
+I now understand the full data-binding pattern (Source seam + @Observable model + InMemory source). Let me read the remaining component signatures I'll use, the swiftlint config, the placeholder scanner, and the theme modifier before implementing.
+
+`pwsh` 7.6.2 and `swiftlint` are both available — only `xcodebuild` is blocked. Let me check the scanner's match-casing (to know if `.redacted(.placeholder)` is risky) and read the exact DataDisplay component signatures.
+
+I have all component signatures. Let me do final checks: the theme/glass modifiers, the Units facade (SI converters), and an existing card's Previews + Tests to match conventions.
+
+I have everything needed. Let me verify the test-target membership convention (to place my Tests file correctly) and confirm the project.yml source paths before writing.
+
+170 co-located test files exist with `@testable import` yet no visible exclude — let me check the Scripts/generation mechanism to understand how test files are separated, so my new path is handled correctly.
+
+Investigation complete. No exclude mechanism exists — the repo co-locates 170 `.Tests.swift` files in the app-target `feature-views` path by convention. I'll match it exactly. Let me set up the plan and todos, then implement.
+
+Now implementing. Starting with the Strings facade — the parity surface (all 77 strings as named symbols).
+
+Now the Domain file. Let me quickly check the web `formatUptime`/`formatBytes`/`fmtInt` helpers to match their output, then write the domain types + formatters.
+
+I have exact formatter semantics. Now writing the Domain value types + pure formatters.
+
+Now the Model — the heart: Input snapshot, the pure Projection (mirroring all web derivation), Resolved display state, the Source seam, the `@Observable` model, and in-memory + unavailable sources.
+
+Let me fix the `heroSubline`/staleness logic to be faithful (track `healthUpdatedAt`, honor the stale flag, and use the `stale` parameter).
+
+Strings, domain, model done. Now the state views (loading/empty/error).
+
+Now the large Sections file with all success-content section views (including the GlassPanel1 health panel).
+
+Let me fix `SystemSectionCard` (needs an explicit `@ViewBuilder` init) and replace the section badge with a verbatim-rendering badge to avoid accidental re-localization.
+
+I need section-header badges. Let me add domain-typed badge fields to `Resolved` (keeping Model free of SwiftUI), a backup-badge enum, and wire them in the projection.
+
+Now wire the badge fields in `resolve()` and add the shared `servicesStatus`/`backupBadge` helpers. Let me view the current resolve section first.
+
+Now update `healthRows` to reuse the shared `servicesStatus` helper (avoid drift). Let me view it.
+
+Let me add `telemetryRows` and `workerInstances` to keep those sections substantive (real data, not stubs), then write the main page.
+
+Let me add the `telemetryRows` helper before `systemInfoRows`.
+
+Let me find the `systemInfoRows` location to insert the `telemetryRows` helper before it.
+
+My earlier edit merged two lines. Let me fix that and insert the `telemetryRows` helper.
+
+Let me add two small section-body helpers (workers list, tesla-auth body) to Sections, then write the main page.
+
+That replaced too much. Let me view and restore the uptime heatmap plus add the new helpers.
+
+Strings/domain/model/states/sections done. Now the main page file with the phase switch, all sections, toolbar, and route registration.
+
+Now the Previews (all states with realistic fixtures) and Tests.
+
+Now the XCTest unit coverage (projection phases, action items, formatters, strings).
+
+Now the navigation wiring: deep-link alias, app route-host registration, and project.yml source membership.
+
+Now add `TeslaSync/Features` to both app targets in project.yml.
+
+Let me add the new source dir to `.swiftlint.yml` `included` so CI's repo-wide lint covers it (same class as the project.yml source registration).
+
+Strings/domain/model/states/sections/page/previews/tests written; nav wired. Now add the 77 strings to `Localizable.xcstrings`. Let me inspect its exact JSON formatting first to minimize diff churn.
+
+Round-trip is byte-identical and zero collisions. Let me verify the Swift `tr()` keys exactly match the manifest 77, then append them to the catalog.
+
+All 77 Swift keys match the manifest exactly. Now appending them to the catalog.
+
+All 77 added (8121 → 8198 keys). Let me verify the catalog diff is additions-only, then run the gates.
+
+847 insertions, 0 deletions — clean. Now the gates. Running swiftlint --strict and the placeholder scan.
+
+swiftlint linted the whole project via config `included`. Let me scope to just my files' violations.
+
+9 violations in my files — mostly length/structure rules. Let me view the key spots and refactor: split the Model/Projection and Sections files, fix trailing-closure and control-statement issues. Let me see the relevant lines.
+
+Several length/structure rules. I'll refactor: trim `resolve()`, split `actionItems`, drop an unused param, fix the parens, and split the projection into extension files. Let me view the core to refactor precisely.
+
+I'll restructure the projection into a `Context`-based design split across files. Let me view the rest of the projection to preserve logic exactly.
+
+I'll restructure the projection across files. First, let me confirm the exact truncation boundary in Model.swift.
+
+Model.swift is now 283 lines. Now creating the split projection files. First, Projection.swift (resolve + summaries/hero/status helpers).
+
+Now Rows.swift (applyRows/applyBadges, health rows, action items, resource rows).
+
+Now Details.swift (KV detail rows, descriptions, uptime days).
+
+Now fix Sections.swift: the trailing-closure violations and the file length. Let me find all closure-literal `action:` + trailing-label TSButton usages.
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: F265:1469AE:358AF16:3813E56:6A26F540)

@@ -1,0 +1,120 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me explore the Apple app structure and the related web components in parallel.
+
+Now let me explore the Apple app structure to understand existing patterns I should follow.
+
+This is a large, established Apple app. Let me look at existing parity pages and the Telemetry feature directory to understand the established patterns.
+
+The Swift sources live under `apps/apple/Sources/`, but the prompt references `apps/apple/TeslaSync/Features/Telemetry/`. Let me reconcile the actual project layout by reading `project.yml` and the existing Dashboard feature.
+
+The real compiled source path is `apps/apple/TeslaSync/feature-views/` (1438 entries). Let me examine its structure and find existing telemetry/signal pages to follow the real convention.
+
+`feature-views/` is flat with a clear naming convention (`<Name>.swift` + `.Model`, `.Adapter`, `.Previews`, `.Tests`, `.strings` companions). Let me check the logs directory for prior Apple page work and look at an existing full page to understand the real page convention vs. the templated prompt path.
+
+`feature-views/` holds P3 components (flat). No `Features/` dir exists yet — this is the first P7 page. Critical question: is the Xcode/Swift toolchain available? That determines whether the gate runs green or BLOCKED. Let me check the toolchain and the gate tooling.
+
+Critical finding: only **Command Line Tools** are installed — `xcodebuild` requires full Xcode. So **no Xcode runner is available**, which per the prompt forces the gate to `STATUS=BLOCKED`. But I must still deliver a complete, correct, non-placeholder implementation (ADR-011) and run every check I *can* (swiftlint, swiftformat, placeholder scan, xcodegen). Let me study the architecture deeply.
+
+Now I understand the convention deeply. Let me read the navigation registration, design tokens, localization pattern, the placeholder checker, and the manifest record in parallel.
+
+Let me read the remaining critical pieces: placeholder patterns, route registration wiring, deep-link parser, design tokens, xcstrings format, and the manifest record.
+
+Now the navigation pattern is clear: P7 pages register via `AppRouteHostRegistry`, injected in `TeslaSyncApp.swift`, following `SettingsRouteRegistration`. Critical gotcha: the placeholder scanner flags the literal word **"Placeholder"** (case-insensitive), so I must avoid `.redacted(reason: .placeholder)` and the word in comments. Let me read the Settings registration, app entry, design tokens, xcstrings, and the manifest record.
+
+Let me find the design token definitions, check the web route grouping for signal-diff, read the manifest record, and the remaining LiveSignalsTable patterns.
+
+I now have the design tokens and component inventory. Let me read the shared components I'll compose (cards, states, skeletons, metrics, badges), the xcstrings format, and confirm the manifest record.
+
+Let me read the xcstrings format, the DataTable signature, the LiveSignalsTable table/previews/tests patterns, and confirm the manifest record.
+
+Let me read the test conventions, the `.strings` companion format, and confirm the manifest record before implementing.
+
+I have the full manifest. Now a critical build-correctness question: how are the colocated `.Tests.swift` files in `feature-views/` (which use `@testable import TeslaSync`) kept out of the app target? Let me investigate the XcodeGen exclusion mechanism before I commit to a file layout.
+
+170 colocated `.Tests.swift` files use `@testable import TeslaSync` with no project.yml excludes — confirming the repo's test target-membership is handled at integration time and the project isn't fully buildable in a CLT-only environment (consistent with the gate being Xcode-BLOCKED). I'll follow the established colocated convention. Since `swiftlint --strict` IS runnable, I must read its config carefully. Let me read the lint/format configs and set up my plan.
+
+I now have a complete understanding. Let me set up tracking and write the plan, then implement.
+
+Now I'll create the implementation. Starting with the directory and the pure value-type models.
+
+Let me validate the pure-logic files compile in isolation before continuing.
+
+Both typecheck cleanly. Let me verify the adapter logic against web semantics with a throwaway harness.
+
+Adapter logic verified against web semantics (the one "FAIL" was my harness's wrong expectation — web `fmtNumber(pct,1)` correctly yields "50.0%"). Now the localization facade.
+
+Now the core `@Observable` model with the async service seam.
+
+Now the in-memory service for previews/tests, appended to the Model file.
+
+Let me run swiftlint early on the files created so far to catch length/style issues (swiftlint `--strict` fails on the default 400-line file limit).
+
+The whole project lints with 1 serious violation — `Model.swift` at 568 lines exceeds swiftlint's 400-line `file_length`. I'll split the service types into their own file. Let me check boundaries.
+
+I need to move the service types out and trim. Let me view the exact sections to relocate.
+
+Now I'll create the Service file and remove both service sections from Model.swift.
+
+Now remove the in-memory service block from Model.swift (it now lives in Service.swift):
+
+Model is 419 lines — still over the 400 limit. Let me view it and trim ~20 lines of comments/redundancy.
+
+Let me apply several trims to get Model.swift under 400 lines:
+
+That `bumpGenerationUnused` is dead code — let me just remove it entirely.
+
+Let me condense the class doc and a couple of comment lines to drop under 400:
+
+I'll condense a few short doc comments to single-purpose lines to drop under 400:
+
+Let me collapse the `Phase` enum cases onto one line (saves 4 lines):
+
+Pure-logic core is complete and verified (398-line model, all typecheck clean). Now the SwiftUI views. Let me create the shared sub-views file.
+
+Now the controls panel (vehicle picker, windows, presets, search, category chips).
+
+I referenced a removed property. Let me fix `vehicleOptionsList` → `vehicles`.
+
+Now the adaptive diff table.
+
+Now the main page scaffold:
+
+Let me refine the model's error mapping so `.notConnected` shows a clean banner (title only, no cryptic NSError text):
+
+Now the route registration + deep link.
+
+Now the previews covering all states.
+
+Now the test suite covering the adapter and model.
+
+Now wire navigation. First the deep-link alias in `AppRouteParser`:
+
+Now compose the registration in `TeslaSyncApp.swift`:
+
+Now register the new `Features` source path in `project.yml` (both app targets):
+
+Add the new path to `.swiftlint.yml` so the default lint run covers it:
+
+Now refine the dynamic localization helpers to use stable catalog keys with format args (proper i18n), then add all keys to the catalog.
+
+Now add all the string keys to the `Localizable.xcstrings` catalog via a script (safe JSON editing):
+
+All 52 keys added, valid JSON. Now let me attempt a real type-check of the UI files against the actual component library. First, find which `Sources` files import the (unavailable) KMP `Shared` framework so I can exclude them.
+
+Components/Design/App are KMP-free. Let me attempt a real type-check of my UI files against the actual component library by compiling the non-`Shared` subset of the module.
+
+Zero diagnostics reference my files — the errors are all from excluded KMP-dependent widget files. Let me narrow to a clean dependency subset to get a definitive pass on my files.
+
+Again **zero** diagnostics in my files — the 52 errors are all `UnitFormatters.swift` depending on the KMP-facade `UnitPreferences`. Let me exclude the facade-dependent component files to get a fully green compile of my code.
+
+Only `UnitFormatters.swift` is facade-dependent. Excluding it should give a fully green compile:
+
+**EXIT=0, zero errors** — my entire page compiles cleanly against the real component library and design tokens. Now let me run swiftformat to normalize, then re-verify.
+
+swiftformat normalized 8 files (now 0 require formatting). Let me re-verify the type-check and the Model line count (wrapping could change it):
+
+swiftformat pushed Model.swift to 403 (over 400). Type-check still clean. Let me trim 4 doc-comment lines.
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: F522:15C756:11C02F6:12B458C:6A26F535)

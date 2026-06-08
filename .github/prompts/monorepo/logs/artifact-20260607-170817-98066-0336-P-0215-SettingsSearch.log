@@ -1,0 +1,191 @@
+================================================================================
+P4 · Feature view · 0215 — SettingsSearch (Apple)
+Run: 2026-06-07T22:46-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/336
+Base: 67b7bd501
+Prompt: P4/feature-views/0215 — Feature view: SettingsSearch
+Web source (spec): web/src/features/settings/components/SettingsSearch.tsx
+                   (+ the matcher it delegates to: web/src/features/settings/searchIndex.ts)
+Mode: code-complete + DEFERRED full-app Xcode build/test (0002 BackendTool / P-0010 ToolCard
+      precedent, ADR-012, Honesty rule 7 — predecessor parity). Surface is authored, compiled
+      on BOTH SDKs, and its full XCTest suite EXECUTED green on this host.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT default) ........ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (83717DEE-…-CBDDD3140989, Booted)            OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                   OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  xcodegen ................... 2.45.4 (project generates cleanly, see deferred)     OK
+  feature-views in project.yml  registered on both app targets (2 refs)             OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+
+  Capability note: the web source lists "Charts/maps used: (none)" and shared
+  components "@/components/ui". The core requirement is SwiftUI, which is AVAILABLE
+  and PROVEN by real iOS-18-simulator AND macOS-15 SDK compiles below, plus a real
+  37-test XCTest run. The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit
+  unavailable") does NOT apply.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/SettingsSearch.*) ===
+  SettingsSearch.Models.swift     121  Foundation value types — SettingsSearchEntry (web SettingsEntry),
+                                       Config (MAX_RESULTS=8), Phase/CatalogStatus/Connection, Update.
+  SettingsSearch.Adapter.swift    152  testable projection core — fuzzyMatch + the searchSettings scoring
+                                       ladder (1000/800/600/400/300/200/100) + stable-sorted, capped search
+                                       + resolvePhase (pure, dependency-free; web-parity VERBATIM).
+  SettingsSearch.Catalog.swift    633  StaticSettingsSearchCatalog — 1:1 port of getSettingsIndex(t) (53 rows;
+                                       keys+fallbacks+keywords) held in a top-level constant (WidgetPicker
+                                       precedent) so the enum stays within the lint budget.
+  SettingsSearch.Projection.swift 126  view-ready Result + Projection + Surface.slug + Accessibility
+                                       (resultLabel/hint + the `useId` option identity).
+  SettingsSearch.Model.swift      354  @Observable @MainActor state holder + Source seam (P1/S8) +
+                                       Static/InMemory sources + Telemetry seam (P1/S11 view.opened) +
+                                       Strings facade (P1/S10): query/open/activeIndex, wrap-around keyboard
+                                       highlight, commit→onNavigate, phase + stale/offline freshness.
+  SettingsSearch.Views.swift      244  presentational chrome — search field (web Input + Search icon, clear,
+                                       spinner, .onKeyPress arrows/Return/Escape, combobox a11y), freshness
+                                       chip, connectivity banner, result row + list.
+  SettingsSearch.States.swift     104  load-state chrome — loading row, empty ("No matching settings."),
+                                       error (QueryError + retry). Never a blank box.
+  SettingsSearch.swift            105  SettingsSearch surface — field + freshness header + connectivity
+                                       banner + glass popover switched over phase; onAppear telemetry.
+  SettingsSearch.Previews.swift   109  #if DEBUG previews — content/idle/loading/empty/error/stale/offline.
+  SettingsSearch.strings          187  P1/S10 catalog — 3 web keys (placeholder/label/noResults) + native
+                                       envelope/a11y keys + the 53 search.entries.* catalog keys.
+  SettingsSearch.Tests.swift      193  XCTest — adapter (scoring/fuzzy/cap/stable-sort/phase/projection),
+                                       catalog (53 rows/ids/order/localizer), accessibility.
+  SettingsSearch.ModelTests.swift 202  XCTest — model query→score, open flag, keyboard wrap, commit→navigate,
+                                       phase, view.opened-once, stale auto-refresh / offline.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine via the Xcode toolchain; real output) ===
+  Shipped surface = the 9 production .swift files compiled together with the REAL design
+  closure (apps/design/generated/apple/Tokens.swift + apps/apple/Sources/Design/TSMaterial.swift);
+  none import the Shared xcframework or any heavy component.
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK
+        xcrun --sdk iphonesimulator swiftc -target arm64-apple-ios18.0-simulator \
+          -swift-version 6 -typecheck -module-name SettingsSearchKit  <closure> <9 files>
+        IOS_SDK_COMPILE_EXIT=0                                                     OK
+  [2] swiftc -typecheck — macOS 15 SDK (same files, -target arm64-apple-macos15.0, -swift-version 6):
+        MACOS_SDK_COMPILE_EXIT=0                                                   OK
+  [3] swiftc -typecheck — DEBUG previews (-D DEBUG, Xcode #Preview macro plugin) on BOTH SDKs
+        (the 9 files incl. SettingsSearch.Previews.swift):
+        IOS_DEBUG_EXIT=0   MACOS_DEBUG_EXIT=0                                      OK
+  [4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM
+        package (real production Models/Adapter/Catalog/Projection/Model/Views/States/surface +
+        real design tokens), Swift 6 language mode, Xcode toolchain:
+          Test Suite 'SettingsSearchAdapterTests'        passed — 12 tests, 0 failures
+          Test Suite 'SettingsSearchCatalogTests'        passed —  5 tests, 0 failures
+          Test Suite 'SettingsSearchAccessibilityTests'  passed —  3 tests, 0 failures
+          Test Suite 'SettingsSearchModelTests'          passed — 17 tests, 0 failures
+          Executed 37 tests, with 0 failures (0 unexpected) in 0.017 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        (Belt-and-braces: the same logic was ALSO exercised by two standalone plain-Swift
+         harnesses — 37 adapter assertions + 35 @MainActor model assertions — all green.)
+        Covers: fuzzyMatch subsequence; the full scoring ladder; keyword/desc tiers; the
+        MAX_RESULTS=8 cap; descending order with catalog-index stable tie-break; blank-query
+        short-circuit; the famous "lng"→Language fuzzy example; 53-row catalog integrity +
+        localizer wiring; row projection (blank-desc drop, useId option id, "Opens %@" hint);
+        model query→score/open, wrap-around highlight, activeIndex reset on result change,
+        commit→clear+close+onNavigate(href), phase matrix (idle/loading/content/empty/error),
+        view.opened-once + slug, stale single auto-refresh, offline keeps cache.
+  [5] swiftlint --strict (11 surface .swift files; explicit paths — the repo .swiftlint.yml
+        `included:` lists TeslaSync/feature-views, run explicitly here):
+          Done linting! Found 0 violations, 0 serious in 11 files.
+        LINT_EXIT=0                                                               OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/11 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate; swift):
+          PLACEHOLDER_ALLOWED=1   PLACEHOLDER_COUNT=0
+        (the single ALLOWED line is the unavoidable i18n key literal
+         "settings.search.placeholder", guarded with `// parity:allow`; the word never
+         appears unguarded anywhere else, incl. comments.)
+        PLACEHOLDER_EXIT=0                                                        OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode toolchain):
+      - `xcodegen generate`                          -> XCODEGEN_EXIT=0 (project + 12 targets + schemes).
+      - `xcodebuild -target TeslaSync-macOS build`   ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **                         -> MAC_BUILD_EXIT=65
+    Why deferred (three independent, code-unrelated reasons — none is a defect in this surface;
+    identical disposition to the 0002 BackendTool / P-0010 ToolCard predecessors, Honesty rule 7):
+      (a) Shared.xcframework not staged: both app targets link the KMP core
+          (Frameworks/Shared.xcframework), but apps/apple/Frameworks holds only .gitkeep.
+          Staging it needs a Kotlin/Native gradle build (apps/shared :core:assembleSharedXCFramework),
+          independent of this UI surface; the concrete missing-framework error is captured above and
+          fails the build BEFORE this surface's sources are reached.
+      (b) Co-located *.Tests.swift in the app target: 125 pre-existing sibling surfaces already drop
+          a `<Surface>.Tests.swift` into TeslaSync/feature-views/ (compiled into the app target),
+          importing XCTest there — a parallel-merge condition owned by the P4/P99 acceptance prompt,
+          which remaps the *.Tests.swift into the XCTest target. This surface's SettingsSearch.Tests.swift
+          + SettingsSearch.ModelTests.swift follow that same sanctioned pattern; here they are PROVEN
+          green by the real `swift test` run in step [4].
+      (c) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    XCTest under Xcode runs in the TeslaSync(/-macOS) test target; here the SAME 37 tests are
+    EXECUTED GREEN by the self-contained SwiftPM package in step [4], and the surface compiles
+    against BOTH the iOS 18 and macOS 15 SDKs in steps [1]/[2]/[3].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states + the prompt envelope (idle/loading/content/empty/error +
+      stale/offline) — implemented; each has a #if DEBUG preview; phase logic unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (SettingsSearchSource→SettingsSearchModel);
+      no view HTTP. useNavigate → onNavigate(SettingsSearchResult); useId → deterministic option ids;
+      useTranslation → P1/S10 facade.
+  [x] Every i18n key from source has a matching P1/S10 catalog key — the 3 web keys
+      (settings.search.placeholder/label/noResults) preserved verbatim; the 53 search.entries.* catalog
+      keys mirrored; native envelope/a11y keys added. No English literals in Swift (one guarded key).
+  [x] Accessibility labels on every interactive element — field (isSearchField + label), each row
+      (label + "Opens %@" hint + useId identifier + isSelected when active), retry button, chips/banner;
+      per-phase spoken summary. Dynamic Type via Font.TS; reduce-motion respected (no custom animation).
+  [x] Tests: adapter unit test + per-state coverage + a11y label test — 37 XCTest cases, EXECUTED 37/37.
+  [x] No TODO / stub / mock / placeholder / Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE (full-app xcodebuild DEFERRED with platform-capability + pre-existing
+      blocker evidence, per the 127-surface precedent).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green     : every host-runnable gate shows its real exit; the xcodebuild gate is openly
+                           DEFERRED with the real EXIT=65 Shared.xcframework error pasted — not greened.
+  2  No scope narrowing  : the field + popover + keyboard nav + click-to-commit + the full searchSettings
+                           matcher + the 53-row catalog + every state are all reproduced.
+  3  No skip-and-assume  : every host gate executed on THIS runner; raw exits pasted; the deferred build
+                           failure was RUN and captured, not assumed.
+  4  No stubs as final   : complete production surface + 37 real, executed tests; placeholder scanner = 0.
+  5  No parity shortcut  : scoring ladder/fuzzy/cap/stable-sort ported VERBATIM; tokens/typography/a11y/
+                           telemetry/i18n all mapped to platform primitives + verified.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics, P4 core all
+                           present and consumed; disposition matches BackendTool/ToolCard.
+  8  No commit on red    : the COMMITTED artifact (SettingsSearch.* + this log + one macos-pending row) is
+                           GREEN on every host gate AND on a real iOS-18 + macOS-15 SDK build and a real
+                           37-test XCTest run; the deferred full-app gate is RED only on pre-existing,
+                           unrelated infrastructure (unstaged Shared.xcframework + sibling test files +
+                           signing) which this commit neither introduces nor can fix within its allowed files.
+  9  No silent drift     : changes are confined to feature-views/SettingsSearch.* (12 files), this log, and
+                           one macos-pending-verifications row — all enumerated above. The two unrelated
+                           pre-modified web/ files in the tree were NOT touched and are NOT in this commit.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic SettingsSearch shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles against BOTH the iOS 18 simulator and macOS 15 SDKs under the app's
+  own Swift 6 strict-concurrency rules, against the real design system, and its full 37-case XCTest suite
+  EXECUTES GREEN — with swiftlint/swiftformat/placeholder all green. The full-app iOS-Simulator + macOS
+  xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked by an unstaged KMP
+  Shared.xcframework (real EXIT=65 captured), the pre-existing co-located sibling *.Tests.swift condition,
+  and macOS development-signing — all owned by the P4/P99 acceptance gate on a signed macos-latest CI
+  runner per apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete +
+  DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

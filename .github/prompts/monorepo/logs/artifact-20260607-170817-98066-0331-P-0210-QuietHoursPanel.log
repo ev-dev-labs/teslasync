@@ -1,0 +1,75 @@
+=== P4 Feature view 0210 QuietHoursPanel (Apple) ===
+date: 2026-06-08T06:23:38Z
+host: Darwin 25.5.0 arm64
+cwd: /Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-331
+
+## ARTIFACT (apps/apple/TeslaSync/feature-views/QuietHoursPanel.*)
+     378 QuietHoursPanel.Adapter.swift
+     382 QuietHoursPanel.Form.swift
+     345 QuietHoursPanel.Logic.swift
+     286 QuietHoursPanel.Model.swift
+     277 QuietHoursPanel.ModelTests.swift
+     137 QuietHoursPanel.Previews.swift
+     234 QuietHoursPanel.Seams.swift
+      87 QuietHoursPanel.swift
+     321 QuietHoursPanel.Tests.swift
+     357 QuietHoursPanel.Views.swift
+      99 QuietHoursPanel.strings
+    2903 total
+
+Web source of truth: web/src/features/settings/components/QuietHoursPanel.tsx
+Surface slug (P1/S11 view.opened): QuietHoursPanel
+Parity: states loading/empty/error/stale/offline/content + create/edit form + HH:MM/tz/weekday/severity
+        + validation + success/failure toast; i18n via P1/S10 facade; a11y labels; SI n/a (no unit fields).
+
+## CAPABILITY PROBE
+swift:      swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+swiftlint:  0.63.3
+swiftformat:0.61.1
+xcodegen:   Version: 2.45.4
+xcodebuild: requires full Xcode; runner active dir = /Library/Developer/CommandLineTools
+simctl:     UNAVAILABLE (no iOS Simulator)
+SDK:        /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+Frameworks: SwiftUI + Swift Charts + MapKit DO type-check against the CLT macOS SDK (probe below).
+
+## GATE STEPS (as written in the prompt)
+--- 1) xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1   [BLOCKED — xcodebuild requires full Xcode; CLT-only runner, no iOS Simulator]
+--- 2) xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1   [BLOCKED — xcodebuild requires full Xcode]
+--- 3) swiftlint --strict (scoped to QuietHoursPanel.* — 10 swift files)
+Done linting! Found 0 violations, 0 serious in 10 files.
+LINT_EXIT=0
+--- 4) swiftformat --lint (scoped to QuietHoursPanel.*)
+0/10 files require formatting.
+FORMAT_EXIT=0
+--- 5) check-placeholders.ps1 (scoped to QuietHoursPanel.* swift files)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+
+## COMPENSATING VERIFICATION (maximum the CLT-only runner allows; all GREEN)
+Toolchain: swiftc -typecheck/-emit-module, target arm64-apple-macos15.0, -swift-version 6 -strict-concurrency=complete, SDK=CLT macOS.
+[A] Framework probe — import SwiftUI + Charts + MapKit type-checks: EXIT=0 (verified earlier).
+[B] Production type-check (8 QuietHoursPanel files + REAL Sources/Components + Sources/Design + generated Tokens): TYPECHECK_EXIT=0
+[C] Testable module build (swiftc -emit-module -enable-testing -module-name TeslaSync, production files + deps): MODULE_EXIT=0
+[D] Test type-check (QuietHoursPanel.Tests.swift + .ModelTests.swift vs the testable module + XCTest shim): TESTS_TYPECHECK_EXIT=0
+    (XCTest.framework ships only with full Xcode; a signature-faithful XCTest shim is used purely to
+     type-check the test sources offline. The test LOGIC compiles against the real surface API.)
+
+## SUMMARY
+Runnable gate steps:    LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0   (all PASS)
+Blocked gate steps:     IOS_EXIT=1  MAC_EXIT=1   (xcodebuild build+test needs full Xcode + iOS Simulator; runner has CLT only)
+Compensating checks:    PROBE=0  PRODUCTION_TYPECHECK=0  MODULE_BUILD=0  TESTS_TYPECHECK=0   (all PASS)
+Surface is fully implemented at web parity, decomposed into 10 swift files (each <=400 lines) + 1 strings table,
+type-checks clean under Swift 6 strict concurrency, lints clean (--strict), formats clean, and is stub-free.
+
+EXIT=1
+STATUS=BLOCKED
+REASON=xcodebuild build+test (iOS Simulator + macOS) cannot run: Xcode is not installed on this runner
+       (Command Line Tools only; 'xcodebuild requires Xcode'; simctl unavailable). Per the prompt capability
+       clause this is reported BLOCKED with API evidence. Every runnable gate (swiftlint --strict, swiftformat
+       --lint, check-placeholders) PASSES, and the surface additionally type-checks (production + tests) against
+       the real shared components/tokens under Swift 6 strict concurrency.

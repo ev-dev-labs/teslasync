@@ -1,0 +1,142 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+I have the web source. Now let me check the Apple toolchain capability (critical — `xcode-select` shows Command Line Tools, not full Xcode) and explore the existing Apple app structure.
+
+**Critical finding:** `xcodebuild` requires full Xcode but only Command Line Tools are installed (`/Library/Developer/CommandLineTools`), and `simctl` is unavailable. The iOS/macOS build+test gate steps cannot run on this runner. This is platform-capability evidence for a potential BLOCKED status. However, `swiftlint`/`swiftformat`/`swift` ARE available, and I must still ship production code. Let me explore the existing patterns thoroughly.
+
+There's a clear established pattern: each feature view has `.Model`, `.Adapter`, `.swift`, `.Views`, `.Previews`, `.strings`, `.Tests` files. `Base64Tool` is the closest analog (admin devtools tool). Let me study it completely along with the shared infrastructure.
+
+Excellent — the pattern is very clear. Let me read the remaining reference files: Base64Tool's Previews/strings/Tests, the shared Design tokens, and the SharedFacade state-holder infrastructure. I'll also check `FleetTelemetryHealth` to see how a data-bound surface handles loading/empty/error states.
+
+Now let me find the design token definitions and the shared components (Feedback, Motion, UI) that ResponseViewer needs, plus study the data-bound `FleetTelemetryHealth` for its loading/empty/error handling.
+
+Tokens `TSSpacing`/`TSRadius`/`Font.TS`/`Color.TS` are defined elsewhere (likely generated P1/S9 tokens). Let me locate them and read the UI/Feedback/Motion components I'll need.Token definitions (TSSpacing/TSRadius/Font.TS) weren't in Sources/ — they're likely generated P1/S9 tokens elsewhere. Let me locate them and the shared UI/Feedback/Motion components.
+
+Tokens live in `Sources/Theme.swift`. Let me read it plus the shared components ResponseViewer needs (GlassPanel/Buttons, Skeleton/EmptyState, Motion, Disclosure for the collapsibles).
+
+Tokens are generated in `apps/design/generated/apple/Tokens.swift`. Let me read that plus the UI components I'll need (Buttons, Cards, Disclosure, Typography, Motion).
+
+Let me read the full Tokens.swift and the remaining components (Cards, Typography, Motion) to finalize my understanding of available primitives.
+
+I now have a thorough grasp of the primitives. Let me read the typography components, the project build config (to confirm feature-views auto-include), the placeholder checker the gate runs, and a data-bound model reference.
+
+**Key finding:** `project.yml` does NOT list `TeslaSync/feature-views` in any target's sources — yet Base64Tool/FleetTelemetryHealth/TelemetryErrorsPanel live there. This confirms per-surface prompts are drop-in files wired at a later integration step, and the prompt's "Allowed files" correctly restricts me to `ResponseViewer.*` + the log (no project.yml edits). Let me confirm pwsh availability and study how the data-bound `TelemetryErrorsPanel` structures its model/states.
+
+`TelemetryErrorsPanel` is the ideal template — it's also a presentational leaf fed by `FleetApiSection` props (just like ResponseViewer), with a `Source` seam, `Input` snapshot, pure `Projection`, `Phase` enum, and in-memory source. Let me read its remaining files to match the structure exactly.
+
+Let me read the remaining TelemetryErrorsPanel files (Views, Previews, Tests, strings) and the web parent `FleetApiSection.tsx` to see how ResponseViewer/SnippetPanel are consumed.
+
+I have a thorough understanding now. Let me read the final reference pieces: the Previews and strings templates, the Badges component (for status/method chips), and the web parent `FleetApiSection.tsx` to confirm how `SnippetPanel`/`ResponseViewer` are consumed.
+
+Let me check how the web parent consumes `ResponseViewer`/`SnippetPanel` to confirm the data shapes and `SnippetPanel` inputs.
+
+I now have a complete understanding of the architecture. **Key facts:**
+- `TelemetryErrorsPanel` is the exact template — a presentational leaf fed by `FleetApiSection`/`ApiPlaygroundPage` props, with a `Source` seam, `Input` snapshot, pure `Projection`, `Phase` enum, telemetry seam, i18n facade, and in-memory source.
+- `ApiResponse`={status, statusText, headers, body, bodyText, duration(ms), size(bytes), contentType}; `HistoryEntry`={method, path, status, duration, timestamp}. `SnippetPanel` is exported separately (method/url/body).
+- Tokens & components are all available. `feature-views` is a drop-in dir (not in project.yml/swiftlint `included`); swiftformat DOES lint it.
+- **`xcodebuild` cannot run** (Command Line Tools only, no Xcode/simctl) → the iOS/macOS gate steps are platform-blocked; swiftlint/swiftformat/placeholder checks DO run.
+
+Let me establish lint baselines and set up tracking.
+
+The sibling `0009` log reveals the precedent: siblings were authored on a runner with **full Xcode 26**, compiled against iOS/macOS SDKs, and only DEFERRED the app-target `xcodebuild` (surface not yet registered in project.yml). My runner has only Command Line Tools. The pivotal question: can the CLT `swiftc` even typecheck SwiftUI against the macOS host SDK? Let me test directly.
+
+**Critical capability finding:** The CLT macOS SDK **includes SwiftUI** and `swiftc -typecheck` of SwiftUI succeeds (PROBE_EXIT=0). So I can compile-verify the surface against the macOS host SDK — but I still lack full Xcode, the iOS 18 simulator, and `xcodebuild` (the prompt's mandated gate). Let me check XCTest availability and scan my dependency tree for the unavailable `Shared` Kotlin framework so I can build a typecheck harness.
+
+XCTest isn't in the CLT SDK (so the test file can't be compiled here — I'll verify the pure adapter logic via a runnable harness instead). Components/Design only import SDK frameworks (SwiftUI/Charts/MapKit/etc.), none import the unavailable `Shared`. Let me verify the component+token subset typechecks standalone so my harness is valid.
+
+Outstanding — all my surface's component/token dependencies are `Shared`-free (only the unrelated `UnitFormatters.swift` needs an external type, which my surface doesn't use). I can build a precise typecheck harness. XCTest isn't in CLT, so I'll verify the pure adapter logic via a runnable harness instead, and ship the XCTest file for the real CI.
+
+Let me set up tracking and write the plan, then create the files.
+
+Now I'll create the surface files. Starting with the pure adapter and the model (independent creates).
+
+Now the main view and the subviews (including the exported `SnippetPanel` parity).
+
+Now the Previews, strings, and Tests files.
+
+Before finalizing the XCTest file, let me verify the **real** adapter logic by compiling it (Foundation-only, macOS SDK) into a runnable harness that exercises the actual public API — this captures exact golden snippet output and proves correctness without XCTest.
+
+Top-level code needs a `main.swift` filename when compiling multiple files. Let me fix that.
+
+Verified: the adapter compiles against the macOS SDK and **all assertions pass (FAILURES=0)**, with snippet output **byte-identical** to the web `generateSnippet`. Now I'll write the XCTest file using these verified goldens (array-joined to avoid literal-indentation ambiguity).
+
+All 7 files created. Now the critical verification: full-surface typecheck against the macOS SDK with the component/token dependency closure.
+
+The typecheck caught a real bug: in `ResponseSnippetPanel`, the stored property `body` collides with SwiftUI's `var body`. Let me rename it to `requestBody`.
+
+**Core surface typechecks GREEN against the macOS SDK** (SURFACE_EXIT=0). The preview failure is purely the `#Preview` macro needing Xcode's `PreviewsMacros` plugin (unavailable under CLT) — it errors identically on the **pre-existing** `Cards.swift`, so it's a toolchain limit, not my code. Let me verify my preview bodies' types by transforming `#Preview` into plain functions for a typecheck.
+
+Now the only error is from the dependency `Cards.swift`'s own `#Preview` under `-D DEBUG`. Let me strip the `#if DEBUG` guard from my transformed copy and compile **without** `-D DEBUG` so the deps' previews are excluded but my (de-macro'd) preview bodies are still checked.
+
+My preview bodies typecheck cleanly (PV2_EXIT=0). **Verification status: core surface + preview bodies typecheck green vs macOS SDK; adapter logic runtime-verified.** Now the host gate tools: swiftformat, swiftlint, and the placeholder check.
+
+swiftformat wants its auto-fixable formatting (redundantReturn, wrapPropertyBodies, etc.) — the repo style. Let me apply it, then re-typecheck to confirm it still compiles green.
+
+Re-lint clean (0/6). Now I must confirm swiftformat didn't alter behavior — re-typecheck the surface, re-run the adapter harness, and run the full gate-faithful `swiftformat --lint apps/apple`.
+
+The full-tree `swiftformat --lint apps/apple` passes (0/642, FULL_FORMAT_EXIT=0) and the surface still typechecks. The harness re-run failed only because `/tmp/main.swift` was clobbered by a parallel task (shared environment). Let me re-run the adapter harness in an isolated dir against the formatted adapter.
+
+Need the entrypoint named `main.swift`. Let me redo in the isolated dir.
+
+The harness surfaced a real issue — but it's in my **XCTest golden**, not the code. The actual generator correctly emits ` \` (continuation) after the `-H` line (matching web `parts.join(' \\\n')`); all other assertions passed. My `testCurlPostIncludesBody` golden omitted that trailing ` \`. Let me fix the test golden.
+
+Now let me close the loop with a **comprehensive** harness that asserts every golden value from my XCTest file against the real Adapter+Model code (Model compiles on macOS — Observation/OSLog are available). This validates the entire test file's expectations.
+
+**FAILURES=0** — every golden in my XCTest file is validated against the real compiled Adapter+Model. Now swiftlint and the placeholder gate.
+
+Placeholder gate clean (COUNT=0 all files). swiftlint flagged 4 default-rule issues (file_length >400 on 3 files, function_parameter_count on `ApiResponse.make`). But note: `feature-views` is **not** in swiftlint's `included:` list, so the gate's `swiftlint --strict` never scans these. Let me check whether the existing sibling feature-views also exceed these defaults — to decide whether to match precedent or tidy up.
+
+Clear precedent: all siblings stay ≤400 lines and swiftlint-clean (0 violations). The `function_parameter_count` flagged only `make` (init passes because swiftlint ignores defaulted params). I'll split my 3 oversized files into additional `ResponseViewer.*` files (allowed by the glob, like FleetTelemetryHealth's `.Tables.swift`) and give `make` defaults. Let me view the current formatted Model to do precise extraction.
+
+All siblings stay ≤400 lines and swiftlint-clean, so I'll match that. First, fix `make`'s param count by defaulting its params (line-count-neutral, matches `init`'s pattern). Then split the three oversized files into additional `ResponseViewer.*` files.
+
+Now split Model → Projection (extract the projection section lines 185–322 into a new `ResponseViewer.Projection.swift`).
+
+Boundaries confirmed. Let me extract the projection section into a new file and remove it from Model.
+
+Model now 281 lines, Projection 151 — clean seam. Now split Views: extract the SnippetPanel + CopyButton into `ResponseViewer.Snippet.swift`. Let me find the boundary.
+
+Views now 327, Snippet 163. Now split Tests: move projection/model/accessibility tests into a second test file. Let me find the boundary.
+
+All files now ≤400 lines. Let me reformat the new files, then re-run swiftformat lint + swiftlint --strict across the full surface.
+
+swiftformat clean (0/9), **swiftlint --strict: 0 violations across all 9 files**, all ≤400 lines. Now re-typecheck the full surface (now including Projection + Snippet) and re-run the comprehensive harness against the split files.
+
+Both green: full surface typechecks (SURFACE_EXIT=0) and the comprehensive harness passes (FAILURES=0). Let me finalize verification: preview bodies typecheck, test-file syntax parse (XCTest unavailable for full compile), full-tree swiftformat, and placeholder check on all 9 files.
+
+All green: preview bodies typecheck (PV_EXIT=0), test files parse clean, full-tree swiftformat 0/645, placeholder COUNT=0. Let me do a rigorous final parse check of the test files and capture the exact gate-command evidence (xcodebuild/simctl unavailability + gate-form linters) for the log.
+
+Final evidence captured. **Disposition is now clear-cut:** the mandated `xcodebuild` gate steps (iOS + macOS build/test) cannot run — `xcodebuild` requires full Xcode but only Command Line Tools are present (iOS_EXIT=1, MAC_EXIT=1, simctl missing). Per the prompt's gate rule ("EXIT=0 only when every step is 0") and capability clause ("If unavailable on the runner → STATUS=BLOCKED with API evidence"), this is **STATUS=BLOCKED**. But all host-runnable verification is GREEN and the code is complete. Let me write the honest gate log.
+
+Log written (ends with `EXIT=1` / `STATUS=BLOCKED` per covenant rule 10). Now commit only the surface files + log (leaving the pre-existing unrelated web changes untouched).
+
+All 10 surface files + log staged; pre-existing web changes correctly excluded. Committing.
+
+Commit succeeded (`a84b4d00`), unrelated web changes left untouched. Let me do a final confirmation on the committed state and clean up temp files.
+
+The `.strings` "error" is only because I passed that file directly to swiftformat (which handles `.swift` only) — the authoritative directory-form gate `swiftformat --lint apps/apple` already returned **0/645 clean**. Let me re-confirm the directory-form on the committed tree and check todo completion.
+
+All 10 todos done; final `swiftformat --lint apps/apple` clean (0/645). The task is complete.
+
+## Summary
+
+Shipped the native Apple **ResponseViewer** feature view (P4 · 0041) at parity with `web/src/features/admin/components/ResponseViewer.tsx`, committed as `a84b4d00`.
+
+**Delivered (10 files, ≤400 lines each, following the `TelemetryErrorsPanel` sibling precedent):**
+- `.Adapter` — pure transforms: status/method tone ladders, `formatBytes`, the 4 `generateSnippet` dialects (cURL/JS/Python/Go), and a `ResponseJSON` `JSON.stringify(.,null,2)` printer.
+- `.Model` / `.Projection` — P1/S8 Source seam (no view HTTP), domain models, pure projection (loading/empty/loaded + history), P1/S11 `view.opened` telemetry, P1/S10 i18n facade.
+- `.swift` / `.Views` / `.Snippet` — glass response panel (loading skeleton / empty / status-bar+body+collapsible headers), replay history strip, and the exported `SnippetPanel` parity with copy.
+- `.Previews`, `.strings`, `.Tests` + `.ProjectionTests`.
+
+**Parity:** all web states reproduced, all 6 i18n keys routed through the facade, VoiceOver labels on every control, Dynamic Type + Reduce Motion, telemetry once. No Charts/MapKit (web uses none).
+
+**Verification — terminal status `STATUS=BLOCKED` (EXIT=1), per the prompt's capability clause:**
+- ❌ `xcodebuild` iOS 18 Simulator + macOS 15 build/test **cannot run** — this runner has Command Line Tools only (no Xcode, no `simctl`). Evidence captured in the log.
+- ✅ All **host-runnable** verification GREEN: `swiftlint --strict` 0/9, `swiftformat --lint apps/apple` 0/645, placeholders 0, full **macOS-SDK type-check** of the surface + previews, and an **executed runtime harness** asserting every test golden (FAILURES=0) with snippet output byte-identical to the web source. (Caught + fixed a real `body`-property/`var body` collision during type-check.)
+
+The code is complete and verified to the maximum the runner allows; clearing steps [1]/[2] to DONE only requires re-running on a full-Xcode runner (surface registration in `project.yml` is outside this prompt's allowed files). The honest BLOCKED status with evidence is the prescribed outcome rather than claiming red-as-green.
+
+
+
+The task is fully complete — all 10 todos done, surface committed (`a84b4d00`), and verified to the maximum the runner allows. No remaining steps; the xcodebuild block is environmental and is the prompt-prescribed BLOCKED outcome.
+

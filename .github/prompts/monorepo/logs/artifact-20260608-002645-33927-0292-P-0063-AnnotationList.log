@@ -1,0 +1,216 @@
+================================================================================
+P4 · Shared surface · 0063 — AnnotationList (Apple)
+Run: 2026-06-08T04:33-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/292
+Base: c9c6fdb9f
+Prompt: P4/shared-surfaces/0063 — Shared surface: AnnotationList
+Web source (spec): web/src/components/charts/AnnotationList.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (BackendTool 0002 / GuardModeWidget
+      0054 / DigitalTwinWidget 0036 precedent, ADR-012, Honesty rule 7 — predecessor parity).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT default) ........ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present + Booted (83717DEE-…-CBDDD3140989)           OK
+  SwiftUI .................... present in both SDKs (this surface's sole requirement) OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  xcodegen ................... 2.45.4 (project generates cleanly, see deferred)     OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+  shared-surfaces in project.yml  0 references (not yet target-registered)          WARN
+  shared-surfaces in .swiftlint.yml  0 references (bare swiftlint skips the dir)     WARN
+
+  Capability note: the prompt lists "Charts/maps used: (none)" and shared components
+  "@/components/ui". The core requirement is SwiftUI, which is AVAILABLE and PROVEN by
+  real iOS-18-simulator AND macOS-15 SDK typechecks below + an executed XCTest run.
+  The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT
+  apply — the surface is authored, host-compiled on BOTH SDKs, and host-tested green.
+
+=== ARTIFACT (apps/apple/TeslaSync/shared-surfaces/AnnotationList.*) ===
+  AnnotationList.Model.swift       371  P1/S8 state-holder seam (AnnotationListSource→
+                                        AnnotationListModel) + P1/S11 telemetry seam (view.opened)
+                                        + P1/S10 strings facade + value types (AnnotationEntry /
+                                        AnnotationCategory / AnnotationConnection) + input/resolved
+                                        + InMemoryAnnotationListSource (remove drops + re-pushes)
+  AnnotationList.Adapter.swift      92  pure projection helpers — ISO→localized-or-verbatim
+                                        timestamp, category-name (web ANNOTATION_CATEGORY_LABELS),
+                                        VoiceOver row-label builder (dependency-free)
+  AnnotationList.Projection.swift   80  pure resolve — error/loading/empty/data + per-row mapping
+  AnnotationList.Views.swift       112  category palette (token colours, no raw hex), rows body,
+                                        AnnotationRowView (dot + label + description + timestamp +
+                                        remove)
+  AnnotationList.Chrome.swift      212  freshness chip, header refresh, per-row remove button,
+                                        stale/offline banner, loading skeleton, error+retry, empty
+  AnnotationList.swift             100  AnnotationList surface (glass card shell, header +
+                                        connectivity banner + phase content, surfaceSlug, onAppear)
+  AnnotationList.Previews.swift    137  #if DEBUG previews — data/single/empty/loading/error/
+                                        stale/offline/long-description
+  AnnotationList.Tests.swift       338  XCTest — adapter + projection + model + a11y (30 methods)
+  AnnotationList.strings            44  P1/S10 catalog contribution (table "AnnotationList", 18 keys)
+  Largest .swift = 371 lines (swiftlint file_length<=400 honored). No file imports the
+  Shared xcframework (seams are Swift protocols; the prod app injects the facade-backed
+  source, previews/tests inject InMemoryAnnotationListSource). Web source = 54 lines; the
+  native delta is the multi-file state-holder architecture + the full P4 leaf state
+  contract + executed tests (same ratio as the BackendTool predecessor), not scope creep.
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data sources (web useTranslation + the parent-supplied `annotations` prop + `onRemove`
+    callback): bound through the P1/S8 seam AnnotationListSource→AnnotationListModel.
+    `remove(id:)` is the native peer of `onRemove(id)`; the production source performs the
+    delete + refetch, the in-memory source drops the row + re-pushes. No HTTP in the view.
+  - Composition (web container + title + rows):
+      • title  -> uppercase tracking-wider muted caption, web t('annotation.listTitle',
+                  'Annotations'); rendered in the always-on surface header.
+      • dot    -> Circle filled by AnnotationPalette.color(category) — the native peer of the
+                  web ANNOTATION_COLORS hex map, expressed via design tokens (NO raw hex):
+                  milestone→chartSeriesSpeed · maintenance→statusWarning · trip→statusSuccess ·
+                  issue→statusDanger · upgrade→chartSeriesPower · custom→textMuted.
+      • label  -> medium-weight secondary text (web font-medium).
+      • desc   -> optional muted "— {description}", truncated (web hidden/sm:inline + truncate).
+      • time   -> trailing muted monospaced; AnnotationFormat.timestampLabel polishes ISO-8601
+                  to a localized medium-date/short-time label and passes any other string through
+                  verbatim — the web renders ann.timestamp as provided.
+      • remove -> AnnotationRemoveButton (xmark), always visible (web reveals on pointer-hover,
+                  not portable to touch/VoiceOver), danger tint on press; web
+                  t('annotation.remove','Remove annotation').
+  - States (ALL rendered, each with a #if DEBUG preview + a projection/model unit test):
+      loading (skeleton rows) · empty (friendly state — the web returns null; the P4 leaf
+      renders a friendly state per the no-hidden-surface contract / prohibited-pattern #6,
+      mirroring the AiUsageCard empty precedent) · error (message + Retry, P4 leaf addition
+      over the prop-driven web) · data (title + rows) · stale (freshness chip + "annotations
+      may be stale" banner + one-shot auto-refresh) · offline (cached rows kept + offline
+      banner + chip, no auto-refresh).
+  - i18n (P1/S10): web keys preserved verbatim — annotation.listTitle / annotation.remove;
+    category names from web ANNOTATION_CATEGORY_LABELS (annotation.category.*); native chrome
+    namespaced annotation.* (empty/live/stale/offline/banners/refresh/loadingA11y/errorTitle/
+    retry). Every code-referenced key is declared in AnnotationList.strings (referenced⊆declared
+    verified, 18/18); NO English string literals in native code (all via AnnotationListStrings +
+    Text(verbatim:)).
+  - Accessibility: VoiceOver labels on every interactive element (remove/refresh/freshness chip);
+    each row is a contained element carrying "{category}: {label}, {timestamp}[, {description}]"
+    so the colour-coded category dot is conveyed by name; loading/banner carry combined labels;
+    Reduce Motion respected (TSFadeIn / TSSkeleton); Dynamic Type via the token fonts.
+  - Telemetry (P1/S11): view.opened emitted once on first presentation with slug "AnnotationList".
+
+=== GATE — HOST STEPS (genuinely executed; real exit codes) ===
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK (production surface + real tokens + real
+        TSButton/TSSkeleton/TSFadeIn):
+        xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+          -swift-version 6 -strict-concurrency=complete <10 library files>
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [2] swiftc -typecheck — macOS 15 SDK (same files, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [3] swiftc -typecheck — DEBUG previews (-D DEBUG, Xcode #Preview macro plugin) on BOTH SDKs
+        (the 10 library files + AnnotationList.Previews.swift):
+        IOS_PREVIEWS_TYPECHECK_EXIT=0   MAC_PREVIEWS_TYPECHECK_EXIT=0              OK
+  [4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained
+        SwiftPM harness (real production Model/Adapter/Projection/Views/Chrome/surface + real
+        design tokens (apps/design/generated/apple/Tokens.swift) + the real TSButton/TSSkeleton/
+        TSFadeIn components), Swift 6 language mode + complete concurrency:
+          Test Suite 'AnnotationFormatTests'               passed —  6 tests, 0 failures
+          Test Suite 'AnnotationListAccessibilityTests'    passed —  3 tests, 0 failures
+          Test Suite 'AnnotationListProjectionPhaseTests'  passed —  5 tests, 0 failures
+          Test Suite 'AnnotationListProjectionRowTests'    passed —  5 tests, 0 failures
+          Test Suite 'AnnotationListModelTests'            passed — 11 tests, 0 failures
+          Executed 30 tests, with 0 failures (0 unexpected) in 0.022 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: ISO timestamp localization + non-ISO/empty verbatim pass-through, category-name
+        resolution + unknown→custom fold, a11y row-label (with/without/empty description),
+        projection phases (error precedence, loading-only-when-empty, empty, data, title in all
+        phases), per-row mapping + order, model start/telemetry-once + deferred-until-first-apply,
+        push, remove-delegates+drops-row, remove-last→empty, stale auto-refresh once, offline
+        no-refresh, live re-arm, manual refresh, stop re-arm, surfaceSlug.
+  [5] swiftlint --strict (8 surface .swift files; explicit paths — the repo .swiftlint.yml
+        `included:` does not list TeslaSync/shared-surfaces, that wiring is the P4 integration
+        prompt's job, so bare `swiftlint --strict` SKIPS this dir; run explicitly here):
+          Done linting! Found 0 violations, 0 serious in 8 files.
+        LINT_EXIT=0                                                               OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/8 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate; swift):
+          ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces -Language swift
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                        OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode toolchain):
+      - `xcodegen generate`                          -> XCODEGEN_EXIT=0 (project + 12 targets).
+      - generated pbxproj AnnotationList references   -> 0 (surface NOT registered; expected).
+      - `xcodebuild -target TeslaSync-macOS build`    ->
+          error: "TeslaSync-macOS" has entitlements that require signing with a development
+                 certificate. (signing)
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **                          -> MAC_BUILD_EXIT=65
+    Why deferred (three independent, code-unrelated reasons — none is a defect in this surface;
+    identical disposition to the BackendTool 0002 / GuardModeWidget 0054 predecessors, Honesty
+    rule 7):
+      (a) NOT-YET-REGISTERED: project.yml's app targets enumerate `Sources/`,
+          `TeslaSync/dashboard-widgets/`, and `TeslaSync/feature-views/`; this surface lives at
+          TeslaSync/shared-surfaces/ and has 0 references in project.yml (verified). The
+          shared-surfaces directory is registered into the XcodeGen app + test targets by the
+          downstream P4 integration/acceptance prompt (exactly as dashboard-widgets was wired
+          once for all its surfaces). Editing project.yml / .swiftlint.yml is OUTSIDE this
+          prompt's allowed files (AnnotationList.* + the log). Running the full xcodebuild now
+          would build the app WITHOUT these files and re-run the existing suite — ZERO evidence
+          about this deliverable. Steps [1]/[2]/[3] DO compile this surface against the real
+          tokens + components on BOTH SDKs, and step [4] EXECUTES its full XCTest suite.
+      (b) Shared.xcframework not staged: the app target links the KMP core; staging it needs a
+          Kotlin/Native gradle build (apps/shared :core:assembleSharedXCFramework). Independent
+          of this UI surface; concrete missing-framework error captured above.
+      (c) macOS app/widget signing requires a development certificate on a signed runner (ADR-012;
+          concrete entitlement-signing error captured above).
+    XCTest under Xcode runs in the TeslaSync(/-macOS) test target; here the SAME tests are PROVEN
+    GREEN (30/30) by the executed SwiftPM harness in step [4], and the surface compiles against
+    BOTH the iOS 18 and macOS 15 SDKs in steps [1]/[2]/[3].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source reproduced — loading/empty/error/data +
+      the orthogonal stale/offline axis; each has a #if DEBUG preview; phase logic unit-tested
+      + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (AnnotationListSource→
+      AnnotationListModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — web annotation.listTitle /
+      annotation.remove preserved verbatim; category + native chrome keys present;
+      referenced⊆declared verified (18/18).
+  [x] Accessibility labels on every interactive element (remove/refresh/freshness chip); each
+      row carries a combined category+label+timestamp+description value.
+  [x] Tests: adapter unit + per-state projection/UI + a11y label — 30 methods, EXECUTED 30/30,
+      exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured
+      evidence (xcframework + registration + signing), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; the xcodebuild build/test is shown
+                          DEFERRED with its real exit 65 + cause, not as pass.
+  2 No scope narrowing ... full surface (8 swift files + strings), all states, seams, tests.
+  3 No skip-and-assume ... web source + types/annotations.ts read end-to-end; every t() + branch
+                          + the ANNOTATION_COLORS / ANNOTATION_CATEGORY_LABELS maps reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. title + colour dot + label + description + timestamp + remove + the
+                          full P4 leaf state contract.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as BackendTool 0002 / GuardModeWidget 0054 host-gate
+                          + Xcode deferral.
+  8 No commit on red ..... committed work is green on every runnable gate; the only non-green
+                          step is the environment-blocked xcframework/signing build, deferred
+                          with evidence (predecessor-accepted disposition).
+  9 No silent drift ...... shared-surfaces not yet in project.yml/.swiftlint.yml (wiring is the
+                          integration prompt's job) documented above; pre-existing unstaged
+                          AIUsageCard.* working-tree edits are NOT part of this prompt and are
+                          NOT staged by this commit (allowed files: AnnotationList.* + log).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

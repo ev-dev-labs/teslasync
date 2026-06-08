@@ -1,0 +1,172 @@
+=== P4 Shared surface 0133 QueryError (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Darwin arm64, Apple Silicon) — SHARED runner, ~48 parallel
+                       slot builds observed (one DerivedData/TeslaSync-* per slot).
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2.
+  Destinations       : iOS Simulator "iPhone 16" present (Booted, iOS 26.5 runtime) · macOS 15 SDK present.
+  Shared.xcframework : ABSENT — apps/apple/Frameworks/ holds only .gitkeep. The KMP core is staged by a Gradle
+                       SCHEME PRE-ACTION (Scripts/build-shared-xcframework.sh → :core:assembleSharedXCFramework),
+                       which `xcodebuild … build` does NOT execute. Not assembled here (a 7m+ Kotlin/Native
+                       build under ~48-way contention); the full-app link input is therefore unavailable.
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS SDKs + simulators all present →
+                       NOT capability-BLOCKED. (This surface uses SwiftUI only; no charts/maps in the source.)
+
+WEB SOURCE (the specification)
+  web/src/components/feedback/QueryError.tsx (+ its layout primitive _ErrorState.tsx) — the inline banner for a
+  failed API query. It branches by ApiError.status so each failure mode gets actionable recovery copy:
+    • !error                       → renders nothing (`return null`).
+    • isTransientWaiting(error)    → Clock, role=status/polite, "Waiting for upstream", NO CTA (the global
+                                     RateLimitBanner owns the countdown).
+    • status === 404               → FileQuestion, "{{thing}} not found" (thing = resourceName ?? "Resource"),
+                                     optional "Back to list" CTA when listHref is set → navigate(listHref).
+    • status === 401 || 403        → Lock, "Sign in required", "Sign in" CTA → window.location.href='/login'.
+    • status >= 500                → Server, "Server error", optional "Retry" CTA → onRetry.
+    • network / offline / unknown  → WifiOff if offline else AlertCircle; isOffline = !online || status === 0;
+                                     offline → role=status/polite "You're offline" + disabled "Retry when online";
+                                     else role=alert/assertive "Can't reach server" + "Retry".
+  A useEffect auto-invokes onRetry ONCE when the browser fires `online`, but ONLY for a pure transport failure
+  (status === undefined) — a 4xx/5xx never recovers from a connectivity event, and status===0 is excluded.
+  Data sources (hooks): useTranslation (→ P1/S10 facade), useNavigate (→ P4 nav seam), useOnlineStatus
+  (→ the reactive `online` field of the P1/S8 snapshot). The `error` is a prop, mapped to a Shared-free
+  classification at the seam.
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/shared-surfaces/QueryError.*, the only allowed files + this log)
+  QueryError.Adapter.swift  (355 L) — Shared-free classification core: QueryErrorInfo(status?,isTransientWaiting),
+                                       QueryErrorKind, QueryErrorClassifier (the web if-ladder verbatim),
+                                       QueryErrorContent (per-branch title/message/cta/symbol/role — single source
+                                       of truth for view + tests), QueryErrorConfig/Input, QueryErrorResolver
+                                       (presentation incl. isOffline + CTA gating + retry-when-online disabled),
+                                       QueryErrorAccessibility. All pure + dependency-free.
+  QueryError.Model.swift    (237 L) — P1/S8 state holder (QueryErrorModel + QueryErrorSource + InMemory), P4 nav
+                                       seam (QueryErrorNavigator + SpyQueryErrorNavigator), P1/S11 telemetry seam
+                                       (QueryErrorTelemetry + OSLog default), P1/S10 facade (QueryErrorStrings,
+                                       incl. the %@ 404-title interpolation), and the web one-shot offline→online
+                                       auto-retry.
+  QueryError.swift          (122 L) — the surface view: branch banner + EmptyView for the no-error case,
+                                       view.opened on appear, combined VoiceOver label + an assertive/polite
+                                       announcement mapped from the web aria-live role.
+  QueryError.Views.swift    (117 L) — the rose-tinted failure card (port of _ErrorState: icon chip + title +
+                                       message + trailing CTA) and the small rose ghost action button + style.
+  QueryError.Previews.swift ( 79 L) — DEBUG previews for every branch (waiting / 404 ± list href / 401 / 5xx /
+                                       can't-reach / offline / none).
+  QueryError.Tests.swift    (339 L) — 37 XCTest cases (classifier ladder, content map, resolver per branch incl.
+                                       offline/status-0/CTA gating, model wiring + telemetry + nav + the auto-retry
+                                       one-shot/re-arm/negatives, accessibility label).
+  QueryError.strings        ( 47 L) — per-surface i18n table: every web key with its English default.
+  NOT touched (integration scope / parallel-unsafe, per the predecessor feature-view disposition):
+    • project.yml — shared-surfaces is NOT yet an app-target source path (0 refs); registering it is a one-time
+      integration step shared by all ~67 P4 shared-surface prompts (conflict-prone to self-register), owned by the
+      P4 acceptance gate. (feature-views/dashboard-widgets are already registered; shared-surfaces is not.)
+    • .swiftlint.yml `included` / the shared Localizable.xcstrings — likewise integration-owned; strings ship
+      per-surface here.
+    • Pre-existing dirty working-tree files (apps/apple/TeslaSync/feature-views/AIUsageCard.* — an unrelated
+      0203→0237 surface rewrite present before this task) are NOT touched and NOT committed.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  _ErrorState rose card   → QueryErrorCard: rose = Color.TS.statusDanger at matching opacities
+                            (card fill 5% / border 20% / icon chip 10%), RoundedRectangle(TSRadius.lg).
+  lucide icons            → SF Symbols: Clock→clock · FileQuestion→questionmark.folder · Lock→lock ·
+                            Server→server.rack · WifiOff→wifi.slash · AlertCircle→exclamationmark.circle.
+  ghost <Button> + rose   → QueryErrorActionButton + QueryErrorActionButtonStyle (small geometry, rose
+    className              foreground, fill 10%→20% on press = the web hover); disabled+dimmed for "Retry
+                            when online".
+  FadeIn                  → TSFadeIn (Sources/Components/Motion) — honors Reduce Motion.
+  aria-live alert/status  → AccessibilityNotification.Announcement priority .high/.default on appear.
+  useTranslation          → QueryErrorStrings (P1/S10, table "QueryError"); zero English literals in code.
+  useNavigate / /login    → QueryErrorNavigator.navigateToList(href) / signIn().
+  useOnlineStatus         → the reactive `online` field of QueryErrorInput (P1/S8 seam).
+  {{thing}} not found      → "%@ not found" printf template fed resourceName ?? localized "Resource".
+  telemetry               → view.opened surface="QueryError" via QueryErrorModel.start (P1/S11), OSLog default.
+  states (P4 leaf map)    → error = every branch (the surface IS the error state); offline = the WifiOff branch
+                            (+ one-shot auto-retry on reconnect); stale ≈ the transient "waiting" branch (back-off
+                            + auto refresh, no CTA); loading/empty = N/A for an error banner — the web returns
+                            null with no error, so kind==.none renders nothing and the host shows real content.
+
+GATES
+  [GREEN]    swiftformat --lint (repo .swiftformat, maxwidth 120, Swift 6) over the surface
+                 0/6 files require formatting                                                  (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict (repo rule set: default rules + the 7 opt-ins, line_length 120) over the surface
+                 Done linting! Found 0 violations, 0 serious in 6 files                        (LINT_EXIT=0)
+             NOTE: the committed .swiftlint.yml `included:` does not yet list TeslaSync/shared-surfaces (same
+             one-time integration registration as project.yml), so the bare `swiftlint --strict` skips this dir;
+             it was linted explicitly with the identical rule set. (The whole-app run's only finding is the
+             PRE-EXISTING function_body_length in dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 — not
+             a QueryError file.)
+  [GREEN]    check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/QueryError (the prompt's gate)
+                 PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0                           (PLACEHOLDER_EXIT=0)
+  [GREEN]    xcodegen generate (project.yml → TeslaSync.xcodeproj)                              (XCODEGEN_EXIT=0)
+  [GREEN]    QueryError build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 LANGUAGE MODE =
+             strict-concurrency complete, the same as the app), compiling the EXACT shipped QueryError.* sources
+             (Adapter + Model + view + Views + Previews) against the REAL repo design-system
+             (apps/design/generated/apple/Tokens.swift + apps/apple/Sources/Components/Motion/Motion.swift) and
+             running the EXACT shipped tests:
+                 Build complete! (76.33s)  ·  Executed 37 tests, with 0 failures (0 unexpected)  (SWIFT_TEST_EXIT=0)
+             (The full surface — including the SwiftUI view, card, rose button, and #Preview blocks — COMPILES
+             under the app's own Swift 6 strict-concurrency settings against the real tokens + SwiftUI.)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=DEFERRED
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=DEFERRED
+
+  WHY DEFERRED (full-app Xcode gate — every blocker pre-exists this change; ZERO involve the QueryError surface):
+    Attempted on THIS runner (xcodegen generate green; xcodebuild -scheme TeslaSync build launched). The full app
+    build did not complete here for two deterministic, pre-existing reasons plus runner contention:
+      (a) Co-located XCTest in the app target — project.yml routes "TeslaSync/feature-views" into the APP target,
+          and 204 of those feature-views/*.Tests.swift files `import XCTest`, which the app target does not link.
+          Directly observed in the shared build system: "feature-views/AIRestorePanel.Tests.swift:18: Unable to
+          resolve module dependency: 'XCTest'". This is the same baseline-RED condition every prior P4 surface
+          recorded (ToolCard/0010, FlagsTable/0031, AcDcStatsPanel/0096) and is unrelated to this surface — the
+          QueryError test file lives in the same dir but shared-surfaces is not even target-registered yet.
+      (b) Shared.xcframework not staged — apps/apple/Frameworks/ holds only .gitkeep; the app/test targets link
+          the KMP core, staged by a Gradle scheme PRE-ACTION that `xcodebuild build` does not run. (macOS adds the
+          known dev-signing/entitlements condition on top.)
+      (+) Runner contention — ~48 parallel slot builds; this slot's xcodebuild was CPU-starved (0 active
+          swift-frontend procs for slot-362 vs 27 across siblings), so a clean full compile could not complete in
+          a bounded window. The QueryError surface contributes ZERO files to the app target (shared-surfaces
+          unregistered) and is independently proven to compile + pass tests above.
+    Both code-level blockers are owned by the P4/P99 Apple acceptance gate (shared-surfaces target registration +
+    XCTest test-target membership + Shared.xcframework staging + macOS signing) on a signed, non-contended
+    macos-latest CI runner per apps/macos-pending-verifications context — NOT by a single shared-surface prompt
+    (task rule: do not fix pre-existing unrelated breakage).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED/RED with its real root
+                           causes (co-located XCTest + absent Shared.xcframework + 48-way CPU starvation) — never
+                           reported as passing. No exit code is fabricated.
+  2  No scope narrowing  : every web branch reproduced — null, transient-waiting (no CTA), 404 (±resourceName/
+                           ±listHref), 401/403 (sign-in), 5xx (retry), and network (offline vs can't-reach), plus
+                           the status-0 nuance and the one-shot offline→online auto-retry.
+  3  No skip-and-assume  : every applicable gate EXECUTED on THIS runner with raw exits pasted; the deferred
+                           gate's blockers were directly verified (file state of Frameworks/, the 204 XCTest
+                           feature-view test files, the observed module-dependency error), not assumed.
+  4  No stubs as final   : complete production surface (1296 L across 7 files) + 37 real tests; placeholder
+                           scanner = 0; no TODO/stub/mock/placeholder/Lorem.
+  5  No parity shortcut  : icons/tints/opacity/role→announcement/copy/CTA gating/auto-retry/a11y/telemetry/states
+                           all mapped to platform tokens + verified in a real Swift 6 build+test.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics, P4 nav all
+                           present and consumed; did NOT self-register project.yml/.swiftlint.yml (integration,
+                           parallel-unsafe) and did NOT edit the shared Localizable.xcstrings.
+  8  No commit on red    : the COMMITTED artifact (QueryError.* + this log) is GREEN on every applicable gate AND
+                           on a real isolated Swift 6 build+test; the deferred full-app gate is RED only on
+                           pre-existing, unrelated conditions this commit neither introduces nor touches.
+  9  No silent drift     : changes confined to apps/apple/TeslaSync/shared-surfaces/QueryError.* + this log. The
+                           pre-existing dirty AIUsageCard.* files are NOT touched and NOT committed.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic QueryError shared surface shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: the entire surface (Adapter + Model + SwiftUI view + card + rose button + previews)
+  compiles and its 37 tests pass under the app's own Swift 6 strict-concurrency settings against the real
+  design-system, with swiftformat/swiftlint/placeholder all green and xcodegen green. The full-app iOS-Simulator
+  + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked by the pre-existing
+  co-located-XCTest app-target condition (observed baseline-RED) and the unstaged KMP Shared.xcframework, and was
+  additionally CPU-starved by ~48-way parallel runner contention — all owned by the P4/P99 acceptance gate on a
+  signed, non-contended CI runner. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate"
+  disposition used by every P4 Apple surface to date.
+
+EXIT=0
+STATUS=DONE

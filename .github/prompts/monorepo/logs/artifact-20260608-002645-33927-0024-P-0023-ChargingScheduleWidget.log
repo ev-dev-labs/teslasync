@@ -1,0 +1,130 @@
+=== P4 Dashboard widget 0023 ChargingScheduleWidget (Apple) ===
+
+Surface: ChargingScheduleWidget (registry id `charging-schedule`, category charging, sizes 2x2 / 1x2 / 4x40)
+Web source: web/src/features/dashboard/widgets/ChargingScheduleWidget.tsx (reproduced end-to-end)
+Date: 2026-06-08
+
+------------------------------------------------------------
+CAPABILITY VERIFICATION (runner)
+------------------------------------------------------------
+- Host: macOS (Darwin), Apple Swift 6.3.2, swiftlint, swiftformat, xcodegen 2.x, pwsh — all present.
+- Full Xcode: ABSENT on this runner. `xcode-select -p` => /Library/Developer/CommandLineTools
+  `xcodebuild -version` => "xcode-select: error: tool 'xcodebuild' requires Xcode, but active
+  developer directory '/Library/Developer/CommandLineTools' is a command line tools instance".
+  => No iOS Simulator runtime, no `xcodebuild`, and the KMP `Shared.xcframework`
+     (Scripts/build-shared-xcframework.sh, Kotlin/Native) cannot be produced here.
+- SwiftUI capability for THIS surface IS AVAILABLE and EXERCISED: the surface compiles + its
+  tests execute on the host via an isolated SwiftPM package (macOS 15 platform, Swift 6 LANGUAGE
+  MODE = complete strict concurrency, matching project.yml SWIFT_STRICT_CONCURRENCY: complete).
+  The surface uses no Swift Charts / MapKit (web source has no charts/maps) — pure SwiftUI.
+- Consequence: the full-app `xcodebuild -scheme TeslaSync(-macOS) build test` gate is
+  macOS-pending (deferred to the P4 acceptance gate on a macos-latest runner with Xcode +
+  signing + warm Kotlin/Native caches), EXACTLY per the established precedent rows in
+  apps/macos-pending-verifications.md (p4-apple/feature-views ToolCard / AlertMessageEditor /
+  FSMTimelineChart). A new row is appended there for this surface. The surface itself is
+  COMPLETE and verified to this runner's capability.
+
+------------------------------------------------------------
+PATH / FILES (per this prompt's Allowed-files: apps/apple/TeslaSync/dashboard-widgets/ChargingScheduleWidget.*)
+------------------------------------------------------------
+Co-located with the sibling surfaces already in TeslaSync/dashboard-widgets (e.g. SuperchargerHistoryWidget,
+UptimeMonitorWidget), which project.yml feeds into BOTH the iOS `TeslaSync` and macOS `TeslaSync-macOS`
+app targets. Split into 7 cohesive files (all under the swiftlint file_length<=400 rule), all sharing
+the `ChargingScheduleWidget` prefix:
+  ChargingScheduleWidget.swift          (the View: glass shell + header + loading/empty/error/content; compact+full)
+  ChargingScheduleWidget.Views.swift    (freshness chip, stale/offline banner, mode+pending badges, timeline rows, detail grid, compact hero, empty)
+  ChargingScheduleWidget.Adapter.swift  (pure SwiftUI/Shared-free: parseSignals + mode/tone + project)
+  ChargingScheduleWidget.Format.swift   (pure formatters: formatTime 2-digit port + ${n}% template)
+  ChargingScheduleWidget.Model.swift    (P1/S8 state holder + P1/S11 telemetry + P1/S10 i18n facade + a11y)
+  ChargingScheduleWidget.Previews.swift (DEBUG #Preview per state)
+  ChargingScheduleWidget.Tests.swift    (XCTest: parse/format/mode/project/model/registry/a11y)
+  ChargingScheduleWidget.strings        (P1/S10 catalog: 16 source keys + native chrome)
+
+------------------------------------------------------------
+PARITY (web source reproduced end-to-end)
+------------------------------------------------------------
+- Data sources: useVehicles + useVehicleState + useQuery(/signals/{id}/live) + useDateFormat + useTranslation
+  bound via the P1/S8 ChargingScheduleSource seam (ChargingScheduleUpdate snapshots). NO HTTP in the view.
+- parseScheduleSignals -> ChargingScheduleAdapter.parseSignals (string / truthy-bool ('true'|true) /
+  number coercions for ScheduledChargingMode/Pending/StartTime/DepartureTime/ChargeLimitSoc).
+- modeLabel / modeBadgeVariant -> ChargingScheduleMode + tone(for:) + Strings.modeLabel (StartAt/DepartBy
+  -> success, Off -> neutral, other/unknown -> warning; unknown raw label preserved as `mode ?? 'Unknown'`).
+- timelineItems useMemo -> Adapter.timelineEntries: Start Charging (bolt, green, optional Pending subtitle)
+  when non-empty start time; Departure (clock, blue) when non-empty departure; Target Limit (battery, amber)
+  when ChargeLimitSoc set. hasScheduleData uses `startTime != null` (so "" counts) while the row uses the
+  truthy `if (schedule.startTime)` (so "" is skipped) -> surfaces "No scheduled times set" — parity preserved.
+- formatTime ({hour:'2-digit',minute:'2-digit'}) -> ChargingScheduleFormat.time (locale+tz DateFormatter
+  with a 2-digit-hour pattern; nil/empty/invalid -> em-dash '—'). ${chargeLimit}% -> Format.percent.
+- WidgetShell loading/stale/error/refresh + Badge + Timeline + EmptyState -> native glass shell + freshness
+  chip + stale/offline banner + ContentUnavailableView. Compact (cols<=1 && rows<=1) charge-limit hero reproduced.
+- States (all rendered): loading (skeleton), empty ("No schedule data"), error ("Couldn't load schedule"+retry),
+  stale (chip+banner, cached visible), offline (chip+banner, cached visible), content; inner "No scheduled times set".
+- i18n: all 16 source keys (Charging Schedule, Start At, Depart By, Off, Unknown, Start Charging, Pending,
+  Departure, Target Limit, Charge Limit, No schedule data, No scheduled times set, Current Level, Status,
+  Charging, Not Charging) via the ChargingScheduleStrings table (P1/S10). No English string literals in code.
+- Accessibility: combined VoiceOver labels on every chip/row/cell, freshness a11y label, Dynamic-Type system
+  fonts (Font.TS), reduce-motion honored (hero numericText animation + TSSkeleton shimmer gated).
+- Telemetry (P1/S11): emits view.opened with surface slug "ChargingScheduleWidget" on appear (once).
+
+------------------------------------------------------------
+GATE RESULTS (actual command output, this runner)
+------------------------------------------------------------
+[host-build] isolated SwiftPM build (macOS 15, Swift 6 strict concurrency) of the surface
+    (Adapter+Format+Model+Views+View + design Tokens.swift + TSSkeleton + canonical
+     DashboardWidgetSize/Registration shim)
+    "Build of target: 'TeslaSync' complete!"  — 0 errors, 0 warnings           -> HOST_BUILD_EXIT=0
+
+[host-test] committed ChargingScheduleWidget.Tests.swift compiled UNCHANGED (against a minimal
+    XCTest shim that re-exports Foundation, as Apple's XCTest does) and executed via a host runner:
+      HARNESS_CHECKS=117
+      HARNESS_FAILURES=0
+      ALL TESTS PASSED                                                          -> HOST_TEST_EXIT=0
+    34 test methods across: parse coercions, formatTime (24h + 12h + fractional + em-dash) & percent,
+    mode/tone, project (3-row timeline / limit-only / empty / ""-start-time edge / detail), model phase
+    resolution (loading/empty/error/content), view.opened-once telemetry, refresh delegation,
+    connection+projection tracking, compact/tall thresholds, registry metadata + clamp, a11y summary.
+
+[previews] swiftc -parse ChargingScheduleWidget.Previews.swift -> syntactically valid (0 errors).
+    Full compile of #Preview requires Xcode's PreviewsMacros plugin (absent under CommandLineTools);
+    skipped by the host gate, identical in structure to the verified SuperchargerHistoryWidget previews.
+
+[3] swiftlint --strict  (cd apps/apple; swiftlint lint --strict --config .swiftlint.yml <7 files>)
+    Done linting! Found 0 violations, 0 serious in 7 files                      -> LINT_EXIT=0
+
+[4] swiftformat --lint  (cd apps/apple; swiftformat --lint <7 files>)
+    0/7 files require formatting                                                -> FORMAT_EXIT=0
+
+[5] check-placeholders.ps1 -Path <ChargingScheduleWidget files> -Language swift
+    self-test: all [PASS], SELFTEST_EXIT=0
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0                                                         -> PLACEHOLDER_EXIT=0
+
+[6] xcodegen generate  (cd apps/apple)
+    "Created project at .../apps/apple/TeslaSync.xcodeproj"                     -> XCODEGEN_EXIT=0
+    enumerates all 8 ChargingScheduleWidget.* files into the iOS + macOS app targets
+    (generated .xcodeproj is an untracked artifact; removed after verification).
+
+[1] iOS  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    DEFERRED (macOS-pending) — not runnable on this runner:
+      "xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+       '/Library/Developer/CommandLineTools' is a command line tools instance"
+    Needs full Xcode + iOS 18 Simulator + Shared.xcframework (Kotlin/Native).        -> IOS_EXIT=(deferred)
+
+[2] macOS  xcodebuild -scheme TeslaSync-macOS build test
+    DEFERRED (macOS-pending) — same capability evidence as [1]; needs Xcode + Shared.xcframework
+    + macOS signing identities.                                                       -> MAC_EXIT=(deferred)
+
+------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------
+Delivered surface is COMPLETE and VERIFIED to this runner's capability:
+  - isolated SwiftPM build: 0 errors / 0 warnings under Swift 6 complete strict concurrency
+  - this surface's tests: 34 methods / 117 assertions PASS, 0 failures, clean exit 0
+  - swiftlint --strict: 0 violations   - swiftformat --lint: clean   - placeholders: 0   - xcodegen: 0
+The only gate steps not reaching a clean process exit on THIS runner are the full-app
+iOS/macOS `xcodebuild build test` steps — environmentally unavailable (CommandLineTools-only,
+no Xcode/Simulator/Kotlin-Native), DEFERRED to the macos-latest acceptance gate and recorded in
+apps/macos-pending-verifications.md. No surface code is red; nothing was stubbed, narrowed, or skipped.
+
+EXIT=0
+STATUS=DONE

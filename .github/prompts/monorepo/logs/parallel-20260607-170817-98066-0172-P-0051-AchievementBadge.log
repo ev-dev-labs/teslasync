@@ -1,0 +1,76 @@
+I'll start by exploring the repository structure to understand what exists and what tooling is available.
+
+Web source exists, Apple app structure exists, and Swift tooling is present. Let me verify xcodebuild and explore the Apple app structure in depth.
+
+Key finding: **xcodebuild is unavailable** — only Command Line Tools are installed, not full Xcode (no iOS 18 / macOS 15 SDKs or simulators). `swift`, `swiftlint`, `swiftformat`, and `pwsh` are present. This is a partial-capability runner. Per the covenant, I'll still build the real production surface (no stubs), run every check that CAN run, and honestly record BLOCKED with evidence for the xcodebuild gate steps.
+
+Let me explore the existing Apple app conventions thoroughly.
+
+There's a well-established feature-view pattern (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`). There's also a `p1-s8-0001-achievementunlocks` state holder. Let me study the conventions and locate the shared P1/S8/S9/S10/S11 layers.
+
+A KMP shared core holds the `AchievementUnlocksStore` state holder; the Apple app consumes it via `SharedFacade`. The web `AchievementBadge` is purely presentational (only `useTranslation`, takes an `achievement` prop). Let me study the canonical feature-view pattern end-to-end and the shared facade/tokens/i18n/diagnostics.
+
+Now I understand the canonical Model/Projection/Source pattern. Let me read the remaining reference files (Views, Previews, strings, Tests) plus the design tokens and the native ProgressRing/data-display components.
+
+Excellent — the pattern is crystal clear. Now let me read the design tokens (P1/S9), the native ProgressRing, the Tests pattern, and shared components (TSSkeleton/TSStatusPill).
+
+The pattern and acceptance criteria mandate the full Model/Adapter/Projection/Source/Views/Previews/Tests set with all states. Let me read the design tokens, shared components (Skeleton/StatusPill/Card), the KMP Achievement model, and the i18n/diagnostics conventions.
+
+The KMP path is under `apps/shared`. Let me read the design tokens, shared components I'll compose with, and the KMP Achievement model/store.
+
+I have the Achievement model (`LifetimeAchievement`) and component patterns. Now I need the token definitions (`Color.TS`, `TSSpacing`, `Font.TS`, `TSMotion`), the `TSCard`/states components, and how `project.yml` includes feature-view files.
+
+Key finding: design tokens are generated at `apps/design/generated/apple`. Also, `project.yml` is **not** in my allowed files and doesn't list `feature-views` (same for all existing feature-views — wiring is handled by the separate P4 gate). I'll match the established convention exactly. Let me read the generated tokens to get exact names.
+
+I now have all tokens and patterns. Let me check the lint/format configs, the placeholder checker, and verify the Swift toolchain can type-check a Foundation-only file (the existing Adapter) — this confirms what verification I can genuinely run.
+
+Foundation-only type-check works (exit 0) — I can genuinely verify the pure adapter. Note: `swiftformat --lint apps/apple` covers my files (must be format-clean); swiftlint's `included` omits feature-views but I'll lint my files anyway. Let me read the placeholder checker and patterns, then start writing.
+
+I have everything needed: tokens, components, the canonical pattern, the Achievement model, lint/format/placeholder configs, and confirmed Foundation-only type-checking works. Let me write a brief plan and create the seven feature-view files.
+
+Now the pure adapter (Foundation-only, the testable projection core):
+
+Now the presentational subviews (size metrics + badge core/ring/states/chip):Now the views (size metrics + all subviews reproducing the web tiers and every state):
+
+Now the View entry point, previews, strings, and tests:
+
+Now the tests:
+
+All seven files created. Now let me normalize formatting with swiftformat, then verify formatting/lint, and type-check the pure adapter.
+
+Format is clean and the pure adapter type-checks (exit 0). One swiftlint issue: `Views.swift` is 425 lines (max 400). I'll split the loading/empty/error state subviews into a new `AchievementBadge.States.swift` (still matches the allowed `AchievementBadge.*`). Let me view the boundary and split.
+
+I'll move the three state subviews into a new `AchievementBadge.States.swift`. First truncate Views.swift to keep through `ABStatusChip`, then create the States file.
+
+Now re-format and re-lint all files including the new States file:
+
+swiftformat and swiftlint are both clean (0 violations) across all 7 files. Now the strongest verification: compile the **real** Adapter + Model files with a harness (Foundation+Observation, no SwiftUI) to genuinely exercise the projection, resolve ladder, model wiring/telemetry, and accessibility logic.
+
+The harness entry needs to be named `main.swift` for top-level code. Let me rename and recompile.
+
+All 21 logic assertions pass against the **real** compiled Adapter + Model (the `@Observable`/`@MainActor` model compiled under Swift 6 strict concurrency). Now let me type-check the entire SwiftUI view layer against the **real** design tokens plus minimal stubs for the two shared components I use (`TSSkeleton`, `TSTone`), to catch any view-layer type errors.
+
+The only failures are the `#Preview` macro — its plugin (`PreviewsMacros`) ships with **Xcode, not Command Line Tools** (same capability gap as xcodebuild). The shipping view code itself is fine. Let me confirm by type-checking without `-D DEBUG` (previews are `#if DEBUG`, so excluded), proving the entire shipping view layer is type-correct.
+
+Shipping view layer type-checks (exit 0) and all 7 files parse. Now let me run the placeholder gate honestly and the repo-wide format/lint that the gate uses, to capture an accurate baseline.
+
+Placeholder gate is clean (COUNT=0) and the gate's `swiftformat --lint apps/apple` passes (0/694 require formatting). Now the gate's `swiftlint --strict` step (repo-wide, as the gate runs it):
+
+One violation in the gate's lint scope — but feature-views isn't in swiftlint's `included` list, so it's not my code. Let me confirm which file it is (to document it as pre-existing).
+
+Confirmed: the lone swiftlint violation is pre-existing in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` — a sibling file outside my allowed scope (I may only touch `AchievementBadge.*` + the log). My own files pass swiftlint cleanly. Let me confirm git state, then build the honest log by running the actual gate commands (capturing the real xcodebuild BLOCKED evidence).
+
+Confirmed: only my 8 files are new; the two modified `web/...` files and the dashboard-widget violation are pre-existing and NOT mine — I'll stage only my files + the log. Now let me generate the honest gate log by running the actual gate commands (capturing real xcodebuild BLOCKED evidence) plus the surface-scoped verifications.
+
+Gate steps captured authentically (iOS/macOS BLOCKED on Xcode, format + placeholder green, lint red only on a pre-existing sibling file). Now let me append the surface-scoped verifications (everything I *can* run on my files) and the final STATUS footer.
+
+Let me verify the surface-scoped verification section of the log captured the real exit codes correctly.
+
+The log is authentic and honest. Now I'll commit only my surface files + the log (not the two pre-existing modified `web/` files). Let me stage precisely and commit.
+
+Exactly my 8 files + the log are staged; the pre-existing `web/` changes remain unstaged. Committing now with an honest body:
+
+Committed cleanly (c7032962): 9 files, all mine. Let me clean up temp files and do a final confirmation.
+
+The task is complete to the maximum extent this runner allows. Everything is committed, temp files cleaned, and the log honestly ends with `EXIT=1 / STATUS=BLOCKED`.
+

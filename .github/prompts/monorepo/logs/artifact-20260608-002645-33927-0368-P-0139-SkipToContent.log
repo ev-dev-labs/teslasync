@@ -1,0 +1,124 @@
+=== P4 Shared surface 0139 SkipToContent (Apple) ===
+Date: 2026-06-08
+Runner: Darwin / macOS. Apple Swift 6.3.2 (swiftlang-6.3.2). Xcode 26.5 (17F42) installed at
+/Applications/Xcode.app, but the ACTIVE developer dir is /Library/Developer/CommandLineTools
+(`xcode-select -p`). swiftlint + swiftformat + pwsh present. xcodegen present. iPhone 16 simulator present.
+
+WEB SOURCE (THE spec): web/src/components/feedback/SkipToContent.tsx — WCAG 2.4.1 (Bypass Blocks, A).
+  - Sole hook: useTranslation. The source has NO data/network layer, hence NO loading / empty / error /
+    stale / offline axis. Reproducing those generic template states would be fabrication (covenant #9
+    "no silent drift" / #5 "no parity shortcuts"). The source's real states are reproduced faithfully:
+      hidden  — sr-only: painted-invisible but in the focus + VoiceOver order (focusable + announced)
+      focused — the visible pill (Tailwind focus:* reveal)
+    Activation moves focus + scroll to the main-content landmark (web onClick → focus(#main-content) +
+    scrollIntoView). data-testid "skip-to-content" → accessibilityIdentifier.
+  - i18n key extracted from source: a11y.skipToContent = "Skip to main content".
+
+DELIVERABLE — apps/apple/TeslaSync/shared-surfaces/SkipToContent.* (the only Allowed source files):
+  SkipToContent.swift            View: reveal-on-focus, a11y label/hint/.isButton/identifier/sortPriority,
+                                 reduce-motion-respecting reveal, view.opened on appear.
+  SkipToContent.Model.swift      P1/S10 i18n facade (SkipToContentStrings), P1/S11 telemetry seam
+                                 (SkipToContentTelemetry + OSLog default), P1/S8 @Observable state-holder.
+  SkipToContent.Projection.swift Pure focus→presentation projection (sr-only ↔ focus reveal), no SwiftUI.
+  SkipToContent.Views.swift      SkipToContentPill (tokenized, no ported Tailwind) + SkipToContentScaffold
+                                 (@AccessibilityFocusState + ScrollViewReader; zero-footprint top-leading
+                                 overlay; activation = focus + scrollTo top landmark).
+  SkipToContent.Previews.swift   Per-state previews: hidden / focused pill / scaffold / dark / light /
+                                 Dynamic Type AX3.
+  SkipToContent.Tests.swift      XCTest: projection (hidden/focused/reduce-motion), model (view.opened
+                                 once, rebindable activation, facade fallback, projection delegation),
+                                 a11y label/hint + stable slugs/identifiers.
+  SkipToContent.strings          P1/S10 catalog contribution (parity key + native VoiceOver hint).
+
+--------------------------------------------------------------------------------------------------------
+GATE STEPS (as written in the prompt)
+--------------------------------------------------------------------------------------------------------
+
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    >>> BLOCKED (platform-capability / prerequisite not provisioned on this runner). Evidence:
+    (a) Active developer dir is CommandLineTools; the gate's bare `xcodebuild` errors:
+          "xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+           '/Library/Developer/CommandLineTools' is a command line tools instance"
+        (Xcode 26.5 + an iPhone 16 simulator ARE present and reachable via a DEVELOPER_DIR override,
+         i.e. the host has the toolchain, but the gate's invocation cannot select it without an admin
+         `xcode-select -s`.)
+    (b) apps/apple/Frameworks/Shared.xcframework is ABSENT (only .gitkeep). The app targets hard-depend
+        on the KMP `Shared` core (15 `import Shared` files in Sources/). With DEVELOPER_DIR set,
+        `xcodegen generate` succeeded and `xcodebuild build` was attempted: the build enters a
+        Gradle/Kotlin-Native compile that downloads the Kotlin/Native distribution to STAGE
+        Shared.xcframework at build time (observed tasks: "Stage Shared.xcframework",
+        ":core:downloadKotlinNativeDistribution", ":core:generateApiClient",
+        ":core:linkDebugFrameworkIosArm64"). That KMP toolchain/network prerequisite is not provisioned
+        here, so the app build cannot complete.
+    (c) apps/apple/TeslaSync/shared-surfaces is NOT listed in project.yml sources (nor in .swiftlint.yml
+        `included`). project.yml is OUTSIDE this prompt's Allowed files; the surface→target wiring is
+        owned by P4 core / the P4 acceptance gate (this artifact "Blocks: P4 acceptance gate"). So even
+        with (a)+(b) resolved, xcodebuild would not compile or test these files on this runner.
+    IOS_EXIT=BLOCKED
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    >>> BLOCKED — same (b)+(c) as [1]. `xcodegen generate` produced schemes
+        {TeslaSync, TeslaSync-macOS, TeslaSyncActivities, TeslaSyncWatch, TeslaSyncWidgets, ...}.
+        `xcodebuild -scheme TeslaSync-macOS build` reached the Gradle KMP Shared.xcframework stage and
+        could not complete (KMP prerequisite + surface not wired).
+    MAC_EXIT=BLOCKED
+
+[3] swiftlint --strict     (config .swiftlint.yml `included` = whole app: 1909 files)
+    Whole-repo result: "Found 1 violation, 1 serious" — PRE-EXISTING, unrelated, OUTSIDE Allowed files:
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: Function Body Length
+      Violation: 78 > 50 lines (function_body_length)
+    THIS SURFACE (6 files, explicit paths): "Found 0 violations, 0 serious in 6 files."
+    LINT_EXIT(surface)=0   LINT_EXIT(repo)=2 (pre-existing; not introduced by this artifact)
+
+[4] swiftformat --lint apps/apple/TeslaSync/shared-surfaces
+    "0/6 files require formatting."
+    FORMAT_EXIT=0
+
+[5] ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/SkipToContent
+    PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+    Extra grep (todo/fixme/xxx/placeholder/lorem/stub/mock/not implemented/coming soon): clean.
+    PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------------------------------
+ADDITIONAL SURFACE-SCOPED VERIFICATION
+(run in isolation BECAUSE the surface is not yet wired into the app target — see [1c]. These compile the
+ actual deliverable against real SwiftUI + the real P1/S9 design tokens under Swift 6 COMPLETE strict
+ concurrency, the same setting the app targets use.)
+--------------------------------------------------------------------------------------------------------
+  swiftc -parse (all 6 files) ......................................... PARSE_OK (x6)
+  swiftc -typecheck -swift-version 6  Tokens + Projection + Model +
+    SkipToContent + Views ............................................. RC=0  (0 errors / 0 warnings)
+  swiftc -typecheck -swift-version 6  #Preview bodies (unwrapped probe;
+    the #Preview macro plugin is Xcode-only and not loadable by bare swiftc) RC=0
+  swiftc -emit-module -enable-testing -module-name TeslaSync (surface) . MODULE_RC=0
+  swiftc -typecheck -swift-version 6  SkipToContent.Tests.swift vs
+    @testable import TeslaSync (+ XCTest assertion shim) .............. RC=0  (0 errors / 0 warnings)
+  swiftc -typecheck  Projection (self-contained, Foundation-only) ..... OK
+
+--------------------------------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------------------------------
+  [x] Renders every state the web source actually has (hidden ↔ focused) + activation focus-move.
+  [x] Binds via P1/S8 state-holder; no HTTP in the view (useTranslation → P1/S10 facade; no data hook).
+  [x] i18n key from source present in the P1/S10 contribution (a11y.skipToContent) + native hint.
+  [x] Accessibility labels on the interactive element (label + hint + .isButton + identifier +
+      sortPriority; reduce-motion-respecting; tokens carry high-contrast variants).
+  [x] Tests: projection unit + model unit + a11y/identity (type-checked; execution requires the app
+      XCTest target, which depends on [1b]/[1c]).
+  [x] No TODO / stub / mock / placeholder / Lorem in shipped code (gate [5] + grep).
+  [ ] xcodebuild build test EXIT=0 — BLOCKED (see [1]/[2]).
+
+EXIT=1
+STATUS=BLOCKED
+  The prompt's xcodebuild build+test gate cannot complete on THIS runner because (b) the KMP
+  Shared.xcframework prerequisite is not provisioned (requires a Kotlin/Native toolchain build) and
+  (c) the surface→app-target wiring lives in project.yml — OUTSIDE this prompt's Allowed files and owned
+  by P4 core / the P4 acceptance gate. The SkipToContent surface itself is COMPLETE and fully verified
+  in isolation (Swift 6 complete strict-concurrency type-check of production + view + preview + test
+  code = 0 errors / 0 warnings; swiftlint 0 on the surface; swiftformat 0/6; placeholder gate 0). No
+  defect in the deliverable — the block is environmental/integration capability, exactly the case the
+  artifact's Capability clause sanctions as STATUS=BLOCKED with evidence.
+
+=== TERMINAL STATUS (canonical, covenant rule 10) ===
+EXIT=1
+STATUS=BLOCKED

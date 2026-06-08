@@ -1,0 +1,210 @@
+I'll start by exploring the repository structure to understand the context and verify the capabilities available.
+
+Let me check the build tooling capabilities and explore the Apple app structure in parallel.
+
+Toolchain note: `swift`, `swiftlint`, `swiftformat` are present, but `xcodebuild` requires full Xcode (only Command Line Tools installed) and no iOS simulator. Let me test SDK framework availability and read the web source.
+
+SwiftUI + Charts **do** typecheck against the macOS SDK (CommandLineTools), but `xcodebuild` (needed for the gate's iOS/macOS build+test) requires full Xcode, which isn't installed. Let me continue reading the web source and explore the existing Apple structure to follow established patterns.
+
+There's an established `feature-views/` directory with a multi-file pattern per surface (`.Adapter`, `.Model`, `.Previews`, etc.). Let me examine an existing complete example to learn the exact conventions, and check whether WebhookChannelsSection files already exist.
+
+Established pattern per surface: `.swift` (view), `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`. Let me study a CRUD-style exemplar (`AlertsSection`) and locate the shared P1 infrastructure, plus finish reading the web source.
+
+Let me read the AlertsSection exemplar files fully and finish the web source, plus locate the shared P1 infrastructure.
+
+Now I understand the pattern. Let me read the remaining exemplar files and the rest of the web source, and find the shared design tokens.
+
+Let me read the rest of the exemplar (Views, Previews, Tests, strings), find the shared design tokens, and locate an interactive/CRUD exemplar (since Webhook is form-heavy, unlike read-only AlertsSection).
+
+Let me read the Tests/Previews exemplars, find the shared design token definitions, and locate an interactive CRUD exemplar (Webhook has forms/modals/toggles).
+
+The shared tokens (`TSSpacing`, `Color.TS`, `Font.TS`, `TSFadeIn`, `TSSkeleton`) are referenced but I haven't found their definitions. Let me search the whole repo and check how the Xcode project includes sources.
+
+The Sources are at `apps/apple/Sources` and tokens at `apps/design/generated/apple/Tokens.swift`. Let me explore the shared component/token definitions and the project config.
+
+Now I understand the build graph. Targets compile `Sources` + `feature-views` + `DesignTokens`. The feature-view files depend on shared seams (`Tokens.swift`, `Motion.swift`, `Skeletons.swift`). Let me read those dependencies, check for an existing notification-channels facade, the test target, and whether `pwsh` exists.
+
+`pwsh` is available (placeholder gate runnable). Tokens, motion, skeletons all confirmed. Now let me inventory the shared native UI components I should reuse, and understand how `.Tests.swift` files in `feature-views/` get wired into the test target.
+
+Key finding: shared native components exist for every web component used (TSGlassPanel, TSButton, TSBadge, TSToggle, TSTextField, TSSecureField, TSSelect, TSEmptyState, TSSpinner, TSIconBox, TSHelperText, TSLabel, TSCopyButton, TSHeading, TSText). Let me learn their exact APIs and check the dependency boundary (whether `Components` compiles against just tokens, or needs the `Shared.xcframework`).
+
+Excellent — the entire `Components` layer imports only system frameworks (SwiftUI/Charts/MapKit/CoreLocation/Foundation), no `Shared` binary. So I can do a **real targeted `swiftc` type-check** of {Components + DesignTokens + my view files} against the macOS SDK. Let me read the exact component APIs I'll use.
+
+Components take `LocalizedStringKey`, but the P4 exemplar uses a per-surface i18n facade with `(key, fallback)`. Let me see how an interactive exemplar (`FleetApiSection`) reconciles this — whether it uses shared `TSTextField`/`TSToggle`/`TSSelect` or native primitives — and read those component APIs.
+
+The canonical P4 convention is clear: per-surface i18n facade `<Surface>Strings.string/.text(key, fallback)` + **native SwiftUI primitives** (TextField, SecureField, Toggle, Picker, Button) styled with tokens — not the `LocalizedStringKey`-based shared components. Let me read the full interactive exemplar (`FleetApiSection`) to mirror its idioms precisely.
+
+Let me read the seam pattern (`FleetApiSection.Model.swift`), the chrome/buttons (`FleetApiSection.Chrome.swift`), the strings format, and the web data hook to model types correctly.
+
+I have a thorough grasp of the pattern. Now let me read the web data hook to model the data contract (channel shape, test result, signature preview, mutations) accurately.
+
+Let me get the exact type shapes for the channel, test result, and signature preview from `@/api/types`.
+
+I have the full data contract. Let me read the lint/format configs and an interactive test exemplar to ensure my code conforms, then set up my plan.
+
+I now have everything needed. Let me verify the test-file wiring convention and write my plan before building.
+
+Let me extract the exact i18n keys from the web source and set up my plan.
+
+The single-line grep missed multi-line keys. Let me do a robust multiline extraction with default values.
+
+I have all 52 keys with exact defaults. Let me check how the exemplar handles `{{...}}` interpolation, then set up todos and plan.
+
+I have complete understanding of all conventions. Let me set up tracking and write the plan, then build.
+
+Now I'll build the surface. Starting with the pure adapter core.
+
+Now let me add pure accessibility helpers to the Adapter, then build the Model (seams + observable).
+
+Now the Views (chrome, row, test-result, docs, states).
+
+Now the form sheet (add/edit + signature preview).
+
+Let me adjust the model's delete flow for native-alert idiom (clear the trigger on confirm to avoid re-presentation), then build the composed view.
+
+Now the previews (every state + form + signature branches).
+
+Now the test suite (adapter + model + accessibility).
+
+Now the i18n catalog (.strings): all 52 web keys + native envelope keys.
+
+All 8 files created. Now the verification phase. Let me run swiftformat (write mode to apply house style), then review changes.
+
+swiftformat clean. Now swiftlint --strict on the new files.
+
+swiftlint enforces a 400-line `file_length` limit (house style splits large surfaces into many files, like FleetApiSection's 16). I need to split my 5 oversized files. Let me check current line counts to plan precise splits.
+
+Only `file_length` (>400) is violated — function/type body lengths are fine. I'll split the 5 oversized files (house style does this too). Let me find exact section boundaries.
+
+Only `file_length` (>400) fails — house style splits large surfaces into many files. I'll split the 5 oversized files using the exact boundaries. Let me extract sections into new files, then trim originals.
+
+Now trim the originals (and rebuild Model/Tests with corrected imports/joins).
+
+All files now ≤343 lines. Let me re-run swiftformat (normalize joins) and swiftlint --strict on all 13 files.
+
+**swiftlint --strict: 0 violations. swiftformat --lint: clean.** Now the targeted `swiftc` type-check against the real macOS SDK + shared seams. Let me identify the exact dependency closure (Cards for TSCard, Motion, Skeletons, Tokens).
+
+My surface's only shared deps are `TSFadeIn`, `TSSkeleton`, `TSRadius`, `TSSpacing`, `Color.TS`, `Font.TS` → closure = Tokens + Motion + Skeletons + Cards. Let me run the targeted type-check against the macOS SDK.
+
+Cards.swift's own `#Preview` references other Components (TSBadge, TSText, `tsGlassPanel()` modifier). The Components layer is internally interdependent. Let me compile the whole `Components` tree + tokens + my files together.
+
+`tsGlassPanel` lives in `Sources/Design`. Let me compile the full `Components` + `Design` + tokens + my files unit.
+
+The only error is the `#Preview` macro plugin (a CLT-without-Xcode limitation, not a code error). Excluding `#if DEBUG` preview blocks gives a clean type-check of the production code. Let me recompile without `-D DEBUG`.
+
+The errors are now in `DataDisplay/UnitFormatters.swift` (needs `UnitPreferences` from outside Components) — files my surface never uses. Let me compile only my exact dependency closure: Tokens + Motion + Skeletons + Cards + TSMaterial.
+
+Cards needs Typography (TSPanelTitle/TSCaption). Adding it.
+
+Now real code errors: `Result<_, String>` needs a `Failure: Error`. I'll add a `WebhookActionError` type and thread it through. Let me view the exact current spots to edit.
+
+Let me add the `WebhookActionError` type and thread it through with precise edits + sed for the repeated patterns.
+
+Now update the Model's failure handlers to use `error.message`.
+
+Re-running the typecheck with the fixes.
+
+**TYPECHECK_RC=0** — production code type-checks against the real macOS SDK + shared seams. Now a headless executed harness to prove the pure adapter logic actually *runs* correctly (the exemplars do this too, since XCTest needs Xcode).
+
+All 33 adapter assertions pass and run cleanly. Let me also prove the `@Observable` model logic *executes* (CRUD, phase, stale-refresh, async signature) via a MainActor harness — since XCTest itself needs Xcode.
+
+The `surfaceSlug` extension in Seams references the View type. It belongs with the View — let me move it to `WebhookChannelsSection.swift` (cleaner, and unblocks the harness).
+
+Now rebuild and run the model harness.
+
+All 26 model assertions pass, including async signature preview and stale auto-refresh. Now let me re-verify the full gate suite after the edits: format, lint, typecheck, placeholder check.
+
+Format + lint both clean. Now re-confirm the production typecheck and run the placeholder gate (pwsh).
+
+Let me verify the placeholder gate actually scanned my files (the path may have been wrong) and check the forbidden-pattern list, since I legitimately use the word "placeholder" in form-field i18n keys.
+
+The "common" forbidden list includes `Placeholder`, and my i18n keys legitimately contain `namePlaceholder`/`urlPlaceholder`/`secretPlaceholder`. I must confirm the gate actually scans my files and how it matches. Let me inspect the script's `-Path` resolution and matching logic.
+
+The gate's `-Path .../WebhookChannelsSection` isn't a real directory, so it scanned 0 files (hollow pass). I must verify my files are *actually* clean — and `Placeholder` is a forbidden pattern while my keys contain `namePlaceholder`. Let me inspect the exact matching logic.
+
+Confirmed: patterns match case-insensitively, but only `.swift` is scanned (not `.strings`). The gate's prompt path doesn't resolve to a real dir (hollow pass) — but for honesty I must ensure my `.swift` files pass a *real* scan. My web-parity i18n keys (`namePlaceholder`, etc.) contain the forbidden substring `Placeholder`. Let me see how peer surfaces handle this.
+
+The sanctioned house pattern is `// parity:allow verbatim web i18n key` (used by ActionBuilder, RequestBuilder, etc.) — isolating the web key literals containing `Placeholder` behind the opt-out. Let me view the exact Form.swift spots, then refactor into an isolated key enum like the peers.
+
+Only those 4 web-key literals — no other forbidden patterns. Let me isolate them behind the sanctioned opt-out in a key enum (matching `ActionBuilder.Fields`). Let me view the Form header to place it.
+
+Now let me prove my files pass a *real* placeholder scan (copy to a temp dir and scan), then re-verify format/lint/typecheck after the Form.swift edits.
+
+My own doc comment contains the word "placeholder" (lines 17–18), which the case-insensitive scan flags. The 4 key constants are correctly `ALLOWED`. Let me reword the comment to avoid the term.
+
+Re-scanning to confirm clean, plus a full case-insensitive sweep for any remaining `placeholder` in `.swift` comments.
+
+**Placeholder gate: COUNT=0, ALLOWED=4, EXIT=0.** Now a final comprehensive re-verification after the Form.swift edits.
+
+All primary gates green (format, lint --strict, typecheck, placeholder, both harnesses). Now let me capture the precise `xcodebuild` capability evidence and verify complete i18n key coverage (web→strings→swift).
+
+Perfect i18n coverage: all 52 web keys present, 66 total keys, zero dangling references. Capability evidence captured (no Xcode/simulator). Let me check the log directory + a sibling log format, and attempt the real `xcodebuild` to capture genuine error output.
+
+There's an established sibling-log precedent. Let me read the full `0002-BackendTool` log to replicate the exact honest disposition and structure.
+
+The sibling log reveals their runner *had* Xcode at `/Applications/Xcode.app` driven via `DEVELOPER_DIR`. Let me check if Xcode is available here too — if so I can produce the same iOS-simulator evidence; if not, I document the stronger blocker.
+
+Xcode 26.5 is available via `DEVELOPER_DIR` (same as the sibling). `feature-views` is registered in project.yml (2 refs), but `Shared.xcframework` is only a `.gitkeep`. Let me produce the stronger evidence: iOS‑18 simulator + macOS‑15 typechecks (Swift 6, strict concurrency) and the preview‑macro typecheck via the Xcode toolchain.
+
+Both iOS‑18 and macOS‑15 typechecks pass under **Swift 6 + complete strict concurrency**. Now the preview‑macro typecheck via the Xcode PreviewsMacros plugin.
+
+The DEBUG previews in the *dependency* `Cards.swift` need `TSBadge`/`TSButton`. Adding those component files to satisfy the closure's own previews.
+
+**PREVIEWS_TYPECHECK_EXIT=0** via the Xcode plugin. Now the strongest evidence: actually *executing* the committed XCTest files (`Tests.swift` + `ModelTests.swift`) via a SwiftPM harness — matching the sibling's `swift test` approach.
+
+**Real XCTest suite EXECUTED: 39 tests, 0 failures** (the committed `Tests.swift` + `ModelTests.swift` under Swift 6). Now let me capture the genuine `xcodebuild` deferral evidence (xcframework blocker) via the exact gate commands.
+
+The build is compiling the full app target (including my files) and will hit the xcframework blocker at link. Let me wait for it to reach that error.
+
+**MAC_BUILD_EXIT=65** — captured the genuine blocker: the app target's pre-build "Stage Shared.xcframework via Gradle" step is SKIPPED (no Kotlin/Native build env), so the required `Shared.xcframework` is absent → BUILD FAILED. This is the code-unrelated deferral cause (matches the sibling). Let me clean up generated artifacts and check the working tree.
+
+Clean working tree — only my 14 files are new; the 2 pre-existing web modifications aren't mine. Let me gather metadata and write the gate log.
+
+Now I'll write the comprehensive gate log with all real evidence.
+
+Let me verify the test-count breakdown in the log is accurate before committing.
+
+The breakdown is 14 projection + 5 accessibility + 20 model = 39. Let me correct the log's figures.
+
+Let me run one consolidated final confirmation of the host gates on the final code, then commit.
+
+All host gates green (format 0/13, lint 0 violations, macOS Swift 6 strict-concurrency typecheck EXIT=0, max file 354). Committing now — staging only my 14 surface files + the log.
+
+All 14 surface files + log staged; no stray web files. Committing.
+
+Committed (`2012d85f4`). Let me finalize tracking and clean up temp artifacts.
+
+Task complete. Here's the summary.
+
+Merge made by the 'ort' strategy.
+ ...e-feature-views-0218-WebhookChannelsSection.log | 232 ++++++++++++++
+ .../WebhookChannelsSection.Adapter.swift           | 354 +++++++++++++++++++++
+ .../WebhookChannelsSection.Content.swift           | 128 ++++++++
+ .../WebhookChannelsSection.Fields.swift            | 164 ++++++++++
+ .../WebhookChannelsSection.Form.swift              | 291 +++++++++++++++++
+ .../WebhookChannelsSection.Model.swift             | 273 ++++++++++++++++
+ .../WebhookChannelsSection.ModelTests.swift        | 223 +++++++++++++
+ .../WebhookChannelsSection.Previews.swift          | 152 +++++++++
+ .../feature-views/WebhookChannelsSection.Row.swift | 197 ++++++++++++
+ .../WebhookChannelsSection.Seams.swift             | 227 +++++++++++++
+ .../WebhookChannelsSection.States.swift            | 144 +++++++++
+ .../WebhookChannelsSection.Tests.swift             | 205 ++++++++++++
+ .../WebhookChannelsSection.Views.swift             | 281 ++++++++++++++++
+ .../feature-views/WebhookChannelsSection.strings   | 102 ++++++
+ .../feature-views/WebhookChannelsSection.swift     | 138 ++++++++
+ 15 files changed, 3111 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0218-WebhookChannelsSection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/WebhookChannelsSection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WebhookChannelsSection.Content.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WebhookChannelsSection.Fields.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WebhookChannelsSection.Form.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WebhookChannelsSection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WebhookChannelsSection.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WebhookChannelsSection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WebhookChannelsSection.Row.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WebhookChannelsSection.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WebhookChannelsSection.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WebhookChannelsSection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WebhookChannelsSection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WebhookChannelsSection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/WebhookChannelsSection.swift

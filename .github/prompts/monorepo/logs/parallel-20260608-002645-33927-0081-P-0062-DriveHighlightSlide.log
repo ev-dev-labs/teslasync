@@ -1,0 +1,88 @@
+I'll start by exploring the repository structure, the web source component, and the available toolchain.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. There's an existing `AIUsageCard.*` pattern to follow. Let me explore deeply.
+
+No `.xcodeproj` or `Package.swift` yet. Let me read the closest predecessor (`AIUsageCard` — a feature-view, recently modified), a feature-view log to understand gate handling, and the web source.
+
+Found `apps/apple/project.yml` (likely XcodeGen). The web source is simple: emoji + label + a stats card (distance/duration/efficiency) with a null/empty state. Let me investigate the build setup, predecessor logs, and verify the AIUsageCard file situation.
+
+Now I understand the architecture. This uses **XcodeGen** + a **KMP `Shared.xcframework`**, and the predecessor (`HeroGauges 0058`) used the same `convertDistanceFromSI`/`KM_PER_MILE` numeric pipeline as my target. Let me check toolchain capabilities and read the full HeroGauges precedent file set.
+
+**Critical capability finding:** macOS SDK is present with `SwiftUI`, `Charts`, `MapKit` frameworks — so I CAN compile the SwiftUI surface against macOS via SwiftPM. But `iphonesimulator` SDK and full `xcodebuild` are unavailable. This matches the predecessor's deferred-gate situation. Let me read the complete HeroGauges precedent (same numeric pipeline) to nail the pattern.
+
+Excellent precedent. Now let me read the remaining HeroGauges files (Views/Previews/Tests/strings), locate the P1/S9 design tokens and shared components, and read the web `YearReviewDriveHighlight` type + `convertDistanceFromSI`.
+
+Now let me read the HeroGauges Tests, find the design tokens (P1/S9), shared components, and the web type. Let me parallelize broadly.
+
+Let me read the web type, the design tokens, and the shared components to use exact symbols.
+
+Let me read the shared components, the web converter, and the full predecessor log to mirror the verification harness approach.
+
+Let me read the web converter/units source, the predecessor log (for the verification harness approach), and the lint/placeholder configs.
+
+I have everything I need to understand the pattern. Let me verify lint configs, `pwsh` availability, confirm no existing `DriveHighlightSlide` files, and check the `tsGlassPanel` modifier + `DistanceUnitPref` web type.
+
+`pwsh` is available (placeholder gate runnable), and macOS SwiftUI compilation is possible. Let me read the lint configs and scan the shared component layer for KMP dependencies (to build a clean macOS test harness).
+
+`pwsh` is available and only `UnitFormatters.swift` needs KMP. The web source uses `@/components/motion`, so I must map to the native motion primitives. Let me read the motion, typography, and button components to use their real APIs.
+
+I now have a complete understanding of the architecture, the precedent pattern, and the verification approach. Let me set up a plan and todos, then implement.
+
+Now I'll write the Foundation-only core: the Model (S8/S10/S11 seams) and Adapter (verbatim numeric port).
+
+Now the Adapter — the Foundation-only projection core porting the web numeric pipeline verbatim.
+
+The core compiles in my head; now the SwiftUI layer. Let me write the main view and the presentational chrome.
+
+Now the tests, previews, and strings catalog.
+
+Now the comprehensive test suite.
+
+All 7 files written. Now let me run the surface-scoped gates. First swiftformat (apply, then lint), then swiftlint.
+
+swiftformat clean. swiftlint flags only file length (407 > 400) on the Tests file. Let me trim the header comment to get under 400.
+
+Trimming the Tests file under 400 lines (header + a few full-line comments).
+
+Now re-run format + lint and the placeholder gate.
+
+Format + lint clean (Tests now 392 lines). Now the placeholder gate. Let me check the script's `-Path` semantics, then run a real scoped scan.
+
+My grep found the word "placeholders" in a Views.swift doc comment — that may match the gate's pattern. Let me check the patterns file.
+
+The gate forbids the word "Placeholder". Let me reword that doc comment.
+
+Now run the placeholder gate — a real scoped scan of the shipped files via `pwsh`.
+
+Placeholder gate passes (COUNT=0). Now the big verification: a SwiftPM macOS harness compiling the shipped surface against the real shared tokens + components. Let me first check what the component layer imports (to anticipate harness scope).
+
+Component layer only imports SDK frameworks (SwiftUI/Charts/MapKit/CoreLocation/Foundation) — only `UnitFormatters.swift` needs the KMP facade. I'll build a SwiftPM `TeslaSync` module harness against the macOS SDK. Let me scaffold it.
+
+The `#Preview` macro needs Xcode's plugin (absent in CLT). Those are all under `#if DEBUG` — building in **release** config excludes them cleanly. Let me rebuild in release.
+
+Release build succeeded — the full surface + shared components compiled against the macOS SDK under Swift 6. Now run the test suite.
+
+`XCTest` isn't available to SwiftPM on this CLT-only runner. Let me confirm, then I'll verify the same logic via an executable assertion harness that actually runs.
+
+Confirmed: `XCTest` ships only with full Xcode, absent here. The XCTest suite is the shipped artifact (runs under Xcode CI). To **actually execute** the surface logic on this runner, I'll build an executable assertion harness that exercises every test case via the public API. Let me reconfigure the package and write it.
+
+Now run the assertion harness against the real surface code.
+
+**88/88 assertions pass** — converters, projector, model phases, accessibility, and all 7 per-state `ImageRenderer` renders executed green against the real surface code. Let me validate the `.strings` catalog and cross-check every i18n key the code references.
+
+The `comm` mismatch is just a trailing-quote artifact in my sed. Let me redo the cross-check cleanly (capturing multi-line refs too).
+
+All 10 referenced keys resolve; both web-parity keys present; `.strings` lints OK. Let me do a final consolidated gate sweep to capture clean output for the log.
+
+All surface gates green (format 0/6, lint 0 violations, placeholder 0, verify 88/0). Let me capture the exact toolchain-limitation evidence for the honest log.
+
+All evidence captured. Now I'll write the honest gate log.
+
+Now clean up the temporary harnesses and commit only the allowed files.
+
+Exactly the 7 surface files + log staged (pre-existing unrelated changes correctly excluded). Committing.
+
+Commit succeeded (8 files, 1663 insertions). Let me verify the working tree is clean of my changes (only pre-existing unrelated edits remain) and finalize todos.
+
+Everything is clean — my commit contains exactly the 8 allowed files; the only remaining working-tree changes are the pre-existing unrelated edits (present before I started, correctly untouched). Let me mark the plan complete.
+

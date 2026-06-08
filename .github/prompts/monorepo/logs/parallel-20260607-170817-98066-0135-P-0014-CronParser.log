@@ -1,0 +1,144 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Let me read the web source spec and explore the Apple app structure.
+
+Now let me examine the existing patterns. The task references `apps/apple/TeslaSync/feature-views/` but I see `apps/apple/TeslaSync/dashboard-widgets`. Let me study that existing pattern plus the web helpers and shared facades.
+
+Let me read a complete representative widget to learn all conventions (imports, tokens, i18n, state-holders, telemetry, tests).
+
+Now let me understand the build config, design tokens, and shared primitives.
+
+Key finding: `project.yml` lists `TeslaSync/dashboard-widgets` as a target source but I must add `feature-views`. Let me check tooling availability (critical for gate) and how widget tests are wired, plus locate design tokens.
+
+Critical: `xcodebuild` needs full Xcode but only CommandLineTools is present. Let me verify whether any full Xcode exists and whether the standalone linters work.
+
+There IS a full Xcode at `/Applications/Xcode.app` — just not selected. I can use `DEVELOPER_DIR` to point to it. Let me verify it works.
+
+Full Xcode 26.5 works via `DEVELOPER_DIR`. Let me check simulators, the XcodeGen flow, and the Shared.xcframework dependency before committing to the gate.
+
+iPhone 16 simulator exists, but the build depends on a KMP-built `Shared.xcframework` (not present; built via Gradle). Let me check the test wiring and KMP feasibility, and look for any existing parity docs/feature-views examples.
+
+The dashboard-widget `.Tests.swift` files live in the app-target source path (established pattern; full integration is a known pending step). Let me read the pending-verifications doc, the placeholder tool, and check how surfaces are tracked.
+
+I now understand the workflow: per repo convention (`macos-pending-verifications.md`), the `Shared.xcframework` + `xcodebuild` gate is deferred to macOS CI, while host-runnable gates (swiftlint, swiftformat, placeholder, compile) must be green. I have full Xcode + JDK here, so I'll attempt the real build too. Let me start the KMP shared-framework build in the background while I write code.
+
+Let me find the shared native primitives (TSSkeleton, etc.) and read the web components CronParser depends on (`ToolCard`, `Input`, `Badge`, `Button`, `formatDateTime`) for exact parity.
+
+Excellent — there are shared native UI components I should reuse. Let me read their APIs plus the web `formatDateTime` and `ICON_COLOR_MAP` for parity.
+
+Let me read the remaining shared components and the web `Input`/`formatDateTime`/`constants` for exact parity, plus the i18n setup.
+
+Let me read `Cards.swift`, the web `Input`/`constants`/`formatDateTime`, and find how existing surfaces model stale/offline freshness.
+
+Let me study how an existing live surface models stale/offline freshness and renders chips, to match house style.
+
+`SecurityStatusWidget` implements the exact 6-state set I need. Let me read it and its Model as the closest precedent.
+
+Let me check the KMP build progress and read the Security connectivity banner + previews for the stale/offline banner pattern.
+
+The KMP build is running in the background. I have a complete picture of the conventions now (`SecurityStatusWidget` is the ideal 6-state precedent). Let me write a plan and start implementing.
+
+Let me check the lint/format rules to avoid `--strict` failures, then write the Adapter.
+
+Config notes: I must register `TeslaSync/feature-views` in both `project.yml` and `.swiftlint.yml` (necessary wiring, mirroring how `dashboard-widgets` is registered). Now let me write the pure Adapter (faithful port of `describeCron`/`getNextCronRuns`).
+
+The KMP build finished. Let me check the result — this determines whether the full xcodebuild gate is achievable.
+
+The KMP `Shared.xcframework` built successfully (ios-arm64, ios-arm64-simulator, macos-arm64). The full xcodebuild gate is now achievable. Let me resolve the critical `.Tests.swift`-in-app-target question by generating the baseline project and inspecting how existing widget tests are bucketed.
+
+KMP build produced all slices. Now the decisive question: the existing widget `.Tests.swift` files (with `@testable import TeslaSync`) are compiled into the **app** targets. Let me empirically test whether self-`@testable import` is fatal, since it determines whether the full gate can pass at all.
+
+Key finding: self-`@testable import` is only a **warning**, not an error. The real question is whether `import XCTest` resolves in an app-target compile. Let me test that.
+
+`import XCTest` fails in app targets. Let me definitively determine which targets actually compile `QuickNavWidget.Tests.swift` — app or test targets.
+
+Definitive: the 35 peer widget `.Tests.swift` files (with `import XCTest`) are mis-bucketed into the **app** targets — a pre-existing, repo-wide condition that breaks the aggregate app build independent of my surface. I'll wire my new `feature-views` tier **correctly** (app target excludes `*.Tests.swift`; tests go to the test targets), implement my surface fully, and verify it in isolation. Let me continue writing the Model.
+
+Now the presentational subviews (`CronParser.Views.swift`), reusing shared atoms where appropriate and a native flow layout for the preset chips.
+
+Now the main composed view `CronParser.swift`:
+
+Now the previews and the i18n strings table:
+
+All 7 surface files are written. Now let me check whether the shared `Sources/Components` + `Sources/Design` are `Shared.xcframework`-free (so I can compile my surface in isolation for real verification), and run an initial swiftformat pass.
+
+Both shared folders are `Shared.xcframework`-free — I can compile my surface in isolation for real verification. Now let me write the comprehensive test suite.
+
+All 7 surface files are written. Now let me wire the build config: register `feature-views` in both app targets (excluding test files) and route the test file to the test targets, plus add it to swiftlint.
+
+Now add `feature-views` to swiftlint's included paths, then run swiftformat to normalize my files.
+
+swiftformat is clean. swiftlint found 3 violations across 518 files — I need to know if they're mine. Let me scope strictly to my files.
+
+Two violations in my files: an opening-brace issue in Adapter and the Tests file exceeds the 400-line limit. Let me inspect and fix both.
+
+Now reduce the Tests file under the 400-line limit by moving render-smoke tests to a separate `CronParser.RenderTests.swift`. Let me view the section boundaries.
+
+Let me move the render-smoke tests into a separate file and trim the main test file's header.
+
+I need the app-target exclude to also cover `RenderTests.swift`, and add the render-tests file to the test targets. Let me adjust `project.yml` precisely.
+
+Now let me re-run format/lint on all files and verify line counts and bucketing via xcodegen.
+
+All 7 files: swiftlint `--strict` clean, swiftformat clean. Now the placeholder check + xcodegen validation + bucketing verification.
+
+Bucketing is correct (app code → app targets; tests → test targets). `pwsh` is available. Let me run the real placeholder check, then do the standalone compile + **actually run** my tests.
+
+Placeholder check passes. Now let me determine the authoritative truth about the aggregate gate: stage the framework and attempt the real macOS app-target build to see whether `import XCTest` in the peer widget test files breaks it (pre-existing) or resolves under xcodebuild.
+
+Confirmed: the app target's `FRAMEWORK_SEARCH_PATHS` lacks the XCTest path (only test targets get `TEST_FRAMEWORK_SEARCH_PATHS`), so the 35 peer widget `.Tests.swift` files mis-bucketed into the app targets will fail to compile — a pre-existing condition independent of my surface. Let me start the real macOS build in the background to capture concrete evidence, and meanwhile probe whether my surface compiles standalone.
+
+The full Components set references app-level types. Let me narrow to the atomic UI/Feedback/Design primitives my surface actually needs and probe again.
+
+The macOS build finished. Let me read its evidence and continue the narrowed typecheck.
+
+Decisive evidence captured: the macOS app build **FAILED only on peer `DigitalTwinWidget.Tests.swift` (`error: unable to resolve module dependency: 'XCTest'`)** — a mis-bucketed peer file — while my `CronParser.strings` was successfully validated and bundled into the app, and **zero CronParser errors** appeared. This confirms the aggregate block is pre-existing and external to my surface.
+
+Now let me prove my surface compiles + tests pass in isolation. First, a narrowed typecheck of the minimal shared-component closure.
+
+My surface typechecks cleanly against the real shared components. Now let me build a SwiftPM harness to **actually run** my tests (definitive proof), using the verified minimal closure as a stand-in `TeslaSync` module.
+
+Now let me run the tests for real:
+
+The harness caught a **real Swift 6 concurrency error** that would also fail the actual gate: the top-level `echo` closure constant isn't `Sendable`. Let me isolate the module error too, then fix.
+
+`swift build` of the module is **clean** — my surface compiles. The only real error is the `echo` global closure (a genuine Swift 6 issue that would also fail the real gate). Let me fix it in the source.
+
+**All 47 tests pass (0 failures)** — real execution covering adapter parity (describeCron/getNextCronRuns), model phases, accessibility, and all 6 per-state render-smokes. The `echo` fix was a genuine Swift-6 gate fix.
+
+Let me re-verify lint/format after that edit, then run a bounded experiment: the aggregate gate is blocked solely by peer test files mis-bucketed into the app targets — a clearly-correct, minimal fix is to exclude `*Tests.swift` from the app targets (test files don't belong there). Let me try it.
+
+Lint/format still clean. Now let me build the macOS app target with peer test files excluded to see if it goes green.
+
+The build is running. Let me wait for it.
+
+The experiment revealed **deeper pre-existing peer breakage in dashboard-widget app code itself** — `'DashboardWidgetSize' is ambiguous` (redeclared across many peer surfaces), `invalid redeclaration of 'PowerFlowProjection'/'PowerFlowFormat'`. These are peer-surface defects entirely outside my CronParser surface and outside my allowed scope. The aggregate gate cannot be made green within scope. Let me revert that experiment (keep only my correct feature-views wiring).
+
+Wiring is correct: `dashboard-widgets` restored to original; `feature-views` properly excludes test files from app targets and routes them to test targets. Now let me run the actual gate's lint/format steps (repo-wide, as the gate does) to capture honest results.
+
+swiftformat is green repo-wide (0/523). swiftlint found 1 violation — let me confirm it's not mine.
+
+The single swiftlint violation is a **pre-existing peer file** (`LifetimeStatsWidget.Adapter.swift`), not mine (0 violations in feature-views). Every red gate is pre-existing peer breakage. Let me run the literal xcodebuild gate commands to capture authentic evidence for the log.
+
+Both gate builds are running. Note: the `web/*` changes are pre-existing (not mine) — I'll exclude them from my commit. Meanwhile, let me cross-check that every i18n key my code references exists in the strings catalog.
+
+Both gate builds finished (as expected, they fail on pre-existing peer breakage). The only "missing" key is a false positive (the dynamic `weekday.\(index)` → `weekday.0..6` all exist). Let me read the gate results.
+
+Definitive gate evidence: **IOS_EXIT=65 and MAC_EXIT=65, both failing on the peer `DigitalTwinWidget.Tests.swift` XCTest error, with ZERO CronParser errors in either build.** Let me gather a couple more evidence snippets, then write the gate log.
+
+I have complete, authentic evidence. Let me write the gate log honestly, capturing every step's real result.
+
+Let me do final sanity checks: confirm the dynamic weekday keys + banner keys exist in strings, verify generated artifacts are gitignored, and confirm the exact set of files to commit.
+
+All keys present; generated artifacts are gitignored. Let me do one final compile check including the Previews file (not yet covered), then commit only my files.
+
+Everything compiles (including Previews). Now let me commit only my files (excluding the pre-existing `web/*` changes).
+
+All 11 files staged correctly; `web/*` excluded. Now commit.
+
+Commit `f954c382` created with all 11 files (web/* correctly excluded). As a final safety check, let me verify the iOS-only code path (`#if os(iOS)`) compiles against the iOS Simulator SDK, since the gate's primary destination is iOS.
+
+iOS-Simulator typecheck passes too — the surface compiles cleanly against **both** iOS 18 and macOS 15 SDKs. Let me confirm the final repo state.
+
+The task is complete. Final state verified: my commit `f954c382` contains the full CronParser surface + wiring + log; the working tree shows only the pre-existing `web/*` changes (correctly untouched/uncommitted).
+

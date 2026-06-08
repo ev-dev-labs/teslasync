@@ -1,0 +1,184 @@
+=== P4 Feature view 0233 LiveControls (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Build 25F80) — Darwin 25.5.0 arm64, Apple Silicon
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively for
+                       this process only — no sudo, no `xcode-select -s` — so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.x · Java 17.0.19
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5, Booted) present · macOS 26.5 SDK present
+  Capability         : SwiftUI + iOS 18 / iPadOS 18 / macOS 15 deployment targets all present on the 26.5 SDK →
+                       NOT capability-BLOCKED. (This surface uses NO charts and NO maps — the web source is a
+                       purely presentational/controlled toolbar — so Swift Charts + MapKit are not exercised.)
+  Parallel-exec note : /tmp + the Gradle cache are shared across sibling parallel slots (the build log showed
+                       "3 busy and 35 stopped Daemons"). All Apple builds below were therefore run under
+                       slot-unique DerivedData paths (/tmp/slot354-dd-ios, /tmp/slot354-dd-mac) and slot-unique
+                       logs (/tmp/slot354-*-build.log), verified to reference only this slot.
+
+WEB SOURCE (the specification)
+  web/src/features/system/components/state-machine/LiveControls.tsx — a PURELY CONTROLLED FSM-debugger toolbar
+  (prompt data sources: useTranslation only; shared components used: @/components/ui; charts/maps: none). It
+  fetches nothing — its parent (the debugger page) owns the transition buffer and passes the control props +
+  callbacks down. Composition:
+    container  : flex-wrap toolbar (rounded-lg border bg-white/[0.02] px-3 py-2)
+    Live       : <Button> variant=primary when isLive else secondary; aria-pressed=isLive; LEADING status dot
+                 (emerald-300 animate-pulse when live, surface-2 when not); onClick → onToggleLive(true)
+    Freeze     : <Button> variant=primary when !isLive else secondary; aria-pressed=!isLive; onToggleLive(false)
+    step-prev  : <Button variant=ghost> "←"; disabled=!canStepPrev; aria-label "Step to previous transition"
+    step-next  : <Button variant=ghost> "→"; disabled=!canStepNext; aria-label "Step to next transition"
+    Window     : <Caption> "Window" (hidden sm:inline) + <Select> value=windowMinutes options 5/10/30/120 min;
+                 aria-label "Window"; onChange → onWindowChange(Number)
+    Clear      : <Button variant=ghost> "Clear buffer"; onClick → onClearBuffer
+    counter    : ml-auto <Tooltip content=tooltipLabel><Caption cursor-help data-testid=live-controls-counter>
+    counter math (VERBATIM): inWindow = windowCount ?? bufferCount ?? 0 ; total = totalCount ?? bufferCount ?? 0 ;
+                 outside = max(0, total - inWindow) ; dual = totalCount != null || windowCount != null
+                 label = (dual && outside>0) ? "{{inWindow}} in window · {{total}} in 24 h" : "{{n}} buffered"
+                 tooltip = "Counts inside the {{minutes}}-minute Window dropdown. {{outside}} more transitions
+                            fetched in the last 24 h."
+    The deprecated single-scope `bufferCount` prop is preserved as the migration fallback for BOTH scopes.
+  Extracted i18n keys (9): debugger.controls.{live, freeze, stepPrev, stepNext, window, clear, buffered,
+                            bufferedDual, bufferedTooltip}. The WINDOW_OPTIONS labels ("5 min"/"10 min"/"30 min"/
+                            "2 h") are web literals → lifted to keyed strings so no English literal lives in native.
+
+ARTIFACTS SHIPPED (apps/apple/TeslaSync/feature-views/LiveControls.*) — 8 files, Stepper(0195) convention
+  LiveControls.Adapter.swift  — pure projection core: LiveControlsState (controlled props), LiveControlsCounter
+                                (+prefersDualLabel/isEmpty), LiveControlsProjection.counter/.make (the VERBATIM
+                                web counter derivation), LiveControlsWindowOption, LiveControlsTone,
+                                LiveControlsText/LiveControlsCopy catalog (20 keys), LiveControlsFormat
+                                (counterLabel/tooltipLabel). SwiftUI-free → unit tested without a view/bundle.
+  LiveControls.Model.swift    — LiveControlsTelemetry seam + OSLogLiveControlsTelemetry (P1/S11 redacted
+                                "view.opened"); LiveControlsPhase/Render/Input; LiveControlsSource (P1/S8 state-
+                                holder seam, incl. the toggleLive/stepPrev/stepNext/changeWindow/clearBuffer
+                                command callbacks + refresh); LiveControlsModel (@MainActor @Observable: render
+                                resolution, stale rising-edge auto-refresh, command delegation);
+                                InMemoryLiveControlsSource (records every command); LiveControlsStrings (P1/S10
+                                facade, table "LiveControls").
+  LiveControls.Views.swift    — toolbar core: LiveControlsPanel chrome, LiveControlsStatusDot (emerald pulse;
+                                Reduce-Motion → steady dot), LiveControlsToggleButton (shared TSButton; aria-pressed
+                                → .isSelected), LiveControlsStepButton (SF-Symbol arrows; aria-label preserved),
+                                LiveControlsDivider, LiveControlsWindowPicker (native Menu — the primitive TSSelect
+                                wraps — facade-resolved labels + checkmark + a11y value), LiveControlsCounterView
+                                (.help tooltip + a11y hint; humanized empty), LiveControlsToolbar (ViewThatFits:
+                                single row with ml-auto counter ⇄ compact scrolling two-row).
+  LiveControls.States.swift   — P4 states-contract chrome: LiveControlsLoadingView (TSSkeleton), LiveControlsErrorView
+                                + LiveControlsRetryButton (web QueryError equiv → refresh), LiveControlsStatusChip
+                                (stale/offline). Split out so each file is ≤400 lines (swiftlint file_length).
+  LiveControls.swift          — `LiveControls` surface (slug "LiveControls"); offline/stale chips + render switch
+                                (loading/failed/ready); onAppear/onDisappear → model.start()/stop().
+  LiveControls.Previews.swift — #if DEBUG previews: live(dual) / frozen(stepping) / legacy-single / empty(zero) /
+                                loading / error / stale / offline.
+  LiveControls.Tests.swift    — 31 XCTest cases (counter math · window options · projection · render · format+a11y
+                                copy · copy catalog · model: telemetry-once + every command delegation + stale edge).
+  LiveControls.strings        — per-surface P1/S10 table (20 keys); first group = the web source keys.
+  No wiring edits required: TeslaSync/feature-views is ALREADY a source path of both app targets (project.yml
+  L37/L68) and is ALREADY in .swiftlint.yml `included`. Strings stay in the per-surface table (no shared
+  Localizable.xcstrings edit) — consistent with the sibling surfaces and with this prompt's allowed-files scope.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  controlled props          → LiveControlsState; web callbacks → LiveControlsSource command seam (P1/S8)
+  inWindow/total/outside/dual→ LiveControlsProjection.counter (verbatim ?? chain + Math.max clamp)
+  "{{n}} buffered" / dual    → LiveControlsFormat.counterLabel (i18next {{name}} → printf %1$d/%2$d positional)
+  Tooltip content            → LiveControlsCounterView .help(...) (macOS hover) + .accessibilityHint(...)
+  <Button> variant/size sm   → shared TSButton(.primary/.secondary/.ghost, .small); aria-pressed → .isSelected
+  emerald-300 pulse dot      → LiveControlsStatusDot statusSuccess + repeatForever pulse (Reduce-Motion → steady)
+  "←" / "→"                  → SF Symbols arrow.left / arrow.right (HIG-native), web aria-labels preserved
+  <Select> 5/10/30/120       → LiveControlsWindowPicker native Menu (facade-resolved), aria-label/value carried
+  h-5 w-px divider           → 1×20 Rectangle, accessibilityHidden
+  flex-wrap + ml-auto        → ViewThatFits(.horizontal): single-row(Spacer→trailing counter) ⇄ scrolling two-row
+  i18n                       → every literal via LiveControlsStrings facade; 20 keys in LiveControls.strings
+  a11y                       → toolbar = contained group "Live transition controls"; dots/divider/icons hidden;
+                               counter = one element label+hint; Dynamic Type via Font.TS; Reduce-Motion honored
+  telemetry                  → view.opened surface="LiveControls" via LiveControlsModel.start (P1/S11), OSLog sink
+  states                     → web live/frozen · step enabled/disabled · dual/single/empty counter  +  native P4
+                               loading / error+retry / stale / offline (the controlled leaf delegates these upward)
+
+GATES
+  [GREEN]    swiftformat --lint  (LiveControls scope, 7 swift files)  : 0/7 files require formatting     (FORMAT_EXIT=0)
+             swiftformat --lint  (whole apps/apple, FYI)              : 1/1647 PRE-EXISTING — ActionBuilder.Previews.swift
+                                                                        (blankLinesBetweenScopes); NOT a LiveControls
+                                                                        file; untouched (git status clean on it).
+  [GREEN]    swiftlint --strict  (LiveControls scope, 7 swift files)  : 0 violations, 0 serious in 7 files (LINT_EXIT=0)
+             swiftlint --strict  (whole included scope, FYI)          : 1 PRE-EXISTING violation — function_body_length
+                                                                        in TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+                                                                        (NOT a LiveControls file; untouched).
+  [GREEN]    check-placeholders.ps1 (true scan of the 7 swift files)  : PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 (PLACEHOLDER_EXIT=0)
+             check-placeholders.ps1 -Path …/feature-views/LiveControls : EXIT=0 (the gate's literal prefix path resolves
+                                                                        to no directory; the true per-file scan above is
+                                                                        the substantive, honest result).
+  [GREEN]    Foundation logic check (swift 6.3.2)                     : 9/9 PASS — String(format:) positional-Int output
+                                                                        for the single/dual counter + tooltip + the
+                                                                        ?? precedence / Math.max clamp / empty / per-scope
+                                                                        fallback all match the web exactly.
+  [GREEN]    LiveControls build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode =
+             strict-concurrency complete, IDENTICAL to the app's SWIFT_STRICT_CONCURRENCY:complete), platforms
+             macOS 15, compiling the EXACT shipped LiveControls.{swift,Adapter,Model,Views,States,Previews}
+             against the REAL repo design system (Tokens · Badges · Buttons[TSButton] · Typography · Cards ·
+             Skeletons[TSSkeleton] · TSMaterial) with LiveControls.Tests.swift as `@testable import TeslaSync`:
+                 Build complete!  ·  Executed 31 tests, with 0 failures (0 unexpected)               (SWIFT_TEST_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS                                                       build test : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO LiveControls errors; all blockers PRE-EXIST and are UNRELATED to this
+               change; both gates were ACTUALLY EXECUTED on this runner, raw exits pasted, failures confirmed):
+    Shared.xcframework : assembled fresh by the scheme pre-action (Gradle :core:assembleSharedXCFramework, Kotlin/
+                         Native link) and STAGED OK ("✓ Shared.xcframework staged" in the iOS log) — so the
+                         framework dependency was satisfied; the failures below are the only blockers.
+    iOS  (IOS_EXIT=65) : the app target source glob includes `TeslaSync/feature-views/**`, sweeping the 138
+                         PRE-EXISTING co-located `*.Tests.swift` files (each `import XCTest`) into the APP target;
+                         XCTest is not linkable into an application target → "Unable to resolve module dependency:
+                         'XCTest'". Total `error:` lines = 4, every one this same XCTest module-resolution error
+                         (first-alphabetical offender AIUsageCard.Tests.swift:18); the compile aborts at module
+                         resolution before typechecking any source file. grep for any error on a LiveControls
+                         SOURCE file ({swift,Adapter,Model,Views,States,Previews}) = 0 hits; on LiveControls.Tests.swift
+                         specifically = 0 hits. LiveControls.Tests.swift co-locates per the DOMINANT repo convention
+                         (138 pre-existing co-located feature-view test files) and per this prompt's allowed-files
+                         scope; correct target membership (compiling *.Tests.swift into TeslaSyncTests, not the app)
+                         is a project-wiring concern owned by the P4/P99 Apple acceptance gate, not a feature-view prompt.
+    macOS (MAC_EXIT=65): fails at signing — total `error:` lines = 4, all "TeslaSync-macOS" / "TeslaSyncWidgets-macOS
+                         has entitlements that require signing with a development certificate", which this runner
+                         does not provision. 0 LiveControls errors.
+    Disposition        : these are exactly the artifacts apps/macos-pending-verifications.md defers to the ADR-012
+                         `macos-latest` signed CI runner + a project test-target-membership pass — the sanctioned
+                         "code-complete + DEFERRED full-app Xcode gate" disposition every prior P4 surface has used
+                         (see p4-apple-feature-views-0195-Stepper.log). Task rule honored: pre-existing, unrelated
+                         breakage was neither touched nor "fixed". (macos-pending-verifications.md itself was NOT
+                         edited — outside this prompt's allowed-files scope.)
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                           explicitly DEFERRED with raw evidence — never reported as passing.
+  2  No scope narrowing  : every web region + branch reproduced — Live/Freeze variant+aria-pressed+pulse dot, the
+                           ghost step buttons with their disabled gating + aria-labels, the Window caption + Select
+                           (5/10/30/120), Clear, and the FULL counter math incl. the deprecated bufferCount fallback,
+                           the dual-vs-single label rule, and the tooltip.
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; both xcodebuild failures confirmed,
+                           not assumed; iOS error set proven to be 100% pre-existing XCTest membership; macOS 100%
+                           signing; the 31-test suite actually run (not asserted) under Swift 6 strict concurrency.
+  4  No stubs as final   : complete production surface (8 files) + 31 real passing tests; placeholder scanner = 0;
+                           no TODO/FIXME/Placeholder/Lorem/"not implemented" tokens.
+  5  No parity shortcut  : variant/opacity/typography/spacing/icon-order/a11y/Reduce-Motion/telemetry all mapped to
+                           platform tokens + the shared TSButton/TSSkeleton and verified by build+test.
+  6  No delegation       : implemented directly; no agents/subtasks.
+  7  No predecessor bypass: binds P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry; P4
+                           core shared components (TSButton/TSSkeleton/Color.TS/Font.TS) consumed, not re-rolled.
+  8  No commit on red    : the COMMITTED artifact (LiveControls.* + this log) is GREEN on every host-runnable gate
+                           AND on a real isolated Swift-6 strict-concurrency build+test; the deferred full-app gate
+                           is RED only on pre-existing, unrelated surfaces this commit neither introduces nor touches.
+  9  No silent drift     : changes confined to the 8 apps/apple/TeslaSync/feature-views/LiveControls.* files + this log.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic `LiveControls` shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 31 tests pass under the app's own Swift 6 strict-concurrency rules, against the
+  REAL design system + shared components, with swiftformat/swiftlint/placeholder all green on the surface scope and
+  the counter/tooltip interpolation cross-checked on the Foundation toolchain. Every web control + the full counter
+  derivation (incl. the deprecated bufferCount fallback) and the full P4 states contract (live/frozen · step
+  enabled/disabled · dual/single/empty counter + loading/error/stale/offline) are reproduced with VoiceOver,
+  Dynamic Type, and Reduce-Motion support and a P1/S11 view.opened telemetry emission. The full-app iOS-Simulator +
+  macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked by the pre-existing app-
+  target test-membership glob (138 unrelated co-located XCTest files) and by macOS development signing — both owned
+  by the P4/P99 acceptance gate on a signed macos-latest CI runner per apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

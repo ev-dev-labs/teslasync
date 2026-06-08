@@ -1,0 +1,100 @@
+I'll start by exploring the codebase to understand the task structure, the web source page, and the existing Apple app patterns.
+
+Key finding: **`xcodebuild` requires full Xcode but only Command Line Tools are installed** — so the build/test gate cannot run. swiftlint, swift 6.3.2, and pwsh ARE available. Let me understand the existing patterns and project structure before deciding on approach.
+
+Now I understand the architecture. The real convention is `feature-views/` (flat, multi-file split per unit), wired into `project.yml`. Let me study the active reference (AIUsageCard, currently being modified) and the RecentActivity feed component I'll reuse.
+
+The git shows `AIUsageCard.*` modified due to a case-rename on the case-insensitive FS (pre-existing, unrelated to my task — I'll leave it). The real reference files are `AiUsageCard.*`. Let me deeply study the Model/Adapter/States/Types conventions to mirror them precisely.
+
+Excellent pattern clarity. Let me study the Adapter (KMP core binding), States views, strings format, navigation, and design tokens in parallel.
+
+Now let me study the strings format, the host/source binding to KMP core (AiUsageCard), the glass panel component, navigation, and tests in parallel.
+
+I have strong pattern clarity. Let me locate the shared glass panel, navigation system, how production sources bind to the KMP core, and whether a per-user activity feed/entry type already exists.
+
+Let me examine the glass panel/timeline patterns, navigation registry, and the web activity-icon/entry sources I need to port.
+
+Now I have the full web logic to port. Let me read the activity entry type, navigation registry/parser, and the previews pattern.
+
+Let me understand the navigation parser and how route hosts get registered, plus confirm the design tokens available.
+
+Let me examine the Settings route registration precedent, AppShell navigation, and confirm design tokens.
+
+Let me check for AppRoute test constraints and confirm the design-token primitives before deciding navigation approach.
+
+RouteTests is generic (no hardcoded counts) — adding a route is safe. Let me read the placeholder patterns, swiftlint config, and confirm token names so my code passes the runnable gates.
+
+Let me check the master string catalog format to add the nav-title key, and confirm a couple token/component signatures I'll use.
+
+Master catalog is 187k lines (multi-locale, generated) — I'll follow the established per-surface `.strings` convention instead of editing it, and keep navigation changes minimal (deep-link alias + NavigationDestination). Let me confirm the exact signatures of the shared components I'll use.
+
+Now I have all the patterns. Let me confirm the `TSFadeIn`/`TSSkeleton` init signatures, then write my plan and begin implementing.
+
+I now have complete pattern clarity. Let me check the web `formatRelative` and `ApiError` to match exactly, then set up my plan and todos.
+
+I have complete clarity on all patterns, web logic, and constraints. Let me record the plan and todos, then implement.
+
+Now I'll create the files. Starting with the pure value types:
+
+Now the visual registry — a faithful port of `activityIcons.ts`:
+
+Now the pure projection adapter — relative-time formatter, subtitle composition, phase resolution, a11y:
+
+Now the `@Observable` model with the state-holder seam, in-memory source, telemetry, and strings facade:
+
+Let me confirm the full set of typography/color tokens before writing the views.
+
+All tokens confirmed. Now the views (glass panel, header, range control, feed rows):
+
+Now the state views (loading / empty / disabled / unauthorized / error):
+
+Now the page view itself plus navigation registration (NavigationStack screen + NavigationDestination):
+
+Now the i18n catalog (per-surface `.strings` table) with all keys:
+
+Now the previews (one per state):
+
+Let me check how the sibling `.Tests.swift` files in feature-views are structured (framework, target membership).
+
+The sibling convention is XCTest + `@testable import TeslaSync` in feature-views — I'll match it. Now the tests:
+
+Now wire the deep-link aliases for `/me/activity` and add the matching test:
+
+Files created. Let me update progress and run the runnable gates (swiftlint, placeholder scan, syntax check).
+
+The placeholder gate is case-insensitive and recursive. Let me verify my files are clean of forbidden patterns and run swiftlint on them.
+
+Clean. Now swiftlint --strict on my new files:
+
+swiftlint clean (0 violations). Now the placeholder gate on my files (via an isolated temp dir for an attributable result):
+
+Placeholder gate clean (COUNT=0, EXIT=0). Now a best-effort Swift syntax check with `swiftc -parse`:
+
+Both runnable gates are green and all files parse. Let me record progress and read the ledger schema to author a valid ledger row.
+
+A macOS SDK is available via CommandLineTools. Let me attempt a real `-typecheck` on the Foundation-only core logic (stronger than parse), then I'll author the log/ledger.
+
+Core logic **fully type-checks** against the SDK (exit 0). Let me probe the SwiftUI files too — filtering out the expected "missing app-module token" errors to confirm my SwiftUI API usage itself is correct.
+
+The redirection order sent errors to the terminal (file was empty). Let me re-run correctly and rigorously filter to confirm **only** expected missing-token errors remain (no SwiftUI API misuse).
+
+Outstanding — **all 48 type-check errors are exclusively missing app-module design tokens** (Color.TS/Font.TS/TSSpacing/TSRadius/TSFadeIn/TSSkeleton, defined in sibling files and resolved only in the Xcode build); **zero SwiftUI API-misuse errors**. Combined with the cores fully type-checking, this is strong correctness evidence. Now I'll author the honest log and ledger.
+
+Let me verify the strings line numbers cited in the log are accurate (honesty matters):
+
+The cited line numbers were off (actual: L17–24). Let me correct the log for accuracy:
+
+Now the ledger and cleanup:
+
+JSON valid, manifest confirms requiredCount=12, log corrected. Let me do a final review of the working tree and stage only my files (excluding the pre-existing AiUsageCard case-rename noise).
+
+Before committing, let me rigorously verify the concurrency-sensitive model under **Swift 6 strict concurrency** (the project uses `SWIFT_STRICT_CONCURRENCY: complete`), since my standalone typecheck didn't enforce that. Model+cores don't need app-module tokens, so they should fully check:
+
+Model + cores pass **Swift 6 complete strict concurrency** (exit 0) — the binding/concurrency core is verified. Let me record this in the log, then commit.
+
+All 14 files staged (the unrelated AiUsageCard case-rename noise is excluded). Committing:
+
+Commit succeeded (14 files, 1872 insertions). Let me finalize todos and run a last verification pass.
+
+All todos complete; swiftlint clean (0 violations, 11 files); working tree shows only the pre-existing AiUsageCard rename noise (not mine). Task finished.
+

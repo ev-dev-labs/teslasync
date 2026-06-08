@@ -1,0 +1,119 @@
+=== P4 Dashboard widget 0017 ChargeHistoryWidget (Apple) ===
+run_utc=2026-06-08T07:50:45Z
+host=Darwin 25.5.0 arm64
+
+--- Artifact (7 files shipped under apps/apple/TeslaSync/dashboard-widgets/) ---
+     179 ChargeHistoryWidget.Adapter.swift
+     235 ChargeHistoryWidget.Model.swift
+     147 ChargeHistoryWidget.Previews.swift
+      46 ChargeHistoryWidget.strings
+     250 ChargeHistoryWidget.swift
+     273 ChargeHistoryWidget.Tests.swift
+     182 ChargeHistoryWidget.Views.swift
+    1312 total
+
+================================================================
+CAPABILITY PROBE (gate requires full Xcode + iOS Simulator)
+================================================================
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+$ xcrun simctl help | head -1
+xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+
+=> xcodebuild (full Xcode) and the iOS/macOS Simulator are NOT available on
+   this runner: only the Command Line Tools are selected. The gate steps
+   'xcodebuild -scheme TeslaSync ... build test' and 'xcodebuild -scheme
+   TeslaSync-macOS build test' CANNOT be executed here. Per the prompt's
+   capability clause + Honesty Covenant (rule 1: no red-as-green) this is
+   recorded as BLOCKED with evidence rather than claimed green.
+
+Available Swift toolchain (used for the verifications below):
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+swiftlint 0.63.3
+swiftformat 0.61.1
+
+SwiftUI + Swift Charts + MapKit availability probe (swiftc -typecheck):
+frameworks_import=OK (exit 0)
+
+================================================================
+GATE STEP 1+2: xcodebuild build test (iOS + macOS)
+================================================================
+IOS_EXIT=127   # BLOCKED: xcodebuild requires full Xcode (see capability probe)
+MAC_EXIT=127   # BLOCKED: xcodebuild requires full Xcode (see capability probe)
+
+Compensating verification on this runner: Swift 6 strict-concurrency
+type-check of every shipped file, compiled against a minimal stand-in for the
+shared P4 core + P1/S9 tokens (the real DashboardWidgetRegistration / TS* tokens
+this surface binds to at integration, same as sibling PowerFlowHistoryWidget 0073).
+  TYPECHECK_PRODUCTION_EXIT=0   (Adapter+Model+swift+Views)
+  TYPECHECK_PREVIEWS_EXIT=0     (Previews bodies; #Preview macro plugin needs full Xcode, neutralized to funcs)
+  TYPECHECK_TESTS_EXIT=0        (Tests bodies; XCTest shimmed — unavailable in CLT)
+
+================================================================
+GATE STEP 3: swiftlint --strict (scoped to the shipped surface)
+================================================================
+Linting Swift files at paths TeslaSync/dashboard-widgets/ChargeHistoryWidget.Adapter.swift, TeslaSync/dashboard-widgets/ChargeHistoryWidget.Model.swift, TeslaSync/dashboard-widgets/ChargeHistoryWidget.swift, TeslaSync/dashboard-widgets/ChargeHistoryWidget.Views.swift, TeslaSync/dashboard-widgets/ChargeHistoryWidget.Previews.swift, TeslaSync/dashboard-widgets/ChargeHistoryWidget.Tests.swift
+Linting 'ChargeHistoryWidget.Model.swift' (1/6)
+Linting 'ChargeHistoryWidget.Adapter.swift' (2/6)
+Linting 'ChargeHistoryWidget.swift' (3/6)
+Linting 'ChargeHistoryWidget.Views.swift' (4/6)
+Linting 'ChargeHistoryWidget.Tests.swift' (5/6)
+Linting 'ChargeHistoryWidget.Previews.swift' (6/6)
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+
+================================================================
+GATE STEP 4: swiftformat --lint (scoped to the shipped surface)
+================================================================
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-18/apps/apple/.swiftformat
+SwiftFormat completed in 1.24s.
+0/6 files require formatting.
+FORMAT_EXIT=0
+
+================================================================
+GATE STEP 5: check-placeholders.ps1 (real scan of the surface files)
+================================================================
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+================================================================
+ACCEPTANCE CRITERIA
+================================================================
+[x] Surface renders every web state: loading / empty / error / stale / offline / content
+    (ChargeHistoryModel.Phase + ChargeHistoryConnection + isEmpty; see Previews: 9 states).
+[x] Hooks bind via shared P1/S8 state-holder seam (ChargeHistorySource); no HTTP in the view.
+[x] Every web i18n key present in catalog: widget.chargeHistory.title/total/avg,
+    widget.noChargeHistory (+ native chrome keys). See ChargeHistoryWidget.strings.
+[x] Accessibility labels on every interactive element (refresh/retry/open buttons,
+    stat cells, chart summary, freshness chip). Dynamic Type via Font.TS tokens.
+[x] Tests: adapter (projection/format) + model (phases/empty/telemetry) + registry
+    (canonical charge-history 2x4/2x2/4x40 + clamp) + a11y label tests.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0).
+[x] Telemetry: ChargeHistoryModel.start() emits view.opened surface=ChargeHistoryWidget (P1/S11).
+[x] Registry parity: id=charge-history, category=charging, default 2x4, min 2x2, max 4x40.
+[x] Data/composition parity: /charging?vehicle_id={id}&limit=10 -> energy Wh/1000 kWh,
+    reversed series, hasData=count>1, Total/Avg stats, compact(cols<=1)=stats-only.
+
+================================================================
+RESULT
+================================================================
+Runnable on this host (all GREEN):
+  TYPECHECK_PRODUCTION_EXIT=0  TYPECHECK_PREVIEWS_EXIT=0  TYPECHECK_TESTS_EXIT=0
+  LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+Not runnable on this host (capability gap, evidence above):
+  IOS_EXIT=127 (xcodebuild needs full Xcode)  MAC_EXIT=127 (xcodebuild needs full Xcode)
+
+Implementation is complete and production-quality; the only unmet gate steps are the
+two xcodebuild build+test invocations, blocked solely by the absence of full Xcode +
+iOS Simulator on this Command-Line-Tools-only runner. Reporting BLOCKED with evidence
+per the prompt's capability clause and Honesty Covenant rather than asserting an
+unverified green. Re-run the gate on an Xcode-equipped runner to obtain IOS_EXIT/MAC_EXIT.
+
+EXIT=1
+STATUS=BLOCKED

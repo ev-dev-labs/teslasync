@@ -1,0 +1,132 @@
+=== P4 Shared surface 0093 KpiOverviewCard (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/KpiOverviewCard.*
+Web src  : web/src/components/data-display/KpiOverviewCard.tsx
+Date     : 2026-06-08
+Honesty covenant: acknowledged (no red-as-green, no scope narrowing, no skip-and-assume,
+                  no stubs-as-final, no parity shortcuts, no delegation, no predecessor
+                  bypass, no commit-on-red, no silent drift, log ends with EXIT + STATUS).
+
+------------------------------------------------------------------------------------------
+DELIVERABLE (complete — no stubs, no skeleton-only)
+------------------------------------------------------------------------------------------
+8 files, mirroring the established P4 surface pattern (cf. feature-views/AiUsageCard.*):
+  KpiOverviewCard.swift            — the View: GlassPanel shell + ComparisonHeader + phase switch.
+  KpiOverviewCard.Model.swift      — i18n facade, value types (KpiTile/KpiDelta/KpiAction/
+                                     KpiCallout/KpiHeader), connection, telemetry seam, input,
+                                     resolved, P1/S8 source seam, @Observable model, in-memory source.
+  KpiOverviewCard.Projection.swift — pure resolve(input)->resolved (error/loading/empty/data;
+                                     header always resolved; secondary join; tile+delta resolution).
+  KpiOverviewCard.Adapter.swift    — pure KpiNumber (port of numberFormat.ts) + KpiDelta resolver
+                                     (verbatim port of Delta.tsx: arrow, good/bad/neutral/muted
+                                     outcome, percent/absolute/both, previous==0 + missing-input
+                                     branches, precision) + KpiAccessibility.
+  KpiOverviewCard.Views.swift      — subviews: header, delta, KPI grid + tile, secondary,
+                                     InlineCallout footer, loading skeletons, empty, error+retry,
+                                     freshness chip, stale/offline banner, refresh/action buttons.
+  KpiOverviewCard.Previews.swift   — DEBUG #Preview per state (data/no-extras/empty/loading/error/
+                                     stale/offline).
+  KpiOverviewCard.Tests.swift      — 39 tests: adapter math, projection phases, model wiring +
+                                     P1/S11 view.opened telemetry + stale auto-refresh, a11y labels.
+  KpiOverviewCard.strings          — P1/S10 catalog (table "KpiOverviewCard").
+
+Parity: web is purely presentational (ComparisonHeader + MetricCard grid + secondary + footer).
+The native .data phase reproduces that composition verbatim; the loading/empty/error states and the
+live/stale/offline connectivity axis are the sanctioned P4 leaf contract (same as AiUsageCard).
+Accessibility: VoiceOver labels on every tile/delta + every interactive control (refresh, header
+actions, footer action, retry); Dynamic Type via tokens; Reduce-Motion respected (TSFadeIn, skeleton
+pulse). Telemetry: view.opened emitted once with slug "KpiOverviewCard" (P1/S11).
+
+------------------------------------------------------------------------------------------
+ENVIRONMENT / CAPABILITY (platform capability IS present)
+------------------------------------------------------------------------------------------
+Default toolchain is CommandLineTools (xcodebuild absent); Xcode 26.5 is usable via
+  DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer  (Build 17F42).
+Simulator: iPhone 16 (iOS 26.5) present and booted. swiftlint 0.63.3, swiftformat 0.61.1,
+xcodegen present, java 17 present, apps/shared/gradlew present.
+KMP Shared.xcframework (the scheme pre-action) BUILDS SUCCESSFULLY here — captured from the real
+gate run:
+  "xcframework successfully written out to: .../XCFrameworks/debug/Shared.xcframework"
+  "xcframework successfully written out to: .../XCFrameworks/release/Shared.xcframework"
+=> SwiftUI/Swift-Charts/MapKit + iOS18/macOS15 capability is NOT the blocker.
+
+------------------------------------------------------------------------------------------
+VERIFICATION THAT WAS RUN (real results)
+------------------------------------------------------------------------------------------
+[1] swiftformat --lint (apps/apple/.swiftformat) on the 7 Swift files:
+      "0/7 files require formatting."                                   FORMAT_EXIT=0  PASS
+
+[2] swiftlint --strict (apps/apple/.swiftlint.yml) — the new files:
+      0 violations in apps/apple/TeslaSync/shared-surfaces/*.swift.     PASS (my files)
+    NOTE: a repo-wide `swiftlint --strict` reports exactly 1 pre-existing, unrelated violation
+      apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+      (function_body_length) — outside this prompt's allowed files; not introduced here.
+
+[3] placeholder gate (apps/tools/check-placeholders.ps1) on the surface:
+      PLACEHOLDER_COUNT=0  EXIT=0                                       PLACEHOLDER_EXIT=0  PASS
+    (No TODO/FIXME/stub/mock/placeholder/Lorem in shipped code — also grep-verified.)
+
+[4] i18n key audit: all 13 keys referenced in Swift resolve in KpiOverviewCard.strings;
+      plutil -lint KpiOverviewCard.strings => OK (valid catalog).      PASS
+
+[5] Standalone SwiftPM harness — a FAITHFUL proxy for the app target's compile + tests:
+      swift-tools 6.0, .macOS(.v15), .swiftLanguageMode(.v6) (== SWIFT_VERSION 6.0 +
+      SWIFT_STRICT_CONCURRENCY complete), module named "TeslaSync" so @testable import resolves.
+      Inputs: the SAME six surface sources + the SAME Tokens.swift + Motion.swift the app uses
+      (KpiOverviewCard is pure presentational — its only app deps are P1/S9 tokens + TSFadeIn,
+      NOT the KMP xcframework), and the SAME KpiOverviewCard.Tests.swift.
+        swift build  => "Build complete! (20.15s)"                      BUILD_EXIT=0  PASS
+                        (compiles every source incl. #Preview, under Swift 6 strict concurrency)
+        swift test   => "Executed 39 tests, with 0 failures"            TEST_EXIT=0   PASS
+      Adapter (number/delta/outcome) + Projection (phases/header/secondary/tiles) + Model
+      (telemetry-once / stale auto-refresh-once / offline-no-refresh / live re-arm / stop re-arm /
+      surfaceSlug) + Accessibility — all green.
+
+------------------------------------------------------------------------------------------
+GATE STEPS (as specified) — REAL STATUS
+------------------------------------------------------------------------------------------
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  IOS_EXIT=BLOCKED  (see PREDECESSOR BLOCK below — the surface cannot be compiled/tested by the
+                     app/test targets in this slot because it is not wired into the build)
+xcodebuild -scheme TeslaSync-macOS build test
+  MAC_EXIT=BLOCKED  (same root cause)
+swiftlint --strict
+  LINT_EXIT=0 for the surface files (1 pre-existing unrelated repo violation noted in [2])
+swiftformat --lint apps/apple
+  FORMAT_EXIT=0 for the surface files
+check-placeholders.ps1 (surface)
+  PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------------------------------
+PREDECESSOR BLOCK (why IOS/MAC build+test are BLOCKED — evidence)
+------------------------------------------------------------------------------------------
+This artifact "Depends on: P4 core". P4 core has NOT wired the new shared-surfaces source group
+into the Xcode build in this slot, and the allowed-files scope for this prompt is ONLY
+apps/apple/TeslaSync/shared-surfaces/KpiOverviewCard.* + this log (project.yml and .swiftlint.yml
+are out of scope; Honesty Covenant #7 forbids bypassing the predecessor by editing them).
+
+Reproducible evidence (xcodegen generate; Xcode 26.5):
+  * project.yml app targets source `TeslaSync/feature-views` + `TeslaSync/dashboard-widgets` but
+    NOT `TeslaSync/shared-surfaces`. Generated TeslaSync.xcodeproj => 0 references to
+    "shared-surfaces" => KpiOverviewCard.* is absent from every target (app, test, macOS).
+  * The per-surface test convention (e.g. feature-views/AiUsageCard.Tests.swift, 224 *.Tests.swift)
+    is emitted as a build file in the APP target's Sources phase, while the XCTest bundles source
+    only `Tests/Unit`. So per-surface `*.Tests.swift` (incl. mine) are not routed into a test
+    target by the current project.yml — another P4-core wiring responsibility.
+Net: the gate's full-app `build test` cannot faithfully exercise THIS surface until P4 core adds the
+shared-surfaces source group (+ a test-target route) to project.yml/.swiftlint.yml. The surface
+itself is complete and independently proven correct (steps [1]-[5]); the block is the predecessor
+wiring, not platform capability (the KMP xcframework builds) and not a defect in this surface.
+
+------------------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------------------------------------
+[x] All web states reproduced (data composition) + P4 leaf states (loading/empty/error/stale/offline).
+[x] Hooks bind via the shared P1/S8 state-holder seam (KpiOverviewSource/KpiOverviewModel); no HTTP in the view.
+[x] Every i18n key resolves in the P1/S10 catalog (audit [4]).
+[x] Accessibility labels on every interactive element + every data tile/delta.
+[x] Tests: adapter unit + projection per-state + model + a11y (39, all pass [5]).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code ([3]).
+[~] EXIT=0/STATUS=DONE: BLOCKED on the P4-core predecessor wiring (evidence above); surface verified.
+
+EXIT=1
+STATUS=BLOCKED

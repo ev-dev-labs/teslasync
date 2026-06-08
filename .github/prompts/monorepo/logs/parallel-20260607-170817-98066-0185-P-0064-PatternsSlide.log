@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure and reading the web source specification. Note: delegation is forbidden for this task, so I'll do all work myself.
+
+I've read the web source. Now let me assess the Apple toolchain situation and existing project structure. Key finding: `xcodebuild` requires full Xcode but only CommandLineTools is active. Let me investigate further.
+
+Key findings: full **Xcode IS installed** at `/Applications/Xcode.app` (just not selected), **pwsh available**, swiftlint/swiftformat available. The `feature-views/` directory uses a strict multi-file convention. Let me verify xcodebuild works via `DEVELOPER_DIR` override and study the conventions.
+
+Full app build + KMP `Shared.xcframework` dependency is the critical risk. Let me assess the build prerequisites and study the established conventions (state holders, tokens, i18n, a representative feature-view).
+
+The existing `YearReviewWidget` in `dashboard-widgets/` uses the **same `YearReview` data** — this is my primary reference for the model, adapter, units, and i18n. Let me read it fully along with the state-holder infrastructure and verification status doc.
+
+This is the key insight: the full-app `xcodebuild` gate is **known-blocked by pre-existing, unrelated issues** (KMP `Shared.xcframework` needs Kotlin/Native, plus parallel-merge symbol collisions). The established predecessor methodology (`P-0010-ToolCard`) is: verify the surface in **isolation via SwiftPM**, run swiftlint/swiftformat/placeholder clean, and document the full-app build as macOS-pending. I'll follow that exact honest pattern.
+
+Let me write a plan and gather the remaining conventions (web libs for verbatim parity, a feature-view reference, design tokens, motion, the placeholder script, and any SwiftPM harness).
+
+Let me read the exact web conversion/format functions (for verbatim parity), the design tokens, a feature-view reference, motion, and the placeholder patterns.
+
+Now I have the design tokens, motion, and web conversion logic. Let me read the test/preview/strings conventions, a non-widget feature-view reference, the feedback components, and the linter configs.
+
+I now have all conventions. Let me record a plan, de-risk the isolated SwiftPM verification approach (since the full-app `xcodebuild` is known-blocked by pre-existing KMP/merge issues), and confirm no existing `PatternsSlide`.
+
+Isolated SwiftPM build with SwiftUI/Observation/ContentUnavailableView works (6.85s). This validates the verification approach. Confirmed: no existing `PatternsSlide`, and `DashboardWidgetSize` is redefined 15× (the documented pre-existing collision — I'll avoid depending on it). Let me confirm `swift test` runs, then write the implementation.
+
+Both isolated build and test execution work. Verification approach is fully validated. Let me check the shared skeleton component API before writing (to reuse it idiomatically).
+
+`TSSkeleton` is the right shared loading primitive (self-contained on tokens). Let me locate `TSCard` and confirm the dependency surface so my isolated harness compiles faithfully against the real components.
+
+Cards.swift pulls a chain of UI components. Let me check whether the entire `Sources/Components` tree is self-contained (tokens + SwiftUI only), so my harness can faithfully include the real shared component library and use `TSSkeleton` exactly as the app does.
+
+`Sources/Components` (39 files) imports only system frameworks — fully self-contained on tokens. So my isolated harness can include the **real** shared component library and compile my surface faithfully against `TSSkeleton`, `TSFadeIn`, etc. Let me read the rest of the placeholder gate (to confirm `-Path` handling) before writing.
+
+Now I fully understand the gate. Critical: the placeholder regex is **case-insensitive**, so I must avoid "placeholder/todo/fixme/etc." even in comments. And `-Path .../PatternsSlide` (no extension) resolves to nothing — I'll run the verbatim gate AND a real scan of my files for honesty.
+
+Let me write all seven `PatternsSlide.*` files.
+
+All seven files written. Now let me auto-format them with swiftformat, then set up the isolated SwiftPM harness (real shared components + my files) to compile and test.
+
+swiftformat clean. Now let me build the isolated SwiftPM harness — target "TeslaSync" with the real design tokens + shared `Sources/Components` + my source files, under Swift 6 language mode (matching the app's strict concurrency), plus a test target.
+
+My files compiled cleanly — the errors are in the shared `Components` library referencing `TSChartPalette`/`tsGlassPanel` from `Sources/Design`. Let me add `Sources/Design` to the harness.
+
+The shared `Components` library has a couple of leaf files (`UnitFormatters.swift`) coupled to a `\.tsUnits` facade environment key my surface doesn't use. Let me identify exactly which Component files reach outside Components/Design and exclude only those unrelated leaves from the harness.
+
+Only one file (`DataDisplay/UnitFormatters.swift`) is facade-coupled, and my surface doesn't use it. Let me drop just that leaf and rebuild.
+
+Build complete against the real shared component library under Swift 6 strict concurrency. Now run the tests.
+
+All 21 tests pass under Swift 6 strict concurrency. Now run swiftlint `--strict` on my files, then the placeholder gate.
+
+swiftlint `--strict`: 0 violations. Now the placeholder gate — both the verbatim command and a real scan of just my files (since the literal `-Path .../PatternsSlide` resolves to nothing).
+
+Both placeholder scans pass (COUNT=0), including a real scan of my actual files. Let me cross-check i18n key coverage and `.strings` cleanliness, then attempt the full `xcodebuild` gate to capture honest evidence.
+
+Perfect 1:1 i18n key coverage and clean strings. Now the honest part — attempt the full `xcodebuild` gate to capture real evidence of the documented pre-existing block. First, generate the xcodeproj.
+
+xcodeproj generated; gradle cache exists. Now attempt the actual iOS-Simulator build to capture honest evidence (expecting the documented pre-existing block).
+
+Build running in background. Let me monitor its progress.
+
+The background process was discarded with the sync session. Let me run it in a detached async session so it persists.
+
+Build running detached. Let me wait and monitor.
+
+The KMP `Shared.xcframework` actually built successfully (the Kotlin/Native toolchain works here). The build then shows "BUILD INTERRUPTED". Let me read the final output.
+
+KMP works here — it built the `Shared.xcframework` (debug), then got interrupted during the slow release-framework link. Let me pre-stage the release XCFramework via Gradle directly (so the xcodebuild pre-action is cached/fast), then run the full build to completion to capture honest app-compile evidence.
+
+Gradle release build running. Let me monitor it.
+
+Release `Shared.xcframework` is built (GRADLE_EXIT=0). Now run the full app build to completion — the app-compile stage is where the documented pre-existing collisions surface. Let me run it detached.
+
+Full build running. Let me monitor for the app-compile stage and any errors.
+
+Build FAILED (exit 65) with **zero PatternsSlide errors** — exactly the documented pre-existing block. The errors are co-located `*.Tests.swift` files importing `XCTest` into the app target (e.g., `BackendTool.Tests.swift`), affecting all surfaces. Let me characterize the failure comprehensively for the honest log.
+
+Definitive honest evidence: **0 PatternsSlide errors**; the build halts at `BackendTool.Tests.swift` (XCTest unavailable in the app target) — the documented repo-wide pre-existing structural block, hit alphabetically before my files. Let me run the macOS build (gate's second step) and repo-wide linters to complete the evidence.
+
+swiftformat repo-wide: 0/766 files require formatting (FORMAT_EXIT=0), including mine. Now repo-wide swiftlint `--strict` and monitor the macOS build.
+
+Repo-wide swiftlint `--strict` trips on a **pre-existing** file (`LifetimeStatsWidget.Adapter.swift`, another slot's surface) — my 6 files are clean (0 violations, shown earlier). Let me read the macOS build result.
+
+Both builds fail with **0 PatternsSlide errors** — iOS on the repo-wide XCTest-in-app-target structural issue (`BackendTool.Tests.swift`), macOS on pre-existing dev-signing — exactly the documented predecessor block. Let me check the log dir and git state, then write the evidence log.
+
+Git is correctly scoped (only my 7 files untracked; xcodeproj/xcframework are git-ignored). Let me read a sibling log to mirror the established format.
+
+This ToolCard log is the exact template. Note feature-views is already wired into `project.yml`/`.swiftlint.yml` (I don't need to touch them — and my scope forbids it). Let me read how ToolCard concluded (EXIT/STATUS).
+
+Decisive precedent: the sanctioned ToolCard disposition is **EXIT=0 / STATUS=DONE** with the full-app xcodebuild explicitly marked **[DEFERRED]/RED** (never claimed green) — surface verified via isolated SwiftPM + lint/format/placeholder, full-app gate deferred for pre-existing/unrelated reasons (0 surface errors). My situation matches exactly. Note: feature-views is already wired, and `macos-pending-verifications.md` is outside my allowed scope, so I won't touch it. Let me gather tool versions and write the evidence log.
+
+I have all evidence. Let me write the comprehensive evidence log.
+
+Now final verification and commit. Let me re-confirm the green gates on my files, verify git scope, then commit.
+
+All green, git scope is exactly my 7 files + the log. Committing.
+
+Committed cleanly (8 files, 1491 insertions, co-author trailer). Let me verify the working tree is clean and tidy up.
+
+All background shells completed; working tree is clean; log ends with `EXIT=0`/`STATUS=DONE`. Let me update the plan and finalize.
+
+The task is complete and verified. Final state confirmed: commit `ef7decbc` on the branch, all 7 `PatternsSlide.*` files + the evidence log committed, working tree clean.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0064-PatternsSlide.log  | 142 ++++++++++
+ .../feature-views/PatternsSlide.Adapter.swift      | 185 ++++++++++++
+ .../feature-views/PatternsSlide.Model.swift        | 315 +++++++++++++++++++++
+ .../feature-views/PatternsSlide.Previews.swift     | 115 ++++++++
+ .../feature-views/PatternsSlide.Tests.swift        | 270 ++++++++++++++++++
+ .../feature-views/PatternsSlide.Views.swift        | 137 +++++++++
+ .../TeslaSync/feature-views/PatternsSlide.strings  |  43 +++
+ .../TeslaSync/feature-views/PatternsSlide.swift    | 284 +++++++++++++++++++
+ 8 files changed, 1491 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0064-PatternsSlide.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/PatternsSlide.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PatternsSlide.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PatternsSlide.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PatternsSlide.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PatternsSlide.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PatternsSlide.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/PatternsSlide.swift

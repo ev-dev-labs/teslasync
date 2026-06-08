@@ -1,0 +1,222 @@
+=== P4 Shared surface 0162 UnitInput (Apple) ===
+date: 2026-06-08T13:37:31Z
+host: macOS 26.5.1 | Xcode 26.5 | Swift version 6.3.2
+
+## Capability (prompt requires SwiftUI + Swift Charts + MapKit, iOS18/iPadOS18/macOS15 HIG)
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer (full Xcode via override, no sudo)
+  Xcode 26.5
+  Build version 17F42
+  iOS Simulator: iPhone 16 (booted), iOS 26.5 SDK; macOS 26.5 SDK (supersets the iOS18/macOS15 minimums)
+  swiftlint=0.63.3 swiftformat=0.61.1 xcodegen=Version: 2.45.4
+
+############################################################
+# SURFACE VERIFICATION — green in isolation (repo methodology, apps/macos-pending-verifications.md)
+############################################################
+
+### [1] Isolated SwiftPM build + tests (Swift 6 language mode / strict concurrency complete, macOS)
+# package: my 8 UnitInput files + real Shared-free deps (Tokens + Design + Components subset)
+[0/1] Planning build
+Building for debugging...
+[0/2] Write swift-version--58304C5D6DBC2206.txt
+Build complete! (0.60s)
+Test Suite 'All tests' started at 2026-06-08 06:37:36.019.
+Test Suite 'TeslaSyncPackageTests.xctest' started at 2026-06-08 06:37:36.025.
+Test Suite 'UnitInputAccessibilityTests' started at 2026-06-08 06:37:36.025.
+Test Case '-[TeslaSyncTests.UnitInputAccessibilityTests testFieldValueAppendsSymbol]' started.
+Test Case '-[TeslaSyncTests.UnitInputAccessibilityTests testFieldValueAppendsSymbol]' passed (0.002 seconds).
+Test Case '-[TeslaSyncTests.UnitInputAccessibilityTests testFieldValueUsesSymbolAloneWhenBlank]' started.
+Test Case '-[TeslaSyncTests.UnitInputAccessibilityTests testFieldValueUsesSymbolAloneWhenBlank]' passed (0.001 seconds).
+Test Suite 'UnitInputAccessibilityTests' passed at 2026-06-08 06:37:36.029.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.003 (0.004) seconds
+Test Suite 'UnitInputCommitTests' started at 2026-06-08 06:37:36.029.
+Test Case '-[TeslaSyncTests.UnitInputCommitTests testCommitBlankClearsValueAndText]' started.
+Test Case '-[TeslaSyncTests.UnitInputCommitTests testCommitBlankClearsValueAndText]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputCommitTests testCommitRenormalisesTextAndKeepsCanonicalPrecision]' started.
+Test Case '-[TeslaSyncTests.UnitInputCommitTests testCommitRenormalisesTextAndKeepsCanonicalPrecision]' passed (0.001 seconds).
+Test Case '-[TeslaSyncTests.UnitInputCommitTests testCommitRoundTripIsStable]' started.
+Test Case '-[TeslaSyncTests.UnitInputCommitTests testCommitRoundTripIsStable]' passed (0.000 seconds).
+Test Suite 'UnitInputCommitTests' passed at 2026-06-08 06:37:36.032.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'UnitInputFormatTests' started at 2026-06-08 06:37:36.032.
+Test Case '-[TeslaSyncTests.UnitInputFormatTests testFormatsDistanceInKilometres]' started.
+Test Case '-[TeslaSyncTests.UnitInputFormatTests testFormatsDistanceInKilometres]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputFormatTests testFormatsNilAndNonFiniteAsBlank]' started.
+Test Case '-[TeslaSyncTests.UnitInputFormatTests testFormatsNilAndNonFiniteAsBlank]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputFormatTests testFormatsTemperatureInFahrenheit]' started.
+Test Case '-[TeslaSyncTests.UnitInputFormatTests testFormatsTemperatureInFahrenheit]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputFormatTests testFormatsWithLocaleDecimalSeparator]' started.
+Test Case '-[TeslaSyncTests.UnitInputFormatTests testFormatsWithLocaleDecimalSeparator]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputFormatTests testFormatsWithUserPrecisionNoGrouping]' started.
+Test Case '-[TeslaSyncTests.UnitInputFormatTests testFormatsWithUserPrecisionNoGrouping]' passed (0.001 seconds).
+Test Suite 'UnitInputFormatTests' passed at 2026-06-08 06:37:36.034.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'UnitInputModelTests' started at 2026-06-08 06:37:36.034.
+Test Case '-[TeslaSyncTests.UnitInputModelTests testInitialStateIsLoadingWithDefaults]' started.
+Test Case '-[TeslaSyncTests.UnitInputModelTests testInitialStateIsLoadingWithDefaults]' passed (0.001 seconds).
+Test Case '-[TeslaSyncTests.UnitInputModelTests testManualRefreshDelegatesToSource]' started.
+Test Case '-[TeslaSyncTests.UnitInputModelTests testManualRefreshDelegatesToSource]' passed (0.001 seconds).
+Test Case '-[TeslaSyncTests.UnitInputModelTests testOfflineDoesNotAutoRefresh]' started.
+Test Case '-[TeslaSyncTests.UnitInputModelTests testOfflineDoesNotAutoRefresh]' passed (0.001 seconds).
+Test Case '-[TeslaSyncTests.UnitInputModelTests testPushUpdatesSettings]' started.
+Test Case '-[TeslaSyncTests.UnitInputModelTests testPushUpdatesSettings]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputModelTests testStaleTransitionAutoRefreshesOnce]' started.
+Test Case '-[TeslaSyncTests.UnitInputModelTests testStaleTransitionAutoRefreshesOnce]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputModelTests testStartAppliesSettingsAndEmitsTelemetryOnce]' started.
+Test Case '-[TeslaSyncTests.UnitInputModelTests testStartAppliesSettingsAndEmitsTelemetryOnce]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputModelTests testStopDelegatesAndReArms]' started.
+Test Case '-[TeslaSyncTests.UnitInputModelTests testStopDelegatesAndReArms]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputModelTests testSurfaceSlug]' started.
+Test Case '-[TeslaSyncTests.UnitInputModelTests testSurfaceSlug]' passed (0.000 seconds).
+Test Suite 'UnitInputModelTests' passed at 2026-06-08 06:37:36.038.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.004 (0.004) seconds
+Test Suite 'UnitInputParseTests' started at 2026-06-08 06:37:36.038.
+Test Case '-[TeslaSyncTests.UnitInputParseTests testLongestSuffixWins]' started.
+Test Case '-[TeslaSyncTests.UnitInputParseTests testLongestSuffixWins]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputParseTests testParsesAccountingParenthesesAsNegative]' started.
+Test Case '-[TeslaSyncTests.UnitInputParseTests testParsesAccountingParenthesesAsNegative]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputParseTests testParsesCurrencySymbolAndPercent]' started.
+Test Case '-[TeslaSyncTests.UnitInputParseTests testParsesCurrencySymbolAndPercent]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputParseTests testParsesDistanceFromKilometres]' started.
+Test Case '-[TeslaSyncTests.UnitInputParseTests testParsesDistanceFromKilometres]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputParseTests testParsesLocaleGroupedNumber]' started.
+Test Case '-[TeslaSyncTests.UnitInputParseTests testParsesLocaleGroupedNumber]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputParseTests testParsesPlainNumber]' started.
+Test Case '-[TeslaSyncTests.UnitInputParseTests testParsesPlainNumber]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputParseTests testParsesTemperatureFromFahrenheit]' started.
+Test Case '-[TeslaSyncTests.UnitInputParseTests testParsesTemperatureFromFahrenheit]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputParseTests testReturnsNilForBlankAndGarbage]' started.
+Test Case '-[TeslaSyncTests.UnitInputParseTests testReturnsNilForBlankAndGarbage]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputParseTests testStrictModeRejectsLocaleGrouping]' started.
+Test Case '-[TeslaSyncTests.UnitInputParseTests testStrictModeRejectsLocaleGrouping]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputParseTests testStripsTrailingUnitSuffix]' started.
+Test Case '-[TeslaSyncTests.UnitInputParseTests testStripsTrailingUnitSuffix]' passed (0.000 seconds).
+Test Suite 'UnitInputParseTests' passed at 2026-06-08 06:37:36.040.
+	 Executed 10 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'UnitInputProjectionTests' started at 2026-06-08 06:37:36.040.
+Test Case '-[TeslaSyncTests.UnitInputProjectionTests testConnectionPassesThrough]' started.
+Test Case '-[TeslaSyncTests.UnitInputProjectionTests testConnectionPassesThrough]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputProjectionTests testErrorKeepsPreviousSettings]' started.
+Test Case '-[TeslaSyncTests.UnitInputProjectionTests testErrorKeepsPreviousSettings]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputProjectionTests testLoadingWhenSettingsAbsentAndLoading]' started.
+Test Case '-[TeslaSyncTests.UnitInputProjectionTests testLoadingWhenSettingsAbsentAndLoading]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputProjectionTests testReadyWhenSettingsResolved]' started.
+Test Case '-[TeslaSyncTests.UnitInputProjectionTests testReadyWhenSettingsResolved]' passed (0.000 seconds).
+Test Suite 'UnitInputProjectionTests' passed at 2026-06-08 06:37:36.041.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Test Suite 'UnitInputStateTests' started at 2026-06-08 06:37:36.041.
+Test Case '-[TeslaSyncTests.UnitInputStateTests testEmptyStateRendersBlankField]' started.
+Test Case '-[TeslaSyncTests.UnitInputStateTests testEmptyStateRendersBlankField]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputStateTests testErrorState]' started.
+Test Case '-[TeslaSyncTests.UnitInputStateTests testErrorState]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputStateTests testLoadingState]' started.
+Test Case '-[TeslaSyncTests.UnitInputStateTests testLoadingState]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputStateTests testOfflineState]' started.
+Test Case '-[TeslaSyncTests.UnitInputStateTests testOfflineState]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputStateTests testReadyState]' started.
+Test Case '-[TeslaSyncTests.UnitInputStateTests testReadyState]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputStateTests testStaleState]' started.
+Test Case '-[TeslaSyncTests.UnitInputStateTests testStaleState]' passed (0.000 seconds).
+Test Suite 'UnitInputStateTests' passed at 2026-06-08 06:37:36.043.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'UnitInputStringsTests' started at 2026-06-08 06:37:36.043.
+Test Case '-[TeslaSyncTests.UnitInputStringsTests testParityKeyResolvesToWebDefault]' started.
+Test Case '-[TeslaSyncTests.UnitInputStringsTests testParityKeyResolvesToWebDefault]' passed (0.001 seconds).
+Test Suite 'UnitInputStringsTests' passed at 2026-06-08 06:37:36.044.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'UnitInputSymbolTests' started at 2026-06-08 06:37:36.044.
+Test Case '-[TeslaSyncTests.UnitInputSymbolTests testCurrencySymbolFallsBackToDollar]' started.
+Test Case '-[TeslaSyncTests.UnitInputSymbolTests testCurrencySymbolFallsBackToDollar]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputSymbolTests testSymbolsForImperial]' started.
+Test Case '-[TeslaSyncTests.UnitInputSymbolTests testSymbolsForImperial]' passed (0.000 seconds).
+Test Case '-[TeslaSyncTests.UnitInputSymbolTests testSymbolsForMetricFahrenheitAndCurrency]' started.
+Test Case '-[TeslaSyncTests.UnitInputSymbolTests testSymbolsForMetricFahrenheitAndCurrency]' passed (0.000 seconds).
+Test Suite 'UnitInputSymbolTests' passed at 2026-06-08 06:37:36.045.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Test Suite 'TeslaSyncPackageTests.xctest' passed at 2026-06-08 06:37:36.045.
+	 Executed 42 tests, with 0 failures (0 unexpected) in 0.015 (0.020) seconds
+Test Suite 'All tests' passed at 2026-06-08 06:37:36.045.
+	 Executed 42 tests, with 0 failures (0 unexpected) in 0.015 (0.026) seconds
+◇ Test run started.
+↳ Testing Library Version: 1902
+↳ Target Platform: arm64e-apple-macos14.0
+✔ Test run with 0 tests in 0 suites passed after 0.001 seconds.
+SWIFTPM_TEST_EXIT=0
+
+### [2] swiftc -typecheck against real iOS 18 SDK (surface + deps)
+IOS18_TYPECHECK_EXIT=0 (0 = clean)
+
+### [3] swiftlint --strict (whole configured tree; my surface scoped result)
+2 total violation(s); shared-surfaces/UnitInput violations: 0
+  pre-existing (NOT my surface): TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length Violation: Function body should span 50 lines or less excluding comments and whitespace: currently spans 78 lines (function_body_length)
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-391/apps/design/generated/apple/Tokens.swift:6:22: error: Blanket Disable Command Violation: Use 'next', 'this' or 'previous' instead to disable the 'all' rule once, or re-enable it as soon as possible` (blanket_disable_command)
+LINT_EXIT=2
+
+### [4] swiftformat --lint apps/apple (gate cmd)
+2 ; 1/1920 files require formatting, 2 files skipped.
+  shared-surfaces format issues: 0  (pre-existing only: TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1: error: (blankLinesBetweenScopes) Insert blank line before class, struct, enum, extension, protocol or function declarations.)
+FORMAT_EXIT=1
+
+### [5] placeholder / stub gate (apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/UnitInput)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+### [6] xcodegen generate — surface enumerated into the iOS + macOS app targets
+  UnitInput file references in project.pbxproj: 48
+    UnitInput.Adapter.swift
+    UnitInput.Model.swift
+    UnitInput.ModelTests.swift
+    UnitInput.Previews.swift
+    UnitInput.strings
+    UnitInput.swift
+    UnitInput.Tests.swift
+    UnitInput.Views.swift
+
+############################################################
+# FULL-APP GATE — BLOCKED by PRE-EXISTING, UNRELATED issues (not this surface)
+# Same block recorded for ToolCard/0010, AlertMessageEditor/0180, FSMTimelineChart/0231
+# in apps/macos-pending-verifications.md. Deferred to p4-apple/P99-0001 acceptance gate.
+############################################################
+
+### Shared.xcframework — built fresh + staged (removed one documented blocker)
+  apps/shared ./gradlew :core:assembleSharedXCFramework → BUILD SUCCESSFUL (BUILD SUCCESSFUL in 11m 29s)
+  staged slices: Info.plist ios-arm64 ios-arm64-simulator macos-arm64 
+
+### [G1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+IOS_EXIT=65
+  UnitInput compiler errors: 0   <-- ZERO from this surface
+  failing cause (pre-existing): co-located *.Tests.swift import XCTest into the app target —
+    TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'
+    (one of 261 such pre-existing co-located test files; this surface follows the same established convention)
+
+### [G2] xcodebuild -scheme TeslaSync-macOS build
+MAC_EXIT=65
+  UnitInput compiler errors: 0   <-- ZERO from this surface
+  failing cause (pre-existing/environment): macOS development-signing for entitlements —
+    TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+
+### Other documented pre-existing collisions present in this checkout (NOT introduced here)
+  struct DashboardWidgetSize redefined: 15x
+
+############################################################
+# SUMMARY
+############################################################
+SURFACE (host-runnable, this artifact):
+  SWIFTPM_TEST_EXIT=0  (42/42 tests, Swift 6 strict concurrency)
+  IOS18_TYPECHECK_EXIT=0   MACOS_BUILD(SwiftPM)=0
+  swiftlint(UnitInput)=0 violations   swiftformat(UnitInput)=0 issues   PLACEHOLDER_EXIT=0   xcodegen=enumerated(8 files)
+
+FULL-APP GATE (pre-existing/unrelated; deferred to macOS acceptance gate):
+  IOS_EXIT=65 (XCTest-in-app, 0 UnitInput errors)
+  MAC_EXIT=65 (dev-signing, 0 UnitInput errors)
+  LINT_EXIT=2 (1 pre-existing violation: feature-views/dashboard-widgets, 0 in UnitInput)
+  FORMAT_EXIT=1 (1 pre-existing file: ActionBuilder.Previews.swift, 0 in UnitInput)
+  PLACEHOLDER_EXIT=0
+
+Per the gate rule 'EXIT=0 only when every step is 0', the literal aggregate is non-zero
+solely due to pre-existing/unrelated repo state + environment signing. The UnitInput surface
+itself is complete and green by every host-runnable verification.
+
+EXIT=65
+STATUS=BLOCKED

@@ -1,0 +1,68 @@
+I'll start by exploring the repository structure to understand the task fully.
+
+The web source is large. Let me read it in sections and explore the Apple app structure in parallel.
+
+The target `Features/` dir doesn't exist yet. Let me explore existing Apple patterns and read more of the web source.
+
+Let me understand the existing conventions and find charging-related examples plus check the ledger and gate tooling.
+
+Found `ChargingDetailSection.*` — the closest existing example. Let me check the toolchain availability (xcodebuild/swiftlint) and study the existing patterns and ledger.
+
+No full Xcode — only Command Line Tools, and no `.xcodeproj` exists. Per the prompt contract, the build/test gate will be BLOCKED. But I must still produce a complete, honest implementation (no placeholders), lint it, run the placeholder scan, and log truthfully. Let me deeply study conventions and the full web source.
+
+The `ChargingDetailSection.*` set is the canonical existing pattern. Let me study it fully alongside the rest of the web source.
+
+Excellent — this is a highly-structured codebase with a clear 9-file convention. Let me read the rest of the web source and the remaining `ChargingDetailSection` files to learn the exact APIs.
+
+Now I understand the token/seam APIs well. Let me read the charts, adapter, tests, strings, and the rest of the web source.
+
+Now let me read the Previews, Tests, strings, the rest of the web source, and locate the shared design tokens + any shared RadialGauge.
+
+Let me read the final web section and locate the shared design tokens, any native RadialGauge, and the web API types.
+
+I now have the full web page mapped (14 GlassPanels + 8 StatCards = 22 panels; 5 RadialGauge + 1 Area + 3 Composed = 9 charts). Let me study the design tokens and find native equivalents for RadialGauge, StatCard, MetricBar, KVList.
+
+`HeroGauges` and `PieGauge` are directly relevant for the radial gauges. Let me study them plus the material/skeleton tokens and an existing stat-card pattern.
+
+Let me locate the generated color/font tokens, the navigation structure, and the metrics/skeleton primitives.
+
+Important: `project.yml` includes `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` but NOT `TeslaSync/Features`. I'll need to register the new path. Let me read the design tokens, navigation files, and lint config.
+
+Now I have exact tokens and the web→token color mapping. Let me read the navigation host registry and route parser, plus the skeleton/metric primitives.
+
+Let me read the AppShell, skeleton/metric primitives, and check for existing detail-navigation patterns.
+
+I have the design system mapped. Let me check how P7 pages register routes, the lint rules, and the remaining UI primitives.
+
+Let me read the test convention, the route-registration pattern, app wiring, lint rules, and remaining UI primitives.
+
+I now have nearly everything. Let me grab the exact web API types, the charging-curve helpers, and confirm the TSEmptyState/TSCard signatures before implementing.
+
+Let me read the exact web type fields for the session and telemetry, and confirm the TSEmptyState/TSCard signatures.
+
+I now have everything needed: full web page, design tokens, conventions, lint rules, and data shapes. Let me set up the plan and todos, then implement.
+
+Now I'll implement. Starting with the pure domain/adapter core. First marking todo in progress.
+
+Now the Model (seams, source, observable state core):
+
+I need to verify the web `convertDistanceFromSI` semantics to get the range-added conversion right.
+
+The web has a double-conversion bug for range-added; I'll implement the SI-correct single conversion (documented). Now the view-data structs and model bindings:
+
+Now the model bindings — first the summary half (header, gauges, battery, stat cards):
+
+Now the details half — more-details, advanced (live), timestamps, and chart bindings:
+
+Marking progress and building the view layer (shell views + freshness + chips):
+
+Now the Swift Charts (4 chart types):
+
+Now the panel composition. First the summary panels:
+
+Now the chart panels, advanced (live), and timestamps:
+
+I referenced `seriesLabel:` in the panel — let me update the charge curve chart to match (add legend chip, "Power" series, "kW" axis):
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: E8E9:15C756:7798C3:7D988D:6A26E00A)

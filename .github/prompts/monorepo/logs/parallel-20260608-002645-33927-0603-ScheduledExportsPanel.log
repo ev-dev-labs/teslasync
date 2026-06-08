@@ -1,0 +1,91 @@
+I'll start by exploring the repository structure, reading the web source, and understanding the existing Apple app architecture.
+
+Key findings: `xcodebuild` requires full Xcode (only CLT installed) → gate will be BLOCKED, but SwiftLint 0.63.3 and Swift 6.3.2 compiler ARE available. I'll build a complete, correct implementation and verify with what's available. Let me explore the existing Apple app structure and an existing feature page to follow the established patterns.
+
+Now let me understand where feature pages actually live in the Apple project and study existing patterns. The project.yml includes `TeslaSync/feature-views` and `Sources/Features` but not `TeslaSync/Features`. Let me investigate the actual conventions and look at completed parity work.
+
+This is the first Apple parity page (no prior logs, no `System` dir yet). The build path `TeslaSync/Features/System` isn't in `project.yml` and `xcodebuild` needs full Xcode (unavailable). Let me study the architecture: SharedFacade (KMP core), an existing CRUD feature view, navigation, components, design tokens, and the string catalog.
+
+Let me read the core architecture files to understand the established patterns for models, state, navigation, and components.
+
+Let me study the navigation registry, a domain facade, error types, and find a representative complete CRUD/data feature view to mirror.
+
+The whole Apple app depends on `import Shared` (KMP xcframework built only via Xcode), so plain `swiftc` compilation isn't possible either — only SwiftLint static checks. Let me examine a complete existing feature view (AuditPanel — a system panel), the domain facade binding, units, and the string catalog format.
+
+The string catalog is huge (187K lines) and already contains some "scheduled" keys. Let me verify the exact keys, check the tooling (placeholder script, ledger), look for KMP shared-core source, and study the AuditPanel reference (a system data panel with a table) plus how routes get registered.
+
+Clear picture now: the 36 keys are absent (must add all), placeholder script + pwsh available, no KMP `ScheduledExport` store exists (facade bootstrap is "future"), and `apple-ledger.json` doesn't exist yet. The 40 parity items = 1 panel + 3 states + 36 strings (hooks aren't counted). Let me study the AuditPanel model/strings/projection, design tokens, key components, and route registration.
+
+Excellent — the AuditPanel establishes the canonical pattern: a `Shared`-free surface with a local load-state enum, a P1/S8 **source seam protocol**, an in-memory source, an `@Observable` model, a pure projection/presentation layer, and an `NSLocalizedString`-based strings facade. Let me examine route registration (AppShell), the design tokens, and key shared components to finalize the approach.
+
+Route registration uses an `AppRouteHostRegistry` populated by helpers like `SettingsRouteRegistration` and wired in `TeslaSyncApp.swift`. `ScheduledExportsPanel` is unrouted (a panel on the data-export surface), nearest group `.system`. Let me read the registration wiring, design tokens, and the key shared component signatures I'll consume.
+
+Now the design tokens and remaining component signatures (Buttons, Badges, Cards, Fields, Pickers, Skeletons, Typography). Let me grab these in parallel.
+
+Tokens are clear. Now the input/select/card/skeleton/typography component signatures plus the forms inputs.
+
+Let me get exact init signatures for the components I'll use most (TextField, Select, GlassPanel, CardHeader, FormField), plus the lint config and placeholder-scan patterns so my code passes both gates.
+
+I have all component signatures. Since I'm adding the 36 keys to the central `Localizable.xcstrings`, I can use `LocalizedStringKey` literals (web key names) directly with the shared components — cleaner than a per-table facade. Let me read the lint config, placeholder-scan patterns, and the overlays/modal components (for the confirm dialog), which are critical to passing both gates I can run.
+
+Let me confirm the placeholder script's matching behavior, find a confirm-dialog/modal component, and see how an existing surface references catalog keys via `LocalizedStringKey` with shared TS components.
+
+The placeholder scanner is case-insensitive and scans comments too — I'll avoid "placeholder", "TODO", etc. entirely (use "prompt"). There's no shared confirm dialog, so I'll use the native HIG `.confirmationDialog`. Let me study a real reference surface (FlagsTable) and the exact `xcstrings` entry format so I add the 36 keys correctly.
+
+FlagsTable is the perfect concrete template (Shared-free surface, `*Strings` facade, `model.phase`/`connection`/`projection`, `TSDataTable`/`TSColumn`, per-row actions). Since these surfaces are `Shared`-free and only `import SwiftUI`, I can attempt a real stub-based typecheck later. Let me read the `TSDataTable`/`TSColumn` API and confirm a couple of typography helpers, then I'll lay out a plan.
+
+`TSDataTable` forces selection checkboxes (not wanted here), so I'll build a custom adaptive table like `AuditPanel` does. Note: the key `namePlaceholder` contains "placeholder" → the case-insensitive scanner will flag it, so I'll use the sanctioned `// parity:allow` marker. Let me confirm `TSText.Variant` cases and how `TeslaSyncApp` composes the route registry, then write the plan and implement.
+
+I now have a complete understanding of the architecture and all component signatures. Let me set up a plan and todos, then implement.
+
+**Key decisions:**
+- Follow the proven `Shared`-free surface pattern (FlagsTable/AuditPanel): local load-state, P1/S8 source seam + in-memory impl, `@Observable` model, pure projection/presentation, strings facade resolving from `Localizable.xcstrings`.
+- Build a custom adaptive table (regular columns + compact cards) — `TSDataTable` forces unwanted selection chrome.
+- Use native HIG `.confirmationDialog` for delete confirm.
+- Register at the currently-empty `.system` route (non-destructive) via a registration helper mirroring `SettingsRouteRegistration`.
+- Gate is BLOCKED (no full Xcode), but I'll verify with SwiftLint `--strict`, the placeholder scan, and a stub-based `swiftc -typecheck`.
+
+Now I'll implement. Starting with the Model file (DTOs, source seam, `@Observable` model, strings facade) — following the `AuditPanel.Model`/`FlagsTable` pattern exactly.
+
+Now the Projection file (pure Foundation logic — row formatting, presentation phase/connection, form validation).
+
+Now the surface View — header, connectivity/error banners, the three data states, and the native delete confirmation dialog.
+
+Now the inline create/edit form subview (adaptive grid, all 14 form-related strings).
+
+Now the adaptive table (regular `Grid` with horizontal scroll + compact card list) with the four per-row actions.
+
+Now the navigable screen + route-registration seam.
+
+Now previews and the unit tests (mirroring `AuditPanel.Tests` structure with pure-logic coverage).
+
+All 8 implementation files created. Let me update todos and run SwiftLint `--strict` on the new files to catch issues early.
+
+SwiftLint linted the whole project (config `included` wins) and found 1 serious violation. The piped exit code is unreliable. Let me lint only my files and surface the exact violation.
+
+The single violation is in a **pre-existing** file (`LifetimeStatsWidget.Adapter.swift`), not mine — SwiftLint lints the whole project via the config's `included` paths regardless of the path arg. Let me confirm none of my files have violations.
+
+My new files are lint-clean (0 violations). The single repo violation is pre-existing and unrelated (`LifetimeStatsWidget.Adapter.swift`), which I won't touch. Let me verify the exact gate-style invocation from repo root lints my files and check whether it's affected by the pre-existing one.
+
+Confirmed: the config's `included` list drives linting (1909 files), and the lone violation is pre-existing/unrelated. Let me verify my files are actually being linted (not silently skipped), since `Features/System` isn't yet in `included`.
+
+My files aren't linted yet because `Features` isn't in `included`. Adding it is required wiring. Let me update `.swiftlint.yml` and `project.yml`, then re-lint.
+
+My `.Tests.swift` raises a real question: feature-views (an app-target source path) contains many `.Tests.swift`, but the test target only globs `Tests/Unit`. Let me check how those tests are wired before adding `Features` to the build, to avoid breaking the app-target link with `import XCTest`.
+
+Confirmed: `feature-views` (app-target path) holds many `.Tests.swift` with no excludes — so the established convention compiles them into the app target, and my `Features/System/*.Tests.swift` matches it exactly. I'll add `TeslaSync/Features` to both app targets in `project.yml` (required so my files compile and the `TeslaSyncApp` registration resolves).
+
+Now wire the navigation registration in `TeslaSyncApp.swift` (additive, non-destructive — fills the currently-empty `.system` route).
+
+Now let me re-run SwiftLint to confirm my files are linted and clean now that `Features` is in `included`.
+
+My files are now linted but two violations: a 148-char line in Form.swift and Model.swift exceeding the 400-line file limit (both warnings promoted by `--strict`). Let me check all file line counts and function lengths, then fix.
+
+Only the Model file exceeds 400 lines. I'll extract the wire DTOs into a separate `ScheduledExportsPanel.DTO.swift`. Let me find the exact section boundaries.
+
+I'll extract the DTOs into a separate file. Let me confirm the boundary blank lines, then split precisely with `sed`.
+
+Boundaries clear: DTOs are lines 21–230. Let me split into `ScheduledExportsPanel.DTO.swift` and trim the Model file.
+
+
+Authorization error, you may need to run /login (Request ID: EB2B:8746:32625B5:34D24F2:6A26F137)

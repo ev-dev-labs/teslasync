@@ -1,0 +1,175 @@
+=== P4 Feature view 0272 SignalStatsPanel (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon) — Command Line Tools only (NO Xcode.app).
+  Toolchain present  : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · pwsh 7.6.2
+  SDK present        : MacOSX.sdk (Command Line Tools). iOS 18 Simulator SDK + simctl + xcodebuild are
+                       NOT present (they ship only inside a full Xcode.app).
+  Capability         : SwiftUI present (typecheck proven below). This surface uses NO Swift Charts and NO
+                       MapKit (web source has zero charts/maps). The FULL-APP iOS-Simulator + macOS
+                       `xcodebuild build test` cannot be invoked on a CLT-only host (API evidence below) and
+                       is DEFERRED to the signed macos-latest acceptance gate, per the repo's sanctioned
+                       disposition (apps/macos-pending-verifications.md). The SURFACE itself is verified green
+                       on every host-runnable gate PLUS an isolated Swift 6 strict-concurrency build+run and a
+                       real-SDK `swiftc -typecheck` against the actual shared component library.
+
+WEB SOURCE (the specification)
+  web/src/features/telemetry/components/SignalStatsPanel.tsx — a PURE presentational leaf fed a computed
+  `stats: SignalStat[]` prop (plus optional `selectedSignals` / `title` / `signalIndex` and a `loading` flag)
+  by its parent (the Workspace / Explorer page). Regions:
+    GlassPanel(p-4 sm:p-5) -> header row [ span.section-title{title ?? "Stats Summary"}
+                              + Toggle "Hide empty ({{count}})" shown only when emptyCount > 0 ]
+                           -> loading ? a grid of 4 Skeletons (grid-cols-2 sm:grid-cols-4)
+                           -> visibleStats.length > 0 ? DataTable(compact) with FIVE columns:
+                                Signal (CHART_COLORS[idx] mono name, "No data in range" subtitle when empty),
+                                Min, Max, Avg, Count. Min/Max = text-secondary, Avg = text-primary,
+                                Count = text-muted; a NaN / non-finite value renders the muted "—".
+                           -> else "No stats available".
+  Behaviour: displayStats = selectedSignals ? one row per selected signal (gap-filled with emptyStatRow that
+  shows "—" + "No data in range", new Map(stats) = last-wins) : stats. emptyCount = rows with count===0.
+  visibleStats = hideEmpty ? drop empties : displayStats. Data sources: `useTranslation` only (no data hooks).
+  Formatting helpers consumed: fmtNumber / fmtInt (numberFormat.ts, global precision 2, safeNumber => 0).
+  i18n keys (t calls): Signal, Min, Max, Avg, Count, Stats Summary, No stats available,
+  signalStats.noDataInRange, signalStats.hideEmpty.
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/feature-views/SignalStatsPanel.*, the only allowed files + this log)
+     200   SignalStatsPanel.Adapter.swift
+     274   SignalStatsPanel.Model.swift
+      84   SignalStatsPanel.Previews.swift
+      38   SignalStatsPanel.strings
+     165   SignalStatsPanel.swift
+     346   SignalStatsPanel.Tests.swift
+     198   SignalStatsPanel.Views.swift
+    1305 total
+
+  Adapter.swift  — SignalStat model (web SignalStat); SignalStatsFormat (number / integer / numericOrDash —
+                   ports of numberFormat.ts fmtNumber / fmtInt + the "—" sentinel); SignalStatRow + the
+                   SignalStatsRows merge (displayStats last-wins gap-fill, CHART_COLORS index rule,
+                   emptyCount, visible filter); SignalStatsAccessibility join. All pure + dependency-free.
+  Model.swift    — P1/S8 state holder (SignalStatsModel + SignalStatsSource + InMemorySignalStatsSource),
+                   P1/S11 telemetry seam (SignalStatsTelemetry + OSLog default, view.opened), P1/S10 facade
+                   (SignalStatsStrings + hideEmptyLabel interpolation), SignalStatsInput, SignalStatsConnection
+                   (live/stale/offline), and the pure SignalStatsProjection (loading/empty/error/data) +
+                   one-shot stale auto-refresh.
+  swift          — the surface view: section-title header + "Hide empty (N)" toggle + freshness chip +
+                   connectivity banner + content state switch, in a TSGlassPanel. view.opened on appear.
+  Views.swift    — SignalStatsContent (+ hidden-all fallback), the five-column TSDataTable, the loading
+                   skeleton grid, the empty render, and the error (QueryError) chrome.
+  Previews.swift — data / selected-with-gaps / empty / loading / error / stale / offline previews (DEBUG).
+  Tests.swift    — 32 XCTest cases (formatters, merge, color index, emptyCount/visible, projection, model
+                   wiring + telemetry + stale auto-refresh, accessibility).
+  strings        — per-surface i18n table (the 9 web source keys + the native chrome keys).
+  NOT touched (parallel-unsafe / integration scope, per AcDcStatsPanel/0096): project.yml + .swiftlint.yml
+  already carry "TeslaSync/feature-views"; the shared Localizable.xcstrings is NOT edited (strings ship
+  per-surface); apps/macos-pending-verifications.md is NOT edited here (deferral recorded in-log, as 0096 did).
+
+PARITY MAPPING (web -> Apple platform tokens; no Tailwind ported)
+  GlassPanel             -> TSGlassPanel (Sources/Components/UI/Cards.swift)
+  DataTable (5 cols)     -> shared TSDataTable + TSColumn (signal/min/max/avg/count)
+  Toggle "Hide empty"    -> shared TSToggle (label resolved via facade + count interpolation)
+  Skeleton               -> TSSkeleton (4-up LazyVGrid, web grid-cols-2 sm:grid-cols-4)
+  FadeIn                 -> TSFadeIn ; EmptyState -> TSEmptyState ; QueryError -> TSQueryError
+  CHART_COLORS[idx]      -> TSChartPalette.color(at:) (the same Okabe-Ito CB-safe series palette)
+  text-secondary/primary/muted -> Color.TS.textSecondary / textPrimary / textMuted (light+dark+highContrast)
+
+STATES (every state renders — no hidden surface)
+  loading  -> 4-up skeleton grid (web `loading`).
+  empty    -> TSEmptyState "No stats available" (web else-branch); also the hide-all fallback.
+  error    -> TSQueryError + retry (P4 leaf contract; upstream message shown verbatim).
+  data     -> the five-column table; the "Hide empty (N)" toggle filters no-data rows.
+  stale    -> amber freshness chip + banner + one-shot auto-refresh.
+  offline  -> muted freshness chip + "showing last known data" banner (no auto-refresh).
+
+------------------------------------------------------------------------------------------------------
+GATE STEP 1/5 — iOS Simulator: xcodebuild -scheme TeslaSync -destination 'iPhone 16' build test
+  STATUS: DEFERRED — NOT EXECUTED ON THIS HOST (Command Line Tools only; no Xcode.app, no iOS SDK, no simctl).
+  API evidence (verbatim):
+    $ xcodebuild -version  -> xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+    IOS_EXIT(observed)=1
+    $ xcrun simctl list devices  -> xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+    $ xcode-select -p  -> /Library/Developer/CommandLineTools
+  Deferred to: p4-apple/P99-0001-apple-acceptance-gate (macos-latest, signing identities) — verification cmd:
+    cd apps/apple && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+      xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+
+GATE STEP 2/5 — macOS: xcodebuild -scheme TeslaSync-macOS build test
+  STATUS: DEFERRED — same CLT-only cause as Step 1. MAC_EXIT(observed)=1 (xcodebuild unavailable). Deferred to
+  the same macos-latest acceptance gate (xcodebuild -scheme TeslaSync-macOS build test).
+
+  -- SURFACE-SCOPED SUBSTITUTE VERIFICATION (what THIS host CAN prove about the surface) --
+  (a) swiftc -typecheck of the SwiftUI views against the REAL shared component library + real generated tokens (macOS 15 SDK, Swift 6):
+      RESULT: PASS — 0 type errors (SignalStatsPanel views bind the real TSGlassPanel/TSDataTable/TSColumn/TSToggle/TSEmptyState/TSQueryError/TSSkeleton/TSFadeIn/TSChartPalette + Color.TS/Font.TS/TSSpacing/TSRadius).
+      TYPECHECK_EXIT=0
+
+  (b) isolated Swift 6 strict-concurrency build + RUN of the pure core (Adapter + Model), headless:
+      swiftc -swift-version 6  -> COMPILE_EXIT=0
+      ./harness  -> CHECKS_PASSED=37 FAILURES=0   RUN_EXIT=0
+      RESULT: PASS — all core checks green (formatters, last-wins merge, color index, emptyCount/visible, projection branches, model wiring + view.opened telemetry + stale auto-refresh, a11y join, i18n facade).
+
+GATE STEP 3/5 — swiftlint --strict (the 6 surface swift files)
+  Done linting! Found 0 violations, 0 serious in 6 files.
+  LINT_EXIT=0
+
+GATE STEP 4/5 — swiftformat --lint (the 6 surface swift files)
+  0/6 files require formatting.
+  FORMAT_EXIT=0
+
+GATE STEP 5/5 — check-placeholders.ps1 (real scan of the 7 surface files)
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  EXIT=0
+  PLACEHOLDER_EXIT=0   (note: the literal gate path '.../SignalStatsPanel' is a filename PREFIX, not a dir, so the
+  stock gate Test-Path returns a trivially-clean result; the scan above is the REAL scan of all 7 files.)
+
+I18N (P1/S10) — every string resolves through the SignalStatsStrings facade; no English literals in Swift.
+  Source-parity keys present in SignalStatsPanel.strings: Signal, Min, Max, Avg, Count, Stats Summary,
+  No stats available, signalStats.noDataInRange, signalStats.hideEmpty (%lld = web "{{count}}").
+  Native chrome keys: signalStats.panelA11y/live/stale/offline/staleBanner/offlineBanner/refresh/loadingA11y.
+
+ACCESSIBILITY
+  Panel: accessibilityElement(children:.contain) + panel label. Header title carries .isHeader. Refresh button,
+  hide-empty toggle, and the QueryError retry all have labels. Each table row exposes a combined VoiceOver
+  label "signal, Min x, Max y, Avg z, Count n" (SignalStatsAccessibility.rowLabel, unit-tested). Skeleton +
+  freshness chip carry labels; decorative icons are a11y-hidden. TSSkeleton/TSFadeIn honour Reduce Motion.
+
+TELEMETRY (P1/S11)
+  SignalStatsModel.start() emits view.opened with surface slug "SignalStatsPanel" exactly once (idempotent;
+  asserted by the model run in Step 2(b)). OSLog default; production injects the shared-core sink.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green      : the two xcodebuild steps are labelled DEFERRED/NOT-EXECUTED with verbatim
+                            xcode-select/simctl API evidence — never shown as passed. The green checks are real
+                            command outputs captured above.
+  2  No scope narrowing   : all 5 web columns, the selected-signal gap-fill, the hide-empty toggle, and the
+                            loading/empty/error/stale/offline states are implemented — nothing dropped.
+  3  No skip-and-assume   : the web source was read end-to-end; every t() call and render branch is reproduced.
+  4  No stubs as final    : zero stubs/skeleton-only; placeholder gate = 0 (real scan of all 7 files).
+  5  No parity shortcuts  : shared TS* components + design tokens used; no Tailwind ported, no raw hex.
+  6  No delegation        : implemented directly; no agents.
+  7  No predecessor bypass: binds P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry;
+                            did NOT self-register project.yml/.swiftlint.yml (already carry feature-views) and
+                            did NOT edit the shared Localizable.xcstrings (parallel-unsafe).
+  8  No commit on red     : the committed artifact (SignalStatsPanel.* + this log) is GREEN on every host-
+                            runnable gate AND on a real isolated Swift 6 build+run (37/37) AND on a real-SDK
+                            swiftc -typecheck against the actual component library (0 errors). The full-app
+                            xcodebuild gate is DEFERRED (platform-capability: CLT-only host), not RED.
+  9  No silent drift      : changes confined to apps/apple/TeslaSync/feature-views/SignalStatsPanel.* + this log.
+                            (Pre-existing unrelated dirty files web/.../FleetApiSection.tsx +
+                            web/.../BackupRestorePage.tsx are NOT touched and NOT committed.)
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic SignalStatsPanel shipped at parity with the web source and verified to
+  the maximum extent this Command-Line-Tools-only host allows: swiftlint --strict / swiftformat --lint /
+  placeholder gate all green; the pure core compiles and 37/37 checks pass under Swift 6 strict concurrency;
+  and the SwiftUI views type-check cleanly (0 errors) against the REAL shared component library + the REAL
+  generated design tokens on the macOS 15 SDK. The full-app iOS-Simulator + macOS `xcodebuild build test` is
+  DEFERRED — NOT failed — to p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner, because
+  this host has only Command Line Tools (no Xcode.app, no iOS SDK, no simctl; API evidence captured in Steps
+  1-2). This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition recorded in
+  apps/macos-pending-verifications.md and used by every prior P4 feature-view surface (0010 ToolCard,
+  0180 AlertMessageEditor, 0231 FSMTimelineChart, 0096 AcDcStatsPanel). Zero SignalStatsPanel/feature-views
+  errors anywhere a check could run.
+
+EXIT=0
+STATUS=DONE

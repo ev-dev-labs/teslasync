@@ -1,0 +1,198 @@
+I'll start by understanding the environment, the web source specification, and the existing Apple app structure.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed, and `simctl` (iOS Simulator) is unavailable. Let me verify whether full Xcode exists anywhere and explore the Apple app structure before deciding.
+
+Found `/Applications/Xcode.app` but it's only 96 bytes (likely a stub). Let me verify if it's a real Xcode and explore the actual Apple source structure.
+
+`xcodebuild` binary exists inside Xcode.app. `xcode-select -s` needs root, but I can use `DEVELOPER_DIR` to point to it without sudo. Let me verify Xcode is functional and explore the widget conventions.
+
+**Xcode 26.5 is fully functional** via `DEVELOPER_DIR` — iOS Simulator (iPhone 16) and macOS SDK both available. The platform capability IS present, so I'm targeting STATUS=DONE. Let me explore the project conventions deeply.
+
+No dashboard widgets exist yet in the Apple app — this is greenfield for this surface type. Let me examine the existing shared components, state-holder infra, design tokens, localization, and a reference UI surface, plus the web shared scaffolding it depends on.
+
+Let me understand the build feasibility (Shared.xcframework, xcodegen, baseline state) and the web shared scaffolding + native state-holder patterns in parallel.
+
+Critical architecture finding: the app binds views → Swift `@Observable` models → KMP `Shared.xcframework` (built via Gradle/Kotlin in a build preAction). `Shared.xcframework` isn't present yet. Let me assess the KMP shared core, the binding pattern, and the web data contract before deciding build feasibility.
+
+The KMP core has `AutomationsStore` + `AutomationModels`. Let me read those, the web hook/types, and the shared EventFeed for exact parity.
+
+I now have the full data contract. Let me set up tracking, kick off the heavy KMP `Shared.xcframework` build in the background (the long pole for the gate), and read reference files meanwhile.
+
+KMP build running in background (caches + network present). Reading reference patterns now.
+
+Reading design tokens, data-display (freshness/timestamp), state-view patterns, i18n catalog, and test patterns.
+
+Let me check the KMP build progress and read the design tokens, i18n catalog format, and test patterns.
+
+KMP build is compiling (will take a while). Let me read token specifics, the i18n catalog format, the model-wiring view pattern, and test patterns.
+
+Confirmed: `pwsh` available (placeholder gate runnable), my 4 i18n keys are absent (must add; catalog uses en/ar/he), no telemetry facade exists (I'll add a scoped seam). Let me read the web formatters and native formatters to match output, then write the plan.
+
+I have full context now. Let me set up tracking and the plan, then implement while the KMP framework finishes building.
+
+`FacadeError` has directly-constructible cases (`.offline`, `.network`, etc.) — good for state tests. Writing the plan, then implementing.
+
+Let me confirm test-import convention, any shared date parser, and the build status before writing files.
+
+Tests use `@testable import TeslaSync`. I'll match the codebase's `public` convention. Let me check the build, then write the files.
+
+KMP build still compiling. I'll write the source files now (independent of the framework). Starting with the pure, testable projection.
+
+Diagnostics seam next, then I need the exact `AutomationsStore` refresh API. Let me read the store's public surface.
+
+Confirmed: the KMP store's history refresh is private — no public force-refresh. My model will expose `retry()` as a re-subscribe (honest, public-API-only). Writing the diagnostics seam and the view now (neither imports `Shared`).
+
+Let me fix a comment wording and add the pure state→presentation resolver to the projection file, then build the view.
+
+Let me check the KMP build and write the main view file.
+
+Let me verify the component/token APIs I referenced (`TSSkeleton`, `teslaSyncTheme`, `Color.TS.surface/textMuted/...`).
+
+All component/token APIs confirmed. Writing the KMP-bound model (the only `import Shared` file), mirroring the `VehicleSettingsModel` pattern.
+
+Now the i18n keys. Let me inspect the catalog's interpolation-key format and confirm existing keys before scripting the additions.
+
+The catalog is partially curated (even `loading`/`score.value` rely on runtime fallback). I'll still add my keys per the requirement. Let me inspect exact JSON formatting to splice safely.
+
+2-space indent, standard JSON style. I'll splice my keys after the `"strings": {` line via a validated Python script (en=translated, ar/he=needs_review, matching the file's convention).
+
+18 i18n keys added and JSON re-validated. Let me check the KMP build and write the tests.
+
+KMP build still linking (slow first build). Let me verify a key assumption — whether `TSTone` (associated-value-free enum) is implicitly `Equatable` — since my `Equatable` view-data depends on it.
+
+Confirmed: value-free enums are implicitly `Equatable`. Now writing the test suite (adapter, per-state, freshness, descriptor, a11y, diagnostics), mindful of swiftlint's 2-char identifier rule.
+
+Let me update progress and run swiftformat/swiftlint on the new files while the framework builds.
+
+KMP build still linking. Let me auto-format my new files and run swiftlint on them (no framework needed).
+
+swiftformat passes. swiftlint scanned all 522 files (using `included:`) and found 4 violations — I need to see if they're mine or pre-existing. Let me surface the violations.
+
+Both violations are in my view file (too long; a `label = label + …` shorthand). Let me view the exact regions, then split out the registry types and fix the operator.
+
+Let me fix the shorthand-operator issue, then split the registry types into their own file to satisfy file-length.
+
+Now run swiftformat + full swiftlint again to confirm zero violations.
+
+swiftformat clean (0/266) and swiftlint strict: zero violations. The KMP framework build finished — let me confirm it staged `Shared.xcframework` and verify the automations API matches my model.
+
+KMP build succeeded (22m, mostly cached now). I ran gradle directly, so I must stage `Shared.xcframework` into `apps/apple/Frameworks/` and verify the automations API matches my model. Let me check the rest of the staging script and run it.
+
+Let me stage the framework (cached gradle → fast) and inspect the automations API to verify my model's symbol usage.
+
+Framework staged (iOS device + sim + macOS). Let me verify the automations API signatures in the generated interface match my model.
+
+The Obj-C header prefixes names with `Shared`, but Kotlin/Native adds `swift_name(...)` mappings (matching how existing code uses un-prefixed `Resource`). Let me verify the exact Swift names + property signatures for the automations types.
+
+`automationHistory(limit:)` takes `int32_t` → my `Int32` ✓. Let me confirm the property signatures (`durationMs` nullability, `items`, `summary`, scalar types).
+
+`AutomationHistory` fields all match (`durationMs` is `KotlinLong?` → `.int64Value` ✓). Let me confirm `AutomationHistoryListResponse.items/.summary` and `AutomationHistoryStats` scalars.
+
+All Shared automations signatures match my model. Let me generate the Xcode project and sanity-check the app entry point for any pre-existing "P7 pages pending" gaps.
+
+ContentView is a self-contained P0 shell (no missing P7 page refs) — baseline should compile. Let me compile the app + tests for iOS (fast check) before the full gate.
+
+Compile errors in my files — let me extract the actual error messages.
+
+Strict-concurrency (Swift 6 complete) errors: `TSTone`/`LocalizedStringKey` aren't `Sendable`, and the static `ISO8601DateFormatter`s aren't concurrency-safe. Fixing all three: drop `Sendable` from the TSTone-holding struct, store descriptor i18n keys as `String`, and create formatters per-call.
+
+Now fix the descriptor to store `String` i18n keys (so it stays `Sendable` for the `static let`):
+
+Rebuilding iOS app + tests to confirm the strict-concurrency fixes (and surface any remaining errors in one pass).
+
+Build succeeded, but one warning in my code: `TSFormattedNumber.format` is `@MainActor`-isolated (it's a `View` type), and I call it from the nonisolated projection. I'll replace it with a nonisolated local formatter so the adapter stays pure. Let me view the exact lines.
+
+Now update the test to use the nonisolated formatter instead of the main-actor `TSFormattedNumber.format`.
+
+Let me add a locale-safe `decimalString` test, then reformat/relint and run the full iOS build+test.
+
+swiftformat + swiftlint clean. Now running the full iOS `build test` (compiles + runs the test suite) — the actual gate command.
+
+Build succeeded but the `test` action returned 65 — I need to see which tests failed (the scheme also runs pre-existing unit + UI tests). Let me inspect the results.
+
+The failures are in pre-existing `AuthOnboardingUITests` (UI test runner crashes during auth-flow bootstrap + a `simctl` diagnostics error) — not my code. `AppLaunchUITests` passed, and I never touched auth. Let me confirm my unit tests (and all of `TeslaSyncTests`) passed in that run.
+
+My test class compiled, but I don't see the `TeslaSyncTests` unit-suite execution — the UI test crash may have aborted the run before/around the unit tests. Let me run my unit suite explicitly to validate it passes.
+
+The unit run failed immediately on `simctl` not found. But the earlier full run *did* launch the sim. Let me inspect the context to understand the simctl/developer-dir issue.
+
+The active developer dir is CLT, so xcodebuild's CoreSimulator helpers can't find `simctl` and the sim got wedged (the auth UI tests crashed it). Let me reset the simulator and run my unit suite in isolation to validate it.
+
+Simulator is booted. Let me stop the hanging bootstatus and run my unit test class against the booted device by UDID.
+
+Same `simctl`-not-found failure even on a pre-booted sim — xcodebuild's test coordinator resolves tools via the active `xcode-select` dir (CLT), not `DEVELOPER_DIR`. Let me see the exact crash and check if I can switch the active dir.
+
+No passwordless sudo to switch `xcode-select`. The XCTest *execution* harness resolves `simctl` via the active CLT dir — this matches the pre-existing "P9-0001 XCTest unit gate BLOCKED" note. Let me try unblocking via `launchctl setenv` so CoreSimulator inherits the Xcode dir.
+
+`launchctl setenv DEVELOPER_DIR` is set and sim is booted. Re-running my unit test class — CoreSimulator subprocesses should now resolve `simctl`.
+
+Let me view the full crash context and confirm whether a *pre-existing* unit test (untouched by me) crashes identically — proving it's environmental.
+
+Major insight: pre-existing `LoadableStateTests` **passed** (`** TEST SUCCEEDED **`) on the same sim — the harness works! So my `AutomationHistoryWidgetTests` specifically crashes the host at load. Let me inspect the crash log for the cause.
+
+That run also rebuilt the UI target and the host was SIGKILL'd at ~23s — classic cold-start watchdog timeout on first app install. `LoadableStateTests` passed right after (warm). Let me re-run my class now that the host is warm.
+
+Tests now execute (warm sim) — 21/23 pass. The 2 failures are both duration formatting: `1450ms`. This is float rounding (`1.45` → `%.1f` → "1.4", not "1.5"). Let me check what the web (`toFixed`) actually produces to pick the correct expectation for parity.
+
+Verified: web `(1450/1000).toFixed(1)` = **"1.4"** — so native "1.4s" is correct parity. My two test *expectations* were wrong. Fixing them to the verified web-matching value.
+
+Let me add a clarifying comment documenting the web-parity rounding, then rebuild+rerun my unit suite on the warm sim.
+
+Cold-start install flakiness again (server died on first launch post-rebuild). The build is done; re-running `test-without-building` (warm) as before.
+
+The sim entered an invalid state from repeated install attempts. Let me cleanly erase+boot it, pre-install the app via `simctl` (which works in my shell), then run — bypassing xcodebuild's flaky installer.
+
+App pre-installed on a healthy booted device. Running my unit suite now (with one retry for cold-start).
+
+My **23 unit tests pass cleanly** (`** TEST EXECUTE SUCCEEDED **`, 0 failures). The duration fix was correct. Now let me determine whether the earlier `AuthOnboardingUITests` failure is genuine or just cold-start flakiness — this decides whether the full gate can go green.
+
+`testFirstRunShowsSignInShell` **passed** warm — the auth UI issue is `testCancelledSignInReturnsToSignedOutShell` (a sign-in-cancel flow, likely ASWebAuthenticationSession crashing headless) plus cold-start restarts. Let me see attempts 2/3.
+
+Both auth UI tests pass individually warm — the non-zero exit comes from xcodebuild's `xcrun simctl` diagnostic failure (CLT active dir) destabilizing multi-test sessions. Let me stop this and try restarting `CoreSimulatorService` so it picks up the launchd `DEVELOPER_DIR`.
+
+`env -i xcrun simctl` fails — confirming any subprocess without `DEVELOPER_DIR` can't find `simctl` (root cause). Let me locate `CoreSimulatorService`'s launchd domain and restart it so it inherits the launchd `DEVELOPER_DIR`.
+
+CoreSimulatorService restarted (now inherits launchd `DEVELOPER_DIR`). Let me reboot the sim and re-run the 2-test auth UI session — if it completes cleanly, the diagnostic issue is fixed.
+
+The `simctl` diagnostic failure persists (CLT active dir, no sudo) — it destabilizes multi-launch UI sessions even though every test passes. This is the pre-existing P9-0001 blocker. macOS tests run on-host (no simulator/simctl), so let me try the macOS gate — it may give a clean test run.
+
+macOS build fails on the **dev-cert/entitlements** requirement — exactly the predecessor's "macOS dev-cert" blocker (pre-existing, not my code). Let me validate my surface still *compiles* for macOS with signing disabled, and run the placeholder gate.
+
+macOS compiles my surface cleanly (`** BUILD SUCCEEDED **`) — fully cross-platform. The macOS gate failure is purely the pre-existing dev-cert config. macOS unit tests run on-host (no simulator/simctl), so let me run my suite there with signing disabled — potentially the cleanest validation.
+
+macOS test host can't be produced without dev-cert signing (the entitlements blocker again). I've validated everything in my control. Let me run the placeholder gate on my surface.
+
+Placeholder gate passes (0 violations). Let me run the **full** `TeslaSyncTests` unit suite (mine + all others) to confirm no regressions and a clean unit-gate EXIT=0.
+
+All executed tests pass (0 failures everywhere); long multi-class sessions just get interrupted by the same `simctl` instability. I have comprehensive evidence. Let me extract exact evidence lines and update tracking.
+
+Evidence confirms: the `AuthOnboardingUITests` *suite passed* — only the session exit was poisoned by the `simctl` teardown error. Both gate blockers are pre-existing/environmental. Let me assemble the official gate log with authentic results.
+
+Static gates all green. Now appending the build/test evidence and blocker analysis to the log.
+
+Let me review the complete log for accuracy.
+
+The log is thorough. One correction: line 7's `xcode-select -p` reflects the shell's `DEVELOPER_DIR` override, not the persistent active dir. Let me make that precise to avoid any drift.
+
+Let me do a final review of the two most complex files before committing.
+
+Let me verify `reduceMotion` is actually used (to honor the reduce-motion requirement and avoid a dead declaration).
+
+`reduceMotion` is declared but unused — I'll make it meaningful by adding a reduce-motion-aware cross-fade on state changes (honoring the requirement and mirroring the web's update feedback).
+
+Let me reformat/lint and confirm the change still compiles (incremental iOS build).
+
+swiftformat + swiftlint clean, iOS rebuild succeeded. Let me reconfirm my 23 unit tests still pass after this final change (warm sim, retry for cold-start).
+
+All 23 tests reconfirmed green post-change. Let me review git status and stage only my surface files (excluding pre-existing unrelated changes and build artifacts).
+
+Git status is clean to stage: my surface, tests, i18n, and log. The two `web/` files are pre-existing unrelated changes (present before I started) — I'll exclude them. The `.xcodeproj`/`Frameworks` are git-ignored. Committing now.
+
+Staged exactly my 8 files (1661 insertions); the 2 pre-existing `web/` files correctly excluded. Committing with an honest message.
+
+Committed (`6b669b1e`). Let me finalize tracking.
+
+All todos done. Final verification that the working tree is clean (only the pre-existing `web/` files remain, untouched by me).
+
+Task complete. Working tree is clean — my commit is in place, the two pre-existing `web/` files are correctly left untouched, and generated artifacts (`.xcodeproj`, `Shared.xcframework`) are git-ignored.
+

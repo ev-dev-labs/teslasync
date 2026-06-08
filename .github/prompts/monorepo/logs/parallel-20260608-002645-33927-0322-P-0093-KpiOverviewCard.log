@@ -1,0 +1,104 @@
+I'll start by exploring the environment and reading the web source that serves as the specification.
+
+Let me read the web source spec and explore the existing Apple app structure for established patterns.
+
+The web `KpiOverviewCard` is a pure presentational composition (header + KPI grid + secondary + footer). Let me read its dependencies and the established native pattern from the sibling `AIUsageCard` files.
+
+The `shared-surfaces` directory doesn't exist yet. Let me study the canonical multi-file pattern via `AIUsageCard` and check how the Xcode project sources files.
+
+Let me check toolchain availability and study the full canonical pattern (Model/Adapter/Views/Previews/Tests/strings) plus the design tokens and i18n facade.
+
+Critical finding: **only Command Line Tools are installed (no full Xcode), and `xcrun simctl` lists no iPhone 16 simulator** — so the gate's `xcodebuild ... build test` cannot run on this runner. That's the prompt's documented BLOCKED-capability path. I'll still write complete, production-quality code and run every check that IS possible. Let me confirm the Xcode situation and study the rest of the canonical pattern.
+
+`/Applications/Xcode.app` exists but isn't selected. I can try `DEVELOPER_DIR` to use it without sudo. Let me test that and continue studying the pattern (Views/Previews/Tests/strings + design tokens).
+
+**Major update:** With `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`, **Xcode 26.5 works and a booted iPhone 16 simulator (iOS 26.5) is available.** The platform capability IS present — so I should aim for a real build/test, not BLOCKED. Let me finish studying the pattern (Previews/Tests/strings, design tokens, motion) and check native peers.
+
+Let me locate the `AiUsageProjection` definition, the design tokens, motion helper, and the placeholder checker rules.
+
+Found `.Projection.swift` as the 8th file. Let me read it, the design tokens, motion helper, and placeholder rules.
+
+Let me read the design tokens and placeholder rules, and investigate how `.Tests.swift` files in feature-views are routed to the test target plus overall build feasibility.
+
+Key facts established: design tokens (`Color.TS.*`, `Font.TS.*`, `TSSpacing`, `TSRadius`), `TSFadeIn` motion, and the 8-file pattern. Note: 170 `.Tests.swift` files live in `feature-views` but the app target sources that dir with no test-excludes and the test target only globs `Tests/Unit` — so the surrounding P4-core project.yml wiring (and KMP `Shared.xcframework`) is a prerequisite. Let me check the xcframework/build feasibility quickly, then write the surface.
+
+Confirmed: no prebuilt `Shared.xcframework` and no Gradle/Kotlin on PATH — the KMP framework that the full `xcodebuild` scheme requires as a pre-action can't be produced here. I'll deliver complete code, verify my surface via a standalone Swift compile+test (it only needs design tokens + SwiftUI), and run swiftlint/swiftformat/placeholder. First, let me model the data faithfully by reading the web peers (`Delta`, `MetricCard`, `InlineCallout`, `GlassPanel`).
+
+Now I understand the full data model. Let me locate `InlineCallout` (footer) and the `Direction`/delta-color semantics to port the delta math faithfully.
+
+I now have a complete, faithful model. Let me check the lint/format configs to match conventions, then write the plan.
+
+I have a complete, faithful model of the web composition (`ComparisonHeader` + `Delta` + `MetricCard` grid + secondary + `InlineCallout` footer) and the exact native conventions. Now let me set up tracking and scaffold the directory.
+
+Now let me create the todo list and write the first file (Adapter — the pure, testable core).
+
+Now the Model file (types, connection, telemetry seam, input/resolved, source seam, `@Observable` model).
+
+Now the Projection (pure resolve → phases, header always resolved, secondary join, tile/delta resolution).
+
+Now the Views file (all subviews: header, delta, tile, grid, secondary, footer callout, loading/empty/error, freshness chip, banner).
+
+Now the main view file — the surface itself (GlassPanel shell + header + banner + phase switch).
+
+Now the strings catalog, then Previews.
+
+Now the comprehensive test suite (adapter math, projection phases, model wiring/telemetry/freshness, a11y).
+
+All 8 files written. Let me update tracking and run the format/lint checks on the new files.
+
+swiftformat found auto-fixable issues. Let me apply formatting in place, then re-lint.
+
+Format lint clean. Let me verify the auto-formatted delta logic is still correct and run swiftlint on the new files.
+
+swiftlint linted the whole configured set (1909 files) and found 1 violation. Let me isolate which file and rule.
+
+The only swiftlint violation is in a **pre-existing** file (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`) — none in my `shared-surfaces` files. Now the key verification: a standalone Swift 6 (strict-concurrency) SwiftPM harness that compiles the **same** source files and runs the **same** XCTests (it only needs design tokens + SwiftUI, not the KMP xcframework).
+
+Placeholder check passes (count=0, EXIT=0). Now let me build the standalone SwiftPM harness to compile + test the surface.
+
+Library compiles cleanly under Swift 6 strict concurrency (including `#Preview`). Now run the tests.
+
+**39/39 tests pass** under Swift 6 strict concurrency. Now let me capture honest evidence for the official gate by generating the Xcode project and attempting the build, to document the precise blockers.
+
+Confirmed: `shared-surfaces` has **0 references** in the generated project — my surface isn't wired by `project.yml` (a P4-core responsibility outside my allowed files). Let me check the test-file routing and attempt the actual gate build (bounded) to capture the decisive blocker.
+
+The generated project routes 224 `feature-views/*.Tests.swift` into the **app** target (not a test bundle) and `Shared.xcframework` is absent. Let me capture the literal gate failure with a bounded run of the KMP pre-action and the xcodebuild step.
+
+**Major correction:** the KMP `Shared.xcframework` **is** buildable here (gradlew + JDK 17 + warm Gradle cache compiling iosArm64/SimulatorArm64/macosArm64 — it was mid-compile when my 60s bound cut it). So the xcframework is *not* the blocker. The real blocker is wiring: the generated project has **0** references to `shared-surfaces` (and per-surface `.Tests.swift` aren't routed to a test bundle) — both require `project.yml`/`.swiftlint.yml` edits that are a **P4-core predecessor** outside my allowed files.
+
+Let me run the actual gate iOS command (bounded) to capture the literal outcome while I prepare the log.
+
+Decisive: `AiUsageCard.Tests.swift` is a **build file in a Sources phase** of the app target (per-surface tests aren't routed to a test bundle), and `shared-surfaces` is absent — both are P4-core wiring gaps requiring forbidden `project.yml` edits. Let me run the exact gate iOS command (bounded) to capture the literal transcript while I draft the log.
+
+While the iOS build runs, let me verify the i18n key set: every key referenced in Swift must exist in the `.strings` catalog (and the catalog must be a valid plist).
+
+All 12 referenced keys are defined; the `.strings` is a valid plist. (`kpiOverview.emptyMessage` is used in `Projection.swift` — the key sits on a wrapped line so my grep missed it.) The iOS gate build already returned — let me read its outcome and confirm.
+
+The launcher returned but `xcodebuild` (PID 83060) is still running — currently finishing the (cached) xcframework assembly. `emptyMessage` is confirmed used. Let me wait and capture the app-compile outcome.
+
+The xcframework built successfully (debug written; now building release) — the KMP toolchain works fully. Still compiling. Let me continue polling for the app-target compile result.
+
+The KMP **release** link is the slow phase (debug xcframework already succeeded). Let me give it more time to reach the app-target compile, which is the decisive evidence.
+
+The KMP release link is very slow (debug xcframework already succeeded — proving the toolchain works). I have conclusive evidence; further waiting only watches the pre-existing app-target test-routing failure. Let me stop the build and clean up the untracked generated artifacts.
+
+Both debug **and** release xcframeworks wrote successfully — the KMP toolchain fully works (not a blocker). Note: PIDs 67548/77118 belong to **other parallel slots** sharing this machine — I must not touch those. Let me stop only my process (83060).
+
+Let me survey untracked build artifacts so I can restore the worktree to only my intended changes.
+
+The KMP xcframework fully builds — confirming the **only** gate blocker is the `shared-surfaces` project wiring (a P4-core predecessor outside my allowed files). The pre-existing `AIUsageCard.*` edits are not mine. Let me clean the gitignored generated project and verify the worktree is tidy.
+
+Worktree is tidy: my 8 files are the only additions; the pre-existing `AIUsageCard.*` edits aren't mine. The staged `Shared.xcframework` is gitignored. Now let me write the honest gate log.
+
+Now let me do a final lint/format re-check on the surface files (to be certain nothing drifted) and commit.
+
+swiftformat clean (0/7). The swiftlint run scans the full configured set (slow); the surface-violation grep returned empty. Let me wait for it to finish.
+
+Confirmed: **0 violations** in my surface files (the lone repo violation is the pre-existing `dashboard-widgets` one); swiftformat clean. Everything is verified. Let me commit my 8 files + the log (staging only my paths, not the pre-existing `AIUsageCard.*` edits).
+
+Committed (`2ac42cda6`) — exactly my 8 surface files + the log, 2292 insertions; the pre-existing `AIUsageCard.*` edits were correctly excluded. Let me clean up temp artifacts and confirm a tidy worktree.
+
+Worktree is clean — only the pre-existing `AIUsageCard.*` edits remain (not mine); generated project/framework removed. Let me finalize tracking.
+
+Task complete. Here's the summary.
+

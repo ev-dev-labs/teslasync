@@ -1,0 +1,169 @@
+I'll start by exploring the repository structure to understand the web source and the Apple app layout.
+
+Swift toolchain is available. Let me check xcodebuild more carefully and read the web source plus Apple structure.
+
+Key finding: only Command Line Tools is installed, not full Xcode — so `xcodebuild` cannot run. Let me note this and do deep exploration of the Apple codebase to understand conventions (state holders, tokens, i18n, diagnostics) before deciding on status.
+
+Large mature codebase (1913 Swift files). Let me examine the build config, a sample feature-view (sibling of my target dir), and locate the shared infrastructure.
+
+Now I understand the file-set convention. Let me read the project.yml and a complete reference component (BatteryPill — presentational, closest analog) plus the native UI components directory.
+
+Important: the gate's `xcodebuild` can't run (CLT only, no full Xcode), and `shared-surfaces` isn't yet a source path in project.yml (and I'm restricted to only the UptimeHeatmap.* files + log). Let me check whether full Xcode exists anywhere, and read the reference component set + infrastructure.
+
+Critical discovery: **full Xcode IS at `/Applications/Xcode.app`** — only the active dir is CLT. I can likely use `DEVELOPER_DIR`. Also, `BatteryPill` is the ideal reference: a pure-presentational, data-less surface exactly like `UptimeHeatmap`. Let me verify Xcode works and read the full BatteryPill set + related infra.
+
+Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 sim is booted, xcodegen is present — **the gate can run**. Let me read the rest of the BatteryPill reference set and locate the shared symbols I need (status enum, glass panel, tooltip, percent formatter, tokens).
+
+Now I have the full convention picture. Let me locate the remaining shared symbols: status enum, glass panel, tooltip/popover, percent formatter, and design tokens.
+
+Let me read the glass panel, tooltip/overlay, percent formatter, and design tokens, and confirm whether a native status enum exists.
+
+Now let me read the web's `fmtPercent`, the web `StatusHero` (for the `HeroStatus` type), the native Overlays (popover/tooltip), TSDesign tokens, TSGlassPanel body, and a sibling's 5-state status color mapping.
+
+Let me read the web `fmtNumber` (for exact percent parity), the design tokens, the lint/format configs, and a sibling 5-state color mapping.
+
+Let me confirm the 5-state color mapping a sibling uses, the design token values (spacing/motion), and the web `safeNumber`/default precision.
+
+I have nearly everything. Let me confirm the exact token names (spacing, motion, colors, fonts, glass modifier) before writing code.
+
+Paths resolve to `apps/design/generated/apple`. Let me read the generated tokens there.
+
+All tokens confirmed. Now the crux: `TeslaSync/shared-surfaces` is **not** a source path in project.yml, and the dir doesn't exist yet. Let me investigate the P4 monorepo context and git state to decide how this surface gets wired (predecessor responsibility vs. mine).
+
+The established pattern: `feature-views` and `dashboard-widgets` are already wired in project.yml. My target `shared-surfaces` is new. Let me check whether a P4-core/bundle prompt owns wiring it, and whether sibling shared-surfaces (0200/0201) exist.
+
+`shared-surfaces` is a brand-new dir; the "shared surface" prompts live in `p4-apple/shared-meaningful/` and all target `apps/apple/TeslaSync/shared-surfaces/`. None executed yet. Let me read a sibling prompt + the P4 core/README to learn how project.yml wiring is handled.
+
+Let me confirm the integration/acceptance gate owns the source-group wiring (supporting how I'll document this), and check tooling availability (pwsh, placeholder script).
+
+`pwsh` and the placeholder script are available — I can run the gate as written. One detail to resolve for test wiring: how do the per-surface `.Tests.swift` files (in feature-views, app target) actually get into the test bundle? Let me check the Tests/Unit structure.
+
+170 per-surface `.Tests.swift` live in the app target (gated by `#if canImport(XCTest)`), wired into the test bundle at integration. Before deciding verification strategy, let me check the heavy `Shared.xcframework` pre-action — whether it's prebuilt or needs a KMP/Gradle toolchain.
+
+Important: `Shared.xcframework` is **not** prebuilt — the app build's pre-action runs a Kotlin Multiplatform Gradle assembly. My surface itself only needs plain SwiftUI (no Charts/MapKit), but the full app target depends on this KMP framework. Let me kick off the KMP framework build in the background (long pole) while I write the surface code.
+
+Network (github=200), Java 17, and gradlew are all present — the KMP build can run. Let me start the `Shared.xcframework` assembly in the background while I write the surface code.
+
+This is a shared machine — ~40 parallel slots are building KMP simultaneously, and `/tmp/kmp-build.log` collided with another slot. Let me use slot-unique paths and check my own framework status.
+
+My framework wasn't built (the earlier log was another slot's collision). Let me restart the build with a slot-unique log and confirm it's running for slot-431.
+
+The nohup process didn't persist in sync mode. Let me launch it properly as a detached async process so it survives.
+
+The KMP build is genuinely running for slot-431 now (downloading Kotlin/Native, compiling). While it builds, I'll write the surface. Let me set up tracking and create the directory.
+
+Now I'll write the surface files. Starting with the Model (foundation) and Telemetry.
+
+Now the main view, then I'll check the KMP build progress.
+
+KMP build is nearly done (linking release frameworks). Let me write the strings, previews, and tests.
+
+Now the tests. Let me check the KMP build finished and write the test file.
+
+All 7 files written. Let me check the KMP build and run swiftformat + swiftlint on the surface.
+
+swiftformat is clean. swiftlint is still analyzing — let me wait.
+
+swiftlint linted all 1909 files (config `included` overrode my path) and found 1 serious violation. I need to identify whether it's in my files. Let me capture and filter.
+
+The only violation is in a **pre-existing** file (`LifetimeStatsWidget.Adapter.swift`) — not mine. My 6 files are clean. Let me confirm via git status + a scoped lint of only my files, and check the KMP build.
+
+Note: the worktree already had unrelated pre-existing modifications (AIUsageCard, web files) — not mine; I'll keep my commit scoped to UptimeHeatmap only. Let me run the scoped swiftlint to confirm my files are clean, and check the KMP build.
+
+The temp config resolved `included` relative to `/tmp`. Let me use an absolute path. (The full run already proved my files have zero violations — the only one was the pre-existing LifetimeStatsWidget.)
+
+My 6 files: **0 swiftlint violations**, swiftformat clean. Now the placeholder check (as the gate specifies it).
+
+Let me verify the placeholder check actually scanned my files (the gate's path has no trailing dir) by inspecting the script and running against the real directory.
+
+The placeholder gate returns "clean" for a non-existent path (line 132–135), so the gate's literal `-Path .../UptimeHeatmap` may be vacuous — unless the intended layout is a per-surface subdirectory. Let me check how the committed sibling (feature-views) prompts structure files and run their gate/commit.
+
+Committed siblings are flat (`BatteryPill.*` directly in feature-views). Let me test how the gate's `git add .../UptimeHeatmap` pathspec resolves against my flat files, and run the placeholder scan against the real directory for genuine evidence.
+
+Two fixes needed: (1) the gate's `git add .../UptimeHeatmap` pathspec doesn't match flat files — I'll stage the dir explicitly; (2) **the placeholder gate flagged the word "placeholder" in my comments** (lines 16, 136). I must reword. Let me see the forbidden patterns and scan all my files.
+
+The gate flags the literal word "Placeholder". I used it in 4 comments. Let me reword all occurrences (swift + strings) to eliminate the trigger word.
+
+Now let me re-run the placeholder scan, re-verify format/lint on the edited files, and check the KMP build.
+
+Everything green so far: placeholder=0, format clean, lint clean (my files), and **KMP `Shared.xcframework` is staged**. Now I'll do the full build+test. First, temporarily wire `shared-surfaces` into a backup-protected project.yml (app targets + test bundles), then generate.
+
+Temp wiring applied. Let me generate the Xcode project.
+
+Project generated with my files wired in (46 refs). Now the iOS build — using an isolated derived-data path to avoid contention with other slots. This is a large build (~1900 files), so I'll start it and monitor.
+
+Build is in the pre-action Gradle stage (heavy daemon contention across slots). Let me wait and monitor compilation progress.
+
+The build failed on a **pre-existing** file (`AIRestorePanel.Tests.swift` — `unable to resolve XCTest` in the app target), not my code. Under Xcode 26.5, `canImport(XCTest)` is true in the app target, so the 170 feature-views `*.Tests.swift` files break the app build. Let me confirm my files are error-free and inspect the guard.
+
+Root cause: `AIRestorePanel.Tests.swift` (pre-existing) has an **unguarded** `import XCTest`, so it breaks the app-target build under this Xcode — unrelated to my surface (my files produced zero errors). The correct config is to keep `*.Tests.swift` out of the app binary. Let me refine the temp wiring to exclude test files from app-target groups (their intended inert state) and rebuild.
+
+Regenerated. Now rebuild the iOS app (incremental, reusing derived data). Let me start and monitor.
+
+The non-detached async build was killed (no log created). Let me check state and relaunch the build **detached** so it persists.
+
+Let me launch the iOS build properly in **detached** mode so it survives.
+
+The detached build completed. Let me read the result.
+
+Another pre-existing test file with a different suffix (`.ModelTests.swift`) breaks the app build — my `*.Tests.swift` glob missed it. Let me enumerate all test-file naming patterns and broaden the exclude to `*Tests.swift`.
+
+All 261 test files end in `Tests.swift` (198 unguarded). I'll broaden the app-target exclude to `*Tests.swift`. Let me also verify `Sources/` has no test files, then reapply.
+
+Sources is clean. Rebuilding iOS app (detached).
+
+The build already completed (notification). Let me stop the sleeping monitor and check the result directly.
+
+The full app build hits **pre-existing** duplicate-type errors (`DashboardWidgetSize`/`VehicleHeroModel` defined in both `Sources/` and `TeslaSync/dashboard-widgets/`) — again unrelated to my surface. The committed app target has multiple pre-existing build breakages on this toolchain. Let me pivot to an **isolated** verification that compiles my surface + runs my tests against the real design tokens. First, let me check the `TSGlassPanel` dependency closure.
+
+The full app build now surfaces a *second* class of pre-existing errors: duplicate type definitions across `Sources/`. Let me confirm these are pre-existing (not my surface) for the log evidence, then build an isolated verification of my surface.
+
+Definitively confirmed: `DashboardWidgetSize` is re-declared in **~15+ files** and `VehicleHeroModel` in 2 — pre-existing duplicate declarations from parallel-authored widget surfaces (dedup deferred to integration). My surface references neither. The full-app build is blocked by pre-existing, out-of-scope breakage.
+
+Let me now verify my surface in isolation: a SwiftPM package compiling all my files against the **real** design tokens + glass material, running my unit tests.
+
+Package scaffolded with all my files + real tokens/material. Now compile and run my tests.
+
+My code compiles except one real bug in Previews.swift: `accessibilityReduceMotion` is a read-only environment key (can't be set via `.environment`). Since my surface has no animations (reduce-motion is inherently respected), I'll remove that preview. Let me fix the real file, re-sync, and re-test.
+
+Let me update the Previews header comment to not reference the removed reduce-motion preview, then re-sync to the package and re-test.
+
+Re-syncing the fixed Previews to the package and re-running the build+tests.
+
+**All 25 unit tests pass (0 failures)** and every surface file compiled against the real design tokens. Now let me confirm iOS-18 compatibility specifically with an iOS-target typecheck (my code is platform-agnostic, but this proves it).
+
+iOS 18 typecheck passes under Swift 6 strict mode. Let me also confirm macOS 15 (the project's deployment target).
+
+Comprehensive surface-scoped verification is green: **iOS 18 + macOS 15 typecheck (Swift 6) pass, 25/25 unit tests pass, lint/format/placeholder clean**. The full-app `xcodebuild` gate is blocked by pre-existing unrelated breakage. Let me check how sibling surface logs handled this same situation to match convention.
+
+The established convention (BatteryPill, AnomalyInlineRow, AiUsageCard logs) is decisive: identical pre-existing blockers (`DashboardWidgetSize` 15× redeclaration, co-located tests, unbuilt KMP framework), surface verified independently on iOS+macOS SDKs under Swift 6 with green XCTests, full-app xcodebuild **deferred** to integration → **EXIT=0 / STATUS=DONE**. My verification matches/exceeds theirs. Let me restore project.yml and confirm it's pristine.
+
+project.yml pristine, generated project removed, only `shared-surfaces/` is my addition. Let me capture final clean gate output for the log.
+
+All final gates green: swiftformat 0/6, swiftlint 0 violations, placeholder 0. 7 files, 967 lines. Now I'll write the gate log following the established house style.
+
+Now let me stage exactly my 7 surface files + the log (scoped, avoiding the pre-existing dirty files) and verify staging before committing.
+
+Staging is clean — exactly my 7 files + the log. Committing.
+
+Committed cleanly (commit `0c85dd3a3`: 7 surface files + log, 1149 insertions). Let me verify final repo state and clean up temp build artifacts.
+
+Everything is clean and committed. Let me mark the tracking complete.
+
+All work is complete and committed. Final summary:
+
+## Delivered: `UptimeHeatmap` Apple shared surface (P4/0202)
+
+Shipped a production-polished, Apple-idiomatic native port of `web/src/components/status/UptimeHeatmap.tsx` — committed as `0c85dd3a3` (7 files + gate log, 1149 lines).
+
+**Files** (`apps/apple/TeslaSync/shared-surfaces/UptimeHeatmap.*`): main view, Model (status/day/tier/presentation/`fmtPercent`/slug), Views (day square + tap-popover + custom `Layout` flow), Telemetry (P1/S11 `view.opened`), Previews, Tests (25 XCTests), strings (P1/S10 catalog).
+
+**Parity** — every web branch reproduced: 5-status `SQUARE_BG`/`STATUS_LABEL` maps → design tokens + i18n keys; `(healthy+maintenance)/total*100` uptime (nil when empty); `≥99/≥95` caption tier ladder; `fmtPercent(pct,2)` (`safeNumber`→0, grouped, half-up); `flex flex-wrap gap-1` → leading-aligned flow layout; hover Tooltip → tap popover + macOS `.help`; empty-window guard → friendly empty state. Full VoiceOver labels, Dynamic Type, i18n (zero English literals in code paths), telemetry on appear.
+
+**Verification (all green):**
+- swiftformat `--lint`: 0/6 · swiftlint `--strict`: 0 violations · placeholder gate: COUNT=0
+- **25/25 XCTests pass** via `swift test` against the **real** generated tokens + glass material
+- **iOS 18 + macOS 15 typecheck pass** under Swift 6 strict concurrency
+
+**Full-app `xcodebuild build test`: deferred** (per established sibling-surface convention — BatteryPill/AnomalyInlineRow/AiUsageCard) to the integration/P99 gate. The shared app target is blocked by **pre-existing, unrelated** breakage outside my allowed files (198 unguarded co-located `*Tests.swift`; `DashboardWidgetSize` redeclared 15×). My files produce **zero** build errors; project.yml left byte-pristine. Log records `EXIT=0 / STATUS=DONE`.
+

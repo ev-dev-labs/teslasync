@@ -1,0 +1,106 @@
+I'll start by exploring the repository structure to understand the task scope and check tool availability.
+
+Apple toolchain exists. Let me verify `xcodebuild` works (it errored above) and explore the Apple app structure.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed (`simctl` also missing). However `swift` 6.3.2, `swiftlint`, and `swiftformat` are available. Let me explore the existing Apple architecture to understand the patterns I must follow (P1/S8 state holders, S9 tokens, S10 i18n, S11 diagnostics) before deciding on build verifiability.
+
+Now let me study the existing patterns in depth: design tokens, state holders, i18n facade, diagnostics, existing components, and a representative all-states view. Let me explore in parallel.
+
+Critical findings: `.swiftlint.yml` and `project.yml` both omit `shared-surfaces` (and I can't edit them per "Allowed files"). Full Xcode is absent. Let me test whether `swiftc -typecheck` can compile SwiftUI/Charts/MapKit against the CommandLineTools SDK (my best build verification), and read the key architecture files in parallel.
+
+Major findings: `swiftc -typecheck` against the macOS SDK **works for SwiftUI+Charts+MapKit** (my build verification path), and an atomic `TSRangeSlider` already exists (out of scope per the prompt — this 0224 is the *shared surface* tier). Let me read the P1/S8 state-holder facade, the i18n catalog, and the diagnostics (S11) contract.
+
+Let me locate the i18n catalog keys, the diagnostics (S11) contract, `FacadeError`, and a representative feature-view that renders `LoadableState` + emits `view.opened` — to copy the exact patterns.
+
+`pwsh` is available, diagnostics uses a `viewOpened(surface:)` seam with an os_log sink, and the catalog uses `translation.`-prefixed keys. Let me read the canonical telemetry/state-holder pattern (DrivetrainHealth widget) plus Typography and the generated design tokens to match conventions exactly.
+
+This `DrivetrainHealthWidget` trio is the canonical P4-surface template — and crucially it's deliberately **Shared-free** so surfaces "host-compile and host-test in isolation." That means I can genuinely host-compile my surface with `swiftc`. Let me confirm the test style, find all Shared-free deps, and locate the generated tokens.
+
+I now have the canonical surface + test patterns. Let me read the exact token names and component signatures I'll compose with (tokens, freshness, tone/badges, skeletons, buttons, cards, and the Forms `Filters` analog).
+
+Let me read the final component signatures (`TSButton`, `TSCard`, `TSSkeleton`) and the placeholder checker so my files pass it.
+
+Let me read the forbidden-pattern list and confirm `XCTest` host-compiles (for verifying the test file), plus grab the `TSCard` signature.
+
+Forbidden tokens noted (incl. the literal word "Placeholder", "TODO", "not implemented"). XCTest can't host-compile under CLT (Xcode-only) — I'll add a runtime assertion harness for real logic verification. Let me calibrate the i18n-catalog honesty note by checking whether existing native keys are physically in the catalog.
+
+Calibration done: component-level keys like `range.lowerBound` and `error.queryTitle` already ship absent from the catalog (runtime fallback), while feature keys are registered. I'll mirror the web keys verbatim with inline dev-language `defaultValue`s. Let me peek at the existing `RangePicker` (Forms) to stay idiomatic, then write the surface.
+
+I have all the architecture I need. Let me set up tracking, create the directory, and write the implementation files.
+
+Now the logic/state file:
+
+Now the views file (control + surface + previews):
+
+Now the test file:
+
+Files written. Now let me verify — first normalize with `swiftformat`, then run `swiftlint --strict`, on the three files.
+
+swiftformat clean (0/3 need formatting). Now swiftlint --strict:
+
+One violation found across 1909 files — let me identify whether it's in my files:
+
+The single violation is **pre-existing** in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` — unrelated to my work. Let me confirm my three files are individually lint-clean:
+
+Linting my files directly reveals `file_length` (>400, the swiftlint default under `--strict`) on the two larger files. The global gate run skips them (dir not in `included`), but quality demands they pass. Splitting into more `RangeSlider.*` files (idiomatic, like the DrivetrainHealth split) is the right fix. Let me check all line counts first.
+
+Tests is fine (390). I'll split the two large files into focused `RangeSlider.*` files (each <400, idiomatic SRP). Let me recreate them.
+
+Now the control view, the surface, and previews as separate files:
+
+Now re-run swiftformat + swiftlint on all split files and check line counts:
+
+All 7 files: ≤390 lines, swiftformat clean (0/7), swiftlint --strict clean (exit 0). Now the key build verification — host-compile the surface against the **real** Shared-free dependencies. Let me first map which dependency files are safe to include.
+
+Only `UnitFormatters.swift` touches Shared (my surface doesn't use it). Let me host-compile my 6 files against the **real** token/component sources to prove type-correctness.
+
+The `#Preview` macro needs Xcode's macro plugin (absent in CLT) — that's an Xcode-only macro, not a type error in my logic. Compiling without `-D DEBUG` excludes preview blocks and type-checks the real surface code:
+
+**Host-typecheck passed (exit 0)** — the full surface type-checks against the real tokens/components under Swift 6 strict, macOS 15. Now the strongest evidence: a **runtime harness** that actually executes the same assertions my XCTest file makes (XCTest itself can't run under CLT). Let me write and run it.
+
+Now compile and run the harness (executable, runs the real logic):
+
+One assertion is wrong: `42.55` formats to `"42.5"` (IEEE: 42.55 is stored as 42.549…), not `"42.6"`. My XCTest has the same faulty expectation — I'll fix both to an unambiguous value (`12.34 → "12.3"`).
+
+**All 55 runtime assertions pass (HARNESS_OK).** The harness caught a faulty expectation that also existed in my XCTest — now fixed in both.
+
+Now let me validate the **test file itself** type-checks (XCTest is Xcode-only, so I'll compile it against a minimal XCTest shim). This catches symbol/reference errors the harness can't. First, I notice the test uses `Binding.constant` but lacks `import SwiftUI` — let me fix that, then typecheck.
+
+Test file type-checks against the shim (exit 0). Let me re-verify format/lint on the modified test file, then run the placeholder gate:
+
+Everything runnable is green: **swiftformat 0/7**, **swiftlint --strict 0 violations**, **check-placeholders EXIT=0**. Now let me capture hard evidence for the xcodebuild blockage (and double-check no Xcode is installed anywhere), then write the gate log.
+
+There's an `/Applications/Xcode.app`! `xcode-select` points to CLT, but I may be able to use Xcode.app directly via `DEVELOPER_DIR`. Let me check — this could let me run real builds/tests.
+
+**Full Xcode 26.5 is available** via `DEVELOPER_DIR` (iPhone 16 sim booted, iOS/macOS SDKs present). This unblocks real builds. My files aren't wired into `project.yml` (which I can't edit per allowed-files), but I can directly compile my surface for **both iOS and macOS SDKs** with the real toolchain (including `#Preview` macros), and run the real XCTest. Let me set that up.
+
+Real Xcode caught a genuine Swift-6 strict-concurrency bug in my previews (CLT missed it since it compiled without `-D DEBUG`): `previewSurface` is nonisolated but calls `@MainActor` code. Let me stop the slow macOS run, fix it, and re-run both.
+
+Now re-copy the fixed file and re-run both SDK typechecks:
+
+iOS SDK typecheck passes (exit 0). Now macOS:
+
+Both **iOS and macOS SDK typechecks pass** with real Xcode (incl. `#Preview` macros, Swift 6 strict). Let me re-verify lint/format after the previews edit, then build a SwiftPM package to actually **run the XCTest suite** under real Xcode.
+
+**Real XCTest suite: 30 tests, 0 failures** under Xcode 26.5. My surface is now verified via iOS+macOS SDK compiles AND a real test run. 
+
+Now let me assess the *literal* prescribed gate (`xcodebuild -scheme TeslaSync build test`). It needs the KMP `Shared.xcframework` (not prebuilt — `Frameworks/` is empty) and my files wired into `project.yml` (which I can't edit). Let me check feasibility honestly.
+
+The literal scheme gate needs the KMP `Shared.xcframework` (assembled by `apps/shared/gradlew` — a separate Kotlin toolchain that "runs on CI"; `gradle` isn't on PATH and `Frameworks/` is empty) **and** `shared-surfaces` wired into `project.yml` (which is **not** referenced and is outside my allowed files). Let me confirm the wiring gap concretely via `xcodegen`, then finalize.
+
+Definitive: `xcodegen` succeeds but my files get **0 references** in the generated project (vs. 6 for a wired widget) — the whole-app scheme literally cannot compile/test my surface without `project.yml` edits I'm not allowed to make, plus the KMP framework isn't prebuilt. Let me capture the remaining literal-gate datapoints honestly for the log.
+
+Let me capture the global `swiftformat --lint` datapoint (the gate's exact command), then write the log.
+
+Global `swiftformat --lint` is also red on a **pre-existing** unrelated file (`ActionBuilder.Previews.swift`), and global `swiftlint --strict` red on `LifetimeStatsWidget.Adapter.swift` — both independent of my surface. The literal whole-repo gate is structurally un-greenable in this snapshot (KMP framework not prebuilt + `shared-surfaces` not wired in `project.yml`/`.swiftlint.yml`, all outside my allowed files), while my surface is independently verified green. Let me write the honest gate log.
+
+Log written. Let me do a final consolidated verification on the actual repo files and check git status before committing.
+
+Final checks green (swiftformat 0/7, swiftlint 0 violations). Git status shows **pre-existing** unrelated modifications (AIUsageCard, web admin files) that I did **not** touch — I'll stage only my surface files + the log. Let me commit precisely.
+
+Staged set is exactly my 7 files + log; pre-existing unrelated edits remain unstaged. Committing:
+
+Committed cleanly (`d4ca503d8`, 8 files, 1453 insertions) — no pre-existing unrelated edits included. Let me clean up temp artifacts and finalize.
+
+Task complete. Cleaned up all temp artifacts; the only remaining working-tree changes are pre-existing unrelated edits I correctly left untouched.
+

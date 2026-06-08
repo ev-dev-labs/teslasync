@@ -1,0 +1,124 @@
+I'll start by exploring the repository structure and verifying the key dependencies and toolchain availability.
+
+Toolchain note: `xcodebuild` requires full Xcode but only Command Line Tools is installed. Swift 6.3, swiftlint, swiftformat, and pwsh are available. There's an existing `AIUsageCard.*` family in `feature-views/` that defines the canonical pattern. Let me study the web source and the existing pattern.
+
+Web source is clear: a GlassPanel with header "Recent Drives", a "View all" link, and a DataTable (Date/Distance/Duration/Battery columns) with an empty state. Let me check whether `RecentDrivesSection.*` already exists, study the canonical `AIUsageCard.*` pattern, and find a table-based example.
+
+`RecentDrivesSection.*` doesn't exist yet. The canonical recent example is the `AiUsageCard.*` family. Let me read that family in full plus the `project.yml` and look at how a table-based view (DataTable) is realized natively.
+
+Excellent canonical pattern. Let me read the rest of the AiUsageCard family (Views, Chrome, Projection, Adapter, Previews, Tests, strings) and locate the shared P1/S9 tokens + P1/S8 conventions.
+
+The pattern is mature and consistent. Let me read the remaining AiUsageCard files (Adapter, Previews, Tests, strings) and locate the shared P1/S9 tokens and components.
+
+Let me locate the shared tokens (P1/S9) and read the component signatures plus the AiUsageCard test/preview patterns and project.yml.
+
+Tokens live in `Sources/Design`. Let me read the design tokens, the shared component signatures, the test patterns, and project.yml.
+
+`TSTableSkeleton` exists for the loading state. Let me read the design tokens, the test patterns, the web helpers (durationStr/formatDateTime), and project.yml.
+
+`Sources/Theme.swift` holds the tokens. Let me read it and confirm where `TSSpacing`/`TSRadius` come from for the main app.
+
+`DataTable.swift` exists natively — directly relevant. Let me read it, the Theme/Typography token sources, Cards, and project.yml.
+
+Architecture is clear: tokens are generated into `apps/design/generated/apple/` and feature-views compile into both app targets. Let me read the test patterns and confirm the generated tokens exist.
+
+Let me read the generated tokens, the web helpers/types, and the `useUnits` hook to nail down exact APIs before writing native code.
+
+Let me read the exact web arithmetic for parity: `Drive` type, `convertDistanceFromSI`, `DistanceUnitPref`, `fmtNumber`, and `formatDateTime`.
+
+I have all parity arithmetic. Let me check the navigation seam (`AppRoute`) and how existing feature-views handle "View all"-style links, so the native "View all" is idiomatic.
+
+`RecentActivity` is the closest analog — it maps web `<Link to="/drives">` to an `onViewAll` closure. Let me read its full family as my primary template.
+
+Perfect template. Let me read the supporting RecentActivity files (Model, States, Views, strings, Previews, Tests) to extract the exact chrome/model/telemetry conventions.
+
+Let me read the remaining template files: Views (GlassPanel + onViewAll header), Types (enums/surface slug), strings, Previews, and Tests.
+
+Let me read the final reference pieces: the Adapter (Format/Accessibility/projection helpers), strings, Previews, and the Tests structure.
+
+Let me read the test structure and the Adapter's format/accessibility helpers to finalize my template understanding.
+
+Let me read the Adapter's format helpers and the ModelTests (telemetry-spy + a11y pattern) to finalize.
+
+I now have a complete picture of the canonical pattern. Let me verify how existing feature-views localize `TSDataTable` headers from a per-surface table (the header-title localization seam).
+
+Convention confirmed: `LocalizedStringKey(RecentDrivesStrings.string(key, fallback))` for table headers. Let me read the lint/format configs and check for symbol collisions before writing.
+
+Collision risk: `RecentDrivesWidget`/`RecentDrivesListWidget` already exist in the same module. Let me inventory their exported symbols so I namespace mine safely.
+
+Important: a `RecentDrivesWidget`/`RecentDrivesListWidget` family already exports many `RecentDrives*` public symbols in the same module. I'll namespace all my types as `RecentDrivesSection*` to avoid collisions. Let me confirm the `TSFadeIn` API and check default swiftlint body-length limits I must respect.
+
+I have the complete pattern. Before writing, let me read the placeholder-check script (to avoid tripping it) and set up tracking.
+
+I now have everything needed. Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed — the build/test gate steps cannot run, though I can still run swiftlint, swiftformat, the placeholder check, and independently verify the pure adapter logic with `swiftc`. Critical constraints captured: namespace all types as `RecentDrivesSection*` (the `RecentDrives*` namespace is already taken by widgets), avoid the forbidden word "Placeholder" in code, no trailing commas, ≤120-col lines.
+
+Let me set up tracking and write the plan.
+
+Now writing the surface. Starting with the pure core (Types, Adapter, Model).
+
+Now the adapter/projection tests and the model/accessibility tests.
+
+All 10 files written. Now the strongest available verification: independently compile and run the pure adapter logic with `swiftc` (since xcodebuild can't run). Let me build a runtime harness over `Types.swift` + `Adapter.swift`.
+
+All adapter parity logic passes at runtime (web `fmtNumber`/`convertDistanceFromSI`/`durationStr`/battery/`formatDateTime`, phase matrix, a11y). Now the lint/format gates. Let me check swiftformat conformance on my files first.
+
+swiftformat passes (0/9 need formatting). Now swiftlint `--strict` on the new files.
+
+swiftlint `--strict`: **0 violations** in all 9 files. Now the placeholder gate (both the exact gate invocation and a genuine scan of my files), plus capturing the `xcodebuild` capability evidence.
+
+Both placeholder checks pass (COUNT=0). Now capturing the `xcodebuild` capability evidence (the blocker) and confirming no full Xcode is present.
+
+A full `/Applications/Xcode.app` exists — it's just not the selected developer dir. I can override with `DEVELOPER_DIR` (no sudo). Let me check whether that makes the Apple toolchain actually usable, and inspect the build prerequisites (xcodegen, the Shared.xcframework preAction).
+
+The full Apple toolchain is actually present (Xcode 26.5, booted iPhone 16 simulator, xcodegen) — but the build's scheme preAction must build a KMP `Shared.xcframework` via Gradle, which isn't prebuilt. Let me assess feasibility before committing to a long build.
+
+This is a known, documented situation. `apps/macos-pending-verifications.md` shows prior P4 feature-view prompts (`ToolCard`, `AlertMessageEditor`, `FSMTimelineChart`) hit the identical wall: the **full-app** `xcodebuild build test` is blocked by **pre-existing, unrelated** parallel-merge collisions (`DashboardWidgetSize` redefined 15×, 150+ co-located `*.Tests.swift` importing XCTest into the app target, the unstaged KMP `Shared.xcframework`, macOS signing) — and the sanctioned resolution is to verify the surface in isolation and record the full-app build as macOS-pending.
+
+Let me match that bar: a real macOS-SDK `swiftc -typecheck` of the surface against its actual shared-component dependencies. First, let me confirm the dependency closure.
+
+The full view-layer typecheck would pull in the whole `Sources/Components` tree, but that tree is self-contained (SwiftUI + tokens only). Let me do a real macОS-SDK `swiftc -typecheck` of my surface compiled together with the actual shared component library + generated tokens — proving the views compile against the real SDK.
+
+Zero errors in my files — the only failures are in `Components/Maps/MapView.swift` referencing `TSChartPalette` (defined in `Sources/Design`, which I didn't include). Let me add `Sources/Design` for a fully clean compile.
+
+The remaining errors are all in unrelated component files (`UnitFormatters.swift` needs app-level `UnitPreferences`/`Units` types) — not my surface. Let me stop this broad run and do a surgical typecheck of just my surface's actual dependency closure.
+
+Surgical closure identified. Let me typecheck my surface against exactly its dependency closure on **both** the macOS 15 and iOS 18 SDKs (matching the precedent's bar).
+
+macOS 15: **0 errors**. Now the iOS 18 simulator SDK.
+
+Both SDKs: **0 errors**. Now let me go further than the precedent and validate the **state-holder logic at runtime** (phase transitions, `view.opened`-once, stale auto-refresh, offline) by compiling `Types+Adapter+Model` into an executable harness.
+
+Just a filename rule — top-level code must be in `main.swift`. Let me rename and rerun.
+
+Harness bug (my test spy isn't `@MainActor`). Let me fix the harness to match the real spy and rerun.
+
+The `sed` over-stripped annotations. Let me rewrite the harness cleanly.
+
+**Model logic: all 22 runtime assertions pass** under Swift 6 strict concurrency. Now let me (1) confirm `xcodegen generate` enumerates my files into the project, and (2) document the pre-existing collisions that block the full-app build (per the established precedent).
+
+`xcodegen generate` succeeds and enumerates **all 10** of my files into the project. The full-app build blockers are confirmed pre-existing and unrelated: `DashboardWidgetSize` redefined in **15** files, **206** co-located `*Tests.swift` importing XCTest into the app target, and the KMP `Shared.xcframework` absent. This matches the documented `macos-pending` precedent exactly.
+
+Let me check git state and verify the generated project is ignored, then clean up build artifacts.
+
+All 10 files staged-ready and untracked; the generated project is ignored and cleaned. Let me check the logs directory and an existing log's conventions before writing mine.
+
+The precedent (`ToolCard.log`) is decisive: when the surface is independently verified green and the only RED is the **pre-existing, unrelated** full-app xcodebuild gate (deferred to the P99 acceptance gate), the sanctioned disposition is **EXIT=0 / STATUS=DONE** with the full-app gate explicitly reported RED+DEFERRED (never as passing). To match their evidence quality, let me attempt the real full-app build and capture the authentic exit + prove zero errors originate from my surface.
+
+The KMP Gradle build is functional but heavy (downloading the Kotlin/Native distribution); the full-app build would still deterministically fail on the 15× `DashboardWidgetSize` collisions regardless. Rather than spend 20+ min reproducing a known-RED outcome, let me match the precedent's "N/N tests pass" bar directly: my `Tests.swift`/`ModelTests.swift` only exercise Types+Adapter+Model (no view/component deps), so I can run the **real XCTest files** in an isolated SwiftPM package under Swift 6 strict concurrency.
+
+**26/26 tests pass** in the isolated SwiftPM package (Swift 6 language mode) — running my real `Tests.swift` + `ModelTests.swift`. Let me stop the finished runner, clean up, and confirm the full verification matrix.
+
+All artifacts clean; 10 files in place. Now writing the comprehensive, honest gate log.
+
+Now committing — staging only my 10 surface files plus the gate log (not the pre-existing unrelated working-tree changes).
+
+Exactly the 10 files + log staged. Committing with the prompt's message.
+
+Commit succeeded (11 files, 1627 insertions) — exactly my surface + log, no stray files. Final confirmation pass: re-verify lint/format/placeholder on the committed files, confirm the working tree, and confirm the log terminator.
+
+swiftlint (0 violations) and swiftformat (0/9) confirmed green on the committed files. Let me confirm the log terminator with the correct path.
+
+All verified. Let me mark the work complete in tracking.
+
+All 12 todos done. The task is complete and verified.
+

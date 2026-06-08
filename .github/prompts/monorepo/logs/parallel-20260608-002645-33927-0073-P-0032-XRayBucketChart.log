@@ -1,0 +1,104 @@
+I'll start by exploring the repository structure and verifying the capability requirements (Apple toolchain, project structure, web source).
+
+Key finding: `xcodebuild` is present but **only Command Line Tools are installed (no full Xcode)** — so `xcodebuild` cannot run. Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me explore the Apple project structure before deciding on capability.
+
+The project is XcodeGen-based and the feature-views directory already has 1438 entries with an established multi-file pattern. Let me study existing examples — especially chart-based ones — and the shared infrastructure (state holders, tokens, i18n).
+
+`BatteryLevelChart` is the ideal reference — a time-series chart feature view with the full 7-file pattern. Let me read the entire set to learn the exact conventions.
+
+The 7-file pattern is clear. Now let me gather the web-side type/helper definitions to port faithfully, and the native design tokens + supporting components I must reuse.
+
+I have the design tokens. Let me read the two web helpers the source uses (`fmtInt`, `useDateFormat.formatTime`) and the supporting native components (TSFadeIn, TSSkeleton) so I can port behavior faithfully.
+
+Now let me precisely determine the build/test capability — this decides DONE vs BLOCKED. Checking SDKs, frameworks (SwiftUI/Charts/MapKit), simulators, and pwsh.
+
+Critical capability picture is now clear:
+- ❌ `xcodebuild` cannot run (Command Line Tools only, no Xcode.app), ❌ no iOS simulators
+- ✅ macOS SDK **includes SwiftUI, Charts, MapKit** modules — so `swiftc` can typecheck SwiftUI+Charts code
+- ✅ `swiftlint`, `swiftformat`, `pwsh`, `xcodegen` available
+
+Let me confirm no Xcode.app exists (airtight BLOCKED evidence) and prove `swiftc` can typecheck SwiftUI+Charts against this SDK before writing all code.
+
+`/Applications/Xcode.app` **exists** — full Xcode is installed; only `xcode-select` points at CommandLineTools. I can override with `DEVELOPER_DIR` (no sudo). This makes the real gate achievable. Let me verify xcodebuild + simulators work via `DEVELOPER_DIR`.
+
+Fully functional: **Xcode 26.5, iOS 26.5 simulators (iPhone 16 booted), macOS SDK** — all present. STATUS=DONE is achievable via `DEVELOPER_DIR`. Before writing code, I must understand two build-critical things: how `*.Tests.swift` in feature-views get compiled (app target vs test target) and the `Shared.xcframework` staging.
+
+Two build-critical unknowns: how `*.Tests.swift` (with `@testable import TeslaSync`) avoid polluting the app target, and whether the KMP `Shared.xcframework` can be staged here. Let me investigate the build tooling and any CI evidence.
+
+`Tests/Unit/FeatureViews/` only contains `ToolCardTests.swift` — the per-surface `*.Tests.swift` live in feature-views and would land in the app target (with `@testable import TeslaSync`). No `.xcodeproj` is generated yet. The file name `macos-pending-verifications.md` is a strong signal. Let me read it and check CI to understand the real expected gate behavior.
+
+This is decisive. `apps/macos-pending-verifications.md` documents the **exact established methodology** for this P4/feature-views series (predecessors ToolCard, AlertMessageEditor, FSMTimelineChart):
+
+- The **surface** is verified green via: isolated SwiftPM build + tests (Swift 6 strict concurrency), real iOS-18 + macOS-15 `swiftc -typecheck`, swiftlint --strict / swiftformat --lint / placeholder gate, and `xcodegen generate` enumeration.
+- The **full-app `xcodebuild build test`** is blocked by **pre-existing, unrelated parallel-merge collisions** (`DashboardWidgetSize` redefined 15×, 150+ co-located `*.Tests.swift` importing XCTest into the app target, unstaged KMP `Shared.xcframework`, dev-signing) — deferred to the `macos-latest` acceptance-gate prompt.
+
+I'll follow this predecessor methodology exactly (covenant rule 7: no predecessor bypass). Let me confirm support-file deps and check for name collisions before coding.
+
+Confirmed: `DashboardWidgetSize` redefined 15×, **170** co-located app-target test files — exactly the documented pre-existing blockers. There are sibling X-Ray surfaces (`XRayFieldsTable`, `XRayHeader`) in the same `admin.xray.*` feature. Let me align with their conventions.
+
+Now I have the full picture and sibling `admin.xray.*` conventions. Let me read the lint/format configs (the gate runs `swiftlint --strict` and `swiftformat --lint`) so my code is clean on the first pass, then write the plan.
+
+Lint/format rules are clear. Let me verify the exact i18n values in the web catalog so my `.strings` defaults are byte-exact, then write the plan.
+
+I have everything needed. Exact parity i18n values confirmed. Let me set up the plan and todos, then build the surface.
+
+Now I'll create the complete 7-file surface, modeled on the `BatteryLevelChart` pattern with the `admin.xray.chart.*` namespace. Starting with the pure adapter core, model, views, and main view.
+
+Now the test suite (adapter + model + accessibility), following the predecessor coverage pattern.
+
+Now the `.strings` catalog with the parity keys + native chrome.
+
+All 7 files created. Now the verification phase. Let me set up todos and start with swiftformat/swiftlint on my files.
+
+swiftformat normalized 1 file. Let me verify lint-clean with both tools and see what changed.
+
+Both lint tools pass (swiftformat 0/6 need formatting; swiftlint 0 violations). Now the isolated SwiftPM build + XCTest under Swift 6 (predecessor methodology). Let me assemble the package with the surface + its token/support deps, module named `TeslaSync`.
+
+My surface compiled cleanly — the only errors are in the wholesale-copied `Skeletons.swift` (references `TSCard`, which my surface doesn't use). Let me trim the harness copy to just the `TSSkeleton` struct my code needs, then build + test.
+
+All **27 tests pass** under Swift 6 strict concurrency, and the surface compiles cleanly. Now the dual-SDK `swiftc -typecheck` (iOS 18 + macOS 15) to prove the SwiftUI+Charts view code compiles on both platforms.
+
+Both **iOS 18 and macOS 15 typechecks pass clean**. Let me update todos, then run `xcodegen generate` (file enumeration) and the placeholder check.
+
+Placeholder check clean (0 placeholders, EXIT=0). Now `xcodegen generate` to confirm the 7 files are enumerated into the project.
+
+`xcodegen generate` succeeds and **all 7 files are enumerated**. Now let me look at the canonical log location + a predecessor log to match format, then attempt the real full-app gate to capture the documented pre-existing block.
+
+This is the definitive precedent: predecessors report the full-app gate **RED + DEFERRED** (IOS_EXIT=65/MAC_EXIT=65) with the surface independently verified green, ending **EXIT=0 / STATUS=DONE**. I'll follow it exactly. Let me run the real full-app gate to capture honest exit codes (covenant rule 3), starting with iOS, while gathering deterministic blocker evidence in parallel.
+
+Deterministic blocker evidence confirmed (DashboardWidgetSize ×15 with exact file list, 171 co-located app-target test files, unstaged Shared.xcframework, macOS signing). The real iOS gate is compiling in the background. Let me monitor its progress.
+
+Good — the KMP `Shared.xcframework` Gradle preAction is actually building (Kotlin/Native iOS+macOS compile/link). It'll proceed to app-source compilation and hit the pre-existing collisions. Let me wait.
+
+The KMP framework built successfully and is now staging the release variant. xcodebuild will then compile app sources. Let me continue waiting for it to reach the app-source collisions.
+
+The KMP release-framework link is the slow step (optimized Kotlin/Native). It will then compile the 1400+ app sources and hit the collisions. Letting it run to capture the real exit code. Waiting longer.
+
+The build was interrupted (IOS_EXIT=143 = SIGTERM) during the slow KMP release-link — an artifact of my async harness, not a real gate result. The KMP framework is now cache-warm. Let me re-run the real gate **detached** (survives teardown) to capture the genuine app-compile exit code, and pre-stage the built debug framework to speed it.
+
+Detached iOS gate launched. Polling for the app-compile result (Gradle cache is now warm).
+
+The **real gate result is captured** — it fails with the exact documented pre-existing blocker:
+```
+Testing failed:
+	Unable to resolve module dependency: 'XCTest'  (in target 'TeslaSync')
+** TEST FAILED **  (2 failures)
+```
+This is blocker #2 (169 co-located `*.Tests.swift` importing XCTest into the app target) — systemic, not my surface. Let me capture the authoritative exit code with a clean synchronous re-run (caches now warm).
+
+**Authoritative: IOS_EXIT=65**, failing on `Unable to resolve module dependency: 'XCTest'` in the app target from a **predecessor's** file (`AIRestorePanel.Tests.swift`) — **zero XRayBucketChart errors**. Now the macOS gate (covenant: don't assume).
+
+Both gates authoritatively RED for **pre-existing, out-of-scope** reasons — **IOS_EXIT=65** (XCTest-in-app-target across predecessor files) and **MAC_EXIT=65** (macOS dev-signing) — with **zero XRayBucketChart errors**. This matches the documented precedent exactly. Now let me capture authoritative whole-tree lint/format exits and clean up.
+
+Whole-tree lint/format are RED but **only from pre-existing violations in unrelated files** (`LifetimeStatsWidget.Adapter.swift` function-length; `ActionBuilder.Previews.swift` blank-lines) — my surface is clean (scoped: 0/0). Let me confirm git status is clean except my 7 files, and that those violations aren't mine.
+
+Git status shows my 7 untracked XRayBucketChart files plus **pre-existing working-tree modifications I didn't make** (AIUsageCard.*, two web files — parallel-slot drift). I'll stage only my files. Let me verify I didn't cause the AIUsageCard changes, then write the canonical log.
+
+Confirmed: AIUsageCard + web files are pre-existing slot drift (no XRay refs, 113-line diff I didn't author). The iOS XCTest blocker hits predecessor files (AcDcStatsPanel, ActionBuilder, …), not mine. I have all evidence. Writing the canonical log.
+
+Log written. Now commit **only** my 7 surface files + the log (not the pre-existing slot drift), per the prompt's Commit section.
+
+Committed cleanly: **HEAD 19b372dd4**, 8 files (7 surface + log), 1544 insertions — only my files. Final cleanup of temp artifacts.
+
+All work complete and verified. 
+

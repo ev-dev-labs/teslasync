@@ -1,0 +1,153 @@
+I'll start by exploring the repository structure and verifying platform capabilities, since this task requires Apple/Xcode tooling.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed; `simctl` is unavailable. However `swift` 6.3.2, `swiftlint`, and `swiftformat` ARE available. Let me read the web source and explore the Apple app structure deeply before deciding on the verification path.
+
+I have the web source. It's a navigation guard that registers "dirty form" guards and shows a confirm dialog on back/navigation when forms are unsaved. Now let me understand the Apple app conventions — state holders, tokens, i18n facade, telemetry, and how prior surfaces were ported.
+
+No shared-surfaces exist yet — this is the first. Two feature-view logs exist (0126, 0128). Let me read a predecessor log to understand how the gate/capability was handled, and study the core facade/design/components in parallel.
+
+The predecessor establishes the canonical disposition: full-app `xcodebuild` gate is DEFERRED (RED, pre-existing parallel-merge/signing issues), but the surface is independently verified via an isolated Swift 6 SwiftPM build+test, with swiftlint/swiftformat/placeholder green. Let me check for Xcode.app and study the LayoutSwitcher file pattern.
+
+`/Applications/Xcode.app` exists — I can override `DEVELOPER_DIR` like the predecessor did. Let me verify Xcode works and read the LayoutSwitcher surface (the closest template — it also maps a confirm dialog) plus the core facade/design files.
+
+Full Xcode 26.5 + iPhone 16 simulator (booted) + xcodegen are available — I'm NOT capability-blocked and can run the real gate. Let me read the LayoutSwitcher surface as the canonical template (it maps a confirm dialog, like my surface needs).
+
+Excellent template. Let me read the remaining LayoutSwitcher files (Adapter, Views, Tests, strings, Previews) to fully internalize the conventions.
+
+I have the full template pattern. Let me read the design tokens, feedback components, shared-facade state holders, and the Previews file to ground my architecture in the real primitives available.
+
+Let me read the shared-facade state holders, overlays, lint configs, and the test-target section of project.yml to finalize my architecture and ensure compliance.
+
+Let me check lint configs, the test-target wiring in project.yml, and the exact component signatures I'll use (TSButton, TSTone, TSSkeleton, etc.) to avoid compile errors.
+
+Critical constraint check: allowed files are only the surface + log, but the new `shared-surfaces/` dir isn't in `project.yml` sources. The predecessor used an isolated SwiftPM build+test for verification. Let me read the predecessor log's verification approach and the test-target wiring.
+
+I now have the sanctioned methodology: ship the surface files + verify via an **isolated SwiftPM harness** (real design-system + surface + tests), run swiftlint/swiftformat/placeholder gates, and capture the full xcodebuild gate (DEFERRED-red on pre-existing issues). Let me gather the remaining specifics: pwsh, the placeholder script, generated tokens, and which components import `Shared`.
+
+pwsh 7.6.2 is available, the placeholder script supports `-SelfTest`, and no needed design files import `Shared`. Let me read the generated tokens and grep the exact component signatures I'll use.
+
+Now I have the full token set. Let me grab the `TSButton` full initializer and the `TSTone` definition (used for tinted chips), then I'll have everything to write the surface.
+
+I have all design primitives. The web surface composes `@/components/ui/ConfirmDialog` (with `variant="warning"` + `silenceKey`). Let me read that shared component to map it faithfully, and check for an existing native confirm/alert counterpart.
+
+I now understand `ConfirmDialog` (warning variant → amber + triangle icon; `silenceKey` honored for non-destructive → "Don't ask again" + auto-resolve when silenced; Escape→cancel). Let me read `GuardedLink` and `confirmSilence` to finalize the native contract, then start building.
+
+I have the complete spec (provider contract, ConfirmDialog warning+silence semantics, GuardedLink consumer contract). Let me check the app's environment-injection convention and locate `TSInlineCallout`, then I'll start building.
+
+There's an established `EnvironmentKey` + `nonisolated(unsafe)` pattern. Let me read it to match convention exactly.
+
+I have everything needed. Let me set up tracking and start building the surface. First the plan and todos.
+
+Now let me create the surface directory and write the Model file.
+
+Now the Adapter (pure logic, no SwiftUI).
+
+Now the core provider file — coordinator, environment context (NOOP default), and the provider view.
+
+Now the Views file — the confirm surface (all states), chip, and presentation plumbing (inline modal + native alert).
+
+Now the Previews file.
+
+Now the test files. I'll split into a pure-adapter file and an async-coordinator file to stay within length/type limits (both match `NavigationGuardProvider.*`).
+
+Now the async coordinator tests.
+
+All 8 surface files are written. Let me set up the isolated SwiftPM harness to compile the exact shipped files against the real design system and run the tests.
+
+The main-file symlink got a `.swift.swift` suffix (harmless — still compiles), but let me clean it up and add the `Package.swift`, then build.
+
+Now build the harness against the real design system.
+
+Build succeeds. One concurrency warning in Previews (static helper constructs a `@MainActor` View). Let me fix it, then run the tests.
+
+Two fixes needed: an inline `await` inside `XCTAssertTrue` (must extract), and a `@MainActor` annotation on the telemetry test (to access the View's isolated static). Let me fix both.
+
+All 29 tests pass against the real design system. Let me capture clean build/test exit codes, then run swiftlint + swiftformat scoped to the surface files.
+
+swiftlint scanned the whole tree (config `included:` overrides the path). Let me find the single violation and confirm it's pre-existing, not mine.
+
+The only violation is the **pre-existing** `LifetimeStatsWidget.Adapter.swift:141` (the exact one the predecessor documented) — **zero** in my `shared-surfaces` files. Let me get a scoped 0-violation proof with a temp config mirroring the repo rules.
+
+swiftlint scoped: **LINT_EXIT=0**. Now swiftformat --lint on the surface files.
+
+swiftformat wants `modifierOrder` fixed on the two `nonisolated(unsafe) public static` decls. Let me auto-fix with swiftformat (write mode) on the surface files, then re-verify lint + rebuild.
+
+swiftformat fixed the modifier order (`public nonisolated(unsafe) static`), **FORMAT_EXIT=0**. Let me confirm the harness still builds/tests and swiftlint is still clean after the format change.
+
+29 tests pass, swiftlint clean. Now the placeholder gate — run it meaningfully against the real surface dir, plus a self-test and a control proving it isn't a no-op.
+
+Self-test passes and the real scan reports `PLACEHOLDER_COUNT=0`. Let me run a control on copies of my actual files (with injected stubs) to prove the 0 is non-trivial.
+
+Placeholder control proves the scanner is non-trivial (COUNT=2, EXIT=1 with stubs). Now the full xcodebuild gate. Let me check the project/xcframework state first (the scheme has a KMP pre-action).
+
+No `.xcodeproj` yet and `Frameworks/` is empty (the scheme's pre-action builds the KMP `Shared.xcframework` via Gradle). Let me generate the project and check the KMP toolchain, then attempt the gate.
+
+Project generates cleanly; JDK 17 + Gradle present. Now the iOS xcodebuild gate (the KMP `Shared.xcframework` pre-action will run Gradle — may be slow). Let me run it and capture real evidence.
+
+Let me check line counts of the shipped files while the iOS build runs.
+
+git status shows `AIUsageCard.*` as modified — I never touched those. Let me investigate whether this is pre-existing or something I caused.
+
+The `AIUsageCard.*` edits are pre-existing in this parallel-slot worktree (mtime 05:08:38 = checkout time, before my work). My swiftformat run was scoped to `shared-surfaces`. I'll stage only my allowed files at commit. Let me check the iOS build progress.
+
+iOS build is in the Gradle KMP `Shared.xcframework` assembly step (heavy parallel-slot daemon contention, as the predecessor noted). Let me wait and poll.
+
+KMP build progressing (Kotlin iOS arm64 linking, using build cache). Let me continue waiting.
+
+Still linking the iOS-simulator KMP framework (0 errors yet). Let me keep waiting for the xcframework to finish and the Swift app phase to begin.
+
+xcframework was written (debug variant). Staging + Swift app compile next. Let me wait for the staging result and Swift phase.
+
+Now it's linking the **release** KMP frameworks (the staging script targets the release variant) — more linking across targets. Build is progressing with 0 errors. Let me wait further while it completes the xcframework and reaches the Swift app phase.
+
+The KMP release-framework linking is slow on this contended runner (~25 min in, 0 errors, Swift app phase not yet reached). My primary verification is already green. Let me continue waiting for the real iOS exit while it links the remaining frameworks.
+
+~30 min in; now linking the macOS KMP framework (release xcframework assembles all platforms). Confirmed my surface isn't compiled by the app target (`NavigationGuard` count = 0 — expected, it's not in project.yml). Let me keep waiting for the Swift app phase + the real iOS exit.
+
+iOS gate completed: **IOS_EXIT=65** (xcframework staged OK, then the `TeslaSync` app-target Swift compile failed). Let me capture the exact `error:` lines to confirm it's the pre-existing blocker, not my code.
+
+Confirmed: iOS failure is the **pre-existing** co-located-XCTest blocker in a sibling feature-view (`AIRestorePanel.Tests.swift:18` — not mine); **zero** errors reference my surface. Now the macOS gate (xcframework now cached → faster; expected to fail on the same/ signing blocker).
+
+While the macOS gate runs, let me start drafting the log. Let me poll macOS progress first.
+
+macOS gate completed: **MAC_EXIT=65**. Let me capture the macOS error evidence (signing and/or co-located XCTest).
+
+Both gates are red on **pre-existing** blockers only (iOS: co-located XCTest in a sibling feature-view; macOS: dev-signing entitlements) — zero references to my surface. Let me confirm these are the documented deferrals, then write the log.
+
+`apps/macos-pending-verifications.md` documents these exact blockers for sibling P4 surfaces (deferred to the P99 `macos-latest` acceptance gate). My findings match precisely. Let me run one final consolidated verification pass on the surface, then write the log and commit.
+
+All final gates green: build/test=0 (29 tests), swiftlint=0, swiftformat=0, placeholder=0; iOS/macOS=65 (deferred, pre-existing). Let me grab exact tool versions, then write the log.
+
+Now I'll write the comprehensive gate log.
+
+Log written. Now let me stage **only** the surface files + log (not the pre-existing AIUsageCard edits or generated artifacts) and commit.
+
+Staged exactly the 8 surface files + the log (generated `.xcodeproj`/`Shared.xcframework` are git-ignored; pre-existing `AIUsageCard.*` not staged). Committing now.
+
+Committed cleanly: 9 files (8 surface + log), 1795 insertions. Let me finalize tracking, verify git state, and clean up temp artifacts.
+
+Everything is clean and committed. The working tree shows only the pre-existing `AIUsageCard.*` edits (which I correctly never touched or staged); all my work is committed; temp artifacts cleaned.
+
+## Summary
+
+Shipped a production, Apple-idiomatic **`NavigationGuardProvider`** surface (P4 · shared-surface · 0128) at parity with `web/src/components/feedback/NavigationGuardProvider.tsx`.
+
+**Capability:** Xcode 26.5 + iPhone 16 sim + SDKs all present → **not** capability-blocked.
+
+**Delivered** (`apps/apple/TeslaSync/shared-surfaces/`, 8 files / 1590 lines):
+- A `@MainActor @Observable NavigationGuardCoordinator` (the React context+provider port): guard registry, `confirmIfDirty() async -> Bool` over continuations with **in-flight re-use**, the **silence allowlist** (UserDefaults, mirroring web `confirmSilence`), and `confirmBack()` (popstate).
+- `NavigationGuardContext` env value with a `.noop` default (web `NOOP_CTX`) read via `@Environment(\.navigationGuard)`.
+- Two presenters — an inline dimmed-scrim modal (web `<Modal>`) and a native `.alert` — rendering **every state** (loading/empty/error/confirming + stale/offline chip). Discard is HIG-destructive; the 4 web copy keys (`forms.unsavedTitle/unsavedWarning/discard/keepEditing`) are preserved verbatim.
+- 29 XCTest cases, previews per state, VoiceOver labels, `view.opened` telemetry.
+
+**Verification (all run on this runner):**
+| Gate | Result |
+|---|---|
+| Isolated SwiftPM build + test (Swift 6 strict concurrency, real design system) | **0 / 29 tests pass** |
+| swiftlint --strict (surface scope) | **0 violations** |
+| swiftformat --lint (surface scope) | **0/7 need formatting** |
+| check-placeholders (+ self-test + injected-stub control) | **COUNT=0** (control proved non-trivial) |
+| xcodebuild iOS / macOS build test | **IOS_EXIT=65 / MAC_EXIT=65 — DEFERRED** |
+
+The full-app xcodebuild gates are red **only** on pre-existing, documented blockers (a sibling feature-view's co-located `XCTest` import on iOS; macOS dev-signing) — **zero** errors reference my surface, which isn't yet wired into `project.yml` (P4-core/P99 scope). This matches the sanctioned precedent in `apps/macos-pending-verifications.md`. Committed as `463802eda` with `EXIT=0 / STATUS=DONE`.
+

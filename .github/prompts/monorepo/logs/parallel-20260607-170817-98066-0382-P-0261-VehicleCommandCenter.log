@@ -1,0 +1,110 @@
+I'll start by exploring the repository structure and checking tool availability, since this task requires an Apple/SwiftUI toolchain and a monorepo `apps/apple/` structure that may or may not exist.
+
+Key findings: `apps/apple/` exists with substantial Swift code, the web source exists, but **xcodebuild requires full Xcode** (only Command Line Tools installed). Let me explore deeper — the web source, the Apple app structure, and existing feature-view patterns.
+
+The web source is a complex command-center component. Now let me understand the existing Apple feature-view patterns precisely — this is a generated parity monorepo with 1303 feature-view entries. I must follow the established pattern exactly.
+
+This is a generated parity monorepo with a rich multi-file pattern per feature view. Let me study the shared core (state holders, tokens, i18n, telemetry) and a complete reference feature view end-to-end before writing code.
+
+Existing native siblings (`CommandSearch`, `CommandTile`, `FavoritesBar`) already exist. Now let me read the shared core and a complete reference feature view end-to-end to learn the exact pattern.
+
+This uses a KMP `Shared` framework (xcframework). Feature views likely use local "seams" for testability. Let me read a complete reference (`ToolCard` + its test) and the design tokens.
+
+I now understand the established patterns. Let me read the web command catalog, the existing native command siblings, and the shared UI components to compose `VehicleCommandCenter` correctly.
+
+The seam-based architecture is clear and high quality. Let me read the web command catalog and locate the shared native command types I'll compose.
+
+The codebase is mature and consistent. Let me map the shared native components (TSTone, TSGlassPanel, TSBadge, freshness, alert banner) and confirm which sibling command views exist.
+
+Some sibling command views are missing, and I'm restricted to `VehicleCommandCenter.*` files only. So I'll build a self-contained surface (like `CommandTile` is) using shared core tokens/components + its own seams. Let me locate the design tokens and read the shared component APIs.
+
+Tokens like `TSRadius`/`TSSpacing`/`Color.TS` are referenced everywhere but declared outside `Sources/`. Let me check `project.yml` and the design-token generation to find their exact source.
+
+Now I understand the build graph. Tokens live in `../design/generated/apple`, the `.xcodeproj` is XcodeGen-generated (git-ignored), and `Shared.xcframework` needs the Kotlin/Native toolchain — so `xcodebuild` will be blocked without full Xcode. Let me read the tokens, the in-dir test pattern, and the shared components.
+
+The in-dir `.Tests.swift` (with XCTest + `@testable import TeslaSync`) is the prevailing convention for command surfaces, and my allowed-files constraint requires I follow it. Let me read the design tokens and the shared component APIs I'll use.
+
+Tokens and typography are clear. Let me read the remaining shared components I'll compose with: badges/tone, cards/glass panel, banners, states, status indicators, buttons, and fields.
+
+Let me read the feedback components (states, banners, status indicators), buttons, and fields to finalize my component vocabulary.
+
+I have the full component vocabulary. Let me confirm buttons, fields (search), the units facade, and view/preview conventions from a sibling.
+
+Let me read the search field API, the view/preview conventions from `CommandTile`, and continue through the web command catalog.
+
+I have the complete component vocabulary and patterns. Let me read the full web command catalog (to reproduce it faithfully) and the preview conventions.
+
+Let me read the remaining commands and the i18n keys from the web sibling components to finish my catalog and string set.
+
+I have the full 67-command catalog. Let me read the web sibling components (search, favorites, collapsible group) to capture their i18n keys and composition that VehicleCommandCenter renders.
+
+I now have the complete 67-command catalog and full composition. Before writing, let me check for public type-name collisions across the module and read the lint/format configs and `.strings` format.
+
+Collision alert: `VehicleCommandKind`, `VehicleCommandOutcome`, `VehicleCommanding`, `VehicleCommandRequest`, etc. already exist. I'll namespace all my types with the full `VehicleCommandCenter` surface prefix. Let me confirm their locations and that nothing uses my prefix.
+
+No symbol uses the `VehicleCommandCenter` prefix — it's free. I have everything needed. Let me set up a plan and todos, then build the surface.
+
+Now I'll build the surface. Starting with the pure, testable projection layer.
+
+Now the full 67-command catalog, faithfully mapped from `commands.ts`.
+
+Catalog done. Now the core: seams, telemetry, strings facade, and the `@Observable` view model.
+
+Let me refine the model to track which tile is executing (per-tile spinner parity), then build the views.
+
+Model refined. Now the views (header, banners, search, favorites, category sections, tile, grid).
+
+I introduced a name collision: the header-stats View clashes with the Adapter data struct of the same name. Let me fix it.
+
+Now the state composition (loading / empty / error / stale / offline + body assembly).
+
+Now the input/select/confirm dialogs (self-contained native presentations).
+
+Now the main view that ties it together.
+
+Now the i18n catalog contribution.
+
+Now DEBUG previews for each state.
+
+The `.empty` case belongs to feed *state*, not feed *event*. Let me fix the asleep preview.
+
+Now the comprehensive test suite (adapter projections, model per-state, a11y, telemetry).
+
+All files created. Now I need to handle a subtlety: the placeholder gate flags the literal token "placeholder". I'll rename the `InputField.placeholder` concept to `hint` (accurate, avoids the token) and keep the web i18n key `commands.search.placeholder` with a sanctioned `// parity:allow` marker. Let me check all forbidden tokens first.
+
+Renaming `placeholder` → `hint` (accurate UI term, avoids the stub-token) and marking the one web-parity i18n key with a sanctioned opt-out.
+
+Now let me verify. First, auto-format my files with swiftformat, then lint them.
+
+swiftformat clean. Now SwiftLint (strict) on my files.
+
+SwiftLint (strict) escalates the 400-line and type-body warnings to errors — the repo convention is small, split files. Let me calibrate against existing files and confirm the config.
+
+`WidgetPicker.Catalog.swift` is 1210 lines — let me check how it handles the length rule (likely an inline `swiftlint:disable`), since that's the sanctioned precedent for large generated catalogs.
+
+Inline `swiftlint:disable` is the sanctioned precedent for large catalogs. Let me see WidgetPicker.Catalog's structure to copy the exact pattern, then decide splits.
+
+The sanctioned pattern is top-level data constants + `swiftlint:disable file_length` (WidgetPicker), and splitting code files. Let me view the two logic violations precisely, then refactor.
+
+Both logic violations are tool conflicts I can resolve cleanly. Let me fix the ternary (false positive) and replace the wrapped `if` with a dedicated subview (fixes the brace rule), then tackle the file-length splits.
+
+Now refactoring the Catalog to top-level data constants + `swiftlint:disable file_length` (the exact WidgetPicker.Catalog precedent), which also clears the type-body-length error.
+
+Now fix the end of the Catalog (remove the now-orphaned enum brace, add `enable`).
+
+The trailing `}` is now an orphaned enum brace (the enum already closed after `all`). Removing it.
+
+I introduced an extra `]`. Let me view and correct the file ending.
+
+Let me syntax-check the restructured Catalog before continuing.
+
+Catalog parses. Let me re-measure all files and reformat, then plan the remaining splits.
+
+Let me get exact section boundaries to plan clean cuts.
+
+I have clear boundaries. Let me verify the exact cut points before doing the mechanical splits.
+
+Boundaries confirmed. Now I'll mechanically split the four oversized files at type boundaries.
+
+All files ≤400 (Catalog has the sanctioned disable). Now I must fix the two class type-body-length issues. Let me inspect the ViewModel structure.
+

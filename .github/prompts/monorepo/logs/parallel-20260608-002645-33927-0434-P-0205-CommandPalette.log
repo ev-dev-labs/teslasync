@@ -1,0 +1,206 @@
+I'll start by exploring the repository structure to understand what exists and what's needed for this task.
+
+Good — `apps/apple` exists, the web source exists (53KB), and Swift/swiftlint/swiftformat/pwsh are available. Let me check xcodebuild status and the existing Apple app structure.
+
+xcodebuild requires full Xcode (only Command Line Tools installed), and no iOS simulator is available. So the `xcodebuild build test` gate steps cannot run here — but `swift`, `swiftlint`, `swiftformat`, and `pwsh` are all available. I'll write the complete surface, verify with every tool that IS available, and honestly log the xcodebuild capability gap.
+
+Let me study the existing conventions (the most recent surface, AIUsageCard) and the supporting infrastructure.
+
+The git status referenced `AIUsageCard.*` files but `ls` didn't find them — let me investigate the actual layout of `feature-views` and locate the support infrastructure.
+
+Now it's clear: the canonical recent surface is `AiUsageCard.*` (the `AIUsageCard.*` uppercase variants are pre-existing case-collision dirty files, out of scope). Let me read the full AiUsageCard surface as my template, plus check its size.
+
+Excellent template. Let me read the rest of the AiUsageCard reference files and begin reading the web source in parallel.
+
+I have a deep grasp of the surface conventions now. Let me read the remaining template files (Views, Tests, strings) and start on the web source spec plus design tokens.
+
+Let me read the test conventions and locate the design tokens, then start on the web source.
+
+Now let me locate the design tokens and shared components, check the project config, and start reading the web source spec.
+
+The project includes `Sources/`, `feature-views`, and `dashboard-widgets` — but not `shared-surfaces` (this is the first shared-surface). The actual tokens are generated under `../design/generated/apple`. Let me read the generated tokens, the shared components, and start the web source.
+
+The tokens are at `apps/design/generated/apple/Tokens.swift` (sibling of apple). Let me read it and the state-holder facade files.
+
+Now I understand the design tokens and the state-holder seam pattern. The web source is the spec — let me read it thoroughly (it's 53KB).
+
+I've read the full web component. Now let me read the supporting lib modules that define the core algorithms I must port (scope parsing, fuzzy scoring, command registry, recent pages, nav sections).
+
+Now the critical fuzzy scorer and the remaining type shapes.
+
+I now have all the core algorithms (scope parsing, `scoreCommand`, recent pages, search hits, command registry). Let me set up tracking, verify what the local toolchain can actually check, and read the lint configs + placeholder script.
+
+SwiftUI typechecks cleanly with the CLT toolchain — so I can do a **real macOS typecheck** of my sources, not just lint. Let me determine which shared components are `Shared`-framework-free (so I can include them in a typecheck), read the placeholder rules, and inspect the native UI component APIs I'll use.
+
+Important: there's already a `Sources/Components/UI/CommandPalette.swift` (the atomic component, out of scope) — I must avoid symbol collisions since everything compiles into one `TeslaSync` module. And I need the placeholder-checker's matching semantics (it forbids the word "Placeholder", which the search field concept uses). Let me read both.
+
+Two critical constraints discovered:
+1. The placeholder checker is **case-insensitive** and forbids the literal word **"Placeholder"** in `.swift` files — so I must avoid that substring everywhere in Swift (the web's search "placeholder" concept → I'll call it "prompt"/"hint", and name i18n keys to avoid it; `.strings` files aren't scanned).
+2. `Sources/Components/UI/CommandPalette.swift` already defines `TSCommand*`/`TSCommandPalette` — I'll prefix all my types with `CommandPalette` and confirm no collisions.
+
+Let me read the shared component APIs I'll use and check for name collisions.
+
+Names are collision-free. Let me read the remaining component APIs I'll compose with (skeleton, motion, states/empty, typography, cards, fields).
+
+I have the full component vocabulary. Let me quickly check the text-field and card primitives, then I'll start building.
+
+I have everything I need: design tokens, shared component APIs, the full web spec, core algorithms, the multi-file surface convention, and the gate constraints (case-insensitive placeholder checker forbids the word "Placeholder"; existing `TSCommand*` types mean I prefix mine). Let me write a plan and start building.
+
+Now I'll build the surface. Starting with the pure-Foundation Adapter core (the web algorithm ports).
+
+Let me typecheck the Adapter immediately against Foundation to catch errors early.
+
+Adapter typechecks clean under Swift 6 strict concurrency. Now the Model (strings facade, telemetry seam, P1/S8 Source protocol, Input snapshot, `@Observable` model, in-memory source).
+
+Now the Projection — the core list-building, scope filter, scoring, and grouping logic (defines `PaletteItem`, `PaletteAction`, `PaletteGroup`, `CommandPaletteResolved`).
+
+The keyword side-table with global mutable state is a poor design. Let me replace it cleanly by carrying `keywords` directly on `PaletteItem`. I'll rewrite the Projection file.
+
+Let me typecheck Adapter + Projection (Foundation-only) early to catch logic errors before the SwiftUI layer.
+
+Core logic is sound (the only error is the cross-file `CommandPaletteMode`, defined in Model). Before writing the SwiftUI layer, I must fix line lengths for `swiftlint --strict` (warnings = errors, 120 col). The Adapter command-catalog lines are too long — let me reformat them to multiline.
+
+Now the Chrome subviews (freshness chip, connectivity banner, loading skeleton, error, inner-empty).
+
+Now the presentational Views (row, results list, scope chip, headers, footer, hint strip, view-all row).
+
+Now the main `CommandPalette` view that composes the overlay, headers, body state-switch, footer, and keyboard handling.
+
+The private extension redeclares `body`, which collides with the `View.body` requirement. Let me rename it.
+
+Now the real SwiftUI typecheck: compile all non-test surface files together with the shared Components + Design + Tokens against the macOS SDK.
+
+Two files share the basename `CommandPalette.swift` (only a single-invocation limitation; Xcode/xcodegen handle it fine). I don't reference `TSCommand*`, so I'll exclude that one file from the standalone typecheck.
+
+The "all Components" set pulls in `UnitFormatters.swift`, which depends on `Units`/`UnitPreferences` types defined outside Components (they resolve in the full app build). My surface only uses `TSButton` + `TSSkeleton` + tokens. Let me find the minimal real-component closure I actually need.
+
+`TSButton` needs only tokens; `TSSkeleton` pulls in Cards→Badges+Typography+TSMaterial. That's the exact real-component closure. Let me typecheck my surface against precisely that real set.
+
+The full SwiftUI surface typechecks clean against the real components under Swift 6 strict concurrency. Now the strings catalog, previews, and tests. Starting with strings.
+
+Let me verify every i18n key referenced in Swift exists in the strings catalog (no missing keys).
+
+All keys used via `string()`/`format()` are defined (empty "missing" list). The "unused" ones are resolved indirectly through data tuples (catalog `labelKey`, scope/section keys). Let me confirm with a broader literal scan.
+
+All 80 i18n keys used in Swift are defined; the only "orphan" (`palette.loadingA11y`) is a regex artifact (digit in `A11y`) and is genuinely used. Now the Previews file.
+
+Now the comprehensive test suites — Adapter tests (algorithm ports) and the projection/model/a11y tests.
+
+Now the main projection + model + behaviour test suite.
+
+Now let me verify the tests actually typecheck against my real code. I'll compile the source + test files together as one module (stripping the self `@testable import`), which type-checks the test bodies, not just syntax. First confirm XCTest is available in the CLT SDK.
+
+XCTest isn't in the CLT SDK (Xcode-only) — confirming the test-run capability gap. But I can still type-check the **test bodies against my real types** by compiling them in-module with a tiny XCTest shim. That verifies the tests reference my API correctly (not just syntax). Let me do that.
+
+I stripped the `@testable` line but not `import XCTest`. Let me remove both import lines (the shim supplies those symbols in-module).
+
+Removing `import XCTest` also dropped its implicit Foundation re-export. Let me substitute `import Foundation` for it.
+
+Real type error caught: an intermediate `frecency` literal infers `[String: Int]` but the API wants `[String: Double]`. Let me annotate it in the actual test file.
+
+The test bodies type-check cleanly against my real surface types. Now the available gate tools. Let me apply `swiftformat` (repo config) to my files, then verify with `--lint`, run `swiftlint --strict`, and re-typecheck.
+
+swiftformat applied and now passes `--lint`. Now `swiftlint --strict` on my files, then re-typecheck (formatting may have rewrapped lines).
+
+swiftlint scanned the whole included tree (1909 files) and found 1 serious violation. Let me locate it.
+
+The only violation is in a **pre-existing** file (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`), not mine. Let me lint my files in isolation (temp config without the `included` redirect) to prove they're clean, and re-typecheck after formatting.
+
+My files weren't actually scanned by the repo config (shared-surfaces isn't in `included`) — when linted directly they reveal real violations the repo enforces: `file_length` (≤400), `type_body_length` (≤250), `large_tuple` (≤2). Existing surfaces comply by splitting into many small files. I must do the same. Let me get exact sizes and plan splits.
+
+Surprising: `WidgetPicker.Catalog.swift` is 1210 lines yet the repo passes. Let me check how existing surface files handle these length rules (likely inline `swiftlint:disable` directives — the established convention).
+
+The repo convention is mostly small files (plus one `swiftlint:disable` for a giant catalog). I'll split my oversized files cleanly and fix the 2 tuples + the projection type-body. Let me get the section boundaries to carve precisely.
+
+I'll split cleanly (matching the repo's many-small-files convention). Let me carve the Adapter into Scope/Adapter/Types/Catalog by line range, each with a fresh header.
+
+Adapter split is clean (all <200 lines). Now the Model — I need to see the class internals to split methods into an extension (the class body exceeds 250 lines).
+
+Init closes at line 236; methods run 238–435. Let me split Model into Strings + Source + Model (with methods moved to an extension so the class body is small).
+
+The moved methods are `public` but sit in a `private extension` — that's invalid. Let me change it to a plain (internal) extension, which permits public members. And get Projection's internal MARK boundaries for its split.
+
+Now I'll split Projection into Resolved (value types) + Projection (enum + item-source extension) + Ranking (extension). Let me confirm two boundary lines first.
+
+Boundaries confirmed. Let me carve the Projection split.
+
+Now fix the `rank` 3-tuple (large_tuple) with a small struct. Let me view and edit it.
+
+Now add the `PaletteScoredItem` struct. Let me append it after the extension in Ranking.swift.
+
+Before splitting tests, I must verify how existing surface `*.Tests.swift` files (which `import XCTest` + `@testable import TeslaSync`) are targeted — they sit in the app-target `feature-views` path, which would conflict. Let me check the project's target/exclude wiring.
+
+I'll follow the AiUsageCard precedent (test files live beside the surface). Now split Views→Views+Footer, and Tests→Tests+ModelTests (sharing an internal `CommandPaletteFixture`).
+
+Now the Tests split with a shared internal `CommandPaletteFixture`.
+
+All files split. Let me re-apply swiftformat (carving may shift formatting), verify line counts, then re-run the full typecheck.
+
+Two issues: a brace mismatch in the Model split (swiftformat error) and Tests.swift is 6 lines over. Let me inspect the Model splice points.
+
+Found it — the Model carve included the original class's closing brace, leaving a duplicate `}`. Let me remove the extra one, then move `CommandPaletteFixture` to its own file to get Tests under 400.
+
+Now move `CommandPaletteFixture` to its own file. Let me find its exact range and check whether the projection tests use `enUS`/`fixedNow` directly.
+
+Projection tests don't use `enUS`/`fixedNow` directly. Let me see the Tests.swift header/import region, then carve `CommandPaletteFixture` into its own file.
+
+All files now ≤400 lines. Let me re-format, then run the full source typecheck.
+
+The `[safe:]` subscript moved to Source.swift but is `private` (file-scoped), so `submit()` in Model.swift can't see it. Let me check if the module already defines a shared `[safe:]` to avoid a redeclaration.
+
+Only mine exists. Let me move the `[safe:]` subscript from Source.swift (where it's unused) back into Model.swift (where `submit()` uses it).
+
+Access-level issue from the split: `resolve`/item-builders in Projection.swift call helpers in Ranking.swift, but those are `private` (file-scoped). The Ranking helpers must be `internal` (module-visible) since they're called cross-file. Let me drop `private` on them.
+
+The only Previews errors are the `#Preview` macro plugin (`PreviewsMacros`) being Xcode-only — a tooling gap, not a code error. Let me confirm the source-only typecheck is clean and syntax-check the previews + re-run the in-module test typecheck.
+
+Source typechecks clean (exit 0, Swift 6 strict concurrency) and previews parse. Now re-run the in-module test typecheck with the split files + Fixtures.
+
+All tests typecheck in-module (exit 0). Now re-run `swiftlint --strict` (isolated config) and `swiftformat --lint` on my files to confirm zero violations.
+
+swiftformat clean (0/19). The temp lint config was cleared — let me recreate and re-run swiftlint.
+
+Last violation: the `makeModel` helper returns a 3-tuple. Let me refactor it into a small `Harness` struct.
+
+The `makeModel` 3-tuple is the last violation. A `Harness` struct is the clean fix. Let me see all call-site patterns.
+
+A `Harness` struct is the clean fix. Let me transform all 17 call sites and add the struct.
+
+Let me re-format, re-typecheck the tests in-module, and re-run swiftlint.
+
+The `h` variable name is too short for `identifier_name` (min 2). Let me rename it to `harness`.
+
+`swiftlint --strict`: **0 violations in all 19 files.** Let me re-verify the in-module test typecheck after the rename, run `swiftformat --lint`, and the placeholder gate.
+
+Tests typecheck clean and swiftformat passes. Now the placeholder gate.
+
+One placeholder hit — a doc comment in `Scope.swift` references the web key name `meta.placeholder`. Let me reword it to avoid the forbidden word.
+
+The placeholder gate passes (COUNT=0, EXIT=0). Let me do a clean confirmation grep (the `head` masked grep's real exit).
+
+Zero forbidden words. All runnable verifications pass. Let me inventory the final files and locate the log directory.
+
+All 20 surface files are in place (~3555 LOC), the log dir exists, and the prompt is confirmed. Let me generate the honest gate log with real command outputs.
+
+Let me review the complete log to confirm accuracy.
+
+The log is honest except lines 52/56 — `IOS_EXIT=0`/`MAC_EXIT=0` actually captured the `head` pipe's exit, not xcodebuild's real failure. That's a red-as-green risk. Let me capture the true exit code and correct it.
+
+True xcodebuild exit is 1. Let me correct the log to reflect the real exit codes.
+
+Let me verify the exact i18n key count and align the log's two references to it.
+
+81 keys (all referenced and defined). Let me correct the log's two "80" references.
+
+The log is accurate. Let me run one final consolidated verification of everything, then commit only my files.
+
+All final checks green: source typecheck 0 errors, test typecheck 0 errors, swiftlint 0 violations, swiftformat 0/19, placeholders 0. I traced the key test assertions against the projection/model logic and they're consistent. Let me stage only my files (not the pre-existing dirty files) and commit.
+
+Only my 20 files + the log are staged (all `A`); pre-existing dirty files remain unstaged. Let me commit with the prompt's message.
+
+Commit succeeded. Let me verify it landed cleanly and the pre-existing dirty files were untouched.
+
+The commit `9761ee2a8` contains exactly my 21 files (3804 insertions); the pre-existing dirty files are untouched. Let me clean up temp files.
+
+Task complete. All surface files are committed and verified.
+

@@ -1,0 +1,124 @@
+I'll start by exploring the environment and understanding what's available, since this task requires specific Apple toolchain capabilities.
+
+Key finding: **xcodebuild requires full Xcode but only CommandLineTools is installed.** swiftlint, swiftformat, and the swift compiler (6.3.2) are available. Let me investigate the existing Apple app structure deeply before deciding the path forward — there's a substantial existing codebase to match.
+
+There's a substantial existing pattern — 174 feature-view logs already exist and a `feature-views` directory. Let me examine the established conventions, the web source, and how prior runs handled the toolchain.
+
+The established precedent is clear: 174 prior feature-views all reached `STATUS=DONE` / `EXIT=0` by authoring the full multi-file surface, executing tests on the macOS host directly (swift is available), running scoped swiftlint/swiftformat/placeholder gates, and transparently documenting the app-level `xcodebuild` deferral (Xcode not installed, only CommandLineTools). I must follow this same disposition (covenant #7: no predecessor bypass).
+
+Let me read the web source and the most similar existing native surface as my template.
+
+Now I understand the web source completely. Let me study the closest existing native analog (`DataPipelineSection` — the adjacent status section) as my template, plus the toolchain config and how tests execute on the host.
+
+Excellent template. Let me read the remaining DataPipelineSection files (Views, Adapter, Tests, strings, Previews, Table) and the design-token/test-harness infrastructure to fully understand the conventions.
+
+Let me read the remaining template files and the shared infrastructure (design tokens, components, test harness) in parallel.
+
+Now let me examine the design tokens, shared components, and — critically — how prior runs execute tests on the macOS host without Xcode.
+
+Let me read the full predecessor log (0242) to replicate the exact gate playbook, and check whether a full Xcode is actually available on this host.
+
+`/Applications/Xcode.app` exists — the predecessors used `DEVELOPER_DIR` to access it. Let me verify that works (it determines whether I can run the full gate vs. the documented deferral) and simultaneously read the design tokens and key shared components.
+
+Confirmed: **full Xcode 26.5 is available via `DEVELOPER_DIR`** (iPhoneSimulator26.5 + MacOSX26.5 SDKs), plus pwsh, xcodegen, swiftlint 0.63.3, swiftformat 0.61.1. This matches the predecessor host environment. The real design tokens live in the generated `DesignTokens` group. Let me locate the token + component symbol definitions I'll need.
+
+Let me read the token file and the exact component signatures I'll compose with.
+
+Let me read the remaining components I'll compose with, plus the navigation route seam for the footer links.
+
+Let me read the web data-source shapes (to model the input accurately) and the last few Swift components (Button, Skeleton, FadeIn, status indicators, glass material).
+
+Let me read the MQTT status shape, the Vehicle type, status indicators, and how sibling surfaces handle navigation links.
+
+Let me see how sibling surfaces model navigation callbacks (footer links / row taps), then I'll have full context to build.
+
+There's a `FleetTelemetryHealth` sibling — likely the closest analog. Let me examine its navigation approach and the lint config.
+
+Let me read the closest sibling (`FleetTelemetryHealth`) end-to-end to align the per-vehicle liveness idiom and navigation approach.
+
+I now have complete understanding of the architecture, the closest sibling (`FleetTelemetryHealth`), the web source, the design tokens, components, lint rules, and the predecessor gate playbook. Let me set up a plan and todos, then build.
+
+Now I'll build the surface. Starting with the pure Adapter core (the testable data adapter + web helper ports).
+
+Adapter done. Now the Model (state-holder seam, projection, @Observable model, i18n + telemetry seams).
+
+Now the main View with chrome and phase switch.
+
+Now the substantial Views file — all presentational regions.
+
+I referenced a `TelemetryFlowLayout` for wrapping chips/links. Let me create it as a dedicated file (matches the allowed `TelemetryPipelineCard.*` glob).
+
+Now the Previews for each state.
+
+Now the i18n strings catalog.
+
+Now the comprehensive test suite.
+
+All 7 surface files are written. Now let me run the gates — starting with swiftformat (apply to my files, then lint-verify), then swiftlint, scoped to the new surface.
+
+swiftformat normalized 5 files. Now verify with `--lint` and run swiftlint, both scoped to the surface.
+
+swiftformat passes, but swiftlint `--strict` flags 4 `file_length` violations (>400 lines, amplified by before-first wrapping). Splitting into more `TelemetryPipelineCard.*` files is the established convention (siblings use `.Projection`, `.Format`, `.Rows`, `.ModelTests`). Let me split the four oversized files.
+
+Let me find clean split boundaries via section markers in each oversized file.
+
+Clean boundaries identified. I'll split via `sed` (preserving exact formatted content) into convention-named sibling files, then reformat and re-lint.
+
+All files now under 400 lines. Let me reformat (fix join seams) and re-run both linters scoped to all 12 surface files.
+
+Both linters are green (swiftformat 0/12, swiftlint 0 violations). Now the typecheck gates against the real iOS + macOS SDKs, compiling the surface together with the real shared Components/Design/Tokens.
+
+The full Components set pulls in `UnitFormatters.swift`, which depends on a `Units` type defined outside Components/Design. My surface doesn't use it. Let me locate `Units` and include its defining file so the real Components set compiles as-is.
+
+`UnitFormatters.swift` depends on `Units` → `import Shared` (the KMP `Shared.xcframework`, the same pre-existing staging gap that defers the full xcodebuild). It's unused by my surface. Let me identify all Components/Design files that transitively need the unavailable `Shared` framework and exclude exactly those from the host typecheck.
+
+Only `UnitFormatters.swift` needs the unavailable KMP `Shared` framework, and my surface never uses it. Let me re-run both SDK typechecks with the real Components/Design/Tokens minus that one KMP-coupled file.
+
+macOS typecheck is green. Now the iOS simulator SDK typecheck.
+
+Both SDK typechecks pass (iOS + macOS, Swift 6, strict concurrency). Now the `swift test` gate via an isolated SwiftPM package (module `TeslaSync` = surface + real Components/Design/Tokens), run on the macOS host.
+
+All 47 tests pass (TEST_EXIT=0). Now the placeholder gate. Let me check the script's interface, then run it scoped to the surface.
+
+The script recursively scans a `-Path`. Let me confirm how it resolves a file path and the self-test, then run it scoped to my surface files.
+
+The gate flagged the literal word "placeholder" in an Adapter doc comment (a forbidden stub marker). Let me find all occurrences across my files and reword them.
+
+Only one occurrence. Let me reword it.
+
+Re-running the placeholder gate plus a re-lint to confirm the edit is clean.
+
+Placeholder gate is clean (COUNT=0). Now let me honestly capture the `xcodebuild` app-scheme disposition — confirm the pre-existing `Shared.xcframework` staging blocker, run `xcodegen generate` (verifying my files wire in), and capture the deterministic build error.
+
+Confirmed: `Frameworks/` holds only `.gitkeep` (Shared.xcframework not staged — the pre-existing KMP gap). Let me verify the `.xcodeproj` ignore rule before generating (to avoid polluting git), then capture the xcodebuild evidence.
+
+The `.gitignore` rule `apps/apple/**/*.xcodeproj/` will ignore the generated project once it exists (check-ignore returned 1 only because the dir doesn't exist yet). Let me generate, confirm my files wire in, capture the deterministic build blocker, then clean up.
+
+Project generated (`XCODEGEN_EXIT=0`), my 12 files wired in (78 pbxproj refs across iOS/macOS/test targets), and the project is git-ignored. Now capture the deterministic build blocker.
+
+Confirmed: the deterministic build fails with **exactly one** error — the missing pre-staged `Shared.xcframework` (KMP gap), not my surface. Let me root-cause the staging script + the tracked macos-pending note, then clean up the generated project.
+
+Fully root-caused: the `macos-pending-verifications.md` table already tracks this exact deferral for sibling surfaces (0010/0180/0231) — same causes (unstaged `Shared.xcframework`, co-located `*.Tests.swift` in app target, signing), deferred to the P99 macos-latest acceptance gate. My surface compiles independently (both SDK typechecks + 47 tests green). Generated project cleaned up. Let me gather final counts and write the log.
+
+All gates green. Writing the comprehensive log following the predecessor format.
+
+Final consolidated verification before commit — re-run all scoped gates and confirm the working tree contains only my intended files.
+
+I did not touch `AIUsageCard.*` — those 7 modifications are pre-existing/external to my task (shared environment). Let me verify they're not mine and confirm their nature before committing only my files.
+
+Confirmed: the `AIUsageCard.*` changes are pre-existing (mtime 01:57, the worktree checkout time — a sibling slot's 0203→0237 rename), not mine. I'll stage **only** my 13 surface files + the log, explicitly, leaving those untouched.
+
+git add is hanging abnormally (likely an index.lock from the shared environment). Let me stop and investigate.
+
+No index.lock or hooks — but a **parallel agent's git process** (slot 0166) is active in the shared repo. My chained command was stopped; let me check what actually got staged with a quick fresh query.
+
+Nothing staged yet — the `git add` hung before completing (transient contention with the parallel agent's git activity). Let me retry it as a monitored async command.
+
+All 14 intended files staged (13 surface + log), no `AIUsageCard`. Now commit (index-only, so the pre-existing `AIUsageCard` changes stay out).
+
+Committed as `57e9e891c` (14 files, +2917). Let me clean up temp artifacts and do a final post-commit verification.
+
+All clean. The pre-existing `AIUsageCard.*` modifications remain untouched/unstaged exactly as received (mtime 01:57, a sibling slot's work), my commit contains only the 13 surface files + log, no build artifacts left behind, and the log ends `EXIT=0 / STATUS=DONE`.
+
+All 15 todos complete. Task finished and verified.
+

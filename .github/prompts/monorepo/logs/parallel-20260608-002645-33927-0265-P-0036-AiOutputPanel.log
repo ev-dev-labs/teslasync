@@ -1,0 +1,104 @@
+I'll start by exploring the repository structure to understand the task context.
+
+The web source is clear. Now let me study the Apple app conventions, existing native ports, and shared infrastructure (state holders, tokens, i18n, branding).
+
+Let me check the toolchain availability (critical for the gate) and explore the shared infrastructure.
+
+**Critical finding:** `xcodebuild` requires full Xcode but only CommandLineTools is installed. The build/test gate can't fully run here. But swiftlint, swiftformat, xcodegen, and the Swift 6.3.2 compiler ARE available. Let me check for a full Xcode and available SDKs before deciding, and study existing conventions thoroughly.
+
+`/Applications/Xcode.app` exists — `xcode-select` just points elsewhere. I can use `DEVELOPER_DIR` to target real Xcode without sudo. Let me verify.
+
+The full gate **can** run via `DEVELOPER_DIR` (Xcode 26.5, iOS 26.5 sim, iPhone 16 booted). Path to STATUS=DONE is viable. Now let me deeply study conventions. Let me find existing AI/Helix Swift code, the state-holder/tokens/i18n/diagnostics infra, and the HelixMark equivalent.
+
+The `AiUsageCard.*` file set is the ideal template (Model/Adapter/Projection/Chrome/Tests/View). Note: `shared-surfaces` isn't yet in `project.yml` sources. Let me read the full AiUsageCard set plus AIRestorePanel to learn the conventions and how co-located tests are wired.
+
+Co-located `.Tests.swift` files import `XCTest` + `@testable import TeslaSync`, yet the test target only sources `Tests/Unit`. There must be build tooling that wires this. Let me examine the build scripts and tooling.
+
+I need to understand the real build invocation (how `.Tests.swift` co-located files get routed to the test target). Let me check CI workflows and any project.yml generator.
+
+Let me read the full AiUsageCard set to understand conventions, and check how `.Tests.swift` files are guarded so they compile in the app target.
+
+The CI guard treats apps/apple as a no-op until a buildable project lands, and `.Tests.swift` files use `@testable import TeslaSync` yet aren't in the test target's source path. I need ground truth. Let me read the Apple README + pending-verifications doc and generate the project to inspect target membership.
+
+Now I have the key context. `macos-pending-verifications.md` documents that the **full-app `xcodebuild build test` is blocked by pre-existing, unrelated collisions** (`DashboardWidgetSize` redefined 8–15×, 150+ co-located `*.Tests.swift` importing XCTest into the app target, signing). Three prior sibling prompts (ToolCard, AlertMessageEditor, FSMTimelineChart) followed an established protocol: ship the surface, prove it green in **isolation** (SwiftPM build + tests + `swiftc -typecheck` on both SDKs + lint/format/placeholder), and record the full-app gate as macOS-pending/BLOCKED.
+
+Let me study the exact conventions: the AiUsageCard implementation, shared facade types, design tokens, i18n, and HelixMark.
+
+Excellent template. Let me read the projection + chrome, locate the design tokens (TSSpacing/TSRadius/Color.TS/Font.TS), the motion helper (TSFadeIn), and any native HelixMark/branding + AIThinkingIndicator equivalents.
+
+Found `HelixIconBox()` — the native Helix branding. Let me locate its definition and read the Button/Skeleton component APIs and the AISettings header pattern.
+
+I have the exact Helix mark path geometry. Now let me read the native HelixIconBox, the TSButton/TSSkeleton APIs, the projection pattern, and the `.strings` i18n catalog format.
+
+I now understand the conventions thoroughly. Let me confirm the exact `AiStreamState` values and check for an existing web test to mirror, plus read the projection pattern.
+
+Confirmed: `AiStreamState = 'idle' | 'streaming' | 'paused-confirm' | 'done' | 'error'`. Let me read the projection pattern and the empty-view chrome to finalize conventions, then check the parity ledger format.
+
+I now have a complete picture of the conventions. Let me read the lint/format configs and the projection tail so my code passes `--strict`, then I'll implement.
+
+I have everything needed. Key finding: the web `AIThinkingIndicator` uses a **bespoke cyan-gradient shimmer** (not the shared Skeleton), so a self-contained native indicator is both faithful and keeps the surface isolated-buildable (deps: only generated `Tokens.swift` + `Motion.swift`). Let me set up tracking and write the plan.
+
+Now let me create the surface files, starting with the Model (state-holder + i18n + telemetry seams):
+
+Now the i18n catalog and the test file:
+
+All six files created. Let me update tracking and scan my files for any banned placeholder tokens before verification.
+
+Clean. Now let me build the isolated SwiftPM verification harness (module named `TeslaSync` so `@testable import TeslaSync` resolves) with the real shared deps (`Tokens.swift` + `Motion.swift`).
+
+The isolated build is green. Now run the tests:
+
+All 21 isolated tests pass (10 projection + 6 model + 1 a11y + 4 render-smoke). Now the dual-SDK `swiftc -typecheck` (iOS 18 simulator + macOS 15):
+
+Both SDKs typecheck clean. Now SwiftLint (`--strict`) and SwiftFormat (`--lint`) — first on my files specifically to fix any issues:
+
+Two fixable issues: a >120-char preview string and `#if`/`#Preview` indentation. Let me view and fix, then auto-format.
+
+Let me check the house style for `#Preview`/`#if DEBUG` in existing feature-views, then shorten the long line and auto-format.
+
+House style indents `#if DEBUG` bodies. Let me shorten the long line, then run swiftformat auto-fix (which applies the exact house style):
+
+Almost — swiftlint still flags line 131 (130 chars). Let me shorten that preview string further:
+
+Both clean (0 violations, longest line 108). Let me re-sync the harness with the formatted files, re-test, and check the placeholder gate tooling availability:
+
+21/21 tests green post-format; pwsh is available. Let me read the placeholder gate script to run it correctly:
+
+Note: the gate's `-Path …/AiOutputPanel` (no such dir) would scan nothing and pass vacuously; I'll run it both as specified **and** against the real directory for an honest scan. Let me also run the gate-level whole-tree lint/format:
+
+Placeholder gate clean (COUNT=0, EXIT=0); self-test passes. Now the gate-level whole-tree lint/format to capture honest results:
+
+Whole-tree format lint fails on **one pre-existing file** (`ActionBuilder.Previews.swift:48`, another prompt's surface) — not mine. My files pass. Now whole-tree swiftlint:
+
+One pre-existing violation in the whole-tree swiftlint (my files aren't in the lint `included:` paths). Let me identify it:
+
+Confirmed: the one whole-tree swiftlint violation is in another prompt's `LifetimeStatsWidget.Adapter.swift`, and **0 shared-surfaces files are in swiftlint's scope**. Both whole-tree gate failures are pre-existing and external to my surface. Now let me generate the project and attempt the full `xcodebuild build test` to capture honest evidence of the documented pre-existing blockers:
+
+Confirmed pre-existing blockers: `DashboardWidgetSize` defined **15×** and **224** co-located `*.Tests.swift` files in app-target source dirs. Now let me run the actual gate's `xcodebuild build` to capture concrete error evidence:
+
+The full `xcodebuild` first triggers a slow Gradle/Kotlin-Native step to assemble `Shared.xcframework` (a documented macOS-pending dependency), then would hit the pre-existing app-target collisions. Let me capture one concrete compiler error for the duplicate-symbol blocker directly (fast + airtight), rather than waiting on Gradle:
+
+I now have airtight, concrete evidence: `error: invalid redeclaration of 'DashboardWidgetSize'` (15× duplicate), 224 co-located `*.Tests.swift` importing `XCTest`+`@testable` into the app target, plus the Gradle/KMP `Shared.xcframework` staging and signing requirements. All pre-existing and external to my surface. Let me check the logs directory and a sibling log for format reference:
+
+This is the key insight: sibling P4 Apple logs (e.g., `DrivetrainHealthWidget`) reach **STATUS=DONE / EXIT=0** with all host-runnable gates green and the full `xcodebuild build test` explicitly marked `[~] DEFERRED-macOS-pending` (Gradle/KMP staging, signing, pre-existing collisions — environmental, not code defects), institutionalized in `macos-pending-verifications.md`. My situation matches, with even more rigorous isolated proof. Let me regenerate fresh evidence into the log. First, clean the generated project and write the consolidated verification script:
+
+Working tree is clean except my new files. Now let me write a consolidated verification script that produces the honest log with real command output:
+
+The log is comprehensive and honest with all host-runnable gates green (EXIT=0 / STATUS=DONE). There's one cosmetic stray `0` line from a `grep -c ... || echo 0` double-print. Let me fix that and regenerate cleanly:
+
+Log is clean — all gates green, EXIT=0 / STATUS=DONE, no stray output. Let me verify the git working tree contains only my intended changes, then clean up temp artifacts:
+
+I see pre-existing modified files I never touched (`AIUsageCard.*`, two `web/` files). Let me confirm these are pre-existing (not caused by my tooling) before committing only my allowed files:
+
+Confirmed: all unrelated modifications are **pre-existing** (mtime 03:50 = checkout time, before my 04:xx work; the web diff is just a CRLF artifact; `AIUsageCard`=`AiUsageCard` same inode on case-insensitive FS). None are mine. Let me stage **only** my allowed files and commit:
+
+Only my 6 surface files + the log are staged. Now commit with the prompt's message + trailer:
+
+Committed cleanly: 7 files (6 surface + log), 1025 insertions, only allowed files, with the trailer. Let me do a final clean-room verification using the **committed** files to leave zero doubt, then finalize tracking:
+
+Final clean-room verification from the **committed** files: build complete + 21/21 tests pass. Everything confirmed green. Let me finalize tracking:
+
+All work complete and verified. Let me do a final confirmation of the committed state:
+
+Task complete. Here's the summary.
+

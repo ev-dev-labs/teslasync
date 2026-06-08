@@ -1,0 +1,144 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Tools are available (xcodebuild, swiftlint, swiftformat, swift). Let me read the web source spec and explore the Apple app structure.
+
+Now let me explore the Apple app structure, looking for the existing patterns (the `feature-views` AIUsageCard pattern and any existing modals-dialogs).
+
+No `modals-dialogs` dir yet — I'll create it. The established pattern is the multi-file `feature-views` structure. Let me study the canonical AIUsageCard pattern, the project.yml build config, and search for the shared infrastructure (state holders, tokens, i18n, diagnostics).
+
+Key finding: `project.yml` lists `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` as sources but NOT `modals-dialogs`. I'll need to verify build tooling. Let me check xcodegen, the shared framework, and study the full canonical pattern + infrastructure.
+
+feature-views is under `TeslaSync/`. Let me correct and examine the shared framework build script (critical capability gate) plus existing modal surfaces.
+
+Build requires Gradle/KMP toolchain (Shared.xcframework isn't staged yet). I'll assess that capability shortly. First, let me study the closest analogue surfaces (settings forms with mutations + JSON editing) and the modal primitive. Let me read the AISettings full set and the Overlays primitive.
+
+Excellent — the architecture is clear and well-established. Let me read the rest of the AISettings reference set to fully internalize the pattern.
+
+Now let me read the test/preview/strings patterns and locate the shared tokens + form components (Select, Textarea, Tabs, Button) I'll need.
+
+Let me investigate the test wiring (how `.Tests.swift` in feature-views reaches the test target), the build feasibility, and prior verification notes.
+
+This is the key insight. The `macos-pending-verifications.md` documents the established precedent: the full-app `xcodebuild build test` is blocked by **pre-existing, unrelated** issues (DashboardWidgetSize redefined, co-located `*.Tests.swift` importing XCTest into the app target, unstaged Shared.xcframework, signing). Prior P4 surfaces verify in **isolation** (SwiftPM build + tests + `swiftc -typecheck` + swiftlint/swiftformat/placeholder + `xcodegen generate`), then defer the full-app gate to macOS CI.
+
+Let me find the isolated build harness and remaining infrastructure (tokens, components, i18n loader).
+
+No Package.swift — the "isolated SwiftPM build" is an ad-hoc verification harness agents construct. Let me read the tokens and all the shared components the surface will use, to learn their exact APIs.
+
+Let me read the remaining components: Fields, Buttons, Cards, Typography, Motion, Skeletons, States.
+
+Let me read the final components plus the web types/hooks for the energy domain to nail data parity.
+
+I have the full component vocabulary. Now let me confirm data parity from the web types/hooks and check test placement conventions + parity manifest.
+
+I now have the full picture. Let me read the exact TOU mutation hook and a peek at the existing modal-ish surface for dismissal conventions, then I'll set up my plan.
+
+I have everything needed. Let me check the lint/format/placeholder gate configs and pwsh availability before writing code, so I comply from the start.
+
+Let me read the placeholder gate script carefully — the web i18n key `selectPlaceholder` could trip a naive "Placeholder" match, and I need to know exactly how it scans.
+
+Now I understand the gate fully. The placeholder gate is **case-insensitive** and scans `.swift` only (not `.strings`). The web i18n key `energy.tou.selectPlaceholder` contains "Placeholder" — I'll keep that key in the `.strings` file and reference it via a single `// parity:allow` line (the sanctioned mechanism the self-test demonstrates). Let me set up my plan and verify the Components import surface for the isolated build harness.
+
+I have a complete understanding of the architecture, gates, and data. Let me set up the plan and todos, then implement.
+
+Now I'll write the Adapter (the pure, testable core) with the exact preset data and a JSON serializer matching `JSON.stringify`.
+
+Adapter done. Now the Projection (input → resolved phase).
+
+Projection done. Now the Model (the state-holder seam + observable model).
+
+Model done. Now the Views file (all subviews). This is the largest — I'll follow the AISettings convention of resolving per-surface strings via the facade and rendering `Text(verbatim:)`, composing shared primitives.
+
+Now the main View that composes everything and bridges dismissal.
+
+Now the Previews (every state) and the strings catalog.
+
+Let me remove the unused `previewA11y` key from the Adapter and write the strings catalog.
+
+Now the comprehensive headless test suite (adapter + projection + model + a11y).
+
+Let me clean up a confusing test (stray first model) before verifying.
+
+All 8 surface files are written. Now I'll verify. First, a high-value cross-check: validate my hand-derived `pgeCompactJSON` literal against Node's actual `JSON.stringify` of the web PG&E preset (the real parity oracle).
+
+Confirmed — my expected JSON **exactly matches** Node's `JSON.stringify` of the web preset (the real parity oracle), and all test substrings match. Now I'll build an isolated SwiftPM package that vendors the **real** Components + Tokens to genuinely compile and run my surface + tests (per the established precedent).
+
+The pipeline masked the real exit (tail returned 0). Two real findings: (1) a vendoring gap — `Components/DataDisplay/Metrics.swift` needs `TSChartPalette` which lives outside Components; (2) a genuine Swift 6 actor-isolation note on my Previews helper. Let me locate the missing symbol and inspect the actor issue.
+
+`Components` depends on `Sources/Design/*`. Let me vendor that too, and fix the Previews actor isolation. Let me check `Sources/Design` is self-contained first.
+
+`Sources/Design` is self-contained (SwiftUI only). I'll vendor it. Also, the actor note is a real Swift 6 issue in my Previews helpers — I'll make them `@MainActor` (matching the AISettings precedent).
+
+These are environmental/vendoring issues, not surface defects: (1) the `#Preview` macro plugin isn't available to plain `swift build` CLI, and (2) `Components/DataDisplay/*` pulls in external unit-conversion symbols my surface never uses. I'll switch to the more comprehensive approach the precedent cites: `swiftc -typecheck` against a **minimal real-dependency set** for both macOS-15 and iOS-18 SDKs (swiftc+SDK provides the Preview macro), plus a SwiftPM **release** test run (strips previews) to execute the tests.
+
+macOS 15 typecheck passed clean (all 6 files incl. `#Preview`). Now the iOS 18 simulator typecheck.
+
+Key environmental finding: this host has **Command Line Tools only** (no full Xcode), so `xcodebuild` and the `iphonesimulator` SDK are unavailable — the full-app gate and iOS typecheck are **platform-blocked** here (same deferral as the documented prior P4 surfaces). The macOS SDK works (typecheck passed). Let me run the full test suite via SwiftPM (release config strips previews, avoiding the macro-plugin limitation) against the minimal real-dependency set.
+
+Release optimization compile is slow. Let me wait for the test run to complete.
+
+`XCTest` module is missing — it ships with full Xcode, not Command Line Tools. Let me confirm, then run the actual test logic via a standalone executable runner (executes the real code paths headlessly without XCTest).
+
+Confirmed — XCTest ships only with full Xcode, not CLT. To still **execute** the real test logic headlessly, I'll add a standalone executable runner that imports the surface and runs the assertions via `precondition`/checks (release config to bypass the preview-macro limit). The shipped XCTest suite remains for macOS CI.
+
+All tested symbols are `public`, so I don't need `@testable`. Let me switch to a plain import and re-run.
+
+All 90 headless checks pass (`ALL_GREEN`), executing the real serializer, validation, projection, model, and accessibility code paths. Now let me wire the new tier into the build/lint config and run the host-runnable gates.
+
+Now wire `modals-dialogs` into both app targets in project.yml (disambiguating iOS vs macOS via the bundle id line).
+
+Now run the formatter (auto-fix), then the host-runnable gates: swiftformat --lint, swiftlint --strict, placeholder check, and xcodegen generate (to prove enumeration).
+
+swiftformat is clean (0/7). swiftlint linted all 1916 files (config `included`) and found 5 violations — I need to know if any are mine. Let me isolate.
+
+4 violations are mine: three `file_length` (>400) and one 653-char line (the JSON literal). The codebase enforces ≤400 lines/file and ≤120/line. I'll split into more `TOUSettingsModal.*` files (an established convention, e.g. `*.AdapterTests.swift`) and wrap the literal. Let me get exact line counts to plan the splits.
+
+I'll split the files. Let me view the exact blocks to move (the i18n enums in Adapter, the facade in Model).
+
+Now I'll create the Strings file and remove those blocks from Adapter and Model.
+
+Now remove the moved blocks from Adapter and Model.
+
+Now split Views.swift. Let me view its current (post-format) content to extract sections precisely.
+
+I have the exact section boundaries. I'll mechanically split Views.swift (lines 20–130 header group + 466–540 state chrome → Chrome.swift; lines 132–464 form → new Views.swift) using sed to avoid transcription risk.
+
+Views split done (346/200). Now split Tests. First, I'll generate the byte-exact JSON literal as line-wrapped raw-string chunks (Python guarantees the concatenation equals the Node-verified original).
+
+Chunks verified (reassembly OK, ≤88 chars each). Now let me view the current Tests.swift landmarks to split it cleanly.
+
+Now I'll split Tests.swift into `AdapterTests.swift` (serializer/preset/validation + the wrapped fixture) and `Tests.swift` (projection/model/a11y), redirecting the literal references to a shared fixtures enum.
+
+BSD `sed` doesn't support `\b`, so the substitution was a no-op — references are still bare (undefined). Let me fix: substitute references (but not the enum definition line) properly.
+
+References fixed (def intact). Now let me reformat the dir and re-run the full host verification: macOS typecheck (all 8 non-test files incl. new Strings+Chrome), the headless runner, swiftformat --lint, and swiftlint --strict.
+
+All files ≤400 lines now; macOS typecheck still clean. Let me re-sync the isolated package and re-run the headless runner (confirm logic survived the split), then run the remaining gates.
+
+Runner still green (90/90) after the split. Now the remaining host gates: swiftformat --lint, swiftlint --strict, and the placeholder scan.
+
+Placeholder scan: COUNT=2 (plus 1 correctly allowed). The two are the word "Placeholder" in **comments** (a doc comment in Strings.swift and one in Views.swift) — the case-insensitive gate flags those. Let me find every occurrence and reword the comments (keeping the single intended `parity:allow` on the key literal).
+
+Three occurrences: two comments to reword (Strings:30, Views:115) and the intended `parity:allow` literal (Strings:32, correctly allowed). Let me view exact lines and reword the two comments.
+
+Now re-run the placeholder gate and re-confirm format/lint after the comment rewording.
+
+All placeholder/format gates are green (COUNT=0, ALLOWED=1). Let me do the final consolidated checks: swiftlint, a fresh macOS typecheck, the headless runner, and `xcodegen generate` to prove the files are enumerated into both targets.
+
+All host gates pass and `xcodegen` enumerates all 11 files into the project. Let me do a final clean macOS typecheck (for the log record), confirm the xcodeproj is gitignored, and check the logs directory.
+
+Final macOS typecheck clean; xcodeproj is gitignored. Let me look at an existing P4 log to match the established format/STATUS conventions for the platform-blocked case.
+
+I now see the sanctioned precedent: prior P4 surfaces report the full-app `xcodebuild` gate as deferred (never as passing) while marking the surface `STATUS=DONE`, because every host-runnable + isolated gate is green. My runner is even more constrained (CLT-only, no Xcode), so I'll report xcodebuild/iOS/XCTest as BLOCKED with platform-capability evidence and record the green host gates. Let me write the gate log.
+
+Now append the deferred-verification row to `macos-pending-verifications.md` (consistent with precedent).
+
+Let me review the final git state and stage precisely my files + necessary wiring (matching the ToolCard precedent), excluding pre-existing unrelated changes.
+
+Clean separation confirmed. Let me list the surface dir contents, stage precisely my files + wiring + log + ledger, and commit.
+
+All 11 surface files + wiring/log/ledger staged (pre-existing changes excluded). Committing now.
+
+Committed cleanly (15 files, no pre-existing changes included). Let me clean up temp artifacts and mark the work complete.
+
+All work is complete and committed. Let me provide the final summary.
+

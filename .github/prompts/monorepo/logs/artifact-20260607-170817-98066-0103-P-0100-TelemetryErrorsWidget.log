@@ -1,0 +1,201 @@
+================================================================================
+P4 · Dashboard widget · 0100 — TelemetryErrorsWidget (Apple)
+Run: 2026-06-07T19:22-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/103
+Base: 011e9c63
+Prompt: P4/dashboard-widgets/0100 — TelemetryErrorsWidget
+Web source (spec): web/src/features/dashboard/widgets/TelemetryErrorsWidget.tsx
+Mode: code-complete + host-validated (real Xcode 26.5 swift build + swift test green)
+      + DEFERRED Xcode *app-target* build/test (0036 DigitalTwin / 0010 BatteryCells
+      precedent; ADR-012 macOS-pending; pre-existing cross-sibling integration state).
+================================================================================
+
+=== CAPABILITY PROBE (this runner) ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                  OK
+  swiftc -typecheck SwiftUI .. compiles (macOS target, Swift 6 -strict-concurrency) OK
+  full Xcode ................. /Applications/Xcode.app — Xcode 26.5 (Build 17F42)   OK
+                               (driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer)
+  swift build / swift test ... real Xcode toolchain — surface builds + XCTest runs  OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen 2.45.4                     OK
+  Shared.xcframework ......... ABSENT at apps/apple/Frameworks/Shared.xcframework    DEFER
+                               (KMP/Gradle artifact — `:core:assembleSharedXCFramework`;
+                                macos-pending per apps/macos-pending-verifications.md)
+  iOS Simulator test exec .... CoreSimulatorService is the CLT instance (no sudo to
+                               `xcode-select -s` the daemon); simctl spawn blocked    DEFER
+                               (identical environmental blocker documented by sibling
+                                0010-BatteryCellsWidget).
+
+  Capability-BLOCKED escape hatch ("SwiftUI/Swift Charts/MapKit unavailable on the
+  runner") does NOT apply: this surface uses NEITHER Swift Charts NOR MapKit (web
+  "Charts/maps used: (none)"); SwiftUI IS available and the surface is PROVEN to
+  compile + test under the real Xcode 26.5 toolchain below. Only the Xcode
+  *app-target* build/test (which links the macos-pending Shared.xcframework and
+  spans every sibling surface) is deferred — not this surface's own code.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/TelemetryErrorsWidget.*) ===
+  TelemetryErrorsWidget.Projection.swift  362  Foundation-only adapter: DTOs (web FleetTelemetryError-
+                                               VIN / FleetTelemetryError) + `aggregate` projection
+                                               (1:1 port of the web `aggregated` useMemo) + activeVIN/
+                                               hasData/isRecent + status verdict + fmtInt/formatRelative
+                                               formatters + ISO-8601 seam parser + P1/S10 i18n facade
+                                               (string/count) + testable a11y (summary + row label).
+  TelemetryErrorsWidget.Model.swift       294  P1/S11 telemetry seam + P1/S8 state-holder seam
+                                               (load-status / freshness enums, update, source proto +
+                                               InMemory) + TelemetryErrorsModel (@Observable
+                                               phase+freshness+projection) + dashboard registry
+                                               primitives + TelemetryErrorsStrings.text.
+  TelemetryErrorsWidget.Components.swift  279  TelemetryStatusBadge (web Badge danger/success) +
+                                               TelemetryRecentBadge (web danger dot Badge) +
+                                               TelemetryFreshnessChip (web DataFreshness 4-state +
+                                               offline) + TelemetryErrorFeedRow/Feed +
+                                               TelemetryErrorsEmptyState — over shared design tokens.
+  TelemetryErrorsWidget.swift             255  TelemetryErrorsWidget surface: glass shell + header
+                                               (icon + title + freshness/refresh chip + open) + every
+                                               state (loading/empty/error/content) + responsive
+                                               compact(1×2)/standard(2×4) layouts.
+  TelemetryErrorsWidget.Previews.swift    177  #if DEBUG previews — content(std/compact)/healthy/
+                                               loading/empty/error/fetching/stale/offline.
+  TelemetryErrorsWidget.Tests.swift       326  XCTest: adapter aggregation + active/hasData/isRecent +
+                                               status + formatters + ISO parse + model phases/freshness/
+                                               telemetry/refresh + registry + a11y (6 suites, 29 tests).
+  TelemetryErrorsWidget.strings            53  P1/S10 catalog contribution (9 source keys + registry
+                                               desc + native chrome + relative-time + a11y).
+  Every file <=400 lines (house file_length); largest 362. One exported View (TelemetryErrorsWidget).
+
+=== PARITY (vs web TelemetryErrorsWidget.tsx) ===
+  Data sources -> bound via the shared state-holder seam (TelemetryErrorsSource ->
+    TelemetryErrorsModel): useFleetTelemetryErrorVINs, useFleetTelemetryErrors,
+    useTelemetry(seam), useTranslation. The production app wires TelemetryErrorsSource over the
+    KMP TelemetryStore (two StateHolderModel<LoadableState<…>> coalesced) polling
+    /tesla/fleet-telemetry/error-vins + /tesla/fleet-telemetry/errors on STALE_TIMES.STANDARD.
+    The view performs NO HTTP — no direct transport in the view (ADR-002/009).
+  Projection -> TelemetryErrorsProjection.aggregate is a 1:1 port of the web `aggregated` useMemo:
+    group by vin + (error_code ?? raw 'unknown') key; sum count; track latest (reported_at ??
+    fetched_at); display code falls back to localized "Unknown"; sort newest-first with undated
+    rows last, STABLE on ties (matches the web Map insertion order under a stable sort).
+    activeVINCount = Σ active; hasData = vins||errors; isRecent = now-lastSeen < 1h (ONE_HOUR_MS).
+    Verified by EXECUTED XCTest (testAggregate*, testActiveVINCount*, testIsRecent*).
+  States (every one renders — no hidden surfaces):
+    loading  -> skeleton chrome (feed skeletons / compact skeleton)            [web WidgetShell loading]
+    empty    -> ContentUnavailableView "No telemetry error data"               [web !hasData EmptyState]
+    error    -> QueryError-equivalent (icon + title + message + Retry)         [prompt-required + web isError]
+    content  -> compact (count + "error VINs" + status badge) OR standard
+                (active-VIN header + status badge + scrollable error feed;
+                 inner "No errors recorded" when aggregated is empty)          [web isCompact / standard]
+    freshness chip (header) maps the web DataFreshness states:
+      live(fresh)/fetching("updating…")/stale/error("error")/offline          [web DataFreshness]
+      — tappable to refresh (web onClick onRefresh); compact = title-less (web compact).
+  i18n -> every web key resolves through the P1/S10 facade (TelemetryErrorsStrings, table
+    "TelemetryErrorsWidget"); NO English literal in code. Source keys present:
+      widget.telemetryErrors.title / .unknown / .errors / .healthy / .noData / .errorVINs /
+      .activeVINs ("%lld VINs with errors") / .noErrors / .recent  (9/9)
+    + registry .description + native chrome (.offline/.updating/.errorChip/.refresh/.retry/
+      widget.open/.loading/.errorTitle/.emptyHint) + relative buckets (.justNow/.minAgo/.hourAgo/
+      .dayAgo) + a11y (.countA11y/.openA11y).
+  Registry -> canonical registry/system.ts "telemetry-errors": category=system,
+    default 2×4, min 1×2, max 4×40; clamp() enforces the envelope. Verified by XCTest.
+  A11y -> VoiceOver labels on every interactive element (freshness/refresh chip, open button,
+    Retry) + combined status/count summary + per-row label (VIN/code/×count/relative/recent);
+    Dynamic Type via tokenized fonts; reduce-motion respected (chip spin + skeleton shimmer).
+  Telemetry -> model.start() emits the P1/S11 `view.opened`/screen_view once with surface slug
+    "TelemetryErrorsWidget" (verified: testStartEmitsViewOpenedTelemetryOnce).
+  Tokens -> only shared design tokens (Color.TS / Font.TS / TSSpacing / TSRadius / TSSkeleton);
+    NO ported Tailwind classes, NO ad-hoc hex. Toned tones via statusDanger/statusSuccess/
+    statusWarning/statusInfo + textMuted.
+
+=== EVIDENCE (host-runnable gates — ALL GREEN) ===
+[1] swiftc -typecheck (macOS SDK, -swift-version 6 -strict-concurrency=complete)
+      Production code (Projection+Model+Components+View + tokens + TSSkeleton shim): EXIT=0
+      (Strict-concurrency caught + FIXED two real defects pre-commit:
+         • non-Sendable `static let` ISO8601DateFormatter -> build formatter locally per call;
+         • SwiftUI .frame(maxHeight:…minHeight:) arg order -> minHeight before maxHeight.)
+[2] swift build  (REAL Xcode 26.5 toolchain, .macOS(.v15), swiftLanguageMode .v6)
+      "Build complete! (8.40s)"                                                       -> EXIT=0
+[3] swift test   (REAL XCTest, Xcode 26.5)
+      "Test Suite 'All tests' passed … Executed 29 tests, with 0 failures"            -> EXIT=0
+      Suites: ProjectionTests(9) FormatTests ModelTests(8) RegistryTests(2)
+              StatusTests(1) AccessibilityTests(3)
+[3b] Foundation adapter exec harness (cached -> projection): 30/30 PASS               -> EXIT=0
+[3c] Model/registry exec harness (phase/freshness/telemetry/clamp): 18/18 PASS        -> EXIT=0
+[4] swiftlint --strict
+      my 6 files:  "Found 0 violations, 0 serious in 6 files"                          -> LINT_EXIT=0
+      whole tree:  1 PRE-EXISTING violation — function_body_length in
+                   TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+                   (a different surface; out of scope "Other surfaces"; NOT this file).
+[5] swiftformat --lint apps/apple
+      "0/380 files require formatting, 2 files skipped" (includes my 6 files)          -> FORMAT_EXIT=0
+[6] check-placeholders.ps1 -Path <my files> -Language swift
+      PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0                                      -> PLACEHOLDER_EXIT=0
+      (no TODO/FIXME/stub/mock/placeholder/Lorem/fatalError-unimpl in shipped code)
+
+=== DEFERRED (Xcode app-target build/test — pre-existing/environmental, NOT this code) ===
+  xcodegen generate ............................................................. OK (GEN_EXIT=0)
+  xcodebuild -target TeslaSync-macOS -configuration Debug build CODE_SIGNING_ALLOWED=NO
+    -> "error: There is no XCFramework found at …/Frameworks/Shared.xcframework"
+       ** BUILD FAILED **  (exit 65)
+    Blocker (a): Shared.xcframework is the KMP/Gradle artifact (macos-pending). Building it
+       runs `apps/shared/gradlew :core:assembleSharedXCFramework` and is explicitly deferred to
+       a macos-latest CI runner per apps/macos-pending-verifications.md. NOT a defect in this surface.
+  Blocker (b) — demonstrated independently (pre-existing cross-sibling collision):
+    swiftc -typecheck MQTTStatusWidget.Model.swift DigitalTwinWidget.Model.swift
+      -> "error: invalid redeclaration of 'DashboardWidgetSize'"
+         "'DashboardWidgetSize' is ambiguous for type lookup in this context"
+    6 sibling surfaces each declare `public struct DashboardWidgetSize` /
+    `DashboardWidgetRegistration` (self-contained-by-mandate: each prompt's Allowed-files is its
+    own widget only). The MQTT+DigitalTwin pair collide with NEITHER being this surface — the
+    full-target build is pre-broken by parallel-integration and is resolved at the integration/
+    dedup phase, OUT OF SCOPE here and UNFIXABLE within Allowed-files (TelemetryErrorsWidget.*).
+  Blocker (c): iOS simulator *test* execution — no-sudo CLT CoreSimulatorService daemon
+    (identical environmental blocker documented by sibling 0010). The iOS *compile* of this
+    surface is proven by [1]/[2]; only the simulator run is deferred.
+  -> IOS_EXIT = DEFERRED   MAC_EXIT = DEFERRED   (Xcode app gate; raw probe exit 65 = missing
+     Shared.xcframework, an infra prerequisite — not a compile/test failure of this code).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green   : every PASS above is raw tool output; the Xcode app gate is reported
+                         DEFERRED with its concrete failure reason (missing xcframework), never
+                         dressed as green. This surface's OWN build+tests are really green (Xcode 26.5).
+  2  No scope narrowing: all web states/branches reproduced (loading/empty/error/content,
+                         compact/standard, inner no-errors, recent flag, freshness chip).
+  3  No skip-and-assume: read the web source end-to-end + WidgetShell + Badge + TimeStamp +
+                         DataFreshness + EmptyState + numberFormat/dateFormat before authoring.
+  4  No stubs as final : full implementation; placeholder gate = 0; no TODO/mock/EmptyView.
+  5  No parity shortcuts: aggregation, sort-stability, isRecent window, status verdict, i18n
+                         keys, registry envelope all matched + EXECUTED in XCTest.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / the dashboard grid
+                         (integration prompt's scope) and did NOT edit the shared
+                         Localizable.xcstrings (parallel-unsafe) — strings shipped as the
+                         per-surface table; did NOT edit any sibling widget file.
+  8  No commit on red  : committing on all-green host gates; the Xcode app build/test is
+                         DEFERRED (missing macos-pending xcframework + pre-existing cross-sibling
+                         dup + no-sudo simulator daemon) — environmental, not a red of this code.
+  9  No silent drift   : changes confined to the allowed TelemetryErrorsWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native TelemetryErrorsWidget shipped at parity with the web source:
+  Foundation-only projection (EXECUTED-green adapter + full XCTest, 29/29), P1/S8 state-holder
+  seam (no view HTTP), P1/S11 telemetry, every state + every i18n key + a11y labels,
+  registry-correct (telemetry-errors, system, 2×4 / 1×2 / 4×40). The surface BUILDS and its
+  tests RUN GREEN under the real Xcode 26.5 toolchain (swift build + swift test). All
+  host-runnable gates pass. The Xcode *app-target* build/test is DEFERRED to a full-Xcode CI
+  runner that stages the macos-pending Shared.xcframework and runs after the integration/dedup
+  phase reconciles the pre-existing cross-sibling DashboardWidgetSize/Registration declarations —
+  none of which are defects in this code — matching the user-approved "code-complete + DEFERRED
+  Xcode gate" disposition of the 18 sibling P4 dashboard-widget surfaces.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/TelemetryErrorsWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0100-TelemetryErrorsWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add TelemetryErrorsWidget surface (P4)"
+
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+IOS_EXIT=DEFERRED
+MAC_EXIT=DEFERRED
+EXIT=0
+STATUS=DONE

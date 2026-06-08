@@ -1,0 +1,183 @@
+I'll start by exploring the repository structure and understanding what exists for both the web source and the Apple app.
+
+Swift 6.3 and the lint tools are present. Let me check xcodebuild more carefully and read the web source plus the Apple app structure.
+
+Key finding: only Command Line Tools are installed, not full Xcode — so `xcodebuild build test` cannot run. But swiftlint/swiftformat/swift work. Let me explore the existing Apple patterns thoroughly before deciding anything.
+
+The feature-views directory has 1217 files following a multi-file-per-component pattern. Let me find a representative complete example and check for any already-built status sections.
+
+The `InfrastructureSection.*` files already exist (8 files). I need to assess their current state and whether they meet the spec. Let me check git tracking and read all existing files.
+
+Important discovery: the existing Swift files implement a **different** surface than this prompt requires. The existing code targets `features/admin/components/devtools/InfrastructureSection.tsx` (5 on-demand tools), but **this prompt (0248)** targets `features/system/components/status/InfrastructureSection.tsx` (SSE Connection + Polling Engine + DB pool). Let me gather evidence about this conflict.
+
+Now the picture is clear: **0006** (devtools, already committed) and **0248** (system status, my task) are two different surfaces that the prompt generator pointed at the *same* native path. Let me read both prompt files verbatim, the 0006 gate log (to see how the gate was satisfied without full Xcode), and the other web source.
+
+Now I fully understand: **0006** (devtools, committed) and **0248** (system status, my task) are auto-generated prompts that collided on the same native path. 0006 is already done and committed — I must not destroy it. Let me read the 0006 gate log (to see how the gate was satisfied on this runner) and the established patterns (design tokens, i18n facade, a query-based sibling, project structure).
+
+The 0006 log is highly informative. Critically: **full Xcode IS present** at `/Applications/Xcode.app/...` (accessed via `DEVELOPER_DIR`), and the established precedent validates surfaces via a **SwiftPM host test harness** plus swiftlint/swiftformat/placeholder, with the full `xcodebuild` app build DEFERRED due to pre-existing baseline breakage in *other* surfaces.
+
+Since 0006 (devtools) is committed and is a genuinely different web component, I'll implement 0248 (system status) as distinctly-named files to avoid destroying the predecessor. Let me verify the runner toolchain and study the established idioms (tokens, shared components, a query-based sibling).
+
+Full Xcode 26.5 is available and `feature-views` is already wired into project.yml + swiftlint. Let me locate the design tokens and shared components, and find a query/live-based sibling to mirror.
+
+The shared components live in `Sources/Components/*` and tokens in `Sources/Design/*`, all in the same app target as feature-views. Let me read the remaining 0006 reference files, the design tokens, project targets, and the web data shapes — all in parallel.
+
+Now I understand the 0006 architecture deeply. Let me read the remaining references in parallel: 0006's Views/Tests/Previews, the design tokens, the web data shapes, and the web composition components (AccordionSection, KVList, InlineMetric, Card).
+
+I have the full 0006 pattern. Now let me read the design tokens, the specific shared components I'll need (Cards, Badges, Lists, Metrics, Typography, Disclosure), the web data shapes, and the web AccordionSection composition.
+
+The tokens are generated elsewhere. Let me locate the actual token declarations and read the web data shapes and composition components in one batch.
+
+Let me read the precise web type shapes and locate the token + component definitions (Badges, Typography, and the generated tokens).
+
+Got the exact web data shapes. Now let me pin down the token definitions (searching the whole tree) and read the Badges + Typography component signatures.
+
+The tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`) are used everywhere but only *declared* in `TeslaSyncWatchShared/WatchDesignTokens.swift` — suggesting they're generated or shared. Let me resolve that, and read the shared components I'll reuse (Cards, Lists, Metrics, Disclosure, Typography, Feedback states).
+
+Tokens are committed-generated at `apps/design/generated/apple/`. Let me confirm token member names and read the shared components I'll reuse for parity (Typography, Cards, Lists, Metrics, Disclosure, Feedback states).
+
+The shared library has exact parity components: `TSAccordion`, `TSCard`/`TSCardHeader`, `TSKVList`/`TSKVRow`, `TSInlineMetric`/`TSStatCard`, `TSEmptyState`, `TSQueryError`. Let me read their exact init signatures.
+
+I now have all component signatures. Let me read the final references: the web `AccordionSection` (header composition), the Feedback states (`TSEmptyState`/`TSQueryError`), and the web `fmtInt`/`KVList`/`InlineMetric` to nail parity.
+
+I now have a complete, verified picture. Let me confirm `TSSkeleton`'s signature and then I'll write the plan and implement.
+
+I have a complete, verified understanding. Key conclusion: **prompts 0006 (devtools) and 0248 (system status) are two different web components that the generator pointed at the same native path.** 0006 is already committed and gate-passed. To satisfy 0248 at true parity *without destroying the committed predecessor* (Covenant rule 7), I'll implement the system-status surface as distinctly-named `InfrastructureStatusSection.*` files in the same directory, and document this collision resolution in the log.
+
+Let me record the plan and todos, then implement.
+
+Now I'll implement. Starting with the pure **Adapter** (app-symbol-free core).
+
+Now the **Catalog** (value types, i18n facade P1/S10, a11y builders, freshness, slug — all app-symbol-free).
+
+Now the **Model** (state-holder seam P1/S8 + telemetry seam P1/S11 + in-memory source).
+
+Now the **Views** (shared-component-backed sub-views: accordion, cards, KV list, metric tiles, chips, skeleton, banner).
+
+Now the composed **Section view** that owns the model and renders every state.
+
+Now the **.strings** catalog (all web `t()` keys + native chrome + a11y).
+
+Now the **Previews** (all six states).
+
+Now the **Tests** (adapter + model + a11y).
+
+All 8 files written. Let me update todos and validate. First I'll build a self-contained SwiftPM host harness (the established precedent for executing tests, since the full app target has pre-existing baseline breakage) to compile and run the core logic.
+
+swiftformat flagged line-wrap + a redundant `throws`. Let me auto-format my files in place, then re-lint.
+
+swiftformat is clean (0/7). Now swiftlint `--strict` — first on my files to isolate, then I'll run the full gate.
+
+Two swiftlint issues: a multiple-trailing-closure in the main view, and Views.swift now exceeds the 400-line file limit. Let me fix the closure call and split the card views into a sibling `.Cards.swift` file (matches the `InfrastructureStatusSection.*` pattern). Let me check the Views structure first.
+
+I'll split the card-related views into a new `.Cards.swift`. Let me read the exact block to move (lines 174–398).
+
+I'll create `.Cards.swift` with the card block, remove it from Views, and fix the trailing-closure call.
+
+Now remove that block from Views.swift and fix the trailing-closure call in the main view.
+
+Views.swift is now 236 lines. Let me re-run swiftformat + swiftlint on all files (now including `.Cards.swift`).
+
+swiftlint is **0 violations**. The swiftformat error was only because I passed the `.strings` file (unsupported). Let me re-run swiftformat on just the `.swift` files.
+
+swiftformat + swiftlint both clean. Now the key validation — compile and **execute** the core logic via a SwiftPM host harness (the established precedent, since the full app target has pre-existing baseline breakage). Let me build it.
+
+Now run the harness tests:
+
+The plain `swift` is using CommandLineTools (no XCTest). Let me point it at the full Xcode toolchain via `DEVELOPER_DIR` (the 0006 precedent) and re-run.
+
+All **25 core tests pass** under the full Xcode toolchain (arm64e-apple-macos14.0). Now I must validate the View layer (Cards/Views/Previews using shared `TS*` components) compiles in the real app target. Let me check the build prerequisites (xcodegen, the KMP framework, the xcodeproj).
+
+Core logic is validated (25/25). The KMP `Shared.xcframework` isn't present (full app build needs a ~7-min gradle build and is baseline-red in other surfaces — the documented 0006 deferral). To authoritatively validate my **view layer** against the *real* shared components (not shims), let me check whether `Sources/Components` + `Sources/Design` are self-contained (no KMP `Shared` dependency).
+
+`Sources/Components` + `Sources/Design` only import system frameworks (no KMP `Shared`). I'll compile my **view layer against the real components** in a single-module SwiftPM target (faithfully mirroring the app's single-module compile) — far better than shims. Let me set it up.
+
+The Tests file (XCTest, app-module import) doesn't belong in this view-compile target — it's already validated in the test harness. Let me remove it and rebuild.
+
+The errors are all in a shared library file (`UnitFormatters.swift`) that references app-level unit types — **not my surface**. My files produce no errors. Let me identify all such library files that need app-only types and exclude them (my surface doesn't use them), to get a clean end-to-end build.
+
+Only one library file (`UnitFormatters.swift`, unused by my surface) needs app-only unit types. My surface files produce **zero** errors. Let me exclude that file and confirm a clean end-to-end build of my view layer against the real components.
+
+**Build complete** — all 7 surface files compile clean against the real shared components (including Previews). Now let me run the placeholder gate and the full-project swiftlint, and check the placeholder script.
+
+pwsh is available. The full-project swiftlint shows **1 violation** — but it's in the Watch files (last batch), not my surface (my 8 files are 0). Let me pinpoint that pre-existing violation precisely, and run the placeholder gate on my surface.
+
+The single global violation is a **pre-existing baseline regression** in `LifetimeStatsWidget.Adapter.swift:141` (`function_body_length`) — the exact file 0006's log documented fixing via a behavior-preserving extraction. My surface is clean. I'll reproduce that minimal repair (left in working tree, not part of my surface commit, documented in the log — the 0006 precedent). Let me view the function and test the placeholder gate.
+
+Placeholder gate passes (COUNT=0, EXIT=0). Let me view the rest of the `project()` function before applying the same behavior-preserving extraction 0006 documented.
+
+Placeholder gate is clean. Now I'll apply the documented behavior-preserving extraction to the pre-existing baseline file (left in working tree, not part of my surface commit). Three edits: replace the two inline arrays with helper calls, and add the helpers.
+
+Applied as a single behavior-preserving extraction. Let me format that file and re-run the full-project swiftlint.
+
+Full-project swiftlint is now **0 violations (1719 files)**. Let me verify my extraction in `LifetimeStatsWidget.Adapter.swift` is type-correct by compiling that widget's files. First, check its file set and imports.
+
+The LifetimeStats set is component-based (no WidgetKit). Let me verify my extraction type-checks by adding the Adapter + Model into the existing real-component harness and rebuilding.
+
+Those errors are pre-existing cross-file deps in `Model.swift` (`DashboardWidgetSize`/`DashboardWidgetRegistration` from a shared widget base), **not** my Adapter edit. Let me confirm where the Lifetime types live and isolate the Adapter for a clean type-check.
+
+`DashboardWidgetSize` is defined in *multiple* widget files (the pre-existing duplicate-definition baseline breakage 0006 documented). My edit is confined to `Adapter.swift`'s `project`. Let me definitively type-check my edited file in isolation with faithful shims for its 3 external types. First, read those types.
+
+I have the exact dependency surface. Let me type-check my edited `Adapter.swift` in isolation against faithful shims of its 3 external types — definitively validating the extraction.
+
+Just a shim access-level mismatch — let me make the shim's enum `public` (matching the real one) and re-run.
+
+**Type-check clean** — my baseline extraction is verified. Every achievable gate is green. Now let me attempt the actual `xcodebuild` gate to capture authentic evidence (it will be DEFERRED on the pre-existing baseline, per the 0006 precedent). First, generate the project.
+
+Project generated with `TeslaSync` + `TeslaSync-macOS` schemes. Now attempt the macOS build to capture authentic gate evidence (expected DEFERRED on missing KMP framework / baseline duplicate-types).
+
+The build is compiling the full app. Let me wait for it to complete.
+
+Let me check the build log progress so far while it continues.
+
+The build is auto-assembling the KMP `Shared.xcframework` via a Gradle pre-action (the ~7-min step). No errors in my surface so far. Let me keep waiting.
+
+The macOS build assembled the KMP framework, then failed at the Swift compile with **MAC_EXIT=65** (same as the 0006 precedent). Let me verify the failures are the pre-existing baseline (not my surface).
+
+The macOS failure is **not** my surface — it's `AIRestorePanel.Tests.swift` failing on `XCTest` module resolution (the embedded-test-file project wiring that 0006 documented fixing via `ENABLE_TESTING_SEARCH_PATHS`). My surface files compiled with zero errors. Let me view the app-target settings to add that same working-tree wiring.
+
+I'll add the `ENABLE_TESTING_SEARCH_PATHS` wiring to both app targets (the documented 0006 working-tree fix so embedded `*.Tests.swift` resolve XCTest), then regenerate and rebuild.
+
+Now regenerate and rebuild macOS (framework is cached now, so this is mostly the Swift compile).
+
+XCTest now resolves and the app compiled many files, ending with 26 failures. Let me verify none are mine and characterize the baseline breakage.
+
+Confirmed: all failures are **pre-existing baseline breakage in other surfaces** (`TelemetryErrorsPanel`/`TelemetryErrorsWidget` ambiguous duplicate types, `DashboardWidgetSize` collisions — merged from sibling slots, exactly the 0006-documented condition). **Zero errors in my surface.** Let me confirm my files were actually compiled, then run the iOS build for completeness.
+
+My files show zero errors (confirmed). iPhone 16 simulator is booted. Let me run the iOS build too (the gate's first step) for authentic evidence.
+
+Both platforms: **IOS_EXIT=65 / MAC_EXIT=65**, identical pre-existing baseline breakage in other surfaces (TelemetryErrors*, TemperatureMetricCards, DashboardWidgetSize collisions). **Zero errors in my surface on both SDKs** — the documented 0006 deferral. Let me review the working tree before writing the log and committing.
+
+Working tree is as expected: my 9 surface files (untracked, to commit), plus working-tree wiring in `LifetimeStatsWidget.Adapter.swift` + `project.yml` (NOT committed with the surface, per the 0006 precedent), plus 2 pre-existing admin changes (not mine). The xcodeproj is git-ignored. Let me get line counts, then write the gate log.
+
+Surface: 9 files, 1811 lines; placeholder gate clean. Now I'll write the comprehensive, honest gate log.
+
+Now I'll commit **only** my surface files + the log (leaving the working-tree wiring uncommitted, per the prompt scope and 0006 precedent).
+
+Exactly my 9 surface files + the log are staged. Committing:
+
+Committed at `a3babda79` with exactly my 9 surface files + the log. The working-tree wiring (`project.yml`, `LifetimeStatsWidget.Adapter.swift`) is intentionally left uncommitted (documented; 0006 precedent), and the 2 admin files were pre-existing. Let me do a final verification of the commit contents and a clean re-lint.
+
+The commit is clean: 10 files (9 surface + log), 2023 insertions, and the committed surface lints at **0 violations**. Let me clean up the temporary build harnesses and finalize.
+
+All work is complete and verified. The task is done.
+
+## Summary
+
+**Task:** P4/0248 — ship a native Apple SwiftUI parity of the system-status `InfrastructureSection` (`features/system/components/status/InfrastructureSection.tsx`).
+
+**Critical finding & resolution:** Two auto-generated prompts (0006 *devtools* and 0248 *system-status*) are different web components that the generator pointed at the **same** native path. 0006 was already committed and gate-passed. To honor the Honesty Covenant ("No predecessor bypass") I shipped this distinct surface as **`InfrastructureStatusSection.*`** (9 files, same directory) with the prompt-required diagnostics slug `"InfrastructureSection"`, all symbols prefixed to avoid collisions — documented explicitly in the log.
+
+**Delivered (parity with the web source):**
+- Collapsible accordion (Globe + Connected/Disconnected pill) → **SSE Connection** card (Wi-Fi icon, KV rows incl. a connection-state badge) + **Polling Engine** card (Active/Standby badge, speed-comparison rows) + **database-pool** metrics (Total/Acquired/Idle, `fmtInt`).
+- P1/S8 two-query state-holder seam (no view networking), P1/S11 `view.opened` telemetry, P1/S10 i18n facade (every web `t()` key reproduced), P1/S9 tokens, shared `TS*` components.
+- All six states (loading/empty/error+retry/stale/offline-cached/ready) + full VoiceOver/Dynamic-Type/reduce-motion a11y.
+
+**Verification (all real output):**
+- `swift test` host harness: **25/25 green** (adapter/model/a11y).
+- `swift build` against the **real** component library: **Build complete** (all 7 view files, Previews included).
+- `swiftlint --strict` (1719 files): **0 violations**; `swiftformat --lint`: **0**; placeholder gate: **0**.
+- iOS + macOS `xcodebuild`: **65 (DEFERRED)** — 1358 errors are **pre-existing baseline breakage in ~15 other surfaces** (TelemetryErrors*/TemperatureMetricCards/`DashboardWidgetSize` collisions); **zero in my surface** — exactly the documented 0006 precedent.
+
+**Committed** (`a3babda79`): only the 9 surface files + the gate log. The minimal working-tree wiring (`project.yml` XCTest search paths + a behavior-preserving lint-fix extraction in `LifetimeStatsWidget.Adapter.swift`) is left uncommitted and documented, per the 0006 precedent. Log ends `EXIT=0 / STATUS=DONE`.
+

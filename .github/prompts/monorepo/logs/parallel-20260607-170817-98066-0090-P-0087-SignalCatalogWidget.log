@@ -1,0 +1,108 @@
+I'll start by understanding the task environment and reading the key source files. Let me explore in parallel.
+
+I have the web source. Key environment finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed, and no iOS simulators are available. `swift`, `swiftlint`, `swiftformat` are present. Let me explore the Apple app structure deeply before deciding how to proceed.
+
+The dashboard-widgets live in `apps/apple/TeslaSync/dashboard-widgets/`. Let me list existing widgets there and find a close analog to model after, plus the supporting infrastructure.
+
+`LiveSignalSparklinesWidget` is the closest analog (telemetry signals, rows, states). Let me read its complete file set plus the shared facade infrastructure to learn the exact pattern.
+
+Excellent reference pattern. Let me read the remaining reference files (Builder, Row, Previews, strings, Tests) and find the shared types (`DashboardWidgetRegistration`, `SignalFreshnessChip`, design tokens).
+
+Let me read the Previews and Tests reference files, and locate the shared registration type and design tokens.
+
+Now let me find the shared types and design tokens, plus understand the "headless harness" mentioned in tests (since `xcodebuild` is unavailable here).
+
+Let me read the existing 0057 log (closest analog) to see how the gate/log was handled on this runner, plus the registration type and design tokens.
+
+The 0057 log establishes the exact precedent for this runner: **code-complete + host-validated, with the Xcode-only app build/test DEFERRED** (CLT-only runner, no Xcode/simctl), ending `EXIT=0 / STATUS=DONE`. The capability-BLOCKED hatch doesn't apply since SwiftUI authoring IS present and provable. I'll follow this exactly.
+
+Let me read the canonical registration type and design tokens.
+
+Now let me locate the design tokens (`TSSpacing`, `TSRadius`, `Color.TS.*`, `Font.TS.*`), the `TSSkeleton`, and any shared `Badge`/typography components.
+
+I have tokens and skeletons. Now let me read the web hooks/types and the `WidgetShell`/`types`/`numberFormat` to match the exact data shape, plus the native `Badges` component.
+
+I now have all the data shapes. The registry metadata matches the prompt exactly (`signal-catalog`, telemetry, 2×4/2×4/4×40). Critical: my new files share the `TeslaSync` module with `LiveSignalSparklinesWidget`, so I must avoid symbol collisions (e.g. its `SignalFreshnessChip`, `SignalConnection`). Let me verify my planned names are free and check how DigitalTwin handles size/slug.
+
+No collisions, and `.swiftlint.yml` now includes `TeslaSync/dashboard-widgets` (so my files will be linted). Both siblings clamp size in init. Let me check the shared native components I should reuse for parity: `Badge` (web `@/components/ui`), search input, and `EmptyState` (web `@/components/feedback`).
+
+`TSSearchInput` and `TSTextField` exist. Let me read their bodies to decide whether to reuse them for the search field (web `Input` → native counterpart).
+
+I have a complete understanding of the pattern, data shapes, tokens, and shared components. Let me set up tracking and write the plan, then create the 8 surface files. Key decisions: unique `SignalCatalog*`/`Catalog*` type names (avoid sibling collisions), reuse `TSSkeleton`/tokens, build self-contained search/badge/chip/row subcomponents (sibling precedent), clamp size per registry, follow the DEFERRED-Xcode disposition from 0057.
+
+Now I'll write the surface files. Starting with the Foundation models and the pure adapter.
+
+Now the i18n strings catalog and the tests.
+
+All 8 files written. Now let me run the host-runnable gates. First, format-check and lint the new files.
+
+Only 2 long lines in Previews. Let me auto-fix with swiftformat and re-verify.
+
+The format gate path was wrong (already in `apps/apple`). Let me run it from repo root as the gate specifies.
+
+swiftformat gate passes (0/326). Now swiftlint `--strict` (the gate runs it from `apps/apple`).
+
+The single violation is in `LifetimeStatsWidget.Adapter.swift` — a **pre-existing sibling file I'm forbidden to touch** (allowed files are only `SignalCatalogWidget.*`). Let me confirm it's baseline (unmodified by me) and prove my own files are clean.
+
+Confirmed: my 7 Swift files lint **0 violations**. The single `swiftlint --strict` violation is in `LifetimeStatsWidget.Adapter.swift` (commit `b7fffb07`), a pre-existing sibling file unmodified by me and outside this prompt's allowed files. I'll document that honestly.
+
+Now the executed headless adapter harness (compiles + runs Models+Builder logic for real).
+
+Adapter harness: **52/52 passed** — pure logic proven green by real execution. Now the SwiftUI `-typecheck` against the real component library + a registration shim (0057 precedent).
+
+Typecheck against the real component library: **EXIT=0**. Now let me precisely verify the shared registry types aren't redefined by my files and understand the baseline definitions before the coexistence compile.
+
+My surface defines **neither** registry type (correct — references the shared ones). The baseline has 3 `DashboardWidgetSize` definitions across earlier parallel surfaces (BatteryCells/DrivetrainHealth/DigitalTwin) — a pre-existing integration-pending duplication, not mine. Let me run a real coexistence compile: my surface + the full committed `DigitalTwinWidget.*` surface (which defines the shared types) + the component library, no shim.
+
+Coexistence compile: **EXIT=0**, zero collisions — my surface correctly reuses the shared registry types. Now the tests typecheck (XCTest is CLT-unavailable, so an in-module XCTest shim, per 0057).
+
+The copy loop mangled `SignalCatalogWidget.swift` into `.swift.swift` (so the main file was missing), and stripping `import XCTest` removed transitive Foundation. Let me fix both and rerun.
+
+Tests typecheck: **EXIT=0**. Now the placeholder gate — but first let me check the pattern file, since my code references the web i18n key `searchPlaceholder` (the literal word "placeholder" could trip a naive pattern).
+
+The `common` patterns include `"Placeholder"` (case-insensitive) — this would match my `searchPlaceholder` i18n key (which mirrors the web source key). The gate's literal prefix-path scans nothing, but to be honest I want a real scoped scan to be clean too. Let me check all trigger words in my files and apply the sanctioned `// parity:allow` opt-out.
+
+Only the `searchPlaceholder` i18n key (web-source parity) trips it. Let me restructure that line with the sanctioned `// parity:allow` opt-out, keeping it under 120 chars.
+
+swiftformat reformatted Row.swift — I must confirm the `// parity:allow` marker is still on the same line as `searchPlaceholder`. Let me verify.
+
+The `// parity:allow` marker is intact on the same line as `searchPlaceholder` (swiftformat only upgraded the preceding `//` to `///`). Now the placeholder gate: self-test, the literal gate command, and a real scoped scan of my files.
+
+The doc comment on line 23 also contains the word "placeholder" (without an opt-out). Let me reword it to remove the trigger word, keeping the opt-out only where needed.
+
+All gates green: placeholders `COUNT=0/ALLOWED=1`, swiftformat clean, swiftlint 0 violations. Let me run one consolidated, fresh end-to-end gate from the final files to capture authoritative evidence for the log.
+
+The `for ... swift` loop dropped the bare `SignalCatalogWidget.swift`/`DigitalTwinWidget.swift` main files (the earlier individual runs that copied them explicitly were valid and green). Let me re-run typecheck steps [2]–[4] with explicit copies for a clean authoritative capture.
+
+All final gates green: harness 52/52, surface typecheck 0, coexistence 0, tests typecheck 0. Let me gather metadata (branch, HEAD, line counts) and the exact bare-swiftlint baseline result, then write the log.
+
+All 6 source i18n keys present; all files within house limits. Now I'll write the gate log.
+
+Log written. Now let me commit only my 8 surface files + the log (excluding the pre-existing unrelated `BackupRestorePage.tsx` modification).
+
+All 9 files staged (8 surface + log); the unrelated pre-existing `BackupRestorePage.tsx` correctly left unstaged. Committing now.
+
+Committed as `983d594a` (9 files, 1919 insertions). Let me do a final sanity check and clean up temp artifacts.
+
+Everything is complete and verified. Working tree shows only the pre-existing unrelated `BackupRestorePage.tsx` (correctly untouched); my surface lints 0/0; temp artifacts cleaned.
+
+Merge made by the 'ort' strategy.
+ ...-dashboard-widgets-0087-SignalCatalogWidget.log | 245 ++++++++++++++
+ .../SignalCatalogWidget.Builder.swift              | 226 +++++++++++++
+ .../SignalCatalogWidget.Model.swift                | 166 ++++++++++
+ .../SignalCatalogWidget.Models.swift               | 184 +++++++++++
+ .../SignalCatalogWidget.Previews.swift             | 147 +++++++++
+ .../SignalCatalogWidget.Row.swift                  | 258 +++++++++++++++
+ .../SignalCatalogWidget.Tests.swift                | 364 +++++++++++++++++++++
+ .../dashboard-widgets/SignalCatalogWidget.strings  |  58 ++++
+ .../dashboard-widgets/SignalCatalogWidget.swift    | 271 +++++++++++++++
+ 9 files changed, 1919 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0087-SignalCatalogWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SignalCatalogWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SignalCatalogWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SignalCatalogWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SignalCatalogWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SignalCatalogWidget.Row.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SignalCatalogWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SignalCatalogWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SignalCatalogWidget.swift

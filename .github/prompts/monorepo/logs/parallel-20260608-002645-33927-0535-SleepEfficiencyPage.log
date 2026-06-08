@@ -1,0 +1,56 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure to understand the existing patterns.
+
+Let me explore the Apple app structure and existing patterns in detail.
+
+Let me understand the parity system and existing page conventions.
+
+Let me check the toolchain and explore the established patterns (components, facade, navigation, tokens).
+
+`xcodebuild` requires full Xcode but only Command Line Tools are present — so the build/test gate cannot run. Per the prompt's severity note, that forces `STATUS=BLOCKED`. But I must still produce a **complete, non-placeholder** implementation and run every gate I *can* (swiftlint, swiftformat, placeholder scan). Let me study the established conventions thoroughly.
+
+This is very informative. The repo precedent ran on a machine **with full Xcode 26.5**; this runner only has Command Line Tools, so the build/test gate genuinely cannot run. I'll build a complete, convention-perfect implementation, run every SDK-independent gate, and log honestly. Let me study the established feature-view conventions deeply.
+
+The feature-view multi-file convention is clear. Now let me locate navigation, the component library, the shared facade for sleep efficiency, SI converters, and design tokens.
+
+The navigation pattern is clear (the `SettingsRouteRegistration` precedent). Let me check the P7 pages prompt directory for the page-registration contract and confirm the web route grouping.
+
+No pages exist yet — this is among the first. The critical question is how feature views bind data through the facade. Let me study the HeroGauges reference set and the SharedFacade domains.
+
+The `Shared.xcframework` is absent (only `.gitkeep`) and every facade file `import Shared` — so the whole module is uncompilable on this runner, confirming `STATUS=BLOCKED`. I must still produce a build-correct implementation. Let me study the full HeroGauges reference set and the Units/SI facade.
+
+The HeroGauges decoupling pattern is the key convention: a `Shared`-free `@Observable` model + projection + view + a `Source` protocol seam, with a separate `.Adapter.swift` bridging to KMP `Shared`. Let me read the rest of the reference set plus the Units/SI facade and a chart-bearing example.
+
+Now let me study the component library, design tokens, Swift Charts usage, the SI/Units facade, and the strings format. Let me find and read the key component files.
+
+Now the design tokens, typography, cards, badges, data table, feedback states, and the SI/Units facade.
+
+Let me read the generated design tokens and the remaining components (Cards, Badges, DataTable, States, Skeletons) plus the Units facade.
+
+Let me read the DataTable, Skeletons, the Units/SI facade, and the strings conventions.
+
+Now the strings catalog, the per-surface strings doc, the test/preview conventions, and `TSSkeleton`.
+
+Let me read the per-surface strings doc, skeletons, and the test/preview conventions to finalize my understanding.
+
+Let me check for layout/page-container, range/vehicle pickers, and freshness components before implementing.
+
+Excellent — `TSVehicleSelect`, `TSDatePresetChips` exist. Now let me port the exact web numeric/format pipeline (temp conversion, number/currency/date formatting) for parity.
+
+I have a thorough understanding now. Let me check the "Unavailable" default-source precedent, then set up my plan and todos.
+
+Let me peek at the test convention, then write the plan and begin implementation.
+
+I now have a complete understanding of all conventions. Let me set up my plan and todos, then implement.
+
+Now I'll implement. Starting with the Foundation-only Model (the state-holder seam).
+
+Model done. Now the Foundation-only projection/format core (verbatim web numeric pipeline).
+
+Now the native Swift Charts file (donut wrapper + grouped categorical comparison bars).
+
+Now the SwiftUI subviews (cards, chart panels, callout, table, skeletons, freshness).
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: F23A:1364D:2A6A551:2C5D163:6A26DF7E)

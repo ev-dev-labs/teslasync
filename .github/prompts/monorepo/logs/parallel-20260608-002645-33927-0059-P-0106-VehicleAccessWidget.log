@@ -1,0 +1,86 @@
+I'll start by exploring the codebase structure and checking platform capabilities in parallel.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me investigate further — check for Xcode elsewhere, examine the existing native patterns, and read the web source.
+
+Full Xcode IS installed at `/Applications/Xcode.app` — `xcode-select` just points to CLT. I can use `DEVELOPER_DIR` to target it without sudo. Let me verify and examine the existing widget pattern + web shared files.
+
+Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 simulator is booted. The gate CAN run. Now let me deeply understand the native widget pattern. Let me list the directory structure and find a representative widget + shared infrastructure.
+
+`GuardModeWidget` (same `security` category, 6-file pattern) is the ideal reference. Let me read the entire GuardModeWidget set plus check the `.strings` file.
+
+Excellent pattern. Let me read the remaining GuardModeWidget files (Adapter, Views, Previews, Tests, strings) to fully internalize the conventions.
+
+Now let me examine the shared native infrastructure (tokens, registration, skeleton) and the web data model (hooks, shared components) in parallel.
+
+The token definitions aren't under `TeslaSync/` — and `DashboardWidgetRegistration` appears in 13 Model files (suggesting guarded duplicates). Let me investigate how these are declared and where the P1/S9 tokens live.
+
+XcodeGen-based project (whole `dashboard-widgets/` dir is a source path). I need to understand how `*.Tests.swift` files in that dir are handled vs. the test targets. Let me investigate the test wiring and tooling.
+
+There's a `Tests/Unit/DashboardWidgets/` dir, yet GuardModeWidget.Tests.swift lives in `dashboard-widgets/`. I need to resolve how test files are actually compiled. Let me check the test dir and generate the project to inspect target membership.
+
+`GuardModeWidget.Tests.swift` lives only in `dashboard-widgets/` (an app source path) yet does `@testable import TeslaSync`. I must verify how XcodeGen assigns it. Let me generate the project and inspect target membership.
+
+Project generated. Now let me assess the critical build dependency (Shared.xcframework / KMP) and the test-file target membership — these determine whether the gate can run at all.
+
+Two crucial blockers to assess: (1) `Shared.xcframework` is absent and requires a KMP/Gradle build, (2) test-file target membership. Let me check the KMP toolchain availability and map the build phases to targets.
+
+Key facts: Java 17 + gradlew exist but no prebuilt xcframework; `.Tests.swift` compiles into the **app** targets (with `@testable import TeslaSync`). Let me read the pending-verifications doc (referenced by the build script) and the web data-model hooks before deciding strategy.
+
+The repo's own `macos-pending-verifications.md` confirms my analysis precisely: the full-app `xcodebuild` is blocked by **pre-existing, unrelated** parallel-merge collisions (`DashboardWidgetSize` redefined 15×, 152 co-located `*.Tests.swift` importing XCTest into the app target, unstaged `Shared.xcframework`, signing). The established precedent (3 sibling P4 surfaces) verifies each surface **green in isolation** (SwiftPM build+tests, `swiftc -typecheck` on both SDKs, swiftlint/swiftformat/placeholder), then defers the full-app gate. I'll follow that exact honest pattern.
+
+Let me gather the remaining data-model + token details.
+
+Now I have the data model. Let me locate the `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius` token definitions and read `formatDateShort` semantics.
+
+I now have the complete picture: data model, tokens, pattern, and the documented precedent for handling the pre-existing full-app build collisions. Let me set up tracking and read the lint configs before writing.
+
+Style rules clear (≤120 cols, before-first wrapping, `--self remove`, `@testable` at bottom). Let me write the plan and the two logic-core files (Model + Adapter).
+
+All 7 files created. Let me update todos and verify i18n key coverage — every key referenced in code must exist in the `.strings` catalog.
+
+I18n coverage is complete (0 missing keys). Now I'll verify the surface compiles + tests pass **in isolation** (the documented precedent, since the full-app `xcodebuild` is blocked by pre-existing collisions). Let me build an isolated SwiftPM package with token shims.
+
+Real issue: `AccessEntry: Sendable` can't store `TSTone` because the app's `public enum TSTone` isn't declared `Sendable` (public types don't get implicit Sendable). Let me confirm the real app's `TSTone` has no Sendable conformance, then fix faithfully.
+
+Confirmed — the app's `TSTone` is not `Sendable`. So `AccessEntry` must not be `Sendable` (matching how `GuardEventCatalog.Visual` avoids storing `TSTone`). Fixing faithfully in the repo file:
+
+All 21 tests pass in isolation under Swift 6 strict concurrency (Previews compiled under DEBUG too). Now the cross-SDK proof: `swiftc -typecheck` against both the iOS 18 simulator SDK and the macOS 15 SDK.
+
+Both iOS 18 and macOS 15 SDK type-checks pass with **0 errors** under Swift 6 strict concurrency. Now the lint/format/placeholder gates on the real repo files.
+
+Trailing-comma violations (config uses `--commas inline`). Let me auto-format with swiftformat (write mode) to enforce the canonical style, then re-verify lint + format + tests.
+
+swiftformat **0 files require formatting**, swiftlint **0 violations**. Let me sync the formatted files to the isolated package and re-confirm tests + typechecks still pass.
+
+Placeholder gate, xcodegen enumeration, and direct pre-existing-collision evidence. Let me gather these.
+
+pwsh available; xcodegen enumerates all **7** files; pre-existing collisions confirmed (`DashboardWidgetSize` defined **15×**, **262** co-located XCTest test files — my widget adds no new `DashboardWidgetSize` definition). Now the placeholder gate:
+
+Placeholder gate: **0**. All host-runnable verifications pass. Now let me set up the log location and make a genuine bounded attempt at the full `xcodebuild` gate to capture real evidence. First, check the logs dir and sibling precedent.
+
+Let me read the sibling `GuardModeWidget` log (closest analog) to match the exact established log format for this status.
+
+The sibling `GuardModeWidget` log establishes the canonical, precedent-consistent disposition: **STATUS=DONE / EXIT=0** with all host-runnable gates green and the full Xcode app `build test` **DEFERRED** (not faked) to the signed integration runner — because the capability IS present (proven on both SDKs) and the blockers (KMP `Shared.xcframework` staging, signing, pre-existing `DashboardWidgetSize`×15 / XCTest-in-app×262 collisions) are outside this surface and this prompt's allowed files.
+
+Let me capture genuine `xcodebuild` evidence (the real missing-xcframework failure), exactly as the precedent did.
+
+Captured genuine evidence: `error: There is no XCFramework found at '.../Shared.xcframework'` → **BUILD FAILED, EXIT=65** — identical to the precedent (the KMP staging is a documented macOS-pending item, independent of this surface). 
+
+Let me gather header metadata and line counts, then write the comprehensive honest log.
+
+All metrics gathered: 6 Swift files (1466 lines, each <400), 21 tests / 59 asserts, 32 i18n keys, zero new `DashboardWidgetSize` definitions. Let me write the comprehensive, honest log mirroring the established precedent format.
+
+Log written. Now let me commit exactly the allowed files (VehicleAccessWidget.* + the log), being careful to exclude the pre-existing working-tree changes and the git-ignored generated project.
+
+Staging didn't take. Let me retry explicitly with status visibility.
+
+All 8 files staged (7 widget files + log). Committing:
+
+Commit `29d65f64f` created with exactly the allowed files; the pre-existing unrelated working-tree changes were correctly left untouched. Let me verify the commit's contents and confirm no generated project leaked in.
+
+The commit is clean — exactly 8 files, no `xcodeproj` leaked. The last lint accidentally globbed the whole repo (6 violations are in pre-existing files like `QuickNav.Previews.swift`, not mine). Let me do a clean final re-verification scoped strictly to my 6 committed Swift files.
+
+All gates confirmed clean on the committed files. Let me finalize tracking.
+
+All todos complete. The task is finished and verified.
+

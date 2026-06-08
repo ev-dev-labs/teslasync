@@ -1,0 +1,212 @@
+I'll start by exploring the repository structure to understand the task scope, then examine the web source page and existing Apple app structure.
+
+The web page is large. Let me read it in sections and explore the Apple app structure in parallel.
+
+Let me continue reading the web page and explore the Apple app structure in depth.
+
+The Apple structure needs more investigation. Let me explore the key directories and the parity manifest in parallel.
+
+There's an important path discrepancy to resolve. Let me check the project layout and existing Features structure.
+
+Now I understand the build layout. Feature pages live in `TeslaSync/feature-views`. Let me find existing charging files and a comparable parity page to use as a template.
+
+The repo uses a flat `feature-views/` directory with `<Component>.<Aspect>.swift` naming. Let me reconcile the prompt's path with reality by checking the manifest, existing page files, and the ledger.
+
+The ledger doesn't exist yet. Critical question: is the Xcode toolchain available? That determines DONE vs BLOCKED. Let me check the toolchain and gate scripts.
+
+Critical finding: only Command Line Tools are installed — `xcodebuild` cannot build/test (no full Xcode). Per the prompt, the gate → `STATUS=BLOCKED`. But `swift`, `swiftlint`, `xcodegen`, and `pwsh` all work. I'll implement a complete, correct, non-placeholder page, run every gate I can, and write an honest log.
+
+Let me confirm there's truly no Xcode.app and study the existing conventions in parallel.
+
+`/Applications/Xcode.app` exists! The active dir is just pointing to CLT. Let me test whether I can use Xcode via `DEVELOPER_DIR`, and check the prebuilt framework.
+
+Xcode 26.5 is available via `DEVELOPER_DIR`. The `Shared.xcframework` (KMP core) isn't prebuilt though — it's staged by a build script. Let me assess KMP build feasibility and read the gate scripts, swiftlint config, and README in parallel.
+
+Let me read the placeholder patterns, assess the KMP/Gradle build feasibility, and look at the Dashboard feature (the page-level convention) in parallel.
+
+Important: "Placeholder" is a forbidden (case-insensitive) word, but `charging.searchPlaceholder` is a required key. Let me see how existing code handles this, and study the navigation architecture.
+
+Good — `AppRoute.charging` already exists. The `searchPlaceholder` issue is handled via `// parity:allow` markers. Let me find how routes map to views and locate the current charging destination.
+
+Pages self-register into `AppRouteHostRegistry`. Let me find where registration happens and how an existing page wires in, plus read AppShell.
+
+Only `.settings` is registered so far. Let me read the registration pattern (SettingsScene), how the registry is assembled (TeslaSyncApp), and how the shell renders pages (AppShell).
+
+I now understand navigation. Let me study the KMP facade layer and the closest existing charging components to learn the exact data APIs and model patterns.
+
+`Domains/` is sparse; charging data flows through the KMP `Shared` core. Let me read the existing charging section model/adapter/view and the AppContainer to learn the data plumbing.
+
+The seam pattern is clear. Now let me read the rest of the web page (the JSX render tree), the string catalog format, and the design-system component/units directories.
+
+The string catalog is huge (187k lines, JSON) and my 67 keys are absent. The component library mirrors web categories. Let me read the rest of the web render tree and the string catalog entry format.
+
+Now I understand the catalog JSON format. Let me read the final section of the web page render tree.
+
+I now have the full web render tree. Let me examine the KMP container, units facade, and how existing code binds charging-session data to the shared core, plus the charts component library.
+
+The KMP core has `ChargingStore`/`ChargingRepository`, but `AppContainer.bootstrap` is deferred — existing views use the seam pattern. I'll follow that. Let me read the web data types, hooks, and aggregation logic I must port, plus an existing Swift chart implementation.
+
+I have the session shape. Now let me read the core aggregation logic I must port and the charging-list sub-component computations.
+
+Let me read the two core logic files I must port faithfully.
+
+Now the helpers (AC/DC, battery dist, efficiency, charger specs) and the score scale.
+
+I have the full logic to port. Now let me study the design-system components, units facade, an existing complete section view, and the Swift Charts pattern.
+
+The `MetricSwitcher` chart component already exists in the library — exactly what I need. Let me read the key components and an existing complete section view to mirror conventions.
+
+Let me efficiently extract the public API surface of the component library and design tokens, then read the closest existing section view.
+
+I have the component API surface. Let me confirm design tokens, check for a page container, see how existing feature tests are structured, and read a complete section view for conventions.
+
+Tokens are in the generated design tokens. Let me locate them and read an existing complete section view plus its test pattern.
+
+Let me read the design tokens and the existing test-file convention.
+
+Let me definitively resolve how `feature-views/*.Tests.swift` are targeted (they use `@testable import`, which can't be in the app target).
+
+`Tests/Unit/FeatureViews` exists. Let me see how it relates to the feature-views Tests files.
+
+`Tests/Unit/FeatureViews` has just one file — confirming `feature-views/*.Tests.swift` (XCTest, `@testable import`) follow a co-located convention and the full Apple build is pending verification (matches `macos-pending-verifications.md`). I'll match conventions. Let me do a final recon batch on remaining tokens/components, then start building.
+
+I now have a complete understanding of the architecture, conventions, design system, and the full web page logic. Let me set up a plan and todo tracking, then build.
+
+Let me quickly read the score-scale and search-query helpers I need to port for faithfulness.
+
+Let me verify the number-format defaults for faithful porting.
+
+I have everything needed. Let me build the pure projection core (the parity bulk), porting all the web aggregation logic faithfully.
+
+I need to create the directory first.
+
+Now the aggregation functions. Let me confirm the web `priorPeriod` behavior for a faithful port.
+
+Now the aggregation/format functions file with all the ported computations.
+
+Now the structured search. Let me read the web search-query helper bodies to port faithfully.
+
+Now the structured search port.
+
+Now the i18n strings file with all 67 keys (binding evidence for parity).
+
+All 67 keys are present. Now let me read the optimizer data shape so the model is faithful.
+
+The conditional analytical sections delegate to separate P3 components (not in the 79 required items). The native `ChargingSessionCard` already exists — let me check its public API to reuse it for list rows.
+
+I have enough to build the data layer. The conditional sections are separate P3 parity units — the page owns their gating + threshold states (in-scope keys) plus compact data-driven panels. Let me write the `@Observable` model with the source seam.
+
+Now the derived-data bundle that ties projections together into render-ready state.
+
+The symbol `placeholderDash` contains the forbidden word "placeholder" (case-insensitive gate). Let me rename it to `unavailable`.
+
+The forbidden word "placeholder" also appears in comment lines 24–25 (the gate scans every line). Let me reword the comment and rename the symbol to `searchPrompt` so only the declaration line (with the key literal) needs the opt-out — call sites stay clean.
+
+Let me verify the placeholder gate is clean on what I've built so far before continuing.
+
+Placeholder scan is clean. Now let me check the exact `Localizable.xcstrings` formatting so my catalog edits match Xcode's style.
+
+Catalog uses 2-space indent, `": "` separator, insertion order. I'll splice new entries right after the `"strings": {` line to keep the rest byte-identical. Let me write and run an insertion script.
+
+Let me verify the exact separator style precisely before inserting.
+
+The separator is `": "` (no space before colon). Let me fix the script's entry formatting.
+
+94 keys inserted and validated. Let me confirm formatting matches and the splice is clean.
+
+Strings catalog is complete and clean. Let me update todos and build the views, starting with the main page scaffold + navigation registration.
+
+I introduced a broken `asLocalizedKey` bridge. Let me check `TSText.Variant` and fix the page to use `LocalizedStringKey(rawKey)` directly.
+
+Now let me add the extra-key symbols to the Strings file, then fix the page header.
+
+Now let me fix the page header to use `LocalizedStringKey` correctly and remove the broken bridge.
+
+Now the overview KPI section (the 6 panels + GlassPanel7), secondary line, and anomaly callout.
+
+Now the trend metric-switcher chart (the 1 required chart, using the native Swift Charts wrappers).
+
+Now the conditional analytical sections (gated, with threshold empty states using in-scope keys + compact data panels).
+
+Now the filters + session list + controls + pagination, and the list states. Let me write the List file.
+
+Now the list state subviews (loading / empty / no-data).
+
+Now let me wire the new source path into the build (project.yml) and lint config, then run xcodegen to inspect how `*.Tests.swift` files are targeted before deciding on my test file.
+
+Now let me run xcodegen and inspect how existing `*.Tests.swift` files are targeted to decide on my test file.
+
+`*.Tests.swift` files are compiled into BOTH app targets (896 memberships) — confirming the co-located test convention and that the full Apple build is pending (matches `macos-pending-verifications.md`). My files (72 refs) are wired in. The critical path for any build is the KMP `Shared.xcframework`. Let me attempt to build it in the background.
+
+The KMP framework build is running in the background. Meanwhile, let me write the sample-data factory, previews, and tests. First the samples.
+
+Let me check the KMP build progress while I continue.
+
+The KMP/Gradle build is still compiling (no output yet — likely downloading dependencies and compiling Kotlin/Native). Let me continue with previews and tests.
+
+Let me fix sample #4 so it's a meaningful telemetry-gap anomaly (duration must exceed 5 min), then write the tests.
+
+Now let me wire the charging route registration into the app, and check the build progress.
+
+While the KMP build continues, let me run swiftlint on my files to catch style issues early.
+
+swiftlint linted the whole project (20 pre-existing violations somewhere). Let me isolate violations in my files only.
+
+19 violations in my files. Let me fix them: split the oversized Aggregation file (file_length + type_body_length), convert large tuples to structs, remove trailing commas, fix empty_count, and add targeted disables. Starting with the file split.
+
+The KMP `Shared.xcframework` build completed. Let me confirm it succeeded, then continue fixing lint issues.
+
+The `Shared.xcframework` built and staged successfully — a full `xcodebuild` is now feasible. Let me finish the lint fixes. Recreating Aggregation split into 3 focused files (core, anomalies/trend, breakdowns/filtering).
+
+Now let me fix the remaining issues. Let me view the precise lines.
+
+Let me view the remaining lines to fix precisely.
+
+Let me view the rest of Conditional to rename the `count` property cleanly, then batch all fixes.
+
+Now let me apply all the lint fixes in a batch (independent edits across files).
+
+Now the Conditional `count` → `sessionTotal` rename and `> 0` → `>= 1`, plus Chart/List/Samples trailing commas and Search complexity:
+
+Let me re-run swiftlint to confirm my files are clean now.
+
+My files are swiftlint-clean. Let me re-run the placeholder scan and regenerate the Xcode project (new files added), then attempt the real build.
+
+Placeholder scan clean; project regenerated. Now the critical validation — let me run the actual macOS build (no simulator needed). This compiles the whole app including my code.
+
+Build failed. Let me find the actual compile errors.
+
+No compile errors in my code — the build only failed on **code signing** (development certificate for macOS entitlements). My Swift code compiled and linked. Let me rebuild with signing disabled (standard CI approach).
+
+Now a Swift compile error surfaced. Let me find it.
+
+The blocker is pre-existing: `feature-views/*.Tests.swift` files `import XCTest` but are compiled into the **app** target (not a test target) — 896 such files repo-wide, unrelated to my page. My code has zero errors. Let me prove the full app (incl. my page) compiles by excluding the pre-existing co-located test files for one verification build.
+
+The pattern missed `*ModelTests.swift`. Let me broaden the exclusion to `*Tests.swift`.
+
+Progress — XCTest errors gone, now 27 compile failures. Let me see if any are in my code.
+
+Critical issue: my type names collide with existing module-level types (the existing `ChargingSection`/`ChargingSessionCard` components define `ChargingFormat`, `ChargingProjection`, `ChargingConnection`, `AcDcBucket`, etc.). It's all one module. Let me find ALL collisions.
+
+Confirmed 7 type-name collisions with existing charging components (it's one module). Let me find ALL collisions comprehensively — extract every type I declare and check against the existing module.
+
+I have the complete collision list (8 names). Let me stop the slow recheck and apply the renames across my files, plus add the missing `ChargingStickySummary` view.
+
+No bare colliding names remain. Now let me add the missing `ChargingStickySummary` view (referenced but never defined) to the Sections file.
+
+Let me re-lint my files (renames + new view), then rebuild.
+
+swiftlint clean. Let me rebuild (verification, excluding the pre-existing co-located test files).
+
+These errors reference my OLD names and even existing files redeclaring them — this looks like a stale incremental-build cache. Let me verify my source is actually renamed.
+
+Root cause: BSD `sed`/`grep` don't support `\b` word boundaries, so the earlier rename silently did nothing (and my new view references the not-yet-renamed `ChargingListFormat`). Let me redo the renames with `perl` (which supports `\b`).
+
+All collisions resolved. Let me re-lint, then rebuild.
+
+One line got too long from the rename. Let me fix it.
+
+Down to 5 failures. Let me find the actual errors.
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: DB03:1469AE:30BD7C4:3301B15:6A26EB5E)

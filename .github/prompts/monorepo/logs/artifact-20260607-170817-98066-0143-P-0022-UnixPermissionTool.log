@@ -1,0 +1,198 @@
+=== P4 Feature view 0022 UnixPermissionTool (Apple) ===
+
+Surface : apps/apple/TeslaSync/feature-views/UnixPermissionTool.*
+Web spec: web/src/features/admin/components/devtools/tools/UnixPermissionTool.tsx
+Tier    : Feature view (composed devtools component below page level)
+Runner  : Darwin · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftformat + swiftlint + pwsh + xcodegen present
+ADR refs: ADR-002 (one SwiftUI source group, iOS+macOS) · ADR-004 (KMP Shared core) · ADR-009
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (allowed scope: UnixPermissionTool.* + this log)
+--------------------------------------------------------------------------------
+  UnixPermissionTool.Adapter.swift  — pure, SwiftUI-free projection: the PERMS octal→triad map
+                                       (verbatim from web constants.ts), `[0-7]{3}` validation, the
+                                       octal→symbolic projector (web `useMemo`), the preset list
+                                       (web `Select` options, source order, derived labels), and the
+                                       VoiceOver summary. No network — this surface is a synchronous
+                                       client-side tool (web parity: its only hook is useTranslation).
+  UnixPermissionTool.Model.swift    — P1/S8 state holder (@Observable UnixPermissionToolModel: octal
+                                       input + derived projection + render Phase + preset selection),
+                                       P1/S11 telemetry seam (view.opened, emitted once), P1/S10
+                                       UnixPermissionToolStrings facade, UnixPermissionToolSurface slug.
+                                       SwiftUI-free (Foundation/Observation/OSLog) so it host-compiles+runs.
+  UnixPermissionTool.swift          — SwiftUI surface: web `ToolCard` chrome (Lock glyph in the green
+                                       ICON_COLOR_MAP chip + title + description) over the octal input
+                                       (Lock-iconed field, "755" prompt) and the presets selector, then
+                                       the decoded breakdown (owner/group/other tiles in emerald/cyan/
+                                       amber + the combined symbolic code with a copy button) or a
+                                       friendly hint when the input is not a valid octal. Built from
+                                       design tokens (P1/S9) + shared TSGlassPanel / TSCopyButton; full a11y.
+  UnixPermissionTool.Previews.swift — #if DEBUG previews: valid (755), preset (644), full (777), invalid (75).
+  UnixPermissionTool.Tests.swift    — XCTest: adapter parity (PERMS table, validation, every preset's exact
+                                       symbolic + triad slices, invalid→nil, preset order/labels), model
+                                       phases (valid↔invalid edits, preset select), view.opened-once telemetry,
+                                       a11y summary. Runs in the TeslaSync(/-macOS) test targets at integration;
+                                       the identical assertions execute GREEN in the host harness below.
+  UnixPermissionTool.strings        — per-surface P1/S10 i18n table (every web t() key + native chrome).
+
+Parity reproduced exactly from the web source (cross-platform value parity, not a "corrected" version):
+  symbolic = (octal.length === 3 && /^[0-7]{3}$/.test(octal)) ? PERMS[d0]+PERMS[d1]+PERMS[d2] : null ;
+  PERMS = {7:rwx,6:rw-,5:r-x,4:r--,3:-wx,2:-w-,1:--x,0:---} ; owner/group/other = symbolic 0..3 / 3..6 / 6.. ;
+  presets (source order) 755/644/700/600/777/444 with `octal (symbolic)` labels.
+
+i18n keys extracted from the web source (table "UnixPermissionTool"): "Unix Perm", "Unix Perm Desc",
+"Octal Perm", "Presets", "Owner", "Group", "Other". The web en.json carries Presets/Owner/Group/Other
+verbatim and has NO entry for Unix Perm / Unix Perm Desc / Octal Perm, so i18next renders those keys
+as-is — the native fallbacks reproduce that exactly (parity). Native-only chrome adds the invalid-input
+hint + the symbolic a11y label. The view holds no bare English literals (all via UnixPermissionToolStrings).
+
+States: this is a pure synchronous compute tool — the web source has NO data fetching (no useQuery), so
+loading / error / stale / offline are N/A by parity (no async source exists to be in those states).
+The web source's two real branches are reproduced and tested: valid octal → content breakdown; invalid
+octal → the breakdown is hidden (native renders a friendly hint, never a blank box).
+
+--------------------------------------------------------------------------------
+GATE RESULTS (real commands, real exit codes on this host)
+--------------------------------------------------------------------------------
+
+[HOST] swiftc -typecheck -swift-version 6 -D DEBUG -strict-concurrency=complete
+       -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator
+       (UnixPermissionTool .Adapter/.Model/.swift/.Previews vs the REAL design system: 40 files from
+        Sources/Components + Sources/Design + design/generated/apple/Tokens.swift — the exact symbols
+        the app build resolves: TSGlassPanel, TSCopyButton, Color.TS, Font.TS, TSSpacing, TSRadius)
+       → error count = 0
+       TYPECHECK_IOS_EXIT=0
+       (Only design file excluded: Sources/Components/DataDisplay/UnitFormatters.swift, which `import`s
+        the KMP `Shared` framework via `Units.*` and is unused by this surface. Every other design file +
+        all four shipped Swift files type-check green; zero errors originate in UnixPermissionTool.*.)
+
+[HOST] swiftc -typecheck -swift-version 6 -D DEBUG -strict-concurrency=complete
+       -sdk <MacOSX26.5> -target arm64-apple-macos15.0   (same file set)
+       → error count = 0
+       TYPECHECK_MAC_EXIT=0
+       (Confirms the surface compiles for BOTH app targets — iOS 18 and macOS 15 — incl. the AppKit
+        token branches.)
+
+[HOST] swiftc -swift-version 6 -strict-concurrency=complete  (Model + Adapter + executed driver)
+       → === UnixPermissionTool host harness ===  CHECKS=53 FAILURES=0  HARNESS_OK
+       HARNESS_EXIT=0
+       Verified GREEN by execution: PERMS table (all 8 digits + unknown→"---"); validation accept
+       {755,000,777,644} / reject {"",75,7555,758,7a5,"   ",888}; exact symbolic strings for every preset
+       + the zero case ("---------"); 755 owner/group/other = rwx/r-x/r-x; invalid→nil; preset order +
+       labels ("755 (rwxr-xr-x)" …); a11y summary content; model phases (default content, invalid edit→
+       empty + nil projection, edit-back→content, select preset→444 r--r--r--); view.opened emitted once
+       with slug "UnixPermissionTool".
+
+[HOST] swiftformat --lint apps/apple
+       → 0/566 files require formatting, 2 files skipped
+       FORMAT_EXIT=0
+
+[HOST] cd apps/apple && swiftlint lint --strict  (THIS surface — its 5 Swift files)
+       → Done linting! Found 0 violations, 0 serious in 5 files.
+       LINT_SURFACE_EXIT=0
+       (Run with the repo rule set; the surface is clean under --strict.)
+
+[HOST] cd apps/apple && swiftlint --strict     (whole tree, the verbatim gate command)
+       → Found 1 violation, 1 serious in 557 files.
+       → TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: Function Body Length
+         Violation: function body spans 78 lines (> 50) (function_body_length)
+       LINT_TREE_EXIT=2  — NOT claimed green.
+       This lone violation is in a PREDECESSOR surface file (dashboard widget 0055), committed and
+       UNTOUCHED by this prompt (git status: clean), and OUTSIDE this prompt's allowed files. Covenant
+       #7 (no predecessor bypass) + #9 (no silent drift) forbid editing it here; it is a pre-existing
+       baseline issue for the owning/integration prompt, not a defect in UnixPermissionTool.*.
+
+[HOST] pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views -Language swift
+       → PLACEHOLDER_ALLOWED=0 · PLACEHOLDER_COUNT=0
+       PLACEHOLDER_EXIT=0
+       (Self-test SELFTEST_EXIT=0. The verbatim gate path -Path .../feature-views/UnixPermissionTool is a
+        file PREFIX, not a directory, so -LiteralPath matches nothing → COUNT=0; the containing directory
+        was scanned for genuine coverage of all shipped files → COUNT=0. No forbidden words case-insensitive.)
+
+[DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+[DEFERRED] xcodebuild -scheme TeslaSync-macOS                                                       build test
+       IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED   (NOT claimed green — see reasoning)
+       Capability IS present on this runner (Xcode 26.5; iPhone 16 simulator 83717DEE-70A3-4325-AA61-
+       CBDDD3140989). The scheme-level build/test is DEFERRED — not failed — for two scope/dependency
+       reasons, neither a defect in this surface's code:
+         (1) The surface lives in apps/apple/TeslaSync/feature-views/, which is NOT yet a source path in
+             project.yml (the app targets list Sources / TeslaSync/dashboard-widgets / Localization /
+             DesignTokens). Registering feature-views (and folding the per-surface .strings into the shared
+             Localizable.xcstrings) is the integration prompt's scope and is OUTSIDE this prompt's allowed
+             files. Covenant #7 forbids self-registering; running the scheme as-is would build the app
+             WITHOUT these files and not exercise them.
+         (2) The TeslaSync/-macOS scheme's pre-action builds the KMP Shared.xcframework via
+             Scripts/build-shared-xcframework.sh (Gradle + Kotlin/Native), and the app targets link it.
+             apps/apple/Frameworks/Shared.xcframework is absent in this checkout (only .gitkeep), so a full
+             scheme build cannot link. This surface does NOT use Shared (it imports none of it).
+       Equivalent in-scope verification was performed instead and is GREEN above: a Swift-6 strict-
+       concurrency typecheck of the surface against the REAL design tokens + shared components for BOTH
+       iOS 18 and macOS 15 (the exact symbols the app build resolves), plus an executed adapter/model
+       harness pinning exact web value parity. This matches the user-approved P4 "code-complete + DEFERRED
+       Xcode gate" disposition used by predecessors 0036 (DigitalTwinWidget) and 0055 (LifetimeStatsWidget).
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+  [x] Surface renders all states from the web source — content (valid octal → owner/group/other tiles +
+      combined symbolic + copy) and empty (invalid → friendly hint, never a blank box). loading/error/
+      stale/offline are N/A by parity (the web tool has no data fetching). Each branch has a #if DEBUG
+      preview; the phase + projection logic is unit-tested AND executed in the host harness.
+  [x] Hooks bind through the shared P1/S8 state holder (UnixPermissionToolModel); no HTTP in the view —
+      trivially satisfied (web source fetches nothing; only useTranslation). The view never networks.
+  [x] Every i18n key from source has a matching catalog key — 7 parity keys + native chrome in
+      UnixPermissionTool.strings (table "UnixPermissionTool"); the view holds no English literals
+      (all via UnixPermissionToolStrings).
+  [x] Accessibility labels on every interactive element: the octal field (label + value), the presets
+      picker (label), each owner/group/other tile (label + value), the combined symbolic (label + value)
+      with an independently-actionable copy button; decorative Lock glyphs are accessibilityHidden.
+      Dynamic Type via Font.TS system fonts; no motion to respect reduce-motion against.
+  [x] Tests: adapter unit tests (PERMS/validation/projection/presets/a11y) + per-state model tests +
+      view.opened telemetry test (UnixPermissionTool.Tests.swift); the same assertions executed GREEN
+      (CHECKS=53 FAILURES=0) in the host harness.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; test double named
+      "Recording…" not "mock"; word-scan clean.
+  [x] Telemetry: view.opened emitted once with surface slug "UnixPermissionTool" (P1/S11) — tested + executed.
+  [x] Host-runnable gates GREEN (typecheck iOS+macOS / executed harness / format / surface lint /
+      placeholder); the Xcode scheme build/test is DEFERRED with capability + scope evidence (per the
+      approved P4 disposition). The lone whole-tree swiftlint violation is a pre-existing predecessor
+      file outside this prompt's allowed scope (flagged honestly, not silenced).
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+  1  No red-as-green : the two xcodebuild scheme steps are shown DEFERRED (not green) with reasons; the
+                       whole-tree swiftlint result is shown as LINT_TREE_EXIT=2 with its exact predecessor
+                       file:line; every "EXIT=0" above is a command actually executed on this host.
+  2  No scope narrowing: implemented the full surface — ToolCard chrome, input + presets, the complete
+                       owner/group/other breakdown, combined symbolic + copy, the invalid-input state,
+                       i18n, a11y, telemetry. Async states are N/A strictly because the web source has none.
+  3  No skip-and-assume: each host gate executed and its real output captured; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; harness executes real logic.
+  5  No parity shortcuts: PERMS table, validation regex, projection, slices, and preset labels ported
+                       VERBATIM and pinned by executed assertions to the exact web display strings.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register feature-views into project.yml / .swiftlint.yml and did
+                       NOT edit the shared Localizable.xcstrings or the predecessor's flagged file (all
+                       out of allowed scope); strings shipped as the per-surface table.
+  8  No commit on red  : committing on all-green IN-SCOPE host gates; the Xcode scheme steps are a
+                       documented scope/dependency DEFERRAL (capability present), and the single whole-tree
+                       lint violation is a pre-existing out-of-scope predecessor file — neither is a defect
+                       in UnixPermissionTool.*.
+  9  No silent drift   : changes confined to the allowed UnixPermissionTool.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished native UnixPermissionTool shipped at parity with the web source: a SwiftUI surface
+  (ToolCard chrome + octal input + presets + owner/group/other breakdown + combined symbolic with copy +
+  invalid-input hint) over a P1/S8 state holder (no view HTTP), P1/S11 telemetry, P1/S10 i18n, P1/S9
+  tokens, with full accessibility. The surface type-checks GREEN under Swift 6 strict concurrency against
+  the real design system for BOTH iOS 18 and macOS 15, and its adapter/model logic executes GREEN
+  (53/53) with exact web value parity. The Xcode scheme build/test is DEFERRED to the signed/integration
+  runner (feature-views not yet target-registered + KMP Shared.xcframework absent — neither a defect in
+  this code), matching the user-approved P4 "code-complete + DEFERRED Xcode gate" disposition.
+
+EXIT=0
+STATUS=DONE

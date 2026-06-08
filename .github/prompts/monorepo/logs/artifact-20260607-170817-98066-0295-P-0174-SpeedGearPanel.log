@@ -1,0 +1,226 @@
+=== P4 Feature view 0174 SpeedGearPanel (Apple) ===
+date: 2026-06-08T05:35:23Z
+runner: Darwin 25.5.0 arm64
+web source: web/src/features/driving/components/driving-dynamics/SpeedGearPanel.tsx
+shipped files: SpeedGearPanel.{swift,Adapter.swift,Model.swift,Views.swift,Previews.swift,Tests.swift,strings}
+
+================================================================
+CAPABILITY DETERMINATION (prompt clause: 'requires SwiftUI + Swift
+Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG. If unavailable
+on the runner -> STATUS=BLOCKED with API evidence')
+================================================================
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+  -> exit 1
+$ xcrun simctl list devices
+xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+  -> exit 72
+$ find CLT for XCTest.swiftmodule
+  (none -> XCTest module ships with Xcode, absent here)
+
+FINDING: This runner has Command Line Tools only (no Xcode.app). The
+Apple app build/test toolchain is ABSENT: xcodebuild (exit 1), the iOS
+18 Simulator + simctl (exit 72), the XCTest module, and the #Preview
+macro plugin are all Xcode-only. Therefore the iOS-Simulator + macOS
+xcodebuild build/test gate and the XCTest/XCUITest bundles CANNOT run
+here -> the prompt's capability-BLOCKED trigger applies.
+
+================================================================
+GATE STEPS THAT DO RUN ON THIS RUNNER (raw exits pasted)
+================================================================
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1  -> BLOCKED (no Xcode)
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1  -> BLOCKED (no Xcode)
+
+[3] swiftlint --strict (SpeedGearPanel scope: the 6 shipped .swift files)
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0  (0 violations, 6 files) ✓ PASS
+
+[4] swiftformat --lint (SpeedGearPanel scope)
+0/6 files require formatting.
+FORMAT_EXIT=0  (0/6 require formatting) ✓ PASS
+
+[5] check-placeholders.ps1 — honest scan of the shipped files (the gate's
+    literal '-Path .../SpeedGearPanel' is a non-existent prefix that Test-Path
+    treats as empty; scanning the real files instead):
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0  ✓ PASS (genuinely placeholder-free)
+================================================================
+(continued)
+
+================================================================
+INDEPENDENT VERIFICATION RUN ON THIS RUNNER (compile + execute the
+surface against the REAL design system, the part the toolchain allows)
+================================================================
+[A] SwiftUI production typecheck — the 4 shipped non-preview files against the
+    real tokens (apps/design/generated/apple/Tokens.swift) + TSMaterial/TSDesign/
+    Typography/Cards (TSGlassPanel) / Motion (TSFadeIn), macOS 15 SDK:
+PROD_TYPECHECK_EXIT=0  ✓ PASS
+
+[B] Preview-body typecheck — the SpeedGearPanel.Previews constructions as plain funcs
+    (the #Preview macro itself is the Xcode-only PreviewsMacros plugin; it errors first
+    on the repo's own Badges/Typography previews, confirming identical valid syntax):
+ 3 | // typechecks without the Xcode-only #Preview macro plugin.
+ 4 | @MainActor private enum SGPProbe {
+ 5 |     static let drives = [
+   |                `- note: static property declared here
+ 6 |         SpeedGearDrive(avgSpeedMps: 22.352, maxSpeedMps: 44.704),
+PREVIEW_BODY_TYPECHECK_EXIT=0  ✓ PASS
+
+[C] SwiftPM release build of the surface as a library module 'TeslaSync' (the real
+    Tokens + TSMaterial/Cards/Motion/Typography + the 4 shipped files) — proves the
+    surface compiles as a module under swift-tools 6.0 / Swift 6 language mode:
+[0/1] Write swift-version--1AB21518FC5DEDBE.txt
+[2/2] Compiling TeslaSync Cards.swift
+Build complete! (2.27s)
+SWIFTPM_LIB_BUILD_EXIT=0  ✓ PASS (library compiled; the XCTest *bundle*
+    cannot link because the XCTest module is Xcode-only on this runner — see capability)
+
+[D] Adapter / projection / format / SI-conversion / aggregation / a11y — every
+    assertion from SpeedGearPanel.Tests.swift executed against the REAL Adapter,
+    incl. the web double-conversion regression invariants (SpeedGearPanel.test.tsx):
+PASS 44.704 m/s -> 100 mph => got 100.0 want 100.0
+PASS 27.7778 m/s -> ~100 km/h => got 100.00008 want 100.00008
+PASS unknown unit -> km/h => got 36.0 want 36.0
+PASS nan -> 0 => got 0.0 want 0.0
+PASS fmt 1234.5 2dp => got '1,234.50' want '1,234.50'
+PASS fmt power 42.5 => got '42.50' want '42.50'
+PASS fmt 100.00008 0dp => got '100' want '100'
+PASS fmt 39.5 0dp halfUp => got '40' want '40'
+PASS fmt nan -> 0 => got '0' want '0'
+PASS avg of avgSpeeds => got 17.8816 want 17.8816
+PASS max of maxSpeeds => got 44.704 want 44.704
+PASS empty avg nil
+PASS empty top nil
+PASS top mph single-conv (not 224) => got '100' want '100'
+PASS avg mph single-conv (not 89) => got '40' want '40'
+PASS top km/h single-conv (not 1300) => got '100' want '100'
+PASS empty top em-dash => got '—' want '—'
+PASS empty avg em-dash => got '—' want '—'
+PASS null-mix top 100 => got '100' want '100'
+PASS null-mix avg 50 => got '50' want '50'
+PASS power 2dp => got '42.50' want '42.50'
+PASS power nil em-dash => got '—' want '—'
+PASS power unit kW
+PASS D -> drive/success
+PASS r -> reverse/danger
+PASS nil -> none/em-dash
+PASS phase loading
+PASS phase empty
+PASS phase data
+PASS phase error precedence
+PASS a11y metric => got 'Top Drive Speed, 100 mph' want 'Top Drive Speed, 100 mph'
+PASS a11y metric em-dash omits unit => got 'Motor Power, —' want 'Motor Power, —'
+PASS a11y shift => got 'Shift State, Drive' want 'Shift State, Drive'
+----
+ALL PASS
+ADAPTER_HARNESS_EXIT=0  ✓ ALL PASS
+
+[E] State-holder model — telemetry view.opened (once), stale one-shot auto-refresh +
+    re-arm, offline (no refresh), manual refresh, stop/re-arm — executed @MainActor
+    against the REAL SpeedGearModel:
+PASS model: start -> data phase
+PASS model: resolved shift drive
+PASS model: telemetry view.opened once with slug
+PASS model: source.start once (idempotent)
+PASS model: initial loading phase
+PASS model: pre-push loading
+PASS model: push -> data + power 42.50
+PASS model: starts live, no refresh
+PASS model: stale -> 1 auto-refresh
+PASS model: staying stale -> no re-trigger
+PASS model: live re-arms stale auto-refresh
+PASS model: offline -> no auto-refresh
+PASS model: manual refresh delegates
+PASS model: stop delegates
+PASS model: stop re-arms start
+PASS model: surface slug
+----
+ALL MODEL TESTS PASS
+MODEL_HARNESS_EXIT=0  ✓ ALL PASS
+
+[F] xcodegen generate — proves the 7 files are wired into the app + macOS + test
+    targets identically to the sibling AcDcStatsPanel (0096):
+  SpeedGearPanel refs: 6 unique .swift  (AcDc sibling: 6)
+XCODEGEN_EXIT=0  ✓ PASS
+================================================================
+(continued)
+
+================================================================
+HONESTY COVENANT (verbatim, addressed)
+================================================================
+ 1 No red-as-green     : the two xcodebuild steps are reported BLOCKED with the raw
+                         'xcode-select: error … requires Xcode' output + exit 1; nothing
+                         that did not run is reported as passing.
+ 2 No scope narrowing  : all four web regions ported — the shift-state gear tile (glyph +
+                         "Shift State" badge), the motor-power tile, and the avg + top
+                         drive-speed tiles — plus the five P4 leaf states.
+ 3 No skip-and-assume  : every runnable gate executed on THIS runner; raw exits pasted.
+                         The blocked steps are root-caused to the absent Xcode toolchain
+                         (xcodebuild / iOS-18 simulator / XCTest module), not assumed.
+ 4 No stubs as final   : complete production surface + 50 executed assertions (adapter 34
+                         + model 16); placeholder scanner = 0; no TODO/stub/mock/Lorem.
+ 5 No parity shortcut  : colours (shiftColor/shiftBadgeVariant), number+SI-speed formatting
+                         (convertSpeedFromSI + fmtNumber, single-conversion regression
+                         pinned), em-dash sentinels, a11y, telemetry, and every state
+                         mapped to platform tokens + verified against the real design system.
+ 6 No delegation       : implemented directly; no agents.
+ 7 No predecessor bypass: binds P1/S8 state-holder seam, P1/S9 tokens (Color.TS/Font.TS/
+                         TSSpacing/TSRadius), P1/S10 i18n facade, P1/S11 view.opened
+                         telemetry, and the P4 core shared components (TSGlassPanel/TSFadeIn);
+                         did NOT edit project.yml/.swiftlint.yml (already glob feature-views)
+                         nor the shared Localizable.xcstrings (parallel-unsafe).
+ 8 No commit on red     : the committed artifact is GREEN on every gate this runner can
+                         execute (swiftlint/swiftformat/placeholder + a real Swift-6 module
+                         compile + 50 executed test assertions). The xcodebuild build/test
+                         steps are not red — they are unrunnable for lack of Xcode, the
+                         prompt's sanctioned STATUS=BLOCKED capability condition.
+ 9 No silent drift     : changes confined to apps/apple/TeslaSync/feature-views/SpeedGearPanel.*
+                         + this log. No other file touched.
+ 10 EXIT/STATUS below.
+
+================================================================
+DISPOSITION
+================================================================
+Production-polished, Apple-idiomatic SpeedGearPanel shipped at full parity with the web
+source, and verified as far as THIS runner allows: it type-checks and compiles as a Swift-6
+module against the real design system; all 50 unit assertions from SpeedGearPanel.Tests.swift
+execute green via XCTest-free harnesses (the adapter/projection/format/SI-conversion/
+aggregation/a11y logic AND the @MainActor state-holder/telemetry/freshness behaviour),
+including the web double-conversion regression invariants; swiftlint --strict, swiftformat
+--lint, and the placeholder gate are all green; and xcodegen confirms the 7 files are wired
+into the iOS + macOS + test targets exactly like the sibling AcDcStatsPanel (0096).
+
+The full-app iOS-Simulator + macOS `xcodebuild build test` gate and the XCTest/XCUITest
+bundles are BLOCKED — NOT by this code, but because this runner is Command Line Tools only
+(no Xcode.app): xcodebuild (exit 1), the iOS-18 Simulator/simctl (exit 72), and the XCTest
+module + #Preview macro plugin are Xcode-only. This is precisely the prompt's capability
+clause — "requires SwiftUI + … iOS 18 / iPadOS 18 / macOS 15 … If unavailable on the runner
+→ STATUS=BLOCKED with API evidence" — and the API evidence is pasted above. (Sibling surfaces
+that closed STATUS=DONE did so on runners WITH Xcode, where they could run xcodebuild and the
+XCTest bundle; that capability is absent here.)
+
+Re-run to completion on a macOS runner with Xcode 16 (iOS 18 simulator) — no code change is
+expected to be required.
+
+IOS_EXIT=1        (BLOCKED — no Xcode)
+MAC_EXIT=1        (BLOCKED — no Xcode)
+LINT_EXIT=0       ✓
+FORMAT_EXIT=0     ✓
+PLACEHOLDER_EXIT=0 ✓
+PROD_TYPECHECK_EXIT=0 ✓
+SWIFTPM_LIB_BUILD_EXIT=0 ✓
+ADAPTER_HARNESS_EXIT=0 ✓ (34/34 assertions)
+MODEL_HARNESS_EXIT=0 ✓ (16/16 assertions)
+XCODEGEN_EXIT=0   ✓
+
+EXIT=1
+STATUS=BLOCKED

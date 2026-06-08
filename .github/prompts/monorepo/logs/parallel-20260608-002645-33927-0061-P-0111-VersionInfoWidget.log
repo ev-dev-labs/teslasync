@@ -1,0 +1,107 @@
+I'll start by understanding the environment and the task requirements. Let me check tooling capability and explore the repo structure.
+
+Key capability finding: **Xcode is NOT installed** — only Command Line Tools (`xcodebuild` errors, `simctl` missing). But `swift`, `swiftlint`, `swiftformat` ARE available. Let me explore deeply before deciding on approach — first the web source, the native scaffolding, and shared dependencies.
+
+Excellent — there's substantial existing native scaffolding. `pwsh`, `swiftlint`, `swiftformat` are all available; only full Xcode (for `xcodebuild build test`) is missing. There are many predecessor widgets to follow. Let me study the established pattern by examining a similar `system`-category widget and the shared infrastructure.
+
+The canonical pattern is a 7-file widget bundle: `.Model`, `.Projection`, `.swift` (view), `.Components`, `.Previews`, `.Tests`, `.strings`. `UptimeMonitorWidget` is the closest structural match (same `system` category, 2×2 default, 1×2 min). Let me read it end-to-end plus the shared infrastructure.
+
+This is a rich, well-structured pattern. Let me read the remaining reference files and the shared design tokens.
+
+Pattern is now clear. Let me read the remaining reference files (Previews, Tests, strings), the design tokens, and check what the command-line SDK can compile.
+
+Now let me read the design tokens, find shared components, check lint configs, probe the SDK, and look for any host-harness mechanism (the Projection file mentions being "host-executable without a simulator").
+
+Critical finding: the Command Line Tools `MacOSX.sdk` **includes** `SwiftUI.framework`, `Charts.framework`, and `MapKit.framework`. So I can host-compile the SwiftUI code with `swiftc` even without full Xcode. Let me read the token definitions, the Skeleton API, the web number formatters, and the data hooks.
+
+Let me locate the exact token definitions (`TSSpacing`, `TSRadius`, `Color.TS`, `Font.TS`) and verify the project layout.
+
+Tokens live at `apps/design/generated/apple`. Let me read the token definitions and the remaining web parity sources (hooks, WidgetShell, shared stat grid, KVList).
+
+Now I have the data shapes. Let me read the generated tokens (Color/Font), plus the remaining web parity components (WidgetShell, shared stat grid, KVList) to faithfully reproduce composition.
+
+Let me read the stat grid and KVList components for full composition parity.
+
+I now have complete understanding of the pattern, data shapes, tokens, and parity sources. Let me set up tracking and write the plan.
+
+Now I'll author the widget. Starting with the Foundation-only Projection (the host-executable adapter).
+
+Now the Model (state-holder + telemetry + registry).
+
+Now the Components (presentational subviews).
+
+Now the main surface view.
+
+Now the Previews and strings.
+
+Now the test suite.
+
+All 7 files written. Critical check: `DashboardWidgetSize`/`DashboardWidgetRegistration` are module-level types — I must verify I'm not creating a duplicate symbol that would break the real build.
+
+There are 14-16 sibling widgets each defining `DashboardWidgetSize`/`DashboardWidgetRegistration` in the same target — confirming these are **self-contained per-surface scaffolds** (de-duplicated at integration), exactly matching the `UptimeMonitorWidget` precedent. My approach is correct and consistent. Now let me run the formatter on my files and review changes.
+
+The `git diff --stat` shows pre-existing working-tree changes to `AIUsageCard.*` (another surface, not mine — this is a shared environment). My new files are untracked. Let me check the baseline and confirm my files are now format-clean.
+
+My 7 files are untracked; the only other working-tree changes are a different surface (AIUsageCard) I'll leave untouched. swiftformat --lint passes (0/6 require formatting). Now swiftlint --strict on my files.
+
+swiftlint --strict: **0 violations**. Now the high-value step — host-compile and **execute** the Foundation-only adapter to prove `cached → projection` parity (no simulator needed).
+
+All 24 adapter assertions **executed and passed** (including `5,637,144,576 bytes → "5.25 GB"`, proving the GB 2-decimal parity). Now a host **typecheck** of the SwiftUI surface against the real design tokens.
+
+The cp preserved original filenames — let me reference them correctly.
+
+The SwiftUI surface **type-checks cleanly** against the real tokens (`TYPECHECK_EXIT=0`). Let me also typecheck the DEBUG Previews (with the `#Preview` macro exercised).
+
+Expected: the `#Preview` macro needs the `PreviewsMacros` compiler plugin that ships only with full Xcode — a plugin-absence limitation, not a code error (the file is explicitly "skipped by the swiftc host gate"). Let me prove the preview *bodies* are type-correct by rewriting the macro into plain functions.
+
+All 8 preview bodies type-check cleanly (macro rewritten to functions) — confirming only the Xcode-only `PreviewsMacros` plugin is absent, not any code error. Now the placeholder check. Let me read the script to invoke it correctly.
+
+The gate's `-Path` points at an extensionless prefix, which `Get-ChildItem -LiteralPath` treats as "nothing to scan" (trivially clean). To genuinely verify my files (honesty covenant), I'll scan an isolated copy AND run the literal gate command. First, a quick pre-check for forbidden substrings.
+
+Clean. Now run the placeholder script — both an isolated real scan of my files and the literal gate command.
+
+Placeholder check is genuinely clean (self-test confirms the scanner detects violations, so the 0 is meaningful). Now let me capture the `xcodebuild` BLOCKED evidence and check the log directory + a sibling log for format conventions.
+
+Confirmed BLOCKED evidence: no Xcode (`/Library/Developer/CommandLineTools`), `xcodebuild` errors, `simctl` missing. Let me examine a sibling widget log to match conventions and see how predecessors recorded status.
+
+The sibling logs reveal the **established, accepted convention**: this runner actually has full Xcode at `/Applications/Xcode.app`, but global `xcode-select` points to CommandLineTools and sudo isn't available — the workaround is per-process `DEVELOPER_DIR`. Siblings mark **STATUS=DONE** (host gates green; xcodebuild app build/test DEFERRED with evidence) and explicitly reject the BLOCKED hatch since SwiftUI/Charts/MapKit ARE available. Let me check whether I can actually run the real build.
+
+Excellent — with `DEVELOPER_DIR`, **Xcode 26.5 works and an iPhone 16 simulator is booted**. I can run the REAL build/test gate. First I must understand how `project.yml` partitions `.Tests.swift`/`.Previews.swift` between app and test targets.
+
+Decisive insight: the app targets include `TeslaSync/dashboard-widgets` **wholesale**, and ~14 parallel sibling slots each define `public struct DashboardWidgetSize`/`DashboardWidgetRegistration` there — so the *full* app-target build cannot compile as-is (duplicate symbols + co-located `.Tests.swift`), independent of my code. That's an integration-time de-dup reality, not a surface defect. The honest, high-value path (matching accepted siblings) is to prove MY surface compiles on both real SDKs and EXECUTES its tests in isolation. Let me build a SwiftPM harness with the **real Xcode toolchain** and run the full test suite.
+
+**All 25 XCTest cases executed and passed** via the real Xcode 26.5 toolchain under Swift 6 strict-concurrency `complete`. Now let me prove the SwiftUI surface compiles against **both** real app SDKs (iOS 18 simulator + macOS 15).
+
+Both **iOS 18 and macOS 15 SDK typechecks pass** under strict concurrency. Now let me capture concrete proof that the *full-app* build blocker is the un-integrated shared tree (sibling slots' duplicate symbols), not my surface — by co-compiling two sibling widgets.
+
+Confirmed concretely: co-compiling two sibling widgets yields **"invalid redeclaration of 'DashboardWidgetSize'"** — proving the full app target is blocked by the un-integrated parallel-slot tree, not my surface. 
+
+I now have comprehensive, honest evidence. Let me write the gate log.
+
+Let me run a final consolidated verification of all runnable gates, then commit only my files.
+
+Final gates green. Now staging only my files (the 7 widget files + log), verifying the staged set excludes the unrelated surface, then committing.
+
+Staged set is clean (8 files: my 7 + the log). Committing.
+
+Commit `8a9a0bfc1` landed cleanly (8 files, 1745 insertions; the unrelated surface was excluded). Let me finalize tracking and confirm the working tree state.
+
+All todos complete, commit scope verified clean, and the only remaining working-tree changes belong to an unrelated parallel slot (untouched). 
+
+## Summary
+
+Shipped the production-grade native Apple `VersionInfoWidget` surface — a faithful SwiftUI parity of `features/dashboard/widgets/VersionInfoWidget.tsx` — as a 7-file bundle in `apps/apple/TeslaSync/dashboard-widgets/`, mirroring the accepted `UptimeMonitorWidget` precedent. Committed as `8a9a0bfc1` (8 files incl. log, 1745 insertions).
+
+**What was built**
+- `.Projection.swift` — Foundation-only adapter: DTOs, `VersionInfoProjector` (verbatim port of `?? '—'` fallbacks, `gitSha.slice(0,7)`, two-decimal GB `formatBytes`), locale-aware formatters, i18n facade, testable a11y summary.
+- `.Model.swift` — P1/S8 state-holder (`@Observable`, phase resolution, `isCompact ≤1`/`isWide ≥4`), P1/S11 `view.opened` telemetry, registry (`version-info`, system, 2×2/1×2/4×40 + clamp).
+- `.Components.swift` / `.swift` — token-styled subviews + responsive compact/standard/wide layouts rendering **every** state (loading/empty/error/content + stale/offline freshness); no networking in the view.
+- `.Previews.swift` (8 states), `.Tests.swift` (25 cases), `.strings` (all 13 web keys + chrome).
+
+**Verification (real Xcode 26.5 toolchain via `DEVELOPER_DIR`)**
+- swiftlint --strict: **0 violations** · swiftformat --lint: **0** · placeholder: **0** (scanner self-test passes)
+- adapter host-harness **executed 24/24** · full XCTest suite **executed 25/25** (SwiftPM, Swift 6 strict-concurrency)
+- iOS 18 + macOS 15 SDK typechecks: **0**
+
+**Honest status:** `EXIT=0 / STATUS=DONE`. The capability-BLOCKED hatch doesn't apply (SwiftUI/Charts/MapKit are present; surface compiles on both SDKs). The literal full-app `xcodebuild build test` is **DEFERRED, not claimed green** — I proved with a co-compile that the shared `dashboard-widgets/` tree currently fails on cross-slot duplicate `DashboardWidgetSize` symbols from ~14 sibling slots (integration-time de-dup), an environmental limitation outside my allowed files, fully documented in the gate log.
+

@@ -1,0 +1,66 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Now let me explore the Apple app structure to understand existing patterns and the dependencies (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics).
+
+`xcodebuild -version` returned empty — let me verify whether full Xcode is actually available (critical for the gate), and explore the existing TeslaSync structure and similar surfaces for patterns.
+
+Key finding: **Xcode is not installed** (only Command Line Tools), so `xcodebuild` cannot run — but `swift`, `swiftlint`, and `swiftformat` are available. Let me study the existing conventions deeply before writing code. I'll look at a representative simple surface plus the P1 infrastructure (state-holders, tokens, i18n, diagnostics).
+
+Now let me understand the P1 infrastructure: state holders (S8), i18n (S10), diagnostics (S11), and how a representative simple surface is structured. Let me also check whether `shared-surfaces` is wired into the build and look for diagnostics/telemetry.
+
+Let me find a representative simple surface to use as a structural template, and understand the i18n (`.strings`) + diagnostics conventions precisely.
+
+The per-surface pattern is clear. Let me find a surface whose web source is also a simple `components/ui/` component (closest analog to PrintButton) and read its complete file set as a template.
+
+`HighlightCard` and `BatteryPill` are complete templates. Let me read the full `HighlightCard` set plus key `BatteryPill` files to nail the conventions (Telemetry seam, Model, i18n in views, Previews, Tests).
+
+Excellent — I now have the full convention picture. Let me read the Previews pattern, the design tokens (P1/S9), the web `Button` for icon composition, and the placeholder-check script.
+
+Let me verify the exact design-token names I'll use exist (P1/S9), read the placeholder patterns, check `pwsh`, and look at an interactive model pattern (`BatteryPill`) for the stateful action reference.
+
+I have the full convention picture. Let me confirm the `@Observable`/`@MainActor` model + async-action pattern used in feature-views (to mirror the `printing` re-entrancy guard) and verify `pwsh` can run the gate.
+
+Let me read the SwiftLint/SwiftFormat configs so my files pass `--strict`, and confirm the `shared-surfaces` wiring status in the build.
+
+The configs are clear (max width 120, `--self remove`, `--commas inline`). Critically, `shared-surfaces` is **not** in `project.yml` or `.swiftlint.yml` `included` — confirming wiring is a P4-core/integration concern outside my allowed files. Let me check how existing interactive surfaces wire button actions to async `@MainActor` model methods under Swift 6 strict concurrency (to copy the exact safe pattern).
+
+`BackupActionsCard` is the gold-standard interactive template (`@MainActor @Observable` model, `Task { await model.run() }` in the button, injected `@MainActor` source protocol + test doubles). Let me read it fully.
+
+I now have everything needed, including the exact Swift 6 strict-concurrency-safe pattern (`action: { Task { await model.run() } }` with a `@MainActor @Observable` model and injected `@MainActor` seam). Let me set up tracking and create the directory.
+
+Now I'll write all seven surface files. Starting with the i18n catalog and the two seam files (Telemetry, Print).
+
+All seven files created. Now let me verify: auto-format with SwiftFormat, then lint with SwiftLint `--strict`, and run the placeholder gate.
+
+SwiftFormat lint passes (0/6 require formatting). Now SwiftLint `--strict` on the new files:
+
+SwiftLint linted the whole tree (1909 files) and found 1 serious violation. Let me locate it — determine whether it's in my files or pre-existing.
+
+The only violation is **pre-existing** (`LifetimeStatsWidget.Adapter.swift`), not in my files. Let me confirm my files were actually linted (not skipped due to `included`) by linting them explicitly by file path.
+
+My 6 files lint clean (0 violations, `--strict`). SwiftLint parsing them successfully also confirms they're syntactically valid. Now the placeholder gate, run exactly as specified:
+
+Placeholder gate passes (COUNT=0, EXIT=0). Let me do a final self-audit (forbidden words, i18n key parity) and capture the `xcodebuild` capability evidence for the log.
+
+All parity checks pass and no forbidden words. `xcodebuild` requires full Xcode (only CommandLineTools present) — that's the platform-capability blocker. Let me check the full-tree `swiftformat --lint` result so the gate log is faithful, then generate the log.
+
+Full-tree `swiftformat --lint` and `swiftlint` each have **one pre-existing** issue in unrelated files (`ActionBuilder.Previews.swift`, `LifetimeStatsWidget.Adapter.swift`) — not mine. My surface passes every runnable check cleanly. `xcodebuild` is the hard blocker (no Xcode). Now I'll generate the honest gate log with real command output.
+
+Now the runnable verification steps (SwiftLint, SwiftFormat, placeholder) with real output, plus parity evidence and conclusion:
+
+Let me review the complete log to ensure it's accurate and honest.
+
+The log is honest and complete, ending with `EXIT=1` / `STATUS=BLOCKED` plus platform-capability evidence (covenant rule 10), while all runnable checks on my code are green. Let me verify the working tree contains only my intended files before committing.
+
+There are **pre-existing** unrelated modifications to `AIUsageCard.*` (not caused by me — my SwiftFormat run was scoped to `shared-surfaces` only). I'll stage **only** my allowed files and leave those untouched. Let me confirm my directory contents and stage precisely.
+
+Exactly 8 files staged (7 `PrintButton.*` + the log); the unrelated pre-existing `AIUsageCard.*` changes are correctly excluded. Committing now with the prompt's message:
+
+One Swift 6 concurrency subtlety to harden before finalizing: `PrintButton` is a **public** struct (not implicitly `Sendable`), so the `@Sendable` `Task {}` inside the button action must not capture `self`. Let me capture `model`/`beforePrint` explicitly via a capture list (the proven sibling `BackupRunButton` avoids this only because it's an internal, implicitly-`Sendable` struct).
+
+Still clean after the hardening edit (0 format issues, 0 lint violations). Let me confirm the final view body and amend the commit (log results are unchanged — still 0/0).
+
+Amended commit `fcb72db95` contains exactly the 8 allowed files (1140 insertions); the pre-existing `AIUsageCard.*` changes remain unstaged and untouched. Let me finalize tracking.
+
+All work is complete and committed. Final summary:
+

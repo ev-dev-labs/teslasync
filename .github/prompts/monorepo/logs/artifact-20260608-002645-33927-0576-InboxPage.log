@@ -1,0 +1,195 @@
+================================================================================
+ p4-apple · P7 · page:notifications/Inbox — InboxPage (SwiftUI / Apple HIG)
+================================================================================
+ Artifact : page:notifications/Inbox
+ Web src  : web/src/features/notifications/pages/InboxPage.tsx
+ Output   : apps/apple/TeslaSync/Features/Notifications/InboxPage.swift
+            apps/apple/TeslaSync/Features/Notifications/InboxPage.Model.swift
+            apps/apple/TeslaSync/Features/Notifications/InboxPage.Previews.swift
+ Nav reg  : apps/apple/TeslaSync/Features/Notifications/InboxPage.swift
+            (NotificationsRouteRegistration) + apps/apple/Sources/TeslaSyncApp.swift
+ Strings  : apps/apple/Localization/Localizable.xcstrings (+3 keys)
+ Build reg: apps/apple/project.yml (TeslaSync/Features → both app targets)
+            apps/apple/.swiftlint.yml (TeslaSync/Features → included)
+ ADR refs : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+================================================================================
+
+--------------------------------------------------------------------------------
+ RUNNER CAPABILITY PROBE (ADR-010/012 — Apple gate requires macOS + Xcode)
+--------------------------------------------------------------------------------
+ OS                 : Darwin (macOS)
+ swift              : Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108)
+ xcodegen           : present (/opt/homebrew/bin/xcodegen)
+ swiftlint          : present (/opt/homebrew/bin/swiftlint)
+ swiftformat        : present
+ pwsh               : present (/opt/homebrew/bin/pwsh)
+ xcodebuild         : PRESENT-BUT-NONFUNCTIONAL
+ xcode-select -p    : /Library/Developer/CommandLineTools
+ Frameworks/Shared.xcframework : ABSENT (only .gitkeep — KMP core not staged)
+
+ $ xcodebuild -version
+ xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+ directory '/Library/Developer/CommandLineTools' is a command line tools instance
+
+ VERDICT: No full Xcode toolchain is installed (Command Line Tools only), and the
+ KMP `Shared.xcframework` the app links is not staged. The `xcodebuild build` and
+ `xcodebuild test` gate steps CANNOT run. Per p4-apple/README.md ("Requires macOS
+ + Xcode runners … prompts that can't run their gate are BLOCKED, not DONE") the
+ gate result is BLOCKED. The artifact is implemented in full anyway (no stubs,
+ ADR-011) and verified with every check that CAN run on this runner.
+
+--------------------------------------------------------------------------------
+ GATE — runnable steps (real output)
+--------------------------------------------------------------------------------
+ [check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Notifications -Language swift]
+   PLACEHOLDER_ALLOWED=0
+   PLACEHOLDER_COUNT=0
+   PLACEHOLDER_EXIT=0                              # PASS — no placeholders/stubs
+
+ [swiftlint --strict  (project .swiftlint.yml, new files)]
+   InboxPage.swift / InboxPage.Model.swift / InboxPage.Previews.swift
+   Done linting! Found 0 violations, 0 serious in 3 files.
+   LINT_EXIT=0                                     # PASS (new files)
+   (note: a pre-existing baseline violation exists in an UNRELATED file —
+    TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+    function_body_length — not introduced or touched by this change.)
+
+ [swiftformat --lint apps/apple/TeslaSync/Features/Notifications]
+   0/3 files require formatting.
+   FORMAT_EXIT=0                                   # PASS
+
+ [swiftc -parse  (syntax, all 3 files)]
+   PARSE_EXIT=0                                    # PASS — no syntax errors
+
+ [xcodegen generate]
+   Created project at apps/apple/TeslaSync.xcodeproj
+   XCODEGEN_EXIT=0                                 # PASS — project.yml valid
+   InboxPage.swift / InboxPage.Model.swift / InboxPage.Previews.swift present in
+   the generated TeslaSync.xcodeproj (TeslaSync + TeslaSync-macOS targets).
+
+ [static code review — claude-opus-4.6, against real type definitions]
+   InboxBodyModel.init / InboxUpdate / InMemoryInboxSource.push /
+   InboxActionsPerforming / TSButton / TSErrorDisplay / TSPageTitle / TSFadeIn /
+   Color.TS / Font.TS / TSSpacing / AppRouteHostRegistry.register /
+   AppRoute.notifications / AppRouteParser.parse — all calls verified correct.
+   Swift 6 strict-concurrency: @MainActor isolation + @MainActor navigate
+   closures match the established SettingsRouteRegistration pattern. Result:
+   "No significant issues found."
+
+--------------------------------------------------------------------------------
+ GATE — blocked steps (cannot execute — no Xcode runner)
+--------------------------------------------------------------------------------
+ [xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync build]
+   xcode-select: error: tool 'xcodebuild' requires Xcode …
+   BUILD_EXIT=1                                    # BLOCKED — no full Xcode
+ [xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync test]
+   (not reached — depends on a successful build)
+   TEST_EXIT=1                                     # BLOCKED — no full Xcode
+
+================================================================================
+ === PARITY ===
+================================================================================
+ PARITY_REQUIRED=4
+
+ [1] state  — success data state
+     EVIDENCE:
+       apps/apple/TeslaSync/Features/Notifications/InboxPage.Model.swift
+         · symbol InboxPageModel.phase : InboxPagePhase   (.loading/.loaded/.failed)
+         · symbol InboxPageModel.load() async — sets .loaded after useVehicles()
+           + useAlertRules() resolve, then seeds the hosted InboxBody source.
+       apps/apple/TeslaSync/Features/Notifications/InboxPage.swift
+         · symbol InboxPage.content — renders InboxBody(model:) for the loaded
+           (non-failed) phase; .failed renders TSErrorDisplay + Retry.
+     COVERED
+
+ [2] string — notifications.inbox.subtitle
+     EVIDENCE:
+       apps/apple/Localization/Localizable.xcstrings
+         · key "notifications.inbox.subtitle" = "Recent notifications from your
+           alert rules."  (web key name preserved verbatim)
+       apps/apple/TeslaSync/Features/Notifications/InboxPage.swift
+         · symbol InboxPage.titleBlock —
+           Text(LocalizedStringKey("notifications.inbox.subtitle"))
+     COVERED
+
+ [3] string — notifications.inbox.title
+     EVIDENCE:
+       apps/apple/Localization/Localizable.xcstrings
+         · key "notifications.inbox.title" = "Inbox"  (web key name verbatim)
+       apps/apple/TeslaSync/Features/Notifications/InboxPage.swift
+         · symbol InboxPage.titleBlock —
+           TSPageTitle(LocalizedStringKey("notifications.inbox.title"))
+     COVERED
+
+ [4] string — notifications.inbox.viewArchived
+     EVIDENCE:
+       apps/apple/Localization/Localizable.xcstrings
+         · key "notifications.inbox.viewArchived" = "View archived"  (verbatim)
+       apps/apple/TeslaSync/Features/Notifications/InboxPage.swift
+         · symbol InboxPage.actions —
+           Label(LocalizedStringKey("notifications.inbox.viewArchived"),
+                 systemImage: "archivebox") inside the TSButton that calls
+           InboxPageModel.viewArchived() → navigate("/notifications/archived").
+     COVERED
+
+ PARITY_COVERED=4
+ PARITY_COVERED==PARITY_REQUIRED ✓ (4==4)
+
+================================================================================
+ IMPLEMENTATION NOTES (parity fidelity — web InboxPage.tsx → SwiftUI)
+================================================================================
+ · Data sources bound through @Observable InboxPageModel (P1/S8) with the web
+   hook names kept at the Swift call sites: InboxPageData.useVehicles()
+   (GET /vehicles) and InboxPageData.useAlertRules() (GET /alerts/rules). The
+   loaded fleet + rules are handed to the hosted InboxBody exactly as the web
+   page passes `vehicles` / `rules` props to <InboxBody/>.
+ · Panels/charts/maps: the web page declares NONE of its own — it hosts the
+   shared <InboxBody/> (already a built P3/P4 surface). Reproduced natively by
+   hosting InboxBody(model:) with archived = false. No anonymous <GlassPanel>
+   regions exist in the web source beyond InboxBody itself.
+ · Data states: InboxBody renders its own loading/empty/content; the page adds a
+   loading→loaded→failed phase for its two sources and surfaces TSErrorDisplay +
+   Retry on a hard fetch failure (web defaults the hook data to [], so empty
+   collections are still a successful load — the only manifest-declared state).
+ · HIG-native: ScrollView + ViewThatFits adaptive header (macOS/iPad single row,
+   iPhone stacked), TSPageTitle, design tokens only (Color.TS / Font.TS /
+   TSSpacing — ADR-005), native ShareLink for the web "Copy link" (system-
+   localized, zero hardcoded text), Label/SF Symbol "archivebox" for View
+   archived, .refreshable pull-to-refresh.
+ · i18n (ADR-014): every visible literal resolves from Localizable.xcstrings via
+   LocalizedStringKey; zero hardcoded strings; web key names preserved.
+ · a11y (ADR-015): TSPageTitle isHeader trait, .accessibilityElement(children:
+   .contain) on the surface + actions, Label-provided VoiceOver labels, Dynamic
+   Type via Font.TS, light/dark via tsDynamicColor tokens, ≥44pt TSButton/
+   ShareLink targets.
+ · Units (ADR): page renders no SI quantities; nothing stored/computed non-SI.
+ · Navigation: NotificationsRouteRegistration registers .notifications →
+   InboxPage; chained onto SettingsRouteRegistration in TeslaSyncApp; the shell's
+   AppRouteHostRegistry renders it. "View archived" deep-links
+   "/notifications/archived" via AppRouteParser.
+
+================================================================================
+ HONESTY COVENANT
+================================================================================
+  1 No red-as-green     : build/test are reported BLOCKED, never green.
+  2 No scope narrowing  : full page implemented; all 4 parity items covered.
+  3 No skip-and-assume  : every runnable check executed; raw output above.
+  4 No stubs as final   : 0 placeholders (scan); seam defaults mirror the shipped
+                          OSLog* defaults, not fake screens (ADR-011).
+  5 No parity shortcuts : web hook names + string keys preserved verbatim.
+  6 No delegation       : authored directly (code-review used for verification
+                          only, no implementation delegated).
+  7 No predecessor bypass: builds ON the existing InboxBody surface; routes
+                          through AppRouteHostRegistry; no architecture bypass.
+  8 No commit on red    : gate is BLOCKED (infra-unavailable), not a failed/red
+                          gate. Work committed with this honest BLOCKED log; no
+                          ledger row marked covered (a BLOCKED page is NOT DONE).
+  9 No silent drift     : project.yml + .swiftlint.yml source-path additions are
+                          disclosed above (required so the prescribed output path
+                          compiles + lints).
+ 10 Terminal line       : present below.
+
+================================================================================
+EXIT=1
+STATUS=BLOCKED
+================================================================================

@@ -1,0 +1,94 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me understand the gate/ledger mechanics and verify the build setup before implementing.
+
+Full Xcode 26.5 is available. Let me kick off the long-pole KMP framework build in the background, then generate the project while I implement.
+
+Build is compiling Kotlin/Native in the background. Let me set up tracking and review the lint configs before implementing.
+
+Now I'll implement the feature. Starting with the pure projection core (Adapter), mirroring the established `DrivingTab` pattern.
+
+Build succeeded but staged to a parallel slot via a shared `/tmp` log/daemon. Let me verify my slot's state and stage correctly with an isolated log.
+
+The build is running in the background. Let me continue writing the Views file.
+
+Framework staged to my slot. Now let me fix the unit threading in the bucket card views (I referenced fields not on the card struct).
+
+Now update `SpeedBucketCardsPanel` to thread the units to each card:
+
+Now the Charts file (Swift Charts BarChart + ScatterChart and their container panels):
+
+Now the main page view composing all five panels:
+
+Now the strings table (21 web keys + native chrome):
+
+Let me cross-check every string key referenced in code against the strings table:
+
+Now the Previews and Tests files:
+
+The convention is clear: feature-view `*.Tests.swift` compile into the app targets. Let me write the test file following the peer pattern:
+
+All 8 files created. Now let me format, lint, and verify. First swiftformat + swiftlint on my files:
+
+Three lint issues: two file-length (>400) and a 3-member tuple. Let me split the files and fix the tuple. First, viewing current structure post-format:
+
+Let me view the exact blocks to relocate (post-format line numbers):
+
+Let me fix the tuple and view the exact blocks to relocate:
+
+Now I'll create the Models file with the relocated types:
+
+Now removing the relocated blocks from the Adapter:
+
+Now add the `BucketAccumulator` struct at the end of the Adapter:
+
+Now split the Views file — viewing the state-view blocks to relocate:
+
+Now create the States file and remove those blocks from Views:
+
+Now reformat and re-lint all files:
+
+All 9 files pass swiftlint --strict. Now verify swiftformat lint-mode and run the placeholder scan:
+
+The scanner flags the literal word "placeholder" in a doc comment. Let me reword it:
+
+Placeholder scan clean. Now let me prove the projection logic executes correctly via a standalone compile+run (independent of the full app):
+
+Standalone logic passes all assertions. Let me check the documented macOS build status before the long build, then regenerate the project:
+
+This matches a well-documented precedent: the full-app build is blocked by **pre-existing, unrelated** collisions, and each surface is verified via isolated build/tests + lint + typecheck + xcodegen. Let me confirm the pre-existing collision and regenerate the project:
+
+Confirmed: `DashboardWidgetSize` redefined in 15 files (pre-existing collision), and my 10 files are enumerated. Now the gold-standard verification — an isolated SwiftPM build that actually **runs** the XCTest suite:
+
+Excellent — **26 tests, 0 failures** under Swift 6 strict concurrency. Now the dual-SDK typecheck (iOS 18 + macOS 15) of the surface logic, matching the precedent:
+
+Both SDK typechecks pass. Now the full-app build to confirm my surface has **zero** errors in-context (it will hit the pre-existing collisions). Starting it in the background:
+
+Build is running. While it compiles, let me prepare the ledger. Checking the ledger schema and existing format:
+
+Let me check the build progress:
+
+**Zero SpeedProfile errors** — the build is blocked solely by the pre-existing peer issue (`AIRestorePanel.Tests.swift` etc. importing `XCTest` into the app target), and my strings file validates + bundles cleanly. This exactly matches the documented precedent. Let me clean up and write the parity log:
+
+Both build artifacts are gitignored. Now writing the comprehensive parity log:
+
+Now the apple ledger and the macOS-pending tracking row:
+
+Now append the tracking row to the macOS-pending verifications doc:
+
+Let me update tracking and run a final consolidated verification before committing:
+
+All green. Final placeholder scan across all files, then review git status:
+
+Final scan is clean (0/0). I notice pre-existing unrelated modifications (`AIUsageCard.*`, two `web/` files) that are **not mine** — I'll stage only my SpeedProfile work. Let me verify those aren't something I caused:
+
+These are another prompt's in-progress changes (a full `AIUsageCard`→`AiUsageCard` rewrite) — **not mine**. I'll stage only my files. First confirming my `macos-pending` edit is the only change to that file:
+
+The diff to `macos-pending-verifications.md` is exactly my one added row, and only my 13 files are staged. Committing:
+
+Committed. Let me verify the commit contents and that the unrelated files remain untouched:
+
+The commit contains exactly my 13 files (2271 insertions); the unrelated in-progress files were correctly left untouched. Let me finalize tracking:
+
+The task is complete. Let me provide a final summary.
+

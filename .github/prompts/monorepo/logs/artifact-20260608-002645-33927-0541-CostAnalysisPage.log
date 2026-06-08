@@ -1,0 +1,189 @@
+================================================================================
+ p4-apple · P7 · page:charging/CostAnalysis — SwiftUI / HIG
+ Native CostAnalysisPage at web parity (web: CostAnalysisPage.tsx, /charging/costs)
+ Log: apple-page-charging-CostAnalysisPage.log
+ Date: 2026-06-08
+================================================================================
+
+--------------------------------------------------------------------------------
+ HONESTY COVENANT — binding
+--------------------------------------------------------------------------------
+ 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+ 5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+ 9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ RUNNER / ENVIRONMENT  (decides DONE vs BLOCKED)
+--------------------------------------------------------------------------------
+ $ xcodebuild -version
+   xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+   directory '/Library/Developer/CommandLineTools' is a command line tools instance
+ => NO Xcode app is installed on this runner (Command Line Tools only).
+
+ Per p4-apple/README.md: "Requires macOS + Xcode runners (ADR-010/012) — prompts
+ that can't run their gate are BLOCKED, not DONE." The `xcodebuild build` and
+ `xcodebuild test` halves of the gate therefore CANNOT run here.
+
+ Available + USED (real greens, not simulated):
+   swiftlint 0.63.3 ........ ran --strict, 0 violations
+   swift 6.3.2 / swiftc .... ran -parse on every file, 0 syntax errors
+   xcodegen ................ generated TeslaSync.xcodeproj from project.yml (OK)
+   pwsh .................... ran the ADR-011 placeholder gate, COUNT=0
+
+--------------------------------------------------------------------------------
+ LOCATION DECISION (no silent drift)
+--------------------------------------------------------------------------------
+ The generated prompt names the output `apps/apple/TeslaSync/Features/Charging/
+ CostAnalysisPage.swift`, and the gate scans that exact path. The repo's app
+ targets, however, glob their sources from `Sources`, `TeslaSync/dashboard-widgets`
+ and `TeslaSync/feature-views` (project.yml) — `TeslaSync/Features` was not a
+ source root. To honour BOTH the prompt's output path AND make the page compile,
+ the page lives at `apps/apple/TeslaSync/Features/Charging/` and that path was
+ added as a source root to both app targets (and to .swiftlint.yml `included`).
+ xcodegen confirms the 23 new sources are members of the TeslaSync targets.
+
+--------------------------------------------------------------------------------
+ FILES CREATED  (apps/apple/TeslaSync/Features/Charging/)
+--------------------------------------------------------------------------------
+ CostAnalysisModels.swift              SI session value type + unit ctx + constants
+ CostAnalysisDatasets.swift            derived dataset structs (web useCostAnalysisData shapes)
+ CostAnalysisForecast.swift            cost-forecast snapshot types (web CostForecastData)
+ CostAnalysisDerivations.swift         pure port of useCostAnalysisData (core/monthly/rate/charger)
+ CostAnalysisDerivations+TOU.swift     hourly / TOU insights / gas comparison / lifetime + helpers
+ CostAnalysisFormatting.swift          Foundation currency/number formatter (no Shared dep)
+ CostAnalysisStrings.swift             i18n resolver (CostAnalysisPage table) + CALocalize
+ CostAnalysisSource.swift             @Observable seam: status/connection/update/protocol/InMemory
+ CostAnalysisPageModel.swift           @MainActor @Observable model (phase, derive, start/stop/refresh)
+ CostAnalysisStateViews.swift          loading / empty / error / stale views (3 data states)
+ CostAnalysisChrome.swift              glass panel + chart-empty + insight card + legend
+ CostTwoColumn.swift                   adaptive 2-col row (regular vs compact)
+ CostAnalysisSectionHosts.swift        hosts: CostSummary / CostPerKwh / ChargerType / Savings
+ CostAnalysisSectionHosts+Forecast.swift hosts: CostForecast / Lifetime / Environmental
+ CostMonthlyTrendChart.swift           local section: monthly cost area chart (Swift Charts)
+ CostMonthlyTableColumns.swift         monthly table column model + sorting
+ CostMonthlyTable.swift                local section: sortable monthly breakdown Grid
+ CostTimeOfUseSection.swift            local section: hourly histogram + legend (Swift Charts)
+ CostTouInsightsColumn.swift           local section: TOU insight cards
+ CostForecastNarrationSection.swift    local section: deterministic forecast narration
+ CostAnalysisPage.swift                MAIN View: phase switch + scaffold + composition
+ CostAnalysisRouteRegistration.swift   nav registration for the .charging route host
+ CostAnalysisPage.Previews.swift       DEBUG previews (loaded/empty/loading/error)
+ CostAnalysisPage.strings              per-surface i18n table (web costAnalysis.* keys)
+
+ FILES MODIFIED (navigation registration + string catalog — allowed scope):
+   apps/apple/project.yml                       + TeslaSync/Features source root (both app targets)
+   apps/apple/.swiftlint.yml                     + TeslaSync/Features to included
+   apps/apple/Sources/App/AppRouteParser.swift   + /charging/costs, /cost-analysis -> .charging
+   apps/apple/Sources/TeslaSyncApp.swift         chain CostAnalysisRouteRegistration onto Settings
+   apps/apple/Localization/Localizable.xcstrings + translation.costAnalysis.empty.message (was missing)
+
+ ARCHITECTURE NOTES (no scope narrowing):
+   - Page is Shared-free: the KMP `Shared.xcframework` is not buildable on this
+     runner and the facade (Units/AppContainer/LoadableState) imports it; the
+     feature views are Shared-free, so the page binds a `CostAnalysisSource` seam
+     (the same pattern every feature view uses) and derives datasets locally.
+   - Composes the 8 EXISTING cost-analysis feature views (CostSummaryCards,
+     CostPerKwhChart, ChargerTypeBreakdown, SavingsCalculator, CostForecastSection,
+     LifetimeSummary, EnvironmentalImpact, LoadingSkeleton) via their real
+     models built from InMemory*Source(initial: *Update(...)).
+   - The 4 web regions with no feature-view component yet (MonthlyCostChart,
+     MonthlyCostTable, TimeOfUseAnalysis, AICostForecastNarration) are reproduced
+     in-scope as native sections (Swift Charts / Grid). Unique `Cost*`/`CA*` type
+     names — a module-wide grep confirms zero symbol collisions.
+
+================================================================================
+ GATE
+================================================================================
+ # 1) ADR-011 placeholder / stub scan
+ $ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Charging -Language swift
+   PLACEHOLDER_ALLOWED=0
+   PLACEHOLDER_COUNT=0
+ PLACEHOLDER_EXIT=0
+
+ # 2) SwiftLint (strict)
+ $ swiftlint --strict apps/apple/TeslaSync/Features/Charging
+   Done linting! Found 0 violations, 0 serious in 23 files.
+ LINT_EXIT=0
+   (edited nav files Sources/App/AppRouteParser.swift, Sources/TeslaSyncApp.swift,
+    Sources/App/RouteHostRegistry.swift also lint clean: 0 violations.)
+
+ # 2b) swiftc -parse syntax check (proxy for the unavailable type-checker)
+ $ for f in TeslaSync/Features/Charging/*.swift; do swiftc -parse "$f"; done
+   syntax_issues=0   (23/23 files parse with zero errors)
+
+ # 2c) project generation (validates project.yml + membership)
+ $ xcodegen generate
+   Created project at apps/apple/TeslaSync.xcodeproj   (XCODEGEN_EXIT=0)
+   grep CostAnalysis project.pbxproj -> 102 references; new files are target members
+
+ # 3) xcodebuild build  — CANNOT RUN (no Xcode app on runner)
+ $ xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync build
+   xcode-select: error: tool 'xcodebuild' requires Xcode ... command line tools instance
+ BUILD_EXIT=1   (BLOCKED — environment, not a code failure)
+
+ # 4) xcodebuild test  — CANNOT RUN (no Xcode app on runner)
+ $ xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync test
+   xcode-select: error: tool 'xcodebuild' requires Xcode ... command line tools instance
+ TEST_EXIT=1    (BLOCKED — environment, not a code failure)
+
+================================================================================
+ === PARITY ===
+ PARITY_REQUIRED=7
+================================================================================
+ [x] state  — loading
+        CostAnalysisPage.swift › CostAnalysisPage.content (case .loading)
+        -> CostAnalysisStateViews.swift › CostAnalysisLoadingView (LoadingSkeleton)
+        driven by CostAnalysisPageModel.Phase.loading (resolvePhase: .loading)
+ [x] state  — empty
+        CostAnalysisPage.swift › CostAnalysisPage.content (case .empty)
+        -> CostAnalysisStateViews.swift › CostAnalysisEmptyView (ContentUnavailableView)
+        driven by CostAnalysisPageModel.Phase.empty (status .empty OR sessions.isEmpty)
+ [x] state  — success
+        CostAnalysisPage.swift › CostAnalysisPage.content (case .loaded)
+        -> CostAnalysisPage.loaded / sections (composition of all regions)
+        driven by CostAnalysisPageModel.Phase.loaded
+ [x] string — costAnalysis.empty.message
+        CostAnalysisStateViews.swift › CostAnalysisEmptyView.body (description)
+        CostAnalysisPage.strings; Localizable.xcstrings translation.costAnalysis.empty.message
+ [x] string — costAnalysis.empty.title
+        CostAnalysisStateViews.swift › CostAnalysisEmptyView.body (Label title)
+        CostAnalysisPage.strings; Localizable.xcstrings translation.costAnalysis.empty.title
+ [x] string — costAnalysis.subtitle
+        CostAnalysisPage.swift › CostAnalysisPage.header (second Text)
+        CostAnalysisPage.strings; Localizable.xcstrings translation.costAnalysis.subtitle
+ [x] string — costAnalysis.title
+        CostAnalysisPage.swift › CostAnalysisPage.header (first Text, isHeader trait)
+        CostAnalysisPage.strings; Localizable.xcstrings translation.costAnalysis.title
+ PARITY_COVERED=7
+ (PARITY_COVERED == PARITY_REQUIRED)
+
+================================================================================
+ DATA SOURCES (bound through the @Observable model / KMP-core seam, P1/S8)
+================================================================================
+ useChargingSessionsPaginated -> CAUpdate.sessions ([CASession]) via CostAnalysisSource
+ useCostForecast (GET /analytics/cost-forecast [vehicle_id, months])
+                              -> CAUpdate.forecast (CAForecast) via CostAnalysisSource
+ Both feed CostAnalysisPageModel.recompute() -> every child dataset + child surface.
+
+================================================================================
+ RESULT
+================================================================================
+ Implementation: COMPLETE — page + model + 3 states + 4 strings + nav + a11y +
+   adaptive macOS/iOS + SI-at-the-boundary; every web region reproduced (8 reused
+   feature views + 4 native sections). PARITY_COVERED == PARITY_REQUIRED (7).
+ Runnable gates: placeholder=PASS, swiftlint --strict=PASS, swiftc -parse=PASS,
+   xcodegen=PASS.
+ Blocking gate(s): xcodebuild build + test cannot execute — no Xcode app on this
+   runner (CommandLineTools only). Per p4-apple/README + Honesty Covenant #1/#8
+   this is reported BLOCKED (not green) and NOT committed; the apple ledger row
+   for page:charging/CostAnalysis is left UNcovered pending a macOS + Xcode runner
+   that can run `xcodebuild ... build test`.
+
+ BLOCKED_REASON=no_xcode_runner (xcodebuild requires Xcode; only CommandLineTools present)
+ PLACEHOLDER_EXIT=0
+ LINT_EXIT=0
+ BUILD_EXIT=1
+ TEST_EXIT=1
+
+EXIT=1
+STATUS=BLOCKED

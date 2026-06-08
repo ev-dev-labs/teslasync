@@ -1,0 +1,174 @@
+I'll start by exploring the repository structure to understand the web source and the existing Apple app architecture.
+
+Found the web source and existing Apple feature-views. The `AIUsageCard.*` files are the same tier — a perfect template. Let me read the web source and explore the feature-views directory.
+
+The web source is clear: a 4-tile fleet summary (Vehicles, Avg Battery, Total Range, Charging/Online). Now let me examine the existing template files and check whether FleetSummary already exists.
+
+`AIUsageCard.*` shows as modified in git but isn't in the directory — let me investigate that, and study the `AcDcStatsPanel.*` set which is the closest analog (a stats panel like FleetSummary).
+
+Both `AIUsageCard.*` and `AcDcStatsPanel.*` are full 7-file templates. `AIUsageCard` is the actively-modified one (latest pattern). Let me read the complete `AIUsageCard` set to learn the exact conventions.
+
+Excellent, this is a very polished pattern. Let me read the remaining 5 files: Adapter (projection), Views, Previews, Tests, and strings.
+
+Let me read the rest of the Views file plus Previews, Tests, and strings.
+
+The Views file references `AiUsageLoadingView`, `AiUsageErrorView`, `AiUsageFreshnessChip`, etc. that aren't in what I read — the working-tree `AIUsageCard` may be mid-edit. Let me locate those symbols, the P1/S9 tokens, and check `AcDcStatsPanel` (clean, committed analog).
+
+The real filename uses `AiUsageCard` (and there's a `.Chrome.swift` too). Let me get the exact file list and read the Chrome file plus the token definitions (P1/S9).
+
+This is a 10-file set with `.Chrome`, `.Projection`, `.AdapterTests`. Now I need the P1/S9 token definitions and shared primitives (`TSFadeIn`, `Color.TS`, `Font.TS`, animated number). Let me find those and read the remaining template files.
+
+Found `Sources/Design`. Let me explore the token definitions and shared component primitives.
+
+Let me read the design tokens and key shared primitives (Cards/GlassPanel, Metrics/AnimatedNumber, Motion/FadeIn, States, Typography).
+
+The token enums are generated elsewhere. Let me find their definitions to know the exact available members (colors, spacing, fonts).
+
+Only the Watch target's tokens were found directly. The main app's tokens must be generated. Let me read the Watch tokens (API mirror) and locate the main-app token source.
+
+Main tokens live at `apps/design/generated/apple/Tokens.swift`. Let me read that for the full palette (need cyan/green/purple/amber), plus the remaining AiUsageCard files (Projection, Chrome, Tests) and shared Metrics/States.
+
+Now I have the full palette. Let me read the remaining template files (Projection, Chrome, Tests, AdapterTests) and the shared Metrics (AnimatedNumber peer) and States (EmptyState/error).
+
+The pattern is clear. Let me read the test conventions and verify shared primitives (`TSSkeleton`, `TSButton`, AnimatedNumber peer, EmptyState).
+
+Let me verify the shared primitives I'll reference: `TSSkeleton`, `TSButton`, any AnimatedNumber peer, and the native unit/distance conversion utilities.
+
+Rich shared infra exists: `TSAnimatedNumber`, `UnitPreferences`, `TSDistance`, and a units facade. Let me read those to bind distance conversion + animated number correctly.
+
+Let me read the `Units` conversion type and `UnitPreferences` definition — I need the pure SI→display distance conversion and the unit label.
+
+Found the units facade. Let me read it fully to bind distance conversion + unit label correctly.
+
+The distance conversion delegates to the Shared KMP framework. To keep the projection testable like the `AiUsageCard` precedent, I need the exact conversion semantics. Let me check the web `convertDistanceFromSI`, the `.metric`/`.imperial` presets, and whether tests link `Shared`.
+
+Let me read the `.metric`/`.imperial` presets and the project.yml test-target wiring (to know where `FleetSummary.Tests.swift` must live to be compiled).
+
+Critical: the test target compiles `Tests/Unit`, not `feature-views`. But `AiUsageCard.Tests.swift` lives in `feature-views/` with `@testable import TeslaSync`. Let me understand how those compile, and crucially check whether the Apple toolchain (xcodebuild/swiftlint/swiftformat/xcodegen) is even available on this runner.
+
+Critical capability finding: `xcodebuild` exists but the active developer dir is **CommandLineTools only — no Xcode, no iOS Simulator**. The gate's `xcodebuild ... build test` cannot run. `swift`, `swiftlint`, `swiftformat`, `xcodegen` ARE available. Let me confirm the blocker with evidence and check the remaining gate tooling.
+
+`/Applications/Xcode.app` exists — `xcode-select` just points at CommandLineTools. I can likely use `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`. `pwsh` and the placeholder script are present too. Let me verify Xcode works and check simulators.
+
+Full Xcode 26.5 + iOS Simulator (iPhone 16 is booted) are available via `DEVELOPER_DIR`. The gate **can** run for real. Let me set up tracking, then check build prerequisites (Shared.xcframework, xcodegen).
+
+`Shared.xcframework` is missing (only `.gitkeep`). The build needs the KMP framework. Let me read the build script and check whether the Kotlin/Gradle toolchain is available — this is the likely blocker.
+
+A `gradlew` wrapper exists in `apps/shared/` and `java` is available. The KMP framework build is slow, so I'll kick it off in the background while I write code. Let me set up tracking and start the prerequisite builds.
+
+Java 17 + gradlew + KMP core (iosSimulatorArm64 + macosArm64) are all present. Let me kick off the Shared.xcframework build in the background now (it's the long pole), then write code while it runs.
+
+Let me write the plan file, then read the web `AnimatedNumber` (to match number formatting) and the `Vehicle`/`VehicleState` API types for exact field semantics.
+
+Got the formatting parity (`fmtNumber` = locale grouping, 0 decimals; suffix concatenated) and `VehicleState` fields. Let me check the background gradle build progress.
+
+I have full parity details. Before writing, let me read the lint configs and placeholder patterns to ensure my code passes `swiftlint --strict`, `swiftformat --lint`, and the placeholder check.
+
+Now let me check `check-placeholders.ps1` to confirm case-sensitivity and matching behavior (so my code/comments avoid all flagged words).
+
+The placeholder scan is **case-insensitive** and the gate points at a path prefix. Key constraints absorbed: no "placeholder/TODO/FIXME/XXX" words anywhere, no trailing commas, maxwidth 120, `before-first` wrapping, `@testable` at bottom. Let me verify no name collisions in the Apple target, then check the gradle build.
+
+No collisions, token available, gradle is linking frameworks. Now I'll write the surface. Starting with the pure-Foundation Adapter.
+
+Now the Model file — the P1/S8 state-holder seam, P1/S10 i18n facade, P1/S11 telemetry seam, input/resolved value types, model, and in-memory source.
+
+Now the pure Projection — resolves the input snapshot into the four tiles across all phases.
+
+The pure layers are done. Let me check the gradle build, then write the Views layer.
+
+The `/tmp` log is shared across parallel slots — that "slot-160" success isn't mine. My slot-163 Frameworks still has only `.gitkeep`. Let me check my own build's real state with a unique log.
+
+My slot-163 gradle build is still running (contending with other slots). I'll keep writing code while it finishes. Let me write the Views layer.
+
+Now the Chrome layer — freshness chip, refresh button, connectivity banner, loading skeleton, error, and empty views.
+
+Now the main surface file composing the chrome + state switch.
+
+Now the i18n catalog file.
+
+Now the Previews for every state.
+
+Now the comprehensive test suite — adapter, projection per-state, model/telemetry/freshness, and accessibility.
+
+Let me fix a confused test I wrote (the live-rearm test had a nonsensical line).
+
+All 10 files written. Let me update tracking and run swiftformat/swiftlint on my files, plus check the gradle build.
+
+swiftformat passes (0/8 need formatting). Now swiftlint --strict on my files, and check the gradle build.
+
+swiftlint: **0 violations** in 8 files. swiftformat: clean. And my slot-163 `Shared.xcframework` is now staged. Let me generate the Xcode project and run the placeholder check.
+
+xcodegen succeeded; placeholder check clean (verbatim + per-file). Now the critical question: how do the `*.Tests.swift` files in `feature-views/` get into the test target vs the app target? Let me inspect the generated project membership.
+
+Let me definitively determine which target the `*.Tests.swift` files belong to before committing to a long build.
+
+The membership result was garbled. Let me parse the project file robustly to see exactly which 2 targets contain the test file.
+
+My name regex is greedy. Let me fix the parse to bound each target block properly.
+
+Decisive finding: `FleetSummary.Tests.swift` (and all 170 feature-view `*.Tests.swift`, including the AiUsageCard reference) are compiled into the **app targets** (`TeslaSync`/`TeslaSync-macOS`), not test targets — so they carry `@testable import TeslaSync` *into the TeslaSync module itself*. Let me verify whether that's actually a compile error, and start the real iOS build in parallel.
+
+Confirmed structurally: `import XCTest` cannot resolve in an app-target module. The feature-view `*.Tests.swift` files (all 170, incl. the AiUsageCard reference) are members of the **app** targets, so the app build can't compile them. This is pre-existing and outside my `FleetSummary.*` scope. Let me get authoritative evidence by running the actual gate build. First, verify the log dir and start the iOS build.
+
+Everything's in place. Let me run the actual iOS gate command (async, unique log) to get authoritative build evidence.
+
+Let me wait and check the iOS build progress while it runs the gradle pre-action then compiles.
+
+Gradle pre-action finished; the app target is now compiling. Let me wait for the Swift compilation to reach the feature-view test files.
+
+**Authoritative evidence captured.** Key findings:
+- My `FleetSummary.Tests.swift` → only a **benign warning** (`part of module 'TeslaSync'; ignoring import`), no error.
+- The hard errors are `error: unable to resolve module dependency: 'XCTest'` across **all 170 feature-view test files** (AIRestorePanel, AiUsageCard reference, …) — they're misfiled into the app target by `project.yml`. Result: `** TEST FAILED **`.
+
+This is pre-existing and outside my `FleetSummary.*` scope. Let me now verify **my surface code compiles cleanly** in the app target by building with test files excluded.
+
+While that compiles, let me prepare a standalone run of my unit tests (to prove the test logic is green, since the misconfigured project can't run them). First, let me check the compile-check progress.
+
+My exclude pattern missed `*.ModelTests.swift`/`*.AdapterTests.swift`. Notably, my `FleetSummary.strings` compiled and validated fine. Let me confirm all XCTest-importing files match `*Tests.swift` and re-run the compile-check with the right exclusion.
+
+All XCTest importers end in `Tests.swift`. Let me re-run the compile-check excluding `*Tests.swift` to verify my surface compiles cleanly.
+
+Now let me set up a standalone SwiftPM run of my unit tests (since the misconfigured project can't execute feature-view tests). I'll copy the Foundation-only layers + a slug shim and run the real assertions.
+
+Let me run the standalone tests and check the iOS compile-check result.
+
+**Two decisive results:**
+1. **Standalone unit tests: 30/30 PASS, 0 failures** — my projection arithmetic, tile values (metric `3/64%/963/1`, imperial range `598`, charging `/ 3` + a11y `1 of 3`), model wiring, telemetry, and freshness auto-refresh are all verified green. ✅
+2. The iOS compile-check (test files excluded) still fails — but on **pre-existing `dashboard-widgets` errors** (`'DashboardWidgetSize'`/`'VehicleHeroModel' is ambiguous`), **none in FleetSummary**.
+
+Let me confirm zero FleetSummary errors and run the remaining gate verifications.
+
+Conclusive: **zero FleetSummary errors**; the only iOS-build blockers are pre-existing and out-of-scope — 170+ feature-view test files importing XCTest into the app target, plus `dashboard-widgets` ambiguous-type errors (unmodified by me). Let me run the remaining gate steps: macOS build+test (async) and swiftlint/swiftformat (verbatim).
+
+Full `swiftlint --strict`: **1 violation in 1917 files — not in any FleetSummary file** (those only show as progress lines). Let me identify that pre-existing violation, run the swiftformat gate, and check macOS progress.
+
+More pre-existing, out-of-scope failures confirmed (none in FleetSummary):
+- swiftlint: `dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141` (function_body_length)
+- swiftformat: `feature-views/ActionBuilder.Previews.swift:48` (blankLinesBetweenScopes)
+
+Let me check the macOS build progress.
+
+macOS gate also failed with **0 FleetSummary errors** — same pre-existing causes. I have authoritative evidence for every step. Now let me run the official gate end-to-end (with `DEVELOPER_DIR` set) teeing to the real log path, capturing exact exit codes. I'll launch it in the background.
+
+Let me launch the authoritative gate runner in the background (it re-runs all 5 steps, teeing exact exits to the official log).
+
+Gate runner launched (will take ~12-15 min for the two `build test` steps). Let me update tracking while it runs.
+
+The runner is executing detached. Let me poll the official log for progress through the long `build test` steps.
+
+Gate runner complete — real exits captured: `IOS=65 MAC=65 LINT=2 FORMAT=1 PLACEHOLDER=0`. Now let me append an authoritative evidence appendix (scoped verifications proving the surface itself is green) plus the BLOCKED analysis and final `EXIT`/`STATUS`.
+
+Now the analysis section and the mandated final `EXIT`/`STATUS` markers.
+
+The gate log is complete, ending with `EXIT=1` / `STATUS=BLOCKED` as the covenant requires. Now let me clean up temporary artifacts and verify what will be committed.
+
+`.xcodeproj`, `build/`, and `Shared.xcframework` are gitignored. The pre-existing `AIUsageCard.*`/`web/*` modifications are not mine — I'll stage only my 9 `FleetSummary.*` files + the log. Let me verify my files are intact and commit.
+
+Surface verified clean. Let me stage only my files + the log and commit.
+
+Only my 9 files + the log are staged. Committing with an honest message (prescribed title + BLOCKED status body + co-author trailer).
+
+Committed as `c523085c6` (10 files). Let me finalize tracking and confirm a clean working tree.
+
+The task is complete. Final state verified: my commit `c523085c6` contains the 9 `FleetSummary.*` files + the gate log; the log ends with `EXIT=1`/`STATUS=BLOCKED`; the only unstaged changes are pre-existing (non-mine) `AIUsageCard.*`/`web/*` files I correctly left alone.
+

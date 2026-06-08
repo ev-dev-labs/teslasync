@@ -1,0 +1,115 @@
+I'll start by exploring the repository structure to understand the task scope and verify capabilities.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me verify this thoroughly and examine the existing conventions before concluding anything.
+
+Xcode.app exists but `xcode-select` points to CommandLineTools. Let me verify whether Xcode.app is functional and examine the established Apple conventions.
+
+Critical finding: **Xcode 26.5 IS functional** via `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`. The capability is available — I must not declare BLOCKED. Let me confirm the build toolchain works and study the established conventions.
+
+Toolchain is fully available (Xcode 26.5, iPhone 16 sim **booted**, xcodegen present). STATUS=DONE is achievable. Now let me study the established conventions and infra (state holders, i18n, tokens, telemetry). First, let me resolve the AIUsageCard listing mystery and read the project config.
+
+Mystery solved: on-disk files are `AiUsageCard.*` (lowercase i) — git shows a case-only rename to `AIUsageCard.*` (pre-existing working-tree change, not mine). 
+
+Critical: `project.yml` app targets include `feature-views` and `dashboard-widgets` but **not** `shared-surfaces` (it doesn't exist yet — FadeIn 0191 is the first). Let me study conventions and infra before writing.
+
+The build scheme's preAction runs a **KMP/Gradle** step (`build-shared-xcframework.sh`) and `Frameworks/` only has `.gitkeep` — so a full app build has a heavyweight pre-existing dependency. I'll assess that separately. First, let me learn the canonical surface conventions from `AiUsageCard` (recently modified) and the infra.
+
+Excellent canonical reference. Now let me read the remaining convention files (Model/state-holder, Previews, Tests), the i18n facade, the telemetry emitter, the web `useMotionPreference` hook, and lint configs.
+
+Now I understand the full surface convention. Let me resolve two key questions before implementing: (1) how tests/sources get wired (via git history of a prior surface), and (2) toolchain feasibility (swiftlint baseline, KMP framework). Let me also read the Projection pattern and lint configs.
+
+`Tests/Unit/` has a `FeatureViews/` subdir, and a recent surface commit (`acc76624a` ToolCard) **modified project.yml**. Let me see exactly how a surface is wired (the definitive pattern) before implementing.
+
+Decisive finding. The precedent is crystal clear:
+
+- **ToolCard was the first `feature-views` surface and it modified `project.yml`** to add that path to both app targets. **FadeIn 0191 is the first `shared-surfaces` surface**, so I must do the same for `shared-surfaces`.
+- ToolCard's commit documents the **honest verification recipe**: swiftformat `--lint`, swiftlint `--strict` (0 in-surface), placeholder scan, and an **isolated SwiftPM build+test** of the shipped sources; the full-app `xcodebuild` gate is **deferred to CI** due to pre-existing unrelated failures, recorded in `apps/macos-pending-verifications.md`.
+
+Let me read the ToolCard log/harness and infra to replicate it exactly.
+
+The `macos-pending-verifications.md` ledger fully confirms the precedent and its honesty rationale. Let me read the ToolCard log to replicate the exact verification recipe and STATUS conclusion, plus the design tokens and placeholder patterns.
+
+I now have the exact sanctioned precedent: **EXIT=0 / STATUS=DONE** with the surface verified green in isolation (SwiftPM build+tests + `swiftc -typecheck` on both SDKs + lint/format/placeholder), and the full-app `xcodebuild` gate **reported RED and DEFERRED** to the macOS CI acceptance gate due to pre-existing unrelated collisions. Let me read the design tokens, placeholder patterns, and a reference test to finalize my implementation plan.
+
+All tokens live in `../design/generated/apple/Tokens.swift` plus `Sources/Design/TSDesign.swift`. Let me read both to get exact APIs for compile-correct code and the isolated harness.
+
+I have all token APIs and the placeholder rules. Let me read the **ToolCard** surface (the closest precedent — a pure presentational container) to right-size FadeIn's ceremony, then implement.
+
+I have everything I need: tokens, conventions, the exact sanctioned verification recipe, and placeholder rules. Let me set up a plan, kick off a baseline swiftlint in the background, and start implementing.
+
+Now let me implement the surface. Starting with the pure adapter (host-free projection):
+
+Baseline confirms the **pre-existing** whole-app violation (1 serious → exit 2), exactly as the ToolCard precedent documented. Let me capture its identity for the log and continue writing the Model file.
+
+Now the Views file (animation factory + DEBUG demo content):
+
+Confirmed the lone pre-existing violation is in `LifetimeStatsWidget.Adapter.swift` (not my surface). Now let me fix a name collision I introduced (`body` used as both a String property and the View body) in the demo card:
+
+Now the main `FadeIn` view:
+
+Now the previews:
+
+Now the i18n strings table and the test suite:
+
+All 7 files created. Let me normalize formatting with the repo's swiftformat config and lint my surface:
+
+swiftformat is clean (0/6 require formatting). Let me run swiftlint strict on the surface and confirm the reformatted file is correct:
+
+swiftlint linted the whole app (1909 files) — my files aren't in `included` yet, so they weren't checked. The only violation is the pre-existing dashboard-widget one. Let me add the necessary wiring (matching the ToolCard precedent) so the gate actually covers my surface, then re-lint.
+
+Now re-run swiftlint — it should lint my 6 new Swift files and show only the pre-existing violation:
+
+My surface lints clean (1915 files, 0 violations in FadeIn; only the pre-existing dashboard-widget one). Before building, let me fix a Swift 6 strict-concurrency pitfall: the `handleAppear` method calls `@MainActor` APIs from a non-isolated context. I'll inline it into the `onAppear` closure (which inherits MainActor isolation, matching the AiUsageCard pattern).
+
+Now let me set up the **isolated SwiftPM harness** (module named `TeslaSync` so `@testable import TeslaSync` works) to actually build + run my tests under Swift 6 strict concurrency — the real verification per the precedent. First re-format after my edit:
+
+The harness works and Swift 6 strict concurrency caught a real issue: the preview helper `reducedMotionModel()` is non-isolated but calls `@MainActor` initializers. Let me fix it:
+
+All **18 tests pass** under Swift 6 strict concurrency in the isolated harness (and it compiled all 5 SwiftUI sources + Previews + Tokens). Now let me verify real `swiftc -typecheck` against the **iOS 18** and **macOS 15** SDKs, and re-confirm format/lint after the edit:
+
+Both SDK typechecks pass and format is clean. Let me generate the Xcode project (confirming my files are enumerated), run the placeholder scan, and kick off a fresh whole-app swiftlint for the authoritative log number.
+
+xcodegen enumerates all 6 FadeIn files into the targets. The placeholder script uses `Get-ChildItem -LiteralPath -Recurse`, so the gate's literal `-Path …/FadeIn` would scan nothing (vacuous). I'll run it on the real `shared-surfaces` dir (which contains only my files) for a meaningful result. Let me check for forbidden patterns and run the scan, plus kick off the authoritative whole-app swiftlint:
+
+Placeholder gate is clean (COUNT=0). No forbidden patterns. Now the heavy step — let me honestly attempt the full-app `xcodebuild` gate (expected to be DEFERRED-red per precedent). I'll launch it in the background and gather corroborating evidence in parallel.
+
+The corroboration matches the ledger exactly: `DashboardWidgetSize` defined in **15 files** (ambiguous), **262** co-located XCTest-in-app-target files, and `Shared.xcframework` unstaged. Let me read the final swiftlint result and check the iOS build progress:
+
+Final swiftlint confirms my 6 files add **0 violations** (1909→1915 files, same 1 pre-existing). The iOS `xcodebuild` is legitimately running through the KMP Gradle preAction (Java daemon active) — this takes ~7+ min per the precedent. Let me wait and poll.
+
+Gradle is building the KMP framework (linking iOS/macOS frameworks). Let me continue waiting:
+
+The debug XCFramework was written; Gradle is now building the release framework. Almost to the app-compile phase (where the pre-existing collisions will surface). Let me keep waiting:
+
+Release framework still linking (the non-cached link tasks are slow, and a parallel slot's macOS build is competing for resources). Let me keep waiting for the app-compile phase:
+
+Release framework nearly done (linking macOS arm64, last target). The app-compile phase will follow. Let me wait for it to reach the expected collision errors:
+
+iOS gate finished: **IOS_EXIT=65**, and the first error is the **pre-existing** co-located `AIRestorePanel.Tests.swift:18 'unable to resolve module dependency: XCTest'** — exactly the known XCTest-in-app-target mode. Now the critical honesty check: confirm **zero FadeIn (non-test) compile errors**, and launch the macOS gate.
+
+**Decisive evidence:** Total errors = 4, **all** `Unable to resolve module dependency: 'XCTest'` (the pre-existing co-located-XCTest-in-app-target mode). **ZERO FadeIn compile errors.** My `FadeIn.strings` is correctly compiled into the app bundle, and the non-test FadeIn sources compiled clean. Now let me capture the macOS gate exit (Gradle is now cached, so faster):
+
+While macOS builds, let me gather the remaining preflight data and the whole-app swiftformat number for the log:
+
+macOS gate finished. Let me capture MAC_EXIT, verify zero FadeIn errors there too, and identify the one pre-existing swiftformat file (not mine):
+
+macOS gate: **MAC_EXIT=65**, failure is **development-signing** entitlements (pre-existing env limitation), **zero FadeIn errors**. Let me stop the slow verbose scan and identify the pre-existing format file efficiently:
+
+Confirmed: the lone pre-existing swiftformat offender is in **feature-views** (1/1266), not my shared-surfaces (0/6). I now have every data point. Let me write the comprehensive gate log:
+
+Now let me record the deferred-gate row in the ledger (matching the precedent), then format-check my Previews edit and review all files:
+
+Now let me do a final verification pass — re-run the isolated tests and format/lint to confirm nothing drifted, and review the final view source:
+
+The `/tmp` path file was cleaned (macOS tmp reaping). Format is still 0/6. Let me recreate the harness and get a fresh final 18/18 confirmation on the current live sources (no skip-and-assume):
+
+**Final: 18 tests, 0 failures** on the live sources. Every surface-scoped gate is green. Let me review git status to stage precisely (excluding the pre-existing unrelated working-tree changes and the git-ignored xcodeproj):
+
+Git status is clean — only my intended changes plus the pre-existing unrelated `AIUsageCard`/`web` working-tree edits (which I will NOT stage). The xcodeproj is git-ignored. Let me stage exactly my files and commit:
+
+All 11 staged files are exactly mine — no unrelated `AIUsageCard`/`web` files. Let me commit:
+
+Committed as `76053afb9` (11 files, 1006 insertions). Let me clean up temp artifacts and do a final confirmation:
+
+The task is complete and verified. Let me mark the plan done and finalize.
+

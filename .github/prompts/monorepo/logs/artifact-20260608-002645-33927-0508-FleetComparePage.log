@@ -1,0 +1,234 @@
+================================================================================
+ p4-apple · P7 · page:analytics/FleetCompare — SwiftUI / HIG
+ Native SwiftUI parity of web FleetComparePage.tsx  (route /vehicle-comparison)
+ Log: .github/prompts/monorepo/logs/apple-page-analytics-FleetComparePage.log
+================================================================================
+
+ARTIFACT
+  Parity unit : page:analytics/FleetCompare   Kind: page
+  Web source  : web/src/features/analytics/pages/FleetComparePage.tsx
+  Output      : apps/apple/TeslaSync/Features/Analytics/FleetComparePage*.swift
+                (SwiftUI View + @Observable model; adaptive macOS + iOS)
+  Allowed     : apps/apple/TeslaSync/Features/Analytics/**, navigation registration,
+                Localizable.xcstrings, this log.
+
+HOST / RUNNER
+  macOS Darwin, Apple Silicon (arm64). Xcode 26.5 (Build 17F42) reachable via
+  DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer (xcode-select default is
+  CommandLineTools; every xcodebuild/xcrun below exported DEVELOPER_DIR).
+  swiftlint, pwsh 7, xcodegen, JDK 17 present. KMP Shared.xcframework BUILT from
+  source (apps/shared/gradlew :core:assembleSharedXCFramework — BUILD SUCCESSFUL,
+  release+debug, ios-arm64 / ios-arm64-simulator / macos-arm64) and staged into
+  apps/apple/Frameworks/Shared.xcframework. So an Xcode runner IS available — the
+  gate was NOT skipped.
+
+--------------------------------------------------------------------------------
+ FILES (apps/apple/TeslaSync/Features/Analytics/)
+--------------------------------------------------------------------------------
+  FleetComparePage.Models.swift   value types + enums (ports of the 5 hook payloads)
+  FleetComparePage.Builder.swift  pure SI→display conversions, formatting, rows,
+                                  monthly merge, phase/connection/auto-select
+  FleetComparePage.Model.swift    telemetry seam, FleetCompareSource seam,
+                                  InMemoryFleetCompareSource, @Observable
+                                  FleetComparePageModel, FleetCompareStrings (P1/S10),
+                                  FleetCompareAccessibility
+  FleetComparePage.Charts.swift   native Swift Charts: MonthlyDistanceChart (line),
+                                  DrivesPerMonthChart (grouped bar) — legend, tap
+                                  tooltip, per-series a11y
+  FleetComparePage.StatusCard.swift  VehicleStatusCard (battery bar/range/temp/
+                                  security/status) + skeleton + empty
+  FleetComparePage.Views.swift    banners, selectors, section header
+  FleetComparePage.Table.swift    key-highlight cards + comparison table (winner)
+  FleetComparePage.swift          page scaffold: loading/singleVehicle/error/content
+                                  + adaptive macOS(regular)/iOS(compact|regular)
+  FleetComparePage.Previews.swift previews for all states
+  FleetComparePage.Tests.swift    XCTest (Convert/Format/Builder/Model/Accessibility)
+  FleetCompareRouteRegistration.swift  registers .vehicleComparison route host
+  Navigation registration: Sources/App/AppRoute.swift (+case .vehicleComparison,
+    path /vehicle-comparison, group .insights, icon arrow.left.arrow.right),
+    Sources/TeslaSyncApp.swift (chained FleetCompareRouteRegistration.registry).
+  project.yml: +TeslaSync/Features source path (both app targets) — required for the
+    new surface dir to compile (mirrors the feature-views/dashboard-widgets entries).
+  Localizable.xcstrings: +49 keys (43 parity + 6 native chrome) appended, JSON valid.
+
+================================================================================
+ === PARITY ===     PARITY_REQUIRED=63
+================================================================================
+PANELS (12)
+  [x] panel GlassPanel1   selectors panel      → FleetCompareSelectors (Views.swift)
+  [x] panel GlassPanel2   status card A         → VehicleStatusCard (StatusCard.swift)
+  [x] panel GlassPanel3   status card B         → VehicleStatusCard (StatusCard.swift)
+  [x] panel GlassPanel4   lifetime table panel  → FleetCompareTable (Table.swift)
+  [x] panel GlassPanel5   disambiguation banner → FleetCompareDisambiguationBanner (Views.swift)
+  [x] panel Monthly-Distance  → FleetCompareChartPanel+MonthlyDistanceChart (FleetComparePage.swift / Charts.swift)
+  [x] panel Drives-per-Month  → FleetCompareChartPanel+DrivesPerMonthChart (FleetComparePage.swift / Charts.swift)
+  [x] panel GlassPanel8   connectivity banner + highlights container
+                          → FleetCompareConnectivityBanner (Views.swift) / highlightsSection (FleetComparePage.swift)
+  [x] panel Battery-Level → FleetCompareHighlightCard "comparison.batteryDiff" (Table.swift)
+  [x] panel Avg-Efficiency→ FleetCompareHighlightCard "comparison.efficiencyDiff" (Table.swift)
+  [x] panel Charging-Cost → FleetCompareHighlightCard "comparison.costDiff" (Table.swift)
+  [x] panel CO-Saved      → FleetCompareHighlightCard "comparison.co2Diff" (Table.swift)
+CHARTS (4) — native Swift Charts (import Charts), never WKWebView
+  [x] chart ChartContainer → FleetCompareChartPanel (FleetComparePage.swift, monthlyDistancePanel)
+  [x] chart LineChart      → MonthlyDistanceChart (Charts.swift, LineMark, 2 series + legend + tooltip)
+  [x] chart ChartContainer → FleetCompareChartPanel (FleetComparePage.swift, drivesPanel)
+  [x] chart BarChart       → DrivesPerMonthChart (Charts.swift, BarMark .position(by:) dodged, 2 series)
+STATES (4) — for every data source (vehicles/state/stats/cost/monthly)
+  [x] state loading → FleetComparePhase.loading + loadingChrome (FleetComparePage.swift),
+                      VehicleStatusCard skeleton, FleetCompareTable skeleton, highlight loading
+  [x] state empty   → singleVehicleState (FleetComparePage.swift), chart empty overlays
+                      (FleetCompareChartPanel comparison.noMonthlyData/noDrivesData),
+                      VehicleStatusCard.emptyState (comparison.selectVehicle)
+  [x] state error   → FleetCompareBuilder.resolvePhase .error + errorState w/ Retry (FleetComparePage.swift)
+  [x] state success → .content comparison (FleetComparePage.swift) bound to @Observable model
+STRINGS (43) — every key added to Localizable.xcstrings + resolved via FleetCompareStrings/LocalizedStringKey
+  [x] comparison.avgEfficiency      Builder.swift (drivingRows) / Table highlight
+  [x] comparison.avgSpeed           Builder.swift (drivingRows)
+  [x] comparison.banner.toPeriodCta Views.swift (FleetCompareDisambiguationBanner)
+  [x] comparison.banner.toPeriodPrefix Views.swift (FleetCompareDisambiguationBanner)
+  [x] comparison.battery            StatusCard.swift (batteryRow)
+  [x] comparison.batteryDiff        Table.swift (FleetCompareHighlights)
+  [x] comparison.chargeSessions     Builder.swift (chargingRows)
+  [x] comparison.chargingCost       Builder.swift (chargingRows)
+  [x] comparison.co2Diff            Table.swift (FleetCompareHighlights)
+  [x] comparison.co2Saved           Builder.swift (impactRows)
+  [x] comparison.costDiff           Table.swift (FleetCompareHighlights)
+  [x] comparison.currentStatus      FleetComparePage.swift (statusSection header)
+  [x] comparison.drivesPerMonth     Charts.swift / FleetComparePage.swift (drivesPanel)
+  [x] comparison.drivesPerMonth.aria Charts.swift (DrivesPerMonthChart .accessibilityLabel)
+  [x] comparison.efficiencyDiff     Table.swift (FleetCompareHighlights)
+  [x] comparison.highlights         FleetComparePage.swift (highlightsSection header)
+  [x] comparison.lifetimeNote       Table.swift (FleetCompareTable note)
+  [x] comparison.locked             StatusCard.swift (securityValue)
+  [x] comparison.metric             Table.swift (grid header)
+  [x] comparison.monthlyDistance    Charts.swift / FleetComparePage.swift (monthlyDistancePanel)
+  [x] comparison.monthlyDistance.aria Charts.swift (MonthlyDistanceChart .accessibilityLabel)
+  [x] comparison.noDrivesData       FleetComparePage.swift (drivesPanel empty)
+  [x] comparison.noMonthlyData      FleetComparePage.swift (monthlyDistancePanel empty)
+  [x] comparison.range              StatusCard.swift (range row)
+  [x] comparison.regenRatio         Builder.swift (impactRows)
+  [x] comparison.security           StatusCard.swift (securityRow)
+  [x] comparison.selectVehicle      StatusCard.swift (emptyState)
+  [x] comparison.sentry             StatusCard.swift (securityValue)
+  [x] comparison.status             StatusCard.swift (statusRow)
+  [x] comparison.subtitle           FleetComparePage.swift (pageHeader)
+  [x] comparison.temp               StatusCard.swift (temperature row)
+  [x] comparison.title              FleetComparePage.swift (pageHeader + navigationTitle)
+  [x] comparison.topSpeed           Builder.swift (drivingRows)
+  [x] comparison.totalDistance      Builder.swift (drivingRows)
+  [x] comparison.totalDrives        Builder.swift (drivingRows)
+  [x] comparison.totalEnergy        Builder.swift (chargingRows)
+  [x] comparison.unknown            StatusCard.swift (statusRow fallback)
+  [x] comparison.unlocked           StatusCard.swift (securityValue)
+  [x] comparison.vehicleA           Views.swift (selector) / FleetComparePage.swift (nameA fallback)
+  [x] comparison.vehicleB           Views.swift (selector) / FleetComparePage.swift (nameB fallback)
+  [x] fleetCompare.singleVehicle.body  FleetComparePage.swift (singleVehicleState)
+  [x] fleetCompare.singleVehicle.cta   FleetComparePage.swift (singleVehicleState)
+  [x] fleetCompare.singleVehicle.title FleetComparePage.swift (singleVehicleState)
+PARITY_COVERED=63   (all 63 parity items implemented; file+symbol evidence above)
+
+================================================================================
+ GATE
+================================================================================
+[1] PLACEHOLDER  pwsh ./apps/tools/check-placeholders.ps1 -Path
+                 apps/apple/TeslaSync/Features/Analytics -Language swift
+     PLACEHOLDER_COUNT=0   PLACEHOLDER_EXIT=0      ✅ GREEN
+
+[2] LINT         swiftlint --strict apps/apple/TeslaSync/Features/Analytics
+                 (run from repo root = gate cwd; path-scoped, default config)
+     "Done linting! Found 0 violations, 0 serious in 11 files."
+     LINT_EXIT=0                                   ✅ GREEN
+
+[3] BUILD/TEST   xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,
+                 name=iPhone 17' build-for-testing CODE_SIGNING_ALLOWED=NO
+                 ENABLE_TESTING_SEARCH_PATHS=YES
+     BUILD_EXIT=65   TEST_EXIT=(not reached)       ❌ BLOCKED — see below
+     ROOT CAUSE IS NOT THIS SURFACE. 60 compiler errors, ZERO in
+     TeslaSync/Features/Analytics/*. ALL are pre-existing duplicate PUBLIC type
+     definitions merged into HEAD (a parallel-merge of ~50 slot branches; HEAD is
+     "Merge(parallel): p4-apple/feature-views/P-0237-AiUsageCard"). The widget layer
+     is duplicated across Sources/DashboardWidgets/ and TeslaSync/dashboard-widgets/:
+        51× 'DashboardWidgetSize' is ambiguous (15 public struct defs)
+        13× 'DashboardWidgetRegistration' invalid redeclaration
+         6× LoadingSkeleton 'string'/'table' ambiguous (TeslaSync/feature-views)
+        + downstream "init cannot be resolved" in Location*/MQTT* widgets.
+     `grep -rlE "public struct DashboardWidgetSize"` → 15 committed files, none mine.
+     Resolving this requires deleting a duplicate copy of the entire widget layer —
+     an integration/merge fix far outside this surface's allowed scope
+     (Features/Analytics/**) and forbidden to bypass (Honesty rule 7).
+
+[3a] OWN-CODE COMPILE PROOF (full real module): the iOS build-for-testing compiled
+     the whole TeslaSync module against the staged Shared.xcframework + the real
+     P2 tokens + P3 component library + my 11 files. The Swift type-checker reported
+     errors ONLY in the duplicated predecessor files; not a single error in any
+     FleetComparePage*.swift — i.e. every view (TSGlassPanel/TSCard/TSSelect/Charts/
+     tokens) and binding type-checks clean in-context.
+
+[3b] OWN-CODE TEST PROOF (executed green): the pure-logic surface (Models + Builder +
+     Model, incl. the @MainActor @Observable model, Observation + SwiftUI) was
+     compiled and RUN in an isolated SwiftPM package (swift-tools 6.0, .macOS(.v15))
+     with the verbatim FleetComparePage.Tests.swift:
+        Executed 17 tests, with 0 failures (0 unexpected) in 0.004s
+        FleetCompareConvertTests 3/3, FleetCompareFormatTests 2/2,
+        FleetCompareBuilderTests 6/6, FleetComparePageModelTests 4/4,
+        FleetCompareAccessibilityTests 2/2.
+     This exercises every state-resolution / winner / SI-conversion / merge /
+     telemetry / selection path. (Package was a throwaway copy; nothing committed.)
+
+[3c] macOS: not separately executed — the macOS app target compiles the IDENTICAL
+     shared source set (Sources + TeslaSync/dashboard-widgets + TeslaSync/feature-views
+     + TeslaSync/Features), so it is blocked by the very same predecessor duplicates;
+     my surface is platform-neutral SwiftUI with #if os() adaptivity only.
+
+================================================================================
+ === HONESTY COVENANT ===
+================================================================================
+  1  No red-as-green : the build/test gate is reported RED (BLOCKED). Every ✅ above
+                       is a real command run on this host with its real exit code;
+                       lint/placeholder green and the 17/17 test run pasted verbatim.
+  2  No scope narrowing: implemented ALL 12 panels, 4 charts, 4 states, 43 strings,
+                       5 data sources — full parity surface.
+  3  No skip-and-assume: each runnable gate executed; the build blocker was traced to
+                       specific committed predecessor files (grep evidence), not assumed.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; the
+                       registered route renders a real empty state, not a skeleton.
+  5  No parity shortcuts: faithful port of the web rows/monthly-merge/winner/SI
+                       boundary + every section, state, and string.
+  6  No delegation     : authored directly; no sub-agent delegation of the surface.
+  7  No predecessor bypass: did NOT delete/edit the duplicated widget layer to force a
+                       green build — that pre-existing parallel-merge defect is the
+                       integration owner's to resolve. Temporary local de-dup was
+                       declined; isolated-package verification used instead (reverted).
+  8  No commit on red  : the full-app build/test gate is red (predecessor), so this is
+                       reported STATUS=BLOCKED and the apple-ledger row is "blocked",
+                       NOT "done"/covered-as-green.
+  9  No silent drift   : working-tree app changes confined to Features/Analytics/** +
+                       the two navigation files + project.yml + Localizable.xcstrings.
+                       (Pre-existing unrelated dirty files in this shared worktree —
+                       feature-views/AIUsageCard.*, web/* — were NOT touched or staged.)
+  10 Log ends with EXIT/STATUS below.
+
+================================================================================
+ === DISPOSITION ===
+================================================================================
+  The native SwiftUI FleetComparePage is implemented at full web parity (63/63
+  parity items, file+symbol evidence above), HIG-native (NavigationStack host,
+  GroupBox/GlassPanel cards, Swift Charts overlays, MapKit n/a, materials, Dynamic
+  Type, VoiceOver labels, SI display boundary, #if os() adaptivity), bound through an
+  @Observable model + state-holder seam, navigation-registered, and i18n-complete.
+
+  Lint (0/11), placeholder (COUNT=0), own-module type-check (0 errors in this surface),
+  and the surface's 17 unit tests (executed 17/17 green in isolation) all PASS.
+
+  The triad build+test gate cannot reach green ON THIS HEAD because the shared app
+  target does not compile: a parallel-merge duplicated the entire dashboard-widget
+  layer (15× DashboardWidgetSize, 13× DashboardWidgetRegistration, LoadingSkeleton,
+  …) in committed sibling files outside this surface's allowed scope. That is a
+  predecessor/integration defect, not a defect in this surface, and must be fixed by
+  de-duplicating the widget layer at integration before the all-targets gate can run.
+  Per the Honesty Covenant (rules 1, 7, 8) this is therefore STATUS=BLOCKED, not DONE.
+
+================================================================================
+EXIT=65
+STATUS=BLOCKED
+================================================================================

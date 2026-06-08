@@ -1,0 +1,124 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me explore the existing Apple project structure to understand patterns and dependencies before deciding on approach.
+
+Now I understand the web source — 3 StatCards + a warning AlertBanner. Let me explore the Apple project layout, schemes, and existing patterns in depth.
+
+The `feature-views` directory already has 1438 files following an established pattern. Let me study a complete existing feature view to mirror its exact structure, and find ones using the same shared components (StatCard, AlertBanner, Grid).
+
+`XRayHeader` is the ideal template — a Header surface using StatCard. Let me read its complete file set and look for existing DLQ-related native files plus the shared component counterparts.
+
+`EntriesTable` is a DLQ-inspector sibling already ported — that's my best reference for i18n namespace and adapter wiring. Let me read it, the `XRayHeader` template, and the shared component counterparts.
+
+Excellent — `XRayHeader` is a near-perfect template (admin diagnostics header using StatCard grid with all states). Let me read its remaining files plus the DLQ sibling `EntriesTable` to learn the DLQ data model and i18n namespace.
+
+Now I have the full pattern. Let me read the remaining template files and the DLQ sibling (`EntriesTable`) to learn the DLQ data model and existing `admin.dlq.*` i18n namespace.
+
+Now let me study the DLQ sibling `EntriesTable` (same web folder) for the native DLQ data model and existing `admin.dlq.*` keys, plus the design tokens referenced by the template.
+
+Let me read the web DLQ types, the shared AlertBanner/StatCard native components, the design tokens, and the `WidgetFreshness` type plus `EntriesTable` view/strings to align idioms.
+
+Paths corrected — `Sources` is at `apps/apple/Sources`. Let me locate the design tokens, `WidgetFreshness`, `TSTone`, the card/skeleton primitives, and the native `AlertBanner`.
+
+I now have the data model (`DLQListResponse`: count, replay_enabled, entries[]) and confirmed `TSAlertBanner` uses `LocalizedStringKey` (won't resolve per-surface tables — XRayHeader's precedent builds facade-localized chrome instead). Let me confirm the exact token/primitive APIs.
+
+Let me confirm exact token member names (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSMotion`), check `pwsh`/placeholder-script availability for the gate, and verify no symbol collisions for my new types.
+
+All tokens confirmed, `pwsh` is available. Let me read `TSSpacing`/`TSRadius` values, check definitively whether a full Xcode is installed (gate needs `xcodebuild`), and inspect the placeholder script's `-Path` handling.
+
+Critical finding: **`/Applications/Xcode.app` IS installed** — only the active developer dir points at CommandLineTools. I can likely use `DEVELOPER_DIR` to run `xcodebuild` without sudo. Let me verify the full toolchain feasibility (xcodebuild via DEVELOPER_DIR, xcodegen, prebuilt Shared.xcframework, existing .xcodeproj).
+
+Major update: Xcode 26.5, xcodegen, and a booted iPhone 16 sim are all present — the only gap is the KMP `Shared.xcframework` (built via Gradle). Let me assess whether that's feasible, since a real green gate (STATUS=DONE) may be achievable.
+
+JDK 17 + gradlew are present, so the real gate is potentially achievable. The KMP XCFramework build is the long pole (network/Kotlin-Native), so I'll kick it off in the background now and write the 7 production files meanwhile. Let me also record a plan.
+
+The KMP build is running in the background. Before writing, let me check the lint/format configs so my files pass `--strict` on the first try, and glance at `EntriesTable.swift` for the sibling view idiom.
+
+Before writing, a quick collision check on my planned type names and a peek at the background KMP build.
+
+No collisions, KMP build progressing in background. Now I'll write all 7 production files following the `XRayHeader` template, adapted to the DLQ `StatusHeader` data and parity logic.
+
+The KMP build completed. Let me confirm the framework staged, then format/lint my files while I prepare the real gate.
+
+Shared.xcframework built and staged — the **real gate is now achievable**. Let me first auto-format and lint my new files (fast feedback) before the heavy xcodebuild run.
+
+Both pass on my files: **swiftformat --lint 0/6 need formatting; swiftlint --strict 0 violations.** Now I'll generate the Xcode project and run the real build/test. Let me generate first (fast), then kick off the iOS build-for-testing.
+
+Project generated with both schemes. Now the key signal — build the full iOS app + test bundle (compiles my files against the real module). Starting it and monitoring.
+
+While the iOS build runs, let me do an independent standalone compile+run of the pure adapter to prove the parity arithmetic, and confirm the gate's log directory exists.
+
+iOS build finished — let me read its result, and run the standalone parity proof.
+
+The build failed — but the errors are `unable to resolve module dependency: 'XCTest'` in `*.Tests.swift` files across **all** surfaces (AIRestorePanel, WeekSelector, XRayHeader, …), and the log shows cross-contamination from a concurrent `slot-63` build sharing the same DerivedData. This is a baseline/environment issue, not my code. Let me investigate rigorously.
+
+This is the **known, documented situation**. `apps/macos-pending-verifications.md` records that prior P4 feature-view surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) hit the identical blocker: co-located `*.Tests.swift` importing `XCTest` into the app target + `DashboardWidgetSize` redefined 15× — **pre-existing, unrelated** collisions. My grep confirms **zero StatusHeader/feature-views errors** (only the 6 XCTest module-resolution errors affecting all surfaces' test files). The established protocol: verify the surface in isolation, defer full-app build to the CI gate.
+
+Let me run the isolated verifications prior surfaces used. First, the standalone adapter parity proof, and locate the real token/primitive deps.
+
+The `/tmp` file creation failed earlier (dir didn't exist yet). Let me recreate it and run the parity proof, and inspect the dependency closure for the isolated SwiftPM build.
+
+Parity main recreated. Let me run the standalone adapter parity proof and check the remaining dependency-closure files (Typography) for the isolated build.
+
+Standalone adapter parity: **15/15 checks PASSED** — the web computation (count→total, replayable filter tally, replay_enabled echo, null-coalescing) executes correctly. Now let me build an isolated SwiftPM package (the precedent's method) to compile the full surface + run my XCTest suite against the **real** design-token/primitive dependencies.
+
+Package scaffolded with real dependencies. Now let me build and run my test suite in isolation under Swift 6 strict concurrency.
+
+**Isolated SwiftPM build PASSED: 31 tests, 0 failures** under Swift 6 strict concurrency — the full surface (incl. Previews) compiled against the **real** tokens/primitives. Now the explicit iOS-18 + macOS-15 `swiftc -typecheck` (matching the precedent's bar).
+
+Both **iOS-18 and macOS-15 `swiftc -typecheck` PASS** (exit 0). Now the placeholder gate. Let me check how the script resolves `-Path` (the gate passes a file-prefix), then run it.
+
+The script needs an existing path. I'll faithfully scan exactly my surface files by copying them to a temp dir and running the gate script there. Let me view the scan/exit logic, then run it via pwsh.
+
+The placeholder gate flagged the **word** "placeholder" in a comment (Views.swift:67). I must reword it. Let me find all forbidden words across my files.
+
+Only one occurrence — a comment. Let me reword it (the web showed an em-dash during loading) and re-run the gate.
+
+Placeholder gate now **EXIT=0**, swiftformat/swiftlint still clean. Let me lock in the final green test run (with the edited file), corroborate the second pre-existing blocker for an accurate log, and check git status.
+
+Final isolated test run: **31/31 pass**. Both pre-existing blockers corroborated: **225** co-located `*.Tests.swift` swept into the app target + `DashboardWidgetSize` defined in **15** files — exactly the documented macOS-pending blockers, none related to my surface. Now I'll run the real full-app gate (isolated DerivedData for clean attribution) to capture authentic exit codes for the log.
+
+While the iOS gate runs, I'll run the macOS gate in parallel (separate DerivedData).
+
+Both full-app gates are running. I'll wait for them to complete before assembling the log.
+
+Both full-app gates confirmed **BUILD FAILED with zero StatusHeader errors**, isolated DerivedData (clean attribution):
+- **iOS (65):** only `XCTest` module-resolution in co-located `*.Tests.swift` (pre-existing).
+- **macOS (65):** macOS development-signing requirement (pre-existing).
+
+For an airtight log, let me prove that even with the test-file blocker removed, my surface compiles in the real app module (only the unrelated `DashboardWidgetSize` dup-symbol remains).
+
+While the supplementary compile runs, let me wait for it, then assemble the log.
+
+Enough authentic evidence — even excluding `*.Tests.swift`, the app target still fails on another co-located test variant (`HealthGaugeGrid.ViewTests.swift`), reconfirming the pre-existing XCTest-in-app-target blocker, with **zero StatusHeader errors** throughout. Now let me write the official gate log.
+
+Now let me append the deferred-verification row to `macos-pending-verifications.md`, following the documented Resolution protocol used by the prior P4 surfaces.
+
+Let me verify git status (ensuring the generated `.xcodeproj`/framework are gitignored and only my intended files are staged-worthy), then commit.
+
+I see pre-existing unrelated modifications in this parallel slot's tree (`AIUsageCard.*`, two `web/` files) — I must **not** include those. Let me check my `macos-pending` edit diff to decide how to handle it cleanly, then commit only my files.
+
+Confirmed: my `macos-pending` edit is a single additive row (no pre-existing changes), and the documented Resolution protocol mandates recording deferred verifications. I'll commit **only** my files (excluding the unrelated pre-existing `AIUsageCard.*`/`web/` changes). Staging explicit paths and committing.
+
+Exactly the intended files staged (7 surface files + log + 1-line pending row), nothing unrelated. Committing.
+
+Committed cleanly as `7baf4d325` (9 files, no unrelated changes). Let me clean up the `/tmp` scratch artifacts.
+
+All work is committed and the scratch is cleaned. Here's the final status.
+
+## Summary
+
+Shipped the native Apple **`StatusHeader`** feature view (P4·0028) at parity with `web/.../dlq-inspector/StatusHeader.tsx`, following the established `XRayHeader` sibling pattern. Committed as `7baf4d325` (9 files, 1555 insertions) — no unrelated changes swept in.
+
+**Delivered files** (`apps/apple/TeslaSync/feature-views/`): `StatusHeader.swift` (view), `.Model.swift` (P1/S8 state-holder + P1/S11 telemetry + P1/S10 facade), `.Adapter.swift` (pure projection), `.Views.swift` (subviews), `.Previews.swift` (8 states), `.Tests.swift` (31 tests), `.strings` (i18n catalog) — plus the gate log and a `macos-pending-verifications.md` row.
+
+**Parity reproduced:** 3 StatCard tiles (Total entries / Replayable / Replay mode), the `entries.filter(replayable).length` tally, the Enabled/Disabled echo, and the replay-disabled `AlertBanner` — plus native loading/empty/error/stale/offline states, VoiceOver labels, and `view.opened` telemetry.
+
+**Verification — surface GREEN in isolation:**
+- swiftlint --strict: **0 violations** · swiftformat --lint: **0/6** · placeholder gate: **0**
+- Isolated SwiftPM build + **31/31 tests** under Swift 6 strict concurrency (against real tokens/primitives)
+- Real **iOS-18 + macOS-15 `swiftc -typecheck`**: both exit 0
+- Standalone adapter parity: **15/15**
+
+**Full-app gate — `STATUS=BLOCKED` (honest):** `xcodebuild build test` fails on both platforms (`IOS_EXIT=65`, `MAC_EXIT=65`) due to **pre-existing, unrelated** repo collisions — XCTest swept into the app target across **225** co-located test files, `struct DashboardWidgetSize` redefined **15×**, and macOS dev-signing — with **zero StatusHeader errors**. This matches the documented macOS-pending protocol (ToolCard/AlertMessageEditor/FSMTimelineChart) and is deferred to the `P99-0001` macOS CI gate. I used Xcode 26.5 + a freshly-built KMP `Shared.xcframework` and isolated DerivedData for clean attribution. The log ends with `EXIT=65 / STATUS=BLOCKED` per the honesty covenant.
+

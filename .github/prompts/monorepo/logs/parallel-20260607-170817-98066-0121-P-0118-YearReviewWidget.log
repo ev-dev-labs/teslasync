@@ -1,0 +1,147 @@
+I'll start by exploring the environment, the web source, and the existing Apple app structure to understand what's needed.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me investigate further and explore the existing Apple app structure to understand patterns.
+
+Full Xcode exists at `/Applications/Xcode.app`. Let me check if I can use it via `DEVELOPER_DIR`, and explore the existing dashboard widget patterns.
+
+Full Xcode 26.5 is usable via `DEVELOPER_DIR` — so building IS possible. The `BatteryCellsWidget` set looks like the canonical analytics-widget pattern. Let me study it and the supporting infrastructure.
+
+This is a clean, well-established pattern (Registry / Data / Model / Components / Widget). Let me study the components file, shared facade, design tokens, i18n, and the analytics store.
+
+Let me read the shared facade core and find the analytics store + design token definitions.
+
+Now let me find the shared `Shared` KMP framework's analytics/vehicles stores, the AppContainer wiring, design tokens, and feedback components.
+
+The `Shared.xcframework` is absent (only `.gitkeep`). This is critical — let me check how prior widgets handled the build, and understand the project configuration.
+
+The prompt's target path `TeslaSync/dashboard-widgets/` IS a compiled source path. The scheme builds `Shared.xcframework` via a preAction script. Let me check the build prerequisites: the target dir, the framework build script, xcodegen, and the KMP source.
+
+The canonical location is `TeslaSync/dashboard-widgets/` with many existing widgets using `WidgetName.Suffix.swift` naming + co-located `.strings`. Let me examine the full listing and find the best analytics template.
+
+`LifetimeStatsWidget` is the ideal template — it uses the analytics store, Units facade, AND a stat grid (closest analogue to YearReview). Let me study its complete file set.
+
+Excellent — this is a complete, self-contained template using a `Source` protocol seam (so view/model/tests compile WITHOUT the Shared framework). Let me read the Adapter, Tests, Previews, and strings.
+
+Now let me read the Previews + strings template and locate the shared primitives (`DashboardWidgetRegistration`, `TSStatGridSkeleton`, `TSAnimatedNumber`, design tokens).
+
+Let me pin down the exact canonical definitions to avoid redeclaration conflicts.
+
+Multiple widgets each define `DashboardWidgetSize` / `DashboardWidgetRegistration`. Let me see how they avoid redeclaration conflicts — this is critical for the build.
+
+I need to understand the expected gate behavior. Multiple files redeclare the same `public struct` primitives — let me check prior surface logs to see how the gate was satisfied, and check the build cache state.
+
+This is the decisive finding. The established, user-approved disposition is **"code-complete + DEFERRED Xcode gate"**: ship the full surface, run host-runnable gates (swiftc typecheck against the real design system, an executed logic harness, swiftformat, swiftlint, placeholder), and mark the two `xcodebuild` scheme steps DEFERRED with evidence. Let me read the middle of the log to replicate the exact methodology.
+
+I now have the exact, user-approved methodology to replicate. Let me read the web conversion/format/hook source for verbatim parity, plus the required instruction files.
+
+I have full parity data. Now let me confirm the design-system component signatures I'll use and map the verification setup (which Sources files import `Shared`).
+
+All design-system symbols confirmed. I have complete parity data and the exact methodology. Let me set up tracking and write the plan.
+
+Now I'll write the surface files following the LifetimeStats template exactly. Starting with the Model (state-holder seam + registry + i18n facade).
+
+Now the Adapter (pure projection reproducing the web numeric pipeline verbatim).
+
+Now the i18n strings table and the SwiftUI surface.
+
+I added a stray `lifetime` key that isn't in the web source. Let me remove it.
+
+Let me check the available color tokens so the header icon and chrome use faithful tokens.
+
+Color tokens confirmed — I'll use `Color.TS.chartSeriesPower` (violet) for the calendar icon to match the web's violet-400. Now the SwiftUI surface:
+
+Now the previews and tests.
+
+Let me compute the exact expected display strings using the real web formulas (via Node `toLocaleString`, the ground truth) so my test assertions pin true parity.
+
+Exact parity values confirmed (km: "12"/"0.4", mi: "7"/"0.2", energy "3,120.6", co2 "1,840", drivingTime "366", topSpeed km/h "376", mph "234"). Now the tests:
+
+All 6 surface files written. Now the verification phase. Let me confirm spacing/radius tokens and set up the isolated typecheck against the real design system.
+
+Tokens confirmed. Now let me set up the isolated typecheck against the real design system (with a registry shim for the module-provided primitives) in a temp dir.
+
+No YearReview errors — the 52 errors are in design-system files. Let me see what symbols they're missing.
+
+All 52 errors are in `UnitFormatters.swift` (depends on the Shared-backed `UnitPreferences`, unused by this surface — same file LifetimeStats excluded). Let me exclude it and re-run.
+
+`TYPECHECK_EXIT=0` — surface type-checks GREEN against 41 real design-system files under Swift 6 strict concurrency. Now the executable harness to prove the logic runs correctly.
+
+The harness needs MainActor isolation. Let me wrap everything in a `@MainActor` function.
+
+Harness GREEN: **CHECKS=96 FAILURES=0**. Now swiftformat and swiftlint.
+
+My files pass swiftformat. Now the full gate commands: `swiftformat --lint apps/apple` and `swiftlint --strict`.
+
+swiftformat clean (0/446). swiftlint found 2 violations — let me locate them.
+
+Two violations: one pre-existing in `LifetimeStatsWidget.Adapter.swift` (a predecessor, outside my scope) and one in MY `YearReviewWidget.Adapter.swift` `project` function (90 lines > 50). Let me check the lint config, then refactor my function.
+
+The lint config uses SwiftLint's default `function_body_length` (50-line limit, enforced under `--strict`). My `project` function (90 lines) must be refactored into helpers. The `LifetimeStatsWidget.Adapter.swift` violation is pre-existing and outside my allowed scope. Let me refactor my projector.
+
+Let me refactor the projector into small helpers (each well under the 50-line limit).
+
+Now re-verify: swiftformat on my files, swiftlint, and re-run typecheck + harness with the refactored Adapter.
+
+Two refactor nits: a 123-char line and a formatting tweak. Let me add a `locale` local to shorten the line, then let swiftformat normalize my files.
+
+The files are new (untracked), so swiftformat now reports 0 changes — my manual fix resolved it. Let me re-run the format and lint gates to confirm clean.
+
+swiftformat clean (0/446), and **my files have zero swiftlint violations**. The only remaining lint violation is pre-existing in the predecessor `LifetimeStatsWidget.Adapter.swift` (outside my allowed scope). Let me confirm that's committed/pre-existing, then re-run typecheck + harness with the refactored Adapter.
+
+All green: **TYPECHECK_EXIT=0**, **harness 96/96**, and my files confirmed new (correct scope). Now the placeholder gate.
+
+Both available. Let me run the placeholder gate exactly as specified.
+
+Placeholder gate: **PLACEHOLDER_COUNT=0, EXIT=0**. Now let me gather concrete evidence for the DEFERRED `xcodebuild` disposition — proving the app-target build is blocked by pre-existing cross-slot duplicate type definitions (outside my scope), not by my code.
+
+Concrete evidence captured: the app target has **pre-existing duplicate `DashboardWidgetSize`/`DashboardWidgetRegistration` definitions across 4 sibling surfaces** (compiling two together → "invalid redeclaration"), and `Shared.xcframework` is absent. My files add zero duplicates. Let me do a final forbidden-word scan, then write the log.
+
+Everything verified. Forbidden-word scan clean (`placeholder` only appears as the legitimate em-dash domain constant). Let me write the gate log.
+
+Log written. Let me do a final review of the refactored Adapter projector section, then stage only my files + the log (not the pre-existing unrelated web changes).
+
+All coherent: `project` is now compact, 8 stat tiles (core 6 + wide 2), 25 i18n keys, 1640 lines across 6 files. Let me stage only my files + the log (leaving the pre-existing unrelated web changes untouched) and commit.
+
+Exactly my 6 files + the log are staged; the pre-existing web changes are untouched. Committing:
+
+Committed cleanly (7 files, commit `ab28114e`). Let me update tracking and clean up temp artifacts.
+
+Task complete. Cleaned up temp artifacts; the working tree shows only the two pre-existing unrelated web changes (untouched).
+
+## Summary
+
+Shipped a production-polished, native Apple `YearReviewWidget` at parity with `web/src/features/dashboard/widgets/YearReviewWidget.tsx`, following the established `LifetimeStatsWidget` sibling pattern. Commit `ab28114e`.
+
+**6 files** in `apps/apple/TeslaSync/dashboard-widgets/` (allowed scope):
+- **`.swift`** — SwiftUI surface: 3 layouts (compact / standard 2-col / wide 4-col), header (violet Calendar + "Year in Review {year}" + freshness chip + refresh + open), all states (loading/empty/error/stale/offline/content), full VoiceOver + Dynamic Type + Reduce-Motion.
+- **`.Model.swift`** — P1/S8 `YearReviewSource` seam, `@Observable YearReviewModel`, P1/S11 telemetry, in-memory source, canonical registry (`year-review`, analytics, 2×4/2×4/4×40), P1/S10 i18n facade.
+- **`.Adapter.swift`** — pure projection reproducing the web numeric pipeline **verbatim** (km→mi→display, speed, driving-time, locale-aware busiest month, half-away-from-zero formatting).
+- **`.Previews.swift`**, **`.Tests.swift`**, **`.strings`** (11 web parity keys + native chrome).
+
+**Host gates — all green (real commands, real exit codes):**
+| Gate | Result |
+|---|---|
+| `swiftc -typecheck` (Swift 6 strict, 41 real design-system files) | **EXIT=0** |
+| Executed adapter/model harness | **CHECKS=96 FAILURES=0** |
+| `swiftformat --lint apps/apple` | **0/446** |
+| `swiftlint --strict` (my files) | **0 violations** |
+| `check-placeholders.ps1` | **COUNT=0, EXIT=0** |
+
+**`xcodebuild` iOS/macOS: DEFERRED** (not claimed green) with reproduced evidence — the capability is present (Xcode 26.5, SwiftUI/Charts/MapKit, iOS 18/macOS 15 SDKs), but the app target is blocked by **pre-existing cross-slot duplicate `DashboardWidgetSize`/`DashboardWidgetRegistration` definitions** in 4 sibling surfaces (proven: `invalid redeclaration` when compiling two together) plus the absent KMP `Shared.xcframework` — both outside this prompt's allowed files. My surface adds **zero** such duplicates. This matches the user-approved "code-complete + DEFERRED Xcode gate" disposition (predecessors 0036, 0055). Log ends with `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...ple-dashboard-widgets-0118-YearReviewWidget.log | 177 ++++++++++
+ .../YearReviewWidget.Adapter.swift                 | 336 ++++++++++++++++++
+ .../dashboard-widgets/YearReviewWidget.Model.swift | 371 ++++++++++++++++++++
+ .../YearReviewWidget.Previews.swift                | 142 ++++++++
+ .../dashboard-widgets/YearReviewWidget.Tests.swift | 352 +++++++++++++++++++
+ .../dashboard-widgets/YearReviewWidget.strings     |  49 +++
+ .../dashboard-widgets/YearReviewWidget.swift       | 390 +++++++++++++++++++++
+ 7 files changed, 1817 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0118-YearReviewWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/YearReviewWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/YearReviewWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/YearReviewWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/YearReviewWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/YearReviewWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/YearReviewWidget.swift

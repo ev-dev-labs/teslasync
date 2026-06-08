@@ -1,0 +1,170 @@
+=== P4 Shared surface 0189 SwipeRow (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/SwipeRow.*
+Web src  : web/src/components/mobile/SwipeRow.tsx
+Runner   : Darwin (arm64), 2026-06-08
+Toolchain: Xcode 26.5 (17F42) @ /Applications/Xcode.app ; swiftlint + swiftformat (brew) ;
+           pwsh 7 ; iPhone 16 simulator (iOS 26.5) booted.
+
+Honesty covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+This log distinguishes the steps that ran green (lint / format / placeholder + a full
+compile-and-test of the surface) from the two xcodebuild steps that are BLOCKED for reasons
+OUTSIDE this prompt's Allowed Files. No green is claimed for a step that did not pass.
+
+-------------------------------------------------------------------------------
+SURFACE SUMMARY
+-------------------------------------------------------------------------------
+SwipeRow is the swipe-to-action row primitive (iOS Mail / Notes style). The web source is a
+PURE INTERACTION PRIMITIVE: it wraps `children`, tracks a horizontal touch drag, and on
+release either snaps closed, peeks an action open, or auto-fires it. It has NO async data
+source — its only "data" hooks are `useIsCoarsePointer` (touch opt-in) and
+`useMotionPreference` (reduced-motion). Therefore the generic loading / empty / error /
+stale / offline envelopes a data surface carries DO NOT EXIST in this source; reproducing
+them would fabricate behavior the web component does not have (a parity violation). The
+faithful states — all reproduced and rendered — are the gesture/edge states:
+  • inactive passthrough (fine pointer / no actions / disabled) — renders children as-is
+  • active idle (closed), dragging, peek-leading, peek-trailing
+  • reduced-motion snap collapse ; default(cyan) vs danger(rose) tone
+Native binding: motion via @Environment(\.accessibilityReduceMotion) (the platform P1/S8
+preference holder, per Sources/Components/Motion/Motion.swift precedent); coarse-pointer via
+the SwipeRowPointerCapability seam; gesture state via the @Observable SwipeRowModel (P1/S8);
+telemetry view.opened (slug "SwipeRow") via the SwipeRowTelemetry seam (P1/S11); strings via
+the SwipeRowStrings facade (P1/S10). Haptic (web navigator.vibrate(10)) via SwipeRowHaptic.
+
+Files (10): SwipeRow.swift .Adapter .Seams .Model .Views .States .Previews .strings
+            .Tests .ModelTests
+
+-------------------------------------------------------------------------------
+GATE STEPS (per prompt Gate block)
+-------------------------------------------------------------------------------
+[1/5] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+      Captured via the iOS app target (TeslaSync) build:
+        error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+               (in target 'TeslaSync' from project 'TeslaSync')
+        ** BUILD FAILED **
+      IOS_EXIT=65   -> BLOCKED (see "WHY BLOCKED" #2)
+
+[2/5] xcodebuild -scheme TeslaSync-macOS build test
+      Captured via the macOS app target (TeslaSync-macOS) build:
+        error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+               (in target 'TeslaSync-macOS' from project 'TeslaSync')
+        ** BUILD FAILED **
+      MAC_EXIT=65   -> BLOCKED (see "WHY BLOCKED" #2)
+
+[3/5] swiftlint --strict   (the 9 SwipeRow swift files)
+        Done linting! Found 0 violations, 0 serious in 9 files.
+      LINT_EXIT=0
+      (A full-tree `swiftlint --strict` reports exactly 1 pre-existing violation in
+       TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 — NOT a SwipeRow
+       file and outside this prompt's Allowed Files. The SwipeRow files are clean.)
+
+[4/5] swiftformat --lint apps/apple   (SwipeRow files)
+        0/9 files require formatting.
+      FORMAT_EXIT=0
+
+[5/5] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces
+        PLACEHOLDER_ALLOWED=0
+        PLACEHOLDER_COUNT=0
+        EXIT=0
+      PLACEHOLDER_EXIT=0
+
+-------------------------------------------------------------------------------
+WHY THE xcodebuild STEPS ARE BLOCKED (platform / scope evidence — not red, not green)
+-------------------------------------------------------------------------------
+#1  Central registration is OUT OF SCOPE for this prompt.
+    The xcodebuild app/test targets enumerate their Swift sources from `apps/apple/project.yml`
+    (paths Sources, TeslaSync/dashboard-widgets, TeslaSync/feature-views). A NEW
+    `TeslaSync/shared-surfaces` directory must be added there to be compiled. project.yml is
+    NOT in this prompt's Allowed Files (Allowed: apps/apple/TeslaSync/shared-surfaces/SwipeRow.*,
+    the log) — it is owned by the P4 acceptance gate this surface "Blocks", and editing it from
+    a parallel per-surface slot would collide with every sibling slot. Proof (xcodegen generate
+    from the unmodified spec):
+        SwipeRow refs in generated project.pbxproj      : 0
+        shared-surfaces refs in generated project.pbxproj: 0
+        feature-views refs (already registered)          : 3
+    => even a successful app build would NOT include or test this surface in-scope.
+
+#2  The app/test targets link the KMP core as `Frameworks/Shared.xcframework`, which is ABSENT
+    (the staged path holds only .gitkeep). It is assembled by the Kotlin/Native Gradle toolchain
+    via the scheme's pre-build "Stage Shared.xcframework" action
+    (apps/apple/Scripts/build-shared-xcframework.sh -> apps/shared/gradlew
+    :core:assembleSharedXCFramework). Building the KMP framework is out of scope for a
+    shared-surface UI prompt and is not produced in this environment. Real failure captured
+    above (exit 65).
+
+Note: Xcode 26.5 + the iPhone 16 simulator ARE present and were exercised (xcodegen generate
+EXIT=0; xcodebuild reached the link/dependency phase). The block is the two scope/dependency
+facts above, NOT the absence of the Apple toolchain.
+
+-------------------------------------------------------------------------------
+COMPENSATING VERIFICATION (in-scope, runnable — substitutes for the blocked build+test)
+-------------------------------------------------------------------------------
+A) Standalone SwiftPM harness compiling the REAL surface sources + the real design tokens
+   (apps/design/generated/apple/Tokens.swift + Sources/Design/TSDesign.swift), built and run
+   with the Xcode 26.5 toolchain under swift-tools-version 6.0 (Swift 6 language mode =
+   strict concurrency, matching project.yml SWIFT_STRICT_CONCURRENCY: complete):
+
+     $ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swift test
+       ...
+       Compiling TeslaSync SwipeRow.Adapter.swift / .Seams / .Model / .Views / .States /
+                 SwipeRow.swift / .Previews / Tokens / TSDesign          [all OK]
+       Test Suite 'All tests' passed
+       Executed 43 tests, with 0 failures (0 unexpected) in 0.006s
+     SWIFT_TEST_EXIT=0
+
+   Suites: SwipeRowActivationTests, SwipeRowReducerMoveTests (10), SwipeRowReducerReleaseTests
+   (9), SwipeRowGeometryTests, SwipeRowAnimationTests, SwipeActionToneTests,
+   SwipeRowSurfaceTests, SwipeRowModelTests. Covers (web-test parity): peek-vs-autofire at the
+   reveal threshold / 50% width, sub-threshold snap-back, vertical-drift cancel, fine-pointer
+   & no-action passthrough, edge clamping & width resist, the one-shot reveal haptic latch
+   (fires once per gesture, re-arms next), the view.opened telemetry slug, and the
+   reduced-motion snap collapse.
+
+B) iOS 18 SDK type-check of the production sources (validates the iOS path incl. the
+   `#if os(iOS)` UIImpactFeedbackGenerator haptic branch + the @Observable / #Preview macros):
+
+     $ DEVELOPER_DIR=.../Xcode xcrun --sdk iphoneos swiftc -typecheck -target arm64-apple-ios18.0 \
+         -swift-version 6 Tokens.swift TSDesign.swift SwipeRow.Adapter.swift SwipeRow.Seams.swift \
+         SwipeRow.Model.swift SwipeRow.Views.swift SwipeRow.States.swift SwipeRow.swift \
+         SwipeRow.Previews.swift
+     IOS_TYPECHECK_EXIT=0
+
+=> The surface compiles for BOTH iOS 18 and macOS 15 and its unit/behavior tests RUN GREEN.
+   The only thing not exercised is the literal multi-target xcodebuild gate, blocked by #1+#2.
+
+-------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+-------------------------------------------------------------------------------
+[x] Surface renders on Apple with all states from the web source reproduced (inactive
+    passthrough, closed, dragging, peek-leading, peek-trailing, reduced-motion, tone variants;
+    no fabricated data-states — the primitive has none). Previews compile (SwiftPM + iOS18).
+[x] Hooks bind to the shared P1/S8 state-holder layer (SwipeRowModel + motion environment +
+    pointer seam); no direct HTTP from the view (there is none in the source).
+[x] Every i18n key resolves through the P1/S10 facade (SwipeRowStrings) with a catalog entry
+    in SwipeRow.strings; no English literal in native code.
+[x] Accessibility labels/hints on every interactive element (action button label + activate
+    hint; revealed/hidden panels toggle accessibilityHidden + hit-testing; swipe hint).
+[x] Tests: adapter unit tests + model state-holder tests + a11y/telemetry-slug tests
+    (43 assertions, all green via SwiftPM). Per-state visual coverage via #Preview gallery
+    (the repo's established convention; image snapshots require the registered xcodebuild
+    bundle, blocked by #1+#2).
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (placeholder gate EXIT=0).
+[~] EXIT=0 / STATUS=DONE  -> NOT achievable in-scope (xcodebuild gate blocked by #1 central
+    registration in project.yml + #2 missing KMP Shared.xcframework). STATUS=BLOCKED with the
+    platform/scope evidence above, per the prompt's allowance.
+
+-------------------------------------------------------------------------------
+PER-STEP EXIT CODES
+-------------------------------------------------------------------------------
+IOS_EXIT=65 (BLOCKED: KMP Shared.xcframework absent + surface unregistered)
+MAC_EXIT=65 (BLOCKED: KMP Shared.xcframework absent + surface unregistered)
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SWIFT_TEST_EXIT=0   (compensating: 43/43 passed, macOS, Swift 6 strict concurrency)
+IOS_TYPECHECK_EXIT=0 (compensating: iOS 18 SDK)
+
+EXIT=65
+STATUS=BLOCKED

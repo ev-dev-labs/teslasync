@@ -1,0 +1,96 @@
+=== P4 Shared surface 0028 AIMqttSseInspectorExplanations (Apple) ===
+date: 2026-06-08T11:09:07Z
+host: Darwin 25.5.0 arm64
+branch: auto/20260608-002645-33927/257
+
+## Honesty Covenant: no red-as-green. The build+test gate steps below could not
+## execute on this runner (Command Line Tools only — no full Xcode, no iOS
+## simulators, no KMP Shared.xcframework). They are reported RED, not green.
+## The surface source itself is complete (no stubs) and independently verified
+## via swiftc type-check + a Foundation logic harness (see SUPPLEMENTARY below).
+
+================ CAPABILITY PROBE ================
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ swiftc --version
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+$ ls $(xcrun --show-sdk-path)/System/Library/Frameworks | grep -E '^(SwiftUI|Charts|MapKit).framework'
+Charts.framework MapKit.framework SwiftUI.framework 
+  → SwiftUI/Charts/MapKit ARE in the macOS SDK (swiftc can type-check), but
+    xcodebuild + iOS Simulator + Shared.xcframework (KMP) require full Xcode.
+
+================ GATE STEP 1/5: iOS build+test ================
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1  (non-zero: xcodebuild unavailable — Command Line Tools instance, no full Xcode)
+
+================ GATE STEP 2/5: macOS build+test ================
+$ xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1  (non-zero: same — xcodebuild requires full Xcode)
+
+================ GATE STEP 3/5: swiftlint --strict ================
+$ swiftlint lint --strict  (surface files, repo-equivalent rules)
+Done linting! Found 0 violations, 0 serious in 9 files.
+LINT_EXIT=0  (0 — the 9 shipped surface files are swiftlint-clean under --strict)
+  note: a repo-wide swiftlint run reports 1 PRE-EXISTING violation in
+  TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift (function_body_length),
+  outside this prompt's allowed files and unrelated to this surface.
+
+================ GATE STEP 4/5: swiftformat --lint ================
+$ swiftformat --lint TeslaSync/shared-surfaces
+SwiftFormat completed in 5s.
+0/9 files require formatting.
+FORMAT_EXIT=0  (0 — 0/9 files require formatting)
+
+================ GATE STEP 5/5: placeholder/stub gate ================
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0  (0 — no stub/placeholder/TODO patterns)
+
+================ SUPPLEMENTARY (compensating verification) ================
+Because the build+test gate is blocked, the surface was verified directly with swiftc:
+
+-- (a) full SwiftUI surface type-check (real design tokens + real TSButton + TSSkeleton API shim) --
+   SURFACE_TYPECHECK_EXIT=0  (0 — Adapter/Projection/Model/Views/Chrome/main all type-check vs SwiftUI)
+   (#Preview blocks need the Xcode macro plugin; they are syntax-validated by swiftlint+swiftformat above.)
+   (XCTest is Xcode-only on this runner; the test files' logic is exercised by the harness below.)
+
+-- (b) Foundation logic harness: compiles + RUNS the shipped Adapter+Projection, asserting the
+       same window/reducer/output-branch/projection contract the XCTest files encode --
+  ok: connection passthrough stale
+  ok: connection passthrough offline
+
+ALL PASS
+   HARNESS_EXIT=0  (0 — 37/37 pure-core assertions pass)
+
+================ SHIPPED FILES ================
+     215 apps/apple/TeslaSync/shared-surfaces/AIMqttSseInspectorExplanations.Adapter.swift
+     151 apps/apple/TeslaSync/shared-surfaces/AIMqttSseInspectorExplanations.AdapterTests.swift
+     136 apps/apple/TeslaSync/shared-surfaces/AIMqttSseInspectorExplanations.Chrome.swift
+     267 apps/apple/TeslaSync/shared-surfaces/AIMqttSseInspectorExplanations.Model.swift
+     129 apps/apple/TeslaSync/shared-surfaces/AIMqttSseInspectorExplanations.Previews.swift
+     171 apps/apple/TeslaSync/shared-surfaces/AIMqttSseInspectorExplanations.Projection.swift
+      38 apps/apple/TeslaSync/shared-surfaces/AIMqttSseInspectorExplanations.strings
+     117 apps/apple/TeslaSync/shared-surfaces/AIMqttSseInspectorExplanations.swift
+     245 apps/apple/TeslaSync/shared-surfaces/AIMqttSseInspectorExplanations.Tests.swift
+     187 apps/apple/TeslaSync/shared-surfaces/AIMqttSseInspectorExplanations.Views.swift
+    1656 total
+
+================ VERDICT ================
+swiftlint=0 swiftformat=0 placeholder=0 surface-typecheck=PASS logic-harness=PASS
+ios-build-test=BLOCKED macos-build-test=BLOCKED  (runner: Command Line Tools only)
+
+Per the prompt capability clause ('requires SwiftUI ... If unavailable on the runner →
+STATUS=BLOCKED with API evidence'): the SwiftUI source is complete and type-checks, but
+the xcodebuild build+test gate cannot execute without full Xcode + iOS Simulator +
+Shared.xcframework (KMP). Reporting BLOCKED rather than asserting an unrun gate as green.
+Integration note: project.yml must add 'TeslaSync/shared-surfaces' to the TeslaSync /
+TeslaSync-macOS source groups (it currently globs feature-views + dashboard-widgets);
+that wiring + the .strings catalog fold are integration-time steps outside this prompt's
+allowed files, mirroring the AiUsageCard reference surface's 'fold in at integration' note.
+
+EXIT=1
+STATUS=BLOCKED

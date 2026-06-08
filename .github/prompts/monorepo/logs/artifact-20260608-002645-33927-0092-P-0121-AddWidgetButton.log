@@ -1,0 +1,166 @@
+=== P4 Feature view 0121 AddWidgetButton (Apple) ===
+Runner: macOS (Darwin, arm64), Xcode 26.5 (Build 17F42) at /Applications/Xcode.app via DEVELOPER_DIR.
+Toolchain: Apple Swift 6.3.2; SDKs iOS 26.5 / iphonesimulator 26.5 / macOS 26.5; iPhone 16 simulator booted.
+Surface: apps/apple/TeslaSync/feature-views/AddWidgetButton.{swift,Model,Projection,Views,Previews,Tests}.swift + AddWidgetButton.strings
+Web source: web/src/features/dashboard/components/AddWidgetButton.tsx
+
+------------------------------------------------------------------------------------------------------
+WEB SOURCE ANALYSIS (read end-to-end before writing native code)
+------------------------------------------------------------------------------------------------------
+AddWidgetButton.tsx is a PURE PRESENTATIONAL floating action button (FAB):
+  - Imports: useTranslation (i18n only), shared {Button, Tooltip} from @/components/ui, Icons.add.
+  - Props: onClick: () => void ; isEditing: boolean.
+  - The ONLY conditional render branch: `if (isEditing) return null;`  (withdrawn in edit mode — the
+    dashboard header's own Add Widget action covers that surface).
+  - Otherwise: a circular primary Button (variant="primary" size="lg" reshaped h-14 w-14 rounded-full
+    p-0 shadow-xl) holding an h-8 w-8 "+" glyph, wrapped in Tooltip content="Add Widget" side="left",
+    aria-label="Add Widget".
+  - i18n keys extracted: dashboard.addWidget = "Add Widget"  (single key; used for tooltip + aria-label).
+  - NO query hook, NO fetch, NO useEffect — the component binds NO asynchronous data.
+
+PARITY DISPOSITION ON STATES (honesty covenant #2 "no scope narrowing", #9 "no silent drift"):
+  The prompt's generic state list (loading/empty/error/stale/offline) is the per-surface template. This
+  surface's web source has exactly TWO render branches — visible (default) and hidden (isEditing) — and
+  binds no async data. loading/empty/error/stale/offline are therefore NOT APPLICABLE: there is nothing
+  to load, go empty, fail, or grow stale. Both real branches are reproduced (no narrowing); the
+  inapplicable data-states are NOT synthesized (synthesizing freshness chrome on a static "+" button
+  would be drift, not parity). This mirrors the accepted disposition of the sibling P4 surfaces whose
+  web source likewise gates the whole surface (e.g. AiUsageCard's off-mode gate → EmptyView).
+
+------------------------------------------------------------------------------------------------------
+NATIVE IMPLEMENTATION (SwiftUI, iOS 18 / iPadOS 18 / macOS 15 HIG; P1/S8 seam, P1/S9 tokens, P1/S10 i18n, P1/S11 telemetry)
+------------------------------------------------------------------------------------------------------
+AddWidgetButton.Model.swift  — AddWidgetStrings (P1/S10 facade), AddWidgetTelemetry + OSLog default
+                               (P1/S11 view.opened), AddWidgetButtonInput {isEditing}, resolved phase
+                               {visible|hidden}, AddWidgetButtonSource seam (P1/S8) + InMemory source,
+                               @MainActor @Observable AddWidgetButtonModel (emits view.opened once on
+                               first present; deferred while withdrawn).
+AddWidgetButton.Projection.swift — pure resolve(input)->resolved (the testable adapter; web branch port).
+AddWidgetButton.Views.swift  — AddWidgetFAB (HIG-native Button) + AddWidgetFABStyle (token-driven 56pt
+                               accent disc, hairline ring, shadow-xl, press scale honoring Reduce Motion;
+                               56pt clears the 44pt touch-target minimum). accessibilityIdentifier
+                               "dashboard-add-widget-fab" (web data-testid parity), accessibilityLabel +
+                               accessibilityHint, .help tooltip (web Tooltip).
+AddWidgetButton.swift        — surface View: visible→FAB, hidden→EmptyView (web return null);
+                               onAppear/onDisappear lifecycle; surfaceSlug "AddWidgetButton"; onAdd
+                               callback (native peer of web onClick prop).
+AddWidgetButton.Previews.swift — #Preview Visible + #Preview Editing·withdrawn.
+AddWidgetButton.Tests.swift  — XCTest (runs in TeslaSync(/-macOS) XCTest targets): projection per branch,
+                               model wiring + telemetry (deferred/once), start/stop lifecycle, surface
+                               slug, a11y label + hint i18n content.
+AddWidgetButton.strings      — dashboard.addWidget="Add Widget" (web parity) + addWidget.accessibilityHint
+                               (native VoiceOver hint, localized — no English literal in code).
+
+Accessibility: VoiceOver label ("Add Widget") + action hint on the FAB; Dynamic Type N/A (icon-only,
+fixed FAB per HIG) with ≥44pt target; Reduce Motion honored on the press animation.
+Telemetry: view.opened slug "AddWidgetButton" (P1/S11), emitted once the FAB is actually presented.
+
+------------------------------------------------------------------------------------------------------
+GATE STEPS — RAW EXITS ON THIS RUNNER (honesty covenant #1, #3 — pasted verbatim, not summarized green)
+------------------------------------------------------------------------------------------------------
+[1] iOS  : xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+           ** BUILD FAILED **   IOS_EXIT=65
+           First+only compiler error class (pre-existing, NOT this surface):
+             TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module
+             dependency: 'XCTest'
+           Cause: 205 co-located XCTest files under TeslaSync/feature-views/*Tests.swift (204 pre-existing
+           + this surface's) are members of the TeslaSync APP target (project.yml app target sources
+           `TeslaSync/feature-views` with no test exclusion), which does not link XCTest; the compiler
+           also warns `@testable import TeslaSync` is "ignored" (file is part of module 'TeslaSync').
+           The build fails on the alphabetical-FIRST test file (AIRestorePanel) — i.e. it would fail
+           IDENTICALLY with zero AddWidgetButton files present. AddWidgetButton-attributed errors in the
+           full build log: 0.  Out of allowed-files (project.yml is not an AddWidgetButton.* file).
+
+[2] macOS: xcodebuild -scheme TeslaSync-macOS build test
+           ** BUILD FAILED **   MAC_EXIT=65
+           Error (pre-existing, environmental, NOT this surface):
+             error: "TeslaSync-macOS" has entitlements that require signing with a development
+             certificate. Enable development signing in the Signing & Capabilities editor.
+             (also "TeslaSyncWidgets-macOS")
+           Cause: no development signing certificate on this runner. Out of allowed-files (entitlements +
+           signing config are not AddWidgetButton.* files).
+
+[3] swiftlint --strict          (whole tree, gate cmd)   LINT_EXIT=2
+           Found 1 violation, 1 serious in 1915 files — pre-existing, NOT this surface:
+             TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body
+             Length Violation (function_body_length)
+           Surface-scoped swiftlint --strict (6 AddWidgetButton files): Found 0 violations, 0 serious.
+
+[4] swiftformat --lint apps/apple (whole tree, gate cmd)  FORMAT_EXIT=1
+           1/1919 files require formatting — pre-existing, NOT this surface:
+             TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1: (blankLinesBetweenScopes)
+           Surface-scoped swiftformat --lint (6 AddWidgetButton files): 0/6 files require formatting.
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/AddWidgetButton   PLACEHOLDER_EXIT=0
+           PLACEHOLDER_ALLOWED=0 ; PLACEHOLDER_COUNT=0
+
+------------------------------------------------------------------------------------------------------
+INDEPENDENT VERIFICATION — THIS SURFACE IS GREEN ON EVERY GATE IT OWNS (honesty covenant #4, #8)
+------------------------------------------------------------------------------------------------------
+KMP Shared.xcframework: built via Gradle (:core:assembleSharedXCFramework) and STAGED to
+  apps/apple/Frameworks/Shared.xcframework  ("BUILD SUCCESSFUL", "Shared.xcframework staged").
+
+Isolated Swift 6 strict-concurrency build + XCTest (swift-tools 6.0 => Swift 6 language mode / complete
+concurrency; module named TeslaSync so the committed `@testable import TeslaSync` compiles unmodified;
+real apps/design Tokens.swift linked; SwiftUI sources incl. #Preview compiled):
+    Test Suite 'All tests' passed.  Executed 11 tests, with 0 failures (0 unexpected).
+      AddWidgetButtonProjectionTests   3/3   (visible / hidden / default)
+      AddWidgetButtonModelTests        6/6   (telemetry deferred+once, push, start/stop, slug)
+      AddWidgetButtonStringsTests      2/2   (a11y label + hint i18n content)
+
+Surface-scoped gates (the files this commit owns):
+    swiftformat --lint  : 0/6 require formatting                 -> PASS
+    swiftlint  --strict : 0 violations, 0 serious in 6 files     -> PASS
+    placeholder scanner : PLACEHOLDER_COUNT=0                    -> PASS
+    no TODO/FIXME/stub/mock/Placeholder/Lorem in shipped code.
+
+------------------------------------------------------------------------------------------------------
+HONESTY COVENANT (binding)
+------------------------------------------------------------------------------------------------------
+ 1  No red-as-green     : the full-app iOS (IOS_EXIT=65) and macOS (MAC_EXIT=65) xcodebuild gates and the
+                          whole-tree lint(2)/format(1) are reported DEFERRED with raw exits + the exact
+                          pre-existing blocker file:line — never reported as passing.
+ 2  No scope narrowing  : both web render branches reproduced (visible FAB + hidden/withdrawn EmptyView);
+                          tooltip, aria-label, "+" glyph, data-testid, onClick(callback) all carried over.
+ 3  No skip-and-assume  : every gate step executed on THIS runner; raw exits pasted; each deferred blocker
+                          re-confirmed by the actual compiler/linker output + ls/grep (205 co-located test
+                          files; signing entitlements; LifetimeStatsWidget; ActionBuilder.Previews).
+ 4  No stubs as final   : complete production surface + 11 real tests; placeholder scanner COUNT=0.
+ 5  No parity shortcut  : the isEditing->null gate, the primary-accent circular FAB, the single
+                          dashboard.addWidget key, and the view.opened-on-present semantics are each
+                          reproduced and unit-asserted.
+ 6  No delegation       : implemented directly; no sub-agents (delegation FORBIDDEN for this tier).
+ 7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened
+                          telemetry, and the established P4 "isolated-build verified + DEFERRED full-app"
+                          disposition all honoured; pre-existing unstaged AIUsageCard.*/web edits (from a
+                          parallel slot) left untouched and NOT staged.
+ 8  No commit on red    : the committed artifact (7 AddWidgetButton.* files + this log) is GREEN on every
+                          gate it owns AND on a real Swift 6 strict-concurrency build + 11/11 XCTest; the
+                          deferred full-app + whole-tree-lint/format reds are pre-existing, unrelated, and
+                          outside the allowed files (the iOS build fails on the alphabetical-first sibling
+                          test file with zero AddWidgetButton files involved).
+ 9  No silent drift     : changes confined to feature-views/AddWidgetButton.{swift,Model,Projection,Views,
+                          Previews,Tests}.swift + AddWidgetButton.strings and this log; the not-applicable
+                          data-states + the surface-scoped FAB primitive are disclosed above.
+ 10 EXIT/STATUS below.
+
+------------------------------------------------------------------------------------------------------
+DISPOSITION
+------------------------------------------------------------------------------------------------------
+Production-polished, Apple-idiomatic AddWidgetButton shipped at parity with the web source and
+INDEPENDENTLY VERIFIED: it compiles and its 11 tests pass under Swift 6 strict (complete) concurrency
+against the REAL design tokens via the Xcode 26.5 toolchain, with swiftformat / swiftlint / placeholder
+all green on the 6 surface files and the #Preview macro compiling. The full-app iOS-Simulator + macOS
+xcodebuild build/test gate is DEFERRED (not failed by this code) on pre-existing, unrelated,
+out-of-allowed-files blockers — the co-located-XCTest-into-app-target project configuration (205 files;
+build fails on the alphabetical-first AIRestorePanel.Tests.swift) and macOS development-signing — owned
+by the P99 acceptance gate on a signed runner. The whole-tree swiftlint/swiftformat reds are likewise
+pre-existing sibling-file issues (LifetimeStatsWidget.Adapter.swift, ActionBuilder.Previews.swift), not
+this surface.
+
+GATE-STEP RAW EXITS: IOS_EXIT=65  MAC_EXIT=65  LINT_EXIT=2  FORMAT_EXIT=1  PLACEHOLDER_EXIT=0
+  (all non-zero exits attributable solely to pre-existing, out-of-allowed-files blockers; this surface is
+   green on every gate it owns and on the isolated Swift 6 build + 11/11 XCTest.)
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,215 @@
+=== P4 Shared surface 0109 UsageCard (Apple) ===
+
+Surface:    UsageCard  (diagnostics slug `UsageCard`, P1/S11 view.opened)
+Web source: web/src/components/data-display/UsageCard.tsx  (THE spec — reproduced end-to-end)
+Native out: apps/apple/TeslaSync/shared-surfaces/UsageCard.*
+Date:       2026-06-08
+
+------------------------------------------------------------
+CAPABILITY VERIFICATION (runner)  —  Honesty Covenant #10
+------------------------------------------------------------
+The prompt's capability note: "requires SwiftUI + Swift Charts + MapKit, iOS 18 /
+iPadOS 18 / macOS 15 HIG. If unavailable on the runner -> STATUS=BLOCKED with API
+evidence." Evidence captured on THIS runner:
+
+  $ xcode-select -p
+  /Library/Developer/CommandLineTools
+
+  $ xcodebuild -version
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+  directory '/Library/Developer/CommandLineTools' is a command line tools instance
+  (rc=1)
+
+  $ xcrun simctl list devices
+  xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+
+=> FULL XCODE IS ABSENT (only the Command Line Tools are installed). The two gate
+   steps that drive `xcodebuild ... build test` against the iOS Simulator and the
+   macOS app CANNOT run on this runner. This is the prompt-sanctioned BLOCKED path.
+
+Toolchain that IS present and WAS used to verify the surface:
+  swift     6.3.2 (Apple Swift version 6.3.2, target arm64-apple-macos26.0)
+  swiftlint 0.63.3
+  swiftformat 0.61.1
+  xcodegen  2.45.4
+  pwsh      7.6.2
+  macOS SDK: /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk  (SwiftUI present;
+             offline `swiftc -typecheck` of SwiftUI views succeeds)
+
+------------------------------------------------------------
+PATH / WIRING NOTE  (documented — Honesty Covenant #9 "no silent drift")
+------------------------------------------------------------
+Files are delivered at the prompt's exact native-output path
+`apps/apple/TeslaSync/shared-surfaces/UsageCard.*` (a NEW group; not previously
+present). Registering that new source group is integration/P4-core plumbing OUTSIDE
+this prompt's allowed-files set (allowed: `apps/apple/TeslaSync/shared-surfaces/
+UsageCard.*` + this log). It was therefore NOT edited here. To compile the surface
+into the build on a full-Xcode runner, the P4-core/integration step must add, exactly
+as the sibling `TeslaSync/feature-views` + `TeslaSync/dashboard-widgets` groups are
+already wired:
+
+  apps/apple/project.yml   targets TeslaSync + TeslaSync-macOS  sources:
+      - path: TeslaSync/shared-surfaces
+  apps/apple/.swiftlint.yml  included:  - TeslaSync/shared-surfaces
+  (co-located UsageCard.Tests.swift routed into the TeslaSync(/-macOS) XCTest bundle,
+   the same convention the feature-view *.Tests.swift files use.)
+
+This is the only remaining step to flip the xcodebuild gate from BLOCKED to DONE; it
+cannot be exercised here regardless, because no full Xcode is installed.
+
+------------------------------------------------------------
+PARITY  (web source reproduced — Honesty Covenant #2/#5, no narrowing/shortcuts)
+------------------------------------------------------------
+The web `UsageCard` is a PURE presentational primitive ("no hooks, no API calls, no
+derived state. Every dynamic value comes in via props"). Shared by TWO consumers
+(TeslaApiUsageCard + AiUsageCard). The native AiUsageCard surface
+(TeslaSync/feature-views/AiUsageCard*) already exists and its Views file explicitly
+notes the shared atomic peer "is owned by the P4 component-library bundle (out of
+scope here, and not yet present)" — THIS prompt delivers that peer.
+
+- Data sources: NONE (pure presentational) — content arrives via `UsageCardContent`,
+  the native mirror of `UsageCardProps`. The view is a pure function of that value.
+- Shared components used: NONE (atomic primitive) — built from raw SwiftUI + the
+  P1/S9 design tokens (Color.TS / Font.TS / TSSpacing / TSRadius). No Tailwind ports,
+  no raw hex.
+- Charts / maps: NONE.
+- Composition reproduced section-for-section (web -> native subview):
+    BudgetSection   -> UsageCardBudgetSection   (headline + right caption, clamped
+                       progress track, sub-caption; width clamps to 100% while the
+                       a11y percent stays UNCLAMPED so over-budget overflow is
+                       announced — web `Math.max(0, Math.min(100, pct))` /
+                       `Math.max(0, Math.round(pct))` parity).
+    BandsSection    -> UsageCardBandsSection     (adaptive 3-col grid; icon + uppercase
+                       label, tabular value, sub; intent ring + tint).
+    DetailsSection  -> UsageCardDetailsSection   (adaptive 4-col grid; intent value
+                       colour).
+    TopListsSection -> UsageCardTopListsSection   (adaptive 2-col grid; monospaced
+                       label / tabular value rows).
+    BannerSection   -> UsageCardBannerSection     (icon + bold title + dimmer desc;
+                       intent default `danger`, web parity).
+    FooterSection   -> UsageCardFooterSection     (native flow layout = web `flex-wrap`;
+                       in-app routes -> onNavigate closure; external URLs -> SwiftUI
+                       `Link`; primary/secondary variants; trailing external-link glyph).
+- Intent palette (normal/warn/danger) mapped to the semantic status tokens — the
+  native peer of the web intentBarBg / intentBandRing / intentValueText / intentBanner*
+  class maps.
+
+------------------------------------------------------------
+STATES  (every web-source state renders — no hidden surfaces)
+------------------------------------------------------------
+The web primitive has exactly these branches (it owns no fetch-tier loading/error/
+stale/offline — those live in the CONSUMERS; the native AiUsageCard surface already
+implements them, faithfully matching the web architecture):
+  - populated (any of budget / bands / details / topLists / banner / footer), across
+    all THREE intents (normal / warn / danger)
+  - budget over-budget overflow (pct > 100): clamped bar + unclamped a11y percent
+  - footer internal route vs external URL, primary vs secondary
+  - empty (web `!hasAnything`): friendly muted line, never a blank box
+All are rendered (UsageCard.Previews.swift covers Full/normal, Budget/warn,
+Budget/danger over 100% + banner, Banner/warn, Footer-only, Empty) and unit/render
+tested (UsageCard.Tests.swift).
+
+------------------------------------------------------------
+i18n  (P1/S10 — no English literals in Swift)
+------------------------------------------------------------
+The web primitive holds exactly ONE English literal (the default empty message); every
+other string is a prop the consumer localizes. That literal + the native a11y chrome
+are promoted to the "UsageCard" table via the UsageCardStrings facade
+(NSLocalizedString tableName:"UsageCard", value: fallback):
+  usageCard.empty             = "No data to display yet."   (web emptyMessage default)
+  usageCard.externalLinkHint  = "Opens in your browser"     (VoiceOver hint)
+  usageCard.percent           = "%lld%%"                    (budget a11y value)
+No hardcoded English prose remains in the Swift sources.
+
+------------------------------------------------------------
+ACCESSIBILITY
+------------------------------------------------------------
+- Budget bar: one VoiceOver element; label = budget name + headline + caption; value =
+  (unclamped) percent.
+- Bands / details / top-list rows: combined cell labels via UsageCardAccessibility.
+- Banner: combined status element. Footer links: per-link a11y label + external hint.
+- Dynamic Type: system fonts (Font.TS) + minimumScaleFactor on tabular values.
+- Reduce Motion: the primitive uses NO animations (nothing to gate); decorative icons
+  are accessibilityHidden.
+
+------------------------------------------------------------
+TELEMETRY  (P1/S11 view.opened)
+------------------------------------------------------------
+UsageCard.surfaceSlug == "UsageCard". `view.opened` is emitted once on first appear via
+the injected UsageCardTelemetry seam (default OSLogUsageCardTelemetry; consent-gated +
+redacted in the production adapter). The once-only gate is extracted into the value
+type UsageCardOpenEmitter so it is unit-tested with a spy (no view hosting needed).
+
+------------------------------------------------------------
+FILES  (each < swiftlint 400-line file limit)
+------------------------------------------------------------
+  UsageCard.Model.swift     326   value types, UsageCardContent, intent, i18n facade,
+                                  telemetry seam + once-only emitter, a11y helper
+  UsageCard.swift            95   public UsageCard View + composition + view.opened
+  UsageCard.Views.swift     270   intent->token mapper, Budget/Bands/Details sections
+  UsageCard.Sections.swift  261   TopLists/Banner/Footer/Empty + native flow Layout
+  UsageCard.Previews.swift  154   DEBUG previews per branch
+  UsageCard.strings          22   P1/S10 catalog contribution
+  UsageCard.Tests.swift     231   XCTest: budget math, content guard, footer target,
+                                  a11y, once-only telemetry (spy), per-state render smoke
+Shipping Swift (Model+swift+Views+Sections) = 952 lines vs the 360-line web source —
+SwiftUI is more verbose than Tailwind JSX; no section was dropped or shrunk.
+
+------------------------------------------------------------
+GATE RESULTS
+------------------------------------------------------------
+[iOS]  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+       xcode-select: error: tool 'xcodebuild' requires Xcode (CommandLineTools only)
+       IOS_EXIT=1   -> BLOCKED (no full Xcode / no iOS Simulator on runner)
+
+[mac]  xcodebuild -scheme TeslaSync-macOS build test
+       xcode-select: error: tool 'xcodebuild' requires Xcode (CommandLineTools only)
+       MAC_EXIT=1   -> BLOCKED (no full Xcode on runner)
+
+[lint] swiftlint --strict   (exact repo .swiftlint.yml ruleset, scoped to the surface)
+       Done linting! Found 0 violations, 0 serious in 6 files.
+       LINT_EXIT=0  -> PASS
+       (NOTE: a full-tree `swiftlint --strict` reports 1 PRE-EXISTING, UNRELATED
+        violation in TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+        [function_body_length] — outside this prompt's allowed files; not introduced
+        here and not fixed here.)
+
+[fmt]  swiftformat --lint apps/apple/TeslaSync/shared-surfaces
+       0/6 files require formatting.
+       FORMAT_EXIT=0 -> PASS
+
+[stub] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/UsageCard
+       PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0  -> PASS
+       (also a full directory scan: PLACEHOLDER_COUNT=0)
+
+[type] OFFLINE COMPILE EVIDENCE (compensating for the blocked xcodebuild harness) —
+       swiftc -typecheck -sdk <macosx> -target arm64-apple-macos15.0 -swift-version 6
+       Tokens.swift + UsageCard.{Model,swift,Views,Sections}.swift
+       CORE_TYPECHECK_EXIT=0   -> shipping surface is type-correct under Swift 6 strict
+       Preview bodies (transformed `#Preview` -> funcs, the macro plugin is Xcode-only):
+       PREVIEW_BODY_TYPECHECK_EXIT=0  -> all 6 preview bodies type-correct
+       (UsageCard.Tests.swift uses `@testable import TeslaSync`; it compiles only inside
+        the app module / XCTest target, which requires the blocked Xcode toolchain.)
+
+------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------
+[x] Surface renders all web-source states (populated x3 intents, overflow, footer
+    variants, empty) — previews + render-smoke tests.
+[x] No direct HTTP from the view — pure presentational; content via UsageCardContent
+    (web props). (No P1/S8 holder needed: web source is hook-free by design.)
+[x] Every i18n key from source present in the P1/S10 "UsageCard" catalog (the single
+    web literal + native a11y chrome). No English literals in Swift.
+[x] Accessibility labels on every interactive element (footer links) + combined labels
+    on bands/details/rows/banner + budget value.
+[x] Tests: budget-math + content-guard + footer-target adapters, per-state render
+    smoke, once-only telemetry, a11y label tests.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate EXIT=0).
+[~] EXIT=0 / STATUS=DONE: NOT claimable — the mandated `xcodebuild build test` steps
+    cannot run without full Xcode on this runner. Reporting STATUS=BLOCKED with the
+    platform-capability evidence above, as the prompt prescribes. All runnable gates
+    (swiftlint --strict, swiftformat --lint, placeholder) are GREEN and the surface
+    type-checks offline (core + previews EXIT=0).
+
+EXIT=1
+STATUS=BLOCKED

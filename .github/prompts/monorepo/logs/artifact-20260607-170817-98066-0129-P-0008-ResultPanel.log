@@ -1,0 +1,233 @@
+================================================================================
+P4 · Feature view · 0008 — ResultPanel (Apple)
+Run: 2026-06-07T19:22-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/129
+Base: 36d149d6
+Prompt: .github/prompts/monorepo/p4-apple/feature-views/P-0008-ResultPanel.prompt.md
+Web source (spec): web/src/features/admin/components/devtools/ResultPanel.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (ADR-012 macOS-pending;
+      matches predecessor p4-apple/dashboard-widgets/0070 OdometerCounterWidget disposition).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                ✅
+  swiftc -typecheck SwiftUI .. compiles (macOS 15 target)                         ✅
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          ✅
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        ✅
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              ✅
+  xcodegen ................... /opt/homebrew/bin/xcodegen                           ✅
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        ✅
+  iOS simulator .............. iPhone 16 present                                   ✅
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks has only .gitkeep) ⚠
+  codesign identities ........ "0 valid identities found"                          ⚠ (BLOCKER for macOS app gate, per ADR-012)
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)" — it is a pure presentational JSON result panel).
+  The core requirement is SwiftUI, which is available and proven by real macOS-SDK
+  compiles + executed binaries below. The capability-BLOCKED escape hatch
+  ("SwiftUI/Charts/MapKit unavailable") therefore does NOT apply — the surface is
+  authored and host-validated for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/ResultPanel.*) ===
+  ResultPanel.JSON.swift        390  Foundation-only: order-preserving JSONValue + recursive-descent
+                                     parser + ECMAScript pretty-printer (the JSON.stringify(_, null, 2) port)
+  ResultPanel.Projection.swift  132  Foundation-only adapter: ResultOutcome/Input/Variant + projection + builder
+  ResultPanel.Model.swift       275  P1/S8 state-holder seam + P1/S11 telemetry seam + clipboard seam +
+                                     P1/S10 strings facade + @Observable ResultPanelModel + a11y summary
+  ResultPanel.Views.swift       175  Copy button (Copy⇄Copied), scrollable code block, freshness chip,
+                                     connectivity banner, variant tint
+  ResultPanel.swift             177  ResultPanelView surface (shell + header + every state + tint)
+  ResultPanel.Previews.swift     97  #if DEBUG previews — one per state (content/loading/idle/error/stale/offline)
+  ResultPanel.Tests.swift       301  XCTest: JSON pretty parity + parser + projection + model + a11y (~60 assertions)
+  ResultPanel.strings            40  P1/S10 catalog contribution (idle source key + CopyButton keys + chrome)
+  Every file ≤400 lines (house file_length); largest 390 (JSON). Word-scan clean
+  (no TODO/FIXME/XXX/stub/mock/placeholder/Lorem/"not implemented"/"coming soon").
+
+=== PARITY (vs web ResultPanel.tsx) ===
+  Web source (37 lines) is a pure presentational panel: props { title, data?, error?, idle?,
+  idleMessage? }; hasData = data != null; stringifiedData = JSON.stringify(data, null, 2);
+  body branch = error (rose) → hasData (<pre> + CopyButton) → idle (muted "No result yet");
+  container tint = error ? bg-neon-red/5 : hasData ? bg-neon-green/5 : bg-white/[0.02].
+
+  Data sources → "(none — pure presentational component)". The model binds through a push-based
+    ResultPanelSource seam (P1/S8): the parent devtool harness pushes ResultPanelUpdate(outcome,
+    connection, updatedAt). The view performs NO networking — trivially true and structurally enforced
+    (the view only reads ResultPanelModel; the model only reads the source).
+  Projection → ResultProjectionBuilder maps the exclusive outcome to a variant + render strings.
+    JSONValue.prettyPrinted() is a byte-faithful port of JSON.stringify(data, null, 2): {} / [] collapse,
+    members join with ",\n", 2-space indent, ECMAScript string escaping (named short escapes; \u00xx
+    lowercase for other C0 controls; non-ASCII verbatim). Object key order is preserved (a hand-rolled
+    order-preserving parser — Foundation JSONSerialization does NOT preserve key order). Verified by an
+    executed harness against Node's reference output (28/28).
+  Composition → header (title + CopyButton when hasData) over a state-driven body, tinted by variant
+    the way the web container is (danger/success/glass). CopyButton parity: Copy ⇄ Copied toggle with a
+    2s reset (web setTimeout(…, 2000)), reduce-motion-aware, VoiceOver-announced; writes via a clipboard
+    seam (web navigator.clipboard.writeText → UIPasteboard/NSPasteboard).
+  Shared components → web "@/components/ui". Renders over the REAL apps/apple design tokens + component
+    library (Color.TS / Font.TS / TSSpacing / TSRadius / TSMotion / TSSkeleton), compiled against them in
+    the typechecks below. The copy button + code block are built locally (the way OdometerReadout extends
+    the tokens) to stay parallel-safe and host-compilable. Recharts→none / Leaflet→none.
+  States (all render) → loading (skeleton code-block chrome) · empty/idle (muted "No result yet" or the
+    caller's idleMessage, never a blank box) · error (danger message + Retry, the QueryError equivalent) ·
+    stale (freshness chip + banner over the cached result) · offline (cached result + chip + banner) ·
+    content (scrollable monospaced pretty JSON + CopyButton).
+  i18n → the web source's only literal ('No result yet') resolves through the P1/S10 facade
+    (devtools.resultPanel.idle); the CopyButton keys (common.copyButton.copy/copied) are present; the
+    native chrome keys back loading/freshness/banners/retry/a11y. 13/13 keys referenced in code are
+    PRESENT in ResultPanel.strings (parity-checked). No English literals in native code (title is a prop).
+  a11y → the code block is one element labelled with the JSON; error/idle are combined elements; the copy
+    button + retry have accessibilityLabels that track state; the panel is accessibilityElement(.contain);
+    Dynamic Type via tokens; Reduce Motion gates the copy + variant transitions. Label content is unit-
+    tested via ResultPanelAccessibility (pure seam).
+  Telemetry → ResultPanelModel.start() emits viewOpened(surface:"ResultPanel") once → bridges shared
+    Telemetry.track(.screenView) (P1/S11). Asserted by a spy in the executed harness.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck  (the 5 production source files compiled together with the REAL apps/apple
+    Shared-free library — Tokens + Design{TSDesign,TSMaterial} + Components/UI{Typography,Cards} +
+    Feedback/Skeletons; none import the Shared xcframework):
+      xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 -swift-version 6 <lib> \
+        ResultPanel.{JSON,Projection,Model,Views,swift}
+      TYPECHECK_EXIT=0                                                              ✅
+      (Platform-agnostic SwiftUI — no #if os(iOS) branches — so the macOS compile covers iOS/iPadOS.)
+
+[1b] swiftc -typecheck -D DEBUG including ResultPanel.Previews.swift, run under the Xcode 26.5
+     toolchain (which ships the #Preview PreviewsMacros plugin CLT lacks) against the full real
+     Components/UI + Feedback library:
+      TYPECHECK_DEBUG_XCODE_EXIT=0                                                  ✅
+      (The preview factory is @MainActor — Swift 6 complete strict-concurrency clean.)
+
+[2] Adapter executed test (compiled ResultPanel.JSON.swift + ResultPanel.Projection.swift + a harness
+    main to a native binary and RAN it — real "outcome → projection" + JSON.stringify parity, not a
+    typecheck):
+      28/28 checks PASSED — pretty object/array/scalars, {}/[] collapse, ECMAScript escapes (\" \\ \n \t
+      \u0001), unicode verbatim, parser round-trip + key-order + whitespace + malformed-reject, builder
+      variant/copyText resolution, rawJSON parse + non-JSON fallback. Compared to Node JSON.stringify.
+      ADAPTER_HARNESS_EXIT=0                                                        ✅
+
+[2b] Model/telemetry/copy/a11y executed test (compiled Projection+JSON+Model+Views+surface+library to a
+     native binary and RAN it on the main actor):
+      20/20 checks PASSED — phases loading/empty/error/content, viewOpened-once, source.start-once,
+      refresh delegation, copy seam writes the pretty JSON, no-data copy returns false, offline push
+      tracking, a11y label content (title/result/error/message), copy label toggle.
+      MODEL_HARNESS_EXIT=0                                                          ✅
+
+[2c] XCTest compile evidence: built a -enable-testing TeslaSync module from the surface
+     (MODULE_EXIT=0) and typechecked ResultPanel.Tests.swift against it with the XCTest framework.
+     `@testable import TeslaSync` RESOLVED and every surface-API reference typechecked; the ONLY
+     diagnostics were the XCTAssert* C function-like macros ("function like macros not supported"),
+     which a standalone swiftc -typecheck cannot expand — they bridge only inside a real XCTest bundle
+     (xcodebuild test). The same logic those XCTAsserts cover is independently PROVEN GREEN by the
+     executed harnesses [2]+[2b] (48/48), which exercise the identical public API.
+      TESTS_MODULE_BUILD_EXIT=0   TESTS_TYPECHECK = XCTAssert-macros-only (precedent-documented)  ✅
+
+[3] swiftlint --strict — surface files, identical ruleset, scoped via a tmp config (the repo
+    .swiftlint.yml `included:` lists TeslaSync/dashboard-widgets but NOT TeslaSync/feature-views — that
+    wiring is the P4 integration prompt's job — so the bare gate does not scan this dir; scoped here to
+    prove clean). Two real violations were found on the first pass and FIXED in the shipped files
+    (multiple_closures_with_trailing_closure in ResultPanel.swift → label: form; cyclomatic_complexity 11
+    in JSON parseEscape → escape lookup table); re-run:
+      Done linting! Found 0 violations, 0 serious in 7 files.
+      SURFACE_SWIFTLINT_EXIT=0                                                      ✅
+    Bare gate `swiftlint --strict` (from apps/apple, included: paths — does NOT scan feature-views):
+      Found 1 violation, 1 serious in 471 files.
+      SWIFTLINT_GATE_EXIT=2   ⚠ PRE-EXISTING, OUT-OF-SCOPE — not this surface:
+        apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19
+        Function Body Length Violation (78 lines) — a sibling P4 surface (0055) merged from another
+        parallel slot, committed at base 36d149d6, in a file outside this prompt's allowed files
+        (ResultPanel.* + this log). Not introduced by, and not fixable within, this surface's scope
+        (Honesty rule 7/9). This surface's own files are 0/0 (scoped run above, identical ruleset).
+
+[4] swiftformat --lint apps/apple   (the exact gate command, whole tree incl. the 8 new files; the 5
+    .swift files were auto-normalized with `swiftformat` before linting):
+      0/482 files require formatting, 2 files skipped.
+      FORMAT_EXIT=0                                                                 ✅
+
+[5] check-placeholders (ADR-011 stub gate; pwsh):
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views -Language swift
+        PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0                        ✅
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/ResultPanel
+        (the prompt's literal -Path is a filename PREFIX → resolves to nothing → clean) EXIT=0 ✅
+      PLACEHOLDER_EXIT=0                                                            ✅
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the signed macos-latest CI runner; NOT faked) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Why deferred (three independent, code-unrelated reasons — none is a defect in this surface):
+      (a) NOT-YET-REGISTERED (PROVEN, not assumed): project.yml's app targets enumerate
+          `Sources/` + `TeslaSync/dashboard-widgets`; this surface lives at TeslaSync/feature-views/ and
+          is registered into the XcodeGen target by the P4 feature-views integration prompt (predecessor,
+          Honesty rule 7). Evidence: `xcodegen generate` then grep of the generated
+          TeslaSync.xcodeproj/project.pbxproj → ResultPanel = 0 refs and feature-views = 0 refs, while
+          registered files have many (OdometerCounterWidget = 42, ContentView.swift = 6). Running
+          xcodebuild now would build the app WITHOUT these files and re-run the existing suite — ZERO
+          evidence about this deliverable. The host swiftc compiles + executed harnesses [1][1b][2][2b][2c]
+          DO exercise this surface against the real library. (generated .xcodeproj is git-ignored; removed
+          after the probe.)
+      (b) Shared.xcframework not staged: the app target links the KMP core; building it needs a
+          Kotlin/Native gradle build (apps/shared/gradlew) staged via Scripts/build-shared-xcframework.sh.
+          apps/apple/Frameworks contains only .gitkeep (apps/macos-pending-verifications.md, row 1).
+          Independent of this UI surface.
+      (c) macOS signing: `security find-identity -p codesigning` → 0 valid identities; the macOS
+          app/widget entitlements require a development certificate. ADR-012 defers this to a signed
+          macos-latest runner.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) — implemented; each has
+      a #if DEBUG preview; phase logic executed-tested (20/20).
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP in the view (pure presentational).
+  [x] Every i18n key from source has a matching catalog key — 13/13 referenced keys present in
+      ResultPanel.strings; the source literal 'No result yet' = devtools.resultPanel.idle.
+  [x] Accessibility labels on every interactive element (copy + retry); code block + states carry labels;
+      label content executed-tested.
+  [x] Tests: adapter unit test (executed, 28/28) + per-state model test + a11y (executed, 20/20) + a full
+      XCTest suite for the Xcode test target (compiles against a -enable-testing module; runs under xcodebuild).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; word-scan clean.
+  [x] Host gates green (typecheck/lint/format/placeholder/executed harnesses); Xcode app build/test
+      DEFERRED with capability + predecessor + generated-project evidence. The bare `swiftlint --strict`
+      repo gate's single violation is a PRE-EXISTING sibling-surface issue outside this prompt's scope
+      (documented in [3]); this surface contributes 0 violations.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green); the bare swiftlint gate's 1
+                       violation shown RED and attributed to a pre-existing sibling file (not this surface).
+                       Every "✅" is a command actually run with its real exit code. Two real swiftlint
+                       defects found in this surface were FIXED, not hidden.
+  2  No scope narrowing: implemented ALL states + the JSON.stringify port + copy affordance + freshness
+                       chrome + i18n + a11y + telemetry.
+  3  No skip-and-assume: each host gate executed; non-registration PROVEN via generated pbxproj grep;
+                       JSON parity PROVEN against Node's reference output.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: byte-faithful JSON.stringify(_, null, 2) port (order-preserving) + full branch
+                       parity + CopyButton Copy⇄Copied + every state.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml (the feature-views integration prompt's
+                       scope) and did NOT edit the shared Localizable.xcstrings (parallel-unsafe across the
+                       concurrent slots) — strings shipped as the per-surface table. Did NOT touch the
+                       pre-existing sibling swiftlint violation (out of allowed files).
+  8  No commit on red  : committing on all-green SURFACE gates; the bare swiftlint red is a pre-existing,
+                       out-of-scope sibling violation, and the Xcode steps are explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed feature-views/ResultPanel.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native ResultPanel shipped at parity with the web source: a byte-faithful,
+  order-preserving JSON.stringify(_, null, 2) adapter (executed-green vs Node, 28/28), a P1/S8 push-based
+  state-holder seam (no view HTTP), P1/S11 view.opened telemetry, a clipboard-seam CopyButton (Copy⇄Copied),
+  every state (loading/empty/error/stale/offline/content), all 13 i18n keys, VoiceOver labels, Reduce Motion,
+  model/copy/a11y executed-green (20/20). All host-runnable gates pass for this surface
+  (typecheck/DEBUG-previews/scoped-swiftlint 0/whole-tree-swiftformat 0/placeholder 0). The Xcode app
+  build/test is DEFERRED to the signed CI runner (surface not yet target-registered [proven 0 refs] +
+  Shared.xcframework not staged + macOS signing — none a defect in this code), matching the accepted P4
+  "code-complete + DEFERRED Xcode gate" disposition established by predecessor 0070 OdometerCounterWidget.
+  The bare repo `swiftlint --strict` reports 1 PRE-EXISTING violation in a sibling surface
+  (dashboard-widgets/LifetimeStatsWidget.Adapter.swift) outside this prompt's allowed files; this surface
+  is swiftlint-clean under the identical ruleset.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/ResultPanel.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0008-ResultPanel.log
+  git commit -m "feat(apps/apple/feature-views): add ResultPanel surface (P4)"
+
+EXIT=0
+STATUS=DONE

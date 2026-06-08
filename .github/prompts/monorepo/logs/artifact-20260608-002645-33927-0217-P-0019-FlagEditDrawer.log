@@ -1,0 +1,122 @@
+=== P4 Modal / dialog 0019 FlagEditDrawer (Apple) ===
+Prompt : .github/prompts/monorepo/p4-apple/modals-dialogs/0019-FlagEditDrawer.prompt.md (P4 · modals-dialogs · 0019)
+Web src: web/src/features/admin/components/feature-flags/FlagEditDrawer.tsx  (THE specification)
+Native : apps/apple/TeslaSync/modals-dialogs/FlagEditDrawer.*
+Capability: SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15. Charts/MapKit unused by
+            this surface (the web source draws no chart and no map — it is a controlled JSON form).
+
+ENVIRONMENT (host-runnable toolchain present — capability is NOT the blocker)
+  Darwin 25.5 arm64 · Xcode 26.5 (Build 17F42) at /Applications/Xcode.app
+  Swift 6.3.2 · iOS Simulator SDK 26.5 (deploy 18.0) · macOS SDK 26.5 (deploy 15.0)
+  iPhone 16 simulator available · swiftlint + swiftformat (homebrew) · pwsh 7
+  NOTE: the default xcode-select dir is CommandLineTools; the documented
+        DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer override is used for all SDK steps
+        (apps/macos-pending-verifications.md convention).
+
+ARTIFACT (10 files — all under the allowed path apps/apple/TeslaSync/modals-dialogs/FlagEditDrawer.*)
+  FlagEditDrawer.swift            119  main View: sheet content, NavigationStack + Cancel/Save toolbar, phase switch
+  FlagEditDrawer.Adapter.swift    237  pure core: FlagJSONValue, FlagJSON parse/pretty, FlagEditValidator, a11y
+  FlagEditDrawer.Projection.swift 165  pure phase resolve (loading/error/ready) + mode/connection passthrough
+  FlagEditDrawer.Model.swift      317  P1/S10 facade, P1/S11 telemetry, FlagEditInput/Resolved, FlagEditSource, @Observable model
+  FlagEditDrawer.Views.swift      256  key/value(JSON)/reason field panels (scoped subviews, Text(verbatim)+facade)
+  FlagEditDrawer.Chrome.swift     228  freshness chip, connectivity banner, loading skeleton, load-error, save-error, toolbar buttons
+  FlagEditDrawer.Previews.swift   122  #Preview per state (create/edit/invalid/empty/saving/save-error/loading/load-error/stale/offline/sheet)
+  FlagEditDrawer.Tests.swift      287  Projection + Model XCTest (incl. telemetry, offline gate, stale auto-refresh, reseed)
+  FlagEditDrawer.AdapterTests.swift 152 FlagJSON + Validator + Accessibility XCTest
+  FlagEditDrawer.strings           47  i18n catalog (web-parity keys verbatim + native chrome keys)
+  Swift LOC = 1883 ; total = 1930 lines.
+
+PARITY — every web branch reproduced (web source is the spec)
+  • mode: create (initial==null) vs edit (initial!=null) — title + key-immutability + disabled key field.
+  • value editor: free-form JSON textarea; trimmed-empty => "Value is required."; bad JSON =>
+    "Invalid JSON: {msg}"; else valid. Backend accepts ANY JSON value => parser is .fragmentsAllowed
+    (bare true/42/"x" valid), exactly like browser JSON.parse.
+  • edit seed = JSON.stringify(initial.value, null, 2) reproduced by FlagJSON.pretty (2-space, sorted keys).
+  • canSave = parsed.ok && key.trim>0 && reason.trim>0 && !saving  (FlagEditValidator.canSave, web-faithful).
+  • title: edit => 'Edit flag "{key}"' ; create => 'Create flag'. Footer Cancel + Save flag(loading=saving).
+  • re-seed on open/initial change (web useEffect) => FlagEditModel reseed-on-seedToken.
+  STATES (every one renders — no hidden surface; the web is a controlled form, so the loading/error/
+  connectivity axes are SANCTIONED P4 leaf additions, documented in-code, mapped honestly to a WRITE
+  surface — never fabricated):
+    ready(create/edit form) · loading(edit-seed skeleton) · error(load failure + Retry) ·
+    validation(value empty / invalid JSON / valid; key & reason required) · saving(spinner+disabled) ·
+    save-error(inline retryable banner) · live / stale(Reload + 1x auto-refresh) / offline(Save gated + banner).
+  i18n: web keys VERBATIM (admin.flags.drawer.*, admin.flags.editor.*, common.cancel) + native chrome
+        keys (flagEdit.*). No English literals in Swift (every string via FlagEditStrings facade,
+        Text(verbatim:)). Acceptance: every source key has a catalog entry — see FlagEditDrawer.strings.
+  Telemetry: view.opened with surface slug "FlagEditDrawer" emitted once on presentation (P1/S11).
+  a11y: every interactive control labelled; key field carries an "immutable" hint while editing;
+        value field announces its parse error; Dynamic Type (token fonts) + Reduce Motion respected.
+
+HOST-RUNNABLE GATES (surface-scoped — all GREEN)
+  [1] swiftformat --lint apps/apple/TeslaSync/modals-dialogs
+      -> 0/9 files require formatting.                                            FORMAT_EXIT=0
+  [2] swiftlint --strict (rules = apps/apple/.swiftlint.yml) over the 9 swift files
+      -> Done linting! Found 0 violations, 0 serious in 9 files.                  LINT_EXIT=0
+      (The repo-wide strict run reports exactly ONE violation and it is PRE-EXISTING + UNRELATED:
+       TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length —
+       not a FlagEditDrawer file, outside this prompt's allowed set, neither introduced nor touched here.)
+  [3] check-placeholders.ps1 -Path apps/apple/TeslaSync/modals-dialogs/FlagEditDrawer (pwsh)
+      -> PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0                               PLACEHOLDER_EXIT=0
+  [4] Isolated SwiftPM build (Swift 6 language mode = complete concurrency; REAL generated
+      apps/design/generated/apple/Tokens.swift + signature-faithful TSButton/TSGlassPanel/TSSkeleton stubs)
+      -> Build complete!                                                         SPM_BUILD_EXIT=0
+  [5] Isolated SwiftPM `swift test`
+      -> Executed 41 tests, with 0 failures (FlagJSONParse 5 · FlagJSONPretty 7 · Validator 5 ·
+         Accessibility 2 · Projection 7 · Model 15)                              SPM_TEST_EXIT=0
+  [6] Real iOS 18 typecheck: xcrun --sdk iphonesimulator swiftc -typecheck
+      -target arm64-apple-ios18.0-simulator -swift-version 6 (surface + tokens + stubs)
+      -> no diagnostics (exercises the #if os(iOS) branches:
+         navigationBarTitleDisplayMode / scrollDismissesKeyboard / textInputAutocapitalization). IOS_TYPECHECK_EXIT=0
+  [7] Real macOS 15 typecheck: xcrun --sdk macosx swiftc -typecheck
+      -target arm64-apple-macosx15.0 -swift-version 6
+      -> no diagnostics.                                                          MAC_TYPECHECK_EXIT=0
+
+FULL-APP xcodebuild build/test (the literal prompt gate) — DEFERRED (macOS-pending), NOT failed by this code
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+  This surface is NOT yet enumerated by the app project, and the full-app build is independently broken
+  by pre-existing parallel-merge state — both owned by the P4/P99 acceptance gate per
+  apps/macos-pending-verifications.md. Concrete evidence captured on this host:
+    • project wiring: apps/apple/project.yml sources list dashboard-widgets + feature-views but NOT the
+      brand-new `modals-dialogs` tier. `xcodegen generate` (EXIT=0) then enumerates
+      FlagEditDrawer => 0 references  vs  the wired control AiUsageCard => 60 references.
+      Adding `- path: TeslaSync/modals-dialogs` to the iOS + macOS targets is a one-line wiring step that
+      lives OUTSIDE this prompt's allowed file set (modals-dialogs/FlagEditDrawer.* + this log) and is
+      deliberately left to the acceptance/wiring step (parallel-safe: avoids project.yml merge collisions
+      across the concurrently-generated sibling modals-dialogs surfaces).
+    • pre-existing, unrelated breakage (same as every prior P4 surface): 170 co-located *.Tests.swift in
+      feature-views import XCTest into the app target, `struct DashboardWidgetSize` duplicate-type
+      redefinitions, the unstaged Frameworks/Shared.xcframework, and macOS development-signing.
+  => The full-app gate is RED only on code this commit neither introduces nor touches; the FlagEditDrawer
+     surface itself is GREEN on a real isolated Swift 6 strict-concurrency build + 41/41 tests + real
+     iOS-18 AND macOS-15 swiftc -typecheck. This is the repo's sanctioned "code-complete + DEFERRED Xcode
+     gate" disposition (see apps/macos-pending-verifications.md; matches p4-apple ToolCard / AlertMessageEditor
+     / FSMTimelineChart).
+
+HONESTY COVENANT
+  1  No red-as-green : the deferred full-app xcodebuild is reported AS deferred with evidence, never as a pass.
+  2  No scope narrowing: every web branch reproduced; the prompt's full state list rendered (loading/empty/
+                         error/stale/offline mapped honestly onto a write form as documented P4 leaf states).
+  3  No skip-and-assume: each gate was executed; real exit codes + counts pasted above (xcodegen actually run).
+  4  No stubs as final: complete implementation — no TODO/stub/mock/placeholder/Lorem (placeholder gate = 0).
+  5  No parity shortcuts: SI/units N/A; JSON parse/pretty + canSave ported to match the web arithmetic, tested.
+  6  No delegation    : authored directly; no sub-agent delegation (prompt forbids delegation).
+  7  No predecessor bypass: binds P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry.
+  8  No commit on red : the COMMITTED artifact is GREEN on every host gate + a real isolated Swift 6 build+test;
+                        the deferred full-app gate is RED only on pre-existing, unrelated surfaces.
+  9  No silent drift  : changes confined to apps/apple/TeslaSync/modals-dialogs/FlagEditDrawer.* + this log.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic FlagEditDrawer shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it builds and its 41 tests pass under the app's own Swift 6 strict-concurrency
+  rules against the REAL design-system tokens, and it type-checks against BOTH the iOS 18 and macOS 15
+  SDKs; swiftlint --strict / swiftformat --lint / placeholder gate all green, 0 opt-outs. The full-app
+  iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): the new
+  modals-dialogs tier is not yet wired into project.yml (a one-line step outside this prompt's allowed
+  files) and the full-app build carries pre-existing parallel-merge collisions — both owned by the
+  P4/P99 acceptance gate on a signed macos-latest runner per apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

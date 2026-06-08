@@ -1,0 +1,112 @@
+I'll start by exploring the repository structure and understanding what exists, then check tool availability.
+
+Key findings: web source exists, `apps/apple/TeslaSync/` exists, swiftlint/swiftformat/swift available, but **xcodebuild requires full Xcode (only CommandLineTools installed)**. Let me explore the existing native patterns and the web source.
+
+A well-established pattern exists with hundreds of feature-view files. Let me check if `SpeedGearPanel.*` already exists and find the closest sibling templates (GForcePanel, PedalUsage, SummaryStats are web siblings).
+
+SpeedGearPanel doesn't exist yet. Let me find the sibling panels using glob (the `&&` short-circuited).
+
+None of the driving-dynamics siblings are ported yet — SpeedGearPanel is first in its family. Let me study the canonical 7-file pattern using `AcDcStatsPanel` (a sibling "Panel") and the project config.
+
+Excellent — this is a high-quality, consistent 7-file pattern. Let me read the remaining template files (Views, Previews, Tests, strings) and the shared infrastructure they reference.
+
+Now let me read the Tests pattern and locate the shared design infrastructure (TSGlassPanel, Color.TS, Font.TS, TSSpacing, etc.) plus the project config.
+
+project.yml is at the `apps/apple` level. Let me read it and locate the shared `TS*` design infrastructure.
+
+Now I understand the build structure. Let me examine the shared design tokens, key components (GlassPanel, FadeIn, Badge, Skeleton, Button), and the unit/measurement system for speed conversion.
+
+Let me read the core building blocks I'll need: design tokens, GlassPanel, Badge, FadeIn, Skeleton, Button, MeasurementSystem, and UnitFormatters.
+
+Let me read the unit formatters and find how existing feature-views convert SI speed (m/s) to display, plus the GlassPanel/FadeIn/Skeleton/Button components.
+
+There's precedent for speed conversion. Let me examine the `Units`/`UnitPreferences` helper and the driving-feature conversion pattern (`DrivingUnitMath`, `speedUnit.convert(mps:)`).
+
+`DrivingPerformanceCards` (P4·0055, same feature family) is the ideal precedent — it has the exact SI speed conversion I need. Let me read its full structure plus the web types and `fmtNumber` default.
+
+Let me read the remaining DrivingPerformanceCards files (Views, Previews, strings) and the web type/format details for exact parity.
+
+I have the full template pattern. Let me confirm exact parity details: web `fmtNumber` default, the `MotorSnapshot`/`Drive` types, and the `TSGlassPanel`/`TSFadeIn` APIs.
+
+I now have the complete pattern. Let me confirm remaining details: the `MotorSnapshot` field semantics, how the web parent passes `speedUnit`, the lint/format configs, and tool availability (pwsh, placeholder script).
+
+`pwsh` IS available, so the placeholder gate can run. The web test confirms `toSpeedDisplay = convertSpeedFromSI` with unit `'mph'`/`'km/h'`. Let me read the web test (to mirror its regression assertions), the placeholder patterns, and the `TSGlassPanel` API.
+
+`pwsh` is available. The web test confirms exact regression invariants I must reproduce (single-conversion: 44.704 m/s→"100" mph, avg→"40", null-coerce→"50"). Let me verify the test-file build convention (how `*.Tests.swift` in feature-views compiles), check for name collisions, read the placeholder script, and confirm `swiftc` can compile SwiftUI here.
+
+Critical finding: **`swiftc` can typecheck SwiftUI** (EXIT=0) against the CommandLineTools SDK — so I can compile-verify my code even without Xcode. The `*.Tests.swift`-in-feature-views convention is established (100 existing files), so I'll follow it. Let me read the placeholder script, `TSGlassPanel`, and confirm no name collisions, then write the plan.
+
+The placeholder gate is **case-insensitive** — I must avoid "todo/fixme/xxx/placeholder/coming soon/lorem ipsum/not implemented" anywhere in `.swift` files (comments included). No name collisions for my prefixed types. Let me locate the `.tsGlassPanel()` modifier and confirm the shared UI layer is `Shared`-framework-free (so I can compile-verify).
+
+I now have everything needed: complete pattern understanding, exact parity invariants, verified tooling. `swiftc` can typecheck SwiftUI, `pwsh` runs the placeholder gate, but **`xcodebuild` needs full Xcode (only CommandLineTools present)** — that's the one capability gap. Let me set up tracking and write the plan.
+
+Now I'll write the Adapter (pure Foundation logic core).
+
+Now the Model (state-holder seam, telemetry, i18n facade).
+
+The create call dropped the path. Let me retry.
+
+Now the main surface view.
+
+Now the Views file (subviews + all states + tone→token mapping).
+
+Now the Previews and strings.
+
+Now the comprehensive Tests file — reproducing the exact web-test regression invariants plus adapter/projection/model/a11y coverage.
+
+All 7 files written. Now the verification phase. First, the pure-logic compile-and-run harness reproducing the exact web-test invariants (the highest-value correctness check).
+
+Top-level code requires the file be named `main.swift`. Let me rename and rerun.
+
+All pure-logic invariants PASS — the single-conversion regression, em-dash, null-coercion, power, phases, and accessibility all hold against the real adapter. Now let me typecheck the SwiftUI layer. First I'll map the shared-dependency island (which files import the unavailable `Shared` framework).
+
+My files only depend on `Shared`-free tokens/components. Let me typecheck the production SwiftUI island (my 4 shipped files + their real shared deps).
+
+Production SwiftUI island typechecks clean (EXIT=0). Now the DEBUG previews — I'll typecheck with `-D DEBUG` against the broader UI component set (resolving the shared previews' cascade).
+
+The `#Preview` failure is a **macro-plugin/toolchain limitation** (the `PreviewsMacros` plugin ships with Xcode) — it errors first on the repo's own `Badges.swift`, confirming my previews use identical, valid syntax. To still verify my preview *bodies* typecheck, I'll compile an equivalent probe (preview constructions as plain functions) against the production island.
+
+Preview bodies typecheck (EXIT=0); the `#Preview` macro itself needs the Xcode toolchain (the documented gap). Now the real repo gate tools — format, lint, placeholder scan. First swiftformat (in place on my files), then verify.
+
+swiftformat adjusted 1 file (5 were already clean). Let me confirm `--lint` passes, run swiftlint `--strict`, and re-verify compile+logic after formatting.
+
+Both clean: **swiftformat --lint EXIT=0**, **swiftlint --strict 0 violations**. Let me re-verify compile + logic still pass post-format, then run the placeholder gate.
+
+Both pass post-format. Now the placeholder gate. The official `-Path .../SpeedGearPanel` is a non-existent prefix (`Test-Path` → scans nothing). I'll run an **honest** scan over a temp dir of exactly my 7 files, plus the literal gate command for the log.
+
+All gate checks green: placeholder **COUNT=0/EXIT=0**, no forbidden tokens. Now let me capture the actual `xcodebuild` capability evidence (the one genuine blocker) for the log.
+
+`xcodebuild`/simulator confirmed unavailable (only CommandLineTools). But `xcodegen` IS installed — I can generate the project to prove my files are wired into the build targets. Let me confirm the generated project is git-ignored, then generate and verify inclusion.
+
+Project generated (EXIT=0, git-ignored). Let me prove my files are wired into the build targets.
+
+All 7 files are wired into the build targets identically to the sibling `AcDcStatsPanel`. Let me clean up generated artifacts and check the log directory/format.
+
+The sibling `AcDcStatsPanel` (0096) reached STATUS=DONE by running a **real isolated Swift build+test** of the surface (its full XCTest suite) against the real design system, deferring only the full-app xcodebuild gate. I can match that bar: I'll assemble an isolated SwiftPM package (library module named `TeslaSync`) and run my actual `*.Tests.swift` via `swift test`.
+
+SwiftPM's default debug config activates `#if DEBUG` previews in the *dependency* copies (Cards/Typography), which need the Xcode-only macro plugin. Building in release excludes `#if DEBUG`. Let me retry with `-c release`.
+
+Let me check whether XCTest is even available without Xcode, and strip the DEBUG-preview blocks from the dependency copies so a debug build can link.
+
+Confirmed: CommandLineTools lacks the `XCTest` module + `xctest` runner (Xcode-only) — so the literal XCTest bundle and full-app `xcodebuild` cannot run here (the documented capability gap). The library itself **compiled clean in the SwiftPM release build**. To get real execution evidence for the `@MainActor` state-holder tests too, I'll run them via an XCTest-free harness against the real Model.
+
+Just an actor-isolation entry-point issue. Let me wrap the call in `MainActor.assumeIsolated`.
+
+All 16 model state-holder assertions PASS too — every behavior in `SpeedGearPanel.Tests.swift` now has real execution evidence. Let me calibrate the DONE-vs-BLOCKED convention by checking why the 8 sibling surfaces are BLOCKED (mine has no charts/maps, so it's fully portable).
+
+The convention is now unambiguous: siblings that said **DONE had a full Xcode toolchain** (they ran `xcodebuild`/iOS-sim, getting exit 65 from *pre-existing* breakage). **This runner has no Xcode at all** (CommandLineTools only) — so the required Apple build/test capability (xcodebuild, iOS 18 simulator, XCTest) is genuinely **unavailable**, which is precisely the prompt's `→ STATUS=BLOCKED with API evidence` trigger. I've maximized every runnable check. Let me generate the gate log with real captured output.
+
+Let me review the captured log so far before appending the final disposition.
+
+Real, honest output captured throughout. Now the final disposition section ending with `EXIT`/`STATUS`.
+
+Log complete (226 lines, ends `EXIT=1` / `STATUS=BLOCKED`). Let me clean up temp artifacts and review git state before committing.
+
+Git status is clean and scoped — my 7 files + the log are untracked; the 2 modified `web/*` files are pre-existing and unrelated (I won't touch them). Let me stage only my files and commit per the prompt.
+
+Committed (`c5806d04f`) with exactly my 7 files + the log; the pre-existing `web/*` changes were left untouched. Let me verify the commit contents and finalize tracking.
+
+All work is complete and committed. Let me update the session plan to reflect the final status.
+
+Task complete. Here's the summary.
+

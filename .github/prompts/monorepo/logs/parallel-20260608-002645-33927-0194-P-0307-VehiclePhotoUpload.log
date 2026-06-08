@@ -1,0 +1,128 @@
+I'll start by understanding the task: ship a native Apple/SwiftUI version of `VehiclePhotoUpload`. First, let me assess runner capability and explore the repo structure, since the prompt mandates STATUS=BLOCKED with evidence if the Apple toolchain is unavailable.
+
+
+
+Key finding: `xcodebuild` reports **Xcode is not installed** (only Command Line Tools at `/Library/Developer/CommandLineTools`). But `swift` 6.3.2, `swiftlint`, and `swiftformat` ARE present, and the Apple app exists. Let me gather hard capability evidence and study the web source + Apple app patterns before deciding.
+
+Now let me read the API hook driving the data and explore the Apple app's existing patterns (feature-views, P1/S8 state holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics).
+
+The `feature-views` directory has an established multi-file pattern (`.Adapter`, `.Model`, `.Previews`, etc.). Let me study a complete reference set and locate the P1 shared layers (state holders, tokens, i18n, diagnostics).
+
+A mature 171-surface pattern exists: each has `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`. Let me read a complete reference set to internalize the conventions.
+
+Excellent architecture. Let me read the remaining reference files plus the shared design-token and i18n layers.
+
+Now the test pattern and shared design system. Let me read the Tests file and locate the shared tokens/components (TSGlassPanel, TSButton, Color.TS, etc.) and any existing ConfirmDialog/Toast/Spinner natives.
+
+Let me pin down the exact shared component/token definitions I'll reuse (GlassPanel, Button, Spinner, plus any ConfirmDialog/Toast natives) and the token palette.
+
+No native ConfirmDialog/Toast yet — I'll need to map those to idiomatic patterns. Let me find how other interactive feature-views handle confirm/delete/toast/mutations, and locate the token definitions.
+
+Let me locate the token definitions and study the closest interactive references (toast + confirm + mutation): PrivacySection and an Actions file.
+
+Found the modeling references. Let me read the token definitions and the toast/confirm/action patterns from PrivacySection and BackupActionsCard.
+
+The tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read it to get exact token names.
+
+Now the toast + confirm + action modeling. Let me study PrivacySection and BackupActionsCard (action+toast+confirm surfaces).
+
+I have the architecture down. Now let me rigorously verify the build capability — whether the CLT-only toolchain can typecheck SwiftUI/Charts/MapKit, whether XcodeGen exists, and whether simulators exist. This determines DONE vs BLOCKED.
+
+Decisive findings:
+- **SwiftUI + Charts + MapKit + PhotosUI typecheck PASSES** against the macOS SDK with the CLT toolchain (real compile verification is possible).
+- **xcodebuild/iOS-simulator are genuinely unavailable**: only Command Line Tools (no Xcode), `iphonesimulator` SDK missing, `simctl` missing.
+
+So the `xcodebuild` gate steps cannot pass → terminal **STATUS=BLOCKED** is the honest outcome per the prompt's capability clause. But per the Honesty Covenant (no scope-narrowing, no stubs), I'll still implement the complete production surface and verify everything the runner *can* (macOS-SDK typecheck of the logic core, swiftlint --strict, swiftformat --lint, placeholder check). Let me set up tracking and read the remaining shared signatures.
+
+Let me study an interactive surface's view + async-action model (BackupActionsCard) and the project layout.
+
+I now understand the full async-action + toast + confirm patterns. Let me check the project/module layout (for typecheck strategy), a `confirmationDialog` view idiom, and the placeholder-check script.
+
+`pwsh` IS available, and the feature-views are part of the `TeslaSync` module. Let me read the forbidden placeholder patterns and a toast-view render idiom before writing.
+
+I have everything needed. Let me read the lint/format configs (to pass `--strict`), then write the implementation.
+
+I now have a complete understanding of the architecture, tokens, lint/format rules, and forbidden patterns. Let me write the production surface, starting with the pure Adapter core.
+
+Let me typecheck the Adapter in isolation immediately for fast feedback, then write the Model.
+
+Adapter typechecks clean. Now the Model (seams, view-model, telemetry, i18n facade) — pure Foundation/Observation/OSLog.
+
+Adapter + Model typecheck clean. Now the SwiftUI subviews.
+
+Now the main surface view with file importer, drop routing, and confirm dialog.
+
+Now the previews and strings catalog.
+
+Now the comprehensive test suite.
+
+All 7 surface files are written. Let me auto-format, lint, and typecheck. First swiftformat + swiftlint on the new files.
+
+swiftformat passes. swiftlint --strict found 4 issues: three **file-length** violations (>400 lines, since `--strict` promotes the 400 warning to an error) and one **trailing-closure** on `dropDestination`. I'll split the large files along the repo's existing conventions (`.Projection`, `.Sources`, `.Chrome`, `.ModelTests`) and fix the closure syntax. Let me check current line counts.
+
+Let me read the formatted Model.swift to split it precisely.
+
+I'll reorganize into the repo's conventional file splits. Let me delete the three oversized files and recreate them split, fixing the closure syntax.
+
+Now the Views (dropzone/preview) with fixed `dropDestination`, and a Chrome file for header/states/toast.
+
+Now fix the `confirmationDialog` in the main view to use labeled closures (avoid the trailing-closure rule).
+
+Now split the tests into pure (`.Tests.swift`) and model (`.ModelTests.swift`).
+
+All files re-split. Let me re-format, then run swiftformat --lint, swiftlint --strict, and check line counts.
+
+swiftformat passes and all files are <400 lines, but swiftlint flags line 112 — swiftformat likely rewrote a call back into trailing-closure form. Let me inspect.
+
+The flag is `removeButton`: an inline `action:` closure literal *plus* a trailing `label:`. The repo's convention (BackupActionsCard) uses the fully-labeled `action:`/`label:` form. Let me apply that.
+
+Both swiftformat --lint and swiftlint --strict now pass with **0 violations**. Now the placeholder/stub gate. Let me check how the script resolves its `-Path` and run it against the new files.
+
+The script treats a non-existent path as "clean" — the gate's `-Path …/VehiclePhotoUpload` (a prefix, not a dir) would scan nothing. To honestly verify, I'll scan my actual files in a temp dir and grep for forbidden words.
+
+Placeholder gate clean (COUNT=0) and no forbidden words. Now the most important honest check: compile the SwiftUI views against the **real** shared components on the macOS SDK. Let me first confirm the four pure files compile together, then gauge the shared-component dependency surface.
+
+Pure core compiles. Components only import system frameworks. Let me attempt a focused SwiftUI typecheck of my views against the real shared component library + tokens on the macOS SDK.
+
+Zero errors reference my files — the failure is `UnitFormatters.swift` needing `UnitPreferences`/`TSUnitsKey` from elsewhere. Let me trim to the minimal real dependency set my views actually use and iterate.
+
+`UnitPreferences` lives in `Sources/SharedFacade`. Let me compile only the specific component files my views use + tokens + my files — a precise, low-noise signal.
+
+My 8 non-test SwiftUI files typecheck cleanly against the **real** design-system components on the macOS SDK (`MIN_TYPECHECK_EXIT=0`). Now let me verify the test files compile against the real types (stripping the cross-module `@testable import` to compile them in-module with XCTest).
+
+Only error is `no such module 'XCTest'` (XCTest requires Xcode; absent on a CLT-only runner). No other errors surfaced. To still verify my test bodies against the real types, I'll compile them with a minimal local XCTest shim (a throwaway verification harness, not shipped).
+
+The strip removed Foundation (which XCTest re-exports). Let me replace `import XCTest` with `import Foundation` instead of deleting it.
+
+Test files typecheck cleanly against the real types (`TESTS_SHIM_TYPECHECK_EXIT=0`). My verification ceiling on this runner is fully green. Now let me run the **actual gate commands** to capture real exit codes for the log, starting with the xcodebuild steps (the genuine blockers) and repo-wide format/lint.
+
+Both xcodebuild steps fail as expected (`IOS_EXIT=1`, `MAC_EXIT=1`) — xcodebuild requires full Xcode. Now the repo-wide swiftformat/swiftlint gate steps and the placeholder step.
+
+Repo-wide swiftformat flags **one pre-existing** violation in `ActionBuilder.Previews.swift` — another surface's file, outside this prompt's allowed-files (`VehiclePhotoUpload.*` only). My files pass (0/10). Let me confirm I didn't touch it, then run repo-wide swiftlint and the placeholder step.
+
+Confirmed: my surface is the 11 untracked `VehiclePhotoUpload.*` files. The `AIUsageCard.*`/web modifications and the `ActionBuilder.Previews.swift` swiftformat violation are **pre-existing** in this shared workspace — outside my prompt's allowed-files. Let me run repo-wide swiftlint to capture its real status (time-boxed).
+
+Repo-wide swiftlint found 1 violation across 1919 files. Let me identify it (my scoped files already passed, so it should be pre-existing).
+
+The repo-wide swiftlint violation is pre-existing in `LifetimeStatsWidget.Adapter.swift` (a dashboard-widget, not my file — 0 matches for VehiclePhotoUpload). Now the placeholder gate step (exact gate path + real scoped scan).
+
+All gate steps captured. Placeholder gate is clean (`PLACEHOLDER_COUNT=0`). Now let me locate the log directory and check existing P4 logs for format, then write the honest BLOCKED log.
+
+Let me view the header of an existing P4 log to match the established format.
+
+I now understand the established log format. Let me get final line counts and re-confirm the scoped checks are still green after my edits, then write the log.
+
+Final state is green (0/10 format, 0 lint, 0 typecheck errors, all files ≤305 lines). Let me cross-check that every i18n key used in code has a catalog entry (and no orphans), then write the log.
+
+Perfect 1:1 i18n mapping — 32 keys in code, 32 in catalog, zero missing, zero orphans; all 14 web-source strings covered. Now I'll write the honest, evidence-backed log.
+
+The log is written. Let me reconsider the commit: the Honesty Covenant (#8 "No commit on red", #1 "No red-as-green") is binding, and the build/test gate genuinely cannot reach green on this Xcode-less runner. So I will **not** fabricate a green commit. Let me do a final review: confirm the test-file naming matches the sibling convention (so routing is handled), verify no stray temp files, and confirm the log terminator.
+
+All conventions match the 170 sibling surfaces. Let me quickly confirm how `.Tests.swift` files in `feature-views/` are routed (to be sure my test files won't break the app-target build on a real runner), by reading the app-target source rules.
+
+All conventions match the 170 sibling feature-views exactly (co-located `.Tests.swift`, identical structure). The test-file routing is a repo-wide project.yml concern identical for every sibling — outside this prompt's allowed-files. Let me do a final coherence check of the edited main view, then finalize.
+
+The main view is coherent and already passed all scoped checks. Let me finalize todos and clean up temp probe files.
+
+All work is complete and verified to this runner's ceiling. Final status:
+

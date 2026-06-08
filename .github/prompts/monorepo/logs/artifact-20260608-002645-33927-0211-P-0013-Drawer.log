@@ -1,0 +1,277 @@
+================================================================================
+P4 · Modal / dialog · 0013 — Drawer (Apple)
+Run: 2026-06-08T03:00-0700   Host: Darwin arm64 (macOS 26.5)   Repo: ev-dev-labs/teslasync
+Base: c9c6fdb9f
+Prompt: .github/prompts/monorepo/p4-apple/modals-dialogs/P-0013-Drawer.prompt.md
+Web source (spec): web/src/components/ui/Drawer.tsx (91 lines)
+Mode: code-complete + host-validated (isolated SwiftPM build+test, real iOS-18 +
+      macOS-15 swiftc -typecheck, swiftlint --strict / swiftformat --lint /
+      placeholder gate, xcodegen enumeration). Full-app Xcode scheme build/test is
+      DEFERRED (ADR-012 macOS-pending) on PRE-EXISTING, UNRELATED app-target blockers
+      — matching predecessors 0010 ToolCard / 0180 AlertMessageEditor / 0231
+      FSMTimelineChart.
+================================================================================
+
+=== PREFLIGHT ===
+  Predecessors (Depends on) — verified present + consumed in THIS tree:
+    P1/S9 design tokens ....... apps/design/generated/apple/Tokens.swift (Color.TS,
+                                Font.TS, TSSpacing, TSRadius, TSMotion) present; consumed.
+    P1/S9 material/motion ..... Sources/Design/TSDesign.swift, TSMaterial.swift,
+                                Sources/Components/Motion/Motion.swift present; consumed.
+    P1/S10 i18n ............... per-surface NSLocalizedString table pattern (the
+                                FSMTimelineChart precedent) present; reproduced as the
+                                "Drawer" table (Drawer.strings + DrawerStrings facade).
+    P1/S8 state holders ....... LoadableState/Resource freshness envelope (ADR-013)
+                                present; reproduced as the DrawerSource seam + phases.
+    P1/S11 diagnostics ........ os_log "view.opened" seam (ToolCard/FSM precedent)
+                                present; reproduced as DrawerTelemetry + DrawerSurface.slug.
+    P4 core (theme/nav/live/cache/state-holders) ... present (Sources/, SharedFacade/).
+  Clean-tree note: the working tree carried 9 PRE-EXISTING modified files before this
+    prompt began (apps/apple/TeslaSync/feature-views/AIUsageCard.* ×7 +
+    web/src/features/admin/{components/devtools/FleetApiSection.tsx,pages/BackupRestorePage.tsx}).
+    They are NOT touched by this prompt and are NOT staged in the commit below.
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                  OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override         OK
+                               (active dir was /Library/Developer/CommandLineTools;
+                               overridden non-destructively — no sudo / no xcode-select -s).
+  iOS simulator SDK .......... iPhoneSimulator 26.5 (deployment target iOS 18.0)     OK
+  macOS SDK .................. MacOSX 26.5 (deployment target macOS 15.0)            OK
+  iOS simulator device ....... iPhone 16 present + booted (simctl via Xcode)         OK
+  swiftlint .................. 0.63.x                                               OK
+  swiftformat ................ 0.61.x                                               OK
+  xcodegen ................... present                                              OK
+  pwsh (placeholder gate) .... 7.x                                                  OK
+  JDK (Kotlin/Native) ........ OpenJDK 17.0.19                                      OK
+  Shared.xcframework ......... BUILT + staged this run (Gradle :core:assembleSharedXCFramework
+                               BUILD SUCCESSFUL in 16m04s; release XCFramework staged to
+                               apps/apple/Frameworks/Shared.xcframework)                  OK
+  codesign identities ........ 0 valid (signed macOS archive deferred to P99, ADR-012)  WARN
+
+  Capability verdict: SwiftUI is available and PROVEN by REAL iOS-18 + macOS-15 SDK
+  `swiftc -typecheck` AND a passing 26-test XCTest run (below). The web source uses
+  NO Recharts and NO Leaflet (prompt "Charts/maps used: none"), so neither Swift
+  Charts nor MapKit is required by this surface. The capability-BLOCKED escape hatch
+  therefore does NOT apply; the surface is authored and host-validated for real.
+
+=== SURVEY ===
+  Web source of truth — web/src/components/ui/Drawer.tsx:
+    A portal-rendered, purely-presentational slide-in side panel. Props:
+      open, onClose, title?, children, footer?, side ('left'|'right', default 'right'),
+      className?.
+    Behaviour: role="dialog" aria-modal="true" aria-label={title || 'Panel'}; a fading
+      backdrop scrim (bg var(--surface-overlay) + blur) that closes on click
+      (aria-hidden); a panel that springs in from the side (x 100%→0 right / -100%→0
+      left); a titled header (rendered only when `title`) with an `<h3>` + a close
+      `<button aria-label="Close"><X/></button>`; a scrollable flex-1 body (children);
+      an optional footer over an overlay surface; a focus trap (focus first focusable,
+      Tab/Shift-Tab cycle), Escape-to-close, and focus restore on unmount.
+    Literal strings: just the `aria-label={title || 'Panel'}` fallback + close
+      `aria-label="Close"`. No data hooks; no loading/empty/error/stale/offline of its
+      own (those belong to whatever `children` it hosts). The prompt itself records
+      "Data sources: (none — pure presentational component)".
+  Existing native code inspected (to match conventions, not duplicated):
+    Sources/Components/UI/Overlays.swift — the ATOMIC `tsDrawer` modifier + TSDrawerEdge
+      (the P4 component-library bundle's scope, OUT of scope here; NOT modified/redeclared).
+    TeslaSync/feature-views/{ToolCard,FSMTimelineChart}.* — the established per-surface
+      file layout (Telemetry/Model/Adapter/Views/Previews/strings/Tests), telemetry seam,
+      P1/S10 NSLocalizedString table facade, and the ADR-013 freshness envelope.
+    Sources/Components/Feedback/{States,Skeletons}.swift — TSSkeleton (used), the
+      ContentUnavailableView empty treatment, the QueryError retry treatment (mirrored).
+
+=== REASONING ===
+  Chosen approach: a self-contained, model-driven SwiftUI surface `Drawer(model:)` that
+    reproduces the web component's composition + behaviour (edge-anchored sliding glass
+    panel over a tap-to-dismiss scrim; titled header with close; scrollable body; footer)
+    AND hosts a representative data-bound body so EVERY prompt-required state renders
+    INSIDE the panel — loading (skeleton rows), empty (ContentUnavailableView), error
+    (retry), stale (chip + one auto-refresh), offline (cached body + chip), content
+    (label/value rows). Binding flows through a `DrawerSource` seam (P1/S8); the view
+    never networks. Dismissal (web `onClose`) is one path shared by the scrim tap, the
+    close button, the footer action, and the Escape key (the close button's
+    `.cancelAction` shortcut). Presentation moves VoiceOver focus onto the panel (web
+    "focus the first focusable") and marks it `.isModal`. Motion honours Reduce Motion.
+  Rejected: (a) porting the web Tailwind classes / framer-motion spring literally —
+    replaced with platform materials + tokens + a native spring/transition per ADR HIG;
+    (b) re-using/!redeclaring the atomic `tsDrawer` modifier (out of scope, and a name
+    collision) — the surface composes its own chrome instead; (c) a generic
+    `Drawer<Content,Footer>` with no model — it could not satisfy the prompt's mandatory
+    loading/empty/error/stale/offline states (the web container delegates those to its
+    children), so the surface binds a `DrawerModel` that drives them, the same way the
+    FSM/feature-view precedents widen a web content/empty split into the full envelope.
+
+=== CHANGES ===
+  NEW — apps/apple/TeslaSync/modals-dialogs/ (the surface; all within Allowed files):
+    Drawer.Telemetry.swift   56  P1/S11 seam: DrawerTelemetry + OSLogDrawerTelemetry
+                                 (redaction-safe os_log "view.opened") + DrawerSurface.slug.
+    Drawer.Adapter.swift    278  Foundation-only core: DrawerEdge(web:) (side→leading/
+                                 trailing, 'right' fallback), DrawerContentItem (the web
+                                 children), DrawerLoadStatus/Phase/Connection, DrawerUpdate,
+                                 DrawerProjection, DrawerLocalization, DrawerProjector
+                                 (project / resolvePhase keeping cached rows during reload /
+                                 aria-label title||Panel / VoiceOver summary / count fmt).
+    Drawer.Model.swift      276  DrawerStrings (P1/S10 "Drawer" table facade) + DrawerSource
+                                 seam (P1/S8) + @MainActor @Observable DrawerModel
+                                 (present/dismiss=onClose, phases, emptyMessage override,
+                                 stale auto-refresh once + re-arm, offline keeps cache,
+                                 retry, view.opened once per presentation) + InMemoryDrawerSource.
+    Drawer.Views.swift      313  Token-driven chrome: scrim, header(title+freshness chip+
+                                 close w/ .cancelAction Escape), connectivity banner,
+                                 loading(skeleton)/empty(ContentUnavailableView)/error(retry)/
+                                 content(label-value rows)/footer.
+    Drawer.swift            137  Composed Drawer View: edge-aligned ZStack scrim+panel,
+                                 slide+fade transitions (Reduce-Motion-safe), .isModal +
+                                 AccessibilityFocus on present, phase switch, dismiss path.
+    Drawer.Previews.swift   101  #if DEBUG previews: content/empty/loading/error/stale/
+                                 offline + leading edge + headerless, over a sample backdrop.
+    Drawer.strings           51  P1/S10 catalog (table "Drawer"): web parity keys
+                                 (drawer.panel, drawer.close) + native chrome/a11y/preview.
+    Drawer.Tests.swift      308  XCTest: DrawerProjectorTests (11) + DrawerModelTests (15).
+    Total 1520 lines (8 files). Every .swift file <= 313 lines (house file_length 400);
+    0 `// parity:allow` opt-outs.
+  NEW — necessary shared wiring (same pattern ToolCard used for the first feature-views
+    surface; explicitly enumerated per Rule 9 — not silent):
+    project.yml   — + "TeslaSync/modals-dialogs" to the TeslaSync and TeslaSync-macOS
+                    target sources (so the surface is a real part of both app targets;
+                    proven enumerated by xcodegen below).
+    .swiftlint.yml — + "TeslaSync/modals-dialogs" to `included` (so the whole-tree
+                    `swiftlint --strict` gate lints the surface).
+
+=== PARITY (vs web Drawer.tsx) — web region → Apple platform token (no Tailwind ported) ===
+  Composition:
+    portal dialog (role=dialog aria-modal)     → Drawer ZStack + panel .accessibilityAddTraits(.isModal)
+    backdrop (bg overlay + blur, aria-hidden)  → DrawerScrim (Color.black 0.45, tap=dismiss, a11yHidden)
+    spring panel x:100%→0 (side right/left)    → .transition(.move(edge:)) + .spring (Reduce-Motion → .opacity/nil)
+    glass panel, max-w-md, full height, border → .regularMaterial + Color.TS.surface, maxWidth 448, inner-edge 1px border
+    header (only if title): <h3> + close <X>   → DrawerHeader: Font.TS.panel title + DrawerCloseButton (xmark)
+    body flex-1 overflow-y-auto (children)     → ScrollView { DrawerContentBody label/value rows }
+    footer (only if footer) over overlay        → DrawerFooter over .bar material + top border
+  Props → model:
+    open / onClose          → DrawerModel.isPresented / .dismiss() (+ onClose closure)
+    side ('left'|'right')   → DrawerEdge.leading/.trailing via DrawerEdge(web:) ('right' fallback)
+    title?                  → DrawerModel.titleKey (nil ⇒ no header, web `title && <header/>`)
+    children / footer       → the hosted DrawerContentItem rows / the footer action bar
+  States (ALL render — never a blank box), the web children-delegated lifecycle widened
+    into the surface via the DrawerSource seam (ADR-013 freshness envelope):
+    loading → DrawerLoadingBody (TSSkeleton rows)         empty   → DrawerEmptyBody (ContentUnavailableView, parent msg or default)
+    error   → DrawerErrorBody (web QueryError + retry)    stale   → freshness chip + banner + ONE guarded auto-refresh
+    offline → freshness chip + banner + cached body kept  content → DrawerContentBody rows
+  i18n: the 2 web literals (aria-label `Panel` fallback = drawer.panel; close
+    `Close` = drawer.close) + all native chrome/a11y/preview strings resolve via the
+    P1/S10 "Drawer" table — zero English literals in code.
+  a11y: dialog label = title || "Panel" (web aria-label) + a per-state VoiceOver summary
+    hint; close button labelled "Close"; scrim hidden; icons decorative; panel marked
+    .isModal so the background is muted; AccessibilityFocus moves to the panel on present
+    (web "focus first focusable"); Dynamic Type via Font.TS; Reduce-Motion-safe motion.
+  telemetry: emits view.opened surface="Drawer" once per presentation (P1/S11), re-armed
+    after dismiss; asserted by tests.
+  PARITY_REQUIRED=18  (4 composition regions: scrim/panel/header/footer/body=5; 4 props;
+                       6 states; i18n; a11y; telemetry — counted conservatively)
+  PARITY_COVERED=18
+
+=== HOST-RUNNABLE GATES (all green) ===
+  swiftformat --lint <surface> ................ 0/7 files require formatting           FORMAT_EXIT=0
+  swiftlint lint --strict <surface> ........... Found 0 violations, 0 serious in 7     LINT_EXIT=0
+  check-placeholders.ps1 -Path <surface> ...... PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 PLACEHOLDER_EXIT=0
+  swiftc -typecheck iPhoneSimulator (ios18.0-simulator, swift6, strict-concurrency, DEBUG) IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (macos15.0, swift6, strict-concurrency, DEBUG) ................. MAC_TYPECHECK_EXIT=0
+  swift build (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6) ................. Build complete!  BUILD_EXIT=0
+  swift test  (isolated SwiftPM pkg, Swift 6 strict-concurrency) .......................... 26/26 passed, TEST_EXIT=0
+      → DrawerProjectorTests (11): edge(web side), resolvePhase (failure / loading-keeps-
+        cached / loaded empty vs content), project, aria-label title||Panel, VoiceOver
+        summary (content/empty/error + freshness), count formatting.
+      → DrawerModelTests (15): onAppear+present emit view.opened exactly once, dismiss
+        stops + invokes onClose + re-arms, dismiss-while-closed no-op, phases
+        (loading/empty+default msg/parent override/error), header title + a11y label/
+        summary, headerless ⇒ "Panel", stale auto-refresh once + re-arm on live, offline
+        keeps cache (no refetch), retry, edge stored, surfaceSlug.
+      Harness compiles the EXACT shipped Drawer.* sources against the REAL repo design
+      system (Tokens.swift + TSDesign.swift + TSMaterial.swift + Typography.swift +
+      Motion.swift); the single out-of-scope shared atom (TSSkeleton — its real file
+      pulls in the Cards/Buttons atom-library, the P4 component-library bundle's scope)
+      is provided with its EXACT public signature.
+  xcodegen generate (spec enumerates all 8 new files into TeslaSync + TeslaSync-macOS) ... XCODEGEN_EXIT=0
+  Whole-tree gate runs (as the prompt's Gate block invokes them) — surface is clean,
+  RED only on PRE-EXISTING, UNRELATED files (NOT this surface; grep of each = 0 hits):
+    swiftformat --lint apps/apple ... 1/1920 require formatting → ActionBuilder.Previews.swift
+                                      (feature-views, pre-existing). 0 modals-dialogs/Drawer hits.
+    swiftlint --strict .............. 1 serious in 1916 files → LifetimeStatsWidget.Adapter.swift:141
+                                      function_body_length (the SAME pre-existing violation the
+                                      0010 ToolCard log recorded). 0 modals-dialogs/Drawer hits.
+
+=== FULL-APP XCODE GATE (RUN this runner — RED on PRE-EXISTING only; ZERO Drawer errors) ===
+  Shared.xcframework was BUILT + staged this run, so the full-app scheme gate was actually
+  executed on this runner (not merely deferred):
+    xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build  IOS_BUILD_EXIT=65
+    xcodebuild -scheme TeslaSync-macOS build                                                       MAC_BUILD_EXIT=65
+  BOTH are RED for exactly ONE PRE-EXISTING, UNRELATED reason — and ZERO of it is this surface:
+    • The ONLY compiler `error:` lines in EITHER build are the pre-existing co-located test file
+      TeslaSync/feature-views/AIRestorePanel.Tests.swift:18 → "unable to resolve module
+      dependency: 'XCTest'" (XCTest is not linkable into an app target). This is one of the 261
+      co-located *.Tests.swift files that `import XCTest` into the app target — the established
+      sibling convention, present long before this surface.
+    • grep "error:" | grep "Drawer" = 0 in BOTH build logs. The surface's own Drawer.* Swift files
+      compiled into both app targets without error (the build reached the resource phase: the
+      `CopyStringsFile … Drawer.strings` step SUCCEEDS in both, validated as UTF-8). The only
+      Drawer line in either log is a benign warning — Drawer.Tests.swift's `@testable import
+      TeslaSync` is "ignored" because that file is compiled INTO module TeslaSync (the same
+      benign self-import every co-located sibling test emits); it is NOT an error.
+    • macOS additionally defers the SIGNED archive (0 codesigning identities) to P99 (ADR-012);
+      the unsigned `build` above still exercises the full compile and is RED only on the same
+      pre-existing XCTest issue.
+  Net: this surface introduces ZERO full-app build errors on either platform. The remaining
+  red — the co-located-XCTest-in-app-target convention + the signed macOS archive — is owned by
+  the P4/P99 acceptance gate on a macos-latest runner and is recorded in
+  apps/macos-pending-verifications.md. This is the repo's sanctioned "code-complete; full-app gate
+  red only on pre-existing unrelated state" disposition (predecessors 0010 / 0180 / 0231).
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all states reproduced (loading/empty/error/stale/offline/content).
+  [x] Binds via the shared P1/S8 DrawerSource seam; no direct HTTP from the view.
+  [x] Every i18n key from source (drawer.panel, drawer.close) + native chrome present in P1/S10 catalog.
+  [x] Accessibility labels on every interactive element (close, retry, footer) + dialog label + summary.
+  [x] Tests: adapter projection tests + per-state model tests + a11y label tests (26 total, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate: COUNT=0, 0 opt-outs).
+  [~] xcodebuild build (iOS-sim + macOS): RUN this runner — IOS_BUILD_EXIT=65 / MAC_BUILD_EXIT=65,
+      RED only on the pre-existing AIRestorePanel.Tests.swift XCTest-in-app issue (0 Drawer errors;
+      Drawer.* compiled + Drawer.strings copied into both app bundles). The signed macOS archive +
+      the co-located-XCTest convention are deferred to P99 (macos-latest). Host equivalents green.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green   : the full-app xcodebuild gate was RUN and is reported RED (IOS_BUILD_EXIT=65,
+                         MAC_BUILD_EXIT=65) with the raw cause pasted — the pre-existing
+                         AIRestorePanel.Tests.swift XCTest-in-app error (0 Drawer errors) — never as passing.
+  2  No scope narrowing: every web region + branch (side fallback, optional title/header, footer,
+                         scrim, focus/escape/onClose) reproduced + the full state envelope.
+  3  No skip-and-assume: every host-runnable gate executed on THIS runner; raw exits pasted.
+  4  No stubs as final : complete production surface + 26 real tests; placeholder scanner = 0.
+  5  No parity shortcut: composition/props/states/i18n/a11y/telemetry all mapped + verified (18/18).
+  6  No delegation     : implemented directly; no agents/parallel/background prompt work.
+  7  No predecessor bypass: P1/S8 seam, P1/S9 tokens, P1/S10 i18n, P1/S11 telemetry, P4 core consumed.
+  8  No commit on red  : the committed artifact is GREEN on every host gate + a real isolated Swift 6
+                         build+test; the deferred full-app gate is RED only on pre-existing files.
+  9  No silent drift   : changes confined to modals-dialogs/Drawer.* (8 files) + the 2 enumerated
+                         wiring files + this log + 1 macos-pending-verifications row — all listed above.
+  10 EXIT/STATUS below.
+
+=== COMMIT ===
+  Staged (this prompt's artifacts only — the 9 PRE-EXISTING dirty files listed in PREFLIGHT
+  are NOT staged; the git-ignored generated TeslaSync.xcodeproj + staged Frameworks/
+  Shared.xcframework are NOT committed):
+    apps/apple/TeslaSync/modals-dialogs/Drawer.Telemetry.swift
+    apps/apple/TeslaSync/modals-dialogs/Drawer.Adapter.swift
+    apps/apple/TeslaSync/modals-dialogs/Drawer.Model.swift
+    apps/apple/TeslaSync/modals-dialogs/Drawer.Views.swift
+    apps/apple/TeslaSync/modals-dialogs/Drawer.swift
+    apps/apple/TeslaSync/modals-dialogs/Drawer.Previews.swift
+    apps/apple/TeslaSync/modals-dialogs/Drawer.strings
+    apps/apple/TeslaSync/modals-dialogs/Drawer.Tests.swift
+    apps/apple/project.yml            (necessary wiring: + TeslaSync/modals-dialogs sources, both targets)
+    apps/apple/.swiftlint.yml         (necessary wiring: + TeslaSync/modals-dialogs included)
+    apps/macos-pending-verifications.md (1 tracking row for the P99 full-app/signed gate)
+    .github/prompts/monorepo/logs/p4-apple-modals-dialogs-0013-Drawer.log
+  Commit: feat(apps/apple/modals-dialogs): add Drawer surface (P4)
+
+EXIT=0
+STATUS=DONE

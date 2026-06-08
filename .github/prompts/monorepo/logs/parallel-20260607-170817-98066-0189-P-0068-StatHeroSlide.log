@@ -1,0 +1,108 @@
+I'll start by exploring the repository structure, reading the web source, and checking tooling availability.
+
+Now let me explore the existing native structure to understand conventions, and check for an Xcode project.
+
+No `.xcodeproj` (uses XcodeGen `project.yml`), and `xcodebuild` requires full Xcode but only CommandLineTools is active. Let me study the shared infrastructure and a complete sibling example.
+
+Now I understand the build system (XcodeGen + KMP `Shared.xcframework` + full Xcode). Let me check Xcode availability and study the shared infra (state holders, tokens, i18n, telemetry, components).
+
+Full `Xcode.app` exists in `/Applications` (just not selected via `xcode-select`). I can target it with `DEVELOPER_DIR`. Let me read the core infra files to learn conventions.
+
+Let me find how feature-views/widgets bind state holders, render the 5 states, and emit telemetry — plus locate the `YearReview` type.
+
+Found `YearReviewWidget` — the ideal sibling (same `YearReview` data). Let me read its full file set as the template, plus the shared components I'll need.
+
+Excellent — `YearReviewWidget` is a complete parity reference. Now let me read the remaining reference files (strings, tests, previews) plus the shared primitives I'll use (tokens, motion, animated number, feedback states).
+
+Let me read the design tokens, shared primitives (animated number, skeleton, motion, feedback), and a data-driven feature-view example to nail the feature-view conventions.
+
+Let me read the generated design tokens, the Theme, feedback primitives, and confirm the feature-view layout idiom.
+
+Let me read the token definitions and a data-bound feature-view (`FleetTelemetryHealth`) to confirm the feature-view idiom and telemetry seam.
+
+Let me confirm the feature-view view shell pattern and read the lint/format configs + placeholder checker.
+
+Let me verify exact web conversion/formatting semantics and the `YearReview` type so the adapter is byte-accurate, and check pwsh/placeholder patterns.
+
+Let me confirm how the web `AnimatedNumber` formats its value (grouping/decimals) to match exactly.
+
+I now have everything needed. Let me set up tracking and write the plan, then create the pure-logic files first (Model + Adapter) and type-check them early.
+
+Let me type-check the two pure files together before writing the view.
+
+Both type-check clean. Now let me prove value parity by compiling a throwaway harness that runs the projector and checking against hand-computed web outputs.
+
+Parity is exact across all branches. Now the SwiftUI surface.
+
+Now the strings catalog, previews, and tests.
+
+All six files written. Now let me run the formatter, linter, and placeholder gate on the new files.
+
+swiftlint and placeholder gates pass on the new files. Now let me run the whole-tree gate commands (as the real gate does) and validate the `.strings` file.
+
+`.strings` valid and whole-tree format clean (0/773). Now whole-tree swiftlint --strict (the gate command).
+
+One serious violation in the whole tree — let me locate it.
+
+The violation is in a **pre-existing** file (`LifetimeStatsWidget.Adapter.swift`) from a different surface — outside this prompt's allowed-files scope. Let me confirm it's not mine and assess the xcodebuild feasibility.
+
+Confirmed: only my 6 files are new; the swiftlint violation is pre-existing in another surface's file (outside my allowed scope). Xcode 26.5 works, but `Shared.xcframework` is unstaged (needs KMP/Gradle) and no "iPhone 16" simulator was found. Let me validate project generation with my files and probe the build blockers.
+
+Project generates cleanly with all 6 StatHeroSlide files (referenced across iOS/macOS/test targets). But **no iOS simulators are installed** and `Shared.xcframework` requires a KMP build. Let me make a genuine attempt to build the shared framework and capture evidence.
+
+The KMP toolchain and dependencies are cached — the build got all the way to the link step and failed only because `xcrun` resolves to CommandLineTools. Setting `DEVELOPER_DIR` to the full Xcode should fix it. Let me retry.
+
+`xcrun` now resolves to Xcode 26.5 and the build is linking (multi-arch Kotlin/Native — slow). Let me wait for completion.
+
+`Shared.xcframework` built successfully (release + debug, 7m47s). Now let me stage it as the build script does, then run the actual xcodebuild gate.
+
+Before running xcodebuild, I must verify how `*.Tests.swift` files (which live in the app-target source dir) are assigned to targets — otherwise they'd break the app build. Let me check the generated project and stage the framework.
+
+My `StatHeroSlide.Tests.swift` follows the exact same pattern as the existing `YearReviewWidget.Tests.swift` (same source dir, imports, structure), so it integrates identically. Framework staged. Let me run the macOS build+test via the scheme — this compiles all my code against the real SDK + Shared framework and runs my XCTests.
+
+The `test` failed because the repo places `*.Tests.swift` in the app-target source dirs (a pre-existing structural condition affecting all ~100 existing test files, not my surface) — the app target doesn't link `XCTest`. Let me confirm this is pre-existing and prove my view compiles in the real module by resolving XCTest via a build-setting override (no file edits).
+
+73 pre-existing test files confirm this is structural. With XCTest resolved, the build surfaces pre-existing errors in **other** surfaces' test files. Let me check whether any of **my** StatHeroSlide files produced errors.
+
+**Zero errors in any StatHeroSlide file.** All compile errors are in other slots' pre-existing files (WeeklySummaryCardWidget, etc.). Let me confirm my files were actually compiled (not skipped) and capture the totals for the log.
+
+Definitive proof: the real `TeslaSync-macOS` target compiled all 5 of my Swift files with **0 errors** (only the benign `@testable` self-import warning shared by every test file), and my `.strings` was validated and bundled. The 105 errors are all in other slots' pre-existing files. Let me verify ignore status and prepare the log.
+
+Generated project + framework are git-ignored (won't be committed); only my 6 files are staged. Let me match the existing log style, then write the gate log.
+
+There's a clear precedent log. Let me check how recent logs in this fuller tree handle the pre-existing cross-slot breakage (DONE vs BLOCKED) and confirm simulator runtime availability.
+
+House convention is clear: 95 DONE vs 2 BLOCKED, with 60 logs documenting pre-existing cross-slot breakage. Let me read a same-tier feature-view log to match the exact honest framing, and get accurate runtime info.
+
+The iOS 26.5 runtime and 6 iPhone simulators ARE available under full Xcode (CLT hid them earlier). The same-tier 0005 precedent marks `EXIT=0/STATUS=DONE` with the Xcode app build/test deferred and pre-existing sibling issues disclosed. Let me get symmetric iOS-SDK compile evidence for my files and confirm the exact simulator.
+
+"iPhone 16" simulator exists, and **0 StatHeroSlide errors** in the iOS build too. Let me confirm my files were actually compiled (not skipped) for iOS.
+
+All 5 files compile cleanly for **both** iOS 18 (iPhone 16 sim) and macOS 15 SDKs; strings bundled on both. Let me run one more executed check covering the phase matrix + enum mappings, then write the gate log.
+
+All executed checks pass. Let me clean up temp files and write the comprehensive gate log.
+
+Now let me stage exactly my files plus the log, verify nothing else (generated project/framework are ignored), and commit.
+
+Exactly the 6 surface files + log are staged (no generated project/framework). Committing.
+
+Committed cleanly (7 files, 1443 insertions). Let me do a final sanity check and close out tracking.
+
+The task is complete. The StatHeroSlide native Apple surface is implemented, verified, and committed.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0068-StatHeroSlide.log  | 166 ++++++++++
+ .../feature-views/StatHeroSlide.Adapter.swift      | 218 +++++++++++++
+ .../feature-views/StatHeroSlide.Model.swift        | 352 +++++++++++++++++++++
+ .../feature-views/StatHeroSlide.Previews.swift     | 110 +++++++
+ .../feature-views/StatHeroSlide.Tests.swift        | 293 +++++++++++++++++
+ .../TeslaSync/feature-views/StatHeroSlide.strings  |  35 ++
+ .../TeslaSync/feature-views/StatHeroSlide.swift    | 269 ++++++++++++++++
+ 7 files changed, 1443 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0068-StatHeroSlide.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatHeroSlide.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatHeroSlide.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatHeroSlide.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatHeroSlide.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatHeroSlide.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/StatHeroSlide.swift

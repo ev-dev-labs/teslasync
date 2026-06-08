@@ -1,0 +1,98 @@
+=== P4 Feature view 0255 SubscribeCard (Apple) ===
+run-host: Darwin 25.5.0 arm64  date: 2026-06-08T06:53:59Z
+toolchain: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+swiftlint: 0.63.3   swiftformat: 0.61.1   xcodegen: Version: 2.45.4
+
+--- Deliverable (allowed files: apps/apple/TeslaSync/feature-views/SubscribeCard.*) ---
+     84  apps/apple/TeslaSync/feature-views/SubscribeCard.swift
+    276  apps/apple/TeslaSync/feature-views/SubscribeCard.Adapter.swift
+    266  apps/apple/TeslaSync/feature-views/SubscribeCard.Model.swift
+    328  apps/apple/TeslaSync/feature-views/SubscribeCard.Views.swift
+     78  apps/apple/TeslaSync/feature-views/SubscribeCard.Previews.swift
+    215  apps/apple/TeslaSync/feature-views/SubscribeCard.Tests.swift
+    218  apps/apple/TeslaSync/feature-views/SubscribeCard.ModelTests.swift
+     48  apps/apple/TeslaSync/feature-views/SubscribeCard.strings
+
+########################################################################
+# CAPABILITY PROBE — iOS/macOS build+test require Xcode (xcodebuild)    #
+########################################################################
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+(xcodebuild rc=1)
+>> Only Command Line Tools are installed; Xcode.app is absent, so xcodebuild
+>> cannot build/test the iOS 18 / macOS 15 SwiftUI app targets or boot a Simulator.
+>> Per the prompt Capability clause this is a runner limitation, not a code defect.
+
+########################################################################
+# GATE STEP 1/5 — xcodebuild iOS Simulator (iPhone 16) build test      #
+########################################################################
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1   [BLOCKED: xcodebuild unavailable — no Xcode.app on runner]
+
+########################################################################
+# GATE STEP 2/5 — xcodebuild macOS build test                          #
+########################################################################
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1   [BLOCKED: xcodebuild unavailable — no Xcode.app on runner]
+
+########################################################################
+# GATE STEP 3/5 — swiftlint --strict (SubscribeCard contribution)      #
+########################################################################
+Linting Swift files at paths TeslaSync/feature-views/SubscribeCard.swift, TeslaSync/feature-views/SubscribeCard.Adapter.swift, TeslaSync/feature-views/SubscribeCard.Model.swift, TeslaSync/feature-views/SubscribeCard.Views.swift, TeslaSync/feature-views/SubscribeCard.Previews.swift, TeslaSync/feature-views/SubscribeCard.Tests.swift, TeslaSync/feature-views/SubscribeCard.ModelTests.swift
+Linting 'SubscribeCard.swift' (1/7)
+Linting 'SubscribeCard.Adapter.swift' (2/7)
+Linting 'SubscribeCard.Model.swift' (3/7)
+Linting 'SubscribeCard.Views.swift' (4/7)
+Linting 'SubscribeCard.Previews.swift' (5/7)
+Linting 'SubscribeCard.Tests.swift' (6/7)
+Linting 'SubscribeCard.ModelTests.swift' (7/7)
+Done linting! Found 0 violations, 0 serious in 7 files.
+LINT_EXIT=0
+
+########################################################################
+# GATE STEP 4/5 — swiftformat --lint (SubscribeCard contribution)      #
+########################################################################
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-376/apps/apple/.swiftformat
+SwiftFormat completed in 1.13s.
+0/7 files require formatting.
+FORMAT_EXIT=0
+
+########################################################################
+# GATE STEP 5/5 — check-placeholders.ps1 (ADR-011 no-stub gate)        #
+########################################################################
+$ pwsh apps/tools/check-placeholders.ps1 -Path <copy of SubscribeCard.*> -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+(note: the gate's literal -Path prefix 'apps/.../SubscribeCard' is non-existent so the
+ scanner self-reports clean; the run above scans real copies of all SubscribeCard.* files.)
+
+########################################################################
+# WHOLE-PROJECT NOTE (out of scope for this prompt)                    #
+########################################################################
+The gate runs swiftlint/swiftformat across all of apps/apple. The seven SubscribeCard
+files pass cleanly (steps 3-4 above). A PRE-EXISTING, unrelated swiftformat violation
+exists in another surface and is NOT in this prompt's allowed-files scope:
+  TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes)
+Left untouched per the allowed-files constraint + 'do not fix unrelated pre-existing issues'.
+
+########################################################################
+# RESULT                                                               #
+########################################################################
+IOS_EXIT=1          BLOCKED  (xcodebuild requires Xcode.app; runner has CommandLineTools)
+MAC_EXIT=1          BLOCKED  (xcodebuild requires Xcode.app; runner has CommandLineTools)
+LINT_EXIT=0         PASS     (swiftlint --strict, 0 violations, 7 files)
+FORMAT_EXIT=0       PASS     (swiftformat --lint, 0/7 require formatting)
+PLACEHOLDER_EXIT=0  PASS     (PLACEHOLDER_COUNT=0)
+
+The surface is implemented to full production parity (no stubs/placeholders) and passes
+every gate step that the runner is capable of executing. The two build+test steps are
+blocked solely by the absence of Xcode on this runner (capability gap, evidenced above).
+
+EXIT=1
+STATUS=BLOCKED

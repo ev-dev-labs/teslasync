@@ -1,0 +1,102 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Toolchain present but `xcodebuild -version` failed. Let me investigate that and the Apple app structure in parallel.
+
+Key finding: only Command Line Tools is installed (no full Xcode), and `simctl` is unavailable — so `xcodebuild` cannot run. Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me check whether a full Xcode exists anywhere, and study the existing native patterns I must match.
+
+`/Applications/Xcode.app` **exists** — only the active dir is wrong. Let me try `DEVELOPER_DIR` to bypass `xcode-select`, and study the established feature-view pattern.
+
+Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 simulator is even booted. Capability is available — I'll produce the real artifact. Now let me understand the build system and find a close table-based template.
+
+Found the closest analogs: **`LiveSignalsTable`** (signal table) and **`EventHistoryTable`** (history table). Let me study `LiveSignalsTable` in depth — it's the ideal template.
+
+Excellent template. Let me read the rest of `LiveSignalsTable`'s files and the web `SignalQueryControls` source (for the `SignalLogEntry` type + `formatValue`) in parallel.
+
+Let me read the test/preview/strings patterns and—critically—the web `SignalQueryControls` data contract plus the design tokens.
+
+Now the web data contract and design tokens. Let me read `SignalQueryControls.tsx` and locate the token definitions.
+
+Now I have the full data contract. Let me read the design tokens, the web `useDateFormat`/`colors`/`numberFormat`, and check the placeholder-check + host-harness gate tooling.
+
+Let me check the existing sibling logs (e.g., LiveSignalsTable 0036) to see exactly how the gate was satisfied, plus verify the build prerequisites (Shared.xcframework, xcodegen).
+
+Critical: `Shared.xcframework` is absent (only `.gitkeep`), so the full-app `xcodebuild` cannot link. Let me read the sibling gate logs to see exactly how this was handled.
+
+The precedent is crystal clear. The **established P4 Apple disposition** (ADR-012, `macos-pending-verifications.md`) is **"code-complete + host-validated, with the full Xcode app build/test DEFERRED"** because `Shared.xcframework` (a KMP/Kotlin-Native binary) is absent and can't link. The meaningful gates that ARE run: `swiftc -typecheck` against real tokens, an executed adapter harness, `swiftlint --strict`, `swiftformat --lint`, placeholder + i18n checks.
+
+Let me verify current blockers freshly, check for type collisions, and study the closest analog `EventHistoryTable`.
+
+Confirmed: 0 signing identities, and the scheme stages `Shared.xcframework` via a pre-action script. No `SignalHistory*` type collisions (only unrelated `SignalHistorySample`). `EventHistoryTable` (the closest analog — a history table) uses shared `TSGlassPanel`/`TSFadeIn`, matching my web source's `<FadeIn><GlassPanel>`. Let me inspect those shared components, the xcframework script, and EventHistoryTable's model/views.
+
+EventHistoryTable composes a shared `TSDataTable` + `TSColumn`. I need the exact APIs of the shared components my web source maps to: `TSDataTable` (does it support row expansion?), `TSGlassPanel`, `TSFadeIn`, `TSBadge`/`TSTone`, `TSSkeleton`, and any pagination/empty-state. Let me locate and read them.
+
+Let me read the exact APIs of all shared components I'll compose with.
+
+Now I understand the table/pagination APIs. `TSDataTable` always renders selection checkboxes (which the web source lacks), so—like the direct `LiveSignalsTable` precedent—I'll build a focused custom table for exact parity (no selection, color-dot signal cell, raw-JSON expansion) while reusing shared chrome: `TSGlassPanel`, `TSFadeIn`, `TSBadge`, `TSSkeleton`, `TSPagination`, and the empty state. Let me read those exact APIs.
+
+Now the layout/motion/typography primitives. Let me read `Cards.swift` (TSGlassPanel/TSCard), `Motion.swift` (TSFadeIn), and `Typography.swift` (TSCode and title helpers).
+
+Let me read the Typography helpers to finalize the header/title and monospaced-text mappings, then I'll set up my task list and begin writing.
+
+I have all component APIs. Let me confirm two web formatting helpers (`fmtInt`, `formatDateTime`) for parity and read the lint/format config to respect house rules, then start building.
+
+I now have everything needed. Let me set up a plan and todos, then build the artifact following the established `LiveSignalsTable`/`EventHistoryTable` precedents.
+
+Now I'll build the artifact. Starting with the Foundation-only files (Models, Adapter, Localization, Model).
+
+Foundation files written. Let me refine the Model (expose `totalRowsText`, drop the unneeded computed binding) and write the SwiftUI surface + table.
+
+Now the core table view with the adaptive layout, expansion, badge, banner, and pagination.
+
+Now the previews, tests, and strings catalog.
+
+Now the comprehensive test suite.
+
+All 9 files written. Now the verification gates. First, auto-format my files and check what the shared components import (to scope the typecheck harness).
+
+Components only import system frameworks (no KMP `Shared`) — good for a focused typecheck. The `.strings` file isn't a Swift file. Let me format only `.swift` files and locate the `tsGlassPanel()` modifier and `Sources/Design` contents.
+
+Formatting clean (0/8). Now the focused `swiftc -typecheck` against the real tokens + shared components (macOS target first).
+
+The error is in an unrelated component file (`UnitFormatters.swift` needs `UnitPreferences` from outside Components) — not my code. I should compile only the transitive closure my surface needs. Let me identify it and retry.
+
+Only `UnitFormatters.swift` has the external dep. Let me exclude it and retry the macOS typecheck.
+
+macOS typecheck **passes (EXIT=0)** under Swift 6 + strict concurrency. Now the iOS Simulator target (the gate's primary).
+
+Both targets typecheck clean. Now a coexistence/collision check: verify none of my public type names are already declared elsewhere in the module.
+
+No collisions — all type names unique. Now the **executed adapter harness**: compile the Foundation files (Models + Adapter + Localization) into a real binary with assertions and run it to prove parity with the web display logic.
+
+Swift 6 main-actor isolation on the harness globals. Let me annotate the helpers `@MainActor` and rerun.
+
+**Harness: 42/42 passed, RUN_EXIT=0.** Now swiftlint `--strict` on my files, plus the whole-tree gate form to distinguish any pre-existing issues.
+
+swiftlint `--strict`: **0 violations in 8 files.** Let me read the placeholder checker to invoke it honestly against my files.
+
+Let me read the patterns, then run the placeholder gate honestly against a staged copy of my files.
+
+Placeholder gate clean (COUNT=0). Now the i18n parity check: code-resolved keys vs catalog keys (no dead refs, no dead keys).
+
+The diff was thrown off by a trailing-quote artifact in my extraction. Let me redo it cleanly.
+
+**All host-runnable gates pass.** i18n parity: 21↔21 keys, 0 dead. Now let me attempt the actual Xcode gate for honest evidence — first generate the project and check my files are included, and inspect the `Shared.xcframework` prerequisite.
+
+`xcodegen generate` succeeded. Let me confirm my files are in the project and check whether the KMP `shared` module is real or a stub, then attempt the build.
+
+My files are referenced 54× in the generated project, and the KMP `shared` module is real (needs Kotlin/Native toolchain). Let me attempt the actual iOS gate build (bounded) to capture honest evidence of where it stands.
+
+Revealing: the gradle Kotlin/Native build got far (Kotlin compiled, many tasks cached) and failed **only** at the link step because gradle's `xcrun` used the CommandLineTools dir. With `DEVELOPER_DIR` set, it may link. Let me retry the pre-action with the override.
+
+The xcframework build exceeded the 240s bound (KMP Kotlin/Native release assembly). This is the documented ADR-012 deferral scenario. Let me give it one substantial async attempt (longer window) while I prepare the log in parallel — genuinely trying rather than assuming.
+
+While that builds, let me verify git status (only my files should be staged-worthy) and gather line counts for the log.
+
+Git is clean (only my 9 new files; the 2 web changes are pre-existing and I'll exclude them). Total 1680 lines, all files ≤400. Let me check the xcframework build progress.
+
+Good progress — it's now linking release frameworks. Let me wait for the xcframework assembly to finish.
+
+Nearly there — linking the simulator release framework now. Let me wait for completion.
+
+macOS slice linking now (the XCFramework bundles iOS device + simulator + macOS). Let me continue waiting.
+

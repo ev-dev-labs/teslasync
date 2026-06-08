@@ -1,0 +1,191 @@
+=== P4 Widget primitive 0012 WidgetTipCards (Apple) ===
+
+Surface: WidgetTipCards (shared widget primitive — a presentational tip-card list)
+Web source: web/src/features/dashboard/widgets/shared/WidgetTipCards.tsx (reproduced end-to-end)
+Native output: apps/apple/TeslaSync/widget-primitives/WidgetTipCards.* (7 files)
+Date: 2026-06-08
+
+TL;DR — The surface is COMPLETE and independently VERIFIED GREEN (iOS build, macOS
+build, 24/24 unit tests, swiftlint --strict, swiftformat --lint, placeholder gate, and
+ZERO compiler warnings — all evidence below). The LITERAL aggregate full-app gate
+(`xcodebuild -scheme TeslaSync … build test`) cannot reach EXIT=0 on this branch/runner
+for two reasons that are 100% PRE-EXISTING and EXTERNAL to this surface:
+  (A) 154 sibling source files in TeslaSync/feature-views + TeslaSync/dashboard-widgets
+      fail to compile in the shared app module (duplicate types, preview concurrency
+      bugs) — 285 compiler errors, ZERO of them in this surface; and
+  (B) the runner has 0 valid codesigning identities, so the macOS app/extension targets
+      (hardened-runtime + entitlements) cannot sign.
+Neither is a platform-capability gap (Xcode 26.5 + SwiftUI/Charts/MapKit are present) nor
+a defect in this surface. Per the Honesty Covenant (#1 No red-as-green, #8 No commit on
+red) this surface is therefore reported with the aggregate gate's true non-zero exit and
+STATUS=BLOCKED, while the surface itself is proven green via an isolation harness.
+
+------------------------------------------------------------
+CAPABILITY VERIFICATION (runner)
+------------------------------------------------------------
+- Full Xcode present: /Applications/Xcode.app -> Xcode 26.5 (Build 17F42)
+  (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is driven via
+   DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo needed to build)
+- SDKs: iphonesimulator26.5 / macosx26.5 (backward-compatible with the project's
+  iOS 18.0 / macOS 15.0 deployment targets) -> SwiftUI + Swift Charts + MapKit available.
+- Simulator: iPhone 16 (booted). Toolchain: xcodegen 2.45.x, swiftlint, swiftformat, pwsh.
+- KMP shared core: `Scripts/build-shared-xcframework.sh` succeeded (Gradle BUILD SUCCESSFUL
+  in 8m51s) -> Frameworks/Shared.xcframework staged. => native Apple capability AVAILABLE.
+- Codesigning: `security find-identity -v -p codesigning` -> "0 valid identities found"
+  => macOS app/extension signing is environmentally unavailable on this runner.
+
+------------------------------------------------------------
+PATH MAPPING (documented — no silent drift)
+------------------------------------------------------------
+Surface files live exactly where the prompt specifies:
+  apps/apple/TeslaSync/widget-primitives/WidgetTipCards.{swift,Views,Adapter,Model,
+    Previews,Tests}.swift + WidgetTipCards.strings
+project.yml globbed TeslaSync/dashboard-widgets + TeslaSync/feature-views but NOT
+TeslaSync/widget-primitives, so the new directory had to be wired into the build. The
+minimal, surgical project.yml change (precedent: the BatteryCellsWidget/0010 log fixed a
+gate-blocking project.yml bug the same way):
+  - both app targets (TeslaSync, TeslaSync-macOS): add
+        - path: TeslaSync/widget-primitives  (excludes: "**/*Tests.swift")
+    AND add `excludes: ["**/*Tests.swift"]` to the existing feature-views +
+    dashboard-widgets source entries (see PRE-EXISTING BLOCKER below).
+  - both unit-test targets (TeslaSyncTests, TeslaSync-macOSTests): add
+        - path: TeslaSync/widget-primitives  (includes: "**/*Tests.swift")
+Verified membership in the generated project: the 5 surface files compile into BOTH app
+targets; WidgetTipCards.Tests.swift compiles into BOTH test targets and NEITHER app
+target; WidgetTipCards.strings is bundled as a resource.
+
+------------------------------------------------------------
+PRE-EXISTING BLOCKER (external — NOT this surface)
+------------------------------------------------------------
+(1) 261 co-located `*Tests.swift` files under TeslaSync/feature-views (204) and
+    TeslaSync/dashboard-widgets (57) were globbed into BOTH app targets with no exclude,
+    so the app module compiled XCTest test files. Baseline iOS build evidence:
+       feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module
+       dependency: 'XCTest'
+    Fixed by the `excludes: ["**/*Tests.swift"]` added to those two source entries (the
+    test files' own headers say "These run in the TeslaSync(/-macOS) XCTest targets").
+    This is a strict improvement: the app target no longer compiles 261 misfiled tests.
+
+(2) After (1), the app target still fails to build because 154 sibling source files in
+    feature-views/dashboard-widgets have genuine compile errors (285 total), e.g.:
+       dashboard-widgets/VehicleHeroWidget.Model.swift … 'VehicleHeroModel' is ambiguous
+         for type lookup in this context        (duplicate type across sibling surfaces)
+       dashboard-widgets/VampireDrainWidget.Previews.swift:14:22: error: call to main
+         actor-isolated initializer 'init(initial:)' in a synchronous nonisolated context
+       Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift:30: 'DashboardWidgetSize'
+         is ambiguous   (struct declared twice within Sources/DashboardWidgets)
+    ZERO of the 285 errors are in TeslaSync/widget-primitives. These belong to other
+    parallel surface prompts; fixing 154 files across dozens of surfaces is out of scope
+    for this surface and would collide with their owners.
+
+(3) macOS: 0 codesigning identities -> "TeslaSync-macOS has entitlements that require
+    signing with a development certificate." (build description phase, before any compile)
+
+Because the shared app target cannot link on this branch, this surface was verified with
+an ISOLATION HARNESS: a throwaway xcodegen framework target (module name TeslaSync)
+compiling the REAL shared library (all of Sources, minus the two pre-existing-broken
+widget homes Sources/DashboardWidgets + Sources/Dashboard) + Shared.xcframework + this
+surface, with a unit-test bundle for this surface's tests. This proves the surface
+compiles against the real shared components and its tests pass. (The harness specs were
+removed after use; not committed.)
+
+------------------------------------------------------------
+PARITY (web source reproduced)
+------------------------------------------------------------
+- Data sources: none (pure presentational primitive, per prompt). Still bound through the
+  P1/S8 state-holder seam (WidgetTipCardsSource -> WidgetTipCardsModel) so the leaf
+  contract states are driven by one snapshot; no HTTP in the view. A web-style direct
+  props initializer `WidgetTipCards(tips:maxTips:compact:emptyMessage:emptyIconSystemName:)`
+  mirrors `<WidgetTipCards tips=… />` for embedding inside host widgets.
+- Composition: the `space-y-2` column of cards; each card = optional SF Symbol +
+  title + trailing impact Badge (web `Badge` -> shared TSBadge) + description
+  (line-clamped to 2 in the compact layout, web `line-clamp-2`); ≥44pt touch target.
+- Windowing: `limit = maxTips ?? (compact ? 1 : 3)`, `visible = tips.prefix(limit)`
+  reproduced verbatim (WidgetTipWindow).
+- Impact tone map reproduced verbatim (web `impactBadgeMap`): high->success,
+  medium->warning, low->neutral; badge label = web `impactLabel ?? impact` (localized).
+- States (all render): loading (skeleton cards), empty (web EmptyState -> TSEmptyState,
+  message `emptyMessage ?? 'No recommendations'`), error (web QueryError -> TSQueryError +
+  retry), data, and the P4 leaf freshness axis stale/offline (freshness banner + one-shot
+  auto-refresh on the stale transition).
+- i18n: all strings via the P1/S10 facade (table "WidgetTipCards", WidgetTipCards.strings)
+  with web English fallbacks; no English literals in Swift. Keys: empty, title,
+  loadingA11y, impact.{high,medium,low}, staleBanner, offlineBanner.
+- Accessibility: each card is one combined VoiceOver element
+  ("{title}, {impact}, {detail}"); badge hidden (spoken via the card); loading label;
+  freshness banner combined; Dynamic-Type system fonts (Font.TS); reduce-motion honored
+  via shared TSFadeIn / TSSkeleton.
+- Telemetry (P1/S11): WidgetTipCardsModel.start() emits view.opened with slug
+  "WidgetTipCards" (OSLogWidgetTipCardsTelemetry; asserted by a spy in the tests).
+
+------------------------------------------------------------
+SURFACE GATE RESULTS (this artifact — isolation-verified, actual output)
+------------------------------------------------------------
+[S1] iOS-Simulator build (framework: real shared lib + this surface; iPhone 16)
+       ** BUILD SUCCEEDED **                                         -> IOS_SURFACE_EXIT=0
+       (0 errors, 0 warnings in TeslaSync/widget-primitives)
+
+[S2] macOS build (framework: real shared lib + this surface)
+       ** BUILD SUCCEEDED **                                         -> MAC_SURFACE_EXIT=0
+       (0 errors, 0 warnings in TeslaSync/widget-primitives)
+
+[S3] macOS unit tests (xcrun xctest on the built ProbeTests.xctest)
+       Test Suite 'All tests' passed
+       Executed 24 tests, with 0 failures (0 unexpected)             -> TEST_SURFACE_EXIT=0
+       Suites: WidgetTipWindowTests(5), WidgetTipImpactTests(2),
+               WidgetTipCardsProjectionTests(7), WidgetTipCardsModelTests(8),
+               WidgetTipCardsAccessibilityTests(2).
+       Covers: windowing/limit + slice prefix; impact->tone + badge-label override;
+               projection across loading/empty(incl. limit==0)/error/data + windowing +
+               override message/icon; model wiring + view.opened telemetry (once) +
+               stale one-shot auto-refresh + offline no-refresh + stop/re-arm + slug;
+               VoiceOver card-label content.
+       (Note: `xcodebuild test` orchestration cannot launch a host-less unsigned macOS
+        unit bundle on this runner; running the built bundle directly via `xcrun xctest`
+        executes the same tests — output above.)
+
+[S4] swiftlint --strict (TeslaSync/widget-primitives, identical rules to .swiftlint.yml)
+       Done linting! Found 0 violations, 0 serious in 6 files        -> LINT_SURFACE_EXIT=0
+
+[S5] swiftformat --lint (TeslaSync/widget-primitives)
+       0/6 files require formatting                                  -> FORMAT_SURFACE_EXIT=0
+
+[S6] check-placeholders.ps1 -Path apps/apple/TeslaSync/widget-primitives
+       PLACEHOLDER_ALLOWED=0 ; PLACEHOLDER_COUNT=0 ; EXIT=0          -> PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------
+AGGREGATE FULL-APP GATE RESULTS (literal commands — PRE-EXISTING RED, external)
+------------------------------------------------------------
+[A1] iOS  `xcodebuild -scheme TeslaSync -destination 'iOS Simulator,iPhone 16' build test`
+       ** BUILD FAILED ** (exit 65) — 154 sibling files, 285 errors, 0 in this surface.
+                                                                     -> IOS_EXIT=65 (external)
+[A2] macOS `xcodebuild -scheme TeslaSync-macOS build test`
+       ** BUILD FAILED ** (exit 65) — entitlements require a dev certificate
+       (0 codesigning identities) + the same sibling compile errors.
+                                                                     -> MAC_EXIT=65 (external)
+[A3] swiftlint --strict  (whole apps/apple tree)
+       Found 1 violation (serious): dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+       function_body_length (78>50) — PRE-EXISTING sibling; this surface adds 0.
+                                                                     -> LINT_EXIT=2 (external)
+[A4] swiftformat --lint apps/apple  (whole tree)
+       exit 70 — PRE-EXISTING sibling formatting debt; this surface's 6 files are clean.
+                                                                     -> FORMAT_EXIT=70 (external)
+[A5] check-placeholders.ps1 (this surface, as the gate scopes it)   -> PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------
+This surface is COMPLETE and fully VERIFIED (no stub / skeleton / skip):
+  - iOS build SUCCEEDED, macOS build SUCCEEDED (real shared library + this surface)
+  - 24/24 unit tests passed, 0 warnings
+  - swiftlint --strict 0 violations, swiftformat --lint clean, placeholders 0
+The literal aggregate full-app gate cannot reach EXIT=0 on this runner due to (A) 154
+PRE-EXISTING broken sibling surfaces in feature-views/dashboard-widgets (285 compiler
+errors, none in this surface) and (B) the runner having no macOS codesigning identity —
+both external to this surface and to platform capability. The project.yml change applied
+here strictly reduces redness (excises 261 misfiled test files from the app targets and
+wires this surface). Honoring "No red-as-green", the terminal reflects the aggregate
+gate's true state.
+
+EXIT=65
+STATUS=BLOCKED

@@ -1,0 +1,14 @@
+I'll start by exploring the environment to understand what exists and what tooling is available.
+
+Web source read. Critical finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. Let me verify the toolchain situation and study the established native pattern (sibling `AIUsageCard.*` was just modified — it's my template).
+
+Confirmed: only Command Line Tools installed, no full Xcode. Let me probe thoroughly for any Xcode install and study the canonical sibling pattern.
+
+Major finding: **Xcode.app exists at `/Applications/Xcode.app`** — only the active dir is wrong. I can likely override with `DEVELOPER_DIR`. Also, `SecurityStatusCards.*` and `SecurityStatistics.*` are same-domain sibling templates. Let me test the toolchain override and study the closest analog.
+
+**Breakthrough:** `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` gives **Xcode 26.5** + a **booted iPhone 16 simulator**. The full gate is runnable — STATUS=DONE is achievable. Now studying the canonical 7-file pattern in depth.
+
+The pattern is clear and rich. Let me read the remaining template files (Views/Previews/Tests) and the shared design tokens + components I'll need.
+
+Now I understand the 7-file architecture completely. Let me investigate the build mechanics: xcodegen, the Shared.xcframework dependency, how `*.Tests.swift` are routed, and where `Color.TS`/`Font.TS` tokens live.
+

@@ -1,0 +1,114 @@
+I'll start by exploring the repository structure to understand the existing setup, then read the web source that serves as the specification.
+
+Let me read the web source specification and examine the existing dashboard-widgets directory to understand established patterns.
+
+I have the web source. Now let me study the existing Apple widget conventions by examining a representative widget and the shared infrastructure (state holders, tokens, i18n, telemetry).
+
+Let me examine a complete representative widget set and the shared infrastructure (WidgetShell, state holders, registry) to learn the conventions.
+
+Excellent — this is a very well-structured pattern. Let me read the remaining files (strings, Views, Previews, Tests) and find the shared infrastructure definitions.
+
+Multiple Model files define `DashboardWidgetSize`/`DashboardWidgetRegistration`. Let me understand how this avoids redeclaration conflicts — check the project structure and how the build target is set up.
+
+Let me check the build tooling availability and project structure — this determines whether I can run the gate or must report BLOCKED.
+
+`xcodebuild -version` exited non-zero — likely Command Line Tools only, plus the target needs a KMP `Shared.xcframework`. The widget files mention a "swiftc host gate". Let me investigate the actual gate mechanism and tooling state.
+
+Confirmed: no full Xcode (Command Line Tools only), so `xcodebuild` + iOS simulator + KMP `Shared.xcframework` can't run here. The widgets are designed for a "swiftc host gate". Let me find that mechanism and read the pending-verifications doc.
+
+Now I understand the established methodology. The full `xcodebuild` gate is **macOS-pending** (documented precedent in `macos-pending-verifications.md`): agents verify each surface via host-runnable gates (isolated SwiftPM build + tests, `swiftc -typecheck`, swiftlint, swiftformat, placeholder). Let me read the remaining reference files and design tokens.
+
+Let me examine the design tokens and find widgets that mirror ChargingScheduleWidget's data sources (vehicle state + live signals) and Timeline usage.
+
+Let me verify `TSSkeleton`, examine the web `useDateFormat` hook (for time formatting parity), and check a widget binding both vehicle-state and live-signals.
+
+I have the design tokens and `TSSkeleton`. Now let me read the canonical `DashboardWidgetSize`/`DashboardWidgetRegistration` definition (used but not defined by SuperchargerHistory) to match its exact shape, and confirm the web vehicle-state fields.
+
+Let me verify the lint/format configs, placeholder gate tooling, and whether `pwsh` is available, before writing code.
+
+`pwsh`, `swiftlint`, `swiftformat` all available — I can run the real host gates. Let me read the placeholder checker, then write a plan file and start implementing.
+
+I now have a complete understanding of the established 7-file pattern, design tokens, the canonical registry types, lint/format configs, and the placeholder gate. The full `xcodebuild` gate is documented as macOS-pending (no Xcode here — Command Line Tools only), so I'll follow the repo precedent: implement the surface completely and verify via the host-runnable gates (isolated SwiftPM build + tests, swiftlint, swiftformat, placeholder, xcodegen).
+
+Let me set up tracking and write the plan.
+
+Now I'll write the Adapter (pure, SwiftUI-free, Shared-free — fully unit-testable on host).
+
+Now the Model file — state holder (P1/S8), telemetry seam (P1/S11), i18n facade (P1/S10), and the testable accessibility/label resolvers.
+
+Now the subviews (freshness chip, connectivity banner, mode/pending badges, timeline rows, detail grid, compact hero, empty state).
+
+Now the main widget View — the glass shell, header, and all state branches (compact + full).
+
+Now the Previews, strings catalog, and Tests.
+
+Now the comprehensive test suite (adapter/parse/format/projection/model/registry/accessibility).
+
+All 7 files created. Let me cross-check that every i18n key referenced in code exists in the strings catalog, then begin host verification.
+
+All keys resolve. Now let me set up an isolated SwiftPM package on the host (macOS, Swift 6.3.2) to actually compile and run the tests — mirroring the repo's documented host-gate precedent. I'll provide the shared `DashboardWidgetSize`/`DashboardWidgetRegistration` and copy in the design tokens + `TSSkeleton`.
+
+Two real issues surfaced — both valuable. (1) `ISO8601DateFormatter` static lets violate Swift 6 strict concurrency (which the app target enforces), so I must fix my committed code. (2) The harness copied the whole `Skeletons.swift` which references other shared components — I only need `TSSkeleton`. Let me fix both.
+
+Library compiles cleanly under Swift 6 strict concurrency. Now run the test suite.
+
+Library compiles cleanly. Test execution fails only because **XCTest isn't bundled with Command Line Tools** (needs Xcode) — the same reason the full gate is macOS-pending. To still get genuine execution evidence on this host, I'll compile the **committed XCTest file unchanged** against a tiny XCTest shim and run every test through a harness, executing the real adapter/model/registry/accessibility logic under Swift 6 strict concurrency.
+
+The build produced warnings (not errors): `ChargingScheduleWidget` is a SwiftUI `View`, so its static `surfaceSlug`/`registration` are MainActor-isolated, and the registry tests read them from a non-isolated context. Registry metadata is a constant that the dashboard grid reads from any context, so marking these `nonisolated` is the correct, cleaner fix. Let me apply it and re-run.
+
+I need to specify the path.
+
+Two harness wiring issues: `@main` conflicts with a file named `main.swift`, and Apple's real `XCTest` re-exports Foundation (so the committed test file gets `Date` for free) — my shim must do the same. Both are harness-only fixes.
+
+All 34 tests (117 assertions) pass on the host under Swift 6 strict concurrency, with the committed XCTest file compiling unchanged. Let me confirm the surface library builds with **zero warnings**, then run swiftlint/swiftformat/placeholder on the actual committed files.
+
+Surface library builds with **zero warnings/errors** under Swift 6 strict concurrency. Now let me confirm the Previews file also compiles (DEBUG), then run swiftlint/swiftformat/placeholder on the actual committed files.
+
+Expected: `#Preview` needs Xcode's `PreviewsMacros` plugin — unavailable with Command Line Tools. This is exactly why the repo precedent notes "previews are skipped by the swiftc host gate." The Previews structure is identical to the verified `SuperchargerHistory` precedent, and swiftlint/swiftformat (syntactic tools) will still validate it. Let me remove it from the package, reconfirm clean build, then run the lint/format/placeholder gates on the real files.
+
+Previews are syntactically valid. Now run swiftlint `--strict`, swiftformat `--lint`, and the placeholder gate on the actual committed files.
+
+All auto-fixable formatting. I'll use the ecosystem tool (swiftformat autocorrect) rather than hand-editing, then re-lint and re-verify build+tests.
+
+swiftformat lint clean. Now swiftlint `--strict`:
+
+Two swiftlint issues: the Adapter exceeds the 400-line file limit (429) and `project(...)` is 1 line over the 50-line function-body limit. Both are cleanly solved by splitting the formatters into their own file (allowed: `ChargingScheduleWidget.*`) and extracting a timeline helper. Let me view the current boundaries.
+
+Cleanest fix: extract the formatters into their own file (`ChargingScheduleWidget.Format.swift`, allowed by the `ChargingScheduleWidget.*` pattern) and extract a timeline helper to slim `project()`. Let me create the Format file and refactor the Adapter.
+
+Now remove the moved formatter section from the Adapter and refactor `project()`:
+
+Now refactor `project()` to use a timeline helper:
+
+Now re-sync the isolated package with the refactored Adapter + new Format file, rebuild, re-run tests, and re-lint.
+
+Refactor verified — 117 assertions pass, zero warnings. Now re-run both linters on all committed files (now 7 swift files):
+
+Both linters are clean (0 violations). Now the placeholder gate and xcodegen enumeration. The literal gate path (`…/ChargingScheduleWidget` with no extension) scans nothing, so I'll point the real `check-placeholders.ps1` at a directory containing my actual files for an honest check, and also run xcodegen.
+
+Placeholder gate passes (0 violations, EXIT=0). Now confirm `xcodegen generate` enumerates the new files:
+
+All host gates are green: build (0 warnings, Swift 6 strict concurrency), 117 test assertions pass, swiftformat 0/7, swiftlint 0 violations, placeholder EXIT=0, xcodegen enumerates all 8 files across both targets. Let me clean up generated artifacts and capture the xcodebuild capability evidence for the log.
+
+All 8 files present and untracked; generated xcodeproj removed. Let me check the logs directory and an existing widget log for format consistency.
+
+Let me read a full precedent log to match the established structure and framing.
+
+I now fully understand the precedent. The `BatteryCells` runner had full Xcode (built both platforms); the `ToolCard`/`AlertMessageEditor`/`FSMTimelineChart` rows in `macos-pending-verifications.md` are the precedent for the **no-Xcode** case — surface verified via isolated SwiftPM build + tests + swiftc + linters, with the full-app `xcodebuild` deferred to macOS CI. My situation matches the latter exactly, and my SwiftUI build capability **is** available (proven). Let me write the gate log with honest, raw evidence.
+
+Now record the deferred full-app `xcodebuild` verification in `macos-pending-verifications.md`, following the established row format:
+
+Now let me do a final consolidated verification run on the committed files and confirm the Adapter is under the line limit, before committing.
+
+All files ≤400 lines, both linters clean. Let me do one final defensive re-sync of the exact committed bytes into the isolated package and re-run the full build+test to confirm green before committing.
+
+Final clean build + test green (117 assertions, 0 failures, 0 warnings). Now commit — scoping `git add` to only my files (there are unrelated pre-existing modifications in the tree I must not touch):
+
+Only my files are staged. Now commit with the prescribed message:
+
+Commit `1635e15a8` succeeded — 10 files, 2158 insertions, nothing unrelated. Let me verify no forbidden words (`stub`/`mock`/`TODO`/`Lorem`/`placeholder`) in shipped code and clean up temp artifacts.
+
+No forbidden words; temp artifacts cleaned. The remaining working-tree changes are the pre-existing unrelated files (present before I started) — correctly left untouched. Let me finalize the todo tracking and confirm the commit.
+
+All 11 todos done; commit `1635e15a8` contains all 8 surface files + log + pending-verifications row. The task is complete.
+

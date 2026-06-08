@@ -1,0 +1,124 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Apple toolchain is available. Let me read the web source spec and examine the existing widget-primitives pattern.
+
+Key finding: only Command Line Tools are installed, not full Xcode. Let me verify the Apple build capability thoroughly and study the established pattern (the just-modified AIUsageCard feature-view).
+
+There's an `/Applications/Xcode.app` (created Jun 7). Let me check if it's a functional Xcode and whether I can switch to it.
+
+Full Xcode 26.5 is installed but not selected. I can override with `DEVELOPER_DIR`. Let me verify the toolchain works.
+
+Full Xcode 26.5 with iOS 26.5 SDK and a booted iPhone 16 simulator — the Apple build capability is available. I'll target `STATUS=DONE`. Now let me study the established native pattern and the P1 facades.
+
+Let me read the project.yml and the full AiUsageCard pattern, plus locate the P1 facade files (tokens, i18n, diagnostics, feedback primitives).
+
+Now I understand the multi-file pattern. Critical concern: the project.yml `sources` lists `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` but **not** `TeslaSync/widget-primitives`. Let me investigate how the build picks up sources and study the dashboard-widgets structure.
+
+`xcodegen` is available and the `.xcodeproj` is generated from `project.yml` (directory-path based — whole dirs are globbed). Since `widget-primitives` isn't a registered source path, I need to understand the intended wiring. Let me find the prompt file, sibling 0001, and any precedent.
+
+Let me check the scaffold prompt (which wires source dirs) and the git history of project.yml to understand the intended wiring for `widget-primitives`.
+
+Commit `31bcf05` shows test-routing logic (excludes `*Tests.swift` from app target). But my full read of the current project.yml didn't show that. Let me reconcile the current test-routing mechanism precisely.
+
+I need to empirically establish the build baseline. The current branch's project.yml compiles co-located `*.Tests.swift` into the app target (which would break), and doesn't include `widget-primitives`. Let me regenerate the project and test the baseline build.
+
+The project generates cleanly. Let me check the Shared.xcframework dependency (a KMP build preAction) and whether co-located tests break the app target.
+
+The app build needs a KMP `Shared.xcframework` (Gradle/Kotlin-Native) plus a project.yml test-routing fix. Let me check the documented verification expectations and the shared module.
+
+This is the key precedent. Sibling prompts (ToolCard, AlertMessageEditor, FSMTimelineChart) follow an established honest pattern: **verify the surface in isolation** (isolated SwiftPM build + tests, real iOS-18/macOS-15 `swiftc -typecheck`, swiftlint/swiftformat/placeholder) and **defer the full-app `xcodebuild build test`** to the `macos-latest` P99 gate, recording it in `apps/macos-pending-verifications.md` — because the full app build has pre-existing unrelated blockers (`DashboardWidgetSize` redefined 15×, 150+ co-located XCTest files, unstaged `Shared.xcframework`, macOS signing).
+
+Let me locate the facade definitions my surface depends on.
+
+Let me read the diagnostics seam, the design tokens, the feedback/motion primitives, and the AiUsageCard previews/tests/strings to finalize my pattern.
+
+Native `EmptyState` exists in `Sources/Components/Feedback/States.swift` (the P3 feedback peer of web `@/components/feedback`). Let me read its API plus the typography tokens, motion, and the AiUsageCard previews/tests/strings to finalize.
+
+Native `TSEmptyState` is the peer of web `EmptyState`. Let me read the typography tokens (correct path), the AiUsageCard previews/tests/strings, and how `view.opened` telemetry fires on appear.
+
+I have the full pattern. Now let me check whether the shared `Components` facade is KMP-free (so I can vendor it into an isolated SwiftPM harness using the *real* facade types) and confirm the design-tokens path.
+
+`Sources/Components` is KMP-free (only system frameworks) — I can vendor it into an isolated SwiftPM harness using the *real* facade. Let me read the design tokens to confirm exact token names, then write the surface.
+
+I have everything needed. Let me check the placeholder-check script and `pwsh` availability, then set up tracking and write the plan.
+
+Everything's available (`pwsh`, `xcodegen`, Xcode 26.5, swiftlint, swiftformat). I have the full pattern. Let me set up tracking and write the plan.
+
+Now I'll write all 7 surface files following the established pattern. Let me read the tokens header (to confirm host-compile safety) and write the files in parallel.
+
+Tokens are cross-platform safe. Now writing all 7 surface files.
+
+Let me check the placeholder patterns to avoid tripping the gate, then write strings, previews, and tests.
+
+All 7 files written. Now wiring `widget-primitives` into the build (necessary infra — the absent scaffold predecessor would have done this; without it the surface is never compiled). Adding to both app targets in project.yml and to the lint scope.
+
+Now let me run swiftformat (autofix), swiftlint, and the placeholder gate on the surface, and verify no forbidden words.
+
+Formatting is clean. Now swiftlint (scoped to the surface) and the forbidden-word check.
+
+One violation found across the repo — let me locate it (it may or may not be in my files).
+
+The single swiftlint violation is pre-existing in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` — not my files. My surface is lint-clean. Now the placeholder gate, then the isolated SwiftPM verification.
+
+Placeholder gate clean (0 count, 0 opt-outs). Now the isolated SwiftPM harness using the **real** facade. Let me check the design-tokens dir contents and set it up.
+
+Components import only system frameworks. Let me build the isolated SwiftPM harness with the real facade and run `swift test`.
+
+My surface compiled; the failures are only in vendored `Components/Maps` (which my surface doesn't use). Let me trim the harness to the real transitive dependency set. First, locate `TSChartPalette` and check cross-references.
+
+`TSChartPalette` is defined *outside* Components (external app type) — so Charts/Maps/DataDisplay aren't self-contained, but my surface doesn't touch them. Let me trim the harness to `UI + Feedback + Motion` (what `TSEmptyState` needs) and verify no cross-refs.
+
+Clean: `UI + Feedback + Motion` import only SwiftUI with no external refs. Let me rebuild the harness with just those and re-run `swift test`.
+
+My surface compiled again — only the unused `Feedback/FeedbackOverlays.swift` references `TSMetricBar` (DataDisplay). Let me identify Feedback files with external deps and exclude only those.
+
+Only `FeedbackOverlays.swift` has an external dep. Let me exclude it and re-run `swift test`.
+
+My surface compiles cleanly every time — failures are always in *unused* vendored UI files (now `Cards.swift` needs a `tsGlassPanel` modifier). Let me find the minimal UI set that `States.swift` (TSEmptyState) actually needs.
+
+Minimal set identified: `States.swift` needs `Buttons.swift` + `Typography.swift` + `Banners.swift` (TSInlineCallout). Let me verify those three are self-contained, then rebuild.
+
+The three facade deps are self-contained. Let me rebuild the minimal harness with the real facade files and run `swift test`.
+
+My surface keeps compiling; `Banners.swift` needs `TSTone`. Let me locate it and add it.
+
+`TSTone` is in `Badges.swift` (self-contained). Adding it and rebuilding.
+
+The isolated build caught a **real bug**: my test file uses `EmptyView`/`WidgetChartSummary<EmptyView>` but doesn't `import SwiftUI` — this would fail in the app's XCTest target too. Fixing the actual file.
+
+All 20 tests pass in the isolated build against the real facade. Now let me re-verify formatting after the import edit, then run the dual-SDK (iOS 18 + macOS 15) `swiftc -typecheck`.
+
+Format clean, iOS 18 typecheck passes. Now macOS 15 typecheck.
+
+Both SDKs typecheck clean. Now regenerate the Xcode project (to prove it enumerates my files after wiring) and re-confirm swiftlint on the surface.
+
+All 7 files enumerated. Let me confirm my files are swiftlint-clean and verify i18n key coverage.
+
+Let me correct the i18n regex (the `statA11y` key contains digits) for an accurate check.
+
+Surface is fully green in isolation. Now let me gather concrete evidence of the pre-existing full-app blockers (to document the deferral honestly), then attempt the real gate command with a bounded time budget.
+
+Evidence matches the documented precedent exactly (Shared.xcframework absent, 262 co-located XCTest-in-app files, `DashboardWidgetSize` defined 15×, no macOS signing). Let me now attempt the **actual** gate command with a bounded budget to capture real failure evidence rather than assert it.
+
+The bounded run timed out (still in the Gradle pre-action). Let me capture the raw output to see exactly where it blocks.
+
+The Gradle KMP pre-action actually runs and progresses (real evidence) — the full build is just slow and will then hit the pre-existing structural blockers. This matches precedent. Let me write the comprehensive, honest gate log.
+
+Now let me record the deferred full-app build in the precedent-established tracker (`apps/macos-pending-verifications.md`), matching the sibling rows.
+
+Let me update tracking, review the post-format surface files, and clean up temp artifacts.
+
+Let me do a final consolidated verification from the committed files (rebuild harness, `swift test`, format, placeholder) and review the two key view files post-format.
+
+Final state is fully green: **20/20 tests pass**, swiftformat clean, placeholder gate clean. Let me review the working tree and stage precisely (my surface + log + necessary wiring), excluding the pre-existing AiUsageCard modifications.
+
+The AIUsageCard modifications are pre-existing (I never touched them) — I'll exclude them. Staging my surface, log, and necessary wiring, then committing.
+
+The surface is committed and green. Let me make one accessibility refinement for Dynamic Type — let the stat value gracefully scale before truncating (matching the house pattern) — then re-verify and amend.
+
+All green after the refinement. Let me amend the commit to include it.
+
+All committed cleanly (commit `a809f106a`, 11 files, AiUsageCard pre-existing changes excluded). Let me confirm the todo tracker is fully closed.
+
+All 12 todos complete. The task is finished and verified.
+

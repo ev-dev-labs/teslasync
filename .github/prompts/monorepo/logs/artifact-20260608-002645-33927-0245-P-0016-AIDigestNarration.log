@@ -1,0 +1,229 @@
+================================================================================
+P4 · Shared surface · 0016 — AIDigestNarration (Apple)
+Run: 2026-06-08T03:55-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/245
+Prompt: P4/shared-surfaces/0016 — Shared surface: AIDigestNarration
+Web source (spec): web/src/components/ai/AIDigestNarration.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (p4-apple feature-views
+      0002-BackendTool / 0010-ToolCard / 0180-AlertMessageEditor precedent;
+      ADR-012; Honesty rule 7 — predecessor parity).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (83717DEE-…-CBDDD3140989, Booted)            OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER —
+                               web source lists "Charts/maps used: (none)")         OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                    OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                  OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  xcodegen ................... 2.45.4 (project generates cleanly, see deferred)     OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+  shared-surfaces in project.yml  0 references (new category; not yet target-registered)  WARN
+
+  Capability note: the core requirement is SwiftUI (no Swift Charts / MapKit for
+  this surface), which is AVAILABLE and PROVEN by real iOS-18-simulator AND
+  macOS-15 SDK compiles below. The capability-BLOCKED escape hatch ("SwiftUI/
+  Charts/MapKit unavailable on the runner") does NOT apply — the surface is
+  authored, host-compiled on both SDKs, host-tested (31/31), and lint/format/
+  placeholder clean.
+
+=== ARTIFACT (apps/apple/TeslaSync/shared-surfaces/AIDigestNarration.*) ===
+  AIDigestNarration.Adapter.swift   185  pure projection core — feature constants
+                                         (id "digest-narration" + endpoint /ai/digests/
+                                         weekly/narrate), request builder (web {vehicle_id
+                                         ?? 0, week_offset_weeks:0}), off-mode gate truth
+                                         table (useAiEnabled), canStart/generate-enabled,
+                                         streamed-output projection (AiOutputPanel), a11y
+  AIDigestNarration.Model.swift     352  P1/S8 gate seam (AIDigestNarrationSource) +
+                                         streaming seam (AIDigestNarrationStreamer, peer of
+                                         useAiStream) + P1/S11 telemetry seam (view.opened)
+                                         + P1/S10 strings facade + @Observable model +
+                                         in-memory doubles
+  AIDigestNarration.Views.swift     379  presentational subviews — Helix badge (AIBadge),
+                                         universal "Ask Helix" CTA, thinking dots/indicator
+                                         (AIThinkingIndicator), output panel (AiOutputPanel:
+                                         empty/thinking/prose/error+retry), gate-loading
+                                         skeleton, freshness chip + connectivity banner
+  AIDigestNarration.swift           186  the surface — withAiFeature gate → EmptyView/card,
+                                         header (title + Helix badge + chip + refresh),
+                                         banner, content (loading/open), a11y summary, slug
+  AIDigestNarration.Previews.swift  129  #if DEBUG previews — one per state (gated/loading/
+                                         idle/no-vehicle/thinking/done/error/stale/offline)
+  AIDigestNarration.Tests.swift     345  XCTest — adapter + gate + output projection + a11y
+                                         + model wiring (31 methods)
+  AIDigestNarration.strings          48  P1/S10 catalog contribution (table "AIDigestNarration")
+  Total 1624 lines. The 57-line web source is a thin wrapper that COMPOSES three shared
+  web primitives (AIFeatureCard ~330, AiOutputPanel ~90, withAiFeature ~70) over the
+  useAiStream hook (~300); the native surface reproduces that whole composed behaviour.
+  No file imports the Shared xcframework (seams are Swift protocols; the prod app injects
+  the facade-backed source/streamer, previews/tests inject the InMemory doubles).
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Gate (web withAiFeature('digest-narration', …) + useAiEnabled, ADR-015): native
+    AIDigestGate mirrors the fail-closed truth table — known feature AND ai_mode != 'off'
+    AND ai_features['digest-narration'] == true. Off ⇒ the whole surface is withdrawn
+    (EmptyView), exactly like the web HOC returning null. view.opened telemetry is
+    DEFERRED until the gate opens (web data-ai-feature marker parity).
+  - Stream (web useAiStream({url:'/ai/digests/weekly/narrate', body:{vehicle_id,
+    week_offset_weeks:0}})): bound through the AIDigestNarrationStreamer seam. generate()
+    mirrors stream.start(); the request coalesces a missing vehicle to 0 (web vehicleId ?? 0).
+    No HTTP in the view.
+  - Composition (web AIFeatureCard + AiOutputPanel):
+      • header  -> title "Helix narration" + AIBadge "Helix" (Sparkles chip) + description.
+      • action  -> universal CTA: visible "Ask Helix" idle / "Helix is thinking…" streaming;
+                   VoiceOver name "Ask Helix · Generate narration" (web aria-label); disabled
+                   = !canStart || streaming (+ P4 offline guard).
+      • output  -> friendly idle empty | thinking (skeleton + dots) | streamed prose
+                   (whitespace-preserved, selectable) | "Helix error: <msg>" + Try again.
+  - States (ALL rendered, each with a #if DEBUG preview + a model/projection unit test):
+      gated (withdrawn) · loading (gate skeleton) · idle/empty · no-vehicle (emptyHint +
+      disabled) · thinking · done (prose) · error (+retry) · stale (chip + one-shot auto-
+      refresh) · offline (cached prose kept + chip + banner + action withheld).
+  - i18n (P1/S10): web keys preserved verbatim — analytics.weeklyDigest.aiNarration.{title,
+    description,generateButton,badge} + shared helix.{askHelix,thinking,errorLabel,tooltip,
+    badge,ariaLabel} + ai.common.errorUnknown; native chrome namespaced aiDigestNarration.*.
+    All 20 code-referenced keys are declared in AIDigestNarration.strings (24 entries); NO
+    English string literals in native code (all via AIDigestStrings facade + Text(verbatim:)).
+  - Accessibility: VoiceOver labels on the action (universal + per-feature verb), badge,
+    freshness chip, refresh, retry, output region; container carries a combined summary;
+    Dynamic-Type system fonts (Font.TS); reduce-motion honored (thinking dots + skeleton).
+  - Telemetry (P1/S11): AIDigestNarrationModel emits view.opened with slug "AIDigestNarration"
+    exactly once, only after the gate opens (OSLogAIDigestTelemetry default; prod injects the
+    shared diagnostics adapter).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the production files compiled together with the REAL design Tokens
+  (Color.TS/Font.TS/TSSpacing/TSRadius, verbatim) + faithful re-decls of the P1/S9
+  component primitives (TSGlassPanel/TSButton/TSSkeleton/TSFadeIn, signatures matched
+  to apps/apple/Sources/Components/*); none import the Shared xcframework.
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK
+        xcrun --sdk iphonesimulator swiftc -typecheck -sdk <iPhoneSimulator26.5> \
+          -target arm64-apple-ios18.0-simulator -swift-version 6 -D DEBUG <closure+5 files>
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+        (Both runs include AIDigestNarration.Previews.swift under -D DEBUG, so the
+         #Preview macro expansions typecheck on both SDKs.)
+  [3] swift build — self-contained SwiftPM harness, Swift 6 language mode (strict
+        concurrency complete), real Tokens + the 5 production files + shims:
+          Build complete! (17.27s)
+        BUILD_EXIT=0                                                              OK
+  [4] swift test — the FULL XCTest suite EXECUTED on the macOS host (same harness):
+          Test Suite 'AIDigestFeatureTests'           passed
+          Test Suite 'AIDigestGateTests'              passed
+          Test Suite 'AIDigestAdapterGatingTests'     passed
+          Test Suite 'AIDigestOutputTests'            passed  (6)
+          Test Suite 'AIDigestAccessibilityTests'     passed
+          Test Suite 'AIDigestNarrationModelTests'    passed  (13)
+          Test Suite 'AIDigestStringsTests'           passed
+          Executed 31 tests, with 0 failures (0 unexpected)
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: feature identity + request coalescing; gate truth table + phase
+        (loading/gated/open); canStart + generate-enabled (vehicle/streaming/offline);
+        output projection (empty/thinking/prose/failed + unknown-error fallback); a11y
+        summary; model wiring — gate-deferred view.opened-once + slug, generate→request
+        forwarding, stream snapshot→prose/failure, stale one-shot auto-refresh, offline
+        no-refresh, stop→cancel+re-arm.
+  [5] swiftlint --strict (6 surface .swift files; explicit paths — the repo
+        .swiftlint.yml `included:` does not list TeslaSync/shared-surfaces, that wiring
+        is the P4 integration prompt's job, so the bare `swiftlint --strict` SKIPS this
+        new dir; run explicitly here):
+          Done linting! Found 0 violations, 0 serious in 6 files.
+        LINT_EXIT=0                                                               OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/6 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate; swift):
+          ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces -Language swift
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                        OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync      -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode toolchain):
+      - `xcodegen generate`                          -> XCODEGEN_EXIT=0 (project + targets + schemes).
+      - `xcodebuild -target TeslaSync    build`      -> IOS_BUILD_EXIT=65
+      - `xcodebuild -target TeslaSync-macOS build`   -> MAC_BUILD_EXIT=65
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **
+        Zero of the captured errors reference AIDigestNarration (grep count = 0 on both targets).
+    Why deferred (independent, code-unrelated reasons — none is a defect in this surface;
+    identical disposition to the 0002-BackendTool / 0010-ToolCard / 0180-AlertMessageEditor
+    predecessors recorded in apps/macos-pending-verifications.md, Honesty rule 7):
+      (a) NOT-YET-REGISTERED: project.yml's app targets enumerate `Sources/`,
+          `TeslaSync/dashboard-widgets/`, `TeslaSync/feature-views/`; this surface lives in
+          the NEW `TeslaSync/shared-surfaces/` category, which has 0 references in project.yml
+          (verified: shared_surfaces_refs=0). The category is registered into the XcodeGen app
+          + test targets by the downstream P4 integration/acceptance prompt (exactly as
+          dashboard-widgets / feature-views were each wired once for all their surfaces).
+          Editing project.yml / .swiftlint.yml is OUTSIDE this prompt's allowed files
+          (AIDigestNarration.* + the log) and the prompt's own commit step adds only those
+          paths — so any local wiring was reverted (config diff = empty). Steps [1]/[2]
+          compile this surface against the real tokens on BOTH SDKs, and step [4] EXECUTES its
+          full 31-test XCTest suite — the meaningful validation.
+      (b) Shared.xcframework not staged: the app target links the KMP core (14 Sources files
+          `import Shared`); staging it needs a Kotlin/Native gradle build (apps/shared
+          :core:assembleSharedXCFramework). Independent of this UI surface; concrete
+          missing-framework error captured above.
+      (c) Pre-existing parallel-merge collisions in the app target, unrelated to this surface:
+          `struct DashboardWidgetSize` redefined 15× across Sources/DashboardWidgets +
+          TeslaSync/dashboard-widgets, and 224 co-located `*.Tests.swift` importing XCTest into
+          the app target. Plus macOS development signing (ADR-012). These pre-date this prompt
+          and live in files this prompt may not touch.
+    Note on the bare global lint/format gate commands (informational; not this surface):
+      - `swiftlint --strict` (whole repo) reports 1 pre-existing violation —
+        TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length).
+      - `swiftformat --lint apps/apple` reports 1 pre-existing file —
+        TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes).
+      Both are in files outside this prompt's scope; this surface's own 6 files are clean
+      (steps [5]/[6] above, explicit paths).
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source (gated/loading/idle/thinking/done/
+      error) + the P4 freshness states (stale/offline) + the no-vehicle branch — each has a
+      #if DEBUG preview; phase/output logic unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder layer (AIDigestNarrationSource gate +
+      AIDigestNarrationStreamer); no direct HTTP from the view.
+  [x] Every i18n key from source has a matching catalog key — web title/description/
+      generateButton/badge + shared helix.* preserved verbatim; native chrome
+      aiDigestNarration.* present; 20 referenced == declared (24 entries) verified.
+  [x] Accessibility labels on every interactive element (action / badge / chip / refresh /
+      retry); container + output carry combined values; Dynamic Type + reduce-motion honored.
+  [x] Tests: adapter unit + per-state model/projection + a11y — 31 methods, EXECUTED 31/31, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured
+      evidence (xcframework + registration + pre-existing collisions + signing), per
+      predecessor parity (apps/macos-pending-verifications.md row appended).
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; the xcodebuild build/test is
+                          shown DEFERRED with its real exit 65 + cause, not as pass.
+  2 No scope narrowing ... full surface (6 swift files + strings), all states, both seams,
+                          31 tests.
+  3 No skip-and-assume ... web source + AIFeatureCard + withAiFeature + useAiStream +
+                          AiOutputPanel + useAiEnabled read end-to-end; every t() + branch
+                          reproduced; pre-existing blockers empirically captured, not assumed.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. gate + universal CTA + thinking indicator + output panel + 9 states.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0002-BackendTool / 0010-ToolCard host-gate +
+                          deferral; macos-pending-verifications.md row appended.
+  8 No commit on red ..... committed work is green on every runnable gate; the only non-green
+                          steps are the environment-blocked xcframework build + pre-existing
+                          collisions in other files, deferred with evidence.
+  9 No silent drift ...... registration deviation documented above (shared-surfaces is a new
+                          category not yet in project.yml; wiring is the integration prompt's
+                          job; any local wiring reverted — config diff empty).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

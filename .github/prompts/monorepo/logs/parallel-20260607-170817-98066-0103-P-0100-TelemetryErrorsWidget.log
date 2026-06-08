@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure, reading the web source specification, and checking the Apple toolchain availability.
+
+Critical finding: `xcodebuild` requires full Xcode (only Command Line Tools present), and `simctl` is unavailable — so the iOS/macOS simulator build+test steps cannot run. However `swift` 6.3.2, `swiftlint`, and `swiftformat` ARE available. Let me explore the Apple app structure to understand conventions and whether an SPM build is possible.
+
+`apps/apple` exists using XcodeGen (`project.yml`), `pwsh` is available, swiftlint/swiftformat available. No Xcode/simulator. Let me explore the Sources structure deeply to find existing widgets, state holders, tokens, and i18n.
+
+Existing dashboard widgets live in `Sources/DashboardWidgets/`. Let me examine the target output dir, the project.yml, and the closest template widgets (BatteryCells, DrivetrainHealth).
+
+Now I understand the structure — `TeslaSync/dashboard-widgets/` holds many widgets, each following a multi-file pattern (`.swift`, `.Model.swift`, `.Models.swift`, `.Adapter/.Projection/.Builder.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`). Let me read the web data hooks/types and a complete analogous widget (MQTTStatusWidget — system category status monitor).
+
+Excellent template. I need to understand which types are shared vs per-widget (to avoid duplicate symbols). Let me check declarations of shared types and read the web data types.
+
+Key finding: `DashboardWidgetSize`/`DashboardWidgetRegistration` are redeclared `public` in 5+ widget files within the same module — meaning either the full module doesn't currently compile together, or widgets are self-contained by convention. Let me investigate the build status doc and shared design tokens.
+
+The picture is now clear. `macos-pending-verifications.md` confirms: the `Shared.xcframework` binary doesn't exist on non-macOS-runner hosts, and Xcode-toolchain artifacts are deferred to `macos-latest` CI. Each widget is **self-contained by mandate** — the "Allowed files" constraint forbids shared files, so every widget redeclares `DashboardWidgetSize`/`DashboardWidgetRegistration` locally (as MQTT/DigitalTwin/MotorHistory all do). Design tokens (`Color.TS`, `TSSpacing`, etc.) are genuinely shared in `Sources/`.
+
+Let me read the full MQTT template set + design tokens + a feed-style widget.
+
+Let me read the remaining template files (strings, Tests, Previews), the design tokens, and a feed-style widget for the scrollable list pattern.
+
+I now have the full pattern. The Previews mention "skipped by the swiftc host gate" and the Projection says it can be "compiled into a host harness and EXECUTED without a simulator" — there may be a swiftc-based gate I can actually run. Let me find it, read the design tokens, the placeholder checker, and a feed-style widget.
+
+Design tokens are clear. No swiftc host-gate script is checked in (the "host gate" is conceptual CI). `swiftc` 6.3.2 is available though, so I can still type-check the Foundation-only projection. Let me read the placeholder checker, the `TSSkeleton` signature, and a feed-style widget for the scrollable list pattern.
+
+I have the full native pattern and tokens. Now let me capture exact web parity details: `WidgetShell` (provides loading/stale/error/refresh chrome), `Badge`, `TimeStamp`, and `EmptyState`.
+
+Important parity nuance: this widget routes errors through the freshness indicator (`isError` → `DataFreshness`), keeping content/empty visible — not a full replacement. Let me read `DataFreshness`, `Badge`, `TimeStamp`, `EmptyState`, `fmtInt`, and the widget `types` to capture exact semantics.
+
+I now have complete parity knowledge. Let me verify `swiftc` can type-check SwiftUI + Observation on this host (so I can validate the non-test files), then I'll build the widget.
+
+`swiftc` type-checks SwiftUI + Observation cleanly (macOS SDK). This lets me type-check my view code and execute the Foundation-only adapter, even without Xcode. Let me grab the exact `formatRelative` thresholds, then build the widget.
+
+I have everything needed for faithful parity. Let me set up tracking and write the widget. Starting with the Foundation-only projection (the testable core).
+
+All 7 files created. Now let me validate. First, the formatter/linter configs, then run the host-runnable gates.
+
+Config: 120 max width, `--self remove`, testable-bottom imports. Let me auto-format my files with swiftformat, then review the diff.
+
+All formatter changes are benign (line-wrapping + implicit-return removal). Now run the lint gates on my files.
+
+Both lint gates pass (0 violations, 0 format issues). Now let me type-check the SwiftUI code with `swiftc` against the real design tokens, using Swift 6 strict concurrency to match the project build settings.
+
+The strict-concurrency type-check caught a real Swift 6 issue (exactly what `xcodebuild` would flag): non-`Sendable` static `ISO8601DateFormatter` globals. Let me fix by building the formatter locally in `parse`.
+
+Another genuine SwiftUI API-order error caught. The `.frame` modifier requires `minHeight` before `maxHeight`. Fixing:
+
+The only remaining error is the `#Preview` macro plugin — an Xcode-toolchain artifact (Command Line Tools `swiftc` can't load `PreviewsMacros`), not a code defect. The 4 core production files type-check clean. Let me confirm the shipping code (no DEBUG previews) passes cleanly.
+
+Production code type-checks clean under Swift 6 strict concurrency. Now the highest-value evidence: actually **execute** the Foundation-only adapter to prove the projection logic works (cached → projection). Let me compile + run a harness.
+
+Swift 6 strict-concurrency nit in my harness (not the widget). Let me annotate `check` with `@MainActor` and re-run.
+
+All 30 adapter assertions pass at runtime. Now let me also execute the **state-holder phase logic** at runtime (constructing the real model + in-memory source) to validate the loading/empty/error/content resolution end-to-end.
+
+48 runtime assertions pass (30 adapter + 18 model/registry), full widget compiles+links+runs under Swift 6 strict concurrency. Now the placeholder gate. Let me first scan my files for forbidden patterns, then run the real checker.
+
+Placeholder gate clean (COUNT=0, EXIT=0). Now let me capture the platform-capability evidence for the Xcode-dependent gate steps.
+
+Capability definitively blocked: no full Xcode (`CommandLineTools` only), no `simctl`/iOS Simulator, and `Shared.xcframework` is absent (macos-pending). The Xcode-dependent gate steps cannot run here. Let me run the whole-tree lint/format exactly as the gate does, to record honest values.
+
+Whole-tree `swiftformat --lint`: 0/380 require formatting → **FORMAT_EXIT=0**. Now whole-tree `swiftlint --strict`.
+
+Whole-tree `swiftlint --strict` reports 1 violation — but my files linted clean. Let me confirm it's a pre-existing sibling-file issue, not mine.
+
+Confirmed: the lone whole-tree lint violation is in `LifetimeStatsWidget.Adapter.swift` (a sibling surface, explicitly out of scope) — **my 6 files lint clean (0 violations)**. Let me verify the log directory and check the existing log convention from a sibling.
+
+The sibling logs reveal the **user-approved disposition** (the "0036 disposition"): host-runnable gates all green + Xcode `build test` steps explicitly **DEFERRED** (capability-absent, not failed) → `EXIT=0`/`STATUS=DONE`. Let me confirm this is the consistent convention across siblings.
+
+Sibling 0010 mentions a full Xcode at `/Applications/Xcode.app` on its runner. Let me check whether this host has it (could enable a real build attempt via `DEVELOPER_DIR`), and read how 0010 framed the Xcode steps + final EXIT.
+
+**This host has full Xcode** at `/Applications/Xcode.app` (with CoreSimulator) plus `xcodegen`. That means I can do far better than ad-hoc harnesses: I can run my **actual XCTest suite** via a throwaway SPM package using the real Xcode toolchain (`@testable import TeslaSync`). Let me set that up.
+
+Surface builds clean with **Xcode 26.5** in Swift 6 language mode. Now run my **actual XCTest suite**.
+
+Outstanding — my **actual XCTest suite passes 29/29 under real XCTest (Xcode 26.5)**. Since full Xcode is present, let me also probe the full app-target build (as the gate intends) to capture the real integration state. First, the xcframework preAction script and a project generation.
+
+Confirmed: **6 files** (5 pre-existing siblings + mine) each declare `public struct DashboardWidgetSize` in the same target — the mandated self-contained convention. A full app build also needs the Gradle-built `Shared.xcframework` (macos-pending). Let me concretely demonstrate the collision is **pre-existing and cross-sibling** (independent of my file) by compiling two sibling models together.
+
+**Definitively proven**: the full-target collision is pre-existing and cross-sibling (MQTT + DigitalTwin collide — neither is mine), an integration-phase concern outside my allowed files. This matches the user-approved "deferred Xcode gate" disposition used by all 18 sibling DONE logs. Let me read the MQTT log header to match structure, then write my log.
+
+My runner has full Xcode (unlike the MQTT sibling's runner), so I can attempt the real gate. Let me generate the project and attempt the actual `xcodebuild` macOS target to capture concrete evidence of the integration state.
+
+The app-target build fails first on the **missing `Shared.xcframework`** (the macos-pending, Gradle-built KMP artifact) — before even reaching the (separately-demonstrated) cross-sibling duplicate-symbol collision. Both are pre-existing/deferred and independent of my surface. I have comprehensive honest evidence. Let me clean up generated/temp artifacts and confirm git state.
+
+Clean state: my 7 files untracked; the 2 pre-existing modified web files are unrelated (I won't touch them). Let me gather log metadata and file sizes, then write the gate log.
+
+All files ≤362 lines (house limit 400). Now I'll write the comprehensive gate log following the sibling structure.
+
+Now let me re-verify my final files are still format/lint-clean after the post-edit fixes, then commit.
+
+Final files are clean (0 format issues, 0 lint violations). Now let me commit exactly the allowed files (excluding the unrelated pre-existing web changes).
+
+Exactly my 8 allowed files staged; the 2 pre-existing web changes correctly excluded. Committing:
+
+Committed `1f5a2af0` (8 files, 1947 insertions). Let me update tracking and do a final cleanliness check.
+
+Everything is clean: generated `.xcodeproj` and all `/tmp` harnesses removed, my 7 source files committed, only the 2 unrelated pre-existing web edits remain untouched.
+
+Merge made by the 'ort' strategy.
+ ...ashboard-widgets-0100-TelemetryErrorsWidget.log | 201 ++++++++++++
+ .../TelemetryErrorsWidget.Components.swift         | 279 ++++++++++++++++
+ .../TelemetryErrorsWidget.Model.swift              | 294 +++++++++++++++++
+ .../TelemetryErrorsWidget.Previews.swift           | 177 ++++++++++
+ .../TelemetryErrorsWidget.Projection.swift         | 362 +++++++++++++++++++++
+ .../TelemetryErrorsWidget.Tests.swift              | 326 +++++++++++++++++++
+ .../TelemetryErrorsWidget.strings                  |  53 +++
+ .../dashboard-widgets/TelemetryErrorsWidget.swift  | 255 +++++++++++++++
+ 8 files changed, 1947 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0100-TelemetryErrorsWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TelemetryErrorsWidget.Components.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TelemetryErrorsWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TelemetryErrorsWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TelemetryErrorsWidget.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TelemetryErrorsWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TelemetryErrorsWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/TelemetryErrorsWidget.swift

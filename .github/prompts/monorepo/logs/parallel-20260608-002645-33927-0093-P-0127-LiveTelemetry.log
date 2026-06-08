@@ -1,0 +1,136 @@
+I'll start by exploring the repository structure, the web source component, and the existing Apple app architecture, plus check tool availability.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swiftlint`, `swiftformat`, `swift` (6.3.2), and `pwsh` are available. Let me explore the Apple app structure and the existing feature-view pattern.
+
+Now I have the full web source. Let me study the existing feature-view pattern and shared infrastructure. Let me check if LiveTelemetry already exists and read a representative example plus the project config.
+
+Now let me read the full AcDcStatsPanel set (Model, Adapter, Views, Previews, Tests, strings) and the shared infrastructure to learn the exact conventions.
+
+Let me read the remaining AcDcStatsPanel files (Views, Previews, Tests, strings) and locate the shared design-system primitives.
+
+Let me read the Previews and Tests, and locate the shared design-system primitives (TSGlassPanel, Color.TS, Font.TS, TSSpacing, TSBadge, etc.).
+
+I now understand the full pattern. Let me locate the shared design-system primitives and the project config.
+
+Let me read the Design tokens and key shared components (Badge, GlassPanel, Skeleton, Motion).
+
+Let me read the Design tokens and key shared components, and find the color token definitions.
+
+The tokens live at `apps/design/generated/apple`. Let me inspect those and check a precedent log to understand the expected gate outcome (given xcodebuild isn't fully available).
+
+Excellent — the precedent shows the approach: author the full surface, run host-level SwiftPM compile + tests, and defer the xcodebuild step with evidence. Let me read the full precedent log, the tokens, and the closest precedent surface (LiveMotorStatus).
+
+Now I have the full picture. The precedent (LiveMotorStatus) is the ideal template. Let me probe the exact toolchain capabilities (Xcode presence, SDKs, SwiftUI/Charts/MapKit availability) and read the LiveMotorStatus sources plus the web `types`.
+
+`/Applications/Xcode.app` exists — I can use it via `DEVELOPER_DIR` like the precedent. Let me verify the Xcode toolchain + iOS simulator SDK, read the swiftlint/swiftformat configs, the LiveMotorStatus source files (my direct template), and the web `types` + helpers.
+
+Full Xcode 26.5 + iPhoneSimulator SDK + booted iPhone 16 are available via `DEVELOPER_DIR`. I can mirror the precedent gate exactly. Now let me read the LiveMotorStatus sources (my direct template) and the web types/helpers.
+
+Let me read the rest of the LiveMotorStatus template (Adapter, Views, Previews) and the web types + helpers.
+
+Let me read the Previews template, the web types/helpers, and the shared components I'll compose (GlassPanel, EmptyState, Skeleton, Motion), plus the unit-conversion instructions.
+
+Let me read the number-format helpers precisely, find how the parent wires the unit converters, read the SI converters, and the unit-conversion instructions (required reading).
+
+Let me find the dashboard parent that wires `LiveTelemetry` and read the SI conversion functions plus the unit-conversion instructions.
+
+Let me read the exact SI converter implementations to port the conversion factors precisely.
+
+I have the conversion factors. Now let me read the shared components I'll compose (GlassPanel, EmptyState, Skeleton, Motion) to use their exact APIs.
+
+Let me read the EmptyState and Motion components to finalize the component APIs I'll use.
+
+I now have a complete understanding of the pattern, tokens, components, web spec, and conversion math. Let me set up tracking and identify which component files depend on the KMP `Shared` framework (to exclude from the host harness).
+
+No component/design files depend on the KMP `Shared` framework, so the full component closure is host-compilable. I have everything needed. Let me set up tracking and a plan, then build the surface.
+
+Now I'll author the surface. Starting with the state-holder layer (Model), data DTOs, pure adapter, and projection.
+
+Let me add a JS-style plain number formatter to the Adapter (for the web's raw `${number}` interpolations), then write the projection layer.
+
+Now the projection structs (per-panel view-models).
+
+Now the projector — the per-panel arithmetic that reproduces the web source exactly.
+
+Pure layers done. Let me compile the Foundation-only files early to catch errors before adding SwiftUI.
+
+Pure layers typecheck clean under Swift 6 strict concurrency. Now the SwiftUI chrome — shared atoms and tone mappings.
+
+Let me extend `TelemetryBadge` with an optional leading icon (for the tire summary) and add the tire-status color mapping, then build the 6 panels.
+
+Now the 6 panel views and the responsive grid.
+
+Now the main surface — section header, freshness, connectivity banner, and the state switch.
+
+Now the i18n catalog and the previews.
+
+Now the test suites — projection/format/conversion/accessibility coverage.
+
+Now the model + view-render test suite.
+
+All 11 files authored. Let me check line counts (swiftlint `file_length` ≤400 under `--strict`) and run swiftformat to normalize.
+
+Panels.swift is 419 lines (over the 400 `file_length` limit) and some test lines exceed 120 chars. Let me split the panels file and view the exact boundary.
+
+I'll split: truncate Panels.swift after the Security section and move Tire/Media/Navigation into a new file.
+
+Now let me run swiftformat to normalize formatting, then re-check lengths.
+
+Nearly all within limits. Let me check the one 121-char line in Projector.swift (line_length warns >120).
+
+Now let me set up the host gate. First, identify any component files that import the KMP `Shared` framework (to exclude from the host compile closure).
+
+All component files only import SDK frameworks. Let me verify the component closure is self-contained by typechecking it alone (macOS) before adding my surface.
+
+UnitFormatters references `UnitPreferences` (defined outside the Components closure) — the file the precedent flagged. Let me find all such externally-dependent files and exclude them, keeping the closure self-contained.
+
+Only `UnitFormatters.swift` depends on the external `UnitPreferences`. Let me re-typecheck the closure excluding it.
+
+Closure is clean. Now the two real SDK typechecks (iOS 18 simulator + macOS 15) of the surface compiled against the full component closure.
+
+iOS 18 typecheck clean. Now macOS 15.
+
+Both SDK typechecks pass (iOS 18 + macOS 15, exit 0). Now I'll build a self-contained SwiftPM harness to execute the XCTest suite on the host. Let me check for duplicate basenames in the closure first.
+
+No collisions. Let me build the SwiftPM harness (real production files + closure + previews + tests) and run the suite on the host.
+
+The main surface file (`LiveTelemetry.swift`) wasn't copied by the loop (the `swift` suffix mismatch). Let me fix that.
+
+All 10 production files present. Now the Package manifest, then run the test suite.
+
+All 50 tests pass (0 failures), including the 6 per-state ImageRenderer render tests. Now swiftlint `--strict`, swiftformat `--lint`, and the placeholder gate.
+
+One 121-char line remains in Projector.swift (line 250). Let me view and fix it.
+
+Fixed. Re-running swiftlint `--strict` and swiftformat `--lint` together.
+
+swiftlint `--strict`: 0 violations. swiftformat `--lint`: 0/12 need formatting. Since I edited Projector.swift after the test run, let me re-sync the harness and re-run tests + both SDK typechecks on the final code to keep the gate honest.
+
+Final tests green (50/50). Let me re-run both SDK typechecks on the final code and inspect the placeholder gate script.
+
+Both SDK typechecks pass on final code. The script needs a real path (the prompt's `-Path …/LiveTelemetry` matches nothing). Let me read the patterns, then run the gate against a temp dir containing exactly my files (a real scan), plus the self-test.
+
+No forbidden tokens. Let me run the placeholder gate authoritatively (real scan of my files via temp dir) plus the self-test and the literal prompt invocation.
+
+Every host-runnable gate step is green. Now let me capture genuine evidence for the DEFERRED xcodebuild step (the precedent's disposition): check the `Frameworks/` state and `xcodegen` availability.
+
+Deferral reasons confirmed real (Shared.xcframework absent; signing entitlements present). Let me capture genuine xcodebuild evidence via `xcodegen generate` + a build attempt (exactly the precedent's disposition).
+
+xcodegen generated all 12 targets cleanly (my files are in the build graph). Now capture the real xcodebuild failure (the missing KMP xcframework / signing).
+
+Captured the exact predecessor-accepted evidence: `MAC_BUILD_EXIT=65` from the absent `Shared.xcframework` + signing entitlements — infra blockers independent of this UI surface. Let me clean up generated artifacts, gather final stats (line counts, i18n key parity, test breakdown), and verify git-ignore.
+
+The one "extra" referenced token is `telemetry.viewOpened` — a Swift method call (`self.telemetry.viewOpened(surface:)`), not an i18n key. So all 50 real i18n keys are referenced and declared (50==50). Let me grab git context and write the gate log.
+
+All 13 files new, no orphan keys, no stray artifacts. Let me write the gate log.
+
+Now let me commit my files + the log (only my new files, not the pre-existing unrelated changes).
+
+Exactly my 13 files + the log are staged (no unrelated changes). Committing.
+
+Committed (6fb7c4154): 14 files, 3293 insertions. Let me do a final verification.
+
+All gates green and committed. The pre-existing unrelated changes (AIUsageCard.*, two web files) were left untouched as they were before I started. The log ends with `EXIT=0` / `STATUS=DONE`.
+
+All 11 todos complete. The task is fully done and verified.
+

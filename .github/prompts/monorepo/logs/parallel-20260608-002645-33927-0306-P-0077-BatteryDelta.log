@@ -1,0 +1,115 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Toolchain status is important: full Xcode is NOT installed (only Command Line Tools), so `xcodebuild` with iOS Simulator won't run. But `swift`, `swiftlint`, `swiftformat` are available. Let me read the web source and explore the existing Apple app structure to follow established patterns.
+
+Now I understand the web component. It's a compact battery state-of-charge delta display. Let me explore the existing Apple patterns deeply — particularly the `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` (the destination's sibling dirs), the DataDisplay components, and the P1 facades (state holders, tokens, i18n, diagnostics).
+
+There's a `project.yml` (XcodeGen). The `feature-views` dir uses a clear multi-file pattern per surface (`.swift`, `.Model`, `.Adapter`, `.Views`, `.States`, `.Previews`, `.strings`, `.Tests`). Let me read the project config and locate the P1 facades (i18n/S10, tokens/S9, diagnostics/S11, state-holders/S8).
+
+Key finding: `project.yml` includes `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` but NOT `shared-surfaces` — and I'm only allowed to touch `shared-surfaces/BatteryDelta.*` (project.yml wiring belongs to the P4 core prompt). Also confirmed full Xcode is absent. Let me study a representative surface end-to-end and locate the i18n/tokens/diagnostics facades.
+
+`BatteryPill` is the ideal analog — a small prop-driven presentational atomic with `.Model`, `.swift`, `.strings`, `.Previews`, `.Telemetry`, and `.Tests` (no Adapter, like BatteryDelta). Let me read the entire BatteryPill set to mirror conventions precisely.
+
+Let me read each file individually to study the conventions:
+
+Excellent pattern match. Let me read the remaining BatteryPill files (Telemetry, strings, Previews, Tests) to complete my understanding of the conventions.
+
+I now have the full convention template. `BatteryDelta` is even simpler than `BatteryPill` (a bare inline `<span>`, not a glass panel). I need to verify the exact design tokens for the tones (`emerald-300`, `amber-300`, `text-muted`). Let me examine the design token definitions.
+
+Now I understand the design tokens and the full surface template. Let me check how existing surfaces handle **interpolated** localized strings at runtime (the `battery.delta.aria` "Battery {{from}}% to {{to}}%" case) and how the `.strings` table is resolved, so I match the established idiom exactly.
+
+The established idiom is `NSLocalizedString(key, tableName: <Surface>, bundle: .main, value: fallback, comment:)` plus `String(format:)` for interpolation. Let me read a couple of complete examples (helper + positional `.strings`) to copy the exact idiom.
+
+I now have the exact localization idiom. Before writing, let me verify the exact Unicode characters used in the web source (the sign `−`, dash `—`, and arrow `→`) so I reproduce them byte-for-byte.
+
+All three confirmed: dash `—` (U+2014), minus `−` (U+2212), arrow `→` (U+2192), plus `+` (ASCII). Now let me check the linter configs and placeholder checker so my code passes them.
+
+Critical findings: SwiftLint's `included:` doesn't list `shared-surfaces` (P4-core's job to add), but **swiftformat --lint runs on the whole tree** so my files WILL be format-checked. Let me read the placeholder checker and confirm tool availability (pwsh, xcodegen, iOS SDK).
+
+`pwsh` and `xcodegen` are available, but the **iOS SDK is absent** (`xcrun --sdk iphonesimulator` fails) — that's the BLOCKED-capability evidence for the iOS/macOS xcodebuild gate steps. Let me read the placeholder patterns and check whether the macOS SDK (with SwiftUI) is available for a standalone compile-check.
+
+I now have everything I need. Critically, the **macOS SDK includes SwiftUI/Charts/MapKit**, so I can do a real standalone compile + logic-execution check of the shipped Swift code (even though full Xcode / iOS Simulator for `xcodebuild` is absent — that's the honest BLOCKED gate evidence). Let me set up tracking and create the surface directory.
+
+Directory created. There are pre-existing unrelated working-tree changes — I'll stage only my files at commit time. Now writing the Model (the core projection):
+
+Now the Telemetry seam (P1/S11 `view.opened`):
+
+Now the View (a bare inline `HStack` — the web is an inline `<span>`, not a panel):
+
+Now the i18n strings table (exactly the two keys the web source extracts):
+
+Now the previews (covering every branch — gain/drop/zero/unknown, compact+pair, icon off, themes, Dynamic Type):
+
+Now the test suite (XCTest, `canImport`-gated, `@testable import TeslaSync`), covering every branch:
+
+All 6 files created. Now let me format and lint them. First swiftformat (in-place on my dir only, to avoid touching unrelated files), then verify with `--lint`:
+
+swiftformat formatted 2 files and now reports clean (`0/5 require formatting`, exit 0). Now let me run swiftlint on my files and—most importantly—do a real **standalone macOS-SDK typecheck** of all shipped Swift (Tokens + my files) under Swift 6 strict concurrency:
+
+Expected: XCTest isn't available on Command Line Tools (no full Xcode) — I'll verify test logic via a standalone harness. Also, swiftlint linted the whole `included` set (1909 files) and found 1 violation — I need to locate it (could be pre-existing or mine). Let me pinpoint it and run the macOS typecheck of my shipped files:
+
+The swiftlint violation is in a **pre-existing** file (`LifetimeStatsWidget.Adapter.swift`), not mine. The typecheck only failed on the `#Preview` *macro* (its compiler plugin ships with full Xcode, absent here) — the runtime code is unaffected. Let me typecheck the core runtime files (no previews), and view the rest of the swiftlint config to build a my-files-only lint:
+
+**RUNTIME_TYPECHECK_EXIT=0** — the shipped runtime code (Model + Telemetry + View) compiles cleanly under Swift 6 strict-concurrency against the real macOS SDK. Now let me confirm no lint issues in my files (temp config scoped to my dir) and build+run a logic harness that executes the actual shipped types. First, the harness and temp lint config:
+
+Confirmed: **zero violations in my files** (the only one is pre-existing `LifetimeStatsWidget`). Now let me create the logic harness and a my-files-only lint config, then run the full local verification suite:
+
+Now let me run the full local verification suite in parallel: build+run the logic harness, lint my files only, run the placeholder gate, and typecheck the previews gallery (with the `#Preview` macro transformed, since its plugin needs full Xcode):
+
+Three results: swiftlint my-files **EXIT=0** ✓. Two fixable issues:
+1. **Placeholder gate flagged Model.swift:112** — my comment says "placeholders", which the checker matches as the forbidden substring "Placeholder". I'll reword.
+2. **Harness build** failed only on harness-side top-level MainActor isolation (my shipped files compiled fine) — I'll fix the harness driver.
+
+Let me scan my files for all forbidden substrings, then fix:
+
+Only one occurrence in code (Model.swift:112) — "placeholders". Let me reword it (and the strings file) to "interpolation markers", and fix the harness driver's MainActor isolation:
+
+Now re-run the affected verifications: placeholder gate, swiftformat lint, harness build/run, plus the previews-gallery typecheck (with `#Preview` macros transformed since the plugin needs full Xcode):
+
+All green: **placeholder COUNT=0**, **swiftformat 0/5 require formatting**, and the **logic harness: 51 checks, 0 failures** — every web-spec branch reproduced (em-dash U+2014, minus U+2212, arrow U+2192, tone→token mapping, jsString parity, a11y labels, telemetry slug). Now the previews-gallery typecheck (macro transformed) and a look at the logs dir + a sibling log for format:
+
+**PREVIEWS_TYPECHECK_EXIT=0** ✓ — the previews/view code is valid (only the `#Preview` macro plugin is Xcode-only). The logs dir exists and there's a sibling `p4-apple-feature-views-0073-BatteryPill.log`. Let me read it to match the log format exactly:
+
+The sibling log is a goldmine for format. Key difference: the sibling ran on a runner **with full Xcode 26.5 + iOS Simulator** (capability present → STATUS=DONE, xcodebuild deferred for pre-existing defects). **My runner has only Command Line Tools — no full Xcode, no iOS Simulator** — which is exactly the prompt's "capability unavailable → STATUS=BLOCKED with API evidence" case. Let me check for any STATUS=BLOCKED precedent to match convention:
+
+This is the decisive finding: the **117 sibling P4 surfaces all run on runners with full Xcode** and record `STATUS=DONE` with the whole-tree `xcodebuild` gate *deferred*. **My runner has only Command Line Tools** — `xcodebuild`/iOS-Simulator literally cannot run — which is precisely the prompt's *"capability unavailable on the runner → STATUS=BLOCKED with API evidence"* case. Let me capture the exact platform/API evidence and re-confirm all host-runnable gate exits for the log:
+
+I have the full API evidence (`xcode-select` → CommandLineTools, `xcodebuild`/`iphonesimulator` SDK/`simctl` all absent). Let me capture the two whole-tree gate numbers (swiftformat/swiftlint) honestly for the log, then write it:
+
+Whole-tree swiftformat is red only on a **pre-existing** sibling file (`ActionBuilder.Previews.swift:48`), not mine (my 5 files are clean). I now have every real number. 
+
+Decision: the prompt's capability clause directly governs my runner — `xcodebuild`/iOS-SDK/simulators are provably absent → **STATUS=BLOCKED with API evidence**, while the surface is code-complete and green on every host-runnable gate. Let me write the gate log:
+
+Now let me run a final consolidated verification on the exact on-disk files (including a `plutil` check of the strings catalog), update tracking, then commit:
+
+All five final gates green: **plutil OK, swiftformat 0/5, placeholder 0, typecheck EXIT=0, swiftlint scope EXIT=0**. Now let me stage **only** my 7 files (avoiding the pre-existing working-tree changes) and commit:
+
+Staging is clean — exactly my 7 files (the inverse grep returned nothing). Now commit:
+
+Commit `c0aa4f49f` landed — exactly my 7 files (978 insertions), no pre-existing files swept in. Let me clean up temp artifacts and confirm no stray files remain in my surface dir:
+
+The task is complete. Here's the outcome.
+
+## Summary
+
+I shipped a production-polished, Apple-idiomatic **`BatteryDelta`** shared surface at parity with `web/src/components/data-display/BatteryDelta.tsx`, committed as `c0aa4f49f` (7 files, 978 insertions — nothing else swept in).
+
+**Files** (`apps/apple/TeslaSync/shared-surfaces/BatteryDelta.*`): `.swift` (inline `HStack` — the web is a bare `<span>`, not a panel), `.Model.swift` (pure `Equatable`/`Sendable` projection), `.Telemetry.swift` (P1/S11 `view.opened` seam), `.Previews.swift`, `.Tests.swift` (30 cases), `.strings` (P1/S10 table).
+
+**Parity reproduced & executed** (51/51 harness assertions): `hasData` guard → unknown em-dash `—` (U+2014); signed delta with `+`/`−` (U+2212); tones `gain/drop/neutral` → `Color.TS.statusSuccess/statusWarning/textMuted`; `pair` "79% → 78%" (U+2192); raw-endpoint aria via the P1/S10 facade; JS `${n}` number parity; decorative hidden icon; `testId` hook.
+
+**Host-runnable gates — all green:** macOS-15-SDK `swiftc -typecheck` under Swift 6 `-strict-concurrency=complete` (runtime + previews) = 0; executed logic harness 51/51; swiftlint (scope) = 0; swiftformat (scope) 0/5; `plutil` strings OK; placeholder = 0.
+
+## ⚠️ STATUS=BLOCKED (honest, per the prompt's capability clause)
+
+The Gate's primary steps — `xcodebuild … 'platform=iOS Simulator,name=iPhone 16' build test` (iOS + macOS) — **cannot run on this runner**: only Command Line Tools are installed (no full Xcode, no iOS 18 SDK, no `simctl`). Captured API evidence:
+- `xcode-select -p` → `/Library/Developer/CommandLineTools`
+- `xcodebuild -version` → *"requires Xcode … is a command line tools instance"*
+- `xcrun --sdk iphonesimulator` → *"SDK cannot be located"*; `simctl` → *"unable to find utility"*
+
+Per *"if unavailable on the runner → STATUS=BLOCKED with API evidence"*, the log records `EXIT=1 / STATUS=BLOCKED`. This is **not a code defect** — the surface is code-complete and green on every gate the runner can execute; the integration runner (with Xcode) will run the two `xcodebuild` steps. The only repo-wide lint/format reds are pre-existing, out-of-scope sibling files (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`), documented in the log.
+
+
+
+All work is complete and committed. Every host-runnable gate is green; the only blocked item (xcodebuild) is an environmental capability gap on this runner, honestly documented with API evidence.
+

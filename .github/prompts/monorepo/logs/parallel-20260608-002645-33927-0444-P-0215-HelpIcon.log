@@ -1,0 +1,103 @@
+I'll start by understanding the task: create a native Apple (SwiftUI) version of the web `HelpIcon` component. Let me first explore the web source, the existing Apple app structure, and check toolchain availability.
+
+I've read the web source and checked the toolchain. Key findings:
+- **`HelpIcon.tsx`**: a small field-level help primitive (a `(?)` icon + Tooltip, i18n, aria-label, Escape-to-dismiss).
+- **Toolchain**: `swiftlint`, `swiftformat`, `swift`, `pwsh` available. `xcodebuild` present but **only Command Line Tools** installed (no full Xcode) — so `xcodebuild build test` against simulators won't run.
+
+Let me examine the existing Apple app structure, a recently-completed sibling artifact (AIUsageCard), and predecessor logs to learn conventions and how DONE/BLOCKED was handled.
+
+`shared-surfaces/` doesn't exist yet — I'll create it. The sibling pattern lives in `feature-views/` (AIUsageCard.*). Let me study that sibling set in full, locate the project/build config, and review how predecessor logs recorded DONE/BLOCKED.
+
+There's an XcodeGen `project.yml` and 345 logs. Let me study the conventions in depth: read the project.yml, a complete sibling (AiUsageCard set), the shared infra (i18n facade P1/S10, tokens P1/S9, state holders P1/S8, diagnostics P1/S11), existing UI components (Tooltip), and a couple predecessor logs for the DONE/BLOCKED pattern.
+
+Critical finding: `project.yml` source paths include `TeslaSync/feature-views` and `dashboard-widgets` but **NOT** `TeslaSync/shared-surfaces`. Let me check the AiUsageCard log (to see the established DONE/BLOCKED pattern on this runner), whether any shared-surfaces prompt/wiring exists, and read the i18n/tokens/diagnostics infra plus the AiUsageCard sibling files.
+
+Now I understand the established disposition: every prior P4 surface ships **code-complete with the full-app `xcodebuild` gate DEFERRED** (pre-existing blockers), verified instead via isolated Swift build/test + swiftlint/swiftformat/placeholder green, logged EXIT=0/STATUS=DONE. I'm the **first** shared-surface (dir doesn't exist yet). Let me locate the i18n facade (P1/S10), tokens (P1/S9), diagnostics `view.opened` (P1/S11), any native Tooltip, and read the AiUsageCard sibling set to mirror conventions.
+
+`SettingField` (a field-level helper) looks like the closest analog to `HelpIcon`. Let me read it fully along with the native Tooltip (Overlays.swift), design tokens (TSDesign), and learn the i18n + telemetry patterns from a small sibling.
+
+`SettingField` (7 files, 632 lines) is the ideal analog. Let me read its full set plus the native Tooltip and design tokens.
+
+`SettingField` is a near-identical sibling — it actually inlines the very same HelpIcon logic. This gives me an exact template. Let me read the design tokens, typography, the remaining SettingField files (Previews/Tests/strings), and the native Tooltip in Overlays.swift to confirm token names and whether a shared `TSTooltip` exists.
+
+Excellent — I have a complete template. Now let me confirm the exact design-token symbol names (especially `textSecondary` for the hover/focus state) and inspect the shared Tooltip.
+
+The core tokens are generated elsewhere. Let me locate the exact definitions of `Color.TS.*`, `Font.TS.*`, `TSSpacing`, and `TSTypeMetrics`.
+
+The generated tokens live in `apps/design/generated/apple/Tokens.swift`. Let me confirm the exact symbol names for colors, fonts, spacing, and type metrics.
+
+All tokens confirmed (`Color.TS.textMuted/.textSecondary/.textPrimary/.bg`, `Font.TS.label/.body`, `TSSpacing`, `TSTypeMetrics.labelTracking`). Now let me check the shared Tooltip and test whether the Command-Line-Tools `swift` can compile SwiftUI/XCTest (determines my isolated-verification strategy).
+
+Key environment facts: **no `iphonesimulator` SDK and no `XCTest` module** under Command-Line-Tools — so `xcodebuild` and XCTest compilation can't run here (this is the platform-capability limit the prompt anticipates). But the macOS SDK is present. Let me verify pure-SwiftUI compiles (so I can do isolated verification of production sources against the real tokens), and read the top of Tokens.swift + the `TSHelpTooltip`/`tsTooltip` API.
+
+Critical: SwiftUI (incl. `#Preview`) typechecks cleanly under CLT (`EXIT=0`), but **XCTest and the iphonesimulator SDK are absent** — so `xcodebuild` and XCTest can't run here. Before settling the disposition, let me check whether a full `Xcode.app` exists anywhere (usable via per-invocation `DEVELOPER_DIR` without mutating shared global state).
+
+A full **`/Applications/Xcode.app` exists** and `xcodegen` is installed. I can use it via per-invocation `DEVELOPER_DIR` (non-destructive — no global `xcode-select` mutation in this shared env). Let me verify Xcode is usable and that the iOS simulator + XCTest are available — this may let me run the *real* gate.
+
+Full **Xcode 26.5** is usable via `DEVELOPER_DIR` (non-destructive), with iphonesimulator26.5 + a booted iPhone 16 and XCTest available. This means I can run the *real* isolated build + XCTest like the predecessors did. Let me check the lint/format configs so my files pass `--strict`, then write the surface.
+
+Style configs noted (swiftlint line-length 120/160, swiftformat maxwidth 120, `--importgrouping testable-bottom`, `--self remove`). Let me read the exact forbidden placeholder patterns so my comments/strings don't trip the gate, then write the surface.
+
+Forbidden words noted (avoid "TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented" everywhere). Now I'll write the 7-file surface, mirroring the `SettingField` architecture. Creating the directory and files.
+
+Now writing the surface files.
+
+All 7 files are written. Now I'll verify them with the real Xcode 26.5 toolchain (via non-destructive `DEVELOPER_DIR`) using an isolated SwiftPM module named `TeslaSync` — replicating the predecessor's "isolated build + XCTest against the real design-system" approach. Let me set that up and build/test.
+
+Now build and run the isolated tests under the real Xcode 26.5 toolchain.
+
+Production sources compile clean (incl. `#Preview`, popover `arrowEdge`, `@ScaledMetric`, `@FocusState`) under Swift 6 strict concurrency. Now the tests:
+
+All **21 tests pass, 0 failures** under Xcode 26.5 / Swift 6 strict concurrency against the real tokens. Now the lint/format/placeholder gates on the real files.
+
+swiftformat clean (0/6). Now swiftlint `--strict`:
+
+swiftlint scanned all 1909 files (config `included` expands) and found 1 violation. Let me locate exactly where it is — mine or pre-existing.
+
+The single swiftlint violation is **pre-existing and not mine** — `dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141` (function_body_length), a file I never touched. My 6 files are **0 violations / 0 serious** under `--strict`. Now the placeholder gate:
+
+Placeholder gate clean (COUNT=0). Now let me concretely verify (not assume) the pre-existing full-app `xcodebuild` blockers on THIS runner, so the deferral is evidence-based per the honesty covenant.
+
+All full-app blockers concretely verified on this runner: Shared.xcframework unstaged (only `.gitkeep`), `DashboardWidgetSize` defined 15×, **224** co-located `*.Tests.swift` compiled into the app target, and `shared-surfaces` not yet wired into `project.yml`/`.swiftlint.yml` (out of this surface's allowed files). My change scope is exactly `shared-surfaces/`. The capability itself (Xcode 26.5, SwiftUI, iOS/macOS SDKs, XCTest) **is present and I used it**.
+
+Now I'll generate the gate log with genuine, reproducible output.
+
+Now the deferred full-app gate section with verified blocker evidence, plus the honesty covenant and disposition:
+
+Note: the `AIUsageCard.*` and `web/*` modifications were **pre-existing** in the working tree before I started — not mine. I'll commit only my `shared-surfaces/` files + the log. Now appending the Honesty Covenant + disposition + EXIT/STATUS:
+
+Log complete (188 lines). Let me do a final review of the two most important source files, then commit only my files.
+
+All 7 files present (741 total lines, comparable to the SettingField sibling). Committing only my surface files + the log (leaving the pre-existing unrelated modifications unstaged):
+
+`git add` is hanging unusually long. Let me stop it and investigate (possible git lock or hook).
+
+Nothing got staged (the `git add` hung before completing). It's a linked worktree sharing a large object store. Let me stage files individually with a timeout to pinpoint/avoid the slowdown.
+
+The log staged fine — the earlier hang was likely transient shared-store contention. Now staging the 7 surface files explicitly:
+
+Exactly the 7 surface files + log staged, nothing unrelated. Committing:
+
+Commit `920eaaec2` succeeded — 8 files, 929 insertions, nothing unrelated. Final verification + cleanup of temp artifacts:
+
+Task complete. Everything is committed cleanly with the pre-existing unrelated changes left untouched, and temp artifacts cleaned up.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`HelpIcon`** shared surface (P4 · 0215) at parity with `web/src/components/ui/HelpIcon.tsx`, committed as `920eaaec2` (7 files + log, 929 insertions).
+
+**Files** (`apps/apple/TeslaSync/shared-surfaces/`): `HelpIcon.swift` (View + `HelpIconSide`), `.Model.swift` (pure resolver/projection + P1/S10 facade + P1/S11 surface slug), `.Views.swift` (trigger + popover), `.Telemetry.swift` (`view.opened` seam), `.Previews.swift` (5 `#Preview`s), `.Tests.swift` (21 XCTest), `.strings`.
+
+**Parity reproduced**: the `i18nKey ? t(...) : content` text ladder, the render-nothing-when-empty rule (`if (!text) return null`), the `ariaLabel` override (JS `??` semantics, empty-string verbatim), per-field "Help for {field}" vs generic "More info", the `{for}-help` describedby id, all four `side` placements (→ popover `arrowEdge`), `HelpCircle`→`questionmark.circle`, muted→secondary hover/focus colour, reduce-motion-respecting transition, Dynamic-Type-scaled metrics, and Escape/outside-tap dismissal. Data-free primitive (only `useTranslation`), so loading/error/stale/offline are N/A — documented, matching the `SettingField` precedent.
+
+**Verification (real Xcode 26.5 via non-destructive `DEVELOPER_DIR`)**:
+- Isolated build (Swift 6 `strict-concurrency=complete`, macOS 15, **real** design tokens): `EXIT=0`
+- XCTest: **21/21 passed, 0 failures**
+- `swiftformat --lint`: 0/6 need formatting
+- `swiftlint --strict` (6 source files): **0 violations / 0 serious**
+- `check-placeholders.ps1`: `COUNT=0`
+
+**Deferred (not failed)**: the full-app iOS/macOS `xcodebuild build test` gate — concretely-verified pre-existing, out-of-allowed-files blockers (unstaged `Shared.xcframework`, `DashboardWidgetSize`×15, 224 co-located app-target tests, and `shared-surfaces` not yet wired into `project.yml`/`.swiftlint.yml`), owned by the P99 acceptance gate. The one repo-wide swiftlint violation (`LifetimeStatsWidget.Adapter.swift`) is pre-existing and untouched.
+
+Log: `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0215-HelpIcon.log` → `EXIT=0 / STATUS=DONE`.
+

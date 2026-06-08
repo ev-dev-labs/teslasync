@@ -1,0 +1,175 @@
+I'll start by exploring the repository structure and reading the web source to understand what I need to build.
+
+SOCRouteChart is the ideal template (chart component). Let me read its full file set.
+
+Let me read the rest of the SOCRouteChart fileset to fully understand conventions.
+
+Now let me check the project configuration and design tokens (P1/S9), and find a closer match — a stacked area chart with categorical/time X-axis.
+
+The project uses XcodeGen directory globs, so files in `feature-views/` are auto-included. Let me check toolchain availability (critical for the gate) and how test files in feature-views are wired.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are present — the build/test gate steps cannot run here. swift, swiftlint, swiftformat, xcodegen ARE available. Let me confirm details and read the instruction files I'm required to follow.
+
+Now I have the full picture. `xcodebuild` needs full Xcode (only CLT present) — the build/test gate is platform-blocked, exactly as documented in `macos-pending-verifications.md` for sibling surfaces (ToolCard, AlertMessageEditor). My plan: write all 9 files mirroring SOCRouteChart, verify via isolated SwiftPM build+tests + swiftc typecheck + swiftlint/swiftformat/placeholder (all host-runnable), and record the xcodebuild deferral honestly. Let me read the web chart primitives and a native stacked-area example.
+
+The `Color.TS.chartCategorical` array IS the Okabe-Ito palette (exact web `CHART_COLORS` parity), with a `TSChartPalette.color(at:)` helper. Let me read the shared helpers I'll use.
+
+Let me verify the exact signatures of `TSFadeIn`, `TSSkeleton`, `TSSpacing`, `TSRadius`, `TSMotion`, and check the instruction files I must follow.
+
+I have all tokens. Let me check the logs directory format and verify a sibling surface's log + how `EventTimeline` (the closest time-bucketed sibling) handles things, plus look at an existing time-axis chart for date formatting parity.
+
+The predecessor achieved STATUS=DONE via real-SDK `swiftc -typecheck` + isolated SwiftPM `swift test`, deferring only the full-app xcodebuild. Their host had full Xcode via `DEVELOPER_DIR`. Let me check if Xcode.app is present here.
+
+Full Xcode is present (just not the active dir) and an iPhone 16 sim is booted. I can replicate the predecessor's DONE methodology: real-SDK typecheck + isolated SwiftPM tests. Let me verify the override works.
+
+Full toolchain confirmed (Xcode 26.5, matching the predecessor host). I can achieve STATUS=DONE via the same methodology. Let me read the web chart chrome (ChartContainer/ChartTooltip/EmptyState) and a native stacked-area sibling for idiom, then write the plan.
+
+I now have a complete understanding of the architecture and idioms. Let me set up tracking and confirm no existing FSM files collide.
+
+Let me write the plan, then start creating the files.
+
+Now I'll create the files, starting with the pure adapter (verbatim bucketing port).
+
+Now the Model (P1/S8 source seam + P1/S10 facade + P1/S11 telemetry).
+
+Now the Swift Charts stacked-area composition.
+
+Now the states chrome (header, freshness chip, banner, loading/empty/error).
+
+Now the composed surface.
+
+Now the i18n catalog. Let me write it, then verify every key referenced in code is present.
+
+Let me verify every i18n key referenced in code has a catalog entry (no missing/extra keys).
+
+All keys reconcile exactly. Now the previews (one per state).
+
+Now the adapter/format/accessibility unit tests with deterministic fixtures.
+
+Now the model state-holder tests.
+
+All 9 files created. Now I'll run the host-runnable gates. Starting with format, lint, and the placeholder check.
+
+swiftformat found mechanical issues plus force-unwraps in tests. Let me see the exact force-unwrap lines, fix those manually, then auto-format the rest.
+
+Force-unwraps fixed. Now auto-format the files to resolve the mechanical rules, then re-lint.
+
+Format passes. Let me verify the auto-format didn't alter semantics (esp. the bucketing numbers/loops), then run swiftlint.
+
+Semantics intact. Now swiftlint --strict.
+
+Three lint issues: a brace, Adapter file length (444>400), and an empty_count in tests. Let me inspect them.
+
+Three fixes needed: a brace conflict (swiftformat vs swiftlint), Adapter file length (split needed), and an `empty_count` false-positive on my `count` property. Let me fix the Chart brace and the test assertion first.
+
+Now split the Adapter. Let me view the tail sections to move into a new file.
+
+Now I'll create the new Accessibility file with these sections and trim the Adapter.
+
+Now trim the moved sections from the Adapter and update its header comment.
+
+Now re-run format + lint on all 9 files.
+
+format + lint both clean (0/0). Now the placeholder gate — let me check the script's parameters.
+
+The placeholder gate scans file contents. Let me first check the forbidden patterns and scan my own files for risky words.
+
+The word "placeholders" in a comment would trip the gate. Let me reword it.
+
+Now run the placeholder gate on each of my 9 files.
+
+Placeholder gate clean (0/0). Now the real-SDK typecheck + isolated SwiftPM tests. Let me map the shared dependency footprint my source files need.
+
+Clean, bounded dependency set (4 shared files: Tokens, TSDesign, Motion, Skeletons). Let me run a real iOS-18 simulator-SDK typecheck of my source files + their shared deps.
+
+`Skeletons.swift` pulls `TSCard`, which would cascade. Let me check how deep `TSCard` goes — if shallow, I'll include it; otherwise I'll use a minimal harness for the shared atoms.
+
+`TSCard` cascades deep into the atom library (out of scope per the prompt). Let me audit exactly which shared symbols my code uses, then build an isolated harness with real primitives + a minimal `TSSkeleton` shim.
+
+Confirmed: real deps are just Tokens.swift + TSDesign.swift + Motion.swift (self-contained), plus `TSSkeleton` (the only atom I use). Let me build an isolated SwiftPM package (module `TeslaSync`) to run typecheck + the full XCTest suite.
+
+Now the harness `TSSkeleton` shim and `Package.swift`.
+
+Build succeeded and 37/38 passed — one failure to diagnose. Let me find it.
+
+A test-expectation bug: `en_US_POSIX` intentionally omits grouping separators, so `count(1234)` is `"1234"` not `"1,234"`. Let me fix the assertion to verify both behaviors correctly.
+
+All 38 tests pass against real tokens under Swift 6 strict concurrency. Let me re-verify format/lint (I edited 3 files since), then run the iOS-18 + macOS-15 typechecks using the isolated set.
+
+Format/lint still clean. Now the explicit iOS-18 simulator + macOS-15 real-SDK typechecks using the isolated source set (with the `TSSkeleton` shim).
+
+Both real-SDK typechecks pass (iOS-18 + macOS-15, Swift 6 strict concurrency). Now let me run `xcodegen generate` and verify the pre-existing full-app blockers are real (so the deferral is evidence-based, not assumed).
+
+All blockers confirmed (real + pre-existing): Shared.xcframework unstaged, `DashboardWidgetSize` redefined ×15, and 152 co-located `*.Tests.swift` compiled into the app target. xcodegen accepts my files (EXIT=0). All host-runnable gates are green. This matches the documented predecessor deferral exactly. Let me gather line counts and write the gate log.
+
+Let me check git status to handle the generated `.xcodeproj` correctly (only my files should be committed).
+
+The `.xcodeproj` uses Xcode's file-system-synchronized groups (XcodeGen 2.45 + Xcode 26), so new files are auto-included with no pbxproj change — confirmed by clean git status. Let me confirm no diff, then write the gate log.
+
+`FileSystemSynchronized` is 0 yet the pbxproj is unchanged after adding files — let me verify how feature-view files are referenced (folder vs. enumerated) to ensure my files are actually included in the build.
+
+Let me confirm HEAD's committed pbxproj already references my files (explaining the empty diff).
+
+Let me check whether `project.pbxproj` itself is git-ignored (explaining the empty status despite content change).
+
+Fully resolved: the `.xcodeproj` is git-ignored (regenerated artifact); my regeneration proved XcodeGen includes my files (60 refs, EXIT=0). Only my 10 files are untracked. Now let me write the gate log.
+
+Now append the macOS-pending verification row, matching the established format.
+
+Now a final consolidated verification run (placeholder + tests + format/lint) on the final files before committing.
+
+All final gates green (format 0/9, lint 0, placeholder 0, tests 38/38). Let me get a focused rubber-duck review of the parity-critical adapter + chart before committing.
+
+Blocking Issues: none.
+
+Non-Blocking Issues:
+- `/Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-352/apps/apple/TeslaSync/feature-views/FSMTimelineChart.Chart.swift:39` / `:105` — `fillOpacity` is `0.55`, while web spec uses `fillOpacity={0.3}`. Impact: visual parity divergence. Fix: set `fillOpacity` to `0.3` if strict render parity is required.
+
+Verified faithful:
+- `floor(_:toMultipleOf:)` matches `Math.floor(...)*bucketMs`, including negative values.
+- Bucket grid loop matches `start...now` inclusive stepping and floor-to-multiple keys.
+- Transition inclusion matches web `if (bucket)`, including the same floor-bucket edge behavior.
+- `fsmTypes`/series are sorted-unique from all transitions, not only in-window.
+- Epoch-ms conversion is safe for realistic dates/current epoch; no meaningful precision risk.
+- Series index → palette mapping is stable via sorted series order.
+- Required i18n keys are present: `fsm.timelineChart`, `fsm.timelineChart.aria`, `fsm.noTimelineData`.The review confirms a faithful port — only one note: my `fillOpacity` is 0.55 vs the web's literal `0.3`. To honor strict parity ("no silent drift"), I'll match the web value exactly.
+
+Now re-verify all gates after that edit, then commit.
+
+All gates green. Now let me stage exactly my files (excluding the 2 pre-existing web changes) and verify before committing.
+
+Staged set is exactly correct (10 surface files + log + macos-pending md; the 2 pre-existing web changes excluded). Committing.
+
+Committed. Let me verify the commit and confirm the working tree is clean (only pre-existing changes remain), then clean up the temp harness.
+
+Commit `58bc925dc` is clean — exactly my 12 files (2101 insertions), the 2 pre-existing web changes untouched, temp harness removed. Let me finalize tracking.
+
+The task is complete and fully verified. Let me do a final confirmation of the committed state.
+
+Task complete and verified.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-feature-views-0231-FSMTimelineChart.log | 149 +++++++++
+ .../FSMTimelineChart.Accessibility.swift           | 114 +++++++
+ .../feature-views/FSMTimelineChart.Adapter.swift   | 343 +++++++++++++++++++++
+ .../feature-views/FSMTimelineChart.Chart.swift     | 235 ++++++++++++++
+ .../feature-views/FSMTimelineChart.Model.swift     | 309 +++++++++++++++++++
+ .../FSMTimelineChart.ModelTests.swift              | 203 ++++++++++++
+ .../feature-views/FSMTimelineChart.Previews.swift  | 104 +++++++
+ .../feature-views/FSMTimelineChart.Tests.swift     | 315 +++++++++++++++++++
+ .../feature-views/FSMTimelineChart.Views.swift     | 196 ++++++++++++
+ .../feature-views/FSMTimelineChart.strings         |  50 +++
+ .../TeslaSync/feature-views/FSMTimelineChart.swift |  82 +++++
+ apps/macos-pending-verifications.md                |   1 +
+ 12 files changed, 2101 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0231-FSMTimelineChart.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMTimelineChart.Accessibility.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMTimelineChart.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMTimelineChart.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMTimelineChart.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMTimelineChart.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMTimelineChart.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMTimelineChart.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMTimelineChart.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMTimelineChart.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMTimelineChart.swift

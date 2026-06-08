@@ -1,0 +1,136 @@
+I'll start by exploring the repository structure and understanding both the web source and the Apple app architecture.
+
+Xcode toolchain is available (xcodebuild, swiftlint, swift, pwsh). Now let me explore the Apple app structure and the web component this page wraps.
+
+This page is a thin shell wrapping `TOTPEnrollmentSection`. The manifest scopes this unit to just the page shell (2 strings, no data sources). Let me verify the manifest entry, check the ledger, and understand the Apple project structure and existing patterns.
+
+No `.xcodeproj` found and no `Features/Settings` dir yet. The actual source tree uses `apps/apple/Sources/`. Let me investigate the real build setup (SPM/XcodeGen) and ledger structure.
+
+The Apple project uses **XcodeGen** (`project.yml`) — the `.xcodeproj` is generated. Let me read the project config and check toolchain.
+
+`xcodebuild -version` returned empty — that's concerning. Let me verify whether a full Xcode (not just Command Line Tools) is actually available, since the gate depends on it.
+
+Full Xcode exists at `/Applications/Xcode.app` but `xcode-select` points to CommandLineTools. I can override per-invocation with `DEVELOPER_DIR` (no sudo needed). Let me verify.
+
+Xcode 26.5 is fully functional with iOS 26.5 simulators — the gate is **not** blocked. Now let me study the real repo conventions: how feature pages are placed, the routing, and existing settings pages. Note `project.yml` compiles `TeslaSync/feature-views` (not `TeslaSync/Features/Settings`), so I must follow the actual layout.
+
+`feature-views/` is a flat directory, and `TOTPEnrollmentSection` **already exists** in the Apple app (it's a separate component-level parity unit). Like the web, my page just wraps it. The prompt's `Features/Settings/` path is a generator template artifact — the real convention is the flat `feature-views/`. Let me study the existing section, routing, and the page-scaffold component.
+
+`TOTPEnrollmentSection` exists as a `View` needing a `TOTPEnrollmentModel`. No `*Page.swift` files exist and no `PageContainer` component. Let me learn the page-header convention, routing system, and how the section's model is constructed/hosted today.
+
+Now I understand the routing enum. `TOTPEnrollmentSection` is only referenced in its own previews/tests — not yet hosted anywhere. My page will be its first host. Let me read the full routing system, the section's model/source seam, and how other pages obtain models.
+
+Let me read the app shell and find how already-built P7 pages register themselves, plus the section's model/source seam.
+
+There's a precedent: `SettingsScene`/`SettingsRouteRegistration` registers the `.settings` route. Let me read the settings registration, app entry, and route tests to understand the wiring and constraints before deciding how to host the new page.
+
+Let me check the route tests to see if they constrain the exact route set, plus look at the section's Model/Source seam to know how to construct it.
+
+Now let me assess the blast radius of adding an `AppRoute` case (exhaustive switches) and check for any existing P7 page precedent in logs, plus the section's Source seam and supporting types.
+
+Two AppRoute switches in `AppRoute.swift` plus one in `WatchBridge/WatchDeepLink.swift` — adding an enum case has cross-target blast radius (watch), so I'll avoid it. Let me read the settings page structure, the section's Source seam, and confirm the watch switch + log naming.
+
+`WatchDeepLink` is its own enum (no AppRoute blast radius there). Only `InMemoryTOTPEnrollmentSource` exists — I need to know if a production source/facade exists for hosting. Let me check the SharedFacade, any production TOTP source, the supporting types, and the README gate contract.
+
+Let me read the section's Adapter, find the supporting types, and locate the real gate contract README (the `Adapter.swift` may be the production wiring).
+
+`apps/apple/README.md` isn't present; the gate contract lives at `.github/prompts/monorepo/p4-apple/README.md`. There's no production TOTP source (only `InMemory`), and the facade only has `VehicleSettingsModel`. Let me read the gate contract and the facade composition pattern to decide how the thin page hosts the section.
+
+I have the full picture now. The gate contract confirms: P7 pages, dual-idiom (macOS+iOS), `xcodebuild build test` + SwiftLint --strict + SwiftFormat --lint, two ledgers. No production TOTP source exists (only `InMemory`) — that's a declared facade dependency (P1/S8), separate from this page unit. Before finalizing the navigation approach, let me verify no test would break from an `AppRoute` enum addition.
+
+Important: `MenuCommandCatalogTests` asserts `Set(navigateRoutes) == Set(AppRoute.allCases)`. I need to see whether the menu catalog derives routes dynamically from `allCases` (safe to add a route) or hardcodes them. Let me check the menu catalog and the macOS Settings hosting nuance.
+
+`navigateCommands()` is dynamic over `AppRoute.allCases`, so adding a route keeps `MenuCommandCatalogTests` green. **Decision: add a first-class `.twoFactor` route in the `account` group** (faithful to the web's "first-class Account side-nav item"), register `TwoFactorAuthPage` for it, and alias the web path `/account/2fa` — exactly mirroring the existing `/battery/health → energy` alias pattern. This is test-safe.
+
+Let me read the web `PageContainer` (for `copyLink` parity) and the Apple string catalog structure.
+
+The catalog has `route.*` keys (need to add `route.twoFactor`), no `account.twoFactor.*` yet, and the section's strings live in a bundled `TOTPEnrollmentSection.strings`. Now let me study the web `PageContainer`/`CopyLinkButton` for faithful `copyLink` parity, and the Apple UI typography components + tokens I'll use.
+
+Now I understand `PageContainer` (title h1 + subtitle + copyLink header) and `CopyLinkButton` (copies URL, keys `common.copyLink.*`). Let me read the Apple typography components, buttons, design tokens, the section's preview model helper, and check for an existing clipboard util.
+
+I have the component vocabulary (`TSPageTitle`, `TSSubhead`, `TSButton`, `Color.TS`, `TSSpacing`). Let me check the clipboard/copy utility, the `TSButton` init, and critically whether `Shared.xcframework` is prebuilt (the build depends on it) plus the staging script.
+
+Critical: `Shared.xcframework` is **not** prebuilt (only `.gitkeep`) — it's assembled by a Gradle/Kotlin-Native pre-build script, which is the long pole for the build/test gate. Let me read the pending-verifications doc and check the toolchain, then kick off the framework build early in the background.
+
+Key context: `macos-pending-verifications.md` shows the **full-app `xcodebuild build test` is pre-existingly blocked** by unrelated parallel-merge collisions (`DashboardWidgetSize` redefined 15×, 150+ co-located `*Tests.swift` importing XCTest into the app target, unstaged `Shared.xcframework`, signing). Prior feature-view prompts used **isolated surface verification** and deferred the full build to the P99 macOS gate. Let me read a prior log to learn the exact accepted methodology.
+
+This is the authoritative precedent: feature surfaces are verified via **host-runnable isolated gates** (swiftformat --lint, swiftlint --strict, placeholder, `swiftc -typecheck` on iOS+macOS SDKs, isolated SwiftPM `swift test`, `xcodegen generate`), with the full-app `xcodebuild build test` **deferred macOS-pending** due to documented pre-existing collisions. EXIT=0/STATUS=DONE. I'll follow this exactly.
+
+Let me write a plan, then gather the final implementation details (TOTP file set + imports, design tokens, lint config, copyLink keys).
+
+TOTP section files are self-contained (Foundation/SwiftUI/Observation/OSLog) + design tokens in a single `Tokens.swift`. Let me confirm the UI/Design layers don't import `Shared` (keeps isolated typecheck clean), read the copy utility + lint configs, and check existing `copyLink` keys.
+
+All clear: UI/Design layers are `Shared`-free (clean isolated typecheck), `common.copyLink.*` keys don't exist yet (I'll add them, web key names), lint is line-length 120/160 + swiftformat maxwidth 120. Let me grab the exact JSON shape of a `route.*` catalog entry to use as an insertion template.
+
+Everything's confirmed. The catalog uses en/ar/he per key; I need to add 6 keys (verbatim web defaults). I'll insert them via a safe, minimal-diff string insertion (validated by re-parsing). Let me add the catalog keys now.
+
+Catalog updated (8127 keys, validated). Now I'll create the page. Let me write `TwoFactorAuthPage.swift`.
+
+Now let me wire the route. First view the exact `AppRoute.swift` regions to edit precisely.
+
+Now register the route. Let me wire `.twoFactor` → `TwoFactorAuthPage()` in the account-area registry.
+
+Let me update the registration doc comment for accuracy, then study the existing TOTP test style to write matching isolated tests.
+
+Now I'll write the isolated model tests, matching the existing `@testable import TeslaSync` style.
+
+Now let me run the fast host-runnable gates (swiftformat --lint, swiftlint --strict, placeholder) on the new/edited files.
+
+Format and lint are clean (FORMAT_EXIT=0, 0 violations). Now the placeholder gate — let me locate the script and run it on my new files.
+
+Format, lint, and placeholder gates are all green (EXIT=0, COUNT=0). Now the typechecks. Let me map the dependency closure: which `Sources` files import `Shared` (must exclude), and what app components the TOTP section transitively pulls in.
+
+The TOTP section pulls in several app components (TSBadge, TSButton, TSGlassPanel, TSIconBox, TSFadeIn, TSTone, etc.). Sources/Components/Design/App are all `Shared`-free. Let me map each needed symbol to its defining file so I can assemble a precise, fast isolated compile set.
+
+I have the symbol→file map. Let me check whether any `Sources/Components` file reaches up into App/Platform symbols (which would expand the closure), then assemble and run the macOS typecheck.
+
+Components are self-contained. Let me assemble the precise compile set and run the **macOS** typecheck (Swift 6, strict concurrency).
+
+`UnitFormatters.swift` uses `UnitPreferences` (a `Shared` type exposed module-wide via `@_exported`), so the whole-Components approach won't work Shared-free. I'll include only the specific component files my page + the TOTP section need. Let me enumerate the complete TS* symbol set used.
+
+The minimal set is clear. Let me verify the UI/Motion/Design files are `Shared`-free, then run the macOS typecheck on the precise set.
+
+Clean. Let me run the macOS typecheck on the precise set (UI + Motion + Design + Tokens + 3 App files + TOTP section + page).
+
+macOS typecheck passes (EXIT=0, 27 files). Now the **iOS Simulator** typecheck (iOS 18.0, Swift 6).
+
+Both SDK typechecks pass (IOS_TYPECHECK_EXIT=0, MAC_TYPECHECK_EXIT=0). Now the isolated SwiftPM `swift test`. Let me assemble a temp package (lib `TeslaSync` = the 27 verified files; test target = my ModelTests) and run it.
+
+Isolated tests pass (8/8, TEST_EXIT=0). Now `xcodegen generate` to confirm project membership.
+
+All host-runnable gates are green and `xcodegen` enumerates my files (6 refs each, across iOS+macOS targets). Let me confirm the documented pre-existing full-build blockers still hold (so the deferral is honestly current), then write the log + ledger.
+
+Confirmed all three pre-existing blockers are current (DashboardWidgetSize ×15, 262 co-located XCTest files, no staged xcframework), and the generated `.xcodeproj` is gitignored. My deferral is honest and matches the documented precedent.
+
+Now let me create the parity ledger and the evidence log.
+
+Now the evidence log. Let me grab the branch/base for the header, then write the comprehensive log.
+
+The log is written. I edited `SettingsScene.swift` (the registration) which wasn't in my typecheck set — let me verify it compiles by extending the macOS typecheck to include `Sources/Platform/Settings/*` (confirming the `.twoFactor` registration wires cleanly).
+
+The only error is a missing `teslaSyncTheme()` modifier (referenced by pre-existing code in `TeslaSyncSettingsScene`, not by my registration) — it's defined in a file I didn't include. Let me find and add it.
+
+Those errors are AppSettingsView's pre-existing Forms-component deps missing from my isolated set — not my registration. Let me run a comprehensive Shared-free compile (all Components except the Shared-bound `UnitFormatters`, plus Theme + Platform/Settings) to cleanly prove `SettingsScene` + the registration compile.
+
+Brace-expansion glitch produced a bad filename. Let me re-run with the explicit TOTP file list.
+
+Last gap: `AuthCoordinator` (from `Sources/Auth`), referenced by `AuthBiometricBridge`. Let me locate it, confirm `Sources/Auth` is `Shared`-free, and include it.
+
+`Sources/Auth` is Shared-free. Let me add it and re-run — this should close the `SettingsScene` dependency chain.
+
+`RootView` (Auth) references `AppShell` — I only included 3 of the App files. Let me include all of `Sources/App` and re-run.
+
+Clean — 81 files, 0 errors. The full nav-registration closure (AppRoute + AppRouteParser + SettingsScene registration + RootView/AppShell host) compiles on macOS. Let me confirm the same set on iOS Simulator for cross-platform parity.
+
+Both SDKs compile the full 81-file registration closure cleanly. Let me strengthen the log's typecheck evidence to reflect this, then do a final lint pass and commit.
+
+Let me run a final format/lint pass on all changed files, validate the catalog JSON, and check git status before committing.
+
+Final gates green (format 0/5, lint 0 violations, catalog valid 8127 keys, xcodeproj correctly gitignored). Git status shows **pre-existing unrelated** changes (AIUsageCard.*, web admin files) that I must NOT commit. I'll stage only my 8 files.
+
+Only my 8 intended files are staged. Let me verify the catalog diff is a minimal addition (not a full reformat), then commit.
+
+Committed cleanly (`2080882f3`) — the catalog diff is +138/-0 (6 keys added, no reformat of the existing 8121). Let me do a final confirmation of the commit contents and update the plan.
+
+Task complete and verified. Here's the summary.
+

@@ -1,0 +1,116 @@
+I'll start by exploring the repository to understand the actual state: the web source, the Apple app structure, and toolchain availability. The Honesty Covenant binds me to verify before claiming anything.
+
+Key finding: **xcodebuild is non-functional** — only Command Line Tools are installed, not full Xcode. Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me verify toolchain details and explore the established Apple app patterns before deciding scope.
+
+The web source is a **pure presentational accordion** (no data hooks — confirmed by the prompt). Now I need to understand the established native patterns. The feature-views dir has 1438 entries. Let me examine existing examples and the shared infrastructure (tokens, i18n, telemetry, GlassPanel/FadeIn equivalents).
+
+Now I understand the file-set convention (`.swift`, `.Adapter`, `.Model`, `.Views`, `.Previews`, `.strings`, `.Tests`). AccordionSection is presentational, so I need to match how presentational components are built. Let me study a representative example and locate the shared infrastructure (tokens, i18n facade, telemetry, GlassPanel/FadeIn equivalents).
+
+`CollapsibleCommandGroup` is the closest existing analog (a disclosure/expandable presentational component). Let me read it fully plus locate the shared token/i18n/motion/telemetry primitives.
+
+`CollapsibleCommandGroup` is a near-perfect blueprint. Let me read its full file-set (Adapter, Model, Previews, Tests, strings) and the shared primitives (Motion, GlassPanel, tokens) to nail the exact conventions.
+
+Adapter/Projection/Surface/Strings all live in `.Model.swift`. Let me find the telemetry protocol, read the Previews + Tests, and confirm the exact file-set for the blueprint.
+
+Now let me read the Telemetry file and the shared primitives (Motion, GlassPanel, tokens, EmptyState) to complete my understanding.
+
+Paths are under `apps/apple/Sources`, not `apps/apple/TeslaSync/Sources`. Let me correct and read the primitives.
+
+Now let me read the design tokens, the `tsGlassPanel()` modifier, lint/format configs, and check the build setup. These determine exact token names and styling parity.
+
+Token enums are likely generated. Let me locate them precisely.
+
+Design tokens are generated in `apps/design/generated/apple`. Let me read them to get exact token names/values (especially the cyan accent for parity).
+
+Let me read the full Tokens.swift to get exact color and font token names.
+
+I now have all tokens and conventions. Let me verify three things before writing: whether `AccordionSection.*` already exists, whether the placeholder script + log dir exist, and whether SwiftUI even compiles under Command Line Tools (a quick smoke test).
+
+Critical: **SwiftUI typechecks cleanly under Command Line Tools** — so I can do real best-effort compile verification. Let me check whether any full `Xcode.app` exists anywhere that I could point `DEVELOPER_DIR` at (which would unblock the actual build/test gate).
+
+**Full `/Applications/Xcode.app` exists** — the dev dir is just pointed at CommandLineTools. I can override with `DEVELOPER_DIR` (no sudo needed), which may unblock the real gate. Let me verify xcodebuild works and whether the project needs generation.
+
+Outstanding — Xcode 26.5 + xcodegen + a booted iPhone 16 simulator are all available. **The real gate IS runnable.** This is not BLOCKED. Let me check the scheme names, then kick off a baseline project generation + build in the background while I write the implementation.
+
+Schemes `TeslaSync` + `TeslaSync-macOS` exist with test targets. There's a "Stage Shared.xcframework" pre-build step. Let me verify the framework dependency exists, then kick off a baseline macOS build in the background to learn buildability while I write code.
+
+The `Frameworks/` dir is empty — the build needs a Go `Shared.xcframework` staged first. Let me read the staging scripts to gauge whether I can produce it in this environment.
+
+The full build depends on a Kotlin Multiplatform `Shared.xcframework` built via Gradle (`apps/shared/gradlew`). That's the long pole. Let me check Gradle/Java availability and kick off that framework build in the background while I write the implementation.
+
+Java 17 + gradlew present. Let me kick off the KMP `Shared.xcframework` build in the background (the long pole) while I write the implementation.
+
+This is fully runnable, not BLOCKED. Full Xcode 26.5, xcodegen, iPhone 16 simulator, and the KMP framework build are all available. The KMP framework is building in the background. Let me set up a plan and todos, then write the complete implementation.
+
+Let me check the KMP build progress and set up todos.
+
+The shared `/tmp` log got cross-contaminated by a parallel slot (note it shows `slot-119`, not my `slot-130`). Let me check slot-130's actual artifacts directly and re-run cleanly with a slot-unique log if needed.
+
+slot-130's framework isn't built (the success log was another slot polluting shared `/tmp`). Let me restart the KMP build for slot-130 with a unique log, then write all the code while it builds.
+
+Now let me write all 7 implementation files. Starting with the telemetry seam, model layer, and sub-views.
+
+The launcher returned; gradle continues in the background. Let me keep writing the implementation — the Model layer next.
+
+Now the main view — the generic disclosure container with glass panel, hover, accessibility, and telemetry.
+
+Now the strings catalog, previews, and tests.
+
+All 7 files written. Now the fast verification loop: format, typecheck against the real SDK, lint, and placeholder check. Let me start with swiftformat (write mode on my files) + a real typecheck against the macOS SDK.
+
+SwiftFormat made zero changes — my files already conform. Now the real typecheck against the macOS SDK plus swiftlint.
+
+Typecheck passes cleanly against the real SDK. Now swiftlint `--strict` on my files and the placeholder check exactly as the gate runs it.
+
+Placeholder check passes. SwiftLint found 1 issue: the badges preview uses a trailing closure alongside the labeled `badges:` closure. Let me make `content:` explicit there.
+
+All fast checks pass: swiftlint 0 violations, swiftformat clean, placeholder 0, typecheck 0. Let me update todos and check the KMP framework build progress.
+
+The KMP build got killed when the async session ended (I didn't use detach). My code is additive — let me first verify no symbol collisions exist, then restart the KMP build **detached** so it survives.
+
+No symbol collisions — only sibling comments reference the web `AccordionSection`. The KMP build is restarting detached. Critical question: my `.Tests.swift` lives in `feature-views/` which feeds the **app** target — I must verify how `*.Tests.swift` get routed to test targets (not compiled into the app). Let me inspect project.yml.
+
+The KMP launcher returned (build continues). Critical finding: the app target includes `feature-views/` (so `*.Tests.swift` would compile INTO the app), but the test target only includes `Tests/Unit`. There must be an exclude rule. Let me check project.yml options and how sibling tests are handled.
+
+No excludes exist — yet `*.Tests.swift` in `feature-views/` would compile into the app target (with `@testable import TeslaSync`, which can't self-import). This and the KMP "pending CI" comment suggest the Apple build is CI-pending. Let me read the verification-status doc and check the KMP build.
+
+This is the decisive context. The repo's own `macos-pending-verifications.md` documents that **3 sibling P4 feature-view surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) hit exactly this situation**: each surface verified green in isolation, but the full-app `xcodebuild build test` is blocked by **pre-existing, unrelated** collisions (`DashboardWidgetSize` redefined 15×, 150+ co-located `*.Tests.swift` importing XCTest into the app target, unstaged framework, macOS signing) — deferred to the macОС acceptance gate.
+
+The established protocol: verify the surface in isolation (SwiftPM build + tests + dual-SDK typecheck + lint/format/placeholder + xcodegen enumerate). Let me follow it precisely. First, the strongest proof — an isolated SwiftPM build that actually **runs my tests** under Swift 6 strict concurrency.
+
+Now run the isolated package tests under Swift 6 strict concurrency (tools 6.0 → Swift 6 language mode).
+
+Isolated build succeeds under Swift 6. Now run the tests.
+
+**15/15 tests pass** under Swift 6 strict concurrency in the isolated build. Now the iOS-18 typecheck (to match the precedent's dual-SDK proof) and `xcodegen generate` to confirm my files are enumerated.
+
+Both SDKs typecheck clean. Now `xcodegen generate` to confirm my 7 files are enumerated in the project targets.
+
+xcodegen generates cleanly and **all 7 files are enumerated** across targets. Now let me gather concrete evidence of the pre-existing blockers and read a sibling log to match the exact log format/protocol.
+
+Confirmed pre-existing blockers, independent of my change: `DashboardWidgetSize` defined **15×**, and **262** co-located XCTest files compiled into the app target. Let me read the FSMTimelineChart sibling log to match the exact log format/protocol.
+
+This sibling log is the authoritative template and confirms the outcome: **STATUS=DONE** — the surface is fully host-validated (dual-SDK typecheck + isolated XCTest + lint/format/placeholder + xcodegen), while the full-app `xcodebuild` is explicitly DEFERRED (ADR-012 macOS-pending) due to pre-existing, unrelated blockers. My situation is identical (and simpler — pure presentational). Let me gather tool versions, line counts, and re-confirm the scoped gate exit codes for the log.
+
+All host-runnable gates are green. Let me grab a precise timestamp and the exact placeholder-gate output, then write the comprehensive log.
+
+Now I'll write the comprehensive gate log following the established sibling protocol.
+
+Now let me clean up temporary artifacts and verify git status before committing exactly the prompt-specified files.
+
+I see pre-existing modifications to `AIUsageCard.*` (7 files) that I did **not** touch — they were already modified in the working tree. The prompt scopes my commit to only `AccordionSection.*` + the log. Let me confirm the AIUsageCard changes aren't mine, then stage only my files.
+
+Confirmed — the `AIUsageCard.*` changes belong to a **different** concurrent prompt (0237 · AiUsageCard), not mine. I'll stage only my scoped files (7 `AccordionSection.*` + the log) and commit, leaving the unrelated changes untouched.
+
+Staged set is exactly my 8 files. Now commit with the prompt's message + co-author trailer.
+
+Commit succeeded (8 files, 957 insertions). Let me verify the commit message trailer and confirm a clean final state.
+
+All verified: commit has the co-author trailer, generated `.xcodeproj` removed, my temp files cleaned, final swiftlint/swiftformat clean. Let me confirm no stray background builds from my session remain and finalize todos.
+
+Let me do a final check on background sessions and confirm all todos are complete.
+
+All launcher sessions completed; no active builds remain. The task is complete. Let me do a final todo verification.
+
+Task complete. Here's the summary.
+

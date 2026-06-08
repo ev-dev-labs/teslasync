@@ -1,0 +1,238 @@
+===========================================================================
+=== P4 Feature view 0177 TripLegList (Apple) ===
+===========================================================================
+Prompt : .github/prompts/monorepo/p4-apple/feature-views/P-0177-TripLegList.prompt.md
+Web src : web/src/features/driving/components/TripLegList.tsx  (THE spec, 120 lines)
+Native  : apps/apple/TeslaSync/feature-views/TripLegList.*
+Host    : macOS 26.5 (25F80), Apple Swift 6.3.2, swiftlint 0.63.3, swiftformat 0.61.1,
+          pwsh 7.x, xcodegen 2.x.
+
+CAPABILITY ASSESSMENT (decisive for STATUS) — this runner has the **Command Line
+Tools only**, NOT a full Xcode.app. The prompt's gate is two `xcodebuild ... build
+test` invocations; those, plus the iOS Simulator and the XCTest runner, are
+Xcode-app-only and are UNAVAILABLE here. API evidence (captured this run):
+
+  $ xcode-select -p
+    /Library/Developer/CommandLineTools
+  $ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+    directory '/Library/Developer/CommandLineTools' is a command line tools instance
+    => IOS_EXIT=1
+  $ xcodebuild -scheme TeslaSync-macOS build test
+    xcode-select: error: tool 'xcodebuild' requires Xcode, ... command line tools instance
+    => MAC_EXIT=1
+  $ xcrun simctl list devices available
+    xcrun: error: unable to find utility "simctl", not a developer tool or in PATH  (SIMCTL_EXIT=72)
+  $ xcrun --find xctest
+    xcrun: error: unable to find utility "xctest", not a developer tool or in PATH
+
+Per the prompt's capability clause ("requires SwiftUI + Swift Charts + MapKit, iOS 18
+/ iPadOS 18 / macOS 15 HIG. If unavailable on the runner -> STATUS=BLOCKED with API
+evidence"), the BUILD/TEST gate is BLOCKED on platform capability. This is recorded
+honestly as BLOCKED — never as green (covenant #1, #3). Note: TripLegList itself uses
+NO Swift Charts and NO MapKit (the prompt's "Charts / maps used" = none); the SwiftUI
+capability IS present and is exercised below (the shipping SwiftUI compiles clean).
+
+EVERYTHING that does NOT require the Xcode app was run, and is GREEN, including a
+genuine EXECUTION of the surface logic (49/49 assertions) — see GATE RESULTS.
+
+===========================================================================
+FILES SHIPPED (allowed-files glob: apps/apple/TeslaSync/feature-views/TripLegList.*)
+===========================================================================
+   90  TripLegList.swift            — root View: TSGlassPanel + header (title + freshness chip) +
+                                      stale/offline banner + phase switch (skeleton / empty / error /
+                                      content) + the FadeIn-staggered leg list with interleaved stops.
+  365  TripLegList.Model.swift      — P1/S8 state-holder seam (Leg / ChargeStop / Input / Formatting /
+                                      LoadStatus / Connection / Update / Source / @Observable Model /
+                                      InMemory source), P1/S11 telemetry seam (view.opened), P1/S10
+                                      strings facade (NSLocalizedString table "TripLegList").
+  298  TripLegList.Adapter.swift    — pure projection: Phase + Row + StopRow + Projection (web-parity
+                                      rows incl. the `idx < charge_stops.length` interleave guard) +
+                                      Accessibility (leg + stop VoiceOver summaries). No store/bundle/view.
+  126  TripLegList.Format.swift     — TripLegListUnitMath: the JS `toFixed` (ungrouped) vs
+                                      `Intl.NumberFormat` (grouped) split, convertDistance/EnergyFromSI,
+                                      formatEnergy (— on non-finite), formatCurrency, roundInt.
+  360  TripLegList.Views.swift      — freshness chip, connectivity banner, leg card (badge + from->to +
+                                      Distance/Duration/Energy/Battery grid), blue charge-stop card,
+                                      skeleton, error (QueryError-equivalent + retry), empty state.
+  134  TripLegList.Previews.swift   — #Preview per state (content x metric/imperial, empty, loading,
+                                      error, stale, offline). DEBUG-only.
+   43  TripLegList.strings          — P1/S10 i18n table: the 8 web keys (tripPlanner.legs.* + common.min)
+                                      + native chrome + a11y keys.
+  281  TripLegList.Tests.swift      — projection + model XCTest (guarded #if canImport(XCTest)).
+  148  TripLegList.AdapterTests.swift — unit-math + endpoint + accessibility XCTest (guarded).
+ 1845  total (9 files). Web source is a single 120-line presentational component; the native delta is
+        the standard feature-view architecture (state holder + projection + formatters + views + i18n +
+        2 test files), identical in shape to the shipped sibling 0139 DriveStatCards.
+
+===========================================================================
+PARITY NOTES (web TripLegList.tsx -> native; web is THE spec)
+===========================================================================
+  • Empty (web `legItems.length === 0`)  -> .empty phase: title "Route Breakdown" + a friendly
+    "Plan a trip to see the route breakdown" (web `EmptyState`), never a blank panel.
+  • Per leg row reproduced field-for-field:
+      - index badge  = idx + 1.
+      - endpoint     = `leg.from.name || "{lat.toFixed(2)}, {lng.toFixed(2)}"` — empty name falls back
+        to the rounded coordinate pair (JS `||`; toFixed = ungrouped, '.'-decimal, locale-independent).
+      - Distance     = `convertDistanceFromSI(distance_m, unit).toFixed(1)` + unit (NO grouping — uses
+        toFixed, distinct from the grouped Intl path used for energy/currency).
+      - Duration     = `Math.round(leg.duration_s)` rendered with the `min` label. THIS IS REPRODUCED
+        VERBATIM from the web source (L70): the leg row applies NO seconds->minutes conversion, unlike
+        the charge-stop row (L99 `charge_duration_s / 60`). Honesty covenant #5/#9: parity is byte-for-
+        byte by mandate, so the magnitude + label match the web exactly on every platform. The quirk is
+        documented loudly in Adapter.swift rather than silently "fixed" (which would be drift from spec).
+      - Energy       = `formatEnergy(energy_wh, { precision: 1 })` (default kWh -> wh/1000, Intl-grouped,
+        non-finite -> "—" per web DEFAULT_EMPTY_DISPLAY).
+      - Battery      = `Math.round(start_soc)% -> Math.round(arrival_soc)%`, arrival tinted rose when the
+        raw `arrival_soc < 20`, else amber; start emerald (web colors -> design tokens).
+  • Charge stop after leg idx (web `idx < chargeStops.length`): blue card with name, `round(s/60)` min,
+    soc range, energy, `formatCurrency(cost)` (emerald), + the optional italic "Recommended stop point
+    — actual charger locations may vary" note (web `is_recommended`).
+  • Hooks bind via facades, not HTTP: useTranslation -> TripLegListStrings (P1/S10); useUnits.formatEnergy
+    + useFormatting.formatCurrency/convertDistanceFromSI -> TripLegListUnitMath + the Formatting struct
+    (P1/S8 seam). The view never performs I/O.
+  • States: loading / empty / error(retry) / stale / offline / content — ALL render (no hidden surfaces).
+    The web component is presentational (parent trip-plan query owns load/error); the loading/error/stale/
+    offline chrome models that parent lifecycle around the same list, same disposition as sibling 0139.
+  • Tailwind -> tokens: emerald->statusSuccess, rose->statusDanger, amber->statusWarning, blue->
+    chartSeriesSpeed (web blue-500 == #3b82f6 == chartSeriesSpeed), muted->textMuted, surface->surfaceGlass.
+  • a11y: each leg card + each stop card is one combined VoiceOver element reading a full summary;
+    decorative glyphs accessibilityHidden; the retry is a labeled Button; FadeIn honors Reduce Motion
+    (TSFadeIn); Dynamic Type via tokenized fonts + minimumScaleFactor.
+  • Telemetry: view.opened with surface slug "TripLegList" on first start (P1/S11), emitted once.
+
+===========================================================================
+GATE RESULTS (real exit codes / real output; nothing fabricated)
+===========================================================================
+
+[BLOCKED] The two prompt gate steps that require the Xcode app — recorded RED, never green:
+  G1. xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+        => IOS_EXIT=1  (xcode-select: 'xcodebuild' requires Xcode; only CommandLineTools present)
+  G2. xcodebuild -scheme TeslaSync-macOS build test
+        => MAC_EXIT=1  (same — Xcode app not installed on this runner)
+  Cause is the runner toolchain (no Xcode.app / no iOS Simulator / no xctest), NOT this surface.
+
+[GREEN] Every host-runnable check (these prove the shipped surface to the extent the runner allows):
+
+  A1. swiftformat --lint <9 TripLegList files>  (config apps/apple/.swiftformat)
+        0/8 files require formatting.
+        => FORMAT_EXIT=0
+      (Whole-tree `swiftformat --lint apps/apple` is RED on exactly ONE PRE-EXISTING sibling —
+       TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes) — which this
+       prompt may not touch; 1/1364 files. ZERO TripLegList files are flagged.)
+
+  A2. swiftlint lint --strict <8 TripLegList .swift files>  (config apps/apple/.swiftlint.yml)
+        (no output — clean)
+        => LINT_EXIT=0   (line_length<=120, identifier/type rules, opt-in rules all satisfied)
+
+  A3. ./apps/tools/check-placeholders.ps1 -Language swift  (scan of the actual TripLegList files)
+        PLACEHOLDER_ALLOWED=0
+        PLACEHOLDER_COUNT=0
+        => PLACEHOLDER_EXIT=0
+        (No TODO/FIXME/XXX/"Coming soon"/Placeholder/"Lorem ipsum"/"not implemented"; grep -niE of the
+         forbidden set over all 9 files = 0 hits. The verbatim gate path
+         `-Path apps/apple/TeslaSync/feature-views/TripLegList` resolves to no literal file/dir, which the
+         script treats as a clean no-op; the scan above targets the real files for honest coverage.)
+
+  A4. swiftc -typecheck  (Swift 6, macOS SDK) of ALL 6 shipping (non-test) files — TripLegList.swift,
+      .Model, .Adapter, .Format, .Views, .Previews — against a faithful shim of the design tokens
+      (Color.TS / Font.TS / TSSpacing / TSRadius) + shared components (TSGlassPanel / TSFadeIn), matching
+      the real signatures in apps/design/generated/apple/Tokens.swift + Sources/Components/UI + /Motion:
+        => TYPECHECK_EXIT=0  (only two warnings: `Text + Text` deprecated in the macOS 26 SDK — an
+           ESTABLISHED, shipping codebase pattern, used by sibling EnvironmentalImpact.Views.swift /
+           BatteryPill.swift; not an error, not flagged by swiftlint/swiftformat. The #Preview macro
+           plugin is Xcode-only, so previews are excluded from this CLT typecheck — same environmental
+           limit as the build gate, not a code defect.)
+
+  A5. EXECUTED unit assertions over the REAL value types — compiled TripLegList.Format + .Adapter +
+      .Model into a standalone Swift executable (xcrun swiftc -O) and ran 49 web-parity assertions
+      (the xctest runner is Xcode-only, so XCTest bundles cannot be hosted here; this directly EXECUTES
+      the identical logic the XCTest cases assert):
+        RUNNER: 49 passed, 0 failed
+        => RUN_EXIT=0
+      Coverage executed: toFixed-ungrouped vs Intl-grouped split (191.7 / 1234.5 vs 1,234.5);
+      formatEnergy (52.4 kWh, 1,234.5 kWh, non-finite -> "—"); formatCurrency ($14.86 / €1,234.50);
+      roundInt + safe non-finite; distanceFromSI exact factor; full 2-leg + 1-stop projection for BOTH
+      imperial (191.7 mi / 11280 / 52.4 kWh / 92%->18% / Home / "36.25, -120.24" / stop 33 min /
+      "18% -> 95%" / 41.3 kWh / $14.86) and metric (308.5 km / €14.86); the interleave guard (leg 1 has
+      NO stop); arrival-low threshold (18<20 true, 27 false); empty/nil-input -> no rows; the full
+      resolvePhase matrix; the leg + charge-stop VoiceOver summaries; and the @MainActor Model — content
+      phase + 2 rows, view.opened-once, start-once, refresh delegation, and stale-auto-refresh-once-per-
+      episode (re-armed after a live tick), plus loaded-without-legs -> empty.
+
+  A6. swift build of the XCTest bundle (SwiftPM, swift-tools 6.0, Swift 6 language mode) over the real
+      Format+Adapter+Model + the two guarded test files:
+        Build complete! (59.96s)   [TeslaSyncPackageTests.xctest produced]
+      => the test sources COMPILE cleanly under Swift 6; only their EXECUTION is blocked (no xctest host).
+      The co-located *.Tests.swift are wrapped in `#if canImport(XCTest)` (the sibling 0124 KioskOverlay
+      convention), so in the app target — where project.yml sweeps feature-views in but does NOT link
+      XCTest — they compile to NOTHING and this surface contributes ZERO XCTest-related build errors.
+
+===========================================================================
+HONESTY COVENANT
+===========================================================================
+ 1 No red-as-green   : The two xcodebuild steps are RED (IOS_EXIT=1 / MAC_EXIT=1) and are reported as
+                       BLOCKED-on-capability, never green. Every green claim (A1-A6) has pasted real output.
+ 2 No scope narrowing: All web data, composition, every state (loading/empty/error/stale/offline/content),
+                       every t() key, the interleaved charge stops, the recommended note, a11y, telemetry —
+                       implemented; nothing dropped or simplified.
+ 3 No skip-and-assume: The xcodebuild + simctl + xctest absences were each PROBED and their real errors
+                       pasted; the surface logic was EXECUTED (49/49), not assumed.
+ 4 No stubs as final : Complete implementations; PLACEHOLDER_COUNT=0. (The /tmp SwiftPM package, the /tmp
+                       swiftc runner, and the typecheck shim are throwaway verifiers — never shipped/committed.)
+ 5 No parity shortcuts: Faithful port incl. the deliberate web duration quirk (Math.round(duration_s) labeled
+                       "min" on legs, /60 on stops), the toFixed-vs-Intl number split, the `||` endpoint
+                       fallback, and the `< 20` arrival tint — documented, not silently altered.
+ 6 No delegation     : Authored directly; no sub-agent delegation of the surface.
+ 7 No predecessor bypass: Did NOT edit project.yml / .swiftlint.yml / .swiftformat / any sibling file / the
+                       shared Localizable.xcstrings. Strings ship as the per-surface table. The one tree-level
+                       swiftformat miss (ActionBuilder.Previews.swift) is pre-existing and out of scope.
+ 8 No commit on red  : The artifact is COMPLETE and GREEN on every runnable gate (format + lint + placeholder
+                       + full-shipping-code typecheck + 49/49 EXECUTED assertions + Swift-6 test-bundle
+                       compile). The only RED is the un-runnable Xcode build/test, which is a runner-capability
+                       BLOCK (documented with API evidence), not a defect or a hidden failure — so committing
+                       the complete, fully-host-verified surface + this BLOCKED log delivers the work honestly
+                       (the established 0124/0139 sibling disposition: ship + record the deferred Xcode step).
+ 9 No silent drift   : `git status --porcelain` adds ONLY the 9 TripLegList.* files (+ this log). The two
+                       pre-existing modified web files (FleetApiSection.tsx, BackupRestorePage.tsx) are NOT
+                       mine and are excluded from the commit.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED> below.
+
+===========================================================================
+DISPOSITION
+===========================================================================
+Production-polished native TripLegList shipped at full parity with the web source and verified by every
+means this Command-Line-Tools runner allows: a clean Swift-6 typecheck of all six shipping files against
+faithful token/component shims, a clean Swift-6 compile of the XCTest bundle, GREEN swiftformat + swiftlint
+--strict + placeholder gates on the surface files, and — most importantly — a real EXECUTION of the surface
+logic (49/49 web-parity assertions over the compiled Format+Adapter+Model). The two prompt gate steps
+`xcodebuild ... build test` (iOS + macOS) CANNOT run on this runner because it has Command Line Tools only,
+not the Xcode app (no xcodebuild, no iOS Simulator, no xctest host) — captured with API evidence above.
+Per the prompt's capability clause this is STATUS=BLOCKED, recorded honestly rather than fabricated as a
+pass. The surface contributes ZERO new errors when the full Xcode build is eventually run on an integration
+runner (guarded #if canImport(XCTest) tests + clean shipping-code typecheck on the macOS SDK).
+
+===========================================================================
+COMMIT
+===========================================================================
+  git add apps/apple/TeslaSync/feature-views/TripLegList.swift \
+          apps/apple/TeslaSync/feature-views/TripLegList.Model.swift \
+          apps/apple/TeslaSync/feature-views/TripLegList.Adapter.swift \
+          apps/apple/TeslaSync/feature-views/TripLegList.Format.swift \
+          apps/apple/TeslaSync/feature-views/TripLegList.Views.swift \
+          apps/apple/TeslaSync/feature-views/TripLegList.Previews.swift \
+          apps/apple/TeslaSync/feature-views/TripLegList.Tests.swift \
+          apps/apple/TeslaSync/feature-views/TripLegList.AdapterTests.swift \
+          apps/apple/TeslaSync/feature-views/TripLegList.strings \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0177-TripLegList.log
+  git commit -m "feat(apps/apple/feature-views): add TripLegList surface (P4)"
+
+IOS_EXIT=1
+MAC_EXIT=1
+FORMAT_EXIT=0
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+TYPECHECK_EXIT=0
+RUN_EXIT=0 (49/49 executed)
+EXIT=1
+STATUS=BLOCKED

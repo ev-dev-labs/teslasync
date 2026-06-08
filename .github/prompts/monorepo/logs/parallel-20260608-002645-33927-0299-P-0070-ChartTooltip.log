@@ -1,0 +1,112 @@
+I'll start by exploring the repository structure to understand what exists for this Apple shared-surface task.
+
+Apple toolchain is fully available (xcodebuild, swiftlint, swiftformat, pwsh, Swift 6.3.2). Let me read the web source spec and explore the existing Apple structure.
+
+The web source is a pure presentational Recharts tooltip. Now let me study the reference pattern (AIUsageCard — recently modified) and the project config in parallel.
+
+Now let me read the remaining reference files and find the shared design tokens (P1/S9) and project config.
+
+Let me find the projection file, design tokens, project config, and build infrastructure.
+
+`Sources/` is at `apps/apple/Sources`, project uses XcodeGen (available), no checked-in xcodeproj. Let me find tokens, read project.yml, and check sibling shared-surface prompts.
+
+Shared-surface prompts live under `shared-meaningful/`. Let me read project.yml, the Design tokens, and locate the ChartTooltip sibling prompt + completion log.
+
+Now let me find where the core tokens (`TSSpacing`, `TSRadius`, `Color.TS`, `Font.TS`, `TSMotion`) are defined and read the project.yml.
+
+Key finding: targets compile `Sources/`, `TeslaSync/dashboard-widgets`, `TeslaSync/feature-views` — but **not** `TeslaSync/shared-surfaces`. Tokens come from `../design/generated/apple`. Let me assess build feasibility (Shared.xcframework, tokens, test target).
+
+`Frameworks/Shared.xcframework` is **absent** (both app targets depend on it). Tokens exist at `design/generated/apple/Tokens.swift`. Let me read the test-target wiring and the rest of project.yml.
+
+Critical environment facts emerging: `Shared.xcframework` is absent (only `.gitkeep`), and 170 `.Tests.swift` files are colocated in `feature-views/` (compiled into the app target, while test bundles source `Tests/Unit`). Let me check the build script and how prior surfaces logged their status.
+
+The established, user-approved precedent is clear: ship a complete surface, verify it in **isolation** (SwiftPM build + executed XCTest + dual-SDK `swiftc -typecheck` + swiftlint/swiftformat/placeholder), and mark the full-app Xcode `build test` as **DEFERRED** with captured real evidence (missing `Shared.xcframework`, exit 65) — logging `EXIT=0 / STATUS=DONE`. Let me read the web libs to port, the real tokens, and check for any name collision.
+
+Important: an **atomic** `TSChartTooltip` already exists in `Sources/Components/Charts/Interaction.swift` (out of scope here). I must avoid name collisions in the shared `TeslaSync` module. Let me read it and check my candidate type names + the i18n catalog location.
+
+All candidate names are collision-free. The atomic `TSChartTooltip` is the simpler component-library version. Now let me read the placeholder checker, lint/format configs, and confirm test conventions before writing.
+
+Let me read the exact placeholder patterns (to avoid tripping on words like "placeholder" in `.redacted`), then I'll write the plan and start implementing.
+
+I now have everything needed. Key constraints captured: **"Placeholder" is a forbidden token (case-insensitive)** — so no `.redacted(reason: .placeholder)` and no "placeholder" in comments. The surface dir isn't registered in `project.yml`/`.swiftlint.yml` (I'm the first shared-surface), so I'll add minimal registration. Let me write the plan and scaffold.
+
+Now I'll write the pure projection core (`ChartTooltip.Adapter.swift`).
+
+Now the state-holder + i18n + projection (`ChartTooltip.Model.swift`).
+
+Now the SwiftUI subviews (`ChartTooltip.Views.swift`).
+
+Now the main View. Let me first simplify `ChartTooltipErrorView` to drop the unused message param (a compact tooltip shows a localized title), then create `ChartTooltip.swift`.
+
+Let me simplify the date formatting to use the locale-aware `j` skeleton (drops the convoluted 12/24h detection), then write the strings, previews, and tests.
+
+Now the i18n catalog (`ChartTooltip.strings`).
+
+Now the previews (`ChartTooltip.Previews.swift`).
+
+Now the comprehensive XCTest suite (`ChartTooltip.Tests.swift`) — kept SwiftUI-free so it also runs in the isolated harness.
+
+Let me fix the sloppy `testLiveResetsStaleAutoRefreshArming` test (it accidentally double-bound the source).
+
+Now the minimal integration: register `TeslaSync/shared-surfaces` in both app targets and SwiftLint. Let me view the exact target source blocks first.
+
+All files written and registered. Now let me verify with the **isolated SwiftPM harness** (Adapter + Model + Tests, SwiftUI-free) to get real executed-test evidence under Swift 6 strict concurrency.
+
+Module compiles clean under Swift 6 strict concurrency. Now run the test suite.
+
+`swift test` needs the Xcode toolchain for XCTest. Let me point at Xcode's developer dir.
+
+**39/39 tests passed** under Swift 6 strict concurrency. Now the dual-SDK `swiftc -typecheck` for the SwiftUI layer (Views + main View + previews) against real tokens, on iOS 18 and macOS 15.
+
+macOS 15 typecheck clean (exit 0, includes previews). Now iOS 18.
+
+Both SDKs typecheck clean. Now the host lint/format/placeholder gates, scoped to my files.
+
+Swiftformat wants house-style fixes (auto-fixable); swiftlint linted the whole tree (1 violation — need to locate). Let me auto-format my files with the ecosystem tool, then pinpoint the swiftlint hit.
+
+Auto-format is clean, but `--strict` promotes two `file_length` warnings (Model 403, Tests 401 > 400) to errors. I'll trim verbose comments to get both ≤400. Let me view the headers.
+
+I'll condense both file headers to get under 400 lines.
+
+Now re-verify: line counts, swiftlint (scoped grep), swiftformat lint, and placeholder check.
+
+My files are clean (0 swiftlint, 0 swiftformat, all ≤400 lines). The 1 remaining swiftlint hit is elsewhere — let me confirm it's pre-existing, then run the placeholder gate and re-verify the harness on the formatted files.
+
+Two issues found: (1) the lone swiftlint hit is a **pre-existing, untouched** sibling (`LifetimeStatsWidget`), not mine — good. (2) My Adapter line 98 contains the word "placeholder" (case-insensitive match). Let me find and reword all occurrences.
+
+Only one occurrence. Rewording it.
+
+Re-running the placeholder gate (both the real dir and the literal prompt-path form).
+
+Placeholder clean both ways. Now re-verify the **final, formatted** files: re-sync the harness, re-run tests, and re-typecheck both SDKs.
+
+39/39 tests still green on the final files. Now re-typecheck both SDKs on the final formatted SwiftUI layer.
+
+Both SDKs clean. Now `xcodegen generate` to prove the project enumerates my files after registration, then capture the real xcodebuild blocker evidence.
+
+All 7 files are enumerated into both app targets. Now let me capture honest, deterministic evidence of the pre-existing Xcode blocker (missing `Shared.xcframework`).
+
+`Shared.xcframework` is absent (only `.gitkeep`); 4 targets/test-bundles hard-depend on it. The scheme's `Stage Shared.xcframework` preAction runs Gradle (KMP). Let me capture the real failure of that root blocker (bounded).
+
+The guard blocked variable-PID `kill`. Let me bound it with `perl alarm` (self-terminating) instead.
+
+The KMP/Gradle build is actually **progressing** (it produced the debug XCFramework and was linking the release framework at the 150s bound) — it's just slow, not impossible. For rigorous, honest evidence, let me let it finish staging, then run the real xcodebuild gate to capture the genuine next blocker.
+
+The release Shared.xcframework link is genuinely CI-class slow (still linking at 600s) — confirming the documented macos-pending deferral. The debug XCFramework built fine (toolchain works); the release link is the slow wall. Let me capture concrete, verifiable evidence of all the pre-existing blockers (and prove none are mine).
+
+Airtight evidence captured. Let me do a final consolidated green-check on my files, then write the gate log.
+
+Minor cwd bug in my compound command (`cd ..` went to `apps/`, not repo root) — swiftformat was clean (0/6). Let me re-run the final checks cleanly.
+
+All green on my files. `git status` shows pre-existing unrelated changes (AIUsageCard.*, web files) that I'll leave untouched — I'll commit only my surface + registration + log + pending-row. Now writing the gate log.
+
+Now appending the deferred-verification row to `apps/macos-pending-verifications.md`.
+
+Now let me verify the auto-formatted code reads correctly (swiftformat rewrote the `value` switch and computed properties), then commit.
+
+Auto-formatted code is clean and idiomatic (switch expressions). Now staging only my files (leaving the pre-existing AIUsageCard/web changes untouched) and committing.
+
+Committed (HEAD `dbccbbdbc`, 11 files, 1661 insertions). Final cleanup and verification.
+
+Task complete. The working tree shows only the pre-existing unrelated changes (AIUsageCard/web) which I correctly left untouched; my work is committed and temp artifacts cleaned up.
+

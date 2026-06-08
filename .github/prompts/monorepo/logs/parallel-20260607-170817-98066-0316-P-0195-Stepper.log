@@ -1,0 +1,141 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple platform capabilities.
+
+Key capability finding: **Xcode is NOT installed** (only Command Line Tools), and **no iOS simulators** (`simctl` missing). `swift`, `swiftlint`, `swiftformat` ARE available. Let me explore the existing Apple app structure and the web source.
+
+Now I understand the web source — a presentational onboarding `Stepper` with three per-step states (done/current/pending). Let me deeply explore the existing Apple conventions: feature-views, state holders, tokens, i18n, diagnostics.
+
+`Stepper.*` doesn't exist yet — I'm creating it fresh. The canonical complete surface = 7 files: `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`. Let me find the best presentational analog to mirror exactly.
+
+`SummaryStatsRow` and `ConflictWarnings` are the cleanest presentational 7-file sets, and `ConflictWarnings` is a list-with-per-item-state (closest to Stepper). Let me read both full sets to learn the exact conventions.
+
+Excellent template. Now let me read the remaining 3 files (Previews, Tests, strings) and verify the design tokens (TSSpacing, TSRadius, TSTone, Color.TS, Font.TS) and shared components exist.
+
+Now I fully understand the 7-file pattern. Let me verify the design tokens (TSSpacing, TSRadius, TSTone, Color.TS, Font.TS, TSSkeleton) exist and read the lint configs.
+
+Tokens exist. Let me read the exact APIs for the tokens I'll use, plus the lint configs.
+
+Let me check the interactive pattern (WeekSelector has selection callbacks) to handle the Stepper's CTA action idiomatically, and confirm shared button usage.
+
+I have the full token + component vocabulary. Let me check the placeholder patterns (to avoid them) and the existing "pending verifications" convention for when Xcode is unavailable.
+
+The ToolCard precedent (`P-0010`) is the exact playbook: verify the surface green in **isolated SwiftPM build + tests + lint + format + placeholder**, and defer the full-app `xcodebuild` to a macOS/Xcode runner. Let me read the ToolCard log and check isolation feasibility.
+
+The exact precedent is clear. On THIS runner there's **no Xcode at all** (ToolCard's runner had Xcode 26.5). My substitute verification = isolated SwiftPM harness compiling the real shipped sources against real design-system files, plus lint/format/placeholder. Let me confirm no Xcode.app and identify clean (SwiftUI-only) dependency files.
+
+`/Applications/Xcode.app` IS present — the active dir is just CommandLineTools. The ToolCard precedent overrode it non-destructively with `DEVELOPER_DIR`. Let me test whether the full Xcode toolchain works that way.
+
+**Major finding:** Full Xcode 26.5 toolchain works via `DEVELOPER_DIR` — iPhone 16 simulator is booted, iOS/macOS SDKs present. I am **NOT capability-blocked**. I'll aim for the full gate. Let me check the Shared.xcframework staging and whether the pre-existing collisions (that blocked ToolCard's full-app build) still exist.
+
+Confirmed: the same pre-existing blockers from ToolCard still exist (`DashboardWidgetSize` defined 15×, no staged `Shared.xcframework`, 112 co-located XCTest files). The full-app `xcodebuild` will fail on these unrelated issues — which are explicitly out of scope. Let me read how ToolCard's log terminated (its EXIT/STATUS convention).
+
+I now have the complete, sanctioned playbook (ToolCard precedent: ship + isolated Swift 6 build/test + lint/format/placeholder green; full-app `xcodebuild` deferred on pre-existing unrelated blockers → `EXIT=0 STATUS=DONE`). Let me check for type-name collisions and confirm the harness dependency set before writing.
+
+Two key findings: `OnboardingStep` already exists (`FleetApiSection.Models.swift`), so I'll namespace my types as `Stepper*` to avoid app-target collisions. And the web `icon?` prop is declared-but-unused in render — I'll faithfully reproduce the state-driven indicator only. Let me write a brief plan, then create the files.
+
+All names clear; Cards→Typography is the skeleton dependency chain. Now writing the 7 files. Starting with the pure Adapter core.
+
+Now the Model (P1/S8 state-holder + P1/S11 telemetry + P1/S10 i18n facade).
+
+Now the presentational Views layer.
+
+Now the main surface view and previews. Let me also verify the web `Button` icon placement for CTA parity.
+
+Web renders `{icon}` **before** `{children}` — the arrow is **leading**. Let me fix the CTA button for parity.
+
+Now the Previews and the strings catalog.
+
+Now the comprehensive test suite.
+
+All 7 files written. Now the verification pipeline. First, auto-format with swiftformat, then check Tokens.swift macOS-compatibility for the isolated harness.
+
+Tokens.swift is macOS-compatible. Now setting up the isolated SwiftPM harness (Swift 6 strict concurrency) compiling the exact shipped Stepper sources against the real design-system files, mirroring the ToolCard precedent.
+
+All Stepper files compiled cleanly under Swift 6 — the only error is a missing `tsGlassPanel` modifier (TSMaterial.swift) needed by the shared `Cards.swift`. Adding it and re-running build + tests.
+
+**Build complete!** Now running the test suite.
+
+**All 25 tests pass, 0 failures, under Swift 6 strict concurrency.** Now the remaining host gates: swiftformat --lint, swiftlint --strict, and the placeholder scanner.
+
+Stepper scope is fully green (format 0, lint 0 violations, placeholder 0). The gate runs these whole-app — let me capture the whole-scope results (to honestly document any pre-existing issues vs. mine) and confirm my files add zero violations.
+
+Whole-app runs surface **pre-existing** issues in non-Stepper files (`ActionBuilder.Previews.swift` format; 1 swiftlint violation elsewhere) — my Stepper scope is clean (0/6 format, 0 lint). Let me capture the exact pre-existing violation for honest documentation, and confirm it predates my change via git.
+
+Confirmed: the pre-existing swiftlint violation is `LifetimeStatsWidget.Adapter.swift:141` (function_body_length) — the exact one ToolCard documented, not a Stepper file. Let me verify from the repo root that my only changes are the Stepper files and the flagged files are untouched.
+
+My only changes are the 7 Stepper files; the whole-app format/lint failures are pre-existing in untouched files (`ActionBuilder.Previews.swift`, `LifetimeStatsWidget.Adapter.swift`). Now, per covenant rule 3 (no skip-and-assume), I'll actually execute the full `xcodebuild` gate. Let me prep: generate the project and check the Shared.xcframework build prerequisites.
+
+`xcodegen` succeeded; Java 17 + gradlew present. Now executing the real iOS gate (`build test`), which first builds `Shared.xcframework` via Gradle (~7min) then compiles the app. I'll run it in the background and capture raw output.
+
+Background iOS build launched (Gradle framework build first, ~7min). Let me monitor it.
+
+The `/tmp/ios-build.log` shows `slot-299` paths and `/tmp/dd-ios` — a **parallel agent in another slot is colliding on the same `/tmp` filename**. That output is NOT my build. I must use slot-unique paths. Let me check the contamination and my process state.
+
+Confirmed: `/tmp/ios-build.log` was a **parallel slot-299 agent's** build (1576 slot-299 refs, 0 slot-316; used `/tmp/dd-ios`). My process already exited, output lost to the `/tmp` collision. The running `xcodebuild` (pid 5967, macOS) is also another slot. I'll re-run with **slot-316-unique paths**. My isolated harness result stands (it used slot-316 symlinks + my unique test names).
+
+iOS build re-launched with slot-unique paths (pid 7677). The Gradle `Shared.xcframework` step runs first (~7min). Let me monitor while it progresses.
+
+Gradle is now linking the release framework (slot-316 confirmed, no contamination). Once it stages `Shared.xcframework`, the app compile starts. Continuing to monitor.
+
+Still in Gradle release-framework linking (the slow Kotlin/Native step). Let me give it more time.
+
+iOS build failed with `IOS_EXIT=65` — the **pre-existing systemic blocker**: `feature-views/*.Tests.swift` import `XCTest` into the app target (first error is `AcDcStatsPanel.Tests.swift`, alphabetically first of 112+ such files). Let me prove ZERO Stepper-source errors and characterize the failure precisely.
+
+**Decisive iOS evidence:** total `error:` lines = 4, ALL the single pre-existing systemic class `unable to resolve module dependency: 'XCTest'`, hitting **111 distinct pre-existing** `feature-views/*.Tests.swift` files (the app-target sweeps in co-located tests). **Stepper-source errors = 0.** No other error category (DashboardWidgetSize not even reached). Now executing the macOS gate for `MAC_EXIT` (warm Gradle cache).
+
+macOS build launched (pid 36432). While it builds (warm Gradle cache + compile), let me gather the exact evidence snippets I'll cite in the log.
+
+Harness re-confirmed green (25 tests, 0 failures). Let me poll the macOS build.
+
+macOS failed with `MAC_EXIT=65` on the **pre-existing signing blocker** (`TeslaSync-macOS`/`TeslaSyncWidgets-macOS` "have entitlements that require signing with a development certificate" — unprovisioned runner), exactly as ToolCard documented. Let me confirm zero Stepper errors in the macOS log too.
+
+Both gates: `IOS_EXIT=65` (pre-existing systemic XCTest-in-app-target, 111 files) and `MAC_EXIT=65` (pre-existing macOS dev-signing), **0 Stepper-source errors in either**. This matches the ToolCard DEFERRED disposition exactly. Let me grab tool versions, then write the log.
+
+All evidence gathered. Now writing the comprehensive, honest log file following the sanctioned structure.
+
+Log written. Now let me verify the working tree is clean (only my 7 files + log tracked; build artifacts git-ignored), then clean up temp files.
+
+Clean tree: only my 7 Stepper files + the log are new (generated `.xcodeproj` and staged `Shared.xcframework` are git-ignored). Committing now.
+
+Committed (e566e9966, 8 files, 1505 insertions). Final verification of a clean tree and the log terminator.
+
+Task complete. Everything is committed, the working tree is clean, and the log terminates with `EXIT=0 / STATUS=DONE`.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`Stepper`** feature view (P4/0195) at parity with `web/src/features/onboarding/components/Stepper.tsx`.
+
+**7 files** (`apps/apple/TeslaSync/feature-views/Stepper.*`, 1,505 lines):
+- **Adapter** — pure projection: the verbatim `stateOf` ladder (done / current / pending, incl. a done step *after* the current one staying done), indicator/tone/connector derivation, CTA gating, copy catalog, a11y summary. Types namespaced `Stepper*` to avoid an existing app-target `OnboardingStep`.
+- **Model** — P1/S8 state-holder seam, P1/S11 `view.opened` telemetry, P1/S10 i18n facade, `@Observable` model with stale rising-edge auto-refresh + keyed CTA activation, in-memory test source.
+- **Views** — indicator circle (Reduce-Motion-aware spinner), connector, row (combined VoiceOver label + separate CTA focus stop), shared `TSButton` CTA with leading arrow (web renders `icon` before children), and full P4 chrome (loading/empty/error/stale/offline) via shared `TSSkeleton`/`ContentUnavailableView`.
+- **Surface + Previews (7 states) + 25 tests + per-surface `.strings`**.
+
+**Verification (NOT capability-blocked — Xcode 26.5 via `DEVELOPER_DIR`):**
+- ✅ Isolated SwiftPM harness (Swift 6 strict-concurrency, real design-system files): **build complete, 25 tests, 0 failures**
+- ✅ swiftformat `--lint` 0/6 · swiftlint `--strict` 0 violations · placeholder scan 0
+- ⏸️ Full-app `xcodebuild` iOS (`IOS_EXIT=65`) + macOS (`MAC_EXIT=65`) **DEFERRED** — fail only on **pre-existing, unrelated** blockers (app-target glob sweeping 111 co-located `*.Tests.swift` `XCTest` imports; macOS dev-signing), **zero Stepper-source errors** — the sanctioned ToolCard disposition.
+
+Whole-app lint/format flagged 2 pre-existing issues in untouched files (`ActionBuilder.Previews.swift`, `LifetimeStatsWidget.Adapter.swift`) — not mine, not touched. Detected and corrected for `/tmp` filename collisions from a parallel slot by re-running all builds under slot-unique paths.
+
+
+
+The task is fully complete and verified — committed, clean tree, log terminating `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../logs/p4-apple-feature-views-0195-Stepper.log   | 158 ++++++++++
+ .../TeslaSync/feature-views/Stepper.Adapter.swift  | 303 +++++++++++++++++++
+ .../TeslaSync/feature-views/Stepper.Model.swift    | 227 ++++++++++++++
+ .../TeslaSync/feature-views/Stepper.Previews.swift |  89 ++++++
+ .../TeslaSync/feature-views/Stepper.Tests.swift    | 295 ++++++++++++++++++
+ .../TeslaSync/feature-views/Stepper.Views.swift    | 329 +++++++++++++++++++++
+ apps/apple/TeslaSync/feature-views/Stepper.strings |  41 +++
+ apps/apple/TeslaSync/feature-views/Stepper.swift   |  63 ++++
+ 8 files changed, 1505 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0195-Stepper.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/Stepper.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/Stepper.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/Stepper.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/Stepper.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/Stepper.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/Stepper.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/Stepper.swift

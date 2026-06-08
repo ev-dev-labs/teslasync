@@ -1,0 +1,52 @@
+=== P4 Shared surface 0166 BreadcrumbOverridesContext (Apple) ===
+date: 2026-06-08T13:24:40Z
+host: Darwin arm64  swift: Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+web source: web/src/components/layout/BreadcrumbOverridesContext.tsx (+ hooks/useBreadcrumbs.ts, components/layout/Breadcrumbs.tsx)
+native output: apps/apple/TeslaSync/shared-surfaces/BreadcrumbOverridesContext.*
+
+--- RUNNER CAPABILITY ---
+Full Xcode / xcodebuild: ABSENT (Command Line Tools only) -> iOS-Simulator + macOS app build/test deferred to macOS CI (ADR-012 matrix).
+swift 6.3 toolchain + macOS 15/26 SDK: PRESENT. swiftlint/swiftformat/pwsh/xcodegen: PRESENT.
+Capability probe (SwiftUI + Swift Charts + MapKit typecheck against /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk):
+CAPABILITY_TYPECHECK_EXIT=0
+
+--- GATE STEP 1: swiftc -typecheck (real surface files, macOS 15 target, Swift 6) ---
+TYPECHECK_EXIT=0
+
+--- GATE STEP 2: isolated SwiftPM build (module TeslaSync, Swift 6 strict concurrency) ---
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build complete! (0.14s)
+
+--- GATE STEP 3: on-host assertion runner (mirrors XCTest suite; XCTest/xctest absent from CLT) ---
+CHECKS=52 FAILURES=0
+ALL_GREEN
+ASSERTION_RUNNER_EXIT=0 (CHECKS=52 FAILURES=0 ALL_GREEN)
+NOTE: canonical XCTest suite (BreadcrumbOverridesContext.Tests.swift + .ModelTests.swift) runs in the Xcode acceptance gate.
+
+--- GATE STEP 4: swiftlint --strict (surface files) ---
+LINT_EXIT=0 (0 violations in shared-surfaces; full-repo has 1 PRE-EXISTING unrelated violation in dashboard-widgets/LifetimeStatsWidget.Adapter.swift)
+
+--- GATE STEP 5: swiftformat --lint (surface files) ---
+SwiftFormat completed in 2.54s.
+0/10 files require formatting.
+FORMAT_EXIT=0 (0/10 files require formatting)
+
+--- GATE STEP 6: check-placeholders.ps1 ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- GATE STEP 7: xcodegen generate (validates project.yml wiring; enumerates files) ---
+⚙️  Writing project...
+Created project at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-395/apps/apple/TeslaSync.xcodeproj
+XCODEGEN_EXIT=0 (11 surface files enumerated in TeslaSync + TeslaSync-macOS)
+
+--- DEFERRED (macOS CI, full Xcode + signing) — recorded in apps/macos-pending-verifications.md ---
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test  : DEFERRED (Xcode absent on runner)
+xcodebuild -scheme TeslaSync-macOS build test                                                  : DEFERRED (Xcode absent on runner)
+Same deferral pattern as P4 ToolCard / AlertMessageEditor / FSMTimelineChart. Capability proven above.
+
+EXIT=0
+STATUS=DONE

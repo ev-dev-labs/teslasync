@@ -1,0 +1,120 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+I have the web source. It's a simple status callout. Now let me examine the existing Apple app structure and the AIUsageCard pattern (which was just modified — likely the reference template).
+
+Key findings: no existing `UpdateAvailableCallout` (I must create it), and `xcodebuild` requires full Xcode but only CommandLineTools is active. Let me check the build system and study the established pattern via the recently-modified AIUsageCard files.
+
+`/Applications/Xcode.app` exists — full Xcode is present, just not selected. The build uses XcodeGen (`project.yml`). Canonical minimal set is 7 files (the AIUsageCard pattern). Let me verify the toolchain works and read the template files.
+
+Full Xcode 26.5 + xcodegen are available; `feature-views/` is glob-included so new files are auto-picked-up. Now let me study the canonical 7-file pattern (AIUsageCard) and locate the shared infra (state holders, tokens, i18n, diagnostics).
+
+Let me read the full canonical AIUsageCard implementation (all 6 Swift files) to internalize the exact pattern.
+
+Excellent — the pattern is very clear and thorough. Let me read the remaining AIUsageCard files (Adapter, Views, Previews, Tests) and the design tokens to learn the exact shared primitives.
+
+Some subviews referenced in `AIUsageCard.swift` aren't in its Views file — the working-tree AIUsageCard may be a mid-refactor. Let me read its Previews/Tests, locate the design tokens, and find the referenced subviews.
+
+The AIUsageCard chrome subviews live in a `.Chrome.swift` file. Let me read the previews + chrome patterns, locate design tokens, and check the web `useDateFormat` hook plus the parent usage.
+
+Now I have the full chrome pattern. Let me locate the design token definitions and shared primitives (Color.TS, Font.TS, TSSpacing, TSButton, TSSkeleton, TSFadeIn) and read the web `useDateFormat` hook + parent usage.
+
+Let me read the web date formatter, the parent page usage, the web test, and the native shared primitives (tokens, button, skeleton, fade).
+
+I now fully understand the web behavior and data flow. Let me confirm the exact design-token palette and shared-component signatures before writing code.
+
+Tokens confirmed (`Color.TS.accent`, `statusInfo`, full `Font.TS`, `TSSpacing`, `TSRadius`). Let me read the token namespace structure + accent RGB, and the TSButton/TSSkeleton/TSFadeIn signatures.
+
+All tokens and primitives confirmed (`Color.TS.accent` is the cyan match). Let me get the exact `TSButton.init` signature and see how external links are handled in existing feature-views.
+
+I need to resolve a critical wiring question: how do `.Tests.swift` files in `feature-views/` (which use `@testable import TeslaSync`) avoid breaking the app target? Let me investigate the test-target wiring.
+
+No excludes, no symlinks — yet `.Tests.swift` files use `@testable import TeslaSync`. I must verify how XcodeGen assigns target membership. Let me generate the project and inspect (generation is cheap and the `.xcodeproj` is gitignored).
+
+Project generated. Let me precisely determine which target the existing `.Tests.swift` files belong to by parsing the generated pbxproj.
+
+The parse shows `.Tests.swift` files compile into the **app targets** themselves. That's surprising (they use `@testable import`). Let me re-verify cleanly and compare against a known test-target file.
+
+Confirmed: the `.Tests.swift` convention compiles into the app targets (with `@testable import` becoming same-module access). I'll follow this exact pattern. Now let me assess full-gate feasibility (KMP framework, simulators, placeholder script).
+
+All preconditions verified: **iPhone 16 sim is booted**, **pwsh available**, Xcode 26.5 present. Only the KMP `Shared.xcframework` (Gradle/Kotlin-Native) is unbuilt — that's the full-gate risk. Let me record a plan, then write the 7 files following the canonical pattern.
+
+Now I'll write the 7 files. Starting with the Model (seams) and Adapter (pure core).
+
+Now the Views (presentational subviews) and the main composition file.
+
+Now the Previews and the i18n strings catalog.
+
+Now the test suite (mirroring the established app-target XCTest convention).
+
+All 7 files written. Now the critical verification: an isolated `swiftc -typecheck` of my production files against the **real** shared tokens/components. Let me set that up.
+
+Skeletons pulls in `TSCard`. For a clean isolated typecheck I'll use the **real** `Tokens.swift` (so any token-name typo is caught) plus exact-signature shims for the 3 components I call. This validates my code under Swift 6 strict concurrency.
+
+Isolated typecheck **passed (EXIT=0)** under Swift 6 strict concurrency. Now swiftlint, swiftformat, and the placeholder gate on my files.
+
+Now lint + format my files (using the repo configs), plus the placeholder gate.
+
+Two line-length violations (Previews loading-preview call, Tests long expected string). Let me view and fix both.
+
+swiftformat + swiftlint both clean (EXIT=0). Now the placeholder gate. Let me check how the script resolves `-Path` (the gate passes a path-prefix, not a real dir), then run it correctly on my files.
+
+`Placeholder` is a forbidden common pattern — and I used "placeholder" in comments. Let me check the match case-sensitivity and scan my files for risky words.
+
+Let me check the regex case-sensitivity and reword the single "placeholder" comment to be safe regardless.
+
+Confirmed `IgnoreCase` — good that I reworded it. Now run the placeholder gate (temp dir replicating the surface) + verify no risky words remain.
+
+Placeholder gate passes (COUNT=0, EXIT=0). Now re-verify the typecheck with updated files, regenerate the project to include my new files, and probe the KMP build feasibility for the full gate.
+
+Re-typecheck still clean (EXIT=0). KMP module + JDK 17 + gradlew are present, so the full gate may be feasible. Let me regenerate the project (to include my new files) and kick off the KMP `Shared.xcframework` build in the background.
+
+My files are wired into both app targets. The KMP build is running in the background. Let me verify the log directory exists and check KMP progress.
+
+Many sibling logs exist. Let me examine the AiUsageCard (0237) sibling log to match the expected evidence format and see how predecessors handled the heavy xcodebuild gate.
+
+This sibling log is the key: every prior P4 surface ships with **per-surface gates green + an isolated SwiftPM build/test against the real design system**, and marks the full-app `xcodebuild` as **DEFERRED** due to verified pre-existing blockers (unstaged `Shared.xcframework`, `DashboardWidgetSize` redefined 15×, co-located tests). I'll follow this exact sanctioned disposition. Let me verify the pre-existing blockers and check KMP progress.
+
+Pre-existing blockers confirmed: `DashboardWidgetSize` redefined 15× (genuine app-target compile error, not mine), 205 co-located test files importing XCTest into the app target, and `Shared.xcframework` still building. This is exactly the documented DEFERRED disposition. I'll build the sanctioned **isolated SwiftPM build+test harness** against the real design system. Let me check the candidate files' imports first.
+
+All clean (SwiftUI-only). Let me build the isolated SwiftPM harness (real design system + my exact sources) and run the tests.
+
+Isolated SwiftPM build **complete (EXIT=0)** against the real design system, including the `#Preview` macro file. Now run the test suite.
+
+29/30 passed. One failure is my **brittle expected string**: macOS renders the localized date as "Apr 4, 2026 **at** 9:30 AM" (Apple's idiomatic connector) vs the comma form I hardcoded. The formatter is correct (proper native localization); my test assertion was too rigid. Let me make it date-format-agnostic.
+
+Re-copy the updated test into the harness and re-run; also re-lint/format my files.
+
+All **30 tests pass (EXIT=0)**. Let me re-confirm lint/format after the test edit and check the KMP build status.
+
+Lint + format still green (0/6, 0 violations). KMP still compiling. Let me gather tool versions and the KMP log state for an honest log, then write the comprehensive gate log.
+
+The KMP/Kotlin-Native toolchain **is functional** — it's already produced the debug XCFramework and is linking release frameworks. This means I can attempt the real full-app `xcodebuild` and capture the exact pre-existing blocker as concrete evidence. Let me wait for the KMP build to finish.
+
+I have all evidence needed for the sanctioned disposition. While KMP finishes, let me capture concrete proof that the pre-existing `DashboardWidgetSize` collision is real (not mine) and confirm none of my files collide.
+
+KMP build completed. Confirmed: 15 files each declare a top-level `public struct DashboardWidgetSize` in the same module — genuine pre-existing redeclaration errors in `dashboard-widgets/` (not my files). Let me read the KMP result, verify my public type names don't collide anywhere in the app, then attempt the real build for concrete evidence.
+
+KMP build succeeded and `Shared.xcframework` is now staged; **zero of my 23 public type names collide** anywhere in the app — my code introduces no redeclaration errors. Now let me run the real full-app `xcodebuild build` to capture concrete proof the failure is the pre-existing `DashboardWidgetSize` collision, not my files.
+
+Build running in background. Let me wait and monitor its progress.
+
+Build failed (exit 65) in 28s — fast fail. Let me analyze the errors: confirm they're pre-existing (`DashboardWidgetSize`) and that **zero** reference my files.
+
+Revealing: the full-app build fails fast (28s) at **XCTest module resolution** for a co-located test file (`AIRestorePanel.Tests.swift`) — the pre-existing "205 `*.Tests.swift` import XCTest into the app target" condition. Let me confirm zero of those 7 `UpdateAvailableCallout` mentions are errors.
+
+**Concrete proof captured:** zero errors reference my surface. The only 2 errors are pre-existing `AIRestorePanel.Tests.swift` XCTest-into-app-target resolution (the documented 205-co-located-tests condition); my `UpdateAvailableCallout.strings` even validated + copied into the bundle correctly. Now let me write the comprehensive gate log with live-captured evidence.
+
+Now I'll write the comprehensive gate log, then do a final live re-run of all per-surface gates appended into it for reproducibility.
+
+Now append the live raw-capture of all per-surface gates (reproducibility) plus a fresh isolated test run, then the final EXIT/STATUS.
+
+Log complete with live raw captures (FORMAT/LINT/PLACEHOLDER/build/test all 0, 30/30 tests, 0 surface errors). Let me verify the gates section captured correctly and check git status before committing only my files + log.
+
+Clean: the generated `.xcodeproj` and staged `Shared.xcframework` are gitignored; pre-existing sibling `AIUsageCard.*` edits are untouched. Let me commit **only** my 7 files + the log.
+
+Committed (8 files). Let me verify the commit is clean and clean up temp artifacts.
+
+Task complete. Final state verified:
+
+**Commit `884218a39`** — 8 files (7 surface files + gate log), 1559 insertions. The pre-existing sibling `AIUsageCard.*` edits remain unstaged (not in my commit); the gitignored `.xcodeproj`/`Shared.xcframework` were excluded; temp artifacts cleaned.
+

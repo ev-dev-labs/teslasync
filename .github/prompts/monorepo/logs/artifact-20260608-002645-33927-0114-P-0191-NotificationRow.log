@@ -1,0 +1,185 @@
+=== P4 Feature view 0191 NotificationRow (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2
+  Destinations       : iOS Simulator "iPhone 16" (booted) present · macOS 15 SDK + iPhoneSimulator SDK present
+  Shared.xcframework : assembled + staged on demand by the scheme pre-action (Scripts/build-shared-xcframework.sh →
+                       Gradle ":core:assembleSharedDebug/ReleaseXCFramework"); debug + release XCFrameworks written to
+                       apps/shared/core/build/XCFrameworks/{debug,release}/Shared.xcframework (git-ignored).
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS simulators/SDKs present → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/features/notifications/components/NotificationRow.tsx — renders ONE inbox row. Prop-fed a NotificationLog
+  plus the resolved rule / vehicle its parent inbox looked up through ruleMap / vehicleMap. Composition:
+      • selection checkbox            (aria-label t('notifications.inbox.row.select','Select notification'))
+      • SeverityBadge(severity)       (severity = rule?.severity ?? 'info')
+      • DateTime(created_at, in tz)   (vehicle-tz when vehicle known, else user)
+      • · vehicle.display_name|#id    (when vehicle known)   · rule.name (when rule named)
+      • title                         (font-medium text-primary when unread; text-secondary when read)
+      • message                       (line-clamp-1, when present)
+      • action cluster (group-hover): mark-read  (MailOpen,  !isRead && onMarkRead   → t('…markRead','Mark as read'))
+                                       mark-unread(Mail,       isRead && onMarkUnread → t('…markUnread','Mark as unread'))
+                                       archive    (Archive,    !isArchived && onArchive   → t('…archive','Archive'))
+                                       restore    (ArchiveRestore, isArchived && onUnarchive→ t('…unarchive','Restore'))
+                                       "View context" Link     (drillHref = rule ? getAlertDrillthroughHref(synthetic)
+                                                                : null → t('alerts.viewContext','View context'))
+      unread rows: left accent bar + stronger fill (border-l-2 border-l-cyan-400/70); read rows: opacity-90.
+      body click (not on a control) → onActivate?(log); Enter/Space → onActivate. role=row, aria-selected.
+  Data sources (bound via the P1/S8 seam, no view HTTP): useTranslation. The row is otherwise prop-fed; the per-row
+  mutations (onMarkRead/onArchive/…) and the drill-through navigation are parent callbacks, modeled natively as the
+  source seam's mutation + intent methods.
+
+ARTIFACTS SHIPPED (allowed files: feature-views/NotificationRow.* + this log)
+  TeslaSync/feature-views/NotificationRow.Adapter.swift    — severity kind (web `?? 'info'`), capabilities option set,
+                                                             row projection + per-affordance gating, drill-through
+                                                             (pure port of lib/alertDrillthrough.ts), phases, projector
+  TeslaSync/feature-views/NotificationRow.Source.swift     — P1/S8 source seam: raw input → projection, update
+                                                             envelope, action result, source protocol, InMemory source,
+                                                             surface-slug extension
+  TeslaSync/feature-views/NotificationRow.Copy.swift       — timestamp formatter, surface slug, VoiceOver summaries
+  TeslaSync/feature-views/NotificationRow.Model.swift      — P1/S10 strings facade + P1/S11 telemetry seam +
+                                                             the @Observable NotificationRowModel (mutations + intents)
+  TeslaSync/feature-views/NotificationRow.Chrome.swift     — freshness chip, stale/offline banner, loading/empty/error
+  TeslaSync/feature-views/NotificationRow.Views.swift      — severity badge, selection control, action buttons,
+                                                             view-context link, inline action error, wrapping meta
+                                                             flow layout, the composed row body
+  TeslaSync/feature-views/NotificationRow.swift            — the bound NotificationRow view (all states)
+  TeslaSync/feature-views/NotificationRow.Previews.swift   — #if DEBUG previews: unread/read/archived/no-rule/empty/
+                                                             loading/error/stale/offline
+  TeslaSync/feature-views/NotificationRow.Tests.swift      — adapter / drill-through / format / a11y / i18n XCTest
+  TeslaSync/feature-views/NotificationRow.ModelTests.swift — observable state-holder XCTest
+  TeslaSync/feature-views/NotificationRow.strings          — per-surface P1/S10 table (the 6 web keys + chrome/a11y)
+  No shared wiring edited: "TeslaSync/feature-views" is already in project.yml (both app targets) and .swiftlint.yml;
+  strings ship as the per-surface table (NSLocalizedString tableName "NotificationRow"), NOT via the shared
+  Localizable.xcstrings — same posture as the sibling 0190 NotificationGroupRow. All NotificationRow symbols are
+  prefixed `NotificationRow*` so nothing clashes with 0190's `Notification*` types in the single compiled target.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  SeverityBadge                → NotificationRowSeverityBadge (info→statusInfo, warn→statusWarning, critical→statusDanger;
+                                 missing/unknown/nil → info, the web `?? 'info'`)
+  <input type=checkbox>        → NotificationRowSelectionControl (square/checkmark.square.fill; a11y "Select
+                                 notification" + Selected/Not selected value + .isSelected trait)
+  DateTime + ·vehicle ·rule    → wrapping NotificationRowMetaFlow (a SwiftUI Layout = web `flex flex-wrap`)
+  title / message              → bold text-primary when unread else text-secondary / muted line-limited message
+  unread accent                → leading 3pt accent bar + accent 5% fill (web `border-l-2 border-l-cyan-400/70`)
+  ghost MailOpen/Mail          → NotificationRowActionButton(envelope.open / envelope) gated !isRead/isRead && capability
+  ghost Archive/ArchiveRestore → NotificationRowActionButton(archivebox / tray.and.arrow.up) gated !isArchived/isArchived
+  Link → drillHref             → NotificationRowViewContextButton (chevron.right; shown iff a rule resolved →
+                                 NotificationRowDrillthrough.href maps signal→page exactly like getAlertDrillthroughHref)
+  onActivate body click        → body .onTapGesture → model.activate() (gated on the .activate capability)
+  load/freshness envelope      → NotificationRowPhase (loading/content/empty/error) + NotificationRowConnection
+                                 (live/stale/offline): freshness chip + stale/offline banner + one guarded stale
+                                 auto-refresh; offline keeps the cached row. Failed per-row mutation → inline error.
+  i18n   : all 6 web keys (select, markRead, markUnread, archive, unarchive, alerts.viewContext) resolve through the
+           P1/S10 facade; severity + chrome + a11y keys added; zero English string literals in code (Text(verbatim:)
+           only over already-localized values).
+  a11y   : decorative glyphs .accessibilityHidden; the meta/title/message is one combined element with a spoken
+           severity/read/archived/time/vehicle/rule/title/message label (.isButton when activatable); the selection
+           control + each action button + the view-context link carry explicit labels; Dynamic Type via tokens;
+           Reduce Motion honored by TSFadeIn / TSSkeleton.
+  telemetry : view.opened surface="NotificationRow" emitted once on first appearance (P1/S11), default OSLog sink.
+
+GATES (every line below is a command actually run on THIS runner with its real exit)
+  [GREEN]    swiftformat --lint  (NotificationRow.* — 10 swift files)        : 0/10 require formatting   (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict  (NotificationRow.* — 10 swift files)        : 0 violations, 0 serious   (LINT_EXIT=0)
+  [GREEN]    check-placeholders.ps1 (staged copy of the 10 shipped swift files) : PLACEHOLDER_COUNT=0    (PLACEHOLDER_EXIT=0)
+             NOTE: the gate's literal `-Path …/feature-views/NotificationRow` is a file PREFIX, not a directory, so the
+             scanner's `Get-ChildItem -LiteralPath` resolves to nothing and returns a vacuous 0. To make the check
+             meaningful I ALSO scanned a staged directory containing exactly the shipped NotificationRow.* swift files:
+             PLACEHOLDER_ALLOWED=0, PLACEHOLDER_COUNT=0. Both invocations EXIT=0.
+  [GREEN]    Isolated SwiftPM build + test (swift-tools 6.0, .swiftLanguageMode(.v6) = the app's Swift-6 /
+             strict-concurrency=complete mode), compiling the EXACT shipped NotificationRow.* product sources (8 files)
+             against the REAL repo design system (apps/design/generated/apple/Tokens.swift + Sources/Design/{TSDesign,
+             TSMaterial} + Sources/Components/UI/{Cards,Typography,Badges,Buttons} + Components/Motion/Motion +
+             Components/Feedback/Skeletons), then running BOTH XCTest files:
+                 Build complete!  ·  Executed 40 tests, with 0 failures                          (SWIFT_TEST_EXIT=0)
+  [GREEN]    SDK typecheck (the 8 product files vs the real design system, swiftc -typecheck -swift-version 6):
+                 iOS  : -sdk iphonesimulator -target arm64-apple-ios18.0-simulator                (IOS_TYPECHECK_EXIT=0)
+                 macOS: -sdk macosx          -target arm64-apple-macos15.0                         (MAC_TYPECHECK_EXIT=0)
+  [GREEN]    xcodegen generate → all 11 NotificationRow.* files registered in TeslaSync.xcodeproj (66 build-file/
+             file-ref entries across the iOS + macOS app targets). The generated .xcodeproj is git-ignored and was
+             removed after the check (not committed).
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO NotificationRow product errors; all blockers pre-exist this change):
+    iOS  : the Shared.xcframework assembled and the app target began compiling; the run fails in the TEST build with
+           "Unable to resolve module dependency: 'XCTest'" originating in
+           TeslaSync/feature-views/AIRestorePanel.Tests.swift:18 — a DIFFERENT, pre-existing surface (the first of the
+           ~440 co-located *.Tests.swift to compile). project.yml compiles feature-views/*.Tests.swift INTO the app
+           target, which does not link XCTest. This is the exact project.yml test-target-membership blocker
+           apps/macos-pending-verifications.md defers; it affects every surface and is owned by P4/P99, not a single
+           feature-view prompt. (** BUILD FAILED ** / ** TEST FAILED ** captured at /tmp/nr_ios.log.)
+    macOS: fails in the BUILD with `"TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have entitlements that require signing
+           with a development certificate. Enable development signing…` — the macOS development-signing blocker, which
+           this runner does not provision. (** BUILD FAILED ** / ** TEST FAILED ** captured at /tmp/nr_mac.log.)
+    grep of BOTH build logs for an `error:` attributed to any NotificationRow PRODUCT file
+    (Adapter/Source/Copy/Model/Chrome/Views/Previews/NotificationRow.swift) = 0 hits. Both blockers are exactly the
+    rows apps/macos-pending-verifications.md defers to the signed integration runner (P4/P99 acceptance gate). Per this
+    prompt's allowed-files set (feature-views/NotificationRow.* + this log) the project.yml/signing fixes are out of
+    scope and were NOT touched.
+
+ACCEPTANCE CRITERIA
+  [x] Surface renders on Apple with all web states reproduced — unread / read / archived / no-rule content + empty /
+      loading / error / stale / offline (9 previews + per-state model/projection tests).
+  [x] Hooks bind to the shared P1/S8 state-holder layer (NotificationRowSource); no direct HTTP in the view — the
+      per-row read/archive mutations, the activate + drill-through intents, and the load/freshness envelope all flow
+      through the seam.
+  [x] Every i18n key from source resolves through the P1/S10 catalog — all 6 web keys present in the per-surface table
+      and asserted by NotificationRowLocalizationTests; severity + chrome + a11y keys added.
+  [x] Accessibility labels on every interactive element (selection control, mark-read/unread, archive/restore,
+      view-context, retry) + a combined row VoiceOver summary; Dynamic Type via tokens; Reduce Motion honored; a11y
+      unit-tested.
+  [x] Tests: adapter unit tests (severity/capabilities/drill-through/phase) + per-state model tests + formatting +
+      a11y + i18n (40 cases, executed green via SwiftPM).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green (format/lint/placeholder/SwiftPM build+test 40/40/iOS+macOS SDK
+      typecheck/xcodegen registration); the full-app Xcode build/test is DEFERRED with captured real exits
+      (IOS_EXIT=65 / MAC_EXIT=65) on pre-existing, unrelated blockers. Platform capability is PRESENT → DONE.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                          explicitly DEFERRED with the real root-cause lines pasted — never reported as passing. Every
+                          GREEN above is a command actually run on THIS runner with its real exit.
+  2  No scope narrowing : every web element + branch reproduced — selection, severity (`?? 'info'`), time, vehicle/rule
+                          meta, unread accent + read muting, title/message, the four state×capability-gated actions, the
+                          rule-gated "View context" drill-through (signal→page map ported + tested), and body-activate.
+  3  No skip-and-assume : every host gate executed; raw exits pasted; the iOS XCTest + macOS signing failures were
+                          confirmed from the logs (file:line), not assumed.
+  4  No stubs as final  : complete production surface + 40 real tests; placeholder scanner = 0.
+  5  No parity shortcut : the severity `?? 'info'` default, the per-affordance `state && callback` gating, the
+                          `rule ? drillHref : null` gating with the full SIGNAL_TO_PAGE map + Signal-Explorer fallback,
+                          and the unread/read styling all mapped to platform tokens + tested.
+  6  No delegation      : implemented directly; no sub-agents (delegation FORBIDDEN by the prompt).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 per-surface i18n table, P1/S11 view.opened
+                          telemetry, and the P4 design-system components all present and consumed.
+  8  No commit on red   : the COMMITTED artifact is GREEN on every host gate AND on a real isolated Swift-6 build+test
+                          (40/40) AND on the iOS-18-sim + macOS-15 SDK typechecks; the deferred full-app gate is RED only
+                          on pre-existing, unrelated surfaces (other surfaces' *.Tests.swift + macOS signing) which this
+                          commit neither introduces nor touches.
+  9  No silent drift    : changes confined to the 11 feature-views/NotificationRow.* files + this log. The generated
+                          TeslaSync.xcodeproj and the staged Shared.xcframework are git-ignored and were not committed;
+                          the pre-existing AIUsageCard.* working-tree edits were left untouched and NOT staged.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic NotificationRow shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: a pure-Swift projection core (executed-green XCTest, 40/40) behind a P1/S8 state-holder seam (no view HTTP),
+  P1/S11 view.opened telemetry (slug "NotificationRow"), every state + all 6 web i18n keys + a11y labels, the selection
+  control, the severity badge + meta line, the unread accent + title/message, the four state×capability-gated row
+  actions (mark read/unread, archive/restore) with an inline failure path, and the rule-gated "View context"
+  drill-through (the full signal→page map ported from lib/alertDrillthrough.ts) — all token-driven, no Tailwind ported.
+  All host-runnable gates pass AND the surface compiles against BOTH the iOS-18 simulator and macOS-15 SDKs under
+  Swift 6 AND is registered in the generated app project. The full-app iOS-Simulator + macOS xcodebuild build/test is
+  DEFERRED to the signed integration runner — blocked only by the pre-existing project.yml test-target membership
+  (*.Tests.swift in the app target, affecting all surfaces) + macOS development-signing, both outside this prompt's
+  allowed files and tracked by apps/macos-pending-verifications.md. This matches the repo's sanctioned
+  "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date (cf. 0190 NotificationGroupRow).
+
+EXIT=0
+STATUS=DONE

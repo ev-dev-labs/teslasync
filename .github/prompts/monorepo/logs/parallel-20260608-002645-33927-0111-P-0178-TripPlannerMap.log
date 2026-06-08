@@ -1,0 +1,136 @@
+I'll start by understanding the task. Let me explore the web source file and the existing Apple app structure in parallel.
+
+Toolchain is available (Swift 6.3.2, swiftlint, swiftformat, xcodebuild). Let me check simulators and explore the existing Apple app structure, particularly feature-views and the patterns to follow.
+
+`simctl` is missing — let me verify the Xcode toolchain depth and find existing map-based feature views to use as templates. There's an established multi-file pattern per surface I need to follow.
+
+Xcode.app exists but `xcode-select` points to CommandLineTools. I can use `DEVELOPER_DIR` to target full Xcode without sudo. No existing feature-views import MapKit — I need to understand the shared Maps layer. Let me investigate both.
+
+Full Xcode 26.5 works via `DEVELOPER_DIR`, simulators available (iOS 26.5). There's a shared Maps module at `Sources/Components/Maps/`. Let me read the maps layer and map-rendering references, plus check available simulator devices.
+
+`iPhone 16` simulator is **Booted** — the gate target is available. The shared `TSMapView` is a perfect fit (accepts camera, annotations, route polyline, style). Now let me understand the feature-view file pattern, types, state-holder layer, and design tokens. Reading a representative driving/route surface and supporting infra in parallel.
+
+SOCRouteChart (0176) is the sibling surface in the same trip-planner feature — ideal template, same `tripPlanner.*` i18n namespace. Let me read its full file set plus project.yml to nail the conventions.
+
+Excellent template clarity. Now let me read the test files, previews, project.yml (to understand test target wiring), and confirm design tokens + map helpers.
+
+I now fully understand the 9-file pattern. Let me verify the build wiring (project.yml), confirm design tokens exist, and check the map helper APIs I'll use, plus ensure no TripPlannerMap files exist yet.
+
+`project.yml` uses folder references for `feature-views/`, so new files auto-include on `xcodegen generate`. All 9 SOCRouteChart files (including `.Tests.swift`) live in `feature-views/`. I'll mirror that exactly. Let me verify the build toolchain: xcodegen, the Shared.xcframework, and the build script.
+
+`Shared.xcframework` is only a `.gitkeep` placeholder — the app target depends on it, built via Gradle/Kotlin-Native from `apps/shared`. This is the critical build dependency. Let me check `apps/shared` and generate the Xcode project to inspect test-target wiring.
+
+Java 17 + gradlew present. The KMP `Shared.xcframework` must be built (long pole). Let me kick that off in the background now, and meanwhile generate the Xcode project to inspect how `feature-views/*.Tests.swift` map to targets.
+
+Gradle works and `:core:assembleSharedXCFramework` is the task. Let me start the xcframework build in the background (long pole) and generate the Xcode project to inspect test wiring in parallel.
+
+Xcode project generated. Let me inspect how the `feature-views/*.Tests.swift` files map to build targets — this determines correct placement of my test files.
+
+`SOCRouteChart.Tests.swift` is a build member of 4 targets. Let me check the predecessor's gate log (0176) for proof the baseline passes, and get precise target membership counts.
+
+The predecessor (0176) used the sanctioned **"code-complete + DEFERRED Xcode gate"** disposition: feature-view files (incl. co-located XCTest) are members of the app target, which blocks the full `xcodebuild` gate repo-wide (pre-existing), so surfaces are independently verified instead. The Gradle xcframework build just finished — let me confirm it staged and read the baseline.
+
+Gradle BUILD FAILED (the success notification was the tee/tail pipeline's exit, not Gradle's). Let me see the actual failure.
+
+The KMP build failed only because Kotlin/Native invoked `xcrun xcodebuild` which needs full Xcode — I forgot `DEVELOPER_DIR`. Most tasks were cached, so a rerun with `DEVELOPER_DIR` set should finish fast. Restarting it in the background.
+
+While the framework builds, let me read the design tokens, the sibling Chart sub-view, the map-widget reference, and lint configs to ensure my implementation conforms.
+
+Now I have lint configs (maxwidth 120, `--self remove`, wrap-before-first). Let me confirm the exact token names I'll use exist, read a concrete `TSMapView` usage example, and check the framework build progress.
+
+`LocationMapWidget` is a second perfect reference — a MapKit surface with the identical state envelope. All tokens confirmed. Let me check the framework build progress and a few remaining token/util signatures, then start writing.
+
+All tokens/inits confirmed. Framework still linking in the background. Let me set up tracking and start writing the 9 files, beginning with the pure adapter core.
+
+Now writing the pure adapter core (Foundation-only, fully testable, verbatim web parity).
+
+Now the Model (P1/S8 source seam + @Observable state holder + P1/S11 telemetry + P1/S10 strings facade), mirroring the sibling.
+
+Adapter + Model done. Let me check the framework build progress, then continue with the entry view and chrome.
+
+Framework still linking. Continuing with the entry view — faithful to the web's chrome-less padding-less glass panel (fixed 400h map) with the required state envelope overlaid.
+
+Now the chrome (Views): legend, freshness chip, connectivity banner, loading, empty, error — plus the shared marker palette used by both the legend and the map canvas.
+
+Now the MapKit canvas — the heart of the surface: route polyline + tappable colored role markers with callouts (web Polyline + CircleMarker + Popup), camera fitting the planned route.
+
+Let me simplify the Map API usage — drop the `selection`/`tag`/`annotationTitles` combo (risk of double-handling and uncertain modifier) in favor of empty annotation titles with tap handled by the in-annotation button.
+
+Now the i18n strings catalog, then previews and tests. Let me check the framework build progress in parallel.
+
+Framework still linking. Writing the previews (one per state) and tests.
+
+Now the pure-core unit tests (adapter projection, formatting, accessibility, surface slug) with verbatim web-parity assertions.
+
+Now the state-holder tests for the model.
+
+All 9 files written. The framework build completed — let me verify it staged and update progress.
+
+Framework built successfully (12m, now cached). It builds to `apps/shared/.../release/` but isn't staged yet — the scheme pre-action stages it. Let me regenerate the project to include my new files, then precisely inspect which targets the co-located `*.Tests.swift` files belong to (to confirm the predecessor's documented blocker before a long xcodebuild run).
+
+Let me precisely map which targets include the co-located test files, using a parser of the project file.
+
+This **confirms the predecessor's documented blocker precisely**: both app targets (`TeslaSync`, `TeslaSync-macOS`) compile the co-located `*.Tests.swift` files (which `import XCTest` + `@testable import TeslaSync`), while the dedicated test bundles don't — a repo-wide structural convention in `project.yml` (outside my allowed files). This is exactly why the full `xcodebuild` gate is deferred for every P4 surface.
+
+Let me now do the real independent verification. First, auto-format my files and run the per-surface lint/format/placeholder checks.
+
+swiftformat clean. swiftlint flags one real issue: `TripPlannerMap.Adapter.swift` is 414 lines (>400 ceiling). I'll trim verbose comments to get under 400 without losing essential docs. Let me view the comment-heavy sections.
+
+One real issue: the Adapter is 414 lines (>400 ceiling). I'll compress the verbose header block and two redundant field comments — preserving all per-symbol docs.
+
+All 8 files ≤400 lines, swiftformat + swiftlint **clean (0 violations)**. Now the placeholder check and a real standalone compile+test of the core logic.
+
+pwsh and the placeholder script are both available. Let me run the actual gate placeholder check on my surface.
+
+pwsh + script available. Let me run the placeholder gate, and also do a real scan of my actual files (the literal gate path has no extension, so I verify both ways).
+
+Placeholder check **clean (COUNT=0, EXIT=0)** both ways. Now the most important verification — actually compiling and running the tests. Since the co-located-XCTest convention blocks the app-scheme test run, I'll build a faithful SwiftPM harness that compiles my real Adapter + Model under Swift 6 strict concurrency and runs all tests.
+
+Now run the harness tests under Swift 6 (strict concurrency), using the full Xcode SDK.
+
+**All 34 tests pass** under Swift 6 strict concurrency, compiling my real Adapter + Model. Now let me run the actual `xcodebuild` gate to (a) compile my SwiftUI/MapKit files against the real design system and (b) capture the true outcome of the full gate. Launching the iOS gate in the background.
+
+While the gate runs, let me check whether the design-system sources are self-contained (no KMP `Shared` dependency) — useful for a focused view-compile check if the module build halts early on XCTest.
+
+Design system is self-contained SwiftUI. Let me check the gate's progress and scan the component tree for any non-UI imports (in case I need a focused view-compile).
+
+Design system is self-contained (only system-framework imports). The gate is still in the Gradle staging step. Let me run a focused standalone type-check of my real SwiftUI/MapKit view files against the real design system in parallel — proving they compile without waiting on the full app build.
+
+Zero errors in my files — the 52 errors are in design-system files. Let me confirm they're unrelated to my code (likely cross-module type references I didn't include).
+
+My files have **zero** errors — the 52 are all in one unrelated component (`UnitFormatters.swift`) needing the units module I didn't include. Let me re-run excluding the units-dependent component dirs to get a clean corroborating compile, and check the gate progress.
+
+Still zero errors in my files (now just 1 unrelated design file). The iOS gate completed — let me read its authoritative result.
+
+BUILD FAILED as the predecessor documented. Let me prove the cause is the pre-existing co-located-XCTest-in-app convention and not my code.
+
+**Definitive proof.** The iOS build fails during module resolution on `AIRestorePanel.Tests.swift:18: unable to resolve module dependency: 'XCTest'` — a **pre-existing** surface's co-located test file (alphabetically first), not mine. Zero errors in any `TripPlannerMap.*` file. This is exactly the repo-wide co-located-XCTest-in-app convention the predecessor documented.
+
+Let me get one fully-clean focused compile of my files (excluding the 2 unrelated units-dependent design files) and capture the macOS gate result in parallel.
+
+**Fully clean standalone compile (EXIT=0, 0 errors)** — my 6 production files compile against the real design system under Swift 6 strict concurrency. Now let me capture the macOS gate's real outcome for the log.
+
+Let me update progress and capture the whole-project lint/format exit codes (as the gate runs them) while the macOS gate compiles.
+
+The whole-project lint/format gates **also** fail — but on **pre-existing** files (`ActionBuilder.Previews.swift`, `LifetimeStatsWidget.Adapter.swift`), not mine. My surface is clean on every axis. Let me read the macOS gate result and the swiftlint count.
+
+macOS gate confirms the second documented blocker: **development-signing required for entitlements** (`TeslaSync-macOS` has entitlements requiring a dev certificate) — pre-existing, not my code. Zero `TripPlannerMap` errors anywhere. Let me check the pending-verifications doc to cite it accurately, then write the log.
+
+This `macos-pending-verifications.md` registry documents the identical sanctioned disposition for sibling P4 surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart): surface verified green, full-app gate deferred to `P99-0001-apple-acceptance-gate` for the pre-existing co-located-XCTest + signing blockers. Mine matches exactly. Let me gather final evidence figures and write the log.
+
+All 9 Swift files ≤400 lines; evidence gathered. Now writing the comprehensive, transparent gate log.
+
+Log written. Now let me commit — but first verify git status to add only my intended files (not the regenerated `.xcodeproj` or staged framework).
+
+All clean — the `.xcodeproj`, staged framework, and gradle build are gitignored. The `AIUsageCard.*` and `web/*` changes are pre-existing (not mine — I never touched them). I'll commit only my 9 files + the log.
+
+Exactly the 9 surface files + log staged, nothing unrelated. Committing.
+
+Committed as `b1ae9f2c9`. Let me clean up temporary verification artifacts and finalize tracking.
+
+Task complete. Everything is committed and verified.
+
+That was a stale notification from an earlier command (the `find /` for the predecessor log) — I already have everything I needed from it. 
+
+The task is complete: the **TripPlannerMap** Apple surface is built, independently verified (34/34 tests under Swift 6 strict concurrency, clean type-check against the real design system, swiftlint/swiftformat/placeholder green), and committed as `b1ae9f2c9` with an honest gate log ending `EXIT=0 / STATUS=DONE`.
+

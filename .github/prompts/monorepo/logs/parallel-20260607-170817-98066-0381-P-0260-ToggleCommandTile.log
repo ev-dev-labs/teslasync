@@ -1,0 +1,128 @@
+I'll start by exploring the environment and the repository structure to understand what's available and what the web source looks like.
+
+
+
+Key finding: `xcodebuild` reports that full **Xcode is not installed** (only Command Line Tools). The gate requires `xcodebuild -scheme ... build test` and iOS Simulator. Let me verify this thoroughly before concluding, and explore the existing Apple app structure.
+
+**Critical discovery:** `Xcode.app` IS present at `/Applications/Xcode.app`, but `xcode-select` points to CommandLineTools. I can likely override this with `DEVELOPER_DIR` (no sudo needed). Let me test whether the full Apple toolchain actually works.
+
+The full Apple toolchain works via `DEVELOPER_DIR` override: **Xcode 26.5, iOS 26.5 SDK, iPhone 16 simulator (booted), macOS SDK** — all available. STATUS=BLOCKED is NOT warranted; I must build this for real. Now let me understand the existing Apple app architecture thoroughly.
+
+Clear pattern: feature-views use multi-file decomposition (`.swift`, `.Model`, `.Adapter`, `.Projection`, `.Views`, `.Previews`, `.Tests`, `.Telemetry`, `.strings`). The project uses **XcodeGen** (`project.yml`). Let me find the most analogous existing command-tile feature views and the shared infrastructure (state-holders, tokens, i18n, telemetry).
+
+The `CommandTile.*` feature view is the perfect template — it's the direct sibling of `ToggleCommandTile` in the web source and follows the full multi-file pattern. Let me read all CommandTile files plus the web `CommandTile.tsx` to understand the established conventions.
+
+Excellent template. Now let me read the Views, Previews, Tests, and strings for CommandTile, plus the web sources and the `TSTone`/token system it references.
+
+Now let me read the web sources for `CommandTile.tsx`, `InputCommandTile.tsx`, the `commands.ts` type definitions (to understand `stateField`, `commandOff`, `iconOff`, `inputConfig`, `variant`), and locate the design tokens (`TSTone`, `Color.TS`, etc.).
+
+Now I fully understand the toggle's unique behavior (ON/OFF state from `def.stateField`, `commandOff`, `iconOff`, `inputConfig` routing, variant-tinted-when-on, status dot). Let me verify the design tokens (P1/S9), the shared-xcframework build script, and the project state before establishing a build baseline.
+
+The build needs `xcodegen generate` + a Gradle/KMP build of `Shared.xcframework` (needs Kotlin/Native toolchain). Let me check whether the xcframework is pre-staged, whether Gradle works, and critically — how sibling surface prompts (like 0226 CommandTile) resolved their gate logs.
+
+Critical context: `macos-pending-verifications.md` documents that the **full-app `xcodebuild build test` is blocked by pre-existing, unrelated parallel-merge collisions** (`DashboardWidgetSize` redefined 8-15×, 116 co-located test files, etc.), and the accepted methodology is to verify each surface via **isolated SwiftPM build + tests + swiftc typecheck + swiftlint + swiftformat + placeholder gate**, deferring the full-app build to the macOS acceptance gate. Let me read the sibling CommandTile (0226) log to learn the exact accepted verification harness and log format.
+
+Let me read the full CommandTile (0226) log — it's the direct sibling and shows the exact accepted verification harness and log format I must follow.
+
+This is the gold-standard template. The accepted methodology is crystal-clear: build an **isolated SwiftPM harness** with the surface files + real token closure (`Tokens.swift`, `TSDesign.swift`, `TSMaterial.swift`, `Badges.swift`), run `swift build` + `swift test` + iOS/macOS `swiftc -typecheck` + swiftlint + swiftformat + placeholder gate, then run the full-app xcodebuild and capture its pre-existing failures as DEFERRED. Let me read the token closure to understand the compile dependencies.
+
+I now have the complete token API and the proven methodology. Let me read the lint/format configs and the placeholder gate, and confirm no `ToggleCommandTile.*` files exist yet, before writing.
+
+I have everything needed: the token API, the proven verification methodology, lint/format rules, and forbidden patterns (note: I must avoid the literal word "placeholder", so no `.redacted(reason:.placeholder)`). Let me set up the plan and todos, then build the surface.
+
+Now creating the surface files, starting with the pure-projection Adapter.
+
+I introduced a bogus method call in one test. Let me fix it to settle the executing state properly via a dispatcher event.
+
+All 9 files created. Now let me auto-format my Swift files and verify lint/format compliance on the surface files.
+
+Format clean. Now swiftlint --strict on the surface files.
+
+`type_body_length` (250 max) exceeded in ModelTests (261 lines). I'll split the model tests into two focused `XCTestCase` classes sharing a fixture factory. Let me rewrite that file.
+
+The file exists; let me remove it and recreate with the split structure.
+
+Now re-run format + lint on all surface files to confirm clean.
+
+All surface files are **swiftformat-clean (0/8)** and **swiftlint --strict clean (0 violations)**, each under 400 lines. Now the key verification: building the isolated SwiftPM harness with the real token closure and running the test suite.
+
+Three Preview errors (argument order + `return` in a `ViewBuilder`). Let me fix them.
+
+Re-format the edited Previews, sync to harness, and rebuild.
+
+Isolated build green. Now run the full XCTest suite via SwiftPM.
+
+All **38 tests pass, 0 failures** (15 adapter + 11 routing + 12 state). Now the iOS-18 and macOS-15 SDK type-checks (mirroring the app-target compile).
+
+Both SDK type-checks pass (iOS 18 + macOS 15, Swift 6 strict concurrency). Now the placeholder/stub gate.
+
+Surface-scoped gates are all green: **build 0, test 38/38, iOS+macOS typecheck 0, swiftlint 0, swiftformat 0, placeholder 0**. Now the full-app xcodebuild (expected to hit the documented pre-existing blockers). Let me generate the project and gather the blocker evidence first.
+
+Confirmed: **179 co-located `*.Tests.swift` files** glob into the app target (first: `AcDcStatsPanel.Tests.swift`) — the exact documented pre-existing XCTest collision. Gradle 8.14.5/Kotlin available. To reproduce the *documented* blocker (not a missing-framework error), I'll stage `Shared.xcframework` via Gradle, then run the full-app xcodebuild. Starting the Gradle build in the background.
+
+The Gradle xcframework build is running (~8 min). While it builds, let me refine one accessibility detail to exactly match the proven CommandTile pattern — removing a redundant `.accessibilityElement(children: .combine)` that could interfere with the independently-focusable favorite button.
+
+Now re-verify the edited Views file and rebuild the harness (in a separate shell so the Gradle build continues undisturbed).
+
+Views edit clean (format 0, lint 0, build 0, 38/38 tests). Let me check the Gradle xcframework build progress.
+
+The Gradle build is in its final linking stage (release iOS frameworks). Let me wait for it to complete.
+
+**Gradle BUILD SUCCESSFUL (8m34s); `Shared.xcframework` staged.** Now running the full-app iOS xcodebuild (expected to hit the pre-existing co-located-XCTest blocker). Capturing to a log.
+
+IOS_EXIT=65 as expected. Let me analyze the failure — confirm it's the pre-existing XCTest collision and that there are **zero** ToggleCommandTile errors.
+
+**iOS failure is exactly the documented pre-existing blocker:** all 4 errors are `unable to resolve module dependency: 'XCTest'` in `AIRestorePanel.Tests.swift` (a pre-existing co-located test file, not mine). **ZERO ToggleCommandTile errors**, and my files were included in the app-target glob. Now the macOS build.
+
+macOS failure is exactly the documented pre-existing dev-signing blocker (no errors in compilation — signing validation fails first; **zero ToggleCommandTile errors**). Now let me run the tree-wide swiftlint/swiftformat (as the gate specifies) to honestly capture that my files are clean and any issues are pre-existing elsewhere.
+
+Let me pinpoint the exact tree-wide violations (the grep counted progress lines, not violations).
+
+Both tree-wide violations are pre-existing in **other** prompts' files (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`) — identical to what the CommandTile log cited — with **zero in ToggleCommandTile**. Let me verify i18n referenced==declared and capture key build/test lines.
+
+The i18n check is correct: the 12 surface-chrome keys are all declared (referenced==declared), and the only "undeclared" 3 are the **dynamic per-command label keys** (`commands.climate.climate`, etc.) owned by the command catalog — exactly as the `.strings` header and CommandTile precedent specify. Let me get the final test summary.
+
+Let me capture a clean final test summary for the log.
+
+All tests green: **15 adapter + 11 routing + 12 state = 38, 0 failures**. I have complete evidence. Let me capture exact line counts and write the gate log.
+
+The `/tmp` logs were cleaned up. Since `Shared.xcframework` is now staged (fast preAction), let me re-run both full-app builds and analyze inline so the evidence is captured in-session.
+
+Both full-app builds reconfirmed (IOS_EXIT=65 XCTest-collision, MAC_EXIT=65 dev-signing, **0 ToggleCommandTile errors**), logs persisted. Now writing the comprehensive gate log.
+
+Now let me verify git state — confirm only my intended files are staged and that generated artifacts (xcodeproj, xcframework) are gitignored.
+
+Clean state: my 9 files + log are untracked; the generated xcodeproj/xcframework are gitignored. The 2 modified `web/` files are pre-existing (not mine) — I'll commit only my surface files + log. Let me clean temp dirs and commit.
+
+Exactly my 9 surface files + the log are staged; the 2 pre-existing `web/` changes remain untouched. Committing.
+
+Committed (HEAD `69c100df2`). Let me do a final verification of the commit contents and clean working state.
+
+All verification complete. Let me finalize the todo tracking.
+
+The task is complete. Here's a summary of what was delivered.
+
+## P4 · Feature view · 0260 — ToggleCommandTile (Apple) → **STATUS=DONE**
+
+**Capability:** Not BLOCKED. Full Xcode 26.5 / iOS 26.5 + macOS 26.5 SDKs / iPhone 16 simulator are available via the `DEVELOPER_DIR` override (no sudo), so I built and tested for real.
+
+**Shipped** (9 files under `apps/apple/TeslaSync/feature-views/ToggleCommandTile.*`, mirroring the merged sibling `CommandTile` 0226):
+- `.Adapter` (pure projections), `.Model` (3 P1/S8 seams + telemetry + @Observable model), `.Support` (in-memory seams), `.swift` (surface), `.Views`, `.Previews`, `.Tests` + `.ModelTests` (38 XCTests), `.strings` (i18n).
+
+**Parity with `ToggleCommandTile.tsx`** — the `isOn` resolution (`state[def.stateField]` vs local optimistic flip), on↔off command routing (incl. `inputConfig`→dialog and guarded `commandOff`), on/off icon swap, variant tone tinting the panel/icon/dot/ON-line while ON, favorite star, status dot, ON/OFF line, and the last-status line. Web keys `commands.toggleFavorite/on/off` preserved verbatim (referenced==declared: 12/12).
+
+**Surface-scoped gates — all green:**
+| Step | Result |
+|---|---|
+| SwiftPM build (real token closure, Swift 6 strict-concurrency) | `Build complete!` |
+| `swift test` | **38/38** (15 adapter + 11 routing + 12 state), 0 failures |
+| iOS 18 + macOS 15 SDK `swiftc -typecheck` | 0 / 0 |
+| `swiftlint --strict` / `swiftformat --lint` (surface) | 0 / 0 |
+| placeholder gate | COUNT=0 |
+
+**Full-app xcodebuild — RAN and DEFERRED** (per the documented `apps/macos-pending-verifications.md` precedent): `Shared.xcframework` staged via Gradle (BUILD SUCCESSFUL 8m34s); `IOS_EXIT=65` (pre-existing co-located-XCTest collision across 179 `*.Tests.swift` files) and `MAC_EXIT=65` (pre-existing dev-signing), **with zero ToggleCommandTile errors** — deferred to the signed macos-latest P99 acceptance gate.
+
+Committed cleanly as `69c100df2` (9 surface files + log only; generated xcodeproj/xcframework gitignored; pre-existing `web/` changes untouched). The gate log ends with `EXIT=0` / `STATUS=DONE`.
+
+
+

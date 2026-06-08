@@ -1,0 +1,112 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple toolchain availability.
+
+Key finding: **Full Xcode is NOT installed** (only Command Line Tools), and **simctl is unavailable**. So `xcodebuild` iOS Simulator build/test cannot run. But swift 6.3.2, swiftlint, and swiftformat ARE available. Let me examine how predecessors handled this and read the web source.
+
+The web source is a clean, simple presentational component. Let me study the most recent predecessor (AutomationCard, 0082) to understand the file pattern and how the toolchain limitation was handled.
+
+The predecessor shipped 7 files per surface and verified via a SwiftPM harness + dual-SDK typecheck, deferring the full Xcode build. Let me understand what I can actually run on THIS runner and study the predecessor's seam-layer wiring (P1/S8 state holders, S9 tokens, S10 i18n, S11 telemetry).
+
+Full Xcode is absent (no `iphonesimulator` SDK, no `simctl`), but the macOS SDK, swift 6.3.2, swiftlint, and swiftformat are present. Let me check pwsh availability and study the predecessor's complete seam-layer wiring.
+
+`pwsh` is available. Now let me locate the shared design-system tokens (TSGlassPanel, Color.TS, TSSpacing, TSEmptyState, etc.) and read the rest of the AutomationCard surface (Adapter, Views, Previews, Tests, strings) to replicate the established pattern precisely.
+
+Now let me read the color/typography tokens, skeletons, and the remaining AutomationCard files (Adapter, Views, Tests, Previews, strings) to fully replicate the pattern.
+
+The token definitions (Color.TS, TSSpacing, etc.) must be generated elsewhere. Let me locate them and read the remaining AutomationCard files plus the SharedFacade (P1/S8) layer.
+
+Tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me inspect the needed token symbols and read the remaining AutomationCard files plus the SharedFacade state-holder layer.
+
+Now let me read the AutomationCard Views/Tests/Previews to mirror structure, the Badges component (TSTone/TSBadge/TSChip), and confirm the web data derivation + formatting approach.
+
+Let me read the AutomationCard tests, the Badges component (TSTone/TSBadge), and the web data hook to confirm empty semantics and number formatting.
+
+I have the full pattern. Let me confirm the web data semantics (empty condition + derivation) and check the build/test harness approach used on this runner.
+
+I now have a complete understanding of the data semantics and the established 7-file pattern. Let me verify a few final details before writing: which shared component files import `Shared` (to scope a build harness), the glass-panel modifier signature, and confirm no slug/string collisions.
+
+No `import Shared` in Components/Design — a macOS SwiftPM harness is viable. The master catalog already has `costAnalysis.environment` keys. Let me confirm their exact values to match verbatim, then write the surface.
+
+All confirmed. `feature-views/` is path-included in project.yml (no edit needed), no `Shared` import in the design system (harness viable on macOS SDK), and catalog keys match. Let me check the lint config limits, then write the surface.
+
+Configs confirmed (Swift 6, iOS 18/macOS 15, line ≤120, swiftformat before-first wrapping). I'll write the surface then auto-format. Let me set up tracking and write the plan.
+
+Now I'll write the surface. Starting with the Model (identity, telemetry, strings, data type, state, connection).
+
+Now the Adapter (pure projections, number formatting, stats, description, freshness chip, accessibility).
+
+Now the presentational subviews (header, freshness chip, primary tiles, description, secondary stats).
+
+Now the main View — state switch, glass panel with the green glow, grids, and telemetry.
+
+Now the previews (every state/branch).
+
+Now the test suite (adapter projections, cache→projection, formatting, accessibility, i18n key parity, telemetry).
+
+Finally the i18n catalog table (web keys verbatim + native chrome).
+
+All 7 files written. Now verification. First, auto-format my Swift files per the repo config, then lint-check them.
+
+Formatter normalized 2 files. Now verify format lint is clean and run swiftlint on the new files.
+
+Format and lint are clean (0 violations). Now the critical check: compile against the real design system and execute the XCTests on the macOS SDK via a SwiftPM harness. Let me first survey the design-system imports to scope the harness.
+
+Design system is self-contained (SwiftUI/Charts/MapKit/AppKit, no `Shared`). I'll assemble a macOS SwiftPM harness that compiles my surface against the real components and executes the XCTests.
+
+Harness assembled. Now build it against the macOS SDK (compiles the full design system + my surface under Swift 6).
+
+The only failure is the `#Preview` macro plugin (`PreviewsMacros`) being absent from the CLT SwiftPM toolchain — not a code issue. Those blocks are `#if DEBUG`-gated, so a release build excludes them. Let me build/test in release with testability enabled.
+
+`UnitFormatters.swift` depends on `Units` from the (excluded) SharedFacade — my surface doesn't use it. Let me trim the harness to the minimal design-system closure my surface actually needs and rebuild.
+
+All minimal files are dependency-clean. Let me rebuild the harness with the minimal closure.
+
+Surface compiles cleanly against the real design system under Swift 6. Now execute the XCTests.
+
+Release-mode `swift test` can't locate `XCTest`; the debug test path configures it, but debug hits the `#Preview` plugin in the design-system copies. Let me strip the `#if DEBUG` preview blocks from the harness copies and run the tests in debug.
+
+`XCTest` isn't shipped with Command Line Tools (it requires full Xcode) — a real environment limitation. Since all my surface types are `public`, I'll execute the identical assertion logic via a standalone executable harness (no XCTest dependency) to prove the behavior runs green on the macOS SDK.
+
+Confirmed: no `XCTest` Swift module under CLT (full Xcode only). I'll execute the same assertions via a standalone executable that imports the public surface API, proving the logic runs green on macOS.
+
+Swift 6 main-actor isolation on top-level globals. Let me annotate the helpers `@MainActor`.
+
+**74/74 checks GREEN.** The surface compiles against the real design system and the logic executes correctly on macOS/Swift 6. Now the placeholder gate and repo-wide lint/format. Let me check the placeholder script's `-Path` handling first.
+
+Let me run the placeholder gate two ways (the exact gate path + an isolated copy of only my files), plus a manual grep for forbidden tokens.
+
+Placeholder gate is clean (COUNT=0 over all 7 files) and manual grep finds nothing. Now the repo-wide lint/format to mirror the gate and confirm no regressions.
+
+Format is clean repo-wide. Swiftlint reports 1 violation across 986 files — my scoped lint was clean, so let me confirm it's not in my files.
+
+The single repo-wide violation is in a **pre-existing, non-owned file** (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift` from another surface) — my 6 files lint clean. It's outside my allowed files (`feature-views/EnvironmentalImpact.*`). Let me confirm it predates my work and isn't something I can touch.
+
+All owned gates are green; the lone repo-wide lint violation is pre-existing in another surface's committed file (`LifetimeStatsWidget`, outside my allowed files). Now I'll write the verification log and commit.
+
+Now commit only my 7 files + the log (excluding the 2 pre-existing unrelated web edits).
+
+Exactly the 7 surface files + log staged. Committing.
+
+Committed as `892f9972`. Let me confirm the repo's `Previews.swift` is intact (the harness strip only touched copies) and clean up the verification harness.
+
+All committed and verified. Let me finalize tracking.
+
+Task complete. Committed `892f9972`.
+
+Merge made by the 'ort' strategy.
+ ...pple-feature-views-0112-EnvironmentalImpact.log | 169 +++++++++++
+ .../EnvironmentalImpact.Adapter.swift              | 337 +++++++++++++++++++++
+ .../feature-views/EnvironmentalImpact.Model.swift  | 160 ++++++++++
+ .../EnvironmentalImpact.Previews.swift             |  76 +++++
+ .../feature-views/EnvironmentalImpact.Tests.swift  | 307 +++++++++++++++++++
+ .../feature-views/EnvironmentalImpact.Views.swift  | 171 +++++++++++
+ .../feature-views/EnvironmentalImpact.strings      |  44 +++
+ .../feature-views/EnvironmentalImpact.swift        | 189 ++++++++++++
+ 8 files changed, 1453 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0112-EnvironmentalImpact.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnvironmentalImpact.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnvironmentalImpact.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnvironmentalImpact.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnvironmentalImpact.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnvironmentalImpact.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnvironmentalImpact.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnvironmentalImpact.swift

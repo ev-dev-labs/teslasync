@@ -1,0 +1,172 @@
+=== P4 Shared surface 0068 ChartLegend (Apple) ===
+Prompt: .github/prompts/monorepo/p4-apple/shared-meaningful/... (P4/shared-surfaces/0068)
+Web source (spec): web/src/components/charts/ChartLegend.tsx
+Native output:      apps/apple/TeslaSync/shared-surfaces/ChartLegend.*
+Host: Darwin / Apple Silicon. Toolchain: Xcode 26.5 (Build 17F42) via
+      DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer; Swift 6.3.2;
+      swiftlint + swiftformat (homebrew); pwsh 7.6.2; iPhone 16 simulator (iOS 26.5) booted.
+      Note: `xcode-select` points at CommandLineTools; all xcodebuild/swiftc invocations
+      below set DEVELOPER_DIR to the full Xcode so the iOS-18 + macOS-15 SDKs are used.
+
+------------------------------------------------------------------------------
+SURFACE SUMMARY (parity with components/charts/ChartLegend.tsx)
+------------------------------------------------------------------------------
+The web source is the recharts `<Legend>` wrapper that toggles series visibility on
+click and persists the hidden set via the supplied / context-resolved hidden-series
+state (`useChartHiddenSeries`). Reproduced natively with SwiftUI per iOS-18 / iPadOS-18
+/ macOS-15 HIG. No Swift Charts / MapKit used (web source uses neither).
+
+Files shipped (10) — apps/apple/TeslaSync/shared-surfaces/:
+  ChartLegend.swift            — surface view; states + connectivity chrome; surfaceSlug
+  ChartLegend.Model.swift      — P1/S10 i18n facade, P1/S11 telemetry seam, P1/S8 state
+                                 holder (ChartLegendSource w/ toggle), @Observable model,
+                                 InMemory source, Input/Resolved/Item/Connection types
+  ChartLegend.Adapter.swift    — pure cached→input adapter, swatch + series DTOs, a11y join
+  ChartLegend.Projection.swift — pure resolve(): loading/empty/error/data + passive rule
+  ChartLegend.Views.swift      — swatch palette, chip (dim+strike when hidden), flow layout
+  ChartLegend.Chrome.swift     — freshness chip, stale/offline banner, refresh, loading, error
+  ChartLegend.Previews.swift   — 9 #Previews (interactive/hidden/passive/empty/loading/
+                                 error/stale/offline/trailing)
+  ChartLegend.Tests.swift      — projection + model + toggle + telemetry + freshness + a11y
+  ChartLegend.AdapterTests.swift — adapter (cached→projection) + a11y label
+  ChartLegend.strings          — P1/S10 catalog (ChartLegend table), all keys, no English literals
+
+Data source (web): useChartHiddenSeries (hidden-series state holder: toggle + isHidden).
+  Bound natively via ChartLegendSource (P1/S8); the view issues NO HTTP.
+States rendered (no hidden surface): loading (skeleton chips), empty (friendly), error
+  (retry), data (toggleable chips: dim+strike-through when hidden; passive = no dim/no tap,
+  web `resolved == null`), plus the orthogonal connection axis live/stale/offline
+  (freshness chip + banner + one-shot stale auto-refresh).
+i18n: every string via NSLocalizedString(table:"ChartLegend"); 0 English literals in Swift.
+a11y: per-chip VoiceOver label + value (Shown/Hidden, web aria-pressed peer), toggle hint,
+  swatch decorative, Dynamic Type fonts (Font.TS.*), Reduce-Motion-aware TSFadeIn/skeleton.
+Telemetry: view.opened emitted once on first presentation (P1/S11), slug "ChartLegend".
+
+==============================================================================
+GATE — host-runnable per-surface steps (the prompt's lint/format/placeholder gates)
+==============================================================================
+
+[1] swiftformat --lint (surface files) ........................ PASS
+    $ swiftformat --lint TeslaSync/shared-surfaces
+    -> 0/9 files require formatting.
+    SURFACE_FORMAT_EXIT=0
+
+[2] swiftlint --strict (surface files) ........................ PASS
+    $ swiftlint lint --strict --no-cache TeslaSync/shared-surfaces/*.swift
+    -> Done linting! Found 0 violations, 0 serious in 9 files.
+    SURFACE_LINT_EXIT=0
+
+[3] check-placeholders.ps1 (surface dir) ...................... PASS
+    $ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces
+    -> PLACEHOLDER_ALLOWED=0
+       PLACEHOLDER_COUNT=0
+       EXIT=0
+    PLACEHOLDER_EXIT=0
+
+==============================================================================
+ISOLATED SURFACE VERIFICATION (sanctioned per apps/macos-pending-verifications.md:
+  "isolated SwiftPM build + N/N tests under Swift 6 strict concurrency;
+   real iOS-18 + macOS-15 swiftc -typecheck")
+==============================================================================
+Throwaway SwiftPM package (module named TeslaSync so @testable import resolves),
+containing the 7 production surface files + their real, self-contained shared
+dependencies (design Tokens.swift, TSDesign/TSMaterial, Motion TSFadeIn, UI TSButton,
+Feedback TSSkeleton) + the 2 test files. Real code only — no stubs.
+
+[4] swift build (Swift 6, strict concurrency, macOS) .......... PASS
+    -> Build complete. BUILD_EXIT=0
+
+[5] swift test (Swift 6, strict concurrency) ................. PASS
+    -> Executed 27 tests, with 0 failures (0 unexpected).
+       Suites: ChartLegendProjectionPhaseTests(4), ChartLegendProjectionItemTests(4),
+               ChartLegendModelTests(11), ChartLegendAccessibilityTests(1),
+               ChartLegendAdapterTests(7).
+    TEST_EXIT=0
+
+[6] swiftc -typecheck — iOS 18 simulator .................... PASS
+    $ swiftc -sdk <iPhoneSimulator26.5.sdk> -target arm64-apple-ios18.0-simulator \
+             -swift-version 6 -strict-concurrency=complete -typecheck <surface+deps>
+    -> no errors. IOS_TYPECHECK_EXIT=0
+
+[7] swiftc -typecheck — macOS 15 ............................ PASS
+    $ swiftc -sdk <MacOSX.sdk> -target arm64-apple-macos15.0 \
+             -swift-version 6 -strict-concurrency=complete -typecheck <surface+deps>
+    -> no errors. MAC_TYPECHECK_EXIT=0
+
+[8] xcodegen enumeration (surface integrates into both app targets) ... PASS
+    With `TeslaSync/shared-surfaces` temporarily added to the two app-target source
+    paths (mirroring `feature-views`; reverted after — wiring shared-surfaces is a
+    P4-core infrastructure dependency, NOT in this prompt's allowed files), xcodegen
+    generate enumerated all 10 ChartLegend files into the iOS + macOS app targets:
+      ChartLegend.{swift,Model,Adapter,Projection,Views,Chrome,Previews,Tests,
+                   AdapterTests}.swift + ChartLegend.strings
+    project.yml restored to HEAD (git diff clean); generated .xcodeproj + build/ removed.
+
+==============================================================================
+GATE — full-app xcodebuild build test (the literal prompt gate)  ......  BLOCKED
+==============================================================================
+The literal gate command builds + tests the ENTIRE TeslaSync app (1900+ Swift files
+across all merged surfaces), not just this surface. It cannot reach EXIT=0 on any host
+in the current repo state for four documented, ChartLegend-UNRELATED reasons:
+
+  (a) KMP Shared.xcframework not built. Direct evidence (xcodebuild app target):
+        "error: There is no XCFramework found at .../Frameworks/Shared.xcframework"
+      Producing/signing that binary requires the Kotlin/Native + Gradle toolchain and is
+      itself a macOS-pending item (apps/macos-pending-verifications.md row 1, deferred to
+      p5-hardening/H8-0001 on macos-latest). The TeslaSync scheme's pre-action
+      (Scripts/build-shared-xcframework.sh -> gradlew :core:assembleSharedXCFramework)
+      is the intended producer on a CI macOS runner.
+  (b) `shared-surfaces` is not wired into project.yml. That one-line-per-target wiring is
+      a P4-core infrastructure concern and is OUTSIDE this prompt's allowed files
+      (`apps/apple/TeslaSync/shared-surfaces/ChartLegend.*`, the log). Verified above (step
+      [8]) that the surface integrates cleanly once wired; the wiring was reverted.
+  (c) Pre-existing, unrelated parallel-merge collisions in the app target (same class the
+      prior P4 surfaces ToolCard / AlertMessageEditor / FSMTimelineChart recorded as
+      macOS-pending): `struct DashboardWidgetSize` redefined in 15 files; 199 co-located
+      *.Tests.swift/*.ModelTests.swift importing XCTest into the app target. Zero of these
+      are ChartLegend files.
+  (d) macOS development code-signing identities are absent on this host.
+
+ChartLegend-attributable errors in any of the above: 0.
+  - app-target xcodebuild log: 0 ChartLegend errors (build stops at (a) before Swift compile).
+  - whole-tree swiftlint --strict: 0 ChartLegend violations (the 1 strict error is the
+    pre-existing TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+    function_body_length).
+  - whole-tree swiftformat --lint: 0 ChartLegend files (the 1 file needing formatting is the
+    pre-existing TeslaSync/feature-views/ActionBuilder.Previews.swift).
+
+Deferred to: p4-apple/P99-0001-apple-acceptance-gate (runs on macos-latest with signing
+identities + the staged Shared.xcframework + shared-surfaces wired). Verification command:
+  cd apps/apple && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  cd apps/apple && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+    xcodebuild -scheme TeslaSync-macOS build test
+
+------------------------------------------------------------------------------
+GATE STEP EXIT CODES (literal prompt gate — honest, whole-tree where the gate is whole-tree)
+------------------------------------------------------------------------------
+IOS_EXIT=65          # xcodebuild build test — BLOCKED on (a) missing Shared.xcframework
+MAC_EXIT=65          # xcodebuild build test — BLOCKED on (a) missing Shared.xcframework
+LINT_EXIT=2          # whole-tree swiftlint --strict — pre-existing LifetimeStatsWidget (0 ChartLegend)
+FORMAT_EXIT=1        # whole-tree swiftformat --lint — pre-existing ActionBuilder.Previews (0 ChartLegend)
+PLACEHOLDER_EXIT=0   # surface dir — clean
+
+SURFACE-SCOPED RESULTS (this prompt's deliverable): ALL GREEN
+  SURFACE_FORMAT_EXIT=0  SURFACE_LINT_EXIT=0  PLACEHOLDER_EXIT=0
+  BUILD_EXIT=0  TEST_EXIT=0 (27/27)  IOS_TYPECHECK_EXIT=0  MAC_TYPECHECK_EXIT=0
+  xcodegen enumerates all 10 files; 0 ChartLegend errors/violations anywhere.
+
+------------------------------------------------------------------------------
+HONESTY COVENANT DISPOSITION
+------------------------------------------------------------------------------
+The surface is COMPLETE and verified to the maximum extent possible on this host
+(isolated build + 27/27 tests + iOS-18 & macOS-15 typecheck + lint/format/placeholder,
+all green). The literal full-app `xcodebuild build test` gate is RED for four documented,
+ChartLegend-unrelated reasons (KMP binary deferred, shared-surfaces wiring out of this
+prompt's allowed files, pre-existing merge collisions, signing). Per honesty rule 1
+(no red-as-green) the EXIT below reflects the real, non-zero gate result and the STATUS is
+BLOCKED — with the full-app verification deferred to the macOS acceptance gate
+(p4-apple/P99-0001), consistent with apps/macos-pending-verifications.md.
+
+EXIT=65
+STATUS=BLOCKED

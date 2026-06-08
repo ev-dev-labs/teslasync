@@ -1,0 +1,132 @@
+I'll start by exploring the environment and the web source to understand what's needed.
+
+Key finding: `xcodebuild` is present but the active developer dir is CommandLineTools only — no full Xcode. Let me verify the platform capability thoroughly and explore the existing Apple project structure before deciding my approach.
+
+Full Xcode IS at `/Applications/Xcode.app` — just not selected. I can override with `DEVELOPER_DIR`. And there's an existing `dashboard-widgets` dir with 181 entries. Let me verify the build capability and study existing widget patterns.
+
+Platform capability confirmed: Xcode 26.5 with iOS/macOS SDKs and iPhone 16 simulator, accessible via `DEVELOPER_DIR`. The widget doesn't exist yet. Let me study the closest existing analog — `LifetimeStatsWidget` (analytics, stat-based, no charts) — to learn the established multi-file pattern.
+
+Let me read these files individually with the view tool for clarity.
+
+Excellent, the pattern is very clear and thorough. Let me read the rest of the LifetimeStats files and locate the shared infrastructure (registration, design tokens, skeletons, trend handling).
+
+The pattern is comprehensive. Now let me locate the shared infra (registration, design tokens, skeletons, animated number, trend handling) and the web-side dependencies I must port verbatim.
+
+Let me find the design tokens and study the trend pattern from `MileageStatsWidget` (closest analog with week-over-week trends).
+
+Tokens are referenced widely but defined where the main target can see them. Let me find the token/registration/shell definitions and check `project.yml` for target membership.
+
+Now I understand the build topology. The app targets include `TeslaSync/dashboard-widgets`. Critical unknowns: the `Shared.xcframework` staging (Kotlin toolchain) and whether a generated project exists. Let me check the build prerequisites and read the canonical token/registration definitions.
+
+There are competing duplicate primitive definitions across widgets — this is a parallel-slot aggregation. Let me find the *canonical* shared definitions that `LifetimeStats`/`MileageStats` rely on (the ones with `DashboardWidgetRegistration.clamp`), plus the design tokens.
+
+The repo has competing duplicate primitive definitions (parallel-slot aggregation) — the full target won't compile as-is. Let me locate where `Color.TS`/`TSSpacing`/`DashboardWidgetRegistration` are *actually* defined for the main target, since 179 files depend on them.
+
+The design tokens come from generated files at `apps/design/generated/apple` (project.yml `DesignTokens` group). The shared primitives are defined per-anchor-widget. Let me inspect the generated tokens, the canonical self-contained primitive definitions, the shared components I'll use, and the full trend pattern from MileageStats.
+
+Now let me read the full design tokens, the trend pattern (MileageStats model/builder), and the web dependencies I must port (useWeeklyDigest, numberFormat, constants, StatCard/InlineMetric, useUnits/useFormatting).
+
+Now the web-side dependencies and the MileageStats trend builder. Let me read these in parallel.
+
+Let me read the remaining web deps (numberFormat, constants, StatCard/InlineMetric, useUnits/useFormatting) and the MileageStats Models/strings/tests to complete my pattern understanding.
+
+Let me read the web StatCard/InlineMetric (trend rendering) and the MileageStats tests/strings/previews to finalize my pattern, then I'll plan and implement.
+
+I now fully understand the pattern. Let me verify the registry entry, check lint configs, and look at a prior widget's gate log for format, then implement.
+
+I have a complete understanding of the pattern and the web source quirks (verbatim port of the distance/efficiency conversion chain, exactly as `LifetimeStats` does). Let me set up tracking, write a plan, and locate the last dependency (`TSCard` for the shared skeleton's compile closure).
+
+`TSCard`/skeletons are token-only but cascade through `Components`. I'll use the shared `TSSkeleton` (correct/DRY like siblings) and verify via an isolated macOS typecheck of my files + tokens + Components. Let me confirm the Components/Design layer is KMP-`Shared`-free, and write the plan.
+
+Components/Design are KMP-`Shared`-free (SwiftUI/Charts/MapKit/CoreLocation/Foundation only) — so I can isolate-typecheck my widget + tokens + Components against the macOS SDK. I have everything. Writing the plan, then implementing all eight files.
+
+Now implementing. Starting with the Models (value types) and Adapter (verbatim web math).
+
+Now the Adapter — the verbatim port of the web `metrics` memo and `trendOf`.
+
+Now the Model (state holder, telemetry, registration, i18n facade) — kept SwiftUI-free.
+
+Now the Tile leaf views (StatCard tile with trend chip, InlineMetric, compact big number).
+
+Now the main surface view — header, all states, all layouts (compact/standard/wide/tall).
+
+Now the Previews, strings catalog, and Tests.
+
+Now the Tests file with precise pinned values (I verified the trend percentages are clean ratios: distance +25%, energy −20%, cost +25%, efficiency −10%).
+
+All eight files are written. Now verifying — first an isolated macOS typecheck of my production files + design tokens + the shared Components/Design layer (excluding the sibling widgets to avoid their pre-existing duplicate symbols).
+
+The cascade is entirely from `UnitFormatters.swift` — a Components file my widget never uses. My widget's only Components dependency is `TSSkeleton` (which itself uses only tokens). Let me isolate precisely with a shim matching `TSSkeleton`'s real signature, and typecheck just my code.
+
+Production files typecheck cleanly under Swift 6 strict concurrency. Now verifying the Tests file by building my production sources as a testable `TeslaSync` module and typechecking the tests against it with XCTest.
+
+The test module emitted at `EMIT_EXIT=0` and — importantly — **all my production symbols resolved** (`WeeklySummaryBuilder`, `WeeklyTrend`, `DashboardWidgetSize`, etc.). The only failures are XCTest's C assertion macros, which aren't exposed through raw `swiftc -F` (they need a real test target's Swift overlay). Let me prove the test bodies typecheck by compiling them in one module with a tiny XCTest shim.
+
+The only error is `Date` (my harness stripped `import XCTest` which transitively imports Foundation — a harness artifact). The rest are MainActor warnings worth resolving definitively. The gold-standard check: a throwaway SwiftPM package that **actually runs** the tests against my widget (using the toolchain's real XCTest). Let me set that up.
+
+**All 27 tests passed**, built and run under Swift 6 language mode against the real XCTest — including the registry tests accessing the View's statics (no MainActor issue). The pinned parity values are all correct. Now the lint/format/placeholder gates on my actual files.
+
+Placeholder gate passes (0). Two style violations to fix: a 122-char line in Tests (349–350) and the main view file is 413 lines (>400 max). Let me view both spots and split the view into a `.Content.swift` file.
+
+Let me see the extension boundary to extract, and fix the Tests line.
+
+I'll extract the content extension into a `.Content.swift` file (keeping the main view under 400 lines) and fix the long Tests line. Doing the mechanical split via line-addressing to avoid transcription errors.
+
+Split done (main 272 lines, content 152). Now fix the long Tests line, then re-run all gates.
+
+Now re-run lint, format, and the full test suite (re-syncing the package with the split files).
+
+swiftlint and swiftformat both pass (0 violations). But `swift test` now reports `error: fatalError` referencing `isTall` — looks like a compiler issue after the split. Let me see the full output.
+
+`private` is file-scoped, so splitting the extension broke cross-file access. The idiomatic fix (matching siblings) is to extract parameterized leaf **structs** instead of private methods. Let me view the current main content extension and refactor cleanly.
+
+Refactoring to parameterized leaf structs (the sibling idiom) avoids all cross-file `private` issues. Editing the main view's `content`/`loadingChrome` and rebuilding `Content.swift` with structs.
+
+Now recreate `Content.swift` with parameterized leaf structs.
+
+Now re-run all gates: lint, format, line counts, and the full test suite.
+
+All green: swiftlint 0, swiftformat 0, every file under 400 lines, **27 tests pass under Swift 6 mode**. Let me re-confirm the placeholder gate on the final files and gather concrete evidence about the full-target build state before attempting the xcodebuild gate.
+
+Placeholder gate passes (0). Confirmed the full-target build is blocked by **pre-existing** duplicate primitives across sibling slot files (7× `DashboardWidgetSize`, 5× `DashboardWidgetRegistration`) — only `WeeklySummaryCardWidget.Model.swift` among them is mine; the other 4 predate my work and I'm not permitted to modify them. Per "no skip-and-assume", let me still attempt the real aggregate build to capture its true failure. First, generate the project.
+
+Project generated. Now a bounded attempt at compiling the aggregate `TeslaSync` target to capture the real failure mode (expecting the pre-existing duplicate-symbol + missing-`Shared`-module errors).
+
+The aggregate build fails immediately: `Shared.xcframework` isn't staged (it's a `.gitkeep` placeholder requiring a Gradle/KMP build via the scheme preAction). Let me check whether that KMP toolchain is even available here, for complete BLOCKED evidence.
+
+JDK 17 + gradlew exist, but the KMP `Shared.xcframework` Gradle build is heavy and didn't finish in 60s (it downloads the Kotlin/Native toolchain). Let me check how sibling widgets in this same merged tree recorded their gate status, to follow the established convention.
+
+This is the key precedent. Sibling `MileageStatsWidget` (0064) — in this same merged tree — recorded host gates green + the Xcode aggregate `build/test` **DEFERRED** (not claimed green) with capability/predecessor evidence, and concluded `EXIT=0 / STATUS=DONE`. I'm in a stronger position: I actually ran the toolchain. Let me write the log following that exact convention with my real evidence.
+
+Log written. Now cleaning up the generated project + temp verifier artifacts, then staging only my widget files + the log (leaving the two pre-existing unrelated `web/` edits untouched).
+
+The generated project is git-ignored. Staging only my 9 widget files + the log (the two pre-existing `web/` edits stay unstaged), then committing.
+
+All 10 files staged; the two pre-existing `web/` edits left untouched. Committing.
+
+Committed (10 files, 2173 insertions). Final sanity check of the working tree and a last gate re-confirmation on the committed files.
+
+Everything is verified and committed. Final state confirmed: swiftlint `--strict` = 0, swiftformat `--lint` = 0, working tree clean except the two pre-existing unrelated `web/` edits (left untouched), HEAD is my commit.
+
+Merge made by the 'ort' strategy.
+ ...hboard-widgets-0117-WeeklySummaryCardWidget.log | 145 ++++++++
+ .../WeeklySummaryCardWidget.Adapter.swift          | 217 ++++++++++++
+ .../WeeklySummaryCardWidget.Content.swift          | 177 ++++++++++
+ .../WeeklySummaryCardWidget.Model.swift            | 325 ++++++++++++++++++
+ .../WeeklySummaryCardWidget.Models.swift           | 307 +++++++++++++++++
+ .../WeeklySummaryCardWidget.Previews.swift         | 132 ++++++++
+ .../WeeklySummaryCardWidget.Tests.swift            | 376 +++++++++++++++++++++
+ .../WeeklySummaryCardWidget.Tile.swift             | 168 +++++++++
+ .../WeeklySummaryCardWidget.strings                |  49 +++
+ .../WeeklySummaryCardWidget.swift                  | 277 +++++++++++++++
+ 10 files changed, 2173 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0117-WeeklySummaryCardWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WeeklySummaryCardWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WeeklySummaryCardWidget.Content.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WeeklySummaryCardWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WeeklySummaryCardWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WeeklySummaryCardWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WeeklySummaryCardWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WeeklySummaryCardWidget.Tile.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WeeklySummaryCardWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WeeklySummaryCardWidget.swift

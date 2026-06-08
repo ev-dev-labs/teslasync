@@ -1,0 +1,92 @@
+I'll start by exploring the repository structure to understand what exists and verify the platform capabilities required for this task.
+
+Key findings: the web source exists, `apps/apple/` exists, but **full Xcode is not installed** (only Command Line Tools), so `xcodebuild` cannot build/test. Let me investigate the Apple app structure and toolchain more before deciding on BLOCKED vs what I can complete.
+
+Critical discovery: `apps/apple` uses **XcodeGen** (`project.yml`, no checked-in `.xcodeproj`), and the macOS Command Line Tools SDK **does include SwiftUI, Charts, and MapKit** frameworks. Full Xcode/iOS-simulator is absent, but I can write complete parity code and verify via swiftc/swiftlint/swiftformat. Let me read the web source (the spec) and study the existing feature-view conventions.
+
+Now I understand the spec: `LiveTelemetryPanels` is a **composing container** — a "Live Telemetry" header with a live-pulse indicator plus a 2-column grid of 7 child panels, each wrapped in staggered `FadeIn`. The child panels are separate surfaces (out of scope). Good news: `pwsh` and `check-placeholders.ps1` are present. Let me study the existing native conventions and infrastructure.
+
+The convention is clear and regular: each surface has `.swift` (View), `.Model.swift` (P1/S8 state-holder), `.Adapter.swift`, `.Views.swift`, `.States.swift`, `.Previews.swift`, `.Tests.swift`, `.ModelTests.swift`, `.strings`. Let me read the full `ActiveOrdersSection` set as a reference template, plus locate the shared infrastructure (TSFadeIn, TSGlassPanel, tokens, i18n, diagnostics).
+
+This is a mature, regular convention. I now understand the shared infra (`TSFadeIn`, `TSGlassPanel`, `TSIconBox`, `TSButton`, `TSSpacing`, `TSRadius`, `Color.TS.*`, `Font.TS.*`), the Model pattern (P1/S8 source seam + P1/S11 telemetry + P1/S10 i18n facade), and per-surface `.strings`. Let me read the remaining reference files and locate the shared infrastructure definitions + placeholder checker.
+
+The placeholder checker uses `placeholder-patterns.json` and supports `// parity:allow <reason>` opt-outs. The shared infra structs aren't in the app target — they're defined elsewhere. Let me locate them and read the remaining reference files + a stagger-grid example.
+
+I have the architecture mapped. Design tokens come from `apps/design/generated/apple`; shared components from `apps/apple/Sources/Components`. `CostSummaryCards` is the closest analog (composable grid feature-view with all states + freshness). Let me read the motion primitives, tokens, GlassPanel, and the full CostSummaryCards set.
+
+Now let me read the design tokens and the full CostSummaryCards set (Model/Adapter/Views/Tests/Previews/strings) as my exact template, plus the GlassPanel/Skeleton component signatures.
+
+I have the full pattern. Let me read the Adapter, Tests, Previews, strings of the analog, plus lint/format configs and the Tests target wiring, to mirror exactly.
+
+I now have the full template. Critical: I must verify how `*.Tests.swift` and `*.Previews.swift` files in `feature-views/` are routed to targets (the app target must not compile XCTest). Let me read the rest of `project.yml`, the lint/format configs, and the remaining analog files.
+
+I need to resolve a critical question: feature-view `*.Tests.swift` files import `XCTest` + `@testable import TeslaSync`, yet the app target sources include all of `feature-views/`. Let me find how test/preview files are routed to the correct target.
+
+No excludes exist and `Tests/Unit` doesn't contain the feature-view tests — confirming this is a large parallel-generation effort where each surface ships its own co-located `.Tests.swift`/`.Previews.swift` (consistent with my allowed-files scope). Full Xcode is absent, so the `xcodebuild` gate will be BLOCKED with evidence, but I'll produce complete, parity-faithful, lint/format/placeholder-clean code and verify the pure projection core by actually compiling+running it. Let me confirm the font tokens and GlassPanel signature, then write the plan.
+
+I have everything needed. Let me record a brief plan and start writing the surface, beginning with the pure (Foundation-only) Adapter core that I can actually compile and run.
+
+Now writing the pure Adapter core (Foundation-only, so I can compile + run it as the adapter unit test).
+
+Now the Model file (P1/S8 source seam, `@Observable` model, P1/S11 telemetry, P1/S10 i18n facade).
+
+I need the `text` (SwiftUI `Text`) helper in the i18n facade like the analog. Let me add `import SwiftUI` and the helper to the Model.
+
+Let me check how the analog maps its Foundation-only accent enum to SwiftUI `Color` (to mirror exactly), then write the Views file.
+
+The analog keeps the accent→`Color` mapping with `import SwiftUI` in its Adapter; I'll keep my Adapter Foundation-only and place the color mapping in the Views layer (cleaner separation). Now writing the Views file.
+
+Now the States file (loading skeleton, empty, error + retry).
+
+Now the main container View. First, let me refine the loading state so it doesn't duplicate the always-on header (matching the analog's pattern where the header persists and only the body swaps).
+
+Now the main container View.
+
+Now the i18n `.strings` catalog contribution.
+
+Now the DEBUG previews (per state), with representative preview-only panel content for the slots.
+
+Now the tests (adapter projection + model phases/telemetry/stale + accessibility), mirroring the analog's XCTest structure.
+
+Now let me verify. First, swiftformat and swiftlint on the new files, and in parallel set up a real compile-and-run of the pure Adapter core (the adapter unit test the prompt requires).
+
+Two line-length violations in the Tests file. Let me auto-fix with swiftformat (the intended workflow), then re-verify both linters.
+
+swiftformat passes. Let me re-run swiftlint and inspect what got reformatted in the Tests file.
+
+Both linters pass cleanly (0 violations, 0 formatting issues) on all 7 files. Now let me run the placeholder checker. Let me first read how it resolves `-Path` and the patterns file.
+
+The gate's `-Path` points at a path prefix (no dir literally named `LiveTelemetryPanels`), so the scanner treats it as "nothing to scan" → trivially clean. To get *real* evidence for my files, I'll also scan an isolated copy. First, a quick grep for forbidden tokens.
+
+No forbidden tokens. Now let me run the placeholder checker: the verbatim gate command, plus an isolated scan of copies of my files (real evidence), plus the script self-test.
+
+Placeholder checks all pass (gate EXIT=0, isolated scan of my files COUNT=0, and the tool's self-test PASSES — proving the zero is real). Now the most important verification: actually **compiling and running** the logic. Let me enumerate the exact shared symbols my view code uses, so I can type-check against an accurate shim plus compile+run the Foundation-only Adapter.
+
+I have the exact shim surface. Let me build an out-of-repo harness: (a) type-check all non-test view files against SwiftUI + an accurate shim of the shared infra, and (b) compile **and run** the Foundation-only Adapter with assertions (the real adapter unit test).
+
+Excellent — **the only errors are the `#Preview` macro plugin missing**, which is a Command Line Tools limitation (the `PreviewsMacros` plugin ships with full Xcode), *not* a problem in my code. All actual surface code (View, Adapter, Model, Views, States) type-checked cleanly. Let me confirm by type-checking the 5 core files alone, plus a de-macro'd copy of the Previews body, then compile **and run** the Adapter.
+
+Both type-checks pass at **EXIT=0** — the only thing CLT can't expand is the `#Preview` macro (environmental, same class as the `xcodebuild` block). Now let me compile **and run** the Foundation-only Adapter with assertions — the real adapter unit test executing at runtime.
+
+Just needs the entry file named `main.swift` (top-level code rule when compiling multiple files). Quick fix and re-run.
+
+The Adapter already passed Swift 6 type-check earlier; only my throwaway test driver hit Swift 6's top-level actor isolation. I'll compile the driver under `-swift-version 5` (Adapter is unchanged) and run.
+
+All 22 adapter assertions pass at runtime. Since the Model already type-checked under Swift 6 (the `@Observable` macro expands fine — only the `#Preview` plugin is missing), let me also compile **and run** the Model's state-machine logic (phases, idempotent `view.opened`, stale auto-refresh once-per-episode, retry delegation).
+
+Same `main.swift` naming rule. Let me make the model driver the `main.swift`.
+
+The Model extends the `LiveTelemetryPanels` View type, so I need the full surface in scope. Let me compile the whole surface (shim + all 5 core files) + the driver and run.
+
+The full surface compiles and the Model state machine runs green (13/13). Combined: **35 runtime assertions pass**. Now let me gather the toolchain/`xcodebuild` capability evidence (for the honest BLOCKED status) and confirm the log directory.
+
+Conclusive capability evidence: only Command Line Tools (no full Xcode), no `iphonesimulator` SDK, no `simctl` — so the `xcodebuild` build/test gate steps are genuinely BLOCKED. Let me run the project-wide swiftlint/swiftformat gate steps (capturing summaries) to confirm my files integrate cleanly alongside siblings.
+
+Project-wide swiftformat: only **1/1920** files needs formatting, and it's a pre-existing sibling (`ActionBuilder.Previews.swift`), not mine — my files integrate cleanly. Let me run project-wide swiftlint and confirm none of the violations are in my files.
+
+Project-wide swiftlint: **0 violations in my files** (the single project-wide violation is a pre-existing sibling). Let me do a final confirmation that no full Xcode is installed anywhere (to make the BLOCKED evidence airtight), then write the log.
+
+`/Applications/Xcode.app` **does** exist — `xcode-select` just points at CLT. I may be able to use it via `DEVELOPER_DIR`. This could change BLOCKED → potentially runnable. Let me investigate the real build feasibility (Xcode version, simulators, the KMP `Shared.xcframework` dependency, and project generation).
+
+Major update: **Xcode 26.5 is installed** (just not `xcode-select`-active), the iPhone 16 simulator exists, but the app targets require a **KMP `Shared.xcframework`** built via Gradle/Kotlin — the heavy CI-only dependency. Rather than the shim, let me now verify my surface against the **real** shared infra via the real Xcode SDK (no KMP needed). Let me check the shared components' imports first.
+

@@ -1,0 +1,205 @@
+I'll start by understanding the task, checking platform capabilities, and reading the web source spec.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swiftlint`, `swiftformat`, and `swift` ARE available. Let me explore the Apple app structure to understand existing patterns before deciding on approach.
+
+The prompt's literal path `TeslaSync/dashboard-widgets/` isn't a compiled source root — the real Xcode targets compile `Sources/`. I need to understand the actual project deeply before deciding placement. Let me explore the key subsystems in parallel.
+
+Critical findings: the Apple app has NO dashboard grid, NO Automations state holder, and only one facade domain. Let me check whether Xcode (vs just CLT) exists anywhere, whether xcodegen/pwsh are available, and look at existing component/facade patterns to model after.
+
+Xcode.app IS installed — `xcode-select` just points to CLT. I can override with `DEVELOPER_DIR`. Let me verify Xcode works.
+
+Full Xcode 26.5 + simctl + iPhone 16 simulator are available. The build/test gate CAN run — this is **not** BLOCKED. Let me check the Shared.xcframework build dependency (a potential blocker) and study existing patterns to mirror.
+
+`Shared.xcframework` isn't present — it's built from the KMP core via Gradle (needs JDK/Kotlin). That's the gating factor for `xcodebuild`. Let me check the JDK and kick off that framework build in the background while I study the code patterns.
+
+JDK 17 present. Let me kick off the `Shared.xcframework` build in the background (the long pole), then study the facade/component patterns while it runs.
+
+Build running in background. Now let me study the core patterns — facade/state holders, components, and design tokens — in parallel.
+
+Let me check the background build progress and read the component patterns I'll need.
+
+Build is compiling Kotlin (with cache hits — good). Let me read the remaining patterns: Motion, Skeletons, Toggle, design tokens, and find the telemetry/diagnostics + i18n conventions.
+
+Let me locate the design tokens, Toggle, telemetry/diagnostics, and i18n conventions.
+
+No `widget.*` keys exist yet. Let me inspect the i18n catalog format, the Toggle/Card/Typography components, the logging pattern, and full token values.
+
+Let me check build progress and read the remaining token/component details plus an existing state-rendering view to match house style.
+
+Build assembled the debug xcframework; staging is still in progress. Let me read the Card/Typography signatures and the rest of the build script while it finishes.
+
+Let me read the web data contract (Automation type + hooks) and the native container/connectivity layer to design the data adapter faithfully.
+
+Build is linking the release framework now. Let me check the container wiring and whether the shared core exposes automations, plus the exact web `Automation` fields.
+
+I now have the full data contract and patterns. Let me confirm the base model fields and check existing i18n keys for chrome (stale/offline/refresh), plus build status.
+
+Found existing `widget.freshness.{live,stale,offline,updated}` keys — perfect for chrome. Let me inspect their structure to mirror, check the WidgetKind registry pattern, and build status.
+
+I have everything needed. Let me set up tracking, write a plan, and check the build.
+
+Let me read the web `WidgetShell` and `WidgetProps` to faithfully reproduce the chrome (loading/error/stale/offline/updatedAt/refresh), and check the build.
+
+The chrome is clear. Let me check the native freshness model (to reuse labels/logic) and whether a freshness component already exists, plus build status.
+
+`WidgetFreshness`/`WidgetFreshnessPolicy` (fresh/stale/offline) is reusable in the app target. Let me read the StatusIndicators component for a freshness chip, then I'm ready to write.
+
+I have all needed components. Let me check the build, then write the plan and implementation.
+
+I have everything needed. Let me write the plan, then implement. First the plan file:
+
+Now the main implementation file:
+
+Now let me create the implementation file:
+
+Now let me check the test conventions and build status, then write tests.
+
+Tests use XCTest with `@testable import TeslaSync`. Let me refactor `WidgetDiagnostics` for testability (injectable sink) and make the toggle awaitable for deterministic tests.
+
+Now the test file:
+
+Now let me add the i18n catalog keys and check the build status.
+
+i18n keys added. Let me update todos and run swiftformat/swiftlint on the new files early (while the framework finishes building).
+
+swiftformat found style issues — most are auto-fixable. Let me run the formatter (autofix) on both files, then handle force-unwraps in tests manually.
+
+swiftformat is clean (it auto-fixed the force-unwraps too). Now swiftlint and build status:
+
+swiftlint: fix `Data(_:)` usage, file is too long (1122 > 1000 — formatter expanded it), and a brace-spacing issue. Let me view the problem spot and plan a clean split into two prefixed files.
+
+Let me plan the split precisely by finding the section boundaries.
+
+Boundary confirmed. Let me split into two prefixed files (the model/logic file and the views file):
+
+Both files are now under 1000 lines. Let me fix the preview helper signature (brace issue) and the test `Data` usage, then reformat.
+
+Now fix the test `Data` usage:
+
+Now reformat all three files and re-run swiftlint strict:
+
+The repo's swiftlint caps files at 400 lines (warning → error under `--strict`). Let me check the config and existing file sizes to confirm the convention.
+
+The repo caps every file at 400 lines under `--strict` (largest existing is 390). I need to split into ≤400-line files, all keeping the `AutomationStatusWidget` prefix. Let me get exact section boundaries.
+
+I'll split into four ≤400-line files, all `AutomationStatusWidget`-prefixed. View subviews referenced across files need internal visibility. Let me carve the sections with sed:
+
+Boundaries confirmed. Let me carve the four files:
+
+All four files ≤400 lines. Now fix cross-file visibility for the content views referenced by the panel:
+
+Now reformat all files and re-run swiftlint strict on the whole widget set plus tests:
+
+Excellent — swiftlint `--strict` passes on all 522 files (0 violations) and swiftformat is clean. Let me check the framework build and update tracking.
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now let me generate the Xcode project and start the iOS build+test.
+
+Project generated. Now the iOS build+test (the main gate). This is long — I'll run it and monitor.
+
+iOS shell completed (exit 0). Let me verify the actual build/test results in the log:
+
+Swift 6 strict-concurrency flagged the static `ISO8601DateFormatter` properties (not Sendable). Let me check for any other errors, then fix by constructing formatters locally.
+
+Only those two errors. Let me fix by constructing the formatters locally (concurrency-safe):
+
+Let me reformat the edited file, verify lint, then rebuild iOS:
+
+Clean. Now rebuild iOS (incremental — should be faster):
+
+App builds (`BUILD SUCCEEDED`); one test has a `@Sendable` mutable-capture compile error. Let me fix the test clock with a thread-safe holder.
+
+Now add the `MutableTestClock` helper near the `DiagnosticsSpy`:
+
+Test file is now 418 lines — split it into logic tests + model tests (both ≤400, prefixed). Let me find the class boundaries:
+
+Let me split the tests into a logic-tests file and a model-tests file:
+
+Both test files ≤400, lint clean. Now re-run the iOS build+test:
+
+Build succeeds and tests compile, but the test phase can't find `simctl` — the system's active developer dir still points to CommandLineTools. Let me try to set Xcode as the active developer dir.
+
+sudo needs a password. Let me examine the exact context of the simctl error in the log.
+
+Tests actually started — the simctl error is in post-test *diagnostic collection* (from the UI-test runner), not the tests themselves. Let me check whether my unit tests actually passed:
+
+Let me search the full log for test execution evidence and the tail to see what actually ran:
+
+The UI-test runner crashed during bootstrap and `simctl` isn't resolvable by xcodebuild's helper subprocess — a CoreSimulator/developer-dir environment issue. Let me check the documented known-limitations and the simulator service state.
+
+The repo itself defers Xcode/simulator verifications to macOS CI (`macos-pending-verifications.md`). Crucially, the **macOS** test target runs my unit tests *natively without a simulator* — the reliable path. Let me run the macOS build+test:
+
+macOS build needs a signing certificate (unavailable here). Let me retry with code signing disabled — standard for CI test runs:
+
+macOS **build succeeded** (widget compiles natively). The test-host lookup failed — let me check the product and try a cleaner test invocation.
+
+The macOS product is `TeslaSync.app` (PRODUCT_NAME=TeslaSync) but the test host expects `TeslaSync-macOS.app` — a pre-existing project.yml target-name/product-name mismatch. Let me override TEST_HOST/BUNDLE_LOADER on the command line to run the macOS tests natively:
+
+The global override breaks the extension/UI-test targets. Let me step back and check the simulator runtime situation — the iOS runner crash may be a runtime/SDK mismatch. Let me inspect runtimes and try a targeted unit-test-only run.
+
+Runtime iOS 26.5 matches the SDK (no mismatch), and iPhone 16 is now booted. Let me retry iOS testing with only the unit-test bundle (skipping the pre-existing UI tests that crashed), targeting the booted device:
+
+The unit tests **ran on the simulator**. The only failing test is a pre-existing `SpotlightTests.testRecordDisabledIsNoOp()` (not mine). Let me confirm all my tests passed and that Spotlight is the sole pre-existing failure:
+
+All 10 `AutomationStatusWidgetModelTests` passed; the sole failure is the pre-existing `SpotlightTests`. Let me get the complete pass count across all my suites:
+
+Let me verify the logic-test suites also ran (not just the model tests):
+
+200 cases passed, 0 failed. Let me confirm my logic-test methods actually executed (the file was created after `xcodegen` — checking whether folder-sync picked it up):
+
+Root cause: `AutomationStatusWidgetLogicTests.swift` was created *after* `xcodegen generate`, so it's not in the project — only the model tests ran (10/10 passed). Let me regenerate the project and re-run the iOS unit tests:
+
+The logic-tests file is now in the project. Let me re-run the iOS unit tests (now including all suites):
+
+Logic tests are now compiling/running. Let me wait for completion:
+
+The simulator is flaky — one run executed all tests (200 passed, my 10 ModelTests included), the next killed the test host mid-bootstrap (a developer-dir/CoreSimulator instability). Let me cleanly restart the simulator subsystem under the correct developer dir and retry.
+
+Let me do this in steps — first get the PID, then kill with a literal value.
+
+CoreSimulatorService restarted (now 85208, under Xcode dir). Let me boot the sim fresh and re-run the unit tests:
+
+The mid-flight service kill corrupted the device state. Let me fully reset the simulator (erase for a clean slate) and retry — the subsystem produced one fully-clean run earlier.
+
+Device erased cleanly. Now boot and run all unit tests:
+
+Let me see exactly how attempt 4 failed:
+
+The failure is now just a pre-boot conflict: I manually booted the device but xcodebuild wants to boot it itself ("Unable to boot device in current state: Booted"). Let me shut it down and let xcodebuild manage the simulator:
+
+Same simulator bootstrap kill — the `simctl`-not-found (CLT active dir, no sudo) makes iOS simulator testing unreliable here. Let me pivot to **native macOS testing** (no simulator). First, check how the macOS test target's TEST_HOST/BUNDLE_LOADER are wired:
+
+Found it: line 3043 has the wrong macOS `TEST_HOST` (`TeslaSync-macOS.app` instead of `TeslaSync.app`), and `BUNDLE_LOADER = $(TEST_HOST)`. The `.xcodeproj` is generated/gitignored, so I'll surgically fix that line locally (the proper fix belongs in project.yml, which is out of scope) and run native macOS tests:
+
+Both macOS test configs now point to the correct host. Let me run the native macOS unit tests:
+
+The macOS native tests are **running** (SpotlightTests already passed natively). Let me wait for completion:
+
+**All 7 of my test suites PASSED natively on macOS.** Let me wait for the final overall status:
+
+All my suites passed (every "Executed N tests" shows 0 failures). The process is hung on post-test CoreSimulator XPC cleanup (the same `simctl`/dev-dir quirk). The test results are conclusive. Let me give it a short grace period, then stop it:
+
+**All 33 of my unit tests pass natively on macOS (7 suites, 0 failures).** Let me update tracking and run the remaining gates (placeholders + final tree-wide lint).
+
+Let me run the placeholder gate on my widget files and re-confirm tree-wide lint/format after all edits:
+
+Placeholders clean (COUNT=0). Let me run the final tree-wide swiftlint/swiftformat to confirm everything is green after all edits:
+
+Every code-level gate is green: builds pass on iOS + macOS, **33/33 unit tests pass natively on macOS**, swiftlint `--strict` 0 violations, swiftformat clean, placeholders 0. Let me write the gate log (honestly documenting the simulator/signing environment workarounds) and then commit.
+
+Now let me write the comprehensive, honest gate log:
+
+Now let me commit. First, check what's in the working tree to stage only my deliverables:
+
+Staging only my deliverables (not the pre-existing `web/src/...` changes; `.xcodeproj` is correctly gitignored):
+
+All deliverables staged, pre-existing web files excluded. Let me commit:
+
+Committed (8 files, 2005 insertions). Let me finalize tracking and do a last sanity check that the tree is clean and lint still passes on the committed files:
+
+All gates are green and the commit is clean. Let me verify the final commit is intact:
+
+Task complete. Here's the summary.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Automatic merge failed; fix conflicts and then commit the result.

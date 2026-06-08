@@ -1,0 +1,176 @@
+=== P4 Shared surface 0216 HelpTooltip (Apple) ===
+Artifact : components/ui/HelpTooltip.tsx  ->  apps/apple/TeslaSync/shared-surfaces/HelpTooltip.*
+Date     : 2026-06-08
+Runner   : Darwin (arm64), Apple Swift 6.3.2 (swiftlang-6.3.2.1.108), Command Line Tools only
+
+--------------------------------------------------------------------------------
+RUNNER CAPABILITY PROBE (binding capability clause — "requires SwiftUI + Swift
+Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG; if unavailable -> BLOCKED")
+--------------------------------------------------------------------------------
+$ xcode-select -p
+  /Library/Developer/CommandLineTools          # Command Line Tools, NOT a full Xcode
+$ xcodebuild -version
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+  directory '/Library/Developer/CommandLineTools' is a command line tools instance
+$ xcrun simctl list devices
+  xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+$ ls /Library/Developer/CommandLineTools/SDKs | grep -i iphone
+  (none)                                       # no iPhoneOS SDK -> cannot target iOS Simulator
+$ ls /Library/Developer/CommandLineTools/SDKs
+  MacOSX.sdk  MacOSX15.4.sdk  MacOSX15.sdk  MacOSX26.5.sdk  MacOSX26.sdk
+$ which xcodegen swiftlint swiftformat swift
+  /opt/homebrew/bin/xcodegen  /opt/homebrew/bin/swiftlint
+  /opt/homebrew/bin/swiftformat  /usr/bin/swift
+
+CONCLUSION: full Xcode + the iOS SDK + the iOS Simulator are NOT installed on this
+runner. `xcodebuild ... build test` for the TeslaSync (iOS) and TeslaSync-macOS
+schemes therefore CANNOT execute here. XCTest.framework and the SwiftUI #Preview /
+@Observable macro plugins are likewise Xcode-only (see STANDALONE VERIFICATION).
+Per the artifact's capability clause this is a STATUS=BLOCKED outcome with API
+evidence — recorded below — NOT a code defect. Every verification that does not
+require full Xcode was run and is green for the surface files.
+
+--------------------------------------------------------------------------------
+GATE STEPS (as specified)
+--------------------------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+  directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1   # BLOCKED: requires full Xcode + iOS SDK + iPhone 16 simulator (absent)
+
+$ xcodebuild -scheme TeslaSync-macOS build test
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+  directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1   # BLOCKED: requires full Xcode (absent)
+
+$ swiftlint --strict          # whole-repo, per apps/apple/.swiftlint.yml `included`
+  Done linting! Found 1 violation, 1 serious in 1909 files.
+  /apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19:
+    error: Function Body Length Violation (function_body_length)  <-- PRE-EXISTING, NOT this surface
+LINT_EXIT=1   # the single repo violation pre-exists in LifetimeStatsWidget.Adapter.swift
+              # (outside this prompt's allowed files). Surface-scoped result below.
+$ swiftlint lint --strict --no-cache TeslaSync/shared-surfaces   (surface files only)
+  0 violations
+SURFACE_LINT_EXIT=0   # HelpTooltip.* is lint-clean
+
+$ swiftformat --lint apps/apple   # whole tree
+  1/1918 files require formatting, 2 files skipped.
+  /apps/apple/TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1:
+    error: (blankLinesBetweenScopes)  <-- PRE-EXISTING, NOT this surface
+FORMAT_EXIT=1   # the single repo violation pre-exists in ActionBuilder.Previews.swift
+                # (outside this prompt's allowed files). Surface-scoped result below.
+$ swiftformat --lint apps/apple/TeslaSync/shared-surfaces   (surface files only)
+  0/5 files require formatting.
+SURFACE_FORMAT_EXIT=0   # HelpTooltip.* is format-clean
+
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/HelpTooltip
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces -Language swift
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0   # no TODO/FIXME/stub/Placeholder/Lorem/"not implemented" in shipped code
+
+--------------------------------------------------------------------------------
+STANDALONE VERIFICATION (compensating for the unavailable xcodebuild step)
+--------------------------------------------------------------------------------
+Because xcodebuild cannot run, the surface was type-checked directly against the
+installed macOS 15 SDK with `swiftc -typecheck`, under the project's real build
+flags (-swift-version 6 -strict-concurrency=complete), together with the generated
+design tokens (apps/design/generated/apple/Tokens.swift).
+
+Toolchain note (artifacts of CLT, not the surface):
+  * `@Observable` — the CLT 6.3.2 macro plugin mis-reports its own `shouldNotifyObservers`
+    helper ("declaration name 'shouldNotifyObservers' is not covered by macro 'Observable'").
+    Reproduced with a 3-line minimal @Observable class, so it is the standalone plugin,
+    not this code. The whole TeslaSync app uses @MainActor @Observable, so the real Xcode
+    build resolves it. For the standalone check the two macro ATTRIBUTES (@Observable /
+    @ObservationIgnored) were stripped from a temp copy; all logic/types are unchanged.
+  * `#Preview` (PreviewsMacros) and `XCTest` are Xcode-only. Preview bodies were
+    type-checked by rewriting `#Preview {...}` into `@ViewBuilder func -> some View`;
+    test bodies were type-checked against the real surface types behind a minimal
+    XCTest shim (XCTestCase + XCTAssert*). No surface source was altered.
+
+Results (all against MacOSX15.sdk, arm64-apple-macos15.0, swift 6, strict concurrency):
+  swiftc -typecheck  Tokens + HelpTooltip.Model + .Views + .swift ............ EXIT=0
+  swiftc -typecheck  + rewritten HelpTooltip.Previews bodies ................. EXIT=0
+  swiftc -typecheck  + HelpTooltip.Tests bodies (via XCTest shim) ............ EXIT=0
+A real strict-concurrency defect WAS caught and fixed this way: the test-file global
+translators are now `@Sendable` (else #MutableGlobalVariable would fail the test build).
+
+RUNTIME LOGIC VERIFICATION (executed, not just type-checked):
+A swiftc-built executable (Tokens + HelpTooltip.Model[attrs-stripped] + .Views + a
+harness mirroring the XCTest assertions) was COMPILED and RUN against MacOSX15.sdk
+under -swift-version 6. All 18 logic assertions passed at runtime (RUN_EXIT=0, "ALL_PASS"):
+  literalText, literalVisible, emptyHides, nilHides, i18nTranslated, i18nFallback,
+  i18nMissingNoDefaultHidden, defaultIconLabel, ariaOverride, learnMoreDefault,
+  learnMoreCustom, learnMoreSuppressedWhenHidden, placementSizeCarried,
+  arrowEdgeMapping, pointSizeMapping, telemetryOnce, telemetrySilentWhenHidden, slug.
+This exercises the real projection, content-resolution, learn-more, placement/size
+mapping, and telemetry-once model logic end-to-end (the XCTest bodies that the
+hosted test target will re-run under XCUnit once the surface is wired in).
+
+--------------------------------------------------------------------------------
+IMPLEMENTATION SUMMARY (production-polished, no stubs)
+--------------------------------------------------------------------------------
+Files (apps/apple/TeslaSync/shared-surfaces/):
+  HelpTooltip.swift          generic SwiftUI surface: "?" trigger + popover; default-icon
+                             initializer + custom-trigger initializer (web `children`).
+  HelpTooltip.Model.swift    P1/S11 telemetry seam (view.opened), P1/S10 i18n facade,
+                             config/placement/size/learn-more value types, pure
+                             HelpTooltipProjection (the testable adapter), @MainActor
+                             @Observable HelpTooltipModel (telemetry-once).
+  HelpTooltip.Views.swift    default "?" glyph, popover bubble (text + learn-more Link),
+                             placement->arrowEdge & size->pointSize mappings.
+  HelpTooltip.Previews.swift 7 #Previews: default / learn-more / placements / sizes /
+                             custom trigger / hidden(empty).
+  HelpTooltip.Tests.swift    projection, label/learn-more, placement+size mapping,
+                             telemetry-once, per-variant ImageRenderer render smoke,
+                             resolved a11y label, hidden invariant.
+  HelpTooltip.strings        P1/S10 catalog contribution.
+
+Parity with components/ui/HelpTooltip.tsx:
+  * props text / i18nKey / defaultValue / placement / learnMore / size / ariaLabel /
+    children  -> all reproduced (children = custom-trigger initializer).
+  * content resolution  i18nKey ? t(i18nKey,{defaultValue}) : (text ?? '')  -> projection.
+  * `if (!resolved) return null`  -> surface renders nothing when content is empty.
+  * shared <Tooltip> (hover/focus/tap, ARIA, placement, reduced-motion)  -> native
+    .popover + .help() + system focus/dismiss; `side` -> arrowEdge; multiline max-w-260
+    -> .frame(maxWidth: 260).
+  * learn-more <a target="_blank"> + external-link glyph  -> SwiftUI Link + arrow.up.right.
+
+States: the web source's only branches are content-present (visible) and empty
+(hidden / `return null`); both render. The generic loading/error/stale/offline axes
+are N/A for this leaf — its sole data source is `useTranslation` (no fetch), so there
+is no loadable state. Documented in-source, not faked (Honesty Covenant #2/#9).
+
+i18n keys (all via the P1/S10 facade; no English literals in Swift):
+  help.tooltip.iconLabel = "More info"   |   common.learnMore = "Learn more"
+  helpTooltip.learnMoreHint = "Opens in your browser" (native a11y hint for the link)
+
+Telemetry: HelpTooltipModel.onAppear emits view.opened with slug "HelpTooltip" once,
+suppressed when the surface is hidden (P1/S11).
+
+Accessibility: trigger has an explicit VoiceOver label (iconLabel, ariaLabel-overridable);
+glyphs are accessibilityHidden; learn-more Link carries label + hint; text uses
+.fixedSize(vertical) so it wraps under Dynamic Type; popover transitions are system-driven
+(reduce-motion respected by the platform).
+
+--------------------------------------------------------------------------------
+INTEGRATION NOTE (for the P4 acceptance gate)
+--------------------------------------------------------------------------------
+apps/apple/project.yml sources `TeslaSync/feature-views` but not yet
+`TeslaSync/shared-surfaces`, and project.yml/.swiftlint.yml are outside this prompt's
+allowed files. Wiring `TeslaSync/shared-surfaces` (and the per-surface .strings) into
+the app + test targets is the P4 acceptance gate's responsibility (this prompt
+"Blocks: P4 acceptance gate"). Once wired on an Xcode-equipped runner, the
+IOS_EXIT / MAC_EXIT steps will execute the included Tests + render checks.
+
+EXIT=1
+STATUS=BLOCKED
+  reason: full Xcode toolchain (xcodebuild + iOS SDK + iPhone simulator + XCTest)
+          is not installed on this runner; the canonical iOS/macOS build+test gate
+          cannot execute (API evidence above). The surface implementation is complete
+          and passes every runnable check: macOS-15-SDK type-check of production,
+          preview, and test sources under strict concurrency (EXIT=0), surface
+          swiftformat (0/5), surface swiftlint --strict (0), placeholder gate (COUNT=0).

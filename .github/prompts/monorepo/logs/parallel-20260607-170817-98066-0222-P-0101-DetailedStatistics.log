@@ -1,0 +1,120 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Web source exists, `apps/apple` exists, and Swift/swiftlint/swiftformat are available. Let me check xcodebuild status and explore the apple app structure.
+
+Key finding: only Command Line Tools are installed (no full Xcode), so `xcodebuild`/iOS simulators are unavailable — but `swift`, `swiftlint`, `swiftformat` work. Let me explore the existing Apple app structure to understand established patterns before writing code.
+
+This is a large, established codebase with an existing `feature-views` directory (315 files). I need to study the conventions carefully. Let me find similar existing statistics surfaces and the core infrastructure.
+
+There's a clear convention: each surface has `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`. The closest analogs to `DetailedStatistics` (a GlassPanel grid of stat cells) are `SummaryStatsRow` and `SecurityStatistics`. Let me read those families fully.
+
+Now I understand the established architecture deeply. Let me locate the full-lifecycle pattern (loading/empty/error/stale/offline), the P1/S8 state-holder facade, P1/S9 tokens, and read the web data types.
+
+Now let me read the web formatting helpers, the full-lifecycle grep results, and key native infra (tokens, cards, feedback states, facade).
+
+SecurityStatistics has the full lifecycle pattern (18 matches) — that's my ideal template. Let me read its family plus the web formatters.
+
+SecurityStatistics is the perfect structural template. Let me read the rest of its family and find the web `formatDuration`.
+
+`formatDuration` = `formatDurationMinutes` from `lib/dateFormat`. Let me read it, the SecurityStatistics Previews/Tests/strings for conventions, and verify the native shared components/tokens I'll depend on.
+
+I have a precise template now. Let me verify all shared tokens/components exist with correct signatures, read the strings format, and check the build/lint tooling.
+
+Build system is XcodeGen (no SwiftPM). Design tokens live in `apps/design/generated/apple`. Let me read the exact token definitions and the shared component signatures.
+
+Let me read the full Tokens.swift and the shared component signatures I'll use.
+
+Complete token palette confirmed. Let me read the web AnimatedNumber + global precision, and the exact signatures of the shared components I'll use.
+
+Let me confirm the remaining component APIs (Button, Badge/Tone, Card, FadeIn, Skeleton), read the lint configs and placeholder patterns, and test whether swiftc can typecheck SwiftUI with Command Line Tools.
+
+Component APIs all confirmed. Let me read the lint configs + placeholder patterns and test whether `swiftc` can typecheck SwiftUI under Command Line Tools.
+
+`swiftc -typecheck` against the CLT macOS SDK **succeeds for SwiftUI + Charts + MapKit** (PROBE_EXIT=0). That gives me a real typecheck harness even without full Xcode. Let me check module imports and whether `pwsh` exists, to design my verification.
+
+`swiftc` typecheck works and `pwsh` is available — but 14 files import the KMP `Shared.xcframework` (unavailable), so the full module can't build without Xcode. My surface won't import `Shared` (per precedent). Let me read the last web helpers (`FALLBACK`, `formatRoundedInt`) and confirm no full Xcode exists.
+
+`/Applications/Xcode.app` **exists** — `xcode-select` just points to CLT. I can likely override with `DEVELOPER_DIR` (no sudo needed). This could let the real gate run. Let me verify the full toolchain.
+
+Xcode 26.5, xcodegen, and an iPhone 16 simulator are all available. The gap: **`Shared.xcframework` is missing** (only `.gitkeep`), and 14 app files import `Shared` (KMP). My surface doesn't import `Shared`, but the full app target needs it. Let me assess whether the KMP framework can be built.
+
+Building the full app needs the KMP `Shared.xcframework` (Gradle/Kotlin-Native). `java` exists and there's a `gradlew`. I'll kick off that long build in the background now while I write the surface code in parallel.
+
+The Gradle build is downloading the Kotlin/Native toolchain and compiling — that's the long pole, so I'll let it run. Now I'll write the 7 surface files following the SecurityStatistics template precisely. Starting with the pure adapter core.
+
+Now the Model (state-holder seam, telemetry, lifecycle, i18n facade), mirroring the SecurityStatistics model.
+
+Now the presentational subviews (header with icon + title + freshness chip, responsive grid, centered stat cells, skeleton, banner, error), mirroring SecurityStatistics.Views.
+
+The Gradle build finished. Let me check its result, then continue writing the remaining files.
+
+**Shared.xcframework built successfully** (ios-arm64, ios-arm64-simulator, macos-arm64) — the full `xcodebuild` gate can now run, opening a real path to STATUS=DONE. Let me finish the remaining files: main View, Previews, Tests, strings.
+
+Now the previews for each state, mirroring SecurityStatistics.Previews.
+
+Now the comprehensive test suite (adapter projection + number/currency/duration parity + layout + a11y + full model lifecycle), mirroring the SecurityStatistics tests.
+
+Now the i18n strings catalog contribution.
+
+All 7 files written. Let me run fast local checks (swiftformat, swiftlint, and a scoped swiftc typecheck) before the heavyweight xcodebuild gate.
+
+swiftformat passes. swiftlint flags one issue: the `project` function exceeds the 50-line body limit. I'll refactor `DetailedStatisticsTiles` to the spec-table pattern (like `SecurityStatisticsTiles`), which moves the bulk into a static property and shrinks the function body.
+
+Let me re-run both linters on the refactored files.
+
+Lines 276–277 exceed 120 chars. Let me view and wrap the currency closure calls.
+
+Wrapping the two currency closure bodies to satisfy line length and `before-first` wrapping:
+
+Both linters pass on all 6 Swift files. Now the real gate. Let me read the rest of `project.yml` for scheme/target names, then generate the Xcode project.
+
+Let me read the full target/scheme config to understand how `*.Tests.swift` files are routed (app target vs test target) and which test target name to use.
+
+The app target globs the whole `feature-views` dir — including `*.Tests.swift`. There must be an exclusion mechanism (otherwise existing `*.Tests.swift` would break the app build). Let me find it.
+
+No exclusion mechanism exists — so I need empirical truth. Let me generate the Xcode project and, in parallel, run a scoped `swiftc` typecheck of my surface against the real shared `Components` + design tokens (a harness I verified works).
+
+xcodegen succeeded. The scoped typecheck failed only inside `Components/Maps/MapView.swift` (missing `TSChartPalette`) — unrelated to my surface, which doesn't use Maps. Let me locate `TSChartPalette`, refine the harness to my surface's actual dependency closure, and check how xcodegen routed `*.Tests.swift`.
+
+Empirical truth needed: the `*.Tests.swift` files are compiled into the **app** targets (4 memberships, same as non-test files). I must run the real build to see how this resolves. Let me check the log dir exists and kick off the iOS gate build+test (async, monitored).
+
+Log dir exists. Now I'll run the actual iOS gate (`build test`) async and monitor it — this definitively answers whether the co-located test files compile and whether my surface integrates.
+
+The co-located `*.Tests.swift` design is clear now: they compile into the app module (the `@testable import` is a benign ignored warning), and XCTest discovers them at runtime in the test host. But my `head -60` may have SIGPIPE-killed the build early. Let me check the full log's tail.
+
+Root cause found — and it's **pre-existing & repo-wide**: every co-located `*.Tests.swift` (AuditPanel, BackendTool, … all ~60, including mine) fails with `unable to resolve module dependency: 'XCTest'` because the app target lacks testing search paths. The fix is the standard `ENABLE_TESTING_SEARCH_PATHS=YES`, which I can pass on the command line (no file edits, since project.yml isn't in my allowed scope). Let me verify the build succeeds with it.
+
+XCTest resolves now with the flag — but the full app build hits **pre-existing errors in `dashboard-widgets/*`** (`DashboardWidgetSize is ambiguous`, actor-isolation errors) from *other* surfaces, outside my allowed scope (`feature-views/DetailedStatistics.*`). The whole-app gate can't go green due to code I can't touch. 
+
+I'll prove MY surface rigorously in isolation: first a typecheck of my full surface against the real shared component closure (UI/Feedback/Motion + tokens).
+
+Just one missing symbol: the `.tsGlassPanel()` modifier used by `Cards.swift`. Let me locate its definition and add it to the closure.
+
+`tsGlassPanel()` lives in `Sources/Design/TSMaterial.swift` (SwiftUI-only). Adding it to the closure and re-running the typecheck.
+
+My DetailedStatistics files never error — only unrelated shared files (Maps, FeedbackOverlays) do. Let me use the precise dependency closure (Feedback minus the unrelated `FeedbackOverlays.swift`) for a clean typecheck.
+
+**Clean typecheck (EXIT=0)** — my full surface compiles against the real shared components under Swift 6 strict concurrency, macOS 15. Now for definitive proof, I'll build a minimal SwiftPM package wrapping my surface + its real dependency closure and actually **run** my XCTest suite.
+
+25 files staged (my earlier typecheck proved this exact closure compiles). Running the test suite:
+
+**All 29 of my XCTest cases pass** (19 adapter + 10 model, 0 failures) against the real shared components under Swift 6. That's definitive proof of correctness. Now the placeholder check (via pwsh) and the macOS gate (async, to capture real evidence), plus a grep sanity for placeholder patterns.
+
+Placeholder check passes (count=0) and grep is clean. The macOS gate fails first on **code-signing** (no dev certificate — environmental), and behind that the same pre-existing `dashboard-widgets` errors. 
+
+I now have complete evidence. Let me write the honest gate log capturing real outputs.
+
+Confirmed: the `.xcodeproj` is git-ignored, and the `DashboardWidgetSize is ambiguous` errors are pre-existing across many `dashboard-widgets/*` files (duplicate type defs from other surfaces) — none in my files. Now writing the comprehensive, honest gate log.
+
+Now let me check git status to stage ONLY my allowed files (the gradle build may have generated stray files I must not commit).
+
+Git shows my 8 new files plus 2 **pre-existing** modified web files (`FleetApiSection.tsx`, `BackupRestorePage.tsx`) that I never touched — I'll exclude those. The gradle-generated Kotlin files are git-ignored. Let me stage only my deliverable + log and commit.
+
+Exactly my 8 files staged; the 2 pre-existing web modifications remain untracked/unstaged. Committing now:
+
+Commit `9afa80a2` created with exactly my 8 files (1694 insertions); pre-existing web edits left untouched. Let me clean up temporary build artifacts and the git-ignored generated project.
+
+Working tree is clean (only the two pre-existing web edits remain, correctly excluded). Final confirmation of the committed surface's lint/format state:
+
+The surface is complete and verified. Final confirmation: swiftformat 0/6, swiftlint 0 violations.
+

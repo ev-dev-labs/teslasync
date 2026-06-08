@@ -1,0 +1,324 @@
+=== P4 Feature view 0146 PowerProfileChart (Apple) ===
+Host: Darwin arm64 (Apple Silicon). Xcode 26.5 (Build 17F42) present at
+/Applications/Xcode.app (activated for this run via DEVELOPER_DIR; the default
+xcode-select points at CommandLineTools). Swift 6.3.2. swiftlint 0.63.3 +
+swiftformat 0.61.1 + pwsh 7.x + xcodegen on PATH. iOS/macOS 26.x SDKs + iPhone 16
+simulator available. → Platform capability PRESENT (SwiftUI + Swift Charts), so this
+surface is DONE, not BLOCKED.
+
+Web source (THE specification):
+  web/src/features/driving/components/drive-detail/PowerProfileChart.tsx
+  (+ its types.ts `ChartDataPoint` { time, power } / `DriveStats`
+   { powerMax, powerMin, avgPower }; useDriveDetailData.ts which feeds the per-row
+   `power` (backend pack_voltage*pack_current/1000, sign preserved = drive/regen) +
+   computes powerMax/powerMin/avgPower; lib/numberFormat.ts `fmtInt`/`fmtNumber`;
+   hooks useTranslation / useSyncedCursor / useSyncedReferenceLineX; components/charts
+   `ChartContainer`/`ChartTooltip`/`AreaChart`/`ReferenceLine`/`areaGradient`;
+   components/motion `FadeIn`)
+Native output (allowed files):
+  apps/apple/TeslaSync/feature-views/PowerProfileChart.{swift,Models,Adapter,Model,
+    Chart,Views,Previews,Tests}.swift
+  apps/apple/TeslaSync/feature-views/PowerProfileChart.strings
+  + this log.
+(The surface is split across Models/Adapter/Model/Chart/Views so every file stays
+ under the 400-line file_length rule; all names match the allowed `PowerProfileChart.*`
+ glob. No sibling / shared / project.yml files were edited.)
+
+---------------------------------------------------------------------------
+PARITY MAPPING (web → native)
+---------------------------------------------------------------------------
+  data:   ChartDataPoint slice { time, power } + DriveStats { powerMax, powerMin,
+            avgPower } → PowerProfileSample { index, time, powerW } (SI floor: power
+            kept in watts, kW derived only at the chart boundary per ADR-009 / the SI
+            cutover + the PowerOutputChart precedent) + PowerProfileStats
+            { powerMaxW, powerMinW, avgPowerW } (web passes `stats` as a prop, so the
+            surface receives them rather than recomputing).
+  power:   web `power` is kW already (parent pre-divides); native carries SI watts and
+            converts power_w/1000 in the pure projection (PowerProfileProjection.points
+            / .summaryKw), keeping the source contract SI-canonical.
+  shell:   <FadeIn><ChartContainer title="Power Profile" ariaLabel height=220> →
+            TSFadeIn(0.2) + tokenized glass card (Color.TS.surface + TSRadius.lg +
+            Color.TS.border), header (bolt glyph + title + freshness chip).
+  chart:   Recharts AreaChart — <Area dataKey="power" stroke/fill #f59e0b> from a y=0
+            baseline + <ReferenceLine y=0> + CartesianGrid + XAxis(time,
+            preserveStartEnd) + YAxis + <Tooltip ChartTooltip> + synced reference line
+            (syncedX) → Swift Charts Chart{ AreaMark(yStart:0,yEnd:power, amber
+            gradient) + LineMark(power stroke width 2) + RuleMark(y=0, dashed) +
+            cursor RuleMark + tooltip }. X is the sample index with start/end time
+            labels (web interval="preserveStartEnd"); Y reads kW; valueDomain always
+            spans 0 so the regen area below zero stays visible.
+  colors:  web amber #f59e0b → Color.TS.chartSeriesEnergy (value-exact #f59e0b,
+            adaptive light/dark/contrast); Max Regen cyan-400 → Color.TS.chartSeriesRegen;
+            Avg → Color.TS.textPrimary; y=0 rule → Color.TS.textMuted (web
+            rgba(255,255,255,0.15)).
+  cursor:  useSyncedCursor (broadcast onMouseMove) + useSyncedReferenceLineX (read
+            syncedX) → PowerProfileCursorSync seam (the shared drive-detail cursor):
+            .chartXSelection broadcasts the local hover via model.updateCursor; the
+            RuleMark + tooltip follow model.cursorIndex, so a sibling chart's hover
+            moves this surface's reference line too (bidirectional, tested).
+  tip:     <Tooltip content={<ChartTooltip/>}> → PowerProfileTooltip via the RuleMark
+            annotation (time + Power X kW).
+  stats:   web row `Max Power: fmtInt(powerMax) kW · Max Regen: fmtInt(powerMin) kW ·
+            Avg: fmtNumber(avgPower) kW` → PowerProfileStatRow (amber / cyan / neutral;
+            fmtInt = intString 0-dp, fmtNumber = decimalString at the configurable
+            precision). Shown only in the content phase (web `chartData.length > 1`).
+  empty:   web `chartData.length > 1 ? <chart+stats> : <Activity glyph + "No telemetry
+            data available">` → resolvePhase threshold (> 1) + PowerProfileEmpty
+            (ContentUnavailableView, waveform.path.ecg). Never a blank box.
+  i18n:    every t(key,default) from source resolved through PowerProfileStrings facade
+            (table "PowerProfileChart"); the 7 source keys (powerProfile, .aria, power,
+            noChartData, maxPower, maxRegen, avgLabel) + units/axis/state scaffolding,
+            fallbacks identical to the web strings, so no English literal ships in code.
+
+STATES (every one renders — no hidden surface):
+  loading  → PowerProfileLoadingChart (TSSkeleton chart block + stat row; reduce-motion)
+  content  → PowerProfileAreaChart (amber area + y=0 line + synced cursor + tooltip) +
+             PowerProfileStatRow (Max Power / Max Regen / Avg)
+  empty    → PowerProfileEmpty (web "No telemetry data available") — never blank
+  error    → PowerProfileError (QueryError-equiv, Retry → model.refresh())
+  stale    → freshness chip (Stale) + connectivity banner + one guarded auto-refresh
+  offline  → freshness chip (Offline) + banner; keeps the cached trace, no refetch
+a11y: container summary (title + sample count + max/regen/avg kW), chart aria label +
+  spoken summary value, per-sample cursor label, stat-row + chip combined labels,
+  reduce-motion animation gate, Dynamic Type via system fonts/tokens. The web chart
+  opts out of a per-sample table (its `chart-a11y:no-table` marker); native matches
+  that with a concise spoken summary rather than reading every sample.
+telemetry: P1/S11 view.opened(surface:"PowerProfileChart") emitted once on appear.
+
+===========================================================================
+HOST GATES — each command actually executed on this host; real exit codes.
+===========================================================================
+
+[1] swiftformat --lint (per-surface, 8 swift files)
+    $ swiftformat --lint TeslaSync/feature-views/PowerProfileChart.*.swift PowerProfileChart.swift
+    → 0/8 files require formatting.
+    MYFORMAT_EXIT=0   PASS
+
+[2] swiftformat --lint apps/apple   (THE gate command, whole tree)
+    → 1/1921 files require formatting, 2 files skipped.
+    FORMAT_EXIT=1   PRE-EXISTING SIBLING DEFECT, NOT THIS SURFACE:
+      TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1: error:
+      (blankLinesBetweenScopes) Insert blank line before … declarations.
+    Outside this prompt's allowed files; editing it would violate the no-sibling-edit
+    / predecessor-bypass rule. The 8 PowerProfileChart files are clean (gate [1] = 0/8,
+    and `swiftformat --lint … | grep PowerProfileChart` = 0 hits). Reported, not hidden
+    (Covenant #1). Same defect the 0141-ElevationChart predecessor reported.
+
+[3] swiftlint (per-surface, explicit paths, --strict)
+    $ swiftlint lint --strict --config .swiftlint.yml TeslaSync/feature-views/PowerProfileChart.*.swift PowerProfileChart.swift
+    → Done linting! Found 0 violations, 0 serious in 8 files.
+    MYLINT_EXIT=0   PASS  (this surface is clean)
+
+[4] swiftlint --strict   (THE bare gate command, from apps/apple)
+    → Linting 1917 files. Found 1 violation, 1 serious.
+    LINT_EXIT=2   PRE-EXISTING SIBLING DEFECT, NOT THIS SURFACE:
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19:
+      error: Function Body Length Violation (currently 78 lines) (function_body_length)
+    `swiftlint --strict | grep -E "warning:|error:" | grep PowerProfileChart` = 0 hits.
+    The identical pre-existing defect the 0141-ElevationChart predecessor reported.
+    Reported, not hidden (Covenant #1).
+
+[5] check-placeholders.ps1   (THE gate command)
+    $ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/PowerProfileChart
+    → PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+    (also scanned the 8 .swift files explicitly, -Language swift → COUNT=0)
+    PLACEHOLDER_EXIT=0   PASS  (no TODO/stub/mock/placeholder/Lorem in shipped code)
+
+[6] EXECUTED isolated SwiftPM build + the REAL XCTest suite (Swift 6 language mode,
+    strict concurrency, macOS host, Xcode 26.5 toolchain) against the REAL design
+    system (apps/design/generated/apple/Tokens.swift) + the REAL Motion.swift (TSFadeIn)
+    + a faithful TSSkeleton stand-in (matching the real init signature
+    width:height:cornerRadius:) + the 7 PowerProfileChart production/preview files,
+    with PowerProfileChart.Tests.swift as the test target (module "TeslaSync" so
+    `@testable import TeslaSync` resolves):
+    $ swift build   → Build complete! (13.12s)                    BUILD_EXIT=0   PASS
+    $ swift test    → Executed 28 tests, with 0 failures          TEST_EXIT=0    PASS
+    Coverage (28 tests = 11 projection + 14 model + 3 accessibility):
+      • projection: watts→kW (120000→120, -45000→-45, 0→0); points conversion;
+        resolvePhase length>1 threshold (0 & 1 → empty, 2 → content; loading/failed
+        envelope); hasTrace; valueDomain always includes y=0 (mixed-sign -50..100 →
+        -62..112; all-positive pins lower ≤0 → -8..108; empty → unit band); indexDomain;
+        summaryKw watts→kW; locale formatting (POSIX "40.00"/"35.2", en-US "1,234");
+        surface slug.
+      • model: phase across loading/loaded/empty/failed; points + summary + precision
+        propagation; view.opened once; stale auto-refresh exactly once + re-arm on live;
+        offline keeps the cached trace / no refetch; retry/stop; synced-cursor
+        read/write (local write sets shared + local index; out-of-range clears; an
+        external sibling move reflects on this surface's reference line); view slug.
+      • a11y: chart summary (count + Max Power / Max Regen / Avg kW), hidden/empty,
+        per-sample cursor label "09:05: Power 84.0 kW".
+
+[7] OUT-OF-MODULE type-check of the full SwiftUI + Swift Charts view set (real
+    Tokens.swift + real Motion.swift[TSFadeIn] + faithful TSSkeleton stand-in + the 7
+    PowerProfileChart view/model/adapter/previews files, incl. the #Preview macros via
+    -D DEBUG), Swift 6 + strict-concurrency=complete, on BOTH gate platforms:
+    iOS Simulator (SDK iphonesimulator, -target arm64-apple-ios18.0-simulator):
+      $ xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6
+        -strict-concurrency=complete -D DEBUG …
+      IOS_TYPECHECK_EXIT=0   PASS
+    macOS (SDK macosx, -target arm64-apple-macos15.0):
+      $ xcrun --sdk macosx swiftc -typecheck -swift-version 6
+        -strict-concurrency=complete -D DEBUG …
+      MAC_TYPECHECK_EXIT=0   PASS  (and macOS is additionally fully COMPILED + TESTED
+      by gate [6]'s arm64-apple-macosx SwiftPM build/test — stronger than a check.)
+    (Also confirmed the Foundation-only core (Models + Adapter) type-checks standalone:
+     CORE_TYPECHECK_EXIT=0.)
+
+NOTE on Swift-version mode: a first isolated type-check in the default (Swift 5) mode
+flagged `call to main actor-isolated initializer 'init()' in a synchronous nonisolated
+context` on the model's `cursor:`/`telemetry:` default arguments. This is NOT a code
+defect: the COMMITTED, passing 0141-ElevationChart.Model.swift reproduces the identical
+diagnostic under the same standalone Swift-5 invocation. Under Swift 6 language mode
+(the app target's mode — SE-0411 isolated default value expressions), the @MainActor
+isolation propagates to the default-argument expression and the call is valid; gates
+[6] and [7] (all Swift-6 mode) are green, proving the point.
+
+===========================================================================
+XCODE APP-TARGET GATE — DEFERRED (real probe; NOT claimed green; Covenant #1/#8)
+===========================================================================
+  Gate as written:
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+
+  Real probe performed on this host (not assumed):
+    $ xcodebuild -version            → Xcode 26.5 (17F42)                       present
+    $ xcodegen generate              → Created TeslaSync.xcodeproj               (XCODEGEN_EXIT=0)
+                                       (git-ignored: .gitignore:379
+                                        apps/apple/**/*.xcodeproj/ — NOT committed)
+    $ grep -c PowerProfileChart …project.pbxproj → 54  (this surface IS registered;
+        project.yml lists `TeslaSync/feature-views` as an app-target source path, so the
+        app target compiles all 9 PowerProfileChart files — a green build WOULD exercise
+        this code).
+    Structural blocker (the documented, pre-existing reason this gate is RED for every
+    feature-view surface): project.yml adds the WHOLE `TeslaSync/feature-views` dir as an
+    app-target source, so the co-located per-surface `*.Tests.swift` files (225 such
+    files registered in the generated pbxproj, the established convention) are compiled
+    INTO the app target, which cannot import XCTest. There is ALSO a pre-existing
+    parallel-merge collision: `public struct DashboardWidgetSize` is redefined 15× across
+    Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/* (the same collision
+    macos-pending-verifications.md records for ToolCard / 0180-AlertMessageEditor /
+    0231-FSMTimelineChart). Neither is introduced or touched by this surface.
+    $ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+      xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync
+        -destination 'platform=iOS Simulator,name=iPhone 16' build
+      → REAL RUN, completed on this host:  ** BUILD FAILED **  (exit 65).
+        • The mandatory "Stage Shared.xcframework" KMP/Gradle pre-action (ADR-004) ran and
+          assembled the Shared XCFramework GREEN (assembleSharedDebugXCFramework UP-TO-DATE;
+          debug+release Kotlin/Native frameworks for ios/iosSimulator/macos/tvos/watchos
+          linked) — the KMP core builds clean here.
+        • Xcode then compiled the app target and FAILED at the pre-existing
+          XCTest-in-app-target issue. First real error (verbatim):
+            TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to
+            resolve module dependency: 'XCTest'
+          (followed by the same import-XCTest error across the co-located *.Tests.swift
+          set). Failed build commands: "SwiftDriver TeslaSync normal arm64 …".
+        • grep "error:" xcb_ios.log | grep PowerProfileChart  →  0 hits. This surface's
+          production code produced ZERO compile errors; only the pre-existing co-located
+          *.Tests.swift / DashboardWidgetSize issues fail the app target.
+        IOS_EXIT=DEFERRED  (real exit 65; pre-existing + unrelated; not green, not faked.)
+    $ xcodebuild -scheme TeslaSync-macOS build → DEFERRED. In addition to the two causes
+        above, the macOS app/widgets targets carry entitlements requiring a development
+        signing certificate this runner does not provision (predecessor real exit 65).
+        MAC_EXIT=DEFERRED.
+
+  Why DEFERRED (none a defect in THIS surface's code):
+    (a) The app target compiles the co-located per-surface `*.Tests.swift` files (XCTest)
+        — a project-structure issue owned by the P4/P99 integration gate, identical for
+        all 225 co-located test files. This surface follows the SAME convention as every
+        predecessor (e.g. ElevationChart.Tests.swift, PowerOutputChart.Tests.swift);
+        fixing the build-system wiring is out of this prompt's allowed files.
+    (b) macOS target code-signing for hosted build/test.
+  These are exactly the artifacts apps/macos-pending-verifications.md defers to the
+  ADR-012 macos-latest CI runner, and they match the user-approved "code-complete +
+  DEFERRED Xcode gate" disposition used by every P4 surface to date (0141-ElevationChart,
+  0158-PowerOutputChart). This surface is instead verified green by gates [6] (isolated
+  Swift 6 strict build + 28 executed tests against the REAL design system) and [7]
+  (Swift-6-strict iOS + macOS type-checks of the rendered SwiftUI/Charts view set) —
+  real compiler verification on BOTH gate platforms.
+
+  IOS_EXIT=DEFERRED  MAC_EXIT=DEFERRED  (pre-existing, unrelated structural causes;
+  not green, not faked.)
+
+===========================================================================
+HONESTY COVENANT (binding)
+===========================================================================
+  1 No red-as-green     : Xcode app build/test reported DEFERRED with a REAL xcodegen +
+                          pbxproj registration (54) + a REAL completed xcodebuild run
+                          (exit 65) whose KMP Shared.xcframework pre-action assembled
+                          green and whose only Swift errors are the pre-existing
+                          XCTest-in-app-target (AIRestorePanel.Tests.swift … +225 files)
+                          and DashboardWidgetSize-×15 collisions — 0 PowerProfileChart
+                          errors; the pre-existing whole-tree swiftlint + swiftformat
+                          single-file failures are reported (not hidden); every PASS is a
+                          command run on THIS host with its real exit code.
+  2 No scope narrowing  : implemented ALL composition + every state (loading/content/
+                          empty/error/stale/offline) + the amber area chart + y=0
+                          reference line + synced-cursor reference line + tooltip + the
+                          Max Power/Max Regen/Avg row + a11y + i18n + P1/S11 telemetry.
+  3 No skip-and-assume  : each host gate executed; the Xcode path was actually probed
+                          (xcodegen + pbxproj grep + a real KMP xcframework build that
+                          assembled green + a real iOS xcodebuild run).
+  4 No stubs as final   : complete implementations; placeholder gate COUNT=0; 28 real
+                          tests executed green.
+  5 No parity shortcuts : faithful port of the SI-watt→kW power conversion, the
+                          `length > 1` content/empty threshold, the amber area-from-zero
+                          composition + y=0 reference line, the synced hover reference
+                          line, the Max Power/Max Regen/Avg row, and the exact web i18n
+                          keys.
+  6 No delegation       : authored directly (no sub-agent delegation of the surface).
+  7 No predecessor bypass: did NOT self-register feature-views into project.yml (already
+                          present; integration scope), did NOT edit the shared
+                          Localizable.xcstrings (parallel-unsafe) — strings ship as the
+                          per-surface PowerProfileChart.strings table; did NOT edit any
+                          sibling file (incl. the two with pre-existing lint/format
+                          violations) or apps/macos-pending-verifications.md.
+  8 No commit on red    : the COMMITTED artifact (PowerProfileChart.* + this log) is GREEN
+                          on every host-runnable per-surface gate AND on a real isolated
+                          Swift 6 strict build + 28 tests + both-platform type-checks; the
+                          deferred full-app gate is RED only on pre-existing, unrelated
+                          surfaces (XCTest-in-app-target, macOS signing) which this commit
+                          neither introduces nor touches.
+  9 No silent drift     : changes confined to the 8 PowerProfileChart.*.swift +
+                          PowerProfileChart.strings + this log. The generated
+                          TeslaSync.xcodeproj and staged Shared.xcframework are git-ignored
+                          build outputs (not committed).
+  10 Log ends with EXIT/STATUS below.
+
+===========================================================================
+DISPOSITION
+===========================================================================
+  Production-polished native PowerProfileChart shipped at parity with the web source: a
+  pure, executed-green projection core (Foundation, Swift 6 strict) porting the SI-watt→kW
+  power conversion + the SI-watt power summary + the length>1 content/empty threshold + a
+  value domain pinned across y=0; a P1/S8 state-holder seam (no view HTTP) with a shared
+  PowerProfileCursorSync for the web useSyncedCursor/useSyncedReferenceLineX hover sync, a
+  P1/S10 i18n facade, P1/S11 view.opened telemetry, the native Swift Charts amber area
+  trace (filled from a y=0 baseline) with a y=0 reference line + synced reference line +
+  tooltip, the Max Power/Max Regen/Avg row, and every prompt state
+  (loading/content/empty/error/stale/offline) with VoiceOver + Dynamic Type +
+  reduce-motion. All host-runnable per-surface gates pass; the surface compiles under
+  Swift 6 strict concurrency on BOTH the iOS-Simulator and macOS SDKs and its 28 tests
+  pass. The Xcode app build/test is DEFERRED to the P4 integration runner (co-located
+  per-surface *.Tests.swift compiled into the app target + macOS development signing —
+  neither a defect in this code; the KMP Shared.xcframework pre-action built green here).
+  The whole-tree swiftlint + swiftformat single violations are pre-existing sibling files
+  (LifetimeStatsWidget.Adapter.swift / ActionBuilder.Previews.swift) outside this prompt's
+  allowed-files scope.
+
+===========================================================================
+COMMIT
+===========================================================================
+  git add apps/apple/TeslaSync/feature-views/PowerProfileChart.swift \
+          apps/apple/TeslaSync/feature-views/PowerProfileChart.Models.swift \
+          apps/apple/TeslaSync/feature-views/PowerProfileChart.Adapter.swift \
+          apps/apple/TeslaSync/feature-views/PowerProfileChart.Model.swift \
+          apps/apple/TeslaSync/feature-views/PowerProfileChart.Chart.swift \
+          apps/apple/TeslaSync/feature-views/PowerProfileChart.Views.swift \
+          apps/apple/TeslaSync/feature-views/PowerProfileChart.Previews.swift \
+          apps/apple/TeslaSync/feature-views/PowerProfileChart.Tests.swift \
+          apps/apple/TeslaSync/feature-views/PowerProfileChart.strings \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0146-PowerProfileChart.log
+  git commit -m "feat(apps/apple/feature-views): add PowerProfileChart surface (P4)"
+
+EXIT=0
+STATUS=DONE

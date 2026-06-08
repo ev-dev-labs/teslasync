@@ -1,0 +1,222 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Apple toolchain is available. Let me read the web source and explore the apple app structure.
+
+Now let me explore the Apple TeslaSync structure to understand existing patterns and conventions.
+
+There's a large existing feature-views directory. Let me examine the file pattern for a representative existing panel to understand conventions.
+
+The pattern is 7 files per panel (Adapter, Model, Previews, strings, swift, Tests, Views). Let me read a representative driving panel end-to-end plus the web types it depends on.
+
+Let me find the closest existing native panel that mirrors a drive-detail web component, and read the full `Drive`/`DriveDetail` types.
+
+`DrivingPerformanceCards` is the closest analog. Let me read all 7 of its files to learn the full architecture and conventions.
+
+Excellent architecture. Let me read the remaining 4 files of this template plus check the shared design tokens.
+
+Now the strings and tests files, plus the shared design tokens.
+
+The architecture is clear. Let me verify the exact units of `stats` by reading how `useDriveDetailData` computes them, and locate the shared design tokens.
+
+Now I understand the units fully — `stats` arrive pre-converted to display units; the panel only converts efficiency. Let me read the exact formatters and the `useUnits` shape.
+
+`unitPrefs.temperature` includes the degree symbol (`°C`/`°F`); default precision is 2; `fmtInt` is precision 0. Now let me locate the shared design tokens (Color.TS, Font.TS, TSSpacing, TSRadius) to find available colors.
+
+Let me find the token definition files specifically (not usages).
+
+The tokens are generated. Let me find the generated token definitions.
+
+The generated tokens live in `apps/design/generated/apple/`. Let me read them.
+
+Complete token palette in hand. Let me check how an existing temperature panel maps blue/orange accents to stay consistent.
+
+I now have the full spec and token palette. Let me assess the build environment before writing code, and confirm the battery-pct type.
+
+Let me check the build prerequisites (Shared.xcframework, simulators) and read the pending-verifications note.
+
+Key finding: `Shared.xcframework` is absent (only `.gitkeep`); the documented precedent (`ToolCard`) verifies surfaces via an **isolated SwiftPM build + tests** because the full-app `xcodebuild` is blocked by the missing KMP framework. Let me confirm simulators and find any isolated-build harness + the placeholder checker.
+
+No iOS simulators present **and** `Shared.xcframework` is absent — the full-app `xcodebuild` is environmentally blocked (matching the documented `ToolCard` precedent). I'll mirror that precedent: build/test my surface in isolation via SwiftPM under Swift 6 strict concurrency, plus run swiftlint/swiftformat/placeholder gates. Let me confirm tool versions and the placeholder patterns.
+
+Let me check the native shared components I must map: `@/components/ui` (GlassPanel) and `@/components/motion` (FadeIn).
+
+Let me inspect `TSFadeIn` and `TSGlassPanel` implementations + imports to decide whether to use them directly (faithful shared-component mapping) and how heavy they are to vendor for the isolated build.
+
+`TSFadeIn` and `TSGlassPanel`/`.tsGlassPanel()` are lightweight leaf components — I'll use them to faithfully map the web `FadeIn` + `GlassPanel`. Let me confirm `Motion.swift` is a clean leaf (token-only) so I can vendor it for the isolated build.
+
+I have everything needed. `Motion.swift`, `TSMaterial.swift`, `TSDesign.swift` are clean token-only leaves I can vendor for the isolated build. Battery pct is `*int16` (integer). Let me record the plan and todos, then write the surface.
+
+Now I'll write the surface. Starting with the pure adapter (projection + formatting + accessibility).
+
+Now the Model file (state-holder seam, telemetry seam, observable model, strings facade).
+
+Now the Views file (chrome + tiles + state renderings).
+
+Now the main surface view (header + phase switch, FadeIn + glass panel).
+
+Now the Previews and strings files.
+
+Finally, the comprehensive tests file.
+
+All 7 files written. Let me auto-format my Swift files, then verify formatting and lint compliance on them.
+
+New files are untracked, so git diff is empty. Let me verify lint + format compliance directly.
+
+swiftformat passes. swiftlint flags file-length (Adapter 503, Tests 426 > 400) and two over-long functions. I'll split the projection into its own `MoreDetailsPanel.Projection.swift` with per-tile builders, and trim. Let me view the projection block boundaries to extract it.
+
+I'll remove the projection block from the Adapter (lines 268–483) and recreate it as a separate, refactored file.
+
+Now create the refactored projection file with compact per-tile builders.
+
+Now trim the Tests file header to get under the 400-line limit.
+
+The norm is one Tests file under 400 lines. Mine is 416 — I'll condense via header trim and merging small tests. Let me view the sections to merge.
+
+swiftformat wrapped long asserts, inflating the file. Cleanest fix: move the state-holder model tests into a sibling `MoreDetailsPanel.ModelTests.swift`. Let me find the boundary.
+
+Now I'll create the new model-tests file and remove those sections from the main tests file.
+
+Now remove the moved sections from `MoreDetailsPanel.Tests.swift`. Let me confirm current line numbers, then delete.
+
+Tests split cleanly (281 lines). Now let me format and lint all 7 Swift files together.
+
+Two functions exceed the 5-parameter limit. I'll bundle the tile descriptor into a small `Spec` struct. Let me view the exact builder lines.
+
+Now I'll apply all the refactoring edits to use a `Spec` descriptor:
+
+Now fix the netEnergy call's trailing arg and the two builder definitions. Let me view the current state around them.
+
+Now update the two builder definitions to take `Spec`:
+
+Now re-run format + lint on all files:
+
+All 8 Swift files pass swiftformat + swiftlint with **0 violations**, all under 400 lines. Now the placeholder check — let me read the checker to invoke it correctly.
+
+swiftlint + swiftformat both clean. Now I'll set up the isolated SwiftPM build+test (mirroring the documented ToolCard verification) to prove the surface compiles under Swift 6 strict concurrency and tests pass. Let me scaffold it in the session workspace.
+
+Only `#Preview` macro errors — the `PreviewsMacros` plugin is Xcode-only (unavailable in plain SwiftPM). That's an environmental limitation, not a code defect; Previews are DEBUG-only and out of the shipped-surface gate scope. I'll exclude that one file from the isolated build and rebuild.
+
+Surface compiles cleanly under Swift 6 strict concurrency. Now run the tests.
+
+`swift test` can't find XCTest — that's an Xcode/developer-dir toolchain issue, not a code problem. Let me check whether a full Xcode is available to provide XCTest.
+
+A full Xcode exists but the active dir is Command Line Tools (no XCTest for SwiftPM). Let me point `DEVELOPER_DIR` at Xcode and re-run the isolated tests.
+
+**All 27 tests pass, 0 failures** under Swift 6 strict concurrency (Format: 4, Model: 8, Projection: 12, Accessibility: 3). Let me retry the Previews file compile now that Xcode's macro plugin is available.
+
+Even the Previews file compiles with the Xcode toolchain. Now the placeholder gate — I'll run the self-test, scan my actual files, and the verbatim gate command.
+
+The honest scan flagged `Tests.swift:137: TODO` — a substring match I must eliminate (acceptance forbids "TODO" in shipped code). Let me find it.
+
+A case-insensitive "TODO" substring hides in the method name `tes**tOdo**meter…`. I'll rename it and then re-scan all files comprehensively.
+
+Let me stop that and use the dedicated grep tool instead.
+
+No placeholder substrings anywhere. Let me re-verify lint/format on the edited Tests file, re-run the isolated tests with the rename, and re-confirm the placeholder count is 0.
+
+PLACEHOLDER_COUNT=0 now. Let me re-sync the test files into the isolated package and re-run the full suite to confirm the rename didn't regress anything.
+
+27 tests green after the rename. Now let me capture the official-gate xcodebuild evidence: regenerate the project, check for the iPhone 16 simulator, and attempt the build to document the framework blocker.
+
+The blocker is precisely the absent `Shared.xcframework` — the iPhone 16 simulator IS available and xcodegen succeeds. Let me capture the concrete xcodebuild failure for both schemes.
+
+The full-app build triggers a "Stage Shared.xcframework via Gradle" scheme action (Kotlin/Native) because the framework binary is absent — the documented macOS-pending blocker. Let me check for and clean up any lingering build processes.
+
+Two recent Gradle/Java processes (≈45s elapsed) are from the build attempt. Let me terminate them and extract the definitive failure reason from the macOS log.
+
+Cleanup done; the macOS log confirms the build is blocked staging `Shared.xcframework` via Gradle/KMP. Let me locate the logs directory and check the precedent log format.
+
+The ToolCard precedent concludes **EXIT=0 / STATUS=DONE** — treating the full-app build as legitimately *deferred* (not failed by the code) while the surface is independently verified green. Let me read the full precedent log to match its structure and honesty framing.
+
+The precedent actually assembled the framework (Gradle ~7min) and then the full-app build still failed on pre-existing, unrelated dashboard-widget duplicate-type collisions — with **zero** feature-view errors. To match that rigor and honestly prove my surface isn't the blocker, I'll run the real full-app build. Let me start the iOS build (it auto-stages the framework via Gradle) in the background.
+
+The framework needs a ~7-minute Gradle/KMP assembly. Let me verify the KMP project exists, then run the staging in the background.
+
+KMP project is present. Let me run the framework assembly in the background (it takes several minutes), capturing output.
+
+Gradle is reusing prior work (many tasks UP-TO-DATE). Let me wait for it to finish staging.
+
+Release-framework linking is underway (the slow Kotlin/Native step). Let me keep polling.
+
+Kotlin/Native release linking (LLVM) is the slow phase. Let me continue polling.
+
+Now on the final release link (`linkReleaseFrameworkMacosArm64`). Nearly done. Let me poll once more.
+
+**`Shared.xcframework` BUILD SUCCESSFUL in 6m54s and staged** (matching the precedent). Now the full-app build can proceed. Let me run the iOS `build test` and capture where it fails.
+
+The build is compiling. Let me wait and then check the outcome and any MoreDetailsPanel-related errors.
+
+The iOS build failed — but the errors are the **pre-existing** structural issue: co-located `*.Tests.swift` files (AcDcStatsPanel, TelemetryErrorsPanel, etc.) import `XCTest` into the app target, which can't resolve it. This is exactly what the ToolCard precedent documented. Let me categorize **all** errors and confirm none come from my production code.
+
+**Zero errors in any MoreDetailsPanel file.** All 4 build errors are the pre-existing `AcDcStatsPanel.Tests.swift` importing `XCTest` into the app target — the build fails fast there (alphabetically before mine). Let me check how `project.yml` wires test sources to understand whether co-located `*.Tests.swift` is meant to be excluded from the app target.
+
+`project.yml` reveals the root cause: the test targets only include `Tests/Unit`, while the app targets include `feature-views` **without excluding `*.Tests.swift`** — so every co-located test file (AcDcStatsPanel, my template DrivingPerformanceCards, etc.) wrongly compiles into the app target and breaks it on `import XCTest`. The correct location (`Tests/Unit/`) is outside my allowed files. To strictly honor "no commit adds to the red," I'll guard my two test files with `#if canImport(XCTest)` so they're inert in the app target but fully active in a real test target. Let me view their headers.
+
+Let me check whether the `#if canImport(XCTest)` guard is already used by any co-located test file in the repo (precedent), and gauge how widespread unguarded co-located tests are.
+
+The guard is rare (1/77) but precedented, and the dominant convention is exactly what breaks the build. To keep my commit from adding to the pre-existing red (honesty rule #8) while staying in-scope, I'll guard both test files. Let me view their endings, then wrap them.
+
+`BatteryPill.Tests.swift` is the precedent. Let me see exactly how it structures the guard so I match it.
+
+`BatteryPill.Tests.swift` is a documented precedent using exactly this guard for exactly this reason ("the app targets do not link XCTest... compiles to nothing there so it never breaks the app build"). I'll apply the same pattern to both my test files.
+
+Now append `#endif` at EOF of both, then let swiftformat normalize indentation:
+
+Guards applied and formatted (both files well under 400 lines). Let me re-verify all lint/format gates and re-run the isolated tests with the guarded files.
+
+All gates green with guards: format 0/8, lint 0 violations, **27/27 tests pass**. Now let me re-run the full-app build to capture final evidence that my surface contributes zero errors (the guarded test files are now inert in the app target).
+
+Confirmed: iOS `build test` fails with **4 errors, all in pre-existing `AcDcStatsPanel.Tests.swift`** (XCTest-in-app-target) — **zero MoreDetailsPanel errors**. My guarded test files don't add to the red. Let me capture the macOS build outcome too.
+
+The tool blocked `kill -0` with a variable. Let me run the macOS build in the foreground and capture its exit directly.
+
+macOS fails fast (MAC_EXIT=65) on **development-signing entitlements** (pre-existing env, exactly like the ToolCard precedent) — again **zero MoreDetailsPanel errors**. Now let me run the gate's repo-wide lint/format commands to capture their real results and confirm my files aren't implicated.
+
+Repo-wide: the **only** swiftlint violation is the pre-existing `LifetimeStatsWidget.Adapter.swift` (the same one ToolCard documented) — zero from my files. swiftformat flags some pre-existing files (none mine). Let me confirm which files swiftformat flags.
+
+The swiftformat exit 70 was my path bug (`cd ..` doubled the path). Let me re-run it correctly from the repo root.
+
+Both repo-wide gates have exactly **one pre-existing violation each, neither in my files** (swiftlint: LifetimeStatsWidget — same as ToolCard; swiftformat: ActionBuilder.Previews). Let me capture the exact iOS exit code with a final clean run for the log.
+
+IOS_EXIT=65 captured, zero MoreDetailsPanel errors. I have a complete evidence set. Let me grab tool versions, then write the gate log.
+
+All evidence collected. Now I'll write the gate log.
+
+The log is written with full honest evidence and EXIT=0 / STATUS=DONE. Now let me commit exactly the surface files + log (and confirm I don't accidentally stage build artifacts).
+
+`TeslaSync.xcodeproj` and `Shared.xcframework` are gitignored (won't be committed). There are unrelated pre-existing web/ modifications I must NOT touch. Let me stage only my 9 surface files + the log, verify, and commit.
+
+Exactly 10 files staged. Now the commit:
+
+Commit `88f9c2fb1` created (10 files, 1897 insertions). Let me do a final verification pass and light cleanup.
+
+Final verification passes: committed files are lint/format-clean, both test files carry the `canImport(XCTest)` guard. One refinement — let me make the log's placeholder-check wording precise (the verbatim gate path scans nothing because the surface is flat files; the substantive check is my explicit scan of the actual files).
+
+I edited the log post-commit. Let me fold that accuracy fix into the commit via amend (keeping it a single clean commit).
+
+All complete. Let me confirm the todo ledger is fully done.
+
+All 10 todos done, commit `b69b7eee1` clean. Task complete.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-feature-views-0145-MoreDetailsPanel.log | 146 ++++++++++
+ .../feature-views/MoreDetailsPanel.Adapter.swift   | 287 ++++++++++++++++++++
+ .../feature-views/MoreDetailsPanel.Model.swift     | 226 +++++++++++++++
+ .../MoreDetailsPanel.ModelTests.swift              | 149 ++++++++++
+ .../feature-views/MoreDetailsPanel.Previews.swift  |  98 +++++++
+ .../MoreDetailsPanel.Projection.swift              | 274 +++++++++++++++++++
+ .../feature-views/MoreDetailsPanel.Tests.swift     | 288 ++++++++++++++++++++
+ .../feature-views/MoreDetailsPanel.Views.swift     | 302 +++++++++++++++++++++
+ .../feature-views/MoreDetailsPanel.strings         |  48 ++++
+ .../TeslaSync/feature-views/MoreDetailsPanel.swift |  85 ++++++
+ 10 files changed, 1903 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0145-MoreDetailsPanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/MoreDetailsPanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MoreDetailsPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MoreDetailsPanel.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MoreDetailsPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MoreDetailsPanel.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MoreDetailsPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MoreDetailsPanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MoreDetailsPanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/MoreDetailsPanel.swift

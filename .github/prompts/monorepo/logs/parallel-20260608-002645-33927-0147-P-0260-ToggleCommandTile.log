@@ -1,0 +1,110 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Toolchain is available (Swift 6.3.2, swiftlint, swiftformat, xcodebuild). Let me examine the existing patterns. The `AIUsageCard.*` files appear to be the canonical template (they were just modified).
+
+The actual files use `AiUsageCard` casing (git shows `AIUsageCard` due to case-insensitive FS). There's an existing `CommandTile` — the closest analog to `ToggleCommandTile` (both in web `features/system/components/`). Let me study it and the web `commands` module.
+
+`CommandTile` is the ideal template — a direct sibling. Let me read all its files plus the web source and commands module.
+
+Excellent, detailed template. Let me read the rest of the CommandTile files plus supporting types.
+
+Now let me understand the `CommandDef` and `VehicleState` types from the web `commands.ts`, focusing on the toggle-specific fields (`stateField`, `commandOff`, `iconOff`, `inputConfig`).
+
+Now let me locate the P1/S9 token definitions (TSTone, TSMaterial, TSRadius, etc.) to confirm available API.
+
+Tokens are generated under `apps/design/generated/apple`. Let me find and inspect them.
+
+Only Command Line Tools are installed (no full Xcode), so `xcodebuild`/simulators are unavailable. Let me confirm what I *can* run for verification (swiftc typecheck, swiftlint, swiftformat, placeholder check).
+
+Only Command Line Tools are present (no Xcode), but `pwsh`, `swiftlint`, `swiftformat` are available and the macOS SDK can typecheck SwiftUI. I'll build the full surface, then verify via a standalone SwiftPM module (typecheck + run tests), swiftlint, swiftformat, and the placeholder gate. `xcodebuild` steps will be BLOCKED with evidence. Let me read the lint/format configs and TSMaterial.
+
+Now I understand the full picture. Key constraint: all my types share the `TeslaSync` module with `CommandTile`, so I must avoid name collisions. Let me verify my intended `Toggle`-prefixed names are unique across the module.
+
+All 31 names are unique. Let me set up tracking and write the plan, then build the surface.
+
+Now I'll write the surface. Starting with the Adapter (pure projections):
+
+Now the Model file (seams + observable view model):
+
+Now the View entry point and the composed Views:
+
+Now the composed Views:
+
+Now the strings catalog contribution:
+
+Let me refine the Model's staleness/`lastChangeAt` initialization for correct controlled-value freshness semantics:
+
+Now the Previews (every state):
+
+Now the comprehensive test suite:
+
+All 7 files created. Now let me set up a temporary SwiftPM module to typecheck and actually run the unit tests (since `xcodebuild` is unavailable).
+
+Badges only needs SwiftUI + Tokens. Let me build a temporary SwiftPM package to typecheck and run the tests.
+
+Only the `#Preview` macro fails — it requires Xcode's PreviewsMacros plugin (unavailable with CLT). The real code compiles. This is a tooling limit, not a code error (CommandTile uses the same macro and builds in CI). Let me exclude preview blocks from the SPM compile and run the build + tests.
+
+The production code compiles cleanly. Now run the unit tests:
+
+`XCTest` ships with Xcode, not CLT — so `swift test` can't import it. To actually *run* my test logic (not just compile it), I'll add a minimal `XCTest` shim module + a manual runner, building `TeslaSync` with `-enable-testing` so `@testable import` works. First, extract the test method names.
+
+16 adapter + 25 model = 41 tests. Let me build the shim package and a generated runner:
+
+All 41 tests pass. Now let me validate `ToggleCommandTile.Previews.swift` typechecks against the module by transforming the Xcode-only `#Preview` macro into equivalent functions:
+
+Previews typecheck cleanly (13/13). Now the real gate tools on the repo files — swiftformat first (auto-format my files, then lint the tree):
+
+Only 1 file got a minor reformat (they're untracked so `git diff` is empty). Let me run the full gate tooling — swiftformat --lint, swiftlint --strict on my files, and the placeholder gate:
+
+swiftformat clean. swiftlint flags `file_length` (Model 430>400, Tests 657>400) and `type_body_length` (Tests class 353>350). The repo convention splits surfaces into multiple files to stay under these limits. Let me check how the project wires test targets before splitting.
+
+The app target globs `TeslaSync/feature-views`, and the sibling `CommandTile.Tests.swift`/`.Previews.swift` already live there — so my split files follow the same accepted convention. I must satisfy `swiftlint --strict` (a runnable gate): split the oversized files. Let me confirm sibling sizes and any excludes first.
+
+Confirmed convention: siblings split tests (`.Tests` + `.AdapterTests`/`.ModelTests`) and keep files <400. I'll split my oversized files the same way. Let me view the Model's in-memory seams section to extract it cleanly.
+
+Let me create the Harness file (in-memory seams) and trim the Model:
+
+Now split the tests. Remove the monolith and create three focused files:
+
+Now the two model-test files (split to satisfy `file_length`/`type_body_length`), each self-contained:
+
+Now re-format, check sizes, and re-run swiftlint/swiftformat on all 9 files:
+
+swiftformat: 0/9 need formatting. swiftlint --strict: **0 violations**. All files <400 lines. Now re-verify compile + tests with the split layout — refresh both temp packages and re-run:
+
+Production + previews compile. Now refresh the test-runner package with the split test files and re-run all 41 tests:
+
+All 41 tests pass across the 3 classes. Now the placeholder gate. Let me check how the script resolves its `-Path` then run it:
+
+The scanner flags case-insensitive `Placeholder` — my Views use `.redacted(reason: .placeholder)`. Let me find every forbidden token across my files:
+
+Only one match — `.redacted(reason: .placeholder)`. The muted Capsule is already the skeleton; I'll drop the redaction modifier (it's redundant on a shape and trips the scanner):
+
+Now re-verify Views compiles, re-lint, and run the placeholder gate (both the verbatim gate command and an isolated real scan of my files):
+
+Now the placeholder gate — isolated real scan of my files plus the verbatim gate command:
+
+Both placeholder scans clean (COUNT=0). Now let me check the gate log directory and a sibling log for format, then write the gate log.
+
+There's an established sibling log format. My situation differs from sibling 0002 (which had Xcode but a missing xcframework, exit 65) — here there's **no Xcode at all**, which is precisely the prompt's "capability unavailable → STATUS=BLOCKED" clause. Let me capture the real xcodebuild evidence and run the full gate steps honestly.
+
+Confirmed: no Xcode (`xcodebuild` exit 1, zero simulators) — the BLOCKED evidence. Now run the whole-tree swiftformat/swiftlint as the gate does, to capture honest exit codes:
+
+Whole-tree swiftformat fails only on a **pre-existing** file (`ActionBuilder.Previews.swift`, not mine — outside my allowed files). My 9 files are clean. Let me capture whole-tree swiftlint similarly:
+
+Whole-tree swiftlint found 1 violation in 1918 files. Let me identify it (my 9 already passed at 0):
+
+The single whole-tree swiftlint violation is in `LifetimeStatsWidget.Adapter.swift` (pre-existing, not mine). **All 9 of my files pass clean.** 
+
+Decision on status: my prompt's capability clause is explicit — "If unavailable on the runner → STATUS=BLOCKED with API evidence." Unlike sibling 0002 (Xcode present, exit 65 from a missing xcframework), here Xcode is entirely absent. That's precisely the capability-unavailable condition → **STATUS=BLOCKED**, with all runnable gates green. Let me write the honest gate log.
+
+The gate log is written. Let me finalize: update todos, clean up temp artifacts, verify the working tree, and stage only my allowed files.
+
+Working tree has pre-existing changes from other slots (AIUsageCard, web files) — I'll stage **only** my 10 surface files + the log, then commit.
+
+Exactly my 11 files staged. Now commit:
+
+All 11 files committed (`a73eafee5`); the other slots' pre-existing changes were correctly left unstaged. Let me confirm the todo ledger is clean.
+
+All 8 todos done. The surface is complete, committed, and verified to the maximum extent this runner allows.
+

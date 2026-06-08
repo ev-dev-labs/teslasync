@@ -1,0 +1,106 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Key findings: `xcodebuild` requires full Xcode but only Command Line Tools are installed. There's an existing `apps/apple` structure with feature-views already committed. Let me explore the patterns and web source.
+
+Now let me study the established conventions. I'll examine the freshest complete feature view (AiUsageCard) and the shared infrastructure.
+
+`Sources` is at `apps/apple/Sources`. Let me read the AiUsageCard template files and explore shared infrastructure in parallel.
+
+Excellent. Now let me read the rest of the AiUsageCard template files and the shared infrastructure (tokens, motion, state-holder facade).
+
+Let me read the remaining template files and the shared design tokens / motion / units infrastructure.
+
+Let me locate the design token definitions and shared primitives (TSSpacing, Font.TS, TSFadeIn, TSSkeleton, TSButton) and the units/state-holder facade.
+
+Let me read the design tokens, units facade, state-holder primitives, and shared components.
+
+Let me check the build tooling reality (pwsh, prior logs) and read the design tokens plus test conventions.
+
+pwsh is available; xcodebuild is not. Let me check how the prior AiUsageCard log handled the gate, read the placeholder checker, and the test conventions.
+
+The convention is clear: complete surface + isolated SwiftPM build/test + lint/format/placeholder green, with the full-app xcodebuild gate DEFERRED. Let me verify the Xcode situation and read test/component conventions.
+
+I now have the full picture. Xcode 26.5 is available via `DEVELOPER_DIR`. Let me read the web data types, conversion helpers, and key components for exact parity, plus check for any existing native RecentActivity files.
+
+There's already an existing native `RecentActivity.*` implementation committed. I need to assess it against this prompt's spec. Let me resolve the git-tracking question and read the existing files.
+
+All 11 files are tracked and committed (2309 lines total). The only missing artifact is the log. I must verify the existing implementation meets this prompt's spec before recording it as done. Let me read the implementation.
+
+The existing `RecentActivity.*` files implement a **different** surface — prompt 0130, parity of `features/dashboard/components/RecentActivity.tsx` (3 panels: feed + battery chart + fleet performance). This prompt (0277) wants `features/vehicles/components/RecentActivity.tsx` (2 panels: drives + charges, no charts). Let me confirm the collision.
+
+Both P-0130 (dashboard) and P-0277 (vehicles) target the same `RecentActivity.*` stem — a true collision. Let me check the parity manifest and both prompt files to find the intended disambiguation.
+
+Let me investigate the collision resolution precedent and the existing implementation's blast radius before deciding.
+
+This is a genuine same-name collision: the existing `RecentActivity.*` files are the **dashboard** variant (P-0130), and this prompt (P-0277) needs the **vehicles** variant. Both prompts declare the identical stem. Following the established precedent (ship the new surface, preserve the predecessor byte-identical, disclose fully), I'll ship the vehicles surface as a distinct `RecentActivity.Vehicles.*` namespace within the allowed glob.
+
+First, let me extract exact parity details from the web source's data types and helpers.
+
+Let me get the exact conversion constants and the display components (AnimatedNumber, TimeStamp, InlineMetric, IconBox) for faithful parity.
+
+I have the exact parity math. Now let me read the shared SwiftUI primitives I'll use and enumerate all existing `RecentActivity*` symbols to avoid collisions.
+
+Let me confirm the canonical card/panel primitive and typography helpers so my views match the established native conventions.
+
+The canonical `TSGlassPanel` exists (web `GlassPanel` parity). I have all conventions. Let me read the lint/format configs to ensure compliance, then set up my plan.
+
+I have complete understanding. Let me record the plan and todos, then build the surface.
+
+Now I'll create the surface. Starting with the pure adapter core:
+
+I referenced the input DTOs but haven't defined them yet. Let me add them to the adapter (pure value types):
+
+Now the projection:
+
+Now the views (panels, rows, per-panel empty):
+
+Now the chrome (freshness chip, banner, loading, error):
+
+Now the main surface entry:
+
+Now the previews:
+
+Now the strings catalog:
+
+Now the adapter unit tests:
+
+Now the projection + model + a11y tests:
+
+All 10 files created. Let me run the formatter on my files, then verify formatting and lint.
+
+swiftformat clean. Now swiftlint on my files:
+
+One brace-spacing violation from a wrapped signature. Let me shorten the preview helper names so they fit on one line:
+
+swiftformat and swiftlint conflict on the wrapped signature. Since it now fits on one line (100 chars), let me collapse it manually:
+
+Format and lint both clean. Now let me check the placeholder scanner — first how it resolves `-Path`, then run it.
+
+The script needs a real directory. Like prior surfaces, I'll scope it to my files via a temp dir. First, a direct grep for any forbidden patterns:
+
+The word "placeholders" in a comment trips the scanner. Let me reword it:
+
+Now run the official scanner scoped to my files (copied to a temp dir, mirroring prior surfaces):
+
+Placeholder gate green (COUNT=0). Now the isolated SwiftPM build+test against the real design system, using the Xcode toolchain — the same verification the prior surfaces used. Let me set up the harness.
+
+All deps present. Let me create the isolated package and build+test it under the Xcode toolchain:
+
+Build clean under Swift 6 strict concurrency. Now run the tests:
+
+All 35 tests pass under the Xcode XCTest runtime. Let me clean up and verify the dashboard predecessor files are untouched and only my files are new.
+
+Predecessor untouched; my 10 files are new. Let me capture tool versions for the log, then write it.
+
+Now I'll write the gate log:
+
+Now let me stage exactly my 10 files + the log (excluding the unrelated pre-existing modifications), and verify the staged set:
+
+Staged set is exactly my 11 files; pre-existing changes correctly excluded. Committing:
+
+Committed as `3b6012f1f`. Let me do a final verification of the commit contents and confirm the predecessor files were not included:
+
+All verified. Let me confirm all todos are complete:
+
+All work complete and verified. Task finished.
+

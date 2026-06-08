@@ -1,0 +1,161 @@
+I'll start by exploring the repository structure and understanding what exists, then check toolchain availability.
+
+Let me check xcodebuild more carefully and read the web source files.
+
+xcodebuild needs Xcode but CLT is active. `/Applications/Xcode.app` exists, so let me try pointing `DEVELOPER_DIR` at it, and explore the existing apple app structure.
+
+Xcode 26.5 works via `DEVELOPER_DIR`. Now let me explore the `feature-views` directory and find existing chart-based examples to use as templates.
+
+`SentryModeChart` is an existing chart surface — a perfect template. Let me read all its files.
+
+Excellent template. Let me read the rest of the SentryModeChart files.
+
+Now let me read the Previews, Tests, and strings files, plus the design tokens.
+
+I have a strong template. Now let me examine the design tokens, web helper utilities (`fmtNumber`, `CHARGER_COLORS`, `ChartContainer`), the `ChargingSession` type, and the project build config.
+
+Tokens are generated elsewhere. Let me locate the exact definitions of `TSSpacing`, `TSRadius`, `TSMotion`, `Color.TS`, `Font.TS`.
+
+The main-app tokens come from a shared module. Let me read `project.yml` and inspect `apps/shared`.
+
+Now I understand the build wiring. Let me verify the generated design tokens, the Shared.xcframework, and whether `xcodegen` is available.
+
+Let me read the generated tokens, the xcframework build script, and the pending-verifications notes.
+
+Critical context: `macos-pending-verifications.md` documents that full-app `xcodebuild` is blocked by **pre-existing unrelated** collisions, and the established pattern (ToolCard P-0010, same tier) is isolated SwiftPM verification. Let me examine prior logs to follow the exact precedent.
+
+This is the sanctioned disposition pattern. Let me read the full SentryModeChart log to replicate the exact isolated-verification harness, and confirm `TSSkeleton`/`Motion` dependencies.
+
+The precedent is crystal-clear. Now let me read the web formatting/colors/types helpers and confirm the isolated-harness dependencies (`Motion.swift`, `Skeletons.swift`).
+
+Let me inspect the native `ChartContainer` and the web `ChartContainer` to decide how to honor the `dataColumns`/title/subtitle parity.
+
+Let me read the lint/format configs, the full `CHARGER_COLORS`, and the placeholder check tool so my files pass cleanly.
+
+I now have a complete understanding. Let me set up a plan and todos, then build the surface following the sanctioned `SentryModeChart` template precisely.
+
+Now I'll build the surface. Starting with the pure projection core (`Adapter`), which the tests and views depend on.
+
+Now the Model (state-holder seam, telemetry seam, i18n facade, in-memory source).
+
+Now the Views file — the presentational chrome and Swift Charts grouped bar chart.
+
+Now the main view that composes everything.
+
+Now the Previews (one per state).
+
+Now the test suite (adapter, model, accessibility).
+
+Now the i18n strings catalog contribution.
+
+All 7 files created. Let me update todos and run formatting/linting on the new files.
+
+Expected formatting fixes (numeric grouping + import spacing). Let me auto-apply swiftformat, then review the diff.
+
+My new files are untracked so they don't show in `git diff`. Let me verify the formatting changes and confirm a clean lint.
+
+swiftformat clean. Now swiftlint on the new files.
+
+Two `file_length` violations (>400 lines). I'll split the data types into a `Models` file and the chart views into a `Chart` file (both match the allowed `ChargerTypeChart.*` glob). Let me read the formatted files to get exact boundaries.
+
+I'll split both files. Let me read the current formatted content to extract exact text.
+
+Now I'll perform the splits. Creating `Models` file and trimming `Adapter`.
+
+Now I'll split the Views file. Let me read the chart + tooltip sections to move them out.
+
+Let me read the Views chrome section (1-261) to recreate the file cleanly split.
+
+Let me read the loading/empty/error sections (428-511) to recreate Views cleanly.
+
+I have all the content. Let me remove Views and recreate it split into `Views` (chrome) + `Chart`.
+
+Now the Chart file with the Swift Charts bar chart and tooltip.
+
+All 8 Swift files created (split resolved file-length). Let me re-run format + lint on the full set.
+
+All files <400 lines, format clean. Now swiftlint.
+
+swiftlint clean. Now the placeholder gate.
+
+Format, lint, and placeholder gates all green. Now the strongest check — an **isolated SwiftPM build + run of the real XCTest suite** under Swift 6 strict concurrency (the sanctioned ToolCard approach). Let me set up the harness.
+
+Library builds clean under Swift 6 strict (including Previews). Now run the real test suite.
+
+Two test fixes needed: the `accuracy:` overload rejects optionals, and `ChargerTypeChart.surfaceSlug` is `@MainActor` (SwiftUI's `View` is MainActor-isolated). Let me fix both in the real test file.
+
+Let me re-format/lint the edited test file, re-copy to the harness, and re-run tests.
+
+All pass except one: `en_US_POSIX` doesn't apply grouping separators (that's correct POSIX behavior) — my assertion was wrong. The formatter is right; I'll assert grouping with `en_US` (which groups, matching the web) and keep POSIX for precision checks.
+
+All 26 tests pass under Swift 6 strict on macOS. Now the iOS-simulator out-of-module type-check (the second gate platform), mirroring the SentryMode precedent.
+
+iOS-simulator type-check passes (incl. Previews) under Swift 6 strict. macOS is already fully compiled+tested via SwiftPM. 
+
+Before probing the full-app gate, let me verify my new public symbols don't collide with anything already in the app target.
+
+No collisions. Now let me probe the full-app `xcodebuild` gate honestly — generate the project, confirm my files are registered, and capture the build's actual failure mode.
+
+My 8 files are registered in the project (54 pbxproj refs). Now let me attempt the real gate build (bounded) to capture its actual failure mode.
+
+The KMP gradle pre-action is real and progressing (it built the debug XCFramework; release linking was still going at the 150s cap — `GRADLE_EXIT=124` is the timeout). Let me run the staging script to completion so I can then reach the app-compile phase and capture the real failure mode.
+
+Shared.xcframework built+staged (`BUILD SUCCESSFUL`). Now the real app build can reach the compile phase. Let me run it and capture the actual outcome.
+
+Build failed (exit 65) at the Swift compile phase. Let me confirm whether any errors are in my files vs. the pre-existing sibling issues.
+
+The single root cause is `AuditPanel.Tests.swift … Unable to resolve module dependency: 'XCTest'` — the pre-existing "co-located `*.Tests.swift` compiled into the app target" structural issue (not mine). Let me confirm it's a repo-wide pre-existing pattern and that none of my production files error.
+
+Confirmed: 30 co-located `*.Tests.swift` (pre-existing pattern), the XCTest error is in sibling `AuditPanel.Tests.swift`, and **zero** errors in my production files. Let me confirm the 4 `ChargerTypeChart` log mentions are benign.
+
+Definitive: all 4 are notes/warnings about `ChargerTypeChart.Tests.swift` (co-located test compiled into the module) — **zero `error:`** in my files. Let me probe the macOS build too (the gate runs both) to capture its failure mode.
+
+macOS fails on pre-existing **development-signing** (documented blocker) — zero errors in my files. Both gate platforms fail only on pre-existing, unrelated issues. Now let me run the whole-tree gate commands (as written) to capture honest exits, and check git status.
+
+Whole-tree swiftformat = 0. The bare swiftlint shows 1 pre-existing sibling violation — let me confirm it's NOT in my files.
+
+The lone violation is pre-existing (`LifetimeStatsWidget.Adapter.swift`, committed in `b7fffb07` — a different prompt), not in my files. Now let me verify git status: only my intended files should be committable (xcodeproj/framework must be gitignored).
+
+Everything verified. Only my 9 files are untracked; xcodeproj/framework are gitignored. Let me run a final consolidated per-surface gate pass to capture clean numbers, then write the log.
+
+All final gates green (format 0/8, lint 0, placeholder 0/file). Now I'll write the comprehensive gate log.
+
+Log written. Now let me commit exactly the 9 surface files + the log (the xcodeproj/framework are gitignored; pre-existing web edits stay unstaged).
+
+Committed cleanly (`f1c43076`, 10 files). Let me clean up temp artifacts and do a final state check.
+
+All verified and committed. The task is complete.
+
+**Summary of gate results:**
+| Gate | Result |
+|---|---|
+| swiftformat `--lint` (per-surface + whole-tree) | ✅ 0/8, 0/846 |
+| swiftlint `--strict` (this surface) | ✅ 0 violations |
+| check-placeholders | ✅ 0 |
+| Isolated SwiftPM build + 26 XCTests (Swift 6 strict, macOS) | ✅ build + 26/26 pass |
+| iOS-simulator type-check (Swift 6 strict, incl. Previews) | ✅ 0 |
+| KMP Shared.xcframework (gradle) | ✅ built green |
+| xcodebuild iOS / macOS app gate | ⏸ DEFERRED (pre-existing: co-located `*.Tests.swift` in app target / macOS signing; **0** ChargerTypeChart errors) |
+
+Merge made by the 'ort' strategy.
+ ...4-apple-feature-views-0087-ChargerTypeChart.log | 257 +++++++++++++++
+ .../feature-views/ChargerTypeChart.Adapter.swift   | 180 +++++++++++
+ .../feature-views/ChargerTypeChart.Chart.swift     | 183 +++++++++++
+ .../feature-views/ChargerTypeChart.Model.swift     | 234 ++++++++++++++
+ .../feature-views/ChargerTypeChart.Models.swift    | 230 ++++++++++++++
+ .../feature-views/ChargerTypeChart.Previews.swift  | 104 +++++++
+ .../feature-views/ChargerTypeChart.Tests.swift     | 315 +++++++++++++++++++
+ .../feature-views/ChargerTypeChart.Views.swift     | 346 +++++++++++++++++++++
+ .../feature-views/ChargerTypeChart.strings         |  61 ++++
+ .../TeslaSync/feature-views/ChargerTypeChart.swift |  73 +++++
+ 10 files changed, 1983 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0087-ChargerTypeChart.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargerTypeChart.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargerTypeChart.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargerTypeChart.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargerTypeChart.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargerTypeChart.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargerTypeChart.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargerTypeChart.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargerTypeChart.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargerTypeChart.swift

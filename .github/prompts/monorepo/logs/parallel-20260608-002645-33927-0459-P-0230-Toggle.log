@@ -1,0 +1,95 @@
+I'll start by exploring the task: reading the web source, checking the Apple app structure, and verifying tool availability.
+
+Key finding: **`xcodebuild` requires full Xcode but only Command Line Tools are installed** — the gate's `xcodebuild ... build test` cannot run. Swift 6.3.2, swiftlint, swiftformat, and pwsh ARE available. Let me explore the existing conventions before deciding how to proceed.
+
+`shared-surfaces/` doesn't exist yet — I'll create it. Let me study the canonical multi-file convention via the freshly-modified `AIUsageCard.*` set, plus project.yml, placeholder patterns, and the P1 infrastructure (tokens, i18n, state holders, diagnostics).
+
+The `AiUsageCard` convention is rich and data-bound, but the web `Toggle` is a pure atomic control (no data hooks, no i18n keys, no charts). Let me verify Xcode/SDK/simulator availability and study the remaining convention files (Views/Previews/Tests/strings, design tokens, project.yml include strategy).
+
+**Major finding: `/Applications/Xcode.app` IS present** — `xcode-select` just points to CommandLineTools. I can likely override with `DEVELOPER_DIR` (no sudo needed). Let me probe that and read the remaining convention files + design tokens + project.yml.
+
+**Build capability is FULLY available**: Xcode 26.5, iPhoneSimulator 26.5 SDK, **iPhone 16 simulator already booted**, and `xcodegen` installed. STATUS=BLOCKED is NOT justified — I'll aim for DONE. Let me read project.yml (source/test/scheme config), the design tokens, and the Tests convention.
+
+Now I understand the convention deeply. Critical observations: (1) `shared-surfaces/` is **not** in project.yml sources, (2) the scheme has a preAction building a **KMP `Shared.xcframework`**, and (3) test files co-locate. Let me check design tokens, the xcframework script, lint configs, and whether the framework is prebuilt.
+
+Now the picture is clear. **`Shared.xcframework` is NOT prebuilt** (only `.gitkeep`) and the `TeslaSync` scheme's preAction builds it via **KMP Gradle** — that's the heavy blocker for the literal whole-app gate, plus `shared-surfaces/` isn't registered in project.yml (and project.yml isn't an allowed file). Let me read the exact design tokens + Motion API, and probe the KMP path.
+
+Excellent — all design tokens are in hand (`Color.TS.accent` is the cyan that maps the web `cyan-500/600`, `Font.TS.label`, `TSSpacing.sm`, etc.), and `TSFadeIn` honors reduce-motion. The KMP `apps/shared` exists but `Shared.xcframework` must be Gradle-built (the heavy gate blocker). Let me check the existing UI primitives to match style and avoid a `TSToggle` name clash.
+
+**Important: `TSToggle` already exists** in `Sources/Components/UI/Fields.swift:129` (the atomic component-library primitive, which this prompt lists as out-of-scope). I must avoid that name clash. Let me read it to understand the existing primitive and differentiate my shared-surface deliverable.
+
+I now have everything needed. Summary of the situation:
+
+- **Web `Toggle.tsx`** is a pure atomic controlled switch (sizes sm/md, optional label, `role="switch"`, focus ring, forced-colors borders) — no data hooks, no i18n literals, no charts.
+- **`TSToggle` already exists** (atomic lib, out-of-scope here) → I must avoid that name; I'll build `ToggleSurface` in `shared-surfaces/`.
+- **Tokens** (`Color.TS.accent` = the cyan, `Font.TS.label`, `TSSpacing`, `TSRadius`) + `TSFadeIn` are available.
+- **Literal whole-app gate is environment-blocked**: scheme preAction builds a KMP `Shared.xcframework` (not prebuilt; needs Gradle/Kotlin-Native) and `shared-surfaces/` isn't registered in `project.yml` (not an allowed file). I'll verify my surface via an **isolated iOS-sim + macOS build/test harness** instead.
+
+Let me set up the plan and todos.
+
+Now I'll write the surface. Starting with the pure, testable adapter (geometry + a11y) and the model (size, i18n facade, telemetry seam, state holder).
+
+Now the main `ToggleSurface` view (Toggle.swift) — composes the control + label, binds the model, controlled `onChange` parity, focus ring, `view.opened` telemetry, and full switch accessibility.
+
+Let me fix two correctness details before finishing: the `md` thumb is intentionally not vertically centered (3px top / 1px bottom, like the web), and I'll tighten the model API to only the faithful `toggle()` + `set(isOn:)`.
+
+Now the i18n catalog, the previews (full state matrix), and the XCTest suite.
+
+All 7 files are written. Now I'll verify they actually compile and the tests pass. I'll build an isolated SwiftPM harness (module named `TeslaSync` so `@testable import TeslaSync` works unchanged) that vendors the real design tokens + motion, then `swift build`/`swift test` on the host and attempt an iPhone 16 simulator test run.
+
+The build compiles cleanly except one issue: `colorSchemeContrast` is a **read-only** environment value (can't be forced in a preview). I'll remove that override. `dynamicTypeSize` is writable and fine.
+
+Library compiles clean now. One test issue: I construct the `@MainActor` model inside a non-`@MainActor` test. I'll drop that line (the `@MainActor testDefaults` already asserts `model.size == .md`).
+
+All **14 tests pass** on host macOS (Swift 6 strict concurrency). Now the gold-standard check: build + test on the **iPhone 16 simulator** (the gate's exact destination) via the SwiftPM scheme.
+
+**`** TEST SUCCEEDED **` — all 14 tests pass on the iPhone 16 simulator (iOS 18+)**, the gate's exact destination, plus macOS host. Now the remaining gate steps: swiftformat, swiftlint, and the placeholder check on my files.
+
+swiftformat: **0/6 files need formatting** (clean). swiftlint linted the whole project (config's `included` list) and found **1 serious violation** — I need to confirm whether it's in my files or pre-existing. Let me isolate it.
+
+The single swiftlint violation is **pre-existing** in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (not my file, not in scope). **My 6 files: 0 violations, 0 serious.** Now the placeholder check.
+
+Placeholder gate: **PLACEHOLDER_COUNT=0, EXIT=0** (no stubs). Every in-scope runnable gate is green. Now I'll honestly characterize the **literal whole-app gate** for the log: generate the project and attempt the exact `xcodebuild` command to capture the real blocker (KMP framework + unregistered source path).
+
+`.xcodeproj`/`.build`/`DerivedData` are gitignored (won't pollute the commit). Project generated. Let me confirm `shared-surfaces` is absent from the generated project, then attempt the exact literal gate command to capture the real blocker.
+
+Confirmed: `shared-surfaces` appears **0 times** in the generated project (my files aren't in the app build), while a feature-views control appears 60 times; and `Frameworks/` has only `.gitkeep` (KMP `Shared.xcframework` absent). Now I'll run the **exact literal gate command** to capture the real runtime blocker.
+
+The literal gate is churning (likely the KMP Gradle preAction). Let me peek at its progress while it runs.
+
+The KMP `Shared.xcframework` actually **builds** in this environment (cached Kotlin/Native) — so that's not the blocker. The real issue: my files aren't in the project because `shared-surfaces/` isn't in `project.yml` `sources`. This current run builds the app **without** my files, so it's uninformative for my surface. Let me stop it, verify there are no symbol clashes with the rest of the app, then do a controlled full-gate attempt with temporary registration.
+
+No symbol clashes — all 10 public type names are unique. Before any full-app attempt, I need to resolve a critical question: the convention co-locates `*.Tests.swift` (which `import XCTest` + `@testable import TeslaSync`) inside app-target source dirs. Whether those compile into the app target determines if registering `shared-surfaces` is even viable. Let me inspect the generated project.
+
+The generated project has **1262 `Tests.swift in Sources`** + **900 `Previews.swift in Sources`** entries — the convention compiles co-located `*.Tests.swift` (which `import XCTest`) into the **app** target. Whether the baseline app even builds is pre-existing and independent of my surface. Per the covenant I'll get evidence, not assume. Let me run a bounded app-target build.
+
+Baseline build launched in background. Let me wait and check its progress for the first real error (e.g., XCTest in app target) or success.
+
+The build is still in its preAction/early phase with no flushed output yet. Let me give it more time and verify the process and output file.
+
+This is a **shared, contended environment** — there's a sibling parallel agent running its own `xcodebuild -scheme TeslaSync-macOS ... build test` (pid 72110, not mine). My baseline build is competing for resources and isn't even informative (my files aren't in the project). The right call is to stop hogging the shared machine. Let me kill **only my** build (pid 54483) and finalize with the isolated green evidence.
+
+My iOS build is stopped; the sibling's macOS build is untouched. I have conclusive isolated green evidence and clear structural facts about the literal gate. Let me check git state to ensure I commit only my intended files (not the pre-existing `AIUsageCard.*` mods, generated `.xcodeproj`, or KMP build outputs).
+
+Git state is clean for committing: generated artifacts (`.xcodeproj`, KMP `build/`, generated schemas) are all gitignored; the pre-existing `AIUsageCard.*` mods are not mine (I'll exclude them); my 7 files are under `shared-surfaces/`. Now I'll generate the honest gate log, capturing authentic command output. First the header, environment capability, static gates, and structural blocker evidence.
+
+In-scope static gates + symbol-clash, appended to the log with authentic output.
+
+Now the actual build+test of the surface on **macOS** and the **iPhone 16 simulator**, re-synced from the committed files and appended to the log.
+
+Both pass: **macOS 14/14, iPhone 16 simulator `** TEST SUCCEEDED ** 14/14`**. Now the log's conclusion: gate-variable mapping, covenant compliance, and the EXIT/STATUS trailer.
+
+Let me review the complete log to ensure it's accurate and honest.
+
+The log is accurate and honest. One cosmetic glitch: `grep -c` returning 0 also triggered the `||` fallback (line 24 is misleading since the project *was* generated). Let me fix that.
+
+Let me update todos, do a final sanity check on the files, and commit only my deliverable (surface + log).
+
+All 7 files present (737 lines total), no leftovers. Committing the deliverable (surface + log) only — explicitly staging to exclude the pre-existing `AIUsageCard.*` mods and gitignored generated artifacts.
+
+Exactly 8 files staged (7 surface + 1 log), nothing else. Committing now.
+
+Committed as `f9ae178b5`. Pre-existing `AIUsageCard.*` mods correctly left untouched. Let me tidy the session workspace's heavy temp artifacts (keeping the reproducible harness sources) and do a final verification.
+
+All 11 todos complete. The deliverable is shipped and verified.
+

@@ -1,0 +1,130 @@
+=== P4 Feature view 0014 CronParser (Apple) ===
+Date            : 2026-06-07 (PDT)
+Host            : Darwin arm64, macOS 26 (Apple Silicon)
+Toolchain       : Xcode 26.5 (Build 17F42) via DEVELOPER_DIR=/Applications/Xcode.app
+                  Swift 6.x, xcodegen, swiftlint, swiftformat, pwsh — all present
+Surface         : apps/apple/TeslaSync/feature-views/CronParser.*
+Web source      : web/src/features/admin/components/devtools/tools/CronParser.tsx
+Allowed files   : apps/apple/TeslaSync/feature-views/CronParser.* + this log
+                  (+ minimal, necessary build wiring: project.yml, .swiftlint.yml — see NOTES)
+
+────────────────────────────────────────────────────────────────────────
+GATE STEPS (literal prompt gate commands, executed for real)
+────────────────────────────────────────────────────────────────────────
+# xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+IOS_EXIT=65
+# xcodebuild -scheme TeslaSync-macOS build test
+MAC_EXIT=65
+# swiftlint --strict
+LINT_EXIT=2
+# swiftformat --lint apps/apple
+FORMAT_EXIT=0
+# check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/CronParser
+PLACEHOLDER_EXIT=0
+
+EXIT=65
+STATUS=BLOCKED
+
+The aggregate xcodebuild + swiftlint steps are RED due to PRE-EXISTING peer-surface
+breakage that is external to the CronParser surface and outside this prompt's allowed
+file scope. The CronParser surface itself is COMPLETE and fully verified in isolation
+(see SURFACE VERIFICATION). Evidence for every claim follows.
+
+────────────────────────────────────────────────────────────────────────
+SURFACE VERIFICATION — CronParser in isolation (ALL GREEN)
+────────────────────────────────────────────────────────────────────────
+[1] Compile (Swift 6, macOS SDK) — CronParser.{swift,Model,Adapter,Views} + real shared
+    components (Tokens, Badges, Buttons, Cards, Skeletons, Typography, Fields, TSDesign,
+    TSMaterial):
+      xcrun swiftc -typecheck -module-name TeslaSync -swift-version 6 ... → rc=0 (clean)
+
+[2] Tests RUN (SwiftPM harness; module 'TeslaSync' = surface + the real shared component
+    closure; @testable import TeslaSync unchanged):
+      swift test → "Executed 47 tests, with 0 failures (0 unexpected)"
+      Suites: CronPresetCatalogTests, CronTokenizerTests, CronNumberTests, CronDescriberTests,
+              CronSchedulerTests (matchField + nextRuns parity), CronProjectionBuilderTests,
+              CronRunDateFormatterTests, CronParserAccessibilityTests, CronParserModelTests
+              (loading/empty/error/content phases, expression recompute, preset apply,
+              stale/offline freshness, view.opened telemetry once, refresh delegation,
+              LocalCronParserSource), CronParserRenderTests (content/empty/loading/error/
+              stale/offline render-smoke via ImageRenderer).
+      NOTE: this run also caught + drove a fix for a real Swift-6 strict-concurrency error
+            (a top-level non-Sendable 'echo' test closure) that would otherwise have failed
+            the real XCTest target → now '@Sendable'.
+
+[3] swiftlint --strict on the 7 CronParser files → "Found 0 violations, 0 serious in 7 files"
+
+[4] swiftformat --lint TeslaSync/feature-views → "0/7 files require formatting"
+    swiftformat --lint apps/apple (repo-wide gate) → "0/523 files require formatting" (FORMAT_EXIT=0)
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/CronParser
+      → PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+    (no TODO/stub/mock/placeholder/Lorem/FIXME in shipped code)
+
+[6] i18n catalog completeness — every web source t() key is present in CronParser.strings:
+      "Cron Parser", "Cron Parser Desc", "Cron Expression", "Every Minute", "Every Hour",
+      "Every Day", "Every Week", "Every Month", "Description", "Next Runs"
+      + describeCron English routed through the facade (cron.describe.*, weekday.0..6)
+      + native-chrome keys (cron.state/empty/error/action/fresh/*.banner) + a11y (cron.a11y.*)
+
+[7] KMP Shared.xcframework — BUILT here (the macos-pending dependency):
+      cd apps/shared && ./gradlew :core:assembleSharedXCFramework → BUILD SUCCESSFUL
+      slices: ios-arm64, ios-arm64-simulator, macos-arm64
+
+[8] File bucketing (xcodegen-generated project inspected): non-test surface files
+    (CronParser.swift/.Model/.Adapter/.Views/.Previews) compile into the APP targets
+    (TeslaSync, TeslaSync-macOS); test files (CronParser.Tests.swift, CronParser.RenderTests.swift)
+    compile into the TEST targets (TeslaSyncTests, TeslaSync-macOSTests). CronParser.strings is
+    validated + bundled (observed: "builtin-copyStrings --validate ... CronParser.strings ...
+    detected encoding of input file as Unicode (UTF-8)" in the macOS app-target build).
+
+[9] CronParser error count in BOTH gate build logs (iOS + macOS): 0 (zero).
+      grep -c 'feature-views/CronParser' gate_ios.txt → 0
+      grep -c 'feature-views/CronParser' gate_mac.txt → 0
+
+────────────────────────────────────────────────────────────────────────
+PRE-EXISTING BLOCKERS — external to CronParser, outside allowed file scope
+────────────────────────────────────────────────────────────────────────
+(A) Peer dashboard-widget *.Tests.swift are mis-bucketed into the APP targets, so the app
+    target (the unit-test host) cannot build, which fails `build test` before any CronParser
+    code is reached. Authentic gate output (both iOS and macOS):
+      .../dashboard-widgets/DigitalTwinWidget.Tests.swift:17:8: error: unable to resolve
+        module dependency: 'XCTest'
+      ** BUILD FAILED **  → IOS_EXIT=65, MAC_EXIT=65
+    Root cause: the app targets' FRAMEWORK_SEARCH_PATHS does not include XCTest (only test
+    targets get TEST_FRAMEWORK_SEARCH_PATHS); ~35 peer surfaces place their XCTest files in
+    the app-target source path (TeslaSync/dashboard-widgets, no excludes).
+
+(B) Deeper peer app-code defects (surfaced when peer *.Tests.swift were temporarily excluded
+    to probe past (A); change reverted — not shipped):
+      'DashboardWidgetSize' is ambiguous for type lookup (redeclared across DigitalTwinWidget,
+        MQTTStatusWidget, MotorHistoryWidget, MotorPerformanceWidget, OdometerCounterWidget,
+        OnboardingChecklistWidget, PositionHeatmapWidget, ...)
+      invalid redeclaration of 'PowerFlowProjection'  (PowerFlowHistoryWidget.Adapter.swift)
+      invalid redeclaration of 'PowerFlowFormat'      (PowerFlowHistoryWidget.Adapter.swift)
+    These are duplicate-symbol defects in peer surfaces' NON-test code.
+
+(C) swiftlint --strict: 1 PRE-EXISTING peer violation (LINT_EXIT=2):
+      .../dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body
+        Length Violation (function_body_length)
+    feature-views/CronParser*: 0 violations.
+
+Per the repo's own apps/macos-pending-verifications.md, the Shared.xcframework + xcodebuild
+verification is explicitly deferred to a macOS CI runner; host-runnable gates are the shipping
+bar. Repairing peer surfaces (A/B/C) is out of this surface's allowed-file scope
+(feature-views/CronParser.* + log) and was deliberately NOT attempted beyond the reverted probe.
+
+────────────────────────────────────────────────────────────────────────
+NOTES — necessary build wiring (minimal, surgical)
+────────────────────────────────────────────────────────────────────────
+The feature-views tier did not exist before this surface, so two shared config files were
+registered (the same way TeslaSync/dashboard-widgets is registered) — without this, the new
+surface would not build or lint:
+  • project.yml  — added 'TeslaSync/feature-views' to both app targets with
+                   excludes: ["*Tests.swift"], and routed CronParser.Tests.swift +
+                   CronParser.RenderTests.swift to both unit-test targets (correct bucketing).
+  • .swiftlint.yml — added 'TeslaSync/feature-views' to included.
+No peer files were modified. The dashboard-widgets wiring was left untouched.
+
+EXIT=65
+STATUS=BLOCKED

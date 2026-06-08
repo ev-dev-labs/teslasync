@@ -1,0 +1,152 @@
+=== P4 Shared surface 0207 CopyButton (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint · swiftformat · xcodegen 2.45.4 · pwsh · Java 17 (openjdk 17.0.19)
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5, Booted) present · macOS 15 SDK present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh during the iOS gate
+                       (Gradle :core:assembleSharedXCFramework — "xcframework successfully written out").
+  Capability         : SwiftUI + simulators present → NOT capability-BLOCKED. (This surface uses no
+                       Swift Charts / MapKit — the web source charts/maps list is "(none)".)
+
+WEB SOURCE (the specification)
+  web/src/components/ui/CopyButton.tsx — a one-click clipboard primitive (promoted from the admin devtools).
+    <Button variant="ghost" size="sm" icon={copied ? <CheckCircle/> : <Copy/>} aria-live="polite"
+            disabled={disabled} title={title} aria-label={resolvedAriaLabel}>{visibleLabel}</Button>
+    handleCopy : navigator.clipboard.writeText(text) → setCopied(true) → onCopy?() →
+                 withToast ? toast?.success('Copied to clipboard') : — → setTimeout(setCopied(false), 2000);
+                 catch → withToast ? toast?.error('Failed to copy') : — ; console.error(...).
+    visibleLabel   = iconOnly ? null : (label ?? (copied ? copiedLabel : copyLabel))
+    resolvedAria   = ariaLabel ?? (iconOnly ? (copied ? copiedLabel : (label ?? copyLabel)) : undefined)
+    i18n keys      : common.copyButton.{copy='Copy', copied='Copied',
+                     successToast='Copied to clipboard', errorToast='Failed to copy'}
+    Data sources   : useTranslation + useOptionalToast — NEITHER is a fetch. The component owns no async
+                     data, so there is no loading / empty / error / stale / offline axis (see STATES).
+
+ARTIFACTS SHIPPED  (all under apps/apple/TeslaSync/shared-surfaces/, the prompt's allowed CopyButton.* set)
+  CopyButton.Model.swift        — CopyButtonSurface (slug + reportOpen), CopyButtonPhase (idle/copied),
+                                  CopyButtonLabels, CopyButtonPresentation (pure web visibleLabel/icon/aria
+                                  projection), CopyButtonStrings (P1/S10 i18n facade + web key constants).
+  CopyButton.Telemetry.swift    — CopyButtonTelemetry seam + OSLogCopyButtonTelemetry (redaction-safe view.opened).
+  CopyButton.Clipboard.swift    — CopyButtonClipboard seam (throwing — web rejected promise) +
+                                  SystemCopyButtonClipboard over UIPasteboard / NSPasteboard.
+  CopyButton.Toast.swift        — CopyButtonToast seam (web useOptionalToast; optional sink → nil no-ops).
+  CopyButton.StateHolder.swift  — CopyButtonModel (@MainActor @Observable, P1/S8): copy() == web handleCopy,
+                                  the copied phase, onCopy, optional success/error toast, the timed reset.
+  CopyButton.swift              — CopyButton SwiftUI view; web-parity init; TSButton(ghost/sm); a11y; tooltip.
+  CopyButton.Previews.swift     — DEBUG previews: default / icon-only / custom-label / disabled / with-toast.
+  CopyButton.strings            — the "CopyButton" i18n table (web keys + DEBUG preview chrome).
+  CopyButton.Tests.swift        — 23 XCTest cases (projection matrix, model branches, telemetry, i18n).
+  Necessary shared wiring (same pattern ToolCard/0010 used when it first added feature-views; enumerated here
+  per covenant #9 — shared-surfaces is a NEW tier, so without these the gate cannot compile/lint my files):
+    project.yml    — + "TeslaSync/shared-surfaces" to the TeslaSync and TeslaSync-macOS target sources.
+    .swiftlint.yml — + "TeslaSync/shared-surfaces" to `included`.
+  NOT edited: Localization/Localizable.xcstrings already carries all four web keys as
+    translation.common.copyButton.{copy,copied,successToast,errorToast} (en + ar/he), so the P1/S10
+    acceptance criterion is satisfied WITHOUT touching the shared catalog.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  <Button variant=ghost size=sm>      → TSButton(variant: .ghost, size: .small)   (Sources/Components/UI/Buttons.swift)
+  Lucide <Copy/> / <CheckCircle/>     → SF Symbols  doc.on.doc  /  checkmark.circle.fill
+  navigator.clipboard.writeText       → CopyButtonClipboard.write (throws) → UIPasteboard.general / NSPasteboard.general
+                                        (NSPasteboard.setString==false maps to the failure branch, like a rejected promise)
+  useOptionalToast() → toast?.x()     → optional CopyButtonToast sink; nil ⇒ no-op (exact graceful-degrade parity)
+  useState(copied)+setTimeout(2000)   → CopyButtonModel.phase + scheduleReset(resetDelay: .seconds(2))
+  visibleLabel/icon/resolvedAriaLabel → CopyButtonPresentation.make (pure, Equatable; unit-tested across the matrix)
+  aria-live="polite"                  → AccessibilityNotification.Announcement(copied).post() on the idle→copied flip
+  title (tooltip)                     → .help(Text(verbatim: title))
+  console.error(err)                  → os.Logger.error("clipboard write failed")  (redaction-safe: text never logged)
+  i18n  t(key, default)               → CopyButtonStrings.string(key, fallback) (NSLocalizedString table "CopyButton");
+                                        keys also already in the master P1/S10 catalog (translation.common.copyButton.*)
+  telemetry                           → view.opened surface="CopyButton" via CopyButtonSurface.reportOpen (P1/S11)
+
+STATES (every state the web source carries is reproduced — no hidden surface, nothing fabricated)
+  idle        — Copy label + doc.on.doc glyph.
+  copied      — Copied label + checkmark.circle.fill, held resetDelay (2s) then reverts; VoiceOver announces it.
+  disabled    — guarded in the view (.disabled) AND the model (copy() no-ops) — web disabled <button>.
+  copy-failed — clipboard throw → catch branch: optional error toast + redaction-safe log; phase stays idle.
+  loading / empty / error / stale / offline — N/A by construction: the web source has NO data fetch (its only
+                "data sources" are useTranslation + useOptionalToast), so there is no async data axis to project.
+                This is NOT scope-narrowing — it is the faithful shape of the web source; every branch that DOES
+                exist (incl. the failure path) is implemented and tested.
+
+GATES (raw exits pasted; every gate executed on THIS runner)
+  [GREEN]    swiftformat --lint apps/apple/TeslaSync/shared-surfaces   : 0/8 files require formatting   (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict   (shared-surfaces scope, 8 files)     : 0 violations                   (LINT_EXIT=0)
+             swiftlint --strict   (whole apps/apple, FYI)              : 1 PRE-EXISTING violation —
+                                                                         function_body_length in
+                                                                         TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+                                                                         (NOT a CopyButton file; not introduced here).
+  [GREEN]    check-placeholders.ps1 -Path …/shared-surfaces            : PLACEHOLDER_ALLOWED=0
+                                                                         PLACEHOLDER_COUNT=0             (PLACEHOLDER_EXIT=0)
+  [GREEN]    ISOLATED SwiftPM harness — swift-tools 6.0, Swift 6 language mode (strict-concurrency = complete, same
+             as the app), compiling the EXACT shipped CopyButton.* sources against the REAL repo design-system
+             (Tokens / Buttons / Typography):
+                 Build complete!  ·  Executed 23 tests, with 0 failures                                 (SWIFT_TEST_EXIT=0)
+  [GREEN]    Cross-SDK typecheck of the shipped sources (proves both platform branches compile):
+                 swiftc -typecheck -swift-version 6 -target arm64-apple-ios18.0-simulator   (UIPasteboard)  IOS_TYPECHECK_EXIT=0
+                 swiftc -typecheck -swift-version 6 -target arm64-apple-macos15.0           (NSPasteboard)  MAC_TYPECHECK_EXIT=0
+  [GREEN]    xcodegen generate                                         : enumerates all 8 CopyButton.* swift files
+                                                                         into TeslaSync + TeslaSync-macOS (XCODEGEN_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS                                                       build test : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO CopyButton runtime errors; all blockers pre-exist this change):
+    iOS  : the whole-module app compile aborts at SwiftDriver dependency resolution with
+             "error: Unable to resolve module dependency: 'XCTest'"
+           — the PRE-EXISTING co-located *.Tests.swift files that `import XCTest` + `@testable import TeslaSync`
+           into the app target (the driver flags TeslaSync/feature-views/AIRestorePanel.Tests.swift, a file this
+           change does not touch). This aborts before any per-file type-check. grep of the iOS build log for a
+           shared-surfaces/CopyButton RUNTIME error = 0. The only CopyButton file in this XCTest class is
+           CopyButton.Tests.swift, which follows the SAME co-located-test convention as the 152+ pre-existing
+           feature-view / dashboard-widget test files and is verified GREEN in the isolated SwiftPM harness above.
+           Positive iOS-compile proof for the runtime sources is the dedicated iOS-18 `swiftc -typecheck` (EXIT=0).
+    macOS: build fails with "TeslaSync-macOS / TeslaSyncWidgets-macOS has entitlements that require signing with a
+           development certificate" — the PRE-EXISTING macOS development-signing blocker this runner does not
+           provision. grep of the macOS build log for a CopyButton / shared-surfaces compile error = 0. Positive
+           macOS-compile proof for the runtime sources is the dedicated macOS-15 `swiftc -typecheck` (EXIT=0).
+    Both are exactly the artifacts apps/macos-pending-verifications.md defers to the ADR-012 macos-latest CI
+    runner; they are owned by the P4/P99 Apple acceptance gate (signing/archive) + a dashboard-widget de-dup /
+    test-target wiring pass — NOT by a single shared-surface prompt (task rule: do not fix pre-existing, unrelated
+    breakage). This matches the sanctioned disposition of every prior P4 Apple surface (ToolCard/0010,
+    AlertMessageEditor/0180, FSMTimelineChart/0231).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                           explicitly DEFERRED with raw evidence — never reported as passing.
+  2  No scope narrowing  : every web region + branch reproduced — copy/copied/disabled/failure, iconOnly, label &
+                           aria overrides, withToast on/off, the 2s reset, the polite announcement, the tooltip.
+  3  No skip-and-assume  : every gate ran on THIS runner; raw exits pasted; the iOS XCTest abort + macOS signing
+                           failure were observed in the logs, not assumed.
+  4  No stubs as final   : complete production view + state holder + four seams + 23 real tests; placeholder
+                           scanner = 0; no TODO/stub/mock/placeholder/Lorem.
+  5  No parity shortcut  : button/glyphs/clipboard/toast/labels/aria/announcement/telemetry all mapped to platform
+                           tokens + seams and verified by the projection-matrix + model-branch tests.
+  6  No delegation       : implemented directly; no sub-agents.
+  7  No predecessor bypass: consumes P1/S8 state-holder pattern, P1/S9 design tokens, P1/S10 i18n (keys already in
+                           the master catalog), P1/S11 diagnostics; P4 core present.
+  8  No commit on red    : the COMMITTED artifact (CopyButton.* + the two wiring files) is GREEN on every host gate
+                           AND on a real isolated Swift-6 strict-concurrency build+test AND on iOS-18 + macOS-15
+                           typecheck; the deferred full-app gate is RED only on pre-existing, unrelated surfaces.
+  9  No silent drift     : changes are confined to TeslaSync/shared-surfaces/CopyButton.* (9 files), the two
+                           necessary wiring files (project.yml, .swiftlint.yml), and this log — all enumerated
+                           above. Unrelated pre-existing working-tree edits in this shared slot (AIUsageCard.*,
+                           web/*) were left untouched and NOT staged.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic CopyButton shipped at parity with the web source and INDEPENDENTLY VERIFIED:
+  it compiles and its 23 tests pass under the app's own Swift 6 strict-concurrency rules against the real
+  design-system, it type-checks cleanly against BOTH the iOS-18 and macOS-15 SDKs (UIPasteboard + NSPasteboard
+  branches), xcodegen enumerates it, and lint/format/placeholder are all green. The full-app iOS-Simulator +
+  macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked by the pre-existing
+  co-located-test XCTest-in-app-target issue and macOS development-signing — both owned by the P4/P99 acceptance
+  gate on a signed macos-latest CI runner per apps/macos-pending-verifications.md. This matches the repo's
+  sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

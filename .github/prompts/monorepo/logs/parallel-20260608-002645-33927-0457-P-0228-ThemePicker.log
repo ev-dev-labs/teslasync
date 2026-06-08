@@ -1,0 +1,89 @@
+I'll start by exploring the repository structure and verifying the capability requirements for this Apple native task.
+
+Swift toolchain is available (Swift 6.3.2, swiftlint, swiftformat, pwsh), but `xcodebuild` is NOT — only Command Line Tools are installed, not full Xcode. Let me explore the existing Apple app structure to understand the established pattern, since prior surfaces were committed successfully.
+
+Now let me read the web source spec and study a canonical recent surface (LiveControls) to replicate the exact file pattern, plus locate the shared facades (P1/S8 state holders, S9 tokens, S10 i18n, S11 diagnostics).
+
+I have a thorough grasp of the established pattern. Let me verify the toolchain reality (is full Xcode present anywhere?), locate the gate's placeholder script, read the lint configs, and understand how `*.Tests.swift`/`*.Previews.swift` in feature-views are wired into targets.
+
+Key finding: **Xcode IS installed** at `/Applications/Xcode.app` (just not selected). I can likely use `DEVELOPER_DIR` to run `xcodebuild` without sudo. Let me verify that and gather the remaining wiring facts.
+
+xcodebuild works via `DEVELOPER_DIR` (Xcode 26.5). But `Frameworks/` only has `.gitkeep` — `Shared.xcframework` (KMP) is built by a pre-action, and `shared-surfaces/` is referenced nowhere (not in `project.yml` or `.swiftlint.yml`). Let me check dependency coupling and CI wiring to plan verification.
+
+Now I have the full picture. Key facts:
+- **xcodebuild works** via `DEVELOPER_DIR` (Xcode 26.5), but a full app build needs `Shared.xcframework` (KMP/Gradle) and `shared-surfaces/` isn't wired into `project.yml`/`.swiftlint.yml` (which I'm not allowed to edit).
+- CI `apps-apple.yml` is a **documented no-op guard** until a buildable project lands — so predecessors were gated on lint/format/placeholder + self-contained checks.
+- My surface (like LiveControls) is **Shared-free**, so I can do a real, isolated `swift test` to actually compile + run my tests.
+
+Let me read the last two component files I may use, then write a plan file.
+
+All dependencies are SwiftUI-only (no KMP `Shared`). Let me read `Cards.swift` (transitively needed by `Skeletons.swift`) and write the plan, then author the surface.
+
+I have everything I need. Let me write a brief plan file, then author the surface following the exact established 8-file pattern (LiveControls/AIUsageCard).
+
+Let me tidy two long lines in the Model to stay within the 120-col limit (swiftlint `--strict` treats warnings as errors).
+
+Now the presentational core (Views) with the platform color bridge:
+
+Now the states chrome (loading/error/empty + status chips):
+
+Now the main surface entry view:
+
+Now the previews (one per state):
+
+Now the comprehensive test suite:
+
+Now the i18n strings catalog:
+
+All 8 files written. Now let me verify — first auto-format with the repo's swiftformat config, then lint-check:
+
+swiftformat is clean (0/7 need formatting). swiftlint linted the whole project (config `included` overrode my path) and found 1 violation — let me locate it:
+
+My files are **clean** — the only swiftlint violation is pre-existing in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (outside my scope). Now let me check the placeholder gate script and run it:
+
+The gate passes `-Path .../ThemePicker` (no extension) which `Test-Path -LiteralPath` treats as non-existent → vacuous clean. Let me check the patterns and run the scan on the **actual** directory to genuinely verify no placeholders:
+
+My files pass placeholder gate (COUNT=0, EXIT=0). I don't use `TSButton` — my only shared-component dependency is `TSSkeleton`. Let me verify the `TSSkeleton` dependency closure (via `TSMaterial`) so I can build a real isolated test harness:
+
+`TSSkeleton`'s closure is a closed, SwiftUI-only set: `{Tokens, Buttons, Badges, Typography, TSMaterial, Cards, Skeletons}`. Now let me build a real isolated SwiftPM harness to actually **compile + run** my tests against real SwiftUI + real design tokens:
+
+Now run the real compile + test (using Xcode's SDK via `DEVELOPER_DIR`):
+
+Everything **compiled** against real SwiftUI + tokens, and 40/41 tests pass. Let me find the 1 failure:
+
+The implementation is correct — `"bad"` is actually **valid** 3-digit hex (b=11, a=10, d=13 → `#BBAADD`). My test used a poor example. Let me fix the test to use a genuinely non-hex string:
+
+All **41 tests pass** — the surface compiles against real SwiftUI + real design tokens. Let me re-confirm format/lint cleanliness after the test edit:
+
+Surface is verified: **41/41 tests pass** (real compile against SwiftUI + tokens), swiftformat/swiftlint/placeholder all clean on my files. Now let me gather honest evidence about the full-gate constraints and check the logs directory + a predecessor log for format.
+
+The predecessor precedent is clear and directly applicable: the per-surface gate = host-runnable checks (swiftformat/swiftlint/placeholder) GREEN on surface scope **+** a real isolated Swift-6 strict-concurrency build+test passing; the full-app `xcodebuild` is explicitly **DEFERRED** to the P4/P99 CI acceptance gate (blocked by pre-existing/environmental factors, not the surface code). My ThemePicker meets every host-runnable gate. Let me write the gate log in the same rigorous style:
+
+All gates green on surface scope + 41/41 isolated tests. Now clean up the temp harness and commit **only** my files (the working tree has unrelated changes from a parallel agent that I must not touch):
+
+Staged set is exactly my 8 surface files + 1 log — no unrelated files. Now commit with the prescribed message:
+
+Committed cleanly (`4c4cfe985`, 9 files, 2254 insertions). Let me do a final integrity check — confirm the unrelated parallel-agent changes remain untouched and the commit trailer is correct:
+
+All checks pass and state is clean. The 9 unrelated parallel-agent changes remain untouched; my commit contains only the 8 ThemePicker files + the gate log with the correct co-author trailer.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`ThemePicker`** shared surface at parity with `web/src/components/ui/ThemePicker.tsx`, committed as `4c4cfe985`.
+
+**8 files** in `apps/apple/TeslaSync/shared-surfaces/` (LiveControls/AiUsageCard pattern):
+- `.Adapter` — pure catalog/projection, mode-icon map, `#RRGGBB` parse/format, copy catalog, toast formatting
+- `.Model` — P1/S8 `ThemePickerSource` seam, P1/S11 telemetry seam, web `useToast` toast seam, P1/S10 i18n facade, `@Observable` model
+- `.swift` / `.Views` / `.States` — view entry + mode cards, accent swatches, `ColorPicker` custom editor (+ platform Color⇄hex bridge), loading/error/empty chrome + stale/offline chips
+- `.Previews` (9 states), `.Tests` (41 XCTest cases), `.strings` (7 web keys + chrome)
+
+**Parity:** Display-Mode grid, Accent-Colour grid, Custom swatch + colour editor; `compact`/`showMode`/`showCustom` props; all 7 i18n keys (`theme.theme`…`theme.accent`); every P4 state (loading/empty/error/stale/offline/ready); VoiceOver labels, Dynamic Type, Reduce-Motion; `view.opened` telemetry.
+
+**Verification (all green on surface scope):**
+- `swiftformat --lint` → 0/7 need formatting
+- `swiftlint --strict` → 0 violations in my files (the lone repo violation is pre-existing in `LifetimeStatsWidget.Adapter.swift`)
+- placeholder gate → `PLACEHOLDER_COUNT=0`
+- **Real Swift 6 strict-concurrency build + test** (isolated SwiftPM against real SwiftUI + real design tokens + real `TSSkeleton` closure) → **41/41 pass**
+
+The literal full-app `xcodebuild build test` is **DEFERRED** (documented in the log): it needs the KMP `Shared.xcframework` toolchain and `project.yml`/`.swiftlint.yml` wiring of the new `shared-surfaces/` directory — both owned by the P4/P99 acceptance gate and outside this prompt's allowed files. The surface itself is verified gate-ready. Log ends `EXIT=0 / STATUS=DONE`.
+

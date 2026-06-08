@@ -1,0 +1,86 @@
+I'll start by exploring the repository structure and reading the web source component, while checking the runner's Apple toolchain capabilities.
+
+I have the file pattern. Let me read a complete reference surface (BatteryHealthSection — closest analog) end-to-end to learn conventions.
+
+Excellent. Now I understand the full pattern. Let me locate the shared components and tokens I'll need (AlertBanner, Badge, AnimatedNumber equivalents, tokens, glow).
+
+Now let me check the build config, remaining shared components, the related DrivetrainHealthWidget, and toolchain specifics.
+
+`pwsh` and an `Xcode.app` are present. Let me verify whether the full Xcode toolchain is actually functional (this decides DONE vs BLOCKED).
+
+Full Xcode 26.5, `xcodegen`, `pwsh`, and a booted iPhone 16 sim are all present. Let me check the one likely blocker — the KMP `Shared.xcframework` dependency — before deciding DONE vs BLOCKED.
+
+Confirmed: `Shared.xcframework` (the KMP core) is absent and 15 `Sources/` files import it. Let me check whether the KMP framework can be built here, and confirm my dependency components are Shared-free.
+
+KMP `apps/shared` (Gradle) exists and `java` is present, but the Apple gate links a `Shared.xcframework` that must be Gradle-built (heavy, pre-build phase). My HealthOverview deps are all `Shared`-free, so I can verify my code via a focused harness. Let me read the last references and check name collisions before coding.
+
+Now a comprehensive collision check for every identifier I plan to introduce (the whole app is one module, so names must be globally unique).
+
+All identifiers are free. Let me quickly confirm two web details (AnimatedNumber default formatting and how the parent feeds HealthOverview) so the native projection is faithful, then I'll set up tracking and write code.
+
+All identifiers are free, AnimatedNumber uses `decimals=0` (grouped int), and `healthScore = HEALTH_SCORE[status]` (good 95 / warning 60 / critical 25). Let me check the lint/format config to match conventions, then set up tracking.
+
+Lint rules captured: max width 120 (and `swiftlint --strict` fails on the 120 *warning*), `--self remove`, no trailing commas, `@testable` at bottom, wrap-before-first. Let me confirm how existing surfaces keep long English fallbacks under 120, and baseline-lint one reference file.
+
+Two findings: existing surfaces keep all lines ≤118, and there's a **pre-existing** `swiftlint --strict` violation in `LifetimeStatsWidget.Adapter.swift` (not my file). Let me confirm swiftlint's file-scoping and the baseline violation set precisely.
+
+swiftlint scans the whole `included` set (baseline has exactly **1 pre-existing** violation in `LifetimeStatsWidget.Adapter.swift`, unrelated to me). I'll verify my files via a scoped temp config + a SwiftPM compile/test harness. Let me locate `TSCard`/typography and confirm the component dirs are `Shared`-free, then write the code.
+
+All dependencies are SwiftUI/Foundation-only and `Shared`-free — a clean harness is feasible. Setting up tracking, then writing the surface.
+
+Now writing the surface. Starting with the pure projection core (Adapter), Model, and Tiles.
+
+All 8 files written. Now verifying: format-normalize my files, then lint. Updating tracking.
+
+swiftformat passes and preserved my string-splitting + if-expressions. Now scoped `swiftlint --strict` on just my files via a temp config mirroring the project rules.
+
+swiftlint --strict on my 7 files: **0 violations**. Now the placeholder check (gate uses `check-placeholders.ps1`).
+
+check-placeholders passes (0). Now the real compile + unit-test proof: a SwiftPM harness (module `TeslaSync`) with my code + its `Shared`-free dependencies.
+
+Harness library **compiles cleanly** (my 5 files + deps). Now running the unit tests, then a strict-concurrency build to match the real project setting.
+
+All **25 tests pass**. Now a strict-concurrency build (the real project sets `SWIFT_STRICT_CONCURRENCY: complete`) to catch any concurrency issues.
+
+The strict flag used cache. Let me force a clean Swift 6 language-mode rebuild (Swift 6 mode = complete concurrency, matching the project).
+
+Clean **Swift 6 language-mode build passes with zero warnings/errors** — matches the project's `complete` concurrency. Confirming tests under Swift 6 mode, then I'll attempt the real gate to capture genuine evidence.
+
+All green under Swift 6 mode. Updating tracking, then attempting the real gate to capture genuine evidence.
+
+Project generates and includes my files (48 refs); both schemes exist. Now attempting the real `xcodebuild` build to capture genuine evidence of the KMP `Shared.xcframework` dependency.
+
+The KMP Gradle toolchain **is** available here (cached) — `Shared.xcframework` built successfully. So the full build may actually go green. Letting it continue compiling the app.
+
+Still in the Gradle release-link phase (KMP builds debug+release variants). The toolchain works; it's just slow. Letting it proceed to the Swift app compile.
+
+The KMP framework staged and the app build proceeded. The command finished — let me check the **actual** build result in the raw log.
+
+The KMP framework built+staged fine. The build failure is a **pre-existing, repo-wide** issue: `*.Tests.swift` files in `feature-views/` (AcDcStatsPanel, MediaNowPlayingWidget, MileageStatsWidget, … and BatteryHealthSection) are swept into the **app** target which can't import `XCTest`. Let me confirm the project.yml targeting.
+
+Root cause confirmed: project.yml routes app sources from `feature-views/` with **no `*.Tests.swift` exclusion**, and the test target only pulls `Tests/Unit`. So every surface's `.Tests.swift` (e.g. pre-existing `AcDcStatsPanel.Tests.swift`) compiles into the app target and fails on `import XCTest` — a pre-existing, repo-wide condition outside my allowed files. Let me prove my **non-test** files compile inside the full iOS app by excluding test sources.
+
+The exclusion glob missed `*.ModelTests.swift` (another test-file suffix swept into the app — further confirming the pre-existing repo-wide condition). Let me check all test-file suffixes and re-exclude properly.
+
+All 148 test files (`.Tests`/`.ModelTests`/`.StateTests`) are swept into the app target — a definitive pre-existing repo-wide condition. Re-running the full iOS app build excluding `*Tests.swift` to prove my non-test code compiles in-app.
+
+More pre-existing errors surfaced — duplicate type declarations in `dashboard-widgets/VehicleHeroWidget.*` (`invalid redeclaration`/`ambiguous`), again unrelated to my surface. Let me confirm **zero** errors reference my HealthOverview files across all build logs.
+
+Confirmed: **zero** errors reference my HealthOverview files in any build log. The full-app build fails only on pre-existing issues — 148 swept-in test files + duplicate type declarations across many `dashboard-widgets/*Widget.Model.swift`. Now capturing the remaining gate signals (swiftformat/swiftlint baselines) for an honest log.
+
+All red gate steps are pre-existing and unrelated: swiftformat fails only on `ActionBuilder.Previews.swift`, swiftlint only on `LifetimeStatsWidget.Adapter.swift` — **none of my files**. Now running the actual gate `xcodebuild build test` commands (fast now that KMP is cached) to capture authentic exit codes for the log.
+
+IOS_EXIT=65 — fails on the pre-existing XCTest-in-app-target sweep (first blocker hit). Now the macOS gate leg.
+
+Both gate legs: **IOS_EXIT=65 / MAC_EXIT=65**, both failing on the pre-existing XCTest-in-app-target sweep. I have all authentic signals. Let me extract exact excerpts and assemble the honest gate log.
+
+All evidence captured. Writing the honest gate log.
+
+Log written. Now let me verify the repo's git state — ensure only my allowed files are staged and no build artifacts (xcodeproj, staged Shared.xcframework, gradle build dirs) get committed.
+
+Only my 8 surface files + the log are untracked; all build artifacts are correctly gitignored. Committing the completed, verified surface with an honest message.
+
+Committed cleanly (9 files, 1449 insertions). Finalizing: updating tracking and cleaning up temporary harness/artifacts.
+
+The HealthOverview Apple surface is shipped and committed. Final state verified: commit `6c277826f` contains exactly my 8 `HealthOverview.*` files + the gate log; all build artifacts are gitignored; temp harness cleaned.
+

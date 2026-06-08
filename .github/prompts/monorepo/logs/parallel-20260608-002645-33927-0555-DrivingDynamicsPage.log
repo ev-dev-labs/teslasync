@@ -1,0 +1,162 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The web page composes many sub-components. Let me explore the components and the Apple app structure in parallel.
+
+Let me read all the web components and the helpers, plus explore the Apple app's existing structure for patterns.
+
+Let me read the remaining web components to understand the full structure.
+
+Now let me explore the Apple app structure to understand the patterns and existing infrastructure.
+
+The `view` output for TeslaSync looks unusual. Let me get the real directory structure.
+
+The actual structure uses a flat `feature-views/` directory with multi-file components. Let me find existing Page-level parity units and the related panel components.
+
+Several panels already exist as separate components. Let me examine the conventions by reading a complete exemplar component set and the `DrivingTab` aggregator.
+
+`DrivingTab` is the closest analog to a page. Let me read it fully along with the `LiveMotorStatus` panel exemplar.
+
+I now understand the multi-file component convention. Let me check the build system, gate tooling availability, and design-token primitives.
+
+Build globs `feature-views/` (the prompt's `Features/Driving/` path is template drift). Xcode tooling is available. Let me check whether the Shared.xcframework dependency exists (critical for whether the build can pass) and read the gate contract.
+
+Critical: `Frameworks/Shared.xcframework` does **not** exist (only `.gitkeep`) — the shared-ledger says native packaging is "deferred to macOS CI." This means `xcodebuild build` cannot link. Let me confirm composition feasibility by reading the existing panel entry points and the design-token primitives.
+
+I now understand the conventions thoroughly. Let me verify the build's real failure mode (missing `Shared.xcframework`) and inventory the available design-token/component primitives. Let me start project generation and inventory in parallel.
+
+Project generates fine. Now let me confirm the build failure mode and check how the shared core is imported.
+
+`Shared.xcframework` is imported by 15 source files but doesn't exist on disk. Let me confirm the build fails on this missing prerequisite.
+
+Decisive finding: only **Command Line Tools** are installed — `xcodebuild` cannot run ("requires Xcode"). Combined with the missing `Shared.xcframework`, the build/test gate cannot execute → honest outcome is **STATUS=BLOCKED** per the prompt ("If no Xcode runner is available, the gate → STATUS=BLOCKED") and the p4-apple README. But I must still deliver a complete, correct, lint-clean implementation. Let me verify lint tooling and locate all primitives I'll need.
+
+Lint tooling is available. Let me read the design tokens and all the shared component primitives I'll compose with.
+
+Rich primitive set. Let me read the remaining primitives, the units facade, and the load/connection types in parallel.
+
+I have the core primitives. Let me read an existing panel's Model (composition contract), the units facade, load/connection types, motion, and locate typography + chart wrappers + nav registration.
+
+I have enough on primitives. Let me confirm the conversion approach, charts convention, typography helpers, chart palette, and navigation registration.
+
+Let me read the adapter pattern and locate typography/chart-palette/nav definitions.
+
+`import Charts` is used directly in feature-views; adapters are Foundation-only (no `Shared` import). Let me read typography, buttons, chart models, and the nav shell.
+
+Navigation uses `AppRoute` + a `routeHosts` registry. Let me read the route definitions and registry, plus `TSChartPalette` and `TSButton`.
+
+Let me see where the route registry is populated/injected and confirm the remaining primitive signatures.
+
+I now have a complete architectural picture. The page-unit ships Foundation+SwiftUI only (no `Shared` import). Let me read two more DTO exemplars and the lint config (critical for my large files).
+
+Key lint constraints noted: `--strict` (warnings = errors), line length ≤120 (code), no single-char identifiers except id/ok/x/y/t, swiftformat `before-first` wrapping. I'll author then auto-format with `swiftformat`. Let me check the placeholder script and the file-length situation.
+
+Files are capped at ≤400 lines (I'll match that). Let me read the placeholder patterns to know exactly what literals to avoid, then I'll start building.
+
+Let me read a `.strings`, `.Previews`, and `.Tests` exemplar to match conventions, and check the Localization catalog.
+
+Let me check how test files are targeted (so my `.Tests.swift` matches the build config).
+
+Let me verify how feature-views `.Tests.swift` files are wired into the test bundle.
+
+I have a thorough understanding now. Key findings:
+- **Build gate cannot run**: only Command Line Tools installed (no full Xcode → `xcodebuild` fails), and `Shared.xcframework` is absent. Per the prompt + p4-apple README, this means **STATUS=BLOCKED** on build/test — but I'll deliver a complete, lint-clean implementation and run every gate that CAN run.
+- The repo convention is per-surface, self-contained multi-file SwiftUI surfaces in `feature-views/` (the prompt's `Features/Driving/` path is template drift).
+
+Let me set up the plan and todos, then build.
+
+Now I'll build the implementation. Starting with the input DTOs.
+
+Now the formatting/conversion helpers, then the projection.
+
+Now the projection view-models and the projector. Let me write the view-model container first.
+
+Now the core projector that builds the projection from a snapshot.
+
+The `analytics(...)` builder lives in its own file (to keep Projector ≤400 lines). Let me write it.
+
+Now the model, source seam, and strings facade.
+
+Now the page shell (View entry, header, phase switch).
+
+Before writing the loading skeleton, let me check how existing surfaces handle redaction (the placeholder gate flags the literal "Placeholder", which `.redacted(reason: .placeholder)` contains).
+
+`TSSkeleton` is the skeleton primitive (no `.placeholder` redaction). Let me confirm its signature.
+
+Now the shared chrome and building blocks.
+
+Let me refine two helpers before writing sections: add a `key(...)` helper and make `DriveGaugeTile.name` a resolved `String`.
+
+Now the live sections (motor, g-force, pedal, speed/gear, autopilot).
+
+Now the efficiency, summary, and tips sections.
+
+The analytics section needs a functional date-range filter (web `filteredDrives` feeds both Speed/Gear and Drive Analytics). Let me wire that into the model and projector before writing the charts.
+
+Now the motor-history charts (Swift Charts).
+
+Now the drive-analytics charts with the functional date-range filter.
+
+Now the Driving Coach section (the largest web region), split across two files. First the score/style/efficiency/trend.
+
+Now the coach detail (patterns, recommendations, per-drive table).
+
+Let me define the per-drive table header and row.
+
+Route registration helper + deep-link alias. Let me update todos and write them.
+
+Now the strings catalog (table "DrivingDynamicsPage") with all referenced keys.
+
+Now the previews and the unit tests.
+
+Now the model wiring tests.
+
+All files written. Let me check line counts and run the formatter on my files.
+
+All files ≤400 lines. Now auto-format with swiftformat, then lint.
+
+swiftformat is clean. Now swiftlint --strict on the new files.
+
+Three lint violations (a false-positive `empty_count`, a 3-tuple, and a 6-param preview helper). Let me fix all three.
+
+Now fix the 6-parameter preview helper. Let me view the current preview data section.
+
+Now re-run swiftformat + swiftlint to confirm clean.
+
+swiftlint --strict and swiftformat --lint are clean (0 violations). Now the placeholder gate. The template path doesn't exist, so I'll scan the actual files via a temp copy for a real result.
+
+Two correctness fixes needed: the `sections` VStack has 11 children (exceeds SwiftUI's 10-view `ViewBuilder` limit), and a `chartYScale` Int range should be Double. Let me fix both.
+
+Let me re-run the lint gates after the fixes.
+
+Lint is clean. Now let me capture the honest gate evidence (xcodebuild cannot run; xcframework absent) for the log.
+
+The build/test gate genuinely cannot run (Command Line Tools only; no `Shared.xcframework`) — confirming **STATUS=BLOCKED** honestly. Let me remove one redundant unguarded refresh path I noticed, then finalize.
+
+Lint is fully clean. Let me verify every external design-system symbol I reference actually exists (a deterministic cross-check, since I can't compile).
+
+All design-system symbols verified. Now a critical check: do any of my public type names collide with existing types elsewhere in the module (which would be a redeclaration compile error)?
+
+Found collisions (`DriveNumberFormat`, `DriveNumberFormatTests` already exist). Let me wait for the full list before renaming.
+
+Only 2 collisions, both `DriveNumberFormat`-related. Let me check the existing `DriveNumberFormat` — if its API matches, I'll reuse it (DRY); otherwise I'll rename mine.
+
+The existing `DriveNumberFormat` has different signatures (2-decimal default, `fractionDigits:`/`unit:` labels) — reusing it would change parity formatting. I'll rename mine uniquely. Let me also verify my protocols don't collide (my earlier scan only covered struct/enum/class).
+
+Renamed cleanly, no protocol collisions. The longer name may push some lines over 120 — let me re-format and re-lint.
+
+Clean. Let me verify line counts are still ≤400 and re-confirm the placeholder gate on the final files.
+
+Everything passes that can run; max line 324; placeholder COUNT=0. Now I'll write the honest evidence log and the ledger, then commit. Let me update todos first.
+
+Let me validate the ledger JSON and review what git will commit (ensuring the generated `.xcodeproj` is ignored).
+
+I notice unrelated `AIUsageCard.*` files are modified in the shared worktree — not mine. I'll commit only my files. Let me verify my `AppRouteParser` edit is the only change there, then stage precisely.
+
+My `AppRouteParser` change is the single alias line; the `AIUsageCard` changes are pre-existing (not mine) and will be excluded. Let me stage only my files and commit.
+
+All 26 of my files staged (no unrelated files). Now commit with an honest message.
+
+Committed as `0c1205a38`. Let me run a final consolidated gate check, clean up the generated temp project, and finalize todos.
+
+All gates that can run are green, work is committed (`0c1205a38`), and the temp project is cleaned up.
+

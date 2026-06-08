@@ -1,0 +1,84 @@
+I'll start by exploring the environment and understanding the task structure.
+
+Xcode is not available (only Command Line Tools), but Swift 6.3.2 CLI is. Let me read the web source and the existing template pattern (`AIUsageCard.*`) to understand conventions.
+
+Now let me read the template pattern (`AIUsageCard.*`) and find the native infrastructure for units, i18n, tokens, and diagnostics.
+
+The AIUsageCard pattern is rich. Now let me find the native unit-preference state holder, unit conversion, design tokens, and read the rest of the template files.
+
+Let me find the native infrastructure: design tokens, units state holder, unit conversion, and the shared freshness/connectivity components.
+
+There's also an `AiUsageCard.Chrome.swift`. Let me explore the `Sources/` shared core for tokens and units infrastructure.
+
+Found the key files. Let me read the units facade, unit formatters, and design system.
+
+There's already a `TSTemperature` in `Sources/`, but per the scope-note pattern, shared-surface prompts must be self-contained. Let me understand the target structure and locate the tokens used by `feature-views`.
+
+Now I understand the target structure. The app targets compile `Sources/` (design tokens + `Units` facade) plus `TeslaSync/feature-views`. Note: `shared-surfaces` is **not** yet in `project.yml`. Let me read the web conversion source, the remaining template files, and the design tokens.
+
+Let me read the web conversion/format source and confirm the design tokens + shared components I'll consume.
+
+Let me read the full color/font tokens, `TSButton` init, and confirm `UnitPreferences.metric`.
+
+Let me confirm the `UnitPreferences` presets, locate `AiUsageProjection`, and check available tooling.
+
+All linting tools, `xcodegen`, and `pwsh` are available — but Xcode itself is not (so `xcodebuild` will be the only blocked step). Let me read the projection pattern, lint configs, and remaining shared components so my code passes `--strict`.
+
+I now have the full picture. Let me check the placeholder patterns I must avoid and the web global precision default, then write my plan.
+
+I have everything I need. Let me set up my plan and todos, then implement.
+
+Now creating the directory and the pure-Foundation Adapter (the testable projection core).
+
+Now writing the pure-Foundation Adapter — the testable projection core that ports the web arithmetic exactly.
+
+Now the Model — i18n facade, telemetry seam, state-holder, and the projection (uses the pure Adapter).
+
+`TSFadeIn` confirmed. Now the main surface view.
+
+Now the Views — the reading hero, source caption, and empty state.
+
+Now the Chrome — freshness chip, refresh, banner, loading skeleton, and error (with an actionable retry button).
+
+Now the i18n strings catalog.
+
+Now the previews (per-state) and the test suite.
+
+Now the comprehensive XCTest suite covering the adapter, projection, model, and accessibility.
+
+All 8 files written. Now let me verify formatting, linting, and placeholders on the new files.
+
+swiftformat passes (0/7). Now swiftlint on the new files.
+
+swiftlint linted the whole project (my dir isn't in the config's `included`). It found 1 pre-existing violation — let me confirm it's not in my files, then lint my files directly with a scoped config.
+
+The lone violation is pre-existing in `LifetimeStatsWidget.Adapter.swift` (not mine). Let me lint my files with a scoped config mirroring the repo rules.
+
+All 7 Swift files pass swiftlint `--strict` (0 violations). Now the placeholder check.
+
+Placeholder check passes (COUNT=0). Now the strongest local verification: compile + run the pure Adapter standalone to prove the web-arithmetic parity (since `xcodebuild` is unavailable).
+
+Top-level code needs the file named `main.swift`. Let me fix and rerun.
+
+All 32 adapter parity checks pass and the adapter compiles under the macOS SDK. Now let me type-check the `Model` (state-holder + projection) in isolation with strict concurrency, using a small shim for the surface slug.
+
+`Model` + `Adapter` type-check cleanly under Swift 6 strict concurrency. Now let me type-check the SwiftUI views against real SwiftUI, using shims that match the verified design-token signatures.
+
+Excellent — the full surface (views + model + adapter) type-checks against real SwiftUI under Swift 6 strict concurrency. Now let me capture the `xcodebuild` unavailability evidence and confirm the logs directory.
+
+Three independent blockers confirmed (no Xcode, no Simulator, no `Shared.xcframework`). Let me check sibling log conventions before writing mine.
+
+I understand the conventions now (siblings on non-Xcode hosts report `EXIT=0 / STATUS=BLOCKED` with all runnable gates green + documented xcodebuild deferral). Let me capture the real whole-tree gate exit codes honestly before writing the log.
+
+Honest finding: both whole-tree gate reds are **foreign + pre-existing** (`ActionBuilder.Previews.swift` format, `LifetimeStatsWidget.Adapter.swift` lint) — neither is mine, and both are outside my allowed files. My 7 files are clean on both. Let me confirm they're untouched in this tree, then write the log.
+
+Confirmed foreign files are untouched. Now writing the comprehensive, honest gate log.
+
+Log written. Now cleanup temp artifacts and commit the scoped files + log.
+
+All 8 surface files + log staged (foreign changes excluded). Committing.
+
+Committed cleanly (9 files, 1495 insertions), scoped to my surface + log. Let me do a final verification and close out todos.
+
+The task is complete. The foreign pre-existing changes remain untouched; my surface is committed clean.
+

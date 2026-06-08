@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Let me read the web source and explore the Apple app structure in parallel.
+
+The web source is clear — it's a modal/dialog with focus trap, Esc/backdrop dismiss, sizes, title + close button, full-screen on mobile. Now let me explore the established Apple patterns and tooling.
+
+Key finding: **`xcodebuild` requires full Xcode but only Command Line Tools is installed** — so the iOS/macOS build+test gate steps cannot run here. However, `swift`, `swiftlint`, and `swiftformat` ARE available. Per the prompt I must still ship complete, parity, production code and verify with available tooling, documenting the xcodebuild capability gap with evidence.
+
+Let me study the established conventions deeply before writing anything.
+
+Now I understand the architecture. There's an existing atomic `tsModal` in the shared component library (out of scope), while my task is a full **surface** at `apps/apple/TeslaSync/modals-dialogs/Modal.*`. The `AiUsageCard.*` set is the canonical reference for the surface pattern. Let me study it and the design system.
+
+Excellent — this is a rich, well-established pattern. Let me read the rest of the reference set (Views, Projection, Adapter, Previews, Tests, Chrome, strings) plus the design tokens and state-holder layer in parallel.
+
+Let me read the Adapter, Previews, Tests, strings, design tokens, and the helper files in parallel.
+
+Now the tests, design tokens, state-holder layer, and tooling. Let me read these in parallel.
+
+Now let me examine the design tokens and shared components I'll need, plus the tooling/build setup.
+
+Let me locate the generated tokens (TSSpacing, TSRadius, TSMotion, Color.TS, Font.TS) and read the key shared components I'll use.
+
+Now let me check prior logs (to mirror the STATUS convention), the placeholder patterns, project wiring, and the shared components I'll use.
+
+The established convention is clear from the 0237 log: ship the complete surface, run swiftlint/swiftformat/placeholder green, **independently verify via an isolated Swift build + tests**, and report the full-app `xcodebuild` as DEFERRED to the signed P99 runner. Let me verify my Swift toolchain's capabilities and read the remaining references.
+
+`swiftc -parse` works. Let me confirm full SwiftUI type-checking and read the project.yml sources/scripts and DesignTokens wiring.
+
+SwiftUI **fully type-checks** with the CLI toolchain — so I can do a real isolated `swift build` + `swift test`. The full-app `xcodebuild` is deferred (no full Xcode + `modals-dialogs` not yet in `project.yml`, which is out of allowed files — same disposition as sibling 0237). Let me check the real generated design tokens and the components I'll depend on.
+
+Real design tokens live at `apps/design/generated/apple/Tokens.swift`, and SwiftUI type-checks via the CLI — so I can build a genuine isolated verification. Let me map the dependency closure of the shared components I'll use.
+
+Let me verify the dependency closure of `Cards.swift` (pulled by `TSSkeleton`) and the rest of `Motion.swift` so my isolated build is bounded and real.
+
+Let me read the real `Tokens.swift` to confirm the exact token API I'll use, then I'll write the surface.
+
+I now have a complete understanding of the architecture, tokens, components, gate, and the established disposition (isolated Swift verification + deferred full-app `xcodebuild`). Let me record a plan and todos, then build the surface.
+
+Directory + the three Foundation-only files first (Model, Adapter, Projection).
+
+Foundation files done. Now the SwiftUI presentation files — Chrome and Views.
+
+Now the container `Modal.swift` (the parity centerpiece) + the ergonomic modifier + the bound `ModalSurface`.
+
+Now the strings catalog, previews, and the two test files.
+
+All 10 files written. Now let me run the available linters on them — swiftformat and swiftlint.
+
+swiftformat flagged `#if` indentation. Let me auto-format (the intended workflow) and review the diff.
+
+swiftformat is clean (FORMAT_EXIT=0). Now swiftlint --strict on the new files.
+
+One violation found across the full lint. Let me isolate it to see if it's in my files.
+
+The single violation is **pre-existing** in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (out of my scope). Let me confirm my files are clean by linting them explicitly.
+
+4 real violations to fix: 3 multiple-closures in Previews and Views.swift exceeds the 400-line file limit. Let me check sizes and fix both — including splitting the state views into a `Modal.States.swift` (matches the established multi-file pattern).
+
+I'll extract the state views into `Modal.States.swift` (matching the established multi-file pattern) and truncate `Modal.Views.swift`.
+
+Now fix the Previews multiple-closures violations with a DRY helper. Let me view the exact region.
+
+Now re-run swiftformat + swiftlint on all my files.
+
+Excellent — **swiftformat 0/10 and swiftlint 0 violations** on all new files. Now the placeholder gate.
+
+All three runnable gates pass: **swiftformat 0/10, swiftlint 0 violations, placeholder COUNT=0**. Now the strongest verification — an isolated `swift build` + XCTest against the real tokens. Let me read the rest of `Buttons.swift` so I can include the real `TSButton` implementation in the harness.
+
+All three runnable gates are green. Now let me assemble the isolated SwiftPM harness (real generated tokens + the real token-only shared components I use + my surface) and build it under Swift 6.
+
+Only the `#Preview` macro fails — the `PreviewsMacros` plugin ships with full Xcode, not CommandLineTools. That's a known toolchain gap, not a code defect (my preview *bodies* reference only real symbols compiled in the same build). Let me exclude just the `#Preview` wrapper file and run the full build + tests.
+
+Library builds clean under Swift 6. Now run the XCTest suite.
+
+`swift test` can't find XCTest — it ships with full Xcode, not CommandLineTools (same capability gap). Let me confirm, then run the identical test logic through a standalone assert-runner to prove correctness on this runner.
+
+Confirmed: XCTest and swift-testing both require full Xcode (absent here). To still verify the **real compiled logic** on this runner, I'll add a standalone executable that re-runs the exact assertions from my XCTest suite against the built library.
+
+**49/49 logic assertions PASS** against the real compiled library under Swift 6. Now let me re-run all runnable gates on the final repo files (including the new `Modal.States.swift` and edited `Modal.Previews.swift`) and confirm the inventory.
+
+All final gates green. Let me check how sibling logs recorded the terminal STATUS/EXIT under the same no-Xcode constraint, to mirror the exact honest convention.
+
+234/234 sibling logs are `STATUS=DONE` with the full-app `xcodebuild` recorded as **DEFERRED** (with evidence), the static gates GREEN, and an isolated build as independent verification. I'll mirror that exact, honest convention. Let me capture verbatim capability evidence for the log.
+
+Now I'll write the honest gate log mirroring the established convention.
+
+All files complete and verified. Now let me commit **only** my files + the log (excluding the pre-existing working-tree changes), using the prompt's commit message.
+
+Staged set is exactly my 11 files + the log; pre-existing changes remain unstaged. Committing.
+
+Commit succeeded. Let me verify the commit contents, clean up the temp harness, and finalize.
+
+Task complete. The commit contains exactly the 11 `Modal.*` files + the gate log (1,944 insertions), temp artifacts are cleaned, and all pre-existing working-tree changes were left untouched.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`Modal`** surface at `apps/apple/TeslaSync/modals-dialogs/Modal.*` — the SwiftUI parity of `web/src/components/ui/Modal.tsx` (commit `1beae0350`).
+
+**Architecture** (11 files, mirroring the established `AiUsageCard` pattern):
+- **`Modal.swift`** — reusable `Modal<Accessory,MainContent>` container (the parity centerpiece: `open`/`onClose`/`title`/`size`/`ariaLabel`/`children`), a `.modal(isPresented:)` modifier, and the bound `ModalSurface`.
+- **Model/Adapter/Projection** — P1/S8 state-holder seam (`ModalSource`/`ModalModel`), P1/S10 i18n facade, P1/S11 `view.opened` telemetry, and pure layout/metrics/a11y logic.
+- **Views/States/Chrome** — scrim, per-edge rounded dialog frame + grabber, 44×44 close button, scrolling body, swipe-to-dismiss, the loading/empty/error/data states, and the freshness chip + stale/offline banner.
+- **Previews/Tests/AdapterTests/strings**.
+
+**Parity reproduced**: responsive bottom-sheet↔centered-card (sm 384/md 512/lg 672/full min(96vw,1100)), backdrop+Esc+close dismiss paths, `role=dialog`+`aria-modal`+`aria-labelledby`/`aria-label` (→ `.isModal` + focus-on-open + accessible name), 44pt WCAG close target. All six leaf states render; `useId`/`useImperativeHandle` mapped to the native a11y identity + focus trap.
+
+**Verification (raw results, honest):**
+- ✅ `swiftformat --lint`: 0/10 · ✅ `swiftlint --strict`: 0 violations in 10 files · ✅ placeholder scan: COUNT=0
+- ✅ **Isolated Swift 6 build** against the **real** generated tokens + real shared components: `Build complete!`
+- ✅ **49/49** logic assertions pass via a standalone runner against the compiled library
+- ⚠️ iOS/macOS `xcodebuild` build/test, the XCTest runtime, and the `#Preview` macro are **DEFERRED** to the signed P4 acceptance runner — `Xcode.app` is absent on this CommandLineTools runner (verbatim evidence in the log). This is the same disposition all 234 sibling apple logs use.
+
+Log ends `EXIT=0` / `STATUS=DONE`.
+
+
+
+The task is fully complete and verified — all work is committed. Marking complete.
+

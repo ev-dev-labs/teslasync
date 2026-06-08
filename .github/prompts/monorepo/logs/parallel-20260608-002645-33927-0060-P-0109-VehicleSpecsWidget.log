@@ -1,0 +1,115 @@
+I'll start by exploring the repository structure to understand the task context, then read the web source that serves as the specification.
+
+Now let me read the web source spec and examine the existing Apple dashboard-widgets directory and patterns.
+
+This is a large established codebase with 400+ native widget files following a clear pattern. Let me check tooling availability and explore the shared infrastructure (state holders, WidgetShell, WidgetDetailCard, tokens, i18n, telemetry) and the registry.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed — so the iOS/macOS simulator build+test gate cannot run here. However, `swift 6.3.2`, `swiftlint`, and `swiftformat` ARE available. Let me check the project build system (Package.swift/xcodegen), pwsh availability, and the existing native patterns I must follow.
+
+The Apple app uses **xcodegen** (`project.yml`), `pwsh` is available, and `swiftlint`/`swiftformat` work — but `xcodebuild` needs full Xcode (only CLT present). Let me find the closest analog widget (vehicle detail/config type) and read the shared native infrastructure. Let me examine the registry and search for similar widgets.
+
+`WarrantyStatusWidget` and `SubscriptionsWidget` are the closest detail-list analogs. Let me read the full file set of one complete widget to learn the exact pattern, plus the registry entry for vehicle-specs and the native shared shell/detail components.
+
+`SubscriptionsWidget` is the ideal analog — same `vehicle` category, same default 2×4 / min 1×2, detail-list style. Let me read its complete file set to learn the exact pattern.
+
+Excellent pattern. Now let me read the remaining SubscriptionsWidget files (Models, Builder, Content, Previews, strings, Tests) to fully internalize the structure.
+
+Now the Content, Previews, strings, and Tests files to complete my understanding of the pattern.
+
+Let me read the Previews and Tests, and locate the design token + registration type definitions.
+
+I have the full pattern. Now let me locate the design tokens, the registration types, and any host-compilation test harness (the files mention a "swiftc host gate" — important since xcodebuild is unavailable).
+
+Let me read the canonical registration types, design tokens, and the placeholder checker to understand exact APIs and constraints.
+
+13 widgets define `DashboardWidgetSize` (parallel-work artifact); SubscriptionsWidget's canonical approach is to **reference**, not redefine — I'll follow that. Now I must locate the design tokens (`TSSpacing`, `TSRadius`, `Color.TS`, `Font.TS`, `TSTone`, `TSSkeleton`).
+
+Tokens appear in the Watch shared file, but the main-app dashboard widgets use them too. Let me read `project.yml` to understand target membership and find where the main `TeslaSync` target's tokens live.
+
+Now I understand the target structure — design tokens are generated into `apps/design/generated/apple`. Let me verify Xcode availability thoroughly (before concluding the build gate is blocked), confirm the generated token names, and check test placement.
+
+A full **Xcode.app exists** at `/Applications/Xcode.app` — `xcode-select` just points to CommandLineTools. I can override via `DEVELOPER_DIR` without sudo. Let me test whether xcodebuild + simulators actually work.
+
+Xcode 26.5 is fully functional via `DEVELOPER_DIR`, iPhone 16 simulator is booted, iOS 26.5 runtime present — **the gate CAN run**. But I must verify the baseline compiles given 13 apparent duplicate `DashboardWidgetSize` definitions. Let me inspect those definitions for guards.
+
+Confirmed: 13 **real, unguarded** duplicate `DashboardWidgetSize` definitions across sibling widgets — the baseline app target cannot compile as-is (pre-existing parallel-work state, outside my allowed scope). My widget must **reference** the canonical types (like SubscriptionsWidget). Let me check the KMP framework dependency and build script to gauge full-gate feasibility.
+
+The full xcodebuild gate has pre-existing, out-of-scope baseline blockers (13 duplicate grid-type defs in sibling widgets + empty `Frameworks/` needing a Kotlin/Gradle build). My widget must reference the canonical types. I'll build the complete artifact + verify it rigorously in isolation against the real SDK. Let me read the exact token/component APIs and the web `shared`/`WidgetDetailCard` spec.
+
+Let me locate the web `shared` module (WidgetDetailCard/DetailEntry) and read the native `TSTone` and `TSSkeleton` APIs.
+
+Let me read the web `WidgetDetailCard.tsx` and its `shared/index.ts` to reproduce its rendering (mono, badge, empty) faithfully.
+
+I now have the complete spec and all native APIs. Let me read the SwiftLint/SwiftFormat configs and the placeholder checker so my code passes `--strict`/`--lint` and the placeholder gate on the first try.
+
+Let me read the placeholder checker to understand its scan scope and path resolution (the gate passes a path prefix).
+
+I have a complete understanding. Key findings:
+- **Xcode 26.5 + iPhone 16 sim + iOS 26.5 runtime work** via `DEVELOPER_DIR` (capability available).
+- The **merged snapshot's full-target build is pre-broken** (13 duplicate `DashboardWidgetSize` defs in sibling widgets + empty `Frameworks/`) — outside my allowed scope. My widget must **reference** canonical types (like `SubscriptionsWidget`).
+- I'll build the complete artifact, then verify it green in **isolation** under the real iOS18/macOS15 SDK + run lint/format/placeholder.
+
+Let me set up tracking and write the plan.
+
+Now I'll write the 8 artifact files, modeled precisely on the canonical `SubscriptionsWidget`, adapted to the `VehicleSpecsWidget` web source. Starting with the data layer.
+
+Now the surface view, content, previews, strings, and tests.
+
+I'll refactor the Builder so all localization (fixed row titles too) flows through the injected `localize` closure — matching the canonical `SubscriptionsWidget` pattern and keeping the adapter fully testable.
+
+Now the comprehensive test suite:
+
+All 8 files written. Now let me normalize formatting with swiftformat (autofix on my files), then verify with `--lint` and `swiftlint --strict`.
+
+`swiftformat --lint` passes (0/7 require formatting). Now SwiftLint `--strict` on my files:
+
+SwiftLint `--strict`: **0 violations**. Now the placeholder gate. I'll scan my actual files (copying to a temp dir so only mine are checked) and grep for any banned words per the acceptance criteria.
+
+One hit: the word "placeholder" in a Builder.swift comment. Let me reword it.
+
+My files pass **all runnable checks**: swiftformat `--lint` ✓, swiftlint `--strict` (0 violations) ✓, check-placeholders (COUNT=0) ✓, no banned words ✓.
+
+Now the strongest verification: an **isolated xcodebuild build+test** under the real iOS 18/macOS 15 SDK (simulating a clean slot, since the merged tree is pre-broken by sibling duplicates). Let me inspect the two small shared deps (`TSSkeleton`, `TSTone`) for self-containedness.
+
+Both deps are self-contained (only `import SwiftUI` + tokens). I'll build an isolated harness with the **real** Tokens/Skeletons/Badges + canonical grid types + my files. Let me grab the exact canonical grid-type definitions to copy faithfully.
+
+I have everything. Let me build the isolated verification harness (real Tokens + Skeletons + Badges + canonical grid types + my 6 source files; my Tests file in a test target), matching the real project's Swift 6 / strict-concurrency / iOS 18 / macOS 15 settings.
+
+Project generated. Now the iOS build+test on iPhone 16 simulator:
+
+`Skeletons.swift` isn't self-contained (references `TSCard`). I'll replace it with just the self-contained `TSSkeleton` struct (verbatim from the real file). Badges.swift compiled fine.
+
+Framework **BUILD SUCCEEDED** (my widget compiles cleanly for iOS). The test target can't resolve `@testable import TeslaSync` because the framework's product name differs from its module name. Let me set `PRODUCT_NAME: TeslaSync` on both framework targets and regenerate.
+
+Module resolves now. New issue: under Swift 6 strict concurrency, the test fixture's `static let localize` needs `VehicleSpecsLocalize` to be `@Sendable`. That's a genuine correctness improvement — let me make the typealias `@Sendable` in the real Builder, then re-sync the harness.
+
+**iOS: 22 tests passed, BUILD+TEST SUCCEEDED (EXIT=0).** Now the macOS build+test:
+
+**Both platforms green: iOS 22/22, macOS 22/22, BUILD+TEST SUCCEEDED.** Let me re-verify lint/format/placeholder after the `@Sendable` edit, and check the established log convention + macOS-pending notes to calibrate my final status honestly.
+
+Lint/format still green after the `@Sendable` edit. The canonical `SubscriptionsWidget` (0097) has an existing log — let me read it to match the established format and STATUS convention.
+
+This is the key calibration: the canonical **0097 SubscriptionsWidget** log ended **EXIT=0 / STATUS=DONE** by host-validating the surface and *deferring* the full-Xcode app build/test (no Xcode on that host + surface not yet grid-registered + Shared.xcframework unstaged).
+
+My verification is **strictly stronger** — I ran a *real* `xcodebuild build test` (iOS + macOS, 22/22 each) in an isolated clean-slot project. Let me capture the whole-tree lint/format state and baseline evidence honestly for the log.
+
+Both whole-tree gates have exactly **one predecessor issue each, neither in my files**. The swiftformat offender is `feature-views/ActionBuilder.Previews.swift`. Let me identify the single swiftlint violation to confirm it's also a predecessor.
+
+Confirmed: the single swiftlint violation is the **same pre-existing predecessor** (`LifetimeStatsWidget.Adapter.swift`, 0055) the 0097 log documented — my 7 files have **0 violations** (the "yes" was just progress lines). Both whole-tree predecessors are outside my allowed scope.
+
+I now have everything, and my evidence is **stronger** than the accepted 0097 precedent (real isolated `xcodebuild build test` green on both platforms vs. their typecheck proxy). Let me gather final metadata and write the gate log.
+
+All metadata gathered. Now I'll write the comprehensive, honest gate log (following the accepted 0097 structure, reflecting my stronger real-`xcodebuild` verification).
+
+Log written. Now final consolidated verification on my files, cleanup, and a check that my changeset is exactly the allowed files before committing.
+
+All surface gates green. But the working tree has **pre-existing modifications I didn't make** (`AIUsageCard.*`, two web files) — those are outside my scope and must NOT be committed. I'll stage **only** my allowed files explicitly.
+
+Exactly my 8 files + log staged; predecessor mods left untouched. Committing:
+
+Committed cleanly (`fc9a92934`) — exactly my 8 files + log, no predecessor changes swept in. Let me finalize tracking.
+
+All tasks complete and verified. Let me do a final confirmation of the committed state.
+
+Task complete and fully verified.
+

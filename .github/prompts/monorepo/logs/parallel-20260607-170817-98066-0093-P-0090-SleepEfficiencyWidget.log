@@ -1,0 +1,117 @@
+I'll start by exploring the repository structure and understanding both the web source specification and the existing Apple app architecture.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swift`, `swiftlint`, `swiftformat` ARE available. Let me read the web source and explore the existing native widget patterns in depth.
+
+The target directory already contains sibling widgets following a clean multi-file decomposition. Let me study the closest analog (`LifetimeStatsWidget` — gauge/stat-based) in full and locate the shared widget infrastructure (WidgetShell, gauge hero, registry, state holders, i18n, telemetry).
+
+`LifetimeStatsWidget` is the closest analog (same dir, registry-based, stat/gauge style). Let me read it completely along with the state-holder infrastructure and web types.
+
+Excellent — this is a thorough, exemplary pattern. Now let me read the remaining LifetimeStats files, the shared design tokens/registry infra, the gauge component, and the web shared widget components + types.
+
+This pattern is crystal clear. Now I need the gauge specifics (web uses `WidgetGaugeHero`, not a stat grid) and the shared native infra. Let me find and read the web shared widget components, the SleepEfficiency types/hook, the registry, and native gauge + design tokens.
+
+Now let me read the native gauge primitive, the shared design tokens, skeletons, and confirm the `DashboardWidgetRegistration`/`DashboardWidgetSize` definitions (shared in the target).
+
+`TSRadialGauge` exists but is hardcoded (120×120, palette-only color, always `%`). The web gauge needs threshold colors, compact sizing, and a custom unit — so I'll build an inline gauge like LifetimeStats built inline tiles. Let me read the design tokens, metrics, skeletons, and confirm the registration struct.
+
+Now let me read the metric component signatures, the placeholder checker, the lint/format configs, and how `project.yml` maps sources/strings — to ensure my new files compile and pass the gate cleanly.
+
+Let me read the full `project.yml` to understand how `.Tests.swift` and `.strings` files in the widget directory are wired into app vs test targets.
+
+I have the full pattern. Let me verify tooling availability (pwsh, swift framework imports) and read the exact `fmtNumber` web implementation to port the math precisely.
+
+pwsh is available (placeholder gate runnable), but **xcodebuild is blocked** — only Command Line Tools, no Xcode, no `simctl`/simulators. SwiftUI/Observation typecheck works with the CLI toolchain, so I can validate logic standalone. Let me read the web `RadialGauge` to match the gauge center/label rendering precisely.
+
+I now have the complete gauge spec. Let me quickly confirm the generated `Font.TS`/`Color.TS` token sizes (to pick the right center font) and peek at one newer sibling header idiom, then start writing.
+
+I have everything needed. Let me confirm the logs directory and spacing token values, then set up my plan and todos.
+
+All confirmed. Let me set up my plan and todos, then implement the six files.
+
+Now I'll write the six files. Starting with the SwiftUI-free **Model** (seams, DTO, registry, i18n facade):
+
+Now the pure **Adapter** (projection + number-format port + tone + a11y summary):
+
+Let me validate the pure logic by compiling and running it standalone (no Xcode needed), proving value parity before writing tests.
+
+Compiles clean. Now let me run it to prove value parity:
+
+All 44 parity assertions pass — the projection logic compiles and matches the web source exactly. Let me update todos and write the **SwiftUI view**.
+
+View written. Now the **Previews**, **strings**, and **Tests** files.
+
+All six files created. Now let me run the verification gates. First, swiftformat (the config lives in `apps/apple/.swiftformat`):
+
+Two lines exceed 120 cols. Let me view them and let swiftformat auto-fix:
+
+I'll extract the long label expression into a local for clarity and width:
+
+swiftformat clean and no line exceeds 120. Now swiftlint `--strict`:
+
+File length is 422 (max 400). The sibling `GuardModeWidget` uses a `.Views.swift` split — I'll extract the two presentational sub-views into `SleepEfficiencyWidget.Views.swift` (same allowed glob). Let me locate the boundary:
+
+Now I'll create the `.Views.swift` file with the two sub-views and remove them from the main file:
+
+Now remove the extracted region (lines 307–422) from the main view file:
+
+Clean. Now re-run swiftformat and swiftlint across all six files:
+
+Both pass cleanly (0 format, 0 lint violations). Now the placeholder gate (pwsh) and a re-verification of the logic against the final files:
+
+Placeholder gate passes (COUNT=0) and logic re-verified (ALL_PASS). Now the full-tree format/lint (as the gate runs them) to confirm no baseline regression:
+
+Full-tree format clean (0/338). Now full-tree `swiftlint --strict` (the gate command):
+
+One violation in the full tree — let me identify it:
+
+The only violation is in a **pre-existing sibling file** (`LifetimeStatsWidget.Adapter.swift`), not mine. Let me confirm it's unmodified baseline and that my files are untouched by it:
+
+Confirmed: my 7 files are the only additions; the lone full-tree lint violation is in `LifetimeStatsWidget.Adapter.swift` — **unmodified at HEAD** (pre-existing, outside my allowed-files scope). My six files are 0-violation clean.
+
+Now let me capture the real xcodebuild capability evidence and assemble the gate log honestly:
+
+I have all evidence. Let me generate the log file with genuine command output for every runnable step plus the xcodebuild capability evidence:
+
+The log is complete and honest. Now, for extra confidence on the SwiftUI views (since xcodebuild can't run), let me attempt a bounded standalone **typecheck** of all six files against the real design tokens plus minimal shims for the few shared components I use.
+
+`TSMotion` and `TSSkeleton` are token/SwiftUI-only. Let me typecheck the app-target view files together with the real design tokens + real `TSSkeleton` + a registration shim (excluding the XCTest file, which references the module by name):
+
+The errors are inside `Skeletons.swift` itself (it uses `TSCard`, unrelated to my code). Let me swap it for a minimal `TSSkeleton` shim (the only component I use) to isolate my files:
+
+Full SwiftUI typecheck passes (exit 0). Let me also validate the `#Preview` bodies compile (with `-DDEBUG`):
+
+The `-DDEBUG` failure is solely the `#Preview` macro plugin (`PreviewsMacros`) being absent from Command Line Tools — an Xcode-only plugin, identical usage to every accepted sibling widget, not a code defect. The shipping (non-DEBUG) code typechecks clean. Let me record this evidence in the log:
+
+All evidence recorded. Let me clean up temp files, finalize todos, and verify the deliverable set:
+
+All 7 files + log present. Now commit only my files + the log (excluding the two pre-existing unrelated modified files):
+
+Exactly the 8 intended files staged (7 deliverables + log), no unrelated changes. Committing:
+
+Committed cleanly as `df14306a` (8 files, 1629 insertions). Let me do a final working-tree sanity check:
+
+The task is complete. The only remaining working-tree changes are two pre-existing unrelated files I correctly left untouched.
+
+## Summary
+
+Shipped native Apple SwiftUI parity of `SleepEfficiencyWidget` (P4/0090), committed as `df14306a` — 7 files in the allowed `SleepEfficiencyWidget.*` envelope + the gate log, following the established sibling pattern (`LifetimeStatsWidget`):
+
+| File | Role |
+|---|---|
+| `.Model.swift` | State-holder seam (P1/S8), `view.opened` telemetry (P1/S11), DTO/prefs, `@Observable` model, registry (`sleep-efficiency`, energy, 1×2…3×40), i18n facade |
+| `.Adapter.swift` | Pure projection — gauge + 3 stats, web `fmtNumber` port, `efficiencyColor` tone thresholds, a11y summary |
+| `.swift` / `.Views.swift` | SwiftUI surface (header/help popover/states) + radial gauge & stats sub-views |
+| `.Previews.swift` | DEBUG previews for every state/layout |
+| `.strings` | i18n catalog (all web keys + native chrome) |
+| `.Tests.swift` | Adapter parity, phases, telemetry, registry clamp, a11y |
+
+**Parity:** reproduces the web gauge (value=`sleep_efficiency_pct`, threshold tone, `fmtNumber(clamp, isInteger?0:precision)` center), the 3 stats (drain×24 @2dp, asleep/offline minutes÷60, `recent_events.length`), all 6 states (loading/empty/error/stale/offline/content), both layouts, and every i18n key — zero English literals in code.
+
+**Verification (all runnable gates green):**
+- `swiftlint --strict`: **0 violations** on all 6 deliverable files (the lone whole-tree violation is pre-existing in unmodified `LifetimeStatsWidget.Adapter.swift`)
+- `swiftformat --lint`: **0** (whole tree, 338 files)
+- `check-placeholders.ps1`: **PLACEHOLDER_COUNT=0**
+- Standalone `swiftc` proof: **44/44** value-parity assertions; release SwiftUI typecheck **exit 0**
+
+**STATUS=BLOCKED** (the prompt's explicitly-accepted terminal state): the `xcodebuild` iOS+macOS `build test` steps cannot run — this runner has Command Line Tools only (no Xcode, no `simctl`/Simulator). Full evidence is in `…/logs/p4-apple-dashboard-widgets-0090-SleepEfficiencyWidget.log`. Per the Honesty Covenant, the build/test gate is reported BLOCKED with capability evidence rather than claimed green.
+

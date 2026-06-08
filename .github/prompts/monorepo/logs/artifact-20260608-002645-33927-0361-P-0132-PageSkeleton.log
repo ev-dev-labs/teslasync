@@ -1,0 +1,137 @@
+=== P4 Shared surface 0132 PageSkeleton (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/PageSkeleton.*
+Web src  : components/feedback/PageSkeleton.tsx (presentational skeleton building blocks)
+Date     : 2026-06-08
+Honesty covenant: red is reported as red. The verbatim whole-app gate is RED on
+pre-existing, repo-wide issues OUTSIDE this surface's allowed-file scope; the surface
+itself is COMPLETE and independently verified GREEN. Terminal status: BLOCKED (see end).
+
+--------------------------------------------------------------------------------
+SECTION A — PLATFORM CAPABILITY (present; this is NOT a capability block)
+--------------------------------------------------------------------------------
+xcodebuild : Xcode 26.5 Build version 17F42   (via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer)
+swift      : Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108)
+swiftlint  : 0.63.3
+swiftformat: 0.61.1
+xcodegen   : 2.45.4
+simulator  : iPhone 16 (83717DEE-70A3-4325-AA61-CBDDD3140989) (Booted), iOS 26.5
+SDKs       : iphonesimulator26.5, macosx26.5  (deploy targets iOS 18 / macOS 15 — OK)
+SwiftUI + Swift Charts + MapKit: probe compiled clean (swiftc -typecheck import SwiftUI/Charts → 0).
+KMP Shared.xcframework (ADR-004 dependency of the app targets):
+  Scripts/build-shared-xcframework.sh → Gradle :core:assembleSharedXCFramework
+  >>> BUILD SUCCESSFUL in 15m 53s
+  >>> ✓ Shared.xcframework staged → apps/apple/Frameworks/Shared.xcframework
+=> The Apple toolchain required by the prompt's capability clause IS available.
+
+--------------------------------------------------------------------------------
+SECTION B — THE SURFACE (created; complete; no stubs)
+--------------------------------------------------------------------------------
+Files (apps/apple/TeslaSync/shared-surfaces/):
+  PageSkeleton.Adapter.swift   — pure core: web default props (4 cards / 320 chart / 8×4 table),
+                                 Tailwind block metrics, responsive column math (grid-cols-2
+                                 md:grid-cols-4), count guards, composition plan, a11y regions.
+  PageSkeleton.Model.swift     — P1/S8 source seam, P1/S11 telemetry seam (view.opened),
+                                 @Observable PageSkeletonModel, P1/S10 i18n facade (PSKStrings).
+  PageSkeleton.Views.swift     — 4 web-parity section subviews (header/statGrid/chartBlock/table)
+                                 + empty-plan fallback; each a role="status"/aria-label region;
+                                 reuses atomic TSSkeleton; tokens only (no Tailwind ports / no hex).
+  PageSkeleton.swift           — PageSkeleton view + surfaceSlug "PageSkeleton"; binds model;
+                                 onAppear start()/onDisappear stop(); empty→fallback (never blank).
+  PageSkeleton.Previews.swift  — DEBUG #Preview per variant (standard/stats/chart/table/custom/empty).
+  PageSkeleton.Tests.swift     — XCTest: defaults, layout/column math, count guards, table cells,
+                                 plan, a11y regions, i18n facade, model wiring + view.opened.
+  PageSkeleton.strings         — P1/S10 catalog table "PageSkeleton": the 4 web aria-label strings
+                                 ("Loading page header/stat cards/chart/table") + native "Loading page".
+
+Parity note: PageSkeleton.tsx is a pure presentational set of shaped skeleton blocks with no
+data fetch. The generic state matrix lists loading/empty/error/stale/offline, but this surface
+*is* the loading representation and the web source has no error/stale/offline branch of its own —
+those are what the skeleton stands in FOR (a host shows PageSkeleton while loading, then swaps to
+content/EmptyState/QueryError). All four web building blocks are reproduced; the one branch this
+surface owns — an empty plan — renders a guarded fallback skeleton, never a blank box. This mirrors
+the accepted precedent of feature-views/SummaryStatsRow (a presentational leaf that reproduces only
+the web branches and documents that lifecycle chrome is owned by the host).
+
+--------------------------------------------------------------------------------
+SECTION C — PER-SURFACE VERIFICATION (this surface only — all GREEN)
+--------------------------------------------------------------------------------
+[C1] swiftformat --lint (TeslaSync/shared-surfaces)
+     >>> 0/6 files require formatting.                                  EXIT=0
+[C2] swiftlint --strict (TeslaSync/shared-surfaces; rules = repo .swiftlint.yml)
+     >>> Done linting! Found 0 violations, 0 serious in 6 files.        EXIT=0
+[C3] check-placeholders.ps1 -Path .../shared-surfaces -Language swift
+     >>> PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0                     EXIT=0
+     (self-test PASS; no TODO/stub/mock/placeholder/Lorem in shipped code)
+[C4] Isolated compile — surface built as module `TeslaSync` against the REAL design tokens
+     (apps/design/generated/apple/Tokens.swift) with the atomic TSSkeleton primitive stubbed
+     to its exact real public signature (init(width:height:cornerRadius:)). Adapter + Model +
+     Views + main view + Previews(-D DEBUG) all compiled clean.         EXIT=0
+[C5] Unit tests — `swift test` (macOS 15, XCTest) over the surface module:
+     >>> Test Suite 'All tests' passed — Executed 19 tests, with 0 failures (0 unexpected)
+       PageSkeletonDefaultsTests, PageSkeletonLayoutTests, PageSkeletonPlanTests,
+       PageSkeletonAccessibilityTests, PageSkeletonStringsTests, PageSkeletonModelTests   EXIT=0
+
+--------------------------------------------------------------------------------
+SECTION D — VERBATIM GATE (whole-app / repo-wide — RED on PRE-EXISTING issues)
+--------------------------------------------------------------------------------
+[D1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+[D2] xcodebuild -scheme TeslaSync-macOS build test
+     BLOCKED — PRE-EXISTING, repo-wide, outside this surface's allowed files.
+     Root cause: 485 co-located *.Tests.swift files under TeslaSync/feature-views and
+     TeslaSync/dashboard-widgets are members of the APP targets in project.yml (sources:
+     - path: TeslaSync/feature-views), and they `import XCTest` + `@testable import TeslaSync`,
+     which cannot compile in an app-target module.
+     Evidence (real repo files, not a toy):
+       • pbxproj target membership — SummaryStatsRow.Tests.swift is in the Sources build
+         phase of BOTH targets:  -> compiled by target: TeslaSync-macOS
+                                 -> compiled by target: TeslaSync
+       • swiftc -module-name TeslaSync -enable-testing -typecheck \
+             feature-views/SummaryStatsRow.{swift,Model,Adapter,Views}.swift \
+             feature-views/SummaryStatsRow.Tests.swift
+         >>> SummaryStatsRow.Tests.swift:19:8: error: no such module 'XCTest'
+             19 | import XCTest
+             20 | @testable import TeslaSync
+     This surface may only create files under shared-surfaces/PageSkeleton.* (+ this log);
+     it cannot edit project.yml to re-home those 485 test files into the unit-test targets,
+     nor add TeslaSync/shared-surfaces to the app-target sources. Registering shared-surfaces
+     and folding PageSkeleton.strings into Localizable.xcstrings are integration-time steps,
+     exactly as the parallel-surface model intends (cf. SummaryStatsRow.strings header).
+
+[D3] swiftlint --strict   (repo-wide; .swiftlint.yml `included:` does NOT list shared-surfaces)
+     >>> Found 1 violation, 1 serious in 1909 files.                    EXIT=2
+     The single violation is PRE-EXISTING and NOT this surface:
+       TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19:
+       error: Function Body Length Violation (function_body_length)
+     (This surface's 6 files: 0 violations — see [C2].)
+
+[D4] swiftformat --lint apps/apple   (repo-wide)
+     >>> 1/1919 files require formatting.                               EXIT=1
+     The single offender is PRE-EXISTING and NOT this surface:
+       TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1:
+       error: (blankLinesBetweenScopes)
+     (This surface's 6 files: 0 require formatting — see [C1].)
+
+[D5] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/PageSkeleton
+     >>> PLACEHOLDER_COUNT=0                                            EXIT=0
+
+--------------------------------------------------------------------------------
+SECTION E — CONCLUSION
+--------------------------------------------------------------------------------
+The PageSkeleton shared surface is COMPLETE and INDEPENDENTLY VERIFIED GREEN on every check
+that scopes to its own files: swiftformat (0), swiftlint (0), placeholder (0), isolated compile
+(0), and 19/19 unit tests. The Apple platform capability required by the prompt is fully present
+(Xcode 26.5, booted iPhone 16 sim, KMP Shared.xcframework built + staged).
+
+The VERBATIM whole-app gate ([D1]-[D4]) is RED, but exclusively on PRE-EXISTING, repo-wide
+conditions that live OUTSIDE this surface's allowed files and cannot be fixed without editing
+project.yml and/or 485+ other surfaces' files:
+  • app-target membership of 485 co-located *.Tests.swift (XCTest in an app module) → blocks D1/D2
+  • LifetimeStatsWidget.Adapter.swift function_body_length                        → blocks D3
+  • ActionBuilder.Previews.swift blankLinesBetweenScopes                          → blocks D4
+None of these are introduced by, or fixable within, this surface. Per the honesty covenant
+(no red-as-green, no commit-on-red claim of success, no scope narrowing), the whole-app gate
+cannot be reported as EXIT=0, so this artifact terminates as BLOCKED with the evidence above —
+the deliverable itself is production-complete (no stubs, no placeholders, full parity, tests pass).
+
+EXIT=1
+STATUS=BLOCKED

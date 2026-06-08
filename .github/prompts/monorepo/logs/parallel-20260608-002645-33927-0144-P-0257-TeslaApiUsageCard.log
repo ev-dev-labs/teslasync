@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Key finding: there's an existing sibling `AIUsageCard` (the web source mentions `AiUsageCard` shares the same `UsageCard` contract). Let me study it as the template, and check the feature-views directory and supporting infrastructure.
+
+Found the sibling template: `AiUsageCard.*` (the other `UsageCard` consumer). Let me understand the git situation and read the full template pattern.
+
+Now I understand the structure. The git "modified" `AIUsageCard.*` (capital I) entries are case-folding artifacts of a pre-existing refactor to `AiUsageCard.*` — not my concern. My task is to create `TeslaApiUsageCard.*` following the `AiUsageCard` pattern. Let me read the rest of the template.
+
+Now let me examine the web data shapes (the `UsageCard` primitive, the hooks, types) and confirm the shared Swift tokens/components exist.
+
+Swift tokens aren't under `Sources`. Let me locate them and read the `useApiLogStats` hook body and the web `UsageCard` primitive.
+
+The web `UsageCard` has **budget bar, over-budget banner, and footer** sections — which TeslaApiUsageCard uses but AiUsageCard did NOT. I must reproduce those too. Let me read the full primitive and locate the design tokens.
+
+Design tokens aren't where I expected. Let me find where `Color.TS`, `TSSpacing`, `TSRadius`, `Font.TS` are actually declared, and check the project layout.
+
+Tokens live in `apps/design/generated/apple/Tokens.swift` (included in the TeslaSync target). Let me confirm the exact token APIs and the shared component signatures I'll reuse.
+
+I have the full infrastructure picture. Let me check Xcode/simulator availability (the gate needs full Xcode), the placeholder checker, lint configs, and how the project handles pending macOS verifications.
+
+Critical insight: **Xcode.app IS installed** — the project convention (per `macos-pending-verifications.md`) is to run with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`. Prior feature-view prompts verify the surface in isolation (SwiftPM + `swiftc -typecheck` against iOS-18/macOS-15 SDKs + swiftlint/swiftformat/placeholder), deferring the full-app `xcodebuild` to a `macos-latest` gate. Let me confirm the toolchain works.
+
+Full Xcode 26.5 with iOS/macOS SDKs and a booted iPhone 16 simulator — the capability is **available**. Let me confirm the `TSButton` init and check for an existing isolated-verification harness (the precedent uses "isolated SwiftPM build").
+
+Full toolchain confirmed. Let me check the dependency closure of the shared components I'll reuse and whether `xcodegen` is available, then write my plan.
+
+I have a complete understanding. Full Xcode 26.5 toolchain is available. Let me check how prior feature-view prompts ended their logs (the established honesty convention) and read the placeholder patterns, then write my plan.
+
+I now have the full established convention (EXIT=0/STATUS=DONE with full-app xcodebuild deferred as macOS-pending; verified via isolated Swift 6 build + XCTest + lint/format/placeholder). Let me read the placeholder script's scan section, then write my plan.
+
+I now have everything needed. Let me write the plan and seed the todo list.
+
+Now I'll write the surface files, starting with the dependency-free `Adapter.swift` core.
+
+Now the comprehensive `Tests.swift` covering projection phases, all sections, model wiring, and accessibility.
+
+All 10 files written. Let me verify formatting and linting. First swiftformat (write) to normalize, then lint.
+
+Three `--strict` violations: two `file_length` (>400) and one `type_body_length` (>250). I'll split files — extract value types into a new `ViewState.swift`, footer views into `Footer.swift`, and move Projection section-builders into an extension. Let me view the exact boundaries.
+
+I'll extract the value types into a new `ViewState.swift` file and remove them from `Model.swift`.
+
+Now remove that block from `Model.swift` (lines 44–197) and verify the seam is clean.
+
+Model.swift is now 332 lines. Now extract the footer views from `Views.swift` into a new `Footer.swift`.
+
+Now create `Footer.swift` with the footer views and remove them from `Views.swift`.
+
+Views.swift is 362 lines now. Now restructure `Projection.swift` to move section-builders into extensions (fixing `type_body_length`). Let me view the boundaries.
+
+I'll recreate `Projection.swift` with section builders in extensions (cleanest fix for `type_body_length`).
+
+Now re-run swiftformat (write) and both linters on all 11 Swift files.
+
+Lint is fully clean (0 violations). Now the placeholder scan and locating typecheck dependencies.
+
+Placeholder scan clean (COUNT=0). Now cross-SDK typecheck against iOS 18 + macOS 15 SDKs with the shared token/component dependencies.
+
+Skeletons.swift (a dependency) references `TSCard`. I need the dependency closure. Let me find the remaining shared-component files and add them iteratively.
+
+Let me compile the whole `Sources/Components` tree (the shared library) + Tokens with my files — that resolves the internal cross-references.
+
+Let me check the component dependency surface and try a minimal closure (faster than the whole tree).
+
+Components is self-contained (only system imports). My minimal closure is Tokens + Buttons + Skeletons + Cards + Motion. Let me typecheck that against both SDKs.
+
+The dependency files' preview blocks chain further. The Components tree is self-contained (only system imports), so I'll build an **isolated SwiftPM package** (module `TeslaSync`) containing the whole Components tree + Tokens + my files — the precedent's primary evidence, which also runs the tests. Let me check the deployment target first.
+
+Deployment: iOS 18.0 / macOS 15.0. Let me set up the isolated SwiftPM package (module `TeslaSync`) with the full Components tree + Tokens + my files, and run the tests.
+
+`UnitFormatters.swift` (a Component my surface doesn't use) depends on an external `Units` type. Let me exclude such non-required files and rebuild.
+
+The whole-tree approach keeps hitting chart/map components (`TSChartPalette`) my surface doesn't use. Let me exclude all Charts/MapKit/CoreLocation-importing component files (none are needed by this card) and rebuild.
+
+Let me reset to the true minimal closure and check how the dependency files structure their previews.
+
+The dep previews are all in `#if DEBUG` blocks (Skeletons/Motion have none). Let me reset to the minimal closure (Tokens + Buttons + Cards + Skeletons + Motion + my files) and strip the `#if DEBUG` blocks from the two disposable dep copies, then build + test in debug.
+
+Cards pulls in Typography. But I only need `TSSkeleton` from Skeletons (the TSCard-using skeletons are unused). Let me trim the disposable Skeletons copy to just `TSSkeleton` and drop Cards entirely. Let me inspect Skeletons structure.
+
+`TSSkeleton` is lines 1–42; the rest pull in `TSCard`. Let me trim the disposable Skeletons copy and drop Cards.
+
+Build succeeds (including my `#Preview` macros). Now run the tests.
+
+All **51 tests pass** against the real design system. Now the cross-SDK typecheck (iOS 18 + macOS 15) using the same minimal closure.
+
+Both iOS 18 and macOS 15 typecheck clean (EXIT=0), previews included. Now run `xcodegen generate` to confirm the project enumerates my files, then attempt the full app build.
+
+All 12 files enumerated; placeholder gate clean (EXIT=0). Now let me check how the project handles co-located test files before attempting the full build.
+
+Test targets source from `Tests/Unit` — so the 206 co-located `*Tests.swift` in feature-views compile into the **app target** (a known pre-existing blocker). Let me attempt the full build and capture the disposition.
+
+Let me check the raw build log to see progress.
+
+The build is progressing — it's building the KMP `Shared.xcframework` via Gradle (0 errors so far). Let me wait for it to reach the app compilation.
+
+Still building the KMP framework (0 errors). Let me continue waiting for the Swift app-compilation phase.
+
+The full build failed with the **exact documented pre-existing blocker**: `AIRestorePanel.Tests.swift: error: unable to resolve module dependency: 'XCTest'` — a co-located test file (not mine) importing XCTest into the app target. Let me confirm all errors are this pre-existing pattern and none are in my files.
+
+**Confirmed**: the full-app build fails with exactly 2 error lines — both the pre-existing `AIRestorePanel.Tests.swift … 'XCTest'` blocker (another surface's co-located test file in the app target). **Zero** errors in my files. This is the documented "co-located-tests-into-app-target" deferral. Let me verify the xcodeproj is gitignored, then write the gate log.
+
+xcodeproj is gitignored; log dir exists. Let me gather final file metrics and write the gate log.
+
+All 12 files in place, 51 tests pass. Now writing the comprehensive gate log.
+
+Log written. Let me do a final verification on the exact committed bytes — re-sync the repo files into the isolated package, rebuild+retest, and re-run lint/format.
+
+Final state is fully green: **format 0, lint 0, 51/51 tests pass** on the committed bytes. Now staging exactly my 12 files + the log (xcodeproj is gitignored) and committing.
+
+Exactly the 12 files + log staged (no xcodeproj, nothing else). Committing.
+
+Committed cleanly (13 files, 2861 insertions, nothing else touched). Let me update tracking and clean up the temporary verification package.
+
+All work is committed and the tree is clean. Let me verify the final todo state.
+
+All 16 todos done. The task is complete.
+

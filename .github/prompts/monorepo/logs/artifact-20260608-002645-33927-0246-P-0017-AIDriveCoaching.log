@@ -1,0 +1,224 @@
+=== P4 Shared surface 0017 AIDriveCoaching (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon).
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively, no
+                       sudo / no xcode-select -s, so the shared runner is untouched). `xcodebuild -version` under the
+                       CommandLineTools dir errors ("requires Xcode") — hence the DEVELOPER_DIR override, the SAME
+                       mechanism every prior P4 surface used (see p4-apple-feature-views-0237-AiUsageCard.log).
+  Toolchain          : swift 6.3.2 (Xcode 26.5 toolchain) · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4
+                       · pwsh 7.x. iPhone 16 simulator (iOS 26.5) booted; iOS 26.5 / macOS 26.5 SDKs installed.
+  Capability         : SwiftUI present; the prompt lists "Charts / maps used: (none)" — the web source has neither —
+                       so this surface needs NO Swift Charts and NO MapKit. The iOS 18 / iPadOS 18 / macOS 15 HIG
+                       primitives it uses (Capsule, RoundedRectangle, Button, Text, @Observable, #Preview, VoiceOver
+                       / Dynamic Type / Reduce-Motion modifiers) are all available → NOT capability-BLOCKED.
+  Predecessors       : P4 core (theme, nav, live, cache, state-holders), P1/S8 state holders, P1/S9 tokens, P1/S10
+                       i18n, P1/S11 diagnostics. Their products are present in-tree and exercised by this surface:
+                       the P1/S9 tokens (apps/design/generated/apple/Tokens.swift — Color.TS / Font.TS / TSSpacing /
+                       TSRadius) and the shared TSButton (Sources/Components/UI/Buttons.swift) + TSFadeIn
+                       (Sources/Components/Motion/Motion.swift) compile against this surface (see GATE). The P1/S8
+                       state-holder seam, P1/S10 i18n facade, and P1/S11 view.opened telemetry contract are
+                       reproduced as the surface's own seams exactly as the just-merged AiUsageCard precedent does
+                       (each surface owns its seams; the atomic AIFeatureCard/withAiFeature/useAiStream peers are
+                       owned by the P4 component-library bundle, out of scope here).
+  Clean-tree note    : the worktree carried PRE-EXISTING, unrelated modifications before this prompt began —
+                       feature-views/AIUsageCard.* (the case-variant settings surface 0203) and two web files
+                       (FleetApiSection.tsx, BackupRestorePage.tsx). None are mine; none are touched, staged, or
+                       reverted. This commit stages ONLY apps/apple/TeslaSync/shared-surfaces/AIDriveCoaching.* and
+                       this log. The xcodegen-generated TeslaSync.xcodeproj is git-ignored (verified via
+                       `git check-ignore`).
+
+WEB SOURCE (the specification — read end to end)
+  components/ai/AIDriveCoaching.tsx — the visible AI surface for the drive-detail page, an opt-in narrative card
+  layered alongside (NOT replacing) the deterministic per-drive stat cards / hero gauges / energy summary.
+
+    export const AIDriveCoaching = withAiFeature('drive-coaching', InnerSection)
+      withAiFeature (components/ai/withAiFeature.tsx): returns null unless useAiEnabled('drive-coaching') is on
+        (ADR-015 §I5/§I6). On = renders InnerSection inside a div carrying data-ai-feature="drive-coaching".
+      InnerSection({ driveId?: string }):
+        url   = driveId ? `/ai/drives/${encodeURIComponent(driveId)}/coach` : '/ai/drives/0/coach'
+        stream = useAiStream({ url, body: {}, onEvent: () => {} })   // POST SSE, empty body
+        renders <AIFeatureCard title="Drive coaching" description=<2-4 para blurb>
+                 buttonLabel="Generate coaching" badgeLabel="Helix" canStart={!!driveId} stream={stream}/>
+  components/ai/AIFeatureCard.tsx — GlassPanel → header (title + AIBadge "Helix" + description + optional emptyHint
+    when !canStart) → action Button → AiOutputPanel. The visible CTA label is the brand-constant "Ask Helix" (idle)
+    / "Helix is thinking…" + AIThinkingDots (streaming); aria-label = "Ask Helix · {buttonLabel}". disabled =
+    !canStart || isStreaming.
+  hooks/useAiStream.ts — AiStreamState = idle | streaming | paused-confirm | done | error. The coaching flow drives
+    idle → streaming → done|error (its onEvent is a no-op; delta frames accumulate into stream.text). start() sets
+    state='streaming'+text=''; 'delta' appends; 'done' settles; non-2xx start → 'stream_http_{status}' error;
+    AbortError → back to idle.
+  components/ai/AiOutputPanel.tsx — hidden when idle & text empty; AIThinkingIndicator (shimmer lines + "Helix is
+    thinking" + dots) while streaming & text empty; whitespace-pre-wrap prose otherwise; "Helix error: {msg}" on error.
+  i18n keys: driveDetail.aiCoaching.title/description/generateButton/badge + the shared helix.askHelix /
+    helix.thinking / helix.errorLabel + ai.common.errorUnknown.
+
+ARTIFACTS SHIPPED  (allowed files: apps/apple/TeslaSync/shared-surfaces/AIDriveCoaching.* + this log)
+  AIDriveCoaching.Adapter.swift    — pure value types (no store/SwiftUI/bundle): AIDriveCoachingStreamEvent
+                                     (delta/done/failed — the coaching subset of the web AiStreamEvent union),
+                                     AIDriveCoachingStream(+Phase idle/streaming/done/failed, text accumulator,
+                                     errorMessage, isStreaming/hasOutput/started/idle invariants),
+                                     AIDriveCoachingConnection (live/stale/offline), AIDriveCoachingAccessibility
+                                     (card + action VoiceOver labels).
+  AIDriveCoaching.Projection.swift — pure projection: resolve(input) → gated (withAiFeature off) / error (context,
+                                     P4 leaf) / loading (context, P4 leaf) / ready(canStart = !!driveId, non-blank);
+                                     reduce(stream,event) — the web useAiStream handleEvent accumulator (delta
+                                     appends only while streaming, done settles, failed captures the message + keeps
+                                     text, late frames dropped).
+  AIDriveCoaching.Model.swift      — P1/S10 AIDriveCoachingStrings facade (string + %@ format); P1/S11 telemetry seam
+                                     (AIDriveCoachingTelemetry + OSLog sink, view.opened surface="AIDriveCoaching"
+                                     deferred past the gate); AIDriveCoachingInput (featureEnabled gate + driveID +
+                                     loading/error + connection); AIDriveCoachingResolved(+Phase); P1/S8 state-holder
+                                     seam (AIDriveCoachingSource w/ onUpdate + onStreamEvent + start/stop/refresh/
+                                     generate/cancel); @MainActor @Observable AIDriveCoachingModel (projection +
+                                     stream reduction, generate() guard+coalesce, cancel→idle, stale 1-shot
+                                     auto-refresh + re-arm); InMemoryAIDriveCoachingSource (push/emit + call counts).
+  AIDriveCoaching.Views.swift      — presentational peers: AIDriveCoachingBadge (the "Helix" pill), AIDriveCoachingDots
+                                     (reduce-motion-aware), AIDriveCoachingShimmerBar (inline skeleton — no TSSkeleton
+                                     dependency), AIDriveCoachingThinkingIndicator (web AIThinkingIndicator),
+                                     AIDriveCoachingIdleHint (P4 friendly empty — web hides the panel when idle),
+                                     AIDriveCoachingOutputPanel (web AiOutputPanel: idle/thinking/prose/error),
+                                     AIDriveCoachingGenerateButton (universal "Ask Helix" CTA, disabled = !canStart ||
+                                     streaming, aria "Ask Helix · Generate coaching").
+  AIDriveCoaching.Chrome.swift     — P4 leaf chrome: freshness chip (Live/Stale/Offline), header refresh button,
+                                     stale/offline connectivity banner, loading skeleton, retryable context-error view.
+  AIDriveCoaching.swift            — the surface: withAiFeature gate wrapper (EmptyView when off) + card chrome
+                                     (header title + Helix badge + freshness chip + refresh; banner when not live;
+                                     phase switch → loading/error/ready; TSFadeIn ready body = description + disabled
+                                     hint + CTA row + output panel); static surfaceSlug = "AIDriveCoaching"; onAppear
+                                     start / onDisappear stop; localized labels via the facade (no English literals).
+  AIDriveCoaching.Previews.swift   — #if DEBUG #Preview for ready/idle, thinking, partial-text, done-narrative,
+                                     failed, disabled (no drive id), loading, context-error, stale, offline, gated.
+  AIDriveCoaching.Tests.swift      — XCTest: projection resolve (5) + stream reduce (5) + stream value type (2) +
+                                     model wiring/telemetry/generate/cancel/freshness (14) + accessibility (2) = 28.
+  AIDriveCoaching.strings          — P1/S10 catalog (table "AIDriveCoaching"): the web keys reused verbatim
+                                     (driveDetail.aiCoaching.* + helix.* + ai.common.errorUnknown) so every source
+                                     string has a matching key, plus the native P4 leaf chrome copy.
+  (9 files; split across .Adapter/.Projection/.Model and .Views/.Chrome and .Previews/.Tests to keep every file under
+   the repo's 400-line SwiftLint file_length budget — all share the AIDriveCoaching.* stem, the same multi-file
+   decomposition the prior P4 surfaces use.)
+
+PARITY MAPPING  (web → Apple platform tokens; no Tailwind ported, no raw hex)
+  withAiFeature('drive-coaching') null    → AIDriveCoaching gate: isGated ⇒ EmptyView (the whole surface withdrawn)
+  AIFeatureCard GlassPanel + header        → card: surfaceGlass fill + border stroke; header = title (Font.TS.panel)
+                                             + AIDriveCoachingBadge + freshness chip + refresh
+  AIBadge cyan "Helix" pill                → AIDriveCoachingBadge: Color.TS.accent on accent.10 capsule + accent.30 stroke
+  CTA "Ask Helix" / "Helix is thinking…"   → AIDriveCoachingGenerateButton (TSButton .secondary .small); dots while
+                                             streaming; disabled = !canStart || isStreaming; aria "Ask Helix · Generate
+                                             coaching"
+  useAiStream idle→streaming→done|error    → AIDriveCoachingStream.Phase + AIDriveCoachingProjection.reduce
+  AiOutputPanel hidden/thinking/prose/error→ AIDriveCoachingOutputPanel: idle hint (P4 leaf, never blank) / thinking
+                                             indicator / pre-wrapped prose (textSelection) / "Helix error: {msg}"
+  AIThinkingIndicator shimmer lines + dots → AIDriveCoachingThinkingIndicator (inline AIDriveCoachingShimmerBar ×3 +
+                                             AIDriveCoachingDots), Reduce-Motion aware
+  canStart = !!driveId                     → AIDriveCoachingProjection.canStart (non-nil AND non-whitespace)
+  i18n t(key, default)                     → AIDriveCoachingStrings (NSLocalizedString table "AIDriveCoaching", web
+                                             literal as value: fallback); web keys reused verbatim
+  a11y                                     → card contain+label, badge label, CTA aria label, output label, chip label,
+                                             header trait; Dynamic Type via Font.TS tokens; Reduce Motion via TSFadeIn +
+                                             local dots/shimmer guards
+  telemetry                                → view.opened surface="AIDriveCoaching" emitted once on the first NON-gated
+                                             apply (mirrors the web data-ai-feature marker, absent in off mode)
+
+STATES (every non-gated one renders — no hidden surface)
+  gated    → withAiFeature off → the whole surface is withdrawn (EmptyView), reproducing the web null.
+  loading  → skeleton header + description + CTA bars while the gate/context resolves (P4 leaf).
+  empty    → the ready card with description + enabled CTA, and the output panel's friendly idle hint (web hides the
+             panel when idle; the native leaf shows a sparkles + hint so the region is never blank).
+  error    → retryable context-error chrome (P4 leaf; the web drive page renders its deterministic baseline).
+  stream   → idle (friendly hint) / streaming (thinking → prose) / done (prose) / failed ("Helix error: {msg}").
+  stale    → header chip + banner + one-shot auto-refresh on the live→stale transition.
+  offline  → header chip + banner over last-known context; no auto-refresh (manual refresh button available).
+
+GATES  (raw exits below; per-surface scope; DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer)
+  [GREEN] swiftformat --lint  (.swiftformat, 8 swift files)      : 0/8 files require formatting        FORMAT_EXIT=0
+  [GREEN] swiftlint --strict  (repo rules, 8 swift files)        : 0 violations, 0 serious in 8 files  LINT_EXIT=0
+            (the whole-tree `swiftlint --strict` surfaces exactly 1 PRE-EXISTING violation in
+             TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 — function_body_length 78>50 — which
+             is outside this surface's allowed files and not introduced here; ZERO violations in shared-surfaces.)
+  [GREEN] check-placeholders.ps1 (-Language swift, shared-surfaces): PLACEHOLDER_ALLOWED=0
+                                                                      PLACEHOLDER_COUNT=0               PLACEHOLDER_EXIT=0
+            (scanner -SelfTest PASS: dirty tree→COUNT=4, clean tree→COUNT=0 — detection proven, so COUNT=0 is real;
+             no TODO/FIXME/XXX/Coming-soon/Placeholder/Lorem/not-implemented/fatalError("unimpl/not") anywhere.)
+  [GREEN] ISOLATED build + test — SwiftPM, swift-tools 6.0 (Swift 6 language mode = strict-concurrency complete, the
+          same as the app), compiling the EXACT shipped AIDriveCoaching.* sources (incl. the #Preview macro file +
+          the @Observable model) against the REAL repo design system (generated apps/design Tokens + the shared
+          Sources/Components TSButton + TSFadeIn) under the Xcode 26.5 toolchain (so the real #Preview macro + XCTest
+          are available):
+              Build complete! (19.96s)                                                                BUILD_EXIT=0
+              Executed 28 tests, with 0 failures (0 unexpected)                                        SWIFT_TEST_EXIT=0
+
+  [DEFERRED] Full-app iOS-Simulator + macOS `xcodebuild -scheme TeslaSync(-macOS) … build test`.
+          NOT run-to-green on this runner because the full app target is blocked by PRE-EXISTING, unrelated
+          conditions this prompt neither introduced nor is allowed to touch (each VERIFIED here, not assumed):
+            • apps/apple/Frameworks/Shared.xcframework is NOT staged (only .gitkeep) — needs the ~7-min Gradle
+              :core:assembleSharedXCFramework (a macOS-pending row for p1-shared/S3);
+            • 204 co-located `*.Tests.swift` under TeslaSync/feature-views import XCTest into the app target (this
+              surface's own AIDriveCoaching.Tests.swift follows that SAME established co-location config);
+            • `struct DashboardWidgetSize` is redefined 15× across Sources/DashboardWidgets/* +
+              TeslaSync/dashboard-widgets/* (parallel-merge collisions);
+            • shared-surfaces/ is not yet a project.yml source group (the directory's first surface) and project.yml
+              is OUTSIDE this prompt's allowed files (Rule 9) — wiring it is owned by the P4 acceptance gate.
+          This is the SAME sanctioned "code-complete + DEFERRED full-app Xcode gate" disposition recorded by every
+          prior P4 surface (see p4-apple-feature-views-0237-AiUsageCard.log) and is owned by
+          p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner. ZERO AIDriveCoaching errors are
+          attributable to this change.
+
+PARITY
+  PARITY_UNIT = shared-surface:ai/AIDriveCoaching
+  Panels/regions  : card chrome, header (title + Helix badge), description, Generate CTA, output panel        ✔ (5/5)
+  Stream branches : idle-hint, thinking-indicator, streaming-prose, done-prose, error-line                   ✔ (5/5)
+  Leaf states     : gated, loading, context-error, stale (chip+banner+auto-refresh), offline (chip+banner)   ✔ (5/5)
+  Data sources    : useTranslation (i18n facade) ✔, useAiStream (stream event channel + reduction) ✔         ✔ (2/2)
+  i18n keys       : driveDetail.aiCoaching.title/description/generateButton/badge, helix.askHelix/thinking/
+                    errorLabel, ai.common.errorUnknown — all resolved via the facade + present in .strings    ✔ (8/8)
+  a11y            : card label, badge label, CTA aria label, output label, freshness chip label, header trait,
+                    Dynamic Type (Font.TS), Reduce Motion (TSFadeIn + dots/shimmer guards)                    ✔ (8/8)
+  telemetry       : view.opened surface="AIDriveCoaching" (deferred past the gate)                           ✔ (1/1)
+  PARITY_COVERED = 34   PARITY_REQUIRED = 34
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED with raw, verified
+                           pre-existing-blocker evidence — never reported as passing. Every runnable gate's raw EXIT
+                           is pasted.
+  2  No scope narrowing  : every web region + branch reproduced — the withAiFeature gate, the AIFeatureCard header +
+                           "Ask Helix"/"Helix is thinking…" CTA + canStart rule, the full useAiStream lifecycle
+                           (idle→streaming→done|error) with delta accumulation, the AiOutputPanel idle/thinking/
+                           prose/error branches; all 5 P4 leaf states render.
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; raw exits pasted; the deferred full-app
+                           blockers were each re-confirmed by ls/grep (Shared.xcframework absent, 204 co-located
+                           XCTest files, DashboardWidgetSize ×15), not assumed; the placeholder scanner's own
+                           -SelfTest was run to prove COUNT=0 is a real (not empty) scan.
+  4  No stubs as final   : complete production surface + 28 real tests; placeholder scanner COUNT=0; no
+                           TODO/FIXME/stub/Coming-soon/Placeholder/Lorem/fatalError anywhere.
+  5  No parity shortcut  : the stream reduction (delta-only-while-streaming, done-settles, failed-keeps-text,
+                           late-frame-drop), the canStart non-blank-driveId rule, the deferred-past-gate telemetry,
+                           and the stale one-shot auto-refresh + re-arm are each unit-asserted against the web
+                           semantics; the friendly idle state is rendered (not hidden), never a blank box.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S9 tokens + the shared TSButton/TSFadeIn compile against this surface (GATE build);
+                           the P1/S8 seam, P1/S10 facade, and P1/S11 telemetry are reproduced per the established
+                           per-surface pattern; the case-variant AIUsageCard.* and the two web files were left
+                           untouched.
+  8  No commit on red    : the committed artifact (9 AIDriveCoaching.* files + this log) is GREEN on every per-surface
+                           gate AND on a real isolated Swift 6 strict-concurrency build + 28/28 XCTest; the deferred
+                           full-app gate is blocked only by pre-existing, unrelated conditions this commit does not
+                           touch.
+  9  No silent drift     : changes are confined to shared-surfaces/AIDriveCoaching.{swift,Adapter,Model,Projection,
+                           Views,Chrome,Previews,Tests}.swift + AIDriveCoaching.strings and this log; the pre-existing
+                           unrelated worktree modifications (AIUsageCard.* + two web files) are disclosed above and
+                           left untouched/unstaged; the generated TeslaSync.xcodeproj is git-ignored.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic AIDriveCoaching shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 28 tests pass under the app's own Swift 6 strict-concurrency rules, against the REAL
+  design system, via the Xcode 26.5 XCTest runtime, with swiftformat / swiftlint / placeholder all green on the 8
+  surface files and the #Preview macro compiling. The full-app iOS-Simulator + macOS xcodebuild build/test gate is
+  DEFERRED (not failed by this code) on pre-existing, unrelated, out-of-allowed-files blockers (unstaged
+  Shared.xcframework, the 204 co-located-tests-into-app-target config, the DashboardWidgetSize ×15 redefinition, and
+  the shared-surfaces project.yml wiring owned by P99), per the established P4 disposition.
+
+EXIT=0
+STATUS=DONE

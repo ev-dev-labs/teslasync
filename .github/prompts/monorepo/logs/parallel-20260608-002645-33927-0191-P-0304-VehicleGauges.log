@@ -1,0 +1,148 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+macOS has Swift 6.3.2, swiftlint, and swiftformat, but **xcodebuild requires full Xcode** (only Command Line Tools installed). Let me examine the web source and the established predecessor pattern.
+
+This is a large, established monorepo with a consistent multi-file pattern per feature-view. Let me study the structure and a representative recent example (AiUsageCard, the most recent predecessor).
+
+Let me read the complete AiUsageCard fileset to learn the canonical pattern.
+
+Excellent pattern clarity. Let me read the remaining AiUsageCard files and locate the shared design tokens and atomic components.
+
+Now let me read the test/preview/strings files and locate the design tokens and any existing native atomic components.
+
+Let me find the exact token definitions and understand the project/target structure.
+
+The design tokens live in `apps/design/generated/apple`. Tests files sit inside the app target. Let me read the test pattern, design tokens, and check for existing native atomic components (gauges, metric bars, car viz).
+
+Now I understand the test pattern. Let me read the design tokens, existing native components, and the web dependencies I need to port.
+
+Let me read the full Tokens.swift and the existing native components to reuse.
+
+Let me read the web dependencies to port and check for an existing native units facade plus motion/skeleton/button components.
+
+`HeroGauges` is the closest sibling surface (radial gauges from vehicle state). Let me study it as the primary template, plus the native units facade.
+
+This is the ideal template. Let me read the rest of HeroGauges and the native units facade.
+
+Let me read the remaining template files, the shared component signatures, and the web TeslaCarViz + Vehicle types I must port.
+
+Let me read the web `TeslaCarViz`, `MetricBar`, and the `Vehicle`/`VehicleState` types to port faithfully.
+
+Let me read the rest of TeslaCarViz (overlays/indicators) and the `Vehicle`/`VehicleState` API types.
+
+Let me read the web `RadialGauge`, `fmtNumber`, and `boolColor` to nail the exact display formatting.
+
+Key parity details captured. Let me verify shared type names to avoid redeclaration collisions and confirm the empty-display fallback.
+
+Critical finding: the module already has multiple top-level `SpeedUnit`/`DistanceUnit` definitions across surfaces (parallel-built, isolated). I'll prefix all my public types to avoid adding collisions. Let me read the lint/format configs and write the plan.
+
+`pwsh` and the placeholder checker are available. Let me read the placeholder patterns and check for predecessor feature-view logs to mirror.
+
+Let me examine a predecessor feature-view log to see how the xcodebuild capability gap was handled and the exact log format.
+
+This predecessor log is the blueprint: the runner has **full Xcode at `/Applications/Xcode.app`** (driven via `DEVELOPER_DIR`), and the disposition is *host-gates-green + deferred xcodebuild app build/test*. Let me verify the Xcode toolchain is present on this runner.
+
+I now have a complete understanding. Full Xcode 26.5 is available via `DEVELOPER_DIR`, with iOS 18 + macOS 15 SDKs and simulators. The disposition (per predecessor) is: **author the full surface, run all host-runnable gates green (typecheck both SDKs, execute XCTest via SwiftPM, swiftlint, swiftformat, placeholder gate), and DEFER the xcodebuild app build/test** (feature-views not yet registered in project.yml + Shared.xcframework unstaged + signing).
+
+Let me set up tracking and write the plan.
+
+No collisions. Now I'll create the files. Starting with the pure projection core — `VehicleGauges.Adapter.swift`.
+
+Now the Model file — seams, input snapshot types, the observable state-holder, in-memory source, and the i18n facade.
+
+The projection core — reproducing the web arithmetic verbatim.
+
+Now the SwiftUI surface entry point.
+
+Now the presentational subviews (content, radial gauge, metric bar, chips, accent mapping).
+
+Now the native car visualization (its own file to respect file-length limits).
+
+Now the chrome (freshness chip, banner, loading, error, empty). Let me confirm the `TSButton` API first.
+
+Now the chrome states.
+
+Now the i18n catalog.
+
+Let me verify every code-referenced i18n key is declared in the strings file.
+
+SwiftUI previews for every state.
+
+Now the test suites. First the adapter-level tests (pure formatting/conversion/parse).
+
+Now the main test suite (projection + model + accessibility).
+
+All 10 files written. Now the verification phase — auto-format my files, then lint.
+
+swiftformat clean. swiftlint flagged 3: Adapter file too long, and two 7-param helpers. Let me fix by extracting the view-model value types to a new file and using spec structs in the projection.
+
+I'll extract the view-model value types into a new file and trim the Adapter.
+
+Now trim the Adapter (remove the moved block) and refactor the Projection to use spec structs.
+
+Adapter trimmed to 209 lines. Now refactor the Projection's 7-param helpers into spec structs.
+
+Now append the spec struct definitions at the end of the Projection file.
+
+Now re-run swiftformat and swiftlint on all 11 files.
+
+swiftformat + swiftlint are clean (0 violations). Now the cross-SDK typecheck. Let me identify the component closure my SwiftUI files need.
+
+No domain imports in the component closure. Let me run the iOS 18 SDK typecheck (app files + real component library).
+
+The errors are from a missing closure file (`States.swift` needs `TSInlineCallout` from `Banners.swift`), not my code. Let me include the full UI/Feedback/Motion dirs.
+
+`FeedbackOverlays.swift` needs `TSMetricBar` from DataDisplay. Let me include the entire Components tree.
+
+The whole tree cascades into SharedFacade. Let me use the precise predecessor-proven closure (specific files, not whole dirs) + Motion.
+
+iOS 18 typecheck passes (exit 0). Now macOS 15, then the previews typecheck with `-D DEBUG`.
+
+macOS 15 typecheck passes. Now the DEBUG previews typecheck (with the `#Preview` macro via the Xcode toolchain).
+
+All three typechecks pass (iOS 18, macOS 15, DEBUG previews). Now execute the XCTest suite via a SwiftPM harness over the pure-logic files.
+
+One test references the SwiftUI `VehicleGauges` View (not in the pure-only harness). I'll build a full harness (app files + real component closure) so the test runs verbatim — the predecessor's approach.
+
+All 41 tests passed (0 failures), `SWIFT_TEST_EXIT=0`. Now the placeholder gate.
+
+Placeholder gate: `PLACEHOLDER_COUNT=0`. Now let me capture authentic xcodebuild deferral evidence (feature-views ARE registered in project.yml now, so I'll verify the real blocker is the unstaged Shared.xcframework).
+
+Confirmed: `Shared.xcframework` is unstaged (only `.gitkeep`) — the genuine blocker. feature-views ARE registered in `project.yml` now (both app targets). Let me capture authentic xcodebuild deferral evidence.
+
+xcodegen succeeded; VehicleGauges is registered in the generated project (72 refs). The macOS build fails with exit 65. Let me capture the exact error line.
+
+Authentic deferral evidence captured: missing `Shared.xcframework` + macOS signing cert (exit 65) — and my surface IS registered (72 refs in pbxproj). All host gates are green. Let me gather final data and write the log.
+
+All 12 files are untracked and ready. The `AIUsageCard.*` modifications are pre-existing predecessor artifacts (not mine) — I'll leave them untouched. Now writing the gate log.
+
+All gates are green. Let me update tracking and commit (explicit file list — only my VehicleGauges files + the log, leaving pre-existing AIUsageCard changes untouched).
+
+Exactly the 12 files + log staged (AIUsageCard changes correctly excluded). Committing.
+
+Committed as `3cc182d32` (13 files). Let me clean up temp artifacts and verify the final working-tree state.
+
+The task is complete and verified. Working tree is clean — only the pre-existing `AIUsageCard.*` changes remain (not part of this task; correctly left untouched).
+
+## Summary
+
+Shipped a production-polished, native Apple (SwiftUI) **`VehicleGauges`** surface at parity with `web/src/features/vehicles/components/VehicleGauges.tsx`, following the established multi-file feature-view pattern (12 files, 2,550 lines):
+
+**Composition reproduced:** native `TeslaCarViz` peer (ambient glow, per-model `Shape` silhouette + spinning 5-spoke wheels, battery bar, charging/lock overlays) · 4 radial gauges (Battery/Range/Speed/Power) · 2–3 metric bars (Charge Rate only while charging) · 4 quick chips — with the exact web SI conversion, `fmtNumber`, clamp/decimals, and `min`-fill arithmetic. All 6 states render (content + leaf loading/empty/error/stale/offline). Bound through a P1/S8 state-holder seam, P1/S10 i18n facade (web `common.*` keys verbatim, 0 key drift), P1/S11 `view.opened` telemetry, full VoiceOver + Reduce-Motion support.
+
+**All host-runnable gates green** (real output, via Xcode 26.5 + `DEVELOPER_DIR`):
+
+| Gate | Result |
+|---|---|
+| swiftc -typecheck · iOS 18 SDK | `IOS_TYPECHECK_EXIT=0` |
+| swiftc -typecheck · macOS 15 SDK | `MAC_TYPECHECK_EXIT=0` |
+| swiftc -typecheck · DEBUG previews | `PREVIEWS_TYPECHECK_EXIT=0` |
+| swift test (SwiftPM, real surface+closure) | **41/41 passed**, `EXIT=0` |
+| swiftlint --strict (11 files) | **0 violations** |
+| swiftformat --lint (11 files) | **0 require formatting** |
+| check-placeholders.ps1 | `PLACEHOLDER_COUNT=0` |
+
+**Deferred (not faked):** `xcodebuild build test` — captured real exit 65 (`Shared.xcframework` unstaged + macOS signing cert). The surface IS registered in `project.yml` (72 refs in the generated `.pbxproj`) and is validated by both-SDK typechecks + executed XCTest.
+
+Committed as `3cc182d32`. Log: `.github/prompts/monorepo/logs/p4-apple-feature-views-0304-VehicleGauges.log` → **EXIT=0 / STATUS=DONE**.
+

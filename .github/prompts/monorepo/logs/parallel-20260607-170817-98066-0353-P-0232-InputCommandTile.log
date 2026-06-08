@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure, locating the web source, and checking the Apple toolchain availability.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me read the web source and explore the existing Apple app structure to understand conventions and dependencies.
+
+Full Xcode.app exists at `/Applications/Xcode.app` but `xcode-select` points to CommandLineTools. Let me check if I can use it and explore the existing `feature-views` structure.
+
+Full Xcode 26.5 is usable via `DEVELOPER_DIR`. The platform capability is available. Now let me study the established feature-view pattern using a representative example.
+
+No existing CommandTile — I'll create it. Let me study a complete example end-to-end and understand the build setup, while launching an explorer to map the shared P1 infrastructure (state holders, tokens, i18n, diagnostics).
+
+The `project.yml` is at `apps/apple/project.yml`. Let me read the remaining example files (Model, Views, Tests) and the build config.
+
+I have a clear picture of the canonical pattern. Now I need the shared design-system APIs and the web command definitions. Let me locate them.
+
+The shared `Sources` is at `apps/apple/Sources`. Let me locate the design-system definitions there and read the web command definitions.
+
+Let me read the shared UI components, design tokens, and the `CommandDef` type definition.
+
+Now let me capture the `CommandDef` type fully, the design tokens, and the remaining shared components (feedback, motion, skeleton, typography).
+
+Let me read the design tokens and remaining shared components (feedback, skeleton, motion, typography).
+
+I now understand the design system. Let me confirm the skeleton/typography APIs, the placeholder checker rules, lint config, and any icon-mapping convention.
+
+Let me read the placeholder patterns, the existing Apple command-kind precedent, and how the web tile's `lastStatus`/usage works.
+
+Let me read the web tile's usage context to model the adapter faithfully.
+
+I have the full picture of conventions. One critical thing to verify: how `*.Tests.swift` files in `feature-views/` get routed to the test target (not the app target). Let me check the build wiring.
+
+There's a `Tests/Unit/FeatureViews` directory. Let me see how the 136 feature-view test files relate to it (symlinks? duplicates? excludes?).
+
+The 136 feature-view test files follow a routing convention I'll match. Now I must assess whether the full `xcodebuild` gate can actually run here (XcodeGen, the Shared.xcframework preAction, simulators).
+
+Platform capability is fully present: `xcodegen` 2.45.4, full Xcode 26.5, and an **iPhone 16 simulator (already booted)**. The one heavy dependency is the KMP `Shared.xcframework` (Gradle/Kotlin-Native) built as a scheme pre-action. Let me kick that off in the background (longest pole) while I write the surface, and probe xcodegen on the current tree.
+
+xcodegen works and generated the project. Let me verify how feature-view `.Tests.swift` files are assigned to targets in the generated project, and check the KMP build progress.
+
+The test file has two build-file entries (two targets). Let me decisively map which targets compile it, and check the KMP build progress.
+
+Let me stop the rabbit-hole analysis and check the KMP build's actual progress via its log file — the real gate run will definitively answer target-membership questions.
+
+The KMP build is already nearly done (Kotlin/Native cached, Gradle warm — it even produced the debug XCFramework). The full gate is feasible. Let me verify completion, then write the surface.
+
+The KMP framework is building (cached toolchain — will finish shortly). The full gate is feasible. Let me set up tracking and write the surface following the canonical `AcDcStatsPanel` pattern exactly.
+
+KMP framework build completed. Now writing the seven surface files following the canonical pattern.
+
+All seven files created. Let me run the formatter/linter on them and a quick standalone type-check of the pure adapter.
+
+swiftformat, swiftlint, and the adapter type-check all pass (exit 0). Now the placeholder gate on my files, and regenerate the project to include them.
+
+Placeholder gate clean (0 on every file); project regenerated with my files as members. Now the heavy gate. Let me confirm the release xcframework is staged-ready and launch the iOS build+test in the background.
+
+Shared.xcframework staged. Now launching the iOS build-for-testing in the background (compiles the app + my test bundle — fastest path to validate my code within the full project).
+
+Build launched. Let me check the gate-log directory conventions while it compiles.
+
+Key discovery: the sibling `AcDcStatsPanel` log documents the **sanctioned repo disposition** for every P4 feature-view: surface is independently verified (isolated Swift 6 build+test, lint/format/placeholder green, surface compiles in app targets), while the **full-app `xcodebuild` gate is DEFERRED** because of a **pre-existing baseline-RED condition** — co-located `*.Tests.swift` files compiled into the app target (e.g. `AuditPanel.Tests.swift`) + macOS signing. My iOS build exited 65 in ~15s. Let me confirm the cause.
+
+The co-located `*.Tests.swift` files (AcDc, AuditPanel, mine, 130+ others) are compiled into the **app target**, where `@testable import TeslaSync` is ignored — the documented baseline-RED condition. Let me find the actual compiler `error:` lines and confirm none come from InputCommandTile.
+
+Confirmed: the failure is the **pre-existing baseline-RED condition** — 414 co-located `*.Tests.swift` files `import XCTest` into the app target, which can't resolve XCTest (`error: unable to resolve module dependency: 'XCTest'`). First error is `AIUsageCard.Tests.swift` (pre-existing, not mine). **Zero `InputCommandTile` compile errors.** This matches the documented disposition exactly. Now I'll build a rigorous isolated verification of my surface, mirroring AcDc. Let me check the design-system's import surface.
+
+The design system is fully self-contained (only SwiftUI/Charts/MapKit/CoreLocation/Foundation — no KMP `Shared`). This lets me build a **rigorous isolated verification**: compile my surface against the *real* design system as a Swift 6 module and run my tests. Setting that up now.
+
+Harness ready (49 Swift files: real design system + my surface + my tests). Running `swift test` in Swift 6 mode.
+
+My surface compiled cleanly (lines 48–50: `InputCommandTile.{Previews,Views,swift}` compiled with no errors). The only failure is a *pre-existing* design-system file `UnitFormatters.swift` needing a `tsUnits` environment key defined outside Components/Design. Let me locate it and include its definition so the full design system compiles.
+
+`tsUnits` is defined in that same file, but it references a `UnitPreferences` type defined elsewhere. The harness pulled in design-system files my surface doesn't use. Let me find `UnitPreferences` and decide: add it, or slim the harness to only what InputCommandTile needs.
+
+`UnitPreferences` lives in `SharedFacade` (which imports the KMP `Shared` framework — what I'm isolating from). The fix: exclude the one design-system file that needs it (`UnitFormatters.swift`) from the harness. Let me confirm it's the only externally-dependent file, then rebuild.
+
+Confirmed — `UnitFormatters.swift` is the sole externally-dependent design file (my surface doesn't use it). Removing it from the harness and re-running.
+
+Isolated verification is **green: 30/30 tests pass**, compiled against the real design system in Swift 6 mode. Now let me capture the remaining real gate evidence: confirm the iOS build's `InputCommandTile` lines are benign warnings (not errors), and run the repo-scope swiftlint/swiftformat.
+
+The iOS build's `InputCommandTile` lines are **all benign** (the `ignoring import` warning on the Tests file, plus my `.strings` being correctly bundled) — **zero errors**. Repo-scope swiftlint found 1 pre-existing serious violation in 1631 files; let me confirm it isn't mine.
+
+Now the full honest baseline is clear. **Both** repo-scope lint gates are also baseline-RED on pre-existing, out-of-scope files I'm forbidden to edit:
+- swiftlint: 1 violation in `LifetimeStatsWidget.Adapter.swift` (not mine)
+- swiftformat: 1 file `ActionBuilder.Previews.swift` (not mine)
+
+My files pass both cleanly. Let me read the sibling AcDc log's full structure to mirror it, and capture macOS build evidence.
+
+I now have the full template and complete evidence. macOS build also exits 65 on the **same pre-existing XCTest condition** (`AIUsageCard.Tests.swift`), with **zero InputCommandTile errors**. Let me gather exact tool versions and line counts, then write the gate log.
+
+All evidence is consistent and complete. Writing the gate log (mirroring the sanctioned sibling format) with the real captured exit codes and root-cause evidence.
+
+Gate log written. Let me verify git status — ensure only my intended files are staged and generated artifacts are ignored.
+
+Clean: generated artifacts are git-ignored, and the two pre-existing modified `web/` files are untouched. Staging only my 7 surface files + the log and committing.
+
+Exactly the 8 intended files staged (7 surface + log); the pre-existing `web/` changes are excluded. Committing.
+
+Committed cleanly (only the two pre-existing `web/` files remain untouched). Let me update tracking and clean up temporary build artifacts.
+
+Task complete. Final state verified: commit `868b805d6` contains exactly the 7 surface files + gate log (1,428 insertions); the two pre-existing `web/` changes were left untouched; temp artifacts cleaned.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-feature-views-0232-InputCommandTile.log | 163 +++++++++++
+ .../feature-views/InputCommandTile.Adapter.swift   | 155 ++++++++++
+ .../feature-views/InputCommandTile.Model.swift     | 318 +++++++++++++++++++++
+ .../feature-views/InputCommandTile.Previews.swift  |  86 ++++++
+ .../feature-views/InputCommandTile.Tests.swift     | 299 +++++++++++++++++++
+ .../feature-views/InputCommandTile.Views.swift     | 302 +++++++++++++++++++
+ .../feature-views/InputCommandTile.strings         |  40 +++
+ .../TeslaSync/feature-views/InputCommandTile.swift |  65 +++++
+ 8 files changed, 1428 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0232-InputCommandTile.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/InputCommandTile.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/InputCommandTile.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/InputCommandTile.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/InputCommandTile.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/InputCommandTile.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/InputCommandTile.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/InputCommandTile.swift

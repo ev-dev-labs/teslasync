@@ -1,0 +1,198 @@
+=== P4-APPLE · P7 · page:sharing/SharedDrive (Apple, SwiftUI/HIG) ===
+
+Artifact   : SharedDrivePage (parity unit `page:sharing/SharedDrive`, web route `/s/:token`)
+Web source : web/src/features/sharing/pages/SharedDrivePage.tsx
+Runner     : Darwin arm64, macOS 26.5
+Toolchain  : Xcode 26.5 (17F42) via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+             iPhone 16 simulator (booted); swiftlint 0.x; swiftformat; pwsh 7;
+             JDK 17 (/opt/homebrew/opt/openjdk@17) + Gradle wrapper; Kotlin/Native prebuilt.
+
+------------------------------------------------------------------------------
+PATH RECONCILIATION (no silent drift)
+------------------------------------------------------------------------------
+The prompt's templated native path `apps/apple/TeslaSync/Features/Sharing/` has NO matching
+Xcode target. The Apple app is a single SwiftUI source root `apps/apple/Sources/`
+(project.yml `sources: - path: Sources`) shared by the iOS + macOS app targets, with tests
+under `apps/apple/Tests/Unit`. Same reconciliation as the p4-apple dashboard-widget logs.
+To actually compile + test under the gate, the surface was placed in the real compiled
+roots and decomposed one-concern-per-file (swiftlint file_length <= 400):
+
+  apps/apple/Sources/Features/Sharing/SharedDriveReport.swift       (pure SI value types + unit math + formatters)
+  apps/apple/Sources/Features/Sharing/SharedDriveProjection.swift   (pure route/chart projection)
+  apps/apple/Sources/Features/Sharing/SharedDrivePageState.swift    (pure render-state derivation)
+  apps/apple/Sources/Features/Sharing/SharedDrivePageModel.swift    (@Observable P1/S8 binding + KMP boundary)
+  apps/apple/Sources/Features/Sharing/SharedDrivePage.swift         (entry View + lifecycle)
+  apps/apple/Sources/Features/Sharing/SharedDriveReportView.swift   (loaded report body)
+  apps/apple/Sources/Features/Sharing/SharedDriveRouteMap.swift     (hero MapKit map)
+  apps/apple/Sources/Features/Sharing/SharedDriveCharts.swift       (elevation + speed Swift Charts)
+  apps/apple/Sources/Features/Sharing/SharedDriveStatsGrid.swift    (7 stat cards + vehicle badge)
+  apps/apple/Sources/Features/Sharing/SharedDriveStateViews.swift   (loading/expired/empty/no-route)
+  apps/apple/Sources/Features/Sharing/SharingRouteRegistration.swift(.sharing register + /s/:token parse)
+  apps/apple/Tests/Unit/Sharing/SharedDriveProjectionTests.swift    (18 unit tests, KMP-free)
+  apps/apple/Localization/Localizable.xcstrings                     (+20 share.* keys, +5 supporting)
+
+Data binds to the shared P1/S8 `SharingStore.sharedDrive(token:) -> StateFlow<Resource<SharedDrive>>`
+via `StateHolderModel`/`LoadableState` (no HTTP in the view). The `SharedDrive` union
+(`SharedDriveData` SI/v2 | `SharedDriveDataV1` legacy) is normalized to SI at the boundary,
+mirroring the web `normalizeSharedDriveData`. Units convert at the render boundary through the
+shared `Units` engine + the pure shared-drive helpers (P1/S5). i18n: 20 share.* keys added to
+Localizable.xcstrings. Navigation: `SharingRouteRegistration.registry(store:token:)` hosts the
+public report at the `.sharing` route; `token(from:)`/`token(fromPath:)` resolve `/s/:token`.
+Live wiring into TeslaSyncApp awaits the deferred `AppContainer.bootstrap(baseURL:)` (the whole
+app data-graph bootstrap is deferred by design; only `.settings`, which is UserDefaults-backed,
+is wired live today) — the registration + parser are real, tested seams the bootstrap calls.
+
+States reproduced: loading (TSPageLoader), expired/error (web ExpiredShareView + Retry + home),
+empty (ContentUnavailableView, share.noMapData), success (full report). Panels never blank:
+absent optionals render an em dash; chart containers show an empty overlay; the no-route panel
+(GlassPanel11) appears only when there is no route/elevation/speed data (web parity).
+
+------------------------------------------------------------------------------
+KMP Shared.xcframework (prerequisite for the Apple build)
+------------------------------------------------------------------------------
+$ JAVA_HOME=/opt/homebrew/opt/openjdk@17 ./apps/apple/Scripts/build-shared-xcframework.sh
+> Task :core:assembleSharedXCFramework
+BUILD SUCCESSFUL in 10m 6s
+Slices: ios-arm64, ios-arm64-simulator, macos-arm64  (covers the iPhone 16 sim + macOS gate)
+✓ Shared.xcframework staged -> apps/apple/Frameworks/Shared.xcframework
+KMP interop confirmed against the built framework: SharingStore.sharedDrive(token:),
+Resource, SharedDrive / SharedDriveData / SharedDriveDataV1, SharedDriveInfo(.distanceM/.durationS/
+.maxSpeedMps?.doubleValue ...), SharedDriveInfoV1(.distanceKm/.durationMin/.maxSpeedKmh ...),
+SharedMapPoint(.lat/.lng), data.description_ (Kotlin `description` -> NSObject-safe `description_`).
+
+------------------------------------------------------------------------------
+swiftformat --lint apps/apple/Sources/Features/Sharing apps/apple/Tests/Unit/Sharing
+------------------------------------------------------------------------------
+0/12 files require formatting.
+FORMAT_EXIT=0
+
+------------------------------------------------------------------------------
+swiftlint --strict
+------------------------------------------------------------------------------
+Surface (Sources/Features/Sharing + Tests/Unit/Sharing): 0 violations.
+Full tree: 1 PRE-EXISTING violation, NOT in this surface ->
+  TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141: function_body_length (78 > 50)
+  (introduced by an earlier dashboard-widget surface; out of scope per "do not fix unrelated").
+LINT_EXIT(surface)=0   LINT_EXIT(full)=2 (pre-existing, non-surface)
+
+------------------------------------------------------------------------------
+check-placeholders.ps1 -Path apps/apple/Sources/Features/Sharing -Language swift
+------------------------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------------------
+PRE-EXISTING, NON-SURFACE ENVIRONMENT BLOCK (documented, not a defect in this page)
+------------------------------------------------------------------------------
+The LITERAL gate `xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16'
+build test` FAILS on the unmodified tree (BUILD FAILED, exit 65) entirely because of pre-existing
+parallel-merge breakage in code UNRELATED to sharing (HEAD c9c6fdb9f is a parallel-merge aggregate):
+
+  (1) 224 co-located `*.Tests.swift` / `*.ModelTests.swift` files (170 under TeslaSync/feature-views,
+      54 under TeslaSync/dashboard-widgets) `import XCTest` but are committed into the APP target's
+      sources (project.yml `- path: TeslaSync/feature-views` / `dashboard-widgets`), so the app target
+      cannot resolve module 'XCTest'. e.g. AIRestorePanel.Tests.swift:18, ActionBuilder.ModelTests.swift:11.
+  (2) Duplicate type definitions from parallel merges cause ~59 "ambiguous for type lookup" /
+      "invalid redeclaration" errors across the dashboard widget dirs — e.g. `DashboardWidgetSize` +
+      `DashboardWidgetDescriptor` are each defined twice in Sources/DashboardWidgets/
+      (BatteryCellsWidgetRegistry.swift AND DrivetrainHealthWidgetModel.swift), and the
+      TeslaSync/dashboard-widgets copies duplicate Sources/Dashboard* types (VehicleHeroModel, ...).
+
+ALL of these errors are outside apps/apple/Sources/Features/Sharing (grep of the build logs:
+0 errors in Features/Sharing). They are committed, pre-existing, parallel-merge defects that this
+P7 page neither introduced nor is in scope to fix ("Out of Scope: Other pages; ... Don't fix
+pre-existing issues unrelated to your task").
+
+------------------------------------------------------------------------------
+SURFACE VERIFICATION (pre-existing breakage worked around WITHOUT touching committed config)
+------------------------------------------------------------------------------
+The .xcodeproj is git-ignored / regenerated, so it was regenerated from a temporarily-patched
+project.yml that (a) excluded the misplaced `*Tests.swift` + duplicate dashboard dirs from the app
+target and (b) scoped TeslaSyncTests to Tests/Unit/Sharing, to prove THIS surface compiles + tests
+pass against the real Shared.xcframework. project.yml was reverted afterward (git status: project.yml
+clean; committed config unchanged).
+
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+** BUILD SUCCEEDED **   (all 11 SharedDrive* files + the test bundle compiled into the iOS app target)
+** TEST SUCCEEDED **
+  SharedDriveUnitsTests           : 3/3   passed
+  SharedDriveFormatTests          : 5/5   passed
+  SharedDriveProjectionTests      : 5/5   passed
+  SharedDrivePageRenderStateTests : 3/3   passed
+  SharingRouteRegistrationTests   : 2/2   passed
+  -> TeslaSyncTests: 18/18 unit tests passed, 0 failures.
+  -> TeslaSyncUITests: 13/13 passed (existing, unaffected).
+SURFACE_BUILD_EXIT=0   SURFACE_TEST_EXIT=0
+
+macOS: additionally blocked by the same repo-wide breakage plus the pre-existing macOS
+code-signing / provisioning requirement (no developer cert on this runner), independent of sharing.
+
+=== PARITY ===
+PARITY_REQUIRED=43
+- [x] panel  — Distance              : SharedDriveStatsGrid.swift  TSStatCard(title:"share.distance")
+- [x] panel  — Duration              : SharedDriveStatsGrid.swift  TSStatCard(title:"share.duration")
+- [x] panel  — Efficiency            : SharedDriveStatsGrid.swift  TSStatCard(title:"share.efficiency")
+- [x] panel  — Battery               : SharedDriveStatsGrid.swift  TSStatCard(title:"share.battery")
+- [x] panel  — Max-Speed             : SharedDriveStatsGrid.swift  TSStatCard(title:"share.maxSpeed")
+- [x] panel  — Avg-Speed             : SharedDriveStatsGrid.swift  TSStatCard(title:"share.avgSpeed")
+- [x] panel  — Elevation-Gain        : SharedDriveStatsGrid.swift  TSStatCard(title:"share.elevGain")
+- [x] panel  — GlassPanel8           : SharedDriveStatsGrid.swift  SharedDriveVehicleBadge (TSGlassPanel)
+- [x] panel  — Elevation-Profile     : SharedDriveCharts.swift     TSChartContainer("share.elevation")
+- [x] panel  — Speed-Profile         : SharedDriveCharts.swift     TSChartContainer("share.speed")
+- [x] panel  — GlassPanel11          : SharedDriveStateViews.swift SharedDriveNoRouteData (TSGlassPanel)
+- [x] chart  — ChartContainer (elev) : SharedDriveCharts.swift     TSChartContainer (elevation)
+- [x] chart  — AreaChart             : SharedDriveCharts.swift     TSAreaChart(series:[elevationSeries])
+- [x] chart  — ChartContainer (speed): SharedDriveCharts.swift     TSChartContainer (speed)
+- [x] chart  — LineChart             : SharedDriveCharts.swift     TSLineChart(series:[speedSeries])
+- [x] map    — MapContainer          : SharedDriveRouteMap.swift   Map(initialPosition:interactionModes:)
+- [x] map    — MapTileLayer          : SharedDriveRouteMap.swift   .mapStyle(TSMapStyle.standard.mapStyle)
+- [x] map    — Polyline              : SharedDriveRouteMap.swift   tsPolyline(route,colorIndex:0,lineWidth:3)
+- [x] map    — CircleMarker (start)  : SharedDriveRouteMap.swift   Annotation{TSCircleMarker(tone:.success)}
+- [x] map    — CircleMarker (end)    : SharedDriveRouteMap.swift   Annotation{TSCircleMarker(tone:.danger)}
+- [x] state  — loading               : SharedDriveStateViews.swift SharedDriveLoadingView / RenderState.loading
+- [x] state  — empty                 : SharedDriveStateViews.swift SharedDriveEmptyView / RenderState.empty
+- [x] state  — success               : SharedDriveReportView.swift / RenderState.loaded
+- [x] string — share.avgSpeed        : Localizable.xcstrings + SharedDriveStatsGrid.swift
+- [x] string — share.battery         : Localizable.xcstrings + SharedDriveStatsGrid.swift
+- [x] string — share.distance        : Localizable.xcstrings + SharedDriveStatsGrid.swift
+- [x] string — share.duration        : Localizable.xcstrings + SharedDriveStatsGrid.swift
+- [x] string — share.efficiency      : Localizable.xcstrings + SharedDriveStatsGrid.swift
+- [x] string — share.elevGain        : Localizable.xcstrings + SharedDriveStatsGrid.swift
+- [x] string — share.elevTooltipLabel: Localizable.xcstrings + SharedDriveCharts.swift (series nameText)
+- [x] string — share.elevation       : Localizable.xcstrings + SharedDriveCharts.swift (container title)
+- [x] string — share.elevation.aria  : Localizable.xcstrings + SharedDriveCharts.swift (container summary)
+- [x] string — share.expired.description : Localizable.xcstrings + SharedDriveStateViews.swift
+- [x] string — share.expired.home    : Localizable.xcstrings + SharedDriveStateViews.swift
+- [x] string — share.expired.title   : Localizable.xcstrings + SharedDriveStateViews.swift
+- [x] string — share.footer          : Localizable.xcstrings + SharedDriveReportView.swift
+- [x] string — share.header          : Localizable.xcstrings + SharedDriveReportView.swift
+- [x] string — share.learnMore       : Localizable.xcstrings + SharedDriveReportView.swift
+- [x] string — share.maxSpeed        : Localizable.xcstrings + SharedDriveStatsGrid.swift
+- [x] string — share.noMapData       : Localizable.xcstrings + SharedDriveStateViews.swift
+- [x] string — share.speed           : Localizable.xcstrings + SharedDriveCharts.swift (container title)
+- [x] string — share.speed.aria      : Localizable.xcstrings + SharedDriveCharts.swift (container summary)
+- [x] string — share.speedTooltipLabel : Localizable.xcstrings + SharedDriveCharts.swift (series nameText)
+PARITY_COVERED=43
+
+------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------
+Surface deliverable COMPLETE and INDEPENDENTLY VERIFIED:
+  - swiftformat --lint           -> 0
+  - swiftlint --strict (surface) -> 0   (1 pre-existing violation elsewhere, non-surface)
+  - check-placeholders           -> 0
+  - KMP Shared.xcframework        -> BUILD SUCCESSFUL (ios-arm64/sim + macos-arm64)
+  - iOS build (surface)           -> BUILD SUCCEEDED  (all 11 SharedDrive* files compiled vs real framework)
+  - iOS tests (surface)           -> TEST SUCCEEDED   (18/18 unit + 13/13 UI)
+  - PARITY                        -> PARITY_COVERED(43) == PARITY_REQUIRED(43)
+
+The LITERAL full-tree `xcodebuild build test` on the unmodified tree is RED (exit 65), blocked
+ENTIRELY by pre-existing parallel-merge breakage (224 misplaced *.Tests.swift in app sources +
+duplicate dashboard widget type definitions) that is independent of this page and out of scope to
+fix. Per the honesty covenant (1 No red-as-green, 8 No commit on red), this page is NOT committed
+and the gate is reported BLOCKED rather than green — even though the sharing surface itself builds,
+tests, lints, and reaches full 43/43 parity under the documented, non-committed project regeneration.
+
+EXIT=65
+STATUS=BLOCKED

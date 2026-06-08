@@ -1,0 +1,82 @@
+I'll start by exploring the repository structure and checking what capabilities are available on this runner.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed, and `simctl` (iOS simulators) is unavailable. However, `swift`, `swiftlint`, and `swiftformat` ARE available. Let me explore the existing Apple app structure and the web source before deciding anything.
+
+The macOS SDK (15 & 26) is available with SwiftUI/Charts/MapKit, but there's NO iOS SDK and NO Xcode (only CLT). Let me explore the actual target directory structure and the `AIUsageCard` template that was recently modified.
+
+The `shared-surfaces/` directory is empty — I'm creating the first surface there. The `feature-views/` uses a multi-file pattern (`.swift`, `.Model`, `.Adapter`, `.Views`, `.Previews`, `.Tests`, `.strings`). Let me study the freshly-modified `AIUsageCard` as the canonical template, plus check the shared-surfaces dir and a simpler example.
+
+macOS case-insensitive FS collision on AIUsageCard (0203 vs 0237) — not my concern. The `shared-surfaces/` dir doesn't exist yet; I'm creating it. HelpTooltip is a presentational component composing a shared `Tooltip`. Let me study the established conventions: an existing UI Tooltip (if any), the design tokens (S9), i18n facade (S10), diagnostics (S11), state holders (S8), and a clean surface template.
+
+No existing Tooltip. Let me read the design tokens, existing overlay patterns, typography, and locate the i18n facade (S10) + diagnostics (S11) + state-holder facade (S8).
+
+Good — I now understand the multi-file surface pattern (main `.swift` with states, `.strings` i18n table, `.Previews`, plus Model/Adapter/Views/Tests). Critical question: how is the app built? If there's a SwiftPM `Package.swift`, I can `swift build`/`swift test` against the macOS SDK *without* full Xcode. Let me check the build system and the diagnostics/facade/tokens infrastructure.
+
+XcodeGen `project.yml` (no SwiftPM) → full app build needs Xcode (unavailable). But `pwsh`, `swiftlint`, `swiftformat`, and the placeholder check ARE available. Let me read the project.yml target mapping, the design tokens, the string-helper pattern, and the Model/Views to learn conventions precisely.
+
+Now let me read the Model (diagnostics `view.opened`, connection axis), the string-helper definition, the Tests pattern, and the design tokens.
+
+Excellent — the pattern is crystal clear now. HelpTooltip is a pure presentational leaf (only `useTranslation`, no async data), so the generic loading/error/stale/offline axes don't apply; I'll faithfully reproduce its real branches (content-resolution, hidden-when-empty, learnMore, custom trigger, size, placement, open/closed). Let me read the web `Tooltip` it composes, the design tokens, material, typography, and existing overlays to map primitives correctly.
+
+The web `Tooltip` uses an inverted high-contrast surface, `role="tooltip"`, aria-describedby wiring, hover/focus/tap reveal, multiline max-width 260px, placement (top/bottom/left/right), reduced-motion. Native-idiomatic equivalent = a `.popover`. Let me confirm the exact design-token names and shared component availability before writing.
+
+I now have the full token vocabulary (Color.TS, Font.TS, TSSpacing, TSRadius, TSMotion, TSMaterial). Let me verify a few conventions before writing: how `.Tests.swift` files in `feature-views/` are wired into the test target, the Motion/reduce-motion helper, existing overlay patterns, and any snapshot-test infra.
+
+Critical finding: `project.yml` app targets source `TeslaSync/feature-views` but NOT `TeslaSync/shared-surfaces` — and the prompt's allowed-files list forbids editing project.yml. So wiring shared-surfaces into the Xcode targets is the P4 acceptance gate's job (this prompt "Blocks: P4 acceptance gate"). I'll design HelpTooltip to depend only on the generated design tokens so I can do a standalone `swiftc` type-check against the macOS SDK. Let me verify that's feasible.
+
+`swiftc -typecheck` against the macOS 15 SDK works for SwiftUI + `.popover` (exit 0). XCTest module is unavailable under CLT (expected — no Xcode). The shared-surfaces dir isn't wired into `project.yml` (acceptance-gate's job; I can't edit it per allowed-files). My plan: implement HelpTooltip depending only on generated tokens, then verify via swiftc type-check + swiftlint + swiftformat + placeholder check. Let me check the lint/format configs to match house style.
+
+House style: maxwidth 120, `--self remove`, before-first wrapping, `@testable` at bottom. Note swiftlint's `included` list doesn't cover `shared-surfaces`, and I can't edit project.yml/.swiftlint.yml (allowed-files restriction) — wiring is the acceptance gate's job. I'll lint my files by explicit path. Let me read the placeholder check + patterns so my code/copy doesn't trip it, then write everything.
+
+I've fully internalized the conventions and the placeholder rules (must avoid "TODO/FIXME/Placeholder/not implemented" etc. in `.swift`; `.strings` files aren't scanned). Now writing the surface. Let me create the directory and the seven files.
+
+Now creating the seven surface files following the established multi-file convention.
+
+All six files created (Model holds the projection/adapter since the surface is small). Now the critical verification — type-check the production sources against the macOS 15 SDK together with the generated tokens.
+
+The `@Observable` macro errors are a toolchain artifact of the CLT Swift 6.3.2 macro expansion, not my code. Let me confirm with a minimal `@Observable` standalone, and check whether the existing `AcDcStatsModel` reproduces it too.
+
+Confirmed: even a minimal `@Observable` class fails under the standalone CLT Swift 6.3.2 macro plugin (`shouldNotifyObservers` coverage bug) — a toolchain artifact, not my code. The entire existing codebase uses `@MainActor @Observable`, so the real Xcode build handles it. To still get a genuine standalone type-check of my logic/SwiftUI, I'll type-check temp copies with only the macro attributes stripped.
+
+Only `#Preview` macro-plugin errors remain (PreviewsMacros plugin unavailable under CLT — another toolchain artifact). Let me type-check the production trio (which has no macro dependencies beyond what's strippable) to confirm zero real errors, then validate the preview bodies via a transform.
+
+Production trio type-checks **cleanly (TRIO_EXIT=0)** under strict-concurrency Swift 6. The preview transform just missed one title containing literal parens — fixing the regex and re-running to validate all preview bodies.
+
+All preview bodies type-check cleanly too. Now let me validate the **Tests** logic against my real API by compiling them together with the sources behind a minimal XCTest shim (since XCTest is unavailable under CLT).
+
+My harness caught a **real strict-concurrency issue**: the file-scope `let fallbackTranslator` closure isn't `Sendable`, which would fail the real `SWIFT_STRICT_CONCURRENCY: complete` test build. Fixing it by marking the test translators `@Sendable`.
+
+Tests type-check cleanly under strict concurrency. Now apply house formatting and lint. Let me run swiftformat (auto-apply), then verify with `--lint`, then swiftlint.
+
+swiftformat reformatted 1 file; now 0/5 require formatting. Let me confirm formatting didn't break anything by re-running the full type-check harness on the freshly-formatted sources, then run swiftlint.
+
+swiftlint linted the whole project (config's `included` list) and found 1 serious violation. Let me isolate whether it's in my files.
+
+The 1 violation is **pre-existing** in `LifetimeStatsWidget.Adapter.swift` (not mine, not in scope). My files produced **zero** swiftlint violations. Let me stop the redundant second run and run the placeholder check.
+
+Placeholder check passes (COUNT=0). Let me review the final formatted files to confirm everything reads correctly.
+
+All files are clean. Now let me gather honest evidence for the gate log — attempt the `xcodebuild` steps (which require full Xcode, unavailable), and run the whole-repo swiftformat the gate uses.
+
+Evidence captured: `xcodebuild` fails immediately (CLT, not Xcode; no iOS SDK). Now capturing the whole-repo swiftformat/swiftlint numbers the gate would see, to document honestly.
+
+Complete evidence gathered. Both whole-repo `swiftlint`/`swiftformat` have exactly **one pre-existing violation each in unrelated files** (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`); my surface files are 100% clean. `xcodebuild` cannot run (CLT, no Xcode, no iOS SDK). Let me write the honest gate log.
+
+Now let me clean up temp files and do a final review of the post-format Model and Tests files to confirm correctness.
+
+Files are complete and coherent. Now I'll commit only my surface files + the log (leaving the unrelated pre-existing working-tree changes untouched), with a commit body that transparently records the BLOCKED gate status — the detailed evidence lives in the committed log.
+
+Exactly my files are staged; pre-existing changes left untouched. Committing with a transparent body.
+
+The commit is clean (7 files, unrelated changes untouched). Let me strengthen verification beyond type-checking: a runtime harness that actually **executes** the projection/model/mapping logic and asserts the expected outputs (mirroring the XCTest cases), compiled with `swiftc` against the macOS SDK.
+
+Harness-only concurrency issue (top-level code is MainActor in Swift 6). Fixing the harness (not the surface) and re-running.
+
+Outstanding — the runtime harness compiled and **all 18 logic assertions passed at runtime** (projection, content resolution, learn-more, placement/size mappings, telemetry-once). This is execution-level verification, not just type-checking. Let me add this to the log and amend the commit (not yet pushed).
+
+Now amending the commit to include the updated log (commit isn't pushed; keeps one clean commit per the prompt).
+
+Let me do a final state check before concluding.
+
+The HelpTooltip Apple shared surface is complete, verified to the maximum extent this runner allows, and committed.
+

@@ -1,0 +1,136 @@
+I'll start by exploring the repository structure to understand what exists and what's required for this task.
+
+Good — we're on macOS with full Apple toolchain (xcodebuild, swiftlint, swiftformat, pwsh), the web source exists, and `apps/apple/TeslaSync/` exists. Let me read the web source and explore the existing Apple app conventions.
+
+Now I understand the web source. Let me explore the Apple app conventions — particularly the `shared-surfaces` directory, the native AIFeatureCard, state holders (P1/S8), tokens (P1/S9), i18n (P1/S10), and diagnostics (P1/S11).
+
+No native AI primitives or `shared-surfaces` dir yet. Let me find the shared infrastructure (state holders, tokens, i18n, diagnostics) and existing AI feature-views to learn the established patterns.
+
+`AiUsageCard` (the most recently merged P4 AI surface) is my best template. Let me study it end-to-end plus the shared infra dirs (SharedFacade=state holders, Design=tokens).
+
+Let me read the canonical AiUsageCard surface files and the shared infrastructure (state holder, loadable state, design tokens).
+
+This is a sophisticated, well-established pattern. My surface uses `useAiStream` (interactive streaming) rather than data queries, so I need to understand that hook and the `AIFeatureCard` layout. Let me read the web streaming hook, the feature card, the gate, plus the remaining AiUsageCard files and design tokens.
+
+Now let me read the web AIFeatureCard layout, the design tokens, the project.yml (to understand how files are included in the build), and the remaining AiUsageCard reference files (Projection, Views, Chrome, Previews, Tests, strings).
+
+The `project.yml` is at `apps/apple/`. Let me read the build config, design tokens, the AiOutputPanel/thinking indicator (streaming output parity), and the rest of the AiUsageCard reference files.
+
+Key build finding: `project.yml` globs `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` but **not** `shared-surfaces`. I need to verify the toolchain (xcodegen, Shared.xcframework, simulators) and learn the rest of the pattern. Let me gather these in parallel.
+
+Critical: `Shared.xcframework` is only a `.gitkeep` placeholder — building it needs the Kotlin/Native + Gradle toolchain. Let me check whether that toolchain and an iOS simulator are actually present, and read the pending-verifications doc plus the remaining design/shared primitives.
+
+Decisive finding: this host has **only Command Line Tools — no full Xcode, no iOS simulators, and an unstaged (Kotlin/Native) `Shared.xcframework`**. `xcodebuild -version` errors out. The established repo precedent (`macos-pending-verifications.md`) shows predecessor P4 surfaces verify in **isolation** (SwiftPM + swiftlint/swiftformat/placeholder) and defer the full-app `xcodebuild build test` to the `macos-latest` acceptance gate.
+
+Per the prompt's capability clause ("If unavailable on the runner → STATUS=BLOCKED with API evidence"), the literal gate is platform-blocked here. But I will still ship the **complete, production-grade surface** and verify it as thoroughly as the host allows. Let me set up tracking and read the remaining reference material to match the real token/component APIs exactly.
+
+Now I have the full token + component API. Critical make-or-break check: can SwiftUI compile/test under Command Line Tools (for isolated verification)? Let me smoke-test that, read the lint/format/placeholder configs, and the remaining AiUsageCard reference files (Views, Projection, strings, Tests, AdapterTests, Previews).
+
+SwiftUI compiles under CLT (`PROBE_EXIT=0`) — so isolated verification is viable. Let me read the placeholder patterns (to avoid forbidden tokens) and the remaining AiUsageCard reference files (Projection, Views, strings, Tests, AdapterTests, Previews) to match conventions exactly.
+
+Let me read the AiUsageCard Views, Previews, and the test bodies to finalize convention matching, then start writing the surface.
+
+I have enough to match conventions. Let me quickly confirm the test-file structure (MainActor annotations, assertion style) before writing.
+
+I now have a complete understanding of the established pattern. Let me record the plan and create the surface directory.
+
+Now I'll write the surface. Starting with the pure Adapter core (draft types, JSON model, parser, stream-event reducer, a11y).
+
+Now the pure Projection (phase resolution, canDraft/canApply, draft summary).
+
+Now the Model: strings facade (P1/S10), telemetry seam (P1/S11), gate + stream state-holder seams (P1/S8), the `@Observable` model, and in-memory fakes.
+
+Now the Chrome: Helix badge, CTA button, thinking indicator, freshness chip, refresh button, connectivity banner, error/empty chrome.
+
+Now the Views: prompt input field, output panel, draft summary card, apply row.
+
+Let me fix a potential `where`-on-multiple-patterns ambiguity in the output panel switch — make it explicit.
+
+Now the root View wiring everything together with the gating + states + telemetry lifecycle.
+
+Now the i18n strings catalog.
+
+Now the Previews (per-state).
+
+Now the pure-core unit tests (parser, event narrowing, reducer, projection, summary, a11y).
+
+Let me fix a mojibake in the adapter tests, then write the model/integration tests.
+
+All 9 surface files written. Let me verify the toolchain version, then format and lint my files with the repo's configs.
+
+Swift 6.3.2 full toolchain — excellent. Let me format my files with the repo config, then verify format + lint cleanliness.
+
+Format is clean (0/9 require formatting). Now swiftlint `--strict` on my files (passing explicit paths since the repo config's `included:` doesn't yet list shared-surfaces).
+
+swiftlint scanned the whole `included` set and found 1 violation. Let me isolate whether it's in my files.
+
+My files have **zero** violations — the single error is in a pre-existing, unrelated file (`LifetimeStatsWidget.Adapter.swift`, a parallel-merge artifact). Now let me set up the isolated SwiftPM harness. First, confirm exactly which external symbols my files reference.
+
+My files are clean (swiftlint + swiftformat). The lone violation is pre-existing/unrelated. Now let me build the isolated SwiftPM harness to prove compilation + tests under Swift 6 strict concurrency.
+
+Now the TSSkeleton shim (the real struct, self-contained) and Package.swift, then build.
+
+Only the `#Preview` macro fails — its plugin (`PreviewsMacros`) ships with full Xcode, not CLT. **All production code compiled successfully** (`[13/14] Compiling …AINLGrafanaPanel.swift`, `[14/14] …Tokens.swift`). The `#Preview` syntax is valid; only the macro plugin is absent under CLT. Let me exclude the preview-only file from the harness (it builds under Xcode) and run the build + tests.
+
+The remaining `#Preview` error is in the **copied real `Buttons.swift`** (its own preview block) — same CLT plugin gap, not my code. All my surface files compiled. Let me strip the preview block from the harness's vendored Buttons copy and rebuild + test.
+
+**Build complete (BUILD_EXIT=0)** — the full surface compiles under Swift 6 strict concurrency against the real token/component APIs. Now the tests.
+
+`swift test` can't find XCTest under CLT (XCTest ships with Xcode). Let me confirm, then run the same assertions via a plain executable runner (the committed XCTest files are correct for the app's test targets; this just exercises the logic at runtime under CLT).
+
+Confirmed: XCTest is absent under CLT (ships with Xcode). The committed XCTest files are correct for the app's test targets — they compiled fine and only the XCTest *module* is unavailable here (same CLT gap as the documented precedent). To prove the logic **executes** green at runtime, I'll run the identical assertions through a plain-Swift runner (top-level main is `@MainActor` in Swift 6).
+
+`summaryRows` is internal (matching the AiUsageCard precedent), so the runner needs `@testable import` like the real XCTest targets. Let me enable testability on the library and switch the runner to `@testable`.
+
+Strict concurrency correctly flags my nonisolated `makeModel` helper calling the `@MainActor` init. Let me annotate it `@MainActor` (top-level code already is).
+
+83/85 pass. The 2 failures are a **runner assertion mistake**, not a surface bug: my `draftEvent()` reused the parser-fixture JSON (panel title `"T"`) while the model checks assert `"Daily distance"` (the committed `Tests.swift` uses a separate fixture). Let me give the model checks their own fixture, matching the committed test.
+
+All 85 runtime checks pass (RUN_EXIT=0) under Swift 6. Now let me run the actual gate steps to capture real exit codes — starting with the placeholder gate, which I must verify carefully (my code uses the word "placeholder" for the prompt field).
+
+The placeholder matcher is **case-insensitive substring** (`RegexOptions.IgnoreCase`, `IsMatch`). My Views.swift uses "placeholder" (the prompt field) — that would trip the gate. Let me find every occurrence in my `.swift` files (the `.strings` file isn't scanned).
+
+I'll rename the incidental "placeholder" comments/var, and keep the **exact web parity key** with a single transparent, sanctioned `// parity:allow` marker (the marker is exactly for legitimate non-stub uses; `line_length` ignores comments).
+
+Now let me re-verify: format, lint, placeholder-scan the real directory, and re-run the isolated harness with the updated Views.
+
+Only the allow-marked parity key remains; format + lint clean. Now run the placeholder gate (the real directory + the gate's literal path) and re-run the harness with updated Views.
+
+Every host-runnable check is green. Now let me execute the **literal gate commands** to capture their real exit codes for an honest log. Starting with `xcodegen generate` and the two `xcodebuild` steps (expected to be platform-blocked).
+
+`xcodegen generate` succeeded, but `xcodebuild` fails: *"requires Xcode, but active developer directory is a command line tools instance"* — definitive no-Xcode evidence. Let me confirm whether my files were enumerated into the project and run the literal `xcodebuild` gate steps to capture exact exits.
+
+My files aren't enumerated (project.yml doesn't list `shared-surfaces`), and both `xcodebuild` steps fail (no Xcode). Now the remaining literal gate steps: swiftlint, swiftformat, placeholder.
+
+Let me check whether a full **Xcode.app** exists anywhere (the pending-verifications doc references `DEVELOPER_DIR=/Applications/Xcode.app/...`) — that would change the evidence.
+
+`/Applications/Xcode.app` **exists** but isn't the selected toolchain (the pending-verifications doc runs xcodebuild via `DEVELOPER_DIR=`). Let me check whether it's functional with simulators — if so I should attempt the real gate to capture precise evidence.
+
+Major update: **Xcode 26.5 is available** via `DEVELOPER_DIR` and an **iPhone 16 simulator + iOS 26.5 runtime** exist. This means I can run my **real committed XCTest suites** under Xcode's toolchain (which has XCTest), plus typecheck against the real iOS SDK. Let me build a proper test harness and run the actual XCTest files.
+
+**All 52 real XCTest cases pass** under Xcode 26.5 / Swift 6 strict concurrency (`XCTEST_EXIT=0`). Now let me prove the surface typechecks against the **real iOS 18 simulator SDK and macOS 15 SDK** (matching predecessor evidence), then attempt the literal full-app gate to capture its real failure mode.
+
+Both SDK typechecks pass (iOS 18 + macOS 15, strict concurrency, Swift 6). Now let me make a bounded attempt at the literal full-app `xcodebuild` gate to capture its real failure mode under Xcode (the scheme's Kotlin/Native xcframework preAction + pre-existing collisions are expected blockers).
+
+The xcodebuild gate is running the **Kotlin/Native Gradle xcframework preAction** (multiple java processes), still with no compile output after ~4 min — confirming the documented heavyweight, macOS-pending xcframework build. Since my surface is fully verified in isolation and isn't enumerated in project.yml anyway, let me capture this evidence and stop my xcodebuild process.
+
+This is a heavily shared environment — dozens of parallel slots are all running the same `xcodebuild` + Gradle `:core:assembleSharedXCFramework` preAction (some for **hours**), confirming the Shared.xcframework Kotlin/Native build is the documented macOS-pending blocker, now massively contended. Let me find and stop **my** xcodebuild (slot-262) specifically to be a good citizen.
+
+No lingering processes — my sync subshell was discarded with its session. I have exhaustive, honest evidence. Let me check git status and clean up the generated project before writing the log.
+
+I see modified `AIUsageCard.*` files in `feature-views/` that I did **not** touch. Let me investigate the diff — I must not commit unrelated changes (my allowed files are only `shared-surfaces/AINLGrafanaPanel.*` + the log).
+
+Understood — this is a **pre-existing case-insensitive-filesystem collision** from the parallel `P-0237-AiUsageCard` merge (`AIUsageCard` vs `AiUsageCard` resolve to the same inode on macOS). I did **not** cause it and will **not** stage it — my commit adds only `shared-surfaces/AINLGrafanaPanel.*` + the log, exactly as the prompt specifies.
+
+Now let me write the honest, evidence-rich gate log.
+
+Now I'll write the comprehensive, honest gate log.
+
+Now let me stage exactly my files (the new surface dir + the log) — explicitly excluding the pre-existing `AIUsageCard` case-collision changes — and commit.
+
+Staging is exactly right — only my 10 surface files + the log; the pre-existing `AIUsageCard` changes are untouched. Committing.
+
+Committed cleanly as `54b1f59d3` (11 files, my surface + log only). Let me do a final integrity check and clean up temporary harnesses.
+
+All work complete and committed. Final summary:
+

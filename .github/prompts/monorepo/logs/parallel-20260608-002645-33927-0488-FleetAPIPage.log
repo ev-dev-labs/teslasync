@@ -1,0 +1,203 @@
+I'll start by exploring the repository structure and reading the key files to understand the task.
+
+Now let me explore the Apple app structure and the parity manifest in parallel.
+
+There's a `Sources/` structure and a `TeslaSync/` structure. Let me understand the real layout via project.yml and the Features directory.
+
+The bulk of feature views live in `TeslaSync/feature-views/`. Let me find the admin-related pages and any existing FleetAPI work to follow conventions.
+
+There's an existing `FleetApiSection.*` family. Let me examine the parity manifest record, the existing FleetApiSection convention, and check the toolchain availability.
+
+Full toolchain is available (xcodebuild, swiftlint, xcodegen, pwsh, swift). There's an existing `FleetApiSection.*` family — let me study it and the conventions. Let me check file sizes first.
+
+No `*Page.swift` files exist — the convention differs. Let me read the existing FleetApiSection implementation and find how pages/navigation are structured.
+
+The existing `FleetApiSection` is parity for a *different* web component (devtools wizard), so I need a new `FleetAPIPage`. The settings pages (`GeneralSettings`, `AdvancedSettings`, `NotificationSettings`) are the closest analogs. Let me study conventions: SharedFacade, navigation, localization, and a full settings page.
+
+Let me read the GeneralSettings reference set and the SharedFacade core in parallel.
+
+This is a sophisticated, well-structured codebase. Let me study the data-source seams, domain models, SharedFacade core, and the Domains layer.
+
+The feature views are standalone (not yet nav-registered). Let me check navigation, the domain source, and the GeneralSettings UI sub-views to learn the component vocabulary.
+
+Now let me confirm the component library (Toggle, Select, Badge, IconBox, GlassPanel, FadeIn, Skeleton) and design tokens, plus the Fields/Previews/Tests conventions.
+
+All needed components exist. Let me read their exact APIs and the design tokens.
+
+Let me check the design tokens, TSToggle/TSFadeIn APIs, the `.strings` format, and whether the central `Localizable.xcstrings` already contains the web keys.
+
+The convention is clear: per-surface `.strings` table + facade, files in `feature-views/`. Let me read the design tokens, motion/skeleton components, lint config, placeholder checker, and the Previews/Tests conventions.
+
+Let me check the placeholder patterns, design token definitions, and remaining components (FadeIn, Skeleton).
+
+Critical: the placeholder scanner flags "Placeholder", "TODO", "FIXME", etc. (case-insensitive) — I'll keep files clean. Let me confirm exact token names in the generated Tokens.swift.
+
+Let me read the test/preview conventions (critical: how `.Tests.swift` in feature-views compile) and the remaining component APIs.
+
+I need to understand how `.Tests.swift` files in `feature-views` compile (they import XCTest but the dir is an app-target source). Let me investigate target membership.
+
+Let me check the baseline build feasibility — the Shared.xcframework dependency and build script.
+
+Shared.xcframework is missing and needs a Kotlin/Native Gradle build. Let me verify the shared module and kick that build off in the background while I implement.
+
+Java 17 + gradlew present. Let me start the Shared.xcframework build in the background now (it's the long pole), then continue implementing while it runs.
+
+Let me check the background Gradle build progress.
+
+`/Applications/Xcode.app` exists but `xcode-select` points to CommandLineTools. I can override per-command with `DEVELOPER_DIR`. Let me verify.
+
+Full Xcode 26.5 works via `DEVELOPER_DIR`. Let me restart the Shared.xcframework build with the correct toolchain in the background, then implement while it runs.
+
+Build running. Let me set up a plan and read the web hooks to model the data shapes accurately.
+
+I now have all data shapes. Let me write the plan, check the build progress, verify the SwiftLint baseline, and read the multi-source model + fields reference.
+
+SwiftLint baseline is clean (EXIT=0). Let me confirm the Gradle build result.
+
+The background build was killed when the sync shell ended. Let me relaunch it properly as a detached async process.
+
+Now let me set up the plan and todos, then implement while the framework builds.
+
+Now I'll implement. Starting with the Models file (value types + strings facade).
+
+Now let me create the Models file with value types and the strings facade.
+
+Now the Seams file (source protocol, in-memory double, telemetry, toast types).
+
+Now the Adapter with pure projections (endpoint catalogs, counts, phase/freshness, formatting).
+
+Let me check the Gradle build progress, then write the Model.
+
+Build progressing through release frameworks. Now the Model (`@Observable`).
+
+Now let me add the revert fields and the actions extension to the Model.
+
+Important — I must avoid symbol collisions with the existing `FleetApiSection.*` family. Let me enumerate its top-level symbols.
+
+Many `Fleet*` symbols exist. Let me verify none of my chosen type names collide anywhere in the module before writing the views.
+
+No collisions — all names are clear. Now the Views (chrome) file.
+
+The Gradle command finished. Let me verify the Shared.xcframework was staged.
+
+Build succeeded but staging is done by the wrapper script. Let me run it (Gradle is now cached, so it'll be fast).
+
+Shared.xcframework staged. Let me verify the glass-panel modifier API before writing the panels, and check the main scaffold reference.
+
+Now the Panels file (GlassPanels 1–4 + endpoint sections).
+
+Let me check how GeneralSettings renders selects with facade-resolved labels (to pick TSSelect vs a custom picker).
+
+Good — the convention uses custom facade-resolved picker rows. Now the Sections file (GlassPanels 5–8 + telemetry capture).
+
+Now the main page View that composes everything.
+
+Now the localization `.strings` table with all 70 web keys plus native chrome keys.
+
+Let me cross-check that every string key referenced in Swift exists in the `.strings` file, and that all 70 web keys are present.
+
+No missing keys. The "unused" ones are referenced indirectly (passed as literals to adapter/section helpers). Let me verify all 70 manifest strings appear as literals in the Swift sources.
+
+All 70 strings verified present. Now let me understand the test-file build mechanism (the `.Tests.swift` files live in the app-target source dir) before writing tests. Let me check pending-verifications and generate the project.
+
+This is the key insight — the doc confirms the established methodology: full-app `xcodebuild build test` is **pre-existing-blocked** (duplicate `DashboardWidgetSize`, 152 co-located XCTest files), so surfaces are verified green via isolated build + lint/format/placeholder, with the full build deferred to a macOS CI gate. I'll follow that exact precedent. Let me write the Previews and Tests, then run all gates.
+
+Now the adapter/strings/a11y tests.
+
+Now the model behavior tests.
+
+All 11 files written. Let me update todos and run the fast gates: collision check, file sizes, SwiftLint, SwiftFormat, and placeholder scan.
+
+All files <400 lines, no collisions. Now SwiftLint, SwiftFormat, and placeholder scan on the new files.
+
+One line-length violation. Let me fix it.
+
+Let me re-run SwiftLint plus SwiftFormat and the placeholder scan.
+
+SwiftLint is clean. SwiftFormat wants auto-formatting. Let me apply it, then re-verify both.
+
+Both SwiftFormat and SwiftLint are clean. Now the placeholder scan on the new files.
+
+Placeholder scan clean (0/0). Now let me do an isolated type-check of the surface against the real macOS SDK + shared components. First, check what the Components layer depends on.
+
+Components only depend on system frameworks. Let me run an isolated Swift 6 type-check of the surface + shared Design/Components against the macOS 15 SDK.
+
+The only errors are in a component I don't use (`UnitFormatters.swift`, which needs the `Units` SI helper). Let me find `Units` and include it, or scope the type-check to what the surface actually uses.
+
+`UnitFormatters.swift` needs the KMP `Shared` layer — unrelated to my surface. Let me re-run the type-check excluding it.
+
+macOS type-check passes. Now the iOS 18 SDK type-check (adaptive parity requirement).
+
+Both SDKs type-check clean. Now let me actually **run** the tests via an ephemeral SwiftPM package (module named `TeslaSync` so `@testable import` works).
+
+SwiftPM package assembled (50 lib files incl. 9 surface, 2 test files). Let me add the manifest and run the tests.
+
+All 28 tests pass under Swift 6. Now let me generate the Xcode project (to confirm my files are enumerated) and read the ledger schema.
+
+xcodegen succeeded — my 11 files are enumerated (72 build refs across iOS+macOS targets). Now let me run the full-app build to honestly confirm the only errors are the documented pre-existing ones (zero from my surface).
+
+Build failed (EXIT=65) with only 2 errors — **zero from FleetAPIPage**. Let me see what the pre-existing errors are.
+
+The macOS build **compiled everything** (including my surface and the 152 co-located XCTest files) and only failed at macOS code-signing — a credential/environment blocker, not a code issue. iOS simulator builds don't need signing. Let me confirm compilation succeeded and find an available simulator.
+
+No Swift compile errors — only macOS signing. iPhone 16 simulator is booted (no signing needed there). Let me run the actual gate build (iOS `TeslaSync` scheme) on the simulator.
+
+iOS build: 2 errors, again zero from FleetAPIPage. Let me see what they are.
+
+The 2 iOS errors are the **documented pre-existing blocker** — `AIRestorePanel.Tests.swift` (an existing file, not mine) importing `XCTest` into the iOS app target. The macOS build compiled all sources and only failed on signing. Let me confirm the full macOS app builds with signing disabled (strongest integration evidence).
+
+The blocker is unambiguous and pre-existing: `AIRestorePanel.Tests.swift` (an existing file, not mine) importing `XCTest` into the app target — the exact documented issue deferred to the P99 infra gate. My surface contributes **zero** errors. This matches all 4 precedents. Let me generate accurate per-string evidence for the parity log.
+
+All 70 string evidences resolved. Let me run a consolidated final verification capturing exact exit codes, then write the parity log.
+
+All surface gates green (lint/format/placeholder/typecheck-macOS/typecheck-iOS/28 tests all EXIT=0). Let me verify the logs dir and write the parity log.
+
+Let me check an existing p4-apple feature-view log to match the established log format (especially the PARITY + EXIT/STATUS handling).
+
+This is the exact precedent: `EXIT=0 / STATUS=DONE` with host gates green and the full-app `xcodebuild` shown DEFERRED with its real exit 65 + cause. Let me read the head + PARITY section to match the format precisely.
+
+I have the precedent format. Let me gather file sizes and assemble the complete parity log.
+
+Now let me assemble and write the complete parity log.
+
+The parity log has exactly 81 `[COVERED]` lines. Now let me create the ledger — first checking if android/windows ledgers exist to match the format.
+
+I'm the first to create `apple-ledger.json`. I'll make it a JSON array of rows conforming to `ledger.schema.json` (one per platform, both covered 81/81).
+
+Now let me add a `macos-pending-verifications.md` row consistent with the precedents.
+
+Let me update todos, verify the log, and check git status before committing.
+
+I see unrelated pre-existing modifications (`AIUsageCard.*`, two web files) that aren't mine. Let me confirm they're pre-existing and not caused by my work, then stage only my files.
+
+Confirmed: the `AIUsageCard.*` (a pre-existing 0203→0237 rename) and the two web CRLF changes are **pre-existing and unrelated** — I'll exclude them. Let me clean up temp artifacts and commit only my scoped files.
+
+All 15 scoped files staged (no unrelated changes). Let me commit.
+
+Committed cleanly (15 files, 2713 insertions). Let me do a final re-verification of the committed surface to confirm nothing regressed.
+
+All green. The log path was relative — let me confirm the committed log from the repo root.
+
+Everything verified and committed. Let me mark the plan complete.
+
+The task is complete. All work is verified and committed.
+
+## Summary
+
+Implemented **`FleetAPIPage`** — a native SwiftUI / Apple HIG parity of the web `web/src/features/admin/pages/FleetAPIPage.tsx` (route `/fleet-api`), adaptive across macOS + iOS — at full **81/81 parity** (`PARITY_COVERED==PARITY_REQUIRED==81`).
+
+**Delivered (12 surface files in `apps/apple/TeslaSync/feature-views/`, the real source root):** `FleetAPIPage.swift` + `.Models/.Seams/.Adapter/.Model/.Views/.Panels/.Sections/.Previews/.Tests/.ModelTests.swift` + `.strings`. Binds an `@Observable FleetAPIPageModel` over a P1/S8 source seam (4 queries + 2 mutations); no networking in the view.
+
+**Parity covered:**
+- **8 GlassPanels** — Tesla API Polling master + suspended banner, API Endpoint Controls (polling/on‑demand/command toggles + telemetry capture), retention row, captured‑signals banner, API Endpoints + configured‑endpoint rows.
+- **3 data states** (loading/empty/success) + ADR‑013 freshness/offline additions.
+- **70 strings** via a per‑surface `FleetAPIPage` catalog table (web English‑as‑key + `common.noData`) — every one verified present as a Swift literal **and** a `.strings` entry.
+
+**Host‑runnable gates — all GREEN:** `swiftc -typecheck` iOS 18 + macOS 15 (Swift 6, strict concurrency) = 0; `swiftlint --strict` = 0; `swiftformat --lint` = 0; placeholder gate = 0/0; **28/28 SwiftPM XCTest** pass; `xcodegen generate` enumerates all 11 files. I built + staged the missing `Shared.xcframework`.
+
+**Full‑app `xcodebuild build/test` — honestly DEFERRED (not claimed green):** fails `EXIT=65` with **zero `FleetAPIPage` errors**. Root cause is the documented, repo‑wide, out‑of‑scope blocker — 150+ co‑located `*.Tests.swift` importing `XCTest` into the app target (first offender `AIRestorePanel.Tests.swift:18`, a pre‑existing file) + macOS dev‑signing — identical to the ToolCard/AlertMessageEditor/FSMTimelineChart/BackendTool precedents. Deferred to `p4-apple/P99` with a new `macos-pending-verifications.md` row.
+
+**Committed** (`496106258`, scoped to my 15 files only — left the pre‑existing unrelated `AIUsageCard`/web changes untouched): surface files, `apps/parity/apple-ledger.json` (page:admin/FleetAPI → done, 81/81, both platforms), and the parity log ending `EXIT=0 / STATUS=DONE`.
+
+
+

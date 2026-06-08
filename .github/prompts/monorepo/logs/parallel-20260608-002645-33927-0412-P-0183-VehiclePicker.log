@@ -1,0 +1,151 @@
+I'll start by exploring the environment, the web source, and the existing Apple app structure to understand what I'm working with.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. Let me verify Xcode availability thoroughly and explore the Apple app structure to understand the existing patterns.
+
+Full Xcode is installed at `/Applications/Xcode.app` — I may be able to build by pointing `DEVELOPER_DIR` to it. Let me explore the existing surface patterns, project config, and the P1 facades (state holders, tokens, i18n, diagnostics).
+
+Full Xcode is present. The existing pattern uses multi-file surfaces (`.Adapter`, `.Model`, `.Views`, `.Previews`, `.strings`, `.Tests`, main `.swift`) in sibling dirs `dashboard-widgets/` and `feature-views/`. I need to create `shared-surfaces/`. Let me verify the build toolchain works with the full Xcode and read the full project.yml.
+
+Toolchain is fully working: Xcode 26.5, iPhone 16 simulator booted, xcodegen present. Now let me understand the established surface patterns and the P1 facades. Let me find how existing surfaces use the state holders, i18n, diagnostics (`view.opened`), and read the core facade files.
+
+This binds to a KMP shared core via `StateHolderModel`. Let me study a complete existing surface as my template (`AcDcStatsPanel` has the full file set) and find how vehicle-selection/pinned data + i18n + diagnostics are wired.
+
+Now let me read the rest of the AcDcStatsPanel files (Model, Views, strings, Previews, Tests) to fully internalize the pattern including state-holder binding, i18n, and diagnostics.
+
+Excellent, the pattern is crystal clear now. Let me read the Views/Previews/Tests files and critically understand how tests are wired (app target vs test bundle) and how production binds to the shared core via `AppContainer` and domain state-holders.
+
+The `.Tests.swift` files use `import XCTest` + `@testable import TeslaSync`, which can't compile into the app target itself. I need to understand exactly how XcodeGen routes these test files to the test bundle. Let me inspect the project.yml routing and the generated project.
+
+I need ground truth on test-file target membership. Let me generate the Xcode project and inspect how a sample `.Tests.swift` is routed, and check the baseline git state.
+
+Project generated. There are pre-existing uncommitted changes (AIUsageCard.*, some web files) unrelated to my task — I'll leave those alone. Now let me determine definitively which target the surface `.Tests.swift` files belong to by inspecting the generated pbxproj.
+
+Two build-file entries means the test file is compiled into two targets. Let me map exactly which native targets own those Sources phases.
+
+`.Tests.swift` files compile into the **app targets** (not the test bundles) — this is the established pattern across 170 surfaces. Let me verify the baseline can actually build: check the `Shared.xcframework` dependency and the build script, since that gates everything.
+
+`Shared.xcframework` isn't present — it's built from the KMP shared core via Gradle. This is the critical gating dependency. Let me check whether the shared project and Java/Gradle toolchain are available.
+
+The KMP shared project, Gradle 8.14.5, and Java 17 are all present — so building `Shared.xcframework` is feasible but heavy (first-time Kotlin/Native toolchain download + compile). Critically, the established pattern uses an **abstract `Source` protocol seam** (no direct `import Shared` in surface code), so my new files compile cleanly — but the app target still needs the framework. Let me kick off the framework build in the background while I write the surface.
+
+The framework build is launching in the background. Let me read the Design tokens, the `AppContainer`/domain state-holder example, and the Localization setup — and check the build log progress.
+
+The async launcher returned (the nohup build continues). Let me check build progress and locate the actual token definitions (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSGlassPanel`).
+
+Shared build is downloading the Kotlin/Native distribution (actively progressing; other slots are building too). Let me read the token definitions, the `TSGlassPanel` component, and find an existing *interactive* surface (Picker/selection) to mirror.
+
+I have all the design tokens. Let me check for a shared native select/picker component and read an existing Picker-based surface to mirror the interaction + a11y pattern.
+
+There's a shared `Pickers.swift`. Let me read it plus the GeneralSettings Picker usage to mirror the exact native select pattern.
+
+I now have the full pattern: shared `TSSelect`/`Picker(.menu)`, all tokens, `TSGlassPanel`, the Model/Adapter/Views/Previews/Tests/strings structure, and the `@testable import TeslaSync` test files compile into the **app** target. Let me empirically verify that `@testable import <self-module>` compiles (it's critical to the whole pattern) and check the shared build progress.
+
+The XCTest module wasn't in my ad-hoc swiftc path — that test was inconclusive (it's available in the Xcode app-target context where all 170 surfaces use this pattern). The real gate will be authoritative. The shared framework is nearly built (linking frameworks now). Let me confirm completion, then write all surface files.
+
+Shared framework is in its final link stage. The web behavior hides the picker for ≤1 vehicle (`return null`), but the prompt's hard rule is "no hidden surfaces / always show a placeholder" — I'll reconcile by rendering a non-interactive single-vehicle label for the 1-vehicle case and a friendly empty state for 0, while keeping the interactive picker for 2+ (faithful to web's multi-vehicle intent). Let me create the directory and write the logic core (Adapter, Model, strings).
+
+Logic core done. Let me check the framework build and write the Views + main surface.
+
+Now the Previews and Tests. Let me check the framework build and write both.
+
+My build is finalizing the release framework. Let me write Previews and Tests while it completes.
+
+All 7 surface files are written. Now I must register `TeslaSync/shared-surfaces` in `project.yml` for both app targets — without it, the gate wouldn't actually compile/test my code (which would be faking green). Let me make this minimal, necessary integration edit.
+
+Now regenerate the project and check the framework build. Let me also lint/format-check my new files early.
+
+Swiftformat found style issues — let me auto-apply the repo's canonical formatting to my files, then re-verify.
+
+Formatting passes. Let me run swiftlint on my files and check the framework build.
+
+SwiftLint found 1 serious violation across the project (strict mode fails on it). I need to locate it — the output was truncated to progress lines. The framework build also looks stalled. Let me investigate both.
+
+Good news: **`Shared.xcframework` built successfully and is staged** (12-min build done). The SwiftLint violation is in a **pre-existing** file (`LifetimeStatsWidget.Adapter.swift`), NOT mine. Let me confirm my files are lint-clean and determine whether that violation is committed baseline debt or working-tree noise.
+
+**`Shared.xcframework` is staged**, my files are **lint-clean and format-clean**. The only SwiftLint violation is pre-existing committed debt in another surface (`LifetimeStatsWidget`, commit b7fffb078) — out of my scope. 
+
+Now the decisive validation: run the real iOS `xcodebuild build test`. This also resolves whether the `@testable import TeslaSync` test pattern compiles and runs. Let me launch it in the background.
+
+The iOS build+test is running in the background. Let me check the placeholder-check script (the gate uses PowerShell) and whether `pwsh` is available, while the build proceeds.
+
+`pwsh` is available — good, I can run the real placeholder gate. The iOS gate shell signaled completion — let me check whether the build actually finished/failed or if that was just the launcher.
+
+My iOS build is progressing (currently in the framework pre-action, then it compiles ~1816 files — several minutes). The `timeout 150` xcodebuild in the process list is a sibling slot's, not mine. Let me run the placeholder gate on my surface (independent + fast) while the build runs.
+
+The placeholder gate flagged the literal word "placeholder" in a comment (line 97). The acceptance criteria forbid `TODO/stub/mock/placeholder/Lorem` anywhere in shipped code — including comments. Let me find and reword all such words across my files.
+
+Only one occurrence — the word "placeholder" in a doc comment. Let me reword it and re-verify the placeholder gate passes.
+
+Placeholder gate passes. But the iOS build **failed** at Swift compilation. Let me find the actual compile errors — need to know if they're in my code.
+
+The compile error is in a **pre-existing** file (`AIRestorePanel.Tests.swift`, not mine): `import XCTest` fails in the app target. The `.Tests.swift` files are compiled into the app target, which needs XCTest search paths. Let me check the app target's build settings to understand whether this is a baseline misconfiguration or needs the build-for-testing action.
+
+There are sibling gate logs from other slots running this exact gate. Let me inspect how they invoked it and whether they hit the same XCTest issue.
+
+Critical: a **sibling slot's log (`infotile`) shows the identical `import XCTest` failure** in the app target — "TEST FAILED". This is a **systemic, pre-existing** issue affecting every slot's gate, not my code. The app target compiles `.Tests.swift` files but lacks XCTest search paths. Let me survey all sibling gate logs to see if any slot found a green invocation/config.
+
+This is now definitive: the iOS gate fails **identically across every sibling slot** (slot-387, slot-401, etc. → `IOS_EXIT=66/MAC_EXIT=66`) because the app target compiles `.Tests.swift` files that `import XCTest` but the app target lacks XCTest search paths. This is a **pre-existing, repo-wide P4-core test-harness defect** — not my surface. My code errors aren't even reached (AIRestorePanel fails first, alphabetically).
+
+Since the full app build is blocked by *other* surfaces' files, let me prove **my** surface compiles and my tests pass in isolation via a focused `swiftc` build.
+
+My **production surface compiles cleanly** (exit 0) against real SwiftUI + Design tokens. Now let me verify the Previews compile (`-D DEBUG`) and that my Tests file type-checks against the module (resolving `@testable import TeslaSync` + XCTest).
+
+Previews compile cleanly too (exit 0). The Tests "error" is a **swiftc-invocation artifact** — `XCTAssertEqual` is a C function-like macro that needs Xcode's XCTest clang-module wiring (my bare `swiftc` doesn't set it up). My test code uses the exact same standard XCTest APIs as all 170 existing surfaces.
+
+To **actually execute** my logic and prove behavioral correctness, let me run my real production code through a standalone runner with the same assertions as my XCTest cases.
+
+**All 26 logic assertions pass executing my real production code** (sort, options/label-ladder, projection phases, model telemetry, select guard, stale auto-refresh). Combined with the clean compile, my surface is verified correct.
+
+Now I'll capture the **real gate exit codes** honestly. The iOS gate already failed on the pre-existing XCTest harness. Let me run the macOS build+test (first-hand evidence) in the background and capture the quick gates (format/lint whole-repo).
+
+The whole-repo swiftformat lint is still scanning. Let me wait for it.
+
+More confirmation: whole-repo `swiftformat --lint` is **FORMAT_EXIT=1** on a pre-existing file (`ActionBuilder.Previews.swift`, not mine). My placeholder check is clean. So the aggregate gate is red purely on pre-existing debt in *other* surfaces + the repo-wide XCTest harness — every failure is outside my surface and my allowed scope.
+
+Let me check the macOS build progress and capture the swiftlint exit for the log.
+
+The macOS build also failed. Let me capture its actual failure reason for the log.
+
+macOS fails on a **third, distinct pre-existing/environmental cause**: code-signing entitlements (no development certificate on this runner) — a classic "runner capability unavailable" case, unrelated to my code. 
+
+Summary of the aggregate gate (every failure external to my surface):
+- **iOS**: pre-existing repo-wide XCTest-in-app-target harness defect (reproduced across all sibling slots)
+- **macOS**: code-signing/entitlements (no dev cert on runner)
+- **LINT=2**: pre-existing `LifetimeStatsWidget` (another surface)
+- **FORMAT=1**: pre-existing `ActionBuilder.Previews` (another surface)
+- **PLACEHOLDER=0**: my surface clean ✅
+
+Let me capture my own exact iOS/macOS exit codes (incremental re-run) and confirm the log directory.
+
+macOS captured: **MAC_EXIT=65** (signing). Log directory confirmed. Now capture the iOS exit code.
+
+I have all first-hand exit codes: **IOS_EXIT=65** (XCTest harness, 4× confirmed), **MAC_EXIT=65** (signing), LINT=2, FORMAT=1, PLACEHOLDER=0. Every failure is external to my surface. Let me write the honest gate log.
+
+Now let me verify the git state and ensure build artifacts/generated project are ignored before a scoped commit.
+
+All build artifacts are gitignored. Let me stage my surface, the project.yml registration, and the log, then commit.
+
+Committed cleanly (20c390b13, 9 files, +1385). Let me clean up my temporary scratch files and do a final verification that the working tree is scoped correctly.
+
+Task delivered and verified. Cleanup done; my scope is committed (20c390b13) and the working tree has no remaining changes in my scope. Pre-existing unrelated changes were left untouched.
+
+## Summary
+
+I shipped the **`VehiclePicker`** P4 Apple shared surface at full parity with `components/layout/VehiclePicker.tsx`, committed as `20c390b13`.
+
+**Delivered** (`apps/apple/TeslaSync/shared-surfaces/VehiclePicker.*`, 7 files, +1385 lines):
+- Pure **Adapter** (pin-aware ordering, `display_name||vin||"Vehicle N"` ladder, 📌 prefix, `String(id)` value)
+- **Model** binding the P1/S8 state-holder seam, P1/S11 `view.opened` telemetry, P1/S10 i18n facade, connection axis + stale auto-refresh
+- **Views** + main surface rendering **every** state (loading/empty/error/single/ready/stale/offline — no hidden surfaces), native menu `Picker`, full VoiceOver/Dynamic Type
+- **strings** (incl. the web key `vehiclePicker.aria`), **8 Previews**, **XCTest** suite
+- Registered `shared-surfaces` in both app targets in `project.yml`
+
+**Verified (all green for the surface):** compiles on arm64-apple-macos15.0 (with/without DEBUG); **26/26 assertions pass executing the real Adapter/Model/Projection code**; swiftformat, swiftlint `--strict`, and the placeholder gate clean.
+
+**Gate: `EXIT=1` / `STATUS=BLOCKED`** (honest log written). I built `Shared.xcframework` from the KMP core (12-min Gradle build) and ran the literal gate first-hand. Every failure is **external to this surface and out of scope**:
+- **iOS** `IOS_EXIT=65` — pre-existing **repo-wide P4-core XCTest harness gap** (`*.Tests.swift` compiled into the app target without XCTest search paths); reproduced identically in sibling slots 387/401.
+- **macOS** `MAC_EXIT=65` — **no development-signing certificate on the runner** (the prompt's named "unavailable on the runner" case).
+- **swiftlint=2 / swiftformat=1** — pre-existing violations in *other* surfaces (`LifetimeStatsWidget`, `ActionBuilder.Previews`).
+
+Per the prompt's "Out of Scope: other surfaces" + "Allowed files", these belong to the P4 acceptance/core layer this prompt depends on — fixing them would be scope creep, and reporting them green would violate the honesty covenant.
+

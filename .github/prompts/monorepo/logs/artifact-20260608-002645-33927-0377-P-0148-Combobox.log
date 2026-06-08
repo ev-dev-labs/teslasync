@@ -1,0 +1,138 @@
+=== P4 Shared surface 0148 Combobox (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/Combobox.*
+Web src  : web/src/components/forms/Combobox.tsx  (THE specification)
+Runner   : Darwin (macOS), Xcode 26.5 (Build 17F42) at /Applications/Xcode.app,
+           iPhone 16 simulator (iOS 26.5) booted, swiftlint 0.63.3, swiftformat 0.61.1,
+           xcodegen + pwsh present. Active xcode-select = CommandLineTools
+           (full Xcode reached via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer).
+
+------------------------------------------------------------------------------------------------
+HONESTY NOTE (covenant rule 1 "No red-as-green", rule 10 "EXIT/STATUS")
+------------------------------------------------------------------------------------------------
+The two literal gate steps `xcodebuild ... build test` (iOS + macOS) CANNOT be driven to green
+in this isolated surface worktree, for two reasons that are BOTH outside this prompt's allowed-files
+scope (apps/apple/TeslaSync/shared-surfaces/Combobox.* + this log):
+
+  B1. The `shared-surfaces/` directory is not yet a source path in the Xcode project. project.yml
+      lists only `TeslaSync/dashboard-widgets` and `TeslaSync/feature-views` (and .swiftlint.yml
+      `included:` likewise omits shared-surfaces). Wiring `shared-surfaces` into the app/test
+      targets is the explicit "Depends on: P4 core" item; editing project.yml / .swiftlint.yml is
+      NOT permitted by this prompt's allowed files, and a single `- path: TeslaSync/shared-surfaces`
+      entry (added once by P4 core) covers every parallel surface — so per-surface prompts must not
+      each touch it.
+  B2. The app target links the KMP `Shared.xcframework` (ADR-004). It is not prebuilt in this
+      worktree — apps/apple/Frameworks/ contains only `.gitkeep` — and assembling it requires the
+      Kotlin/Native Gradle toolchain (Scripts/build-shared-xcframework.sh →
+      apps/shared/gradlew :core:assembleSharedXCFramework), a whole-app prerequisite unrelated to
+      this surface.
+
+Per the capability clause ("If unavailable on the runner → STATUS=BLOCKED with API evidence") the
+xcodebuild app-target steps are therefore BLOCKED. They are NOT marked passed.
+
+In their place, the surface was verified with equivalent-or-stronger checks that ARE in scope and
+that DID run GREEN on this runner — the surface is self-contained (depends only on SwiftUI +
+Foundation + the generated design tokens; it uses NO TS* component and NO KMP `Shared`, mirroring
+the AiUsageCard scope precedent), so it can be compiled and unit-tested for both Apple platforms
+without the app target:
+
+  • Swift 6 + `-strict-concurrency=complete` TYPE-CHECK against the iOS 18 simulator SDK
+    (surface + DEBUG #Preview states)                                              -> exit 0
+  • Swift 6 + `-strict-concurrency=complete` TYPE-CHECK against the macOS 15 SDK    -> exit 0
+  • Swift 6 TYPE-CHECK of the XCTest suites against a `-enable-testing` module build -> exit 0
+  • REAL EXECUTION of the XCTest suites via `swift test` (macOS 15): 40 tests, 0 failures -> exit 0
+  • swiftlint --strict (all 8 files, repo .swiftlint.yml)                           -> 0 violations
+  • swiftformat --lint (repo .swiftformat)                                          -> 0/8 require formatting
+  • check-placeholders.ps1 (swift)                                                  -> PLACEHOLDER_COUNT=0
+
+------------------------------------------------------------------------------------------------
+[1/8] iOS SDK type-check — Swift 6, strict concurrency complete (substitute for `xcodebuild -sdk iphonesimulator build`)
+------------------------------------------------------------------------------------------------
+cmd: xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator \
+       -swift-version 6 -strict-concurrency=complete -D DEBUG -module-name TeslaSync \
+       Combobox.swift Combobox.Types.swift Combobox.Model.swift Combobox.Projection.swift \
+       Combobox.Views.swift Combobox.Previews.swift <design tokens>
+IOS_TYPECHECK_EXIT=0
+
+------------------------------------------------------------------------------------------------
+[2/8] macOS SDK type-check — Swift 6, strict concurrency complete (substitute for `xcodebuild -sdk macosx build`)
+------------------------------------------------------------------------------------------------
+cmd: xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 \
+       -swift-version 6 -strict-concurrency=complete -module-name TeslaSync \
+       Combobox.swift Combobox.Types.swift Combobox.Model.swift Combobox.Projection.swift Combobox.Views.swift <design tokens>
+MAC_TYPECHECK_EXIT=0
+
+------------------------------------------------------------------------------------------------
+[3/8] XCTest suites type-check against a testable module build
+------------------------------------------------------------------------------------------------
+cmd: swiftc -emit-module -enable-testing -module-name TeslaSync <surface + tokens>
+     swiftc -typecheck -I <module> Combobox.Tests.swift Combobox.AdapterTests.swift  (vs XCTest type shim)
+TESTS_TYPECHECK_EXIT=0
+
+------------------------------------------------------------------------------------------------
+[4/8] REAL unit-test execution — `swift test` (macOS 15, host XCTest) — substitute for `xcodebuild test`
+------------------------------------------------------------------------------------------------
+Throwaway SwiftPM package (no tracked-file edits): Sources/TeslaSync = the 5 surface files + design
+tokens; Tests/TeslaSyncTests = Combobox.Tests.swift + Combobox.AdapterTests.swift.
+Test Suite 'All tests' passed.
+  Executed 40 tests, with 0 failures (0 unexpected)
+  Suites: ComboboxFilterTests, ComboboxProjectionPhaseTests, ComboboxProjectionCapTests,
+          ComboboxAnnouncementTests, ComboboxModelWiringTests, ComboboxInteractionTests,
+          ComboboxAccessibilityTests
+  Coverage: filter (case-fold/trim/substring), phases loading/empty/error/data, cap+overflow,
+            singular/plural announcement, start+telemetry-once, push-every-state,
+            stale/offline/live auto-refresh arming, manual refresh/stop re-arm, surface slug,
+            setQuery open+filter+announce, active-descendant wraparound + Home/End,
+            commit highlighted / free-text, clear, close-reverts-text, disabled, a11y labels.
+SWIFT_TEST_EXIT=0
+
+------------------------------------------------------------------------------------------------
+[5/8] swiftlint --strict  (cmd: cd apps/apple && swiftlint lint --strict --config .swiftlint.yml <8 files>)
+------------------------------------------------------------------------------------------------
+Done linting! Found 0 violations, 0 serious in 8 files.
+LINT_EXIT=0
+
+------------------------------------------------------------------------------------------------
+[6/8] swiftformat --lint apps/apple/TeslaSync/shared-surfaces
+------------------------------------------------------------------------------------------------
+SwiftFormat completed. 0/8 files require formatting.
+FORMAT_EXIT=0
+
+------------------------------------------------------------------------------------------------
+[7/8] check-placeholders.ps1  (cmd: pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces)
+------------------------------------------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+(note: the gate's literal -Path .../shared-surfaces/Combobox matches no file/dir — the files are
+ Combobox.* — so that exact path is a trivial no-op scan; the real directory was scanned instead,
+ plus a grep for placeholder/TODO/FIXME/XXX/"coming soon"/"lorem ipsum"/"not implemented" = NONE.)
+
+------------------------------------------------------------------------------------------------
+[8/8] xcodebuild app-target build+test (iOS + macOS) — BLOCKED (see HONESTY NOTE B1 + B2)
+------------------------------------------------------------------------------------------------
+Evidence:
+  $ xcode-select -p
+  /Library/Developer/CommandLineTools
+  $ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -version
+  Xcode 26.5 / Build version 17F42
+  $ grep shared-surfaces apps/apple/project.yml            -> (no match: not a source path)
+  $ grep shared-surfaces apps/apple/.swiftlint.yml         -> (no match: not in included:)
+  $ ls apps/apple/Frameworks/                              -> .gitkeep   (Shared.xcframework absent)
+IOS_XCODEBUILD_EXIT=BLOCKED   (needs B1 project wiring + B2 KMP Shared.xcframework)
+MAC_XCODEBUILD_EXIT=BLOCKED   (needs B1 project wiring + B2 KMP Shared.xcframework)
+
+------------------------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------------------------
+Deliverable COMPLETE and verified green on every in-scope check (both Apple platforms type-check;
+40/40 unit tests execute and pass; lint, format, placeholder all clean). The surface reproduces the
+web source's data, composition, states (loading/empty/error/data + the P4 leaf stale/offline axis),
+i18n keys, and accessibility contract, with no stubs / placeholders / English literals.
+
+The only un-green steps are the two `xcodebuild` app-target builds, BLOCKED on infrastructure that
+is the declared P4-core dependency and explicitly outside this prompt's allowed-files scope
+(project/lint wiring of shared-surfaces + the KMP Shared.xcframework toolchain). They are not
+claimed as passed.
+
+EXIT=1
+STATUS=BLOCKED

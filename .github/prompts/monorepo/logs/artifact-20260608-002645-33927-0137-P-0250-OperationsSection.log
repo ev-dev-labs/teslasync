@@ -1,0 +1,92 @@
+=== P4 Feature view 0250 OperationsSection (Apple) ===
+date: 2026-06-08T09:27:22Z
+runner: Darwin 25.5.0 arm64
+swift: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+
+--- CAPABILITY PROBE (the prompt's iOS18/iPadOS18/macOS15 + xcodebuild requirement) ---
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+$ xcrun --sdk iphoneos --show-sdk-path
+xcrun: error: SDK "iphoneos" cannot be located
+xcrun: error: SDK "iphoneos" cannot be located
+xcrun: error: unable to lookup item 'Path' in SDK 'iphoneos'
+$ xcrun simctl list devices (iPhone 16 destination)
+xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+$ xcrun --show-sdk-path (available host SDK)
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+=> Xcode is NOT installed (Command Line Tools only): no iphoneos SDK, no iOS Simulator,
+   no xcodebuild. The gate's two 'xcodebuild ... build test' steps and the iOS-SDK
+   typecheck CANNOT run on this runner. API evidence captured verbatim above.
+
+--- GATE STEP 1/2: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test ---
+BLOCKED — xcodebuild requires Xcode (see probe). IOS_EXIT=BLOCKED
+
+--- GATE STEP 2: xcodebuild -scheme TeslaSync-macOS build test ---
+BLOCKED — xcodebuild requires Xcode (see probe). MAC_EXIT=BLOCKED
+
+--- GATE STEP: swiftlint --strict (8 surface files) ---
+Linting 'OperationsSection.Tables.swift' (7/8)
+Done linting! Found 0 violations, 0 serious in 8 files.
+LINT_EXIT=0
+
+--- GATE STEP: swiftformat --lint apps/apple (8 surface files) ---
+SwiftFormat completed in 2.12s.
+0/8 files require formatting.
+FORMAT_EXIT=0
+
+--- GATE STEP: check-placeholders.ps1 (per-file real scan; gate's prefix path matches none) ---
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- SUPPLEMENTARY COMPILE EVIDENCE (no Xcode required; host macOS SDK = /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk) ---
+swiftc -parse (all 8 surface files): PASS  PARSE_EXIT=0
+swiftc -typecheck -swift-version 6 -strict (Adapter+Model, SwiftUI-free core): MACOS_CORE_TYPECHECK_EXIT=0
+swiftc -typecheck -swift-version 6 -strict (7 view+core files + 12 REAL shared
+  components: TSGlassPanel/TSCard/TSFadeIn/TSSkeleton/TSEmptyState/TSButton/TSBadge/
+  TSPanelTitle/TSMetric*/TSDataTable/TSColumn + design tokens + material):
+  total compiler errors in OperationsSection.* = 0   MACOS_VIEWLAYER_TYPECHECK_EXIT=0
+
+--- ARTIFACTS (8 files, apps/apple/TeslaSync/feature-views/OperationsSection.*) ---
+     171 OperationsSection.swift
+     354 OperationsSection.Adapter.swift
+     289 OperationsSection.Model.swift
+     351 OperationsSection.Views.swift
+      97 OperationsSection.Metrics.swift
+     184 OperationsSection.Tables.swift
+     186 OperationsSection.Previews.swift
+     361 OperationsSection.Tests.swift
+    1993 total
+
+--- STATES REPRODUCED (web OperationsSection.tsx parity) ---
+loading (2 skeletons) · ready · error(retry) · stale(chip+banner+auto-refresh) · offline(cached+chip);
+Notification Delivery block always-shown: stats present -> 4 MetricCards + success RadialGauge
+  + recent-notifications DataTable / empty('No recent notifications') / not-loaded('No data available');
+  stats absent -> 'No notification statistics yet'. Audit Log: DataTable / 'No audit log entries'.
+
+--- RATIONALE (Honesty Covenant: no red-as-green; no fabricated passes) ---
+All HOST-RUNNABLE gates are green (lint, format, placeholder) and the surface's OWN code
+type-checks cleanly under Swift 6 + -strict-concurrency=complete against the available macOS
+SDK WITH the real shared components (0 errors). The surface is a faithful structural clone of
+the STATUS=DONE-verified sibling 0242 DataPipelineSection (same web folder, same shared
+components, same P1/S8 seam + P1/S10 facade + P1/S11 telemetry).
+However, unlike the 174 sibling feature-views (which ran on a runner WITH Xcode and recorded a
+real iphoneos-SDK typecheck IOS_TYPECHECK_EXIT=0 + executed XCTest before STATUS=DONE), THIS
+runner has Command Line Tools only: NO Xcode, NO iphoneos SDK, NO iOS Simulator. The two
+'xcodebuild ... build test' gate steps and the iOS-18/iPadOS-18 SDK compile CANNOT be executed
+or honestly claimed here. Per the prompt's capability clause ('requires SwiftUI + Swift Charts
++ MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG. If unavailable on the runner -> STATUS=BLOCKED with
+API evidence') this is a genuine platform-capability block, recorded honestly rather than
+fabricating an iOS build/test pass.
+Unblock: run the gate verbatim on a macOS+Xcode 16 runner (iOS 18 simulator) — expected green
+given the host-SDK typecheck + lint/format/placeholder already pass.
+
+FORMAT_EXIT=0
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+MACOS_CORE_TYPECHECK_EXIT=0
+MACOS_VIEWLAYER_TYPECHECK_EXIT=0
+PARSE_EXIT=0
+IOS_EXIT=BLOCKED(no Xcode/iphoneos SDK/Simulator)
+MAC_EXIT=BLOCKED(no xcodebuild)
+EXIT=1
+STATUS=BLOCKED

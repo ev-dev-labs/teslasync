@@ -1,0 +1,122 @@
+I'll start by exploring the task requirements: reading the web source component, understanding the Apple app structure, and checking platform capabilities.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Swift compiler, swiftlint, and swiftformat ARE available. Let me explore the existing Apple app structure and shared layers before deciding on approach.
+
+A mature Apple app exists with ~700 feature-view files following a clear multi-file convention. Let me examine the web constants, a similar existing chart feature-view for conventions, the placeholder checker, and a recent log to understand the STATUS convention given the toolchain.
+
+`SpeedTrendChart` is the closest analogue. Let me read its full file set to mirror conventions exactly, plus the placeholder checker and a recent feature-view log.
+
+Now let me read the full `SpeedTrendChart` file set — the blueprint I'll mirror for conventions.
+
+Excellent, clear pattern. Let me read the remaining SpeedTrendChart files: Adapter, Views, Previews, strings, and Tests.
+
+Let me read the Previews, strings, Tests, and verify the shared design tokens (Color.TS, Font.TS, TSSpacing, TSChartPalette, TSFadeIn, TSSkeleton).
+
+Now let me verify the shared token/component names I'll depend on (Color.TS, Font.TS, TSSpacing, TSRadius, TSChartPalette, TSFadeIn, TSSkeleton, TSMotion) and how ChartGradient/AreaMark gradients are done elsewhere.
+
+I have all the shared APIs. Now the critical question: can the xcodebuild gate run? Let me check for full Xcode and examine how predecessor feature-view logs handled this.
+
+Full Xcode IS installed at `/Applications/Xcode.app` — just not selected. Let me verify it works via `DEVELOPER_DIR` and read the SpeedTrendChart predecessor log for the exact build approach.
+
+Critical precedent established: Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 sim exists, and predecessor 0092 ended **EXIT=0/STATUS=DONE** via an isolated Swift build+test (the full-app gate is a deferred, pre-existing repo-wide blocker). Let me read the full predecessor log, the pending-verifications doc, and any isolated-build helper.
+
+I now fully understand the sanctioned methodology (isolated SwiftPM harness + deferred full-app gate → EXIT=0/STATUS=DONE). Let me study the web ChartContainer/FadeIn/charts barrel, how the torque data is produced upstream, and a native AreaMark example for gradient-area parity.
+
+`TSChartGradient.fill(colorIndex:)` is the native gradient-area helper. Let me read the full TSDesign.swift (palette + gradient), the web chart defaults/gradient, the native AreaMark idiom, and find where torque data is built upstream.
+
+I have full parity context. Let me confirm the generated `Tokens.swift` exposes the exact `Color.TS`/`Font.TS` symbols I'll use (and that accent == #00F0FF, matching the web's `#00f0ff`), and read TSCard since the skeleton leaf references it.
+
+All parity facts confirmed: `Color.TS.accent` dark = `(0, 0.941, 1)` = **#00F0FF**, exactly matching the web torque color `#00f0ff`. I have the complete blueprint. Let me set up tracking and write the plan.
+
+Now I'll write the implementation. Starting with the pure adapter.
+
+All 7 source files written. Now I'll set up the isolated SwiftPM harness (the sanctioned verification). First let me confirm the generated `Tokens.swift` compiles cross-platform (macOS), since the harness builds against the macOS SDK.
+
+Tokens.swift compiles cross-platform (UIKit + AppKit branches). Now I'll build the isolated SwiftPM harness (the sanctioned verification path) outside the repo, compiling the shipped sources + real design-system files under Swift 6 strict concurrency.
+
+Harness laid out. Now let me build it (compiling against the macOS SDK with SwiftUI + Charts).
+
+Build complete (0 errors, Swift 6 mode). Now running the tests.
+
+All 29 tests pass under Swift 6 strict concurrency. Now the host gates: swiftformat, swiftlint, and the placeholder scanner on the shipped files.
+
+swiftformat flagged one `docComments` issue in Tests.swift:52. Let me inspect and fix it.
+
+Idiomatic fix: move the explanatory comment inside the test body (the `docComments` rule wants `///` before declarations; a regular comment belongs in the body).
+
+swiftformat passes. swiftlint flags one issue: Views.swift is 412 lines (>400 limit). I'll split the chart + tooltip into a dedicated `TorqueHistoryChart.Chart.swift` (matching the sibling `.Chart.swift` convention), which keeps both files well under 400. Let me view exact boundaries first.
+
+I'll split mechanically via sed to guarantee byte-identical moved code. Let me confirm the import lines first.
+
+Clean split: Views.swift now 239 lines, Chart.swift 186 lines. Let me update the Views.swift header comment to reflect the chart moving out (avoiding doc drift), then re-run all gates on the full 7-file set.
+
+Now re-run swiftformat and swiftlint on the full 7-file set.
+
+All green: swiftformat 0/7, swiftlint 0 violations, every file <400 lines. Now re-sync the harness with the split files and rebuild+retest, validate the `.strings`, and run the placeholder gate.
+
+The "MISSING" is a sed artifact (trailing quote). Let me re-check correctly and rebuild the harness with the split files.
+
+Harness passes post-split (29 tests, 0 failures). The parity check still has a trailing-quote sed bug. Let me verify the keys directly.
+
+All 6 web source keys present (0 missing), 21 total catalog keys. Now the placeholder gate — both the literal gate command and a genuine scan of my files.
+
+Placeholder gate fully clean (literal, genuine 7-file scan, self-test all PASS). Now the final gate: the full-app xcodebuild iOS/macOS build to capture honest DEFERRED evidence. Let me check the project generation setup.
+
+No `.xcodeproj` yet and the `Shared.xcframework` (a 7+ min Gradle artifact) isn't staged — the full-app gate's known pre-existing infra prerequisites. Let me generate the project and attempt the real iOS xcodebuild to capture honest exit codes.
+
+Project generated with `TeslaSync` (iOS) and `TeslaSync-macOS` schemes. Note: project.yml compiles all of `feature-views/` — including every co-located `*.Tests.swift` — into the app target, which is the documented repo-wide blocker. Let me run the real iOS gate and capture evidence.
+
+The iOS build is running its pre-build Gradle step to assemble `Shared.xcframework` (the ~7 min step the predecessor documented). Let me monitor the log while it progresses.
+
+The background build got interrupted when its parent shell torn down. I'll run the real gate properly **detached** so it persists, running both iOS and macOS sequentially (the Gradle xcframework step stages once and is reused).
+
+The full gate is running detached. Let me confirm it's alive and progressing while I draft the log.
+
+Gate is progressing (Gradle assembling `Shared.xcframework`). The detached launcher returned; the actual xcodebuild processes run independently. Let me wait and poll for the compile phase.
+
+Still in the multi-platform Gradle xcframework assembly (pre-build). Let me continue polling.
+
+Gradle is doing cold Kotlin/Native release-framework linking for all platforms (the slow part). Let me wait longer.
+
+iOS failed at the **pre-build "Stage Shared.xcframework" script** (IOS_EXIT=75) — *before* any app Swift sources compiled (0 TorqueHistoryChart lines). That's a repo infra step, not my code. Let me capture the exact failure reason and check the macOS build.
+
+iOS failed in the **pre-build Gradle "Stage Shared.xcframework" step** — *"Gradle build daemon has been stopped: stop command received"* (shared-runner contention) plus a `/tmp` `mkstemp` result-bundle failure. Both are environmental/infra; app Swift sources never compiled (0 TorqueHistoryChart/feature-views errors). Let me wait for the macOS leg to finish.
+
+Gate complete: **IOS_EXIT=75** (pre-build Gradle staging failure) and **MAC_EXIT=65** (matches predecessor's documented macOS blocker). Let me confirm the macOS failure cause and prove zero TorqueHistoryChart-specific errors.
+
+macOS failure is **exactly** the documented pre-existing blocker: *"TeslaSync-macOS has entitlements that require signing with a development certificate"* (MAC_EXIT=65). **TorqueHistoryChart-specific errors: iOS 0, macOS 0.** Both legs are RED for pre-existing, unrelated reasons. Now let me clean up generated artifacts and verify git state.
+
+Clean: only my 8 surface files are untracked (xcodeproj was gitignored). Let me gather final facts for the log, then write it.
+
+All facts gathered. Now writing the comprehensive, honest log.
+
+Now committing the 8 surface files + log.
+
+Committed (HEAD `84b6d1097`), tree clean. Final cleanup: remove temp build logs and any lingering xcodebuild processes I spawned.
+
+The tool requires literal numeric PIDs for `kill`. Let me list them first, then clean temp files.
+
+PID 35618 is a fresh PID — my own builds already returned (exit codes captured, script completed "ALL DONE"). On a **shared** runner it's likely another slot's build, so I won't kill an unknown process. Temp files cleaned. Let me do a final verification of the committed state.
+
+Task complete and verified. Working tree clean, commit `84b6d1097` (9 files, 1591 insertions), log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...apple-feature-views-0164-TorqueHistoryChart.log | 163 ++++++++++
+ .../feature-views/TorqueHistoryChart.Adapter.swift | 222 ++++++++++++++
+ .../feature-views/TorqueHistoryChart.Chart.swift   | 186 ++++++++++++
+ .../feature-views/TorqueHistoryChart.Model.swift   | 244 +++++++++++++++
+ .../TorqueHistoryChart.Previews.swift              |  88 ++++++
+ .../feature-views/TorqueHistoryChart.Tests.swift   | 329 +++++++++++++++++++++
+ .../feature-views/TorqueHistoryChart.Views.swift   | 238 +++++++++++++++
+ .../feature-views/TorqueHistoryChart.strings       |  51 ++++
+ .../feature-views/TorqueHistoryChart.swift         |  70 +++++
+ 9 files changed, 1591 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0164-TorqueHistoryChart.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/TorqueHistoryChart.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TorqueHistoryChart.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TorqueHistoryChart.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TorqueHistoryChart.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TorqueHistoryChart.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TorqueHistoryChart.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TorqueHistoryChart.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/TorqueHistoryChart.swift

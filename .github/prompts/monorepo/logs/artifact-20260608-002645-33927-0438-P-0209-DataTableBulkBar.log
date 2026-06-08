@@ -1,0 +1,152 @@
+=== P4 Shared surface 0209 DataTableBulkBar (Apple) ===
+Date: 2026-06-08
+Web source (spec): web/src/components/ui/DataTableBulkBar.tsx
+Native output:      apps/apple/TeslaSync/shared-surfaces/DataTableBulkBar.*
+Branch:             auto/20260608-002645-33927/438
+
+--------------------------------------------------------------------------------
+RUNNER CAPABILITY PROBE (per the prompt's "Capability" clause)
+--------------------------------------------------------------------------------
+SwiftUI + Swift Charts + MapKit ............ PRESENT (Xcode 26.5, Build 17F42)
+Swift toolchain ............................ Apple Swift 6.x (Xcode default toolchain)
+iOS Simulator runtime ...................... iOS 26.5 (runs the app's iOS 18.0 deployment target)
+iPhone 16 simulator device ................. available
+macOS SDK / AppKit ......................... PRESENT
+xcodegen ................................... /opt/homebrew/bin/xcodegen
+swiftlint .................................. 0.63.3
+swiftformat ................................ present
+pwsh (placeholder gate) .................... present
+Default xcode-select ....................... /Library/Developer/CommandLineTools
+                                             (Xcode reachable via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer)
+
+The leaf SwiftUI/Charts/MapKit capability is AVAILABLE and was exercised (the surface
+was compiled + unit-tested against the real Xcode 26.5 toolchain — see LEAF VERIFICATION).
+What is NOT runnable in this isolated slot is the *whole-app* `xcodebuild -scheme TeslaSync
+build test` gate, for two predecessor/infra reasons documented under STEP 1/2 below.
+
+--------------------------------------------------------------------------------
+STEP 1 — xcodebuild -scheme TeslaSync (iOS Simulator, iPhone 16) build test
+STEP 2 — xcodebuild -scheme TeslaSync-macOS build test
+--------------------------------------------------------------------------------
+STATUS: BLOCKED (predecessor wiring + KMP toolchain) — NOT a failure of this surface.
+
+Evidence A — the surface is not wired into the app target in this slot:
+  `xcodegen generate` succeeds, but the generated project does not include the
+  shared-surfaces group, so `xcodebuild -scheme TeslaSync ...` would compile the app
+  WITHOUT this surface and could not exercise it:
+      $ DEVELOPER_DIR=.../Xcode xcodegen generate           -> XCODEGEN_EXIT=0
+      $ grep -c 'shared-surfaces'  TeslaSync.xcodeproj/project.pbxproj  -> 0
+      $ grep -c 'DataTableBulkBar' TeslaSync.xcodeproj/project.pbxproj  -> 0
+      $ grep -c 'feature-views'    TeslaSync.xcodeproj/project.pbxproj  -> 3   (sanity)
+  Wiring `TeslaSync/shared-surfaces` into apps/apple/project.yml (and .swiftlint.yml
+  `included:`) is a P4-CORE predecessor responsibility ("Depends on: P4 core"). This
+  prompt's Allowed-files list is limited to
+  `apps/apple/TeslaSync/shared-surfaces/DataTableBulkBar.*` + this log, and Honesty
+  Covenant rule 7 ("No predecessor bypass") forbids editing project.yml here. The
+  generated .xcodeproj is git-ignored and was removed after probing.
+
+Evidence B — the app target requires the KMP `Shared.xcframework` (heavy):
+  `xcodebuild -scheme TeslaSync ... build` runs the scheme pre-action
+  "Stage Shared.xcframework" -> apps/apple/Scripts/build-shared-xcframework.sh, which
+  drives a Kotlin/Native Gradle build:
+      ▸ Assembling Shared.xcframework via Gradle…
+      > Task :core:downloadKotlinNativeDistribution
+      > Task :core:compileKotlinIosArm64 / IosSimulatorArm64 / MacosArm64
+      > Task :core:linkDebugFrameworkIosArm64 / IosSimulatorArm64
+  This was observed running (apps/shared/gradlew :core:assembleSharedXCFramework) and
+  was stopped: it neither validates nor includes this leaf (Evidence A) and would
+  additionally compile the entire 1,400+ file app + test bundle.
+
+  IOS_EXIT=BLOCKED
+  MAC_EXIT=BLOCKED
+
+--------------------------------------------------------------------------------
+STEP 3 — swiftlint --strict   (project rule set from apps/apple/.swiftlint.yml)
+--------------------------------------------------------------------------------
+  Linting 6 Swift files in apps/apple/TeslaSync/shared-surfaces …
+  Done linting! Found 0 violations, 0 serious in 6 files.
+  (large_tuple was found + fixed during development; clean re-run shown above.)
+  LINT_EXIT=0
+
+--------------------------------------------------------------------------------
+STEP 4 — swiftformat --lint   (config apps/apple/.swiftformat, --swiftversion 6.0)
+--------------------------------------------------------------------------------
+  0/6 files require formatting.
+  FORMAT_EXIT=0
+
+--------------------------------------------------------------------------------
+STEP 5 — check-placeholders.ps1 -Path .../shared-surfaces/DataTableBulkBar  (pwsh)
+--------------------------------------------------------------------------------
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+LEAF VERIFICATION — isolated SwiftPM build + XCTest under the SAME Xcode 26.5 toolchain
+(compensating control for the BLOCKED whole-app gate; proves the surface is real, not a stub)
+--------------------------------------------------------------------------------
+Harness: a throwaway SwiftPM package (swift-tools-version 6.0, Swift 6 language mode =
+complete concurrency, .macOS(v15)) compiling the shipped surface files + the generated
+design tokens (apps/design/generated/apple/Tokens.swift), with the shipped Tests.swift as
+the test target (`@testable import TeslaSync`). Run with
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer.
+
+  $ swift build      -> Build complete!  (Model, Adapter, Views, DataTableBulkBar,
+                                          Previews [#Preview macro expanded], Tokens)
+  $ swift test       -> Test Suite 'All tests' passed
+                        Executed 16 tests, with 0 failures (0 unexpected)
+
+  Suites:
+    DataTableBulkBarProjectionTests ....... 6 passed
+    DataTableBulkBarStateMatrixTests ...... 1 passed (per-state matrix: hidden/active)
+    DataTableBulkBarModelTests ............ 8 passed (wiring, view.opened telemetry, clear relay)
+    DataTableBulkBarAccessibilityTests .... 1 passed
+
+--------------------------------------------------------------------------------
+PARITY / ACCEPTANCE
+--------------------------------------------------------------------------------
+Web render branches reproduced:
+  • hidden  (web `count <= 0 -> return null`)  -> false `if` renders nothing (bar withdrawn)
+  • active  (web `count > 0`)                  -> glass bar: "{count} selected" + actions slot + Clear
+  (No loading/error/stale/offline axis exists in the web source — its only hook is
+   `useTranslation`; the data is the parent-owned selection count. Documented in-file, not skipped.)
+i18n keys (P1/S10), 1:1 with the web source:
+  table.bulkActions.region   = "Bulk actions"
+  table.bulkActions.selected = "%@ selected"   (web `{{count}} selected`, raw number, no grouping)
+  table.bulkActions.clear    = "Clear selection"
+Accessibility: region landmark label; Clear button accessibilityLabel; aria-live="polite"
+  parity via AccessibilityNotification.Announcement on selection change; Dynamic Type preview.
+State holder (P1/S8): DataTableBulkBarSource seam; view issues no I/O.
+Telemetry (P1/S11): `view.opened` surface="DataTableBulkBar", emitted once on first presentation.
+
+Files shipped (871 lines across 7 files):
+  DataTableBulkBar.swift          (89)   generic surface View + lifecycle + a11y announce
+  DataTableBulkBar.Model.swift    (278)  strings facade, telemetry seam, input/resolved, source, model
+  DataTableBulkBar.Adapter.swift  (73)   pure projection + count formatter + a11y summary
+  DataTableBulkBar.Views.swift    (107)  selection label, Clear button (hover/focus), bar chrome
+  DataTableBulkBar.Previews.swift (83)   #Preview per state (DEBUG-only)
+  DataTableBulkBar.Tests.swift    (217)  projection + model + a11y XCTest (16 tests)
+  DataTableBulkBar.strings        (24)   i18n catalog (the 3 web keys)
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT DISPOSITION
+--------------------------------------------------------------------------------
+1 No red-as-green ....... IOS/MAC marked BLOCKED, not 0; not faked.
+2 No scope narrowing .... all web data/composition/states/i18n reproduced.
+3 No skip-and-assume .... absent fetch-states justified from the source, not skipped.
+4 No stubs as final ..... full implementation; compiled + 16 tests green.
+5 No parity shortcuts ... composition + i18n + a11y match the web source.
+6 No delegation ......... authored directly.
+7 No predecessor bypass . project.yml left to P4-core (not edited).
+8 No commit on red ...... leaf checks are green; the block is environmental, not a code failure.
+9 No silent drift ....... the BLOCKED whole-app gate is documented with evidence above.
+10 EXIT + STATUS ........ below.
+
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+IOS_EXIT=BLOCKED
+MAC_EXIT=BLOCKED
+
+EXIT=1
+STATUS=BLOCKED

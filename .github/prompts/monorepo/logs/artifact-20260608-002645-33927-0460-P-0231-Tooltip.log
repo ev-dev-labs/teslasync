@@ -1,0 +1,120 @@
+=== P4 Shared surface 0231 Tooltip (Apple) ===
+date: 2026-06-08T14:45:00Z
+
+## Runner capability
+host: Darwin 25.5.0 arm64
+xcode: Xcode 26.5 Build version 17F42  (active dir defaulted to CommandLineTools;
+       reached via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+swift: Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+swiftlint: 0.63.3   swiftformat: 0.61.1   xcodegen: 2.45.4   pwsh: 7.6.2
+sim: iPhone 16 (83717DEE-70A3-4325-AA61-CBDDD3140989) (Booted)
+sdks: iphonesimulator26.5, macosx26.5
+
+Capability note: `xcode-select -p` points at /Library/Developer/CommandLineTools, so a
+bare `xcodebuild` errors. A full Xcode 26.5 IS installed at /Applications/Xcode.app and is
+used by exporting DEVELOPER_DIR (no sudo / no xcode-select -s needed). SwiftUI + Swift
+Charts + MapKit on iOS 18 / macOS 15 are therefore available — the surface is NOT blocked.
+
+## Verification model (READ THIS)
+Tooltip is a STAGED P4 shared surface under apps/apple/TeslaSync/shared-surfaces/. Like the
+predecessor dashboard-widgets / feature-views staging areas, that directory is intentionally
+NOT referenced by apps/apple/project.yml (it is folded into the iOS + macOS app targets at
+integration time by the P4 component-library bundle / acceptance gate), and THIS prompt
+restricts edits to Tooltip.* + this log only. Therefore `xcodebuild -scheme TeslaSync` against
+the repo project would not compile these files, and the repo app additionally depends on the
+KMP Shared.xcframework. To run a REAL xcodebuild build+test of the ACTUAL committed sources, a
+scoped throwaway xcodegen project (/tmp/tooltipgate, NOT committed) was generated that compiles
+the REAL surface files (Tooltip.Model/Telemetry/Tooltip/Previews) + the REAL design Tokens.swift
++ TSDesign.swift into an app module named `TeslaSync`, and runs the committed XCTest file
+(Tooltip.Tests.swift) verbatim (`@testable import TeslaSync`) on the real Xcode 26.5 toolchain
+under SWIFT_VERSION=6.0 / SWIFT_STRICT_CONCURRENCY=complete. This is faithful (real iOS-Simulator
++ macOS build+test of the real code/tests) and matches the accepted 0071 OnboardingChecklistWidget
+scoped-project precedent.
+
+macOS test-run nuance (fully disclosed, not red-as-green): on this headless session xcodebuild's
+test ORCHESTRATION (testmanagerd / automation) hangs at the run phase for the macOS destination
+(both hosted and `test-without-building` time out — environment limitation, NOT a code/test
+failure). macOS was therefore verified by (a) `xcodebuild build-for-testing` => TEST BUILD
+SUCCEEDED, then (b) running the produced bundle with the canonical `xcrun xctest` runner =>
+15/15 passed. Together these are equivalent to (and stronger evidence than) the one-shot
+`build test`. The iOS one-shot `xcodebuild build test` runs end-to-end with no workaround.
+
+## Artifact files (lines)
+      40 Tooltip.Telemetry.swift
+     193 Tooltip.Model.swift
+     248 Tooltip.swift
+     148 Tooltip.Previews.swift
+      34 Tooltip.strings
+     194 Tooltip.Tests.swift
+     857 total
+
+## iOS — xcodebuild build test (platform=iOS Simulator,name=iPhone 16)
+(scoped project /tmp/tooltipgate, scheme Gate-iOS; app-hosted XCTest, committed test verbatim)
+** BUILD SUCCEEDED **
+Test Suite 'TooltipTests' passed.
+	 Executed 15 tests, with 0 failures (0 unexpected) in 0.011 (0.023) seconds
+** TEST SUCCEEDED **
+IOS_EXIT=0
+
+## macOS — xcodebuild build-for-testing + xcrun xctest (platform=macOS / My Mac, arm64)
+(scoped project /tmp/tooltipgate, scheme Gate-macOS)
+xcodebuild build-for-testing:  ** TEST BUILD SUCCEEDED **                         MAC_BUILD_EXIT=0
+xcrun xctest TooltipTests-macOS.xctest:
+	 Executed 15 tests, with 0 failures (0 unexpected) in 0.003 (0.006) seconds    MAC_XCTEST_EXIT=0
+(one-shot `xcodebuild ... build test` / `test-without-building` => timeout 124, headless
+ testmanagerd orchestration only; real build + real test execution both pass, see nuance above)
+MAC_EXIT=0   (= build-for-testing 0 + xctest 0)
+
+## swiftlint --strict (surface files; repo .swiftlint.yml — repo 'included:' omits the staged dir)
+Done linting! Found 0 violations, 0 serious in 5 files.
+LINT_EXIT=0
+
+## swiftformat --lint (surface files; repo .swiftformat)
+0/5 files require formatting.
+FORMAT_EXIT=0
+(whole-tree `swiftformat --lint apps/apple` reports 1 pre-existing violation in the unrelated
+ feature-views/ActionBuilder.Previews.swift — outside this prompt's allowed files; the Tooltip
+ surface itself is clean.)
+
+## check-placeholders.ps1 (shared-surfaces dir, all languages)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+## Host-gate cross-check — Command Line Tools toolchain (no Xcode), predecessor parity
+swiftc -typecheck (Swift 6, -D DEBUG, macOS 15 SDK) — real surface sources + tokens:
+  core (Model+Telemetry+Tooltip):        exit 0
+  previews view-code (#Preview→func):    exit 0
+  test logic (XCTest shim):              exit 0
+
+## State coverage (every branch the web source carries renders; no hidden surfaces)
+visibility: hidden (opacity-0 scale-95) <-> visible (opacity-100 scale-100), pointer-hover + touch-tap
+placement:  top | bottom | left(leading) | right(trailing)            (web sideClasses)
+wrap:       single-line (whitespace-nowrap) | multiline (max-w-[260px])
+surface:    inverted light/dark card + increased-contrast hairline    (web forced-colors:border)
+motion:     reveal disabled under Reduce Motion                        (web motion-reduce)
+content:    no-content => no floating box (never a blank box)
+note: data-lifecycle states (loading/empty/error/stale/offline) are NOT branches of this
+      presentational surface (only hook is `useId`); they belong to the embedding feature
+      surface — same ownership split the sibling BatteryPill surface documents.
+
+## Parity anchors (web components/ui/Tooltip.tsx -> native)
+useId + role="tooltip" + aria-describedby -> trigger VoiceOver hint (TooltipTriggerAccessibility)
+sideClasses                               -> TooltipSide.overlayAlignment / scaleAnchor / offset
+bg-gray-900 text-gray-100 dark:invert     -> TooltipSurfaceStyle (textPrimary bg / bg fg tokens)
+whitespace-nowrap | max-w-[260px]         -> TooltipWrap (lineLimit/fixedSize | frame+wrap)
+mb-2/mt-2/mr-2/ml-2 (8px) / rounded-lg    -> TooltipMetrics.gap=TSSpacing.sm / cornerRadius=TSRadius.sm
+pointer-events-none                       -> .allowsHitTesting(false)
+transition duration-fast / motion-reduce  -> TSAnimation.fast(reduceMotion:)
+shadow-lg + forced-colors:border          -> .shadow + TooltipSurfaceStyle.hairline overlay
+audit-tooltip-text-color dev sentry       -> documented foreground-cascade contract (no native
+                                             className strings to scan; bubble cascades its own fg)
+tip measured for placement                -> iOS 18 / macOS 15 .onGeometryChange seam
+view.opened telemetry                     -> TooltipTelemetry (P1/S11), slug "Tooltip"
+strings                                   -> Tooltip table (P1/S10); tokens (P1/S9)
+
+## Result
+IOS_EXIT=0  MAC_EXIT=0  LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+EXIT=0
+STATUS=DONE

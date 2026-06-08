@@ -1,0 +1,110 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Let me read the web source specification and explore the existing Apple structure.
+
+Let me explore the web dependencies and the Apple project structure in parallel.
+
+Let me check the build tooling availability and examine the SharedFacade (state holders) and key components.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed (no iOS simulators). Let me investigate the prompt structure and existing conventions before deciding on approach.
+
+No p4-apple logs exist yet. Let me examine the P4 core prompt, the methodology, completion tracking, and the diagnostics contract to ground my directory and telemetry decisions.
+
+The README confirms "Allowed files scoped to `apps/apple/**`" and BLOCKED (not DONE) when the gate can't run. Let me read the actual sibling prompt, the app-structure prompt, and the diagnostics contract.
+
+This confirms the mapping: prompt path `apps/apple/TeslaSync/App/` landed at `apps/apple/Sources/App/`. So `TeslaSync/dashboard-widgets/` → `Sources/dashboard-widgets/`. Let me deeply study the conventions: facade/state-holders, components, and an existing view that renders all states.
+
+Now I understand the facade pattern (it depends on the KMP `Shared.xcframework`). Let me verify which layers are `Shared`-coupled vs. independent, and study the Maps/Feedback/UI components, design tokens, i18n catalog, and diagnostics contract.
+
+`Shared` is isolated to `SharedFacade`/`Live`; Components and Design are `Shared`-free. No central diagnostics emitter exists yet. Let me study the remaining conventions: geo helpers, feedback/UI components, design tokens, unit formatters, an existing state-rendering view, logging idiom, and the diagnostics contract.
+
+Now studying design tokens, unit formatting, the live-state rendering pattern, logging idiom, diagnostics contract, and test conventions.
+
+Studying the live-state/freshness chrome, cards/typography, logging, diagnostics contract, and test + i18n conventions.
+
+Let me read typography/cards components, the design tokens, live enums, the diagnostics contract, a sample test, and the i18n catalog format.
+
+The tokens live at `apps/design/generated/apple/Tokens.swift`. Let me read that, a sample test, the diagnostics contract, and the i18n catalog format.
+
+Let me confirm the `TSButton` API, `FacadeError`, and the i18n language set before writing.
+
+Let me check existing `widget.*` keys to avoid collisions and match naming, then verify the exact i18n entry block shape.
+
+I have the exact i18n format. Let me verify which referenced component keys already exist (to avoid duplicate keys and decide what to add).
+
+Let me read the lint/format configs to ensure my code passes `--strict`, then set up tracking.
+
+I have what I need. Let me quickly check the skeleton and banner components, then write the surface.
+
+I now have a complete understanding of the conventions. Let me create the surface file.
+
+Now the test file:
+
+Let me fix the awkward unwrapping in one test:
+
+Let me refactor the `let` binding inside the MapKit content builder to a helper to avoid result-builder issues:
+
+Now let me add the i18n keys to the catalog via a precise JSON insertion script:
+
+The full re-sort created a noisy diff across all existing keys. Let me revert and insert surgically instead, preserving existing order:
+
+Surgical insert succeeded (299 insertions, 0 deletions). Now format and lint my new files:
+
+swiftlint flags `file_length` (804 > 400). I'll split the surface into three cohesive `GeofenceWidget*` files. Let me view the formatted file to preserve content, then restructure.
+
+I'll split into three cohesive files. Creating the data/model files and rewriting the view file:
+
+Now rewriting `GeofenceWidget.swift` to hold only the view layer:
+
+Now format all files and re-run strict lint:
+
+`GeofenceWidget.swift` is 415 lines — still over the 400 limit. Let me move previews to a separate file:
+
+All files now under 400 lines. Running strict lint on the full surface:
+
+Surface is clean: **0 swiftlint violations, 0 swiftformat issues.** Now running the full gate-style lint/format and verifying the project still generates:
+
+Full `swiftformat --lint` passes (0/265 need formatting). Now full `swiftlint --strict`:
+
+Full strict lint passes (0 violations, 261 files). Now the placeholder gate, project generation, and a syntax parse check:
+
+Placeholder gate clean (0). Now verify the project generates with the new files included:
+
+Project generates cleanly. Let me confirm the new files are wired into the targets, that the `.xcodeproj` is git-ignored, and do a best-effort syntax parse:
+
+All 4 source files + test are wired into the targets (iOS + macOS), and `.xcodeproj` is git-ignored. Best-effort syntax parse against the macOS SDK:
+
+Syntax parse passes (exit 0). Let me attempt a deeper type-check of the `Shared`-free data/projection layer together with its real dependencies:
+
+Data layer type-checks (exit 0). Let me also validate the model layer with its real dependencies:
+
+Data + model layers type-check under Swift 6 (exit 0). Now let me produce the honest gate log by actually running the gate commands and capturing real exit codes:
+
+The log path broke inside `Push-Location`. Let me use an absolute log path and re-run for a clean, complete log:
+
+The log is honest and complete: `EXIT=1 / STATUS=BLOCKED` with full platform-capability evidence, and every runnable check green. Let me clean up artifacts and review what to stage:
+
+Staging only my files (leaving the unrelated admin changes untouched), after confirming the i18n diff is purely additive:
+
+All correct: 7 surface files staged, admin files untouched, i18n purely additive. Committing:
+
+Committed cleanly (7 files, +1377). Let me finalize tracking and do a last working-tree check:
+
+Task complete. The `GeofenceWidget` Apple surface is fully implemented, verified to the maximum extent this runner allows, and committed.
+
+## Summary
+
+Built a production-quality native Apple (SwiftUI + MapKit) port of `web/.../GeofenceWidget.tsx` at parity, committed as `4e959fbf` (7 files, +1377, no deletions). The two pre-existing unrelated `web/.../admin` changes were left untouched.
+
+**What shipped** (`apps/apple/Sources/dashboard-widgets/`, split to satisfy the 400-line lint limit):
+- `GeofenceWidgetData.swift` — Sendable domain types, pure haversine + inside/outside projection, registry metadata (`geofence-status`, 2×4 / 1×2 / 4×40), snapshot + 5‑state derivation.
+- `GeofenceWidgetModel.swift` — `@MainActor @Observable` model bound through a **data-source port** (no HTTP in the view), republishing snapshots like the facade's `StateHolderModel`; `view.opened` telemetry seam (P1/S11, redaction-safe).
+- `GeofenceWidget.swift` / `GeofenceWidgetPreviews.swift` — adaptive compact + standard layouts, MapKit overview (inside=green / outside=grey circles + vehicle marker), and **every state**: loading, empty, error+retry, stale, offline, plus cached-content-on-refresh (ADR-013). Uses shared `TS*` components + design tokens; VoiceOver labels + identifiers throughout.
+- `Tests/Unit/DashboardWidgets/GeofenceWidgetTests.swift` — 17 XCTest cases (adapter, per-state derivation, a11y label source, registry, telemetry-once).
+- `Localizable.xcstrings` — 13 keys added (`widget.geofence.*` + `action.retry`), purely additive (+299/−0); reused existing `widget.freshness.stale/offline`.
+
+**Verification (all green where runnable):** `swiftlint --strict` 0/261, `swiftformat --lint` 0/265, placeholder gate 0, `swiftc -parse` all sources, `swiftc -typecheck` data+model under Swift 6, `xcodegen` (surface wired into both iOS + macOS targets).
+
+## Status: **BLOCKED** (not a false DONE)
+Per the prompt's Capability clause, `xcodebuild build test` cannot run: this runner has **Command Line Tools only** (no Xcode.app, 0 iOS simulators) and does not build the KMP `Shared.xcframework`. `IOS_EXIT=1 / MAC_EXIT=1`, everything else `0` → log ends `EXIT=1 / STATUS=BLOCKED` with full capability evidence at `.github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0053-GeofenceWidget.log`. The build/test halves should be re-run on a macOS + Xcode CI runner to reach DONE.
+

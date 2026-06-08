@@ -1,0 +1,126 @@
+I'll start by exploring the environment, checking toolchain availability, and reading the web source. Let me gather context in parallel.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is active. Let me check if Xcode.app exists anywhere and explore the existing Apple project structure in parallel.
+
+Critical: **Xcode.app exists** at `/Applications/Xcode.app` — it's just not selected. I can use `DEVELOPER_DIR`. Also, `feature-views/` already has 478 files with an established multi-file convention. Let me verify Xcode works and learn the conventions.
+
+Xcode 26.5 with iOS 26.5 SDK + iPhone 16 simulator are available. No existing LayoutSwitcher files. Let me learn the conventions from existing feature-views and the build config.
+
+The convention is clear: each feature view has `<Name>.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`. Tests live in the same dir. Let me read the build config and study a representative similar view.
+
+Now let me check xcodegen availability and study a representative feature view's full set, plus locate the shared state holders, i18n facade, tokens, and telemetry contract in Sources.
+
+Two build risks to assess: the KMP `Shared.xcframework` staging pre-action, and how feature-view tests compile. Let me check the shared framework and study representative files in full.
+
+`Shared.xcframework` isn't staged (needs KMP/Gradle build) and tests use XCTest with `@testable import TeslaSync`. Let me read the verification-status doc, check the test-target wiring, pwsh availability, and the shared facade/state-holders.
+
+Now I understand the precedent. `macos-pending-verifications.md` documents that full-app `xcodebuild build test` is blocked by **pre-existing unrelated collisions** (struct redefinitions, co-located XCTest in app target, signing). The established green gate is **isolated SwiftPM build + tests + swiftlint/swiftformat/placeholder**. Let me study the ToolCard precedent and its log.
+
+The canonical precedent is ToolCard. Let me read its log (exact green-gate commands + final STATUS), its source (telemetry `view.opened` pattern), and a recent co-located-test feature-view log.
+
+The ToolCard precedent is crystal clear: the sanctioned green gate is **swiftformat + swiftlint + placeholder + an isolated SwiftPM build/test harness** against the real design system, with the full-app `xcodebuild` DEFERRED for pre-existing unrelated collisions → `EXIT=0 STATUS=DONE`. Now I need the conventions for confirm, selected-vehicle holder, i18n tables, and a richer reference view. Let me gather these.
+
+AutomationCard is the ideal analog (presentational, owns no data, parent maps the S8 holder, native confirm via `@State`, Localizer + Telemetry seams, renders all states). Let me study its full file set and the design-system primitives I'll compile against.
+
+Excellent reference. Let me read the rest of AutomationCard (view body, sub-views, adapter, previews, tests, strings) and survey the design-system primitives I'll compile against.
+
+I now know the design-system primitives. Let me read AutomationCard's Adapter (Localizer + projections), Previews, Tests, strings, and then map the design-system source files for the isolated harness.
+
+I have a complete template. Now let me read AutomationCard's tests and locate the exact design-system source files (tokens, components) for the isolated harness.
+
+Test convention is clear. Now let me read the core design tokens and grep the exact public APIs of the components I'll use, so the isolated harness compiles against the real design system.
+
+The core tokens are generated. Let me read the component files I'll use and locate the generated token definitions.
+
+I have the full token set. Now let me read the exact component APIs I'll consume.
+
+Let me read the glass-panel material modifier, the Banners dependency (used by States.swift), the web `SavedDashboard` type, and the lint configs to finalize the isolated-harness file set and ensure lint compliance.
+
+I have full context now. Let me record a plan and todos, and scan the Banners dependency for closure.
+
+Dependency set closes cleanly. Let me record the plan and todos, then build the implementation.
+
+Now I'll write the implementation, starting with the Model and Adapter (pure, testable cores).
+
+All 7 files created. Now let me run the formatters/linters on the new files and set up the isolated SwiftPM build+test harness.
+
+Three swiftlint issues: a 7-param function, type body 1 line over 250, and a brace-wrap in tests. Let me refactor `LayoutSwitcher.swift` (bundle params into a context, move helpers to an extension) and fix the test helper.
+
+swiftformat and swiftlint disagree on the wrapped brace. I'll shorten the helper signature to fit one line (drop the unused `isDefault` param).
+
+Scoped gates are green (swiftformat 0/6, swiftlint 0 violations). Now let me build the isolated SwiftPM harness that compiles the exact shipped files against the real design system and runs the tests.
+
+The library compiles cleanly under Swift 6 strict concurrency. Now let me run the test suite.
+
+All 19 tests pass. Now the placeholder check and the full-suite lint gates.
+
+Let me verify the placeholder scanner actually matched my files (the `-Path` is a prefix), then run the full-suite lint gates.
+
+Let me confirm the scanner actually scanned my files (the `-Path` is a prefix, not a real path) — I must not report a false green.
+
+Confirmed: line 132–134 returns a clean result when the `-Path` doesn't resolve to a real item — so the prefix form scans nothing (a false green). To honestly verify my files, I'll scan a temp dir containing exactly the 7 LayoutSwitcher files.
+
+Let me verify the scanner actually detects placeholders (prove my 0 is real, not a no-op), then clean up.
+
+Scanner is proven to work — my files are genuinely placeholder-clean. Now the full-suite lint gates (to capture honest whole-repo state).
+
+Full swiftformat flags 1 pre-existing file (`ActionBuilder.Previews.swift` — surface 0080, not mine, outside my allowed scope). Let me confirm my changeset is isolated and run the full swiftlint gate.
+
+My changeset is exactly the 7 new files. Now the full swiftlint gate.
+
+Both full-suite failures are the documented pre-existing issues (`LifetimeStatsWidget.Adapter.swift` swiftlint + `ActionBuilder.Previews.swift` swiftformat) — neither is mine; the "6" was just progress lines. Now let me attempt the full-app xcodebuild gate honestly. First, generate the Xcode project.
+
+Project generated. Let me check the KMP/Java prerequisites and attempt the iOS `xcodebuild build test` (the scheme stages `Shared.xcframework` via Gradle as a pre-action), capturing full output for analysis.
+
+KMP staging is the slow pre-action (timed out at 90s; ToolCard recorded ~7m24s). Let me run the actual iOS gate command async (its scheme pre-action stages the framework) and monitor, capturing full output.
+
+The iOS build is running (KMP staging + full compile, expect several minutes). Let me monitor it while preparing the gate log.
+
+The environment is shared with many parallel slots (numerous Gradle daemons + other `xcodebuild` processes). My build (PID 1544) is running but the redirect log is missing — let me locate output and check progress.
+
+The runner is heavily contended by parallel slots (load avg ~33, 14 concurrent `xcodebuild`/Gradle) and my redirect didn't capture. Let me check the build shell state once more before deciding.
+
+The async redirect isn't capturing output (so I'd get no error log to analyze), and load is ~33. Let me stop this run and re-launch the iOS gate with reliable `tee` capture so I get a genuine exit code and a grep-able log.
+
+Now let me confirm the tee capture is working and monitor progress while I draft the gate log.
+
+Good — tee is capturing (652KB) and the build is past KMP staging into the app compile. Let me let it run and check for completion/errors.
+
+iOS build failed as predicted — **0 LayoutSwitcher errors**. Let me capture the exit code and confirm the 4 errors are the documented pre-existing collisions.
+
+Captured **IOS_EXIT=65** with **0 LayoutSwitcher errors** — the failure is the documented pre-existing blocker (co-located `ActionBuilder.ModelTests.swift` importing XCTest into the app target). Now let me run the macOS gate and gather the full pre-existing evidence.
+
+Both gates captured: **IOS_EXIT=65**, **MAC_EXIT=65**. Let me confirm the macOS errors are also pre-existing (zero LayoutSwitcher).
+
+Both gates fail **only** on documented pre-existing blockers (iOS: co-located XCTest-in-app-target in `ActionBuilder.ModelTests.swift`; macOS: dev-signing on `TeslaSync-macOS` entitlements) — **0 LayoutSwitcher errors** in either. This is the exact ToolCard disposition. Let me gather final metadata and write the gate log.
+
+All metadata gathered. Let me write the comprehensive gate log.
+
+Gate log written. Let me clean up generated/temp artifacts and verify the final changeset.
+
+Changeset is exactly the 7 surface files + the log. Let me commit.
+
+Committed (`4e93244b0`). Let me do a final verification that the tree is clean and the scoped gates still pass post-commit.
+
+All gates green post-commit and the tree is clean. Let me finalize the todo state.
+
+All 12 todos done. Task complete.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0126-LayoutSwitcher.log | 159 +++++++++
+ .../feature-views/LayoutSwitcher.Adapter.swift     | 343 +++++++++++++++++++
+ .../feature-views/LayoutSwitcher.Model.swift       | 250 ++++++++++++++
+ .../feature-views/LayoutSwitcher.Previews.swift    | 118 +++++++
+ .../feature-views/LayoutSwitcher.Tests.swift       | 376 +++++++++++++++++++++
+ .../feature-views/LayoutSwitcher.Views.swift       | 321 ++++++++++++++++++
+ .../TeslaSync/feature-views/LayoutSwitcher.strings |  63 ++++
+ .../TeslaSync/feature-views/LayoutSwitcher.swift   | 353 +++++++++++++++++++
+ 8 files changed, 1983 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0126-LayoutSwitcher.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/LayoutSwitcher.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LayoutSwitcher.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LayoutSwitcher.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LayoutSwitcher.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LayoutSwitcher.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LayoutSwitcher.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/LayoutSwitcher.swift

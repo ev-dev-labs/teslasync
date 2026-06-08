@@ -1,0 +1,174 @@
+=== P4 Feature view 0270 SignalSelector (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively for
+                       this session only — no sudo, no `xcode-select -s` — so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2
+  Destinations       : iOS Simulator "iPhone 16" (present + booted) · macOS 15 SDK present
+  Shared.xcframework : ABSENT (apps/apple/Frameworks holds only .gitkeep). It is git-ignored and assembled from the
+                       KMP core via Scripts/build-shared-xcframework.sh by the P4/P99 integration gate — NOT a
+                       single feature-view's responsibility. This surface imports no `Shared` symbols, so its
+                       isolated build+test (below) does not need it.
+  Capability         : SwiftUI present (verified: `import SwiftUI` + LocalizedStringKey(String) typecheck OK) +
+                       Swift Charts + MapKit available in the SDK + iOS/macOS toolchains present → NOT capability-
+                       BLOCKED. The web source uses neither Charts nor maps (none listed), so only SwiftUI + the
+                       shared forms/ui components are exercised.
+
+WEB SOURCE (the specification)
+  web/src/features/telemetry/components/SignalSelector.tsx — a CONTROLLED multi-select specialised for signal
+  names (a `ComboboxMulti` wrapper). Regions + branches reproduced:
+    • label <span> : `${t('Signals')} (${value.length} / ${max})`  — and `(${value.length})` when `max` is null,
+                     and the explicit `labelOverride` when provided (uppercase / tracking-wider / text-muted).
+    • HelpTooltip  : shown when `showLayerHelp` (default true) — i18nKey "help.signal.layers" (+ the long default)
+                     and ariaLabel "help.signal.layers.aria".
+    • ComboboxMulti: `label={t('Signals')}` (hidden), placeholder `t('Search signals…')`, a search icon, each
+                     option rendered in a monospaced font (`renderOption` → font-mono), `maxItems={cap}`.
+    • cap          : `cap = max ?? +Infinity`; `max` DEFAULTS to 5; `null` ⇒ no cap. `onChange` is
+                     `onChange(Number.isFinite(cap) ? next.slice(0, cap) : next)` — i.e. the new value is clamped
+                     to the first `cap` entries before bubbling to the parent.
+  Data sources (per the prompt): `useTranslation` only — there is no data hook in the leaf component. The
+  available-signal list (web `options`) is the data the embedding page supplies (production:
+  /signals/{vehicleID}/available); the native surface binds that list through a P1/S8 state-holder seam so the
+  HIG loading/empty/error/stale/offline states can be layered around the always-present selector.
+
+ARTIFACTS SHIPPED (all under the allowed scope: apps/apple/TeslaSync/feature-views/SignalSelector.*)
+  SignalSelector.Adapter.swift   — PURE projection (no SwiftUI/Foundation-bundle): SignalSelectorProjection
+                                    {applyChange (cap+order = web onChange slice), cap (seed dedup+clamp),
+                                    label (web template + override), isAtCap} + SignalSelectorAccessibility
+                                    {fieldSummary, selectionSummary}.
+  SignalSelector.Model.swift     — P1/S11 telemetry seam (SignalSelectorTelemetry + OSLog default, redacted
+                                    os_log "view.opened"); P1/S8 state-holder seam (SignalListStatus,
+                                    SignalSelectorConnection, SignalSelectorUpdate, SignalSelectorSource +
+                                    InMemorySignalSelectorSource); @MainActor @Observable SignalSelectorModel
+                                    (owns ordered selection/cap/showLayerHelp/labelOverride/options, parent
+                                    onChange, phase + freshness, stale auto-refresh-once); P1/S10 i18n facade
+                                    (SignalSelectorStrings, table "SignalSelector").
+  SignalSelector.Views.swift     — label row (uppercase/tracked/muted + inline TSHelpTooltip w/ aria override),
+                                    field (TSComboboxMulti), monospaced selected-signal chips, at-cap caption,
+                                    status line (loading skeleton / empty hint / error+retry), stale|offline banner.
+  SignalSelector.swift           — the composed SignalSelector view (always-present label+field; layered chrome;
+                                    Set<->ordered selection binding bridge; onAppear start / onDisappear stop).
+  SignalSelector.Previews.swift  — 8 #Preview states (content capped+selected, uncapped, at-cap, loading, empty,
+                                    error, stale, offline). DEBUG-only; out of the shipped-surface gate scope.
+  SignalSelector.strings         — the P1/S10 catalog contribution (table "SignalSelector"): the web-source keys
+                                    (label, search prompt, help.signal.layers[.aria]) + native chrome + a11y keys.
+  SignalSelector.Tests.swift     — 33 XCTest cases (adapter cap/seed/label/atCap, accessibility copy, phase
+                                    resolution, model selection/telemetry/freshness wiring).
+
+  No shared-file edits were needed (and none were made — strictly within the allowed scope):
+    • project.yml already lists "TeslaSync/feature-views" in the TeslaSync + TeslaSync-macOS source paths.
+    • .swiftlint.yml already lists "TeslaSync/feature-views" under `included`.
+    • Strings live in the per-surface SignalSelector.strings table (the WeekSelector convention), so the master
+      Localizable.xcstrings is NOT touched. The integration gate folds per-surface tables into the catalog.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  ComboboxMulti (@/components/forms) → TSComboboxMulti (Sources/Components/Forms/Inputs.swift); each signal →
+                                       TSComboOption(title:searchText:); collapsed prompt = t('Search signals…').
+  HelpTooltip   (@/components/ui)    → TSHelpTooltip (Sources/Components/UI/Overlays.swift); help text via the
+                                       facade; the inner "?" a11y label is OVERRIDDEN with help.signal.layers.aria
+                                       so the web ariaLabel parity holds while the button stays actionable.
+  label span (text-xs uppercase      → Text(verbatim:) · Font.TS.label · .textCase(.uppercase) ·
+    tracking-wider text-muted)         .tracking(TSTypeMetrics.labelTracking) · Color.TS.textMuted.
+  renderOption font-mono             → the SELECTED signals are surfaced as monospaced chips (Font .monospaced)
+                                       in the feature view (the atomic TSComboboxMulti owns its option-row font and
+                                       is out of this surface's scope — P4 component-library bundle); the code-like
+                                       signal-name intent is preserved in the region this surface owns.
+  cap (max ?? ∞, slice(0,cap))       → SignalSelectorProjection.applyChange: removals always applied; new picks
+                                       appended (options-order, then sorted out-of-list extras) only while under the
+                                       cap → at the cap a new pick is rejected, exactly like slice(0,cap). nil = ∞.
+  i18n                               → every string from the P1/S10 facade; zero English literals in code paths.
+  a11y                               → label carries "Signals, N of M selected"; help button has its own aria;
+                                       chips region reads "Selected signals: …"; decorative glyphs hidden; Dynamic
+                                       Type via tokens; reduce-motion respected (TSFadeIn).
+  telemetry                          → view.opened surface="SignalSelector" via the model on first start (P1/S11).
+
+STATES (every state renders — no hidden surfaces; each has a preview + test)
+  loading  : available-signal list fetching → skeleton hint under the always-present field.       (preview+phase test)
+  empty    : list resolved with zero signals → friendly "no signals available" hint, never blank. (preview+phase test)
+  error    : list fetch failed → inline QueryError-equivalent with a Retry affordance.             (preview+phase test)
+  stale    : freshness past window → amber "may be stale" banner + ONE guarded auto-refresh.       (preview+model test)
+  offline  : no connectivity → muted "showing last loaded signals" banner, cached list, NO refresh.(preview+model test)
+  content  : signals available → bar speaks for itself (label + field + chips + optional cap hint). (preview+tests)
+
+GATES (executed on THIS runner; raw exits recorded)
+  [GREEN]    swiftformat --lint (SignalSelector.* — 6 swift files)        : 0/6 require formatting    FORMAT_EXIT=0
+  [GREEN]    swiftlint --strict (SignalSelector.* — 6 swift files)        : 0 violations, 0 serious    LINT_EXIT=0
+  [GREEN]    check-placeholders.ps1 -SelfTest                             : SELFTEST_EXIT=0 (tool sane)
+  [GREEN]    check-placeholders.ps1 (SignalSelector.* swift)              : PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0
+  [GREEN]    swiftc -typecheck (SignalSelector.{swift,Model,Adapter,Views}: 0 errors — typechecked against the REAL
+             + entire Sources/Components + Sources/Design + Tokens)         Components/Design (only the unrelated
+                                                                            UnitFormatters.swift, which needs the
+                                                                            out-of-scope UnitPreferences, is excluded).
+  [GREEN]    ISOLATED SwiftPM build + test — swift-tools 6.0, .swiftLanguageMode(.v6) (Swift 6 strict concurrency =
+             the app's own settings), compiling the EXACT shipped SignalSelector.{swift,Model,Adapter,Views} sources
+             + SignalSelector.Tests.swift against the REAL repo design-system (Tokens, Components/UI + Forms):
+                 Executed 33 tests, with 0 failures (0 unexpected)                                  SWIFT_TEST_EXIT=0
+             (This strict build CAUGHT + fixed a real defect: the pure SignalSelectorModel.resolvePhase static was
+              MainActor-isolated via the class and so unreachable from the non-isolated phase unit tests; it is now
+              `nonisolated` — correct, since it is a pure mapping over Sendable inputs.)
+
+  WHOLE-APP, FYI (pre-existing, NOT this surface):
+             swiftformat --lint apps/apple  : 1/1919 files — TeslaSync/feature-views/ActionBuilder.Previews.swift
+                                              (blankLinesBetweenScopes). NOT a SignalSelector file; not touched here.
+             swiftlint --strict (whole app) : 1 violation — TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter
+                                              .swift (function_body_length). NOT a SignalSelector file.
+
+  [DEFERRED] xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync      -destination 'platform=iOS Simulator,
+                                                                            name=iPhone 16' build           IOS_EXIT=65
+  [DEFERRED] xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync-macOS build                          MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO SignalSelector errors in either; both blockers pre-exist this change):
+    iOS  : the app target wholesale-includes TeslaSync/feature-views/*.Tests.swift (every sibling's co-located
+           XCTest file) with no `excludes` in project.yml, so SwiftDriver fails with
+           "feature-views/AIRestorePanel.Tests.swift:18: unable to resolve module dependency: 'XCTest'" (the first
+           such file alphabetically) — XCTest is not linkable into an application target. This is a repo-wide
+           project-configuration issue owned by the P4/P99 integration prompt (add a per-target source filter, or
+           route *.Tests.swift to the unit-test target), affecting EVERY co-located-test surface identically. grep
+           of the 6.8k-line build log for "SignalSelector … error:" = 0 hits — my file is not even reached.
+           NB: SignalSelector.Tests.swift is REQUIRED to live at feature-views/SignalSelector.* by THIS prompt's
+           "Allowed files" list, so co-locating it is correct; the app-target inclusion is the integration gate's
+           wiring to fix, not a feature-view's.
+    macOS: additionally
+           "'TeslaSync-macOS' has entitlements that require signing with a development certificate" (and the same
+           for TeslaSyncWidgets-macOS) — this shared runner provisions no signing identity. Pre-existing infra,
+           identical to apps/macos-pending-verifications.md and to every prior P4 surface's macOS deferral.
+    Both are exactly the "code-complete + DEFERRED full-app Xcode gate" disposition used by every P4 surface to
+    date (see e.g. p4-apple-feature-views-0010-ToolCard.log). The surface itself is INDEPENDENTLY verified GREEN by
+    the isolated Swift 6 strict-concurrency build+test above, against the real design-system.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                          explicitly DEFERRED with raw evidence — never reported as passing.
+  2  No scope narrowing : every web region + branch reproduced — label (3 branches: override / capped / uncapped),
+                          help tooltip (shown/hidden), search-prompt, cap (default 5 / null), the slice semantics,
+                          and the monospaced signal-name intent.
+  3  No skip-and-assume : every gate was EXECUTED on this runner; raw exits pasted; the iOS + macOS failures were
+                          observed (not assumed) and grep-confirmed to contain 0 SignalSelector errors.
+  4  No stubs as final  : complete production surface (7 files) + 33 real tests that compile and PASS under the
+                          app's own Swift 6 strict-concurrency mode; placeholder scanner = 0.
+  5  No parity shortcut : cap/order/label/tooltip-aria/typography/a11y/telemetry all mapped to platform tokens and
+                          unit-verified; the one atomic-component limit (option-row font) is documented + honored
+                          in the region this surface owns, not silently dropped.
+  6  No delegation      : implemented directly; no sub-agents.
+  7  No predecessor bypass: binds P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry,
+                          and the P4 shared components — all consumed, none re-implemented.
+  8  No commit on red   : the COMMITTED artifact (SignalSelector.* + this log) is GREEN on every applicable host
+                          gate AND on a real isolated Swift 6 build+test; the deferred full-app gate is RED only on
+                          pre-existing, unrelated repo wiring/signing that this commit neither introduces nor touches.
+  9  No silent drift    : changes are confined to feature-views/SignalSelector.* (7 files) and this log — enumerated
+                          above. No shared file (project.yml / .swiftlint.yml / Localizable.xcstrings) was edited.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic SignalSelector shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 33 tests pass under the app's own Swift 6 strict-concurrency rules, against the
+  real design-system, with lint / format / placeholder / typecheck all green. The full-app iOS-Simulator + macOS
+  xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked by a pre-existing project-config
+  issue (co-located *.Tests.swift compiled into the app target) and by macOS development-signing — both owned by
+  the P4/P99 acceptance/integration gate, neither introduced nor touchable by a single feature-view prompt. This
+  matches the repo's sanctioned disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

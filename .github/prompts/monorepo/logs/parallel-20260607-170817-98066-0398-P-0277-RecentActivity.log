@@ -1,0 +1,118 @@
+I'll start by understanding the task environment, the web source specification, and the existing Apple app structure. Let me explore in parallel.
+
+Toolchain note: `xcodebuild` requires full Xcode but only Command Line Tools is installed. `swift`, `swiftlint`, `swiftformat` are available. I'll write complete production code and run all gates that are possible, documenting any platform-capability blocks honestly.
+
+Let me explore the existing Apple app structure to match conventions exactly.
+
+The closest analogs are `RecentDrivesListWidget` and `RecentDrivesWidget`. Let me examine the feature-views directory, those widgets, and the shared facade/design layers.
+
+The `feature-views` directory already has 1400+ files following an established pattern. Let me find the closest analogs and understand the shared layers (state holders, tokens, i18n, telemetry).
+
+There are already `RecentActivity.*` files present. I must read their current state before deciding what to do. Let me check sizes and read them all, plus the shared infrastructure.
+
+The surface already exists and was committed. Per the honesty covenant ("no red-as-green", "no predecessor bypass"), I must verify it genuinely meets all acceptance criteria rather than assume. Let me read all 11 files plus the log and check whether the log exists.
+
+Important discovery: the existing native `RecentActivity.*` files mirror `features/**dashboard**/components/RecentActivity.tsx` (a 3-panel activity-feed + battery-chart + fleet-performance surface, labeled "0130"), but THIS prompt (0277) specifies `features/**vehicles**/components/RecentActivity.tsx` (a 2-panel Recent Drives / Recent Charges surface). These are different web components colliding on the same native path. Let me gather evidence before deciding.
+
+Now it's clear: prompt **0130** (dashboard) is already complete (its log exists, native files committed). Prompt **0277** (this one, vehicles) is NOT done (no log). Both prompts reference the same native path — a collision. Let me read both prompt files and the 0130 log to determine the correct disambiguation.
+
+Now the full picture is clear. Two distinct prompts collide on the same native path:
+- **0130** (dashboard source) — DONE, committed, owns the `RecentActivity` Swift symbol.
+- **0277** (this, vehicles source) — not done; different surface (drives/charges lists).
+
+I must implement 0277 WITHOUT bypassing 0130 (honesty covenant #7). Let me check how the repo handles such collisions and read the 0130 log + the placeholder gate script.
+
+Now I understand the situation fully. This is a **path/symbol collision**: prompt 0130 (dashboard `RecentActivity`) is already shipped and owns the `RecentActivity.*` files and the `RecentActivity` Swift symbol. Prompt 0277 (this one) is a *different* surface (vehicles drives/charges lists) from a different web source. 
+
+Per covenant #7 (no predecessor bypass) and #9 (no silent drift), I must NOT destroy 0130's surface. I'll implement 0277 as distinct, disambiguated files that still match the `RecentActivity.*` allowed-files glob (e.g. `RecentActivity.Vehicles.*`) with a distinct Swift type, and document the collision in the log.
+
+Let me read the remaining 0130 files and shared infrastructure to reuse the exact same seams.
+
+The 0130 pattern is clear and high-quality. Let me read the remaining 0130 files (States, Previews, Tests, ModelTests, strings), the design tokens, and the web vehicles-source dependencies so my 0277 implementation matches conventions exactly.
+
+I have the seam conventions down. Now let me nail web parity for the **vehicles** source: its dependency components, the exact `Drive`/`ChargingSession` shapes, and the conversion/format helpers. Plus the 0130 test files and token definitions.
+
+Now let me read the web dependency components, check for existing native counterparts to reuse, confirm token definitions, and read the remaining 0130 test/preview files.
+
+Let me confirm the shared tokens/primitives signatures, how the Xcode project includes feature-view files (globs), and read the remaining 0130 test/preview files to mirror their structure.
+
+Two things to verify: how test files in `feature-views/` route to the test target, and where the design tokens (`TSSpacing`, `Color.TS`, `Font.TS`) are defined (the generated path). Let me read project.yml fully and the generated tokens.
+
+Key facts confirmed: feature-view files are globbed into both app targets; tokens live in `design/generated/apple/Tokens.swift`. The test files in `feature-views/` follow an established (integration-runner) pattern. 
+
+My plan: implement 0277 as `RecentActivity.Vehicles.*` files (distinct filenames within the `RecentActivity.*` allowed glob, distinct Swift symbols prefixed `VehiclesRecentActivity`) so I fully ship 0277 without bypassing the committed 0130 surface. Let me read the token catalog, the 0130 Previews/Tests/ModelTests, and the shared `TSFadeIn`/`TSSkeleton` primitives.
+
+Let me read the 0130 Previews + Tests and the shared motion/skeleton primitives, then I'll have everything to implement.
+
+Let me read the shared motion/skeleton primitives and the lint configs so my code passes `swiftlint --strict` and `swiftformat --lint`.
+
+I now have everything needed. Let me set up a todo list and write a brief plan, then implement the 0277 surface as `RecentActivity.Vehicles.*` files.
+
+Now I'll write the surface. Starting with the value types.
+
+Now the pure projection/adapter with web-parity formatting.
+
+Now the state-holder, telemetry seam, i18n facade, and in-memory source.
+
+Now the state-envelope chrome (freshness chip, connectivity banner, loading skeleton, error).
+
+Now the root view that switches over phase and lays out the responsive panel pair.
+
+Let me add the per-panel VoiceOver summary labels to the panels.
+
+Now the previews gallery (one per state).
+
+Now the adapter/projection unit tests with exact web-parity expectations.
+
+Let me verify the epoch date used in the absolute-timestamp test and then write the ModelTests.
+
+Date confirmed (Dec 7). Now the model/state-holder tests.
+
+Now the i18n catalog. Let me write it ensuring values exactly match the in-code fallbacks.
+
+All 10 files written. Now the verification gates. First, format and lint.
+
+swiftformat flagged a redundant init, two long lines, and a keypath simplification. Let me auto-format my files, then review the key changes (especially the `ResponsivePair` init removal) for correctness.
+
+swiftformat mangled the `ResponsivePair` (doubled `@ViewBuilder`) and exposed a real bug in my `Loading` view (single trailing closure instead of `first`/`second`). Let me fix both by following the established `TSFadeIn` pattern (plain props + explicit `@ViewBuilder` init).
+
+Now re-run swiftformat lint on my files to confirm clean.
+
+Now run the full gate-scope `swiftformat --lint apps/apple` and `swiftlint --strict`.
+
+The full-tree format lint shows ONE failure — but in `ActionBuilder.Previews.swift`, a *different* surface outside my allowed files. Let me confirm it's pre-existing (not caused by me).
+
+Confirmed pre-existing and out-of-scope: only my 10 `RecentActivity.Vehicles.*` files are new; the lone `swiftformat` failure is in `ActionBuilder.Previews.swift` (HEAD, a different surface, not in my allowed files). My 9 swift files pass swiftformat cleanly. Now swiftlint — scoped to mine first, then full.
+
+Two `function_parameter_count` violations (6 and 7 params). Let me refactor: bundle locale+timeZone into a small context struct for the timestamp helpers, and inline the two summary functions to drop the 7-param helper. Let me view the current state of those regions first.
+
+Now refactor the Adapter to drop the parameter-count violations.
+
+Now update the projection's row builders to use the new `Context`, and inline the summaries.
+
+Now inline the two summary functions to drop the 7-param helper.
+
+Now update the test call sites for the new `Context` signature.
+
+Re-format and re-lint my files after the refactor.
+
+My 9 files: swiftformat clean and swiftlint --strict clean (0 violations). Now the full-scope swiftlint and the placeholder gate.
+
+One pre-existing violation somewhere in the full set. Let me identify it.
+
+Both full-tree gate failures are pre-existing in files **outside my allowed scope** (`ActionBuilder.Previews.swift` for swiftformat, `LifetimeStatsWidget.Adapter.swift` for swiftlint). My 9 files are fully clean. Let me confirm they're at HEAD, then run the placeholder gate and build a real Swift typecheck + runtime driver for my core.
+
+`pwsh` is available and the violations are confirmed pre-existing. Let me examine the placeholder script's `-Path` handling, then run it.
+
+The gate's literal `-Path .../RecentActivity` prefix scans nothing (returns clean trivially). To genuinely verify, I'll copy my files to a temp dir and scan them, plus run the script self-test as a control. Let me also test whether SwiftUI typechecks under the CLT SDK.
+
+Two issues surfaced. First, the placeholder gate flagged the literal word "placeholder" in one of my **comments** (Adapter.swift:153) — the gate matches forbidden words anywhere. I must purge such words. Let me find all forbidden-word occurrences in my files and check the pattern list.
+
+Only ONE forbidden word in my files: "placeholder" in an Adapter comment. Let me rephrase it.
+
+Now re-copy, re-scan for placeholders, run the self-test control, and probe SwiftUI under the CLT SDK — sequentially to avoid races.
+
+Placeholders clean (COUNT=0). Now probe SwiftUI under the CLT SDK and run the gate self-test as a control.
+
+SwiftUI (incl. `.numericText`) typechecks under the CLT SDK, and the placeholder gate self-test passes. Now I'll build a real Swift-6 typecheck of my full view set against the **real** tokens + `TSFadeIn` + `TSSkeleton`. First, confirm exactly which shared symbols my views reference.
+

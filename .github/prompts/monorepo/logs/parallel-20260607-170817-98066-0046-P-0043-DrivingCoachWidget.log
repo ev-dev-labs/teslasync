@@ -1,0 +1,139 @@
+I'll start by exploring the environment and understanding the task. Let me check the toolchain availability and the codebase structure.
+
+Key finding: **Xcode is not installed** (only Command Line Tools), so `xcodebuild`/`simctl` are unavailable, but `swift`, `swiftlint`, and `swiftformat` work. Let me explore the web source and existing Apple structure in parallel.
+
+I have the web source. Now let me deeply understand the Apple architecture: state holders (P1/S8), tokens (P1/S9), i18n (P1/S10), and any sibling dashboard widgets. Let me read the related web files and explore the Apple structure in parallel.
+
+Let me examine the project structure, sibling prompts, the SharedFacade state-holder pattern, and the web dependencies in parallel.
+
+Now let me understand the intended placement convention and existing native patterns. Let me read the dashboard-widgets README/conventions, the widget-primitives, and the full Sources tree.
+
+No Dashboard feature exists yet — this is the first dashboard widget. Let me read the core facade/state-holder pattern (P1/S8), design tokens (P1/S9), and i18n in parallel.
+
+Let me read the App layer, Localization, diagnostics/telemetry contract, and key components (Feedback States, UI Badge) to understand the end-to-end native pattern.
+
+Let me find the S8/S9/S10/S11 contracts in the prompts and read the key native components (Feedback States, UI exports, Design tokens, Localization).
+
+This is greenfield for in-app feature surfaces. Let me read the lint config, the key native components I'll compose with, the design tokens, the i18n catalog, and the Shared framework headers to ground my implementation.
+
+The `Shared.xcframework` doesn't exist in-repo (built during Xcode build) — I must not fabricate KMP symbols. Let me see how existing facade tests decouple from it, and read the components I'll compose with (Feedback, UI, tokens, Live, i18n).
+
+Good — components use `LocalizedStringKey` (SwiftUI String Catalog = the i18n facade) and `TS` design tokens. Let me read the tokens, UI components (Badge/Card), Live status (offline/stale), the i18n catalog, an existing `@Observable` model with telemetry, and test patterns.
+
+`TSSpacing`/`Color.TS`/`Font.TS` come from generated tokens. Let me read those generated tokens plus Badges, Cards, Typography, Live status, the i18n catalog, and an existing telemetry-emitting model.
+
+Now I understand the design system. Let me read the telemetry/diagnostics pattern, Live status (offline/stale), the i18n catalog structure, and test patterns to finalize my design.
+
+I have a thorough picture. Let me read the logging convention, Cards/Typography components, the i18n catalog structure, and test patterns — and verify the Swift toolchain can typecheck Foundation/SwiftUI files locally.
+
+Two big wins: `swiftc` typechecks SwiftUI locally, and the catalog already has `translation.widget.*` keys. Let me check whether the DrivingCoach keys already exist (so I reference, not duplicate) and how native code references them.
+
+The i18n keys already exist. Let me read their exact values/format (especially `potentialSavings` interpolation) and check for impact keys.
+
+All i18n keys exist (`translation.widget.drivingCoach.*`), including `potentialSavings` = `"Potential savings: %1$@%%"`. No catalog edits needed. Now let me read the web hook, types, WidgetShell, shared tip cards, and number formatting to reproduce data + composition exactly.
+
+Now let me read the exact DTO types, the shared tip-cards component, `WidgetProps`, and `fmtInt` to complete my model fidelity.
+
+I have full data fidelity. Let me check SwiftLint baseline behavior (body-length, disables), the test conventions, and how the repo splits View/Model files.
+
+I now have complete fidelity. Let me read `FacadeError` (for offline mapping) and confirm the exact token namespaces, then write the plan and implement.
+
+Let me confirm exact token member names so I reference them correctly.
+
+I have everything needed. Let me set up the plan and todos, and check the placeholder script + pwsh availability.
+
+`pwsh`, the placeholder script, swiftlint, and swiftformat are all available — only `xcodebuild` is blocked. Let me read the placeholder patterns (to avoid forbidden tokens) and a sample completed log for format.
+
+The precedent log (`p4-p0-0001-apple-scaffold.log`, already DONE) shows how this repo handles no-Xcode: run all runnable gates for real, mark Xcode steps with capability evidence. Let me read the Skeleton component, check the scanner's case-sensitivity, and confirm git state.
+
+All tooling confirmed. `TSSkeleton` is the loading primitive (avoids the scanner's "placeholder" token). Let me check which freshness/stale/offline/refresh i18n keys already exist so I reuse them rather than inventing keys.
+
+I have all the context. Let me write the plan, set up todos, and check the `stale` label value.
+
+I have everything I need. Let me write the plan and implement the model layer first.
+
+Now let me typecheck the pure model standalone (Shared block excluded since the framework isn't present here).
+
+Pure model typechecks clean. Now let me prove the core logic actually runs correctly with a standalone harness compiled against the real model file.
+
+Top-level code requires the file be named `main.swift`. Let me rename and rerun.
+
+All 30 logic assertions pass — core logic proven. Let me mark progress and write the SwiftUI view.
+
+View written. Now let me attempt a real typecheck of the view against the actual components/tokens. First, find which Sources files import `Shared` (the compile boundary).
+
+Only 10 files import `Shared` (SharedFacade/Live). My View depends only on pure SwiftUI Components + Design tokens. Let me typecheck the View against the **real** component/token sources.
+
+The only failures are from `DataDisplay/UnitFormatters.swift` (uses the Shared `UnitPreferences`), which my view doesn't use. Let me narrow to exactly my view's real dependencies: Components/UI + Components/Feedback + tokens.
+
+Just need `Design/TSMaterial.swift` (defines `tsGlassPanel`). Let me include all of Design.
+
+All errors are in unrelated component files (cross-deps to DataDisplay), never in my file. Let me assemble the minimal clean closure that includes my view.
+
+Excellent — the strict-concurrency typecheck caught a real issue: the `@MainActor` diagnostics type can't be a default arg in the view's nonisolated init. The diagnostics seam doesn't need actor isolation (os.Logger is Sendable). Let me fix it.
+
+Clean compile under `-strict-concurrency=complete`. Let me also validate the `#if DEBUG` previews (add `-DDEBUG`) and re-run the logic proof after the edit.
+
+Previews use the standard `#Preview` macro (the macro plugin only exists under Xcode — same as every existing file like `Typography.swift`); the non-preview compile is clean under strict concurrency, and the logic proof passes. Let me write the XCTest suite.
+
+Let me typecheck the test logic by compiling it alongside the real sources (stripping the module import so symbols resolve in-place).
+
+`XCTest` needs Xcode. Let me typecheck the test's references to my code via a minimal XCTest shim (validates every assertion expression resolves against the real symbols).
+
+Test typechecks (exit 0); the notes are MainActor-isolation hints for the View-touching tests. Let me check the repo's test convention and apply `@MainActor` to be safe under strict concurrency.
+
+`@MainActor` test classes are an established convention here (AppSettingsTests, LiveDataStoreTests, etc.). Let me apply it to the View-touching test class and re-verify.
+
+Test typechecks cleanly under strict concurrency. Let me run the real, available gates: swiftformat and swiftlint on my files.
+
+Those are auto-fixable. Let me format my files in place (scoped to my dirs only), then re-lint.
+
+swiftformat passes. Now swiftlint --strict on my files.
+
+434 > 400 line limit. Let me view the formatted file to trim precisely (consolidate previews + tighten comments).
+
+Let me consolidate the previews with a helper to get under the 400-line limit.
+
+403 — just 3 over. Let me trim the verbose top doc comment slightly.
+
+All green: 399 lines, swiftformat lint passes, swiftlint --strict 0 violations. Let me re-verify typecheck + logic still pass after formatting, and run the placeholder gate.
+
+Core verifications pass (typecheck, logic, placeholders). Now the full-project gate lints to confirm I didn't disturb the baseline.
+
+Full swiftformat passes (0/263). Now full swiftlint --strict (the gate's lint step).
+
+Full gate lints pass (swiftformat 0/263, swiftlint 0/259). Let me mark progress and generate the honest gate log with **real** captured tool output, including the actual Xcode-unavailable evidence.
+
+Let me review the full log to confirm the captured tool output is genuine and complete.
+
+The log is honest and evidence-backed. Let me do a final visual review of the formatted source files before committing.
+
+Code is clean and idiomatic. Let me stage the deliverables and commit.
+
+Committed cleanly. Let me clean up temp files and do a final verification.
+
+Implementation is complete and committed. Here's the summary.
+
+## DrivingCoachWidget (Apple) — P4/0043
+
+Shipped a production-quality native SwiftUI surface at parity with `web/.../DrivingCoachWidget.tsx`, committed as `0aa16c09`.
+
+**Delivered** (4 files, 1077 lines):
+- `Sources/Dashboard/Widgets/DrivingCoachWidget.swift` — presentational view: compact + expanded layouts; loading skeleton, `QueryError`+retry, content, inline no‑tips empty state, **stale** + **offline** freshness chips; VoiceOver labels, Reduce‑Motion, `view.opened` telemetry seam.
+- `DrivingCoachWidgetModel.swift` — pure projection/DTO/savings/5‑state reducer + facade‑bound `@Observable` model (`StateHolderModel` + `LoadableState`, P1/S8), gated `#if canImport(Shared)`; registers `id=driving-coach`, sizes `2×4 / 1×2 / 4×40`.
+- `Tests/Unit/Dashboard/DrivingCoachWidgetTests.swift` — adapter, savings formula, every reducer state, descriptor, impact tone/i18n, diagnostics spy.
+- The gate log.
+
+**Runnable gates — all GREEN (real output in log):**
+- `swiftc -typecheck -strict-concurrency=complete` against the **real** components/tokens ✅
+- Standalone logic harness — 30 assertions PASS ✅
+- `swiftlint --strict` 0/259 ✅ · `swiftformat --lint` 0/263 ✅ · placeholder gate COUNT=0 ✅
+
+**`STATUS=BLOCKED`** (honest, per the prompt's capability clause): `xcodebuild` iOS+macOS build/test cannot run — this host has **Command Line Tools only, no Xcode.app** and the git‑ignored `Shared.xcframework` isn't built here. The captured `xcode-select` error is the evidence; reproducible macOS‑runner commands are in the log. The implementation itself is complete — only the platform build/test verification is environment‑blocked, exactly the case the prompt designates `STATUS=BLOCKED`.
+
+I diverged from the templated path `TeslaSync/dashboard-widgets/` to `Sources/Dashboard/Widgets/` because XcodeGen only compiles `Sources/` (documented in the log under "no silent drift").
+
+
+
+All work is complete, verified, and committed. Let me update the plan to reflect completion and finalize.
+

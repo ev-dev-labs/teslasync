@@ -1,0 +1,127 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swiftlint`, `swiftformat`, `swift` 6.3.2, and `pwsh` are available. Let me check SDK availability and study the established patterns.
+
+SwiftUI, Charts, and MapKit are in the CommandLineTools macOS SDK — I can likely compile with `swiftc` directly. Let me study the established native patterns and the web helpers in parallel.
+
+Excellent — SwiftUI/Charts/MapKit are present. Now let me read the rest of the TelemetryErrorsPanel reference files and locate the shared infra (tokens, i18n, components).
+
+Now let me locate the shared infra (P1/S9 tokens, shared components like GlassPanel/EmptyState/FadeIn equivalents) and read the test/adapter conventions.
+
+Rich shared infrastructure exists. Let me read the key shared files: design tokens, GlassPanel material, feedback states, motion, and data-display.
+
+Let me find the token definitions and read the P1/S8 state-holder base files.
+
+Tokens (`Color.TS`, `TSSpacing`, etc.) for the main app are generated (P1/S9) and not committed — confirming the app needs Xcode/codegen to build. Let me read the adapter/tests conventions and the P1/S8 state-holder base.
+
+Let me read the P1/S8 state-holder base and the FleetTelemetryHealth example (which fetches data, so it should demonstrate loading/error/stale/offline).
+
+Let me read the FleetTelemetryHealth view + adapter (full loading/stale/offline example) and locate the data-display time/status helpers.
+
+I now understand the architecture deeply. Let me read the stale/offline chrome (FleetTelemetryHealth.Views), the status-indicator components, and the lint/placeholder tooling.
+
+Let me verify the remaining shared symbols (TSTone, TSBadge, TSIconBox, TSSkeleton, TSStatusPill) and read the lint configs + placeholder script.
+
+Let me read the lint configs, placeholder script, and FleetTelemetryHealth strings/tests (for the stale/offline + a11y test patterns).
+
+I now have a complete understanding of the architecture. Let me check the logs directory and how prior surfaces handled the gate (to set STATUS correctly), then set up my plan.
+
+This is pivotal: prior surfaces used **full Xcode at `/Applications/Xcode.app`** via a `DEVELOPER_DIR` override (since `xcode-select` points at CommandLineTools). Let me probe for it.
+
+Full Xcode 26.5 + xcodegen are available via the override — matching the precedent. Now let me find the design-token generator (tokens are generated) and the project config, and confirm simulator + `swift test`.
+
+Tokens are committed at `apps/design/generated/apple/Tokens.swift`. Let me read the project config + token API, and probe the simulator.
+
+Everything needed is present: real Xcode 26.5, xcodegen, committed design tokens. `TeslaSync/feature-views` is not in `project.yml` sources (matching the precedent's deferral). Let me confirm the exact token member names and simulator, then start building.
+
+All tokens confirmed and iPhone 16 simulator present. Before writing, let me check for type-name collisions in the Apple module and set up my plan/todos.
+
+No collisions. I'll prefix all public types with `EventTimeline*` for safety. Let me set up the plan and todos, then build the surface.
+
+Now I'll write the surface, starting with the pure adapter core.
+
+The empty-view title line exceeds 120 chars. Let me fix it to keep lines within the limit.
+
+Now the main surface view:
+
+Now the previews (per-state), then tests:
+
+Let me fix the double-optional and make same-timestamp assertions order-independent (Swift's sort isn't guaranteed stable):
+
+Now the i18n catalog:
+
+All 7 files are written. Now the verification phase — let me run swiftformat (auto-fix) and swiftlint on my files.
+
+swiftformat passes. Now swiftlint --strict on the 6 Swift files:
+
+The Tests file is 403 lines (limit 400). Let me trim the header comment to get under 400.
+
+swiftlint and swiftformat are both clean. Now the strongest evidence: a SwiftPM harness that **executes** the XCTest suite (Adapter + Model are SwiftUI-free, so they compile standalone).
+
+**30 tests EXECUTED green (0 failures).** Now the iOS-18 + macOS-15 SDK typechecks of the full SwiftUI surface, compiled against the real component closure (tokens + Material + Motion + Badges) plus minimal real-interface shims for the two leaf components I use.
+
+iOS 18 typecheck passed. Now macOS 15 + the DEBUG previews:
+
+All four SDK typechecks pass (iOS 18 + macOS 15, with and without previews). Now the placeholder gate and xcodegen:
+
+Placeholder gate clean. Now xcodegen + capturing the deferred-xcodebuild evidence (the precedent's disposition):
+
+xcodegen generates cleanly; my surface is confirmed unregistered (0 pbxproj refs) and Shared.xcframework is unstaged. Let me capture the real xcodebuild deferred-evidence error:
+
+Captured the real infra blocker (missing `Shared.xcframework`, exit 65) — identical to the precedent. Now let me run the two **bare gate commands** (`swiftlint --strict`, `swiftformat --lint apps/apple`) to capture their real whole-tree output:
+
+`swiftformat --lint apps/apple` is clean (0/650). The bare `swiftlint --strict` reports 1 violation — let me confirm it's pre-existing (not in my files, which aren't in the lint `included` scope):
+
+Confirmed: the 1 bare-lint violation is the **pre-existing sibling** `LifetimeStatsWidget.Adapter.swift:141` (same one the precedent disclosed) — 0 in my files, and `feature-views` isn't even in the lint `included` scope. Let me clean up generated/temp artifacts and check git status.
+
+My 7 files are staged-ready (the 2 modified `web/*.tsx` files are pre-existing, not mine — I'll exclude them). Let me get accurate line counts for the log, then write it.
+
+All checks are green and evidence captured. Now I'll write the comprehensive gate log following the established precedent format.
+
+Now I'll commit only my allowed files (excluding the pre-existing `web/*.tsx` changes that aren't mine):
+
+Exactly the 8 allowed files staged (no stray `web/` changes). Committing:
+
+Commit `70c2dbd5` landed cleanly — only the unrelated pre-existing `web/*.tsx` changes remain (correctly not mine). Let me do a final confirmation of the committed contents.
+
+The task is complete and fully verified. Final state:
+
+**Committed** (`70c2dbd5`, 8 files): the 7-file `EventTimeline.*` Apple surface + the gate log.
+
+**What was built** — a production-polished native SwiftUI parity of `features/admin/components/security-access/EventTimeline.tsx`:
+- **Adapter** (pure): `deriveTimeline` / `isSentryActive` / `doorClosed` / `timelineIcon` / `useTimelineLabels` ports.
+- **Model**: P1/S8 source seam + projection (no view HTTP), P1/S11 `view.opened` telemetry, P1/S10 facade.
+- **Views/surface**: `TSFadeIn(0.35)` + glass panel, variant-tinted lock/sentry/door rows, every state (content · empty · loading · error · stale · offline).
+- 30 XCTest methods, per-state previews, 12 web i18n keys + 8 native, full VoiceOver.
+
+**Gate evidence (all real, executed)**:
+| Step | Result |
+|---|---|
+| iOS 18 + macOS 15 SDK typecheck (±previews) | **EXIT=0** |
+| `swift test` (SwiftPM harness) | **30/30 green** |
+| `swiftlint --strict` (surface) | **0 violations** |
+| `swiftformat --lint apps/apple` | **0/650** |
+| placeholder gate | **COUNT=0** |
+| `xcodegen generate` | **EXIT=0** |
+| signed `xcodebuild` app build/test | **DEFERRED** (un-staged `Shared.xcframework`, exit 65 — infra, outside allowed files) |
+
+Per the 0005/0009 precedent and the honesty covenant, the signed Xcode app build/test is deferred (KMP framework + feature-views registration + signing — none a defect in this code), everything host-runnable is green → the log ends `EXIT=0 / STATUS=DONE`. The two `web/*.tsx` working-tree edits were pre-existing and correctly left unstaged.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0043-EventTimeline.log  | 256 +++++++++++++
+ .../feature-views/EventTimeline.Adapter.swift      | 326 +++++++++++++++++
+ .../feature-views/EventTimeline.Model.swift        | 241 +++++++++++++
+ .../feature-views/EventTimeline.Previews.swift     | 107 ++++++
+ .../feature-views/EventTimeline.Tests.swift        | 397 +++++++++++++++++++++
+ .../feature-views/EventTimeline.Views.swift        | 252 +++++++++++++
+ .../TeslaSync/feature-views/EventTimeline.strings  |  42 +++
+ .../TeslaSync/feature-views/EventTimeline.swift    |  86 +++++
+ 8 files changed, 1707 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0043-EventTimeline.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/EventTimeline.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EventTimeline.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EventTimeline.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EventTimeline.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EventTimeline.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EventTimeline.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/EventTimeline.swift

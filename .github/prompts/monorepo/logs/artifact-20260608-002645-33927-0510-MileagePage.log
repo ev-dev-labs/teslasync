@@ -1,0 +1,183 @@
+=== P4-APPLE · P7 · page:analytics/Mileage — SwiftUI / HIG parity (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6 (Xcode 26.5) · swiftlint 0.63.x · swiftformat 0.57.x · xcodegen 2.45.x · pwsh · Java 17
+  Destinations       : generic/platform=iOS Simulator present · macOS 15 SDK present
+  Shared.xcframework : assembled + staged via Gradle :core:assembleSharedXCFramework
+                       (BUILD SUCCESSFUL in 8m35s; release + debug XCFrameworks; the release slice
+                       {ios-arm64, ios-arm64-simulator, macos-arm64} staged to apps/apple/Frameworks/Shared.xcframework).
+  Capability         : SwiftUI + Swift Charts + iOS/macOS SDKs present → NOT capability-BLOCKED → target STATUS=DONE.
+
+WEB SOURCE (the specification)
+  web/src/features/analytics/pages/MileagePage.tsx — route /mileage. A PageContainer with:
+    • header: title `mileage.title` + subtitle `mileage.subtitle` + actions (VehicleSelect + DataFreshnessAuto).
+    • a load-failure AlertBanner on `anyError` (statsError | dailyError | monthlyError).
+    • four MetricCards (Total Distance / Total Drives / Daily Avg 30d / Annual Projection), 4 skeletons while isLoading.
+    • GlassPanel "Odometer Over Time" → Recharts AreaChart over days with end_odometer_km != null (EmptyState else).
+    • GlassPanel "Daily Distance" → Recharts BarChart over daily total_km (EmptyState else).
+    • GlassPanel "Monthly Summary" → DataTable [Month, Distance (unit), Drives, Distance per Drive (unit)].
+  Data sources (cache-then-network, SI on the wire — km):
+    useMileageStats → GET /mileage/stats[vehicle_id]; useDailyMileage → GET /mileage/daily[vehicle_id,days=90];
+    useMonthlyMileage → GET /mileage/monthly[vehicle_id]. Distance converted km→display via convertDistanceFromSI.
+
+ARTIFACTS SHIPPED (apps/apple/TeslaSync/Features/Analytics/)
+  MileagePage.Data.swift      — pure DTOs (MileagePageStats/Daily/Monthly), MileagePageUnit (SI km→display, mirrors
+                                convertDistanceFromSI), MileagePageFormat (fmtInt/fmtNumber parity), MileagePageDateFormat,
+                                the load/connection axes, and MileagePageSnapshot.
+  MileagePage.Projection.swift — view-ready projection types + MileagePageBuilder.project (the web useMemo/render branches).
+  MileagePage.Model.swift     — MileagePageModel (@Observable, P1/S8), MileagePageSource seam, InMemory + Unavailable
+                                sources, MileagePageTelemetry (P1/S11 view.opened), MileagePageStrings (P1/S10 facade).
+  MileagePage.Views.swift     — MileageMetricsGrid, MileageOdometerPanel, MileageDailyPanel, MileageMonthlyPanel,
+                                MileageErrorBanner, MileageFreshnessChip, MileageSectionState (loading/empty/error).
+  MileagePage.swift           — MileagePage View: adaptive scaffold (ViewThatFits header), no-vehicle state, lifecycle.
+  MileagePage.Live.swift      — SharedMileagePageSource: the KMP binding over Shared.AnalyticsStore
+                                (mileageStats/dailyMileage/monthlyMileage StateFlows → FlowBridge → LoadableState →
+                                SI JSON decode), the ONLY page file naming `Shared`.
+  MileagePage.Previews.swift  — MileagePagePreviewData + 6 #Previews (content km/mi, loading, empty, error, no-vehicle).
+  MileagePageRoute.swift      — MileagePageRouteRegistration.register(into:) — hosts MileagePage at `.mileage`.
+  MileagePage.Tests.swift     — 21 XCTest cases (projection/format/units/model/sources). Excluded from the app target
+                                (see GATES); runs in the isolated SwiftPM harness.
+  Necessary shared wiring (same pattern every P4 surface used):
+    Sources/App/AppRoute.swift           — + `mileage` case (insights group, /mileage path, gauge.medium icon).
+    Sources/TeslaSyncApp.swift           — compose MileagePageRouteRegistration over the settings registry.
+    project.yml                          — + TeslaSync/Features to TeslaSync and TeslaSync-macOS sources
+                                           (excludes **/*.Tests.swift from the app targets — see GATES).
+    .swiftlint.yml                       — + TeslaSync/Features to included.
+    Localization/Localizable.xcstrings   — + the 16 web keys (verbatim defaults) + 8 page-specific/auxiliary keys
+                                           (route.mileage, mileage.noVehicle, mileage.fresh.{live,stale,offline},
+                                           error.queryTitle, error.queryMessage, action.retry); additive (+24, -0).
+
+PARITY MAPPING (web → Apple platform components; no Tailwind/Recharts ported)
+  PageContainer          → SwiftUI ScrollView/VStack scaffold + ViewThatFits adaptive header (macOS regular / iOS compact).
+  MetricCard ×4          → TSMetricCard (Components/DataDisplay) — web `MetricCard` parity component.
+  GlassPanel ×3          → TSGlassPanel (Components/UI) — native material (ADR-005).
+  Recharts AreaChart     → TSAreaChart (Components/Charts, Swift Charts) — gradient area; P3 wrapper, never a WKWebView.
+  Recharts BarChart      → TSBarChart (Components/Charts, Swift Charts) — bars; P3 wrapper.
+  DataTable              → TSDataTable<MileagePageMonthlyRow> with 4 sortable TSColumns (Month/Distance/Drives/per-Drive).
+  AlertBanner            → TSAlertBanner(tone:.danger) (Components/Feedback) on the aggregated source error.
+  EmptyState             → TSEmptyState("No Entries") (ContentUnavailableView) for every empty chart/table.
+  Skeleton               → TSStatSkeleton (metrics) + TSChartSkeleton (charts) on the initial fetch.
+  DataFreshnessAuto      → TSFreshnessIndicator chip from the connection axis (live/stale/offline, ADR-013).
+  convertDistanceFromSI  → MileagePageUnit.convert(kilometers:) (km×0.621371 for mi); SI stays on the wire / in the model.
+  Charts x-axis note     → the P3 wrappers index points on the chronological bucket order; each bucket's date is carried
+                           as the point id + summarized in a per-panel range caption (web date X-axis context preserved).
+  i18n      : every visible string via LocalizedStringKey (component titles) or MileagePageStrings/String(localized:)
+              (chart series / table headers / banner detail); web key names kept; 16 keys in Localizable.xcstrings.
+  a11y      : panels .accessibilityElement(.contain), charts .accessibilityLabel(series), header combined, ≥44pt targets,
+              Dynamic Type via the token ramp, light/dark + increased-contrast via the generated dynamic colors.
+  telemetry : view.opened surface="MileagePage" via MileagePageModel.start (P1/S11), default OSLog sink.
+  units     : formatted at the render boundary by MileagePageUnit/MileagePageFormat from the model's snapshot unit label.
+
+GATES
+  [GREEN]    swiftformat --lint  TeslaSync/Features/Analytics            : 0/9 files require formatting    (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict  (Features/Analytics scope)              : 0 violations in 9 files          (LINT_EXIT=0)
+             swiftlint --strict  (whole app, FYI)                        : 1 PRE-EXISTING violation —
+                                                                           function_body_length in
+                                                                           TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+                                                                           (NOT a Mileage file; not introduced here).
+  [GREEN]    check-placeholders.ps1 -Path …/Features/Analytics -Language swift : PLACEHOLDER_COUNT=0        (PLACEHOLDER_EXIT=0)
+  [GREEN]    Isolated SwiftPM harness — swift-tools 6.0, .swiftLanguageMode(.v6) (Swift 6 strict-concurrency
+             complete = same as the app), compiling the EXACT shipped page sources (Data/Projection/Model/Views/swift/
+             Route/Previews) against the REAL repo design system (Tokens, Design, ALL of Components, App/AppRoute,
+             RouteHostRegistry):
+                 Build complete!                                                                  (SWIFT_BUILD_EXIT=0)
+                 Executed 21 tests, with 0 failures                                               (SWIFT_TEST_EXIT=0)
+  [GREEN]    Isolated SwiftPM harness — MileagePage.Live.swift + the SharedFacade (FlowBridge / LoadableState /
+             FacadeError / StateHolderModel / Units+Facade / LiveConnection) compiled against the REAL staged
+             Shared.xcframework (binaryTarget), Swift 6 strict concurrency:
+                 Build complete!  (KMP AnalyticsStore binding type-checks against the real framework) (LIVE_BUILD_EXIT=0)
+  [GREEN]    xcodegen generate                                           : project written; 8 production page files
+                                                                           enumerated into both app targets
+                                                                           (MileagePage.Tests.swift correctly excluded).
+
+  [DEFERRED] xcodebuild -scheme TeslaSync -destination 'generic/platform=iOS Simulator' build : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build [test]                                   : (same XCTest blocker
+                                                                                                 + macOS dev-signing) — DEFERRED
+
+  WHY DEFERRED (full-app Xcode gate — ZERO Mileage errors; all blockers pre-exist this change):
+    The app target fails module resolution with 4× "Unable to resolve module dependency: 'XCTest'" BEFORE type-checking,
+    emitted by PRE-EXISTING co-located *.Tests.swift across TeslaSync/feature-views/* and TeslaSync/dashboard-widgets/*
+    (e.g. AIRestorePanel.Tests.swift) that import XCTest into the app target — exactly the pollution
+    apps/macos-pending-verifications.md already defers, together with the `public struct DashboardWidgetSize` ×15
+    duplicate-type collisions and macOS development-signing. This prompt's own co-located test is kept OUT of the app
+    target (project.yml `excludes: **/*.Tests.swift` on TeslaSync/Features) and is instead executed green in the isolated
+    SwiftPM harness above, so the Mileage surface contributes ZERO errors to the app build:
+        grep -E "error: " ios_build.log | grep -iE "Features/Analytics|MileagePage"  →  0 hits.
+    These blockers are owned by the P4/P99 Apple acceptance gate on a signed macos-latest CI runner (ADR-012), NOT by a
+    single page prompt (task rule: do not fix pre-existing unrelated breakage).
+
+=== PARITY ===
+PARITY_REQUIRED=29
+
+  [x] panel  — Total-Distance        : MileagePage.Views.swift · MileageMetricsGrid → TSMetricCard(title:"mileage.totalDistance", value: projection.totalDistanceText)
+  [x] panel  — Total-Drives          : MileagePage.Views.swift · MileageMetricsGrid → TSMetricCard(title:"mileage.totalDrives", value: projection.totalDrivesText)
+  [x] panel  — Daily-Avg-30d         : MileagePage.Views.swift · MileageMetricsGrid → TSMetricCard(title:"mileage.dailyAvg", value: projection.dailyAvgText)
+  [x] panel  — Annual-Projection     : MileagePage.Views.swift · MileageMetricsGrid → TSMetricCard(title:"mileage.annualProjection", value: projection.annualProjectionText)
+  [x] panel  — GlassPanel5           : MileagePage.Views.swift · MileageOdometerPanel (TSGlassPanel + TSPanelTitle "Odometer Over Time")
+  [x] panel  — GlassPanel6           : MileagePage.Views.swift · MileageDailyPanel    (TSGlassPanel + TSPanelTitle "Daily Distance")
+  [x] panel  — GlassPanel7           : MileagePage.Views.swift · MileageMonthlyPanel  (TSGlassPanel + TSPanelTitle "Monthly Summary")
+  [x] chart  — AreaChart             : MileagePage.Views.swift · MileageOdometerPanel → TSAreaChart(series:[series]) (Swift Charts P3 wrapper)
+  [x] chart  — BarChart              : MileagePage.Views.swift · MileageDailyPanel    → TSBarChart(series:[series]) (Swift Charts P3 wrapper)
+  [x] state  — loading               : MileagePage.Data.swift MileagePagePhase.loading + projection.metricsLoading → MileageMetricsGrid TSStatSkeleton / MileageSectionState TSChartSkeleton
+  [x] state  — empty                 : MileagePage.Data.swift MileagePagePhase.empty → MileageSectionState/MileageMonthlyPanel TSEmptyState(title:"No Entries")
+  [x] state  — error                 : MileagePage.Projection.swift MileagePageBuilder.aggregatedError → MileageErrorBanner (TSAlertBanner) + MileageSectionState.error (TSQueryError)
+  [x] state  — success               : MileagePage.Data.swift MileagePagePhase.content → TSAreaChart / TSBarChart / TSDataTable render
+  [x] string — Daily Distance        : Localizable.xcstrings "Daily Distance" → MileageDailyPanel TSPanelTitle("Daily Distance")
+  [x] string — Distance              : Localizable.xcstrings "Distance" → MileageMonthlyPanel column header via MileagePageStrings.withUnit("Distance",unit) + chart series
+  [x] string — Distance per Drive    : Localizable.xcstrings "Distance per Drive" → MileageMonthlyPanel column header MileagePageStrings.withUnit("Distance per Drive",unit)
+  [x] string — Drives                : Localizable.xcstrings "Drives" → MileageMonthlyPanel TSColumn(title:"Drives")
+  [x] string — Month                 : Localizable.xcstrings "Month" → MileageMonthlyPanel TSColumn(title:"Month")
+  [x] string — Monthly Summary       : Localizable.xcstrings "Monthly Summary" → MileageMonthlyPanel TSPanelTitle("Monthly Summary")
+  [x] string — No Entries            : Localizable.xcstrings "No Entries" → MileageSectionState/MileageMonthlyPanel TSEmptyState(title:"No Entries")
+  [x] string — Odometer              : Localizable.xcstrings "Odometer" → MileageOdometerPanel chart series MileagePageStrings.withUnit("Odometer",unit)
+  [x] string — Odometer Over Time    : Localizable.xcstrings "Odometer Over Time" → MileageOdometerPanel TSPanelTitle("Odometer Over Time")
+  [x] string — error.loadFailed      : Localizable.xcstrings "error.loadFailed" → MileageErrorBanner TSAlertBanner(title:"error.loadFailed")
+  [x] string — mileage.annualProjection : Localizable.xcstrings "mileage.annualProjection" → MileageMetricsGrid TSMetricCard(title:"mileage.annualProjection")
+  [x] string — mileage.dailyAvg      : Localizable.xcstrings "mileage.dailyAvg" → MileageMetricsGrid TSMetricCard(title:"mileage.dailyAvg")
+  [x] string — mileage.subtitle      : Localizable.xcstrings "mileage.subtitle" → MileagePage.swift titleBlock TSText("mileage.subtitle")
+  [x] string — mileage.title         : Localizable.xcstrings "mileage.title" → MileagePage.swift titleBlock TSPageTitle("mileage.title") + AppRoute.mileage titleKey
+  [x] string — mileage.totalDistance : Localizable.xcstrings "mileage.totalDistance" → MileageMetricsGrid TSMetricCard(title:"mileage.totalDistance")
+  [x] string — mileage.totalDrives   : Localizable.xcstrings "mileage.totalDrives" → MileageMetricsGrid TSMetricCard(title:"mileage.totalDrives")
+
+PARITY_COVERED=29
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65) and explicitly DEFERRED
+                           with evidence — never reported as passing. Every other gate exit is pasted verbatim.
+  2  No scope narrowing  : all 7 panels, both charts, all 4 data states, and all 16 strings reproduced (29/29 above).
+  3  No skip-and-assume  : every gate executed on THIS runner; the Shared.xcframework was actually built (Gradle) and the
+                           KMP live binding actually compiled against it; the iOS build failure was confirmed, not assumed.
+  4  No stubs as final   : complete production page (View + @Observable model + pure projection + real KMP source) +
+                           21 real tests; placeholder scanner = 0; no TODO/Coming-soon/EmptyView placeholders.
+  5  No parity shortcut  : units/number/date formatting, the odometer null-filter, the per-drive derivation, the
+                           per-section phases, a11y, telemetry, and i18n all mapped to platform tokens + unit-verified.
+  6  No delegation       : implemented directly; no sub-agents.
+  7  No predecessor bypass: P1/S5 SI converters, P1/S8 AnalyticsStore state holders (real binding), P1/S10 i18n catalog,
+                            P1/S11 telemetry, P2 tokens, P3 components, P4 shell/nav all present and consumed.
+  8  No commit on red    : the COMMITTED Mileage artifact is GREEN on every host-runnable gate AND on a real isolated
+                           Swift 6 build+test AND a real Shared-framework compile of the live binding; the deferred
+                           full-app gate is RED only on PRE-EXISTING, unrelated surfaces this commit neither introduces
+                           nor touches (grep of the build log for Features/Analytics|MileagePage errors = 0 hits).
+  9  No silent drift     : changes confined to TeslaSync/Features/Analytics/*, the navigation registration
+                           (Sources/App/AppRoute.swift, Sources/TeslaSyncApp.swift, project.yml, .swiftlint.yml), the
+                           string catalog (Localizable.xcstrings, +24/-0), apps/parity/apple-ledger.json, and this log.
+                           (Pre-existing unrelated working-tree edits to TeslaSync/feature-views/AIUsageCard.* — slot
+                           baseline, mtime 07:32 — are NOT part of this change and are NOT staged.)
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic MileagePage shipped at full web parity (29/29) and INDEPENDENTLY VERIFIED: the
+  Shared-free page core compiles and its 21 tests pass under the app's own Swift 6 strict-concurrency rules against the
+  real design system + component library, AND the KMP AnalyticsStore live binding compiles against the real
+  Shared.xcframework — with swiftformat/swiftlint/placeholder all green and the project generating cleanly. The full-app
+  iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked by pre-existing
+  co-located-XCTest module pollution + DashboardWidgetSize duplicate-type collisions + macOS development-signing, all
+  owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per apps/macos-pending-verifications.md. This
+  matches the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

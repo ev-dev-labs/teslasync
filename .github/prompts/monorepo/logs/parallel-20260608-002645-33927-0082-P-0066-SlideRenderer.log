@@ -1,0 +1,148 @@
+I'll start by exploring the environment to understand the task scope and verify capability requirements.
+
+Capability check is important here. Xcode is NOT available (only Command Line Tools), and no iOS simulator. Let me check the precedent surfaces and remaining tooling to understand how prior work handled this.
+
+Tooling summary: `swiftlint`, `swiftformat`, `swift`, `pwsh` all available. `xcodebuild` requires full Xcode (only CLT present), `simctl` missing — so the iOS/macOS xcodebuild gate cannot run. Let me read the web source, a recent precedent log, and a template surface.
+
+The precedent log shows prior surfaces ran on a runner WITH Xcode 26.5 (via `DEVELOPER_DIR=/Applications/Xcode.app`). Let me verify whether Xcode.app exists on THIS runner, and examine the established multi-file pattern.
+
+Xcode 26.5 **is** present at `/Applications/Xcode.app` (usable via `DEVELOPER_DIR` override) and `xcodegen` is available — matching how every prior P4 surface built. Let me verify simulator runtimes and read the web slide model, types, and the established template.
+
+Full capability confirmed: Xcode 26.5, iPhone 16 simulator booted, iOS 26.5 runtime, xcodegen + project.yml present. The gate can run — not BLOCKED. Now let me read the complete web feature: slide model, YearReview types, and all child slides to build a faithful port.
+
+Let me read the rest of YearReview and all child slides to capture every data field and i18n key.
+
+Now I have the full web feature. Let me study the established native template (AiUsageCard) and locate the shared P1 facade (state-holders, tokens, i18n, telemetry, motion).
+
+Excellent template. Let me read the remaining template files and locate the shared design primitives (TSSpacing, Color.TS, Font.TS, TSFadeIn).
+
+Let me read the remaining template files and locate the shared design tokens and components (TSSpacing, Color.TS, Font.TS, TSFadeIn, TSSkeleton, TSButton).
+
+I have the full pattern. Now let me locate the shared design tokens/components and read the test pattern + adapter.
+
+Shared code is in `apps/apple/Sources/`. Let me read the design tokens, motion, button, skeleton APIs, and the project.yml build config.
+
+Now I understand the build topology. Let me read the exact APIs of the shared primitives plus the adapter/test patterns.
+
+The core tokens (TSSpacing, Color.TS, Font.TS) are generated under `apps/design/generated/apple`. Let me read them plus typography, the adapter, and the test pattern.
+
+Now I have the token vocabulary. Let me read the adapter, both test files, and check the SharedFacade + States components to finalize conventions.
+
+Let me read the view/a11y test pattern, the placeholder checker rules, the distance conversion arithmetic, and the SharedFacade.
+
+Let me read the exact placeholder patterns and the distance conversion arithmetic.
+
+I have nearly everything. Let me check the shared chart components and feedback states to decide how to render the two chart-bearing slides idiomatically, plus confirm the placeholder scan baseline.
+
+Shared `TSBarChart`/`TSPieChart` exist — I'll use them for the two chart slides (honors Recharts→Swift Charts ADR). Let me read their data models and the feedback states.
+
+I have a complete understanding. Let me check for a few optional shared peers (AnimatedNumber, EmptyState) and the swiftlint config before writing.
+
+I now have a complete picture of the pattern, tokens, shared components, lint rules, and the full web feature. Let me set up tracking and start building.
+
+Now I'll write the surface. Starting with the pure Foundation core (Adapter).
+
+Now the Model file — i18n facade, telemetry seam, connection axis, content value types, input/resolved state, and the state-holder seam with deck navigation.
+
+Now the Projection — the pure input→resolved logic building all 12 slides. I'll split builders across extensions to respect swiftlint body-length rules.
+
+Let me update progress and lint the three core files early to catch issues before writing the SwiftUI layer.
+
+file_length (>400) and a few long lines. I'll split the content value-types into a new `SlideRenderer.Content.swift` (matches the allowed glob) and trim comments. Creating the Content file first.
+
+Now remove the duplicated content structs from Model. Let me find the exact line boundaries.
+
+Now trim Adapter & Projection under 400 lines and fix the 3 long lines. Let me view the relevant spots.
+
+Cleaner to split the builders into a second file (mirrors how the template keeps files small). Let me find the split point.
+
+Now create the builders file from the extracted body, then fix the long lines.
+
+Now trim the Adapter under 400 by shortening its header comment.
+
+Adapter trimmed. Let me re-lint the 5 core files and locate any swiftformat config.
+
+Only a trailing-newline issue on the truncated Projection. Let me fix it and check the swiftformat config.
+
+Now let me run swiftformat in-place on the core files (the gate uses this exact config), then re-lint.
+
+swiftformat's wrapping regrew the Adapter to 404. Let me trim a few more comment lines.
+
+Core 5 files are lint-clean. Before writing the SwiftUI layer, let me independently verify the Foundation core compiles under Swift 6 strict concurrency and the arithmetic is correct via an isolated SwiftPM harness.
+
+Now a comprehensive golden test for the harness. Let me compute and assert the arithmetic + projection + model behavior.
+
+The CLT `swift` lacks XCTest. Let me run with the Xcode toolchain via DEVELOPER_DIR.
+
+All 39 isolated tests pass under Swift 6 strict concurrency — the core logic is verified. Let me update tracking and build the SwiftUI layer.
+
+Now the Drive + Summary slide views.
+
+Now the Chart + Charging slide views. Let me first confirm the `TSChartSlice` construction idiom used elsewhere.
+
+`LocalizedStringKey(runtimeString)` is an established idiom. Let me check the existing TSPieChart usage pattern, then write the chart views.
+
+Confirmed the idiom. Now writing the Chart + Charging views.
+
+Now the Savings + Environment + Patterns views.
+
+Now the Chrome file (freshness chip, banner, loading/error/empty states, progress bar, nav controls).
+
+Let me verify the `TSButton` API before writing the surface.
+
+`TSButton` confirmed. Now the main surface file with the animated deck container.
+
+Now the Previews and the i18n strings catalog.
+
+Let me verify every `slide.*` key referenced in code exists in the strings catalog.
+
+All 58 keys resolve. Now the two co-located test files for the app target.
+
+Now the projection + model + per-slide content tests.
+
+All files written. Let me format, lint, and run the placeholder scan on the full surface.
+
+Lengths, swiftformat-lint, and swiftlint-strict all pass (0 violations). Now the placeholder scan. Let me check how the gate's `-Path` argument resolves and run it.
+
+The gate's `-Path .../SlideRenderer` is a non-existent literal prefix (files are `SlideRenderer.*`), so the script would trivially return 0 by scanning nothing. To honestly verify, I'll scan real copies of my files plus a direct grep cross-check.
+
+PLACEHOLDER_COUNT=0 on real files and no forbidden tokens. Now the xcodebuild gate. Let me regenerate the project and check the known build prerequisites.
+
+`Frameworks/Shared.xcframework` is absent (only `.gitkeep`) — the pre-existing blocker prior surfaces documented. Let me check the build script and whether the shared UI/design layer is independently compilable (no `import Shared`), so I can verify my SwiftUI layer against the real components.
+
+My surface and the shared Design/Components layers don't import `Shared`, so I can verify the full SwiftUI layer against the real design system without the (absent) KMP framework. Let me check the Components layer's external dependencies first.
+
+Components/Design only use system frameworks (Charts, MapKit, SwiftUI, Foundation, CoreLocation) — no `Shared`. I'll compile my full SwiftUI layer against the REAL design system + shared components in a focused module to verify it builds.
+
+The full Components copy pulls in unrelated files that depend on app-only `Units`/`tsUnits`. Let me build a minimal module with only the shared files my views actually use, iterating on transitive deps.
+
+Dependency-chasing is unbounded. Instead, I'll copy the whole Design+Components layer but exclude only the few files that reference the app-only `Units`/`tsUnits` symbols (which my views never use). Let me identify that cluster.
+
+Only one file (`UnitFormatters.swift`) references the app-only `Units`. Let me exclude it and rebuild the full design+components + my surface.
+
+The full SwiftUI layer compiles cleanly. Let me do one clean rebuild capturing evidence that my surface files actually compiled.
+
+Clean rebuild: **Build complete, 0 errors**, 56 files including my 12 surface files, Swift 6 mode. The full surface compiles against the real design system. Now let me attempt the actual xcodebuild gate to capture honest evidence of the Shared.xcframework prerequisite.
+
+The `apps/macos-pending-verifications.md` ledger confirms the sanctioned disposition: prior surfaces verify green via isolated SwiftPM build + tests and defer the full-app `xcodebuild` (blocked by the absent KMP `Shared.xcframework`, the `DashboardWidgetSize` 15× redefinition, co-located XCTest, and signing) to the P99 macos-latest gate. Let me capture first-hand evidence of those pre-existing blockers and that my files add zero errors.
+
+First-hand evidence captured: `Shared.xcframework` absent, 14 app files `import Shared` (the absent module), `DashboardWidgetSize` redefined 15×, 206 co-located XCTest files — all pre-existing. My 14 files are enumerated in the project (90 refs). Let me attempt a target-level compile (skipping the Gradle pre-action) to confirm my files add zero errors.
+
+Let me see the single error that aborted the target compile.
+
+Definitive: the target build aborts at **`There is no XCFramework found at Frameworks/Shared.xcframework`** — before any Swift compiles — with **zero SlideRenderer errors**. This is the pre-existing, ledger-tracked blocker (KMP/Gradle on macos-latest), not my code.
+
+Let me update tracking and write the gate log capturing all real evidence.
+
+Let me verify the log's preflight section populated correctly, then prepare the commit.
+
+The log is complete and accurate. Now let me verify git state and confirm the generated `.xcodeproj` is ignored before committing only my allowed files.
+
+Everything is correctly scoped: my 15 `SlideRenderer.*` files + the log are untracked, the generated `.xcodeproj` is gitignored, and the 9 pre-existing modified files will be left untouched. Let me clean up temp artifacts and commit only my allowed files.
+
+Exactly the 16 allowed files staged (no pre-existing changes). Committing with the prompt's message.
+
+Committed cleanly. Let me do a final confirmation of the commit contents and update tracking.
+
+Commit verified: exactly 16 files (15 `SlideRenderer.*` + log, 3,372 insertions); the 9 pre-existing modified files remain untouched. Let me finalize tracking.
+

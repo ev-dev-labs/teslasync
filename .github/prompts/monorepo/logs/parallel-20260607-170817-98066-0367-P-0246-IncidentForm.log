@@ -1,0 +1,133 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Found the web source. Let me read it and explore the Apple app structure.
+
+Let me explore the Apple app structure in depth to understand the existing patterns and dependencies.
+
+The feature-views directory is large. Let me find existing patterns—especially any status/incident-related views and form-based views to follow conventions.
+
+Let me examine representative form/interactive feature-views to learn the conventions—`NotificationChannelsView` (has a form) and `HttpStatusTool` (interactive with inputs/mutation).
+
+`NotificationChannelsView` is the closest analog (form + mutation). Let me read its full implementation to learn the conventions.
+
+This is a comprehensive pattern. Let me read the remaining `NotificationChannelsView` files (Form, Views, Projection, Builder, Previews, Tests, strings) to fully internalize the conventions.
+
+Let me read the remaining files: Views, Builder, Previews, Tests, ModelTests, and the strings catalog.
+
+Now the Previews, Tests, ModelTests, and strings catalog to complete my understanding of test/preview/i18n conventions.
+
+Let me read the Previews and strings files to complete the pattern, plus check how shared P1/S8 state holders and tokens are structured.
+
+I have the full pattern. Now let me locate the shared component (P1/S9) definitions to confirm exact APIs—especially a Textarea/multiline equivalent and a Select/Picker equivalent that the web source uses.
+
+Let me read the Typography, feedback, and token files, plus check the web Toast hook API and the existing tests directory structure.
+
+Now let me read the web `useIncidents` hook to understand the data shapes and the create mutation, plus the feedback/token components I'll use.
+
+I have the web spec, hooks, and shared components. Let me check how an existing *interactive/tool* surface (not a data-list) maps the P4 state contract, since `IncidentForm` is a form rather than a data view. Reading `HttpStatusTool`.
+
+The HttpStatusTool precedent is exactly what I need: even a fetch-less surface models the full loading/empty/error/freshness lifecycle "so every state renders and is testable." I'll follow that precedent for the form. Let me verify the remaining shared tokens/components I'll use and check the project structure for test/strings registration.
+
+The feature-views path (including co-located `.Tests.swift`) is compiled into the app targets. Let me check the toolchain availability — this determines whether I can run the gate or must report BLOCKED per the capability note.
+
+Critical finding: only Xcode **Command Line Tools** are installed (no full Xcode), so `xcodebuild` cannot run iOS/macOS build+test. Per the capability note that's a BLOCKED condition for those steps — but I'll still deliver the complete production implementation and run every check that IS available (swiftlint, swiftformat, placeholder check, xcodegen). Let me read the lint/format configs and the placeholder checker so my code passes `--strict`.
+
+Now let me read the remaining shared component signatures I'll use (Badges, Surfaces/Cards, Motion, Skeletons) and the design tokens (Color.TS, Font.TS, TSSpacing, TSRadius).
+
+Let me confirm the exact design token member names (Color.TS, Font.TS, TSSpacing, TSRadius, TSMotion) from the generated tokens, and check an existing UI test for the snapshot/a11y test pattern.
+
+Let me verify how the co-located `*.Tests.swift` files in feature-views are wired into a test target (critical for getting tests compiled correctly), by inspecting the Tests directory and any include mechanism.
+
+There's a `Tests/Unit/FeatureViews/` directory. Let me see how the co-located feature-view tests relate to it—whether there's a sync mechanism or the app target excludes test files.
+
+I now have the complete picture: web spec, hooks, all shared components, tokens, lint/format/placeholder rules, and the sibling file pattern. Let me set up tracking, confirm the logs dir, and baseline-lint a sibling to validate my understanding of the rules.
+
+Toolchain works; siblings are format-clean. Let me confirm a sibling passes `swiftlint --strict` (validating rule understanding) and write the plan.
+
+Siblings pass `--strict` cleanly — my rule understanding is validated. Let me set up todos and start implementing, beginning with the pure-core Adapter.
+
+Now the presentational subviews. Updating todos and writing `IncidentForm.Views.swift`.
+
+Now the surface view that composes the modal chrome, body, banner, chip, and toast.
+
+Now the previews — one per state, driving submitting/failed/validation via a small host.
+
+Now the pure-core unit tests.
+
+Now the model/state-holder tests.
+
+Now the i18n catalog.
+
+All 9 files written. Now the verification phase — auto-format my files to satisfy `swiftformat --lint`, then run the strict linters.
+
+swiftformat clean. Now `swiftlint --strict` on all my files.
+
+All my files pass `--strict` (0 violations). Let me run the placeholder gate, `xcodegen generate`, and kick off a full-tree `swiftlint --strict` in the background.
+
+Placeholder gate clean, xcodegen regenerates with my files. The full-tree lint shows 1 violation — let me confirm it's pre-existing, not mine.
+
+All 8 of my files lint clean inside the full run. The single violation is pre-existing in an out-of-scope file (`LifetimeStatsWidget.Adapter.swift`) which this prompt may not modify. Let me confirm that's pre-existing/untouched, and — high value — attempt a real `swiftc -typecheck` of my pure logic layer (Adapter+Projection+Model, which import no SwiftUI/app components).
+
+Strong result: the pure logic layer (Adapter+Projection+Model, including the `@Observable` model) **type-checks cleanly** against the macOS 15 SDK (TYPECHECK_EXIT=0), and git confirms the lone lint violation is in a pre-existing, out-of-scope file. Let me attempt to also type-check the SwiftUI layer against the real shared components — first checking those sources only import SDK frameworks.
+
+Components/Design only import SDK frameworks — so I can attempt a real type-check of my SwiftUI layer against the actual shared components. Let me compile logic + UI + previews together with all shared components under Swift 6 strict concurrency.
+
+The **only** errors are `#Preview` macro-plugin-not-found — a Command Line Tools capability gap (the Previews macro ships with full Xcode), not a code defect. Every other file, including my SwiftUI views and all shared components, type-checked. Let me confirm by re-running without the Previews file.
+
+Those errors are in an unrelated shared file (`UnitFormatters.swift`) that depends on `UnitPreferences` defined outside my compile set — not my code. Let me type-check my UI+logic against just the shared components my surface actually uses, which avoids unrelated dependencies and gives a conclusive result.
+
+**Conclusive:** my entire surface (logic **and** SwiftUI UI) type-checks cleanly (`EXIT=0`) under Swift 6 strict concurrency against the macOS 15 SDK and the real shared-component APIs. The only un-runnable steps are the `xcodebuild` ones (no full Xcode) and the `#Preview` macro plugin (CLT gap).
+
+Let me verify the whole-tree `swiftformat --lint` baseline, then produce the gate log authentically via `pwsh`.
+
+Both pre-existing baseline violations (swiftlint + swiftformat) are in other prompts' files, outside my allowed scope; my 8 files are clean. Now I'll generate the gate log authentically by running each gate step (capturing the real `xcodebuild` capability error) plus my scoped + compiler verifications.
+
+xcodebuild steps captured the authentic CLT capability error. Now appending the lint/format/placeholder gate steps plus scoped + compiler verification.
+
+Now the placeholder gate, compiler verification, and the honesty trailers.
+
+Finalizing the log with the summary and the mandated honesty trailers.
+
+The log ends correctly with `EXIT=1` / `STATUS=BLOCKED`. Before committing, let me strengthen accessibility on the remaining interactive controls (components field + the two selects) so every interactive element has an explicit label, then re-verify.
+
+Re-verifying after the accessibility edits: format, lint, and re-typecheck the UI layer.
+
+All green after edits. To guarantee the gate log reflects the exact final bytes (not a pre-edit snapshot), I'll regenerate it in one coherent pass against the final code.
+
+All markers authentic; the log ends with `EXIT=1` / `STATUS=BLOCKED` per the covenant. Let me do a final holistic review of the two most intricate files before committing.
+
+The implementation is complete and reproduces every web field. Let me confirm the generated `.xcodeproj` is gitignored (so it won't be committed), check git state, then stage only my files + the log.
+
+Everything is correctly scoped (the generated `.xcodeproj` is gitignored). Staging my 9 files + the log and committing.
+
+Committed cleanly (10 files, commit `5d44ea40e`); the pre-existing modified web files were left untouched. Let me finalize tracking.
+
+All todos complete. Final status:
+
+I've completed and committed the IncidentForm Apple surface. Here's the outcome.
+
+## Delivered — `apps/apple/TeslaSync/feature-views/IncidentForm.*` (9 files, commit `5d44ea40e`)
+
+Native SwiftUI parity of `web/src/features/system/components/status/IncidentForm.tsx`, following the proven sibling architecture (`NotificationChannelsView` / `HttpStatusTool`):
+
+| File | Role |
+|---|---|
+| `IncidentForm.swift` | Surface view — Modal chrome ("Log an incident" + close), banner, freshness chip, toast, lifecycle, `view.opened` telemetry |
+| `IncidentForm.Adapter.swift` | Pure core — severity/status catalogs, payload builder (trim title, `message||nil`, comma-split components), validation (`<3`), `maxLength` clamps, i18n facade (P1/S10) |
+| `IncidentForm.Projection.swift` | Connection axis, toast, submission lifecycle, resolved render-state |
+| `IncidentForm.Model.swift` | `@Observable` VM + P1/S8 source seam (`useCreateIncident`) + P1/S11 telemetry seam + in-memory source |
+| `IncidentForm.Views.swift` | Field rows, severity/status selects, banner/chip/toast — all VoiceOver-labelled |
+| `.Previews/.Tests/.ModelTests.swift`, `.strings` | Per-state previews, adapter/projection + model XCTests, i18n catalog |
+
+**Every state reproduced** (web branches + P4 leaf contract, mapped per the `HttpStatusTool` fetch-less precedent): editing, submitting (`create.isPending`), submit-failed (`catch` → inline + toast), validation (`title<3`), success (toast + `onClose`), stale (chip + re-arm), offline (banner + disabled submit).
+
+## Verification
+- ✅ `swiftlint --strict` (scoped): **0 violations / 8 files**
+- ✅ `swiftformat --lint` (scoped): **0/8 need formatting**
+- ✅ placeholder gate: **0** (no TODO/stub/mock/placeholder/Lorem)
+- ✅ `swiftc -typecheck` logic **and** SwiftUI layer vs the real shared components, **Swift 6 strict concurrency, macOS 15 SDK: EXIT=0**
+- ✅ `xcodegen generate`: wired into both app targets
+
+## Status: BLOCKED (platform capability, per the prompt's capability note)
+`xcodebuild` iOS/macOS build+test **cannot run** — this runner has only the Xcode **Command Line Tools** (no full Xcode.app, iOS Simulator runtime, or SwiftUI Previews macro plugin). `IOS_EXIT=1`/`MAC_EXIT=1` with the authentic `xcode-select` error captured in the log, which ends with `EXIT=1` / `STATUS=BLOCKED`. The surface is otherwise proven to compile via `swiftc -typecheck`. Two pre-existing lint/format violations in the full tree are in **other prompts' files** (outside this prompt's allowed scope) and were left untouched.
+

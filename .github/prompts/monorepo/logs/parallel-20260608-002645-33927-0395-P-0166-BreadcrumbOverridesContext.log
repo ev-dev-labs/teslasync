@@ -1,0 +1,112 @@
+I'll start by exploring the repository structure and reading the web source that I need to reproduce natively.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swift` 6.3.2, `swiftlint`, and `swiftformat` ARE available. Let me read the web source and explore the existing Apple structure before deciding on approach.
+
+The web source is a React Context state-holder (breadcrumb label overrides keyed by route pattern), not a visual component. Let me understand the native architecture: state holders (P1/S8), tokens (P1/S9), i18n (P1/S10), diagnostics (P1/S11), and how breadcrumbs/nav already work.
+
+The `macos-pending-verifications.md` reveals the **established, accepted pattern** for this exact scenario: prior P4 surfaces (`ToolCard`, `AlertMessageEditor`, `FSMTimelineChart`) were verified via isolated SwiftPM build + tests + `swiftc -typecheck` + swiftlint/swiftformat/placeholder gates, deferring only the full-app `xcodebuild` to macOS CI. Let me check SDK/framework availability and read the facade + an example feature-view set.
+
+`swiftc -typecheck` of SwiftUI + Charts + MapKit **succeeded (EXIT=0)** using the macOS 26.5 SDK from CommandLineTools. So the capability IS available; only full-Xcode `xcodebuild` (iOS Simulator) is missing — exactly the deferral the prior surfaces documented. The architecture bridges KMP `Shared` StateFlows. Let me study the reference feature-views, the isolated build setup, and i18n/tokens/diagnostics facades.
+
+Let me read a complete reference surface set and locate the i18n facade and diagnostics (`view.opened`) contract precisely.
+
+Now I understand the file-set convention. Let me read the complete `AddressInput` set plus the design tokens to learn the exact patterns (model, states, projection, adapter, strings facade, diagnostics, tests, previews).
+
+Let me read the design tokens, supporting model types, and the test/preview/strings/views conventions, plus the build config.
+
+I have deep understanding now. Let me read the design tokens, the Views/Previews conventions, the build config, and the placeholder checker.
+
+Let me locate the actual token definitions (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`), check the build config + placeholder patterns, and verify `pwsh` availability.
+
+`pwsh`, `xcodegen`, `swift`, `swiftlint`, `swiftformat` are all available — only full Xcode is missing. Tokens come from `apps/design/generated/apple`. Let me read the token definitions, remaining view components, and lint/format configs.
+
+Now let me read the rest of `project.yml` (test targets + how surfaces are wired), the `.swiftformat`, placeholder patterns, and check whether `shared-surfaces` is referenced anywhere.
+
+Let me read the full token definitions and confirm available members, plus check how a SwiftUI registration/diagnostics modifier is done elsewhere.
+
+Now let me examine the web `useBreadcrumbs` hook and the Layout breadcrumb consumer to faithfully model the trail projection (route → crumbs, override application).
+
+I have the full breadcrumb subsystem. Let me quickly ground the route-meta shape and a real page's override usage, then I'll build.
+
+I now have the complete picture. The breadcrumb surface = an in-memory overrides registry (the source file) feeding a breadcrumb trail (`useBreadcrumbs` → `<Breadcrumbs>`). Let me set up a plan and todos, then build the self-contained native surface mirroring the `AddressInput` convention.
+
+Real example grounded (`'/drives/:id'` → `"196th Street → Northeast 90th"`). Now writing the self-contained core. Starting with the Foundation-only value types, registry/projector, and projection.
+
+Now the registry + projector — the verbatim parity core of the React context.
+
+Now the projection type, surface slug, and accessibility builder.
+
+Now the state holder — the `@Observable` model with the P1/S8 source seam, P1/S11 telemetry, P1/S10 facade, the registry ownership, and the faithful `useSetBreadcrumbOverrides` registrar.
+
+Now the presentational chrome (home link, chevron, crumb, freshness chip, banner, assembled row).
+
+Now the loading / empty / error chrome in States.swift.
+
+Now the main `BreadcrumbBar` view plus the `breadcrumbOverrides` registration modifier (the `useSetBreadcrumbOverrides` parity).
+
+Now the previews and the strings catalog.
+
+Let me align the facade copy keys with the actual web keys (`a11y.breadcrumb`, `a11y.breadcrumbHome`) for traceability, then write the strings catalog.
+
+Now the comprehensive XCTest suite covering the registry merge, projector, registrar, model lifecycle, and accessibility.
+
+All 10 files are written. Now let me verify via an isolated SwiftPM build + XCTest (module `TeslaSync`), exactly the host-runnable pattern the prior surfaces used.
+
+Only errors are the `#Preview` macro plugin (`PreviewsMacros`) which ships with full Xcode, not Command Line Tools — a toolchain limitation, not a code defect (same `#Preview` pattern as the existing `AddressInput.Previews.swift`). Let me exclude the preview-only file from the isolated CLT build and rebuild + test the logic.
+
+Library builds clean under Swift 6. Now run the test suite.
+
+`XCTest` isn't bundled with Command Line Tools (it ships with full Xcode). Let me confirm and locate any available XCTest, then choose a verification path that proves the test assertions pass without altering the repo's XCTest convention.
+
+`XCTest` and the `xctest` runner are absent from Command Line Tools (they ship with full Xcode) — a runner limitation, not a code issue. The Swift Testing plugin IS present. To prove the assertions pass on-host without altering the repo's canonical XCTest file, I'll build an isolated executable runner that exercises the same library code and assert every scenario.
+
+Just my runner's global counters need `@MainActor` (the library itself compiled clean). Fixing the harness.
+
+**52/52 assertions pass (EXIT 0)** under Swift 6 strict concurrency. Now an explicit `swiftc -typecheck` against the macOS SDK on the real repo files for the log evidence.
+
+Clean typecheck (EXIT 0). Now format with swiftformat, then run the strict linters and placeholder gate.
+
+swiftformat formatted 6/9 files; lint now clean. Now swiftlint --strict and the placeholder gate.
+
+swiftlint used the config's `included:` (linted all 1909 files, ignoring the positional path) and found 1 pre-existing violation. Let me pinpoint where it is and verify my files specifically.
+
+The 1 violation is **pre-existing** in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (a different surface, out of scope) and my files produced none. But to prove my files are clean (they weren't in the `included` list yet), let me lint them with a temp config scoped to the surface.
+
+One swiftlint violation: my Tests file is 496 lines (>400 limit). I'll split it — moving the model-lifecycle tests into a `.ModelTests.swift` companion (matching repo convention), keeping each file under 400.
+
+I'll create the `.ModelTests.swift` companion with the model-lifecycle tests, then remove that section from `Tests.swift`.
+
+Tests.swift now 347 lines. Re-running format + lint on the split files.
+
+Both clean (swiftformat 0/10, swiftlint 0). Re-syncing the formatted files into the isolated package to confirm the build still passes, and running the placeholder gate.
+
+Verify still 52/52 green. The placeholder gate caught the word "placeholders" in a Models.swift doc comment (the checker matches "Placeholder" case-insensitively). Let me find and replace all such words across my files.
+
+Only one occurrence. Replacing "placeholders" with "markers" (consistent with my other docs).
+
+Placeholder gate clean. Now wiring the new directory into the build — `project.yml` (both app targets) and `.swiftlint.yml`.
+
+Now validating `project.yml` with `xcodegen generate` and confirming the surface files are enumerated.
+
+xcodegen succeeded (EXIT 0); all 11 surface files are enumerated in both app targets. Let me confirm the generated `.xcodeproj` is git-ignored (must not be committed) and check the logs dir.
+
+All correct — `.xcodeproj` is ignored. Now running the full repo `swiftlint --strict` to confirm my files add zero violations (isolating the pre-existing one), for honest log evidence.
+
+**Confirmed: 0 violations in my files.** The single repo violation is pre-existing in another surface (`LifetimeStatsWidget.Adapter.swift`), out of scope. Now I'll generate the gate log by actually re-running each host-runnable verification and capturing real output.
+
+Log complete with real output, ending `EXIT=0 / STATUS=DONE`. Now appending the deferred-verification row to `macos-pending-verifications.md`.
+
+Now a final consolidated re-verification after all edits (the placeholder-word fix touched Models.swift post-format), then commit.
+
+All final gates green (52/52 assertions, swiftformat 0/10, swiftlint exit 0, placeholder 0, no forbidden words, 11 files). Committing the surface plus the necessary build wiring.
+
+I notice `AIUsageCard.*` files show as modified but I never touched them — let me confirm these are pre-existing workspace changes (not caused by me) and that they're not in my staged set.
+
+Confirmed — the `AIUsageCard` changes are pre-existing in-flight workspace state from a different surface (0203→0237, unrelated to breadcrumbs), not caused by me, and correctly **not staged**. I'll leave them untouched. Committing my staged set.
+
+Committed (15 files, 2067 insertions) — surface, tests, log, and wiring; the unrelated pre-existing changes were correctly excluded. Cleaning up temp artifacts and finalizing.
+
+All committed and the working tree is clean (only the unrelated pre-existing `AIUsageCard` changes remain, untouched). Finalizing todos.
+
+Task complete. Here's the summary.
+

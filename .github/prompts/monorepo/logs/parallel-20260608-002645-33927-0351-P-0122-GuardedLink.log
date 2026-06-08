@@ -1,0 +1,103 @@
+I'll start by exploring the repository structure, locating the web source spec, and checking whether the Apple toolchain is available on this runner.
+
+Key finding: full Xcode is **not** installed — only Command Line Tools (`xcodebuild` errors out, no iOS Simulator). `swift`, `swiftlint`, `swiftformat` are available. Let me explore the existing Apple app conventions and the web source before deciding the path. Let me map the structure first.
+
+The web source is a navigation-guard link wrapper (no data fetching). Now let me study the native conventions: an existing sibling surface, the SharedFacade (state holders / i18n / diagnostics), and whether a navigation-guard equivalent already exists in the Apple app.
+
+The established convention places each surface as a *set* of files (`.swift`, `.Model.swift`, `.Views.swift`, `.Tests.swift`, `.strings`, etc.). Let me check where prior *shared-meaningful* siblings landed (to resolve the `shared-surfaces/` vs `feature-views/` placement) and find the native navigation-guard abstraction.
+
+Sibling shared-surfaces aren't implemented yet — this is among the first, so `shared-surfaces/` is a new directory (consistent with the prompt's allowed-files clause). Let me read the canonical recent surface (AiUsageCard) end-to-end plus the navigation-guard seam and SharedFacade core to mirror conventions exactly.
+
+Now I understand the seam/model/i18n/telemetry conventions. I need the consumer-side guard contract — let me read the web `NavigationGuardProvider` (spec for `confirmIfDirty`), the project source-globbing, theme tokens, and the test/strings/previews conventions.
+
+Now I understand the conventions well. Critical detail: `project.yml` globs `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets`, but **not** `shared-surfaces`. The prompt restricts me to `shared-surfaces/GuardedLink.*` + the log. Let me verify the design tokens/motion primitives exist in-module and check the placeholder tooling + pwsh availability.
+
+`pwsh` and `xcodegen` are available — good, I can run the placeholder check. Let me read the design tokens, motion/typography primitives, the test conventions, and the placeholder patterns so my code conforms exactly.
+
+I have the placeholder rules (avoid "TODO/FIXME/XXX/Placeholder/not implemented" in `.swift`). Let me confirm exact token/motion/typography symbol names and the test-target wiring before writing code.
+
+I now have all conventions. Let me confirm the logs directory location (gate vs metadata differ) by finding where sibling logs actually live, then I'll write the surface.
+
+All conventions confirmed. Logs go to `.github/prompts/monorepo/logs/`. This is the first Apple shared-surface. Let me set up a brief plan + todos, create the directory, and write the surface files.
+
+Now the Model file — i18n facade, seams, value types, the observable model, and in-memory doubles.
+
+Now the Views file — the shared button core (with confirmation dialog + lifecycle) and the label primitive.
+
+Now the public entry file — `GuardedLink` and `GuardedNavLink` surfaces with ergonomic convenience inits.
+
+Now the i18n catalog (`.strings`) with web-parity mapping.
+
+Now the per-state previews.
+
+Now the comprehensive XCTest file.
+
+Files written. Now I'll verify with every tool available on this runner. First, normalize formatting and run the lint/format/placeholder checks.
+
+swiftformat lint passes (0/5 need formatting). Now swiftlint, placeholder check, and a syntax parse.
+
+Placeholder check passes (COUNT=0). swiftlint used the repo config's `included:` (which doesn't list `shared-surfaces`), so it linted the existing 1909 files and found 1 pre-existing violation — not my files. Let me (a) find that violation to confirm it isn't mine, and (b) lint my files directly with the repo's rule set via a temp config.
+
+Two violations found:
+- **Pre-existing (not mine):** `LifetimeStatsWidget.Adapter.swift` function_body_length — out of scope.
+- **Mine:** `GuardedLink.Tests.swift:73` large_tuple (3-member tuple). Sibling tests use 2-tuples; I'll refactor my test helper to a small struct.
+
+Now re-run swiftformat + swiftlint on my files to confirm clean.
+
+My files pass swiftformat (0/5), swiftlint strict (0 violations), and placeholder (COUNT=0). Now a best-effort `swiftc -parse` syntax check (full type-check needs Xcode SDK + the whole module, which is blocked).
+
+All 5 files parse cleanly. Let me test whether a real type-check is even feasible under Command Line Tools (does the CLT SDK ship SwiftUI + the macro plugins?). If a trivial SwiftUI typecheck works, I'll attempt a harness-driven typecheck of my files.
+
+SwiftUI, Charts, MapKit are all in the CLT SDK and a SwiftUI/`@Observable`/`.confirmationDialog` typecheck probe **passed**. That means I can do a *real* type-check of my shipped runtime code against the real design tokens + real SwiftUI SDK in a throwaway harness. Let me confirm `Tokens.swift` is self-contained first.
+
+`Tokens.swift` is fully self-contained. I'll type-check my **actual shipped runtime files + the real tokens** against the macOS SDK — a genuine compile (with macro expansion), not a stub.
+
+The **only** errors are the `#Preview` macro plugin (`PreviewsMacros`) — which ships with Xcode, not CLT. That's the same capability gap as `xcodebuild`, not a code defect. Let me confirm all non-preview runtime code type-checks to 0 against the real SDK + tokens, then handle previews/tests via labeled harness transforms.
+
+**All shipped runtime code type-checks to EXIT 0** against the real macOS SDK + real tokens (`@Observable`, `@Bindable`, generics, `.confirmationDialog` all expand). Now I'll verify the Previews and Tests bodies via clearly-labeled throwaway harness transforms (shipped files untouched).
+
+Preview bodies type-check to EXIT 0. Now the test bodies via an XCTest shim harness.
+
+Test bodies type-check to EXIT 0 too. I now have comprehensive honest verification. The only non-green steps are `xcodebuild` (iOS/macOS build+test) and the `#Preview` macro plugin — both require full Xcode, which isn't installed. Per the prompt's capability clause that's **STATUS=BLOCKED**. Let me write the gate log with real captured evidence.
+
+Both gate `LINT_EXIT=2` and `FORMAT_EXIT=1` are due to **pre-existing** repo files, not my surface (my 5 files passed targeted checks). Let me pinpoint the swiftformat offender to document it, then append my-files-clean evidence + the real SDK typechecks + footer.
+
+Confirmed: both gate failures are **pre-existing** files (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`), not my surface. Let me append the targeted my-files-clean evidence, the real SDK typecheck results, and the footer.
+
+All surface-scoped checks are GREEN. Now the footer with the exit summary and BLOCKED status.
+
+Log complete, ending `EXIT=1` / `STATUS=BLOCKED` (covenant #10). Let me clean up the throwaway harness, verify git status shows only my allowed files, and update todos.
+
+Critical: the working tree has **pre-existing unrelated modifications** (`AIUsageCard.*`, two `web/*.tsx`) from the shared environment — **not mine**. I'll stage **only** my allowed files (the 6 surface files + the log) and commit just those, leaving the unrelated changes untouched.
+
+Index contains exactly my 7 files; the unrelated pre-existing changes remain unstaged. Committing now.
+
+Committed cleanly — only my 7 files (1092 insertions), unrelated changes untouched. Final sanity check on the working tree and committed content.
+
+The filtered grep returned empty (exit 1) — meaning every remaining working-tree change is one of the unrelated pre-existing files. Let me confirm the counts explicitly (the `&&` chain short-circuited).
+
+Everything is clean and isolated: all 6 surface files + the log are committed; the 9 unrelated pre-existing working-tree changes were left untouched (not my scope). All todos done.
+
+## Summary
+
+I delivered a complete, production-grade native Apple (SwiftUI) **`GuardedLink`** shared surface at parity with `web/src/components/feedback/GuardedLink.tsx`, committed as 7 files (1092 insertions) following the repo's established surface conventions:
+
+| File | Role |
+|---|---|
+| `GuardedLink.Model.swift` | i18n facade (P1/S10), navigator + navigation-guard + telemetry seams (P1/S8 / P1/S11), value types, `@Observable @MainActor` model, in-memory doubles |
+| `GuardedLink.Views.swift` | shared button core hosting the `.confirmationDialog` + the label primitive |
+| `GuardedLink.swift` | `GuardedLink` + `GuardedNavLink` public surfaces |
+| `GuardedLink.strings` | table "GuardedLink" (web provider keys mapped 1:1) |
+| `GuardedLink.Previews.swift` | 7 per-state previews |
+| `GuardedLink.Tests.swift` | XCTest: guard-policy truth table, confirm copy, full model wiring, `view.opened` telemetry, a11y |
+
+**Parity:** reproduces every real web branch — `ready`, `confirming` (Unsaved-changes dialog), `disabled`, plus the `shouldSkipGuard` bypass (modifier/external). The web source has no data fetch, so the leaf data-freshness states (loading/empty/error/stale/offline) have no branch to reproduce — documented, not fabricated (covenant #2/#5).
+
+**Verification — every runnable check GREEN** on this runner:
+- swiftformat `--lint` 0/5 · swiftlint `--strict` (repo rules) 0 violations · placeholder gate COUNT=0
+- `swiftc -parse` 5/5 · **real `swiftc -typecheck` against the macOS SDK + real design tokens**: runtime EXIT 0, preview bodies EXIT 0, test bodies EXIT 0
+
+**STATUS=BLOCKED (honest):** the gate's `xcodebuild` iOS-Simulator + macOS build/test steps (and `#Preview`/XCTest macro plugins) require **full Xcode**, which is not installed here (Command Line Tools only). This is exactly the prompt's capability-clause scenario. The log at `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0122-GuardedLink.log` records the full evidence and ends `EXIT=1` / `STATUS=BLOCKED` (covenant #10). The two gate failures otherwise observed (`LINT_EXIT=2`, `FORMAT_EXIT=1`) are pre-existing repo files outside this surface, not mine.
+
+Re-running the gate on an Xcode-equipped runner is required to green the IOS/MAC build+test steps.
+

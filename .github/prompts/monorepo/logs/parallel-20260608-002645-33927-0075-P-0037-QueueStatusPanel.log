@@ -1,0 +1,162 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+I have the web spec. The toolchain is available. There's an existing `AIUsageCard` feature view I can use as the reference pattern. Let me study it and the supporting infrastructure.
+
+Excellent — this is a rich, well-established 7-file pattern. Let me read the rest of the reference and the supporting web infrastructure.
+
+Let me find the shared infrastructure and verify the build setup before writing code.
+
+No Xcode project at shallow depth, and there's a separate `AiUsageCard.Chrome.swift`. Let me locate the project/build setup and design tokens.
+
+Uses XcodeGen (`project.yml`). Let me read the build config, the chrome views, tests, and check tooling availability.
+
+All tooling is present. Now let me understand the test wiring and the available design tokens/shared components.
+
+Critical detail: the `*.Tests.swift` uses `@testable import TeslaSync` but sits in the app target's source path. Let me understand how tests and previews are wired into the right targets.
+
+Let me investigate the build prerequisites: the Shared.xcframework, build scripts, and simulator availability.
+
+`xcodebuild` is bound to CommandLineTools, not full Xcode, and no iOS simulators exist. Let me check whether a full Xcode is installed anywhere and whether the KMP toolchain is present.
+
+Full Xcode IS installed at `/Applications/Xcode.app` — just not selected. Java 17 and gradlew are present too. Let me verify Xcode works via `DEVELOPER_DIR` and check simulators.
+
+Xcode 26.5 works with `DEVELOPER_DIR`, iPhone 16 simulator is booted, iOS 26.5 runtime present. The build is feasible. Now let me read the web supporting code to faithfully reproduce data/formatting, and generate the Xcode project to inspect target membership.
+
+Now let me read all the web supporting files in parallel to capture exact data shapes and formatting logic.
+
+Let me read the formatting helpers and Typography, and locate the design token definitions.
+
+Now I have all the formatting logic. Let me locate and read the design tokens and shared SwiftUI primitives I'll bind to.
+
+Wrong path for Tokens. Let me read the correct token file and the shared primitives I'll use (motion, skeleton, button, metric bar peer).
+
+I have the full token system. Let me read the remaining shared primitives I'll compose with: TSTone, TSButton, TSSkeleton/Spinner, TSFadeIn, TSCard/GlassPanel, and feedback components.
+
+Let me read the last shared primitives and generate the Xcode project to settle how `*.Tests.swift`/`*.Previews.swift` files in `feature-views/` get assigned to targets.
+
+Now let me settle the test-target wiring empirically by generating the project and inspecting target membership, plus survey the canonical feature-view file layout.
+
+Path correction — `feature-views` is under `TeslaSync/`. Let me redo the survey and generate the project.
+
+All 170 feature views use co-located `.Tests.swift` with `@testable import`. Let me generate the project and inspect exactly which target these files compile into — this is the key to a green build.
+
+Project generated. Now the definitive check — which target compiles the co-located `*.Tests.swift` files?
+
+The pbxproj uses `AiUsageCard` casing. Let me trace the exact target membership with correct casing.
+
+My parser mis-mapped targets. Let me use a robust block-based parser to get the true membership.
+
+The app targets DO compile the co-located `*.Tests.swift`. Let me verify the committed convention (imports) by reading an unmodified feature view's test + main file.
+
+All 170 committed feature-view tests use `@testable import TeslaSync` and compile into the app target — this is the seeded convention I must match. The KMP `Shared.xcframework` build is the long pole for the xcodebuild gate, so let me start it in the background now while I write code.
+
+`AcDcStatsPanel` is the canonical committed "Panel" (uses `TSGlassPanel`) — the ideal template for `QueueStatusPanel`. Let me read its Model, Adapter, Views, Previews, and Tests to match conventions exactly.
+
+This gives me the complete canonical template. Let me read the remaining three reference files (Adapter, Previews, strings) to lock conventions, then start building.
+
+I have the complete canonical template. Let me check the web i18n catalog for the real `queueStatus.severity.*` display values and check the KMP build progress.
+
+KMP build is running. Let me read the web i18n values for the queueStatus block.
+
+Real severity values confirmed: ok→"Healthy", warn→"Lagging", critical→"Stale", down→"Down". Let me verify the global decimal-precision default the web counts use, then I'll start building.
+
+Confirmed: web counts render via `fmtNumber` at the global precision (default **2**). I now have everything. Let me set up tracking and write the plan, then build the 7 files.
+
+Now I'll create the **Adapter** (pure projection core) first.
+
+Now the **Model** (state-holder seam, projection, telemetry, i18n facade).
+
+Let me check the KMP build progress, then write the **Views**.
+
+KMP build still running (downloading toolchain). Let me continue building — writing the **Views**.
+
+KMP build finished — let me confirm it succeeded.
+
+KMP `Shared.xcframework` built and staged successfully (9m) — the xcodebuild gate is now feasible. Let me write the **main surface**.
+
+Now the **strings** catalog (every key my Swift resolves, with web English values).
+
+Now the **Previews** (every state).
+
+Now the **Tests** (adapter, projection, model wiring, accessibility).
+
+All 7 files written. Let me regenerate the project (to include them) and lint my files against the repo's swiftformat/swiftlint configs.
+
+Key gate configs noted (swiftformat maxwidth 120, `--self remove`, before-first wrapping; swiftlint `--strict` turns warnings into errors). Let me auto-format my files, then verify, and regenerate the project.
+
+swiftformat reformatted 2 files. Let me confirm my files are now format-clean and lint-clean.
+
+swiftformat is clean; swiftlint found 5 fixable issues: 2 long lines, 1 multiple-trailing-closure, and 2 file-length violations (Model 499, Tests 406). I'll wrap the long strings, fix the closure, and split Projection + Model-tests into their own `QueueStatusPanel.*` files (the established `.Projection.swift`/`.ModelTests.swift` pattern). Let me view the exact regions.
+
+Let me fix the long strings and the closure issue.
+
+Now I'll split the two over-long files. Let me find the exact boundaries in Model.swift and Tests.swift.
+
+Model.swift Projection spans lines 199–357; Tests.swift Model-tests span 292–406. Let me view the exact cut boundaries before splitting.
+
+Let me view the tail of Tests.swift to get exact boundaries for the split.
+
+Now I'll split Projection out of Model.swift and Model-tests out of Tests.swift (the established `.Projection.swift` / `.ModelTests.swift` pattern) using a precise script.
+
+All files now under 400 lines. Let me auto-format and re-lint all 8 Swift files, and sanity-check the split boundaries.
+
+swiftformat **0/8 require formatting** and swiftlint --strict **0 violations**. Now regenerate the project (to register the 2 new files) and run the iOS build+test.
+
+All 9 files registered. Let me start the iOS build+test (long pole) in the background, and meanwhile check the whole-project format/lint baseline.
+
+Whole-project `swiftformat --lint` flags one **pre-existing** violation in `ActionBuilder.Previews.swift` (a different surface, outside my allowed files). Let me confirm it's pre-existing and check the iOS build progress + full swiftlint baseline.
+
+Critical finding: `@testable import TeslaSync` in the app target is **tolerated** (just a warning), but `import XCTest` in the co-located `.Tests.swift` files **fails in the app target** (`AIRestorePanel.Tests.swift: Unable to resolve module dependency: 'XCTest'`). This is a repo-wide seed defect affecting all 170 surfaces. Let me analyze the full log to confirm the build sequence and whether my files compiled cleanly.
+
+Confirmed: `** BUILD FAILED **` — the app target itself can't compile because project.yml routes all 170 feature-view `*.Tests.swift` (which `import XCTest`) into the **app** target, which can't resolve XCTest. The first failure is in `AIRestorePanel.Tests.swift` (not mine), proving this is a pre-existing, repo-wide seed defect outside my allowed files.
+
+Let me (1) verify my production code compiles by building the app with test files excluded, and (2) check the swiftlint baseline.
+
+Whole-project swiftlint has 1 violation across 1917 files. Let me identify it (to confirm it's pre-existing, not mine).
+
+Both lint defects are pre-existing and in other surfaces' files: `ActionBuilder.Previews.swift` (swiftformat) and `LifetimeStatsWidget.Adapter.swift` (swiftlint) — neither is mine. Let me wait for the test-excluded app build to confirm my production code compiles.
+
+Even with tests excluded, the app build hits **more pre-existing seed defects** — duplicate/ambiguous `DashboardWidgetSize`/`DashboardWidgetRegistration` declarations in `dashboard-widgets/*` (again, not my files). The app target has multiple pre-existing compile blockers unrelated to my surface.
+
+Let me verify MY logic directly by compiling and running my real Adapter + Model + Projection with `swiftc` against a focused test harness.
+
+Now compile and run the harness against my real source files.
+
+Top-level code needs to be in `main.swift` when compiling multiple files. Let me rename and recompile.
+
+**My real Adapter + Model + Projection compile cleanly and all 38 logic assertions PASS** — strong proof the core surface logic is correct and parity-faithful. Now let me syntax-check the SwiftUI view files and confirm the dashboard-widgets blocker is pre-existing and not mine.
+
+Confirmed pre-existing seed defects, none in my files: my 3 SwiftUI files **parse cleanly**, while `DashboardWidgetSize` is redeclared in **10+ committed dashboard-widget files** (a pervasive pre-existing duplicate-declaration defect that prevents the app target from ever compiling). 
+
+Let me run the placeholder check on my surface, scan for forbidden tokens, and start the macOS gate (to capture its real exit).
+
+Two of my comments contain the word "stub" (used in the negative — "No stub drawer is shipped"), which the placeholder gate may flag mechanically. Let me check the exact forbidden patterns and the `-Path` semantics.
+
+"stub" is only a C#-pattern (not Swift/common), so my `.swift` files won't be flagged — but I'll reword the two comments to drop the word entirely for clarity. First let me confirm the `-Path` resolution behavior for a non-directory path.
+
+The placeholder checker is **case-insensitive substring** matching, and a non-existent `-Path` returns clean (vacuous pass). "stub" is C#-only so my `.swift` files are unaffected — but I'll reword anyway and verify against the real patterns. First, the macOS gate completed — let me read it.
+
+The macOS gate fails on **code-signing** (no development certificate in this environment) — another pre-existing/environment blocker, not my code. Every whole-project gate step is blocked by pre-existing seed defects or environment limits, none in my files.
+
+Let me reword the two "stub" comments (clarity), then verify my surface against the real placeholder patterns.
+
+Now re-verify my files (format + lint) after the reword, and run the placeholder gate against my actual files via a temp copy.
+
+My surface is fully verified: swiftformat clean, swiftlint --strict clean, placeholder check clean (COUNT=0), logic 38/38, SwiftUI parse-clean. Every whole-project gate step is blocked by pre-existing/out-of-scope issues. Let me now assemble the authentic gate log.
+
+Section A is authentic. Let me append the macOS signing evidence, the blocked-analysis (Section B), and the live surface-verification (Section C) with the final EXIT/STATUS.
+
+Now append the logic-test (C4), SwiftUI parse-check (C5), and the final EXIT/STATUS footer.
+
+Let me review the complete log to ensure it's coherent and the verification captured correctly.
+
+The log is authentic and comprehensive. Let me correct the assertion count (42, not 38) for accuracy, then commit.
+
+Both corrected. Now let me verify exactly which files will be committed (only my 9 + the log) and commit.
+
+All 9 surface files + the log are new; the generated `.xcodeproj` and `Shared.xcframework` are correctly gitignored. Committing now.
+
+Committed cleanly — 10 files (9 surface + log), 2041 insertions, nothing extraneous. Let me finalize the todos and clean up temp artifacts.
+
+All work is complete and committed. Let me provide the final summary.
+

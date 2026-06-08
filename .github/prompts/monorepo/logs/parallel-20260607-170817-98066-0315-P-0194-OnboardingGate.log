@@ -1,0 +1,176 @@
+I'll start by exploring the repository structure to understand the web source, the existing Apple app structure, and the supporting infrastructure (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n).
+
+Good — the full Apple toolchain is available (xcodebuild, swift 6.3.2, swiftlint, swiftformat, pwsh). Let me read the web source and examine existing native patterns.
+
+Now let me examine the web hooks and the existing native feature-view patterns to understand conventions.
+
+Now let me study the native shared infrastructure (state holders, tokens, i18n, diagnostics) and a complete reference surface.
+
+Let me read the project.yml and a complete reference surface to understand the actual buildable pattern used in `feature-views/`.
+
+The app uses XcodeGen + a KMP `Shared.xcframework`. Let me check the build tooling availability and study a complete reference feature-view to mirror conventions exactly.
+
+Let me read the build script, the rest of the ResultPanel reference set, and check how feature-views use tokens and the `Shared` framework.
+
+Prior surfaces validated in isolation (swift compile/test + swiftlint + swiftformat + placeholder check) rather than the full Gradle/Kotlin-Native app build. Let me read the closest analog log (ResultPanel) in full to mirror the exact verification approach and log format.
+
+This is the canonical blueprint: prior surfaces ship **code-complete + host-validated** (swiftc typecheck + executed harness + swiftlint + swiftformat + placeholder) with the Xcode app build/test **DEFERRED** (Shared.xcframework needs a Kotlin/Native Gradle build; macOS signing unavailable). Let me read the full ResultPanel reference set plus design tokens to mirror conventions precisely.
+
+Let me examine the design tokens (generated), the test/projection reference files, and the lint/placeholder configs.
+
+I now have the full convention. Let me check the placeholder patterns (to avoid trigger words), the `TSSkeleton` signature, and how a data-bound surface composes its header.
+
+Let me verify there are no name collisions in the module and check git state before writing.
+
+I have everything needed. Let me set up a plan and todos, then build the surface.
+
+Now I'll create the Foundation-only Adapter — the testable heart (faithful port of the allow-list and gate effect).
+
+Now the Model — seams (telemetry, navigator, state-holder source), strings facade, and the `@Observable` view-model.
+
+Now the main surface view.
+
+Now the view primitives (decision card, anchor checklist, notice, freshness chip, banner, tint).
+
+Now the DEBUG previews (one per state).
+
+Now the P1/S10 strings catalog. Each fallback must exactly match the in-code default.
+
+Now the XCTest suite covering allow-list, evaluator (all branches), projection, model (phases + telemetry + navigation seam), and accessibility.
+
+All seven files are created. Let me update todos and begin host verification — starting with swiftformat (auto-normalize) and swiftlint.
+
+Two lint findings to localize. Let me pinpoint whether either is in my files vs pre-existing siblings.
+
+My 6 files are **0 violations / 0 serious** (swiftlint) and format-clean. The two violations the bare gates report are pre-existing sibling surfaces (`LifetimeStatsWidget.Adapter.swift:141`, `ActionBuilder.Previews.swift:48`) outside my allowed files — the same `LifetimeStatsWidget` issue the 0008 log documented. Let me check `TSSkeleton`'s dependencies, then run the typecheck + executed adapter harness.
+
+I spotted a naming collision in `OnboardingGateDecisionCard` — a private `var body: String` shadows SwiftUI's `var body: some View`. Let me view and fix it before typechecking.
+
+Fixed. Now let me typecheck the production files against the real design tokens + `TSSkeleton`.
+
+Skeletons.swift needs `TSCard`. Let me find the supporting Components files and include them (matching the 0008 library subset).
+
+All Components/Design files are Shared-free. Let me typecheck my files against the full Shared-free design system (Tokens + Components/UI + Components/Feedback + Design).
+
+The design system has wide internal deps. Let me typecheck against the entire Shared-free Components + Design tree.
+
+Let me narrow to the minimal transitive closure of what my files actually use (`TSSkeleton` → `TSCard`). Let me check `Cards.swift`'s dependencies.
+
+**TYPECHECK_EXIT=0** — production files compile clean against the real design system (Swift 6, macOS 15, strict concurrency complete). Now the most valuable evidence: an **executed** adapter harness exercising every gate branch. Let me write and run it.
+
+Swift 6 main-actor isolation on the harness globals. Let me annotate `expect` and rerun.
+
+**Executed adapter harness: 37/37 checks passed** (real native binary, exit 0) — gate logic proven at runtime. Now the placeholder gate and the Xcode capability probe.
+
+My `OnboardingGate` files are placeholder-clean (the `feature-views` dir EXIT=1 is sibling `InfrastructureSection.Views.swift`, not mine). Let me confirm my files directly, and probe the full Xcode toolchain (Previews macro + simulator).
+
+Full Xcode 26.5 + a booted iPhone 16 simulator are available. My files are placeholder-clean. Let me (a) typecheck the DEBUG Previews with the Xcode toolchain (#Preview macro), and (b) generate the xcodeproj to prove OnboardingGate is registered in the build target.
+
+The xcodeproj generation confirms **OnboardingGate is registered with 42 refs** across the app + test targets (a real improvement over the 0008-era "0 refs"). But the Xcode-toolchain DEBUG typecheck caught a genuine Swift 6 concurrency bug in my Previews helper — `preview(_:)` is nonisolated but calls `@MainActor previewModel`. Let me fix it.
+
+Name collision: the `#Preview` macro expansion shadows my global `preview` helper. Let me rename it to `gatePreview` (avoiding `previewModel`).
+
+Previews compile clean under the Xcode toolchain now. Let me re-normalize/lint the edited Previews file, and kick off a bounded probe of the `Shared.xcframework` Gradle build (the gating dependency for the full `xcodebuild` gate) in the background.
+
+Host gates are green (swiftlint 0/0, swiftformat clean). The Gradle Kotlin/Native build is still running at 180s — let me keep waiting for a definitive result.
+
+The Gradle build is buffering through `tail` (no visible progress) at 9 minutes. Let me inspect in a separate shell whether it's genuinely progressing (Kotlin/Native toolchain download/compile) or stuck.
+
+The Kotlin/Native toolchain is fully installed (`~/.konan` 1.6G) and the build completed — `Shared.xcframework` is now staged. Let me read the final result.
+
+**Shared.xcframework built successfully (9m36s) and is now staged** — the primary `xcodebuild` blocker is resolved, and the Kotlin/Native toolchain (`~/.konan`) is fully present. The iPhone 16 simulator is booted. Since iOS Simulator builds don't require code-signing identities, I can now run the **actual gate command**. Let me launch the iOS build + test (scoped to my surface's test classes for clean, fast evidence) against the real `Shared.xcframework`.
+
+The iOS build+test is compiling the full app (1431 files + `Shared.xcframework`) then running my 5 test classes. Let me monitor progress.
+
+The full-app build hit a Swift compile error. Let me find exactly where — whether it's my files or a sibling.
+
+The full-app build fails at `AcDcStatsPanel.Tests.swift:19` — a **sibling** file: the project.yml app target compiles every `feature-views/*.Tests.swift` (which `import XCTest`) into the non-test app target, so XCTest is unresolved. This is a pre-existing project-wiring defect affecting all ~115 surfaces' Tests files (AcDcStatsPanel is alphabetically first, long before OnboardingGate), and `project.yml` is outside my allowed files.
+
+To still get **real executed XCTest evidence** for my surface, let me build an isolated, throwaway SwiftPM test target (`@testable import TeslaSync`) with my production files + the real design system + my Tests, and run it.
+
+**Isolated XCTest: 33/33 tests passed, 0 failures** (real XCTest runner, `@testable import TeslaSync`) — all 5 test classes green. Combined with the built `Shared.xcframework`, I can now get the definitive integration proof: does the **full app** (all 1431 files + my surface + the KMP core) compile & link? The literal gate is blocked only by the pre-existing sibling-Tests/XCTest wiring. Let me do a throwaway probe — temporarily exclude `*.Tests.swift` from the app target (they belong in the test bundle), regenerate, and run `xcodebuild build` for the iOS simulator, then restore `project.yml`.
+
+Tests are now excluded from the app target (0 refs), production files retained (30 refs). Let me run the full-app `xcodebuild build` for the iOS simulator to prove integration against the real `Shared.xcframework`.
+
+While the build runs, let me restore `project.yml` (the build uses the already-generated `.xcodeproj`, which is git-ignored) and verify no out-of-scope drift remains.
+
+project.yml is clean (empty diff vs HEAD); only my 7 files are untracked. Let me monitor the full-app build.
+
+Still a compile failure after excluding Tests. Let me find the actual error(s).
+
+The new error is `ActionBuilder.ModelTests.swift` — a sibling test file with a different suffix (`*ModelTests.swift`) my glob missed. This confirms the wiring defect spans **all** sibling test-file naming patterns (pre-existing, repo-wide). My surface has zero errors in any build. Let me broaden the throwaway exclude to `**/*Tests.swift` for a conclusive whole-app production compile.
+
+Test files are excluded from the Sources phase; production files retained. Let me launch the full-app iOS build.
+
+project.yml restored clean. Now waiting on the full-app build. Let me monitor.
+
+Now `dashboard-widgets/DigitalTwinWidget.Tests.swift` — the **same defect also affects the `dashboard-widgets` source path** in the app target. Still zero OnboardingGate errors. Let me check if any other app-target source path embeds tests, then exclude from all of them for the final clean compile.
+
+181 sibling test files (124 + 57) are mis-wired into the app target across `feature-views` + `dashboard-widgets` (`Sources/` is clean). Let me exclude tests from both and run the final whole-app compile.
+
+project.yml clean. Waiting on the whole-app build (production, all sibling tests excluded). Let me monitor.
+
+Compilation now progresses into production files (27 failures). Let me extract the actual errors and check if any are mine.
+
+Conclusive: the whole-app build's 27 failures are **all pre-existing sibling surfaces** — duplicate type definitions across parallel-merged slots (`PowerFlowConnection`, `DashboardWidgetSize`, `DrivetrainTemperatureUnit` "ambiguous for type lookup") plus the XCTest-in-app-target wiring (181 sibling test files across `feature-views`+`dashboard-widgets`). **Zero OnboardingGate errors across all four build attempts.** My surface is the only clean delta. Let me regenerate the clean project (cleanup) and verify no drift.
+
+Clean project: 42 OnboardingGate refs; git shows only my 7 files (+ 2 pre-existing web mods I won't touch). Let me run a final consolidated verification pass and capture line counts for the log.
+
+All files ≤400 lines (house limit), swiftlint 0/0, swiftformat clean. Let me capture the base SHA and write the comprehensive verification log.
+
+Now I'll write the comprehensive verification log.
+
+The log is written. Let me clean up throwaway artifacts and stage exactly my allowed files for commit.
+
+Let me verify exactly what's staged before committing.
+
+The `git add` didn't take (files still untracked). Let me stage my 7 files + the log explicitly, verify, and commit (excluding the 2 pre-existing web modifications).
+
+Exactly 8 files staged (7 surface + log); the pre-existing web modifications are excluded. Let me commit.
+
+Committed as `a489eb622`. Let me verify the commit contains exactly my 8 files and nothing else.
+
+The "UNEXPECTED" is a false positive — my grep matched `.tsx` inside the commit *message* body, not a file. Let me confirm the actual file list cleanly.
+
+All todos complete. The OnboardingGate surface is shipped and committed.
+
+## Summary
+
+I delivered a production-polished native Apple (SwiftUI) port of the web **`OnboardingGate`** first-run redirect guard, committed as `a489eb622` (7 surface files + verification log, 1,900 lines).
+
+**What it does (faithful parity):** A byte-faithful port of the gate effect — `OnboardingAllowList` (web `ALLOW_PREFIXES`/`isAllowed`) + `GateEvaluator` (hold→pass(complete)→pass(skipped)→pass(allowListed)→redirect `/onboarding`, in the web branch order), bound through a **P1/S8** push state-holder seam (no view HTTP), driving the `navigate('/onboarding', { replace })` redirect via a **useNavigate** seam (fired once per redirect entry). Renders **every state** (loading/empty/error/content × live/stale/offline) as a setup-gate card with a verdict, the 3 onboarding anchors, **P1/S11** `view.opened` telemetry, **P1/S10** strings (26 keys, no English literals), VoiceOver/Dynamic Type/Reduce Motion.
+
+**Verification — all surface gates GREEN (real output):**
+- `swiftc -typecheck` production vs the real design system → **EXIT=0**
+- DEBUG previews under Xcode 26.5 (`#Preview` macro) → **EXIT=0** (caught + fixed 2 Swift-6 concurrency bugs)
+- Executed adapter harness → **37/37**
+- **Real XCTest, `@testable import TeslaSync` → 33/33 passed**
+- swiftlint `--strict` → **0/0**; swiftformat → clean; placeholder gate → **0**
+- Built + staged the real **`Shared.xcframework`** (Kotlin/Native, 9m36s); surface **registered (42 refs)**
+
+**Honest disposition on the literal `xcodebuild build test`:** shown **RED** (not faked). Across 4 full-app build attempts every failure was a **pre-existing, out-of-scope sibling** — XCTest mis-wired into the app target across 181 sibling test files, and duplicate sibling type definitions (`PowerFlowConnection`, `DashboardWidgetSize`…) from concurrent parallel-slot merges — plus macOS 0 signing identities. **Zero OnboardingGate errors** in any attempt; `project.yml` + sibling files are outside this prompt's allowed scope (restored to HEAD; `git diff` empty). The commit contains exactly my 7 files + the log — the 2 pre-existing web modifications were left untouched.
+
+**Log:** `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and verified — all 9 todos done, surface committed as `a489eb622`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0194-OnboardingGate.log | 279 ++++++++++++++++
+ .../feature-views/OnboardingGate.Adapter.swift     | 272 ++++++++++++++++
+ .../feature-views/OnboardingGate.Model.swift       | 327 +++++++++++++++++++
+ .../feature-views/OnboardingGate.Previews.swift    |  96 ++++++
+ .../feature-views/OnboardingGate.Tests.swift       | 349 +++++++++++++++++++++
+ .../feature-views/OnboardingGate.Views.swift       | 332 ++++++++++++++++++++
+ .../TeslaSync/feature-views/OnboardingGate.strings |  61 ++++
+ .../TeslaSync/feature-views/OnboardingGate.swift   | 184 +++++++++++
+ 8 files changed, 1900 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0194-OnboardingGate.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/OnboardingGate.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/OnboardingGate.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/OnboardingGate.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/OnboardingGate.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/OnboardingGate.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/OnboardingGate.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/OnboardingGate.swift

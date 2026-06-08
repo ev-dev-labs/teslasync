@@ -1,0 +1,44 @@
+I'll start by exploring the repository structure and the web source that serves as the specification.
+
+The web source is straightforward — a metrics grid showing charging telemetry. The Apple toolchain is available. Let me explore the existing `apps/apple` structure to understand the patterns, P4 core, and P1 state holders.
+
+There's a large existing structure with established patterns. Feature views use a multi-file pattern (`.Adapter`, `.Model`, `.Previews`, `.strings`). Let me examine a complete sibling example and check if my target already exists.
+
+`ChargingDetailSection`, `AcDcStatsPanel`, and `TimeToChargeSection` are close analogs. Let me read a complete sibling end-to-end to learn the exact native architecture, state-holder binding, tokens, i18n, and telemetry conventions.
+
+Now I understand the multi-file architecture. Let me read the remaining reference files and find the shared P4 core (tokens, glass panel) plus the units helper used by siblings.
+
+Let me read the Tests reference and locate the shared P4 core components plus the units helper that siblings use.
+
+Excellent — I now fully understand the established pattern. Let me locate the shared components I'll need (GlassPanel, MetricCard, tokens, FadeIn) and the units helper that handles `formatDistance`/`formatSpeed`.
+
+Let me read the units facade, unit formatters, MetricCard, GlassPanel, and a sibling that uses units to learn the exact APIs.
+
+Now let me read the web number formatter and MetricCard, plus the native MetricCard, GlassPanel, tokens, and a sibling that uses units (ChargingSection) to see how unit prefs flow through.
+
+Now let me get the `ChargingTelemetry` type, the GlassPanel/Card/IconBox shared components, the color/font/spacing tokens, and see how a units-using sibling wires `UnitPreferences`.
+
+Tokens are generated in `apps/design/generated/apple`. Let me read them to know the exact available color/font/spacing names.
+
+I have the full token palette. Let me read the card/icon/typography/feedback/motion primitives, the web neon color map, and how a units-consuming sibling threads `UnitPreferences`.
+
+Now I have exact color mappings (green→chartSeriesBattery #10b981, cyan→chartSeriesRegen, purple→chartSeriesPower). Let me read the Feedback states, Motion, and how a units-consuming sibling threads `UnitPreferences`.
+
+Let me see how a units-consuming sibling (`ChargingSection`) threads `UnitPreferences` through its model/adapter/view, to follow the established convention.
+
+I have all the shared APIs I need. The canonical units pattern (from `DrivingTab`) carries `UnitPreferences` in the input snapshot and formats in the projection. Now let me verify the build prerequisites — whether the Xcode project can even be generated/built on this runner (xcodegen, the KMP `Shared` framework, schemes).
+
+Important finding: the KMP `Shared.xcframework` is consumed as a dependency but `Frameworks/` only has `.gitkeep`. Let me check how it's produced and whether it can be built on this runner.
+
+The `Shared.xcframework` is built via `Scripts/build-shared-xcframework.sh` (a KMP/Gradle preBuild step). Let me read it and check simulator + JDK availability to assess whether the gate can actually run.
+
+Decisive finding: `xcodebuild` reports only Command Line Tools are active (no full Xcode), and there are **no iOS Simulator runtimes**. Before concluding, let me verify whether a full `Xcode.app` exists anywhere that I could point `DEVELOPER_DIR` at.
+
+A full `/Applications/Xcode.app` exists — `xcode-select` just points to CLT. I can use `DEVELOPER_DIR` to access it. Let me verify `xcodebuild` works and check for iOS simulator runtimes and an iPhone 16 device.
+
+A full Xcode 26.5 with an iPhone 16 simulator (iOS 26.5 runtime) is available via `DEVELOPER_DIR`. The gate may be runnable. Let me read the lint/format configs and the placeholder checker so my code conforms, then write the surface.
+
+I have all the patterns and constraints. Let me read the typography components I'll reuse, then write a plan and start building.
+
+All conventions confirmed. Let me verify the `UnitPreferences` presets exist, then write the plan and build the surface.
+

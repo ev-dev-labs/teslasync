@@ -1,0 +1,134 @@
+I'll start by understanding the environment and the task requirements. Let me explore the repository structure and check tool availability.
+
+Swift, swiftlint, and swiftformat are available. `xcodebuild -version` failed — let me investigate the Xcode situation and the Apple app structure.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed, and `simctl` (iOS Simulator) is unavailable. Swift 6.3.2 compiler, swiftlint, and swiftformat ARE available. Let me read the web source spec and explore the existing Apple app conventions before deciding the approach.
+
+pwsh and check-placeholders.ps1 are available. Let me examine the project structure, conventions, and the P1/S8-S11 layers (state holders, tokens, i18n, diagnostics) in depth.
+
+Let me reconcile the prompt's output path with the actual `Sources/` convention, and find how dashboard widgets/feature surfaces are organized. I'll check git history for sibling widgets and search for any existing Dashboard surfaces.
+
+No dashboard widgets exist yet — this is the first batch. The prompt's literal path `apps/apple/TeslaSync/dashboard-widgets/` wouldn't be in the build target (only `Sources/` is). Let me check the parity conventions and Apple README to determine the canonical native location.
+
+This is the first dashboard widget — I'm establishing the convention. Let me read the parity manifest mapping, the P1/S8 state-holder layer, the i18n facade, diagnostics contract, and the web data hooks in parallel.
+
+Now let me study the binding patterns: AppContainer (what state holders exist), a real data-bound view (Live), the i18n facade, diagnostics contract, and the shared components I'll need (Feedback states, DataDisplay, Design tokens).
+
+Let me read the i18n approach, diagnostics contract, a representative state-bound Live view, and the shared Feedback/DataDisplay components I'll reuse.
+
+Components use SwiftUI `LocalizedStringKey` for i18n (resolved against `Localizable.xcstrings`). Let me find the P1/S11 diagnostics contract, the i18n catalog format, and a real state-bound view template (the one existing domain facade + a Live view).
+
+The diagnostics (P1/S11) and state holders (P1/S8) live in the KMP shared core (`Shared.xcframework`). Let me read the diagnostics/telemetry contract, confirm which presentation state holders exist (audit/security/vehicles), and read the i18n catalog + a full state-rendering view template.
+
+Telemetry maps to the frozen `TelemetryEvent.ScreenView` taxonomy (no arbitrary events). State holders exist for `admin`, `vehicles`, `system`, `dashboard`. Let me read the web hooks/data shapes, check the i18n catalog for existing widget keys, and find the shared-core store names + how Telemetry is accessed.
+
+The i18n keys already exist in the P1/S10 catalog as `translation.widget.audit*`. Let me confirm the key format/value, how Swift references `translation.*` keys, the exact web data types, and the shared-core admin/vehicles store names.
+
+The i18n keys exist as `translation.widget.audit*`. Let me confirm the Swift key-reference convention (do existing keys use a `translation.` prefix?), read the exact web data types, the shared-core admin/vehicles stores, and the components I'll compose with (Cards, Badges, DataDisplay).
+
+Key insight: parity keys use the `translation.` prefix in the catalog (e.g. `translation.widget.auditLog`). Let me grab the last references — `AuditLogEntry` type, shared-core admin/vehicles holders, a state-rendering view template, and the components I'll compose with.
+
+Excellent — `LiveStateView` is my state-rendering template. Let me read the `AuditLogEntry` type, the shared-core AdminStore/VehiclesStore APIs, and the composition components (Cards, Badges, DataDisplay, Typography).
+
+I now have the shared-core API (`AdminStore.auditLogs()`, `AdminStore.securityEvents(vehicleId:)`, both `StateFlow<Resource<JsonElement>>`) and the web types. Let me read the final composition components (DataDisplay, Typography, tokens) and the VehiclesStore + Resource Swift surface, then write a plan.
+
+I have what I need. Let me confirm the exact design-token names, then set up a plan and todos.
+
+Design tokens come from the generated DesignTokens. Let me locate the exact token definitions (TSSpacing, Color.TS, Font.TS, TSRadius) so I use correct names.
+
+I have all design tokens. Let me read the lint/format configs, the placeholder-checker, and an existing test to match conventions before writing.
+
+Configs understood (line length err 160, maxwidth 120, must avoid words like "placeholder"/"TODO"/"not implemented" even in comments). Let me verify catalog keys for the non-parity states (loading/error/stale/offline) and confirm the keys shipped components rely on.
+
+I have all i18n keys and design tokens. Let me check the Diagnostics/Telemetry accessor, then write the plan and start implementing.
+
+Let me check the security-title localization keys, then I'll write the plan and implement.
+
+I have everything needed. Let me set up the plan and todos, then implement.
+
+Now writing the pure projection layer (Foundation-only, fully unit-testable):
+
+Now let me verify the exact component APIs I'll compose with (buttons, freshness indicator, badge tones) before writing the view.
+
+Component APIs confirmed. Writing the SwiftUI presentational surface:
+
+Now let me add the JSON decode layer to the projection file (Foundation-only, so it's testable standalone), then write the model.
+
+Now the Shared-coupled facade + container view + telemetry adapter:
+
+Let me verify the AdminStore public refresh API I referenced actually exists.
+
+`AdminStore.refresh()` is internal — there's no public refetch for these feeds. Let me fix `refresh()` to honestly re-collect, make the security mirror task cancellable, and verify `Vehicle.id`.
+
+`Vehicle(val id: Long)` confirmed. Let me fix `refresh()` to use only public API and make the security mirror cancellable.
+
+Now the test files. First the pure, standalone-runnable projection tests:
+
+Now the SwiftUI-layer widget test (verifies descriptor, severity presentation mapping, a11y, and that every state branch builds):
+
+Now let me verify formatting and linting on the new files. Updating todos and running the tools:
+
+Formatting issues are mechanical. Let me auto-format my files, then re-lint to confirm clean:
+
+swiftformat clean. Now swiftlint --strict on the new files:
+
+A few lint violations to fix. Let me inspect the ternary issue and check line counts:
+
+Let me fix the ternary false-positive with a helper, and view the projection sections to split the file under 400 lines:
+
+Now fix the ternary lint false-positive in the view with a helper:
+
+Now split the projection test class to satisfy `type_body_length`. Let me find the boundary:
+
+I'll recreate the test file split into two classes (cleaner than multi-edit). Let me delete and rewrite:
+
+Re-running format + strict lint on all new files:
+
+swiftformat + swiftlint --strict both clean (0 violations). Now the placeholder gate:
+
+Placeholder gate clean. Now let me actually compile + run the pure adapter tests standalone with `swift` to get real green evidence:
+
+The library itself failed to compile (and XCTest isn't available under CLT-only). Let me see the real compile error:
+
+Library compiles clean (BUILD_EXIT=0). XCTest isn't available under CLT-only, so let me run the same adapter logic via a plain executable harness:
+
+Swift 6 actor-isolation on the global counter. Quick fix — mark `check` `@MainActor`:
+
+All 69 adapter checks pass standalone (RUN_EXIT=0). Now let me confirm the gate-level commands (full-tree swiftformat + swiftlint) pass, not just my files:
+
+Gate-level commands pass repo-wide: **swiftformat --lint = 0 errors**, **swiftlint --strict = 0 violations (262 files)**. Now let me generate the honest gate log with real command outputs, capturing both the green runnable checks and the BLOCKED capability evidence.
+
+Let me review the complete log to ensure it's accurate and coherent:
+
+The adapter `ok`/PASS lines didn't capture (BSD `sed` alternation). Let me regenerate the log cleanly with correct output capture:
+
+Let me verify the adapter section captured correctly, then check git status:
+
+The env vars didn't persist across separate shell calls. Let me regenerate the log in a single self-contained command:
+
+Log is accurate with real outputs. Let me do a final review of the two Shared-coupled files (post-format) for correctness, since they can't be compiled here:
+
+Model and view are coherent against the confirmed APIs. Now let me stage and commit the work:
+
+Committed (67845332, 7 files). Let me clean up the temp harness and finalize todos:
+
+The task is complete to the maximum extent the runner allows. Let me do a final confirmation of the committed state:
+
+Done. Committed `67845332` with the complete, production-real AuditLogWidget Apple surface.
+
+## Summary
+
+I built a native SwiftUI parity of `features/dashboard/widgets/AuditLogWidget.tsx` and verified everything the runner allows.
+
+**Implementation (6 files, ~1,884 lines)** under `apps/apple/Sources/Dashboard/Widgets/` + `Tests/Unit/Dashboard/`:
+- **Projection/Support** (pure, Foundation-only): severity inference, security-title precedence, feed projection, 24h stats, ISO timestamp parsing, wire JSON decode, state reducer, registry descriptor (`audit-log`, system, 2×4…4×40), a11y-id map, telemetry seam.
+- **Model** (`@Observable` facade): binds the P1/S8 state holders `AdminStore.auditLogs()` + `securityEvents()` + `VehiclesStore.vehicles()` exactly like `VehicleSettingsModel`; emits P1/S11 `view.opened` via the frozen `TelemetryEvent.ScreenView` taxonomy.
+- **View**: all six states (loading/empty/error/stale/offline/loaded), compact (24h big-number + severity badge) and expanded (event feed) layouts, every web i18n key via the P1/S10 `translation.*` catalog, VoiceOver labels + stable a11y identifiers, previews.
+- **Tests**: adapter unit suite + view/i18n/a11y suite.
+
+**Runnable gate subset — all green:** swiftformat --lint (0), swiftlint --strict (0 violations), check-placeholders.ps1 (0), and a standalone `swift` adapter verification (**69/69** checks) since XCTest needs Xcode.
+
+**Honest BLOCKED status:** the two `xcodebuild` build+test steps cannot execute — the runner has only Command Line Tools (no Xcode.app), no iOS Simulator, and cannot build the KMP `Shared.xcframework`. Per the prompt's capability clause, the log ends `EXIT=1 / STATUS=BLOCKED` with full API evidence. I also disclosed (no silent drift) that the prompt's literal path `apps/apple/TeslaSync/dashboard-widgets/` isn't a source root in `project.yml`, so I placed files in the buildable `Sources/Dashboard/Widgets/`.
+
+
+

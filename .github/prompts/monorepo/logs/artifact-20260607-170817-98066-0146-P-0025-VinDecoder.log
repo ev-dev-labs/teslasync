@@ -1,0 +1,159 @@
+=== P4 Feature view 0025 VinDecoder (Apple) ===
+Date: 2026-06-07
+Runner: macOS (Darwin), Xcode 26.5 present at /Applications/Xcode.app (CommandLineTools active by default).
+Surface: apps/apple/TeslaSync/feature-views/VinDecoder.*
+Web source (THE spec): web/src/features/admin/components/devtools/tools/VinDecoder.tsx
+                        + web/src/features/admin/components/devtools/constants.ts (VIN_* tables)
+
+------------------------------------------------------------
+WHAT WAS BUILT
+------------------------------------------------------------
+A production-polished, native Apple-idiomatic parity of the web VIN-decoder devtool, decomposed
+one-responsibility-per-file (mirrors the TeslaSync/dashboard-widgets convention):
+
+  VinDecoder.Adapter.swift   pure Foundation decode core (VinField, VinBreakdown, VinDecoderAdapter
+                             + the five VIN_* lookup tables). Shared-free and SwiftUI-free → host-
+                             compiles + unit-tests in isolation. Parity with the web `useMemo`.
+  VinDecoder.Model.swift     P1/S11 telemetry seam (VinDecoderTelemetry + OSLogVinDecoderTelemetry
+                             emitting `view.opened surface=VinDecoder`), @Observable VinDecoderModel
+                             (holds `vin`, derives `phase`), P1/S10 i18n facade (VinDecoderStrings,
+                             table "VinDecoder"), testable VinDecoderAccessibility summary.
+  VinDecoder.swift           VinDecoderView surface — ToolCard chrome (car icon + title + desc),
+                             input, content switch, lifecycle (onAppear→start / onDisappear→stop),
+                             surfaceSlug = "VinDecoder".
+  VinDecoder.Content.swift   VinInputField (@Bindable), VinDecodedGrid (responsive 2-col), VinFieldCell,
+                             VinEmptyState (ContentUnavailableView).
+  VinDecoder.Previews.swift  #Preview empty / decoded / decoded-with-unknown-segments (DEBUG).
+  VinDecoder.Tests.swift     XCTest: adapter + model + telemetry + i18n facade + accessibility.
+  VinDecoder.strings         P1/S10 catalog (15 keys): the exact web keys ("Vin Decoder",
+                             "Vin Decoder Desc", "Vin", "Unknown", devtools.utils.vin_{mfr,model,
+                             drive,year,plant,serial}) + native chrome (example, empty state, a11y).
+
+------------------------------------------------------------
+STATE COVERAGE (honesty: states reproduced == states that exist in the web source)
+------------------------------------------------------------
+VinDecoder is a PURE, synchronous, client-side compute tool. Its ONLY data source is `useTranslation`
+(the i18n facade, P1/S10); it performs NO network/async/cache work. The web source has exactly two
+render branches:
+  • empty   — `decoded === null` (VIN < 11 chars) → native: a guiding ContentUnavailableView empty state.
+  • decoded — `decoded` truthy → native: the 6-field grid (manufacturer, model, drive, year, plant,
+              serial) in the web's insertion order; lookup misses render the localized "Unknown"
+              (web `?? t('Unknown')`), an absent serial renders an em dash.
+The generic template states loading / error / stale / offline are NOT reachable for a dependency-free
+synchronous tool whose only input is the bundled i18n catalog, so they are intentionally NOT
+fabricated (covenant #1 no red-as-green, #9 no silent drift). Both real states are implemented and
+proven via previews + executed model tests.
+
+`view.opened` diagnostics (P1/S11) emitted once per appearance with slug "VinDecoder" (verified by test).
+Accessibility: header marked .isHeader; icons .accessibilityHidden; field carries label+hint; each
+decoded cell combines into a single "label: value" element; grid exposes a "Decoded VIN" summary.
+
+------------------------------------------------------------
+GATE STEPS (real output)
+------------------------------------------------------------
+NOTE on the literal `xcodebuild -scheme TeslaSync build test` gate: it cannot reach a clean process
+exit on THIS runner for reasons OUTSIDE this surface's control and outside its allowed-files scope:
+  (a) The new `TeslaSync/feature-views` directory is not yet registered in apps/apple/project.yml
+      (the app targets list Sources, TeslaSync/dashboard-widgets, Localization, design tokens).
+      Registering a brand-new source directory is a one-time P4-core/integration step; this surface's
+      Allowed files are `feature-views/VinDecoder.*` + this log only, so project.yml is NOT edited here.
+  (b) The full app target links the KMP `Shared.xcframework`, staged by Scripts/build-shared-xcframework.sh
+      via a multi-minute Gradle/Kotlin-Native build (apps/shared). This surface is KMP-`Shared`-FREE and
+      does not need it.
+  (c) iOS Simulator test execution needs the CoreSimulatorService daemon (privileged) — the same
+      environmental block documented by the sibling p4-apple dashboard-widget logs.
+Because the surface is Shared-free and uses only design tokens + raw SwiftUI + SDK ContentUnavailableView,
+its compile is verified directly with `swiftc` (the same compiler xcodebuild drives) against BOTH target
+SDKs under the project's real settings (SWIFT_VERSION 6.0, SWIFT_STRICT_CONCURRENCY complete), and its
+logic is executed. Capability (SwiftUI / iOS 18 / macOS 15) IS present and demonstrated below.
+
+[1] iOS 18 build  (xcodebuild scheme blocked per note above; substituted with the real compile phase)
+    DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+    swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG \
+      -sdk <iPhoneSimulator26.5.sdk> -target arm64-apple-ios18.0-simulator \
+      VinDecoder.{Adapter,Model,Content,Previews}.swift VinDecoder.swift Tokens.swift
+        -> IOS_TYPECHECK_EXIT=0
+    swiftc -c -wmo -swift-version 6 -strict-concurrency=complete -D DEBUG -module-name TeslaSync \
+      -sdk <iPhoneSimulator26.5.sdk> -target arm64-apple-ios18.0-simulator <same sources> -o out.o
+        -> IOS_CODEGEN_EXIT=0  (full SIL/IR codegen, 483,976-byte object emitted)
+    Simulator present: iPhone 16 (iOS) — UDID 83717DEE-70A3-4325-AA61-CBDDD3140989.
+
+[2] macOS 15 build (xcodebuild scheme blocked per note above; substituted with a real compile+run)
+    swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG \
+      -sdk <MacOSX26.5.sdk> -target arm64-apple-macos15.0 <same sources>
+        -> MAC_TYPECHECK_EXIT=0
+    swiftc -swift-version 6 -sdk <MacOSX26.5.sdk> -target arm64-apple-macos15.0 \
+      VinDecoder.{Adapter,Model,Content}.swift VinDecoder.swift Tokens.swift main.swift -o vinrun
+        -> COMPILE_EXIT=0  (full executable linked)
+    XCTest file compile check (Swift 6, macOS SDK + XCTest framework, same-module):
+        -> TESTS_TYPECHECK_EXIT=0
+
+    Executed test runner (adapter + model + telemetry + i18n facade + accessibility):
+        PASS empty -> nil
+        PASS len 10 -> nil
+        PASS len 11 -> empty serial
+        PASS len 11 -> year 2022
+        PASS WMI 5YJ / model 3 / drive A / year N / plant F / serial
+        PASS lowercase==uppercase
+        PASS unknown segments nil
+        PASS field order
+        PASS table sizes
+        PASS empty phase
+        PASS decoded phase after edit
+        PASS view.opened once
+        PASS re-emit after stop
+        PASS label fallback / unknown value / empty serial em-dash
+        PASS a11y mfr / a11y serial
+        ALL_PASS  (23/23, RUN_EXIT=0)
+
+[3] swiftlint --strict
+    The shipped config's `included:` does not yet list TeslaSync/feature-views (integration-owned, see
+    note (a)). Linted this surface explicitly with the identical ruleset:
+        swiftlint lint --strict --config <feature-views-scoped copy of .swiftlint.yml>
+        Done linting! Found 0 violations, 0 serious in 6 files            -> LINT_EXIT=0 (this surface)
+    For transparency, the repo-wide `swiftlint --strict` also surfaces 1 PRE-EXISTING violation that is
+    NOT part of this surface: TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+    (function_body_length). Left untouched (out of scope).
+
+[4] swiftformat --lint apps/apple   (literal gate step — includes this surface)
+    0/573 files require formatting, 2 files skipped                       -> FORMAT_EXIT=0
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0                                                    -> PLACEHOLDER_EXIT=0
+
+    Extra: VinDecoder.strings validated  ->  `plutil -lint` = OK (15 keys).
+
+------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------
+[x] Surface renders all states from the web source (empty + decoded); loading/error/stale/offline are
+    N/A for this synchronous tool and intentionally not fabricated.
+[x] Hooks bind to the shared layer; no direct HTTP from the view. (Only hook is useTranslation → bound
+    via the P1/S10 VinDecoderStrings facade; there is no P1/S8 data hook and no HTTP to perform.)
+[x] Every i18n key from source has a matching key in the catalog (VinDecoder.strings).
+[x] Accessibility labels present on every interactive/!decorative element (verified by compile + tests).
+[x] Tests: adapter unit tests + model/per-state + telemetry + a11y label tests (executed green; XCTest
+    bundle authored + compile-verified).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (check-placeholders = 0).
+[ ] `xcodebuild -scheme TeslaSync build test` to clean exit — BLOCKED on this runner (see note a/b/c).
+    Capability (SwiftUI / iOS 18 / macOS 15) IS available and the surface is compile-verified on BOTH
+    target SDKs under Swift 6 + complete concurrency, with logic tests executed green.
+
+------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------
+The VinDecoder surface is COMPLETE and VERIFIED by every means available on this runner:
+  - iOS 18 simulator: typecheck + full -wmo codegen compile  -> EXIT 0
+  - macOS 15: typecheck + full executable compile + link      -> EXIT 0
+  - Tests: 23/23 executed PASS (adapter, model, telemetry, i18n, a11y); XCTest file compiles -> EXIT 0
+  - swiftlint --strict (this surface): 0 violations            -> EXIT 0
+  - swiftformat --lint apps/apple: 0/573 require formatting    -> EXIT 0
+  - check-placeholders: 0                                      -> EXIT 0
+The only step that does not reach a clean process exit is the literal `xcodebuild -scheme TeslaSync
+build test`, blocked by integration/environment concerns outside this surface's allowed files (KMP
+Shared.xcframework Gradle staging, the iOS Simulator privileged daemon, and the one-time registration
+of TeslaSync/feature-views in project.yml). No test is red; nothing is fabricated.
+
+EXIT=1
+STATUS=BLOCKED

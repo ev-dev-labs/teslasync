@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure and reading the key files to understand the task.
+
+Existing atomic skeletons already live in `Components/Feedback/Skeletons.swift` (out of scope per prompt). My task is the higher-level `shared-surfaces/PageSkeleton` surface. Let me study the state-holder, i18n, diagnostics facades and an existing complete surface to follow conventions.
+
+Xcode.app exists. Let me try using `DEVELOPER_DIR` to access the full toolchain without sudo.
+
+Full toolchain is available (Xcode 26.5, xcodegen, iPhone 16 simulator booted). Now let me check the Shared.xcframework dependency and build script.
+
+`Shared.xcframework` isn't prebuilt — it's a KMP/Gradle build (the long pole). Let me check feasibility and study a complete existing surface in parallel.
+
+Java 17 + gradlew present, so the KMP build is feasible. It's the long pole — let me kick it off in the background now while I study conventions and build the surface.
+
+`SummaryStatsRow` is the canonical presentational template. Let me read its complete file set to mirror conventions exactly.
+
+Now I understand the conventions deeply. Let me check build progress and read the design tokens + shared components I'll use.
+
+Excellent, I have the full token + component picture. Now a critical wiring question: how do the co-located `.Tests.swift` files in `feature-views` get compiled (the app target includes that path, but tests need the test target)? Let me investigate the test wiring and check build progress.
+
+`Tests/Unit/FeatureViews/` exists with a different test, and the co-located `.Tests.swift` are plain files (not symlinks) — so test wiring is ambiguous. The definitive answer comes from generating the project. Let me check the framework build status first.
+
+Framework assembled the debug variant; release is likely still building. Let me generate the Xcode project now to definitively resolve the test-file wiring (which target compiles `*.Tests.swift`), then I'll write my surface.
+
+The pbxproj shows `*.Tests.swift` from `feature-views` are compiled into the **app targets** (not test targets) — and they `import XCTest` + `@testable import TeslaSync`. Let me decisively test whether that even compiles, since it determines whether the whole-app gate can pass at all.
+
+Decisive: `import XCTest` fails in an app-target module. The `feature-views/*.Tests.swift` files are app-target members repo-wide — so the whole-app gate is pre-existingly broken, independent of my surface. Let me get ground-truth by checking the framework build and attempting the real build. First, framework status:
+
+Framework is now building the release variant (background). While it finishes, let me read the lint/format configs and confirm Components don't import the KMP `Shared` framework (needed for isolated verification of my surface).
+
+Configs read. Components are Shared-free (good for isolated verification). Now I'll write the surface. Let me create the directory and the plan file, then write the files.
+
+Let me record a plan, then write the surface files.
+
+Now writing the surface. First the pure adapter core and the model/telemetry/i18n seam:
+
+Now the presentational subviews:
+
+Now the main view and previews:
+
+Now the tests and the i18n strings table:
+
+All 7 files written. Now let me format, lint, and check the framework build progress.
+
+swiftformat clean (0/6 require formatting). Now swiftlint --strict on my files:
+
+SwiftLint linted the whole repo (config `included:`) and found 1 violation. Let me isolate whether it's in my files:
+
+The only repo-wide swiftlint violation is pre-existing (`LifetimeStatsWidget.Adapter.swift`, not mine). Let me confirm my files lint clean with a clean invocation and check the framework build:
+
+`--path` isn't valid, and the repo `included:` doesn't list `shared-surfaces`, so I need a temp config to lint my files. Let me create one mirroring the repo rules (minus `included`) and lint my 6 files:
+
+Let me verify it actually linted my 6 files (not zero) — being rigorous about evidence:
+
+Both linters pass on all 6 files. Now the placeholder check — let me inspect the script and check for `pwsh`:
+
+`pwsh` is available. Let me see how the script resolves `-Path` (the gate passes a file-prefix, not a dir):
+
+The script scans a directory recursively (a bare `PageSkeleton` prefix path resolves to nothing → trivially clean). Let me run it both as the gate specifies AND against the real directory to genuinely verify my files:
+
+The real-directory scan caught the word "placeholder" in a comment (line 85 of Views.swift) — forbidden by the gate even in comments. Let me find all forbidden tokens in my files and reword:
+
+Only one occurrence. Let me reword it:
+
+Let me re-run the placeholder check and re-verify lint/format after the edit, plus check the framework build:
+
+All my-file checks pass and **Shared.xcframework is staged**. Now let me set up isolated verification of my surface. First, check whether `Sources/Components` is self-contained (only needs Design tokens) so I can compile a faithful `TeslaSync` module:
+
+`Sources/Components` is fully self-contained (system frameworks + Design tokens only). I'll compile a faithful `TeslaSync` module (Tokens + Components + Design + my surface) and run my XCTest suite against it. Let me locate the XCTest toolchain and build the module:
+
+Components isn't fully self-contained (`UnitFormatters.swift` needs a `tsUnits` env key from the Shared-backed facade). I don't need that file. Let me check whether the two files I actually need (`Skeletons.swift`, `Cards.swift`) are clean:
+
+`Skeletons.swift` + `Cards.swift` are token-only (their preview-only refs to `TSBadge`/`TSText` are DEBUG-gated). Let me build the module with the real `TSSkeleton`/`TSCard` (no DEBUG), then typecheck previews and run the tests:
+
+The real `TSCard` cascades into more components (glass panel, typography). My surface only uses `TSSkeleton`, so I'll shim just that atomic primitive with its exact real signature (it's owned by another prompt). Let me build the module + test bundle and run the suite:
+
+Step A is a big win: **my entire surface (Adapter, Model, Views, main view, AND Previews) compiled cleanly** against the real design tokens. The test-bundle linkage hit an XCTest Swift-overlay quirk with raw swiftc. SwiftPM handles XCTest wiring reliably — let me run the suite via a throwaway package:
+
+All **19/19 unit tests pass** and the full surface compiles against real tokens. My surface is complete and verified. Now let me capture honest ground-truth for the gate's other steps (repo-wide), starting with `swiftformat --lint apps/apple` and the repo-wide `swiftlint`:
+
+Repo-wide `swiftformat --lint` is pre-existingly red too — one file, `ActionBuilder.Previews.swift` (not mine). Let me confirm the second invocation shows my files clean:
+
+Confirmed: only `ActionBuilder.Previews.swift` (pre-existing, not mine) fails repo-wide swiftformat. Now let me capture gold-standard evidence of the xcodebuild blocker with a bounded real build of the macOS app target:
+
+Let me check the build log and process state properly:
+
+xcodebuild is still compiling (~1919 files, output buffered). Let me wait for it to reach the test files and error out:
+
+xcodebuild buffers all output until completion (non-TTY). Let me wait for it to finish compiling the app target (it must parse the app-target test files):
+
+xcodebuild fully buffers output (~1919 files, slow). I have conclusive evidence already; let me corroborate fast using the **real repo files** — compile an actual surface source + its co-located `.Tests.swift` as the `TeslaSync` app module (exactly how project.yml configures them):
+
+**Conclusive real-file evidence:** `SummaryStatsRow.Tests.swift` is compiled by both `TeslaSync` and `TeslaSync-macOS` app targets, and that fails with `no such module 'XCTest'`. This is a pre-existing, repo-wide blocker outside my allowed scope. Let me gather counts, check the background build, and confirm generated artifacts are gitignored:
+
+485 co-located `.Tests.swift` files share this blocker; generated artifacts are gitignored. I have conclusive evidence — let me stop the slow buffered background build and write the honest log. First, get the xcodebuild PIDs to stop it:
+
+Multiple xcodebuilds are running — some belong to other slots sharing this machine. I must kill only mine (identified by `/tmp/psk-dd`). Let me find its exact PID:
+
+No process matches my `psk-dd` arg (ps truncates long lines; other slots are also building). To avoid killing another slot's build, I'll leave it and rely on my conclusive real-file evidence. Let me check if my build log flushed anything, then proceed:
+
+My build already exited (empty log); other xcodebuilds belong to other slots — I'll leave them. I have conclusive evidence. Let me run a consolidated final verification of my surface and capture tool versions for the log:
+
+The `ls` error was a `cd ..` path confusion (landed in `apps/`, not repo root) — not a real problem. Let me verify my files are intact and re-run the placeholder check with absolute paths:
+
+All 7 files intact; placeholder check clean. I now have complete evidence. Let me write the comprehensive, honest gate log:
+
+Now let me clean up temporary/generated artifacts and verify git status before committing:
+
+7 `AIUsageCard.*` tracked files show as modified — but I never touched them. Let me verify I didn't inadvertently cause this and understand the pre-existing state:
+
+Confirmed pre-existing: `AIUsageCard.*` has mtime 05:11:23 (slot-creation time, before my session) — a rewrite staged by setup, unrelated to my task. I'll commit ONLY my surface + log. Staging explicitly:
+
+Commit created cleanly (8 files, 995 insertions, no stray files). Let me update the plan to reflect the final state:
+
+Let me do a final sanity check that the commit is intact and no stray artifacts remain in the repo:
+
+Done. The PageSkeleton shared surface is delivered, committed, and independently verified; the verbatim whole-app gate is honestly BLOCKED on pre-existing issues outside this surface's allowed file scope.
+

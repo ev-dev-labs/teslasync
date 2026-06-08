@@ -1,0 +1,175 @@
+=== P4 Feature view 0078 WeekOverWeekSummary (Apple) ===
+
+Surface: WeekOverWeekSummary (feature view, below page level)
+Web source: web/src/features/analytics/components/weekly-digest/WeekOverWeekSummary.tsx
+            (THE specification — reproduced end-to-end)
+Native output: apps/apple/TeslaSync/feature-views/WeekOverWeekSummary.*
+Date: 2026-06-07
+
+------------------------------------------------------------
+CAPABILITY VERIFICATION (runner)
+------------------------------------------------------------
+- Full Xcode present: /Applications/Xcode.app  ->  Xcode 26.5 (Build 17F42)
+  (default `xcode-select -p` = /Library/Developer/CommandLineTools; Xcode is driven via
+   DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo needed to build)
+- SDK: MacOSX (26.5; backward-compatible with the project's macOS 15.0 / iOS 18.0
+  deployment targets). SwiftUI type-checks + builds clean against it. Swift 6.3.2.
+- iOS Simulator "iPhone 16" present (83717DEE-…). Toolchain: swiftlint, swiftformat,
+  xcodegen 2.45.4, pwsh all present.
+- KMP shared core: Java 17 + ~/.konan kotlin-native 2.4.0 + ~/.gradle (3.0G warm).
+  => Native Apple capability is AVAILABLE on this runner.
+
+This surface uses NO charts/maps (web source imports none) and does NOT depend on the
+KMP `Shared` module (its only data hooks are useTranslation + useFormatting, ported as
+pure Swift), so it compiles against SwiftUI + Foundation alone.
+
+------------------------------------------------------------
+PRE-BUILD ARTIFACT (regenerated — was missing in this checkout)
+------------------------------------------------------------
+apps/apple/Frameworks/Shared.xcframework was absent (only .gitkeep). Rebuilt it (the
+project.yml pre-build Run Script does this) so the app targets can link:
+  cd apps/shared && ./gradlew :core:assembleSharedXCFramework
+  > Task :core:assembleSharedXCFramework
+  BUILD SUCCESSFUL in 7m 29s   (ios-arm64 / ios-arm64-simulator / macos-arm64)
+  staged -> apps/apple/Frameworks/Shared.xcframework  (Info.plist + 3 slices)
+
+------------------------------------------------------------
+PARITY (web source reproduced)
+------------------------------------------------------------
+- Data sources: useTranslation + useFormatting. The web component is a presentational
+  leaf taking `metrics: DigestMetrics` from the parent useWeeklyDigest aggregation; the
+  native surface binds the coalesced parent query snapshot through the P1/S8 state-holder
+  seam (WeekOverWeekSource -> WeekOverWeekModel @Observable). No HTTP in the view.
+- Composition: a GlassPanel titled "Week-over-Week Comparison" wrapping a responsive grid
+  (web grid-cols-1 / sm:2 / lg:3 -> LazyVGrid adaptive) of SIX StatCards — Distance (km),
+  Drives, Energy (kWh), Cost (currency), Efficiency (Wh/km), CO2 Saved (kg). Each card =
+  label + SF-Symbol icon, value + unit, and the week-over-week trend (up/down/flat arrow +
+  signed %). trendFor invert semantics reproduced exactly (energy/cost/efficiency are
+  "good when down" -> green on a down arrow). fmtNumber/fmtInt/formatCurrency ported with
+  en-US + precision-2 web defaults (WoWNumberFormat / WoWCurrency).
+- States (every state renders — no hidden surfaces):
+    loading  -> six-card skeleton grid (TSStatSkeleton; web DigestSkeleton)
+    error    -> danger box + Retry affordance wired to model.refresh (QueryError-equivalent)
+    empty    -> friendly "No activity this week" state (web parent !hasData branch)
+    data     -> the six comparison cards
+    stale    -> data + Stale chip + auto-refresh (onChange -> model.refresh)
+    offline  -> cached data + Offline chip
+- i18n: all 7 source keys (analytics.weeklyDigest.weekOverWeek/distance/drives/energy/cost/
+  efficiency/co2) + native chrome (unit symbols, stale/offline/retry/error/empty, trend +
+  loading a11y) resolve through the P1/S10 facade (WoWStrings, table "WeekOverWeekSummary",
+  WeekOverWeekSummary.strings). No English string literals in native code.
+- Accessibility: every card is one combined VoiceOver element (label, value, unit, trend
+  phrase via WoWAccessibility.cardSummary); chips combine; icons accessibilityHidden;
+  system fonts (Font.TS) scale with Dynamic Type; reduce-motion honored (TSFadeIn /
+  TSStatSkeleton shimmer gated).
+- Telemetry (P1/S11): WeekOverWeekModel.start emits view.opened with surface slug
+  "WeekOverWeekSummary" exactly once (OSLogWeekOverWeekTelemetry -> screen_view; asserted).
+
+Files delivered (7, all prefixed WeekOverWeekSummary, mirroring the RateLimitStatusPanel
+feature-views file-set convention):
+  WeekOverWeekSummary.Adapter.swift    metrics decode + fmt/trend ports + projection + a11y
+  WeekOverWeekSummary.Model.swift      telemetry/input/resolver + @Observable model + i18n
+  WeekOverWeekSummary.swift            root View (header + state-body switch)
+  WeekOverWeekSummary.Views.swift      chip/header/loading/error/empty/grid/stat-card
+  WeekOverWeekSummary.Previews.swift   DEBUG previews per state
+  WeekOverWeekSummary.strings          P1/S10 catalog contribution
+  WeekOverWeekSummary.Tests.swift      adapter/projection/model/a11y unit tests
+
+------------------------------------------------------------
+GATE RESULTS (actual command output)
+------------------------------------------------------------
+[A] Surface compile — standalone swiftc -typecheck against the macOS SDK, Swift 6
+    language mode, -strict-concurrency=complete, module-name TeslaSync (the 5 non-test
+    surface files + their first-order shared component deps: Tokens, TSMaterial, TSDesign,
+    Cards, Buttons, Badges, Typography, Metrics, Skeletons, Motion — none import Shared):
+      TYPECHECK_EXIT=0
+
+[B] Surface build + tests — isolated SwiftPM package (the documented feature-views
+    verification methodology; cf. ToolCard "isolated SwiftPM build + 13/13 tests"). The
+    surface + the SAME shared component files (copied verbatim) compiled as module
+    TeslaSync; WeekOverWeekSummary.Tests.swift as @testable test target; macOS 15, Swift 6:
+      swift build  -> Build complete! (Swift 6 strict concurrency)        BUILD_EXIT=0
+      swift test   -> Executed 37 tests, with 0 failures (0 unexpected)   TEST_EXIT=0
+        Suites: WoWNumberFormatTests(5) WoWCurrencyTests(4) WoWTrendMathTests(7)
+                WoWMetricsDecodeTests(2) WoWProjectionTests(7)
+                WeekOverWeekProjectionTests(7) WeekOverWeekModelTests(3)
+                WoWAccessibilityTests(2)
+        Covers: fmtNumber/fmtInt/formatCurrency parity, pctChange + trendFor (up/down/flat
+        + invert), camelCase metrics decode, the six-card projection (value + trend per
+        kind), phase resolution (loading/error/empty/data) + stale/offline overlays, the
+        model wiring + view.opened telemetry (once), and the VoiceOver card summary.
+
+[C] swiftlint --strict  (cd apps/apple; swiftlint lint --strict --no-cache <6 swift files>)
+      Done linting! Found 0 violations, 0 serious in 6 files            LINT_EXIT=0
+
+[D] swiftformat --lint  (cd apps/apple; swiftformat --lint <6 swift files>; .swiftformat)
+      0/6 files require formatting                                      FORMAT_EXIT=0
+
+[E] check-placeholders.ps1 (per-file, -Language swift, over the 6 swift files)
+      PLACEHOLDER_COUNT=0 on every file                                PLACEHOLDER_EXIT=0
+      (also: case-insensitive substring scan of all 7 files for
+       todo|fixme|xxx|coming soon|placeholder|lorem ipsum|not implemented -> CLEAN)
+
+[F] Full-app iOS build  (xcodebuild -scheme TeslaSync
+      -destination 'platform=iOS Simulator,name=iPhone 16' CODE_SIGNING_ALLOWED=NO build)
+      ** BUILD FAILED **                                               IOS_BUILD_EXIT=65
+      First/only errors:
+        TeslaSync/feature-views/AuditPanel.Tests.swift:19:8:
+          error: unable to resolve module dependency: 'XCTest'
+      Errors referencing WeekOverWeekSummary: 0
+
+[G] Full-app macOS build  (xcodebuild -scheme TeslaSync-macOS CODE_SIGNING_ALLOWED=NO build)
+      ** BUILD FAILED **                                               MAC_BUILD_EXIT=65
+      First error: identical — AuditPanel.Tests.swift:19 'XCTest' into the app target.
+      Errors referencing WeekOverWeekSummary: 0
+
+------------------------------------------------------------
+WHY [F]/[G] ARE BLOCKED (pre-existing + unrelated — not red-as-green)
+------------------------------------------------------------
+The iOS/macOS app targets (project.yml) source `TeslaSync/feature-views` with NO exclude
+for `*.Tests.swift`, so the 25 PRE-EXISTING co-located test files in that directory
+(AuditPanel.Tests.swift is alphabetically first) get compiled into the app target and fail
+to resolve `XCTest` (XCTest is not linkable into an application). A second pre-existing
+class of breakage — `public struct DashboardWidgetSize` redefined 15x across
+Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/* — would also block the link.
+Both are documented, out-of-scope, pre-existing issues:
+
+  apps/macos-pending-verifications.md, row "p4-apple/feature-views/P-0010-ToolCard":
+    "Full-app iOS-Simulator + macOS xcodebuild build test … blocked by pre-existing,
+     unrelated parallel-merge collisions — public struct DashboardWidgetSize (…) redefined
+     8x …, co-located *.Tests.swift importing XCTest into the app target, and macOS
+     development-signing. … The ToolCard surface itself is verified green (isolated SwiftPM
+     build + 13/13 tests under Swift 6 strict concurrency; swiftlint/swiftformat/placeholder
+     clean)." -> Status: macOS-pending.
+
+This surface (also feature-views tier) is in exactly that documented posture: the surface
+is verified GREEN by the isolated SwiftPM build + 37 tests + lint/format/placeholder; the
+full-app `xcodebuild build test` is BLOCKED by pre-existing co-located-test + symbol-collision
+breakage in OTHER files. Zero WeekOverWeekSummary errors appear in either full-app build.
+The prompt's Allowed-files scope is WeekOverWeekSummary.* + this log, so the pre-existing
+blockers (other surfaces' files + project.yml) are intentionally NOT modified.
+
+------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------
+Delivered surface is COMPLETE and VERIFIED green:
+  - standalone swiftc typecheck (Swift 6, complete concurrency): EXIT=0
+  - isolated SwiftPM build: SUCCEEDED ; tests: 37/37 PASS, TEST_EXIT=0
+  - swiftlint --strict: 0 violations ; swiftformat --lint: clean ; placeholders: 0
+  - Shared.xcframework: rebuilt SUCCESSFULLY
+The literal full-app gate (xcodebuild build test, iOS+macOS) does NOT reach EXIT=0 on this
+checkout — BLOCKED by PRE-EXISTING, UNRELATED breakage (25 co-located feature-views
+*.Tests.swift compiled into the app target; DashboardWidgetSize redefined 15x), documented
+above and in apps/macos-pending-verifications.md, with zero errors attributable to this
+surface. Per the directly-comparable ToolCard feature-views precedent, the surface ships
+green and the full-app gate is macOS-pending.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SURFACE_TYPECHECK_EXIT=0
+SURFACE_TEST_EXIT=0
+EXIT=65
+STATUS=BLOCKED

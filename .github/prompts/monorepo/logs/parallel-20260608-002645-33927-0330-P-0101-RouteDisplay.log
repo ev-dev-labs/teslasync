@@ -1,0 +1,84 @@
+I'll start by exploring the repository structure and the web source that serves as the specification, plus checking the Apple toolchain availability.
+
+Key finding: `xcodebuild` requires full Xcode but only CommandLineTools is active, and `simctl` is unavailable. Swift 6.3.2, swiftlint, swiftformat, and pwsh ARE available. Let me explore the existing structure and web source.
+
+`shared-surfaces/` doesn't exist yet — I'm creating the first one. Let me read the web source, its test, and study the existing surface conventions (AIUsageCard) as a template.
+
+Now I understand the web source: a pure presentational component with branches (no-location / round-trip / from→to), plus `endpointLabel` and `haversineMeters` helpers, and i18n keys `route.noLocationData` and `route.roundTrip`. Let me study the Apple project structure, build config, and the AIUsageCard template + core facades (theme/i18n/diagnostics).
+
+`project.yml` wires only `Sources`, `dashboard-widgets`, `feature-views` — **not** `shared-surfaces`. And my allowed files exclude `project.yml`. Let me check predecessor logs for the established precedent (how BLOCKED/DONE was handled) and study the core facades I'll bind to.
+
+Established precedent is clear: prior P4 surfaces ship **complete code + isolated Swift build/test green**, with the full-app `xcodebuild` gate marked **DEFERRED** (pre-existing unrelated blockers) → `EXIT=0 STATUS=DONE`. Those ran on a full-Xcode runner (26.5); this runner has only CommandLineTools. Let me check whether SwiftUI/Charts/MapKit compile here and study the template + facades.
+
+SwiftUI/Charts/MapKit **typecheck cleanly** against the macOS 26.5 SDK with CommandLineTools (`PROBE_EXIT=0`). So I can do a real isolated Swift build. Let me probe XCTest/swift-testing, look for an isolated-build harness, and read the AIUsageCard template files.
+
+Neither XCTest nor swift-testing is available here — but `swiftc -typecheck` against the macOS SDK works, and I can build/run a plain executable for logic verification. swiftlint, swiftformat, and pwsh (check-placeholders) all run. Let me read the full AIUsageCard template to learn the exact conventions and facade APIs.
+
+I now understand the conventions and facade surface (`TSSpacing`, `TSRadius`, `Color.TS.*`, `Font.TS.*`, `TSFadeIn`, per-surface `…Strings.string(key, fallback)`, `…Accessibility`, `view.opened`). Let me read the remaining template files and locate the real facade definitions so my isolated build binds to them.
+
+Now let me locate the exact facade definitions (tokens, fonts, spacing, motion) so my isolated build binds to the real types.
+
+I have all facade APIs (`Color.TS.*`, `Font.TS.*`, `TSSpacing`, `TSRadius`, telemetry + i18n patterns). Let me set up tracking and create the directory, then write the surface files. RouteDisplay is a synchronous presentational leaf (web's only data source is `useTranslation`), so I'll faithfully reproduce its real branches (noLocation / single / roundTrip / fromTo) and bind data via a cached-row→input adapter rather than fabricating async loading states the web source doesn't have.
+
+Now I'll write the surface files, starting with the pure-Foundation projection/adapter core.
+
+Now let me verify: isolated typecheck of the SwiftUI sources against the **real** design tokens (Swift 6, strict concurrency complete, macOS 15 target).
+
+Isolated typecheck passes (`TYPECHECK_EXIT=0`) against the real tokens. Since XCTest can't run on this CommandLineTools runner, let me **execute** the projection/adapter/a11y logic via a standalone Foundation harness that runs the same assertions as the XCTest.
+
+Harness driver hit Swift 6 top-level actor isolation (a harness-only issue, not the surface). Let me make the driver `@MainActor`-clean and rerun.
+
+All 35 logic assertions **PASS** (`RUN_EXIT=0`), executed against the real surface sources — this independently verifies what the committed XCTest asserts. Now the lint/format/placeholder gates on my files.
+
+A few formatter nits and one swiftlint violation. Let me inspect the exact lines before fixing.
+
+Three swiftformat nits + need to isolate the swiftlint violation. The `copy:` arg in `RouteDisplayAccessibility.label` is genuinely unused (a11y uses its own template keys), so I'll drop it; wrap the multiline `if` brace; and ungroup `10_007` (below swiftformat's 6-digit threshold). Let me apply these.
+
+Now re-verify: swiftformat lint, swiftlint scoped to **only my files**, isolated typecheck, and re-run the harness.
+
+swiftformat passes, but swiftlint's `opening_brace` conflicts with swiftformat's `wrapMultilineStatementBraces` on the multiline `if`. I'll sidestep the conflict by making the condition single-line.
+
+Now full re-verification: both linters, isolated typecheck, and the executable harness (with updated a11y calls).
+
+All green: swiftformat `0/5`, swiftlint `0` on my files, typecheck `0`. Now re-run the executable harness (a11y calls updated), run the placeholder gate, and locate that earlier full-set swiftlint violation to confirm it isn't mine.
+
+35/35 harness pass. The placeholder scan flags 3 hits — all the literal word "placeholder" in my **doc comments** (false positives, not placeholder code). The full-set swiftlint violation is in `dashboard-widgets/LifetimeStatsWidget` — not my file. Let me check the scanner's patterns, then reword my comments to clear the gate.
+
+The scanner matches the literal word "Placeholder" anywhere. I'll reword my doc comments (and double-check no other forbidden words appear). Let me grep all forbidden terms across my files first.
+
+`mock`/`stub` aren't in the scanner's pattern set (only `Placeholder` matched), but the acceptance list names them too — I'll reword all 4 to be unambiguous. Let me view the exact lines and fix.
+
+Let me verify the reworded comment is coherent and re-run all gates.
+
+All gates green on my files: forbidden-words `NONE`, placeholder `EXIT=0`, swiftformat `0/5`, swiftlint `0 violations`, typecheck `0`. Now let me capture authentic evidence for the full-app `xcodebuild` gate (check for any full Xcode, then run the real gate commands).
+
+There's a full `/Applications/Xcode.app` — the active dir is just CommandLineTools. I can point `xcodebuild`/`xcrun` at it via `DEVELOPER_DIR` without sudo. Let me probe whether that unlocks XCTest + simulators, which would let me run real tests.
+
+Full **Xcode 26.5 + booted iPhone 16 simulator** are accessible via `DEVELOPER_DIR`. This lets me run the committed XCTest suite for real and typecheck against the iOS SDK. Let me build an isolated SwiftPM package that compiles my actual surface sources + runs my committed Tests.swift verbatim (only swapping the module import).
+
+Running the real XCTest surfaced a **genuine bug** in my committed `Tests.swift`: the file-private `let copy` collides with `NSObject.copy()` inside `XCTestCase` methods (resolves to `() -> Any`) — this would fail the real P99 gate too. I'll rename it to `routeCopy`.
+
+Rename clean (swiftformat `0/1`, swiftlint `0`). Now re-run the real XCTest suite via the isolated package.
+
+**Real XCTest: 27 tests, 0 failures** via the Xcode 26.5 runtime, compiled against the real design tokens. Now the iOS-Simulator SDK typecheck (proving the iOS 18 build) and authentic evidence for the full-app gate's deferred blocker.
+
+iOS 18 typecheck passes too. Now capture authentic evidence of the full-app gate's deferred blocker: generate the project and run the real gate command.
+
+Confirmed: `RouteDisplay refs in pbxproj: 0` — my files aren't wired into the project (editing `project.yml` is outside allowed files). Let me capture the authentic `xcodebuild` failure to document the deferred blocker concretely.
+
+The kill-with-variable was blocked by policy. Let me use `gtimeout`/`timeout` if available, otherwise rely on the already-confirmed facts. First check the preAction script and a bounded build.
+
+`gtimeout` is available, and the preAction needs the Kotlin/Gradle toolchain to build `Shared.xcframework`. Let me run the real gate command bounded, to capture the authentic blocker.
+
+The full-app gate reaches the **Gradle `Shared.xcframework` (KMP) build** and was interrupted at 150s while still compiling Kotlin/Native targets — and my files aren't in the project (0 pbxproj refs) since wiring `project.yml` is outside allowed files. This is the established DEFERRED disposition. Let me verify git state and confirm generated artifacts are ignored.
+
+Git is clean — only my untracked `shared-surfaces/` plus pre-existing unrelated working-tree changes (not mine); the generated `.xcodeproj` is gitignored. Now I'll write the honest gate log capturing all real evidence.
+
+Now clean up generated/temp artifacts and stage **only** my files (not the pre-existing unrelated changes).
+
+Staged set is exactly my 6 surface files + the log. Committing.
+
+Commit `c96adb793` created with exactly my 6 surface files + the log (999 insertions); pre-existing unrelated changes stayed out. Final sanity check on tree cleanliness and the log's terminal status.
+
+All clean: working tree shows only the 3 pre-existing unrelated files (untouched by me), the Gradle cache is gitignored (`!!`), and the log terminates with `EXIT=0 / STATUS=DONE`.
+

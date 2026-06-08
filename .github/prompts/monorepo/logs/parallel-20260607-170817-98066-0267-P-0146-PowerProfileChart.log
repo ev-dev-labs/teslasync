@@ -1,0 +1,146 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Apple toolchain note: `xcodebuild` requires full Xcode but only Command Line Tools are active. `swift`, `swiftlint`, `swiftformat` are available. Let me read the web source and understand existing native patterns.
+
+The web source is a simple area chart (power over time) with three stats below. There are 594 files in feature-views. Let me find an existing chart-based feature view to model after, and understand the file pattern.
+
+`SpeedTrendChart` and `BatteryLevelChart` are the closest analogs (time-series area charts in drive-detail). Let me read the full file set for these models.
+
+Comprehensive pattern. Let me read the rest of the SpeedTrendChart set (Views, Adapter, Previews, Tests), the web `types.ts`, and check for already-ported drive-detail siblings to align naming.
+
+`BatteryLevelChart` is an area chart — let me read it fully, plus the SpeedTrendChart Adapter/Previews/Tests, and check for an existing synced-cursor coordinator (the native equivalent of `useSyncedCursor`/`useSyncedReferenceLineX`).
+
+No existing synced-cursor coordinator. Let me read the web `useSyncedCursor`/`useSyncedReferenceLineX` hooks to understand the contract, plus the SpeedTrendChart Adapter/Previews/Tests and an AreaMark example.
+
+Now let me examine the design tokens (P1/S9), the build setup, and the test target organization.
+
+Project uses XcodeGen (`project.yml`). Let me read it and locate the design token definitions referenced by the feature views.
+
+The build uses XcodeGen. Test files live in `feature-views/` alongside sources, yet use `@testable import TeslaSync` — I need to understand how they're assigned to the test target vs app target. Let me investigate toolchain availability and target membership.
+
+Full `Xcode.app` exists (only Command Line Tools are *selected*). I can likely use `DEVELOPER_DIR` to access it without sudo. `xcodegen` is installed. Let me verify the toolchain and establish how feature-view test files map to targets.
+
+Full Xcode 26.5 is accessible via `DEVELOPER_DIR`, iOS simulator SDK present, iPhone 16 simulator booted. The capability IS available. Let me check the `Shared.xcframework` dependency (Kotlin preAction) and generate the project to inspect target membership.
+
+`Shared.xcframework` isn't pre-built — it requires a Kotlin/Native Gradle build (scheme pre-action). Let me check KMP build feasibility and generate the project to confirm test-file target membership.
+
+Java 17 + gradlew present, project generated. Let me confirm how feature-view test files map to targets, then start the KMP framework build in the background while I write code.
+
+Confirmed: feature-view `.Tests.swift` files compile into the app targets (iOS + macOS) — the established convention. I'll replicate the exact 7-file pattern. Let me kick off the KMP `Shared.xcframework` build in the background (needed for the gate) while I write code.
+
+Build started in background (PID 85545). Let me read the design tokens (P1/S9) I'll reference so my code uses real APIs, and check the build log.
+
+KMP build is progressing (downloading Kotlin/Native, some tasks cached). Let me read the exact design-token APIs I'll use.
+
+Let me read the generated design tokens for exact `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius`/`TSMotion` APIs.
+
+I have all the design tokens. Note `Color.TS.chartSeriesEnergy` is amber (#f59e0b, the web power color) and `chartSeriesRegen` is cyan — matching the web stat colors. Let me read how the web computes `power`, `powerMax/Min`, `avgPower`, the `time` label, and the `fmtInt`/`fmtNumber` formatters, so the adapter is faithful and testable.
+
+Let me read the exact web computation (samples, `formatTime`, stats) to port faithfully.
+
+I now have the full web data model. Let me confirm `fmtNumber` default precision/`safeNumber` and `formatTime`, set up tracking, and check the background build.
+
+`fmtNumber` defaults to **2** decimals (locale en-US); `fmtInt` = 0 decimals — both grouped. `formatTime` = "HH:mm". The KMP build process exited — let me verify the framework was staged successfully.
+
+The earlier background build was killed when its session ended (only a debug xcframework got cached; release staging didn't finish). Gradle now has the Kotlin/Native toolchain + cache warm, so a re-run will be faster. Let me relaunch it **detached** so it persists, then write code in parallel.
+
+Framework build running detached. Let me set up tracking and write the plan.
+
+Now I'll write the pure adapter (Foundation-only projection core) — the most test-critical file.
+
+Now the Model file — state holder, telemetry/i18n seams, the synced-cursor coordinator (`useSyncedCursor`/`useSyncedReferenceLineX` parity), and the in-memory source.
+
+Model done. Let me check the SwiftLint/SwiftFormat configs so the Views/main view match the lint rules exactly, and check the framework build progress.
+
+Lint constraints: 120 col (comments ignored), 160 hard cap, `--self remove`, `before-first` wrapping, `@testable` bottom. Now the Views file (header, freshness, banner, area chart with zero rule + synced cursor + tooltip, stats row, loading/empty/error).
+
+Now the composed main view.
+
+Now the previews (one per state).
+
+Now the test suite — adapter, model, cursor-sync, and accessibility coverage.
+
+Framework build finished. Let me verify it staged, then write the strings file.
+
+`Shared.xcframework` staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now the strings catalog.
+
+All 7 files written. Let me auto-format my Swift files to the repo style, then inspect what changed.
+
+No formatting changes needed — my files already conform. Let me run SwiftLint (strict) and SwiftFormat lint.
+
+SwiftFormat passes. SwiftLint found 2 violations — let me see exactly which.
+
+Two violations: one is **mine** (`PowerProfileChart.Views.swift` is 470 lines > 400 `file_length`), one is in `LifetimeStatsWidget.Adapter.swift` (not a file I created). Let me confirm the latter is pre-existing and split my Views file.
+
+Confirmed: my changes are only the 7 PowerProfileChart files; the `LifetimeStatsWidget` violation is **pre-existing** (in HEAD, unmodified) and outside my allowed file scope. I'll fix my own `file_length` violation by splitting the chart into its own `PowerProfileChart.Chart.swift` (matching the established sub-file convention). Let me view the exact section boundaries.
+
+Let me verify the boundary, then extract the chart + tooltip into their own file.
+
+Boundaries confirmed. Let me extract the chart + tooltip into `PowerProfileChart.Chart.swift` and remove them from Views.
+
+Clean split: Chart.swift (236 lines) and Views.swift (251 lines), both under 400. Let me re-format and re-lint.
+
+SwiftFormat passes for all 7 files. Now confirm SwiftLint shows zero violations from my files.
+
+My files produce **0** SwiftLint violations. Let me confirm the only remaining one is the pre-existing out-of-scope file.
+
+SwiftLint now shows exactly **1 violation** — the pre-existing, out-of-scope `LifetimeStatsWidget.Adapter.swift` (in HEAD, unmodified, not in my allowed file set). My 7 files are lint-clean. Let me update tracking, check the placeholder script, and run a standalone compile+test of the pure adapter.
+
+`pwsh` is available. Let me see how the script consumes `-Path` so I run the placeholder gate correctly.
+
+The script treats a non-existent literal path as vacuously clean, so the gate's exact `-Path .../PowerProfileChart` scans nothing. I'll run it both as-specified **and** meaningfully against the real directory. Let me read the forbidden patterns first.
+
+My files contain none of the forbidden markers (the script matches case-insensitively). Let me run the actual pwsh placeholder gate (both as-specified and meaningfully against the real directory), and compile+run the pure adapter standalone to prove its logic.
+
+The exact gate command passes (`PLACEHOLDER_EXIT=0`). The whole-dir scan shows 10 pre-existing sibling violations (none in my files — the PowerProfile filter was empty). Let me scan **only my files** in isolation for clean evidence, then compile+run the pure adapter.
+
+Placeholder-clean for my files (`COUNT=0`). Now let me compile and run the pure adapter standalone (Foundation-only) to prove its logic independently of the Xcode build.
+
+Adapter compiled clean under Swift 6 — only my harness globals tripped strict concurrency. Let me annotate the harness for MainActor and rerun.
+
+The mutable global is the problem. Let me move everything into a function with local state.
+
+All 32 adapter checks pass under Swift 6. Now the real gate — full `xcodebuild build test` for iOS + macOS. Let me set up the log and launch the iOS build/test (this is heavy; I'll run it in the background).
+
+Logs dir and simulator ready. Let me launch the iOS build+test in the background (heavy), writing to the gate log, and monitor.
+
+While the build runs, let me proactively fix a type issue I spotted: in `AreaMark(yStart:yEnd:)` and the zero `RuleMark`, the literal `0` would infer `Int` and mismatch the `Double` y-values. Let me make them `Double`.
+
+The launcher returned; the actual xcodebuild runs in background. Since I just edited Chart.swift, I need to check the build's state and likely restart it with the fix. Let me inspect.
+
+The iOS build failed: the app target can't resolve `import XCTest` — confirming the `.Tests.swift` files (all 77 siblings + mine) compile into the **app** target, which lacks XCTest search paths. This is a baseline repo condition. Let me confirm it's pre-existing and understand the intended setup.
+
+Critical context: `apps/macos-pending-verifications.md` documents this EXACT precedent. The reference P4 surface (**ToolCard, P-0010**) hit the identical blocker — the full-app `xcodebuild build test` is **blocked by pre-existing, unrelated issues**: co-located `*.Tests.swift` importing `XCTest` into the app target, duplicate struct redefinitions across parallel merges, and macOS dev-signing. The accepted methodology is: **verify the surface in isolation via SwiftPM + tests** (Swift 6 strict), keep lint/format/placeholder clean, and defer the full-app build to the macOS acceptance gate.
+
+Let me confirm my surface's external dependency closure so I can build it in isolation.
+
+My closure is small: `Tokens.swift`, `Motion.swift` (TSFadeIn), and `Skeletons.swift` (TSSkeleton). Let me locate `TSCard` (referenced by other helpers in Skeletons.swift) to size the closure.
+
+This matches the documented ToolCard precedent exactly. I'll verify my surface via an **isolated SwiftPM build + XCTest** (Swift 6 strict), using the real `Tokens.swift` + `Motion.swift` and a verbatim `TSSkeleton`, with the library named `TeslaSync` so `@testable import TeslaSync` resolves. Let me assemble the package.
+
+Package assembled with verbatim `TSSkeleton`. Let me add the `Package.swift` and run the isolated build+tests under Swift 6.
+
+**Isolated build + 34/34 tests PASS under Swift 6 strict concurrency** — the entire surface (SwiftUI views, Swift Charts, model, adapter) compiles and all tests pass. This matches the ToolCard precedent. Let me confirm my surface contributes zero errors to the full-app build and capture the pre-existing blockers for the log.
+
+Confirmed: **0 PowerProfile errors** in the full-app build. It fails solely on the pre-existing `Unable to resolve module dependency: 'XCTest'` (544 co-located `*.Tests.swift` files import XCTest into the app target) — the exact blocker documented for ToolCard, affecting all 77+ sibling surfaces identically and outside my allowed files. Let me capture the macOS build evidence too while I write the gate log.
+
+While macOS builds, let me capture fresh host-gate outputs for the log.
+
+Scoped gates: **SwiftFormat 0/7 need formatting, SwiftLint 0 violations** on my 7 files. The macOS build launcher returned — let me check its result.
+
+macOS build: `MAC_EXIT=65` — failed at **macOS development-signing** (the third documented ToolCard blocker), but it got past compilation. Let me verify my surface compiled cleanly in the real macOS app target before the signing step.
+
+macOS compiled my surface with **zero errors** (0 PowerProfile errors, 0 XCTest errors) — it failed only at **dev-signing** (the documented third ToolCard blocker). Both full-app failures are pre-existing/environmental and outside my allowed files. Let me capture clean summaries for the isolated verification and assemble the gate log.
+
+All summaries captured (isolated 34/34, adapter 32/32). Let me assemble the comprehensive gate log.
+
+Log complete (137 lines), ending `EXIT=65 / STATUS=BLOCKED` per the covenant. Let me verify git status (ensure only my files + log are staged, generated artifacts are gitignored), then clean temp files.
+
+Clean git state — only my 8 surface files + the log are untracked; generated artifacts (xcodeproj, Shared.xcframework, gradle build) are gitignored. Let me clean temp files and commit.
+
+All 8 surface files + log staged. Let me commit.
+
+Committed (`d632d43fa`). Let me update tracking and do a final verification of the commit contents.
+
+The commit is clean: exactly 9 files (8 surface + log), 1819 insertions, working tree clean. The task is complete to the maximum extent possible within scope. Let me record the final status in the plan.
+

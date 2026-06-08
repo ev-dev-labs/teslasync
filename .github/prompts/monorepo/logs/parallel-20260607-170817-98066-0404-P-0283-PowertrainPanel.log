@@ -1,0 +1,94 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the Apple toolchain availability and the repo structure in parallel.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. However `swift`, `swiftlint`, `swiftformat` are available. Let me investigate the build system and existing patterns more deeply before deciding the path forward.
+
+Good — Xcode.app exists in /Applications but `xcode-select` points to CommandLineTools. Let me check if I can switch to full Xcode, and study the existing patterns. The web source is clear: a `PowertrainPanel` taking `MotorSnapshot` data with shift state, power bar, RPM/torque metric cards, temps, and regen.
+
+Xcode 26.5 works via `DEVELOPER_DIR` override. The build uses XcodeGen + a `Shared.xcframework`. Let me study an existing complete feature-view exemplar and the shared infrastructure (state holders, tokens, i18n, components) before deciding the build approach.
+
+`LiveMotorStatus` is the closest motor analog and `EfficiencyPanel` is a clean structural template. Let me read the full LiveMotorStatus set to learn the canonical conventions.
+
+Excellent architecture. Let me read the remaining LiveMotorStatus files and the shared component/token definitions to learn all the primitives I need.
+
+Let me read the remaining LiveMotorStatus files (strings, previews, tests) and locate the shared design tokens and the data-display MetricCard native equivalent.
+
+Let me locate and read the shared components and design tokens I'll need (TSGlassPanel, TSEmptyState, MetricCard, TSSpacing, Color.TS, Font.TS, TSTone).
+
+`TSMetricCard` exists in data-display. Now let me read the design tokens, the remaining shared components, and the test conventions. The tokens (TSSpacing, Color.TS, Font.TS) weren't in Sources/Design — likely in the generated design tokens dir.
+
+Now let me read the key design tokens, typography, cards, feedback states, and the test file to learn all primitives and conventions.
+
+Let me read the remaining shared primitives (Cards, States, Badges, Skeletons) and the test conventions.
+
+Let me read the Badges (TSTone/TSBadge), Skeletons, and the test conventions to complete my understanding.
+
+Let me read the test conventions and assess build feasibility (KMP framework script, test wiring, simulator availability).
+
+Critical questions: how `.Tests.swift` files in feature-views map to test targets, and whether the KMP `Shared.xcframework` can be built. Let me investigate the build status doc and the shared module.
+
+Now I understand the build reality. The `macos-pending-verifications.md` documents the established precedent: sibling feature-view prompts (ToolCard, AlertMessageEditor, FSMTimelineChart) verify the **surface in isolation** (SwiftPM build + tests + `swiftc -typecheck` on iOS/macOS SDKs + swiftlint/swiftformat/placeholder), because the **full-app `xcodebuild build test` is blocked by pre-existing, unrelated parallel-merge collisions** (DashboardWidgetSize redefined 15×, co-located `*.Tests.swift` importing XCTest into the app target, unstaged KMP `Shared.xcframework`, signing). No system Gradle/Kotlin, so the framework can't be assembled here either.
+
+Let me read the exact web helper semantics I must reproduce (formatTemperature, fmtNumber/fmtInt, MotorSnapshot type, parent wiring).
+
+Let me read the exact `formatTemperature` implementation and the `MotorSnapshot` type to reproduce values faithfully.
+
+I now have the exact `formatTemperature` semantics (finite-guard → `—`; digits = precision-override ?? pref.precision ?? **1**; convert; number+symbol, no space) and `fmtNumber`/`fmtInt` (global precision default 2 / 0). Let me check the lint configs, isolated-build feasibility (whether Components/Design are KMP-free), and simulator availability.
+
+Strong findings: Components/Design are fully KMP-free (only system imports), iPhone 16 simulator is booted, iOS/macOS SDKs present. The full-app `xcodebuild` is blocked by pre-existing out-of-scope issues + unbuildable KMP framework. Let me match the exact log format/STATUS used by sibling prompts.
+
+The sibling `LiveMotorStatus` (0170) log confirms the exact accepted disposition: **STATUS=DONE** with host gates genuinely green (isolated SwiftPM tests N/N + both-SDK `swiftc -typecheck` + lint/format/placeholder clean), and the full `xcodebuild build test` shown DEFERRED with its real exit code + cause. Let me read the full log to replicate the structure faithfully.
+
+This is the gold-standard precedent. I'll replicate the LiveMotorStatus disposition exactly for PowertrainPanel. Let me confirm pwsh, the swiftformat config location, and which component files import `Shared` (to exclude from the isolated harness).
+
+All prerequisites confirmed: pwsh 7.6.2, swiftformat config at `apps/apple/.swiftformat`, swiftlint config (line 120/160, file default ≤400), and **no** Components/Design file imports `Shared` — so the isolated harness can compile the real component closure. I have full parity semantics. Let me write a plan file and begin authoring the 7 surface files.
+
+Key catch: `UnitPreferences` lives in `SharedFacade` (KMP-backed), and only `Components/DataDisplay/UnitFormatters.swift` uses it — so I'll exclude that one file from the isolated harness (matching the precedent). Let me confirm nothing else references it, then author the files.
+
+Confirmed. Now I'll author the surface. Writing File 1 (Model — P1/S8 state-holder seam + telemetry + i18n facade + input DTO):
+
+File 2 (Adapter — the pure, SwiftUI-free projection core reproducing the web arithmetic 1:1):
+
+File 3 (Views — presentational chrome: shift row, bipolar power bar, metric grid via `TSMetricCard`, readout rows, freshness chip, loading skeleton):
+
+File 4 (the surface — glass panel + Cog header + freshness chip + state switch):
+
+File 5 (Previews — one per state):
+
+File 6 (strings catalog — web parity keys + native chrome):
+
+File 7 (Tests — adapter parity + model lifecycle + a11y + per-state render smoke):
+
+All 7 files written. Now let me normalize formatting (swiftformat in-place on my files only), check line counts, then lint.
+
+swiftformat reformatted 2 files. The Tests file is 424 lines — over swiftlint's default `file_length` warning (400), which `--strict` treats as an error. Let me verify current counts and run both linters to see exact violations.
+
+swiftformat is clean. swiftlint found 4 issues, all in Adapter/Tests (2 file-length, 1 param-count, 1 void-in-ternary). Let me inspect the flagged Adapter region.
+
+The `void_function_in_ternary` is a false-positive on the ternary inside the if-expression branch. Let me restructure the Adapter's tile construction (removes the 6-param helper AND the ternary-in-if, and trims length). Let me view the exact block first.
+
+Adapter is clean at 397. Now trim Tests (424→≤400) by consolidating the duplicated full-sample motor into one file-scope helper and shortening the header. Let me view the exact blocks.
+
+Now I'll consolidate the three duplicated full-sample motors into one file-scope helper and trim the header.
+
+Now add the shared file-scope test motor helper at the bottom:
+
+Now reformat and run the full lint suite on all 6 surface files:
+
+Tests is 404, just over. Let me trim 5 more lines (header, helper doc, one MARK divider):
+
+Both linters pass cleanly (0 violations, 0/6 reformat) and all files ≤400 lines. Now let me build the isolated SwiftPM harness (module named `TeslaSync`, real component closure minus the KMP-coupled `UnitFormatters.swift`) to compile + run the full test suite on the macOS host.
+
+Harness library builds clean (surface + previews + full component closure). Now run the test suite:
+
+Excellent — the harness caught a **real bug**: a `NaN` power input produces a `NaN` bar magnitude (unsafe for a SwiftUI frame width). My test correctly asserts it should collapse to 0. Let me fix `power()` to `safeNumber` the magnitude (a genuine robustness fix), which also makes `isPositive` well-defined.
+
+Now re-sync the harness with the fixed Adapter, re-run tests, and re-lint the Adapter:
+
+All 38 tests pass (9 format + 13 projector + 9 model + 1 a11y + 6 view-render). Now the explicit cross-SDK typechecks (iOS 18 simulator + macOS 15), over the shipped production files + component closure (release mode, so `#Preview`/DEBUG blocks compile out — matching the precedent's steps [1]/[2]):
+
+iOS 18 typecheck clean. Now macOS 15:
+
+Both SDK typechecks pass. Now the placeholder gate. Let me inspect the script's `-Path` semantics, then run it:
+
+The gate's literal `-Path …/PowertrainPanel` (no extension) scans nothing, so I'll ALSO scan my actual files directly. First, let me check the patterns and grep my files for any risky tokens (I used "placeholder" in a doc comment):
+

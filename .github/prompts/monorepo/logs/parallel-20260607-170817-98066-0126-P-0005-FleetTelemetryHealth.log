@@ -1,0 +1,127 @@
+I'll start by exploring the repository structure and reading the key files to understand the task.
+
+No `feature-views` dir exists yet. Let me understand the project layout, state holders, i18n, and diagnostics conventions.
+
+Xcode.app exists but isn't selected. Let me try using `DEVELOPER_DIR` to access it without sudo.
+
+Xcode 26.5 with iPhone 16 simulator is available via `DEVELOPER_DIR`. The platform capability is present. Now let me study the established patterns deeply before writing code.
+
+The `SentryEventLogWidget` is the closest analog (a log/table admin widget). Let me read its full file set plus supporting infrastructure.
+
+Excellent structural insight. Let me examine the sibling feature-view prompts, the P4 core, remaining widget files, and shared components in parallel.
+
+No feature-views exist yet — this is the first. The dashboard-widgets establish a clear self-contained pattern (Source seam, no direct KMP import). Let me read the remaining reference files.
+
+Let me read the prompt file, design tokens, key components, the placeholder script, and a prior widget's gate log to understand the build/test mechanism.
+
+The prior precedent is clear: full `xcodebuild` is deferred (Shared.xcframework unstaged), replaced by REAL iOS+macOS SDK typechecks + executed XCTest via SwiftPM. Let me read the rest of that log and find the SwiftPM setup.
+
+I now have the exact methodology (code-complete + real iOS/macOS SDK typechecks + executed XCTest via SwiftPM harness + lint/format/placeholder; Xcode app build/test deferred due to unstaged KMP framework). Let me read the design tokens and shared components I'll reuse.
+
+Let me locate the remaining shared pieces I'll reuse (TSSkeleton, TSCard, timestamp formatter) and check how column titles + i18n facade interact across existing widgets.
+
+All `devtools.health.*` i18n keys already exist in the shared catalog. Let me read the web `ToolCard` + `TimeStamp` (to reproduce exactly), and the native `TSSkeleton`, `TSCard`, plus lint/format configs.
+
+Let me read `TSCard`, the lint/format configs, and the placeholder script to ensure compliance, then set up my verification harness.
+
+Let me read the placeholder patterns (to avoid forbidden words) and confirm SwiftPM availability, then start building.
+
+I have everything needed. Forbidden words in `.swift`: TODO, FIXME, XXX, "Coming soon", "Placeholder", "Lorem ipsum", "not implemented" — I'll avoid all (including `.redacted(.placeholder)`). SwiftLint `--strict` enforces file≤400, function body≤50, line≤120. Let me set up tracking and write the plan.
+
+Now I'll write the files. Starting with the directory and Model.swift.
+
+Now the Adapter (pure projection core):
+
+Now the Views (chrome subviews):
+
+Now the data tables:
+
+Now the composed surface:
+
+Now the strings catalog contribution and the previews:
+
+Now the test suite:
+
+All 7 files written. Let me verify line counts, check for forbidden patterns, and update tracking.
+
+All clean. Now let me auto-format with the repo's swiftformat config, then lint.
+
+swiftformat clean. SwiftLint found 1 violation across 458 files — let me confirm it's the known pre-existing sibling, not mine.
+
+Two fixable violations in my files (the whole-tree gate config doesn't include `feature-views`, but I want them clean when linted explicitly). Let me fix the large tuple and the long line.
+
+Now fix the large tuple in Views.swift by replacing it with a small struct:
+
+SwiftLint and SwiftFormat clean on all 7 files. Now let me build the verification harness (real iOS 18 + macOS 15 SDK typechecks + executable SwiftPM test suite) following the established precedent.
+
+iOS 18 SDK typecheck passes. Now macOS 15:
+
+Good — runtime typechecks pass on both SDKs. The `-DDEBUG` previews typecheck surfaced a real Swift 6 actor-isolation bug in my Previews helper. Let me fix it (mark the helper `@MainActor`):
+
+Previews now compile under Swift 6. Now execute the full XCTest suite via SwiftPM:
+
+All 20 tests pass (Adapter 7 + Model 10 + Accessibility 3). Now the placeholder gate and xcodegen:
+
+Placeholder gate clean. Now confirm the Xcode project still generates and check surface registration:
+
+All host gates pass. Per the established precedent (and parallel-safety + allowed-files), the one-time `feature-views` path registration in `project.yml`/`.swiftlint.yml` is integration-runner scope. Let me capture the honest "Xcode app build DEFERRED" evidence (missing KMP framework), exactly as the predecessor did:
+
+Confirmed the deferred-build blocker (missing KMP `Shared.xcframework`, EXIT=65) — infra, not my code. Let me update tracking, get final line counts, and verify the generated project is git-ignored.
+
+Final files all ≤400 lines; generated `.xcodeproj` is git-ignored. Let me capture the exact whole-tree gate exit codes (swiftformat + swiftlint) for honest reporting:
+
+All evidence captured. Now I'll write the comprehensive gate log following the established precedent's structure and honesty covenant.
+
+Let me do a final pre-commit re-verification with the final files (re-sync harness, re-run both SDK typechecks + surface lint), then clean up:
+
+Final gates all green (iOS+macOS typecheck EXIT=0, 20/20 tests, 0 lint violations). Cleaning up the harness and committing:
+
+Exactly my 9 files are staged. The two `web/...tsx` files are pre-existing unstaged working-tree changes (not mine, not staged — I never touched them). Committing now:
+
+Committed cleanly as `a911b85b` (9 files, 1881 insertions). Let me finalize tracking and confirm the working tree state.
+
+All complete. The commit contains exactly my 9 files; the two `web/*.tsx` working-tree changes were pre-existing (1 line each), not made by me, and correctly excluded from my commit.
+
+## Summary
+
+Shipped a production-polished, native Apple-idiomatic **`FleetTelemetryHealth`** feature view at parity with `web/src/features/admin/components/devtools/FleetTelemetryHealth.tsx`, committed as `a911b85b`.
+
+**Artifact** (`apps/apple/TeslaSync/feature-views/`, 8 files, 1650 lines, every file ≤400):
+- `.Model.swift` — P1/S8 state-holder seam (`FleetHealthSource`→`FleetHealthModel`, no view HTTP) + P1/S11 `view.opened` telemetry + DTOs + in-memory source + P1/S10 strings facade
+- `.Adapter.swift` — pure projection (`isRecent`<24h, row/emphasis/badge-tone/phase, timestamp fmt, a11y summaries)
+- `.Views.swift` / `.Tables.swift` — freshness chip, stale/offline banner, ToolCard-equivalent section cards, count/filter badges, refresh button, the two data tables with the VIN-filter link
+- `.swift` — composed surface (Error VINs + Error Log, per-section phase switch, QueryError-equivalent retry)
+- `.Previews.swift` — per-state previews; `.Tests.swift` — 20 XCTest methods; `.strings` — 17 web-parity `devtools.health.*` keys + 9 native-chrome keys
+
+**Verification (all real, executed on Xcode 26.5 via `DEVELOPER_DIR`):**
+- iOS 18 simulator SDK typecheck — `EXIT=0`
+- macOS 15 SDK typecheck (+ previews under DEBUG) — `EXIT=0` (caught & fixed a real Swift-6 actor-isolation bug)
+- `swift test` — **20/20 passed**
+- `swiftlint --strict` (surface) — 0 violations; `swiftformat --lint` — clean; placeholder gate — `COUNT=0`; `xcodegen generate` — `EXIT=0`
+
+**Honestly deferred:** the signed `xcodebuild ... build test` is blocked on the unstaged KMP `Shared.xcframework` (captured `EXIT=65` missing-framework error) and the one-time `feature-views` project-path registration — both integration-runner scope, outside this prompt's allowed files (matching the 0086 precedent). The gate log records every command's real exit code. `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and verified — all 11 todos done, committed as `a911b85b`. Calling task_complete.
+
+Merge made by the 'ort' strategy.
+ ...ple-feature-views-0005-FleetTelemetryHealth.log | 231 +++++++++++++++
+ .../FleetTelemetryHealth.Adapter.swift             | 228 +++++++++++++++
+ .../feature-views/FleetTelemetryHealth.Model.swift | 321 +++++++++++++++++++++
+ .../FleetTelemetryHealth.Previews.swift            | 127 ++++++++
+ .../FleetTelemetryHealth.Tables.swift              | 204 +++++++++++++
+ .../feature-views/FleetTelemetryHealth.Tests.swift | 303 +++++++++++++++++++
+ .../feature-views/FleetTelemetryHealth.Views.swift | 235 +++++++++++++++
+ .../feature-views/FleetTelemetryHealth.strings     |  48 +++
+ .../feature-views/FleetTelemetryHealth.swift       | 184 ++++++++++++
+ 9 files changed, 1881 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0005-FleetTelemetryHealth.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetTelemetryHealth.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetTelemetryHealth.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetTelemetryHealth.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetTelemetryHealth.Tables.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetTelemetryHealth.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetTelemetryHealth.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetTelemetryHealth.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetTelemetryHealth.swift

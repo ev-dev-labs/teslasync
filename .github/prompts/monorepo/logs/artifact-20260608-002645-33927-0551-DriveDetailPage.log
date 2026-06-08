@@ -1,0 +1,292 @@
+=== P4 Page driving/DriveDetail — DriveDetailPage (Apple, SwiftUI / HIG) ===
+Host: Darwin arm64 (Apple Silicon). Full Xcode 26.5 (Build 17F42) present at
+/Applications/Xcode.app, driven via DEVELOPER_DIR (the machine default
+xcode-select points at /Library/Developer/CommandLineTools; DEVELOPER_DIR
+overrides it without sudo). Swift 6.3.2 (swiftlang-6.3.2.1.108). swiftlint
+0.63.x + swiftformat + pwsh + xcodegen + JDK 17 on PATH. iOS 26.5 simulator
+runtime + iPhone 17 Pro simulator available; macOS 15 SDK present. The KMP
+Shared.xcframework Gradle assembly SUCCEEDED (debug variant, cache-warm on this
+shared parallel-slot host) and was staged to apps/apple/Frameworks. Implication:
+SwiftUI + XCTest + the #Preview macro ALL run on this host (proven below — the
+surface compiles against the REAL shared tokens + components and EVERY state
+renders; the shipped XCTest executes 33/33). The capability-BLOCKED trigger
+("no Xcode runner available") does NOT apply: Xcode IS present and was used.
+
+Web source (THE specification):
+  web/src/features/driving/pages/DriveDetailPage.tsx   (route /drives/:id)
+Manifest unit: page:driving/DriveDetail  (kind=page; requiredCount=25 = 2 states
+  + 23 strings; panels=0, charts=0, maps=0, api=0 — the page is the ORCHESTRATION
+  SHELL; its child panels HeroGauges/DriveTimeline/… are SEPARATE feature-view
+  parity units, injected into the shell exactly as the web page composes them
+  from ../components/drive-detail).
+Native output (allowed files):
+  apps/apple/TeslaSync/Features/Driving/DriveDetailPage.{swift,Model,Adapter,
+    Views,Navigation,Previews}.swift
+  apps/apple/TeslaSync/Features/Driving/DriveDetailPage.strings
+  apps/apple/Tests/Unit/Features/Driving/DriveDetailPageTests.swift  (TEST target,
+    so `xcodebuild test` actually RUNS it — NOT the app target)
+  navigation registration: apps/apple/Sources/App/AppShell.swift
+    (.driveDetailNavigationDestination() on the split-detail + tab NavigationStacks)
+  project wiring: apps/apple/project.yml (+TeslaSync/Features sources on both app
+    targets), apps/apple/.swiftlint.yml (+TeslaSync/Features included)
+  apps/parity/apple-ledger.json  +  this log.
+Charts/maps: NONE in this unit (the page composes child units; the charts/maps
+  live in those separate units). No Swift Charts / MapKit needed by the shell.
+
+---------------------------------------------------------------------------
+PARITY MAPPING (web → native; verified by the executed swift test below)
+---------------------------------------------------------------------------
+  shell:  isLoading ? <DriveDetailSkeleton> : <PageContainer title error actions>
+            → DriveDetailPageModel.Phase switch: .loading → DriveDetailPageSkeleton
+              (TSPageHeaderSkeleton + TSStatGridSkeleton + 2× TSChartBlockSkeleton);
+              .error → DriveDetailPageErrorView (danger glyph + message + Retry →
+              model.refresh()); .empty → DriveDetailPageEmptyView
+              (ContentUnavailableView); .content → the composed section stack.
+  envelope: hasTelemetryRows = telemetry.length>0 || positions.length>0;
+            hasMeaningfulDriveStats = (distanceM ?? 0)>0 || (stats.maxSpd ?? 0)>0
+              || (stats.energyWh ?? 0)>0 || hasTelemetryRows
+            → DriveDetailProjector.project(_:) reproduces this VERBATIM (pinned by
+              DriveDetailProjectorTests, 9/9). vehicleName = display_name ||
+              t('driveDetail.vehicle','Vehicle').
+  banner: !hasMeaningfulDriveStats → <AlertBanner variant="info"
+            title=noTelemetryTitle>{noTelemetryBody}</AlertBanner>
+            → DriveDetailNoTelemetryBanner (info-tinted card, info.circle.fill,
+              title + body) gated by DriveDetailSectionPlan.showsNoTelemetryBanner.
+  sections: each web <SectionErrorBoundary name=… fallbackTitle=t('driveDetail.
+            section.<x>Failed',…)><Child/></SectionErrorBoundary>
+            → DriveDetailSectionBoundary(section:status:onRetry:content:) — renders
+              the injected child unit when .ready, a compact skeleton when .loading,
+              and the EXACT web fallback title + Retry when .failed / no child
+              (never a blank region). The 19 fallback titles live on
+              DriveDetailSection.fallbackTitleKey/Default (Model).
+  order:  the web JSX order + grouping + the four conditional gates are reproduced
+            1:1 in DriveDetailPage.sections(_:) and pinned by
+            DriveDetailSectionPlanTests.testFullPlanOrderWithTelemetryEnergyAndID:
+            header · [banner] · heroGauges(stats) · timeline · statCards(stats) ·
+            aiCoaching · moreDetails(stats) · energySummary(stats) ·
+            costSavings(energy>0) · routeMap · journeyDetails · [chart group:
+            overviewChart · {socChart|elevationChart} · {temperature|speedHistogram}
+            · aiSpeedProfile · powerProfile] · tirePressure · whyEnded(id).
+  charts grid: web `grid grid-cols-1 lg:grid-cols-2` → adaptivePair(_:_:) — two-up
+            on a wide (macOS/iPad regular) window, stacked on a compact iPhone
+            width (@Environment horizontalSizeClass; macOS = wide). ADR-002 one
+            adaptive source for macOS + iOS.
+  nav:    web <Route path="/drives/:id"> + <Link>s → DriveDetailDestination value +
+            .driveDetailNavigationDestination() on the NavigationStacks +
+            DriveDetailDeepLink.destination(forPath:) (parses /drives/:id) +
+            DriveDetailPageFactory (builds the shell from the route id — the page
+            renders from navigation values / local state, no API per the manifest).
+  i18n:   table "DriveDetailPage" via the P1/S10 facade DriveDetailPageStrings —
+            the 23 web keys (verbatim, defaults reconciled with web/src/i18n/en.json)
+            + native shell chrome (loading/empty/errorTitle/retry/sectionRetry).
+  telemetry: P1/S11 view.opened(surface:"DriveDetailPage") emitted exactly once on
+            appear (asserted by testStartEmitsViewOpenedOnce).
+  a11y:   per-section accessibilityIdentifier, combined header summary
+            (DriveDetailPageAccessibility.summary), decorative glyphs hidden,
+            Dynamic Type via tokens, Reduce-Motion via TSSkeleton, light/dark +
+            increased-contrast via the generated dynamic-color tokens.
+  units:  SI on the wire (distanceM / maxSpeedMps / energyWh) — the shell never
+            converts; display conversion is the child units' boundary concern.
+
+STATES (every one renders — verified by the ImageRenderer tests [6/6]):
+  loading → DriveDetailPageSkeleton (header + stat-grid + 2 chart blocks).
+  empty   → DriveDetailPageEmptyView (ContentUnavailableView, "Drive Details").
+  error   → DriveDetailPageErrorView (danger glyph + message + Retry).
+  content → the ordered section stack (two flavours: with telemetry = every
+            numeric panel + cost savings; without telemetry = the info banner
+            replaces the four numeric panels, matching the web envelope).
+  section → DriveDetailSectionBoundary states ready / loading / failed(fallback).
+
+===========================================================================
+=== PARITY ===
+===========================================================================
+PARITY_REQUIRED=25
+  state  : loading  → DriveDetailPageModel.Phase.loading → DriveDetailPageSkeleton
+             (DriveDetailPage.Views.swift) ; test testLoadingRenders ✔
+  state  : error    → DriveDetailPageModel.Phase.error → DriveDetailPageErrorView
+             (DriveDetailPage.Views.swift) ; test testErrorRenders ✔
+  string : driveDetail.noTelemetryBody              → DriveDetailPage.{strings,Views.swift(DriveDetailNoTelemetryBanner.bodyText)} ✔
+  string : driveDetail.noTelemetryTitle             → DriveDetailPage.{strings,Views.swift(DriveDetailNoTelemetryBanner.title)} ✔
+  string : driveDetail.section.aiCoachingFailed     → DriveDetailSection.aiCoaching.fallbackTitleKey (Model.swift) + .strings ✔
+  string : driveDetail.section.aiSpeedProfileInsightsFailed → DriveDetailSection.aiSpeedProfile.fallbackTitleKey (Model.swift) + .strings ✔
+  string : driveDetail.section.costSavingsFailed    → DriveDetailSection.costSavings.fallbackTitleKey (Model.swift) + .strings ✔
+  string : driveDetail.section.elevationChartFailed → DriveDetailSection.elevationChart.fallbackTitleKey (Model.swift) + .strings ✔
+  string : driveDetail.section.energySummaryFailed  → DriveDetailSection.energySummary.fallbackTitleKey (Model.swift) + .strings ✔
+  string : driveDetail.section.headerFailed         → DriveDetailSection.header.fallbackTitleKey (Model.swift) + .strings ✔
+  string : driveDetail.section.heroGaugesFailed     → DriveDetailSection.heroGauges.fallbackTitleKey (Model.swift) + .strings ✔
+  string : driveDetail.section.journeyDetailsFailed → DriveDetailSection.journeyDetails.fallbackTitleKey (Model.swift) + .strings ✔
+  string : driveDetail.section.moreDetailsFailed    → DriveDetailSection.moreDetails.fallbackTitleKey (Model.swift) + .strings ✔
+  string : driveDetail.section.overviewChartFailed  → DriveDetailSection.overviewChart.fallbackTitleKey (Model.swift) + .strings ✔
+  string : driveDetail.section.powerProfileFailed   → DriveDetailSection.powerProfile.fallbackTitleKey (Model.swift) + .strings ✔
+  string : driveDetail.section.routeMapFailed       → DriveDetailSection.routeMap.fallbackTitleKey (Model.swift) + .strings ✔
+  string : driveDetail.section.socChartFailed       → DriveDetailSection.socChart.fallbackTitleKey (Model.swift) + .strings ✔
+  string : driveDetail.section.speedHistogramFailed → DriveDetailSection.speedHistogram.fallbackTitleKey (Model.swift) + .strings ✔
+  string : driveDetail.section.statCardsFailed      → DriveDetailSection.statCards.fallbackTitleKey (Model.swift) + .strings ✔
+  string : driveDetail.section.temperatureFailed    → DriveDetailSection.temperature.fallbackTitleKey (Model.swift) + .strings ✔
+  string : driveDetail.section.timelineFailed       → DriveDetailSection.timeline.fallbackTitleKey (Model.swift) + .strings ✔
+  string : driveDetail.section.tirePressureFailed   → DriveDetailSection.tirePressure.fallbackTitleKey (Model.swift) + .strings ✔
+  string : driveDetail.section.whyEndedFailed       → DriveDetailSection.whyEnded.fallbackTitleKey (Model.swift) + .strings ✔
+  string : driveDetail.title                        → DriveDetailPage.swift(navigationTitle)/Views.swift/Adapter.swift + .strings ✔
+  string : driveDetail.vehicle                      → DriveDetailProjector.resolvedVehicleName (Adapter.swift) + .strings ✔
+PARITY_COVERED=25
+PARITY_REQUIRED==PARITY_COVERED → 25==25 ✔
+  (All 19 section.*Failed defaults + the 4 shell strings are pinned to their web
+   en.json values by DriveDetailPageStringsTests; all 2 states + the section/render
+   states are pinned by the ImageRenderer view tests; the conditional section order
+   is pinned by DriveDetailSectionPlanTests.)
+
+===========================================================================
+GATES (apple triad: placeholder + lint + build + test)
+===========================================================================
+SURFACE gates — all run on THIS host, real exit codes:
+
+  $ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Driving -Language swift
+    PLACEHOLDER_ALLOWED=0 ; PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  (Tests dir also scanned: PLACEHOLDER_COUNT=0.)
+
+  $ swiftlint --strict apps/apple/TeslaSync/Features/Driving
+    Done linting! Found 0 violations, 0 serious in 6 files.
+  LINT_EXIT=0
+  $ swiftformat --lint TeslaSync/Features Tests/Unit/Features/Driving
+    0/7 files require formatting.
+  SWIFTFORMAT_EXIT=0
+
+  Isolated SwiftPM `swift test` (the EXACT shipped surface files + the EXACT shipped
+  XCTest, compiled against the REAL design tokens apps/design/generated/apple/
+  Tokens.swift + Sources/Design/TSMaterial + Sources/Components/UI/{Buttons,Cards,
+  Badges,Typography} + Sources/Components/Feedback/Skeletons, Swift 6 language mode /
+  complete concurrency, #Preview macro expanded, ImageRenderer per-state render
+  smoke):
+    Test Suite 'All tests' passed — Executed 33 tests, with 0 failures.
+  SURFACE_TEST_EXIT=0   (33/33)
+  NB: the harness caught a REAL Swift-6 strict-concurrency defect mid-development
+  (a file-scope @MainActor DriveDetailSectionContent default in a nonisolated
+  context, DriveDetailPage.Previews.swift) — fixed to a @MainActor factory func and
+  re-run green. Not assumed; driven to ground.
+
+  $ xcodegen generate   → TeslaSync.xcodeproj written; the 7 surface files enumerate
+    into the app targets (TeslaSync + TeslaSync-macOS: the .swift sources + the
+    .strings resource + the #Preview file) and DriveDetailPageTests.swift into the
+    TEST targets (TeslaSyncTests + TeslaSync-macOSTests). Verified by pbxproj parse.
+
+FULL-APP gate (`xcodebuild build test`) — ACTUALLY RUN, reported RED, isolated:
+
+  $ xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator \
+      -arch arm64 CODE_SIGNING_ALLOWED=NO build
+    ** BUILD FAILED **  → BUILD_EXIT=65
+  The ONLY compiler error is PRE-EXISTING sibling pollution, NOT this surface:
+    feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module
+      dependency: 'XCTest'
+  project.yml globs TeslaSync/feature-views + TeslaSync/dashboard-widgets into BOTH
+  app targets; that pulls 261 co-located *Tests.swift files (which `import XCTest`)
+  into the app target — a module the app target cannot resolve. My DriveDetailPage.
+  strings was COPIED into the app bundle cleanly (CopyStringsFile … note: UTF-8, no
+  error) and NO DriveDetailPage/Features source produced any error.
+
+  Reproduced with the test files stripped to surface the SECOND pre-existing cause:
+  $ xcodebuild … EXCLUDED_SOURCE_FILE_NAMES='*Tests.swift' build  → BUILD_EXIT=65
+    13× "invalid redeclaration" + 250× "is ambiguous for type lookup" (+ 864
+    cascading "cannot infer key path") on duplicate sibling types — e.g.
+    TelemetryErrorsModel / TelemetryErrorRow defined in FOUR sibling files
+    (dashboard-widgets/TelemetryErrorsWidget.Model.swift, feature-views/
+    TelemetryErrorsPanel.{Adapter,Model}.swift, feature-views/FleetApiSection.
+    Models.swift). The SAME class of parallel-merge collision the prior P4 surfaces
+    recorded (macos-pending-verifications.md: DashboardWidgetSize / PowerFlowConnection
+    / WeeklyDigestDTO). grep of BOTH build logs for "Features/Driving" / "DriveDetailPage"
+    error: → ZERO. None in this surface or its allowed files.
+
+  DISPOSITION OF THE FULL-APP GATE: DEFERRED to the P4 integration runner / P99
+  acceptance gate (macos-pending-verifications.md), exactly as the peer surfaces
+  (0010-ToolCard, 0180-AlertMessageEditor, 0231-FSMTimelineChart, 0137-
+  DriveDetailHeader) deferred it — with stronger positive evidence here: full Xcode
+  actually ran, the surface compiled clean against the real tokens/components, and
+  the RED was driven to ground and isolated to (i) 261 co-located *Tests.swift
+  globbed into the app targets and (ii) duplicate sibling types — neither in this
+  surface. Integration resolves both by excluding *Tests.swift from the app targets
+  (wiring them into TeslaSyncTests, which is where THIS page's tests already live)
+  and de-duplicating the sibling types. NOTE: this page did NOT add to the app-target
+  test pollution — its tests are correctly in Tests/Unit (the TEST target).
+
+===========================================================================
+HONESTY COVENANT (binding)
+===========================================================================
+  1 No red-as-green     : the full-app xcodebuild is reported RED (BUILD_EXIT=65)
+                          with the real pre-existing compiler errors; every SURFACE
+                          PASS is a command run on THIS host with its real exit code,
+                          incl. an executed `swift test` 33/33 over the EXACT shipped
+                          files against the REAL tokens/components.
+  2 No scope narrowing  : full shell — loading/empty/error states + the no-telemetry
+                          banner + ALL 19 section boundaries (web order + grouping +
+                          the 4 conditional gates) + the adaptive 2-col chart grids +
+                          nav registration + deep link + i18n (23 web keys) + a11y +
+                          view.opened. Child panels are separate units (manifest:
+                          panels=0) injected via DriveDetailSectionContent.
+  3 No skip-and-assume  : each surface gate executed; the xcodebuild path was actually
+                          RUN twice (with + without the sibling test files) and the
+                          failure isolated, not assumed; a real concurrency defect the
+                          harness caught was fixed and re-verified.
+  4 No stubs as final   : complete implementations; placeholder real-scan COUNT=0
+                          (Features/Driving + Tests); no "Coming soon"/blank regions —
+                          an un-injected section renders the REAL web SectionErrorBoundary
+                          fallback string, not a stub.
+  5 No parity shortcuts : faithful port of the web render — the hasMeaningfulDriveStats
+                          envelope, the energy>0 / id gates, the exact section order +
+                          grouping + the lg:grid-cols-2 pairs, the 23 verbatim i18n
+                          keys — pinned by 33 tests.
+  6 No delegation       : authored directly (no sub-agent delegation of the surface).
+  7 No predecessor bypass: builds on the P4 shell/nav (AppRoute, RouteHostRegistry,
+                          AppShell), P3 components, P2 tokens, P1 state-holder seam —
+                          did NOT reimplement them; registered via the documented
+                          .navigationDestination seam.
+  8 No commit on red    : committing on the all-green SURFACE gates (placeholder
+                          COUNT=0, swiftlint --strict 0/6, swiftformat 0/7, swift test
+                          33/33, xcodegen enumeration). The repo-wide xcodebuild app
+                          build is DEFERRED (pre-existing sibling defects out of
+                          allowed-files scope) — explicitly NOT claimed passing.
+  9 No silent drift     : the xcodebuild RED + its two pre-existing sibling causes are
+                          fully DISCLOSED above. Pre-existing unrelated working-tree
+                          edits (web/.../BackupRestorePage.tsx, FleetApiSection.tsx,
+                          feature-views/AIUsageCard.*) were NOT touched and are NOT
+                          staged. The generated TeslaSync.xcodeproj is git-ignored.
+                          The /tmp SwiftPM harness + staged Shared.xcframework are
+                          throwaway. project.yml / .swiftlint.yml edits add ONLY the
+                          new TeslaSync/Features path (the page's own home).
+  10 Log ends with EXIT/STATUS below.
+
+===========================================================================
+DISPOSITION
+===========================================================================
+  Production-polished native drive-detail PAGE shell shipped at parity with the web
+  source: a pure, executed-green projection core (Foundation, Swift 6) reproducing
+  the web hasMeaningfulDriveStats envelope + the energy/id gates + the exact JSX
+  section order/grouping; a P1/S8 @Observable state holder (no view networking) with
+  loading/empty/error phases + per-section status; a SectionErrorBoundary parity that
+  renders each of the 19 web fallback titles (never a blank region); the no-telemetry
+  info banner; adaptive 2-column chart grids (macOS/iPad two-up, iPhone stacked);
+  navigation registration (DriveDetailDestination + .navigationDestination + the
+  /drives/:id deep link) wired into the app shell; a P1/S10 i18n facade with the 23
+  web keys; P1/S11 view.opened telemetry; and full a11y (VoiceOver summary, Dynamic
+  Type, Reduce-Motion, light/dark + increased contrast). All host-runnable SURFACE
+  gates pass: check-placeholders COUNT=0, swiftlint --strict 0, swiftformat 0,
+  xcodegen enumeration, and an executed `swift test` 33/33 (incl. ImageRenderer
+  per-state render smoke) against the REAL tokens/Design/Components. The repo-wide
+  xcodebuild app `build test` is DEFERRED to the P4 integration / P99 acceptance
+  runner — RED only on PRE-EXISTING sibling defects (261 co-located *Tests.swift
+  globbed into the app targets + duplicate sibling types), none in this surface's
+  code or allowed files, reproduced twice. apple-macos + apple-ios ledger rows set
+  done @ 25/25 (one adaptive source, ADR-002).
+
+===========================================================================
+COMMIT
+===========================================================================
+  git add apps/apple/TeslaSync/Features/Driving \
+          apps/apple/Tests/Unit/Features/Driving/DriveDetailPageTests.swift \
+          apps/apple/Sources/App/AppShell.swift \
+          apps/apple/project.yml apps/apple/.swiftlint.yml \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-driving-DriveDetailPage.log
+  git commit -m "feat(apps/apple): DriveDetailPage at web parity (P7 driving)"
+
+EXIT=0
+STATUS=DONE

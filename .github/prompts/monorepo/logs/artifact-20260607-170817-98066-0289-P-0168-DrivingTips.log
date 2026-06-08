@@ -1,0 +1,150 @@
+=== P4 Feature view 0168 DrivingTips (Apple) ===
+Run host: Darwin 25.5.0 arm64  |  2026-06-08T05:28:30Z
+Web source spec: web/src/features/driving/components/driving-dynamics/DrivingTips.tsx
+Native output:   apps/apple/TeslaSync/feature-views/DrivingTips.{swift,Model,Adapter,Views,Previews,Tests}.swift + .strings
+
+########################################################################
+# SECTION A — Platform capability probe (SwiftUI/SwiftCharts/MapKit, iOS18/macOS15)
+########################################################################
+$ xcodebuild -version
+Xcode 26.5
+Build version 17F42
+$ swift --version
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+Target: arm64-apple-macosx26.0
+$ xcrun simctl list devices available | grep -i 'iPhone 16'
+    iPhone 16 (83717DEE-70A3-4325-AA61-CBDDD3140989) (Booted) 
+$ which swiftlint swiftformat pwsh xcodegen
+/opt/homebrew/bin/swiftlint
+/opt/homebrew/bin/swiftformat
+/opt/homebrew/bin/pwsh
+/opt/homebrew/bin/xcodegen
+RESULT: Apple platform capability is PRESENT on this runner (Xcode 26.5, iOS 26.5 sim 'iPhone 16' booted).
+
+########################################################################
+# SECTION B — Surface-scoped gates (the shipped DrivingTips.* surface)
+########################################################################
+
+----- B1: swiftformat --lint (gate scope: the surface files) -----
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-289/apps/apple/.swiftformat
+SwiftFormat completed in 0.77s.
+0/6 files require formatting.
+FORMAT_EXIT=0
+
+----- B2: swiftlint --strict (gate scope: the surface files) -----
+Linting Swift files at paths TeslaSync/feature-views/DrivingTips.swift, TeslaSync/feature-views/DrivingTips.Model.swift, TeslaSync/feature-views/DrivingTips.Adapter.swift, TeslaSync/feature-views/DrivingTips.Views.swift, TeslaSync/feature-views/DrivingTips.Previews.swift, TeslaSync/feature-views/DrivingTips.Tests.swift
+Linting 'DrivingTips.swift' (1/6)
+Linting 'DrivingTips.Model.swift' (2/6)
+Linting 'DrivingTips.Adapter.swift' (3/6)
+Linting 'DrivingTips.Views.swift' (4/6)
+Linting 'DrivingTips.Previews.swift' (5/6)
+Linting 'DrivingTips.Tests.swift' (6/6)
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+
+----- B3: check-placeholders.ps1 (no TODO/stub/mock/placeholder/Lorem) -----
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+----- B4: Isolated SwiftPM build (real DrivingTips sources + real design Tokens.swift,
+          Swift 6 strict concurrency = .swiftLanguageMode(.v6)) -----
+          [methodology mirrors apps/macos-pending-verifications.md → P-0010-ToolCard]
+[0/1] Planning build
+Building for debugging...
+[0/1] Write swift-version--58304C5D6DBC2206.txt
+Build complete! (0.18s)
+ISOLATED_BUILD_EXIT=0
+
+----- B5: Isolated XCTest (adapter + projection + model/telemetry + a11y) -----
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+	 Executed 24 tests, with 0 failures (0 unexpected) in 0.004 (0.005) seconds
+Test Suite 'All tests' passed at 2026-06-07 22:29:06.727.
+	 Executed 24 tests, with 0 failures (0 unexpected) in 0.004 (0.006) seconds
+ISOLATED_TEST_EXIT=0
+
+########################################################################
+# SECTION C — Full-app two-scheme gate (xcodebuild build test) — BLOCKED
+########################################################################
+
+----- C1: xcodegen generate (project wiring) -----
+Project generated: apps/apple/TeslaSync.xcodeproj   XCODEGEN_EXIT=0
+DrivingTips references in generated project.pbxproj: 42 (surface wired into TeslaSync + TeslaSync-macOS targets)
+
+----- C2: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test -----
+Attempted live. KMP 'Stage Shared.xcframework' pre-action DID assemble the framework:
+xcframework successfully written out to: /Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-289/apps/shared/core/build/XCFrameworks/debug/Shared.xcframework
+
+...but the full-app gate did NOT reach EXIT=0. Two independent, out-of-scope blockers:
+
+  [BLOCKER 1 — shared-runner Gradle-daemon contention]
+  The pre-build 'Stage Shared.xcframework' Run-Script was killed mid-assembly by a
+  competing process in this shared parallel slot (3 concurrent 'xcodebuild -scheme'
+  processes observed). Verbatim xcodebuild output:
+    1706:Gradle build daemon has been stopped: stop command received
+    3410:Gradle build daemon has been stopped: stop command received
+    1718:	Run custom shell script 'Stage Shared.xcframework'
+
+  [BLOCKER 2 — pre-existing, unrelated app-target source collisions]
+  Independent of DrivingTips, the TeslaSync app module contains 15 files each
+  declaring 'public struct DashboardWidgetSize' (a hard 'invalid redeclaration'
+  compile error), plus 102 co-located '*.Tests.swift' files importing XCTest into
+  the app target. These are the exact blockers recorded in apps/macos-pending-verifications.md
+  for p4-apple/feature-views/P-0010-ToolCard. They live in out-of-scope files
+  (allowed files = feature-views/DrivingTips.* + this log) and cannot be fixed here.
+  Evidence (first 3 of 15 duplicate declarations):
+    apps/apple/Sources/DashboardWidgets/DrivetrainHealthWidgetModel.swift:10:public struct DashboardWidgetSize: Equatable, Sendable {
+    apps/apple/Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift:13:public struct DashboardWidgetSize: Equatable, Sendable {
+    apps/apple/TeslaSync/dashboard-widgets/UptimeMonitorWidget.Model.swift:225:public struct DashboardWidgetSize: Sendable, Equatable {
+
+  Zero DrivingTips / feature-views errors were emitted before the pre-action abort.
+  IOS_EXIT=BLOCKED (deferred)   MAC_EXIT=BLOCKED (deferred; same collisions + macOS dev signing)
+
+Deferral: full-app build+test for this surface is deferred to
+p4-apple/P99-0001-apple-acceptance-gate (macos-latest runner, signing identities),
+per apps/macos-pending-verifications.md. The surface itself is verified GREEN in isolation (Section B).
+
+########################################################################
+# SECTION D — Summary, acceptance criteria, final status
+########################################################################
+
+Per-step EXIT codes:
+  FORMAT_EXIT=0           swiftformat --lint (surface files)         GREEN
+  LINT_EXIT=0             swiftlint --strict (surface files)         GREEN
+  PLACEHOLDER_EXIT=0      check-placeholders.ps1                     GREEN
+  ISOLATED_BUILD_EXIT=0   SwiftPM build, Swift 6 strict concurrency  GREEN
+  ISOLATED_TEST_EXIT=0    24 tests, 0 failures                       GREEN
+  XCODEGEN_EXIT=0         project generation (surface wired in)      GREEN
+  IOS_EXIT=BLOCKED        full-app xcodebuild build test             DEFERRED (macos-latest)
+  MAC_EXIT=BLOCKED        full-app xcodebuild build test             DEFERRED (macos-latest)
+
+Acceptance criteria:
+  [x] All web states reproduced: loading / empty(no-data) / error / data / stale / offline
+      (DrivingTipsProjection.Phase + connection axis; per-state #Preview surfaces; projection tests).
+  [x] Binds via shared P1/S8 state holder (DrivingTipsSource → DrivingTipsModel); no HTTP in the view.
+  [x] Every web t() key present in P1/S10 catalog (DrivingTips.strings): recommendations, tipNoData,
+      tipEaseAccel, tipBrakeEarly, tipSmoothThrottle, tipCoast, tipGreat, tipKeep, tipThermal.
+  [x] Accessibility labels on every element: header (.isHeader), freshness chip, refresh Button,
+      each tip row (tone+message), error retry Button, loading region; icons accessibilityHidden.
+  [x] Tests: adapter (throttle banding + useMemo tip builder + tone) + per-state projection +
+      model/telemetry(view.opened)/stale-auto-refresh + a11y label join. + per-state #Preview snapshots.
+  [x] No TODO/stub/mock/placeholder/Lorem (PLACEHOLDER_EXIT=0).
+  [x] Telemetry: view.opened emitted with surface slug 'DrivingTips' (asserted by SpyDrivingTipsTelemetry).
+
+Conclusion:
+  The DrivingTips surface is COMPLETE and GREEN on every host-runnable, surface-scoped gate.
+  The literal two-scheme full-app 'xcodebuild build test' could not reach EXIT=0 on this runner
+  due to (1) pre-existing, OUT-OF-SCOPE app-target collisions (DashboardWidgetSize x-redeclaration,
+  co-located XCTest-in-app) and (2) shared-runner Gradle-daemon contention — neither caused by, nor
+  fixable within, this surface's allowed files. Per the prompt's capability clause and
+  apps/macos-pending-verifications.md, that verification is deferred to p4-apple/P99-0001-apple-acceptance-gate.
+  No red is reported as green: the full-app gate is recorded BLOCKED with API evidence (Section C).
+
+LEGEND: EXIT=4 → surface-scoped gates all 0; full-app two-scheme xcodebuild BLOCKED/deferred (see Section C).
+EXIT=4
+STATUS=BLOCKED

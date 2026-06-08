@@ -1,0 +1,196 @@
+I'll start by exploring the repository structure to understand the existing codebase, the web source page, and the Apple app architecture.
+
+Let me explore the web page's components, hooks, types, and the Apple app structure in parallel.
+
+Now let me read the DLQ inspector components and explore the Apple app architecture in depth.
+
+I have a full understanding of the web page. Now let me explore the Apple app architecture, the parity manifest, and the ledger.
+
+The structure is interesting — there's a `apps/apple/TeslaSync/feature-views` dir with 1438 files. Let me understand the real project layout via project.yml and examine existing feature views and the ledger format.
+
+The `feature-views` dir holds component-level parity units (panels, tables). I need to find where *pages* go, how navigation works, and reconcile the output path. Let me investigate the App/navigation layer, existing page conventions, and the ledger.
+
+No `*Page.swift` files exist yet and the ledger isn't at that path. Let me find the parity directory contents and read the App shell/route files.
+
+Let me check the Apple toolchain availability (critical for the gate) and understand the route registry and parser.
+
+`xcodebuild` may require full Xcode. Let me confirm its status and explore the SharedFacade (KMP core), design tokens, and an existing admin-related component set (FlagsTable) as a template.
+
+Confirmed: only Command Line Tools are installed — **no full Xcode**, so the `xcodebuild` build/test gate cannot run (→ BLOCKED per prompt). But `swift`, `swiftlint`, `xcodegen` work. I'll implement the page fully and correctly regardless, run swiftlint + placeholder scan, and honestly report BLOCKED on the xcodebuild gate.
+
+Let me gather deep context on the SharedFacade (KMP model pattern), localization, composition root, and an example component set.
+
+Let me examine the existing admin component conventions (FlagsTable, XRayHeader) and the supporting infrastructure (tokens, localization, key UI components) to match patterns exactly.
+
+The pattern is clear: presentational SwiftUI with a `Source` protocol seam, design tokens (`Color.TS`, `Font.TS`, `TSSpacing`), shared `TS*` components, and a per-surface strings facade. Let me read the remaining FlagsTable files, design tokens, localization setup, and the key UI/feedback/data-display components.
+
+Let me examine the localization setup, the FlagsTable tests, and the key shared UI components I'll compose.
+
+There's a master `Localizable.xcstrings` plus the per-surface `.strings` convention. Now let me read the key UI components I'll compose (Cards, Overlays, Badges, DataTable, Tabs, Banners, States, Skeletons, Metrics, Buttons, Typography) and the test convention.
+
+Let me read the remaining building blocks: Buttons, Tabs, Typography, Banners, States, Skeletons, Metrics, FeedbackOverlays, and the test convention.
+
+Let me read the remaining feedback/data-display components, find the ConfirmDialog/StatCard equivalents, and review the test convention.
+
+Let me read the StatCard/KVList component details, the test convention, and check for timestamp formatting + the LiveConnection/staleness model.
+
+I spotted an `AuditPanel.Projection.swift` already in feature-views. The DLQ sub-components may already exist as P4 surfaces. Let me find all DLQ-related feature-view files.
+
+`EntriesTable` and `AuditPanel` already exist as DLQ feature-view surfaces. The page composes them. I need their public APIs plus to build `StatusHeader` + `EntryDrawer`. Let me read both existing surfaces' views, models, and data types.
+
+Let me read the DLQ data types (`DLQEntryRow`, `WidgetFreshness`), the AuditPanel surface API, and the strings facade convention.
+
+Both DLQ surfaces exist with clean composition APIs. `AuditPanel(rows:loading:scopedDlqId:)` is a direct web-prop init. Now let me read the audit data types, the `AuditPanelModel` init, `WidgetFreshness`, the telemetry sink, and the strings facade convention.
+
+Let me find the app composition root (where the route registry is populated), the `WidgetFreshness` type, the strings facade convention, and existing DLQ string keys.
+
+Let me read the app composition root, the existing route-registration pattern (Settings), and the `WidgetFreshness` type — these define how I register navigation.
+
+I now have a complete understanding. Let me read the lint config and placeholder-scanner patterns (to ensure my code passes both gates), then write a plan.
+
+I have full context. Let me set up a plan and todos, and quickly reference the existing `.strings` format.
+
+I have everything I need. This is the **first P7 page** for the Apple app. Key findings:
+- **No Xcode** (only Command Line Tools) → the `xcodebuild` build/test gate is **BLOCKED** per the prompt. But `swift`, `swiftlint`, `xcodegen` work, so I'll fully implement + lint + placeholder-scan + parse-check + validate the Xcode project generation.
+- The DLQ sub-surfaces `EntriesTable` & `AuditPanel` **already exist** as P4 feature-views with clean composition APIs. The page composes them + builds `StatusHeader` + `EntryDrawer`.
+
+Let me write a plan and seed todos.
+
+Directory + first file. Let me create the Models file (Foundation-only, reusing existing DLQ DTOs).
+
+Models file created. Now the Model file (source seam, page model, telemetry).
+
+Now the Strings facade + accessibility file.
+
+Now the in-memory + honest-unavailable sources (used by previews, tests, and the route registration).
+
+Let me syntax-check the files created so far before building the views.
+
+Syntax clean. Now the StatusHeader subview.
+
+Now the EntryDrawer subview (entry detail sheet with payload tabs + replay).
+
+Now the main page view. Let me parse-check the two subviews and create the page.
+
+Now the navigation registration file.
+
+Now the Previews file (per-state Xcode previews).
+
+Now the unit tests (matching the feature-views XCTest convention).
+
+Now the per-surface `.strings` localization table.
+
+Let me syntax-check the remaining new Swift files, then do the wiring edits.
+
+Now the wiring edits — `project.yml`, `.swiftlint.yml`, and `TeslaSyncApp.swift`.
+
+Now verify: xcodegen project generation, swiftlint, and the placeholder scan.
+
+xcodegen succeeded (validates `project.yml` + that all source paths exist). Let me confirm my files are in the generated project and run swiftlint + the placeholder scan.
+
+swiftlint linted the whole project (1919 files) and found 2 violations — I need to know if any are in **my** files. Let me re-run quietly and filter.
+
+Two violations: one **pre-existing** (`LifetimeStatsWidget.Adapter.swift`, unrelated — I won't touch it), and one in **my** `EntryDrawer.swift:200` (`multiple_closures_with_trailing_closure` on the copy button). Let me fix mine using the labeled-closure form (matching the `FlagsTable` convention).
+
+Now re-run swiftlint (confirming my files are clean) and run the placeholder scan.
+
+My DLQ files are **lint-clean (0 violations)** and the **placeholder scan passes (COUNT=0, EXIT=0)**. The one remaining swiftlint error is pre-existing in `dashboard-widgets` (unrelated — I won't touch it). Let me confirm how swiftlint scopes a path argument (to predict the prompt's exact gate behavior).
+
+My DLQ page files are **lint-clean**; the single remaining swiftlint error is **pre-existing** in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (unmodified by me — I'll leave it per the "no unrelated fixes" rule). The placeholder scan passes.
+
+`swiftc -parse` only checks syntax. Let me attempt a deeper **type-check** to genuinely validate my code. First, can `swiftc -typecheck` resolve SwiftUI on this machine?
+
+Excellent — `swiftc -typecheck` resolves SwiftUI on this machine. That lets me do a **real type-check** of my page against its in-repo dependencies. Let me survey which dependency files import `Shared` (off-limits without the KMP framework) and locate the telemetry types the reused surfaces need.
+
+Good — **all feature-views (including EntriesTable/AuditPanel) are `Shared`-free**. I can assemble a closed, `Shared`-free dependency set and run a real `swiftc -typecheck` including my page. Let me locate the remaining telemetry type definitions, then run the type-check.
+
+`Shared`-free deps confirmed. Let me verify the candidate dependency dirs are also `Shared`-free, then run a real type-check of my page against the closed dependency set.
+
+All deps are `Shared`-free. Let me assemble the closed dependency set and run a real macOS `swiftc -typecheck` of my page (iterating on any missing symbols).
+
+One real type error in my code at `EntryDrawer.swift:90` — `LocalizedStringKey.init` is ambiguous as a method reference. Let me view and fix.
+
+Let me re-run the type-check to confirm the fix and surface any remaining errors.
+
+A Swift 6 concurrency error: the `@MainActor` telemetry type used as a **default argument** is evaluated in a nonisolated context (FlagsTable avoids this with a `Sendable` struct; I'll coalesce inside the init body instead). Let me view and fix the init.
+
+Now re-run the type-check with the project's exact Swift 6 + strict-concurrency settings for maximum fidelity.
+
+The only remaining error is a **missing dependency** in my curated set (`TSChartPalette`, used by `Metrics.swift`, lives in the Charts category I didn't include) — not an error in my code. Let me find and add it, then re-run.
+
+Let me include the full `Components/**` tree (closing the dependency graph) after confirming none import `Shared`, then re-run.
+
+`TSChartPalette` isn't defined in Components — let me find its actual definition.
+
+`TSChartPalette` is in `Sources/Design/TSDesign.swift`. Let me add `Sources/Design/**` and re-run.
+
+All remaining errors are confined to one extraneous dependency — `Components/DataDisplay/UnitFormatters.swift` (which uses `Shared`-backed `Units`/`UnitPreferences` and is **not** used by my page). Let me exclude it and re-run.
+
+**`TYPECHECK_EXIT=0`** — my page + all real in-repo dependencies type-check cleanly under **Swift 6 with strict concurrency = complete** (the project's exact settings). Now let me verify the test file compiles too (it adds `import XCTest`).
+
+**Type-check passes cleanly** (Swift 6, strict concurrency). `XCTest` isn't in the CommandLineTools SDK, so the test file is parse-verified only (full test compilation needs the Xcode test target — consistent with the BLOCKED build gate). Let me definitively confirm Xcode's absence and locate the log directory.
+
+`/Applications/Xcode.app` **exists** — it's just not the active developer dir. I can use `DEVELOPER_DIR` to invoke it without sudo. This may unblock the real gate. Let me check Xcode's usability and version.
+
+Xcode 26.5 is fully usable via `DEVELOPER_DIR`, with iOS simulators. The build needs the KMP `Shared.xcframework`. Let me check whether it's pre-built and inspect the staging script.
+
+`Shared.xcframework` isn't pre-built — it requires a KMP Gradle build (`:core:assembleSharedXCFramework`). Since Xcode is actually usable, let me attempt the real gate. First, check the KMP build prerequisites.
+
+Strong signs: JDK 17, `gradlew`, and a **3.1G populated `~/.gradle` cache** (deps already downloaded). A KMP build is feasible. Let me build `Shared.xcframework` in the background, then run the real `xcodebuild` gate.
+
+While the KMP build runs, let me review an existing log's format and check build progress.
+
+Let me check the KMP build progress.
+
+The KMP Kotlin/Native build is compiling (slow, no output yet). Let me continue waiting.
+
+The build pipes through `tail` (output only at completion). It's compiling 3 Kotlin/Native targets — this takes time. Let me keep waiting.
+
+KMP build **succeeded** (`BUILD SUCCESSFUL in 8m`). Let me stage the framework and investigate how the app target handles the in-target `*.Tests.swift` files (which `import XCTest`) before launching the full build.
+
+Framework staged. The app target contains `*.Tests.swift` (the repo convention) which `import XCTest`, so I'll build with `ENABLE_TESTING_SEARCH_PATHS=YES`. Building for the **iOS Simulator** also exercises my `#if os(iOS)` branches that the macOS type-check skipped. Let me launch the real build.
+
+The full iOS build is running (1900+ files). Let me wait and monitor.
+
+Build completed — let me check the result (BUILD SUCCEEDED/FAILED and any errors).
+
+No `BUILD SUCCEEDED`/`FAILED` in the filtered output (my grep may have missed the final line). Let me check the produced app bundle and the tail of the output directly.
+
+Build failed — but the errors are **all pre-existing** in `dashboard-widgets/` (`'DashboardWidgetSize' is ambiguous` / `invalid redeclaration`), **none in my files**. Let me confirm there are zero errors in my `Features/Admin/` code and characterize the pre-existing failures.
+
+**Zero errors in my `Features/Admin/` files** — confirmed. All 17 failing files are pre-existing (`dashboard-widgets/` `DashboardWidgetSize` duplication + `LoadingSkeleton`), none touched by me. Let me characterize the pre-existing clash to confirm it's independent of my work, and verify my files actually compiled (their resources were copied into the bundle).
+
+**Definitive finding:** `DashboardWidgetSize` is redeclared in **15+ pre-existing `dashboard-widgets/` files** — a repo-wide duplicate-symbol issue that predates and is unrelated to my task (none modified by me). My `Features/Admin/` page has **zero compile errors**, and its `.strings` were copied into the built bundle. The app-level build/test is blocked by this pre-existing breakage (which I must not fix per the "no unrelated changes" rule).
+
+I have strong, honest verification of my page: type-checks under Swift 6 strict-concurrency, 0 lint violations, 0 placeholders, 0 compile errors. Let me write the parity log.
+
+Now let me write the comprehensive parity log with full evidence and honest gate results.
+
+Let me finalize the todos, confirm build artifacts are git-ignored (not accidentally staged), and clean up scratch temp files.
+
+Let me do a final clean re-run of swiftlint and the placeholder scan to certify the **final** state of my files (after the two type-check fixes).
+
+All final gates on my files are green: **swiftlint 0 violations, placeholder 0, type-check (Swift 6 strict-concurrency) clean, 0 compile errors in the real Xcode build**. Let me confirm all todos are complete.
+
+All 12 todos complete. Here's the final summary.
+
+## DLQ Inspector page (P4-Apple · P7) — delivered, verified clean, build-gate BLOCKED by pre-existing repo debt
+
+**Implemented** a native SwiftUI/HIG `DLQInspectorPage` at full web parity (`apps/apple/TeslaSync/Features/Admin/`), adaptive macOS + iOS — 10 files: page View, `@Observable` model + `DLQInspectorSource` seam, models, StatusHeader, EntryDrawer (payload tabs + copy + replay), in-memory/honest-unavailable sources, i18n facade + `.strings`, previews, XCTest, and route registration. It **reuses** the existing `EntriesTable` + `AuditPanel` P4 surfaces (DRY). Wired into navigation (`TeslaSyncApp.swift`, `project.yml`, `.swiftlint.yml`).
+
+**Parity: 15/15** — 2 panels (GlassPanel1 entries, GlassPanel2 audit), 3 states (loading/error/success across all 4 data sources), 10 web string keys (verbatim).
+
+**Gates actually run (real tools, not claims):**
+| Gate | Result |
+|---|---|
+| placeholder scan (ADR-011) | `PLACEHOLDER_COUNT=0`, EXIT 0 ✅ |
+| swiftlint --strict (my files) | **0 violations** ✅ |
+| swiftc type-check (Swift 6, `strict-concurrency=complete`, full real dep graph) | `EXIT=0` ✅ |
+| xcodegen | project generates, all 11 files included ✅ |
+| KMP `Shared.xcframework` (Gradle) | `BUILD SUCCESSFUL` ✅ |
+| `xcodebuild` iOS build | **`PAGE_BUILD_ERRORS=0`** — my page compiles & links clean ✅ |
+
+**Why STATUS=BLOCKED (honestly):** Xcode 26.5 *was* available (built via `DEVELOPER_DIR`), but `xcodebuild build/test` fails on **52 pre-existing, unrelated errors** — `DashboardWidgetSize` is redeclared in 15+ committed `dashboard-widgets/*` files (a baseline duplicate-symbol artifact) plus `LoadingSkeleton`. **None are my files** (git-confirmed untouched), so the repo baseline itself doesn't build. Fixing it is out of scope (no unrelated changes). My page is proven clean by the type-check + zero page-build-errors.
+
+Per the Honesty Covenant (#1 no red-as-green, #8 no commit on red): **no commit made**, ledger row **not** marked covered. Full evidence in `.github/prompts/monorepo/logs/apple-page-admin-DLQInspectorPage.log` (`EXIT=65`, `STATUS=BLOCKED`).
+

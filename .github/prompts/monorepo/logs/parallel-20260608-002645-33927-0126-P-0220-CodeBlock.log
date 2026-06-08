@@ -1,0 +1,96 @@
+I'll start by exploring the repository structure to understand the context and verify what's available.
+
+I now have critical findings. Let me record toolchain status and study the established pattern. Xcode proper is NOT installed (only Command Line Tools), so `xcodebuild`/iOS Simulator are unavailable — but `swift`, `swiftlint`, `swiftformat` work. Let me study the predecessor pattern (AIUsageCard) and shared infrastructure.
+
+The filesystem is case-insensitive (macOS), causing `AIUsageCard`/`AiUsageCard` collision. Let me read the actual on-disk canonical files and check the case situation precisely.
+
+Let me map the shared infrastructure (P1/S8 state-holders, S9 tokens, S10 i18n, S11 telemetry) and read the canonical predecessor files.
+
+Let me read the core shared infrastructure and find a pure-presentational predecessor (since CodeBlock has no data sources).
+
+The shared core is Kotlin-Multiplatform-backed (`import Shared`). CodeBlock is purely presentational (no data), so no StateHolder needed. Let me read the design tokens, telemetry contract, and find clipboard helpers + a clean presentational template.
+
+Found the native component library at `Sources/Components/UI/`. `ChatMessageItem` is a sibling in the same chatbot feature. Let me read the clipboard utility, the component library index, the telemetry contract, and sibling chatbot components.
+
+`MarkdownRenderer.CodeBlock.swift` already renders fenced code — key visual-parity reference. `ChatMessageItem` is a clean sibling. Let me read these plus the telemetry contract and i18n strings format.
+
+The `MarkdownRenderer.CodeBlock.swift` is the exact visual-parity reference. Now I need the i18n facade definition and the telemetry `view.opened` emit pattern. Let me locate them.
+
+This is the canonical pattern. CodeBlock is in the same chatbot feature, so I'll mirror MarkdownRenderer's P4-leaf contract (the chatbot content streams, so loading/empty/error/stale/offline are genuine here). Let me read the remaining reference files to nail exact APIs.
+
+Token grep came up empty — they're defined elsewhere (likely generated P1/S9 tokens). Let me locate the exact definitions to ensure my code references valid symbols.
+
+The tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read it to confirm exact symbols.
+
+I now have the complete token vocabulary and pattern. Let me verify what I can actually compile/lint given the toolchain (no Xcode), and check how the project globs sources.
+
+pwsh is available and SwiftUI/Charts/MapKit all typecheck against the CLT macOS SDK — so I can do a real standalone typecheck plus run swiftlint/swiftformat/check-placeholders. Let me read the full project.yml to understand the test target and excludes.
+
+I have the complete picture now. Key facts:
+- **Toolchain**: Xcode.app absent (only Command Line Tools) → `xcodebuild`/iOS-Simulator unavailable. But `swift`/`swiftc` (typechecks SwiftUI+Charts+MapKit against macOS SDK ✓), `swiftlint`, `swiftformat`, `pwsh` all work.
+- **Pattern**: The sibling `MarkdownRenderer` (same chatbot feature, which delegates fenced code to `CodeBlock.tsx`) is the exact canonical template — self-contained (no `Shared` import), P4-leaf state contract, telemetry/i18n/pasteboard seams, generated `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius`/`TSMotion` tokens.
+
+Let me create a plan file and the todo list, then build.
+
+Now I'll build the surface. Starting with the Foundation-only value types.
+
+I left a stray placeholder enum. Let me remove it.
+
+Now the Adapter (Foundation-only projection — the testable "cached → projection" the prompt requires).
+
+Now the Model — state holder, seams (telemetry/pasteboard/source), and the P1/S10 i18n facade.
+
+Now the Views — the web-faithful code card, the icon-only copy button, the freshness chip, and the connectivity banner.
+
+Now the non-data states — loading (skeleton or streaming partial), empty, and error.
+
+Now the entry view.
+
+Now the previews exercising every state, then the strings catalog.
+
+Now the test files — the adapter/projection unit tests and a11y, then the model-behavior tests.
+
+All 10 files written. Let me verify — format, lint, placeholder check, and a real typecheck against the macOS SDK.
+
+swiftformat made no changes — my formatting already matches. Now lint (scoped to my files) and placeholder check.
+
+Both lint checks pass (0 violations). Let me read the placeholder checker to invoke it correctly, then run it.
+
+The gate's literal `-Path .../CodeBlock` scans nothing (no such literal path) — a vacuous pass. I'll run that for the gate record but also do a *meaningful* scan of my actual files. First, let me check the forbidden patterns and grep my files for any risky tokens.
+
+No forbidden tokens. Let me confirm the stray enum is gone, run the placeholder gate (literal + meaningful scan), and the real typecheck.
+
+Placeholder gate passes (real scan: COUNT=0). Now the strongest check — a real Swift 6 / strict-concurrency typecheck of the production files + generated tokens against the macOS SDK.
+
+The only errors are the `#Preview` macro needing Xcode's `PreviewsMacros` plugin (absent in CLT) — a toolchain gap, not a code defect (the sibling uses the same macro). Let me confirm all non-preview code typechecks cleanly.
+
+All production code typechecks cleanly (EXIT=0, Swift 6 strict concurrency). Let me confirm the Previews file has *only* the macro-plugin gap and nothing else, then typecheck the test files.
+
+Production code is fully clean (only the `#Preview` macro needs Xcode's plugin). XCTest isn't in CLT, so I'll typecheck the **test bodies** against my real API using a minimal XCTest shim — this catches any symbol/signature mismatch in the tests.
+
+Test bodies typecheck clean against the real API (EXIT=0). Now let me capture the real xcodebuild failure evidence for the log (the genuine capability block).
+
+All capability evidence captured: `xcodebuild` (IOS_EXIT=1, MAC_EXIT=1, "requires Xcode"), no `simctl`, and `Shared.xcframework` absent (git-ignored, needs Kotlin/Native). Now I'll generate the log by actually running each gate step and teeing real output.
+
+The Shared.xcframework line had a subshell paren error. Let me view the log and fix that line, then append the rest.
+
+Line 16 fixed. Now append the remaining gate steps and supplementary verification with real output.
+
+The S3 capture is misleading — `grep -c` found **0** error lines (good), but `$?`=1 is just grep's no-match exit, not the typecheck result. Let me correct that in the log with the authoritative swiftc exit.
+
+Confirmed: swiftc exit 0, 0 errors. Let me fix the misleading S3 lines in the log and append the capability analysis + footer.
+
+Now the capability analysis, parity summary, and honest EXIT/STATUS footer.
+
+Let me review the complete log to ensure it's coherent and honest.
+
+Log is coherent and honest. Now let me verify git state and stage **only** my files (not the pre-existing working-tree changes), then commit.
+
+All 10 CodeBlock files + log are untracked; the AIUsageCard/web changes are pre-existing and NOT mine. Staging only my files explicitly.
+
+Exactly my 10 files + the log — nothing else. Committing with the specified message.
+
+Commit succeeded (`ec0aa91d1`, 11 files, no hook interference). Let me verify the commit contents and that pre-existing changes remain untouched.
+
+Everything verified — the commit contains exactly my 11 files; the pre-existing AIUsageCard/web changes are untouched. Let me finalize the todos.
+

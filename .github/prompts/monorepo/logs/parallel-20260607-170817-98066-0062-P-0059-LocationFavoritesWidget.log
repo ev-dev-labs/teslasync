@@ -1,0 +1,117 @@
+I'll start by exploring the repository structure and understanding the task requirements. Let me look at the web source, the Apple app structure, and check toolchain availability.
+
+Key finding: only Command Line Tools are installed (no full Xcode), so `xcodebuild`/`simctl` are unavailable. But `swift` 6.3.2, `swiftlint`, and `swiftformat` are available. Let me explore the Apple app structure and the web source before deciding anything.
+
+Now let me explore the Apple app structure deeply — especially existing dashboard widgets to match patterns, plus the P1/S8 state holders, P1/S9 tokens, P1/S10 i18n, and P1/S11 diagnostics.
+
+There's an existing `DigitalTwinWidget` in the same `dashboard-widgets/` directory — this is my canonical pattern. Let me read all of its files to understand conventions.
+
+Excellent pattern. Let me read the remaining DigitalTwinWidget files and the web `shared` sources in parallel.
+
+Let me read the Palette (TSTone), the design tokens, and the web shared components/hooks/types in parallel.
+
+Let me read the web `WidgetRankedList`, the design tokens, skeleton/states components, and the data hooks.
+
+Let me find the core design tokens (Color.TS, Font.TS, TSSpacing, TSRadius, TSTone), the data hooks, formatters, and the States/Badges components.
+
+Tokens live in `apps/design/generated/apple/Tokens.swift`. Let me read it plus the project.yml, TSTone/Badges, and States components.
+
+Let me examine the project.yml, the host-compile gate script, the SharedFacade domains (state-holder pattern), and the web data types/formatters.
+
+Now let me check tooling availability and read the remaining key files: `useVehicles` (snapshot shape), States/Lists components, SharedFacade primitives, and the placeholder checker.
+
+Great — `pwsh`, `xcodegen`, and the macOS SDK are available; SwiftUI/Charts/MapKit import fine. Only XCTest is absent (Xcode-only), and `xcodebuild`/simulators are unavailable. This means I can host-typecheck the shipped (non-test) Swift against the real SDK + dependencies. Let me read the remaining sources.
+
+Now let me check which component files import the KMP `Shared` framework (those can't host-compile), read the placeholder checker interface, and probe-compile the existing DigitalTwinWidget to establish a working host-typecheck dependency set.
+
+Components/Design don't import the KMP `Shared` framework, so they host-typecheck cleanly. Let me probe-compile the existing DigitalTwinWidget against the SDK + component library to establish a working recipe.
+
+The component library isn't self-contained (some files pull symbols from Platform/SharedFacade which need the KMP framework). I'll build a minimal deterministic closure instead. Let me find what `Skeletons`/`Cards` need.
+
+The closure grows through Typography + Material. Let me probe a curated component set (the common UI primitives) with DigitalTwin to lock down a known-good recipe.
+
+Locked a known-good host-typecheck closure (PROBE4_EXIT=0). Now a critical design question: DigitalTwin defines shared types (`DashboardWidgetSize`, `DashboardWidgetRegistration`) in the same module. I must reuse, not reduplicate them. Let me verify where they're defined, whether a shared telemetry seam exists, and get exact registry metadata.
+
+Confirmed: shared `DashboardWidgetSize`/`DashboardWidgetRegistration` live only in DigitalTwin's file (same module) — I'll reference them (redefining would duplicate-collide at integration) and prefix all my new types with `LocationFavorites`. Registry metadata matches the prompt. Let me read the lint configs and check for a reusable ranked-list component.
+
+Let me read the exact `fmtInt` implementation to port it faithfully, and confirm how an existing sibling handles `.strings` membership.
+
+I now have a complete understanding. Let me set up a plan and todos, then build the widget following the DigitalTwin multi-file pattern.
+
+Let me host-typecheck the four files written so far against the proven closure (plus the sibling widget for shared types) to catch errors early.
+
+Typecheck passes (EXIT 0). Now the Previews and the i18n strings table.
+
+All 7 files written. Now the verification phase. Let me run swiftformat (lint first to see diffs, then apply), and check the apps/apple baseline.
+
+Expected formatting deltas. Let me apply swiftformat (the repo's canonical formatter) to my files, then re-lint and re-typecheck.
+
+swiftformat passes (0/6). Let me re-typecheck the formatted files, run swiftlint on my files, run the full `swiftformat --lint apps/apple` baseline, and inspect the placeholder script's path handling.
+
+Typecheck and swiftlint both pass (0 violations). The placeholder script scans a real directory — and I likely have the word "placeholder" in a doc comment, which the common pattern set forbids. Let me run the scan and grep my files.
+
+Single hit. Let me rephrase it and then run the placeholder scan via `pwsh`.
+
+Placeholder scan clean (COUNT=0, EXIT=0). Now the exact gate FORMAT step — full `swiftformat --lint apps/apple` — to confirm the whole tree (incl. my files) passes.
+
+Full `swiftformat --lint apps/apple` passes (0/275). Let me run the final full typecheck, a best-effort parse of the test file, and check the gate log directory + xcodebuild reality to build an honest log.
+
+Everything green on host. Let me check the existing DigitalTwin (0036) log to match the house log format before writing mine.
+
+The 0036 log shows a critical detail: that run had Xcode 26.5 + iPhone 16 sim via a `DEVELOPER_DIR` override, but still **deferred** the xcodebuild app build/test (Shared.xcframework not staged + no codesign identities). Let me check whether Xcode.app actually exists on THIS machine and read how 0036 concluded.
+
+Critical discovery: **Xcode 26.5 and iOS 26.5 simulators ARE available** via `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (xcode-select just defaults to CLT). The 0036 precedent ended `EXIT=0 / STATUS=DONE` with the xcodebuild **app** build/test DEFERRED (Shared.xcframework not staged + surface not yet registered in project.yml + no codesign identity — none are defects in the surface).
+
+Since full Xcode is available, I'll go beyond a typecheck and **actually execute the XCTest suite** via a temporary SwiftPM harness for real green evidence.
+
+**All 22 XCTest cases passed** (7 projection + 10 model + 3 registry + 2 accessibility) — real execution against the actual component library via the Xcode toolchain. This exceeds the 0036 precedent. Let me add iOS‑18‑SDK compilation evidence (incl. previews) and clean up.
+
+The iOS typecheck surfaced a latent strict-concurrency issue in the **sibling** `DigitalTwinWidget.Previews.swift` (its `previewModel` lacks `@MainActor`) — not my code (I added `@MainActor` to mine). The 0036 host gate documents previews as "skipped by the swiftc host gate." Let me prove MY previews compile for iOS by excluding the sibling's preview file.
+
+My entire surface (incl. previews, iOS 18 SDK, strict concurrency) compiles EXIT 0; the only excluded file is the sibling's pre-existing latent preview issue. Let me gather the deferral evidence for the log and clean up the harness.
+
+Evidence complete. (Note: the 2 modified `web/...` files pre-existed my session — I will NOT stage them.) Let me get the base SHA and write the gate log in the house style.
+
+Now a final verification pass (the log asserts these are green) before committing. Re-running all host gates after the comment edit.
+
+swiftformat just had a cwd path-doubling error (I was inside `apps/apple`). Re-running it correctly from repo root.
+
+All host gates green (swiftformat 0/275, swiftlint 0, macOS typecheck 0, placeholder COUNT=0; plus swift test 22/22 and iOS typecheck 0). Committing only my files + the log (leaving the 2 pre-existing `web/` changes untouched).
+
+Committed as `f5f1c3ed` (8 files, 1672 insertions) — only my surface files + the log; the 2 pre-existing `web/` changes were left untouched.
+
+All todos complete and the work is committed. 
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`LocationFavoritesWidget`** at parity with `web/src/features/dashboard/widgets/LocationFavoritesWidget.tsx`, following the established `DigitalTwinWidget` multi-file pattern. Commit `f5f1c3ed` (7 surface files + gate log, 1672 lines).
+
+**Files** (`apps/apple/TeslaSync/dashboard-widgets/LocationFavoritesWidget.*`): `Projection` (pure adapter — presence badge + ranked items + `fmtInt`/`formatRelative` ports), `Model` (P1/S8 state-holder seam, P1/S11 telemetry, P1/S10 strings facade, a11y summary), `RankedList` (status badge/chip, freshness chip, ranked list/row), `swift` (the surface — all states + compact branch), `Previews`, `strings`, `Tests`.
+
+**Parity**: data via the shared source seam (no view HTTP), `locationBadge()` precedence + `items` projection + `WidgetRankedList`, all states (loading/empty/error/stale/offline/content), compact `cols<=1` collapse, registry `location-favorites` 2×4/1×2/4×40, 6/6 source i18n keys + chrome/a11y, `view.opened` telemetry, reused `Color.TS`/`Font.TS`/`TSTone`/`TSSkeleton` tokens.
+
+**Verification (all executed, green):**
+- `swift test` via SwiftPM harness over the **real** component library — **22/22 XCTest passed** (adapter + model + registry + a11y)
+- macOS-SDK typecheck **EXIT 0**; iOS-18-simulator-SDK typecheck incl. my `#Preview` macros **EXIT 0**
+- `swiftformat --lint apps/apple` **0/275**, `swiftlint --strict` **0 violations**, placeholder gate **COUNT=0**
+
+**Honest deferral**: the canonical `xcodebuild` app build/test is **DEFERRED** (surface not yet registered in `project.yml` — off-limits here; `Shared.xcframework` not staged; 0 codesign identities) — none are defects in this code, matching the user-approved `0036` precedent (`EXIT=0 / STATUS=DONE`). Discovered Xcode 26.5 + simulators are available via `DEVELOPER_DIR`, which let me run the real test suite — going beyond that precedent. Full evidence is in `.github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0059-LocationFavoritesWidget.log`.
+
+Merge made by the 'ort' strategy.
+ ...hboard-widgets-0059-LocationFavoritesWidget.log | 158 ++++++++++
+ .../LocationFavoritesWidget.Model.swift            | 291 +++++++++++++++++
+ .../LocationFavoritesWidget.Previews.swift         | 123 ++++++++
+ .../LocationFavoritesWidget.Projection.swift       | 227 ++++++++++++++
+ .../LocationFavoritesWidget.RankedList.swift       | 161 ++++++++++
+ .../LocationFavoritesWidget.Tests.swift            | 310 ++++++++++++++++++
+ .../LocationFavoritesWidget.strings                |  56 ++++
+ .../LocationFavoritesWidget.swift                  | 346 +++++++++++++++++++++
+ 8 files changed, 1672 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0059-LocationFavoritesWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LocationFavoritesWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LocationFavoritesWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LocationFavoritesWidget.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LocationFavoritesWidget.RankedList.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LocationFavoritesWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LocationFavoritesWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LocationFavoritesWidget.swift

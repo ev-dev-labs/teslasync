@@ -1,0 +1,88 @@
+I'll start by exploring the repository structure to understand the codebase and the task requirements.
+
+Now let me explore the Apple app structure and supporting infrastructure.
+
+The actual Swift code lives under `Sources/`. Let me examine the project structure, the maps component library, and existing feature views.
+
+The feature views live flat in `TeslaSync/feature-views/`. Let me check tooling availability and the P3 map wrappers, and find existing map-based parity pages to model after.
+
+Let me check for full Xcode, find existing feature views using the map wrappers, and understand the localization + KMP binding conventions.
+
+Xcode.app exists. Let me test whether I can run xcodebuild via DEVELOPER_DIR, and examine the established parity-page convention (model, adapter, states, strings) plus the charging session type.
+
+Xcode 26.5 is available via `DEVELOPER_DIR`. Now let me study the established parity-page convention in depth by reading a representative charging feature view set and the localization helper.
+
+This convention is elaborate. Let me read the rest of the map wrappers and their tests to understand the intended API surface for clustering and callouts.
+
+Let me examine the charging-session Swift model, the SwiftUI string helper pattern, and the States/Previews/Tests conventions.
+
+Let me examine the empty-state convention, navigation/routing, the placeholder scanner, and an existing log format.
+
+The predecessor disposition is clear: feature-views aren't yet in `project.yml`; surfaces are validated via a SwiftPM host harness on both SDKs + tests + lint + placeholder, with xcodebuild deferred. Let me find the gate contract and harness.
+
+I now understand the established methodology. Let me set up tracking and gather the remaining specifics: routing, ledger schema, token/component locations, and Shared-import status of the Maps closure.
+
+Maps/UI/Design don't import Shared — good, I can typecheck the surface against the real component closure. Let me locate the exact token/component APIs, SI/format helpers, and any existing Swift charging-session type.
+
+`TSEnergy`/`Units` pull in the `Shared` framework, so I'll keep formatting pure in the projection (web hardcodes kWh = wh/1000 anyway), matching the predecessor injected-converter pattern. Let me read the tokens, typography, TSTone, and the date/currency port conventions.
+
+I have a thorough understanding of the conventions. Let me read the lint/format configs, ledger schema, and git baseline, then start implementing.
+
+Key findings: feature-views ARE committed and `.swiftlint.yml` now includes `TeslaSync/feature-views` (so `--strict` lints my files; 120-char lines matter). Let me read the format config, check for any existing apple ledger, and view a Previews/Tests exemplar.
+
+I have full context. Let me verify the web energy converter + date formatter semantics so my port matches exactly, then start implementing.
+
+Confirmed: energy = wh/1000, datetime = "MMM d, yyyy, h:mm a", number with 1 decimal. Let me check the forbidden placeholder patterns so my code/comments avoid them, then set up the plan and start writing.
+
+I have everything needed. Let me set up tracking and write the plan.
+
+Now I'll implement the surface. Starting with the pure Adapter (projection, clustering, formatting) — Foundation-only, Sendable, testable.
+
+Now the Model file — `@Observable` model, input type, strings facade, telemetry seam, navigation route value.
+
+Now the main view file:
+
+Now the previews and the strings catalog:
+
+Now the test suite:
+
+All 7 files created. Let me normalize formatting with swiftformat (matching the repo config), then lint.
+
+Format and lint are green (0 violations). Now the placeholder scan, scoped to my surface's files:
+
+Format, lint, and placeholder gates are green. Now I'll typecheck against the real component closure. Let me identify the exact Shared-free dependency set my surface needs.
+
+None import `Shared`; the closure is bounded. Let me run the iOS-simulator SDK typecheck against this real closure.
+
+iOS typecheck passes. Now the macOS 15 SDK typecheck:
+
+Both SDKs pass. Now the DEBUG previews typecheck:
+
+Previews compile. Now the critical step — executing the full XCTest suite via a self-contained SwiftPM harness (real surface + real component closure, Swift 6 mode):
+
+All 18 tests pass. Let me clean up the harness and capture honest evidence for the deferred xcodebuild step (verify the xcodeproj is gitignored first).
+
+Let me check the gitignore situation and the xcframework build script before generating any artifacts:
+
+The xcodeproj and xcframework are gitignored; the framework isn't staged (build needs the Kotlin/Native gradle toolchain). Let me capture the deferral evidence: generate the project and attempt a build to confirm the real blocker.
+
+xcodegen succeeds; my surface is registered (42 pbxproj refs). Now a bounded build attempt to capture the real blocker:
+
+Captured the exact blocker: `There is no XCFramework found ... ** BUILD FAILED **`. Let me clean up the generated project and gather line counts for the log.
+
+Tree is clean — only my 7 files are new. Let me update tracking and write the parity log.
+
+Now the parity ledger:
+
+Now let me validate the ledger JSON and re-run the full host gate suite as a final confirmation before committing.
+
+Let me do a final consolidated re-run of the SDK typechecks and the full test harness to confirm everything is green before committing.
+
+All gates green on final re-run (iOS+macOS typecheck 0, 18/18 tests). Let me commit only my files (explicitly, to avoid the unrelated working-tree changes).
+
+Exactly the 9 intended files are staged. Committing:
+
+Committed. Let me do a final verification of the commit and confirm no stray build artifacts remain.
+
+All complete and verified. Let me finalize the todo tracking.
+

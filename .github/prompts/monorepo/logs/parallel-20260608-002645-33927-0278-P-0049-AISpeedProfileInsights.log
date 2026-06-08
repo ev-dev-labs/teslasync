@@ -1,0 +1,158 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Key finding: **Full Xcode is not installed** — only Command Line Tools. `xcodebuild` and `simctl` are unavailable, but Swift 6.3.2, swiftlint, and swiftformat work. Let me verify SwiftUI availability and study the codebase before deciding the path.
+
+SwiftUI may be importable. Let me confirm the real exit code and read the web dependencies in parallel.
+
+SwiftUI, Charts, and MapKit **all compile** with the CLT macOS SDK 26.5. `xcodebuild` (iOS) is unavailable, but `swiftc` macOS compilation works. Now let me study the existing Apple codebase to find native counterparts and conventions.
+
+Good — `AIRestorePanel`, `AISettings`, and `AiUsageCard` are existing native AI surfaces. Let me read the web stream hook plus the closest native templates to learn the exact conventions.
+
+Let me read the full AIRestorePanel native template (closest AI surface) and the web `useAiStream` hook.
+
+This is a well-structured codebase. Let me read the rest of the AIRestorePanel template, the design tokens, shared UI primitives, and the project config in parallel.
+
+Let me read the remaining template files and locate the shared design tokens and UI primitives.
+
+Let me locate the token and primitive definitions, and check the project config for how files are compiled.
+
+Important: the app targets compile `Sources`, `feature-views`, `dashboard-widgets`, `Localization`, and `../design/generated/apple` — but **not** `shared-surfaces`. And `xcodebuild` needs full Xcode (absent). Let me read the design tokens, primitive APIs, and check PowerShell availability.
+
+`pwsh` is available (placeholder check runnable). Tokens live in `apps/design/generated/apple/Tokens.swift`. Let me read the tokens and primitive APIs I'll build against.
+
+Now the button, typography, feedback, motion, and badge primitives.
+
+Let me capture the `useAiStream` state contract and the AiUsageCard test patterns (including any view/a11y test style).
+
+Let me probe the toolchain (XCTest, Observation macro) and read the lint/format configs so my code passes `--strict`.
+
+Findings: `XCTest` isn't available to the CLT `swiftc` (so `.Tests.swift` can't run here — only under `xcodebuild`), but `@Observable` works. Also `shared-surfaces` is absent from `project.yml` and `.swiftlint.yml`, but `swiftformat --lint apps/apple` **does** scan it. I'll keep logic SwiftUI-free for genuine standalone test execution, and make everything format/lint-clean.
+
+Let me write a plan file, then build the surface.
+
+The logs dir has many sibling logs. Let me check a sibling shared-surfaces log to match conventions before writing.
+
+Revealing: sibling logs are **committed reference artifacts** from a real Xcode CI (they claim "iOS build SUCCEEDED"), but my runner is CLT-only. The 11 BLOCKED siblings confirm BLOCKED is legitimate. Honesty covenant forbids fabricating a DONE log. Let me genuinely check whether any full Xcode exists before concluding.
+
+`/Applications/Xcode.app` **exists** — the active dir is just pointed at CLT. I can use `DEVELOPER_DIR` (no sudo) to access it. Let me probe its real capabilities.
+
+**Breakthrough:** Xcode 26.5 with iOS 26.5 SDK, macOS SDK, and a **booted iPhone 16 simulator** are all available via `DEVELOPER_DIR`. The gate CAN run. Let me check build prerequisites (xcodegen, the Shared.xcframework dependency, committed project).
+
+Full Xcode 26.5, iOS/macOS SDKs, a booted iPhone 16 simulator, and `xcodegen` are all available — the real gate is runnable. The Shared.xcframework needs a Gradle/KMP build (heavy, CI-owned). I'll write the complete surface now, verify with real-SDK `swiftc` compiles + standalone logic tests, then attempt the full xcodebuild gate.
+
+Let me write the pure-logic Adapter first.
+
+Now the Model (state-holder seam, telemetry, i18n facade):
+
+Now the main surface View:
+
+Now the presentational subviews:
+
+Now Previews and Tests:
+
+Now the i18n catalog contribution:
+
+All 7 files created. Now let me verify — starting with swiftformat and swiftlint on the new files.
+
+swiftformat wants auto-fixable reformatting (the repo convention wraps single-line property bodies). Let me run the fixer on my files, then re-lint.
+
+swiftformat clean. Now swiftlint `--strict` on the new files:
+
+The only violation is **pre-existing** in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (not my surface, out of allowed scope). Let me prove my files are clean in isolation with a mirrored config.
+
+My files: **0 violations**. Let me confirm the pre-existing violation isn't mine via git status, then run the placeholder check.
+
+Two findings: (1) the placeholder gate flags the literal word "placeholder" in my comments (describing the thinking indicator) — I'll reword. (2) `AIUsageCard.*` show as modified but I never touched them — likely pre-existing baseline changes. Let me investigate both.
+
+Both explained: `AIUsageCard.*` changes are **pre-existing baseline edits** (a case-rename 0203→0237 already in the working tree before my session — not mine; I'll exclude them from my commit). The placeholder hits are the word "placeholder" in my comments. I'll reword to "indicator" (the web's `AIThinkingIndicator` term).
+
+Placeholder gate passes (0 placeholders). Now the key verification: compile correctness. Let me check whether the design-system layer is self-contained (no KMP `Shared` dependency) so I can typecheck my surface against the real primitives.
+
+Design-system is `Shared`-free — I can typecheck my surface against the **real** primitives. Let me run a full typecheck against the macOS SDK (with strict concurrency + DEBUG to cover previews).
+
+The failure is in an **unrelated** primitive (`UnitFormatters.swift` needs `UnitPreferences` from another module file) — my surface doesn't use it. Let me typecheck against only the minimal real primitives my surface actually references.
+
+`tsGlassPanel()` modifier lives in `TSMaterial.swift`. Let me add the missing design dependencies and retry.
+
+macOS typecheck **passes** (strict concurrency + DEBUG previews). Now the iOS Simulator SDK — the gate's primary target.
+
+Both iOS and macOS typechecks **pass**. Now genuine logic test execution — I'll compile and run the Adapter + Model logic as a macOS executable with assertions.
+
+Harness structure issue (top-level `@MainActor` + `@main`). Let me restructure it as a library-parsed file with statics.
+
+**All 54 logic assertions pass** on the real toolchain. Summary so far: swiftformat clean, swiftlint 0 violations, placeholders 0, iOS+macOS typechecks pass, logic executes correctly.
+
+Now let me attempt the **full official gate**. First, can the KMP `Shared.xcframework` build (the heavy prerequisite)? Let me check the toolchain and start a bounded build.
+
+JDK 17 + gradlew present, but no prebuilt xcframework (a full KMP build is heavy/CI-owned). The highest-value, controllable verification is to **run my actual `Tests.swift` as a real XCTest bundle** on macOS against the real primitives — no xcframework needed. Let me build and run that.
+
+The manual XCTest bundle hits the toolchain's C-macro bridging (which only `xcodebuild` wires up). My logic harness already executed the assertions; the view tests are covered by the passing typecheck. Let me now attempt the **real** gate — starting the KMP `Shared.xcframework` build (bounded), which is the prerequisite for `xcodebuild`.
+
+Gradle works **offline** with cached deps. Let me build the `Shared.xcframework` (bounded). This is heavy Kotlin/Native compilation — I'll start it and monitor.
+
+Kotlin/Native compilation is slow — still building. Let me continue waiting.
+
+The KMP xcframework build exceeded 9 min (Kotlin/Native is slow). It was genuinely compiling (no error). Let me restart it in the background with a longer budget and continue monitoring — a second run may benefit from Gradle incremental state.
+
+While that builds, let me verify the final formatted state of my files and re-confirm lint after the comment edits.
+
+Final checks all clean (format 0, lint 0/6, placeholder 0). Let me check the xcframework build progress.
+
+Good — the first run's compilation was cached (tasks now `UP-TO-DATE`); the second run is near completion. Let me wait for it to finish.
+
+Release macOS linking (the slow final step) is underway. Let me wait for completion.
+
+**`Shared.xcframework` BUILD SUCCEEDED.** Now I can attempt the real `xcodebuild` gate. Let me stage the framework, back up and temporarily wire `shared-surfaces` into `project.yml`, and generate the project.
+
+Now generate the Xcode project and build for macOS (faster than iOS, no simulator needed).
+
+My files are in the generated project (42 refs). Let me build the macOS app target (xcframework already staged). This compiles the whole app including my surface — a long build, so I'll run it in the background.
+
+Let me monitor the build for early errors.
+
+The macOS build finished. Let me check the result.
+
+Flag error — `-derivedDataPath` needs `-scheme`. Let me rebuild with the target (no derivedDataPath) so it compiles directly with the staged xcframework.
+
+Compilation didn't start — it's a **code-signing** prerequisite (no dev cert on this runner), a pre-build validation. Standard CI fix: disable signing. Let me rebuild so compilation actually runs.
+
+Compilation actually started but hit a structural issue: `.Tests.swift` files (which `import XCTest`) are in the app target's source path. This affects existing `feature-views` tests too — so the real project must route them to a test target. Let me investigate how the baseline handles this.
+
+This is the decisive finding. `macos-pending-verifications.md` documents that for **every** p4-apple surface, the full-app `xcodebuild build test` is a **known deferred verification** blocked by *pre-existing, unrelated parallel-merge collisions*: co-located `*.Tests.swift` importing `XCTest` into the app target (the exact error I hit), `DashboardWidgetSize`/`PowerFlowConnection` redefined 8–15×, the unstaged xcframework, and dev-signing. The sanctioned per-surface path is isolated build + tests + real-SDK typechecks + lint/format/placeholder — exactly what I did. Let me corroborate the blockers and confirm zero errors from my surface.
+
+Fully corroborated: **zero** errors from my surface; `DashboardWidgetSize` redefined **15×**; **261** co-located test files force `XCTest` into the app target — all matching the documented pre-existing blockers. The build stopped on a pre-existing `feature-views` test file. Let me capture the parallel iOS-gate evidence (same pre-existing blocker).
+
+Both gate steps fail identically on the **pre-existing** XCTest-in-app-target blocker with **zero** errors from my surface — exactly the documented `macos-pending` situation. I've matched and exceeded the sanctioned per-surface verification. Now let me revert the temporary `project.yml` edit and clean up generated artifacts.
+
+The `/tmp` backup was cleaned and the `&&` chain short-circuited, so cleanup didn't complete. Let me revert `project.yml` via git and remove generated artifacts properly.
+
+Tree is clean — only my `shared-surfaces/` files are new. Now let me capture the **exact gate commands'** real exit codes (repo-wide lint/format) for an honest log.
+
+Repo-wide format gate is red on a **pre-existing** file (`ActionBuilder.Previews.swift`, not mine); my 6 files are clean. Combined with the pre-existing swiftlint violation and the `xcodebuild` collisions, every repo-wide gate step is red due to pre-existing issues outside my allowed scope, while my surface is green throughout. Let me capture the swiftlint repo-wide exit and write the honest log.
+
+All gate exits captured honestly. Let me gather final line counts and write the comprehensive log.
+
+Now I'll write the comprehensive, honest gate log.
+
+Now let me stage exactly my surface files + the log (excluding the pre-existing baseline changes) and commit.
+
+Staging is exactly my 7 files + the log. Let me commit with the prescribed message.
+
+Committed cleanly (8 files, `fba74367e`). Let me do final cleanup and verify the working tree is pristine.
+
+The task is complete. Working tree is pristine (project.yml unchanged, no generated artifacts left; the remaining `AIUsageCard.*` modifications are pre-existing baseline changes, not mine). My commit `fba74367e` contains exactly the 7 surface files + the log.
+
+## Summary
+
+I shipped the native Apple **`AISpeedProfileInsights`** shared surface — the SwiftUI parity of `components/ai/AISpeedProfileInsights.tsx` — as 7 files (1,593 lines) in `apps/apple/TeslaSync/shared-surfaces/`, reproducing the web `AIFeatureCard` + `AiOutputPanel` + `withAiFeature` + `useAiStream` scaffold natively (new shared-component files were out of allowed scope), plus the P4 leaf contract.
+
+**Architecture** (mirrors the existing `AIRestorePanel`/`AiUsageCard` conventions): pure SwiftUI-free Adapter (stream lifecycle, output-branch logic, projection), `@Observable @MainActor` Model bound through a P1/S8 `AISpeedProfileSource` seam (no HTTP in the view), P1/S10 i18n facade, P1/S11 `view.opened` telemetry. **All states render**: gated → `EmptyView` (ADR-015), loading, empty, ready {idle, streaming, done, error+retry}, stale (1-shot auto-refresh), offline. The three source-extracted strings resolve through i18n.
+
+**Verification (genuine, on real Apple SDKs via `DEVELOPER_DIR`→Xcode 26.5):**
+- ✅ `swiftc -typecheck` iOS-18 **and** macOS-15 SDKs, strict concurrency, against the **real** design-system primitives — both pass
+- ✅ 54/54 logic assertions compiled + **executed** (projection, model wiring, telemetry-once, stale/offline, i18n)
+- ✅ swiftformat 0/6 · swiftlint --strict 0 violations · placeholders 0
+- ✅ Built the KMP `Shared.xcframework`, `xcodegen` enumerates my files, full-app build shows **zero** errors from my surface on both platforms
+
+**Outcome — `EXIT=65 STATUS=BLOCKED`** (honest): the literal full-app `xcodebuild … build test` and repo-wide swiftlint/swiftformat gates can't reach `EXIT=0` on this pre-integration slot, blocked **solely** by pre-existing, out-of-allowed-scope parallel-merge collisions (261 co-located `*.Tests.swift` forcing `XCTest` into the app target; `DashboardWidgetSize` redefined 15×; dev-signing; one pre-existing lint + one format violation). This exactly matches `apps/apple/macos-pending-verifications.md`, which defers these to the `P99-0001` acceptance gate on macos-latest CI. The surface itself is complete and green on every check that isolates it. I did not fabricate a green xcodebuild result (honesty covenant §1/§8).
+

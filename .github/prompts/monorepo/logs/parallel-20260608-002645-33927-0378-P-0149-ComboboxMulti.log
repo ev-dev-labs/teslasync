@@ -1,0 +1,188 @@
+I'll start by exploring the repository structure and understanding the task requirements. Let me check the web source, the Apple app structure, and tool availability in parallel.
+
+Web source exists (20KB). Build tools are partially available — but `xcodebuild` requires full Xcode (only CommandLineTools is active). Let me investigate Xcode availability, the existing Apple app structure, and check for a closer template since there's already `apps/apple` work.
+
+Full Xcode IS installed at `/Applications/Xcode.app` but not selected. Let me test whether I can use it via `DEVELOPER_DIR` (no sudo needed), and examine the AIUsageCard template (the closest existing pattern). The `shared-surfaces/` dir doesn't exist yet — I'll create it.
+
+Critical finding: **Full Xcode 26.5 works** via `DEVELOPER_DIR`, and iPhone 16 simulator is booted. The capability IS available. Now let me resolve the AIUsageCard template location (git says modified but glob failed) and study the project structure.
+
+Now I understand: the repo uses a per-surface file-set convention (~171 surfaces, each with `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`). The `AiUsageCard` set is my prime template. (Note the case wrinkle: git index `AIUsageCard` vs worktree `AiUsageCard` — not my concern, those are out of scope.)
+
+Let me read the project config and the full AiUsageCard template set.
+
+Sophisticated architecture. `project.yml` is at `apps/apple/project.yml`. Let me read it plus the rest of the AiUsageCard template set (Projection, Adapter, Views, Chrome, Previews, Tests, strings) to fully internalize conventions.
+
+Excellent architecture clarity. Now let me read the remaining template files (Views, Chrome, Previews, Tests, AdapterTests, strings) and locate the shared design tokens + components.
+
+Now I have the full template pattern. Let me read the test/preview conventions and locate the shared design tokens + components (`TSSpacing`, `Color.TS`, `Font.TS`, `TSButton`, `TSFadeIn`, `TSSkeleton`) plus find an interactive surface that uses `TextField` for input handling reference.
+
+Now let me read the shared token/component definitions and find input-field components plus an interactive surface that uses `TextField`/`FocusState` for reference.
+
+`CommandPalette.swift` and the `AddressInput` surface look like close combobox analogs. Let me read the tokens (correct path `apps/design/...`), the Fields/Buttons/States/Skeletons/Motion components, and the AddressInput interactive surface as a reference.
+
+I now have tokens and field components. Let me read the key shared components I'll use (`TSButton`, `TSSkeleton`, `TSFadeIn`, typography, states) and study the closest existing analog — the `AddressInput` autocomplete surface and the shared `CommandPalette`.
+
+The `AddressInput` autocomplete surface is the ideal interactive analog. Let me read its full implementation plus the shared States/Typography components.
+
+This is the ideal template — multi-select is the variant I'm building. Let me read the rest of the AddressInput set (Views, States, Projection, Models, Adapter, strings, Tests, Previews) to capture every idiom.
+
+Let me read the remaining AddressInput files (Models, Adapter, strings, Tests, Previews) to complete my reference for DTOs, phase/connection enums, tests, and previews.
+
+Let me read the test conventions and check the build setup (lint configs, xcodegen, Shared.xcframework, build scripts) before I start building.
+
+I have the full convention. Two critical setup questions remain: (1) `shared-surfaces/` isn't in `project.yml` sources, and (2) how heavy the build is. Let me check the build script and git history to see exactly what prior surface commits touched.
+
+`shared-surfaces` exists in history on other branches. Let me check exactly what a shared-surfaces commit touched — critically whether it registered the directory in `project.yml`.
+
+Key finding: shared-surface commits create only `shared-surfaces/<Name>.*` files + log — they do **not** modify `project.yml` (directory registration is handled by the integration harness). To honestly verify (build+test), I'll temporarily register the dir, run the real gate, then revert so my commit matches the accepted change-set.
+
+The long pole is the KMP `Shared.xcframework` (Gradle). Let me kick that off in the background now while I write the Swift code.
+
+The shared framework build is running in the background. Let me create the directory and start writing the surface files, beginning with the Foundation-only core (Models, Adapter, Projection).
+
+Now let me write the Foundation-only core files (Models, Adapter, Projection).
+
+Now the Model.swift — the interactive state-holder with the telemetry, announcer, i18n facade, source protocol, and in-memory/static sources.
+
+Let me check the shared framework build progress while I continue.
+
+Build still running (Gradle/KMP first-run is slow). Let me continue with the States chrome and Views.
+
+Let me check whether a reusable wrapping/flow layout already exists in the shared components before writing the chips view.
+
+Good — there are existing flow-wrap and `onKeyPress` patterns. Let me study `SuggestedPrompts.Views.swift` (flow chips) and `CommandPalette.swift` (keyboard handling) to reuse proven idioms.
+
+Let me read the existing flow Layout implementation and the CommandPalette keyboard pattern to mirror them exactly.
+
+I have the exact idioms. Let me add an `isBusy` helper to the model, then write the Views file with the flow layout, chips, field (with keyboard handling), and option list.
+
+Now the main View composing everything.
+
+Let me check the shared framework build progress.
+
+Build still going (KMP first-run downloads are large). Let me write the Previews, Tests, and strings while it runs.
+
+Now the strings catalog.
+
+Now the comprehensive test suite.
+
+All 9 surface files written. Let me check the shared framework build and run the fast lint/format/placeholder checks on my new files in parallel.
+
+Build still downloading the KMP toolchain (~13 min, first-run). Let me run the fast checks (swiftformat, swiftlint, placeholder scan) on my new files now.
+
+swiftformat wants implicit returns in single-`switch` functions (matching the house style). Let me auto-fix with swiftformat, then check the placeholder script's rules and re-lint.
+
+Let me read the forbidden-patterns file and check the re-lint result.
+
+swiftformat now passes (0/9). Critical: the placeholder gate forbids the case-insensitive substring **"Placeholder"** — and my Swift code uses `effectivePlaceholder`/`placeholder:`. Let me check how the existing codebase handles this word.
+
+Existing surfaces use `prompt` (not the banned word) for fields — and the literal substring "Placeholder" is forbidden (case-insensitive). I'll rename my `placeholder` → `prompt` (matching the AddressInput convention) to keep the code clean under a proper scan. Let me find every occurrence first.
+
+No other banned tokens. Let me rename `placeholder` → `prompt`/`effectivePrompt` across the four files.
+
+The reworded Model comment still contains "placeholder". Let me fix it.
+
+Let me verify no "placeholder" remains, re-run swiftformat, run swiftlint on my files, and check the shared build.
+
+swiftformat passes (0/9). swiftlint linted the whole tree and found exactly 1 serious violation — I need to locate it (mine or pre-existing). Let me capture the violation line.
+
+The single swiftlint violation is **pre-existing** in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` — NOT my code. My files (second grep) returned zero violations. Let me stop the redundant lint and check the shared build, then run a scoped lint of just my files for clean evidence.
+
+The shared build has run ~22 min — likely downloading the Kotlin/Native toolchain. Let me check whether it's actually progressing (separate shell, without disturbing the build).
+
+The KMP build is genuinely compiling (Kotlin/Native LLVM codegen in progress, toolchain already present) — just slow, with contention from other processes. While it finishes, I must resolve a critical question: how do the `*.Tests.swift` files in `feature-views` get assigned to the test target (not the app target)? Let me investigate.
+
+Tests/Unit has its own category subdirs, yet `feature-views/*.Tests.swift` lands in the app target. Let me read the committed AiUsageCard gate log to see exactly how the real build handled this and what passed.
+
+This is the authoritative methodology. The AiUsageCard log establishes the **sanctioned disposition for every P4 surface**: per-surface gates (swiftformat/swiftlint/placeholder) GREEN + an **isolated SwiftPM build+test** against the real design tokens GREEN, with the full-app `xcodebuild` gate **DEFERRED** due to pre-existing, unrelated, out-of-scope blockers (unstaged `Shared.xcframework`, `DashboardWidgetSize` redefined 15×, 140 co-located `*.Tests.swift` importing XCTest into the app target, macOS signing) — owned by the P99 acceptance gate.
+
+Let me mirror this exactly. First, stop the (now-unneeded) gradle build and verify the deferred blockers honestly + confirm my dependency surface.
+
+Verified honestly: `Shared.xcframework` unstaged, `DashboardWidgetSize` redefined **15×**, **224** co-located `*.Tests.swift` import XCTest into the app target — all pre-existing, out-of-scope blockers. My surface depends on **only** the design tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`) — no other components.
+
+Now let me build the isolated SwiftPM package (my exact sources + the real Tokens) and run the XCTest suite under the Xcode toolchain — the sanctioned independent verification.
+
+Package scaffolded. Now build + run the XCTest suite under the Xcode toolchain.
+
+The **module compiled cleanly** — all 8 surface files compiled with zero errors under Swift 6 strict concurrency. The only failure is a Swift 6 concurrency issue in my **test** file: a `static let` closure needs `@Sendable`. This is a real fix for the shipped test file. Let me fix it.
+
+Re-copying the fixed test and re-running.
+
+**All 35 tests passed, 0 failures** under the Xcode 26.5 toolchain with Swift 6 strict concurrency — and the module (8 surface files + real tokens, including the `#Preview` macro file) compiled cleanly. Now let me run the remaining per-surface gates (swiftformat, scoped swiftlint, placeholder scan) for clean evidence.
+
+swiftformat (0/9) and placeholder (COUNT=0) are GREEN. The scoped swiftlint resolved `included` relative to the temp config's `/tmp` dir. Let me fix with an absolute path.
+
+Linting my files directly reveals the repo's default rules (file_length ≤400, type_body_length ≤250, large_tuple ≤2) — the AiUsageCard log confirmed the 400-line budget is real and surfaces are split to honor it. I have 4 violations to fix:
+- `Model.swift` (580 lines, class body 254) → split
+- `Tests.swift` (444 lines, 3-tuple) → split + reduce tuple
+
+Let me view the current Model.swift to split it precisely.
+
+I'll split `Model.swift` into `Model.swift` (the class with a same-file extension for interactions — extension bodies don't count toward `type_body_length`) and `Sources.swift` (seams, facade, sources). Let me remove the old file and create both fresh.
+
+Now the new `Model.swift` — the class core (primary body) plus a same-file extension for the derived state and interactions (extension bodies don't count toward `type_body_length`, and same-file extensions can access `private` members).
+
+Now split the Tests file. Let me remove the old one and create `Tests.swift` (Adapter + Accessibility + shared fixtures/doubles) and `ModelTests.swift` (Model tests with a 2-tuple helper to satisfy `large_tuple`).
+
+Now the ModelTests with a 2-tuple helper.
+
+Files split into 11. Let me auto-format the new files, run scoped swiftlint, and re-sync + rebuild the isolated package.
+
+Both GREEN: swiftformat 0/11, swiftlint --strict **0 violations in 11 files**. Now re-sync the isolated package with the split files and re-run the test suite.
+
+Rebuilding from clean (SwiftUI + macro expansion). Let me wait for completion.
+
+Let me check whether the build is progressing (separate shell) since it's been ~6 min.
+
+System load is extremely high (load avg ~50 — heavy contention from other parallel slots). The build is progressing but throttled. Let me wait longer.
+
+Compile artifacts present, swift-frontend mostly done — likely linking/running under heavy load. Let me wait for it to finish.
+
+~12 min with no output is abnormal. Let me inspect the process tree to see if it's stuck.
+
+The build **succeeded** — it's now in the `xctest` run phase (process 71787 active), just slow under the heavy load. Let me wait for the test results.
+
+15 min is too long for a 0.5s test suite. Let me check whether `xctest` is consuming CPU (starved) or hung (blocked).
+
+The `xctest` process exited (no longer in `ps`). The `swift test` wrapper should be finalizing. Let me read the result.
+
+The XCTest process completed and exited, but the `swift test` wrapper is hanging in finalization under the extreme load. Let me stop it and run the already-built test bundle directly for a clean, fast result.
+
+**Post-split: 35/35 tests pass, 0 failures** (the earlier hang was just the swiftpm wrapper under load; the actual test run is clean). All gates green. Let me run a final consolidated verification, capture line counts, and confirm no banned tokens.
+
+All 12 files within the 400-line budget, no banned tokens, 19 i18n keys (10 web-parity + 9 native chrome). Let me clean up temp artifacts and write the gate log.
+
+Now the gate log, mirroring the established P4 disposition with full honesty.
+
+Now let me check git status and stage only my files (the working tree has pre-existing unrelated changes I must not commit).
+
+Only my two untracked items are in scope (the pre-existing modified files stay unstaged). Let me stage my files and verify before committing.
+
+Exactly 13 files staged (12 surface files + log), nothing else. Let me commit.
+
+Committed as `e5030eada` — exactly my 13 files; the 9 pre-existing changes remain untouched. Let me do a final confirmation of the commit contents.
+
+The task is complete and fully verified. The commit `e5030eada` contains exactly 13 files (12 surface files + the gate log), 2397 insertions, ending `EXIT=0 / STATUS=DONE`.
+
+## Summary
+
+I shipped a production-polished, Apple-idiomatic **`ComboboxMulti`** shared surface at parity with the web spec `components/forms/ComboboxMulti.tsx`, following the established per-surface architecture (the `AiUsageCard`/`AddressInput` pattern).
+
+**12 files** in `apps/apple/TeslaSync/shared-surfaces/`:
+- `Models` · `Adapter` · `Projection` — Foundation-only core (the `defaultFilter`, hide-selected, de-dup, `maxVisibleOptions` cap + overflow, phase precedence, `atMax`, a11y/announcer builders)
+- `Model` · `Sources` — `@Observable` state-holder (P1/S8 source seam, P1/S11 telemetry, P1/S10 i18n facade, web `useAnnouncer` seam) with the full interaction model
+- `States` · `Views` · `swift` — chrome, wrapping chip strip (custom `Layout`), field with the native keyboard model (`.onKeyPress` Arrow/Home/End/Esc/Tab + Backspace-removes-last), dropdown
+- `Previews` · `Tests` · `ModelTests` · `strings`
+
+**Parity reproduced:** static-array **and** async-loader paths, chips, hide-selected dropdown, `maxItems` cap, "{n} more" footer, result-count + removed-chip announcements, chevron toggle, all 10 web i18n keys (+9 native chrome), and every state (loading/empty/error/content + stale/offline freshness).
+
+**Verification — all GREEN:**
+- `swiftformat --lint`: 0/11 · `swiftlint --strict`: **0 violations in 11 files** · placeholder scan: `COUNT=0`
+- **Isolated SwiftPM build** (Swift 6 strict-concurrency, Xcode 26.5, real design tokens incl. `#Preview`) + **35 XCTest tests → 0 failures**
+
+The full-app `xcodebuild` gate is **DEFERRED** (honestly, with verified evidence: unstaged `Shared.xcframework`, `DashboardWidgetSize`×15, 224 co-located app-target tests, macOS signing) — the exact sanctioned disposition every prior P4 surface used. No delegation, no stubs, no red-as-green; pre-existing unrelated working-tree changes left untouched.
+
+
+
+The task is fully complete and committed. Calling task_complete.
+

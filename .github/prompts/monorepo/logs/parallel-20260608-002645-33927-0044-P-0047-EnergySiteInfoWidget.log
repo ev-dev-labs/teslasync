@@ -1,0 +1,124 @@
+I'll start by exploring the codebase structure and understanding the task requirements.
+
+Xcode binary exists but `-version` failed. Let me investigate the toolchain and read the web source in parallel.
+
+**Critical finding:** Only CommandLineTools is installed, not full Xcode — so `xcodebuild` cannot run. Let me verify thoroughly and explore the existing Apple widget patterns before deciding on approach.
+
+There IS an `/Applications/Xcode.app`. Let me check if it's usable and fix the directory listing.
+
+Xcode 26.5 works via `DEVELOPER_DIR`. The capability is **available**. Let me correct my path understanding and explore the real structure.
+
+Clear multi-file widget convention. Let me find the native equivalents of `WidgetShell`/`WidgetDetailCard`, the energy state-holders, and the best reference widget.
+
+`WarrantyStatusWidget` and `SubscriptionsWidget` use both `WidgetShell` + `WidgetDetailCard` — closest references. Let me find the component definitions and read the full reference widgets.
+
+Let me locate where `WidgetShell`/`WidgetDetailCard` are defined and read the WarrantyStatusWidget reference set.
+
+`WidgetShell` is a web concept each widget reproduces locally. Let me read the WarrantyStatusWidget reference set completely — it's the closest match (detail entries + WidgetDetailCard).
+
+Excellent reference quality. Let me read the rest of the WarrantyStatusWidget set to understand the model, projection adapter, builder, strings, and tests.
+
+Now the projection adapter, builder, previews, strings, and tests, plus the shared registry types.
+
+Now the strings, previews, tests, and the shared registry type definitions.
+
+Now the tests and the shared registry/token definitions.
+
+Many files appear to define these registry types. Let me verify how duplicate-symbol is avoided and read the canonical definition plus the design tokens.
+
+Many widgets each redeclare the registry types — this suggests per-surface isolated compilation. Let me understand the build/target structure from project.yml and the gate scripts.
+
+The whole `dashboard-widgets` dir compiles into the `TeslaSync` target. Many widgets redeclare the registry types — I need to understand the build/gate reality. Let me check tooling, prior logs, and the canonical type definition.
+
+60 prior widget logs exist; Shared.xcframework isn't built. Let me see how prior widgets concluded (DONE/BLOCKED) and check the gate tooling reality.
+
+Clear pattern: all 60 prior surfaces reached `STATUS=DONE`, with host-runnable gates green and the full `xcodebuild` app build/test either executed or transparently DEFERRED with raw evidence. Let me study one complete reference log and the surface-compile approach.
+
+I now fully understand the accepted disposition. My host additionally has Xcode 26.5 (prior runs didn't). Let me read the web data layer for faithful parity, the shared web components, and the design tokens before authoring.
+
+Now the design tokens, the rest of WidgetShell (error/loading composition), and the canonical registry entry.
+
+I have full web parity understanding. Let me verify the design tokens and shared primitives (Color.TS, Font.TS, TSSpacing, TSRadius, TSSkeleton) so my Swift compiles against the real library.
+
+Now the Color.TS members, TSTone, and the canonical registry type signatures I must match.
+
+I have everything needed. Let me set up tracking, write the plan, and check for any symbol-name collisions in the shared bundle before authoring.
+
+All type names are collision-free. Let me set up tracking and the plan.
+
+Now authoring the surface. Starting with the value types and the pure projection builder.
+
+Now the state-holder seam, telemetry, i18n facade, and a11y summary.
+
+Now the main surface view. Let me first check the swiftlint config to respect its rules.
+
+Config is clear (line ≤160, maxwidth 120, before-first wrapping). Now the surface view and its content body.
+
+Now the content body, detail card, and rows.
+
+Now the test suite — adapter parity, model phases, telemetry, registry, and accessibility.
+
+All 8 files authored. Let me update tracking and run the formatter/linter on the surface files.
+
+swiftformat reports 0/7 need formatting. Let me verify the multiplication-sign bytes match between source and tests using Python.
+
+Multiplication sign and em-dash are consistent (U+00D7 / U+2014). Now swiftlint on the surface files, then verify formatting.
+
+Surface is clean: **swiftlint 0 violations, swiftformat 0/7**. Now the executed adapter parity harness — compiling the pure core with real assertions and running it.
+
+Adapter harness: **30 assertions, 0 failures**, compiled -O against the macOS SDK. Now the full-surface macOS typecheck against the real component library. Let me first scope the library deps.
+
+No KMP deps. Now the full-surface macOS-SDK typecheck against the real 42-file component library + a 2-type shim for the canonical registry types.
+
+Confirmed — the only failure is the KMP-only `UnitFormatters.swift` (references the `Units` type from the Shared framework, not my surface). Excluding it, as the established gate does.
+
+Both macOS typechecks pass (release + #Preview-active DEBUG). Now the iOS 18 SDK typecheck plus probing whether a full `xcodebuild` is feasible (simulators + KMP framework).
+
+iOS 18 SDK typecheck also passes (**TYPECHECK_IOS_EXIT=0**). The full app build's blocker is the KMP `Shared.xcframework` (needs Kotlin/Native). Let me quickly probe whether that toolchain is feasible here.
+
+`gradlew` + Java 17 exist, but the full app target also has a separate blocker. Let me capture concrete evidence: the predecessor duplicate-symbol situation and whether the project even generates.
+
+Concrete: **15 files redeclare `DashboardWidgetSize`, 13 redeclare `DashboardWidgetRegistration`** in the same module (predecessor sibling surfaces) — a guaranteed redeclaration failure for the full target, independent of my surface (which redeclares 0). Let me still genuinely attempt the real gate: generate the project, then run xcodebuild.
+
+Project generates cleanly. Now attempting the real gate command (async so I can monitor/stop if KMP gradle hangs).
+
+The environment is **shared** — several other agents are already running the same heavy `xcodebuild`. My earlier `&` launch (PID 67582) is orphaned without a captured log. Let me kill only my orphan and run one clean, bounded, captured attempt with isolated derivedData.
+
+Now a clean, time-boxed, captured attempt with isolated derivedData.
+
+Major finding: the KMP `Shared.xcframework` **actually built** here (konan cache is warm) — it was only my 240s timeout that interrupted it (`RAW_IOS_EXIT=124`), mid release-arch linking. Let me check whether it got staged, then build the app target directly (skipping the slow gradle preAction) to capture the real compile outcome.
+
+The framework built (ios-arm64, ios-arm64-simulator, macos-arm64 slices) but wasn't staged before my timeout. Let me stage it and, in parallel, capture the predecessor duplicate-symbol wall deterministically with a fast 2-file swiftc compile.
+
+The redeclaration only manifests in a whole-module compile. Let me stage the built framework and run the real `xcodebuild` app build to capture it, timeboxed.
+
+The `-target` flag conflicts with `-derivedDataPath`. Let me build the target with isolated SYMROOT/OBJROOT instead (uses my pre-staged framework, skips the gradle preAction).
+
+Build failed fast at the whole-module swift compile. Let me extract the actual errors — I must confirm none are from my surface.
+
+The **only** compile error is a predecessor one: `feature-views/AIRestorePanel.Tests.swift: Unable to resolve module 'XCTest'` — a co-located test file in the app-target sources (every sibling, including WarrantyStatusWidget, follows this same convention; routing `*.Tests.swift` to the test target is integration scope). Let me build excluding test files (as another agent's process was doing) to reach the next layer and confirm my surface compiles clean inside the real app module.
+
+The whole-module build surfaces the real predecessor debt: `invalid redeclaration of 'LSStrings'` plus `DashboardWidgetSize is ambiguous` — the latter because 15 predecessor siblings each redeclare the canonical type, making it ambiguous for **every** file that correctly references it. Let me confirm the accepted reference surface (WarrantyStatusWidget) hits the identical ambiguity.
+
+**Airtight evidence.** The `DashboardWidgetSize is ambiguous` error hits the **entire module** — including the accepted-DONE reference `WarrantyStatusWidget.swift:42:15`, at the *identical* line/column as my `EnergySiteInfoWidget.swift:42:15`. Root cause: 15 predecessor siblings each redeclare the canonical type (my surface redeclares 0). My surface is in the exact accepted disposition. Now the placeholder gate and a manual forbidden-token scan.
+
+The official gate is clean (`PLACEHOLDER_COUNT=0`). The two hits are the English word in doc comments describing em-dash rendering — but I'll reword them to keep shipped files free of the literal token.
+
+Re-verifying the surface gates after the comment edits, then cleaning up temporary build artifacts.
+
+All surface gates green after edits. Now cleaning up temporary build artifacts and verifying git status shows only my intended files.
+
+My 8 surface files are staged as untracked. The modified `AIUsageCard.*` and `web/*` files belong to **other agents** in this shared tree — not mine; my explicit `git add` will exclude them. Let me gather final metrics and write the gate log.
+
+All metrics gathered. Now writing the comprehensive gate log with real exit codes.
+
+Now committing only my files (explicit add excludes the other agents' working-tree changes). Let me stage, verify the staged set, then commit.
+
+Exactly 8 surface files + 1 log staged. Committing.
+
+Committed cleanly (9 files, 1503 insertions). Final verification: confirm no stray build artifacts I created remain tracked, and the gradle output is ignored.
+
+Everything is clean and committed. Let me finalize the todos.
+
+All 8 todos done. The task is complete.
+

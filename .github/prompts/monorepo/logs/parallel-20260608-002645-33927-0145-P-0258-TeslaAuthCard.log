@@ -1,0 +1,96 @@
+I'll start by exploring the environment to understand the task: the web source component, the existing Apple app structure, and tool availability.
+
+Key finding: `xcodebuild -version` failed. Let me gather hard evidence about Xcode availability and read the web source + existing Apple conventions in parallel.
+
+Critical evidence captured: **Xcode is not installed** — only CommandLineTools (`xcodebuild` and `simctl` unavailable). `swift` 6.3.2, `swiftlint`, `swiftformat` ARE available. The `feature-views` dir already has ~1438 files following a pattern. Let me understand the established conventions and check whether SwiftUI/Charts/MapKit can compile via the SDK.
+
+Major findings: **SwiftUI + Charts + MapKit compile against the CommandLineTools SDK** (`PROBE_EXIT=0`), so I can verify compilation even without full Xcode. The canonical file set is 7 files per component. Let me study a complete representative component and the shared facades (i18n, tokens, telemetry, state-holders).
+
+Feature-views are self-contained (only system frameworks). Let me read the full canonical `AiUsageCard` set to learn the i18n, tokens, telemetry, state, and test conventions.
+
+Rich, well-established conventions. Before deciding DONE vs BLOCKED, I need to understand how this repo handles the Xcode-unavailable situation and finish learning the template. Let me read the pending-verifications doc, existing P4 logs, the remaining AiUsageCard files, and the design tokens.
+
+The established convention is clear: surfaces are verified via isolated SwiftPM build/tests + `swiftc -typecheck` on both SDKs + lint/format/placeholder, with full-app `xcodebuild` deferred to a macOS CI runner (tracked in `macos-pending-verifications.md`). Let me confirm my runner's exact capabilities and finish learning the template + design tokens.
+
+**Critical correction: `/Applications/Xcode.app` IS present** — the active dir is just CommandLineTools, which prior runs overrode non-destructively via `DEVELOPER_DIR`. `pwsh` and `xcodegen` are also available. This may unblock the full gate. Let me verify Xcode works via `DEVELOPER_DIR` and read the remaining template + token files.
+
+**Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 simulator is booted.** The full gate can run — targeting STATUS=DONE. Now I need the design-token definitions (not in feature-views) and the rest of the template. Let me locate tokens broadly and read the remaining template files.
+
+Now I understand the target layout (tokens come from `../design/generated/apple`, app target globs `feature-views`). Let me read how prior logs concluded (one passing, one deferred), the rest of `project.yml`, and the token/motion APIs.
+
+Both reference logs concluded **EXIT=0 / STATUS=DONE** by running host-runnable gates green (isolated SwiftPM build+tests, `swiftc -typecheck` on both SDKs, swiftlint/swiftformat/placeholder, xcodegen) and **deferring** the full-app `xcodebuild build test` to the P99 macOS runner (pre-existing, unrelated blockers: unstaged `Shared.xcframework`, `DashboardWidgetSize` 15×, co-located tests). I'll follow this exact convention. Let me read the token/motion/theme definitions and locate the GlassPanel/Badge native equivalents.
+
+Let me read the token definitions, the native GlassPanel/Badge components, and the remaining AiUsageCard template files (Projection, Views, Chrome, Previews, Tests) to finalize my understanding.
+
+I now have the token + shared-component APIs (`TSGlassPanel`, `TSBadge`/`TSTone`, `Color.TS.*`, `Font.TS.*`, `TSSpacing/TSRadius/TSMotion`). Let me read the glass material modifier, the button/typography components, and the rest of the AiUsageCard template (Projection, Views, Chrome, Previews, Tests).
+
+Let me read the final template pieces (Projection, Chrome, Previews, Tests) and the Button/Typography component APIs.
+
+Let me read the Projection + Tests conventions and the Button/Typography/Skeleton component definitions.
+
+Let me read the test tail, typography components, the app route enum (for the CTA destination), and how cards expose navigation callbacks.
+
+Let me check the navigation pattern (AlertCard drill-through + AppRoute) and the Skeleton API, then I'll start implementing.
+
+I have full command of the conventions. Let me confirm the web CTA route, ensure no native files exist yet, and set up tracking.
+
+Confirmed: web route `/tesla-account` exists, no native files yet, and there's a **web test file** I should mirror for golden values. Let me read the web test + parent usage.
+
+I have the golden values from the web test. Before writing code, let me read the exact `.swiftformat` / `.swiftlint.yml` rules to avoid lint failures, then set up tracking.
+
+I now have everything: golden values, conventions, tokens, components, lint rules, and the deferral protocol. Let me set up tracking and write the plan, then implement.
+
+Now implementing. Batch A — the pure-logic core (Adapter, Model, Projection):
+
+Batch A done. Batch B — the SwiftUI surface (Views, Chrome, main, Previews):
+
+Batch C — tests + i18n catalog:
+
+Let me fix a convoluted test I wrote (the stale re-arm test had a messy double-wiring):
+
+Now the i18n catalog:
+
+All 10 files created. Now verifying — first normalize formatting on my files, then check lint/format compliance.
+
+swiftformat adjusted 2 files. Let me confirm format/lint/placeholder compliance on my files.
+
+Format, lint, and placeholder gates all pass (0 violations). Now I'll verify compilation + run tests. Let me map the shared-design dependency closure so I can build the surface in isolation.
+
+The component/design library is self-contained (only system frameworks). I'll build an isolated SwiftPM harness with the minimal shared-design closure + my surface + tests, under Swift 6 strict concurrency. Setting it up:
+
+Now building + running the isolated tests under Swift 6 strict concurrency:
+
+Only failure is the `#Preview` macro — `PreviewsMacros` is an Xcode-toolchain plugin absent from the bare `swift` CLI (a known limitation; my unit tests don't need previews). I'll (1) run the test harness with preview blocks stripped to prove the tests pass, then (2) typecheck the previews via Xcode's toolchain separately. Reconfiguring:
+
+Two issues: XCTest needs Xcode's `DEVELOPER_DIR`, and there's a real compile error in the library (truncated). Let me capture the actual library error with the proper toolchain:
+
+Library compiles clean with the Xcode toolchain. Now running the full test suite:
+
+**All 36 tests pass, 0 failures**, under Swift 6 strict concurrency against the real design system — every golden web-parity value verified. Now the dual-SDK typecheck (incl. `#Preview`) via the Xcode toolchain:
+
+macOS-15 typecheck (incl. `#Preview`) clean. Now iOS-18:
+
+Both SDKs typecheck clean (incl. `#Preview`). Now running `xcodegen generate` and gathering the full-app deferral evidence:
+
+xcodegen clean (TeslaAuthCard enumerated, 60 refs = 10 files). Deferral blockers confirmed: `Shared.xcframework` absent (only `.gitkeep`), `DashboardWidgetSize` redefined 15×, 206 co-located test files compiled into the app target. Now the full-tree format + lint gate commands:
+
+The full-tree format gate trips on **one pre-existing, unrelated file** (`ActionBuilder.Previews.swift:48` — not in my allowed-files scope). My surface files are format-clean. Let me confirm I only touched TeslaAuthCard files and that this violation is pre-existing in HEAD:
+
+Confirmed: my 10 TeslaAuthCard files are new (`??`); `ActionBuilder.Previews.swift` is **unmodified vs HEAD** (pre-existing format violation, outside my allowed-files); and the `AIUsageCard.*` ` M` entries are the pre-existing case-variant collision (0203 vs 0237 on a case-insensitive FS) — none caused by me. Let me characterize the whole-tree swiftlint state too:
+
+One pre-existing violation in the 1918-file tree (my 9 files were clean). Let me identify it to confirm it's not mine:
+
+The lone whole-tree swiftlint violation is `dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141` (function_body_length) — pre-existing, outside feature-views and my allowed-files (TeslaAuthCard: 0 violations). Let me confirm both pre-existing tree violations are unmodified vs HEAD, then write the gate log:
+
+Both pre-existing violations confirmed unmodified vs HEAD. Verification complete — all per-surface gates green (36/36 tests, dual-SDK typecheck, lint/format/placeholder, xcodegen). Now writing the honest gate log:
+
+Now staging exactly my 10 surface files + the log (excluding the pre-existing `AIUsageCard` case-collision and the gitignored `.xcodeproj`), then committing:
+
+Exactly 11 files staged (10 surface + log), no stray files. Committing:
+
+Commit `9432f5da7` created, working tree clean for TeslaAuthCard. Final verification of commit contents + cleanup:
+
+All complete. Commit `9432f5da7` has exactly 11 files (10 surface + log, 1851 insertions); temp harness cleaned; no stray artifacts.
+
+All 12 todos done. Task complete.
+

@@ -1,0 +1,126 @@
+I'll start by exploring the repository structure, reading the web source specification, and checking platform capabilities.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swift`, `swiftlint`, `swiftformat` are available. Let me explore the existing structure and the web source.
+
+Both the web source and a substantial Apple app exist. Let me read the web source and explore the Apple app conventions in detail.
+
+There's a large, well-established pattern (684 files). Let me find the closest analog — a chart feature-view — and check if sibling drivetrain-health components are already ported.
+
+No siblings ported yet — PowerOutputChart is first from drivetrain-health. `SessionComparisonChart` (multi-series chart) and `YearlyTrendChart` (area/trend chart) are the best analogs. Let me read their complete file sets.
+
+Excellent, sophisticated established pattern. Let me read the remaining analog files plus the shared tokens and the `useHiddenSeries` parity.
+
+Now let me read the shared chart components (hidden-series parity) and the design tokens.
+
+Now let me read the design tokens, motion, area-chart parity, skeletons, and check the build system.
+
+Tokens like `TSSpacing`/`Color.TS`/`Font.TS` are defined elsewhere (likely generated). Let me locate them and read project.yml.
+
+Build uses XcodeGen; tokens live in `apps/design/generated/apple`. Let me verify the test-file wiring (since `.Tests.swift` sit in app-target `feature-views/`) and read the token/typography/skeleton definitions.
+
+The design tokens are generated in `Tokens.swift`. Let me read the tokens, typography, skeletons, and the YearlyTrendChart area-chart analog (which uses fixed semantic colors like my target).
+
+I now have the full token/component picture. Let me verify how `powerMax/powerMin` are constructed upstream (W vs kW) so the adapter's SI boundary is correct, and confirm the swift toolchain can typecheck against the macOS SDK.
+
+Key findings: (1) web `powerMax = avgPowerW/1000` — SI watts is the source, so my adapter takes SI watts → kW at display (matching the sibling pattern); (2) **SwiftUI + Charts typecheck against the CLT macOS SDK works**. Let me confirm full-Xcode/xcodegen availability and test whether the shared Components+Design subset typechecks standalone.
+
+Major discovery: **`/Applications/Xcode.app` exists** — the active dir is just set to CLT. I can use `DEVELOPER_DIR` to access it without sudo. `xcodegen` and `pwsh` are also installed. Let me verify the full toolchain works.
+
+Full toolchain works: Xcode 26.5, iPhone 16 simulator already booted. Now I need to understand build feasibility — the `Shared.xcframework` dependency and the `.Tests.swift`-in-app-target wiring. Let me create a plan and investigate.
+
+Critical findings: `Shared.xcframework` is absent (needs KMP/Gradle toolchain), and 87 `.Tests.swift` files sit in the app-target path. Let me check the KMP toolchain and empirically generate the project to see real target membership.
+
+`apps/shared` (KMP) and `gradlew` exist. The test file shows "4 in Sources" references — I need to confirm target membership precisely before committing to a full build. Let me parse the pbxproj and kick off the KMP framework build in the background as a feasibility probe.
+
+Confirmed: the 87 `.Tests.swift` files (with `import XCTest` + `@testable import TeslaSync`) compile into the **app** targets — a pre-existing baseline condition. Let me gather definitive evidence and read the pending-verifications doc, then start building my surface.
+
+Decisive finding: `apps/macos-pending-verifications.md` documents the exact methodology — surfaces are verified via **isolated SwiftPM build + tests**, swiftlint/swiftformat/placeholder clean; the full-app `xcodebuild` is macOS-pending, blocked by pre-existing parallel-merge collisions (in-app-target XCTest files, KMP framework, signing). The `@testable` self-import is only a warning. My surface doesn't import KMP `Shared`, so I'll verify it in isolation per precedent. Let me set up the plan and probe the shared-component compile closure.
+
+Let me read the remaining shared dependencies (Typography, Card, Clipboard) to finalize my minimal real-closure for the isolated build.
+
+To get the most faithful isolated build, I'll compile the whole real `Sources/Components` + `Sources/Design` + tokens as one module, iteratively excluding files that reference app-level symbols outside this set. Let me discover that closure empirically.
+
+Bash 3.2 lacks `mapfile`. Let me redo the closure finder portably.
+
+The shared closure compiles standalone (41 files, only `UnitFormatters.swift` excluded). That's my faithful isolated-build library. Let me confirm two details — how `date` is built upstream and the `TSClipboard` API (for the CSV export parity) — then write the files.
+
+All details confirmed. Web: drives sorted ascending, last 30 points, `date = formatDateShort(startTs)`, `powerMax = avgPowerW/1000`, `powerMin = 0`. `TSClipboard.copy` is `@MainActor`. Now I'll write the 8 surface files, mirroring the `SessionComparisonChart` template. Starting with the pure adapter.
+
+Now the chart. First, let me resolve the Swift Charts area-stacking question definitively (web overlays two translucent areas; I must avoid a stacked area chart) by compile-testing the API.
+
+`AreaMark` supports `stacking: .unstacked` (true overlay, web parity) and `RuleMark(y:)` works. Writing the chart file now.
+
+All 8 files written. Let me cross-check that every i18n key referenced in Swift exists in the `.strings` catalog (no missing/dead keys).
+
+No missing i18n keys (the "unused" ones are multi-line/variable references my line-grep missed — all are wired). Now the key verification: an **isolated SwiftPM build + test** against the real shared-component closure, per the documented methodology. Let me set up the throwaway package.
+
+Isolated build **succeeded** (Swift 6 mode, real shared components). Now running the tests.
+
+**All 30 tests passed, 0 failures** under Swift 6 strict concurrency. Now swiftlint, swiftformat, and the placeholder check. Let me find the repo's lint configs and run them on my files.
+
+Configs found. Let me view them and run swiftlint `--strict` + swiftformat `--lint` on my new files.
+
+swiftformat flagged style issues (property-body wrapping, trailing commas, number grouping, line wraps). The correct fix is to let the ecosystem tool auto-format my own new files. Running apply mode, then re-verifying.
+
+swiftformat passes. Now swiftlint `--strict` on my files.
+
+One `large_tuple` violation in Previews (a 3-tuple). Let me view and refactor it to avoid the tuple.
+
+Re-running both linters after the fix.
+
+Both tools agree (the repo uses `--commas inline`): my manual edit wrongly added a trailing comma. Re-applying swiftformat to strip it, then re-checking both linters.
+
+Both linters pass (0 violations). Since files were reformatted, let me re-sync the isolated package and re-run build + test to confirm still green.
+
+Build green, **30/30 tests pass** after formatting. Now the placeholder gate via the real pwsh script.
+
+Let me confirm the script actually scanned my files (not a no-op) by inspecting its path handling.
+
+The script uses `-LiteralPath` (no globbing), so the exact gate path is a harmless no-op for all prefix-style surfaces. For an honest, real scan, let me run it against a temp dir containing exactly my deliverable files.
+
+Genuinely 0 placeholders in my files. My surface is fully verified (build + 30 tests + lint + format + placeholder all green). Now let me capture concrete evidence of the full-app gate's pre-existing blocker by attempting the real KMP framework build (its root dependency), time-boxed.
+
+Confirmed: the KMP `Shared.xcframework` build doesn't complete in a bounded time here (timed out at 150s) and the framework is absent — the documented macOS-pending blocker for the full-app gate. My surface is fully verified in isolation. Let me check the logs directory and an existing log for format, then write mine.
+
+Let me read the precedent log (ToolCard) and a sibling feature-view log to match the exact format.
+
+The ToolCard log is the exact precedent: isolated SwiftPM build+test + lint/format/placeholder green → **STATUS=DONE/EXIT=0**, with the full-app xcodebuild **DEFERRED** (macOS-pending). My verification is at least as strong. Let me make one more substantial attempt at the real full-app gate — kicking off the KMP framework build (online, longer) in the background while I prepare the log.
+
+Gradle is now progressing (daemon warmed up; many tasks UP-TO-DATE). Let me wait for the framework to finish, then attempt the real xcodebuild gate.
+
+This is a **shared, parallel-slot environment** — multiple slots (slot-20, slot-283, …) are concurrently building the same KMP framework, contending for Gradle. My framework build didn't complete due to that contention, and it's the documented macOS-pending item regardless. I'll follow the exact sanctioned ToolCard disposition: full surface verified in isolation → DONE, full-app xcodebuild DEFERRED. Let me gather preflight facts and write the log.
+
+All preflight facts gathered. Writing the comprehensive, honest log.
+
+The log is written. Now let me review final file state, clean up artifacts, and check what will be committed.
+
+Clean — only my 8 surface files + the log. Let me do a final visual sanity check on the two reformatted/edited files, then commit.
+
+Both files are clean and correct. Everything is verified. Now committing the 8 surface files + the log.
+
+Commit succeeded. Let me capture the SHA and run one final clean isolated build+test from the committed files for ironclad confirmation.
+
+Confirmed green from the exactly-committed files: **Build complete, 30/30 tests pass**. Commit `20388190a` (9 files, 1973 insertions). Cleaning up temp artifacts.
+
+Task complete. The working tree is clean and the commit is in place.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-feature-views-0158-PowerOutputChart.log | 157 +++++++++
+ .../feature-views/PowerOutputChart.Adapter.swift   | 379 +++++++++++++++++++++
+ .../feature-views/PowerOutputChart.Chart.swift     | 311 +++++++++++++++++
+ .../feature-views/PowerOutputChart.Model.swift     | 277 +++++++++++++++
+ .../feature-views/PowerOutputChart.Previews.swift  | 127 +++++++
+ .../feature-views/PowerOutputChart.Tests.swift     | 371 ++++++++++++++++++++
+ .../feature-views/PowerOutputChart.Views.swift     | 211 ++++++++++++
+ .../feature-views/PowerOutputChart.strings         |  61 ++++
+ .../TeslaSync/feature-views/PowerOutputChart.swift |  79 +++++
+ 9 files changed, 1973 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0158-PowerOutputChart.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/PowerOutputChart.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PowerOutputChart.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PowerOutputChart.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PowerOutputChart.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PowerOutputChart.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PowerOutputChart.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PowerOutputChart.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/PowerOutputChart.swift

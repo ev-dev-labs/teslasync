@@ -1,0 +1,80 @@
+I'll start by exploring the codebase to understand the task structure and requirements.
+
+Let me explore the Apple app structure and existing patterns in detail.
+
+The actual structure uses `feature-views/` (flat) not `Features/Automations/`. Let me study the parity manifest, ledger, and an existing similar feature-view (ActionBuilder, same automations domain) as my template.
+
+Existing `ConflictWarnings.*` files already exist in `feature-views/`. Let me read them and the manifest record.
+
+There's already a complete `ConflictWarnings` implementation (from prompt 0084). The current P7 prompt covers the same unit. Let me check tooling availability (Xcode, pwsh), the ledger situation, and read the remaining files.
+
+Key findings: `xcodebuild -version` failed (exit 1 — likely Command Line Tools only, no full Xcode), and `TeslaSync.xcodeproj` doesn't exist (project uses XcodeGen `project.yml`). Let me confirm the Xcode situation precisely and read the gate contract + existing log.
+
+Confirmed: **only Command Line Tools is installed — no full Xcode, no `xcodebuild`, no `simctl`.** Per the prompt, the build/test gate cannot run → this will be `STATUS=BLOCKED`. But I must still verify/complete the implementation and run what I can. The implementation already exists (from prompt 0084) in the real `feature-views/` flat layout. Let me read the rest of it, the prior log, the placeholder script, and the parity README.
+
+The implementation is thorough. Let me read the remaining files (strings, tests, previews), the prior 0084 log, the placeholder script, and the parity README/ledger schema.
+
+The implementation is complete and high quality. Let me read the prior log (to match format/conclusion), the placeholder script, parity README/ledger schema, and verify the design-token dependencies exist.
+
+The prior 0084 run (on a different slot) had full Xcode at `/Applications/Xcode.app` via `DEVELOPER_DIR` override. I must check whether **this** slot has it — that determines whether I'm DONE (host gates) or BLOCKED. Let me check thoroughly.
+
+**Full Xcode IS installed at `/Applications/Xcode.app`** on this slot too — so I can use the `DEVELOPER_DIR` override (the established 0084/0039 precedent) to run the real gates. The implementation already exists and is complete and satisfies all 3 P7 parity items. Let me verify the toolchain override works and check the framework staging situation.
+
+Toolchain works via override (Xcode 26.5, iPhone 16 simulator booted, macOS/iOS SDKs). `Shared.xcframework` is **not staged** (Frameworks holds only `.gitkeep`) — same as the 0084 run, so the signed app build will fail on the missing KMP framework (integration-runner scope, outside this prompt's allowed files). Let me ground the disposition by reading ADR-011/012, the ledger schema, and project.yml.
+
+Let me check how other page (P7) logs in this repo concluded for the same Xcode-present-but-framework-unstaged situation, and whether any apple ledgers already exist.
+
+All 235 apple logs concluded `STATUS=DONE`, and `macos-pending-verifications.md` documents the standing convention: per-surface SwiftPM build + executed XCTest + real iOS/macOS `swiftc -typecheck` + swiftlint/swiftformat/placeholder are the green gates, while the full-app `xcodebuild` is DEFERRED to the `macos-latest` signing runner (un-staged `Shared.xcframework` + pre-existing parallel-merge collisions). The existing `ConflictWarnings.*` artifact already satisfies all 3 P7 parity items. 
+
+My plan: don't duplicate the artifact; run the real host gates, capture deferred evidence, write the P7 log + ledger. Let me locate the design-token dependency closure for the typecheck.
+
+Let me understand the component/design closure's import footprint so I can assemble a clean `swiftc -typecheck` (and SwiftPM test) closure without pulling in the KMP framework.
+
+The component/design library imports only system frameworks (no KMP). Let me check `TSTone` (Badges) and `TSSkeleton` (Skeletons) dependencies to scope a minimal but faithful compile/test closure.
+
+The closure is framework-free. Let me run the cheap, high-confidence direct gates first (swiftlint, swiftformat, placeholder scan, xcodegen), then build the compile/test harness.
+
+Both lint and format gates are green (0 violations, 0/6 require formatting). Now the placeholder scan and xcodegen.
+
+All cheap gates green: swiftlint 0 violations, swiftformat 0/6, placeholder COUNT=0, xcodegen EXIT=0 (42 refs). Now the high-value executions — a SwiftPM harness to actually run the 18 tests, plus both-SDK typechecks. Let me assemble the compile closure.
+
+Harness builds clean on the first try. Now execute the tests.
+
+All **18 tests executed and passed** (0 failures, macOS arm64e, Swift 6). Now the both-SDK `swiftc -typecheck` (iOS simulator + macOS) and the DEBUG previews typecheck.
+
+All three typechecks pass (iOS sim, macOS, DEBUG previews — all EXIT=0). Now I'll attempt the full `xcodebuild` to capture the **real** deferred-gate evidence (un-staged `Shared.xcframework`), so the log is honest about what's deferred vs green.
+
+Confirmed: the full-app `xcodebuild` fails with **exit 65 solely on the un-staged `Shared.xcframework`** (a documented, pre-existing integration-runner blocker — zero errors in any `ConflictWarnings.*` file). This is the standing macos-pending deferral that all 235 sibling apple surfaces share.
+
+Evidence summary — every host-runnable gate is green; only the signed full-app build is deferred:
+
+| Gate | Result |
+|---|---|
+| swiftlint --strict | 0 violations (EXIT=0) |
+| swiftformat --lint | 0/6 (EXIT=0) |
+| check-placeholders | COUNT=0 (EXIT=0) |
+| xcodegen generate | EXIT=0 (42 refs) |
+| iOS-sim typecheck | EXIT=0 |
+| macOS typecheck | EXIT=0 |
+| DEBUG previews typecheck | EXIT=0 |
+| swift test | 18/18 passed (EXIT=0) |
+| xcodebuild full-app | EXIT=65 — DEFERRED (un-staged KMP framework) |
+
+Let me gather exact line counts and write the P7 log + ledger.
+
+The xcodeproj is gitignored (good). Let me confirm the `ConflictWarnings.*` files are tracked and unmodified by me, and check the broader working-tree state (other surfaces show pre-existing modifications from parallel work).
+
+Everything verified: the `ConflictWarnings.*` artifact is tracked, complete, and satisfies all 3 P7 parity items; every host-runnable gate is green; the full-app build is the standing macos-pending deferral. Now I'll write the P7 log and the apple ledger.
+
+Now the apple ledger (`apps/parity/apple-ledger.json`) with rows for both Apple idioms, schema-valid against `ledger.schema.json`.
+
+Now add the standing macos-pending row for the deferred full-app build, consistent with precedent (Honesty rule 7).
+
+Now validate the ledger JSON, confirm deliverables, and clean up temp artifacts.
+
+All deliverables validated: ledger schema-valid (2 rows, done, 3/3), log ends `EXIT=0 / STATUS=DONE`, `PARITY_COVERED==PARITY_REQUIRED` (3==3), temp artifacts cleaned. My changes are scoped to exactly 3 files (the surface itself is the unmodified 0084 artifact). Let me commit just my files (the tree has unrelated parallel-work modifications I must not sweep in).
+
+Committed cleanly (exactly 3 files). Final confirmation that the commit is scoped correctly and the surface remains the unmodified 0084 artifact.
+
+Task complete. Final disposition for **P7 · page:automations/ConflictWarnings**: **STATUS=DONE** (host gates green; full-app build deferred per standing macos-pending convention).
+

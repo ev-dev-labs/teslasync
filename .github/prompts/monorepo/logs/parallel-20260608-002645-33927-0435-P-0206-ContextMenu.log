@@ -1,0 +1,124 @@
+I'll start by exploring the repository structure and checking tool availability, since this task has a hard capability requirement (SwiftUI + Swift Charts + MapKit, Xcode toolchain).
+
+Key finding: **`xcodebuild` requires full Xcode but only Command Line Tools are installed, and `simctl` is unavailable.** Swift 6.3, swiftlint, and swiftformat ARE available. Let me gather hard evidence on the SDK/framework capability and study existing conventions + the web spec.
+
+Critical capability finding: The CLT SDK **does** contain SwiftUI/Charts/MapKit and my probe type-checked with `EXIT=0` — so I can author & compile SwiftUI code. But `xcodebuild` (needs full Xcode) and `simctl` (simulators) are absent, so the gate's `xcodebuild build test` cannot run. Let me confirm no Xcode.app exists and study the existing conventions (AIUsageCard 7-file split, i18n/tokens/state-holders/diagnostics facades).
+
+Major update: `/Applications/Xcode.app` **exists** and `/usr/bin/xcodebuild` is present — only the active dev dir is CLT. I may be able to use `DEVELOPER_DIR` override. Also, existing P4 widget logs exist — those tell me the expected outcome format. Let me investigate the build system, test the Xcode override, and read a sibling log.
+
+Excellent — this is decisive. **Full Xcode 26.5 is available via `DEVELOPER_DIR`**, `simctl` works (iPhone 16 already booted), and the build uses **xcodegen** (`apps/apple/project.yml`) with `TeslaSync`/`TeslaSync-macOS` schemes. The sample log confirms the runner has full native capability. The current source layout is `apps/apple/TeslaSync/{feature-views,dashboard-widgets}/` with co-located tests and a multi-file split per surface (≤400 lines each).
+
+Let me read `project.yml` (source of truth for what compiles) and the closest analog surface (AiUsageCard) plus locate the shared facades.
+
+Now I understand the build wiring. Critical detail: `project.yml` compiles `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` into both app targets, but **not** `shared-surfaces` — I'll need to add that path (documented, like the precedent project.yml fix in log 0010). I also need to understand how co-located `*.Tests.swift` files are wired and learn the shared facades. Let me investigate the test wiring and read the rest of the AiUsageCard template.
+
+Now I see the convention clearly: co-located `*.Tests.swift` use `import XCTest` + `@testable import TeslaSync` and live in the app-target source dirs (204 such files in feature-views). I must add `shared-surfaces` to both `project.yml` app targets AND `.swiftlint.yml` `included` for honest gate coverage. Let me read the rest of the swiftlint config, locate the design tokens, check the xcframework build script + cache, and read the remaining AiUsageCard template files.
+
+The swiftlint config is short (<80 lines). I still need the core design tokens. Let me read `TSDesign.swift`, the full swiftlint config, the AiUsageCard state-views, and the motion/skeleton primitives.
+
+I have the conventions down. Now let me pin the exact token member names (`Color.TS.*`, `Font.TS.*`, `TSSpacing.*`, `TSRadius.*`), find reusable primitives (`TSFadeIn`, shared Button/EmptyState), generate the Xcode project, and determine whether co-located `*.Tests.swift` land in the app target or a test bundle.
+
+Decisive finding: co-located `*.Tests.swift` compile into **both app targets** (lines 10445, 12279 = iOS + macOS app targets), not the separate unit-test bundles. For app-hosted XCTest, these are discovered and run when the hosted `TeslaSyncTests` bundle executes. I'll verify that empirically later.
+
+Let me kick off a baseline macOS build now (warms the KMP xcframework + DerivedData — the long pole) while I study the remaining token/primitive files.
+
+All tokens mapped. Let me read the Adapter pattern (the prompt requires an "adapter (cached → projection)" unit test), check the shared Button primitive, and survey how the codebase handles cross-platform keyboard/focus/overlay idioms — then check baseline build progress.
+
+`CommandPalette.swift` is the ideal reference — a keyboard-navigable overlay with `onKeyPress` + `FocusState`. Let me read it and the secondary-click/overlay-dismiss idioms while the baseline build runs.
+
+I now have everything I need: tokens, motion, the i18n/telemetry/state-holder/adapter conventions, and `CommandPalette.swift` as the keyboard-nav overlay reference (note: `tsContextMenu` already exists there, so I must avoid that name). Let me set up todos, create the directory, and check the swiftformat config before writing.
+
+swiftformat config noted: `--maxwidth 120`, `--self remove`, `--importgrouping testable-bottom`, `--disable environmentEntry` (so I'll use a manual `EnvironmentKey`, not `@Entry`), `before-first` wrapping. Now writing the surface. File 1 — model + i18n facade:
+
+File 2 — the pure navigation/layout adapter core (the testable "cached → projection" seam):
+
+File 3 — the `@Observable` store, telemetry seam, presentation, and environment key (P1/S8 + P1/S11):
+
+File 4 — the menu panel + item row views. Let me also peek at the baseline build progress.
+
+File 5 — the `ContextMenuHost` overlay with positioning, dismiss, focus, and full keyboard navigation:
+
+File 6 — the trigger modifier (the `useContextMenu` parity), named `contextMenuTrigger` to avoid colliding with the existing `tsContextMenu`:
+
+File 7 — DEBUG previews covering every rendered branch:
+
+File 8 — comprehensive XCTest coverage (adapter, store, telemetry, model, a11y strings):
+
+Baseline build finished — let me confirm it's green, then write the strings file.
+
+Baseline failed on **code-signing entitlements** (exit 65) — an environmental issue, not a compile error. Prior successful logs must pass signing-disable flags. Let me find the exact xcodebuild invocation those runs used.
+
+Found it — prior runs used `CODE_SIGNING_ALLOWED=NO`. Let me read the exact full invocations (build + test, both platforms) from a prior log to mirror them precisely.
+
+Now I understand the established methodology. Let me read the full gate section of a prior accepted log to mirror the exact commands and honesty framing.
+
+I now have the complete accepted methodology (iOS `build test` runs fully; macOS needs `CODE_SIGNING_ALLOWED=NO` due to a pre-existing repo-wide signing block; the macOS TEST_HOST fix is already in committed `project.yml`). Co-located app-target tests do run under the hosted test bundle. Let me wire `shared-surfaces` into the build + lint config and regenerate.
+
+File 9 — the i18n catalog contribution (`.strings`):
+
+All 9 files written. Now regenerate the project and run the style gates (swiftformat, swiftlint, placeholder check). Let me also verify `pwsh` is available for the placeholder script.
+
+Project regenerated (shared-surfaces wired into both targets), pwsh available, swiftformat adjusted 3 files. Let me review what swiftformat changed, then run the full lint gates + placeholder check.
+
+Files are new (untracked, so no diff). swiftformat applied formatting in place. Now run the three style gates:
+
+swiftformat flags 1 pre-existing file (`ActionBuilder.Previews.swift` — not mine), and swiftlint reports 2 violations. I need to determine whether these are mine or pre-existing. Let me scope both tools to my files and locate the exact violations.
+
+My files are format-clean (`MY_FORMAT_EXIT=0`) and `ActionBuilder.Previews.swift` is confirmed pre-existing/unmodified. swiftlint's `included` config overrides path args (lints all 1917 files). Let me capture the 2 violation locations to see if any are mine.
+
+Two violations: `LifetimeStatsWidget.Adapter.swift` (pre-existing, not mine) and **`ContextMenu.Tests.swift:133` (mine — opening_brace)**. Let me inspect and fix mine.
+
+swiftlint's only violation in my code is `ContextMenu.Tests.swift:133` — swiftformat wrapped the long helper signature so the brace landed on its own line, which `opening_brace` rejects. (The other violation, `LifetimeStatsWidget.Adapter.swift`, is pre-existing/not mine.) Let me view the full store-tests class and rewrite the helper to avoid the multi-line signature.
+
+The fix: collapse the helper to a single-line signature (drop the unused positional `id` param) so swiftformat won't wrap the brace onto its own line. Let me also confirm the other violation is pre-existing.
+
+Both pre-existing files are confirmed unmodified (baseline HEAD already flags them — `dashboard-widgets` was already in swiftlint's `included`). My surface is now format-clean. Before deciding how to handle the pre-existing violations, let me assess whether they're safely fixable by viewing them.
+
+Both pre-existing violations are in **other surfaces' files** (each has its own prompt per "Out of Scope") — `LifetimeStatsWidget` (0055) and `ActionBuilder`. They're git-unmodified and baseline HEAD already flags them. The function-body one can't be safely fixed without refactoring unfamiliar code. Per the don't-fix-unrelated rule + ownership boundaries, I'll document them and prove my surface is clean. Let me confirm my fix worked (zero shared-surfaces violations) and run the placeholder check.
+
+My surface is fully clean: **0 swiftlint violations in shared-surfaces**, **0 swiftformat issues**, **placeholder check EXIT=0**. The single remaining lint violation is the pre-existing `LifetimeStatsWidget.Adapter.swift` (another surface). Now the builds. Let me run the macOS build with signing disabled (incremental from the warm baseline).
+
+The macOS build is running (incremental). Let me wait for it and review the result.
+
+The build failed (exit 65) but the visible output is only "note: Also imported here" notes — the real error scrolled past `tail`. Let me re-run capturing the actual error lines.
+
+No ContextMenu-specific redeclaration errors. Let me capture the full error output to a file and inspect it precisely.
+
+The real error: `unable to resolve module dependency: 'XCTest'` in **`AIRestorePanel.Tests.swift`** (not mine) — the macOS *app* target can't resolve XCTest for the 200+ pre-existing co-located test files. The baseline failed earlier at the signing pre-check, masking this. iOS simulator resolves XCTest for app targets; macOS doesn't. Let me verify the iOS path (the authoritative gate) works and read the known-issues doc.
+
+This is the key context. `apps/macos-pending-verifications.md` documents the **accepted methodology**: the full-app `xcodebuild build test` is *pre-existingly blocked* by parallel-merge collisions (`DashboardWidgetSize` redefined 8–15×, 116–152 co-located `*.Tests.swift` importing XCTest into the app target, signing). Surfaces are verified green via **isolated SwiftPM build + tests**, **`swiftc -typecheck` on both SDKs**, and **swiftlint/swiftformat/placeholder clean** — then marked "macOS-pending" and deferred to the acceptance gate.
+
+Let me identify exactly which design-token deps my files need (for an isolated build) while the iOS build runs.
+
+My surface only needs `Tokens.swift` (Color.TS/Font.TS/TSSpacing/TSRadius) — clean, minimal dependency. The iOS build finished; let me check whether it failed on pre-existing collisions (not mine) or my code.
+
+Confirmed: the iOS app target build **also** fails on the identical pre-existing co-located-XCTest issue (`AIRestorePanel.Tests.swift` — not mine). Both platforms are blocked by the documented parallel-merge collisions. Let me confirm zero ContextMenu errors in both logs and catalog the pre-existing blockers.
+
+Zero ContextMenu errors in either build log — the full-app build is blocked solely by the pre-existing co-located-XCTest-in-app-target issue (`AIRestorePanel.Tests.swift` + 100+ others), exactly as documented. My surface only needs `Tokens.swift`. Now the decisive verification: an **isolated SwiftPM build + test under Swift 6 strict concurrency** (the documented accepted method, which actually runs my tests).
+
+Isolated build **succeeded under Swift 6 strict concurrency** (all 7 source files clean, including the `.shared` MainActor patterns). Now run the tests:
+
+**All 21 tests pass, 0 failures, under Swift 6 strict concurrency.** Now the explicit dual-SDK `swiftc -typecheck` (iOS 18 + macOS 15) that the documented methodology requires:
+
+The iOS typecheck failed only because the nested `xcrun` didn't inherit `DEVELOPER_DIR` (so it couldn't find the simulator SDK). macOS 15 typecheck passed clean. Let me re-run the iOS typecheck with `DEVELOPER_DIR` exported.
+
+**iOS 18 + macOS 15 typecheck both EXIT=0.** My verification matrix is complete and green. Let me confirm git ignores the generated project/build artifacts before writing the log and committing.
+
+All build artifacts are gitignored. Important: `AIUsageCard.*` and the two `web/*` files were **already modified before I started** (pre-existing working-tree changes) — I'll exclude them from my commit. My changes are `shared-surfaces/`, `project.yml`, `.swiftlint.yml`. 
+
+My verification matrix is complete and green. Let me write the comprehensive gate log.
+
+Now append the deferred-verification row to `apps/macos-pending-verifications.md`, following the established pattern of the sibling surfaces:
+
+Now a final integrity check on my surface files, then stage exactly the right paths (excluding the pre-existing `AIUsageCard.*` and `web/*` changes).
+
+All 9 files present and clean. Let me stage exactly my changes and verify the staged set before committing.
+
+Staged set is exactly correct — only my changes; pre-existing `AIUsageCard.*` and `web/*` are excluded. Committing:
+
+Commit `a69486d4f` succeeded; pre-existing files correctly remain uncommitted. Let me do a final safety grep for forbidden placeholder tokens in my shipped code, then clean up temporary artifacts.
+
+All clean: no forbidden tokens, temp artifacts removed, commit `a69486d4f` contains exactly my 13-file change (1242 insertions). Let me finalize the todo tracking.
+
+Task complete. Here's the summary.
+

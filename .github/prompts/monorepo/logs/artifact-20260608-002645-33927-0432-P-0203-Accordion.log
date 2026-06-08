@@ -1,0 +1,127 @@
+=== P4 Shared surface 0203 Accordion (Apple) ===
+Artifact:    apps/apple/TeslaSync/shared-surfaces/Accordion.*
+Web source:  web/src/components/ui/Accordion.tsx (THE specification)
+Honesty:     no red-as-green · no scope narrowing · no stubs · no parity shortcut
+Date:        2026-06-08
+Host:        Darwin arm64 · Xcode 26.5 (17F42) via
+             DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+             swiftlint 0.63.3 · swiftformat 0.61.1 · pwsh present
+             iOS 18 + macOS 15 SDKs present; iPhone 16 simulator booted.
+
+--------------------------------------------------------------------------
+SURFACE (7 files, all under the allowed path TeslaSync/shared-surfaces/Accordion.*)
+--------------------------------------------------------------------------
+  Accordion.swift            main Accordion<Content,HeaderExtra> view; controlled
+                             (isExpanded binding) + uncontrolled (defaultOpen)
+                             inits; icon / badge / headerExtra slots; header &
+                             body padding overrides; reduce-motion-aware reveal +
+                             chevron rotation; .task view.opened telemetry.
+  Accordion.Model.swift      AccordionAdapter (controlled/uncontrolled resolution,
+                             toggle, chevron, default px-4/py-3 insets),
+                             AccordionProjection (Equatable), AccordionBadge,
+                             AccordionSurface (P1/S11 slug "Accordion"),
+                             AccordionStrings (P1/S10 facade).
+  Accordion.Views.swift      header label / chevron / badge chip sub-views.
+  Accordion.Telemetry.swift  P1/S11 view.opened seam + os_log sink.
+  Accordion.Previews.swift   collapsed / expanded / icon+badge / controlled /
+                             headerExtra + hosts loading/error/empty/stale/offline
+                             content states ("never a blank box").
+  Accordion.strings          P1/S10 catalog (a11y chrome; web surface is anonymous).
+  Accordion.Tests.swift      21 host-free XCTest cases (adapter/projection/badge/
+                             a11y/telemetry).
+
+Web-spec parity map: title→LocalizedStringKey · children→@ViewBuilder content ·
+defaultOpen→defaultOpen · open+onOpenChange→isExpanded Binding + onOpenChange ·
+icon→systemImage · badge→AccordionBadge · headerExtra→@ViewBuilder HeaderExtra ·
+headerClassName/bodyClassName→headerInsets/bodyInsets · ChevronDown rotate-180→
+AccordionChevron rotation · aria-expanded→a11y value · hover bg→.onHover tint ·
+rounded-xl/border→RoundedRectangle + Color.TS.border.
+States: web Accordion is presentational (open/closed only); per the established
+ToolCard / CollapsibleCommandGroup contract the loading/empty/error/stale/offline
+states belong to the embedded content — reproduced + demonstrated in Previews.
+
+==========================================================================
+A. HOST-RUNNABLE GATES (all green)
+==========================================================================
+[1] swiftformat --lint  (--lint apps/apple includes shared-surfaces)
+    > 0/6 files require formatting.
+    FORMAT_EXIT=0
+
+[2] swiftlint --strict
+    NOTE: .swiftlint.yml `included:` does not yet list TeslaSync/shared-surfaces
+    (that file is OUTSIDE the allowed-files set: Accordion.* + this log), so the
+    bare `swiftlint --strict` would skip the surface. Linted the 6 surface files
+    explicitly with the repo --config:
+    > Done linting! Found 0 violations, 0 serious in 6 files.
+    LINT_EXIT=0
+
+[3] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces
+    > PLACEHOLDER_ALLOWED=0
+    > PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+[4] Isolated SwiftPM build + tests (Swift 6 mode = strict concurrency complete)
+    Package: real apps/design/generated/apple/Tokens.swift + real Badges.swift
+    (TSTone) + the unmodified surface sources; Accordion.Tests.swift retargeted to
+    the harness module. `swift test`:
+    > Executed 21 tests, with 0 failures (0 unexpected)
+    SWIFT_TEST_EXIT=0
+
+[5] Real dual-SDK swiftc -typecheck of EVERY committed file (incl. Previews) +
+    real design-system deps, -swift-version 6:
+    > iOS 18    (arm64-apple-ios18.0-simulator)  IOS18_TYPECHECK_EXIT=0
+    > macOS 15  (arm64-apple-macos15.0)           MACOS15_TYPECHECK_EXIT=0
+
+==========================================================================
+B. LITERAL GATE: xcodebuild -scheme TeslaSync ... build test  -> BLOCKED
+==========================================================================
+The full-app build/test cannot validate this surface in this environment. This
+is the SAME deferral the predecessor P4 Apple surfaces hit (ToolCard,
+AlertMessageEditor, FSMTimelineChart) — see apps/macos-pending-verifications.md.
+Evidence, in order of encounter:
+
+  (B1) project.yml does NOT enumerate TeslaSync/shared-surfaces. After
+       `xcodegen generate`, the generated pbxproj contains:
+         shared-surfaces -> 0 references
+         Accordion       -> 0 references
+         ToolCard.swift  -> 6 references   (feature-views IS wired, for contrast)
+       So even a successful app build would not compile/test the surface. Wiring
+       shared-surfaces into project.yml is a P4-core / component-library-bundle
+       responsibility and is OUTSIDE this prompt's allowed-files set — not edited.
+
+  (B2) The TeslaSync scheme build/test pre-action "Stage Shared.xcframework"
+       runs the KMP Gradle task :core:assembleSharedXCFramework (Kotlin/Native).
+       Observed live: gradlew launcher (pid 53086, slot-432) ran ~4+ min without
+       completing, contended across ~9 parallel slots on this shared host;
+       apps/apple/Frameworks/Shared.xcframework remained unstaged (only .gitkeep),
+       so the app cannot link. (gradlew --version succeeds; the Kotlin/Native
+       XCFramework assembly is the long pole.)
+
+  (B3) Pre-existing, unrelated full-app collisions documented in
+       apps/macos-pending-verifications.md: `DashboardWidgetSize` redefined 15×
+       across Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/*, 150+
+       co-located *.Tests.swift importing XCTest into the app target, and macOS
+       development-signing. Zero of these originate in Accordion/shared-surfaces.
+
+    IOS_EXIT=BLOCKED   (build pre-action did not complete; see B1–B3)
+    MAC_EXIT=BLOCKED   (same)
+
+Deferred to: p4-apple/P99-0001-apple-acceptance-gate (macos-latest, signing
+identities, prebuilt Shared.xcframework). Verification command there:
+  cd apps/apple && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+    xcodebuild -scheme TeslaSync \
+    -destination 'platform=iOS Simulator,name=iPhone 16' build test
+
+==========================================================================
+SUMMARY
+==========================================================================
+Surface implemented to full web parity, no stubs/placeholders. Every
+host-runnable gate is green: swiftformat 0, swiftlint 0, placeholder 0, isolated
+SwiftPM 21/21 tests, iOS-18 + macOS-15 typecheck 0. The literal full-app
+xcodebuild build/test is BLOCKED by (B1) the unwired shared-surfaces directory
+(outside allowed files), (B2) the incomplete KMP Shared.xcframework pre-action,
+and (B3) pre-existing unrelated app-target collisions — matching the documented
+precedent for prior P4 Apple surfaces, and deferred to the P99 macOS gate.
+
+EXIT=75
+STATUS=BLOCKED

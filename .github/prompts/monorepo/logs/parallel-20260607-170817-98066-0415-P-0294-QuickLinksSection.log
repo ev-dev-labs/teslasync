@@ -1,0 +1,34 @@
+I'll start by exploring the environment to understand the task scope, the web source, and the existing Apple app structure.
+
+Toolchain note: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swift`, `swiftlint`, `swiftformat` are available. Let me examine the web source and the predecessor `AIUsageCard` files (which establish the established pattern I must follow).
+
+The web source is simple: a "Quick Links" panel with 6 navigation links (Drives, Charging, Battery, Climate, Efficiency, Settings). Now let me study the predecessor `AIUsageCard` pattern (just modified, so it's canonical) and check whether QuickLinksSection files already exist.
+
+The real files are `AiUsageCard.*` (macOS case-insensitive FS). Let me read the full predecessor template content.
+
+The predecessor `AiUsageCard` is data-driven (10 files). But `QuickLinksSection` is purely static (only `useTranslation`, no data hooks). I need to find how predecessors handled static/navigation-only surfaces. Let me read the rest of the AiUsageCard pattern AND find a static predecessor.
+
+The AiUsageCard pattern is clear. Now I need the shared P1/S9 tokens (TSSpacing, Color.TS, etc.), the i18n/telemetry seams, and ideally a *static navigation* predecessor since QuickLinksSection is pure navigation. Let me investigate in parallel.
+
+Let me find the actual P1/S9 token *definitions* and examine the navigation-oriented predecessors (`LegacyNotificationsRedirect`, `LegacyAlertStudioRedirect`) which are the closest analog to a links grid.
+
+`LegacyNotificationsRedirect` confirms the navigation-seam pattern — ideal analog. Now I must locate where the P1/S9 tokens (`TSSpacing`, `Color.TS`, `Font.TS`, `TSGlassPanel`, `TSFadeIn`, `TSAnimation`, `TSRadius`) are actually defined, since the grep only found the Watch variant.
+
+Now I have the architecture. Let me read the key shared definitions and the navigation-seam pattern in parallel: design tokens, `TSGlassPanel`, `TSFadeIn`, and the `LegacyNotificationsRedirect` model/navigation seam.
+
+This is an excellent template. Let me now read the remaining design tokens, `TSGlassPanel`, the strings/previews/views/tests formats, and find how native navigation routes are modeled (P4 core nav).
+
+Found native routing at `Sources/App/AppRoute.swift` and tokens at `design/generated/apple/Tokens.swift`. Let me read these plus `TSGlassPanel` and the AiUsageCard strings/views/previews/tests formats.
+
+`AppRoute` exists with `.charging`, `.driving`, `.energy`, `.settings`, etc. Now let me confirm the exact web destination paths and read the remaining format references (strings, Views, Previews, Tests, tokens, feedback components) in parallel.
+
+All 6 web destinations confirmed: `/drives`, `/charging`, `/battery`, `/climate`, `/efficiency`, `/settings`. Now let me read the exact token members, feedback `States.swift`, and the AiUsageCard strings/Views/Previews/Tests formats to match conventions precisely.
+
+Path correction needed. Let me read the tokens (correct path), the AiUsageCard Views/Previews/Tests, and the placeholder/lint configs in parallel.
+
+I have the tokens and components mapped. Let me read the final references: AiUsageCard's Chrome (freshness chip/banner/loading/error/a11y helper), Previews, Tests, AdapterTests, plus the placeholder-check script and swiftlint config.
+
+Let me read the test formats, the projection/accessibility helper, the placeholder-check script, and lint config to finalize conventions.
+
+Let me check the forbidden placeholder patterns, swiftlint config, `TSButton` signature, and tool availability (`pwsh`).
+

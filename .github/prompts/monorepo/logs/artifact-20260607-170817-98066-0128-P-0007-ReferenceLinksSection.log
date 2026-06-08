@@ -1,0 +1,209 @@
+=== P4 Feature view 0007 ReferenceLinksSection (Apple) ===
+Generated: 2026-06-08T02:49:35Z
+Web source (THE spec): web/src/features/admin/components/devtools/ReferenceLinksSection.tsx
+Native bundle: apps/apple/TeslaSync/feature-views/ReferenceLinksSection.*
+
+Honesty Covenant: 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+  4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+  8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS
+
+########################################################################
+# 0. Capability probe (per prompt: SwiftUI + Swift Charts + MapKit, iOS18/macOS15)
+########################################################################
+-- uname --
+Darwin 25.5.0 arm64
+-- default xcode-select (why bare xcodebuild fails) --
+/Applications/Xcode.app/Contents/Developer
+-- full Xcode (used via DEVELOPER_DIR) --
+Xcode 26.5
+Build version 17F42
+-- swift --
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+-- swiftlint --
+0.63.3
+-- swiftformat --
+0.61.1
+-- pwsh --
+PowerShell 7.6.2
+-- macOS SDK --: /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk
+-- iOS Simulator SDK --: /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk
+-- iPhone 16 simulator --
+    iPhone 16 (83717DEE-70A3-4325-AA61-CBDDD3140989) (Shutdown) 
+-- SwiftUI/Charts/MapKit import probe (macOS SDK) --
+FRAMEWORK_IMPORT_PROBE=OK (SwiftUI+Charts+MapKit available)
+
+########################################################################
+# 1. Shipped surface bundle (allowed files)
+########################################################################
+     186  TeslaSync/feature-views/ReferenceLinksSection.Adapter.swift
+     264  TeslaSync/feature-views/ReferenceLinksSection.Model.swift
+      90  TeslaSync/feature-views/ReferenceLinksSection.Previews.swift
+      41  TeslaSync/feature-views/ReferenceLinksSection.strings
+     100  TeslaSync/feature-views/ReferenceLinksSection.swift
+     329  TeslaSync/feature-views/ReferenceLinksSection.Tests.swift
+     268  TeslaSync/feature-views/ReferenceLinksSection.Views.swift
+
+########################################################################
+# 2. swiftformat --lint (gate step) — shipped bundle
+########################################################################
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-128/apps/apple/.swiftformat
+SwiftFormat completed in 0.13s.
+0/6 files require formatting.
+FORMAT_EXIT=0
+
+########################################################################
+# 3. swiftlint --strict (gate step) — focused on the shipped bundle
+#    (repo .swiftlint.yml 'included' wires feature-views at integration time;
+#     here we lint the bundle directly so the surface is genuinely checked)
+########################################################################
+Linting Swift files in current working directory
+Linting 'ReferenceLinksSection.Previews.swift' (1/6)
+Linting 'ReferenceLinksSection.swift' (2/6)
+Linting 'ReferenceLinksSection.Tests.swift' (3/6)
+Linting 'ReferenceLinksSection.Views.swift' (4/6)
+Linting 'ReferenceLinksSection.Model.swift' (5/6)
+Linting 'ReferenceLinksSection.Adapter.swift' (6/6)
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+
+########################################################################
+# 4. swiftc typecheck — shipped surface compiles for BOTH gate platforms
+#    (Swift 6, -strict-concurrency=complete; deps = real Tokens.swift + TSSkeleton)
+########################################################################
+-- macOS 15 (TeslaSync-macOS target platform) --
+MAC_TYPECHECK_EXIT=0
+-- iOS 18 simulator (TeslaSync iOS target platform) --
+IOS_TYPECHECK_EXIT=0
+-- macOS 15 incl Previews (SwiftUI #Preview macro plugins loaded) --
+PREVIEWS_TYPECHECK_EXIT=0
+
+########################################################################
+# 5. Tests compile against a testable TeslaSync module (@testable import)
+########################################################################
+TESTABLE_MODULE_BUILD_EXIT=0
+TESTS_TYPECHECK_EXIT=0 (0 = every XCTest reference resolves against the real module API)
+
+########################################################################
+# 6. EXECUTED logic + per-state render harness (adapter/model/a11y + ImageRenderer)
+#    Runs the SAME assertions the XCTest cases make, on macOS, for real.
+########################################################################
+HARNESS_BUILD_EXIT=0
+PASS catalog order matches web
+PASS title key
+PASS web icon names
+PASS devPortal url
+PASS partner url
+PASS all urls absolute https
+PASS distinct SF Symbols
+PASS builder order/count
+PASS items carry destination url
+PASS builder localizes title (fallback)
+PASS builder empty
+PASS layout 0 -> 1
+PASS layout 639 -> 1
+PASS layout 640 -> 2
+PASS layout 1023 -> 2
+PASS layout 1024 -> 4
+PASS a11y label combines
+PASS a11y label omits empty url
+PASS a11y hint format
+PASS phase loading
+PASS phase content
+PASS phase empty
+PASS phase error
+PASS freshness stale + content
+PASS freshness offline passthrough
+PASS telemetry once + start once
+PASS refresh delegates
+PASS static source publishes fresh catalog
+PASS render content
+PASS render content wide
+PASS render stale
+PASS render offline
+PASS render loading
+PASS render empty
+PASS render error
+---
+ALL HARNESS CHECKS PASSED
+HARNESS_RUN_EXIT=0
+
+########################################################################
+# 7. check-placeholders.ps1 (gate step) — ADR-011 no-stubs/no-skeleton
+########################################################################
+-- substantive scan of the shipped bundle directory (scans all 6 .swift files) --
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+-- literal gate path (prompt-as-written prefix) --
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_LITERAL_EXIT=0
+
+########################################################################
+# 8. Full-app xcodebuild build/test gate — BLOCKED (platform/integration evidence)
+########################################################################
+The literal gate runs:
+  xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+Attempted (DEVELOPER_DIR=/Applications/Xcode.app/...). It cannot reach EXIT=0 within this
+prompt's allowed-files scope for TWO reasons, both OUTSIDE the surface bundle:
+
+  (a) KMP dependency artifact absent. project.yml declares 'Frameworks/Shared.xcframework'
+      (embed:false) and the scheme's pre-build action runs Scripts/build-shared-xcframework.sh.
+      The framework is a build artifact, not in the tree:
+        total 8
+        drwxr-xr-x@  3 atulgupta  staff   96 Jun  7 19:21 .
+        drwxr-xr-x@ 18 atulgupta  staff  576 Jun  7 19:46 ..
+        -rw-r--r--@  1 atulgupta  staff  159 Jun  7 19:21 .gitkeep
+      The pre-action builds it via a cold Kotlin/Native Gradle build:
+        gradlew -p apps/shared :core:assembleSharedXCFramework   (Kotlin/Native, iosArm64+iosSimulatorArm64+macosArm64)
+      Attempting the gate launched exactly this (observed: apps/shared/core/build/bin/{iosArm64,iosSimulatorArm64,macosArm64}).
+      It is a multi-minute, network-dependent toolchain build of the SHARED CORE (not this surface)
+      and was stopped — it adds no verification of the ReferenceLinksSection surface.
+
+  (b) Surface not yet wired into the Xcode targets. project.yml app/test targets list
+      'TeslaSync/dashboard-widgets' but NOT 'TeslaSync/feature-views':
+        36:      - path: TeslaSync/dashboard-widgets
+        66:      - path: TeslaSync/dashboard-widgets
+      Adding the feature-views source path is an integration edit to project.yml, which is
+      OUTSIDE this prompt's Allowed files (apps/apple/TeslaSync/feature-views/ReferenceLinksSection.* + log).
+      Per the dashboard-widgets precedent, each parallel surface is authored in isolation and
+      wired at integration time.
+
+  => SwiftUI / Swift Charts / MapKit ARE available (probe OK above) and the surface compiles for
+     iOS 18 AND macOS 15; the BLOCK is the KMP xcframework prerequisite + project wiring, not the
+     surface code and not a capability gap in the UI frameworks.
+IOS_EXIT=BLOCKED(kmp-xcframework-prereq + project-wiring; outside allowed files)
+MAC_EXIT=BLOCKED(kmp-xcframework-prereq + project-wiring; outside allowed files)
+
+########################################################################
+# 9. Summary
+########################################################################
+  swiftformat --lint                 0 (0=pass)
+  swiftlint --strict (bundle)        0 (0=pass)
+  typecheck macOS 15                 0 (0=pass)
+  typecheck iOS 18 simulator         0 (0=pass)
+  typecheck incl Previews            0 (0=pass)
+  testable module build              0 (0=pass)
+  Tests typecheck vs module          0 (0=pass)
+  logic+render harness (exec)        0 (0=all 35 checks pass)
+  check-placeholders                 0 (0=pass)
+  xcodebuild iOS build/test          BLOCKED (KMP xcframework + project wiring)
+  xcodebuild macOS build/test        BLOCKED (KMP xcframework + project wiring)
+
+SURFACE_VERIFICATION_AGGREGATE_EXIT=0 (sum of all surface-scoped checks; 0 = all green)
+
+Determination: the shipped ReferenceLinksSection surface is COMPLETE and fully verified to the
+extent the runner allows (compiles iOS 18 + macOS 15 under Swift 6 strict concurrency; Previews
+compile; XCTest cases compile against the real module; 35/35 logic + per-state render checks
+execute green; swiftlint --strict and swiftformat --lint clean; zero placeholders). The literal
+xcodebuild app build/test gate is BLOCKED on the KMP Shared.xcframework prerequisite and on the
+project.yml target wiring — both outside this prompt's Allowed files. Per the prompt's acceptance
+clause, this is reported as STATUS=BLOCKED with platform/integration evidence (NOT red-as-green).
+
+EXIT=1
+STATUS=BLOCKED

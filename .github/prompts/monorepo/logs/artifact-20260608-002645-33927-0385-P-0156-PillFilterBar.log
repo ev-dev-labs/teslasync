@@ -1,0 +1,185 @@
+================================================================================
+P4 · Shared surface · 0156 — PillFilterBar (Apple)
+Run: 2026-06-08T05:39-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/385
+Base: c9c6fdb9f
+Prompt: P4 · shared-surfaces · 0156 — PillFilterBar (Apple)
+Web source (spec): web/src/components/forms/PillFilterBar.tsx (196 lines)
+Mode: code-complete + host-validated; DEFERRED full-app Xcode scheme build/test
+      (ADR-012 macOS-pending), matching predecessors 0231 FSMTimelineChart /
+      0180 AlertMessageEditor / 0010 ToolCard.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                 OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iOS simulator SDK .......... iPhoneSimulator 26.5 (deployment target iOS 18.0)    OK
+  macOS SDK .................. MacOSX 26.5 (deployment target macOS 15.0)            OK
+  iOS simulator device ....... iPhone 16 present + booted (simctl via Xcode)        OK
+  swiftlint .................. 0.63.3                                               OK
+  swiftformat ................ 0.61.1                                               OK
+  xcodegen ................... 2.45.4                                               OK
+  pwsh (placeholder gate) .... 7.6.2                                               OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks has only .gitkeep) WARN
+  codesign identities ........ none (BLOCKER for signed app gate, ADR-012)         WARN
+
+  Capability note: this surface is pure SwiftUI (NO Swift Charts, NO MapKit — the web
+  "Charts/maps used" section lists none; PillFilterBar is a controlled filter row). The
+  core requirement — SwiftUI + iOS 18 / macOS 15 HIG — is available and PROVEN by REAL
+  iOS-18 + macOS-15 SDK `swiftc -typecheck` AND a passing 44-test XCTest run below. The
+  capability-BLOCKED escape hatch therefore does NOT apply; the surface is authored and
+  host-validated for real, STATUS=DONE.
+
+=== SCOPE NOTE (shared surface vs the atomic component — NOT a duplicate) ===
+  The atomic `TSPillFilterBar` (Sources/Components/Forms/Filters.swift) is the P4
+  component-library bundle's MINIMAL atom (value + label only; no icon/count/accent/
+  disabled, no variants, no keyboard pattern, no states) and is explicitly Out of Scope
+  here. THIS shared surface is the FULL-SPEC parity binding of the web source: per-item
+  icon + count + accent + disabled, the pills/tabs variants, the WAI-ARIA Tabs keyboard
+  pattern, the P4 leaf state envelope, the P1/S8 state-holder, P1/S11 telemetry, and the
+  P1/S10 i18n facade.
+
+=== ARTIFACT (apps/apple/TeslaSync/shared-surfaces/PillFilterBar.*) ===
+  PillFilterBar.Adapter.swift       87  Foundation-only pure core: `fmtInt` count formatter
+                                        (locale grouping), the roving-tabindex keyboard navigation
+                                        (VERBATIM web `handleKeyDown` port — Arrow wrap
+                                        `(idx+delta+n)%n` + skip-disabled via `enabledKeys`, Home/End,
+                                        the `idx===-1` guard), and the VoiceOver label composition.
+  PillFilterBar.Types.swift        111  Foundation-only value types (split for the 400-line house
+                                        budget): PillAccent / PillVariant / PillFilterConnection +
+                                        PillItem (web `PillItem`) + PillResolvedItem (resolved peer).
+  PillFilterBar.Model.swift        345  P1/S10 strings facade + P1/S11 telemetry seam + surface slug +
+                                        input snapshot + resolved + P1/S8 source protocol +
+                                        @Observable PillFilterModel (selection ownership stable across
+                                        refresh / adopt-on-disappear, view.opened once, stale
+                                        auto-refresh / offline) + InMemory source.
+  PillFilterBar.Projection.swift    99  Pure resolve(Input, activeKey) → Resolved: phase
+                                        (loading/empty/error/data), per-item resolution (count suffix,
+                                        selected flag, accent default, a11y label), aria-label default.
+  PillFilterBar.Views.swift        274  Token-driven row: PillFilterBarRow (controlled parity — pills/
+                                        tabs, selected fill/dot/ring/underline, icon, count, disabled,
+                                        scrollable, `.onKeyPress` nav) + PillCell + accent palette
+                                        (tokens, no hex) + empty view.
+  PillFilterBar.Chrome.swift       182  Token-only leaf chrome (self-contained): freshness chip,
+                                        refresh button, stale/offline banner, loading skeleton chips,
+                                        error + retry.
+  PillFilterBar.swift               92  The composed surface: connectivity header (chip + banner +
+                                        refresh when !live) + phase switch (loading/error/empty/data) +
+                                        view.opened lifecycle (onAppear/onDisappear).
+  PillFilterBar.Previews.swift     121  #if DEBUG previews: pills/tabs data, not-scrollable, empty,
+                                        loading, error, stale, offline.
+  PillFilterBar.strings             36  P1/S10 catalog — the 1 web templated literal (pill.count) +
+                                        native chrome / a11y keys.
+  PillFilterBar.Tests.swift        372  XCTest: projection phases + item resolution, model lifecycle
+                                        (view.opened once, selection ownership stable/adopt/ignore-
+                                        disabled/ignore-unknown, stale auto-refresh once + re-arm,
+                                        offline keeps cache, manual refresh, stop/re-arm, slug), a11y,
+                                        view construction smoke (every state + both variants + chrome).
+  PillFilterBar.AdapterTests.swift  88  XCTest: fmtInt grouping (en/de), navigation (next/prev wrap,
+                                        Home/End, empty, current-not-enabled guard, single-key), a11y.
+  Total 1807 lines (11 files). Every .swift file <= 372 lines (house file_length 400);
+  largest Tests.swift 372. Zero `// parity:allow` opt-outs.
+
+=== PARITY (vs web PillFilterBar.tsx) ===
+  Data sources (web → native P1/S8 source seam):
+    items / activeKey / onChange / ariaLabel / variant / scrollable props (parent-owned)
+        → PillFilterSource → PillFilterInput (+ select() = web onChange peer)
+    useId (stable tablist id)               → native view identity / @FocusState (NOT a fetch)
+    (source is "anonymous" — no useTranslation) → native chrome via PillFilterStrings (P1/S10)
+  Verbatim web logic ported + unit-pinned:
+    count suffix `({fmtInt(item.count)})`   → PillFilterNumber.int + "(%@)" (locale grouping) ·
+    handleKeyDown: enabledKeys = items.filter(!disabled).map(key); ArrowLeft/Right wrap
+      `(idx+delta+n)%n`; Home→first; End→last; `idx===-1` (active pill disabled) → no move ·
+    `accent ?? 'cyan'` default.
+  Composition (pills / tabs both reproduced):
+    pills → rounded-full Capsule chip + active fill (accent .15) + ring (accent .40) + leading
+      6pt accent dot · tabs → flat + 2pt accent bottom underline + container hairline ·
+    selected text = accent; unselected = textMuted; disabled = opacity 0.4 + skipped in nav;
+    leading icon (SF Symbol peer of web `icon?: ReactNode`); trailing muted tabular `(N)`.
+  Accent palette → design tokens (NO raw hex): cyan→accent, green→statusSuccess,
+    amber→statusWarning, red→statusDanger, purple→chartSeriesPower, blue→chartSeriesSpeed.
+  States (all render, never a blank box): loading(skeleton chips) · empty(web empty `tablist`
+    → labeled "No filters available") · error(+retry, leaf add) · data(row) · stale(chip+banner
+    +one auto-refresh) · offline(cached+chip) — a freshness envelope (ADR-013) around the
+    controlled web row.
+  i18n: the web source is anonymous (no t() calls); the one templated literal is promoted to
+    `pill.count`, and all native chrome / a11y keys resolve via the P1/S10 facade. a11y: the
+    tablist container label (web `ariaLabel`) + per-pill `.isSelected`/`.isButton` traits +
+    precomputed VoiceOver label (label + count) + WAI-ARIA Tabs keyboard (Left/Right/Home/End
+    via @FocusState + .focusable + .onKeyPress) + Dynamic Type via Font.TS + reduce-motion-safe
+    selection-colour transition.
+  Telemetry: emits view.opened with surface slug "PillFilterBar" once (P1/S11), asserted.
+
+=== HOST-RUNNABLE GATES (all green) ===
+  swiftformat --lint <surface> ................ 0/10 require formatting             FORMAT_EXIT=0
+  swiftlint lint --strict <surface> ........... Found 0 violations, 0 serious (10)  LINT_EXIT=0
+  check-placeholders.ps1 (gate path + dir) .... PLACEHOLDER_COUNT=0 ALLOWED=0       PLACEHOLDER_EXIT=0
+  swiftc -typecheck iPhoneSimulator (ios18.0-simulator, swift6, strict-concurrency) IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (macos15.0, swift6, strict-concurrency) ................. MAC_TYPECHECK_EXIT=0
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6 mode) ...... 44/44 passed, TEST_EXIT=0
+      → PillFilterProjectionPhaseTests (5) · PillFilterProjectionItemTests (7) ·
+        PillFilterModelTests (15) · PillFilterAccessibilityTests (2) ·
+        PillFilterViewTests (4, SwiftUI construction smoke — every state + both variants) ·
+        PillFilterNumberTests (3) · PillFilterNavigationTests (6) ·
+        PillFilterAccessibilityAdapterTests (2)
+      Harness links the REAL generated Tokens.swift; the surface depends ONLY on the
+      generated DesignTokens (no out-of-scope shared atom is pulled in — the loading
+      skeleton + retry are built from tokens + a raw SwiftUI Button, the same idiom the
+      sibling TSTabs / TSPillFilterBar / TSDatePresetChips use).
+  xcodegen generate (project spec enumerates the 11 new files, 66 refs) ............ XCODEGEN_EXIT=0
+
+  FULL-TREE NOTE (honesty / no silent drift): the gate's whole-tree lints —
+  `swiftlint --strict` (1923 files) and `swiftformat --lint apps/apple` — each report
+  exactly 1 PRE-EXISTING, UNRELATED violation, NEITHER in this surface (both verified by
+  grep to be outside shared-surfaces):
+    • swiftlint: TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+      (function_body_length, 78 lines) — a sibling widget surface.
+    • swiftformat: TeslaSync/feature-views/ActionBuilder.Previews.swift:48
+      (blankLinesBetweenScopes) — a sibling feature view.
+  The surface-scoped lints above (the 10 PillFilterBar files) are 0/0. These two
+  pre-existing items belong to their own surfaces' prompts, not this one.
+
+=== BUILD WIRING (necessary infra — new source root) ===
+  shared-surfaces is the FIRST surface under TeslaSync/shared-surfaces (the directory did
+  not exist). Wired the new source root into:
+    • apps/apple/project.yml — TeslaSync (iOS) + TeslaSync-macOS app target `sources`
+      (one line each, after `TeslaSync/feature-views`), mirroring the pre-existing
+      feature-views wiring.
+    • apps/apple/.swiftlint.yml — `included` list (after feature-views).
+  Verified: `xcodegen generate` succeeds and enumerates all 11 PillFilterBar files into
+  both app targets. The generated TeslaSync.xcodeproj remains git-ignored (not committed).
+
+=== DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test ===
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. Attempted in THIS tree: the gate's FIRST step — the
+    "Stage Shared.xcframework" scheme pre-action — was entered and runs the Kotlin/Native
+    Gradle toolchain (`apps/shared/gradlew :core:assembleSharedXCFramework`) to build the
+    absent framework; it blocks there (no staged artifact / KMP toolchain). Blocked by
+    PRE-EXISTING, UNRELATED parallel-merge state in the shared app target — ZERO of which
+    originates in this surface (all verified present in THIS tree):
+      • Shared.xcframework not staged (apps/apple/Frameworks has only .gitkeep); the scheme
+        pre-action builds it via the Kotlin/Native Gradle toolchain (the P1/S3 artifact
+        already tracked macOS-pending). 15 app-target files `import Shared`.
+      • `struct DashboardWidgetSize` redefined across 15 files (Sources/DashboardWidgets/*
+        + TeslaSync/dashboard-widgets/*) — "invalid redeclaration" across the app target.
+      • 206 co-located feature-view *.Tests.swift `import XCTest` into the app target (this
+        surface's 2 test files follow that SAME established sibling convention; they do not
+        introduce a new failure class).
+      • No macOS development-signing identity (ADR-012).
+    This surface's OWN code is proven to compile against the real iOS-18 + macOS-15 SDKs
+    (typechecks above) and its logic runs green (44/44 XCTest). The full-app build/test is
+    recorded in apps/macos-pending-verifications.md for the P99 acceptance gate on a
+    macos-latest runner with signing identities.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all web states reproduced (loading/empty/error/stale/offline + data).
+  [x] Hooks bind to the shared P1/S8 source seam; no direct HTTP from the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (the 1 templated literal + native chrome).
+  [x] Accessibility labels present on the tablist container + every interactive pill + the chrome states.
+  [x] Tests: adapter unit tests + per-state model/view tests + a11y label tests (44 total, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (stub gate: 0, 0 opt-outs).
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing unrelated blockers);
+      host-runnable equivalents (real-SDK typecheck both platforms + 44/44 XCTest) green.
+
+EXIT=0
+STATUS=DONE

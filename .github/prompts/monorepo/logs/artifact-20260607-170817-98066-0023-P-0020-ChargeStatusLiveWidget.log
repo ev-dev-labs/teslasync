@@ -1,0 +1,148 @@
+=== P4 Dashboard widget 0020 ChargeStatusLiveWidget (Apple) ===
+date: 2026-06-08T00:35:56Z
+host: Darwin 25.5.0 arm64
+swift: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+
+############################################################
+# Capability assessment (gate requires SwiftUI+SwiftCharts+
+# MapKit via xcodebuild; iOS18/iPadOS18/macOS15 simulators)
+############################################################
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+$ xcrun simctl list devices | head -3
+xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+
+FINDING: Only the Command Line Tools are installed (no Xcode.app).
+         xcodebuild + iOS/macOS simulators are unavailable, so the two
+         'xcodebuild build test' gate steps CANNOT run on this runner.
+         Per the prompt capability clause and p4-apple/README.md
+         ('prompts that can't run their gate are BLOCKED, not DONE')
+         these steps are recorded BLOCKED with evidence (not green).
+
+############################################################
+# Gate step 1/6 — xcodebuild iOS (TeslaSync, iPhone 16)
+############################################################
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1   (BLOCKED — requires Xcode.app)
+
+############################################################
+# Gate step 2/6 — xcodebuild macOS (TeslaSync-macOS)
+############################################################
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1   (BLOCKED — requires Xcode.app)
+
+############################################################
+# Gate step 3/6 — swiftlint --strict (widget files)
+# NOTE: .swiftlint.yml 'included:' scopes Sources/Tests/etc;
+# the new surface dir is linted by explicit path below.
+############################################################
+Linting Swift files at paths TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.LiveTests.swift, TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Model.swift, TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Previews.swift, TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Snapshot.swift, TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.swift, TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Tests.swift, TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Views.swift
+Done linting! Found 0 violations, 0 serious in 7 files.
+LINT_EXIT=0
+
+############################################################
+# Gate step 4/6 — swiftformat --lint (widget files)
+############################################################
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+SwiftFormat completed in 0.03s.
+0/7 files require formatting.
+FORMAT_EXIT=0
+
+############################################################
+# Gate step 5/6 — check-placeholders.ps1 (no stubs)
+############################################################
+# (a) gate literal path form (Test-Path miss → empty scan):
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+# (b) real recursive scan of the surface directory (7 files):
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+############################################################
+# Gate step 6/6 — standalone pure-logic verification
+# (compensating control for the blocked xcodebuild test:
+#  compiles+runs the pure projector/formatter with swift)
+############################################################
+ok   clamp-hi: DashboardWidgetSize(cols: 3, rows: 40)
+ok   clamp-lo: DashboardWidgetSize(cols: 1, rows: 2)
+ok   isCharging: true
+ok   battery round: 64
+ok   power: 11.0 kW
+ok   battery: 64%
+ok   timeLeft: 1h 30m
+ok   added(kWh): 18.4 kWh
+ok   rate: 48 km/h
+ok   voltage(absent): —
+ok   current(absent): —
+ok   fmtTime 0: —
+ok   fmtTime .5: 30m
+ok   fmtTime 2: 2h
+ok   chargingState Stopped: false
+ok   voltage: 232 V
+ok   current: 15 A
+ok   added always kWh: 9.1 kWh
+ALL_PURE_LOGIC_CHECKS_PASSED
+STANDALONE_LOGIC_EXIT=0
+
+############################################################
+# Deliverable (allowed files: TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.*)
+############################################################
+apps/apple/TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.swift          (View + WidgetShell + i18n keys)
+apps/apple/TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Views.swift    (compact/full charging + idle branches, MetricCell)
+apps/apple/TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Model.swift    (LiveDataStore-bound @Observable model + diagnostics seam)
+apps/apple/TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Snapshot.swift (pure snapshot + projector + readout + registration)
+apps/apple/TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Previews.swift (SwiftUI previews for every branch)
+apps/apple/TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.Tests.swift    (adapter/readout/registration/diagnostics XCTest)
+apps/apple/TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.LiveTests.swift(live 5-state presentation XCTest)
+
+############################################################
+# Parity with web source (features/dashboard/widgets/ChargeStatusLiveWidget.tsx)
+############################################################
+Data sources   : useVehicleState/useCharging → shared LiveDataStore (.signals target),
+                 latest charging session energy injected (REST, like the web).
+Branches       : compact-charging, full-charging (2x2 grid + tall Rate/Battery row),
+                 compact-idle, full-idle + Last Session card, empty "No charge data".
+States         : loading · empty · error(retry) · stale(chip+banner) · offline(chip)
+                 via LiveStatus/LivePresentation — never a blank panel (ADR-011/013).
+i18n           : LocalizedStringKey using the web t() keys 1:1 — widget.chargeStatusLive,
+                 widget.noChargeData, widget.notCharging, widget.charging, widget.voltage,
+                 widget.amps, widget.timeRemaining, widget.energyAdded, widget.chargeRate,
+                 widget.batteryLevel, widget.lastSession. These are the String Catalog
+                 extraction keys; physically seeding Localizable.xcstrings is outside the
+                 allowed-files scope and is performed by the Xcode build's string
+                 extraction (blocked here with the xcodebuild step).
+a11y           : VoiceOver labels/values on power, battery, metric cells, badges, last
+                 session; SF Symbol decorations accessibilityHidden; Dynamic Type via
+                 Font.TS system ramp; pulse honors accessibilityReduceMotion.
+Telemetry      : view.opened slug=ChargeStatusLiveWidget (os.Logger) on appear, once.
+Registration   : id charge-status-live, default 2x2, min 1x2, max 3x40 (web registry).
+Units          : SI on-device; rate converts via shared Units engine at the render
+                 boundary; energy always kWh to match the web source.
+
+############################################################
+# Acceptance criteria
+############################################################
+[~] Renders on Apple with all states reproduced .... CODE COMPLETE; render/build BLOCKED (no Xcode)
+[x] Hooks bind to shared state-holder layer ........ LiveDataStore; no HTTP in the view
+[x] Every i18n key from source present ............. web keys used 1:1 (catalog extraction pending build)
+[x] Accessibility labels on every element .......... labels/values + identifiers set
+[~] Tests: adapter + per-state + a11y .............. WRITTEN (XCTest); run BLOCKED (no Xcode).
+                                                      Pure adapter/formatter logic RUN & PASSED standalone.
+[x] No TODO/stub/mock/placeholder/Lorem ............ check-placeholders COUNT=0
+[~] EXIT=0 / STATUS=DONE ............................ BLOCKED with platform-capability evidence
+
+############################################################
+# Result
+############################################################
+Runnable gates GREEN: swiftlint --strict=0, swiftformat --lint=0, check-placeholders=0,
+standalone pure-logic=0. Blocked gates: IOS_EXIT/MAC_EXIT (xcodebuild requires Xcode.app,
+unavailable on this Command-Line-Tools-only runner; no iOS/macOS simulators).
+
+EXIT=1
+STATUS=BLOCKED

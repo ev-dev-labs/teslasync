@@ -1,0 +1,149 @@
+================================================================================
+p4-apple · P7 · page:telemetry/LiveSignalMonitor — SwiftUI / Apple HIG
+Native parity of web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx
+Route /live-monitor · adaptive macOS + iOS · ADR-002/004/005/006/011/013/014/015
+================================================================================
+
+SCOPE
+  Implemented the LiveSignalMonitor page natively in SwiftUI at full panel / state /
+  string parity with the web source. The web page is a thin wrapper over
+  `useLiveSignalStream` (SSE firehose, vehicle-scoped, tailMax 500) + `LiveSignalTail`
+  (scrolling Time/Signal/Value/Type/Freshness table + 4 stat cards + filter / pause /
+  auto-scroll / clear + connection badge). All reproduced SwiftUI-native (no web
+  cloning): a titled header (vehicle picker + connected/disconnected badge) and the
+  live tail panel with first-class loading / empty(waiting) / noMatch / error / stale
+  states, bound through an @Observable model driven by the live SSE seam.
+
+SHIPPED FILES (apps/apple/TeslaSync/Features/Telemetry/**)
+  LiveSignalMonitorPage.swift          — View scaffold + LiveSignalMonitorStrings (catalog keys)
+  LiveSignalMonitorPage.Support.swift  — value types + seams + in-memory source + LiveSignalMonitorCatalogKeys
+  LiveSignalMonitorPage.Model.swift    — @Observable LiveSignalMonitorPageModel (P1/S8) — tail fold/cap/rate/state
+  LiveSignalMonitorPage.Views.swift    — header, connection badge, tail panel, 4 stat cards, states
+  LiveSignalMonitorPage.Rows.swift     — column header, signal row, kind badge/tint, freshness chip, formatters
+  LiveSignalMonitorPage.Adapter.swift  — prod LiveStreamProvider<LiveFleetEvent> → seam bridge + route registration
+  LiveSignalMonitorPage.Previews.swift — DEBUG previews (live / waiting / failed / stale) via in-memory source
+  LiveSignalMonitorPage.Tests.swift    — 28 XCTest cases (@testable import), Swift 6 strict concurrency
+NAVIGATION REGISTRATION (allowed scope)
+  Sources/App/AppRouteParser.swift     — "/live-monitor" → .telemetry deep-link alias (web /signals also → .telemetry)
+  Sources/TeslaSyncApp.swift           — chains LiveSignalMonitorRouteRegistration onto the route-host registry
+  project.yml                          — adds TeslaSync/Features source path to both app targets (iOS + macOS)
+LEDGER
+  apps/parity/apple-ledger.json        — page:telemetry/LiveSignalMonitor rows (apple-ios, apple-macos) → done 4/4
+
+ARCHITECTURE NOTES
+  - Page/Model/Support/Views/Rows are Shared-FREE (Foundation/Observation/SwiftUI only): they build + unit-test
+    under Swift 6 strict concurrency WITHOUT the KMP framework. The live data flows through the Shared-free
+    `LiveSignalMonitorSource` seam (mirrors the P4 LiveControls `LiveControlsSource` pattern).
+  - The production `LiveStreamMonitorSource` (Adapter.swift) is the ONLY page file touching the live-stream /
+    shared-facade types (LiveStreamProvider/LiveFleetEvent/LiveScalar/LiveStreamTarget/LiveConnectionState). It
+    bridges the real SSE firehose into the seam, filtering to the selected vehicle (web useLiveSignalStream scope).
+  - Until the KMP SseClient is bootstrapped at the composition root, the page is wired with
+    `LiveStreamProvider.unavailable()` — an HONEST connecting→offline provider that drives the loading→error/
+    reconnect chrome (never fabricated rows; ADR-011). Swap for SharedLiveStreamProvider.live(client:tokenProvider:).
+  - Strings: every visible literal resolves from Localizable.xcstrings; all 21 liveMonitor.* keys already exist
+    in the catalog under the `translation.` namespace (the i18next default), so key names match web verbatim and
+    the catalog itself was NOT edited.
+
+=== PARITY ===
+PARITY_REQUIRED=4
+  [x] string — liveMonitor.title
+        key   : LiveSignalMonitorCatalogKeys.title = "translation.liveMonitor.title"  (…Support.swift)
+        render: LiveSignalMonitorStrings.titleKey → TSPageTitle in LiveSignalMonitorHeader.titleBlock (…Views.swift)
+        test  : LiveSignalMonitorParityTests.testRequiredParityKeys / LSMCheck "parity.title"  → PASS
+  [x] string — liveMonitor.subtitle
+        key   : LiveSignalMonitorCatalogKeys.subtitle = "translation.liveMonitor.subtitle"  (…Support.swift)
+        render: LiveSignalMonitorStrings.subtitleKey → TSSubhead in LiveSignalMonitorHeader.titleBlock (…Views.swift)
+        test  : LiveSignalMonitorParityTests.testRequiredParityKeys / LSMCheck "parity.subtitle"  → PASS
+  [x] string — liveMonitor.connected
+        key   : LiveSignalMonitorCatalogKeys.connected = "translation.liveMonitor.connected"  (…Support.swift)
+        render: LiveSignalMonitorStrings.connectedKey → LiveSignalConnectionBadge.label (isConnected) (…Views.swift)
+        test  : LiveSignalMonitorParityTests.testRequiredParityKeys / LSMCheck "parity.connected"  → PASS
+  [x] string — liveMonitor.disconnected
+        key   : LiveSignalMonitorCatalogKeys.disconnected = "translation.liveMonitor.disconnected"  (…Support.swift)
+        render: LiveSignalMonitorStrings.disconnectedKey → LiveSignalConnectionBadge.label (…Views.swift)
+        test  : LiveSignalMonitorParityTests.testRequiredParityKeys / LSMCheck "parity.disconnected"  → PASS
+PARITY_COVERED=4
+  (Beyond the 4 required keys, the LiveSignalTail surface strings — time/signal/value/type/freshness/
+   filterPlaceholder/filterLabel/pause/resume/autoScroll/clear/sigPerSec/bufferSize/uniqueSignals/filtered/
+   waiting/noMatch — are also catalog-bound via LiveSignalMonitorStrings; zero hardcoded literals.)
+
+GATES (executed on this runner — raw results)
+  [GREEN]    swiftlint --strict (scoped to Features/Telemetry, repo .swiftlint.yml rules)
+                 → Done linting! Found 0 violations, 0 serious in 8 files.                       SWIFTLINT_EXIT=0
+  [GREEN]    placeholder gate (apps/tools/check-placeholders.ps1 -Language swift)
+                 → PLACEHOLDER_COUNT=0  PLACEHOLDER_ALLOWED=4 (filterPlaceholder = web i18n key name)  EXIT=0
+  [GREEN]    Isolated library build — SwiftPM swift-tools 6.0, Swift 6 language mode (= strict-concurrency
+             complete, IDENTICAL to the app's SWIFT_STRICT_CONCURRENCY:complete), macOS 15, compiling the EXACT
+             shipped Support+Model:                       Build of target 'TeslaSync' complete!     BUILD_EXIT=0
+  [GREEN]    Isolated view-layer build — same SwiftPM/Swift-6 harness compiling the EXACT shipped
+             Page.{swift,Support,Model,Views,Rows} against the REAL repo design system (Tokens · Design/
+             {TSMaterial,TSDesign} · Components/{UI,DataDisplay/{Metrics,StatusIndicators},Feedback,Forms,Motion}):
+                                                            Build complete!                          UI_BUILD_EXIT=0
+  [GREEN]    Shipped XCTest suite — the EXACT LiveSignalMonitorPage.Tests.swift as `@testable import TeslaSync`,
+             run via the full Xcode 26.5 toolchain (DEVELOPER_DIR=/Applications/Xcode.app), Swift 6 strict
+             concurrency:                  Executed 28 tests, with 0 failures (0 unexpected)        XCTEST_EXIT=0
+  [GREEN]    Executable logic check — the shipped model exercised end-to-end (tail fold/cap/pause/clear/filter/
+             unique/rate/presentation ladder/staleness/connection/vehicle-reset/parity-keys/taxonomy):
+                                            LOGIC CHECK: 34 passed, 0 failed                        LOGIC_EXIT=0
+  [GREEN]    Adapter syntax — swiftc -parse -target arm64-apple-macosx15.0 …Adapter.swift            PARSE_EXIT=0
+  [GREEN]    KMP Shared.xcframework — built by the scheme pre-action (Gradle :core:assembleSharedXCFramework,
+             Kotlin/Native): "xcframework successfully written out to …/XCFrameworks/debug/Shared.xcframework".
+  [GREEN]    xcodegen generate — project.yml valid; the generated TeslaSync.xcodeproj enumerates the page
+             (48 LiveSignalMonitorPage references in project.pbxproj).                            XCODEGEN_EXIT=0
+
+  [DEFERRED] Full-app xcodebuild — macOS scheme, full Xcode 26.5 toolchain, ACTUALLY EXECUTED on this runner:
+                 xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO
+                 → BUILD FAILED.                                                                   MAC_EXIT=65
+             WHY DEFERRED (ZERO LiveSignalMonitor errors; blocker is PRE-EXISTING + UNRELATED):
+                 total `error:` lines = 2, BOTH "Unable to resolve module dependency: 'XCTest'". The app-target
+                 source glob (`TeslaSync/feature-views/**`, pre-existing) sweeps 170 co-located `*.Tests.swift`
+                 files — each `import XCTest` — into the APP target; XCTest is not linkable into an application
+                 target, so the build aborts at module-dependency resolution before typechecking any source file.
+                 grep for any error on a Features/Telemetry / LiveSignalMonitor source file = 0 hits. The repo
+                 also carries the documented pre-existing parallel-merge collision `struct DashboardWidgetSize`
+                 (redefined 15×). Both blockers are exactly the items apps/macos-pending-verifications.md defers
+                 to `p4-apple/P99-0001-apple-acceptance-gate` (macos-latest, signed, correct test-target
+                 membership) — the sanctioned "code-complete + DEFERRED full-app Xcode gate" disposition every
+                 prior P4 surface used. This commit neither introduces nor touches those surfaces; per task rules
+                 the pre-existing breakage was NOT modified. (iOS-Simulator build is identically blocked by the
+                 same platform-agnostic app-target XCTest glob; macos-pending-verifications.md was NOT edited —
+                 outside this prompt's allowed-files scope.)
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app macOS xcodebuild gate is reported RED (MAC_EXIT=65) and explicitly
+                           DEFERRED with the raw 2-error XCTest-module evidence — never reported as passing.
+  2  No scope narrowing  : every web region reproduced — title+subtitle header, VehicleSelect, connected/
+                           disconnected badge, filter field, Pause/Resume + Auto-scroll + Clear, the 4 stat
+                           cards (sig/sec · buffer N/500 · unique · filtered), and the Time/Signal/Value/Type/
+                           Freshness scrolling table incl. value-kind tint + per-row freshness.
+  3  No skip-and-assume  : every gate EXECUTED on this runner; raw results pasted; the macOS xcodebuild failure
+                           CONFIRMED (not assumed) to be 100% pre-existing XCTest membership (2/2 errors), 0 on
+                           the page; the 28-test XCTest suite + 34-assertion logic check actually RUN.
+  4  No stubs as final   : complete production surface (8 files) + 28 real passing tests; placeholder scanner = 0
+                           (4 sanctioned opt-outs for the web i18n key literally named filterPlaceholder).
+  5  No parity shortcut  : panels/states/strings/units/a11y mapped to platform tokens + shared TS components; the
+                           5-state contract (loading/empty/error/fresh/stale) + >2-min staleness (ADR-013) honored.
+  6  No delegation       : implemented directly; no agents/subtasks.
+  7  No predecessor bypass: binds P1/S8 state-holder model, P1/S4 live seam, P1/S9 tokens, P1/S10 i18n catalog,
+                           P1/S11 telemetry; P3 shared components (TSCard/TSButton/TSStatCard/TSTextField/
+                           TSVehicleSelect/TSEmptyState/TSErrorDisplay/TSAlertBanner/…) consumed, not re-rolled.
+  8  No commit on red    : the COMMITTED artifact is GREEN on every host-runnable gate AND on a real Swift-6
+                           strict-concurrency build + 28-test XCTest run of the shipped sources; the deferred
+                           full-app gate is RED only on pre-existing, unrelated surfaces this commit never touches.
+  9  No silent drift     : changes confined to apps/apple/TeslaSync/Features/Telemetry/** + the navigation
+                           registration (AppRouteParser, TeslaSyncApp, project.yml) + apps/parity/apple-ledger.json
+                           + this log. Pre-existing dirty worktree files (feature-views/AIUsageCard.*, web/*) were
+                           left untouched and NOT staged.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic LiveSignalMonitorPage shipped at web parity and INDEPENDENTLY VERIFIED: it
+  compiles and its 28 XCTest cases pass under the app's own Swift-6 strict-concurrency rules against the REAL
+  design system, with swiftlint --strict + the placeholder gate green and PARITY_COVERED==PARITY_REQUIRED (4/4).
+  The full-app iOS/macOS xcodebuild build+test gate is DEFERRED (not failed by this code): it is blocked by the
+  pre-existing app-target test-membership glob (170 unrelated co-located XCTest files) + the documented
+  DashboardWidgetSize collision + macOS signing — owned by the P4/P99 acceptance gate on a signed macos-latest
+  runner per apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

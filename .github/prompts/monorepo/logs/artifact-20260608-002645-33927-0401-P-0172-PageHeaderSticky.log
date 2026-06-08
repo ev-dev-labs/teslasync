@@ -1,0 +1,163 @@
+=== P4 Shared surface 0172 PageHeaderSticky (Apple) ===
+Date: 2026-06-08
+Runner: Darwin / macOS 26.5 (25F80). Apple Swift 6.3.2 (host) + Xcode 26.5 (17F42) toolchain
+(Swift 6, iOS 26.5 + macOS 26.5 SDKs) at /Applications/Xcode.app. swiftlint + swiftformat + pwsh +
+xcodegen present. iPhone 16 simulator present (booted). NOTE: the ACTIVE developer dir is
+/Library/Developer/CommandLineTools (`xcode-select -p`), so the gate's bare `xcodebuild` errors; the
+full toolchain is reachable only via a DEVELOPER_DIR override (no admin `xcode-select -s` available).
+
+WEB SOURCE (THE spec): web/src/components/layout/PageHeaderSticky.tsx
+  - A pure presentational scroll affordance. Its only imports are React state (useState/useEffect/
+    useCallback) + the lucide `ArrowUp` icon. There is NO data/network layer, hence NO loading / empty /
+    error / stale / offline axis. Reproducing those generic template states would be fabrication
+    (covenant #5 "no parity shortcuts" / #9 "no silent drift"). The source's REAL render branches are
+    reproduced faithfully:
+      hidden                 — `if (!visible) return null` → the surface carries no footprint.
+      visible · interactive  — `scrollToTop` (default true): the whole bar is a scroll-to-top button
+                               with the up-arrow glyph; aria-label = `${ariaLabel} — scroll to top`.
+      visible · static       — `scrollToTop={false}`: a labeled, non-interactive `role="region"`.
+      (empty content)        — a blank summary resolves to a localized em-dash, never a blank strip.
+  - Visibility = the IntersectionObserver guard pair under a `-topOffset` top root-margin:
+      `const scrolledPast = entry.boundingClientRect.top < 0;
+       setVisible(!entry.isIntersecting && scrolledPast);`
+    Native port (PageHeaderStickyVisibility): visible == (heroTop < 0) && (heroBottom <= topOffset).
+    The `top < 0` guard is the documented false-positive suppressor for "hero still below the viewport
+    on first paint of a long page".
+  - Scroll-to-top scrolls the real scroll container (`#main-content`), not window. data-testid →
+    accessibilityIdentifier "page-header-sticky".
+  - i18n: the web source is "anonymous" — the caller passes an already-localized `ariaLabel`; the only
+    English literal is the " — scroll to top" suffix. Per the native no-English-literals rule that
+    suffix + the native chrome strings (VoiceOver hint, em-dash, region-label fallback) are promoted to
+    the P1/S10 "PageHeaderSticky" table.
+
+DELIVERABLE — apps/apple/TeslaSync/shared-surfaces/PageHeaderSticky.* (the only Allowed source files):
+  PageHeaderSticky.swift             Generic surface View: renders nothing while hidden (web `null`),
+                                     the interactive/static bar while visible; reduce-motion-respecting
+                                     reveal; + a string-summary convenience init.
+  PageHeaderSticky.Model.swift       P1/S10 i18n facade (PageHeaderStickyStrings), P1/S11 telemetry seam
+                                     (PageHeaderStickyTelemetry + OSLog default), P1/S8 @Observable
+                                     state-holder: geometry→visibility, view.opened once on first
+                                     reveal, localized a11y labels, host scroll-to-top action.
+  PageHeaderSticky.Projection.swift  Pure projections (no SwiftUI): visibility (IntersectionObserver
+                                     port), summary em-dash elision, a11y label composition.
+  PageHeaderSticky.Views.swift       Bar chrome (translucent material + hairline divider + up-arrow,
+                                     tokenized, no ported Tailwind) + PageHeaderStickyScaffold
+                                     (ScrollViewReader + onGeometryChange hero tracking + scroll-to-top).
+  PageHeaderSticky.Previews.swift    10 previews: interactive / static / long-truncated / empty / top
+                                     offset / custom content / scaffold / dark / light / Dynamic Type AX3.
+  PageHeaderSticky.Tests.swift       XCTest: visibility projection (incl. false-positive guard + offset
+                                     boundary), summary + a11y projections, model (geometry→visibility,
+                                     view.opened-exactly-once, activation forward/no-op, topOffset clamp,
+                                     stable slug/identifier).
+  PageHeaderSticky.strings           P1/S10 catalog contribution (parity suffix + native chrome keys).
+
+--------------------------------------------------------------------------------------------------------
+GATE STEPS (as written in the prompt)
+--------------------------------------------------------------------------------------------------------
+
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    >>> BLOCKED — but ONLY by integration wiring that is OUTSIDE this prompt's Allowed files. Evidence,
+        established first-hand on this runner:
+    (a) The gate's bare `xcodebuild` errors because the active dir is CommandLineTools:
+          "xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+           '/Library/Developer/CommandLineTools' is a command line tools instance"
+        (Bypassable here only via `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`; the gate
+         as literally written does not set it and no admin `xcode-select -s` is available.)
+    (b) The app targets hard-depend on the KMP `Shared.xcframework` (15 `import Shared` files in
+        Sources/; Frameworks/Shared.xcframework ships only as .gitkeep, staged at build time by
+        Scripts/build-shared-xcframework.sh via Gradle/Kotlin-Native). On THIS runner that prerequisite
+        IS provisioned: with DEVELOPER_DIR set, `xcodegen generate` succeeded and the macOS scheme
+        pre-action built the framework — observed verbatim in the build log:
+          "▸ Assembling Shared.xcframework via Gradle…"
+          ":core:downloadKotlinNativeDistribution / :core:generateApiClient /
+           :core:linkDebugFrameworkIosArm64 / :core:compileKotlinMacosArm64"
+          "xcframework successfully written out to: apps/shared/core/build/XCFrameworks/debug/Shared.xcframework"
+        So (b) is NOT a blocker on this runner — the KMP core builds.
+    (c) THE blocker: apps/apple/TeslaSync/shared-surfaces is NOT listed in project.yml `sources` (nor in
+        .swiftlint.yml `included`). project.yml is OUTSIDE this prompt's Allowed files; the surface→target
+        wiring is owned by P4 core / the P4 acceptance gate (this artifact "Blocks: P4 acceptance gate",
+        "Depends on: P4 core"). Confirmed first-hand against the freshly generated project:
+          grep -c PageHeaderSticky  TeslaSync.xcodeproj/project.pbxproj  ->  0   (surface NOT in any target)
+          grep -c AiUsageCard.swift TeslaSync.xcodeproj/project.pbxproj  ->  6   (a wired feature-view, for contrast)
+        Therefore `xcodebuild -scheme TeslaSync build test` would compile/run the app WITHOUT this
+        surface and WITHOUT its tests — it cannot certify this deliverable on this branch, and adding the
+        wiring is out of scope. (This matches the accepted precedent, e.g. shared-surface 0139
+        SkipToContent, which shipped STATUS=BLOCKED for the same (c).)
+    IOS_EXIT=BLOCKED (surface not wired into the iOS target — project.yml, outside Allowed files)
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    >>> BLOCKED — same (c) as [1]. `xcodegen generate` produced schemes {TeslaSync, TeslaSync-macOS,
+        TeslaSyncActivities, TeslaSyncWatch, TeslaSyncWidgets(-macOS), TeslaSyncWatchWidgets}; the
+        macOS pre-action built Shared.xcframework (see [1b]) — but the surface is absent from the
+        target (see [1c]), so the macOS scheme cannot compile or test it either.
+    MAC_EXIT=BLOCKED (surface not wired into the macOS target — project.yml, outside Allowed files)
+
+[3] swiftlint --strict
+    .swiftlint.yml `included` does not list shared-surfaces (see [1c]) — owned by P4 core — so the bare
+    gate command does not reach this surface. Linted explicitly against the 6 surface .swift files with
+    the repo config:
+        "Linting 6 files ... Done linting! Found 0 violations, 0 serious in 6 files."
+    LINT_EXIT=0   (surface, 6 files, --strict, repo .swiftlint.yml)
+
+[4] swiftformat --lint apps/apple/TeslaSync/shared-surfaces  (repo .swiftformat, --swiftversion 6.0)
+    "0/6 files require formatting."
+    FORMAT_EXIT=0
+
+[5] ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/PageHeaderSticky
+    PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+    (No TODO / FIXME / XXX / Placeholder / Lorem / "not implemented" / stub / mock in shipped code.)
+    PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------------------------------
+ADDITIONAL SURFACE-SCOPED VERIFICATION
+(Because the surface is not yet wired into the app target — see [1c] — it is verified in isolation here,
+ using the REAL Xcode 26.5 toolchain: the exact deliverable files compiled against the real iOS 18
+ simulator + macOS 15 SDKs under Swift 6 COMPLETE strict concurrency — the same setting the app targets
+ use — and the exact shipped XCTest file executed under the real XCTest runtime.)
+--------------------------------------------------------------------------------------------------------
+  [macOS 15] swiftc -typecheck (TSToken stubs + Projection + Model + Views + PageHeaderSticky)
+     -swift-version 6 -strict-concurrency=complete ......................... RC=0  (0 errors / 0 warnings)
+  [macOS 15] swiftc -typecheck ALL 6 files incl. Previews (#Preview macro via Xcode plugin) .. RC=0
+  [iOS 18 simulator] swiftc -typecheck ALL 6 files incl. Previews
+     (-target arm64-apple-ios18.0-simulator -strict-concurrency=complete) .. RC=0  (0 errors / 0 warnings)
+  REAL XCTEST RUN of the shipped PageHeaderSticky.Tests.swift (built as a `TeslaSync` test module from
+     the shipped Projection + Model files; `swift test`, Xcode toolchain):
+        Test Suite 'PageHeaderStickyVisibilityTests'    — 6 tests, 0 failures
+        Test Suite 'PageHeaderStickySummaryTests'       — 2 tests, 0 failures
+        Test Suite 'PageHeaderStickyAccessibilityTests' — 3 tests, 0 failures
+        Test Suite 'PageHeaderStickyModelTests'         — 8 tests, 0 failures
+        Executed 19 tests, with 0 failures (0 unexpected).  SWIFT_TEST_EXIT=0
+  Runtime logic harness (real Projection/Summary/Accessibility/Model, executable): 31/31 checks PASSED.
+
+--------------------------------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------------------------------
+  [x] Renders every state the web source actually has (hidden / interactive / static / empty→em-dash) +
+      the IntersectionObserver-port visibility incl. the long-page false-positive guard.
+  [x] Binds via the P1/S8 state-holder; no HTTP in the view (pure presentational — no data hook).
+  [x] Every i18n key the native sources need is in the P1/S10 "PageHeaderSticky" contribution (the web
+      " — scroll to top" suffix + native VoiceOver hint / em-dash / region-label fallback).
+  [x] Accessibility on every interactive element: button label (`{label} — scroll to top`) + hint +
+      .isButton + identifier "page-header-sticky"; static variant labeled region; arrow .accessibilityHidden;
+      reduce-motion-respecting reveal; tokens carry high-contrast + Dynamic Type.
+  [x] Telemetry: view.opened (slug "PageHeaderSticky") emitted exactly once on first reveal (tested).
+  [x] Tests: visibility + summary + a11y projection units + model unit — EXECUTED under real XCTest
+      (19/19 pass), plus dual-platform compile of the views/previews.
+  [x] No TODO / stub / mock / placeholder / Lorem in shipped code (gate [5]).
+  [ ] xcodebuild build test EXIT=0 — BLOCKED by the surface→target wiring in project.yml (see [1c]),
+      OUTSIDE this prompt's Allowed files and owned by P4 core.
+
+EXIT=1
+STATUS=BLOCKED
+  The prompt's xcodebuild build+test gate cannot certify THIS surface on THIS branch because the
+  surface→app-target wiring lives in project.yml (and the lint scope in .swiftlint.yml) — OUTSIDE this
+  prompt's Allowed files {apps/apple/TeslaSync/shared-surfaces/PageHeaderSticky.*, the log} and owned by
+  P4 core / the P4 acceptance gate (this artifact "Depends on: P4 core", "Blocks: P4 acceptance gate").
+  Confirmed first-hand: the surface compiles 0/0 (errors/warnings) for BOTH iOS 18 and macOS 15 against
+  the real SDKs under Swift 6 complete strict concurrency, its 19 shipped XCTest cases EXECUTE with 0
+  failures under the real XCTest runtime, swiftlint --strict = 0 on the 6 files, swiftformat = 0/6, and
+  the placeholder gate = 0. The KMP Shared.xcframework prerequisite builds successfully on this runner,
+  so the ONLY block is the out-of-scope integration wiring (c). No defect in the deliverable — the block
+  is exactly the integration-capability case the artifact's Capability clause sanctions as
+  STATUS=BLOCKED with evidence. This mirrors the accepted convention of prior shared-surface artifacts
+  (e.g. 0139 SkipToContent).

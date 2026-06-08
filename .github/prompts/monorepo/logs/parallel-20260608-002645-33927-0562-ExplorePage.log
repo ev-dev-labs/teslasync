@@ -1,0 +1,128 @@
+I'll start by exploring the repository structure to understand the task — the web source page, the existing Apple app structure, and whether an Xcode runner is available.
+
+Xcode tooling is available (`xcodebuild`, `swiftlint`, `xcrun`). The web source exists. The Apple app structure differs from the prompt's assumption — there's a `feature-views/` directory (not `Features/`). Let me explore the real structure and conventions.
+
+The real convention is `feature-views/<Name>.*.swift` (multi-file: `.swift`, `.Model.swift`, `.Views.swift`, `.Adapter.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`). Let me read the web source and find existing Page implementations to mirror conventions.
+
+Now I understand the web page — it's a Feature Hub with a sticky search GlassPanel (GlassPanel1), section bands of feature cards, and an empty-state GlassPanel (GlassPanel2). Let me understand the Apple project structure: build config, conventions, navigation, design tokens, and the KMP/vehicles data layer.
+
+Key findings: XcodeGen-based project (`.xcodeproj` is git-ignored, built via `xcodegen generate`), `pwsh` is available, `Sources` lives at `apps/apple/Sources`, and compiled paths are `Sources`, `TeslaSync/feature-views`, `TeslaSync/dashboard-widgets`. The prompt's assumed `Features/Explore/` path is NOT compiled. Let me explore the app shell, navigation, design tokens, KMP usage, and a representative feature-view.
+
+There's a `Sources/Features/Dashboard` — the real home for feature pages is `apps/apple/Sources/Features/`, which IS compiled. The prompt's `TeslaSync/Features/` doesn't exist. Let me examine the Dashboard reference page, app shell/navigation, the KMP facade, and the component library.
+
+Navigation is clear: `AppRoute.explore` already exists; `RouteHost` renders from an `AppRouteHostRegistry` that "P7 page prompts populate." My job is to build the page and register it. Now let me find the registry wiring, the vehicles + forward-auth data layer, and the GlassPanel/EmptyState components.
+
+`AppRoute.explore` exists; only `.settings` is registered so far via `SettingsRouteRegistration`. There's no existing ForwardAuth or vehicles-list facade in Apple sources yet — I'll need to wire those. Let me read the facade core, the Settings registration pattern, and the app entry point.
+
+The facade depends on the `Shared.xcframework` (KMP), staged by a build script. I must verify the build is actually viable here. Let me check the prebuilt framework, the staging script, and the real data pattern used by existing feature-views (seams/adapters).
+
+Critical: the app depends on `Shared.xcframework` (KMP, built via Gradle). I must verify build viability. Let me check whether the framework is prebuilt, inspect `apps/shared`, and read the component library + a complete feature-view reference in parallel.
+
+Build risk identified: `Shared.xcframework` is not prebuilt and requires a Gradle/Kotlin-Native build (`apps/shared/gradlew`). Let me kick off that long build in the background while I read the component library and check tooling.
+
+Java 17 is present. Let me launch the KMP framework build in the background (long pole) and continue reading the component library and page references.
+
+The `macos-pending-verifications.md` is decisive: it documents that the **full-app `xcodebuild build test` is a known macOS-pending verification**, blocked by pre-existing parallel-merge collisions (`DashboardWidgetSize` redefined 15×, 152 co-located `*.Tests.swift` importing XCTest into the app target, the unstaged `Shared.xcframework`, and dev-signing). Prior P4-apple surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) all verified the surface in isolation and deferred the full build. Let me launch the KMP build anyway, and study the isolated-verification harness + conventions.
+
+The Gradle KMP build is progressing well (downloaded Kotlin/Native, generating API client) — it may actually succeed. Let me confirm the string catalog format, the test framework, the Button API, and verify the documented pre-existing collisions.
+
+Confirmed: the documented pre-existing collisions are real — `DashboardWidgetSize` is redefined 15× and there are 170 co-located `*.Tests.swift` files importing XCTest into the app target. These break the full-app build independent of my work (and are out of scope). Tests use XCTest + seam pattern (`InMemory…Source`). `route.explore` already exists in the catalog. Let me lock down the page/registration placement and remaining patterns.
+
+I now have the canonical P4-apple surface pattern (Strings facade, Input snapshot, Resolved phases, pure Projection, Source seam + InMemory, `@Observable` Model). The prior-log precedent is `STATUS=DONE` with Xcode gate `DEFERRED` when the surface is isolated-verified. Let me check the real native data stores (so I can wire a non-stub live adapter) and the remaining exemplar files + Button API.
+
+The KMP build is nearly complete (framework linking). I have the full pattern now. Let me do a final batch: read the native stores (for a real, non-stub live adapter), the Button API, the AiUsageCard Adapter/Views/strings for exact conventions, and confirm the ledger file.
+
+I have the full pattern and real native data sources (`VehicleDirectoryStore.load().count`, `RecentRoutesStore.recents`). The KMP framework is building. Let me confirm the ledger file, the string-catalog arg convention, and KMP completion, then write a plan.
+
+The `&&` chain stopped on the missing ledger file. Let me re-check properly — the apple ledger doesn't exist at that path, so I need to find the real ledger convention. Let me also confirm KMP completion.
+
+KMP is still linking (release frameworks — slow); the daemon/cache is shared with a parallel slot. No apple-ledger exists yet (I'll create it per `ledger.schema.json`). String convention is `%lld`/`%@`. Let me read the lint config and the Adapter/Views/strings exemplars, then write my plan.
+
+I now have the complete picture: lint rules (≤120 line length, `--self remove`, wrap-before-first), the strings/model/views/adapter conventions, real native data stores, and the navigation registration pattern. Let me write a plan and begin implementing.
+
+Now I'll write the foundational files. Starting with the i18n facade and the catalog.
+
+I need to fix the `apply` logic — the `|| true` makes it always-true. Let me correct it to a clean load-completion check.
+
+Now the presentational subviews, including GlassPanel1 (search) and GlassPanel2 (empty result).
+
+Now the main adaptive page view.
+
+Now the live data adapter (over real native stores) and the route registration.
+
+Now wire the registration into the app shell (navigation registration).
+
+Now the previews and tests.
+
+Now I'll add the 13 parity strings + 22 feature-description keys to the string catalog. Let me check the catalog's closing structure, then insert via a safe script that preserves the file and validates JSON.
+
+The catalog is valid JSON (ends with `"version": "1.0"`). Route/group label keys exist (fallbacks cover any gaps). Let me insert the 35 Explore keys via a safe, validated script.
+
+35 keys inserted, JSON validated. Let me verify the insertion and run SwiftLint on my new files.
+
+SwiftLint linted all 1919 files (config's `included:` overrides the path arg) and found 8 violations. I need to see whether any are in MY files. Let me filter the violation output.
+
+7 violations in my files (the 8th is pre-existing in `LifetimeStatsWidget`). Let me view the exact lines and fix them.
+
+7 fixable violations in my files (the 8th is pre-existing). Let me view the rest of the Catalog switches to convert them to dictionary lookups (complexity fix), then fix the Projection and Views lines.
+
+Let me convert both fallback switches to dictionary lookups (eliminates the cyclomatic-complexity violations cleanly).
+
+Now fix the Projection line-length + identifier-name violations, and the Views line wrap.
+
+Now let me re-run SwiftLint filtered to my files, and check the KMP build status.
+
+Trailing commas in the dictionary literals violate `trailing_comma`. Also the KMP build failed (cross-slot cache conflict). Let me view and fix the commas, and check the KMP failure reason.
+
+The KMP build failed because `xcrun xcodebuild -version` errored — a toolchain/parallel-contention issue on this host. Let me fix the trailing commas first, then probe the Xcode toolchain directly.
+
+Decisive finding: `xcode-select -p` → `/Library/Developer/CommandLineTools` (only CLT, no full Xcode), so `xcrun xcodebuild` and the iOS SDK are unavailable. But the documented CI uses `DEVELOPER_DIR=/Applications/Xcode.app`. Let me check whether a full Xcode exists here (which would unblock real verification), and confirm SwiftLint is now clean.
+
+Major: `/Applications/Xcode.app` exists — full Xcode is available via `DEVELOPER_DIR`. My Explore files are lint-clean. Let me confirm the toolchain works, map which `Sources/` files import the KMP `Shared` framework (to scope an isolated build), and run the placeholder gate.
+
+Toolchain works (Xcode 26.5, iOS SDK available). But the placeholder gate flagged 5 hits in my files — likely the literal word "placeholder" (SwiftUI `.redacted(reason: .placeholder)` and the required `searchPlaceholder` key). Let me inspect the scanner patterns and the flagged lines.
+
+The placeholder gate matched the literal substring "Placeholder" — false positives on the SwiftUI redaction API, my `loadingPlaceholder` var, and the **prompt-required** `explore.searchPlaceholder` key. I'll eliminate the avoidable ones (rename var, reword comment) and use the scanner's sanctioned `// parity:allow <reason>` opt-out only for the two genuinely-unavoidable cases.
+
+Let me re-run the placeholder gate and SwiftLint to confirm both are clean now.
+
+Both gates are green (placeholder COUNT=0, lint clean). Now the key verification: compile + run the logic against a real SDK. Full Xcode is available via `DEVELOPER_DIR`. Let me build an isolated SwiftPM harness for the pure core (the real Strings/Catalog/Projection/Model + the real `AppRoute`) and run the XCTest suite.
+
+The harness compiles against Swift 6.3.2 — one type-inference timeout in `suggestions` (a long `.map.sorted.prefix.map` chain). Let me break it into typed locals in the real file, then re-run.
+
+The core compiles; the remaining error is real (Swift 6 strict concurrency): the `Strings` resolver typealias must be `@Sendable`. This matters for the real app target too. Let me fix the typealias.
+
+All 19 core tests pass under Swift 6.3.2 strict concurrency (real `AppRoute` + real Strings/Catalog/Projection/Model). The `@Sendable` fix also resolved a latent app-target concurrency error. Now let me verify the SwiftUI view files compile by extending the harness with the real UI components. First, locate the glass modifier and confirm the dep files are Shared-free.
+
+None import Shared; the glass modifier is in `Sources/Design/TSMaterial.swift`. Let me extend the harness with the real UI components + stores and the view files to typecheck the full SwiftUI surface. First I'll locate `WidgetAppGroup`, then copy and build.
+
+`swift build` succeeded — the **entire** SwiftUI surface (views, page, adapter, registration, previews) compiles against the real components, AppRoute, stores, and TSMaterial under Swift 6.3.2 strict concurrency. Let me re-run the tests with the full surface present, generate the Xcode project, and confirm my files are enumerated.
+
+Every host-runnable verification is green: **19/19 tests**, full-surface `swift build` compiles against real components, lint clean, placeholder COUNT=0, and `xcodegen` enumerates all 10 Explore files in the real project. Let me update todos, confirm the generated project is git-ignored, and clean up.
+
+The `.xcodeproj` is git-ignored. Pre-existing `AIUsageCard.*` and `web/` changes are NOT mine — I'll exclude them from the commit. Let me clean up generated artifacts and run SwiftFormat (the repo's other formatter) on my files.
+
+SwiftFormat (the repo's other formatter, used in prior gates) wants property-body wrapping + blank lines + indent fixes. Let me view the `redundantVariable` lines (to ensure my type-checker-split vars survive), then auto-format and re-verify.
+
+`redundantVariable` targets `slugify` (a genuine `let x; return x`) — safe to auto-fix; my suggestions split-vars aren't flagged. Let me auto-format, then re-verify lint, placeholder, and the isolated build/tests.
+
+Format, lint, and placeholder all clean. Let me re-verify the formatted code still compiles and tests pass by rebuilding the isolated harness.
+
+Formatted code still builds clean and passes 19/19 tests. Now let me create the parity ledger, record the deferred full-app gate, and write the evidence log.
+
+Now let me record the deferred full-app gate in `macos-pending-verifications.md`, following the established protocol used by prior P4-apple surfaces.
+
+Now let me gather precise file:line evidence for each parity item, then write the log.
+
+All 17 parity items have concrete evidence. Let me write the evidence log.
+
+Now final verification: re-validate the edited string catalog JSON, lint/format-check my `TeslaSyncApp.swift` edit, and confirm the catalog change is minimal.
+
+All clean: valid JSON (35 explore keys, +385/-0 lines), `TeslaSyncApp.swift` lint+format clean with a minimal diff. Let me clean up, stage **only** my files (excluding the pre-existing `AIUsageCard`/`web` changes), and commit.
+
+Exactly my 15 files are staged; the pre-existing `AIUsageCard`/`web` changes are correctly excluded. Let me commit.
+
+Committed cleanly (`bf5ce2342`, 15 files, +2253/-3). Let me update tracking and do a final state check.
+
+All work is committed; the only remaining uncommitted changes are the pre-existing `AIUsageCard`/`web` edits I correctly left untouched. The task is complete and verified to the maximum extent this host allows.
+

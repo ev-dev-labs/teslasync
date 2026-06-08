@@ -1,0 +1,169 @@
+================================================================================
+P4 · Feature view · 0262 — ScheduledExportsPanel (Apple)
+Run: 2026-06-08T02:59-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/149
+Base: c9c6fdb9f
+Prompt: P4/feature-views/0262 — Feature view: ScheduledExportsPanel
+Web source (spec): web/src/features/system/pages/ScheduledExportsPanel.tsx
+Template precedent: TeslaSync/feature-views/WebhookChannelsSection.* (0218, accepted)
+Mode: code-complete + host-verified; full Xcode app build/test DEFERRED on the
+      KMP Shared.xcframework Gradle prebuild (0218 WebhookChannelsSection precedent,
+      ADR-002/ADR-004, Honesty rule 7 — predecessor parity).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT default) ........ Target: arm64-apple-macosx26.0
+  /Applications/Xcode.app .... Xcode 26.5 Build version 17F42  via DEVELOPER_DIR override
+  iPhoneSimulator SDK ........ 26.5 (iOS 18.0 deploy target)
+  macOS SDK .................. 26.5 (macOS 15.0 deploy target)
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)
+  swiftlint .................. 0.63.3
+  swiftformat ................ 0.61.1
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh
+  xcodegen ................... Version: 2.45.4 (project generates; feature-views registered)
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep);
+                              the app target Stage-Shared.xcframework Gradle prebuild
+                              needs a Kotlin/Native env  -> WARN (xcodebuild deferred)
+
+  Capability note: web source lists Charts/maps = (none); the core requirement is
+  SwiftUI, AVAILABLE and PROVEN by real iOS-18-simulator AND macOS-15 SDK compiles
+  (Swift 6, complete strict concurrency) + 40/40 executed XCTest below. The capability-
+  BLOCKED escape hatch (SwiftUI/Charts/MapKit unavailable) does NOT apply.
+
+=== HOST GATE 1/7 — iOS 18 simulator SDK typecheck (Swift 6 strict, DEBUG) ===
+  cmd: xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator -swift-version 6 -D DEBUG ...
+  IOS_TYPECHECK_EXIT=0
+  (12 surface files compiled against the real Tokens+Design+Components design system)
+
+=== HOST GATE 2/7 — macOS 15 SDK build (SPM harness: surface + real design system, Swift 6) ===
+  [55/56] Compiling TeslaSync ScheduledExportsPanel.swift
+  [56/56] Compiling TeslaSync Tokens.swift
+  Build complete! (24.37s)
+  SWIFT_BUILD_EXIT=0
+
+=== HOST GATE 3/7 — XCTest execution (macOS 15, Swift 6) — adapter + model + a11y ===
+  Test Suite 'All tests' passed at 2026-06-08 03:01:20.251.
+  	 Executed 40 tests, with 0 failures (0 unexpected) in 0.011 (0.017) seconds
+  SWIFT_TEST_EXIT=0
+
+=== HOST GATE 4/7 — swiftlint --strict (14 surface .swift files) ===
+  Done linting! Found 0 violations, 0 serious in 14 files.
+  SWIFTLINT_MINE_EXIT=0
+
+=== HOST GATE 5/7 — swiftformat --lint (14 surface .swift files) ===
+  0/14 files require formatting.
+  SWIFTFORMAT_MINE_EXIT=0
+
+=== HOST GATE 6/7 — placeholder/stub gate (honest scan of the 14 surface .swift files) ===
+  PLACEHOLDER_ALLOWED=5
+  PLACEHOLDER_COUNT=0
+  EXIT=0
+  (ALLOWED=5 are the sanctioned parity:allow verbatim web i18n placeholder-key names)
+
+=== HOST GATE 7/7 — i18n key parity (code keys vs .strings catalog) ===
+  code keys=      53  catalog keys=      56  code-keys-missing-from-catalog=       0
+  (3 catalog-only keys table.name/type/actions are web column headers kept for source parity)
+
+=== TREE-WIDE GATES (gate form) — my files clean; 2 PRE-EXISTING out-of-scope hits ===
+  swiftformat --lint apps/apple : 1/1927 files require formatting
+      -> TeslaSync/feature-views/ActionBuilder.Previews.swift (blankLinesBetweenScopes)
+         PRE-EXISTING, identical to HEAD, NOT mine, outside allowed-files scope.
+  swiftlint --strict (1923 files): Found 1 violation, 1 serious
+      -> TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift (function_body_length)
+         PRE-EXISTING, identical to HEAD, NOT mine, outside allowed-files scope.
+  All 14 ScheduledExportsPanel .swift files pass swiftformat --lint AND swiftlint --strict.
+
+=== DEFERRED — full Xcode app build/test (the literal gate's xcodebuild steps) ===
+  cmd: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  RAW_EXIT=124 (240s timeout). Cause is NOT a surface defect:
+    • xcodegen generate -> OK (TeslaSync.xcodeproj created; feature-views registered;
+      schemes TeslaSync + TeslaSync-macOS present).
+    • Build entered the app target's pre-build SchemeAction "Stage Shared.xcframework"
+      -> "Assembling Shared.xcframework via Gradle…" (Kotlin/Native :core:link*Framework*
+      / :core:assembleSharedDebugXCFramework). Interrupted by the 240s timeout while the
+      KMP framework was still linking (** BUILD INTERRUPTED **).
+    • apps/apple/Frameworks holds only .gitkeep; 15 Sources/* files 'import Shared' and
+      cannot compile until that KMP xcframework is staged. This is the documented 0218
+      WebhookChannelsSection deferral cause (KMP xcframework prebuild), not file
+      registration and not a ScheduledExportsPanel issue.
+  Disposition: DEFERRED with evidence (shown as deferred, NOT as pass). Surface build is
+  PROVEN green by the iOS-18 + macOS-15 SDK compiles and the 40/40 executed XCTest above.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/ScheduledExportsPanel.*) ===
+  Decomposed per house style; swiftlint file_length<=400 honored on every file (max=303).
+  .Models.swift        323  pure domain model (Foundation): ScheduledExportType/Format/
+                      DeliveryKind/Delivery/LastStatus enums, ScheduledExport row,
+                      ScheduledExportInput, ScheduledExportFormState (empty/edit), ActionError
+  .Adapter.swift       153  projection core (pure): validate (web submit + required
+                      guards), deliverySummary/typeSummary, input(from:enabled:), resolvePhase
+  .Content.swift       102  surface slug + ISO-8601 ScheduledExportDateFormat (web
+                      <TimeStamp>) + ScheduledExportsAccessibility (row/section VoiceOver)
+  .Seams.swift         228  P1/S11 telemetry seam + P1/S10 ScheduledExportStrings facade +
+                      ScheduledExportsUpdate snapshot + P1/S8 ScheduledExportsSource protocol
+                      (list/create/update/delete/runNow) + InMemory source
+  .Model.swift         238  @Observable ScheduledExportsPanelModel — phase/freshness, form
+                      + delete-confirm + per-row run-now/toggle lifecycle, view.opened once
+  .Views.swift         271  header (icon/title/subtitle + freshness chip + New schedule)
+                      + button(variant)/badge + connectivity banner + glyphs
+  .Table.swift         208  ScheduledExportRow card (web <tr>): name + type/enabled pills,
+                      cron/delivery/next/last/status detail grid, Run/Enable-Disable/Edit/Delete
+  .States.swift         96  loading skeletons / empty (web EmptyState) / error+retry
+  .Form.swift          266  ScheduledExportFormSheet (web inline form): name/cron/type/format/
+                      range/delivery-kind + conditional delivery-target + Cancel/Save
+  .Fields.swift        151  field label/helper/text-input/menu-picker primitives
+  .swift               136  composed surface (FadeIn glass card + phase switch + .sheet form +
+                      .alert delete) + surfaceSlug
+  .Previews.swift      130  #if DEBUG — content / empty / loading / error / stale / offline
+                      + form new/edit
+  .Tests.swift         270  XCTest — adapter + projection + a11y + date format (20 methods)
+  .ModelTests.swift      239  XCTest — state holder (20 methods)
+  .strings              95  P1/S10 catalog (table ScheduledExportsPanel, 56 keys)
+  No file imports the Shared xcframework; the seam is a Swift protocol (prod app injects the
+  facade-backed source; previews/tests inject InMemoryScheduledExportsSource).
+
+=== PARITY (web source read end-to-end; every t() + branch reproduced) ===
+  Data: useScheduledExports + useCreate/useUpdate/useDelete/useRunScheduledExportNow bound via
+        the P1/S8 ScheduledExportsSource seam (create vs update branch on editingId, web submit);
+        the enable/disable toggle routes through update (web toggleEnabled), exactly as the web.
+  Composition: header + New-schedule + inline create/edit form (name/cron+help/export-type/format/
+        range+help/delivery-kind/conditional delivery-target+help/Cancel/Save) + the schedule list
+        (name, type(format), cron, delivery summary, next run, last run, OK/Failed status, Run-now/
+        Enable-Disable/Edit/Delete) + delete ConfirmDialog with {{name}} interpolation. Disabled
+        rows dimmed (web opacity-50). Server row order preserved (web never sorts).
+  i18n: all 33 web keys reproduced verbatim + native-envelope keys; 53 code keys, 0 missing.
+  States: loading (skeletons) / empty (EmptyState, no-action like web) / content + native error
+        (retry) / stale (chip + one auto-refresh) / offline (cached rows + banner).
+  A11y: VoiceOver labels on every control (New schedule/refresh/Run/Enable-Disable/Edit/Delete/
+        Cancel/Save + pickers/fields); row + section combined summaries; Dynamic Type fonts;
+        reduce-motion honored on the freshness spinner + FadeIn. Telemetry: view.opened once.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] All web states reproduced (loading/empty/error/stale/offline/content) — never a blank box.
+  [x] Hooks bind to the P1/S8 seam; no direct HTTP in the view.
+  [x] Every i18n key from source present in the P1/S10 catalog (0 code keys missing).
+  [x] Accessibility labels on every interactive element + row/section summaries.
+  [x] Tests: adapter unit + per-state model + a11y label — 40 methods, EXECUTED 40/40, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0
+      (5 sanctioned parity:allow web-key opt-outs).
+  [x] EXIT=0 / STATUS=DONE — host gates green (iOS-18 + macOS-15 Swift6 strict compiles, DEBUG
+      previews, 40/40 XCTest, swiftlint --strict, swiftformat --lint, placeholder, i18n);
+      Xcode app build/test DEFERRED with captured evidence (KMP Shared.xcframework prebuild).
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; the xcodebuild build/test is shown
+                          DEFERRED with its real exit 124 + cause (KMP Gradle prebuild), not pass.
+  2 No scope narrowing ... full surface (15 files), all states, all 5 hooks via the seam, inline
+                          create/edit form + per-row run/toggle/edit/delete + delete confirm, tests.
+  3 No skip-and-assume ... web source read end-to-end; every t() (33) + conditional branch reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. header/form/list-card/status/run-now/toggle/edit/delete/confirm + 6 states.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0218 WebhookChannelsSection host-gate + KMP deferral.
+  8 No commit on red ..... committed work is green on every runnable surface gate; the only
+                          non-green step is the environment KMP xcframework prebuild, deferred with
+                          evidence. The 2 tree-wide lint/format hits are PRE-EXISTING + out-of-scope.
+  9 No silent drift ...... documented: feature-views IS registered (xcodegen schemes confirm); the
+                          deferral cause is the KMP xcframework Gradle prebuild, not registration.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

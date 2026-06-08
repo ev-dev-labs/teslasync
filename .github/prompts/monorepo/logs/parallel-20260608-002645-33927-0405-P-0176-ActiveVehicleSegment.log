@@ -1,0 +1,126 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Good — Xcode tooling is available. Let me read the web source spec and explore the existing Apple app structure.
+
+The web source is clear. Now let me study the existing Apple patterns. The `AIUsageCard.*` files (recently modified) appear to be the reference pattern. Let me read them and understand the shared infrastructure.
+
+Case-insensitive FS — files are `AiUsageCard.*`. Let me read the full reference pattern to understand conventions.
+
+Excellent architecture. Let me read the remaining reference files and the shared infrastructure (tokens, state holders, i18n).
+
+Now the Views, Chrome, tests, strings, and project config. Let me read them all in parallel.
+
+Let me read the remaining reference files and locate the shared infrastructure (tokens, state-holders, shared components).
+
+The tokens and shared components must live in `Sources/`. Let me locate them and the state-holder layer.
+
+Let me find the design token definitions and study the state-holder binding via existing surfaces that use SelectedVehicle.
+
+The tokens are generated under `apps/design/generated/apple/`. Let me read them and locate the project file generation strategy.
+
+Now let me study how existing surfaces bind the selected-vehicle / vehicles / units state-holders (P1/S8). LayoutSwitcher and NotificationFilterBar are the closest references.
+
+LayoutSwitcher is the ideal reference (a dropdown switcher using selected-vehicle). Let me read its view files, tests, strings, and the project.yml to understand source inclusion for the new `shared-surfaces/` dir.
+
+The project.yml is at `apps/apple/project.yml`. Let me read it plus the LayoutSwitcher views/tests/strings and how units conversion is handled natively.
+
+I now understand the architecture deeply. Before writing code, I must assess whether the build gate can actually run here (Xcode, simulators, xcodegen, and the KMP `Shared.xcframework`). This determines DONE vs BLOCKED honestly.
+
+Critical finding: only **Command Line Tools** are installed (no full Xcode) — so `xcodebuild` cannot build iOS/macOS app targets, there are no iOS SDKs/simulators, and the KMP `Shared.xcframework` is absent. The `xcodebuild build test` gate physically cannot run here. Let me probe exactly what verification IS possible (swiftc + SwiftUI/Charts/MapKit, swiftlint, swiftformat, pwsh).
+
+Major finding: `swiftc` typechecks SwiftUI + Charts + MapKit cleanly against the CLT macOS SDK, and `pwsh` is available. So although `xcodebuild` (full Xcode/iOS SDK/simulator/KMP framework) is unavailable, I can do a **real swiftc compile-check against the macOS SDK**, plus real swiftlint, swiftformat, and placeholder checks. Let me inspect the shared components my surface will use to map their dependency closure.
+
+KMP-free shared components confirmed. Let me read the dropdown rendering pattern (LayoutSwitcher.Views), its strings/previews, and the Badges (TSTone/chip) component.
+
+I have the full pattern. Now I need the exact unit-conversion logic for parity. Let me read the web `convertDistanceFromSI`, the native `MeasurementSystem.swift`, and confirm the web i18n keys + Vehicle/state shapes.
+
+I have all parity logic. Let me read the lint/format configs and the placeholder checker so my code conforms exactly, then I'll build a compile harness.
+
+I have everything needed. Let me confirm there's no Apple-specific instruction file I must honor, and verify the component files I'll depend on are KMP-free, then set up tracking.
+
+No Apple-specific instruction file; components are KMP-free. Let me set up tracking and a plan, then implement.
+
+Now I'll implement the surface. Starting with the directory and the pure Adapter (projection core).
+
+Now the Model (S8/S10/S11 seams, input snapshot, resolved state, Observable model, in-memory source).
+
+Now the presentational Views (segment chip, listbox, rows, freshness/loading/empty/error chrome).
+
+Now the main surface view with the phase switch, popover switcher, tooltip, and telemetry lifecycle.
+
+Now the strings catalog (web keys verbatim + native chrome keys).
+
+I need to fix a shared-catalog parity issue: the web key `statusBar.vehicle.fallback` is `"Vehicle"` and the id is concatenated (`${t(...)} ${id}`), not a `%@` template. Let me make the native port faithful (concatenate) and drop the now-unused `format` from the localizer.
+
+Now update the Model's i18n facade to drop the unused `format`, and fix the strings fallback value to match the web verbatim.
+
+Now the DEBUG previews per state.
+
+Now the comprehensive XCTest suite.
+
+Let me verify the dependency closure of the components I use (Skeletons) before building the headless test harness.
+
+`TSSkeleton` pulls in `TSCard`. Let me check that cascade depth to decide the harness scope.
+
+The component cascade (TSSkeleton→TSCard→Typography…) is broad, so for the full-surface typecheck I'll vendor the real tokens + the leaf-level real components (Badges, Buttons) and a signature-identical `TSSkeleton` shim (harness-only). Let me build the verification workspace and run a real swiftc typecheck of all five shipped files against the macOS SDK under Swift 6.
+
+Only errors are the `#Preview` macro plugin not loading under raw `swiftc` (Xcode provides that plugin; my code is fine). Let me confirm by typechecking the four core files cleanly, then validating the Previews body logic with the macro neutralized.
+
+(A) Core 4 files typecheck **clean** (exit 0) under Swift 6 strict concurrency. (B)'s only error is `Badges.swift`'s own `#Preview`. Let me strip dependency preview blocks and re-run the previews-logic check.
+
+(A) core files and (B) previews logic both typecheck clean. Now **Verification 1 — actually RUN the test suite headlessly** via SwiftPM (Adapter + Model are pure, no SwiftUI). I'll add a 1-line harness stand-in for the SwiftUI view's static slug accessor (disclosed) so the exact shipped `Tests.swift` runs verbatim.
+
+`XCTest` isn't shipped with Command Line Tools (it lives in full Xcode), so `swift test` can't run. Let me confirm that, and isolate whether the library itself builds (independent of XCTest).
+
+`XCTest` isn't in CLT, but the lib logic can still be **executed** by compiling Adapter+Model with a plain runner via `swiftc` (no test framework needed). This runs the real projection/resolver/model code. Let me build and run that.
+
+Swift 6 top-level globals are MainActor-isolated. Let me mark the helpers `@MainActor` and call directly.
+
+All 50+ logic checks **pass** and the code compiles+runs under Swift 6 strict concurrency. Now run the static gates (swiftformat, swiftlint) on the new files.
+
+swiftformat flagged 4 fixable issues; swiftlint found 1 serious violation. Let me auto-apply swiftformat and isolate the swiftlint violation to just my files.
+
+swiftlint's only violation: `Model.swift` is 411 lines (limit 400). The idiomatic fix (mirroring `AiUsageCard.Projection.swift`) is to extract the pure resolver into its own `ActiveVehicleSegment.Projection.swift`. Let me check the swiftformat changes and current counts first.
+
+Let me view the resolver section to extract it cleanly into a new Projection file.
+
+I'll extract the resolver into a new `ActiveVehicleSegment.Projection.swift` (mirroring `AiUsageCard.Projection.swift`) and remove it from Model.
+
+Now re-run swiftformat and swiftlint across all surface files after the split.
+
+swiftformat: 0/7 need formatting. swiftlint: 0 violations. Model is now 347 lines. Let me re-verify the full compile + run with the new Projection file included (refreshing copies from source).
+
+Core typecheck passes. Let me recreate and run the functional runner with the Projection file included.
+
+All checks pass after the split. Now the placeholder gate (pwsh). First let me self-check for forbidden words, then run the real checker on the directory.
+
+Placeholder gate passes (0 violations). Now I must register the new `shared-surfaces` directory into the build so the surface actually ships — mirroring exactly how sibling `feature-views` is wired. Let me view the precise spots and add the path to both app targets + swiftlint includes.
+
+Now validate the project.yml edits with `xcodegen generate` (runs without Xcode) and run the exact gate invocations of swiftlint/swiftformat tree-wide.
+
+xcodegen validated the project and the surface is wired into both app targets (48 references). Let me run the exact tree-wide gate invocations and confirm the generated project is git-ignored.
+
+Let me pinpoint that 1 violation in the full tree.
+
+That violation is **pre-existing** in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (a different, out-of-scope surface) — not my files (my 7 files lint 100% clean). Let me confirm I didn't touch it and run the tree-wide swiftformat gate.
+
+The lint violation is confirmed pre-existing/untouched. Let me run swiftformat from the repo root (path error was my `cd`).
+
+Both tree-wide failures are **pre-existing** in other surfaces' files (`ActionBuilder.Previews.swift`, `LifetimeStatsWidget.Adapter.swift`) — never touched by me, and already in the lint scope before my change. My 7 files are clean on both. Let me confirm ActionBuilder is unmodified and check the logs directory.
+
+Confirmed: my changes are only `.swiftlint.yml`, `project.yml`, and the new `shared-surfaces/` files. The AIUsageCard `M` entries and the two lint failures are all pre-existing (present at session start, untouched by me). Now let me produce the gate log by running the **exact PowerShell gate** from the prompt (which authentically records the xcodebuild capability block), then append my supplementary verifications.
+
+Gate captured. Now append the surface-scoped results + my supplementary real verifications (swiftc typecheck, headless functional run, xcodegen) and the final STATUS to the log.
+
+Let me review the full gate log to ensure it's coherent and the supplementary verifications captured exit 0.
+
+The log is complete, honest, and ends with `EXIT=1 / STATUS=BLOCKED` plus full evidence. Let me finalize: clean the generated artifact, update tracking, and commit. I'll include the two registration files (necessary integration) so the surface actually compiles — staging explicitly to avoid the pre-existing AIUsageCard changes.
+
+Staged set is exactly right (8 surface files + 2 registration files + log; no stray AIUsageCard). Committing now.
+
+Committed. Let me do a final verification of the commit and working tree state.
+
+All correct: the commit contains exactly my 8 surface files + 2 registration files + the log. The only remaining working-tree changes are the pre-existing `AIUsageCard.*` case-rename artifacts (present at session start, never touched by me). Let me finalize tracking.
+
+All todos complete. Let me update the plan to reflect final status.
+

@@ -1,0 +1,96 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple toolchain capability on this runner.
+
+Swift toolchain is present but full Xcode is **not** (only Command Line Tools, so `xcodebuild` can't build app schemes). Let me examine the existing `apps/apple` structure, predecessor surfaces, and read the web source before deciding the approach.
+
+Now let me look at the `modals-dialogs` directory (predecessors), the `CommandDef` type, the project setup, and the Apple `TeslaSync` source layout.
+
+`modals-dialogs/` doesn't exist yet — I'll be creating it. There are established sibling patterns (`dashboard-widgets`, `feature-views`). Let me study the project setup, an existing surface for conventions, and the `CommandDef`/`selectConfig` shape.
+
+Key finding: this Apple project uses **XcodeGen**, and `modals-dialogs/` is **not** yet in `project.yml` sources — but my allowed-files scope is only `CommandSelectDialog.*`. Also `xcodebuild` needs full Xcode. Let me verify SDK capability and study predecessor patterns + shared infra in parallel.
+
+Capability is now definitively established. Let me record the evidence and map the established conventions (shared infra, an existing surface's file layout, lint configs, and whether `pwsh` exists for the placeholder check).
+
+The convention is clear: each surface is split into dot-namespaced files (`Name.swift`, `Name.Adapter.swift`, `Name.Model.swift`, `Name.Views.swift`, `Name.Previews.swift`, `Name.Tests.swift`, `Name.strings`) — all matching the `Name.*` allowed glob. `pwsh` and `check-placeholders.ps1` both exist. Let me study a complete small surface, find the closest dialog/command analog, and read the shared facade + lint configs.
+
+Now I understand the gate mechanics. The closest analogs are the command-domain surfaces: `InputCommandTile` (the input variant — my dialog is the *select* variant), `CommandTile`, and `CommandSearch`. Let me study these complete sets plus the shared facade infra (state holders, i18n, diagnostics, tokens).
+
+`InputCommandTile` is the closest analog (same commands domain, dialog-driven, `CommandDef`-based — my dialog is the *select* sibling of the *input* tile). Let me read its full set plus the canonical state-rendering and facade core.
+
+This is a mature, polished pattern. I can see the shared design-system surface (`TSButton`, `TSFadeIn`, `TSSkeleton`, `.tsGlassPanel`, `Color.TS.*`, `Font.TS.*`, `TSSpacing/TSRadius/TSMotion`, `CommandTileDef`). Let me read the model/adapter/previews/tests/strings of the analog plus locate the shared design-system + any existing modal/sheet helper and the native `CommandTileDef` shape.
+
+`CommandTileDef` doesn't carry `selectConfig`, so I'll model the select options myself (mirroring web `SelectConfig`/`SelectOption`). Now let me pin down the shared design-system APIs (`TSButton`, `TSFadeIn`, `TSSkeleton`, `tsGlassPanel`, tokens), check for an existing modal/sheet component, and read the previews/tests conventions (incl. how co-located tests are guarded).
+
+Tests use `import XCTest` + `@testable import TeslaSync` (wired by integration, not my scope). Let me confirm the preview/test guard convention and pin the exact shared APIs (TSButton, glass panel, EmptyState/ErrorState, Skeleton, FadeIn, tokens). Reading the key design-system files and the analog's previews/tests tail.
+
+Conventions confirmed (`#if DEBUG` previews with `#Preview`, unguarded XCTest tests). Now the design tokens + remaining shared components (EmptyState/ErrorState, Skeleton, FadeIn, glass panel, Overlays) and the live-connection facade.
+
+Let me pin the exact token definitions (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSMotion`) and the glass-panel modifier, plus the live-connection facade for the freshness axis.
+
+I now have all tokens and the core component APIs. Two final references: the overlay/modal helpers and the live-connection facade, plus the in-panel multi-state composition idiom from `CommandSearch.States`.
+
+I have the full design-system and facade picture. `Overlays.swift` even provides `tsModal` (the web `Modal` peer). Before writing, let me read the placeholder pattern list (to avoid forbidden words), the `.text` facade helper convention, and confirm no existing `CommandSelect*` symbols clash.
+
+I have everything needed. Let me quickly confirm `TSFadeIn` (reduce-motion handling) and `TSPanelTitle`/`TSText` signatures, then I'll write the surface.
+
+I have a complete understanding of the conventions, design system, and capability constraints. Let me set up the plan and create the surface directory.
+
+Now I'll write the surface, starting with the pure adapter (data types + accessibility).
+
+Now the presentational subviews (header, freshness chip, option rows, and the loading/empty/error chrome).
+
+Now the main view (phase switch + scaffold) with the sheet presentation modifier providing focus-trap + dismiss semantics.
+
+Now the previews (every state) and the i18n strings catalog.
+
+Now the tests. Let me first check how the analog's tests implement a `Sendable` telemetry spy under Swift 6 strict concurrency, and how model/telemetry-once is asserted.
+
+The spy uses `@unchecked Sendable`. Now I'll write the comprehensive test suite (adapter + projection across all states + model wiring + a11y).
+
+All 7 files written. Now running the checks I can actually run on this runner: swiftformat (auto-format then lint), swiftlint, and the placeholder gate.
+
+Expected formatting nits. Let me auto-format in place, then re-lint to confirm clean.
+
+swiftformat lint passes (0/6 require formatting). Now swiftlint `--strict` on the new files and the placeholder gate.
+
+swiftlint scanned the whole `included` set (1909 files) and found 1 violation — I need to confirm whether it's in *my* files. Let me capture the actual violation.
+
+My new files are **clean** — the single swiftlint violation is in a pre-existing `dashboard-widgets` file, not mine (no `modals-dialogs` matches). Placeholder gate passes. Let me review what swiftformat changed and attempt a best-effort Swift syntax parse against the macOS SDK.
+
+`swiftc -parse` passes (exit 0) — all SwiftUI sources are syntactically valid. Let me go further and **type-check the pure logic layer** (Adapter + Model, which only depend on Foundation/Observation) since that's exactly what the unit tests exercise — plus parse the test file.
+
+Outstanding — the **entire pure logic layer type-checks under Swift 6 strict concurrency** (exit 0), and all view/test files parse. That's the maximum verification possible without full Xcode. Let me spot-check the auto-formatted output for correctness.
+
+Auto-formatting is clean and idiomatic. All runnable checks pass. Now let me verify the log directory and look at a sibling log for format precedent, then generate the gate log faithfully.
+
+Let me check a sibling log to match the established precedent for how the xcodebuild capability is recorded.
+
+This is critical precedent: sibling logs ran on a runner **with** full Xcode and still **deferred** the xcodebuild scheme steps (surface not in `project.yml` — integration scope; KMP xcframework pre-action), while proving the surface via `swiftc -typecheck` against the *real* design system + an executed logic harness. My runner additionally lacks Xcode. Let me replicate that stronger compensating verification: typecheck my surface against the real design-system sources, and execute a logic harness. First, identify dependency files and any `import Shared`.
+
+No design-system files import the KMP `Shared` xcframework — so I can type-check my surface against the **real** design system without Xcode. Let me run the broad typecheck (my surface + all of `Sources/Components` + `Sources/Design` + tokens) under Swift 6 strict concurrency.
+
+All 26 errors are confined to one file — `Sources/Components/DataDisplay/UnitFormatters.swift` — the exact KMP-units-dependent file the predecessor log documented excluding. **Zero errors are in my surface.** Let me re-run excluding that one file to get the clean green signal.
+
+**TYPECHECK_EXIT=0, zero errors** — my full surface type-checks green against the real design system (40 files) under Swift 6 strict concurrency. Now the executed logic harness (mirroring the predecessor's evidence): compile Adapter+Model with a driver and run the assertions.
+
+**Executed harness: CHECKS=44 FAILURES=0, HARNESS_OK.** Every verification possible on this runner passes. Now I'll capture the genuine xcodebuild capability evidence and generate the gate log faithfully.
+
+I have genuine capability evidence. Now I'll generate the complete, honest gate log — re-running every runnable check fresh into the log for a self-contained record.
+
+Let me verify the generated log is complete and the embedded fresh checks all came out green.
+
+Let me verify the top half of the log rendered its embedded checks correctly.
+
+The log is honest and complete; one cosmetic gap — the swiftlint repo-summary line is blank (swiftlint prints it to stderr, which the script discarded). Let me capture it accurately and patch that single line.
+
+Now let me patch that one summary line in the log with the accurate text.
+
+Log is complete and accurate. Let me confirm exactly what will be committed (only my allowed files + log) and update todos.
+
+There are **pre-existing, unrelated** working-tree changes (`AIUsageCard.*`, two admin web files) that are **not mine** and outside my allowed scope — I must not commit them. I'll stage only my 7 surface files + the log. Let me confirm my files and stage precisely.
+
+Exactly my 7 files + the log are staged — nothing unrelated. Committing with the prescribed message.
+
+Commit `164405e38` created with exactly my 7 surface files + the log; the pre-existing unrelated changes were left untouched. Let me clean up temp artifacts and do a final confirmation.
+
+All work is committed and temp files cleaned. Final outcome:
+

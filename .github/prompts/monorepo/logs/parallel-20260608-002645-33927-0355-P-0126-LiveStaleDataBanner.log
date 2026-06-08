@@ -1,0 +1,104 @@
+I'll start by exploring the repository structure, the web source component, and the existing Apple app setup.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Swift 6.3.2, swiftlint, and swiftformat are available. Let me read the web source and the established native pattern (the recently-modified `AIUsageCard` feature view set).
+
+The web source is simple: a banner shown when live connection has been `disconnected` for ≥2 minutes. Now let me study the canonical `AIUsageCard` pattern (recently modified) and locate the native dependencies (live state holder, i18n facade, tokens, telemetry, AlertBanner equivalent).
+
+The AIUsageCard glob returned nothing despite git showing them modified — let me verify, and locate the native dependencies (live connection holder, i18n facade, tokens, telemetry, AlertBanner analog). Note: `shared-surfaces` is **not** yet in `project.yml` sources.
+
+The canonical files are `AiUsageCard.*` (case-rename in index). Now let me explore the native dependency layers: `Sources/Live` (live connection), `Sources/SharedFacade` (i18n/state holders), `Sources/Design` (tokens), `Sources/Platform` (diagnostics), `Sources/Components` (AlertBanner analog).
+
+This is the dependency layer I need. Let me read the core files: `LiveConnection` facade, `LiveStatus`, the feedback `Banners`, the `StateHolderModel`, and design tokens.
+
+The native layer already has `TSAlertBanner` and a `TSLiveStaleDataBanner` preset — but those are dumb presets. My surface must bind the live-connection state holder, implement the 2-min threshold, handle all states, and emit telemetry. Let me read the canonical `AiUsageCard` multi-file pattern plus the state-holder base.
+
+The pattern is sophisticated and well-established. Let me read the remaining canonical files (Adapter, Projection, Views, Previews, Tests, AdapterTests, strings) and the real live-data store to wire my Adapter correctly.
+
+Now let me read the remaining canonical files and the design tokens + live store I'll bind to.
+
+Let me read the Projection, both test files, the design tokens, and the live store to finish understanding the pattern and the real binding points.
+
+Let me read the design tokens, the AdapterTests, and the real live store to finalize my binding strategy.
+
+Let me locate the actual design token definitions and the real live store + state-holder base.
+
+Now I have the full token vocabulary. Let me read the web `useLiveConnection` hook (to map its status taxonomy) and the native live store/staleness policy to bind correctly.
+
+Let me read the live store's observation API and a couple of supporting files so my production binding is real, not just a seam.
+
+I have the full picture. Let me verify the tooling: placeholder check script, pwsh availability, lint/format configs, and whether `swiftc` can typecheck SwiftUI standalone.
+
+`pwsh` is available (placeholder gate + PowerShell steps runnable). Note: `.swiftlint.yml` and `project.yml` don't list `shared-surfaces` (that's P4-core's wiring per the dependency note). Let me test what standalone Swift validation is feasible on this CLT toolchain.
+
+I have everything I need. Let me write a plan file, create the directory, and start authoring the surface (pure core first so I can validate it standalone).
+
+Now the pure core — Adapter and Projection (Foundation-only, standalone-testable).
+
+Now the Model — i18n facade, telemetry seam, source seam + in-memory, the `@Observable` holder, and the `LiveStatus → LiveLinkPhase` boundary mapping.
+
+Now the presentational banner subview and the main surface View.
+
+Now the main surface View.
+
+Now the Previews, Tests, and strings files.
+
+Now the comprehensive test suite (projection, mapping, model wiring/telemetry/threshold/promotion, a11y).
+
+All 8 files created. Now let me validate — starting with swiftformat (the gate runs `swiftformat --lint apps/apple`).
+
+swiftformat wants one-liner bodies wrapped. Let me auto-fix by running swiftformat in write mode on my directory, then re-lint to confirm.
+
+swiftformat passes. Now swiftlint --strict on the new files.
+
+swiftlint linted the whole project (config `included`) and found 1 violation. Let me surface exactly which file/line.
+
+The only violation is in a **pre-existing** file (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`), not mine — my files produced zero warnings/errors. Let me confirm that's untouched by me, and lint my files in isolation for clean evidence.
+
+My files lint clean in isolation (exit 0). Now the placeholder gate via pwsh.
+
+Good catch — scanning the real directory flagged `XXX` (from my preview title "XXXL"). The gate's literal path scans nothing, so I verified against the actual directory. Let me fix that title.
+
+Placeholder scan is clean. Now let me do real validation that `xcodebuild` can't: (1) compile & **run** the pure projection logic, and (2) standalone `swiftc -typecheck` the SwiftUI surface against the macOS SDK using minimal stubs for the in-module deps.
+
+Top-level code must live in `main.swift` when compiling multiple files. Let me rename and rerun.
+
+Pure logic runs green. Now the standalone `swiftc -typecheck` of the SwiftUI surface (Model + Views + View) against the macOS SDK, with minimal stubs for the in-module deps.
+
+SwiftUI surface type-checks clean under Swift 6. Now the highest-value check: actually **run** the XCTest suite standalone via a tiny XCTest shim (validates model wiring, telemetry, the scheduled-timer promotion, mapping, and a11y for real).
+
+Stripping `import XCTest` removed Foundation. Let me swap it for `import Foundation` in the test copy.
+
+The full XCTest suite **runs green** standalone. Before concluding the xcodebuild capability, let me thoroughly check whether a full Xcode is installed anywhere (not just what xcode-select points to) — this determines DONE vs BLOCKED.
+
+`/Applications/Xcode.app` exists. Let me verify it's a complete, usable Xcode with a working xcodebuild and iOS runtime.
+
+A full **Xcode 26.5** with an iOS 26.5 simulator and a booted iPhone 16 is installed. This may make the real gate runnable. Let me check the remaining prerequisites: `xcodegen`, and whether `Shared.xcframework` is pre-staged (the scheme's preAction needs the KMP toolchain otherwise).
+
+A full Xcode 26.5 + iOS simulator is present, and `xcodegen` is installed — but `Shared.xcframework` isn't staged (needs a heavy KMP/Gradle build) and `shared-surfaces` isn't wired into `project.yml` (P4-core's job, outside my allowed files). Also note `swiftlint --strict` over the whole repo already fails on pre-existing debt I can't touch. So the *canonical whole-app* gate can't go fully green here — but I can still get a **real iOS/macOS `xcodebuild test` run of my surface** via a scoped harness. First, a quick iOS-18 SDK typecheck:
+
+iOS-18 typecheck passes. Now the strongest evidence I can produce here: a **real `xcodebuild test` run of my actual surface + tests** on the iPhone 16 simulator and macOS, via a scoped xcodegen project (stubbing only the out-of-scope P1/S8 live types and P1/S9 tokens). Let me set it up.
+
+Project generated. Now the real `xcodebuild test` on the iPhone 16 simulator.
+
+The framework itself **built successfully on iOS** — only the test target failed to resolve the `@testable` module (frameworks need `ENABLE_TESTABILITY`). Let me fix that and rerun.
+
+Module-name/target-name mismatch is confusing resolution. Simpler and robust: put the surface sources **and** tests in one unit-test bundle (same module, no import needed). Let me restructure.
+
+**`** TEST SUCCEEDED **`** — 23 tests, 0 failures, on the iPhone 16 simulator (the exact gate destination). Now the macOS run.
+
+The macOS test-bundle launch is hanging (likely hostless-bundle/code-sign on macOS). Let me stop it and instead compile the macOS test bundle (`build-for-testing`), which proves macOS compilation without the launch hang.
+
+macOS **TEST BUILD SUCCEEDED**. Let me run the built macOS bundle directly via `xctest` (bypassing the xcodebuild launcher that hung).
+
+Both platforms green: **iOS iPhone 16 sim — 23/23 TEST SUCCEEDED**, **macOS — 23/23 passed**. Let me capture final gate evidence and confirm the log directory.
+
+All final per-surface gates are green and the log directory exists. Now I'll write the honest gate log with the real evidence.
+
+Now clean up temp harnesses and commit only the surface + log.
+
+Exactly the 8 surface files + log staged (no unrelated worktree changes). Committing.
+
+Committed cleanly (HEAD `6fd86054f`), unrelated worktree edits untouched. Let me do a final repo-cleanliness check and update the plan.
+
+Task complete. Final cleanup verified — no untracked junk, all 8 files committed.
+

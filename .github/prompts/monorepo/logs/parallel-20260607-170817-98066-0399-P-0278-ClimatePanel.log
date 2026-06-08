@@ -1,0 +1,110 @@
+I'll start by understanding the task requirements, checking the runtime capabilities (this requires Xcode/Swift tooling), and reading the web source spec. Let me do these in parallel.
+
+Swift toolchain is partially available: `swift`, `swiftlint`, `swiftformat`, `pwsh` are present, but **`xcodebuild` requires full Xcode** (only Command Line Tools active). Let me verify whether a full Xcode exists anywhere and explore the existing Apple app structure deeply.
+
+Key findings: **Full Xcode IS installed at `/Applications/Xcode.app`** — `xcode-select` just points to CommandLineTools. I can likely use `DEVELOPER_DIR` to access it. Also, `feature-views/` has a well-established multi-file pattern. Let me verify Xcode access and study the reference pattern.
+
+Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 simulator is booted, and both iOS + macOS SDKs are present — **the full gate can run**. Now let me study the established pattern. Let me look at sibling web telemetry-panels, a complete native reference panel, the shared facade, and the `ClimateSnapshot` type.
+
+The closest web siblings are `TirePressurePanel`, `SecurityPanel`, `VehicleStatePanel`, `PowertrainPanel`. Let me read the `ClimateSnapshot` type, the shared-facade foundation files, and find a native sibling panel to use as the canonical reference.
+
+Native sibling telemetry panels don't exist yet — ClimatePanel is being created fresh. Let me study the canonical multi-file pattern via `AcDcStatsPanel` (a complete reference "Panel"), plus the units facade and design tokens.
+
+Now I understand the 7-file pattern thoroughly. Let me read the remaining reference files (Views, Previews, strings, Tests) plus the design tokens and units facade.
+
+Now let me read the test pattern, design tokens, units facade, and locate the shared component definitions.
+
+`TemperatureMetricCards` and `TemperatureSection` are highly relevant siblings (temperature + metric cards — exactly ClimatePanel's domain). Let me read those, the shared unit formatters, and the design tokens.
+
+`TemperatureMetricCards` is the ideal reference (temperature + metric cards). The `TSTemperature` view formats SI Celsius via environment units. Let me read the full TemperatureMetricCards set and locate the generated design tokens.
+
+The `TemperatureMetricCards` pattern is the ideal template — it pre-computes unit-formatted strings in a pure projection from injected `unitPrefs`. Let me read its Adapter, Projection, Previews, strings, Tests, and locate the design-token definitions.
+
+I have a deep understanding of the architecture now. Let me read the remaining reference details (strings, tests, previews) and locate the design tokens, `TSGlassPanel`, the project build config, and the placeholder checker.
+
+Let me locate the exact token definitions and read the build config, glass panel, motion, and placeholder checker.
+
+Design tokens live in `../design/generated/apple` (included in all targets); feature-views are auto-globbed. Let me read the generated tokens, the glass panel + motion components, check for xcodegen/.xcodeproj, and the placeholder patterns.
+
+`xcodegen` is available and there's no checked-in `.xcodeproj` (generated from `project.yml`). Forbidden literals: `TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented`. Let me read the generated tokens, glass panel, motion, the rest of the checker, and the temperature tests.
+
+I now have the full pattern. Let me verify the exact web `formatTemperature` semantics (to avoid drift), the `MetricCard` visual, and the swiftlint/swiftformat configs I must satisfy.
+
+Let me read the exact web `formatTemperature`/`convertTempFromSI` implementations and the `useUnits` wrapper to match semantics precisely.
+
+I've confirmed the web temperature semantics (null → em-dash, precision 1, no space before °unit). Let me confirm the exact APIs of `TSGlassPanel`, `TSFadeIn`, `TSSkeleton`, and the project's deployment targets/schemes before writing code.
+
+All APIs confirmed. Deployment targets are iOS 18/macOS 15/watchOS 11 with `SWIFT_STRICT_CONCURRENCY: complete`. I need to understand how `*.Tests.swift` files in `feature-views/` are routed to the test target (not the app target). Let me read the rest of `project.yml`.
+
+Critical detail: test targets source from `Tests/Unit`, but the `*.Tests.swift` files live in `feature-views/`. There must be a routing mechanism. Let me investigate how feature-view tests reach the test target.
+
+`Tests/Unit/FeatureViews/` has only `ToolCardTests.swift` — yet `AcDcStatsPanel.Tests.swift` sits in `feature-views/` with `@testable import TeslaSync`. I need to establish the build baseline. The critical feasibility question: does the KMP `Shared.xcframework` prebuilt exist, and does the app even build? Let me check.
+
+`Shared.xcframework` isn't prebuilt — it's built via Gradle/Kotlin-Native in a scheme preAction. And feature-view `.Tests.swift` files sit in the app-target source path. I must establish the real build baseline before writing code. Let me check the KMP toolchain and generate the project to inspect test-file routing.
+
+JDK 17 + gradlew + `apps/shared/core` are present, so the KMP build may be feasible. Project generated. The pivotal question remains: are `.Tests.swift` files compiled into the **app** target (which would break compilation pre-existing)? Let me inspect the generated project's target membership.
+
+Finding: each file — including `.Tests.swift` — has 4 "in Sources" refs, and there are **170** `.Tests.swift` + **170** `.Previews.swift` files in `feature-views/`. If `.Tests.swift` (with `@testable import TeslaSync`) compiles into the app target, that's a structural, repo-wide condition. Let me parse the pbxproj precisely to map target membership.
+
+Confirmed: `AcDcStatsPanel.Tests.swift` (with `@testable import TeslaSync`) compiles into both app targets — and there are **170** such sibling test files. This is a repo-wide structural condition. Let me (1) quickly confirm whether `@testable import <self>` breaks an app-target compile, and (2) kick off the long KMP framework build in the background so I can attempt the real gate later.
+
+`import XCTest` fails to resolve in a non-test module compile — confirming the 170 sibling `.Tests.swift` files cannot compile in the app target. Let me capture definitive evidence (with the test framework path so I isolate the self-import behavior), then begin implementing while the KMP build runs.
+
+Definitive evidence captured: `import XCTest` fails to resolve in a non-test module, and `@testable import <self>` is ignored with a warning. There are **170** sibling `.Tests.swift` files compiled into the app targets — a pre-existing, repo-wide structural condition I can't fix within my allowed file scope (`project.yml` is off-limits). The KMP framework build is running in the background.
+
+My plan: implement ClimatePanel.* to full production quality per the established pattern, verify it rigorously **in isolation** (compile + run its tests via SwiftPM, lint, format, placeholder), then run the official gate honestly and record real results. Let me set up tracking and begin implementing.
+
+Confirmed structural blocker: app target has `ENABLE_TESTING_SEARCH_PATHS = NO` and no XCTest in `FRAMEWORK_SEARCH_PATHS`, so the 170 sibling `*.Tests.swift` files break `xcodebuild build` repo-wide (outside my fixable scope). I'll proceed: implement fully, verify in isolation, run the gate honestly. Let me seed tracking and start building the files.
+
+Now I'll implement the 8 files. Starting with the pure Foundation adapter.
+
+Now the pure projection (content model, phase resolution, accessibility).
+
+Now the Model (telemetry seam, source seam, observable view-model, strings facade).
+
+Now the main surface view.
+
+Let me check for an existing flow/wrap layout to reuse (DRY) and peek at the KMP build progress before writing the large Views file.
+
+The established convention is per-surface `Layout` conformances (e.g., `AlertFlowLayout`). Let me read that proven implementation to mirror it correctly in mine.
+
+I'll mirror the proven `AlertFlowLayout` for wrapping badges. Now creating the full Views file with all subviews.
+
+Now the Previews and strings files.
+
+Let me refine the projection to exactly match the web's `hvac_state ?? '—'` and strict `defrost_mode !== 'Off'` semantics (faithful parity, no drift), then write the tests.
+
+Now the comprehensive test suite.
+
+All 8 files created. Let me check the KMP build progress and run swiftformat/swiftlint/placeholder checks on my files.
+
+KMP `Shared.xcframework` built successfully (10m35s), and **swiftformat: 0/7 files require formatting (FORMAT_EXIT=0)**. Now let me run swiftlint + the placeholder check on my files, stage the framework, and inspect the placeholder script's path handling.
+
+Two issues to fix: under `--strict`, the default `file_length` warning (400) becomes an error — `ClimatePanel.Views.swift` (454) and `ClimatePanel.Tests.swift` (405) exceed it. The framework staged fine. The siblings keep files <400 by splitting. I'll split Views→Views+States and Tests→Tests+ModelTests (both still `ClimatePanel.*`). Let me create the States file and trim Views.
+
+Now I'll remove the moved sections from `Views.swift`. Let me view the exact trailing block to delete.
+
+Views.swift is now 317 lines. Now split the tests: move the model state-holder tests into `ClimatePanel.ModelTests.swift`. Let me view the boundaries.
+
+Now I'll build `ClimatePanel.ModelTests.swift` from the extracted model-test sections and remove them from `Tests.swift`.
+
+ModelTests.swift built (171 lines). Now remove those sections from Tests.swift, keeping the accessibility tests.
+
+Both files now under 400 lines. Let me re-run swiftformat + swiftlint on all 9 Swift files and do an honest placeholder scan.
+
+Placeholder scan: **clean (no matches)**. Just one cosmetic issue — a double blank line in ModelTests.swift from concatenation. Let me auto-fix with swiftformat and re-verify.
+
+Both linters are green (FORMAT_EXIT=0, LINT_EXIT=0) and the placeholder scan is clean. Now the key isolated proof: compile and **run** the real Adapter/Projection/Model logic + all tests via a throwaway SwiftPM package (replacing only `@testable import TeslaSync` → the local module, plus a tiny `ClimatePanel.surfaceSlug` shim).
+
+Now run the real logic + tests in isolation.
+
+**All 34 isolated tests pass** (SWIFT_TEST_EXIT=0) — the real Adapter/Projection/Model logic compiles under Swift 6 strict concurrency and every parity assertion holds. Now let me typecheck the SwiftUI view files against the **real** tokens + shared components. First, locate the dependency tail.
+
+Cards.swift has a large tail (TSButton, TSCard, etc.), so I'll include only the small self-contained component files. Let me check the tails of TSMaterial/Motion/Skeletons.
+
+TSMaterial and Motion are self-contained (tokens only); Skeletons references `TSCard` in other structs, so I'll extract just the `TSSkeleton` struct. Let me view its boundaries.
+
+TSSkeleton (lines 1-42) and TSGlassPanel are self-contained. Let me assemble a typecheck harness using the **real** tokens/material/motion plus those two extracted structs, and typecheck all my SwiftUI files (with DEBUG so Previews are included).
+
+The harness's `TSGlassPanel` extraction was truncated (missed the struct's closing brace at line 16 — I cut 4-15 instead of 4-16). That's a harness artifact, not my code. Let me fix the extraction and re-run.
+

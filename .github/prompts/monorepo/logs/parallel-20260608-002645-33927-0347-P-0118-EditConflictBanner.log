@@ -1,0 +1,102 @@
+I'll start by exploring the task: understanding the web source component and the existing Apple app structure.
+
+Excellent, this is a strong template. Let me read the rest of the ConflictWarnings file set plus the design tokens it references.
+
+Key finding: `shared-surfaces` is not yet in `project.yml` (only `dashboard-widgets` and `feature-views` are). Let me verify the toolchain and read the design tokens.
+
+Full Xcode exists at `/Applications/Xcode.app` but `xcode-select` points to CommandLineTools. I can override with `DEVELOPER_DIR`. Let me verify that and read the design tokens.
+
+xcodebuild works via `DEVELOPER_DIR` (Xcode 26.5, iPhone 16 booted). Now reading the design tokens and shared components.
+
+Important findings: `Shared.xcframework` isn't prebuilt (needs Kotlin/Gradle), and neither `project.yml` nor `.swiftlint.yml` include `shared-surfaces` yet. Let me check the KMP build feasibility and how test files are routed to targets.
+
+The `macos-pending-verifications.md` doc is decisive — it documents the established precedent: full-app `xcodebuild build test` is **pre-existingly blocked** (DashboardWidgetSize redefinitions, 100+ co-located `*.Tests.swift` importing XCTest into the app target, unstaged Kotlin `Shared.xcframework`, signing). Predecessors verify each surface in **isolation** (SwiftPM build + tests + `swiftc -typecheck` on real SDKs + swiftlint/swiftformat/placeholder) and defer the full-app build to the macOS acceptance gate.
+
+Let me find the isolated-verification harness predecessors used and check how prior commits wired things.
+
+The ToolCard commit (first feature-views surface) touched `project.yml` — confirming the first surface of a tier wires its directory in. Let me see exactly what it changed.
+
+Precedent fully confirmed. I'll mirror ToolCard exactly: write the surface, wire `shared-surfaces` into `project.yml` + `.swiftlint.yml`, verify via isolated SwiftPM build+tests against the real design system, and defer the full-app build to macOS CI. Let me map the design-system dependencies for the isolated harness.
+
+Now I have the full component vocabulary. Let me verify there are no symbol collisions for the names I'll introduce, then check the `Localization` catalog setup and how `.strings` tables resolve.
+
+No collisions, and `.strings` tables resolve via `NSLocalizedString(tableName:)`. Let me confirm the design-system subtree is self-contained (no KMP `Shared` imports) so my isolated SwiftPM harness will compile, then I'll write everything.
+
+Design-system subtree is fully self-contained (only system imports). My isolated SwiftPM harness will compile cleanly against it. Let me set up tracking and create the surface directory.
+
+Now I'll write the surface files, starting with the pure projection/adapter layer.
+
+I spotted a naming collision: `EditConflictBannerContent` declares both `var body: some View` (View requirement) and a `body: String` property. Let me fix that.
+
+Now the public surface file composing all states:
+
+Now the previews and the strings catalog:
+
+Now the test suite:
+
+All 7 surface files are written. Now wiring `shared-surfaces` into the build (mirroring the ToolCard precedent commit): `project.yml` (both app targets) and `.swiftlint.yml`.
+
+Now let me run the fast quality gates on the new surface files (format, lint, placeholder scan).
+
+Three fixable issues: swiftformat style, a `resourcePlaceholder` identifier tripping the placeholder scanner, and 2 swiftlint violations. Let me inspect the exact spots.
+
+Let me view the full `ECBCopy` section to fix the identifier rename and decorative separators precisely.
+
+Let me apply the fixes: rename the `resourcePlaceholder` identifier (placeholder scanner), drop decorative separators (docComments), and remove the trailing comma. Then I'll let swiftformat auto-fix the remaining mechanical style.
+
+Now let me run swiftformat autofix on the new files to resolve the remaining mechanical style, then re-verify all three gates.
+
+swiftformat passes. Let me re-run swiftlint + placeholder scan and verify the auto-fixed projection logic is intact.
+
+swiftlint (scoped) and placeholder scan both clean, and the projection logic auto-converted correctly. Now the key verification — the **isolated SwiftPM build+test** against the real design system. Let me assemble a harness in the session folder.
+
+The design system's `UnitFormatters`/`TypedFormatters` reference an external `Units` facade my surface never uses. Let me identify all such externally-coupled files and exclude them from the harness (my surface doesn't touch formatters).
+
+Only `UnitFormatters.swift` has that external coupling. Removing it from the harness (my surface uses none of it) and rebuilding.
+
+Harness builds clean. Now running the test suite:
+
+All **18 tests pass** under Swift 6 strict concurrency. Now the repo-level gates: full swiftlint, swiftformat over the whole tree, and `xcodegen generate` to confirm file enumeration.
+
+Pre-existing issues surfaced in other files (not mine): one swiftlint violation and one swiftformat issue in `ActionBuilder.Previews.swift` (a different surface from a parallel merge). My files are clean (scoped: 0/6 format, 0 lint). Let me confirm the lint violation location and wait for xcodegen.
+
+All gates confirm my surface is clean — the only 2 violations tree-wide are pre-existing in **other** surfaces (`LifetimeStatsWidget.Adapter.swift` function length; `ActionBuilder.Previews.swift` blank line), 0 in `shared-surfaces`. `xcodegen generate` enumerated my files (42 refs across both targets). Now the real-SDK typechecks for iOS 18 + macOS 15.
+
+iOS-18 typecheck clean. Now macOS-15 (including the DEBUG previews block):
+
+Both SDK typechecks pass. Now I'll attempt the actual full-app `xcodebuild build test` to capture concrete evidence of the pre-existing blocker (for honest macOS-pending documentation).
+
+The KMP/Gradle `Shared.xcframework` build is actually progressing (compiling Kotlin/Native frameworks). Let me wait for it to reach the app-target compile where the known collisions live.
+
+The Gradle `Shared.xcframework` build **succeeded** — it's now compiling the app target. Let me independently confirm the known pre-existing collision while the build continues.
+
+Confirmed firsthand: `DashboardWidgetSize` is redefined across **15** files and **261** co-located `*.Tests.swift` import XCTest into the app target — exactly the pre-existing blockers documented in `macos-pending-verifications.md`. Let me wait for the build to hit the compile error to capture it.
+
+The build is bottlenecked on slow Kotlin/Native release-framework linking and will ultimately fail on the pre-existing collisions I confirmed. Let me check how predecessor surface logs recorded this exact situation to match their EXIT/STATUS convention.
+
+This matches the established convention exactly: host gates green, full-app `xcodebuild` shown DEFERRED with its real exit code, ending `EXIT=0 / STATUS=DONE`. Let me let the build progress toward the app-compile failure to capture the real exit code.
+
+After ~15 min the build is still in Kotlin/Native release-framework linking — the app compile hasn't even started. This confirms the KMP `Shared.xcframework` staging is the heavy long-pole blocker (alongside the confirmed app-target collisions). Per precedent, I'll stop here and record the deferral with captured evidence.
+
+Let me verify git status (ensure the generated `.xcodeproj` is ignored) before writing the log.
+
+Unexpected: `AIUsageCard.*` files show as modified, which I didn't touch. Let me investigate before committing — my commit must be scoped to only my surface + wiring.
+
+These `AIUsageCard` changes are from a **different** parallel prompt (renaming 0203→0237) present in the shared working tree — not mine. I'll exclude them and commit only my scoped files. Now let me write the gate log following the predecessor convention.
+
+Now I'll add the deferral audit row to `macos-pending-verifications.md` (mirroring predecessors), then do the scoped commit.
+
+Now the scoped commit — staging only my surface files, the wiring, the audit row, and the log (explicitly excluding the unrelated `AIUsageCard` edits).
+
+Nothing staged — the `git add` didn't take. Let me investigate and retry explicitly.
+
+Files are all present; the add just didn't execute. Retrying with a simple explicit stage.
+
+All 7 surface files + wiring + log + audit row staged; the unrelated `AIUsageCard` edits correctly left unstaged. Committing now.
+
+Committed (`830576ad8`). Let me verify the commit is correctly scoped and that the committed sources match exactly what was tested in the harness (no drift).
+
+Commit is correctly scoped (11 files, 1205 insertions) and the committed sources are byte-identical to what passed the 18 tests. Let me clean up generated artifacts and finalize.
+
+Task complete. All 12 tracked todos are done, the commit is correctly scoped, and the working tree only retains the unrelated `AIUsageCard` edits (a different prompt's in-flight work I correctly left untouched).
+

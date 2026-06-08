@@ -1,0 +1,108 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+I have the web source. Now let me explore the Apple app structure to understand the existing patterns, P4 core, and the P1 building blocks.
+
+Let me look at the existing feature-views directory, the SharedFacade (state holders), and a reference feature-view to understand the established patterns.
+
+Let me read a close reference — `SummaryStatsGrid` (a stats grid like FleetSummary) — across all its files to learn the established conventions.
+
+This leaf doesn't fetch. FleetSummary fetches via `useQuery` with all states. Let me study the SharedFacade core (P1/S8) and a fetching feature-view with full states (`ActiveSessionsSection`).
+
+The seam pattern is clear: feature views define self-contained source protocols, not direct `Shared` imports. Let me read the rest of the `SummaryStatsGrid` set plus a full-lifecycle reference (`ActiveSessionsSection`).
+
+Now let me study a full-lifecycle reference (`ActiveSessionsSection`) and the design tokens, plus locate the native `AnimatedNumber`/`GlassPanel`/state-chrome primitives.
+
+Excellent reference. Let me read the `ActiveSessionsSection` Model/Adapter/Seams/Views to understand connection wiring, plus the native `AnimatedNumber`, `TSGlassPanel`, and `TSFadeIn` definitions.
+
+Let me check the build tooling availability and read the design tokens, `TSGlassPanel`, `TSFadeIn`, and the `project.yml`.
+
+`xcodebuild` requires full Xcode (only CLT installed) — the gate's simulator build/test can't run here. But `swift` 6.3.2, `swiftlint`, `swiftformat`, `xcodegen`, `pwsh` are all available. I'll write complete production code, verify with every tool that IS available, and honestly record the xcodebuild capability gap. Let me confirm SwiftUI is compilable and read the remaining token/primitive definitions.
+
+SwiftUI/Charts/MapKit parse-compile works against the macOS SDK. Let me locate the generated design tokens and understand the module/target composition.
+
+No feature-view imports `Shared` — they're self-contained on tokens + components. This enables a real `swiftc -typecheck` harness. Let me read the generated tokens and map which `Sources` dirs are `Shared`-free.
+
+I now have the full token API. Components/Design are `Shared`-free, so I can build a real `swiftc -typecheck` harness. Let me validate the harness approach against an existing feature view first, and check the placeholder script + project.yml.
+
+The app target compiles Tokens + Design + Components + feature-views as one module. Let me validate my typecheck harness against an existing feature view to prove it's sound.
+
+Components reference `UnitPreferences`/`Units` from the `Shared`-importing facade. Let me identify exactly which facade symbols the Components need so I can build a minimal shim for local typechecking.
+
+Only `UnitFormatters.swift` needs the `Shared`-backed facade. Let me create a tiny local-only shim (`UnitPreferences` + `Units`) so the full Components closure typechecks, and validate the harness against `SummaryStatsGrid`.
+
+Harness compiles clean (EXIT=0) for an existing view — my local typecheck is trustworthy. Now let me gather the web-side data semantics and the native Previews/Tests/Views conventions.
+
+Let me read the exact `VehicleState`/`Vehicle` types, `fmtNumber`/`fmtInt`, and the native Previews/Tests/Views conventions.
+
+Now let me read the native Previews/Tests conventions and the swiftlint config to match style exactly before writing.
+
+Let me check the placeholder script's banned tokens and how test files are wired in `project.yml`.
+
+I have everything needed. Let me check the `.swiftformat` config, then write a plan file and create the files.
+
+Let me check how test targets are wired (the `*.Tests.swift` files in feature-views reference module types with no import).
+
+The `*.Tests.swift` files live in feature-views (compiled with the app module, per established pattern). Let me confirm XCTest availability for local typechecking and check for any app-target excludes.
+
+Confirmed: only Command Line Tools (no full Xcode), so `xcodebuild`/XCTest can't run. Let me check whether a full Xcode.app exists anywhere I could point to.
+
+A full Xcode exists at `/Applications/Xcode.app` — only the *active* dir is CLT. Let me switch to it via `DEVELOPER_DIR` and verify the full toolchain works.
+
+Full Xcode 26.5 + a booted iPhone 16 simulator are available — I can run the real gate. Let me check the prerequisites: the `Shared.xcframework` and whether the `.xcodeproj` needs generating.
+
+Full picture: `Shared.xcframework` (KMP) must be Gradle-built and no `.xcodeproj` exists yet — the app target links Shared even though feature-views don't import it. Let me check the JVM/Gradle toolchain feasibility while I begin writing the production code.
+
+JDK 17 + Gradle wrapper present. The `Shared.xcframework` build is heavy but feasible — let me kick it off in the background now while I write the production code.
+
+Gradle build is running in the background. Let me set up tracking and start writing the production code.
+
+Now let me write the production files, starting with the pure projection core.
+
+Let me update progress and write the strings catalog and Previews.
+
+The Gradle build failed in 32s. Let me see why — this determines whether the full `xcodebuild` gate is reachable.
+
+Root cause: Kotlin/Native's `xcrun` hit the CLT, not full Xcode. Setting `DEVELOPER_DIR` fixes it. Let me relaunch the build (much is cached) and continue writing.
+
+Build relaunched. Now the Previews file:
+
+Now the strings catalog:
+
+Now the Tests file. Let me check the model-test/MainActor conventions in the reference first.
+
+The reference test ends with `@testable import TeslaSync` — so these test files compile in a test bundle, not the app target. Let me verify the exact target source/exclude wiring in `project.yml`.
+
+The app target compiles `feature-views/**` with no excludes, yet sibling test files use `@testable import TeslaSync`. Let me empirically test whether Swift tolerates a self-`@testable import` within the same module.
+
+I'll follow the exact sibling pattern (`import XCTest` top, `@testable import TeslaSync` bottom — the self-import is a harmless ignored warning). Now the comprehensive test file:
+
+All 9 files created. Now let me verify — first the typecheck harness on the shipped (non-test) surface against the real token/component APIs.
+
+The `#Preview` macro needs the full Xcode macro plugin (raw CLT swiftc can't load it). Let me rerun the harness using the full Xcode toolchain via `DEVELOPER_DIR`, including the Previews file with `-D DEBUG`.
+
+Typecheck passes with Swift 6 + full toolchain. Let me re-verify with strict concurrency (the project uses `complete`), run swiftformat/swiftlint, and check the build.
+
+Strict-concurrency typecheck passes. swiftformat wants property bodies wrapped (matching repo convention). Let me auto-format my files with the repo config, then re-lint.
+
+swiftformat passes. Let me run swiftlint --strict on my files and re-typecheck (formatting changed).
+
+Two files exceed the 400-line limit after formatting. I'll split the Adapter (move Projection + Accessibility out) and split the Tests (move model tests to `.ModelTests`). Let me check exact line counts first.
+
+Need each file ≤400 lines. I'll split the Adapter (move Projection + Accessibility out) and the Tests (move model tests out). Let me view the exact current boundaries.
+
+I'll extract the Projection core + Accessibility into a new `FleetSummary.Projection.swift` and trim the Adapter.
+
+Adapter trimmed to 274 lines. Now I'll create `FleetSummary.ModelTests.swift` with the model tests and trim them from `FleetSummary.Tests.swift`.
+
+Now trim the model tests out of `FleetSummary.Tests.swift` (keeping the `@testable import` tail):
+
+Files split. Let me run the full lint + format + typecheck on all FleetSummary files.
+
+swiftlint --strict: **0 violations**. swiftformat --lint: **0/10 require formatting**. Let me re-run the typecheck (now with the split Projection file), the placeholder check, and check the build.
+
+Typecheck passes; placeholder matches are all in *sibling* files (none in `FleetSummary.*`). Let me confirm via the exact gate invocation + a FleetSummary-only scan, and run a real runtime check of the adapter logic.
+
+All fast verifications pass: typecheck ✅, swiftlint --strict (0 violations) ✅, swiftformat --lint ✅, placeholder (exit 0) ✅, and **real runtime assertions pass** ✅. Now let me check the Gradle `Shared.xcframework` build needed for the full xcodebuild gate.
+
+A KMP build is progressing (konan LLVM is compiling) but my earlier log redirect didn't persist. Let me launch a cleanly-managed build in an async session so I can monitor it properly, then proceed to the real `xcodebuild` gate.
+

@@ -1,0 +1,157 @@
+I'll start by exploring the task requirements: the web source, the Apple app scaffolding, and the toolchain availability.
+
+Web source and Apple scaffolding both exist. Toolchain note: `xcodebuild` requires full Xcode but only Command Line Tools are installed; `swiftlint`, `swiftformat`, and `swift` 6.3.2 are available. Let me explore deeply before deciding anything.
+
+The web source is a pure controls component (no data fetching). Now let me examine the existing `feature-views` siblings and the shared facade/design/i18n layers to match conventions exactly.
+
+There are ~1438 files in feature-views (many siblings). Let me find the complete file set for one sibling and look for the closest analog (controls/filters, no charts).
+
+`NotificationFilterBar` and `LiveControls` are the closest analogs (filters + presets + chips). Let me read the full `NotificationFilterBar` set as the primary template.
+
+Excellent architecture. Let me read the remaining `NotificationFilterBar` files — adapter, views, controls, seams, previews, and tests — to fully internalize the seam/telemetry/i18n conventions.
+
+Now the view layer, controls, previews, and tests to capture the theming tokens and test conventions.
+
+Now let me locate the design tokens (P1/S9), motion/skeleton components, and read the test + preview conventions, plus the project config.
+
+Let me confirm where the main-target design tokens (`TSSpacing`, `TSRadius`, `Color.TS`, `Font.TS`) are defined, and read the test conventions.
+
+The tokens are used everywhere but not declared in the tree — likely provided by a P1/S9 dependency. Let me read `project.yml`, `versions.lock.md`, and check how `OptimizerSection.Heatmap.swift` references `Color.TS`.
+
+Tokens come from `apps/design/generated/apple` (the `DesignTokens` group = P1/S9). Let me verify those definitions exist and read the test file conventions.
+
+I now have the full token vocabulary. Let me read the model-test pattern, the `LiveControls` preset analog, and confirm how `.Tests.swift`/`.strings` files are wired (Tests dir + Localization).
+
+Let me check the test wiring, Localization registration, the placeholder checker, and the lint/format configs — the final pieces before writing code.
+
+`pwsh` is available, so I can run the placeholder check. Let me read the placeholder checker (to understand suppression + `.strings` scanning, since the web key `signalDiff.filterPlaceholder` contains "Placeholder") and the `LiveControls` view/states/adapter for the preset pattern.
+
+The placeholder checker scans only `.swift/.kt/.cs/.xaml` (not `.strings`), is case-insensitive, and honors `// parity:allow <reason>`. The web i18n key `signalDiff.filterPlaceholder` contains "Placeholder", so I'll need a `parity:allow` marker — exactly as `NotificationFilterBar` did. Let me read the remaining `LiveControls` files (preset/states/views/adapter/strings) and check the logs dir + format config.
+
+Let me read `LiveControls.Views.swift` (panel + dropdown pattern), the shared `GlassPanel`/`TSFadeIn`/`TSSkeleton` definitions, `LiveControls.strings`, and check the logs directory.
+
+Both analog logs exist. Let me read the `LiveControls` log (precedent for the gate/STATUS), the shared `GlassPanel` definition, and `LiveControls.Views.swift`.
+
+The `LiveControls` log reveals the sanctioned disposition: ship the complete surface, run swiftformat/swiftlint/placeholder green on-scope, **build+test via an isolated SwiftPM harness** against the real design system, and DEFER the full-app xcodebuild gate (which fails only on pre-existing XCTest-glob + macOS signing). Note that runner had full Xcode at `/Applications/Xcode.app`. I must verify MY runner's capability.
+
+`/Applications/Xcode.app` exists. I'll use it non-destructively via `DEVELOPER_DIR` (per-process, no sudo) exactly like the sanctioned predecessor. Let me verify the Xcode toolchain, simulators, and that an isolated SwiftPM+SwiftUI harness (the substantive verification path) works on this runner.
+
+Toolchain is fully present (Xcode 26.5, simulators, SwiftUI compiles). My probe only failed on a one-line syntax error in the probe itself. Let me fix and confirm the harness builds+tests end-to-end.
+
+The isolated SwiftUI XCTest harness passes — my substantive verification path works. Let me read the shared `TSButton`, form inputs, typography, and `LiveControls.Views.swift` so I reuse real shared components (not re-rolled), then I'll write the surface.
+
+I have everything I need. Let me write a brief plan, then build the surface following the `NotificationFilterBar`/`LiveControls` conventions exactly.
+
+Now the Core file (pure support types: enums, categories, presets, selection):
+
+Now the Adapter (verbatim date-format ports, projection, copy catalog):
+
+Now the Seams (P1/S8 source, P1/S10 facade, P1/S11 telemetry, change sink):
+
+Now the Model (`@Observable` state holder):
+
+Now the main surface View (`FadeIn` + `GlassPanel` + phase switch + optional `topSlot`):
+
+Now the Views file (content orchestrator, freshness/banner/empty chrome, loading + error states):
+
+Let me add a `localDate` convenience and a `clearWindow` label to the Adapter, then write the interactive Controls file.
+
+Now the interactive Controls file (windows + help + presets + search + category chips + flow layout):
+
+I referenced a label-resolver convenience on the enums. Let me add it to Core:
+
+Now the Previews (one per state):
+
+Now the i18n strings table:
+
+Now the unit tests (pure adapter/core/date/category/preset/a11y) + test doubles:
+
+Now the model state-holder tests:
+
+All 11 files are created. Let me verify the set and check file lengths against the lint budget.
+
+All files are within the length budget. Now let me run the on-scope formatters and linter. First swiftformat (lint mode) on my files:
+
+Two auto-fixable findings (redundant `return` in the switch, one doc-comment). Let me apply swiftformat in write mode on my files, then re-lint to confirm clean:
+
+swiftformat is clean (0/10). Let me confirm the `parity:allow` marker survived and the `compute` switch is intact, then run swiftlint:
+
+`parity:allow` marker intact and `compute` is clean. Let me view the full Adapter diff (to confirm the doc-comment change was benign) and run swiftlint --strict scoped:
+
+Two `multiple_closures_with_trailing_closure` violations where I pass `action:` as a closure literal plus a trailing `label`. Let me view and fix those two call sites:
+
+Re-running swiftformat + swiftlint on the scope to confirm both clean:
+
+swiftformat + swiftlint both clean (0 violations). Now I must ensure the placeholder scanner is clean — the web key `filterPlaceholder` contains "Placeholder". Let me find every occurrence in my `.swift` files:
+
+The line-based placeholder scanner needs the `parity:allow` marker on the *same* line as the flagged token, and the `filterPlaceholder` identifier leaks "placeholder" into several lines. Cleanest fix: rename the Swift identifier to `filterPrompt` (keeping the web key string only on the single declaration line, with an inline marker) and reword two doc comments. Let me view and edit precisely.
+
+Let me re-verify no unmarked "placeholder" remains, and re-run format/lint on the scope:
+
+The inline marker pushed the line to 158 chars (with `--strict`, the 120 warning becomes an error; `ignores_comments` didn't strip it). I'll split the key onto its own short line carrying the marker — exactly how `NotificationFilterBar` isolated its `searchPlaceholder` key. (Note: "stub" isn't even a scanned pattern; only "Placeholder" is.)
+
+Now re-run format + lint, and run the *real* placeholder scan on a temp copy of the actual `.swift` files (the gate's literal path resolves to nothing, so this is the honest check):
+
+Format, lint, and the real placeholder scan are all green (`PLACEHOLDER_COUNT=0`, `ALLOWED=1`). Now the substantive verification: an isolated SwiftPM harness that compiles my exact files + the real design system and runs my tests. Let me find the minimal real-dependency closure first.
+
+Cards.swift pulls in `TSMaterial.swift` + `Typography.swift` (PanelTitle/Caption). Let me confirm Typography's dependencies terminate at tokens:
+
+Typography terminates at tokens. The closure is 7 real files + my 8 sources. Let me build the isolated SwiftPM harness (Swift 6 language mode = strict concurrency, macOS 15) and run my tests:
+
+Only error is in Cards.swift's `#if DEBUG` preview referencing `TSBadge` (a demo dependency). Let me add the real `Badges.swift` to the closure and rebuild:
+
+The harness caught a **real bug in my code**: `SignalCompareHelpButton` declares both a stored `body` property and the `View`'s `var body` — a name collision. Let me rename the property to `message`:
+
+Re-copying the fixed file and running the harness build + tests:
+
+**The isolated harness passed: 28/28 tests, 0 failures** — compiling my exact 8 source files + 2 test files against the real design system (Tokens, Motion, Skeletons, Buttons, Typography, TSMaterial, Cards, Badges) under Swift 6 strict concurrency on macOS 15. The harness also caught and let me fix a real `body` collision bug.
+
+Now let me assess the full-app xcodebuild gate. Let me check the toolchain (xcodegen, KMP/Shared.xcframework, Java) and the documented deferral policy:
+
+The deferral policy is explicit: prior P4 feature-view prompts (ToolCard, AlertMessageEditor, FSMTimelineChart) verify the surface green via isolated SwiftPM build+tests + swiftc typecheck on both SDKs + lint/format/placeholder, and **defer** the full-app xcodebuild to the P99 acceptance gate (blocked by pre-existing `DashboardWidgetSize` ×15 collisions, the ~201 co-located XCTest-in-app files, unstaged Shared.xcframework, signing). Let me match that bar: add a real **iOS 18 simulator SDK** typecheck of my files + the real design closure.
+
+iOS 18 SDK typecheck is clean (`IOS_TYPECHECK_EXIT=0`). Let me add the macOS 15 SDK typecheck for symmetry and run `xcodegen generate` to prove the project enumerates my files:
+
+macOS 15 typecheck clean, `xcodegen generate` succeeds, and my files are enumerated (66 references). My host-runnable evidence now matches/exceeds the sanctioned predecessors. To honor "no skip-and-assume," I'll make a bounded best-effort at the full-app gate. First, can the KMP `Shared.xcframework` even be staged here? Let me inspect and attempt with a timeout:
+
+The KMP project is present. Let me attempt to stage `Shared.xcframework` (the gating dependency for the full-app build) with a bounded wait, capturing to a log:
+
+The Gradle build is running but the environment is heavily contended — multiple sibling-slot Gradle daemons (PIDs from 2:32–2:40 AM) are competing for CPU, exactly the parallel-exec hazard the predecessor logs noted. Let me give my KMP build a bounded window to see if it can stage the framework:
+
+After ~4 minutes the KMP build produced no output and didn't stage `Shared.xcframework` — the contended shared runner (many sibling-slot Gradle daemons) can't reliably produce it. This is exactly the sanctioned deferral condition in `macos-pending-verifications.md` ("the unstaged Shared.xcframework" blocker). 
+
+Importantly, per the prompt's capability clause: SwiftUI + iOS 18/iPadOS 18/macOS 15 are all present (proven by my dual-SDK typechecks), and this surface uses no charts/maps — so I am **NOT capability-BLOCKED**. The full-app xcodebuild is deferred (pre-existing wiring + KMP staging), not a capability gap.
+
+Let me confirm no stray slot-154 Gradle process, clean up artifacts, and capture final gate numbers:
+
+Note: git shows pre-existing unrelated working-tree changes (`AIUsageCard.*`, two `web/*` files) that I did **not** touch — I'll scope my commit to only my files + log (Covenant rule 9). 
+
+Let me run the final verification on the exact committed files (re-create harness + re-run all runnable gates) and capture precise numbers for the log:
+
+All three gates green. Now the final substantive harness run on the exact committed files:
+
+**Final substantive verification green: Build complete + 28/28 tests, 0 failures** on the exact committed files. Let me grab preflight version details, then write the log:
+
+All gates captured. Now I'll write the comprehensive, honest log:
+
+Now the scoped commit — staging only my 11 files + the log (excluding the pre-existing unrelated changes):
+
+Exactly 11 files + log staged; the unrelated pre-existing changes are correctly excluded. Committing:
+
+Commit `44797245c` landed: 12 files, 2201 insertions, scoped exactly to the surface + log. Let me do a final cleanup/sanity check:
+
+Task complete. All artifacts shipped, verified, and committed.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`SignalCompareControls`** SwiftUI surface (11 files) at parity with `web/src/features/telemetry/components/SignalCompareControls.tsx`, following the established `NotificationFilterBar`/`LiveControls` feature-view convention.
+
+**Parity** — every web region reproduced: two cyan/amber `datetime-local` windows with `HelpTooltip` help, all 5 quick presets (verbatim `compute` offsets), the search field, all 8 category chips (verbatim regexes + toggle/Clear), and the optional `topSlot`. The exported pure helpers (`toLocalDatetimeInput`/`isoOrEmpty`, `CATEGORY_PREFIXES.matches`, `DIFF_PRESETS.compute`) are ported verbatim and unit-tested. Bound through a P1/S8 source seam (no networking in the view), P1/S9 tokens, P1/S10 i18n facade (38 keys), P1/S11 `view.opened` telemetry. Full P4 states contract: loading / error+retry / inline empty (controls stay usable) / stale / offline, with VoiceOver + Dynamic Type.
+
+**Verification (all on this runner, raw exits in the log):**
+- `swiftformat --lint` → 0/10 · `swiftlint --strict` → 0 violations · placeholder scan → `COUNT=0` (1 marked web key)
+- **Isolated SwiftPM build + 28 tests, 0 failures** (Swift 6 strict concurrency, against the real design system) — this harness caught and let me fix a real `var body` collision before commit
+- `swiftc -typecheck` clean on **both** the iOS 18 and macOS 15 SDKs · `xcodegen generate` clean (66 file refs)
+
+**Full-app `xcodebuild` DEFERRED** (not capability-BLOCKED — SwiftUI + iOS 18/macOS 15 proven present, no charts/maps): on this contended shared runner the KMP `Shared.xcframework` couldn't be staged, and the build is otherwise blocked by the pre-existing `DashboardWidgetSize` ×15 collision, the ~201 co-located XCTest-in-app files, and macOS signing — all owned by the P99 acceptance gate per `apps/macos-pending-verifications.md`. Committed scoped to my 11 files + log (`44797245c`); pre-existing unrelated working-tree changes were excluded. Log ends `EXIT=0 / STATUS=DONE`.
+

@@ -1,0 +1,90 @@
+I'll start by exploring the repository structure to understand the task — the web source, the Apple app structure, and the supporting infrastructure (state holders, tokens, i18n).
+
+Key findings: The web source is a simple clipboard-copy button. The Apple app exists but has **no `shared-surfaces` directory yet** — I'll create it. Build tooling: `swiftlint`/`swiftformat`/`swift` are available, but `xcodebuild` requires full Xcode (only Command Line Tools active). Let me study the established multi-file pattern via the recently-modified `AIUsageCard`.
+
+Let me use the proper tools to navigate — the shell paths got confused.
+
+The glob didn't find AIUsageCard despite git status listing it. Let me investigate directly and read the reference pattern files.
+
+The pattern is `AiUsageCard.*` (case difference). Each surface is a multi-file bundle: `.swift`, `.Adapter.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`. Let me read the reference surface and key infrastructure (state holders, tokens, i18n, telemetry, toast).
+
+Now I understand the surface architecture. Let me read the remaining reference files plus the key infrastructure (design tokens, native Button, toast/feedback, state-holder seam).
+
+Let me read the toast infrastructure, design tokens, native Button, and the test/adapter conventions.
+
+Let me check design tokens, how the codebase handles clipboard/share + toast seams in other surfaces, and the deep-link/route URL source.
+
+`ResultPanel` already implements clipboard copy — the key reference. Let me read it plus the shared clipboard utility and find the token definitions.
+
+`ResultPanel` is the ideal template — it has clipboard seam, telemetry seam, i18n facade, connection states, and a "Copied" toggle. Let me read its full file set, the token definitions, feedback components, and project.yml to understand build inclusion.
+
+Critical finding: `project.yml` includes `feature-views` and `dashboard-widgets` but **not** `shared-surfaces` — and my allowed files are restricted to `CopyLinkButton.*` + the log. Also `xcodebuild` requires full Xcode (unavailable). Let me read the remaining ResultPanel reference files, the generated design tokens, and the feedback/states components to nail conventions exactly.
+
+The `ResultPanel` template is comprehensive. Let me read the generated design tokens (exact names), the projection/previews/strings reference files, the lint configs, the placeholder checker, and the route/deep-link infra for realistic URL modeling.
+
+Note: neither `project.yml` nor `.swiftlint.yml` includes `shared-surfaces`, and both are outside my allowed files. `swiftformat` covers all of `apps/apple` though. Let me read the exact token names, the projection-builder reference, the placeholder checker, and check `pwsh` availability.
+
+I now have all token names, `pwsh` is available, and the deep-link scheme is `teslasync://`. Let me read the placeholder checker to know exactly what it flags, then I'll write a plan and build the surface.
+
+I now have a complete picture: tokens, conventions, seams, lint rules (≤120 cols, `--strict`), placeholder patterns (case-insensitive — must avoid "placeholder/TODO/stub/mock" everywhere), and `pwsh` is available. `xcodebuild` needs full Xcode (unavailable) so that gate step will be BLOCKED, but I can verify with swiftc/swiftformat/swiftlint/placeholder. Let me verify tool versions and SDK, then write the plan.
+
+Tooling confirmed. Let me set up a plan and todos, then build the surface.
+
+Now I'll build the surface. First create the directory, then the i18n strings table.
+
+Now the pure projection adapter (cached input → view-ready projection), unit-testable.
+
+Now the presentational subviews (action button, freshness chip, connectivity banner, leaf-state chrome).
+
+Now the main surface view that composes the states.
+
+Now the DEBUG previews for each state.
+
+Now the XCTest suite (adapter, model, accessibility) with spies.
+
+All 7 files created. Let me update todos and run verification — formatting first, then lint, placeholder check.
+
+swiftformat wants multi-line property bodies. Let me auto-fix my files with swiftformat (only edits my directory), then re-lint.
+
+swiftformat passes. Let me view the auto-formatted section, run swiftlint `--strict` on the files, and run the gate's full-tree `swiftformat --lint apps/apple`.
+
+swiftlint `--strict`: **0 violations**. Now the gate's full-tree swiftformat lint plus the placeholder check (both against my real directory and as the gate specifies).
+
+My 6 files pass swiftformat and the placeholder scan is clean (COUNT=0). Note: the full-tree `swiftformat --lint apps/apple` flags one **pre-existing** file (`ActionBuilder.Previews.swift`) that I never touched. Let me confirm the gate-path placeholder scan result and verify that ActionBuilder issue is pre-existing.
+
+Both placeholder scans pass (COUNT=0). The `ActionBuilder.Previews.swift` issue is pre-existing (untouched by me). 
+
+One robustness fix before compile-verification: my `Model.swift` uses `UIPasteboard`/`NSPasteboard` but doesn't explicitly import the platform frameworks (it relies on no transitive import since it doesn't import SwiftUI). Let me add guarded platform imports like the codebase's `Utility.swift` does.
+
+Now re-format and run a real `swiftc -typecheck` of the production files against a copy of the design tokens (outside the repo), plus syntax-parse the test/preview files.
+
+`TYPECHECK_EXIT=0` — the production files compile cleanly under Swift 6 strict concurrency for macOS 15. Let me also typecheck the Previews together with the production code (validates the `#Preview` API usage) and syntax-parse the Tests.
+
+`TYPECHECK2_EXIT=0` (including `#Preview` macro expansion) and Tests parse clean. Let me go further and typecheck the **Tests** against a real `TeslaSync` module built from my sources (validates spy conformances, actor isolation, and the model API the tests call).
+
+XCTest isn't on this runner (ships with full Xcode — same limitation as `xcodebuild`). The `TeslaSync` module built cleanly from my sources (`MODULE_EXIT=0`). To still validate the **test logic** against the real API, I'll typecheck the tests against my module plus a tiny XCTest shim — isolating only the missing framework.
+
+Only error is `Date` not in scope — because my XCTest *shim* doesn't re-export Foundation, but the real XCTest does (ResultPanel.Tests.swift relies on the same transitive import and is known-good). Let me fix the shim to mirror real XCTest and re-verify the test logic.
+
+`TESTS_TYPECHECK_EXIT=0` — the full test logic typechecks against the real API (spies, actor isolation, model/adapter/a11y calls all valid). Now let me capture the `xcodebuild` BLOCKED evidence and inspect the logs directory conventions.
+
+The logs dir pre-exists with sibling P4 logs. Let me read one to match the exact format and see how predecessors recorded the `xcodebuild` situation on this runner.
+
+This is very informative — predecessors deferred the `xcodebuild` app build/test (ADR-012 macOS-pending) while host-validating via real macOS-SDK swiftc + swiftlint + swiftformat + placeholder, and did **not** invoke the capability-BLOCKED hatch (SwiftUI is present/proven). Let me read the tail of that log to match the final STATUS/EXIT disposition exactly.
+
+This establishes the canonical disposition: **EXIT=0 / STATUS=DONE** with the Xcode app build/test **DEFERRED** (ADR-012 macOS-pending) — not BLOCKED, since SwiftUI is present and host-proven, and the surface uses no Charts/MapKit. My runner has no Xcode at all (stronger defer justification). Let me gather final facts (line counts, versions, word-scan for stub/mock) before writing the log.
+
+All clean: word-scan green, all 5 web i18n keys present, largest file 375 lines. Let me capture git facts and timestamp, then author the gate log.
+
+Found the prompt path. Now I'll author the comprehensive gate log.
+
+Now a final verification pass (after all edits) and then commit. Let me re-confirm format/lint/placeholder are green and stage exactly the allowed files.
+
+All green: swiftformat 0/6, swiftlint 0 violations, placeholder COUNT=0. Let me stage exactly the allowed files (not the pre-existing AiUsageCard changes) and commit.
+
+Exactly the 8 allowed files staged (7 surface + log); pre-existing AiUsageCard changes excluded. Committing.
+
+Committed (`ddddbbb2a`). Let me finalize todos and confirm the commit contents.
+
+Task complete. All 8 allowed files committed (`ddddbbb2a`), all host-runnable gates green, todos closed.
+

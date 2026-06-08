@@ -1,0 +1,134 @@
+I'll start by exploring the repository structure to understand what exists and what toolchain is available.
+
+Toolchain note: `xcodebuild` is present but tied to CommandLineTools (no full Xcode). Let me investigate deeper — checking for a full Xcode, the existing Apple app structure, predecessors, and the web source.
+
+Full Xcode exists at `/Applications/Xcode.app` — just not selected. I can use `DEVELOPER_DIR` to target it without sudo. Let me read the web source and explore the Apple project structure.
+
+Full Xcode 26.5 is available with a booted iPhone 16 simulator. Capability is met — this is buildable. The feature-views directory uses an established multi-file Swift pattern. Let me study the web spec dependencies and the project config, then find a good predecessor to mirror.
+
+XcodeGen-based project (`.xcodeproj` is generated, feature-views auto-included by glob). Let me check tooling (xcodegen, the shared-framework prebuild) and find sibling devtools tools already ported to use as a precise pattern reference.
+
+Excellent — `Base64`, `UuidGenerator`, and `JwtDecoder` are already-ported sibling devtools tools using the same `ToolCard` pattern. These are my predecessors. Let me study them thoroughly alongside their web sources.
+
+Now reading the predecessor Swift implementations to capture exact conventions. Starting with the full 7-file Base64Tool pattern and the leaner UuidGenerator.
+
+The pattern is clear and high-quality. Let me read the remaining predecessor files (tests, strings, previews) and locate the shared token/component definitions (`TSSpacing`, `Color.TS`, `Font.TS`, `TSButton`, `TSTextField`/`Select` equivalents).
+
+I have the full pattern. Now locating the shared design tokens (`TSSpacing`, `Color.TS`, `Font.TS`) and shared components (`TSButton`, and any text-field / picker equivalents for the web `Input` + `Select`).
+
+Found the shared components. Let me read the token definitions and the field/picker/button components to use the correct APIs.
+
+Now I understand the shared components (`TSTextField`, `TSSelect`, `TSButton`). Let me check how a sibling devtools surface that uses these handles the per-surface i18n facade, and review the leaner UuidGenerator tool for structure.
+
+Two complete references in hand. Now I need the exact `BYTE_UNITS` constant and the `fmtNumber` formatting to reproduce the projection faithfully, plus confirm `TSGlassPanel`/`TSCopyButton` exist.
+
+Confirmed: `BYTE_UNITS = ['B','KB','MB','GB','TB']`, `fmtNumber` = locale grouped, fixed min/max fraction digits (default en-US). Let me check how sibling feature-views actually use `TSSelect`/`TSTextField` with the per-surface i18n facade, to choose the right mapping.
+
+`ConditionBuilder` uses a `CBView.key(...)` helper to bridge the per-surface facade into `LocalizedStringKey` for shared components. Let me read that bridge and its field usages.
+
+The `CBView.key` bridge (`"\(resolved)"` renders a resolved string verbatim as a `LocalizedStringKey`) lets me use shared `TSTextField`/`TSSelect` while keeping the per-surface facade authoritative — the guideline-preferred approach. Let me grab the exact English copy for the i18n keys from the web locale catalog.
+
+`Value`/`Unit` exist in the web catalog; `Byte Size`/`Byte Size Desc` are not (web renders the key/default verbatim — exactly as predecessor Base64 mirrored `Base64Desc`). Let me read the placeholder checker (to avoid tripping it) and the `TSGlassPanel` signature before writing.
+
+Let me check the exact forbidden placeholder patterns so my code/strings don't trip the gate.
+
+I now have everything needed: the spec, the predecessor pattern, shared components, tokens, i18n facade bridge, and the placeholder rules (must avoid the literal word "placeholder" in `.swift`). Let me set up a plan, seed todos, and kick off the long-pole KMP shared-framework build in the background while I write the Swift files.
+
+Let me kick off the KMP shared-framework build (the build's long-pole dependency) in the background, then seed todos and start writing the Swift files while it runs.
+
+The placeholder gate forbids the literal word "placeholder" (and TODO/FIXME/XXX/etc.) in `.swift` files — I'll avoid those. Let me read the lint/format config so my files pass `swiftlint --strict` and `swiftformat --lint` cleanly, then check the TSButton/.swiftlint specifics.
+
+Background gradle build is now running detached (logging to `/tmp/shared-xcframework-build.log`). Config captured: maxwidth 120, wrap-before-first, `@testable` imports bottom. Now writing the Swift files. Starting with the pure, testable adapter.
+
+The KMP shared framework is building successfully (debug xcframework already written, release linking in progress). The build gate is feasible. Writing the adapter now.
+
+Adapter and model done. Now the presentational subviews (header, input row mapping web `Input`/`Select` to `TSTextField`/`TSSelect`, the conversion grid, and the empty/invalid states).
+
+Now the main view, previews, and strings.
+
+Now the comprehensive test suite (adapter projection/formatting/parse parity, model state + telemetry, accessibility), with exact en_US-pinned expectations.
+
+All 7 files written. Let me check the gradle build and auto-format/lint my new Swift files to the repo standard.
+
+Gradle is linking the macOS slice now. swiftformat normalized 2 files. Let me verify `--lint` passes and run swiftlint on my new files.
+
+One swiftlint violation: enum case `b` is too short (min 2). I can't edit the shared `.swiftlint.yml` (out of scope), so I'll rename the cases to descriptive full words (`byte`/`kilobyte`/…) while keeping the `"B"`/`"KB"` raw values. Applying across all files.
+
+Rename clean, `bytesPerUnit` intact. Re-running format + both linters on the renamed files.
+
+Formatting and swiftlint both pass clean (0 violations) on all 6 files. Let me check the gradle build and verify my files are placeholder-free.
+
+The release `Shared.xcframework` built successfully for slot-64 (ios-arm64, ios-arm64-simulator, macos-arm64). Note: `/tmp` log is shared with sibling parallel slots, so I'll isolate my build with a slot-local DerivedData path. My files are placeholder-free. Now generating the Xcode project.
+
+Project generated; my files are included (42 refs incl. `.strings` resource). Now the heavy step — iOS build+test. I'll isolate DerivedData per-slot (shared `/tmp` + sibling slots) and run it in the background, logging to the gate log path.
+
+Booted iPhone 16 confirmed. Kicking off the iOS build+test in the background (slot-isolated DerivedData).
+
+While the iOS build runs, let me verify one risky construct — an inline `#if os(iOS)` inside a SwiftUI modifier chain (for `.keyboardType`) — is an established pattern here.
+
+The `#if os(iOS)` + `.keyboardType` chain pattern is well-established here. And the iOS build+test completed. Let me read the result.
+
+The shell exited 0 (due to the `tee` pipe) but xcodebuild actually **failed**: `import XCTest` can't resolve **in the app target `TeslaSync`** — meaning `*.Tests.swift` files in `feature-views/` are being compiled into the app target. Predecessors (`Base64Tool.Tests.swift`, etc.) have the same layout, so there must be a test-file routing mechanism I'm missing. Let me investigate the project config and predecessor logs.
+
+Predecessor test files are members of the **app targets** (iOS + macOS), confirmed in pbxproj. Yet predecessor P4 logs (0002–0009) are committed as passing. Let me read one to learn how the app target compiles XCTest-importing files (likely a build setting) and the exact gate invocation.
+
+The predecessor log is the key. It reveals the established methodology: `*.Tests.swift` live in the app target, so a literal `xcodebuild build test` can't run them as a bundle — predecessors instead prove green via (a) surface typecheck, (b) an `-enable-testing` module build, (c) adapter/model harness runs, plus surface-scoped lint. Let me read the exact evidence structure to follow precedent faithfully (covenant rule 7).
+
+Crucial finding: predecessor 0008 ran when `feature-views` was **not yet registered** in the app target, so it deferred the Xcode build. My environment has advanced — `feature-views` IS now registered (42 refs) and I built the `Shared.xcframework`. The only blocker is `import XCTest` in the app target (because `*.Tests.swift` now compile into the app). That's fixable by building the app module as testable (`ENABLE_TESTING_SEARCH_PATHS=YES`). Let me first check the full log for any errors in *my* code, then retry.
+
+This is an environment-wide condition: all **171** `.Tests.swift` files in `feature-views` import XCTest, and the app module compile aborts at the first one (`AIRestorePanel`, alphabetically) — **not** my code. The fix is to build the app module as testable. Let me retry the full gate with `ENABLE_TESTING_SEARCH_PATHS=YES`, and in parallel run a standalone runtime harness of my (Foundation-only) adapter as independent green evidence.
+
+While the build runs, writing a standalone runtime harness for the Foundation-only adapter (independent proof the conversion/parse/format/a11y logic is green).
+
+Compiling and running the adapter harness (host macOS, independent of the Xcode build).
+
+Adapter harness: **all green, 0 failures** — every parse/format/conversion/a11y assertion matches the web parity exactly. Let me check the iOS build progress.
+
+Progress — XCTest now resolves (it's compiling widgets), but 8 failures remain. Let me see the actual errors.
+
+All 8 failures are pre-existing `'DashboardWidgetSize' is ambiguous` errors in `dashboard-widgets/*` — a duplicate-type conflict in a sibling directory **outside my allowed files**, not in my code. Let me confirm zero errors touch my surface and pin down the duplicate declaration as pre-existing.
+
+Definitive: **zero errors in my surface**; the full app build is blocked solely by a **pre-existing duplicate `public struct DashboardWidgetSize`** declared 15+ times across `dashboard-widgets/*` (a sibling-slot collision) — outside my allowed files. My feature-views files (incl. the Tests file, which compiled past XCTest resolution) produced no diagnostics in the real app module.
+
+Let me (1) kick off the macOS gate to document it honestly, and (2) locate UI-dependency files to run an isolated surface typecheck for a clean green exit code.
+
+Dependency closure identified. Running an isolated `swiftc -typecheck` of my surface against the real UI library (Tokens, Design, Typography, Cards, Fields, Pickers) for a clean surface-scoped green exit code — mirroring the predecessor's headline evidence.
+
+TYPECHECK_EXIT=0 — my production files type-check clean against the real UI library. The macOS build finished too. Let me verify the Previews file (DEBUG/macro pass) and read the macOS result.
+
+Clear picture now:
+- **macOS** build failed only on **code-signing** (`entitlements require a development certificate`; 0 dev identities) — predecessor's documented reason (c)/ADR-012. The app **compiled** (no `DashboardWidgetSize`/ByteSizeConverter errors on macOS).
+- The isolated DEBUG typecheck failure is in **Cards.swift's own** preview examples (`TSBadge`/`TSButton` not in my closure), not my Previews.
+
+Let me confirm my Previews compiled cleanly in the real module (build2) and close the DEBUG typecheck by adding the two missing dep files.
+
+The isolated DEBUG typecheck caught a **real bug in my Previews** that the aborted full build had masked: `previewModel` is a nonisolated free function calling the `@MainActor` model init. Fixing it (mark `@MainActor`), then re-verifying.
+
+TYPECHECK_DEBUG_EXIT=0 — Previews fixed. Re-confirming format/lint after the edit, and re-running the iOS gate post-fix in the background for a current artifact (it will still hit the pre-existing `DashboardWidgetSize` wall, but my files must remain clean).
+
+Format and lint both clean (0/6, 0 violations) after the fix. Now the placeholder gate — running both the literal gate invocation and a genuine scan of my files (copied to a temp dir so the count reflects only my surface).
+
+Placeholder gate green (literal EXIT=0; genuine scan of my 6 files COUNT=0). Now verifying i18n key parity — every catalog key my code resolves must exist in `ByteSizeConverter.strings`.
+
+i18n parity confirmed — 12/12 catalog keys present; zero used-but-undefined. Capturing the macOS signing evidence and checking the iOS rerun.
+
+macOS blocker confirmed: **0 codesigning identities** (all 4 macOS errors are signing/entitlement — none in my surface). Now waiting on the post-fix iOS rerun to capture a current artifact.
+
+The post-fix iOS rerun (IOS_EXIT=65) — let me confirm all failures remain pre-existing `dashboard-widgets` issues and my surface is still clean.
+
+Definitive: **0 errors in my surface**; all 243 errored references are in `dashboard-widgets/` (cascading from the pre-existing duplicate `DashboardWidgetSize`). Let me grab the exact macOS exit code, then write the gate log.
+
+Complete evidence gathered. macOS exit=65 (signing only). Now writing the comprehensive, honest gate log following the established predecessor structure.
+
+Log written. Now verifying git state to commit precisely (only my 7 files + the log; generated `.xcodeproj` and build artifacts must stay out).
+
+Empty output is unexpected — let me re-check git state directly on my files.
+
+Git state is clear: my 7 `ByteSizeConverter.*` files + the log are untracked; there are unrelated pre-existing working-tree modifications (`AIUsageCard.*`, two web files) that are **not mine** and out of scope. The generated `.xcodeproj` is correctly git-ignored. Staging only my files + the log.
+
+Exactly my 8 files staged; unrelated pre-existing changes correctly excluded. Committing with the prescribed message.
+
+Committed cleanly (`c46a55d55`, 8 files, 1121 insertions — only my surface + log). Now cleaning up build/temp artifacts (generated `.xcodeproj`, DerivedData, harness, scratch logs).
+
+All complete and verified. Final state confirmed: surface committed at `c46a55d55`, nothing pending in my scope, temp artifacts cleaned, pre-existing unrelated changes left untouched.
+

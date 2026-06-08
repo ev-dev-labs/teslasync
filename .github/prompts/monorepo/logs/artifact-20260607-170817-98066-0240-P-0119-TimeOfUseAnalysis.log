@@ -1,0 +1,146 @@
+=== P4 Feature view 0119 TimeOfUseAnalysis (Apple) ===
+Host: macOS (Darwin), Xcode 26.5 (Build 17F42), Swift 6.3.2, DEVELOPER_DIR=/Applications/Xcode.app
+Surface: apps/apple/TeslaSync/feature-views/TimeOfUseAnalysis.*
+Web source (spec): web/src/features/charging/components/cost-analysis/TimeOfUseAnalysis.tsx
+
+Files shipped (8 Swift + 1 .strings, every file <= 400 lines per swiftlint file_length):
+  TimeOfUseAnalysis.swift            84   (composed view: TSFadeIn card, phase switch, responsive chart|insights)
+  TimeOfUseAnalysis.Adapter.swift   371   (pure projection: hour points, band classify, insights, fmt, a11y, slug)
+  TimeOfUseAnalysis.Model.swift     239   (P1/S8 state holder, P1/S11 view.opened telemetry, P1/S10 i18n facade)
+  TimeOfUseAnalysis.Views.swift     256   (header, freshness chip, banner, legend, chart area, insight cards)
+  TimeOfUseAnalysis.Charts.swift    190   (Swift Charts BarMark, per-band fill, selection tooltip)
+  TimeOfUseAnalysis.States.swift    120   (loading skeleton, empty, error+retry)
+  TimeOfUseAnalysis.Previews.swift  119   (content, no-insights, empty, loading, error, stale, offline)
+  TimeOfUseAnalysis.Tests.swift     308   (adapter + model + accessibility XCTest coverage)
+  TimeOfUseAnalysis.strings          --   (P1/S10 catalog: 15 web-parity keys + native envelope keys)
+
+------------------------------------------------------------------------------
+SURFACE-SCOPED GATES (host-runnable) — ALL GREEN
+------------------------------------------------------------------------------
+
+[1] swiftformat --lint  (TimeOfUseAnalysis*.swift, project .swiftformat, swiftversion 6.0)
+    -> SwiftFormat completed. 0/8 files require formatting.
+    FORMAT_EXIT=0
+
+[2] swiftlint lint --strict  (TimeOfUseAnalysis*.swift, project .swiftlint.yml)
+    -> Done linting! Found 0 violations, 0 serious in 8 files.
+    LINT_EXIT=0
+
+[3] check-placeholders.ps1  (ADR-011 stub/placeholder gate, swift patterns)
+    -> honest scan of a temp copy of the 8 shipped .swift files:
+       PLACEHOLDER_ALLOWED=0
+       PLACEHOLDER_COUNT=0
+    -> verbatim gate path (apps/apple/TeslaSync/feature-views/TimeOfUseAnalysis):
+       PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+[4] Adapter logic — executed standalone (swiftc -O Adapter.swift + assertion harness)
+    Covers: hour sort + "HH:00" labels; band classify (peak 14-19 / off-peak >=22||<6 /
+    mid otherwise); insights cheapest/priciest/busiest + tie-break to earliest hour;
+    offPeakPct = off-peak sessions / total * 100; nil insights when no sessions;
+    fmtNumber/fmtInt/percent/dollars parity (en_US grouping, half-up); NaN -> 0;
+    resolvePhase; accessibility columnLabel + chartSummary; surface slug.
+    -> ADAPTER_HARNESS: ALL PASS
+    ADAPTER_HARNESS_EXIT=0
+
+[5] Surface compiles for iOS 18 simulator  (swiftc -typecheck -swift-version 6 -D DEBUG
+    -target arm64-apple-ios18.0-simulator, 8 surface files + real design tokens
+    Tokens.swift + real TSFadeIn (Motion.swift) + real base TSSkeleton)
+    -> no errors
+    IOS_TYPECHECK_EXIT=0
+
+[6] Surface compiles for macOS 15  (swiftc -typecheck -swift-version 6 -D DEBUG
+    -target arm64-apple-macos15.0, same inputs)
+    -> no errors
+    MAC_TYPECHECK_EXIT=0
+
+[7] Test file API resolution  (TimeOfUseAnalysis.Tests.swift typechecked in-module
+    against the iOS sim SDK + XCTest framework search path)
+    -> The ONLY unresolved symbols are XCTest's C assertion macros themselves
+       (XCTAssertEqual / XCTAssertTrue / XCTAssertNil / XCTAssertNotNil / XCTUnwrap),
+       which raw `swiftc` cannot import without the xcodebuild/SwiftPM XCTest overlay
+       ("function like macros not supported"). The `.peak`/`.content`/`.offPeak`
+       contextual-base failures are downstream of those unresolved macro calls.
+       ZERO invalid references to surface APIs — every TimeOfUseProjection / TouBand /
+       TouFormat / TimeOfUseAccessibility / TimeOfUseAnalysisModel / InMemoryTimeOfUseSource
+       symbol resolves. The equivalent assertions are executed green in [4].
+    TEST_API_RESOLUTION=clean (XCTest macros require the real test target)
+
+------------------------------------------------------------------------------
+FULL-APP GATE (the prompt's xcodebuild commands) — BLOCKED by PRE-EXISTING defects
+------------------------------------------------------------------------------
+KMP prerequisite (built fresh, BUILD SUCCESSFUL in 9m22s):
+  apps/shared/core ... :core:assembleSharedXCFramework
+  -> Shared.xcframework staged to apps/apple/Frameworks/Shared.xcframework  (SHARED_BUILD_EXIT=0)
+
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  -> ** TEST FAILED **  (build of app target 'TeslaSync' failed BEFORE any test ran)
+  -> First/only root error (compiler bails at the alphabetically-first offender):
+     TeslaSync/feature-views/ActionBuilder.ModelTests.swift:11:8:
+       error: unable to resolve module dependency: 'XCTest'
+  -> Cause: co-located feature-view `*.Tests.swift` files (60 of them, 58 importing
+     XCTest) are compiled INTO the app target by project.yml's
+     `- path: TeslaSync/feature-views` glob, but the app target does not link XCTest.
+     This is the established repo convention for ALL ~58 sibling surfaces (e.g.
+     SentryModeChart.Tests.swift). It is a P4-core project-wiring defect, NOT this surface.
+  -> ZERO TimeOfUseAnalysis errors.
+  IOS_EXIT=65
+
+iOS isolation build (same command + EXCLUDED_SOURCE_FILE_NAMES='*Tests.swift' to step
+past the XCTest defect and reach the rest of the app target):
+  -> ** BUILD FAILED ** with 145 errors, all pre-existing parallel-merge collisions:
+     TeslaSync/dashboard-widgets/MotorPerformanceWidget.Support.swift:17:15:
+       error: invalid redeclaration of 'DashboardWidgetSize'
+     TeslaSync/dashboard-widgets/OdometerCounterWidget.Projection.swift:19:15:
+       error: invalid redeclaration of 'DashboardWidgetSize'
+     TeslaSync/dashboard-widgets/OnboardingChecklistWidget.Model.swift:251:15:
+       error: invalid redeclaration of 'DashboardWidgetSize'
+     ... ('DashboardWidgetSize' / 'PowerFlowConnection' redefined across dashboard-widgets)
+  -> ZERO TimeOfUseAnalysis errors.
+  ISO_IOS_EXIT=65
+
+xcodebuild -scheme TeslaSync-macOS build test
+  -> ** TEST FAILED **
+  -> Root error:
+     TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing
+       with a development certificate. Enable development signing ...
+       (also TeslaSyncWidgets-macOS)
+  -> Cause: macOS development-signing identity not present on this host.
+  -> ZERO TimeOfUseAnalysis errors.
+  MAC_EXIT=65
+
+------------------------------------------------------------------------------
+ASSESSMENT
+------------------------------------------------------------------------------
+The full-app `xcodebuild ... build test` (iOS + macOS) is BLOCKED by three PRE-EXISTING,
+out-of-scope defects that are already documented in apps/macos-pending-verifications.md
+for the sibling surface `p4-apple/feature-views/P-0010-ToolCard` (verbatim):
+
+  "The full-app build is blocked by pre-existing, unrelated parallel-merge collisions —
+   public struct DashboardWidgetSize (and PowerFlowConnection) redefined 8x across
+   Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/*, co-located *.Tests.swift
+   importing XCTest into the app target, and macOS development-signing. Zero ToolCard/
+   feature-views errors."
+
+All three are reproduced above; none originate from this surface. The repo's resolution
+protocol (same file) defers this full-app verification to
+`p4-apple/P99-0001-apple-acceptance-gate` on a macOS runner with signing identities. The
+only allowed files for this prompt are TimeOfUseAnalysis.* + this log; project.yml /
+dashboard-widgets / signing are out of scope and must not be edited here.
+
+This surface itself is COMPLETE and verified green by every surface-scoped, host-runnable
+gate: swiftformat, swiftlint --strict, placeholder, executed adapter logic, and clean
+Swift-6 typecheck against BOTH the iOS 18 and macOS 15 SDKs. Per the Honesty Covenant
+this is reported as BLOCKED (the literal full-app gate is non-zero here) rather than
+DONE, with full evidence above — no red is painted green.
+
+FORMAT_EXIT=0
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+IOS_TYPECHECK_EXIT=0
+MAC_TYPECHECK_EXIT=0
+IOS_EXIT=65   (pre-existing: XCTest-in-app-target; deferred to P99 acceptance gate)
+MAC_EXIT=65   (pre-existing: macOS development-signing; deferred to P99 acceptance gate)
+
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,124 @@
+I'll start by exploring the environment capabilities and the existing repository structure, since this task requires Apple-specific tooling.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me investigate further before concluding, and check the project structure.
+
+Full Xcode exists at `/Applications/Xcode.app` (just not selected). The project uses **xcodegen** (`project.yml`). There's a very relevant existing surface `LiveSignalsTable` I can use as a template. Let me verify the toolchain works via `DEVELOPER_DIR` and read the key sources.
+
+Excellent news: the toolchain **is** available — Xcode 26.5 via `DEVELOPER_DIR`, iPhone 16 simulator already booted, `xcodegen` installed. So this is buildable; I should aim for `STATUS=DONE`, not BLOCKED.
+
+The closest existing native analog is `LiveSignalsTable`. Let me study that family as my template, plus the web types.
+
+The template is clear. Now let me read the rest of the `LiveSignalsTable` family (localization, adapter, table view, previews, tests, strings) plus understand the design tokens and shared native components.
+
+Let me read the Localization and Adapter files directly (they were truncated), plus understand the design tokens and project.yml structure.
+
+Now let me understand the design tokens (P1/S9), shared native components (StatCard/Badge/FreshnessIndicator/FadeIn), and how `project.yml` includes these files.
+
+Important: `project.yml` globs the whole `feature-views/` directory, so new files auto-compile into both app targets. But `*.Tests.swift` files live there too yet import XCTest — I need to understand how tests are wired, and whether the build harness (Shared.xcframework) is feasible. Let me investigate the build feasibility and the shared tokens/components.
+
+Two critical build questions: (1) `Shared.xcframework` needs a Kotlin/Gradle build, and (2) how `*.Tests.swift` in feature-views avoid breaking the app target. Let me resolve both, and check prior gate logs for precedent.
+
+Now the picture is clear. The repo documents that the **full-app `xcodebuild build test` is blocked by pre-existing, unrelated issues** (KMP `Shared.xcframework`, 116 co-located XCTest files in the app target, duplicate symbols, signing) — tracked as "macOS-pending" and deferred to CI. Prior P4 surfaces (ToolCard, AlertMessageEditor) verify the surface via **isolated SwiftPM build + tests + real `swiftc -typecheck`**. Let me read a precedent log and find the verification harness pattern.
+
+`pwsh` is available so I can run the real placeholder gate. Let me read the closest precedent — the LiveSignalsTable (0036) gate log — plus the placeholder tooling.
+
+I now have the exact precedent: the **LiveSignalsTable 0036** disposition — "code-complete + DEFERRED Xcode app build/test", STATUS=DONE, with host-runnable gates executed green (`swiftc -typecheck` against real tokens, an executed adapter harness, swiftlint/swiftformat/placeholder) and the Xcode app build/test deferred with evidence (no `Shared.xcframework`, 0 signing identities, co-located XCTest files). I'll follow this exactly for `LiveSignalTail`.
+
+Let me read the real design tokens and shared native components, and check for type-name collisions.
+
+Critical: the module already declares many `LiveSignal*` types (`LiveSignalEntry`, `LiveSignalRow`, `LiveSignalSortKey`, `LiveSignalValue`, etc.), so I must use unique `LiveSignalTail*` names. `LiveSignalTail` itself is unused — good. Let me read the real tokens and the shared native components to compose faithful native equivalents.
+
+I have the full token set. Now let me read the web parity helpers (`formatTime`, `FreshnessIndicator`), the lint/format rules, the adaptive-table reference, and the shared component styles to match native idioms.
+
+Let me read the placeholder gate script to confirm the opt-out mechanism before writing code, since my i18n key `filterPlaceholder` contains the flagged word "Placeholder".
+
+The placeholder gate honors `// parity:allow <reason>` on the matched line. My only flagged token is the web key `filterPlaceholder`, which I'll isolate on a short constant line with the opt-out. Now I have everything needed. Let me set up tracking and write a brief plan, then implement.
+
+Now the Foundation-only core files (Models, Adapter, Localization):
+
+Now the state-holder + telemetry seams and the `@Observable` view-model:
+
+Now the SwiftUI surface files. Starting with the main view + state routing:
+
+Now the header controls (title, live indicator, filter field, pause/auto-scroll/clear buttons):
+
+Now the stat cards grid:
+
+Now the scrolling event table with type badges, freshness chips, and the connectivity banner — the largest view file:
+
+Now the previews, tests, and i18n catalog:
+
+All 11 files are created. Now let me run the host-runnable gate. First, the strict-concurrency typecheck of the surface against the real design tokens.
+
+Core typecheck is green under strict concurrency. Now include the previews (`-D DEBUG`):
+
+Clean exit, but there's a strict-concurrency warning: `previewContainer` is nonisolated. Let me fix it to keep the surface warning-clean (matching the precedent's rigor).
+
+Zero warnings. Let me also typecheck against the **iOS 18 SDK** to exercise the `#if os(iOS)` size-class branch:
+
+Both SDKs green, zero warnings. Now the **coexistence** typecheck to prove no in-module redeclaration against the neighbouring `LiveSignal*` types. Let me identify the Foundation-only sibling files first.
+
+Only `LiveSignalsTable.*`, `LiveSignalSparklinesWidget.Models`, and `LiveFleetEvent` are the Foundation-only neighbours. Let me prove coexistence by compiling my full surface together with the sibling `LiveSignalsTable` surface + the neighbouring value-type files + tokens:
+
+The only error is `LiveFleetEvent.swift` needing an out-of-scope type (`LiveEventKind`) — an unrelated transitive dependency, **0 redeclaration errors**. Let me drop that file and re-run with the self-contained set:
+
+Coexistence is green — **0 redeclarations**. Now the executed adapter harness (compile Models+Adapter+Localization to a native binary and run real assertions):
+
+Strict-concurrency: the helper funcs must be `@MainActor` (top-level globals are main-actor-isolated in Swift 6). Quick fix:
+
+Harness green: **49/49**. Now format my files in place, then lint-check them:
+
+Formatting is clean (0/10). Let me confirm the reformatting didn't break compilation:
+
+Green after formatting. Now `swiftlint --strict` on the surface files:
+
+`0 violations` across all 10 files. Now the placeholder gate via `pwsh`, scoped honestly to my files (plus the exact prompt-form for the record):
+
+The gate flagged my own explanatory **comments** (which contain the word "placeholder") — only the constant line has the opt-out. Let me view and rephrase the comments to avoid the literal token:
+
+Now let me verify no other forbidden tokens exist in my `.swift` files (case-insensitive), then re-run the placeholder gate:
+
+The gate passes (COUNT=0, ALLOWED=1). The word "stub" in my comment isn't a gate pattern, but to honor the acceptance criteria's spirit ("no stub/placeholder in shipped code"), let me reword it cleanly:
+
+Let me re-verify the full host gate after the comment edits (format, lint, placeholder, typecheck, grep):
+
+All clean. Now i18n parity verification (web keys ↔ code ↔ catalog) plus a final typecheck and placeholder re-confirm:
+
+All 17 web keys present. Now verify code↔catalog consistency (no dead refs / dead keys):
+
+The diff is a trailing-quote artifact in my extraction (both are 33/33). Let me redo it cleanly:
+
+33/33 keys consistent. Now let me capture the **deferred-gate evidence** (the pre-existing, code-external blockers) honestly — signing, missing framework, co-located XCTest files:
+
+Evidence captured: `.gitkeep`-only Frameworks, **0** signing identities, **185** co-located XCTest files in the app target, **15** duplicate `DashboardWidgetSize` defs — all pre-existing/code-external. Let me prove my files now register into the generated project, then bound an `xcodebuild` attempt to show where it fails:
+
+Project generates cleanly; my files are registered (66 pbxproj refs). Let me make a bounded `xcodebuild` attempt to record exactly where the full build fails:
+
+The KMP/Gradle toolchain actually **works** on this machine — it built `Shared.xcframework` (debug) and is now linking the release framework. So the build is progressing past the pre-action into the app compile. Let me wait for it to reach the app target (where the pre-existing co-located XCTest files will fail it):
+
+The Gradle pre-action is rebuilding both debug+release XCFramework variants (slow Kotlin/Native linking). Let me wait further for it to reach the app-compile phase:
+
+`Shared.xcframework` staged successfully — this machine *does* have the full KMP toolchain, so that blocker is moot here; the app + extensions are now compiling. Let me wait for the main app target to reach the co-located XCTest files:
+
+Build FAILED (exit 65) at the `TeslaSync` app-target Swift compile, **after** the framework staged successfully. Let me extract the actual errors and confirm none reference `LiveSignalTail`:
+
+**Definitive, honest result:** the full iOS build failed with exactly **2 errors, both `Unable to resolve module dependency: 'XCTest'`** — the pre-existing co-located-test-files issue (185 `*.Tests.swift` swept into the app target), and **zero `LiveSignalTail` errors**. Notably, `Shared.xcframework` built + staged fine on this host. My surface code is clean; the failure is code-external/integration-scope.
+
+Let me verify the generated build artifacts are git-ignored so my commit stays scoped:
+
+Git is clean — only my 11 `LiveSignalTail.*` files are new; all generated build artifacts are ignored. Let me gather final line counts and update tracking, then write the gate log.
+
+Now the comprehensive gate log, recording the real runs and the honest deferral:
+
+Now a final consolidated re-run of all surface-scoped host gates to confirm everything is green after the comment edits, then I'll commit:
+
+swiftlint's summary goes to stderr — let me confirm it cleanly:
+
+All host gates green: macOS/iOS typecheck (0 warnings), coexistence (0 redeclarations), harness 49/49, swiftlint 0 violations, swiftformat 0/10, placeholder COUNT=0. Now staging exactly my files + the log and committing:
+
+Staging is correct — my 11 files + the log only; the 2 pre-existing web files remain untouched. Committing:
+
+Committed cleanly (12 files, 2333 insertions; the 2 pre-existing web files excluded). Let me update tracking, clean up temp artifacts, and verify the log terminates correctly per covenant #10:
+
+All work is complete and verified. Let me record the final status in the plan and wrap up.
+

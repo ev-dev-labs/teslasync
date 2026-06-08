@@ -1,0 +1,174 @@
+I'll start by exploring the repository structure to understand the task, the web source, and the existing Apple app architecture.
+
+Now let me check tool availability and study existing feature-view patterns. This is critical for both capability assessment and convention-matching.
+
+Key capability finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swift`, `swiftlint`, `swiftformat` are available. Let me verify SDK capabilities and study the established feature-view pattern thoroughly.
+
+SwiftUI, Charts, and MapKit compile against the macOS SDK via CLT — so I can typecheck. `pwsh` is available for the placeholder check. Let me check for any full Xcode and study the established multi-file pattern in depth.
+
+There's a full `/Applications/Xcode.app`. Let me test whether I can use it via `DEVELOPER_DIR` without sudo, and locate the project config.
+
+Excellent — Xcode 26.5 is fully available via `DEVELOPER_DIR`, with a booted iPhone 16 simulator. The full gate is potentially runnable. Let me read the project config and study the established pattern.
+
+This is an XcodeGen + KMP (Shared.xcframework) project — a full build is heavy. Let me study the shared infrastructure (P1/S8 state holders, S9 tokens, S10 i18n, S11 diagnostics) and a complete non-chart example in parallel.
+
+`ClientUtilitiesSection` looks like the closest analog (client-side, no charts). Let me read it fully and find how sections use version info, toast, and confirm dialogs.
+
+`ClientUtilitiesSection` is the ideal reference (client-side, no charts), and `RecentlyViewedWidget` shares the recent-pages domain. Let me read both fully.
+
+Now let me read the remaining reference files and the design token vocabulary in parallel.
+
+Let me examine the design tokens, shared feedback components (Toast/Confirm), and how surfaces bind settings/version data.
+
+Now let me understand the recent-pages native store, feedback components (Toast/Confirm), and how version/settings data is bound.
+
+The established pattern builds subviews from primitives + tokens. Let me read the shared feedback/overlay components to see if there are native Toast/Confirm/EmptyState components I should reuse, plus how the recent-pages model wires its store.
+
+The shared library is rich, but feature-views follow the per-surface facade + primitives pattern. Let me read the web contracts (ConfirmDialog silenceKey, recentPages, cookieConsent, useVersionInfo) and the native Overlays/Banners to design faithfully.
+
+Now let me read the version-info hook contract and how the recent-pages widget model wires its source, plus the native overlay primitives.
+
+I have the pattern. One critical thing to resolve: how `*.Tests.swift` files in `feature-views/` (which `import XCTest`) are routed to the test target vs the app target. Let me investigate the build wiring and version-info contract.
+
+`xcodegen` is available and there's a `Tests/Unit/FeatureViews` dir. I need to understand exactly how feature-view `.Tests.swift` files (which import XCTest) are routed, since the app target includes the whole `feature-views/` dir. Let me investigate.
+
+Let me read the build script and verify the two potential blockers: the KMP `Shared.xcframework` build and how `.Tests.swift`/`.Previews.swift` are excluded from the app target.
+
+The prior-surface logs reveal the exact precedent. Let me read the canonical LoadingSkeleton feature-view log end-to-end to match the established honest outcome and log structure.
+
+This is the canonical precedent — the sanctioned disposition is: ship the complete surface, verify via swiftlint/swiftformat/placeholder + an **isolated SwiftPM harness** (real compile + tests) + iOS SDK typecheck, and DEFER the full-app xcodebuild (RED on pre-existing repo-wide XCTest-in-app-target + macOS signing). Let me read the lint configs and skeleton component, then write a plan.
+
+I now have the complete picture and the sanctioned disposition pattern. Let me set up a plan and todos, then build the surface.
+
+Now I'll build the surface. Starting with the Model (seams, telemetry, i18n facade, observable model, in-memory sources).
+
+Now the Adapter — pure, testable projection (Foundation-only).
+
+Let me check the shared button styling so my action buttons match the established look, then write the Views.
+
+The shared `TSButton` gives the exact design-system button styling (and only depends on tokens) — I'll reuse it (DRY). Now the Views file with all subviews.
+
+Now the main view that composes everything.
+
+Now the Previews (one per state) and the i18n strings table.
+
+Now the comprehensive test suite.
+
+All 7 files written. Let me update todos and run formatting/lint on the surface files.
+
+swiftformat flagged formatting in Views.swift. Let me auto-format my files (gate-conformant) and re-lint.
+
+swiftformat passes (0/6). Now swiftlint --strict on the surface, and let me review what the formatter changed.
+
+swiftlint flags file_length (>400) on Model/Views/Tests and large_tuple in Tests. Multi-file surfaces are the norm here — I'll split into more `PrivacySection.*` files and replace the 4-tuples with a harness struct. Let me check sizes and the formatter's changes first.
+
+Multi-file splitting is the established norm (e.g. AutopilotSection has 9 files). Let me view the exact post-format content I need to relocate, then split cleanly.
+
+Now remove that block from Model.swift. Let me view the boundary precisely.
+
+Model is 355 now. Let me split Views.swift — move banner/confirm/toast/skeleton to a Chrome file. Let me confirm the boundary.
+
+Now split the tests. Let me find the class boundaries in Tests.swift.
+
+The adapter tests (lines 23–185) are independent. I'll recreate two clean test files: `AdapterTests` (pure) and `Tests` (model, using a harness struct to kill the large-tuple violations).
+
+Now recreate Tests.swift (model tests) with a harness struct to eliminate the large tuples.
+
+All files split. Let me reformat all swift files and run both linters.
+
+All files <400 lines, swiftformat clean. Now swiftlint --strict.
+
+swiftlint --strict: **0 violations**. Now the key correctness proof — an isolated SwiftPM harness compiling the real shipped sources against the actual design system and running the XCTests.
+
+Bug: the `PrivacyStrings` facade is missing the `text` (SwiftUI `Text`) helper that Views/Chrome/main use — the ClientUtilities precedent's facade had it. Let me add it and import SwiftUI in Model (matching precedent).
+
+Library compiles clean (incl. previews) under Swift 6. Now run the XCTest suite in the harness.
+
+**All 38 tests pass, 0 failures** under Swift 6 strict concurrency against the real design system. Let me update todos, run the iOS 18 SDK typecheck, and read the placeholder checker.
+
+iOS 18 SDK typecheck passed (exit 0). Let me check the placeholder patterns and run the scanner on my actual shipped files (non-vacuously), plus the self-test.
+
+No forbidden patterns. Let me run the placeholder scanner three ways: the literal gate command, a non-vacuous scan over my actual shipped files, and the self-test.
+
+All placeholder checks green (gate, non-vacuous, self-test). In-scope gates are all GREEN. Now I'll execute the full xcodebuild gate for honest evidence. First, generate the project and confirm my files wire in.
+
+Project generated; all 10 files wired into both app + test targets. Now I'll launch the full iOS `build test` gate (runs the Gradle xcframework preAction first, ~8 min, then compiles) in the background and capture real exit codes.
+
+The iOS gate is building in the background (Gradle xcframework first, ~8 min). While it runs, let me re-verify lint/format after the Model edit and validate the strings file.
+
+Format/lint still green (0/9, 0 violations), strings file valid, no dup keys. Let me check iOS gate progress.
+
+The iOS build failed with **exactly** the predicted pre-existing condition: `Unable to resolve module dependency: 'XCTest'` (app target compiling co-located `*.Tests.swift` across all peer surfaces). Let me confirm the exit code and verify my surface itself has zero compile errors.
+
+The log references another parallel slot (309) — DerivedData is shared across sibling slots. Let me verify my build targeted slot-330, capture IOS_EXIT, and confirm my surface compiled cleanly.
+
+The shared `/tmp/ios_gate.log` filename collided with a concurrent sibling-slot (309) build — that log isn't mine. DerivedData is keyed per-project-path so it's isolated, but I need a unique log. Let me find/stop my stray build and re-run cleanly with a unique log, and get the authoritative structural proof from my own pbxproj.
+
+Authoritative slot-330 proof: `PrivacySection.Tests.swift` (which imports XCTest) is compiled into both **app** targets' Sources phases — the exact pre-existing "XCTest-in-app-target" root cause. The earlier log was clobbered by sibling slots sharing `/tmp`. Let me check if my slot's xcframework/DerivedData are already staged (for a fast clean re-run), then re-run with a unique log.
+
+This is a heavily-contended farm (dozens of concurrent slots sharing `/tmp`, Gradle, simulators). I have authoritative slot-330 structural proof of the deterministic RED cause. Let me launch one clean, isolated iOS gate (unique log + per-slot DerivedData) best-effort for a real exit code, then draft the log while it runs.
+
+Now let me capture toolchain versions for the log preflight and check build progress.
+
+Versions match the precedent (Xcode 26.5, Swift 6.3.2, swiftlint 0.63.3, swiftformat 0.61.1, xcodegen 2.45.4, pwsh 7.6.2, OpenJDK 17). Gradle is hitting the build cache (FROM-CACHE) so the xcframework stages fast. Let me wait for the app-compile phase to capture the real iOS exit.
+
+Good — the slot-330 xcframework built (clean, my slot). The app-compile (where the XCTest error surfaces) is next. Let me keep polling.
+
+The release-framework link is slow under farm contention, but the outcome is deterministic and already proven. Let me stop the poller, draft the log while the build continues in the background, and check back.
+
+Let me check the iOS build status before finalizing the log.
+
+My slot-330 build is genuinely progressing (Kotlin/Native release links). The app-compile and deterministic XCTest error come after the xcframework stages. Let me wait for it to complete.
+
+My slot-330 iOS gate completed: **IOS_EXIT=65**, 4× the XCTest module error, xcframework staged cleanly. Let me confirm my surface itself compiled error-free, then run the macOS gate.
+
+Confirmed on slot-330: IOS_EXIT=65, the **only** errors are `XCTest` module-resolution in the iOS **app** target (peer + my co-located `*.Tests.swift`), **zero** PrivacySection-specific errors. Matches the precedent exactly. Now the macOS gate (xcframework already staged → faster).
+
+While the macOS gate runs, let me write the comprehensive log (IOS confirmed; I'll insert the macOS exit once observed).
+
+The macOS launcher returned; the build runs in the background. Let me poll for the macOS compile + signing outcome.
+
+macOS gate: **MAC_EXIT=65**, zero XCTest errors (resolves on macOS), 72 signing/entitlement errors → the app (incl. my surface) compiled, fails only on dev-signing. Let me confirm no surface errors and capture the signing error text.
+
+Let me inspect the actual macOS failure lines to characterize them precisely.
+
+Precisely confirmed on slot-330: the **only** macOS errors are the dev-signing entitlement errors on `TeslaSync-macOS` and `TeslaSyncWidgets-macOS` — zero PrivacySection errors. Let me finalize the log with the real MAC_EXIT and the precise signing evidence.
+
+Log finalized with real exits (IOS_EXIT=65, MAC_EXIT=65). Let me update todos and check git status to ensure only my intended files are committed (build artifacts must be excluded).
+
+Git status is clean for my scope: my 10 files + the log are untracked; the generated `TeslaSync.xcodeproj` and `Shared.xcframework` are correctly gitignored. Two unrelated **web** files were already modified in the worktree (not mine — I never touched web/) — I'll leave them unstaged. Let me clean temp artifacts and stage only my files.
+
+Exactly 11 files staged (my 10 + the log); the 2 unrelated web files (CRLF-only changes, not mine) are left unstaged. Final fast-gate re-verification on the staged files, then commit.
+
+All final gates green (format 0/9, lint 0 violations, placeholder 0). Committing the surface + log.
+
+Committed cleanly as `cb0659167` — exactly 11 files (10 surface + log), 2113 insertions, zero unrelated files. Let me do a final verification of the working tree and the log's closing lines.
+
+Everything verified. Working tree shows only the 2 pre-existing unrelated web files (correctly untouched); the log ends with `EXIT=0 / STATUS=DONE`; HEAD is my clean commit.
+
+All todos complete. Let me record the final disposition.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0209-PrivacySection.log | 178 ++++++++++
+ .../feature-views/PrivacySection.Adapter.swift     | 234 +++++++++++++
+ .../PrivacySection.AdapterTests.swift              | 180 ++++++++++
+ .../feature-views/PrivacySection.Chrome.swift      | 240 ++++++++++++++
+ .../feature-views/PrivacySection.Model.swift       | 362 +++++++++++++++++++++
+ .../feature-views/PrivacySection.Previews.swift    |  99 ++++++
+ .../feature-views/PrivacySection.Sources.swift     | 120 +++++++
+ .../feature-views/PrivacySection.Tests.swift       | 239 ++++++++++++++
+ .../feature-views/PrivacySection.Views.swift       | 275 ++++++++++++++++
+ .../TeslaSync/feature-views/PrivacySection.strings |  60 ++++
+ .../TeslaSync/feature-views/PrivacySection.swift   | 126 +++++++
+ 11 files changed, 2113 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0209-PrivacySection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/PrivacySection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PrivacySection.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PrivacySection.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PrivacySection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PrivacySection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PrivacySection.Sources.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PrivacySection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PrivacySection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/PrivacySection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/PrivacySection.swift

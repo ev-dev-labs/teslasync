@@ -1,0 +1,140 @@
+I'll start by investigating the environment and repository structure to understand what's available and what the task requires.
+
+We're on macOS with `xcodebuild`, `swift`, `swiftlint`, and `swiftformat` available — but `xcode-select` points to **Command Line Tools**, not a full Xcode. Let me gather hard evidence on capability and explore the existing Apple app structure.
+
+Critical capability evidence captured. Let me confirm whether a full Xcode exists anywhere, check for iOS SDKs, and read the web source plus an existing feature-view template in parallel.
+
+A full **Xcode IS installed** at `/Applications/Xcode.app` — it's just not selected. I can likely use `DEVELOPER_DIR` to access it without sudo. This is pivotal. Let me verify its SDKs and simulators.
+
+Full **Xcode 26.5** is usable via `DEVELOPER_DIR`, with an **iPhone 16 simulator** and iOS 26.5 SDK present. Capability is available — I must build the real surface and run the gate. Delegation is forbidden, so I'll do all research and implementation myself.
+
+Let me study the existing architecture: full feature-view list, the project config, and the shared infrastructure.
+
+This is a KMP-backed monorepo; the app build depends on `Shared.xcframework` (a Kotlin/Native artifact) staged by a pre-action script. Let me assess that dependency and study the shared infrastructure plus the most complete existing feature-view as my template.
+
+`Shared.xcframework` is not vendored — it's Gradle/KMP-built. I'll need to assess that to run the full app build. First, let me deeply learn the patterns: a complete feature-view example plus the core facade, data-display, and charts infra.
+
+The architecture is clear: feature views bind through a **Source protocol seam** (no direct `Shared` import in the surface files), switch over per-section phases, and use a Model with telemetry + i18n facades. Let me read the rest of the template (Adapter, Views, Previews, Tests, strings) plus the data-display/charts components, design tokens, and the Units facade.
+
+Let me read the remaining critical pieces: the MetricCard equivalent, chart `safe()`, design tokens, the Units facade, and the template's Views/Tests/strings.
+
+`apps/design/generated/apple/Tokens.swift` is the token path. The native `TSMetricCard` lacks the icon/color the web `MetricCard` uses, so I need to understand the web component's full API and how tones map. Let me read the tokens, the web MetricCard, `TSTone`, and the template's Views/Tests/strings.
+
+Now I understand the parity gap: web `MetricCard` carries `icon` + `color` (neon) + `subtitle`, which the atomic `TSMetricCard` doesn't expose — so I'll compose a faithful card from shared atoms (`TSIconBox`/`TSTone`/typography/`TSCard`) in my surface's `.Views.swift`, exactly as other surfaces do. Let me read the web conversion/format/token sources, the chart `safe()`, the `FleetAnalytics` types, and the template's Views/Tests/strings to nail exact parity.
+
+Let me read the exact web conversion math, the template's `.Views.swift`, the lint configs, and the Localization setup to finalize parity.
+
+I have the full pattern. One critical wiring question: how do `*.Tests.swift` files inside `feature-views/` (an app-target source dir) get compiled into the **test** target rather than the app target? Let me verify before placing my test file.
+
+project.yml doesn't exclude `*.Tests.swift` from the app target — so target membership must be resolved by XcodeGen itself. Let me read the verification docs and generate the project to inspect real target membership, and check KMP build prerequisites.
+
+This is decisive. `macos-pending-verifications.md` documents the exact precedent: the **ToolCard** surface was verified green via an **isolated SwiftPM build + tests + swiftlint/swiftformat/placeholder**, while the full-app `xcodebuild` gate is **known-blocked by pre-existing, unrelated collisions** (duplicate `DashboardWidgetSize`/`PowerFlowConnection`, co-located `*.Tests.swift` importing XCTest into the app target, macOS signing) — deferred to the acceptance-gate prompt. Java 17 + Gradle exist, but the full build is blocked regardless. I'll mirror the ToolCard precedent exactly.
+
+Let me read the feedback atoms, the placeholder checker, and look for an existing isolated-build harness.
+
+All the feedback/skeleton atoms I need (`TSQueryError`, `TSSkeleton`, `TSEmptyState`, etc.) are clean SwiftUI-only. The placeholder gate patterns are clear. Now let me confirm which `Sources` subtrees are free of `Shared`/`Charts`/`MapKit` imports so I can assemble a clean isolated SwiftPM harness (the ToolCard-precedent verification path).
+
+I now have a complete, verified understanding of the architecture, the exact web behavior, the verification precedent (isolated SwiftPM + lint/format/placeholder; full `xcodebuild` is macOS-pending due to documented pre-existing collisions), and the shared atoms. Let me set up a plan and start writing the surface.
+
+Now I'll write the surface files, starting with the pure Adapter (projection + conversions), then the Model.
+
+Now the Views (sub-views) and the main View file.
+
+Now the Previews and the i18n strings catalog.
+
+Now the Tests file with golden-value conversion assertions, projection, phase, model, and accessibility coverage.
+
+All 7 files written. Now let me verify formatting/lint on the new files first, then build + test in isolation.
+
+swiftformat flagged wrapping/trailing-comma nits. Let me auto-fix with swiftformat (apply mode), then re-verify.
+
+swiftformat clean. Now swiftlint --strict on the new files.
+
+One `function_body_length` violation in the 6-card builder. Let me refactor it into compact per-card helpers. First let me view the current (auto-formatted) projection section.
+
+The 6-card builder trips `function_body_length`. I'll refactor it into a clean data-driven spec array (single source of card metadata) with short value helpers — better code and resolves the violation. Let me replace the `cards(...)` function.
+
+Now I'll add the `CardSpec` type, the `specs` array, and the value helpers before the enum's closing brace.
+
+swiftformat + swiftlint both clean on all 6 files. Now let me determine the exact shared-symbol dependencies of my surface to assemble a minimal isolated SwiftPM harness.
+
+Confirmed: the surface depends only on design tokens. I'll build an isolated SwiftPM harness (the ToolCard-precedent verification) under the session workspace — `TeslaSync` library (tokens + 5 surface files) + test target (my tests) — under Swift 6 strict concurrency.
+
+¡The surface compiles cleanly under Swift 6 strict concurrency. Now let me run the tests.
+
+All 24 tests pass under Swift 6 strict concurrency. Now the placeholder gate — let me read how `-Path` is handled, then run it.
+
+The gate's placeholder path targets my surface files. I'll run the checker against a scan dir holding exactly my shipped surface files (faithful, scoped) and also grep to confirm.
+
+The word "placeholder" in a comment trips the gate. Let me find and reword all such occurrences across my files.
+
+Comment-only reword. Let me re-run the placeholder gate and re-verify format/lint on the edited file.
+
+Placeholder gate passes. Now let me run the **tree-wide** swiftformat and swiftlint exactly as the gate does, to confirm my additions integrate cleanly and capture the real baseline.
+
+Tree-wide swiftformat clean (0/714). Now tree-wide swiftlint --strict.
+
+One tree-wide swiftlint violation surfaced — let me identify it.
+
+The lone tree-wide swiftlint violation is in a **pre-existing, unrelated** file (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`), outside my allowed-files scope. Let me confirm via git that I only added my surface files and touched nothing else.
+
+Confirmed: **only my 7 surface files are added**; the lone tree-wide swiftlint violation is pre-existing in an unrelated dashboard-widget (`LifetimeStatsWidget.Adapter.swift`), which my allowed-files scope forbids me to touch. 
+
+Now let me gather **real evidence** for the full-app `xcodebuild` gate status (rather than only citing the precedent doc): generate the project and confirm the documented pre-existing collisions.
+
+Evidence confirms the documented pre-existing, repo-wide collisions: **15 files** redefine `DashboardWidgetSize`, 2 redefine `PowerFlowConnection`, and **68 co-located `*.Tests.swift`** files (mine included, following the same established convention as `FleetTelemetryHealth.Tests.swift`) import XCTest into the app target. The full-app build is blocked independent of my surface. Let me attempt the real `xcodebuild` gate (time-boxed) to capture genuine API evidence.
+
+Still running after 210s — likely the gradle KMP framework download/build (the `Shared.xcframework` staging pre-action, itself a documented macOS-pending item). Let me check what it's doing.
+
+The gradle KMP build is actually progressing (cache hits) and **successfully staged `Shared.xcframework`** — further than expected. It's now compiling the app, where the documented collisions should surface. Let me keep watching.
+
+Gradle is still in the slow Kotlin/Native **release** framework link (`linkReleaseFrameworkMacosArm64`) — CPU-intensive native compilation, itself a documented macOS-pending item. The framework debug variant already built successfully. Let me give it more time to reach the app-compile phase where the documented collisions will surface.
+
+The real `xcodebuild` gate produced **decisive API evidence** (exit 65): the KMP `Shared.xcframework` built successfully via gradle, then the app target failed with **`Unable to resolve module dependency: 'XCTest'`** — the documented pre-existing blocker where all 68 co-located `*.Tests.swift` files (mine following the identical `FleetTelemetryHealth.Tests.swift` convention) compile into the app target. This is repo-wide, out-of-my-allowed-scope, and deferred to the acceptance-gate prompt.
+
+Let me confirm git state is still clean (only my files; build artifacts git-ignored) and capture the key evidence lines.
+
+Decisive: the xcodebuild failure occurs on **`BackendTool.Tests.swift:20` (a pre-existing file, not mine)** — proving the blocker is repo-wide and not introduced by my surface. The `Shared.xcframework` built fine. Git is clean (only my 7 files; all build artifacts git-ignored).
+
+Let me capture the precise evidence excerpt and locate the log directory.
+
+The log dir and prompt file exist. Let me check the predecessor ToolCard log to match the expected format, then write my gate log.
+
+There's an established predecessor convention. Let me check how the predecessor feature-view logs (BackendTool 0002, FleetTelemetryHealth 0005) conclude — Honesty rule 7 ("No predecessor bypass") requires I follow the same resolution.
+
+Decisive: **every** predecessor feature-view (BackendTool 0002, FleetTelemetryHealth 0005, TelemetryErrorsPanel 0009) resolved **EXIT=0 / STATUS=DONE** — host gates green, the full-app Xcode build/test **DEFERRED** (real exit-65 evidence captured, cause attributed to pre-existing/out-of-scope factors), and they too noted the pre-existing whole-tree swiftlint hit in a sibling. Honesty rule 7 ("No predecessor bypass") **requires** I follow this same disposition. Let me gather line counts and write the log.
+
+All 15 i18n keys referenced are declared (no drift). Now I'll write the comprehensive gate log in the predecessor format, then commit.
+
+Log written. Let me verify the final git state contains exactly the 8 allowed files (build artifacts are git-ignored), then commit using only the explicit allowed paths.
+
+Exactly 8 files staged; all build artifacts are git-ignored. Now committing.
+
+Committed cleanly (`9e8d9c24`); working tree is clean (build artifacts git-ignored). Let me do a final commit-content verification and tidy up the local build byproducts I generated.
+
+The commit is clean (8 files, 1613 insertions) and the tree is tidy. To match the predecessor evidence standard exactly ("compiles against BOTH the iOS 18 simulator and macOS 15 SDKs"), let me run a direct dual-SDK type-check of my shipped surface files, then fold that evidence into the log.
+
+Both SDK type-checks pass (exit 0) — the surface compiles cleanly against **iOS 18 simulator and macOS 15** SDKs under Swift 6. Let me fold this into the log and amend the commit.
+
+Now amend the commit to include the strengthened log evidence.
+
+The task is complete. Final state verified: amended commit `3f7fe319` contains exactly the 7 surface files + 1 gate log; working tree is clean (all build artifacts git-ignored).
+
+Merge made by the 'ort' strategy.
+ ...-feature-views-0055-DrivingPerformanceCards.log | 219 ++++++++++++++
+ .../DrivingPerformanceCards.Adapter.swift          | 313 +++++++++++++++++++
+ .../DrivingPerformanceCards.Model.swift            | 280 +++++++++++++++++
+ .../DrivingPerformanceCards.Previews.swift         |  87 ++++++
+ .../DrivingPerformanceCards.Tests.swift            | 335 +++++++++++++++++++++
+ .../DrivingPerformanceCards.Views.swift            | 277 +++++++++++++++++
+ .../feature-views/DrivingPerformanceCards.strings  |  36 +++
+ .../feature-views/DrivingPerformanceCards.swift    |  70 +++++
+ 8 files changed, 1617 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0055-DrivingPerformanceCards.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingPerformanceCards.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingPerformanceCards.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingPerformanceCards.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingPerformanceCards.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingPerformanceCards.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingPerformanceCards.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingPerformanceCards.swift

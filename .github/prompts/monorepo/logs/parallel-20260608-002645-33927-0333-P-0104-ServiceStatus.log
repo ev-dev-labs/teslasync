@@ -1,0 +1,80 @@
+I'll start by exploring the environment to understand the task scope and verify the required capabilities are available.
+
+Key finding: **Full Xcode is NOT installed** — only Command Line Tools. `xcodebuild` requires Xcode, so the build+test gate steps cannot run. But `swiftlint`, `swiftformat`, and `swift` 6.3.2 are available. Let me explore the existing Apple app conventions deeply before deciding the path.
+
+Found it: the canonical prompt is `p4-apple/shared-meaningful/P-0104-ServiceStatus.prompt.md`, and there ARE existing p4-apple logs from predecessors. Let me read the canonical prompt, a predecessor log (to see the DONE/BLOCKED precedent on this runner), and the core SharedFacade + Design conventions.
+
+Excellent — the predecessor log is highly informative. It shows the precedent: predecessors ran on a **full-Xcode runner**, achieved green build/test/lint, and used `STATUS=DONE` with `GATE_ENV_BLOCKED=...` annotations for capability gaps. Note the predecessor committed to `apps/apple/Sources/Dashboard/Widgets/` — not the literal `TeslaSync/...` path in metadata. I must reconcile the real convention. Let me check the project layout authority.
+
+Now I understand the real architecture. `project.yml` source roots are `Sources/`, `TeslaSync/dashboard-widgets`, `TeslaSync/feature-views`. The predecessor `ExportStatusWidget` (prompt said `TeslaSync/dashboard-widgets/`) actually committed to **`Sources/Dashboard/Widgets/ExportStatusWidget.swift` + `Tests/Unit/ExportStatusWidgetTests.swift`** — the real, compiling convention. The web source is `components/data-display/`, mapping to `Sources/Components/DataDisplay/`. Let me confirm conventions and the facade APIs (i18n, diagnostics, connection state, feedback components).
+
+The feature-views wave uses co-located multi-file surfaces; the dashboard-widgets predecessor (ExportStatusWidget) uses `Sources/<Category>/X.swift` + `Tests/Unit/XTests.swift`. The web source `components/data-display/` mirrors to `Sources/Components/DataDisplay/` (sibling to `StatusIndicators.swift`). Let me read the gold-standard predecessor and the sibling/facade references to match conventions exactly.
+
+Strong conventions now clear: `LocalizedStringKey` with `translation.`-prefixed catalog keys, `TSTone`/`Color.TS`/`Font.TS`/`TSSpacing` design tokens, `LoadableState`/`LiveConnectionState` for stale/offline, reduce-motion handling. Let me read the rest of the gold-standard predecessor (view + diagnostics + previews), its test, and the Feedback components.
+
+I have the complete predecessor pattern. Now I need the web data contract (`lib/resilience`) and the remaining native building blocks (test pattern, Feedback components). Let me read these in parallel.
+
+Let me read the web data contract precisely, the `TSEmptyState` API, and check the i18n catalog + the co-located `.strings` convention (to decide the cleanest in-scope localization approach).
+
+Let me confirm the feature-views localization convention (co-located `.strings` vs central catalog) and search the seeded catalog for reusable `translation.*` keys.
+
+The feature-views convention is decisive and matches my exact scenario: a co-located per-surface `.strings` table (within the `ServiceStatus.*` allowed glob) "so each parallel surface prompt owns its own strings without editing the shared catalog." Let me confirm exactly how the table is consumed at call sites and whether keys also land in master.
+
+The proven feature-views i18n idiom: an `NSLocalizedString(key, tableName: "<Surface>", bundle: .main, value: fallback)` resolver backed by a co-located per-surface `.strings` table. Let me read the exact implementation to replicate it.
+
+I now have the complete, proven pattern. Let me confirm the exact design-token and shared-component signatures I'll use, so the code compiles cleanly on a real Xcode runner.
+
+I have all the API signatures confirmed. Let me check the lint/format configs and placeholder tooling to ensure compliance, then write the implementation.
+
+`pwsh`, `swiftlint`, `swiftformat` are all available; only `xcodebuild` (full Xcode) is missing. My files land in `included` lint paths. Let me establish the lint/format baseline (for honesty re: pre-existing vs. my contribution) and write a plan, in parallel.
+
+Critical baseline finding: the tree is **already red** before my changes — 1 pre-existing swiftformat violation (`ActionBuilder.Previews.swift`, another slot's file) and 1 pre-existing swiftlint violation. I must isolate my contribution and document these as pre-existing (not my regression). Let me identify the lint violation.
+
+`pwsh`/`swiftlint`/`swiftformat` available; only Xcode missing. Baseline is **already red** from two pre-existing violations in other slots' files (`LifetimeStatsWidget.Adapter.swift` function-length; `ActionBuilder.Previews.swift` blank-lines) — I'll document these as pre-existing and isolate my contribution. There are also pre-existing unstaged modifications (AIUsageCard.*, web files) I must not touch. Now writing the implementation.
+
+Main surface written. Now the per-surface `.strings` table and the test file.
+
+Now let me auto-format my new files, then lint and syntax-check them in isolation.
+
+Both files now pass swiftformat. Let me run swiftlint on them, plus a syntax parse and the placeholder gate.
+
+My files pass swiftlint (0 violations), swiftformat (0 require formatting), and the placeholder gate (COUNT=0). Now a best-effort syntax parse since a full Xcode build isn't possible here.
+
+Clean parse. Let me attempt a deeper **type-check** against the macOS SDK (stronger than parse) by compiling my file with its design-token/component dependencies — first verifying the SDK has SwiftUI and that those deps are KMP-free.
+
+SDK has SwiftUI + my deps are KMP-free. Let me run a real **type-check** of my file together with the (Shared-free) component library + design tokens, under Swift 6 mode to match the project — this validates actual API usage and concurrency, not just syntax.
+
+The only error is the `#Preview` macro **plugin** (`PreviewsMacros`) missing from the standalone toolchain — an environment limitation affecting all component previews (it appeared in `Typography.swift`, not my code), not a code defect. Let me type-check the production code (excluding `#if DEBUG` previews) to validate my real code + API usage under Swift 6.
+
+All errors are in an unrelated facade-coupled file (`UnitFormatters.swift` references `UnitPreferences`/`Units` from the KMP layer I excluded) — none in my code. Let me type-check my file against its **minimal real dependency set** (design tokens + the specific components I use).
+
+Converging — now only `TSCard` (from `Cards.swift`) is missing, referenced by other skeletons in `Skeletons.swift` (not my code). Adding it.
+
+Typical sibling cascade (`TSPanelTitle`/`TSCaption` from Typography). Let me include the full component library except the few facade/KMP-coupled files, to get a clean closure around my file.
+
+Only `UnitFormatters.swift` is KMP-coupled. Let me type-check the entire component library minus that one file — a clean closure around my code.
+
+**Production code type-checks cleanly (EXIT=0)** under Swift 6/macOS 15 against the real 42-file component library — strong evidence my code compiles with correct API usage. Now let me verify the DEBUG preview-provider + (if XCTest is available) the test file, by stripping only the `#Preview` macro blocks (the Xcode-only macro plugin is what's missing).
+
+My awk strip left an unbalanced `#endif` (a stripping artifact, not a code issue). Let me use a robust Python brace-matcher to remove only the `#Preview` blocks and verify the DEBUG provider/preview-data types.
+
+Cascade is from sibling files' `#Preview` macros (e.g., `Typography.swift`), not mine. Let me strip `#Preview` from my temp copy **and all deps**, then type-check the DEBUG types (which the tests depend on) definitively.
+
+Comprehensive verification complete: **production code AND DEBUG preview types both type-check cleanly (EXIT=0) under Swift 6**, plus swiftlint/swiftformat/placeholder green on my files. Now let me clean up temp files and build the authentic gate log (running the real gate commands, capturing the Xcode-capability block as evidence).
+
+Xcode-capability block captured as evidence. Now the runnable gates (lint/format/placeholder) + supplementary type-checks.
+
+Placeholder gate + supplementary type-check/parse evidence, then finalize the log.
+
+Now the evidence + acceptance section, ending (per covenant rule 10) with `EXIT`/`STATUS` as the final lines.
+
+Log finalized (ends with `EXIT=1`/`STATUS=BLOCKED` per covenant rule 10). The on-disk (post-format) file already type-checked at EXIT=0, so formatting changed nothing logically. Let me verify git state and commit **only** my 4 files (avoiding the pre-existing unstaged modifications from other slots).
+
+My 4 files are cleanly isolated from the 13 pre-existing dirty files (other slots' work I won't touch). Committing only my files.
+
+Committed cleanly (`ade532d1c`, 4 files, +1147). Let me confirm the pre-existing files remain untouched and nothing of mine is left uncommitted.
+
+All clean: my 4 files committed; the 9 remaining dirty files are pre-existing (other slots') and untouched; my surface re-lints at 0 violations / 0 formatting. Let me update the plan and finish.
+
+Task complete. Final summary:
+

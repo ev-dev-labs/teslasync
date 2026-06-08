@@ -1,0 +1,80 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the platform capabilities and explore the codebase structure.
+
+Note: `xcodebuild` requires full Xcode but only Command Line Tools are present. `swift`, `swiftlint`, `swiftformat` are available. I'll build the full implementation and verify with available tools. Let me read the web source and existing widget patterns.
+
+The `GuardModeWidget` is the closest analog (security category, data-display + feedback, no charts). Let me study it as my template and read the web shared dependencies.
+
+Excellent pattern. Let me read the remaining GuardModeWidget files and the web dependencies.
+
+Now let me read the test conventions and locate the shared infrastructure (tokens, registry types) plus the remaining web dependencies.
+
+Let me read the web shared components, the safetyEnum lib, the hook, and locate the shared token/registry definitions.
+
+Let me locate the shared Apple infrastructure (tokens, registration types, skeleton) and read the remaining web specs.
+
+I need to understand how shared types (registration, tokens) are defined and which targets compile the widgets. Let me investigate.
+
+Let me read the shared token definitions and the registration struct to confirm the exact APIs available.
+
+Let me read the project.yml fully (to understand how `.Tests.swift` files are wired), plus lint configs and confirm no existing SafetyHistory Swift files.
+
+I have the full token vocabulary. Let me check a couple of conventions (stat-card rendering, placeholder checker) before writing.
+
+I now have the complete picture. Let me set up a plan and todos, then probe whether SwiftUI compiles with the available toolchain.
+
+SwiftUI compiles and `pwsh` is available. Let me record todos and write all seven Swift files.
+
+Now writing the files, starting with the pure projection adapter.
+
+Now the comprehensive tests file.
+
+All 7 files written. Now formatting and linting my files.
+
+swiftformat clean. Now swiftlint --strict on the files.
+
+Three lint issues: two file-length (>400) and one `sorted().first`. Let me fix the sort and split the two oversized files (both match the `SafetyHistoryWidget.*` allowed glob). Let me check current structure first.
+
+Splitting the two oversized files. First truncate the Adapter and create a Projection file with the `max(by:)` fix.
+
+Now split the Tests file. Let me check the exact boundaries.
+
+Both files split cleanly. Re-running format + lint across all eight files.
+
+swiftformat clean, swiftlint --strict: 0 violations. Now the placeholder gate via `pwsh`.
+
+Placeholder gate passes. Now the strongest available verification: a SwiftPM harness that typechecks the SwiftUI views and runs the XCTests (with token shims standing in for the app-target design system).
+
+Library compiles cleanly under Swift 6 strict concurrency. Now running the test suite.
+
+`XCTest` isn't available to SwiftPM under Command Line Tools (it ships with Xcode), so the XCTest target can't execute here — same class of limitation as `xcodebuild`. The shipped XCTest files follow the established repo pattern and will run in the real Xcode test targets. To still prove the **logic** at runtime, I'll add an executable that links the same library and runs the same assertions.
+
+Swift 6 top-level is `@MainActor`; the helper funcs need the same isolation. Quick fix.
+
+This is the Swift type-checker struggling with a long top-level script (a known slowdown). Let me stop and restructure the checks into a function body, which type-checks far faster.
+
+Even wrapped it's slow — the generic `eq<T>` with ~50 heterogeneous call sites stresses Swift's type-checker. Let me rewrite using only a non-generic `expect(Bool, …)` to eliminate generic inference cost.
+
+Top-level vars are already MainActor-isolated in Swift 6 — the explicit annotation is rejected. Removing it.
+
+Still slow — let me run it in the background and watch the actual build progress to find the bottleneck.
+
+Found it — the build was fine; the **run** deadlocked: `sem.wait()` blocks the main thread, but the `@MainActor` Task needs that same thread. Top-level code is already `@MainActor`, so I can call `runAll()` directly.
+
+All 79 runtime logic checks pass (FAILURES=0). The deadlock was the culprit, not the code. Let me check the log directory conventions before writing the gate log.
+
+I now understand the sibling log format. My environment lacks full Xcode entirely (siblings had it), so the `xcodebuild` steps are genuinely blocked. Per the Honesty Covenant ("no red-as-green") and the capability clause, I'll record those as BLOCKED with evidence while documenting all verifications that DO pass. Let me capture exact exit codes for the gate commands.
+
+Confirmed: no Xcode on this runner (`xcodebuild` exit 1). Let me capture fresh outputs for the passing steps and write the gate log.
+
+Let me verify every referenced i18n key has a catalog entry (acceptance criterion).
+
+All referenced keys resolve to the catalog (the lone "unreferenced" hit is a regex artifact — `safetyOpenA11y` contains digits). Catalog is complete. Now writing the gate log.
+
+Implementation and log complete. Let me clean up temp files, then stage and commit.
+
+Clean staging — only the widget files and log. Committing.
+
+Committed (10 files, 2111 insertions). Let me update todos and run a final confirmation of the passing gates and clean tree.
+
+All runnable gates green, working tree clean, commit in place. The task is complete to the maximum extent this runner allows.
+

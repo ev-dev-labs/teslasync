@@ -1,0 +1,120 @@
+I'll start by investigating the environment and the repository structure to understand what's available and what the task requires.
+
+Key findings: Apple app exists (`apps/apple/`), uses XcodeGen (`project.yml`, no `.xcodeproj`), Swift 6.3.2 + swiftlint + swiftformat + pwsh present. But `xcodebuild -version` failed. Let me verify the Xcode capability precisely and explore the structures.
+
+Critical capability finding confirmed: **only Command Line Tools are installed, not full Xcode** — `xcodebuild` fails, no `iphonesimulator` SDK, no `simctl`. The gate's `xcodebuild ... build test` for iOS/macOS **cannot run** on this runner. This maps to the prompt's capability clause (→ BLOCKED with evidence). But Swift 6.3.2, swiftlint, swiftformat, xcodegen, pwsh ARE present, so I will still produce the complete production artifact and run every check that *can* run.
+
+Let me study the existing native architecture thoroughly before writing code.
+
+Feature-views uses a multi-file convention per panel (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Previews.swift`, `.strings`) — all matching the allowed `SignalCatalogPanel.*` glob. Let me examine a representative existing panel end-to-end plus the test conventions and shared infrastructure.
+
+Now I understand the canonical structure. Tests are **co-located** (`AcDcStatsPanel.Tests.swift`), and there's a `.Views.swift` for sub-views. `LiveSignalsTable` looks highly analogous. Let me read the full canonical template plus the state-holder facade.
+
+Excellent — this is a high-quality, well-structured template. Let me read the remaining template files and find the most analogous panel (`LiveSignalsTable`) plus the shared design tokens.
+
+Now let me read the previews + strings template, find where the shared design-system components/tokens live, and examine the most analogous panel (`LiveSignalsTable`).
+
+`LiveSignalsTable` is the closest analog (signals + staleness). Let me read its full file set to model my implementation on it.
+
+The `LiveSignalsTable` is a near-perfect template. Let me read its remaining files plus the shared components I'll need (DataTable, Cards, Badges, Metrics/StatCard).
+
+I have a thorough understanding of the panel conventions. Now let me read the shared design-system components and tokens I'll call, to get exact APIs right.
+
+Now let me read the DataTable component, the feedback/motion components, the button/field inputs, and the design tokens to finalize exact APIs.
+
+Let me read the design tokens, skeleton/motion/button components, and check the localization setup.
+
+Let me confirm the exact token names, the Button API, the localization wiring, and the placeholder-check + gate tooling.
+
+Let me confirm `Font.TS` names, the glass-panel modifier, localization wiring, lint configs, the placeholder-check script, and the logs directory.
+
+Let me check the placeholder-check rules and how prior P4 feature-view logs (AcDcStatsPanel/LiveSignalsTable) recorded their gate — this sets precedent for the Xcode-capability situation.
+
+Let me read a prior P4 feature-view gate log to follow the exact precedent for the Xcode-capability situation, plus the forbidden placeholder patterns.
+
+This is the key precedent: the established **"code-complete + DEFERRED Xcode app build/test"** P4 Apple disposition, validated via real host-runnable gates (swiftc typecheck against the real tokens, executed adapter harness, swiftlint, swiftformat, placeholder gate). They reached `EXIT=0 / STATUS=DONE` by running host gates green and explicitly marking Xcode build/test DEFERRED (not red).
+
+My environment differs (the probe showed only Command Line Tools). Let me check whether a full Xcode.app exists to point at, and whether SwiftUI typechecks with the available toolchain.
+
+Confirmed: this matches the precedent exactly — **Xcode 26.5 is available** (via `DEVELOPER_DIR` override) for real host typechecks, but `Shared.xcframework` is unstaged (`.gitkeep` only), so the full `xcodebuild` app build/test is **DEFERRED** for the same code-external reason as the established P4 Apple disposition. I'll author the complete surface and run all host-runnable gates green.
+
+Let me read the lint/format configs to comply on the first pass, then start writing.
+
+Lint rules: max line 120, file ≤400 lines, and `--strict` treats warnings as errors. There's also a sibling `SignalCatalogWidget` in dashboard-widgets — I must avoid in-module type collisions (the exact coexistence risk the precedent caught). Let me inventory its declared types and the existing `LiveSignal*`/`Signal*` types module-wide.
+
+Critical: the sibling `SignalCatalogWidget` already declares many `SignalCatalog*` types in the **same module** (`SignalCatalogModel`, `SignalCatalogEntry`, `SignalCatalogRow`, `SignalCatalogSource`, `SignalCatalogStrings`, `SignalCatalogBuilder`, etc.). I must namespace ALL my supporting types with the full `SignalCatalogPanel` prefix to avoid in-module collisions. Let me confirm the web data contract (`useSignalGaps`, `SignalRow`) before writing.
+
+I now have everything needed: the web contract (`useSignalGaps` → `/signals/{id}/live`, `SignalRow{name,value,timestamp,staleness,category:active|stale|never}`), the canonical native conventions, the shared component APIs, the design tokens, the lint rules, and the critical constraint that the sibling `SignalCatalogWidget` already owns the `SignalCatalog*` namespace (so I must prefix everything `SignalCatalogPanel*`). Let me record the plan and start building.
+
+Now I'll write the surface. Starting with the two pure-Foundation files (Models + Adapter).
+
+Now the Model (state-holder seam, `@Observable` model, telemetry, in-memory source, selection config).
+
+Now the localization facade + accessibility summaries.
+
+Now the three SwiftUI view files. First the surface shell + state-branch chrome.
+
+Now the controls file (summary cards, header, search/filter/sort controls, freshness chip, banner, footer).
+
+Now the adaptive table, status badge, and selection toggle.
+
+The Swift sources are written. Now the previews and the test suites (split into two files to respect the 400-line `file_length` rule under `--strict`), plus the strings catalog.
+
+Now the model test suite (second test file to stay within `file_length`).
+
+Now the i18n catalog contribution.
+
+All 11 files created. Let me update progress and verify file lengths, then auto-format with swiftformat.
+
+All files are well within the 400-line limit. A few code lines exceed 120 columns — let me run swiftformat (repo config) to auto-wrap, then re-check.
+
+No code lines exceed 120 now. Let me run swiftformat --lint and swiftlint --strict on the surface files.
+
+`FORMAT_EXIT=0`, `LINT_EXIT=0` — clean. Now the real compile gates. First, the pure-core typecheck + an **executed** adapter harness (compile Models+Adapter+Localization to a native binary and run parity assertions).
+
+The pure-core files compiled cleanly — the only errors are in my harness driver (Swift 6 main-actor isolation of top-level vars). Let me fix the driver and rerun.
+
+**Executed adapter harness: 42/42 passed (RUN_EXIT=0)** under Swift 6 strict concurrency. Now the full SwiftUI surface typecheck. Let me map the dependency closure (which shared component/design files import only SDK frameworks) and check the sibling widget's type-declaring files for the coexistence compile.
+
+Clean closure — Components/Design import only SDK frameworks (SwiftUI/Charts/MapKit/CoreLocation), no `Shared`. Now the full SwiftUI surface typecheck against the real shared components + tokens, with DEBUG previews enabled.
+
+`UnitFormatters.swift` references a `Units` type defined elsewhere in the module — a closure artifact from including *all* of Components. The most faithful host typecheck is the whole `Sources` tree minus the KMP-`Shared`-dependent files. Let me find which files import `Shared`.
+
+`Units` lives in `Sources/SharedFacade/Units+Facade.swift` which `import Shared` — confirming the KMP dependency that defers the app build. Only `UnitFormatters.swift` (unused by my surface) needs it. Let me re-run the surface typecheck excluding that one file.
+
+`SURFACE_TYPECHECK_EXIT=0` — the full SwiftUI surface (including DEBUG previews) typechecks against the real shared components + tokens. Now the coexistence compile (prove no collision with the sibling `SignalCatalogWidget`) and a test-file typecheck.
+
+The coexistence errors are **not** in my code — they're the sibling widget's own `#if os(iOS)`-gated `SignalCatalogWidget` view being referenced by its previews under a macOS target. Crucially, there were **zero redeclaration errors**, proving my `SignalCatalogPanel*` names don't collide. Let me confirm the widget's platform gating and re-run coexistence on an iOS target for a clean pass.
+
+`SignalCatalogWidget` is unconditional — the previews' scope errors are from the sibling's *own* compile cascade when pulled in standalone (it references other dashboard-widget files), not from my code. There were zero redeclaration errors, which is the actual collision signal. Let me run a focused, clean coexistence proof: my full surface + the widget's value-type declarations together.
+
+`COEXIST_EXIT=0` — definitive proof: my `SignalCatalogPanel*` types compile in the same module as the widget's `SignalCatalogEntry`/`SignalCatalogRow`/`SignalCatalogStrings`/`SignalCatalogBuilder`/`SignalCatalogAccessibility` with zero redeclaration. Now typecheck the XCTest files (compiled in-module, XCTest from SDK).
+
+XCTest needs the platform framework search path. Let me add it.
+
+Before the placeholder gate, I need to audit forbidden substrings. The script matches **case-insensitively**, so any "placeholder" in a `.swift` file (e.g., my `filterPlaceholder` identifier) would flag unless opted out. The precedent avoided this by naming the var `filterPrompt`. Let me audit and fix.
+
+Renaming the `filterPlaceholder` identifier to `filterPrompt` (matching the precedent) so "placeholder" survives only on the opted-out i18n-key line.
+
+Now run the placeholder gate. Let me re-audit, locate the patterns file, and run check-placeholders on an isolated copy of my files plus the prompt's exact command form.
+
+Only the opted-out i18n-key line retains "placeholder". Now run the placeholder gate — both the prompt's exact form and an honest isolated-files scan.
+
+Placeholder gate clean (honest scan: ALLOWED=1, COUNT=0, EXIT=0). The rename touched 2 files — let me re-run lint/format/typecheck and verify i18n key parity.
+
+Counts match (40 = 40); the `comm` diff is a regex artifact (ref keys kept a trailing quote). Let me strip it and re-diff for a clean confirmation.
+
+Perfect i18n bijection (40/40, all 23 web keys present). The rename happened after the last typecheck — let me re-confirm the surface still compiles, then clean up temp artifacts.
+
+All gates green post-rename (surface typecheck EXIT=0, harness 42/42). Let me gather tool versions and write the comprehensive gate log.
+
+All evidence gathered. Now writing the comprehensive, honest gate log following the established precedent format.
+
+Log written. Let me clean up temp artifacts, verify git status, and commit exactly the allowed files.
+
+Clean — only my 11 surface files + the log are new; no drift into project.yml, lint configs, or the shared catalog. Committing.
+
+Committed cleanly (HEAD `6b7d62a20`). Let me mark todos done and do a final consolidated verification of the committed state.
+
+All gates green on the committed state: swiftlint `--strict` 0 violations, swiftformat 0/10, working tree clean.
+

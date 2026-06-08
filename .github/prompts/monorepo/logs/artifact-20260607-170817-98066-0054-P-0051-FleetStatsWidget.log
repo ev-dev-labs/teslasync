@@ -1,0 +1,201 @@
+=== P4 Dashboard widget 0051 FleetStatsWidget (Apple) ===
+Run host: Darwin (arm64), shared CI-style worktree slot-54
+Date: 2026-06-07
+
+The canonical gate is authored in PowerShell. `pwsh` is present, but the build
+steps shell out to `xcodebuild`, so the gate was executed step-for-step in the
+native shell with the exact same commands + exit-code capture. Every number
+below is copied from the real run logs under the session artifact dir
+(kmp-release.log, ios-buildtest.log, mac-buildtest.log, mac-nosign.log).
+
+--------------------------------------------------------------------------------
+PATH RECONCILIATION (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+The prompt template names the native output `apps/apple/TeslaSync/dashboard-widgets/`.
+This repo's Apple app is an XcodeGen project (apps/apple/project.yml) whose ONLY
+compiled app-source root is `apps/apple/Sources/` (shared by the iOS + macOS app
+targets). A file under `TeslaSync/dashboard-widgets/` would NOT be compiled into
+any target — i.e. it would be dead code, violating the no-stub covenant.
+
+The surface was therefore placed at the real, compiled locations, decomposed per
+the "decomposition preferred over monoliths" guideline (each file < 400 lines to
+satisfy SwiftLint file_length under --strict):
+  apps/apple/Sources/Dashboard/Widgets/FleetStatsWidget.swift            (views)
+  apps/apple/Sources/Dashboard/Widgets/FleetStatsWidgetModel.swift       (binding + model + diagnostics)
+  apps/apple/Sources/Dashboard/Widgets/FleetStatsWidgetProjection.swift  (i18n + registry + adapter + state)
+  apps/apple/Tests/Unit/Dashboard/FleetStatsWidgetTests.swift            (tests)
+XcodeGen picks these up automatically (verified: 24 refs in the generated
+pbxproj across TeslaSync, TeslaSync-macOS, TeslaSyncTests, TeslaSync-macOSTests).
+
+--------------------------------------------------------------------------------
+ENVIRONMENT CAPABILITY PROBE
+--------------------------------------------------------------------------------
+xcode-select -p (default) : /Library/Developer/CommandLineTools   (full Xcode NOT default)
+Full Xcode                : /Applications/Xcode.app — Xcode 26.5 (17F42)
+  -> driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+iOS Simulator             : iPhone 16 present (iOS 26.5 runtime), Booted
+SDKs                      : iphonesimulator26.5, macosx26.5 (build for iOS18/macOS15 deploy targets)
+swift                     : Apple Swift 6.3.2
+swiftlint                 : /opt/homebrew/bin/swiftlint
+swiftformat               : /opt/homebrew/bin/swiftformat
+xcodegen                  : /opt/homebrew/bin/xcodegen
+JDK (for KMP)             : openjdk 17.0.19  (Shared.xcframework via Gradle)
+
+--------------------------------------------------------------------------------
+PREDECESSOR / SEAM NOTES (covenant #3, #7 — no skip-and-assume, no bypass)
+--------------------------------------------------------------------------------
+* P1/S8 state-holders: only a representative `VehicleSettingsModel` ships today;
+  there is no fleet-analytics/vehicle-list holder wired in `AppContainer`
+  (bootstrap is documented "future"). The surface binds through a
+  `FleetStatsDataSource` seam (same dependency-inversion `VehicleSettingsModel`
+  uses) + a concrete `StateHolderFleetStatsDataSource` built on the existing
+  `StateHolderModel` / `LoadableState` primitives. The host injects the holder
+  models once they land — the view itself does NO HTTP.
+* P1/S10 i18n: the native catalog (Localization/Localizable.xcstrings) does not
+  yet contain the web `dashboard:fleet.*` keys (it is outside this surface's
+  allowed file set). Strings use `LocalizedStringResource(key, defaultValue:)` /
+  `String(localized:defaultValue:)` — the exact native analogue of the web
+  `t(key, default)` pattern — so the key is the source of truth and the build's
+  Swift string-extraction will populate the catalog. Keys are centralized in
+  `FleetStatsStrings` for audit.
+* P1/S11 diagnostics: no native diagnostics sink exists yet; the surface defines
+  a minimal `FleetStatsDiagnostics` seam + privacy-aware `os.Logger` default and
+  emits `view.opened` (slug "FleetStatsWidget") exactly once. Swap for the shared
+  sink when it lands.
+
+--------------------------------------------------------------------------------
+GATE STEP 1/6 — swiftformat --lint apps/apple
+--------------------------------------------------------------------------------
+$ swiftformat --lint .
+SwiftFormat completed in 3.71s.
+0/264 files require formatting, 2 files skipped.
+FORMAT_EXIT=0      ✅
+
+--------------------------------------------------------------------------------
+GATE STEP 2/6 — swiftlint --strict
+--------------------------------------------------------------------------------
+$ swiftlint --strict        (cd apps/apple)
+Done linting! Found 0 violations, 0 serious in 260 files.
+LINT_EXIT=0        ✅   (the 4 new files are included; verified clean)
+
+--------------------------------------------------------------------------------
+GATE STEP 3/6 — check-placeholders.ps1 (surface files)
+--------------------------------------------------------------------------------
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Dashboard -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/Tests/Unit/Dashboard -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0  ✅   (no TODO/stub/mock/placeholder/Lorem in shipped code)
+
+--------------------------------------------------------------------------------
+GATE STEP 4/6 — KMP Shared.xcframework (scheme pre-action dependency)
+--------------------------------------------------------------------------------
+$ ./apps/shared/gradlew -p apps/shared :core:assembleSharedXCFramework
+  > assembleSharedDebugXCFramework  -> debug/Shared.xcframework written ✅
+  > assembleSharedReleaseXCFramework -> release/Shared.xcframework written ✅
+  Staged to apps/apple/Frameworks/Shared.xcframework (ios-arm64, ios-arm64-simulator, macos-arm64)
+NOTE (shared-environment contention): this slot shares the host with other
+parallel worktrees. The release Kotlin/Native link
+(:core:linkReleaseFrameworkIosArm64 / ...IosSimulatorArm64 / ...MacosArm64) was
+repeatedly interrupted by an external "Gradle build daemon has been stopped:
+stop command received" (another worktree issuing `gradlew --stop`). It is NOT a
+toolchain or code fault — the debug framework built first-try, and the release
+framework completed on retry #2 (exit 0). A non-shared CI runner builds it once.
+
+--------------------------------------------------------------------------------
+GATE STEP 5/6 — xcodebuild -scheme TeslaSync -destination 'iOS Simulator,name=iPhone 16' build test
+--------------------------------------------------------------------------------
+Pre-action: "▸ Staging .../release/Shared.xcframework"  "✓ Shared.xcframework staged"
+Compile   : ** BUILD SUCCEEDED **   (FleetStatsWidget*.swift compiled, 0 errors)
+Unit tests: TeslaSyncTests  ->  Executed 284 tests, with 0 failures (0 unexpected)
+  Test Suite 'FleetStatsAdapterTests'     passed — Executed 9 tests, 0 failures
+  Test Suite 'FleetStatsMetadataTests'    passed — Executed 2 tests, 0 failures
+  Test Suite 'FleetStatsModelTests'       passed — Executed 6 tests, 0 failures   (exercises Units bridge)
+  Test Suite 'FleetStatsUnitBindingTests' passed — Executed 2 tests, 0 failures
+  Test Suite 'FleetStatsViewStateTests'   passed — Executed 10 tests, 0 failures
+  => 29/29 of THIS surface's tests pass; 284/284 of ALL unit tests pass.
+UI tests  : TeslaSyncUITests — 4 pre-existing, unrelated, flaky failures:
+  AuthOnboardingUITests.testCancelledSignInReturnsToSignedOutShell()
+  LiveDataUITests.testLiveIndicatorAndContentAppear()
+  PushNotificationsUITests.testForegroundChargingPushShowsBannerThenDeepLinks()
+  PushNotificationsUITests.testStartLiveActivityMarksActive()
+  These live in Tests/UI/{Auth,Live,Push}; `grep -r FleetStats|Dashboard Tests/UI`
+  -> 0 references. This change is PURELY ADDITIVE (git status: only new
+  Sources/Dashboard/ + Tests/Unit/Dashboard/; no existing file modified), so it
+  cannot have caused them. They are environment-sensitive XCUITests (web-auth
+  session, SSE live data, push permission/APNs in the simulator).
+IOS_EXIT=65        ❌ (caused solely by the 4 out-of-scope flaky UI tests above)
+
+--------------------------------------------------------------------------------
+GATE STEP 6/6 — xcodebuild -scheme TeslaSync-macOS build test
+--------------------------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync-macOS build test
+  error: "TeslaSync-macOS" has entitlements that require signing with a
+         development certificate. Enable development signing...
+  error: "TeslaSyncWidgets-macOS" has entitlements that require signing...
+  error: Could not find test host for TeslaSync-macOSTests
+MAC_EXIT=70        ❌ (Apple development signing certificate is absent in this
+                       headless/shared environment — project.yml ships
+                       DEVELOPMENT_TEAM="" + hardened-runtime/app-group
+                       entitlements that demand a real signing identity)
+
+Proof this is provisioning-only and NOT a code/compile fault — rebuild with
+signing disabled:
+$ xcodebuild -scheme TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO ENABLE_HARDENED_RUNTIME=NO
+  ** BUILD SUCCEEDED **      (FleetStatsWidget*.swift compiled for macOS, 0 swift errors)
+macOS unit-test EXECUTION still cannot run: TeslaSync-macOSTests' TEST_HOST is the
+app bundle, whose test-host resolution requires the signed app — same missing
+certificate. macOS COMPILATION of the surface is therefore proven; macOS test
+EXECUTION is blocked by the same provisioning gap.
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA SELF-ASSESSMENT
+--------------------------------------------------------------------------------
+[x] All web states reproduced: loading / content / empty / error / stale / offline
+    (+ refreshing) — derived by FleetStatsViewState.make, one #Preview each,
+    unit-tested in FleetStatsViewStateTests (10 cases).
+[x] Five-tile FleetStatsBar parity: fleet size + "<n> online", 30d distance
+    (+drive sparkline), 30d energy kWh (+charge sparkline), efficiency
+    (Wh/mi|Wh/km) + "fleet average", alerts + "unread"; tones + numericText
+    animation + staggered entrance + pulse-on-update.
+[x] Hooks bind via shared state-holder seam (P1/S8); the view does NO HTTP.
+[x] SI stored, converted at the render boundary via shared `Units` + `useUnits`
+    equivalent; efficiency factor 1.609344 matches the web exactly.
+[~] Every i18n key has a catalog entry: keys + English defaults ship via
+    LocalizedStringResource; catalog population is the P1/S10 step (the .xcstrings
+    file is outside this surface's allowed file set). Display is correct today.
+[x] Accessibility: VoiceOver labels on every tile + refresh button + chips;
+    Dynamic Type (Font.TS ramp + minimumScaleFactor); Reduce Motion honored
+    (TSFadeIn / pulse guard). a11y label composition unit-tested.
+[x] Tests: adapter (cached->projection), per-state mapping, a11y-label, registry,
+    unit-binding, model/telemetry — 29 tests, all green on iOS.
+[x] Telemetry: view.opened slug "FleetStatsWidget", emitted once (tested).
+[x] No TODO/stub/mock/placeholder/Lorem (placeholder gate EXIT=0).
+[x] Registry id "fleet-stats", category analytics, default 4x2, min 2x2, max 4x40
+    + clamp() — matches registry/analytics.ts; unit-tested.
+
+--------------------------------------------------------------------------------
+VERDICT
+--------------------------------------------------------------------------------
+The FleetStatsWidget surface is COMPLETE and is verified to the maximum extent
+this environment permits:
+  • swiftformat --lint = 0, swiftlint --strict = 0, placeholder gate = 0
+  • compiles on BOTH iOS (BUILD SUCCEEDED) and macOS (BUILD SUCCEEDED, signing off)
+  • 29/29 of its own tests pass; 284/284 of ALL unit tests pass on iOS
+The aggregate `build test` gate cannot reach EXIT=0 here for reasons entirely
+outside this surface's scope and control:
+  R1. macOS: no Apple development signing certificate (platform provisioning) —
+      hard block on TeslaSync-macOS app signing + macOS test-host. Unfixable
+      without a signing identity; cannot be made green in this environment.
+  R2. iOS: 4 pre-existing, unrelated, flaky XCUITests (Auth/Live/Push) — out of
+      scope (this prompt forbids touching other surfaces).
+  R3. Build infra: shared-host Gradle daemon "stop command" contention from
+      sibling worktrees (worked around with a retry).
+Per the Honesty Covenant (#1 no red-as-green, #8 no commit on red) this is
+reported as BLOCKED with platform-capability evidence rather than DONE.
+
+EXIT=1
+STATUS=BLOCKED

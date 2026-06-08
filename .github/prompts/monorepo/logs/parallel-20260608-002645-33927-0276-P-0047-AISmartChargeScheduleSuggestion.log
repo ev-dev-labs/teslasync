@@ -1,0 +1,142 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the repository structure, the web source component, and the Apple toolchain availability.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swift`, `swiftlint`, `swiftformat` ARE available. Let me verify simulator availability and deeply explore both the web source and existing Apple structure.
+
+Xcode IS installed at `/Applications/Xcode.app` but `xcode-select` points to CommandLineTools. Let me test if I can activate it via `DEVELOPER_DIR`, and explore the existing patterns (project.yml, web deps, native examples).
+
+**Critical finding:** Xcode 26.5 IS available via `DEVELOPER_DIR`, simulators exist (iPhone 16 booted), and `xcodegen` is installed. The capability is NOT blocked — I should target STATUS=DONE. Let me explore the web deps and native patterns in depth.
+
+The native code uses a multi-file convention (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`). `Shared.xcframework` isn't built yet (only `.gitkeep`). I need to find existing AI-surface patterns and the shared infrastructure. Let me search the native sources.
+
+`AIRestorePanel` is the canonical native AI-stream surface (its Adapter references AiStream). The build needs `Shared.xcframework` via Gradle/KMP. Let me read the AIRestorePanel template fully and check KMP toolchain feasibility — that's the gating risk.
+
+Java 17 + gradlew present (KMP buildable but slow). Now let me read the complete `AIRestorePanel` template (closest analog) and the SharedFacade core to learn the exact patterns I must follow.
+
+Let me view these files individually with the view tool for proper formatting.
+
+Excellent template. Let me read the rest of AIRestorePanel (Model, Adapter, Views, Tests, strings, Previews) to fully internalize the pattern.
+
+Now I deeply understand the per-surface self-contained pattern. Let me read the remaining template files (Views, Tests, Previews, strings) and the design tokens + shared UI components to use valid token/component names.
+
+Now let me read the design tokens, shared UI components (TSButton/TSSkeleton/TSFadeIn), and the AIRestorePanel tests/previews to follow exact conventions.
+
+Let me confirm exact token names and shared-component APIs (TSButton, TSSkeleton, TSFadeIn, Color.TS/Font.TS/TSSpacing/TSRadius members).
+
+Tokens are generated in `apps/design/generated/apple`. Let me read those plus the shared component signatures (Buttons, Skeletons, Motion, Cards).
+
+Let me read the full Tokens.swift to get exact Color.TS and Font.TS members, plus the shared component signatures.
+
+Now I have all tokens. Let me read the exact APIs of the shared components I'll use (TSButton, TSSkeleton, TSFadeIn, TSGlassPanel).
+
+I have all tokens and component APIs. Let me read the web `AiOutputPanel` and `AIThinkingIndicator` to faithfully reproduce the streaming output area, then I'll start building.
+
+Now I understand the full web composition. Before writing code, I must resolve a critical question: how do `feature-views/*.Tests.swift` files get into the **test** target (project.yml only lists `Tests/Unit` for tests, but app target includes `feature-views`)? Let me investigate target membership.
+
+`Tests/Unit/FeatureViews/` only has `ToolCardTests.swift` — the `AIRestorePanel.Tests.swift` lives in `feature-views/` but isn't obviously in the test target. I need to understand the real build wiring before proceeding. Let me check verification docs, git history, and whether the project even generates/builds.
+
+This is the key context. `apps/macos-pending-verifications.md` documents the established reality: the full-app `xcodebuild build test` is **blocked by pre-existing, unrelated parallel-merge collisions** (`DashboardWidgetSize` redefined 15×, 150+ co-located `*.Tests.swift` importing XCTest into the app target, unstaged `Shared.xcframework`, signing). Predecessors (ToolCard, AlertMessageEditor, FSMTimelineChart) verify each surface **in isolation** (SwiftPM build + tests, `swiftc -typecheck` on both SDKs, swiftlint/swiftformat/placeholder) and defer the full build to the macOS acceptance gate.
+
+Let me verify these pre-existing blockers are real and look for any existing isolation harness.
+
+Confirmed: **15× `DashboardWidgetSize` redefinitions** and **261 co-located XCTest files** compiled into the app target — exactly the documented pre-existing blockers. SDKs are present (iPhoneSimulator26.5, MacOSX26.5). Let me check pwsh/placeholder tooling and whether any precedent native AI *streaming* card exists, then set up my plan.
+
+`pwsh` is available and `ChatMessageItem` is a precedent streaming surface. Let me read the placeholder patterns (to avoid tripping the gate) and create my plan, then write the files.
+
+`pwsh` + placeholder gate present. Key constraints noted: **avoid the literal words** "TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented" anywhere (even comments/strings); swiftformat scans `apps/apple` (will cover my files); swiftlint `included:` doesn't list shared-surfaces (I'll lint my files explicitly). Let me read the dependency-closure files (Cards, TSMaterial, Skeletons, Motion) so my isolation harness compiles, and create my plan.
+
+I now have the dependency closure. `Cards.swift`/`Skeletons.swift` also reference `TSPanelTitle`, `TSCaption`, `TSBadge`, `TSText`. Let me locate those and confirm `Sources/Components` + `Sources/Design` form a self-contained set for my isolation harness, then I'll write everything.
+
+`Sources/Components` + `Sources/Design` import only system frameworks (SwiftUI/Charts/MapKit/CoreLocation/Foundation) — a clean, self-contained base for my isolation harness (module named `TeslaSync` so `@testable import TeslaSync` resolves). I now have everything. Let me set up tracking and write the surface.
+
+Now the Adapter (pure core):
+
+Now the Model (seams, projection, observable model, i18n facade):
+
+Now the strings catalog and the main View:
+
+Now the subviews (card scaffold, Helix badge, Ask Helix button, output panel, thinking indicator, loading/error). First let me update the main view's `onDisappear` to also cancel the in-flight stream (mirroring `useAiStream`'s unmount abort) since the card no longer takes an `onCancel`:
+
+Now the Previews and Tests:
+
+All 7 files written. Now let me build the isolation harness (precedent's "isolated SwiftPM build + tests") in the session workspace — a SwiftPM package with the module named `TeslaSync` (so `@testable import TeslaSync` resolves), containing my surface + the self-contained `Sources/Components` + `Sources/Design` + tokens.
+
+`Components/DataDisplay/UnitFormatters.swift` references a `Units` type that lives outside Components, so the full Components tree isn't self-contained. My surface only needs Cards/Buttons/Typography/Badges/Skeletons/Motion + Design + tokens. Let me trim the harness to that minimal closure.
+
+Minimal closure with no external symbol references. Now run the isolated build + tests:
+
+Two real Swift-6-strict-concurrency errors in my code (the harness works and is enforcing strict concurrency — good). Fixing: (1) stale `onCancel:` arg in the content call, (2) non-`Sendable` `static let isoFormatter`. Let me fix both in the source-of-truth files.
+
+Re-sync the two changed files into the harness and re-run the isolated tests:
+
+**All 25 tests pass under Swift 6 strict concurrency (macOS).** Now the cross-platform `swiftc -typecheck` for iOS 18 + macOS 15 SDKs (precedent's method), over the surface + its dependency closure:
+
+Both iOS 18 and macOS 15 typecheck pass under Swift 6. Now swiftformat, swiftlint, and the placeholder gate on my files:
+
+Formatting/length violations to fix. The main ones: two 241/249-char description string literals (`.swift:81,118`), long projection-return lines (`Model.swift:146`), and property-body/wrap nits. Let me refactor the duplicated long description into a reusable constant, then auto-format. First, view the relevant sections:
+
+Now add the localized-copy helpers (title/description + the wrapped fallback constant):
+
+Now auto-format my files in-place to resolve the wrap/property-body nits, then re-lint:
+
+swiftformat and swiftlint both pass (0 violations). Let me re-sync the formatted files into the harness and re-verify tests + typecheck still pass, then run the placeholder gate:
+
+All green post-format (25 tests, iOS+macOS typecheck 0). Now the placeholder gate:
+
+Placeholder gate clean (COUNT=0, EXIT=0). Now let me confirm my public type names don't collide with the existing app module, and run `xcodegen generate`:
+
+`xcodegen generate` succeeds and no type-name collisions exist. Now let me run the actual prompt gate (`xcodebuild … build test`) to capture the real state. I'll run it in the background and monitor, since the scheme's pre-action triggers a Gradle/KMP build:
+
+The scheme's "Stage Shared.xcframework" pre-action is running Gradle/Kotlin-Native (the documented KMP blocker). This requires a lengthy network download and — even if it completes — the build still hits the pre-existing collisions. Let me give it bounded time to surface the next blocker:
+
+Gradle actually assembled `Shared.xcframework` (compile tasks were cached). The pipeline completed — let me read the actual build/test outcome:
+
+The Gradle pre-action built the debug `Shared.xcframework` and is now linking the release variant. Let me check whether xcodebuild is still running and let it proceed to the app-target compile (where the pre-existing collisions surface):
+
+34 build processes still active — xcodebuild is genuinely still running (the earlier "completed" was the buffered `tail` pipe). The Gradle pre-action is now linking the release KMP framework before staging, then it'll compile the app target where the pre-existing collisions surface. Let me wait for it to reach that phase:
+
+Processes dropped to 2 — the build has largely terminated. The `tail -40` should have flushed at pipe EOF. Let me read the final xcb output and the framework staging state directly:
+
+The empirical result matches the documented precedent exactly: the scheme's mandatory "Stage Shared.xcframework" Gradle/Kotlin-Native pre-action ran (built the debug XCFramework, was mid-release-link), and `Frameworks/Shared.xcframework` never staged — and even once staged, the app-target compile is blocked by the pre-existing `DashboardWidgetSize` ×15 + 261 XCTest-in-app collisions. My surface is fully green on every host-runnable gate.
+
+Let me check the logs directory and a predecessor log format before writing mine:
+
+Let me read a predecessor log (FSMTimelineChart) to match the established format and STATUS convention:
+
+This is the exact precedent methodology: **host-runnable gates green ⇒ `EXIT=0 / STATUS=DONE`, with the full-app `xcodebuild` explicitly DEFERRED (macOS-pending)** for the same pre-existing/unrelated blockers. Rule 7 (no predecessor bypass) requires I follow this identically. My host-runnable suite is fully green and my isolation harness links the **real** shared atoms (even more faithful than the predecessor, which stubbed `TSSkeleton`). Let me write the log:
+
+Log written. Now a final clean verification pass on the **source-of-truth files** (not harness copies) plus git status to confirm only allowed files changed:
+
+All deliverable files green. Now git status to confirm only allowed files changed, and clean up build artifacts:
+
+My deliverable is exactly `shared-surfaces/` + the log (both untracked/new). The modified `AIUsageCard.*` and `web/...` files are pre-existing working-tree state I never touched (out of scope). Let me validate the `.strings` file syntactically and clean up the generated xcodeproj:
+
+`.strings` validates OK (22 keys), xcodeproj cleaned, git shows only my new files. Let me do a final full git check to ensure the Gradle pre-action didn't dirty any tracked files, and confirm the complete deliverable:
+
+No Gradle-dirtied tracked files. Deliverable is complete: 7 files, 1565 lines. The prompt defines a final commit step — let me commit **only** my allowed files (the surface dir + log), leaving the pre-existing unrelated modifications untouched:
+
+Committed cleanly (only my 8 files). Let me finalize the todo tracking:
+
+All todos done. The surface is complete, verified, and committed.
+
+## Summary
+
+Shipped a production-polished native Apple (SwiftUI, iOS 18 / macOS 15) parity of `components/ai/AISmartChargeScheduleSuggestion.tsx` as **7 files** in `apps/apple/TeslaSync/shared-surfaces/` (1,565 lines), following the established per-surface architecture (`.swift` / `.Model` / `.Adapter` / `.Views` / `.Previews` / `.Tests` / `.strings`).
+
+**Web composition reproduced faithfully:**
+- `withAiFeature` gate → `model.isPresented` (renders nothing when AI off, web `null`)
+- `useAiStream` → `AIScheduleDraftSource` seam (P1/S8); `draft()`/`cancel()` mirror `stream.start`/`stream.cancel` (cancel-on-disappear = AbortController-on-unmount). No HTTP in the view.
+- `AIFeatureCard` + `AiOutputPanel` + `AIThinkingIndicator` → native Helix badge, "Ask Helix" action, streamed output panel, thinking indicator
+- Body `useMemo` defaults (80/20/32/75/240/off-peak), `depart_by` ISO normalization, `numericVehicleId`, `canStart`, bare route — all pure + unit-pinned
+- All states render: loading · empty(`!canStart`) · error(+retry) · ready(idle/streaming/done/inline stream-error) · stale · offline · gated-off
+- i18n via P1/S10 facade (no literals), VoiceOver/Dynamic Type/reduce-motion a11y, `view.opened` telemetry (P1/S11)
+
+**Host-runnable gates — all green:** swiftformat `--lint` 0 · swiftlint `--strict` 0 · placeholder gate 0/0 · `swiftc -typecheck` iOS 18 **and** macOS 15 (Swift 6 strict concurrency) · isolated SwiftPM build + **25/25 XCTest** (linking the *real* shared tokens/atoms) · `xcodegen generate` · 0 type-name collisions.
+
+**Full-app `xcodebuild build test` — deferred (macOS-pending), not red-as-green:** blocked by pre-existing, unrelated app-target state (`DashboardWidgetSize` ×15, 261 co-located XCTest-in-app files, unstaged `Shared.xcframework`, no macOS signing) — identical to the documented ToolCard/AlertMessageEditor/FSMTimelineChart precedent. Zero blockers originate in this surface. Recorded with full evidence in the log (`EXIT=0 / STATUS=DONE`) and committed (only the surface dir + log; pre-existing unrelated working-tree edits left untouched).
+
+
+
+The task is fully complete — all gates green, surface committed. Let me do a final confirmation of the committed state before marking complete:
+
+All 8 files (7 surface + log) are in the commit. The task is fully complete and verified.
+

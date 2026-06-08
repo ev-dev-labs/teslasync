@@ -1,0 +1,98 @@
+I'll start by investigating the environment and the repository structure to understand what's available and what this task requires.
+
+Swift toolchain is present but `xcodebuild` requires full Xcode (only CLT installed). Let me examine the existing structure, the web source, and how prior surfaces were built.
+
+This `Delta` is a small, pure presentational component (no charts/maps). Now let me understand the established Swift file pattern, check tooling (pwsh), and see how prior prompts in this series concluded.
+
+pwsh, swiftlint, swiftformat, and the Swift compiler are all available; only full Xcode/simulators are absent. The established repo precedent (see the 0003 and 0237 logs) is a **host-runnable gate** (`swiftc -typecheck` + swiftformat + swiftlint + placeholder) with the `xcodebuild` iOS/macOS full-app gate **honestly DEFERRED** to CI — concluding DONE without claiming the deferred step passed. I'll follow that precedent faithfully.
+
+Let me study the project config, the shared facades (tokens/i18n/state-holders/telemetry), and a complete reference surface.
+
+Key finding: `project.yml` includes `TeslaSync/feature-views` but **not** `shared-surfaces`. The strict allowed-files (Delta.* + log) forbid editing `project.yml`, and the established precedent runs an **isolated `swiftc -typecheck`** gate with full-app build deferred — so I'll follow that and disclose wiring as a deferred follow-up. Let me read a complete reference surface and the web libs Delta depends on.
+
+Excellent — this is a rich, production-quality pattern. Now let me read the web libs `Delta` depends on (`metricSemantics`, `numberFormat`, `useUnits`, `useFormatting`), the design tokens, shared components, lint configs, and the rest of the reference surface, all in parallel.
+
+`included:` in `.swiftlint.yml` and `sources:` in `project.yml` both omit `shared-surfaces` — a wiring gap I'll disclose honestly (can't edit those; not in allowed files). swiftformat covers the whole tree, so my files will be checked. Now let me read the units/formatting hooks, the design tokens, shared components, and the rest of the reference surface.
+
+Now let me confirm token accessors, locate the shared `TSFadeIn`/`TSSkeleton` components, read the rest of the reference pattern (Adapter/Previews/Tests/strings), and smoke-test that host SwiftUI typecheck works.
+
+Tokens and shared components confirmed. Let me read the `TSSkeleton` API and the rest of the reference surface (Adapter, strings, Previews, Tests) to nail conventions, and smoke-test host SwiftUI typecheck.
+
+Host SwiftUI typecheck works (`SMOKE_EXIT=0`) — isolated verification is viable, matching precedent. Let me read the Adapter (projection/types/accessibility/surface-slug), Previews, and Tests files to match conventions exactly.
+
+The adapter pattern is pure Foundation — testable in isolation. Let me read the Previews and Tests reference files and smoke-test whether XCTest / `swift test` works on this host (CLT-only).
+
+Confirmed: XCTest is **not** importable on this CLT-only host (`no such module 'XCTest'`), and `xcodebuild` needs full Xcode. The repo's entire P4-Apple track operates under this constraint. Let me confirm the documented disposition (`macos-pending-verifications.md`), read the rest of the test conventions, and verify the placeholder script runs under pwsh.
+
+The disposition is authoritatively documented in `apps/macos-pending-verifications.md`: host-runnable gates green + `xcodebuild` full-app build/test **deferred to the P99 `macos-latest` acceptance gate** = DONE (not unfinished). I'll follow this exactly. Note: that file isn't in my allowed files, so I'll record the deferral in my own log instead. Let me finish reading test conventions and verify the placeholder checker.
+
+I now have full command of the conventions and the sanctioned disposition. Let me do final pre-flight checks: parameterized-string convention, and any `Delta` name collisions in the module.
+
+`%1$@ vs %2$@` is the native idiom, and `AiUsageCard.Model` has a `String(format:arguments:)` facade I'll mirror. There's also a web `Delta.test.tsx` — I'll harvest its golden values for faithful parity tests.
+
+I have everything I need, including golden parity values from `Delta.test.tsx`. Let me set up tracking, create the directory, and write a brief plan.
+
+Now I'll write the pure projection core. This is the heart of the parity logic, ported faithfully from the web source.
+
+Now the Model file — state-holder seam (P1/S8), telemetry (P1/S11), and the i18n facade (P1/S10).
+
+Now the SwiftUI view and presentational chrome:
+
+Now the i18n table, then the previews and tests.
+
+Now the previews gallery and the XCTest suite (with the web golden values baked in).
+
+All 7 files written. Now the verification gate. First, auto-format with swiftformat (write mode on my files only), then confirm with `--lint`.
+
+Formatted. Now confirm `--lint` on my files, then run the strict Swift 6 typecheck of all production sources against the real design tokens + shared components.
+
+The error is in the repo's `Skeletons.swift` (references `TSCard`), not my code — I under-included dependencies. Let me locate `TSCard` and check whether the component library needs the (absent) `Shared` framework, then typecheck against the full real component set + tokens.
+
+No `Shared` dependency in components. Let me typecheck my surface against the **full real component library** (39 files) + tokens — the strongest honest host check.
+
+The component library has internal cross-deps (Maps→Charts). I'll typecheck my surface against the **exact real symbols it uses** — `TSSkeleton` (`Skeletons.swift`) + its sibling `TSCard` (`Cards.swift`) + tokens — the focused, honest set.
+
+The UI library has a deep internal dependency web (Cards→Panels→Typography→Charts palette). For an honest, focused check I'll (a) **execute** the Foundation-only adapter to prove the logic, and (b) typecheck the SwiftUI layer against `Tokens` + the **verbatim real `TSSkeleton`** struct. Let me inspect `Skeletons.swift` to extract it cleanly.
+
+Clean typecheck (`TYPECHECK_EXIT=0`) under Swift 6 strict concurrency. Now I'll **execute** the Foundation-only adapter on-host (since XCTest isn't available on CLT) to prove the projection logic produces the web golden values.
+
+Top-level code requires the file be named `main.swift`. Let me fix and rerun.
+
+Swift 6 main-actor isolation on the driver's helpers. Quick fix — mark the mutating helpers `@MainActor`:
+
+**Adapter harness: all golden assertions pass** (`HARNESS_OK`, exit 0) — the projection reproduces the web `Delta.test.tsx` values exactly. Now swiftlint (strict) on my files and the placeholder check.
+
+Placeholder scan clean (0). swiftlint linted the whole project (1909 files) and found 1 serious violation — I need to pinpoint it. Let me lint **only my 7 files** explicitly with a reporter.
+
+When linted directly, my files surface real issues under the project's default thresholds (which the ≤400-line existing surfaces respect): two files exceed 400 lines, one switch exceeds cyclomatic-complexity 10, and single-char enum cases `h`/`c`/`f` violate `identifier_name`. The current gate skips `shared-surfaces`, but I'll fix these to be a proper citizen and match the established multi-file convention. Let me check exact line counts.
+
+Clear refactor needed: split the oversized files (matching the repo's ≤400-line, multi-file convention), break the 13-branch `resolve` switch, and rename the single-char enum cases (preserving raw values). Let me restructure into `Delta.Types.swift` + `Delta.Format.swift` + a slimmer `Delta.Adapter.swift`, and split tests into `Delta.Tests.swift` + `Delta.ModelTests.swift`.
+
+Now the slimmed `Delta.Adapter.swift` — the render model + projection:
+
+Now the two test files (split to stay ≤400 lines each), with the renamed enum cases:
+
+I need to fix a Swift 6 concurrency issue: a global `let` closure isn't concurrency-safe. Let me convert `deltaEcho` to a global `func`, then write the model/accessibility test file reusing these shared fixtures.
+
+Restructured into 9 files. Let me re-run the full host gate: format, line counts, typecheck, swiftlint, the adapter harness, and placeholder scan.
+
+All files ≤400 lines, formatting clean. Now the Swift 6 strict typecheck of all production sources, then swiftlint strict on my files.
+
+swiftlint strict: **0 violations in 9 files**. Re-run the adapter harness against the split files to reconfirm golden values, plus placeholder scan:
+
+Everything green on my files: format clean, typecheck 0, swiftlint 0 violations, harness golden values pass, placeholders 0, all files ≤400 lines. Now let me run the **actual gate commands** to capture honest evidence — the full-tree swiftformat lint, full swiftlint, and the `xcodebuild` capability evidence (expected BLOCKED).
+
+`xcodebuild` requires full Xcode (CLT only) and there are no simulators — the iOS/macOS build-test steps are genuinely un-runnable here (the documented `macos-pending-verifications` deferral). Now the full-tree `swiftformat --lint apps/apple` gate step (to confirm my files don't break it, and surface any pre-existing noise):
+
+The full-tree `swiftformat --lint` flags exactly **one pre-existing, unrelated file** (`feature-views/ActionBuilder.Previews.swift`) — none of my `Delta.*` files. Let me confirm git state (my files are new/untracked; that file isn't mine) and locate the one pre-existing swiftlint violation, for honest disclosure.
+
+Confirmed: both full-tree violations (`ActionBuilder.Previews.swift` swiftformat, `LifetimeStatsWidget.Adapter.swift` swiftlint) are **pre-existing in HEAD, not mine** (my files are untracked-new). My surface is 100% clean. Now I'll write the honest log capturing all evidence and the sanctioned deferral, then commit.
+
+Now I'll stage **only** my `Delta.*` files + the log (using the `Delta.*` glob, since the allowed-files scope is `Delta.*`), verify nothing unrelated is staged, then commit.
+
+Staged set is exactly the 10 `Delta.*` files + the log — nothing unrelated. Committing:
+
+Committed as `b19c176e8`. Final verification that the commit contains only my files and the pre-existing working-tree changes remain untouched:
+
+All verified. Commit `b19c176e8` contains exactly my 11 files (10 `Delta.*` + log, 1767 insertions); the pre-existing working-tree changes (AIUsageCard, 2 web files) were never touched and remain unstaged.
+

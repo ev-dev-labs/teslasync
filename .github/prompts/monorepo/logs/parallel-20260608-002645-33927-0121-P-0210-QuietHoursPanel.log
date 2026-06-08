@@ -1,0 +1,158 @@
+I'll start by understanding the environment and the task requirements. Let me explore the repository structure and check tool availability.
+
+Key findings: `apps/apple` exists, web source exists (22KB). Critical: **xcodebuild requires full Xcode but only Command Line Tools are installed** — so the gate's `xcodebuild build test` cannot run. However `swift` 6.3.2, `swiftlint`, and `swiftformat` ARE available. Let me explore the Apple app structure thoroughly before deciding the approach.
+
+There's an established multi-file pattern per surface (`.swift`, `.Adapter`, `.Model`, `.Views`, `.Previews`, `.strings`, `.Tests`, `.ModelTests`). Build is via XcodeGen `project.yml` (no checked-in xcodeproj, no Package.swift). Let me read the web source fully and check for an existing QuietHoursPanel + understand the shared infra.
+
+Now let me read the data hooks and find a close reference surface to mirror the native architecture.
+
+Now I have the full data model. Let me explore the shared native infrastructure (P1/S8 state-holders, S9 tokens, S10 i18n, S11 diagnostics) and find a close CRUD/form reference surface.
+
+The app target includes `feature-views` (which has `.Tests.swift` files) but test targets only reference `Tests/Unit`/`Tests/UI`. Let me understand how tests are wired, the state-holder facade, design tokens, i18n, and lint config — and read a complete close reference surface.
+
+`Tests/Unit/FeatureViews` exists and a `QuietHours.swift` routing model already exists. Let me examine how feature-view tests are wired and how a notifications-domain surface binds to the facade.
+
+Let me read a complete notifications-domain reference surface and the facade core to learn the exact conventions.
+
+Excellent architecture detail. Let me read the Adapter (source/facade binding), Views, strings, and both test files for this reference surface.
+
+Now the Source (facade binding), Views, strings, Previews, and tests for this reference.
+
+The `.Tests.swift` files import XCTest directly in `feature-views/` — that's the established repo convention across all 1436 files, so I'll mirror it exactly. Let me check the full toolchain, lint configs, the placeholder script, and find the closest CRUD+form+validation reference surface.
+
+Major update: **full Xcode IS at `/Applications/Xcode.app`**, plus `xcodegen` and `pwsh` are installed. The blocker is just `xcode-select` pointing at CommandLineTools — overridable via `DEVELOPER_DIR`. Let me probe the real build capability and find the closest CRUD+form+validation reference surface.
+
+Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 sim is booted. `WebhookChannelsSection` looks like an ideal CRUD+form+toast reference. Let me examine its full file set and key files.
+
+`WebhookChannelsSection` is a near-perfect CRUD list+form analog. Let me read its main view, seams (source), and model.
+
+Strong reference. Let me read its Seams (state-holder source), Model, and Adapter.
+
+Now the Model (view-model with draft/validation/toast) and Adapter (value types, validation, save-request).
+
+This is a complete CRUD reference. Let me read the Adapter (validation + value types), the surface-slug location, the Form, and the shared components I'll need.
+
+Now let me read the reference sub-views, form, states, previews, both test files, locate the surface-slug definition, and survey the shared component catalog + toast patterns.
+
+Let me read the Form, States, Previews, and both test files, plus locate the surface-slug definition, toast patterns, and verify available shared tokens.
+
+Let me read the reference's two test files, the Content file (surface slug location), and survey toast handling + shared tokens.
+
+Let me locate the surface-slug/spy/content/accessibility definitions, read the adapter Tests file, and check the shared feedback/Toast components.
+
+`BackupActionsCard` renders toasts on actions — exactly my need. Let me read its Content (surface/accessibility/spy pattern) reference and BackupActionsCard's toast handling.
+
+I now understand toasts. Let me read the toast type, its view, the overlay+auto-dismiss wiring, and find the Spy telemetry + adapter/a11y test conventions.
+
+Let me read the toast overlay+auto-dismiss wiring, the tone→color map, the model's toast region, and verify the design tokens exist.
+
+Let me confirm the exact token/symbol names I'll use (spacing, radius, colors, fonts, motion, skeleton, glass panel, tone).
+
+TSDesign.swift is minimal; the core tokens live elsewhere. Let me confirm the exact member names for Color.TS, Font.TS, TSSpacing, TSRadius, TSTone, TSGlassPanel, TSMotion.
+
+Let me confirm `TSGlassPanel`, `TSTone`, and badge APIs.
+
+Let me confirm the `TSTone`, `TSBadge`, `TSButton`, `TSToggle` APIs so I can use the real shared components faithfully.
+
+I have a complete understanding of the architecture. Let me check build feasibility (KMP framework dependency) and establish the lint baseline before writing code.
+
+Key finding: `Shared.xcframework` is **not present** — it's generated by a Gradle/Kotlin-Native build (`apps/shared/gradlew :core:assembleSharedXCFramework`), which the app targets depend on. swiftlint passes on references. Let me read the pending-verifications doc and probe the KMP toolchain feasibility.
+
+This is the decisive context. The `macos-pending-verifications.md` establishes the **exact accepted methodology**: prior feature-views (ToolCard, AlertMessageEditor, FSMTimelineChart) verify the surface green via **isolated SwiftPM build + tests + real iOS-18/macOS-15 `swiftc -typecheck` + swiftlint/swiftformat/placeholder + `xcodegen generate`**, and record the full-app `xcodebuild build test` as **macOS-pending** (blocked by pre-existing, repo-wide collisions: `DashboardWidgetSize` redefined 15×, 150+ co-located XCTest-in-app files, unstaged KMP `Shared.xcframework`, dev-signing). Java 17 + Gradle exist but KMP/Native is the documented blocker.
+
+Let me write a plan, then check the isolated-harness footprint (`tsGlassPanel()`, Components import surface).
+
+Now I have a complete plan. Let me record it, check the exact placeholder patterns to avoid, and confirm `tsDynamicColor`'s location for the isolated harness.
+
+I have everything needed. Let me record the plan, seed todos, and start writing the surface (pure core first).
+
+Now the pure core. Writing the Adapter (value types, validation, projections):
+
+Now the Content file (surface slug, timezone catalog, next-change label, accessibility):
+
+Now the Toast projection (Foundation):
+
+Now the Seams (telemetry, i18n facade, source snapshot, Source protocol, in-memory source):
+
+Now the `@Observable` Model (state holder):
+
+Now the main composed view:
+
+Now the Views chrome (header, freshness chip, banner, buttons, pills, toast):
+
+Now the window Row + day chip:
+
+Now the inline draft Form:
+
+Now the loading/empty/error states:
+
+Now the Previews:
+
+Now the i18n strings catalog:
+
+Now the test files. Adapter/projection/toast/a11y/next-change tests + spy telemetry:
+
+Now the Model state-holder tests:
+
+All 13 files written. Let me verify key consistency and run the linters.
+
+All keys consistent. Now format and lint my Swift files (apply formatting first, then verify clean + strict lint):
+
+swiftformat clean. One swiftlint error: Adapter is 410 lines (>400 `file_length`). I'll extract the Severity + Weekday catalogs into a new `QuietHoursPanel.Catalog.swift`. Let me view the exact blocks.
+
+Now I'll extract the two catalog enums into a new file and remove them from the Adapter:
+
+Now re-run both linters across all 14 Swift files:
+
+Both clean. Now the placeholder gate. Let me check how the script resolves `-Path`, then run it as the gate specifies.
+
+Placeholder script needs a real path. Let me first scan my files for forbidden tokens, then run the gate against a temp dir holding exactly my surface files.
+
+Clean. Now run the placeholder gate against a temp dir containing exactly my surface files:
+
+Placeholder gate clean (0/0). Now the key verification: isolated SwiftPM build + tests under Swift 6, against the **real** vendored Design+Components. Let me set up the harness.
+
+Harness ready (42 real shared + 12 surface + 2 test files). Now build it under Swift 6 with the full Xcode toolchain:
+
+The full Components include pulls in files (e.g. `UnitFormatters.swift`) that depend on the shared-core `Units` symbol — not needed by my surface. Let me vendor only the minimal real component set my surface uses. First, map the dependency closure.
+
+Only `UnitFormatters.swift` depends on the external `Units` core. Let me drop just that one file from the harness and rebuild:
+
+All shared components + surface compiled. One real Swift 6 strict-concurrency issue in my test file: the global `quietHoursEcho` closure must be `@Sendable`. This matters for the real app target too — let me fix it in the source, re-sync, and rebuild.
+
+**Isolated SwiftPM build + 44 tests PASSED** under Swift 6 strict concurrency against the real Design+Components library. Now re-lint the edited test file and run real iOS-18 + macOS-15 `swiftc -typecheck` (per precedent).
+
+iOS-18 typecheck passes, Tests.swift still clean. Now macOS-15 typecheck:
+
+Both SDK typechecks pass. Now `xcodegen generate` to confirm the project enumerates the new files:
+
+xcodegen enumerates all 15 files. Now let me gather honest evidence for the full-app `xcodebuild` block (the documented macOS-pending precedent), confirming it's pre-existing and not in my files.
+
+Evidence confirms the documented macOS-pending block precisely (KMP framework unstaged, `DashboardWidgetSize` ×15, 263 XCTest-in-app files) — and **zero** of these are in my files. Let me run a bounded full-app `xcodebuild` attempt to capture the actual failure mode for the log.
+
+Conclusive: the full-app build fails immediately on the **unstaged KMP `Shared.xcframework`** (a Gradle/Kotlin-Native CI artifact) — not on any QuietHoursPanel file. This matches the documented precedent exactly. Let me run the repo-wide host gates (as the gate specifies) to capture their real status, then write the log.
+
+Repo-wide gates trip on **pre-existing** violations in *other* surfaces' files (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`) — outside my allowed `QuietHoursPanel.*` scope — plus the unstaged KMP framework. My surface is green. Let me check the logs dir + an existing log's format, then write the gate log.
+
+This is the exact accepted precedent (FSMTimelineChart 0231): host-runnable gates green, full-app `xcodebuild` marked `[~] DEFERRED` to macOS-pending CI, ending `EXIT=0 / STATUS=DONE`. Let me read the full precedent log to mirror its structure faithfully.
+
+This is the precise accepted template. Let me gather exact line counts, then write the log mirroring this structure with my real evidence.
+
+Now I'll write the gate log, mirroring the accepted precedent structure with my real evidence:
+
+Now add the macOS-pending row mirroring the existing entries:
+
+Now verify git state (ensure the generated `.xcodeproj` is ignored), then stage and commit. Let me check status first.
+
+I notice **pre-existing unrelated dirty files** (AIUsageCard.*, web/*) that are NOT mine — I must not stage those. The `.xcodeproj` is correctly ignored. Given the explicit "Allowed files" scope (`QuietHoursPanel.*` + log), let me verify my macos-pending edit is isolated, then decide. Let me check its diff.
+
+My macos-pending row is isolated and additive (mirrors the 3 predecessors + the doc's "append a row" protocol). The AIUsageCard/web dirty files are pre-existing and NOT mine — I'll exclude them. Staging only my files:
+
+All 15 files + log + ledger staged, no leakage. Final green re-check of the surface gates before commit (covenant rule 8: no commit on red):
+
+All gates green. Committing:
+
+Committed cleanly (3b965cb34) — exactly 17 files (15 surface + log + ledger row), no unrelated changes. Let me finalize todos and clean up temp files.
+
+All work complete and verified. Marking the task done.
+

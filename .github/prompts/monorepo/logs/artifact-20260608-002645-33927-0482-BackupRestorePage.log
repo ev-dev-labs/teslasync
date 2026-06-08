@@ -1,0 +1,259 @@
+================================================================================
+p4-apple · P7 · page:admin/BackupRestore — SwiftUI / HIG parity
+artifact: apps/apple/TeslaSync/Features/Admin/BackupRestorePage*.swift
+web source: web/src/features/admin/pages/BackupRestorePage.tsx  (route /backup)
+generated: 2026-06-08T08:03:05-07:00
+host: Darwin (Apple). Toolchain: swift 6.3.2, swiftlint 0.63.3, swiftformat, xcodegen, pwsh.
+================================================================================
+
+SUMMARY
+  Native SwiftUI/HIG implementation of the Backup & Restore page, adaptive macOS+iOS,
+  bound to an @Observable BackupRestorePageModel over a P1/S8-style data seam
+  (BackupRestoreProviding). 14 Swift files (2924 LOC). All 6 panels, all 4 data states,
+  and all 81 i18n strings implemented; full create/edit/delete/trigger/quick/verify/
+  preview flows + restore-preview sheet, with SI display formatting at the render edge.
+
+ENVIRONMENT GATE NOTE (binding, prompt clause):
+  "If no Xcode runner is available, the gate → STATUS=BLOCKED."
+  This host has Command Line Tools only (no full Xcode), so xcodebuild build/test
+  CANNOT run. Per the prompt + Honesty Covenant (no red-as-green, no commit on red),
+  this artifact is reported STATUS=BLOCKED. Every check that CAN run on this host was
+  run and PASSED; the project + all 14 files generate cleanly via XcodeGen so the
+  xcodebuild triad will run on a macOS-with-Xcode runner.
+
+=== GATE STEPS ===
+[PASS ] check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Admin -Language swift
+        PLACEHOLDER_ALLOWED=2  PLACEHOLDER_COUNT=0  EXIT=0
+        (2 allowed = `// parity:allow` on the web key name 'backup.configNamePlaceholder')
+[PASS ] swiftlint --strict (apps/apple/TeslaSync/Features/Admin/*.swift)  → 0 violations
+[PASS ] swiftformat (.swiftformat) — 0 files need formatting (idempotent)
+[PASS ] swiftc -typecheck -swift-version 6 (strict concurrency) against the REAL shared
+        component library (Sources/Components, Sources/Design, design tokens) + AppRoute
+        → 0 errors, 0 warnings in Features/Admin (Shared.xcframework + UnitFormatters.swift
+        excluded from the curated set as they need the KMP framework absent on this host).
+[PASS ] xcodegen generate → TeslaSync.xcodeproj created; all 14 BackupRestorePage*.swift
+        files are members of the TeslaSync (iOS) + TeslaSync-macOS targets.
+[BLOCK] xcodebuild -scheme TeslaSync build  → BUILD_EXIT=1
+        xcode-select: tool 'xcodebuild' requires Xcode (active dir is CommandLineTools).
+[BLOCK] xcodebuild -scheme TeslaSync test   → TEST_EXIT=1  (same: no Xcode runner)
+
+NAVIGATION REGISTRATION
+  • Sources/App/AppRouteParser.swift — added '/backup' → .admin deep-link alias.
+  • apps/apple/TeslaSync/Features/Admin/BackupRestorePage.swift::BackupRestoreRouteRegistration
+    registers the page for the .admin route host (interim native home for /backup).
+  • Sources/TeslaSyncApp.swift — composes BackupRestoreRouteRegistration.register(into:)
+    over the existing SettingsRouteRegistration registry.
+  • project.yml + .swiftlint.yml — added TeslaSync/Features to the iOS+macOS app targets
+    and the lint 'included' set (so the page builds + lints like its feature-view peers).
+
+STRINGS
+  • All 81 parity keys added to apps/apple/Localization/Localizable.xcstrings (en),
+    key names + English values verbatim from the web source. JSON validated (8204 keys).
+  • 2 native-chrome keys added (backup.serviceUnavailable, backup.retry) — not parity keys.
+  • Every visible literal resolves via BackupStrings (LocalizedStringKey / String(localized:)).
+
+=== PARITY ===
+PARITY_REQUIRED=91
+[x] panel  — Total-Configs
+        ↳ BackupRestorePage.Views.swift::BackupMetricGrid — TSStatCard(title: BackupStrings.totalConfigs, value: BackupFormat.countAlways)
+[x] panel  — Total-Backups
+        ↳ BackupRestorePage.Views.swift::BackupMetricGrid — TSStatCard(title: BackupStrings.totalBackups)
+[x] panel  — Last-Backup
+        ↳ BackupRestorePage.Views.swift::BackupMetricGrid — TSStatCard(title: BackupStrings.lastBackup, value: BackupFormat.relative)
+[x] panel  — Total-Size
+        ↳ BackupRestorePage.Views.swift::BackupMetricGrid — TSStatCard(title: BackupStrings.totalSize, value: BackupFormat.bytes)
+[x] panel  — GlassPanel5
+        ↳ BackupRestorePage.Views.swift::BackupConfigsPanel — TSGlassPanel + TSDataTable(BackupConfigColumns) / TSEmptyState
+[x] panel  — GlassPanel6
+        ↳ BackupRestorePage.Views.swift::BackupHistoryPanel — TSGlassPanel + TSDataTable(BackupRunColumns) + BackupRecentErrors / TSEmptyState
+[x] state  — loading data state
+        ↳ BackupRestorePage.Model.swift::BackupLoadPhase.loading + BackupRestorePage.Chrome.swift::BackupLoadingView (TSStatSkeleton/TSTableSkeleton); page switch case .loading
+[x] state  — empty data state
+        ↳ BackupRestorePage.Views.swift::BackupConfigsPanel/BackupHistoryPanel — TSEmptyState(BackupStrings.noConfigs/.noRuns) over ContentUnavailableView
+[x] state  — error data state
+        ↳ BackupRestorePage.Model.swift::BackupLoadPhase.failed + BackupRestorePage.Chrome.swift::BackupLoadFailedView (BackupStrings.loadFailed + Retry → model.load())
+[x] state  — success data state
+        ↳ BackupRestorePage.swift::BackupRestorePage.content case .loaded → BackupMetricGrid + BackupConfigsPanel + BackupHistoryPanel bound to @Observable BackupRestorePageModel
+[x] string — backup.backupType
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.backupType  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.checksumFailed
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.checksumFailed  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.checksumMismatch
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.checksumMismatch  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.checksumVerified
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.checksumVerified  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.compress
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.compress  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.configCreateFailed
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.configCreateFailed  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.configCreated
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.configCreated  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.configDeleteFailed
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.configDeleteFailed  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.configDeleted
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.configDeleted  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.configName
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.configName  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.configNamePlaceholder
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.configNameHint  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.configUpdateFailed
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.configUpdateFailed  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.configUpdated
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.configUpdated  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.configurations
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.configurations  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.create
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.create  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.daily
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.daily  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.delete
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.delete  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.deleteConfig
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.deleteConfig  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.deleteConfigMessage
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.deleteConfigMessage  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.disabled
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.disabled  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.download
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.download  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.duration
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.duration  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.edit
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.edit  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.editConfig
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.editConfig  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.enabled
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.enabled  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.encrypt
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.encrypt  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.everyNDays
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.everyNDays  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.file
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.file  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.frequency
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.frequency  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.frequencyDays
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.frequencyDays  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.full
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.full  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.history
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.history  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.incremental
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.incremental  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.lastBackup
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.lastBackup  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.lastRun
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.lastRun  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.loadingPreview
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.loadingPreview  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.maxRetention
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.maxRetention  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.metadata
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.metadata  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.name
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.name  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.newConfig
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.newConfig  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.nextRun
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.nextRun  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.noConfigs
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.noConfigs  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.noConfigsMessage
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.noConfigsMessage  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.noRuns
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.noRuns  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.noRunsMessage
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.noRunsMessage  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.noTables
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.noTables  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.options
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.options  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.preview
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.preview  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.previewFailed
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.previewFailed  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.provider
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.provider  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.providerSettings
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.providerSettings  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.quickBackup
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.quickBackup  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.quickFailed
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.quickFailed  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.quickStarted
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.quickStarted  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.recentErrors
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.recentErrors  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.records
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.records  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.refresh
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.refresh  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.restorePreview
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.restorePreview  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.rows
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.rows  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.runType
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.runType  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.saveChanges
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.saveChanges  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.schedule
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.schedule  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.size
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.size  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.status
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.status  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.subtitle
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.subtitle  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.table
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.table  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.tables
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.tables  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.time
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.time  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.title
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.title  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.totalBackups
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.totalBackups  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.totalConfigs
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.totalConfigs  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.totalSize
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.totalSize  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.triggerFailed
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.triggerFailed  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.triggerNow
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.triggerNow  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.triggered
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.triggered  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.type
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.type  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.verify
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.verify  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — backup.verifyFailed
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.verifyFailed  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — common.cancel
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.cancel  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — common.close
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.close  (value in Localizable.xcstrings; rendered via .key/.text)
+[x] string — error.loadFailed
+        ↳ BackupRestorePage.Keys.swift::BackupStrings.loadFailed  (value in Localizable.xcstrings; rendered via .key/.text)
+PARITY_COVERED=91
+
+ACCEPTANCE CRITERIA
+  [x] Every named panel implemented; every anonymous region reproduced (metric tiles,
+      configs table, history table, recent-errors, editor sheet, delete dialog, preview sheet).
+  [x] All 91 parity items render from the bound @Observable BackupRestorePageModel.
+  [x] loading / empty / error / success implemented for the page data source.
+  [x] All visible strings from Localizable.xcstrings; key names match web; 0 hardcoded UI literals
+      (provider/field labels are verbatim exactly as the web source leaves them un-i18n'd).
+  [x] Dark mode + Dynamic Type + a11y labels/traits + SI units honored; SwiftUI-native only.
+  [x] placeholder + lint + format + typecheck + xcodegen green.
+  [~] build + test gates: BLOCKED — no Xcode runner on this host (CLT only).
+  [~] apple ledger: NOT updated (status is blocked; no commit on red).
+
+HONESTY COVENANT: no red-as-green, no scope narrowing, no skip-and-assume, no stubs as
+final, no parity shortcuts, no delegation, no predecessor bypass, no commit on red, no
+silent drift. The two xcodebuild steps are RED for an environmental reason (no Xcode);
+they are reported as such, not masked.
+
+EXIT=1
+STATUS=BLOCKED

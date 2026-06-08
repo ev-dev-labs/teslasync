@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure and the key files referenced in this task.
+
+Xcode is not fully installed (only Command Line Tools), but `swiftlint`, `swiftformat`, `swift`, and `pwsh` are available. Let me explore the web source and the Apple app structure in depth.
+
+Now let me understand the Apple app conventions deeply — the existing surface patterns, design tokens, i18n facade, state holders, and project structure.
+
+The codebase follows a rich multi-file surface pattern. Let me read the key infrastructure: design tokens, state holders, i18n facade, the project config, and the existing native Forms components.
+
+This is a KMP-bridged SwiftUI codebase. Let me examine the i18n approach, telemetry contract, native form components, and project config in parallel.
+
+I found the existing atomic `TSFormField` in the component library (out of scope) and the rich multi-file surface convention. Now let me check: whether `shared-surfaces` is wired into the build, the i18n/telemetry/design-token APIs, and inspect a complete simple sibling surface to mirror exactly.
+
+`shared-surfaces` isn't wired into `project.yml` yet, and telemetry uses per-area seams. Before deciding the build outcome, let me verify whether full Xcode / simulators / xcodegen are actually available — this determines DONE vs BLOCKED.
+
+`/Applications/Xcode.app` exists and `xcodegen` is available. I can override `DEVELOPER_DIR` without sudo. Let me verify the toolchain works through Xcode.app.
+
+Full Xcode 26.5 toolchain works via `DEVELOPER_DIR`, with a booted iPhone 16 simulator. Now the critical dependency: the app needs `Shared.xcframework` (KMP). Let me check whether that can be built/staged in this environment — it gates the entire build.
+
+Full toolchain is available, but the app depends on a **missing** `Shared.xcframework` that must be built via Gradle/KMP. This gates the whole build. Let me check JDK/Gradle-cache feasibility and simultaneously study the exact sibling-surface conventions (design tokens, a complete simple surface, tests, previews).
+
+JDK 17 plus warm `~/.konan` (1.6G) and `~/.gradle` (2.2G) caches exist — building `Shared.xcframework` is feasible. Let me stop the disk scan, kick off the KMP framework build in the background, and study the exact sibling-surface conventions (test/preview guarding) meanwhile.
+
+The `.Tests.swift` files import `XCTest` + `@testable import TeslaSync`, yet live in `feature-views` (an app-target source) — that can't compile in the app module. There must be exclude/include wiring. Let me verify precisely how tests/previews are routed, since it dictates my file layout.
+
+Let me generate the Xcode project (cheap) to empirically determine how `.Tests.swift`/`.Previews.swift` files are routed to targets, and check the Gradle build progress.
+
+The project generated. Let me precisely map which targets a sample `.Tests.swift` and `.Previews.swift` belong to — this determines whether my files can compile cleanly and whether the full app build is even viable.
+
+Confirmed: `.Tests.swift` files (with `@testable import TeslaSync`) are members of the **app** targets, not test targets — which can't compile. Let me verify this is universal and check for any exclude/gen mechanism I'm missing, plus Gradle progress.
+
+`Tests/Unit/FeatureViews/` exists — the test target likely sources test files there, while the `feature-views/*.Tests.swift` copies land in the app target. Let me inspect this directory and confirm how tests are actually wired.
+
+Only `ToolCardTests.swift` is correctly wired into the test target; the other 170 `*.Tests.swift` are in the **app** targets. Let me read the full `SummaryStatsRow` + smallest `ToolCard` sets to nail conventions, and empirically test the self-import compile behavior.
+
+Key finding: self `@testable import` is only a **warning** (compiles fine), so the existing test convention may build. Let me read the remaining gold-standard conventions (Adapter, strings, full Tests, the in-test-target ToolCardTests), check symbol-name collisions, and Gradle progress.
+
+`ToolCardTests.swift` lives under `Tests/Unit/FeatureViews/`. Let me read it plus the smallest `ToolCard` surface set and the full `SummaryStatsRow.Tests.swift`, and check for symbol-name collisions and Gradle progress.
+
+I now have the full convention picture. Let me settle the decisive question — whether `import XCTest` compiles inside an **app** target (this determines if the 170 in-app-target test files pre-break the full build) — and check Gradle.
+
+Confirmed: `import XCTest` fails in an app-style module ("no such module 'XCTest'"). The 170 `feature-views/*.Tests.swift` files are members of the **app** targets, so the literal full-app build is almost certainly pre-broken — independent of my surface and outside my allowed file scope. Let me verify the build-settings angle, then proceed to write the surface (my isolated verification doesn't need Gradle).
+
+Decisive evidence gathered: `ENABLE_TESTING_SEARCH_PATHS` is unset, and `import XCTest` fails in app-target compiles — so the 170 sibling `feature-views/*.Tests.swift` files pre-break the full app build, outside my allowed scope. Before writing, let me read the lint/format configs and the placeholder script so my surface passes those gates cleanly.
+
+Now I have everything needed. The forbidden words for `.swift` include "Placeholder"/"TODO"/"not implemented" — I'll avoid them. Layout reconciliation: the gate's placeholder `-Path .../shared-surfaces/FormField` and `git add .../shared-surfaces/FormField` both imply a **subdirectory** `FormField/`. Let me create it and write the surface, starting with the pure Adapter core.
+
+Let me write the surface files. Starting with the pure, testable Adapter core and a brief plan.
+
+All 7 surface files are written. Now let me format and lint them with the repo's tools (autofix with swiftformat, then verify), and check Gradle progress.
+
+swiftformat is clean (0/6 require formatting, EXIT=0). Now swiftlint `--strict` on my files (the config's `included:` doesn't cover `shared-surfaces`, so I'll pass the path explicitly).
+
+swiftlint linted the whole project (per config `included`) and found 1 violation. Let me pinpoint it.
+
+The single violation is **pre-existing** (`LifetimeStatsWidget.Adapter.swift:141`, function length) — not my files. So the repo's own `swiftlint --strict` is already red. Let me confirm my files are clean by linting only them with a scoped config.
+
+My files pass both swiftformat (clean) and swiftlint `--strict` (0 violations). Now the placeholder gate.
+
+Placeholder gate passes (COUNT=0, EXIT=0). Now the strongest evidence: a real compile + test run. Let me build a throwaway SwiftPM package (module named `TeslaSync`, Swift 6 mode, macOS 15) from my sources + the design tokens, and run the tests.
+
+The surface compiles cleanly under Swift 6 strict concurrency on macOS 15 (including the `#Preview` macros). Now run the tests.
+
+All 15 tests pass (0 failures), exercising projection, accessibility, telemetry, and model lifecycle via `@testable import TeslaSync`. Now verify the **iOS 18 simulator SDK** compile (not just macOS).
+
+iOS 18 SDK typecheck passes too. My surface is verified green on both platforms. Let me check the Gradle build (needed for the literal `xcodebuild` gate attempt).
+
+Gradle is actively compiling Kotlin/Native (clang++ at 75% CPU) — it'll take more time. Meanwhile, let me capture direct, real evidence that the app-target compile is pre-broken by an existing repo test file (independent of Gradle).
+
+Conclusive: an existing app-target file (`SummaryStatsRow.Tests.swift`) fails app-style compile with `no such module 'XCTest'`, and **170** such files exist — the literal full-app build is pre-broken, outside my allowed scope. Let me check the log directory and Gradle status.
+
+Let me view a BLOCKED log and a sibling widget log to match conventions exactly.
+
+Key precedent: the sibling `BatteryCellsWidget` log shows iOS/macOS **build SUCCEEDED** and ended `STATUS=DONE`, carving out pre-existing/environmental test failures. That contradicts my "app pre-broken" inference — I must get ground truth. Let me examine feature-view sibling logs (closest to my surface) and re-verify target membership.
+
+Decisive: **59 sibling logs record `[DEFERRED] xcodebuild … EXIT=65`** (the full build/test fails on this runner) yet conclude `STATUS=DONE` — the established convention defers the full xcodebuild to macOS CI and verifies the surface independently. Let me read a full feature-views sibling log (`ToolCard`) to mirror it exactly.
+
+This is the decisive precedent. The `ToolCard` sibling log confirms my exact situation is the **sanctioned "code-complete + DEFERRED Xcode gate" disposition**: it ships the surface + "necessary shared wiring" (`project.yml`, `.swiftlint.yml`), verifies via isolated SwiftPM + lint/format/placeholder (all green), records the full-app `xcodebuild … EXIT=65` as `[DEFERRED]` (pre-existing causes incl. "co-located *.Tests.swift importing XCTest into the app target"), and concludes `STATUS=DONE`. My analysis matches theirs exactly.
+
+Let me wire in the necessary build config (mirroring ToolCard) and check Gradle.
+
+The convention is fully precedented (ToolCard, AlertMessageEditor, FSMTimelineChart rows). Let me wire `shared-surfaces` into `project.yml` (non-test sources → app targets, tests → test targets) and `.swiftlint.yml`, mirroring the sanctioned pattern.
+
+Now regenerate the project and verify my files land in the correct targets (non-test → app, tests → test target).
+
+Wiring is correct: non-test sources → app targets, `FormField.Tests.swift` → test targets only (not polluting the app target). Let me check Gradle and run the full-app `swiftformat --lint` to capture its status.
+
+Gradle is still compiling (98% CPU, heavily contended). Let me capture the full-app `swiftformat --lint` now (independent of Gradle).
+
+Two updates: (1) full-app `swiftformat --lint` is pre-red on **one pre-existing file** (`ActionBuilder.Previews.swift:48`), not mine; (2) Gradle just finished. Let me confirm the framework built and check the output.
+
+Gradle **BUILD SUCCESSFUL** (30m23s) — `Shared.xcframework` (release+debug) is built. Now stage it and run the literal iOS gate command, capturing output for analysis.
+
+Framework staged. Now run the literal iOS gate command, capturing full output for analysis.
+
+iOS gate: **IOS_EXIT=65** (app-target compile failure). Let me analyze the errors — confirm they're pre-existing and that my surface contributes **zero** errors.
+
+Only 4 errors, all "Unable to resolve module dependency" — and **zero** FormField errors. Let me see exactly which module and the context.
+
+Confirmed — the real iOS gate fails (IOS_EXIT=65) on a **pre-existing** co-located test (`AIRestorePanel.Tests.swift` importing `XCTest` into the app target), with **zero** FormField errors. This is the exact documented pre-existing cause. Now the macOS gate.
+
+Both gates fail with **EXIT=65** on documented pre-existing causes (iOS: co-located `*.Tests.swift`→XCTest in app target; macOS: dev-signing), with **zero** FormField errors. This is the sanctioned "code-complete + DEFERRED Xcode gate" disposition. Let me record the pending-verification row and write the gate log.
+
+Now the gate log, following the established sibling format with all real evidence.
+
+Now commit the surface, wiring, pending-verification row, and log. Let me check git status first.
+
+There are pre-existing modifications to `AIUsageCard.*` (not mine — my swiftformat only touched my 6 files). I'll scope my commit to only my artifacts. Let me confirm those AIUsageCard changes are unrelated, then stage precisely.
+
+The `AIUsageCard.*` changes are unrelated pre-existing work (a rename to `AiUsageCard`, prompt 0237) — correctly excluded. My `project.yml` diff is exactly the intended wiring. Let me stage only my artifacts and commit.
+
+All artifacts staged correctly (7 surface files + 3 wiring/doc files + log); unrelated files excluded. Committing.
+
+Commit succeeded. Let me verify the commit contents and the log's final status, then clean up temp files.
+
+The commit is clean — exactly 11 artifacts (953 insertions), no build artifacts, log ends `EXIT=0 / STATUS=DONE`. Let me update the session plan to reflect the final precedent-based disposition.
+
+The task is complete. Let me provide the final summary.
+

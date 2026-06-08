@@ -1,0 +1,130 @@
+I'll start by exploring the repository structure and understanding both the web source and the existing Apple app architecture.
+
+Web source is a simple presentational component. The toolchain shows `xcodebuild` is **non-functional** (CommandLineTools only, no full Xcode), but `swift`, `swiftlint`, `swiftformat` are available. Let me explore the existing Apple app structure before deciding on approach.
+
+This is a substantial Apple app (475 Swift files). Critically: **`xcodebuild` is non-functional** (CommandLineTools only, no Xcode) and **`simctl` is unavailable**. So the build/test gate cannot run, but I can still produce the complete artifact and run swiftlint/swiftformat/placeholder checks. Let me explore the existing architecture (feature-views, state holders, tokens, i18n, diagnostics) to ensure parity.
+
+Key finding: `apps/apple/TeslaSync/feature-views/` doesn't exist yet, and `project.yml` only lists `TeslaSync/dashboard-widgets` (not `feature-views`) — but I'm restricted to only the `feature-views/ResultPanel.*` files. Let me check prior P4 work, the logs, and learn the established conventions from `dashboard-widgets`, plus the shared facade/tokens/i18n/diagnostics layers.
+
+No feature-views built yet — this is the first. Let me check for full Xcode, read the canonical ResultPanel prompt, examine a complete dashboard-widget set as the convention template, and inspect the shared facade/diagnostics layers.
+
+**Major discovery: `/Applications/Xcode.app` exists** — `xcode-select` just points to CommandLineTools. I can likely use `DEVELOPER_DIR` to activate full Xcode. SwiftUI/Charts/MapKit are all available. Let me test this and read the canonical prompt + conventions.
+
+**Xcode 26.5 is fully functional via `DEVELOPER_DIR`**, `iPhone 16` simulator exists, and `xcodegen` is installed — so the full gate (build+test) can potentially run, enabling STATUS=DONE. Now let me learn all conventions: a complete widget set, state holders, diagnostics, tokens, i18n, the shared framework build, and wiring.
+
+The Shared.xcframework needs a Gradle/Kotlin-Native build (only `.gitkeep` present) — a potential blocker for full app build. But my ResultPanel is pure-presentational (no KMP dependency), so I can verify it independently. Let me locate the diagnostics (P1/S11) and i18n (P1/S10) layers, then read a complete widget template set.
+
+The first widget commit modified `project.yml` (for TEST_HOST) — so per-surface prompts do touch wiring when needed for the gate. `feature-views` is not yet wired, so I'll need to add it like `dashboard-widgets`. Let me understand the test convention and adapter/i18n/telemetry patterns.
+
+Now I understand the rich convention. The `.Tests.swift` files live in the widget dir but the comment says they "run in the TeslaSync XCTest targets" — I need to verify how XcodeGen assigns test-file membership. Let me generate the project to inspect, and read the remaining convention files (strings, Model/state-holder, Views, Previews, i18n helper, tokens).
+
+The convention is fully self-contained per surface (own telemetry/state-holder/i18n/projection/model seams — no KMP dependency, host-compilable). Now I must resolve where `.Tests.swift` files get compiled. Let me generate the project to inspect target membership, and read the tokens, strings, Views, Previews, and placeholder-check conventions.
+
+Test file is referenced in 2 targets' Sources phases. I must identify exactly which targets and the mechanism, so I replicate it correctly. Let me analyze the pbxproj precisely and re-check project.yml wiring.
+
+Confirmed: `.Tests.swift` compiles into the **app targets** (TeslaSync + TeslaSync-macOS) via the source dir — the proven, gate-passing convention. I'll mirror it exactly. Now the critical risk: the Shared.xcframework (KMP/Gradle) build, which the scheme forces. Let me assess its feasibility and read the pending-verifications note.
+
+KMP/Kotlin-Native is set up (`~/.konan/kotlin-native-prebuilt-macos-aarch64-2.4.0`, Gradle caches present) and Xcode 26.5 is available — so the full build *may* be achievable, though `macos-pending-verifications.md` documents Shared.xcframework as CI-deferred. I'll write the complete surface, verify via standalone swiftc + lint/format/placeholder, then attempt the full gate. Let me read the exact design tokens, skeleton, Views and Previews conventions.
+
+Crucial clue: the Previews comment says "skipped by the **swiftc host gate**" and the Projection/Tests are "host-runnable without the KMP runtime." There's a swiftc-based host harness that compiles surfaces and runs adapter tests without Xcode/KMP — that's my reliable verification path. Let me find it and read the exact design tokens + TSSkeleton.
+
+I have the exact tokens now. The "swiftc host gate" is referenced in dashboard-widget logs — let me read the OdometerCounterWidget log to learn the exact host-verification commands and outcome (DONE vs BLOCKED), plus the lint/format configs and TSSkeleton signature.
+
+This is the definitive blueprint. The accepted precedent (OdometerCounterWidget, STATUS=DONE) **deliberately does NOT register into project.yml** (Honesty rule 7 — that's the integration prompt's job) and ships strings as a per-surface table, achieving DONE via **host-runnable gates** (swiftc typecheck + executed adapter/model harnesses + lint/format/placeholder), with Xcode app build/test **DEFERRED** for three proven, code-unrelated reasons. This perfectly matches my "Allowed files" constraint. Let me read the web CopyButton (to mirror behavior) and TSSkeleton's dependencies.
+
+I now have the complete blueprint and the accepted disposition pattern. Let me capture exact `JSON.stringify(data, null, 2)` reference outputs from Node so my native pretty-printer is byte-accurate, then start writing the surface. Let me also set up todos.
+
+Exact JS reference captured — my printer must preserve order, emit `{}`/`[]` for empties, escape control chars as lowercase `\u00xx`, and keep unicode verbatim. Let me create the feature-views directory and write the Foundation-only JSON adapter first.
+
+Let me immediately verify the Foundation-only adapter compiles and runs correctly against the exact JS reference outputs — this is the executed adapter harness (bare `swiftc`, no Xcode needed).
+
+Adapter is byte-faithful to JS and runs green (28/28) under bare `swiftc`. Now the state-holder/telemetry/clipboard/i18n/model layer.
+
+Now the presentation subcomponents.
+
+Now the main surface view.
+
+Now previews, i18n strings, and the XCTest suite.
+
+Now the XCTest suite.
+
+All 7 surface files written. Now the host gates. First, the real `swiftc -typecheck` of the 5 production files compiled against the actual app design-token + component library (matching the precedent's closure).
+
+Production surface typechecks clean under Swift 6 strict, macOS 15. Now the DEBUG typecheck including Previews under the full Xcode toolchain (for the `#Preview` macro plugin that CLT lacks).
+
+The error is in the library's own `Cards.swift` DEBUG preview (needs `TSBadge`/`TSButton`), not my code — under `-D DEBUG` the library files' previews activate and need their full closure. Let me check what the Components previews import, to assemble a complete DEBUG closure.
+
+All Apple-framework imports only, and `Tokens.swift` has no previews. I'll include the full real component library (39 files) + Design + Tokens in the DEBUG closure — the strongest integration evidence.
+
+Including all of DataDisplay pulls in out-of-closure symbols (`UnitPreferences`). The cascade only matters for the library's own previews. I just need a complete closure for the `TSSkeleton → TSCard` chain. Let me check what the `Cards`/`Badges`/`Buttons` previews reference, then assemble a minimal-but-complete DEBUG closure.
+
+The UI previews only cross-reference other UI symbols + tokens. Let me assemble the DEBUG closure as Tokens + Design + all Components/UI + Skeletons, and compile my surface + Previews under it.
+
+Step 1b passes: my surface **and** Previews compile clean against the real UI component library under `-D DEBUG`/Swift 6/Xcode toolchain — the `#Preview` macro works and the preview factory has no concurrency defect. Now the executed model/telemetry/copy/a11y harness (compiled to a native binary and run on the main actor).
+
+Swift 6 top-level code is MainActor-isolated; my `check` helpers were nonisolated. Let me fix the harness (mark helpers `@MainActor`, drop the unused spy).
+
+Top-level vars are implicitly MainActor-isolated and can't take an explicit attribute. Let me drop it from the two vars (keeping it on the funcs).
+
+Model harness runs green (20/20) — real runtime proof of phases, telemetry-once, refresh, copy seam, connection tracking, and a11y. Combined with the adapter harness that's 48/48 executed. Now formatting and lint.
+
+Whole-tree `swiftformat --lint apps/apple` passes (0/482 need formatting). swiftformat reformatted 4 of my files — let me re-verify typecheck + both harnesses still green after formatting, and run swiftlint on the surface.
+
+Post-format all green (typecheck, adapter 28/28, model 20/20). Now swiftlint, placeholder gate, and the xcodegen non-registration + signing probes.
+
+swiftlint's `included:` config caused it to scan all 471 files (ignoring my path arg), and found 1 serious violation. I need to identify whether it's in my code or pre-existing. Let me locate it.
+
+The 1 violation is **pre-existing in a sibling surface** (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`, from another slot) — **not** my code and outside my allowed scope. Let me prove my files are swiftlint-clean under the identical ruleset (scoped config), and confirm I touched nothing else.
+
+Two notes: (1) the scoped config's `included` resolved relative to `/tmp`; I'll pass the path as an arg instead. (2) git status confirms I only added `feature-views/` — the two modified `web/` files are pre-existing working-tree changes I never touched (won't be committed). Let me re-run the scoped lint correctly.
+
+Good — the scoped lint now actually scans my 7 files and found **2 real violations in my code**. Let me view and fix them.
+
+Both are real violations in my code: a legacy trailing-closure `Button` form, and `parseEscape` cyclomatic complexity 11. Let me fix both — the Button to multi-trailing-closure form, and `parseEscape` via a lookup table.
+
+Now re-format, re-lint (scoped), and re-verify typecheck + both harnesses + whole-tree format.
+
+All green: scoped swiftlint 0/7, whole-tree format 0/482, typecheck 0, adapter 28/28, model 20/20. Now the placeholder gate + DEBUG/preview re-check + xcodegen non-registration & signing probes. Let me inspect the placeholder script interface first.
+
+The placeholder gate recursively scans a path. Let me run it on my dir (genuine scan) and the prompt's literal form, plus re-run the DEBUG/Previews typecheck after my edits.
+
+Placeholder gate clean (COUNT=0) and DEBUG/Previews typecheck still 0 after edits. Now the probes proving the Xcode app build/test must be **DEFERRED** (non-registration + unstaged framework + no signing identity) — exactly the accepted precedent disposition.
+
+All three DEFERRED reasons are proven (identical to the accepted precedent): ResultPanel/feature-views = **0 refs** in the generated project (registered files like OdometerCounterWidget have 42), **0 codesigning identities**, Shared.xcframework **not staged**. Now final integrity checks: file lengths, i18n key parity, and a word-scan.
+
+Everything green: largest file 390 lines (≤400), perfect i18n key parity (13/13 referenced keys defined), zero forbidden tokens. 
+
+For extra rigor — since `ResultPanel.Tests.swift` compiles into the app target — let me prove it type-checks by building a testable module from the surface and compiling the XCTest file against it with the XCTest framework.
+
+The module built (MODULE_EXIT=0) and `@testable import TeslaSync` **resolved** — every surface-API reference in the test typechecked; the *only* errors are the `XCTAssert*` C function-like macros, which standalone `swiftc -typecheck` can't expand (the exact precedent-documented limitation). The same assertions run green in the executed harnesses. 
+
+Now let me write the gate log.
+
+Log written. Now let me stage exactly my files + the log (not the pre-existing modified web files), verify what's staged, and commit.
+
+Exactly my 8 surface files + the log are staged; the 2 pre-existing modified web files remain unstaged (not mine). Committing now.
+
+Committed cleanly as `244a01a2` (9 files, 1820 insertions — only my surface + log). Let me run one final confirmation of the host gates on the committed tree.
+
+All host gates green on the committed tree: typecheck 0, scoped swiftlint 0/7, swiftformat 0/482, placeholder COUNT=0. Working tree shows only the two pre-existing `web/` changes (not mine). Task complete.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0008-ResultPanel.log    | 233 ++++++++++++
+ .../TeslaSync/feature-views/ResultPanel.JSON.swift | 390 +++++++++++++++++++++
+ .../feature-views/ResultPanel.Model.swift          | 275 +++++++++++++++
+ .../feature-views/ResultPanel.Previews.swift       |  97 +++++
+ .../feature-views/ResultPanel.Projection.swift     | 132 +++++++
+ .../feature-views/ResultPanel.Tests.swift          | 301 ++++++++++++++++
+ .../feature-views/ResultPanel.Views.swift          | 175 +++++++++
+ .../TeslaSync/feature-views/ResultPanel.strings    |  40 +++
+ .../TeslaSync/feature-views/ResultPanel.swift      | 177 ++++++++++
+ 9 files changed, 1820 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0008-ResultPanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/ResultPanel.JSON.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ResultPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ResultPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ResultPanel.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ResultPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ResultPanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ResultPanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/ResultPanel.swift

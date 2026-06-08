@@ -1,0 +1,112 @@
+I'll start by exploring the repository structure to understand the web source and the existing Apple app architecture.
+
+I have the web source. Now let me explore the Apple app structure and the supporting infrastructure (P1 state holders, tokens, i18n, diagnostics).
+
+Apple app exists. Let me examine the `TeslaSync/` output directory, existing components, and the P1 infrastructure (state holders, tokens, i18n, diagnostics).
+
+Let me look at the existing patterns: a representative dashboard-widget set, feature-views, the facade state holders, and check for any existing Tooltip in Overlays.
+
+There's already a `tsTooltip`/`TSHelpTooltip` in Sources. Now I need to understand the P4 "shared surface" output convention in `TeslaSync/`. Let me examine a complete feature-view group, the telemetry contract, design tokens, and check toolchain availability.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed — so the iOS/macOS simulator build+test gate cannot run here. `swift`, `swiftlint`, `swiftformat` ARE available. I'll still implement the full surface and verify with everything available, recording the xcodebuild capability gap honestly.
+
+Let me study the P4 conventions, telemetry contract, tokens, and a representative complete surface group.
+
+Important: `project.yml` sources list `dashboard-widgets` and `feature-views` but NOT `shared-surfaces`, and my allowed files are only `Tooltip.*` + the log. The xcodebuild gate can't run here anyway (no Xcode). Let me study a complete representative surface group and the telemetry/state-holder/token/i18n contracts.
+
+`BatteryPill` is the smallest complete group — let me read it entirely as my template for conventions.
+
+Excellent — the conventions are clear. Let me read the Tests file and the design token sources (TSDesign, Typography, Cards for TSGlassPanel) to complete my understanding.
+
+Conventions are now fully clear. Let me read the design token sources to know exactly which tokens exist (colors, spacing, motion, fonts, shadow, radius) and how `TSGlassPanel`/`TSText` are defined.
+
+Now I have the tokens. Let me probe the Swift toolchain (can it compile SwiftUI under CLT?), read the swiftformat config, and check `TSText`/typography helpers.
+
+SwiftUI (incl. iOS 18 `onGeometryChange`), `os`, hover, and environment all compile under CLT — good, I can typecheck locally. Let me check existing house patterns for hover/tip and `@FocusState` usage, and glance at Typography.
+
+I have everything needed. Note: `TSText`/`TSCaption` force their own foreground (would collide with the inverted tooltip surface — exactly the web's warning), so tooltip content must be plain `Text` inheriting the cascaded color. Let me verify no symbol collisions, then set up tracking and build.
+
+I have a complete understanding of the conventions, tokens, and toolchain. No symbol collisions exist. Let me set up tracking and create the surface directory.
+
+Now I'll create all the surface files, starting with the Model and Telemetry.
+
+Now the main view file:
+
+Now the strings, previews, and tests files:
+
+All six files created. Now let me verify — first a real Swift typecheck against the macOS SDK (compiling my non-test files together with the design tokens), since xcodebuild can't run here.
+
+Two findings: (1) a real bug — `body` stored property collides with `View.body` in `TooltipPreviewCell`; (2) the `#Preview` macro can't be expanded by bare `swiftc` (no Xcode plugin server) — an environmental limitation, not a code error. Let me fix the real bug.
+
+Now let me re-verify. The `#Preview` macro is a bare-`swiftc` limitation, so I'll typecheck the core files directly, and typecheck the previews' view code via a transformed copy (replacing `#Preview` with plain functions).
+
+Both pass (CORE_EXIT=0, PREVIEWS_EXIT=0). XCTest isn't importable under CLT so the test file is inert here — but I'll still validate the test *logic* compiles by transforming it (strip the canImport guard / module import) and compiling against a tiny XCTest shim plus my surface files.
+
+All three typecheck green (CORE/PREVIEWS/TESTS = 0). Now the gate-relevant linters that CAN run here: `swiftformat --lint` (will scan my files) and `swiftlint --strict`. Let me run them on my files plus check `pwsh` for the placeholder gate.
+
+swiftlint is clean (0 violations). swiftformat wants `wrapPropertyBodies` (single-line property bodies wrapped). I'll auto-format my files with the ecosystem tool, then re-verify.
+
+Clean now. Let me re-run the full verification suite (typechecks + swiftlint + whole-tree swiftformat lint + the pwsh placeholder gate) since auto-format touched the files.
+
+All green. Now the actual gate commands that can run: whole-tree `swiftformat --lint apps/apple` and the pwsh placeholder check.
+
+My files are swiftformat-clean and the placeholder gate passes (COUNT=0). The one whole-tree swiftformat error is in an unrelated pre-existing file (`ActionBuilder.Previews.swift`), outside my allowed scope. Let me confirm it's pre-existing and that my diff is scoped correctly.
+
+Confirmed: the only changes I made are the untracked `shared-surfaces/` directory. The `AIUsageCard.*`, `web/*`, and `ActionBuilder.Previews.swift` issues are all pre-existing baseline state outside my allowed scope. Let me review the auto-formatted output of my key files to confirm correctness.
+
+Log directory exists with sibling logs. Let me check the house log format by viewing a couple of existing P4 logs to match conventions.
+
+The sibling logs are very informative: the predecessor runner had **full Xcode 26.5** and ran real `xcodebuild` via a scoped xcodegen project, PLUS a CLT `swift build` host-gate cross-check. My runner has **only Command Line Tools** (no Xcode), so `xcodebuild` is genuinely unavailable. Let me gather airtight capability evidence and run the strongest verification I can: a real SwiftPM `swift build` of the actual sources.
+
+`Xcode.app` IS present in `/Applications` — only the active developer dir is set to CommandLineTools. I can override with `DEVELOPER_DIR` (no sudo needed). Let me check if Xcode is actually usable.
+
+**Xcode 26.5 is fully available** via `DEVELOPER_DIR` override (Build 17F42 — matching the predecessors), with a booted iPhone 16 simulator and xcodegen. This unlocks the real `xcodebuild` gate (the STATUS=DONE path). Following the predecessor methodology, I'll build a scoped, throwaway xcodegen harness that compiles the **real** surface files + real design tokens into iOS+macOS framework modules named `TeslaSync` and runs the committed XCTest verbatim.
+
+Harness generated. Now the real iOS Simulator build+test (iPhone 16) on Xcode 26.5:
+
+The framework with my **real** Tooltip sources (including `#Preview` macros) compiled cleanly — the remaining error is pure harness plumbing: the logic-test bundle can't resolve the `@testable import TeslaSync` framework module under explicit-module builds. Let me fix the harness (enable testability, disable explicit modules, embed the framework).
+
+Framework builds (all real files compile), but the logic-test bundle still can't see the framework module. Let me mirror the **real project pattern** instead — app targets hosting the tests (the proven approach the predecessors used) — by adding a tiny harness `@main` and switching target types.
+
+iOS: **15 tests, 0 failures, TEST SUCCEEDED**. Now the real macOS build+test:
+
+macOS hosted-test app launch is hanging (likely no GUI session for the host app to launch). Let me stop it and make the macOS host a headless agent app (`LSUIElement`) to allow the hosted test to launch.
+
+macOS hosted-test hangs on the GUI host-app launch (headless session, no window server) — `timeout` killed it (124). I'll run macOS as a non-hosted **logic test** compiling the real Lib sources directly into the bundle (same assertions, no GUI host), while keeping the iOS run as the verbatim app-hosted test.
+
+macOS destination specifier issue with `arch=arm64`. Let me retry with the default macOS destination (as the gate spec does — no explicit destination):
+
+Let me see the actual available destinations and the full error for the macOS scheme:
+
+`My Mac` destination exists. Let me run with the explicit destination name:
+
+Let me see the full unfiltered error (the "Ineligible destinations" note explains why):
+
+The scheme's buildables report no supported platform. Let me set `SUPPORTED_PLATFORMS`/`SDKROOT` explicitly on the macOS test target and use `all` in the scheme:
+
+Now it's building (destination resolved). Let me wait for the macOS logic test result:
+
+macOS test execution hangs at the run phase (headless-host limitation), unlike the iOS Simulator which hosts everything. Let me first confirm the macOS **build** succeeds, then try running the built bundle directly via `xctest` (bypassing xcodebuild's test orchestration).
+
+macOS **build-for-testing SUCCEEDED**. Now let me run the built bundle directly via `xctest` (bypassing the orchestration that hangs):
+
+**macOS tests RAN and PASSED** via direct `xctest`: 15 tests, 0 failures. The hang is purely in xcodebuild's headless test *orchestration* (testmanagerd), not the build or test execution. Let me try `test-without-building` once (lighter orchestration) to see if the literal one-shot can complete:
+
+Confirmed precisely: macOS test **execution** passes (direct `xctest`, 15/15), only xcodebuild's headless test *orchestration* hangs. I have real build+test on both platforms. Let me view a sibling log's footer format, then capture fresh gate output for the log.
+
+The log format is clear. Let me capture fresh, authentic gate output. First, re-run the iOS build+test (project was regenerated since):
+
+iOS fresh: BUILD SUCCEEDED, 15 tests passed, IOS_EXIT=0. Now capture macOS (build-for-testing + direct xctest) and the lint/format/placeholder/typecheck steps fresh:
+
+All gate steps green. Let me capture artifact line counts and re-confirm the host cross-check typechecks for the log:
+
+All evidence gathered and green. Let me update tracking and write the gate log.
+
+Now let me commit exactly my allowed files (the surface + log), being careful to exclude the pre-existing unrelated modifications.
+
+Exactly my 7 files staged. Committing:
+
+Committed cleanly (`a34e5d1cb`); my surface directory is clean. Let me clean up the temporary verification harness and finalize tracking.
+
+Task complete. The `Tooltip` shared surface is shipped at parity with the web source, verified on the real Xcode 26.5 toolchain, and committed.
+

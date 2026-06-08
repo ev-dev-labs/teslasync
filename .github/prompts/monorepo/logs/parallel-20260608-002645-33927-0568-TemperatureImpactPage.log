@@ -1,0 +1,178 @@
+I'll start by exploring the repository structure to understand the web source, the Apple app architecture, and the parity tracking files.
+
+xcodebuild exists but the version check failed. Let me investigate the actual Apple project layout and the real build tooling, since the prompt's paths may differ from the repo.
+
+xcodebuild requires full Xcode (only Command Line Tools present). Let me confirm the project layout and find existing page examples to follow.
+
+Found a key discrepancy: the prompt says output goes to `TeslaSync/Features/Maps/` but `project.yml` compiles `TeslaSync/feature-views`. Let me examine the real conventions and existing pages.
+
+The real pages live in `TeslaSync/feature-views/` as multi-file splits. Let me examine the parity ledger, the navigation registration, and a comparable existing analytics page to use as a template.
+
+The ledger doesn't exist yet — I'll need to create `apple-ledger.json`. Critically, no full Xcode is present (only Command Line Tools), so the build/test gate will be BLOCKED per the prompt. Let me examine navigation registration, the placeholder script, pwsh availability, and a comparable chart-based feature view.
+
+pwsh, swiftlint, and the placeholder script are all available — only full Xcode is missing (so build/test will be BLOCKED). `TeslaSync/Features/Maps/` doesn't exist; all 1436 real feature pages live flat in `TeslaSync/feature-views/`. Let me study the navigation, an existing chart-based page, the strings catalog, and the placeholder script.
+
+Let me look at the placeholder patterns, the strings catalog format, how maps sub-pages are navigated, and whether sibling maps pages exist yet.
+
+No sibling maps pages exist yet, so I'm establishing the pattern. Let me find the root view that maps `AppRoute` cases to screens, and study a complete existing feature-view bundle (model + adapter + views + strings + previews + tests) to mirror its structure.
+
+Now I understand the navigation infra: `AppRouteHostRegistry` hosts views per top-level `AppRoute`, populated by P7 prompts. Let me see the deep-link parser, who calls `.register(`, existing page logs, and a complete feature-view bundle to mirror.
+
+Now I understand the bundle conventions. There's a critical path question: the prompt targets `TeslaSync/Features/Maps/` but the repo compiles `TeslaSync/feature-views/`. Let me check the manifest record and the generator to resolve the intended output path.
+
+The gate scans `apps/apple/TeslaSync/Features/Maps` for both placeholders and swiftlint — confirming that's the intended location. I'll place files there and wire compilation/navigation. Let me study the route-registration pattern (`SettingsRouteRegistration`) and a complete chart bundle to mirror conventions.
+
+The registration pattern is clear (`SettingsRouteRegistration` composes into the registry via `base`). Let me read a complete chart+states bundle and a metric-cards bundle to mirror conventions exactly, plus check the strings catalog and lint config.
+
+The gate passes explicit paths to swiftlint, so it overrides `included`. I'll add `TeslaSync/Features` to `project.yml` and `.swiftlint.yml` as necessary integration (documented). Let me check the strings catalog format/keys and read the two closest analog bundles.
+
+None of the 22 keys exist yet — I'll add all. Let me read the richest analog bundle (DriveAnalyticsSection: charts+states+projection+adapter) and the metric-cards bundle to mirror the exact patterns.
+
+Excellent — the pattern is clear and rich. Let me read the supporting files: the phase/data models, the Swift Charts implementation, the views (glass panel), the adapter (KMP facade), and the shared P3 component library + design tokens.
+
+Now I understand the Swift Charts + token patterns. Let me read the views/adapter/strings of the analog, the metric-cards bundle (for SI temp conversion + facade), the shared component library, and design tokens.
+
+Let me read the shared components I'll use (Cards, Metrics, States, UnitFormatters) and the temperature metric-cards adapter/model for the SI conversion + facade pattern.
+
+Now I have the shared card components. Let me read the remaining shared pieces (States, Cards, UnitFormatters, Typography, Banners, Badges, ChartContainer) and the temperature metric-cards bundle for SI conversion + facade.
+
+Let me find the `Units`/`UnitPreferences` SI converters, the chart palette/colors, and read the temperature metric-cards bundle (closest analog for SI temp + facade wiring).
+
+The SI converters live in `SharedFacade/Units+Facade.swift` (`Units.convertTemperature`, `Units.formatTemperature`). Let me read the temperature metric-cards bundle (Adapter/Model/Projection/strings) and check the shared facade for an analytics/temperature-impact source.
+
+No analytics facade exists (only `VehicleSettingsModel`), and `TemperatureMetricsMath` shows pure host-testable SI conversion is the convention. Let me read the design tokens, the P3 chart wrappers, the card views, and badges/banners.
+
+`TSChartContainer` is the P3 chart wrapper I'll use. Let me read the token color values, the card-accent view mapping, badges/banners, and the analog's Panel/Adapter/strings.
+
+The web bucket colors map **exactly** to design tokens (chartSeriesSpeed=blue, chartSeriesRegen=cyan, chartSeriesBattery=green, chartSeriesEnergy=amber, chartSeriesTemperature=red) — token-compliant parity. Let me read the card views, badges, banners, and the analog's Panel/Adapter/Model/Projection.
+
+I have a thorough grasp of the architecture. Let me read the production adapter, the strings format, and the model/projection of the closest analog to finalize the seam/facade approach, then start building.
+
+I now understand the full pattern. One critical detail to resolve: how `.Tests.swift` files in `feature-views` are compiled (the app target includes that dir, but tests usually need a test target). Let me check.
+
+The `.Tests.swift` files import XCTest with `@testable import TeslaSync` yet `feature-views` is an app-target source — there must be a generation mechanism. Let me investigate the Scripts and how the test target actually picks them up.
+
+`feature-views` (app target) contains XCTest `.Tests.swift` with `@testable import TeslaSync` — which implies a target-membership convention. Let me check for any exclude mechanism or CI workflow before committing to the layout.
+
+Key finding: CI only builds Apple when a `.xcodeproj`/`Package.swift` exists (git-ignored, generated by `xcodegen`). On a fresh checkout (here and CI) it's a documented no-op — so the build/test gate is inherently BLOCKED without Xcode+xcodegen. Let me confirm xcodegen availability and how tests guard XCTest.
+
+Both `xcodegen` and `swiftformat` are available — so I can validate the project spec and run lint/format, even though `xcodebuild` (full Xcode) is absent. Let me generate the project to see how `feature-views/*.Tests.swift` are routed to targets.
+
+Decisive: the apple program is pre-build (CI no-op until a generated project exists; feature-views `.Tests.swift` already compile into the app target). So build/test is genuinely BLOCKED without Xcode, but I can run xcodegen, swiftlint, swiftformat, and the placeholder scan. Let me read the last reference bits (Motion, Typography top, swiftformat config) then build.
+
+I have everything I need. Let me confirm the web `fmtNumber` default precision, then set up tracking and start building.
+
+I have all conventions confirmed (`fmtNumber` default precision = 2, swiftformat maxwidth 120, `--self remove`, tokens, components). Let me set up tracking, create the directory, and start building.
+
+Now building the Foundation core. Creating the Models file:
+
+The file landed at the wrong path. Let me move it to the correct location.
+
+Models in place. Now the Projection (pure projector + math):
+
+Now the Model (observable state holder + source seam + sample data + strings facade):
+
+I referenced `TemperatureImpactAccessibility` and need to finalize the strings `format` API. Let me add the accessibility helper and fix the format call in the Model file:
+
+Models, Projection, and Model are done. Updating tracking and creating the Charts (Swift Charts):
+
+Now the Views (metric tiles, optimal panel, tips panel, states, freshness):
+
+Now the main page scaffold that composes all panels and switches over phase:
+
+Now the navigation registration, previews, and tests:
+
+Let me fix the retry key to be page-scoped (matching the per-surface convention) and create the Previews and Tests:
+
+Now the comprehensive test suite:
+
+The Foundation/UI/test layers are done. Now let me inspect the exact xcstrings formatting before inserting keys (to keep a minimal, valid diff):
+
+The format matches Python's `json.dump(indent=2)` exactly. Let me verify the unicode encoding (raw UTF-8 vs escaped) to produce a minimal diff:
+
+Confirmed: raw UTF-8, no escapes — so `json.dump(ensure_ascii=False)` produces a minimal diff. Let me add all keys via a script:
+
+All 29 keys added. Let me validate the catalog and check the diff is additive-only, then do the navigation edits:
+
+Catalog diff is purely additive (319 insertions, 0 deletions). Now the navigation registration edits:
+
+Now add `TeslaSync/Features` to the two app targets in `project.yml`. Let me view the exact lines first:
+
+Now add `TeslaSync/Features` to the SwiftLint `included` list:
+
+Let me mark progress and run the gates I can: xcodegen spec validation, SwiftLint, SwiftFormat, and the placeholder scan.
+
+Project spec generates cleanly. Let me verify my files are in the target and run SwiftLint, SwiftFormat, and the placeholder scan:
+
+The placeholder scan flags the literal word "Placeholder" in my doc comments (false positives — they're describing empty-state UI, not stubs). Let me find and reword all occurrences:
+
+Now re-run the placeholder scan and check for other forbidden patterns:
+
+Placeholder scan passes (COUNT=0). Now SwiftLint and SwiftFormat:
+
+Passing `--config` made SwiftLint lint the whole project. Let me run it scoped to my files (as the gate does) and filter for my violations:
+
+I have a clear list of my SwiftLint violations to fix: line lengths >120, `empty_count` (false-positives on my `count` Int field), `large_tuple` (3-member tuples), and `file_length` (Views.swift 544>400). Let me view the flagged regions to fix precisely:
+
+This is a substantial but mechanical set of lint fixes (line wraps, `empty_count` false-positives on my Int `count` field, two 3-tuples, and Views.swift exceeding 400 lines). Let me view the remaining flagged regions, then fix all systematically:
+
+Now I'll fix all violations. First, the simpler files — add `hasData` to Models, and apply `hasData` + line wraps across Projection, Charts, page, Model:
+
+Now the Projection fixes (hasData + line wraps):
+
+Now Charts, page, and Model fixes:
+
+Now the Model's `pageSummary` (wrap signature + the long `parts.append` lines):
+
+Now the Tests long lines (extract a helper for the repeated push):
+
+`model` is now unused in that test (it must stay alive to receive callbacks). Let me add a meaningful final assertion that references it:
+
+Now the largest fix: split `Views.swift` (544 lines > 400 limit) into two files and fix the remaining `empty_count`, `large_tuple`, and line-length issues. Let me recreate `Views.swift` (data panels) and add `States.swift` (chrome):
+
+Now the States chrome file (freshness, banner, loading, error) with the `large_tuple` fix:
+
+Now re-run SwiftLint and filter for my files only:
+
+3 left: `empty_count` (my `hasData` comparison on the `count` field still trips it), one 128-char line, and Views.swift is 402 lines (2 over). Let me rename the field to `driveCount` (avoids the rule), shorten the line with the helper, and move `TemperatureFlowLayout` to States. First, find all `count` references:
+
+Renaming the `count` field to `driveCount` (avoids the `empty_count` rule). Let me apply across the files:
+
+Now update the Views (`best.driveCount`), Tests (`\.driveCount`), and the page's 128-char line:
+
+Now move `TemperatureFlowLayout` from Views to States to get Views under 400 lines. Let me view the block to relocate:
+
+All files now under 400 lines. Re-running SwiftLint on my files:
+
+Just a trailing-newline issue from the edit. Let me normalize it:
+
+SwiftLint clean (0 violations in my files). Now SwiftFormat lint:
+
+SwiftFormat flags `wrapFunctionBodies`/`wrapPropertyBodies` (wrap single-line bodies) — but the existing codebase uses single-line bodies everywhere. Let me check if this is a version mismatch vs. the pinned tool:
+
+AppRoute (single-line bodies) passes, but my files fail — so it's something specific. Let me view the flagged lines before deciding:
+
+The codebase enforces multi-line bodies (AppRoute uses them); I have a few single-line bodies. Let me auto-format my files with SwiftFormat (the ecosystem tool) and re-verify both linters:
+
+Both linters clean and formatter satisfied. Let me re-verify the placeholder scan, line counts, and regenerate the project to confirm everything is wired:
+
+Excellent — placeholder=0, all files ≤356 lines, project generates, my files are in the target. Now let me verify a potential Swift 6 concurrency concern (the test's telemetry spy must satisfy the `Sendable` protocol) by checking how existing tests handle it:
+
+The existing pattern uses `@unchecked Sendable` on the spy. Let me match it exactly:
+
+Both linters and the formatter pass. Since I can't run full `xcodebuild`, let me validate the Foundation-only core (Models + Projection + Model) by type-checking it against the macOS SDK under Swift 6 strict concurrency — this catches real type/concurrency errors:
+
+The Foundation core type-checks cleanly under Swift 6 strict concurrency (exit 0). Let me check how existing apple gate logs conclude (to match the house convention for the BLOCKED/DONE marker), then write my evidence log:
+
+The repo convention runs isolated xcodebuild build+test on a macOS+Xcode runner to reach DONE. My environment has **only Command Line Tools (no `xcodebuild`)**, so per this prompt's explicit rule ("If no Xcode runner is available, the gate → STATUS=BLOCKED"), the honest terminal status is BLOCKED — with all runnable host gates green plus a Swift 6 strict-concurrency type-check of the core. Let me write the evidence log:
+
+Now create the `apple-ledger.json` with the unit's coverage row (status `blocked` per ADR-011 since gates aren't fully green):
+
+Now validate the ledger against its schema and do a final full gate sweep after all edits:
+
+The `&&` chain stopped on the `grep -c` returning 0 (no violations). Let me confirm the last two gates separately:
+
+All gates green. Let me clean up the generated project artifact and review what will be committed:
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: E4D8:3FE557:2478D:27944:6A26EECE)

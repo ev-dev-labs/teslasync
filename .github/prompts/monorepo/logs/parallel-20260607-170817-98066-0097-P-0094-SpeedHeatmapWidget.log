@@ -1,0 +1,121 @@
+I'll start by exploring the repository structure and understanding both the web source and the existing Apple app architecture.
+
+Apple toolchain is fully available. Let me read the web source and explore the Apple app structure.
+
+The web source is clear. There's an established multi-file convention for native widgets. Let me study a representative drives-based widget (`MileageStatsWidget`) completely to learn the patterns.
+
+The convention is clear. Let me read the remaining MileageStats files plus locate the shared primitives and the web speed-unit conversion.
+
+Now let me locate the shared primitives, the speed-unit conversion in web, and the build/gate setup.
+
+Important finding: `DashboardWidgetSize`/`DashboardWidgetRegistration` are defined once in `DigitalTwinWidget.Model.swift` and shared. Let me read those shared types, check the web conversion details, and understand how the build gate actually runs (xcodegen, Shared.xcframework, prior logs).
+
+`Shared.xcframework` is absent (only `.gitkeep`), so a full `xcodebuild` app build will fail on the framework dependency. The Previews/Tests reference a "swiftc host gate". Let me examine how prior dashboard-widget surfaces were verified.
+
+I now understand the established disposition: **code-complete + host-validated, with the two `xcodebuild` scheme steps DEFERRED** because `Shared.xcframework` (KMP core) is absent — the precedent across 0036/0055/0064. Let me probe capabilities and read the exact design-token symbols plus a custom-drawing widget for convention.
+
+Confirmed: this host has **Command Line Tools only — no Xcode, no iphonesimulator SDK**, so `xcodebuild` cannot run (matches the 0064/0055 precedent). Let me read the exact token symbols and a custom-drawing widget convention.
+
+The tokens path is under `apps/design/`. Let me read it plus locate `Font.TS`, `TSSpacing`, `TSRadius`, `TSMotion`.
+
+I have the full token vocabulary. Let me study a custom-drawing widget (sparklines uses `Canvas`/`Path`), plus read the lint/format/placeholder configs and confirm the registry entry.
+
+Let me confirm the exact registry entry and read the web `WidgetShell`/`types` to mirror freshness/stale/offline semantics precisely.
+
+I have everything needed. Let me verify there are no symbol collisions in the shared module before writing, and confirm the `Drive` field names.
+
+No collisions; conventions fully understood. Let me record a plan + todos, then implement the 8-file surface.
+
+Now implementing. Starting with the pure layers (Models + Builder).
+
+Now the Model.swift — state-holder seam, telemetry, i18n facade, accessibility summary.
+
+Now the leaf views (Canvas heatmap, legend, summary, compact number) in Grid.swift.
+
+Now the main surface file.
+
+I'll wire the web's per-cell tooltip phrasing into the a11y layer so the `drivesSuffix`/`noData` parity keys are genuinely used and testable.
+
+Now the i18n catalog, previews, and tests.
+
+Now the test suite.
+
+All 8 files created. Let me check line counts (swiftlint `file_length` warns at 400 under `--strict`) and auto-format my files.
+
+All files ≤400 lines. Now run the format-lint (whole tree) and swiftlint `--strict`.
+
+swiftformat clean. Swiftlint found 2 violations — let me see them.
+
+`large_tuple` in Previews (a 4-member tuple). Let me replace it with a small struct.
+
+One violation remains. Let me locate it.
+
+The remaining violation is in `LifetimeStatsWidget.Adapter.swift` — a **pre-existing** issue in another surface, outside my allowed scope. Let me confirm my files are clean and that this violation predates my changes.
+
+My 7 files: **0 violations**. The single tree violation is pre-existing in `LifetimeStatsWidget.Adapter.swift` (surface 0055), unmodified by me and outside my allowed scope. Now the key validation: a real `swiftc -typecheck` against the live design system. Let me map the dependencies (files importing the absent KMP `Shared`).
+
+My surface files import no KMP `Shared`. I'll replicate the 0064 precedent: a real `swiftc -typecheck` of my 5 non-test/preview files against the live design system (tokens + Components + Design) plus the DigitalTwin surface that defines the shared grid types. Let me assemble the file set.
+
+DigitalTwin's match was a comment, not a real `Shared` import. Components/Design only pull SDK frameworks. Let me run the real typecheck against the live design system.
+
+All 52 errors are confined to one design-system file — `Sources/Components/DataDisplay/UnitFormatters.swift` — which depends on the KMP `Shared` facade types (`UnitPreferences`/`TSUnitsKey`), absent here. **Zero errors mention SpeedHeatmap.** This is the documented exclusion from the 0055 precedent. Let me exclude that single Shared-bound file and re-run.
+
+The "26" are caret-annotation half-lines of the same UnitFormatters errors (two lines per diagnostic). Let me verify precisely by counting file-path error lines, then re-run excluding that single Shared-bound file.
+
+**Typecheck is clean (EXIT=0, 0 errors)** — my 5 surface files + the shared DigitalTwin grid types + the entire real design system compile together under Swift 6 / macOS 15. The only excluded file is the single KMP-`Shared`-bound `UnitFormatters.swift` (the documented 0055 exclusion). Now the executed adapter harness to prove the pure logic runs correctly.
+
+Harness build hit 6 errors — let me see them.
+
+Swift-6 top-level actor isolation in the harness driver (not the surface). The harness only verifies runtime logic — I'll build it with `-swift-version 5` (the v6 typecheck of the real surface already passed separately).
+
+**Harness: CHECKS=29 FAILURES=0 HARNESS_OK** — every parity value (bucketing, averaging, fallback, max/total/peak, the full rounded gradient, labels, formatting) verified by real execution. Now the placeholder gate. Let me check the script's interface, then run it.
+
+No forbidden words. Now run the placeholder gate (both the literal prompt path and a real per-directory scan).
+
+**All host gates green.** Placeholder COUNT=0. Let me clean up stray scan artifacts, confirm final line counts, and verify the pre-existing tree violation is isolated to LifetimeStats.
+
+Clean — only my 8 files are new additions; all ≤400 lines. Let me capture the base SHA and write the gate log.
+
+All gates documented honestly. Now commit only the allowed files (the 8 surface files + the log), leaving the pre-existing `web/*` edits untouched.
+
+Exactly 8 surface files + log staged; the pre-existing `web/*` edits remain unstaged. Committing.
+
+Committed (`2767aea1`). Let me finalize todos and do a last sanity re-lint of the committed surface files.
+
+The run expanded to the full config tree (357 files); the 1 violation is the known pre-existing one. Let me confirm it's LifetimeStats, not my surface.
+
+Confirmed: the only tree violation is the pre-existing `LifetimeStatsWidget.Adapter.swift` (surface 0055, out of scope); **my 7 files produce zero violations**. 
+
+All work is complete and verified. Final status:
+
+**Surface shipped** — `apps/apple/TeslaSync/dashboard-widgets/SpeedHeatmapWidget.*` (8 files) + gate log, committed as `2767aea1`.
+
+**Host gates (all real, all green for this surface):**
+- `swiftc -typecheck` (5 surface files + the full live design system + the 0036 grid types) → **EXIT=0, 0 errors**
+- Executed adapter harness → **CHECKS=29 FAILURES=0**
+- `swiftlint --strict` on the 7 surface files → **0 violations**
+- `swiftformat --lint apps/apple` → **0/355 need formatting**
+- `check-placeholders.ps1` → **COUNT=0**
+
+**Honest deferrals/notes:** the two `xcodebuild` scheme steps are DEFERRED (this host is CommandLineTools-only — no Xcode, no iphonesimulator SDK — and `Frameworks/Shared.xcframework` is absent), matching the approved 0036/0055/0064 precedent. The one tree-level lint failure is a pre-existing, out-of-scope defect in `LifetimeStatsWidget.Adapter.swift` (surface 0055) — reported, not masked, and not touched per the allowed-files scope.
+
+Merge made by the 'ort' strategy.
+ ...e-dashboard-widgets-0094-SpeedHeatmapWidget.log | 205 +++++++++++
+ .../SpeedHeatmapWidget.Builder.swift               | 158 +++++++++
+ .../SpeedHeatmapWidget.Grid.swift                  | 222 ++++++++++++
+ .../SpeedHeatmapWidget.Model.swift                 | 303 +++++++++++++++++
+ .../SpeedHeatmapWidget.Models.swift                | 144 ++++++++
+ .../SpeedHeatmapWidget.Previews.swift              | 180 ++++++++++
+ .../SpeedHeatmapWidget.Tests.swift                 | 377 +++++++++++++++++++++
+ .../dashboard-widgets/SpeedHeatmapWidget.strings   |  49 +++
+ .../dashboard-widgets/SpeedHeatmapWidget.swift     | 275 +++++++++++++++
+ 9 files changed, 1913 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0094-SpeedHeatmapWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SpeedHeatmapWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SpeedHeatmapWidget.Grid.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SpeedHeatmapWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SpeedHeatmapWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SpeedHeatmapWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SpeedHeatmapWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SpeedHeatmapWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SpeedHeatmapWidget.swift

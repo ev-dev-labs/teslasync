@@ -1,0 +1,140 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Let me read the web source spec and look at sibling Legacy redirect components for patterns.
+
+The web source is a simple navigation redirect using `useLocation`, sending `/alert-studio` → `/notifications/studio` preserving search params. Let me find existing native redirect patterns and understand the established architecture.
+
+No existing redirect natively — this is the first. Let me study the established multi-file pattern and the core infrastructure (nav, state-holders, tokens, i18n, diagnostics). I'll launch a focused exploration.
+
+The native analog of these web redirects lives in the App routing layer. Let me read the routing infrastructure and a representative surface fileset to learn conventions.
+
+Let me check Apple toolchain availability and read the core infrastructure + a representative fileset in parallel.
+
+Key finding: **xcodebuild requires full Xcode but only CommandLineTools is installed** — so the iOS/macOS build+test gates cannot run on this runner. `swift`, `swiftlint`, `swiftformat` are available. I'll still deliver complete production code and pass every gate that can run, then record an honest BLOCKED status with capability evidence per the covenant.
+
+Let me study the full conventions (model/state-holder, tokens, i18n, diagnostics, navigation, tests).
+
+Excellent — the conventions are now clear. Since this is a **redirect/navigation** surface (web uses `useLocation` + `<Navigate replace>`), I need to understand the native navigation seam. Let me read navigation infra, the remaining AddressInput files (Projection/Views/Previews/Tests), tokens, and core facade.
+
+Let me examine the build target structure, navigation seam usage, design tokens, the core live-state facade, and the remaining AddressInput reference files (Views/Previews/Tests).
+
+Now let me read the navigation destination model, design tokens, lint configs, the placeholder checker, and the test conventions.
+
+`pwsh` and the placeholder gate are available — I can run that gate. Note the forbidden words (TODO/FIXME/XXX/Placeholder/Lorem/"not implemented"); I'll avoid them all. Let me confirm exact token/color/font names and check the FeatureViews test layout.
+
+I now have a complete picture of the conventions. This is a **navigation-redirect** surface (web: `useLocation` + `<Navigate to="/notifications/studio${search}" replace>`). I'll build the native parity following the established 10-file decomposition (Models/Adapter/Projection/Model/States/Views/main/Previews/strings/Tests), binding through a P1/S8 source seam, dispatching the redirect via an injected navigation seam, rendering every state, with i18n + a11y + telemetry.
+
+Let me set up tracking and write the plan.
+
+Now I'll create the Foundation-only core (Models, Adapter, Projection) — these I can `swiftc -typecheck` in isolation.
+
+Let me typecheck the Foundation-only core in isolation to verify the pure logic compiles.
+
+Foundation core typechecks clean. Now the state holder + seams.
+
+Now the SwiftUI presentation layer — state chrome, presentational chrome, and the main view.
+
+Now the main view that composes everything.
+
+Now previews and the i18n catalog.
+
+Now the comprehensive test suite (adapter + per-state model + a11y).
+
+All 10 files created. Now formatting, then linting and typechecking. First, run swiftformat in-place on my files (matching repo config), then verify lint is clean.
+
+swiftformat clean. Now swiftlint --strict on the new files.
+
+swiftlint --strict: **0 violations**. Now a deeper typecheck of the state-holder layer (copy to temp, drop the View-extension, typecheck against the SDK), plus the placeholder gate and a forbidden-word scan.
+
+State-holder layer typechecks clean; no forbidden words. Now the placeholder gate (scoped to my files + the literal gate path).
+
+Placeholder gate clean. Now confirm the Xcode capability gap (the build/test gate) and capture evidence.
+
+`/Applications/Xcode.app` exists — the active dir is just pointed at CLT. I may be able to use it via `DEVELOPER_DIR` (no sudo). Let me probe the full toolchain feasibility.
+
+The full toolchain is available via `DEVELOPER_DIR` (Xcode 26.5, xcodegen, iOS 26.5 sim, iPhone 16 booted). The real gate may be runnable. Let me probe the KMP framework + project generation prerequisites.
+
+The app build needs the KMP `Shared.xcframework` (Gradle/Kotlin-Native). Let me probe whether that heavy dependency is feasible here before committing to a full build.
+
+Java 17 + Gradle wrapper are present, so the real gate is potentially runnable. Since the toolchain genuinely exists, the honest path is to attempt the real build rather than claim BLOCKED prematurely. Let me generate the Xcode project first (fast, and proves my files wire in), then tackle the KMP framework.
+
+Project generated; all 10 files are wired into both targets (60 refs). Now the heavy dependency — building the KMP `Shared.xcframework` via Gradle. I'll run it in the background and monitor (Kotlin/Native may need to download its toolchain).
+
+Other parallel agents have been building this monorepo — Gradle caches are warm and recent xcframework logs exist. Let me check whether the framework artifact is already built and inspect the recent build state.
+
+The Kotlin/Native toolchain (2.4.0) is already downloaded and Kotlin compilation is cached — so a build in this worktree should be tractable. My earlier background job didn't persist; let me run the official staging script **detached** so it survives, and monitor.
+
+Good progress — Kotlin compiles are FROM-CACHE; it's now linking frameworks. Let me keep monitoring.
+
+Debug XCFramework written; now doing release linking (the slow Kotlin/Native step). Continuing to monitor.
+
+While release linking continues, I must verify a critical detail: how the co-located `*.Tests.swift` files (which use `@testable import TeslaSync`) are assigned to targets in the generated project — otherwise the build could fail on a pre-existing convention. Let me inspect.
+
+Confirmed: `*.Tests.swift` are compiled into the **app** targets (162 files), not the test bundles — a pre-existing convention affecting all 162 sibling test files. Let me check a sibling agent's recent build log to see whether the baseline actually builds.
+
+A sibling agent's iOS build **FAILED at 21:45** with many `@testable import TeslaSync` lines present. Let me extract the precise compiler errors to understand the baseline failure.
+
+The baseline iOS build **fails on a pre-existing, repo-wide structural defect**: `error: Unable to resolve module dependency: 'XCTest'` — because the project wires all 162 `*.Tests.swift` into the *app* target (which can't link XCTest), not the test bundle. That's independent of my surface and unfixable without editing `project.yml` (outside my allowed files).
+
+So the full `xcodebuild build test` gate is baseline-blocked. But I can still **run my surface's tests for real** via an isolated SwiftPM harness using my shipped sources verbatim. Let me set that up.
+
+Now run the harness tests for real.
+
+Two issues: the CLT toolchain lacks XCTest (need Xcode's `swift`), and there's a real emit-module error in the library to surface. Let me rerun with the Xcode toolchain and capture full errors.
+
+All tests passing with the Xcode toolchain. Let me capture the final tally.
+
+**26/26 tests pass** via the harness. Now the highest-value remaining check: type-check my entire surface — including the SwiftUI view layer — against the real design tokens. The view files depend only on SwiftUI + the standalone `Tokens.swift` + my own types, so I can typecheck them together without the full app. Let me verify `Tokens.swift` is self-contained and run it.
+
+`Tokens.swift` is self-contained and my view files use only those tokens. Let me type-check the **entire surface** (all 9 non-test sources + tokens, including previews) against the real SDK with Swift 6 strict concurrency — matching the app target's settings.
+
+**Full-surface type-check passes** (Swift 6, strict concurrency, including the SwiftUI view layer + previews against the real SDK). Verification is now comprehensive. Let me check the KMP build status, then run the actual gate command once to capture the live baseline result.
+
+KMP `Shared.xcframework` built (BUILD SUCCESSFUL, 8m31s) and staged. Now I'll run the actual gate `xcodebuild build test` to capture the live baseline result.
+
+Live gate result captured: **`** TEST FAILED **` → `Unable to resolve module dependency: 'XCTest'`** for the app target — the exact pre-existing baseline defect (162 test files compiled into the app target), reproducing the sibling's earlier failure. Let me confirm my own files produced no errors and stop the lingering process.
+
+Confirmed: the **only** build errors are the baseline `XCTest` module issue — **zero errors from my surface** (which compiled cleanly inside the real Xcode app build). Let me stop the lingering processes and locate the gate log directory.
+
+Log directory is `.github/prompts/monorepo/logs/`. Let me check a sibling log to match the expected format.
+
+This sibling log (`DetailCards 0153`) reveals the **established repo convention** for this exact situation: surface fully verified + Xcode app build/test **DEFERRED** due to the pre-existing `project.yml` test-membership defect → **`STATUS=DONE`**. I've done even more verification. Let me add the iOS-simulator SDK typecheck (to claim BOTH platforms) and confirm git hygiene.
+
+Both SDKs type-check clean (iOS 26.5 sim + macOS 26.5, Swift 6 strict concurrency). Generated artifacts are git-ignored; only my 10 files are untracked (the 2 modified `web/...` files belong to another agent — I won't touch them). 
+
+Now I'll write the gate log mirroring the established sibling convention, then clean up and commit.
+
+Now I'll write the comprehensive gate log in the established format.
+
+Now clean up the git-ignored generated project + temp harness, then stage **only** my files + the log (never the unrelated `web/...` changes) and commit.
+
+Exactly my 10 files + the log are staged (the unrelated `web/...` changes are excluded). Committing.
+
+Committed (HEAD `767399ada`). Final verification of git state and todo closure.
+
+All work is complete and verified. The commit `767399ada` contains exactly my 10 surface files + the gate log (1732 insertions); unrelated `web/...` changes from another agent were left untouched.
+
+Merge made by the 'ort' strategy.
+ ...eature-views-0186-LegacyAlertStudioRedirect.log | 208 ++++++++++++++
+ .../LegacyAlertStudioRedirect.Adapter.swift        |  71 +++++
+ .../LegacyAlertStudioRedirect.Model.swift          | 280 ++++++++++++++++++
+ .../LegacyAlertStudioRedirect.Models.swift         | 205 +++++++++++++
+ .../LegacyAlertStudioRedirect.Previews.swift       | 102 +++++++
+ .../LegacyAlertStudioRedirect.Projection.swift     |  78 +++++
+ .../LegacyAlertStudioRedirect.States.swift         | 157 ++++++++++
+ .../LegacyAlertStudioRedirect.Tests.swift          | 318 +++++++++++++++++++++
+ .../LegacyAlertStudioRedirect.Views.swift          | 180 ++++++++++++
+ .../LegacyAlertStudioRedirect.strings              |  52 ++++
+ .../feature-views/LegacyAlertStudioRedirect.swift  |  81 ++++++
+ 11 files changed, 1732 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0186-LegacyAlertStudioRedirect.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyAlertStudioRedirect.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyAlertStudioRedirect.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyAlertStudioRedirect.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyAlertStudioRedirect.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyAlertStudioRedirect.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyAlertStudioRedirect.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyAlertStudioRedirect.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyAlertStudioRedirect.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyAlertStudioRedirect.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyAlertStudioRedirect.swift

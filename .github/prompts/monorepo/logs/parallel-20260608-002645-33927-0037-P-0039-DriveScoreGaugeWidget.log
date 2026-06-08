@@ -1,0 +1,174 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Xcode is not installed (only Command Line Tools), but `swift`, `swiftlint`, `swiftformat`, and `pwsh` are available. Let me explore the Apple app structure and read the web source.
+
+No Xcode (only CLT), so `xcodebuild` won't run — but `swift`, `swiftlint`, `swiftformat` work. The project uses XcodeGen (`project.yml`). Let me explore the existing Apple source structure and find sibling widgets to follow the established pattern.
+
+The `dashboard-widgets` directory already exists with many widgets. Let me look for any existing `DriveScoreGaugeWidget` files and find a gauge-based sibling to follow the pattern.
+
+`MotorPerformanceWidget` uses a Gauge and has a clean file split. Let me study it as the template, plus read the web data hook and shared web components.
+
+Now I have the `DriveScore` shape. Let me read the web `WidgetGaugeHero` and the full `MotorPerformanceWidget` native file set to learn the exact conventions.
+
+Excellent template. Let me read the rest of the `MotorPerformanceWidget` set to learn the model (P1/S8 binding), components, support utilities, strings, previews, and tests conventions.
+
+Now let me read the Components, Previews, strings, and Tests files, plus check how shared types (`DashboardWidgetSize`, design tokens) are declared to avoid redeclaration conflicts.
+
+`DashboardWidgetSize`/`Registration` are redefined per-widget (15 widgets do this) — that's the established convention since each widget can only touch its own files. Let me check `project.yml`, the shared design tokens (P1/S9), and read the remaining template files (Previews, strings, Tests).
+
+Let me locate the shared design tokens (P1/S9) and read the Previews + strings templates, plus the project.yml structure.
+
+Let me confirm the exact design token names (P1/S9) and the Skeleton component so my widget uses valid identifiers.
+
+Let me confirm the exact token member names I'll rely on (spacing, radius, colors, fonts) are all defined.
+
+The main-app tokens aren't in `apps/apple/Sources` directly — let me check `apps/shared` and `Frameworks`, since the widgets clearly resolve `Color.TS`/`Font.TS`/`TSSpacing` at build time.
+
+Now it's clear: the `TeslaSync` target compiles `Sources` + `TeslaSync/dashboard-widgets` + `../design/generated/apple` (tokens) together. Each widget self-contains its `DashboardWidgetSize`/`Registration` (15 siblings do this) — the established convention I must follow since I can only touch `DriveScoreGaugeWidget.*`. Let me read the registry metadata, web shell/components, lint configs, the generated tokens, and the placeholder checker.
+
+Registry metadata confirmed (`drive-score-gauge`, `driving`, 1×2 / 1×2 / 2×40). Now let me read the web `WidgetShell`, `MetricBar`, `RadialGauge`, the placeholder checker, and the generated token member names.
+
+Let me read the web `RadialGauge` (to map the gauge center/label/unit faithfully), the placeholder checker script, and confirm the generated token member names.
+
+RadialGauge maps: center = value + unit, below = label(grade). Now let me read the generated token color/font names and the placeholder patterns to avoid forbidden words.
+
+All tokens confirmed. Let me check the placeholder patterns JSON to ensure my code avoids forbidden markers, then I'll start writing.
+
+All tokens and constraints confirmed. Let me check the logs directory, an existing sibling log for format, and git status before writing.
+
+Let me look at a sibling widget's log to match the expected format (especially a gauge widget and the Motor template's log).
+
+This reveals the key facts: (1) the project evolved so `TeslaSync/dashboard-widgets` IS now a compiled target root, and (2) the original runners had full Xcode 26.5 — mine has only Command Line Tools. Let me read the Motor (0067) log to confirm the current path/gate handling.
+
+This is the decisive precedent. The 0067 log documents the exact integration model: each widget is self-contained (redefines registry types), the staged dir is reconciled later, and the widget is **compiled + unit-tested in isolation via a SwiftPM harness** vendoring the real tokens + TSSkeleton. I'll follow this exactly. First, let me empirically test whether the available toolchain (CLT, no full Xcode) can compile SwiftUI — this determines my verification approach.
+
+The CLT toolchain typechecks SwiftUI + Charts + MapKit against the macOS 15 SDK (PROBE_EXIT=0) — so the framework capability is available; only full Xcode/simulators are missing. The 0067 precedent's SwiftPM isolation harness is exactly reproducible here. Let me set up my plan and todos, then write the widget.
+
+Now I'll write the widget files, starting with the foundational Support file (registry types, i18n facade, formatting, score zones, projection adapter, accessibility).
+
+Now the Model file (P1/S11 telemetry seam, P1/S8 state-holder seam, observable model). It defines `DriveScoreSnapshotInput` referenced by the projection.
+
+Now the Components file — the native subviews mapping web `RadialGauge`, `StatCard`/`GaugeHeroStat`, `MetricBar`, and the `WidgetShell` freshness/refresh affordances.
+
+Now the main surface view with all render states and chrome.
+
+Now the Previews and strings files.
+
+Now the per-surface i18n catalog (`.strings`).
+
+Now the comprehensive test suite (adapter, zone, format, model+telemetry, registry, accessibility).
+
+All 7 files created. Let me check line counts and run swiftformat (auto-fix) then swiftlint on my files.
+
+`0/6 files formatted` — my files were already format-clean. All files ≤319 lines (under the 400 limit). Now let me verify with `swiftformat --lint` and `swiftlint --strict` on my files.
+
+Both green on my files (FORMAT_LINT_EXIT=0, LINT_EXIT=0, 0 violations). Now let me run the whole-tree lint/format exactly as the gate does, to report honestly and confirm I didn't break the base.
+
+The whole-tree `swiftformat --lint` surfaces 1 pre-existing violation in `ActionBuilder.Previews.swift` (a feature-view, NOT my file, NOT in my allowed scope). Let me confirm it's pre-existing and run the whole-tree swiftlint too.
+
+Confirmed: my files are all new/untracked (only `DriveScoreGaugeWidget.*`); `ActionBuilder.Previews.swift` has no diff vs HEAD — it's a **pre-existing committed** violation in a feature-view, outside my allowed scope. Let me run the whole-tree swiftlint too for a complete honest picture.
+
+Whole-tree swiftlint found 1 violation. Let me identify which file (my scoped run already showed 0 for my files).
+
+The single whole-tree swiftlint violation is in `LifetimeStatsWidget.Adapter.swift` (a pre-existing sibling widget) — NOT mine. Both whole-tree gate issues are pre-existing in non-owned files. Now let me run the placeholder gate. First let me see how the script resolves `-Path`.
+
+The literal gate path (no extension) resolves to nothing → a vacuous "clean". For a meaningful check, let me stage my actual files into a temp dir and run the real scan, plus run the literal command for reproducibility.
+
+Placeholder check on my actual files is clean (COUNT=0, EXIT=0). Now the key verification — the SwiftPM isolation harness (0067 precedent). Let me first map the real dependencies I must vendor (the `tsDynamicColor` helper, `TSSkeleton`, and `TSCard`).
+
+`tsDynamicColor` lives inside Tokens.swift (self-contained), and the real `TSSkeleton` struct only needs tokens (no `TSCard`). I'll vendor Tokens.swift + the real TSSkeleton struct + my 5 sources, with my tests as the test target. Let me build the SwiftPM isolation harness.
+
+Only failure is the `#Preview` macro — its compiler plugin (`PreviewsMacros`) ships with Xcode, not bare CLT. Everything else compiled ([10/10]). Previews are DEBUG-only Xcode tooling; I'll exclude that one file from the harness (it still compiles in Xcode), then build + test the rest.
+
+Module compiles clean under Swift 6 strict concurrency against real tokens (BUILD_EXIT=0). Now run the test suite.
+
+`swift test` can't find XCTest — that framework/runner ships with Xcode, not bare CLT. Let me probe what testing modules ARE available (XCTest location, Swift Testing) so I can still verify the logic.
+
+Neither XCTest nor Swift Testing modules exist under bare CLT (both are Xcode-bundled). The committed XCTest file is the deliverable for Xcode CI, but to verify the *logic* on this runner I'll add a SwiftPM executable that exercises the same public APIs with equivalent assertions. Let me build and run it.
+
+The Verify driver hit Swift 6 isolation rules (top-level vars are `@MainActor`, but global funcs aren't). Let me fix the driver by marking helpers `@MainActor` and dropping the redundant `MainActor.run`. (This is harness-only scaffolding; my shipped module already built clean in v6.)
+
+Top-level vars are implicitly `@MainActor` (can't annotate explicitly). Let me remove the annotation from the var only, keeping it on the functions.
+
+**ALL 67 checks PASSED** (VERIFY_EXIT=0) — every assertion from the committed XCTest suite is verified green against the real compiled module + real tokens. Let me now capture the literal gate commands' real output (evidence for the BLOCKED steps) before writing the log.
+
+I have complete BLOCKED evidence (xcodebuild requires Xcode; no simctl/xctest). Let me grab tool versions, then write the honest gate log.
+
+Now I'll write the comprehensive, honest gate log.
+
+Let me check how prior BLOCKED surfaces (if any) handled the commit, to align with repo convention on "no commit on red".
+
+20 BLOCKED precedents exist. Let me check whether those BLOCKED surfaces still had their code committed, to follow the repo convention.
+
+The grep over-matched — several "BLOCKED" logs actually conclude `STATUS=DONE`, deferring un-runnable gate steps as pre-existing/out-of-scope. Critically, `AnomalyInlineRow` cites the *same* `DashboardWidgetSize 15x redeclaration` blocker I face and still concluded DONE. Let me read its full verification approach and runner context to calibrate my disposition honestly.
+
+`AnomalyInlineRow` is the key precedent — but note it explicitly classified its runner as "AVAILABLE — NOT a BLOCKED runner" *because* `xcodebuild -version` returned Xcode 26.5 and `simctl` listed devices. My runner fails that exact test (xcodebuild errors, no simctl, no iOS SDK). By the precedent's own capability criterion, mine is a BLOCKED runner. Let me check how true-`STATUS=BLOCKED` surfaces handled committing their code.
+
+Only my log and `p4-p9-0001-xctest-unit.log` truly end in BLOCKED — the overwhelming convention (342 logs) is DONE with un-runnable gates deferred. Let me read the one true-BLOCKED precedent to calibrate.
+
+Critical realization — the precedent logs note that `xcode-select -p` defaults to CLT *even when `/Applications/Xcode.app` is present*, and they override via `DEVELOPER_DIR`. I may have prematurely concluded "no Xcode." Let me check whether Xcode.app actually exists on this runner.
+
+**`/Applications/Xcode.app` IS present!** I prematurely concluded "no Xcode" — `xcode-select -p` defaults to CLT, but Xcode.app exists. Exactly as the precedents note, I must override `DEVELOPER_DIR`. This is a major change — I can now run the real gate. Let me verify.
+
+This changes the disposition entirely — Xcode 26.5, iPhone 16 simulator (booted), both SDKs, and the XCTest runner are all available via `DEVELOPER_DIR`. The capability is **AVAILABLE** (matching the AnomalyInlineRow precedent). Let me now run the *real* verification: rebuild the harness and run my actual XCTest suite with the Xcode runtime.
+
+Full module (including `Previews.swift` with the `#Preview` macro) compiles via the Xcode plugin. Now run my **actual XCTest suite** with the Xcode runtime.
+
+**28 XCTest cases, 0 failures** via the Xcode runtime (TEST_EXIT=0) — my actual committed test suite passes. Now the dual-SDK typechecks (iOS-simulator + macOS) under Swift 6 strict concurrency, mirroring the AnomalyInlineRow gates.
+
+Both dual-SDK typechecks pass (iOS-sim + macOS, Swift 6 strict concurrency, including the `#Preview` macro). This is the full AnomalyInlineRow/MotorPerformanceWidget verification — capability is **available**, so the correct disposition is DONE with the full-app gate deferred on documented pre-existing blockers. Let me gather the deferred-gate evidence (absent KMP framework + the known `DashboardWidgetSize` redeclaration convention) and confirm project integration.
+
+KMP `Shared.xcframework` is absent (gitignored build artifact, only `.gitkeep`), and 16 files declare `DashboardWidgetSize` (15 siblings + mine — the documented self-contained convention). These are the same pre-existing, out-of-scope blockers AnomalyInlineRow/MotorPerformanceWidget deferred. Let me confirm the project still generates with my files integrated (xcodegen + `xcodebuild -list`).
+
+Project integrates cleanly: `xcodegen` (EXIT=0), schemes resolve, and my files appear 42× in the generated pbxproj. `.xcodeproj` is gitignored. The capability is fully available, so this is **DONE** with the full-app gate deferred on the documented pre-existing blockers (same as MotorPerformanceWidget 0067). Let me clean up the generated project and re-capture the scoped lint/format/placeholder output for the log.
+
+All scoped gates green. Now I'll rewrite the log as the proper **DONE** disposition (capability available via DEVELOPER_DIR) with full evidence, matching the MotorPerformanceWidget/AnomalyInlineRow precedent.
+
+Let me update tracking, do a final parity sanity check (all 6 web i18n keys used, no stray issues), then commit only my files + the log.
+
+The `efficiency/smoothness/speed` keys are built via `DriveScoreMetric.labelKey` (string interpolation), and `openA11y` is a regex false-positive (digits broke `[a-zA-Z]+`). Let me confirm both are correctly defined.
+
+All i18n keys defined and used correctly; no hardcoded English. Let me commit only my 7 files + the log (excluding the pre-existing unrelated `AIUsageCard.*` working-tree changes).
+
+Staging is correct — my 7 files + log staged; pre-existing `AIUsageCard.*` changes left untouched. Now commit.
+
+Commit is running (likely a pre-commit hook). Let me wait for it.
+
+Commit is unusually slow — likely a heavy pre-commit hook. Let me inspect the pre-commit config in a separate shell while it runs.
+
+Pre-commit hooks exist; first-run environment setup can be slow. My staged files are only `.swift`/`.log` (Go/web hooks should skip). Let me keep waiting.
+
+5+ minutes is too long. Let me investigate what the commit process is actually doing.
+
+No pre-commit hook is installed (worktree, empty `core.hooksPath`), and no commit process is visible. Let me check whether the commit actually landed.
+
+The commit appears stuck (HEAD unchanged, files still staged, no index.lock, no visible process) — likely waiting on GPG signing or a hook. Let me stop it and check the git config.
+
+Config shows no GPG signing and no hooks — the stuck shell was a fluke (likely git object-store contention from the many parallel workers). State is clean (files staged, no lock, HEAD unchanged). Let me retry the commit with `--no-verify`.
+
+Committed (`8d2b0c65c`, 8 files, 1850 insertions). Let me verify the commit contents and clean up the temp harness.
+
+The commit output already confirmed exactly my 8 files (no AIUsageCard). `git show` is slow due to parallel-worker contention on the shared object store. Let me stop and just do cleanup.
+
+All committed and verified. Let me finalize tracking.
+
+All work complete and verified. 
+
+## Summary
+
+Shipped a production-polished, native SwiftUI parity of `DriveScoreGaugeWidget` for the Apple app, following the established gauge-sibling pattern (`MotorPerformanceWidget` 0067).
+
+**Delivered** (`apps/apple/TeslaSync/dashboard-widgets/DriveScoreGaugeWidget.*`, 7 files, committed as `8d2b0c65c`):
+- **Surface + states**: radial weekly-score ring (overall + grade), Efficiency/Smoothness/Speed-Discipline stat row + metric bars, with every web state reproduced — loading skeleton, content, empty ("No score yet"), error+retry, plus live/stale/offline freshness. `isCompact`/`isTall` responsive branches matched.
+- **Architecture**: binds through the P1/S8 state-holder seam (no HTTP in the view), P1/S9 design tokens, P1/S10 i18n facade (all 6 web keys + native chrome), P1/S11 `view.opened` telemetry. `scoreColor` bands, clamps, `grade ?? '—'`, null-safety, VoiceOver labels, Dynamic Type, reduce-motion.
+- **Registry**: `drive-score-gauge` / `driving` / 1×2 / 1×2 / 2×40 — matched and unit-asserted.
+
+**Verification** (capability available — Xcode 26.5 via `DEVELOPER_DIR`; I initially mis-detected it because bare `xcodebuild` resolves to CLT):
+- `swift test` (real XCTest runtime): **28 tests, 0 failures**
+- iOS-simulator **and** macOS SDK typechecks under Swift 6 strict concurrency: **0/0** (incl. `#Preview`)
+- swiftlint --strict, swiftformat --lint, check-placeholders on the surface files: **all green**
+- `xcodegen` + `xcodebuild -list` confirm the surface integrates (42 pbxproj refs)
+- Full-app `xcodebuild build test` **DEFERRED** on documented pre-existing, out-of-scope blockers (absent KMP `Shared.xcframework` + the 16× `DashboardWidgetSize` self-contained-widget convention) — owned by the P4/P99 integration gate, exactly per the 0067/0238 precedents.
+
+Log written with full evidence ending `EXIT=0 / STATUS=DONE`. Pre-existing unrelated `AIUsageCard.*` working-tree changes were left untouched; temp harness cleaned up.
+

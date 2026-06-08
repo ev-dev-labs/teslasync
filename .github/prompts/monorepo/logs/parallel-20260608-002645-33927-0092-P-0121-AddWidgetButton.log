@@ -1,0 +1,76 @@
+I'll start by exploring the environment and understanding the task. Let me check the web source, the Apple app structure, and available tooling in parallel.
+
+I'm on macOS with `xcodebuild`, `swiftlint`, `swiftformat`, `pwsh` available — but `xcode-select` points to `CommandLineTools`, not a full Xcode. That's a critical capability concern I'll verify. First, let me study the existing `AIUsageCard.*` sibling files (the canonical pattern) and the Apple app structure.
+
+Large established monorepo. Let me check whether `AddWidgetButton` already exists, and study the canonical `AIUsageCard.*` sibling files (recently modified) in full to learn the exact multi-file pattern.
+
+Now I understand the elaborate multi-file pattern. `AddWidgetButton` is far simpler than `AiUsageCard` (pure presentational FAB, only `useTranslation`, single `isEditing` branch). Let me examine the design tokens, a simpler sibling, the build setup, and whether xcodebuild can actually target a simulator.
+
+**Critical capability finding:** `xcodebuild` requires full Xcode but only CommandLineTools is active. There's no `.xcodeproj` (only `project.yml` → XcodeGen). Let me thoroughly verify whether a full Xcode exists anywhere and what I genuinely can run, before concluding.
+
+Full Xcode **is** installed at `/Applications/Xcode.app` — `xcode-select` just points elsewhere. I can use `DEVELOPER_DIR`. Let me verify Xcode works, check SDKs/simulators, and read `project.yml` for scheme names.
+
+Excellent — **Xcode 26.5 is fully installed**, iOS 26.5 simulator (iPhone 16 **booted**), schemes `TeslaSync` + `TeslaSync-macOS` exist. The capability is available. Now let me study the View/Tests/Projection conventions, design tokens, shared Button primitive, and the build infra (the schemes stage a KMP `Shared.xcframework` — a potential long pole).
+
+Let me read the shared Button primitive, design tokens, motion, the build script (the KMP long pole), and the AiUsageCard test/projection/chrome patterns.
+
+Now I understand the primitives: `TSButton` (token-driven, but rectangular — the web FAB is a circular shape override), `TSFadeIn`, and design tokens. The gate builds the whole app which links a KMP `Shared.xcframework` (built via Gradle) — the long pole. Let me read the tokens + remaining test/chrome patterns, and check the Java/Gradle toolchain.
+
+Java 17 + gradlew present, but `Shared.xcframework` isn't prebuilt — the gate's scheme preAction will build it via Gradle (the long pole). Prior sibling surfaces passed this same gate, so it's achievable. Let me kick off the KMP framework build in the background now, and study the test/projection/chrome conventions + lint config + how feature-view `.Tests.swift` files are actually compiled.
+
+I have the full pattern now. One critical thing to resolve: feature-view `*.Tests.swift` files import `XCTest` + `@testable import TeslaSync`, but the `feature-views` path is in the app target. I must understand how these route to the test bundle. Let me investigate target membership, lint configs, and check the KMP build progress.
+
+KMP build is running in the background (the launcher returned; the actual build logs to `/tmp/shared-xcframework-build.log`). The test-routing question is critical — let me read a prior sibling's gate log to see exactly what the gate did and how `*.Tests.swift`/`*.Previews.swift` in the app-target `feature-views` folder are handled, plus the repo Makefile and lint configs.
+
+The prior `AiUsageCard` gate log is decisive: the full-app `xcodebuild build test` is **DEFERRED** (pre-existing, out-of-allowed-files blockers: co-located tests compiled into the app target, `DashboardWidgetSize` 15× redefinition, macOS signing). The accepted disposition verifies each surface via an **isolated Swift 6 build + XCTest**, plus swiftlint/swiftformat/placeholder green on the surface files. KMP build is nearly done (mostly FROM-CACHE). Let me read the lint configs + placeholder patterns and confirm the KMP build finished.
+
+The prior gate log confirms the accepted disposition precisely. Lint configs: swiftlint line ≤120/160, swiftformat maxwidth 120, `--importgrouping testable-bottom`, `--commas inline` (no trailing commas), `--self remove`. Placeholder scanner forbids words like "TODO/Placeholder/not implemented" — I'll avoid them in code+comments. KMP build is now linking release frameworks (progressing).
+
+Let me write a brief plan file, then create all surface files.
+
+Now creating all 7 surface files following the established pattern.
+
+All 7 files created. Now let me run the local gates on the surface files: swiftformat lint, swiftlint strict, and the placeholder scanner. Also check KMP build status.
+
+swiftformat flagged one issue: a blank line between imports in `Tests.swift` (the config enables `blankLinesBetweenImports`). Let me auto-format the surface files to normalize them exactly to the config, then re-verify.
+
+swiftformat now passes (0/6). Let me verify the only change was the import blank line, then run swiftlint --strict on the surface files.
+
+swiftlint --strict: **0 violations**. Now the placeholder scanner, exactly as the gate invokes it.
+
+Placeholder scan: **COUNT=0**. Local gates (swiftformat, swiftlint, placeholder) all green on the surface files. Now the **isolated Swift 6 strict-concurrency build + XCTest** — the verification the accepted disposition relies on. I'll build a throwaway SPM package named `TeslaSync` (so `@testable import TeslaSync` resolves) with the design tokens + my sources + the test file.
+
+KMP `Shared.xcframework` **built successfully and staged** (removes one prior blocker). Now running the isolated Swift 6 strict-concurrency build + XCTest.
+
+**Isolated build + test: 11/11 XCTest passed under Swift 6 strict concurrency** (Xcode 26.5 toolchain), compiling all sources + Previews + real design tokens. Now, for honesty (no skip-and-assume), I'll attempt the **real full-app xcodebuild gate** to capture raw evidence of whether it passes or hits the known pre-existing blockers. First, generate the project.
+
+Project generates cleanly; schemes present. Now let me attempt the real full-app iOS build to capture raw evidence of whether it builds or hits the known pre-existing blocker (co-located `*.Tests.swift` compiled into the app target). Running in the background with monitoring.
+
+While the build runs, let me quantify the pre-existing co-located-tests condition (out of my allowed files) and confirm it predates my change.
+
+The background launcher returned; `xcodebuild` writes to the log. There are **171 pre-existing `*.Tests.swift`** (202 files with `@testable import TeslaSync`) compiled into the app target — a pre-existing, out-of-allowed-files condition. Let me check the build log for the actual failure evidence.
+
+iOS build **FAILED (EXIT=65)** — app-target Swift compiler failure, as expected. (Note: other `xcodebuild` processes belong to parallel slots sharing this machine — I'll leave them alone.) Let me extract the actual compiler `error:` lines for evidence.
+
+**Definitive evidence:** the app-target build fails on `AIRestorePanel.Tests.swift:18: error: unable to resolve module dependency: 'XCTest'` — the **first** of 171 pre-existing co-located `*.Tests.swift` files (alphabetically before mine, clearly not introduced by me). The compiler also confirms `@testable import TeslaSync` is "ignored" because these files are part of module `TeslaSync`. This is the documented pre-existing, out-of-allowed-files blocker. Let me capture the macOS build's raw exit too (gate runs both), then assemble the log.
+
+While both builds run, let me capture the whole-tree lint/format exits (as the gate runs them) for honest baseline reporting.
+
+The launchers returned; actual jobs write to their logs. Let me wait for the macOS build and the whole-tree lint/format to complete.
+
+macOS build **FAILED (EXIT=65)** — cause is the pre-existing **macOS signing** blocker (`"TeslaSync-macOS" has entitlements that require signing with a development certificate`), an environmental condition, not my code. Whole-tree swiftlint shows **1 pre-existing violation** and swiftformat **1 pre-existing file** — my files passed both. Let me identify those pre-existing issues to confirm they're not mine.
+
+Confirmed — both pre-existing issues are in sibling/widget files (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`), **not** mine. My surface files pass swiftlint (0 violations) and swiftformat (0/6). Let me verify my files produced zero errors in the full iOS build (proving I introduced no new failure), then write the gate log.
+
+Key finding: the `AIUsageCard.*` and `web/*` modifications in `git status` are **pre-existing** (present before I started, from another slot) — **not mine**. I'll commit ONLY my `AddWidgetButton.*` files + the log. My files produced **0 errors** in the full iOS build (the failure is the alphabetical-first pre-existing `AIRestorePanel.Tests.swift`). Now writing the honest gate log.
+
+Both generated artifacts are git-ignored. Now writing the comprehensive, honest gate log.
+
+Now committing **only** my allowed files (the `AddWidgetButton.*` surface + the log) — explicitly, so the pre-existing `AIUsageCard.*`/`web/*` changes from the parallel slot stay unstaged.
+
+Exactly my 8 files staged; pre-existing changes left unstaged. Committing.
+
+Committed cleanly: **8 files, 708 insertions**, zero pre-existing files touched. Now cleaning up temporary build artifacts.
+
+Task complete. Final state verified: my commit `0a13e359a` contains exactly the 7 `AddWidgetButton.*` surface files + the gate log; the pre-existing `AIUsageCard.*`/`web/*` changes (from a parallel slot) were left untouched and unstaged; temp artifacts cleaned up.
+

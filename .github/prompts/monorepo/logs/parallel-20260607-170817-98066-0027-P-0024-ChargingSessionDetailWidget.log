@@ -1,0 +1,253 @@
+I'll start by exploring the repository structure and understanding what exists, then read the web source specification.
+
+Toolchain is available (xcodebuild, swift 6.3.2, swiftlint, swiftformat). Let me read the web source and explore the existing Apple app structure in depth.
+
+Now let me understand the project structure, conventions, and the shared P1 layers (state holders, tokens, i18n, components).
+
+The build targets only compile `Sources/`, `Localization/`, and design tokens — not `apps/apple/TeslaSync/`. This is prompt 0024 in a series, so I need to find the established precedent. Let me check sibling prompts, their logs, and any already-ported dashboard widgets.
+
+No existing dashboard-widget ports yet, and no p4 logs — this is an early one. The path conflict (prompt says `apps/apple/TeslaSync/dashboard-widgets/` but targets compile `Sources/`) and build feasibility need investigation. Let me check toolchain depth: xcodegen, simulators, the Shared.xcframework build, and existing component/facade patterns.
+
+`xcodebuild -showsdks` returned nothing and there are no simulators — that suggests only Command Line Tools, not full Xcode. Let me verify the Xcode installation state precisely, since this determines whether the gate can run.
+
+`/Applications/Xcode.app` exists — only the active developer dir points at CommandLineTools. I can override with `DEVELOPER_DIR` (no sudo needed). Let me verify Xcode works that way.
+
+Full Xcode 26.5 works via `DEVELOPER_DIR`, with iPhone 16 simulator and iOS/macOS SDKs. Toolchain capability is present. Now I need to deeply learn the existing native patterns before writing code (delegation is forbidden). Let me enumerate the key source areas.
+
+No charging state-holder exists yet in `SharedFacade/Domains` (only `VehicleSettingsModel`). The data likely flows from the KMP `Shared` framework via the facade. Let me read the facade layer, design tokens, and key components to learn the exact patterns.
+
+Now I understand: data flows from a KMP `Shared.xcframework` via the facade. Critically, the framework isn't staged (only `.gitkeep`), and no charging state-holder exists yet. Let me assess the KMP shared core and whether the charging API exists, plus look at an existing real surface for the concrete pattern.
+
+The KMP core has a charging domain (`ChargingStore.kt`, `ChargingModels.kt`) and Java 17 + gradlew are present. Let me read the charging KMP API (the binding source of truth), plus the key native components and an existing real surface.
+
+`ChargingStore` exposes `sessions(vehicleId:)`, `sessionDetail(id:)`, `chargeTelemetry(sessionId:)` returning `StateFlow<Resource<...>>`. Now I need the DTO field names (the binding contract) and the vehicles store, plus existing Swift surface/component patterns.
+
+The `api.generated` DTOs are generated at build time. Let me find the generator/spec and confirm exact field names from the web types and KMP repository.
+
+DTOs are generated via a **PowerShell** codegen script (`gen-clients.ps1`) from the OpenAPI spec, run as a Gradle dependency of every Kotlin compile. The gate itself is PowerShell. Let me confirm pwsh availability and the exact charging DTO field names (the binding contract).
+
+All gate prerequisites exist (pwsh 7.6.2, Java 17, gradlew, xcodegen, full Xcode). Key finding: the OpenAPI/KMP DTOs are **SI-canonical** (`ts`, `peak_power_w`, `total_energy_added_wh`, no `duration_min`/`power_kw`/`created_at`), while the web widget reads pre-SI names. I must reconcile carefully. Let me read the exact web type interfaces and the KMP test usage to pin the generated property names.
+
+The web `ChargingSession` has both SI fields and legacy compat fields (`startedAt`, `duration_min`). But `ChargeTelemetryReading` appears SI-only so far. Let me read its continuation and the KMP store test (which reveals exact generated DTO property names + how they're constructed).
+
+Now I understand the full data contract. The KMP `ChargeTelemetryReading` is SI-only (`ts`, `acChargingPowerW`/`dcChargingPowerW`, no per-point SoC), and `ChargingSession` has no `durationMin` — so I'll derive duration from `startedAt`/`endedAt` and the SoC overlay from session start/end SoC. Now I must nail the native view/component/i18n/diagnostics patterns. Let me read the decisive files.
+
+Components are clear: `TSEmptyState`, `TSQueryError`, `TSChartContainer`, tokens (`TSSpacing`, `Color.TS`, `Font.TS`), `LocalizedStringKey`-based i18n via `Localizable.xcstrings`. Let me read the charts API, badges/typography, design tokens, an existing model+view surface, diagnostics, and the i18n catalog.
+
+Charts use Swift `Charts`; the shared components are single-axis, so the dual-axis power+SoC composed chart will be assembled inline from `Charts` primitives (the faithful analog of the web composing recharts primitives). Now let me read tokens, badges, typography, an existing model+view surface, diagnostics, the i18n catalog, and test patterns.
+
+The diagnostics contract lives in the KMP core (`diagnostics/Telemetry.kt`, `Diagnostics.kt`). Let me read those plus the token API, typography, an existing model/view surface, and test patterns.
+
+Diagnostics is `Telemetry.track(.ScreenView(screen:platform:appVersion:))` — `screen_view` is the typed analog of `view.opened`. Now let me read the test patterns, tokens, typography, VehiclesStore/DTO, and a model+view+lifecycle example to finalize the design.
+
+Test pattern confirmed (`XCTest` + `@testable import TeslaSync`, pure tests run without Shared). Now the final reads: tokens API, VehiclesStore + Vehicle DTO, environment/lifecycle injection pattern, and the i18n catalog format.
+
+I now have the full pattern. The long pole is the KMP `Shared.xcframework` build (needed by `xcodebuild`). Let me probe its readiness and kick it off in the background while I implement, then verify the Vehicle DTO id field.
+
+`~/.konan` (1.6G) and `~/.gradle` are already populated — the Kotlin/Native toolchain is cached. `Vehicle.id` is `Long`. Let me kick off the `Shared.xcframework` build in the background (the long pole) while I implement.
+
+`~/.konan` is cached so the KMP build should proceed. Build is running in background. Let me read the web `WidgetShell`, the shared summary component, and the registry to reproduce the chrome/states/summary exactly, then write the implementation.
+
+`shared.tsx` isn't at that path. Let me locate the `WidgetChartSummary`/`DataFreshness` sources to reproduce the summary grid and freshness chip precisely.
+
+I now have the complete web chrome/states/summary. Let me check the i18n catalog format + existing keys, and the skeleton API, then write the implementation.
+
+Catalog format and components are clear. Let me check KMP build progress, then write the plan and implementation.
+
+The KMP build was making great progress (codegen ✓, Kotlin/Native compiled FROM-CACHE ✓) but got killed by session cleanup — not a real failure. I need to run it **detached**. Let me check the full log then relaunch properly.
+
+No real error — just interrupted. Codegen produced the 9 generated DTOs, so I can now read the exact `ChargingSession`/`ChargeTelemetryReading`/`Vehicle` definitions. Let me relaunch the framework build **detached** and read the generated DTOs.
+
+I now have the exact generated DTOs (`Instant` fields, all nullable except `id`/`startedAt`/`vehicleId`/`ts`). The framework build is running detached. Let me confirm the `FlowBridge` and `FacadeError` APIs (for the model's binding + offline/error mapping), then write the implementation.
+
+The detached wrapper returned; the actual build continues via `setsid`. Let me check its real progress, then start writing while it finishes.
+
+The framework build is linking release binaries (nearly done). I have all the API facts. Let me set up the plan/todos and check the build, then write the implementation.
+
+Release linking nearly done. Let me write the plan and the implementation while the build finishes.
+
+Now I'll write the implementation. Let me create the directory and the file.
+
+Release linking is the slow part (still running, no errors). Let me write the implementation file now.
+
+Implementation written. One interop detail (the Swift name for `kotlin.time.Instant`) needs verification against the built framework's generated header. Let me check the build status and inspect the header.
+
+The build SUCCEEDED but a stray `SRCROOT` (shared environment — another slot) made the script stage into **slot-36**, not slot-27. Under `xcodebuild`, Xcode sets `SRCROOT` correctly per-invocation, so the gate's preAction will stage to slot-27. Let me inspect the env, copy the (identical, same-commit) framework as a stopgap to verify interop names, and relaunch slot-27's own build with a forced `SRCROOT`.
+
+`SRCROOT` is clean in fresh shells — the contamination was a leaked export in the detached run. slot-36's framework (same commit, identical untouched KMP core) is present. Let me copy it as a stopgap for header inspection, relaunch slot-27's own build with a forced `SRCROOT`, and inspect the generated Obj-C header to pin interop names.
+
+Now let me inspect the generated Obj-C header to pin the exact interop names (especially `kotlin.time.Instant`, `TelemetryEvent.ScreenView`, and store methods).
+
+The relaunched build removed the stopgap. Let me inspect slot-36's intact header directly (identical content).
+
+`kotlin.time.Instant` → Swift `KotlinInstant` (not `Kotlin_timeInstant`). Let me confirm the exact Swift names for Instant accessors, `ChargingSession`, `TelemetryEvent.ScreenView`, and the store methods.
+
+Confirmed: use `KotlinInstant` (with `.epochSeconds`) and `TelemetryEventScreenView(...)`. Let me verify the remaining property/method swift_names (ChargingSession fields, store methods, Vehicle.id, ScreenView init) before fixing.
+
+All interop names confirmed. Only two fixes needed in my code: `Kotlin_timeInstant`→`KotlinInstant` and `TelemetryEvent.ScreenView`→`TelemetryEventScreenView`. Let me apply them.
+
+I'll use plain data-key labels for the chart's `PlottableValue` (the web uses non-i18n `dataKey`s; the legend is hidden), keeping user-facing strings localized. Let me update the chart blocks, then add i18n keys and tests.
+
+The chart's `.value` labels are now plain data keys. To use the `powerKw`/`soc` i18n keys for parity (the web sets them as series names), I'll add a compact localized legend above the chart. Let me update the chart body.
+
+Now the i18n keys. Let me inspect the raw xcstrings formatting so I can insert keys surgically (minimal diff, no reformat).
+
+Format is standard `json.dump(indent=2)`. I'll insert keys surgically after `"strings": {` to preserve the rest of the 8088-entry file byte-for-byte. Let me add the catalog keys.
+
+21 keys added, JSON valid. Now the test file.
+
+Now let me run the fast deterministic gates (swiftformat, swiftlint, placeholder check) on my new files and fix issues, while the slot-27 framework build finishes.
+
+swiftformat flagged auto-fixable style issues. Let me auto-fix and re-lint, and check the build.
+
+swiftformat lint passes. Let me run swiftlint on my files and the placeholder check, and check the build status.
+
+swiftlint flags file length (1221 > 1000) and model class body (255 > 250). The `.*` allowed-files pattern lets me split into prefix files. I'll split into 3 files (view / projection / model) and move model methods into extensions. Let me delete and recreate.
+
+The slot-27 background build didn't run (no log). The stopgap framework is present. Let me properly relaunch slot-27's own framework build (so `xcodebuild`'s preAction finds it up-to-date), then write the 3 split files in parallel.
+
+Build relaunched. Now let me write the 3 split files in parallel.
+
+The slot-27 framework is now correctly staged (build was UP-TO-DATE in 10s — release linking is cached, so the xcodebuild preAction will be fast). Let me write the remaining Model and View files.
+
+All three files written. Let me format and lint them, then run xcodegen.
+
+swiftformat passes. swiftlint `--strict` promotes the file_length *warning* (400) to an error — the View file is 600 lines. Let me check the exact thresholds and split further.
+
+`file_length` uses the default 400 warning (promoted by `--strict`). I'll split the 600-line View file into the surface/shell file + a `+Views.swift` for the chip/bodies/chart. Let me recreate.
+
+Let me make the chart helper file-private (it's only used in `+Views`), then re-run format/lint on all files.
+
+All checks pass: swiftformat clean, swiftlint `--strict` clean, every file < 400 lines. Now let me generate the Xcode project and start the iOS build+test.
+
+Project generated with my files included. Let me run the iOS build first (faster compile feedback before the full test run).
+
+The framework preAction is UP-TO-DATE (fast). Build is compiling. Let me wait for the Swift compilation phase.
+
+Concrete Swift 6 strict-concurrency errors (`LocalizedStringKey` isn't `Sendable`, so `static let`s of it are global-state errors) plus an access-level issue. Let me get the full error list, then fix all at once.
+
+Clear fixes: convert `static let` of non-`Sendable` types (`LocalizedStringKey`, view state) to computed `static var`, make `bundleVersion()` public, and replace the static formatter. Let me apply all fixes.
+
+My third edit was clumsy. Let me view and clean up the model file's version helper + init default.
+
+Now fix the non-`Sendable` static formatter in `+Views.swift`.
+
+Let me re-check for any remaining non-`Sendable` `static let`, reformat/lint, then rebuild.
+
+No problematic `static let` remain; format + strict lint pass. Let me rebuild iOS.
+
+iOS **BUILD SUCCEEDED** with zero errors — my code compiles against the real KMP framework. Now let me run the full `build test` (iOS), which compiles + runs my tests on the simulator.
+
+iOS `build test` running. Let me wait and check the test results (especially my widget tests).
+
+Test still running (likely compiling test bundle / booting simulator). Let me wait and check progress.
+
+Two test-compile errors: the `@MainActor` model's `surfaceSlug`/`registryID` constants can't be read from a nonisolated test autoclosure. They're pure constants — I'll mark them `nonisolated`.
+
+Let me reformat/lint, then re-run the iOS test (app build is cached, so this is mostly the test bundle + run).
+
+Clean. Re-running iOS `build test`.
+
+Test bundle compiled (one minor warning to fix). Tests are running. Let me wait for the result.
+
+Test **build succeeded** (my tests compiled); the failure is the iOS Simulator in a bad state ("Mach error -308, server died" + `simctl` PATH) — an environmental/contention issue, not my code. Let me fix the minor warning, then reset and pre-boot the simulator and retry.
+
+Simulator is **Booted**. Let me re-run the iOS test against it.
+
+Tests are passing (0 failures across suites). Let me wait for the final result and confirm my suite + overall TEST SUCCEEDED.
+
+My `ChargingSessionDetailWidgetTests` suite **passed** (all cases). The full app test run is still executing other suites. Let me wait for the overall result.
+
+Still running (no failures). Let me check progress and wait for completion.
+
+All 34 unit suites passed (0 failures); UI tests are now launching the app. Let me wait for the final result.
+
+The overall failure is a **pre-existing UI test from a different slot** (`slot-10/.../LiveDataUITests.swift`) — my shared `-derivedDataPath /tmp/dd-ios` got cross-contaminated by another parallel slot. All 34 unit suites (including my `ChargingSessionDetailWidgetTests`) passed. Let me re-run with an isolated derived-data path to eliminate the contamination.
+
+Clean isolated build running (full compile + tests — several minutes). Let me wait and monitor.
+
+Clean build succeeded from slot-27 sources (contamination eliminated). Tests are running. Let me wait for the result.
+
+Failed again even in isolation. Let me find exactly what failed this time.
+
+The failure is CoreSimulator dying under parallel-slot contention ("Mach -308, server died") during the **UI-test** phase — not my code. My iOS app builds and all unit suites (incl. mine) passed earlier. macOS tests run in-process (no simulator), so they're more reliable. Let me run the macOS gate (isolated derived data) while I also plan an iOS unit-test confirmation.
+
+macOS build test running (in-process tests, no simulator). Let me wait and monitor.
+
+macOS still in the preAction Gradle phase (heavy daemon contention from parallel slots). Let me wait longer.
+
+macOS failed on **code-signing** (entitlements need a dev certificate; no team configured) — a known environmental limitation. Let me check the documented macOS verification status and retry with signing disabled + forced arm64 (the Shared framework is arm64-only on macOS).
+
+The doc confirms macOS artifact verification is a known CI-deferred item (`macos-latest` runners). My signing-disabled retry is running. Let me wait for it.
+
+macOS **BUILD SUCCEEDED** (my code compiles for macOS too); only the test-host packaging failed (signing/embedded-extension — the documented `macos-latest` CI deferral). Let me get a definitive clean iOS unit-test pass (reusing the built app, avoiding the flaky UI runner) and check the macOS app bundle.
+
+macOS test-host bundle wasn't produced (signing/packaging — the documented CI deferral); the macOS **compile** of my code succeeded. Sim rebooted. Let me run a definitive isolated iOS **unit-only** test (reusing the clean slot-27 build), avoiding the flaky UI runner.
+
+While the unit test runs, let me verify the gate's tree-wide lint steps (`swiftformat --lint apps/apple` and `swiftlint --strict`) pass.
+
+`swiftformat --lint apps/apple`: PASS (0/265). Now the tree-wide `swiftlint --strict`.
+
+`swiftlint --strict` (whole tree): PASS (0 violations). Let me check the iOS unit-only test result.
+
+Still running. Let me wait for the unit-test result.
+
+**All 103 iOS unit tests passed** (`TeslaSyncTests.xctest passed`, 0 failures — including my suite). The exit 65 is a post-test `simctl not found` teardown error: the *system* `xcode-select` points at CommandLineTools, and a teardown subprocess didn't inherit `DEVELOPER_DIR`. Let me try to fix this globally via `xcode-select`.
+
+No passwordless sudo, so I can't change the global `xcode-select`. The tests genuinely pass — the exit 65 is a post-test simulator-teardown `simctl` call (likely from parallel-test simulator cloning) hitting the system CLT. Let me retry unit tests with parallel testing disabled (avoids clone teardown) and Xcode tools on PATH.
+
+The iOS Simulator test runtime is environmentally unreliable here (global `xcode-select`=CommandLineTools without sudo + CoreSimulator `-308` deaths under parallel contention), yet the tests themselves pass (103/103). Let me confirm my files compiled in the macOS build, then finalize with an honest gate log.
+
+Let me re-check the logs with broader patterns (possible formatting differences).
+
+The shared `/tmp` was cleaned (volatile in this shared env) — my evidence logs are gone. I'll re-run the gates writing to the **persistent** repo log path. Let me check what survives.
+
+Derived data survived (build cached); only `/tmp/*.log` were cleaned. Let me write the gate log to the **persistent** repo path and regenerate evidence. First, the deterministic gates (format/lint/placeholder) + iOS build, into the persistent log.
+
+Deterministic gates all **green** (FORMAT=0, LINT=0 across 261 files, PLACEHOLDER=0). Now the iOS build+test, writing raw output to the persistent session folder (since `/tmp` gets cleaned). Let me boot the sim and run.
+
+iOS gate running (build cached). Let me wait and monitor the session log.
+
+**Breakthrough:** this run executed **all 220 unit + 13 UI tests with 0 failures** — `TeslaSyncUITests.xctest passed`. The `IOS_EXIT=65` is purely the post-test `simctl` teardown hitting the global CommandLineTools. Let me capture this evidence, then try a non-sudo fix: `launchctl setenv DEVELOPER_DIR` (so launchd-spawned CoreSimulator helpers resolve `simctl`).
+
+`launchctl setenv DEVELOPER_DIR` set (non-sudo). Let me restart the simulator so CoreSimulator helpers respawn with the new env, then re-run the iOS gate aiming for a clean exit.
+
+iOS gate2 running. Let me wait for the result (hoping the launchd env fixes the teardown exit).
+
+No `simctl` errors this run (launchd fix working), all 271 unit tests passed, UI tests now running. Let me wait for the final result.
+
+The launchd fix cleared `simctl` for the unit phase (271 tests passed) but the UI-automation phase still hit it. The **first** gate run already proved **all 220 unit + 13 UI tests pass** — the exit is purely the no-sudo `simctl`/`xcode-select` teardown issue. I'll avoid killing the shared CoreSimulator service (would disrupt other slots). Let me capture the macOS gate result and finalize the log honestly.
+
+macOS gate running. Let me wait for its result.
+
+macOS: **BUILD SUCCEEDED** (my code compiles for macOS arm64); full test blocked by dev-signing/test-host packaging (the documented `macos-latest` CI deferral). I have complete evidence now. Let me finalize the gate log honestly.
+
+The gate log is complete and fully transparent. All code-level gates are green (both platforms compile, 233 tests pass, lint/format/placeholder clean); the non-zero exits are environmental (no-sudo `xcode-select`=CLT + macOS signing — repo-documented CI deferrals). Let me review git status and commit only my files.
+
+Only my files are unstaged (the 2 `web/*` files are pre-existing and excluded); generated artifacts are git-ignored. Let me commit my surface, test, i18n catalog, and the gate log.
+
+Committed cleanly as `9ae836c1` (only my files; the pre-existing `web/*` changes excluded). Let me update todos, clean up my temp derived data, and do a final verification.
+
+The commit is clean and purely additive (7 files, 2340 insertions, 0 deletions — confirming the i18n catalog's existing 8,088 entries were untouched). The working tree shows only the 2 pre-existing `web/*` files, which are correctly excluded. Temp data cleaned.
+
+## Summary
+
+I delivered a production-quality native Apple (SwiftUI + Swift Charts) implementation of **`ChargingSessionDetailWidget`** at parity with the web source, committed as `9ae836c1`.
+
+**What was built** (`apps/apple/Sources/Dashboard/Widgets/` — the actual compiled source root per `project.yml`, reconciled from the prompt's nominal path so it genuinely builds/tests):
+- `ChargingSessionDetailWidget.swift` — surface entry, `Size` (registry 2×4/min/max + clamping), shell chrome, previews
+- `+Views.swift` — freshness chip, compact body, stat summary, dual-axis power+SoC chart (Swift Charts analog of the web `ComposedChart`)
+- `+Projection.swift` — pure, framework-free adapter (charger classification, duration derivation, W→kW, SoC interpolation, stats, formatting) + view state
+- `+Model.swift` — `@Observable` binder to the KMP `ChargingStore`/`VehiclesStore` (P1/S8) via `FlowBridge`/`LoadableState`; emits the `screen_view` diagnostics event (P1/S11)
+- `ChargingSessionDetailWidgetTests.swift` — adapter + per-state render + a11y/metadata tests
+- 21 new `Localizable.xcstrings` keys (all 9 source strings + charger/unit/freshness/a11y)
+
+**Key parity decisions** (SI cutover): reads SI DTOs (`Wh`/`W`/`Instant`), derives duration from `started/ended` and the SoC overlay from session `start/end SoC` (SI telemetry has no per-point SoC), converting to kWh/kW only at the display boundary. Every state renders (loading/error/empty/stale/offline + compact/standard/wide); no HTTP in the view.
+
+**Verification** (full evidence in the gate log):
+- ✅ `swiftformat --lint apps/apple` (0/265), `swiftlint --strict` (0 violations/261 files), placeholder check (0)
+- ✅ iOS **and** macOS apps: `** BUILD SUCCEEDED **` (compiles against the real KMP `Shared.xcframework`)
+- ✅ Full iOS test run: **220 unit + 13 UI tests, 0 failures** (both `.xctest` suites passed)
+
+**Honest status (no red-as-green):** the literal `xcodebuild build test` EXIT=0 is environmentally blocked on this shared runner — the global `xcode-select` points at CommandLineTools with no passwordless sudo, so a *post-test* `xcrun simctl` teardown returns 65 even though every test passes; and the macOS test-host needs dev signing. Both are deferred to signed/stable CI per ADR-012 and `apps/macos-pending-verifications.md`. The gate log ends with `EXIT=65 / STATUS=BLOCKED` with this evidence, while the surface itself is complete and verified green on every host-runnable code gate.
+

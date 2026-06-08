@@ -1,0 +1,274 @@
+================================================================================
+P4 · P9 · 0001 — Apple XCTest unit coverage
+Run: 2026-06-07T17:09-0700  Host: Darwin arm64  Branch: auto/20260607-170817-98066/1
+Prompt: .github/prompts/monorepo/p4-apple/P9-0001-xctest-unit.prompt.md
+================================================================================
+
+=== CAPABILITY PROBE ===
+  xcode-select -p ............ /Library/Developer/CommandLineTools  (CLT only)
+  /Applications/Xcode.app .... PRESENT → DEVELOPER_DIR override (no sudo):
+  DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+  xcodebuild -version ........ Xcode 26.5 (17F42)                          OK
+  iPhone 16 simulator ........ present; runtime iOS 26.5 (23F77)           OK
+  swift ...................... Apple Swift 6.3.2                            OK
+  java ....................... OpenJDK 17.0.19 (Homebrew)                  OK
+  swiftlint / swiftformat .... 0.x via Homebrew                            OK
+  pwsh / xcodegen ............ present (Homebrew)                          OK
+  → macOS + Xcode toolchain ARE available. The prompt's "no macOS/Xcode
+    runner" escape hatch does NOT apply. The gate is RUN FOR REAL below.
+    A SEPARATE capability gap (no code-signing identity) blocks the macOS
+    leg — see GATE EXECUTION → macOS, and DISPOSITION blocker A.
+
+  Shared.xcframework (KMP core, ADR-004) built fresh this run:
+    cd apps/shared && ./gradlew :core:assembleSharedXCFramework  → BUILD
+    SUCCESSFUL in 23m24s (GRADLE_EXIT=0); host was heavily contended (see
+    HOST CONTENTION). Staged to apps/apple/Frameworks/Shared.xcframework:
+      slices = { ios-arm64, ios-arm64-simulator, macos-arm64 } + Info.plist
+    xcodegen generate → TeslaSync.xcodeproj (schemes: TeslaSync,
+    TeslaSync-macOS, TeslaSyncWatch).
+
+================================================================================
+=== INVENTORY (implementation step 1) ===
+================================================================================
+Sources: 169 .swift across App(5), Auth(20), Components(39), Design(2),
+  Live(12), Notifications(29), Platform(32), SharedFacade(8), WatchBridge(9),
+  Widgets(10) + ContentView/TeslaSyncApp/Theme.
+  → NO Pages/ or Features/ directory anywhere under apps/apple. The only
+    ObservableObject/Store types (6) are INFRASTRUCTURE stores (LiveDataStore,
+    AppSettingsStore, …), NOT P7 page view-models. ZERO page view-models exist.
+
+Existing XCTest targets (pre-existing P1..P8; verified this run):
+  TeslaSyncTests (iOS)   Tests/Unit/**  — 44 files, 255 test methods
+  TeslaSyncUITests (iOS) Tests/UI/**    — 4 files (P9-0002 scope)
+  TeslaSyncWatchTests    Tests/Watch/** — 8 files (watchOS scheme; not in gate)
+  TeslaSync-macOSTests / -macOSUITests  — reuse Tests/Unit + Tests/UI
+
+  Unit methods by category (maps onto the Spec's non-page bullets):
+    Facade/golden : Facade 10 (incl. UnitsGoldenVectorTests → shared
+                    *-golden.json parity through the Swift Units facade)
+    Design/comp.  : Design 5, Components 6, Charts 7, DataDisplay 5, Forms 2,
+                    Maps 4
+    Auth/live/push: Auth 41, Live 29, Notifications 33
+    Widgets/intents/watch/app : Widgets 38, Platform 66 (Intents/Menus/Handoff/
+                    Spotlight/Settings), App 8
+    TOTAL = 255 across 44 files.
+
+COVERAGE GAP (logged per step 1): per-P7-parity-unit PAGE view-model state
+  tests are ABSENT because the page sources they would test DO NOT EXIST
+  (see PREDECESSOR). All nine non-page Spec categories are present.
+
+================================================================================
+=== HOST CONTENTION (material to the iOS leg — recorded for honesty) ===
+================================================================================
+This is a SHARED host running many parallel prompt slots
+(/.teslasync-parallel/20260607-170817-98066/slot-1, …). 1-min load average
+was sampled throughout the run and escalated monotonically:
+    17:32 load ~39   (Shared.xcframework release link)
+    17:46 load ~140
+    17:51 load ~113
+    17:58 load ~488  with Pages free = 916 (~3.6 MB free RAM)
+At load 488 / ~3.6 MB free RAM the kernel OOM/watchdog kills launching
+processes. This directly produced the iOS UI-test and coverage-pass launch
+failures below (NOT test-logic failures). Evidence is cited inline.
+
+================================================================================
+=== GATE EXECUTION (exact prompt commands; implementation step 5) ===
+================================================================================
+
+[1] iOS — xcodebuild -scheme TeslaSync \
+      -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    ----------------------------------------------------------------------
+    BUILD SUCCEEDED.
+    UNIT bundle  TeslaSyncTests.xctest .... PASSED  (255 tests, 0 failures)
+      "Test Suite 'TeslaSyncTests.xctest' passed at 2026-06-07 17:41:29.314"
+      This is the P9-0001 DELIVERABLE and it is GREEN.
+    UI   bundle  TeslaSyncUITests.xctest .. 3 flakes (P9-0002 scope):
+      AuthOnboardingUITests.testCancelledSignInReturnsToSignedOutShell
+      AuthOnboardingUITests.testFirstRunShowsSignInShell
+      LiveDataUITests.testLiveIndicatorAndContentAppear
+    Root cause (NOT a logic failure — zero XCTAssert/Assertion failures):
+      iOSSimulator 83717DEE-…: "Failed to launch app with identifier:
+      io.teslasync.app"; preceded by "Mach error -308 (ipc/mig) server died",
+      "[XPCErrors] Connection interrupted", "IDELaunchParametersSnapshot: The
+      operation couldn't be completed (DebuggerLLDB.…StoreError)". CoreSimulator
+      launch service died under host load.
+    IOS_EXIT=65
+
+    Re-run (sim pre-booted) to characterise the flake — same command:
+      Failing tests: AppLaunchUITests.testAppLaunchesToForeground   (ONE test,
+      and a DIFFERENT one than run 1). Different failing set across identical
+      runs ⇒ NON-DETERMINISTIC / ENVIRONMENTAL. Zero assertion failures.
+    IOS_EXIT=65 (re-run)
+
+    Verdict on the iOS leg: the deliverable (255 unit tests) passes
+    deterministically; the gate's bundled XCUITests (out of scope per "Out of
+    Scope: XCUITest flows") flake on simulator app-launch under load 39→488.
+    No clean IOS_EXIT=0 was captured because the host degraded mid-run; this is
+    reported red, not green (Covenant rule 1).
+
+[2] macOS — xcodebuild -scheme TeslaSync-macOS build test
+    ----------------------------------------------------------------------
+    ** BUILD FAILED ** — DETERMINISTIC (fails at signing validation, pre-compile,
+    in ~54 s; independent of host load). Verbatim:
+      error: "TeslaSyncWidgets-macOS" has entitlements that require signing with
+        a development certificate. Enable development signing in the Signing &
+        Capabilities editor. (target 'TeslaSyncWidgets-macOS')
+      error: "TeslaSync-macOS" has entitlements that require signing with a
+        development certificate. (target 'TeslaSync-macOS')
+      note: Disabling hardened runtime with ad-hoc codesigning.
+      xcodebuild: error: Failed to build project TeslaSync with scheme
+        TeslaSync-macOS … Could not find test host for TeslaSync-macOSTests …
+    Independent proof:  security find-identity -p codesigning -v
+        → "0 valid identities found"  (no Apple Development cert on host)
+    Why iOS passes signing but macOS cannot: iOS-Simulator products are not
+    code-signed; the macOS app + widget carry entitlements (aps-environment
+    [push], com.apple.security.application-groups, associated-domains) under
+    ENABLE_HARDENED_RUNTIME=YES, which REQUIRE a development certificate.
+    This is the ADR-012 capability gap recorded in apps/macos-pending-
+    verifications.md — macOS artifact verification is deferred to a signed
+    `macos-latest` runner. NOT hacked around (would mean editing production
+    project signing config to mask a documented capability gap).
+    MAC_EXIT=70
+
+[3] swiftlint --strict            (run from apps/apple; uses .swiftlint.yml)
+    ----------------------------------------------------------------------
+    "Done linting! Found 0 violations, 0 serious in 256 files."
+    LINT_EXIT=0
+
+[4] swiftformat --lint apps/apple
+    ----------------------------------------------------------------------
+    "0/260 files require formatting, 2 files skipped."
+    FORMAT_EXIT=0
+
+[5] ./apps/tools/check-placeholders.ps1 -Path apps/apple -Language swift
+    ----------------------------------------------------------------------
+    PLACEHOLDER_ALLOWED=2  PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+Gate formula: EXIT=0 only if IOS/MAC/LINT/FORMAT/PLACEHOLDER all 0.
+  IOS_EXIT=65  MAC_EXIT=70  LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+  → MAC_EXIT=70 (deterministic) AND IOS_EXIT=65 (environmental) ⇒ gate EXIT
+    is NON-ZERO.
+
+================================================================================
+=== COVERAGE REPORT (implementation step 4) ===
+================================================================================
+PER-PARITY-UNIT (PAGE) STATE COVERAGE — the metric step 4 keys on:
+  P7 parity units under .github/prompts/monorepo/p4-apple/pages/**: 153
+    admin 29, system 18, driving 11, analytics 10, automations 10, battery 10,
+    charging 10, notifications 10, telemetry 7, vehicle-systems 7, settings 6,
+    maps 5, vehicles 4, dashboard 3, power-user 3, trips 3, sharing 2,
+    diagnostics 1, explore 1, exports 1, onboarding 1, watch 1.
+  Page view-model state suites present (loading/empty/error/success/stale): 0/153.
+  PAGE_COVERAGE_EXIT=1  → required parity-unit state tests are ABSENT
+    (per step 4: "fail the log if any required parity unit lacks all state
+    tests"). The page SOURCES do not exist (PREDECESSOR), so the tests are
+    unsatisfiable without fabricating the pages — forbidden by Covenant 4/5/7.
+
+NON-PAGE LOGIC COVERAGE: 255 unit methods / 44 files exercise every non-page
+  Spec category (facade+golden, design/components, auth/live/push,
+  widgets/intents/watch). The TeslaSyncTests bundle is GREEN (0 failures).
+
+OVERALL INSTRUMENTED LINE-% (xccov): NOT OBTAINABLE THIS RUN.
+  A coverage-enabled pass —
+    xcodebuild -scheme TeslaSync -destination '…iPhone 16' \
+      -enableCodeCoverage YES -only-testing:TeslaSyncTests build test
+  BUILT SUCCEEDED but the instrumented test host was OOM/watchdog-KILLED during
+  bootstrap under load 488 / ~3.6 MB free RAM:
+    "Testing failed: TeslaSync encountered an error (Early unexpected exit,
+     operation never finished bootstrapping … Test crashed with signal kill
+     before establishing connection.)"
+  No xccov number is invented here (Covenant 1/3). The free, deterministic
+  unit-bundle pass at lower load ([1] run 1) is the green evidence of record.
+
+COVERAGE TARGET (≥80% Apple presentation/logic, ADR-010): NOT MET and NOT
+  achievable on this run — the BULK of "presentation/logic" is the 153 P7 page
+  view-models, which do not exist (PREDECESSOR). Their absence both removes the
+  testable logic and leaves the SwiftUI component layer unexercised by any page.
+  The golden-vector parity portion of the target IS satisfied (Facade/
+  UnitsGoldenVectorTests passes inside the green unit bundle).
+
+================================================================================
+=== PREDECESSOR (Honesty Covenant rule 7 — "No predecessor bypass") ===
+================================================================================
+"Depends on: P4/P1..P8 infrastructure and generated P7 pages."
+  • P4/P1..P8 infrastructure ... PRESENT; its 255 unit tests are GREEN here.
+  • Generated P7 pages .......... ABSENT. .github/prompts/monorepo/logs/done.txt
+    lists p4-apple P0,P1,P2,P3×5,P4,P5,P6×2,P8 — there is NO P7 entry. The 153
+    page prompts under p4-apple/pages/** have NOT been generated into Swift
+    (no Pages//Features/ source tree; no *ViewModel*/*Page* sources).
+  Generating the 153 pages is P7's own job (its own parity spec + gate).
+  Authoring them here to self-unblock would be a parity shortcut (rule 5) +
+  stub-as-final (rule 4) + predecessor bypass (rule 7). Respected, not invented.
+
+================================================================================
+=== ACCEPTANCE CRITERIA ===
+================================================================================
+[~] Suites cover facade/tokens/components/auth/live-push/widgets-intents-watch
+    AND every page state — first clause MET (255 green unit tests across all
+    nine non-page categories); "every page state" NOT met (0/153 P7 page
+    view-models exist to test).
+[x] Golden vectors pass through the Swift facade, no real network/secret store —
+    UnitsGoldenVectorTests runs the shared *-golden.json vectors through the
+    Swift Units facade and passes inside the green TeslaSyncTests bundle.
+[~] Coverage target + per-parity-unit state coverage RECORDED — RECORDED above
+    (pages 0/153; non-page 255/44 green; overall xccov un-obtainable under
+    load-488 OOM-kill; ≥80% target unachievable w/o P7). Targets NOT met.
+[ ] SwiftLint/SwiftFormat/placeholder clean; iOS + macOS green — LINT/FORMAT/
+    PLACEHOLDER clean; iOS UNIT green but iOS gate red (XCUITest env flake);
+    macOS BUILD FAILED (no signing identity). NOT all green.
+[x] EXIT/STATUS recorded below = BLOCKED.
+
+================================================================================
+=== HONESTY COVENANT ===
+================================================================================
+1  No red-as-green : MAC_EXIT=70 and IOS_EXIT=65 shown RED with verbatim cause;
+                     coverage xccov shown un-obtainable (not faked). Only the
+                     unit bundle + lint/format/placeholder are called green —
+                     because they actually are.
+2  No scope narrowing: ran the EXACT five gate commands unmodified. The
+                     -only-testing coverage pass is clearly labelled supplementary.
+3  No skip-and-assume: every gate executed on THIS host/branch; the framework
+                     was built, the project generated, tests actually launched.
+4  No stubs as final: shipped no fake pages/tests/placeholders.
+5  No parity shortcuts: made NO page-parity claim (0/153).
+6  No delegation: performed directly; no sub-agents (Delegation: FORBIDDEN).
+7  No predecessor bypass: P7 pages absent → respected; not fabricated.
+8  No commit on red: committing ONLY this log; ZERO code committed (apps/apple
+                     tracked files unchanged; .xcodeproj + Frameworks/*.xcframework
+                     are git-ignored build artifacts).
+9  No silent drift: no apps/apple tracked-file changes.
+10 Log ends with EXIT/STATUS, each on its own line, below.
+
+================================================================================
+=== DISPOSITION ===
+================================================================================
+Two INDEPENDENT, evidence-backed blockers force STATUS=BLOCKED:
+
+  A. macOS gate cannot pass on this host — 0 valid code-signing identities; the
+     macOS app + widget entitlements (push/App-Group/associated-domains under
+     hardened runtime) require a development certificate (MAC_EXIT=70,
+     deterministic). Documented capability gap → ADR-012 signed `macos-latest`
+     runner (apps/macos-pending-verifications.md). Not worked around.
+
+  B. P7 pages predecessor absent — per-parity-unit page view-model state tests
+     (a hard Spec/step-4 requirement) are unsatisfiable (0/153). Covenant rule 7.
+
+Contributing environmental factor (NOT a blocker by itself): the shared host
+  degraded to load 488 / ~3.6 MB free RAM mid-run, OOM-killing simulator app
+  launches — this reddened the iOS gate's out-of-scope XCUITests and prevented
+  a fresh xccov pass. The in-scope unit deliverable passed (255/0) when load
+  permitted.
+
+Net: host gates (lint/format/placeholder) GREEN; iOS UNIT deliverable GREEN;
+macOS leg and P7 page-state coverage cannot be satisfied here.
+
+================================================================================
+=== COMMIT ===
+================================================================================
+Per rule 8 (BLOCKED → commit ONLY the log; never code):
+  git add .github/prompts/monorepo/logs/p4-p9-0001-xctest-unit.log
+  git commit -m "test(apps/apple): P9-0001 XCTest unit gate BLOCKED — macOS dev-cert + P7 pages pending"
+
+EXIT=70
+STATUS=BLOCKED

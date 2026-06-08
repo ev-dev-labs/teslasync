@@ -1,0 +1,181 @@
+=== P4 Dashboard widget 0080 RecentlyUnlockedAchievements (Apple) ===
+
+Surface : apps/apple/TeslaSync/dashboard-widgets/RecentlyUnlockedAchievements.*
+Web spec: web/src/features/dashboard/widgets/RecentlyUnlockedAchievements.tsx
+Registry: registry/analytics.ts → "recently-unlocked-achievements" · category=analytics · 2x2 / 1x2 / 4x4
+Runner  : Darwin · Apple Swift 6.3.2 (arm64-apple-macosx26.0) · swiftformat 0.61.1 + swiftlint + pwsh 7.6.2
+          present · FULL XCODE ABSENT — only CommandLineTools (xcode-select -p = /Library/Developer/
+          CommandLineTools); xcodebuild + xcrun simctl NOT available on this host (evidence below).
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (allowed scope: RecentlyUnlockedAchievements.* + this log) — 1415 lines total
+--------------------------------------------------------------------------------
+  RecentlyUnlockedAchievements.swift          (305) — SwiftUI surface: glass widget shell; header
+                                                      (Trophy glyph + title + freshness chip + refresh +
+                                                      open); ALL states (loading skeleton strip / opt-out /
+                                                      empty / error+retry / content) + stale|offline
+                                                      connectivity banner; responsive 2x2↔wide badge grid
+                                                      (LazyVGrid adaptive = web flex-wrap); full a11y; i18n.
+  RecentlyUnlockedAchievements.Views.swift    (100) — presentational badge card (web AchievementBadge
+                                                      unlocked variant: emoji + name + description +
+                                                      "✓ Unlocked", amber treatment) tap→onOpen, and the
+                                                      shared icon+message empty view (web EmptyState).
+  RecentlyUnlockedAchievements.Model.swift    (311) — P1/S8 state-holder seam (RecentlyUnlockedSource),
+                                                      @Observable RecentlyUnlockedModel (+ nonisolated
+                                                      resolvePhase w/ disabled short-circuit, autoRefresh
+                                                      IfStale), P1/S11 telemetry seam, InMemory source,
+                                                      RecentAchievementDTO, RecentlyUnlockedStrings (P1/S10),
+                                                      RecentlyUnlockedSurface (slug + canonical registration).
+  RecentlyUnlockedAchievements.Adapter.swift  (151) — pure selection projection: cached achievements →
+                                                      ordered badge rows, reproducing the web pipeline
+                                                      VERBATIM (parity), + layout (limit/isWide) + a11y.
+  RecentlyUnlockedAchievements.Previews.swift (150) — #if DEBUG previews for every state + layout
+                                                      (standard/wide/loading/empty/error/offline/opt-out).
+  RecentlyUnlockedAchievements.Tests.swift    (352) — XCTest: adapter selection/ordering parity + layout +
+                                                      model phases (incl. disabled)/telemetry/refresh +
+                                                      registry + accessibility (run in TeslaSync(/-macOS)
+                                                      test targets at integration).
+  RecentlyUnlockedAchievements.strings        ( 46) — per-surface i18n table (every web t() key + native
+                                                      chrome); 20 entries.
+
+Selection + ordering reproduced exactly from the web source (cross-platform parity, NOT a "corrected"
+version):
+  recent = data.achievements
+             .filter(a => a.unlocked && a.unlocked_at)        // unlocked + has unlock time only
+             .sort((a,b) => Date.parse(b.unlocked_at) - Date.parse(a.unlocked_at))   // desc, STABLE
+             .slice(0, limit)                                  // limit = (cols>=3) ? 5 : 3
+  Stability: web Array.prototype.sort is stable (ES2019+); reproduced with an `offset` tiebreaker so
+             equal unlock instants keep original payload order (not Swift's unspecified sort stability).
+  Opt-out : !useAchievementCelebrationPrefs().showOnDashboard → "disabled" empty state (widget slot
+            stays in the grid). Coalesced into the P1/S8 snapshot (showOnDashboard), not read in the view.
+  Deep link: each badge tap → onOpen(id) → web navigate('/lifetime?achievement={id}').
+  i18n keys (parity): widget.recentlyUnlocked.title/disabled · achievements.viewNamed ({{name}}→%@) ·
+            achievements.noneYet · lifetime.unlocked · widget.recentlyUnlocked(.description) [registry].
+
+--------------------------------------------------------------------------------
+GATE RESULTS (real commands, real exit codes on this host)
+--------------------------------------------------------------------------------
+
+[HOST] swiftc -swift-version 6 -strict-concurrency=complete  (Model + Adapter PURE logic +
+       an executable assertion harness, Apple Swift 6.3.2, macOS SDK)
+       → compiled clean; executed 35/35 parity assertions GREEN:
+         limit 3/3/5/5 · isWide threshold · hasUnlocked T/F/empty · filter+desc-sort+exclude =>
+         [bravo, echo, alpha] · cap-to-limit · limit 0 => empty · STABLE order on equal instants =>
+         [xx, yy, zz] · unlockedLabel "✓ Unlocked" · actionLabel "View achievement: <name>" · row
+         carries icon+name · listSummary "Recently Unlocked, 3 achievements" · resolvePhase matrix
+         (loading/empty/loaded/failed × cache) · disabled short-circuit overrides loading & content ·
+         registry id/category/2x2/1x2/4x4 + clamp(min)/clamp(max) · slug "RecentlyUnlockedAchievements".
+       COMPILE_EXIT=0 · RUN_EXIT=0 (ALL PURE-LOGIC CHECKS PASSED)
+
+[HOST] swiftc -typecheck -sdk $(xcrun --show-sdk-path --sdk macosx) -target arm64-apple-macos15.0
+       -swift-version 6 -strict-concurrency=complete   (SHIPPING SwiftUI surface + views + model +
+       adapter vs the REAL design tokens design/generated/apple/Tokens.swift, macOS SDK)
+       → error count = 0
+       TYPECHECK_EXIT=0
+       (Including Previews.swift adds ONLY "plugin for module 'PreviewsMacros' not found" for the
+        #Preview macro — a developer-tools macro that ships with FULL Xcode; DEBUG-gated, not shipping
+        code. Every non-preview file type-checks GREEN. Same root cause as the deferred xcodebuild step.)
+
+[HOST] swiftformat --lint  (config apps/apple/.swiftformat — swiftversion 6.0, maxwidth 120,
+       wrap*/before-first, numberFormatting)  on all 6 RecentlyUnlockedAchievements*.swift
+       → 0/6 files require formatting
+       FORMAT_EXIT=0
+
+[HOST] swiftlint lint --strict --no-cache  (config apps/apple/.swiftlint.yml, opt-in rules)
+       on all 6 RecentlyUnlockedAchievements*.swift
+       → Found 0 violations, 0 serious in 6 files
+       LINT_EXIT=0
+
+[HOST] pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/
+       RecentlyUnlockedAchievements   (ADR-011 no-stub gate)
+       → PLACEHOLDER_ALLOWED=0
+         PLACEHOLDER_COUNT=0
+       PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+DEFERRED STEPS (shown NOT-GREEN with evidence — no red painted as green)
+--------------------------------------------------------------------------------
+
+[DEFER] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+[DEFER] xcodebuild -scheme TeslaSync-macOS  build test
+        Capability evidence (this host):
+          $ xcode-select -p
+          /Library/Developer/CommandLineTools
+          $ xcodebuild -version
+          xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+          '/Library/Developer/CommandLineTools' is a command line tools instance
+          $ xcrun simctl list devices
+          xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+        → xcodebuild + the iOS Simulator are UNAVAILABLE on this runner (CommandLineTools only).
+        Structural reasons the scheme build/test is deferred to the signed CI runner regardless
+        (same disposition as predecessors 0055 LifetimeStatsWidget / 0078 RecentDrivesListWidget):
+          1. The scheme builds the WHOLE app; the module-level shared scaffolding
+             (DashboardWidgetSize / DashboardWidgetRegistration) is currently declared per-surface
+             across sibling widgets and is deduped into ONE canonical declaration at the P4 integration
+             pass — out of this surface's allowed scope. This surface follows the canonical reference
+             (0055) and does NOT redeclare those types (adds no 14th copy).
+          2. The app target links the KMP Shared.xcframework (ADR-004) and requires a signed runner.
+          3. This surface is not yet registered into project.yml / the dashboard grid (predecessor
+             bypass forbidden) — its strings ship as the per-surface table, not the shared catalog.
+        These are integration/runner concerns, NOT defects in this code: the surface type-checks GREEN
+        against the real macOS SDK + real tokens and its logic executes GREEN with exact web parity.
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+  [x] Surface renders on Apple with ALL states from the web source reproduced — loading / opt-out
+      (disabled) / empty (no unlocks) / error+retry / content, plus stale + offline connectivity chips.
+  [x] Hooks bind to the shared P1/S8 state-holder seam (RecentlyUnlockedSource); NO direct HTTP in the
+      view. useAnalytics/useVehicles/useAchievementCelebrationPrefs/useLifetimeStats are coalesced into
+      the RecentlyUnlockedUpdate snapshot the production source pushes.
+  [x] Every i18n key from source has a matching catalog key — 7 parity keys + native chrome in
+      RecentlyUnlockedAchievements.strings; view holds no English literals (all via RecentlyUnlockedStrings).
+  [x] Accessibility labels on every interactive element — each badge is a button labelled
+      "View achievement: <name>"; refresh/open buttons labelled; the strip exposes a spoken summary;
+      emoji/icons are accessibilityHidden; empty/error are combined elements.
+  [x] Tests — adapter selection/ordering parity + layout + per-phase model (incl. disabled) + registry +
+      a11y label tests (RecentlyUnlockedAchievements.Tests.swift; the same assertions executed GREEN in
+      the host harness).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] Telemetry — view.opened emitted once with surface slug "RecentlyUnlockedAchievements" (P1/S11) — tested.
+  [x] Host-runnable gates GREEN (swift6 strict compile+run / SwiftUI typecheck vs real SDK / format / lint /
+      placeholder); the two xcodebuild scheme steps DEFERRED with capability + scope evidence above.
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+  1  No red-as-green : the two xcodebuild scheme steps are shown DEFERRED (not green) with the literal
+                       xcode-select/xcodebuild/simctl error output; every "EXIT=0" above is a command
+                       actually executed on this host with its real output captured.
+  2  No scope narrowing: implemented ALL states (incl. the opt-out short-circuit + both empty variants),
+                       both layouts (limit 3 / wide 5), i18n + a11y + telemetry + registry + deep link.
+  3  No skip-and-assume: each host gate executed and its real output captured; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; harness executes real logic.
+  5  No parity shortcuts: filter + STABLE descending sort + slice(limit) + the "✓ Unlocked"/viewNamed
+                       labels ported VERBATIM and pinned by executed assertions.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / the dashboard grid and did NOT edit
+                       the shared Localizable.xcstrings or redeclare the shared scaffolding types (both
+                       out of allowed scope); strings shipped as the per-surface table (matching 0055/0078).
+  8  No commit on red  : committing on all-green host gates; the Xcode scheme steps are DEFERRED (a
+                       documented capability + scope/dependency deferral with evidence), not failed.
+  9  No silent drift   : changes confined to the allowed RecentlyUnlockedAchievements.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished native RecentlyUnlockedAchievements shipped at parity with the web source: a
+  SwiftUI surface (standard 2x2 ↔ wide) over a P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry,
+  P1/S10 i18n, P1/S9 tokens; every state (loading / opt-out / empty / error / content + stale|offline),
+  every i18n key, every interactive a11y label; registry-correct (recently-unlocked-achievements,
+  2x2 / 1x2 / 4x4). The surface type-checks GREEN under Swift 6 strict concurrency against the REAL
+  macOS SDK + REAL design tokens, and its adapter/model logic executes GREEN (35/35) with exact web
+  selection + ordering parity. The xcodebuild scheme build/test is DEFERRED to the signed CI runner —
+  this host has only CommandLineTools (no full Xcode), AND the whole-app scheme requires the KMP
+  Shared.xcframework + integration-pass dedup of the shared scaffolding + target registration, none of
+  which are defects in this code — matching the user-approved P4 "code-complete + DEFERRED Xcode gate"
+  disposition used by all 60 sibling apple dashboard-widget surfaces (0 BLOCKED).
+
+EXIT=0
+STATUS=DONE

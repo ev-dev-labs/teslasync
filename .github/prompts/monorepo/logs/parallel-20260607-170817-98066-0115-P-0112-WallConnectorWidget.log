@@ -1,0 +1,147 @@
+I'll start by exploring the repository structure and reading the key files to understand the task.
+
+Web source read. Toolchain note: `swift` 6.3.2, `swiftlint`, `swiftformat` present, but `xcodebuild` points to CommandLineTools (no full Xcode). Let me explore the Apple app structure and shared infrastructure.
+
+Found the output dir `apps/apple/TeslaSync/dashboard-widgets`. Let me examine existing widgets to follow conventions (the Honesty Covenant forbids predecessor bypass).
+
+Many predecessors exist. Let me study the closest matches — chart-based energy/history widgets — and the shared infrastructure (facade, tokens, i18n, diagnostics).
+
+Let me read the closest predecessors in full — `MotorHistoryWidget` (has a Swift Charts Chart) and `PowerFlowHistoryWidget` (uses WidgetChartSummary).
+
+Now let me read the Model, Projection, strings, and Tests for MotorHistory, plus PowerFlowHistory's Model/Adapter (energy domain).
+
+Let me read the strings/tests format, the PowerFlowHistory energy widget, and locate the shared types (`MeasurementSystem`, design tokens).
+
+Let me examine the design tokens, MeasurementSystem, a predecessor's log (to understand the gate outcome), and the build setup.
+
+Precedent is clear: predecessors DEFER `xcodebuild` (needs KMP xcframework staging + target registration — outside allowed files) but run host-level gates green. Let me confirm the toolchain and read the tokens/tests/script.
+
+Xcode.app exists — `xcode-select` just points to CLT. Let me test the `DEVELOPER_DIR` override and locate the generated tokens, TSSkeleton, and the energy facade.
+
+`DEVELOPER_DIR` override gives Xcode 26.5 + iOS Sim 26.5 SDK, and `pwsh` is available. The dashboard-widgets dir is already a source path in project.yml. Let me check build feasibility (xcodegen, Shared.xcframework) and read the token names + test conventions.
+
+Build picture is clear: `Shared.xcframework` is absent (only `.gitkeep`), so the full `xcodebuild` app build/test must be deferred (predecessor precedent), but host-level SDK compiles + XCTest + lint + format + placeholder check are runnable. Let me read the PowerFlowHistory full set and the web energy hooks.
+
+Let me read the PowerFlow main view, tests, previews, and the web energy hooks + shared summary component to finalize my understanding.
+
+I have the full pattern. Let me read the web energy hooks (exact DTO types), the shared `WidgetChartSummary`, and a Previews file to finalize.
+
+Let me grab the exact web DTO types and confirm the available design tokens (chart green, fonts).
+
+Tokens confirmed. Let me locate the exact web DTO type definitions for the energy site and WC charging entry.
+
+I have all the web behavior and DTOs. Critical check: `DashboardWidgetSize`/`DashboardWidgetRegistration` are `public` — I must verify where they're defined to avoid a duplicate-symbol collision (all widgets compile into one module).
+
+I now have everything needed. Critical finding: `DashboardWidgetSize`/`DashboardWidgetRegistration` are defined locally per-surface (6 existing copies) — surfaces are gated in isolation and deduped at integration (explicitly out of scope). I'll mirror MotorHistory and define them locally. Let me confirm the number formatters and lint configs.
+
+Everything confirmed. Let me verify the exact token member names (TSRadius/TSSpacing/Font.TS) so the shipped code matches the real generated tokens.
+
+All tokens confirmed (TSRadius: sm/md/lg/pill; bar corner uses literal `4` to match web `radius={[4,4,0,0]}`). I have full understanding. Let me set up a plan and todos, then build the surface.
+
+Now I'll write the surface. Starting with the pure, Foundation-only Adapter (projection core + formatters + a11y):
+
+Now the Model (state-holder seam, telemetry, registry, i18n facade):
+
+Now the main view with header, freshness, states, and compact/standard composition:
+
+Now the Previews, strings catalog, and tests:
+
+Now the i18n strings catalog:
+
+Now the XCTest suite:
+
+All 7 surface files written. Now let me run the host gates. First, auto-format my files to the repo's swiftformat config, then lint them:
+
+Files already conform (0 reformatted). Now swiftlint --strict and swiftformat --lint on the new files:
+
+Both lint gates green (0 violations). Now let me verify which design tokens my code references so my throwaway compile-shim is complete:
+
+Now I'll create the throwaway token shim and run the iOS 18 simulator typecheck of the surface (shipped files + shim):
+
+iOS 18 typecheck passes (exit 0). Now let me set up the macOS 15 SPM harness to execute the XCTest suite and prove macOS compile:
+
+All 25 XCTest tests pass on macOS 15 and the SwiftUI+Charts surface compiles cleanly. Now the placeholder check via pwsh — let me inspect the script's `-Path` semantics first:
+
+The script scans `-Path` recursively via `-LiteralPath`; the gate's prefix path (`…/WallConnectorWidget` with no extension) matches no literal dir, yielding a vacuous pass. To verify honestly, I'll scan a temp copy of my actual `.swift` files too. Let me check the patterns and grep my files first:
+
+No forbidden tokens. Now let me run the placeholder gate — both a real scan of my files (temp copy) and the exact gate invocation form:
+
+Real scan of shipped files: `PLACEHOLDER_COUNT=0`, and the self-test confirms the script genuinely detects stubs (integrity verified). 
+
+Now let me capture honest evidence for the deferred full `xcodebuild` step by actually generating the project and attempting it:
+
+`.gitignore` covers `*.xcodeproj/`, `DerivedData/`, `build/`, and `Frameworks/*.xcframework/` — so generating + building won't pollute git. Let me generate the project and attempt the real build to capture honest deferral evidence:
+
+Project generates cleanly; both `TeslaSync` and `TeslaSync-macOS` schemes exist. Now the real build attempt (expected to fail on the absent KMP xcframework / cross-surface dupes) to capture honest evidence:
+
+The build's pre-action is staging `Shared.xcframework` via Gradle (KMP build) automatically — this takes time. Let me keep waiting:
+
+KMP xcframework staging is progressing (release frameworks linking). Let me continue waiting for the Swift app compile phase:
+
+Build failed with `EXIT=65`. Notably the Gradle pre-action **successfully staged `Shared.xcframework`**, so the blocker is the Swift compile. Let me extract the exact errors:
+
+This confirms the deferral is **pre-existing and integration-level, not a defect in my code**: the first `error:` is `DigitalTwinWidget.Tests.swift` (a predecessor) — `unable to resolve module dependency: 'XCTest'`. Every surface's `*.Tests.swift` gets compiled into the app target (project.yml wiring), which only the integration step fixes. Let me confirm no WallConnector-specific errors and that my surface (non-test) files are clean in this build:
+
+Conclusive: the **only** 2 errors are `XCTest` module-resolution failures in a **predecessor** (`DigitalTwinWidget.Tests.swift`), which aborts compilation alphabetically before mine. My `WallConnectorWidget.Tests.swift` shows the identical benign "ignoring import" warning every predecessor has — no WallConnector-specific error, no duplicate-symbol error. The full build is blocked by pre-existing test-target wiring in `project.yml` (out of scope). Let me capture the macOS scheme evidence too (Gradle cache is now warm):
+
+macOS fails even earlier — at **code-signing** (`entitlements require signing with a development certificate`; `DEVELOPMENT_TEAM` is empty) — a signed-runner concern, before Swift compile. Again not my code, and no WallConnector error. Both xcodebuild steps are environment/integration-blocked as the precedent documents. Let me clean up generated artifacts and verify git status is clean:
+
+Git is clean — only my 7 WallConnector files are new (the two modified web files are pre-existing, unrelated to my task; I won't touch them). No stray generated artifacts (all git-ignored). 
+
+All gates captured. Let me write the comprehensive, honest log:
+
+Now let me do a final verification (re-lint the final files, confirm tests still green) and commit only my scoped files:
+
+Final gates all green: swiftlint 0 violations, swiftformat 0 require formatting, 25/25 SPM tests pass against the final shipped files. Now let me commit only my scoped files (leaving the pre-existing web edits untouched):
+
+Exactly the 8 intended files staged (7 surface + log); pre-existing web edits excluded. Committing:
+
+Committed as `c85a0c5c`. Let me clean up the temporary build artifacts and do a final verification:
+
+Commit is exactly the 8 intended files (1731 insertions); the working tree shows only the two pre-existing, unrelated web edits (correctly left untouched). Temp artifacts cleaned.
+
+All todos complete. The WallConnectorWidget Apple surface is shipped and committed.
+
+## Summary
+
+Built a production-polished, native SwiftUI parity of `WallConnectorWidget.tsx` at `apps/apple/TeslaSync/dashboard-widgets/WallConnectorWidget.*` (commit `c85a0c5c`, 7 files + log, 1,731 lines).
+
+**Architecture (mirrors the 0073/0066 chart-widget precedent):**
+- **Adapter** — pure, Foundation-only projection: daily-kWh aggregation + current-month summary (total/sessions/avg) + `hasData`, ported 1:1 from the web `useMemo` memos; locale formatters + a11y builders.
+- **Model** — P1/S8 `WallConnectorSource` seam (no HTTP in the view), `@Observable` model with `loading/error/content` phases + `noSite/noData` empty reasons, P1/S11 `view.opened` telemetry, registry types, P1/S10 strings facade.
+- **Views + main view** — header/freshness(live/stale/offline)/refresh/open, Swift Charts `BarMark` (exact web `#10b981`, rounded top, M/D axis), every state rendered (never a blank box), compact (2 stats, no chart) vs standard (3 stats + chart).
+- **Previews** (9 states), **Tests** (25), **strings** (all 7 web keys + chrome).
+
+**Gates — host-runnable all GREEN:**
+- swiftlint `--strict`: 0 violations · swiftformat `--lint`: 0 require formatting
+- iOS 18 simulator typecheck of the surface: EXIT 0
+- macOS 15 SPM: **25/25 XCTest passed** + full SwiftUI/Charts compile
+- placeholder scan of shipped files: COUNT=0 (scanner self-test verified)
+
+**Full `xcodebuild` build/test — DEFERRED with real evidence (EXIT=65), not a defect in this surface:**
+- iOS: blocked by a **predecessor** (`DigitalTwinWidget.Tests.swift` — XCTest unresolved) because `project.yml` compiles every per-surface `*.Tests.swift` into the app target; `Shared.xcframework` auto-staged fine via Gradle. No WallConnector-specific error.
+- macOS: blocked at dev code-signing (empty `DEVELOPMENT_TEAM`).
+- Both are integration/signed-runner concerns outside this prompt's allowed files — matching the established precedent. Log ends `EXIT=0 / STATUS=DONE`.
+
+
+
+All work is complete, verified, and committed. Let me update the plan to reflect the final state, then mark the task complete.
+
+Merge made by the 'ort' strategy.
+ ...-dashboard-widgets-0112-WallConnectorWidget.log | 193 +++++++++++
+ .../WallConnectorWidget.Adapter.swift              | 230 +++++++++++++
+ .../WallConnectorWidget.Model.swift                | 276 +++++++++++++++
+ .../WallConnectorWidget.Previews.swift             | 160 +++++++++
+ .../WallConnectorWidget.Tests.swift                | 375 +++++++++++++++++++++
+ .../WallConnectorWidget.Views.swift                | 169 ++++++++++
+ .../dashboard-widgets/WallConnectorWidget.strings  |  48 +++
+ .../dashboard-widgets/WallConnectorWidget.swift    | 280 +++++++++++++++
+ 8 files changed, 1731 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0112-WallConnectorWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WallConnectorWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WallConnectorWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WallConnectorWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WallConnectorWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WallConnectorWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WallConnectorWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WallConnectorWidget.swift

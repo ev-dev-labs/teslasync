@@ -1,0 +1,93 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Apple toolchain is available. Let me examine the existing dashboard-widgets structure to understand the established pattern.
+
+`RangeEstimateWidget` is the closest analog (range + distance units + vehicle state). Let me read its full 7-file structure as a template.
+
+`RangeEstimateWidget` uses simple text metrics, but `RangeBarWidget` uses `MetricBar` (horizontal bars). Let me read the remaining template files, the web `MetricBar`, and find the shared design tokens.
+
+Now I understand the `MetricBar` (horizontal bar with gradient fill). Let me locate the shared design tokens, registration types, and the Xcode project structure to understand how files are included and avoid symbol collisions.
+
+Each widget defines its own `DashboardWidgetSize`/`DashboardWidgetRegistration` — which means they can't all be in one module. I need to understand the target structure. Let me read `project.yml` and the lint configs.
+
+The TeslaSync target globs ALL of `TeslaSync/dashboard-widgets`, yet many widgets each define `public struct DashboardWidgetSize`. That would be a redeclaration error. I need to understand how this is resolved. Let me investigate the canonical definition and whether `RangeEstimateWidget` relies on a shared one.
+
+82 widget main files but only 13 redefine the type — there must be a canonical shared definition. Let me find the P4-core shared file and check whether the project currently builds (to establish baseline).
+
+Let me empirically establish the build baseline and locate the design tokens. These determine whether the gate can pass and what my code can rely on.
+
+Key baseline findings: `xcodegen` is present but `Frameworks/Shared.xcframework` is **empty** (just `.gitkeep`) — the KMP framework isn't built, and the app targets depend on it. Plus 13 pre-existing duplicate type definitions. Let me read the design tokens, skeleton, and check how native widgets render horizontal bars (web uses `MetricBar`).
+
+No iOS simulators detected and the KMP `Shared.xcframework` is unbuilt (needs Kotlin/Native + Gradle). Let me confirm these capability blockers definitively and check for a shared meter-bar component and the placeholder script.
+
+`simctl` is missing — that signals only Command Line Tools may be installed, not full Xcode. Let me confirm definitively and inspect the shared `Metrics.swift` for a reusable bar component.
+
+I have a complete picture. Critical findings:
+
+**Platform-capability blockers for the `xcodebuild` gate (will document as evidence):**
+- `xcode-select -p` → `/Library/Developer/CommandLineTools` (only CLT, **no full Xcode**); `xcodebuild` errors out, `simctl` missing → **no iOS Simulator**.
+- `Frameworks/Shared.xcframework` is empty; KMP source (`apps/shared/core`) absent → app targets can't link.
+- 13 pre-existing duplicate type definitions in sibling widgets (outside my allowed files).
+
+**What I CAN run:** `swiftlint`, `swiftformat`, `pwsh` + `check-placeholders.ps1`, and `swift` 6.3 (to execute my pure logic standalone).
+
+I'll build a complete, parity-faithful `RangeBarWidget` following the canonical `RangeEstimateWidget` (0077) pattern, verify everything runnable, then record honest gate evidence. Let me set up tracking and check the lint/format baseline.
+
+Format baseline: only **1 pre-existing** file (`ActionBuilder.Previews.swift`, a feature-view outside my scope) fails `swiftformat --lint`. My files will be clean. Now let me write the widget. Starting with the pure adapter.
+
+Now the Model file (state-holder seam, telemetry, registry, i18n facade).
+
+Now the SwiftUI view — header, all states, compact/standard layouts with gradient meters and EPA variance.
+
+Now the previews, tests, and strings files.
+
+Now the i18n strings catalog.
+
+All 7 artifacts created. Now let me verify — format, lint, and run the pure logic standalone. First, auto-format my files and confirm they're clean.
+
+My files pass `swiftformat --lint` cleanly. Now swiftlint on my files.
+
+One SwiftLint issue: `RangeBarWidget.swift` is 410 lines (limit 400). I'll extract the `RangeBarMeter` subview into `RangeBarWidget.Meter.swift` (still within my allowed `RangeBarWidget.*` scope, matching the multi-file convention). Let me view the exact block to move.
+
+Now I'll extract the `RangeBarMeter` struct (lines 346–410) into its own file and remove it from the main view file.
+
+Now re-run both linters across all 6 Swift files.
+
+Both linters are green on all 6 files (swiftformat 0/6, swiftlint 0 violations). Now the most important verification: actually **executing** my shipped pure logic to prove numeric/phase parity, since XCTest can't run without full Xcode. I'll compile the real `Adapter.swift` + `Model.swift` with a harness via `swiftc`.
+
+Now compile and execute the harness against the real shipped logic.
+
+Compiled cleanly. Now run it.
+
+The only failure is a **harness tolerance bug**, not a code bug: the actual EPA value `11.1111111…%` is correct (and the displayed `"+11.1%"` passed); my assertion compared against a truncated `11.1111` with too-tight tolerance. Let me fix the assertion and re-run.
+
+**All 75 assertions pass** against the real shipped logic — full numeric/phase/registry/a11y parity proven. Now let me run the placeholder check and verify no banned tokens in my files.
+
+No banned tokens. Let me check the swift patterns and how `-Path` (passed without extension) is resolved, then run the placeholder gate.
+
+The gate's `-Path` (no extension) matches nothing → vacuously clean. I'll run the exact gate invocation **and** a meaningful per-file scan of my 6 files to genuinely prove they're placeholder-free.
+
+Placeholder gate is clean for all my files. Now let me set up the log and capture honest gate evidence. First, check the logs directory and an existing widget log for format.
+
+The sibling 0077 log establishes the precedent: ship all host gates green, mark `xcodebuild` scheme steps as deferred/blocked with concrete evidence. I can go further than 0077 — let me check whether the CLT macOS SDK can type-check my actual SwiftUI view (0077 only claimed SDK type-check, I already *executed* the logic).
+
+SwiftUI type-checks under CLT. Let me type-check my **actual SwiftUI view** against the real macOS SDK + real design tokens under Swift 6 strict concurrency (matching the target's build settings) — going beyond 0077's evidence.
+
+The **only** errors are the `#Preview` macro plugin (`PreviewsMacros`) being unavailable under CLT — an Xcode-only toolchain plugin, not a code defect. All actual view/model/adapter code type-checked. Let me confirm the production view (minus DEBUG previews) is fully green.
+
+Production view type-checks **100% green** against the macOS 15 SDK under Swift 6 + complete concurrency (only the DEBUG `#Preview` macro can't expand under CLT — an Xcode-plugin limitation). Before finalizing status, let me check how sibling logs resolved the same `xcodebuild` capability gap.
+
+Decisive: all 60 sibling logs use `EXIT=0 / STATUS=DONE` with `xcodebuild` scheme steps **DEFERRED** (not faked, not green) — same code-unrelated reasons (target-registration outside allowed files + KMP `Shared.xcframework` staging). My runner is additionally CLT-only. I'll follow this unanimous convention with honest, captured evidence. Let me capture the real `xcodebuild` failure output (proving nothing is faked green).
+
+All capability evidence captured (CLT-only, `xcodebuild` errors, no `simctl`, empty `Shared.xcframework`). Let me do one consolidated capture of the green gates for accurate transcription into the log.
+
+All green gates confirmed (format=0, lint=0, harness 75/75, macOS-15 SDK type-check=0). Now I'll write the honest, evidence-backed log.
+
+Log written. Let me clean up temp binaries and verify git scope before committing — I must add **only** my files, not the pre-existing unrelated modifications.
+
+Clean scope — my 8 new files are untracked; the pre-existing modifications stay untouched. Committing only my files.
+
+Committed cleanly (8 files, 1741 insertions). Let me do a final scope confirmation and update tracking.
+
+The task is complete. All 7 todos done, my commit is HEAD with exactly my 8 files, and the pre-existing unrelated modifications remain untouched and uncommitted.
+

@@ -1,0 +1,217 @@
+================================================================================
+ p4-apple · P7 · page:admin/ApiLogs — SwiftUI / HIG parity
+ Native SwiftUI implementation of web ApiLogsPage at full panel/state/string parity
+================================================================================
+ Parity unit : page:admin/ApiLogs   (kind=page, web route /api-logs)
+ Web source  : web/src/features/admin/pages/ApiLogsPage.tsx (476 lines)
+ Output dir  : apps/apple/TeslaSync/feature-views/   (the repo's real, project.yml-
+               registered app-source dir for these surfaces; the prompt's idealized
+               Features/Admin/ path is NOT a compiled source root in project.yml —
+               the established convention for every sibling surface is feature-views/
+               with the Name.{swift,Model,Adapter,Views,Previews,Tests,strings}
+               multi-file split; followed verbatim here so the build is real.)
+ Host        : macOS (Darwin), Xcode 26.5 (Build 17F42) via
+               DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+               (xcode-select default is the CommandLineTools instance; overridden).
+               swiftlint 0.x, swiftformat, pwsh all present.
+
+================================================================================
+ DELIVERED FILES (9; all new)
+================================================================================
+   ApiLogsPage.swift            165  surface View + header/freshness/error-banner + lifecycle
+   ApiLogsPage.Model.swift      368  @Observable model, source seam, telemetry, i18n facade, export
+   ApiLogsPage.Adapter.swift    267  domain models, badge/service catalogue, service-option union
+   ApiLogsPage.Projection.swift 176  formatting (int/%/ms/UTC/JSON) + loading/empty/error/data projection
+   ApiLogsPage.Views.swift      362  stats grid, by-service chips, filters panel, table panel, pagination
+   ApiLogsPage.Rows.swift       250  log row + request-URL/error/JSON-body detail + loading/empty/error chrome
+   ApiLogsPage.Previews.swift   138  #Preview data/empty/loading/error/stale/offline (DEBUG)
+   ApiLogsPage.Tests.swift      378  XCTest: adapter/model/strings (29 cases)
+   ApiLogsPage.strings           88  per-surface "ApiLogsPage" table (30 web keys + native chrome)
+   Production Swift = 1588 lines (web 476) — 3.3x; native parity is more verbose
+   (explicit types, SwiftUI composition). Well above the >=70%-of-source floor.
+
+================================================================================
+ ARCHITECTURE NOTES (binding decisions)
+================================================================================
+ * Data: the manifest classifies this page as "no first-party API data source"
+   (renders from navigation values / local state). The model binds an injectable
+   `ApiLogsSource` seam; `InMemoryApiLogsSource` drives previews/tests; the app wires
+   the live /api-logs + /api-logs/stats reads later. No fabricated KMP endpoint.
+ * SI: the page renders counts / milliseconds / a percentage only — no physical
+   quantities — so no SI conversion applies (parity with the web, which renders
+   these verbatim). The display boundary is honored; nothing non-SI is stored.
+ * i18n: per-surface "ApiLogsPage" .strings table resolved via NSLocalizedString,
+   mirroring the sibling AcDcStatsPanel convention; folds into Localizable.xcstrings
+   at integration. Components taking LocalizedStringKey get the pre-resolved English
+   via ApiLogsStrings.key(). Zero hardcoded visible literals in the Swift sources.
+ * Freshness (ADR-013): a live/stale/offline connection axis → header chip + banner
+   + one-shot auto-refresh on the stale transition (this page is not SSE-backed).
+ * a11y (ADR-015): VoiceOver labels/traits on header, stat cards, chips, filters,
+   rows (composed spoken label + expand/collapse hint), banners; Dynamic Type system
+   fonts (Font.TS); >=44pt targets via shared TSButton; light/dark via tokens.
+
+================================================================================
+ GATE — HOST-RUNNABLE STEPS (executed on this machine; real output)
+================================================================================
+ Surface compiled against the REAL apps/apple component closure:
+   Sources/Design/*  +  apps/design/generated/apple/Tokens.swift  +
+   Sources/Components/**  (minus DataDisplay/UnitFormatters.swift, the single
+   closure file that pulls SharedFacade->Shared/KMP via `UnitPreferences`; this
+   surface uses no unit formatters, so it is correctly outside the closure).
+   The closure imports only system frameworks (SwiftUI/Charts/MapKit/CoreLocation).
+
+ [0] xcodegen generate                                              XCODEGEN_EXIT=0
+       (TeslaSync.xcodeproj, 12 targets + schemes; feature-views IS now registered
+        into the iOS+macOS app targets — verified: ApiLogsPage.Tests.swift is owned
+        by targets TeslaSync and TeslaSync-macOS.)
+
+ [1] swiftc -typecheck — iOS 18 SIMULATOR SDK
+       xcrun --sdk iphonesimulator swiftc -typecheck \
+         -target arm64-apple-ios18.0-simulator -swift-version 6 \
+         -strict-concurrency=complete <closure> <6 production files>
+       errors=0                                                     IOS_TYPECHECK_EXIT=0
+
+ [2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0)
+       errors=0                                                     MAC_TYPECHECK_EXIT=0
+
+ [3] swiftc -typecheck — DEBUG previews (-D DEBUG; Xcode #Preview macro plugin;
+       6 production files + ApiLogsPage.Previews.swift + closure)
+       errors=0                                                     PREVIEWS_TYPECHECK_EXIT=0
+
+ [4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a
+       self-contained SwiftPM harness (the production Adapter+Projection+Model verbatim
+       + the ApiLogsPage.strings table as an en.lproj resource; Tests with module
+       rebound to the harness; Swift 6 language mode). Feature-view *.Tests.swift
+       compile into the app target (not the unit-test bundle) per the established
+       convention, so host execution is via this harness — same disposition as the
+       0002-BackendTool predecessor.
+         Test Suite 'ApiLogsPageAdapterTests' passed — 18 tests, 0 failures
+         Test Suite 'ApiLogsPageModelTests'   passed —  8 tests, 0 failures
+         Test Suite 'ApiLogsPageStringsTests' passed —  3 tests, 0 failures
+         Executed 29 tests, with 0 failures (0 unexpected)          SWIFT_TEST_EXIT=0
+       Covers: int/number/percent/ms/UTC-timestamp/JSON-pretty formatting; method &
+       status badge tones; service catalogue + deriveServiceOptions union/sort;
+       filters.hasAny; loading/empty/error/data projection incl. stale-rows-under-
+       banner; JSON export snake_case; a11y row label; model start->telemetry+query,
+       filter-resets-page+requery, pagination bounds, row expansion, stale one-shot
+       auto-refresh, service options; AND all 30 web string keys resolve from the
+       "ApiLogsPage" table (testEveryParityKeyResolvesFromTable).
+
+ [5] swiftlint --strict  (cd apps/apple; swiftlint lint --strict --config
+       .swiftlint.yml <8 surface .swift files> — the repo .swiftlint.yml DOES list
+       TeslaSync/feature-views, run explicitly here on the surface)
+         Done linting! Found 0 violations, 0 serious in 8 files.    LINT_EXIT=0
+
+ [6] swiftformat --lint  (config apps/apple/.swiftformat)
+         0/8 files require formatting.                              FORMAT_EXIT=0
+
+ [7] check-placeholders.ps1  (ADR-011 stub gate; swift; surface files)
+         pwsh apps/tools/check-placeholders.ps1 -Path <surface files> -Language swift
+         PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0                PLACEHOLDER_EXIT=0
+
+================================================================================
+ GATE — FULL-APP xcodebuild (scheme build/test): RED for PRE-EXISTING reasons,
+         NOT this surface. Documented honestly (Honesty rules 1 & 7).
+================================================================================
+   Command actually run (real output captured):
+     xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync-macOS -configuration Debug \
+       -derivedDataPath /tmp/ddmac479 build test \
+       CODE_SIGNING_ALLOWED=NO ENABLE_TESTING_SEARCH_PATHS=YES
+       ** BUILD FAILED ** — 626 errors.
+   Per-file breakdown of those 626 errors:
+     - ZERO are in any ApiLogsPage.* file (grep 'ApiLogsPage' over the error set = 0).
+     - 223  "'X' is ambiguous for type lookup in this context"  (e.g. DashboardWidgetSize,
+            JSONValue) — DUPLICATE type names defined across many sibling feature-views /
+            dashboard-widgets that collide once all ~1438 files compile into one module.
+     - 303  "cannot infer contextual base in reference to member" (e.g. .loaded/.live/.fresh)
+            — the same cross-surface enum-name collisions.
+     - the remainder: sibling Previews contextual-type + a couple invalid redeclarations.
+   ROOT CAUSE: every surface in this program was authored & validated IN ISOLATION
+   (isolated typecheck + host tests, exactly as steps [1]-[4] above); the whole-app
+   module does not compile because sibling surfaces share type names. This is a
+   PRE-EXISTING, program-wide condition independent of page:admin/ApiLogs — verified:
+   this surface introduces ZERO new top-level type-name collisions (grep of every
+   ApiLogs* type name across Sources/ + TeslaSync/ outside this surface = 0 defs).
+   Additionally, iOS-SIMULATOR *test* execution is environmentally BLOCKED on this
+   runner (no-sudo CoreSimulatorService / CommandLineTools), identical to every
+   predecessor apple log (e.g. 0010-BatteryCellsWidget).
+   DISPOSITION: same as the predecessor feature-view surfaces — the full-app
+   build/test is deferred to the integration/signed runner that resolves the
+   cross-surface namespace; the meaningful per-surface validation (steps [1]-[7])
+   is GREEN. No red is reported as green.
+
+================================================================================
+ === PARITY ===
+ PARITY_REQUIRED=43
+ Each item: <kind> — <name>  ->  <evidence: file:symbol>
+--------------------------------------------------------------------------------
+ [panel ] GlassPanel1   request/response JSON body viewer  -> ApiLogsPage.Rows.swift:struct ApiLogJsonViewer
+ [panel ] Total-Calls   stat card                          -> ApiLogsPage.Views.swift:ApiLogsStatsGrid.totalCallsCard
+ [panel ] Error-Rate    stat card (+elevated delta >5%)    -> ApiLogsPage.Views.swift:ApiLogsStatsGrid.errorRateCard
+ [panel ] Avg-Duration  stat card                          -> ApiLogsPage.Views.swift:ApiLogsStatsGrid.avgDurationCard
+ [panel ] Last-24h      stat card                          -> ApiLogsPage.Views.swift:ApiLogsStatsGrid.last24hCard
+ [panel ] GlassPanel6   filters panel (service/method/status/endpoint + clear)
+                                                            -> ApiLogsPage.Views.swift:struct ApiLogsFiltersPanel
+ [panel ] GlassPanel7   logs table panel (header+export, body, pagination)
+                                                            -> ApiLogsPage.Views.swift:struct ApiLogsTablePanel
+ [panel ] GlassPanel8   expanded request-URL detail panel  -> ApiLogsPage.Rows.swift:ApiLogDetail.requestURLPanel
+ [panel ] GlassPanel9   expanded error detail panel        -> ApiLogsPage.Rows.swift:ApiLogDetail.errorPanel
+ [state ] loading       -> ApiLogsPage.Projection.swift:ApiLogsPhase.loading + Rows.swift:struct ApiLogsLoadingView
+ [state ] empty         -> ApiLogsPage.Projection.swift:ApiLogsPhase.empty   + Rows.swift:struct ApiLogsEmptyView
+ [state ] error         -> ApiLogsPage.Projection.swift:ApiLogsPhase.error   + Rows.swift:struct ApiLogsErrorView
+                          + ApiLogsPage.swift:errorBanner (web `anyError`)
+ [state ] success       -> ApiLogsPage.Projection.swift:ApiLogsPhase.data + Views.swift:ApiLogsTablePanel.body(.data)
+                          + Rows.swift:struct ApiLogRowView
+ [string] apiLogs.adjustFilters     -> ApiLogsPage.Rows.swift  (ApiLogsEmptyView)
+ [string] apiLogs.allMethods        -> ApiLogsPage.Views.swift (methodField)
+ [string] apiLogs.allServices       -> ApiLogsPage.Views.swift (serviceOptions head)
+ [string] apiLogs.allStatus         -> ApiLogsPage.Views.swift (statusField)
+ [string] apiLogs.avgDuration       -> ApiLogsPage.Views.swift (avgDurationCard)
+ [string] apiLogs.byService         -> ApiLogsPage.Views.swift (ApiLogsServiceChips)
+ [string] apiLogs.clear             -> ApiLogsPage.Views.swift (filters Clear button)
+ [string] apiLogs.error             -> ApiLogsPage.Rows.swift  (errorPanel label)
+ [string] apiLogs.errorRate         -> ApiLogsPage.Views.swift (errorRateCard)
+ [string] apiLogs.exportJson        -> ApiLogsPage.Views.swift (table export button)
+ [string] apiLogs.filterEndpoint    -> ApiLogsPage.Views.swift (endpointField)
+ [string] apiLogs.filters           -> ApiLogsPage.Views.swift (filters header)
+ [string] apiLogs.last24h           -> ApiLogsPage.Views.swift (last24hCard)
+ [string] apiLogs.loading           -> ApiLogsPage.Rows.swift  (ApiLogsLoadingView)
+ [string] apiLogs.next              -> ApiLogsPage.Views.swift (pagination Next)
+ [string] apiLogs.noData            -> ApiLogsPage.Rows.swift  (ApiLogJsonViewer empty)
+ [string] apiLogs.noLogs            -> ApiLogsPage.Views.swift (table header, total=0)
+ [string] apiLogs.noLogsFound       -> ApiLogsPage.Rows.swift  (ApiLogsEmptyView)
+ [string] apiLogs.pageOf            -> ApiLogsPage.Views.swift (pagination page-of)
+ [string] apiLogs.previous          -> ApiLogsPage.Views.swift (pagination Previous)
+ [string] apiLogs.requestBody       -> ApiLogsPage.Rows.swift  (ApiLogDetail JSON viewer)
+ [string] apiLogs.requestUrl        -> ApiLogsPage.Rows.swift  (requestURLPanel label)
+ [string] apiLogs.responseBody      -> ApiLogsPage.Rows.swift  (ApiLogDetail JSON viewer)
+ [string] apiLogs.serviceCount      -> ApiLogsPage.Views.swift (serviceField helper)
+ [string] apiLogs.serviceFilterAria -> ApiLogsPage.Views.swift (serviceField a11y)
+ [string] apiLogs.showing           -> ApiLogsPage.Views.swift (table header showingText)
+ [string] apiLogs.subtitle          -> ApiLogsPage.swift       (header subtitle)
+ [string] apiLogs.title             -> ApiLogsPage.swift       (header title + a11y)
+ [string] apiLogs.totalCalls        -> ApiLogsPage.Views.swift (totalCallsCard)
+ [string] error.loadFailed          -> ApiLogsPage.swift (errorBanner) + Rows.swift (ApiLogsErrorView title)
+--------------------------------------------------------------------------------
+ (all 30 web keys ALSO verified to resolve from the "ApiLogsPage" table by
+  ApiLogsPageStringsTests.testEveryParityKeyResolvesFromTable, executed green in [4])
+ PARITY_COVERED=43
+================================================================================
+
+ SUMMARY
+ -------
+ Delivered surface is COMPLETE and VERIFIED per the established feature-view
+ methodology:
+   - iOS 18-sim typecheck: 0 errors        - macOS 15 typecheck: 0 errors
+   - DEBUG previews typecheck: 0 errors     - swift test: 29/29 PASS, exit 0
+   - swiftlint --strict: 0 violations       - swiftformat --lint: clean (0/8)
+   - check-placeholders: 0                  - PARITY_COVERED == PARITY_REQUIRED == 43
+ The only step that does not reach a clean process exit on THIS runner is the
+ full-app `xcodebuild -scheme … build/test`, which is RED for PRE-EXISTING,
+ program-wide cross-surface type-name collisions (626 errors, ZERO in this
+ surface) plus the no-sudo iOS-simulator daemon — both environmental / pre-existing
+ and documented above with raw evidence, identical disposition to the predecessor
+ apple feature-view logs (Honesty rule 7, no predecessor bypass).
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,156 @@
+=== P4 Shared surface 0046 AISignalExplorerNlFilter (Apple) ===
+Date: 2026-06-08
+Runner: Darwin (arm64), Xcode 26.5 (17F42) at /Applications/Xcode.app, iPhone 16 simulator booted,
+        swift 6.3.2, swiftlint, swiftformat, pwsh, xcodegen all present.
+Web source (THE spec): web/src/components/ai/AISignalExplorerNlFilter.tsx
+Native output: apps/apple/TeslaSync/shared-surfaces/AISignalExplorerNlFilter.*
+
+--------------------------------------------------------------------------------
+DELIVERABLE — shipped files (10; production-polished, no stubs/placeholder/TODO)
+--------------------------------------------------------------------------------
+AISignalExplorerNlFilter.Adapter.swift     299  pure: SignalFilterDraft DTO, AiJSONValue, parseSignalFilterDraft,
+                                                 AiStreamEvent union + AiStreamFrameParser (port of useAiStream
+                                                 parseSSEFrame/toTypedEvent), AISignalFilterAccessibility seam.
+AISignalExplorerNlFilter.Projection.swift  127  pure: AISignalFilterOutput/Input/Resolved + projection (web
+                                                 computed canDraft/canApply + AiOutputPanel branch order).
+AISignalExplorerNlFilter.Model.swift       298  P1/S8 stream-source seam, P1/S11 telemetry seam, @Observable
+                                                 model, InMemory source. No networking in the view.
+AISignalExplorerNlFilter.Strings.swift      57  P1/S10 i18n facade (table "AISignalExplorerNlFilter") + Key set.
+AISignalExplorerNlFilter.swift             191  the SwiftUI surface (glass panel, header+Helix badge+freshness,
+                                                 description, prompt field, Ask Helix action, draft+apply, output).
+AISignalExplorerNlFilter.Views.swift       340  subviews: badge, accessible prompt field (web Textarea+aria-label),
+                                                 action row, propose-only draft summary+Apply, AiOutputPanel parity
+                                                 (resting/thinking/text/error), thinking chrome, shared panel chrome.
+AISignalExplorerNlFilter.Previews.swift    123  #Preview per state (resting, no-vehicle, thinking, streamed text,
+                                                 captured draft, error, stale, offline).
+AISignalExplorerNlFilter.AdapterTests.swift 195 XCTest: draft validator + SSE frame parser parity.
+AISignalExplorerNlFilter.Tests.swift       267  XCTest: projection + state-holder (telemetry/draft/apply/error/
+                                                 stale one-shot) + accessibility + i18n facade.
+AISignalExplorerNlFilter.strings            -   per-surface i18n catalog: all 8 web-source keys (incl.
+                                                 signalExplorer.aiFilter.promptPlaceholder), helix.*/ai.common.*
+                                                 scaffold, P4 chrome. Not Swift → not placeholder-scanned.
+
+States reproduced (every one renders — no hidden surface):
+  resting/empty, thinking/loading, streamed-text/data, captured-draft (propose-only Apply),
+  error+retry, stale (freshness chip + one-shot auto-refresh), offline (cached + chip + Draft disabled),
+  no-vehicle (Draft disabled + hint). Data bound only via the P1/S8 stream-source seam (useTranslation +
+  useAiStream). i18n: every string via the P1/S10 facade. Telemetry: view.opened slug
+  "AISignalExplorerNlFilter" (P1/S11). a11y: labels on prompt field, Ask Helix, Apply, refresh, retry,
+  badge, freshness chip; container summary seam; Reduce-Motion-safe skeletons; Dynamic Type via tokens.
+
+================================================================================
+GATE STEPS
+================================================================================
+
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    STATUS: BLOCKED (full-app build) — NOT a defect of this surface.
+    The full TeslaSync app target cannot compile/link on this snapshot due to PRE-EXISTING,
+    UNRELATED issues (identical to the documented p4-apple precedents ToolCard / AlertMessageEditor /
+    FSMTimelineChart in apps/macos-pending-verifications.md) plus the P4-core source-glob registration:
+      - `struct DashboardWidgetSize` redefined in 15 files across Sources/DashboardWidgets/* +
+        TeslaSync/dashboard-widgets/* (duplicate-symbol).
+      - 261 co-located *.Tests.swift / *.ModelTests.swift importing XCTest into the app-target source
+        paths (TeslaSync/feature-views, TeslaSync/dashboard-widgets) — XCTest in an app target.
+      - Frameworks/Shared.xcframework not staged (only .gitkeep). It is produced by the scheme
+        pre-action (apps/shared/gradlew :core:assembleSharedXCFramework, Kotlin/Native) — itself a
+        documented macOS-pending artifact (p1-shared/S3-0001-kmp-scaffold) deferred to macos-latest.
+        A Gradle build attempt on this shared runner did not produce the framework in-window
+        (multiple parallel build slots contend for the shared ~/.gradle daemon).
+      - macOS development-signing identities are not present on this runner.
+      - TeslaSync/shared-surfaces is not yet in the project.yml `sources:` glob nor the .swiftlint.yml
+        `included:` — that registration is owned by P4-core ("Depends on: P4 core") and is OUTSIDE this
+        prompt's allowed-files scope (apps/apple/TeslaSync/shared-surfaces/AISignalExplorerNlFilter.* + log).
+    This surface contributes ZERO of the above collisions (grep confirms no DashboardWidgetSize and no
+    XCTest import in any non-test file of the surface).
+    IOS_EXIT=BLOCKED
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    STATUS: BLOCKED — same pre-existing/out-of-scope reasons as [1] (+ hardened-runtime signing).
+    MAC_EXIT=BLOCKED
+
+[3] swiftlint --strict
+    Repo-wide `swiftlint --strict` (real .swiftlint.yml) over 1909 files reports exactly 1 pre-existing
+    violation — TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift (function_body_length) —
+    which is UNRELATED to this surface and outside allowed files. The real config's `included:` does not
+    yet list shared-surfaces (P4-core), so to verify THIS surface under --strict it was linted explicitly
+    with the real rule set (opt_in rules, line_length 120/160, identifier/type_name, and SwiftLint DEFAULT
+    file_length/cyclomatic — i.e. no relaxations):
+        $ swiftlint lint --strict --no-cache <real-ruleset> TeslaSync/shared-surfaces
+        Done linting! Found 0 violations, 0 serious in 9 files.
+    All 9 surface .swift files are ≤ 400 lines (max Views.swift = 340), matching the repo convention
+    (only 1 feature-views file exceeds 400, and it carries an explicit disable).
+    LINT_EXIT=0 (surface) ; repo-wide residual = 1 pre-existing, unrelated.
+
+[4] swiftformat --lint apps/apple (surface scope)
+        $ swiftformat --lint TeslaSync/shared-surfaces
+        0/9 files require formatting.
+    FORMAT_EXIT=0
+
+[5] check-placeholders.ps1 (surface scope)
+        $ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces -Language swift
+        PLACEHOLDER_ALLOWED=1
+        PLACEHOLDER_COUNT=0
+        EXIT=0
+    (The single ALLOWED opt-out is the web i18n key literal
+     "signalExplorer.aiFilter.promptPlaceholder", carried verbatim from the web source and marked
+     `// parity:allow web i18n key`. The gate's literal -Path argument
+     `.../AISignalExplorerNlFilter` is a non-existent path because the surface ships as flat,
+     prefixed files; scanning the containing directory is the meaningful, equivalent check.)
+    PLACEHOLDER_EXIT=0
+
+================================================================================
+SUPPLEMENTARY SURFACE VERIFICATION (host-runnable; proves the surface is GREEN
+to the maximum extent possible without the P4-core wiring + macos-latest CI)
+— mirrors the accepted p4-apple precedent pattern in apps/macos-pending-verifications.md
+================================================================================
+
+[A] Isolated SwiftPM build + tests — surface compiled against the REAL macOS 15 SDK and the REAL
+    design system (generated apps/design Tokens.swift + Sources/Components UI/Feedback/Motion +
+    Sources/Design), via Xcode 26.5 toolchain:
+        $ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swift test
+        Test Suite 'All tests' passed — Executed 40 tests, with 0 failures (0 unexpected).
+    Suites: SignalFilterDraftParseTests(8), AiStreamFrameParserTests(10), AISignalFilterProjectionTests(6),
+    AISignalExplorerNlFilterModelTests(14), AISignalFilterAccessibilityTests(1), AISignalFilterStringsTests(1).
+
+[B] Real cross-SDK typecheck under Swift 6 + strict concurrency (complete) + DEBUG previews:
+        $ xcrun --sdk macosx        swiftc -typecheck -swift-version 6 -strict-concurrency=complete \
+              -D DEBUG -target arm64-apple-macos15.0 <surface + design system>   -> EXIT=0
+        $ xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6 -strict-concurrency=complete \
+              -D DEBUG -target arm64-apple-ios18.0-simulator <surface + design system> -> EXIT=0
+    Confirms iOS 18 + macOS 15 HIG SDK compatibility (SwiftUI + Observation + OSLog; this surface
+    needs neither Swift Charts nor MapKit — the web source uses no charts/maps).
+
+[C] xcodegen enumeration — with shared-surfaces temporarily added to the project.yml `sources:` of both
+    app targets, `xcodegen generate` enumerates all 10 surface files into TeslaSync.xcodeproj:
+        AISignalExplorerNlFilter.{Adapter,AdapterTests,Model,Previews,Projection,Strings,swift,Tests,Views}.swift
+        AISignalExplorerNlFilter.strings
+    project.yml was reverted immediately afterward (git diff --stat = empty); the temporary registration
+    is NOT committed (P4-core owns it). This proves the surface is integration-ready: when P4-core adds the
+    source glob, the files compile into the iOS + macOS app targets with no further change.
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+1 No red-as-green: the two full-app xcodebuild steps are reported BLOCKED, not passed.
+2 No scope narrowing: every web-source state, hook, i18n key, and the propose-only Apply flow reproduced.
+3 No skip-and-assume: the SSE parser + draft validator are ported and unit-tested (40/40).
+4 No stubs as final: zero TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate = 0).
+5 No parity shortcuts: AIFeatureCard + AiOutputPanel scaffold + withAiFeature semantics reproduced natively.
+6 No delegation: implemented directly (no sub-agent delegation of the surface).
+7 No predecessor bypass: follows the P4 AIRestorePanel/feature-views convention + macos-pending precedent.
+8 No commit on red: only the surface files + this log are committed; all surface-scoped gates are green.
+9 No silent drift: SI/unit rules N/A (no unit-suffixed fields); i18n keys match the web source verbatim.
+10 Log ends with EXIT=<int> and STATUS.
+
+DEFERRAL: The full-app iOS-Simulator + macOS `xcodebuild build test` is deferred to
+p4-apple/P99-0001-apple-acceptance-gate (runs on macos-latest with signing identities + the staged
+Shared.xcframework + P4-core source/test wiring), exactly as the ToolCard / AlertMessageEditor /
+FSMTimelineChart surfaces are recorded in apps/macos-pending-verifications.md. The surface itself and
+every host-runnable surface-scoped gate are GREEN.
+
+Surface-scoped results: SwiftPM build + 40/40 tests PASS; macOS15 + iOS18 swiftc -typecheck EXIT=0;
+swiftlint --strict 0 violations; swiftformat --lint 0; check-placeholders EXIT=0; xcodegen enumerates 10 files.
+Full-app xcodebuild [1][2]: BLOCKED by pre-existing/unrelated collisions + KMP/signing + P4-core wiring (out of allowed-files scope).
+
+EXIT=1
+STATUS=BLOCKED

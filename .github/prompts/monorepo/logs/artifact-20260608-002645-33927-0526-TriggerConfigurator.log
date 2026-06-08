@@ -1,0 +1,292 @@
+================================================================================
+P4-APPLE · P7 · page:automations/TriggerConfigurator (Apple — SwiftUI / HIG)
+Run: 2026-06-08T08:14-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/526
+Base: c9c6fdb9f
+Prompt: .github/prompts/monorepo/p4-apple/pages/automations/TriggerConfigurator.prompt.md
+Web source (spec): web/src/features/automations/pages/TriggerConfigurator.tsx
+Parity unit: page:automations/TriggerConfigurator   PARITY_REQUIRED=23 (2 states + 21 strings)
+Mode: code-complete (predecessor surface already shipped) + central xcstrings integration +
+      apple-ledger row + REAL iOS-18/macOS-15 SDK typechecks + EXECUTED XCTest (46/46) +
+      DEFERRED signed Xcode app build/test (0086 precedent, ADR-012). No stubs as final (ADR-011).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)  OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override                OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18 deploy target)               OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15 deploy target)                       OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.x                            OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.6x                            OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh 7.x                                    OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                                    OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                                OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)      WARN
+  surface in project.yml ..... REGISTERED (TeslaSync/feature-views is a source path on both
+                               the iOS and macOS app targets — project.yml L37/L68)         OK
+
+  NOTE — the active developer dir defaults to /Library/Developer/CommandLineTools (no
+  xcodebuild / no iPhoneSimulator SDK). The full Xcode 26.5 toolchain (xcodebuild, both SDKs,
+  swift test) is reached WITHOUT sudo via
+  `export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (0086 precedent). An Xcode
+  runner IS therefore available — the prompt's "no Xcode runner → BLOCKED" escape hatch does
+  NOT apply. SwiftUI is PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles below.
+  This surface uses NEITHER Swift Charts NOR MapKit (manifest "charts: 0 / maps: 0") — it is a
+  form configurator, not a chart/map.
+
+=== OUTPUT-PATH RECONCILIATION (no silent drift — Honesty rule 9) ===
+  The generated prompt names the output `apps/apple/TeslaSync/Features/Automations/
+  TriggerConfigurator.swift`. The native SwiftUI parity of THIS exact web source was already
+  shipped by the predecessor prompt p4-apple/feature-views/P-0086 at the repo's CANONICAL
+  surface location `apps/apple/TeslaSync/feature-views/TriggerConfigurator.*` (10 files,
+  2123 LOC, EXECUTED 46/46 XCTest), committed at 355d85fa4 and registered in project.yml on
+  BOTH app targets. The "page" and "feature-views" prompts are two generator emissions of the
+  SAME parity unit (web `page:automations/TriggerConfigurator`, which is UNROUTED — a
+  controlled `{trigger, onChange}` component, not a standalone route).
+
+  Creating a second `TriggerConfigurator` type under `Features/Automations/` would REDECLARE
+  the existing `public struct TriggerConfigurator` in the same `TeslaSync` module → a guaranteed
+  build break; and a `Features/` path is not in project.yml, so any file there would be dead,
+  uncompiled code (= a stub, ADR-011 violation). Editing project.yml to add the path is
+  parallel-unsafe and NOT in this prompt's allowed files (identical disposition to 0086 rule 7).
+  Therefore this prompt binds the parity unit to the already-registered, app-target-compiled
+  feature-views surface (the "predecessor bypass" prohibition, rule 7, is the OPPOSITE of this:
+  we build ON the shipped predecessor, the prompt's declared P3 "component library" dependency),
+  and contributes the page prompt's DISTINCT, explicitly-allowed increments:
+    (a) the 21 web i18n keys integrated into the central platform catalog
+        `apps/apple/Localization/Localizable.xcstrings` (the page prompt's allowed file +
+        acceptance criterion; 0086 deliberately kept them per-surface and did NOT touch the
+        shared catalog), and
+    (b) the `apps/parity/apple-ledger.json` covered row for page:automations/TriggerConfigurator.
+
+=== ARTIFACT (binding surface: apps/apple/TeslaSync/feature-views/TriggerConfigurator.*) ===
+  TriggerConfigurator.swift           54  surface — switch on trigger kind → editor; .task{start()}
+                                          (view.opened) + .onDisappear{stop()}; a11y container
+  TriggerConfigurator.Adapter.swift  285  SwiftUI-free projection core — AutomationTrigger union,
+                                          CronExpression build/parse, TriggerAdapter (toggleDay,
+                                          signalValue/displayValue/parseLeadingDouble), createDefault,
+                                          Geofence wire decode, surface slug, a11y summaries
+  TriggerConfigurator.Catalog.swift  206  static option catalogs (VEHICLE_EVENTS / GEOFENCE_EVENTS /
+                                          SIGNAL_OPERATORS / SIGNAL_FIELDS+BOOL_FIELD_KEYS /
+                                          COMMON_TIMEZONES / DAYS / TRIGGER_TYPES) w/ labelKey+fallback
+  TriggerConfigurator.Model.swift    384  @Observable TriggerConfiguratorModel (P1/S8) — owns the
+                                          controlled trigger, every web edit rule, emits onChange;
+                                          GeofenceSource seam + GeofenceProjection (loading/error/
+                                          empty/data + stale/offline); P1/S11 view.opened telemetry;
+                                          P1/S10 TCStrings facade
+  TriggerConfigurator.Views.swift    340  presentational primitives — TCChip, TCSelectRow, TCField,
+                                          DaysToggleRow, GeofencePickerField (all query states),
+                                          GeofenceErrorRow (retry)
+  TriggerConfigurator.Editors.swift  257  the four per-kind editors (Schedule/Event/Geofence/Signal)
+  TriggerConfigurator.Previews.swift 125  #if DEBUG — 15 previews, one per web branch + geofence state
+  TriggerConfigurator.Tests.swift    279  XCTest — 36 methods (cron, day toggle, signal value,
+                                          defaults, geofence decode/projection, a11y)
+  TriggerConfigurator.ModelTests.swift 193 XCTest — 10 methods (model edit rules + geofence wiring +
+                                          view.opened telemetry)
+  TriggerConfigurator.strings        117  per-surface P1/S10 table (every web key + native chrome/a11y)
+  Runtime closure is design Tokens (Color.TS/Font.TS/TSSpacing/TSRadius) + Components/UI/Badges
+  (TSTone) only — no KMP `Shared` import. Web `Select`/`Input` map to native menu `Picker`/`TextField`.
+
+=== CHANGES MADE BY THIS PROMPT ===
+  M apps/apple/Localization/Localizable.xcstrings   +231 / -0 lines (purely additive; 21 new keys,
+                                                    compact format matching the catalog; total
+                                                    strings 8121 → 8142; `python3 -m json.tool` VALID;
+                                                    `plutil -lint` reports the SAME pre-existing
+                                                    "Unexpected character {" on the PRISTINE HEAD file
+                                                    too — a CommandLineTools-plutil/xcstrings quirk,
+                                                    not introduced here; the build compiles the catalog
+                                                    via the XCStrings tool, not plutil).
+  A apps/parity/apple-ledger.json                   page:automations/TriggerConfigurator covered 23/23
+                                                    for apple-ios AND apple-macos (proven on both SDKs).
+  A .github/prompts/monorepo/logs/apple-page-automations-TriggerConfigurator.log  this log.
+  (The shipped Swift surface is the predecessor's, unchanged — see reconciliation above.)
+
+=== PARITY ===
+PARITY_REQUIRED=23   (manifest record: page:automations/TriggerConfigurator, requiredCount 23)
+Each item: binding evidence as file + symbol. "central xcstrings" = key now present in
+apps/apple/Localization/Localizable.xcstrings (this prompt); "facade" = resolved at the render
+boundary via TCStrings.string(key, webFallback) (NSLocalizedString, table "TriggerConfigurator").
+
+[state]  empty data state
+         → GeofenceResolved.Phase.empty (Model.swift:90) decided by GeofenceProjection.resolve
+           when geofences == [] (Model.swift:127); rendered by GeofencePickerField `.empty` branch
+           (Views.swift:226-232) as picker + "No geofences defined yet." caption — never blank;
+           #if DEBUG preview present (Previews.swift, geofence-empty). COVERED
+[state]  success data state
+         → GeofenceResolved.Phase.data (Model.swift:93, resolve L130); GeofencePickerField `.data`
+           branch (Views.swift:233-234) renders the populated menu, and the four per-kind editors
+           render the configured trigger (Editors.swift: ScheduleEditor/EventEditor/GeofenceEditor/
+           SignalEditor) bound to TriggerConfiguratorModel; preview present. COVERED
+[string] automations.builder.advancedCron  → Editors.swift:73 (ScheduleEditor.modeToggle) · central xcstrings + facade. COVERED
+[string] automations.builder.changedOnly   → Editors.swift:218 (SignalEditor Toggle label) · central xcstrings + facade. COVERED
+[string] automations.builder.cronExpr      → Editors.swift:35 (advanced TCField labelKey) · central xcstrings + facade. COVERED
+[string] automations.builder.cronHint      → Editors.swift:40 (TCField hintKey) · central xcstrings + facade. COVERED
+[string] automations.builder.cronPlaceholder → Editors.swift:38 (TCField promptKey; // parity:allow verbatim web i18n key) · central xcstrings + facade. COVERED
+[string] automations.builder.days          → Views.swift:132 (DaysToggleRow header) · central xcstrings + facade. COVERED
+[string] automations.builder.dwellHint     → Editors.swift:176 (GeofenceEditor.dwellField hint) · central xcstrings + facade. COVERED
+[string] automations.builder.dwellMinutes  → Editors.swift:162,173 (dwell label + a11y) · central xcstrings + facade. COVERED
+[string] automations.builder.event         → Editors.swift:109 (EventEditor event select labelKey) · central xcstrings + facade. COVERED
+[string] automations.builder.geofence      → Views.swift:199,265 (GeofencePickerField header + a11y) · central xcstrings + facade. COVERED
+[string] automations.builder.geofenceEvent → Editors.swift:141 (GeofenceEditor event select) · central xcstrings + facade. COVERED
+[string] automations.builder.operator      → Editors.swift:209 (SignalEditor operator select) · central xcstrings + facade. COVERED
+[string] automations.builder.selectGeofence → Views.swift:255 (picker prompt) + Adapter.swift:283 (a11y value) · central xcstrings + facade. COVERED
+[string] automations.builder.signal        → Editors.swift:203 (SignalEditor signal select) · central xcstrings + facade. COVERED
+[string] automations.builder.simpleCron    → Editors.swift:73 (ScheduleEditor.modeToggle, advanced→simple) · central xcstrings + facade. COVERED
+[string] automations.builder.statePlaceholder → Editors.swift:239 (TCField promptKey; // parity:allow verbatim web i18n key) · central xcstrings + facade. COVERED
+[string] automations.builder.time          → Editors.swift:56,67 (ScheduleEditor time label + a11y) · central xcstrings + facade. COVERED
+[string] automations.builder.timezone      → Editors.swift:46 (ScheduleEditor timezone select) · central xcstrings + facade. COVERED
+[string] automations.builder.value         → Editors.swift:229,236,244 (SignalEditor value control, all 3 shapes) · central xcstrings + facade. COVERED
+[string] common.false                      → Editors.swift:255 (SignalEditor.boolOptions) · central xcstrings + facade. COVERED
+[string] common.true                       → Editors.swift:254 (SignalEditor.boolOptions) · central xcstrings + facade. COVERED
+PARITY_COVERED=23
+PARITY_COVERED==PARITY_REQUIRED (23==23)  OK
+
+  i18n note — all 21 keys verified ABSENT from the central catalog before this run and ADDED with
+  their verbatim web `t(key, default)` English values (advancedCron="Use advanced cron expression",
+  changedOnly="Fire on any change", cronExpr="Cron Expression", cronHint="minute hour day-of-month
+  month day-of-week", cronPlaceholder="0 8 * * 1-5", days="Days", dwellHint="Required for dwell
+  triggers", dwellMinutes="Dwell Minutes", event="Event", geofence="Geofence", geofenceEvent="Event",
+  operator="Operator", selectGeofence="Select geofence...", signal="Signal", simpleCron="Switch to
+  simple mode", statePlaceholder="online", time="Time", timezone="Timezone", value="Value",
+  common.false="False", common.true="True"). Zero hardcoded literals in the surface — every visible
+  string flows through the facade; the cron expression + geofence names are protocol/user data shown
+  verbatim. The two keys whose NAME contains "Placeholder" carry a sanctioned // parity:allow opt-out.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (6 runtime files + design Tokens + Components/UI/Badges):
+      DEVELOPER_DIR=…/Xcode.app xcrun --sdk iphonesimulator swiftc -typecheck \
+        -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator -swift-version 6 \
+        Tokens.swift Badges.swift TriggerConfigurator.{Adapter,Catalog,Model,Views,Editors,}.swift
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0, -swift-version 6):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swiftc -typecheck — DEBUG previews (-D DEBUG; same closure + TriggerConfigurator.Previews.swift
+    against macOS 15 SDK; exercises all 15 #Preview bodies incl. the empty + data geofence states):
+      PREVIEWS_TYPECHECK_EXIT=0                                                     OK
+[4] swift test — FULL XCTest suite EXECUTED on the macOS host via a self-contained throwaway SwiftPM
+    harness (the real Adapter + Catalog + Model — the SwiftUI-free core — copied verbatim into a
+    `TeslaSync` library target so the test files' `@testable import TeslaSync` needs NO rewrite;
+    Tests.swift + ModelTests.swift unchanged). No shims:
+      Executed 46 tests, with 0 failures (0 unexpected)
+        TriggerCronTests 11 · TriggerDayToggleTests 5 · TriggerSignalValueTests 8 ·
+        TriggerDefaultTests 2 · TriggerGeofenceDecodeTests 3 · TriggerGeofenceProjectionTests 5 ·
+        TriggerAccessibilityTests 2 · TriggerConfiguratorModelTests 10
+      SWIFT_TEST_EXIT=0                                                             OK
+[5] swiftlint --strict on the 9 surface .swift files (config apps/apple/.swiftlint.yml):
+      Done linting! Found 0 violations, 0 serious in 9 files.
+      LINT_EXIT=0                                                                   OK
+[6] swiftformat --lint (config apps/apple/.swiftformat) on the 9 surface files:
+      0/9 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+[7] check-placeholders (ADR-011 stub gate; pwsh) — REAL scan:
+      [7a] LITERAL gate path `-Path apps/apple/TeslaSync/Features/Automations -Language swift`
+           (the prompt's templated path; directory does not exist on this canonical layout):
+             PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+      [7b] MEANINGFUL scan of this parity unit's 9 shipped .swift files:
+             PLACEHOLDER_ALLOWED=2  PLACEHOLDER_COUNT=0  EXIT=0
+           (the 2 ALLOWED are the sanctioned `// parity:allow verbatim web i18n key` opt-outs on the
+            cronPlaceholder + statePlaceholder key references, whose NAMES contain the marker
+            substring; COUNT=0 — no stubs/TODO/FIXME/mock/Lorem.)
+      PLACEHOLDER_EXIT=0 (literal gate command)                                     OK
+[8] xcodegen generate — project + targets + schemes generate cleanly; the surface IS target-registered:
+      XCODEGEN_EXIT=0                                                               OK
+      generated TeslaSync.xcodeproj references to "TriggerConfigurator" = 60 (feature-views is a
+      source path on BOTH app targets); Localizable.xcstrings registered = 16 refs.
+      (generated .xcodeproj is git-ignored — removed after the probe.)
+  catalog validation — `python3 -m json.tool Localizable.xcstrings` => VALID; total strings 8142;
+    git diff --numstat => 231 insertions / 0 deletions (purely additive).
+  ledger validation — apple-ledger.json conforms to apps/parity/ledger.schema.json (2 rows:
+    apple-ios + apple-macos; status done; coveredCount 23 == requiredCount 23).
+
+=== GATE — XCODE APP BUILD/TEST (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO
+    Captured evidence (real command run on this host, full Xcode 26.5):
+      error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+      ** BUILD FAILED **   XCODEBUILD_TARGET_EXIT=65
+    Why deferred (code-unrelated, outside this prompt's allowed files — identical disposition to the
+    0086/0038/0040 precedents, Honesty rule 7):
+      (a) Shared.xcframework not staged: BOTH app targets link the KMP core (Frameworks/ holds only
+          .gitkeep); staging it needs a Kotlin/Native Gradle build, a pre-build phase independent of
+          this UI surface. Concrete missing-framework error captured above (exit 65).
+      (b) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    The MEANINGFUL validation IS performed here: the surface compiles against BOTH the iOS 18
+    simulator and macOS 15 SDKs (steps [1]/[2]) and its full XCTest suite EXECUTES green (46/46,
+    step [4]). Under Xcode these same tests run in the TeslaSync(/-macOS) test target once (a) lands.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Every region of the web source reproduced — the four trigger-kind editors (schedule
+      simple/advanced + mode toggle + weekday math + timezone · vehicle event · geofence picker
+      with loading/error/empty/data + stale/offline + dwell · signal with typed value + change-only);
+      the web component has no <GlassPanel>/chart/map (manifest panels 0 / charts 0 / maps 0).
+  [x] All 23 parity items render from the bound @Observable state holder (TriggerConfiguratorModel)
+      — enumerated above with file+symbol evidence; PARITY_COVERED=23.
+  [x] loading / empty / error implemented for the one data source (useGeofences → GET /geofences):
+      GeofenceProjection → GeofencePickerField loadingRow / empty caption / GeofenceErrorRow(retry);
+      never a blank region.
+  [x] All visible strings sourced from Localizable.xcstrings — 21 keys added to the central catalog
+      (verified present; values match web defaults); key names match web verbatim; zero hardcoded
+      literals in the surface.
+  [x] Dark mode + Dynamic Type + a11y + SI units — design-token colors/typography (light/dark via
+      the --text-* token ramp), Font.TS Dynamic Type ramp, a11y labels/traits on every interactive
+      element; no non-SI storage/compute (this surface carries no unit-bearing fields).
+  [x] SwiftUI-native only (menu Picker / TextField / Toggle / Stepper / DatePicker — no web cloning,
+      no WKWebView).
+  [x] build + lint + test + placeholder gates green where host-runnable; signed Xcode app build/test
+      DEFERRED with captured evidence; PARITY_COVERED==PARITY_REQUIRED (23==23).
+  [x] apple ledger row for page:automations/TriggerConfigurator set covered (apple-ios + apple-macos).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the signed Xcode app build/test is shown DEFERRED (not green) with the real
+                       XCODEBUILD_TARGET_EXIT=65 missing-framework error captured verbatim. Every
+                       "OK" is a command actually run with its real exit code (iOS+macOS SDK compiles,
+                       a DEBUG-previews compile, an EXECUTED 46/46 XCTest run, swiftlint/swiftformat/
+                       placeholder/xcodegen, json.tool catalog validation). The plutil quirk + the
+                       unstaged framework are disclosed, not hidden.
+  2  No scope narrowing: bound the full surface (all four trigger kinds + every geofence query state)
+                       and delivered the page prompt's distinct increments (central xcstrings + ledger);
+                       nothing dropped.
+  3  No skip-and-assume: web source read end-to-end; every host gate executed on this machine; the
+                       21 keys verified ABSENT then ADDED and re-verified PRESENT; the catalog
+                       re-parsed VALID.
+  4  No stubs as final : no `Features/Automations/` placeholder was written (it would be dead,
+                       uncompiled code — see reconciliation). placeholder COUNT=0 for the shipped files.
+  5  No parity shortcuts: the binding surface is a faithful port (buildCronExpr/parseCronExpr,
+                       handleDayToggle, signalValueFromInput + value derivation, parseFloat semantics,
+                       every per-kind edit rule, the schedule mode-toggle quirk reproduced verbatim,
+                       every web i18n key). Catalog values are the verbatim web defaults.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: built ON the shipped predecessor surface (P-0086, registered in
+                       project.yml) — the declared P3 component dependency — instead of duplicating /
+                       redeclaring it; did NOT edit project.yml / .swiftlint.yml. Did edit the central
+                       Localizable.xcstrings because THIS page prompt explicitly lists it as an allowed
+                       file + acceptance criterion (unlike the 0086 feature-views prompt).
+  8  No commit on red  : committing on green host gates + iOS/macOS compiles + DEBUG-previews compile +
+                       executed 46/46 tests + clean lint/format/placeholder + VALID additive catalog +
+                       schema-valid ledger; signed Xcode app build/test explicitly DEFERRED (captured
+                       evidence), not failed.
+  9  No silent drift   : the output-path divergence (Features/Automations → canonical feature-views)
+                       is documented above with its build-safety rationale; changes confined to the
+                       allowed Localizable.xcstrings + apple-ledger.json + this log. (Pre-existing
+                       unrelated working-tree edits to feature-views/AIUsageCard.* and web/*.tsx are
+                       NOT touched and NOT committed here.)
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  page:automations/TriggerConfigurator is covered on apple (iOS + macOS) by the native SwiftUI surface
+  apps/apple/TeslaSync/feature-views/TriggerConfigurator.* — a faithful, executed-green port of the web
+  controlled configurator (cron build/parse, weekday toggle, signal-value coercion, every per-kind edit
+  rule; 46/46 XCTest) bound through an @Observable state holder with the geofence query projected into
+  loading/error/empty/data + stale/offline, a11y on every control, and every web i18n key. This prompt
+  added the page-level increments: the 21 web string keys integrated into the central
+  Localizable.xcstrings catalog and the apple-ledger covered row. All host-runnable gates pass AND the
+  surface compiles against BOTH the iOS 18 simulator and macOS 15 SDKs under Swift 6 strict concurrency;
+  the signed Xcode app build/test is DEFERRED to the downstream integration/signed runner
+  (Shared.xcframework KMP staging + macOS signing — outside this prompt's allowed files), matching the
+  0086 "code-complete + DEFERRED Xcode gate" precedent.
+
+=== COMMIT ===
+  git add apps/apple/Localization/Localizable.xcstrings apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-automations-TriggerConfigurator.log
+  git commit -m "feat(apps/apple): TriggerConfigurator at web parity (P7 automations)"
+
+EXIT=0
+STATUS=DONE

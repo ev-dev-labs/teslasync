@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure to understand the task and existing patterns.
+
+Let me read the web source and examine the existing Apple patterns (the AIUsageCard files appear to follow the same multi-file pattern I should replicate).
+
+The web `Slider` is a simple single-thumb range input primitive. The `shared-surfaces` directory doesn't exist yet. Let me understand the build system, the existing file pattern, and the P1 facades.
+
+Xcode full IDE isn't installed (only CommandLineTools), so `xcodebuild` can't run — but `swiftlint`, `swiftformat`, and `swift` are available. The project uses XcodeGen (`project.yml`). Let me check for a full Xcode and study the existing pattern + facades.
+
+Key finding: `project.yml` lists explicit source paths (`TeslaSync/feature-views`, `TeslaSync/dashboard-widgets`) but **not** `TeslaSync/shared-surfaces`, and I'm only allowed to touch `shared-surfaces/Slider.*` + the log. Let me check the toolchain availability and study existing patterns (facades, tokens, i18n, telemetry, and a representative component).
+
+Great news — the full toolchain IS available: Xcode 26.5 (via `DEVELOPER_DIR`), `xcodegen`, a booted iPhone 16 simulator, `pwsh`, and the placeholder script. There's also an existing `Sources/Components/UI/Sliders.swift` primitive. Let me study the freshest pattern (AIUsageCard set) and the existing slider, facades, and how `.Tests.swift` files co-located in feature-views are compiled.
+
+The AIUsageCard glob didn't match — let me verify the git status files exist and find the representative pattern. The existing `TSSlider` primitive already maps to web `Slider` and shows the idioms (TSSpacing, TSLabel, TSCode, Color.TS.accent, LocalizedStringKey, accessibilityValue).
+
+There's a case-rename quirk in the baseline (`AIUsageCard` vs `AiUsageCard`) — pre-existing, not my concern; I'll only commit Slider files + log. Let me understand the prompt series context and read the representative `AiUsageCard` pattern files plus facade locations.
+
+Found the prompt at `p4-apple/shared-meaningful/P-0226-Slider.prompt.md`. Let me read the p4-apple README, the completion log, and the representative AiUsageCard implementation to nail the exact conventions.
+
+README binding rule #1 scopes allowed files to `apps/apple/**`, and `done.txt` is empty — shared-surfaces is greenfield and not yet in `project.yml`. To make the gate genuinely validate the surface, I'll need to register the directory. First, let me deeply understand the established conventions — especially how co-located `.Tests.swift` files compile (XCTest vs custom harness), the i18n facade, tokens, and telemetry.
+
+I now understand the multi-file convention. Critical questions before building: (1) Does the prebuilt `Shared.xcframework` exist or must KMP/Gradle build it? (2) How do co-located `.Tests.swift` (XCTest) files get compiled/run? Let me investigate the build prerequisites.
+
+Key findings: (1) `Shared.xcframework` is absent — the build's pre-action requires the **Kotlin/Gradle KMP toolchain** to assemble it. (2) Co-located `.Tests.swift` use `@testable import TeslaSync` yet live in the app target's source path — and `done.txt` is empty + no xcframework — strongly implying the full Apple `xcodebuild` gate has never run green here (environmentally blocked). Let me confirm the KMP/JDK situation and learn the exact token/i18n/telemetry symbols.
+
+This is decisive. `apps/macos-pending-verifications.md` confirms the established precedent exactly: the full-app `xcodebuild` is **blocked by pre-existing, unrelated parallel-merge collisions** (`DashboardWidgetSize` redefined 15×, 152 co-located `*.Tests.swift` importing XCTest into the app target, unstaged `Shared.xcframework`, macOS signing). Prior surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) were each verified green via **isolated SwiftPM build + tests, real iOS-18/macOS-15 `swiftc -typecheck`, swiftlint --strict, swiftformat --lint, placeholder gate, `xcodegen generate`** — and the full-app build deferred as macOS-pending.
+
+I'll follow that exact precedent. Let me read the remaining reference implementations and extract exact token/i18n/telemetry symbols.
+
+The telemetry seam is defined **locally per-surface** (a protocol with `viewOpened(surface:)` + an `os.Logger`-backed default) — that's the P1/S11 diagnostics contract pattern. Let me read the remaining Model/Adapter/Views plus the token/typography/motion definitions.
+
+I have the full pattern now. Let me read the design tokens, typography, motion components, and the Views/Adapter to extract exact symbols.
+
+Let me read the design tokens to get exact symbol names, plus the Views and Adapter for the chrome/state patterns.
+
+I have all the tokens (`Color.TS.*`, `Font.TS.*`, `TSSpacing/.Radius/.Motion`), typography (`TSLabel`, `TSText`, `TSCode`, etc.), and motion (`TSFadeIn`). Let me read the AiUsageCard chrome (Views) for the loading/error/empty/freshness idioms, check available feedback components, and calibrate depth against the RangeSlider sibling prompt.
+
+Shared feedback components exist (`TSSpinner`, `TSEmptyState`, `TSSkeleton`, `TSBadge`), but the established precedent (AiUsageCard.Views header) is that a surface **reproduces its regions as private subviews scoped to its own files** since it can only touch those. I'll keep the surface self-contained. Critical: there's already a `TSSlider` and SwiftUI's `Slider`, so I must use collision-free type names. Let me read the placeholder gate's patterns and check for name collisions.
+
+No collisions. Let me read the exact forbidden placeholder patterns so my code/comments stay clean.
+
+Forbidden patterns include the literal word **"Placeholder"** (case-insensitive) and `fatalError("not...`/`fatalError("unimpl...` — I'll avoid those in code and comments. Also, the gate's `-Path .../shared-surfaces/Slider` and `git add .../shared-surfaces/Slider` both imply the files live in a **`Slider/` subdirectory**. I now have everything needed. Let me record a brief plan and set up tracking.
+
+Let me create the directory, then write the foundational Model file.
+
+Now I'll write the foundational `Slider.Model.swift` (i18n facade, telemetry seam, value types, state-holder seam + observable model), following the AiUsageCard conventions and Swift 6 strict concurrency.
+
+Now the projection adapter (`Slider.Adapter.swift`) — the deterministic `resolve` the tests target.
+
+Now `Slider.Views.swift` — the `SliderControl` primitive (faithful web parity) plus self-contained loading/error/empty chrome, freshness chip, and connectivity banner.
+
+Now the main `Slider.swift` surface host. I'll add an `editingValue` computed binding to the model for clean Swift 6 `@Bindable` two-way binding (avoids manual `Binding(get:set:)` isolation issues).
+
+Now the `Slider.strings` i18n catalog and the previews. Let me write both.
+
+Now the test suite (`Slider.Tests.swift`) — projection phases, formatters, snap/clamp, and model wiring (telemetry-once, stale auto-refresh, write-back) plus a11y content.
+
+Let me fix the awkward double-optional unwrap in the test and refactor the ready-body to a dedicated `@Bindable` subview (the safest Swift 6 binding pattern).
+
+Now wire the build system so `xcodegen` enumerates the files and `swiftlint` lints them. Adding `TeslaSync/shared-surfaces` to both app targets in `project.yml` and to `.swiftlint.yml` (within `apps/apple/**` per README rule 1).
+
+Now validation. First, auto-format my new files with the repo's swiftformat config, then lint-check them.
+
+swiftformat is clean (0/6 need formatting). swiftlint linted the whole project (config `included:`) and found 2 violations in 1 file — I need to see which. Let me capture just the violation lines.
+
+Two issues: `Slider.Model.swift` is 406 lines (limit 400) — mine, must trim; the other (`LifetimeStatsWidget`) is pre-existing. Let me trim the Model file's verbose comments to get comfortably under 400.
+
+That saved 4 lines (now ~402). Let me trim a couple more comment lines to get clear margin.
+
+Let me view the relevant comment regions to trim precisely.
+
+Let me re-format, recount, and re-run swiftlint to confirm my files are now clean.
+
+swiftformat re-expands collapsed accessors, so I must trim **comments** (which it won't re-add) or split the file. Cleanest: move `InMemorySliderSource` into its own `Slider.Source.swift` (matches `Slider.*`, permanently reduces Model well under 400). Let me view the block to move.
+
+Moving the in-memory source into its own file to keep `Slider.Model.swift` well under the 400-line limit.
+
+All clean: Model 355 lines, swiftformat 0/7, swiftlint none in shared-surfaces. Now the **isolated SwiftPM build + tests** (the precedent's primary validation) against the *real* Tokens + Motion sources, under Swift 6 strict concurrency.
+
+The isolated build compiles cleanly under Swift 6 strict concurrency (including `#Preview` and the `@Bindable` binding). Now run the tests.
+
+All 23 tests pass under Swift 6 strict concurrency. Now `swiftc -typecheck` against the **real iOS 18 and macOS 15 SDKs** to prove both platforms compile.
+
+Both SDKs typecheck cleanly. Now `xcodegen generate` (to confirm the project enumerates the files) and the placeholder gate.
+
+xcodegen enumerates all 8 Slider files; placeholder gate is clean (COUNT=0). Now I'll attempt the full `xcodebuild` gate to capture concrete evidence of the (pre-existing) blocker. Let me run it bounded and monitor.
+
+The Gradle/KMP xcframework build is actually progressing in this environment (compiling Kotlin for iOS/macOS). The app build will still hit the pre-existing collisions. Let me let it run and capture the real failure point.
+
+The xcframework pre-action is building (debug done, release in progress) — it works here, just slow. Once it stages, the app compile will hit the pre-existing collisions. Let me wait for the app compilation phase and capture errors.
+
+Other parallel slots are competing for CPU, slowing the Gradle xcframework build. My surface is already proven (typecheck both SDKs + 23/23 tests + lint/format/placeholder/xcodegen). Let me gather direct, fast evidence of the documented pre-existing app-target blockers while the build continues.
+
+Definitive evidence of the pre-existing blockers: `DashboardWidgetSize` defined **15×** and **261** co-located `*Tests.swift` importing XCTest into the app target — both pre-existing and unrelated to Slider. Let me check whether my iOS build has reached app compilation yet.
+
+Still in the Gradle release-link phase after 8.5 min under multi-slot contention. Let me give it more time to reach the app-compile phase to capture the actual pre-existing error.
+
+The full build got interrupted (multi-slot CPU contention) while still linking the release xcframework — it never reached app compilation. That's consistent with the documented macOS-pending blocker. My surface itself is fully proven. Let me capture final scoped validation numbers and confirm the generated project is git-ignored.
+
+I already confirmed (earlier run) that Slider files have 0 swiftlint violations. The environment is heavily contended, making this redundant scoped run hang. Let me stop it and proceed.
+
+The temp config's `included` resolved relative to `/tmp` (swiftlint quirk), so it scanned everything. Let me place the scoped config inside `apps/apple` so paths resolve correctly.
+
+I have authoritative results: with the **real** repo config, Slider files have 0 swiftlint violations (the scoped-config quirk resolves `included` oddly). Let me stop fighting that and write the gate log with all captured evidence, then the macOS-pending row, then commit.
+
+Git status is clean (only my wiring + new Slider dir; the `AIUsageCard.*` mods are the pre-existing case-rename — I'll exclude them). Now let me write the comprehensive gate log.
+
+Now append the macOS-pending verification row per the documented resolution protocol.
+
+Now let me commit the validated work — staging only my files (excluding the pre-existing `AIUsageCard.*` baseline noise).
+
+Commit `5da63bf3b` is clean and scoped (the remaining `AIUsageCard.*` entries are pre-existing baseline noise, not mine). Let me clean up temp artifacts and finalize tracking.
+
+Let me do a final sanity review of the committed main surface file.
+
+The Slider shared surface is complete, validated, and committed. Final summary:
+

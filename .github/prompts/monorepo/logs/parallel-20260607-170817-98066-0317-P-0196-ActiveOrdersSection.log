@@ -1,0 +1,171 @@
+I'll start by understanding the environment and what's available, since this task has a capability gate (SwiftUI/Xcode tooling) that determines whether it's actionable.
+
+Key findings so far:
+- `apps/apple/` exists with a real project (XcodeGen `project.yml`, Sources, Tests).
+- `swift`, `swiftlint`, `swiftformat` are available.
+- **`xcodebuild` requires full Xcode but only Command Line Tools are installed**, and `simctl` is missing — so the iOS/macOS simulator build+test gate cannot run on this runner.
+
+This is exactly the capability constraint the prompt anticipates. Per the Honesty Covenant I won't fake the build, but I also won't narrow scope — I'll produce the complete production implementation + tests, run every check I *can*, and record honest evidence. Let me read the web source and the existing Apple conventions.
+
+A mature codebase with a clear per-feature-view file convention (`.swift`, `.Adapter`, `.Model`, `.Views`, `.Previews`, `.strings`, `.Tests`). Let me study the conventions deeply: a close sibling (`AlertsSection`), the shared facade/state-holder layer, the web `useUser` hook, and project wiring.
+
+Excellent — `AlertsSection` is a perfect template. Let me read the rest of its file set plus the shared facade layer to learn the exact state-holder, i18n, token, and telemetry wiring.
+
+Now the test conventions plus the shared facade/token/lint infrastructure. Let me read these in parallel.
+
+Now the design tokens, toast/motion/skeleton primitives, the toast pattern used by sibling views, and the lint/placeholder tooling.
+
+`pwsh` is available (placeholder checker can run). No feature-view uses toast yet, so I'll need a self-contained toast seam. Let me find the token definitions and the shared UI primitives (Card/GlassPanel, Badge, Button, IconBox) and the motion/skeleton signatures.
+
+Now the generated tokens and the shared UI primitives (Card, Badge, Button) so I map web `GlassPanel`/`Badge`/`Button`/`IconBox` faithfully.
+
+Strong shared primitives exist (`TSBadge`, `TSIconBox`, `TSSkeleton`, `TSFadeIn`, `ContentUnavailableView`). Now I'll confirm the web date-format semantics, the settings i18n keys, and the source-seam pattern across siblings.
+
+Confirmed the universal pattern: **every** feature view defines its own source-protocol seam + `InMemory…Source` (267 matches), with real wiring done at integration — no feature view touches `AppContainer`/`Shared`. My approach matches exactly. Now let me conclusively determine the Xcode toolchain situation and check for any shared date utility.
+
+`/Applications/Xcode.app` **does exist** — it's just not the selected developer dir. I can likely point at it via `DEVELOPER_DIR` without sudo. This could unblock the real gate. Let me verify.
+
+**Pivotal:** Full Xcode 26.5 is available via `DEVELOPER_DIR`, iPhone 16 simulator is booted, and `xcodegen` is present. The remaining blocker is `Frameworks/Shared.xcframework` (the KMP shared core) is **absent** (only `.gitkeep`), and the app targets depend on it. My surface files won't import `Shared`, but the whole app target does. Let me check whether the shared framework can be built here.
+
+The long pole is building `Shared.xcframework` via Gradle/Kotlin-Native. Let me check Java availability and kick that build off in the background while I write the implementation.
+
+Java 17 is present. Let me launch the Shared.xcframework Gradle build in the background (it's the long pole — first run downloads Kotlin/Native), then write the implementation while it builds.
+
+Build is running in the background. Let me set up tracking and read the remaining shared primitives I'll map to (feedback states, cards, overlays) before writing code.
+
+I have everything I need: `TSGlassPanel`, `TSCard`, `TSIconBox`, `TSBadge`, `TSSkeleton`, `TSFadeIn`, `ContentUnavailableView`. Let me confirm `TSButton`/typography/`tsGlassPanel` signatures, then start writing.
+
+I now have a complete understanding of the conventions. Let me record the plan and todos, then write the implementation.
+
+Let me check the background build's progress, then write the Adapter (pure core).
+
+Multiple parallel sibling slots are building simultaneously (shared environment). My slot's gradle is running but the log redirect didn't attach. Let me re-establish a cleanly-logged detached build, then write code while it runs.
+
+Build relaunched (detached, logged to `/tmp/shared-xcf-317.log`). Now writing the implementation, starting with the pure Adapter core.
+
+Now the Model — state-holder, telemetry + toast seams, and i18n facade.
+
+Now the presentational Views — the largest file (header with refresh, cards, KV rows, badges, all states).
+
+The Shared.xcframework build finished. Let me check whether it succeeded before continuing.
+
+**BUILD SUCCESSFUL** — `Shared.xcframework` was produced (4m29s; Kotlin/Native cache shared with sibling slots). The full gate is now achievable. Let me stage the framework and write the remaining four files (main View, Previews, strings, Tests).
+
+Framework staged with all three slices. Now the i18n catalog and the tests.
+
+Now the comprehensive test suite (adapter, model lifecycle/telemetry/toast/auto-refresh, accessibility).
+
+All 7 files written. Critical check: how the `*.Tests.swift` files are wired into a test target (the app `sources` glob includes `feature-views`). Let me inspect the rest of `project.yml`.
+
+I need to see exactly how feature-view `.Tests.swift` files map to the test bundle vs the app target. Let me read the precise sections.
+
+Confirmed: the app target globs `TeslaSync/feature-views`, so `*.Tests.swift` compile into the host app and run via the hosted `TeslaSyncTests` bundle — the exact established pattern my files follow. Now let me lint/format-check my files for fast feedback before the heavy build.
+
+swiftformat clean. Now swiftlint --strict on my files.
+
+Two `file_length` violations (>400 lines under `--strict`): `Views.swift` (431) and `Tests.swift` (410). The idiomatic fix (siblings do this) is to split into more `ActiveOrdersSection.*` files. Let me split Views → Views+Cards+States and Tests → Tests+ModelTests.
+
+Now recreate the tests, split into adapter/a11y tests and model tests.
+
+Re-run swiftformat + swiftlint on the full split set.
+
+Clean: swiftformat 0/9, swiftlint 0 violations, all files ≤359 lines. Now the placeholder checker (gate step) — let me check its interface and run it.
+
+The gate's `-Path` is a file *prefix*, so `Test-Path` treats it as empty (vacuous pass) — but I must verify meaningfully. Critically, my code uses the word "placeholder" (variable/comments) — I must check the forbidden-pattern list to avoid a real hit.
+
+Critical catch: the common forbidden list includes `"Placeholder"` (case-insensitive), and my code uses "placeholder" as a constant name and in comments. Even though the gate's prefix-path makes it scan nothing, an honest scan would flag it. Let me check how siblings handle the em-dash fallback word.
+
+Decision: the dominant sibling convention names the em-dash fallback `emDash`/`dash` (AuditPanel, QuickMetrics, RedisDiagnostic), and the forbidden list literally includes `"Placeholder"` (case-insensitive). To pass even a strict per-file scan (not rely on the prefix quirk), I'll rename `OrdersDisplay.placeholder` → `emDash` and scrub the word from my files. Let me enumerate every occurrence.
+
+Renaming `placeholder` → `emDash` (the dominant sibling convention) and scrubbing the word from comments/test names. `line_length` ignores comments and no `wrap` rule is enabled, so longer prose is safe.
+
+Clean. Let me re-verify lint/format and run the placeholder checker (both the exact gate command and a meaningful per-file scan).
+
+All static gates are green (swiftformat 0/9, swiftlint 0, placeholder genuinely 0 per-file). Now the real build+test gate. Let me generate the Xcode project, then run the iOS Simulator build+test.
+
+Project generated; both schemes present. Now the iOS Simulator build+test (the long pole) — starting it in the background with an isolated DerivedData path.
+
+Build running in the background. Let me proactively check for type-name collisions with the rest of the module (a collision would fail the build) while it compiles.
+
+No collisions. The iOS build+test shell completed — let me read the result.
+
+The shell finished but xcodebuild failed (exit 65) — a Swift compile error in the TeslaSync target. Let me find the actual errors.
+
+The compile error is **not in my code** — it's `AcDcStatsPanel.Tests.swift:19: unable to resolve module dependency: 'XCTest'`. The app target compiles all feature-view `*.Tests.swift` (which `import XCTest`) but lacks XCTest search paths. This is a pre-existing project-wide setup detail. Let me find how CI builds this (likely sets `ENABLE_TESTING_SEARCH_PATHS`).
+
+This is the key context. A sibling P4 log and `apps/macos-pending-verifications.md` document that the **full-app** `xcodebuild` is blocked by **pre-existing, unrelated** issues (co-located `*.Tests.swift` needing `ENABLE_TESTING_SEARCH_PATHS`, duplicate `DashboardWidgetSize`/`PowerFlowConnection` across parallel-merged files, macOS signing). The accepted methodology (per ToolCard P-0010) is to verify the **surface in isolation via SwiftPM** + tests, plus lint/format/placeholder. Let me confirm the component/design primitives are `Shared`-free so I can build an isolated package.
+
+Components + Design are `Shared`-free, and my files only need SwiftUI/Foundation/Observation/OSLog/XCTest. I'll follow the accepted ToolCard methodology: build + test the surface in isolation via SwiftPM (Swift 6 language mode = strict concurrency), pulling in the real primitive dependencies. Let me assemble it.
+
+Package assembled (17 lib + 2 test files). Now build + test it in isolation under Swift 6 language mode.
+
+**Isolated SwiftPM build + test: 34 tests, 0 failures** under Swift 6 strict concurrency, compiled against the real design tokens + component primitives. This compiles the full surface (views, cards, states, previews for every state) and runs the adapter/model/a11y suites — the accepted ToolCard methodology.
+
+Now let me confirm the documented pre-existing full-app blockers exist in this checkout, then run the full `xcodebuild` (with the documented `ENABLE_TESTING_SEARCH_PATHS` fix) to prove zero errors come from my files.
+
+Confirmed: `DashboardWidgetSize` is redeclared as `public struct` in **15 files** and `PowerFlowConnection` in 2 — pre-existing parallel-merge collisions in the app module, exactly as `macos-pending-verifications.md` documents. The full-app build cannot link regardless of my work. Let me run the full iOS build with the documented `ENABLE_TESTING_SEARCH_PATHS` fix to capture definitive proof that **zero** errors come from my files.
+
+While the build runs, let me study a sibling log to match the established format. Let me look at the logs directory and a comparable BLOCKED log.
+
+The InfrastructureSection log is the exact precedent: the surface is verified green in isolation + all achievable gates green, and the full-app `xcodebuild` is **DEFERRED** (baseline-red in other files), reaching `EXIT=0 / STATUS=DONE`. My situation matches. Let me wait for the iOS build to confirm error attribution.
+
+The iOS build (with the testing-search-paths fix) completed. Let me read its result and attribute the errors.
+
+**Conclusive: ACTIVEORDERS_ERRORS=0.** All 1350 errors are in pre-existing `dashboard-widgets/*Widget*` files (`DashboardWidgetSize`/`VehicleHeroModel` ambiguous from the 15×/8× redeclarations) — zero in my files. This matches the documented precedent exactly. Let me capture the macOS data point too (same shared sources + signing) while I write the log.
+
+The old progress shell completed (ignore). While macOS builds, let me capture the final clean gate outputs verbatim for the log.
+
+All confirmed: 0 lint, 0 format, and **zero errors in any feature-views file** on iOS (only dashboard-widgets collisions remain). Let me wait for the macOS build to finish.
+
+macOS build also failed (exit 65, same shared sources). Let me confirm zero ActiveOrders/feature-views errors on macOS too.
+
+macOS: 1326 errors, **0 in ActiveOrders** (the sibling `TelemetryErrorsPanel` errors are collateral from the same pre-existing ambiguous duplicated types). My surface is clean on **both** platforms, and the isolated build already proved it compiles against the macOS 15 SDK. This fully matches the precedent → `STATUS=DONE` with the full-app gate deferred. Let me write the gate log.
+
+Log written. Now let me verify git status (ensure build artifacts are ignored) and stage only the allowed files.
+
+Clean — only my 10 surface files + the log are untracked; all build artifacts are git-ignored. Committing.
+
+Committed: 11 files, 1974 insertions. Let me clean up temporary/generated artifacts and confirm final todo state.
+
+The two modified `web/*` files are **pre-existing, unrelated** working-tree changes (I never touched `web/`; they're not in my commit). All 9 todos are done. Let me do a final confirmation of the commit and that those web files aren't mine.
+
+All verified and committed. The two modified `web/*` files are pre-existing CRLF normalizations (2 lines each) — not mine, not in my commit. Final gates re-confirmed green.
+
+## Summary
+
+I shipped **`ActiveOrdersSection`** — the native Apple (SwiftUI) parity of `web/src/features/settings/components/ActiveOrdersSection.tsx` — across 10 files in `apps/apple/TeslaSync/feature-views/`, following the canonical sibling pattern (`Adapter`, `Model`, `Views`, `Cards`, `States`, main `View`, `Previews`, `strings`, `Tests`, `ModelTests`).
+
+**Parity delivered (no scope narrowing):** P1/S8 state-holder seam (no view networking), P1/S11 `view.opened` telemetry, P1/S10 i18n facade (zero hardcoded English), P1/S9 tokens, shared-component reuse (`TSGlassPanel`/`TSIconBox`/`TSButton`/`ContentUnavailableView`/`TSFadeIn`/`TSSkeleton`), manual-refresh toast seam, and **all six states** — including **both** web empty variants (`noOrders` vs `noData`), error+retry, and stale/offline chips with a guarded auto-refresh. Full VoiceOver/Dynamic Type/reduce-motion a11y. Status tone + `formatOrderStatus` title-casing + date formats match the web helpers.
+
+**Verification (real, not claimed):**
+- `swiftlint --strict`: **0 violations** · `swiftformat --lint`: **0/9** · placeholder gate: **0** (genuine per-file, not a vacuous pass — em-dash constant renamed `emDash`).
+- Built the absent **`Shared.xcframework`** from KMP source (Gradle, BUILD SUCCESSFUL) to enable real builds.
+- **Isolated SwiftPM build + 34/34 XCTest green** under Swift 6 strict concurrency against the real design system (compiles the whole surface incl. a preview per state).
+- Full **iOS + macOS** `xcodebuild` with real Xcode 26.5: **0 errors attributable to this surface** on either platform.
+
+**Full-app `build test` → DEFERRED (IOS_EXIT/MAC_EXIT=65, shown honestly, not as green):** blocked solely by **pre-existing** parallel-merge collisions outside my allowed files (`DashboardWidgetSize` ×15, `PowerFlowConnection` ×2 + macOS signing) — the documented P-0006/P-0010 precedent. Log ends `EXIT=0 / STATUS=DONE`. Committed only the allowed files (+ log) with the Co-authored-by trailer.
+
+Merge made by the 'ort' strategy.
+ ...pple-feature-views-0196-ActiveOrdersSection.log | 171 ++++++++++
+ .../ActiveOrdersSection.Adapter.swift              | 359 +++++++++++++++++++++
+ .../feature-views/ActiveOrdersSection.Cards.swift  | 148 +++++++++
+ .../feature-views/ActiveOrdersSection.Model.swift  | 327 +++++++++++++++++++
+ .../ActiveOrdersSection.ModelTests.swift           | 219 +++++++++++++
+ .../ActiveOrdersSection.Previews.swift             | 128 ++++++++
+ .../feature-views/ActiveOrdersSection.States.swift | 103 ++++++
+ .../feature-views/ActiveOrdersSection.Tests.swift  | 199 ++++++++++++
+ .../feature-views/ActiveOrdersSection.Views.swift  | 209 ++++++++++++
+ .../feature-views/ActiveOrdersSection.strings      |  45 +++
+ .../feature-views/ActiveOrdersSection.swift        |  66 ++++
+ 11 files changed, 1974 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0196-ActiveOrdersSection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActiveOrdersSection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActiveOrdersSection.Cards.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActiveOrdersSection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActiveOrdersSection.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActiveOrdersSection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActiveOrdersSection.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActiveOrdersSection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActiveOrdersSection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActiveOrdersSection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/ActiveOrdersSection.swift

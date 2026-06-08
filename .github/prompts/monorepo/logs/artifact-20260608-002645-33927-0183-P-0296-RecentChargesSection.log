@@ -1,0 +1,165 @@
+=== P4 Feature view 0296 RecentChargesSection (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2
+  Capability         : SwiftUI present; this surface has NO Swift Charts / NO MapKit (the web source has none
+                       either — it is a DataTable leaf), so every iOS 18 / iPadOS 18 / macOS 15 HIG primitive it
+                       uses (Grid, ContentUnavailableView, the design tokens) is available → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/features/vehicles/components/vehicle-detail/RecentChargesSection.tsx (93 lines):
+    <GlassPanel p-6>
+      <header> BatteryCharging(neon-green) + <span text-lg bold>Recent Charges</span>
+               <Link to="/charging"> View all <ChevronRight/> </Link> </header>
+      sessions && length > 0
+        ? <DataTable tableId="vehicles:detail-recent-charges" compact pagination columns={useChargeColumns()}
+                     data={sessions} keyExtractor={s => s.id} emptyMessage={t('common.noCharges', …)} />
+        : <EmptyState icon={BatteryCharging} message={t('common.noCharges', 'No charging sessions recorded yet')} />
+    </GlassPanel>
+  useChargeColumns() (local hook) → 5 columns, each a `render`:
+    date     → formatDateTime(s.start_ts)                                   (dateFormat.ts: medium date + short time, '—' on nil)
+    energy   → `${fmtNumber(convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh'))} kWh`   (wh/1000, global precision)
+    duration → durationStr(s.duration_min)                                  (helpers.ts: floor(min/60) "h", fmtInt(min%60) "m")
+    cost     → s.cost != null ? formatCurrency(s.cost) : '—'                (useFormatting: `${symbol}${fmtNumber(amount,prec)}`)
+    battery  → s.end_soc_pct != null ? `${start}% → ${end}%` : `${start}%`  (bare SOC numbers, U+2192 arrow)
+  Hooks    : useChargeColumns (local), useTranslation, useFormatting (formatCurrency + currencySymbol + precision).
+  i18n keys: common.{date,energy,duration,cost,battery,recentCharges,viewAll,noCharges}.
+  The web leaf has only the table / empty branches; the P4 leaf contract adds loading / error / stale / offline.
+
+ARTIFACTS SHIPPED  (allowed files: apps/apple/TeslaSync/feature-views/RecentChargesSection.* + this log)
+  RecentChargesSection.Adapter.swift    (283)  Pure Foundation core: RecentChargesNumber (port of numberFormat.ts
+                                               fmtNumber/fmtInt + safeNumber guard + halfUp, `plain` bare-number for
+                                               SOC, currency prefix, kWh = wh/1000), RecentChargesDuration.split (port
+                                               of helpers.ts durationStr), RecentChargesDateFormat (medium+short,
+                                               nil ⇒ '—'), RecentChargesAccessibility, and the value types
+                                               (RecentCharge, RecentChargesColumn/Row, Input, Resolved, Connection).
+  RecentChargesSection.Projection.swift (138)  RecentChargesProjection.resolve — the web useChargeColumns set + the
+                                               render ladder (content / empty), widened with the P4 leaf loading /
+                                               error envelopes + the inline reload-error. Per-cell render verbatim.
+  RecentChargesSection.Model.swift      (261)  P1/S10 RecentChargesStrings facade (NSLocalizedString, web t(key,default)
+                                               fallback); P1/S11 telemetry seam (RecentChargesTelemetry + OSLog sink,
+                                               view.opened surface="RecentChargesSection"); P1/S8 state-holder seam
+                                               (RecentChargesSource + @Observable @MainActor RecentChargesModel +
+                                               InMemoryRecentChargesSource); the /charging navigation seam
+                                               (navigate(AppRoute.charging), default logs — host maps it).
+  RecentChargesSection.States.swift     (197)  Loading skeleton bars, empty (ContentUnavailableView, battery glyph +
+                                               web noCharges copy), retryable error, inline reload-error, freshness
+                                               chip (Live/Stale/Offline), cached-data banner. All P1/S9 tokens + P1/S10.
+  RecentChargesSection.Views.swift      (170)  Header (battery icon + title + freshness chip + "View all" link) and the
+                                               adaptive table: a real aligned Grid on macOS / regular width, a stacked
+                                               label/value card list on compact iPhone width (native idiom of the web
+                                               responsive DataTable). Numeric cells monospacedDigit.
+  RecentChargesSection.swift            ( 69)  The surface: TSFadeIn → GlassPanel-equivalent card (surface + border),
+                                               always-on header, connectivity banner, phase switch; static
+                                               surfaceSlug = "RecentChargesSection"; onAppear start / onDisappear stop.
+  RecentChargesSection.Previews.swift   (140)  #if DEBUG #Preview for data / many-rows / empty / loading / error /
+                                               stale / offline / euro-currency.
+  RecentChargesSection.Tests.swift      (397)  36 XCTest cases (formatters, duration split, date, projection across
+                                               every phase + the inline error, per-cell rendering, columns, model
+                                               wiring/telemetry/stale-auto-refresh/navigation, accessibility labels).
+  RecentChargesSection.strings          ( 50)  P1/S10 catalog (table "RecentChargesSection"): the 8 web-source keys
+                                               (common.*) verbatim + the templated cell units (energy/duration/SOC, so
+                                               "kWh"/"h"/"m"/"%" live here not in Swift) + native chrome + a11y summaries.
+
+PARITY MAPPING  (web → Apple platform tokens; no Tailwind ported)
+  <GlassPanel>                → VStack + RoundedRectangle(surface).strokeBorder(Color.TS.border) inside TSFadeIn
+  header icon (neon-green)    → Image("bolt.batteryblock.fill") foregroundStyle Color.TS.statusSuccess
+  <span text-lg bold>         → Text(Font.TS.panel, Color.TS.textPrimary) + .isHeader trait
+  <Link to="/charging">       → Button → RecentChargesModel.viewAll() → navigate(AppRoute.charging) (seam; host pushes)
+  <DataTable>                 → Grid/GridRow columnar (macOS/regular) + stacked card list (compact iPhone), aligned by column
+  <EmptyState>                → ContentUnavailableView(battery glyph + localized noCharges)
+  fmtNumber / fmtInt          → RecentChargesNumber.number/integer (NumberFormatter .decimal, grouping, halfUp, safeNumber)
+  convertEnergyFromSI(wh,kWh) → RecentChargesNumber.kilowattHours = wh/1000 (verbatim divisor)
+  durationStr(min)            → RecentChargesDuration.split + "%1$@h %2$@m" | "%@m" templates
+  formatCurrency              → RecentChargesNumber.currency = symbol + fmtNumber(amount, precision)
+  formatDateTime              → RecentChargesDateFormat (DateFormatter .medium + .short, injected locale + tz, nil ⇒ '—')
+  battery `${a}% → ${b}%`     → "%1$@%% → %2$@%%" | "%@%%" with `plain` bare SOC numbers
+  i18n                        → every string via RecentChargesStrings (table "RecentChargesSection", web t(key,default) fallback);
+                                the 8 source keys preserved verbatim (common.date/energy/duration/cost/battery/recentCharges/viewAll/noCharges)
+  a11y                        → panel .contain labelled by model.accessibilitySummary; each row one element "{header}: {value}, …";
+                                "View all" / retry labelled; Dynamic Type via tokens; Reduce Motion honoured by TSFadeIn
+  telemetry                   → view.opened surface="RecentChargesSection" emitted once from RecentChargesModel first snapshot (P1/S11)
+
+STATES (every one renders — no hidden surface)
+  loading   → skeleton bars under the live header (first load, no cached rows).
+  empty     → ContentUnavailableView (battery glyph + "No charging sessions recorded yet"), never blank.
+  error     → retryable QueryError-equivalent chrome (first-load failure with no rows).
+  content   → the adaptive 5-column table; a reload failure with rows still showing surfaces an inline ErrorText.
+  stale     → header chip + banner + one-shot auto-refresh on the live→stale transition.
+  offline   → header chip + banner over the cached rows; no auto-refresh.
+
+GATES  (raw exits below; per-surface scope — the full-tree swiftlint/swiftformat include sibling surfaces still in flight,
+        so each linter is scoped to the eight shipped RecentChargesSection.* sources)
+  [GREEN] swiftformat --lint  (RecentChargesSection.* )        : 0/8 files require formatting                FORMAT_EXIT=0
+  [GREEN] swiftlint --strict  (RecentChargesSection.* )        : Found 0 violations, 0 serious in 8 files     LINT_EXIT=0
+  [GREEN] check-placeholders.ps1 (RecentChargesSection.*, swift): PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0   PLACEHOLDER_EXIT=0
+  [GREEN] swiftc -typecheck  (the 6 non-test sources against the REAL Tokens + Motion + AppRoute, -swift-version 6
+                              -strict-concurrency=complete, arm64-apple-macos15.0)                            TYPECHECK_EXIT=0
+  [GREEN] swiftc -parse  (Tests.swift + Previews.swift, syntactic)                                            PARSE_EXIT=0
+  [GREEN] ISOLATED build + test — SwiftPM, swift-tools 6.0 (Swift 6 language mode = strict-concurrency complete,
+                              same as the app), compiling the EXACT shipped RecentChargesSection.* sources against the
+                              REAL repo design-system files (generated Tokens + Motion + AppRoute) under the Xcode 26.5
+                              toolchain (so the real #Preview macro + XCTest are available):
+                              Build complete!  ·  Executed 36 tests, with 0 failures (0 unexpected)           SWIFT_TEST_EXIT=0
+  [GREEN] symbol-collision scan : none of the 18 public RecentCharges* / RecentCharge / OSLogRecentChargesTelemetry /
+                              InMemoryRecentChargesSource / RecentChargesSection types are redefined anywhere else in the
+                              app module (Sources/ + TeslaSync/ + widgets).
+
+  [DEFERRED] Full-app iOS-Simulator + macOS `xcodebuild -scheme TeslaSync … build test`.
+          NOT run-to-green on this runner because the full app target is blocked by PRE-EXISTING, unrelated
+          conditions this prompt neither introduced nor is allowed to touch (each confirmed by ls/grep, not assumed):
+            • apps/apple/Frameworks/Shared.xcframework is NOT staged (ls: No such file or directory) — the TeslaSync
+              target links it; staging needs the ~7-min Gradle :core:assembleSharedXCFramework (p1-shared/S3, tracked
+              in apps/macos-pending-verifications.md);
+            • `struct DashboardWidgetSize` is redefined 15× across Sources/DashboardWidgets/* +
+              TeslaSync/dashboard-widgets/* (parallel-merge collisions) → invalid-redeclaration in the app module;
+            • 171 co-located `*.Tests.swift` import XCTest into the app target via the `TeslaSync/feature-views`
+              source path (the project.yml config first triggered by AcDcStatsPanel.Tests.swift);
+            • macOS development-signing.
+          This is the SAME sanctioned "code-complete + DEFERRED full-app Xcode gate" disposition recorded by every
+          prior P4 surface (see p4-apple-feature-views-0203-AIUsageCard.log / -0010-ToolCard.log) and is owned by
+          p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner. ZERO RecentChargesSection /
+          feature-views errors are attributable to this change (the isolated build+test above compiles + passes).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED (pre-existing blockers, raw
+                           ls/grep evidence above) — never reported as passing. Every other gate ran green on THIS runner.
+  2  No scope narrowing  : every web column render reproduced (date / energy kWh / duration h-m / cost-or-dash /
+                           SOC range-or-single), the header + "View all" /charging link, the empty branch; plus all
+                           six P4 leaf states (loading / empty / error / content+inline-error / stale / offline).
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; raw exits pasted; the en_US golden cell values
+                           ("48.65 kWh", "1h 32m", "$7.83", "18% → 80%", "10%", "—", "45m", "0m", "2h 10m") were
+                           verified empirically by compiling + running the projection, and the three deferred full-app
+                           blockers were each confirmed by ls/grep (Shared.xcframework absent, DashboardWidgetSize 15×,
+                           171 co-located tests), not assumed.
+  4  No stubs as final   : complete production surface + 36 real passing tests; placeholder scanner COUNT=0; no
+                           TODO/stub/Lorem/placeholder/mock literals in any shipped Swift source.
+  5  No parity shortcut  : fmtNumber grouping/rounding, the wh/1000 kWh conversion, the floor/%60 duration, the
+                           `${symbol}${fmtNumber}` currency, the bare-SOC `${a}% → ${b}%`, the medium+short date,
+                           tint/typography/a11y/telemetry all mapped to platform tokens and unit-asserted against the
+                           web expressions.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened telemetry,
+                           and the established P4 "isolated-build + DEFERRED full-app" disposition all honoured.
+  8  No commit on red    : the committed artifact (RecentChargesSection.* + this log) is GREEN on every per-surface gate
+                           AND on a real isolated Swift 6 strict-concurrency build + 36/36 XCTest; the deferred full-app
+                           gate is blocked only by pre-existing, unrelated surfaces this commit does not touch.
+  9  No silent drift     : changes are confined to feature-views/RecentChargesSection.{swift,Adapter,Projection,Model,
+                           States,Views,Previews,Tests}.swift + RecentChargesSection.strings and this log.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic RecentChargesSection shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 36 tests pass under the app's own Swift 6 strict-concurrency rules, against the REAL
+  design system, via the Xcode 26.5 XCTest runtime, with swiftformat / swiftlint / placeholder all green on the surface
+  and the #Preview macro compiling. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not
+  failed by this code) on pre-existing, unrelated, out-of-allowed-files blockers (unstaged Shared.xcframework, the
+  DashboardWidgetSize 15× redefinition, the co-located-tests-into-app-target config, macOS signing), owned by the P99
+  acceptance gate on a signed macos-latest runner per apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

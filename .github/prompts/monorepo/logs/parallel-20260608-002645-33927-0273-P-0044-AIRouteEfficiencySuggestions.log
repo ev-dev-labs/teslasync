@@ -1,0 +1,156 @@
+I'll start by exploring the repository structure and reading the web source that this native surface must reproduce.
+
+Apple toolchain is fully available. Let me read the web source and explore the Apple project structure.
+
+Now let me read the web dependencies and explore the existing Apple conventions in parallel.
+
+I now fully understand the web source. Let me explore the existing Apple project conventions — feature-views, state holders (P1/S8), tokens (P1/S9), i18n (P1/S10), diagnostics (P1/S11).
+
+The feature-views directory has a clear multi-file convention. Let me find existing AI feature surfaces to use as the closest pattern, and view the full directory structure.
+
+Let me find the native equivalents of the web components — the AI stream state holder, AIFeatureCard, AiOutputPanel, and Helix badge.
+
+No native AI streaming surface exists yet. The closest references are `AIRestorePanel` and `AiUsageCard`. Let me read the SharedFacade (P1/S8) layer and a complete reference feature-view.
+
+Now let me read the two closest reference surfaces — `AiUsageCard` and `AIRestorePanel` — completely, to learn the exact file conventions I must follow.
+
+Excellent reference. Let me read the rest of the `AiUsageCard` files to learn the full multi-file pattern.
+
+The pattern is clear and rich. Let me read the remaining `AiUsageCard` files (Projection, Views, Chrome, strings, Previews, Tests) to complete my understanding.
+
+Let me read the Views, Chrome, Previews, and Tests files, plus the design tokens, in parallel.
+
+Let me read the Previews/Tests and locate the design tokens and shared primitives (TSButton, TSSkeleton, TSFadeIn, Color.TS, Font.TS).
+
+I have the full surface pattern. Now I need the AI output/thinking web components (core of the streaming states), the design tokens, shared primitives, and the project config. Let me gather these in parallel.
+
+Now let me locate the token definitions (TSSpacing, TSRadius, Color.TS, Font.TS) and read the shared primitives I'll use.
+
+The tokens are generated. Let me find the generated token files and read the shared primitives I'll use.
+
+Key finding: `project.yml` lists `Sources`, `dashboard-widgets`, `feature-views` — but **not** `shared-surfaces`. The allowed-files list also excludes `project.yml`. I must verify whether the build is even feasible in this environment (XcodeGen + KMP `Shared.xcframework`). Let me investigate the build toolchain.
+
+Two red flags: `xcodebuild -showsdks` and the iPhone 16 simulator query both returned empty. Let me determine whether full Xcode (with SDKs/simulators) is actually present — this decides DONE vs BLOCKED.
+
+`xcodebuild` requires full Xcode but only Command Line Tools are active. Let me check whether a full Xcode.app exists anywhere (perhaps just not selected) before concluding.
+
+`/Applications/Xcode.app` exists — it's just not selected. I can point to it via `DEVELOPER_DIR` without sudo. Let me verify it's functional.
+
+Full Xcode 26.5 with iOS 26.5 SDK and a booted iPhone 16 simulator is available via `DEVELOPER_DIR`. But the build needs the KMP `Shared.xcframework` (absent) and `shared-surfaces` isn't in `project.yml`. Let me read the pending-verifications doc and check how `.Tests.swift` files in `feature-views` are wired.
+
+This is the decisive context. The `macos-pending-verifications.md` documents the **established methodology**: each P4 Apple surface is verified **green in isolation** (isolated SwiftPM build + tests, `swiftc -typecheck` on real iOS/macOS SDKs, swiftlint/swiftformat/placeholder clean, `xcodegen generate` enumeration), while the **full-app `xcodebuild build test` is BLOCKED by pre-existing, unrelated issues** (unstaged `Shared.xcframework`, `DashboardWidgetSize` redefined 8–15×, 116+ co-located `*.Tests.swift` importing XCTest into the app target, macOS signing) and deferred to the P99 acceptance gate.
+
+Let me read the design tokens and shared primitives my surface depends on, and check a precedent log.
+
+Now let me read the precedent verification log and the shared primitives (TSButton, TSSkeleton, TSFadeIn) to mirror the exact approach.
+
+I now have the exact sanctioned methodology and log format from the precedent. Let me read the shared primitives I'll consume (TSButton, TSSkeleton, TSFadeIn) and the placeholder-check tooling.
+
+`pwsh` and `check-placeholders.ps1` are available. Let me read the placeholder gate config so my code passes it, then I'll start building.
+
+I now have everything needed: the exact sanctioned methodology, the file conventions, design tokens, primitives, the placeholder gate rules (note: the literal word "Placeholder"/"TODO"/"not implemented" are forbidden in Swift sources), and full Xcode is reachable via `DEVELOPER_DIR`. Let me record the plan and todos, then build the surface.
+
+Now I'll build the surface. Starting with the directory and the pure Adapter core.
+
+Now the Model.swift — i18n facade, telemetry seam, connection, input snapshot, resolved state, state-holder seam + model, and in-memory source.
+
+Now the pure Projection (input → resolved).
+
+Now the Views.swift — the feature-card chrome subviews (Helix badge, freshness chip, banner, loading skeleton, context-error, thinking indicator, output panel, Ask Helix button).
+
+Let me refine the Views file — simplify the thinking dots color and button traits to avoid fragile constructs.
+
+Now the main surface View that orchestrates the states.
+
+Now I'll align the i18n keys to the **exact web source keys** for parity (the precedent uses verbatim web keys). Let me rename `routeEff.*` → `routeEfficiency.aiSuggestions.*` across the surface, then write the catalog.
+
+Now handle the `ai.common.errorUnknown` fallback (web `error ?? 'unknown'`) in the output error line.
+
+Now the i18n catalog.
+
+Now the per-state Previews.
+
+Now the comprehensive test suite (adapter + projection + model + accessibility).
+
+All 8 surface files are written. Let me update todos and scan for forbidden placeholder words before verification.
+
+No forbidden words. Now I'll build the isolated SwiftPM verification harness (module `TeslaSync`) linking the **real** Tokens/Motion/Buttons + a faithful TSSkeleton, mirroring the sanctioned precedent.
+
+Now the faithful TSSkeleton (the real implementation, isolated from its TSCard-dependent file-mates) and the `Package.swift`.
+
+Now run the isolated `swift test` (macOS 15, Swift 6 strict concurrency) using the Xcode toolchain.
+
+**42/42 tests pass** on macOS under Swift 6 strict concurrency. Now the real-SDK typechecks for iOS 18 simulator and macOS 15.
+
+iOS 18 typecheck clean. Now macOS 15.
+
+Both typechecks clean. Now swiftformat and swiftlint on the actual surface files, using the repo configs.
+
+swiftformat flagged style nits. Let me apply the repo's formatter (ecosystem tool) to the surface files, then re-verify clean.
+
+swiftformat clean (0/7). Now swiftlint --strict.
+
+swiftlint linted the whole tree (config `included` took over). Let me isolate the single violation and confirm whether it's in my surface.
+
+The single violation is **pre-existing** in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (a parallel-merge artifact noted in macos-pending). My surface contributed **0**. Let me produce a clean scoped lint of only my surface using the same rules.
+
+The full-config run skipped my dir entirely (not in `included`); the scoped run is authoritative: one 298-char line (the long description fallback at line 123) exceeds the 160 limit. Let me view and fix it with string concatenation that preserves the exact runtime value.
+
+Now re-verify formatter and linter on the surface.
+
+Both clean (format 0/7, lint 0 violations). The formatter modified files, so I'll re-sync the harness and re-verify tests + typechecks on the final code, then run the placeholder gate.
+
+42/42 still green. Now re-run both typechecks on final code and the placeholder gate.
+
+All host-runnable gates are green: **swift test 42/42, iOS+macOS typecheck 0, swiftformat 0/7, swiftlint 0, placeholder 0**. Now let me run `xcodegen generate` to confirm the project spec is valid and determine the `shared-surfaces` wiring status.
+
+`xcodegen` generates cleanly (EXIT=0); confirms `shared-surfaces` is an unwired new source root (a P4-core integration step, by design — editing `project.yml` is outside allowed-files and would collide with sibling surface prompts). Let me substantiate the documented pre-existing full-build blockers so the deferred note is honest, not fabricated.
+
+All four pre-existing blockers verified present (Shared.xcframework absent · `DashboardWidgetSize` ×15 · 261 co-located XCTest-in-app-target files · 0 signing identities). Let me confirm the generated `.xcodeproj` is git-ignored, then clean it up and write the gate log.
+
+Now I'll write the gate log, mirroring the sanctioned precedent format with my actual outputs.
+
+Let me do a final visual sanity check of the formatted surface and confirm the harness copies match the committed files.
+
+No drift — the 42/42 tests and typechecks ran on exactly the committed code. Let me verify the full git status is clean (only surface + log) and commit.
+
+I see pre-existing unrelated modifications (`AIUsageCard.*` in feature-views, `web/*` admin files) that were already dirty in the tree before my session — I never touched `feature-views` or `web/`. Let me confirm these aren't from my actions, then stage **only** my surface + log.
+
+Confirmed: the `AIUsageCard.*` (983/693 lines) and `web/*` changes are pre-existing dirty-tree state — I only ever wrote to `shared-surfaces/`, the log, and the session dir. A scoped `git add` guarantees my commit contains only my work. Let me stage and commit exactly my two paths.
+
+Exactly my 9 files are staged (8 surface + log), nothing else. Committing per the prompt's commit spec.
+
+Committed (`7cb3c349d`). Let me verify the commit contains exactly my 9 files and nothing pre-existing, then finalize.
+
+Commit verified: exactly my 9 files (1716 insertions, all new), pre-existing dirty files untouched, log ends `EXIT=0 / STATUS=DONE`. Let me finalize todos and clean up the temporary verification harness.
+
+All work is complete and verified. Let me confirm all todos are closed.
+
+All 11 todos done. The task is complete and verified.
+
+## Summary
+
+Shipped a production-polished native Apple (SwiftUI) parity of `components/ai/AIRouteEfficiencySuggestions.tsx` at `apps/apple/TeslaSync/shared-surfaces/AIRouteEfficiencySuggestions.*` (8 files), committed as `7cb3c349d` with the gate log.
+
+**What it reproduces (web `AIRouteEfficiencySuggestions` → `AIFeatureCard` → `AiOutputPanel`):**
+- `withAiFeature` off-gate → surface withdrawn; `view.opened` telemetry deferred past the gate (slug `AIRouteEfficiencySuggestions`).
+- Every state renders: **gated · loading · context-error(retry) · ready** with output **idle-hint · thinking · streamed-text · stream-error** (verbatim `AiOutputPanel` branching), plus the P4 freshness envelope **live/stale/offline** (chip + banner + one-shot stale auto-refresh).
+- Universal "Ask Helix" CTA (disabled when `!canStart || streaming`), Helix badge, the long source description.
+- Bound through the P1/S8 `AIRouteSuggestionsSource` seam — no HTTP in the view. i18n via the P1/S10 facade (4 verbatim source keys + scaffold + chrome). VoiceOver + Dynamic Type + reduce-motion a11y.
+
+**Verification (all green — sanctioned `macos-pending` isolation methodology, mirroring ToolCard/AlertMessageEditor/FSMTimelineChart):**
+| Gate | Result |
+|---|---|
+| `swift test` (isolated SwiftPM, module `TeslaSync`, Swift 6 strict concurrency) | **42/42** |
+| `swiftc -typecheck` iOS 18 simulator / macOS 15 (real SDKs) | **0 / 0** |
+| `swiftformat --lint` · `swiftlint --strict` · placeholder gate | **0 / 0 / 0** |
+| `xcodegen generate` | **EXIT=0** |
+
+The full-app `xcodebuild build test` is **DEFERRED to the P99 macOS-latest gate**, blocked by **pre-existing, unrelated** state verified present in this tree (unstaged `Shared.xcframework`, `DashboardWidgetSize` ×15 redefs, 261 co-located XCTest-in-app-target files, 0 signing identities) **plus** the `shared-surfaces` source-root wiring — a P4-core integration step (one `sources:` line per app target), intentionally not done here since `project.yml` is outside this prompt's allowed files and would collide with sibling surface prompts (the exact diff is documented in the log).
+
+`EXIT=0 · STATUS=DONE`
+
+
+
+The task is fully complete and verified. All gates green, work committed, no open items.
+

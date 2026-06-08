@@ -1,0 +1,114 @@
+I'll start by exploring the repository structure and checking the capability requirements for this Apple-native task.
+
+Key findings: we're on macOS with `swift`, `swiftlint`, `swiftformat` available, but **full Xcode is NOT installed** (only CommandLineTools) and **no iOS simulator** (`simctl` missing). There's existing in-progress work on `AIUsageCard.*`. Let me explore the established pattern and the web source.
+
+The `shared-surfaces` dir doesn't exist yet — I'll create it. There's an established `feature-views` pattern (AIUsageCard). Let me study that pattern and the web source in detail.
+
+Let me read the web source in full and study the established native pattern.
+
+The build (`project.yml`) includes `feature-views` and `dashboard-widgets` but **not** `shared-surfaces`. Allowed-files is strict, so I'll follow the exact multi-file pattern. Let me study the canonical current reference (AIUsageCard, being modified now) and the supporting infra (facade, tokens, i18n, a11y, diagnostics).
+
+It's `AiUsageCard` (note casing). Let me read the canonical pattern set and the facade base in parallel.
+
+Excellent — the pattern is clear. Now let me finish reading the web source and the rest of the canonical Swift set (projection, views, strings, tests, previews).
+
+I have a thorough grasp of the pattern. Let me read the remaining infra: chrome/states, strings, previews, tests, adapter, design tokens, a11y, and native form inputs.
+
+Critical finding: `TSCombobox` already exists in `Inputs.swift` as the **atomic** component — which this prompt explicitly lists as out-of-scope ("Atomic shared components... covered by P4 component-library bundle"). So like `AiUsageCard`, I reproduce the surface with private subviews scoped to `shared-surfaces/Combobox.*`. Let me map the design tokens, helper components, and the remaining canonical files.
+
+Let me read the design tokens and the shared component primitives I'll compose with.
+
+Now the shared component primitives and the adapter/test pattern.
+
+Now the adapter, tests, and previews patterns — these tell me the test framework and the data-binding seam approach.
+
+Now let me examine how the co-located test/preview files are structured (test framework, and how they avoid pulling XCTest into the app target), plus the swiftlint/format config and the placeholder checker.
+
+Let me resolve the test-target wiring question and read the lint/format/placeholder configs that gate my work.
+
+Now let me check whether a full Xcode exists anywhere (to possibly switch to it), and whether `xcodegen`/`pwsh` are available, plus read the placeholder checker.
+
+Major update: **full Xcode IS installed** at `/Applications/Xcode.app` (xcode-select just points at CommandLineTools), and `xcodegen` + `pwsh` are available. Let me verify the real Xcode, simulators, and whether the KMP `Shared.xcframework` (a build prerequisite) can be produced on this runner.
+
+Full Xcode 26.5 + a booted iPhone 16 simulator are available, but the KMP `Shared.xcframework` is **not prebuilt** (only `.gitkeep`) — the app target can't link without a Gradle/Kotlin build. Let me read the placeholder patterns (critical: the web has a "placeholder" prop I may need to avoid as a literal) and map my dependency blast radius.
+
+Now I understand the constraints precisely. Critical: **"Placeholder" is a forbidden token (case-insensitive)** — the web's `placeholder` prop must be renamed `prompt` in native (matching existing `TSCombobox`). No `import Shared` in Components/Design, so I can typecheck my self-contained surface against the real iOS+macOS SDKs without the KMP framework. Let me set up tracking and check conventions (announcer, focus, keyboard) before writing.
+
+The codebase already uses `onKeyPress`, `FocusState`, and `AccessibilityNotification` — my approach is conventional. Let me study the closest analog (`CommandPalette`, a keyboard-navigable searchable list) and the announcer pattern in `WidgetPicker`.
+
+`TSCommandPalette` confirms the interaction idioms (pure filter/navigation enums, `onKeyPress`, `@FocusState`, selected-trait a11y). Let me see the announcer seam pattern, then I'll write.
+
+I have a complete picture of the conventions. Let me record the plan and todos, then build the surface.
+
+Now I'll write the surface. Starting with the model (facade, types, state-holder seam).
+
+Now the presentational views (chip, banner, listbox, rows, accessories).
+
+Let me switch the subviews to plain observed references and write the surface entry.
+
+Let me fix the in-chain `#if` (formatter-fragile) with a platform helper.
+
+Now the i18n strings table and previews.
+
+Now the tests. Let me see how the canonical tests cover model wiring, telemetry, and connection (auto-refresh) so I mirror them.
+
+The spy pattern is a simple `@unchecked Sendable` class. Now the pure projection tests and the model/a11y tests.
+
+Let me clean up a messy test I wrote.
+
+All 8 files are written. My surface depends only on the design tokens + SwiftUI/Foundation (no `TS*` components — fully self-contained like AiUsageCard). Let me typecheck against the real iOS + macOS SDKs.
+
+iOS typecheck passes clean with Swift 6 strict concurrency. Now macOS, plus the DEBUG-gated previews.
+
+macOS passes clean. Waiting for the previews typecheck (the `#Preview` macro expansion is slower).
+
+All typechecks pass clean (iOS, macOS, previews — Swift 6 strict concurrency). Now typecheck the XCTest files against a testable module build.
+
+Found a **real bug**: in `ComboboxModel.init`, I pass the stored properties `input`/`query` into `resolve(...)` before all stored properties are initialized. (The XCTest macro errors are just a raw-swiftc harness limitation — those macros only resolve in a real test target.) Let me fix the init to use locals.
+
+The init bug is fixed. Now I spot **optional-array comparison type issues** in the tests (`[String?]` vs `[String]`/`[nil]` won't unify in generic `XCTAssertEqual`). Let me fix those, then validate the test logic with an XCTest type shim.
+
+Now let me re-emit the module (validating the init fix) and typecheck the test logic against a faithful XCTest type shim (the real macros only resolve in xcodebuild).
+
+Both are shim/keypath-inference artifacts, not code bugs (the real Apple XCTest re-exports Foundation, which my shim lacks; and keypath shorthand inside assertion autoclosures is fragile). Let me make the shim re-export Foundation and switch assertion keypaths to closures for robustness.
+
+Test logic type-checks clean against the testable module. Now the gate tools: swiftformat, swiftlint, placeholder check. First, lint-check formatting on my files.
+
+These are all auto-fixable formatter preferences. Let me apply swiftformat in-place (they're my files), then re-verify compilation — watching whether `preferKeyPath` reverts the test maps in a way that breaks type inference.
+
+swiftformat passes (0/7 require formatting). Now I must re-verify compilation, since the formatter rewrote `phase` to an if-expression and reverted the test maps to keypaths. Re-running all typechecks.
+
+Surface compiles clean on both platforms. swiftformat reverted line 164 to keypath form — let me confirm the tests still typecheck (this was the fragile spot).
+
+Tests typecheck clean post-format — confirming the earlier keypath error was purely a missing-XCTest-macro artifact, not a real issue. Now swiftlint (strict) on the new files and the placeholder gate.
+
+One swiftlint violation: `Combobox.Model.swift` is 539 lines (file_length limit 400). I'll split the value types/seams into a `Combobox.Types.swift` (allowed by the `Combobox.*` scope), keeping the model class in `.Model.swift`. Let me view the formatted file to split precisely.
+
+I'll split the value types/seams into `Combobox.Types.swift` (matches the `Combobox.*` scope), keeping the view-model in `.Model.swift`. Using sed to move blocks precisely, then re-normalize with swiftformat.
+
+Both files now under 400 lines and already format-clean. Let me re-run swiftlint and full multi-platform typechecks (now including `Combobox.Types.swift`).
+
+swiftlint: **0 violations**. swiftformat: clean. Now re-run full multi-platform typechecks (module now includes `Combobox.Types.swift`) plus the placeholder gate.
+
+The placeholder gate caught one slip: line 128 of `Combobox.Types.swift` references the web prop name "placeholder" in a comment. Let me find every case-insensitive occurrence across my files and reword.
+
+Fixed. Let me re-run the placeholder gate on the real directory (all languages) and re-confirm format/lint after the comment edit.
+
+Placeholder gate, swiftformat, and forbidden-token scan all clean. Now for the strongest honest verification within scope: I'll **actually run the XCTest suites** by assembling a throwaway SwiftPM package in `/tmp` (no tracked-file edits) compiling the surface + tokens for macOS 15 and executing `swift test`.
+
+Compiling and running the suite (first SwiftPM build takes a bit). Let me wait.
+
+**All 40 unit tests pass (0 failures)** when actually executed via `swift test` on macOS 15 — real behavioral verification, not just type-checking. Let me clean up the temp package and gather the remaining evidence for the honest gate log (the xcodebuild blockers).
+
+All evidence gathered: the deliverable is complete and green on every in-scope check; the only blockers to the literal `xcodebuild` gate are external (KMP `Shared.xcframework` not prebuilt + `shared-surfaces` not yet wired into `project.yml`/`.swiftlint.yml`, both the P4-core dependency and outside this prompt's allowed files). Let me write the honest gate log.
+
+Let me do a final review of the formatter-rewritten sections (the `if`-expression in projection, the surface entry) to ensure quality before committing.
+
+The surface is clean and complete. Before committing, let me check git state — there were pre-existing `AiUsageCard.*` modifications (not mine) that I must NOT include.
+
+Confirmed: only my new files (`shared-surfaces/` + the log) are untracked; the 7 `AiUsageCard.*` modifications are pre-existing and not mine. Staging only my files and committing per the prompt.
+
+Commit `69efd0dcf` landed with exactly my 10 files (1943 insertions); the pre-existing `AiUsageCard.*` changes were correctly left out. Final state verification:
+
+The Combobox shared surface is complete, verified, and committed. Final state confirmed: my scope is clean, the 7 unrelated `AiUsageCard.*` changes were left untouched, and all 8 web `combobox.*` i18n keys are present in the native catalog (plus leaf-state keys).
+

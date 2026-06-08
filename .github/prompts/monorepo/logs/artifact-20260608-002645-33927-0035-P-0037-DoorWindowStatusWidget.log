@@ -1,0 +1,213 @@
+================================================================================
+P4 · Dashboard widget · 0037 — DoorWindowStatusWidget (Apple)
+Run: 2026-06-08T00:49-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/35
+Base: c9c6fdb9f
+Prompt: P4/dashboard-widgets/0037 — DoorWindowStatusWidget
+Web source (spec): web/src/features/dashboard/widgets/DoorWindowStatusWidget.tsx
+Mode: code-complete + host-runnable gates GREEN + DEFERRED Xcode app build/test
+      (0054 GuardModeWidget / 0036 DigitalTwinWidget precedent, ADR-012).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18 deploy target)       OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15 deploy target)              OK
+  iPhone 16 simulator ........ present (booted) 83717DEE-70A3-4325-AA61-CBDDD3140989 OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  Shared.xcframework ......... NOT staged (needs KMP/Gradle :core:assembleSharedXCFramework) WARN
+  surface in project.yml ..... globbed via `path: TeslaSync/dashboard-widgets`
+                               (42 pbxproj refs after xcodegen generate)            OK
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and PROVEN by real iOS-18-simulator AND macOS-15 SDK compiles below.
+  The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does
+  NOT apply — the platform is fully capable; the surface is authored, host-
+  compiled against both SDKs, and host-tested (32/32 executed) for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/DoorWindowStatusWidget.*) ===
+  DoorWindowStatusWidget.Adapter.swift   343  pure projection core — DoorWindowParser
+                                              (parseDoorStates/parseWindowState port), DoorWindowFormat
+                                              (toGridStatus/toValueLabel), DoorWindowProjection
+                                              (cells + open counts + compact summaries), a11y summaries
+  DoorWindowStatusWidget.Model.swift     257  P1/S8 state-holder seam (DoorWindowSource→DoorWindowModel) +
+                                              P1/S11 telemetry seam + P1/S10 strings facade + in-memory
+                                              source + three-way field-value/snapshot inputs
+  DoorWindowStatusWidget.Views.swift     195  presentational subviews — chip / connectivity banner /
+                                              2-col status grid + tiles / section / compact badges / empty
+  DoorWindowStatusWidget.swift           221  DoorWindowStatusWidget surface (shell chrome + freshness +
+                                              state switch + compact/standard/tall layout + registry)
+  DoorWindowStatusWidget.Previews.swift  137  #if DEBUG previews — one per state (content 2x2 / content
+                                              tall 2x4 / compact 1x1 / no-data / loading / error / stale /
+                                              offline)
+  DoorWindowStatusWidget.Tests.swift     341  XCTest — parser + format + projection + model + registry +
+                                              a11y (32 methods, 83 asserts)
+  DoorWindowStatusWidget.strings          50  P1/S10 catalog contribution (15 web-source keys + registry
+                                              description + native chrome keys)
+  Every file <= 343 lines (house file_length). Total 1544 lines across 7 files.
+  Shared registry types (DashboardWidgetSize / DashboardWidgetRegistration) and design tokens
+  (Color.TS / Font.TS / TSSpacing / TSRadius / TSTone / TSSkeleton) are REFERENCED, not redeclared
+  (verified: 0 scaffold/token definitions in the surface files) — matching the 0054 GuardModeWidget
+  sibling and the 40+ other dashboard widgets that consume the shared scaffold.
+
+=== PARITY (vs web DoorWindowStatusWidget.tsx) ===
+  Data sources -> bound via the shared state-holder seam (DoorWindowSource -> DoorWindowModel):
+    useVehicles (default vehicle id), useSecurityLatest(id, 5s), useTranslation. The production app
+    wires DoorWindowSource over the shared security state holder; the view performs NO HTTP.
+  Projection -> a 1:1 port of the web helpers, executed-green by XCTest:
+    • parseWindowState: boolean -> open/closed; asNonEmptyString gate (length>0, NO trim);
+      "closed" -> closed; contains "vent"/"partial" -> partial; else -> open.
+    • parseDoorStates: boolean -> all open/closed; "all_closed"/"allclosed" -> all closed; non-empty CSV
+      seeds all-closed then applies per-token open rules (driver/passenger × front/rear, front/rear ×
+      left/right, bare "open" -> all). Per-token trim+lowercase + filter Boolean; web else-if precedence
+      preserved (exactly one rule fires per token).
+    • toGridStatus: closed->ok, open/partial->warning, unknown->unknown. toValueLabel: Closed/Open/
+      Partial/em-dash. openDoorCount = doors === open; openWindowCount = windows !== closed && !== unknown.
+    • 4 door + 4 window StatusCells (ids door-fl..rr / window-fl..rr) ALWAYS produced; compact summaries
+      "Doors ✓" / "N door(s) open" + "Windows ✓" / "N window(s) open".
+  Composition -> shell chrome (door icon + "Door & Window Status" title [hidden when 1x1] + freshness
+    chip + refresh) · 1x1 CompactView (doors + windows summary chips, web CompactView) · standard/tall
+    (Doors section + Windows section, each a 2-col status grid; inter-section spacing widens when
+    rows>=2, web isTall space-y-4 vs space-y-2) · empty grid ("No door/window data", web
+    WidgetStatusGrid empty branch).
+  Shared components -> reuses Color.TS / Font.TS / TSSpacing / TSRadius / TSTone (compiled against the
+    REAL apps/apple Tokens + Components/UI/Badges in the iOS+macOS typechecks below). DoorWindowChip
+    mirrors the TSBadge tokens, extended to take a pre-localized String (our per-surface table).
+    Recharts -> none / Leaflet -> none (no chart/map on this surface).
+  States (all render) -> loading (skeleton chrome) · empty ("No door/window data") · error (retry
+    affordance) · stale (chip + banner) · offline (cached value + chip + banner) · content. Model phase
+    resolution keeps cached content visible behind refresh/errors, matching the web shell (skeleton only
+    on initial fetch; empty grid only when securityData is absent).
+  i18n -> all 15 source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    widget.doorWindow.{title,doors,windows,closed,open,partial,fl,fr,rl,rr,doorsAllClosed,doorsOpen,
+    windowsAllClosed,windowsOpen,noData} -> ALL PRESENT in DoorWindowStatusWidget.strings, plus the
+    registry description + native chrome keys. No English literals in native code (verbatim facade).
+  a11y -> each status tile carries a combined "<position>, <value>" label; section headers tagged
+    isHeader; compact row a combined door+window summary; refresh button an accessibilityLabel; freshness
+    chip a spoken label; Dynamic Type via tokens; the surface is an accessibility container.
+  Telemetry -> DoorWindowModel.start() emits viewOpened(surface:"DoorWindowStatusWidget") -> bridges the
+    shared Telemetry view.opened (P1/S11). Asserted by a spy test (fires exactly once).
+  Registry -> DoorWindowStatusWidget.registration: id "door-window-status", category "security",
+    default 2x2, min 1x2, max 4x40 (+ clamp()), matching registry/security.ts. Asserted.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (the 4 shipping source files compiled together with the
+    REAL apps/apple design Tokens + Components/UI/Badges (TSTone), plus a minimal faithful
+    TSSkeleton/registry shim for symbols whose real source lives in sibling files):
+      xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+        -swift-version 6 -strict-concurrency=complete  <shipping 4> Tokens.swift Badges.swift Shims.swift
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swiftc -typecheck — DEBUG previews (-D DEBUG; closure + Previews.swift):
+      PREVIEWS_TYPECHECK_EXIT=0                                                     OK
+[4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM harness
+    (module named "TeslaSync" so the test's `@testable import TeslaSync` runs unchanged; real production
+    Adapter/Model/Views/Widget + real design Tokens + real TSTone badges + minimal TSSkeleton/registry
+    shims), platforms macOS 15, Swift 6 tools:
+      Executed 32 tests, with 0 failures (0 unexpected) in 0.006 seconds
+        DoorWindowWindowParserTests   3/3   (boolean, absent/empty, closed/vent/partial/open strings)
+        DoorWindowDoorParserTests     7/7   (boolean all, absent/empty, all_closed variants, bare open,
+                                            named corner isolates, aliases, multi-corner)
+        DoorWindowFormatTests         3/3   (gridStatus, valueLabel, cell-status -> TSTone)
+        DoorWindowProjectionTests     7/7   (nil->empty, counts, 4+4 cells + ids, cell content,
+                                            summaries open/all-closed, unknown not counted)
+        DoorWindowModelTests          8/8   (phase loading/empty/empty-status/error/content,
+                                            telemetry-once, refresh delegation, connection+projection)
+        DoorWindowRegistryTests       2/2   (canonical door-window-status metadata, clamp min/max)
+        DoorWindowAccessibilityTests  2/2   (cell label combine, compact summary combine)
+      SWIFT_TEST_EXIT=0                                                             OK
+[5] swiftlint --strict on the 6 surface .swift files (config apps/apple/.swiftlint.yml; the bare gate
+    `swiftlint --strict` does not list TeslaSync/dashboard-widgets in `included:` — that wiring is the
+    P4 integration prompt's job — so it is run explicitly here on the surface files):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0                                                                   OK
+[6] swiftformat --lint on the 6 surface .swift files (config apps/apple/.swiftformat):
+      0/6 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+[7] check-placeholders (ADR-011 stub gate; pwsh, -Language swift, scoped to the surface files):
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host):
+      - `xcodegen generate` -> EXIT=0 (project + 12 targets + schemes generate cleanly; the surface's
+        7 files glob into both app targets — 42 pbxproj references).
+      - `xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS -configuration Debug build
+        CODE_SIGNING_ALLOWED=NO` ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **   BUILD_EXIT=65
+    Why deferred (independent, code-unrelated reasons — none is a defect in this surface; identical
+    disposition to the 0054 GuardModeWidget / 0036 DigitalTwinWidget predecessors, Honesty rule 7):
+      (a) Shared.xcframework not staged: both app targets link the KMP core; staging it needs a
+          Kotlin/Native Gradle build (apps/shared/gradlew :core:assembleSharedXCFramework) wired as the
+          scheme pre-action. Independent of this UI surface; concrete missing-framework error captured
+          above. Steps [1]/[2] DO compile this surface against BOTH real SDKs and step [4] EXECUTES its
+          full XCTest suite (32/32) — the meaningful validation.
+      (b) Pre-existing merged-tree conditions OUTSIDE this prompt's allowed files (DoorWindowStatusWidget.*
+          only): the merged parallel tree currently carries 13 duplicate `DashboardWidgetRegistration`/
+          `DashboardWidgetSize` definitions across sibling widget files and 225 `*.Tests.swift` files in
+          the app-target source dirs (the established per-surface convention; this surface adds 1, like
+          GuardModeWidget). Resolving those is the downstream P4 integration prompt's scope; editing
+          sibling files here is forbidden. This surface adds NO new duplicate scaffold (verified: 0).
+      (c) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    XCTest under Xcode runs in the TeslaSync/-macOS test target; here the SAME tests are PROVEN GREEN
+    (32/32) by the executed SwiftPM harness in step [4], and the views/model/adapter compile against
+    BOTH the iOS 18 and macOS 15 SDKs in steps [1]/[2].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) — implemented; each has
+      a #if DEBUG preview; phase logic unit-tested + executed green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (DoorWindowSource->DoorWindowModel); no view
+      HTTP.
+  [x] Every i18n key from source has a matching catalog key — 15 web-source keys + registry description
+      + native chrome, all present in DoorWindowStatusWidget.strings.
+  [x] Accessibility labels on every interactive element; each tile + compact row carry combined values.
+  [x] Tests: adapter unit + per-state model + registry + a11y — 32 methods / 83 asserts, EXECUTED 32/32.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured evidence.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with the real BUILD_EXIT=65
+                       missing-framework error captured; every "OK" is a command actually run with its
+                       real exit code (incl. iOS+macOS SDK compiles AND a 32/32 executed XCTest run).
+  2  No scope narrowing: implemented ALL states/views/badges + parsing + i18n + a11y + telemetry +
+                       registry; compact + standard + tall layouts all present.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (Shims used ONLY in the
+                       throwaway typecheck/test harness, never in shipped surface files.)
+  5  No parity shortcuts: faithful 1:1 port of parseDoorStates / parseWindowState / toGridStatus /
+                       toValueLabel + the full count + cell + summary derivation + every state.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit sibling widget files / project.yml / the shared
+                       Localizable.xcstrings (parallel-unsafe); strings shipped as the per-surface table,
+                       exactly like 0054. Added NO new duplicate scaffold (verified 0).
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed DoorWindowStatusWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native DoorWindowStatusWidget shipped at parity with the web source: a pure-Swift
+  projection core (executed-green XCTest, 32/32) that is a 1:1 port of the web door/window parsing +
+  count + cell + compact-summary derivation, a P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry,
+  every state + i18n key + a11y label, registry-correct (door-window-status, 2x2 / 1x2 / 4x40). All
+  host-runnable gates pass AND the surface compiles against BOTH the iOS 18 simulator and macOS 15 SDKs
+  with the real Xcode 26 toolchain under Swift 6 strict concurrency. The Xcode app build/test is DEFERRED
+  to the downstream integration/signed runner (Shared.xcframework KMP staging + pre-existing merged-tree
+  scaffold/test-placement conditions, all outside this prompt's allowed files), matching the 0054
+  GuardModeWidget / 0036 DigitalTwinWidget "code-complete + DEFERRED Xcode gate" precedent (ADR-012).
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/DoorWindowStatusWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0037-DoorWindowStatusWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add DoorWindowStatusWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

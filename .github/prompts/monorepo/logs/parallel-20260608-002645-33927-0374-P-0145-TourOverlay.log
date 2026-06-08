@@ -1,0 +1,140 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Toolchain check: `swift` 6.3.2, `swiftlint`, `swiftformat` are present, but **`xcodebuild` requires full Xcode (only Command Line Tools installed)** and `simctl` is unavailable. I'll keep this in mind for the gate. Let me read the web source and explore the existing Apple structure to follow conventions.
+
+Now I understand the web source. The `shared-surfaces` directory doesn't exist yet. Let me study the `AIUsageCard` feature-view files (recently modified, the canonical template) and the shared infrastructure.
+
+Clear file-split convention. Let me read the rest of the `AIUsageCard` files and locate the shared infrastructure (tokens, i18n facade, state holders, diagnostics).
+
+Excellent, very rich pattern. Let me read the remaining `AIUsageCard` files and locate the shared tokens/motion primitives.
+
+Let me see all AIUsageCard files, the remaining sub-views, the strings format, and locate the shared token/motion definitions.
+
+The files are `AiUsageCard.*` (lowercase 'i'). Now let me read the remaining files and find the shared token/motion definitions (P1/S9).
+
+The design tokens are in `Sources/Design/TSDesign.swift`. Let me read the token definitions, the motion primitives, and the remaining AiUsageCard files (Chrome, Projection, Previews, strings, Tests) in parallel.
+
+Let me locate the exact token/component definitions and read the motion primitives, plus the remaining AiUsageCard reference files.
+
+The main target's sources include `TeslaSync/feature-views` but **not** `TeslaSync/shared-surfaces` (the dir doesn't exist yet). Let me read the full project.yml, lint configs, the generated tokens, motion primitives, and remaining AiUsageCard reference files.
+
+`project.yml` is at `apps/apple/project.yml`. Neither it nor `.swiftlint.yml` lists `shared-surfaces` yet (P4-core wiring). Generated tokens live in `apps/design/generated/apple/Tokens.swift`. Let me read the tokens and remaining reference files.
+
+Now I have the full token vocabulary. Let me read the projection pattern, test conventions, the `TSButton`/`TSSkeleton` APIs, and the web hooks (`useMotionPreference`, `useTour`).
+
+I now understand the data model (`TourStep`, `useMotionPreference`). Let me read the test/preview conventions and the `TSButton`/`TSSkeleton`/overlay component APIs.
+
+Let me read the full `project.yml` to understand how test files in source dirs are wired to targets.
+
+Now I understand the full target/test wiring. Let me confirm the `TSButton` API and check for any reusable overlay/scrim primitives I should use.
+
+Let me verify I can typecheck SwiftUI with command-line `swiftc` (my build proxy, since `xcodebuild` is unavailable).
+
+SwiftUI typechecks cleanly via `swiftc` — I'll use that as my build proxy. Let me check `TSButton`'s style dependency so I can assemble a real-dependency typecheck harness.
+
+SwiftUI typechecks; `TSButton` only needs Tokens.swift. I have enough to build. Let me quickly check the referenced ADRs and set up my plan/todos.
+
+`pwsh` IS available, so I can run the placeholder gate. Forbidden substrings include "TODO", "Placeholder", "not implemented" — I'll avoid those in code/comments. Let me read the AiUsageCard model-test conventions before writing, and set up my plan.
+
+I have all conventions. Let me set up the plan and todos, create the directory, and start writing the surface.
+
+`MacOSX15.sdk` is available — I'll typecheck against the macOS 15 deployment target. Let me write the plan, then the foundation files (strings, Model, Adapter).
+
+Now the Model file (facade, value types, telemetry seam, input, resolved phase, source seam, observable model, in-memory source).
+
+Now the Adapter — pure geometry, projection, and accessibility formatters (Foundation/CoreGraphics only, fully unit-testable).
+
+Marking foundation files done. Now the Views file (scrim+cutout, ring, tooltip card, nav, dots).
+
+Now the main surface view.
+
+Let me typecheck the non-test files against the macOS 15 SDK with the real token + button dependencies (Swift 6 mode, matching project settings) before writing previews/tests.
+
+The `@Observable` macro error is a toolchain/SDK mismatch (Swift 6.3.2 plugin vs. the older 15 SDK's Observation module), not a code bug. Let me confirm: the existing `AiUsageCard.Model.swift` should hit the same error against SDK 15, and my code should typecheck against the matching SDK 26.
+
+H1 confirms it: the existing `AiUsageCard.Model.swift` hits the identical error against SDK 15 (12 occurrences) — so it's an environment mismatch, not my code. Let me wait for H2 (SDK 26) to finish.
+
+H2 passes: my non-test code typechecks cleanly against the matching SDK 26 under Swift 6 strict concurrency. The SDK-15 error was purely an environment mismatch (confirmed identically on the existing `AiUsageCard.Model.swift`). Now let me write the Previews and test files, and probe XCTest availability.
+
+XCTest isn't in the Command Line Tools SDK, so I'll typecheck the test files via a faithful XCTest shim + the real source as one module (gold-standard proxy). First, let me write the two test files.
+
+Now the model wiring + telemetry tests.
+
+All 8 files written. Now let me build a verification harness that typechecks the test files against the real source via an XCTest shim (one module), since XCTest isn't in the CLT SDK.
+
+Test files typecheck cleanly against the real source. Now let me verify the Previews file compiles with DEBUG active (exercising the `#Preview` macros).
+
+The `#Preview` macro needs the Xcode-only `PreviewsMacros` plugin (the error is on the existing `Buttons.swift` too — an environment limit, not my code). Let me verify my Previews *logic* by typechecking it with the `#Preview` wrappers rewritten as plain view-returning functions.
+
+Need to neutralize the existing `Buttons.swift` `#Preview` too (it's a dependency). Let me rewrite that dep copy as well.
+
+All preview bodies typecheck. Now let me run the actual available gate tools: SwiftFormat lint, SwiftLint, and the placeholder check.
+
+Two long lines in Tests.swift. Let me auto-format my files with SwiftFormat (write mode), then re-verify.
+
+SwiftFormat lint passes (0/7 require formatting). Let me re-typecheck the reformatted tests and run SwiftLint on my files.
+
+SwiftLint linted the whole `included` set (1909 files) and found 1 violation. Let me identify exactly which file/line it's in.
+
+SwiftLint's `included` list excludes `shared-surfaces`, so my files weren't linted (the 1 violation is pre-existing in an unrelated widget file). Let me lint my files explicitly via a temp config that mirrors the repo rules but points at shared-surfaces.
+
+Let me lint by passing the explicit file paths with the repo config.
+
+SwiftLint: **0 violations** on my 7 files. Now the placeholder gate via pwsh.
+
+Placeholder check: **0**. Let me verify the log directory exists, run the exact gate-path placeholder form, and capture the `xcodebuild` capability error for evidence.
+
+Log dir exists; placeholder + capability evidence captured. Let me check existing log formats to match convention.
+
+The precedent logs are very informative: the real integration runner reaches full Xcode via `DEVELOPER_DIR=/Applications/Xcode.app/...`. Let me check whether Xcode.app is actually present here, and the SDK/simulator availability.
+
+Xcode 26.5 **is** installed (reachable via `DEVELOPER_DIR=/Applications/Xcode.app/...`) — so the capability is present, not blocked. This matches the precedent. Let me discover the iOS 18 / macOS 15 SDKs and simulators, then compile + execute against the real Xcode toolchain.
+
+Full Xcode toolchain confirmed (iOS sim SDK 26.5, macOS SDK, xcodegen, booted iPhone 16). Let me write an executable logic harness mirroring the tests, then run the real-toolchain SDK compiles + execution.
+
+Now the real-Xcode-toolchain verification: iOS-18-sim + macOS-15 full-surface compiles (incl. `#Preview`), the executed logic harness, and `plutil`.
+
+Both SDK compiles pass (incl. `#Preview`). Now the executed harness and `plutil`.
+
+`plutil`: OK. The harness needs the entry file named `main.swift` for top-level code. Let me rename and re-run.
+
+EXECUTED harness: **34/34 assertions, 0 failures**, full surface compiled to a runnable binary. Let me check whether a prebuilt `Shared.xcframework` exists so I can attempt a real `xcodebuild` of my files in-target.
+
+No prebuilt `Shared.xcframework` (the full app build needs a heavy Gradle step + has documented pre-existing sibling breakage). To get genuine `xcodebuild build`+`test` evidence for *my* surface without that, I'll build a temporary isolated framework+test project (module `TeslaSync`) from my actual files on the booted iPhone 16 sim.
+
+xcodebuild is compiling. Let me wait for the build to complete.
+
+`** BUILD SUCCEEDED **` via xcodebuild on the iOS simulator. Now let me run the actual XCTest suite on the booted iPhone 16.
+
+`** TEST SUCCEEDED **` — all **29 XCTest cases pass on the iPhone 16 simulator**, 0 failures. Now let me capture the macOS `build`+`test` evidence too (the gate's second xcodebuild step) by adding macOS targets.
+
+Module-name ambiguity from two same-named frameworks in one project. Let me use a separate macOS-only project (mirroring the iOS one).
+
+The macOS build+test is taking a while (first-time SwiftUI macOS compile + test host spin-up). Let me keep waiting.
+
+It's been ~6.5 min — unusually long. Let me peek at the build log from a separate shell to see where it's stuck.
+
+The macOS **build** completed (all compile/link/bundle steps done); it's now hanging on launching the unsigned `xctest` runner — a known macOS environment issue (the precedent logs note the same). iOS already executed all 29 tests green. Let me stop this and capture a clean macOS **build** result.
+
+macOS `** BUILD SUCCEEDED **`. Let me try executing the macOS tests with ad-hoc signing (the usual fix for the unsigned-`xctest` launch hang), time-boxed.
+
+The macOS **test runner launch** hangs (testcase_lines=0, before any test executes) — the documented macOS unsigned/headless `xctest` environment issue, not a code issue. macOS **build** succeeded and the identical tests executed green on iOS (29/29) plus the macOS harness binary (34/34). Let me stop it and verify my working tree is clean.
+
+Working tree is clean — only my new `shared-surfaces/` is mine (the `M` files pre-existed at session start; I never touched them, nor project.yml/.swiftlint.yml/Tokens/Buttons). Let me capture the literal whole-tree `swiftformat --lint` gate result for the log (honest baseline), then write the log.
+
+Whole-tree `swiftformat` flags only a **pre-existing** file (`ActionBuilder.Previews.swift`, matching the precedent) — my files are clean. I now have the complete honest picture. Let me write the gate log.
+
+Now let me commit (staging only my surface dir + the log), verifying the staged set excludes the pre-existing modified files.
+
+Nothing staged — let me investigate (possibly a `.gitignore` rule or the add didn't execute).
+
+All 8 surface files + log staged correctly (no leak). Let me commit with the prescribed message.
+
+Committed cleanly (`70fda9b1`, 9 files, +1422). Let me verify the post-commit tree and clean up temporary verification artifacts.
+
+Post-commit tree is clean — only the pre-existing `AIUsageCard.*`/`web/*` changes (present at session start, never touched by me) remain. My verification artifacts are cleaned up (the other `/tmp/ts*` files belong to parallel sessions).
+
+All todos done. Let me do a final confirmation that the committed surface is intact.
+
+Task complete. Here's the summary.
+

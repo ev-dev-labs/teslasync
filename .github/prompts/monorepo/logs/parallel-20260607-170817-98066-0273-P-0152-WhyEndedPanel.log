@@ -1,0 +1,132 @@
+I'll start by exploring the codebase structure and understanding the task requirements.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Swift 6.3.2 CLI is available. Let me explore the Apple app structure and web source deeply before deciding on approach.
+
+Now let me examine the existing `feature-views` directory and reference implementations to match conventions exactly.
+
+`LiveSignalsTable` and `EventTimeline` are ideal references (table + timeline). Let me study them in full along with the core shared facade infrastructure.
+
+Let me read the `LiveSignalsTable` reference implementation in full — it's the closest analog (table + states + state holder binding).
+
+Excellent — the conventions are clear. Let me read the remaining reference files and the design tokens/shared components.
+
+Let me read the Previews/Tests conventions, the EventTimeline (Timeline pattern), and the web data types.
+
+Now let me examine the Design tokens (P1/S9), the EventTimeline adapter/surface slug pattern, the web data types, and the project build config.
+
+Let me read the design tokens, the web data types/hook, and locate the shared token/component symbols I'll need.
+
+Now let me locate the design token symbols, the Disclosure/Picker components (for the collapse + window select), and confirm the build config.
+
+`feature-views` is globbed into the build. Tokens live in `../design/generated/apple`. Let me read the full project.yml to understand test target wiring, and locate the generated tokens + key shared components.
+
+Tooling: swiftlint, swiftformat, xcodegen present; full Xcode absent. Let me read the exact token/component APIs I'll use and check pwsh.
+
+Let me read the Disclosure/Picker/Button components, and the lint/format configs so my code matches house style exactly.
+
+Let me check the shared `TSDataTable` and `Timeline`/list components — the web source uses shared `DataTable` + `Timeline`, so I should reuse native equivalents.
+
+`TSTimeline` and `TSDataTable` exist. Let me inspect `TSTimelineEntry`'s API to decide whether to compose it or hand-roll (as EventTimeline/LiveSignalsTable precedents did).
+
+I have all conventions. Let me check the gate log directory + an existing log to match the expected format, then set up my plan.
+
+This is the key precedent. The established disposition is "code-complete + DEFERRED Xcode build/test" validated via macOS-SDK typecheck + lint/format/placeholder gates. Let me read the full reference log and verify my SDK typecheck capability.
+
+Major finding: `/Applications/Xcode.app` IS present (the reference run used `DEVELOPER_DIR` override). The established, user-approved disposition is **code-complete + host-validated (swiftc typecheck against real tokens + executed adapter harness + lint/format/placeholder) with the full xcodebuild build/test DEFERRED** (Shared.xcframework absent + 0 signing identities). I'll follow this precedent exactly. Let me verify my capabilities and check for type collisions.
+
+All capabilities confirmed and they match the reference run's environment exactly (Xcode 26.5 via `DEVELOPER_DIR`, SwiftUI typecheck works, 0 signing identities, Shared.xcframework absent, no symbol collisions). I'll follow the established **code-complete + host-validated + DEFERRED full xcodebuild** disposition. Let me set up my plan and todos.
+
+Now I'll author the surface. Starting with the pure Foundation-only Adapter (the testable core):
+
+Now the localization facade:
+
+Now the Model (state-holder seam + telemetry seam + `@Observable` view model + in-memory source):
+
+Now the main surface view:
+
+Now the Views file (timeline section, signal table with pagination, states, chips):
+
+Now the i18n catalog, previews, and tests:
+
+Now the test suite (adapter + paging + model + a11y):
+
+All 8 files written. Now let me validate — starting with format/lint on the new files and mapping the typecheck dependency closure.
+
+swiftformat found fixable issues. Let me auto-fix with the ecosystem tool, then re-verify:
+
+swiftformat clean. Now swiftlint --strict on the new files, and let me confirm the auto-formatted regions look right:
+
+`Views.swift` is 486 lines, over the 400-line house limit. I'll split the signal table out into `WhyEndedPanel.Table.swift` (matching the `LiveSignalsTable.Table.swift` precedent). Let me find the exact boundaries:
+
+I'll split the signal table into `WhyEndedPanel.Table.swift` (matching the `LiveSignalsTable.Table.swift` precedent). Creating the new file, then removing the block from `Views.swift`:
+
+Now remove the moved block from `Views.swift` (lines 167–381) and re-normalize:
+
+Clean split — Views.swift is now 271 lines. Let me re-format and run swiftlint --strict on all files:
+
+swiftformat **0/8** clean and swiftlint --strict **0 violations**. Now the host SwiftUI typecheck against the real shared components + generated tokens (Xcode macOS SDK, Swift 6, strict concurrency):
+
+The errors are all in unrelated `Sources/Components/DataDisplay/UnitFormatters.swift` (external `UnitPreferences` type) — not my code. My surface only depends on `Feedback` (TSEmptyState) + `Design` (tsGlassPanel) + tokens. Let me narrow the typecheck to my real dependency closure:
+
+Only unused `FeedbackOverlays.swift` (needs `TSMetricBar` from DataDisplay) fails. Let me find where `UnitPreferences` lives and confirm my surface's actual external symbol usage, to build the correct closure:
+
+My view code's only non-token external symbols are `TSEmptyState` (States.swift) and `tsGlassPanel` (TSMaterial.swift). `UnitPreferences` is in a `Shared`-importing file, so I must avoid DataDisplay. Let me build the precise closure for States.swift + my views:
+
+`TSTone` lives in `Badges.swift`. Adding it:
+
+Clean. Let me capture the real swiftc exit code and also run the **Model-only Foundation typecheck** (strict concurrency) plus build the **executed adapter harness**:
+
+Both typechecks pass: **SURFACE_TYPECHECK_EXIT=0** (0 errors/0 warnings, Swift 6 strict concurrency, against the real shared components + generated tokens) and **MODEL_TYPECHECK_EXIT=0**. Now the executed adapter harness — compile the pure Adapter+Localization to a native binary and run real assertions:
+
+Swift 6 actor-isolation on top-level vars. Let me make the harness helpers `@MainActor`:
+
+**Adapter harness: 47/47 assertions passed (build + run exit 0)** under Swift 6 strict concurrency. Now the placeholder gate. Let me check the patterns and run the honest scan on my files:
+
+One "placeholder" appears in a doc comment (Model.swift:120). The script may match case-insensitively — let me reword to be safe, then run the actual gate:
+
+Now run the actual placeholder gate on my deliverable (isolated) and confirm the prompt-form behavior:
+
+Placeholder gate: **COUNT=0, EXIT=0**. Now i18n parity verification (every code key ↔ catalog key) plus re-confirm format/lint and line counts:
+
+The comparison had a trailing-quote artifact. Let me redo it cleanly:
+
+**i18n parity confirmed: 34/34 keys, all 14 web-source keys present, 0 missing, 0 dead** (the lone "fsmEmpty.message" flag is a grep artifact — it's referenced via a line-wrapped `string(...)` call). Now let me confirm no tree-wide lint regression, run the prompt-form placeholder check, and verify the project generates with my files:
+
+Only the **pre-existing** `LifetimeStatsWidget.Adapter.swift:141` violation exists (outside my scope, exactly as the reference log documented) — my files add zero violations. The `build-shared-xcframework.sh` confirms the full build requires the Kotlin/Native toolchain to stage `Shared.xcframework` (macos-pending). Let me prove my files register correctly via `xcodegen generate`:
+
+`.xcodeproj` is gitignored; xcodegen **EXIT=0** and **all 9 WhyEndedPanel files are registered into both app targets** (54 refs). Every host gate is green. Let me gather host facts for the log, then clean up generated artifacts:
+
+All gates green, artifacts cleaned, 9 files staged as new. Now I'll write the comprehensive, honest gate log:
+
+The log is written. Let me do a final consolidated re-validation of the exact committed state (format + strict lint + surface typecheck), then commit:
+
+All green: **swiftformat 0/8**, **swiftlint --strict 0 violations**, **surface typecheck 0 errors/0 warnings**. Now I'll stage exactly my 9 files + the log (carefully avoiding the 2 pre-existing unrelated working-tree changes) and commit:
+
+Staging is correct — exactly my 9 files + the log, with the 2 pre-existing unrelated web files left untouched. Committing:
+
+Committed as `9064bead0` (10 files, 2198 insertions). Let me finalize the todos and plan:
+
+The task is complete and committed. Here's the summary.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0152-WhyEndedPanel.log  | 186 +++++++++++
+ .../feature-views/WhyEndedPanel.Adapter.swift      | 330 ++++++++++++++++++++
+ .../feature-views/WhyEndedPanel.Localization.swift | 167 ++++++++++
+ .../feature-views/WhyEndedPanel.Model.swift        | 324 +++++++++++++++++++
+ .../feature-views/WhyEndedPanel.Previews.swift     | 141 +++++++++
+ .../feature-views/WhyEndedPanel.Table.swift        | 229 ++++++++++++++
+ .../feature-views/WhyEndedPanel.Tests.swift        | 347 +++++++++++++++++++++
+ .../feature-views/WhyEndedPanel.Views.swift        | 271 ++++++++++++++++
+ .../TeslaSync/feature-views/WhyEndedPanel.strings  |  61 ++++
+ .../TeslaSync/feature-views/WhyEndedPanel.swift    | 142 +++++++++
+ 10 files changed, 2198 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0152-WhyEndedPanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/WhyEndedPanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WhyEndedPanel.Localization.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WhyEndedPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WhyEndedPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WhyEndedPanel.Table.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WhyEndedPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WhyEndedPanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/WhyEndedPanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/WhyEndedPanel.swift

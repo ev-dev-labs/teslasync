@@ -1,0 +1,202 @@
+================================================================================
+P4 · Dashboard widget · 0106 — VehicleAccessWidget (Apple)
+Run: 2026-06-07T19:05-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/109
+Base: 29cb3442
+Prompt: .github/prompts/monorepo/p4-apple/dashboard-widgets/P-0106-VehicleAccessWidget.prompt.md
+Web source (spec): web/src/features/dashboard/widgets/VehicleAccessWidget.tsx
+Mode: code-complete + host-verified (macOS SDK compile + executed logic) ;
+      canonical xcodebuild iOS/macOS build+test is BLOCKED — no Xcode on this runner.
+================================================================================
+
+=== CAPABILITY PROBE (real commands, this host) ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)             OK
+  macOS SDK (CLT) ........... /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk   OK
+  SwiftUI / Charts / MapKit . `import SwiftUI; import Charts; import MapKit` -typecheck PROBE_EXIT=0  OK
+  swiftlint ................. /opt/homebrew/bin/swiftlint                            OK
+  swiftformat ............... /opt/homebrew/bin/swiftformat                          OK
+  pwsh (placeholder gate) ... /opt/homebrew/bin/pwsh                                 OK
+  -------------------------------------------------------------------------------
+  /Applications/Xcode.app ... NOT INSTALLED                                         BLOCKED
+  xcode-select -p ........... /Library/Developer/CommandLineTools (CLT instance)    BLOCKED
+  xcodebuild ................ "tool 'xcodebuild' requires Xcode, but active developer
+                              directory '/Library/Developer/CommandLineTools' is a
+                              command line tools instance"                           BLOCKED
+  iPhoneSimulator SDK ....... absent (no Xcode → no iOS 18 simulator SDK)            BLOCKED
+  xcrun simctl .............. "unable to find utility 'simctl', not a developer tool" BLOCKED
+
+  Capability ruling: the SwiftUI + Swift Charts + MapKit frameworks the prompt
+  names ARE present (macOS SDK; probe compiled). This surface uses NEITHER Charts
+  NOR MapKit (web "Charts/maps used: (none)"); its only capability requirement is
+  SwiftUI, proven importable + compiled below. HOWEVER, the canonical gate is
+  `xcodebuild -scheme TeslaSync(-macOS) ... build test`, and the iOS 18 / iPadOS 18
+  toolchain (Xcode.app, the iPhoneSimulator SDK, simctl, and xcodebuild itself) is
+  UNAVAILABLE on this runner. Per the prompt's capability clause ("iOS 18 / iPadOS
+  18 / macOS 15 HIG. If unavailable on the runner → STATUS=BLOCKED with API
+  evidence"), the disposition is STATUS=BLOCKED. The code is nevertheless authored
+  in full and verified to the maximum this runner allows (macOS-15 SDK type-check
+  under Swift 6 strict concurrency + executed adapter/model logic + lint/format/
+  placeholder), all GREEN — see the host-runnable gate below.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/VehicleAccessWidget.*) ===
+  VehicleAccessWidget.Adapter.swift   226  testable projection core — VehicleAccessTone, MobileAccess
+                                           tri-state, DetailEntry, VehicleAccessProjection (driver +
+                                           invitation memos), formatDateShort parity, a11y summaries
+  VehicleAccessWidget.Model.swift     279  P1/S8 state-holder seam (VehicleAccessSource→…Model) + P1/S11
+                                           telemetry seam + P1/S10 strings facade + in-memory source
+  VehicleAccessWidget.Views.swift     294  presentational subviews — chip / connectivity banner / compact
+                                           row / mobile row / standard view / detail card + row + empty
+  VehicleAccessWidget.swift           242  VehicleAccessWidget surface (shell chrome + state switch + registry)
+  VehicleAccessWidget.Previews.swift  165  #if DEBUG previews — one per state (content/compact/mobile-only/
+                                           loading/no-data/error/offline/stale)
+  VehicleAccessWidget.Tests.swift     254  XCTest — adapter + model + registry + a11y (21 methods)
+  VehicleAccessWidget.strings          55  P1/S10 catalog contribution (20 source-parity + native chrome keys)
+  Every file <= 400 lines (house file_length). Total 1515 lines across 7 files.
+  Shared registry types (DashboardWidgetSize / DashboardWidgetRegistration) are REFERENCED from the
+  shared P4 core (like the 0054 GuardModeWidget sibling) — NOT redefined → no duplicate symbols.
+
+=== PARITY (vs web VehicleAccessWidget.tsx) ===
+  Data sources -> bound via the shared state-holder seam (VehicleAccessSource -> VehicleAccessModel):
+    useVehicleDrivers, useVehicleInvitations, useVehicleMobileEnabled, useVehicles, useTranslation. The
+    production app wires the source over the KMP drivers/invitations/mobile-enabled stores (coalesced);
+    the view performs NO HTTP.
+  Projection -> VehicleAccessProjection.driverEntries is a 1:1 port of the web `driverEntries` memo
+    (label = name ?? email ?? '—'; value = formatDateShort(fetched_at); badge = role=='owner' ?
+    Owner/success : Driver/neutral). invitationEntries ports the `invitationEntries` memo (label =
+    created_by ?? '—'; value = formatDateShort(created_at); status pending→Pending/warning,
+    accepted→Accepted/success, else→Expired/danger — web 'error' variant = danger badge). MobileAccess
+    ports `mobileData?.data?.enabled ?? null` as a closed tri-state. EXECUTED + asserted (see gate [5]).
+  Composition -> shell chrome (person.2 icon + "Vehicle Access" title + freshness chip + refresh + Open) ·
+    1x2 CompactView (people glyph + "{n} Drivers" + tri-state mobile dot) · 2x4 StandardView (uppercase
+    "Mobile Access" + Enabled/Disabled/Unknown chip, then "Authorized Drivers" detail card, then
+    "Pending Invitations" detail card shown only when invitations exist — web invitationEntries.length>0).
+  Shared components -> reuses Color.TS / Font.TS / TSSpacing / TSRadius / TSTone / TSSkeleton +
+    ContentUnavailableView (compiled against the real macOS 15 SDK in gate [2]). VehicleAccessChip mirrors
+    the TSBadge tokens, extended to take a pre-localized String (our per-surface table) the
+    LocalizedStringKey-only TSBadge can't express. VehicleAccessDetailCard/Row port the web WidgetDetailCard.
+    Recharts -> none / Leaflet -> none (no chart/map on this surface).
+  States (all render) -> loading (skeleton chrome) · empty ("No access data available") · error (retry
+    affordance) · stale (freshness chip + "Reconnecting — access may be stale" banner) · offline (cached
+    values + chip + "Offline — showing last known access" banner) · content (compact OR standard). Model
+    phase resolution keeps cached content visible behind refresh/errors, matching the web shell. EXECUTED
+    truth-table assertions in gate [6].
+  i18n -> all source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    widget.vehicleAccess, vehicleAccessDrivers, vehicleAccessMobile, vehicleAccessMobileOn/Off/Unknown,
+    vehicleAccessEnabled/Disabled/Unknown, vehicleAccessAuthorized, vehicleAccessNoDrivers,
+    vehicleAccessPending, vehicleAccessNoInvitations, vehicleAccessOwner/Driver,
+    vehicleAccessPendingStatus/Accepted/Expired, vehicleAccessNoData -> ALL PRESENT in
+    VehicleAccessWidget.strings. No English literals in native code (verbatim from the facade).
+  a11y -> mobile row + compact row carry combined summary values (VehicleAccessAccessibility); each detail
+    row a combined label/badge/value label; every button an accessibilityLabel; the compact mobile dot
+    exposes its status via the row's combined label; Dynamic Type via tokens; Reduce Motion gates the
+    TSSkeleton shimmer.
+  Telemetry -> VehicleAccessModel.start() emits viewOpened(surface:"VehicleAccessWidget") -> bridges the
+    shared Telemetry.track(.screenView) (P1/S11). Asserted by a spy test (fires exactly once) — EXECUTED.
+  Registry -> VehicleAccessWidget.registration: id "vehicle-access", category "security", default 2x4,
+    min 1x2, max 4x40 (+ clamp()), matching registry/security.ts. EXECUTED assertions in gate [6].
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -parse — syntax check of all 6 surface .swift files (macOS 15 target):
+      Model / Adapter / Views / Widget / Previews / Tests  ->  parse_exit=0 (each)        OK
+[2] swiftc -typecheck — macOS 15 SDK, the 5 shipping source files (Model+Adapter+Views+Widget+Previews)
+    compiled together with minimal stand-ins for the shared P4 core/tokens, under the project's exact
+    build settings (-swift-version 6 -strict-concurrency=complete):
+      TYPECHECK_EXIT=0                                                                     OK
+[3] swiftc — SwiftUI/Charts/MapKit availability probe against the macOS SDK:
+      `import SwiftUI; import Charts; import MapKit` + a trivial View  ->  PROBE_EXIT=0     OK
+[4] swiftc build+run — the REAL VehicleAccessWidget.Adapter.swift executed against a Foundation harness
+    that asserts the projection logic (mobile tri-state, driver label fallback + owner/driver badge,
+    invitation status→tone incl. unknown=danger, stable ids, order preservation, formatDateShort nil→'—'
+    + real-date "Nov 14", a11y summaries):
+      ALL_ADAPTER_LOGIC_PASS   RUN_EXIT=0                                                  OK
+[5] swiftc build+run — the REAL VehicleAccessWidget.Model.swift + Adapter.swift executed against a harness
+    that drives InMemoryVehicleAccessSource and asserts the phase truth-table (loading/empty/error/content
+    incl. mobile-only→content + data-present-while-loading/failed→content), isCompact, view.opened-once
+    telemetry, source start/refresh wiring, and projection tracking on push:
+      ALL_MODEL_LOGIC_PASS   RUN_EXIT=0                                                    OK
+[6] swiftlint --strict on the 6 surface .swift files (explicit paths; config apps/apple/.swiftlint.yml):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0                                                                          OK
+      (Note — no silent drift: the bare full-dir `swiftlint --strict TeslaSync/dashboard-widgets` is
+       PRE-EXISTING RED on a sibling, LifetimeStatsWidget.Adapter.swift:141 function_body_length=78>50,
+       which is OUTSIDE this prompt's allowed files. This surface's 6 files add 0 violations.)
+[7] swiftformat --lint on the 6 surface .swift files (config apps/apple/.swiftformat):
+      0/6 files require formatting.
+      FORMAT_EXIT=0                                                                        OK
+[8] check-placeholders (ADR-011 stub gate; swift) — scanned the real surface files in isolation
+    (the bare gate `-Path .../VehicleAccessWidget` is a non-existent stem → Test-Path false →
+    a VACUOUS 0; re-run against the actual files so the result is attributable):
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                                   OK
+
+=== GATE — XCODE-ONLY STEPS (BLOCKED on this runner; real evidence, NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+      -> xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+         '/Library/Developer/CommandLineTools' is a command line tools instance
+      IOS_EXIT=1                                                                           BLOCKED
+    xcodebuild -scheme TeslaSync-macOS build test
+      -> (same "requires Xcode" error)
+      MAC_EXIT=1                                                                           BLOCKED
+    xcrun simctl list devices
+      -> xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+      SIMCTL_EXIT=72                                                                       BLOCKED
+    iOS 18 simulator-SDK swiftc -typecheck  ->  NOT POSSIBLE (no iPhoneSimulator SDK without Xcode).
+    Root cause: Xcode.app is not installed on this runner (only the Command Line Tools). This is an
+    irreducible platform-capability gap for the iOS/iPadOS build+test gate; installing Xcode (multi-GB,
+    Apple-ID/App-Store gated) is out of scope and not possible here. Unlike the sibling surfaces (whose
+    runner had Xcode 26.5 and deferred ONLY the final app build/test under ADR-012), this runner cannot
+    perform the iOS-SDK compile at all — hence STATUS=BLOCKED rather than the ADR-012 deferred→DONE.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) — implemented; each has
+      a #if DEBUG preview; phase logic unit-tested AND EXECUTED green on host (gate [5]).
+  [x] Hooks bind through the shared P1/S8 state-holder seam (VehicleAccessSource->Model); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — 20 source-parity keys present in
+      VehicleAccessWidget.strings (+ native chrome keys).
+  [x] Accessibility labels on every interactive element; mobile/compact/detail rows carry combined values.
+  [x] Tests: adapter unit + per-state model + registry + a11y — 21 XCTest methods authored; the SAME
+      adapter+model logic EXECUTED green via host harnesses (gates [4]/[5]).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0 (real scan).
+  [~] EXIT=0 / STATUS=DONE  ->  NOT CLAIMED. Host gates green; the canonical xcodebuild iOS/macOS
+      build+test is BLOCKED (no Xcode on this runner) with the real errors captured above.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : xcodebuild iOS/macOS shown BLOCKED with the real IOS_EXIT=1/MAC_EXIT=1 "requires
+                       Xcode" errors + SIMCTL_EXIT=72; STATUS is BLOCKED, not DONE. Every "OK" is a real
+                       command with its real exit code (incl. executed adapter+model logic + macOS compile).
+  2  No scope narrowing: implemented ALL states/views/badges + i18n + a11y + telemetry + registry.
+  3  No skip-and-assume: each host gate executed; the un-runnable iOS gate is reported BLOCKED, not assumed.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (Stand-ins used ONLY in the
+                       throwaway typecheck/run harnesses, never in shipped surface files.)
+  5  No parity shortcuts: faithful port of the driverEntries/invitationEntries memos + mobile tri-state +
+                       full compact/standard composition + all states + the WidgetDetailCard rows.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / the dashboard grid (integration
+                       prompt's scope) and did NOT edit the shared Localizable.xcstrings (parallel-unsafe)
+                       and did NOT redefine the shared registry types — strings shipped as the per-surface
+                       table + registry types REFERENCED, exactly like the 0054 sibling.
+  8  No commit on red  : no host gate is red; the implementation + this honest BLOCKED log are committed so
+                       the complete, verified work and the mandated log are preserved. The BLOCKED step is
+                       an environment capability gap (no Xcode), explicitly the prompt's BLOCKED escape.
+  9  No silent drift   : changes confined to the allowed VehicleAccessWidget.* files + this log; the
+                       pre-existing sibling swiftlint violation is disclosed in gate [6], not touched.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native VehicleAccessWidget shipped at parity with the web source: pure-Swift
+  projection core (EXECUTED-green logic harness), P1/S8 state-holder seam (no view HTTP), P1/S11
+  telemetry, every state + i18n key + a11y label, registry-correct (vehicle-access, 2x4 / 1x2 / 4x40).
+  All host-runnable gates pass (swiftc -parse x6, macOS-15 -typecheck under Swift 6 strict concurrency,
+  SwiftUI/Charts/MapKit probe, executed adapter logic, executed model/phase logic, swiftlint --strict 0,
+  swiftformat --lint 0, placeholder COUNT=0). The canonical xcodebuild iOS/macOS build+test CANNOT run on
+  this runner — Xcode.app / the iPhoneSimulator SDK / simctl / xcodebuild are all absent (Command Line
+  Tools only) — so per the prompt's capability clause the status is BLOCKED with the platform-capability
+  evidence captured above. The surface is complete and ready to go green on a runner with Xcode +
+  the staged Shared.xcframework once the downstream P4 integration prompt registers it in project.yml.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/VehicleAccessWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0106-VehicleAccessWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add VehicleAccessWidget surface (P4)"
+
+EXIT=1
+STATUS=BLOCKED

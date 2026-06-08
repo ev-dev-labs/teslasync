@@ -1,0 +1,146 @@
+I'll start by exploring the repository structure and checking tool availability, since this is an Apple/SwiftUI task with specific capability requirements.
+
+Key finding: only Command Line Tools are installed (no full Xcode), so `xcodebuild` and `simctl` are unavailable. Let me investigate the Apple app structure and whether the Swift toolchain can build SwiftUI at all before concluding.
+
+994 feature-view files already exist following a structured pattern. Let me read the web source spec and study the established conventions in parallel.
+
+Now let me read the web dependencies (hooks + schema) and study the native conventions: a representative feature-view, the shared facade, and the build config.
+
+I now fully understand the web spec and build setup (XcodeGen + full Xcode + Shared.xcframework required). Let me confirm the toolchain limitation precisely and find the closest existing native pattern (interactive + mutations + toast + multi-stage).
+
+Confirmed: no full Xcode (only Command Line Tools), no iOS SDK, no simulators — so `xcodebuild` iOS/macOS build+test is environmentally BLOCKED. `xcodegen`, `swiftlint`, `swiftformat` are available. Let me study the native facade/token/i18n layers and a representative interactive feature-view to replicate the exact pattern.
+
+Let me study the closest interactive pattern (UserImpersonateButton) in full — it's a mutation+action+state-machine feature view.
+
+The pattern is now clear. Let me read the remaining UserImpersonateButton files (Views, Previews, Tests, Adapter) and the design tokens to fully internalize conventions.
+
+Let me read the Tests pattern and locate the shared native components/tokens (TSButton, TSGlassPanel, TSSpacing, TSTone, etc.) I'll need.
+
+Excellent — I have the full pattern. Now let me read the shared design tokens and the specific native components I'll use (Buttons, Cards, Typography, States, Toast, Skeletons, Motion).
+
+Now let me read the feedback/motion components, the IconBox lookup, and the placeholder gate rules to ensure compliance.
+
+Let me check for IconBox/Toast/Skeleton/Banner components and the lint + placeholder gate configs.
+
+Let me read the remaining components I'll use (IconBox/Badge, Skeleton, Banners) and the placeholder gate rules.
+
+I have all component APIs. Let me read the placeholder checker, check for `pwsh`, and see how other surfaces do native file import/export + drag-drop.
+
+`pwsh` is available, and the placeholder gate scans `.swift` files for: TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented (case-insensitive). I'll avoid all of these. Let me check the native file import/export idiom in LayoutManager, then start building.
+
+Let me confirm nothing already references `SettingsExportImport` natively and set up my task tracking.
+
+I have enough to design faithfully. Let me check the platform's live-connection contract (for the offline/stale chrome) and set up tracking.
+
+The live-state contract is clear. Let me write the plan and start with the Foundation-only Adapter (pure logic, independently type-checkable).
+
+Let me type-check the Adapter standalone (Foundation-only) to catch errors early.
+
+`Result.Failure` must be an `Error`. Let me fix the conformance.
+
+Adapter type-checks clean. Let me quickly verify formatting/lint conventions on it before writing the rest.
+
+Format/lint surfaced clear fixes: split the file (>400 lines), use switch-expression form, drop trailing comma, wrap brace, and shorten `validate`. Let me extract the JSON model into its own allowed file and refactor.
+
+Now let me rewrite the Adapter without the JSON model, with a refactored (short) validator.
+
+swiftformat and swiftlint conflict on multiline-`if` brace placement. Let me make that condition single-line so the brace stays attached.
+
+Adapter + JSON are clean (typecheck, format, lint all pass). Let me mark progress and write the Model (seams + observable model + i18n facade), keeping it UI-free so it stays standalone-typecheckable.
+
+Now the in-memory seams (shipped, used by previews/tests and as model defaults).
+
+Let me type-check Model + Seams + Adapter + JSON together (all UI-free), then format/lint.
+
+Core (JSON+Adapter+Model+Seams) type-checks clean in Swift 6 mode. Let me format/lint them.
+
+Two fixes: split the file (>400 lines) and fix two doc-comment placements. Let me view the flagged region first.
+
+I'll split out the contracts (seams/enums/i18n) and keep the Model lean, using `// MARK:` group headers (exempt from the doc-comment rule).
+
+Core layer fully green (typecheck + format + lint). Now the SwiftUI layer. Let me write the Views, marking progress.
+
+Now the import-flow subviews (dropzone, parse error, preview, applied).
+
+Now the entry View with file export/import wiring and the document type.
+
+Now the previews (DEBUG-only, one per state).
+
+Now the i18n catalog (`.strings`) with all parity + chrome + validation keys.
+
+Let me validate the strings file and syntax-check the SwiftUI files (`-parse`), then format/lint everything.
+
+Strings valid; UI files parse clean. Now format + lint all new Swift files.
+
+Most are auto-fixable formatting; the `multiple_closures_with_trailing_closure` needs manual conversion to labeled closures. Let me auto-format first, then fix closure style.
+
+Format is clean. Now let me find and fix the trailing-closure violations.
+
+All 6 are `TSButton(action:) { label }` — I'll convert to labeled `action:`/`label:` form (matching the codebase convention). Let me view and fix each.
+
+Let me view the remaining button regions in ImportViews.
+
+Let me convert all 6 buttons to labeled `action:`/`label:` form.
+
+The Done button edit didn't match (I mistyped the old_str). Let me fix it.
+
+Now auto-format and re-lint the UI files.
+
+UI files are clean. Now the tests. Let me write the adapter/JSON/strings/a11y tests first (kept UI-free so they're runnable via SwiftPM).
+
+Now the model state tests (the bulk of behavioral coverage) with test doubles.
+
+Now let me format/lint the test files, then attempt to actually build+run the logic tests via a temporary SwiftPM package (strong verification).
+
+swiftlint flagged type-body length. But first, a critical wiring question: how do existing `*.Tests.swift` files in `feature-views/` get into the test target (not the app target)? Let me verify the project config.
+
+This is a pre-existing scaffold convention (100+ feature-views ship `.Tests.swift` beside the source); I'll match it exactly. The `type_body_length` needs the test class split. Let me restructure ModelTests with file-scope shared helpers and two classes.
+
+Test files pass format + lint. Now the strong verification: build & **run** the logic tests via a temporary SwiftPM package (module named `TeslaSync`, core + tests).
+
+Excellent — the **core module compiled cleanly** as a Swift 6 module (`Emitting module TeslaSync` succeeded). Only XCTest is missing (CLT, no Xcode). To actually *execute* the test logic, I'll provide a tiny XCTest shim and a runner that invokes every shipped test method against the real code.
+
+Let me fix the shim's `XCTAssertNil`/`NotNil` to be generic (avoids the `Any?`-wrapping nil pitfall).
+
+Now the runner that invokes every shipped test method.
+
+Real execution: **134 checks, 1 failure** — and it caught a genuinely contradictory test scenario. In `testApplyGatedWhenOffline`, the successful dry-run correctly clears the offline flag (a successful network call implies connectivity), so apply isn't gated. The fix: drop connectivity *after* the preview. Let me correct the shipped test.
+
+Let me re-sync the test copy and re-run the verifier.
+
+Let me stop and re-run writing output to a file so I can observe progress.
+
+Build still compiling (shared runner is slow). Let me poll for the result.
+
+Lock contention from my repeated launches. Let me clean up my stale build processes and do one clean build+run.
+
+The shared environment is heavily CPU-contended (another user's process at 100%). Let me keep waiting for the build.
+
+Unusually long. Let me check for competing build processes in parallel.
+
+I already have strong evidence (the verifier executed 134 assertions; the lone failure was a test-scenario bug now fixed). Let me do one clean, patient run to confirm fully green — without interrupting it.
+
+The runner used a stale copy. Let me re-sync the copy, confirm the fix landed, and re-run.
+
+Fix confirmed in the copy. Let me re-run the verifier.
+
+**CHECKS=134 FAILURES=0** — all 50 shipped tests execute against the real code and pass. Now let me run the full local gate (format, lint, placeholders) on the shipped files and re-confirm the core compiles.
+
+All shipped files: format ✅, lint ✅, core typecheck ✅, UI parse ✅, strings ✅. Now the placeholder gate (via `pwsh`) and a forbidden-token sanity grep.
+
+Placeholder gate: **COUNT=0, EXIT=0**. No forbidden tokens. Now let me reproduce the actual gate commands to capture honest exit codes for the log — starting with the whole-tree formatter and the xcodebuild capability probe.
+
+Whole-tree formatter flags something. Let me identify whether it's mine or pre-existing.
+
+The whole-tree formatter flag is a **pre-existing** drift in `ActionBuilder.Previews.swift` (not my files, and outside my allowed scope). My surface is clean. Let me capture the xcodebuild capability evidence, then write the gate log.
+
+Let me capture tool versions and write the comprehensive, honest gate log.
+
+Let me clean up temp artifacts, update tracking, and commit only my surface files + the log (leaving the pre-existing unrelated web changes untouched).
+
+Staged exactly my 12 surface files + the log; the 2 pre-existing web changes are left untouched. Committing now.
+
+Committed (13 files, 2724 insertions). Let me do a final confirmation that the committed surface files still pass lint/format and that the working tree is clean apart from the pre-existing web changes.
+
+All shipped files pass format + lint; the working tree shows only the pre-existing (untouched) web changes. Task complete.
+

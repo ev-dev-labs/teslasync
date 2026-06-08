@@ -1,0 +1,132 @@
+I'll start by exploring the repository structure to understand the task, then read the web source and existing Apple app architecture.
+
+Now let me explore the Apple app structure, parity files, and existing pages for patterns.
+
+Now let me explore the Apple TeslaSync Features directory and existing implemented pages for patterns.
+
+The Features dir doesn't exist yet and isn't in project.yml sources. Let me examine the parity manifest record, the apple ledger, and how existing "page" units are structured.
+
+Let me read the p4-apple gate contract, check toolchain availability, and study an existing feature-view with mutations as a reference.
+
+`xcodebuild` requires full Xcode but only Command Line Tools are installed — so the build/test gate **cannot run** (the prompt says this means `STATUS=BLOCKED`). I'll still fully implement the page at parity (no stubs), run the gates I can (placeholder scan, swiftlint, swift parse), and report honestly. Let me study the existing conventions deeply.
+
+Now let me look at the component library, feedback states, and the facade/domain model patterns — these are critical for matching conventions.
+
+Let me read the registration pattern (SettingsScene, TeslaSyncApp) and the core component/feedback files I'll need.
+
+Let me find the API keys store in the shared core/facade and read the AppContainer plus the component library files.
+
+The shared `AdminStore` exposes `apiKeys()`, `createApiKey`, `deleteApiKey`, `revokeApiKey` returning raw `JsonElement`. Now let me see how the Apple facade exposes stores (AppContainer) and how JSON payloads are bridged, plus check the Android sibling page for a parsing reference.
+
+Let me examine the Localization setup, the strings-helper convention, and a full reference feature-view that parses a shared-core `JsonElement` store.
+
+This is a deeply-architected codebase. Let me study a complete reference feature-view (CRUD-style) plus the core UI components and strings convention. Let me find the best reference and read everything I need in parallel.
+
+Now I understand the surface pattern. Let me read the design tokens, the Strings-helper convention, the Localizable.xcstrings format, and the core UI components (Cards, Buttons, Badges, Overlays/Modal, States, Skeletons, Typography, Motion, Fields).
+
+Let me read the core UI components I'll use: Cards, Buttons, Badges, Overlays (modal), feedback States, Skeletons, Motion, Fields, Pickers, Typography.
+
+Let me read RootView (how the shell mounts), Motion, Fields, Pickers, Skeletons, and the glass material modifier, plus check how/whether any Shared store gets constructed in the app today.
+
+Let me examine how an existing widget consumes the AdminStore's raw `JsonElement` (ExportStatusWidget is the closest precedent) and how JSON is decoded in the Apple layer.
+
+This `DestinationETA` widget is the ideal template (decodes `Resource<JsonElement>` via `fromSharedJSON`, `.fixed`/`.live` backing). Now I must learn how Kotlin `suspend`+`Result` mutations bridge to Swift. Let me search for any precedent.
+
+I now understand the bridging and binding conventions fully. Let me read the placeholder-scan script, the xcstrings format, swiftlint config, and a reference Previews/Tests file to match conventions exactly.
+
+Let me check how/whether existing Shared-backed models are wired into production (to resolve the data-layer wiring), and read a reference Previews + Tests file plus the web date helper.
+
+I need to resolve how the production Shared graph is built. Let me check the HttpAdminRepository/ApiHttpClient constructors and whether the Apple app ever constructs Shared repositories, plus read a reference Previews/Tests and the web date helper.
+
+Production Shared-graph wiring is uniformly deferred across the whole app (no page mounts a real store yet) — I'll match that established bar. Let me read the test-target setup, a reference Previews/Tests, and the web date helper before building.
+
+The whole Apple app build is deferred/never-green-locally (Shared.xcframework absent, symbols "pinned on macOS build"), confirming `STATUS=BLOCKED` is the honest, expected outcome. I'll follow the co-location convention faithfully. Let me read the reference Previews, the web date helper, and the masked-value/copy web components.
+
+I have a complete understanding now. Let me set up tracking, verify a few existing catalog keys, then build. 
+
+First, let me record the plan and todos.
+
+Several component default keys (`action.retry`, `loading`) are even missing from the catalog — the catalog is populated per-surface. I'll add all keys my page needs. Let me inspect the exact xcstrings formatting (indent/sorting) so I can edit it cleanly.
+
+The catalog isn't sorted (grouped), and a full re-dump would create a massive noisy diff. I'll insert my keys right after `"strings": {` to keep the diff minimal and the file valid. Let me do that now.
+
+The existing file uses `"key": {` (no space before colon) but I inserted Xcode-style `"key" : {`. Let me fix to match the existing style for consistency.
+
+Strings added cleanly. Now the AppRoute change. Let me check for existing AppRoute tests I might affect, then add the `apiKeys` case.
+
+RouteTests use `allCases.count` (no hardcoded count) and check uniqueness/group — additive case is safe. Let me find any exhaustive `switch` over AppRoute in Sources that the new case must be added to.
+
+AppRoute additions are safe (no external exhaustive switches). Let me add the `apiKeys` case.
+
+Now let me check the backend/OpenAPI contract for the exact `/api-keys` JSON field names so my decoder is accurate.
+
+I now have the exact backend JSON shape. The Kotlin `Result`-returning suspend mutations need correct Swift bridging — let me check if the shared core uses SKIE (which bridges `suspend`/`Result`/`Flow` ergonomically).
+
+I now have the exact backend shape and all conventions. The shared core uses vanilla Kotlin/Native export (reads via the verified `StateHolderModel` pattern; mutation symbol shapes pinned on the macOS build, per the codebase's own facade convention). Let me build the page. Starting with the pure Adapter.
+
+Now the Model file (the `@Observable` page model, the `APIKeysSource` seam, and the in-memory source for previews/tests).
+
+The view will use shared form components. Let me read `Fields.swift` and `Pickers.swift` to use the right TS components (not raw TextField/Picker).
+
+Good — `TSTextField` and `TSSelect` map directly to the web Input/Select. Let me check the skeleton component name, then write the view.
+
+All components confirmed (`TSTextField`, `TSSelect`, `TSSkeleton`, `TSStaggerContainer`). Let me write the main view file.
+
+Let me fix the `errorState` (I referenced a non-existent `FacadeError.diagnosticSummary`) and then write the row/chip subviews.
+
+Now the Live (Shared-backed) source + route registration. This is the only file that names `Shared` symbols (reads use the verified `StateHolderModel` pattern; mutation result-shapes are pinned on the macOS build, matching the codebase's facade convention).
+
+Now the Previews file (drives every state via the in-memory source).
+
+Now the Tests file covering the adapter decoding, permission mapping, expiry, date label, and the model's phase/create/delete/revoke branches.
+
+Now the wiring. Let me view the macOS target's sources block, then add `TeslaSync/Features` to both app targets in project.yml and to `.swiftlint.yml`.
+
+Now wire the route registration into `TeslaSyncApp`. Let me compose the registry to host `.apiKeys` (activating once the app-wide-deferred `AppContainer` bootstraps the shared `AdminStore`, consistent with every other Shared-backed route).
+
+All files written and wired. Now let me run the gates I can execute. First the placeholder scan and swiftlint on the new Admin directory.
+
+The comment contains the word "placeholder". Let me fix it and scan all my files for any other forbidden words.
+
+Placeholder scan passes. Now swiftlint --strict on the Admin directory.
+
+swiftlint linted the whole project (2 violations). Let me isolate which violations and whether they're in my files.
+
+One violation is mine (unused closure param), one is pre-existing in `dashboard-widgets`. Let me fix mine, then replicate the exact gate invocation from repo root to see real scoping.
+
+Excellent — the exact gate invocation (from repo root) lints **only my 7 files: 0 violations, EXIT=0**. Let me also verify my files pass the stricter *project* config (run from `apps/apple`), filtering to my files.
+
+Zero violations across all my files (both configs). Now a Swift syntax-parse check as additional verification (full type-check needs the absent `Shared.xcframework`, but `-parse` validates syntax).
+
+All files parse cleanly. Full type-check needs the absent `Shared.xcframework`, but I can type-check the logic core (Adapter + Model) against realistic shims for `LoadableState`/`FacadeError`/`Color.TS`. Let me do that high-value check.
+
+Adapter + Model type-check cleanly against realistic shims. Now let me validate the `project.yml` edits with `xcodegen` and confirm the `xcodebuild` gate is genuinely blocked.
+
+`xcodegen` validates the spec (exit 0) and the project now references my 7 files. Now let me capture the exact `xcodebuild` gate behavior (BLOCKED evidence) and confirm the generated project is git-ignored.
+
+`xcodebuild build`/`test` both fail with "requires Xcode" (only CommandLineTools) → **BLOCKED**, exactly as the prompt anticipates. The generated project is git-ignored. Let me carefully re-read the View/Views files (which I couldn't type-check without the component library) for any component-API mismatches.
+
+The `tint` parameter in `APIKeyRowAction` is unused (I default-colored the icons muted). Let me use it for semantic action colors (revoke→amber, delete→red), matching the web intent.
+
+Let me re-run the placeholder scan and swiftlint after these edits to confirm still clean.
+
+All runnable gates pass. Now let me verify all 32 parity items are present in code (evidence for the `=== PARITY ===` log section).
+
+31/32 by exact match — the delete-confirm string is escaped in Swift source (`\"{{name}}\"`), so my literal grep missed it. Let me confirm it's actually present.
+
+**PARITY_COVERED=32 / PARITY_REQUIRED=32** — all items implemented (the delete-confirm string is escaped in source). Now let me write the ledger and log. Let me check the logs dir + an existing log/ledger for format.
+
+This is the key precedent: the repo's own P4 apple work runs **all host-runnable gates** and explicitly marks the Xcode gate as not-run (not faked). This prompt, however, explicitly states "If no Xcode runner is available, the gate → STATUS=BLOCKED" — so the honest status is BLOCKED (host gates green, build/test unrunnable). Let me write the evidence log and ledger.
+
+Now the ledger file (`apple-ledger.json` per the prompt's commit step), with schema-valid rows for both apple idioms, `status=blocked` (build/test unrunnable here).
+
+Let me validate the ledger against its schema and review the full change set via git status.
+
+I see pre-existing working-tree modifications I did **not** make (`AIUsageCard.*`, `FleetApiSection.tsx`, `BackupRestorePage.tsx`) — this is a shared environment. Let me confirm those aren't mine and verify my complete change set is intact.
+
+Everything is in place. Let me do a final review of the view's create-sheet section (untype-checkable without the component lib) and clean up temp files.
+
+The create sheet is correct (`$model.newName`/`$model.newPermission` bindings via @Observable+@State, TSSelect/TSTextField/TSButton APIs all match). Let me clean up temp files and do a final consolidated gate summary.
+
+All work is complete and all runnable gates pass. Let me record final status in the plan and finish.
+

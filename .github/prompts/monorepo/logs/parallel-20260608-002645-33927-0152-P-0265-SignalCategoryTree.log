@@ -1,0 +1,150 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swift` 6.3.2, `swiftlint`, and `swiftformat` ARE available. Let me check for a full Xcode and understand the project structure and web source.
+
+Full Xcode IS installed at `/Applications/Xcode.app` (just not the active dev dir), and `pwsh` is available. Let me investigate the native patterns, shared infrastructure, and whether I can target the full Xcode.
+
+Full Xcode 26.5 IS usable via `DEVELOPER_DIR`, iPhone 16 simulator is booted, and `xcodegen` generates the project from `project.yml`. **The gate can pass.** Let me map the structure and shared infrastructure.
+
+Now I understand the layout. Let me read a complete reference feature-view (`WeekSelector` — a selector like mine) and the signals-domain `LiveSignalsTable`, plus the web hook/types.
+
+Excellent pattern clarity. Let me read the remaining WeekSelector files (Adapter, Views, Previews, Tests, strings) to fully internalize the conventions.
+
+I now deeply understand the multi-file pattern. Let me examine the signals data shape (web hook + types), the existing signals-domain native reference, the design tokens available, and the build feasibility (KMP framework) in parallel.
+
+Two key risks identified: (1) `Shared.xcframework` (KMP) isn't built and needs Gradle/Kotlin, (2) test-wiring location needs confirming. Let me resolve these and gather the signals data shape + design tokens.
+
+Test files live only in `TeslaSync/feature-views/` (170 of them) — I'll match that convention exactly. Now let me gather design tokens and the signals-domain native reference so my code compiles against real APIs.
+
+Now let me read the web `TreeSelect` (the real UI spec my wrapper reproduces), plus the native forms/fields/states components and the signals-domain reference.
+
+Let me read the web `TreeSelect` (the actual UI spec), check whether `SignalSparklinePreview` native already exists, and read the exact native primitive signatures I'll compose with.
+
+Let me read the web `TreeSelect.tsx` in sections to capture the full composition spec.
+
+I have the full spec. Let me confirm the list-data Source/Model conventions via the signals-domain `LiveSignalsTable` reference before designing.
+
+Let me read the web `SignalSparklinePreview` to faithfully reproduce the leaf-right slot's enabled/disabled rendering.
+
+Let me get the `SignalKind` union and check for any existing native type collisions (all feature-views compile into one module).
+
+I have a complete understanding of the spec and conventions. Let me set up a plan and start writing the implementation.
+
+Now the pure projection adapter — the testable core mirroring `TreeSelect`'s logic.
+
+Let me fix the awkward `rank(for:)` implementation, then write the Model (state-holder seam).
+
+Let me check the `TSEmptyState` and `TSQueryError` signatures before writing the Views.
+
+`TSErrorDisplay` and `TSEmptyState` fit perfectly. Now the Views file (presentational subviews).
+
+Now the root View that composes everything.
+
+Now let me check the Previews convention before writing it.
+
+Now the comprehensive test suite (adapter + accessibility + model/state).
+
+Now the i18n strings catalog.
+
+All 8 files created. Let me run the lightweight verifications (swiftformat, swiftlint, placeholder check) on the new files first.
+
+SwiftFormat found auto-fixable issues. Let me apply the formatter (ecosystem tool) to my files, then re-lint.
+
+SwiftFormat passed and converted the force-unwrap to `XCTUnwrap`. Let me verify the enclosing test function was made `throws` (required for `try`).
+
+SwiftFormat clean. Now SwiftLint `--strict` on the new files, plus the placeholder check.
+
+File-length rule (400 lines, strict) tripped 3 files. The codebase splits files to stay under this. Let me confirm the limit against existing files and plan splits.
+
+The codebase caps files at 400 lines (splitting into `.Localization`, `.States`, `.ModelTests` files). Let me check the `.Localization` convention, then split my 3 oversized files.
+
+Confirmed the `.Localization` convention. Let me view the current (post-format) sections I need to move, then split the 3 oversized files.
+
+Let me view the exact boundaries in Tests.swift to plan the split precisely.
+
+Now I'll execute the splits. First, create the 3 new files, then remove the moved blocks from the originals.
+
+Now remove the moved blocks from the originals, then reformat and re-lint everything.
+
+All files now ≤400 lines. Let me normalize with swiftformat and run the full strict lint on all 10 files.
+
+Both linters pass. Let me sanity-check the edit boundaries and run the placeholder check.
+
+Boundaries clean; placeholder check passes (0 placeholders). Before the heavy xcodebuild, let me do a fast standalone compile+run of the pure logic (Models + Adapter) to verify correctness independently.
+
+Just the `main.swift` top-level rule — let me rename and rerun.
+
+Core logic verified — all 16 assertions pass. Now the heavy xcodebuild gate. Let me generate the project and assess the KMP framework build feasibility (the main risk).
+
+Project generated. Let me check whether the KMP framework or Gradle cache already exists before attempting a (potentially slow) build.
+
+Gradle 8.14.5 and Kotlin/Native 2.4.0 are already cached, so the KMP toolchain is warm. Let me build the `Shared.xcframework` (async, long-running) and prep the log directory.
+
+The KMP framework build is running (compiling Kotlin/Native for iOS + macOS). Let me continue waiting.
+
+Still compiling (output is buffered through `tail`). Let me check build progress in a separate shell while it runs.
+
+The framework build completed. Let me read its result.
+
+`Shared.xcframework` built and staged (12m20s, exit 0). Now the iOS build+test gate. Let me write the log header and start it (async, since it's a large app).
+
+Now the iOS build+test (large app — running async with output to a build log).
+
+Let me monitor the iOS build progress.
+
+The build failed — but the errors are in **pre-existing** files (`AIRestorePanel.Tests.swift`), not mine: the app target can't resolve `XCTest`. Let me investigate whether this is a baseline issue and confirm my code is clean.
+
+Zero errors in my code — the only failure is the pre-existing `AIRestorePanel.Tests.swift` (and all 170 feature-view test files): the **app target can't resolve `XCTest`** because `project.yml` lacks `ENABLE_TESTING_SEARCH_PATHS`. This is a repo-wide baseline issue outside my file scope. Let me verify my code builds+tests green by passing that setting as a command-line override (no file changes).
+
+Let me monitor the verification build while it compiles the full app.
+
+Still failing but zero errors in my code. Let me see what the remaining failures are with the override applied.
+
+The XCTest issue is resolved by the override — now the **only** remaining errors are pre-existing duplicate-type errors in `dashboard-widgets/` (`invalid redeclaration of 'DashboardWidgetSize'`), entirely outside my scope and untouched by me. My 10 files compiled with **zero** errors. Let me locate the pre-existing duplicate to document it precisely.
+
+This is a definitive pre-existing breakage: **15+ duplicate `public struct DashboardWidgetSize` declarations** across committed `dashboard-widgets/` files (plus 2 in `Sources/DashboardWidgets/`) — a merge artifact from parallel dashboard-widget prompts, untouched by me and outside my scope. The shared app target cannot compile for *any* feature-view prompt right now. Let me confirm my files were actually type-checked (not skipped) in the module compile.
+
+Critical evidence: the build log shows my test files compiled with only the **benign "ignoring import" warning** (identical to all 170 existing feature-view test files) and **zero errors** — confirming my entire surface type-checks against the real shared components, design tokens, and KMP framework. 
+
+The gate is blocked solely by pre-existing out-of-scope breakage. Let me run the macOS gate to capture the same evidence honestly, then finalize.
+
+While macOS builds, let me confirm my working-tree changes are scoped correctly (the commit must include only my SignalCategoryTree files + log, not the unrelated pre-existing `AIUsageCard` edits).
+
+My 11 files are isolated; the `AIUsageCard` edits are pre-existing and will stay unstaged. Let me check macOS progress and confirm generated artifacts are git-ignored.
+
+macOS also failed (MAC_EXIT=65). Let me confirm it's the same pre-existing cause and my code is clean there too.
+
+Both gates fail on **pre-existing, out-of-scope** causes (iOS: feature-view test files can't resolve `XCTest` repo-wide; macOS: missing dev signing cert + the same `dashboard-widgets` duplicates) — **zero** errors in my code on either platform. I have complete evidence. Let me write the honest, detailed gate log.
+
+The log honestly documents BLOCKED with full evidence. My surface is complete and verified clean; the gate is blocked by three pre-existing, out-of-scope issues. Let me clean up temp files and commit my surface + log (staging only my files, not the unrelated `AIUsageCard` edits or git-ignored generated artifacts).
+
+Staging came back empty — let me diagnose why the `git add` didn't take.
+
+`git add -v` works. Let me stage all my files plus the log and commit.
+
+All 12 files staged correctly (no `AIUsageCard`, no ignored artifacts). Let me commit.
+
+Committed cleanly (8b7585b4c, 12 files). Let me run a final confirmation of the static gates on the committed files and update the plan.
+
+Final static gates confirmed green: swiftformat 0/10, swiftlint 0 violations. Let me do a final placeholder check and update the plan.
+
+All gates confirmed. Let me update the plan with the final state.
+
+## Summary
+
+I shipped the **`SignalCategoryTree`** Apple surface (P4/0265) as a native SwiftUI parity of `features/telemetry/components/SignalCategoryTree.tsx` (the thin wrapper over the generic `TreeSelect` primitive), and committed it (`8b7585b4c`, 12 files).
+
+**Delivered** (11 files, all ≤400 lines, in `apps/apple/TeslaSync/feature-views/`):
+- Root `View` + value types (`Models`) + pure projection (`Adapter`) + P1/S8 state-holder seam & `@Observable` model + P1/S11 `view.opened` telemetry (`Model`) + P1/S10 i18n facade (`Localization`) + presentational rows/accessory (`Views`) + all six states loading/empty/no-results/error/stale/offline (`States`) + per-state `#Preview`s + adapter/accessibility/model tests + `.strings` catalog (12 category labels + surface + a11y keys).
+- Reproduces the web composition: categorized tri-state multi-select tree, search-with-auto-expand, per-group `{sel}/{total}` counts, selection-survives-filter, and the lazy per-leaf sparkline-slot enablement gate. Full null-safety, VoiceOver labels, no hardcoded English.
+
+**Verified clean (every gate within my allowed scope):**
+- `swiftformat --lint`: 0/10 · `swiftlint --strict`: 0 violations · `check-placeholders`: 0 · standalone logic harness: 16 asserts pass · KMP `Shared.xcframework` built (Gradle) · **real Xcode whole-module compile: 0 errors in all SignalCategoryTree files on iOS *and* macOS** (only the benign "ignoring import" warning every feature-view test file shares).
+
+**Gate STATUS = BLOCKED** (logged honestly with evidence). The scheme-level `build test` can't reach EXIT=0 due to **pre-existing breakage outside this prompt's file scope** (`SignalCategoryTree.*`):
+- **R1** `project.yml` lacks `ENABLE_TESTING_SEARCH_PATHS` → all 170 feature-view `*.Tests.swift` fail `import XCTest`.
+- **R2** `TeslaSync/dashboard-widgets/*` redeclares `DashboardWidgetSize` 15+ times (merge artifact) → fatal compile error.
+- **R3** macOS targets need a dev signing certificate absent on this runner.
+
+None are introduced by or fixable within my allowed files, so per the Honesty Covenant I reported BLOCKED with evidence rather than marking the gate green. The unrelated working-tree `AIUsageCard` edits were left unstaged.
+

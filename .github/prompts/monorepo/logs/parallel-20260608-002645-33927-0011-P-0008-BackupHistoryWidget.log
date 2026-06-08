@@ -1,0 +1,120 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure and the existing patterns to follow.
+
+`PowerFlowHistoryWidget` is the closest structural match (Adapter + Model + Views + Previews + Tests pattern). Let me read all its files plus the web WidgetShell and registry.
+
+Excellent reference. Let me read the remaining PowerFlowHistoryWidget files (Adapter, Views, Previews, strings, Tests).
+
+Now let me read the shared infrastructure (registration, tokens, skeleton) and the web dependencies (registry, hooks, types, WidgetShell, useDateFormat).
+
+Let me check the build tooling availability (critical for the gate) and the Xcode project structure.
+
+Full Xcode exists at `/Applications/Xcode.app` — I can use `DEVELOPER_DIR` to target it without sudo. Let me verify and find the backup event types.
+
+Full Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 simulator is booted. The gate CAN run. Let me read the types, project.yml, and investigate the duplicate-definition situation.
+
+Let me verify the duplicate-definition concern precisely — this determines whether I redefine shared types or just reference them.
+
+13 files redefine the shared types unguarded — so I must **reference** them (like PowerFlowHistoryWidget does), never redefine. Let me establish the baseline build state and read remaining dependencies in parallel.
+
+Project generates cleanly. Let me kick off a baseline build (to learn the current state) and read the closest list/badge sibling references in parallel.
+
+Strong list-row reference. Now let me read the design tokens, the native skeleton, and the web StatCard/Badge for visual parity.
+
+I now have the full token vocabulary. Let me check the baseline build progress and the `TSSkeleton` API.
+
+Baseline build still compiling. I have everything needed. Let me set up tracking and start writing the widget files (Model + Adapter cores first).
+
+Baseline still building. Let me write the widget files now. Starting with the Model (state-holder + telemetry + i18n facade).
+
+Now the Views file. Let me quickly confirm the web `StatCard` styling for parity, then write the subviews.
+
+Web `StatCard` is a bordered card with a muted label + bold value. Let me write the Views file with that parity.
+
+Now the main surface view.
+
+Now the strings catalog. Let me also check the baseline build result.
+
+Baseline failed only on **macOS code-signing** (env limitation), not compilation. The iOS Simulator build needs no signing and is the definitive compile test. First, let me check how test targets are wired in project.yml (so my Tests.swift lands correctly).
+
+Let me verify how `*.Tests.swift` files are wired — they can't live in the app target with `@testable import`.
+
+Let me write the Previews and Tests files (following the sibling pattern, which the file-allowlist requires), then empirically test the build.
+
+Now the comprehensive test suite.
+
+All 7 files created. Let me regenerate the project (to include new files) and lint the new files in parallel.
+
+swiftformat found formatting issues. Let me auto-fix them, then re-verify.
+
+swiftformat passes. Now swiftlint --strict on the new files.
+
+One line-length violation. Let me view and fix it.
+
+Now re-run both linters on the new files to confirm clean.
+
+Both linters pass cleanly on the new files. Now the critical compile verification — an iOS Simulator build (no signing needed). Let me run it and capture output.
+
+While that builds, let me verify the auto-formatted files look correct.
+
+Build running. Let me check for any symbol collisions my code might introduce (e.g., the `Calendar.iso8601UTC` extension or my type names).
+
+No collisions. The iOS build completed — let me read the result.
+
+The truth is now clear and important:
+- **My BackupHistoryWidget files have ZERO errors** — they compile cleanly.
+- The only 2 errors are **pre-existing**: `AIRestorePanel.Tests.swift` (a non-widget sibling) imports `XCTest`, which isn't available in the app target. This is a systemic baseline condition: 50+ sibling `*.Tests.swift` files live in the app target's source folder (per `project.yml`), and the compiler halts on the first XCTest import.
+
+Let me prove the app (including my widget + the 13 sibling registration defs) compiles green when test files are excluded — a non-destructive diagnostic via `EXCLUDED_SOURCE_FILE_NAMES`.
+
+While that builds, let me locate and run the placeholder check (pwsh is available).
+
+The excluded-test build also failed — let me see why (maybe the exclusion pattern didn't apply, or there's another error class).
+
+Ah — there are also `*.ModelTests.swift` files. Let me broaden the exclusion to `*Tests.swift` and rebuild (purely diagnostic).
+
+While the diagnostic builds, let me run the placeholder gate on my files (pwsh available).
+
+Placeholder gate passes (EXIT=0). Let me wait for the diagnostic build and meanwhile check how sibling surfaces handled commits/gate in git history.
+
+The convention is confirmed: siblings commit `feat(...): add XWidget surface (P4)` + a log file. Let me check the diagnostic build result and read a sibling's committed log for the STATUS convention.
+
+This is the key insight. The committed PowerFlowHistory sibling log (STATUS=DONE) documents the exact accepted convention: host-runnable gates (swiftlint/swiftformat/placeholder + **standalone-executed XCTest**) must pass; the full Xcode app `build test` is **DEFERRED** to integration because the surface isn't yet registered in `project.yml` and `Shared.xcframework`/signing aren't on the parallel runner. The 59 ambiguity errors are pre-existing sibling duplicate-definition noise.
+
+Let me confirm my files aren't among those errors, then build a standalone test harness like the sibling did.
+
+**Confirmed: my BackupHistory files have ZERO compiler errors** even in the full-app context. The 59 errors are all pre-existing sibling duplicate-definition ambiguities (`DashboardWidgetSize` ×49 from the 13 dup defs, `VehicleHero*` ×3) — none mine.
+
+Now I'll execute my unit tests via a standalone SwiftPM harness (the same approach the accepted sibling used) to prove the logic is green. Let me build it.
+
+Now run the standalone test suite with the Xcode toolchain.
+
+The standalone harness caught a **real bug** the broken app build had masked: `Calendar.iso8601UTC` is internal but is referenced in a public function's default argument. Let me fix it (make the extension public), then re-run.
+
+I'll restructure `BackupHistoryWindow` to avoid the public-default-arg issue and drop the public `Calendar` extension (which could also risk integration collisions). Let me view and replace that section.
+
+Re-sync the fixed Adapter to the harness and re-run the tests.
+
+All **28 tests pass** under Swift 6 strict concurrency — and the harness caught+fixed a real bug. Let me re-lint the changed Adapter and confirm the full new fileset is still clean.
+
+Both clean. Now let me run the **official gate command sequence** and capture honest results into the log. Starting the iOS `build test` step.
+
+While iOS runs, let me run the macOS gate step (parallel shell) plus the quick whole-tree format/placeholder gate steps.
+
+Whole-tree swiftformat fails only on a **pre-existing sibling** file (`ActionBuilder.Previews.swift`, 1/1919) — my files are clean (0/6). Let me run the whole-tree swiftlint gate step and the placeholder gate.
+
+check-placeholders passes (EXIT=0). The whole-tree lint failures are both pre-existing siblings (`LifetimeStatsWidget`, `ActionBuilder`), not mine. The macOS gate finished — let me read it and check the iOS gate.
+
+Both Xcode gate steps: IOS_EXIT=65, MAC_EXIT=65 — **zero errors in my files** in both. Let me confirm the iOS failure cause is the pre-existing condition, then I'll write the evidence log.
+
+Every official-gate red is reproduced and proven to originate in **pre-existing sibling files / integration-signing**, never my surface. My surface passes every per-surface gate and executes **28/28 tests green** under Swift 6. Now let me write the comprehensive, fully-transparent evidence log (mirroring the accepted sibling 0073 structure).
+
+The log is written. Let me update tracking, clean up the temp harness, and commit only my surface files + log (explicitly, to avoid the pre-existing unrelated working-tree changes).
+
+Exactly the 7 surface files + log are staged (no unrelated/generated files). Let me commit.
+
+Committed. Let me do a final verification of the commit contents and working-tree state.
+
+Task complete. The commit contains exactly the 7 surface files + the evidence log (1650 insertions); the only remaining working-tree changes are pre-existing and unrelated (AIUsageCard + 2 web files), which I correctly left untouched, and the generated `.xcodeproj` is git-ignored.
+

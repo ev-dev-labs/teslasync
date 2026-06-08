@@ -1,0 +1,72 @@
+=== P4 Shared surface 0032 AINLDriveSearch (Apple) ===
+date: 2026-06-08T11:13:37Z
+git:  c9c6fdb9f branch=auto/20260608-002645-33927/261
+honesty-covenant: red-as-green=NO  scope-narrowing=NO  skip-and-assume=NO  stubs-as-final=NO
+
+--- Runner capability probe ---
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+swift:       swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+xcodegen:    Version: 2.45.4
+swiftlint:   0.63.3
+swiftformat: 0.61.1
+pwsh:        PowerShell 7.6.2
+
+=== GATE STEP 1: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test ===
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+
+=== GATE STEP 2: xcodebuild -scheme TeslaSync-macOS build test ===
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+
+=== GATE STEP 3: swiftlint --strict (config included tree) ===
+Done linting! Found 1 violation, 1 serious in 1916 files.
+pre-existing violations (NOT in shared-surfaces):
+apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length Violation: Function body should span 50 lines or less excluding comments and whitespace: currently spans 78 lines (function_body_length)
+shared-surfaces violations: 0
+LINT_EXIT=2
+
+=== GATE STEP 4: swiftformat --lint apps/apple ===
+Source input did not pass lint check.
+1/1920 files require formatting, 2 files skipped.
+shared-surfaces format issues: 0
+FORMAT_EXIT=1
+
+=== GATE STEP 5: check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces ===
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- SUPPLEMENTARY: file-scoped evidence (the shipped surface only) ---
+
+# swiftlint --strict scoped to TeslaSync/shared-surfaces:
+Done linting! Found 0 violations, 0 serious in 7 files.
+
+# swiftformat --lint scoped to TeslaSync/shared-surfaces:
+0/7 files require formatting.
+
+# xcodegen generate (validates project.yml spec + surface target membership):
+Created project at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-261/apps/apple/TeslaSync.xcodeproj
+XCODEGEN_EXIT=0
+shared-surfaces files compiled into TeslaSync(+macOS) targets: 48 pbxproj refs
+
+--- Wiring (necessary infra: registered the new source dir; missing P4-core predecessor step) ---
+project.yml:   added 'TeslaSync/shared-surfaces' to TeslaSync + TeslaSync-macOS sources.
+.swiftlint.yml: added 'TeslaSync/shared-surfaces' to included.
+
+--- Pre-existing baseline (NOT introduced by this surface) ---
+swiftlint tree violation: TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift (function_body_length).
+swiftformat tree files needing format: ActionBuilder.Previews.swift 
+case-collision in working tree at checkout: AIUsageCard.* (0203) vs AiUsageCard.* (0237) — pre-existing, untouched.
+
+--- Result interpretation ---
+Shipped surface (apps/apple/TeslaSync/shared-surfaces/AINLDriveSearch.*) is clean on every runnable gate:
+  swiftlint(scoped)=0 violations | swiftformat(scoped)=0 | placeholder=0 | xcodegen=0 (48 pbxproj refs).
+xcodebuild iOS+macOS build+test cannot run: requires full Xcode; runner has CommandLineTools only.
+Per prompt capability clause, that is a BLOCKED platform-capability gap (evidence: GATE STEP 1/2 above).
+Tree-wide LINT_EXIT/FORMAT_EXIT are non-zero solely due to the pre-existing baseline items listed above.
+
+EXIT=1
+STATUS=BLOCKED

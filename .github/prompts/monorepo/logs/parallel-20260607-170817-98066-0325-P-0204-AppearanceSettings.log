@@ -1,0 +1,164 @@
+I'll start by exploring the repository structure, the web source spec, the existing Apple app, and checking runner capabilities.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swift`, `swiftlint`, `swiftformat` ARE available. I'll do all real work (full native code + all runnable checks) and assess the gate honestly. Let me read the web source and explore the Apple app structure.
+
+Extensive existing feature-views with a clear multi-file pattern. Let me read the web source in chunks and check whether AppearanceSettings already exists, plus find a comparable settings-style example to follow conventions.
+
+Let me read the rest of the web source to fully understand all sections.
+
+I have the full web source picture. Now let me understand the native architecture: shared state holders (P1/S8), tokens (P1/S9), i18n (P1/S10), telemetry (P1/S11), and the native component counterparts. Let me explore in parallel.
+
+Now let me explore the shared facade (state holders), design tokens, i18n, telemetry, and native components in parallel.
+
+Let me look at a complete reference feature view and find the i18n facade + telemetry patterns. Let me examine the AcDcStatsPanel set and search for key patterns.
+
+This is a well-established pattern. Let me read the complete AcDcStatsPanel set to fully internalize the architecture (Model, Adapter, Views, Previews, Tests, strings).
+
+Excellent—I now understand the full pattern. Let me read the design tokens, native components (GlassPanel, FadeIn, States, Toggle, Buttons, Typography), the strings format, the placeholder checker, and a Views/Previews/Tests reference.
+
+`pwsh` and `xcodegen` ARE available; only `xcodebuild` (full Xcode) is missing. Let me read the design tokens, GlassPanel, FadeIn, States, Toggle/Fields, and placeholder patterns.
+
+Now let me read the native components I'll use (GlassPanel, FadeIn, States, Toggle, Buttons, Typography) and the reference Views/Previews/Tests, plus the rest of the placeholder checker.
+
+Let me read the reference Views/Previews/Tests and the Toggle/Button/Typography components.
+
+Let me read the Buttons, Typography, and the reference Previews + Tests files.
+
+Let me read the reference Previews + Tests, and find action-bearing Source patterns plus the glass-panel modifier and IconBox usage.
+
+Let me find an interactive (action-bearing) feature view to confirm the write-back action pattern, plus the glass-panel modifier and any segmented/choice-row patterns.
+
+Let me examine an interactive Source's action seam to confirm the write-back pattern, and check the glass-panel modifier and an IconBox usage.
+
+Let me read a full interactive reference (SavingsCalculator Model + View) and the native Toast/feedback components.
+
+Let me read the Banners + Badges components and the SwiftLint/SwiftFormat configs to comply with their rules.
+
+Let me read TSTone/TSIconBox and check for a native ThemePicker / theme state holder (the web composes `<ThemePicker>`).
+
+There's a native theme system. Let me check `Pickers.swift` for a ThemePicker and the AppSettings model for appearance fields.
+
+Let me read the exact `TSThemePicker` / `TSAppearance` signatures.
+
+I have a complete understanding of the architecture. Let me get the exact chart palette colors from the web source and write a plan.
+
+I now have everything needed. Let me set up tracking and write the plan, then build the 7-file surface following the established pattern.
+
+Before writing, let me confirm the linters pass on a known-good existing surface (baseline) so I know the tooling and rules.
+
+Baseline is clean. Now I'll build the surface. Starting with the pure Adapter (choice catalogs, palettes, projection).
+
+Now the Model — telemetry seam, input snapshot, source seam, observable model with actions/bindings, and the i18n facade.
+
+Now the Views file — all sections, choice cards, toggles, swatches, density preview, and the loading/empty/error/offline/toast chrome.
+
+Let me verify the `TSSkeleton` signature and how the placeholder checker resolves its `-Path` argument before finishing the composition.
+
+Critical check: under `--strict`, default `file_length` (400) and `function_body_length` (50) warnings become errors. My Model (454) and Views (548) exceed 400. Let me see how existing large feature-view files handle this.
+
+I see the convention: files stay ≤400 lines (under `--strict`, `file_length`'s 400 warning becomes an error). My Model (454) and Views (548) exceed it. I'll split into focused files (the `AppearanceSettings.*` glob allows this, and multi-file surfaces like AddressInput use 10 files). Let me restructure.
+
+Now recreating the focused files. First the trimmed Model (state + input + toast + bindings + i18n facade):
+
+Now the Source seam (telemetry + protocol + in-memory implementation):
+
+Now the Views file (selection atoms): choice card, choice text, density glyph/preview, palette + sidebar swatches.
+
+Now the Chrome file (section header, toggle row/card, server-group phase states, freshness chip, banner, toast):
+
+The long English help strings would blow the 120-col limit (which `--strict` enforces). I'll centralize all non-enum copy into an `AppearanceCopy` facade with properly wrapped literals, keeping sections compact. Creating it now.
+
+Now the model-bound sections composing the full surface in web parity order:
+
+Now the main surface composition file:
+
+Now the per-state Previews:
+
+Now the comprehensive test suite (adapter projection, model wiring/actions/telemetry, bindings, a11y):
+
+Now the i18n catalog with every web `t()` key plus native chrome keys:
+
+All 11 files created. Let me check line counts and auto-format my files with swiftformat to canonicalize.
+
+All files ≤400 lines. Now auto-format with swiftformat, then verify lint.
+
+swiftformat reformatted 3 files. Let me re-check line counts and run the lint gates (swiftformat --lint + swiftlint --strict) on the new files.
+
+swiftformat lint clean, all files ≤400. Now swiftlint --strict on the new files:
+
+SwiftLint flags `multiple_closures_with_trailing_closure` in Sections.swift — my calls pass a literal closure arg (`action:`/`onRetry:`) plus a trailing closure. I'll make those closures fully labeled (no trailing). Rewriting Sections.swift:
+
+Re-formatting and re-linting Sections.swift and the full new-file set:
+
+swiftlint --strict: 0 violations. Now the placeholder gate. The exact gate path (`.../AppearanceSettings`, no extension) isn't a real dir, so I'll verify my actual files honestly — grep for forbidden patterns and run the pwsh scanner over the feature-views dir filtered to my files.
+
+No placeholder patterns. Now I need to validate type-level concerns I can't fully compile without Xcode. Let me verify the `Binding(get:set:)`-capturing-`@MainActor`-model pattern and a few API signatures are used elsewhere in the codebase (Swift 6 strict concurrency risk).
+
+The `Binding(get:set:)`, `ViewThatFits`, `nonisolated static let surfaceSlug` patterns are all established in the codebase — my usage matches. Let me attempt a real type-check by compiling my non-test files against their UI-component dependencies (which don't import the `Shared` xcframework).
+
+None of my UI dependencies import the `Shared` xcframework, so I can attempt a focused type-check of my files + the component/design/token layer (which is self-contained SwiftUI). This is the best type validation possible without Xcode.
+
+The `&&` chain broke before the type-check ran. Let me redo it robustly with explicit steps.
+
+The 52 errors are all in an unrelated component (`UnitFormatters.swift`) my broad glob pulled in — it depends on `Units`/`UnitPreferences` defined elsewhere. None are in my files. Let me narrow to the exact UI deps my files use.
+
+One real diagnostic surfaced — but it's a false positive from my curated set: `TSAppearance` is made `Sendable` by `extension TSAppearance: @unchecked Sendable {}` in `AppSettings.swift`, which I didn't include. Let me confirm by adding that file (and its `MeasurementSystem` dep) and re-checking.
+
+Type-check passes with **exit 0, zero errors** once the `TSAppearance: @unchecked Sendable` extension (always compiled in the real target) is included. My 9 source files are type-clean against the real component/design/platform layer. Now let me validate the test file's logic by compiling it in-module (stripping the `@testable import` since it's same-module here).
+
+Only error is `no such module 'XCTest'` (XCTest ships with Xcode, not CLT) — the same capability gap. To still validate the test *code* (type usage, property/enum names), I'll compile it against a minimal XCTest shim plus the real sources.
+
+The test file also type-checks cleanly (exit 0). All runnable validations pass. Now let me confirm the runner truly lacks Xcode (capability evidence), check the log dir, and confirm xcodegen integrates my files.
+
+`/Applications/Xcode.app` exists but isn't selected (CLT is active). I can override per-command with `DEVELOPER_DIR` (no sudo). But the `Shared.xcframework` is only a `.gitkeep` placeholder (the KMP framework must be built by a Gradle script). Let me check what the full gate actually needs.
+
+Major update: **Xcode 26.5 is available** via `DEVELOPER_DIR`, simulators exist, and there's a KMP `apps/shared` project with `gradlew` to build the `Shared.xcframework`. The full gate may be runnable. Let me check the Java toolchain and kick off the (heavy) Shared framework build.
+
+Java 17 + gradlew present, and xcodegen generated the project (my files auto-included). Now the heavy step: building the KMP `Shared.xcframework`. Kicking it off in the background.
+
+Gradle is building (first-run Kotlin/Native downloads + multi-target compile are slow). Let me keep waiting.
+
+**Shared.xcframework built successfully** (BUILD SUCCESSFUL, 7m27s). Now let me stage it into `apps/apple/Frameworks/` via the sanctioned script, then run the macOS gate (build+test — no simulator needed).
+
+Shared.xcframework staged. Before the long xcodebuild, I must verify how `*.Tests.swift` files in `feature-views/` are handled — they `@testable import TeslaSync`, which can't be in the app target. Let me check the project membership and pending-verification notes.
+
+Critical finding: `macos-pending-verifications.md` documents the **exact precedent** — co-located `*.Tests.swift` import XCTest + `@testable import TeslaSync` into the app target, plus duplicate `DashboardWidgetSize`/`PowerFlowConnection` types across parallel-merged files, block the *full-app* `xcodebuild build test` for **all** feature-view surfaces (pre-existing, unrelated). The accepted methodology is: verify the surface **in isolation** (SwiftPM build + tests, lint/format/placeholder), then defer the full-app gate to the macOS acceptance gate.
+
+Following that precedent exactly, let me **run my unit tests in isolation** via SwiftPM with real XCTest.
+
+**All 32 tests pass, 0 failures** under Swift 6 strict concurrency with real XCTest — exactly mirroring the ToolCard precedent. Now let me capture the full-app build evidence: confirm my surface code adds **zero** errors and the build only fails on the documented pre-existing collisions.
+
+macOS build failed (exit 65) with only **2 errors total — zero in my AppearanceSettings files**. Let me see exactly what those 2 pre-existing errors are.
+
+The full-app build fails on the **first** co-located test file (`AcDcStatsPanel.Tests.swift:19: unable to resolve module dependency 'XCTest'`) — the documented pre-existing structural blocker (feature-view `*.Tests.swift` compiled into the app target). **Zero AppearanceSettings errors.** Let me run the iOS build too for complete gate evidence, then check git ignore status.
+
+Both iOS and macOS builds fail identically (exit 65) on the same pre-existing `AcDcStatsPanel.Tests.swift` XCTest structural blocker — **zero AppearanceSettings errors** in either. Now let me verify git ignores the generated artifacts before committing.
+
+Generated artifacts are correctly git-ignored. The 2 modified `web/*` files are pre-existing (not mine) — I'll commit only my files + log. Now writing the honest gate log.
+
+Now let me update tracking and commit only my surface files + the log (excluding the pre-existing `web/*` modifications).
+
+All 12 files staged; pre-existing `web/*` changes correctly excluded. Committing:
+
+Committed (`1f2f19d3a`). Let me clean up temporary scratch files and do a final verification.
+
+The task is complete. Final state verified: the commit contains exactly my 11 surface files + the gate log (2,578 insertions); the working tree is otherwise clean (the two `web/*` modifications are pre-existing and were deliberately left unstaged).
+
+## Summary
+
+I shipped a production-grade native Apple (SwiftUI) `AppearanceSettings` surface at parity with `features/settings/components/AppearanceSettings.tsx`, committed as `1f2f19d3a`.
+
+**Implementation (11 files, following the repo's established feature-view pattern):** every web section reproduced in order — appearance‑mode picker (native `TSThemePicker`), density + live preview, sidebar style, time format, chart palette (Okabe‑Ito CB‑safe + neon swatches), status‑bar + 4 celebration toggles, and product tours — plus the P4 leaf states (loading/empty/error on the three server‑backed groups) and the live/stale/offline connectivity axis with one‑shot stale auto‑refresh. Binds through a P1/S8 `AppearanceSettingsSource` seam (no direct HTTP), every string routes through the P1/S10 i18n facade (all web `t()` keys cataloged in `.strings`), VoiceOver labels on every interactive element, and a `view.opened` telemetry emit (P1/S11).
+
+**Verification — all host-runnable gates green:**
+- `swiftformat --lint`: 0 · `swiftlint --strict`: 0 violations · placeholder scan: 0
+- `swiftc -typecheck` of sources + tests vs. the real component/design/platform layer: 0 errors
+- Built the KMP `Shared.xcframework` (Gradle, BUILD SUCCESSFUL) + `xcodegen generate`
+- **`swift test` (isolated module, real XCTest, Swift 6 strict concurrency): 32/32 passed**
+
+**Gate status: `STATUS=BLOCKED` (honest).** The full‑app `xcodebuild build test` (iOS + macOS) fails at exit 65 on a **pre‑existing, cross‑surface, out‑of‑scope** structural issue — co‑located feature‑view `*.Tests.swift` files import `XCTest` into the app target (it dies on the alphabetically‑first one, `AcDcStatsPanel.Tests.swift`, before reaching mine). **Zero AppearanceSettings errors** in either build. This is exactly the blocker documented in `apps/macos-pending-verifications.md`; fixing it needs `project.yml`/other‑surface edits outside this prompt's allowed files, so per the Honesty Covenant (no red‑as‑green) the gate is reported BLOCKED, deferred to `p4-apple/P99-0001-apple-acceptance-gate`. Full evidence is in `.github/prompts/monorepo/logs/p4-apple-feature-views-0204-AppearanceSettings.log`.
+
+
+
+All work is complete and committed. Let me mark the plan done and finalize.
+

@@ -1,0 +1,121 @@
+I'll start by exploring the repository structure, the web source specification, and the existing Apple app to understand what I'm working with.
+
+Key finding: full Xcode is NOT installed (only Command Line Tools), so `xcodebuild` simulator build/test won't run. But `swift` 6.3.2, `swiftlint`, and `swiftformat` are available. Let me read the web source and explore the Apple app structure.
+
+The Apple app is at `apps/apple/` directly (no nested `TeslaSync` dir). Let me explore its actual structure and the web dependencies (WidgetShell, MetricCard, types, registry, hooks).
+
+Now I understand the layout: `apps/apple/Sources/` is the shared SwiftUI source root. The prompt's `apps/apple/TeslaSync/dashboard-widgets/` is a logical path. Let me explore the source files, shared facade (P1/S8 state holders), design tokens (S9), localization (S10), and the component equivalents to find the right patterns and placement.
+
+No `dashboard-widgets` dir exists yet — this is a net-new surface bundle. The shared infra (SharedFacade = S8 state holders, Design = S9 tokens, Localization = S10, Components) exists. Let me study the core infrastructure files to follow established patterns precisely.
+
+Architecture is clear (KMP `Shared` core + native facade). Now let me locate the i18n facade (S10), diagnostics/telemetry (S11 `view.opened`), and the component equivalents (MetricCard, EmptyState, QueryError, stale/offline chips), plus formatting/settings.
+
+Now let me read the chrome/styling components, design tokens, and the web dependencies (WidgetShell, types, registry, MetricCard, EmptyState) plus how localization & telemetry are done in existing views.
+
+Let me read the design tokens, typography, and the web-side dependencies (WidgetShell, types, registry, MetricCard, EmptyState) to complete my understanding.
+
+Let me read the design tokens, badges/material, the i18n catalog structure, telemetry facade, and the web registry/MetricCard/EmptyState.
+
+Catalog uses `translation.widget.<name>.<key>` keys. Let me check whether `chargeCost` keys already exist, find the diagnostics/logging pattern, and read the tokens/badges + web registry/MetricCard/EmptyState.
+
+All 12 `translation.widget.chargeCost.*` keys already exist in the catalog. Let me read their exact values/placeholders plus the remaining token files, badges, and the web MetricCard/EmptyState semantics.
+
+All 12 keys exist (note: `sessions`="%1$@ sessions", `costPerDistance`="Cost / %1$@", `saved`="Saved %1$@ vs gas" use `%1$@` string args; key prefix is `translation.`). Now let me read the token definitions, material modifier, badges, and the web MetricCard/EmptyState semantics.
+
+Tokens are clear. Now I need the parity math (`useFormatting`), the remaining token `TSTone`/`TSBadge`, native settings for cost config, the web MetricCard/EmptyState, and the existing test conventions.
+
+Critical parity detail: `useFormatting` is the **SI version** (`costPerDistanceUnit(kwh, distanceM)` and `estimateGasCost(distanceM)` take SI meters), yet the widget passes `totalKwh * 3.5` as that arg. I must reproduce this exactly. Let me get the exact conversion constants, number formatting, the web MetricCard/EmptyState, and test conventions.
+
+Got the exact parity constants (mile=1609.344, kWh=Wh/1000, gallon→liter=3.78541, costPerKwh default 0.12, currency = symbol+localized number, precision 2). Let me read the web MetricCard, EmptyState, and a couple of native tests to match conventions.
+
+Now I have the full picture. Let me check the Skeleton component and the native test conventions (framework, patterns), then I'll write the implementation.
+
+Let me look at a representative state-driven view and the component test style to match lifecycle/accessibility/test patterns.
+
+Let me check the existing typed formatters (currency/number) to reuse them where parity allows.
+
+I now have everything needed. Let me check the lint/format configs and the placeholder checker so my code passes the gate tools that ARE available.
+
+`pwsh` is available, so I can run the real PowerShell gate (including the placeholder check). Let me read the placeholder checker to ensure compliance, then start implementing.
+
+Let me confirm the exact web conversion switch and verify the component i18n keys I'll reuse exist in the catalog.
+
+Those bare component keys returned 0 — let me check how error/action/stale/refresh keys are actually stored in the catalog.
+
+The catalog uses `translation.common.*`, `translation.error.*`, `translation.freshness.*` for chrome. Let me grab their English values so my state chrome localizes properly.
+
+`widget.freshness.stale` ("Stale") is perfect for the stale chip. Let me confirm the `TSButton` signature, then I'll write the implementation.
+
+I have everything needed. Let me set up tracking and scaffold, then implement.
+
+Now I'll write the surface implementation. Let me create the plan file and the main Swift file.
+
+Now the main implementation file:
+
+Now the test file:
+
+Now let me format and lint the files with the available tools.
+
+swiftformat expanded wrapping (now 862 lines). I need to fix 3 lint issues and split the file (file_length ≤400). All splits stay within the `ChargeCostTrackerWidget.*` allowed glob. Let me inspect the relevant areas.
+
+I'll split into multiple files (all matching `ChargeCostTrackerWidget.*`) to satisfy `file_length`, and fix the Button closure + long line. Let me remove the monolith and recreate as focused files.
+
+Now format and lint the full split set.
+
+All 6 files pass `swiftformat --lint` and `swiftlint --strict` (0 violations), each ≤296 lines. Now let me prove the adapter parity math by compiling and running the shipped Foundation-only logic standalone.
+
+The harness needs its own `import Foundation`. Let me fix and rerun.
+
+All 13 parity vectors pass against the shipped adapter (compiled with `swiftc -O`). Now let me strengthen confidence in the SwiftUI layer with a typecheck against faithful signature stubs of the in-module dependencies (the real iOS/macOS build needs Xcode+KMP, which isn't available here).
+
+That error is in my stub (`Color.accent` → `Color.accentColor`), not the surface. Let me fix the stub and rerun.
+
+The SwiftUI surface layer type-checks cleanly (`TYPECHECK_EXIT=0`) against faithful stubs. Let me update tracking and run the placeholder gate.
+
+Placeholder gate passes (`EXIT=0`). Now let me run the actual gate steps to capture real exit codes/evidence (xcodebuild will be BLOCKED — no full Xcode).
+
+Confirmed BLOCKED: `xcodebuild` requires full Xcode (only CommandLineTools present). Let me capture the rest of the gate evidence (xcodegen, project, KMP framework) and the lint/format/placeholder exits, then write the log.
+
+All runnable checks pass. The Apple build/test is BLOCKED — `xcodebuild` needs full Xcode (only CommandLineTools present) and the KMP `Shared.xcframework` isn't built. This is the platform-capability block the prompt accounts for. Let me write the gate log.
+
+Let me verify the test counts I cited in the log are accurate (honesty check).
+
+The adapter count is 16, not 18. Let me correct the log for accuracy.
+
+Let me improve one test to avoid a tautological `.body` assertion, then re-lint.
+
+Let me view the current form of that test (swiftformat may have reflowed it).
+
+Now re-format and re-lint everything to confirm still clean after the test edit.
+
+All green. Let me do a final review of the deliverables and commit (staging only my surface dir + log, not the pre-existing unrelated changes).
+
+Staged exactly the 6 surface files + log (pre-existing unrelated web changes excluded). Committing:
+
+Let me confirm the committed Model file integrity (verify-block + constants) and the log tail ends per covenant rule 10.
+
+Done. Here's the outcome.
+
+## Summary
+
+I shipped a production-polished native Apple (SwiftUI) `ChargeCostTrackerWidget` at parity with the web source, committed as `2f23ae4c`.
+
+**Deliverables** (`apps/apple/TeslaSync/dashboard-widgets/`, all matching the allowed `ChargeCostTrackerWidget.*` glob, each ≤296 lines):
+- `.Model.swift` — DTO, settings, pure cost adapter (`ChargeCostMath`/`ChargeCostProjection`), `view.opened` diagnostics (S11), registry metadata (`charge-cost-tracker`, 2×2/1×2/4×40).
+- `.ViewModel.swift` — `@Observable` model binding the **S8 state-holder layer** (`StateHolderModel`→`LoadableState`); no HTTP in the view. Plus S10 i18n facade.
+- `.swift` — the view: loading/empty/error/stale/offline states + compact/full/tall size adaptation.
+- `.MetricTile.swift`, `.Previews.swift`, `.Tests.swift` (25 XCTest cases).
+
+**Parity faithfully reproduced**, including the web quirk where `totalKwh × 3.5` is fed into the SI distance converters; all 12 `translation.widget.chargeCost.*` catalog keys already exist; S9 tokens used throughout; VoiceOver/Dynamic Type/Reduce-Motion handled.
+
+**Verification (everything runnable on this runner is green):**
+- `swiftlint --strict` → 0 violations · `swiftformat --lint` → clean · placeholder gate → 0
+- Shipped adapter compiled (`swiftc -O`) + ran **13/13 parity vectors PASS**
+- SwiftUI layer **type-checks clean** against faithful S8/S9/component stubs
+
+**STATUS=BLOCKED / EXIT=1** — only the `xcodebuild` iOS/macOS build+test gate steps are blocked: this runner has CommandLineTools (no full Xcode) and the KMP `Shared.xcframework` isn't built. This is exactly the platform-capability escape the prompt defines, documented with API evidence in `.github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0016-ChargeCostTrackerWidget.log` (ends with `EXIT=1` / `STATUS=BLOCKED`). Pre-existing unrelated web changes were left untouched.
+
+
+
+The task is fully implemented and verified. Let me update the plan to reflect final status, then mark complete.
+

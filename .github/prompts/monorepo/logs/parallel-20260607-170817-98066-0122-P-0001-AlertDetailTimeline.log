@@ -1,0 +1,110 @@
+I'll start by understanding the task: create a native Apple SwiftUI version of `AlertDetailTimeline` based on the web source. Let me first check the environment capabilities and read the web source.
+
+Environment findings: macOS with Swift 6.3.2, swiftlint, swiftformat present. **But** `xcodebuild` reports only Command Line Tools is active (no full Xcode → no iOS simulators). Let me investigate the Apple app structure thoroughly before concluding anything about the gate.
+
+This is an XcodeGen-based project (`project.yml`, no committed `.xcodeproj`). The `feature-views` directory doesn't exist yet. Let me explore the structure deeply to understand the shared infrastructure I must bind to.
+
+XcodeGen project, deployment iOS 18/macOS 15, Swift 6 strict concurrency. The gate's `xcodebuild` needs full Xcode but only Command Line Tools is installed. I'll still build the complete production implementation and verify with available tooling. Let me study the existing conventions and shared infrastructure I must bind to.
+
+Now I have the Timeline and EmptyState/error/loading primitives. Let me read the state-holder layer, design tokens, tone/status helpers, and a representative widget that demonstrates the full file pattern (view + model + adapter + tests + previews + strings).
+
+The web component is **presentational** (receives `events` prop; only data source is `useTranslation`). I'll build a feature view that renders all required states via `LoadableState`, plus a presentational entry matching web parity. Let me study the telemetry contract, design tokens, tone helpers, and a full widget example (view+model+adapter+tests+previews+strings) to mirror conventions exactly.
+
+The convention is clear: `.swift`, `.Model.swift`, `.Adapter.swift`, `.Tests.swift`, `.Previews.swift`, `.strings`. Let me read a representative widget set plus tokens and the telemetry contract in parallel.
+
+Now I understand the binding model (`GuardModel`), telemetry (`DashboardWidgetTelemetrySink`/`viewOpened`), and per-surface i18n (`GuardStrings`). Let me read the Model, Tests, Previews, strings for GuardMode, plus the telemetry contract and design tokens definitions.
+
+I now have the complete self-contained per-surface pattern (GuardModeWidget owns its telemetry/state-holder/i18n seams). Let me read the remaining specifics: tokens, TSTone, TSSkeleton, the Tests & Previews patterns, and the web `AlertEvent` type + `formatDateTime`.
+
+Excellent — I have tokens (`TSTone`, `TSSpacing`, `Color.TS`, `Font.TS`, `TSRadius`), `TSSkeleton`, `TSTimeline`, `TSEmptyState`. Now the test/preview conventions and the web `AlertEvent` type + `formatDateTime`.
+
+Tests use **XCTest** co-located as `*.Tests.swift`; previews use `#Preview` under `#if DEBUG`. The surface files only import Foundation/SwiftUI/Observation/OSLog (no `import Shared`). Now let me verify the Swift toolchain can compile SwiftUI, check the Shared framework, and read the web `AlertEvent` type + `formatDateTime` + icon names.
+
+I have everything needed. The web `AlertEvent` is `{id, occurred_at, actor?, kind, note?}`. SwiftUI parses fine via command-line `swiftc`. `Frameworks/Shared.xcframework` is just a `.gitkeep` placeholder (built by a script at Xcode build time). Let me check the placeholder-check tooling and `pwsh`, then write the plan.
+
+`pwsh` is available. Let me read the placeholder-check script and its patterns so my code avoids every flagged token.
+
+I now have a complete understanding of the conventions. Let me set up the plan and todos, then build the implementation.
+
+Now let me create the directory and the Model file (the seams layer).
+
+The create call lost its `path`. Let me retry.
+
+Now the main View file with all states.
+
+Now the Previews file.
+
+Now the comprehensive XCTest suite.
+
+Now the strings catalog.
+
+All 6 files created. Now the verification phase. Let me run swiftformat (format in place) then lint, on my files.
+
+swiftformat passes (0/5 require formatting). Let me view what swiftformat changed and run swiftlint on the files.
+
+swiftlint linted the whole project (used config `included`) and found 1 serious violation. Let me isolate which file.
+
+The only violation is in a **pre-existing** file (`LifetimeStatsWidget.Adapter.swift`), not mine. Let me confirm my files are clean by linting only them, and verify git shows only my new files.
+
+My files lint **clean** (0 violations). The two `M` web files are pre-existing changes from the shared worktree — not mine; I'll exclude them from the commit. Now the placeholder check (both the gate's path and the real directory).
+
+Placeholder check passes (COUNT=0). Now the highest-value correctness check available without Xcode: a faithful typecheck shim. Let me build a shim that reproduces the exact shared API signatures and `swiftc -typecheck` my files against the real macOS SDK.
+
+Typecheck **passed** (RC=0) under Swift 6 strict concurrency targeting macOS 15 — `@Observable`, `@MainActor`, all token/component usages validated against faithful signatures. Now let me typecheck the Previews (with the `#Preview` macro) and the Tests file.
+
+Both failures are **toolchain-capability limitations, not code errors**: the `#Preview` macro plugin (`PreviewsMacros`) and `XCTest` ship only with full Xcode, not Command Line Tools. To still validate the preview *bodies*, let me transform them into plain functions and typecheck that content; and parse-check both files for syntax.
+
+All available verifications pass: typecheck (RC=0), preview bodies (RC=0), parse (RC=0). The `#Preview` macro and `XCTest` are Xcode-only — confirmed capability limits. Let me harden the tone assertions to avoid `Color`-equality fragility (TSTone isn't Equatable) by using stable case-name comparison instead.
+
+`created`→"info" and `commented`→"accent" are distinct case names (4 distinct tones), even though info/accent share a hue — correct semantics. Let me re-run the full verification suite to capture final results, after re-formatting the edited Tests file.
+
+All available gates pass. Now let me capture genuine evidence from the actual gate commands (xcodebuild capability failure, whole-tree formatters) and confirm the log directory.
+
+Complete evidence captured: `xcodebuild` requires Xcode (only CommandLineTools active), no `simctl` (no simulators), no XCTest/PreviewsMacros. Whole-tree swiftformat is clean (0/453). Now let me generate the gate log authentically by running the real commands and teeing output.
+
+Now append the supplementary verification section (everything that doesn't need Xcode — all green) and the final status.
+
+There was a perl escaping error inside the log block — the preview-body transform produced an empty file, so that one log line isn't trustworthy. Let me inspect the log and fix that section honestly.
+
+Confirmed empty (0 lines) — that log line is invalid. Let me regenerate the transform via a script file (no escaping issues) and rebuild the **entire** log cleanly in one pass.
+
+Genuine result: 8 preview functions transformed, bodies typecheck cleanly (RC=0). Now let me rebuild the **entire** log in one authentic pass.
+
+Let me review the complete log to confirm accuracy.
+
+The log is authentic and honest. Let me do a final review of the shipped View and Model files (post-swiftformat) to confirm quality, then commit.
+
+Files are appropriately comprehensive (1273 lines across the 6-file convention: view + model + adapter + previews + tests + strings). Let me clean up temp files, stage **only** my files + the log (excluding the pre-existing modified web files), and commit.
+
+Staged exactly the 6 surface files + the log; the two pre-existing web `M` files are correctly excluded. Committing now.
+
+Committed cleanly (e947561b) — 7 files, the pre-existing web changes excluded. Let me do a final verification of the commit and update tracking.
+
+That "PROBLEM" is a false positive — my grep matched the word "web" in the commit *message* ("parity of web AlertDetailTimeline.tsx"), not a file path. Let me confirm precisely with path-only matching.
+
+Verified: the commit contains **exactly** the 6 surface files + the log, with **zero** `web/` paths. The two pre-existing web modifications remain untouched in the working tree. All todos complete.
+
+## Summary
+
+I built the native Apple SwiftUI parity of `AlertDetailTimeline` at `apps/apple/TeslaSync/feature-views/AlertDetailTimeline.*`, following the established self-contained per-surface pattern (mirroring `GuardModeWidget`).
+
+**Delivered (6 files, 1273 lines, committed `e947561b`):**
+- **`.swift`** — the view; renders every state: loading (skeleton), empty (`TSEmptyState`, exact web copy), error (retry), content (`TSTimeline`), plus live/stale/offline freshness chip + banner. Includes a presentational `init(events:)` for web-API parity.
+- **`.Adapter.swift`** — pure projection: `AlertEventKind` (web `KIND_COLOR`→token tone + `kindIcon`→SF Symbol), title builder reproducing `defaultTitleWithActor`/`defaultTitleAnonymous` + the `alerts.timeline.kind.*`/`kindAnonymous.*` key selection + actor interpolation, `formatDateTime`, a11y summary.
+- **`.Model.swift`** — state-holder seam (P1/S8), telemetry seam emitting `viewOpened(surface:"AlertDetailTimeline")` (P1/S11), i18n facade (P1/S10).
+- **`.Previews.swift`** (8 states), **`.Tests.swift`** (XCTest: adapter + model + a11y), **`.strings`** (catalog incl. exact web keys).
+
+**Verification — everything runnable passed:**
+| Check | Result |
+|---|---|
+| `swiftc -typecheck` (Swift 6 strict, macOS 15 SDK) | ✅ 0 |
+| `#Preview` body typecheck | ✅ 0 |
+| `swiftc -parse` Previews + Tests | ✅ 0 |
+| swiftlint --strict (my files) | ✅ 0 violations |
+| swiftformat --lint | ✅ clean |
+| check-placeholders | ✅ COUNT=0 |
+
+**BLOCKED — `xcodebuild build test`:** the runner has only Command Line Tools (no full Xcode, no iOS Simulator/`simctl`, no XCTest, no `PreviewsMacros` plugin). The gate log records this with API evidence and ends `EXIT=1` / `STATUS=BLOCKED`, exactly as the prompt's Capability clause permits.
+
+The log also documents the P4-core integration wiring (project.yml/`.swiftlint.yml`/test-target inclusion of `feature-views`) deliberately left untouched to honor the allowed-files constraint, and notes one pre-existing swiftlint violation in `LifetimeStatsWidget.Adapter.swift` (not mine, out of scope).
+

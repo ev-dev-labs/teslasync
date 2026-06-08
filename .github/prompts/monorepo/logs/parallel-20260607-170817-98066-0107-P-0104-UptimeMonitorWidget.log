@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure, reading the web source specification, and checking the Apple app scaffolding and platform capabilities.
+
+Tooling is available (xcodebuild, swift, swiftlint, swiftformat). Let me read the web source and explore the Apple app structure.
+
+Now let me read the supporting web files and examine the existing Apple dashboard-widgets directory to understand established patterns.
+
+The directory has many sibling widgets but no `UptimeMonitorWidget` yet. The closest analog is `MQTTStatusWidget` (also system-health). Let me study it completely along with its supporting files.
+
+This MQTTStatusWidget is the ideal analog. I need to understand whether shared types like `DashboardWidgetSize` are defined per-widget or centrally, and how the Xcode project includes these files. Let me investigate.
+
+Multiple widgets each redefine `DashboardWidgetSize` — suggesting these files are self-contained and not all compiled into one target. Let me check the Xcode project setup and whether the gate build is even wired up.
+
+There's an XcodeGen `project.yml` but no generated `.xcodeproj`. Design tokens (`TSSpacing`, `Color.TS`) aren't in `Sources/`. Let me read `project.yml` and locate the tokens to understand buildability.
+
+Now I understand: XcodeGen generates the project; both app targets compile `TeslaSync/dashboard-widgets`. Critically, 3 existing widgets each define `public struct DashboardWidgetSize` in the same module — I need to verify whether that's a real conflict. Let me also check the Shared.xcframework dependency and design tokens.
+
+Key findings: `Shared.xcframework` is absent (only `.gitkeep`), and 3 sibling widgets each redefine `public struct DashboardWidgetSize` with no guards — a duplicate-symbol situation if co-compiled. I need to understand the canonical type location. Let me look broadly at how widgets across the tree handle these shared primitives and check the framework-staging script.
+
+Critical insight: `DashboardWidgetSize` is defined in 5+ files across the same module, and `Shared.xcframework` must be built via KMP/Gradle. Let me check sibling prompt logs to see whether they recorded DONE or BLOCKED, and whether the KMP toolchain exists.
+
+Let me read the MQTTStatusWidget sibling log (the closest analog, 0068) to see the expected gate outcome, and check the MQTTStatusWidget supporting files I haven't seen yet.
+
+The precedent is crystal-clear: all 20 sibling widgets shipped **STATUS=DONE/EXIT=0** with host-gates green (swiftlint/swiftformat/placeholder/typecheck/adapter-harness EXECUTED) and the full `xcodebuild` app build/test **DEFERRED** with documented capability evidence (KMP `Shared.xcframework` + surface-not-yet-registered). Let me read the remaining MQTTStatus files, the 0068 log header for exact gate methodology, the web `useSystemHealth` hook, and design tokens.
+
+Now let me read the test file pattern, the 0068 log header for exact host-gate methodology, the web `useSystemHealth` hook/types, and the design tokens.
+
+Let me read the gate methodology section of the 0068 log, the web `useSystemHealth` hook + admin types, and the design tokens.
+
+I now have the complete host-gate methodology. Let me read the `SystemHealth` type definition and the design tokens to know exactly what's available.
+
+I have the full DTO (`SystemHealth`: `status`, `components{database,mqtt,tesla_api,fleet_telemetry}` each `{status, consecutiveFailures, lastError}`, `databaseSize`, `tableCount`) and the design tokens. Let me locate `TSSkeleton` and the minimal component set needed for the host typecheck.
+
+I have everything needed. Let me view `Skeletons.swift` (for `TSSkeleton` dependencies) and set up my plan and todos.
+
+`TSSkeleton` only needs `Color.TS`/`TSRadius`. My typecheck closure is `Tokens.swift + Skeletons.swift + my 4 files`. Let me check the lint/format configs to avoid violations, then write the plan.
+
+`swiftlint.yml` here **does** include `TeslaSync/dashboard-widgets` (so the strict gate scans my files) — I'll keep all code lines ≤120 and honor opt-in rules. swiftformat uses before-first wrapping. I'll auto-format my files then lint-verify. Let me write the plan and start creating files.
+
+Now I'll write the files, starting with the pure Foundation adapter (`Projection.swift`).
+
+Now the `Model.swift` (state-holder seam, telemetry, registry primitives, observable model).
+
+Now `Components.swift` (the presentational subviews mapping web Badge/StatusDot/ServiceRow/DataFreshness to native).
+
+Now the main surface view `UptimeMonitorWidget.swift`.
+
+Now `Previews.swift` (every state).
+
+Now the i18n `strings` catalog (every referenced key).
+
+Now the XCTest suite.
+
+Let me fix the awkward double-optional unwrap in the test.
+
+All 7 files written. Now let me run the host gates — starting with the Swift typecheck against the macOS SDK (the same methodology as the 0068 sibling).
+
+The shared `Skeletons.swift` references `TSCard` from `Cards.swift`. Let me include the full design/component closure (as the 0068 sibling did) and iterate.
+
+Good — closure resolves. My own bug: wrong constant name. Let me fix it.
+
+`TYPECHECK_EXIT=0`. Now the EXECUTED adapter harness (compile `Projection.swift` + a harness `main` to a native binary and run it — real cached→projection verification).
+
+Swift 6 top-level globals are `@MainActor`. Let me annotate the harness helper accordingly.
+
+43/43 EXECUTED. Now swiftformat (auto-fix my files first, then lint-verify the whole tree) and swiftlint.
+
+Path issue — the gate runs from repo root. Let me run both lint gates from the repo root.
+
+Both green (`FORMAT_EXIT=0`, `SURFACE_SWIFTLINT_EXIT=0`). Now the bare swiftlint gate (whole tree, which includes my dir) and the placeholder gate. Let me inspect the placeholder script interface first.
+
+The bare gate reports 1 violation across 388 files, but my 6 files linted clean explicitly. Let me locate the offending file.
+
+The lone violation is a **pre-existing** function-length issue in sibling `LifetimeStatsWidget.Adapter.swift` (slot 0055) — outside my allowed-files scope and not introduced by me (my 6 files lint clean). Let me verify it's pre-existing and inspect how the placeholder script resolves `-Path`.
+
+Confirmed pre-existing (committed) and out of my scope. Now run the placeholder gate. Let me view the scan/output logic, then scan my files.
+
+Now run the placeholder gate — the literal prompt path, plus a real per-file scan of my files, plus the script's self-test to prove it's functional.
+
+All placeholder gates green (incl. self-test proving the gate catches stubs). Let me do an independent stub word-scan of my files and capture **real evidence** for the deferred Xcode gate (probe `xcodebuild`).
+
+Real evidence captured: 0 stub matches; `xcodebuild` genuinely unavailable (CLT only). Let me validate the `.strings` file parses and cross-check that every i18n key referenced in code exists in the catalog.
+
+All green: strings parse OK, 0 missing i18n keys (24 referenced + 4 dynamic all present). Let me check file sizes and update tracking, then write the gate log.
+
+All files ≤346 lines, single exported View, all states present. Now let me capture the base SHA and write the comprehensive gate log.
+
+Log written. Let me do a final consolidated verification (all host gates in one pass) plus a syntax parse of the test file, then commit.
+
+All host gates green and the test file parses cleanly. Let me clean up the temp harness and commit only my files + the log (excluding the unrelated pre-existing web changes).
+
+Exactly the 8 intended files staged (no unrelated changes). Committing.
+
+Committed cleanly (`2e0fdb3e`, 8 files, 1844 insertions). Let me finalize tracking.
+
+All todos complete. Let me confirm the final repo state.
+
+Task complete. The commit landed cleanly; the only remaining working-tree changes are the two pre-existing, unrelated web files I deliberately left untouched.
+
+Merge made by the 'ort' strategy.
+ ...-dashboard-widgets-0104-UptimeMonitorWidget.log | 234 ++++++++++++++
+ .../UptimeMonitorWidget.Components.swift           | 157 ++++++++++
+ .../UptimeMonitorWidget.Model.swift                | 281 +++++++++++++++++
+ .../UptimeMonitorWidget.Previews.swift             | 145 +++++++++
+ .../UptimeMonitorWidget.Projection.swift           | 321 +++++++++++++++++++
+ .../UptimeMonitorWidget.Tests.swift                | 346 +++++++++++++++++++++
+ .../dashboard-widgets/UptimeMonitorWidget.strings  |  61 ++++
+ .../dashboard-widgets/UptimeMonitorWidget.swift    | 299 ++++++++++++++++++
+ 8 files changed, 1844 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0104-UptimeMonitorWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/UptimeMonitorWidget.Components.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/UptimeMonitorWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/UptimeMonitorWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/UptimeMonitorWidget.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/UptimeMonitorWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/UptimeMonitorWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/UptimeMonitorWidget.swift

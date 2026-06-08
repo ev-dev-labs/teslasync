@@ -1,0 +1,122 @@
+=== P4 Shared surface 0069 ChartTimeRangeContext (Apple) ===
+run-utc: 2026-06-08T11:52:32Z
+
+## Runner capability probe (ADR honesty: capability evidence)
+$ swift --version
+  swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+  Target: arm64-apple-macosx26.0
+$ xcodebuild -version
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+$ ls /Library/Developer/CommandLineTools/SDKs
+  MacOSX.sdk
+  MacOSX15.4.sdk
+  MacOSX15.sdk
+  MacOSX26.5.sdk
+  MacOSX26.sdk
+  NOTE: only Command Line Tools + macOS SDKs are installed; no full Xcode and
+        no iOS Simulator runtime, so 'xcodebuild build test' cannot execute.
+
+## Gate step 1/2 — iOS Simulator build test
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=70  # BLOCKED: tool 'xcodebuild' requires Xcode (CommandLineTools only)
+
+## Gate step 2 — macOS build test
+$ xcodebuild -scheme TeslaSync-macOS build test
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=70  # BLOCKED: same Xcode-absence reason
+
+## Gate step — swiftlint --strict (surface files)
+Note: repo .swiftlint.yml 'included:' does not yet list TeslaSync/shared-surfaces
+(integration wiring below), so the surface was linted via an included-scoped config.
+  Done linting! Found 0 violations, 0 serious in 7 files.
+LINT_EXIT=0
+  (repo-wide 'swiftlint --strict' additionally reports 1 PRE-EXISTING violation in
+   TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift — not in this surface
+   and outside this prompt's allowed files.)
+
+## Gate step — swiftformat --lint
+  SwiftFormat completed in 2.78s.
+  0/7 files require formatting.
+FORMAT_EXIT=0
+
+## Gate step — placeholder / stub gate
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  EXIT=0
+PLACEHOLDER_EXIT=0
+
+## Compensating verification (xcodebuild blocked -> proven another way)
+Swift 6 + SwiftUI + Swift Charts ARE present in the macOS SDK, so the surface was
+compiled and its logic executed off-device to prove it is real, not a stub.
+
+### a) Core context + store — standalone Swift 6 strict-concurrency typecheck
+$ swiftc -typecheck -swift-version 6 -strict-concurrency=complete \
+    ChartTimeRangeContext.swift ChartTimeRangeContext.Store.swift
+  CORE_TYPECHECK_EXIT=0
+
+### b) Demo + Model + States + Previews — typecheck vs REAL design tokens
+    (apps/design/generated/apple/Tokens.swift) + faithful TSGlassPanel/TSFadeIn/TSButton shims
+  BROAD_TYPECHECK_EXIT=0
+
+### c) Runtime harness — the .Tests.swift / web cursorSync + ChartTimeRangeContext
+    suites run against the REAL ported Store / Context / Model:
+  ok   - store: nil syncId -> nil
+  ok   - store: missing -> nil
+  ok   - store: set/get text
+  ok   - store: set/get number
+  ok   - store: numberValue accessor
+  ok   - store: stringValue nil for number
+  ok   - store: nil clears entry
+  ok   - store: no-op on unchanged keeps single entry
+  ok   - store: clear removes
+  ok   - store: clear absent is no-op
+  ok   - store: reset empties
+  ok   - store: keys don't leak
+  ok   - ctx: default index
+  ok   - ctx: honor value
+  ok   - cursor: inert outside provider
+  ok   - cursor: record+read inside
+  ok   - cursor: writes shared store
+  ok   - cursor: record nil clears
+  ok   - cursor: provider unmount clear parity
+  ok   - model: loaded -> content
+  ok   - model: loaded empty -> empty
+  ok   - model: cold failure -> error
+  ok   - model: failure with cache keeps content
+  ok   - model: view.opened once
+  ok   - model: stale auto-refresh once (initial)
+  ok   - model: stale does not re-refresh
+  ok   - model: retry -> loading + refresh
+  ok   - model: a11y summary non-empty
+  
+  ALL HARNESS CHECKS PASSED
+  HARNESS_EXIT=0
+
+## Integration wiring required at P4-core / acceptance (outside this prompt's allowed files)
+  This surface's allowed files are ChartTimeRangeContext.* + this log only. For the
+  Xcode gate to build/lint it once full Xcode is available, the integrator must add:
+    project.yml      -> targets.TeslaSync.sources       += - path: TeslaSync/shared-surfaces
+    project.yml      -> targets.TeslaSync-macOS.sources  += - path: TeslaSync/shared-surfaces
+    .swiftlint.yml   -> included:                        += - TeslaSync/shared-surfaces
+  (Mirrors how TeslaSync/feature-views and TeslaSync/dashboard-widgets are wired.)
+
+## Acceptance criteria status
+  [x] All web-source behavior reproduced: store (set/get/clear/reset, no-op-on-unchanged),
+      context (syncId+syncMethod, default index), provider (inject + unmount clear), and the
+      4 hooks (useChartSync/useSyncedCursor/useSyncedReferenceLineX/useCursorSyncPosition).
+  [x] Every render state present: loading / content / empty / error + stale / offline.
+  [x] Hooks bind via shared state-holder seam (P1/S8); no direct HTTP in any view.
+  [x] Every i18n key has a catalog entry (ChartTimeRangeContext.strings); no English literals.
+  [x] Accessibility labels on every interactive element + per-state summary.
+  [x] Tests: store/context/cursor adapter + model phases + telemetry-once + a11y (Tests.swift),
+      logic proven green via the runtime harness above.
+  [x] No TODO / stub / placeholder / mock / Lorem in shipped code (placeholder gate = 0).
+  [~] xcodebuild iOS+macOS build test: BLOCKED — no full Xcode on this runner (evidence above).
+
+EXIT=70
+STATUS=BLOCKED
+REASON=xcodebuild requires full Xcode + iOS Simulator runtime; this runner has only
+       Command Line Tools. Surface code is complete and was verified green via standalone
+       Swift 6 typecheck (core + broad) and a 28-check runtime harness; swiftlint --strict,
+       swiftformat --lint, and the placeholder gate all pass on the surface files.

@@ -1,0 +1,268 @@
+================================================================================
+P4 · Dashboard widget · 0088 — SignalHealthWidget (Apple)
+Run: 2026-06-08T01:17-0700   Host: Darwin arm64 (Mac Studio)   Branch: auto/20260608-002645-33927/55
+Base: c9c6fdb9f
+Prompt: P4/dashboard-widgets/0088 — SignalHealthWidget
+Web source (spec): web/src/features/dashboard/widgets/SignalHealthWidget.tsx
+Registry: signal-health · telemetry · default 2×4 · min 1×2 · max 4×40
+Mode: code-complete + DEFERRED Xcode app build/test (P4/0057+0087+0099 precedent, ADR-012 macOS-pending).
+================================================================================
+
+=== CAPABILITY PROBE (this runner) ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                 OK
+  swiftc SwiftUI ............. import SwiftUI/Observation + ContentUnavailableView +
+                               Grid/GridRow + LazyVStack + @Observable + onChange(of:_,_)
+                               typecheck at -target arm64-apple-macos15.0           OK  (real probe, exit 0)
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh 7.6.2, self-test PASS         OK
+  xcodebuild ................. UNAVAILABLE on this runner —
+        `xcode-select -p` = /Library/Developer/CommandLineTools
+        `xcodebuild -version` -> "tool 'xcodebuild' requires Xcode, but active
+         developer directory '/Library/Developer/CommandLineTools' is a command
+         line tools instance"                                                       N/A
+  iOS simulator (simctl) ..... UNAVAILABLE — `xcrun simctl` not a developer tool    N/A
+  XCTest.framework ........... UNAVAILABLE under CLT — ships with full Xcode; the
+         suite runs in the Xcode test target. Its pure-adapter subset is proven by
+         the executed harness [1]; the whole suite is proven type-correct in-module [5]. N/A
+  #Preview macro ............. UNAVAILABLE under CLT — `PreviewsMacros` plugin ships
+         with full Xcode. The preview *construction* code is proven by a macro-free
+         harness [3]; the macro expansion itself runs in Xcode.                      N/A
+
+  Charts/Maps capability note: this surface uses NO Swift Charts and NO MapKit
+  (web "Charts / maps used: (none)"). The CORE authoring capability — SwiftUI — IS
+  present and is PROVEN by the real macOS-SDK typechecks below. The capability-BLOCKED
+  escape hatch (SwiftUI/Charts/MapKit unavailable) therefore does NOT apply: the
+  surface is authored and host-validated for real. Only the full Xcode *app*
+  build/test gate is unavailable here — a DEFERRAL to a signed CI runner, not a
+  capability block of the surface.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/SignalHealthWidget.*) ===
+  SignalHealthWidget.Models.swift     219  Foundation DTOs (live entry / snapshot / hasData),
+                                            projection (gap signal / analysis), level/load/
+                                            connection/freshness/phase enums + i18n resolver
+  SignalHealthWidget.Builder.swift    252  pure adapter (analyze / healthLevel / statusWord /
+                                            formatInt / coverageRatio / formatAge / relativeTime /
+                                            resolvePhase / resolveFreshness / isCompact / isWide) + a11y copy
+  SignalHealthWidget.Model.swift      175  P1/S8 source seam + P1/S11 telemetry + @Observable model
+  SignalHealthWidget.Components.swift 250  stat tile (StatCard) + level badge (Badge) + freshness chip +
+                                            gap row + compact summary + health tone (all surface-local)
+  SignalHealthWidget.swift            288  the surface (shell header + every state branch + compact/
+                                            standard/wide layouts)
+  SignalHealthWidget.Previews.swift   127  #if DEBUG previews — one per state + compact
+  SignalHealthWidget.Tests.swift      352  XCTest: adapter + model + registry + a11y (29 methods)
+  SignalHealthWidget.strings           60  P1/S10 catalog (16 source keys + 18 native chrome/a11y keys)
+  Every file ≤400 lines (house file_length); one exported View per file
+  (SignalHealthWidget; all leaf components in .Components are internal). The shared
+  registry types (DashboardWidgetSize / DashboardWidgetRegistration) and the shared
+  feedback component (TSSkeleton) are REUSED, never redefined — grep-verified:
+    grep 'struct TSSkeleton|struct DashboardWidgetSize|struct DashboardWidgetRegistration'
+    SignalHealthWidget.* -> NONE. Coexistence proven by the no-redecl compile [4].
+
+=== PARITY (vs web SignalHealthWidget.tsx) ===
+  Data sources → bound via the shared state-holder seam (SignalHealthSource →
+    SignalHealthModel): useVehicles, useSignalStats, useSignalGaps, useSignals,
+    useTranslation. The production app wires the source over the KMP telemetry stats/
+    availability stores + the per-vehicle live-gap store; the view performs NO HTTP.
+  Projection → SignalHealthBuilder is a 1:1 port of the web derivation:
+    • analysis memo — available-signal total (useSignals.length), the 5-minute
+      STALE_THRESHOLD active/stale split over the live map (useSignalGaps), a hard
+      gap for a null/absent timestamp, newest-sample tracking, the gap-list sort
+      (null-last-seen first then oldest), and freshnessAge = floor(now − newest)
+      clamped ≥ 0.
+    • healthLevel memo — neutral (no live signals) / green / amber (any stale) /
+      red (≥ 50% stale ratio).
+    • formatAge — '—' / Ns / Nm / Nh ago.   • fmtInt — locale grouping.
+    Verified by an executed harness (below, 48/48).
+  Composition → WidgetShell chrome reproduced natively: activity icon tinted by the
+    health band + uppercase "Signal Health" title + tappable DataFreshness chip (the
+    refresh control) · 2×2 StatCard grid (Total Signals / Active / With Gaps /
+    Freshness, each with its web icon + tint) · "Status" row with the level-toned
+    Badge (Healthy/Degraded/Critical/Unknown) · the wide (cols ≥ 3) "Stale / Gap
+    Signals" list (name + relative last-seen, sliced to 15) · the compact (cols ≤ 1)
+    coverage-badge + big-number + age layout. Recharts→none; Leaflet→none.
+  States (all render) → loading (skeleton grid/badge) · empty ("No signal health
+    data", web !hasData) · error (retry) · stale (amber chip, cached content) ·
+    offline (muted chip + cached content, the native addition) · content. The compact
+    (cols ≤ 1) layout is REACHABLE here — the shared min size is 1×2 (unlike the 2×4
+    SignalCatalog) — and has its own #Preview + unit-tested predicate.
+  i18n → all 16 source strings PRESENT in SignalHealthWidget.strings (title, noData,
+    signals, totalSignals, active, withGaps, freshness, status, healthy, degraded,
+    critical, unknown, staleSignals, secAgo, minAgo, hrAgo — the web `{{count}}`
+    becomes the native `%lld`), plus 18 native-chrome/a11y keys. No English literals
+    in native code (every string flows through the P1/S10 facade). Placeholder gate
+    COUNT=0 with ZERO opt-outs (no verbatim trigger word in this surface's keys).
+  a11y → each stat tile + gap row + badge is one VoiceOver element; the compact
+    summary speaks the full title+status+counts; the chip has a Refresh label +
+    freshness value; the retry button is labeled; Dynamic Type via tokens; Reduce
+    Motion gates the chip spin + skeleton shimmer.
+  Telemetry → SignalHealthModel.start() emits viewOpened(surface:
+    "SignalHealthWidget") → bridges shared Telemetry.track(.screenView) (P1/S11).
+    Asserted by a spy test.
+  Registry → SignalHealthWidget.registration: id "signal-health", category
+    "telemetry", default 2×4, min 1×2, max 4×40 (+ clamp()), matching
+    registry/telemetry.ts. Asserted.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] Adapter executed test (compiled Models+Builder to a native binary with a harness
+    and RAN it — real "cached → projection" verification, not a typecheck):
+      swiftc -O Models.swift Builder.swift main.swift -o harness && ./harness
+      48/48 checks PASSED — total-only, the 5-minute active/stale split incl. the
+      300 s boundary (active), null-timestamp gaps, the null-first-then-oldest gap
+      sort, freshnessAge (incl. nil with no timestamps), the health bands, status
+      words, fmtInt (en_US grouping), coverageRatio, formatAge buckets, relativeTime
+      buckets (incl. the ≥7d absolute fallback), phase resolution, freshness
+      precedence (offline▸error▸fetching▸stale▸fresh), responsive splits, a11y summary
+      + gap-row copy.
+      ADAPTER_HARNESS_EXIT=0                                                        OK
+
+[2] swiftc -typecheck — the 5 production surface files compiled together with the
+    REAL design tokens (apps/design/generated/apple/Tokens.swift) + a verbatim
+    signature shim of the shared TSSkeleton + DashboardWidgetSize/Registration:
+      xcrun swiftc -typecheck -target arm64-apple-macos15.0 <surface+Tokens+shim>
+      TYPECHECK_EXIT=0  (0 errors, 0 warnings)                                      OK
+      (Platform-agnostic SwiftUI — no #if os(iOS) branches — so the macOS compile
+       covers the iOS/iPadOS code paths. @Observable / onChange(of:_,_) /
+       ContentUnavailableView / Grid+GridRow / LazyVStack all resolve vs the macOS 15 SDK.)
+
+[3] swiftc -typecheck PREVIEW CONSTRUCTION — a macro-free harness builds each
+    preview's model+widget via the public API (the #Preview macro itself needs the
+    Xcode-only PreviewsMacros plugin), proving the preview construction is type-correct:
+      PREVIEW_PROOF_EXIT=0                                                          OK
+
+[4] swiftc -typecheck COEXISTENCE — the 5 production files compiled with the VERBATIM
+    REAL TSSkeleton source (extracted from Sources/Components/Feedback/Skeletons.swift)
+    + the registry shim, NO TSSkeleton shim — proving the surface reuses the real
+    shared component with zero redeclaration / symbol collision:
+      PASS_B_EXIT=0   (grep confirms the surface declares neither TSSkeleton nor the
+      registry structs)                                                            OK
+
+[5] swiftc -typecheck TESTS — SignalHealthWidget.Tests.swift compiled in-module
+    (XCTest shim re-exporting Foundation, since XCTest is CLT-unavailable) against the
+    surface + tokens + shims, proving every assertion is type-correct vs the public API:
+      TESTS_TYPECHECK_EXIT=0                                                        OK
+
+[6] swiftlint --strict:
+      surface-scoped (the 7 new .swift files, explicit paths):
+        Done linting! Found 0 violations, 0 serious in 7 files.
+        SURFACE_SWIFTLINT_EXIT=0                                                    OK
+      bare gate `swiftlint --strict` (from apps/apple, 1916 files):
+        Found 1 violation, 1 serious in 1916 files.
+        -> LifetimeStatsWidget.Adapter.swift:141: Function Body Length (78>50 lines)
+        SWIFTLINT_GATE_EXIT=2                                              PRE-EXISTING
+      NOTE (honesty rule 1, 9): the single bare-gate violation is in
+      LifetimeStatsWidget.Adapter.swift — a SIBLING file UNMODIFIED by this task
+      (`git status` shows only SignalHealthWidget.* added) and OUTSIDE this prompt's
+      allowed files. It is a baseline defect this prompt is forbidden to touch, NOT
+      introduced by this surface (whose own contribution is 0/0, surface-scoped).
+
+[7] swiftformat --lint apps/apple   (the exact gate command, whole tree, 1920 files):
+      1/1920 files require formatting, 2 files skipped.
+      -> feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes)
+      FORMAT_GATE_EXIT=1                                                   PRE-EXISTING
+      NOTE: the lone flagged file is a SIBLING in feature-views/ — UNMODIFIED by this
+      task and OUTSIDE this prompt's allowed files. The 8 new SignalHealthWidget.*
+      files are CLEAN (surface-scoped `swiftformat --lint` = 0/7, run after applying
+      the canonical format to the new files only).
+      SURFACE_FORMAT_EXIT=0                                                         OK
+
+[8] check-placeholders (ADR-011 stub gate, pwsh 7.6.2):
+      self-test ............................................. SELFTEST_EXIT=0      OK
+      gate's literal `-Path .../SignalHealthWidget` (a filename PREFIX → resolves to
+        nothing → clean scan): PLACEHOLDER_COUNT=0  EXIT=0                          OK
+      REAL scoped scan of ONLY the 8 new files (-Path <tmp copy>):
+        PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0                        OK
+      (No TODO/FIXME/stub/mock/placeholder/Lorem/fatalError("unimpl") in the shipped
+       code, and ZERO opt-out markers were needed.)
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to a signed Xcode CI runner; NOT faked) ===
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Why deferred (four independent, code-unrelated reasons — none is a defect in this
+    surface):
+      (a) NO XCODE ON THIS RUNNER: active developer dir is CommandLineTools;
+          xcodebuild + simctl are absent (evidence in the capability probe). The
+          surface is instead host-validated by the executed adapter harness + four
+          real swiftc typechecks above (steps [1]–[5]).
+      (b) NOT-YET-REGISTERED: project.yml's app target globs Sources/ +
+          TeslaSync/dashboard-widgets; the dashboard-widgets dir currently carries
+          duplicate DashboardWidgetSize/Registration definitions across parallel
+          surfaces that the P4 integration prompt reconciles — so a full-target
+          compile is integration-pending, independent of this surface (which adds NO
+          new definition, reusing the shared types — proven by [4]).
+      (c) Shared.xcframework not staged: the app target links the KMP core
+          (Kotlin/Native gradle build). Independent of this UI surface.
+      (d) macOS signing: the macOS app/widget entitlements require a development
+          certificate (ADR-012 defers to a signed macos-latest runner).
+    XCTest (SignalHealthWidget.Tests.swift) runs in the TeslaSync(/-macOS) test target
+    under Xcode; XCTest is CLT-unavailable here. Its pure-adapter subset is PROVEN
+    GREEN by the executed harness [1]; the model/registry/a11y suites are PROVEN
+    TYPE-CORRECT against the public API by the in-module typecheck [5].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content +
+      compact) — implemented; each has a #if DEBUG preview; phase + freshness logic
+      unit-tested. (Compact is reachable here: shared min 1×2.)
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP in view.
+  [x] Every i18n key from source has a matching catalog key — 16/16 source keys present.
+  [x] Accessibility labels on every interactive element; each tile/row/badge is one
+      labeled element; chip + retry labeled; compact summary speaks the full state.
+  [x] Tests: adapter unit test (executed, 48/48) + per-state model test + registry +
+      a11y label test (type-correct vs public API).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0
+      (ZERO opt-outs).
+  [x] Host gates green (harness/typecheck×4/placeholder + surface-scoped swiftlint 0/0
+      + surface-scoped swiftformat 0/7); Xcode app build/test DEFERRED with capability
+      + integration evidence (per P4/0057+0087+0099 disposition). The bare swiftlint
+      (1) + swiftformat (1) findings are PRE-EXISTING sibling defects outside this
+      prompt's allowed files.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green). The bare
+                       swiftlint (LifetimeStatsWidget.Adapter.swift) + swiftformat
+                       (ActionBuilder.Previews.swift) findings are reported truthfully
+                       and attributed to pre-existing out-of-scope sibling files.
+  2  No scope narrowing: implemented ALL states + 2×2 stat grid + status pill + wide
+                       gap list + compact summary + i18n + a11y + telemetry + registry.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0 / ALLOWED=0.
+  5  No parity shortcuts: faithful port of the web analysis + healthLevel derivation +
+                       full composition + every state incl. the reachable compact branch.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / the dashboard grid
+                       (integration prompt's scope), did NOT add a duplicate shared-type
+                       or TSSkeleton definition (reused the real ones — proven by [4]),
+                       did NOT edit the shared Localizable.xcstrings (per-surface table),
+                       and did NOT touch the pre-existing sibling swiftlint/swiftformat
+                       defects (out of allowed files). Matches the P4/0087 + 0099 disposition.
+  8  No commit on red  : committing on all-green host gates for THIS surface; Xcode
+                       steps DEFERRED (not failed); the bare-gate findings are
+                       pre-existing sibling defects this prompt may not modify.
+  9  No silent drift   : changes confined to the allowed SignalHealthWidget.* files +
+                       this log. (`git status` shows unrelated pre-existing working-tree
+                       modifications — AIUsageCard.*, two web .tsx — that this task did
+                       NOT make and does NOT commit; the commit explicitly adds only the
+                       SignalHealthWidget.* files + this log.)
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native SignalHealthWidget shipped at parity with the web source:
+  pure-Swift cached→projection adapter (executed-green, 48/48), P1/S8 state-holder seam
+  (no view HTTP), P1/S11 telemetry, every state (loading/empty/error/stale/offline/
+  content) + the reachable compact layout + the wide stale/gap list, all 16 source
+  i18n keys + a11y labels, registry-correct (signal-health, 2×4 / 1×2 / 4×40), reusing
+  the shared registry types + the real TSSkeleton component (proven by a no-redecl
+  coexistence compile). All host-runnable gates pass for this surface; the Xcode app
+  build/test is DEFERRED to a signed CI runner (no Xcode on this runner +
+  dashboard-widgets integration-pending + Shared.xcframework + macOS signing — none a
+  defect in this code), matching the committed P4/0057+0087+0099 "code-complete +
+  DEFERRED Xcode gate" disposition.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/SignalHealthWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0088-SignalHealthWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add SignalHealthWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

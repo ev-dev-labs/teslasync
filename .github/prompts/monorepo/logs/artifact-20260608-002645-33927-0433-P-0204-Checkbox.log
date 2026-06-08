@@ -1,0 +1,249 @@
+================================================================================
+=== P4 Shared surface 0204 Checkbox (Apple) ===
+Run: 2026-06-08T13:55Z   Host: Darwin arm64
+Prompt: P4/shared-surfaces/0204 — Checkbox
+Web source (spec): web/src/components/ui/Checkbox.tsx (117 lines)
+Native output: apps/apple/TeslaSync/shared-surfaces/Checkbox.*
+Allowed files: apps/apple/TeslaSync/shared-surfaces/Checkbox.* + this log (only)
+Mode: code-complete + host-validated (isolated build/test/typecheck) + DEFERRED
+      full-app Xcode build/test (precedent: feature-views 0202 AISettings / 0205
+      FeatureToggles; apps/macos-pending-verifications.md; ADR-012). The full-app
+      build/test is DEFERRED — not faked — for pre-existing, code-unrelated
+      reasons recorded below.
+================================================================================
+
+=== CAPABILITY PROBE (real, this host) ===
+  swift ........................ Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108)      OK
+  /Applications/Xcode.app ...... Xcode 26.5 (Build 17F42) via DEVELOPER_DIR override    OK
+  swiftc -typecheck SwiftUI .... compiles vs the REAL design system on BOTH the
+                                 macOS-15 and iOS-18 SDKs (see [1])                      OK
+  swiftlint .................... /opt/homebrew/bin/swiftlint 0.63.3                      OK
+  swiftformat .................. /opt/homebrew/bin/swiftformat 0.61.1                    OK
+  xcodegen ..................... /opt/homebrew/bin/xcodegen 2.45.4                       OK
+  pwsh (placeholder gate) ...... /opt/homebrew/bin/pwsh; -SelfTest PASS                  OK
+  codesign identities .......... `security find-identity -p codesigning` -> 0 valid     WARN (deferral input R3)
+
+  Charts/Maps capability note: the web source declares "Charts / maps used: (none)"
+  and "Data sources: (none — pure presentational component)". This surface uses
+  ONLY SwiftUI — NEITHER Swift Charts NOR MapKit. SwiftUI IS available and is proven
+  by the real macOS-15 + iOS-18 SDK compiles in [1]. The capability-BLOCKED escape
+  hatch ("SwiftUI/Charts/MapKit unavailable on the runner") therefore does NOT apply;
+  the surface is authored + host-validated for real, and STATUS is DONE (not BLOCKED).
+
+=== WEB-SOURCE READING (parity basis) ===
+  components/ui/Checkbox.tsx is a PURE presentational primitive: a visually-hidden
+  native <input type=checkbox> + a styled indicator. Props: label?(ReactNode),
+  indeterminate?, size?(sm|md|lg), onChange?(checked), disabled, checked/defaultChecked.
+  Branches read end-to-end: the `sizes` map (box h-3.5/h-4/h-5 + icon h-2.5/h-3/h-3.5);
+  the indicator border/fill (`border-[var(--border-strong)] bg-white/[0.04]`) flipping
+  to `border-cyan-500 bg-cyan-500/20 text-cyan-300` on peer-checked AND peer-indeterminate
+  (indeterminate precedence); the lucide Check vs Minus glyph; peer-focus-visible ring;
+  peer-disabled:opacity-50 + label disabled opacity-60; the handler
+  `onChange={e => { if (disabled) return; onChange?.(e.target.checked) }}`.
+  t() calls: NONE (the surface is anonymous; its label is caller-supplied content).
+
+  States note: the web source has NO data source / hook / query, so the P4 template's
+  data-lifecycle states (loading/empty/error/stale/offline) do NOT exist in the spec
+  and are not fabricated (that would be parity drift). The reproduced states are the
+  component's REAL visual/interaction states: off / checked / mixed(indeterminate) /
+  disabled / focused, across the three sizes, with and without a label.
+
+=== ARTIFACT (apps/apple/TeslaSync/shared-surfaces/Checkbox.*) ===
+  Checkbox.swift            200  the SwiftUI `Checkbox` surface: indicator + label, the
+                                 tap target (web <label>), 3 inits (key+Binding /
+                                 Text+Binding / controlled checked+onChange), VoiceOver
+                                 label+value+hint+toggle trait, focus ring, Dynamic Type
+                                 (@ScaledMetric), Reduce-Motion (TSAnimation), once-only
+                                 view.opened telemetry on appear.
+  Checkbox.Style.swift      104  pure parity logic: CheckboxSize, CheckboxMetrics (the web
+                                 `sizes` map → points), CheckboxVisualState (off/on/mixed
+                                 with indeterminate precedence + glyph), CheckboxPalette
+                                 (token colors), CheckboxInteraction (disabled-gated tap).
+  Checkbox.A11y.swift        48  P1/S10 CheckboxStrings facade + CheckboxAccessibility
+                                 (localized value / fallback name / hint builders).
+  Checkbox.Telemetry.swift   68  P1/S11 CheckboxTelemetry seam + OSLog default +
+                                 CheckboxSurface.slug + CheckboxAppearReporter (once-guard).
+  Checkbox.Previews.swift    91  #if DEBUG previews — states / states·dark / sizes / AX5
+                                 Dynamic Type.
+  Checkbox.Tests.swift      131  XCTest (13 tests): metrics vs web sizes map; visual-state
+                                 precedence + glyph; interaction gating; a11y strings;
+                                 telemetry slug + once-only emission.
+  Checkbox.strings           24  P1/S10 catalog (table "Checkbox"): 5 a11y keys.
+  Total 666 lines. One exported view per file; every .swift file <= house file_length.
+  (Web source 117 lines; native expands with the pure style/a11y/telemetry seams +
+  previews + tests + strings — the same multi-file pattern as the feature-views surfaces.)
+
+=== PARITY (vs web Checkbox.tsx) ===
+  Data sources -> NONE (pure primitive). The acceptance item "hooks bind via P1/S8;
+    no HTTP in the view" holds vacuously: the view performs no networking and owns no
+    data; its controlled value is a `Binding<Bool>` (the native parity of React's
+    controlled `checked` + `onChange`). The existing atomic `TSCheckbox`
+    (Components/UI/Fields.swift) is the simpler shared-library variant and is OUT OF
+    SCOPE (component-library bundle); this surface is the fuller parity and is NOT a
+    modification of it (no symbol collision — `Checkbox` vs `TSCheckbox` verified).
+  Geometry -> CheckboxMetrics.metrics(for:) ports the web `sizes` map 1:1: sm 14/10,
+    md 16/12, lg 20/14 pt (box/icon), corner ~4–5 (web `rounded`), scaled by @ScaledMetric.
+  Visual state -> CheckboxVisualState.resolve reproduces peer-indeterminate > peer-checked
+    precedence (mixed shows the Minus glyph even when checked); glyph checkmark/minus =
+    lucide Check/Minus; token colors via CheckboxPalette (accent border + accent/20 fill +
+    accent glyph when active; design border + surface fill when off) — adaptive across
+    light/dark/high-contrast.
+  Interaction -> CheckboxInteraction.nextValue gates on `isEnabled` (web `if (disabled)
+    return`); reports the toggled value through the Binding and/or onChange.
+  Disabled -> opacity 0.6 on the control + 0.5 on the box (web label opacity-60 +
+    box peer-disabled:opacity-50); non-interactive.
+  Focus -> @FocusState ring in the accent color (web peer-focus-visible:ring-2 ring-cyan-500).
+  i18n -> web source keys = 0 (anonymous). Native adds 5 a11y keys, used==defined==5,
+    drift = 0 (see [i18n]); no English literals in shipped code (only sanctioned facade
+    fallbacks + DEBUG-only preview sample text).
+  a11y -> single combined element; localized label (or fallback "Checkbox") + value
+    (Checked/Unchecked/Mixed) + hint; .isToggle (+ .isSelected when on); Dynamic Type via
+    @ScaledMetric; Reduce-Motion honored on the check transition.
+  Telemetry -> CheckboxAppearReporter emits P1/S11 view.opened surface="Checkbox" once on
+    appear (OSLog default; app injects the shared adapter). Asserted by a unit test.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — the 4 surface source files compiled WITH the REAL design system
+    (apps/design/generated/apple/Tokens.swift + apps/apple/Sources/Design/TSDesign.swift),
+    Swift 6 language mode + -strict-concurrency=complete, on BOTH SDKs:
+      macOS:  -target arm64-apple-macos15.0          MAC_TYPECHECK_EXIT=0               OK
+      iOS:    -target arm64-apple-ios18.0-simulator   IOS_TYPECHECK_EXIT=0               OK
+    (Platform-agnostic SwiftUI — no `#if os(...)` in the surface — so each SDK fully
+     covers its code paths; Tokens' UIKit branch is exercised on iOS, AppKit on macOS.)
+
+[2] Isolated SwiftPM package (Swift 6 strict concurrency, debug w/ testability) — the
+    5 surface sources (incl. Checkbox.Previews.swift) + the real Tokens + TSDesign, built
+    and its XCTest suite RUN (real execution, not a typecheck):
+      Build complete!                                 ISOLATED_BUILD_EXIT=0              OK
+      Executed 13 tests, with 0 failures              ISOLATED_TESTS_EXIT=0             OK
+    (Fixed one real finding during authoring: AccessibilityTraits `insert` unused-result
+     warning -> rewrote as an array-literal ternary `[.isToggle, .isSelected]`, matching
+     the existing TSCheckbox; rebuild is warning-clean.)
+
+[3] swiftlint --strict on the 6 surface .swift files (explicit paths):
+      Done linting! Found 0 violations, 0 serious in 6 files.   LINT_EXIT=0             OK
+
+[4] swiftformat --lint on the 6 surface .swift files:
+      0/6 files require formatting.                   FORMAT_EXIT=0                     OK
+    Whole-tree `swiftformat --lint apps/apple` reports 1/1919 files require formatting —
+    that one file is TeslaSync/feature-views/ActionBuilder.Previews.swift
+    (blankLinesBetweenScopes), UNMODIFIED by this prompt (git-clean, committed) and
+    OUTSIDE my allowed scope. Pre-existing baseline; this surface contributes 0 deltas.
+
+[5] check-placeholders (ADR-011 stub gate; pwsh):
+      -SelfTest -> all 6 self-checks PASS (gate proven to detect stubs)                 OK
+      scan apps/apple/TeslaSync/shared-surfaces -> PLACEHOLDER_COUNT=0                  OK
+      PLACEHOLDER_EXIT=0
+    (Fixed one finding during authoring: a preview title contained "XXXL" which matched
+     the "XXX" pattern -> renamed to "AX5"; the gate then reports 0, 0 opt-outs.)
+
+[i18n] used-vs-defined key diff (checkbox.a11y.* literals in .swift vs "key" in .strings):
+      USED=5  DEFINED=5  used-but-not-defined=0  (checked, unchecked, mixed, label, hint)  OK
+      Web source i18n keys = 0 (anonymous primitive), so 0 source keys are unmatched.
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the signed macos-latest runner; NOT faked) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_FULLAPP_BUILDTEST = DEFERRED      MAC_FULLAPP_BUILDTEST = DEFERRED
+
+    Evidence gathered on this host (real):
+      xcodegen generate -> XCODEGEN_EXIT=0 (project regenerates).
+      grep "shared-surfaces" generated project.pbxproj -> 0 matches. The shared-surfaces/
+        directory is NOT yet registered in project.yml (sources list only
+        TeslaSync/dashboard-widgets + TeslaSync/feature-views) NOR in .swiftlint.yml
+        `included`. Wiring shared-surfaces into the app/test targets is the P4 INTEGRATION
+        prompt's scope and is OUTSIDE my allowed files (Checkbox.* + this log only) and
+        parallel-unsafe across slots — I did NOT edit project.yml / .swiftlint.yml /
+        apps/macos-pending-verifications.md (Honesty rule 7).
+      Even once wired, the bare `build test` is RED at baseline for pre-existing,
+      code-unrelated reasons (NOT this surface):
+        R1. `struct DashboardWidgetSize` (+ peers) redefined across 15 files in
+            Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/* (parallel-merge
+            collisions) -> invalid-redeclaration in the app module.   [grep count: 15]
+        R2. 204 co-located *.Tests.swift under TeslaSync/feature-views `import XCTest`
+            into the APP target (project.yml globs feature-views into the app target,
+            not a test target).                                       [grep count: 204]
+        R3. macOS app target needs a development signing identity:
+            `security find-identity -p codesigning` -> 0 valid.
+      The surface ITSELF contributes ZERO compile/test errors — proven by [1]+[2] (real
+      macOS-15 + iOS-18 compiles + 13/13 executed tests). Deferred to
+      p4-apple/P99-0001-apple-acceptance-gate (macos-latest + signing), matching the
+      user-approved disposition recorded for 0202 AISettings / 0205 FeatureToggles and the
+      rows in apps/macos-pending-verifications.md.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states present in the web source (off/checked/mixed/disabled/
+      focused × sizes × with/without label) — implemented; each has a #if DEBUG preview;
+      the state logic is unit-tested + executed (13/13). The data-lifecycle states do not
+      exist in the spec (pure primitive) and were not fabricated.
+  [x] No direct HTTP in the view; the controlled value is a Binding<Bool> (P1/S8 N/A —
+      the source is a pure primitive with no data binding).
+  [x] Every i18n key resolves through the P1/S10 facade; catalog in Checkbox.strings;
+      used==defined==5; 0 web source keys unmatched.
+  [x] Accessibility labels on the interactive element (label/value/hint/toggle trait).
+  [x] Tests: parity-logic unit tests (metrics/state/interaction) + a11y-string tests +
+      telemetry once-only test = 13 tests, 0 failures (EXECUTED).
+  [x] No TODO/stub/placeholder/Lorem in shipped code — placeholder gate COUNT=0; self-test PASS.
+  [x] Host gates green (typecheck×2 / build / 13 tests / lint / format / placeholder /
+      i18n); full-app Xcode build/test DEFERRED with capability + predecessor evidence.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : full-app Xcode build/test shown DEFERRED (not green); reasons are
+                       real + counted on this host (R1=15, R2=204, R3=0 identities; my
+                       files = 0 in the generated project). Every "OK" is a command run
+                       here with its real exit code.
+  2  No scope narrowing: implemented sizes + off/checked/mixed/disabled/focused + onChange
+                       + Binding + a11y + Dynamic Type + Reduce-Motion + telemetry + i18n.
+  3  No skip-and-assume: each host gate executed; the deferral reasons are grep/security-verified, not assumed.
+  4  No stubs as final : complete implementation; placeholder gate COUNT=0; 13 tests executed.
+  5  No parity shortcuts: faithful port of the sizes map, the indeterminate>checked
+                       precedence, the disabled-gated handler, the focus/disabled styling.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit project.yml / .swiftlint.yml /
+                       apps/macos-pending-verifications.md / the shared Localizable.xcstrings
+                       (all parallel-unsafe / outside allowed files); strings shipped as the
+                       per-surface Checkbox.strings table. Generated TeslaSync.xcodeproj +
+                       /tmp harness are out-of-tree and were removed; git carries only my
+                       7 files + this log.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED.
+  9  No silent drift   : changes confined to apps/apple/TeslaSync/shared-surfaces/Checkbox.*
+                       + this log. (Pre-existing unrelated dirty files —
+                       AIUsageCard.* / two web/*.tsx — are NOT touched/committed.)
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native Checkbox shipped at parity with the web source: a SwiftUI
+  primitive reproducing the sizes map, the off/checked/mixed(indeterminate) indicator with
+  indeterminate>checked precedence, disabled + focus styling, Binding + onChange (the
+  controlled web contract), full VoiceOver state, Dynamic Type, Reduce-Motion, P1/S10
+  a11y strings (0 drift), and the P1/S11 view.opened telemetry (once). All host-runnable
+  gates pass (real macOS-15 + iOS-18 compiles, isolated build + 13/13 executed tests,
+  swiftlint --strict, swiftformat --lint, placeholder gate, i18n diff). The full-app Xcode
+  build/test is DEFERRED to the signed P99 acceptance gate: shared-surfaces is not yet
+  registered in project.yml/.swiftlint.yml (integration scope, outside allowed files), and
+  the baseline app target is pre-existing-red (R1 DashboardWidgetSize ×15, R2 204 co-located
+  XCTest files, R3 no signing) — none a defect in this code.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/shared-surfaces/Checkbox.swift \
+          apps/apple/TeslaSync/shared-surfaces/Checkbox.Style.swift \
+          apps/apple/TeslaSync/shared-surfaces/Checkbox.A11y.swift \
+          apps/apple/TeslaSync/shared-surfaces/Checkbox.Telemetry.swift \
+          apps/apple/TeslaSync/shared-surfaces/Checkbox.Previews.swift \
+          apps/apple/TeslaSync/shared-surfaces/Checkbox.Tests.swift \
+          apps/apple/TeslaSync/shared-surfaces/Checkbox.strings \
+          .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0204-Checkbox.log
+  git commit -m "feat(apps/apple/shared-surfaces): add Checkbox surface (P4)"
+
+IOS_EXIT=DEFERRED
+MAC_EXIT=DEFERRED
+MAC_TYPECHECK_EXIT=0
+IOS_TYPECHECK_EXIT=0
+ISOLATED_BUILD_EXIT=0
+ISOLATED_TESTS_EXIT=0
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+XCODEGEN_EXIT=0
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,206 @@
+I'll start by exploring the repository structure and understanding both the web source and the existing Apple app architecture.
+
+Now let me explore the Apple app structure, the API hook, and existing reference pages.
+
+The Features directory doesn't exist yet. Let me explore the Apple app structure deeper.
+
+The project structure differs from the prompt. Let me explore where existing feature pages actually live.
+
+This is a large widget directory. Let me find where actual feature *pages* live and look at the parity manifest/ledger plus any already-implemented parity pages for the established convention.
+
+No pages exist yet. Let me look at the parity manifest record, the ledger, and the existing Sources structure to understand conventions.
+
+No pages or apple-ledger exist yet — this is greenfield. Let me check the toolchain availability and read the key infrastructure: components, navigation, shared facade, and gate docs.
+
+Key finding: **`xcodebuild` requires full Xcode but only Command Line Tools are installed** — the build/test gate will be environment-BLOCKED. But `swiftlint`, `swift` 6.3.2, `xcodegen`, and `pwsh` are all available. I'll implement fully and run every check I can.
+
+Let me map the existing infrastructure — navigation, shared facade, the closest existing feature, and locate the string catalog.
+
+Now let me understand the shell registration flow and the SharedFacade (KMP core access) patterns that my `@Observable` model must follow.
+
+Now the critical reference files: the one existing route registration, the KMP container, and the one existing domain model.
+
+Now let me check whether the KMP shared core exposes an anomalies store/DTO, and read the P3 component library files I'll need (charts, data-display, feedback, cards, badges, typography, forms).
+
+The KMP source isn't under `packages/`. Let me locate the actual Kotlin shared core and check what stores/DTOs exist (e.g. the `VehicleSettingsStore` the example model references), and whether anomalies are covered.
+
+Found the KMP core at `apps/shared/core`. Let me check whether the anomalies/diagnostics domain store + DTOs exist there (a P1 predecessor dependency), and how the existing VehicleSettings store/models are shaped.
+
+The anomalies store **does** exist in the KMP core (`presentation/anomalies/AnomaliesStore.kt`). Let me read its exact API, models, and the reference VehicleSettings store/models shape.
+
+The anomalies payload crosses as a raw `Resource<JsonElement>` (verbatim-SI strategy). I need to understand how Apple decodes that `JsonElement`. Let me check the facade bridge files and any existing JSON-decoding strategy.
+
+Found the exact precedent: `DashboardWidgets/BatteryCells*` and `DrivetrainHealth*` consume `Resource<JsonElement>` and decode it. These are my compile-correct templates. Let me read them fully.
+
+This `BatteryCellsModel`/`BatteryCellsWidgetData` pair is my exact template. Now I need to confirm how models get their KMP store instance and how pages register. Let me read `TeslaSyncApp.swift` and trace how stores are provided.
+
+There's already an `AnomalyInlineRow` feature-view in the **same anomalies domain** — that's the closest precedent and likely has a reusable decoder/model. Let me read it fully.
+
+Let me read these key files individually.
+
+There's an existing `AnomalyInlineRow` in the same module defining `AnomalyData`, `AnomalyEntryItem`, `AnomalySeverity`, `AnomalyDetectorType` — I must **reuse** these, not redefine. Let me read the Seams (decoder), the existing strings, and the core component wrappers I'll need.
+
+I now understand the conventions well. Let me set up tracking and then read the exact component APIs I'll use. Key facts: reuse existing `AnomalyData`/`AnomalyEntryItem`/`AnomalySeverity` types (same module), follow the `BatteryCellsModel` KMP-binding pattern, and put page strings in `Localizable.xcstrings`.
+
+Major finding: all 15 page keys **already exist** in `Localizable.xcstrings` as `translation.anomaly.*`. And `route.diagnostics` exists. Let me see how existing Swift code references these `translation.*` catalog keys, and inspect the entry format.
+
+All 15 strings already exist in the catalog as `translation.anomaly.*` with English values — referenced via `LocalizedStringKey("translation.anomaly.title")` (same as `BatteryCellsWidget`). No catalog edit needed. Now let me read the remaining component APIs: Cards, Feedback states, BarChart wrapper, chart models, and Badges.
+
+Now the chart wrapper, badges, and typography components.
+
+Now the chart models/container, typography, and I need to find the page scaffold (`AppSettingsView`) plus the vehicle-selection source. Let me gather these in parallel.
+
+Let me resolve the chart approach by precedent — checking how existing feature/widget code renders bar charts (do they use `TSBarChart` or `Charts` directly?), plus read the page scaffold and the vehicle filter.
+
+`TSVehicleSelect` and `TSBarChart` are the right P3 components (features use `TSBarChart`). Let me read the `TSBarChart` category-label precedent, the vehicle list source, typography, and the page scaffold.
+
+The `SpeedProfileChart` precedent shows feature code builds native `Charts` directly with a categorical axis — that's my chart approach. I have all component APIs now. Let me resolve the registration/store-wiring question by reading `RootView`, how feature views are hosted, and the KMP `VehiclesStore`.
+
+I have the full component picture. Let me make final checks before coding: the vehicle directory source, the lint config, the placeholder scanner rules, and confirm design-token names.
+
+Critical lint facts: line length ≤120 (strict), avoid all stub markers. Let me read the exact placeholder patterns and confirm the design-token names.
+
+"Placeholder", "TODO", "not implemented" etc. are forbidden — I'll avoid those words entirely. Let me read the design tokens to use exact names.
+
+I now have everything needed: design tokens, all component APIs, the KMP store, the reusable domain types, and the string catalog. Let me verify the 15 keys + common keys resolve, then set up tracking and start writing.
+
+All 15 strings + common chrome keys exist with English values — **no catalog edit needed**. Let me record the plan and start implementing.
+
+Now creating the data/decoder file (Foundation-only, pure, reuses existing module types):
+
+Now the `@Observable` model + phase resolution (KMP `AnomaliesStore` binding, mirroring `BatteryCellsModel`):
+
+Strings and section files now. First the string-key constants (gives clean symbols for parity evidence):
+
+Now the sections file (panel subviews, severity/health chips, and the native Swift Charts bar chart):
+
+Page scaffold next. Let me quickly confirm available catalog keys for a freshness/refresh affordance and the `Color.TS.bg` token.
+
+`translation.common.refresh` exists. Let me verify the bare component keys (used internally by P3 components) and pick an error message key that resolves.
+
+The P3 components use bare keys not in the catalog (a pre-existing P3 concern). For my page's chrome I'll use the resolving `translation.*` keys. Let me read the `TSButton` API to build a clean error state, then write the page.
+
+Let me check how `AppSettingsView` stores its injected model (to match the established pattern), then write the page and registration.
+
+Now adding `isStale` to the phase, `refresh` to strings, then creating the page view:
+
+Now the route registration. First let me check the established test/preview convention for feature surfaces (those `.Tests.swift` files live in the app-target source dir).
+
+Conventions are clear: `#if canImport(XCTest)` for tests, `#if DEBUG` for previews, both in the feature dir. Now the route registration:
+
+Now wire the registration into the app and add the source path to `project.yml`:
+
+Updating tracking, then creating previews and tests:
+
+Now the unit tests (covering decode, projection, content derivation, and all four phase states):
+
+All files created. Now let me run the verification gates I can execute — swiftlint, the placeholder scan, and xcodegen.
+
+swiftlint linted the whole project (1917 files) and found 6 serious violations. Let me capture the actual exit code and see which files those violations are in.
+
+5 fixable violations in my files (the `LifetimeStatsWidget` one is pre-existing). Let me view the exact spots and fix: reduce preview param count, wrap long lines, and split the Sections file under 400 lines.
+
+Let me refactor the footer (shorten lines) and move the frequency chart into its own file to get under 400 lines.
+
+Now remove that frequency block from Sections (moving it to its own file):
+
+Now remove the unused `Charts` import from Sections and create the dedicated chart file:
+
+Let me recreate the Previews file with a 5-param helper and shorter preview lines:
+
+Let me re-run swiftlint and confirm my files are now clean (only the pre-existing non-mine violation should remain):
+
+One trailing-newline issue in Sections (the only violation in my files). Let me fix it:
+
+My files: **0 swiftlint violations**. The only remaining violation is pre-existing and not mine. Let me confirm it's pre-existing (untouched by me) and check how swiftlint scopes the path:
+
+swiftlint's `included:` is overriding the path. The gate runs from repo root — let me check whether there's a root `.swiftlint.yml` and how swiftlint scopes when run from there:
+
+Excellent — run from repo root (as the gate does), swiftlint lints **only my 9 files: 0 violations, EXIT=0**. Now the placeholder scan, xcodegen validation, and a syntax parse of my files.
+
+Placeholder scan: **0, EXIT=0**. Now validate `project.yml` with xcodegen and syntax-parse my Swift files:
+
+xcodegen validates `project.yml` cleanly (EXIT=0) and my files are wired into the targets. Now a syntax parse of my Swift files to catch any structural errors:
+
+All 9 files parse cleanly (0 errors). One concurrency correctness fix I can reason about: `makeHolder` constructs a `@MainActor` `StateHolderModel`, so it must itself be `@MainActor` (it's only called from `@MainActor` contexts). Let me fix that:
+
+Let me re-parse the edited Model and the app file, and inspect the ledger schema + log directory the gate/commit expects:
+
+Both edits parse clean. Let me read the ledger schema to create the apple-ledger correctly:
+
+All checks pass for my files. Let me capture the exact build-tool status for an honest log, then write the log + ledger:
+
+All gate evidence captured. Let me write the honest gate log with the full `=== PARITY ===` section:
+
+Now the apple parity ledger (status `blocked` — honest, since the build/test triad couldn't run, though all 27 parity items are implemented):
+
+Now let me review the full set of changes and confirm the generated `.xcodeproj` (a build artifact) is git-ignored so the tree stays clean:
+
+The `.xcodeproj` is git-ignored. Note: the `AIUsageCard.*` and `web/...` modifications are **pre-existing** in this shared worktree — not mine (I never touched them). Let me confirm my 3 modified files contain exactly my intended changes:
+
+My 3 changes are exactly as intended. Let me verify the `[m` in the diff output was just a terminal color-code artifact and not actually in the file:
+
+The line is clean (the `[m` was a terminal color artifact). One hardening improvement: give `store` a default of `nil` so `TeslaSyncApp` never has to reference the `Shared` type. Let me apply that:
+
+Let me run the final verification after these edits:
+
+All final gates green for my files. Given the build can't run locally, let me get a focused expert review to catch any compile/logic issues before finalizing.
+
+I'll start by examining the files under review and the reference files that establish the patterns they must match.The new files are untracked. Let me look at the directory and read all the files under review.Now let me read all the files under review in parallel.Let me read the remaining files under review and the key reference files.Now let me read the reference files to verify the patterns match.Now let me verify the P3 component signatures used by the page.Let me verify the module/target layout — whether `Sources/**` and `TeslaSync/Features/**` are the same compilation unit.Let me compare against the chart precedent and check established `.task`/`.refreshable` patterns.Let me check for symbol redeclaration collisions across the module (the new files share the `Anomaly*` prefix with the existing AnomalyInlineRow surface).Let me look at the broader context of the `TeslaSyncApp.swift` change to assess model lifecycle.The static `ISO8601DateFormatter` properties caught my attention for Swift 6. Let me verify whether the project builds in Swift 6 language mode and how existing code handles static formatters.I've completed a thorough verification against every referenced precedent. Let me do one final confirmation on how the shell consumes the registry, to be sure about the model-lifecycle finding.I've completed a thorough review, verifying every file against its referenced precedent (`BatteryCellsWidgetModel/Data`, `StateHolderModel`, `LoadableState`, `FacadeError`, `AnomalyInlineRow.Adapter`, `AnomaliesStore.kt`, the P3 component signatures, `SpeedProfileWidget.Chart`, `AppSettingsView`, `SettingsRouteRegistration`, and `AppRoute`).
+
+The code is unusually clean. The KMP binding (`raw as? Resource` → `LoadableState.from`, `Int32(days)` bridging, `store.anomalies(vehicleId:days:)` labels), the Charts axis usage (`@AxisContentBuilder` + `value.as(Int.self)`/`.as(String.self)`), the `@Bindable`/`init(model:)` shape, the domain-type reuse with correct initializer labels/defaults, `AnomalyDashboardPhase.resolve` exhaustiveness over all five `LoadableState` cases, the `static let ISO8601DateFormatter` pattern (matches the compiling `NotificationStatsWidget.Models` precedent under `SWIFT_STRICT_CONCURRENCY: complete`), the `@ObservationIgnored holder?.state` observation seam, and the `TeslaSyncApp.swift` wiring (correctly needs no `import Shared`) are all correct. I found no compile, concurrency, SwiftUI-API, or KMP-binding defects.
+
+One substantive finding:
+
+## Issue: AnomalyDashboardModel is created inside `body`, so it is recreated on every root re-render (state-ownership divergence from the precedent it mirrors)
+**File:** apps/apple/TeslaSync/Features/Diagnostics/DiagnosticsRouteRegistration.swift:37 (+ apps/apple/Sources/TeslaSyncApp.swift:72)
+**Severity:** Medium (currently dormant; activates the moment a store/vehicles are wired)
+
+**Problem:** `DiagnosticsRouteRegistration.registry(...)` builds the `AnomalyDashboardModel` *internally* via `makeModel(...)`. That registry is constructed inside `TeslaSyncApp.rootContent`, a `@ViewBuilder` computed property that re-evaluates on every state change that touches it (e.g. `selection` navigation, `.onChange(of: auth.state)`). Each re-evaluation produces a **new** `AnomalyDashboardModel` instance, which `AppShell.view(for:)` (AppShell.swift:157) then hands to a fresh `AnomalyDashboardPage`.
+
+This diverges from the precedent it explicitly claims to mirror. `SettingsRouteRegistration` takes an *externally-owned* `@State private var settingsModel` (TeslaSyncApp.swift:20), so the Settings page model survives re-renders. The diagnostics model has no such stable owner.
+
+**Evidence:**
+- TeslaSyncApp.swift:20 — `@State private var settingsModel: AppSettingsModel` (stable), passed in at line 74.
+- DiagnosticsRouteRegistration.swift:37 / 48-65 — model is *constructed* inside `registry`/`makeModel`, not injected.
+- AppShell.swift:144,157 — `@Environment(\.routeHosts)` + `routeHosts.view(for: route)` re-invokes the provider closure (which captures the freshly-built model) whenever the environment registry changes.
+
+**Impact:** Today this is **inert** — the call site passes no `store` and no `vehicles` (both default to `nil`/`[]`), so the model is a throwaway `.idle` preview and recreation has no visible effect. But the file's own doc-comment instructs that the store be passed "when available." When someone follows that and passes `store:`/`vehicles:` to the existing call, every root re-render will (a) reset the user's `selectedVehicleID` to the default and (b) tear down and restart the `StateHolderModel` feed subscription (`.task { model.start() }` re-fires on the new instance) — a silent selection-loss + reload regression.
+
+**Suggested fix (do not implement):** Own the `AnomalyDashboardModel` (or its inputs) as `@State` on `TeslaSyncApp` and pass the stable instance into `DiagnosticsRouteRegistration.registry(...)`, exactly as `settingsModel` is threaded into `SettingsRouteRegistration` — rather than constructing it inside the registry factory.The reviewer confirmed the code is compile/concurrency/API-correct, and flagged one real design divergence: the model is built **inside** the registry (called from a `@ViewBuilder`), so it'd be recreated on every root re-render — unlike the `settingsModel` precedent which is owned as stable `@State`. Currently inert, but a latent regression once a store is wired. Let me fix it to match the precedent: own the model as `@State` and inject it.
+
+Now re-verify everything after the ownership fix:
+
+All gates green for my files after the fix. Let me update tracking, clean up the generated build artifact, and do a final holistic check of the complete file set:
+
+The deliverable is complete and verified to the fullest extent this environment allows. Let me do a final confirmation of the complete change set:
+
+The task is complete to the fullest extent this environment allows. Here's the final summary.
+
+## Summary
+
+I implemented the native SwiftUI/HIG parity port of the web `AnomalyDashboardPage` (`/analytics/anomalies`) for the TeslaSync Apple app, at full panel/chart/state/string parity.
+
+### Delivered (`apps/apple/TeslaSync/Features/Diagnostics/`, 9 files, ~1355 LOC)
+- **`AnomalyDashboardData.swift`** — decodes the KMP `Resource<JsonElement>` payload → the existing module `AnomalyData`/`AnomalyEntryItem` types (**reused, not redefined**), plus pure projections (top‑10 `signalFrequency`).
+- **`AnomalyDashboardModel.swift`** — `@Observable` model binding the shared KMP **`AnomaliesStore`** via `StateHolderModel`/`LoadableState` (the `BatteryCellsModel` precedent), with `AnomalyDashboardPhase.resolve` (loading/empty/error/success + stale).
+- **`AnomalyDashboardSections.swift` / `AnomalyDashboardChart.swift`** — the 7 panels: 4 StatCards, System‑Health grid, Anomaly Timeline, and a native **Swift Charts** horizontal bar chart (the `SpeedProfileChart` precedent).
+- **`AnomalyDashboardPage.swift`** — adaptive macOS/iOS scaffold (header + vehicle picker + ADR‑013 freshness affordance + state switch).
+- **`AnomalyDashboardStrings.swift`** — the 15 web i18n keys (all already in `Localizable.xcstrings` as `translation.anomaly.*`; **no catalog edit needed**).
+- **`DiagnosticsRouteRegistration.swift`** + `TeslaSyncApp.swift` wiring — registers `.diagnostics`, with the model owned as stable `@State` (matching `SettingsRouteRegistration`).
+- **Previews** (all 4 states) + **XCTest** (decode/frequency/projection/phase).
+- `project.yml` + `.swiftlint.yml` updated to compile the new `TeslaSync/Features` source path.
+
+### Verification (every gate the runner allows)
+- **swiftlint `--strict`**: 0 violations · **placeholder scan**: 0 · **`swiftc -parse`**: 0 errors · **`xcodegen`**: valid (files wired into both app targets) · **PARITY_COVERED = 27/27**.
+- **Code‑review** (Opus): confirmed compile/concurrency/KMP‑binding correctness; the one design finding (model recreated per‑render) was **fixed**.
+
+### Honest blocker (per the prompt's own contract)
+**`xcodebuild` requires full Xcode; this host only has Command Line Tools** → the build+test triad cannot run. The prompt states: *"If no Xcode runner is available, the gate → STATUS=BLOCKED."* The log (`.github/prompts/monorepo/logs/apple-page-diagnostics-AnomalyDashboardPage.log`) ends with `EXIT=2` / `STATUS=BLOCKED` and a full `=== PARITY ===` section. The `apps/parity/apple-ledger.json` row is `status: blocked`, `covered 27/27` — not marked green (honesty covenant #1, #8).
+
+I did **not** commit (covenant #8 "no commit on red"; also this shared worktree contains unrelated pre‑existing changes — `AIUsageCard.*`, `web/...` — which I left untouched). A real Xcode CI runner can execute the build/test triad and commit.
+
+
+
+All 7 todos are complete and every runnable gate passes. The work is fully done — the only non-green item (Xcode build/test) is environmentally blocked and reported honestly per the prompt's contract.
+

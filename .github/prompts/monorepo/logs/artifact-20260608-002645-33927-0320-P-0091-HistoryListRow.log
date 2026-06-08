@@ -1,0 +1,87 @@
+=== P4 Shared surface 0091 HistoryListRow (Apple) ===
+date          : 2026-06-08T12:03:57Z
+host          : Darwin 25.5.0 arm64
+swiftlint     : 0.63.3
+swiftformat   : 0.61.1
+web source    : web/src/components/data-display/HistoryListRow.tsx (pure presentational, slot-based)
+native output : apps/apple/TeslaSync/shared-surfaces/HistoryListRow.*
+
+--- CAPABILITY PROBE (the build/test gate requires full Xcode.app + iOS Simulator) ---
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+$ xcrun simctl help | head -1
+xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+
+>> This runner has the Command Line Tools only (no Xcode.app, no iOS/macOS Simulator
+>> SDKs, no simctl). Per the prompt capability clause, the two xcodebuild build+test
+>> steps are BLOCKED here. They are recorded below with their real failure output as
+>> evidence. The remaining gate steps (swiftlint/swiftformat/placeholder) DO run and
+>> are clean for this surface's files.
+
+--- [1/5] xcodebuild iOS (scheme TeslaSync, iPhone 16 simulator) build test ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1   (BLOCKED: requires Xcode.app; Command Line Tools only)
+
+--- [2/5] xcodebuild macOS (scheme TeslaSync-macOS) build test ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1   (BLOCKED: requires Xcode.app; Command Line Tools only)
+
+--- [3/5] swiftlint --strict ---
+(a) full project (gate command). NOTE: the new shared-surfaces group is not yet in
+    .swiftlint.yml 'included:' nor in project.yml sources — wiring it in is the P4
+    integration gate's job, not this per-surface prompt (allowed files are limited to
+    shared-surfaces/HistoryListRow.* + this log).
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-320/apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length Violation: Function body should span 50 lines or less excluding comments and whitespace: currently spans 78 lines (function_body_length)
+    -> the single violation is pre-existing and unrelated to this surface:
+       dashboard-widgets/LifetimeStatsWidget.Adapter.swift (function_body_length).
+(b) scoped to THIS surface's 6 files (mirror config, same rules):
+LINT_EXIT=0   (surface files: 0 violations)
+
+--- [4/5] swiftformat --lint ---
+(a) full project (gate command):
+1/1919 files require formatting, 2 files skipped.
+    -> the single drift is pre-existing and unrelated: feature-views/ActionBuilder.Previews.swift (blankLinesBetweenScopes).
+(b) scoped to THIS surface:
+0/6 files require formatting.
+FORMAT_EXIT=0   (surface files: 0/6 require formatting)
+
+--- [5/5] check-placeholders.ps1 (swift) on the surface dir ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- DELIVERABLE INVENTORY (apps/apple/TeslaSync/shared-surfaces/) ---
+  HistoryListRow.swift              241 lines
+  HistoryListRow.Model.swift        129 lines
+  HistoryListRow.Adapter.swift      129 lines
+  HistoryListRow.Views.swift        339 lines
+  HistoryListRow.Previews.swift     239 lines
+  HistoryListRow.Tests.swift        193 lines
+  HistoryListRow.strings             43 lines
+
+--- STATE / VARIANT MAPPING (web pure-presentational slot row -> native) ---
+  web source has NO data-fetch states (no t(), no hooks, no loading/empty/error).
+  Reproduced web render branches : checkbox slot, leading w-9 column, primary line,
+    route/metrics/insight lines, hover-revealed actions (group-hover/focus-within),
+    href XOR onClick activation, selected ring, glow accent (cyan/green/purple/none),
+    hideChevron, propagation-stop on checkbox + actions (composed outside the tap target).
+  Native widening (surface contract; documented in code + .strings as native-only):
+    .loading row-shaped shimmer, .empty friendly row, .error QueryError+retry,
+    opt-in stale/offline freshness chip (ADR-013, default .live = hidden).
+  Telemetry : view.opened slug=HistoryListRow (P1/S11), emitted from .task on appear.
+  Tests     : HistoryListRow.Tests.swift — projection (chevron/interactive/freshness/
+    leading), glow union+isGlowing, freshness descriptor distinctness, accessibility
+    label/hint/value, surface slug + reportOpen telemetry. (Run under the XCTest
+    bundle once shared-surfaces is wired into the test target by the P4 gate.)
+
+=== RESULT ===
+  IOS_EXIT=1 (BLOCKED)  MAC_EXIT=1 (BLOCKED)  LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+  The surface is implemented, formatter-clean, linter-clean (strict), and placeholder-
+  free. The xcodebuild build+test steps cannot execute on this runner (Command Line
+  Tools only; no Xcode.app / iOS Simulator) — capability evidence captured above.
+
+EXIT=1
+STATUS=BLOCKED

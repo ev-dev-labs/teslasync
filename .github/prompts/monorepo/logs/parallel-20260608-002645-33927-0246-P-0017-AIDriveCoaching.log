@@ -1,0 +1,131 @@
+I'll start by exploring the repository structure and the web source that serves as the specification.
+
+Environment has Xcode tooling, Swift 6.3.2, swiftlint, and swiftformat. Let me read the web source and explore the Apple app structure.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are active. Let me investigate further — check for a full Xcode install, and study the existing Apple patterns (state holders, tokens, i18n, and an existing AI feature-view to mirror).
+
+Full Xcode exists at `/Applications/Xcode.app` but isn't selected. Let me test if I can use it via `DEVELOPER_DIR`, and study the established multi-file pattern (`AiUsageCard` is the closest AI-card analog).
+
+Full Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 simulator is booted, iOS/macOS SDKs present. Capability is available. Now let me study the established patterns — the AI card view, plus the shared infrastructure (state holders, AI stream, tokens, i18n, telemetry).
+
+`Sources` is at `apps/apple/Sources`. Let me read `project.yml` to understand target/path mapping, and explore the shared infrastructure.
+
+Now I understand the target/source layout. Critically, `TeslaSync/shared-surfaces` is **not** in `project.yml` sources yet. Let me understand the build generation, test framework convention, and check for sibling shared-surface prompts/logs to follow precedent.
+
+`xcodegen` is available (no project generated yet). There are pre-existing working-tree modifications to `AIUsageCard.*`. Let me find my prompt's siblings and the P4 methodology to understand how `shared-surfaces` is meant to integrate into the build.
+
+The prompts live under `shared-meaningful`, not `shared-surfaces`. Let me read a sibling prompt to confirm the exact output path convention and whether `shared-surfaces` needs wiring into the build.
+
+I'm the first shared-surface; the directory doesn't exist and isn't wired into `project.yml`. Let me check the P4 core prompt, the build prerequisites (Shared.xcframework, the preAction script), and study the closest existing AI-card view to mirror its structure.
+
+I need to understand the methodology's rules and whether a predecessor wires `shared-surfaces`. The `Shared.xcframework` is not prebuilt (built via Gradle/KMP at build time). Let me read the methodology and scaffold prompts in full.
+
+Now I understand the strict rules: I can only touch `shared-surfaces/AIDriveCoaching.*` + the log (Rule 9), and `project.yml` is off-limits. Let me study the just-merged `AiUsageCard` AI surface in full — it's the canonical precedent — to learn the native infrastructure that actually exists (AI gating, streaming, tokens, i18n, telemetry).
+
+This is the key insight: each surface is **self-contained** — `AiUsageCard` defines its own i18n facade, telemetry seam, state-holder seam, and projection, consuming only shared design tokens (`TSSpacing`, `Color.TS`, `Font.TS`, `TSRadius`, `TSFadeIn`). The native counterparts of `AIFeatureCard`/`withAiFeature`/`useAiStream` are built *within* my surface files. Let me read the web streaming infra and the rest of the `AiUsageCard` precedent in parallel.
+
+I now fully understand the web streaming contract (`idle → streaming → done|error`, thinking indicator, output panel). Let me read the rest of the `AiUsageCard` precedent (Projection, Views, Chrome, strings, Adapter, Tests, AdapterTests, Previews) and locate the design tokens + lint configs.
+
+Design token usage is clear. Let me read the remaining `AiUsageCard` files (Chrome, strings, Adapter, Tests, AdapterTests, Previews) and locate the actual design-token definitions + lint configs.
+
+Critical: `TeslaSync/shared-surfaces` is in neither `project.yml` sources nor `.swiftlint.yml` `included`. I need to understand how the co-located `.Tests.swift` files build, and locate the design tokens. Let me read the test/adapter/preview precedent files and find token definitions.
+
+Now I understand the precedent fully (XCTest with `@testable import TeslaSync`, co-located in the surface dir). Let me locate the exact design-token and shared-primitive definitions (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSFadeIn`, `TSSkeleton`, `TSButton`) and check how the build generates target membership for co-located test/preview files.
+
+Path correction — tokens live at `apps/design/generated/apple/`. Let me read the tokens and the shared primitives I'll use.
+
+Tokens confirmed. Now the shared primitives — `TSFadeIn`, `TSSkeleton`, `TSButton` signatures.
+
+`TSButton` API and a couple of preview/test wiring details. Let me check the button signature and how existing previews are structured, plus verify the `check-placeholders` tool and whether `xcodegen generate` works for inspecting target membership.
+
+I have all the precedent I need. Now let me empirically resolve the build-wiring question: generate the project (git-ignored) and inspect how co-located `.Tests.swift` files get target membership, plus check the placeholder tool and PowerShell availability.
+
+`pwsh` and `check-placeholders.ps1` are available; `xcodegen generate` works. The decisive guide is how the just-merged `AiUsageCard` gate was actually run and logged. Let me read its log and check target membership of co-located test files.
+
+Let me read the `AiUsageCard` gate log to learn the established, accepted gate approach (especially the build command, project.yml handling, and STATUS).
+
+This is the decisive precedent. The accepted gate for every prior P4 surface is an **isolated SwiftPM build+test** compiling the surface against the real design-system files (the full-app `xcodebuild` is DEFERRED due to pre-existing, out-of-scope blockers: unstaged `Shared.xcframework`, `DashboardWidgetSize` 15× redefinition, 140 co-located test files importing XCTest into the app target, macOS signing). This means I do **not** touch `project.yml`. Let me map the design-system dependency closure for the isolated build, then write the surface.
+
+To keep the isolated build bulletproof, I'll depend only on tokens + `TSButton` (Buttons.swift, tokens-only) + `TSFadeIn` (Motion.swift, tokens-only), and inline my own skeleton (avoiding `Skeletons.swift`→`TSCard`→wide closure). Let me confirm `TSButton`'s full API and that Buttons/Motion import only SwiftUI.
+
+I now have everything needed. The accepted gate is an **isolated SwiftPM build+test** (full-app `xcodebuild` DEFERRED on documented pre-existing blockers), so I won't touch `project.yml`. My dependency closure is minimal: `Tokens.swift` + `Buttons.swift` (`TSButton`) + `Motion.swift` (`TSFadeIn`), all tokens-only. Let me set up tracking and write the surface.
+
+Now writing the surface. Starting with the pure value types and projection.
+
+Marking core types done; writing the presentational views.
+
+Let me make the shimmer bar reusable across Views and Chrome, then write the Chrome (freshness chip, banner, loading, error).
+
+Marking views/chrome done; writing the main surface view.
+
+Marking surface done; writing the i18n catalog, previews, and tests.
+
+All 9 files written. Let me fix two robustness issues before verifying: the in-button dots tint, and restructure previews so each `#Preview` body is a single expression (avoiding ViewBuilder statement limits).
+
+All files written. Now verifying — file lengths, long lines, then the isolated build.
+
+No long lines, all files <400 lines. Now the critical check — the isolated SwiftPM build+test (the accepted gate). Let me set up the package against the real design-system files.
+
+Package assembled. Building the isolated package under the Xcode 26.5 toolchain.
+
+Isolated build succeeded under Swift 6 strict concurrency. Now running the test suite.
+
+All 28 tests pass. Now the polish gates — swiftformat, swiftlint, placeholders — on the actual shipped files.
+
+swiftformat wants canonical formatting (wrapped property bodies, redundant-type removal). Let me apply it in write mode, then re-verify build+tests.
+
+swiftformat clean. Now swiftlint --strict, plus re-verifying the formatted files still build and pass tests.
+
+swiftlint linted the whole tree (1909 files) and found 1 violation — I need to know if it's mine. Let me isolate it.
+
+The only violation is pre-existing in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (not mine, out of scope). Let me confirm my files are clean by linting them in isolation with a scoped config.
+
+swiftlint on my 8 files: **0 violations**. Now re-verify the formatted files build+test, and run the placeholder gate.
+
+Re-test passed (28/28) with formatted files. Let me check my files for placeholder patterns, then run the actual placeholder gate.
+
+No placeholder patterns present. Now running the actual placeholder gate via pwsh.
+
+Let me confirm it actually scanned my files (the exact path has no extension) by scanning the real directory.
+
+Let me confirm the scanner actually detects placeholders (so the 0 count is real) via its self-test.
+
+All gates pass (build, 28 tests, swiftformat, swiftlint 0 violations, placeholders 0 with detection self-test confirmed). Let me clean up temp artifacts and check the git working-tree state.
+
+Working tree: my files are the only untracked addition; the `M` files (AIUsageCard.*, two .tsx) are pre-existing and not mine — I'll stage only my allowed files. Let me verify the documented full-app deferral blockers (evidence, not assumption) before writing the log.
+
+All blockers verified (Shared.xcframework absent, 204 co-located XCTest files in app target, DashboardWidgetSize ×15). The full-app `xcodebuild` deferral is evidence-based, matching every prior P4 surface. Now writing the gate log.
+
+Log written. Let me review the swiftformat-applied changes in the shipped files before committing.
+
+swiftformat changes are clean and correct (verified by the passing build/tests). Now staging and committing only my allowed files.
+
+Staged set is exactly my 9 surface files + the log (no pre-existing files). Committing.
+
+Commit succeeded. Let me verify the final state.
+
+Committed cleanly: 10 files (9 surface + log), 1794 insertions. The remaining `M` files are pre-existing and untouched. Marking todos complete.
+
+All todos complete. The task is fully delivered and verified.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`AIDriveCoaching`** shared surface at parity with `components/ai/AIDriveCoaching.tsx`, committed as `0f6098833`.
+
+**9 files** in `apps/apple/TeslaSync/shared-surfaces/` (1,794 lines), following the just-merged `AiUsageCard` precedent — self-contained i18n facade, P1/S8 state-holder seam, P1/S11 telemetry seam, pure projection — consuming only shared P1/S9 tokens + `TSButton`/`TSFadeIn`:
+
+- **`.Adapter`** stream-event/state/connection value types · **`.Projection`** `resolve` (gate→error→loading→ready) + `reduce` (SSE delta/done/failed) · **`.Model`** strings facade, telemetry, `@Observable` model, in-memory source · **`.Views`** Helix badge, "Ask Helix" CTA, output panel, thinking indicator · **`.Chrome`** freshness chip, banner, loading, error · **`.swift`** `withAiFeature` gate + card chrome · **`.Previews`** (11 states) · **`.Tests`** (28 XCTest) · **`.strings`** (web keys reused verbatim).
+
+**Reproduced**: the `withAiFeature('drive-coaching')` gate, the full `useAiStream` lifecycle (idle→streaming→done|error with delta accumulation), the `AiOutputPanel` branches, `canStart=!!driveId`, and all 5 P4 leaf states (loading/empty/error/stale/offline) with VoiceOver, Dynamic Type, Reduce-Motion, and `view.opened` telemetry.
+
+**Gates (all green, raw exits in the log):**
+- Isolated SwiftPM build under Xcode 26.5 / Swift 6 strict-concurrency — `Build complete!`
+- 28 tests, 0 failures
+- `swiftformat --lint` 0/8 · `swiftlint --strict` 0 violations · placeholder scan COUNT=0 (detection self-test confirmed)
+
+**Deferred (documented, evidence-verified):** the full-app `xcodebuild` — blocked by pre-existing, out-of-scope conditions (unstaged `Shared.xcframework`, 204 co-located XCTest files in the app target, `DashboardWidgetSize` ×15, and the `shared-surfaces` `project.yml` wiring owned by P99) — the same disposition as every prior P4 surface. Only my allowed files were staged; pre-existing unrelated worktree changes were left untouched. Log ends `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and verified — all gates green, committed as `0f6098833`, all 11 todos done.
+

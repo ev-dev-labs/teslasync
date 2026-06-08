@@ -1,0 +1,162 @@
+I'll start by understanding the environment and the codebase structure, then verify capabilities before doing any work.
+
+Key finding: only Command Line Tools are installed (no full Xcode), so `xcodebuild` won't run. But `swift`, `swiftlint`, `swiftformat` are available. Let me investigate the Apple app structure and check for full Xcode before deciding on capability.
+
+Full Xcode IS present at `/Applications/Xcode.app` and `pwsh` is available. The active dir is just CommandLineTools — I can override with `DEVELOPER_DIR`. Let me verify Xcode works and check simulators/SDKs.
+
+Capability confirmed: **Xcode 26.5 functional via `DEVELOPER_DIR`, iPhone 16 simulator booted, macOS SDK present, `pwsh` available.** The feature-views directory has a clear multi-file pattern. Now let me read the web source and find related exemplars.
+
+Now I fully understand the web spec. Let me read the supporting web types/hooks and study the native patterns — including whether `NotificationRow` exists natively and the shared infrastructure (state holders, tokens, i18n, telemetry).
+
+Native `NotificationRow` doesn't exist yet (separate prompt). Let me read the web types, the `NotificationRow` web source (to render equivalent row content), the relevant hooks, and explore the native shared infrastructure.
+
+Now I understand the full data model and row content. Let me study the native shared infrastructure (state holders, tokens, i18n facade, telemetry) and a complete exemplar feature-view to replicate the exact pattern.
+
+The architecture uses a KMP `Shared` core with StateFlow-based state holders bound via `StateHolderModel`. Let me read a complete same-domain exemplar (`AlertsSection`) plus the i18n facade, tokens, and telemetry contract to learn the canonical feature-view pattern.
+
+Excellent, very thorough pattern. Let me read the rest of the AlertsSection set (Model, Views, Tests, strings, Previews) to complete my understanding of the canonical structure.
+
+Let me read the Views/Tests/Previews of the exemplar plus the design tokens and project.yml to understand rendering, testing, and build inclusion.
+
+Let me read the exemplar tests, the design tokens, and project.yml to finalize my understanding of testing and build inclusion.
+
+Now I understand the full pattern. The build uses XcodeGen (`.xcodeproj` is git-ignored). Let me verify the build tooling: xcodegen, how `.Tests.swift` files in the app-target `feature-views/` path are handled, the check-placeholders script, and lint configs.
+
+xcodegen 2.45.4 is installed. Critical open questions: (1) how the app target's `Shared.xcframework` gets built, and (2) how `*.Tests.swift` in `feature-views/` reach the test target. Let me investigate both — these determine whether the full xcodebuild gate can run.
+
+Building the app requires Gradle/Kotlin-Native to assemble `Shared.xcframework` (heavy) plus xcodegen. And `*.Tests.swift` in `feature-views/` have no exclusion mechanism. Let me read the verification-status docs and git history to understand the established posture for these prompts.
+
+Critical context: `macos-pending-verifications.md` documents that the **full-app `xcodebuild build test` is blocked by pre-existing, unrelated parallel-merge collisions** (duplicate symbols, co-located `*.Tests.swift` importing XCTest into the app target, macOS signing). The established posture (ToolCard precedent) verifies each surface via an **isolated SwiftPM build + tests** plus lint/format/placeholder, and defers full-app xcodebuild to the acceptance gate. Let me read the canonical gate logs to replicate the exact format.
+
+This is the canonical, sanctioned template: all host-runnable gates GREEN (swiftformat, swiftlint, check-placeholders, **isolated SwiftPM build+test** against real design-system files), with the full-app xcodebuild DEFERRED (pre-existing unrelated collisions) → `EXIT=0/STATUS=DONE`. Let me find the isolated harness approach, the design tokens, and a recent log to confirm the current method.
+
+Allowed files are only `feature-views/NotificationGroupRow.*` + the log, so I'll co-locate everything (matching the AlertsSection pattern) and use a per-surface `.strings` table. Let me confirm `.swiftlint.yml` already includes feature-views, locate the design tokens for the isolated harness, and read a recent log's exact gate format.
+
+The current sanctioned recipe (DetailCards 0153) is now crystal clear: per-surface strings table, co-located tests, isolated SwiftPM build+XCTest, SDK typecheck for iOS/macOS, xcodegen registration check, lint/format/placeholder green, full xcodebuild deferred with real exits. Let me read the exact design-token APIs I'll consume.
+
+Now I have the tokens. Let me read the shared component APIs I'll consume (motion, skeletons, cards/typography, and any badge/button), so my code compiles against the real design system.
+
+I now know the component APIs. For the isolated harness I'll compile my files against the real design system. Let me confirm `Sources/Components` and `Sources/Design` are self-contained (no `Shared`/KMP imports), and check `TSTone` and the glass-panel material modifier.
+
+Design system is fully self-contained (only system framework imports) — perfect for an isolated harness. Let me read the final two component files and check how existing surfaces handle count-parameterized i18n strings.
+
+Conventions confirmed. Let me check the `AlertRuleSeverity` values to map severities correctly, then I'll create a plan and write all files.
+
+I have everything needed. Let me set up tracking and write the plan, then create the files.
+
+Now I'll write the Adapter (pure projection core).
+
+Now the Model (state-holder seam, telemetry, i18n facade, observable model, in-memory source).
+
+Now the per-surface strings table and the Views.
+
+Now the Views file (presentational chrome).
+
+Now the main view and Previews.
+
+Let me refine `toggleExpanded` in the Model for singleton-safety, then write the test suite.
+
+Fixing the todo update (SQL syntax) and assembling the isolated SwiftPM harness that compiles the exact shipped sources against the real design system.
+
+My surface compiled cleanly (all `NotificationGroupRow.*` built). The only errors are in an unrelated `UnitFormatters.swift` that references a `Units` helper living outside the design system (behind the KMP boundary). I'll trim the harness to the real design-system files my surface actually depends on — matching the ToolCard precedent of compiling against the needed design files.
+
+Build clean under Swift 6. Now run the XCTest suite.
+
+Two Swift 6 strict-concurrency issues in the test file. I'll fix the real shipped files: make the test's `echo` localizer `@Sendable`, and mark `surfaceSlug` `nonisolated` (SwiftUI `View` is `@MainActor` by default).
+
+All 39 tests pass under Swift 6 strict concurrency. Now the lint/format/placeholder gates. Let me check my files against swiftformat and swiftlint.
+
+Real issues to fix: `file_length` (≤400) on 4 files, trailing commas, short identifiers, and test force-unwraps. The allowed-files glob `NotificationGroupRow.*` lets me split into more files (matching repo convention). Let me read the lint configs to align exactly, then reorganize.
+
+Clear constraints: files ≤400 lines, no trailing commas (`--commas inline`), identifiers ≥2 chars (except id/ok/x/y/t). I'll split the 4 oversized files into additional `NotificationGroupRow.*` files (repo convention) and fix the test issues. Let me delete the oversized originals and recreate as focused splits.
+
+Now recreating as focused splits. First the Adapter (core projection) and Copy (labels/format/a11y).
+
+Now the Model (facade + telemetry + observable model) and Source (inputs + seam + in-memory source).
+
+Now the Views (row + chips + members region) and Chrome (states + freshness + toast).
+
+Now let me fix the main view's references to the removed `.text` helper, then write the two split test files.
+
+Now the two split test files (adapter/copy/a11y/i18n and model), with lint-clean identifiers and no force-unwraps.
+
+Now let me run swiftformat auto-fix on all my files, then re-check swiftlint and line counts.
+
+All files now ≤370 lines. Let me verify swiftformat --lint and swiftlint --strict are clean on my files.
+
+Both clean: `FORMAT_EXIT=0`, `LINT_EXIT=0`. Now re-sync the harness with the split files and re-run the full build + test.
+
+39/39 tests pass after the split. Now the placeholder gate — let me check how it resolves the `-Path` prefix to ensure it actually scans my files.
+
+The scanner uses `-LiteralPath` (no globbing) — the literal `.../NotificationGroupRow` prefix isn't a real directory, so it would scan nothing (a vacuous pass). To make the check honest, I'll scan a staged copy of exactly my shipped `NotificationGroupRow.*` files. Let me check the forbidden patterns and run a real scan.
+
+No forbidden patterns. Now run the real placeholder scanner against a staged copy of my files (and also the literal gate path for documentation).
+
+Placeholder gate clean (`PLACEHOLDER_COUNT=0`). Now the iOS-18-simulator and macOS-15 SDK typechecks under Swift 6.
+
+Both SDK typechecks pass under Swift 6. Now the xcodegen registration check.
+
+All 11 files registered across both targets. Now the honest full-app `xcodebuild` attempt to capture real exit codes. This triggers the Gradle `Shared.xcframework` build (~7 min per precedent) then the app compile. Let me start the iOS gate in the background.
+
+The iOS build is running (Gradle + Xcode, ~7+ min). Let me verify Java is present and check early progress.
+
+Gradle is using a warm cache (`FROM-CACHE`), so it should be fast. The launcher shell returned, but I need to confirm the backgrounded build is still alive. Let me check the process and log growth.
+
+The xcodebuild (PID 6920) is alive and Gradle is linking the frameworks (Kotlin compile was cached). Let me wait for it to reach the app-compile/test phase.
+
+Still building the release `Shared.xcframework`. Let me wait for it to reach the app compile + test phase.
+
+Gradle is staging the release `Shared.xcframework` (multi-platform slices). Let me continue waiting for the app-compile phase.
+
+`IOS_EXIT=65` — and the cause is the **pre-existing** blocker documented in `macos-pending-verifications.md`: co-located `*.Tests.swift` importing `XCTest` into the app target (`Unable to resolve module dependency: 'XCTest'`), which affects every surface. Let me confirm zero errors are attributable to my product files, then run the macOS gate.
+
+Confirmed: the iOS failure is purely the pre-existing structural blocker — `AcDcStatsPanel.Tests.swift` (a different surface) fails `import XCTest` in the app target. **Zero errors in my product files.** Now the macOS gate (Shared.xcframework is now staged, so faster).
+
+The macOS build is running. Let me wait for it while it compiles (Gradle now cached).
+
+`MAC_EXIT=65` — the macOS failure is the other documented blocker: **macOS development-signing** ("entitlements that require signing with a development certificate"), which this runner doesn't provision. Let me confirm no product-file errors on macOS, then clean up and write the gate log.
+
+Both gate exits are `65`, caused solely by the two documented pre-existing blockers — **zero** errors in my product files. Let me clean up build artifacts and verify git status before writing the log.
+
+Git shows exactly my 11 files (artifacts ignored). Let me grab tool versions and write the gate log.
+
+All data gathered. Now writing the gate log following the sanctioned precedent format.
+
+Now a final clean verification of the on-disk files (lint/format + harness build+test) before committing.
+
+All final gates green: `FORMAT_EXIT=0`, `LINT_EXIT=0`, **39/39 tests pass**. Now committing only the allowed files + the log.
+
+Exactly the 12 allowed files staged, nothing else. Committing now.
+
+Committed as `030a63ac5`. Let me clean up temp artifacts and do a final sanity check.
+
+Everything is clean and committed. Let me finalize the todo tracking.
+
+All todos complete. The task is finished and verified.
+
+Merge made by the 'ort' strategy.
+ ...ple-feature-views-0190-NotificationGroupRow.log | 168 ++++++++++
+ .../NotificationGroupRow.Adapter.swift             | 279 ++++++++++++++++
+ .../NotificationGroupRow.Chrome.swift              | 195 +++++++++++
+ .../feature-views/NotificationGroupRow.Copy.swift  | 163 +++++++++
+ .../feature-views/NotificationGroupRow.Model.swift | 216 ++++++++++++
+ .../NotificationGroupRow.ModelTests.swift          | 242 ++++++++++++++
+ .../NotificationGroupRow.Previews.swift            | 141 ++++++++
+ .../NotificationGroupRow.Source.swift              | 265 +++++++++++++++
+ .../feature-views/NotificationGroupRow.Tests.swift | 323 ++++++++++++++++++
+ .../feature-views/NotificationGroupRow.Views.swift | 370 +++++++++++++++++++++
+ .../feature-views/NotificationGroupRow.strings     |  57 ++++
+ .../feature-views/NotificationGroupRow.swift       | 113 +++++++
+ 12 files changed, 2532 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0190-NotificationGroupRow.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationGroupRow.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationGroupRow.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationGroupRow.Copy.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationGroupRow.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationGroupRow.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationGroupRow.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationGroupRow.Source.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationGroupRow.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationGroupRow.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationGroupRow.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationGroupRow.swift

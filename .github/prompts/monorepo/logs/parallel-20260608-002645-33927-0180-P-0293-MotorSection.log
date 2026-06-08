@@ -1,0 +1,130 @@
+I'll start by understanding the task, the web source specification, and the existing Apple app structure. Let me explore in parallel.
+
+Web source is simple: a "Powertrain" GlassPanel with 8 MetricCards or an EmptyState. The runner has `swiftlint`, `swiftformat`, and Swift 6.3.2, but `xcodebuild` requires full Xcode (only CLT installed). Predecessor feature-views already exist, so I'll follow their conventions. Let me study an existing reference panel and the build/test setup.
+
+Now I understand the file conventions (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`) and the build uses xcodegen/xcodebuild (full Xcode required, only CLT present). Let me find sibling vehicle-detail sections and study the most relevant reference, plus shared components.
+
+None of the sibling sections exist yet — MotorSection is among the first vehicle-detail sections. `LiveMotorStatus` is the most semantically related reference. Let me study it fully plus the shared components it relies on.
+
+Excellent reference. Let me read the rest of the LiveMotorStatus set and the key shared components in parallel.
+
+Now let me read the shared components, design tokens, the strings/previews/tests format, and the web helpers (`useUnits`, `numberFormat`) to reproduce values exactly.
+
+Let me read the design tokens, Cards/Typography components, the Previews/Tests format, and the web helpers to reproduce values exactly.
+
+Now let me find the token/component definitions and read the exact web formatter behavior (`fmtNumber`, `fmtInt`, `formatTemperature`), plus the build config and placeholder checker.
+
+Let me read the exact `formatTemperature` SI formatter, locate the token definitions, and check the build config + placeholder script.
+
+Token definitions aren't in Design/UI as expected. Let me locate them across the tree, plus read the build config, placeholder checker, and i18n catalog setup.
+
+Key finding: design tokens live in `apps/design/generated/apple` (the `DesignTokens` group). The per-surface `.strings` table IS the P1/S10 catalog contribution. Let me read the tokens, the native Typography/IconBox, and the web `MetricCard`/`EmptyState` to map visuals precisely.
+
+Let me read the web `MetricCard` color map, native Typography/Badges(TSTone)/Skeletons APIs, and the full Tokens.swift.
+
+Let me read the web neon color map, the full Tokens.swift, and the TSSkeleton API.
+
+Tokens are at `apps/design/generated/apple/Tokens.swift`. Let me read it fully to map colors and confirm the Font.TS ramp.
+
+I now have all tokens, components, and color mappings (cyan→accent, green→statusSuccess, purple→chartSeriesPower — exact hex matches). I need the exact default precisions for `fmtNumber` and `formatTemperature` to reproduce values.
+
+`fmtNumber` defaults to 2 decimals, `fmtInt` to 0, and `formatTemperature` resolves `pref.precision` (else 1). Let me confirm what `precision` `useUnits` passes so the temp card matches exactly.
+
+I have the precision rules (number=2, temp=`decimal_precision ?? 1`) and exact color/token mappings. Now let me read the lint configs, placeholder patterns (to avoid forbidden tokens), and confirm the log directory exists. I must also namespace all types uniquely since `LiveMotorStatus` already defines `MotorSnapshotInput`, `MotorAccent`, etc. in the same module.
+
+I now have a complete picture. Key constraints: line length ≤120 (code), avoid the literal words `TODO/FIXME/XXX/Placeholder/Lorem ipsum/not implemented`, and all type names must be unique within the `TeslaSync` module (so I'll prefix everything `MotorSection*` since `LiveMotorStatus` already owns `MotorSnapshotInput`/`MotorAccent`/etc.). Let me set up tracking and check tooling availability.
+
+`pwsh`, `swiftlint`, `swiftformat`, and `swiftc` (CLT macOS SDK) all work. `xcodebuild` needs full Xcode (only CLT) → the simulator build/test gate steps are platform-BLOCKED, but I can validate via swiftlint `--strict`, swiftformat `--lint`, the placeholder gate, and a standalone `swiftc` typecheck+run of the Foundation-only core. Let me write the plan and start creating files.
+
+Now I'll create the Model file (state-holder, seams, i18n facade — Foundation/Observation/OSLog only).
+
+Now the Adapter (pure projector — Foundation only) reproducing the web numeric pipeline exactly.
+
+Before writing the SwiftUI layer, let me validate the Foundation-only core compiles and produces exact web-parity values via a standalone `swiftc` harness.
+
+Top-level expressions need `main.swift`. Let me rename and rerun.
+
+Core compiles and **all 26 web-parity value checks pass** (order, accents, °C/°F, vbat fallback, em-dash, precision overrides, NaN→0, phase matrix, a11y). Now the SwiftUI layer.
+
+Now the main surface view.
+
+Now the strings catalog, previews, and tests.
+
+The `.Tests.swift` files live alongside the surface in `feature-views/`, but the app target includes that whole directory. Let me verify how existing `*.Tests.swift` files are excluded from the app target and routed to the test target — this determines whether my test file is correctly placed.
+
+No excludes exist — `*.Tests.swift` files live in `feature-views/` for every surface (LiveMotorStatus, AcDcStatsPanel, etc.), so my placement matches the established convention exactly (the gate's xcodegen step routes them; xcodebuild is unavailable here regardless). Now let me run the runnable gates: swiftformat (normalize, then lint) and swiftlint `--strict` on my files.
+
+swiftformat normalized 2 files; lint now clean (0/6). Let me run swiftlint `--strict` and check what swiftformat changed.
+
+One swiftlint violation: `measured(...)` has 8 params (max 5). Initializers are exempt (that's why the 7–10 param `init`s passed), so I'll bundle the static descriptor into a `MetricSpec` struct (its synthesized init is exempt). First let me confirm the AIUsageCard/web changes are pre-existing (not mine) so I stage only my files.
+
+Confirmed: AIUsageCard.* and the 2 web files are **pre-existing** working-tree changes (not mine) — I'll stage only my untracked `MotorSection.*` files. Now let me fix the param-count violation. Let me view the current adapter section post-format.
+
+I'll refactor the 6 numeric builders to use a `MetricSpec` bundle (its synthesized init is exempt from the rule) and slim `measured` to 2 params. Two surgical edits that preserve `motorTemp()`.
+
+Now re-validate: re-run the core harness with the refactored adapter, then swiftformat + swiftlint.
+
+Both format and lint pass cleanly (0 violations). Now let me attempt a real SwiftUI typecheck of my view files against the **actual** shared components + tokens. First probe SwiftUI availability under CLT swiftc and map the Shared-free design-system closure.
+
+SwiftUI compiles under CLT swiftc, and only 15 Shared-importing files exist (none under `Components/` or `Design/`). Let me attempt a real typecheck of my SwiftUI files against the actual design-system components + tokens.
+
+Errors are confined to `UnitFormatters.swift` (depends on facade types `UnitPreferences`/`Units` — not Shared-free, and not used by me). Let me exclude the facade-dependent formatter files and retry.
+
+Only `UnitFormatters.swift` is facade-dependent. Excluding it should make the design system self-contained. Retrying typecheck.
+
+My view files **typecheck cleanly (0 errors)** against the real `TSGlassPanel`/`TSEmptyState`/`TSSkeleton`/tokens. Let me also typecheck the Previews (`-DDEBUG`) and the Tests body (compiled in-module, since `@testable import` can't resolve standalone) to catch any API misuse.
+
+Let me see where the 16 `-DDEBUG` errors originate — likely the design-system files' own `#Preview` blocks, not my Previews.
+
+All 16 `-DDEBUG` errors are the **same** toolchain limitation: the `#Preview` macro plugin (`PreviewsMacros`) ships only with full Xcode, not CLT — identical for every existing surface's previews. Not a code defect. XCTest is likewise Xcode-only. This confirms the xcodebuild/test gate is genuinely environment-BLOCKED. Now the placeholder gate — let me check how it resolves `-Path` and run it.
+
+The gate's `-Path .../MotorSection` resolves to a non-existent literal path → the script treats it as a clean no-op (true for every flat-file surface). To get genuine evidence, I'll run the scanner against an isolated copy of my actual files AND run the exact gate invocation.
+
+All placeholder checks clean (gate EXIT=0, isolated scan COUNT=0, grep none). Now let me rigorously verify i18n parity: every web `t()` key exists in my `.strings`, and every key my Swift references is defined.
+
+The `comm` mismatch is a shell artifact (trailing `'` left by my regex). Let me verify membership robustly with clean key extraction.
+
+`motor.section.loading` is referenced (multi-line call my single-line regex missed). i18n parity confirmed: **all 10 web keys + all Swift keys present**. Let me confirm that reference and check whether whole-tree lint/format is clean (to decide gate scoping).
+
+Whole-tree format fails on a **pre-existing** file I'm not allowed to touch (`ActionBuilder.Previews.swift`, blankLinesBetweenScopes) — unrelated to my surface. My scoped runs are clean. I'll scope the lint/format gates to my files (and note the pre-existing issue). Now let me generate the gate log with genuine command outputs and exit codes.
+
+Now append the lint/format/placeholder gates and supplementary capability-compensating evidence.
+
+Now append the supplementary validations that compensate for the unavailable Apple build toolchain (real `swiftc` compile+run of the core, view typecheck against real components, and XCTest/Preview-macro capability probes), then the final status.
+
+The XCTest probe line reads `=0` because my process-substitution lacked a `.swift` extension (swiftc didn't treat it as Swift). My earlier direct probe clearly showed XCTest is missing. Let me correct that line so the log isn't self-contradictory.
+
+XCTest-missing now confirmed and corrected in the log. Let me review the complete log for coherence before committing.
+
+The log is coherent and honest (ends `EXIT=1 / STATUS=BLOCKED` with capability evidence, per covenant). For extra assurance on the required Tests file (which can't use XCTest here), let me typecheck the test bodies **in-module** against my real APIs using a minimal XCTest shim.
+
+The Tests file **typechecks in-module against my real APIs with 0 errors** (XCTest shimmed) — confirming it compiles under Xcode. Let me record this stronger evidence in the log.
+
+All validations pass. Let me clean up temp files, mark todos done, and stage **only** my files + the log (not the pre-existing AIUsageCard/web changes).
+
+Staged exactly my 8 files; the pre-existing AIUsageCard/web changes correctly remain unstaged. Committing with the prescribed message.
+
+Committed cleanly as `4c9e01d9e` (8 files, 1851 insertions) — only my files. Let me do a final working-tree check to confirm nothing else was touched.
+
+The task is complete. The working tree is clean for my scope — all MotorSection files committed, and the pre-existing (not-mine) AIUsageCard/web changes left untouched as required.
+
+## Summary
+
+I shipped the native Apple SwiftUI **`MotorSection`** surface at full parity with `web/.../vehicle-detail/MotorSection.tsx`, following the established `LiveMotorStatus` (0170) conventions. Committed as `4c9e01d9e` — 7 surface files + the gate log (1851 insertions), staging only my files.
+
+**Files** (`apps/apple/TeslaSync/feature-views/`): `MotorSection.swift` (surface), `.Model.swift` (P1/S8 state-holder + P1/S11 telemetry + P1/S10 i18n facade), `.Adapter.swift` (pure projector), `.Views.swift` (chrome), `.Previews.swift`, `.Tests.swift`, `.strings`.
+
+**Parity**: the "Powertrain" `TSGlassPanel` + the 8-card metric grid (Shift State, Pack Voltage `vbat_rear ?? vbat_front`, Motor Current (F), Front/Rear Torque, Front/Rear RPM, peak Motor Temp) with byte-identical formatting (`fmtNumber` p2, `fmtInt`, `formatTemperature` p`decimal_precision ?? 1`, °C/°F, em-dash empties, `Math.max` NaN semantics). Colors map exactly: cyan→`accent`, purple→`chartSeriesPower`, green→`statusSuccess`. **Every state renders**: loading/empty(`EmptyState`)/content + P4 leaf error(retry)/stale/offline (freshness chip + cached banner + one-shot auto-refresh). i18n via P1/S10 facade (all 10 web keys present), full VoiceOver/Dynamic-Type/reduce-motion a11y, `view.opened` telemetry.
+
+**Verification** (paste in log):
+- `swiftc` compile **+ run** of the Foundation core → **26/26 web-parity assertions pass**
+- View files `-typecheck` against the **real** design system → **0 errors**
+- Test bodies `-typecheck` in-module (XCTest-shimmed) → **0 errors**
+- `swiftlint --strict` **0 violations**, `swiftformat --lint` **0/6**, placeholder gate **0**
+
+**Gate status: `EXIT=1 / STATUS=BLOCKED`** (honest, covenant-compliant). The two `xcodebuild` build+test steps cannot run: this runner has **CommandLineTools only** (no Xcode → no `xcodebuild`, no `XCTest` module, no `#Preview` macro plugin), captured with evidence in the log. The prompt explicitly sanctions this: *"If unavailable on the runner → STATUS=BLOCKED with API evidence."* The surface itself is production-complete and verified to the maximum extent possible on this environment.
+
+
+
+The task is fully complete — all 8 todos done, the surface committed (`4c9e01d9e`), and every runnable gate validated. Marking complete.
+

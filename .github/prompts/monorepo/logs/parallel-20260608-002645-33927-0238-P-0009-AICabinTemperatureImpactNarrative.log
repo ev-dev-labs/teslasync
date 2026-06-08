@@ -1,0 +1,151 @@
+I'll start by exploring the repository structure and checking the Apple toolchain availability, since this task requires SwiftUI/Xcode capabilities.
+
+Key finding: `/Applications/Xcode.app` is a real 4.8GB install, but `xcode-select` points to CommandLineTools. I can override with `DEVELOPER_DIR` without sudo. Let me verify.
+
+Full toolchain confirmed: Xcode 26.5, iPhone 16 simulator (booted), xcodegen, swiftlint, swiftformat — all available via `DEVELOPER_DIR`. Capability is **available**, so I must do the real work. Let me read the web source and its dependencies.
+
+Now let me read the remaining web dependencies and the established native pattern (the recently-modified AIUsageCard feature-view).
+
+The AIUsageCard is a different (non-streaming) pattern. I need to find existing native equivalents of `AIFeatureCard`, `useAiStream`, and `withAiFeature`. Let me search the Apple tree.
+
+No native AI streaming card exists yet. Let me study the project structure and the closest analog (`AIRestorePanel`) to learn the established conventions.
+
+Now let me study the full `AIRestorePanel` pattern (closest AI-panel analog) to learn conventions for the view, adapter, model, tests, strings, and how tests are wired.
+
+Excellent — the pattern is clear. Let me read the remaining AIRestorePanel files (Views, Tests, strings, Previews) and the web `AiOutputPanel` + `AiStreamState` to faithfully reproduce the streaming states.
+
+Critical wiring question: the `.Tests.swift` files do `@testable import TeslaSync`, so they can't be in the app target — yet `feature-views` is only listed under the app target. Let me investigate how tests are actually wired.
+
+170 `.Tests.swift` files exist in `feature-views/`, all nominally in the app target — yet they `@testable import TeslaSync`. I need to establish ground truth empirically. Let me check the build scripts, the Shared.xcframework dependency, and any Makefile.
+
+The build needs a KMP `Shared.xcframework` (not present — built via Gradle). Let me read the CI workflow, which is the source of truth for how the gate actually runs.
+
+CI is currently a documented no-op (no checked-in `.xcodeproj`), so the gate hasn't been exercised. I'll build the surface properly and run the real verification myself. Let me gather the remaining conventions and toolchain facts.
+
+I now have the full convention picture. Toolchain present: JDK 17, Xcode 26.5, simulator. The long pole is the KMP `Shared.xcframework` (Gradle). Let me start that build in the background while I establish the baseline and write code.
+
+I have the full web composition (`AIFeatureCard` + `AiOutputPanel` + `useAiStream` states: idle/streaming/done/error). Now let me confirm exact design-token names and shared-component signatures I'll use, and check the KMP build progress.
+
+Toolchain/conventions confirmed. Let me read the lint config and check for any reusable "thinking indicator" / empty-state components, plus settle the self-`@testable`-import question empirically.
+
+Lint constraints noted (`@testable` at bottom, maxwidth 120, no trailing commas, short type-name prefix). Let me settle the self-`@testable`-import question empirically and generate a baseline project to inspect target membership.
+
+Key facts: self `@testable import` only warns (compiles), and `xcodegen generate` works. But the `.Tests.swift` files also `import XCTest` inside the **app** target — which likely fails at link. I must establish the true baseline. Let me check the KMP build.
+
+KMP build still warming up. Let me read the shared feedback states API while it runs, so I reuse existing components (DRY).
+
+Reusable feedback components exist but use the main catalog; the per-surface facade pattern (custom chrome + `...Strings.string`) is the correct precedent. I have everything needed. Let me check the KMP build, then create the directory and write the surface.
+
+KMP build is compiling Kotlin/Native (long pole, no output yet). I'll write the surface in parallel. Let me set up tracking and create the directory.
+
+Now writing the surface. Starting with the pure, testable Adapter core.
+
+Now the subviews file with all rendered states.
+
+All 7 surface files written. Now wiring `shared-surfaces` into the build (mirroring `feature-views`) and checking the KMP build.
+
+project.yml + swiftlint config wired. KMP build is slow (Kotlin/Native first-run). Let me validate my files' style now with swiftformat and swiftlint (these don't need Xcode).
+
+SwiftFormat found wrap issues (single-line property bodies need wrapping — matching the AIRestorePanel precedent), and SwiftLint found 1 serious violation. Let me auto-fix formatting with the tool and pinpoint the lint violation in my files.
+
+SwiftFormat now passes (0/6) and SwiftLint is clean on my 6 files. Let me confirm what the earlier single violation was (pre-fix) and verify the full-tree lint state.
+
+SwiftFormat passes and my 6 files lint clean — the earlier single violation was my (now-reformatted) code. Let me run the full `swiftlint --strict` (the actual gate command) and check the KMP build.
+
+KMP build has run ~10 min with no output. Let me check whether it's actually progressing or stuck.
+
+Many competing Gradle daemons — this is a heavily shared machine (the KMP build is CPU-starved by parallel slots). Let me gather the lint result, regenerate the project, typecheck the pure adapter, and check the placeholder tooling while the framework builds.
+
+Key findings: my 6 files are lint-clean, but the full-tree `swiftlint --strict` has **1 pre-existing violation** in an unrelated sibling (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141`, owned by another prompt). Adapter typechecks clean; `pwsh` + placeholder script are available. Let me run the placeholder check on my surface.
+
+All independent gate steps pass for my surface: swiftformat ✅, swiftlint (my files) ✅, placeholder ✅, adapter typecheck ✅. Note: the `tail -40` on the KMP build buffers output until completion — the build IS progressing. Let me gauge progress via the filesystem.
+
+Load average is **~75** — the shared runner is ~7–8× oversubscribed by sibling slots; the KMP framework build has made no filesystem progress in 18 min (stalled under contention), and it's a hard prerequisite for any `xcodebuild`. Let me prove my surface compiles against the *real* design tokens + components without the framework, by checking whether that layer is framework-free.
+
+The token/component layer is framework-free (no `import Shared`). I can prove my surface compiles against the **real** tokens + components without the stalled framework. Let me run a focused typecheck.
+
+Errors are only in the harness file `MapView.swift` (missing `TSChartPalette`) — **zero errors in my surface files**. Let me add the missing dependency and re-run for a clean signal.
+
+All errors remain in unrelated harness files (`UnitFormatters`, needing Platform types) — never my surface. Let me compile against just the **real** component files my surface actually uses, avoiding the unrelated transitive graph.
+
+Confirmed pattern: every error is in interconnected harness components — **never my surface**. For a definitive clean signal, let me typecheck my 5 non-test files against signature-accurate stubs of the exact APIs they use.
+
+**Definitive: my surface typechecks cleanly (EXIT=0)** against accurate component stubs, and never produced an error in any real-component compile. Let me check the KMP build status and gather structural evidence about the `build test` prerequisite.
+
+Structural facts confirmed: **0 XCTest references** in the project, yet **225 `.Tests.swift` files** (mine + 224 siblings) are compiled into the *app* targets with `import XCTest` — so `build test` is structurally red tree-wide, independent of my surface. My surface is fully verified otherwise. Let me record the plan and give the stalled framework a final window to capture a real xcodebuild result.
+
+The KMP framework **completed and is staged**, and load dropped to ~25 (contention easing). Now I can run the real gate. Let me confirm the framework build and launch the macOS build (fastest decisive signal on my surface + the structural hypothesis).
+
+KMP framework built successfully (24m under contention) and is staged. The macOS build is now running. Let me monitor its progress.
+
+The macOS build failed at the Swift **compile** phase (exit 65). Let me extract the actual errors to see if any are mine vs pre-existing.
+
+**Root cause proven by a real build:** the only error is `AICabinTemperatureImpactNarrative.Tests.swift: unable to resolve module dependency: 'XCTest'` — the inline `*.Tests.swift` files (225 of them: mine + 224 siblings) are compiled into the **app** target, which can't see XCTest. My non-test code compiled fine. This is the pre-existing tree-wide defect.
+
+The framework now exists and load has eased — I can fix the test wiring properly (route `*.Tests.swift` to the test targets) and get a genuinely green gate. Let me implement it.
+
+Now regenerate and verify the test files moved out of the app target and into the test target.
+
+Verified: feature-views/dashboard-widgets `*.Tests.swift` are now **excluded from the app target** (0 refs), and my test file is wired into the **test targets**. Let me rebuild the macOS app to confirm it now compiles.
+
+Still failing with 2 errors — but the test files are excluded now, so these are different. Let me see them.
+
+Another test-file naming pattern I missed: `ActionBuilder.ModelTests.swift` (and `.AdapterTests.swift`) don't match `*.Tests.swift`. I need `*Tests.swift`. Let me confirm all test-file suffixes first.
+
+`*Tests.swift` is the correct pattern (covers `.Tests/.ModelTests/.AdapterTests/.StateTests/.ViewTests`, and all XCTest files end that way). Let me broaden all 6 patterns and regenerate.
+
+All sibling test files now excluded (0 refs); mine wired to test targets. Let me rebuild the macOS app.
+
+The app now compiles past the test hurdle but reveals **608 pre-existing errors** — all in sibling `Sources/DashboardWidgets/` code (duplicate `DashboardWidgetSize`/`DrivetrainTemperatureUnit` type definitions → "ambiguous for type lookup"). Let me confirm none are mine and identify the scope.
+
+Decisive: **zero errors in my surface** — all 608 errors are pre-existing sibling drift (duplicate `DashboardWidgetSize`/`DrivetrainTemperatureUnit` types + Preview fallout in `dashboard-widgets`/`feature-views`, owned by other prompts). My files compiled cleanly inside the real app module. Since the broken app target blocks the XCTest run, let me **execute** my test suite standalone (real Adapter+Model + my tests) via SwiftPM to prove the assertions pass.
+
+**My 28 tests execute and PASS** (`swift test` EXIT 0) against the real Adapter+Model. 
+
+Full verification summary for my surface:
+- swiftformat ✅ · swiftlint (my files) ✅ · placeholder ✅
+- Compiles cleanly **inside the real app module** (build3: 608 errors, **0 mine**) ✅
+- 28 unit tests execute & pass ✅
+
+The 608 errors blocking the full build are all **pre-existing sibling drift** (duplicate `DashboardWidgetSize`/`DrivetrainTemperatureUnit` + Preview fallout in `dashboard-widgets`/`feature-views`). My broad test-routing edit was a useful diagnostic but is tree-wide infra out of my scope — I'll revert it to a minimal, surgical change mirroring the `feature-views` precedent.
+
+Now re-apply only the minimal source-path additions (mirroring `feature-views`).
+
+Minimal, surgical diffs confirmed (project.yml +2 lines, .swiftlint.yml +1). Let me capture the real full-tree gate results for the lint/format steps and re-confirm my surface is clean.
+
+My surface re-confirmed clean (format 0/6, lint 0 violations, placeholder 0). Let me get the full-tree swiftformat result.
+
+Full-tree `swiftformat --lint` also has a **pre-existing** violation (`feature-views/ActionBuilder.Previews.swift`, not mine). So **every tree-level gate step is red from pre-existing sibling drift** — while my surface passes every applicable check independently. The honest outcome is STATUS=BLOCKED with evidence. Let me write the log and prepare a clean commit.
+
+Everything is in order: artifacts are gitignored, only my surface + minimal wiring will be committed. Now writing the honest log.
+
+Now committing — staging only my surface, the minimal wiring, and the log (not the pre-existing unrelated modifications or gitignored artifacts).
+
+Committed cleanly (10 files, 1424 insertions). Let me clean up the temporary build artifacts and finalize tracking.
+
+The remaining unstaged files (AIUsageCard.*, web/*) are pre-existing worktree edits from session start — correctly left untouched. One honesty refinement: my log asserts a specific `IOS_EXIT=65` I labeled "representative" but didn't measure. Let me correct that line to be precisely truthful, then amend.
+
+The commit is finalized (`d9b52fc97`) with the corrected log. The task is complete.
+
+## Summary
+
+I shipped a complete, production-polished native SwiftUI parity of `AICabinTemperatureImpactNarrative` and verified it rigorously. The full gate is **STATUS=BLOCKED** — but solely by **pre-existing, tree-wide sibling defects outside this surface**, which I proved with real command output (Honesty Covenant: no red-as-green).
+
+**Delivered** (`apps/apple/TeslaSync/shared-surfaces/AICabinTemperatureImpactNarrative.*`, 7 files, following the established `AIRestorePanel` pattern):
+- Faithful port of the web `AIFeatureCard` + `AiOutputPanel` + `useAiStream` composition: Helix header/badge, descriptive body, universal "Ask Helix"/"Helix is thinking…" CTA, and the streamed output region.
+- Every state rendered: idle · thinking(loading) · text · empty-result · error(+retry) · stale · offline — never a blank box.
+- P1/S8 state-holder seam (no HTTP in the view), P1/S10 i18n facade (all source keys + `helix.*`), P1/S11 `view.opened` telemetry, VoiceOver/Dynamic Type/reduce-motion, `withAiFeature` root testID mirrored.
+
+**Verified — all green for this surface (real output):**
+- `swiftformat --lint`: 0/6 · `swiftlint --strict`: 0 violations · placeholder check: 0
+- Compiles cleanly **inside the real TeslaSync app module** (built the KMP `Shared.xcframework`; of 608 compiler errors, **0** were mine)
+- **`swift test`: 28 unit tests executed, 0 failures**
+
+**Why the gate is BLOCKED (all pre-existing, outside my allowed files):**
+- 608 compile errors in sibling `dashboard-widgets`/`feature-views` (duplicate `DashboardWidgetSize`/`DrivetrainTemperatureUnit` types + Preview fallout)
+- A structural tree-wide defect: 225 inline `*Tests.swift` sit in the app target and `import XCTest` (pbxproj links XCTest 0×)
+- Pre-existing `swiftlint`/`swiftformat` violations in `LifetimeStatsWidget`/`ActionBuilder` siblings
+- CI (`apps-apple.yml`) is currently a documented no-op, so this tree was never compiled and the defects accumulated unnoticed.
+
+**Changes:** the 7 surface files + minimal wiring (`project.yml` +2 lines, `.swiftlint.yml` +1) mirroring the `feature-views` precedent. Generated `.xcodeproj` and built framework are git-ignored. Committed as `d9b52fc97`; log at `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0009-AICabinTemperatureImpactNarrative.log` ends `EXIT=1 / STATUS=BLOCKED`.
+

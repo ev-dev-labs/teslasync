@@ -1,0 +1,18 @@
+I'll start by exploring the repository structure and checking the prerequisites for this task, including the web source, the Apple app structure, and the required toolchain.
+
+Key findings: `apps/apple/` exists with full structure, web source exists, and `swift`/`swiftlint`/`swiftformat` are available. But `xcodebuild -version` failed despite the binary existing. Let me investigate the toolchain and existing Apple app conventions in detail.
+
+`xcodebuild` requires full Xcode but only Command Line Tools are installed — no iOS Simulator SDK, no `simctl`. This is a platform-capability constraint central to the BLOCKED clause. But I must still do the full implementation. Let me gather complete evidence and study the established conventions.
+
+Excellent — critical discoveries: the macOS SDK has SwiftUI/Charts/MapKit/Combine, `pwsh`, `xcodegen`, `swiftlint`, `swiftformat` are all present. But **`xcodebuild` requires full Xcode (only CLT installed), and there's no iOS Simulator SDK or `simctl`** — so the gate's build/test steps can't run. I'll do the complete implementation, run every check I can, and study the established conventions closely. Let me read the best analog (`RecentActivity`) and Drive-specific (`DriveStatCards`) file sets.
+
+The convention is rich and well-established. Let me read the remaining RecentActivity files (Model, Adapter, Views, Previews, strings, Tests) and the Drive-data analog (DriveStatCards) to internalize the exact patterns for state-holders, i18n facade, diagnostics, and tests.
+
+Let me read the View/Previews/strings/Tests patterns plus the Drive-data analog and find the shared design tokens and any table component.
+
+The convention is now very clear. Let me read the test framework pattern, previews, the web helpers (`durationStr`, `formatDateTime`), check for a shared native table component, and the project structure to confirm how files are included.
+
+Now I have `durationStr`. Let me read the date/number/unit formatting from web, the test framework used (RecentActivity.Tests.swift), the project config, and locate the shared design tokens and any native table component.
+
+There's a native `DataTable.swift` shared component — perfect, since the web source uses `DataTable`. Let me read it, find the design tokens, read the project config, and find a feature view that already uses the native DataTable.
+

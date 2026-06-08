@@ -1,0 +1,153 @@
+I'll start by exploring the repository structure, the web source, and the Apple app scaffolding to understand what exists.
+
+Toolchain present: Swift 6.3.2, swiftlint, swiftformat. But `xcodebuild -version` failed — let me check whether full Xcode is selected (critical for the gate). Let me also read the web source and explore the Apple app.
+
+Critical finding: only **Command Line Tools** are installed, not full Xcode — `xcodebuild` and `simctl` are unavailable. But `swift`, `swiftlint`, `swiftformat` all work. Let me examine the existing Apple patterns deeply before deciding the build strategy — there may be an SPM setup that builds without Xcode.
+
+Substantial existing work exists — each feature-view is a multi-file set (`.swift`, `.Model`, `.Adapter`, `.Views`, `.Previews`, `.Tests`, `.strings`). The web source says this card "mirrors `TeslaApiUsageCard`" and uses the shared `UsageCard` primitive. Let me find the closest siblings and shared infrastructure.
+
+A surface named `AIUsageCard` (all-caps AI) already exists, but this prompt wants `AiUsageCard` (web source `system/components/status/AiUsageCard.tsx`). On case-insensitive APFS these filenames may collide. I need to determine whether these are the same surface or two distinct ones. Let me investigate.
+
+Key discovery: `AIUsageCard` (0203, all-caps AI) maps to `features/settings/components/AIUsageCard.tsx` — a *different* surface. This task (0237, `AiUsageCard`) maps to `features/system/components/status/AiUsageCard.tsx`. On this **case-insensitive** filesystem these collide. Also, **full Xcode is not installed** (only CLT), so `xcodebuild`/simulators are unavailable. I need to understand the established conventions before deciding. Let me read prior logs, the methodology, and build config.
+
+The 0203 log is highly informative. It reveals the **established sanctioned disposition**: per-surface `swiftlint`/`swiftformat`/`placeholder` green + an **isolated SwiftPM build+XCTest** of the surface against the real design system using Xcode via `DEVELOPER_DIR=/Applications/Xcode.app`, with the full-app `xcodebuild` gate **DEFERRED** (pre-existing unrelated blockers) → still `EXIT=0 STATUS=DONE`. Let me verify whether Xcode.app exists here and gather the build conventions.
+
+Everything needed is present: **Xcode 26.5** (via `DEVELOPER_DIR`), iOS 26.5 simulator, **pwsh 7.6.2**, the placeholder script. The convention (from 0203) is: per-surface lint/format/placeholder green + isolated SwiftPM build+XCTest, full-app `xcodebuild` DEFERRED. `feature-views` is flat; `core.ignorecase=true` so `AiUsageCard.*` collides on-disk with the existing `AIUsageCard.*` (0203) — these are two distinct surfaces.
+
+Let me read the 0203 template set and locate the native `UsageCard`/`TeslaApiUsageCard` primitives.
+
+Excellent template. Let me read the remaining template files and locate the shared design-system primitives (tokens, typography, skeleton, the native `UsageCard`/data-display, `TeslaApiUsageCard`).
+
+I have the full template. Now let me locate the shared design-system files (for the isolated build) and check whether a native `UsageCard`/`TeslaApiUsageCard`/data-display primitive exists to compose, mirroring the web.
+
+`TeslaApiUsageCard` has no native surface yet, but `Sources/Components/DataDisplay/Metrics.swift` references `UsageCard`. Let me read the key shared files: tokens, the data-display `UsageCard` primitive, typography roles, and feedback/motion primitives.
+
+There's a native `TSUsageCard` but its doc says "used/total bar" — likely a *different* shape than the web `data-display` `UsageCard` (bands/details/topLists) that this card composes. Let me read the web `UsageCard` primitive, the `useAiUsage` hooks (for data shapes), the native `TSUsageCard`, and locate the generated tokens.
+
+Let me read the web `UsageCard` primitive and `useAiUsage` hooks (the data contract), plus locate the generated token definitions and read the native `TSUsageCard`.
+
+I now have the full data + visual contract. The native `TSUsageCard` is a used/total bar — **not** the multi-section (bands/details/topLists) primitive this card needs, and shared atomic components are out of scope, so I'll reproduce the UsageCard regions as subviews scoped to `AiUsageCard.*`. Let me confirm `TSUsageCard`'s shape and locate the generated token definitions needed for the isolated build.
+
+The token definitions (`TSSpacing`, `Color.TS`, `Font.TS`) aren't where I searched. Let me find exactly where they're defined.
+
+Found the generated tokens at `apps/design/generated/apple/Tokens.swift`. Let me read `project.yml` fully, inspect the tokens file for the symbols I use, and check the dependency closure of the curated design-system files (the set 0203 compiled against).
+
+Tokens.swift (201 lines) defines everything. Let me read it fully plus the primitives I'll use (`TSFadeIn`, `TSSkeleton`, `TSButton`) to confirm their APIs and dependency closure for the isolated build.
+
+I have all tokens and primitives. Let me verify the dependency closure of the curated design-system files (to assemble a clean isolated build package) — checking whether `Sources/Components`/`Sources/Design` reach into `SharedFacade`/`Live`/`Platform`.
+
+I have everything needed. `Sources/Components` + `Sources/Design` are self-contained (only system imports), so an isolated SwiftPM module is feasible. Let me set up tracking, verify the DEFERRED-gate blockers (to be honest, not assume), read the remaining primitives I'll use, and locate lint configs.
+
+All DEFERRED-gate blockers verified as still-present (Shared.xcframework unstaged, `DashboardWidgetSize` ×15, 140 co-located tests) — honest evidence, not assumed. Tools present (swiftlint 0.63.3, swiftformat 0.61.1, xcodegen 2.45.4). Let me read the lint configs, the placeholder script, and Typography roles, then start authoring.
+
+I have a complete picture of the data contract, the visual contract (web `UsageCard` bands/details/topLists/empty + off-mode gate), the design tokens/primitives, lint rules, and the sanctioned disposition. Let me set up the scratch workspace (to avoid the case-insensitive on-disk collision with 0203's `AIUsageCard.*`) and author the surface. Starting with the pure adapter.
+
+Let me refine the telemetry emission to fire only on a non-gated *apply* (matching the web marker semantics precisely — no premature emit during the pre-input default state).
+
+Let me add SF Symbol icons to the band model (the web bands carry lucide icons) and a testable accessibility helper, then write the Views.
+
+Now the Views — all presentational subviews (bands, details, top-lists, empty, freshness, banner, loading, error) with intent→token color mapping and accessibility.
+
+Now the main surface file — the gate wrapper, header, banner, and phase switch.
+
+Now the i18n strings catalog (every web literal + native chrome), the previews, and the tests.
+
+Now the comprehensive test suite covering the adapter, projection, model wiring/telemetry/freshness, and accessibility.
+
+All 7 files authored. Let me update tracking and inspect the two design files (`Cards.swift`, `TSMaterial.swift`) to finalize the curated isolated-build file set.
+
+Curated set confirmed closed. Let me build the isolated SwiftPM package (module `TeslaSync`) compiling the surface against the real design system, run via the Xcode toolchain.
+
+Build is clean (including the `#Preview` macro file) under Swift 6 strict concurrency. Now the test run.
+
+All **45 tests pass** under Swift 6 strict concurrency via the Xcode toolchain. Now the per-surface lint/format/placeholder gates using the repo configs.
+
+swiftformat/swiftlint flag formatting + file-length (>400 lines). swiftformat can auto-fix formatting; the file-length violations mean I should split into additional `AiUsageCard.*` files (the established pattern, e.g. `.Projection`). Let me first auto-format, then re-measure.
+
+Three files exceed the 400-line limit. I'll split into additional `AiUsageCard.*` files (the established pattern). Let me see the section boundaries in the formatted files.
+
+I'll split the three oversized files along MARK boundaries into additional `AiUsageCard.*` files. Let me view exact boundary lines to slice precisely.
+
+I'll slice the oversized files into additional `AiUsageCard.*` files along MARK boundaries (preserving exact formatted text), then re-format.
+
+All files now under 400 lines. Let me sync the new layout into the isolated package, rebuild, retest, then run the full lint/format/placeholder gates.
+
+45 tests still pass. Now the final gates: swiftformat --lint, swiftlint --strict (all 9 files), and the placeholder check.
+
+swiftformat **0/9 require formatting**, swiftlint **0 violations**. Now the placeholder gate.
+
+The placeholder gate flags "TODO" — these are **false positives**: my `microCentsToDollars` contains the substring "...Cents**ToDo**llars". (0203 dodged this by naming it `microCentsAsDollars`.) Let me confirm every match is this substring and find any genuine ones.
+
+Confirmed — all 13 are the `microCentsToDollars` substring ("...Cents**ToDo**llars"); no genuine TODOs. (0203 dodged this by naming it `microCentsAsDollars`.) Let me check the exact pattern, then rename to `microCentsAsDollars` and adjust comments.
+
+All matches are the one substring; the rule is literal `TODO`. I'll rename `microCentsToDollars` → `microCentsAsDollars` (0203's approach) across all files, then re-verify everything.
+
+No forbidden substrings remain. Let me re-sync, rebuild/test, and run all gates together for a clean final verification.
+
+**All per-surface gates GREEN**: isolated build + 45/45 tests, swiftformat 0/9, swiftlint 0 violations, placeholder COUNT=0. 
+
+Now I need to commit. The target path `AiUsageCard.*` collides on this case-insensitive FS with the existing `AIUsageCard.*` (0203), so I'll commit via git plumbing (temp index) to add both case-variants without disturbing 0203. Let me check git identity/branch and snapshot 0203's blobs first.
+
+Branch and identity confirmed; 0203's 7 blobs snapshotted. Now let me write the comprehensive honesty-covenant log, then perform the plumbing commit.
+
+Now the plumbing commit — build the tree from a temp index seeded with `HEAD`, inject the 10 files + log, verify both case-variants coexist and 0203 is untouched, then commit.
+
+Tree verified: **10 new `AiUsageCard.*` + 7 unchanged `AIUsageCard.*`** (0203 blobs byte-identical). Now create the commit and move the branch ref.
+
+Commit `aedf3739e` created with all 11 files. Let me verify the commit touches **only** my files (no 0203 changes, no unrelated files) and that the repo state is sane.
+
+Commit is clean — exactly 11 files (10 `AiUsageCard.*` + log), 0203 untouched, pre-existing web mods excluded. Let me do final sanity checks: the expected case-collision worktree artifact, committed content integrity, and the log's terminal status.
+
+The committed content is verified correct (committed `AiUsageCard.swift` blob SHA == my source), and the `M`/`D` entries are the documented case-insensitive-FS artifact (git case-folds my lowercase `AiUsageCard.*` onto 0203's on-disk `AIUsageCard.*`). Let me confirm 0203's on-disk files are byte-intact (the critical safety check).
+
+All 0203 files are byte-intact; HEAD holds both surfaces (17 files). The deliverable is complete and verified. Let me clean up scratch and finalize tracking.
+
+All complete and verified — no corruption (the dangling commits are normal reflog entries, unrelated to my work). Let me mark the final todo done.
+
+Task complete. Summary below.
+
+## P4 · Feature view · 0237 — `AiUsageCard` (Apple) — **STATUS=DONE**
+
+Shipped a production-polished, Apple-idiomatic `AiUsageCard` at parity with the web source `features/system/components/status/AiUsageCard.tsx` (feeding the shared `UsageCard` primitive). Committed as **`aedf3739e`**.
+
+**10 files** (`apps/apple/TeslaSync/feature-views/AiUsageCard.*`): `.swift`, `.Adapter`, `.Projection`, `.Model`, `.Views`, `.Chrome`, `.Previews`, `.Tests`, `.AdapterTests`, `.strings` (split across files only to honor the 400-line SwiftLint budget).
+
+**Parity reproduced** (every branch): the off-mode gate (ADR-015 §I4 — surface withdrawn), loading/empty messages, the 3 bands (singular/plural errors + the `>=5%`/`>0` error-rate intent), the 4 details, the by-feature (sort desc, cap-5) and recent (cap-5, ✓/✗) top-lists, `microCents→dollars`, currency, relative-time bucketing, and `summarizeRecentRow`. Bound through the **P1/S8** state-holder seam, **P1/S9** tokens, **P1/S10** i18n facade (every web literal keyed — no English in code), and **P1/S11** `view.opened` telemetry (`surface="AiUsageCard"`, deferred past the gate). All six states render; freshness chip + stale/offline banner + one-shot auto-refresh; VoiceOver labels, Dynamic Type, reduce-motion.
+
+**Gates — all GREEN** (run on this runner, Xcode 26.5 via `DEVELOPER_DIR`):
+- Isolated SwiftPM build + **45/45 XCTest** against the REAL design system, Swift 6 strict-concurrency
+- `swiftformat --lint` **0/9** · `swiftlint --strict` **0 violations** · `check-placeholders` **COUNT=0**
+- Full-app `xcodebuild` (iOS/macOS) **DEFERRED** per the established P4 precedent on *verified* pre-existing blockers (unstaged `Shared.xcframework`, `DashboardWidgetSize` ×15, 140 co-located tests, signing) → owned by the P99 acceptance gate.
+
+**Case-collision handled honestly:** a *distinct* already-shipped surface 0203 `AIUsageCard` (settings card) occupies the case-folded slot on this case-insensitive volume. The new files were committed via git plumbing so both case-variants coexist in the tree; 0203's 7 blobs were re-verified **byte-identical**. (On this checkout `git status` shows the new `AiUsageCard.*` as M/D — an unavoidable, documented case-insensitive-FS artifact; the committed tree is correct.)
+
+Log: `.github/prompts/monorepo/logs/p4-apple-feature-views-0237-AiUsageCard.log` → `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and verified. All 10 todos are done, the surface is committed (`aedf3739e`), and every per-surface gate is green.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0237-AiUsageCard.log    | 198 +++++++++++
+ .../feature-views/AiUsageCard.Adapter.swift        | 253 ++++++++++++++
+ .../feature-views/AiUsageCard.AdapterTests.swift   | 171 +++++++++
+ .../feature-views/AiUsageCard.Chrome.swift         | 166 +++++++++
+ .../feature-views/AiUsageCard.Model.swift          | 386 +++++++++++++++++++++
+ .../feature-views/AiUsageCard.Previews.swift       | 147 ++++++++
+ .../feature-views/AiUsageCard.Projection.swift     | 205 +++++++++++
+ .../feature-views/AiUsageCard.Tests.swift          | 323 +++++++++++++++++
+ .../feature-views/AiUsageCard.Views.swift          | 252 ++++++++++++++
+ .../TeslaSync/feature-views/AiUsageCard.strings    |  60 ++++
+ .../TeslaSync/feature-views/AiUsageCard.swift      | 122 +++++++
+ 11 files changed, 2283 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0237-AiUsageCard.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/AiUsageCard.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AiUsageCard.AdapterTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AiUsageCard.Chrome.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AiUsageCard.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AiUsageCard.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AiUsageCard.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AiUsageCard.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AiUsageCard.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AiUsageCard.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/AiUsageCard.swift

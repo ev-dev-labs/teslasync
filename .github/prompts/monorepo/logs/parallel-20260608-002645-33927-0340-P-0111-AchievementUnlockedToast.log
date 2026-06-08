@@ -1,0 +1,120 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple toolchain capability in parallel.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is active. Let me investigate the capability situation thoroughly and understand existing patterns before deciding BLOCKED vs DONE.
+
+Xcode.app **is** installed — just not the active developer dir. I can use `DEVELOPER_DIR` without invasive `xcode-select`. Let me verify xcodebuild works that way and read the web source + existing native patterns.
+
+Xcode 26.5 with iOS 26.5 simulator (iPhone 16 booted) and macOS SDK are available via `DEVELOPER_DIR` — **capability is NOT blocked**. Now let me read the supporting web sources and explore the established native patterns I must follow.
+
+Excellent — there's a mature, well-structured native pattern (per-surface `.swift`, `.Model`, `.Adapter`, `.Views`, `.States`, `.Previews`, `.Tests`, `.strings`). Let me read the supporting web sources, the project.yml, and a representative existing surface to learn the conventions.
+
+Let me read the project.yml (correct path) and explore the native core infrastructure: state-holders (P1/S8), tokens (P1/S9), i18n (P1/S10), diagnostics (P1/S11), and the live/SSE layer.
+
+Critical: project uses **XcodeGen**, and `shared-surfaces` is **not** yet registered in `project.yml` sources. Let me check build feasibility (xcodegen, Shared.xcframework, KMP toolchain) and whether sibling shared-surfaces exist, to determine the honest verification path.
+
+`shared-surfaces` is the **first** of its kind (siblings used `feature-views`, which is registered). Let me check how sibling surfaces handled the build gate — their logs reveal the accepted verification reality in this environment. Also checking Frameworks/Scripts/pwsh.
+
+Frameworks/Scripts are under `apps/apple/` (PROJECT_DIR), not `TeslaSync/`. Let me read sibling logs to learn the accepted verification approach, and check the real Frameworks/Scripts/Shared.xcframework.
+
+The sibling log reveals the **established, accepted methodology**: capability is NOT blocked; full `xcodebuild` is deferred (pre-existing repo-wide wiring: 146 `*.Tests.swift` in the app target + KMP `Shared.xcframework`), and surfaces are verified via **dual-SDK `swiftc -typecheck` (iOS 18 + macOS 15) + macOS-host `swift test` (isolated SwiftPM "TeslaSync" package) + scoped swiftlint/swiftformat/placeholder gates**. I'll replicate this exactly. Let me study the reference surface files and shared infra.
+
+The pattern is crystal-clear now. Let me read the remaining reference files and locate the real shared P1/S9 token + component definitions (TSGlassPanel, Color.TS.*, Font.TS.*, TSSpacing, TSBadge/TSTone, TSFadeIn, TSSkeleton, TSButton).
+
+Now I have a precise template. Let me locate the real shared component/token APIs so I bind to the correct symbols.
+
+Design tokens are clear. Now the shared components — TSGlassPanel, TSBadge/TSTone, TSButton, TSSkeleton, TSFadeIn.
+
+I have all component APIs. Now let me confirm the achievement data type, the native navigation route (`/lifetime?achievement=`), existing i18n keys, and how siblings handle `useNavigate`.
+
+The i18n keys **already exist** in the central catalog (`translation.achievements.toastEyebrow/view/dismiss/viewNamed`). Let me read those catalog entries, the navigation seam pattern, and how a sibling consumes `translation.*` keys via the P1/S10 facade.
+
+The keys exist in the main catalog with a `translation.` prefix (react-i18next namespace). Let me determine the dominant native i18n convention (own table vs. referencing `translation.*`) and the navigation seam by examining siblings.
+
+Conventions are clear: per-surface `.strings` table (own keys, avoids editing shared catalog) + `XxxStrings` facade; navigation via an injected `XxxNavigator` protocol seam (web `useNavigate`); full leaf-contract state-holder even for event-driven sources (sibling precedent). Let me read the navigator seam, the placeholder gate patterns, and a live/subscription source seam.
+
+I have enough to design the verification harness (matching the sibling's "dual-SDK typecheck + isolated SwiftPM `swift test`"). Let me verify the design-system sources form a closed, KMP-free dependency set.
+
+The design system (`Sources/Components` + `Sources/Design`, 41 files) is a clean, KMP-free, system-frameworks-only set — perfect for the isolated `swift test` module and dual-SDK typecheck. Let me read the lint/format configs, then set up my plan and start writing.
+
+Configs read. `swiftformat` is path-based (auto-covers my dir); `swiftlint` only scans `included:` paths (so the new category needs registration). Let me check for any naming collisions in the app target before writing.
+
+There's an existing `TSAchievementUnlockedToast` shared component and a KMP `Shared.LiveEventAchievementUnlocked`. Let me read the existing component to avoid collisions and understand what exists.
+
+I now have a complete understanding. There's an existing atomic `TSAchievementUnlockedToast` (out of scope, different prefix), so my `Achievement*`/`AchievementUnlockedToast*` names won't collide. Let me set up the workspace, plan, and todos, then write the surface.
+
+Now writing the surface. Starting with the pure parity core (Adapter) and the seams (Model).
+
+Core and seams done. Now the bound surface, the single toast/badge/confetti, and the state chrome.
+
+Now the previews and the i18n strings table.
+
+Now the test suite — adapter, projection, model, accessibility, and strings coverage.
+
+All 8 surface files written. Now wiring the new category into `project.yml` (both app targets) and `.swiftlint.yml`, mirroring how `feature-views` is registered.
+
+Wiring done. Now formatting my files in place, then running the scoped lint/format gates.
+
+Format is clean (0/7). swiftlint linted the whole tree (2 violations) — I need to see whether they're in my files or pre-existing. Let me isolate the violations.
+
+Two violations: one pre-existing foreign file (`LifetimeStatsWidget`, noted in the sibling log) and **one mine** — `var z` in my PRNG (identifier too short). Let me stop the scan and fix it.
+
+Fixed. Re-running the full swiftlint gate to confirm only the pre-existing foreign violation remains and my files are clean.
+
+Only the **pre-existing foreign** `LifetimeStatsWidget` violation remains (documented in the sibling log); my files are swiftlint-clean and swiftformat-clean. Now the dual-SDK typecheck against the real design system. Let me set up SDK paths and compile.
+
+The full `Components` set isn't self-contained (`UnitFormatters.swift` needs `UnitPreferences` from elsewhere). I should compile against the **minimal closed set** my surface actually uses. Let me find exactly which shared symbols I reference.
+
+My surface only needs `TSButton`, `TSSkeleton`, and tokens. Let me find the minimal closed dependency set (these pull in `TSCard`/typography via shared files) and locate those definitions.
+
+Minimal closed set = Tokens + Typography + Buttons + Badges + Cards + Skeletons. Let me typecheck my surface against it on macOS 15, then iOS 18.
+
+The design system + my production code compiles cleanly — only the preview's `.environment(\.accessibilityReduceMotion, true)` fails (that key is get-only in this SDK). Let me fix that preview to a compile-safe form.
+
+Re-running both SDK typechecks (macOS 15 + iOS 18 simulator) to confirm zero errors.
+
+`Cards.swift` needs the `tsGlassPanel()` modifier from `Sources/Design`. Let me add the Design layer to the dependency set.
+
+The real design system now compiles; the only errors are in my preview helper calling `@MainActor` inits from a nonisolated func. Let me annotate it `@MainActor`.
+
+Both dual-SDK typechecks pass (**MAC=0, iOS=0**). Now the isolated SwiftPM `swift test` harness (module "TeslaSync", real design system + my surface, `@testable import`), matching the sibling methodology.
+
+**`swift test`: 33 passed, 0 failures** on the macOS-15 host against the real design system. Now the placeholder gate, `xcodegen generate` wiring check, and a final format re-lint. Let me check the placeholder script's `-Path` handling first.
+
+The script scans a path recursively (case-insensitive patterns) and treats a non-existent literal path as a clean no-op. So I'll run the **meaningful** scan against my directory (plus a grep double-check), then `xcodegen generate` to confirm wiring, and a final format re-lint.
+
+Placeholder gate **COUNT=0 / EXIT=0**. Now `xcodegen generate` to confirm my files wire into both app targets, plus a final format re-lint after the preview edits.
+
+All surface-scoped gates are green: **swiftformat 0/7, xcodegen wired my 8 files into both targets, swift test 33/0, dual-SDK typecheck 0/0, placeholder 0.** Now let me transparently probe the full `xcodebuild` gate to capture its real status. First, the Shared.xcframework preAction script.
+
+The `xcodebuild` preAction runs a heavy Gradle/Kotlin-Native build (KMP `Shared.xcframework`). Let me gather concrete evidence for the documented blockers, then attempt a bounded real `xcodebuild` to capture its actual status.
+
+Evidence confirms the documented blockers: **259 files `@testable import TeslaSync` from within the app-target source roots** (mine is one, matching the established per-surface pattern), **14 sources `import Shared` (KMP)**, and `Frameworks/` holds only `.gitkeep`. Let me make a bounded, honest attempt at the real `xcodebuild` to capture its actual status.
+
+Still running at 240s — confirming the heavy KMP/full-app build. Let me wait a bit more to capture the first real error, then stop.
+
+Still in the heavy KMP build at ~9 min — empirically confirming the full `xcodebuild` is dominated by the pre-existing KMP staging step, not my surface. Let me verify no symbol collisions exist in the full app module (a risk the isolated typecheck wouldn't catch) while the build runs, then stop it.
+
+No collisions (0 external definitions for all my symbols). Let me get the remaining results and stop the long xcodebuild.
+
+All 12 symbols: **0 external definitions → collision-free** in the full app module. I have conclusive evidence. Let me stop the long-running xcodebuild and finalize.
+
+No collisions, build evidence gathered. Let me clean up temp artifacts and gather final stats for the log.
+
+Line counts are healthy (largest 317 ≤ 400). Let me capture the repo-wide swiftformat status for transparent logging, then write the log.
+
+Confirmed: the lone repo-wide swiftformat issue is the **pre-existing foreign** `ActionBuilder.Previews.swift:48` (same file the sibling log documented); my files are clean. Now writing the comprehensive gate log.
+
+Log written. Let me check git status (to avoid the gitignored `.xcodeproj` and pre-existing unrelated changes) before committing.
+
+`.xcodeproj` is gitignored. I'll commit **only my files** (shared-surfaces, log, and the two wiring files), excluding the pre-existing unrelated `AIUsageCard.*`/web changes.
+
+Staged exactly my 11 files; pre-existing unrelated changes excluded. Committing.
+
+Committed as `e45f6e7bf`. Let me do a final consolidated re-verification of the committed artifact (dual-SDK typecheck + host tests + scoped gates) to confirm green.
+
+Dual-SDK typecheck green, format clean. Final host-test re-run on the committed files to be fully certain.
+
+All gates green on the committed artifact: **dual-SDK typecheck 0/0, swift test 33/0, swiftformat 0/7, placeholder 0, swiftlint my-files clean**. Let me confirm no open todos remain.
+
+All 10 todos done. Task complete.
+

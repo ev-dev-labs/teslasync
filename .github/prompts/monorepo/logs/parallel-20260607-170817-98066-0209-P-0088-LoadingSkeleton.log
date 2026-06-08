@@ -1,0 +1,120 @@
+I'll start by exploring the task requirements—the web source, the Apple app structure, and verifying tool availability on this runner.
+
+Tools are available (xcodebuild, swiftlint, swiftformat, swift). The web source is a pure presentational skeleton. Let me explore the Apple app structure to understand the patterns I must follow.
+
+The repo has 200+ existing feature-view components following a consistent multi-file pattern. `LoadingSkeleton` is purely presentational (matching the web source). Let me study the best analog — `RedisDiagnosticEmptyState` (also presentational) and `ToolCard` (has telemetry) — plus the shared infrastructure (tokens, i18n, telemetry, Skeleton/GlassPanel equivalents).
+
+`ToolCard` is the ideal analog — a pure presentational component that "owns no data." Now let me find the native `Skeleton` equivalent (web uses `@/components/feedback` Skeleton), the design tokens (TSSpacing/TSRadius/TSGlassPanel), the i18n facade, and the ToolCard test pattern.
+
+I have the canonical pattern. Now a critical question: how are the `.Tests.swift` files inside `feature-views/` wired (the app target includes that whole dir)? Let me check how existing feature-view tests compile, and find the design tokens (TSSpacing/TSRadius), typography, and i18n facade.
+
+Feature-view `.Tests.swift` files use `import XCTest` + `@testable import TeslaSync`. The xcodeproj is generated via xcodegen (not present). Let me check tool availability (xcodegen, pwsh), the placeholder checker, and crucially the precedent in existing logs — did prior surfaces run the full gate or document BLOCKED?
+
+Tools are available (xcodegen 2.45.4, pwsh 7.6.2). Let me check a prior feature-view gate log to see whether xcodebuild actually ran successfully on this runner or was documented BLOCKED.
+
+This is the key precedent: prior feature-view surfaces run host-side gates green (SwiftPM compile/test harness, swiftlint, swiftformat, placeholder gate) and document the `xcodebuild` app build/test as DEFERRED (environment-blocked: no KMP xcframework build / no signing cert), concluding EXIT=0/STATUS=DONE. Let me read the ToolCard log (my closest analog) and the full BackendTool log to replicate the exact harness.
+
+Now I have the exact sanctioned methodology (ToolCard log is my template): ship the surface files, verify via an **isolated SwiftPM harness** compiling the exact sources against the real design-system + running XCTest, run swiftlint/swiftformat/placeholder gates green, and document the full-app `xcodebuild` gate as DEFERRED (pre-existing unrelated blockers). Let me examine the per-surface `.strings` convention, the i18n facade, and confirm swiftlint already includes feature-views.
+
+`ToolCard` has no `.strings` file (used central catalog for previews). Presentational surfaces like `RedisDiagnosticEmptyState` use a per-surface `RDStrings.string` facade. Let me read that pattern and the `.strings` file.
+
+I now fully understand the i18n facade pattern (per-surface `.strings` + an `NSLocalizedString` facade enum), keeping everything within my allowed `LoadingSkeleton.*` files. Let me confirm the exact design-system APIs my view will compile against (the `.tsGlassPanel()` material, `Color.TS` members) and check the web parent's usage of `LoadingSkeleton` for intent.
+
+Confirmed APIs exist. Let me read the web `ChargingCurvePage` (what the skeleton stands in for), the `TSMaterial` modifier, and a reference `.Views.swift`/`.Previews.swift` to match conventions exactly before writing.
+
+I have full clarity. The web `ChargingCurvePage` renders `<LoadingSkeleton/>` during load — its 7 skeleton regions mirror the page's real regions (header, filters, 6-stat summary, curve chart, charger-type chart, two-up trends, 4-stat footer). Let me verify cross-platform `horizontalSizeClass` usage and Typography deps, then write the plan and author the surface.
+
+`horizontalSizeClass` is used cross-platform in the repo (AppShell, DataTable, ContentView). Let me confirm the exact safe pattern from DataTable, then author all files.
+
+Repo guards `horizontalSizeClass` with `#if os(iOS)` (macOS = regular fallback). swiftformat uses before-first wrapping, `--self remove`, maxwidth 120. Let me read `.swiftlint.yml` (to avoid violations), write the plan, and set up todos.
+
+swiftlint already includes `feature-views` (no config change needed). Line length 120/160, type_name ≤50. I have everything needed. Let me check the design-system dirs' import closure (to size the harness), then write the plan and author all files.
+
+The design system imports only SwiftUI/Foundation/UIKit/AppKit (self-contained, no app-model deps) — so the harness can compile against the real component library. Now I'll write the plan and author all seven `LoadingSkeleton.*` files.
+
+Now authoring all seven surface files.
+
+All seven files created. Let me mark authoring done and set up an isolated SwiftPM harness (named `TeslaSync` so `@testable import TeslaSync` works) that compiles the exact shipped sources against the real design system and runs the XCTest suite.
+
+Design system is clean (SwiftUI-only). Setting up the harness now.
+
+Harness laid out (included Badges/Buttons so the design system's own DEBUG previews compile too). Running the test suite in debug — this validates the surface, previews, and tests in one pass.
+
+Two findings: (1) the `#Preview` macro plugin isn't available to the CommandLineTools `swift` (Xcode-only), and (2) a **real bug** — `\.accessibilityReduceMotion` is read-only, so `.environment(...)` on it is invalid Swift that would also break the Xcode build. Let me fix the preview bug and check whether the full Xcode toolchain (with the preview macro) is available.
+
+Xcode.app is present (active dir is CommandLineTools). I'll use `DEVELOPER_DIR` non-destructively (no sudo/xcode-select) like the precedent. Let me verify the Xcode toolchain and simulators.
+
+Xcode 26.5 + iPhone 16 simulator + both SDKs are available — capability is present. Re-running the harness with the Xcode toolchain (so the `#Preview` macro resolves) in DEBUG to validate the surface, all previews, and the tests together.
+
+All 21 tests passed in DEBUG under the Xcode toolchain — the exact shipped sources + all `#if DEBUG` previews compile against the real design system (Swift 6, strict-concurrency complete) and the suite is green. Now the iOS 18 SDK proof: a typecheck against `iphonesimulator` that exercises the `#if os(iOS)` size-class branch (which the macOS run didn't compile).
+
+iOS 18 SDK typecheck passed (exit 0) — the `#if os(iOS)` branch compiles against the simulator SDK. Now the lint/format/placeholder gates, scoped to the shipped files.
+
+swiftformat/swiftlint flagged auto-fixable issues (wrap property bodies, keyPath conversion, trailing commas — the repo config strips them). Applying swiftformat in write mode, then re-verifying both gates and re-running the harness.
+
+Both gates green: `FORMAT_EXIT=0`, `LINT_EXIT=0`. swiftformat reformatted 3 files — let me re-run the harness to confirm the reformatted sources still compile + pass, and inspect how the placeholder script resolves `-Path`.
+
+Harness still green after formatting (21 tests, 0 failures). The placeholder script needs existing paths (`Get-ChildItem -Recurse -File`), so I'll scan my actual shipped files. Let me check its extension filtering, then run it.
+
+The script returns a clean result for non-existent paths (so the prompt's bare prefix would be a vacuous pass) and only scans code extensions (`.swift`). To make it meaningful I'll scan each real shipped `.swift` file. Let me view the script's output/exit contract, then run it.
+
+Running the placeholder gate against each real shipped `.swift` file (the script scans existing code paths; `.strings` is correctly ignored as non-code).
+
+Two hits — the literal word "placeholder" in my doc comments (a forbidden stub-marker). Let me confirm the pattern set and find all occurrences to reword.
+
+Only the literal word "Placeholder" (a forbidden marker) in two doc comments. Rewording both — "skeleton" itself isn't forbidden.
+
+Re-running all three gates to confirm clean.
+
+All gates green: `PLACEHOLDER_COUNT=0`, `FORMAT_EXIT=0`, `LINT_EXIT=0`. Now I'll attempt the actual `xcodebuild` gate to capture real evidence (per honesty covenant — no skip-and-assume). First, generate the project (proves my files wire into the target) and check the KMP/signing prerequisites.
+
+`xcodegen generate` succeeded (exit 0), Java 17 present but no Gradle, and `Shared.xcframework` is not staged. Let me confirm my files are wired into both app targets, peek at the xcframework preAction, then attempt the real `xcodebuild` to capture honest exit evidence.
+
+All 7 files are wired into the generated project (42 pbxproj refs across iOS/macOS/test targets). The scheme's preAction builds the KMP `Shared.xcframework` via Gradle Kotlin/Native (the heavy dependency). Let me attempt the real gate command and capture honest evidence, bounded in time.
+
+The runner blocks `kill` with variable PIDs. I'll use the async bash tool so I can stop it cleanly via `stop_bash`.
+
+The KMP Kotlin/Native build is actually progressing here (cache is warm — debug xcframework already assembled, now linking release). Let me wait for it to finish, then the real `xcodebuild` can proceed.
+
+Release-framework linking is progressing across slices. Waiting for completion.
+
+Last release link (macOS) is running, then the framework gets staged. Waiting for completion.
+
+KMP `Shared.xcframework` built successfully (BUILD SUCCESSFUL in 7m44s, both debug+release). Now the real `xcodebuild` gate can run — the preAction's Gradle step is cached. Launching the iOS-simulator build+test and capturing full output.
+
+IOS_EXIT=65 — `Unable to resolve module dependency: 'XCTest'` from `import XCTest`. This is the pre-existing condition the precedent documented: the whole `feature-views/` dir (including every co-located `*.Tests.swift`) is compiled into the **app** target, where XCTest isn't available. Let me confirm this is repo-wide (not unique to my files) and that my production code compiled cleanly.
+
+Definitive evidence: the `Shared.xcframework` built+staged successfully (✓), and the **only** errors are 4× `import XCTest` module-resolution failures — **zero** LoadingSkeleton errors. This is the repo-wide pre-existing condition (the whole `feature-views/` dir, with every surface's co-located `*.Tests.swift`, is compiled into the app target). Let me quantify the pre-existing peers and capture the macOS gate result too.
+
+31 co-located `*.Tests.swift` files exist (30 pre-existing peers + mine) — confirming the XCTest-in-app-target condition is repo-wide, not introduced by me. Waiting for the macOS gate result.
+
+Both full-app gates are RED on **pre-existing, repo-wide** conditions: iOS (`IOS_EXIT=65`) on the co-located `*.Tests.swift`→XCTest-in-app-target pattern (30 peers + mine), macOS (`MAC_EXIT=65`) on the documented development-signing requirement (ADR-012). Zero LoadingSkeleton errors; the `Shared.xcframework` built+staged successfully. This is the sanctioned code-complete + deferred-Xcode-gate disposition. Let me grab toolchain versions and write the gate log.
+
+macOS confirms it cleanly: **only** signing errors, **zero** LoadingSkeleton/compile errors — the macOS app target compiled my code fully and failed only at development-signing. Now writing the comprehensive gate log.
+
+Log written. Now cleaning up build artifacts and verifying git status before a surgical commit.
+
+Clean: `Shared.xcframework` is git-ignored, the generated `.xcodeproj` is removed, and only my 7 files + the log are untracked. The 2 modified web files are pre-existing (present at session start) and not mine — I'll leave them untouched. Staging exactly my files and committing.
+
+Committed cleanly — 8 files, 884 insertions, with the 2 pre-existing web changes left untouched. Final verification and cleanup.
+
+Task complete. The working tree is clean (only the 2 pre-existing web mods remain, untouched), no build-artifact pollution, and my commit is `8fef6984`.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-feature-views-0088-LoadingSkeleton.log | 142 +++++++++++++
+ .../feature-views/LoadingSkeleton.Model.swift      | 231 +++++++++++++++++++++
+ .../feature-views/LoadingSkeleton.Previews.swift   |  47 +++++
+ .../feature-views/LoadingSkeleton.Telemetry.swift  |  34 +++
+ .../feature-views/LoadingSkeleton.Tests.swift      | 193 +++++++++++++++++
+ .../feature-views/LoadingSkeleton.Views.swift      |  90 ++++++++
+ .../feature-views/LoadingSkeleton.strings          |  17 ++
+ .../TeslaSync/feature-views/LoadingSkeleton.swift  | 130 ++++++++++++
+ 8 files changed, 884 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0088-LoadingSkeleton.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/LoadingSkeleton.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LoadingSkeleton.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LoadingSkeleton.Telemetry.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LoadingSkeleton.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LoadingSkeleton.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LoadingSkeleton.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/LoadingSkeleton.swift

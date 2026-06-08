@@ -1,0 +1,152 @@
+I'll start by understanding the environment and the task. Let me check platform capabilities and explore the repo structure in parallel.
+
+Key finding: full Xcode is NOT installed (only Command Line Tools), so `xcodebuild` for iOS Simulator may be blocked. But `swift`, `swiftlint`, `swiftformat` are available. Let me verify Xcode availability and read the web source + Apple structure in depth.
+
+Major update: **Xcode.app IS at `/Applications/Xcode.app`** — just not selected. I can likely override with `DEVELOPER_DIR`. Also there's a large established `feature-views/` (300 files) with clear patterns. Let me verify the toolchain override and study existing patterns.
+
+`DEVELOPER_DIR` override works — **Xcode 26.5 + iPhone 16 simulator are available. Capability is NOT blocked.** I can build and test. Now I'll study the established patterns deeply before writing code. Let me create a plan and examine the shared infrastructure (state-holders P1/S8, tokens P1/S9, i18n P1/S10, diagnostics P1/S11) plus a representative chart-based feature view.
+
+Now let me read the core infrastructure and a representative chart-based feature view set (ChargingDetailSection — same charging domain) to clone the exact patterns.
+
+Correct path is `apps/apple/Sources`. Two app targets compile `feature-views`. Critical feasibility questions: does the KMP `Shared.xcframework` build in this env, and how are co-located `.Tests.swift` wired? Let me investigate.
+
+Critical findings: `Shared.xcframework` must be built via Gradle/Kotlin (heavy), and the gate uses PowerShell. Let me verify those feasibility points while reading the core pattern files (correct paths now).
+
+Good — `pwsh`, gradlew, java 17 all present; the gate is theoretically runnable. Now let me read the state-holder model, adapter, charts, views, and strings patterns for the exemplar.
+
+Excellent — the feature-view layer is **KMP-free** (only Foundation/SwiftUI/Observation/OSLog); it uses a `Source` seam with in-memory impls for tests/previews. My `ChartsRow.*` won't need Shared either. Now let me read the remaining exemplar files (Views, Panels, Charts, Previews, Tests, strings), a reference area chart, the design tokens, and the web formatting helpers — all in parallel.
+
+The pattern is crystal clear and highly consistent. Now I need the exact design tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSChartPalette`, `tsGlassPanel`, `TSSkeleton`), the test/preview/strings patterns, an area-chart reference, and the web formatting/colors. Let me locate and read them.
+
+Now let me read the design token definitions, the tests pattern, an area-chart reference (DrivingTab), and the web color palette — plus check for an existing hex→Color helper.
+
+I have nearly everything. Now the design tokens (exact `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius` members), the glass-panel + skeleton helpers, and an area-chart reference with a dashed line. Let me grab these.
+
+Let me read the full token definitions (colors, typography, spacing, radius), the skeleton helper, and a dashed-line area chart reference.
+
+Path correction — tokens live at `apps/design/generated/apple/`. Let me read it and the dashed-line area chart reference.
+
+I now have the full picture. **Color tokens map exactly to the web hexes**: `statusSuccess`=#10B981 (energy green), `statusWarning`=#F59E0B (cost amber/DC), `statusDanger`=#EF4444 (supercharger red). Let me resolve the last open risk (how co-located `.Tests.swift` are compiled) and check motion/config, then write a plan.
+
+Test targets only include `Tests/Unit`, yet co-located `*.Tests.swift` live in `feature-views` (app target). I must resolve how these compile. Let me generate the project to see target membership, and read the native motion + chart helpers.
+
+Project generated. `TSFadeIn` is the native `FadeIn` parity. Now let me definitively resolve test-file wiring by inspecting the generated project membership.
+
+Two build entries — need to know which targets. Let me map them precisely.
+
+Confirmed: co-located `.Tests.swift` compile into the **app targets** (TeslaSync, TeslaSync-macOS), doing `import XCTest` + `@testable import TeslaSync`. I must verify Swift tolerates this self-import, and whether the heavy KMP `Shared.xcframework` builds. Let me kick off the KMP build in the background and empirically test the self-import.
+
+KMP build needs much longer (still downloading at 60s). Let me launch it as a persistent background build and fix the self-import test (`-typecheck`).
+
+XCTest isn't resolvable in my bare harness. Let me isolate just the self-import question (without XCTest) and also point swiftc at the simulator's XCTest framework.
+
+Definitive answer: `@testable import TeslaSync` from within the module is a **warning that's ignored** (exit 0) — the established 39-file pattern is valid; XCTest links into the app target in a real Xcode build. I'll follow the co-located pattern exactly. KMP build is running in the background. Let me write a plan and verify the web i18n keys exist.
+
+KMP build is progressing well (debug XCFramework already written, now linking release). Web i18n keys confirmed. Before writing, I must avoid type-name collisions in the single `TeslaSync` module. Let me check for existing declarations of the names I plan to use.
+
+No collisions. To be safe in the single-module namespace (note `ChargingLegendChip`, `ChargingGlassPanel` etc. already exist from ChargingDetailSection), I'll prefix **all** my types with `ChartsRow`. KMP build continues in the background. Let me write the plan and the three core (non-SwiftUI) files.
+
+Now the Adapter (Foundation-only projection core):
+
+Now the Model (state-holder, telemetry, formatting, source seam, i18n facade):
+
+Now the strings file and the main view. Let me also peek at KMP build progress.
+
+Now the main view:
+
+Now the Swift Charts file (trend area+line, donut, tone→token, legend chip):
+
+Now the chrome (Views) and data panels (Panels), and expose the grid columns for reuse:
+
+Let me check the KMP build progress, then write the Previews and Tests files.
+
+KMP `Shared.xcframework` built and staged successfully (21:19) — the full gate is feasible. Now the Tests file:
+
+All 9 files (8 Swift + strings) written. Now let me format and lint my new files to ensure they comply with the gate's `swiftformat --lint` and `swiftlint --strict`.
+
+swiftformat clean. One swiftlint issue: `costRowSummary` has 6 params (limit 5). I'll bundle the unit words into a struct (same approach as the exemplar's `CostLabels`). Let me fix the Adapter and its two callers.
+
+Now update the two callers (Panels + Tests):
+
+Re-verify lint clean and check the placeholder script behavior:
+
+swiftlint --strict: **0 violations**; swiftformat: **0 require formatting**. Let me see how the placeholder script resolves `-Path` (the gate passes a path prefix `.../ChartsRow`, not a real dir) and test it.
+
+The placeholder script treats a non-existent path as a clean pass, so the gate's `-Path .../ChartsRow` (a prefix, matching the established flat-file layout) passes. To genuinely verify (covenant: no stubs), I'll scan my real files in a temp dir, and confirm the gate's exact command exits 0.
+
+Both placeholder checks pass (0 placeholders in my files; gate command exits 0). Now the heavy step — the actual Xcode build/test. Let me regenerate the project, boot the simulator, and run an iOS build to catch any compile errors first.
+
+Project regenerated, simulator booted. Now the iOS build (build-only first for fast compile feedback). This compiles all my files into the app target.
+
+The build failed at **XCTest module resolution** — and the error originates in `AuditPanel.Tests.swift` (a pre-existing file), with mine listed as "also imported." This is the app-target/`build` action lacking testing search paths. The gate uses `build test` (build-for-testing), which typically sets `ENABLE_TESTING_SEARCH_PATHS=YES`. Let me verify that theory quickly via build settings.
+
+`build` = NO (fails), `build-for-testing` shows a YES present. I need the **app target's** specific value under build-for-testing. Let me attribute it precisely.
+
+Decisive: the **app target `TeslaSync` has `ENABLE_TESTING_SEARCH_PATHS = NO` even under build-for-testing** — so co-located `*.Tests.swift` can't resolve XCTest in the app target. The error originates in the pre-existing `AuditPanel.Tests.swift`. Let me check whether established test files guard the XCTest import (`#if canImport(XCTest)`), which I may need to mirror.
+
+Zero of 40 co-located `.Tests.swift` guard the XCTest import, and the app target has `ENABLE_TESTING_SEARCH_PATHS=NO` — so the app-target compile fails on all 40 (including 39 outside my allowed scope). This looks like a pre-existing infra state. Let me check the pending-verification doc and any CI/xcconfig that sets the search paths, then prove my code compiles via an override build.
+
+This is now clear and confirms the established methodology. `apps/macos-pending-verifications.md` documents that for P4 Apple surfaces (e.g. ToolCard P-0010), the **full-app `xcodebuild build test` is blocked by pre-existing, unrelated issues** (co-located `*.Tests.swift` importing XCTest into the app target without `ENABLE_TESTING_SEARCH_PATHS`, plus `DashboardWidgetSize`/`PowerFlowConnection` redefined 8×, plus macOS signing) — while each surface is verified green in isolation. Prior surface logs (0006, 0057) record the same `ENABLE_TESTING_SEARCH_PATHS` workaround.
+
+I'll mirror the predecessors: prove my surface compiles with **zero feature-views errors** (override build), run my tests in isolation, and document the pre-existing full-app blocker. Let me run the override build first.
+
+The override build got past XCTest and type-checked the whole module, surfacing **2,461 pre-existing errors** — all from parallel-merge collisions (`DashboardWidgetSize`, `TwinVehicle`, `ParsedEndpoint`, `JSONValue` ambiguous). The "feature-views" matches were other surfaces (EndpointSidebar, FleetApiSection) with their own pre-existing ambiguities. Let me confirm **zero errors in ChartsRow.* specifically**.
+
+**Zero errors in ChartsRow.\* files** — confirmed. All 2,461 errors are pre-existing parallel-merge ambiguities (`DashboardWidgetSize`×360, `ParsedEndpoint`×93, `JSONValue`×48, etc.) in other surfaces' files. My code compiles clean against the real tokens + real app module.
+
+Now let me actually **run my tests** via an isolated SwiftPM harness (matching the predecessor "isolated SwiftPM build + tests" methodology). The Adapter+Model are Foundation/Observation/OSLog-only, so a lean harness needs no token shims.
+
+The isolated harness caught a real bug in my **test** file that the error-flooded override build masked: `XCTAssertEqual(optional, _, accuracy:)` needs a non-optional. Let me fix it in the real file and re-run.
+
+**All 27 tests pass (0 failures)**, and lint/format remain clean. Now let me capture final evidence: re-run the iOS override build against the final file state, and study a predecessor log's format to match it.
+
+My final iOS override build confirms **0 ChartsRow errors** (the 176 remaining are all pre-existing sibling ambiguities). My approach exactly matches the established 0057 methodology. Let me capture the verbatim gate step results and read the predecessor log's conclusion format.
+
+The established precedent (0057, 0005, 0086) concludes `EXIT=0 / STATUS=DONE` with the two xcodebuild gates + whole-tree swiftlint documented as **DEFERRED** (blocked solely by pre-existing, out-of-scope sibling breakage + macOS signing) — verifying the surface by all in-scope host-runnable means. My verbatim iOS gate matches exactly: IOS_EXIT=65, fails on pre-existing `AuditPanel.Tests.swift`, **0 ChartsRow errors**. Let me capture the remaining verbatim gate steps.
+
+macOS verbatim: MAC_EXIT=65, blocked by **pre-existing dev-certificate signing** requirement (runner-level, outside allowed files), **0 ChartsRow errors**. Now the host-runnable gates (whole-tree swiftlint/swiftformat, placeholder) and a macOS compile to confirm 0 ChartsRow errors on the macOS SDK.
+
+`FORMAT_EXIT=0` (verbatim pass, 0/914 need formatting). `LINT_EXIT=2` — the **single** pre-existing violation is `LifetimeStatsWidget.Adapter.swift` (unmodified sibling; the exact one 0057 documented), **0 ChartsRow violations**. My placeholder invocation had a cwd bug — let me re-run it verbatim from repo root, do the macOS compile check, and confirm git scope.
+
+Everything is verified. Summary of captured gate evidence:
+
+- **`FORMAT_EXIT=0`** — `swiftformat --lint apps/apple`: 0/914 need formatting ✓
+- **`PLACEHOLDER_EXIT=0`** (verbatim) + real-file scan `PLACEHOLDER_COUNT=0` ✓
+- **27/27 unit tests pass** (isolated SwiftPM harness over the real Adapter+Model) ✓
+- **0 ChartsRow errors** on both iOS-sim and macOS SDK compiles ✓
+- `IOS_EXIT=65`, `MAC_EXIT=65`, `LINT_EXIT=2` — all blocked **solely** by pre-existing, out-of-scope sibling breakage (`DashboardWidgetSize` ambiguous ×360, the app targets' missing `ENABLE_TESTING_SEARCH_PATHS`, macOS dev-cert signing, the unmodified `LifetimeStatsWidget.Adapter.swift` lint hit) — matching the established 0057/0010 precedent.
+
+`git status` confirms my scope is exactly the 9 `ChartsRow.*` files (the two modified `web/*.tsx` files were pre-existing in the slot and I won't touch/stage them). Now let me write the gate log and commit.
+
+Now let me stage exactly my files and commit.
+
+Staged exactly the 9 `ChartsRow.*` files + the log; the 2 pre-existing `web/*.tsx` files remain unstaged. Final lint/format confirmation on the staged files, then commit.
+
+Clean. Committing:
+
+Committed cleanly: `5706ad92` — 10 files (9 `ChartsRow.*` + log), 1883 insertions, nothing else. Let me clean up temp artifacts and finalize the plan.
+
+Task complete. Temp artifacts cleaned; git is clean (only the two pre-existing `web/*.tsx` slot files remain untouched/unstaged).
+
+Merge made by the 'ort' strategy.
+ .../logs/p4-apple-feature-views-0099-ChartsRow.log | 147 ++++++++++
+ .../feature-views/ChartsRow.Adapter.swift          | 310 ++++++++++++++++++++
+ .../TeslaSync/feature-views/ChartsRow.Charts.swift | 199 +++++++++++++
+ .../TeslaSync/feature-views/ChartsRow.Model.swift  | 315 +++++++++++++++++++++
+ .../TeslaSync/feature-views/ChartsRow.Panels.swift | 164 +++++++++++
+ .../feature-views/ChartsRow.Previews.swift         | 115 ++++++++
+ .../TeslaSync/feature-views/ChartsRow.Tests.swift  | 298 +++++++++++++++++++
+ .../TeslaSync/feature-views/ChartsRow.Views.swift  | 197 +++++++++++++
+ .../TeslaSync/feature-views/ChartsRow.strings      |  42 +++
+ apps/apple/TeslaSync/feature-views/ChartsRow.swift |  96 +++++++
+ 10 files changed, 1883 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0099-ChartsRow.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChartsRow.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChartsRow.Charts.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChartsRow.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChartsRow.Panels.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChartsRow.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChartsRow.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChartsRow.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChartsRow.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChartsRow.swift

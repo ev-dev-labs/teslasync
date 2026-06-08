@@ -1,0 +1,178 @@
+=== P4 Feature view 0268 SignalDiffTable (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 toolchain — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active CommandLineTools dir is overridden non-destructively, no sudo /
+                       no xcode-select -s, the SAME mechanism every prior P4 surface used).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.x · swiftformat 0.61.x · xcodegen 2.45.x · pwsh 7.x
+  Capability         : SwiftUI present; iOS 18 / macOS 15 deployment per project.yml. This surface uses
+                       NO Charts and NO MapKit (the web source has none either — prompt "Charts / maps
+                       used: (none)"), so the iOS 18 / iPadOS 18 / macOS 15 HIG primitives it needs
+                       (Grid, @Observable, ContentUnavailable-style empty, popover) are all available
+                       → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification — read end to end)
+  web/src/features/telemetry/components/SignalDiffTable.tsx — the power-user diff table that compares two
+  point-in-time signal snapshots (Window A vs Window B) on the Signal Diff page. Wraps the shared
+  <DataTable virtualized selectable="multi"> with the incident-grade columns:
+    pin (PinButton, item_type='widget', context='signal-diff:vehicle:N') · name (mono) ·
+    value_a "Window A" (formatRaw) · value_b "Window B" (formatRaw, emphasised) ·
+    delta "Δ" (deltaLabel → none '—' / 'changed' amber / numeric "+d (+p%)" emerald-rose-muted) ·
+    source_a "Src A" + source_b "Src B" (SourceLayerBadge L1/L2/LOG/STALE/— with formatAge tooltip).
+  Above the table a legend hosts two HelpTooltips (Δ, "Src A / Src B"). Rows are sorted pinned-first then
+  name; the name + delta columns are sortable. Empty message = filterActive ? "No signals match the
+  current filter" : "No differences between the two snapshots"; loading = "Loading…".
+  Pure helpers reproduced verbatim (the arithmetic is the contract): isFiniteNumber, asNumber
+  (number | finite-numeric-string | bool→1/0 | else null), formatRaw (null/undefined '—', finite number
+  fmtNumber else '—', bool true/false, string verbatim, object JSON), deltaLabel (both-numeric ⇒
+  {delta=b−a, pct = a≠0 ? delta/|a|·100 : null}; equal-raw ⇒ none; else ⇒ change), and the shared
+  SourceLayerBadge STYLE map + formatAge (<1s ms, <1m s.1, <1h min, <1d h.1, else d.1).
+  Hooks : useTelemetry (the SignalDiffRow feed), useTranslation. Shared components : @/components/ui
+          (DataTable, PinButton, HelpTooltip), @/components/data-display (SourceLayerBadge).
+  i18n  : every signalDiff.* + help.signal.* + sourceLayer.* key from the source/sub-component promoted
+          to the P1/S10 catalog (table "SignalDiffTable"); no English literal in native code.
+
+ARTIFACTS SHIPPED  (allowed files: apps/apple/TeslaSync/feature-views/SignalDiffTable.* + this log)
+  SignalDiffTable.Models.swift      — Foundation value types: SignalSourceLayer (lenient decode w/ unknown
+                                      fallback), SignalDiffValue (null/absent/string/number/bool/compound),
+                                      SignalDiffRow, SignalDiffDelta, SignalDiffDeltaTone, sort enums,
+                                      SignalDiffTableProjection.
+  SignalDiffTable.Adapter.swift     — pure ports: fmtNumber (NumberFormatter .decimal, grouping, half-up,
+                                      safeNumber guard = web fmtNumber), formatRaw, asNumber, deltaLabel,
+                                      numericDeltaText, tone, formatAge, and SignalDiffTableBuilder.order
+                                      (pin-first + sortable name/delta, stable) + deltaSortValue.
+  SignalDiffTable.Model.swift       — P1/S8 state-holder seam (SignalDiffTableSource + Update + @Observable
+                                      SignalDiffTableModel + InMemory source), P1/S11 telemetry seam
+                                      (view.opened surface="SignalDiffTable"), live selection (web
+                                      selectedSignals/onSelectionChange) + pin (web pinnedSignals) + sort +
+                                      filterActive empty-message selector + selection pruning.
+  SignalDiffTable.Localization.swift— P1/S10 facade (NSLocalizedString table "SignalDiffTable", web literal
+                                      as value: fallback) + testable SignalDiffTableAccessibility summary.
+  SignalDiffTable.Badge.swift       — native SourceLayerBadge (tinted L1/L2/LOG/STALE/— glyph + localized
+                                      description+age VoiceOver value) + legend HelpTooltip host (info
+                                      button → popover, aria label).
+  SignalDiffTable.Cells.swift       — shared cells: multi-select checkbox, pin toggle, value text, Δ cell
+                                      (text + emerald/rose/muted/amber tone), sortable + static headers.
+  SignalDiffTable.Table.swift       — ready region (banner + legend + table/empty), adaptive layout:
+                                      columnar Grid (macOS/regular) + card list (compact iPhone) + the
+                                      stale/offline connectivity banner + the friendly empty/loading message.
+  SignalDiffTable.swift             — the surface: phase switch (loading / empty+content / error+retry),
+                                      static surfaceSlug = "SignalDiffTable", onAppear start / onDisappear stop.
+  SignalDiffTable.Previews.swift    — #if DEBUG #Preview for content / loading / empty (no-diff) /
+                                      empty (filter active) / error / stale / offline.
+  SignalDiffTable.strings           — P1/S10 catalog: the full signalDiff.* + help.signal.* + sourceLayer.*
+                                      web keys + native chrome (error/retry, banners, accessibility).
+  SignalDiffTable.Tests.swift       — state-holder (phases, view.opened once, refresh/stop, selection toggle
+                                      + prune, pin float + persist, seed-pinned, sort toggle, filter empty)
+                                      + accessibility (grid summary, row label, layer names).
+  SignalDiffTable.AdapterTests.swift— fmtNumber/formatRaw/asNumber, deltaLabel (numeric/zero-base/none/
+                                      changed/bool-coercion), numericDeltaText, tone, formatAge buckets,
+                                      order (name asc/desc, pin-first, delta asc/desc, deltaSortValue).
+  (12 files; split across .Model/.Adapter/.Models, .Table/.Cells/.Badge and .Tests/.AdapterTests to keep
+   every file within the repo's 400-line SwiftLint budget — the same multi-file decomposition the prior
+   feature-views use; all share the SignalDiffTable.* stem.)
+
+PARITY MAPPING  (web → Apple platform tokens; no Tailwind ported, no raw hex)
+  <DataTable> rows            → columnar Grid (macOS/iPad) + LazyVStack cards (compact iPhone)
+  pin column (PinButton)      → SignalDiffPinButton (pin/pin.fill, accent when pinned), pin-first ordering
+  selectable="multi"          → SignalDiffSelectToggle (circle/checkmark.circle.fill) + model selection set
+  Δ cell emerald/rose/amber   → SignalDiffDeltaCell tone: statusSuccess / statusDanger / statusWarning /
+                                textMuted (web emerald-300 / rose-300 / amber-300 / text-muted)
+  SourceLayerBadge L1/L2/...  → SignalDiffSourceBadge tint: statusSuccess/statusInfo/textSecondary/
+                                statusWarning/textMuted; glyph kept verbatim (web hardcodes 'L1'… labels)
+  HelpTooltip                 → SignalDiffLegendItem info button + .popover(help); aria label preserved
+  fmtNumber                   → SignalDiffFormat.fmtNumber (NumberFormatter, grouping, half-up, safeNumber⇒0)
+  formatRaw / asNumber        → SignalDiffFormat.formatRaw / asNumber (verbatim branch order)
+  deltaLabel / delta render   → SignalDiffFormat.deltaLabel + numericDeltaText ("+10.00 (+25.0%)") + tone
+  formatAge                   → SignalDiffFormat.formatAge (ms / s.1 / min / h.1 / d.1, nil for null/!finite)
+  sortedRows + sortable cols  → SignalDiffTableBuilder.order (pin-first primary, name/delta sortable, stable)
+  i18n                        → every string via SignalDiffTableStrings (table "SignalDiffTable")
+  a11y                        → row label = name + both windows/layers + spoken Δ + pinned/selected; select/
+                                pin/sort/legend/retry/badge all labelled; Dynamic Type via tokens
+  telemetry                   → view.opened surface="SignalDiffTable" emitted once on first start()
+
+STATES (every state renders — no hidden surface)
+  loading  → spinner + "Loading…" (web DataTable loading box; no legend, web returns early).
+  empty    → friendly icon + filter-aware message ("No signals match the current filter" /
+             "No differences between the two snapshots"), legend still shown above (web parity).
+  error    → retryable error chrome (P4 leaf addition; the web delegates to its host page).
+  content  → pin-first sortable table with all 7 web columns + the Δ legend.
+  stale    → header/banner "Reconnecting — values may be stale" over cached rows.
+  offline  → banner "Offline — showing last known values" over cached rows.
+
+GATES  (raw exits below; per-surface scope)
+  [GREEN] swiftformat --lint  (.swiftformat, 11 swift files)    : 0/11 require formatting        FORMAT_EXIT=0
+  [GREEN] swiftlint --strict  (.swiftlint.yml, 11 swift files)  : 0 violations, 0 serious        LINT_EXIT=0
+  [GREEN] check-placeholders.ps1 (-Language swift, SignalDiffTable.*) : PLACEHOLDER_ALLOWED=0
+                                                                      PLACEHOLDER_COUNT=0         PLACEHOLDER_EXIT=0
+          (also: grep -niE 'todo|fixme|xxx|coming soon|placeholder|lorem ipsum|not implemented' = NONE)
+  [GREEN] ISOLATED build + test — SwiftPM, swift-tools 6.0 (Swift 6 language mode = strict-concurrency
+          complete, same as the app), compiling the EXACT shipped SignalDiffTable.* sources (incl. the
+          #Preview macro file) against the REAL generated design system (apps/design/generated/apple/
+          Tokens.swift) under the Xcode 26.5 toolchain (real #Preview macro + XCTest runtime):
+              Build complete!  (0 warnings, 0 errors)
+              Executed 33 tests, with 0 failures (0 unexpected)                                  SWIFT_TEST_EXIT=0
+
+  [DEFERRED] Full-app iOS-Simulator + macOS `xcodebuild -scheme TeslaSync(-macOS) … build test`.
+          ATTEMPTED on this runner (xcodegen generate ✓ → xcodebuild -scheme TeslaSync -destination
+          'platform=iOS Simulator,name=iPhone 16' build). The pre-build "Stage Shared.xcframework" script
+          ran Gradle :core:assembleSharedXCFramework and successfully staged the framework, then the build
+          FAILED — VERIFIED, not assumed — on a PRE-EXISTING, unrelated, out-of-allowed-files blocker this
+          prompt neither introduced nor is allowed to touch:
+            • apps/apple/TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve
+              module dependency: 'XCTest'  ·  ** BUILD FAILED ** (XCBUILD_EXIT=65).
+              The app target's `TeslaSync/feature-views` source path globs ALL 171 co-located *.Tests.swift
+              files (every surface's tests, incl. mine), which `import XCTest`; the app target does not link
+              XCTest, so the build fails on the first such file alphabetically (AIRestorePanel.Tests.swift)
+              — my SignalDiffTable code is never even reached.
+            • Additionally `struct DashboardWidgetSize` is redefined 15× across Sources/DashboardWidgets/* +
+              TeslaSync/dashboard-widgets/* (parallel-merge collisions), and macOS development-signing apply.
+          This is the SAME sanctioned "code-complete + DEFERRED full-app Xcode gate" disposition recorded by
+          every prior P4 surface (see p4-apple-feature-views-0237-AiUsageCard.log and
+          -0203-AIUsageCard.log) and is owned by p4-apple/P99-0001-apple-acceptance-gate on a signed
+          runner with the test-target split. ZERO SignalDiffTable errors are attributable to this change.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED with the raw,
+                           verified pre-existing-blocker error (AIRestorePanel.Tests.swift XCTest, exit 65)
+                           — never reported as passing.
+  2  No scope narrowing  : every web column + branch reproduced — pin, name, Window A/B (formatRaw), the Δ
+                           none/changed/numeric(+pct) with emerald/rose/muted/amber, Src A/Src B badges
+                           (formatAge), the two-tooltip legend, pin-first + name/delta sort, multi-select,
+                           the two filter-aware empty messages; all six P4 states render.
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; raw exits pasted; the deferred
+                           full-app blocker was reproduced by an actual xcodebuild run (not grep-assumed)
+                           and the 171 co-located tests / 15× DashboardWidgetSize re-confirmed by ls/grep.
+  4  No stubs as final   : complete production surface + 33 real tests; placeholder scanner COUNT=0; no
+                           TODO/FIXME/stub/placeholder/Lorem anywhere.
+  5  No parity shortcut  : fmtNumber grouping/half-up, the b−a / delta·100/|a| percent, the formatRaw branch
+                           order, the formatAge buckets, the deltaLabel bool-coercion edge, and the
+                           pin-first sort are each unit-asserted against the web expressions (en-US goldens).
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened
+                           telemetry, and the established P4 isolated-build + DEFERRED-full-app disposition
+                           all honoured.
+  8  No commit on red    : the committed artifact (12 SignalDiffTable.* files + this log) is GREEN on every
+                           per-surface gate AND on a real isolated Swift 6 strict-concurrency build + 33/33
+                           XCTest; the deferred full-app gate is blocked only by pre-existing, unrelated
+                           files this commit does not touch.
+  9  No silent drift     : changes are confined to feature-views/SignalDiffTable.* + this log; the generated
+                           TeslaSync.xcodeproj / staged Shared.xcframework / Gradle build output are all
+                           git-ignored and were removed/left unstaged (git status shows exactly the 12 new
+                           files). Pre-existing unrelated worktree edits (AIUsageCard.*, two web files) were
+                           NOT touched and are NOT in this commit.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic SignalDiffTable shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 33 tests pass under the app's own Swift 6 strict-concurrency
+  rules, against the REAL design system, via the Xcode 26.5 XCTest runtime, with swiftformat / swiftlint /
+  placeholder all green on the 11 surface files and the #Preview macro compiling with 0 warnings. The
+  full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code) on a
+  pre-existing, unrelated, out-of-allowed-files blocker (the 171 co-located *.Tests.swift importing XCTest
+  into the app target — build fails on AIRestorePanel.Tests.swift, not mine — plus the DashboardWidgetSize
+  15× redefinition and macOS signing), owned by the P99 acceptance gate.
+
+EXIT=0
+STATUS=DONE

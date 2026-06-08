@@ -1,0 +1,156 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+All tools available, web source exists. Let me read the web source spec and examine existing patterns.
+
+Web source read. No native files exist yet. Let me study existing widget patterns and the build system.
+
+`PowerFlowHistoryWidget` is the closest structural match (Adapter/Model/Views/Previews/Tests/strings/swift). Let me study it as a template.
+
+Excellent pattern. Let me read the rest of the template files: Adapter, Views, Previews, Tests, strings.
+
+Now let me read Previews, Tests, strings, and understand the shared P1 tokens and registration types.
+
+Let me read the strings file and find the shared P1 token/registration definitions.
+
+Multiple Model files define `DashboardWidgetRegistration` — I need to understand the target/build structure to avoid symbol conflicts. Let me investigate.
+
+There's a `project.yml` (XcodeGen) and 13 files each declare `public struct DashboardWidgetRegistration` — a potential conflict. Let me read project.yml to understand target membership.
+
+All dashboard-widgets are in the app target, yet 13 files each declare `public struct DashboardWidgetRegistration`. I need to establish the build baseline. Let me check the toolchain.
+
+Critical baseline finding: `xcodebuild` reports only Command Line Tools are installed (no full Xcode), no `Shared.xcframework`, and no iOS simulators. Let me confirm the toolchain limits and understand how sibling widgets share the registration seam (to avoid 14-way symbol conflicts).
+
+`/Applications/Xcode.app` exists but `xcode-select` points to CLT. I can try overriding with `DEVELOPER_DIR` (no sudo needed). Let me test that and read the canonical seam definition + the web charging types.
+
+`DEVELOPER_DIR=/Applications/Xcode.app/...` makes xcodebuild work (Xcode 26.5, iPhone 16 sim booted). The platform IS available. Now I must verify the baseline build. Let me inspect the Shared.xcframework build script and confirm the duplicate-seam situation.
+
+The Shared.xcframework needs a KMP/Gradle build, and the widget registration seam is defined in 13 sibling files (not in `Sources/`). Before deciding my approach, I must verify whether these are truly conflicting. Let me inspect the modifiers/guards precisely.
+
+Confirmed: 13 sibling files declare `public struct DashboardWidgetRegistration` with no guards — the full-target compile has a pre-existing duplicate-symbol conflict outside my allowed scope. My template (PowerFlow) *consumes* the seam without defining it, so I'll follow that exactly. Let me now gather the exact token APIs and web charging types.
+
+Let me read the design tokens, exact web charging types, and a charging-category sibling for convention.
+
+Let me locate the exact `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius`/`TSSkeleton` token APIs and check how charging siblings render a charger badge.
+
+I have all token APIs. Let me confirm the web registry metadata, existing i18n keys, and how a charging sibling renders a status chip/badge.
+
+I have all the data, tokens, registry, and i18n. Let me check for an existing dual-axis (power + SoC) chart precedent in the repo, then write my plan.
+
+`MotorHistoryWidget.Chart.swift` has the exact dual-axis pattern I need (leading + trailing axis, normalized secondary series). Let me study it fully.
+
+`MotorHistoryChart` is the exact dual-axis template (leading power axis + trailing normalized secondary axis). I have everything. Let me check lint/format configs, then write the plan and implement.
+
+Now I understand all conventions, configs, and the dual-axis chart pattern. Let me record a plan, set up tracking, and check the Gradle/JDK toolchain (needed for the Shared.xcframework the gate build depends on) in parallel.
+
+JDK 17 + gradlew present but no prebuilt framework. Let me kick off the Shared.xcframework build in the background (long pole for the gate) while I implement the widget.
+
+Now let me set up tracking and write the plan while Gradle runs.
+
+Gradle is building in the background. Let me write the implementation, starting with the Model (seams + state holder).
+
+Model done. Now the Adapter (pure projection core) — charger classification, chart points, dual-axis scale, formatters, a11y.
+
+Gradle still running. Writing the Adapter.
+
+Now the Views (subviews): stat grid, dual-axis chart, charger badge, empty state, compact content.
+
+Let me fix the chart a11y (I passed a placeholder energy value) and verify the `AreaMark`/`LineMark` `series:` initializer is valid by checking sibling usage.
+
+I'll remove the unsupported `series:` from `AreaMark`, fix the chart's accessibility summary, and update the adapter's `chartSummary` signature accordingly.
+
+Now the main surface view. Let me check Gradle progress in parallel.
+
+Gradle still downloading. Writing the main surface view.
+
+Gradle finished. Let me verify the Shared.xcframework built, then continue with Previews and Tests.
+
+Shared.xcframework built successfully (KMP toolchain works) — the gate build can run. Let me finish Previews and Tests, then verify.
+
+Now the comprehensive test suite.
+
+Now the i18n strings catalog.
+
+All 7 files written. Let me verify i18n key consistency between code and strings, and check for any obvious issues.
+
+The regex truncated digit-containing keys. Let me re-check with digits included to confirm `a11yChart`/`openA11y` are present.
+
+i18n keys are perfectly consistent (33/33). Now let me run the formatters/linters on my files.
+
+swiftformat wants auto-fixes (trailing commas, number grouping). Let me apply the formatter to my files, then re-lint.
+
+swiftformat clean. Now swiftlint --strict on my files.
+
+One violation: Views.swift is 420 lines (limit 400). I'll extract the chart into a sibling `.Chart.swift` file (matches repo convention like `MotorHistoryWidget.Chart.swift`). Let me view current boundaries.
+
+I'll extract the chart + legend + palette into a new `.Chart.swift` file (repo convention), then trim Views.swift.
+
+Now let me trim Views.swift down to the non-chart components by recreating it cleanly.
+
+Now re-run both linters on all 7 files (including the new `.Chart.swift`).
+
+A hand-written trailing comma slipped in. Let me auto-format all files again, then re-lint.
+
+Both linters pass on my files (0 violations). Let me verify file lengths and run the placeholder gate.
+
+All files ≤400 lines; placeholders clean. Let me run the placeholder check exactly as the gate invokes it (prefix path), then scan all my files.
+
+Placeholder gate passes. Now let me prove my code type-checks against the real SDK in isolation (the pre-existing sibling duplicate-symbols would otherwise mask my code). I'll compile my sources with the real design tokens + a minimal seam shim.
+
+Clean typecheck against iOS SDK (Swift 6 strict concurrency, 0 errors). Let me also verify macOS target and the DEBUG preview bodies compile.
+
+My code type-checks cleanly on both iOS and macOS (Swift 6 strict concurrency), including preview bodies. Now let me run the actual gate: generate the Xcode project and attempt the build to capture authoritative evidence.
+
+Project generated. Now running the actual gate iOS build (long-running) — capturing output to confirm the build outcome.
+
+Build running in background. Let me wait and monitor while confirming the duplicate-symbol hypothesis with a fast targeted compile of the sibling registration files.
+
+Let me check the real build progress.
+
+Build failed as predicted. Let me examine the exact errors — confirming they're pre-existing sibling conflicts, not my code.
+
+The build failed on a *pre-existing sibling* issue — `AIRestorePanel.Tests.swift` (a file I didn't touch) imports XCTest into the app target. None of my files errored. Let me understand the scope: how colocated `*.Tests.swift` are meant to be handled.
+
+Root cause: **225 pre-existing colocated `*.Tests.swift` files** (none mine) compile into the app target and import XCTest, which the app target can't resolve. This is a merged-branch config issue outside my allowed scope. Let me confirm the next layer by excluding test files (isolating app-target correctness), which will also reveal the duplicate-seam issue.
+
+Build probe running. Let me wait for it to reveal the next layer of pre-existing errors.
+
+`EXCLUDED_SOURCE_FILE_NAMES` was honored but there are *other* test-file suffixes too (`*.ModelTests.swift`). This is a broad pre-existing condition. Let me probe to the structural layer with a wider exclusion to get complete evidence.
+
+Let me wait for the structural-layer build to complete.
+
+All 262 colocated test files excluded; now the build reaches source compilation with 26 failures. Let me confirm these are pre-existing duplicate symbols and that none are mine.
+
+Complete authoritative evidence: the full app-target compile yields **1260 pre-existing errors** in sibling files (duplicate `DashboardWidgetRegistration`/`DashboardWidgetSize`, duplicate `TelemetryErrors*`/`Drivetrain*` types, plus 262 colocated XCTest files) — and **zero** in my files. Let me also validate my test file's logic against my real APIs (one-module typecheck), then run the tree-wide linters.
+
+The only test-file errors are XCTest C-macro availability (a standalone-tooling limitation) — every one of my API references (`ChargerClass.classify`, `.acHome`, etc.) resolves correctly. Now let me capture the tree-wide linter state (gate steps 3 & 4).
+
+The one swiftformat failure is a pre-existing sibling (`ActionBuilder.Previews.swift`), not mine. Now the tree-wide swiftlint (gate step 3).
+
+Tree-wide swiftlint: 1 violation total, **none in my files**. Let me identify that pre-existing sibling violation for the record.
+
+Complete evidence gathered. The single tree-wide swiftlint violation is a sibling (`LifetimeStatsWidget.Adapter.swift`), not mine. Let me check the log directory and a sibling log to match format.
+
+Critical discovery: early widgets (e.g., `BatteryCellsWidget`) live in `Sources/DashboardWidgets/` with tests in `Tests/Unit/` and their logs show STATUS=DONE, but my template `PowerFlowHistoryWidget` and 262 others are colocated in `TeslaSync/dashboard-widgets/`. Let me see how a *later, colocated* sibling's log handled this exact build situation.
+
+This is the decisive governed precedent: **all** colocated `TeslaSync/dashboard-widgets/` siblings (PowerFlow 0073, WallConnector 0112, Supercharger 0098, MotorHistory 0066, TelemetryErrors 0100) use the **user-approved "code-complete + DEFERRED Xcode gate"** disposition — EXIT=0/STATUS=DONE with IOS/MAC=DEFERRED — citing the *exact* pre-existing sibling drift I found (duplicate shared-type decls + colocated `*.Tests.swift`). Let me read a full sibling log and confirm the governing docs.
+
+This sibling log is the exact governed template (user-approved "code-complete + DEFERRED Xcode gate"). To match their evidence bar, I'll go beyond typecheck and actually **execute** my XCTest suite via an ephemeral SwiftPM package using the real Xcode toolchain.
+
+`swift build` complete (Xcode 26.5, Swift 6). Now executing the test suite.
+
+**31/31 tests PASS** under the real Xcode 26.5 toolchain (`swift test`, Swift 6 strict). Gold-standard verification achieved. Let me capture run metadata and write the gate log.
+
+All evidence gathered. Now writing the comprehensive, honest gate log matching the governed sibling format.
+
+Let me correct the per-suite test counts in the log to be precise, then verify git state.
+
+Let me verify git state and that generated artifacts are ignored, then clean up.
+
+Everything is in order: my 8 files + log are untracked; generated project and framework are gitignored. Let me clean up temp artifacts and commit using the prompt's exact command.
+
+Exactly the 9 intended files staged (pre-existing modified files untouched). Committing.
+
+Committed: 9 files, 2117 insertions. Let me finalize tracking and confirm a clean working tree.
+
+The task is complete. The working tree is clean — only pre-existing modifications (AIUsageCard, FleetApiSection, BackupRestorePage) remain untouched, and my 9 files are committed.
+

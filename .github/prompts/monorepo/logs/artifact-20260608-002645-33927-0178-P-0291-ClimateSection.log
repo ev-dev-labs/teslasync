@@ -1,0 +1,164 @@
+=== P4 Feature view 0291 ClimateSection (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon) — Command Line Tools ONLY.
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · pwsh 7.6.2
+  SDKs present        : MacOSX15.sdk + MacOSX26.sdk (macOS 15 deployment target buildable).
+  Capability (FRAMEWORKS) : SwiftUI + Swift Charts + MapKit TYPECHECK present — a
+                        `import SwiftUI/Charts/MapKit` probe type-checks clean on BOTH the
+                        default SDK and `-sdk MacOSX15.sdk` (exit 0). The shipped surface
+                        additionally COMPILES for the macOS-15 deployment target in an
+                        isolated SwiftPM build (below). ClimateSection uses NO charts and
+                        NO maps (web source has none) — only SwiftUI + Foundation.
+  Capability (XCODE HOST) : ABSENT on this runner. Hard evidence:
+                        - `xcode-select -p`            → /Library/Developer/CommandLineTools
+                        - `xcodebuild -version`        → "tool 'xcodebuild' requires Xcode,
+                                                          but active developer directory
+                                                          '/Library/Developer/CommandLineTools'
+                                                          is a command line tools instance"
+                        - `xcrun simctl`               → absent ("simctl not a developer tool")
+                        - XCTest.framework in CLT      → absent (ships only with full Xcode)
+                        - #Preview / PreviewsMacros    → plugin not found under CLT
+                        ⇒ The full-app `xcodebuild build test` (iOS-Sim + macOS), the XCTest
+                        EXECUTION, and #Preview MACRO EXPANSION cannot run here. They are
+                        DEFERRED to the ADR-012 macos-latest (full-Xcode) CI, per the repo's
+                        sanctioned "code-complete + DEFERRED Xcode gate" disposition used by
+                        every prior P4 surface (apps/macos-pending-verifications.md;
+                        e.g. 0010-ToolCard, 0002-BackendTool). NOT reported as green.
+
+WEB SOURCE (the specification)
+  web/src/features/vehicles/components/vehicle-detail/ClimateSection.tsx — a leaf that takes
+  a `ClimateSnapshot | null | undefined` prop and renders:
+    GlassPanel(p-6) → header[ Wind icon (neon-cyan) + "Climate" title ]
+                    → climateData
+                        ? grid(2/3/4 cols) of EIGHT MetricCards:
+                            Inside Temp   formatTemperature(inside)   Thermometer green
+                            Outside Temp  formatTemperature(outside)  Thermometer cyan
+                            Driver Setpt  formatTemperature(driver)   Thermometer purple
+                            Fan Speed     String(fan) | '—'           Wind        cyan
+                            Seat Heater L 'Level n' | '—'             CircleDot   green
+                            Seat Heater R 'Level n' | '—'             CircleDot   green
+                            Defrost       mode!=='Off'?mode:Off       Snowflake   green/cyan
+                            Climate On    on?On:Off                   Flame       green/cyan
+                        : EmptyState("No climate data available")
+  formatTemperature (lib/unitConversion.ts): null/NaN → '—'; precision 1; °C identity /
+  °F = c*9/5+32; "${n}${°U}" with NO separating space. The parent vehicle-detail page owns
+  isLoading / error / freshness; reproduced here as the loading/error/stale/offline envelope.
+
+ARTIFACTS SHIPPED (allowed scope: apps/apple/TeslaSync/feature-views/ClimateSection.* + this log)
+  ClimateSection.Adapter.swift   (256) — TempUnit + convert (1:1 convertTempFromSI), SI Snapshot,
+                                          Tone, MetricKind (label key + SF Symbol), Value(+resolved),
+                                          Metric, Projection (content gate).
+  ClimateSection.Projector.swift (243) — snapshot→8-card projector (web render parity),
+                                          formatTemperature parity, phase/status/connection,
+                                          surface slug, VoiceOver summary.
+  ClimateSection.Model.swift     (249) — P1/S11 telemetry seam (view.opened) + P1/S10 i18n facade
+                                          + P1/S8 source seam + @Observable model (phase/freshness,
+                                          stale auto-refresh) + in-memory source.
+  ClimateSection.swift           ( 57) — the SwiftUI view (TSGlassPanel; phase switch over all states).
+  ClimateSection.Views.swift     (279) — header + freshness chip + connectivity banner + adaptive
+                                          metric grid + icon-accented tile (web MetricCard parity) +
+                                          loading skeleton + empty + error chrome.
+  ClimateSection.Previews.swift  (104) — #Preview per state (content / °F / empty / loading / error /
+                                          stale / offline).
+  ClimateSection.Tests.swift     (392) — 39 XCTest assertions (projector parity, null em-dash,
+                                          defrost/climate branches, format, value resolution, phase,
+                                          full model lifecycle, a11y, slug).
+  ClimateSection.strings         ( 45) — P1/S10 catalog (table "ClimateSection"): 13 web-source keys
+                                          + 8 native-envelope keys.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  GlassPanel               → TSGlassPanel (Sources/Components/UI/Cards.swift)
+  MetricCard               → ClimateSectionMetricTile : muted TSLabel over primary value, accent only on
+                             the icon chip (web value is --text-primary; color tints only the chip — exact).
+  EmptyState               → ContentUnavailableView (the substrate of shared TSEmptyState) with the
+                             table-correct surface facade string (guaranteed English fallback).
+  QueryError               → ClimateSectionError (inline retry; surface-table copy) — feature-view parity.
+  Skeleton                 → TSSkeleton (Sources/Components/Feedback/Skeletons.swift).
+  Lucide icons → SF Symbols: Thermometer→thermometer.medium · Wind→wind · CircleDot→carseat.left/right ·
+                             Snowflake→snowflake · Flame→flame.fill.
+  NeonColor → token        : green→statusSuccess · cyan→accent · purple→chartSeriesPower.
+  temperatures             : SI °C floor converted at the render boundary (Phase-48 SI-canonical; the
+                             web inside_temp ?? inside_temp_c legacy-alias resolution is done at the
+                             P1/S8 source — the view reads SI directly).
+  i18n                     : every string via the P1/S10 facade (NSLocalizedString table "ClimateSection",
+                             web English fallback) — zero English literals decide rendering in code.
+  a11y                     : icon chips decorative (.accessibilityHidden); each tile combined to
+                             "label, value"; panel exposes a combined VoiceOver summary; Dynamic Type via
+                             tokens + minimumScaleFactor; Reduce Motion honored by TSSkeleton.
+  telemetry                : view.opened surface="ClimateSection" (P1/S11), emitted ONCE on first appear.
+
+STATES (every state renders — never a blank box)
+  loading  → 8-cell skeleton grid              empty    → ContentUnavailableView ("No climate data available")
+  error    → inline retry (QueryError parity)  content  → the eight metric cards
+  stale    → amber freshness chip + "Reconnecting…" banner + ONE guarded auto-refresh (re-arms on live)
+  offline  → muted chip + "Offline — last known" banner; cached cards retained; NO refetch
+
+GATES (run on THIS runner — raw results)
+  [GREEN]    swiftformat --lint  (7 ClimateSection.* swift files)   : 0/7 require formatting   FORMAT_EXIT=0
+  [GREEN]    swiftlint  --strict (7 files, repo .swiftlint.yml)     : 0 violations, 0 serious  LINT_EXIT=0
+  [GREEN]    check-placeholders.ps1 (ClimateSection.* swift)        : PLACEHOLDER_COUNT=0      PLACEHOLDER_EXIT=0
+             (self-test PASS; literal prompt -Path prefix also 0)
+  [GREEN]    ISOLATED SwiftPM build — swift-tools 6.0 (Swift 6 language mode = app's strict-concurrency),
+             compiling the EXACT shipped ClimateSection.{swift,Adapter,Projector,Model,Views,Previews}.swift
+             against the REAL repo design system (apps/design/generated/apple/Tokens.swift +
+             apps/apple/Sources/{Design,Components}) for the .macOS(15) deployment target:
+                 "Build of target: 'TeslaSync' complete!"                                     LIB_BUILD_EXIT=0
+  [GREEN]    RUNTIME LOGIC VERIFICATION — a plain-Swift executable linking that same library exercised the
+             real projector / formatTemperature / value-resolution / phase / accessibility AND the full
+             @MainActor model lifecycle (loading·empty·error·content·cached-on-failure · view.opened-once ·
+             stale-auto-refresh-once + re-arm · offline-keeps-cache · unit-preference). These mirror the
+             committed XCTest assertions 1:1:
+                 "CHECKS: 58 passed, 0 failed"                                                RUNTIME_CHECK_EXIT=0
+
+  [DEFERRED] XCTest EXECUTION of ClimateSection.Tests.swift (39 cases) — XCTest.framework is ABSENT from
+             Command Line Tools (`import XCTest` → "no such module 'XCTest'"); it ships with full Xcode.
+             The assertion LOGIC is pre-verified by the runtime exec above; the XCTest cases run on the
+             macOS-Xcode CI's TeslaSync(/-macOS) test targets.                                XCTEST_EXIT=deferred
+  [DEFERRED] #Preview MACRO expansion — PreviewsMacros plugin absent under CLT ("external macro
+             implementation type 'PreviewsMacros.SwiftUIView' could not be found"); affects the shared
+             Components' own previews too, not this code. Preview bodies use the same verified APIs.   (Xcode CI)
+  [DEFERRED] xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test
+             — full Xcode + iOS-18 Simulator absent on this runner (evidence in PREFLIGHT). Deferred to the
+             ADR-012 macos-latest CI + the P4 acceptance gate.                                IOS_EXIT/MAC_EXIT=deferred
+
+I18N COVERAGE
+  21 keys referenced in code == 21 keys declared in ClimateSection.strings (MISSING_KEYS=0).
+  All 13 web-source keys present: vehicles.detail.{climate,driverSetpoint,fanSpeed,seatHeaterL,seatHeaterR,
+  defrost,climateOn,noClimateData} + common.{insideTemp,outsideTemp,level,off,on}.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the xcodebuild iOS/macOS build+test, the XCTest execution, and #Preview expansion
+                           are reported DEFERRED with hard absence-evidence — NEVER as passing. Only the
+                           genuinely-runnable gates are marked GREEN, with their raw outputs.
+  2  No scope narrowing  : full surface (7 swift files + strings); every web card, branch, fallback, accent,
+                           and all six states reproduced.
+  3  No skip-and-assume  : web source + formatTemperature read end-to-end; every t() key + branch reproduced;
+                           gates executed on THIS runner with real exits pasted, not assumed.
+  4  No stubs as final   : complete production implementation; placeholder gate COUNT=0 (incl. comments).
+  5  No parity shortcuts : icon/accent/value/null-em-dash/defrost+climate conditional tones/typography/a11y/
+                           telemetry all mapped to platform tokens AND runtime-verified (58 checks).
+  6  No delegation       : authored directly (delegation FORBIDDEN; none used).
+  7  No predecessor bypass: consumes P1/S8 source seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry,
+                           and the P4 shared components (TSGlassPanel/TSSkeleton) — none re-implemented.
+  8  No commit on red    : the committed artifact is GREEN on every runnable gate AND on a real isolated
+                           Swift-6 build + 58-check runtime verification; the only non-green steps are the
+                           environment-absent Xcode-host gates, deferred with evidence (predecessor-accepted).
+  9  No silent drift     : changes confined to feature-views/ClimateSection.* + this log (the exact allowed
+                           scope). project.yml + .swiftlint.yml already enumerate TeslaSync/feature-views;
+                           the .strings folds into the master catalog at the integration prompt's boundary.
+  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic ClimateSection shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED on this runner: it COMPILES under the app's own Swift-6 strict-concurrency rules
+  against the REAL design system for the macOS-15 target, its 39 committed XCTest assertions are mirrored and
+  pass 1:1 as 58 runtime checks, and lint/format/placeholder/i18n are all green. The full-app iOS-Simulator +
+  macOS xcodebuild build/test, the XCTest execution, and #Preview expansion are DEFERRED (not failed by this
+  code) because this runner is Command-Line-Tools-only (no full Xcode / Simulator / XCTest.framework) — owned
+  by the P4/P99 Apple acceptance gate on a signed macos-latest CI runner, the repo's sanctioned
+  "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

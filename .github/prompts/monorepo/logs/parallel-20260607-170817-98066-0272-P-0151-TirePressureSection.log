@@ -1,0 +1,139 @@
+I'll start by exploring the environment to understand what's available and what the task requires. Let me check the web source, the Apple app structure, and the toolchain in parallel.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me verify SDK availability and explore the existing Apple app structure thoroughly before deciding on approach.
+
+Confirmed: no full Xcode → no iOS SDK, no simulator, no functional `xcodebuild`. This triggers the prompt's capability clause. But I must still ship complete production code + tests and run all checks that *can* run. Let me explore the existing patterns deeply.
+
+The `feature-views` directory has 626 entries with an established multi-file pattern per surface. Let me find the complete file set for a sibling surface (especially `TemperatureSection`, which is nearly identical) to use as my template.
+
+`TirePressureSection` doesn't exist yet. The canonical pattern is 7 files per surface (Adapter, Model, Previews, strings, main, Tests, Views). Let me read the full `AcDcStatsPanel` set and find the best Swift Charts line-chart template among drive-detail siblings.
+
+Let me read the canonical 7-file pattern (`AcDcStatsPanel`), the `SpeedTrendChart` chart idiom, and the `HeroGauges` drive-detail sibling in parallel.
+
+Excellent — I now understand the 7-file canonical pattern. Let me read the Views, Tests, Previews, strings, the `SpeedTrendChart` Swift Charts idiom, and the web drive-detail types/helpers in parallel.
+
+Let me read the full `SpeedTrendChart` chart surface (main, Model, Adapter), plus the Tests/Previews/strings patterns.
+
+Now let me locate the design tokens and shared components, read the test/preview/strings patterns, and check how files are registered in the build.
+
+Let me read the design tokens, shared components I'll use, the test pattern, and the strings file.
+
+`Color.TS`, `Font.TS`, `TSSpacing`, etc. are defined elsewhere. Let me locate all the token and shared-component definitions I'll need.
+
+Tokens are "generated". Let me find the generated token file and check how `project.yml` includes feature-view files (glob vs explicit) — critical for build registration.
+
+`feature-views` is included via **directory glob** — new files auto-register. Tokens live in `apps/design/generated/apple`. Let me read the rest of `project.yml` (test targets + any `*.Tests.swift` handling) and the generated token files.
+
+Let me verify how `.Tests.swift` files in `feature-views` are handled (the app target globs that dir but tests use `@testable import`). Checking `Tests/Unit` and the generated tokens.
+
+Let me read the generated token API, the web unit/number helpers, the components I'll use, and confirm the chart surface's full file set.
+
+Now I have the full token API. Let me read the native `ChartContainer`, the line-chart components, and the web data prep (`useDriveDetailData` tire handling + `useUnits` + `numberFormat`) to get the unit contract exactly right.
+
+Let me verify the tire-pressure unit contract in the web data hook — whether `chartData.tireFl` values are pre-converted to display units.
+
+I now have the full unit contract: `chartData.tire*` values are **pre-converted to display units** upstream; the leaf just appends the `unitPrefs.pressure` label. Let me read the lint config, placeholder gate, the chart Tests/Previews pattern, and the Units facade before writing.
+
+Let me read the placeholder patterns (forbidden tokens), the chart Tests pattern, and confirm the Units facade approach.
+
+I have everything needed. Let me verify the exact `fmtNumber` default precision (parity-critical) and the Units facade, then write the files.
+
+Confirmed: `fmtNumber` defaults to precision 2, pressure base is kPa (psi/bar conversions upstream). I have full parity context. Let me set up tracking and write the plan.
+
+Pre-existing unrelated modifications exist in the tree (admin web files) — I'll leave those untouched and only commit my surface files + log. Let me write the plan, then create all 7 files.
+
+Now writing the files. Starting with the pure Foundation core (Adapter).
+
+Let me quickly check `AREA_DEFAULTS` (line type/width/dots) for faithful chart styling before writing the Views.
+
+`AREA_DEFAULTS` = monotone, no dots, width 2, connectNulls. Now writing the Views (palette, tiles, Swift Charts line chart with selection, legend, state chrome).
+
+Now the composed main surface view.
+
+Now the Previews.
+
+Writing the Tests (adapter, projection, model, accessibility), then the strings catalog.
+
+Now updating the chart's accessibility to use the parity `aria` key, then writing the strings catalog.
+
+All 7 files written. Now the verification phase — starting with swiftformat on my files.
+
+Auto-fixing formatting in-place on my files.
+
+Formatting passes. Now running swiftlint and the placeholder gate on my files, and reviewing the reformatted blocks.
+
+Two swiftlint issues: Model has a 6-param helper (max 5), and Views is 496 lines (max 400). Let me fix the Model param count and split the chart views into a separate `TirePressureSection.Chart.swift` (still matches the allowed `TirePressureSection.*` glob).
+
+Now splitting the chart views into a separate file. Let me find the exact boundaries of the chart structs in the Views file.
+
+Creating `TirePressureSection.Chart.swift` with the chart + tooltip, then removing them from Views.
+
+Now removing the chart structs from the Views file (lines 234–417) using sed, then verifying.
+
+Views is now 312 lines. Re-running swiftformat + swiftlint on all 7 files.
+
+Both clean. Now running the placeholder gate, checking for symbol collisions, verifying the Views cut, and attempting a syntax parse of the pure Adapter.
+
+Two issues found: (1) my Views comment contains the word "placeholders" (forbidden token), and (2) there are **existing** `TirePressure*` widget files in the same module — I must check for type-name collisions. Let me investigate the widget type names precisely.
+
+Critical: existing `TirePressure*` widget files in the same module declare colliding types (`TirePressureProjection`, `TirePressureSource`, `TirePressureStrings`, `TirePressureConnection`, `TirePressureTelemetry`, `OSLogTirePressureTelemetry`, `InMemoryTirePressureSource`, `TirePressureAccessibility`, and test classes). I must namespace all my types uniquely. Renaming my types to the `TirePressureSection` prefix (the View name stays `TirePressureSection`).
+
+Renames applied cleanly. Now fix the forbidden "placeholders" word and scan all my files for any other forbidden tokens.
+
+Now reformatting (rename may have pushed lines past 120), then re-running all gates and re-checking collisions.
+
+One 127-char line swiftformat couldn't wrap. Let me view and manually fix it.
+
+Re-running all gates after the line-length fix, including the exact placeholder-gate invocation from the prompt.
+
+swiftformat and swiftlint pass on all 7 files. Now the placeholder gate (exact prompt invocation) and a full-project swiftlint run to confirm no regressions.
+
+Placeholder gate passes (0), and my files add **zero** swiftlint violations (the one full-project violation is pre-existing in `LifetimeStatsWidget.Adapter.swift`, untouched by me). Now let me get real compile confidence: typecheck the pure Adapter and syntax-parse all files against the macOS SDK.
+
+Adapter pure core **typechecks cleanly** against the macOS SDK, and only my 8 files are added. Let me syntax-parse the SwiftUI/Charts files, then attempt a fuller group typecheck including the real token + component dependencies.
+
+All 6 files parse cleanly. Now attempting a fuller group typecheck against the **real** generated tokens + shared components (excluding the Tests file, which needs `@testable import`).
+
+The only errors are in `Skeletons.swift` (depends on `TSCard` from a file I didn't include) — **not** in my code. Let me isolate my SwiftUI files against the real tokens using correctly-signatured component shims in a temp dir (keeping the repo clean).
+
+Outstanding — **all 6 source files typecheck cleanly (rc=0)** against the real generated tokens + Swift Charts + SwiftUI on the macOS SDK. Let me verify the Tests file's renamed references are consistent, then clean up.
+
+The mechanical rename over-reached into one **method name**: `hasTirePressure` became `hasTirePressureSection` (consistent across files, so it compiles, but it's a poor name). Let me find any such non-type identifiers and clean them up.
+
+The only over-reach is the `hasTirePressure` method (now `hasTirePressureSection`) — consistent so it compiles, but the name is poor and it corrupted a web-property reference in comments. Let me clean these up precisely.
+
+Clean. Re-running the full verification suite after the cleanup.
+
+All green: swiftformat ✓, swiftlint (my files) rc=0 ✓, Adapter typecheck rc=0 ✓, full surface typecheck rc=0 ✓. Let me do a final visual sanity check of the main view and key sections.
+
+Code is clean and coherent. Now generating the gate log with **honest, real** evidence — running the actual gate steps (including the xcodebuild capability probe) and capturing true output + exit codes.
+
+Real gate evidence captured. Now appending supplementary compile evidence (typecheck against the real SDK + tokens) and the deliverable summary + honest EXIT/STATUS footer.
+
+Log is complete and honest. The code is complete, typechecks against the real SDK + tokens, and passes every runnable gate. Let me stage exactly my surface files + the log (excluding the pre-existing unrelated web changes) and commit.
+
+Exactly my 8 surface files + the log are staged (no unrelated files). Committing.
+
+Committed cleanly. Let me verify the commit contents and finalize tracking.
+
+All 9 files committed (1861 insertions), nothing extraneous, all todos done. The task is complete to the maximum the runner allows.
+
+## Summary
+
+I built a production-polished native Apple/SwiftUI parity of the web `TirePressureSection` as 8 files under `apps/apple/TeslaSync/feature-views/TirePressureSection.*`, following the established surface convention (`AcDcStatsPanel`/`SpeedTrendChart`).
+
+**What shipped**
+- **Adapter** (pure, Foundation-only): wheel enum, sample/row/tile models, projection (per-wheel min/max over positive readings, plotted-wheel + flattened-row derivations, `hasAnyReading`, axis bounds), `fmtNumber` port, surface slug, VoiceOver builder.
+- **Model**: P1/S8 `TirePressureSectionSource` state-holder seam + `@Observable` model, P1/S10 i18n facade, P1/S11 `view.opened` telemetry, input→resolved projection, in-memory source.
+- **Views + Chart**: per-wheel min/max tiles, a four-series **Swift Charts** `LineMark` chart (monotone/no-dots/width-2/connect-nulls per `AREA_DEFAULTS`) with FL/FR/RL/RR mapped to **exact brand-token colors**, selection tooltip, legend, and loading/empty/error chrome.
+- **Main view**: composes header + freshness chip + connectivity banner + state switch (loading/empty/error/data/stale/offline).
+- **Previews** (×6 states), **Tests** (adapter + resolver-per-state + model wiring/telemetry/freshness + a11y), **strings** (all web-parity keys + envelope).
+
+**Key correctness fix:** the module already had `TirePressure*` dashboard-widget types — I namespaced every surface type as `TirePressureSection*` to avoid duplicate-definition collisions.
+
+**Verification (all runnable gates pass):**
+- `swiftformat --lint`: 0/7 · `swiftlint --strict`: 0 surface violations · placeholder gate: 0
+- Real compile evidence: pure adapter **typechecks** (rc=0); all 6 source files **typecheck against the real generated design tokens + Swift Charts/SwiftUI** (rc=0); Tests grammar-parses (rc=0).
+
+**STATUS=BLOCKED (honest):** the gate's mandatory `xcodebuild build test` (iOS Simulator + macOS) **cannot run** — this runner has Apple Command Line Tools only, not full Xcode (no `iphoneos`/`iphonesimulator` SDK, no `simctl`). This is the prompt's documented capability-block condition; full evidence is in the committed log, which ends `EXIT=1` / `STATUS=BLOCKED`.
+

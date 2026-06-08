@@ -1,0 +1,147 @@
+I'll start by exploring the repository structure and checking the capabilities required for this task.
+
+Key findings: web source is at `web/src/components/ui/ThemeProvider.tsx`. `apps/apple` exists. **xcodebuild requires full Xcode but only CommandLineTools is installed** — but swiftlint, swiftformat, swift 6.3, and pwsh ARE available. Let me explore deeply before concluding anything.
+
+Now I understand the web source. Let me explore the existing Apple app conventions — feature-views, state holders, design tokens, i18n, and any precedent logs.
+
+This is a sophisticated monorepo. Each surface follows a multi-file pattern (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.States.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`). Let me read the foundational infrastructure and the placeholder gate.
+
+The app binds to a **KMP `Shared` framework** (`import Shared`) — building requires full Xcode + compiled Kotlin/Native framework. Let me verify the project/build setup and read the settings/theme infrastructure plus a complete template surface.
+
+Now I understand the surface pattern. Let me read the complete file set of this template plus the settings state holder, telemetry, i18n mechanism, and build config.
+
+Excellent — the pattern is crystal clear now. Let me read the remaining template pieces, the settings state holder, design tokens, build config, and the placeholder gate.
+
+Let me locate the exact design token and glass panel definitions, and read the placeholder gate at the correct path.
+
+The `TSSpacing` grep found nothing in Sources — tokens must be generated/elsewhere. Let me locate them and read the exact forbidden placeholder patterns (critical to avoid false positives like SwiftUI's `.placeholder`).
+
+Critical: **"Placeholder" is a forbidden pattern (case-insensitive)** — I must avoid `.redacted(reason: .placeholder)` and the word entirely. Let me find the canonical token/component definitions so my usage is exact.
+
+Tokens are generated at `apps/design/generated/apple/Tokens.swift`; `TSGlassPanel` lives in `Sources/Components/UI/Cards.swift`. Let me read the tokens, glass panel, feedback states/skeletons, typography, and project.yml.
+
+Now let me read the existing theme/settings code (to align, not collide), key components (states, typography, buttons, badges), the build config, and the template's Views/Tests.
+
+There's an existing native appearance system (`Sources/Theme.swift`, `TSThemePicker`). I need to read it to avoid type collisions, plus the typography/button components, the template's Views + Tests, and the container. Let me batch these.
+
+I now understand the architecture deeply. Let me read the lint configs, the template's Views + Tests, the DI container, and TSButton signature to nail conventions exactly.
+
+Let me read the test conventions, button/skeleton signatures, the DI container, and the existing settings model shape.
+
+Let me confirm the exact `TSButton`/`TSBadge` init signatures and read the DI container to model the production source accurately.
+
+I have all conventions. Before implementing, let me probe exactly what the toolchain can verify (critical for honest reporting): can `swiftc` parse SwiftUI, and can `swift` run a standalone package test?
+
+The CLT macOS SDK includes **SwiftUI, Charts, and MapKit** — and `swiftc -typecheck` of SwiftUI succeeds. This means I can genuinely type-check my surface against the real tokens/components standalone. Let me confirm those component files import only SwiftUI (self-contained), so I can assemble a real verification compile.
+
+All are SwiftUI-only. Let me check which Components import the KMP `Shared` framework (those I must exclude from a standalone type-check) and locate a couple of referenced symbols.
+
+No Components import `Shared` — the entire UI/Feedback/Motion component layer is SwiftUI-only. This means I can genuinely type-check my surface against the real tokens + components standalone. I have everything needed. Let me record the plan and todos, then implement.
+
+Now implementing. Starting with the pure-Foundation Adapter (the testable core).
+
+Let me type-check the Adapter immediately (Foundation-only) to catch errors early.
+
+Adapter type-checks clean under Swift 6. Now the Model (state-holder + seams + telemetry + i18n facade).
+
+Let me type-check Adapter + Model together (no SwiftUI needed).
+
+Adapter + Model type-check clean. Now the SwiftUI surface view.
+
+Now the substantial Views file — all subviews, the custom-color editor, the live preview, the state chrome, and the `ThemeProviderScope` environment-injection (the `useTheme`/`applyThemeCSS` parity).
+
+Now the critical verification: type-check the full SwiftUI surface against the **real** design tokens + component library.
+
+My files are clean — the only error is a missing `tsGlassPanel()` modifier used by `Cards.swift` itself. Let me locate and include it.
+
+Only component-to-component errors remain — **my code has zero errors**. Let me compile the precise transitive closure my files actually use to get a definitive green type-check.
+
+My full surface type-checks **clean under Swift 6** against the real tokens + components. Let me refine one preview string (drop units) and write the remaining files.
+
+Now the comprehensive test suite (the committed XCTest artifact).
+
+All seven surface files are written and the surface type-checks clean. Now the strongest honest verification: build + **run** the pure logic as a standalone Swift package test.
+
+XCTest isn't available in the CLT toolchain. I'll run the same assertions via an executable harness (public API + literal default keys) so the logic genuinely executes.
+
+`@main` conflicts with a file literally named `main.swift`. Let me rename and run.
+
+The catalog-injecting overload is internal. Let me use `@testable import` with `-enable-testing` so the harness reaches it (same visibility the committed XCTest has).
+
+**All 74 logic assertions pass** against the real Adapter + Model — including the empty-catalog branch. Now the format + placeholder gates on the actual surface files.
+
+swiftformat found auto-fixable style issues. Let me apply the repo's formatting to my files, then re-lint and re-type-check.
+
+swiftformat lint now passes (0/6 require formatting). Let me re-type-check post-format, run the placeholder gate, and lint with swiftlint.
+
+Type-check ✅ and placeholder gate ✅ (COUNT=0). Let me run swiftlint on the files and re-run the logic harness with the **post-format** sources.
+
+swiftlint linted the whole repo (1909 files) and found 1 pre-existing serious violation — I need to confirm it's **not** in my files. Let me isolate violations and check my path specifically.
+
+The one violation is pre-existing in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` — not mine. But I must confirm my files were actually linted (my dir isn't in the config's `included`). Let me lint them explicitly with a scoped config.
+
+swiftlint resolves `included` relative to the config file's location. Let me use an absolute path.
+
+swiftlint now genuinely lints my files: 7 violations (file length >400, large tuples >2, param count >5, brace spacing). The repo splits surfaces into multiple files to satisfy these — I'll do the same. Let me inspect the brace-conflict spots first.
+
+Right — the repo keeps each file ≤400 lines and tuples ≤2; I'll split into the multi-file convention and fix the tuple/param/brace issues (the brace conflict is from multi-line `if let` — I'll keep those single-line). Let me restructure.
+
+Now update the Model to use the new projection API.
+
+Now the split view files. Let me create Views (content selectors) and States (editor, preview, chrome, scope).
+
+Now update the test suite for the new projection API and to avoid the large-tuple violation. Let me rewrite it.
+
+All files split and rewritten. Let me format, check line counts, and re-type-check the entire surface (now 8 files) against the real tokens + components.
+
+All files ≤400 lines. Now the full verification battery: type-check (8 files + previews), swiftformat lint, swiftlint scoped, placeholder gate.
+
+The `#Preview` macro needs Xcode's macro plugin (unavailable in CLT) — that's why I type-check without `-D DEBUG` (preview bodies are `#if DEBUG`-gated). Re-running:
+
+Clean type-check. Now swiftlint (scoped), swiftformat lint, and the placeholder gate together.
+
+All gates green: **swiftlint 0 violations, swiftformat 0 require formatting, placeholder COUNT=0, typecheck exit 0**. Now re-run the logic harness with the split sources + new projection API.
+
+**74/74 logic assertions pass** with split sources. Now let me capture precise evidence for the xcodebuild BLOCKED status (the gate's build/test steps).
+
+Clear BLOCKED evidence for xcodebuild: no full Xcode, no `Shared.xcframework`, no iOS Simulator. Let me run the actual gate command sequence to capture real exit codes for an honest log.
+
+Let me confirm the 1 swiftformat-flagged file is pre-existing (not mine).
+
+Both whole-tree gate "failures" are **pre-existing** files (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`) — not mine. My surface is clean across every runnable check. Let me write the honest gate log.
+
+Let me do a final consolidated verification, check git status, and clean up temp files before committing.
+
+The `AIUsageCard.*` and `web/*.tsx` modifications are **pre-existing working-tree changes from this shared workspace — not mine** (I only wrote to `shared-surfaces/` and the log). I'll stage only my files explicitly. Let me clean up temp files and commit precisely.
+
+Nothing staged — let me re-run the staging explicitly and verify step by step.
+
+Exactly my 11 files staged, nothing unrelated. Let me confirm no unrelated files crept in, ensure temp cleanup, and commit.
+
+All work is complete and committed. Let me do a final consolidated verification pass on the committed files to confirm the green state holds.
+
+Final state confirmed green. Here's the outcome.
+
+## P4 · Shared surface · 0229 — `ThemeProvider` (Apple)
+
+**STATUS = BLOCKED** (on `xcodebuild`, per the prompt's capability clause) — **implementation complete, every runnable check green.** Honest evidence is in the gate log.
+
+### What shipped (committed `a2d8c2491`, 10 files, ~2,300 LOC)
+A production-grade SwiftUI parity of `web/src/components/ui/ThemeProvider.tsx`, split into the repo's multi-file convention (each ≤400 lines):
+- **Adapter / Catalog / Projection** (pure Foundation): the 6 colour themes + 7 display modes verbatim, `hexToRGB`, `#hex`/`rgba()` parsing, custom-theme builder, `/settings` validation + merge, and the `auto → system light/dark` resolution.
+- **Model** (`@Observable`): P1/S8 source seam, P1/S11 `view.opened` telemetry, `UserDefaults` seed + write-through persistence of `setTheme`/`setMode`/`setCustomColors`, stale auto-refresh.
+- **Views / States**: theme swatches, mode rows, a `ColorPicker` custom editor, a live applied-theme preview, every state (loading/empty/error/stale/offline/data), and `ThemeProviderScope` (the `useTheme` + `applyThemeCSS` context parity).
+- **Previews / Tests / .strings**: a preview per state, XCTest for adapter+model+a11y, and the full i18n catalog (no English literals in code).
+
+### Verification (run on this runner)
+- **Type-check** of the whole surface against the **real** generated tokens + shared components, Swift 6 strict concurrency → **exit 0**
+- **74/74 logic assertions** executed against the real Adapter+Model (standalone harness, since XCTest isn't in the CLT toolchain)
+- **swiftlint --strict** (repo rules, scoped) → **0 violations**; **swiftformat --lint** → **0/9**; **placeholder gate** → **0**
+
+### Why BLOCKED (not DONE)
+`xcodebuild ... build test` cannot run here: the runner has **CommandLineTools only (no full Xcode)**, the **KMP `Shared.xcframework` is not built**, and there's **no iOS Simulator**. The prompt explicitly maps this to `STATUS=BLOCKED with evidence`. The whole-tree `swiftlint`/`swiftformat` non-zero exits are **pre-existing** issues in other files (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`), not this surface. Unrelated pre-existing working-tree changes were deliberately left unstaged.
+
+
+
+The task is fully complete and committed. All 11 todos are done, and every runnable verification passes. Let me mark it complete.
+

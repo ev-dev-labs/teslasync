@@ -1,0 +1,122 @@
+================================================================================
+p4-apple · P7 · page:analytics/WeeklyDigest — SwiftUI / HIG implementation
+================================================================================
+prompt   : p4-apple/P7-page-analytics-WeeklyDigest
+unit     : page:analytics/WeeklyDigest   (web route /weekly-digest)
+web src  : web/src/features/analytics/pages/WeeklyDigestPage.tsx (+ components/weekly-digest/*)
+target   : apps/apple/TeslaSync/Features/Analytics/** (adaptive macOS + iOS, ADR-002)
+host     : Darwin arm64, Swift 6.3.2, swiftlint present, pwsh present, Command Line Tools ONLY (NO Xcode)
+
+--------------------------------------------------------------------------------
+WHAT WAS BUILT (full panel/chart/state/string parity — no scope narrowing)
+--------------------------------------------------------------------------------
+Native SwiftUI page bound to an @Observable WeeklyDigestPageModel over an injected
+WeeklyDigestPageSource seam (P1/S8 pattern, mirroring WeeklyDigestWidget). Reproduces
+EVERY region of the web source in the same data + order:
+  WeekSelector → SummaryHeroCards (incl. Fun Fact) → DrivingSection (daily-distance
+  bar chart + 4 mini-stats + Top Drive) → ChargingSection (daily-energy bar chart +
+  4 mini-stats + energy-vs-last-week) → BatteryHealthSection (2 battery pills + 3
+  stats) → AlertsSection (severity list + distribution donut / all-clear empty) →
+  WeekOverWeekSummary (6 comparison cards).
+Charts use the P3 Swift Charts wrappers (TSBarChart / TSPieChart in TSChartContainer)
+— never WKWebView, never a direct Charts import in feature code. Units/figures are a
+1:1 port of useWeeklyDigest + helpers.ts + constants.ts (Monday-first week ranges,
+day-of-week bins, trend/percent incl. inverted metrics, fun-fact city pairing, the
+locale number/currency formatting).
+
+Files (14, all <= 265 lines; per feature-views multi-file convention):
+  WeeklyDigestPage.swift              — page scaffold: subtitle, toolbar vehicle picker,
+                                        loading/empty/error/content switch
+  WeeklyDigestPage.Model.swift        — @Observable model + Source seam + InMemory source
+  WeeklyDigestPage.Inputs.swift       — Drive/Charge/Alert DTOs, formatting, trend, constants
+  WeeklyDigestPage.Projection.swift   — projected piece structs + WeeklyDigestProjection
+  WeeklyDigestPage.Projector.swift    — project() + aggregate() + daily bins
+  WeeklyDigestPage.Cards.swift        — hero / driving / charging section builders
+  WeeklyDigestPage.Stats.swift        — battery / alerts / week-over-week builders
+  WeeklyDigestPage.Math.swift         — week range / trend / number-format helpers
+  WeeklyDigestPage.Localization.swift — catalog facade + adaptive grid columns
+  WeeklyDigestPage.Components.swift   — leaf views (trend, hero card, mini-stat, pill, bar chart)
+  WeeklyDigestPage.Sections.swift     — 7 section views + DigestSkeleton
+  WeeklyDigestPage.Alerts.swift       — AlertsSection (severity list + donut)
+  WeeklyDigestPage.Navigation.swift   — .analytics route registration (cached model)
+  WeeklyDigestPage.Previews.swift     — content/empty/loading/error previews
+
+Navigation: AnalyticsRouteRegistration hosts the page at the .analytics route via the
+shell AppRouteHostRegistry; wired in Sources/TeslaSyncApp.swift; /weekly-digest deep
+link aliased to .analytics in Sources/App/AppRouteParser.swift. Production KMP-backed
+source is injected at the macOS build (same deferral as AppContainer.bootstrap); the
+default unconnected source renders the genuine "No Data" state — never fabricated data
+(ADR-011).
+
+Strings: 5 required keys resolve from apps/apple/Localization/Localizable.xcstrings
+(translation.analytics.weeklyDigest.*). 3 missing catalog keys added (noDataMessage,
+funFactDesc, noAlerts); JSON re-validated.
+
+Build wiring: TeslaSync/Features/Analytics added to both app targets in
+apps/apple/project.yml and to apps/apple/.swiftlint.yml `included`.
+
+--------------------------------------------------------------------------------
+VERIFICATION ACTUALLY RUN (raw results)
+--------------------------------------------------------------------------------
+[swiftc -typecheck -swift-version 6] Foundation-only files (Inputs, Projection,
+  Projector, Cards, Stats, Math, Model)                                  -> EXIT 0 (clean)
+[swiftc -typecheck -swift-version 6] full view layer (Page, Components, Sections,
+  Alerts, Navigation, Localization, Previews-data) against precise P2/P3 component
+  + token stubs                                                          -> EXIT 0 (clean;
+  only the #Preview macro could not expand under bare swiftc — environment, not code)
+[swiftc -parse -swift-version 6] all SwiftUI files (incl. #Preview)      -> EXIT 0 (syntax ok)
+[swiftc -parse] edited Sources/App/AppRouteParser.swift, Sources/TeslaSyncApp.swift -> EXIT 0
+[logic harness] 34 assertions on the projector (week ranges, day bins, trend/percent,
+  city-pair fun fact, aggregation, formatting, empty-week)              -> PASS=34 FAIL=0
+[logic harness] 11 assertions on the model (resolvePhase, auto-select first vehicle,
+  empty phase, idempotent start, week-nav guards)                       -> PASS=11 FAIL=0
+
+--------------------------------------------------------------------------------
+GATE (apple triad: placeholder + build + lint + test)
+--------------------------------------------------------------------------------
+check-placeholders.ps1 -Path .../Features/Analytics -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+swiftlint --strict (Features/Analytics)                                  LINT_EXIT=0   (0 violations)
+xcodebuild -scheme TeslaSync build                                       BUILD_EXIT=BLOCKED
+  -> xcode-select: tool 'xcodebuild' requires Xcode, but active developer directory
+     '/Library/Developer/CommandLineTools' is a command line tools instance.
+xcodebuild -scheme TeslaSync test                                        TEST_EXIT=BLOCKED
+  -> same: no Xcode runner on this host (prompt: "If no Xcode runner is available,
+     the gate -> STATUS=BLOCKED").
+
+=== PARITY ===
+unit=page:analytics/WeeklyDigest platform=apple
+PARITY_REQUIRED=8
+[1/8] state  loading  -> WeeklyDigestPage.swift `content` .loading case + Sections.swift
+                         `WeeklyDigestSkeletonView` (web DigestSkeleton); model phase .loading
+[2/8] state  empty    -> WeeklyDigestPage.swift `content` .empty case `TSEmptyState`
+                         (ContentUnavailableView); WeeklyDigestPageModel.resolvePhase -> .empty
+[3/8] state  error    -> WeeklyDigestPage.swift `content` .error case `TSQueryError` + Retry
+                         -> model.refresh(); resolvePhase(.failed) -> .error
+[4/8] string analytics.weeklyDigest.noData        -> WeeklyDigestPage.swift .empty TSEmptyState
+                         title LocalizedStringKey("translation.analytics.weeklyDigest.noData")
+[5/8] string analytics.weeklyDigest.noDataMessage -> WeeklyDigestPage.swift .empty TSEmptyState
+                         message key; catalog key ADDED + validated
+[6/8] string analytics.weeklyDigest.selectVehicle -> WeeklyDigestPage.swift `vehiclePicker`
+                         accessibilityLabel + empty-options label (WeeklyDigestL10n)
+[7/8] string analytics.weeklyDigest.subtitle      -> WeeklyDigestPage.swift `subtitle`
+                         (WeeklyDigestL10n.text("subtitle"))
+[8/8] string analytics.weeklyDigest.title         -> WeeklyDigestPage.swift
+                         .navigationTitle(WeeklyDigestL10n.key("title"))
+PARITY_COVERED=8
+=== END PARITY ===
+
+--------------------------------------------------------------------------------
+RESULT
+--------------------------------------------------------------------------------
+Implementation + parity coverage COMPLETE and verified (PARITY_COVERED == PARITY_REQUIRED
+== 8; types check under Swift 6 strict concurrency; 45 logic assertions pass; swiftlint
+--strict clean; placeholder gate clean). The build + test legs of the triad cannot be
+executed on this host because no Xcode runner is installed (Command Line Tools only), so
+per the prompt's gate contract the overall gate is BLOCKED rather than green. No
+red-as-green: not reported DONE.
+
+EXIT=1
+STATUS=BLOCKED

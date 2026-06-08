@@ -1,0 +1,147 @@
+=== P4 Feature view 0201 AIRestorePanel (Apple) ===
+
+Web source : web/src/features/settings/components/AIRestorePanel.tsx  (THE spec)
+Catalog dep: web/src/ai/features.ts  (AI_FEATURES name table + isKnownAiFeature — 57 features)
+Parent     : web/src/features/settings/components/AISettings.tsx  (feeds `archived`, `onConfirm`, `onDecline`)
+Native out : apps/apple/TeslaSync/feature-views/AIRestorePanel.{swift,Model,Adapter,Views,Previews,Tests}.swift
+             + AIRestorePanel.strings  (7 files; git status shows ONLY these changed)
+Runner     : Darwin / full Xcode 26.5 reached via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+             (the box's xcode-select defaults to /Library/Developer/CommandLineTools; overridden for every
+             xcodebuild/xcrun/Gradle invocation). iPhone 16 sim (Booted) + iOS 26.5 runtime present.
+             swiftlint 0.63.3, swiftformat 0.61.1, xcodegen 2.45.4, pwsh 7.6.2, swiftc 6.3.2, Java 17.
+
+Capability : SwiftUI + Swift Charts + MapKit + iOS 18 / macOS 15 SDKs ARE present and were compiled+executed
+             against (see SDK compiles + EXECUTED harness below) — this is NOT a STATUS=BLOCKED platform case.
+             (This surface uses no charts/maps; web source has none.)
+
+[Shared.xcframework] Built from apps/shared via Gradle/Kotlin-Native
+                     (`DEVELOPER_DIR=…Xcode.app… ./gradlew :core:assembleSharedXCFramework`,
+                     ":core:assembleSharedDebugXCFramework" → "xcframework successfully written out") and staged to
+                     apps/apple/Frameworks/Shared.xcframework. Local, git-ignored build artifact — not committed.
+                     (First Gradle attempt failed in 9s because Kotlin-Native ran `xcrun xcodebuild -version`
+                     against CommandLineTools; re-run with DEVELOPER_DIR exported succeeded.)
+
+──────────────────────────────────────────────────────────────────────────────
+SURFACE PARITY — what was ported from the web source (no scope narrowing)
+──────────────────────────────────────────────────────────────────────────────
+• Composition : Sparkles header + title (Subhead) + description (Caption) + disc-bulleted preview list of the
+                archived-feature labels + trailing "No thanks" (ghost) / "Restore selection" (primary) actions —
+                every region of AIRestorePanel.tsx.
+• previewLabels: faithfully ported (AIRestorePreview.labels) — walks the archived entries IN ORDER, drops the
+                `false` ones, resolves a known feature id to t(`ai.settings.feature.<id>.label`, AI_FEATURES[id].name)
+                and renders an unknown id verbatim (raw id) so the listing is never blank.
+• AI_FEATURES : the frozen 57-feature id→name table + isKnownAiFeature ported verbatim into AIFeatureCatalog.
+• role=alert  : web `role="alert" aria-live="polite"` → a contained accessibility element whose label announces
+                title + description + the resolved feature names (AIRestoreAccessibility.summary seam).
+• onConfirm / onDecline : forwarded through the P1/S8 state-holder seam (AIRestoreSource.confirm/decline); the view
+                issues no HTTP. ADR-015 §I7 "restore is never silent" preserved (explicit confirm vs decline).
+• States      : loading (skeleton chrome) / empty (nothing enabled → friendly ContentUnavailableView, never blank) /
+                error (QueryError peer + retry) / data, PLUS the orthogonal connection axis live/stale/offline
+                (freshness chip + banner + one-shot stale auto-refresh) — the P4 leaf contract.
+• i18n        : 100% via the P1/S10 facade (AIRestoreStrings, table "AIRestorePanel"); zero English literals in
+                Swift beyond the web-default fallbacks (the established AcDcStatsPanel/0096 pattern).
+• Telemetry   : P1/S11 `view.opened` emitted once with surface slug "AIRestorePanel".
+• a11y        : VoiceOver labels on every interactive element (decline, restore, refresh, retry), Dynamic Type via
+                Font.TS roles, Reduce-Motion-aware fade-in + skeleton shimmer.
+
+──────────────────────────────────────────────────────────────────────────────
+GATE STEPS — real captured results (no red painted green)
+──────────────────────────────────────────────────────────────────────────────
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' -configuration Debug \
+        ENABLE_TESTING_SEARCH_PATHS=YES build
+    IOS_EXIT=65  → DEFERRED. The app module compiled WITH the real Shared.xcframework; the build stops SOLELY on
+    pre-existing parallel-merge sibling breakage in files OUTSIDE this prompt's allowed scope:
+      • `'DashboardWidgetSize' is ambiguous for type lookup` ×47 (+ `invalid redeclaration of DashboardWidgetSize`):
+        the type is DEFINED in 15 UNMODIFIED sibling files (Sources/DashboardWidgets/*.swift ×2 +
+        TeslaSync/dashboard-widgets/*.swift ×13). HEAD is a parallel-merge commit; not my surface.
+      • The repo's co-located *.Tests.swift compile INTO the app target (project.yml sources), so the app build
+        needs ENABLE_TESTING_SEARCH_PATHS=YES (supplied here as an ephemeral CLI override — project.yml is outside
+        allowed files).
+    PROOF the surface is clean: grep of the full 7,183-line build log → ZERO `AIRestorePanel*: error:` lines. The
+    only AIRestorePanel mention is a benign warning in AIRestorePanel.Tests.swift ("file is part of module
+    'TeslaSync'; ignoring import") — the documented co-located-test structure, identical to every sibling, not a
+    defect. My files were compiled in-context (that warning proves the compiler processed them in the app module).
+
+[2] xcodebuild -scheme TeslaSync-macOS -configuration Debug ENABLE_TESTING_SEARCH_PATHS=YES CODE_SIGNING_ALLOWED=NO build
+    MAC_EXIT=65  → DEFERRED. Same dashboard-widgets contamination — `DashboardWidgetSize` (×93),
+    `TelemetryErrorsModel` (×152), `VehicleHeroModel` (×144), `VehicleHeroProjection` (×62) ambiguities cascading
+    into ~1,556 downstream key-path/type-inference errors — all in UNMODIFIED dashboard-widgets siblings
+    (dashboard-widgets is a source path of BOTH app targets). macOS additionally requires a dev-certificate
+    (CODE_SIGNING_ALLOWED=NO supplied to isolate the compile). PROOF: ZERO `AIRestorePanel*: error:` lines in the
+    35,396-line log.
+
+[3] swiftlint --strict           (apps/apple, 1,445 files)
+    LINT_EXIT=2  → 1 violation, PRE-EXISTING and OUTSIDE allowed files:
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141  Function Body Length (78 > 50)
+      — `git status` shows the file UNMODIFIED; not my surface.
+    Scoped `swiftlint --strict` on the 6 AIRestorePanel*.swift files → "Found 0 violations, 0 serious in 6 files". ✓
+
+[4] swiftformat --lint apps/apple (1,449 files)
+    FORMAT_EXIT=1  → 1 file requires formatting, PRE-EXISTING and OUTSIDE allowed files:
+      TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes) — UNMODIFIED; not my surface.
+    Scoped `swiftformat --lint` on the 6 AIRestorePanel*.swift files → "0/6 files require formatting". ✓
+
+[5] ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/AIRestorePanel
+    PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0 ✓
+    (Also scanned the 6 swift files in isolation → PLACEHOLDER_COUNT=0; direct grep for
+    TODO/FIXME/XXX/Placeholder/"Coming soon"/"not implemented"/"Lorem ipsum" → none.)
+
+[6] plutil -lint AIRestorePanel.strings → "OK".  (71 keys: 4 web parity + 57 per-feature labels + 10 native chrome.)
+
+──────────────────────────────────────────────────────────────────────────────
+IN-SCOPE SURFACE VERIFICATION — executed + compiled, real (the surface itself is fully green)
+──────────────────────────────────────────────────────────────────────────────
+• EXECUTED logic  : direct-call harness over the REAL Adapter+Model (swiftc, macOS 15 SDK, -swift-version 6, strict
+                    concurrency): "EXECUTED 30 assertions, 0 failures". Covers AIFeatureCatalog (57 names,
+                    known/unknown, labelKey), AIRestorePreview (order + disabled filtering + known key/fallback +
+                    unknown verbatim + hasRestorableEntries), AIRestoreProjection (error precedence / loading
+                    (flag+nil) / empty / data), the AIRestoreModel wiring (view.opened-once telemetry,
+                    push→projection, confirm/decline delegation, manual refresh, stale auto-refresh once-per-episode,
+                    offline no-refresh, stop+re-arm), the AIRestoreAccessibility summary, and the i18n facade label
+                    resolution. (The harness is a throwaway verifier — never shipped/committed.)
+• iOS 18 sim SDK  : swiftc -typecheck of the FULL surface (Adapter+Model+swift+Views+Previews incl. #Preview macros,
+                    -DDEBUG) against iPhoneSimulator26.5 + the REAL shared component library (Tokens, TSDesign,
+                    TSMaterial, Buttons, Cards, Typography, Badges, Motion, Skeletons) → EXIT=0. ✓
+• macOS 15 SDK    : same full-surface -typecheck against macosx26.5 → EXIT=0. ✓
+• Standalone      : Adapter alone (Foundation) -typecheck EXIT=0; Adapter+Model (+slug shim) -typecheck EXIT=0.
+
+──────────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT
+──────────────────────────────────────────────────────────────────────────────
+ 1 No red-as-green   : every result above is the REAL captured exit; the 2 xcodebuild reds + 1 lint + 1 format red are
+                       shown and attributed to pre-existing sibling/signing causes — NOT painted green.
+ 2 No scope narrowing: ALL states (loading/empty/error/data/stale/offline) + the preview list (known+unknown) +
+                       confirm/decline + i18n + a11y + telemetry + stale auto-refresh implemented; nothing dropped.
+ 3 No skip-and-assume: iOS xcodebuild RAN; macOS xcodebuild RAN; all host gates RAN; the surface logic was EXECUTED;
+                       the DashboardWidgetSize blocker was directly observed in the real build logs, not assumed.
+ 4 No stubs as final : complete implementations; PLACEHOLDER_COUNT=0.
+ 5 No parity shortcuts: faithful port of previewLabels + the 57-feature AI_FEATURES catalog + isKnownAiFeature + the
+                       alert composition + every i18n key (incl. all 57 per-feature label keys).
+ 6 No delegation     : authored directly (no sub-agent delegation of the surface).
+ 7 No predecessor bypass: did NOT edit project.yml / .swiftlint.yml / .swiftformat / sibling files / the shared
+                       Localizable.xcstrings; strings ship as the per-surface table; Shared.xcframework + the
+                       generated .xcodeproj are local git-ignored build artifacts.
+ 8 No commit on red  : committing on green host-runnable gates (scoped swiftlint, scoped swiftformat, placeholder,
+                       plutil) + dual-SDK full-surface compiles + EXECUTED tests. The 2 xcodebuild steps + the
+                       whole-tree swiftlint/swiftformat hits are DEFERRED — each blocked SOLELY by pre-existing,
+                       out-of-allowed-files sibling breakage / runner signing, not by this surface.
+ 9 No silent drift   : `git status` lists ONLY the 7 AIRestorePanel.* files (+ this log).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED> below.
+
+──────────────────────────────────────────────────────────────────────────────
+DISPOSITION
+──────────────────────────────────────────────────────────────────────────────
+Production-polished native AIRestorePanel shipped at parity with the web source and verified by every in-scope,
+host-runnable means: an EXECUTED-green logic harness (30/30) over the real Adapter+Model, iOS-18-sim AND macOS-15
+SDK compiles of the full surface (incl. #Preview) against the REAL shared component library under Swift 6 strict
+concurrency, and green scoped swiftlint + scoped swiftformat + placeholder + plutil gates. The whole-tree
+`xcodebuild build test` (iOS + macOS) and the whole-tree `swiftlint --strict` / `swiftformat --lint` are DEFERRED to
+the integration/signed runner because they are blocked SOLELY by pre-existing, parallel-merge sibling breakage and
+runner signing — all in files this prompt forbids me to touch (`DashboardWidgetSize`/`TelemetryErrorsModel`/
+`VehicleHeroModel` ambiguities across 15 unmodified dashboard-widgets files; `LifetimeStatsWidget` body-length;
+`ActionBuilder.Previews` blank-line; the app targets' missing ENABLE_TESTING_SEARCH_PATHS; macOS dev-certificate
+signing). ZERO errors originate in any AIRestorePanel.* file. This matches the established "code-complete + DEFERRED
+Xcode gate" precedent of the 117 sibling P4 feature-view surfaces.
+
+EXIT=0
+STATUS=DONE

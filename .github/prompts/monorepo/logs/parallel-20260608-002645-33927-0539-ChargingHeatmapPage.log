@@ -1,0 +1,150 @@
+I'll start by exploring the repository structure and understanding the task requirements. Let me look at the web source, the Apple app structure, and relevant instructions.
+
+Now let me explore the Apple app structure to understand the existing patterns, components, and architecture.
+
+Let me explore the Apple app structure in depth.
+
+The actual structure differs from the prompt's assumed paths. Let me explore the real layout in detail.
+
+This is a large, established codebase. Let me examine the parity manifest record, the build tooling, and a complete existing example to understand conventions.
+
+Let me study a complete existing example and the supporting infrastructure (tokens, components, KMP facade).
+
+Excellent architecture. Let me read the rest of this exemplar set and find where shared types (KMP facade) live.
+
+Let me understand the build configuration, tooling, and log format conventions.
+
+Let me check tool availability and study the expected log format from a prior feature-view.
+
+Now I have strong context. This is the first "page"-kind prompt. The build target only compiles `TeslaSync/feature-views` (not `Features/Charging`), and the predecessor avoided editing `project.yml`. Let me explore navigation, design tokens, components, and a Swift Charts bar-chart exemplar.
+
+`feature-views` is the only valid home (build + lint paths). Let me read the routing infrastructure and design tokens.
+
+Let me study the registration precedent (Settings), the app wiring, and the deep-link parser.
+
+Let me check the Localization catalog, route string conventions, and how the web routes this page.
+
+Confirmed: `/charging-heatmap` is a distinct web route ("Charging Patterns", calendarClock icon). I'll add a dedicated `chargingHeatmap` route. Let me read the app wiring, design tokens, a BarChart exemplar, and the component library.
+
+Let me examine the shared facade (production data seam) and key design/component files I'll build against.
+
+Let me verify whether full Xcode and the KMP framework are available — this determines if the build gate can run at all.
+
+Full Xcode is present; the KMP `Shared.xcframework` is not staged (built via Gradle pre-action). Let me check whether any feature-view wires a real (Shared-backed) production source, to model my navigation wiring correctly.
+
+NO feature-view imports `Shared` — they're all self-contained with protocol seams (the page surface must follow this). Let me read the design tokens, key components, and a Swift Charts bar-chart exemplar.
+
+Let me read the remaining building blocks: chart models, feedback states, cards, typography, metrics, motion, material, and the units facade.
+
+The exemplar set is the strongest template. Let me read its Views, Panels, Charts, Previews, and Tests.
+
+Let me read the Previews/Tests templates and the remaining component APIs (cards, typography, skeletons, units, motion).
+
+Let me read the test template, typography, units facade, motion, material, and the web helper functions I'm porting.
+
+Let me read the web helpers I'm porting and the test template.
+
+I have the full web logic. Let me verify the exact i18n default strings and read the test template.
+
+I have the full template. Let me read the panels exemplar, the xcstrings route structure, the registry composition point, and the ledger schema.
+
+Let me check the ledger schema so I can correctly create the apple ledger, then I'll start building.
+
+Let me check the placeholder gate patterns (to avoid tripping them) and confirm no existing apple-ledger exists.
+
+I now have comprehensive understanding. Let me set up tracking and a plan, then build.
+
+Now I'll build the page. Starting with the pure projection adapter.
+
+Let me fix the redundant logic in the model's `apply` method.
+
+Now the shell subviews (Views).
+
+Now the charts file: the Swift Charts bar chart and the heatmap grid.
+
+Now the 7 panels.
+
+Let me simplify the favorite time format to avoid mixed-type format fragility.
+
+Now the main page view.
+
+Now the per-surface strings table.
+
+Let me verify every string key referenced in code exists in the strings table.
+
+Now the previews.
+
+Now the tests.
+
+Let me fix the awkward double-optional in the stats test.
+
+Now the navigation: registration helper, AppRoute case, app wiring, and the route title string.
+
+Now the AppRoute case, app wiring, and route title in the string catalog.
+
+Now add the route title to the string catalog (inserted after `route.charging`, matching enum order).
+
+Let me verify the JSON catalog is still valid and the AppRoute compiles logically.
+
+All files created. Now let me run the gates. First, swiftformat and swiftlint on the new files.
+
+swiftformat has style rules to satisfy. Let me auto-format my new files (the ecosystem tool), then re-lint.
+
+swiftformat lint passes (0/11). Now swiftlint on my files.
+
+swiftformat passes. 6 swiftlint issues to fix (empty_count on my `count` property, parameter counts, file length). Let me fix them at the source.
+
+Now update the Chart file to use `sessions` and the new cellSummary signature.
+
+Now fix the Previews helper (7→5 params) and the Tests file (rename, signature, length).
+
+Now update Tests for the rename and signature, and trim the header to satisfy file length.
+
+Let me re-run swiftformat (auto) and swiftlint on the edited files.
+
+swiftlint clean (0 violations). Let me lint the shared-file edits and run the placeholder gate.
+
+The 19 placeholder hits are pre-existing in other files (InfrastructureSection, TemperatureSection). Let me confirm MY files are clean against every pattern.
+
+My files are placeholder-clean. Now let me run the placeholder gate scoped narrowly and check it doesn't flag mine.
+
+My files pass placeholder (COUNT=0) and lint. Now I need to verify they compile. Let me inventory the Shared-free dependency set to build a focused typecheck.
+
+Components are Shared-free except `UnitFormatters.swift`. Let me build a focused SwiftPM package to typecheck + run my tests against the real dependency set.
+
+One missed rename in the grid cell. Let me fix it.
+
+Build succeeds in Swift 6 mode. Now let me run the tests.
+
+All 32 tests pass on macOS 15. Now let me verify iOS 18 SDK compatibility (the page is adaptive macOS + iOS).
+
+iOS 18 typecheck passes too. The page compiles clean against **both** SDKs in Swift 6 mode and all 32 tests pass. Now let me generate the Xcode project to confirm my files register into the app target.
+
+Project generates; my 10 files are registered (60 pbxproj refs) across both app targets. Now let me attempt the real `xcodebuild` app build to capture honest evidence of the known pre-existing blockers.
+
+The Gradle staging of the KMP `Shared.xcframework` timed out on this runner (300s, no network/toolchain), so the full app link can't run here — but my surface is **Shared-free** and already proven to compile on both SDKs + 32 green tests. Let me clean up and check git state.
+
+My changes are scoped (xcstrings, AppRoute, TeslaSyncApp, 10 new ChargingHeatmapPage files). The `AIUsageCard.*` and the 2 `web/*` changes are pre-existing/not mine — I'll exclude them. Let me create the ledger and the PARITY log.
+
+Now the comprehensive PARITY log with all gate evidence.
+
+Let me re-verify format + lint on the final state of all files (after the last Chart edit), then commit.
+
+Final gates green (format 0/11, lint 0). Now let me commit, scoped strictly to my files (excluding the pre-existing `AIUsageCard.*` and `web/*` changes).
+
+Staged set is exactly my files — `AIUsageCard.*` and `web/*` correctly excluded. Committing.
+
+Committed as `b28c9ea7f`, scoped correctly. Let me finalize tracking and do a last verification.
+
+All verification complete. Summary of the work:
+
+**Delivered** the native SwiftUI/HIG parity of the web `ChargingHeatmapPage` (route `/charging-heatmap`), adaptive across macOS + iOS, committed as `b28c9ea7f` (scoped strictly to my files).
+
+**Path reconciliation:** the prompt's idealized `TeslaSync/Features/Charging/**` is not a compiled/linted source root — `project.yml` and `.swiftlint.yml` only include `TeslaSync/feature-views` (where all 1436 existing surfaces live). Shipping there is the only build-verifiable home and avoids a `project.yml` edit (covenant #7).
+
+**Shipped** (10 files, Shared-free protocol-seam pattern per ChargingDetailSection 0053): Adapter (pure projection — stats/buildGrid/locations/durationMinutes/Wh→kWh/heat levels), Model (`@Observable` + source seam + telemetry + formatting + i18n facade), the page view, Views/Panels/Chart (7 panels + Swift Charts horizontal BarChart + 7×24 heat grid), Previews, 32 XCTest cases, and the per-surface strings table. Plus navigation: a `.chargingHeatmap` `AppRoute` case, a `ChargingHeatmapRouteRegistration` composed into `TeslaSyncApp`, and the `route.chargingHeatmap` catalog title.
+
+**Gates (real exit codes):** swiftformat `0/11` · swiftlint `0 violations` · placeholder `COUNT=0` (mine) · `swift build` green · **32/32 XCTest pass** · iOS 18 + macOS 15 Swift-6 typecheck `0` · xcodegen registers (60 pbxproj refs). `PARITY_COVERED==PARITY_REQUIRED==24`.
+
+**Honestly deferred:** the full `xcodebuild` app link — the KMP `Shared.xcframework` Gradle staging timed out on this runner (`STAGE_EXIT=124`), plus the pre-existing `project.yml` test-target-membership + signing blockers (identical to the 0053 predecessor) — all outside this Shared-free surface, which is proven to compile on both SDKs.
+

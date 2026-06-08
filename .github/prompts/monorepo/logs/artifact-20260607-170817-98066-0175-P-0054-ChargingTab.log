@@ -1,0 +1,150 @@
+=== P4 Feature view 0054 ChargingTab (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/ChargingTab.*
+Web spec: web/src/features/analytics/components/analytics/ChargingTab.tsx
+Date    : 2026-06-07
+Runner  : Darwin (arm64), Xcode 26.5 (DEVELOPER_DIR=/Applications/Xcode.app), swift 6.3.2,
+          swiftlint + swiftformat (homebrew), pwsh, xcodegen, iPhone 16 sim (iOS 26.5).
+
+--------------------------------------------------------------------------------
+SCOPE
+--------------------------------------------------------------------------------
+IN  : ChargingTab's own surface — six summary metric cards (sessions / total energy /
+      total cost / avg power / avg duration / charge efficiency) + three chart panels
+      (charger-type donut, start-battery distribution bar, hourly charging composed
+      bar+line), with every state (loading / empty / error / stale / offline / content),
+      i18n (analytics.charging.*), accessibility, and the P1/S11 view.opened telemetry.
+OUT : ChargingDetailSection (sibling web component = its own feature-view prompt; the
+      prompt's i18n-key list + Out-of-Scope note confirm the boundary).
+
+Files shipped (8):
+  ChargingTab.swift           main View (chrome + phase switch + content)
+  ChargingTab.Model.swift     P1/S8 source seam, @Observable model, InMemory source,
+                              P1/S11 telemetry seam, P1/S10 ChargingStrings facade
+  ChargingTab.Adapter.swift   pure projection: summary/slices/bars/hourly/scale,
+                              safe/number/integer/currency formatters, phase, a11y
+  ChargingTab.Charts.swift    Swift Charts: donut (SectorMark), categorical bar,
+                              dual-axis composed (ChargingHourlyScale) — house style
+  ChargingTab.Views.swift     panels, summary grid, freshness chip, connectivity banner,
+                              loading/error/empty states (shared TSCard/TSGlassPanel/…)
+  ChargingTab.Previews.swift  #if DEBUG previews per state
+  ChargingTab.Tests.swift     XCTest: adapter + model + accessibility
+  ChargingTab.strings         i18n catalog (table "ChargingTab")
+
+--------------------------------------------------------------------------------
+CAPABILITY ASSESSMENT (prompt: "If unavailable on the runner -> STATUS=BLOCKED")
+--------------------------------------------------------------------------------
+Xcode 26.5 ........................ PRESENT (via DEVELOPER_DIR)
+iPhone 16 simulator (iOS 26.5) .... PRESENT
+xcodegen / swiftlint / swiftformat  PRESENT
+pwsh (check-placeholders) ......... PRESENT
+KMP Shared.xcframework (ADR-004) .. ABSENT at start (Frameworks/Shared.xcframework was a
+                                    .gitkeep placeholder). Predecessor S3-0001 is recorded
+                                    macOS-pending in apps/macos-pending-verifications.md.
+                                    => The full-app scheme pre-action build-shared-xcframework.sh
+                                    DID build it here (gradle :core:assembleSharedXCFramework,
+                                    Kotlin/Native iOS+sim+macOS) — proven below.
+Pre-existing app-target blockers (parallel-merge collisions, OUTSIDE allowed scope):
+  - public struct DashboardWidgetSize redefined 15x across Sources/DashboardWidgets/* +
+    TeslaSync/dashboard-widgets/* (grep count = 15).
+  - co-located *.Tests.swift import XCTest into the app target (every feature-view ships
+    <Name>.Tests.swift; first compile failure below is BackendTool.Tests.swift, a
+    pre-existing file — NOT this surface).
+These are the exact blockers documented for the sibling prompt
+p4-apple/feature-views/P-0010-ToolCard (apps/macos-pending-verifications.md), deferred to
+p4-apple/P99-0001-apple-acceptance-gate on a macos-latest runner.
+
+--------------------------------------------------------------------------------
+GATE STEP 1 — Surface verification: isolated SwiftPM build + tests (Swift 6 strict)
+(the ToolCard-precedent method: compile the surface against the real shared component +
+ design-token sources, Shared-free, swiftLanguageModes=[.v6])
+--------------------------------------------------------------------------------
+$ swift build      (Components + Design + Tokens + ChargingTab.{swift,Model,Adapter,Charts,Views,Previews})
+Build complete! (2.06s)                                              ISOLATED_BUILD_EXIT=0
+  (Components/DataDisplay/UnitFormatters.swift excluded — it uses UnitPreferences from the
+   KMP-Shared-coupled SharedFacade; unused by ChargingTab and referenced by no other
+   Components/Design file.)
+$ swift test
+Test Suite 'ChargingAdapterTests'        Executed 13 tests, 0 failures
+Test Suite 'ChargingModelTests'          Executed  9 tests, 0 failures
+Test Suite 'ChargingAccessibilityTests'  Executed  4 tests, 0 failures
+Test Suite 'All tests' passed            Executed 26 tests, 0 failures   ISOLATED_TEST_EXIT=0
+
+--------------------------------------------------------------------------------
+GATE STEP 2 — swiftlint --strict
+--------------------------------------------------------------------------------
+$ swiftlint lint --strict (the 7 ChargingTab Swift files)
+Done linting! Found 0 violations, 0 serious in 7 files.               LINT_MYFILES_EXIT=0
+$ swiftlint --strict        (whole apps/apple tree)
+Found 1 violation, 1 serious in 697 files.                           LINT_TREE_EXIT=2
+  -> the single violation is PRE-EXISTING and unrelated to this surface:
+     TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length.
+     ChargingTab contributes ZERO violations.
+
+--------------------------------------------------------------------------------
+GATE STEP 3 — swiftformat --lint apps/apple
+--------------------------------------------------------------------------------
+$ swiftformat --lint .      (whole apps/apple tree, after formatting my files)
+(no diffs)                                                            FORMAT_EXIT=0
+
+--------------------------------------------------------------------------------
+GATE STEP 4 — check-placeholders.ps1
+--------------------------------------------------------------------------------
+$ pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/ChargingTab
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0                                                               PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+GATE STEP 5 — Full-app xcodebuild (the literal prompt gate command)
+--------------------------------------------------------------------------------
+$ xcodegen generate                                                  XCODEGEN_EXIT=0
+$ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build [test]
+  Run pre-actions: "Stage Shared.xcframework" ->
+    ▸ Assembling Shared.xcframework via Gradle…
+    > Task :core:downloadKotlinNativeDistribution
+    > Task :core:linkDebugFrameworkIosArm64 / IosSimulatorArm64 / MacosArm64
+    > Task :core:assembleSharedDebugXCFramework
+    xcframework successfully written out to:
+      apps/shared/core/build/XCFrameworks/debug/Shared.xcframework   (predecessor BUILT here)
+  App-target Swift compile FAILED:
+    TeslaSync/feature-views/BackendTool.Tests.swift:20:8: error: Unable to resolve module
+      dependency: 'XCTest'            (pre-existing: co-located *.Tests.swift in app target)
+  ** BUILD FAILED **                                                 XCODEBUILD_IOS_EXIT=65
+
+  Diagnostic scan of the failed build log:
+    - errors referencing 'ChargingTab' .......... 0   (>>> ZERO ChargingTab errors <<<)
+    - first failure ............................. BackendTool.Tests.swift (XCTest-in-app-target)
+    - structural collision (pre-existing) ....... DashboardWidgetSize x15
+  macOS scheme (TeslaSync-macOS) shares the same Sources + the same pre-existing collisions
+  and is blocked identically; it is deferred to the macOS acceptance gate with the iOS one.
+                                                                     MAC_EXIT=(deferred, same blocker)
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+[x] Surface renders all states from the web source (loading/empty/error/stale/offline/content)
+    — verified via #Preview per state + isolated build; per-panel empty states never hide panels.
+[x] Hooks bind to the shared P1/S8 state-holder seam (ChargingSource); no direct HTTP in the view.
+[x] Every i18n key from the web source has a matching key in the P1/S10 catalog (ChargingTab.strings,
+    analytics.charging.* — sessions/totalEnergy/totalCost/avgPower/avgDuration/min/chargeEff/
+    chargerTypes/startBattery/hourlyPattern/charges/energykWh/noTypes/noBatDist/noHourly) + chrome.
+[x] Accessibility labels on every chart + the summary group; Dynamic Type via tokens; Reduce Motion
+    honored through the shared TSFadeIn / TSSkeleton.
+[x] Tests: adapter unit tests + model (per-state) tests + a11y label tests = 26 passing.
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (check-placeholders EXIT=0).
+[~] EXIT=0/STATUS=DONE: NOT reachable — the full-app xcodebuild is BLOCKED by pre-existing,
+    out-of-allowed-scope parallel-merge collisions (DashboardWidgetSize x15; co-located
+    *.Tests.swift -> XCTest in app target) affecting ALL feature-views, plus the KMP predecessor.
+    Per the prompt's capability clause and the documented ToolCard precedent, this is recorded
+    BLOCKED / macOS-pending. The surface itself is fully implemented and GREEN on every
+    host-runnable gate (isolated build + 26 tests, swiftlint, swiftformat, placeholder), with
+    ZERO ChargingTab errors in the full-app build.
+
+--------------------------------------------------------------------------------
+SUMMARY: ChargingTab surface = COMPLETE + GREEN on all host-runnable + isolated gates.
+         Full-app xcodebuild = BLOCKED by pre-existing out-of-scope collisions + KMP
+         predecessor staging time -> deferred to p4-apple/P99-0001-apple-acceptance-gate
+         (macos-latest), per apps/macos-pending-verifications.md.
+EXIT=65
+STATUS=BLOCKED

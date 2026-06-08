@@ -1,0 +1,132 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swift`, `swiftlint`, `swiftformat` are available. Let me explore the Apple app structure and the web source.
+
+Now let me explore the `apps/apple/TeslaSync/` directory and the existing patterns (AIUsageCard as reference, shared-surfaces, project.yml).
+
+`shared-surfaces/` doesn't exist yet. The closest pattern is `feature-views/` (multi-file: `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`). Let me read the instruction files and understand the architecture (project.yml, i18n facade, tokens, state holders, existing Pagination).
+
+Let me check tooling availability (pwsh, xcodegen, git history) and read the canonical reference pattern (AIUsageCard) plus the facade/tokens/i18n infrastructure.
+
+`shared-surfaces` isn't in project.yml — prior P4 surfaces went to `feature-views`. This prompt introduces `shared-surfaces`. Note `xcodebuild` needs full Xcode (unavailable), but `swiftlint`, `swiftformat`, `pwsh`, `xcodegen` are all available. Let me read a complete reference surface to nail the pattern.
+
+Let me read the full AiUsageCard reference set and locate the shared infrastructure (i18n facade, tokens, state holders).
+
+Excellent reference. I can see the token system (`TSSpacing`, `TSRadius`, `Color.TS`, `Font.TS`), i18n facade (`AiUsageStrings.string`), motion (`TSFadeIn`), and the state-holder/phase/connection pattern. Let me locate the shared infrastructure definitions and read a small recent surface (AnomalyInlineRow) + the strings/adapter/previews pattern.
+
+Let me read the i18n facade (`AiUsageStrings`), the shared `LiveConnection`, the tokens, and the Adapter/Chrome files to understand the full contract.
+
+This is a clean, consistent architecture. Let me read the Chrome, Views, Tests files and locate the exact token/motion APIs.
+
+Now let me confirm the token definitions, the test framework, and the Views a11y patterns.
+
+Tests use XCTest. Tokens aren't in `Sources/Design` — likely generated. Let me locate all token/component definitions and check the prompt provenance/methodology.
+
+The category maps to `p4-apple/shared-meaningful`. Let me find the actual Pagination prompt and a sibling to confirm directory + wiring conventions, and read the token file.
+
+Now I have exact tokens. No shared-meaningful surfaces exist yet — I'll establish `shared-surfaces`. Let me read the shared component APIs (Buttons, Motion, Skeletons, Pickers) and the remaining AiUsageCard reference files (Views, Projection, Adapter, Tests).
+
+Let me check the Pickers component (for the page-size selector) and read the remaining reference files (Views, Projection, Adapter, Tests).
+
+There's a `TSSelect` component that maps perfectly to the web `<select>`. Let me read its API, plus the Projection (with accessibility helper), Adapter, and Tests structure.
+
+Let me read the Adapter (for the accessibility helper + production source seam) and the Tests structure to mirror them precisely.
+
+Let me read the test files to mirror the XCTest structure and telemetry spy pattern.
+
+I have a thorough grasp of the pattern. One critical thing to resolve: how `.Tests.swift` files in the app-target source dir actually compile (XCTest can't live in an app target). Let me investigate the test wiring, web i18n number formatting, and set up my plan/todos.
+
+Key findings: web i18n has no number formatting (`escapeValue: false` only) → I'll render counts as plain integers for parity. Test files live alongside surfaces in the app-target dir (house convention). Let me check git history to see whether surface wiring into `project.yml` was done per-surface or by a separate core commit.
+
+This is the blueprint: ToolCard (the first feature-view) wired `feature-views` into project.yml itself, and verified via **isolated SwiftPM build+test of the shipped sources against real design tokens** (since full Xcode isn't on the runner), deferring the xcodebuild gate to CI via `apps/macos-pending-verifications.md`. Let me read the ToolCard log, the pending-verifications file, and check for an SPM harness.
+
+I now have the complete, proven blueprint (ToolCard). Key approach: per-surface `.strings` table (like AiUsageCard), wire `shared-surfaces` into `project.yml` + `.swiftlint.yml`, verify via an **isolated SwiftPM build+test** against real design tokens, and record the xcodebuild deferral in `apps/macos-pending-verifications.md`. Let me read the lint config, placeholder patterns, and confirm component imports.
+
+Components I need only import SwiftUI. Forbidden words include "Placeholder"/"TODO"/etc. — I'll avoid them in code+comments. `--strict` turns the 120-col warning into an error, so I'll keep code lines ≤120. Let me check which component files import `Shared` (to scope the isolated harness) and Cards.swift deps.
+
+No component/design files import `Shared` — so I can compile against the real design system in isolation. I have everything I need. Let me set up my plan and todos, then build.
+
+Now I'll build the surface. Starting with the directory and the Model file (facade, value types, connection, telemetry, input, resolved, source seam, observable model).
+
+Now the Adapter — the pure, testable projection (web math), the number facade, and the accessibility seam.
+
+Now the Chrome (inline freshness chip + connectivity banner) and the Views.
+
+Now the Views file — nav buttons, page-size picker, showing line, responsive controls row, plus loading/empty/error states.
+
+Now the entry view.
+
+Now the per-surface i18n strings table.
+
+Now the previews (DEBUG-only, one per state).
+
+Now the test suite (XCTest, mirroring the house structure).
+
+Surface files created. Now wiring `shared-surfaces` into `project.yml` (both app targets) and `.swiftlint.yml` (per the ToolCard precedent for establishing a new surface dir).
+
+Surface + wiring complete. Let me run the host-runnable gates: swiftformat, swiftlint, placeholder scan, and xcodegen validation.
+
+swiftformat flagged two auto-fixable style rules (use if-expression assignment; redundant `@ViewBuilder`). Let me fix them.
+
+swiftformat passes. swiftlint scanned all 1916 files (config `included`) and found 1 serious violation — I need to confirm whether it's in my files or pre-existing. Let me isolate.
+
+The only swiftlint violation is the **pre-existing, unrelated** `LifetimeStatsWidget.Adapter.swift` (exactly as the ToolCard log documented). My `shared-surfaces` files have **zero** violations. Now the placeholder scan and xcodegen project validation.
+
+Placeholder scan clean (0 count, 0 opt-outs). Now validate the `project.yml` wiring with xcodegen.
+
+Placeholder, format, lint, and xcodegen all green; all 8 files enumerated. Now the key verification — an **isolated SwiftPM build+test** against the real design system. Let me map the dependency closure of the real component files I use.
+
+`Sources/Components` + `Sources/Design` are fully self-contained (only system imports). I'll build the isolated harness with the entire real design system. Let me inspect the design dirs and check for flatten collisions.
+
+No collisions (42 files). Let me build the isolated SwiftPM harness against the real design system and compile my sources.
+
+The only errors are the `#Preview` macro — its `PreviewsMacros` plugin ships only with full Xcode (this runner has Command Line Tools only). That's a toolchain limit, not a code defect; the DEBUG-only previews compile under the deferred Xcode gate. Let me exclude that one file from the harness and rebuild the testable logic.
+
+My Pagination sources compiled cleanly — the remaining errors are `#Preview` blocks inside the *real* component files (e.g. Typography.swift), which need Xcode's macro plugin. Building in **release** mode disables `#if DEBUG`, stripping all previews. Let me run the tests in release.
+
+Including *all* of Components pulled in `UnitFormatters.swift`, which needs a `Units` type from outside the design layer (my surface doesn't use it). Let me curate the harness to just my dependency closure: tokens + Buttons/Motion/Skeletons → Cards → Badges/Typography/Material.
+
+Library compiled cleanly (all my sources + real design system, Swift 6 strict concurrency). XCTest module is missing — let me check whether it's available at all on this CLT-only runner.
+
+XCTest is genuinely absent on this CLT-only runner — executing the XCTest suite requires Xcode (deferred). The library itself compiles cleanly, which proves type/concurrency correctness. To verify **runtime behavior** here, I'll run the identical assertions via a standalone executable against the exact shipped library sources.
+
+Now the executable harness running the identical assertions.
+
+**63/63 assertions passed** — the exact shipped sources compile and behave correctly against the real design system under Swift 6 strict concurrency. Let me syntax-check the shipped XCTest file, confirm the regenerated `.xcodeproj` is git-ignored, and review my full diff.
+
+All host-runnable gates are green: the exact shipped sources compile under Swift 6 strict concurrency and 63/63 runtime assertions pass; the XCTest file is syntactically clean; the generated `.xcodeproj` is git-ignored. The working tree also has pre-existing unrelated changes (AIUsageCard, two web files) which I will **not** stage.
+
+Now let me gather the API evidence that the Apple build/test capability (Xcode) is genuinely absent on this runner, for the BLOCKED determination.
+
+Definitive evidence: `xcodebuild` requires Xcode (only CLT present), no `simctl`/simulators, no iOS SDK. The mandated xcodebuild gate cannot run here. Let me clean up the harness and write the gate log.
+
+Now the gate log, documenting all green host gates and the BLOCKED xcodebuild capability with evidence.
+
+Now the pending-verifications deferral row.
+
+Let me do a final review of the wiring diffs, then stage only my files (excluding the pre-existing unrelated changes) and commit.
+
+Clean, minimal wiring. Now staging only my files (explicitly excluding the pre-existing unrelated changes) and committing.
+
+Staged set is exactly correct — my files only; pre-existing changes left untouched. Committing.
+
+Committed cleanly (12 files, 1500 insertions); only the pre-existing unrelated changes remain in the tree. Let me finalize my task tracking.
+
+The Pagination shared surface is complete, verified, and committed. 
+
+## Summary
+
+I shipped a production-polished, Apple-idiomatic **`Pagination`** shared surface at `apps/apple/TeslaSync/shared-surfaces/Pagination.*` — the native SwiftUI parity of `web/src/components/ui/Pagination.tsx`, following the established house pattern (AiUsageCard/ToolCard).
+
+**8 surface files** (Model, Adapter, Chrome, Views, entry, Previews, Tests, strings):
+- **Parity**: web arithmetic reproduced verbatim (`totalPages = max(1, ceil(total/pageSize))`, start/end window with the `total==0 → 0` ternary, prev/first disabled `page≤1`, next/last disabled `page≥totalPages`, un-grouped i18next numbers). "Showing X–Y of Z" line, rows-per-page `Picker` (web `<select>`), First/Prev/indicator/Next/Last cluster, RTL-mirroring SF Symbol chevrons, responsive `ViewThatFits` (`flex-col sm:flex-row`).
+- **State-holder seam** (P1/S8 `PaginationSource` + `@Observable` model) keeps the controlled-component contract; **every state renders** (loading skeleton, empty = web zero chrome + "No results", error+retry, data, inline stale/offline freshness chip+banner with one-shot auto-refresh).
+- **i18n** via per-surface "Pagination" table (no English literals in code), **P1/S9 tokens**, full **a11y** labels, **P1/S11** `view.opened` telemetry.
+- Established `TeslaSync/shared-surfaces` and wired it into `project.yml` (iOS+macOS) and `.swiftlint.yml`.
+
+**Verification — green on every host-runnable gate:** swiftformat `0/7`, swiftlint --strict `0` violations in the 8 files (the 1 whole-app violation is pre-existing in `LifetimeStatsWidget.Adapter.swift`), placeholder scan `0/0`, xcodegen enumerates all 8 files, and an **isolated SwiftPM build of the exact shipped sources against the real design system under Swift 6 strict concurrency with 63/63 runtime assertions passing**.
+
+**STATUS=BLOCKED (honest):** the prompt's `xcodebuild` iOS-Simulator + macOS build/test gate **cannot run on this Command-Line-Tools-only runner** (no Xcode, no `simctl`/simulators, no iOS SDK, no XCTest — API evidence captured in the log). Per the prompt's capability clause, it's recorded BLOCKED and **deferred to the macos-latest CI runner** via a new `apps/macos-pending-verifications.md` row. The surface itself introduces zero errors on every gate that can run here.
+
+I committed only my files (`1d57ba7`, 12 files / 1500 insertions); the pre-existing unrelated working-tree changes (AIUsageCard, two web files) were left untouched.
+

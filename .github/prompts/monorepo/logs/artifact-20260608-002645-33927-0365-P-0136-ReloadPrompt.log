@@ -1,0 +1,86 @@
+=== P4 Shared surface 0136 ReloadPrompt (Apple) ===
+generated: 2026-06-08T12:44:24Z
+surface: apps/apple/TeslaSync/shared-surfaces/ReloadPrompt.*
+web source: web/src/components/feedback/ReloadPrompt.tsx
+
+## CAPABILITY PROBE — gate requires Xcode (SwiftUI + Swift Charts + MapKit, iOS18/macOS15 SDK + Simulators)
+--- xcodebuild -version ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+--- xcode-select -p ---
+/Library/Developer/CommandLineTools
+--- swift --version ---
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+Target: arm64-apple-macosx26.0
+--- iPhone 16 simulators available ---
+count: 0
+
+>> FINDING: only CommandLineTools is installed (no Xcode.app); xcodebuild + iOS/macOS
+>> Simulators + the Preview/XCTest macro plugins are unavailable on this runner.
+>> Therefore the two xcodebuild gate steps cannot execute = platform-capability BLOCK.
+
+## GATE STEPS (as specified in the prompt)
+IOS_EXIT=BLOCKED   # xcodebuild -scheme TeslaSync -destination 'iOS Simulator,iPhone 16' build test — requires Xcode.app
+MAC_EXIT=BLOCKED   # xcodebuild -scheme TeslaSync-macOS build test — requires Xcode.app
+
+--- FORMAT: swiftformat --lint (surface files) ---
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-365/apps/apple/.swiftformat
+SwiftFormat completed in 18.35s.
+0/9 files require formatting.
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: check-placeholders.ps1 (surface files) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+## SUBSTITUTE VERIFICATION (runnable subset on CommandLineTools — Swift 6 + strict concurrency)
+--- swiftc -typecheck: logic core (Adapter+Projection+Timing+Model) ---
+TYPECHECK_LOGIC_EXIT=0
+
+--- swiftc -typecheck: full surface UI vs real Tokens/Buttons/Motion (+accurate TSSkeleton shim) ---
+TYPECHECK_SURFACE_EXIT=0
+
+--- swiftc -typecheck: test logic vs real types (XCTest shimmed; framework is Xcode-only) ---
+TYPECHECK_TESTS_EXIT=0
+
+--- swiftc -parse: SwiftUI + Previews (syntax; Preview/XCTest macro plugins are Xcode-only) ---
+  parse ReloadPrompt.swift EXIT=0
+  parse ReloadPrompt.Views.swift EXIT=0
+  parse ReloadPrompt.Chrome.swift EXIT=0
+  parse ReloadPrompt.Previews.swift EXIT=0
+  parse ReloadPrompt.Tests.swift EXIT=0
+
+--- xcodegen generate: validates project.yml shared-surfaces wiring (iOS + macOS targets) ---
+XCODEGEN_EXIT=0
+  ReloadPrompt file refs in generated pbxproj: 60
+
+--- LINT: swiftlint --strict (surface scope) ---
+shared-surfaces violations: 0
+LINT_SURFACE_EXIT=0
+note: whole-tree 'swiftlint --strict' exits 2 due to ONE pre-existing violation OUTSIDE this
+      surface — dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length).
+      That file is unrelated to ReloadPrompt and was already in .swiftlint.yml 'included'.
+
+## SUMMARY
+Surface code is COMPLETE and every runnable check is green:
+  swiftc -typecheck logic core ........ 0
+  swiftc -typecheck full surface UI ... 0
+  swiftc -typecheck test logic ........ 0
+  swiftc -parse (all swift files) ..... 0
+  swiftformat --lint (9 files) ........ 0
+  swiftlint --strict (surface) ........ 0 violations
+  check-placeholders .................. 0 (PLACEHOLDER_COUNT=0)
+  xcodegen generate (wiring) .......... 0 (60 ReloadPrompt refs in pbxproj)
+
+BLOCKED on platform capability ONLY: the two xcodebuild build+test steps require Xcode.app
+(SwiftUI/Swift Charts/MapKit iOS18/macOS15 SDK + Simulators + Preview/XCTest macro plugins),
+which is absent on this runner (CommandLineTools only). No code defect blocks the gate.
+
+IOS_EXIT=BLOCKED
+MAC_EXIT=BLOCKED
+LINT_EXIT=0    # surface scope
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,100 @@
+=== P4 Shared surface 0041 AIQuietHoursSuggestion (Apple) ===
+Date: 2026-06-08
+Branch: auto/20260608-002645-33927/270
+Web source (spec): web/src/components/ai/AIQuietHoursSuggestion.tsx
+Native output:      apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.*
+
+--------------------------------------------------------------------------------
+DELIVERABLE (complete — no stubs, no skeleton-only, full web parity)
+--------------------------------------------------------------------------------
+apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.swift            (View)
+apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.Adapter.swift    (pure domain: proposal, parser, preview rows, weekdays, a11y)
+apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.Projection.swift (connection/stream-phase/feed/resolved/projection)
+apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.Model.swift      (P1/S8 source seam, P1/S11 telemetry, P1/S10 i18n facade, @Observable model)
+apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.Views.swift      (badge, Ask-Helix button, thinking dots, output panel, proposal review, idle CTA)
+apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.Chrome.swift     (freshness chip, refresh, banner, loading, error)
+apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.Previews.swift   (11 state previews)
+apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.Tests.swift      (projection + model wiring)
+apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.AdapterTests.swift (pure adapter)
+apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.strings          (i18n catalog)
+
+Parity coverage:
+  - withAiFeature('quiet-hours-suggestion') gate ........ .gated phase -> surface withdrawn (EmptyView); view.opened deferred past gate
+  - AIFeatureCard scaffold ............................. title + Helix badge + description + universal "Ask Helix" CTA + AiOutputPanel peer
+  - useAiStream lifecycle (idle/streaming/paused-confirm/done/error) ... QuietHoursStreamPhase + isBusy/canStart parity
+  - tool_result 'draft_quiet_hours_window' validation .. QuietHoursDraftParser (exact web handleEvent gate) + lenient bypass_severities filter
+  - onApplyDraft({enabled:true,...}) ................... QuietHoursDraftProposal.patch() -> source.apply() (no direct write path in view)
+  - proposal preview rows .............................. window / weekday bitmask / bypass severities (+ insufficient_history + existing_windows_count footnotes)
+  - every i18n key from source ......................... present in .strings (title/description/button/badge/applyButton/previewLabel/previewWindow/previewWeekdays/previewBypass/previewInsufficientHistory/previewExistingCount) + helix CTA + native chrome
+  - states ............................................. gated / loading / idle(empty) / streaming / proposal / error / stale / offline all render
+  - accessibility ...................................... VoiceOver labels on every interactive element; reduce-motion-aware thinking dots; spoken weekday expansion
+  - telemetry .......................................... view.opened surface="AIQuietHoursSuggestion" (P1/S11), emitted once, deferred until gate open
+  - all files <= 400 lines (swiftlint file_length); shared-component-only; no Tailwind ports; no raw hex
+
+--------------------------------------------------------------------------------
+VERIFICATION THAT CAN RUN ON THIS RUNNER (raw results)
+--------------------------------------------------------------------------------
+[swiftformat --lint apps/apple/TeslaSync/shared-surfaces]  -> "0/9 files require formatting."   FORMAT_EXIT=0
+[swiftlint --strict (repo rules, surface files)]           -> "Found 0 violations, 0 serious in 9 files."   LINT_EXIT=0
+[check-placeholders.ps1 -Path .../shared-surfaces]         -> PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+
+Isolated SwiftPM type-check + test harness (real Apple SDK, macOS 15, Swift 6, Xcode 26.5),
+shared P1/S9 tokens = verbatim apps/design/generated/apple/Tokens.swift, P1/S9 components = faithful
+signature stubs of TSButton/TSGlassPanel/TSFadeIn/TSSkeleton:
+[swift build]  -> "Build complete!" (all 7 production files + previews compile clean against SwiftUI/Foundation SDK)
+[swift test]   -> "Executed 42 tests, with 0 failures (0 unexpected)"
+                  (QuietHoursDraftParserTests, QuietHoursDraftToolDataTests, QuietHoursWindowPatchTests,
+                   QuietHoursDraftPreviewTests, QuietHoursWeekdaysTests, QuietHoursSuggestionAccessibilityTests,
+                   QuietHoursSuggestionProjectionTests, QuietHoursSuggestionModelTests)
+
+--------------------------------------------------------------------------------
+GATE STEP RESULTS
+--------------------------------------------------------------------------------
+xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test  -> IOS_EXIT=BLOCKED (see capability evidence)
+xcodebuild -scheme TeslaSync-macOS build test                                                        -> MAC_EXIT=BLOCKED (see capability evidence)
+swiftlint --strict                                                                                   -> LINT_EXIT=0
+swiftformat --lint apps/apple                                                                         -> FORMAT_EXIT=0
+check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion              -> PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+BLOCKED — PLATFORM / BUILD-GRAPH CAPABILITY EVIDENCE (the two xcodebuild steps)
+--------------------------------------------------------------------------------
+The xcodebuild build+test steps cannot reach EXIT=0 in THIS checkout for reasons that are
+provisioned by the "P4 core" dependency (this prompt: "Depends on: P4 core") and are OUTSIDE the
+allowed-files scope of this prompt (allowed: apps/apple/TeslaSync/shared-surfaces/AIQuietHoursSuggestion.* + this log).
+They are NOT defects in the deliverable, which is independently verified green above.
+
+Evidence A — the gate's `xcodebuild` resolves to Command Line Tools, not Xcode:
+  $ xcodebuild -version
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+  '/Library/Developer/CommandLineTools' is a command line tools instance
+  (Xcode 26.5 exists at /Applications/Xcode.app but is not the active developer dir; the gate
+   script does not set DEVELOPER_DIR, so the very first xcodebuild invocation errors out.)
+
+Evidence B — the new surface directory is not wired into the Xcode project source graph:
+  $ grep -n 'shared-surfaces' apps/apple/project.yml      -> (absent)
+  $ xcodegen generate                                     -> OK (project created)
+  $ grep -c 'AIQuietHoursSuggestion' TeslaSync.xcodeproj/project.pbxproj  -> 0
+  i.e. the generated project compiles 0 of the surface files. project.yml lists only
+  Sources / TeslaSync/dashboard-widgets / TeslaSync/feature-views / Localization / DesignTokens.
+  Adding `TeslaSync/shared-surfaces` to project.yml is a P4-core change and is OUTSIDE this
+  prompt's allowed-files scope, so the gate cannot exercise the surface here even if it builds.
+
+Evidence C — the KMP shared core framework is absent and is (re)built on the fly via Gradle:
+  $ ls apps/apple/Frameworks/Shared.xcframework                 -> No such file or directory
+  Both app targets hard-depend on `Frameworks/Shared.xcframework` (ADR-004). 15 files under
+  Sources/ `import Shared`. The Xcode build runs apps/apple/Scripts/build-shared-xcframework.sh
+  (Gradle Kotlin/Native: ":core:linkReleaseFrameworkIosArm64", ":core:linkReleaseFrameworkMacosArm64", ...),
+  a heavyweight multi-platform native link that requires the full KMP toolchain and is not part of
+  this surface's scope.
+
+Net: the surface is production-complete and verified by every check that can run on this runner
+(swift build, 42 unit tests, swiftlint --strict, swiftformat --lint, placeholder gate — all green).
+The two xcodebuild gate steps are BLOCKED on P4-core build-graph provisioning (Evidence A/B/C),
+which is an explicit upstream dependency and outside the allowed-files scope of this prompt.
+
+Honesty covenant: no red reported as green; no scope narrowing; no stubs as final; no parity
+shortcuts; xcodebuild status reported as BLOCKED with API/platform evidence (not DONE).
+
+EXIT=1
+STATUS=BLOCKED

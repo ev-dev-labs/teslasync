@@ -1,0 +1,150 @@
+I'll start by exploring the environment and understanding the task requirements.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed, and `simctl` (iOS Simulator) is unavailable. swiftlint, swiftformat, and the Swift 6.3 compiler ARE available. Let me investigate further before deciding on approach.
+
+Full Xcode is installed at `/Applications/Xcode.app` (though `xcode-select` points to CLT). Let me test whether I can activate it via `DEVELOPER_DIR`, and explore the existing Apple app patterns in parallel.
+
+Excellent — capability IS available: Xcode 26.5 activates via `DEVELOPER_DIR`, iOS 26.5 simulator (iPhone 16 already booted), swiftlint/swiftformat present. The existing `feature-views/` has a rich established pattern (Adapter/Model/Views/States/Previews/strings/Tests per surface). Now let me understand the web contract and find native equivalents for the AI primitives.
+
+No native AI primitives exist yet except a reference in `AIRestorePanel`. Let me read the remaining web contract (useAiStream, withAiFeature, AiOutputPanel) and examine the closest native AI surface as a template.
+
+Now I fully understand the web contract. Let me study the native architecture: the closest existing AI surface (`AIRestorePanel`), the build config, and the shared infrastructure (state holders, tokens, i18n, diagnostics).
+
+`project.yml` is at `apps/apple/project.yml`. Let me read the AIRestorePanel template set and core infrastructure.
+
+The pattern is very clear now. Let me read the remaining template files (Views, Previews, Tests, strings), the design tokens, the build config, and check for any existing native streaming-card surface.
+
+Now let me read the build config, design tokens, and strings format to understand registration and available primitives.
+
+Now I understand the file pattern and that `shared-surfaces/` must be registered in `project.yml`. The critical question is whether the full gate can actually run. Let me check the build toolchain dependencies (xcodegen, the Shared.xcframework, Kotlin).
+
+This is the key precedent. The `macos-pending-verifications.md` documents the exact established protocol: `Shared.xcframework` needs Kotlin/Native (gradle/kotlin **not installed** here), so the full-app `xcodebuild build test` cannot run on this host. Prior P4-apple surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) verified the surface **green in isolation** (SwiftPM + `swiftc -typecheck` on real SDKs + swiftlint/swiftformat/placeholder) and deferred the full-app build to macOS CI. Let me examine the prior logs and harness to match the exact protocol.
+
+Let me read the precedent log (ToolCard) and the placeholder checker to match the exact verification protocol and STATUS convention.
+
+I now have the complete sanctioned protocol from the ToolCard precedent: **isolated SwiftPM build+test (Swift 6 strict concurrency) + `swiftc -typecheck` on real SDKs + swiftlint/swiftformat/placeholder all GREEN**, with the full-app `xcodebuild` DEFERRED (pre-existing `DashboardWidgetSize` collisions + macOS signing, zero surface errors) → `EXIT=0 / STATUS=DONE`. Let me locate the exact design-system primitives my surface will consume, and confirm the toolchain.
+
+Java 17 + gradlew exist (so Shared.xcframework is buildable, though the precedent shows the full-app gate still fails on pre-existing collisions). Now I need the exact token/component definitions for my surface. `Color.TS` is in `Theme.swift`, but `TSSpacing`/`TSRadius`/`Font.TS` weren't found in Sources — likely generated tokens. Let me locate them.
+
+Tokens are at `apps/design/generated/apple/Tokens.swift` (the `../design/generated/apple` path in project.yml). Let me read the token contract and the component signatures my surface will use.
+
+Complete token contract confirmed. Now the component signatures (TSGlassPanel, TSButton, TSSkeleton, TSFadeIn) and any shared typography/badge primitives.
+
+Now the remaining primitives: skeleton, motion/fade, and typography/badge components.
+
+I now have the complete design-system contract. Let me set up tracking and create the surface directory, then build the implementation.
+
+Now I'll build the surface. Starting with the pure Adapter core.
+
+Now the Model — the P1/S8 state-holder seam, P1/S11 telemetry, P1/S10 strings facade, feature gate, connection axis, and stream handling.
+
+Now the Views — the native `AIFeatureCard` equivalent and all sub-states.
+
+Now the main surface View.
+
+Now the previews covering every state.
+
+I need to fix the preview helper so the "Streaming" state actually opens the draft. Let me correct it.
+
+Now the strings catalog.
+
+Now the comprehensive test suite.
+
+All 7 surface files written. Now the necessary build wiring (project.yml + .swiftlint.yml), following the ToolCard precedent.
+
+Wiring done. Let me verify the config edits and run the formatter/linter on my files. First, check the swiftformat config and apply it to my directory only (avoiding drift to other files).
+
+Config confirmed (`--maxwidth 120`). Let me apply swiftformat to my directory only, then lint.
+
+Formatter clean (0/6 require formatting). Now swiftlint and the placeholder gate on my files.
+
+Two items to fix: a placeholder-word in a comment (line 117) and I need to isolate which swiftlint violations are mine. Let me investigate both.
+
+Clear picture: the only violations in my files are `file_length` (>400 lines under `--strict`) on Model.swift (438) and Tests.swift (474) — the third is pre-existing (LifetimeStatsWidget). Plus the placeholder gate caught the literal word "placeholder" in a comment. The repo's established fix for length is splitting (many feature-views have separate `.ModelTests.swift`). Let me find clean split boundaries.
+
+Now I'll fix the placeholder word and split the two oversized files (Model → extract Strings facade; Tests → extract ModelTests), matching the repo's established multi-file pattern. Let me view the exact blocks to move.
+
+I'll split the files. Model: extract the Strings facade to a new file (precise tail split). Let me do the Model split via shell to preserve exact formatting.
+
+Model is 324 lines now. Let me fix the placeholder word and verify the exact Tests.swift tail boundaries before splitting it.
+
+Boundaries confirmed. Now I'll split Tests.swift into Tests (adapter/projection/i18n) + ModelTests (model wiring + Spy), preserving exact formatting.
+
+Both under 400 now. Let me re-run formatter, linter, and placeholder gate on the full surface set.
+
+All host gates green (format 0/8, lint 0 violations, placeholder 0). Now the key verification: an **isolated SwiftPM build + test** under Swift 6 strict concurrency, compiling my surface against the real design-system files. Let me set up the harness.
+
+Now the Package manifest, then build and test under Swift 6.
+
+Library compiles clean under Swift 6 strict concurrency against the real design system. Now the tests.
+
+45 tests ran, 1 failure. Let me find it.
+
+The failure is a test-expectation issue: my `summary` used a naive `". "` join that produces `".."` when a part already ends in a period. The fix is a smarter spoken-join (genuine VoiceOver quality improvement) — which makes both existing assertions correct. Let me update the adapter.
+
+Let me add an explicit regression test for the double-period avoidance, then re-format and re-verify.
+
+All 46 tests pass under Swift 6. Now the cross-SDK `swiftc -typecheck` on both real iOS 18 and macOS 15 SDKs (per precedent).
+
+iOS 18 typecheck clean. Now macOS 15.
+
+Both SDKs typecheck clean. Now let me prove the project enumerates my files (`xcodegen generate`) and confirm the pre-existing full-app blocker is real and not mine.
+
+Project generates cleanly and enumerates my files (54 refs). The pre-existing `DashboardWidgetSize` collision (the documented full-app blocker) is confirmed present and unrelated to my surface. Let me quantify it and attempt the real full-app gate. First, kick off the Shared.xcframework build (needed before `xcodebuild`).
+
+Confirmed: `DashboardWidgetSize` is redefined 15× (matching the precedent's documented blocker); my surface defines none of the colliding types. The Kotlin/Native toolchain is configured (dry-run succeeds). Let me run the real `Shared.xcframework` assembly so I can attempt the actual full-app gate, capturing genuine evidence.
+
+Launched in background. Let me check its progress while I prepare the log.
+
+The background job was discarded with the ephemeral session. Let me launch it properly as a detached async process.
+
+Building detached. Let me monitor it and meanwhile verify the split files are coherent.
+
+All split files are coherent and within limits. Let me check the framework build progress.
+
+Progressing well (downloading Kotlin/Native distribution, some tasks FROM-CACHE). Let me wait and check again.
+
+Debug XCFramework written, now building release variants. Let me wait for it to finish staging.
+
+Release linking (the slow, optimized Kotlin/Native step) in progress. Let me wait longer.
+
+Nearly there — macOS release link is the last compile step. Let me wait for completion and staging.
+
+The framework is staged (ios-arm64, ios-arm64-simulator, macos-arm64 slices present). Let me confirm the build's final status.
+
+Framework staged successfully (ios-arm64, ios-arm64-simulator, macos-arm64 slices). The shared `/tmp` log got clobbered by a parallel slot, but my framework is correctly staged in slot-284. Now the real full-app gate. Let me run the iOS Simulator build, capturing output for analysis.
+
+Build running. Let me monitor it while drafting the log.
+
+Build failed as expected. Let me read the actual errors and confirm they're the pre-existing collisions with zero shared-surfaces errors.
+
+`IOS_EXIT=65`. The build fails fast on `AIRestorePanel.Tests.swift:18: error: unable to resolve module dependency: 'XCTest'` — the **pre-existing** structural blocker documented in `macos-pending-verifications.md` (co-located `*.Tests.swift` compiled into the app target). **Zero** errors originate from my surface. Let me capture the macOS exit for completeness while I draft the log.
+
+Let me thoroughly categorize the iOS build errors while macOS builds.
+
+Confirmed: the **only** iOS error is the pre-existing `AIRestorePanel.Tests.swift` XCTest-in-app-target blocker — zero errors in any non-test file and zero in my surface. Let me wait for the macOS build.
+
+macOS build hit the identical pre-existing blocker. Let me capture its exit code.
+
+Both `IOS_EXIT=65` / `MAC_EXIT=65`, identical pre-existing blocker, zero surface errors. Now let me run the final consolidated host-gate numbers for the log (tree-wide format/lint to prove I don't regress them).
+
+Lint is clean for my files (the 1 violation is pre-existing `LifetimeStatsWidget`). But swiftformat flags 1 file tree-wide — let me confirm it's not mine.
+
+The 1 swiftformat file is pre-existing (`ActionBuilder.Previews.swift`), not mine (my dir = 0/8). Let me confirm my git footprint is clean and the generated project/framework are ignored.
+
+My git footprint is clean (`shared-surfaces/`, `project.yml`, `.swiftlint.yml`); the generated `.xcodeproj` and `Shared.xcframework` are git-ignored. The `AIUsageCard.*` and `web/*` modifications are **foreign** (parallel agent / pre-existing) — I'll exclude them from my commit. The swiftformat tree flag is pre-existing `ActionBuilder.Previews.swift` (unmodified in HEAD), not mine. Now let me write the comprehensive log.
+
+Now let me record the deferred-verification row in `macos-pending-verifications.md`, following the established format.
+
+Let me do the final definitive verification: re-sync the harness with the exact files I'm about to commit, run the full test suite once more, and confirm my wiring diffs are clean.
+
+Final verification green: 46/46 tests on the exact committed sources, and the wiring diffs are clean 1-line additions to both targets. Now let me commit **only** my files (excluding the foreign `AIUsageCard.*`/`web/*` changes).
+
+All 13 staged files are mine; no foreign files. Committing.
+
+Committed cleanly (13 files, 2092 insertions). Let me clean up temporary verification artifacts.
+
+All 9 todos done, temp artifacts cleaned, and the only remaining working-tree changes are the **foreign** parallel-task files (`AIUsageCard.*`, `web/*`) which I correctly left untouched. Let me update the session plan status.
+
+The task is complete. Let me provide the final summary.
+

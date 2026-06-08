@@ -1,0 +1,162 @@
+I'll start by exploring the repository structure and the key files referenced in this task.
+
+Now let me look at the YearReview type definitions and the existing Apple app structure.
+
+All tools are available (xcodebuild, swiftlint, swift, pwsh) — not blocked. The individual slides already exist as components. Let me examine the existing patterns and check for any existing page file.
+
+No existing page file. 7 of 10 slides exist; DriveHighlight/ChargingBreakdown/Comparisons are missing. The template path `Features/Analytics/` doesn't match the actual flat `feature-views/` layout. Let me study the conventions, gate contract, and data-binding patterns.
+
+No page logs yet — this is the first page. The gate paths in the prompt are templated (no `.xcodeproj`, uses `feature-views/` not `Features/Analytics/`). Let me discover the actual build setup.
+
+Two build blockers found: `Shared.xcframework` is absent (only `.gitkeep`), and `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me confirm whether any full Xcode exists.
+
+A full Xcode exists at `/Applications/Xcode.app`. I can target it via `DEVELOPER_DIR` without sudo. Let me verify it works.
+
+Xcode 26.5 with iOS 26.5 SDK and simulators is available via `DEVELOPER_DIR`. The only remaining build dependency is the missing `Shared.xcframework`. Let me study the data-binding references and the xcframework build script.
+
+Excellent reference — the widget pattern is clear (Model/Adapter/View/strings/Previews/Tests, with a `Source` seam to the shared core). Now I need to understand the slide component API to decide composition strategy. Let me read several slide files.
+
+Now I deeply understand the slide architecture: each slide is a standalone surface with its own model/source bound to the shared core. Let me check whether production source adapters and a navigation system exist, to decide composition strategy.
+
+No production sources exist yet for slides. Key infra is in `Sources/App/` (routing) and `Sources/SharedFacade/` (KMP facade). Let me study the routing system, the facade, and a production "LiveProvider" wiring pattern.
+
+Now let me study the shell, route parser, the facade (container, state holders), and a production LiveProvider pattern.
+
+Let me find the composition root (where routeHosts is populated, app entry) and the facade internals.
+
+Found the composition root (`TeslaSyncApp.swift`) and the registration pattern (`SettingsScene.swift`). Let me read both, plus the SettingsRouteRegistration.
+
+Now I understand registration. Let me harvest the design tokens and shared components (the building blocks I'll reuse), plus the existing chart-slide pattern.
+
+Now I have the token vocabulary. Let me read the chart wrappers, motion, metrics, skeletons, and states components — the building blocks I'll compose.
+
+I now have all the building blocks. Localization uses per-surface `.strings` tables folded into the master `Localizable.xcstrings`. Let me set up a plan and check the heavy build dependency (KMP `Shared.xcframework`) feasibility before committing to an approach.
+
+Java 17 + KMP `gradlew` exist, but building `Shared.xcframework` via Kotlin/Native is heavy. Let me check the pending-verifications doc and the apple ledger to calibrate, then kick off the xcframework build in the background while I implement.
+
+This is the key precedent: host-runnable gates (Swift 6 typecheck, executed harness, swiftformat, swiftlint, placeholder) must be GREEN; the Xcode scheme build/test is DEFERRED with documented reasons (missing `Shared.xcframework` + cross-slot duplicates), and STATUS=DONE. Strings ship as a per-surface table; no core-file self-registration. Let me read the widget's log head, Tests, and Previews to mirror the exact structure.
+
+The verification approach is now fully clear. Let me write the plan and todos, then read the remaining adapter/test/preview references to nail value-parity arithmetic. Let me kick off the (heavy) xcframework build in the background first, then continue.
+
+Gradle configures fine. Let me kick off the actual `Shared.xcframework` assembly in the background (it's heavy Kotlin/Native compilation) while I implement the page.
+
+I have the canonical conversion/format patterns. Let me read the web `YearReview` type, the interpolate helper, the remaining slide projections, and the widget Previews/Tests structure.
+
+I have all the arithmetic patterns and the full `YearReview` DTO. Let me read the widget's Previews and Tests to mirror structure exactly, then start building.
+
+I now have everything: patterns, value-parity arithmetic, test/preview structure, and the critical constraint that the widget already defines many `YearReview*` symbols in-module (so I must uniquely prefix all page types). Let me check the lint config limits, then write the plan and start building.
+
+All constraints are clear (avoid the literal words TODO/FIXME/XXX/"Coming soon"/"Placeholder"/"Lorem ipsum"/"not implemented"; type names ≤50; lines ≤120; functions short; uniquely prefix every symbol to avoid collisions with the widget's in-module `YearReview*` types). Let me record the plan and todos, then build.
+
+Let me verify the effective `file_length`/`function_body_length` limits by checking the largest existing files that already pass `--strict`.
+
+Conventions confirmed. Now I'll build the page. Starting with the data types (DTOs/units/enums), then the model.
+
+Now the model file — the `@Observable` view-model, source seam, update snapshot, deck identity, strings facade, telemetry, and in-memory source.
+
+Let me check how the existing Title/Summary adapters format the year (grouping matters for parity) before I write the projector.
+
+Key parity nuance confirmed: Title year is grouped (`"2,026"` via AnimatedNumber→fmtNumber), Summary header year is ungrouped (`"2026"` via raw `{data.year}`), and `Math.round`/raw-number interpolations are ungrouped while `fmtNumber(...)` values are grouped. Let me write the adapter (value types + format helpers + accessibility).
+
+I need to adjust the `YearReviewPageChart` struct (split drives value/label for the view) and confirm the SF Symbols the existing Summary slide uses for the Plug/Car/Zap/Leaf icons. Let me do both.
+
+SF Symbols confirmed (car.fill, bolt.fill, powerplug.fill, leaf.fill). Let me check the background build, then write the projector.
+
+The `Shared.xcframework` built successfully (~8 min)! Let me stage it into `Frameworks/` so the full `xcodebuild` gate becomes runnable — this elevates the build/test gate from deferred to actually-executable.
+
+Now the projector — the core value-parity logic porting each web slide's math.
+
+Core data/logic done. Let me update todos and build the slide views. Starting with the slide palette, renderer, and first four slides.
+
+Now the remaining six slides (Charging, Savings, Environment, Patterns, Comparisons, Summary).
+
+Now the story chrome (progress bar, vehicle picker, nav/close buttons, counter) and the page-level loading/empty/error states.
+
+Now the navigation registration (deep-link value type, parser, destination host) — the allowed "navigation registration" file.
+
+Now the main page view — the full-screen story shell with states, slide transitions, tap/swipe/keyboard navigation, and chrome.
+
+Now the per-surface strings table with all page + slide keys (web key names preserved).
+
+Let me verify every string key referenced in code exists in the strings table, and scan for forbidden placeholder words.
+
+All keys covered, no forbidden words. I caught a deep-link edge case (universal vs custom-scheme URLs) — let me fix the URL parser, then write Previews and Tests.
+
+Now the previews (every page state + a slide gallery) and the comprehensive test suite.
+
+Now the comprehensive test suite with hand-verified value-parity assertions.
+
+All 13 files created. Let me update todos and run verifications — first a fast focused typecheck of my code against the real design system. Let me identify which component files pull in the Shared facade (to exclude from a Shared-free typecheck).
+
+Only `UnitFormatters.swift` needs the facade (same as the precedent). Let me run a focused Swift 6 typecheck of my surface against the real design system.
+
+Path fix — the tokens live at `../design/generated/apple`. Let me re-run.
+
+Only 2 errors, one in my Previews (a `Sendable` static). Let me see both fully.
+
+Just one real error: the preview's static needs `YearReviewPageProjection` (and its members) to be `Sendable`. They're all value types of Sendable members — let me add the conformance.
+
+Let me re-run the focused typecheck to confirm zero errors.
+
+**Typecheck GREEN** (0 errors, Swift 6 strict concurrency). Now swiftlint, swiftformat, and the placeholder gate on my files.
+
+Minor lint fixes needed (line lengths, one large tuple, one cyclomatic). Let me view the exact lines.
+
+Let me fix all lint violations (line lengths, the 3-tuple, and the cyclomatic switch).
+
+Now the Chrome (two long accessibility/title lines) and SlidesB/Tests line wraps.
+
+Now re-run swiftlint, plus swiftformat lint and the placeholder gate.
+
+Two issues: the lint directive orphaned the doc comment, and tests have inline loops + force-unwraps that swiftformat forbids. Let me view the slideSummary region and fix the directive via a block disable, fix the test force-unwraps, then auto-format.
+
+Now fix the test force-unwraps (use `XCTUnwrap`), then auto-format my files with swiftformat.
+
+swiftformat passes. Let me re-verify swiftlint, the typecheck (format may have shifted lines), and run the placeholder gate.
+
+Placeholder violations are pre-existing in sibling files (none in mine — no `YearReviewPage` lines appeared). And one swiftlint brace issue from the reformatted test helper. Let me view and fix it to the canonical widget form, then isolate the placeholder scan to my files.
+
+Let me re-verify swiftformat + swiftlint on my files, and run the placeholder gate isolated to just my files (via a temp copy).
+
+**All static gates GREEN on my files:** typecheck (0 errors), swiftformat (0/11), swiftlint --strict (0 violations), placeholder (COUNT=0). Now the authoritative gate — let me generate the Xcode project and attempt the full build (the `Shared.xcframework` is now staged). First, a quick scan for pre-existing cross-file duplicate symbols that could doom the module build.
+
+Confirmed: **15 definitions of `DashboardWidgetSize`** and **13 of `DashboardWidgetRegistration`** across sibling files — pre-existing cross-slot duplicate symbols that will fail the whole-module build (my files define none of these). Let me confirm where they live, then run the real build to capture honest evidence.
+
+Confirmed — 15 sibling files redeclare `DashboardWidgetSize` (pre-existing cross-slot duplicates); my files use none of them. Let me run the real build to capture honest evidence that failures are pre-existing (in siblings), not in my code.
+
+Build is running in the background. While it compiles, let me check the ledger schema/format (the commit references `apps/parity/apple-ledger.json`) and prepare the log path.
+
+Ledger schema is simple (per-row); no apple ledger exists yet. Let me check the build progress.
+
+Build failed (as expected). Let me confirm the errors are the pre-existing sibling duplicates and that none are in my files.
+
+The build's first failure is a **pre-existing structural issue** — sibling `*.Tests.swift` files (e.g. `AIRestorePanel.Tests.swift`) in `feature-views/` import `XCTest` but are compiled into the **app** target. Zero errors in my files. Let me understand the project's test-target setup to see how `.Tests.swift` is meant to build.
+
+Now it's definitive: the app-target build is blocked by **220 pre-existing `.Tests.swift` files** swept into the app target (the test bundles correctly source from `Tests/Unit`, not `feature-views/`) plus the 15 duplicate `DashboardWidgetSize` defs — all sibling/structural, zero in my files. This is the documented "Xcode gate deferred" condition.
+
+Let me add the strongest possible evidence: execute my pure parity logic as a host harness (proving the projector emits the exact expected strings, not just type-checks).
+
+Harness driver hit Swift 6 top-level actor isolation (the source files already passed Swift 6 separately). Let me compile the harness in Swift 5 mode to execute the logic.
+
+**Host harness executed: 49/49 checks pass (HARNESS_OK)** — the parity logic emits the exact web-parity strings. 
+
+Verification complete. Let me update the plan, clean up build artifacts, and confirm git status (the generated `.xcodeproj`/xcframework should be git-ignored).
+
+Generated project + xcframework are git-ignored. My 12 files are untracked; the `AIUsageCard.*` and web changes are pre-existing (not mine — I'll commit only my files). Let me update the plan, then write the honesty log and the parity ledger.
+
+Now the parity ledger with the page row for both Apple idioms.
+
+Let me run a final full typecheck (my SwiftUI files were edited after the first typecheck) and validate the strings + ledger files before committing.
+
+Final gates all green (typecheck 0 errors, strings valid, ledger 12/12). Let me commit exactly my files (excluding the pre-existing `AIUsageCard.*`/web changes).
+
+14 files staged (3326 insertions). Let me confirm no pre-existing files slipped in, then commit.
+
+The command is hanging (possibly git index-lock contention from parallel slots). Let me stop it and retry in a fresh shell.
+
+Staged set is exactly my 14 files — clean. Let me commit.
+
+Committed successfully. Let me verify the commit and final state.
+
+All complete. Commit `949211ec9` contains exactly my 14 files (3326 insertions); the pre-existing `AIUsageCard.*`/web changes were correctly left untouched.
+

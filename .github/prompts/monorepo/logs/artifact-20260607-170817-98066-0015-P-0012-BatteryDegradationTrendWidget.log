@@ -1,0 +1,117 @@
+=== P4 Dashboard widget 0012 BatteryDegradationTrendWidget (Apple) ===
+Run host: macOS (Darwin arm64, Apple Silicon), Xcode 26.5 (17F42), iOS 26.5 sim runtime.
+Date: 2026-06-07
+
+------------------------------------------------------------------------------
+SURFACE
+------------------------------------------------------------------------------
+Web source : web/src/features/dashboard/widgets/BatteryDegradationTrendWidget.tsx
+Registry   : id=battery-degradation, category=battery, default 2x4, min 1x2, max 4x40
+Native out : apps/apple/Sources/Dashboard/Widgets/BatteryDegradationTrend{Data,Model,Widget}.swift
+Tests      : apps/apple/Tests/Unit/Dashboard/BatteryDegradationTrendWidgetTests.swift
+
+Implementation notes (full parity, no stubs):
+  * Data binding (P1/S8): BatteryDegradationTrendModel binds EnergyStore.batteryDegradation
+    (web useBatteryDegradation) + VehiclesStore.vehicles (web useVehicles, default-vehicle
+    fallback) through StateHolderModel -> LoadableState. No HTTP in the view.
+  * States rendered: loading (skeleton), empty (no-degradation), error (retry, offline copy),
+    content, stale chip, offline chip, and the web "more data needed" chart fallback + 1x1
+    compact layout. Every branch from the web source reproduced.
+  * i18n (P1/S10): all 8 source strings + chrome resolve via Localizable.xcstrings
+    (translation.widget.*, widget.freshness.*, translation.queryError.*). No English literals.
+  * Charts: Swift Charts AreaMark+LineMark with the 80% RuleMark threshold (web ReferenceLine
+    y=80), token palette index 1 (web palette.series[1]).
+  * A11y: VoiceOver labels/identifiers on stats, chart, freshness, retry; Dynamic Type + tokens.
+  * Telemetry (P1/S11): emits view.opened via SurfaceTelemetry seam mapping to
+    TelemetryEvent.ScreenView(screen:"BatteryDegradationTrendWidget"); asserted by spy.
+
+Path/structure adaptation (disclosed; no silent drift):
+  * The prompt's nominal path apps/apple/TeslaSync/dashboard-widgets/ is not a compiled source
+    root in this repo. project.yml compiles apps/apple/Sources/. Files were therefore placed
+    under Sources/Dashboard/Widgets/ (the first dashboard surface) so the gate actually builds
+    and tests them; tests under Tests/Unit/Dashboard/ (the unit-test source root).
+  * Single file was split into 3 (Data/Model/Widget) to satisfy SwiftLint file_length<=400.
+  * Toolchain: machine's global `xcode-select -p` is /Library/Developer/CommandLineTools and
+    sudo is unavailable, so DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer was
+    exported for every xcodebuild/xcrun invocation (full Xcode required for Swift/Charts + sim).
+
+------------------------------------------------------------------------------
+GATE STEPS
+------------------------------------------------------------------------------
+
+[1] iOS build  -- xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+    ** BUILD SUCCEEDED **            IOS_BUILD_EXIT=0
+    (compiles the surface + KMP Shared.xcframework binding cleanly)
+
+[1b] iOS test  -- xcodebuild ... test -only-testing:TeslaSyncTests/BatteryDegradationTrendWidgetTests
+     Executed 18 tests, with 0 failures (0 unexpected)
+     ** TEST SUCCEEDED **            IOS_SURFACE_TEST_EXIT=0
+
+[1c] iOS test  -- full suite (xcodebuild ... build test) and (... test -only-testing:TeslaSyncTests)
+     ** BUILD SUCCEEDED ** then runner launch failed:
+       [MT] IDELaunchReport: ... (Mach error -308 - (ipc/mig) server died)
+       xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+       TeslaSync encountered an error (Failed to install or launch the test runner ...)
+     IOS_FULLSUITE_TEST_EXIT=65  -- BLOCKED (runner capability)
+     Cause: CoreSimulator service is unstable on this shared runner because the machine's
+     active developer dir is Command Line Tools (global xcode-select), and the test harness's
+     own `xcrun simctl` calls intermittently resolve to CLT (which has no simctl). Fixable only
+     with `sudo xcode-select -s /Applications/Xcode.app` (sudo requires a password here) or a
+     CI runner whose global selection is full Xcode. Build is unaffected; the surface's own
+     suite passed 18/18 in a healthy sim window (step 1b).
+
+[2] macOS build -- xcodebuild -scheme TeslaSync-macOS build
+    ** BUILD SUCCEEDED ** (surface compiles for macOS 15; AppKit token path OK)   MAC_BUILD_EXIT=0
+
+[2b] macOS test (literal) -- xcodebuild -scheme TeslaSync-macOS build test
+     BLOCKED by two pre-existing, out-of-scope project/runner issues:
+       (a) Code signing: "TeslaSync-macOS has entitlements that require signing with a
+           development certificate." No signing certificate is available on this runner.
+       (b) Pre-existing project.yml bug: the macOS app target sets PRODUCT_NAME=TeslaSync
+           (bundle => TeslaSync.app) but XcodeGen derives the test host from the TARGET name:
+             pbxproj: TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TeslaSync-macOS.app/Contents/MacOS/TeslaSync-macOS"
+           That bundle never exists -> "Could not find test host for TeslaSync-macOSTests".
+           This breaks the macOS test host for ANY change, not this surface. project.yml is
+           outside this prompt's allowed files.
+     MAC_TEST_LITERAL_EXIT=70 -- BLOCKED
+
+[2c] macOS test (surface, with the pre-existing TEST_HOST path corrected + signing disabled)
+     xcodebuild -scheme TeslaSync-macOS build test \
+       -only-testing:TeslaSync-macOSTests/BatteryDegradationTrendWidgetTests \
+       CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO   (+ generated pbxproj TEST_HOST fixed)
+     ** BUILD SUCCEEDED **
+     Executed 18 tests, with 0 failures (0 unexpected)
+     ** TEST SUCCEEDED **            MAC_SURFACE_TEST_EXIT=0
+     => the surface's own suite passes on the macOS host once the pre-existing host-path
+        defect is corrected; the surface itself is fully green on macOS.
+
+[3] SwiftLint  -- cd apps/apple && swiftlint --strict
+    Done linting! Found 0 violations, 0 serious in 260 files.        LINT_EXIT=0
+
+[4] SwiftFormat -- swiftformat --lint apps/apple
+    0/264 files require formatting, 2 files skipped.                 FORMAT_EXIT=0
+
+[5] Placeholder gate -- pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Dashboard/Widgets -Language swift
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0                                              PLACEHOLDER_EXIT=0
+    (literal prompt path apps/apple/TeslaSync/dashboard-widgets does not exist; scanned the
+     actual surface directory instead.)
+
+------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------
+Surface implementation: COMPLETE (all states, i18n, a11y, telemetry, adapter, chart) — no stubs.
+Build .................: iOS PASS, macOS PASS.
+Surface test suite ....: iOS 18/18 PASS, macOS 18/18 PASS (18 tests: adapter + per-state
+                         render/snapshot + presentation/stats/freshness + a11y + telemetry +
+                         registry parity).
+SwiftLint --strict ....: PASS (0). SwiftFormat --lint: PASS (0). Placeholders: PASS (0).
+Literal `build test` ..: BLOCKED on this runner only — iOS by an unstable CoreSimulator under a
+                         CLT-global xcode-select with no sudo; macOS by a pre-existing
+                         project.yml TEST_HOST/PRODUCT_NAME mismatch + an absent signing cert.
+                         None of these are caused by, nor fixable within, this surface's
+                         allowed files. The surface is verified green on both platforms via the
+                         documented, legitimate workarounds above (no red reported as green).
+
+EXIT=65
+STATUS=BLOCKED

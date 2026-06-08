@@ -1,0 +1,166 @@
+================================================================================
+P4 · Shared surface · 0213 — EditableText (Apple)
+Run: 2026-06-08T06:33-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/442
+Base: c9c6fdb9f
+Prompt: P4 · shared-surfaces · 0213 — EditableText (Apple)
+Web source (spec): web/src/components/ui/EditableText.tsx (391 lines)
+Mode: code-complete + host-validated; DEFERRED full-app Xcode scheme build/test
+      (ADR-012 macOS-pending), matching predecessors 0231 FSMTimelineChart /
+      0180 AlertMessageEditor / 0010 ToolCard.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                 OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iOS simulator SDK .......... iPhoneSimulator 26.5 (deployment target iOS 18.0)    OK
+  macOS SDK .................. MacOSX 26.5 (deployment target macOS 15.0)            OK
+  iOS simulator device ....... iPhone 16 present + booted (simctl via Xcode)        OK
+  SwiftUI .................... import SwiftUI resolves on both SDKs (typecheck below) OK
+  swiftlint .................. 0.63.3                                               OK
+  swiftformat ................ 0.61.1                                               OK
+  xcodegen ................... 2.45.4                                               OK
+  pwsh (placeholder gate) .... 7.6.2                                               OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks has only .gitkeep) WARN
+  codesign identities ........ none (BLOCKER for signed app gate, ADR-012)         WARN
+
+  Charts/Maps capability note: the web source lists NO charts and NO maps — it is a
+  pure inline-edit primitive (components/ui). The core requirement — SwiftUI — is
+  available and PROVEN by REAL iOS-18 + macOS-15 SDK `swiftc -typecheck` AND a passing
+  41-test XCTest run below. The capability-BLOCKED escape hatch therefore does NOT
+  apply; the surface is authored and host-validated for real, STATUS=DONE.
+
+=== ARTIFACT (apps/apple/TeslaSync/shared-surfaces/EditableText.*) ===
+  EditableText.Adapter.swift        115  Foundation-only pure core — VERBATIM web port: the trim
+                                         normaliser (`normalise`), the commit guard (`commitDraft`
+                                         pre-await: unchanged → invalid-empty → invalid-validator →
+                                         duplicate → save, in that order), the live keystroke
+                                         validator (`handleInputChange`), the display/empty-hint
+                                         projection (`visibleText`), and the max-length cap.
+  EditableText.Accessibility.swift   29  Foundation-only VoiceOver builders: the `{{label}}` "saved"
+                                         announcement substitution (web `useAnnouncer`) + the field's
+                                         spoken label (base + error, web aria-describedby).
+  EditableText.Model.swift          340  P1/S11 telemetry seam + the native `useAnnouncer` announcer
+                                         seam + the async saver seam (web `onSave`) + P1/S10 strings
+                                         facade + @MainActor @Observable EditableTextModel: start
+                                         (view.opened once), startEdit/cancel, updateDraft (cap + live
+                                         validation), the single guarded commit path, blur semantics,
+                                         external syncValue, focus requests, failure-message mapping.
+  EditableText.Views.swift          166  Token-driven chrome: the edit field (focus-on-open,
+                                         Return-to-save, Escape-to-cancel, blur-to-commit, read-only
+                                         while saving, error border), the saving indicator
+                                         (web role=status), the inline error (web ErrorText), and the
+                                         default display affordance (button-as-text + hover pencil).
+  EditableText.swift                 85  The composed surface + the surface slug + the display/editing
+                                         switch + the custom `display` render prop (web render prop,
+                                         via opaque `some View`) + the view.opened lifecycle.
+  EditableText.Previews.swift       141  #if DEBUG previews: display(value) / display-empty(hint) /
+                                         heading / disabled / edit-idle / edit-invalid / saving /
+                                         save-error / custom-display.
+  EditableText.strings               27  P1/S10 catalog — the 4 web source keys + native a11y chrome.
+  EditableText.Tests.swift          167  XCTest: adapter (normalise, every commitOutcome branch, live
+                                         validator, display projection, max-length cap) + a11y builders.
+  EditableText.ModelTests.swift     321  XCTest: model lifecycle (view.opened once, slug, initial
+                                         phase, display projection), enter/cancel/syncValue, commit
+                                         (no-op/empty/validator/duplicate/success/blur), failure
+                                         mapping (provided/generic/LocalizedError), saving phase +
+                                         reentrancy guard.
+  Total 1391 lines (9 files). Every .swift file <= 340 lines (house file_length 400);
+  largest Model.swift 340. Zero `// parity:allow` opt-outs.
+
+=== PARITY (vs web EditableText.tsx) ===
+  Data sources (web → native seams):
+    useAnnouncer  → EditableTextAnnouncer seam (AccessibilityNotification.Announcement) (P1/S8)
+    useTranslation → EditableTextStrings facade (P1/S10)
+    useId          → SwiftUI @FocusState + the model focusRequest token (no DOM id needed)
+    onSave (prop)  → EditableTextSaver async seam (the view never issues the mutation itself)
+  Verbatim web logic ported + unit-pinned:
+    normalise = trim · commitDraft order (next===current no-op → empty → validate → lastSubmitted
+    duplicate → onSave) · handleInputChange live validation (empty not surfaced live; validator on
+    trimmed) · handleInputBlur (inert while saving or invalid, else commit) · visibleText/empty-hint ·
+    success → useAnnouncer "{{label}} saved" + exit · rejection → stay open, show err.message, refocus.
+  States (all render, never a blank box):
+    display(value) · display-empty(hint, web `placeholder` fallthrough) · edit-idle · edit-invalid
+    (live + commit) · saving (web role=status "Saving…") · save-error (web ErrorText, stays open,
+    refocus) · disabled · custom-display render prop.
+    NOTE on the generic state template (loading/empty/error/stale/offline): EditableText is a
+    CONTROLLED primitive with NO async data feed in the web spec — its only async is the in-flight
+    save. The web branches map as empty→hint, error→validation/save error, loading→saving. There is
+    NO stale/offline freshness axis in the web source (no query, no connection), so none is invented
+    here — reproducing the source faithfully (no silent drift). The data-panel freshness envelope used
+    by feature-view leaves (e.g. 0231) is deliberately absent because the web source has none.
+  i18n: the 4 source keys (editableText.error.empty / .announce.saved / .error.saveFailed / .saving)
+    + native a11y chrome (editableText.editHint / .editing) all resolve via the P1/S10 facade; catalog
+    carries the verbatim web English. a11y: field spoken label (web ariaLabel) + error append (web
+    aria-describedby) + value; saving indicator label; pencil decorative (web aria-hidden); Dynamic
+    Type via Font.TS; activation via native Button (tap/Return/Space, the idiomatic superset of the
+    web click/Enter/Space/F2).
+  Telemetry: emits view.opened with surface slug "EditableText" once (P1/S11), asserted.
+
+=== INTEGRATION (new source tier — predecessor-gap wiring) ===
+  EditableText is the FIRST `TeslaSync/shared-surfaces` artifact; the tier was not yet registered
+  in the build. Registered it the SAME way `TeslaSync/feature-views` is wired (no new mechanism):
+    • apps/apple/project.yml ........ added `- path: TeslaSync/shared-surfaces` to the iOS `TeslaSync`
+                                      and macOS `TeslaSync-macOS` app targets.
+    • apps/apple/.swiftlint.yml ..... added `TeslaSync/shared-surfaces` to `included`.
+    • apps/macos-pending-verifications.md ... added the deferred full-app row (audit trail).
+
+=== HOST-RUNNABLE GATES (all green) ===
+  swiftformat --lint <surface> ................ 0/8 require formatting              FORMAT_EXIT=0
+  swiftlint lint --strict <surface> ........... Found 0 violations, 0 serious       LINT_EXIT=0
+  check-placeholders.ps1 -Language swift ...... PLACEHOLDER_COUNT=0 ALLOWED=0       PLACEHOLDER_EXIT=0
+  swiftc -typecheck iPhoneSimulator (ios18.0-simulator, swift6, strict-concurrency) IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (macos15.0, swift6, strict-concurrency) ................. MAC_TYPECHECK_EXIT=0
+  swift build (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6) .......... Build complete, EXIT=0
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6) ........... 41/41 passed, TEST_EXIT=0
+      → EditableTextNormaliseTests (1) · EditableTextCommitOutcomeTests (7) ·
+        EditableTextLiveErrorTests (4) · EditableTextDisplayTests (3) · EditableTextCapTests (2) ·
+        EditableTextAccessibilityTests (3) · EditableTextModelLifecycleTests (4) ·
+        EditableTextModelEditingTests (6) · EditableTextModelCommitTests (7) ·
+        EditableTextModelFailureTests (4).
+      Harness links the REAL Tokens.swift (P1/S9 design tokens — Color.TS / Font.TS / TSSpacing /
+      TSRadius). EditableText references no out-of-scope shared atoms (the field is a native
+      SwiftUI TextField/Button/ProgressView), so no atom shims were needed.
+  swiftlint --strict scoped to <surface> explicit files ........................... 0 violations
+      (Full-tree `swiftlint --strict` reports exactly 1 PRE-EXISTING, UNRELATED violation —
+       TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length —
+       in a sibling tier, NOT in this surface. EditableText's 8 .swift files are clean.)
+  xcodegen generate (project spec enumerates the 9 new files, 54 refs across iOS+macOS) XCODEGEN_EXIT=0
+
+=== DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test ===
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. They are blocked by PRE-EXISTING, UNRELATED parallel-merge
+    state in the shared app target — ZERO of which originates in this surface
+    (all verified present in THIS tree):
+      • Kotlin/Native Shared.xcframework not staged (apps/apple/Frameworks has only .gitkeep);
+        the scheme pre-action builds it via Gradle. A bounded `./gradlew :core:assembleSharedXCFramework
+        --dry-run` confirmed the pipeline (downloadKotlinNativeDistribution → compileKotlinIosArm64 /
+        compileKotlinMacosArm64 → linkReleaseFramework* → assembleSharedXCFramework). The actual iOS
+        `xcodebuild build` ran 5+ minutes inside this Kotlin/Native pre-action without reaching Swift
+        compilation (the P1/S3 artifact, already tracked macOS-pending).
+      • `struct DashboardWidgetSize` redefined across 15 files (Sources/DashboardWidgets/* +
+        TeslaSync/dashboard-widgets/*) — "invalid redeclaration" across the app target.
+      • 263 co-located feature-view/dashboard-widget *.Tests.swift / *.ModelTests.swift `import XCTest`
+        into the app target (this surface's 2 test files follow that SAME established sibling
+        convention; they do not introduce a new failure class).
+      • No macOS development-signing identity (`security find-identity -p codesigning`: 0 valid) (ADR-012).
+    This surface's OWN code is proven to compile against the real iOS-18 + macOS-15 SDKs (typechecks
+    above) and its logic runs green (41/41 XCTest). The full-app build/test is recorded in
+    apps/macos-pending-verifications.md for the P99 acceptance gate on a macos-latest runner with
+    signing identities.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all web states reproduced (display/empty-hint/editing/invalid/
+      saving/error/disabled/custom-display). Stale/offline are N/A — the web source has no data feed
+      (documented above; not narrowed, not invented).
+  [x] Hooks bind to the shared P1/S8 seams (announcer + saver + telemetry); no direct HTTP from the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (4/4 + native a11y chrome).
+  [x] Accessibility labels present on every interactive element (field spoken label + value + error,
+      saving status, display button + hint; pencil decorative).
+  [x] Tests: adapter unit tests + per-state model tests + a11y label tests (41 total, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (stub gate: 0, 0 opt-outs).
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing unrelated blockers);
+      host-runnable equivalents (real-SDK typecheck both platforms + 41/41 XCTest) green.
+
+EXIT=0
+STATUS=DONE

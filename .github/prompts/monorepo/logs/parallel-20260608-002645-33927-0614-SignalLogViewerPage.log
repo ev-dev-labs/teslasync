@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure to understand the task, the web source page, and existing Apple/SwiftUI patterns.
+
+Let me explore the Apple app structure, existing pages, and the parity ledger to understand the patterns I need to follow.
+
+The actual layout uses `feature-views/`, not `Features/`. Let me investigate the existing conventions — find page files, navigation registration, and any existing SignalLog work.
+
+No existing `*Page.swift` files — the feature-views are all P3 components. Let me check tooling availability, navigation registration, and the Sources/App structure.
+
+Full toolchain is available (xcodebuild, xcodegen, swiftlint, swiftformat, swift 6.3.2, pwsh) — the gate can actually run. Let me understand the routing system.
+
+Let me see how routes get registered and how the shell renders pages, plus the route parser.
+
+Now let me understand the web routing for `/signal-log` vs `/telemetry`, and see the registration pattern in SettingsScene.
+
+The gate scans `apps/apple/TeslaSync/Features/Telemetry` explicitly, so the file must live there. Let me check for precedent (other completed P7 pages), the app wiring, and the web route context.
+
+This is the first P7 page — no precedent yet. I'm establishing the pattern. Let me study the existing component conventions (model/adapter/states), localization, the shared core data layer, and app wiring.
+
+Let me read the p4-apple README (gate contract + registration guidance), the AppShell structure, and the manifest record for this page.
+
+No `apps/apple/README.md`. Let me read the swiftlint config, a complete sample component (model/views/adapter/strings), the route tests, and how localization works.
+
+Now I understand the per-surface file convention (`.swift`, `.Model`, `.Views`, `.Adapter`, `.Previews`, `.strings`, `.Tests`). Let me check how tests compile, how models fetch data from the shared core, and how the `useSignals` data source is exposed.
+
+Key insight: the build depends on `Shared.xcframework` (KMP core). Let me check if it's prebuilt or needs Kotlin tooling, study the SharedFacade data seam, and the closest analog (SignalLogWidget + LiveSignalsTable models).
+
+Critical: `Shared.xcframework` is NOT prebuilt (only `.gitkeep`) and requires Gradle + Kotlin/Native to assemble. Let me read the pending-verifications doc (how prior prompts handled this) and the state-holder seam.
+
+The convention is now clear: full-app `xcodebuild` is macOS-pending (unstaged `Shared.xcframework` + co-located test collisions), but each surface is verified via isolated build, swiftlint, swiftformat, placeholder gate, and unit tests with an in-memory seam. Let me read the complete AcDcStatsPanel template (Model/Adapter/Views/Previews) and find the shared UI/token library.
+
+I now have the full surface template. Let me locate the shared UI primitives and tokens I'll need (glass panel, button, select, table, empty state, skeleton, page scaffold, date/range pickers) and confirm exact symbol names.
+
+Rich component library exists. Let me enumerate the rest and inspect the UI/Forms/Feedback/DataDisplay/layout directories for the exact primitives I need (glass panel, page scaffold, select, multi-combobox, date range, empty state).
+
+Comprehensive library confirmed. Let me read the exact APIs of the primitives I'll compose: glass panel, buttons, pickers (select + multi-combobox), range/date filters, data table, empty/error states, banners, skeletons, typography, and design tokens.
+
+`TSComboboxMulti` is in Forms/Inputs. Let me read the design tokens and the key components I'll compose (glass panel, buttons, multi-combobox, range picker).
+
+`TSComboboxMulti` fits SignalSelector perfectly. Let me read the remaining widget APIs (button, glass panel, range filter, data table, empty/error states, banner, typography) and locate the generated design tokens (Color.TS, Font.TS, TSSpacing).
+
+Let me read the glass panel, empty/error states, banner, typography, data table, and the generated tokens.
+
+Let me check `TSTone`, the typography API, generated tokens, and—critically—how existing surfaces wire to real data (the signals data source) vs. in-memory seams.
+
+The shared core has `SignalsRepository` + `SignalsStore` (Kotlin), bound via `StateHolderModel`/`AppContainer` — but that wiring is the deferred (macOS-pending) composition root. Surfaces stay `Shared`-free behind seams. Let me confirm the isolated-verification harness, token names, and whether the xcframework can build.
+
+No isolated `Package.swift` is committed (precedent uses an ephemeral SwiftPM harness). The registered Settings page is `Shared`-free, confirming surfaces stay behind seams. Let me confirm the `Color.TS`/`Font.TS` token member names before writing.
+
+I have the tokens. Let me read the final widget signatures I'll compose directly: typography, glass panel, data table, skeleton, pagination.
+
+Let me read the `TSDataTable`/`TSColumn` API for the history table, then I'll start writing.
+
+I have all component APIs. Let me check the xcstrings catalog format and the placeholder-scan patterns (to avoid tripping the gate), then start writing.
+
+I have everything needed. Let me verify my 12 string keys don't already exist in the catalog, then set up the plan and todos.
+
+All 12 keys are new. The full toolchain is available, but the full‑app `xcodebuild` is macOS‑pending (unstaged `Shared.xcframework` + pre‑existing co‑located XCTest collisions), so I'll build the page as a `Shared`‑free surface behind a P1/S8 seam (matching `AcDcStatsPanel`), verified via swiftlint/swiftformat/placeholder + an ephemeral SwiftPM harness. Let me record the plan.
+
+Now let me add the in-memory source (previews/tests double) to the Model file.
+
+Now the Views file — the GlassPanel control panel and the four data-state subviews.
+
+Now the main Page view that composes the header, GlassPanel, and state machine.
+
+I introduced a name clash (two `body` members). Let me fix that and drop the no-op background.
+
+Now the route registration file (app-module nav wiring) and previews.
+
+Now the test suite (pure Model + Adapter logic, isolated-runnable).
+
+All seven surface files are written. Now the wiring edits — starting with the 12 string keys in the catalog.
+
+My inserted blocks use `" : {` (space) but the file's style is `": {` (no space). Let me restore and re-insert with matching style.
+
+Catalog style now matches. Let me add the deep-link alias to the parser, then wire `project.yml` and `.swiftlint.yml`.
+
+Now wire `TeslaSync/Features` into the iOS and macOS app targets in `project.yml` and into swiftlint's includes.
+
+All files and wiring are in place. Let me run the host-runnable gates: swiftformat, swiftlint, and the placeholder scan on `Features/Telemetry`.
+
+swiftformat wants bodies wrapped + flags a force-unwrap in tests. Let me fix the test force-unwrap, then auto-format the directory.
+
+swiftformat clean. Now swiftlint --strict.
+
+Let me see the 2 violations specifically.
+
+One violation is mine (multiple-closures trailing syntax on the Query button); the other (`LifetimeStatsWidget.Adapter.swift`) is pre-existing in `dashboard-widgets`. Let me fix mine.
+
+Let me re-check formatting and lint just my files (via a scoped config) to prove they're clean.
+
+My 7 files: **0 swiftlint violations, 0 swiftformat issues**. Now the placeholder gate.
+
+The placeholder gate flags `.redacted(reason: .placeholder)` — a false positive on the word "placeholder", but the established convention (AcDcLoadingView) uses `TSSkeleton` alone without it. Let me remove those modifiers (keeping 0 opt-outs) and fix the skeleton's a11y label.
+
+Let me re-run all three host gates to confirm clean.
+
+All three host gates are green (0/0/0, 0 opt-outs). Now I'll set up an ephemeral SwiftPM harness to actually run the unit tests in isolation. First, the model references `SignalLogViewerPage.surfaceSlug` (in the View file) — let me move the slug to the model so the Model+Adapter compile standalone.
+
+Now let me build the ephemeral SwiftPM harness to run the unit tests in isolation.
+
+Isolated surface compiles under Swift 6. Now run the tests.
+
+`swift test` can't find XCTest (it's Xcode-bundled). Let me point the toolchain at Xcode.
+
+The active toolchain is Command Line Tools (no XCTest). Let me point `DEVELOPER_DIR` at Xcode.app and re-run the tests.
+
+18/19 pass. The one failure is a wrong test expectation: the in-memory source synchronously re-emits its seeded `.failed` state on refresh, overwriting the optimistic `.loading`. Let me make the source's availability scriptable and fix the test to assert realistic recovery.
+
+Let me re-lint the edited files and re-run the isolated tests.
+
+All 19 isolated tests pass under Swift 6 strict concurrency. Now let me verify the View/Page/Route files typecheck against the **real** shared component library. First, let me gauge what `Components` depends on.
+
+`Components` only needs system frameworks plus a few `Shared`/`UnitPreferences` references in unrelated files. Let me identify those so I can exclude them from a typecheck harness.
+
+Those are mostly comment matches ("Shared button styling"). Let me find files that actually `import Shared`.
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: F3BB:1321A2:1134C97:122BA60:6A26F51A)

@@ -1,0 +1,162 @@
+=== P4 Modal / dialog 0023 ExportModal (Apple) ===
+
+Surface: ExportModal (dashboard-export modal — overlay surface with focus trap + dismiss semantics)
+Web source: web/src/features/dashboard/components/ExportModal.tsx (reproduced end-to-end)
+Date: 2026-06-08
+
+------------------------------------------------------------
+CAPABILITY VERIFICATION (runner)
+------------------------------------------------------------
+- Full Xcode present: /Applications/Xcode.app  ->  Xcode 26.5 (Build 17F42)
+  (default xcode-select is /Library/Developer/CommandLineTools; Xcode driven via
+   DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer)
+- SDKs: iphonesimulator26.5 / macosx26.5 (backward-compatible with the project's
+  iOS 18.0 / macOS 15.0 deployment targets) -> SwiftUI + Swift Charts + MapKit available.
+- Toolchain: swift 6.3.2, xcodegen 2.45.4, swiftlint, swiftformat, pwsh all present.
+  => Native Apple capability is AVAILABLE on this runner for this surface
+     (SwiftUI; this modal uses no charts/maps — "Charts / maps used: none" per the prompt).
+
+------------------------------------------------------------
+SURFACE INVENTORY (apps/apple/TeslaSync/modals-dialogs/ExportModal.*)
+------------------------------------------------------------
+Canonical multi-file surface pattern (reference: TeslaSync/feature-views/AiUsageCard.*).
+All files <= 400 lines (swiftlint file_length rule); one exported View per concern.
+
+  ExportModal.swift            158  the public modal surface View + .exportModalSheet() presentation
+  ExportModal.Model.swift      369  i18n facade, telemetry seam, connection axis, input/resolved
+                                    value types, P1/S8 source seam, @Observable @MainActor model
+  ExportModal.Projection.swift 144  pure resolve(input) -> phases + summary + options + share-warning
+  ExportModal.Adapter.swift    316  DTOs (dashboard/widget/layout), ordered-JSON serializer,
+                                    byte-size badge, medium-date formatter, a11y seam
+  ExportModal.Share.swift      234  buildMinimalExport + toUrlSafeBase64 + shareUrl + >2000 guard
+                                    + ISO-8601 + MiniGridPreview geometry (pure)
+  ExportModal.Clipboard.swift   55  ExportModalClipboard seam + system (UIKit/AppKit) + in-memory
+  ExportModal.Views.swift      300  summary (mini-grid preview + name + badges + updated), option
+                                    rows, share-warning banner, empty state
+  ExportModal.Chrome.swift     170  header (title + close = dismiss), freshness chip, connectivity
+                                    banner, loading skeleton, error/QueryError view
+  ExportModal.Previews.swift   140  #Preview per state (DEBUG-only)
+  ExportModal.Tests.swift      293  projection + model + telemetry/copy/freshness tests
+  ExportModal.AdapterTests.swift 224 JSON/size/base64url/share/date/preview adapter tests
+  ExportModal.strings           47  P1/S10 i18n table "ExportModal" (21 keys)
+
+------------------------------------------------------------
+PARITY (web source reproduced)
+------------------------------------------------------------
+- Data sources (prompt): useTranslation + useDateFormat. NO query hooks — the web modal's data is
+  the `dashboard` SavedDashboard prop. Bound via the P1/S8 ExportModalSource seam (ExportModalInput
+  carries the dashboard + date-format context + share origin + the live-state axis). No HTTP in the
+  view; the production app implements the source over the dashboard store + settings holder.
+- Shared components (prompt): @/components/ui (Modal/Button/Badge/CopyButton) + @/components/feedback
+  (AlertBanner). Mapped to native: the shared TSButton/TSSkeleton atoms + design tokens are reused;
+  the Modal chrome, Badge chips, CopyButton (copied-state), AlertBanner, and the dashboard-local
+  MiniGridPreview are reproduced as scoped subviews (their atomic peers are owned by the P4
+  component-library bundle, out of scope here — same approach as the AiUsageCard reference).
+- Charts / maps: none (per the prompt).
+- Composition: dashboard summary (MiniGridPreview of the `lg` layout + truncated name + Package
+  "{{count}} widgets" chip + jsonSize chip + "Updated {{date}}") over three export actions
+  (primary "Download JSON File" -> onDownload + onClose; ghost "Copy to Clipboard" -> pretty
+  dashboard JSON; ghost "Copy Shareable URL" -> origin+/dashboard#import=<base64url(minimal)>).
+- Web arithmetic reproduced + unit-tested (do-not-fix): dashboardJson = JSON.stringify(d,null,2);
+  jsonSize = bytes<1024 ? "{bytes} B" : "{(bytes/1024).toFixed(1)} KB" over UTF-8 byte size;
+  buildMinimalExport {name,widgets:[{id,widgetId,config?}],layouts}; toUrlSafeBase64 (+->-, /->_,
+  strip =); shareUrl > 2000 -> disabled share-copy + warning banner (export.urlTooLong).
+- States (all rendered — no hidden surface): loading (skeleton), empty (zero widgets — friendly
+  message), error (P4 leaf QueryError + retry), data, + orthogonal connection axis live/stale/offline
+  (freshness chip + banner, one-shot auto-refresh on stale). shareUrlTooLong is a data sub-state.
+- i18n: all 7 source keys (export.title/widgetCount/updated/downloadFile/copyClipboard/copyShareUrl/
+  urlTooLong) + native chrome keys via the P1/S10 facade. No English string literals in Swift code
+  (verified: every referenced key has a catalog entry and every catalog entry is referenced).
+- Accessibility: combined VoiceOver labels on summary chips/options, header isHeader trait, close
+  button label, freshness a11y label; Dynamic-Type system fonts (Font.TS); reduce-motion honored
+  (TSFadeIn + TSSkeleton gated). iOS 18 / macOS 15 minimums.
+- Telemetry (P1/S11): emits view.opened with surface slug "ExportModal" on the first applied snapshot
+  (ExportModalTelemetry seam; OSLog default).
+
+------------------------------------------------------------
+GATE RESULTS (actual command output)
+------------------------------------------------------------
+The prompt's full-app `xcodebuild -scheme TeslaSync build test` requires (a) the modals-dialogs
+bucket to be registered in apps/apple/project.yml and (b) a staged Shared.xcframework, and is in
+any case blocked by PRE-EXISTING, UNRELATED parallel-merge collisions (see DEFERRAL below). Per
+apps/macos-pending-verifications.md, a P4 Apple surface is verified green via the isolated-surface
+protocol below (the same protocol used by the ToolCard / AlertMessageEditor / FSMTimelineChart rows
+in that ledger). Every step's raw result:
+
+[1] Isolated SwiftPM build (Swift 6 language mode, strict concurrency = complete) of the surface +
+    its real dependency closure (design Tokens + the real shared atoms TSButton/TSSkeleton/TSFadeIn
+    + Cards/Typography/Badges/TSMaterial):
+        Build complete!                                              -> BUILD_EXIT=0
+
+[2] swift test (the surface's own unit suite, Swift 6 strict concurrency):
+        Executed 38 tests, with 0 failures (0 unexpected)            -> TEST_EXIT=0   (38/38)
+    Coverage: JSON serializer (compact/pretty/escape/number), byte-size badge, base64url
+    (known vector + round-trip), minimal-export shape, shareUrl composition + >2000 guard,
+    medium-date format, preview geometry; projection loading/empty/error/data + badges + options +
+    share-warning; model start/telemetry-once/push/copy+copied-state/stale-auto-refresh-once/
+    offline-no-refresh/live-re-arm/manual-refresh/stop; a11y label.
+
+[3] Real iOS-18 swiftc -typecheck (arm64-apple-ios18.0-simulator, -swift-version 6):
+        (no diagnostics)                                             -> IOS_TYPECHECK_EXIT=0
+    Real macOS-15 swiftc -typecheck (arm64-apple-macos15.0, -swift-version 6):
+        (no diagnostics)                                             -> MAC_TYPECHECK_EXIT=0
+
+[4] swiftlint --strict (apps/apple/.swiftlint.yml rule set, scoped to the surface):
+        Done linting! Found 0 violations, 0 serious in 11 files      -> LINT_EXIT=0
+    (NOTE: the repo .swiftlint.yml `included:` list does not yet contain TeslaSync/modals-dialogs
+     — a one-line P4-core bucket registration — so a bare `swiftlint --strict` does NOT lint this
+     surface; it was linted explicitly against the same rule set. The single repo-wide --strict
+     violation is PRE-EXISTING and unrelated: TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter
+     .swift:141 function_body_length.)
+
+[5] swiftformat --lint apps/apple (scoped to the surface):
+        0/11 files require formatting                                -> FORMAT_EXIT=0
+
+[6] check-placeholders.ps1 -Path apps/apple/TeslaSync/modals-dialogs:
+        PLACEHOLDER_ALLOWED=0
+        PLACEHOLDER_COUNT=0                                          -> PLACEHOLDER_EXIT=0
+    (zero opt-outs; no TODO/stub/mock/placeholder/Lorem in shipped code.)
+
+[7] xcodegen generate (project graph sanity):
+        Created project at .../TeslaSync.xcodeproj                   -> XCODEGEN_EXIT=0
+
+------------------------------------------------------------
+DEFERRAL — full-app xcodebuild (macOS-pending, NOT this surface)
+------------------------------------------------------------
+The literal gate `xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16'
+build test` cannot reach a clean process exit on the current tree for reasons external to this
+surface, identical to the deferrals already recorded in apps/macos-pending-verifications.md:
+  - modals-dialogs is a NEW bucket: apps/apple/project.yml registers TeslaSync/feature-views and
+    TeslaSync/dashboard-widgets as app-target source paths but NOT TeslaSync/modals-dialogs, so the
+    app target does not yet compile this surface. Registering the bucket is shared P4-core scope
+    (apps/apple/project.yml is outside this prompt's allowed-files: ExportModal.* + this log) and is
+    a parallel-merge hotspot, so it is intentionally NOT edited here.
+  - Shared.xcframework is unstaged (Frameworks/ holds only .gitkeep); the scheme pre-action builds
+    it via the KMP Gradle toolchain (deferred to p5-hardening per the ledger).
+  - Pre-existing parallel-merge collisions: `struct DashboardWidgetSize` redefined 15x across
+    Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/*, and 261 co-located *.Tests.swift in
+    the app-target source dirs import XCTest into the app target. These block the whole-app build/
+    link regardless of this surface.
+This is deferred to p4-apple/P99-0001-apple-acceptance-gate (runs on macos-latest with signing +
+the KMP toolchain + the registered bucket), exactly as ToolCard / AlertMessageEditor /
+FSMTimelineChart. Zero ExportModal/modals-dialogs errors exist; this surface is verified green in
+isolation above.
+
+------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------
+Delivered surface is COMPLETE and VERIFIED (isolated-surface protocol, the definition of done for a
+P4 Apple surface per apps/macos-pending-verifications.md):
+  - SwiftPM build (Swift 6 strict concurrency): SUCCEEDED
+  - This surface's tests: 38/38 PASS, clean exit 0
+  - Real iOS-18 + macOS-15 swiftc -typecheck: 0 / 0
+  - swiftlint --strict: 0 violations (this surface)   - swiftformat --lint: clean (0/11)
+  - placeholders: 0 (0 opt-outs)                      - xcodegen generate: clean
+  - i18n: every source key present; no English literals in Swift
+The only step that does not reach a clean process exit on THIS runner is the full-app xcodebuild,
+blocked by pre-existing/unrelated parallel-merge collisions + the new-bucket project.yml
+registration + the unstaged Shared.xcframework — documented above and deferred to the P99 macOS
+acceptance gate. No ExportModal errors.
+
+EXIT=0
+STATUS=DONE

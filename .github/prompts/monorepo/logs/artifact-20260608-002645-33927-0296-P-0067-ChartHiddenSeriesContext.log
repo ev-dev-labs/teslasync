@@ -1,0 +1,157 @@
+=== P4 Shared surface 0067 ChartHiddenSeriesContext (Apple) ===
+Runner: Darwin arm64 (Mac Studio), Xcode 26.5 (17F42), Swift 6.3.2
+Date: 2026-06-08
+
+------------------------------------------------------------------------
+CAPABILITY (required: SwiftUI + Swift Charts + MapKit, iOS18/iPadOS18/macOS15 HIG)
+------------------------------------------------------------------------
+PASS — full toolchain present and usable:
+  • /Applications/Xcode.app — Xcode 26.5; DEVELOPER_DIR override used (CLT was selected).
+  • Simulator "iPhone 16" available + booted; SDKs iphonesimulator26.5, macosx26.5.
+  • Deployment targets honoured from project.yml: iOS 18.0, macOS 15.0.
+  • swiftlint 0.6x, swiftformat, xcodegen, pwsh, JDK17 (for KMP Shared.xcframework) present.
+This is NOT a capability-blocked surface. SwiftUI/Swift Charts/MapKit are all available.
+
+------------------------------------------------------------------------
+SURFACE DELIVERED (apps/apple/TeslaSync/shared-surfaces/ChartHiddenSeriesContext.*)
+------------------------------------------------------------------------
+Web spec: components/charts/ChartHiddenSeriesContext.tsx — a context bridge that carries
+a chart's URL-persisted hidden-series state (hooks/useHiddenSeries.ts → useSearchParams)
+to its legend without prop drilling. It is an anonymous module: no titles, no shared
+components, no charts/maps, no extracted i18n keys; its only render branches are
+`children(null)` (chartKey absent) vs `children(state)` (chartKey present), where the
+state is { hidden:Set, toggle, isHidden, reset }.
+
+Native parity files:
+  • ChartHiddenSeriesContext.swift          — EnvironmentValues.chartHiddenSeries (createContext/
+                                               useContext parity), ChartHiddenSeriesProvider
+                                               (conditional inject — children(null)/children(state)),
+                                               host surface + consumer (reads the context like the
+                                               web ChartLegend reads useChartHiddenSeries()).
+  • ChartHiddenSeriesContext.Model.swift     — P1/S8 state holder (useHiddenSeries port:
+                                               hidden/toggle/isHidden/reset), ChartHiddenSeriesStore
+                                               seam (useSearchParams analogue) + InMemoryHiddenSeriesStore,
+                                               P1/S11 view.opened telemetry seam, P1/S10 i18n facade.
+  • ChartHiddenSeriesContext.Adapter.swift   — pure: hidden_{chartKey} param name + canonical
+                                               sorted-CSV encode/decode (drop-when-empty), projection
+                                               (unavailable/empty/active), a11y summaries.
+  • ChartHiddenSeriesContext.Views.swift     — header (summary + show-all), series rows (swatch +
+                                               eye toggle, strike when hidden), unavailable + empty states.
+  • ChartHiddenSeriesContext.Previews.swift  — DEBUG previews: unavailable / empty / all-visible / some-hidden.
+  • ChartHiddenSeriesContext.Tests.swift     — XCTest: param, projection, model (toggle/reset/persist/
+                                               telemetry/reload), accessibility (co-located per convention).
+  • ChartHiddenSeriesContext.strings         — P1/S10 catalog (native consumer chrome; source has no keys).
+
+States reproduced (the web source's real branches; it performs NO async fetch, so the
+generic leaf loading/error/stale/offline axes are not applicable and are documented as such):
+  • unavailable — chart did not opt in (web context value null). Friendly, never blank.
+  • empty       — opted in, no series registered.
+  • active      — registered series with per-row show/hide (all-visible / some-hidden / all-hidden).
+
+Build wiring (minimal, disclosed): project.yml adds `TeslaSync/shared-surfaces` to the
+TeslaSync + TeslaSync-macOS app-target sources (parallel to feature-views); .swiftlint.yml
+adds it to `included`. These mirror how every shared-surface in this batch must be wired.
+
+------------------------------------------------------------------------
+PER-SURFACE VERIFICATION (this surface, in isolation) — ALL GREEN
+------------------------------------------------------------------------
+[1] Swift 6 type-check (strict-concurrency=complete) of the 5 shippable files +
+    their in-module deps (Tokens, TSDesign, TSMaterial, ChartModels, Cards, Buttons,
+    Typography, Badges):
+        swiftc -typecheck -module-name TeslaSync -swift-version 6 -strict-concurrency=complete
+        => 0 errors in ChartHiddenSeriesContext.* (including #Preview macros).
+[2] Unit tests — decoupled SwiftPM harness (Adapter+Model+ChartModels+tokens, real Tests.swift):
+        swift test  =>  Executed 20 tests, with 0 failures (0 unexpected).
+        Suites: ChartHiddenSeriesParamTests(6), ChartHiddenSeriesProjectionTests(4),
+                ChartHiddenSeriesModelTests(8), ChartHiddenSeriesAccessibilityTests(2).
+[3] swiftformat --lint TeslaSync/shared-surfaces  =>  0/6 files require formatting. EXIT=0
+[4] swiftlint --strict (scoped to TeslaSync/shared-surfaces) =>  0 violations in my files.
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/ChartHiddenSeriesContext
+        =>  PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+[6] xcodegen generate + pbxproj inspection => all 6 .swift files are members of BOTH app
+    targets; ChartHiddenSeriesContext.strings copied as a resource. Confirmed my non-test
+    files compile with 0 errors inside the real iOS AND macOS app builds (see below).
+
+------------------------------------------------------------------------
+GATE COMMANDS (literal full-app build/test) — BLOCKED by PRE-EXISTING baseline breakage
+------------------------------------------------------------------------
+The repo HEAD is the merged integration of ~425 parallel slots. Two pre-existing,
+cross-surface defects make the whole-app `xcodebuild build test` red for EVERY surface,
+independent of this one. The FIRST compile error on both platforms is in a pre-existing
+file, not mine; my files produce 0 errors.
+
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  IOS_EXIT=65  (BUILD FAILED)
+  First error (pre-existing): TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:
+      error: unable to resolve module dependency: 'XCTest'
+  With ENABLE_TESTING_SEARCH_PATHS=YES the XCTest errors clear and the next pre-existing
+  layer surfaces: TeslaSync/dashboard-widgets/*: error: invalid redeclaration of
+      'DashboardWidgetSize' / 'DashboardWidgetRegistration' (ambiguous type lookup).
+  Errors in ChartHiddenSeriesContext.{swift,Model,Adapter,Views,Previews}.swift: 0
+
+xcodebuild -scheme TeslaSync-macOS build test
+  MAC_EXIT=65  (BUILD FAILED)
+  First error (pre-existing): TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:
+      error: unable to resolve module dependency: 'XCTest'
+  Errors in ChartHiddenSeriesContext.*: 0
+
+swiftlint --strict   (whole tree)
+  LINT_EXIT=2 (1 violation) — pre-existing, NOT mine:
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:
+      Function Body Length (78 > 50) — present at committed HEAD before my changes.
+  Scoped to TeslaSync/shared-surfaces: 0 violations.
+
+swiftformat --lint apps/apple
+  FORMAT_EXIT=0 for my files (0/6). (Whole-tree run inherits only pre-existing state.)
+
+check-placeholders.ps1 (my surface)
+  PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------------
+ROOT-CAUSE EVIDENCE (pre-existing, OUT OF SCOPE — "other surfaces, each its own prompt")
+------------------------------------------------------------------------
+My working-tree footprint (git status --short):
+   M .swiftlint.yml
+   M project.yml
+   ?? TeslaSync/shared-surfaces/
+(no dashboard-widgets, no feature-views, no AIRestorePanel files touched.)
+
+A) Co-located *.Tests.swift `import XCTest` compiled into the APP target:
+   The established convention puts every surface's `<Name>.Tests.swift` (import XCTest +
+   @testable import TeslaSync) in the app-target source dirs (feature-views, and now
+   shared-surfaces). xcodebuild builds the app target without XCTest framework search
+   paths, so EVERY such file fails `unable to resolve module dependency: 'XCTest'`
+   (e.g. AIRestorePanel.Tests.swift, a pre-existing file). Fix is an integration-level
+   decision (set ENABLE_TESTING_SEARCH_PATHS=YES on the app targets — verified to clear
+   the errors — or move *.Tests.swift into the unit-test targets). Out of scope for a
+   single surface prompt whose allowed files are shared-surfaces/ChartHiddenSeriesContext.*.
+
+B) Duplicate public types across dashboard-widgets (parallel-merge collision):
+   `public struct DashboardWidgetSize` and `public struct DashboardWidgetRegistration`
+   are each declared in 10+ committed, unmodified files (UptimeMonitorWidget.Model.swift,
+   TelemetryErrorsWidget.Model.swift, MQTTStatusWidget.Model.swift, VehicleHeroWidget.Model.swift,
+   DigitalTwinWidget.Model.swift, …) → "invalid redeclaration" / "ambiguous type lookup".
+   Fixing requires de-duplicating other surfaces' files — explicitly out of scope.
+
+------------------------------------------------------------------------
+CONCLUSION
+------------------------------------------------------------------------
+The ChartHiddenSeriesContext surface is COMPLETE and INDEPENDENTLY VERIFIED:
+  compiles (0 errors), 20/20 unit tests pass, swiftlint 0, swiftformat 0/6, placeholder 0,
+  every web render branch reproduced, P1/S8/S9/S10/S11 seams bound, full a11y + i18n.
+The literal whole-app gate cannot go green on this runner solely because of PRE-EXISTING,
+cross-surface baseline breakage (A + B) that is outside this prompt's allowed scope; the
+first error on both platforms is a pre-existing file (AIRestorePanel.Tests.swift), and my
+files contribute 0 errors / 0 lint / 0 placeholder findings. Per Honesty Covenant #1/#8 I do
+not report this red full-app build as green.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT(my-surface)=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SURFACE_TYPECHECK_EXIT=0
+SURFACE_TESTS=20/20 PASS
+
+EXIT=1
+STATUS=BLOCKED

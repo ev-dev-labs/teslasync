@@ -1,0 +1,219 @@
+================================================================================
+P4 · Apple · P7 page — admin/LiveLogs (LiveLogsPage)
+Run: 2026-06-08T07:36-0700   Host: Darwin arm64 (Command Line Tools active)
+Prompt: p4-apple · P7 · page:admin/LiveLogs (SwiftUI / Apple HIG)
+Web source (spec): web/src/features/admin/pages/LiveLogsPage.tsx (+ api/hooks/useLogStream.ts)
+Native output: apps/apple/TeslaSync/Features/Admin/LiveLogsPage.*
+Mode: code-complete + host-verified (swiftc/​swiftlint/​swiftformat/​harness/​xcodegen)
+      + DEFERRED Xcode app build/test (no configured runner — KMP Shared.xcframework
+      not staged + 0 signing identities; ADR-012, apps/macos-pending-verifications.md).
+Delegation: NONE (authored directly; FORBIDDEN by prompt).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                  OK
+  macOS SDK (typecheck) ...... MacOSX.sdk; -swift-version 6 -target macos15.0
+                               -strict-concurrency=complete                         OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) present (DEVELOPER_DIR override)   OK
+  xcode-select active dir .... /Library/Developer/CommandLineTools                  CLT
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.x                    OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                  OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                            OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  Frameworks/Shared.xcframework  NOT staged (Frameworks/ holds only .gitkeep)       BLOCKER
+  codesign identities ........ "0 valid identities found"                           BLOCKER
+
+  Charts/Maps: this page uses NEITHER Swift Charts NOR MapKit (manifest "charts:0,
+  maps:0"). The core requirement is SwiftUI, available + proven by a real macOS-SDK
+  compile below (-strict-concurrency=complete). The capability-BLOCKED escape hatch
+  therefore does NOT apply to the surface itself — it is authored + host-validated
+  for real. Only the heavyweight Xcode *app* build/test is deferred (see last gate).
+
+=== DESIGN DISPOSITION ===
+  Token-only surface (the established P4-Apple pattern, see
+  logs/p4-apple-feature-views-0036-LiveSignalsTable.log): the page depends ONLY on
+  the generated design tokens (apps/design/generated/apple/Tokens.swift —
+  Color.TS / Font.TS / TSSpacing / TSRadius / TSTypeMetrics) + SwiftUI + Foundation,
+  with native HIG controls (Picker / TextField / Toggle / Button / ScrollViewReader /
+  ContentUnavailableView / fileExporter / Material). This makes the whole dependency
+  surface compile under a real `swiftc -typecheck` on this host. The web GlassPanel →
+  `.regularMaterial` card (ADR-005); Select → menu Picker; Input → TextField; Badge →
+  toned capsule; DataTable → LazyVStack in a ScrollViewReader with auto-scroll.
+
+  Data binding: web `useLogStream` → an `@Observable LiveLogsPageModel` (P1/S8) fed by
+  a `LiveLogsSource` seam. Production source `URLSessionLiveLogsSource` streams
+  GET {base}/api/v1/admin/logs/stream over URLSession.bytes line-SSE (the native
+  analogue of the web fetch+ReadableStream hand-rolled transport — EventSource cannot
+  carry headers); previews/tests use `InMemoryLiveLogsSource`. SI units: N/A (logs
+  carry no unit-bearing scalars).
+
+=== ARTIFACT (apps/apple/TeslaSync/Features/Admin/LiveLogsPage.*) ===
+  LiveLogsPage.Models.swift        172  Foundation value types: LogStreamLevel, LogSeverity,
+                                        LogField, LogEvent, LiveLogsStreamParams/Element,
+                                        LiveLogsStatus, LiveLogsConstants(maxEvents=1000)
+  LiveLogsPage.Adapter.swift       254  pure ports: SSE parse (parseSSEChunk), buildLogEvent
+                                        + detectLevel/extractMessage/extractFields/vehicle,
+                                        jsNumber, formatTime, downloadFilename, eventToText,
+                                        matchRanges (HighlightedText), buildLogStreamUrl
+  LiveLogsPage.Localization.swift  205  facade — all 31 web keys + native chrome, web key names
+  LiveLogsPage.Model.swift         282  @Observable model: buffer/cap, counters, status, pause,
+                                        filters, freshness + LiveLogsSource seam + InMemory source
+  LiveLogsPage.Stream.swift        167  production URLSession SSE source (monotonic seq, reconnect)
+  LiveLogsPage.Views.swift         263  glass panel + tones + Filters panel (GlassPanel1) +
+                                        StatusBadge (ConnectionBadge) + Error panel (GlassPanel3)
+  LiveLogsPage.Controls.swift      174  Controls panel (GlassPanel2): badge+stats+controls,
+                                        TimelineView freshness, fileExporter (.txt) document
+  LiveLogsPage.Table.swift         261  Table panel (GlassPanel4): empty state + adaptive table +
+                                        row + level badge + highlighted message + field chips
+  LiveLogsPage.swift                62  page scaffold (header + 4 panels), .task start/onDisappear
+  LiveLogsPage.Registration.swift   35  AppRouteHostRegistry .admin host registration
+  LiveLogsPage.Previews.swift       72  #if DEBUG previews — content/empty/error/paused/idle (5)
+  LiveLogsPage.Tests.swift         257  XCTest: adapter + model + accessibility (50+ assertions)
+  ---------------------------------------------------------------------------------
+  Total 2204 lines across 12 files. Largest 282 (<= house file_length 400). One
+  exported View per view-file. vs web source 1051 lines (page 674 + hook 377) => 210%
+  (>> the 70% floor): every web section + the hook's transport/parse logic reproduced.
+
+  Integration edits (navigation registration + build/i18n wiring, all allowed scope):
+    Sources/TeslaSyncApp.swift  — chains LiveLogsRouteRegistration.registry(base:) onto
+                                  the routeHosts environment (mirrors SettingsRouteRegistration)
+    project.yml                 — TeslaSync/Features added to iOS + macOS app target sources
+    .swiftlint.yml              — TeslaSync/Features added to `included`
+    Localization/Localizable.xcstrings — +38 keys (31 required + 7 native chrome),
+                                  en=translated, ar/he=needs_review (en placeholder), additive
+                                  diff only (874 insertions, 0 deletions; JSON re-validated)
+
+=== PARITY ===
+PARITY_REQUIRED=37
+  Data source — useLogStream -> LiveLogsPageModel (LiveLogsPage.Model.swift) bound via the
+  LiveLogsSource seam; production URLSessionLiveLogsSource (LiveLogsPage.Stream.swift) streams
+  /admin/logs/stream; pure parse/format proven by the executed harness (43/43) below.
+
+  [panel  01] GlassPanel1 (filters)  -> struct LiveLogsFiltersPanel  (LiveLogsPage.Views.swift)
+              level menu-Picker + grep TextField(+help) + vehicle TextField, adaptive layout.
+  [panel  02] GlassPanel2 (controls) -> struct LiveLogsControlsPanel (LiveLogsPage.Controls.swift)
+              status badge + buffered/received/drops stats + autoscroll/pause/clear/download/reconnect.
+  [panel  03] GlassPanel3 (error)    -> struct LiveLogsErrorPanel    (LiveLogsPage.Views.swift)
+              rose-bordered material card; title + server message/hint + reconnect (web stream.error).
+  [panel  04] GlassPanel4 (table)    -> struct LiveLogsTablePanel    (LiveLogsPage.Table.swift)
+              empty state | LiveLogsTable + buffered/max footer.
+  [state  05] empty   -> LiveLogsTablePanel.emptyState ContentUnavailableView (LiveLogsPage.Table.swift)
+              "No log events yet…" + conditional reconnect action (web EmptyState).
+  [state  06] success -> struct LiveLogsTable (LiveLogsPage.Table.swift) — ScrollViewReader + LazyVStack,
+              auto-scroll-to-bottom, header + LiveLogsRow (time/level/message/fields).
+  [string 07] liveLogs.controls.autoscroll  -> LiveLogsStrings.controlAutoscroll  (Controls Toggle)
+  [string 08] liveLogs.controls.clear       -> LiveLogsStrings.controlClear       (Controls clearButton)
+  [string 09] liveLogs.controls.download     -> LiveLogsStrings.controlDownload    (Controls download)
+  [string 10] liveLogs.controls.pause        -> LiveLogsStrings.controlPause       (Controls pauseButton)
+  [string 11] liveLogs.controls.reconnect    -> LiveLogsStrings.controlReconnect   (Controls/Views/Table)
+  [string 12] liveLogs.controls.resume       -> LiveLogsStrings.controlResume      (Controls pauseButton)
+  [string 13] liveLogs.empty.noEvents        -> LiveLogsStrings.emptyMessage       (Table emptyState)
+  [string 14] liveLogs.error.hint            -> LiveLogsStrings.errorHint          (Views ErrorPanel)
+  [string 15] liveLogs.error.title           -> LiveLogsStrings.errorTitle         (Views ErrorPanel)
+  [string 16] liveLogs.filename              -> LiveLogsStrings.filenameTemplate   (Controls fileExporter)
+  [string 17] liveLogs.filters.grep          -> LiveLogsStrings.filterGrep         (Views grepField)
+  [string 18] liveLogs.filters.grepHelp      -> LiveLogsStrings.filterGrepHelp     (Views grepField)
+  [string 19] liveLogs.filters.grepPlaceholder -> LiveLogsStrings.filterGrepPrompt (Views grepField prompt)
+  [string 20] liveLogs.filters.level         -> LiveLogsStrings.filterLevel        (Views levelField)
+  [string 21] liveLogs.filters.vehicleId     -> LiveLogsStrings.filterVehicleID    (Views vehicleField)
+  [string 22] liveLogs.filters.vehicleIdPlaceholder -> LiveLogsStrings.filterVehiclePrompt (Views vehicle)
+  [string 23] liveLogs.stats.buffered        -> LiveLogsStrings.buffered(_:)       (Controls stats + Table footer)
+  [string 24] liveLogs.stats.drops           -> LiveLogsStrings.drops(_:)          (Controls stats)
+  [string 25] liveLogs.stats.received        -> LiveLogsStrings.received(_:)       (Controls stats)
+  [string 26] liveLogs.status.connected      -> LiveLogsStrings.statusLabel(.live)        (Views StatusBadge)
+  [string 27] liveLogs.status.connecting     -> LiveLogsStrings.statusLabel(.connecting)  (Views StatusBadge)
+  [string 28] liveLogs.status.disconnected   -> LiveLogsStrings.statusLabel(.disconnected)(Views StatusBadge)
+  [string 29] liveLogs.status.error          -> LiveLogsStrings.statusLabel(.error)       (Views StatusBadge)
+  [string 30] liveLogs.status.paused         -> LiveLogsStrings.statusLabel(.paused)      (Views StatusBadge)
+  [string 31] liveLogs.subtitle              -> LiveLogsStrings.subtitle           (LiveLogsPage header)
+  [string 32] liveLogs.table.fields          -> LiveLogsStrings.tableFields        (Table header)
+  [string 33] liveLogs.table.level           -> LiveLogsStrings.tableLevel         (Table header)
+  [string 34] liveLogs.table.message         -> LiveLogsStrings.tableMessage       (Table header)
+  [string 35] liveLogs.table.noLevel         -> LiveLogsStrings.noLevelText        (Table LiveLogsLevelBadge)
+  [string 36] liveLogs.table.time            -> LiveLogsStrings.tableTime          (Table header)
+  [string 37] liveLogs.title                 -> LiveLogsStrings.title              (LiveLogsPage header + nav + empty)
+PARITY_COVERED=37
+  (All 37 present in Localization/Localizable.xcstrings — verified below — and rendered
+  from the bound @Observable state. Zero hardcoded English literals; the only forbidden
+  substrings are the two web key NAMES "*Placeholder", carried with `// parity:allow web key`.)
+
+  Extra coverage beyond the manifest (no scope narrowing): loading/connecting + error data
+  states (the web error panel + connecting badge), the >2-min idle freshness chip (ADR-013),
+  the client-side vehicle filter, pause-keeps-buffer, grep highlight, and a11y row/table
+  summaries. 7 native-chrome keys added (level.debug/info/warn/error, status.idle,
+  status.idleSeconds, stats.bufferedOfMax) so those visible literals localize too.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real exit codes) ===
+[1] swiftc -typecheck (the 10 non-preview/non-test surface files + the route registration,
+    compiled together with the REAL generated Tokens.swift AND the real nav types
+    Sources/App/AppRoute.swift + RouteHostRegistry.swift, under -swift-version 6
+    -target arm64-apple-macos15.0 -strict-concurrency=complete). This is the COMPLETE
+    app-module dependency surface (no other TS* component referenced):
+        TYPECHECK_EXIT=0
+    (Earlier runs correctly caught real defects fixed before green: non-Sendable
+     LocalizedStringKey static `let`s -> computed `var`s; @ObservationIgnored on a
+     non-@Observable class -> removed.)
+
+[2] EXECUTED adapter harness (Models + Adapter compiled to a native arm64 binary + a
+    43-assertion main exercising jsNumber, parseSSEChunk (frames+remainder+CRLF+multiline),
+    buildLogEvent (message/msg/raw, fields sorted minus level/time/message/msg, numeric +
+    string vehicle id, nested-JSON field, non-JSON->info), severity classify, formatTime,
+    downloadFilename, eventToText, matchRanges (valid/empty/invalid), buildLogStreamUrl
+    (grep set / blank omitted) against expected web values):
+        ADAPTER HARNESS: 43/43 assertions passed; 0 failed   (RUN_EXIT=0)
+    (The harness caught one wrong TEST expectation — vehicle_id is BOTH the client-filter
+     key and a displayed field per the web extractFields skip-set — fixed to match web.)
+
+[3] swiftlint --strict --config apps/apple/.swiftlint.yml (repo rules) over the surface:
+        Found 0 violations in apps/apple/TeslaSync/Features/Admin (mine).
+    (Tree-wide note: the ONLY remaining swiftlint violation in apps/apple is pre-existing
+     in dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 — outside this prompt's
+     scope/allowed files, identical to the LiveSignalsTable gate note.)
+        LINT_EXIT=0 (for the in-scope files)
+
+[4] swiftformat --lint apps/apple/TeslaSync/Features/Admin (repo .swiftformat):
+        0/12 files require formatting.   (FORMAT_EXIT=0)
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Admin -Language swift:
+        PLACEHOLDER_ALLOWED=2   PLACEHOLDER_COUNT=0   EXIT=0
+    The 2 ALLOWED are the literal web key names "liveLogs.filters.grepPlaceholder" and
+    "…vehicleIdPlaceholder" (contain forbidden "Placeholder"); each carries
+    `// parity:allow web key`, exactly the sanctioned opt-out. No stubs/skeletons.
+
+[6] xcodegen generate (validates the project.yml change incl. the new TeslaSync/Features
+    source path; the .xcodeproj is git-ignored and removed after):
+        Created project … TeslaSync.xcodeproj   (XCODEGEN_EXIT=0; 72 LiveLogsPage refs wired)
+
+[7] i18n verification (executed): all 31 required keys + 7 native-chrome keys PRESENT in
+    Localizable.xcstrings (en/ar/he); every facade member used by a view (0 dead members
+    after removing the unused tableNoLevel LocalizedStringKey — the key is rendered via
+    noLevelText); 0 hardcoded English literals in the surface.
+
+=== GATE — XCODE APP BUILD/TEST (DEFERRED/BLOCKED, with verified evidence) ===
+  The prompt's `xcodebuild -scheme TeslaSync build/test` (iOS + macOS) is BLOCKED on this
+  host — NOT shown green — for two verified, code-external reasons (this machine has
+  Xcode 26.5 but is NOT a configured app-build runner):
+    (a) KMP Shared.xcframework not staged: `ls Frameworks/` shows only `.gitkeep`. The app
+        targets link `Frameworks/Shared.xcframework`, produced by the scheme pre-action
+        Scripts/build-shared-xcframework.sh (gradlew :core:assembleSharedXCFramework,
+        Kotlin/Native). Its header states "On CI this runs on a macos-latest runner; see
+        apps/macos-pending-verifications.md." Without it the app cannot link.
+    (b) Signing: `security find-identity -p codesigning` -> "0 valid identities found";
+        the app/widget entitlements require a development certificate (ADR-012 defers to a
+        signed runner).
+  Consequently the co-located LiveLogsPage.Tests.swift XCTest suite (which `@testable import
+  TeslaSync`, matching the 170 existing co-located feature-view test files) is also deferred
+  to that runner. The pure-adapter subset is proven green here by harness [2]; the SwiftUI
+  surface is proven to compile here by typecheck [1].
+        BUILD_EXIT=BLOCKED   TEST_EXIT=BLOCKED   (no configured Xcode app-build runner)
+
+=== SUMMARY ===
+  PARITY_COVERED=37 / PARITY_REQUIRED=37   (100%)
+  Host-runnable gates: typecheck, adapter harness (43/43), swiftlint, swiftformat,
+  placeholder scan, xcodegen, i18n cross-check — ALL GREEN.
+  Xcode app build/test: BLOCKED — KMP Shared.xcframework not staged + 0 signing identities
+  (ADR-012 / apps/macos-pending-verifications.md); resolves on a macos-latest runner with
+  no code change. Per the prompt ("If no Xcode runner is available, the gate -> BLOCKED").
+
+EXIT=1
+STATUS=BLOCKED

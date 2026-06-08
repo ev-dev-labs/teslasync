@@ -1,0 +1,124 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure and related instructions in parallel.
+
+Let me explore the Apple app structure deeper, looking at existing Features and patterns.
+
+The output path mentioned (`TeslaSync/Features/Driving`) differs from the actual structure (`Sources/Features`). Let me investigate the project structure and existing patterns.
+
+The build wires up `Sources`, `TeslaSync/dashboard-widgets`, `TeslaSync/feature-views`. The target path `TeslaSync/Features/Driving` is new. Let me examine existing related components, navigation, and the shared facade pattern.
+
+This is a rich, established codebase with a clear multi-file pattern per feature. Let me study the navigation system and a representative existing feature (DrivingTab) plus the TripPlanner-related components.
+
+Let me find how pages register into the route host registry, and look at the parity manifest and ledger.
+
+Let me examine the parity manifest, ledger, and check for any completed sibling page work to follow established patterns.
+
+Let me study the SharedFacade domains (KMP core access), the ledger schema, and the component library.
+
+Let me read the core facade pattern files and an example domain model.
+
+Let me check what build tooling is actually available in this environment, since the gate needs Xcode/swiftlint.
+
+Critical findings: **no Xcode** (only Command Line Tools), and **no `Shared.xcframework`** (only `.gitkeep`). So the `xcodebuild` build/test gate cannot run → per the prompt, STATUS=BLOCKED. But I must still deliver a complete, non-placeholder implementation (ADR-011, covenant rule 4). swiftlint, swiftformat, xcodegen, pwsh are available.
+
+Let me study the existing TripPlanner-related component family (AddressInput, SOCRouteChart) to follow the exact established multi-file pattern.
+
+The pattern is clear: feature views use an injected "Source" protocol seam (not direct `Shared` import), with an in-memory source for previews/tests. This compiles without the xcframework. Let me study the design tokens, Localization (xcstrings), UI components, feedback components, and the placeholder checker.
+
+There's a single `Localizable.xcstrings` catalog plus per-surface `.strings`. Let me examine a sibling Apple log to learn the expected `=== PARITY ===` format and how no-Xcode is handled, plus the placeholder checker and design tokens.
+
+Let me definitively check for Xcode and read the design tokens, the placeholder checker, and the SOCRouteChart view/states files in parallel.
+
+Xcode.app exists in /Applications — just not selected. Let me verify it works via `DEVELOPER_DIR`, and check whether `Shared.xcframework` can realistically be built. Also reading placeholder patterns and design tokens.
+
+Xcode 26.5 is available via `DEVELOPER_DIR`. Now the key question is the `Shared.xcframework`. Let me check how it's built and whether the project builds, plus how existing code handles the "placeholder"/redacted pattern (which the checker flags).
+
+Let me check the Gradle/JDK toolchain and kick off the (long-pole) `Shared.xcframework` build in the background while I study the remaining reference files.
+
+Java 17 + gradlew available. Let me start the `Shared.xcframework` build in the background (it's the long pole), then continue studying reference files.
+
+Framework build running in background. Now let me read the design tokens and core UI components I'll use.
+
+Let me read the form controls, feedback, metrics, typography components, and the generated design tokens.
+
+Let me read the remaining components: Pickers (Select), Typography, Feedback states/banners, Metrics, and the generated Tokens.
+
+Let me read the design tokens, typography, metrics (StatCard), the page-level DrivingTab example, and SOCRouteChart views.
+
+Let me read the navigation parser, the xcstrings catalog header, the DrivingTab model (mutation/source pattern), and SOCRouteChart States/Previews/Tests to mirror conventions.
+
+Let me check the framework build progress and read the xcstrings catalog structure + the model/source pattern from DrivingTab and AddressInput.
+
+Two big wins: the **`Shared.xcframework` built successfully**, and the **30 web string keys already exist** in the catalog under a `translation.` prefix. Let me verify framework staging (the script wanted `release` but Gradle built `debug`) and check exactly which required keys exist vs. missing.
+
+Framework staging failed (script wanted `release/`, Gradle built `debug/`). Only 2 strings are missing. Let me inspect the build failure and the Gradle XCFramework task setup.
+
+The build is still running — it builds both debug AND release, and release linking is in progress. Let me check the background shell status.
+
+Build continues in background (builds both debug + release, then stages). Let me read the remaining reference files: typography, the DrivingTab model (full source-seam pattern), AddressInput model/views, and confirm token symbols.
+
+Let me verify sibling surface availability (AddressInput/TripPlannerMap/TripLegList), confirm token symbols, and check how `TSTone`/`TSIconBox`/`TSGrid` are defined.
+
+AddressInput & SOCRouteChart siblings exist (separate units not built: TripPlannerMap, TripLegList, VehicleSelect). Let me confirm `Font.TS`/`TSTone` format and the AddressInput composition API.
+
+Let me read the AddressInput model constructor and its source seam to decide composition, plus confirm `TSSkeleton` and `TSGrid`/layout availability.
+
+Let me read the test-target wiring in project.yml and the AddressInput model init/update shapes so I compose and place tests correctly.
+
+I need to understand the test-vs-app target membership convention precisely before placing files. Let me view the full project.yml target source config.
+
+Let me check the framework build completion and confirm the route-key naming convention in the catalog before I start writing.
+
+Let me check the background build shell directly and inspect the interpolated string values in the catalog.
+
+Build still linking release (will stage to the repo when done). Catalog interpolation uses `%1$@`. Let me read the SI unit converters/formatters to reuse them, then start writing.
+
+I now have a complete understanding of the architecture. Let me write a plan file and verify the framework finished staging.
+
+The framework build completed. Let me verify staging.
+
+`Shared.xcframework` staged. Let me kick off a **baseline** macOS build of the unmodified repo in the background (validates the framework link + XCTest-in-app convention) while I write the implementation.
+
+Project generated. Let me start a baseline macOS build in the background while I write code.
+
+Baseline build running. Let me check the lint/format config so my code passes `swiftlint --strict` and `swiftformat --lint` on the first try.
+
+Config understood (120 col, swiftformat before-first wrapping). Baseline build running. Let me write the pure adapter first.
+
+Baseline build finished. Let me check its result and create the feature directory.
+
+The baseline build fails on a **pre-existing** repo condition: `feature-views/*.Tests.swift` files `import XCTest` but are app-target members (XCTest unresolvable in app target). This is unrelated to my page. Let me verify a non-committed workaround (`ENABLE_TESTING_SEARCH_PATHS=YES`) neutralizes it.
+
+Confirmed: the repo snapshot has **pre-existing, repo-wide compile failures** in unrelated surfaces (`dashboard-widgets` duplicate `DashboardWidgetSize`/`DashboardWidgetRegistration` declarations, plus `feature-views/*.Tests.swift` importing XCTest into the app target). The full app build is pre-broken independent of my page. Let me quantify briefly, then proceed — I'll verify my code via an isolated build.
+
+The pre-existing breakage (48+ `DashboardWidgetSize` ambiguities, VehicleHero duplicates across ~30 unrelated widget files) makes the full app build pre-broken — **zero** errors relate to my page. This is out of scope. I'll deliver a complete page, verify it compiles in isolation, and report the gate honestly.
+
+Now let me write all the source files. Starting with the pure adapter.
+
+Now the Model file (state holder + source seam + strings facade + telemetry).
+
+Now the Views file (form panel, stat grid, disclaimer, feasibility, weather, result states).
+
+Now the main page view that composes everything (and the two AddressInput fields).
+
+Now the navigation registration file (deep-link + NavigationDestination + factory).
+
+Now the previews (one per data state).
+
+Let me check how the working test target imports the module before placing my tests there.
+
+The working test convention is `Tests/Unit/` with `@testable import TeslaSync` (ToolCard precedent); colocated `feature-views/*.Tests.swift` are the broken ones that pollute the app target. I'll place my **runnable** tests in `Tests/Unit/Features/Driving/` (keeps my feature dir app-target-clean). Let me write both test files.
+
+Now the model state-transition tests.
+
+Now let me add the 2 missing strings to the catalog, wire `project.yml`, and register navigation in `AppShell`. First, inspect an existing catalog entry's structure.
+
+Let me check the catalog's formatting (key ordering, indentation) to make a minimal, Xcode-compatible edit.
+
+Keys aren't sorted (so a full re-dump would reorder everything). I'll do a targeted text insertion. Let me extract the exact raw formatting of an anchor entry.
+
+I'll insert the 2 missing keys with exact formatting (en=translated, ar/he=needs_review), matching the web default copy, then validate.
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: C710:AB822:2D51BD3:2F85068:6A26E80B)

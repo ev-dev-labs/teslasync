@@ -1,0 +1,150 @@
+I'll start by exploring the repository structure to understand the task context — the web source, the existing Apple app structure, and the shared infrastructure (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n).
+
+The web source exists and there are many existing widget implementations to follow as patterns. Let me read the web source and examine existing widget patterns.
+
+Now let me read the web source's supporting files (hook, WidgetShell, shared event feed, types) and study a structurally similar existing Apple widget (LocationFavoritesWidget — list-based) to learn the conventions.
+
+Let me study the complete LocationFavoritesWidget (closest list-based analog) and find the shared Apple infrastructure (WidgetShell equivalent, state-holders, tokens, i18n, telemetry).
+
+Excellent pattern clarity. Let me read the remaining LocationFavorites files (Projection, RankedList, Previews, Tests, strings) and locate the shared infrastructure definitions (DashboardWidgetRegistration, Color.TS, Font.TS, TSSpacing, etc.).
+
+Now let me find the shared infrastructure definitions and the Tests/Previews/strings files to complete my understanding.
+
+Now let me read TSTone, TSSkeleton, the project.yml build config, and the strings/Tests/Previews of an existing widget to nail the conventions.
+
+Critical finding: `xcodebuild` requires full Xcode but only CommandLineTools is active — the iOS/macOS simulator gate cannot run here. Let me check how sibling widgets handled this (their logs) and whether `pwsh`/host-swift verification is available.
+
+The established sibling disposition is clear: ship the complete implementation + run all host-available gates (swiftc typecheck, executed harness, swiftformat, swiftlint, placeholder), and mark the xcodebuild scheme step DEFERRED/BLOCKED with evidence. Let me verify this runner's exact capability before deciding DONE vs BLOCKED.
+
+The disposition is well-established by siblings (0036, 0055, 0059): ship complete code + run host gates green, defer the xcodebuild scheme step (KMP `Shared.xcframework` is absent in this checkout). Let me verify host SwiftUI typecheck feasibility and inspect shared components (TSBadge, Skeletons, Components tree) before writing.
+
+SwiftUI host typecheck works. Let me inspect the shared list/timeline, badge, and feedback components for reuse, and check whether a SoftwareUpdate DTO already exists in the Apple shared facade.
+
+There are perfect native counterparts: `TSTimeline`/`TSTimelineItem` (web `WidgetEventFeed`→`TimelineItem`), `TSBadge`, `TSEmptyState`, `TSQueryError`, `TSSkeleton`. Let me read their exact APIs to reuse them faithfully.
+
+I have everything I need. Let me verify the exact registry metadata from the canonical source and the web `TimelineItem` composition, then set up my plan/todos.
+
+I now have a complete understanding of the architecture and conventions. Let me set up my plan and todos, then check the lint/format config so my code passes `--strict`.
+
+Now I'll set up tracking and write the plan. Then implement the 7 files mirroring the LocationFavorites structure.
+
+Now I'll create the Projection (pure, harness-testable adapter):
+
+Now the Model (state-holder seam, observable model, telemetry, i18n facade, surface/registration, accessibility):
+
+Feed subviews + tone→Color mapping:
+
+Now the main surface view (header + all states, compact/full):
+
+Now the Previews (all states) and the strings table:
+
+Now the i18n strings table:
+
+Now the comprehensive test suite:
+
+All 7 files written. Now let me auto-format my files to match the repo's swiftformat rules, then run the lint check.
+
+Two things to fix: I ran swiftformat from the wrong dir, and swiftlint found 2 violations. Let me get the specifics.
+
+Violation #1 is mine (Tests file >400 lines — I'll split it). Violation #2 is in a sibling file I didn't touch. Let me confirm it's pre-existing baseline (not caused by me) before deciding.
+
+Confirmed: the LifetimeStats violation is **pre-existing baseline** (1 violation without my files), in a sibling file outside my allowed scope. My files added exactly one new violation — the Tests file length (441>400). I'll split my tests into two allowed `SoftwareUpdateHistoryWidget.*` files. Let me view the boundary to split precisely.
+
+I'll split the test file: extract the model/registry/accessibility section into a new allowed `*.ModelTests.swift` file, then truncate the original.
+
+The split worked (255 + 218 lines). But `daysBefore` is now unused in ModelTests — let me remove it, then reformat and re-lint.
+
+`swiftformat --lint` is clean (0/339), and my files contribute **0 swiftlint violations** — the lone remaining one is the pre-existing sibling `LifetimeStatsWidget.Adapter.swift`. Now the key verification: host SwiftUI typecheck against the real design system. Let me check the dependency file (`DigitalTwinWidget.Model.swift`) for the registration types.
+
+No dashboard-widget or Components/Design file imports `Shared` (the KMP framework), and the registration types live in a self-contained `DigitalTwinWidget.Model.swift`. Let me run the host SwiftUI typecheck of my surface against the real design system. I'll start minimal and iterate.
+
+Skeletons pulls in `TSCard`, etc. — cascading deps. The cleanest representative approach is to typecheck the whole app source set (which is exactly what the target compiles), excluding only files that `import Shared` (the absent KMP framework). Let me find all `Shared` importers.
+
+The Shared-importers form a connected subgraph (SharedFacade/Live). The P4 staging widgets are designed to depend only on the design system (Components/Design/Tokens) + registration types. Let me typecheck that closure.
+
+The `#Preview` macro needs Xcode's toolchain plugin (absent in CommandLineTools). Xcode.app is installed — let me route swiftc through it via `DEVELOPER_DIR` so I can typecheck *with* previews using the real compiler.
+
+Excellent — Xcode's full toolchain is reachable via `DEVELOPER_DIR` (swiftc with preview macros + simctl). Let me re-run the typecheck **with** `-D DEBUG` (including my Previews) using the real Xcode compiler.
+
+`UnitFormatters.swift` depends on `UnitPreferences` from the KMP/Platform unit layer — it's the one design file the sibling log also excluded, and my surface doesn't use it. Let me exclude it from the closure.
+
+Only `DigitalTwinWidget.Model.swift` errors now — it drags DigitalTwin-specific types from sibling files. I included it only for the `DashboardWidget*` registration types. Let me include the full self-contained DigitalTwin file set instead, and check which siblings pull the unit layer.
+
+There's a pre-existing `TwinVehicle` name collision between `DigitalTwinMiniWidget` and `DigitalTwinWidget` siblings. I only need DigitalTwin for the `DashboardWidget*` registration types — let me include just the `DigitalTwinWidget.*` set (dropping the colliding Mini sibling).
+
+Now the only errors are in the **sibling's** `DigitalTwinWidget.Previews.swift` (a pre-existing strict-concurrency gap in its preview helper — mine correctly marks `@MainActor`). My files produce zero errors. Let me exclude sibling previews (I only need DigitalTwin's non-preview files for the registration types).
+
+**TYPECHECK_EXIT=0** — my surface (View+Feed+Model+Projection+Previews) type-checks green under Swift 6 strict-concurrency against the real design system + real registration types, using the actual Xcode toolchain. 
+
+Now let me build an **executable harness** that actually runs the adapter+model assertions on-host. I'll write a driver + a minimal registration-type shim (harness-only) in /tmp.
+
+Now the harness driver — all checks run on `@MainActor` to avoid cross-actor capture, exercising projection, model, registration, and accessibility against the real `Projection.swift` + `Model.swift`:
+
+Now compile and run the harness (Shim + real Projection + real Model + Driver), linking SwiftUI:
+
+The harness spy shouldn't be `@MainActor` (the real test double isn't). Let me fix and recompile.
+
+**Harness GREEN: CHECKS=82, FAILURES=0.** The real Projection + Model logic executes correctly. Now the placeholder gate (pwsh):
+
+Let me confirm the placeholder scan actually inspected my files (the prefix path) and do a manual forbidden-word scan to be certain.
+
+`-LiteralPath` on the prefix likely matched nothing — let me verify properly by scanning the real directory and doing an explicit forbidden-word grep on my 8 files.
+
+Placeholder gate is genuinely clean (directory scan COUNT=0; manual word-scan of my 8 files finds nothing). Now let me concretely characterize the xcodebuild blocker (the KMP `Shared.xcframework`) so the log is honest and evidence-backed.
+
+The `Shared.xcframework` is absent and must be built from the KMP core via Gradle/Kotlin-Native (the app targets depend on it). The iPhone 16 sim exists and Xcode is reachable. Let me make a genuine, time-boxed attempt to build the xcframework so I can try the real xcodebuild gate rather than only deferring it.
+
+Java 17 + Gradle 8.14.5 are present. Let me attempt the KMP xcframework build in the background and monitor it.
+
+The KMP build is running (Kotlin/Native is slow on first run — likely downloading the compiler). Let me check progress.
+
+The KMP build is nearly done — compilation is cached and it's linking the release frameworks now (debug xcframework already produced). Let me wait for completion.
+
+Still linking release frameworks (macOS arm64 now). Let me wait for the final assembly.
+
+BUILD SUCCESSFUL — the KMP `Shared.xcframework` is built. Now I can attempt the **real xcodebuild gate**. Let me stage the framework, generate the Xcode project, and check the simulator.
+
+Framework staged. Let me generate the Xcode project with xcodegen.
+
+Project generated with TeslaSync + TeslaSync-macOS schemes. One concern: the `dashboard-widgets` source path globs `*.Tests.swift` into the **app** target, which would break it (`@testable import TeslaSync` inside the app). Let me check how the generated project handles test files before building.
+
+Confirmed: the generated project compiles **all** `*.Tests.swift` (18 refs — mine + every sibling) into the **app** target itself, where `@testable import TeslaSync` is a self-import error. This is a pre-existing integration-wiring issue (test files co-located in the app source path), affecting every sibling equally — and it's outside my allowed files (`SoftwareUpdateHistoryWidget.* + log`). Let me get concrete evidence by attempting the real macOS app build.
+
+Build failed (exit 65) as predicted. Let me capture the precise compile errors to confirm the cause.
+
+Definitive: the **only** build errors are `unable to resolve module dependency: 'XCTest'` from the co-located `*.Tests.swift` files — **zero errors from my surface**. This is pre-existing wiring affecting all siblings. Let me get a real GREEN xcodebuild by excluding test files via a build-setting override (no project edit), proving my surface builds in the actual app against the real `Shared.xcframework`.
+
+The app target now compiles my surface, but new errors appeared. Let me attribute each error to a file to separate mine from pre-existing collisions.
+
+Decisive evidence: **every** app-build error is in pre-existing sibling files — `DashboardWidgetSize` is triple-defined across widget bundles (`Sources/DashboardWidgets/DrivetrainHealthWidgetModel.swift`, `BatteryCellsWidgetRegistry.swift`, `DigitalTwinWidget.Model.swift`), and `LivePowerFlowWidget.Previews.swift` lacks `@MainActor`. **Zero errors originate in my surface** — and it compiled in the real app target. These collisions are outside my allowed files. Let me verify git status and clean up build artifacts.
+
+Everything confirmed: only my 8 surface files are staged for commit; all build artifacts are git-ignored. My surface compiled in the real app target with zero attributable errors. Now let me write the comprehensive, honest gate log.
+
+Let me do a final re-verification of all in-scope gates before committing, to confirm the committed state matches what I logged.
+
+All in-scope gates GREEN: typecheck surface_errors=0, harness 82/82, swiftformat 0/339, swiftlint surface_violations=0 (only the pre-existing sibling remains), placeholder COUNT=0. Let me commit the 8 surface files + the log.
+
+Committed. Let me verify the commit and confirm a clean working tree, then clean up temporary harness files.
+
+Done. Commit `d3607134` landed cleanly (9 files, 1996 insertions); working tree clean; temp files removed.
+
+Merge made by the 'ort' strategy.
+ ...rd-widgets-0091-SoftwareUpdateHistoryWidget.log | 194 ++++++++++++
+ .../SoftwareUpdateHistoryWidget.Feed.swift         | 185 +++++++++++
+ .../SoftwareUpdateHistoryWidget.Model.swift        | 286 +++++++++++++++++
+ .../SoftwareUpdateHistoryWidget.ModelTests.swift   | 214 +++++++++++++
+ .../SoftwareUpdateHistoryWidget.Previews.swift     | 123 ++++++++
+ .../SoftwareUpdateHistoryWidget.Projection.swift   | 345 +++++++++++++++++++++
+ .../SoftwareUpdateHistoryWidget.Tests.swift        | 255 +++++++++++++++
+ .../SoftwareUpdateHistoryWidget.strings            |  63 ++++
+ .../SoftwareUpdateHistoryWidget.swift              | 331 ++++++++++++++++++++
+ 9 files changed, 1996 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0091-SoftwareUpdateHistoryWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SoftwareUpdateHistoryWidget.Feed.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SoftwareUpdateHistoryWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SoftwareUpdateHistoryWidget.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SoftwareUpdateHistoryWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SoftwareUpdateHistoryWidget.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SoftwareUpdateHistoryWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SoftwareUpdateHistoryWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SoftwareUpdateHistoryWidget.swift

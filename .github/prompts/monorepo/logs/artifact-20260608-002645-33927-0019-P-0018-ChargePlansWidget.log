@@ -1,0 +1,179 @@
+=== P4 Dashboard widget 0018 ChargePlansWidget (Apple) ===
+Surface : apps/apple/TeslaSync/dashboard-widgets/ChargePlansWidget.*
+Web spec: web/src/features/dashboard/widgets/ChargePlansWidget.tsx
+Registry: charge-plans · category charging · default 2x4 · min 1x2 · max 4x40
+Runner  : macOS 26.5.1 (BuildVersion 25F80) · Swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen present · pwsh present
+Date    : 2026-06-08
+
+================================================================================
+A. GATE STEPS (exactly as specified in the prompt)
+================================================================================
+
+--- xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+'/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+
+--- xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+'/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+
+--- swiftlint --strict (surface files, repo .swiftlint.yml)
+Linting 8 Swift files (ChargePlansWidget.{Adapter,Format,Model,ModelTests,Previews,Tests,Views}.swift + ChargePlansWidget.swift)
+Done linting! Found 0 violations, 0 serious in 8 files.
+LINT_EXIT=0
+
+--- swiftformat --lint (surface files, repo .swiftformat)
+0/8 files require formatting.
+FORMAT_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/ChargePlansWidget
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+================================================================================
+B. CAPABILITY ANALYSIS — why IOS_EXIT / MAC_EXIT are BLOCKED (not red-as-green)
+================================================================================
+The two `xcodebuild ... build test` steps cannot run on this runner. This is a
+platform-capability gap, exactly the condition the prompt names ("If unavailable
+on the runner -> STATUS=BLOCKED with API evidence"):
+
+  1. NO XCODE. The active developer directory is the Command Line Tools, not a
+     full Xcode (`xcode-select -p` -> /Library/Developer/CommandLineTools).
+     `xcodebuild -version` -> "tool 'xcodebuild' requires Xcode". xcodebuild is
+     the only tool that can drive the iOS-Simulator + macOS `build test` gate, so
+     both steps fail before compiling a single file.
+  2. NO iOS SIMULATOR SDK / RUNTIME. `xcrun --sdk iphonesimulator --show-sdk-path`
+     -> "SDK 'iphonesimulator' cannot be located". The iPhone 16 destination is
+     unreachable on a CLT-only host.
+
+Even on a full-Xcode host, the FULL-APP `xcodebuild` gate is additionally blocked
+by PRE-EXISTING, OUT-OF-SCOPE conditions (this prompt's allowed files are only
+`ChargePlansWidget.*` + this log — fixing them is forbidden here and is the
+documented job of `p4-apple/P99-0001-apple-acceptance-gate` on a macos-latest
+runner; see apps/macos-pending-verifications.md):
+
+  - KMP `Shared.xcframework` is not staged. Both app schemes run a pre-build
+    Run Script (`Scripts/build-shared-xcframework.sh`) that needs the
+    Kotlin/Native + Gradle toolchain (gradle is not on PATH on this host); the
+    binary is itself macOS-pending (deferred to p5-hardening/H8-0001).
+  - Parallel-merge symbol collisions across the 54-widget parity tree:
+    `struct DashboardWidgetSize` is defined 16x and `DashboardWidgetRegistration`
+    14x across TeslaSync/dashboard-widgets + Sources/DashboardWidgets, and 263
+    co-located `*.Tests.swift` files import XCTest into the app target. This
+    surface deliberately follows the SAME self-contained per-widget convention as
+    the committed reference `WallConnectorWidget` (its allowed-files scope forbids
+    extracting a shared definition); it does not introduce a new class of problem.
+  - macOS app target requires a development signing identity.
+
+CONCLUSION: IOS_EXIT and MAC_EXIT are environment/predecessor blocked, NOT caused
+by this surface. The surface itself is verified GREEN below by every host-runnable
+means the CLT Swift 6.3.2 toolchain affords.
+
+================================================================================
+C. ISOLATION VERIFICATION — the ChargePlansWidget surface itself (all GREEN)
+================================================================================
+Method: an ephemeral SwiftPM package (module named `TeslaSync`, platforms
+.macOS(.v14), swift-tools 6.0 => Swift 6 language mode = strict concurrency
+complete) containing the 5 shipped source files + the real generated design
+tokens (apps/design/generated/apple/Tokens.swift) + a faithful copy of the one
+shared component the surface uses (TSSkeleton). Not committed.
+
+C1. SwiftPM build (Swift 6 strict concurrency)
+    swift build  ->  Build complete!   BUILD_EXIT=0
+    (Compiles Adapter, Format, Model, Views, and the SwiftUI surface clean.)
+
+C2. Logic verification (executable, mirrors the shipped XCTest assertions)
+    XCTest + swift-testing both ship only with Xcode and are unavailable under
+    CLT, so the shipped `*.Tests.swift` files are RUN-deferred to the Xcode test
+    target. Their full logic is instead executed here by an equivalent executable
+    that drives the same public API (ChargePlanProjection / ChargePlanFormat /
+    ChargePlansModel / registration / ChargePlanAccessibility):
+        swift run cpwcheck  ->  CHECKS=102 FAILURES=0  ALL_CHECKS_PASSED  (exit 0)
+    Coverage: active-plan selection; planEntries order + composition; savings row
+    gating (>0 only); null fallbacks ("0%", "-", "- -"); status-tone mapping
+    (completed/active/scheduled/failed/cancelled/other/nil); planDetailEntries
+    slice(2); rateEntries (utility/name/id/mono + null fallbacks); hasData;
+    ChargePlanFormat percent/kWh/currency (half-up, separators, non-finite -> "-")
+    + date helpers; model phases (loading/loaded/rates-only/empty/cached/failed);
+    card projection; view.opened telemetry once + re-arm after stop; refresh
+    delegation; connection tracking; resolvePhase/makeCard; registry id/category/
+    sizes/clamp; accessibility summaries.
+    NOTE: cpwcheck caught a real defect during verification — percent()/
+    kilowattHours() appended their suffix to a non-finite value ("-%", "- kWh");
+    fixed to return "-" before the run was accepted.
+
+C3. swiftc -typecheck against the REAL macOS SDK (Swift 6, arm64-apple-macos14.0)
+    5 shipped source files + Tokens + TSSkeleton  ->  TYPECHECK_EXIT=0
+
+C4. Syntax parse of the Xcode-only files (XCTest / #Preview macro need Xcode)
+    swiftc -parse ChargePlansWidget.Tests.swift        -> PARSE_EXIT=0
+    swiftc -parse ChargePlansWidget.ModelTests.swift   -> PARSE_EXIT=0
+    swiftc -parse ChargePlansWidget.Previews.swift     -> PARSE_EXIT=0
+
+C5. swiftlint --strict (surface files)         -> 0 violations          (exit 0)
+C6. swiftformat --lint (surface files)         -> 0/8 require formatting (exit 0)
+C7. Placeholder gate — REAL scan of the actual ChargePlansWidget.* files
+    (copied to a temp dir so Get-ChildItem enumerates them, since the gate's
+    file-prefix `-Path` is not a real path and Test-Path treats it as nothing to
+    scan):  PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0                    (exit 0)
+
+C8. Project wiring — `xcodegen generate` succeeds and the generated
+    TeslaSync.xcodeproj enumerates all 9 surface files (8 .swift + .strings) in
+    the TeslaSync iOS + TeslaSync-macOS targets. (Generated project is
+    git-ignored and was removed after inspection.)
+
+================================================================================
+D. SURFACE SUMMARY (web parity)
+================================================================================
+Files (allowed scope only):
+  ChargePlansWidget.swift          surface: glass shell, header (icon/title/
+                                   freshness chip/refresh/open), compact vs
+                                   standard composition, loading/error/content.
+  ChargePlansWidget.Views.swift    badge, stat cards, detail list/row (compact
+                                   slice 4), section header, compact tile, empty.
+  ChargePlansWidget.Model.swift    @Observable state holder (P1/S8 source seam),
+                                   phase resolution, card projection, registry,
+                                   strings facade (P1/S10), telemetry (P1/S11).
+  ChargePlansWidget.Adapter.swift  pure DTOs + projection (selection, planEntries,
+                                   rateEntries, hasData).
+  ChargePlansWidget.Format.swift   pure formatters + accessibility summaries.
+  ChargePlansWidget.Previews.swift 9 state previews (DEBUG).
+  ChargePlansWidget.Tests.swift    adapter + formatter XCTest coverage.
+  ChargePlansWidget.ModelTests.swift  model + registry + a11y XCTest coverage.
+  ChargePlansWidget.strings        i18n catalog (table "ChargePlansWidget").
+
+Data sources bound via the P1/S8 state-holder seam (no HTTP in the view):
+  useChargePlans, useRatePlans, useVehicles, useFormatting, useDateFormat
+  (+ useTranslation) -> ChargePlansSource / ChargePlansUpdate.
+
+States rendered (every one): loading (skeleton chrome), content, empty
+  (no-plans / no-details / no-rates / no-data friendly surfaces), error
+  (QueryError-equivalent + Retry), stale (amber chip), offline (cached + chip),
+  plus compact (1-col) vs standard (>=2-col) and shallow (rows<=3) detail slicing.
+
+i18n keys (all from source, resolved through the P1/S10 facade; no English
+literals in rendered logic): widget.chargePlans.{title, ratePlans, targetSoc,
+departure, schedStart, schedEnd, estEnergy, estCost, savings, saved, ratePlan,
+noPlans, noDetails, noRates, noData} + native chrome
+{description, unitKwh, live, stale, offline, refresh, retry, open, loading,
+errorTitle, openA11y}.
+
+Charts/maps: none (per registry) — no Swift Charts / MapKit dependency.
+Accessibility: VoiceOver labels on badge/stat/row/compact/empty/chip/buttons;
+Dynamic Type via system fonts; Reduce Motion respected by TSSkeleton.
+
+================================================================================
+RESULT
+================================================================================
+Host-runnable verification (build, logic 102/102, typecheck, lint, format,
+placeholder, project wiring): ALL GREEN.
+Gate xcodebuild steps: BLOCKED — no Xcode (CLT only) + no iOS Simulator SDK on
+this runner; full-app build additionally gated by pre-existing, out-of-scope
+parallel-merge collisions + unstaged KMP Shared.xcframework + macOS signing.
+Deferred to p4-apple/P99-0001-apple-acceptance-gate (macos-latest).
+
+EXIT=1
+STATUS=BLOCKED

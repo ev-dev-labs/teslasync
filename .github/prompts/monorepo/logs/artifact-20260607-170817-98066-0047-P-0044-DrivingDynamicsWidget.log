@@ -1,0 +1,108 @@
+=== P4 Dashboard widget 0044 DrivingDynamicsWidget (Apple) ===
+Date: 2026-06-07
+Host: macOS (Darwin arm64), Xcode 26.5 (17F42), Swift 6.3.2,
+      iPhone 16 sim (iOS 26.5), JDK 17.0.19, SwiftLint, SwiftFormat, pwsh 7.
+Capability check (prompt requires SwiftUI + Swift Charts + MapKit, iOS18/macOS15 HIG):
+      AVAILABLE — the surface BUILDS and UNIT-TESTS green on both iOS and macOS
+      (evidence below). The required platform capability is present.
+
+--------------------------------------------------------------------------------
+SURFACE COMPLETE — every code-attributable gate is GREEN
+--------------------------------------------------------------------------------
+Artifact (repo convention realizes the prompt's `dashboard-widgets` concept under
+the single shared `Sources/` module root used by project.yml + .swiftlint.yml):
+  apps/apple/Sources/Dashboard/Widgets/DrivingDynamicsWidget.swift        (SwiftUI surface)
+  apps/apple/Sources/Dashboard/Widgets/DrivingDynamicsModels.swift        (types, registry, pure logic, freshness)
+  apps/apple/Sources/Dashboard/Widgets/DrivingDynamicsDataSource.swift    (P1/S8 seam, P1/S11 diagnostics, preview source)
+  apps/apple/Sources/Dashboard/Widgets/DrivingDynamicsWidgetModel.swift   (@Observable view model + chrome phase)
+  apps/apple/Sources/Dashboard/Widgets/DrivingDynamicsWidgetPreviews.swift(per-state Xcode previews)
+  apps/apple/Tests/Unit/Dashboard/DrivingDynamicsWidgetTests.swift        (21 tests: logic + projection + diagnostics + a11y)
+  apps/apple/Localization/Localizable.xcstrings                           (+5 keys: severity.{calm,normal,sporty,aggressive}, freshness.stale)
+
+Parity with web/src/features/dashboard/widgets/DrivingDynamicsWidget.tsx:
+  - Data sources bound via shared state-holder seam (no HTTP in the view):
+    useDrivingDynamics + useAccelerationDistribution + useVehicles -> DrivingDynamicsDataSource
+    projecting facade LoadableState (cache-then-network, ADR-013).
+  - Compact (cols<=1): maxG number + "Max g" + Smooth/Aggressive badge.
+  - Standard (cols>=2): 3 g-force gauges (Accel/Brake/Lateral) + severity badge.
+  - Wide (cols>=3): + G-Force Distribution histogram (Swift Charts TSBarChart).
+  - States reproduced: loading (skeleton silhouette), empty ("No dynamics data"),
+    error (retry), stale (chip), offline (chip + cached). Never a blank panel.
+  - Pure logic ported verbatim: G_MAX=1.2, deriveSeverity, isSmooth, gaugeColor, histogram.
+  - Registry: id=driving-dynamics, default 2x4, min 1x2, max 4x40 (enforced via clamp).
+  - i18n: every label via P1/S10 catalog keys (translation.widget.drivingDynamics.*,
+    +severity.*, +freshness.stale). No English literals in native code.
+  - Accessibility: VoiceOver labels/values on gauges, severity badge, histogram,
+    refresh, freshness/offline chips; Dynamic Type via Font.TS; Reduce Motion honored.
+  - Telemetry: os.Logger diagnostics emit "view.opened surface=DrivingDynamicsWidget" once (P1/S11).
+
+GREEN gate steps (each EXIT=0):
+  [OK] Shared.xcframework built via Gradle (BUILD SUCCESSFUL in 15m22s; ios-arm64,
+       ios-arm64-simulator, macos-arm64 slices) and staged to Frameworks/.
+  [OK] xcodegen generate (TeslaSync.xcodeproj) — new Sources/Dashboard auto-included.
+  [OK] iOS app BUILD: "** BUILD SUCCEEDED **" — all 5 widget files compiled into
+       target TeslaSync; DrivingDynamicsWidgetTests compiled into TeslaSyncTests.
+  [OK] macOS app BUILD: "** BUILD SUCCEEDED **" — all 5 widget files compiled into
+       target TeslaSync-macOS, 0 Swift compile errors (CODE_SIGNING_ALLOWED=NO).
+  [OK] iOS UNIT TESTS — DrivingDynamicsWidgetTests on a dedicated, isolated sim
+       (test-without-building, -parallel-testing-enabled NO):
+         Executed 21 tests, with 0 failures (0 unexpected)   XCB_EXIT=0
+       (In a full-suite run the surface ran inside 225 passing tests, 0 failures,
+        before an unrelated environmental SIGKILL — see BLOCKED notes.)
+  [OK] swiftlint --strict      -> Found 0 violations, 0 serious in 262 files   LINT_EXIT=0
+  [OK] swiftformat --lint apps/apple -> 0/266 files require formatting          FORMAT_EXIT=0
+  [OK] check-placeholders.ps1 (apps/.../DrivingDynamicsWidget*) -> PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0
+       (No TODO/stub/mock/placeholder/Lorem in shipped code.)
+
+--------------------------------------------------------------------------------
+BLOCKED gate steps — platform-capability / shared-runner ENVIRONMENT, not the surface
+--------------------------------------------------------------------------------
+The prompt's literal gate runs the FULL scheme `test` action (unit + UI). Three
+ENVIRONMENT limitations prevent IOS_EXIT/MAC_EXIT from reaching 0. None are caused
+by this surface (the widget compiles on both platforms and its unit tests pass).
+These match the repo's documented posture (apps/macos-pending-verifications.md;
+prior P9-0001 "XCTest unit gate BLOCKED — macOS dev-cert").
+
+B1) iOS full `xcodebuild ... build test`  -> IOS_EXIT=65
+    BUILD SUCCEEDED, then the pre-existing XCUITest runner cannot bootstrap on a
+    headless/shared simulator:
+      "TeslaSyncUITests-Runner encountered an error (Early unexpected exit,
+       operation never finished bootstrapping ... Test crashed with signal kill
+       before establishing connection.)"
+    XCUITest requires a GUI WindowServer automation session unavailable here.
+    The 11 pre-existing UI tests (AppLaunch/Auth/LiveData/Push) are unrelated to
+    this surface (which adds unit tests only).
+
+B2) macOS full `xcodebuild -scheme TeslaSync-macOS build test`  -> MAC_EXIT=70
+    "TeslaSync-macOS / TeslaSyncWidgets-macOS has entitlements that require signing
+     with a development certificate." No Apple development certificate / signing
+     identity exists on this runner (DEVELOPMENT_TEAM=""), so the hosted macOS test
+     host cannot be produced/launched. With CODE_SIGNING_ALLOWED=NO the macOS app
+     still BUILDS SUCCEEDED (compilation of this surface is proven green).
+
+B3) Shared-runner instability: this host is shared with other parallel slot agents
+    churning simulators. Full-suite iOS unit runs were intermittently SIGKILL'd at
+    test-host bootstrap (EXIT 137, 0 tests executed) and a stray
+    'xcrun simctl' subprocess (lacking inherited DEVELOPER_DIR) logged
+    "unable to find utility simctl". Isolating on a dedicated sim +
+    test-without-building yielded the clean 21/21 PASS recorded above.
+
+--------------------------------------------------------------------------------
+Gate variable summary
+--------------------------------------------------------------------------------
+IOS_EXIT=65         (BUILD SUCCEEDED; unit suite 21/21 PASS in isolation; XCUITest runner bootstrap BLOCKED — B1/B3)
+MAC_EXIT=70         (BUILD SUCCEEDED w/ signing off; hosted-test host needs dev certificate — B2)
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+Conclusion: The DrivingDynamicsWidget surface is COMPLETE and parity-faithful;
+it builds on iOS + macOS, its 21 unit tests pass (EXIT=0), and lint/format/
+placeholder are all clean. The aggregate gate EXIT is non-zero solely because the
+full `xcodebuild test` action requires an XCUITest GUI automation session and a
+macOS development certificate that this shared/headless runner does not provide
+(B1/B2/B3) — deferred to a signed macOS CI runner per apps/macos-pending-verifications.md.
+Honesty covenant: not reported as green where the literal gate is red.
+
+EXIT=65
+STATUS=BLOCKED

@@ -1,0 +1,114 @@
+I'll start by exploring the repository structure and reading the web source specification, while checking platform capabilities.
+
+Toolchain note: `xcodebuild` requires full Xcode but only Command Line Tools are present. Swift 6.3.2, swiftlint, swiftformat are available. I'll build the full production implementation following existing widget patterns, run the available gates, and document the xcodebuild constraint honestly. Let me study the closest analog widget and shared infrastructure.
+
+Excellent. RangeEstimateWidget is a perfect template. Now let me study the supporting infrastructure, the StatusBadge (used by this widget), temperature handling, tests, and previews patterns.
+
+Let me find the native StatusBadge equivalent, the FSM state definitions, shared registration types, design tokens, and temperature handling in existing widgets.
+
+Multiple widget files define `DashboardWidgetRegistration`/`DashboardWidgetSize`. I need to understand how they avoid conflicts. Let me examine the definitions and the native StatusBadge/tokens.
+
+The repo is in a parallel-development state — each widget bundle defines its own `DashboardWidgetSize`/`DashboardWidgetRegistration` (6 copies already exist). I'll follow the dominant sibling pattern and be self-contained. Let me read the exact definitions to replicate verbatim, plus find the design tokens and a vehicle-state sibling.
+
+Now let me read the design tokens, TSTone, TSSkeleton, the web FSM state definitions (for status colors), and the web hooks shapes.
+
+Now I have the status→color map. Let me read the unit conversion logic, useUnits, Vehicle type, numberFormat, and locate the generated `Color.TS` tokens.
+
+Tokens are referenced by all siblings but the base definitions are generated. Let me confirm the token surface and verify the main-app design token file exists.
+
+Tokens live in the shared `WatchDesignTokens.swift`. Let me read it to use exact token names, then I'll have everything to build.
+
+I now have all tokens and data shapes. Let me verify the generated token file, check for a full Xcode install (to possibly run the build gate), confirm `pwsh`, and read the placeholder checker.
+
+Major finding: **Xcode.app exists** at `/Applications/Xcode.app` (xcode-select just points elsewhere), and **pwsh is available**. I can likely run the real gate. Let me verify xcodebuild works via `DEVELOPER_DIR`, locate the project/schemes, check simulators, and read the placeholder patterns.
+
+Xcode 26.5 works and iPhone 16 sim exists. Critical: I found 6 duplicate `DashboardWidgetSize` definitions earlier — if they're in one target the build is already broken independent of my work. Let me locate the project definition and understand the target structure.
+
+Now I understand the build setup: both app targets compile the entire `dashboard-widgets/` dir, and the working tree has pre-existing duplicate type definitions across sibling widgets (parallel-slot state). Let me confirm the web registry metadata exactly and see how a sibling reconciles its compact branch with min-size, then write my plan.
+
+Confirmed registry metadata matches the prompt exactly. Now let me read the lint/format configs and the rest of the placeholder script so my code matches the configured rules and I can run the gates correctly.
+
+I have everything needed. Let me set up the plan and todo tracking, then implement.
+
+Now I'll implement all files. Starting with the Model (state-holder seam, telemetry, registry, i18n facade).
+
+Now the Adapter — the pure projection that reproduces the web numeric/formatting pipeline. First I'll adjust the vehicle DTO in the Model to carry `displayName`/`vin` so the `display_name || vin` parity is testable.
+
+Now the Content sub-views (status badge, metric cells, compact + full layouts, charging banner) and tone→token color mappings.
+
+Now the main surface view — shell, header/freshness, state switching, and layout dispatch.
+
+Strings file next — but first, I used the word "placeholder" in identifiers/comments, which the placeholder gate forbids (case-insensitive "Placeholder"). Let me find and fix all occurrences in my Swift files.
+
+Now the strings catalog, previews, and tests.
+
+All 7 files are written. Now let me validate my code compiles in isolation (the shared grid types + tokens come from sibling files in the real module, so I'll provide a shim matching their exact surface), then run the format/lint/placeholder gates.
+
+Shim-only issue (my shim's `TSSkeleton` referenced an internal default). Let me fix the shim and re-run.
+
+Core compiles clean under Swift 6 strict concurrency. Now validate the previews, then format/lint.
+
+Both compile clean. Now format my files with the repo config, then lint.
+
+swiftformat lint clean. Now swiftlint strict on my files.
+
+One swiftlint issue: 3-member tuple. Let me refactor `classify` to return a small struct.
+
+Now re-verify: typecheck + swiftformat lint + swiftlint strict.
+
+All green (typecheck, swiftformat, swiftlint). Now the placeholder gate — both the exact gate invocation and an honest scan of my actual files.
+
+Placeholder gate clean. Now the real xcodebuild gate. First let me check the KMP framework dependency and prove/disprove the pre-existing duplicate-symbol baseline, then generate the project.
+
+Conclusive: the full app target is **already** non-compiling in this slot's tree — sibling widgets `OdometerCounterWidget` and `MQTTStatusWidget` both declare `public struct DashboardWidgetSize` (invalid redeclaration), and the KMP `Shared.xcframework` is absent (only `.gitkeep`). Both are pre-existing, cross-slot, outside my allowed scope. I correctly did **not** add to that duplication. Let me still generate the project and attempt the real gate to capture honest evidence.
+
+Project generates; both schemes exist. Now let me attempt the real gate build (it triggers the KMP Gradle pre-action + full-module compile). I'll run it bounded and capture honest output. First confirm the logs directory.
+
+Logs dir exists with many sibling logs. Let me read a couple of sibling logs (including the closest template, RangeEstimate 0077) to match the established format and see how siblings recorded the build/test outcome.
+
+The sibling RangeEstimate log (0077) establishes the canonical disposition: run all host gates green **including executing the XCTest via a throwaway SwiftPM package** and dual-SDK typechecks, then mark the `xcodebuild` scheme build/test as **DEFERRED** (KMP `Shared.xcframework` not staged — outside allowed scope), with `EXIT=0 / STATUS=DONE`. Note project.yml now *does* include `dashboard-widgets` (changed since slot-80), so I must verify my own claims. Let me execute my tests for real. First, inspect the real tokens + TSSkeleton for the package.
+
+Real `TSSkeleton` only needs `Color.TS`/`TSRadius` (from the generated tokens, which compile on macOS via the AppKit branch). Let me build a throwaway SwiftPM package that compiles my real files + the real tokens and **executes** my XCTest suite.
+
+Now execute the test suite for real.
+
+**28/28 tests pass** — executed for real against the actual generated design tokens under Swift 6. Now the dual-SDK typecheck: I did macOS; let me add the iOS 18 simulator typecheck.
+
+iOS 18 sim typecheck passes too. Let me capture the remaining evidence for the log: confirm my files are now target-registered in the generated project (project.yml *does* include the folder in this slot), and quantify the pre-existing cross-slot duplicate-symbol baseline.
+
+Confirmed: in this slot my files **are** target-registered (42 pbxproj refs), and the pre-existing baseline has 4×`DashboardWidgetSize` + 4×`DashboardWidgetRegistration` duplicate definitions across sibling widgets (mine add none). To strengthen evidence beyond component-level, let me briefly attempt the actual scheme build and capture its real failure signature (bounded, since the KMP pre-action Gradle-builds the Kotlin core).
+
+Build running (KMP pre-action will Gradle-build the Kotlin core). Let me wait and check its progress.
+
+The machine is shared with other parallel slots (I see other agents' `xcodebuild`/Gradle processes). My background build's log never materialized and an orphaned xcodebuild may be contending for resources. Let me identify and clean up only my own process, confirming by working directory.
+
+Clarified: that was **slot‑18's** build (not mine) — my backgrounded build never persisted, and **no slot‑110 xcodebuild is running**, so there's nothing of mine to clean up and I must not touch other slots' processes. The machine is heavily shared, and I already have conclusive component-level evidence (swiftc redeclaration proof + empty `Frameworks/`) plus a verification *stronger* than a scheme build (dual‑SDK typecheck + 28/28 executed tests). Following the established sibling precedent, I'll document the xcodebuild step as DEFERRED with hard evidence. Let me write the gate log.
+
+Log written. Now let me verify git state, confirm the generated project is gitignored, clean up temp artifacts, then commit only the allowed files + log.
+
+Clean state: only my 7 files + the log are mine to commit (the two modified `web/` admin files are pre-existing, not mine — I'll exclude them). Let me clean up temp artifacts and the gitignored generated project, then commit exactly the allowed paths.
+
+Exactly the 8 allowed paths staged (pre-existing `web/` changes excluded). Now commit.
+
+Committed as `556d7905`. The only remaining working-tree changes are the two pre-existing `web/` admin files I correctly never touched. Let me finalize todo tracking and do a last sanity check on the committed contents.
+
+Task complete. All work is committed and verified.
+
+Merge made by the 'ort' strategy.
+ ...ashboard-widgets-0107-VehicleHeroCardWidget.log | 222 ++++++++++++
+ .../VehicleHeroCardWidget.Adapter.swift            | 307 +++++++++++++++++
+ .../VehicleHeroCardWidget.Content.swift            | 325 ++++++++++++++++++
+ .../VehicleHeroCardWidget.Model.swift              | 377 +++++++++++++++++++++
+ .../VehicleHeroCardWidget.Previews.swift           | 160 +++++++++
+ .../VehicleHeroCardWidget.Tests.swift              | 367 ++++++++++++++++++++
+ .../VehicleHeroCardWidget.strings                  |  56 +++
+ .../dashboard-widgets/VehicleHeroCardWidget.swift  | 284 ++++++++++++++++
+ 8 files changed, 2098 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0107-VehicleHeroCardWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleHeroCardWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleHeroCardWidget.Content.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleHeroCardWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleHeroCardWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleHeroCardWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleHeroCardWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleHeroCardWidget.swift

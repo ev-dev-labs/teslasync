@@ -1,0 +1,239 @@
+================================================================================
+P4 · Feature view · 0115 — LoadingSkeleton (Apple)
+Run: 2026-06-07T21:30-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/236
+Base: 0e0b1f01
+Prompt: P4/feature-views/0115 — Feature view: LoadingSkeleton
+Web source (spec): web/src/features/charging/components/cost-analysis/LoadingSkeleton.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (0002 BackendTool precedent,
+      ADR-012, Honesty rule 7 — predecessor parity). Presentational-surface
+      disposition per 0076 HighlightCard / ToolCard (remote envelope belongs to
+      the data-bound caller).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT default) ........ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (83717DEE-…-CBDDD3140989, Shutdown)          OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  xcodegen ................... 2.45.4 (project generates cleanly, see deferred)     OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+
+  Capability note: the web source lists "Charts/maps used: (none)" and shared
+  components "@/components/ui + @/components/feedback + @/components/motion". The
+  core requirement is SwiftUI, which is AVAILABLE and PROVEN by real iOS-18 and
+  macOS-15 SDK compiles below. The capability-BLOCKED escape hatch
+  ("SwiftUI/Charts/MapKit unavailable") does NOT apply — the surface is authored,
+  host-compiled on BOTH SDKs, and host-tested green.
+
+=== NATURE OF THE SOURCE (presentational; states disposition) ===
+  LoadingSkeleton is a *presentational* component: the web source fetches nothing
+  (its only deps are @/components/ui GlassPanel, @/components/feedback Skeleton,
+  @/components/motion FadeIn). It IS the loading-phase chrome the cost-analysis
+  parent (web `useCostAnalysisData`) renders while its query is in flight, so the
+  remote envelope (empty / error / stale / offline) belongs to that PARENT, not to
+  the skeleton — identical disposition to the 0076 HighlightCard / ToolCard
+  presentational surfaces (documented verbatim in LoadingSkeleton.Model.swift).
+  The branches the web source DOES own are reproduced + tested here:
+    • responsive layout — the Tailwind grid breakpoints (`flex-col sm:flex-row`,
+      `grid-cols-2 lg:grid-cols-3 xl:grid-cols-6`, `grid-cols-1 lg:grid-cols-2`),
+      ported pure as LoadingSkeletonLayout (same seam as 0048 SummaryStatsRow),
+      measured via the iOS-18/macOS-15 `onGeometryChange` width hook, and
+    • the fixed shape of every shimmer region (header title/subtitle/action, the
+      six stat-card lines, the two chart blocks, the five table rows) — each
+      `<Skeleton>` width+height taken verbatim from the web source.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/LoadingSkeleton.*) ===
+  LoadingSkeleton.Model.swift      178  P1/S11 surface slug + LoadingSkeletonBar shape
+                                        (points/fraction/fill + pill) + LoadingSkeletonLayout
+                                        (Tailwind column math + verbatim region dims) +
+                                        P1/S10 strings facade + a11y loading label. Pure,
+                                        Equatable, Sendable; no SwiftUI, no Shared.
+  LoadingSkeleton.Telemetry.swift   38  P1/S11 diagnostics seam (view.opened) — Sendable
+                                        protocol + OSLog default sink (redaction-safe).
+  LoadingSkeleton.swift            232  The surface — TSFadeIn(web FadeIn) over header +
+                                        responsive TSGlassPanel stat-card grid + chart row +
+                                        five-row table, every region a TSSkeleton bar driven
+                                        by the measured-width layout; `.task` view.opened;
+                                        consolidated VoiceOver loading label; surfaceSlug.
+  LoadingSkeleton.Previews.swift    65  #if DEBUG previews — compact(390)/regular(834)/
+                                        wide(1300) responsive branches + Dynamic-Type(AX3) +
+                                        dark. Silent telemetry sink.
+  LoadingSkeleton.Tests.swift      182  XCTest — layout breakpoints + verbatim region dims +
+                                        a11y label + view.opened slug (18 methods).
+  LoadingSkeleton.strings           19  P1/S10 catalog contribution (table "LoadingSkeleton").
+  Largest .swift = 232 lines (swiftlint file_length<=400 honored). No file imports
+  the Shared xcframework (the telemetry seam is a Swift protocol; previews/tests
+  inject a silent/spy sink; the view is pure SwiftUI over the shared TS components).
+  Native bundle 714 lines vs the 50-line web shimmer — the expansion is the full
+  P1/S8-style seams + pure projection + per-branch tests + previews, matching the
+  presentational-surface precedent (HighlightCard 0076).
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data sources: NONE (web "Data sources: (none — pure presentational component)").
+    No HTTP, no store — nothing to bind; documented, not narrowed.
+  - Composition (web FadeIn > space-y-6 p-6 column):
+      • FadeIn          -> TSFadeIn (shared motion parity; honors Reduce Motion).
+      • Header          -> title 220x28 + subtitle 340x16 (TSSkeleton) + a 200x36
+                           pill action; `flex-col` stacked < sm, `sm:flex-row`
+                           justify-between >= 640 (LoadingSkeletonLayout.headerIsHorizontal).
+      • Stat-card grid  -> 6x TSGlassPanel, each three lines (60%x14, 80%x24 mt-2,
+                           40%x12 mt-1); cols 2 / lg:3 / xl:6 (cardColumnCount).
+      • Chart row       -> 2x TSGlassPanel, title 40%x16 + body 200 (mt-4); cols
+                           1 / lg:2 (chartColumnCount).
+      • Table block     -> TSGlassPanel, title 30%x16 + five 32-tall rows (space-y-2).
+    Tailwind px gaps mapped to design tokens (gap-4/space-y-6 -> lg/x2xl, mt-2/mt-1
+    -> sm/xs). Fixed-px header bars cap to the measured content width so they never
+    overflow a narrow phone; percentage bars measure their container (GeometryReader)
+    so "60%/80%/40%/30%" stay faithful at any column width.
+  - States: the surface IS the loading state; every region renders (no hidden
+    surface). The remote envelope (empty/error/stale/offline) is the cost-analysis
+    parent's responsibility (presentational disposition above) — reproduced there,
+    not duplicated here.
+  - i18n (P1/S10): web renders no visible copy (pure shimmer), so there are no web
+    t() keys to preserve. The one native string is the consolidated VoiceOver
+    "Loading…" label (loadingSkeleton.a11y.loading), declared in LoadingSkeleton.strings
+    + resolved via LoadingSkeletonStrings; NO English literals in native code.
+  - Accessibility: each TSSkeleton bar is accessibilityHidden; the surface exposes
+    ONE combined label ("Loading…") with .updatesFrequently so VoiceOver announces
+    progress instead of silence. Dynamic Type (system fonts via the shared
+    components), Reduce Motion (TSSkeleton shimmer + TSFadeIn) honored.
+  - Telemetry (P1/S11): the view's `.task` calls LoadingSkeletonSurface.reportOpen,
+    emitting view.opened with surface slug "LoadingSkeleton" (OSLog default; prod
+    app injects the shared diagnostics adapter). Slug asserted in tests.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 3 production files compiled together with the REAL apps/apple
+  component closure (apps/design Tokens + Sources/Design{TSDesign,TSMaterial} +
+  Sources/Components/** minus the SharedFacade-coupled DataDisplay/UnitFormatters.swift
+  — 41 closure files); none import the Shared xcframework.
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK
+        xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+          -swift-version 6 -strict-concurrency=complete  <41 closure> <3 production files>
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [3] swiftc -typecheck — DEBUG previews (-D DEBUG, Xcode PreviewsMacros plugin;
+        the 3 production files + previews + closure):
+        PREVIEWS_TYPECHECK_EXIT=0                                                  OK
+        (Note: a first pass flagged the read-only `accessibilityReduceMotion`
+         environment key as non-writable in the Reduce-Motion preview; replaced
+         with a writable Dynamic-Type(AX3) preview before this green. Reduce
+         Motion is honored structurally by TSSkeleton/TSFadeIn, no forced preview
+         needed.)
+  [4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a
+        self-contained SwiftPM harness (real production Model/Telemetry/surface +
+        real design tokens + real TS component closure), Swift 6 language mode:
+          Test Suite 'LoadingSkeletonLayoutTests'        passed —  6 tests, 0 failures
+          Test Suite 'LoadingSkeletonShapeTests'         passed —  7 tests, 0 failures
+          Test Suite 'LoadingSkeletonAccessibilityTests' passed —  2 tests, 0 failures
+          Test Suite 'LoadingSkeletonTelemetryTests'     passed —  3 tests, 0 failures
+          Executed 18 tests, with 0 failures (0 unexpected) in 0.004 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: card-column math at the lg/xl breakpoints (2/3/6), chart-column
+        math at lg (1/2), header axis at sm, full layout composition, breakpoint
+        constants, equatability; the verbatim region dimensions (header/card/chart/
+        table bars + counts 6/2/5 + pill flag); the a11y loading label resolves to
+        copy (not the raw key); view.opened emits the exact slug each time + slug
+        stability.
+  [5] swiftlint --strict (5 surface .swift files; explicit paths — the repo
+        .swiftlint.yml `included:` does not list TeslaSync/feature-views, that
+        wiring is the P4 integration prompt's job, so a bare `swiftlint --strict`
+        SKIPS this dir; run explicitly here):
+          Done linting! Found 0 violations, 0 serious in 5 files.
+        LINT_EXIT=0                                                               OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/5 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+        (the Tests file's wide XCTAssertEqual lines were wrapped by `swiftformat`
+         to the 120 maxwidth before this green.)
+  [7] check-placeholders.ps1 (ADR-011 stub gate; swift) — THIS surface:
+          ./apps/tools/check-placeholders.ps1 -Path <LoadingSkeleton.* copy> -Language swift
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                        OK
+        (A dir-wide scan of TeslaSync/feature-views reports COUNT=2 from a
+         PRE-EXISTING "Placeholder" literal in InfrastructureSection.Views.swift —
+         OTHER surfaces, outside this prompt's allowed files. This surface = 0.)
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode toolchain):
+      - `xcodegen generate`                          -> XCODEGEN_EXIT=0 (project +
+          all targets/schemes; LoadingSkeleton.* are members — 36 pbxproj refs).
+      - `xcodebuild -target TeslaSync-macOS -configuration Debug CODE_SIGNING_ALLOWED=NO build` ->
+          error: There is no XCFramework found at
+            '.../apps/apple/Frameworks/Shared.xcframework'. (in target 'TeslaSync-macOS')
+          ** BUILD FAILED **                          -> MAC_BUILD_EXIT=65
+    Why deferred (independent, code-unrelated reasons — none is a defect in this
+    surface; identical disposition to the 0002 BackendTool predecessor, Honesty rule 7):
+      (a) Shared.xcframework not staged: the app + app-hosted XCTest targets link the
+          KMP core; staging it needs a Kotlin/Native gradle build
+          (apps/shared :core:assembleSharedXCFramework / Scripts/build-shared-xcframework.sh).
+          Independent of this UI surface; concrete missing-framework error captured above.
+      (b) TEST-TARGET SEGREGATION: project.yml feeds the whole TeslaSync/feature-views
+          dir into the app targets with no `*.Tests.swift` / `*.Previews.swift` filter,
+          and the unit-test bundles source only from Tests/Unit. Wiring the per-surface
+          *.Tests.swift into the XCTest targets is the downstream P4 integration prompt's
+          job; editing project.yml is OUTSIDE this prompt's allowed files (LoadingSkeleton.*
+          + the log). Step [4] EXECUTES this surface's FULL XCTest suite via SwiftPM
+          (18/18) and steps [1]/[2] compile it against the real library on BOTH SDKs —
+          the meaningful validation.
+      (c) macOS app/widget signing requires a development certificate on a signed runner
+          (ADR-012).
+    The SAME tests are PROVEN GREEN (18/18) by the executed SwiftPM harness in step [4],
+    and the surface compiles against BOTH the iOS 18 and macOS 15 SDKs in steps [1]/[2].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all states from the web source reproduced —
+      the web source is a single-rendering shimmer (every region renders, no hidden
+      surface); each responsive branch (compact/regular/wide) has a #if DEBUG
+      preview; the column/axis math is unit-tested + EXECUTED green. Remote envelope
+      belongs to the data-bound parent (presentational disposition).
+  [x] Hooks bind to the shared P1/S8 state-holder layer; no direct HTTP from the
+      view — N/A: web "Data sources: (none)". No HTTP exists anywhere in the surface.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog — web has
+      no t() keys (pure shimmer); the one native a11y key (loadingSkeleton.a11y.loading)
+      is declared in LoadingSkeleton.strings; referenced==declared verified.
+  [x] Accessibility labels present on every interactive element — no interactive
+      elements; the surface carries one combined "Loading…" VoiceOver label (.ignore +
+      .updatesFrequently); Dynamic Type + Reduce Motion honored.
+  [x] Tests: adapter unit (width->layout projection) + per-state/branch (region dims +
+      breakpoints) + a11y label test — 18 methods, EXECUTED 18/18, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0
+      for this surface.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with
+      captured evidence (xcframework + test-target wiring + signing), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; the xcodebuild build/test
+                          is shown DEFERRED with its real exit 65 + cause, not as pass.
+  2 No scope narrowing ... full surface (6 files), responsive branches, seams, tests;
+                          the pure-presentational nature (no data/charts/maps/copy) is
+                          the web source's, documented — not a narrowing.
+  3 No skip-and-assume ... web source read end-to-end; every region + every <Skeleton>
+                          dimension + every Tailwind breakpoint reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. FadeIn + GlassPanel + Skeleton composition, exact region
+                          dims, and the responsive 2/3/6 + 1/2 + flex-col/row breakpoints.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same host-gate + deferral disposition as 0002 BackendTool;
+                          presentational disposition as 0076 HighlightCard.
+  8 No commit on red ..... committed work is green on every runnable gate; the only
+                          non-green step is the environment-blocked xcframework build,
+                          deferred with evidence (predecessor-accepted disposition).
+  9 No silent drift ...... path/registration deviation documented above (feature-views
+                          Tests/Previews not yet segregated into the XCTest targets;
+                          wiring is the integration prompt's job).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

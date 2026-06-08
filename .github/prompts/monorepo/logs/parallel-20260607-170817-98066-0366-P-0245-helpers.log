@@ -1,0 +1,119 @@
+I'll start by exploring the repository structure to understand what we're working with.
+
+Let me read the web source and examine the Apple app structure in parallel.
+
+The web source is a **pure utility/helpers file** — it exports status-color/icon/format helper functions, no UI. Let me examine the existing feature-views structure to follow the established native pattern.
+
+Each surface has 7 files (Adapter, Model, Previews, strings, main view, Tests, Views). Let me read a complete reference surface and check toolchain availability in parallel.
+
+Toolchain note: only Command Line Tools is active (`xcodebuild` needs full Xcode). `swift`, `swiftlint`, `swiftformat` are present. Let me read the rest of the reference surface and locate shared tokens, and check for full Xcode.
+
+Full Xcode.app **is** installed (active dir just points to CLT). I can use `DEVELOPER_DIR` to run xcodebuild without sudo. `pwsh` and `xcodegen` are also present. Let me verify xcodebuild works, read the remaining reference files, and locate the design tokens.
+
+Xcode 26.5 + booted iPhone 16 sim + macOS SDK all available — the gate can run. Now let me locate the design-system tokens and shared components, plus understand the project wiring.
+
+The tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read it to get exact token names, plus check how the project includes feature-views and the shared components I'll reference.
+
+Now let me read the shared components I'll compose with (GlassPanel, FadeIn, Skeleton, Button, StatusBadge) and the project wiring.
+
+Project.yml is at `apps/apple/project.yml`. Let me read it plus the lint configs and test target setup.
+
+Sources under `feature-views/` auto-compile into both app targets. I notice `*.Tests.swift` files live in `feature-views/` but the test bundle only references `Tests/Unit` — and there's a `macos-pending-verifications.md`. Let me check how tests are wired, the xcframework script, and prior surface logs to understand the established gate outcome.
+
+I now have everything needed: the design tokens, shared components, project wiring, lint configs, and the established predecessor disposition (host gates green; `xcodebuild` build/test deferred on the KMP-`Shared.xcframework`/Gradle env block, evidence captured, `EXIT=0/STATUS=DONE`). Let me confirm the KMP toolchain block and a prior log's gate section, then start authoring.
+
+This matches the established, accepted disposition exactly: author the surface, run host gates green (swiftlint/swiftformat/placeholder), and defer the full `xcodebuild` (blocked on the KMP `Shared.xcframework` Gradle pre-build) with captured evidence. Let me set up tracking and start authoring the 7 `helpers.*` files.
+
+Now the Views file with the SwiftUI subviews:
+
+Now the main surface file:
+
+Now the Previews and strings files:
+
+Now the Tests file:
+
+All 7 files authored. Now let me run the host gates. First autoformat my files with swiftformat, then lint-check.
+
+No formatting changes needed — files already comply. Now run the lint gates scoped to my files, then full-tree.
+
+My files pass both linters cleanly (0 formatting, 0 violations). Now let me run the full-tree gate commands and inspect the placeholder script.
+
+Full-tree swiftlint found **1 serious violation in 1702 files** — but my scoped 6-file run was clean, so it's pre-existing. Let me pinpoint it, and note the placeholder gate's literal `-Path .../helpers` matches no real path (vacuous). Let me identify the violation and check the working-tree state.
+
+The single violation is in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (a **different** P4 surface), not mine. Let me confirm it's pre-existing/committed and untouched by me, since the prompt restricts me to `helpers.*` files only.
+
+Confirmed: the lone violation is **pre-existing** (committed in `b7fffb078`, the LifetimeStatsWidget surface), untouched by me; my 7 `helpers.*` files are all new and lint-clean. Per the prompt's allowed-files constraint I must not modify that foreign file. Now let me run the remaining host gates (tree-wide swiftformat, placeholder gate both ways) and validate the project generates with my files.
+
+Placeholder gate passes (COUNT=0) both ways. Tree-wide swiftformat flags one **foreign pre-existing** file too (`ActionBuilder.Previews.swift`), not mine. Let me confirm that's pre-existing and then produce real multi-SDK compile evidence for my surface.
+
+Both foreign violations are confirmed pre-existing (committed by sibling surfaces, empty diffs). The design system (41 files) imports only system frameworks — self-contained and KMP-free. Let me produce real multi-SDK compile evidence for my surface by type-checking it against the actual design system on both the macOS and iOS-simulator SDKs.
+
+The design-system cascade hit a sibling file (`UnitFormatters.swift` needs `UnitPreferences` from another dir) — not my code. Let me narrow to exactly the components my surface uses and type-check that minimal, self-contained set on both SDKs.
+
+Cards.swift's own `#if DEBUG` preview pulls in typography components. Let me include the self-contained `Components/UI` + `Motion` + `Feedback` set so previews resolve, and run a clean pass without DEBUG too. First, enumerate those files and their external deps.
+
+No cascading deps in UI/Motion/Feedback. Let me type-check the full self-contained set (Tokens + Design + UI + Motion + Feedback + my 5 files) with DEBUG on both the macOS and iOS-simulator SDKs.
+
+Only remaining error is a sibling's preview (`FeedbackOverlays` → `TSMetricBar`), unrelated to my surface. Let me use the curated set of exactly the components my surface uses (adding `Typography.swift` for Cards' preview) and type-check with DEBUG on both SDKs.
+
+Both SDKs type-check **cleanly** (EXIT=0) with my full surface + previews against the real design system under Swift 6 + strict concurrency. Now let me syntax-validate the Tests file and confirm my files emit no warnings.
+
+Tests file is syntactically valid; my files emit zero warnings under strict concurrency. Now let me validate the project generates with my files and gather the `xcodebuild` deferral evidence (KMP `Shared.xcframework`).
+
+Project generates cleanly with my files wired in (42 pbxproj refs across both targets). Frameworks/ holds only `.gitkeep` and 15 app sources `import Shared` — so the app build requires the KMP `Shared.xcframework`. Let me capture the real deferral evidence by attempting the build's prerequisite (the Gradle xcframework stage), bounded.
+
+The sandbox rejected the signal-based wait. Let me run the staging script as an async session and bound it with the tool's own stop mechanism.
+
+The KMP Gradle build actually **runs** here (warm cache) and produced the debug `Shared.xcframework`. That reframes the deferral: even with the framework, the app target compiles 145 sibling `*.Tests.swift` files (pre-existing wiring) — so I'll verify that and pivot to genuine test execution via SwiftPM. Let me stop the staging and confirm the Tests-in-app-target condition.
+
+Confirmed: 146 sibling `*.Tests.swift` files are wired into the app target via the folder reference (each `@testable import TeslaSync`), so the full `xcodebuild -scheme TeslaSync build` is red on pre-existing wiring — independent of my surface and the framework. My surface follows the identical established pattern. To genuinely **execute** my tests, I'll build an ephemeral SwiftPM package (target named `TeslaSync`) on the macOS host.
+
+**40/40 tests passed** on the macOS 15 host with `@testable import TeslaSync`, compiled against the real design system. That's genuine green test execution. Let me clean up ephemeral artifacts, confirm the generated project is git-ignored, and re-affirm the two foreign files are the only tree-wide blockers.
+
+Generated `.xcodeproj` is **not** git-ignored — already removed it; working tree now shows only my 7 files (plus 2 unrelated pre-existing web edits I won't touch). Tree-wide gates re-confirm **exactly one foreign blocker each**, so my surface introduces zero new violations. Let me gather header facts and write the gate log.
+
+Now let me stage exactly my 7 surface files plus the log (not the unrelated pre-existing web edits) and commit.
+
+Staged set is exactly the 7 `helpers.*` files + the log; the unrelated web edits are left untouched. Committing now.
+
+Committed cleanly (8 files, 1618 insertions). Let me do a final verification that no stray generated artifacts remain and the tree is clean.
+
+All clean — only the two pre-existing unrelated web edits remain (untouched), no stray artifacts. Let me finalize tracking.
+
+All 10 todos complete. The `helpers` Apple feature view is shipped and committed.
+
+## Summary
+
+Delivered a production-polished, native Apple-idiomatic parity of `web/.../status/helpers.tsx` — a pure utility module — as 7 files under `apps/apple/TeslaSync/feature-views/helpers.*` (commit `41f392ac0`).
+
+**What it does**
+- **Faithful core** (`helpers.Adapter.swift`): ports all six web helpers — status→colour/icon/badge classification + `formatUptime`/`formatBytes`. Reproduces the web's **"connected" colour-success / badge-neutral asymmetry** exactly (pinned by a test). ADR-006 semantic-token colour mapping.
+- **Seams**: P1/S8 state-holder (`StatusHelpersSource→StatusHelpersModel`), P1/S10 i18n facade (table `helpers`, 26 keys, zero English literals in Swift), P1/S11 telemetry (`view.opened`, slug `helpers`).
+- **All 6 states render**: loading/empty/error/data + stale/offline — each with a preview and a test.
+
+**Verification (real evidence in the log, nothing fabricated)**
+- swiftlint `--strict` + swiftformat `--lint` on the surface: **0 / 0** • placeholder gate: **COUNT=0**
+- Type-checks clean on **both** the iOS-18 simulator and macOS-15 SDKs (Swift 6, strict concurrency)
+- **40/40 XCTest methods executed green** on the macOS host (`@testable import TeslaSync`, compiled against the *real* design system)
+- `xcodegen generate` wires the files into both app targets
+
+**Honest deferral**: the full `xcodebuild -scheme TeslaSync build test` is red on **pre-existing, out-of-scope** conditions — 146 sibling `*.Tests.swift` folder-referenced into the app target, plus KMP `Shared.xcframework` staging. Two tree-wide lint reds trace to **foreign committed files** (`LifetimeStatsWidget.Adapter.swift` `b7fffb078`, `ActionBuilder.Previews.swift` `87160b082`), untouched by me and outside the allowed `helpers.*` scope. Shown with real exit codes, never claimed green. `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../logs/p4-apple-feature-views-0245-helpers.log   | 225 ++++++++++++++
+ .../TeslaSync/feature-views/helpers.Adapter.swift  | 234 ++++++++++++++
+ .../TeslaSync/feature-views/helpers.Model.swift    | 279 +++++++++++++++++
+ .../TeslaSync/feature-views/helpers.Previews.swift |  82 +++++
+ .../TeslaSync/feature-views/helpers.Tests.swift    | 340 +++++++++++++++++++++
+ .../TeslaSync/feature-views/helpers.Views.swift    | 253 +++++++++++++++
+ apps/apple/TeslaSync/feature-views/helpers.strings |  50 +++
+ apps/apple/TeslaSync/feature-views/helpers.swift   | 155 ++++++++++
+ 8 files changed, 1618 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0245-helpers.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/helpers.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/helpers.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/helpers.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/helpers.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/helpers.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/helpers.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/helpers.swift

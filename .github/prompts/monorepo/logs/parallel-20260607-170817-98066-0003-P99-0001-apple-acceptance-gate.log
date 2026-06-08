@@ -1,0 +1,74 @@
+I'll start by exploring the repository structure to understand what exists for this Apple acceptance gate.
+
+I have critical findings already. Let me read the actual prompt file, methodology, and verify predecessor logs and the toolchain in detail.
+
+The picture is now clear. Let me confirm conventions by reading the methodology, precedent BLOCKED logs, and the commit handling.
+
+The methodology confirms the contract: **on BLOCKED, commit ONLY the log** (Rule 8). Now let me gather the remaining real evidence — Xcode availability (the P9-0001 log used a `/Applications/Xcode.app` override), signing identities, predecessor P7/P9-0002 status, schemes, and run the host-runnable gates.
+
+Full Xcode 26.5 **is** present (via `DEVELOPER_DIR` override), but there are multiple hard, independent blockers. Let me capture real evidence by running the host-runnable gates and checking the build prerequisites.
+
+Host gates pass (SwiftLint 0/256, SwiftFormat 0/260). `Shared.xcframework` is **not** staged. Now the placeholder scanner and the two parity-ledger checks (whose tool and ledger files are missing).
+
+Placeholder scanner passes (0 stubs); the parity-ledger checker script itself is **absent** and so are both ledger files. Now let me set up for the real `xcodebuild` gate: inspect the pre-build staging script, confirm `.xcodeproj` is gitignored, and check the Android SDK (needed for the KMP framework).
+
+Key finding: the `Shared.xcframework` pre-build needs Gradle `:core:assembleSharedXCFramework`, and `:core` applies the Android library plugin — but **no Android SDK is installed**. Let me confirm the gitignore status, generate the project, and attempt the real Gradle pre-build that the `xcodebuild` gate depends on (bounded).
+
+Project generated cleanly (`.xcodeproj` is gitignored — no drift). Now let me confirm the KMP `:core` Android dependency and attempt the real Gradle pre-build (bounded) that the `xcodebuild` gate triggers.
+
+The Gradle build configured fine (offline, cached) but failed at Kotlin/Native linking because `xcrun` resolves to CommandLineTools. Setting `DEVELOPER_DIR` to the real Xcode should fix that. Let me retry.
+
+Linking all three K/N slices takes time. Let me wait for completion.
+
+Kotlin/Native release linking of 3 slices is heavy. Let me continue waiting.
+
+It's been ~14 minutes. Let me verify it's actively progressing (not stalled) by inspecting the build output directory from another shell.
+
+Active `clang++ -emit-obj` from the K/N LLVM toolchain confirms the release link is progressing (debug slices done, release in progress). Let me keep waiting.
+
+All three release framework binaries are built; now finalizing (dSYM/xcframework assembly). Nearly done — waiting for completion.
+
+The final `xcodebuild -create-xcframework` assembly step is running. Let me wait for the Gradle task to finish.
+
+`Shared.xcframework` built successfully (BUILD SUCCESSFUL in 22m47s). The iOS build/test half is now runnable. Let me run the actual gate commands faithfully, capturing real exit codes. Starting with the iOS Simulator build/test.
+
+iOS gate ran for real: **IOS_EXIT=65** — build succeeded but a UITest crashed (`signal kill before establishing connection`, plus `simctl` resolution errors indicating simulator-runner contention in this shared host). Recorded honestly as RED. Now the macOS build/test and both archive/sign steps.
+
+macOS gate confirms the signing blocker live: **MAC_EXIT=70** — both `TeslaSync-macOS` and `TeslaSyncWidgets-macOS` "have entitlements that require signing with a development certificate" → BUILD FAILED. Now the two archive/sign steps.
+
+Both archives fail on signing — **IOS_ARCHIVE_EXIT=65** ("requires a development team"), **MAC_ARCHIVE_EXIT=65** ("requires a development certificate"). I now have all real gate evidence. Let me capture the iOS test detail, predecessor summary, and verify the working tree is clean (gitignored artifacts only).
+
+All evidence gathered. iOS: **BUILD SUCCEEDED** but **TEST FAILED** (IOS_EXIT=65) — a UITest crashed amid `simctl`-resolution/simulator-runner contention on this shared host. Working tree is clean except 2 pre-existing web files (outside scope); generated `.xcodeproj`/`.xcframework` are gitignored. Let me grab exact version/host strings, then write the log.
+
+All evidence is in hand. Writing the comprehensive acceptance log now.
+
+Log written ending in `EXIT=70` / `STATUS=BLOCKED`. Per Rule 8 (BLOCKED → commit ONLY the log, never code/artifacts), let me stage just the log and commit.
+
+Committed cleanly as `ccf9e42f` — only the log (239 lines); the two pre-existing web edits remain untouched/unstaged. Cleaning up temp scratch files.
+
+Done. The Apple acceptance gate (P4/P99/0001) was executed faithfully — not assumed — and the honest verdict is **STATUS=BLOCKED / EXIT=70**.
+
+## What I did
+I ran the gate **for real**: full Xcode 26.5 was reachable via a `DEVELOPER_DIR` override, so to make the `xcodebuild` halves genuinely runnable I first built the KMP `Shared.xcframework` from source (BUILD SUCCESSFUL, 22m47s), then ran all 9 verbatim gate commands and recorded actual exit codes.
+
+## Real results
+| Step | Result |
+|---|---|
+| SwiftLint `--strict` | **0** violations / 256 files ✅ |
+| SwiftFormat `--lint` | **0**/260 need formatting ✅ |
+| Placeholder scanner | 0 stubs ✅ |
+| iOS Simulator build/test | `** BUILD SUCCEEDED **` but UI-test runner crashed → **IOS_EXIT=65** ❌ |
+| macOS build/test | dev-cert entitlements → `BUILD FAILED` → **MAC_EXIT=70** ❌ |
+| iOS / macOS archive | no dev team / no dev cert → `ARCHIVE FAILED` → **65 / 65** ❌ |
+| Parity ledger checks | `check-parity-ledger.ps1` **and** both `apple-{macos,ios}-ledger.json` absent → **FAIL** ❌ |
+
+## Five independent blockers (any one decisive)
+1. **Predecessors incomplete** — `p4-p9-0001` BLOCKED, `p4-p9-0002` log absent, P7 pages **0/861** generated (Rule 7).
+2. **Parity ledgers + checker absent** — parity can't be evaluated, let alone be 100% (Rule 5); creating them is Out of Scope.
+3. **No code-signing identity** (`0 valid identities`) — macOS build + both archives fail; no signed archive producible.
+4. **iOS test run RED** (65) on this shared host (simulator/`simctl` contention).
+5. Pre-existing unrelated web drift left untouched.
+
+## Compliance
+Per Rule 8 (BLOCKED → commit **only** the log), I committed just `p4-p99-0001-apple-acceptance-gate.log` (commit `ccf9e42f`, 239 lines, ending `EXIT=70` / `STATUS=BLOCKED`). No code fixed, no scope narrowed, no delegation; the two pre-existing `web/` edits and the git-ignored generated `.xcodeproj`/`.xcframework` were not staged.
+

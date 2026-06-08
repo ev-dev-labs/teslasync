@@ -1,0 +1,68 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Apple toolchain note: `xcodebuild` requires full Xcode (only CommandLineTools present), but `swift`, `swiftlint`, `swiftformat` are available. Let me explore the Apple app structure and read the web source.
+
+Now let me read the related web hooks and explore the Apple project structure to understand conventions.
+
+Let me explore the full project structure, conventions, and the P1 dependencies (state-holders, tokens, i18n, diagnostics).
+
+The `shared-surfaces` path isn't yet in `project.yml`, and `xcodebuild` needs full Xcode. Let me investigate conventions, existing announcer code, i18n/telemetry facades, and the placeholder checker before deciding on approach.
+
+The codebase uses a decomposed convention (`.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Tests.swift`, `.strings`, `.Previews.swift`). `InboxBody` references `useAnnouncer` + `view.opened`, and `AppShell.swift` has the native announce mechanism. Let me read these key references.
+
+This gives me the gold-standard convention (self-contained Model with diagnostics/telemetry/announcer/i18n seams). Now let me check the remaining toolchain, style configs, and a complete reference file-set (Views/Adapter/Tests/Previews/strings).
+
+Key finding: **`/Applications/Xcode.app` exists**, `xcodegen` and `pwsh` are available, but `Frameworks/Shared.xcframework` is only a `.gitkeep` (the KMP artifact isn't built) and `shared-surfaces` isn't wired into `project.yml` (which I'm not allowed to edit). Let me read the full InboxBody reference set to nail conventions exactly.
+
+Let me read the strings, test, previews, and views conventions, plus verify the Xcode SDK paths and that swiftlint runs.
+
+I have all conventions. Now let me de-risk the core Apple API (`AccessibilityNotification.Announcement` + speech-announcement priority) by compiling a small probe against both the iOS 18 simulator and macOS 15 SDKs using the full Xcode toolchain.
+
+API verified on both SDKs. Now I'll set up tracking and write the surface. Let me create the directory, a short plan, and todos.
+
+Logs dir exists. Let me write the plan, then create all surface files.
+
+Now the surface files. Starting with the pure Adapter and the seams (Model, Store).
+
+Now the SwiftUI entry view and the Views file (hidden live regions, system poster, visually-hidden modifier).
+
+Now the strings catalog, the DEBUG preview harness, and the tests.
+
+Now the comprehensive test suite.
+
+All 8 files written. Let me typecheck the module against the macOS 15 SDK under Swift 6 (which enforces complete concurrency), including the DEBUG previews.
+
+macOS clean. Now iOS 18 simulator SDK, plus a release-mode typecheck (no DEBUG) to confirm the shipped surface compiles without the harness.
+
+All typechecks pass (iOS+macOS, DEBUG+release, Swift 6). Now apply the repo formatter to my files, then verify with `--lint` and run `swiftlint --strict`.
+
+Formatter conformed my files (`--lint` clean). I notice pre-existing uncommitted `AIUsageCard.*` changes in the working tree (not mine). Let me check git status and lint my files explicitly (my dir isn't yet in `.swiftlint.yml`'s `included:`).
+
+Pre-existing `AIUsageCard.*` modifications are unrelated (I won't touch/commit them). SwiftLint linted all 1909 files and found 1 serious violation — I need to know if it's in my files. Let me locate it.
+
+The only swiftlint violation is pre-existing in `LifetimeStatsWidget.Adapter.swift` (dashboard-widgets) — **not my file**. My files are 100% clean. Now the placeholder gate and the real test run.
+
+Placeholder gate clean (0/0). Now the real test run — I'll build a throwaway SPM package (module `TeslaSync`) with my logic + view files and the tests, then `swift test` headlessly with the Xcode toolchain.
+
+**17/17 tests pass.** Now let me gather concrete evidence for the xcodebuild gate's blockers (this surface can't be built in isolation without the KMP `Shared.xcframework` and `project.yml` wiring, both outside my allowed files).
+
+Evidence is conclusive: **Xcode 26.5 + iPhone 16 sim are present and usable**, but `Shared.xcframework` is absent (only `.gitkeep`) and `shared-surfaces` isn't in `project.yml`. Let me capture the actual xcodebuild failure as honest API evidence (bounded), generating the gitignored project first.
+
+The generated project confirms my surface is absent (0 refs) — `project.yml` wiring is owned by P4 core. Now let me capture the actual `xcodebuild` failure on the missing framework (bounded run).
+
+It's compiling all 1900+ app files (link-time failure only). I have conclusive structural evidence already; let me stop the slow build and capture the framework dependency reference quickly instead.
+
+Conclusive: the generated project references `Shared.xcframework` 16× but the artifact is **absent**, and my surface isn't wired into `project.yml` (both predecessor-owned, outside my allowed files). Cleaned up the gitignored project. Now I'll generate the honest gate log by re-running all in-scope checks live, teeing into the log file.
+
+Format clean (0/7). Now append swiftlint, placeholder, the live `swift test`, and the xcodebuild BLOCKED evidence with the final status.
+
+All in-scope checks green. Now append the BLOCKED xcodebuild section with evidence and the final status.
+
+Log finalized (109 lines). Let me verify the working tree, stage only my files + log (excluding the pre-existing `AIUsageCard` changes), and commit.
+
+Staged set is exactly my 8 files + the log (no `AIUsageCard`, no generated artifacts). Committing with the gate-specified message.
+
+Committed cleanly (9 files, 973 insertions, nothing unrelated). Let me clean up temp artifacts and finalize tracking.
+
+Task complete. Cleaned up temp artifacts; the 7 pre-existing `AIUsageCard` changes were correctly left untouched (not mine).
+

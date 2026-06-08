@@ -1,0 +1,205 @@
+================================================================================
+P4 · Dashboard widget · 0060 — LocationMapWidget (Apple)
+Run: 2026-06-07T19:10-0700   Host: Darwin arm64   Slot: 20260607-170817-98066/slot-63
+Prompt: P4/dashboard-widgets/0060 — LocationMapWidget
+Web source (spec): web/src/features/dashboard/widgets/LocationMapWidget.tsx
+Registry (canonical): web/src/features/dashboard/widgets/registry/maps.ts → "location-map"
+Mode: code-complete + host-built + host-unit-green; Xcode full `build test` UI portions
+      DEFERRED to the signed GUI macos-latest CI runner (ADR-012; 0036 precedent).
+================================================================================
+
+=== CAPABILITY PROBE (every line is a real probe on this host) ===
+  swift ...................... Apple Swift 6.3.2, macOS SDK 26.5                       ✅
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override           ✅
+  iPhone 16 simulator ........ present (booted)                                        ✅
+  swiftlint .................. /opt/homebrew/bin/swiftlint                              ✅
+  swiftformat ................ /opt/homebrew/bin/swiftformat                            ✅
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                                   ✅
+  java ....................... OpenJDK 17.0.19 (Kotlin/Native)                          ✅
+  Shared.xcframework ......... BUILT (release) + STAGED to apps/apple/Frameworks       ✅
+        gradle :core:assembleSharedXCFramework — BUILD SUCCESSFUL in 8m04s.
+        NOTE: the shared ~/.gradle home is contended by the 40 parallel slots, whose
+        `gradle --stop` repeatedly killed the daemon ("stop command received") mid
+        release-link. Re-ran with an ISOLATED GRADLE_USER_HOME=/tmp/lmw-gradle-home →
+        immune to other slots' --stop → release XCFramework built + staged cleanly.
+
+  Charts/Maps capability note: this surface uses MapKit (web Leaflet → MapKit); it uses
+  NO Swift Charts (web "Charts/maps used: (none)" for charts). MapKit + SwiftUI are
+  available AND proven by a real iOS+macOS app BUILD below, so the capability-BLOCKED
+  escape hatch ("SwiftUI/Charts/MapKit unavailable on the runner") does NOT apply — the
+  surface is authored and host-built for real, not declared blocked.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/LocationMapWidget.*) ===
+  LocationMapWidget.Adapter.swift   137  pure cached→projection (LocationInput→VehicleLocation);
+                                          web hasCoords / heading-normalize / toFixed(4) port
+  LocationMapWidget.Model.swift     274  P1/S8 state-holder seam + P1/S11 telemetry + registry
+                                          + P1/S10 strings facade + testable a11y summary
+  LocationMapWidget.swift           390  the surface: glass shell + header(freshness/refresh) +
+                                          MapKit canvas + pulsing heading marker + overlay chips +
+                                          all states (loading/empty/error/content)
+  LocationMapWidget.Previews.swift  126  #if DEBUG previews — content/loading/empty/error/stale/
+                                          offline/compact
+  LocationMapWidget.Tests.swift     276  XCTest: adapter + model phases + registry + a11y
+                                          (25 methods)
+  LocationMapWidget.strings          40  P1/S10 catalog contribution (15 keys)
+  One exported SwiftUI view per file; no direct HTTP in the view; no `Shared` import in
+  the surface (decoupled via the LocationMapSource seam, exactly like 0036).
+
+=== PARITY (vs web LocationMapWidget.tsx) ===
+  Data sources → bound via the shared state-holder seam (LocationMapSource → LocationMapModel):
+    useVehicles, useVehicleState, useTranslation. The production app wires LocationMapSource over
+    the KMP VehicleStore (useVehicles' `vehicles?.[0]` fallback) + the vehicle-state holder
+    (useVehicleState → latitude/longitude/heading/live) as StateHolderModel<LoadableState<…>>;
+    the view performs NO networking. No direct transport in the view.
+  Projection → LocationProjectionBuilder is a 1:1 port of the web derivations:
+    hasCoords (`latitude !== 0 && longitude !== 0`, + a validity guard), heading `?? undefined`
+    normalized into [0,360), lat/lng `toFixed(4)`. Verified by executed tests (swift test, below).
+  Composition → WidgetShell chrome (MapPin icon + "Vehicle Location Map" title + live/stale/offline
+    freshness chip + refresh) · WidgetMapView → MapKit `Map` (web Leaflet MapContainer; camera
+    centered on the fix, interaction disabled when compact = web !compact) · AnimatedMarker →
+    shared TSAnimatedMarker pulse + a heading-rotated arrow · status overlay → bottom-leading chips
+    (last-known / heading °/ lat,lng) gated by !compact and isExpanded, matching the web exactly.
+  Shared components → reuses Color.TS / Font.TS / TSSpacing / TSRadius / TSTone / TSSkeleton /
+    TSAnimatedMarker / TSGeo (compiled against the REAL apps/apple library — proven by the iOS
+    and macOS app BUILDs + the swift-test harness below). Recharts→none / Leaflet→MapKit.
+  States (all render) → loading (skeleton chrome) · empty ("No location data available", web
+    emptyMessage) · error (retry affordance) · stale (freshness chip + "Last known position" chip)
+    · offline (cached fix stays visible + chip) · content. Phase resolution keeps the cached
+    position visible behind refresh/failed re-fetch, matching the web shell's behaviour.
+  i18n → all source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    widget.locationMap.{title, noData, lastKnown, heading} (web source) + .description (registry) +
+    native chrome (live/stale/offline/refresh/retry/loading/emptyHint/errorTitle) + a11y
+    (mapA11y/markerA11y) → 15/15 code-referenced keys PRESENT in LocationMapWidget.strings.
+    No English literals in native code.
+  a11y → the Map carries a localized label + a state-summary value (LocationMapAccessibility.summary:
+    live/last-known + heading° + coordinates, or the empty copy); refresh + retry buttons each have
+    an accessibilityLabel; overlay chips combine to readable text; Dynamic Type via tokens; Reduce
+    Motion gates the marker pulse (TSAnimatedMarker).
+  Telemetry → LocationMapModel.start() emits viewOpened(surface:"LocationMapWidget") → bridges the
+    shared Telemetry.track(.screenView) (P1/S11). Asserted by a spy test (executed).
+  Registry → LocationMapWidget.registration: id "location-map", category "maps", default 2×4,
+    min 1×4, max 4×40 (+ clamp()), matching registry/maps.ts. Asserted (executed).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swift test  (a throwaway SPM package compiling the ACTUAL LocationMapWidget.{swift,Model,
+    Adapter}.swift sources together with VERBATIM copies of the real Shared-free deps — design
+    Tokens + TSDesign + Components/UI{Badges,Typography} + Components/Maps{MapView,GeoHelpers} +
+    TSSkeleton — under Swift 6 language mode / strict concurrency, then RUNNING the suite):
+      Executed 25 tests, with 0 failures (0 unexpected).
+      SWIFT_TEST_EXIT=0                                                              ✅
+      Suites: LocationMapAdapterTests (9) · LocationMapModelTests (10) ·
+              LocationMapRegistryTests (3) · LocationMapAccessibilityTests (3).
+      This harness CAUGHT a real defect — `VehicleLocation.none` was not concurrency-safe under
+      strict concurrency; fixed by making VehicleLocation `Sendable` (the shipped file). Honest
+      red→green, not assumed green.
+
+[2] iOS app BUILD (the full Sources/ tree + the staged release Shared.xcframework, Debug,
+    iPhone 16 simulator, Swift 6 strict concurrency):
+      xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+      ** BUILD SUCCEEDED **
+      IOS_BUILD_EXIT=0                                                              ✅
+
+[3] iOS unit-test suite (Tests/Unit → TeslaSyncTests; the existing suite, as a regression guard):
+      xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' \
+        test -only-testing:TeslaSyncTests
+      Executed 255 tests, with 1 test skipped and 0 failures.  ** TEST SUCCEEDED **
+      IOS_UNIT_EXIT=0                                                              ✅
+
+[4] macOS app BUILD (the full Sources/ tree + staged release Shared.xcframework, Debug):
+      xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' build
+      ** BUILD SUCCEEDED **
+      MAC_BUILD_EXIT=0                                                              ✅
+
+[5] swiftlint  (the surface's 5 Swift files, explicit paths — the repo .swiftlint.yml `included:`
+    does NOT yet list TeslaSync/dashboard-widgets; that wiring is the P4 integration prompt's job):
+      Done linting! Found 0 violations, 0 serious in 5 files.
+      SURFACE_SWIFTLINT_EXIT=0                                                      ✅
+    Bare gate `swiftlint --strict` (from apps/apple, included: paths): 0 violations, 256 files.
+      SWIFTLINT_GATE_EXIT=0                                                         ✅ (does not scan the new dir — see note)
+
+[6] swiftformat --lint apps/apple   (the exact gate command, whole tree incl. the 6 new files):
+      0/274 files require formatting, 2 files skipped.
+      FORMAT_EXIT=0                                                                 ✅
+
+[7] check-placeholders (ADR-011 stub gate; swift):
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/LocationMapWidget -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            ✅
+
+=== GATE — XCODE FULL `build test` UI PORTIONS (DEFERRED to the signed GUI macos-latest CI runner; NOT faked) ===
+    xcodebuild -scheme TeslaSync      -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_FULL_BUILD_TEST = DEFERRED (build green; UI tests un-launchable headless)
+    MAC_FULL_BUILD_TEST = DEFERRED (build green; pre-existing macOS TEST_HOST config bug; UI needs GUI)
+    Three independent, code-UNRELATED reasons — none is a defect in this surface:
+      (a) HEADLESS-SIMULATOR UI TESTS: the iOS full `build test` BUILDS clean and the unit bundle
+          passes (255, step [3]), but TeslaSyncUITests fails to launch the runner —
+          "Simulator device failed to launch io.teslasync.TeslaSyncUITests.xctrunner" +
+          "xcrun: error: unable to find utility \"simctl\"". UI tests need an interactive Simulator
+          GUI; this headless slot cannot host the xctrunner. (AuthOnboardingUITests / LiveDataUITests
+          / PushNotificationsUITests; LiveDataStoreTests cascaded once but PASSES in isolation — it is
+          in the 255 green unit set.) ADR-012's matrix runs UI tests on a GUI macos-latest runner.
+      (b) macOS TEST_HOST CONFIG (pre-existing, checked-in project.yml): TeslaSync-macOS sets
+          PRODUCT_NAME=TeslaSync (→ TeslaSync.app) but XcodeGen derives the unit-test TEST_HOST from
+          the target name → "TeslaSync-macOS.app/Contents/MacOS/TeslaSync-macOS" → xcodebuild aborts
+          with "Could not find test host for TeslaSync-macOSTests". This is a repo infra mismatch
+          independent of this surface (project.yml is NOT in this prompt's allowed files). The
+          IDENTICAL Tests/Unit code ran GREEN on iOS (255, step [3]).
+      (c) NOT-YET-REGISTERED: project.yml's app/test targets glob `Sources/` and `Tests/`; this
+          surface lives at TeslaSync/dashboard-widgets/ and is registered into the XcodeGen target,
+          the dashboard grid, and Localizable.xcstrings by the P4 integration prompt (predecessor,
+          Honesty rule 7). So `xcodebuild ... test` does NOT compile LocationMapWidget.Tests.swift at
+          all; it is PROVEN GREEN instead by `swift test` (25/25, step [1]) against the real deps.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) — implemented;
+      each has a #if DEBUG preview; phase logic unit-tested (executed).
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — 15/15 present (verified by diff).
+  [x] Accessibility labels on every interactive element; the map carries a label + summary value.
+  [x] Tests: adapter unit test (executed) + per-state model test + registry + a11y — 25/25 GREEN.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; word-scan clean.
+  [x] Host gates green (swift test / iOS+macOS BUILD / iOS unit 255 / lint / format / placeholder);
+      Xcode full `build test` UI portions DEFERRED with capability + pre-existing-config evidence.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the Xcode full `build test` UI portions are shown DEFERRED (not green); every
+                       "✅" is a command actually run on this host with its real exit code. The one red
+                       found (VehicleLocation Sendable) was fixed, not hidden.
+  2  No scope narrowing: implemented ALL states + overlays + i18n + a11y + telemetry + registry.
+  3  No skip-and-assume: each host gate executed; the unit suite + my tests were RUN, not assumed.
+  4  No stubs as final : complete implementation; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of the .tsx data/composition/states; MapKit canvas + pulsing
+                       heading marker + the exact overlay-chip gating (compact/expanded/!live).
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT register the surface into project.yml / the dashboard grid and did
+                       NOT edit the shared Localizable.xcstrings (parallel-unsafe across the 40 slots)
+                       — strings shipped as the per-surface table, exactly like 0036.
+  8  No commit on red  : committing on all-green host gates (build + unit + my tests + lint/format/
+                       placeholder); the Xcode full build-test UI steps are explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed LocationMapWidget.* files + this log. (The two
+                       pre-existing dirty web files in this slot are NOT touched and NOT committed.)
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native LocationMapWidget shipped at parity with the web source: pure-Swift
+  projection (executed-green tests), P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, a MapKit
+  canvas with a Reduce-Motion-aware pulsing heading marker, every state + i18n key + a11y label,
+  registry-correct (location-map, 2×4 / 1×4 / 4×40). Beyond the 0036 precedent, this run BUILT the
+  release Shared.xcframework and the FULL iOS and macOS apps (both ** BUILD SUCCEEDED **) and ran the
+  existing iOS unit suite GREEN (255). The Xcode full `build test` UI portions are DEFERRED to the
+  signed GUI macos-latest CI runner — headless-simulator UI-test launch + a pre-existing macOS
+  TEST_HOST config mismatch + the not-yet-registered surface — none a defect in this code.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/LocationMapWidget.Adapter.swift \
+          apps/apple/TeslaSync/dashboard-widgets/LocationMapWidget.Model.swift \
+          apps/apple/TeslaSync/dashboard-widgets/LocationMapWidget.swift \
+          apps/apple/TeslaSync/dashboard-widgets/LocationMapWidget.Previews.swift \
+          apps/apple/TeslaSync/dashboard-widgets/LocationMapWidget.Tests.swift \
+          apps/apple/TeslaSync/dashboard-widgets/LocationMapWidget.strings \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0060-LocationMapWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add LocationMapWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

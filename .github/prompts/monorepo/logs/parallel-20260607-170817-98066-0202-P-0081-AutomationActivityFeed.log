@@ -1,0 +1,120 @@
+I'll start by exploring the repository structure and checking toolchain availability, since this task has a hard capability requirement (SwiftUI + Swift Charts + MapKit, iOS 18/macOS 15).
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swift`, `swiftlint`, `swiftformat`, `pwsh` are available. Let me explore the existing Apple app structure thoroughly before deciding anything — there are likely existing feature-views to match.
+
+Both web source and Apple app exist. Let me read the web source spec and explore the Apple app's feature-views and core structure.
+
+There's an extensive, well-established pattern. Each feature view has: `.swift` (main view), `.Model.swift`, `.Adapter.swift`/`.Projection.swift`, `.Views.swift`/`.Components.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`. No `AutomationActivityFeed.*` exists yet. Let me study the closest analogs — `EventHistoryTable` and `TelemetryErrorsPanel` (both are event/history lists).
+
+Excellent, this is a rich, well-defined pattern. Let me read the rest of the `EventHistoryTable` set plus locate the shared core primitives (TSGlassPanel, TSFadeIn, Color.TS, Font.TS, TSSpacing).
+
+The pattern is very clear now. Let me read the shared core tokens/components and a surface that handles connection/stale/offline states (the P4 states contract), since `AutomationActivityFeed` has a live connection indicator.
+
+Now let me locate the exact token definitions (Color.TS, Font.TS, TSSpacing, TSTone, TSBadge, TSSkeleton) and find how connection/stale/offline states are idiomatically handled in P4 core.
+
+Design tokens are generated at `apps/design/generated/apple`. Let me inspect them plus the shared components I'll use (TSGlassPanel, TSFadeIn, TSSkeleton).
+
+Now I have the full token vocabulary. Let me read the shared components I'll compose with, plus `FleetTelemetryHealth` (the closest analog with live/stale/offline connection chrome).
+
+Let me study `FleetTelemetryHealth` (the established analog with live connection + stale/offline chrome) and the placeholder-check script that the gate runs.
+
+Deep pattern understanding achieved. Let me check the event-type color precedent (EventTimeline), the placeholder gate script, the test-target wiring in project.yml, and the FleetTelemetryHealth main view + adapter.
+
+Now I understand the gate constraints. Critical: `xcodebuild` needs full Xcode (only CLT installed). Let me verify exact toolchain capabilities and read the remaining reference files (FleetTelemetryHealth main view + adapter, lint/format configs).
+
+macOS SDK includes SwiftUI, Charts, MapKit, and XCTest — so I can **typecheck against the macOS SDK** even though `xcodebuild` (needs full Xcode + simulators) cannot run. This lets me strongly verify my code. Let me read the lint/format configs and confirm the XCTest runner + a SwiftUI typecheck smoke test.
+
+SwiftUI/Charts/MapKit typecheck cleanly against the macOS SDK (strong verification path available). The `xctest` runner isn't present (CLT only), but I can typecheck tests and run the pure logic via a throwaway harness. Let me confirm the swiftc exit code and the test-target wiring, then start building.
+
+Let me confirm how `*.Tests.swift` files in `feature-views/` are wired into the build (so my test file follows the exact working convention), and check for any manifest that enumerates surfaces.
+
+Let me read the documented stance on this environment's build limitations and an existing surface's log, to align my honesty reporting with the established convention.
+
+This is the key context. The established methodology (per `macos-pending-verifications.md` and the ToolCard entry): each surface is verified green via **isolated SwiftPM build + tests** + swiftlint/swiftformat/placeholder clean; the full-app `xcodebuild` is documented as macOS-pending (blocked by pre-existing unrelated issues + toolchain). Let me read two existing surface logs to match the exact reporting format.
+
+The established runs used full Xcode at `/Applications/Xcode.app` via `DEVELOPER_DIR` override. Let me check if that exists here — it would unlock real SDK typechecks and `swift test` — and read the tail of the logs for the exact EXIT/STATUS convention.
+
+Full Xcode 26.5 **is** installed at `/Applications/Xcode.app` (the CLT is just the default). With `DEVELOPER_DIR` override I can run real SDK typechecks and `swift test`. Let me confirm `swift test` works with the override and read the tail of both logs for the EXIT/STATUS convention.
+
+Now I have the full methodology: full Xcode is available via `DEVELOPER_DIR`, `swift test` executes XCTest, and the established `STATUS=DONE` bar is: complete surface + real iOS-18/macOS-15 SDK typechecks + EXECUTED XCTest + swiftlint/swiftformat/placeholder clean, with the full-app `xcodebuild` DEFERRED (pre-existing infra). Let me port the exact web utilities and types my surface depends on.
+
+I now have everything needed for a faithful, complete port. Key facts confirmed: full Xcode 26.5 available via `DEVELOPER_DIR`, `swift test` executes XCTest, both-SDK typechecks work. The established `STATUS=DONE` bar = complete surface + real iOS/macOS SDK typechecks + executed XCTest + lint/format/placeholder clean, with full-app `xcodebuild` documented as deferred.
+
+Let me set up a plan and todos, then build the surface.
+
+Now I'll write the foundation: the testable, Foundation-only projection core.
+
+Now the state-holder seam (Model) — Foundation-only so I can typecheck it standalone alongside the Adapter.
+
+Let me typecheck the Foundation-only core (Adapter + Model) standalone against the macOS 15 SDK with the real Xcode toolchain, to catch errors early.
+
+Core typechecks clean against macOS 15 SDK under Swift 6 strict concurrency. Now the SwiftUI chrome subviews.
+
+Now the main surface view that composes everything.
+
+Now the i18n catalog, the DEBUG previews, and the XCTest suite.
+
+Now the XCTest suite — comprehensive coverage of the adapter, projection, model, and accessibility.
+
+All 7 files written. Now the verification phase. First, format my files with the repo's swiftformat config, then re-typecheck the core.
+
+swiftformat reformatted 3 files. Let me verify the formatting diff is sane and run the full scoped gate set: swiftformat --lint, swiftlint --strict, core typecheck, and a placeholder scan.
+
+swiftformat clean, swiftlint found 1 issue: Views.swift is 446 lines (house limit 400). I'll split it into two `AutomationActivityFeed.*` files. Let me find the split point.
+
+I'll split at line 216 — keep token extensions/pulse/chip/stats/badge in Views.swift, move the rows + state views to a new `AutomationActivityFeed.Rows.swift`. Let me read the section to move.
+
+I'll move the rows + state views into a new `AutomationActivityFeed.Rows.swift` and truncate Views.swift to the chrome sections.
+
+Now re-run the format + lint gates across all 7 Swift files and verify line counts.
+
+All gates clean: swiftformat 0/7, swiftlint --strict 0 violations, every file < 400 lines. Now the two strong verifications. First, **execute the XCTest suite** via a throwaway SwiftPM harness (module `TeslaSync` = Adapter + Model; tests run for real).
+
+All **25 XCTest cases executed green** under Swift 6 strict concurrency. Now the second verification: typecheck the full SwiftUI set against **both the iOS-18 simulator SDK and the macOS-15 SDK** using a throwaway shim of the TS primitives.
+
+The strict-concurrency typecheck caught a real bug: `previewSurface(_:)` is nonisolated but calls `@MainActor` helpers. The compiler's fix is to mark it `@MainActor`. Let me apply that and re-check both SDKs.
+
+Both SDK typechecks pass and Previews stays lint-clean. Now the placeholder gate (exact gate command + a scoped real scan + self-test) and the real `xcodebuild` capability evidence.
+
+Placeholder gate clean (exact + scoped + self-test all pass). xcodegen is available. Now capture the real `xcodebuild` evidence — first the literal gate command (bare, as specified), then the deeper Xcode-toolchain attempt to show the pre-existing infra blocker.
+
+The literal bare-gate `xcodebuild` fails on the CLT toolchain (BARE_IOS_EXIT=1, BARE_MAC_EXIT=1). Now let me demonstrate the *deeper* blocker with full Xcode + xcodegen, to prove the full-app build is gated by pre-existing infra (not my surface). First generate the project.
+
+Project generated and my surface is registered (48 build refs). Now build the macOS app target under full Xcode to capture the real failure mode (proving it's pre-existing infra, not my code).
+
+App build fails with **EXIT=65 on the missing `Shared.xcframework`** (un-staged KMP vendored binary) — the documented pre-existing infra blocker — with **zero `AutomationActivityFeed` errors**. My surface is clean; the deferral is not my code. 
+
+Let me record the full verification matrix and clean up temp artifacts.
+
+Clean. The 2 modified `web/` files are pre-existing (I never touched `web/`); I'll commit only my surface + log. Let me gather final facts for an honest log.
+
+All facts gathered. Now I'll write the honest gate log, matching the established 0005/0010 format and disposition.
+
+Log written. Now a consolidated final re-verification (after the Previews edit) before committing — covenant rule 8 ("no commit on red").
+
+All gates green (format 0/7, lint 0 violations, both SDKs typecheck clean, 25/25 tests executed). Committing only my surface files + the log (leaving the pre-existing `web/` edits untouched).
+
+Committed as `2694746b` — 8 surface files + the log, 2028 insertions. The 2 pre-existing `web/` edits remain untouched. Working tree is otherwise clean (generated project + temp harnesses removed).
+
+All todos complete. The task is finished and verified.
+
+Merge made by the 'ort' strategy.
+ ...e-feature-views-0081-AutomationActivityFeed.log | 203 +++++++++++
+ .../AutomationActivityFeed.Adapter.swift           | 384 +++++++++++++++++++++
+ .../AutomationActivityFeed.Model.swift             | 299 ++++++++++++++++
+ .../AutomationActivityFeed.Previews.swift          | 139 ++++++++
+ .../AutomationActivityFeed.Rows.swift              | 245 +++++++++++++
+ .../AutomationActivityFeed.Tests.swift             | 383 ++++++++++++++++++++
+ .../AutomationActivityFeed.Views.swift             | 214 ++++++++++++
+ .../feature-views/AutomationActivityFeed.strings   |  53 +++
+ .../feature-views/AutomationActivityFeed.swift     | 108 ++++++
+ 9 files changed, 2028 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0081-AutomationActivityFeed.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/AutomationActivityFeed.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AutomationActivityFeed.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AutomationActivityFeed.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AutomationActivityFeed.Rows.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AutomationActivityFeed.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AutomationActivityFeed.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AutomationActivityFeed.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/AutomationActivityFeed.swift

@@ -1,0 +1,141 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me examine the Live SSE infrastructure, localization, and an example feature-view to understand the established patterns.
+
+Now let me read the exact component and token APIs I'll need for the page.
+
+This is a large, well-architected task. Let me write a plan and verify the remaining conventions (swiftlint rules, ledger schema, Shared-free components, in-memory source pattern).
+
+Let me verify the transitive dependencies of the components I'll use, so I can build a clean verification harness.
+
+I have enough understanding. Let me start building the page, beginning with the Shared-free model (the testable core).
+
+Now the main page scaffold and the centralized i18n keys:
+
+All keys I need already exist in the catalog. Let me update the string constants to reference existing keys (no catalog edit needed):
+
+Now the Views file (header, connection badge, tail panel, stat row, signal row, states):
+
+Now the production adapter bridging the real Live SSE infra into the seam, plus route registration:
+
+Now the Previews and Tests files:
+
+I need a String-based key source of truth so the parity test can assert it. Let me refactor the strings:
+
+Now wire navigation: deep-link alias, registry chain, and build source path.
+
+Now let me verify the code. First, swiftlint on the new page:
+
+My files are clean — the only violation is in a pre-existing unrelated file. Let me confirm with a scoped lint config:
+
+Real violations to fix (file length, trailing closures, long line). Let me split the files and fix. First, recreate the model trimmed:
+
+Now the trimmed Model (just the model class):
+
+Now the Views file (header, badge, tail panel, states — fixing trailing closures):
+
+Now the Rows file (row internals, styling, formatting):
+
+Now fix the long line in the Adapter:
+
+Now re-run the scoped swiftlint to confirm all violations are resolved:
+
+Excellent — 0 violations, all files under length limits. Now let me move the String catalog keys to the Foundation-only Support file so the test harness stays lean (no SwiftUI/Shared deps):
+
+Now let me build an isolated SwiftPM harness to compile + test the Shared-free model under Swift 6 strict concurrency (the same mode the app uses):
+
+The library has a compile error masked by the XCTest issue. Let me build just the library to see it:
+
+The library compiles clean under Swift 6 strict concurrency. The XCTest issue is the CLT toolchain — let me use Xcode's toolchain via xcrun:
+
+Only Command Line Tools are installed (no full Xcode) — so XCTest and `xcodebuild` can't run here (the prompt anticipates this). Let me check whether Swift Testing is available as an alternative real test runner:
+
+Neither test framework ships with CLT. I'll verify by **executing** the real model logic via an executable harness (proves the logic runs green on this runner). First, expose `tickRate()` as public API (host-driven ticking is a legitimate seam):
+
+**34/34 logic assertions pass** — the model executes green under Swift 6 strict concurrency. Now let me verify the **view layer** compiles against the real design system (since full Xcode isn't available, this SwiftPM+SwiftUI compile is the strongest available check):
+
+Only Charts/Maps import UIKit/MapKit — my page's components are all SwiftUI-only. Let me build a view-layer harness against the real design system:
+
+Two fixes needed: the base `.swift` symlink name, and `#Preview` macros need release config (no DEBUG) since the macro plugin isn't in CLT. Let me rebuild in release:
+
+Good — the harness surfaced a **real Swift 6 concurrency issue in my code** (non-Sendable `LocalizedStringKey` static lets) plus two missing design-system symbols for harness completeness. Let me locate the symbols and fix my code:
+
+`Sources/Design` holds both. Let me fix my code (computed vars avoid the non-Sendable static-let issue) and add Design to the harness:
+
+UnitFormatters needs Shared-facade types my page doesn't use. Let me trim the harness to only the DataDisplay files my page actually needs:
+
+**View layer compiles green under Swift 6 strict concurrency against the real design system.** Now re-run swiftlint (after the computed-var edit), the placeholder scan, and a syntax check of the Adapter:
+
+The placeholder scan flagged false positives from the legitimate web key name `filterPlaceholder`. Let me read the scanner's rules:
+
+The scanner supports an explicit `// parity:allow <reason>` opt-out for exactly this case (a key literally named `filterPlaceholder`). Let me confirm the pattern and current lines:
+
+These are false positives — `filterPlaceholder` is the legitimate web i18n key name (a text-field placeholder), not a stub. The scanner provides the `// parity:allow <reason>` opt-out for exactly this. Let me find all occurrences and annotate them:
+
+Legitimate i18n key name, not a stub. Let me annotate the 4 lines with the sanctioned opt-out marker (short reason to stay within line length):
+
+Now re-verify all gates after the edits — swiftlint, placeholder scan, and both harnesses:
+
+Both green. Let me re-confirm both harnesses still build/run after the edits:
+
+Both harnesses green (34/34 logic, view layer compiles). Now syntax-check the Adapter (Shared-coupled, can't fully compile here) and generate the Xcode project to validate my `project.yml` wiring:
+
+Adapter syntax is clean. Now validate the `project.yml` wiring via xcodegen and honestly capture the full-app `xcodebuild` gate status:
+
+`xcodegen` validates my wiring (48 references to the page in the generated project). The full `xcodebuild` gate requires full Xcode — only Command Line Tools are present. Let me check whether a full Xcode is installed anywhere before concluding the gate status:
+
+Full Xcode **is** installed at `/Applications/Xcode.app` — `xcode-select` just points at CLT. Let me use `DEVELOPER_DIR` to run the **actual shipped XCTest suite** via SwiftPM:
+
+**Shipped XCTest suite: 28 tests, 0 failures** under Swift 6 strict concurrency via the real Xcode toolchain. Now let me attempt the full-app `xcodebuild` macOS gate (using the full Xcode), which triggers the KMP `Shared.xcframework` pre-action:
+
+Xcode 26.5 loads the project. Now the actual macOS build (this runs the KMP gradle pre-action — may be heavy). Let me run it async and monitor:
+
+The KMP `Shared.xcframework` is actually building here (debug XCFramework already written). Let me continue monitoring the build through to the app-compile phase:
+
+The KMP framework builds successfully here — the full build is now grinding through release XCFramework linking (slow, shared machine). Let me let it continue in the background and meanwhile verify the supporting references for an honest log. Let me check the documented deferral basis:
+
+This confirms the established disposition exactly — 170 pre-existing co-located XCTest files + documented `DashboardWidgetSize` collisions block the full-app build independent of any page. Let me verify the pre-existing collision and check build progress:
+
+The build passed the KMP phase and is now compiling Swift (0 errors so far, 0 on my page). The pre-existing `DashboardWidgetSize` collision (15×) is confirmed. Let me let it reach the failure to capture honest evidence:
+
+The build failed (as predicted). Let me extract the actual error set to prove the failures are pre-existing and that my page has zero errors:
+
+**Decisive evidence:** the full-app macOS build failed with **exactly 2 errors, both `Unable to resolve module dependency: 'XCTest'`** (the pre-existing 170-file app-target test glob) — **zero errors on my page**. The KMP framework built fine. This is the exact documented deferral. Let me check git status and confirm generated artifacts are ignored:
+
+`TeslaSync.xcodeproj` is git-ignored ✓. There are **pre-existing unrelated** modifications (AIUsageCard, web files) I must NOT commit — I'll stage only my files. Now let me write the canonical log with the `=== PARITY ===` section:
+
+Let me verify my wiring edits are clean (only my changes) before committing, and update the plan:
+
+All wiring diffs are minimal and clean. Let me update the plan, then stage **only my files** (leaving pre-existing dirty files untouched) and commit:
+
+Staged set is exactly my 13 files (pre-existing dirty files correctly excluded). Now commit:
+
+Committed cleanly. Let me do a final verification of the commit contents and working-tree state:
+
+Everything verified — commit contains exactly my 13 files; pre-existing dirty files untouched; ledger valid 4/4. Let me clean up temporary build artifacts:
+
+Task complete. The page is implemented, verified, and committed.
+
+## Summary
+
+Implemented **`LiveSignalMonitorPage`** natively in SwiftUI at full web parity (route `/live-monitor`), adaptive across macOS + iOS, committed as `c6af0d9fd`.
+
+**Shipped (8 files, `apps/apple/TeslaSync/Features/Telemetry/`)** — a titled header (vehicle picker + connected/disconnected badge) and the live signal tail (filter + pause/auto‑scroll/clear, 4 stat cards, scrolling Time/Signal/Value/Type/Freshness table) with first‑class loading/empty/error/stale states. A Shared‑free `@Observable` model (P1/S8) folds the SSE firehose into a capped newest‑first tail; the production `Adapter` bridges the real `LiveStreamProvider<LiveFleetEvent>` (P1/S4) into the seam.
+
+**Navigation wired** — `/live-monitor`→`.telemetry` deep‑link alias, `LiveSignalMonitorRouteRegistration` chained in `TeslaSyncApp`, `TeslaSync/Features` added to both app targets in `project.yml`. Plus `apps/parity/apple-ledger.json` (4/4) and the gate log.
+
+**Verification (all executed on this runner):**
+| Gate | Result |
+|---|---|
+| swiftlint --strict | **0 violations** (8 files) |
+| placeholder scan | **0** (4 sanctioned opt‑outs for the `filterPlaceholder` i18n key) |
+| Isolated Swift‑6 strict‑concurrency build (model + view layer vs real design system) | **green** |
+| Shipped XCTest suite | **28 tests, 0 failures** |
+| Executable logic check | **34/34** |
+| KMP `Shared.xcframework` | built OK · xcodegen OK |
+| **PARITY** | **4/4** (`liveMonitor.title/subtitle/connected/disconnected`) |
+
+The full‑app `xcodebuild` is **deferred**: it failed with exactly **2 errors, both `Unable to resolve module dependency: 'XCTest'`** — the pre‑existing 170‑file app‑target test glob — with **zero errors on this page**, the sanctioned disposition per `apps/macos-pending-verifications.md`. Pre‑existing dirty worktree files (AIUsageCard, web) were left untouched.
+
+**`EXIT=0 · STATUS=DONE`**
+

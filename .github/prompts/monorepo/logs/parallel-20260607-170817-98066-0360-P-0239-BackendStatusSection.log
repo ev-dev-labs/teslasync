@@ -1,0 +1,144 @@
+I'll start by exploring the repository structure, the web source specification, and the existing Apple app scaffold.
+
+There are uncommitted changes in the working tree unrelated to my task. Let me examine the web source spec and the existing Apple app structure.
+
+This is a mature monorepo with ~1175 files in feature-views following a clear multi-file pattern. Let me check tooling availability and study the established conventions, plus look at the web helpers/hooks the source depends on.
+
+Critical capability finding: only **Command Line Tools** is installed — `xcodebuild` requires full Xcode, which is absent, and no iOS simulators exist. `swift` 6.3.2, `swiftlint` 0.63.3, `swiftformat` 0.61.1, `xcodegen` ARE present. Per the prompt's capability clause, the xcodebuild build/test gate cannot run here — but I must still ship complete, parity code and run every check that IS available. Let me study the established conventions and shared infra before writing.
+
+`InfrastructureSection` is the closest already-ported sibling. Let me read its full file set and the web source it derives from to learn the exact conventions, plus the shared facade for admin data.
+
+The pattern is clear and mature. `InfrastructureSection` uses a tool/mutation model, but `BackendStatusSection` is a **live-query** surface (loading/empty/error/stale/offline). Let me study the freshest live-data exemplars (`ActiveOrdersSection`, just committed) and the shared facade domains for admin data.
+
+`ActiveOrdersSection` is the ideal recent template — exact state matrix, clean seams. Let me read its remaining files to capture the full pattern (adapter/projection, views, states, previews, tests, strings).
+
+Excellent template. Let me read the remaining ActiveOrders files (views/states/previews/tests/strings) plus the design tokens and shared UI components, and the web data sources for exact DTO shapes.
+
+Now I have the data sources. Let me capture the exact TypeScript DTO shapes and the shared Apple component APIs (DataTable, StatCard/Cards, KVList/Lists, Badges, Skeletons, States, design tokens), plus the remaining ActiveOrders template files.
+
+ConnectionPool shape confirmed: `maxOpen, open, inUse, idle, waitCount, waitDurationMs`. Now let me extract the public APIs of the design tokens and shared components I'll reuse (Badge, StatCard, KVList, DataTable, Skeleton, States, Button, Typography, IconBox, GlassPanel, FadeIn).
+
+Tokens live elsewhere. Let me locate the full token + shared-component public APIs and read the ActiveOrders test files to capture the test conventions.
+
+Now I have tokens. Let me read the exact public initializers of the shared components I'll reuse (StatCard, KVList, DataTable, Badge, IconBox, GlassPanel, Button, Skeleton, EmptyState, StatusBadge, FadeIn).
+
+The exemplar builds inline view helpers (rendering `Text(verbatim:)` through the per-surface strings table) rather than passing `LocalizedStringKey` to shared atoms. The web source's outer wrapper is an **AccordionSection** (collapsible). Let me read Disclosure, DataTable, Cards, Skeletons, States, Buttons, Motion, and the test conventions.
+
+Let me read the remaining component initializers (Button, Skeleton, Cards, Motion, DataTable) and the test conventions, plus confirm how feature-views are globbed into the build.
+
+Let me read the view/a11y test file and the project config to confirm target/test wiring and source globbing.
+
+Feature-views compile into the app target, but the `.Tests.swift` files use `@testable import TeslaSync` + XCTest. I need to understand how test files are routed to the test bundle (not the app). Let me investigate the test wiring.
+
+There's a `Tests/Unit/FeatureViews/` dir. Let me see how feature-view tests are actually wired — whether they're moved/excluded or there's a generation step.
+
+Let me check how prior slots handled this exact gate — the committed logs reveal the accepted STATUS and evidence format on this runner.
+
+Now I understand the accepted disposition precisely. Key facts:
+- Prior slots ran on a runner **with Xcode 26.5**; this runner has only CommandLineTools (no Xcode, no simulators).
+- The accepted gate pattern: `swiftlint --strict` + `swiftformat --lint` + placeholder check must be green; an **isolated SwiftPM `swift test`** compiles the real surface against the real design system and runs the XCTests; the full `xcodebuild build test` is **DEFERRED** with evidence. Final `EXIT=0 / STATUS=DONE`.
+
+Let me verify `pwsh`/placeholder script availability and study the closest table-based exemplar (FeatureToggles) for the responsive table.
+
+All capability checks pass: `pwsh` present, placeholder script exists, and `swift -typecheck` compiles SwiftUI against the CLT macOS SDK. The FeatureToggles native `Grid`(wide)/cards(compact) table is my model for Component Health. Let me grab the exact web formatters to port faithfully, then write the plan.
+
+I have the full picture now. Let me read the last supporting pieces (Typography exports, the `tsGlassPanel` material modifier) so my isolated SwiftPM harness pulls the right real files, then I'll write the plan and start building.
+
+I now have complete understanding of the architecture, conventions, data contracts, and the accepted gate disposition. Let me write the plan and set up tracking, then build the surface.
+
+Now I'll build the surface. Starting with the pure projection core (Adapter).
+
+Adapter done. Now the Model (seams + state holder).
+
+Now the header/chrome Views (accordion container, health badge, status cell, freshness chip, connectivity banner, section title).
+
+Now the three content sections (component health table, connection-pool tiles, system-runtime list).
+
+Now the load states (skeleton / empty / error+retry).
+
+Now wire the main view. First I'll simplify the accordion body so `content()` manages its own layout, then create the main `BackendStatusSection.swift`.
+
+Now the i18n strings catalog. Let me enumerate every key referenced across my files to ensure complete coverage.
+
+Complete key set confirmed. Now the i18n catalog.
+
+Now the per-state previews.
+
+Now the test files — pure adapter + accessibility coverage.
+
+Let me fix an awkward test assertion before moving on.
+
+Now the state-holder ModelTests.
+
+All 10 files are created. One macOS-safety fix: `\.horizontalSizeClass` isn't reliably available on macOS, so I'll guard it like the `InfrastructureSection`/`TSDataTable` precedent (defaulting to the wide layout on macOS).
+
+Now let me run the formatter and linter on my files to get them clean before the isolated build.
+
+swiftformat found auto-fixable style issues. Let me apply the formatter to my Swift files (excluding the `.strings`).
+
+swiftformat clean. Now swiftlint --strict on my files.
+
+One violation: `Adapter.swift` exceeds the 400-line limit (formatter expansion). I'll split the formatters + accessibility into a companion `BackendStatusSection.Format.swift`. Let me find the split boundary.
+
+I'll split at the "Load status / Projection" boundary into a companion `BackendStatusSection.Projection.swift`. Let me view the exact cut point.
+
+Both files now under the limit. Let me re-run formatter + linter across all files (including the new `Projection.swift`).
+
+swiftformat 0/10, swiftlint 0 violations. Now the key correctness proof: an isolated SwiftPM build+test compiling the real surface against the **real** design system under Swift 6, then running all XCTests. Let me assemble the harness.
+
+Build was terminated early (143) — likely first-compile latency. Let me run it to a log with a longer wait.
+
+The **only** errors are the `#Preview` macro plugin being unavailable to the bare CLT/SwiftPM toolchain (no defect in my code — `#Preview` is the standard macro every sibling uses; it resolves under full Xcode). Let me confirm there are zero other errors, then exclude the preview-only file from the isolated harness and rebuild.
+
+Confirmed: zero errors in my logic files or the real design system — only the preview-only file fails because the `#Preview` macro plugin ships with full Xcode, not the CLT toolchain. `#Preview` is the same standard macro all 1170+ siblings use. Let me exclude the preview-only file from the isolated harness and run the tests.
+
+The macro plugin is unavailable to the CLT toolchain for **any** `#Preview` — including the vendor design-system files' own preview blocks. To get the strongest verification (compile-check my preview *bodies* too, not just skip them), I'll transform the harness copies: strip the trailing `#Preview` blocks from the vendor substrate, and rewrite my preview macros into macro-free functions so their view-construction logic is still type-checked. Then debug-build + test.
+
+Two findings: (1) the TeslaSync library `emit-module` failed — I need the actual error (hidden behind the test-target noise); (2) `swift test`'s XCTest is unavailable under CLT (XCTest.framework ships with Xcode, not CommandLineTools). Let me first isolate the library compile error.
+
+The TeslaSync **library target compiles clean under Swift 6 strict** (exit 0) — my full surface + the real design system, with preview bodies type-checked. The only blocker is that XCTest.framework ships with Xcode, not CommandLineTools, so `swift test` can't run here. To still execute my tests' behavioral assertions on this runner, I'll add a macro/XCTest-free executable probe that runs the same checks against the real compiled module.
+
+Confirmed: XCTest is genuinely absent under CLT. Now the behavioral probe that executes every assertion from my test files against the real compiled module.
+
+The probe needs to be `main.swift` for top-level code. Let me rename and build+run it.
+
+**100/100 behavioral checks pass** against the real compiled module. Now let me run the placeholder gate (via `pwsh`) and do an independent manual scan for honesty.
+
+All runnable gates are green. Let me do a final verification pass on the **repo** files (confirming the real `#Preview` macros are intact and untouched), capture clean gate outputs, then run the whole-dir `swiftformat --lint` to ensure I broke nothing.
+
+Everything is clean and verified to the maximum the runner allows. Let me clean up the temp harness, then write the comprehensive gate log.
+
+Now commit exactly my files + the log (leaving the pre-existing unrelated worktree changes untouched).
+
+All 12 files staged (11 surface files + log); the two pre-existing dirty files remain untouched. Committing.
+
+Committed cleanly. Let me do a final verification of the commit contents and mark todos complete.
+
+The task is complete. The commit contains exactly the 11 `BackendStatusSection.*` files + the gate log (12 files, 2526 insertions), with all todos done.
+
+Merge made by the 'ort' strategy.
+ ...ple-feature-views-0239-BackendStatusSection.log | 210 ++++++++++++++
+ .../BackendStatusSection.Adapter.swift             | 320 +++++++++++++++++++++
+ .../feature-views/BackendStatusSection.Model.swift | 295 +++++++++++++++++++
+ .../BackendStatusSection.ModelTests.swift          | 151 ++++++++++
+ .../BackendStatusSection.Previews.swift            | 129 +++++++++
+ .../BackendStatusSection.Projection.swift          | 250 ++++++++++++++++
+ .../BackendStatusSection.Sections.swift            | 308 ++++++++++++++++++++
+ .../BackendStatusSection.States.swift              |  95 ++++++
+ .../feature-views/BackendStatusSection.Tests.swift | 319 ++++++++++++++++++++
+ .../feature-views/BackendStatusSection.Views.swift | 291 +++++++++++++++++++
+ .../feature-views/BackendStatusSection.strings     |  59 ++++
+ .../feature-views/BackendStatusSection.swift       |  99 +++++++
+ 12 files changed, 2526 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0239-BackendStatusSection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackendStatusSection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackendStatusSection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackendStatusSection.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackendStatusSection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackendStatusSection.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackendStatusSection.Sections.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackendStatusSection.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackendStatusSection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackendStatusSection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackendStatusSection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackendStatusSection.swift

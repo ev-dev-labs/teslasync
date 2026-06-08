@@ -1,0 +1,235 @@
+=== P4 Feature view 0025 VinDecoder (Apple) ===
+
+Surface : apps/apple/TeslaSync/feature-views/VinDecoder.*
+Web spec: web/src/features/admin/components/devtools/tools/VinDecoder.tsx
+Tier    : Feature view (composed devtools component below page level)
+Runner  : Darwin · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftformat 0.61.1 + swiftlint 0.63.3 + pwsh 7 + xcodegen 2.45.4 present
+ADR refs: ADR-002 (one SwiftUI source group, iOS+macOS) · ADR-004 (KMP Shared core) · ADR-009
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (allowed scope: VinDecoder.* + this log)
+--------------------------------------------------------------------------------
+  VinDecoder.Adapter.swift  — pure, SwiftUI-free projection: the VIN lookup tables (VIN_MANUFACTURERS /
+                              VIN_MODELS / VIN_DRIVE / VIN_YEAR / VIN_PLANT, verbatim from web
+                              constants.ts), the `length < 11` guard, the upper-case + slice positions
+                              (0..3 / 3 / 7 / 9 / 10 / 11..), the unknown-segment fallback (injected
+                              label = web `t('Unknown')`), the ordered `fields` list (web
+                              `Object.entries(decoded)`), and the VoiceOver summary. No network — this
+                              surface is a synchronous client-side tool (web parity: only hook is useTranslation).
+  VinDecoder.Model.swift    — P1/S8 state holder (@Observable VinDecoderModel: VIN input + derived
+                              projection + render Phase), P1/S11 telemetry seam (view.opened, emitted once),
+                              P1/S10 VinDecoderStrings facade, VinDecoderSurface slug. SwiftUI-free
+                              (Foundation/Observation/OSLog) so it host-compiles + runs. No VIN is logged.
+  VinDecoder.swift          — SwiftUI surface: web `ToolCard` chrome (Car glyph in the cyan ICON_COLOR_MAP
+                              chip + title + description) over the VIN input (Car-iconed monospaced field,
+                              sample-VIN prompt) and then the decoded field grid (mfr / model / drive /
+                              year / plant / serial tiles, web `grid sm:grid-cols-2`) or a friendly hint
+                              when the VIN is too short. Built from design tokens (P1/S9) + shared
+                              TSGlassPanel; full a11y (field + each tile labelled/valued, glyphs hidden).
+  VinDecoder.Previews.swift — #if DEBUG previews: decoded Model 3, decoded Model Y/Berlin, unknown segments,
+                              too-short hint.
+  VinDecoder.Tests.swift    — XCTest: table parity (all five maps, counts + entries), decode parity (canonical
+                              Model 3, Model Y, lower-case, 11-char empty serial, unknown→injected label,
+                              too-short→nil, fields order/keys/values), model phases (default empty, decodable
+                              content, edit↔short, default Unknown label), view.opened-once telemetry, a11y
+                              summary. Runs in the TeslaSync(/-macOS) test targets at integration; the
+                              identical assertions execute GREEN in the host harness below.
+  VinDecoder.strings        — per-surface P1/S10 i18n table (every web t() key + native chrome).
+
+Parity reproduced exactly from the web source (cross-platform value parity, not a "corrected" version):
+  decoded = vin.length < 11 ? null : {
+    mfr   : VIN_MANUFACTURERS[upper.slice(0,3)] ?? t('Unknown'),
+    model : VIN_MODELS[upper[3]]  ?? t('Unknown'),
+    drive : VIN_DRIVE[upper[7]]   ?? t('Unknown'),
+    year  : VIN_YEAR[upper[9]]    ?? t('Unknown'),
+    plant : VIN_PLANT[upper[10]]  ?? t('Unknown'),
+    serial: upper.slice(11) }
+  upper = vin.toUpperCase(); grid order = mfr, model, drive, year, plant, serial.
+  Tables ported verbatim: 4 manufacturers, 4 models, 10 drive, 10 model-year, 6 plant codes.
+
+i18n keys extracted from the web source (table "VinDecoder"): "Vin Decoder", "Vin Decoder Desc", "Vin",
+"Unknown", and the six dynamic "devtools.utils.vin_<mfr|model|drive|year|plant|serial>" grid labels.
+The web en.json carries "Vin" and "Unknown" verbatim, but has NO entry for "Vin Decoder" / "Vin Decoder
+Desc" and NO "devtools.utils.vin_*" keys (the devtools.utils block holds only base64/base64Desc/
+computeSha256), so i18next renders those keys AS-IS. The native fallbacks reproduce that exactly (parity;
+identical to how predecessor 0011 Base64Tool ships the ugly en.json value "Base64Desc" verbatim).
+Native-only chrome adds the too-short hint. The view holds no bare English literals (all via VinDecoderStrings).
+
+States: this is a pure synchronous compute tool — the web source has NO data fetching (no useQuery), so
+loading / error / stale / offline are N/A by parity (no async source exists to be in those states). The
+web source's two real branches are reproduced and tested: a decodable VIN (>= 11 chars) → the field grid;
+a too-short VIN → the grid is hidden (native renders a friendly hint, never a blank box). Within the
+content branch, unmapped segments render the localized "Unknown" (web `?? t('Unknown')`), and an 11-char
+VIN's empty serial renders an em dash so no tile is ever blank — both reproduced + tested.
+
+--------------------------------------------------------------------------------
+GATE RESULTS (real commands, real exit codes on this host)
+--------------------------------------------------------------------------------
+
+[HOST] swiftc -typecheck -swift-version 6 -D DEBUG -strict-concurrency=complete
+       -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator
+       (VinDecoder .Adapter/.Model/.swift/.Previews vs the REAL design system: 40 files from
+        Sources/Components + Sources/Design + design/generated/apple/Tokens.swift — the exact symbols the
+        app build resolves: TSGlassPanel, Color.TS, Font.TS, TSSpacing, TSRadius)
+       -> error count = 0
+       TYPECHECK_IOS_EXIT=0
+       (Only design file excluded: Sources/Components/DataDisplay/UnitFormatters.swift, which depends on
+        the KMP `Shared` framework via `Units.*` and is unused by this surface. Every other design file +
+        all four shipped Swift files type-check green; zero errors originate in VinDecoder.*.)
+
+[HOST] swiftc -typecheck -swift-version 6 -D DEBUG -strict-concurrency=complete
+       -sdk <MacOSX26.5> -target arm64-apple-macos15.0   (same file set)
+       -> error count = 0
+       TYPECHECK_MAC_EXIT=0
+       (Confirms the surface compiles for BOTH app targets — iOS 18 and macOS 15 — incl. the AppKit token branches.)
+
+[HOST] swiftc -swift-version 6 -strict-concurrency=complete  (Model + Adapter + executed driver)
+       -> === VinDecoder host harness ===  CHECKS=78 FAILURES=0  HARNESS_OK
+       HARNESS_EXIT=0
+       Verified GREEN by execution: all five lookup tables (counts + representative entries vs web
+       constants.ts); isDecodable accept {11,17} / reject {10,""}; canonical "5YJ3E1EA1NF000001" -> Tesla
+       (USA) / Model 3 / Dual Motor AWD / 2022 / Fremont, CA / serial "000001"; "7SAYGDEE9PF123456" ->
+       Tesla (EU/Berlin) / Model Y / Dual Motor / 2023 / Fremont, CA / "123456"; lower-case decodes
+       identically (toUpperCase); 11-char VIN -> empty serial; unknown segments -> injected label "??";
+       too-short -> nil; fields order mfr/model/drive/year/plant/serial + devtools.utils.vin_* keys + values;
+       a11y summary (incl. em-dash for empty serial); model phases (default empty + nil, decodable content,
+       edit->short empty + nil, edit-back content, default Unknown label); view.opened emitted once, slug "VinDecoder".
+
+[HOST] swiftformat --lint  (THIS surface — its 5 Swift files, repo .swiftformat config)
+       -> 0/5 files require formatting
+       FORMAT_SURFACE_EXIT=0
+
+[HOST] swiftformat --lint apps/apple   (whole tree, the verbatim gate command)
+       -> 1/1918 files require formatting, 2 files skipped
+       -> apps/apple/TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1 (blankLinesBetweenScopes)
+       FORMAT_TREE_EXIT=1  — NOT claimed green.
+       The lone file is a PREDECESSOR surface (ActionBuilder, 0001x), committed and UNTOUCHED by this prompt,
+       OUTSIDE this prompt's allowed files. Covenant #7/#9 forbid editing it here. Zero VinDecoder.* files
+       require formatting.
+
+[HOST] cd apps/apple && swiftlint lint --strict   (THIS surface — its 5 Swift files)
+       -> Done linting! Found 0 violations, 0 serious in 5 files.
+       LINT_SURFACE_EXIT=0
+
+[HOST] cd apps/apple && swiftlint --strict     (whole tree, the verbatim gate command)
+       -> Found 1 violation, 1 serious in 1914 files.
+       -> TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: Function Body Length
+          (function body spans 78 lines > 50) (function_body_length)
+       LINT_TREE_EXIT=2  — NOT claimed green.
+       This lone violation is in a PREDECESSOR surface file (dashboard widget 0055), committed and UNTOUCHED
+       by this prompt, OUTSIDE this prompt's allowed files (the identical pre-existing violation is recorded
+       in the 0022 UnixPermissionTool log). Covenant #7/#9 forbid editing it here; not a defect in VinDecoder.*.
+
+[HOST] pwsh apps/tools/check-placeholders.ps1 -SelfTest            -> SELFTEST_EXIT=0
+[HOST] pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/VinDecoder -Language swift
+       -> PLACEHOLDER_ALLOWED=0 · PLACEHOLDER_COUNT=0 (verbatim gate path: a file PREFIX, not a directory,
+          so -LiteralPath matches nothing -> COUNT=0)
+[HOST] pwsh apps/tools/check-placeholders.ps1 -Path <copy of the 5 VinDecoder .swift files> -Language swift
+       -> PLACEHOLDER_ALLOWED=0 · PLACEHOLDER_COUNT=0  (genuine coverage of every shipped Swift file)
+       PLACEHOLDER_EXIT=0
+       No forbidden word (case-insensitive TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not implemented/
+       fatalError stub) in shipped code; the test double is named "Recording…", not "mock".
+
+[HOST] xcodegen generate
+       -> Created project at apps/apple/TeslaSync.xcodeproj  (GEN_EXIT=0)
+       -> the app targets (sources include TeslaSync/feature-views) enumerate all six shipped files:
+          VinDecoder.Adapter.swift, VinDecoder.Model.swift, VinDecoder.swift, VinDecoder.Previews.swift,
+          VinDecoder.Tests.swift, VinDecoder.strings. (.xcodeproj is git-ignored; removed after.)
+
+[DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+[DEFERRED] xcodebuild -scheme TeslaSync-macOS                                                       build test
+       IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED   (NOT claimed green — see reasoning)
+       Capability IS present on this runner (Xcode 26.5; iPhone 16 simulator 83717DEE-70A3-4325-AA61-
+       CBDDD3140989, Booted; JDK 17). The scheme-level build/test is DEFERRED — not failed — for
+       pre-existing, monorepo-wide reasons, NONE a defect in this surface's code (all VERIFIED, not assumed):
+         (1) The TeslaSync/-macOS scheme's pre-action builds the KMP Shared.xcframework via
+             Scripts/build-shared-xcframework.sh (Gradle :core:assembleSharedXCFramework, Kotlin/Native), and
+             both app targets link `Frameworks/Shared.xcframework`. That artifact is ABSENT in this checkout
+             (apps/apple/Frameworks/ holds only .gitkeep), so a full scheme build cannot link. This surface
+             imports none of `Shared`.
+         (2) 171 co-located *.Tests.swift files under TeslaSync/feature-views import XCTest + `@testable
+             import TeslaSync` into the APP target source set (a pre-existing parallel-merge state), which a
+             plain app build does not host. (VinDecoder.Tests.swift follows that same predecessor convention.)
+         (3) macOS app target requires a development signing identity (ENABLE_HARDENED_RUNTIME).
+       Per macos-pending-verifications.md, these whole-app verifications are deferred to
+       p4-apple/P99-0001-apple-acceptance-gate on a `macos-latest` runner with signing identities. Editing
+       project.yml / .swiftlint.yml / the shared Localizable.xcstrings / Frameworks to work around (1)-(3) is
+       OUTSIDE this prompt's allowed files (covenant #7); this log does NOT add a row to
+       macos-pending-verifications.md for the same scope reason.
+       Equivalent in-scope verification was performed instead and is GREEN above: a Swift-6 strict-concurrency
+       typecheck of the surface against the REAL design tokens + shared components for BOTH iOS 18 and macOS
+       15 (the exact symbols the app build resolves), plus an executed adapter/model harness pinning exact
+       web value parity (78/78). This matches the user-approved P4 "code-complete + DEFERRED Xcode gate"
+       disposition used by predecessors 0010 (ToolCard), 0022 (UnixPermissionTool), 0180, 0231.
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+  [x] Surface renders all states from the web source — content (decodable VIN -> mfr/model/drive/year/plant/
+      serial tiles, with localized "Unknown" for unmapped segments + em-dash for an empty serial) and empty
+      (too-short -> friendly hint, never a blank box). loading/error/stale/offline are N/A by parity (the web
+      tool has no data fetching). Each branch has a #if DEBUG preview; the phase + decode logic is unit-tested
+      AND executed in the host harness.
+  [x] Hooks bind through the shared P1/S8 state holder (VinDecoderModel); no HTTP in the view — trivially
+      satisfied (web source fetches nothing; only useTranslation). The view never networks.
+  [x] Every i18n key from source has a matching catalog key — 10 parity keys + native chrome in
+      VinDecoder.strings (table "VinDecoder"); the view holds no English literals (all via VinDecoderStrings).
+  [x] Accessibility labels on every interactive element: the VIN field (label "Vin" + live value); each
+      decoded tile is an a11y element (field label + value); decorative Car glyphs are accessibilityHidden;
+      the grid uses .contain so VoiceOver steps through each field. Dynamic Type via Font.TS system fonts;
+      no motion to respect reduce-motion against.
+  [x] Tests: adapter unit tests (tables/decode/slices/unknown/fields) + per-state model tests + view.opened
+      telemetry test (VinDecoder.Tests.swift); the same assertions executed GREEN (CHECKS=78 FAILURES=0) in
+      the host harness; per-state #Preview entries stand in for snapshot states.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0 (self-test + real scan);
+      test double named "Recording…" not "mock"; word-scan clean.
+  [x] Telemetry: view.opened emitted once with surface slug "VinDecoder" (P1/S11) — tested + executed.
+  [x] Host-runnable gates GREEN (typecheck iOS+macOS / executed harness / surface format / surface lint /
+      placeholder / xcodegen enumerates the 6 files); the Xcode scheme build/test is DEFERRED with
+      capability + scope evidence (per the approved P4 disposition). The lone whole-tree swiftlint + lone
+      whole-tree swiftformat findings are pre-existing predecessor files outside this prompt's allowed scope
+      (flagged honestly, not silenced).
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+  1  No red-as-green : the two xcodebuild scheme steps are shown DEFERRED (not green) with VERIFIED reasons
+                       (Shared.xcframework absent; 171 co-located app-target test files; signing); the
+                       whole-tree swiftlint/swiftformat results are shown as LINT_TREE_EXIT=2 / FORMAT_TREE_EXIT=1
+                       with exact predecessor file:line; every "EXIT=0" above is a command actually executed here.
+  2  No scope narrowing: implemented the full surface — ToolCard chrome, VIN input, the complete six-field
+                       decode grid, the unknown-segment + empty-serial sub-branches, the too-short state,
+                       i18n, a11y, telemetry. Async states are N/A strictly because the web source has none.
+  3  No skip-and-assume: each host gate executed and its real output captured; the xcodebuild blockers were
+                       VERIFIED on disk (ls Frameworks -> only .gitkeep; 171 *.Tests.swift counted; sim +
+                       JDK probed), not assumed.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; harness executes real logic.
+  5  No parity shortcuts: the five VIN tables, the length guard, toUpperCase, the slice positions, the
+                       `?? Unknown` fallback, and the grid order/label keys are ported VERBATIM and pinned by
+                       executed assertions to the exact web display strings (incl. the verbatim missing-key labels).
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register feature-views into project.yml / .swiftlint.yml, did NOT edit
+                       the shared Localizable.xcstrings, did NOT add a macos-pending-verifications.md row, and
+                       did NOT touch the predecessor files flagged by the whole-tree linters (all out of allowed
+                       scope); strings shipped as the per-surface table.
+  8  No commit on red  : committing on all-green IN-SCOPE host gates; the Xcode scheme steps are a documented
+                       scope/dependency DEFERRAL (capability present), and the two whole-tree lint/format
+                       findings are pre-existing out-of-scope predecessor files — none a defect in VinDecoder.*.
+  9  No silent drift   : changes confined to the allowed VinDecoder.* files + this log (the generated
+                       .xcodeproj is git-ignored and was removed; the /tmp harness is outside the repo).
+  10 Log ends with EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished native VinDecoder shipped at parity with the web source: a SwiftUI surface (ToolCard
+  chrome + VIN input + six-field decode grid with localized Unknown / em-dash empty serial + too-short hint)
+  over a P1/S8 state holder (no view HTTP), P1/S11 telemetry, P1/S10 i18n, P1/S9 tokens, with full
+  accessibility. The surface type-checks GREEN under Swift 6 strict concurrency against the real design system
+  for BOTH iOS 18 and macOS 15, and its adapter/model logic executes GREEN (78/78) with exact web value
+  parity. The Xcode scheme build/test is DEFERRED to the signed/integration runner (KMP Shared.xcframework
+  absent + co-located app-target test files + macOS signing — none a defect in this code), matching the
+  user-approved P4 "code-complete + DEFERRED Xcode gate" disposition.
+
+EXIT=0
+STATUS=DONE

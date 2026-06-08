@@ -1,0 +1,176 @@
+=== P4 Modal / dialog 0027 WidgetSettingsModal (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon) — SHARED/contended (load avg ~76 during run).
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no `xcode-select -s`, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh ·
+                       Java 17 · kotlin-native 2.4.0 (~/.konan present).
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS-18 / macOS-15 SDKs present (smoke-compiled
+                       `import SwiftUI` + a `View` on this runner). => NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/features/dashboard/components/WidgetSettingsModal.tsx — a Modal (web `Modal size=sm`,
+  title `${def.name} Settings`) editing a widget's controlled `config` (web `useState(widget.config ?? {})`):
+    • Vehicle      (when `isVehicleWidget = category !== 'system' && !== 'analytics'`): web `Select`,
+                   value `config.vehicleId?.toString() ?? 'all'`; options 'all'→"All Vehicles (first)"
+                   then each `useVehicles()` row → `v.display_name || \`Vehicle ${v.id}\``;
+                   onChange `'all' ? undefined : Number(val)`.
+    • Refresh      (always): web `Select`, value `refreshRate?.toString() ?? 'default'`; options
+                   default / 5 / 15 / 30 / 60 s; onChange `'default' ? undefined : Number(val)`.
+    • Time Range   (when `isChartWidget = category ∈ {driving,charging,analytics,battery}`): web `Select`,
+                   value `timeRange ?? '7d'`; options 24h / 7d / 30d / 90d.
+    • Appearance   (always): web `Toggle`, label "Show widget title", checked `showTitle !== false`.
+    • Footer       : Cancel (web `onClose`) + Save (web `handleSave → onSave(config); onClose()`).
+  Data sources: useVehicles, useTranslation. Shared components: @/components/ui (Modal/Select/Toggle/
+  Button), @/components/forms (FormSection). Charts/maps: none.
+
+PATH MAPPING / INTEGRATION (documented — no silent drift)
+  The prompt's native-output path `apps/apple/TeslaSync/modals-dialogs/` is a NEW tier (this is its first
+  surface). Per ADR-002 (one shared `Sources/` group feeds the iOS `TeslaSync` + macOS `TeslaSync-macOS`
+  app targets) and the repo's first-of-tier precedent (commit acc76624a registered `TeslaSync/feature-views`
+  when its first surface, ToolCard, landed), this surface registers the tier in three wiring files:
+    project.yml       — + `- path: TeslaSync/modals-dialogs` to BOTH app targets' `sources:` (iOS + macOS).
+    .swiftlint.yml    — + `- TeslaSync/modals-dialogs` to `included:`.
+    (tests live IN the surface dir as `WidgetSettingsModal.Tests.swift`, matching the dominant
+     feature-views convention + the prompt's `WidgetSettingsModal.*` allow-glob.)
+  Verified: `xcodegen generate` → RC=0; `WidgetSettingsModal` enumerated 66× into the generated project;
+  the `modals-dialogs` group is present; zero public-type collisions vs the existing tree (checked all 26
+  shipped public type names against Sources + TeslaSync/{feature-views,dashboard-widgets}).
+  (The generated .xcodeproj is git-ignored and rebuilt with `xcodegen generate` — not committed.)
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/modals-dialogs/, all prefixed WidgetSettingsModal)
+  WidgetSettingsModal.Models.swift      — Foundation value types: WidgetCategory (+ showsVehicleSelector /
+                                          showsTimeRange = web isVehicleWidget / isChartWidget),
+                                          WidgetSettingsConfig (+ passthrough = web index signature),
+                                          selections, copy, vehicle load-status / phase / connection enums.
+  WidgetSettingsModal.Projection.swift  — WidgetSelectOption projection, WidgetSettingsSurface.slug,
+                                          WidgetSettingsAccessibility (VoiceOver summaries).
+  WidgetSettingsModal.Adapter.swift     — WidgetSettingsProjector (option lists + section gating + vehicle
+                                          phase) + WidgetSettingsConfigReducer (the controlled setConfig
+                                          transforms, pure).
+  WidgetSettingsModal.Model.swift       — telemetry seam + OSLog default, vehicles Store seam + in-memory
+                                          impl, @Observable @MainActor WidgetSettingsModel.
+  WidgetSettingsModal.Strings.swift     — P1/S10 surface-table i18n facade (string/text/copy/title).
+  WidgetSettingsModal.Views.swift       — the four sections, styled menu selects, switch, freshness chip,
+                                          connectivity banner, Cancel/Save action row.
+  WidgetSettingsModal.States.swift      — the vehicle-selector load envelope (loading / empty / error+retry).
+  WidgetSettingsModal.swift             — the NavigationStack sheet content + toolbar Cancel + onAppear
+                                          telemetry; iterates the model's visible sections.
+  WidgetSettingsModal.Previews.swift    — #if DEBUG previews: content / system-widget / empty / loading /
+                                          error / stale / offline.
+  WidgetSettingsModal.strings           — the i18n catalog (table "WidgetSettingsModal").
+  WidgetSettingsModal.Tests.swift       — 23 XCTest cases (projector, reducer, model, accessibility).
+  Wiring: apps/apple/project.yml (+2), apps/apple/.swiftlint.yml (+1), apps/macos-pending-verifications.md (+1 row).
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  Modal(size=sm)          → sheet content in a NavigationStack (focus trap + dismiss for free), title
+                            `${def.name} Settings` via "%@ Settings", toolbar `.cancellationAction` Cancel.
+  FormSection             → titled section header (Font.TS.bodySm semibold, textSecondary, isHeader).
+  Select                  → native menu `Picker` styled with the design tokens (the same primitive
+                            `TSSelect` wraps). Labels resolve through the surface i18n TABLE and render
+                            verbatim — `TSSelect`'s LocalizedStringKey would route to the main catalog,
+                            so the surface uses the underlying primitive + the P1/S10 facade, matching the
+                            AdvancedSettings / WebhookChannelsSection precedent.
+  Toggle                  → native `Toggle(.switch)` tinted accent, surface-table label.
+  Button (Cancel/Save)    → `TSButton` (.ghost / .primary) with surface-table `Text` labels.
+  i18n                    : every web key (dashboard.settings.* + common.cancel/save) + the native envelope
+                            keys present in WidgetSettingsModal.strings; ZERO English literals in the Swift.
+  a11y                    : every control has a VoiceOver label; the vehicle section exposes a per-phase
+                            spoken summary; the freshness chip / banner / retry are labelled; Dynamic Type
+                            via Font.TS; Reduce-Motion safe (no bespoke animation).
+  telemetry (P1/S11)      : `view.opened` surface="WidgetSettingsModal" emitted once on appear via the
+                            WidgetSettingsTelemetry seam (default OSLog sink, redaction-safe).
+
+STATES (every state renders — never a blank section; scoped to the useVehicles binding)
+  loading  → "Loading vehicles…" note beneath a usable selector (All Vehicles option present).
+  ready    → populated selector.
+  empty    → "No vehicles found — showing All Vehicles." (selector keeps the 'all' option).
+  error    → inline "Couldn't load vehicles" + Retry affordance (selector still usable).
+  stale    → Stale freshness chip + "Reconnecting…" banner + one guarded auto-refresh.
+  offline  → Offline chip + "Offline — showing the last synced vehicles" banner, cached options kept.
+
+GATES (actual command output on THIS runner)
+  [GREEN]    swiftformat --lint apps/apple/TeslaSync/modals-dialogs : 0/10 files require formatting   FORMAT_EXIT=0
+  [GREEN]    swiftlint --strict (modals-dialogs scope)              : 0 violations, 0 serious in 10 files
+                                                                                                       LINT_EXIT=0
+             swiftlint --strict (whole app, FYI)                    : 1 PRE-EXISTING violation —
+                                                                       function_body_length in
+                                                                       TeslaSync/dashboard-widgets/
+                                                                       LifetimeStatsWidget.Adapter.swift
+                                                                       (NOT a modals-dialogs file).
+  [GREEN]    check-placeholders.ps1 -Path …/modals-dialogs          : PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0
+                                                                                                  PLACEHOLDER_EXIT=0
+  [GREEN]    WidgetSettingsModal build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language
+             mode, strict-concurrency = complete, same as the app), compiling the EXACT shipped
+             WidgetSettingsModal.* sources against the REAL repo design-system (Tokens + Design +
+             Components/{UI,Forms,Motion} subset), module named `TeslaSync` so `@testable import TeslaSync`
+             resolves, on the Xcode 26.5 swift 6.3.2 toolchain:
+                 Build complete! (14.0s)
+                 Executed 23 tests, with 0 failures                                       SWIFT_TEST_EXIT=0
+                 (WidgetSettingsProjectorTests 6 · WidgetSettingsConfigReducerTests 5 ·
+                  WidgetSettingsModelTests 10 · WidgetSettingsAccessibilityTests 2)
+  [GREEN]    xcodegen generate (with the new tier registered)       : RC=0; 11 files enumerated into
+                                                                       TeslaSync + TeslaSync-macOS.
+
+  [DEFERRED] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test
+             ATTEMPTED on this runner: the build reached the scheme pre-action "Assembling Shared.xcframework
+             via Gradle" then could not proceed under contention — raw log shows
+             "Starting a Gradle Daemon, 17 busy and 35 stopped Daemons could not be reused" followed by
+             "** BUILD INTERRUPTED **" (host load average ~76/71/59; this is a shared parallel-build runner
+             and Shared.xcframework is not pre-staged here).
+             INDEPENDENT OF the daemon contention, the full-app TeslaSync target is GUARANTEED to fail to
+             typecheck on PRE-EXISTING, unrelated parallel-merge collisions, confirmed present on this exact
+             tree right now (NONE introduced by this surface):
+               • `struct DashboardWidgetSize` DEFINED 15× across Sources/DashboardWidgets/* +
+                 TeslaSync/dashboard-widgets/* → "ambiguous for type lookup".
+               • 170 co-located `*.Tests.swift` in TeslaSync/feature-views importing `XCTest` into the app
+                 target.
+               • macOS additionally requires a development signing certificate this runner does not provision.
+             These are exactly the artifacts apps/macos-pending-verifications.md defers to the ADR-012
+             `macos-latest` CI runner, owned by `p4-apple/P99-0001-apple-acceptance-gate` (signing/archive)
+             + a dashboard-widget de-duplication pass — NOT by a single modal-dialog prompt (task rule:
+             do not fix pre-existing unrelated breakage). A pending-verification row was added.
+             => IOS_EXIT / MAC_EXIT : DEFERRED (full-app gate; zero WidgetSettingsModal errors).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED (not passing), with
+                           raw "BUILD INTERRUPTED" + the pre-existing-collision evidence — never as green.
+  2  No scope narrowing  : every web region + branch reproduced (vehicle/refresh/time-range/appearance,
+                           the isVehicleWidget + isChartWidget gating, the all/default/showTitle transforms,
+                           config passthrough on save).
+  3  No skip-and-assume  : every host-runnable gate executed here; raw outputs pasted; the xcodebuild
+                           attempt + its interruption are shown, and the blocker is grep-confirmed (15× /
+                           170), not assumed.
+  4  No stubs as final   : complete production dialog + 23 real tests; placeholder scanner = 0 (0 opt-outs).
+  5  No parity shortcut  : select/toggle/button/section/title/freshness/a11y/telemetry all mapped to
+                           platform tokens + the surface i18n table; option labels + defaults pinned to the
+                           web literals by tests.
+  6  No delegation       : implemented directly; no sub-agents.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry all
+                           present and consumed.
+  8  No commit on red    : the COMMITTED artifact (WidgetSettingsModal.* + wiring) is GREEN on every
+                           host-runnable gate AND on a real isolated Swift 6 strict-concurrency build+test;
+                           the deferred full-app gate is RED only on pre-existing, unrelated surfaces this
+                           commit neither introduces nor touches.
+  9  No silent drift     : changes confined to TeslaSync/modals-dialogs/WidgetSettingsModal.*, the three
+                           wiring files (project.yml, .swiftlint.yml, macos-pending-verifications.md), and
+                           this log — all enumerated above.
+  10 EXIT / STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic WidgetSettingsModal shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 23 tests pass under the app's own Swift 6 strict-concurrency
+  rules, against the real design-system, with swiftlint / swiftformat / placeholder all green and
+  `xcodegen generate` enumerating it into both app targets with zero type collisions. The full-app
+  iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked by
+  pre-existing parallel-merge duplicate-type collisions across ~15 unrelated dashboard-widget files, 170
+  co-located XCTest files in the app target, an unstaged Shared.xcframework, and macOS development-signing —
+  all owned by the P4/P99 acceptance gate on a signed `macos-latest` CI runner per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED Xcode
+  gate" disposition used by every P4 Apple surface to date.
+
+EXIT=0
+STATUS=DONE

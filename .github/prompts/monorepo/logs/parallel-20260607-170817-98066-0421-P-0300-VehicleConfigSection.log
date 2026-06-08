@@ -1,0 +1,22 @@
+I'll start by exploring the repository structure and checking the Apple toolchain availability, since this task requires SwiftUI/Swift Charts/MapKit and Xcode.
+
+Swift, swiftlint, swiftformat are present. `xcodebuild` exists but errored on `-version`. Let me investigate the Apple app structure and xcodebuild status.
+
+Key finding: **`xcodebuild` requires full Xcode but only Command Line Tools are installed** — so the build/test gate cannot run. But `swift`, `swiftlint`, `swiftformat` are present. There are 1438 existing feature-views, so a strong established pattern exists. Let me study it and read the web source.
+
+Now I have the web spec. Each native feature-view is a multi-file bundle (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`). `VehicleConfigSection` doesn't exist yet. Let me read the type definition and find the closest existing analog (a sibling vehicle-detail section) to mirror conventions exactly.
+
+None of the siblings are ported. I need to mirror the established pattern from the 1438 existing feature-views. Let me find the shared infrastructure (state holders, tokens, i18n, diagnostics, shared components) and read a complete representative bundle.
+
+Now I understand the layout. Shared infra is in `apps/apple/Sources/` (SharedFacade = P1/S8 state holders, Components = shared UI, Design = P1/S9 tokens, Localization = P1/S10). Let me read the shared component equivalents (GlassPanel, KVList, Skeleton), the state-holder pattern, and find a close analog feature-view to mirror.
+
+Only one domain state-holder exists (`VehicleSettingsModel`). The web component takes `vehicleConfig`/`softwareVersion` as **props** (only `useTranslation` as a "data source"), so it's presentational. Let me read the shared component equivalents and find the best analog feature-view that renders a KV/spec list from a snapshot.
+
+Now I have the native component names: `TSGlassPanel`, `TSKVList`/`TSKVRow`, `TSSkeleton`, `TSEmptyState`, `TSQueryError`. Let me read their exact APIs and the state-holder/loadable infrastructure.
+
+Now let me read the state-holder infrastructure (P1/S8) and find a feature-view analog that uses `TSKVList` + `TSGlassPanel` with the full state model.
+
+No feature-view uses `TSKVList`. Let me read the state-holder infra and pick a complete representative "Section" bundle to mirror. Let me find a structurally simple one.
+
+This uses the KMP `Shared` framework (StateFlow/Resource), which needs the Kotlin/Native toolchain. The section is presentational (props in), mirroring web. Let me read a complete analog `*Section` bundle to match conventions exactly.
+

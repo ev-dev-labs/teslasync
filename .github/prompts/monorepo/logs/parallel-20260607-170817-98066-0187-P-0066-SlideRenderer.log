@@ -1,0 +1,139 @@
+I'll start by exploring the repository structure and understanding what exists, then check runner capabilities.
+
+Key finding: **Xcode is NOT installed** — only Command Line Tools. `xcodebuild` fails, so iOS Simulator and macOS scheme builds can't run. Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me explore the web source and Apple app structure before deciding the path forward.
+
+No `Package.swift`/`.xcodeproj` — confirms Xcode project isn't checked in (matches CLT-only runner). Let me examine existing native conventions: the feature-views directory, a sample existing feature-view, and the shared facades (state holders, tokens, i18n, diagnostics).
+
+Rich existing native codebase with a clear per-surface multi-file convention. Critically, there's a `YearReviewWidget` and the web source uses `YearReview` data — let me find the native data model and check whether the slide sub-surfaces already exist. Also locating the i18n facade (S10), diagnostics (S11), and the placeholder checker.
+
+`pwsh` is available; native slide surfaces don't exist yet (fresh surface); `YearReviewWidget` already models the `YearReview` data. Let me study the YearReviewWidget set (closest data analog) and a complete state-rich feature-view to learn exact conventions.
+
+Excellent — the YearReview widget reveals the full native convention (Model/Adapter/View seams, telemetry, i18n facade, states). Now I need the web data shape and the slide composition details. Let me read the `YearReview` type, the slide components (to reproduce composition faithfully), the design tokens, and find the web consumer/page of SlideRenderer.
+
+Now I have strong template references. Let me read the web `YearReview` type, the consumer page, all slide components (to reproduce composition + i18n keys faithfully), and locate the design tokens (`TSSpacing`, `TSRadius`, `Color.TS`, `Font.TS`).
+
+The web SlideRenderer is a dispatcher + motion transition; its consumer `YearReviewPage` owns loading/empty. The artifact's own i18n scope is just the two drive-highlight labels. To faithfully reproduce composition without stubs, I'll read all 10 slide components, the rest of the `YearReview` type, and locate the generated design tokens.
+
+Let me read the remaining 5 slides, the rest of the `YearReview` type, and locate the generated design-token definitions to confirm exact token names.
+
+I now have the complete data model and every slide's composition + i18n keys. Let me locate the generated design tokens, the Xcode project/manifest mechanism, lint/format configs, the placeholder checker, and a sample feature-view to confirm conventions.
+
+Critical placeholder-checker constraint: my Swift must avoid "TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented" (case-insensitive). Now let me pin the design-token definitions and read the project manifest + lint/format configs.
+
+XcodeGen auto-includes `TeslaSync/feature-views/` — no manifest edit needed. Tokens come from `apps/design/generated/apple`. Let me read the generated tokens, the swiftformat config, and a sample feature-view (`RateLimitStatusPanel`) to confirm feature-view conventions (vs dashboard-widget).
+
+Let me read the generated tokens and the rest of the `RateLimitStatusPanel` set (Model, Previews, Tests) to lock the exact token API, i18n facade with `{{placeholder}}` substitution, telemetry seam, and preview/test conventions for feature-views.
+
+I now have all conventions locked: tokens, feature-view seams (Telemetry/Model/Adapter/Views/Previews/strings/Tests), the i18n facade with `{{name}}` interpolation, and Swift 6 strict concurrency. Before writing, let me probe whether the Command-Line-Tools `swift` can typecheck SwiftUI + Swift Charts + Observation against the macOS SDK — that determines whether I can really compile-verify my sources (since `xcodebuild` needs full Xcode).
+
+Confirmed: the CLT `swift` typechecks SwiftUI + Charts + Observation against the macOS SDK (RC=0). So I can genuinely compile-verify my sources even though full `xcodebuild` (the gate) needs Xcode. Let me confirm the Xcode situation and logs dir, then set up tracking.
+
+`/Applications/Xcode.app` exists, but `xcode-select` points at CLT. I may be able to use full Xcode via `DEVELOPER_DIR` without sudo — which could unblock the real gate. Let me probe.
+
+Full Xcode 26.5 with an "iPhone 16" simulator is reachable via `DEVELOPER_DIR` — the real gate may be runnable. But the project needs `xcodegen` + a KMP `Shared.xcframework` (built by a preAction script). Let me check those prerequisites.
+
+`Frameworks/Shared.xcframework` is absent (the KMP core). The whole app target links/imports it, so a full `xcodebuild` of the app scheme depends on building that framework. Let me read the staging script to see if it's runnable here.
+
+The full app gate needs a KMP `Shared.xcframework` (Gradle/Kotlin-Native) that 17 `Sources/` files import. I'll kick that heavy build off in the background while I write code, and rely on rigorous isolated `swiftc` verification (iOS + macOS SDKs, Swift 6 strict concurrency) for my own files. Let me start the framework build and the project generation, then begin writing.
+
+The KMP build got far (Kotlin/Native cached) but failed only because its linker called `xcrun` against the CLT. Setting `DEVELOPER_DIR` to full Xcode should fix it. Retrying — this may take a few minutes.
+
+The KMP framework is linking in the background (heavy). Meanwhile I'll write code. One parity detail matters for exact value formatting: how the web `AnimatedNumber` renders numbers (grouping?). Let me read it, then start authoring. Let me also set up the plan/todos.
+
+`AnimatedNumber` uses grouped `fmtNumber`; direct JSX `Math.round(...)` values are plain. I'll mirror both (grouped for headline quantities, plain for `Math.round` values, ungrouped year). Now writing the Foundation-only Adapter (data model + dispatch + projector).
+
+The KMP framework build finished — let me check the result, as it may unblock the real gate.
+
+The KMP `Shared.xcframework` built successfully (debug + release) in ~7.5 min — so the **full `xcodebuild` gate is now feasible**. I'll finish all files, verify my code in isolation first (fast), then run the real gate. Continuing with the Model layer.
+
+Let me quickly typecheck the two Foundation-only files (Adapter + Model) in isolation before building the SwiftUI layer on top — catching errors early under the project's exact Swift 6 strict-concurrency settings.
+
+Adapter + Model typecheck clean under Swift 6 strict concurrency. Now the SwiftUI Views layer (slide bodies + Swift Charts).
+
+Now the main `SlideRenderer` view: the dispatch + motion transition + load/empty/error states + freshness chip + accessibility, plus the SwiftUI `SRStrings.text` helper.
+
+Now let me fix two SwiftUI gotchas in the Views before compiling: `@ViewBuilder` initializers for the container views, and a dynamic `ForEach` range. Then typecheck the whole SwiftUI set against the iOS and macOS SDKs.
+
+All four production files typecheck clean on **both iOS 18 and macOS 15** under Swift 6 strict concurrency. Now the Previews and the i18n catalog.
+
+Production files written. Before writing test literals, let me build an executable harness (Adapter + Model) to **confirm the exact projected values at runtime** — so my test expectations are verified, not guessed.
+
+Harness driver hit a Swift-6 main-actor isolation nit (top-level `failures` var) — just the test driver, not my sources. Let me annotate the helpers and rerun.
+
+All runtime logic checks pass (`FAILURES=0`) — every projected value is now confirmed (incl. miles: distance "11,520", longest "399"/"254 Wh/mi"). Writing the XCTest suite with these verified literals.
+
+Let me fix one optional-handling slip in the tests (double-optional from `try? XCTUnwrap`), then format and lint my files.
+
+Now let me format-lint and strict-lint my files, plus run the placeholder gate on them.
+
+Two things surfaced: swiftlint `--strict` enforces ≤400 lines/file, ≤120-char lines, and ≤10 cyclomatic complexity — so I must split files (matching the repo's multi-file convention) and auto-format. But first, a critical wiring question: the `*.Tests.swift` files live in `feature-views/` (an app-target source path) yet do `@testable import TeslaSync`. Let me verify how tests are actually built before finalizing.
+
+Decisive finding: the repo's own `macos-pending-verifications.md` documents that the **full-app `xcodebuild build test` is blocked by pre-existing, unrelated collisions** (`DashboardWidgetSize` redefined 8×, co-located `*.Tests.swift` importing XCTest into the app target, signing) — and the established bar for a feature-view is "isolated build + tests green under Swift 6 strict concurrency + swiftlint/swiftformat/placeholder clean" (the sibling ToolCard precedent). My `xcodebuild` step will thus be BLOCKED by out-of-scope issues I'm not allowed to touch.
+
+So I'll: split files to satisfy `--strict` (≤400 lines), match the existing Previews convention, then verify via an isolated SwiftPM build + `swift test`. Let me check the Previews convention and Model length.
+
+Conventions confirmed: Previews wrap in `#if DEBUG` **with indented bodies**, and every existing file is ≤396 lines. I'll split my 3 oversized files into the repo's multi-file pattern, fix the Previews indentation, then auto-format and strict-lint. Starting the split — creating the Catalog, Slides, Projector, and Accessibility files extracted from the Adapter.
+
+Now I'll trim the Adapter to only constants/units/format/DTOs (the rest moved to the new files). Recreating it cleanly.
+
+Now splitting the Views file into Chrome + Views + CardViews (making shared helpers internal so they cross files).
+
+Now splitting the Tests into Tests + ModelTests, fixing the Previews indentation, and the one long line in the main view.
+
+Now rewriting Previews with proper `#if DEBUG` indentation and short lines, then auto-formatting all files.
+
+Now auto-formatting all my files in place, then strict-linting to catch remaining issues.
+
+Down to a single issue: CardViews is 417 lines (>400). I'll split out Patterns/Comparisons/Summary into a new file. Let me find the split point.
+
+I'll move Patterns/Comparisons/Summary into a new `SummaryViews.swift` file and truncate CardViews.
+
+Clean: **swiftlint --strict and swiftformat --lint both pass**, all files ≤351 lines. Let me re-typecheck the now-split production set on iOS + macOS (with DEBUG to include Previews), and run the placeholder gate on my files.
+
+Both iOS 18 + macOS 15 typechecks pass (incl. Previews); placeholder count is 0. Now the strongest verification, matching the ToolCard precedent: an **isolated SwiftPM package that compiles all production files and actually runs the XCTest suite** under Swift 6.
+
+Library builds clean. Now running the actual test suite:
+
+Test files have argument-ordering errors (Swift requires labeled args in declaration order). Let me fix the reordered `YearReviewSnapshot(...)` calls in both repo test files, then re-run.
+
+Re-copying the fixed tests into the package and re-running `swift test`:
+
+**All 42 tests pass, 0 failures** under the isolated SwiftPM package (Swift 6, macOS). Let me re-lint the edited test files, then run the actual `xcodebuild` gate to capture evidence (expected to hit the documented pre-existing collisions).
+
+All my files pass swiftlint --strict + swiftformat --lint, lines ≤120. Now staging the framework, generating the Xcode project, and attempting the real gate (capturing evidence).
+
+Project generated. Now running the iOS Simulator `build test` gate (captures evidence; expected to hit the documented pre-existing collisions). This compiles the whole app, so it's slow.
+
+The build is compiling. Let me wait for it to reach the app-target compile (where the documented collisions surface).
+
+The background job was torn down with the sync session. Let me relaunch the build as a properly detached process writing to a log, then poll it.
+
+Build relaunched detached. Let me wait for it to reach the app-target compile where the documented collisions surface.
+
+iOS gate `IOS_EXIT=65`. The first failure is exactly the documented pre-existing blocker: `AuditPanel.Tests.swift … Unable to resolve module dependency: 'XCTest'` — co-located `*.Tests.swift` importing XCTest into the app target. Let me characterize the full error set and confirm zero errors in my non-test SlideRenderer source.
+
+Definitive: iOS gate `BUILD FAILED / TEST FAILED (65)`, and the **only** errors are the documented pre-existing blocker (`AuditPanel.Tests.swift … 'XCTest'` — co-located tests in the app target). **Zero SlideRenderer errors.** Let me launch the macOS leg (same determined outcome) and write the gate log meanwhile.
+
+While macOS builds, let me run the remaining gate steps (whole-tree swiftlint/swiftformat and the placeholder command) to capture their exit codes.
+
+`swiftformat --lint` whole-tree is clean (0). `swiftlint --strict` found **1 violation** in 778 files — I need to confirm it's not mine (my files passed in isolation). macOS build also finished. Let me identify the violation and read the macOS result.
+
+Both gate legs are BLOCKED by **pre-existing/environmental** issues, with **zero SlideRenderer errors**:
+- iOS: co-located `*.Tests.swift` importing XCTest into the app target (`AuditPanel.Tests.swift`).
+- macOS: development-signing requirement on `TeslaSync-macOS`.
+- The 1 whole-tree swiftlint violation is pre-existing (`LifetimeStatsWidget.Adapter.swift`), not mine.
+
+Let me run the literal placeholder gate command and confirm my files are untouched-clean, then write the gate log.
+
+Scope confirmed clean: only my `SlideRenderer.*` files are new; nothing out-of-scope modified; placeholder count 0. Now writing the gate log with all evidence, then committing.
+
+All evidence in hand; generated artifacts are git-ignored. Writing the gate log.
+
+Now cleaning up generated build artifacts and committing only my in-scope files + the log.
+
+Worktree is clean — exactly my 15 `SlideRenderer.*` files plus the log. Committing.
+
+Committed (`47178d1e`). Final confirmation that the committed files pass the in-scope gates and the tree is clean.
+
+Done. Final state: committed `47178d1e`, working tree clean, all 14 committed Swift files pass `swiftlint --strict` + `swiftformat --lint`.
+

@@ -1,0 +1,96 @@
+=== P4 Dashboard widget 0045 EnergyFlowAnimatedWidget (Apple) ===
+Surface : EnergyFlowAnimatedWidget  (registry id: energy-flow-animated)
+Web src : web/src/features/dashboard/widgets/EnergyFlowAnimatedWidget.tsx
+Native  : apps/apple/TeslaSync/dashboard-widgets/EnergyFlowAnimatedWidget.*
+Runner  : Darwin (arm64), Apple Swift 6.3.2 (Target arm64-apple-macosx26.0)
+
+--------------------------------------------------------------------------------
+CAPABILITY (Honesty Covenant #1 / capability clause)
+--------------------------------------------------------------------------------
+xcode-select -p           => /Library/Developer/CommandLineTools   (Command Line Tools only — no Xcode.app)
+xcodebuild -version       => xcode-select: error: tool 'xcodebuild' requires Xcode, but active
+                             developer directory '/Library/Developer/CommandLineTools' is a command
+                             line tools instance
+Consequence: the iOS/iPadOS/macOS app-target build+test gate (SwiftUI app targets, iOS Simulator,
+XCTest, KMP Shared.xcframework staging) CANNOT run on this runner. XCTest.framework is also absent
+(it ships with Xcode, not the Command Line Tools). These steps are BLOCKED by runner capability,
+not by code defects. Per the prompt: "If unavailable on the runner -> STATUS=BLOCKED with evidence."
+
+Available + used for verification: swift 6.3.2 (+ macOS SDK), swiftlint, swiftformat, pwsh.
+
+--------------------------------------------------------------------------------
+DELIVERABLE (all under the allowed glob EnergyFlowAnimatedWidget.*)
+--------------------------------------------------------------------------------
+EnergyFlowAnimatedWidget.swift              161  main View + WidgetShell chrome + registration
+EnergyFlowAnimatedWidget.Model.swift        319  sample, P1/S8 provider seam, @Observable model, P1/S11 diagnostics, registry types
+EnergyFlowAnimatedWidget.Presentation.swift  89  pure (state,offline,size) -> presentation adapter (testable)
+EnergyFlowAnimatedWidget.Diagram.swift      242  animated node/arrow energy diagram (Canvas + TimelineView, reduce-motion)
+EnergyFlowAnimatedWidget.Support.swift      174  i18n strings, palette, formatting, compact fallback, a11y summary
+EnergyFlowAnimatedWidget.Previews.swift      68  8 #Preview states (driving/charging/regen+stale/loading/empty/error/offline/compact)
+EnergyFlowAnimatedWidget.Tests.swift        358  adapter + per-state + arrows + layout + i18n + a11y + diagnostics + registry tests
+
+States rendered (parity with web + P4 state matrix): loading / empty / error / stale / offline / loaded(diagram|compact).
+i18n: 7 canonical web keys widget.energyFlowAnimated.{title,idle,battery,drive,regen,charger,noData}
+      resolved via String(localized:defaultValue:) (keyed + English default; P1/S10 catalog owns translation).
+Data : injected EnergyFlowProviding state-holder seam (no HTTP in the view); host wires useVehicles+useVehicleState.
+Telemetry: EnergyFlowDiagnostics.viewOpened(surface:"EnergyFlowAnimatedWidget") on start (P1/S11).
+
+--------------------------------------------------------------------------------
+GATE STEPS
+--------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    => IOS_EXIT=1   BLOCKED (xcodebuild requires Xcode; CLT-only runner — evidence above)
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    => MAC_EXIT=1   BLOCKED (same cause)
+[3] swiftlint --strict   (7 widget files, explicit paths)
+    => LINT_EXIT=0   "Found 0 violations, 0 serious in 7 files"
+[4] swiftformat --lint   (TeslaSync/dashboard-widgets)
+    => FORMAT_EXIT=0  "0/7 files require formatting"
+[5] ./apps/tools/check-placeholders.ps1 (Language swift, dir scan)
+    => PLACEHOLDER_EXIT=0  PLACEHOLDER_COUNT=0 ; -SelfTest SELFTEST_EXIT=0 (gate proven functional)
+
+--------------------------------------------------------------------------------
+SUPPLEMENTARY VERIFICATION  (run in lieu of the blocked xcodebuild compile/test)
+--------------------------------------------------------------------------------
+Method: type-check the REAL source against the macOS SDK with faithful, signature-accurate shims
+for the in-module dependencies (Color.TS/Font.TS/TSSpacing/TSRadius from design/generated/apple
+Tokens.swift; LoadableState + FacadeError; TSSkeleton/TSQueryError/TSEmptyState/TSBadge/TSFreshnessIndicator).
+Per-file imports are enforced because Swift `import` is file-scoped (all files compiled together still
+require each file to import what it uses).
+
+swiftc -parse  (all 7 files)                                                  => OK (7/7)
+swiftc -typecheck  source (Model/Presentation/Support/Diagram/MainView)
+        -swift-version 6  -strict-concurrency=complete                        => EXIT=0  (matches project SWIFT_VERSION 6.0 + complete)
+swiftc -typecheck  preview bodies (#Preview rewritten to funcs, -D DEBUG)     => EXIT=0  (all 8 preview states)
+swiftc -typecheck  test logic (XCTest shim), -swift-version 6 strict          => EXIT=0
+XCTest run                                                                    => BLOCKED (XCTest framework absent under CLT) — test LOGIC verified by typecheck
+
+Notes: zero compiler warnings (deprecated Text(+) concatenation removed in favour of String
+composition); the only non-error diagnostics encountered during development (swiftformat wrapping,
+swiftlint file_length/type_body_length/void_function_in_ternary) were all resolved (file split into
+focused units; enum-case ternaries -> if-expressions; @MainActor on the async test helper).
+
+--------------------------------------------------------------------------------
+PROJECT-WIRING NOTE (outside this surface's allowed files)
+--------------------------------------------------------------------------------
+The files live at the prompt's literal path apps/apple/TeslaSync/dashboard-widgets/, which is a
+sibling of the XcodeGen Sources/ group rather than inside it. For the xcodebuild gate to compile and
+run them, this directory must be added to project.yml's TeslaSync + TeslaSync-macOS (sources) and
+TeslaSyncTests (sources) targets. That is P4-core project wiring and is outside this surface's
+allowed-files scope (apps/apple/TeslaSync/dashboard-widgets/EnergyFlowAnimatedWidget.* + this log).
+
+--------------------------------------------------------------------------------
+PARITY NOTES
+--------------------------------------------------------------------------------
+- Diagram: battery(left)/drive(right)/charger(top) nodes; arrows battery->drive (cyan, consuming),
+  drive->battery (emerald, regen), charger->battery (amber, charging); stroke weight scales with
+  |value|; active edges march (animated dash, 0.8s) and pause under Reduce Motion. Cyan/emerald/amber
+  map to Color.TS.chartSeriesRegen/Battery/Energy (hue-matched to the web tailwind colors).
+- Thresholds preserved from web: power>0.5 consuming, power<-0.5 regen; |power| kW (1 dp), charger kW
+  (0 dp in compact / a11y), battery %. Node numeric values render 1-dp like the web AnimatedNumber.
+- Compact fallback (cols<2) reproduced: battery% + charger/consume/regen chip or Idle.
+- Accessibility: header is a header trait; refresh button labelled; diagram + compact expose a single
+  localized VoiceOver summary; Reduce-Motion respected on arrows + skeleton.
+
+EXIT=1
+STATUS=BLOCKED

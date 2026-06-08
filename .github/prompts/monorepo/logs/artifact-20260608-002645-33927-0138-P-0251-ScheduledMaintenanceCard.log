@@ -1,0 +1,145 @@
+=== P4 Feature view 0251 ScheduledMaintenanceCard (Apple) ===
+Date: 2026-06-08
+Web source (spec): web/src/features/system/components/status/ScheduledMaintenanceCard.tsx
+Native output:    apps/apple/TeslaSync/feature-views/ScheduledMaintenanceCard.*
+
+------------------------------------------------------------------
+TOOLCHAIN / CAPABILITY
+------------------------------------------------------------------
+swift            : Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)
+Xcode            : 26.5 (17F42) at /Applications/Xcode.app  (via DEVELOPER_DIR;
+                   xcode-select default is /Library/Developer/CommandLineTools)
+iOS simulator    : iOS 26.5 runtime + booted "iPhone 16" present
+swiftlint        : 0.63.3
+swiftformat      : 0.61.1
+pwsh             : present (placeholder gate runnable)
+JDK              : OpenJDK 17.0.19 (Kotlin/Native build runnable)
+
+------------------------------------------------------------------
+SURFACE FILES (all <= 400 lines, SwiftLint file_length budget)
+------------------------------------------------------------------
+ScheduledMaintenanceCard.swift            111   composed surface (TSGlassPanel + variant ring)
+ScheduledMaintenanceCard.Model.swift      374   telemetry/connection/input/resolved/projection/seam/view-model/strings
+ScheduledMaintenanceCard.Sources.swift    111   in-memory + controllable MaintenanceControlling seams
+ScheduledMaintenanceCard.Adapter.swift    399   pure core: mode/date/status/plan/outcome/toast/a11y
+ScheduledMaintenanceCard.Views.swift      360   header/banner/active/chrome/toast
+ScheduledMaintenanceCard.Form.swift       221   scheduler intro + inline schedule form
+ScheduledMaintenanceCard.Previews.swift   143   11 #Preview states
+ScheduledMaintenanceCard.Tests.swift      320   adapter + projection unit tests
+ScheduledMaintenanceCard.ModelTests.swift 215   state-holder lifecycle tests
+ScheduledMaintenanceCard.strings           65   P1/S10 i18n catalog (34 keys)
+
+------------------------------------------------------------------
+PARITY (web branches reproduced; every state renders)
+------------------------------------------------------------------
+- Data shapes: useMaintenanceState (GET /admin/maintenance) -> MaintenanceSnapshot
+  (mode ok|degraded|maintenance, maintenance_message, maintenance_until);
+  useUpdateMaintenance (POST /admin/maintenance) -> MaintenanceUpdateRequest {mode,message,until}.
+- Status arithmetic ported verbatim: isActive (mode==maintenance), untilTs (Date.parse),
+  minutesToStart (floor((until-now)/60000)), within24h (active && 0 < until-now <= 24h).
+- handleSchedule: durMin = max(5, Number(duration) || 60); end = start + dur;
+  default message "Scheduled maintenance . ends {dt}"; until = ISO(end). Validation
+  branches: "Pick a start time." / "Invalid start time.".
+- handleClear: {mode:ok,message:'',until:null}.
+- Toasts (useToast): scheduled / cleared / pick-start / invalid-start / "Failed to schedule"
+  / "Failed to clear maintenance" (server message preferred, web err.message).
+- Variant ring: amber within 24h, blue active (web ring-amber-400/40 / ring-blue-400/30).
+- P4 leaf contract added on top: loading / empty(no-record) / error(+retry) / data, plus
+  the orthogonal live|stale|offline freshness chip + banner with one-shot stale auto-refresh.
+- i18n: all 34 strings via the P1/S10 facade (ScheduledMaintenanceCardStrings); no English
+  literals in Swift. VoiceOver labels on every interactive control; Dynamic Type via tokens;
+  Reduce Motion honoured (TSFadeIn / TSSkeleton). Telemetry: view.opened surface=
+  ScheduledMaintenanceCard (P1/S11).
+
+------------------------------------------------------------------
+GATE STEPS
+------------------------------------------------------------------
+[1] iOS-Simulator full-app build/test
+    cmd: DEVELOPER_DIR=.../Xcode.app xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync \
+         -destination 'platform=iOS Simulator,name=iPhone 16' build  (CODE_SIGNING_ALLOWED=NO)
+    result: ** BUILD FAILED ** at apps/apple/TeslaSync/feature-views/AIRestorePanel.Tests.swift:18
+            error: unable to resolve module dependency: 'XCTest'
+    -> PRE-EXISTING, UNRELATED: the app target's source glob (project.yml: path
+       TeslaSync/feature-views) pulls every co-located *.Tests.swift / *.ModelTests.swift
+       into the app module, which cannot import XCTest. Build halts at AIRestorePanel
+       (alphabetically first), never reaching this surface. ScheduledMaintenanceCard errors: 0.
+    IOS_EXIT=65
+
+[2] macOS full-app build/test
+    cmd: DEVELOPER_DIR=.../Xcode.app xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync-macOS \
+         -destination 'platform=macOS' build  (CODE_SIGNING_ALLOWED=NO)
+    result: ** BUILD FAILED ** -> same pre-existing co-located-XCTest collision
+            (first run also surfaced macOS development-signing; bypassed with
+            CODE_SIGNING_ALLOWED=NO). ScheduledMaintenanceCard errors: 0.
+    MAC_EXIT=65
+
+[3] swiftlint --strict
+    cmd: cd apps/apple && swiftlint lint --strict --config .swiftlint.yml ScheduledMaintenanceCard.*
+    result: Done linting! Found 0 violations, 0 serious in 9 files.
+    LINT_EXIT=0
+
+[4] swiftformat --lint
+    cmd: swiftformat --lint ScheduledMaintenanceCard.* (config apps/apple/.swiftformat)
+    result: 0/9 files require formatting.
+    FORMAT_EXIT=0
+
+[5] placeholder gate
+    cmd: pwsh apps/tools/check-placeholders.ps1 -Path <surface files> -Language swift
+    result: PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+    (the literal gate path '.../feature-views/ScheduledMaintenanceCard' is a flat-file prefix,
+     not a directory, so the script treats it as a vacuous clean scan; the meaningful scan
+     above runs the same script over the actual 10 surface files.)
+    PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------
+ISOLATED SURFACE VERIFICATION (this surface is green)
+------------------------------------------------------------------
+[A] swiftc -typecheck, macOS 15 SDK, -swift-version 6 (strict concurrency complete),
+    production (6 files) + shared component library + design tokens:
+      errors=0 warnings=0
+[B] swiftc -typecheck, iOS 18 simulator SDK, -swift-version 6, production (6 files):
+      errors=0
+[C] swiftc -typecheck of Previews (11 #Preview bodies) + DEBUG seams: errors=0
+[D] swiftc -typecheck of Tests + ModelTests against the real Adapter/Model/Views: errors=0
+[E] Isolated SwiftPM build + XCTest run (Xcode 26.5 toolchain, Swift 6 language mode,
+    macOS 15), surface sources + shared component island + tokens as one module:
+      Test Suite 'All tests' passed.
+      Executed 44 tests, with 0 failures (0 unexpected).
+      (MaintenanceModeTests, MaintenanceDateFormatTests, MaintenanceStatusTests,
+       MaintenanceSchedulePlanTests, MaintenanceToastTests, MaintenanceAccessibilityTests,
+       MaintenanceCardProjectionTests, ScheduledMaintenanceCardModelTests)
+[F] xcodegen generate: EXIT=0; project enumerates the 10 surface files (60 pbxproj refs).
+[G] KMP Shared.xcframework: `./gradlew :core:assembleSharedXCFramework` BUILD SUCCESSFUL;
+    staged to apps/apple/Frameworks/Shared.xcframework (ios-arm64, ios-arm64-simulator,
+    macos-arm64). This removes the "unstaged Shared.xcframework" blocker noted for prior
+    surfaces; the remaining full-app blocker is the co-located-XCTest collision (infra).
+
+------------------------------------------------------------------
+PRE-EXISTING / OUT-OF-SCOPE (full-app gate deferral)
+------------------------------------------------------------------
+Per apps/macos-pending-verifications.md, prior P4-apple feature views (ToolCard P-0010,
+AlertMessageEditor 0180, FSMTimelineChart 0231) record the IDENTICAL state: surface verified
+green in isolation, full-app `xcodebuild build test` deferred to the
+p4-apple/P99-0001-apple-acceptance-gate (macos-latest with signing identities), blocked by
+pre-existing parallel-merge collisions (co-located *.Tests.swift importing XCTest into the app
+target; struct DashboardWidgetSize / PowerFlowConnection redefined Nx; macOS dev-signing).
+These collisions live in OTHER files and the shared project.yml source globs; fixing them is
+outside this prompt's allowed-files scope (ScheduledMaintenanceCard.* + this log) and would be
+a repo-wide infra change. No predecessor bypass, no scope narrowing applied.
+
+------------------------------------------------------------------
+RESULT
+------------------------------------------------------------------
+IOS_EXIT=65   (pre-existing app-target XCTest collision; 0 ScheduledMaintenanceCard errors)
+MAC_EXIT=65   (same pre-existing collision; 0 ScheduledMaintenanceCard errors)
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+Surface ScheduledMaintenanceCard: GREEN (typecheck iOS-18 + macOS-15 Swift 6; 44/44 tests;
+swiftlint --strict clean; swiftformat --lint clean; placeholder clean; xcframework built+staged).
+Full-app iOS/macOS `xcodebuild build test`: BLOCKED on pre-existing, unrelated infra
+(macOS-pending; deferred to P99 acceptance gate), consistent with the documented precedent.
+
+EXIT=65
+STATUS=BLOCKED

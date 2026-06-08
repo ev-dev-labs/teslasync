@@ -1,0 +1,144 @@
+I'll start by exploring the repository structure and verifying the Apple toolchain capability, since this task has strict requirements about platform availability.
+
+Key finding: `xcodebuild` is **not functional** (only Command Line Tools, no full Xcode), but `swift` 6.3.2, `swiftlint`, and `swiftformat` ARE available. Let me explore the Apple app structure and verify SwiftUI/Swift Charts/MapKit availability before deciding the path forward.
+
+Excellent news: **SwiftUI + Charts + MapKit type-check PASSES** with `swiftc` (the macOS 26 CommandLineTools SDK includes them). Only `xcodebuild -scheme` is unavailable. So the capability exists. Let me explore the existing Apple app structure to follow established patterns.
+
+The `feature-views/` dir has 1438 entries — many sibling surfaces exist. Let me examine the established pattern, check if `LiveMotorStatus.*` already exists, and locate the build setup and shared dependencies.
+
+`LiveMotorStatus.*` **already exists** with 7 substantial files (Model 14KB, Adapter 13KB, Tests 17KB, etc.). Build system is **xcodegen** (`project.yml`). I need to understand the current state of these files — whether they're complete, stubbed, or broken. Let me read them all.
+
+Critical discrepancy found. The **existing** Swift files are for prompt **0170**, referencing web source `features/driving/components/driving-dynamics/LiveMotorStatus.tsx` (radial gauges: Torque/RPM/Motor). But **my prompt is 0157**, referencing `features/driving/components/drivetrain-health/LiveMotorStatus.tsx` (a metric grid: Shift/Power/Regen/Source + RPM/Torque/Temp metrics). These are two different web components colliding on the same native path. Let me investigate.
+
+Now I understand the collision clearly:
+- **0170** (already committed, log exists) → `driving-dynamics/LiveMotorStatus.tsx` (radial gauges) → occupies `LiveMotorStatus.*`
+- **0157** (my task, no log yet) → `drivetrain-health/LiveMotorStatus.tsx` (metric grid)
+
+Both web components share the basename `LiveMotorStatus.tsx`. The entire Apple app already exists (1436 feature-view files). I need to understand how the codebase handles such basename collisions before acting. Let me investigate precedent.
+
+Confirmed: my drivetrain-health keys (`drivetrain.liveMotor`, "No live motor telemetry yet") appear **nowhere** in feature-views — my surface is genuinely unimplemented. There are 10 basename collisions in the web codebase. Let me see how the other 9 collisions were resolved natively to follow precedent.
+
+Precedent is clear: collisions resolve to **at most one** native surface per basename — there is NO disambiguation-suffix pattern. 0170 already claimed `LiveMotorStatus.*` for driving-dynamics. This is a genuine design collision. Let me check the parity manifest and the 0170 log to find the authoritative resolution convention before deciding.
+
+The 0170 log reveals it ran on a **different host with full Xcode 26.5** (via `DEVELOPER_DIR` override) and used "code-complete + host-executed gates + DEFERRED Xcode build/test" mode. Let me check whether full Xcode exists on THIS host and read the rest of the 0170 log — it's the template for conventions, gate handling, and STATUS reporting I should mirror.
+
+**Critical update:** Full Xcode 26.5 **IS available on this host** via `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`. The 0170 log gives me the exact methodology template (capability probe → artifact → parity → host-executed gates → swiftlint/swiftformat/placeholder). 
+
+Now I must resolve the collision correctly. Let me check how the OTHER collision prompts were resolved — especially whether any logged STATUS=BLOCKED for a taken basename — and find the prompts manifest.
+
+**This is the decisive precedent.** Multiple HeroGauges prompts (0058, 0103, 0143) ran for its 3 colliding web sources. Notably:
+- **0103**: "SURFACE-NAME COLLISION (disclosed — Covenant #9 no silent drift)" → STATUS=DONE
+- **0143**: "SURFACE COLLISION RESOLUTION (why HeroGauges.* is **overwritten**)" → STATUS=DONE
+
+So the sanctioned convention is: the later collision-prompt **overwrites** the shared `<Basename>.*` with ITS web source's parity and **discloses** it in the log. Let me read the exact disclosure pattern from 0143 and 0103.
+
+The precedent is now authoritative and complete. The convention is **last-writer-wins per basename + disclosure** (Covenant #9). 0143 overwrote `HeroGauges.*`; "predecessor" = shared infra only, NOT a sibling same-name surface. The gate methodology is "code-complete + host-executed gates (swiftc both SDKs + swift test via SwiftPM harness + swiftlint/swiftformat/placeholder) + DEFERRED full-app xcodebuild" (pre-existing project-wide collision, outside allowed files).
+
+**Decision:** Overwrite `LiveMotorStatus.*` with the drivetrain-health parity (I'm the last writer), fully disclosed in the log. Let me set up tracking and gather all source material.
+
+I fully understand the 0170 seam architecture now. Let me gather the remaining parity sources: web helpers/types and the native shared component APIs.
+
+Now I have full web parity data. The drivetrain-health source needs more `MotorSnapshot` fields than 0170 (adds power_kw, regen_kw, source, rpm_rear, torque_rear, inverter/battery temps, isolation). Let me locate the native shared tokens/components I'll bind to, and read the 0170 Tests + the exact gate harness from the log.
+
+Let me locate the generated color/font/spacing tokens and the Badges/Cards/Typography APIs.
+
+The main-app token definitions aren't in `Sources/` — likely generated. But I just need to *use* the same `Color.TS.*` tokens the sibling feature-views use. Let me find the generated tokens file and enumerate the available color tokens.
+
+Found it: `apps/design/generated/apple/Tokens.swift` (gitignored but present on disk). Let me read it to enumerate available color/font/spacing tokens.
+
+Complete token palette confirmed. Now let me read the remaining shared components I'll bind to (Cards/Skeletons/Badges/Typography + any DataDisplay metric tile), plus the 0170 Tests to mirror structure and the exact gate harness from the 0170 log.
+
+`DataDisplay/Metrics.swift` likely holds the native `InlineMetric`. Let me read it + Typography + the web `InlineMetric` source for parity, plus the 0170 Tests and the gate-harness section of the 0170 log.
+
+I now have all shared component APIs. The web `InlineMetric` renders `[icon][value][label-name]` with per-metric colored icons — so I'll build custom tiles (like 0170 did) rather than the icon-less `TSInlineMetric`. Let me read the 0170 Tests for structure parity and the exact gate-harness commands from its log.
+
+I have the complete methodology template. Before overwriting, I must verify (honesty rule 3) that no code *outside* the 7 `LiveMotorStatus.*` files references the 0170-specific types/strings I'll replace, and confirm `project.yml` includes feature-views as a directory glob.
+
+Important: `MotorSnapshotInput` is **also referenced by dashboard-widgets** (`MotorPerformanceWidget`/`MotorHistoryWidget`) with different initializer fields (`diTorque`, `diStatorTemp`, `gear`, `lateralAccel`…). This is the known pre-existing baseline-red type-collision soup the 0006/0058 logs documented. I must confirm whether widgets *define* their own `MotorSnapshotInput` (so renaming mine is safe and reduces collisions) vs. *depend* on 0170's. Let me check all definitions.
+
+The collision landscape is clear: `MotorSnapshotInput` already has a pre-existing **3-way** definition collision (2 widgets + 0170) — part of the documented baseline-red full-app state. The `LiveMotor*` canonical types are unique to the surface (safe to keep when I overwrite). I'll rename my DTO to `LiveMotorReading` to reduce the collision footprint. Let me read the lint configs and scan the component-closure imports to build a clean isolated gate harness, and write my plan.
+
+Lint configs understood (line_length error 160, type_name ≤60, file ≤400 lines; swiftformat maxwidth 120 with specific wrap rules). Component closure uses only system frameworks (SwiftUI/Charts/MapKit/CoreLocation/Foundation) — no custom Shared module needed. Let me verify the `.tsGlassPanel()` modifier and `TSButton`/`TSInlineCallout` (closure deps), then write my plan and start authoring.
+
+Everything verified. The component closure (41 files in Components+Design) uses only system frameworks — clean for an isolated harness. I have full parity data, the seam architecture, token mappings, lint rules, and the gate methodology. Let me write the plan and begin authoring (overwriting 0170's files = sanctioned last-writer-wins).
+
+Now authoring the 7 files. Starting with the Model (P1/S8 seam + P1/S11 telemetry + P1/S10 facade).
+
+Model done. Now the Adapter (pure projector + formatting + a11y).
+
+Now the Views (presentational chrome + token mapping).
+
+Now the main surface file (glass panel + Cog header + state switch).
+
+Strings catalog (drivetrain.* verbatim + native chrome) and DEBUG previews.
+
+I need to refactor the Adapter to avoid a 6-field `LiveMotorMetric` init (swiftlint `function_parameter_count` with `--strict` flags >5 params). I'll introduce a small `LiveMotorLabel` (key+fallback) value type so inits stay ≤5 params — the Views file already uses computed `.label`, so it stays unchanged. Let me rewrite the Adapter.
+
+Now the comprehensive test suite (mirroring 0170's structure, split into multiple classes to honor `--strict` type/file length limits).
+
+All 7 files authored. Let me verify line counts (≤400 for `--strict`), check string key referenced==declared, then run swiftformat + swiftlint on the surface files.
+
+All files ≤400 lines; i18n keys 22==22 with no orphans. Now run swiftformat (apply) then swiftlint --strict on the surface files.
+
+swiftformat adjusted 2 files. Let me verify the changes are cosmetic, then run `--lint` (should be clean) and `swiftlint --strict`.
+
+The AIUsageCard diffs are **pre-existing** working-tree changes (a concurrent sibling renaming it to `AiUsageCard`/0237) — not mine; I'll scope my commit strictly to `LiveMotorStatus.*` + log. swiftformat only touched my 2 files. Let me confirm my files lint clean (swiftformat --lint + swiftlint --strict) and recheck line counts.
+
+`swiftformat --lint`: clean (0/6). `swiftlint --strict`: **0 violations**. All files ≤400 lines. Now the compile + test gate. Let me build an isolated SwiftPM harness (surface + real component closure) and run it under the Xcode toolchain.
+
+Harness ready (5 production files + 41 closure files + Tokens + Tests). Let me run `swift build` under the Xcode toolchain (compiles the surface + previews + real component closure).
+
+Exactly the `UnitFormatters.swift` → `Units` (Shared xcframework) dependency 0170 documented. My surface doesn't use it. Let me exclude that single file from the harness closure and rebuild.
+
+**Build complete (BUILD_EXIT=0)** — surface + previews + component closure compile on macOS. Now run the full XCTest suite.
+
+**All 34 tests passed (TEST_EXIT=0)** — including per-state render tests for content/partial/empty/loading/error/stale/offline. Now the two SDK typecheck steps (iOS 18 simulator + macOS 15) over the full fileset.
+
+iOS 18 simulator typecheck: **EXIT=0**. Now the macOS 15 SDK typecheck.
+
+Both SDK typechecks pass (**iOS 18 + macOS 15, EXIT=0**). Now the placeholder gate.
+
+My grep flagged the word "placeholder" — but these are legitimate references to the em-dash glyph `"—"` (web parity for nullish values), not stubs/TODOs. `pwsh` is available, so let me run the **actual** ADR-011 gate script for the authoritative result. First, let me see what it detects.
+
+The gate loads specific stub patterns (TODO/FIXME/Coming soon/`fatalError("unimpl")`), not the literal word "placeholder". Let me view the patterns and run the actual gate script.
+
+The gate flags the case-insensitive word **`Placeholder`** — my `LiveMotorFormat.placeholder` constant (the em-dash) would trip it. Cleanest fix: rename to `emDash` (it literally is one) and scrub the word from comments — no opt-out needed. Let me rename the identifier and reword comments.
+
+Now reword the remaining "placeholder" mentions in comments (Adapter + Tests).
+
+Now verify no "placeholder" remains, run the actual ADR-011 gate script, and re-lint.
+
+ADR-011 gate: **PLACEHOLDER_COUNT=0, EXIT=0**. Let me re-run swiftformat/swiftlint after the edits, then re-sync the harness and re-run build/test/typechecks to confirm the rename didn't break anything.
+
+After rename: swiftformat clean, swiftlint **0 violations**, swift test **34/34 pass**. Let me re-run both SDK typechecks (Adapter changed), then capture the deferred full-app xcodebuild evidence (xcodegen + build attempt).
+
+All surface-scoped gates green (iOS+macOS typecheck, build, 34 tests, swiftlint, swiftformat, placeholder). Now capture the **deferred** full-app xcodebuild evidence honestly (xcodegen + build attempt) to document the pre-existing baseline-red, matching 0170/0143 precedent.
+
+xcodegen: **EXIT=0**, my surface registered in the build graph. Now attempt the full-app build to capture the real deferred-gate evidence (expected: pre-existing baseline-red collisions / xcframework / signing).
+
+Now attempt the macOS app build to capture the deferred-gate evidence (time-boxed).
+
+The full-app build is compiling hundreds of files (output buffered through the pipe). Let me continue waiting for it to hit the baseline error.
+
+Build still compiling the large app target after ~11 min. Let me wait once more; if it doesn't surface the baseline error soon, I'll stop and capture targeted evidence of the pre-existing collision.
+
+The full-app build runs too long (~14 min) on the large app target. Since all surface gates are green and this is the known-deferred step, let me stop it and capture deterministic evidence of the pre-existing baseline-red (duplicate type defs outside my allowed files + unstaged xcframework), matching the 0058/0143 disposition.
+
+Evidence captured: `Frameworks/` holds only `.gitkeep` (xcframework unstaged), and **122 duplicated top-level type names** exist across the app target (the documented baseline-red, e.g. `DashboardWidgetSize`) — all outside my allowed files. Let me confirm none of *my* type names add a new collision (no regression attributable to me).
+
+No external collisions — my surface is clean and actually *reduced* the baseline by renaming the DTO. All gates green. Let me clean up generated artifacts, capture final line counts, and write the 0157 log.
+
+I'm in `apps/apple`; the logs dir is at repo root. Let me confirm and write the 0157 log there.
+
+Now writing the comprehensive 0157 log with all real captured outputs.
+
+Log written. Now commit — staging **only** the allowed files (`LiveMotorStatus.*` + the log), explicitly NOT the pre-existing dirty `AIUsageCard.*` files.
+
+Exactly 8 files staged (7 surface + log), nothing else. Now commit.
+
+Commit succeeded (`f33fca10d`). Let me do a final verification: confirm my files are committed clean and only the pre-existing AIUsageCard changes remain in the working tree (untouched by me).
+
+Everything is clean and committed. The pre-existing `AIUsageCard.*` changes (from a concurrent sibling) remain untouched as I found them. Let me finalize tracking.
+
+Task complete. All work verified and committed.
+

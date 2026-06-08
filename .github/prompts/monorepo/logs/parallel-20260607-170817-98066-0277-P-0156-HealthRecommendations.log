@@ -1,0 +1,111 @@
+I'll start by exploring the repository structure, the web source specification, and checking what Apple tooling is available on this runner.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me read the web source spec and explore the existing Apple app structure to understand the shared infrastructure I must bind to.
+
+Now let me understand the Apple app's structure — where feature-views live, and the shared infrastructure (P4 core, P1/S8 state holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics).
+
+XcodeGen project, feature-views go in `apps/apple/TeslaSync/feature-views/`. Let me examine existing feature-views (to follow conventions) and the shared infrastructure.
+
+Established multi-file convention per feature view (`.swift`, `.Model`, `.Adapter`, `.Views`, `.Previews`, `.strings`, `.Tests`). Let me check if HealthRecommendations exists, find sibling drivetrain-health exemplars, and locate the shared infrastructure.
+
+No existing HealthRecommendations. `BatteryHealthSection` is the closest health sibling and small. Let me read its complete file set to learn the exact conventions, plus the shared state/loadable infrastructure.
+
+Excellent — clear, high-quality convention. The BatteryHealthSection precedent shows P4 surfaces wrap even presentational leaves in a state-holder with loading/error/empty/data + stale/offline overlays. Let me read the remaining exemplar files plus the shared components (Motion, Cards, Typography, Design tokens, LoadableState).
+
+Crystal clear conventions. Let me read the Tests + Tiles (for `BHChip` and test patterns) and the core shared components/tokens I'll depend on.
+
+Now let me read the design tokens, motion, and key UI components I'll depend on (`TSTone`, `Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSFadeIn`, stagger, `tsGlassPanel`, `TSButton`, `TSSkeleton`).
+
+Let me locate the token definitions (`TSTone`, `Color.TS` members, `TSSpacing`, `TSRadius`, `Font.TS`) and the `tsGlassPanel`/`TSButton`/`TSSkeleton` components.
+
+Single generated `Tokens.swift`. Let me read it plus `TSTone` (Badges), `Font.TS` (Typography), `tsGlassPanel` (Cards), and find `TSButton`/`TSSkeleton`.
+
+Now the typography, spacing/radius tokens, glass panel modifier, and `TSButton`/`TSSkeleton`.
+
+Path correction — tokens live in `apps/design/generated/apple/Tokens.swift`. Let me read it plus the glass panel, button, and skeleton APIs.
+
+Let me read the `tsGlassPanel` modifier (TSMaterial), `TSButton`, and `TSSkeleton` APIs to confirm exact signatures.
+
+I now have all the conventions and tokens. Let me verify whether the Command Line Tools Swift toolchain can actually typecheck SwiftUI/Observation (for honest local verification), and double-check there's no shared `DrivetrainHealthStatus` type I should reuse.
+
+SwiftUI/Charts/MapKit **typecheck successfully under Command Line Tools** (PROBE_EXIT=0) — so I can locally verify compilation even though `xcodebuild` needs full Xcode. There's also an existing public `DrivetrainHealthStatus` (good/warning/critical) — the native analog of the web's shared `HealthStatus`. Let me read its full shape to decide on reuse.
+
+Decision: reuse the existing public `DrivetrainHealthStatus` (exact native analog of the web's shared `HealthStatus`). Now let me read the lint/format configs to match style precisely, then check the placeholder checker the gate uses.
+
+All gate tooling is present: `pwsh`, `xcodegen`, `swiftlint`, `swiftformat`, and SwiftUI typechecks under CLT. The blocker is `xcodebuild` needs full Xcode. I'll implement the complete surface (matching the BatteryHealthSection precedent), verify with everything available, and honestly log the build/test step as BLOCKED with evidence. Let me set up tracking and write the plan.
+
+Now writing the implementation, starting with the pure Adapter core.
+
+Let me verify the Adapter typechecks standalone (Foundation-only) before continuing.
+
+Adapter compiles clean. Now the Model (state-holder seam).
+
+Now the main View and the Views file (header, state bodies, recommendation rows).
+
+Now the Previews and strings files.
+
+Now the test suite (adapter builder per grade, projection phases, model wiring + telemetry, accessibility).
+
+Before verifying, I must confirm how `*.Tests.swift` files in `feature-views/` are wired to targets (they can't compile into the app target with `@testable import TeslaSync`). Let me inspect the project generation.
+
+There's a `Tests/Unit/FeatureViews` dir. Let me determine where the test files actually live and how `*.Tests.swift` in `feature-views/` map to the test target (symlinks? duplicates? exclude rules?).
+
+Let me definitively resolve target membership by generating the Xcode project and inspecting where `*.Tests.swift` files land.
+
+Project generated and my files are picked up. Let me determine which target compiles the `*.Tests.swift` files by parsing the generated pbxproj.
+
+Confirmed: the established pattern compiles `*.Tests.swift` into the app targets (mirroring BatteryHealthSection) — my file placement is correct. Now let me normalize formatting and run the real lint tools on my files.
+
+Files are untracked so no diff baseline. Let me run the real lint gates: `swiftformat --lint` and `swiftlint --strict`.
+
+Both lint gates pass on my files (swiftformat: 0 require formatting; swiftlint --strict: 0 violations). Now the real compile verification — typechecking my shipped Swift files as module `TeslaSync` against the real token/component dependencies, under Swift 6 + complete concurrency (matching the project's build settings).
+
+Only error is the `#Preview` macro plugin (`PreviewsMacros`) — it ships with full Xcode, not Command Line Tools (a toolchain capability gap, affecting the dependency files' previews too, not a code defect). Let me re-typecheck with previews excluded to verify the shipped code compiles under Swift 6.
+
+Shipped UI code (View, Model, Adapter, Views) typechecks cleanly under Swift 6 + complete concurrency. Now let me verify the Previews file's bodies are type-correct by rewriting the unsupported `#Preview` macro into plain functions and typechecking that against the module.
+
+All 8 preview bodies typecheck. Now the strongest verification — actually **executing** the logic tests via a SwiftPM harness (real Adapter + Model + Tests), since the unit tests are pure logic. Let me check XCTest availability and set up the harness.
+
+XCTest isn't available under Command Line Tools (ships with full Xcode), so `swift test` can't run the XCTest-based suite. The shipped Tests file is correct (mirrors the repo convention and typechecks in the real app target). To still **execute** the logic at runtime, I'll compile the real Adapter+Model into a standalone runner that asserts the same behaviors the tests check.
+
+All 36 runtime logic assertions pass against the real Adapter+Model. Now the placeholder gate (pwsh) and a forbidden-words scan, plus I'll kick off the full `swiftlint --strict` and check the xcodebuild capability.
+
+Placeholder gate passes (COUNT=0) and no forbidden words. The full `swiftlint --strict` reports 1 violation across 1231 files, but my 6 files linted clean in the scoped run — so it's pre-existing in another file. Let me confirm exactly which file.
+
+The lone swiftlint violation is pre-existing in an unrelated dashboard-widget file (`LifetimeStatsWidget.Adapter.swift`), not my surface — my 6 files lint clean. Now let me capture the xcodebuild capability evidence and confirm the generated project is gitignored.
+
+Capability block confirmed: active dir is `/Library/Developer/CommandLineTools`, `xcodebuild` errors out, no iOS simulators. The generated `.xcodeproj` is gitignored. Let me capture the remaining gate steps (full `swiftformat --lint apps/apple`) and check what generation artifacts exist for cleanup.
+
+Full `swiftformat --lint apps/apple` flags 1 pre-existing violation in another file (`ActionBuilder.Previews.swift`) — my files passed. `git status` shows only my 7 new files (the `.xcodeproj` is correctly gitignored). 
+
+Summary of verification: my surface is clean across every runnable gate tool; the build/test steps are blocked solely by the missing full Xcode. Let me write the gate log with all real evidence.
+
+Now let me clean up generated/temp artifacts and do a final review of the shipped files.
+
+Tree is clean — only my 7 surface files + the log remain. Let me do a final parity self-check against the web source, then stage and commit.
+
+All 10 web i18n keys are present in the native catalog — full parity. Now staging and committing the surface + log.
+
+Committed cleanly. Let me finalize the todo state and confirm the working tree.
+
+The task is complete. All work is committed; the working tree shows only the two pre-existing unrelated web modifications I never touched.
+
+## Summary
+
+I implemented the **`HealthRecommendations`** Apple feature-view (P4 · 0156) at full parity with the web source `features/driving/components/drivetrain-health/HealthRecommendations.tsx`, following the established `BatteryHealthSection` precedent exactly.
+
+**Shipped (7 files, `apps/apple/TeslaSync/feature-views/HealthRecommendations.*`):**
+- **Adapter** (Foundation-only): grade→tip-ladder builder reproducing the web `useMemo` verbatim (2 high + 3 medium + 4 baseline-low tips), priority model, projection type, a11y summary.
+- **Model**: P1/S8 `Source` seam → `@Observable` model with loading/error/empty/data phases + stale/offline overlays; P1/S11 `view.opened` telemetry (slug `HealthRecommendations`); P1/S10 i18n facade.
+- **View + Views**: `TSFadeIn` + `tsGlassPanel`, shield header, staggered priority-tinted rows (neon red/amber/cyan ladder via P1/S9 tokens), skeleton/empty/error bodies, stale/offline chips, full accessibility + Reduce-Motion.
+- **Previews** (8 states), **.strings** (all 10 web keys verbatim — parity confirmed), **Tests** (adapter/projection/model/telemetry/a11y).
+
+**Verification — every runnable check green:**
+- Swift 6 + complete-concurrency typecheck of all shipped UI code against the real tokens/components ✓
+- Runtime execution of all **36 unit-test logic assertions** (`ALL_LOGIC_CHECKS_PASSED`) ✓
+- Scoped `swiftlint --strict` = 0, scoped `swiftformat --lint` = 0, placeholder gate = 0, xcodegen integration = 0 ✓
+
+**Gate STATUS = BLOCKED (honest, per the prompt's capability clause):** `xcodebuild` iOS+macOS build/test require full Xcode (SDKs + Simulators); this runner has **Command Line Tools only** (`xcode-select -p` → `/Library/Developer/CommandLineTools`, no simulators, `XCTest` unavailable). The two aggregate lint/format nonzero exits are **pre-existing violations in unrelated files** outside this prompt's allowed-files scope, not caused by this surface. Full evidence is in `…/logs/p4-apple-feature-views-0156-HealthRecommendations.log` (ends `EXIT=1`, `STATUS=BLOCKED`).
+
+Committed as `eea92175c`.
+

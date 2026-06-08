@@ -1,0 +1,150 @@
+=== P4 Shared surface 0033 AINLGrafanaPanel (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/AINLGrafanaPanel.*
+Web spec : web/src/components/ai/AINLGrafanaPanel.tsx (Helix NL Grafana panel drafter)
+Host     : Darwin (Apple Silicon). Repo HEAD c9c6fdb9f.
+Date     : 2026-06-08
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT NOTE
+--------------------------------------------------------------------------------
+This log reports REAL command exit codes. The surface itself is verified green by
+every applicable means (dual real-SDK typecheck + the real committed XCTest suites
+under Xcode + isolated SwiftPM build/run + swiftlint/swiftformat/placeholder). The
+literal full-app `xcodebuild build test` gate cannot reach EXIT=0 IN THIS SLOT for
+reasons that are entirely platform/infra/pre-existing and OUTSIDE this prompt's
+allowed-files scope (AINLGrafanaPanel.* + this log only). Per the prompt capability
+clause ("If unavailable on the runner -> STATUS=BLOCKED with API evidence") and
+covenant rule 1 (no red-as-green) / rule 8 (no commit on red) / rule 10, the
+terminal status is BLOCKED with the evidence below. No result is overstated.
+
+--------------------------------------------------------------------------------
+ARTIFACT (shipped, complete — no stubs/skeleton/placeholder)
+--------------------------------------------------------------------------------
+10 files, 2277 LoC Swift + i18n catalog (decomposed like the AiUsageCard precedent):
+  AINLGrafanaPanel.Adapter.swift      pure core: typed-draft types, Sendable JSON model,
+                                      parseGrafanaPanelDraft port, SSE event narrowing,
+                                      draft-capture reducer, a11y builders
+  AINLGrafanaPanel.Projection.swift   pure resolve(phase) + canDraft/canApply + draft summary
+  AINLGrafanaPanel.Model.swift        P1/S10 strings facade, P1/S11 telemetry seam, P1/S8 gate
+                                      + stream state-holder seams, @Observable model, in-mem fakes
+  AINLGrafanaPanel.Chrome.swift       Helix badge, Ask-Helix CTA, thinking indicator, freshness
+                                      chip, refresh, connectivity banner, error/empty chrome
+  AINLGrafanaPanel.Views.swift        prompt field (Textarea peer), output panel, draft summary,
+                                      apply row
+  AINLGrafanaPanel.swift              root view: gating + every state + telemetry lifecycle
+  AINLGrafanaPanel.Previews.swift     9 per-state previews
+  AINLGrafanaPanel.AdapterTests.swift pure parser/event/reducer/projection/summary/a11y tests
+  AINLGrafanaPanel.Tests.swift        model wiring / lifecycle / telemetry / stale / a11y tests
+  AINLGrafanaPanel.strings            i18n catalog (parity keys + helix scaffold + leaf chrome)
+
+States reproduced (every one renders — no hidden surface): gated (withAiFeature off ->
+EmptyView), idle, loading (thinking skeleton), streaming (live prose), completed
+(prose + draft summary + Apply), empty (friendly, never blank), error (retry), plus the
+orthogonal live-state axis stale/offline (freshness chip + banner + one-shot gate refresh).
+Data sources bound via shared state-holders (P1/S8): useTranslation -> AINLGrafanaStrings;
+useAiStream -> AINLGrafanaStreaming seam (+ AINLGrafanaGateSource for useAiEnabled gate).
+i18n: every web key (powerGrafana.aiDrafter.*) + the helix.* scaffold keys resolve through
+the facade; no English literals in code (one sanctioned // parity:allow on the verbatim web
+key string "powerGrafana.aiDrafter.promptPlaceholder"). Telemetry: view.opened with slug
+"AINLGrafanaPanel", deferred until the gate is open (web data-ai-feature marker parity).
+
+--------------------------------------------------------------------------------
+SURFACE VERIFICATION (all green)
+--------------------------------------------------------------------------------
+[1] swiftc -typecheck against the REAL iOS 18.0 simulator SDK
+    xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator \
+      -strict-concurrency=complete -swift-version 6  <surface + real Tokens/Buttons/Motion>
+    IOS_TYPECHECK_EXIT=0
+
+[2] swiftc -typecheck against the REAL macOS 15.0 SDK
+    xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 \
+      -strict-concurrency=complete -swift-version 6  <same set>
+    MAC_TYPECHECK_EXIT=0
+
+[3] REAL committed XCTest suites, Xcode 26.5 toolchain, Swift 6 strict concurrency
+    (DEVELOPER_DIR=/Applications/Xcode.app/...; swift test over a SwiftPM harness that
+     vendors the real design Tokens + Buttons + Motion and the two committed test files)
+    Test Suite 'All tests' passed.  Executed 52 tests, with 0 failures (0 unexpected).
+    XCTEST_EXIT=0
+
+[4] Isolated SwiftPM build + runtime behaviour runner (CLT toolchain, Swift 6.3.2)
+    swift build  -> Build complete!  BUILD_EXIT=0
+    swift run    -> RAN 85 checks, 0 failures  RUN_EXIT=0
+    (85 runtime assertions mirroring the XCTest cases — used to prove runtime behaviour
+     where XCTest.framework is unavailable under Command Line Tools.)
+
+[5] swiftformat --lint  (apps/apple/.swiftformat config) on the surface dir
+    0/9 files require formatting.  FORMAT(surface)_EXIT=0
+
+[6] swiftlint --strict (apps/apple/.swiftlint.yml) scoped to the surface dir
+    0 violations in shared-surfaces.  LINT(surface)_EXIT=0
+
+[7] placeholder gate on the surface dir
+    apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces
+    PLACEHOLDER_ALLOWED=1  PLACEHOLDER_COUNT=0  EXIT=0
+    (the 1 allow is the verbatim web i18n key string, not a stub)
+
+--------------------------------------------------------------------------------
+LITERAL GATE STEPS (real exit codes)
+--------------------------------------------------------------------------------
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  - Command Line Tools active dir: "xcodebuild requires Xcode" -> exit 1.
+  - With DEVELOPER_DIR=/Applications/Xcode.app (Xcode 26.5, iPhone 16 sim, iOS 26.5 rt
+    all present): the scheme pre-action runs Scripts/build-shared-xcframework.sh, i.e.
+    the Kotlin/Native Gradle build `:core:assembleSharedXCFramework`. That step is the
+    documented macOS-pending blocker (apps/macos-pending-verifications.md): the
+    Shared.xcframework is unstaged (.gitkeep only) and the Kotlin/Native build does not
+    complete here (heavily contended across many parallel slots; multiple peer slots
+    observed running the same Gradle task for hours). Additionally the surface dir is
+    NOT yet enumerated by project.yml (see WIRING below) and the full-app target carries
+    pre-existing parallel-merge collisions (struct DashboardWidgetSize redefined,
+    co-located *.Tests.swift importing XCTest into the app target) per the precedent doc.
+  IOS_EXIT=1
+
+xcodebuild -scheme TeslaSync-macOS build test
+  - Same root causes (xcframework pre-action + signing + pre-existing collisions + wiring).
+  MAC_EXIT=1
+
+swiftlint --strict            (repo config, whole included set)
+  - 1 violation, PRE-EXISTING and UNRELATED to this surface:
+    TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length.
+    0 violations in shared-surfaces (this surface). Cannot fix the pre-existing file
+    (outside allowed files).
+  LINT_EXIT=2
+
+swiftformat --lint apps/apple (whole tree)
+  - 1 file requires formatting, PRE-EXISTING and UNRELATED:
+    TeslaSync/feature-views/ActionBuilder.Previews.swift (blankLinesBetweenScopes).
+    The surface dir is clean (0/9). Cannot fix the pre-existing file (outside allowed files).
+  FORMAT_EXIT=1
+
+check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/AINLGrafanaPanel
+  PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+WIRING FOLLOW-UP (required P4-core dependency, OUTSIDE this prompt's allowed files)
+--------------------------------------------------------------------------------
+The shared-surfaces tier is new; this slot's project.yml lists only
+`TeslaSync/dashboard-widgets` and `TeslaSync/feature-views` as app-target source paths,
+and .swiftlint.yml's `included:` likewise omits shared-surfaces. So `xcodegen generate`
+does not enumerate AINLGrafanaPanel.* into the app/test targets, and the repo `swiftlint`
+config does not scan them. The prompt's allowed files are AINLGrafanaPanel.* + this log
+only, so wiring these two configs is deferred to P4-core / the acceptance gate:
+  project.yml  (TeslaSync + TeslaSync-macOS targets):  - path: TeslaSync/shared-surfaces
+  .swiftlint.yml (included:):                          - TeslaSync/shared-surfaces
+xcodegen generate itself succeeds (XCODEGEN_EXIT=0); the spec is valid.
+
+--------------------------------------------------------------------------------
+VERDICT
+--------------------------------------------------------------------------------
+Surface AINLGrafanaPanel is production-complete and verified green on every applicable
+check (iOS 18 + macOS 15 real-SDK typecheck; 52/52 real XCTest; isolated build/run;
+swiftformat/swiftlint/placeholder clean for the surface). The literal full-app
+`xcodebuild build test` cannot reach EXIT=0 in this slot because of the macOS-pending
+Kotlin/Native Shared.xcframework build, the not-yet-wired shared-surfaces source path
+(P4-core), and pre-existing unrelated parallel-merge collisions + a pre-existing
+swiftlint/swiftformat violation in other files — none of which are in this prompt's
+allowed-files scope. Deferred to p4-apple/P99-0001-apple-acceptance-gate (macos-latest).
+
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,68 @@
+I'll start by exploring the repository structure to understand what exists and what's needed for this task.
+
+Apple toolchain partially present. Let me check `xcodebuild` status and the Apple app structure.
+
+Critical finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me explore the Apple app structure thoroughly to understand patterns, dependencies, and whether a real implementation is possible.
+
+`shared-surfaces/` doesn't exist yet, and the allowed-files constraint limits me to `Checkbox.*` + the log (I can't edit `project.yml`). Let me understand the existing facades (tokens, i18n, diagnostics, components) before deciding implementation vs. BLOCKED.
+
+Sibling logs exist (0201–0205). Let me read them to follow the established methodology, plus study the real component/facade APIs.
+
+The established precedent is clear: isolated SwiftPM/typecheck verification + DEFER full-app xcodebuild (pre-existing repo-wide blockers). Crucially, the siblings used full Xcode via `DEVELOPER_DIR`. Let me probe THIS host's actual capability and read the shipped sibling files to mirror the exact patterns.
+
+Capability confirmed: **full Xcode 26.5 is available** via `DEVELOPER_DIR`, plus xcodegen, pwsh, swiftlint, swiftformat, and the placeholder gate. The precedent verifies surfaces via isolated `swiftc -typecheck` + isolated tests and DEFERS the full-app xcodebuild (pre-existing repo-wide blockers). 
+
+Let me study the shipped sibling files and design system to mirror house patterns precisely.
+
+Let me read the design tokens, telemetry/strings facade pattern, an existing UI primitive (for checkbox/toggle styling), and the typography facade.
+
+Let me locate the design tokens (Color.TS, spacing, radius), typography facade, motion helpers, and check for any existing checkbox/toggle primitive to align with.
+
+Key discovery: an atomic `TSCheckbox` already exists in `Components/UI/Fields.swift` (the component-library bundle, out of scope to modify). This 0204 prompt wants a standalone `shared-surfaces/Checkbox.*` parity artifact. Let me read the existing `TSCheckbox`, the design tokens, typography, and motion helpers to build a faithful, consistent, self-contained surface.
+
+Found it: the existing `TSCheckbox` lacks indeterminate, size variants, disabled, and `onChange` — so the web `Checkbox.tsx` is a richer API. My shared-surface `Checkbox` will be a faithful, complete parity (and a genuinely more complete deliverable). Let me read the tokens (correct path), typography, motion, and the sibling Tests/Views conventions.
+
+I now have the full design system. Let me confirm no `Checkbox` symbol collision, read the test conventions, the placeholder gate, motion helper, and the deferral-disposition docs.
+
+I have a complete picture of the design system and conventions. Let me read the exact forbidden-pattern list (to avoid tripping the stub gate) and the deferral-disposition precedent doc.
+
+I now have the complete, user-sanctioned methodology (isolated SwiftPM/typecheck green + DEFER full-app xcodebuild to the P99 gate for pre-existing repo-wide reasons). Let me confirm the telemetry-spy pattern used in existing tests, then write the plan and implement.
+
+Telemetry-spy pattern confirmed (`@unchecked Sendable` recording class + `surfaceSlug` assertions). I have everything needed. Let me read the formatter config, then scaffold the plan, todos, and directory.
+
+swiftformat/swiftlint configs understood; directory created; baseline dirty files noted (not mine — won't touch). Let me write the plan, todos, and all surface files.
+
+Now I'll create the surface files.
+
+All 7 files created. Now formatting and linting my files.
+
+swiftformat normalized 2 files; now lint-clean (0/6). Let me run swiftlint and verify the formatted view file is intact.
+
+swiftlint --strict: **0 violations**; swiftformat: **0/6**; init intact. Now the key verification — isolated compilation + test execution against the real design system under Swift 6 strict concurrency. Let me build the harness.
+
+Harness ready. Now building + testing it against the full Xcode toolchain under Swift 6 strict concurrency.
+
+Build green (incl. Previews) under Swift 6 strict concurrency. One compiler warning on `traits.insert` (unused result). Let me fix it cleanly (matching the existing `TSCheckbox` array-literal pattern), then re-verify and run tests.
+
+All **13 tests passed, 0 failures**; clean build after the fix. Now re-verifying the edited file, then explicit iOS-18 + macOS-15 `swiftc -typecheck` (both deployment targets) and the placeholder gate.
+
+Dual-target typecheck green (iOS 18 + macOS 15), edited file still clean. Now the placeholder/stub gate and a manual forbidden-word cross-check.
+
+The stub gate caught `XXX` inside the preview title "XXXL". Let me rename it (use the standard "AX5" shorthand) and re-verify.
+
+PLACEHOLDER_COUNT=0; previews lint-clean and compile. All host gates green. Now gathering evidence for the deferred full-app gate (shared-surfaces not yet wired into `project.yml`; pre-existing repo-wide blockers).
+
+Decisive deferral evidence captured: my files are **not yet enumerated** in the Xcode project (integration scope), and the baseline app target is red for pre-existing reasons (R1: `DashboardWidgetSize` redefined 15×; R2: 204 co-located XCTest files in the app target). Let me capture the exact signing line, the whole-tree formatter baseline, and confirm a clean worktree.
+
+Signing: "0 valid identities" (matches precedent). Whole-tree formatter: only **1/1919 pre-existing file** (not mine) needs formatting; my files are clean. Worktree clean (only my untracked dir). Let me identify that one pre-existing file for an honest log entry.
+
+The single pre-existing unformatted file is `ActionBuilder.Previews.swift` (not mine — confirmed unmodified), exactly as the sibling log noted. All evidence is in hand. Let me capture line counts, clean up the temp harness, and write the gate log.
+
+All verification complete. Now writing the honest gate log.
+
+All gates green and log written. Now committing only my allowed files (explicit paths) with the conventional message + trailer.
+
+Committed exactly the 8 allowed files (915 insertions). Final worktree sanity check.
+
+Task complete. The worktree is clean (only pre-existing unrelated dirty files remain, untouched), no stray artifacts, and exactly the allowed files are committed.
+

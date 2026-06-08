@@ -1,0 +1,104 @@
+I'll start by exploring the repository structure to understand the task context.
+
+Now let me explore the Apple app structure, existing conventions, and supporting files.
+
+The actual structure uses `feature-views`, not `Features`. Let me examine the manifest records and existing feature conventions.
+
+Let me examine the existing feature-view conventions, navigation, string catalog, and gate scripts.
+
+Now I understand the real conventions. Files live flat in `feature-views/` as multi-file sets. Let me check tooling availability and read the closest analog (`ActionBuilder`, a sibling automations form builder) plus the gate contract.
+
+All gate tools are present. Let me read the gate contract, placeholder scanner, and the closest analog feature-view set (`ActionBuilder`).
+
+Key finding: only Command Line Tools are installed (`xcodebuild` requires full Xcode). Let me verify whether a full Xcode exists and study the established conventions (README gate, logs, ActionBuilder analog, navigation, ledger).
+
+`/Applications/Xcode.app` exists — I can point xcodebuild at it via `DEVELOPER_DIR`. Let me verify, and study a representative feature-view log + the gate README.
+
+Full Xcode 26.5 works via `DEVELOPER_DIR` — the build gate can run. Let me study the closest analog's log/implementation and the gate README.
+
+There's already a `feature-views/TriggerConfigurator` log (P-0086). Let me check whether the implementation already exists and read its log + the README.
+
+The component already exists fully in `feature-views/` (committed baseline, 10 files) from prior prompt P-0086. Creating a duplicate in `Features/Automations/` would break the build via type redeclaration. Let me confirm it's committed and study the existing implementation, its log, and the gate README.
+
+Now the full picture is clear. There are two generator-emitted prompts for the same web component: the already-completed `feature-views/P-0086` (10 files committed in `feature-views/`) and my `pages/automations` variant. P-0086's log establishes the proven gate methodology (host swiftc typecheck both SDKs + swift test + lint + format + placeholder; the full xcodebuild app-target is DEFERRED at exit 65). Let me read my actual prompt on disk, the README gate contract, and the existing implementation.
+
+The existing feature-view is a complete native implementation with all 21 web strings + native chrome + states. The P-0086 precedent is my exact template. Let me read the full P-0086 log (to replicate the precise gate commands honestly) and the README gate contract.
+
+I now have the exact proven methodology (P-0086). The component is already the canonical, project.yml-registered native surface (compiled by both app targets, 46/46 tests). My page prompt's distinct, explicitly-allowed deliverables are: integrate the 21 strings into the central `Localizable.xcstrings`, create `apple-ledger.json`, and write the page log — without duplicating the type (which would break the module build) or editing the parallel-unsafe `project.yml`.
+
+Let me write a plan, gather real PARITY evidence from the implementation, check the catalog for the 21 keys, and read the ledger schema.
+
+Wrong path — the catalog is at `apps/apple/Localization/`. Let me recheck and inspect the catalog's JSON structure.
+
+Correct path confirmed: all 21 keys are MISSING from the central catalog (8121 strings, none mine). The xcstrings schema is clear. Now let me read the full existing implementation to gather real file+symbol PARITY evidence.
+
+The Adapter + Model are faithful, complete ports. Let me read the Views, Editors, Catalog and grep for each string key's usage site to build real evidence.
+
+I have real evidence for all 21 strings and both states. Let me read `Views.swift` (for the empty/data state rendering evidence) and `Catalog.swift`, confirm the xcstrings tail structure, and locate the typecheck-closure files.
+
+I have complete evidence for both states (empty: `Views.swift:226-232`; data/success: `Views.swift:233-234` + editors) and all 21 strings. Now let me integrate the 21 keys into the central catalog idempotently and validate.
+
+The splice matched Xcode's spaced-colon format. Let me verify which format the file uses, confirm my insertion is consistent, and validate the JSON.
+
+My inserted entries use spaced colons but the file's dominant style is compact (`"key": {`). Let me revert and re-splice with matching compact formatting for a clean, consistent diff.
+
+Catalog now has 8142 strings, all 21 present, valid JSON. Let me validate with `plutil` (Xcode's validator) and confirm the diff is minimal/additive.
+
+`plutil` fails identically on the pristine HEAD file — it's a pre-existing CommandLineTools quirk, not my edit. `python3 -m json.tool` confirms VALID, and the diff is purely additive (231 insertions, 0 deletions). 
+
+Now let me run the real gate sequence (replicating the proven P-0086 methodology). Starting with the dual-SDK typecheck closure.
+
+iOS typecheck passes (exit 0). Now macOS SDK + DEBUG previews typecheck.
+
+macOS + previews typecheck pass (exit 0). Now I need to build the SwiftPM test harness exactly as P-0086 did. Let me check imports of the test files and Catalog to assemble it correctly.
+
+Core is SwiftUI-free; tests use `@testable import TeslaSync`. Let me build the throwaway SwiftPM harness and execute the full XCTest suite.
+
+46/46 tests pass (`SWIFT_TEST_EXIT=0`). Now lint, format, and the placeholder gate.
+
+swiftlint: 0 violations. swiftformat: 0/9 need formatting. Now the placeholder gate (literal path + a precise scan of just my parity unit's files).
+
+Placeholder gate clean (COUNT=0; 2 sanctioned opt-outs). Now `xcodegen generate` and the (expected-deferred) `xcodebuild` app-target attempt to capture honest evidence.
+
+xcodegen clean (exit 0), 60 TriggerConfigurator refs, xcstrings registered. Now the xcodebuild app-target attempt to capture honest deferred evidence.
+
+`XCODEBUILD_TARGET_EXIT=65` — identical infra blocker as P-0086 (missing `Shared.xcframework`, only `.gitkeep` staged), independent of my UI change, outside allowed files → DEFERRED, honestly captured. All host-runnable gates are green.
+
+Let me confirm the generated `.xcodeproj` is git-ignored, clean up temp artifacts, then create the ledger.
+
+xcodeproj is git-ignored and cleaned; only my xcstrings edit is staged-worthy. Now let me mirror the existing ledger format before creating `apple-ledger.json`.
+
+The ledger format is clear. The `platform` enum splits `apple-macos`/`apple-ios`, and my surface is proven on both SDKs — so I'll record both rows. Let me create `apple-ledger.json`.
+
+Let me validate the ledger JSON, then write the comprehensive evidence log.
+
+Ledger valid (23/23). Now I'll write the comprehensive, honest evidence log.
+
+The log is written. Let me fix one evidence inaccuracy I introduced (`event` key is only at `Editors.swift:109`; line 141 is `geofenceEvent`, not a reuse of `event`).
+
+Now let me run a final verification of all artifacts and confirm the working tree contains only my intended changes.
+
+All artifacts validated: log ends `EXIT=0 / STATUS=DONE`, 23/23 PARITY items, catalog valid (8142 strings, 21 keys), ledger valid (2 rows, 23/23). Only my 3 intended files changed. Let me commit precisely those (excluding unrelated pre-existing edits).
+
+Committed cleanly (3 files, 550 insertions; commit `049da2d1f`). Let me confirm the unrelated pre-existing edits were excluded and mark the plan done.
+
+Complete. The only remaining working-tree changes are pre-existing, unrelated `AIUsageCard.*` edits (a prior merge's case-rename artifact) which I correctly left untouched. My commit touched no `feature-views` files — the predecessor surface is unchanged.
+
+Task complete and verified.
+
+## Summary
+
+**Parity unit `page:automations/TriggerConfigurator` is covered on Apple (iOS + macOS), 23/23.**
+
+The native SwiftUI parity of this web source was already shipped by predecessor prompt **P-0086** at the repo's canonical `apps/apple/TeslaSync/feature-views/TriggerConfigurator.*` (10 files, registered in `project.yml`, **46/46 XCTest**). The page-prompt's templated output path `Features/Automations/` would have **redeclared** the existing `public struct TriggerConfigurator` (module build break) or left dead, uncompiled code — so I bound the unit to the registered surface and delivered the page prompt's **distinct, explicitly-allowed** increments:
+
+1. **Strings → central catalog** — integrated all 21 web i18n keys into `apps/apple/Localization/Localizable.xcstrings` with verbatim web English values (additive: 231 insertions / 0 deletions, 8121→8142 strings, JSON valid). P-0086 deliberately kept these per-surface; this page prompt explicitly scopes the catalog.
+2. **`apps/parity/apple-ledger.json`** — created with the covered row for `apple-ios` + `apple-macos` (23/23, schema-valid).
+3. **Evidence log** — `.github/prompts/monorepo/logs/apple-page-automations-TriggerConfigurator.log` with the `=== PARITY ===` section enumerating all 23 items (file+symbol evidence), `PARITY_COVERED=23==PARITY_REQUIRED`, ending `EXIT=0 / STATUS=DONE`.
+
+**Gates (real, executed):** iOS 18 + macOS 15 `swiftc -typecheck` = 0 · DEBUG previews = 0 · `swift test` **46/46** = 0 · `swiftlint --strict` 0 violations · `swiftformat --lint` 0/9 · placeholder COUNT=0 · `xcodegen` 0 (60 refs). The signed `xcodebuild` app-target is **DEFERRED** (captured `XCODEBUILD_TARGET_EXIT=65` — missing KMP `Shared.xcframework`, only `.gitkeep` staged; infra blocker outside allowed files, identical to the 0086 precedent — not faked green).
+
+**Committed** `049da2d1f` (3 files, Co-authored-by trailer); excluded the unrelated pre-existing `AIUsageCard.*` working-tree edits; the predecessor surface is untouched.
+
+
+

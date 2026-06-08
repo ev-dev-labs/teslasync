@@ -1,0 +1,88 @@
+I'll start by exploring the environment and reading the web source specification. Note this task forbids delegation, so I'll do all work myself.
+
+Key capability findings: `xcodebuild` requires full Xcode but only CommandLineTools is installed; `xcrun simctl` (iOS Simulator) is unavailable. `swift` 6.3.2, `swiftlint`, `swiftformat` ARE available. There's already an `AIUsageCard.*` sibling artifact establishing the pattern. Let me explore the structure and read the web source.
+
+Now I understand the web source: a 6-tile telemetry grid (Battery, Speed, Inside temp, Odometer, Charger, Sentry) bound to `VehicleState`, using `useTranslation` + `useUnits`, wrapped in stagger motion. Let me study the established `AIUsageCard` sibling pattern (recently modified) thoroughly.
+
+Rich established pattern. Let me read the remaining AIUsageCard files, find the `AiUsageProjection` definition, locate the shared P1/S9 tokens (TSSpacing, Color.TS, Font.TS, TSFadeIn), and find how `useUnits`/`VehicleState` are represented natively.
+
+There's an `AiUsageCard.Projection.swift` I need to read. Let me read it plus the Previews/Tests, and locate the shared facade tokens and any existing units/VehicleState representation.
+
+The pattern is clear. Let me read the web `InfoTile` (composed by TelemetryGrid), the units facade, design tokens, motion component, and the AIUsageCard tests/previews — plus a close sibling that binds vehicle state + units.
+
+Now let me see how a sibling that actually uses units structures it (inject prefs vs. preformatted), and read the design tokens, shared state-holder seam, and the AIUsageCard tests/previews.
+
+`DetailCards` is the ideal sibling: it injects a pure `DetailCardsFormatting` facade (testable peer of `useUnits`, no KMP dependency), a `Source` seam, a `Projection`, an `@Observable` model. I'll follow this exactly. Let me read the test/preview patterns, design tokens, and confirm the web `VehicleState` field types.
+
+Let me read the design tokens, confirm the web `VehicleState` field types/units, get the exact `common.*` i18n English defaults, and check the gate tooling (placeholder script + logs dir).
+
+`pwsh` IS available — I can run the placeholder check and PowerShell gate. VehicleState fields confirmed. Let me find the token definitions (Color.TS/TSSpacing/Font.TS), the web i18n `common.*` defaults, and read a sibling log to mirror its format.
+
+The DetailCards log is a perfect methodology template. It reveals the full verification protocol. Critically, I must verify THIS runner's actual state (no assumptions). Let me check Xcode/SDK availability, find the token definitions (`Tokens.swift`), read the web `common.*` i18n block, and check lint configs.
+
+Confirmed on THIS runner: Xcode 26.5 at `/Applications/Xcode.app` works with `DEVELOPER_DIR`, iOS/macOS SDKs present, lint configs + pwsh present. i18n `common.*` defaults confirmed. Now let me locate the exact token/skeleton definitions I'll depend on for the test compile.
+
+Found the tokens at `apps/design/generated/apple/Tokens.swift`. Let me read the token API, theme, skeleton, typography, and material so my surface uses exact token names.
+
+I have the full token API. Let me read the skeleton/material components and the DetailCards view/tests/strings to match the chrome conventions for a units-using sibling, then I'll implement.
+
+Now I have the full chrome pattern. Let me read the exact web unit-conversion math (for faithful distance/speed/temperature formatting) plus the `tsGlassPanel` modifier and `TSSkeleton` signatures.
+
+Let me read the exact web unit-conversion formatters to reproduce distance/speed/temperature math faithfully.
+
+Let me confirm the web `fmtInt`/`fmtNumber` defaults (for battery %, charger kW, and time-to-full) to reproduce them exactly.
+
+I now have complete parity data: web unit math, `fmtInt`/`fmtNumber` (global precision 2), tokens, motion, glass panel, skeleton, and the full sibling pattern. Let me read the lint configs and project setup to ensure compliance, then write a plan.
+
+I have everything needed. Note: `swiftlint --strict` turns warnings (incl. line_length 120 and file_length 400) into errors, so I'll keep files modular (<400 lines) and lines ≤120. The app target compiles `feature-views/*.Tests.swift` (pre-existing XCTest-in-app issue, out of my allowed scope) — I'll follow the DetailCards verification approach (SwiftPM test harness + dual-SDK typecheck + honest xcodebuild deferral). Let me write the plan and todos.
+
+Now implementing. Starting with the pure Adapter (formatting facade + domain model + intent + tile + a11y).
+
+Now the pure Projection (the 6-tile builder, web logic verbatim).
+
+Now the Model (strings facade, telemetry seam, input/resolved types, source seam, `@Observable` model, in-memory source).
+
+Now the presentational Views (tile grid + InfoTile peer, freshness banner, error, empty, skeleton).
+
+Now the main surface view with the phase switch.
+
+Now the i18n catalog and DEBUG previews.
+
+Now the test suites — splitting into pure (formatting/projection/a11y/i18n) and state-holder (model/telemetry/freshness) to respect the file_length limit.
+
+Now the state-holder/telemetry/freshness tests.
+
+All 9 files created. Now running the verification gates. First swiftformat and swiftlint on the shipped files.
+
+swiftformat wants style fixes. Let me auto-format my files (the ecosystem-recommended approach) and review the changes.
+
+Format passes. Let me review what swiftformat changed (especially the `localize` property) to ensure correctness.
+
+Changes look correct. Now swiftlint --strict on the shipped files.
+
+One brace-style conflict at Tests.swift:154. Let me view and fix that helper's signature wrapping.
+
+Now re-run both swiftformat and swiftlint to confirm both pass together.
+
+Both green (0 violations). Now the placeholder gate — let me check the script's interface then run it.
+
+Let me verify the scan actually covers my files by copying them to a temp dir and scanning that directly.
+
+The scan flagged a "TODO" at Tests.swift:186 — likely a substring. Let me find and fix it.
+
+The scanner matched "tOdo" inside `testOdometer...`. Let me rename that test to break the substring, then re-scan.
+
+Placeholder gate clean (COUNT=0). Now building a throwaway SwiftPM harness that compiles the shipped files against the REAL Shared-free deps + runs the XCTest suites. Let me set it up.
+
+Confirmed minimal deps. Building the harness now.
+
+Now the Package manifest and `swift test` run (using Xcode's toolchain for the full SwiftUI SDK).
+
+All 42 tests passed on the harness (compiling the full surface — including previews — against the real deps). Now the dual-SDK typecheck against iOS 18 + macOS 15.
+
+Both SDK typechecks pass (with DEBUG previews). Now gathering honest xcodebuild gate evidence — checking project generation setup and the bare gate behavior.
+
+Confirmed: no committed project (xcodegen-based), Shared.xcframework not staged, bare gate exits 1. Let me generate the project, verify the surface is registered, then capture the real xcodebuild outcome.
+
+Surface registered (54 refs, all files, both targets). Now capturing the real xcodebuild outcome with the full toolchain.
+

@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure to understand the task, then check platform capabilities.
+
+Key findings: `swift`, `swiftlint`, `swiftformat` available, but `xcodebuild` requires full Xcode (only CommandLineTools present). The web source exists. The Apple app lives at `apps/apple/` (not `apps/apple/TeslaSync/`). Let me explore deeply.
+
+The Apple app is at `apps/apple/` with `Sources/` as the main group. Let me explore the existing structure to find dashboard widgets, state holders, i18n, and shared components.
+
+No existing dashboard-widgets dir — this is a new surface. Let me deeply understand the SharedFacade (state holders), Components, Design tokens, and find the diagnostics contract.
+
+Let me read the core facade files and understand the state-holder, i18n, and diagnostics patterns.
+
+Now I understand the state-holder pattern binds to a KMP `Shared.xcframework`. Let me explore i18n, design tokens, diagnostics, an example complete view, and the shared component States/Cards.
+
+Let me locate the KMP shared core (energy stores), the diagnostics contract, and read key token/component/view files.
+
+Found the KMP `EnergyStore.kt` and diagnostics contract. Let me read the shared core energy store/repo, the web hooks, and the web widget shell/shared components.
+
+Let me read the web type definitions, widget infrastructure (shell/shared/registry), the diagnostics contract, and design tokens.Let me read the web types, hook bodies, the widget shell/shared/types/registry, and the diagnostics contract.
+
+Types live in `@/types/energy`. Let me read those, the widget shell/shared/types/registry, and the diagnostics contract.
+
+Let me read the native design tokens, key shared components, a complete view example, and search for native telemetry/offline handling.
+
+Excellent context. Let me read the shared UI components I'll use (Cards, Banners, Skeletons, Badges, Typography, Lists), a complete view example, and check for native telemetry + offline/live handling.
+
+Let me read the remaining components (Typography, Badges, Lists, Skeletons), a full view example, and search for native telemetry + offline handling.
+
+Let me read Typography, Skeletons, a full view example, the LiveConnection, and search native telemetry/diagnostics.
+
+Let me read the shared Telemetry/Diagnostics API, a full view example, and the LiveConnection.
+
+Let me examine the test infrastructure, LiveConnection (offline), the i18n catalog format, and the FlowBridge/FacadeError binding helpers.
+
+Let me study the test framework conventions, the i18n catalog format, and the LiveConnection for offline handling.
+
+Let me verify the local Swift toolchain can typecheck SwiftUI, check the xcstrings schema + existing generic keys, and identify which shared components are `Shared`-free.
+
+macOS SwiftUI typecheck works, and all components/tokens are `Shared`-free — so I can compile-verify the bulk locally. Let me re-check i18n keys and the xcstrings entry schema.
+
+Now let me confirm how the raw `JsonElement` payload crosses to Swift (decoding strategy), and read Motion + the glass material helper.
+
+I have nearly all the context. Let me confirm the number-formatting parity (`fmtNumber`/`fmtInt`) and native formatter utilities, then I'll plan and build.
+
+I now have comprehensive context. Let me confirm the native number formatter's behavior, then write the plan and begin implementing.
+
+I have everything I need. Let me set up the plan, todos, and directory, then build.
+
+Now I'll build the Shared-free core. Creating the value types, view state, and descriptor first.
+
+Now the presentational view with all states, accessibility, and previews.
+
+Let me typecheck the three Shared-free files against the real components using the macOS SDK before continuing.
+
+The only error is the `#Preview` macro plugin (unavailable to standalone `swiftc`, affects existing repo files too). Re-running without `DEBUG` to exclude previews and verify the real code compiles.
+
+`UnitFormatters.swift` depends on a `Shared` type (`UnitPreferences`) module-wide. My widget doesn't use it. Let me confirm where `UnitPreferences` lives and exclude `Shared`-coupled component files from the focused compile.
+
+`UnitFormatters.swift` uses the same-module `UnitPreferences` (defined in a `Shared`-importing file). My widget doesn't use it — excluding it from the focused compile.
+
+The Shared-free core compiles cleanly (`rc=0`). Now the two thin `Shared`-importing files following the proven `VehicleSettingsModel`/`FlowBridge` patterns.
+
+Now the top-level widget surface that owns the model and renders the content.
+
+Now the i18n keys. Let me inspect the exact xcstrings byte formatting so I can add keys with a minimal, matching diff.
+
+The format is default `json.dumps(indent=2)` with insertion order. Let me verify an exact roundtrip, then append my keys.
+
+Exact roundtrip confirmed. Adding my 13 keys (7 source-derived + 6 native chrome) with a minimal diff.
+
+i18n done (143 insertions, 0 deletions). Now the Shared-free unit tests.
+
+Now verification. First, auto-format my files with the repo's swiftformat config, then lint.
+
+Formatted 3 files. Let me confirm formatting is clean, run swiftlint on my files, and re-typecheck after formatting.
+
+swiftformat clean, swiftlint **0 violations in 524 files**. Now let me re-typecheck the Shared-free sources post-format and verify the test logic compiles against them.
+
+Need to exclude the 2 `Shared`-importing files from the Shared-free typecheck. Let me re-run sources, then verify the test logic compiles via XCTest shims (XCTest isn't available standalone).
+
+Sources clean. Now verifying the **test logic** typechecks against the real APIs via XCTest shims (XCTest isn't available to standalone `swiftc`).
+
+`test_rc=0` — the test logic typechecks against the real APIs. The two warnings are artifacts of my single-overload shim (real XCTest resolves them cleanly), but I'll make those two assertions explicit for clarity. Then re-verify.
+
+All green: test logic typechecks (0 warnings), swiftformat clean, swiftlint **0 violations in 524 files**. Now the placeholder check + a syntax parse of the two `Shared`-coupled files.
+
+`pwsh` is available and the placeholder script exists. Let me check its parameters and run the real gate placeholder check on my files.
+
+Placeholder gate passes (EXIT=0). Now let me capture honest evidence of the `xcodebuild` block and confirm the log directory.
+
+`xcodebuild` is genuinely BLOCKED (CommandLineTools only). But `xcodegen` 2.45.4 is available — let me generate the project to prove my files are wired into the app + test targets (strong supplementary evidence).
+
+`xcodegen` confirms all 5 sources (30 refs) + test (6 refs) are wired into the app & test targets. Let me check the repo's convention for macOS/xcodebuild-pending verification and existing log STATUS format before writing the log.
+
+Implementation is complete and all host-runnable gates are green; `xcodebuild` is genuinely unavailable (no Xcode), which the prompt designates as `STATUS=BLOCKED`. This matches the repo's `macos-pending-verifications.md` convention. Let me clean up, then assemble the gate log with real captured evidence.
+
+Now I'll assemble the gate log with real captured evidence (host-runnable gates + the `xcodebuild` block + supplementary compile proofs).
+
+Now append the supplementary compile-proof evidence (swiftc typecheck + xcodegen membership), implementation summary, and the final EXIT/STATUS.
+
+All proofs green (core/test/parse/gen all RC=0). Let me review the final log, then add the macos-pending row.
+
+The log is complete and honest, ending `EXIT=1` / `STATUS=BLOCKED`. Now I'll record the deferred xcodebuild verification in the repo's `macos-pending-verifications.md`, per its documented convention.
+
+The log and pending-verification record are in place. Let me do a final careful review of the two compiler-unverifiable `Shared` files before staging.
+
+The model logic is correct and matches the proven `StateHolderModel` pattern. One Swift 6 concurrency refinement: the widget's convenience init constructs a `@MainActor` model, so the View should be main-actor isolated. Let me mark the struct `@MainActor`.
+
+Let me re-verify formatting/lint/parse after that edit, then stage and commit.
+
+All green. Let me stage only my files (excluding the pre-existing unrelated web changes) and commit.
+
+Staging is precise (no unrelated web files). Committing now.
+
+Committed cleanly (9 files, 1361 insertions). Let me do a final status check.
+
+The task is complete to the maximum extent possible on this runner. Final summary below.
+

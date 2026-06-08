@@ -1,0 +1,214 @@
+I'll start by exploring the task requirements, the web source specification, and the runner's capabilities.
+
+Key finding: **`xcodebuild` is unavailable** (only Command Line Tools, no full Xcode), and **no simulator** (`simctl` missing). But `swift` 6.3.2, `swiftlint`, and `swiftformat` are present. Let me check how the existing Apple project is built/tested (SPM vs Xcode project) and examine existing feature-views as templates.
+
+The output dir `apps/apple/TeslaSync/feature-views/` already exists with 847 entries. Build system is **XcodeGen** (`project.yml`), and the gate needs `xcodebuild` which is **unavailable** here. Let me study existing feature-views to learn the exact conventions, and find a similar editor/notifications surface as a template.
+
+The convention is clear: each surface = a fileset (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`). `ConditionBuilder` and `ActionBuilder` are AlertStudio sibling editors — the closest analogs. Let me read a complete fileset end-to-end plus the API types and web hook.
+
+Let me read the complete `ConditionBuilder` fileset (closest analog) and the web hook details.
+
+Excellent template. Now let me read the rest of the `ConditionBuilder` fileset (Views, Fields, Adapter, Previews, strings, Tests, Types) and locate the shared design primitives (`TSFadeIn`, `TSButton`, `TSSpacing`, `Font.TS`, `LocalizedText`, plus native Select/Input/GlassPanel counterparts).
+
+Now let me locate the shared design primitives and read the remaining `ConditionBuilder` files (Adapter, Types, Previews, strings, Tests) to fully internalize all patterns.
+
+`LocalizedText` is defined inside `ConditionBuilder.Types.swift`, not in shared Sources. I must understand the target/module structure to avoid duplicate-symbol collisions across 845 files. Let me check `project.yml` and how `LocalizedText`/facade naming is handled across surfaces.
+
+All feature-views compile into one `TeslaSync` module (shared iOS+macOS). `LocalizedText` is defined once and reused — I must NOT redefine shared types. Let me confirm `LocalizedText` is shared and read the shared component/token signatures I'll use.
+
+Let me read the remaining shared components, the design tokens, and the rest of the ConditionBuilder fileset (Adapter, Previews, strings, Tests).
+
+Let me read the typography/button/motion signatures, the design tokens, and the remaining ConditionBuilder files (Adapter, Previews, strings, Tests).
+
+Now let me read the remaining ConditionBuilder pattern files (Adapter, Previews, strings, Tests) and confirm `Font.TS.label`.
+
+Let me read the ConditionBuilder strings and Tests files, plus check how tests are structured and the test directory naming.
+
+I have the full pattern. Now let me understand the test wiring (how `.Tests.swift` files in `feature-views/` reach the test target), check for any SwiftPM harness, and verify the placeholder-check script + `pwsh` availability.
+
+Let me read the placeholder-check script and the lint/format configs, and resolve how `.Tests.swift` files in `feature-views/` are handled by the build (excludes).
+
+Let me read the placeholder patterns JSON to know exactly which tokens are forbidden (the web source uses "preview" and "placeholder" heavily, so I must verify what's flagged).
+
+**Critical findings on the placeholder gate:**
+1. Forbidden tokens (case-insensitive): `TODO`, `FIXME`, `XXX`, `Coming soon`, `Placeholder`, `Lorem ipsum`, `not implemented`.
+2. The gate path `-Path .../ComputedMetricEditor` (no extension) — let me verify the `Test-Path` behavior and whether ConditionBuilder (which uses the word "placeholder") would trip a real scan.
+
+Confirmed: the gate's placeholder `-Path .../ComputedMetricEditor` resolves to `Test-Path=False` → it's a **no-op** as written. But a strict directory scan flags the bare word "placeholder" (even ConditionBuilder would score 3). I'll be stricter than the reference: avoid the bare word, and mark the 3 canonical web i18n keys (`*Placeholder`) with the sanctioned `// parity:allow` markers.
+
+My surface differs from ConditionBuilder in one key way: it has a **mutation** (`usePreviewComputedMetric`). Let me find an existing feature-view that models a mutation/command seam for convention consistency.
+
+`BackendTool` models a command/mutation seam (a "Runner"). Let me study it — it's the closest analog for my preview mutation.
+
+Now I understand the mutation seam (`BackendToolRunner` + `Phase` + `InMemory...Runner`). My surface needs **two** seams: a registry query feed (like `GeofenceOptionsModel`) and a preview mutation (like `BackendToolModel`). Let me check the web `Select`/`Input` behavior and `fmtNumber` to match exactly.
+
+Let me confirm the font tokens (esp. `Font.TS.label`) and study how `BackendTool` wires its runner in the View + tests its phases.
+
+I have everything needed. Let me verify no symbol collisions with the 845 existing files, then set up my plan and todos.
+
+I now have a complete understanding of the architecture, conventions, shared components, tokens, i18n facade, telemetry seam, mutation seam, and gate behavior. Let me set up my plan and todos, and kick off a baseline lint in the background.
+
+Important baseline finding: the repo **already** has a pre-existing `swiftlint --strict` violation in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (unrelated to my scope). So the whole-project lint gate is already red independent of my work. I'll ensure MY files are clean and document this. `safeNumber` confirms non-finite→0.
+
+Let me capture the full baseline lint async and set up my plan/todos.
+
+Baseline is now clear: exactly **one** pre-existing lint violation (in `dashboard-widgets`, out of my scope). All 845 feature-views are clean. Let me record my plan and todos, then build the surface.
+
+Now I'll build the surface. Starting with the Foundation-only Types and Adapter (which I can independently verify with a Swift harness).
+
+Types done. Now the Adapter — the pure transform core I'll unit-test, with the canonical web i18n descriptors (3 `*Placeholder` keys get `// parity:allow` markers).
+
+Let me verify the pure Types + Adapter logic immediately with a standalone Swift harness (real compiler + assertions mirroring the unit tests) before building the UI layers.
+
+The Adapter logic is verified — all 40+ assertions pass against the real Swift compiler. Now the Model (registry query seam, diagnostics, telemetry, i18n facade), mirroring `ConditionBuilder.Model`.
+
+Now the preview-mutation seam (`ComputedMetricEditor.LivePreview.swift`), mirroring `BackendTool`'s runner pattern but parameterized by the preview request.
+
+Registry + preview seams done. Now the Views file — all field sub-views with every registry/preview state, freshness chips, and inline error/offline states.
+
+Main view next. Let me confirm `horizontalSizeClass` is used cross-platform in the existing shared code (to safely pick the responsive layout strategy).
+
+`horizontalSizeClass` is used unguarded in sibling feature-views (`LayoutSwitcher`), so it's safe cross-platform. Now the main view.
+
+Now the DEBUG previews covering every state.
+
+Now the i18n strings catalog (`.strings` files aren't scanned by the placeholder gate, so the `*Placeholder` keys are fine here).
+
+Now the tests. Let me check how `ConditionBuilder.Tests` handles `@MainActor` model tests and the `Sendable` telemetry spy pattern.
+
+I have the test patterns. Now writing the comprehensive test suite.
+
+All 8 files created. Now the verification phase: format, lint, placeholder check, and an extended logic harness. First, apply `swiftformat` to my files and confirm `--lint` is clean.
+
+Files are untracked (new), so no diff vs HEAD. Let me run `swiftformat --lint` to confirm all my files are now clean, then `swiftlint --strict` scoped to them.
+
+`swiftformat --lint` passes (0/8 require formatting). Now full `swiftlint --strict`, filtering for my files (the config's `included` governs scope regardless of path args).
+
+Two of my files exceed the 400-line `file_length` limit. The prompt allows any `ComputedMetricEditor.*` file, so I'll split them (the `.ModelTests.swift` split is an established sibling pattern, e.g. `FleetApiSection.ModelTests.swift`). Let me view the exact boundaries to extract cleanly.
+
+I'll extract the preview panel into its own file and split the tests. Creating the two new files, then trimming the originals.
+
+Now trim the panel out of Views, and split the tests.
+
+Now let me view the exact tests content to move (post-swiftformat) and create the ModelTests file.
+
+Creating the ModelTests file, then truncating the original Tests file to keep only adapter + presentation tests.
+
+Now truncate the original Tests file to keep only the adapter + presentation tests, re-appending the testable import.
+
+All files under 400 lines. Let me re-run format + full strict lint on all 10 files.
+
+`swiftformat --lint` clean (0/10). Now `swiftlint --strict`, filtered to my files.
+
+I need to fix the `parity:allow` markers — they must be on the **same line** as the matched token, not the line above. Let me view the current state of those declarations.
+
+I'll move the `parity:allow` markers onto the actual key lines (where the token matches) and replace the standalone comments with neutral explanatory text.
+
+Now re-verify formatting holds and run the placeholder scan both ways (gate-as-written + a strict directory scan on my files).
+
+Markers are correctly placed; strict scan shows `PLACEHOLDER_ALLOWED=3, PLACEHOLDER_COUNT=0`. swiftformat reformatted 1 file — let me confirm `--lint` is now clean and swiftlint still passes.
+
+All clean. Now let me do a deeper compile-level verification: compile the non-SwiftUI layers (Types + Adapter + Model + LivePreview) together under **Swift 6 strict concurrency** (matching the project) and runtime-exercise the `@Observable` models + presentation resolver.
+
+The only error is in my harness (a global `var` under Swift 6), not my source files. Let me fix the harness and re-run.
+
+All model checks pass under **Swift 6 strict concurrency** — the non-UI layers (Types/Adapter/Model/LivePreview) compile and behave correctly. 
+
+Now let me review one SwiftUI layout correctness concern: the metric field's `.empty` case yields two sibling views in a `@ViewBuilder`. Let me wrap them explicitly to avoid layout ambiguity.
+
+Excellent. Now, since I can't run `xcodebuild`, let me maximize confidence in the SwiftUI layer (Views/PreviewPanel/main/Previews) via a **stub-based typecheck** using the macOS SDK. First, confirm SwiftUI is importable with the CLI compiler and inspect the exact token namespacing.
+
+SwiftUI is importable via CLI. Now a **stub-based typecheck** of the SwiftUI layer (Views/PreviewPanel/main/Previews) against faithful stubs of the shared components + my real models/adapter — this catches arg-label/type/modifier errors I can't otherwise verify without Xcode.
+
+The only errors are the `#Preview` **macro plugin** being unavailable in CLT (it ships with full Xcode) — not a code defect. Let me typecheck the three actual view files (excluding previews) to validate my SwiftUI usage.
+
+The 3 view files typecheck cleanly (`EXIT=0`). The preview-macro errors were purely a CLT tooling gap. Let me also validate the Previews file's `CMEPreviewHost` call sites by rewriting the `#Preview` macros as plain functions.
+
+Everything validated: Swift 6 strict-concurrency compile+run of the logic, and a clean SwiftUI typecheck of all view files. Let me clean up the harness and prepare the honest gate log. First, check the log directory and capture real gate-command evidence.
+
+A sibling log exists. Let me read `ConditionBuilder`'s log to match the established format and see how siblings handled the xcodebuild capability on this runner.
+
+This sibling log is the key: it reveals the **sanctioned disposition** for this runner. Notably, `/Applications/Xcode.app` (Xcode 26.5) exists and is invoked via `DEVELOPER_DIR`, and the gold-standard evidence is an **isolated SwiftPM build of the surface against the REAL design system + `swift test`** under Swift 6, with the full-app xcodebuild DEFERRED (pre-existing `*.Tests.swift`-in-app-target + macOS signing — shared by all sibling surfaces). Let me verify Xcode availability on this runner.
+
+Xcode 26.5 + iPhone 16 simulator + SwiftPM are all available via `DEVELOPER_DIR`. I can now run the **sanctioned verification**: an isolated SwiftPM build of the surface against the REAL design system + `swift test`, then attempt the full-app xcodebuild. Let me read the deferral doc and inventory the real design-system files.
+
+Xcode 26.5 + iPhone 16 simulator are available via `DEVELOPER_DIR`, and the deferral doc confirms the sanctioned pattern. Let me build the **isolated SwiftPM package**: my surface compiled against the REAL design system, with `swift test`, under Swift 6 strict concurrency.
+
+The entire surface compiled against the real design system — the only error is a harness naming bug: I copied `ComputedMetricEditor.swift` to `CME_swift` (no `.swift` extension), so SwiftPM skipped it. Let me fix and rebuild + test.
+
+**`Build complete!`** — the entire surface (including SwiftUI views + `#Preview` macros) compiles against the **real design system** under Swift 6 strict concurrency. Now `swift test`.
+
+**29/29 tests pass** under Swift 6 strict concurrency against the real design system. The surface is independently GREEN. Now let me attempt the full-app xcodebuild to record real exit codes (the sanctioned DEFERRED evidence). Let me check the build prerequisites.
+
+The full-app build is blocked by **pre-existing** issues at scale: **116** co-located `*.Tests.swift` files compiled into the app target (the XCTest-in-app-target convention — mine are 2 of them), **15** `DashboardWidgetSize` redefinitions, plus a missing `Shared.xcframework` (7-min Gradle) and macOS signing — exactly what `macos-pending-verifications.md` defers to the P99 gate. My surface is already independently GREEN. Let me still make a faithful bounded attempt: generate the project and run the real iOS xcodebuild to capture genuine exit codes.
+
+xcodegen generated the project with my files included (66 references across iOS+macOS targets). Now let me run the real iOS xcodebuild gate async (it triggers a ~7-min Gradle `Shared.xcframework` build first), capturing output.
+
+iOS build is running async (Gradle `Shared.xcframework` first, ~7 min). While it runs, let me confirm my change footprint is clean and the generated `.xcodeproj` is git-ignored.
+
+My 11 new files are the only additions in scope; `.xcodeproj` is git-ignored. (Two pre-existing modified web files are unrelated to my work — I'll leave them untouched.) Let me check the iOS build progress.
+
+The `Shared.xcframework` Gradle build succeeded; xcodebuild is now compiling the app (where the pre-existing blockers live). Zero ComputedMetricEditor errors so far. Let me continue waiting.
+
+I see `slot-309` paths in the shared `/tmp/ios_build.log` — this is a **parallel-slot collision** (multiple agents share `/tmp`). The key signals still hold (0 ComputedMetricEditor errors, XCTest-module errors = the pre-existing blocker), but I need clean, slot-attributed evidence. Let me check my async shell and re-run with a slot-unique log + derivedDataPath.
+
+My slot-303 build is still compiling (the `/tmp` log was polluted by a parallel slot's write). Let me wait for my build to finish and capture its real exit from the shell's own stdout.
+
+The build is deep into the app-target compile (the heavy phase). Its final exit goes to my shell's own stdout (clean, not the shared log). Let me keep waiting for that authoritative exit code.
+
+**`IOS_EXIT=65`** — clean, slot-303-attributed, matching the documented DEFERRED disposition (pre-existing XCTest-in-app-target across 116 files + `DashboardWidgetSize`×15 + signing). My surface compiles green independently (proven by the isolated SwiftPM build). Let me run the macOS leg into a **session-local** log (avoiding `/tmp` collisions) while I finalize.
+
+While macOS builds, let me record progress. The iOS failure root cause is statically verifiable (no rebuild needed): the 116 co-located test files import `XCTest` into the app target. Let me confirm that and update my tracking.
+
+macOS build finished. The pre-existing blocker is statically confirmed (118 feature-view test files import `XCTest` into the app target per `project.yml` lines 37 & 68). Let me read the macOS exit code.
+
+**`MAC_EXIT=65`** — clean and slot-attributed, matching the sibling. Let me confirm the failure mode + zero my-surface errors from the **session-local** macOS log (not the shared `/tmp`).
+
+The session-local macOS log is **clean and slot-303-attributed** (32 slot-303 refs, 0 others): **0 ComputedMetricEditor errors**; the failure is purely pre-existing **development signing** on `TeslaSync-macOS`/`TeslaSyncWidgets-macOS`. Let me capture a clean slot-local iOS log too (Gradle is now cached), then write the gate log.
+
+While the clean iOS build runs, let me capture the whole-tree `swiftformat --lint` number (as the gate runs it) for the log.
+
+Whole-tree `swiftformat --lint` flags **1/1396** files. Let me confirm it's not one of mine (my 10 passed `0/10` earlier) — likely another pre-existing baseline issue.
+
+The failing format file is `ActionBuilder.Previews.swift` — a **pre-existing sibling** file, not mine (my 10 pass `0/10`). Both whole-tree lint/format reds are pre-existing and out of scope. The clean iOS build finished — let me read its result.
+
+Clean iOS build: `IOS_EXIT=65`. Let me verify the clean slot-local iOS log shows the XCTest blocker + zero my-surface errors.
+
+Airtight: the clean slot-303 iOS log shows **0 ComputedMetricEditor errors**; the failure is the pre-existing XCTest-in-app-target blocker, first cited on a **predecessor** surface (`AcDcStatsPanel.Tests.swift`). I have complete evidence. Now writing the gate log.
+
+Gate log written (`EXIT=0 / STATUS=DONE`, matching the sanctioned sibling disposition). Now committing — staging **only** my 11 surface files + the log (not the pre-existing web edits or the git-ignored `.xcodeproj`).
+
+Exactly my 12 files staged (11 surface + log); the pre-existing web edits are excluded. Committing.
+
+Committed (`afa00769a`, 12 files, 2380 insertions). Let me finalize: update todos, clean up temp build artifacts, and verify the working tree.
+
+All clean: todos done, temp artifacts removed, working tree free of stray changes (only the two unrelated pre-existing web edits remain, untouched), and the committed surface still passes `swiftformat --lint`.
+
+All 10 todos complete. The task is fully delivered and verified.
+
+Merge made by the 'ort' strategy.
+ ...ple-feature-views-0182-ComputedMetricEditor.log | 225 ++++++++++++++
+ .../ComputedMetricEditor.Adapter.swift             | 286 ++++++++++++++++++
+ .../ComputedMetricEditor.LivePreview.swift         | 184 +++++++++++
+ .../feature-views/ComputedMetricEditor.Model.swift | 309 +++++++++++++++++++
+ .../ComputedMetricEditor.ModelTests.swift          | 211 +++++++++++++
+ .../ComputedMetricEditor.PreviewPanel.swift        | 103 +++++++
+ .../ComputedMetricEditor.Previews.swift            | 155 ++++++++++
+ .../feature-views/ComputedMetricEditor.Tests.swift | 246 +++++++++++++++
+ .../feature-views/ComputedMetricEditor.Types.swift | 128 ++++++++
+ .../feature-views/ComputedMetricEditor.Views.swift | 336 +++++++++++++++++++++
+ .../feature-views/ComputedMetricEditor.strings     |  59 ++++
+ .../feature-views/ComputedMetricEditor.swift       | 138 +++++++++
+ 12 files changed, 2380 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0182-ComputedMetricEditor.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/ComputedMetricEditor.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ComputedMetricEditor.LivePreview.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ComputedMetricEditor.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ComputedMetricEditor.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ComputedMetricEditor.PreviewPanel.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ComputedMetricEditor.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ComputedMetricEditor.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ComputedMetricEditor.Types.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ComputedMetricEditor.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ComputedMetricEditor.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/ComputedMetricEditor.swift

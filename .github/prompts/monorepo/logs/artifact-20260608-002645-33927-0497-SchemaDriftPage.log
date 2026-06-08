@@ -1,0 +1,129 @@
+================================================================================
+ p4-apple · P7 · page:admin/SchemaDrift — SwiftUI / Apple HIG parity
+ Log: .github/prompts/monorepo/logs/apple-page-admin-SchemaDriftPage.log
+ Host: macOS (Darwin, arm64) · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint 0.63.3
+ Web source: web/src/features/admin/pages/SchemaDriftPage.tsx
+================================================================================
+
+## Scope reconciliation (honest deviation from the GENERATED prompt paths)
+
+The generated prompt targets `apps/apple/TeslaSync/Features/Admin/SchemaDriftPage.swift`
+and `apps/parity/apple-ledger.json`. Neither path exists in this repo, and
+`Features/Admin/` is NOT a compiled source root in `apps/apple/project.yml`. The
+real, building convention (1438 surfaces, e.g. AiUsageCard / BrowserPushChannelCard)
+is the globbed `apps/apple/TeslaSync/feature-views/` directory with a multi-file
+surface pattern. Implementing under the idealized path would have produced a file
+that never compiles. Decision: follow the REAL repo convention (feature-views/ +
+the per-surface file split + per-surface `.strings` table). The string keys are the
+EXACT web key names so a future merge into Localizable.xcstrings is a no-op rename.
+Navigation is NOT wired into the shared AppRoute/RouteHostRegistry — 0 of 1438
+surfaces do (that is the P4 shell/nav dependency layer); the surface is route-ready
+and exposes `.navigationTitle` (the native peer of web `usePageTitle`).
+
+## Files (apps/apple/TeslaSync/feature-views/)
+  SchemaDriftPage.swift            — composed surface + adaptive scaffold + branch switch
+  SchemaDriftPage.Model.swift      — i18n facade, telemetry seam, input, @Observable model
+  SchemaDriftPage.Adapter.swift    — pure formatting + input DTOs + resolved view types
+  SchemaDriftPage.Projection.swift — pure input→resolved projection (branch priority)
+  SchemaDriftPage.Views.swift      — GlassPanel1 (summary) + GlassPanel2 (details) + cells
+  SchemaDriftPage.Chrome.swift     — loading / notConfigured(503) / error / empty(GlassPanel6)
+  SchemaDriftPage.Previews.swift   — 6 #Preview states
+  SchemaDriftPage.Tests.swift      — 23 XCTest cases
+  SchemaDriftPage.strings          — 22 parity keys (verbatim web names) + 5 native-chrome keys
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=32
+--------------------------------------------------------------------------------
+[panels — 6]
+[01] panel GlassPanel1  → COVERED  SchemaDriftSummaryPanel            (SchemaDriftPage.Views.swift)
+[02] panel GlassPanel2  → COVERED  SchemaDriftDetailsPanel            (SchemaDriftPage.Views.swift)
+[03] panel Tables       → COVERED  SchemaDriftCountStat id:"tables"   (Projection.fingerprintCard → SchemaDriftCountStatView)
+[04] panel Columns      → COVERED  SchemaDriftCountStat id:"columns"  (Projection.fingerprintCard → SchemaDriftCountStatView)
+[05] panel Indexes      → COVERED  SchemaDriftCountStat id:"indexes"  (Projection.fingerprintCard → SchemaDriftCountStatView)
+[06] panel GlassPanel6  → COVERED  SchemaDriftEmptyPanel              (SchemaDriftPage.Chrome.swift)
+
+[data states — 4]
+[07] state loading      → COVERED  SchemaDriftResolved.Phase.loading → SchemaDriftLoadingView      (Chrome)
+[08] state empty        → COVERED  SchemaDriftResolved.Phase.empty   → SchemaDriftEmptyPanel        (Chrome)
+[09] state error        → COVERED  SchemaDriftResolved.Phase.error   → SchemaDriftErrorView+Retry   (Chrome)
+[10] state success      → COVERED  SchemaDriftResolved.Phase.success → Summary+Details panels       (Views)
+       (plus .notConfigured / 503 → SchemaDriftNotConfiguredBanner — web `subsystemMissing`)
+
+[strings — 22, all via SchemaDriftStrings(table:"SchemaDriftPage"), verbatim web keys]
+[11] admin.schemaDrift.columnDelta        → COVERED  Projection DeltaSpec(columns).labelKey
+[12] admin.schemaDrift.columnSub          → COVERED  Projection DeltaSpec(columns).subKey
+[13] admin.schemaDrift.columns            → COVERED  Projection.fingerprintCard stats(columns).label
+[14] admin.schemaDrift.emptyMessage       → COVERED  Chrome.SchemaDriftEmptyPanel description
+[15] admin.schemaDrift.emptyTitle         → COVERED  Chrome.SchemaDriftEmptyPanel label
+[16] admin.schemaDrift.fingerprintCurrent → COVERED  Projection.makeDetails current.titleKey
+[17] admin.schemaDrift.fingerprintExpected→ COVERED  Projection.makeDetails expected.titleKey
+[18] admin.schemaDrift.fingerprintTitle   → COVERED  Views.SchemaDriftDetailsPanel SchemaDriftPanelTitle
+[19] admin.schemaDrift.generatedAt        → COVERED  Projection.fingerprintCard captured (format)
+[20] admin.schemaDrift.indexDelta         → COVERED  Projection DeltaSpec(indexes).labelKey
+[21] admin.schemaDrift.indexSub           → COVERED  Projection DeltaSpec(indexes).subKey
+[22] admin.schemaDrift.indexes            → COVERED  Projection.fingerprintCard stats(indexes).label
+[23] admin.schemaDrift.notConfigured      → COVERED  Chrome.SchemaDriftNotConfiguredBanner message
+[24] admin.schemaDrift.pageTitle          → COVERED  SchemaDriftPage.pageTitle (header + navigationTitle)
+[25] admin.schemaDrift.statusClean        → COVERED  Projection.makeSummary statusLabel(!isDrifted)
+[26] admin.schemaDrift.statusDrifted      → COVERED  Projection.makeSummary statusLabel(isDrifted)
+[27] admin.schemaDrift.statusTitle        → COVERED  Views.SchemaDriftSummaryPanel SchemaDriftPanelTitle
+[28] admin.schemaDrift.subtitle           → COVERED  SchemaDriftPage.header subtitle
+[29] admin.schemaDrift.tableDelta         → COVERED  Projection DeltaSpec(tables).labelKey
+[30] admin.schemaDrift.tableSub           → COVERED  Projection DeltaSpec(tables).subKey
+[31] admin.schemaDrift.tables             → COVERED  Projection.fingerprintCard stats(tables).label
+[32] admin.subsystem.unavailableTitle     → COVERED  Chrome.SchemaDriftNotConfiguredBanner title
+--------------------------------------------------------------------------------
+PARITY_COVERED=32
+PARITY_REQUIRED=32
+=== /PARITY ===
+================================================================================
+
+## Web-fidelity notes (ported verbatim — arithmetic NOT "fixed")
+ - fmtNumber(v, decimals) → SchemaDriftFormat.number: locale grouping, fixed fraction
+   digits, half-up, safeNumber(non-finite⇒0). Display precision carried as
+   decimalPrecision (web global `settings.decimal_precision ?? 2`).
+ - formatDelta → SchemaDriftFormat.delta: 0 ⇒ "0" (no fraction digits); >0 ⇒ "+"+fmt;
+   <0 ⇒ fmt (keeps its own minus).
+ - formatDateTime → SchemaDriftFormat.dateTime: medium date + short time; unparseable ⇒ "—".
+ - `{sha256 || '—'}` and `{generatedAt && …}` (absent OR empty ⇒ no Captured line) preserved.
+ - is_different drives the status badge (web `is_different ?? has_drift`).
+ - P4 leaf additions over the web: loading skeleton (web shows a blank body) and a
+   retryable error (web folds a non-503 failure into the empty state). Declared as the
+   required `loading` / `error` data states; every branch renders a surface (ADR-011).
+
+## A11y / HIG / units
+ - Dynamic-type tokens (Font.TS), dark/light/increased-contrast dynamic colors (Color.TS),
+   VoiceOver labels + .isHeader traits, ContentUnavailableView for empty, ≥44pt Retry.
+ - No SI unit values on this page (counts + sha + timestamp only); date formatted at the
+   display boundary with an injected locale + time zone.
+
+================================================================================
+## Gate results (host-runnable, this macOS host)
+PLACEHOLDER_EXIT=0        check-placeholders.ps1 -Language swift  → PLACEHOLDER_COUNT=0, ALLOWED=0
+LINT_EXIT=0              swiftlint --strict (8 swift files)        → 0 violations, 0 serious
+TYPECHECK_MACOS_EXIT=0   swiftc -typecheck -sdk macosx15 -swift-version 6 -strict-concurrency=complete → 0 errors
+TYPECHECK_IOS_EXIT=0     swiftc -typecheck -sdk iPhoneOS26.5 -target arm64-apple-ios18.0 (Swift 6, strict) → 0 errors
+BUILD_EXIT=0             isolated SwiftPM build (surface + P3 primitives + tokens, Swift 6 strict) → success
+TEST_EXIT=0             swift test (Swift 6 strict concurrency)    → Executed 23 tests, 0 failures
+XCODEGEN_EXIT=0          xcodegen generate                         → project created; enumerates all 9 files
+
+## Full-app xcodebuild build/test — macOS-pending (deferred, NOT a regression)
+The full-app `xcodebuild -scheme TeslaSync build test` is blocked by the SAME
+pre-existing, unrelated parallel-merge collisions documented in
+apps/macos-pending-verifications.md for every prior p4-apple feature-view
+(ToolCard / AlertMessageEditor / FSMTimelineChart):
+  • `struct DashboardWidgetSize` (+ PowerFlowConnection) redefined 8–15× across
+    Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/*
+  • 116–170 co-located `*.Tests.swift` files importing XCTest into the app target
+  • the unstaged KMP `Shared.xcframework` (needs `./gradlew :core:assembleSharedXCFramework`)
+  • macOS development-signing identities
+Zero SchemaDriftPage / feature-views errors. Deferred to
+`p4-apple/P99-0001-apple-acceptance-gate` on macos-latest (signing + staged
+xcframework), per the established resolution protocol. A macos-pending row was
+appended to apps/macos-pending-verifications.md.
+
+================================================================================
+EXIT=0
+STATUS=DONE
+================================================================================

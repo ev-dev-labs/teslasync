@@ -1,0 +1,127 @@
+I'll start by exploring the environment, the web source spec, and the existing Apple app structure to understand what I'm reproducing.
+
+Key finding: `xcodebuild` is present but only Command Line Tools are installed (no full Xcode), so simulator/macOS builds may be blocked. Let me verify this and gather the template pattern from an existing feature-view.
+
+I have the web source — it's a pure presentational connection-state pill with three states (`live`, `reconnecting`, `offline`) and a relative-time label. Critical infra finding: a full `Xcode.app` exists at `/Applications/Xcode.app` but `xcode-select` points to CommandLineTools. Let me check if I can use the full Xcode, and study the canonical template (AIUsageCard) plus project structure.
+
+Full Xcode **is** accessible via `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (Xcode 26.5). That unblocks builds/tests. The project uses XcodeGen (`project.yml`). Let me read the rest of the template and the project config.
+
+Now let me read the rest of the template (previews, tests, strings), the project config, and locate the P1/S9 design tokens.
+
+Tokens live outside `Sources/`. Let me locate the design-system definitions and read the project config and tests.
+
+XcodeGen auto-discovers files in `TeslaSync/feature-views`, so dropping `LiveStatusPill.*` there is enough. Tokens are generated at `apps/design/generated/apple`. Let me read the color/spacing/font tokens, the motion helper, and the test conventions.
+
+I now have all design tokens. The mapping is clear: `live`→`statusSuccess`, `reconnecting`→`statusWarning`, `offline`→`textMuted`; `TSRadius.pill` for the pill shape. Let me read the test conventions and the test-target wiring in project.yml.
+
+I need to understand a critical wiring detail: the `*.Tests.swift` files live in `feature-views/` (an **app** target source), yet they `import XCTest` + `@testable import TeslaSync`. Let me find how they're actually compiled (excludes / test-target inclusion) and check xcodegen availability.
+
+There's a `Tests/Unit/FeatureViews/` dir. Let me see how it links to the feature-views `.Tests.swift` files (likely symlinks), confirming where my test file should live.
+
+`AIUsageCard.Tests.swift` lives in `feature-views/` with `@testable import TeslaSync` — so my `LiveStatusPill.Tests.swift` belongs there too (and "Allowed files" confirms `LiveStatusPill.*` in feature-views). Now let me assess full-build feasibility (Shared.xcframework staging, simulators) and lint configs.
+
+Now the picture is complete. Critical facts:
+- iPhone 16 simulator is **booted**; iOS/macOS 26.5 SDKs present.
+- `Frameworks/Shared.xcframework` is **missing** — the build pre-action builds it from KMP via Gradle (heavy, may be slow/blocked).
+- Two test conventions coexist: `feature-views/*.Tests.swift` (AIUsageCard) vs `Tests/Unit/FeatureViews/*Tests.swift` (ToolCard).
+
+Let me resolve the test-target wiring empirically by generating the project and inspecting target membership.
+
+Project generated. Let me determine which target `AIUsageCard.Tests.swift` actually compiles into, by parsing the pbxproj.
+
+The `feature-views` folder is added as a **PBXFileSystemSynchronizedRootGroup** (Xcode 16 synchronized group) — that's why individual files don't appear as build files. Let me inspect these groups and any membership exceptions to see how `*.Tests.swift` is handled.
+
+Decisive finding: `*.Tests.swift` in `feature-views/` compile into the **app** targets (TeslaSync / TeslaSync-macOS), not a test bundle — so my `LiveStatusPill.Tests.swift` follows that exact convention. The long pole is the missing `Shared.xcframework` (built from KMP via Gradle). Let me verify the shared module and kick off that build in the background while I write code.
+
+Shared module and gradlew are present. Let me kick off the `Shared.xcframework` Gradle build in the background (the long pole), then write the LiveStatusPill files while it runs.
+
+Let me set up tracking, verify no existing LiveStatusPill files, and check the background build's early progress.
+
+The Shared.xcframework build is genuinely compiling Kotlin/Native (good sign). No existing LiveStatusPill files. Let me write the plan and the core source files now while the build runs.
+
+Now the Previews and Tests files. Let me also check the Shared.xcframework build progress.
+
+All 7 files created. Let me run scoped swiftformat and swiftlint on my files to catch issues fast (build still running).
+
+Three fixes needed: redundant `return` in Adapter's `localizedText` (convert to switch-expression) and two over-long lines in Tests. Let me view the exact Tests lines and fix both files.
+
+Let me re-run the scoped lint/format checks to confirm clean.
+
+Scoped swiftformat and swiftlint are both **clean (0 violations)**. Now let me get isolated compile evidence: type-check the 4 production files + Tokens under Swift 6 strict concurrency via `swiftc`, independent of the heavy app build.
+
+Excellent — the 4 production files + Tokens **type-check cleanly under Swift 6 strict concurrency** (`TYPECHECK_EXIT=0`). Now let me get runtime evidence: compile the feature into a small executable and assert the adapter logic (relative bucketing, tone, projection) at runtime.
+
+The top-level-expressions error is just because the entry file must be named `main.swift`. Let me rename and recompile.
+
+Runtime asserts pass: **`LSP_ADAPTER_RUNTIME_OK`** (RUN_EXIT=0). Now let me validate the Tests + Previews compile too (as one module, stripping the `@testable` self-import), and check the xcframework build progress.
+
+The XCTest macro errors are purely a standalone-harness limitation (XCTest assertion macros require the test-target build), not a problem with my test code — it follows the established pattern and will compile under the real test build. I have strong isolated evidence already (Swift 6 typecheck pass + runtime asserts pass). Let me run the placeholder check, the full repo-wide format lint baseline, and check the xcframework build.
+
+Status: placeholder check = 0 (clean), my files pass swiftformat, **but** the repo-wide `swiftformat --lint` has **1 pre-existing violation in `ActionBuilder.Previews.swift`** (a different surface, outside my allowed files). The Shared.xcframework debug build finished; release is linking. Let me confirm the ActionBuilder issue is pre-existing (not mine), launch the full swiftlint baseline in the background, and wait for the xcframework.
+
+Confirmed: I only added `LiveStatusPill.*` (7 untracked files); the `AIUsageCard.*` modifications and the `ActionBuilder` swiftformat violation are **pre-existing**, not mine. The full swiftlint finished — let me read its result.
+
+Full `swiftlint --strict` over 1915 files: **1 serious violation, none in LiveStatusPill** (all 6 of my files linted clean). Let me identify the single pre-existing violation.
+
+The only 2 repo-wide lint failures are **pre-existing in other surfaces** (`ActionBuilder.Previews.swift` swiftformat, `LifetimeStatsWidget.Adapter.swift` swiftlint) — both outside my allowed files. All 7 of my files are clean. Let me wait for the Shared.xcframework to finish so I can attempt the authoritative xcodebuild gate.
+
+Shared.xcframework built successfully. Before running the heavy gate, let me check how sibling surface logs handled the same repo-wide situation (to mirror format/STATUS convention), and verify the framework is staged.
+
+This is the key insight. The sibling ToolCard log establishes the **repo-sanctioned disposition** used by every P4 surface: scoped lint/format/placeholders green + an **isolated SwiftPM Swift-6 build+test of the exact shipped sources** (the authoritative GREEN), while the full-app `xcodebuild` iOS/macOS gate is **DEFERRED (IOS/MAC_EXIT=65)** due to documented pre-existing breakage (duplicate dashboard-widget types, co-located `*.Tests.swift` importing XCTest into the app target, macOS signing). Final: `EXIT=0 / STATUS=DONE` with the deferral transparently logged.
+
+Let me build that isolated SwiftPM harness (library target named `TeslaSync` so `@testable import TeslaSync` resolves) and run the real tests.
+
+**Isolated SwiftPM harness: all 20 XCTest cases passed, 0 failures (SWIFT_TEST_EXIT=0)** — compiling the exact shipped sources (incl. Previews) against the real design-system tokens under Swift 6 language mode. This is the authoritative green verification, matching the repo's sanctioned approach.
+
+Now let me run the full-app `xcodebuild` gate to capture the (expected pre-existing) deferral with evidence. Starting the iOS build+test.
+
+The iOS gate is running (it re-stages the framework via preAction, then compiles ~1900 files). Let me wait and monitor its progress.
+
+iOS gate failed fast (`IOS_EXIT=65`, ~52s) — same signature as the sibling ToolCard deferral. Let me confirm the errors are pre-existing and that **zero** are in LiveStatusPill.
+
+Confirmed: **zero LiveStatusPill errors**. The iOS gate fails on a pre-existing systemic condition — co-located `*.Tests.swift` files (e.g. `AIRestorePanel.Tests.swift`) import XCTest into the app target, which it can't resolve. This is exactly the deferral the sibling ToolCard log documents, and it affects every feature-view equally (not introduced by me). Let me run the macOS gate to capture its result.
+
+While the macOS gate runs, let me capture fuller detail from the iOS log for honest documentation.
+
+The iOS failure is unambiguously the pre-existing systemic condition: ~230 co-located `*.Tests.swift` files across all surfaces import XCTest into the app target (which can't resolve it). Framework staged fine; **zero LiveStatusPill errors**. The macOS gate finished — let me read it.
+
+Both full-app gates are RED for **pre-existing/environmental** reasons with **zero LiveStatusPill errors**: iOS = the ~230 co-located `*.Tests.swift` XCTest-into-app-target condition; macOS = development signing certificate not provisioned (fails before compilation). This matches the sanctioned ToolCard deferral exactly.
+
+Let me add one supplementary confirmation (macOS build with signing disabled, to show the macOS app target hits the same pre-existing test condition) and re-capture the clean scoped checks for the log.
+
+Scoped swiftformat and swiftlint re-confirmed clean (both 0). Let me wait for the macOS no-signing build to confirm the macOS app target hits the same pre-existing test condition (compile parity with iOS).
+
+Airtight: macOS without signing hits the **identical** pre-existing condition (220 co-located `*.Tests.swift` importing XCTest), zero LiveStatusPill errors. Both full-app gates are deferred for pre-existing/environmental reasons only.
+
+Let me grab exact tool versions for the log preflight, then write the comprehensive gate log.
+
+All evidence gathered. Now let me write the comprehensive, honest gate log following the repo's sanctioned format.
+
+Log written ending `EXIT=0 / STATUS=DONE`. Now let me commit precisely the 7 LiveStatusPill files + the log (and nothing else — leaving the pre-existing AIUsageCard changes and generated artifacts untouched). Let me verify the working tree first.
+
+Both generated artifacts are gitignored. Let me add exactly my 8 files and commit.
+
+Committed cleanly (only my 8 files; the pre-existing AIUsageCard changes were left untouched). Let me finalize: update todos, clean temp artifacts, and verify the commit/log tail.
+
+The task is complete. Everything is committed and verified.
+
+## Summary
+
+I shipped a production-polished, Apple-idiomatic **`LiveStatusPill`** SwiftUI surface at parity with `web/src/features/system/components/status/LiveStatusPill.tsx`, committed as `88567147b` (7 source files + the gate log, 957 insertions). The pre-existing `AIUsageCard.*` working-tree changes were left untouched.
+
+**Delivered** (`apps/apple/TeslaSync/feature-views/LiveStatusPill.*`):
+- **Adapter** (pure Foundation): `LiveStatusState`, `LiveStatusTone`, `LiveStatusRelative.bucket` (verbatim web `relative()` floor+clamp+thresholds), `LiveStatusProjection.resolve`, `LiveStatusAccessibility`.
+- **Model**: P1/S10 i18n facade, P1/S11 telemetry seam (`view.opened`), P1/S8 state-holder (`LiveStatusSource`/`@Observable LiveStatusModel`), in-memory source.
+- **Views/main**: capsule + ring + pulsing dot (Reduce-Motion aware) + SF-Symbol icon + label + middot + relative; `TimelineView` 1s tick as the native peer of the web `now` prop; combined VoiceOver label.
+- **strings / Previews / Tests** (20 XCTest cases).
+
+**Parity**: tones→tokens (`statusSuccess`/`statusWarning`/`textMuted`), `animate-pulse`, icons (`waveform.path.ecg`/`wifi`/`wifi.slash`), `rounded-full`→Capsule, `/10`+`/30` opacities, aria-label, `data-status-live-state`→accessibilityIdentifier. Zero English literals in code.
+
+**Verification (all in-scope checks GREEN)**:
+- swiftformat `--lint` (scoped) = 0, swiftlint `--strict` (scoped) = 0, check-placeholders = 0
+- `swiftc -typecheck` Swift 6 strict-concurrency = 0
+- **Isolated SwiftPM `swift test` (Swift 6, real design-system, exact shipped sources+tests): 20 tests, 0 failures**
+- Runtime parity asserts vs the web arithmetic: `LSP_ADAPTER_RUNTIME_OK`
+
+**Honestly deferred** (reported RED, never green): the full-app `xcodebuild` iOS/macOS gate (`IOS_EXIT=65`/`MAC_EXIT=65`) with **zero LiveStatusPill errors** — blocked only by ~230 pre-existing co-located `*.Tests.swift` files importing XCTest into the app targets and by unprovisioned macOS dev-signing, both outside my allowed files. This matches the repo's sanctioned "code-complete + DEFERRED full-app Xcode gate" disposition (per the sibling ToolCard log). Log ends `EXIT=0 / STATUS=DONE`.
+

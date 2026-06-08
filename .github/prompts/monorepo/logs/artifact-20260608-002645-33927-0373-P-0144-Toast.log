@@ -1,0 +1,127 @@
+=== P4 Shared surface 0144 Toast (Apple) ===
+Prompt: .github/prompts/monorepo/p4-apple-shared-surfaces/0144-Toast.prompt.md
+Web source (spec): web/src/components/feedback/Toast.tsx
+Native output: apps/apple/TeslaSync/shared-surfaces/Toast/Toast.*
+Host: Darwin (macOS 26.5), bash. Gate authored in PowerShell; steps reproduced
+faithfully in bash with the real exit codes recorded below.
+
+------------------------------------------------------------------------------
+CAPABILITY (required: SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15)
+------------------------------------------------------------------------------
+- Xcode 26.5 (Build 17F42) available via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+  (xcode-select points at CommandLineTools; DEVELOPER_DIR overrides it).
+- SDKs: iOS 26.5 (iphonesimulator26.5), macOS 26.5 — deployment floors iOS 18 / macOS 15 honoured.
+- Simulator: iPhone 16 present (booted). xcodegen 2.45.4, swiftlint 0.63.3,
+  swiftformat 0.61.1, pwsh, JDK 17 present.
+- This surface uses neither Swift Charts nor MapKit (web source has no Recharts/Leaflet),
+  so the chart/map capability is not exercised; SwiftUI is.
+CAPABILITY: AVAILABLE.
+
+------------------------------------------------------------------------------
+DELIVERABLE (7 files, no stubs)
+------------------------------------------------------------------------------
+apps/apple/TeslaSync/shared-surfaces/Toast/
+  Toast.Model.swift      ToastKind / ToastAction / ToastItem; ToastCenter (@MainActor
+                         @Observable state holder, P1/S8) with post/success/error/info/
+                         warning/dismiss/dismissAll/runMutation + 5-toast cap + 4s auto-
+                         dismiss; ToastTelemetry seam (P1/S11 view.opened) +
+                         OSLogToastTelemetry; ToastScheduling seam + TaskToastScheduler;
+                         ToastStrings i18n facade (P1/S10).
+  Toast.Adapter.swift    Pure ToastPresentation projections (icon/tint/assertive-role/
+                         a11y label/action-kind/queue cap) — fully unit-tested.
+  Toast.Views.swift      ToastRow card (icon, title, message, link/callback action,
+                         dismiss; VoiceOver announce assertive/polite; Reduce Motion).
+  Toast.swift            ToastOverlay surface (surfaceSlug="Toast", view.opened on
+                         appear) + .toastLayer(_:onNavigate:) host modifier.
+  Toast.Previews.swift   #Preview per kind + message/action/stacked branches.
+  Toast.strings          P1/S10 catalog (dismiss + spoken severity prefixes).
+  Toast.Tests.swift      19 XCTest cases (adapter + center + scheduler + mutation +
+                         telemetry + a11y).
+
+Web-source data sources bound (P1/S8): useToast -> @Environment(ToastCenter.self);
+useOptionalToast -> optional @Environment(ToastCenter.self); useMutationToast ->
+ToastCenter.runMutation(...); useMotionPreference -> @Environment(\.accessibilityReduceMotion).
+States reproduced = the branches that exist in the web source (4 kinds; action link/
+callback/none; message present/absent; reduce-motion; empty = zero-toast resting layer
+that passes touches through). A transient, data-free feedback surface has no fetch
+lifecycle, so the generic loading/error/stale/offline DATA states do not exist in the
+source and are intentionally not fabricated (covenant: no silent drift).
+
+==============================================================================
+PER-SURFACE VERIFICATION (isolated, per apps/macos-pending-verifications.md precedent)
+==============================================================================
+Isolated SwiftPM harness compiles the REAL surface sources against the REAL design
+tokens (apps/design/generated/apple/Tokens.swift — KMP-free) under Swift 6 strict
+concurrency, on the iOS 18 / macOS 15 floors. This excludes the unrelated full-app
+collisions (see below) while proving the surface itself.
+
+[1] swift build (Swift 6 language mode, strict concurrency)  ............. Build complete! (38.10s)
+    ISOLATED_BUILD_EXIT=0
+[2] swift test  ......................................................... Executed 19 tests, with 0 failures
+    ToastPresentationTests: 10/10 ; ToastCenterTests: 9/9
+    ISOLATED_TEST_EXIT=0
+[3] iOS 18 typecheck (xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6
+    -strict-concurrency=complete -target arm64-apple-ios18.0-simulator)
+    IOS18_TYPECHECK_EXIT=0
+[4] macOS 15 typecheck (xcrun --sdk macosx swiftc -typecheck -swift-version 6
+    -strict-concurrency=complete -target arm64-apple-macos15.0)
+    MACOS15_TYPECHECK_EXIT=0
+[5] swiftformat --lint apps/apple/TeslaSync/shared-surfaces/Toast .......... 0/6 files require formatting
+    FORMAT_EXIT=0
+[6] swiftlint --strict (6 surface files) .................................. Found 0 violations, 0 serious in 6 files
+    LINT_EXIT=0
+[7] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/Toast . PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+[8] xcodegen generate ..................................................... project enumerates all 7 Toast files
+    (Toast.Model/Adapter/Views/swift/Previews/Tests.swift + Toast.strings)
+    XCODEGEN_EXIT=0
+
+PER-SURFACE RESULT: ALL GREEN.
+
+==============================================================================
+FULL-APP GATE (xcodebuild -scheme TeslaSync ... build test)
+==============================================================================
+KMP pre-action: apps/shared/gradlew :core:assembleSharedXCFramework  -> KMP_EXIT=0
+  (Shared.xcframework built + staged to apps/apple/Frameworks/Shared.xcframework).
+
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+  IOS_EXIT=65   (FAILED)
+
+  Total compiler errors: 2 — BOTH pre-existing, unrelated, and NOT in this surface:
+    TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve
+      module dependency: 'XCTest'  (in target 'TeslaSync')  [x2]
+
+  Errors referencing the Toast surface: 0.
+
+  Root cause (PRE-EXISTING, UNRELATED — outside this prompt's allowed files):
+    • 261 co-located *.Tests.swift files under TeslaSync/feature-views +
+      TeslaSync/dashboard-widgets import XCTest into the app target (the app target
+      cannot resolve XCTest); the build halts at the first such file alphabetically
+      (AIRestorePanel.Tests.swift), long before any Toast source.
+    • struct DashboardWidgetSize is redefined 15x across Sources/DashboardWidgets/* +
+      TeslaSync/dashboard-widgets/* (duplicate-symbol collisions behind the XCTest error).
+    • macOS development-signing identities are absent on this runner.
+  These are the exact blockers recorded in apps/macos-pending-verifications.md for the
+  predecessor surfaces P-0010-ToolCard, 0180-AlertMessageEditor, 0231-FSMTimelineChart.
+  They are not introduced by, and cannot be fixed within, this surface's allowed files.
+
+MAC_EXIT: not separately reached — the macOS scheme shares the same app-target source
+set and therefore the same pre-existing blockers.
+
+------------------------------------------------------------------------------
+DISPOSITION
+------------------------------------------------------------------------------
+The Toast surface is production-complete and GREEN on every per-surface gate (isolated
+Swift 6 build + 19/19 tests + real iOS-18 & macOS-15 typecheck + swiftlint --strict +
+swiftformat --lint + placeholder gate, 0 opt-outs; xcodegen enumerates all 7 files).
+The full-app `xcodebuild build test` is BLOCKED by pre-existing, unrelated, repo-wide
+collisions (261 co-located XCTest-in-app-target files incl. AIRestorePanel.Tests.swift,
+DashboardWidgetSize x15, macOS signing) — identical to the documented predecessors —
+and is deferred to p4-apple/P99-0001-apple-acceptance-gate on a macos-latest runner.
+A tracking row was appended to apps/macos-pending-verifications.md.
+
+Honesty: the full-app build is RED (IOS_EXIT=65) and is reported as RED — not green.
+Zero of those errors are in the Toast surface.
+
+EXIT=65
+STATUS=BLOCKED

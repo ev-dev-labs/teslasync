@@ -1,0 +1,163 @@
+=== P4 Dashboard widget 0002 AnalyticsSummaryWidget (Apple) ===
+Run host: Darwin (Apple Silicon). Date: 2026-06-07.
+Prompt: .github/prompts/monorepo/p4-apple/dashboard-widgets/P-0002-AnalyticsSummaryWidget.prompt.md
+Web source (spec): web/src/features/dashboard/widgets/AnalyticsSummaryWidget.tsx
+
+--------------------------------------------------------------------------------
+PREFLIGHT / CAPABILITY
+--------------------------------------------------------------------------------
+Capability required by prompt: SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG.
+PRESENT on this runner (capability is NOT the blocker):
+  - Xcode 26.5 (Build 17F42)  [iOS 26.5 SDK, macOS 26.5 SDK — exceed the iOS 18 / macOS 15 minimums]
+  - swift 6.x, xcodegen 2.45.4, swiftlint 0.63.3, swiftformat 0.61.1, JDK 17
+  - Simulators available: iPhone 16 / iPhone 17 family (iOS 26.5)
+NOTE: the active global developer dir is CommandLineTools:
+  $ xcode-select -p  ->  /Library/Developer/CommandLineTools
+  Xcode itself is at /Applications/Xcode.app; all Xcode commands below were run with
+  DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer. `sudo xcode-select -s` is NOT
+  available on this runner ("sudo: a password is required"), so the GLOBAL developer dir
+  cannot be switched. This degrades CoreSimulator/XCUITest runner services (see TESTS).
+
+KMP shared core (ADR-004): built + staged for linking.
+  $ ./gradlew :core:assembleSharedXCFramework   ->  BUILD SUCCESSFUL in 22m 52s (GRADLE_EXIT=0)
+  staged -> apps/apple/Frameworks/Shared.xcframework (ios-arm64, ios-arm64-simulator, macos-arm64)
+
+--------------------------------------------------------------------------------
+ARTIFACT / PLACEMENT
+--------------------------------------------------------------------------------
+The prompt template names the surface `apps/apple/TeslaSync/dashboard-widgets/AnalyticsSummaryWidget.*`.
+That literal path does not exist in this repo's Xcode project: project.yml (XcodeGen, ADR-002)
+compiles ONE shared SwiftUI group `apps/apple/Sources/` into the iOS + macOS app targets, and
+SwiftLint's `included:` list is {Sources, Tests, ...}. Per the P4 README binding rule
+("Allowed files scoped to apps/apple/**"), the generator's `TeslaSync/dashboard-widgets/` token
+maps to the project's real compiled group. The surface was therefore placed where it is genuinely
+compiled, linted, formatted and tested (no project.yml / .swiftlint.yml edits needed):
+
+  apps/apple/Sources/Dashboard/Widgets/AnalyticsSummaryWidget.swift          (SwiftUI surface, all states)
+  apps/apple/Sources/Dashboard/Widgets/AnalyticsSummaryWidget+Previews.swift (8 per-state #Previews)
+  apps/apple/Sources/Dashboard/Widgets/AnalyticsSummaryWidgetModel.swift     (@Observable model, SI snapshot,
+                                                                              JSON->snapshot adapter, display
+                                                                              projection, diagnostics seam)
+  apps/apple/Tests/Unit/Dashboard/AnalyticsSummaryWidgetTests.swift          (24 XCTest cases)
+  apps/apple/Localization/Localizable.xcstrings                              (+10 i18n keys; en + ar/he)
+
+Registry parity (web registry/analytics.ts -> analytics-summary): id=analytics-summary,
+category=analytics, default 2x2, min 1x2, max 4x40 — encoded as AnalyticsSummaryWidget.descriptor
+and asserted by testDescriptor_matchesWebRegistry.
+
+--------------------------------------------------------------------------------
+GATE STEP 1 — iOS Simulator build
+--------------------------------------------------------------------------------
+$ xcodegen generate            -> OK (24 AnalyticsSummaryWidget refs in TeslaSync.xcodeproj)
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+BUILD: ** BUILD SUCCEEDED **  (the surface + previews + tests all compile against Shared.xcframework)
+  - 0 compile errors; AnalyticsSummaryWidgetTests.swift compiled into target 'TeslaSyncTests'.
+
+--------------------------------------------------------------------------------
+GATE STEP 1 — iOS tests
+--------------------------------------------------------------------------------
+UNIT tests (TeslaSyncTests) — authoritative clean run (before the simulator daemon degraded):
+  "Executed 278 tests, with 0 failures (0 unexpected)"
+  Test Suite 'All tests' passed ... ** TEST SUCCEEDED **   (xcodebuild exit 0)
+  -> AnalyticsSummaryWidgetTests: 24 of 24 passed, 0 failed. Covers:
+       projection adapter (snake_case + camelCase + numeric-string + missing-fields + invalid-JSON
+       + trends + KMP-payload bridge), per-state presentation (fresh/stale/offline/empty/loading/
+       error + error-wins-over-cache + offline-wins-with-cache), display projection (metric/imperial/
+       empty), telemetry view.opened one-shot with surface slug, accessibility value summary,
+       registry descriptor parity, and per-state ImageRenderer render smoke (2x2/4x2 + compact).
+
+UI tests (TeslaSyncUITests) — pre-existing suite, UNRELATED to this surface: FAILED to run.
+  Symptom (varies run to run — non-deterministic / flaky):
+    "Early unexpected exit, operation never finished bootstrapping — no restart will be attempted.
+     (Underlying Error: Test crashed ... before establishing connection.)"
+    "Failure collecting diagnostics from simulator: xcrun: error: unable to find utility 'simctl'"
+    "Invalid device state"
+  Run A failing set: AuthOnboardingUITests, LiveDataUITests, PushNotificationsUITests,
+                     AccessibilityUITests x2  (8 other UI tests PASSED first, then one app-relaunch
+                     crash cascaded the remainder).
+  Run B (fresh-erased sim) failing earlier at runner bootstrap. Sustained runs degrade the
+  CoreSimulator daemon further (later even unit-host launches crash at bootstrap).
+  IOS_EXIT=65 (build green; XCUITest runner could not connect — environment, not code).
+
+PROOF the UI-test failures are PRE-EXISTING / environmental and NOT caused by this surface:
+  Removed the surface entirely (mv Sources/Dashboard, Tests/Unit/Dashboard aside), regenerated
+  (grep AnalyticsSummaryWidget TeslaSync.xcodeproj/project.pbxproj -> 0), and re-ran the full gate:
+    $ xcodebuild -scheme TeslaSync -destination '...iPhone 16' build test   (CLEAN TREE, 0 widget refs)
+    -> ** BUILD SUCCEEDED ** ; Testing failed: "Invalid device state";
+       Failing tests: LiveDataUITests.testPushUpdateKeepsSurfaceLive()   (CLEAN_EXIT=65)
+  The clean tree fails the same way (different test -> flaky), with ZERO of this surface's code
+  present. Conclusion: the XCUITest harness is environmentally broken on this runner (global
+  developer dir is CommandLineTools + no sudo to switch it -> degraded CoreSimulator), independent
+  of this change. The surface itself builds and all of its unit/render tests pass.
+
+--------------------------------------------------------------------------------
+GATE STEP 2 — macOS build/test
+--------------------------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync-macOS build test
+  -> error: "TeslaSync-macOS"/"TeslaSyncWidgets-macOS" have entitlements that require signing with a
+     development certificate. (no signing identity / empty DEVELOPMENT_TEAM on this runner)
+  MAC_EXIT=70  (pre-existing signing capability; changing signing config is OUT OF SCOPE per prompt)
+
+$ xcodebuild -scheme TeslaSync-macOS build test CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+  -> ** BUILD SUCCEEDED **   (the surface compiles + links on macOS too)
+  -> test host could not be hosted: "Could not find test host for TeslaSync-macOSTests:
+     TEST_HOST evaluates to .../TeslaSync-macOS.app/Contents/MacOS/TeslaSync-macOS"
+     This is a PRE-EXISTING project.yml/XcodeGen mismatch: the macOS app target overrides
+     PRODUCT_NAME=TeslaSync (builds TeslaSync.app), but TeslaSync-macOSTests' TEST_HOST is derived
+     from the target name (TeslaSync-macOS.app). Unrelated to this surface; scheme/target config is
+     OUT OF SCOPE per prompt ("Out of Scope: ... changing signing configuration").
+
+--------------------------------------------------------------------------------
+GATE STEP 3 — SwiftLint --strict   (full apps/apple)
+--------------------------------------------------------------------------------
+$ swiftlint --strict           -> 0 violations.   LINT_EXIT=0
+
+--------------------------------------------------------------------------------
+GATE STEP 4 — SwiftFormat --lint apps/apple
+--------------------------------------------------------------------------------
+$ swiftformat --lint apps/apple -> "0/264 files require formatting".   FORMAT_EXIT=0
+
+--------------------------------------------------------------------------------
+GATE STEP 5 — Placeholder scan (surface + tests)
+--------------------------------------------------------------------------------
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Dashboard      -Language swift
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/Tests/Unit/Dashboard   -Language swift
+  -> PLACEHOLDER_COUNT=0 ; EXIT=0  (no TODO/stub/mock/placeholder/Lorem).   PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+[x] Surface renders on Apple with every web-source state reproduced
+    (loading skeleton / empty / query-error+retry / fresh / stale / offline-with-cached-value) —
+    verified by build + per-state ImageRenderer tests.
+[x] Hooks bind via the shared P1/S8 state-holder layer (StateHolderModel + LoadableState over the
+    KMP AnalyticsStore summary StateFlow); no direct HTTP in the view.
+[x] Every i18n key from the source has a matching catalog key (+10 keys added to Localizable.xcstrings).
+[x] Accessibility labels present (per-tile combined elements, header trait, refresh label, value summary).
+[x] Tests: adapter unit test + per-state render/UI test + a11y label test (24 cases, all pass).
+[x] No TODO/stub/mock/placeholder/Lorem (placeholder scan = 0).
+[~] Full literal gate EXIT=0: BLOCKED by pre-existing, out-of-scope, platform-capability limits
+    (iOS XCUITest harness cannot connect on this runner; macOS dev-signing absent + pre-existing
+    TEST_HOST mismatch). All SURFACE-SCOPED checks are green; the blockers are proven pre-existing
+    (clean-tree run) and unrelated to this change.
+
+--------------------------------------------------------------------------------
+SUMMARY OF EXIT CODES
+--------------------------------------------------------------------------------
+IOS_BUILD            = 0   (** BUILD SUCCEEDED **)
+IOS_UNIT_TESTS       = 0   (278/278 incl. 24/24 for this surface, authoritative clean run)
+IOS_UITESTS          = 65  (pre-existing/environmental XCUITest harness failure; proven via clean tree)
+MAC_BUILD            = 0   (** BUILD SUCCEEDED ** with signing disabled)
+MAC_TESTHOST         != 0  (pre-existing signing + TEST_HOST/PRODUCT_NAME config; out of scope)
+LINT_EXIT            = 0
+FORMAT_EXIT          = 0
+PLACEHOLDER_EXIT     = 0
+
+The surface is COMPLETE and every surface-scoped quality gate is GREEN. The full literal acceptance
+gate cannot reach all-green on THIS runner due to pre-existing, out-of-scope, environment/capability
+limitations (XCUITest simulator harness + macOS development signing), demonstrated to be independent
+of this change. Per the prompt's sanctioned outcome, this is reported as BLOCKED with evidence rather
+than red-as-green.
+
+EXIT=65
+STATUS=BLOCKED

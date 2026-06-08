@@ -1,0 +1,162 @@
+================================================================================
+ p4-apple · P7 · page:system/IncidentTimeline — SwiftUI / HIG parity
+ log: .github/prompts/monorepo/logs/apple-page-system-IncidentTimelinePage.log
+ prompt: .github/prompts/monorepo/p4-apple/pages/system/IncidentTimelinePage.prompt.md
+ web source: web/src/features/system/pages/IncidentTimelinePage.tsx
+ route: /system-status/incidents/:id
+ date: 2026-06-08
+================================================================================
+
+--- ENVIRONMENT DETECTION ------------------------------------------------------
+swift           : Apple Swift 6.3.2 (/usr/bin/swift)                     OK
+swiftlint       : /opt/homebrew/bin/swiftlint                            OK
+swiftformat     : /opt/homebrew/bin/swiftformat                          OK
+xcodegen        : /opt/homebrew/bin/xcodegen                             OK
+pwsh            : /opt/homebrew/bin/pwsh                                 OK
+xcodebuild      : requires full Xcode — only CommandLineTools present    UNAVAILABLE
+  > xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+  >   directory '/Library/Developer/CommandLineTools' is a command line tools instance
+=> No Xcode runner. Per the prompt ("If no Xcode runner is available, the gate
+   -> STATUS=BLOCKED"), the build+test legs of the apple triad CANNOT run green.
+   Every leg that CAN run (format, lint, placeholder, swiftc type-check) was run
+   and is recorded below with its real output. No red reported as green.
+
+--- RECONCILIATIONS (no silent drift) ------------------------------------------
+R1 Output directory. The generated prompt names apps/apple/TeslaSync/Features/
+   System/**, but apps/apple/project.yml compiles TeslaSync/feature-views (flat)
+   and apps/apple/.swiftlint.yml lints the same path; all 1438 sibling surfaces +
+   every recent commit (feat(apps/apple/feature-views): ...) live there, and the
+   P4 README binding rule #1 scopes allowed files to apps/apple/**. The page is
+   therefore implemented in apps/apple/TeslaSync/feature-views/ (compiles, lints,
+   matches convention). The Features/System path is a generator template artifact.
+R2 i18n. The established feature-view convention is a per-surface .strings table +
+   NSLocalizedString(tableName:) facade + Text(verbatim:), folded into
+   Localizable.xcstrings at integration. Followed verbatim (IncidentTimelinePage
+   .strings + IncidentTimelineStrings). Zero hardcoded UI prose in .swift.
+R3 KMP binding. Incidents do NOT exist in the KMP shared core (grep -i incident
+   over apps/apple/Sources + apps/shared/src = 0 hits) and ZERO feature-views
+   import Shared. Like all siblings, the page binds an IncidentTimelineSource seam
+   (P1/S8) with an InMemory source for previews/tests; production KMP wiring is
+   integration work. The seam method names keep the web hook call-site names.
+R4 AIIncidentTimelineSummarizer. The web renders it between header and timeline,
+   but it is a SEPARATE parity unit (shared-meaningful/P-0022), not yet built and
+   NOT in this page's panel list -> out of scope here (ADR per "Out of Scope").
+
+--- FILES (apps/apple/TeslaSync/feature-views/) --------------------------------
+IncidentTimelinePage.Adapter.swift      290  pure domain types + fmtDuration/ISO/format helpers
+IncidentTimelinePage.Seams.swift        183  strings facade, telemetry, connection, source seam
+IncidentTimelinePage.States.swift       249  input + resolved view-state + InMemory source
+IncidentTimelinePage.Projection.swift   137  pure Input -> Resolved (web render parity)
+IncidentTimelinePage.Model.swift        229  @Observable model (start/append/resolve/freshness)
+IncidentTimelinePage.Views.swift        212  badge, freshness chip/banner, feedback, loading, GlassPanel1
+IncidentTimelinePage.Panels.swift       265  header (GP2), timeline (GP3), append form (GP4)
+IncidentTimelinePage.swift              151  IncidentTimelinePage View + phase switch + resolve alert
+IncidentTimelinePage.Navigation.swift    81  IncidentTimelineLink + .incidentTimelineDestination + deep link
+IncidentTimelinePage.Previews.swift     130  DEBUG previews (open/resolved/empty/loading/notFound/stale)
+IncidentTimelinePage.Tests.swift        269  XCTest: Adapter + Projection + Navigation
+IncidentTimelinePage.ModelTests.swift   182  XCTest: model wiring (append/resolve/freshness/telemetry)
+IncidentTimelinePage.strings              -  i18n table (40 keys; web English defaults)
+(all .swift files < 400 lines -> SwiftLint file_length warning threshold respected)
+
+--- GATE: PLACEHOLDER (ADR-011) ------------------------------------------------
+$ check-placeholders.ps1 -Path <new swift files> -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- GATE: SWIFTFORMAT (--lint, .swiftformat) -----------------------------------
+$ swiftformat --lint TeslaSync/feature-views/IncidentTimelinePage*.swift
+0/12 files require formatting.
+FORMAT_EXIT=0
+
+--- GATE: SWIFTLINT (--strict, .swiftlint.yml) ---------------------------------
+$ swiftlint lint --strict --no-cache TeslaSync/feature-views/IncidentTimelinePage*.swift
+Done linting! Found 0 violations, 0 serious in 12 files.
+LINT_EXIT=0
+
+--- GATE: SWIFT TYPE-CHECK (best-effort, no Xcode) -----------------------------
+The 5-file SwiftUI-free logic core type-checks against the macOS SDK under Swift 6
+strict concurrency:
+$ swiftc -typecheck -swift-version 6 -target arm64-apple-macosx15.0 \
+    IncidentTimelinePage.{Adapter,Seams,States,Projection,Model}.swift
+TYPECHECK_CORE_EXIT=0   (0 errors)
+
+The 5 SwiftUI view files type-check against the macOS SDK + the REAL design tokens
+(apps/design/generated/apple/Tokens.swift) + the REAL P3 components (TSGlassPanel,
+TSButton, TSTextArea, TSFadeIn via Sources/Design/TSMaterial.swift, TSDesign.swift,
+Sources/Components/UI/{Cards,Buttons,Fields,Typography}.swift, Motion/Motion.swift):
+$ swiftc -typecheck ... IncidentTimelinePage.{Views,Panels,swift,Navigation,Previews} + deps
+TYPECHECK_VIEWS_EXIT=0  (0 errors)
+(Tests/ModelTests use @testable import TeslaSync; they compile only inside the
+ XCTest target, which needs Xcode -> deferred with BUILD/TEST below.)
+
+--- GATE: XCODEBUILD BUILD -----------------------------------------------------
+$ xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync build
+BUILD_EXIT=BLOCKED   (no full Xcode on host; xcodegen-generated .xcodeproj + the
+                      Shared.xcframework staging pre-action both require Xcode)
+
+--- GATE: XCODEBUILD TEST ------------------------------------------------------
+$ xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync test
+TEST_EXIT=BLOCKED    (same cause; the XCTest bundle cannot be built/run without
+                      Xcode + a simulator/macOS test host)
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=6
+Each item below carries binding evidence (file + symbol). Mutually-exclusive
+panels (GP1 not-found vs GP2/3/4 ready) are all implemented and reachable via the
+phase switch in IncidentTimelinePage.content.
+
+[x] panel  GlassPanel1 (not-found, web L128)
+      symbol: IncidentNotFoundPanel
+      file:   IncidentTimelinePage.Views.swift  (wraps TSGlassPanel)
+      render: IncidentTimelinePage.content -> case .notFound  (IncidentTimelinePage.swift)
+[x] panel  GlassPanel2 (incident header, web L159)
+      symbol: IncidentHeaderPanel  (TSGlassPanel; severity icon, status/severity/
+              source/lifecycle badges, description, affects, timing, Resolve CTA)
+      file:   IncidentTimelinePage.Panels.swift
+      render: IncidentTimelinePage.readyBody
+[x] panel  GlassPanel3 (timeline, web L218)
+      symbol: IncidentTimelinePanel + IncidentTimelineRowView  (newest-first list,
+              count label, empty-state line)
+      file:   IncidentTimelinePage.Panels.swift
+      render: IncidentTimelinePage.readyBody
+[x] panel  GlassPanel4 (append-update form, web L242; open-only)
+      symbol: IncidentAppendFormPanel  (TSTextArea + status Menu + submit TSButton)
+      file:   IncidentTimelinePage.Panels.swift
+      render: IncidentTimelinePage.readyBody  (gated by model.showForm == !isResolved)
+[x] state  loading  (web `if (isLoading)`)
+      symbol: IncidentPhase.loading -> IncidentLoadingView
+      file:   IncidentTimelinePage.Projection.swift (resolve loading branch)
+              + IncidentTimelinePage.Views.swift (IncidentLoadingView)
+      test:   IncidentTimelineProjectionTests.testLoadingPhase
+[x] state  success (web ready render)
+      symbol: IncidentPhase.ready -> IncidentTimelinePage.readyBody
+      file:   IncidentTimelinePage.Projection.swift (resolve ready branch)
+      test:   IncidentTimelineProjectionTests.testReadyHeader / testTimeline...
+PARITY_COVERED=6
+
+Additional contract coverage (beyond the 6 required):
+ - data source useIncident             -> IncidentTimelineSource.start/refresh +
+                                          IncidentTimelineUpdate -> Model.apply -> projection
+ - data source useAppendIncidentUpdate -> IncidentTimelineSource.appendIncidentUpdate +
+                                          Model.appendUpdate (validation + feedback)
+ - data source usePatchIncident        -> IncidentTimelineSource.patchIncident +
+                                          Model.confirmResolve (web ConfirmDialog -> .alert)
+ - extra states: not-found (error) + empty-timeline line + stale/offline freshness
+   chip + banner (ADR-013) + inline write feedback (web toast).
+ - i18n: 40 keys in IncidentTimelinePage.strings; zero hardcoded UI prose.
+ - a11y: accessibilityLabel/Value/traits on panels, badges, controls; Dynamic Type
+   via Font.TS tokens; light/dark/high-contrast via Color.TS dynamic tokens.
+ - units: page has NO physical-unit fields (durations are time only) -> no SI
+   conversion required; timestamps formatted at the display boundary.
+================================================================================
+
+--- VERDICT --------------------------------------------------------------------
+Implementation complete and parity-covered (PARITY_COVERED == PARITY_REQUIRED == 6).
+Runnable gates green: PLACEHOLDER=0, FORMAT=0, LINT=0, TYPECHECK(core+views)=0.
+xcodebuild build+test cannot run on this host (no full Xcode) -> the apple triad is
+NOT green, so per the prompt this artifact is BLOCKED, not DONE. Honest outcome:
+
+EXIT=2
+STATUS=BLOCKED

@@ -1,0 +1,158 @@
+I'll start by examining the environment and repository structure to understand what's available and what the task requires.
+
+Key finding: full Xcode is **not** installed (only Command Line Tools), but `swift`, `swiftlint`, `swiftformat` are present. The web source exists and there's an established `apps/apple` project with a precedent (`AIUsageCard.*` was just modified). Let me explore the established patterns and build system before deciding anything.
+
+The web source is a pure presentational component (tip cards list with impact badges + empty state). I had a path error — `TeslaSync` exists but got truncated. No `Package.swift`, so the build is XcodeGen + xcodebuild (needs full Xcode). Let me map the real structure and the predecessor pattern.
+
+`TeslaSync/` has `dashboard-widgets` and `feature-views` (1438 entries!). No `widget-primitives` dir yet — I must create it. The `AIUsageCard.*` 7-file pattern in `feature-views` is my template. Let me examine predecessors: the sibling widget-primitive prompts/logs, the AIUsageCard template files, and how project.yml includes sources.
+
+Case note: git shows `AIUsageCard` but disk has `AiUsageCard` (macOS case-insensitive FS) — those are pre-existing out-of-scope edits I won't touch. `AcDcStatsPanel` is the clean canonical 7-file pattern. Let me read it as my template and locate the shared P1 layers (tokens, i18n, EmptyState, Badge, telemetry).
+
+This is a mature, sophisticated pattern. Now the critical capability question: is full Xcode + iOS Simulator actually available? Let me settle that definitively while reading the rest of the template (Adapter, Previews, Tests, strings) and confirming the shared symbols (tokens, Badge, EmptyState) exist.
+
+**Critical update:** Full Xcode **is** installed at `/Applications/Xcode.app` — it's just not the selected developer dir. I can likely override per-command with `DEVELOPER_DIR=...` (no sudo needed). If that works, STATUS=DONE is achievable. Let me verify and read the project config + remaining template files.
+
+`xcodebuild` works via `DEVELOPER_DIR` (Xcode 26.5, iOS 26.5 SDK, iPhone 16 simulator **booted**). But two concerns surfaced: (1) `project.yml` globs `feature-views`/`dashboard-widgets` but **not** `widget-primitives`; (2) the scheme has a `Shared.xcframework` (KMP) build pre-action. I need ground truth on how predecessors ran the gate here. Let me check existing logs, the shared framework, test wiring, and the strings/tests template.
+
+Now I understand the template fully. Two decisive questions remain: (1) did predecessors actually pass the `xcodebuild` gate on *this* runner, and (2) does the `Shared.xcframework` KMP pre-action work here? Let me read a predecessor log and the build script — these determine whether DONE is reachable.
+
+The predecessor log is the Rosetta Stone. Key facts it establishes on **this** runner: Xcode 26.5 + KMP toolchain work; iOS *build* passes but iOS *simulator test* is environmentally blocked (no sudo for CLT CoreSimulator); macOS build + **targeted** macOS tests pass; and crucially it **remapped** the templated `TeslaSync/dashboard-widgets/` path to `Sources/` + `Tests/Unit/` (the only paths compiled into both targets). But now `TeslaSync/dashboard-widgets` and `feature-views` ARE in project.yml. I must resolve the test-target wiring before placing files. Let me investigate empirically.
+
+Critical tension found: the committed bulk convention co-locates `.Tests.swift` (204 in feature-views, 57 in dashboard-widgets) **inside** the app-target source dirs, yet project.yml has **no excludes** — that should break the app target (XCTest + `@testable import TeslaSync` self-import). Meanwhile the log-verified predecessor (BatteryCellsWidget) used `Sources/` + `Tests/Unit/` instead. I must find how `.Tests.swift` is routed/excluded before placing files. Let me search for the mechanism and a build wrapper.
+
+No exclude mechanism exists, yet feature-views `.Tests.swift` files DO contain `@testable import TeslaSync`. This means the current project.yml (which globs `TeslaSync/feature-views`) would pull self-importing test files into the app target. I need empirical ground truth on whether the baseline even builds. Let me generate the project and inspect target membership (fast, no compile), and kick off the required `Shared.xcframework` build in the background since it's slow and needed regardless.
+
+`SummaryStatsRow.Tests.swift` is referenced 6× in the generated project — consistent with membership in both app targets' Sources phases. If true, the baseline app target compiles self-importing `@testable import TeslaSync` test files → pre-existing RED. Let me confirm precisely which targets include it, and read one feature-views test to be certain, while the shared framework builds.
+
+Confirmed: `SummaryStatsRow.Tests.swift` (with `import XCTest` + `@testable import TeslaSync`) is in the **Sources build phase of both app targets** — a self-import that means the baseline app target is **pre-existing RED**, caused by ~261 co-located test files from other surfaces' bulk work (project.yml globs the dirs but has no `*.Tests.swift` exclude). This is not my surface. I need actual build output as evidence. Let me check the shared-framework build, then run a real baseline build.
+
+Confirmed pre-existing RED: the self-importing test file is in **both app targets' Sources phases**. I now have a clear strategy, but I need the actual baseline build output as evidence before acting. Let me record the plan and wait for the shared framework (needed for any build).
+
+Plan recorded. Let me wait for the shared framework build to complete.
+
+Gradle is still compiling the KMP core (multi-arch, ~3 min so far). Let me use this time productively to locate the exact shared symbols I must use — the native `Badge` and `EmptyState` counterparts (web imports), plus tokens — so my implementation maps correctly to the component library.
+
+Found all shared primitives. Let me read the two the web source directly maps to (`TSBadge`, `TSEmptyState`) plus the token definitions and the other primitives' signatures, so my implementation compiles against their real APIs.
+
+I now know `TSBadge(LocalizedStringKey, tone:)` and `TSEmptyState(title:message:systemImage:)`. Let me read the design tokens and remaining primitive signatures so everything compiles, and check the shared-framework build progress.
+
+Shared.xcframework built & staged (8m51s; now cached for fast re-runs). I have all token/primitive signatures. Let me kick off the **baseline** macOS app build async (to capture evidence of the pre-existing self-import RED) and write the implementation while it compiles.
+
+Baseline build running async. Let me confirm the last few signatures (`TSGlassPanel`, `TSFadeIn`, `TSCard`) and the exact token color names, then write the implementation.
+
+Baseline build finished. Let me read the captured errors (evidence of the pre-existing RED).
+
+The baseline failed on **code signing** (macOS entitlements need a dev cert) — an environmental issue — but I don't yet see whether Swift compilation (and the self-import test files) succeeded or wasn't reached. I must inspect the full log to know the true compile state.
+
+macOS failed at **signing validation before any Swift compiled** (0 sources compiled) — a dev-certificate/entitlements environmental issue, separate from the self-import problem. iOS **Simulator** builds skip signing, so that's the right baseline to confirm the compile state and matches the gate's primary command. Let me launch the baseline iOS build async and write the implementation while it compiles.
+
+macOS stops at signing before compiling. The iOS Simulator baseline (which compiles) is running. Let me read the lint configs so my files pass `--strict`, then write the implementation.
+
+Baseline iOS build done. Let me read it to confirm the compile-time diagnosis.
+
+Diagnosis confirmed: baseline iOS build **FAILED (exit 65)** with dozens of `@testable import TeslaSync` errors — the co-located test files compile into the app target. Let me capture the exact error text + count for the log evidence, then write the implementation.
+
+The `@testable import` is downgraded to a warning ("part of module; ignoring import"), but the build still FAILED — the real errors are elsewhere (likely `XCTest`/`XCTestCase` unavailable in the app target). 255 test files are wrongly compiled into the app. Let me capture the actual error lines.
+
+Pre-existing RED **definitively confirmed**: `feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'` — **255** co-located `*Tests.swift` files compile into the app target (no exclude in project.yml). This is the bulk-work bug, not my surface. My fix: exclude `*Tests.swift` from app targets + wire `widget-primitives`. Now let me create the directory and write all 7 files. First, the strings format reference.
+
+Now I'll write all 7 files following the established pattern. Starting with the pure adapter core.
+
+Let me fix a likely >120-char line in the empty view (swiftlint `--strict` turns the 120 warning into an error) before writing the surface.
+
+Now the main surface view.
+
+Now the previews and tests.
+
+Now the strings file, then the project.yml wiring.
+
+Surface files written. Before wiring project.yml, let me verify the exclude glob `**/*Tests.swift` catches every XCTest-importing file in those dirs (any stragglers with other names would still break the app build).
+
+All 261 XCTest files end in `Tests.swift` — the glob covers them. Now let me make the precise project.yml edits. Let me re-read the exact regions to match whitespace.
+
+Now the four surgical project.yml edits — exclude test files from both app targets (the pre-existing-bug fix) + wire `widget-primitives` into both app and test targets.
+
+Now regenerate and verify membership: my surface in app targets, my tests in test targets (not app), and feature-views tests excluded from app.
+
+Wiring is exactly correct: surface files → both app targets, my Tests → both test targets (not app), and the 261 stray test files → excluded from all targets (app build unblocked). Let me auto-format and lint my files before the heavy build.
+
+`swiftformat` is clean on my files. `swiftlint --strict` linted the whole tree (1909 files) and found **1 serious violation** — I need to locate it (mine vs pre-existing).
+
+The sole `swiftlint` violation is **pre-existing in a sibling surface** (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141`, function body length) — my `widget-primitives` files are clean. I won't touch another surface's file. Let me produce a scoped swiftlint run over just my files (identical rules) as the meaningful signal, while recording the whole-tree result honestly.
+
+The sed hack corrupted the config. Let me write a clean scoped config.
+
+My 6 files pass `swiftlint --strict` (0 violations) and `swiftformat --lint` (clean). Now the critical build. Let me run the iOS Simulator build (gate's primary, no signing needed) — it should now green since the stray test files are excluded.
+
+While iOS builds, let me check whether any code-signing identity exists (to understand the macOS signing wall and pick the right flags).
+
+No signing identities exist (`0 valid identities found`) — so macOS requires `CODE_SIGNING_ALLOWED=NO` (environmental, like the predecessor's iOS-sim-test block). iOS Simulator is unaffected. Let me wait for the iOS build.
+
+Major finding: my `WidgetTipCards` files compile cleanly (my `.strings` even bundles), and the test-file exclusion worked — but the app build now surfaces **pre-existing compile errors in many sibling surfaces** (e.g., `VampireDrainWidget.Previews.swift` main-actor concurrency bug; duplicate `VehicleHeroModel`/`VehicleHeroConnection` type collisions). These aren't mine. Let me measure the blast radius across the whole app.
+
+Decisive: **154 sibling source files** have pre-existing compile errors (duplicate types, preview concurrency bugs) — **zero in my files**. The full-app target is pre-existingly broken by other parallel surfaces; fixing 154 files across dozens of surfaces is far outside this surface's scope. I'll verify my surface in **isolation** (probe build + run my tests). First, let me check whether the shared `Sources/` references the broken sibling types.
+
+Confirmed: `Sources/` is independent of the broken surfaces, and `Sources/Components` only imports system frameworks. So my surface depends solely on `Sources/Components` + design tokens. The full-app gate is pre-existingly broken by 154 unrelated sibling files. I'll build an **isolated probe** (real shared components + my surface) to prove my code compiles and to **run my tests**. Let me create a temporary probe spec.
+
+`Sources/Components` isn't self-contained — `UnitFormatters.swift` needs `UnitPreferences`/`TSUnitsKey` from elsewhere in `Sources`. Better probe: include **all of `Sources`** (the shared module, which I verified is clean and independent of the broken surfaces) minus the 154 broken sibling files, plus my surface. Let me confirm those symbols live in `Sources`, then widen the probe.
+
+`UnitPreferences`/`TSUnitsKey` live in `Sources/SharedFacade`, and `Sources` imports the KMP `Shared`. So the probe needs **all of `Sources`** + `Shared.xcframework` + sqlite. Let me widen it.
+
+More pre-existing breakage: `Sources/DashboardWidgets/` + `Sources/Dashboard/` have a duplicate `DashboardWidgetSize` collision (within `Sources` itself). My surface needs neither. Rather than whack-a-mole, let me pinpoint the duplicate definitions and exclude the broken widget dirs from the probe (my surface depends only on `Sources/Components` + facade + tokens).
+
+Pinpointed: `DashboardWidgetSize` is declared **twice inside `Sources/DashboardWidgets/`** (BatteryCells + DrivetrainHealth predecessors collided) — a pre-existing duplicate. Core `Sources` doesn't reference the widget dirs, so excluding the broken widget homes from the probe is safe. Let me exclude them and rebuild.
+
+The probe now compiles all of `Sources` and reached **my** code, catching one real bug in my surface: `WidgetTipCards.Views.swift:177` — SwiftUI `.frame` requires width args before height args. Let me fix it.
+
+Now rebuild the probe (incremental — only my file + tests recompile).
+
+Probe build/test is compiling the full shared module. Let me keep waiting.
+
+It's been ~10 min. Let me peek at the live log to see whether it's compiling or the test run is hanging.
+
+The framework + my surface **built successfully** (ProbeTests.xctest was produced). The hang/error is in test **execution launch** (a unit-test bundle with no app host on macOS). Let me read the exact launch error and check the still-running command.
+
+**`** BUILD SUCCEEDED **`** — my surface compiles and links against the real shared library. The test bundle also compiled/linked. The hang is the **host-less macOS test bundle failing to launch** (a harness issue, not my code) — plus I see 4 MainActor warnings in my Tests worth fixing. Let me stop the hung run and read the exact launch error.
+
+The build fully completed (framework auto-embedded into the `.xctest`); only the `xcodebuild test` **orchestration** fails to launch the host-less unsigned bundle. I can run the built bundle directly with `xcrun xctest` (rpath resolves the embedded framework). Let me try that.
+
+**24/24 tests PASS** via `xcrun xctest`, and the probe **build SUCCEEDED** — my surface compiles against the real shared library and all tests pass. Now let me eliminate the 4 compiler concurrency warnings by moving the badge-label logic out of the `View` into a non-isolated model helper (cleaner design too).
+
+Now re-format/re-lint my files, then rebuild the probe and re-run tests to confirm zero warnings and 24/24.
+
+Clean format + lint after edits. Now rebuild (`build-for-testing`) and re-run via `xcrun xctest`, checking that the 4 warnings are gone.
+
+Clean build, **0 warnings** in my files now. Let me re-run the tests.
+
+24/24 pass, 0 warnings, clean macOS build. To be rigorous about the gate's iOS-primary requirement (no skip-and-assume), let me confirm my surface also compiles for **iOS Simulator** via an iOS framework probe.
+
+iOS Simulator build **SUCCEEDED** — my surface compiles cleanly on iOS too (0 errors, 0 warnings). Now the placeholder gate check (PowerShell, pwsh available).
+
+Placeholder gate clean (0). My surface is fully green: iOS build ✓, macOS build ✓, 24/24 tests ✓, swiftlint ✓, swiftformat ✓, placeholders ✓, 0 warnings. Now let me gather the remaining whole-tree facts (for an honest log), confirm the real project still generates, and check the aggregate swiftformat state.
+
+Aggregate gate is pre-existingly red on multiple steps (format exit 70, lint 1 sibling violation, builds blocked by 154 sibling files + no signing) — all external. Let me confirm my files aren't among the format failures, verify membership in the regenerated real project, and check gitignore before cleanup.
+
+My files are clean tree-wide; membership is correct; generated projects are gitignored. Let me clean up the temporary probe artifacts, then write the honest gate log.
+
+Now I'll write the gate log. Given the deliberation: my surface is **complete and verified green in isolation** (iOS+macOS build, 24/24 tests, lint/format/placeholder clean, 0 warnings), but the **literal full-app gate is pre-existingly RED** from 154 unrelated sibling compile errors + no macOS signing identity on the runner. Per "No red-as-green," I'll mark the aggregate honestly while documenting the complete surface with full evidence.
+
+Let me reconsider the commit scope and stage only my files (not the pre-existing `AIUsageCard.*` edits or generated projects), then verify staging before committing.
+
+Staging is clean (7 surface files + project.yml + log; no pre-existing edits, no generated projects). Committing.
+
+Committed (9 files, 1341 insertions). Let me do final cleanup of temp artifacts and a last verification of the repo state.
+
+Everything is clean: temp scratch removed, no probe specs remain, and the working tree has nothing of mine uncommitted (only the 3 pre-existing external edits that predate my work). The commit is in place.
+
+## Summary
+
+I delivered **`WidgetTipCards`** — the native SwiftUI parity of `web/src/features/dashboard/widgets/shared/WidgetTipCards.tsx` — as 7 files in `apps/apple/TeslaSync/widget-primitives/`, following the established sibling pattern (e.g. `AcDcStatsPanel`): `.Adapter` (pure projection), `.Model` (P1/S8 state-holder + P1/S11 telemetry + P1/S10 i18n facade), `.Views`, `.swift` (surface), `.Previews`, `.Tests`, `.strings`.
+
+**Parity reproduced:** tip-card list, impact badges via the web `impactBadgeMap` (high→success/medium→warning/low→neutral), windowing (`maxTips ?? (compact ? 1 : 3)` + `slice`), `EmptyState`, line-clamp in compact, plus the P4 leaf states (loading/error/stale/offline), VoiceOver labels, Dynamic Type, reduce-motion, and `view.opened` telemetry. No English literals; no HTTP in the view.
+
+**Verification (surface — all GREEN, raw evidence in the log):** iOS-Simulator build ✓, macOS build ✓ (both against the *real* shared component library), **24/24 unit tests pass**, `swiftlint --strict` 0 violations, `swiftformat --lint` clean, placeholder gate 0, **0 compiler warnings**.
+
+**Honest blocker (external, pre-existing):** The literal full-app gate can't reach `EXIT=0` because **154 unrelated sibling files** in `feature-views`/`dashboard-widgets` fail to compile (285 errors — duplicate types, preview concurrency bugs; **none in my surface**) and the runner has **0 macOS codesigning identities**. I verified my surface via an isolation harness instead. My `project.yml` change also *fixes* a pre-existing bug — 261 misfiled `*Tests.swift` were being compiled into the app targets (`unable to resolve module dependency: 'XCTest'`) — by excluding them, strictly reducing app-target redness.
+
+Per the Honesty Covenant (#1 No red-as-green), the log terminates **`STATUS=BLOCKED`** for the aggregate gate while documenting the surface itself as complete and fully verified. Committed as `10606412e` (surface + `project.yml` wiring + log).
+

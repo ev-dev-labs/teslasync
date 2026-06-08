@@ -1,0 +1,112 @@
+I'll start by exploring the environment and understanding what infrastructure exists for this Apple native task.
+
+Apple app infrastructure exists. Let me check xcodebuild status, the web source, and existing shared-surfaces patterns.
+
+Key findings: **xcodebuild requires full Xcode but only Command Line Tools are installed.** The `shared-surfaces/` dir doesn't exist yet. The web source is a small AI feature card. Let me study the established sibling pattern (AIUsageCard) and check how predecessor logs handled the xcodebuild situation.
+
+The AIUsageCard glob returned nothing despite git showing them modified. Let me investigate the feature-views structure and how AI cards are actually built natively.
+
+Git shows a case-folding artifact (`AIUsageCard` vs `AiUsageCard` on case-insensitive FS) — those are pre-existing working-tree changes, not mine. I'll keep my commit scoped. Now let me study the closest AI streaming card analog and find native AI-stream equivalents across the whole Apple tree.
+
+AIRestorePanel is the closest analog (it references AiStream/AIFeatureCard/withAiFeature). Let me read its full implementation as my template, plus the web AI helper sources for the spec.
+
+The closest analog is presentational; my surface is a *streaming* AI card (`useAiStream`). There's no shared native AI-stream component, so I must reproduce that behavior self-contained. Let me read the web AI helper specs and the rest of the AIRestorePanel template files plus project.yml.
+
+Now I fully understand the web spec: an AI streaming feature card (`AIFeatureCard` + `withAiFeature` gate + `useAiStream`). I'll follow the established `AIRestorePanel` 7-file native pattern. Critical: the output dir is `shared-surfaces/` (new) and I **cannot** edit `project.yml` (not in allowed files) — so I must verify how sources are globbed. Let me check that and the rest of the template.
+
+**Two blockers found:** (1) `project.yml` does **not** include `TeslaSync/shared-surfaces` and I can't edit it; (2) only Command Line Tools are installed — no full Xcode. Before concluding, let me check whether a full Xcode exists anywhere, how sibling logs handled the gate, and whether pwsh exists for the placeholder check.
+
+**Great news:** Full Xcode IS at `/Applications/Xcode.app` — `xcode-select` just points to CLT. I can use `DEVELOPER_DIR`. `pwsh`, `xcodegen` exist too. Sibling logs show the accepted convention (build SUCCEEDS, surface tests pass, simulator *test execution* blocked by no-sudo daemon → still STATUS=DONE). Now let me resolve the `shared-surfaces` wiring question — check the prompt series and any scaffold.
+
+There's a `p4-apple/shared-meaningful/` prompt series — all referencing `shared-surfaces/`. Let me find my exact prompt, check the methodology, and see whether any sibling/scaffold wires `shared-surfaces` into `project.yml`.
+
+Found my prompt: `P-0023-AILearnedAnomalyBaselines.prompt.md`. The `shared-surfaces/` dir doesn't exist in git yet and isn't wired in `project.yml` (no sibling wires it). I need to understand the test-file convention (how `feature-views/*.Tests.swift` build) and confirm exact requirements. Let me read the test/preview template and my prompt + methodology.
+
+Now I understand the full picture. Key insight: `.Tests.swift` files live alongside the surface in the source dir (compiled via the app target like `feature-views`), using `XCTest` + `@testable import TeslaSync`. Let me extract the methodology's build/wiring guidance and verify the shared tokens/components I'll depend on exist.
+
+The methodology is strict and decisive (Rule 9: any file outside Allowed-Files in `git status` → BLOCKED; can't run gate → BLOCKED). This directly governs the `shared-surfaces` wiring dilemma. Let me read it in full plus check the P4 acceptance gate's capability nuance.
+
+Now I have the binding rules. The methodology is explicit: Rule 9 (any file outside Allowed-Files → BLOCKED), Rule 3/line 82-83 ("can't run the gate → BLOCKED, never DONE"), Rule 8 ("if BLOCKED, commit ONLY the log"). My Allowed-Files are only the surface + log — **not** `project.yml`. But `shared-surfaces` isn't wired into `project.yml`. Before concluding, I must EMPIRICALLY verify (Rule 3: no skip-and-assume), not assume. Let me check the toolchain with `DEVELOPER_DIR`, look for a shared-surfaces wiring scaffold, and inspect a feature-view prompt's Allowed-Files.
+
+**Decisive empirical findings:**
+- **Capability IS present**: with `DEVELOPER_DIR=/Applications/Xcode.app/...`, `xcodebuild` = Xcode 26.5, **iPhone 16 simulator is Booted**, iOS + macOS SDKs available (26.5 SDK building for the 18/15 deployment targets). So the prompt's "capability unavailable → BLOCKED" escape does **not** apply.
+- Feature-view prompts' Allowed-Files also exclude `project.yml` → `feature-views` was wired by a **scaffold**. **No such scaffold exists for `shared-surfaces`**, and no prompt is permitted to edit `project.yml`.
+
+So the real situation is a **wiring/predecessor gap**, not a capability gap. Per Rule 3 (no skip-and-assume), I'll do the full real implementation and verify it empirically (temporary wiring, reverted) before finalizing status. Let me read the exact design-token/component APIs I'll depend on, and the closest streaming AI-card pattern.
+
+Now I have exact token/component APIs. Let me read the remaining pieces I need: the web output/thinking components (to match streaming states), the native skeleton/motion/typography/badge primitives, and the closest native AI-card analog (`AiUsageCard`).
+
+I have everything needed to reproduce the surface faithfully (output panel + thinking indicator states, tokens, components). Let me check the placeholder gate and lint config so my code passes on the first try, then verify the baseline build is green.
+
+`swiftlint.yml`'s `included:` list omits `shared-surfaces` (so swiftlint won't scan my files), but `swiftformat --lint apps/apple` will. Let me see how the placeholder gate resolves its `-Path` arg and its forbidden patterns, then I'll start writing.
+
+I now have a complete, precise understanding of the spec, the established native pattern, the design tokens, the gates, and the **decisive constraint**: the `shared-surfaces` source group is not registered in `project.yml`, no scaffold registers it, and I may not edit `project.yml` (Allowed-Files / Rule 9). Capability itself IS present (Xcode 26.5, iPhone 16 sim). I'll do the full real implementation, verify it empirically (temporary wiring, reverted), and report honestly.
+
+Let me set up tracking and write the plan.
+
+Now I'll write the surface. Starting with the pure-logic Adapter, the Model (seams), and the strings catalog.
+
+Logic + i18n done. Now the SwiftUI views — main view first.
+
+Now the test suite.
+
+All 7 files written. Let me verify incrementally — first format-lint my files and standalone type-check the Foundation-only Adapter (fast feedback), then do the full build.
+
+Adapter type-checks clean. swiftformat flagged style issues (single-line property bodies, blank lines, doc comments). Let me auto-format with the ecosystem tool, then re-lint to confirm clean.
+
+Formatting now clean. Let me quickly verify the auto-format didn't distort the i18n facade, then set up the temporary wiring to run the real build.
+
+swiftformat clean and the i18n facade is intact. Now I'll temporarily wire `shared-surfaces` into both app targets in `project.yml` (for empirical verification only — to be reverted before commit), regenerate, and build.
+
+xcodegen succeeded; my 7 files are wired in (42 references). Now the real build. The app is large (1400+ files) so this will take a while — running the iOS simulator build.
+
+Build still running (large app). Let me continue waiting.
+
+Build failed with a Swift compiler error, but the tail only showed string-copy steps. I need the actual `error:` lines to determine if it's my code or the pre-existing `AiUsageCard` case-fold mess in the working tree. Let me capture and grep.
+
+Only error: my `Tests.swift` can't resolve `XCTest` in the app target. But `feature-views/*.Tests.swift` do the same and didn't fail — so they must be routed differently. Let me inspect how the generated project assigns test files to targets.
+
+`ENABLE_TESTING_SEARCH_PATHS` is absent, yet 170 feature-views `*.Tests.swift` import XCTest and the app reportedly builds. So those test files must be routed to the **test** target, not the app target. Let me find AIRestorePanel.Tests.swift's actual target membership in the pbxproj.
+
+That explains it: `AIRestorePanel.Tests.swift` IS in the app target and imports XCTest too. The difference is the **action** — a plain `build` doesn't enable testing search paths, but the gate's `build test` does (the app builds as a test host). I ran `build`, not `build test`. Let me run `build-for-testing` (compiles app + tests with XCTest resolved) to validate my code compiles correctly.
+
+Still only my file errors — not the 170 feature-views tests. There's a real difference. Let me examine the full error context and how feature-views tests resolve XCTest.
+
+The XCTest error is reported **once for the whole module** (my file is alphabetically first; AIRestorePanel.Tests.swift etc. are listed as "also imported here" notes). So this is a **module-wide, pre-existing** condition: the app target needs `ENABLE_TESTING_SEARCH_PATHS=YES` to compile the co-located `*.Tests.swift`. Let me confirm my code compiles cleanly with that flag set (the `test` action / CI sets it).
+
+With testing search paths enabled, the XCTest error vanishes — replaced by a flood of **pre-existing** "ambiguous for type lookup" errors in `DashboardWidgets`/other files (duplicate type definitions), **none in my files**. This points to the pre-existing uncommitted working-tree changes. Let me confirm my files are clean and diagnose the duplication source.
+
+Confirmed: **zero errors in my files**; all 772 errors are in pre-existing files (`DashboardWidgets`, etc.). The working tree was **already dirty before I started** — 7 `feature-views/AIUsageCard.*` files modified (outside my Allowed-Files). Let me confirm these errors are pre-existing (duplicate type definitions) and not caused by my change.
+
+The ambiguity is from **many duplicate `public struct DashboardWidgetSize`/`SpeedUnit`/`TwinVehicle` definitions in committed files** (e.g., `DrivetrainHealthWidgetModel.swift`, `BatteryCellsWidgetRegistry.swift`) — these are NOT in my dirty set, so they exist at HEAD. This is a pre-existing app-target condition. Let me confirm these files are committed (clean) and run the remaining verifiable gate steps on my files in parallel.
+
+check-placeholders passes (COUNT=0, EXIT=0). The duplicate-type files are confirmed committed at HEAD (15 files define `DashboardWidgetSize` — pre-existing). swiftlint found 1 violation across 1909 files — I must confirm it's not mine (my files aren't even in swiftlint's `included` set). Let me locate it.
+
+check-placeholders passes. The pre-existing swiftlint violation is in `LifetimeStatsWidget.Adapter.swift` (not mine). But linting my files directly surfaced **one violation in my `Previews.swift:22`** (opening_brace, from swiftformat wrapping a long signature). I'll fix it by inlining the snapshot helper. Let me rewrite Previews.swift.
+
+Now re-verify both formatters/linters are clean on my files.
+
+Both swiftformat and swiftlint are now clean on my files (0 violations). The earlier whole-module build already type-checked my files with zero errors in them. Let me re-run `build-for-testing` once more to capture authoritative final evidence (with the corrected Previews) and the exact pre-existing-error count, running it in the background while I draft the log.
+
+Build running in background. Meanwhile, let me capture the whole-tree gate steps (`swiftformat --lint apps/apple` and `swiftlint --strict`) exactly as the gate runs them — to document both my files' cleanliness and any pre-existing issues honestly.
+
+The whole-tree `swiftformat --lint` fails on a **pre-existing** file (`ActionBuilder.Previews.swift:48`), not mine — another pre-existing gate blocker. The final build completed; let me read its result.
+
+Zero errors in my files AND zero total errors now? That's unexpected vs the earlier 772. Let me read the actual build outcome.
+
+The final build was externally **interrupted** (SIGTERM during module emit) — inconclusive. My authoritative evidence remains the completed shellId-39 type-check (zero errors in my files; 772 pre-existing). To confirm my *corrected* Previews compiles in-module, let me re-run `build-for-testing` to completion (sync, uninterrupted).
+
+Conclusive: my corrected surface has **0 errors** in-module; the app build fails on **202 pre-existing errors** in committed files (duplicate widget types) — entirely outside my scope. Now I'll revert the temporary `project.yml` wiring and capture final evidence for the log.
+
+`project.yml` reverted cleanly. Working tree now shows only the pre-existing `AIUsageCard.*` changes (not mine) and my untracked `shared-surfaces/`. Let me capture a clean sample of the pre-existing build errors for the log evidence.
+
+I have conclusive evidence. The pre-existing errors are duplicate `public` types across the committed dashboard-widget tier (`VehicleHeroModel`, `DashboardWidgetSize`, etc.) — unrelated to my surface. Let me update tracking and write the comprehensive log.
+
+Now commit ONLY the log per BLOCKED discipline (Rule 8 / methodology line 107).
+
+Commit succeeded — **only the log** (1 file, 196 insertions). Let me record the commit exit in the log's COMMIT section and amend (still log-only), then do a final state check.
+
+Final state is correct: the commit contains **only the log** (EXIT=1 / STATUS=BLOCKED); `project.yml` is reverted; my 7 verified surface files remain as untracked output; the pre-existing `AIUsageCard.*` changes are untouched. Let me do a final sanity check on the surface files and close out tracking.
+
+I've completed the prompt following its binding Honesty Covenant. Final outcome: **STATUS=BLOCKED** (committed: log only, per Rule 8).
+

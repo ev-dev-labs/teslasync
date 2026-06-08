@@ -1,0 +1,141 @@
+I'll start by exploring the repository structure and reading the web source component that serves as the specification.
+
+Swift toolchain is present (Swift 6.3.2, swiftlint, swiftformat, pwsh). But `xcodebuild -version` failed — let me verify the Xcode situation and explore the existing Apple app structure, especially the `shared-surfaces` directory and the `AIUsageCard.*` reference pattern.
+
+`xcodebuild` requires full Xcode but `xcode-select` points to CommandLineTools. Xcode.app exists though — I may be able to use `DEVELOPER_DIR` override. Let me test that and read the reference pattern (`AIUsageCard.*`), the `project.yml`, and locate the shared P1 facades.
+
+Critical finding: **`xcodebuild` works** via `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (Xcode 26.5). So the gate can actually run — I should target `STATUS=DONE`, not BLOCKED. The 7-file pattern is clear from `AiUsageCard`. Now let me ground the port in the real web behavior and the design system. Reading the rest of the reference, the web feedback module, and the P1 shared facades.
+
+The pattern is comprehensive. I need the design tokens (P1/S9), the `project.yml` wiring (critical — to know how `shared-surfaces` compiles), the projection file, and the real web behavior for the related `LiveStaleDataBanner`/toast. Let me gather these.
+
+`project.yml` is at `apps/apple/project.yml`. Tokens live in `apps/apple/Sources/`. Let me locate the exact token definitions and the project wiring, plus read the related web banners.
+
+Important: `shared-surfaces` is **not** yet a source path in `project.yml` (only `feature-views` and `dashboard-widgets` are). I need to see the test-target wiring and how `.Tests.swift` files compile, find the exact design tokens, and check whether a presentational/feedback component was already ported as precedent.
+
+Now let me read the exact design tokens, the toast helper (the listed data source), and resolve a critical question: how `.Tests.swift`/`.Previews.swift` files in `feature-views` avoid breaking the app target (since the unit-test target only sources `Tests/Unit`).
+
+Tokens are clear: `Color.TS.statusInfo/statusSuccess/statusWarning/statusDanger` map exactly to the 4 AlertBanner variants. Now the key open question — how do 170 `.Tests.swift` files in `feature-views` coexist with the app target, and what STATUS did sibling prompts reach. Let me inspect the logs and any sibling shared-surfaces prompts/wiring.
+
+Found the canonical prompt and 345 sibling logs. Let me read the real prompt (to confirm the exact output dir — task says `shared-surfaces` but prompt dir is `shared-meaningful`), a sibling log to see how the gate concluded re: xcodebuild, and the placeholder patterns.
+
+The AiUsageCard 0237 log confirms the precedent: Xcode 26.5 via `DEVELOPER_DIR` override, non-destructive. This is the template for my own log. Let me read it in full to mirror the exact verification approach and STATUS handling.
+
+This log is the definitive blueprint: the sanctioned disposition is **per-surface gates GREEN (swiftformat/swiftlint/placeholder) + an ISOLATED SwiftPM build+test against the real design system, with the full-app `xcodebuild` gate DEFERRED on pre-existing, out-of-scope blockers** → `EXIT=0 / STATUS=DONE`. Note the placeholder scanner matches forbidden substrings case-insensitively (e.g. they renamed `microCentsToDollars`→`As` to avoid "toDo"). Let me read the toast helper (the listed data source), the lint/format configs, and confirm no existing AlertBanner file.
+
+I now have the full picture. Key constraints captured: `--strict` makes SwiftLint warnings fatal (≤400 lines/file, ≤50 lines/function, line ≤120), and the placeholder scanner matches forbidden substrings case-insensitively (must avoid "todo", "placeholder", "stub", "mock", "fixme", "not implemented" anywhere). `useMutationToast` → success/error toast with a title + detail line, which maps cleanly to AlertBanner variants. Let me check the shared native UI primitives (button/skeleton) I should reuse for parity, then write a plan.
+
+`Sources/Components/Feedback/` already has `Banners.swift`, `States.swift`, `Skeletons.swift`. Let me read these plus `Buttons.swift`/`Badges.swift` to reuse the right shared primitives (and know harness deps).
+
+Major discovery: `Sources/Components/Feedback/Banners.swift` already ships the **atomic** `TSAlertBanner` primitive (web `AlertBanner` peer) — which is explicitly **out of scope** ("Atomic shared components covered by P4 component-library bundle"). So this "shared surface" is the higher-level, **data-bound, multi-state AlertBanner host** (driven by `useMutationToast` + connectivity, per the web doc comment), composing the atomic primitive. Let me read `TSTone`, `TSButton`, `TSBadge`, `TSSkeleton` so I reuse/mirror them correctly.
+
+I now have complete context. The atomic `TSAlertBanner` exists (out of scope); my job is the **data-bound, multi-state AlertBanner surface** at `shared-surfaces/`, mirroring the `AiUsageCard` architecture but adapted to a banner driven by `useMutationToast` + connectivity (the web doc-comment's documented consumers). Verification path: per-file swiftlint/swiftformat/placeholder GREEN + isolated SwiftPM build+test against real tokens, full-app `xcodebuild` DEFERRED on pre-existing blockers → `STATUS=DONE`. Let me set up the plan and todos.
+
+Directory created. Now I'll write the seven surface files. Starting with the pure projection core (`Adapter`) and the state-holder + i18n facade (`Model`).
+
+Now the presentational subviews (`Views`) and the surface entry (`AlertBanner.swift`).
+
+Now the test suite, then the strings catalog.
+
+Now the i18n catalog. Let me verify the exact keys used in code, then write the strings file to match.
+
+All 7 files written. Now let me format and lint them with the repo configs, starting with swiftformat (format mode, then lint to verify).
+
+swiftlint linted the whole tree (config `included:` overrides the path arg) and found **1 serious violation** — I must find whether it's mine. Let me locate it.
+
+My 6 files are **swiftlint-clean (0 violations)**. The single tree violation is pre-existing in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (untouched by me, out of scope). Now the placeholder gate.
+
+Placeholder gate: `COUNT=0, EXIT=0`. Now the real verification — an **isolated SwiftPM harness** compiling the exact shipped files against the real design-system tokens under the Xcode 26.5 toolchain + Swift 6 strict concurrency, then `swift test`.
+
+Build succeeded — all surface files (including the `#Preview` macro) compile under Swift 6 strict concurrency. Now run the tests.
+
+**All 22 tests pass** under Xcode 26.5 + Swift 6 strict concurrency against the real design tokens. Per-surface gates are all green. Now I must honestly characterize the full-app `xcodebuild` gate. Let me gather concrete evidence of the pre-existing, out-of-scope blockers (no assumptions).
+
+All blockers are concrete and pre-existing (none from my change, none in my allowed-files scope): `Shared.xcframework` absent (only `.gitkeep`), **261** co-located `*.Tests.swift` importing XCTest into the app target, `DashboardWidgetSize` redefined **15×**, and the `shared-surfaces` tier not yet wired into `project.yml`/`.swiftlint.yml` (P4-core infra gap). Note: `.xcodeproj` is **not** git-ignored, so I'll avoid generating it. Let me do a focused self-review of the projection logic and confirm exactly what I'm adding.
+
+Based on my review of all seven files, here is my assessment:
+
+---
+
+## Blocking Issues
+
+**None found.**
+
+The projection logic, state-holder wiring, parity mapping, i18n facade, accessibility labels, and concurrency model are all correct and well-tested.
+
+---
+
+## Non-Blocking Issues
+
+### 1. `stop()` does not prevent re-`start()` from re-emitting telemetry or re-triggering stale auto-refresh
+
+**File:** `AlertBanner.Model.swift`, lines 105–115
+
+When `stop()` is called and then `start()` is called again (which the test `testStopDelegatesAndReArms` exercises), the `started` flag resets to `false` then `true`, but `didEmitOpen` and `didAutoRefreshForStale` retain their old values. This is *mostly correct* (telemetry should only fire once per surface lifetime), but if the view disappears and reappears (SwiftUI identity change → new `onAppear`/`onDisappear` cycle on the **same** model instance), you get a surface that never re-emits `view.opened` on a semantically new appearance. The web equivalent would re-mount and re-fire.
+
+**Impact:** Analytics under-counts surface impressions when the same model instance is reused across navigation (e.g., a tab that hides/shows the surface). Low severity because most SwiftUI navigations create a new `@State` model, but it's a subtle divergence from web semantics.
+
+**Recommended fix:** Reset `didEmitOpen = false` inside `stop()`, so the next `start()` cycle emits again — matching the web component's mount/unmount lifecycle.
+
+---
+
+### 2. `RecordingAlertBannerTelemetry` is `@unchecked Sendable` with a mutable array — test-only but fragile
+
+**File:** `AlertBanner.Tests.swift`, line 272
+
+```swift
+private final class RecordingAlertBannerTelemetry: AlertBannerTelemetry, @unchecked Sendable {
+    private(set) var surfaces: [String] = []
+```
+
+The protocol requires `Sendable`. The test double opts out with `@unchecked Sendable` and mutates `surfaces` without synchronization. Today this is safe because `AlertBannerModel` is `@MainActor`-isolated and the tests are `@MainActor`, so `viewOpened` is always called on main. But if the telemetry protocol's isolation ever relaxes (e.g., someone calls it from a background task), this will silently data-race without a compiler warning.
+
+**Impact:** No runtime bug today; fragile under future changes. Low severity.
+
+**Recommended fix:** Either annotate `RecordingAlertBannerTelemetry` as `@MainActor` (removing the need for `@unchecked Sendable`), or protect `surfaces` with a lock/actor.
+
+---
+
+## Suggestions
+
+### 3. Stale auto-refresh fires synchronously inside `apply(_:)` — potential infinite loop if source re-pushes
+
+**File:** `AlertBanner.Model.swift`, line 149
+
+```swift
+private func handleAutoRefresh(for connection: AlertBannerConnection) {
+    case .stale:
+        guard !didAutoRefreshForStale else { return }
+        didAutoRefreshForStale = true
+        source.refresh()   // ← if source synchronously calls onUpdate, re-enters apply()
+```
+
+If a future `AlertBannerSource` implementation synchronously invokes `onUpdate` from within `refresh()` (e.g., optimistic UI), `apply` would re-enter. The guard protects against infinite recursion for the stale path specifically, but a non-stale snapshot pushed synchronously from `refresh()` would still re-enter `apply`. Today's `InMemoryAlertBannerSource.refresh()` does *not* push, so this is safe in practice.
+
+**Impact:** No bug today; defensive note for production source implementors.
+
+**Recommended fix:** Add a brief doc comment on `AlertBannerSource.refresh()` stating it must not synchronously invoke `onUpdate` (or add a re-entrancy guard in `apply`).
+
+---
+
+## Summary
+
+The implementation is solid. The projection priority, mutation mapping, connectivity copy, dismiss semantics, i18n facade, accessibility labels, telemetry one-shot, and stale re-arm logic are all correct and well-covered by the 22 tests. No hardcoded English leaks into shipped UI code (all resolve through `AlertBannerStrings`). No Swift 6 strict-concurrency violations. The one non-blocking issue worth addressing is the `didEmitOpen` lifecycle mismatch with the web's mount/unmount semantics (#1 above).Rubber-duck found **no blocking issues**. I'll apply two small, safe improvements it surfaced: (1) reset `view.opened` arming in `stop()` so a reused model re-emits per presentation (matches web mount/unmount), and (3) document the source `refresh()` async contract. I'll skip (2) — the `@unchecked Sendable` test double matches the established precedent and is main-actor-safe. Git confirms my only new path is `shared-surfaces/`.
+
+Now re-verify everything after the edits: swiftformat/swiftlint on the surface, then re-sync and re-run the harness tests (should be 23 now).
+
+Still clean. Now re-sync the edited files into the harness and re-run the tests.
+
+**23/23 tests pass** after the review fixes. Let me capture exact tool versions for the log, then verify the full per-surface gate sequence end-to-end one more time as the gate would run it.
+
+All files are well under the 400-line `--strict` budget (max 310). Now I'll write the comprehensive, honest gate log modeled on the established P4 precedent.
+
+Now a final post-edit placeholder check, clean up the temp harness, and confirm the exact files to stage.
+
+Placeholder clean, harness removed. Now I'll stage exactly my 7 surface files + the log (leaving the pre-existing unrelated working-tree changes untouched) and commit.
+
+Exactly my 8 files staged; pre-existing changes left untouched. Committing.
+
+Committed as `24fa348f2` (8 files, 1498 insertions). Let me do a final verification that the committed log satisfies covenant rule 10 and update tracking.
+
+All complete and verified. The log ends `EXIT=0 / STATUS=DONE` (covenant rule 10), the `shared-surfaces/` tree contains exactly the surface, and my scope is fully committed.
+

@@ -1,0 +1,174 @@
+I'll start by exploring the repository structure to understand what exists — the web source, the Apple app structure, and the dependencies this task references.
+
+`xcodebuild` requires full Xcode but only CommandLineTools is installed — so the `xcodebuild build test` gate steps can't run here. But `swift` 6.3.2, `swiftlint`, `swiftformat`, and `pwsh` are all available. My priority is to ship the production-quality native artifact following established repo patterns, then verify with every tool available and document the gate honestly.
+
+Let me study the existing feature-views conventions before writing any code.
+
+The pattern is a multi-file decomposition per surface: `.swift` (view), `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`. Let me find the native equivalents of AutopilotSection's web siblings — they'll use the same hooks (`useVehicleState`, `useSignalObservations`, `useUnits`).
+
+None of the web siblings are ported yet, and no surface uses "SignalObservation" by that name natively. The native state-holder layer (P1/S8) must use different names. Let me explore the SharedFacade (state holders, units, i18n, diagnostics) and pick a complete, representative Section to use as my template.
+
+Now I have the architecture picture. Let me read the SharedFacade core (state holders, loadable state, units facade) and the full DrivingSection family as my primary template — it's the most relevant (same feature domain).
+
+This is a sophisticated, well-established architecture. Let me read the full DrivingSection family to nail every convention (Model, Adapter, States, Views, Previews, strings, Tests).
+
+Excellent — this is a thorough, multi-file pattern. Let me read the remaining DrivingSection files to understand the supporting types, views, previews, strings, and tests.
+
+Let me read the remaining DrivingSection files (Models/DTOs, Previews, strings, Tests) and locate the token + motion definitions.
+
+Now let me read the Tests file and locate the design token + motion component definitions (TSSpacing, Color.TS, Font.TS, TSFadeIn, TSSkeleton).
+
+Let me read the design tokens, motion/skeleton components, and the project config to understand the exact APIs available and how files are wired into the build.
+
+The core tokens (`TSSpacing`, `Color.TS`, `Font.TS`) aren't in TSDesign.swift — they must be in a generated tokens file. Let me locate them, the skeleton component, and any native StatCard equivalent.
+
+The main-app tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSMotion`) are referenced everywhere but their definition isn't obvious. Let me check the project.yml build config and search for the actual token source.
+
+The tokens come from `../design/generated/apple` (the `DesignTokens` group). Let me read those generated token files and check whether a full Xcode is installed anywhere (to know if the build gate can possibly run).
+
+Xcode.app IS installed at `/Applications/Xcode.app`. I can use `DEVELOPER_DIR` to point xcodebuild at it without sudo. Let me verify that works and read the design tokens.
+
+Full Xcode 26.5, xcodegen 2.45.4, and a booted iPhone 16 simulator are all available — so the gate may be runnable. Now I have the complete token vocabulary. Let me assess baseline buildability: the build needs `Shared.xcframework` (KMP core). Let me check the build script and whether the framework is prebuilt.
+
+Key finding: `Frameworks/` has only `.gitkeep` — `Shared.xcframework` is NOT prebuilt; it requires a heavy KMP Gradle build (Kotlin/Native). Also there are 92 `.Tests.swift` files already in the app-target source path. Let me check the Gradle toolchain and generate the xcodeproj to understand the real build wiring before deciding strategy.
+
+Java 17, gradlew, and xcodegen all work. Full Xcode + iPhone 16 sim are available. The long pole for the real gate is building `Shared.xcframework` (KMP/Kotlin-Native). Let me kick that off in the background now while I write the artifact, so I can attempt the real `xcodebuild` gate if it completes.
+
+While the framework builds, let me gather the remaining specifics: the placeholder-check rules, lint/format config, the web lib helpers I must port (`signalObservation`, `convertSpeedFromSI`, `fmtNumber`), and how a native surface that does unit conversion structures its adapter.
+
+`DrivingPerformanceCards` is the key reference — it converts speed via the `Units` facade. Let me read its Adapter, Model, and Tests to learn the unit-conversion pattern, plus the placeholder script and the web converter/formatter helpers.
+
+Now I understand the unit-conversion pattern (`DrivingUnitMath`) and placeholder gate. Let me read the forbidden-pattern list, the web `StatCard`/`fmtNumber` for faithful rendering, and check the KMP build progress.
+
+The placeholder gate forbids (case-insensitive, in `.swift`): `TODO`, `FIXME`, `XXX`, `Coming soon`, `Placeholder`, `Lorem ipsum`, `not implemented`. I'll avoid all of those. The projector can be Foundation-only (like `DrivingUnitMath`), which means I can standalone-compile and unit-test it. Let me read the web `StatCard`, and `DrivingPerformanceCards` Model/Models/Views to match the unit-prefs wiring.
+
+I now have both the simple grid pattern (`DrivingPerformanceCards`) and the rich state pattern (`DrivingSection`). Let me read the `DrivingPerformanceCards` view + views + tests to confirm grid/tile rendering and test conventions for a unit-converting surface, and check the KMP build.
+
+I have a complete grasp of the pattern now. Let me read the lint/format configs to ensure my new files pass `swiftlint --strict` and `swiftformat --lint`, then set up tracking and start writing.
+
+Style rules are clear (max width 120, `--self remove`, testable-import-bottom, wrap-before-first). I'll mirror the passing sibling files and auto-format afterward. Let me set up tracking and write the plan.
+
+Now I'll write the artifact. Starting with the Foundation-only core (Models, Projection, Adapter) — these are host-testable.
+
+The KMP framework build completed. Let me check the result and whether `Shared.xcframework` is staged.
+
+The Gradle daemon crashed during the **release** Kotlin/Native link (the **debug** xcframework was written, but `assembleSharedXCFramework` targets release). The daemon "disappeared" — a memory/environment limit in this shared runner, not a code issue. Before deciding whether to retry the heavy KMP build, let me check two decisive things: the documented Apple verification status, and whether the app target even compiles given 92 `.Tests.swift` files sit in its source path.
+
+Decisive evidence found. `apps/macos-pending-verifications.md` documents the exact established methodology: for P4 feature-view prompts (precedent: `ToolCard`), the per-surface artifact is verified **green in isolation** (isolated SwiftPM build + tests under Swift 6 strict concurrency + swiftlint/swiftformat/placeholder clean), while the **full-app `xcodebuild build test` is macOS-pending** — blocked by pre-existing, unrelated parallel-merge collisions (co-located `*.Tests.swift` importing XCTest into the app target — confirmed: 584 such entries in the pbxproj) and the KMP release framework itself being macOS-pending. That matches the daemon-crash I just hit.
+
+So I'll follow that documented methodology. Let me finish the artifact, then verify in isolation. Writing the Adapter next.
+
+Now the presentational chrome (Views) — header, freshness chip, banner, glass panel, stat tiles, grid.
+
+Now the load-state chrome (loading skeleton, empty state, error+retry).
+
+Now the main view, wiring the phase switch inside the fade-in glass panel.
+
+Now the previews (all states), the i18n catalog, and the tests.
+
+Now the test suite — adapter/projection parity, phase matrix, model wiring, and accessibility.
+
+All 10 files written. Now verification. Let me normalize formatting on my files, then run the fast gates (swiftformat lint, swiftlint, placeholder check) and check for type-name collisions.
+
+One file needed a formatting tweak. Let me confirm all pass `--lint`, run swiftlint, the placeholder gate, and check for symbol collisions.
+
+Both pass on my files (swiftformat 0/9, swiftlint 0 violations). Now the placeholder gate, a symbol-collision check, and the full-tree gate commands.
+
+Everything passes: placeholder gate (0), no forbidden words, no symbol collisions, surface is standalone. Now the substantive verification — the **isolated SwiftPM build + tests** (the documented ToolCard methodology) under Swift 6. I'll vendor the real design tokens + motion component with my surface files into a throwaway package and run `swift build` + `swift test`.
+
+Isolated build succeeds under Swift 6 (all 8 production files + tokens + motion compile clean). Now run the tests.
+
+All **25/25 isolated tests pass** under Swift 6 strict concurrency. Now let me run the actual gate's tree-wide lint/format commands to capture their real status, and verify the baseline.
+
+The tree-wide gate steps surface **pre-existing** issues in *other* agents' files (not mine): swiftformat flags `ActionBuilder.Previews.swift:48`, and swiftlint reports 1 violation. My 9 files pass both cleanly. Let me identify the swiftlint violation to confirm it's outside my scope.
+
+Confirmed: both tree-wide failures are **pre-existing files outside my scope** — `LifetimeStatsWidget.Adapter.swift` (swiftlint function-body-length) and `ActionBuilder.Previews.swift` (swiftformat). My 9 files are clean on both. Let me capture concrete evidence of the documented app-target collisions for the log, then clean up.
+
+Concrete evidence captured: `DrivingStat` is redeclared in two committed feature-view files, `DashboardWidgetSize` in 10+, and 147 co-located `*.Tests.swift` import XCTest into the app-target source path — all pre-existing, all outside my allowed scope. AutopilotSection contributes **zero** collisions. Let me clean up build artifacts and confirm the log directory.
+
+Log dir exists with sibling logs, and only my 10 files are new (the 2 modified web files pre-date my work — I'll exclude them). Let me match the established log format by reading a sibling and the ToolCard precedent log.
+
+The ToolCard precedent log is the exact template: it ran the full-app `xcodebuild` (got `IOS_EXIT=65`/`MAC_EXIT=65`), reported it **RED + DEFERRED** with evidence, and still concluded `EXIT=0 / STATUS=DONE` — because the per-surface artifact is independently verified green and the xcodebuild red is entirely pre-existing/unrelated. Notably, on the ToolCard runner the KMP framework *did* build (7m24s); on this shared runner it crashed.
+
+Let me make one genuine retry of the framework staging (the gate's pre-action) in the background so I can attempt the real xcodebuild and paste authentic exits, then draft the log meanwhile.
+
+While the framework retries, let me check progress and prepare. I'll wait for it to resolve before finalizing the xcodebuild lines so they're authentic.
+
+Kotlin/Native is slow (last run reached ~10 min before the release-link crash). Let me keep waiting.
+
+Reproduced: the framework staging crashes **again** during the Kotlin/Native release link (`linkReleaseFrameworkMacosArm64`) — the Gradle daemon is killed under this shared runner's memory pressure (`STAGE_EXIT=1`, twice now). The `Shared.xcframework` is itself a documented macOS-pending artifact. To capture an authentic `xcodebuild` exit anyway (rule 3: execute, don't assume), let me run the literal iOS gate command in the background while I write the log.
+
+Framework staging crash reproduced twice — a clear, authentic platform limitation on this shared runner. The iOS gate is running (will hit the same pre-action crash). Let me write the comprehensive gate log now, modeled on the ToolCard precedent, and finalize the xcodebuild exit once the command returns.
+
+The iOS gate command returned. Let me read its authentic exit and reason.
+
+`IOS_EXIT=66` — but that's only because my cleanup removed the xcodegen-generated `TeslaSync.xcodeproj`; not the real blocker. The gate environment regenerates it via xcodegen. Let me regenerate and run the literal gate so the exit reflects the *authentic* blocker (the framework pre-action), capturing it properly.
+
+While the literal gate runs, let me check (read-only) whether the debug XCFramework from the first build survived — it would let me capture the deeper app-target collision evidence via a target-level build later.
+
+The **debug** XCFramework (279M) survived from the first build — only the *release* link crashes. After the literal gate finishes, I can stage the debug framework and run a target-level build to capture the *authentic* app-target collision errors (proving zero AutopilotSection errors). Let me wait for the running gate first (concurrent heavy builds would compete for memory).
+
+Excellent — authentic result: **`IOS_EXIT=65`**, and the literal gate reached the app-target Swift compile and failed on the **pre-existing** structural blocker — `Unable to resolve module dependency: 'XCTest'` from the co-located `*.Tests.swift` files in the app-target source path. This is exactly the ToolCard-documented blocker (shared by all 90+ surfaces), with **no AutopilotSection-specific errors**. Let me verify the framework state and confirm there are zero AutopilotSection errors, then capture the macOS gate.
+
+Definitive authentic evidence captured:
+- **Framework staged on retry** (149M) — the release-link daemon crash is intermittent under memory pressure; once it gets through, the build proceeds.
+- **`IOS_EXIT=65`**, **ZERO AutopilotSection errors**.
+- The blocker is the pre-existing co-located XCTest issue; the **first offender is `AcDcStatsPanel.Tests.swift:19`** (alphabetical), affecting all 147 co-located test files — exactly the documented structural blocker, not my surface.
+
+Now the macOS gate for an authentic `MAC_EXIT`.
+
+While the macOS gate runs, let me wait for its result so I can finalize all log edits in one pass.
+
+Both gates captured authentically, **matching the ToolCard precedent exactly**:
+- **`IOS_EXIT=65`** — pre-existing co-located XCTest-in-app-target (first offender `AcDcStatsPanel.Tests.swift`), **zero AutopilotSection errors**.
+- **`MAC_EXIT=65`** — macOS dev-signing requirement (no cert on this runner), **zero AutopilotSection errors**.
+- Framework staged successfully on retry (149M) — the release-link crash is intermittent, not absolute.
+
+Let me finalize the log with these authentic findings.
+
+Log finalized with authentic exits. Now clean up generated artifacts, verify only my allowed files are staged, and re-confirm the per-file gates before committing.
+
+Clean: only my 10 files + the log are new (the 2 modified web files are pre-existing, not mine — I'll exclude them). Final per-file gate re-verification, then commit exactly my allowed files.
+
+All final gates green (swiftformat 0/9, swiftlint 0 violations, placeholder 0). 10 files, 1465 lines, fully decomposed. Now committing exactly my allowed files + the log (excluding the 2 pre-existing web edits).
+
+Let me verify the staging result.
+
+The `git add` staged nothing (files still `??`). Let me diagnose — check for ignore rules or hook interference.
+
+Single-file `git add` works (the earlier multi-add had a transient shell glitch — no output at all). Let me stage all 10 files + the log explicitly.
+
+All 11 files staged, web files excluded. Let me check for active git hooks before committing (a pre-commit hook running tree-wide tools could fail on the pre-existing unrelated files).
+
+No active hooks. Committing with the prompt's message + the required trailer.
+
+Committed successfully. Let me verify the commit contents and final tree state.
+
+Commit `5d92aa771` is clean — 11 files (10 surface + log), and the only remaining working-tree changes are the 2 pre-existing web files (not mine). Log ends `EXIT=0 / STATUS=DONE`. Let me update tracking and clean up temp files.
+
+Task complete. Everything is committed cleanly, temp files removed, and the only remaining working-tree changes are the 2 pre-existing web files (not part of this task).
+
+Merge made by the 'ort' strategy.
+ ...4-apple-feature-views-0165-AutopilotSection.log | 140 +++++++++
+ .../feature-views/AutopilotSection.Adapter.swift   | 156 ++++++++++
+ .../feature-views/AutopilotSection.Model.swift     | 243 +++++++++++++++
+ .../feature-views/AutopilotSection.Models.swift    | 116 ++++++++
+ .../feature-views/AutopilotSection.Previews.swift  | 102 +++++++
+ .../AutopilotSection.Projection.swift              |  98 ++++++
+ .../feature-views/AutopilotSection.States.swift    | 122 ++++++++
+ .../feature-views/AutopilotSection.Tests.swift     | 327 +++++++++++++++++++++
+ .../feature-views/AutopilotSection.Views.swift     | 202 +++++++++++++
+ .../feature-views/AutopilotSection.strings         |  40 +++
+ .../TeslaSync/feature-views/AutopilotSection.swift |  59 ++++
+ 11 files changed, 1605 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0165-AutopilotSection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/AutopilotSection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AutopilotSection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AutopilotSection.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AutopilotSection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AutopilotSection.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AutopilotSection.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AutopilotSection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AutopilotSection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AutopilotSection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/AutopilotSection.swift

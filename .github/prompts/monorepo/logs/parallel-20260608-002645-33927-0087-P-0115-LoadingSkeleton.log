@@ -1,0 +1,90 @@
+I'll start by exploring the repository structure and the web source that serves as the specification, plus checking platform capabilities.
+
+Web source and Apple scaffolding both exist. `xcodebuild -version` failed — let me investigate that and read the spec plus existing conventions.
+
+Key finding: **xcodebuild is unavailable** (only Command Line Tools, no full Xcode) — so the iOS/macOS simulator build+test gate cannot run. But `swift`, `swiftlint`, `swiftformat`, `pwsh` are all available. The web source is a pure presentational skeleton. Let me study the existing native conventions before writing code.
+
+**Critical finding:** Native `LoadingSkeleton.*` files already exist (7 files), but the `0115` log does not. These may be pre-existing scaffolding/stubs I must bring to full parity, or already complete. Let me read all of them plus a recently-completed sibling (LifetimeSummary/0114) to learn conventions and the quality bar.
+
+**Major discovery:** The existing `LoadingSkeleton.*` native files implement the **charging-curve** variant (labeled "P4 feature view · 0088"), referencing `features/charging/components/charging-curve/LoadingSkeleton.tsx`. But **my** prompt (0115) targets the **cost-analysis** variant — a structurally different component. There's a filename collision in the flat `feature-views/` directory. I need to understand how the monorepo disambiguates duplicate-named web components before proceeding.
+
+The committed `LoadingSkeleton.*` is the charging-curve surface (commit `8fef69845`). Both `P-0088` (charging-curve) and `P-0115` (cost-analysis) exist — a real collision. Let me read both prompts, the charging-curve web source, and the methodology to understand the intended disambiguation.
+
+Now it's clear. **P-0088** = charging-curve (already DONE, committed, log exists). **P-0115** = cost-analysis (my task, no log yet). Both prompts declare the *same* native output path `LoadingSkeleton.*` — a generator collision. I must ship the cost-analysis surface **without** breaking the committed 0088 charging-curve surface, using disambiguated filenames that still match the `LoadingSkeleton.*` glob and distinct Swift symbols.
+
+Let me read the cost-analysis web Skeleton API, the 0088 sibling files, the shared native tokens (P1/S9), and build config.
+
+Now I understand the web Skeleton API (width as px/%/full, `rounded` → capsule, default 16h) and the 0088 conventions (Telemetry protocol, Tests structure). Let me read the predecessor logs to learn the established terminal STATUS on this runner, plus the shared tokens and build config.
+
+The 0088 log is a goldmine: it reveals the **sanctioned verification harness** for this runner — an isolated SwiftPM build compiling the shipped sources against the real design system + XCTest, plus an iOS-SDK typecheck — with the full-app `xcodebuild` gate marked DEFERRED. Crucially, the 0088 runner had Xcode at `/Applications/Xcode.app` (used via `DEVELOPER_DIR`). I must determine whether **my** runner has Xcode.app or only CLT — this decides DONE-via-harness vs capability-BLOCKED.
+
+**Decisive finding: Xcode IS installed** at `/Applications/Xcode.app` (just not `xcode-select`'d), and SwiftUI+Charts compile. This is exactly the 0088 scenario — I am **NOT** capability-BLOCKED. I can use `DEVELOPER_DIR` non-destructively (no sudo) to access the full toolchain and reproduce the sanctioned verification harness, targeting STATUS=DONE.
+
+Let me confirm the toolchain and map the design-system dependencies my surface will use.
+
+Xcode 26.5 + iPhone 16 simulator (booted) + iOS 26.5 SDK all available via `DEVELOPER_DIR`. Design system mapped: `TSGlassPanel`, `TSSkeleton(width:height:cornerRadius:)`, `TSSpacing`, `TSRadius`, `Color.TS`. Let me locate the tokens and understand the `Sources/` dependency graph (especially any KMP `Shared` coupling) to build the verification harness.
+
+Tokens all live in one file: `Sources/Design/TSMaterial.swift`. `feature-views/` is cleanly presentational (no `Shared` import). Let me read the tokens and locate the remaining design-system files Cards.swift depends on (Typography, Badges, Buttons).
+
+`TSMaterial.swift` references `TSRadius`/`Color.TS` but doesn't define them. Let me find the actual token definitions (likely a generated Tokens file) to assemble the complete harness dependency set.
+
+Token definitions (`TSSpacing`, `TSRadius`, `Color.TS`) must be in a generated file. Let me search the whole Apple tree precisely.
+
+Tokens are generated at `apps/design/generated/apple` (the `DesignTokens` group, added to every target). And the cost-analysis source uses `FadeIn` from `@/components/motion` (unlike charging-curve). Let me map the token files, the native motion primitive, and the project.yml target/source wiring.
+
+I now have the full design-system API (`TSSpacing`, `TSRadius`, `Color.TS`, `Font.TS`, `TSGlassPanel`, `TSSkeleton`, `TSFadeIn`). The cost-analysis surface needs things 0088 lacked: a `FadeIn` wrapper, fractional widths (60%/80%/40%/30%), a `rounded` capsule button, and a 5-row table. Let me read the gate's placeholder scanner, lint/format config, and project.yml wiring before writing code.
+
+Now I understand the gate scanner (recursive, scans `.swift` for forbidden patterns; a path that doesn't exist scans clean) and the lint/format rules (`--strict`: type names ≤50, `empty_count`, no explicit `self`, maxwidth 120). Let me read the forbidden-pattern list (must avoid "placeholder"/"stub"/"mock"/etc. even in comments) and the project.yml source/test wiring.
+
+I have everything: targets glob `feature-views/` (auto-include), module `TeslaSync`, Swift 6 strict-concurrency, iOS 18/macOS 15. Forbidden words (case-insensitive): `TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented` — I'll avoid all in code+comments. Plan: ship 7 disambiguated `LoadingSkeleton.CostAnalysis.*` files (matching the `LoadingSkeleton.*` glob, distinct Swift symbols) so the committed 0088 charging-curve surface stays intact. Let me verify no symbol collisions exist, then write a plan file.
+
+All clear — no symbol collisions, conventions understood. Let me record a plan, then write the 7 disambiguated surface files.
+
+Now writing the surface. Starting with the Model (identity + value specs + layout projection + i18n facade):
+
+Now the comprehensive test suite (layout projection, responsive columns, telemetry, i18n, width semantics):
+
+All 7 files written. Now formatting them with the repo's swiftformat config, then verifying:
+
+swiftformat clean (0/6 require formatting). Now swiftlint `--strict` on the new files:
+
+swiftlint `--strict`: **0 violations, 0 serious in 6 files.** Now the placeholder gate — I'll scan each real shipped file (the literal gate path scans nothing since no file is named exactly `LoadingSkeleton`), plus run the scanner self-test:
+
+Placeholder gate green (self-test PASS; all 6 files PLACEHOLDER_COUNT=0). Now the authoritative verification — the sanctioned **isolated SwiftPM harness** that compiles the *exact* shipped sources against the real design system and runs the XCTest suite. Let me assemble it with symlinks to the real files.
+
+The surface symlinks dropped the `.swift` extension. Let me fix them:
+
+14 library files resolve (9 design-system + 5 surface). Writing `Package.swift` (Swift 6 mode, macOS 15) and running the real XCTest suite via the Xcode toolchain:
+
+**SwiftPM harness: built against the real design system under Swift 6 / complete concurrency, and ran all 21 tests — 0 failures.** This also compiled the DEBUG `#Preview`s and the macOS `#else` size-class branch. Now the iOS 18 SDK typecheck to exercise the `#if os(iOS)` `horizontalSizeClass` branch:
+
+**iOS 18 SDK typecheck: clean (exit 0)** — the `#if os(iOS)` size-class branch compiles. Surface-level gates are all green and the surface is independently proven (21/21 tests + iOS/macOS typecheck). Now let me handle the full-app `xcodebuild` gate honestly. Let me read the repo's deferral reference and check `xcodegen`.
+
+Confirmed: the full-app `xcodebuild` is a documented **macOS-pending deferral** (per `apps/macos-pending-verifications.md`) — blocked by pre-existing, unrelated conditions (171 co-located `*.Tests.swift` importing XCTest into the app target, `DashboardWidgetSize` redefinitions, unstaged `Shared.xcframework`, macOS signing). Siblings (ToolCard, AlertMessageEditor, FSMTimelineChart) all ship STATUS=DONE via the isolated-harness + typecheck route. Let me substantiate the wiring with `xcodegen generate` (proves my files enumerate into the real targets) and confirm the pre-existing blockers.
+
+xcodegen succeeded. Let me confirm my 7 files are enumerated into the real targets and verify the pre-existing blockers (to substantiate the deferral honestly):
+
+My 7 files enumerate into both app targets (42 pbxproj refs). The full-app `xcodebuild` blockers are confirmed pre-existing and unrelated: **225** co-located `*.Tests.swift` importing XCTest into the app target, `DashboardWidgetSize` redefined **15×**, and the unstaged KMP `Shared.xcframework` — matching the documented deferral for ToolCard/AlertMessageEditor/FSMTimelineChart. Let me complete the SDK matrix with an explicit macOS 15 typecheck, then clean the generated artifact.
+
+Full SDK matrix green (iOS 18 + macOS 15 typecheck + 21/21 tests). Let me clean the generated artifact and review git state so I commit only my 7 files + the log.
+
+The generated `.xcodeproj` is correctly git-ignored (`.gitignore:379`); I removed it. My 7 files are untracked; the 7 `M` files are pre-existing `AIUsageCard.*` edits I won't touch. To maximize honesty (real raw exit, not an assumed one), let me attempt the actual iOS `xcodebuild` with a bounded budget. First, let me check the scheme's preActions to predict behavior.
+
+The 7 `M` files are pre-existing `AIUsageCard.*` edits (not mine) — I'll leave them untouched. The `TeslaSync` scheme's preAction runs the KMP `build-shared-xcframework.sh` (the multi-minute Gradle build that's itself macOS-pending). Let me make one bounded, honest attempt at the real iOS `xcodebuild` to capture a genuine runner exit rather than assume it.
+
+Heavy multi-slot contention (several shared Gradle daemons from parallel slots) and the sync session discarded my backgrounded build. The Gradle activity confirms the xcframework staging is a real multi-minute KMP build — substantiating blocker #1. Running the full app build to completion re-confirms a documented deferral with no added value. Let me check for and clean up any `xcodebuild` I spawned, and remove the regenerated project.
+
+No stray `xcodebuild` (the discarded session cleaned it up); shared Gradle daemons belong to other slots — I'll leave those. Let me clean up artifacts and temp files, then write the gate log.
+
+Working tree is clean (only my 7 files untracked). Now writing the comprehensive, honest gate log:
+
+Log written. Final commit-time re-verification of the surface-level gates (covenant pt 8: no commit on red), then staging only my 7 files + the log:
+
+Final gates green (format 0/6, lint 0 violations). Staging my 7 files + the log and committing:
+
+Exactly 8 staged (7 surface + log), no pre-existing `AIUsageCard` files. Committing:
+
+Commit `990d9fa76` created — only pre-existing `AIUsageCard.*` edits remain unstaged (left untouched, as required). Final sanity check of the commit contents + log tail, and temp cleanup:
+
+All verified: commit `990d9fa76` (8 files, 1062 insertions), log terminates with `EXIT=0 / STATUS=DONE`, temp cleaned, and the **0088 charging-curve surface is intact and unmodified**. Let me mark the plan done.
+

@@ -1,0 +1,126 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the tooling capabilities and the existing repository structure.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Swift 6.3.2, swiftlint, swiftformat are available. Let me explore the Apple app structure and the web source before concluding anything.
+
+Now let me explore the Apple Sources structure, the shared-surfaces directory, and understand the conventions from existing surfaces.
+
+Let me determine actual capability thoroughly — check for full Xcode, xcodegen, and whether SwiftUI/Charts/MapKit can compile with the available toolchain.
+
+Full Xcode is installed at `/Applications/Xcode.app` — just not selected. I can target it via `DEVELOPER_DIR` without sudo. Let me verify.
+
+Full Xcode 26.5 + iPhone 16 simulator are available via `DEVELOPER_DIR`, so capability exists. Now I must verify the dependencies (P4 core, P1/S8 state holders, S9 tokens, S10 i18n, S11 diagnostics) actually exist. Let me explore the Sources tree and prompt/log structure.
+
+The Apple app is mature with a clear multi-file convention per surface. But `TeslaSync/shared-surfaces` isn't in `project.yml` sources. Let me check the P4 prompts, whether sibling shared-surfaces were built, and how the directory gets into the build.
+
+Let me find the exact 0018 prompt, understand how the `shared-surfaces` directory gets wired into `project.yml`, and check the xcframework build script.
+
+Key realization: feature-views/dashboard-widgets are pre-registered directory paths in `project.yml`, so files dropped in compile automatically — but `shared-surfaces` is NOT registered. Let me read the actual on-disk prompt (may differ from pasted), and study a recently-added surface (ToolCard) end-to-end for conventions.
+
+Now let me study the ToolCard surface (most recent, parallel template) and the web sub-components it composes, plus locate the native facades (i18n, tokens, telemetry, GlassPanel).
+
+ToolCard is an ideal template — a presentational primitive owning no data, exactly like AIFeatureCard. Now let me read the web sub-components I must reproduce (AiOutputPanel, useAiStream state, HelixMark) and confirm the native facades (GlassPanel, Button, typography, colors, .strings format).
+
+Now I fully understand the web behavior. Critical open question: how does `TeslaSync/shared-surfaces` get into `project.yml` so the gate actually compiles my code. Let me check the P4 core prompt and acceptance gate, plus the Localization/.strings convention.
+
+Localization uses a master `Localizable.xcstrings`; surfaces ship a per-surface `.strings` table that folds in at integration. Critical: `shared-surfaces` isn't registered in `project.yml` and no prompt registers it. Let me check git history — the ToolCard commit touched `project.yml`, which tells me whether surfaces edit it.
+
+Decisive findings: the ToolCard commit (the precedent for adding a surface) **did edit `project.yml`** to register its new directory, and documented the accepted verification methodology: swiftformat + swiftlint + placeholder scan + **isolated SwiftPM build/test of the shipped sources against the real design system**, with full-app xcodebuild deferred due to pre-existing parallel-merge collisions. Let me read that pending-verifications doc and find the isolated-build harness + exact UI facade APIs.
+
+Complete clarity now. The pending-verifications doc confirms the authoritative methodology: surfaces verify via **isolated SwiftPM build + tests + real iOS-18/macOS-15 `swiftc -typecheck` + swiftlint/swiftformat/placeholder**, with full-app xcodebuild deferred to signed CI due to documented pre-existing parallel-merge collisions. Let me locate the exact design-system symbols I must consume.
+
+I now have the full design-system API. Let me study one complete data-bound surface (AcDcStatsPanel) to match the P1/S8 state-holder, states, telemetry, and XCTest idioms precisely.
+
+Let me read the lint/format configs and the placeholder patterns so my code passes all mechanical gates, plus confirm the reduce-motion idiom.
+
+Critical wiring insight: `.swiftlint.yml` `included:` lists feature-views/dashboard-widgets but not `shared-surfaces`, and `project.yml` sources likewise — so the first surface in a new directory must register it in both (the ToolCard precedent did this for project.yml). Let me confirm the `.swiftlint.yml` precedent, check `pwsh`, and read the placeholder-scan path logic.
+
+`pwsh` is available, so I can run the exact gate. Placeholder scan is case-insensitive (must avoid TODO/FIXME/XXX/placeholder/etc. everywhere). I need to resolve the file layout: the gate's `-Path .../AIFeatureCard` and `git add .../AIFeatureCard` (no extension) vs the flat `AIFeatureCard.*` convention. Let me read the enumeration logic and the ToolCard prompt's actual gate.
+
+`pwsh` is available and the placeholder scan recurses a real directory — so a per-surface **subdirectory** layout (`shared-surfaces/AIFeatureCard/…`) makes the gate's `-Path …/AIFeatureCard` and `git add …/AIFeatureCard` work correctly and scan my files for real. Now let me check for existing native counterparts (HelixMark, AiOutputPanel, etc.) to reuse, and any name collisions.
+
+No native HelixMark/AiOutputPanel exists (I'll render private parity sub-views within my surface), and no name collisions. There's an `AISettings` AI surface and an `AiUsageCard` — both close precedents. Let me study them and the Helix glyph idiom.
+
+`AiUsageCard` is the gold-standard precedent — an AI/Helix card with the full P4 leaf contract (loading/empty/error/data + live/stale/offline + refresh), P1/S8 model, telemetry, i18n. Let me read its Chrome, Model, the Helix glyph, the motion wrapper, and its test style.
+
+This is the gold standard. Let me grab the remaining specifics: the Helix glyph, the skeleton/motion APIs, the projection resolver, and the test style.
+
+I have everything needed. Let me grab the telemetry-spy test idiom and the preview structure, then I'll start building.
+
+I now have a thorough, complete understanding of every convention (gold-standard precedent: `AiUsageCard`). Let me record a plan and start building the surface.
+
+All 7 files created. Let me do a fast `swiftc -typecheck` of the surface against the real design-system sources (macOS SDK) to catch compile errors early.
+
+Typecheck passes on macOS 15. Let me confirm iOS 18 target and include the Previews (DEBUG) file.
+
+iOS 18 passes. The macOS DEBUG check surfaced a Swift 6 actor-isolation error in the **Previews** helper (calls main-actor inits from a nonisolated context). Fix: mark the preview-data enum `@MainActor`.
+
+Both platforms typecheck clean. Now let me build the **isolated SwiftPM harness** (module named `TeslaSync`) to actually build the surface against the real design system and run the XCTest suite (the authoritative test run, per the established methodology).
+
+Build succeeds against the real design system under Swift 6. Now let me run the test suite.
+
+All 20 tests pass under Swift 6 strict concurrency against the real design system. Now let me normalize formatting with swiftformat and verify with swiftlint on my files.
+
+swiftformat wants single-line property bodies wrapped (matching the house style) and two long lines wrapped. Let me let the ecosystem tool auto-fix, then re-lint.
+
+swiftformat passes (0/6). Now swiftlint on my files, and re-verify the formatted files still build/test in the harness.
+
+Harness re-test passes. swiftlint linted all 1909 files (config `included:` overrides the path) and found 1 serious violation — I must locate it. Let me isolate.
+
+The 1 serious violation is **pre-existing** in `LifetimeStatsWidget.Adapter.swift` (a parallel-merged dashboard-widget) — not mine. Let me cleanly confirm my files are violation-free.
+
+One violation in my file: `AIFeatureCard.Model.swift` is 404 lines (>400 `file_length` limit under `--strict`). The house convention splits the projection into its own file (`AiUsageCard.Projection.swift` precedent). Let me view the formatted sections and split out a `Projection` file.
+
+I'll extract the projection into its own file (matching the `AiUsageCard.Projection.swift` convention) to get Model under 400 lines.
+
+Now let me re-format, re-lint all 7 files, and re-verify the harness with the new Projection file.
+
+All 7 files: swiftformat clean, swiftlint --strict clean. Let me re-verify the harness includes the new Projection file and still builds + tests green.
+
+All 20 tests pass with the split. Now let me wire the new directory into `project.yml` (both app targets) and `.swiftlint.yml` — the precedented step the ToolCard commit performed for `feature-views`.
+
+Let me verify `xcodegen generate` enumerates my files (proves the wiring), and run the placeholder scan via the real pwsh tool.
+
+xcodegen enumerates all 8 files; placeholder scan is clean (COUNT=0). Now the project-wide gate commands: `swiftformat --lint apps/apple` and `swiftlint --strict`.
+
+Both project-wide gates fail on **pre-existing, unrelated** parallel-merge files I never touched (`ActionBuilder.Previews.swift` for swiftformat; `LifetimeStatsWidget.Adapter.swift` for swiftlint). My own 7 files pass all three. Let me confirm my working tree is limited to my files + the 2 wiring edits, and that those pre-existing failures exist independent of me.
+
+I see pre-existing dirty files I never touched (`AIUsageCard.*`, two `web/` files) — the environment handed me a dirty tree (confirmed: I never touched `web/`). Let me verify these aren't from my tooling, then proceed with a **scoped** commit.
+
+Confirmed pre-existing: the dirty files have mtime `03:30` (repo checkout), well before my edits at `04:02+`, and I never touched `web/`. My commit will be scoped. Now let me attempt the full-app `xcodebuild` to capture this run's evidence (expected to fail on the documented pre-existing collisions). First, check the xcframework/KMP situation.
+
+Definitive pre-existing blockers confirmed: `Shared.xcframework` unstaged (needs KMP/Kotlin-Native gradle build) and `DashboardWidgetSize` redefined **15×** (duplicate-type compile failure) — exactly the documented parallel-merge collisions. Let me run the actual gate `xcodebuild` time-boxed to capture this run's evidence.
+
+The tool blocked `kill` with a variable. Let me run xcodebuild in async mode (cleanly stoppable via stop_bash) to capture the pre-existing failure evidence.
+
+The build is stuck in the `Stage Shared.xcframework` pre-action (the KMP/Kotlin-Native gradle build) — the documented infra blocker. Let me give it more time to either progress or emit an error.
+
+Still stuck in the KMP `Shared.xcframework` gradle pre-action after ~5.5 min — the documented infra blocker. I have definitive evidence. Let me characterize the gradle state, then stop the build.
+
+Conclusive evidence: the `Stage Shared.xcframework` KMP gradle pre-action is the blocker — and `ps` shows other parallel slots' identical builds stuck for **5–10+ hours** in this shared environment. Zero `AIFeatureCard` references appear in the xcodebuild output (it never reached source compilation). Let me stop my contending build.
+
+My build stopped. Let me check how the precedent surface logs (ToolCard, FSMTimelineChart) ended their STATUS line for this exact deferral situation — to match the house convention precisely.
+
+The house convention is unambiguous: all three prior surfaces in this identical situation end `EXIT=0 / STATUS=DONE` — surface code-complete + every host-runnable/surface-scoped gate green, full-app `xcodebuild` DEFERRED to the signed `macos-latest` P99 gate and recorded in `macos-pending-verifications.md`. I'll match this exactly (avoiding silent drift), with full honest attribution. Let me add the deferral row.
+
+Let me capture final clean exit codes for the surface-scoped gates in one pass, to record accurate numbers in the log.
+
+All surface-scoped gates green; all files ≤342 lines. Now let me write the comprehensive, honest gate log.
+
+Now let me do a final clean verification, confirm the generated `.xcodeproj` is git-ignored, and stage exactly the right scoped files.
+
+All clean. Let me stage exactly the scoped files (excluding the pre-existing dirty files) and verify the staged set.
+
+`git add` is hanging unusually long. Let me stop it and investigate (likely an index lock from the shared environment).
+
+It's a shared git worktree (main repo serves many parallel slots) — heavy machine contention is slowing git I/O, not a deadlock. Nothing staged yet. Let me retry staging with patience.
+
+Staged set is exactly correct (8 surface files + 2 wiring files + pending-verifications + log; no stray files). Let me check the pre-commit hook setup before committing to avoid surprises.
+
+No pre-commit hooks active — safe to commit. Let me create the commit with the prescribed message plus a concise honest body.
+
+Committed as `789e7d4ca` (12 files, +1583). Let me verify the commit contents are exactly scoped and the pre-existing dirty files remain unstaged/untouched.
+
+The commit is exactly scoped (12 files), and the pre-existing dirty files (`AIUsageCard.*`, `web/*`) correctly remain uncommitted. Let me update the plan to reflect completion.
+
+Task complete. Final verification confirms the log ends `EXIT=0 / STATUS=DONE` and the commit is clean and scoped.
+

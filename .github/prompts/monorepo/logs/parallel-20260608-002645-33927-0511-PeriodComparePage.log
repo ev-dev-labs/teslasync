@@ -1,0 +1,146 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure to understand existing patterns.
+
+Let me check tooling availability and read the key navigation/infrastructure files.
+
+`/Applications/Xcode.app` exists — let me verify I can use it via `DEVELOPER_DIR`.
+
+Xcode 26.5 is available. Let me study the established page/surface pattern and the isolated-build technique from a reference implementation.
+
+This is highly informative. Let me study the navigation wiring, placeholder patterns, design tokens, and key components.
+
+Let me check whether the AppRoute switches in widgets/watch have `default` clauses (to assess blast radius of adding a route case).
+
+Navigation switches are over their own enums, not `AppRoute` — low blast radius. Now let me explore the component library I must use for parity.
+
+Now the key components: pickers, data table, badges, banners, states, motion, bar charts, and typography.
+
+Let me study the state-holder seam pattern from AiUsageCard, the DI container, design tokens, and chart models.
+
+Charts use `import Charts` directly in dedicated `.Chart.swift` files. Let me read a chart example plus the design tokens, badges, motion, skeletons, and typography.
+
+Let me read the design tokens, typography, and the string catalog format.
+
+Let me confirm the glass/chart-axes modifiers, the web number formatting, the web MetricCard, and the xcstrings format.
+
+Let me check the Shared framework staging, the DI container, and the web SI conversion math.
+
+No `Shared.xcframework` is staged and **zero** feature-views import `Shared` — surfaces are built Shared-free with data seams. Let me check the shared client API surface and the OpenAPI contract to see if a real data adapter is feasible.
+
+`AnalyticsRepository.kt` and `VehiclesRepository.kt` exist in the shared core. Let me check their signatures and how the Swift facade wires repos, to decide on a real data adapter.
+
+Endpoint `/analytics/period-stats` isn't in the shared client (confirming the Shared-free seam approach). Let me finalize by reading the lint config, placeholder patterns, and string catalog format.
+
+I have a complete understanding of the architecture. Let me set up tracking and write a plan.
+
+Now I'll build the files. Starting with the Model (strings facade, DTOs, period options, seams).
+
+Now the Projection — the pure parity logic (number/pct/unit adapters, value types, resolve).
+
+Now the Store (the `@Observable` model).
+
+Now the Source (in-memory + sample/failing/unavailable implementations of the seam).
+
+Now the Swift Charts grouped bar chart.
+
+I need to switch the strings facade to the main catalog (so TS components' `LocalizedStringKey` resolve). Let me update the facade and write the view layers.
+
+Let me fix the `LocalizedStringKey`-from-runtime-String issues (window labels need literal keys; error message needs interpolation).
+
+Now the Sections file — chart, table (columns/cells), and insights.
+
+Now the main page scaffold.
+
+Now the navigation registration helper and the `AppRoute` wiring.
+
+Now wiring `AppRoute`, the deep-link parser. Let me make those edits.
+
+Now let me check whether `compare.*` keys already exist in the catalog before adding them.
+
+The catalog uses bare keys (like `route.analytics`). I'll add my `compare.*` keys surgically via a script to preserve formatting.
+
+Now the build/lint config to include the new `Features` directory, and chaining the registration into the app.
+
+Let me verify `teslaSyncTheme` exists and inspect how feature-view tests are wired, to place my tests correctly.
+
+The feature-view tests are mis-globbed into the app target (the known deferred blocker). I'll do it cleanly: exclude tests from the app target, add my test to the test targets. Let me view the test target config.
+
+I'll exclude tests from the app target and register my test file in both unit-test targets.
+
+Let me add a test-friendly `reload()` to the store, then write the previews and tests.
+
+Now the test suite (adapter, projection, and model coverage).
+
+All files created. Let me update tracking and check file sizes against the 400-line limit.
+
+All files are within limits. Now let me run the lint and placeholder gates.
+
+SwiftFormat wants formatting applied. Let me run it to auto-format, then re-verify.
+
+SwiftFormat passes. Now SwiftLint --strict and the placeholder scan.
+
+SwiftLint found 5 violations across 1920 files — let me see which are mine.
+
+4 are mine. Let me view the exact code to fix the trailing-closure and function-length violations.
+
+Let me view the rest of `buildMetrics` and fix both issues.
+
+Now fix the trailing-closure violations in the table columns.
+
+My files are clean. Let me confirm the other violation is pre-existing and check scoping.
+
+Confirmed: the only other violation is **pre-existing** in `LifetimeStatsWidget` (present at HEAD, not my file). Let me run a clean scoped lint over exactly my files.
+
+My 11 files: **0 violations**. Now the placeholder scan.
+
+All lint + placeholder gates green. Now the critical build verification — an isolated Swift 6 typecheck of the page against the real component library (the full xcodebuild needs the absent `Shared.xcframework`, so I compile the closure directly).
+
+No `Layout` subdir exists (I don't use it). Let me re-run without it.
+
+The `Components` layer references `UnitPreferences` from the SharedFacade. Let me find all SharedFacade symbols the components need so I can provide a minimal compile shim.
+
+Only `UnitFormatters.swift` needs the Shared-backed `UnitPreferences`, and I don't use those formatter components. Let me exclude it and re-typecheck.
+
+Production page **typechecks clean** under Swift 6 strict concurrency. The `#if DEBUG` previews were skipped (no `-DDEBUG`). Let me verify previews compile too.
+
+Production + previews compile clean. Now let me actually **run** the tests by building an isolated executable test-runner (the full xcodebuild test target needs the absent xcframework).
+
+Top-level code needs `main.swift`. Let me rename the runner.
+
+The XCTest macros need a proper build system. Let me run the tests via a temporary SwiftPM package (which sets up the XCTest overlay correctly).
+
+The XCTest infra works now — just a test-code fix needed (`accuracy:` overload needs a non-optional). Let me fix it.
+
+Now re-sync the changed files into the package and re-run the tests.
+
+All **29 tests pass**. Let me validate the project.yml generates correctly, lint my edited nav files, and confirm the new `AppRoute` case doesn't break exhaustive switches.
+
+Let me verify `WatchDeepLink.swift` doesn't have an exhaustive `AppRoute` switch that my new case would break.
+
+`WatchDeepLink` switches its own enum — safe. Let me confirm no code does an exhaustive switch over `AppRoute.allCases`.
+
+Let me check the `AppRoute.allCases.map` sites (Menu/Shell) for exhaustive switches without a default.
+
+All `AppRoute` consumers are generic (no exhaustive switches) — my new case is safe. Let me check git state, the ledger situation, and that the generated project is ignored.
+
+Let me look at the shared-ledger format to create a correctly-structured apple ledger.
+
+Both apple targets need a ledger row. Let me verify all 34 string keys are actually referenced in code (for the parity evidence), then create the ledger and the evidence log.
+
+All 34 keys are referenced in code and present in the catalog. Now let me create the apple ledger and the evidence log.
+
+Now the comprehensive evidence log with the `=== PARITY ===` section.
+
+Let me clean up temp artifacts and run a final consolidated verification before committing.
+
+All final gates green. Let me review exactly what to commit (excluding the pre-existing unrelated working-tree changes).
+
+I'll stage **only my files** (excluding the pre-existing unrelated AIUsageCard/web changes), then commit.
+
+All 19 staged files are mine; no unrelated changes. Committing.
+
+Committed. Let me verify the final state and update tracking.
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: F5C6:306DDD:283DF1D:2A5416F:6A26E05A)

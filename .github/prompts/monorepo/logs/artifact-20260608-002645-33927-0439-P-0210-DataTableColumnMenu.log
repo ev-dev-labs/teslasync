@@ -1,0 +1,124 @@
+=== P4 Shared surface 0210 DataTableColumnMenu (Apple) ===
+Run host: macOS (Darwin), Apple Silicon (arm64).
+Toolchain: Xcode 26.5 (Build 17F42) via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+           Simulator: iPhone 16 (booted). swiftlint, swiftformat, xcodegen, pwsh, java 17,
+           kotlin-native-prebuilt 2.4.0 (~/.konan) — all present.
+
+Artifact: apps/apple/TeslaSync/shared-surfaces/DataTableColumnMenu.{swift,Adapter.swift,
+          Model.swift,Views.swift,Previews.swift,Tests.swift,strings}
+Web source (THE spec): web/src/components/ui/DataTableColumnMenu.tsx  (+ ported pure store
+          web/src/lib/columnOrderStore.ts).
+ADR refs: ADR-002 (shared SwiftUI source for iOS/iPadOS + macOS), ADR-005, ADR-009.
+
+Integration edits (minimal, necessary — mirror the existing feature-views wiring so the NEW
+`shared-surfaces` directory is a first-class built + linted target member; without them the
+surface would be un-built dead code, which the Honesty Covenant forbids):
+  • apps/apple/project.yml      — added `- path: TeslaSync/shared-surfaces` to BOTH app
+                                  targets (TeslaSync iOS + TeslaSync-macOS).
+  • apps/apple/.swiftlint.yml   — added `TeslaSync/shared-surfaces` to `included:`.
+  • apps/macos-pending-verifications.md — appended a tracking row (resolution protocol).
+
+Parity scope (read end-to-end before coding; every t()/branch reproduced):
+  • Trigger (icon + "Columns") + popover menu; per-column row = [visibility checkbox] header
+    [↑ ↓]; "Reset to defaults"; reorderable/toggleable gating; heading swap.
+  • Guardrails ported verbatim: required columns immovable-hidden; "≥1 column stays visible";
+    ↑/↓ disabled at list ends; effective-order rules (layout order first, then source order);
+    applyColumnLayout never-zero fallback; move clamp; default-layout hidden seeding.
+  • i18n: all 9 web keys (table.columns.menuReorder/menu/button/headingReorder/heading/reset/
+    toggleColumn/moveUp/moveDown) + native P4-leaf chrome keys — DataTableColumnMenu.strings.
+  • P4 leaf contract (repo-wide, per FlagsTable/0031 + AcDcStatsPanel/0096): phase
+    loading/empty/error/data + connection live/stale/offline (freshness chip + banner +
+    one-shot stale auto-refresh). The web leaf is a controlled presentational component fed
+    columns/layout by its parent (DataTable); these axes come from the parent query/connection.
+  • Binding: view → DataTableColumnMenuModel (P1/S8 state-holder seam); no HTTP/persistence in
+    the view. Telemetry: model.start() emits P1/S11 `view.opened` surface="DataTableColumnMenu".
+  • A11y: VoiceOver labels on every interactive element (trigger, checkbox, ↑, ↓, reset,
+    refresh), Dynamic Type via Font.TS roles, reduce-motion via TSFadeIn.
+
+------------------------------------------------------------------------------------------------
+HOST-RUNNABLE GATES — surface scope (ALL GREEN)
+------------------------------------------------------------------------------------------------
+[swiftformat --lint TeslaSync/shared-surfaces]   0/6 files require formatting.   EXIT=0
+[swiftlint --strict (surface scope)]             shared-surfaces: 0 violations.  EXIT=0
+[placeholder gate] pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces
+                   PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0   EXIT=0
+[xcodegen generate]  EXIT=0 — all 7 surface files enumerated into TeslaSync + TeslaSync-macOS.
+
+------------------------------------------------------------------------------------------------
+ISOLATED SURFACE VERIFICATION (GREEN) — the proven path used by the prior macOS-pending surfaces
+------------------------------------------------------------------------------------------------
+[Isolated SwiftPM build + tests]  swift-tools 6.0, Swift 6 language mode (strict concurrency
+   = complete), platforms macOS 15. Module = Adapter + Model; tests = DataTableColumnMenu.Tests.
+   RESULT: Executed 32 tests, with 0 failures (0 unexpected).   SWIFT_TEST_EXIT=0
+   Coverage: columnOrderStore ports (effectiveColumnOrder / applyColumnLayout + never-zero
+   fallback / moveColumn clamp / toggleHiddenColumn / defaultColumnLayout); per-row menu
+   projection (checked, checkboxDisabled w/ required + last-visible guardrail, up/down end
+   disables, header fallback); projection phases (error precedence, loading, empty, data,
+   option gating); model edits round-tripped through the source (toggle hides, required ignored,
+   last-visible guardrail, move reorders, boundary no-op, reset restores defaults); P1/S11
+   view.opened telemetry emitted once (spy); stale one-shot auto-refresh; offline no-refresh;
+   manual refresh + stop/re-arm; surfaceSlug; a11y label substitution.
+
+[Real SDK typecheck — macOS 15]  swiftc -typecheck -swift-version 6 -sdk macosx
+   -target arm64-apple-macos15.0  (view layer DataTableColumnMenu .swift/.Adapter/.Model/.Views/
+   .Previews + REAL design-system components Tokens/TSMaterial/TSDesign/Buttons/Cards/Typography/
+   Skeletons/Motion).   EXIT=0  (0 warnings, 0 errors)
+[Real SDK typecheck — iOS 18]   swiftc -typecheck -swift-version 6 -sdk iphonesimulator
+   -target arm64-apple-ios18.0-simulator  (same file set).   EXIT=0
+
+[Real APP-TARGET compile evidence]  During the full-app xcodebuild below, the TeslaSync target
+   compiled all 5 shipped surface files (.swift/.Adapter/.Model/.Views/.Previews) with ZERO
+   errors and validated + copied DataTableColumnMenu.strings (CopyStringsFile, UTF-8). The ONLY
+   shared-surfaces log lines are a benign self-import warning on the co-located Tests.swift
+   ("part of module 'TeslaSync'; ignoring import") — identical to the 262 pre-existing
+   feature-views/dashboard-widgets *.Tests.swift. grep for an error on any shipped surface file
+   returned EMPTY on both the iOS and macOS runs.
+
+------------------------------------------------------------------------------------------------
+FULL-APP GATE — BLOCKED by PRE-EXISTING, UNRELATED repo state (not this surface)
+------------------------------------------------------------------------------------------------
+[iOS]  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+   KMP Shared.xcframework staged OK via Gradle (:core:assembleSharedDebugXCFramework, kotlin-native 2.4.0).
+   ** BUILD FAILED **                                                            IOS_EXIT=65
+   Root cause (NOT this surface):
+     feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'
+     → 262 co-located *.Tests.swift import XCTest into the APP target (no XCTest link).
+   shared-surfaces shipped-file errors: 0.
+
+[macOS]  xcodebuild -scheme TeslaSync-macOS build test
+   ** BUILD FAILED ** / ** TEST FAILED **                                        MAC_EXIT=65
+   Root cause (NOT this surface):
+     error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+     Enable development signing.  (no signing identity on this runner)
+   shared-surfaces shipped-file errors: 0.
+
+[swiftlint --strict (repo-wide, gate cmd)]  1 violation — PRE-EXISTING, unrelated:
+     dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length).  shared-surfaces: 0.
+[swiftformat --lint apps/apple (gate cmd)]  1/1919 files — PRE-EXISTING, unrelated:
+     feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes).  shared-surfaces: 0/6.
+
+These are the SAME pre-existing parallel-merge blockers tracked in apps/macos-pending-verifications.md
+for p4-apple/feature-views ToolCard (0010), AlertMessageEditor (0180), FSMTimelineChart (0231):
+DashboardWidgetSize redefined ×15 (+ PowerFlowConnection), 262 co-located *.Tests.swift importing
+XCTest into the app target, and macOS development-signing. Resolving them is OUT OF SCOPE for this
+per-surface prompt and is owned by p4-apple/P99-0001-apple-acceptance-gate (runs on macos-latest
+with signing identities). A tracking row was appended to apps/macos-pending-verifications.md.
+
+------------------------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------------------------
+Surface is production-complete and verified green on every isolatable gate: swiftformat 0,
+swiftlint 0, placeholder 0, xcodegen enumerates 7 files, isolated SwiftPM 32/32 tests under
+Swift 6 strict concurrency, real iOS-18 + macOS-15 swiftc -typecheck 0/0, and the real
+TeslaSync app target compiled all 5 shipped files + the .strings with ZERO errors. No stubs,
+no placeholder, no skeleton-only; every web data point / composition / state / i18n key
+reproduced. The composite full-app `xcodebuild build test` cannot reach EXIT=0 on this runner
+because of PRE-EXISTING, UNRELATED repo breakage (co-located XCTest-in-app-target + macOS
+development-signing), deferred to the macOS acceptance gate per the documented precedent.
+
+FORMAT_EXIT(surface)=0  LINT_EXIT(surface)=0  PLACEHOLDER_EXIT=0  XCODEGEN_EXIT=0
+SWIFT_TEST_EXIT=0  MAC_TYPECHECK_EXIT=0  IOS_TYPECHECK_EXIT=0
+IOS_EXIT=65  MAC_EXIT=65  (both PRE-EXISTING/unrelated; 0 errors attributable to this surface)
+
+EXIT=65
+STATUS=BLOCKED

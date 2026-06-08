@@ -1,0 +1,132 @@
+I'll start by exploring the repository structure and checking the capability requirements (Apple toolchain, existing infrastructure).
+
+Xcode is **not** installed (only Command Line Tools), but Swift 6.3.2, swiftlint, and swiftformat are available. Let me explore the existing Apple app structure deeply — this determines whether I can build via SwiftPM.
+
+XcodeGen-based project (`project.yml`), no `.xcodeproj` checked in. The `modals-dialogs` dir doesn't exist yet — I'm creating it. Let me explore the existing source structure and tooling.
+
+Now I understand the web spec. Let me examine the web shortcut registry hook (data shape), the XcodeGen `project.yml`, and the existing native infrastructure (Sources, Frameworks, Localization).
+
+Critical finding: `project.yml` includes `TeslaSync/dashboard-widgets` and `TeslaSync/feature-views` but **not** `TeslaSync/modals-dialogs` — yet allowed files forbid editing `project.yml`. And Xcode isn't installed. Let me study the existing infra conventions (state holders, i18n, tokens, telemetry) and the parity/tooling docs before deciding how to proceed.
+
+The convention is a multi-file split per surface (`.swift`, `.Model`, `.Adapter`, `.Views`, `.States`, `.Previews`, `.Tests`, `.ModelTests`, `.strings`). Let me find the exact infra facades: telemetry `view.opened`, i18n, state-holder base, and the Modal/SearchInput component equivalents.
+
+Found the infra layout. Let me read the key facade files: `LoadableState`, `StateHolderModel`, the telemetry seam in `ExportStatusWidget`, the Modal (`Overlays`), and the search/filter form components.
+
+The infra pattern is clear. The shortcut registry is a **local in-memory store** (no HTTP/KMP), so my surface can be self-contained within the allowed files. Let me read a representative feature-view surface end-to-end plus the i18n facade and the shared UI components I'll map to.
+
+The i18n facade is a per-surface `<Name>Strings` enum with `.string(key, default)`. Let me read the full canonical surface (`AcDcStatsPanel`) — main view, adapter (strings+telemetry+provider seam), states, previews, and tests — to mirror conventions exactly.
+
+Excellent, very thorough conventions. Let me read the `.Model`, `.Views`, `.Previews`, `.Tests` for this surface, plus the shared Modal/overlay and search/filter components, and the design tokens.
+
+I have the full surface pattern. Now let me read the test/preview conventions and the shared components I'll map to (search field, segmented control, modal/sheet, empty state), plus design tokens.
+
+Now the search field (`TSSearchInput`) and conventions are clear. Let me read the Modal/overlay container, the segmented/tab control for the filter, and confirm the design tokens.
+
+I now have the full pattern. Let me confirm the exact design-token names, the empty-state/skeleton/glass-panel/fade components, the typography facade, and whether `pwsh` is available for the placeholder check.
+
+`pwsh` is available — good, I can run the placeholder check. Tokens live in the generated DesignTokens path. Let me locate the exact token enums (`TSSpacing`, `TSRadius`, `Color.TS`, `Font.TS`, `TSMotion`) and read the key components (`TSGlassPanel`, `TSFadeIn`, `TSSkeleton`, `TSButton`, typography).
+
+Let me read the generated `Tokens.swift` (token API) and the key components I'll compose with.
+
+All tokens confirmed (incl. `fontFamilyMono`). Let me read the exact init signatures of the components I'll compose with: `TSGlassPanel`, `TSFadeIn`, `TSSkeleton`, `TSButton`, the typography facade, and feedback states.
+
+Let me confirm the `TSButton` init and read the lint/format configs so my code passes `--strict`.
+
+I now have everything needed: tokens, components, conventions, lint/format rules. Key insight (from `AcDcStatsPanel`): per-surface strings resolve via `NSLocalizedString(table:)` and are passed to shared components as `LocalizedStringKey(resolvedString)`. Xcode isn't installed, so the `xcodebuild` gate will be BLOCKED, but I'll write complete production code and run every available check (swiftformat, swiftlint, placeholder, standalone typecheck + pure-logic tests).
+
+Let me write a plan file and the todo list, then build the surface.
+
+All 7 source files written. Now verification. Let me first format my files with the repo `swiftformat` config, then lint them.
+
+Format passes (0/6 require formatting). Now swiftlint `--strict` on the new files.
+
+swiftlint applied the repo config's `included` set (which excludes my dir) and flagged **1 pre-existing** violation — my files weren't linted. Let me (a) identify that baseline violation and (b) lint my files via a temp config with an absolute `included` path.
+
+Two issues:
+1. **Baseline** (pre-existing, not mine): `LifetimeStatsWidget.Adapter.swift` has a `function_body_length` error — the repo's `swiftlint --strict` is already red independent of my work.
+2. **Mine**: `Model.swift` (443) and `Tests.swift` (459) exceed the 400-line `file_length` limit. I must split these — and the established convention already uses a separate `.ModelTests.swift`, plus I'll add a `.Registry.swift`. Let me view exact boundaries.
+
+I'll extract the source/registry layer into a new `KeyboardShortcutsModal.Registry.swift` (an allowed `KeyboardShortcutsModal.*` file) and remove it from `Model.swift`.
+
+Now remove that extracted block (lines 197–338) from `Model.swift`.
+
+Model is now 301 lines. Now split the Tests file. Let me find its boundaries.
+
+Now create `.ModelTests.swift` (matching the existing `.ModelTests.swift` convention) with the model/registry/store tests, then trim those from `.Tests.swift`.
+
+Now trim those sections from `Tests.swift`. Let me verify exact boundaries first.
+
+All files trimmed. Now re-format and re-lint everything (incl. the 2 new split files).
+
+All green so far: swiftformat clean, all files ≤301 lines, swiftlint `--strict` **0 violations** on my 8 files. Now the placeholder check (via `pwsh`).
+
+Placeholder gate passes (`PLACEHOLDER_COUNT=0`, `EXIT=0`) and no forbidden words. Now I'll get **real compile+test signal** for the non-UI logic (Adapter, Model, Registry, and their tests) by running them on the actual Swift 6 toolchain in a throwaway SwiftPM package in `/tmp` (the SwiftUI view files need Xcode's app module, which isn't available).
+
+The toolchain caught **two real bugs** — exactly why I ran it:
+1. `ShortcutRouteMatch.matches` — mixed implicit/explicit return makes it not a valid switch-expression.
+2. `UserDefaultsKeyboardShortcutsFilterStore` — stores non-`Sendable` `UserDefaults` while conforming to a `Sendable` protocol (Swift 6 strict concurrency).
+
+Let me fix both in the real files.
+
+Now re-sync the temp package and re-run the toolchain tests.
+
+Another real bug surfaced: reading `self.mode` (an `@Observable` property) in `init` before `resolved` is initialized. Let me fix the init to use a local.
+
+The KSCore library (my Adapter + Model + Registry) now **compiles cleanly under Swift 6 strict concurrency**. The only remaining error is `import XCTest` being unavailable to the command-line toolchain (no Xcode). To actually *execute* and prove the logic, I'll convert the test assertions into a runnable executable harness (in `/tmp`, not the repo).
+
+**All 39 logic checks pass** on the real Swift 6 toolchain (`CHECKS=39 FAILURES=0`). My fixes are already in the real files. Now re-verify format + lint after those edits, and do a parse-only syntax check of the SwiftUI files (which need Xcode's app module for full typecheck).
+
+The parse check can't catch type errors (no app module). Reviewing my `controls(model:)` helper, I spot a real type bug: `$model` from `@Bindable` is a `Bindable<…>`, and `$model.search` yields `Binding<String>` — but I declared the param as `Binding<KeyboardShortcutsModel>` and passed `$model`. That's a `Bindable` vs `Binding` mismatch. Let me fix `controls` to take the two concrete bindings.
+
+Fixed the `controls` binding signature. Now I'll do a deeper validation of the **SwiftUI** files: a shim SwiftPM package that copies the authoritative `Tokens.swift` (real token names) plus faithful stubs of the 5 shared components I call (exact signatures verified from source), then type-checks my real Views + main surface against them.
+
+The shim build is taking unusually long (~11 min) — a classic sign of a SwiftUI type-checker slowdown. Let me stop it and rebuild with a long-expression diagnostic to pinpoint any problematic expression in my code (a real quality signal worth fixing).
+
+Shims.swift didn't persist (lost when I stopped the earlier session). The 11-min build was genuine SwiftUI type-check cost *with* shims present. Let me recreate it as its own step, verify, then rebuild with timing diagnostics.
+
+**Shim package builds cleanly** (`Build complete!`, 0 errors, no long-expression warnings) — my SwiftUI Views + Surface type-check against the real token names and component signatures under Swift 6. 
+
+Verification summary so far: KSCore logic 39/39 ✓, SwiftUI type-checks ✓, swiftformat clean ✓, swiftlint `--strict` 0 violations on my files ✓, placeholder gate 0 ✓, all files ≤301 lines ✓.
+
+Now let me check the log directory and run the actual gate commands to capture honest evidence.
+
+Let me check how a sibling P4 Apple log handles the (likely identical) Xcode-capability situation, to match the established format.
+
+Critical: the sibling logs reveal the reference runner had **Xcode at `/Applications/Xcode.app`** used via `DEVELOPER_DIR` override (no sudo), and they used a "code-complete + DEFERRED Xcode app build/test" mode. Let me check if Xcode is actually present here and read a sibling log's tail for the exact STATUS convention.
+
+**Xcode 26.5 is available** at `/Applications/Xcode.app` (via `DEVELOPER_DIR`, no sudo)! The default `xcode-select` just points to CLT. The sibling precedent achieves **`EXIT=0` / `STATUS=DONE`** by: compiling the surface against both iOS 18 + macOS 15 SDKs, running tests via a SwiftPM XCTest harness (with Xcode's toolchain), and marking only the full `xcodebuild` app build/test as DEFERRED (exit 65 — `Shared.xcframework` unstaged + not yet in `project.yml`). Let me read their exact verification steps.
+
+This is the authoritative template. Xcode is available, so I can do **much better** than before: compile my surface against the real iOS 18 + macOS 15 SDKs using the real component closure, run my actual XCTest suite via the Xcode toolchain, and capture the deferred `xcodebuild` evidence. First, let me check whether the shared component library is self-contained (no `Shared`/app deps).
+
+The component library imports **only system frameworks** (no `Shared`, no app types) — it's self-contained, so I can type-check my surface against the **real** component sources + real tokens on each SDK. Let me get the SDK paths and run the macOS 15 type-check first.
+
+The full library isn't self-contained (`UnitFormatters.swift` needs app-level `UnitPreferences`). Let me narrow to the **minimal real closure** my surface actually uses: `Tokens`, `Typography`, `Buttons`, `Tabs`, `Inputs`, `Skeletons`.
+
+Just one more symbol — `TSCard` (used by an unrelated skeleton variant in `Skeletons.swift`). Let me add `Cards.swift` + the `Design` helpers to the closure.
+
+**macOS 15 typecheck passes (`MAC_TYPECHECK_EXIT=0`)** against the real component closure. Now the iOS 18 simulator SDK typecheck and the DEBUG previews typecheck (the `#Preview` macro needs Xcode's plugin).
+
+iOS 18 typecheck **passes**. The previews step only fails because a closure file's *own* `#Preview` (Cards.swift) references `TSBadge` — an artifact of my reduced closure, not my code. Let me add `Badges.swift` and retry.
+
+**All three SDK type-checks pass** (iOS 18 ✓, macOS 15 ✓, DEBUG previews ✓). Now step [4]: execute the **real XCTest suite** via `swift test` using the Xcode toolchain (which provides XCTest), compiling against the real surface + component closure.
+
+The **real XCTest suite executed and passed** against the real surface + real components via the Xcode toolchain. Let me capture the grand total.
+
+**35 tests executed, 0 failures** via real XCTest. Now the deferred `xcodebuild` evidence (step [8]): confirm `modals-dialogs` isn't registered in `project.yml`, generate the project, and capture the real `xcodebuild` failure cause.
+
+The deferred evidence matches the precedent exactly: `modals_dialogs_refs=0` (not yet registered), `Shared.xcframework` unstaged, signing required → `MAC_BUILD_EXIT=65`; `xcodegen` succeeds. Let me verify the generated `.xcodeproj` is git-ignored, clean it up, and confirm git status.
+
+Those `AIUsageCard.*` and `web/*` modifications are **pre-existing/external** (shared parallel workspace) — not mine; I only created `modals-dialogs/`. My commit will be scoped to my files + log. Let me do a final consolidated capture of the host gates for the log, then write it.
+
+All host gates green: swiftlint 0 violations, swiftformat clean, placeholder COUNT=0, i18n 15/15 keys match, max file 306 lines. Let me grab git metadata and write the log.
+
+Log written. Now update todos, stage **only** my scoped paths (not the pre-existing external changes), and commit.
+
+Exactly my 10 files staged; external changes untouched. Committing.
+
+Committed cleanly (10 files, 2041 insertions). Let me clean up temp artifacts and do a final verification.
+
+All todos complete, tree clean, temp artifacts removed. Let me confirm the todo ledger.
+
+The task is complete. All 10 todos done, committed cleanly.
+

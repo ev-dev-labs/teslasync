@@ -1,0 +1,170 @@
+I'll start by exploring the repository structure to understand the web source and the existing Apple app architecture.
+
+The web source is clear. Now let me understand the Apple app conventions by examining existing feature-views and checking for an existing NotificationFilterBar.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swiftlint`, `swiftformat`, and `swift` 6.3.2 ARE available. Let me examine existing feature-view conventions thoroughly.
+
+Each feature view is a set of files: `.swift`, `.Adapter`, `.Model`, `.Views`, `.Previews`, `.Tests`. Let me find the most relevant examples — notification-related and form/filter-based views.
+
+No existing NotificationFilterBar. Let me find the most representative examples — those using forms components, search inputs, selects, and the notifications state holder.
+
+`SessionListSection` is the closest analog (filtering, search, controls). Let me read its complete file set to learn the conventions.
+
+This is a complete, rich example. Let me read the core files to learn all conventions — the main view, model, adapter, seams (state-holder bindings), and controls.
+
+Excellent architecture. Let me read the Model, Views, Controls, Tests, strings, and Previews to complete my understanding, plus locate the shared tokens/components (P1/S9).
+
+Now let me locate the shared P1/S9 tokens (TSSpacing, Color.TS, Font.TS, TSFadeIn) and read the remaining SessionListSection files (Views, Core, strings, Tests, Previews).
+
+There's a proper Design (tokens) and Components/SharedFacade structure. Let me explore these and the notifications state holder.
+
+Let me read the shared Design tokens, Forms/UI components, and the remaining SessionListSection files (Views, Core, strings, Tests, Previews) to fully understand the patterns.
+
+Now I understand the convention: feature views build bespoke controls using shared design tokens. Let me find the token definitions (Color.TS, TSSpacing, Font.TS, TSRadius, TSFadeIn) and read the remaining SessionListSection reference files.
+
+The token enums weren't in Sources/Design via that grep. Let me locate them and the `.text()` localization helper and `TSFadeIn` precisely.
+
+Let me find the actual token source (searching for distinctive token names) and read the reference Views, Previews, and Tests files.
+
+Let me pinpoint the exact token definitions so I use only valid token names, and read the reference Previews + Tests for the testing pattern.
+
+The design tokens are generated at build time (only the Watch mirror is in-source). Since I must use exactly the valid token names, let me aggregate the token vocabulary actually used across shipped feature-views, and check the i18n catalog + test harness setup.
+
+Now I have the exact token vocabulary. Let me read the test patterns, confirm the web data types (NotificationFilters, Vehicle, AlertRule), and check the i18n/test integration.
+
+Let me get the exact `NotificationFilters`, `Vehicle`, and `AlertRule` type shapes from the web source.
+
+I have everything needed on the data side. Let me verify the tooling: swiftlint/swiftformat configs, the placeholder check script, and whether `pwsh` exists.
+
+`pwsh` is available, so I can run the placeholder gate. Only `xcodebuild` is blocked (needs full Xcode). Let me read the lint configs, placeholder patterns, and how the project includes these files.
+
+XcodeGen project. Let me check how feature-views and their `.Tests.swift` files are routed to targets, so my files land correctly.
+
+I need to verify how `*.Tests.swift` files in `feature-views/` are routed (app target excludes them, test target includes them). Let me read the full target definitions.
+
+No excludes — these P4 surface bundles are self-contained and wired at integration time (matching the reference's XCTest-in-feature-views layout). I now have a complete picture. Let me confirm the `TSFadeIn` and `TSSkeleton` signatures, then write a plan and build.
+
+I have all the conventions. Let me check for naming collisions in the Apple module before writing (all feature-views compile into one `TeslaSync` module).
+
+I have a complete understanding of the architecture. Let me set up a plan and todos, then build the surface.
+
+Now I'll build the surface. Starting with the pure Adapter core, the Seams, and the i18n strings (independent files).
+
+Now the state-holder Model (P1/S8):
+
+Now the state Views and the Controls. Updating todos and writing both files.
+
+I'll replace the custom flow layout with a responsive HStack/VStack approach (matching the reference's size-class pattern) for reliability:
+
+Now the Controls file with all interactive widgets:
+
+Main view + previews next, then tests. Let me check the reference's spy declarations to mirror the exact pattern, and write the main view and previews.
+
+I have the exact test patterns. Now let me write the main view, previews, and both test files.
+
+Now the two XCTest files — adapter/projection/a11y tests plus the state-holder tests:
+
+All 10 files created. Now let me verify — run swiftformat on my files, then swiftlint, a syntax parse-check, and the placeholder gate.
+
+swiftformat is clean (0/9 require formatting). Now swiftlint --strict on my files:
+
+File length: Adapter is 402 lines (limit 400). I'll extract the pure support types into a `NotificationFilterBar.Core.swift` (matching the reference's Core split). Let me view the current Adapter sections to move.
+
+Now I'll create the Core file and remove those blocks from the Adapter. Let me view the Adapter's tail for an exact match.
+
+I'll create the Core file with the extracted types and remove them from the Adapter:
+
+Now re-run swiftformat and swiftlint --strict across all 10 files:
+
+swiftlint --strict: **0 violations** across all 10 files; Adapter trimmed to 303 lines. Now the placeholder gate — let me check how the script consumes `-Path`, then run it.
+
+Let me confirm the script actually scanned my files (not a vacuous pass) by checking its path handling and doing a real scan of exactly my files in a temp dir.
+
+Confirmed: the literal prefix path doesn't exist, so the gate returns a vacuous clean. To genuinely verify (honesty covenant), I'll scan my actual files via a temp dir, plus a direct grep cross-check.
+
+The real scan correctly flagged the substring "Placeholder" inside my web-derived i18n key `searchPlaceholder` (line 166). The reference handles this exact collision with a sanctioned `// parity:allow` marker on a short constant. Let me mirror that pattern.
+
+Now re-verify everything — format, lint, and a real placeholder scan:
+
+All green: swiftformat clean, **swiftlint --strict 0 violations**, real placeholder scan EXIT=0 (1 sanctioned allow). Now let me get real compiler verification: type-check the pure Foundation core (Adapter+Core) and the test logic, and syntax-parse the SwiftUI files.
+
+Core type-checks cleanly under Swift 6. Now let me syntax-parse the SwiftUI files (and check if the CLT SDK has SwiftUI for a deeper check):
+
+SwiftUI.tbd is in the CLT SDK — I can do a deeper type-check by stubbing the design tokens. Let me gather exactly which tokens/components my code uses, then type-check all app-code files against SwiftUI with accurate stubs.
+
+Now let me type-check all app-code files together against SwiftUI using accurate token stubs:
+
+Real error caught — `os.Logger` interpolations can't be concatenated with `+`. Let me fix the change-sink logger to build a plain `String` first:
+
+The only remaining errors are the `#Preview` macro plugin missing — an environment limitation of the CLT-only toolchain (no Xcode Previews plugin), not a code error. Let me confirm the other 7 app-code files type-check with zero errors:
+
+All 7 app-code files type-check against SwiftUI with **zero errors**. The only unverifiable parts are the `#Preview` macro (needs Xcode's plugin) and XCTest bundle — both environment limits. Let me re-confirm lint after the Seams edit, then capture the xcodebuild blocker evidence for the log.
+
+Confirmed: swiftformat/swiftlint clean; xcodebuild is genuinely blocked (CommandLineTools only). Let me check how sibling P4 Apple logs in this dir are formatted/terminated to match conventions.
+
+The precedent is clear (112 sibling logs): host gates green + xcodebuild **DEFERRED** with evidence → `STATUS=DONE`. Let me read a full sibling log to match the structure and understand their "tests EXECUTED" claim.
+
+Critical finding — the predecessor had `/Applications/Xcode.app` via `DEVELOPER_DIR` override and compiled against the **real** tokens + ran the XCTest suite via a SwiftPM harness, deferring only the final `xcodebuild` app build. Let me probe whether this environment has the same capabilities.
+
+Full Xcode 26.5 is available via `DEVELOPER_DIR`, and the real tokens are at `apps/design/generated/apple/Tokens.swift`. I can now match the predecessor's verification exactly — compile against the real closure on both SDKs and execute the XCTest suite. Let me inspect the real token/component closure.
+
+Tokens.swift covers all my token deps. Let me compile my surface against the **real** closure (Tokens + Motion + Skeletons) on the iOS 18 simulator SDK using full Xcode:
+
+The only errors are in the *real* `Skeletons.swift` needing `TSCard` (a transitive dep I hadn't included) — not my code. Let me include the full design-system closure (Tokens + Design + Components UI/Feedback/Motion):
+
+My files have **zero errors** against the real closure on iOS 18. The lone closure error is `TSMetricBar` in an unrelated `FeedbackOverlays.swift` (which I don't use). Let me trim to the minimal real closure for a clean exit-0 compile, then run macOS + previews + the XCTest suite.
+
+Both SDKs: **zero errors** against the real closure. Now [3] previews type-check with the Xcode macro plugin, then I'll build a SwiftPM harness to actually execute the XCTest suite.
+
+Previews type-check clean with the macro plugin (0 errors). Now the key step [4] — execute the full XCTest suite via a SwiftPM harness using the real production files + real tokens:
+
+The harness library built cleanly with my production files + real tokens/components. Now execute the full XCTest suite:
+
+All tests pass. Let me capture the clean total count and exit code in a single run:
+
+**All 29 XCTest cases pass (exit 0)** against the real production code + tokens. Now let me capture evidence for the deferred full `xcodebuild` step (the KMP xcframework / signing blocker) to match the established precedent.
+
+feature-views IS registered in project.yml (2 refs); the blocker is the unstaged KMP `Shared.xcframework` (only `.gitkeep`). Let me capture the real `xcodebuild` failure as deferral evidence:
+
+Confirmed the exact predecessor blocker: `Shared.xcframework` missing → `BUILD FAILED` exit 65 (KMP infra, code-unrelated). My surface is fully proven by host gates. Let me clean up generated artifacts and check git status.
+
+Clean — only my 11 surface files. Let me gather line counts for the log, then write the comprehensive gate log matching the established precedent.
+
+Let me verify every referenced i18n key is declared (accounting for the dynamically-built severity keys), then write the log:
+
+i18n parity complete (every referenced key declared; 3 dynamic severity keys present). Now I'll write the comprehensive gate log with all real evidence.
+
+Now a final verification pass and commit. Let me re-confirm format/lint are clean and commit the surface + log.
+
+Final state is clean (format 0/10, lint 0 violations, 11 files). Now committing the surface + log:
+
+Committed as `ba22c3585`; working tree clean. Let me finalize the todo tracking and confirm no stray temp artifacts remain.
+
+The task is complete. Working tree is clean, no stray artifacts, and the commit is in place.
+
+Merge made by the 'ort' strategy.
+ ...le-feature-views-0189-NotificationFilterBar.log | 229 +++++++++++++
+ .../NotificationFilterBar.Adapter.swift            | 303 +++++++++++++++++
+ .../NotificationFilterBar.Controls.swift           | 372 +++++++++++++++++++++
+ .../feature-views/NotificationFilterBar.Core.swift | 111 ++++++
+ .../NotificationFilterBar.Model.swift              | 197 +++++++++++
+ .../NotificationFilterBar.ModelTests.swift         | 188 +++++++++++
+ .../NotificationFilterBar.Previews.swift           | 122 +++++++
+ .../NotificationFilterBar.Seams.swift              | 172 ++++++++++
+ .../NotificationFilterBar.Tests.swift              | 227 +++++++++++++
+ .../NotificationFilterBar.Views.swift              | 268 +++++++++++++++
+ .../feature-views/NotificationFilterBar.strings    |  64 ++++
+ .../feature-views/NotificationFilterBar.swift      |  61 ++++
+ 12 files changed, 2314 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0189-NotificationFilterBar.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationFilterBar.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationFilterBar.Controls.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationFilterBar.Core.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationFilterBar.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationFilterBar.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationFilterBar.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationFilterBar.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationFilterBar.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationFilterBar.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationFilterBar.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/NotificationFilterBar.swift

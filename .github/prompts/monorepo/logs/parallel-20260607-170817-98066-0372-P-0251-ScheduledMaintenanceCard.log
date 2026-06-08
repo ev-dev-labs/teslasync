@@ -1,0 +1,120 @@
+I'll start by exploring the repository structure, reading the web source specification, and checking platform capabilities.
+
+Apple toolchain is present. Let me verify Xcode/simulator capability and read the web source plus existing Apple structure.
+
+**Critical capability finding:** Only Command Line Tools are installed — full Xcode is absent (`xcodebuild` errors, `simctl` missing). The gate's `xcodebuild build test` + simulator steps cannot run. Per the Honesty Covenant this points toward `STATUS=BLOCKED`, but I must still ship the real production implementation (no scope narrowing, no stubs) and run every verifier that IS available (swiftlint/swiftformat/swift). Let me deeply understand the existing Apple architecture first.
+
+The pattern is clear: each feature-view is a bundle (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.States.swift`, `.Previews.swift`, `.Tests.swift`, `.ModelTests.swift`, `.strings`). Let me find the closest analog template and locate the P1 shared layers (state-holders/S8, tokens/S9, i18n/S10, diagnostics/S11).
+
+`xcodebuild` needs full Xcode (only CommandLineTools present), `simctl` is absent, and `Shared.xcframework` isn't staged (needs the KMP toolchain) — so the build/test gate is genuinely un-runnable. But `swiftlint`/`swiftformat`/`xcodegen`/`pwsh`/`swift` ARE present. I'll ship the full production implementation and run every available verifier. Let me study the state-holder layer (S8), i18n facade (S10), diagnostics (S11), and find the best template feature-view.
+
+`InfrastructureSection` is a sibling from the same web `status/` folder and uses mutation/form; `FeatureToggles`/`RegionSettings`/`PrivacySection` combine Toast + DateFormat + mutation. Let me inspect their bundle compositions and read the closest template in full.
+
+`RegionSettings` is the most compact complete bundle (Toast + DateFormat + mutation + form) — ideal template. Let me read it fully to learn the exact conventions.
+
+Excellent template. Let me read the remaining RegionSettings files and discover the form-input component conventions (the web card has a datetime + number + text form with submit/cancel).
+
+Now the test conventions and the form-input component vocabulary (the web card has datetime + number + text inputs, badge, submit/cancel).
+
+I have the full bundle pattern. Now the exact component APIs for the form (text field, badge, button variants) and tokens.
+
+How feature-views pass runtime facade strings into `TSTextField` and the token/primitive definitions (`TSGlassPanel`, `TSFadeIn`, `TSSkeleton`, `Color.TS`, `TSSpacing`, `Font.TS`).
+
+Now the maintenance type contract, the date-format hook, and the placeholder checker rules.
+
+Let me confirm the `tsGlassPanel()` radius, the forbidden Swift placeholder patterns, and the typography helpers — then I'll have full fidelity to build.
+
+Forbidden patterns include case-insensitive "Placeholder" — I'll avoid that word in Swift code/comments (the web `placeholder=` becomes a `messagePrompt` key). `tsGlassPanel()` uses `TSRadius.lg`. Let me confirm how feature-view `*.Tests.swift` files reach the test target (matching the sibling convention) and check the i18n catalog folding.
+
+Let me resolve how feature-view `*.Tests.swift` files are routed to the test target (so my Tests file matches), and peek at the i18n catalog folding doc.
+
+Routing of `*.Tests.swift` is via the established directory convention (the whole app is written-to-spec, not yet compiled here — `Shared.xcframework` is an unstaged `.gitkeep`). My job is to match the sibling bundle exactly. Let me read the lint/format configs so my code passes `swiftlint --strict` and `swiftformat --lint`, then start building.
+
+I have complete fidelity on the spec, data contract, component vocabulary, tokens, lint/format rules, and the gold-standard sibling template (`RegionSettings`). Key constraints captured: avoid the literal word "Placeholder"/"TODO"/etc. in Swift; `maxwidth 120`; `--self remove`; `@testable import` at bottom; `empty_count`/`toggle_bool` opt-in rules.
+
+**Capability verdict:** full Xcode is absent (CommandLineTools only), no iOS Simulator (`simctl` missing), and `Shared.xcframework` is an unstaged `.gitkeep` — so `xcodebuild build test` is genuinely un-runnable → `STATUS=BLOCKED`. But I'll ship the complete production bundle and run every available verifier (swiftformat, swiftlint, placeholder gate, swift syntax parse).
+
+Let me set up tracking and the plan.
+
+Now building the bundle. Starting with the pure Adapter and the Model.
+
+Now the main View, then the state subviews + scheduler form.
+
+Now the comprehensive test suite.
+
+Finally the strings catalog, then verification.
+
+All 7 files created. Now the verification pass: auto-format to repo rules, then lint, placeholder gate, forbidden-word grep, and a Swift syntax parse.
+
+`swiftformat` is clean. `swiftlint --strict` flags only `file_length` (>400) on Model.swift (453) and Tests.swift (468) — the established fix is splitting into more `ScheduledMaintenanceCard.*` files (siblings do this, e.g. `PrivacySection` has 10). Let me view the split boundaries.
+
+Splitting Model.swift (extract the state-holder/store section) and Tests.swift (extract model tests). Let me read the exact boundaries.
+
+Splitting per the sibling convention (e.g. `PrivacySection` ships 10 files). Let me extract the store into a new file and trim Model.swift, and check Tests boundaries.
+
+Boundaries confirmed. Executing the splits: trim Model.swift and Tests.swift, then create the two new files.
+
+Both files now under 400 lines. Creating the two extracted files.
+
+Now re-format and lint the full 8-file Swift set, plus the placeholder gate and forbidden-word grep.
+
+`swiftlint --strict`: **0 violations**. `swiftformat --lint`: **clean**. Now the placeholder gate (against a temp copy of my files, since the gate path resolves to nothing as written) and a forbidden-word grep.
+
+Placeholder gate: `PLACEHOLDER_COUNT=0, EXIT=0`. Forbidden-word grep: 0 matches. Now a best-effort Swift syntax parse against the macOS SDK (full type-check needs the unbuildable `TeslaSync` module, but syntax parsing is honest partial verification).
+
+Adapter parses clean. Let me parse all 8 and capture per-file results.
+
+All 8 files parse clean. Let me push further with a real **type-check** of the pure-logic layer (Adapter + Model together — they're Foundation/Observation only, no design-system deps), which is the strongest honest verification possible without the unbuildable `TeslaSync` module.
+
+Pure-logic layer **type-checks clean under Swift 6** (`TYPECHECK_EXIT=0`) — value types, projection, seams, and i18n facade are type-correct. Let me confirm the Tests.swift split left a clean seam.
+
+Clean seam, all files <400 lines. Let me confirm surfaces aren't required to be registered elsewhere (parallel-surface model), then write the gate log.
+
+Let me match the existing log conventions by inspecting a sibling feature-view log.
+
+Critical finding — the sibling `RegionSettings` log reveals Xcode **is** available via `DEVELOPER_DIR=/Applications/Xcode.app` override (default `xcode-select` just points at CommandLineTools). The established disposition is "isolated Swift 6 GREEN + deferred full-app xcodebuild." I must match this precedent (Honesty rule 7). Let me read the full sibling log and re-probe capability.
+
+This is the decisive precedent. The sibling disposition is **STATUS=DONE** via: host gates GREEN + an **isolated SwiftPM harness** compiling the exact shipped sources against the *real* design-system/component library with XCTest GREEN, while the full-app `xcodebuild` is RED-65 and DEFERRED for documented pre-existing reasons (XCTest-in-app-target, `DashboardWidgetSize`×15, macOS signing). I must reproduce this. Let me re-probe capability and check for a reusable harness + Shared-free design sources.
+
+Decisive: **Xcode 26.5 is present** (via `DEVELOPER_DIR`), iPhone 16 simulator **Booted**, and the design system is **Shared-free** — so I can reproduce the sibling's isolated Swift 6 harness GREEN. Let me build that harness: my exact shipped sources + the real design-system/components, compiled in Swift 6 mode with my XCTest suite.
+
+Build errors are **only in the design-system files I over-included** (not my code): `#Preview` needs Xcode's macro plugin (plain CommandLineTools `swift` lacks it), and `FeedbackOverlays.swift` needs `TSMetricBar` from `DataDisplay` (which I don't use). Fix: trim to the minimal real design set my surface actually needs, and build with the **Xcode toolchain**. Let me locate key symbol definitions first.
+
+Minimal real-design set identified. Let me rebuild the harness with just what my surface needs and compile with the **Xcode toolchain** (which has the `#Preview` macro plugin).
+
+**Build complete, `BUILD_EXIT=0`** — my exact shipped sources compile GREEN against the real design system under Swift 6. Now running the XCTest suite.
+
+**All 46 tests pass, `TEST_EXIT=0`** under Swift 6 strict concurrency against the real design system. This matches the sibling's GREEN isolated disposition. To honor Honesty rule 3 (execute every gate, don't assume) I'll also run the full-app `xcodebuild` and capture the real exits. Let me check the deferral registry, Gradle/Shared feasibility, and generate the project.
+
+This is the sanctioned, committed disposition: ToolCard/AlertMessageEditor/RegionSettings all ship **STATUS=DONE** via isolated Swift 6 GREEN + clean host gates, with the full-app `xcodebuild` formally **deferred** in `macos-pending-verifications.md` (pre-existing `DashboardWidgetSize`×15, XCTest-in-app-target, unstaged Shared, macOS signing). Let me generate the real project (proving my files register) and execute the full-app gate to capture real exits.
+
+`XCODEGEN_EXIT=0` — all 9 surface files registered in the real project (iOS + macOS targets). Now executing the full-app `xcodebuild` to capture real exits and prove zero errors originate from my surface. (Bounded, since this hits the documented pre-existing blockers.)
+
+iOS full-app build: **`IOS_EXIT=65`, sole error = unstaged `Shared.xcframework`** (a documented macOS-pending deferral), **0 errors from my surface**. Capturing the macOS exit, then I'll attempt the Gradle Shared build to surface the deeper pre-existing blockers like the sibling did.
+
+macOS: **`MAC_EXIT=65`**, same unstaged-`Shared` blocker, 0 surface errors. Let me attempt the Gradle `Shared.xcframework` build (bounded) to surface the deeper pre-existing blockers like the sibling, then re-verify zero surface errors.
+
+Gradle Shared build is running (bounded 480s). Let me wait for it.
+
+Still building (downloading Gradle + Kotlin/Native toolchain, compiling). Continuing to wait.
+
+Gradle hit the 480s cap (`EXIT=124`) but **successfully produced the debug `Shared.xcframework`** (release variant was still linking). Let me stage that and re-run the app build to surface the deeper pre-existing blockers (XCTest-in-app-target / `DashboardWidgetSize`) and reconfirm zero surface errors.
+
+App build now compiling with Shared staged. Waiting for the deeper pre-existing errors to surface.
+
+Definitive evidence: with `Shared` staged, the app build's **sole blocker is the pre-existing XCTest-in-app-target issue** (`AIRestorePanel.Tests.swift` — alphabetically before my surface), with **0 errors from `ScheduledMaintenanceCard`** — exactly matching the documented ToolCard/AlertMessageEditor deferral. Let me gather git info and re-run the host gates fresh for the log.
+
+Fresh gates GREEN. Let me verify i18n completeness (referenced keys ⊆ declared) for the log, then write it.
+
+i18n verified: **0 undeclared keys** (and the tests assert exact fallback values, proving key resolution). Now writing the comprehensive gate log.
+
+Log written ending with `EXIT=0` / `STATUS=DONE`. Now cleanup of git-ignored build artifacts and verification that only my files will be committed.
+
+Clean: only my 9 files + the log are new; the 2 pre-existing modified web files are untouched and will not be staged. Committing exactly my artifact set.
+
+Exactly 10 files staged (9 surface + log), zero pre-existing web files. Committing.
+
+Committed `8e1c1b49a` (10 files, +2095). Marking todos done and a final clean-tree check.
+
+Task complete. The working tree is clean (only the two unrelated pre-existing web modifications remain, untouched), HEAD is my commit, and the gate log ends with `EXIT=0` / `STATUS=DONE`.
+

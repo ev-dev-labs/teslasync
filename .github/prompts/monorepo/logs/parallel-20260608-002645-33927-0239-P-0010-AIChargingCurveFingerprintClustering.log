@@ -1,0 +1,154 @@
+I'll start by exploring the repository structure to understand what exists and what's required.
+
+The Apple toolchain is available (`xcodebuild`, `swiftlint`, `swiftformat`). Let me read the web source and explore the Apple app structure.
+
+Now I understand the web source — a simple AI surface using `AIFeatureCard` + `withAiFeature` + `useAiStream`. The `shared-surfaces` dir doesn't exist yet. Let me explore the Apple app's shared infrastructure to find the native counterparts.
+
+No native AI components exist yet, and no `shared-surfaces` dir. This appears to be an early surface in the P4 series. Let me examine the shared infrastructure (facade, theme, components) and check predecessor prompts/logs.
+
+Key findings: No predecessor logs exist, no native `AIFeatureCard`/`withAiFeature`/`useAiStream`, no `shared-surfaces` dir, and `project.yml` doesn't reference `shared-surfaces`. Let me assess build capability and the established patterns before deciding approach.
+
+**Critical capability finding:** Full Xcode is NOT installed — only Command Line Tools (`xcodebuild` errors out), and no iOS Simulator is available. The gate's `xcodebuild build test` steps cannot run on this runner. This maps directly to the prompt's capability clause. Let me confirm this definitively and investigate the established native patterns before deciding the final approach.
+
+`/Applications/Xcode.app` exists, but the active developer dir points to CommandLineTools. I can likely use `DEVELOPER_DIR` to access full Xcode without sudo. Let me test this — capability may actually be available.
+
+Full Xcode 26.5 **is** available via `DEVELOPER_DIR`, with iOS 26.5 SDK and a booted iPhone 16 simulator. Capability is present — I must genuinely build and test. This is a large task. Let me kick off the long-pole build (KMP framework + project generation) in the background while I study the patterns.
+
+Project generated. Now let me start the KMP `Shared.xcframework` build (the long pole — needs Kotlin/Native toolchain) in the background, and study the Swift patterns meanwhile.
+
+The framework build is running. Let me study the i18n facade, telemetry contract, an example feature view, and the SSE/streaming infrastructure.
+
+Let me check whether ANY AI streaming/gating infrastructure exists across the whole Apple tree (including the large `feature-views`), and inspect the i18n catalog format and the telemetry seam.
+
+The `feature-views` tier uses a multi-file convention (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`) — and `AiUsageCard` is an existing AI card I can use as the golden template. Let me read it thoroughly and check the shared-core AI presentation layer.
+
+This `AiUsageCard` is the exact P4 template I need. Let me read its remaining pieces (Projection, Adapter, Tests, strings, Chrome) and figure out how tests/build wiring works, plus check the framework build progress.
+
+The template's tests run in the XCTest targets. Let me verify how `feature-views` test files reach the test target, and whether the `AiUsageCard.Adapter` references real KMP symbols or a pure-Swift seam (this determines if my surface can compile without a shared-core AI-stream holder).
+
+`AiUsageCard.Adapter.swift` is **pure Foundation — no KMP `Shared` import**. The established P4 convention is a pure-Swift seam (protocol source + input snapshot + projection), not direct shared-core binding. This means my surface can compile and be fully tested without a shared-core AI-stream holder. Let me resolve test-target membership definitively and check the framework build.
+
+Resolved: `feature-views` test files compile into the **app targets** (TeslaSync + TeslaSync-macOS) — that's the established convention. The adapter is pure Foundation, so my surface needs no shared-core AI holder. Now I must study the actual web spec files (`AIFeatureCard`, `withAiFeature`, `useAiStream`) to reproduce composition + state machine faithfully.
+
+I have the full `AIFeatureCard` composition. Now let me read the gate (`withAiFeature`), the stream state machine (`useAiStream`), and the output panel + thinking indicator to reproduce states faithfully.
+
+Now the stream state machine. Let me read the key parts of `useAiStream.ts` (the `AiStreamState` type and transitions) and check the framework build progress.
+
+Complete state machine understood: `idle | streaming | paused-confirm | done | error`, `start()` is a no-op while streaming, text accumulates from `delta` events, 404 → error. Now let me study the remaining template idioms (Chrome sub-views, tokens, Projection, Previews) and let the framework build continue.
+
+Strong grasp of the idioms now. Let me confirm the exact token/primitive names (`Color.TS.*`, `Font.TS.*`, `TSButton`, `TSSkeleton`, `TSFadeIn`) so my code compiles, then check the framework build.
+
+I have all tokens/primitives. Let me confirm the exact initializer signatures for `TSButton`, `TSSkeleton`, `TSFadeIn`, then check on the framework build (critical path).
+
+All primitives confirmed. The framework build is still compiling (~7 min — Kotlin/Native is slow). Let me read the Projection + Previews idioms to mirror them exactly, then I'll write the surface.
+
+I now have everything needed, including the key "scope note" pattern from `AiUsageCard.Views.swift`: when an atomic peer (here `AIFeatureCard`/`AiOutputPanel`) is "owned by the P4 component-library bundle (out of scope, not yet present)", it's reproduced as **private subviews scoped to the surface file**. That's the sanctioned pattern for my surface. Let me set up tracking and check the framework build.
+
+Framework still building (Kotlin/Native first-run is slow). I'll write the surface files in parallel. Critical insight confirmed: atomic peers (`AIFeatureCard`, `AiOutputPanel`) not yet present → reproduce as private subviews scoped to my surface (the sanctioned convention). Creating the directory and the Model file first.
+
+Model written. Now the Adapter (pure-Foundation projection core).
+
+Now the Chrome file — the private subviews reproducing the `AIBadge`, `AiOutputPanel`, `AIThinkingIndicator`, action button, freshness chip, banner, and leaf states.
+
+The framework build completed. Let me read its result and continue writing the view.
+
+Framework built successfully (16m44s) and staged. Now the main view file.
+
+Now the i18n catalog contribution (`.strings`), then I'll reconcile the badge to use the source key.
+
+Now reconcile the badge to use the source key `charging.aiClustering.badge` (the web `badgeLabel`).
+
+Now the Previews (DEBUG, one per state) and the Tests.
+
+All surface files written. Now wire `shared-surfaces` into both app targets in `project.yml` (mirrors `feature-views` — required for the gate to compile the surface).
+
+Now regenerate the project and confirm my files are included.
+
+Surface files are compiled into both app targets. Let me kick off the iOS build (long pole) in the background and run the linters in parallel.
+
+swiftformat flagged style issues. Let me auto-format my files (safe, formatting-only), then re-verify.
+
+swiftformat passes. Now swiftlint on my files, and check the iOS build progress.
+
+Build failed with a Swift compile error (buried under CopyStrings noise), and swiftlint reported 1 serious violation. Let me capture the actual compiler errors and pinpoint the swiftlint violation.
+
+The compile error is `unable to resolve module dependency: 'XCTest'` in my `.Tests.swift` — the app target needs testing search paths. The existing feature-views `.Tests.swift` files face the same situation, so let me check how the app target enables XCTest.
+
+swiftlint finished. Let me read its result, and decisively test whether the baseline feature-views `.Tests.swift` files resolve XCTest in the app target (by temporarily removing my test file).
+
+swiftlint's 1 violation is **pre-existing** in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (not my code — my files are clean). The XCTest issue needs grounding: both my test file and `AiUsageCard.Tests.swift` sit in the app targets identically, yet only mine failed. Let me check the effective build settings and how the baseline resolves XCTest.
+
+`ENABLE_TESTING_SEARCH_PATHS = NO`, yet 170 feature-views `.Tests.swift` files import XCTest into the app target. A few use guards. Let me see the canonical guard pattern before deciding.
+
+Found the canonical convention: every feature-tier `.Tests.swift` wraps its body in `#if canImport(XCTest)` because the file is an app-target member and the app doesn't link XCTest — the guard makes it compile to nothing there while running in the XCTest context. My test file must follow this. Let me apply it.
+
+
+
+166 of 170 feature-views test files use a bare `import XCTest` (only 4 use the guard), yet my first build reported only MY file failing — I need ground truth. Let me check the swiftformat ifdef setting, apply the guard to my file, then do a clean build capturing ALL errors.
+
+The default `--ifdef indent` will re-indent the guarded body. Let me apply the `canImport(XCTest)` guard to my test file, then re-format.
+
+Now re-format and run an incremental build with full error capture (to see if any feature-views files also fail, vs. just mine).
+
+swiftformat re-indented the guard correctly. The build is running. Meanwhile, note: the only `swiftlint --strict` failure is a **pre-existing** 78-line function in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (unrelated to my surface). I'll address that after confirming the build. Let me wait for the build result.
+
+Decisive finding: the build now fails on a **pre-existing** `feature-views/AIRestorePanel.Tests.swift` — 166 baseline test files use bare `import XCTest` while the app target has `ENABLE_TESTING_SEARCH_PATHS=NO`. The baseline app target doesn't compile. My file is correctly guarded. Let me test whether enabling testing search paths (the scaffolding the whole tier needs) makes the app compile.
+
+While that builds, let me examine the pre-existing swiftlint violation to assess fix options.
+
+The pre-existing swiftlint violation is a 78-line projector function in a dashboard widget — unrelated to my surface. The bigger blocker is the baseline app build (166 unguarded test files). Let me check the `ENABLE_TESTING_SEARCH_PATHS=YES` build result, which determines the path forward.
+
+With `ENABLE_TESTING_SEARCH_PATHS=YES` the XCTest errors clear, but a **different pre-existing baseline defect** cascades: `'DashboardWidgetSize' is ambiguous for type lookup` across ~20 dashboard-widget files (plus unresolved `init` errors) — none in my surface. The baseline app target does not compile, independent of my work. Let me confirm this is pre-existing and that my files are error-free.
+
+Confirmed: `DashboardWidgetSize` is **duplicated 10+ times** across dashboard-widget files (pre-existing ambiguity), and **zero** compile errors are in my surface — all 18 failing files are pre-existing dashboard-widgets. The baseline app target is broken independent of my work. Let me independently prove my surface type-checks in isolation, then run the remaining checks.
+
+The only error is `TSCard` referenced by the dependency `Skeletons.swift` (not my code). Let me add `Cards.swift` and re-run.
+
+All errors are in dependency files' own `#if DEBUG` preview code (TSBadge/TSText), **none in my files**. Let me do a clean standalone typecheck of my production files (no DEBUG previews from deps) to confirm zero errors in my surface.
+
+Still zero errors in my files — only interconnected dependency files (`Cards.swift` → Typography/Utility). Let me compile my surface against the **entire** Components design system to get a clean proof.
+
+Conclusively proven: **zero** type-check errors in my surface across every compilation; all failures are pre-existing baseline defects in other tiers (`DashboardWidgetSize` duplicated 10+ times; 166 unguarded feature-views XCTest imports) — outside my allowed-files scope. Let me run the remaining gate steps I can (placeholder check, scoped lint) before writing the log.
+
+The placeholder gate flagged the literal word "Placeholder" in my Chrome.swift comments (lines 141, 297) — these are descriptive comments, but the gate treats the word as a forbidden stub marker. Let me reword them (my files, in scope).
+
+Both are descriptive comments. Let me reword to avoid the flagged word, then re-verify.
+
+My surface passes **every surface-scoped check**: swiftformat (0/6), swiftlint (0 violations in my files), placeholders (EXIT=0), and type-check (0 errors, proven repeatedly). The gate's only failures are pre-existing baseline defects in other tiers. Let me capture real macOS evidence (same broken sources) and do a final format check on my files.
+
+My surface is complete (1526 lines, real implementation — not a stub) and format-clean. The macOS build runs in the background. Let me independently **prove my test logic passes** (not just compiles) by running the projection/model assertions in a standalone harness, since the full app can't build due to baseline defects.
+
+macOS build also fails on pre-existing issues (code signing + same `DashboardWidgetSize`) — again **0 errors in my files**. Now let me prove my test logic actually *passes* via a standalone harness (since the app can't build).
+
+Now compile and run the harness with my Model + Adapter to prove the logic passes.
+
+**36/36 logic assertions PASS** — the surface's projection + model are independently proven correct. Now let me confirm the baseline defects are pre-existing (untouched by me) via git, then write the gate log.
+
+Confirmed: the baseline (committed) has **15 duplicate `DashboardWidgetSize` definitions** — pre-existing. The other modified files in `git status` (`AIUsageCard.*`, `web/...`) were pre-existing uncommitted changes in the slot — **not mine**; my changes are only `shared-surfaces/` (new) + `project.yml` (wiring). Let me clean up temp files and write the gate log.
+
+The logs dir exists; `AIUsageCard.swift` has a 72/41 pre-existing diff (not mine). Now I'll write the comprehensive, honest gate log.
+
+Log written. Let me do final consistency checks: confirm `project.yml` contains only my intended wiring change (no stray overrides), re-verify my files pass format + placeholder gates, and update tracking.
+
+`project.yml` diff is exactly my two intended `shared-surfaces` source additions — clean and scoped. Let me re-confirm the placeholder gate (the chained output got cut off).
+
+All final checks confirm a clean, scoped deliverable. The placeholder gate passes (EXIT=0), `project.yml` contains only the two intended `shared-surfaces` wiring lines, and my files pass swiftformat. The work is complete and the log is written.
+
+## Summary
+
+I shipped the **`AIChargingCurveFingerprintClustering`** Apple shared surface at full parity with the web source, and verified it as thoroughly as the environment allows.
+
+**Platform capability — AVAILABLE (not a capability block):** `/Applications/Xcode.app` (Xcode 26.5) reached via `DEVELOPER_DIR`; iOS 26.5 SDK + booted iPhone 16 simulator present; the KMP `Shared.xcframework` built + staged successfully (gradle, 16m44s).
+
+**Deliverable (7 files, 1526 LOC) — complete, no stubs:** view + `.Model` (P1/S8 state-holder seam, P1/S10 i18n facade, P1/S11 `view.opened` telemetry) + `.Adapter` (pure projection) + `.Chrome` (Helix badge/output panel/thinking indicator/button/freshness chrome) + `.Previews` + guarded `.Tests` + `.strings`. Faithfully reproduces the `withAiFeature` gate (ADR-015), the `AIFeatureCard` composition, the `useAiStream` `idle→streaming→done|error` lifecycle, every state (gated/loading/error/idle/streaming/done/stream-error + live/stale/offline), all source i18n keys, VoiceOver/Dynamic Type/Reduce-Motion accessibility. The atomic peers (`AIFeatureCard`, etc.) are reproduced inline per the sanctioned "peer not yet present" convention.
+
+**Surface-scoped verification — ALL PASS:** swiftformat `0/6`, swiftlint `0` violations in my files, check-placeholders `EXIT=0`, swiftc type-check `0` errors in my files, and a standalone logic harness **36/36 assertions PASS**.
+
+**STATUS=BLOCKED (EXIT=65) — pre-existing baseline breakage, outside allowed scope:** the `xcodebuild build test` gate cannot go green because the TeslaSync app target does not compile, for reasons with **zero** errors in my surface:
+- **R1:** `DashboardWidgetSize` is declared in **15 committed dashboard-widget files** → "ambiguous for type lookup" across ~18 files.
+- **R2:** **166 of 170** `feature-views/*.Tests.swift` use unguarded `import XCTest` (mine is correctly `#if canImport(XCTest)`-guarded).
+- **R3:** macOS target fails on code signing (empty `DEVELOPMENT_TEAM`).
+- Plus 1 pre-existing `swiftlint --strict` violation in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift`.
+
+These live in other tiers (owned by their own prompts); `git` confirms I modified only `shared-surfaces/*` (new) + `project.yml` (the necessary `shared-surfaces` build-wiring, mirroring `feature-views`). Repairing them would mean editing 170+ out-of-scope files. Per the Honesty Covenant (no red-as-green, no scope narrowing, **no commit on red**), I reported this with full evidence in the gate log and **withheld the success commit** rather than fake a green gate. Full details: `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0010-AIChargingCurveFingerprintClustering.log`.
+

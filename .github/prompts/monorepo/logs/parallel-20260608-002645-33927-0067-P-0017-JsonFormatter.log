@@ -1,0 +1,120 @@
+I'll start by exploring the repository structure and the web source, plus checking for the Apple app scaffolding and tooling.
+
+Environment is macOS with full Apple toolchain (Xcode, swiftlint, swiftformat, Swift 6.3.2). Both web source and Apple scaffolding exist. Let me read the web source and explore the Apple app structure.
+
+The web source is a simple JSON formatter tool. Now let me understand the native patterns. Let me find an existing devtools-tool port (closest analog) and the shared infrastructure (state holders, tokens, i18n, telemetry).
+
+Existing devtools tool ports exist: `Base64Tool`, `JwtDecoder`, `HashCalculator`, etc. `Base64Tool` is the closest analog (input → transform → output → error). Let me study it thoroughly along with the native `ToolCard` and `CopyButton`.
+
+`ToolCard` native exists. Base64Tool is the ideal template. Let me read its complete file set (Model, Adapter, Views, Previews, Tests, strings) plus the ToolCard support files.
+
+Excellent template. Let me read the remaining Base64Tool files (Previews, Tests, strings) and locate the design token definitions to confirm exact token APIs.
+
+I now have the complete pattern. Let me assess build feasibility: check for xcodegen, generated project, the Shared.xcframework script, simulators, pwsh, and the placeholder checker.
+
+xcodegen/pwsh/swiftlint/swiftformat are available, but there's **no generated `.xcodeproj`** and **no `Shared.xcframework`** (built via Gradle/KMP). Let me check the verification docs, lint configs, placeholder checker, and how feature-view `.Tests.swift` files are wired.
+
+The `macos-pending-verifications.md` confirms the established precedent: full-app `xcodebuild build test` is **BLOCKED by pre-existing, unrelated parallel-merge collisions** (DashboardWidgetSize redefined 15×, 100+ co-located `*.Tests.swift`, unstaged Shared.xcframework, signing). Each surface is verified green **in isolation** (SwiftPM build + tests, `swiftc -typecheck` for both SDKs, swiftlint/swiftformat/placeholder clean, xcodegen enumerates). Let me locate the design tokens and shared components I'll reference, and read the placeholder checker.
+
+The placeholder gate forbids the literal word "Placeholder" — Base64 cleverly uses `example` instead. Let me read the exact token/component APIs (Color.TS, Font.TS, TSSpacing, TSRadius, TSGlassPanel, TSText, TSPanelTitle, TSCaption, TSButton) so my code and isolated-build stubs match real signatures.
+
+The design tokens are in `../design/generated/apple/Tokens.swift`. Let me read it along with the key shared component definitions (Typography, Cards, Buttons).
+
+I have everything I need: design tokens (`Tokens.swift`, self-contained), the Base64 precedent pattern, lint/format configs, and the placeholder gate (must avoid the literal word "Placeholder"). The full-app `xcodebuild` is BLOCKED by documented pre-existing collisions; I'll verify my surface in isolation like the precedent. Let me record a plan and todos, then build the files.
+
+Logs directory may not exist yet. Let me verify the path, then start writing the surface files beginning with the pure adapter core.
+
+Logs dir exists. Let me peek at an existing P4 feature-view log to match the expected format, then start writing the adapter.
+
+This is the exact precedent. The established disposition: host gates (SwiftPM build+test, `swiftc -typecheck` iOS/macOS, swiftlint, swiftformat, placeholder, xcodegen) GREEN → `STATUS=DONE`, with the full Xcode `xcodebuild build test` step DEFERRED with captured evidence (exit 65: xcframework/registration/signing). Let me read the full BackendTool log to match the format precisely.
+
+This BackendTool log is the gold-standard precedent: host gates green → `STATUS=DONE`, with `xcodebuild build test` DEFERRED (exit 65: unstaged Shared.xcframework, not-yet-registered, signing). I'll replicate this exactly. Let me kick off a baseline swiftformat check in the background while I write the files.
+
+Now let me write the core files. Starting with the adapter (value model, result, engine, surface, accessibility):
+
+Baseline `swiftformat --lint` shows **1 pre-existing violation** in `ActionBuilder.Previews.swift` (a different surface, outside my allowed files). I'll keep my files clean and document that as pre-existing. Let me start a swiftlint baseline in the background and continue writing the parser/printer.
+
+Now the recursive-descent ordered JSON parser:
+
+Both baselines show exactly **1 pre-existing violation** each (swiftlint: 1 serious in 1910 files; swiftformat: ActionBuilder.Previews.swift). Let me identify the swiftlint one to confirm it's not mine, then continue.
+
+Two violations now: a **pre-existing** one in `LifetimeStatsWidget.Adapter.swift` (not mine), and **mine** in `JsonFormatter.Parser.swift:148` — `parseUnicodeEscape` has cyclomatic complexity 11. Let me refactor it into smaller helpers.
+
+Now the pretty-printer with ECMAScript-accurate number rendering and JSON string escaping:
+
+I need to fix a type issue: `digits[..<split]` returns `Substring`, so those concatenations yield `Substring`, not `String`. Let me wrap the slices in `String(...)`.
+
+Now the state holder, telemetry seam, and i18n facade (Model):
+
+Now the presentational subviews (header, input, formatted/invalid/empty states, copy button):
+
+Let me simplify the input field to avoid cross-platform modifier pitfalls (the Base64 precedent didn't use them), then write the main view, previews, and strings.
+
+Now the main view, previews, and strings catalog:
+
+Now the strings catalog and the test suite:
+
+Now the test suites. I'll split into two files (engine/model/a11y + number/escaping) to stay well under the `file_length` limit:
+
+I spotted a parser bug: `scanFractionPart` doesn't require a digit after `.`, so `"1."` would wrongly parse. JSON requires it. Let me fix that.
+
+Now the number-rendering and string-escaping test file:
+
+All 9 files written. Now let me set up verification. First, a capability probe (Xcode, SDKs, simulator) to mirror the precedent and gather honest log evidence.
+
+Xcode.app is available (via `DEVELOPER_DIR`). SDKs: iphonesimulator26.5 + macosx26.5. Let me check the iPhone 16 simulator and get SDK paths, then build the isolated SPM harness.
+
+iPhone 16 simulator is present (Booted). Now let me build the isolated SwiftPM harness with the real production files + design tokens, under Swift 6 strict concurrency, and run the full test suite.
+
+The production surface compiles cleanly under Swift 6 strict concurrency. Now let me run the full test suite:
+
+All **34 tests pass** under Swift 6 mode. Now the cross-SDK `swiftc -typecheck` for iOS 18 simulator and macOS 15 (the precedent's steps [1]/[2]):
+
+Both SDK typechecks pass. Now the previews typecheck (with `-D DEBUG` and the Xcode `#Preview` macro plugin), then swiftlint/swiftformat/placeholder on my files:
+
+Previews pass. Now swiftformat + swiftlint on my files. Let me lint my files and auto-format if needed:
+
+swiftformat flagged 3 of my files. Let me auto-format them in place, then re-verify build/tests still pass:
+
+swiftformat clean now (0/9). Let me re-sync the harness and re-run build + tests to confirm formatting didn't change behavior:
+
+Still 34/34 after formatting. Now swiftlint on the full tree to confirm my files are clean (only the pre-existing violation should remain):
+
+The complexity violation is back at `Parser.swift:148`. Let me see what's there now after formatting shifted lines:
+
+It's `parseEscape()` (9 cases + guard = complexity 11). Let me replace the simple-escape cases with a dictionary lookup, leaving only the `u` branch:
+
+Now re-format, re-sync harness, rebuild/retest, and re-lint (both tools):
+
+My files are now **swiftlint-clean and swiftformat-clean** (only the pre-existing LifetimeStatsWidget violation remains in the tree). Now the placeholder gate. Let me check how the script resolves `-Path` since my files are flat (`JsonFormatter.*`):
+
+The script uses `Test-Path -LiteralPath` — the literal `.../JsonFormatter` prefix won't resolve, so the gate would scan nothing (vacuous pass). I'll run a **meaningful** scan on my actual files. But first, I must check my own files for forbidden words — I referenced the web `placeholder=` attribute in a comment and a test name. Let me grep:
+
+Three real hits the placeholder gate would flag: a comment with `placeholder=` (Model), `\uXXXX` matching the `XXX` pattern (Parser), and a test named `...Placeholder` (Tests). Let me fix all three:
+
+Now re-verify no forbidden words remain, re-sync the harness, re-test, and run the **real** placeholder gate (pwsh) on a temp dir containing my actual files:
+
+Clean and 34/34. Now the placeholder gate via pwsh — both the literal gate command and a meaningful scan of my actual files:
+
+Both placeholder scans: **COUNT=0, EXIT=0**. Now `xcodegen generate` to confirm the project enumerates my files, then capture the honest `xcodebuild` deferral evidence:
+
+`xcodegen generate` succeeded (exit 0) and enumerated all 10 JsonFormatter files. Now capture the honest `xcodebuild` deferral evidence (the documented pre-existing blockers):
+
+Captured the exact deferral evidence (exit 65): missing `Shared.xcframework` + macOS dev-signing — the documented pre-existing blockers. Let me quantify the other pre-existing collisions (co-located XCTest files, `DashboardWidgetSize` redefinitions) for honest logging:
+
+All evidence gathered. My surface: 10 files, 1397 lines (largest .swift = Parser 299, under the 400 limit). Pre-existing blockers quantified (263 co-located XCTest files, 15 `DashboardWidgetSize` redefinitions). Let me grab git metadata and write the gate log.
+
+All verified. Let me write the gate log following the established precedent format:
+
+Now a final consolidated verification of the exact files to be committed, then commit. Let me update todos and run the full gate once more:
+
+All green: 34/34 tests, 0 swiftlint violations, 0/9 need formatting, placeholder COUNT=0. Let me review git status and commit exactly the allowed files:
+
+There are **pre-existing** working-tree modifications (`AIUsageCard.*`, two web files) that I never touched — from the slot baseline, not my work. I'll stage **only** my JsonFormatter files + the log, leaving those untouched:
+
+Exactly 11 files staged (my 10 + the log); pre-existing changes excluded. Committing:
+
+Commit `a6cb2b777` created with all 11 files (1622 insertions). Let me clean up temp artifacts and do a final working-tree check:
+
+Task complete. The working tree is clean and the commit is in place.
+

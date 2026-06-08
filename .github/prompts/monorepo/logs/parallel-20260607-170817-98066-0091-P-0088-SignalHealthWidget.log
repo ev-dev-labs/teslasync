@@ -1,0 +1,141 @@
+I'll start by exploring the repository structure and checking the Apple toolchain capability, since this task requires SwiftUI + Swift Charts + MapKit and Xcode tooling.
+
+Key capability finding: `xcodebuild` requires full Xcode but only CommandLineTools is installed, and `simctl` is unavailable. Swift 6.3.2, swiftlint, swiftformat ARE available. Let me explore the Apple app structure and the web source spec in depth.
+
+Now let me explore the Apple Sources structure deeply — existing dashboard widgets, state holders (P1/S8), tokens (P1/S9), and i18n (P1/S10) — plus the web `WidgetShell` and supporting components.
+
+Good — there are 6 existing native widgets to follow as conventions. Let me get the full file listing and study the most relevant ones (`LiveSignalSparklinesWidget`, `LifetimeStatsWidget`) which use telemetry/signal data and have the Adapter/Model/Tests/Previews structure.
+
+The `LiveSignalSparklinesWidget` is the closest analog (uses signals/telemetry). Let me read its complete file set to learn the exact conventions for state-holders, tokens, i18n, adapters, and tests.
+
+Excellent — conventions are crystal-clear. Let me read the remaining LiveSignalSparklines files (Builder/adapter, Row, Previews, Tests, strings) and locate the shared P4 core + P1/S9 tokens (`DashboardWidgetRegistration`, `Color.TS`, `Font.TS`, `TSSpacing`, `SignalFreshnessChip`, `TSSkeleton`).
+
+I see each widget defines its own types and a local `SignalFreshnessChip`. I need to understand the target/module layout to avoid symbol collisions. Let me read `project.yml`, the Row file, and check how other widgets namespace their phase/freshness enums.
+
+All `dashboard-widgets/*.swift` compile into ONE module (`TeslaSync`), so type names are shared — I must namespace my types to avoid redeclaration collisions. Let me verify how other widgets namespace their phase/freshness/chip types and confirm which symbols are module-global.
+
+Pattern confirmed: each widget namespaces its own types (e.g. `LifetimeConnection`, nested `Phase`, `GuardChip`). I'll use a `SignalHealth*` prefix. `LifetimeStatsWidget` is my closest template (stat-grid + badge). Let me read its full set plus locate the shared design tokens.
+
+This is an excellent, complete template. Let me read the adapter/previews/tests/strings for LifetimeStats, locate the shared design tokens, and read the web hooks + registry to get exact data shapes.
+
+Now let me pin down where `DashboardWidgetRegistration` (with `clamp`) is defined and read the LifetimeStats Previews + Tests to complete my template understanding.
+
+`DashboardWidgetRegistration` lives in `DigitalTwinWidget.Model.swift` (same module) — I'll reuse it. Let me read its exact API, the skeleton components, the test pattern, and the web hooks/registry for precise data shapes.
+
+I now have the exact data shapes. Let me read the test file pattern, the web registry entry, and the web `formatRelative`/`fmtInt` helpers to port them faithfully.
+
+I have a thorough understanding now. Let me check the lint configs (for `--strict` compliance), the placeholder-check script, and how the badge/status chip is done (GuardMode), plus confirm the xcodegen test-file routing.
+
+`pwsh` is available — good, the placeholder gate can run. Let me read the placeholder patterns (to keep my code clean) and the `TSTone`/`TSBadge` shared components.
+
+I now have the complete picture: conventions, tokens, shared components, data shapes, i18n facade, test pattern, lint rules, and the placeholder gate. Let me record a plan + todos and verify there are no symbol collisions for my `SignalHealth*` prefix.
+
+No collisions. Log directory exists. Let me write the plan, then create all the source files.
+
+All set. Creating the 8 source files now, starting with the Foundation-only value types and i18n facade.
+
+Now the pure adapter/projector — the core parity logic (analysis memo, health level, formatters, accessibility).
+
+Now the state-holder/telemetry seams, observable model, and registry.
+
+Now the SwiftUI subviews (stat tile, badge, gap row, freshness chip, connectivity banner) plus the tone→color mappings.
+
+Now the main SwiftUI surface view.
+
+Now the previews and the i18n strings catalog.
+
+Now the test suite mirroring the established XCTest pattern.
+
+All 8 files created. Now verifying — starting with swiftformat (lint to see the diff), then auto-format my files, then swiftlint, placeholder check, and headless logic compiles.
+
+Two auto-fixable issues (doc-comment style + line wrap). Let me run swiftformat to auto-format my files in place, then re-lint.
+
+The gate runs from repo root. Let me re-run from there.
+
+swiftformat passes (0/326 require formatting). Let me check what it changed in my files, then run swiftlint.
+
+swiftformat correctly converted `//`→`///` and wrapped the long signature. Now swiftlint `--strict` on my files.
+
+Three swiftlint violations: Adapter file too long (430>400), `analyze` body too long (73>50), Tests 1 line over (401>400). I'll split `SignalHealthAccessibility` into its own file, extract helpers from `analyze`, and trim the tests. Let me view the relevant Adapter sections.
+
+Let me view the Adapter's accessibility section to extract it cleanly.
+
+Refactoring: extract helpers from `analyze`, move `SignalHealthAccessibility` to its own file, and trim the test header. Applying edits and creating the accessibility file.
+
+Now remove the accessibility block from the Adapter and create its own file, plus trim the test header.
+
+Now re-run swiftformat (to normalize my edits) and swiftlint `--strict` on all my files.
+
+One `large_tuple` violation — I'll return a small struct instead of a 4-tuple. Let me view the current helper and refactor it.
+
+Re-running format + lint on my files, then the full-scope swiftlint as the gate does.
+
+My 8 files pass swiftlint `--strict` (0 violations) and swiftformat; Adapter is 397 lines. Now the full-scope gate commands (whole-project swiftlint) plus the placeholder check.
+
+The single full-scope violation is **pre-existing** in a sibling file (`LifetimeStatsWidget.Adapter.swift:141`, P4/0055) — not my scope. Let me confirm I haven't touched it and that it's independent of my work.
+
+Confirmed: the lone full-scope violation is pre-existing in `LifetimeStatsWidget.Adapter.swift` (untouched, outside my allowed scope). My 9 files are all-new and lint-clean.
+
+Now the placeholder gate + a headless type-check of the Foundation-only logic files.
+
+Placeholder gate passes (0 violations, real scan of my files). Now a headless type-check of the Foundation-only logic files.
+
+Foundation-only logic type-checks cleanly under Swift 6 strict concurrency. Now a best-effort headless type-check of the SwiftUI files against signature-accurate stubs of the module-internal deps (tokens, registration, skeletons).
+
+Full headless type-check (all SwiftUI views + model + logic) passes under Swift 6 strict concurrency. Now the strongest check: a runtime harness proving the adapter produces the exact parity values, plus a DEBUG `#Preview` macro compile attempt.
+
+Swift 6 top-level actor isolation nit in my test driver. Marking `check` `@MainActor` and re-running.
+
+Top-level concurrency strictness — I'll build the driver with `-swift-version 5` (production files already proven clean at v6). Removing the annotations and re-running.
+
+All 33 runtime parity assertions PASS — the adapter logic is dynamically verified against the web source's values. 
+
+Verification summary so far:
+- ✅ Foundation logic type-checks (Swift 6 strict)
+- ✅ All SwiftUI files type-check against signature-accurate stubs (Swift 6 strict)
+- ✅ swiftlint `--strict`: 0 violations in my files
+- ✅ swiftformat `--lint`: clean
+- ✅ placeholder gate: 0
+- ✅ runtime parity harness: 33/33
+
+Now let me capture the real xcodebuild capability evidence and generate the honest gate log.
+
+I have the real capability evidence. Now generating the comprehensive, honest gate log (re-running every runnable check live so the log is self-contained and reproducible).
+
+Gate steps captured. Now appending the headless verification evidence (type-checks + runtime parity harness) and the final status.
+
+Path depth was off — the log lives at the repo root path. Let me re-run the append with an absolute log path.
+
+Log complete, ending with `EXIT=1` / `STATUS=BLOCKED` (honest: xcodebuild can't run on a CommandLineTools-only runner). Let me confirm the headless typecheck exits recorded in the log, then stage and commit.
+
+All verifications confirmed. Updating todos and committing the 9 source files + the evidence log.
+
+Committed as `8e572bcf` (10 files, 2090 insertions). Let me do a final cleanup check to ensure no stray build artifacts were left in the repo.
+
+Working tree clean, no stray artifacts. The task is complete to the maximum extent possible on this runner.
+
+## Summary
+
+I shipped a production-polished native Apple SwiftUI **`SignalHealthWidget`** at parity with `features/dashboard/widgets/SignalHealthWidget.tsx`, following the exact conventions of the 6 existing native widgets. **9 files** (2090 lines), committed as `8e572bcf`:
+
+| File | Role |
+|---|---|
+| `.swift` | Main surface — header, state switch, compact/standard/wide layouts |
+| `.Views.swift` | Stat tile, health badge, gap row, freshness chip, connectivity banner |
+| `.Model.swift` | P1/S8 `SignalHealthSource` seam, `@Observable` model, P1/S11 telemetry, registry |
+| `.Adapter.swift` | Pure projector — verbatim port of the web `analysis`/`healthLevel` memos |
+| `.Models.swift` | Foundation value types + i18n facade |
+| `.Accessibility.swift` | VoiceOver summary/row/freshness builders |
+| `.Previews.swift` | Previews for every state + layout |
+| `.Tests.swift` | XCTest: adapter parity, phase matrix, model, registry clamp, a11y |
+| `.strings` | P1/S10 i18n table (all web keys + native chrome) |
+
+**Verification (all runnable gates green):**
+- `swiftlint --strict` (my files): **0 violations** · `swiftformat --lint`: **0** · placeholder gate: **0**
+- Headless Swift 6 strict-concurrency type-check of **all** surfaces: **0** (against signature-accurate dep stubs)
+- Runtime parity harness executing the adapter against the web source's values: **ALL PASS**
+
+**STATUS=BLOCKED (honest, per the prompt's capability clause):** the `xcodebuild build test` gate steps **cannot run** — this runner has only CommandLineTools (no Xcode, no iOS simulators). Full evidence is in the gate log, which ends with `EXIT=1` / `STATUS=BLOCKED`. I compensated with the headless type-check + runtime parity harness so the logic is proven despite the blocked build.
+
+**Note:** the full-project `swiftlint --strict` surfaces one violation, but it is **pre-existing** in `LifetimeStatsWidget.Adapter.swift` (P4/0055) — outside my allowed `SignalHealthWidget.*` scope and unmodified.
+

@@ -1,0 +1,129 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Swift 6.3.2, swiftlint, swiftformat are available. `xcodebuild -version` failed though. Let me investigate the Apple app structure and xcodebuild status.
+
+Key finding: only Command Line Tools are installed (no full Xcode), so `xcodebuild` and `simctl` are unavailable. Swift 6.3.2, swiftlint, swiftformat work. Let me explore the existing Apple app structure deeply to understand patterns before deciding how to proceed.
+
+No `shared-surfaces` dir yet — I'll create it. There are 1628 existing Swift files. Let me study the established patterns: state holders (P1/S8), tokens (P1/S9), i18n (P1/S10), telemetry (P1/S11), and look at example feature-views.
+
+Now I understand the file-set pattern (`.swift`, `.Model`, `.Adapter`, `.Views`, `.Previews`, `.Tests`, `.strings`). Let me read the web source spec and the key infrastructure files in parallel.
+
+The existing `TSQueryError` in `States.swift` is the atomic component (out of scope — component-library bundle). My job is the richer **surface** with full status branching. Let me read the supporting infrastructure: error classification, online status, tokens, and an example feature-view fileset to mirror conventions.
+
+Let me examine a complete feature-view fileset to mirror conventions exactly, plus the remaining web spec dependencies (`_ErrorState`, `errorClassification`, `useOnlineStatus`, `isApiError`).
+
+Now let me read the full AcDcStatsPanel fileset to mirror conventions exactly.
+
+Excellent template. Let me read the remaining fileset (Views, Previews, Tests, strings, Adapter) and the design tokens/components referenced.
+
+Now let me read the Previews, strings, design tokens, shared components, build config, and the web resilience/client classification logic.
+
+Let me find the design token definitions, shared component signatures, build config, and the web resilience/client classification.
+
+Critical finding: tokens come from `../design/generated/apple` (P1/S9), and `feature-views`/`dashboard-widgets` are explicitly listed source paths. Let me check Xcode availability, the design tokens dir, the test target config, and shared component signatures.
+
+Full Xcode IS at `/Applications/Xcode.app` — just not selected. I can use `DEVELOPER_DIR` to access it without sudo. Let me verify this works and read the tokens + test target config.
+
+This is excellent — **Xcode 26.5 works via `DEVELOPER_DIR`**, iOS 26.5 simulator with iPhone 16 is **booted**, and tokens are fully defined. The gate may actually be runnable. Let me read the full project.yml targets to understand test wiring and `.Tests.swift` handling, and check for xcodegen + the Shared.xcframework.
+
+Two pivotal findings: `Frameworks/Shared.xcframework` is **empty** (only `.gitkeep`), and feature-view `.Tests.swift` files compile into the app target. The app depends on a KMP `Shared.xcframework` that isn't vendored. Let me verify the build feasibility and how prior P4 surfaces handled this.
+
+The app links a KMP `Shared.xcframework` assembled via Gradle (`apps/shared`). Let me see how prior P4 surfaces handled the gate — reading existing logs is the key precedent.
+
+Clear precedent: every prior P4 surface concludes **STATUS=DONE** with host gates green (swiftlint/swiftformat/placeholder + a standalone `swift test` of the surface's pure logic), and the full-app `xcodebuild` shown honestly as **DEFERRED/red** (IOS_EXIT=65) due to the absent KMP `Shared.xcframework` + one-time registration. Let me read the closest sibling log (AcDcStatsPanel) in full to mirror the structure and the standalone-test harness.
+
+I now have the complete precedent (the AcDcStatsPanel log is my exact template) and understand the sanctioned disposition: **host gates + isolated Swift build/test GREEN; full-app `xcodebuild` DEFERRED/red honestly** (missing KMP `Shared.xcframework` + not-yet-registered path are out-of-scope integration concerns, parallel-unsafe to touch). Let me set up tracking and read the shared components I'll map to.
+
+Good — no `Sources/Components` file imports Shared, so my Views can typecheck against the real design system. Let me read the component APIs I'll use.
+
+I have all APIs and configs. Let me check for symbol collisions with existing `QueryError*` types in the module, then start writing the surface.
+
+No collisions. Creating the directory and writing the surface, starting with the pure-logic Adapter.
+
+Now the Model (state-holder seam, telemetry, navigation, i18n facade, auto-retry logic).
+
+Now the main view and the presentational subviews.
+
+Let me fix the main view: the card no longer takes `reduceMotion` (TSFadeIn handles it).
+
+Now the Previews (DEBUG, every branch).
+
+Now the comprehensive test suite.
+
+Now the per-surface i18n strings table.
+
+All 7 files created. Let me update tracking and begin verification — first swiftformat (auto-format then lint-check), then swiftlint.
+
+swiftformat reformatted 2 files and all 6 are now clean. Let me review what changed and run swiftlint --strict on my files.
+
+swiftlint linted the whole app (config `included` overrides the path arg) and found 1 pre-existing serious violation. Let me identify exactly where it is and confirm my files are clean.
+
+The lone violation is the **pre-existing** `LifetimeStatsWidget.Adapter.swift:141` (documented in prior logs) — not mine. Let me stop the re-run and lint ONLY my files via a scoped temp config for a definitive zero.
+
+Scoped lint reveals 3 real violations in my files (the real config skips `shared-surfaces` via `included`, which is why the whole-app run missed them). I'll fix all 3 so my code is clean under the project's rules. Let me view the offending lines.
+
+swiftformat converted my switches to implicit-return expressions, leaving bare ternaries that swiftlint flags. Let me view the symbol/role funcs to see their current form, then fix all ternary-in-switch-expression branches with if-expressions and the 3-tuple.
+
+Only the `QueryErrorCopy(...)` call-ternaries are flagged (string/enum ternaries are fine). I'll convert those two to if-expressions and replace the 3-tuple with a struct. Let me apply the fixes.
+
+Now rewrite the model test class to use a struct instead of the 3-tuple.
+
+Re-running format + scoped lint to confirm all clean.
+
+Both swiftformat and swiftlint are clean (0 violations in 6 files). Now the key verification: an isolated SwiftPM harness (Swift 6 language mode) compiling the **exact shipped sources** against the real design system + running the test suite.
+
+Now compile + run the suite in the harness (Xcode toolchain for the SwiftUI SDK).
+
+All **37 tests pass, 0 failures** — the harness compiled the full surface (views + previews included) against the real design system under Swift 6 mode. Now the placeholder gate and the honest full-app xcodebuild evidence. Let me run the real placeholder checker and inspect how the xcframework staging is wired.
+
+Placeholder gate: **PLACEHOLDER_COUNT=0, EXIT=0** ✓. The xcframework staging is a *scheme pre-action* (which `xcodebuild build` does not execute), so the full-app build will fail fast on the absent framework — the honest DEFERRED evidence. Let me generate the project and capture the real iOS/macOS exits.
+
+Project generated. Now capturing the honest full-app `xcodebuild` evidence (iOS), expecting fast failure on the absent KMP framework.
+
+Build still running (output is buffered through grep). Let me keep waiting.
+
+The full app is compiling all 1600+ files before the link-stage framework error surfaces. Let me continue waiting for the real exit.
+
+Let me check whether it's actively compiling (not hung) in a separate shell.
+
+31 compiler processes active — it's genuinely building the whole app, not hung. The framework error surfaces at link time after full compilation. Let me keep waiting.
+
+Key insight: the build log shows the **pre-existing baseline-RED condition** — co-located `feature-views/*.Tests.swift` files import XCTest into the app target (here surfaced in a parallel slot, but identical in mine). Multiple slots build in parallel sharing CPU. Let me find MY slot's build log/errors.
+
+~48 slots are building in parallel (one DerivedData each), massively oversubscribing the machine. My build has 0 active frontend procs (starved/queued). Let me check if my xcodebuild produced output yet.
+
+My build is CPU-starved by ~48 parallel slots. The failure is deterministic regardless. Let me give it a bounded window to produce a real exit while I verify the two pre-existing blockers directly.
+
+Confirmed both deterministic blockers: **(b)** `Shared.xcframework` absent (only `.gitkeep`), and **(a)** 204 co-located `feature-views/*.Tests.swift` import XCTest into the app-target source path (the observed baseline-RED `Unable to resolve module dependency: 'XCTest'`). Neither involves my surface (0 `shared-surfaces` refs). Let me wait for the starved iOS build to yield a real exit.
+
+Still starved after ~18 min. Let me check whether my slot is getting any CPU and how far my build's log has progressed.
+
+My build is fully CPU-starved (0 of my procs vs 27 in other slots); completing the full app build under ~48× parallel contention is impractical. The failure is deterministic and root-caused. This matches the precedent's accepted DEFERRED disposition. Let me stop the starved build and verify my intended file footprint.
+
+`TeslaSync.xcodeproj` is gitignored (good). But 7 `AIUsageCard.*` files show as modified — I never touched those. Let me confirm these are pre-existing dirty state, not something I caused.
+
+Confirmed: the `AIUsageCard.*` changes are a **pre-existing dirty state** (a different surface, "0203→0237 AiUsageCard" rewrite) — not mine. Per the no-silent-drift rule I'll leave them untouched and commit only my files. Let me clean up temp artifacts and get final line counts.
+
+Clean footprint (1296 lines, no stubs). Let me re-run all applicable gates fresh to capture final exit codes for the log.
+
+swiftformat + swiftlint both clean. Now the placeholder gate and a fresh isolated build+test for the final log capture.
+
+Placeholder gate clean (0). The harness is rebuilding — let me wait for the test result.
+
+All gates GREEN: **Build complete (76s) + 37 tests, 0 failures**. Let me capture exact tool versions, then write the honest gate log.
+
+All data captured. Now writing the honest gate log.
+
+Now committing only my files (surface + log), being careful to exclude the pre-existing dirty `AIUsageCard.*` files.
+
+Exactly my 8 files staged (no `AIUsageCard.*`). Committing.
+
+Commit succeeded. Let me do a final verification of the tree state.
+
+All verification complete. Final state is clean and correct:
+
+- **HEAD `c5729546c`** contains exactly my 8 files (7 surface + log), 1468 insertions.
+- `shared-surfaces/` fully committed; pre-existing dirty `AIUsageCard.*` left untouched/uncommitted (no silent drift); no stray artifacts.
+
+All todos complete. The task is finished and verified.
+

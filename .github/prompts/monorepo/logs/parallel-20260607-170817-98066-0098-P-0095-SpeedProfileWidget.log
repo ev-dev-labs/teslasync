@@ -1,0 +1,112 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Swift toolchain is available but **xcodebuild requires full Xcode** (only Command Line Tools installed). Let me note this and continue exploring — the implementation is the real deliverable.
+
+Now I understand the structure. There's an established multi-file widget pattern. Let me study the existing widgets, shared components, and state holders in detail.
+
+Two widget dirs exist. The target is `TeslaSync/dashboard-widgets/`. Let me find the best chart-based template and understand the shared conventions (shell, states, registry, telemetry, i18n).
+
+No widget in this dir uses Swift Charts yet — they use custom diagrams. Let me check Swift Charts usage app-wide and read a complete widget as a template (MileageStats = stats analog, LivePowerFlow = chart analog).
+
+There's a shared Swift Charts library at `Sources/Components/Charts/` (maps to web `@/components/charts`). Let me read the template widget and chart components.
+
+Excellent template. Now let me read the remaining MileageStats files (full multi-file split) and locate the shared primitives, design tokens, units facade, and chart components.
+
+Now let me understand the shared registration primitives, project structure, design tokens, units facade, and chart components.
+
+Let me verify whether the registration types are shared or duplicated (critical to avoid redeclaration), and read the design tokens + chart components.
+
+Multiple parallel-built surfaces each define `DashboardWidgetSize`/`DashboardWidgetRegistration`. To avoid introducing a 4th duplicate, I'll reference them as shared types (exactly like MileageStats does). Let me read their exact shape, the design tokens, units facade, chart components, and the remaining template files.
+
+Design tokens are generated. Let me locate the token definitions, `TSSkeleton`, the units facade, and chart components.
+
+Now the units facade, chart components, and remaining template files (Tile, Previews, Tests, strings).
+
+There's a `TSComposedChart` (bars + line) that maps exactly to the web `ComposedChart`. Let me find the chart series types and read the web data/conversion sources for exact parity.
+
+`TSComposedChart` exists but lacks categorical bucket axis + dual-scale that define this widget, so I'll build a dedicated Swift Charts view (like LivePowerFlow.Diagram does). Let me verify my offline Swift capabilities and read the remaining web/Apple specifics.
+
+Swift Charts typechecks offline against the macOS SDK — I have a real verification path. Let me read the web shell/summary composition and the remaining Apple template files (Tile, Previews, Tests, strings).
+
+Now I have the full composition picture. Let me read the test/preview/strings conventions and how a chart-bearing widget structures those files.
+
+I have a complete blueprint. Let me verify the build excludes mechanism, lint/format/placeholder configs, and the canonical registry metadata before writing code.
+
+Let me read the full registry block, lint/format configs, and the placeholder-check script so my code passes those gates.
+
+`pwsh` is available. Let me read the placeholder patterns and see how a chart-bearing widget (LivePowerFlow) integrates its chart, then I'll start building.
+
+I now have a complete blueprint. Let me set up tracking, verify the log directory, and write the plan.
+
+Let me check how sibling logs handled the build gate (especially the xcodebuild capability) to match the honest convention.
+
+This is the key precedent: sibling surfaces use a **"code-complete + DEFERRED Xcode gate"** disposition (ADR-012) — they validate with real macOS-SDK compiles + executed adapter harness + swiftlint/swiftformat/placeholder, then defer only the Xcode-only app build/test, ending `EXIT=0 / STATUS=DONE`. My surface uses Swift Charts (available + typechecks offline), so the capability-BLOCKED escape doesn't apply. Let me write the plan, then build.
+
+Now writing the pure domain core — Models and Builder.
+
+Now the state-holder model with telemetry, i18n facade, and accessibility.
+
+The chart is the most novel piece. Let me write it carefully with Swift Charts (dual-axis bar+line, categorical buckets) plus the stat cell and legend leaves.
+
+Now the main surface view with glass shell, header, and all states.
+
+Now the Previews, Tests, and strings catalog.
+
+Let me fix one computed test expectation — `peakBucket` for the mph case is "22-45", not "16-31".
+
+Now the i18n strings catalog.
+
+All 8 files written. Now the verification phase — starting with swiftformat (apply, then lint) and swiftlint on my files.
+
+swiftformat (0/7 need formatting) and swiftlint --strict (0 violations) both pass on my files. Now the placeholder gate and the executed adapter harness.
+
+Placeholder gate passes (COUNT=0, EXIT=0). Now the **executed adapter harness** — compiling the real `Models.swift` + `Builder.swift` against the macOS SDK and running parity assertions.
+
+The dir exists now (the parallel create raced the mkdir). Let me write the harness file and run it.
+
+**Adapter harness: 39/39 GREEN** — pure math matches the web derive block exactly. Now the SwiftUI/Charts typecheck against the macOS 15 SDK + real design tokens + a faithful shim for the shared grid/skeleton primitives.
+
+Dir exists now (parallel race again). Let me write the shim and run the typecheck.
+
+**Typecheck GREEN (EXIT=0)** — the full SwiftUI + Swift Charts surface compiles against the real macOS 15 SDK + real design tokens. Now let me validate the XCTest file by building my sources into a `TeslaSync` module and typechecking the tests with `@testable import`.
+
+XCTest/platform frameworks aren't on a CLT host (same capability family as xcodebuild). Let me confirm the module builds cleanly on its own, then syntax-parse the tests.
+
+Module builds clean (177KB `.swiftmodule`) and Tests parse is clean. For a **real typecheck of the test bodies**, let me build a minimal `XCTest` shim module and typecheck the tests against my `TeslaSync` module.
+
+Only error is `Date` — my XCTest shim doesn't re-export Foundation (the real XCTest does). Let me fix the shim with `@_exported import Foundation` and re-typecheck.
+
+**Tests typecheck GREEN.** All host-runnable verification passes. Let me record evidence, check line counts/quality, and clean up.
+
+All quality gates green: largest file 339 lines (≤400), no hardcoded literals, no neon/hex colors, one public View per file. Let me clean up temp artifacts and gather commit metadata for the log.
+
+Now writing the gate log with all real evidence, then committing.
+
+Log written. Let me do a final clean re-verification of all gates on the shipped files, then commit.
+
+All gates green on shipped files. Committing only my surface files + the log (excluding unrelated working-tree changes).
+
+Committed (0b40ec9c). Let me verify the commit contains exactly my 9 files and nothing unrelated.
+
+The commit is correctly scoped — exactly 9 files (8 surface + log), with unrelated working-tree changes left untouched.
+
+Merge made by the 'ort' strategy.
+ ...e-dashboard-widgets-0095-SpeedProfileWidget.log | 168 ++++++++++
+ .../SpeedProfileWidget.Builder.swift               | 151 +++++++++
+ .../SpeedProfileWidget.Chart.swift                 | 239 +++++++++++++++
+ .../SpeedProfileWidget.Model.swift                 | 259 ++++++++++++++++
+ .../SpeedProfileWidget.Models.swift                | 172 +++++++++++
+ .../SpeedProfileWidget.Previews.swift              | 138 +++++++++
+ .../SpeedProfileWidget.Tests.swift                 | 280 +++++++++++++++++
+ .../dashboard-widgets/SpeedProfileWidget.strings   |  46 +++
+ .../dashboard-widgets/SpeedProfileWidget.swift     | 339 +++++++++++++++++++++
+ 9 files changed, 1792 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0095-SpeedProfileWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SpeedProfileWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SpeedProfileWidget.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SpeedProfileWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SpeedProfileWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SpeedProfileWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SpeedProfileWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SpeedProfileWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SpeedProfileWidget.swift

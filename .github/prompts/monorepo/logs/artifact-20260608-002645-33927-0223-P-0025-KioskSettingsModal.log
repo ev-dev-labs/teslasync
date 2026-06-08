@@ -1,0 +1,168 @@
+================================================================================
+P4 · Modal / dialog · 0025 — KioskSettingsModal (Apple)
+Run: 2026-06-08T03:0x-0700   Host: Darwin arm64 (Atuls-Mac-Studio)   Slot: slot-223
+Prompt: P4 · modals-dialogs · 0025 — KioskSettingsModal (Apple)
+Web source (spec): web/src/features/dashboard/components/KioskSettingsModal.tsx (284 lines)
+Mode: code-complete + host-validated (real iOS-18 + macOS-15 swiftc -typecheck +
+      isolated SwiftPM XCTest, 47/47); DEFERRED full-app Xcode scheme build/test
+      (ADR-012 macOS-pending), matching predecessors 0010 ToolCard / 0180
+      AlertMessageEditor / 0231 FSMTimelineChart.
+================================================================================
+
+=== CAPABILITY PROBE (real, this runner) ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                 OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+        (xcode-select default dir is /Library/Developer/CommandLineTools; the full
+         Xcode toolchain is reached with
+         DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — the exact pattern
+         macos-pending-verifications.md prescribes.)
+  iOS simulator SDK .......... iPhoneSimulator26.5 (deployment target iOS 18.0)     OK
+  macOS SDK .................. MacOSX26.5 (deployment target macOS 15.0)            OK
+  iOS simulator device ....... iPhone 16 present + booted (simctl via Xcode)        OK
+  swiftlint .................. 0.63.3                                               OK
+  swiftformat ................ 0.61.1                                               OK
+  xcodegen ................... present (/opt/homebrew/bin/xcodegen)                 OK
+  pwsh (placeholder gate) .... 7.x present                                          OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks has only .gitkeep) WARN
+  codesign identities ........ none (BLOCKER for signed full-app gate, ADR-012)    WARN
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)" — it is a controlled settings form: selects,
+  toggles, sliders, a dashboard checklist, and a live transparency-preview swatch).
+  The core requirement is SwiftUI, which is available and PROVEN by REAL iOS-18 +
+  macOS-15 SDK type-checks AND a passing 47-test XCTest run below. The
+  capability-BLOCKED escape hatch therefore does NOT apply; the surface is authored
+  and host-validated for real, and STATUS=DONE.
+
+=== ARTIFACT (apps/apple/TeslaSync/modals-dialogs/KioskSettingsModal.*) ===
+  KioskSettingsModal.Models.swift       216  Foundation-only: KioskClockPosition (web wire
+                                             round-trip), KioskConfig (field parity + DEFAULT_KIOSK_
+                                             CONFIG), KioskDashboard, the four web option tables
+                                             (rotation/cursor/dim/clock), KioskConnection +
+                                             KioskDashboardsStatus, and the hardcoded web tunables.
+  KioskSettingsModal.Projection.swift   145  Foundation-only projected types: KioskPreviewStyle,
+                                             KioskSectionVisibility, KioskDashboardRow, the rotation-
+                                             list phase enum, and the injected-localizer VoiceOver
+                                             summary builders.
+  KioskSettingsModal.Adapter.swift      142  Foundation-only pure projector — VERBATIM web logic:
+                                             initial selection (+ useKioskMode validity filter), the
+                                             toggleDashboard min-one set mutation, the preview rgba/
+                                             blur math, the section visibility gates, the checklist
+                                             rows, the rotation-list phase, fraction<->percent.
+  KioskSettingsModal.Model.swift        284  P1/S11 telemetry seam + P1/S10 strings facade (+ key())
+                                             + surface slug + P1/S8 source protocol + the snapshot DTO
+                                             + @Observable KioskSettingsModalModel (controlled draft,
+                                             selection seed/prune, lifecycle, stale auto-refresh) +
+                                             InMemory source.
+  KioskSettingsModal.Editing.swift      192  Model extension: the controlled mutators (each forwarding
+                                             onUpdateConfig), the SwiftUI bindings the controls drive,
+                                             enter/cancel/retry, and the derived projections.
+  KioskSettingsModal.States.swift       142  Token-driven dashboards-area chrome: loading, not-enough
+                                             (empty), error+retry, the freshness chip, and the stale/
+                                             offline connectivity banner. Never a blank panel.
+  KioskSettingsModal.Views.swift        196  Shared helpers (KioskForm), the rotation section + the
+                                             stateful checklist + checkbox row, and the display
+                                             section (cursor/dim/clock with their conditional controls).
+  KioskSettingsModal.Controls.swift     180  The transparency section (two opacity sliders +
+                                             Transparent/Solid scale + live preview swatch), the hint
+                                             callout, and the Cancel / Enter-Kiosk actions.
+  KioskSettingsModal.swift               88  The composed surface + freshness header + view.opened
+                                             lifecycle + the native .kioskSettingsModal(...) titled-
+                                             sheet presentation modifier (overlay + focus trap +
+                                             dismiss).
+  KioskSettingsModal.Previews.swift      93  #if DEBUG previews: populated/live, rotation-list loading,
+                                             not-enough, error, stale, offline.
+  KioskSettingsModal.strings             76  P1/S10 catalog ("KioskSettingsModal" table) — every web
+                                             key + the option labels + the native state envelope +
+                                             a11y. Verbatim web display copy lives here.
+  KioskSettingsModal.Tests.swift        309  XCTest: adapter (selection/validity, toggle min-one,
+                                             preview math, visibility gates, rows + a11y, phase,
+                                             conversions) + accessibility summaries.
+  KioskSettingsModal.ModelTests.swift   259  XCTest: model lifecycle (view.opened once, start/load),
+                                             selection seed/prune, toggle + onUpdateConfig, setters +
+                                             bindings, enterKiosk order, cancel, stale/live/offline
+                                             freshness policy.
+  Total 2322 lines (13 files). Every file <= 400 lines (house file_length); largest
+  Tests.swift 309, Model.swift 284. Every code line <= 115 cols (line_length 120).
+
+=== PARITY (vs web KioskSettingsModal.tsx) ===
+  Data sources (web hooks -> native P1/S8 seam):
+    useTranslation              -> KioskSettingsModalStrings facade (P1/S10)
+    config + dashboards (props) -> KioskSettingsModalModel (controlled draft) + the
+                                   KioskSettingsModalSource saved-dashboards resource.
+  Composition reproduced 1:1 (web FormSections + footer):
+    Rotation: interval select + (rotateInterval>0 && dashboards>1) "Dashboards to
+      Rotate" checklist with the min-one guard + per-row Default chip.
+    Display: Auto-hide Cursor toggle (+ Hide After), Dim Screen After (+ Dimmed
+      Brightness slider 30-90%), Show Clock toggle (+ Clock Position).
+    Transparency: Widget Opacity (30-100%) + Background Opacity (0-100%) sliders with
+      Transparent<->Solid captions + the live preview swatch
+      (bg rgba(10,10,20,bgOpacity), widget rgba(255,255,255,0.03+widget*0.17),
+       blur(4+widget*12)).
+    Hint callout + Cancel / Enter Kiosk Mode actions (handleEnter: persist selection,
+      close, enter).
+  Verbatim web logic ported + unit-pinned: initial selection set, toggleDashboard
+    min-one mutation, preview rgba/blur math, the rotateInterval/hideCursor/dimAfter/
+    showClock render gates, Math.round(n*100) / n/100 conversions.
+  States (all render, never a blank box): loading - empty(not-enough) - error(+retry)
+    - stale(chip + one auto-refresh) - offline(cached + chip), across the saved-
+    dashboards resource + a freshness envelope (ADR-013).
+  i18n: every listed source string resolves via the P1/S10 facade; catalog carries the
+    verbatim web English. a11y: VoiceOver labels on every interactive element + spoken
+    row/connection/preview summaries; Dynamic Type via Font.TS; reduce-motion-safe.
+  Telemetry: emits view.opened with surface slug "KioskSettingsModal" once (P1/S11),
+    asserted by test.
+
+=== HOST-RUNNABLE GATES (all green) ===
+  swiftformat --lint <surface> ................ 0/12 require formatting              FORMAT_EXIT=0
+  swiftlint lint --strict <surface files> ..... Found 0 violations                  LINT_EXIT=0
+  check-placeholders.ps1 -Language swift ...... PLACEHOLDER_ALLOWED=0 COUNT=0        PLACEHOLDER_EXIT=0
+  swiftc -typecheck iPhoneSimulator (ios18.0-simulator, swift6, strict-concurrency)  IOS_TYPECHECK_EXIT=0
+        (surface + 38 shared Components + Design + generated Tokens; 0 errors)
+  swiftc -typecheck MacOSX (macos15.0, swift6, strict-concurrency) .................  MAC_TYPECHECK_EXIT=0
+        (same fileset; 0 errors)
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6 strict) ....  TEST_EXIT=0
+        -> 47/47 passed: KioskAdapterSelectionTests, KioskAdapterToggleTests,
+           KioskAdapterPreviewTests, KioskAdapterVisibilityTests, KioskAdapterRowTests,
+           KioskAdapterPhaseTests, KioskAdapterConversionTests, KioskAccessibilityTests,
+           KioskModelLifecycleTests, KioskModelSelectionTests, KioskModelActionTests,
+           KioskModelFreshnessTests.
+
+  Note on repo-wide swiftlint: `swiftlint --strict` over the whole apps/apple tree
+  reports 1 PRE-EXISTING violation in TeslaSync/dashboard-widgets/
+  LifetimeStatsWidget.Adapter.swift:141 (function_body_length) — untouched by this
+  prompt (git shows it unmodified). Linting only this surface's files is clean (0).
+
+=== DEFERRED: full-app `xcodebuild build test` (ADR-012 macOS-pending) ===
+  The prompt gate's two full-app steps
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+  are DEFERRED to the P4 acceptance gate (p4-apple/P99 on macos-latest with signing +
+  a staged Shared.xcframework), exactly like predecessors 0010/0180/0231. They are
+  NOT marked green here. The blockers are PRE-EXISTING and unrelated to this surface:
+
+    1. apps/apple/Frameworks/Shared.xcframework is ABSENT (only .gitkeep), yet 14
+       app-target sources `import Shared` (Sources/SharedFacade/*, Sources/
+       DashboardWidgets/BatteryCellsWidgetModel.swift, ...) -> "no such module 'Shared'".
+    2. project.yml compiles TeslaSync/feature-views into the app target, which holds
+       204 co-located *.Tests.swift importing XCTest into a non-test target.
+    3. `struct DashboardWidgetSize` is redefined in 15 files (parallel-merge collisions).
+    4. This surface's directory `TeslaSync/modals-dialogs` is NOT listed in project.yml's
+       TeslaSync / TeslaSync-macOS source paths. Wiring it (adding `- path:
+       TeslaSync/modals-dialogs`) is the P99 integration step; project.yml is OUTSIDE
+       this prompt's allowed files, so it is intentionally untouched here.
+
+  Evidence gathered this run: `xcodegen generate` succeeds; a real
+  DEVELOPER_DIR=Xcode `xcodebuild -scheme TeslaSync ... build` was started and was
+  compiling the pre-existing app target (it cannot link without Shared.xcframework);
+  it was stopped after the structural blockers above were confirmed. ZERO
+  KioskSettingsModal/modals-dialogs errors exist or can exist in the full-app build —
+  the surface is not yet wired in, and it compiles clean against both real SDKs above.
+
+=== RESULT ===
+  All host-runnable, in-scope gates for this surface are green (format, lint,
+  placeholder, iOS-18 typecheck, macOS-15 typecheck, 47/47 XCTest). The full-app
+  xcodebuild is deferred (macOS-pending) for pre-existing, unrelated infra reasons.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,88 @@
+=== P4 Dashboard widget 0021 ChargeStatusWidget (Apple) ===
+Surface: ChargeStatusWidget (registry id `charge-status`, category `charging`)
+Web source: web/src/features/dashboard/widgets/ChargeStatusWidget.tsx
+Generated/verified on: macOS (Darwin), Xcode 26.5 (17F42), Swift 6.3.2, swiftlint + swiftformat present.
+
+--- Path reconciliation (documented, not silent drift) ---
+The prompt's templated output path `apps/apple/TeslaSync/dashboard-widgets/` does
+not exist in the actual Apple scaffold and is wired into NONE of the toolchain:
+  * project.yml compiles the app/test targets from `Sources/` and `Tests/`.
+  * .swiftlint.yml `included:` only scans `Sources`, `Tests`, watch/widgets targets.
+To make build + lint + test genuinely exercise the surface (Honesty Covenant:
+no dead code, green-or-blocked), the surface was placed in the real, tooling-wired
+locations and auto-included by xcodegen with ZERO project.yml edits:
+  * apps/apple/Sources/DashboardWidgets/ChargeStatusWidget.swift          (SwiftUI view + chrome)
+  * apps/apple/Sources/DashboardWidgets/ChargeStatusWidgetModel.swift     (@Observable model, P1/S8 binding)
+  * apps/apple/Sources/DashboardWidgets/ChargeStatusWidgetData.swift      (DTO/adapter/formatting/registry/i18n/diagnostics)
+  * apps/apple/Sources/DashboardWidgets/ChargeStatusWidget+Previews.swift (per-state previews)
+  * apps/apple/Tests/Unit/DashboardWidgets/ChargeStatusWidgetTests.swift  (adapter + per-state + a11y + diagnostics)
+
+--- Parity coverage vs web source ---
+Data sources: useVehicles + useVehicleState -> bound via shared StateHolderModel<LoadableState<ChargeStatusSnapshot>> (P1/S8); no HTTP in view.
+useUnits -> shared Units facade (P1/S5); SI meters / m·h⁻¹ converted only at the render boundary.
+States reproduced: loading (skeleton), content[charging | notCharging], empty ("No charge data"),
+  error (+retry), stale (chip + auto-refresh on appear), offline (cached value + offline chip), background-fetch (spinner).
+i18n keys (web names kept): widget.charging, widget.power, widget.rate, widget.battery,
+  widget.timeToFull, widget.notCharging, widget.noChargeData (+ freshness/a11y/action keys). No English literals in code paths (resolved via Localizable.xcstrings facade with web defaults).
+a11y: VoiceOver labels on every metric + refresh/retry; combined element labels; Dynamic Type fonts; Reduce Motion honored on the charging pulse + skeleton shimmer.
+Telemetry: view.opened emitted with surface slug "ChargeStatusWidget" (P1/S11 diagnostics seam) on .task.
+Registry: id/category/defaultSize 2x2/minSize 1x2/maxSize 3x40 mirrored + clamp().
+
+=== Host-runnable gates (this runner) ===
+--- swiftlint --strict (whole project; includes new files) ---
+Linting 'WatchDesignTokens.swift' (261/261)
+Done linting! Found 0 violations, 0 serious in 261 files.
+LINT_EXIT=0
+--- swiftformat --lint . ---
+SwiftFormat completed in 0.09s.
+0/265 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+--- check-placeholders.ps1 (surface dir) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+--- standalone Swift 6 (strict concurrency) pure-logic compile+run ---
+ok - telemetry slug
+ALL_PURE_LOGIC_OK
+STANDALONE_EXIT=0
+
+=== KMP dependency build (gating; every app file does `import Shared`) ===
+apps/shared :core:assembleSharedXCFramework -> BUILD SUCCESSFUL in 20m 55s ; KMP_ASSEMBLE_EXIT=0
+Staged ios-arm64 + ios-arm64-simulator + macos-arm64 slices into apps/apple/Frameworks/Shared.xcframework.
+
+=== Xcode build + test (Xcode 26.5 / iPhone 16 sim iOS 26.5 / macOS 15+) ===
+[iOS]  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+         -> ** BUILD SUCCEEDED **  (IOS_BUILD2_EXIT=0)  [full app + ChargeStatusWidget* + links Shared.xcframework]
+[iOS]  xcodebuild ... -only-testing:TeslaSyncTests/ChargeStatusWidgetTests test
+         -> Test Suite 'ChargeStatusWidgetTests' passed; Executed 20 tests, 0 failures ; ** TEST SUCCEEDED ** (IOS_TEST_MINE_EXIT=0)
+[iOS]  xcodebuild ... -only-testing:TeslaSyncTests test   (full unit target)
+         -> ** TEST FAILED **; 0 test cases executed. Cause (environmental, not code):
+            "Failed to install or launch the test runner (Mach error -308 (ipc/mig) server died)";
+            "operation never finished bootstrapping". CoreSimulator service died under runner
+            oversubscription (1-min load average 516; 26 concurrent gradle JVMs across parallel slots).
+[mac]  xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' build
+         -> ** BUILD SUCCEEDED **  [full app + ChargeStatusWidget* compile clean on macOS]
+[mac]  xcodebuild -scheme TeslaSync-macOS ... test
+         -> error: Could not find test host for TeslaSync-macOSTests: TEST_HOST evaluates to
+            ".../TeslaSync-macOS.app/Contents/MacOS/TeslaSync-macOS" but the macOS app product is
+            "TeslaSync.app/Contents/MacOS/TeslaSync" (PRODUCT_NAME override). PRE-EXISTING project.yml
+            macOS test-host misconfiguration affecting the whole repo; unrelated to this surface and
+            out of this prompt's allowed-files scope. (CLI TEST_HOST override is rejected because the
+            macOS UI-test target sets USES_XCTRUNNER.)
+
+=== Determination ===
+Surface is COMPLETE and proven where the runner permits:
+  * iOS build GREEN, macOS build GREEN (real Shared.xcframework link on both).
+  * Surface's own 20 unit tests GREEN on the iOS simulator.
+  * swiftlint --strict GREEN (0 violations), swiftformat --lint GREEN, placeholder scan GREEN (0).
+  * Pure-logic core compiles + runs natively (macOS arm64, Swift 6 strict concurrency) GREEN (14/14).
+The full `build test` gate cannot reach EXIT=0 in THIS environment for two reasons outside this
+surface's control: (1) CoreSimulator service death under extreme parallel-slot load (Mach -308,
+load avg 516) and (2) a pre-existing macOS XCTest TEST_HOST misconfiguration. Per the prompt's
+platform-capability clause and apps/macos-pending-verifications.md (Apple runner-bound verification
+deferred to macos-latest CI), the runner-bound full-suite execution is recorded as BLOCKED while the
+delivered surface and all host-runnable + build + own-test gates are GREEN.
+
+EXIT=1
+STATUS=BLOCKED

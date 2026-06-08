@@ -1,0 +1,190 @@
+================================================================================
+p4-apple · P7 · page:battery/Energy — SwiftUI / HIG parity
+Artifact: apps/apple/TeslaSync/Features/Battery/EnergyPage.swift (+ surface files)
+Web source: web/src/features/battery/pages/EnergyPage.tsx  (route /energy)
+Manifest unit: page:battery/Energy   requiredCount=81
+Host: Darwin (Apple Silicon). Xcode 26.5 present at /Applications/Xcode.app
+      (global xcode-select = CommandLineTools; full Xcode reachable via DEVELOPER_DIR).
+================================================================================
+
+-- APPROACH (mirrors the committed p4-apple feature-view methodology) --
+The web page is ported natively to SwiftUI as a multi-file surface under
+apps/apple/TeslaSync/Features/Battery/, following the gold-standard pattern of the
+1266 existing feature-view files: a pure, Shared-free projection core (own SI +
+number formatting ported from lib/numberFormat.ts + lib/unitConversion.ts), an
+@Observable model bound through a state-holder seam (P1/S8), SwiftUI views built from
+the P2 design tokens + P3 shared components, and a per-page i18n facade resolving the
+56 manifest keys from the platform string catalog (Localizable.xcstrings).
+
+Files added (apps/apple/TeslaSync/Features/Battery/, 12):
+  EnergyPage.swift             — EnergyPage: View (scaffold, header, phase switch, i18n bridge, tint map)
+  EnergyPage.Model.swift       — EnergyPageInput/Resolved/Projection, seam, @Observable EnergyPageModel, EnergyStrings
+  EnergyPage.Adapter.swift     — EnergyConnection, EnergyConvert, EnergyFormat, EnergyUnits, inputs, EnergyChargerKind, EnergyTint
+  EnergyPage.Models.swift      — EnergyDerived + the resolved sub-models + EnergyPageData
+  EnergyPage.Builders.swift    — EnergyBuilders: gauges/quickMetrics/lifetime/costCards
+  EnergyPage.Builders.Series.swift — EnergyBuilders: daily/timeOfDay/chargerBreakdown/sessions
+  EnergyPage.Views.swift       — freshness chrome, GlassPanel1 hero gauges, GlassPanel2 strip, section header, inline empty, skeleton
+  EnergyPage.Panels.swift      — GlassPanel3 lifetime, GlassPanel4 cost cards, GlassPanel9 sessions table
+  EnergyPage.Charts.swift      — 4 chart panels (TSChartContainer + native Swift Charts)
+  EnergyPage.Routing.swift     — EnergyRouteRegistration (.energy) + EnergyPagePendingSource
+  EnergyPage.Previews.swift    — sample data + 4 state previews
+  EnergyPage.Tests.swift       — 30 XCTest cases (formatting/convert/builders/projection/model)
+
+Navigation registration (allowed): Sources/TeslaSyncApp.swift chains
+  EnergyRouteRegistration.registry(base: SettingsRouteRegistration.registry(...)).
+Build wiring: project.yml adds `- path: TeslaSync/Features` to both app targets;
+  .swiftlint.yml adds TeslaSync/Features to `included`.
+Strings: Localization/Localizable.xcstrings += 68 keys (56 manifest + 12 native-chrome),
+  purely additive (748 insertions / 0 deletions; JSON validated).
+
+================================================================================
+GATES
+================================================================================
+
+check-placeholders.ps1 (apps/apple/TeslaSync/Features/Battery, swift) ...........
+    PLACEHOLDER_ALLOWED=1   (RedactionReasons.placeholder — HIG loading treatment, ADR-015)
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+swiftlint --strict (12 Battery surface files) ..................................
+    Done linting! Found 0 violations, 0 serious in 12 files.
+    LINT_EXIT=0
+
+Isolated swiftc -typecheck (real macOS SDK, Swift 6, strict concurrency complete)
+    swiftc -typecheck -sdk MacOSX.sdk -target arm64-apple-macos14.0 -swift-version 6
+      <11 surface files> + design tokens + Shared-free P3 components (excl. the
+      KMP-backed UnitFormatters facade, which the surface does not use).
+    Result: 0 errors.   TYPECHECK_EXIT=0
+
+Isolated SwiftPM build (library `TeslaSync`, -c release) ........................
+    Build complete. (surface + Shared-free components compile under Swift 6)
+    SWIFTPM_BUILD_EXIT=0
+
+Unit tests — committed EnergyPage.Tests.swift via SwiftPM + Xcode toolchain ......
+    DEVELOPER_DIR=/Applications/Xcode.app swift test
+    Test Suite 'All tests' passed — Executed 30 tests, with 0 failures (0 unexpected).
+      EnergyFormatTests (6) · EnergyConvertTests (3) · EnergyChargerKindTests (1)
+      EnergyBuildersTests (9) · EnergyPageProjectionTests (5) · EnergyPageModelTests (5) + spy
+    TEST_EXIT=0
+
+Executable cross-check (EnergyVerify, -c release; XCTest-free logic gate) ........
+    ENERGY_VERIFY passed=64 failed=0   →   ENERGY_VERIFY_OK   VERIFY_EXIT=0
+
+xcodegen generate (project enumerates the new files) ...........................
+    Created project at apps/apple/TeslaSync.xcodeproj ; 72 EnergyPage refs in pbxproj.
+    XCODEGEN_EXIT=0
+xcodebuild -list (project well-formed) .........................................  OK
+
+-- ENVIRONMENTAL GATE LIMITATION (runner capability / pre-existing, NOT this surface) --
+Full-app `xcodebuild -scheme TeslaSync[-macOS] build test` is the macOS-CI step
+(p4-apple/P99 apple-acceptance-gate, macos-latest). On this shared CLT-default host it
+is blocked by the SAME pre-existing, unrelated issues already tracked in
+apps/macos-pending-verifications.md for every P4-apple surface:
+  • the KMP `Shared.xcframework` is not staged (Frameworks/Shared.xcframework = .gitkeep;
+    requires the Kotlin/Native Apple toolchain via the scheme's gradle pre-action),
+  • `public struct DashboardWidgetSize` (+ PowerFlowConnection) redefined ~15× across
+    Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/*,
+  • 150+ co-located *.Tests.swift import XCTest into the app target,
+  • macOS app/widget targets need a development signing identity.
+ZERO of these involve Features/Battery. The surface itself is proven green by the real
+macOS SDK type-check, the SwiftPM release build, and the 30/30 XCTest run above (all via
+the present Xcode 26.5 toolchain). This deferral is recorded in
+apps/macos-pending-verifications.md.
+GATE_ENV_BLOCKED=shared-xcframework-unstaged; dashboardwidgetsize-redef×15;
+                 colocated-xctest-in-app-target; macos-dev-signing
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=81
+Each item: manifest entry → binding native evidence (file : symbol). Strings also
+resolve from Localization/Localizable.xcstrings (English value verified).
+--------------------------------------------------------------------------------
+[panel  01] GlassPanel1 (hero gauges)        → EnergyPage.Views.swift : EnergyHeroPanel
+[panel  02] GlassPanel2 (quick metrics)      → EnergyPage.Views.swift : EnergyQuickMetricsStrip
+[panel  03] GlassPanel3 (lifetime metrics)   → EnergyPage.Panels.swift : EnergyLifetimePanel
+[panel  04] GlassPanel4 (cost-vs-gas)        → EnergyPage.Panels.swift : EnergyCostSavingsRow
+[panel  05] Energy-Cost-Daily                → EnergyPage.Charts.swift : EnergyCostDailyPanel
+[panel  06] Efficiency-Trend                 → EnergyPage.Charts.swift : EnergyEfficiencyTrendPanel
+[panel  07] Charging-by-Time-of-Day          → EnergyPage.Charts.swift : EnergyTimeOfDayPanel
+[panel  08] Charger-Type-Breakdown           → EnergyPage.Charts.swift : EnergyChargerBreakdownPanel
+[panel  09] GlassPanel9 (sessions table)     → EnergyPage.Panels.swift : EnergySessionsPanel
+[chart  10] RadialGauge (Energy Used)        → EnergyPage.Views.swift : EnergyHeroGauge ← EnergyBuilders.gauges[0]
+[chart  11] RadialGauge (Efficiency)         → EnergyPage.Views.swift : EnergyHeroGauge ← EnergyBuilders.gauges[1]
+[chart  12] RadialGauge (CO₂ Saved)          → EnergyPage.Views.swift : EnergyHeroGauge ← EnergyBuilders.gauges[2]
+[chart  13] RadialGauge (Total Cost)         → EnergyPage.Views.swift : EnergyHeroGauge ← EnergyBuilders.gauges[3]
+[chart  14] ChartContainer (energyCostDaily) → EnergyPage.Charts.swift : EnergyCostDailyPanel → TSChartContainer
+[chart  15] ComposedChart                    → EnergyPage.Charts.swift : EnergyCostDailyPanel.chart (BarMark+LineMark, dual axis)
+[chart  16] ChartContainer (efficiencyTrend) → EnergyPage.Charts.swift : EnergyEfficiencyTrendPanel → TSChartContainer
+[chart  17] AreaChart                         → EnergyPage.Charts.swift : EnergyEfficiencyTrendPanel.chart (AreaMark+LineMark)
+[chart  18] ChartContainer (chargingByTime)  → EnergyPage.Charts.swift : EnergyTimeOfDayPanel → TSChartContainer
+[chart  19] BarChart                          → EnergyPage.Charts.swift : EnergyTimeOfDayPanel.chart (grouped BarMark)
+[chart  20] ChartContainer (chargerBreakdown)→ EnergyPage.Charts.swift : EnergyChargerBreakdownPanel → TSChartContainer
+[chart  21] PieChart                          → EnergyPage.Charts.swift : EnergyChargerBreakdownPanel.donut → TSPieChart
+[state  22] loading  → EnergyPage.Views.swift : EnergyPageSkeleton ; EnergyPageProjection.Phase.loading (test: testLoadingPhase)
+[state  23] empty    → EnergyPage.Views.swift : EnergyEmptyHero/EnergyInlineEmpty ; Phase.empty (test: testEmptyPhaseWhenNoEnergyData)
+[state  24] error    → EnergyPage.Views.swift : EnergyErrorBanner ; Phase.error (test: testErrorPhase)
+[state  25] success  → EnergyPage.swift : pageBody ; Phase.data (test: testDataPhaseWhenPopulated)
+[string 26] common.noData                    → EnergyPage.Charts.swift (EnergyTimeOfDayPanel/EnergyChargerBreakdownPanel empties)
+[string 27] energy.breakdown.sessions        → EnergyPage.Charts.swift : EnergyChargerBreakdownPanel.legend
+[string 28] energy.chart.chargerBreakdown     → EnergyPage.Charts.swift : EnergyChargerBreakdownPanel (TSChartContainer title)
+[string 29] energy.chart.chargerBreakdown.aria→ EnergyPage.Charts.swift : EnergyChargerBreakdownPanel.donut (.accessibilityLabel)
+[string 30] energy.chart.chargingByTime       → EnergyPage.Charts.swift : EnergyTimeOfDayPanel (title)
+[string 31] energy.chart.chargingByTime.aria  → EnergyPage.Charts.swift : EnergyTimeOfDayPanel.chart (.accessibilityLabel)
+[string 32] energy.chart.distance             → EnergyPage.Charts.swift : EnergyEfficiencyTrendPanel.chart (distance series name, %@ unit)
+[string 33] energy.chart.efficiencyTrend      → EnergyPage.Charts.swift : EnergyEfficiencyTrendPanel (title)
+[string 34] energy.chart.efficiencyTrend.aria → EnergyPage.Charts.swift : EnergyEfficiencyTrendPanel.chart (.accessibilityLabel)
+[string 35] energy.chart.energy               → EnergyPage.Charts.swift : EnergyCostDailyPanel.chart (energy series name)
+[string 36] energy.chart.energyCostDaily      → EnergyPage.Charts.swift : EnergyCostDailyPanel (title)
+[string 37] energy.chart.energyCostDaily.aria → EnergyPage.Charts.swift : EnergyCostDailyPanel.chart (.accessibilityLabel)
+[string 38] energy.chart.energyKwh            → EnergyPage.Charts.swift : EnergyTimeOfDayPanel.chart (energy series name)
+[string 39] energy.chart.noEfficiencyData     → EnergyPage.Charts.swift : EnergyEfficiencyTrendPanel (empty)
+[string 40] energy.chart.noEnergyData         → EnergyPage.Charts.swift : EnergyCostDailyPanel (empty)
+[string 41] energy.chart.sessions             → EnergyPage.Charts.swift : EnergyTimeOfDayPanel.chart (count series name)
+[string 42] energy.cost_decimal.evCost        → EnergyPage.Panels.swift : EnergyCostComparisonCard.comparison
+[string 43] energy.cost_decimal.gasEquivalent → EnergyPage.Panels.swift : EnergyCostComparisonCard.comparison
+[string 44] energy.cost_decimal.less          → EnergyPage.Panels.swift : EnergyCostComparisonCard.savingRow
+[string 45] energy.cost_decimal.periodTotal   → EnergyPage.Builders.swift : EnergyBuilders.costCards (label, %@ days)
+[string 46] energy.cost_decimal.projectedAnnual→ EnergyPage.Builders.swift : EnergyBuilders.costCards (label)
+[string 47] energy.cost_decimal.saving        → EnergyPage.Panels.swift : EnergyCostComparisonCard.savingRow
+[string 48] energy.empty.hero                 → EnergyPage.Views.swift : EnergyEmptyHero
+[string 49] energy.gauge.co2Saved             → EnergyPage.Builders.swift : EnergyBuilders.gauges (label) → EnergyHeroGauge
+[string 50] energy.gauge.efficiency           → EnergyPage.Builders.swift : EnergyBuilders.gauges (label)
+[string 51] energy.gauge.energyUsed           → EnergyPage.Builders.swift : EnergyBuilders.gauges (label)
+[string 52] energy.gauge.totalCost            → EnergyPage.Builders.swift : EnergyBuilders.gauges (label)
+[string 53] energy.lifetime.energyUsed        → EnergyPage.Panels.swift : EnergyLifetimePanel.lifetimeCell
+[string 54] energy.lifetime.energyUsedDesc    → EnergyPage.Panels.swift : EnergyLifetimePanel.lifetimeCell
+[string 55] energy.lifetime.periodEnergy      → EnergyPage.Panels.swift : EnergyLifetimePanel.periodCell (%@ days)
+[string 56] energy.lifetime.periodEnergyDesc  → EnergyPage.Panels.swift : EnergyLifetimePanel.periodCell
+[string 57] energy.lifetime.title             → EnergyPage.Panels.swift : EnergyLifetimePanel (section header)
+[string 58] energy.metric.costPerDist         → EnergyPage.Builders.swift : EnergyBuilders.quickMetrics (%@ unit)
+[string 59] energy.metric.costPerKwh          → EnergyPage.Builders.swift : EnergyBuilders.quickMetrics
+[string 60] energy.metric.monthlyEst          → EnergyPage.Builders.swift : EnergyBuilders.quickMetrics
+[string 61] energy.metric.sessions            → EnergyPage.Builders.swift : EnergyBuilders.quickMetrics
+[string 62] energy.metric.totalDistance       → EnergyPage.Builders.swift : EnergyBuilders.quickMetrics
+[string 63] energy.metric.yearlyEst           → EnergyPage.Builders.swift : EnergyBuilders.quickMetrics
+[string 64] energy.pageSubtitle               → EnergyPage.swift : header
+[string 65] energy.pageTitle                  → EnergyPage.swift : header (+ accessibilityLabel)
+[string 66] energy.sessions.empty             → EnergyPage.Panels.swift : EnergySessionsPanel (empty)
+[string 67] energy.sessions.title             → EnergyPage.Panels.swift : EnergySessionsPanel (section header)
+[string 68] energy.table.battery              → EnergyPage.Panels.swift : EnergySessionColumns.battery
+[string 69] energy.table.cost_decimal         → EnergyPage.Panels.swift : EnergySessionColumns.cost
+[string 70] energy.table.date                 → EnergyPage.Panels.swift : EnergySessionColumns.date
+[string 71] energy.table.energy               → EnergyPage.Panels.swift : EnergySessionColumns.energy
+[string 72] energy.table.perKwh               → EnergyPage.Panels.swift : EnergySessionColumns.perKwh
+[string 73] energy.table.power                → EnergyPage.Panels.swift : EnergySessionColumns.power
+[string 74] energy.table.type                 → EnergyPage.Panels.swift : EnergySessionColumns.type
+[string 75] energy.timeOfDay.afternoon        → EnergyPage.Builders.Series.swift : timeOfDaySpecs → EnergyTimeOfDayPanel.chart
+[string 76] energy.timeOfDay.evening          → EnergyPage.Builders.Series.swift : timeOfDaySpecs
+[string 77] energy.timeOfDay.morning          → EnergyPage.Builders.Series.swift : timeOfDaySpecs
+[string 78] energy.timeOfDay.night            → EnergyPage.Builders.Series.swift : timeOfDaySpecs
+[string 79] energy.tip.offPeak                → EnergyPage.Charts.swift : EnergyTimeOfDayPanel.tips
+[string 80] energy.tip.solar                  → EnergyPage.Charts.swift : EnergyTimeOfDayPanel.tips
+[string 81] energy.title                      → EnergyPage.Model.swift/Strings ; route title (AppRoute.energy)
+--------------------------------------------------------------------------------
+PARITY_COVERED=81
+PARITY_REQUIRED=81
+PARITY_OK (81==81)
+================================================================================
+
+EXIT=0
+STATUS=DONE

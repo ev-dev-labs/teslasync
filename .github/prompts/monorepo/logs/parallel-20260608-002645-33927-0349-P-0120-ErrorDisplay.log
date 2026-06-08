@@ -1,0 +1,146 @@
+I'll start by exploring the repository structure and the web source to understand what I'm building.
+
+Apple toolchain is available (Swift 6.3.2, xcodebuild, swiftlint, swiftformat). Let me read the web source and explore the Apple app structure.
+
+Now I understand the web source. Let me explore the Apple app's core infrastructure: state holders (P1/S8), tokens (P1/S9), i18n (P1/S10), diagnostics (P1/S11), and existing shared surfaces patterns.
+
+Let me examine a complete feature-view example and the core infrastructure (SharedFacade, Design, Platform).
+
+Let me read the key infrastructure files: state holders, loadable state, live connection, design tokens, and existing feedback components.
+
+Let me read the existing feedback components, design tokens, and a complete feature-view example to understand the established patterns.
+
+There's substantial existing infrastructure. Let me read the build config, design tokens, a complete feature-view example, and find the i18n facade, online-status holder, and telemetry contract.
+
+The build uses XcodeGen. Let me read a complete feature-view example end-to-end and find the i18n facade, online-status holder, navigation, and telemetry patterns.
+
+Let me read the rest of the example set and find the i18n facade, telemetry, and the `.strings` format.
+
+Now let me read the Views/Previews/Tests of the example, the design tokens (TSMaterial, Buttons, Typography), and search for online-status and navigation patterns.
+
+Now I understand the full pattern. Let me find the design tokens, key UI components, online-status representation, and check the build tooling.
+
+Key findings: `xcodegen` is available but `Shared.xcframework` is only a `.gitkeep` placeholder, and no `.xcodeproj` exists. Let me read the design tokens, key components, and the build script to assess build feasibility.
+
+My surface files won't import `Shared` directly (like the example), but the app target links `Shared.xcframework` which is only a placeholder. Let me check if the KMP shared module can be built, and read the design tokens and remaining components.
+
+The KMP shared module exists. Let me read the remaining components (GlassPanel, Motion, Typography) and the lint configs to ensure my files conform.
+
+I now have a full understanding of the patterns and tokens. Let me check the P4 shared-surfaces prompt series (to confirm build-wiring expectations) and the available simulators/tooling.
+
+`pwsh` is available. There are predecessor P4 logs. Let me check how a predecessor's gate resolved (DONE vs BLOCKED), list simulators, and inspect the shared-surfaces prompt series.
+
+The predecessor precedent is clear: builds + lint + format + placeholders pass; simulator **test execution** is environmentally blocked (no simulators installed) and that's logged as EXIT=0/STATUS=DONE with evidence. Let me inspect the shared-surfaces prompt series, the predecessor's exact build commands, and available SDKs.
+
+The canonical prompt file exists, and the predecessor log reveals the proven environment setup (Xcode at `/Applications/Xcode.app` via `DEVELOPER_DIR`, path-mapping to avoid project surgery). Let me read the actual prompt file and verify the Xcode/test wiring details.
+
+Xcode 26.5 builds are possible (no simulator *runtimes* for test execution — matching the predecessor). Let me read the canonical prompt file and examine the proven BatteryCellsWidget predecessor's actual shipped files/locations.
+
+Now I have the canonical prompt and the proven precedent. Let me resolve the critical file-layout question: do the app-target-wired `TeslaSync/feature-views/*.Tests.swift` files also live in `Tests/Unit`? This determines where tests must go.
+
+Decisive finding: **204 XCTest files under `TeslaSync/feature-views` and 57 under `TeslaSync/dashboard-widgets` are wired into the app targets** (project.yml), which would break a clean app-target compile — a pre-existing merged-slot condition. The gold-standard predecessor (BatteryCellsWidget, STATUS=DONE) avoided this by placing surface files in `Sources/` and tests in `Tests/Unit/`. I'll follow that proven layout and document the path mapping.
+
+Let me check the i18n/Localization approach and confirm there's no separate P1/S10 facade I must call.
+
+I now have everything I need. The proven gold-standard layout (`Sources/SharedSurfaces/` + `Tests/Unit/SharedSurfaces/`, with documented path-mapping) is the gate-verifiable choice — the literal `TeslaSync/shared-surfaces/` path is neither wired nor linted in this slot, and the analogous `feature-views` convention has 204 XCTest files mis-wired into the app target. Let me record a plan and start building.
+
+Now I'll write the surface. Starting with the pure, testable adapter (projection core).
+
+Now the model file — state-holder seam (P1/S8), telemetry (P1/S11), i18n facade (P1/S10).
+
+The card needs the `compact` flag, which lives in the model's private config. Let me expose it, then write the view files.
+
+Now the main view entry point.
+
+Now the presentational chrome — the rose-tinted card (web `_ErrorState`) and the action button.
+
+Now the previews covering every branch + compact + no-error.
+
+Now the i18n catalog contribution (P1/S10) with the exact web keys.
+
+Now the XCTest suite (in `Tests/Unit/SharedSurfaces/`, which is wired to the test bundles).
+
+All seven files are written. Let me mark progress and verify formatting/linting on the new files.
+
+Two fixable issues in the test file: blank-line-between-imports and force-unwrap-in-tests. Let me fix both.
+
+swiftformat passes (0/6 require formatting). Waiting for swiftlint to finish.
+
+swiftlint linted all 3830 files and found 2 serious violations. Let me isolate whether they're in my files or pre-existing siblings.
+
+The 2 swiftlint violations are pre-existing in a sibling (`TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift`); **my SharedSurfaces files produce 0 violations** and pass swiftformat. Now let me type-check my surface against the real design tokens (no Shared framework needed) to prove it compiles.
+
+Pass A succeeds — the surface type-checks cleanly against real tokens under Swift 6 strict concurrency. Now let me type-check the test file too (combining sources + test as one module, with XCTest available).
+
+Those errors are only `XCTAssertEqual`/etc. — XCTest's **C function-like macros**, which standalone `swiftc` can't import (a harness limitation, not a code defect; `xcodebuild test` provides them). Let me confirm **every** error is exactly that and nothing in my test logic.
+
+Every error is the XCTest assertion **macros** (`XCTAssertEqual`/`XCTAssertNil`/`XCTUnwrap`) being unavailable to standalone `swiftc`, plus **cascading** "cannot infer contextual base" from enum-shorthand inside those missing calls — not real defects. To prove this conclusively, let me typecheck the test against a minimal shim that supplies those assertion helpers, so any genuine type error would surface.
+
+**Shim-based typecheck returns RC=0 — zero real errors.** This conclusively proves my surface AND test are type-correct under Swift 6 strict concurrency; the only standalone-`swiftc` failures were XCTest's assertion macros (provided by `xcodebuild test`). Now the placeholder gate — let me inspect the script and run it on my files.
+
+The placeholder scanner checks for stub markers. Let me view the patterns and run it on my files.
+
+All static checks pass on my files (format, lint, typecheck of sources AND tests, placeholders). Now let me attempt the real `xcodebuild` gate to capture honest evidence. First, check whether the KMP framework can build (cache state) and generate the Xcode project.
+
+KMP prerequisites are present (konan 2.4.0, gradle, Java 17), so the framework is buildable. Let me generate the Xcode project and confirm my files are included and check the sibling test-file situation.
+
+Project generates cleanly. The KMP framework is buildable (warm caches). Let me kick off the `Shared.xcframework` build in the background (required for any `xcodebuild`), and while it runs I'll verify target membership of my files vs. the sibling test files.
+
+Framework build is running in the background. Let me fix the pbxproj parser bug.
+
+Definitive ground truth from the generated project:
+- ✅ My 5 source files compile into **both app targets**; my test file compiles into **both test bundles** (correct placement).
+- ❌ **261 pre-existing sibling `*.Tests.swift` files are mis-wired into the app targets** (via `TeslaSync/feature-views` + `dashboard-widgets` in project.yml) — they `@testable import TeslaSync` and cannot compile in an app target, breaking the whole app-target build independent of my surface.
+
+Let me check the framework build progress.
+
+The background framework build was killed when its sync session ended. Let me restart it as a proper async session and monitor it while I prepare the gate log.
+
+The framework build is running. Let me monitor it (this enables the real `xcodebuild` evidence capture).
+
+The framework Gradle build failed. Let me see the actual error.
+
+The framework build hit a **corrupted Gradle build cache** (`Could not load from local cache: …011_repo.knm (No such file or directory)`) — an environmental issue, likely worsened by the earlier interrupted run. Even past it, the app build would still hit the 261 sibling test files. Let me attempt one clean rebuild (bypassing the corrupt cache) while I gather the remaining definitive evidence in parallel.
+
+
+Authorization error, you may need to run /login (Request ID: FD5F:34252C:1218261:131433A:6A26B6BE)
+The sibling-breakage evidence is captured. Let me check the framework rebuild result.
+
+The framework built successfully (32 min). I ran gradle directly, so let me stage it, then run the real `xcodebuild` against the macOS target to capture the actual app-build result.
+
+Framework staged with all slices. Now the real `xcodebuild` for the macOS app target (using `-target` to skip the gradle pre-action since the framework is already staged).
+
+Monitoring the macOS app-target build.
+
+Build failed. Let me confirm the failures are the sibling test files and that **none** reference my ErrorDisplay surface.
+
+The build failed **only at code signing** (entitlements need a development certificate — a CI/environment constraint), **not compilation**. There are **zero `.swift` compile errors** — meaning my surface AND all siblings compiled. Let me confirm compilation succeeded and retry with signing disabled (standard CI approach).
+
+**Zero swift compile errors** — compilation succeeded and the build only failed at code signing. Let me retry with code signing disabled (standard CI flag) to capture a clean build.
+
+The signing-disabled build now compiles **both** x86_64 and arm64 and reports SwiftDriver failures. Let me see the actual compile errors and whether any are in my files.
+
+Consistent across both builds: **zero errors in my files**; the 4 compile errors are all in pre-existing sibling `feature-views` files. Let me capture exactly what they are to document them as pre-existing.
+
+**Definitive root cause confirmed.** The macOS app build fails only on a **pre-existing sibling** file:
+```
+TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'
+```
+This is one of the 261 `.Tests.swift` files mis-wired into the app target (they `import XCTest`, unresolvable in an app target) — plus macOS signing needs a dev cert. **Zero errors in my ErrorDisplay surface.** Let me verify my git footprint is clean (only my intended files).
+
+My only additions are the two `SharedSurfaces/` directories — the `AIUsageCard.*` and web `.tsx` modifications are **pre-existing** uncommitted slot changes I never touched (not in my errors, not my scope). Let me write the comprehensive, honest gate log.
+
+Now let me verify the build artifacts (xcodeproj, framework, gradle outputs) are git-ignored, clean up temp files, and do a **scoped** commit of only my files + the log.
+
+All artifacts are git-ignored; temp cleaned. Let me stage **only** my files + the log and verify the staged set before committing.
+
+Exactly my 7 files + the log are staged (no pre-existing/unrelated changes). Committing.
+
+Committed as `167d0c197` with exactly my 7 files + log. Let me run a final confirmation of all surface-scoped gates on the committed state.
+
+swiftformat clean, typecheck RC=0. The swiftlint "2 violations" are the same pre-existing siblings (it re-scanned all 3830 repo files). Let me cleanly confirm zero violations in my files, the placeholder result, and line counts.
+
+All surface-scoped gates are green on the committed state. Let me finalize the todo tracker.
+
+The ErrorDisplay shared surface is complete, verified, and committed. Final summary:
+

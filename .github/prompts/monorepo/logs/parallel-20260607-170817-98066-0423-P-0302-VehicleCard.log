@@ -1,0 +1,8 @@
+I'll start by exploring the environment to understand the existing structure and verify platform capabilities.
+
+Swift 6.3.2, swiftlint, and swiftformat are available, but `xcodebuild` requires full Xcode (only Command Line Tools present). Let me explore the existing Apple structure and the web source to understand established patterns.
+
+Substantial existing structure with many feature-views already built. Let me study the established patterns, shared components, and state holders before writing any code.
+
+The `VehicleHeroCardWidget` is the closest analog — same vehicle/state domain. Let me study its complete file set to learn the established patterns.
+

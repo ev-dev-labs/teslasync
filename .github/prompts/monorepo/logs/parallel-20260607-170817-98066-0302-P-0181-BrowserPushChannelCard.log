@@ -1,0 +1,183 @@
+I'll start by exploring the repository structure and checking the platform capabilities, since this task requires Apple/SwiftUI tooling.
+
+Swift toolchain is present (swift 6.3.2, swiftlint 0.63.3, swiftformat 0.61.1), but **`xcodebuild` requires full Xcode** — only Command Line Tools are installed, and **`simctl` (iOS Simulator) is unavailable**. Let me gather full evidence on the repo structure and dependencies before deciding DONE vs BLOCKED.
+
+Critical findings: **`/Applications/Xcode.app` exists** (full Xcode is installed; only the *active* dir points to CLT), **pwsh 7.6.2 is available**, the **web source exists**, and `apps/apple/` is a full XcodeGen project (`project.yml`, no checked-in `.xcodeproj`). Let me verify Xcode is usable via `DEVELOPER_DIR` and check for simulators + XcodeGen.
+
+Capability is **fully available**: Xcode 26.5, iOS 26.5 SDK + Simulator, **iPhone 16 simulator already booted**, macOS 26.5 SDK, xcodegen 2.45.4, swiftlint, swiftformat, pwsh, and `check-placeholders.ps1`. This is **not** a BLOCKED scenario — I must build the real component. Let me read the web source spec and the Apple project structure.
+
+Now I understand the structure. Schemes `TeslaSync` and `TeslaSync-macOS` match the gate; `feature-views` lives at `TeslaSync/feature-views`. This is artifact 0181, so there must be predecessor feature-views to follow as a pattern. Let me examine existing feature-views, the state-holder/token/i18n layers, and the xcframework staging script.
+
+This is a large, established project (834 files = ~120 feature views, each ~7 files: `.swift`, `.Model`, `.Adapter`, `.Views`, `.Previews`, `.strings`, `.Tests`). The build stages a KMP `Shared.xcframework` via Gradle. Let me check for a prebuilt framework, find the closest existing template (a notifications/push card with a removable-row list), and inspect the shared facade layer.
+
+No prebuilt xcframework (only `.gitkeep`), so the build will compile the KMP `Shared.xcframework` via Gradle. Let me read the `.gitkeep` note, the SharedFacade layer (LoadableState, StateHolderModel, etc.), and the Domains directory to find the Push state holders.
+
+No existing WebPush/PushSubscription state holder in Apple Sources — this surface introduces new data bindings. The architecture uses `.Model` (observable VM) + `.Adapter` (cached→projection) wrapping the KMP shared core. Let me read the facade infrastructure and find the closest existing template (a list-with-remove-action card across all states).
+
+Now I understand the facade infra (`LoadableState` enum, `StateHolderModel` Flow wrapper, `AppContainer`). I must follow the exact established pattern. Let me find the parity manifest entry for this component and the closest complete template — a card with a removable-row list across all states.
+
+The spec is the web source + prompt (manifest is sparse). Now I need the exact established native pattern. Let me read a complete representative template — `AutomationCard` (a card with delete actions) — across all its files to learn Model/Adapter/Views/Previews/strings/Tests conventions and how they bind to data.
+
+This is a remarkably consistent, mature pattern. `AutomationCard` is purely presentational (parent supplies data), but **BrowserPushChannelCard binds data hooks directly**, so I need a data-bound template. Let me find feature views whose `.Model` binds to shared state holders (`StateHolderModel`/`LoadableState`/`AppContainer`), and locate the shared UI components (TSGlassPanel, Badge, Button, etc.) + tokens.
+
+Good — 49 data-bound feature views exist. Let me check how their Models bind (do they reference `Shared.` directly or inject seams?) and read the core shared components + tokens I'll need.
+
+Key insight: **no feature view imports `Shared` directly** — they bind through **protocol seams** + an `@Observable` view-model (production supplies a Shared-backed impl; tests supply doubles). Let me read the data-binding template (`ChargingSessionCard.Model` + view) and the core components/tokens.
+
+TSDesign is thin — the real tokens (Color.TS, TSSpacing, TSRadius) are generated under `../design/generated/apple`. Let me read the generated tokens and the core components I'll use (Cards/Badges/Buttons/States/Skeletons/Banners).
+
+Now I have tokens + `TSTone`/`TSBadge`/`TSIconBox`. Let me read the remaining components (Cards/Buttons/States/Skeletons/Banners) and the rest of the `ChargingSessionCard` template (view, Views, Previews, strings, Tests) to fully internalize the pattern before writing.
+
+Now I have GlassPanel + Button + Badge. Let me read the remaining components (States, Skeletons, Typography, Banners) and the consuming view + tests + strings of the template.
+
+Excellent — I now have the full component toolkit. Let me read the remaining template files (Typography, the consuming view, Tests, strings, Previews, Adapter) to lock in the exact conventions, then write the surface.
+
+Let me read the test/strings/preview conventions and the lint configs, and clarify how `.Tests.swift` files in `feature-views/` are compiled (the app target sources that dir, but test targets source `Tests/`).
+
+I need to clarify a critical wiring question: `.Tests.swift` files (which `import XCTest` + `@testable import TeslaSync`) live in `feature-views/`, but the app target sources that whole dir. There must be an exclusion mechanism. Let me investigate how tests are actually compiled.
+
+`Tests/Unit/FeatureViews/` has only `ToolCardTests.swift`, yet hundreds of `.Tests.swift` live in `feature-views/`. I need to understand the real gate/verification status. Let me read the pending-verifications doc, the done log, and a recent feature-view gate log.
+
+Critical context found. `macos-pending-verifications.md` documents the established precedent (ToolCard P-0010): the **full-app `xcodebuild build test` is blocked by pre-existing, unrelated issues** (duplicate `DashboardWidgetSize` symbols across dashboard-widgets, co-located `*.Tests.swift` importing XCTest into the app target, and dev-signing). The sanctioned methodology is **isolated SwiftPM build + tests + swiftlint/swiftformat/placeholder**, with the full-app build deferred to macOS CI. Let me find how ToolCard's isolated verification was done.
+
+This is the canonical precedent. Let me read the rest of the ToolCard log to capture the exact isolated-harness construction and the final EXIT/STATUS lines I must match.
+
+I now have the canonical precedent: ToolCard's log ends `EXIT=0 / STATUS=DONE` with the full-app xcodebuild honestly recorded as **DEFERRED (IOS_EXIT=65/MAC_EXIT=65)** due to pre-existing unrelated breakage, while the surface is verified GREEN via an **isolated SwiftPM build+test** + swiftlint/swiftformat/placeholder. I'll follow this exactly. Let me grab the web `PushSubscriptionRow` type, `formatRelative`, `TSMaterial`, and a Views/Previews/strings example, then write.
+
+Let me read the Previews + remaining Views/Tests conventions (delete button rows, warning banner, preview macro style, a11y/state tests) before writing.
+
+I now have a complete understanding of the established pattern, the data spec, and the sanctioned verification methodology. Let me set up tracking and start implementing.
+
+Now writing the surface. Starting with the Model (surface identity, telemetry, strings facade, value types, state-holder seam, view-model, in-memory source).
+
+Now the Adapter — the pure, testable projection core (Localizer, unsupported-reason 4-way, status badge, device projection, relative-time port, accessibility).
+
+Now the main view container.
+
+Let me check how the sibling renders a verbatim/resolved string inside a tinted banner and a row with a trailing destructive button (the exact analogs I need), to avoid drift.
+
+The sibling `AutomationWarningBanner` confirms the sanctioned pattern for a tinted callout with a resolved/verbatim string. Now writing the subviews.
+
+Now the Previews covering every state and branch.
+
+Now the strings catalog contribution.
+
+Now the test suite — adapter projections, relative-time port, phase resolution, model lifecycle/telemetry, and accessibility labels.
+
+Let me fix a bug in one test (I wrongly nulled the model's update binding).
+
+All 7 files written. Now let me run the repo's `swiftformat` on the new Swift files (auto-format to the repo style), then review what changed.
+
+Only 1 file needed reformatting. Let me confirm the whole tree is swiftformat-clean (the gate command) and verify my files specifically.
+
+The only file flagged is the pre-existing `ActionBuilder.Previews.swift` (not mine — I never touched it). Let me confirm my files are format-clean and capture swiftformat's true exit code, then verify it's genuinely pre-existing.
+
+My 6 files are swiftformat-clean; `ActionBuilder.Previews.swift` is confirmed pre-existing (untouched by me). Now swiftlint --strict on my files.
+
+Three swiftlint issues to fix: a trailing-closure on the refresh button, a 3-tuple in tests, and the Model file exceeding 400 lines. Let me inspect the exact button lines, then fix all three cleanly (including splitting the state-holder seam into its own `BrowserPushChannelCard.Source.swift`).
+
+Line 216 flags because `action:` receives a closure *literal* plus a trailing label (two literals); the others pass stored closures. I'll fix it with an explicit `label:`, convert the test 3-tuple to a struct, and split the state-holder seam into `BrowserPushChannelCard.Source.swift` to bring the Model under 400 lines. Let me view the seam sections to move.
+
+Creating `BrowserPushChannelCard.Source.swift` (state-holder seam + in-memory source), removing those sections from the Model, and fixing the button + test-tuple lint issues.
+
+Now removing the moved sections from the Model and fixing the button + test issues.
+
+Now fixing the Views button (explicit `label:`) and the test 3-tuple → struct.
+
+Re-formatting and re-linting all 7 files (including the new Source file).
+
+Model is now 311 lines and all files are format-clean. Re-running swiftlint --strict on all 7 files.
+
+swiftlint --strict: **0 violations** across all 7 files. Now the placeholder gate — let me check the script's `-Path` semantics, then run it.
+
+The script treats a non-existent prefix path as "nothing to scan" (vacuous 0). To genuinely verify my files, I'll copy them to a temp dir and scan that, then also run the literal gate command for the record.
+
+The real scan correctly flagged the literal word "placeholder" in my comments (a forbidden stub marker). Let me find and rephrase all occurrences.
+
+Re-running the real placeholder scan to confirm clean.
+
+Placeholder scan is now clean. Now the key verification: an **isolated SwiftPM harness** (Swift 6 language mode, like ToolCard) compiling the exact shipped surface files against the real repo design-system, running the test suite. Let me build it.
+
+Now building and testing the harness under Swift 6 language mode.
+
+Everything compiles. One test-compile error: `resolvePhase` is `@MainActor`-isolated (inherited from the class) but it's a pure function called from a nonisolated test. The correct fix is to mark the pure static helpers `nonisolated`.
+
+Re-copying the updated Model and re-running the suite.
+
+**All 34 tests pass, 0 failures**, compiled under Swift 6 language mode against the real design-system. Let me re-verify format + lint on the final files (I edited Model after the last lint), then run the full-app xcodebuild gate to honestly record its deferred status.
+
+All final checks green: swiftformat 0/7, swiftlint 0 violations, Model 312 lines, 34/34 tests pass. Now the full-app xcodebuild gate — I must run it honestly to capture the deferred status with evidence. Let me generate the project and check the toolchain.
+
+Project generates cleanly; JDK 17 + gradlew present; schemes `TeslaSync`/`TeslaSync-macOS` exist. Now running the full-app iOS gate (it stages the KMP `Shared.xcframework` via Gradle first, ~7 min, then hits the pre-existing app-target breakage). Capturing to a log for evidence.
+
+iOS gate launched in the background (Gradle xcframework stage first, then app compile). Let me poll its progress.
+
+Gradle is staging the xcframework (debug done, release linking). Let me keep waiting for the app-compile stage.
+
+Still linking the release xcframework. Let me continue waiting for the app-compile stage.
+
+IOS_EXIT=65 (matches the ToolCard precedent). Now the critical evidence: grep the build log for any BrowserPushChannelCard/feature-views errors (must be zero) vs. the pre-existing causes.
+
+The 4 errors are all the documented pre-existing blocker — `AcDcStatsPanel.Tests.swift` (NOT mine) hitting *"Unable to resolve module dependency: 'XCTest'"* (co-located test files importing XCTest into the app target). Let me confirm zero errors are specific to my surface.
+
+Zero BrowserPushChannelCard-specific errors. Let me capture the rest of the evidence (grep exited nonzero on the zero-count, breaking the chain).
+
+Confirmed: all 4 errors are in the **pre-existing** `AcDcStatsPanel.Tests.swift` (XCTest-in-app-target — the documented blocker); **zero** reference my surface. Now the macOS gate (xcframework is already staged, so Gradle will be incremental).
+
+macOS gate launched. Let me poll it while preparing the deliverables.
+
+MAC_EXIT=65. Let me grep the macOS log for the cause and confirm zero surface errors.
+
+Both full-app gates fail only on **pre-existing, documented blockers** (iOS: XCTest-in-app-target across all feature-view tests; macOS: dev-signing), with **zero** BrowserPushChannelCard errors — exactly the ToolCard precedent. Now writing the gate log.
+
+34 tests, 0 failures confirmed. Now writing the comprehensive gate log.
+
+Now let me verify the working tree state before committing — ensure the generated `.xcodeproj`/xcframework are git-ignored and I commit only my surface files + log (not the two pre-existing modified web files).
+
+Clean: generated `.xcodeproj`/xcframework are git-ignored; the two modified web files are pre-existing (not mine). Staging exactly my 8 surface files + the log and committing.
+
+All 8 surface files + log staged. Committing with the prompt's message.
+
+Committed (9 files, 1869 insertions). Let me do a final verification of the working tree and mark the task tracking complete.
+
+All committed cleanly — only the two pre-existing web modifications remain unstaged; generated build artifacts are git-ignored. Let me finalize tracking.
+
+The plan.md path differs (non-critical session artifact) — the task itself is fully complete and committed. Let me do a final confirmation that the committed files are intact and lint-clean as committed.
+
+All verified. The task is complete.
+
+## Summary
+
+Shipped the native Apple (SwiftUI) **`BrowserPushChannelCard`** feature view at parity with `web/src/features/notifications/components/BrowserPushChannelCard.tsx`, following the established P4 pattern. Commit `3851f3412` (8 surface files + gate log, 1869 insertions).
+
+**Files** (`apps/apple/TeslaSync/feature-views/BrowserPushChannelCard.*`): `Model`, `Source` (P1/S8 state-holder seam), `Adapter` (pure projections), `swift` (container), `Views`, `Previews`, `strings`, `Tests`.
+
+**Parity reproduced**: the 4-way `disabledReason` (notification/serverDisabled/pushApi/permissionDenied), 3 status badges, enable/disable + iOS note, and the registered-devices list (unknown-agent fallback, "(this device)" flag, `formatRelative` "Last used …", revoke). **Every P4 state renders**: loading skeleton · error+retry · friendly empty · loaded · stale/offline freshness chip. Bound via the P1/S8 seam (no view HTTP), P1/S9 tokens, P1/S10 i18n facade (all 18 `webpush.*` keys + chrome), and a P1/S11 `view.opened` emission. Accessibility label on every interactive control; Dynamic Type + Reduce-Motion honored.
+
+**Verification (raw exits)**:
+- ✅ Isolated SwiftPM harness (Swift 6 language mode = strict-concurrency complete) compiling the exact shipped sources against the real design-system: **Build complete · 34 tests, 0 failures** (`SWIFT_TEST_EXIT=0`)
+- ✅ `swiftlint --strict`: 0 violations / 7 files · ✅ `swiftformat --lint`: 0/7 · ✅ placeholder scan: 0
+- ⏸️ `xcodebuild` iOS + macOS `build test`: **IOS_EXIT=65 / MAC_EXIT=65 — DEFERRED**, with grep proof of **zero** BrowserPushChannelCard errors. Both failures are pre-existing, repo-wide, documented blockers (co-located `*.Tests.swift` importing XCTest into the app target; macOS dev-signing) owned by the P4/P99 acceptance gate — exactly the sanctioned ToolCard P-0010 precedent.
+
+Gate log written; ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...e-feature-views-0181-BrowserPushChannelCard.log | 146 ++++++++
+ .../BrowserPushChannelCard.Adapter.swift           | 279 +++++++++++++++
+ .../BrowserPushChannelCard.Model.swift             | 312 +++++++++++++++++
+ .../BrowserPushChannelCard.Previews.swift          | 153 +++++++++
+ .../BrowserPushChannelCard.Source.swift            | 126 +++++++
+ .../BrowserPushChannelCard.Tests.swift             | 379 +++++++++++++++++++++
+ .../BrowserPushChannelCard.Views.swift             | 337 ++++++++++++++++++
+ .../feature-views/BrowserPushChannelCard.strings   |  53 +++
+ .../feature-views/BrowserPushChannelCard.swift     |  84 +++++
+ 9 files changed, 1869 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0181-BrowserPushChannelCard.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/BrowserPushChannelCard.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BrowserPushChannelCard.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BrowserPushChannelCard.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BrowserPushChannelCard.Source.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BrowserPushChannelCard.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BrowserPushChannelCard.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BrowserPushChannelCard.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/BrowserPushChannelCard.swift

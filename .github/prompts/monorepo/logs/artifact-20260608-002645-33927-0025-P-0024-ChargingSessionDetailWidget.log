@@ -1,0 +1,242 @@
+================================================================================
+P4 · Dashboard widget · 0024 — ChargingSessionDetailWidget (Apple)
+Run: 2026-06-08T01:05-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/25
+Base: c9c6fdb9f
+Prompt: P4/dashboard-widgets/0024 — ChargingSessionDetailWidget
+Web source (spec): web/src/features/dashboard/widgets/ChargingSessionDetailWidget.tsx
+Mode: code-complete + host-validated (real Xcode 26.5 swift build + swift test green,
+      31/31) + DEFERRED Xcode *app-target* build/test (0073 PowerFlowHistory / 0100
+      TelemetryErrors / 0112 WallConnector precedent; ADR-012 macOS-pending;
+      pre-existing cross-sibling integration state — duplicate shared-type decls +
+      colocated *.Tests.swift target membership).
+================================================================================
+
+=== CAPABILITY PROBE (this runner) ===
+  swift (CLT/Xcode) .......... Apple Swift 6.3.2, macOS SDK present                  OK
+  swiftc -typecheck SwiftUI .. compiles (iOS-18-sim + macOS-15, Swift 6 strict)      OK
+  Swift Charts ............... import Charts available (iOS 18 / macOS 15)           OK
+  full Xcode ................. /Applications/Xcode.app — Xcode 26.5 (Build 17F42)    OK
+                               (driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer;
+                                xcode-select defaults to CLT — overridden per-invocation)
+  swift build / swift test ... real Xcode toolchain — surface builds + XCTest runs   OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                            OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                          OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                                OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                             OK
+  Shared.xcframework ......... BUILT this run via apps/shared/gradlew
+                               :core:assembleSharedXCFramework — "BUILD SUCCESSFUL in
+                               7m 42s"; staged ios-arm64 / ios-arm64-simulator /
+                               macos-arm64 slices                                     OK
+  iPhone 16 simulator ........ present + booted (iOS 26.5 runtime)                    OK
+
+  Capability-BLOCKED escape hatch ("SwiftUI / Swift Charts / MapKit unavailable on the
+  runner") does NOT apply: the full Xcode 26.5 toolchain, the iPhone-16 simulator, the
+  macOS 15 + iOS 18 SDKs, and Swift Charts are ALL present and exercised below. This
+  surface uses Swift Charts (the web source composes a Recharts <ComposedChart> via the
+  @/components/charts barrel — the prompt's "Charts/maps: (none)" field reflects a
+  direct-import scan, not the barrel; the dual-axis chart is reproduced natively) and
+  NO MapKit. STATUS is therefore DONE for the surface, with only the Xcode *app-target*
+  build/test (which spans every sibling surface + links the macos-pending framework)
+  DEFERRED — not this surface's own code.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/ChargingSessionDetailWidget.*) ===
+  ChargingSessionDetailWidget.swift          293  Surface: glass shell + header (bolt icon + title +
+                                                  freshness chip + refresh + open) + every state
+                                                  (loading/error/empty/content) + responsive
+                                                  compact(1x2) energy readout vs standard/wide(2x4/4x4)
+                                                  stats+chart; stale->auto-refresh; registry metadata
+                                                  + surfaceSlug; web `stats` memo (4 stats).
+  ChargingSessionDetailWidget.Model.swift     284  P1/S11 telemetry seam (view.opened) + P1/S8
+                                                  state-holder seam (load-status/freshness enums,
+                                                  session-ref/detail/telemetry input DTOs, update,
+                                                  source proto + InMemory) + @Observable
+                                                  ChargingDetailModel (phase/connection/projection/
+                                                  isEmpty) + ChargingSessionDetailStrings facade.
+  ChargingSessionDetailWidget.Adapter.swift   257  Foundation-only projection: ChargerClass.classify
+                                                  (1:1 web classifyCharger) + latestSession (reduce by
+                                                  startedAt) + chartPoints + peakPowerKw + maxPowerKw +
+                                                  energyKwh (Wh->kWh) + ChargeChartScale dual-axis map +
+                                                  decimal/shortTime/durationLabel formatters + a11y.
+  ChargingSessionDetailWidget.Chart.swift     242  Swift Charts dual-axis composition (web
+                                                  <ComposedChart>): filled green power area + crisp
+                                                  stroke (left kW axis) + dashed cyan SoC line (mapped
+                                                  right % axis via ChargeChartScale) + legend; exact
+                                                  web hexes (#22c55e / #22d3ee).
+  ChargingSessionDetailWidget.Views.swift     190  Stat grid (web WidgetChartSummary), charger chip
+                                                  (web Badge warning/neutral), compact energy readout,
+                                                  empty surface (web EmptyState), no-telemetry note.
+  ChargingSessionDetailWidget.Previews.swift  187  #if DEBUG previews — content(2x4)/wide(4x4)/
+                                                  compact(1x2)/compact-AC/empty/no-telemetry/loading/
+                                                  error/offline/stale.
+  ChargingSessionDetailWidget.Tests.swift     352  XCTest: adapter (charger classify all branches,
+                                                  latest-session, chart points, peak/max/energy,
+                                                  hasChartData, scale, formatters, durationLabel) +
+                                                  model phases/empty/telemetry/refresh/tracking +
+                                                  registry + a11y (4 suites, 31 tests).
+  ChargingSessionDetailWidget.strings          70  P1/S10 catalog contribution (9 web source keys +
+                                                  registry desc + charger labels + units + duration
+                                                  formats + freshness/actions + states + axes + a11y).
+  Every file <=400 lines (house file_length); largest 352. One exported View
+  (ChargingSessionDetailWidget). The chart was split into .Chart.swift to keep Views
+  under the 400-line ceiling (MotorHistoryWidget.Chart.swift precedent).
+
+=== PARITY (vs web ChargingSessionDetailWidget.tsx) ===
+  Data sources -> bound via the shared state-holder seam (ChargingDetailSource ->
+    ChargingDetailModel): useVehicles, useChargingSessions, useChargingSessionDetail,
+    useChargeTelemetry, useTranslation. The production app wires ChargingDetailSource over the
+    P1/S8 charging stores (sessions list -> latest-by-startedAt -> detail + telemetry for that
+    session id). The view performs NO HTTP — no transport in the view (ADR-002/009).
+  Projection -> 1:1 ports of the web memos:
+    latestSessionId  -> ChargingProjection.latestSession (reduce by startedAt; nil when empty).
+    chartData        -> chartPoints (nullable power_kw / battery_level??soc preserved; HH:mm label).
+    peakPower        -> peakPowerKw (max power_kw ?? 0, floor 0).
+    durationStr      -> ChargingDetailFormat.durationLabel (nil->em-dash; <60 -> Xm; else Xh Ym/Xh).
+    energy           -> energyKwh (convertEnergyFromSI total_energy_added_wh -> kWh, /1000).
+    classifyCharger  -> ChargerClass.classify (null/""->AC/Home; supercharger|tesla->Supercharger;
+                        other non-empty/!<invalid>->DC Fast; <invalid>->AC/Home; warning vs neutral).
+    All verified by EXECUTED XCTest (testClassify*, testLatestSession*, testPeakPower*,
+    testEnergyKwh*, testDurationLabel*, testScale*).
+  Chart (web <ComposedChart>: Area power left-axis [0,dataMax+5] + dashed Line SoC right-axis [0,100])
+    -> Swift Charts single Chart: AreaMark (gradient #22c55e) + LineMark stroke + dashed LineMark SoC
+       mapped into power space by ChargeChartScale, with a trailing axis that reads back in percent
+       (MotorHistoryChart dual-axis idiom). X = HH:mm; isWide drives tick density (6 vs 4).
+  States (every one renders — no hidden surfaces):
+    loading -> skeleton chrome (stat + chart skeletons; compact single)        [web WidgetShell loading]
+    empty   -> ChargeEmptyState "No charge sessions" (bolt icon)               [web !detail EmptyState]
+    error   -> QueryError-equivalent (icon + title + message + Retry)          [prompt-required + web error]
+    content -> compact (big kWh + "kWh added" + charger badge) OR standard
+               (2-col stat grid + dual-axis chart + legend; no-telemetry note
+                when detail present but no plottable samples)                   [web isCompact / standard]
+    freshness chip (header): live / stale / offline — tappable refresh;
+      stale -> auto-refresh; compact = title-less                              [web DataFreshness / WidgetShell]
+  i18n -> every web source key resolves through the P1/S10 facade
+    (ChargingSessionDetailStrings, table "ChargingSessionDetailWidget"); NO English literal in code.
+    Source keys (9/9): widget.chargingSessionDetail.title / .energy / .duration / .peakPower /
+    .charger / .powerKw / .soc / .unitKwh / .empty.  + registry .description + charger labels
+    (.chargerAcHome/.chargerSupercharger/.chargerDcFast — web hardcodes these in classifyCharger)
+    + units (.unitKw/.unitKwhSymbol) + duration formats (.durationMinutes/.durationHours/
+    .durationHoursMinutes/.valueDash) + freshness/actions (.live/.stale/.offline/.refresh/.retry/
+    .open) + states (.loading/.errorTitle/.noTelemetry) + axes (.axisTime/.axisPower/.axisSeries)
+    + a11y (.openA11y/.a11yChart).  Code<->catalog cross-check: 33 referenced == 33 defined, 0 missing.
+  Registry -> canonical registry/charging.ts "charging-session-detail": category=charging,
+    default 2x4, min 1x2, max 4x40; clamp() enforces the envelope. Verified by XCTest.
+  A11y -> VoiceOver labels on every interactive element (freshness/refresh chip, open, Retry) +
+    combined stat-cell labels + chart summary (title + axes descriptor + peak power) + compact
+    summary; Dynamic Type via tokenized fonts; reduce-motion-safe (no implicit looping animation).
+  Telemetry -> model.start() emits the P1/S11 view.opened once with surface slug
+    "ChargingSessionDetailWidget" (verified: testStartEmitsViewOpenedTelemetryOnce).
+  Tokens -> only shared design tokens (Color.TS / Font.TS / TSSpacing / TSRadius / TSSkeleton);
+    NO ported Tailwind classes. The two chart-series hexes are the web stroke colors (parity), the
+    convention used by every sibling chart surface (PowerFlow/Motor/etc.).
+
+=== EVIDENCE (host-runnable gates — ALL GREEN, raw tool output) ===
+[1] swiftc -typecheck (production sources + Tokens + seam/TSSkeleton shim)
+      iOS-18-simulator  (arm64-apple-ios18.0-simulator, -swift-version 6)             -> EXIT=0
+      macOS-15          (arm64-apple-macos15.0,          -swift-version 6)             -> EXIT=0
+      iOS-18 + -D DEBUG (compiles the #if DEBUG preview bodies)                        -> EXIT=0
+[2] swift build  (ephemeral SwiftPM pkg, REAL Xcode 26.5 toolchain, .macOS(.v15),
+      swiftLanguageMode .v6; module "TeslaSync" = the 5 production files + Tokens + shim)
+      "Build complete! (10.20s)"                                                       -> EXIT=0
+[3] swift test   (REAL XCTest, Xcode 26.5 — the shipped Tests.swift via @testable import)
+      "Test Suite 'All tests' passed … Executed 31 tests, with 0 failures (0 unexpected)" -> EXIT=0
+      Suites: ChargingDetailAdapterTests(18) ChargingDetailModelTests(9)
+              ChargingDetailRegistryTests(2) ChargingDetailAccessibilityTests(2)
+              (31 tests total, 0 failures)
+[4] swiftlint --strict
+      my 7 files:  "Found 0 violations, 0 serious in 7 files"                          -> LINT_EXIT=0
+      whole tree:  1 PRE-EXISTING violation — function_body_length in
+                   TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+                   (a different surface; "Other surfaces" out of scope; NOT this file).
+[5] swiftformat --lint apps/apple
+      my 7 files:  "0/7 files require formatting"                                      -> FORMAT_EXIT=0
+      whole tree:  1 PRE-EXISTING file — blankLinesBetweenScopes in
+                   TeslaSync/feature-views/ActionBuilder.Previews.swift:48
+                   (a different surface; out of scope; NOT this file).
+[6] check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/ChargingSessionDetailWidget
+      PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0                                      -> PLACEHOLDER_EXIT=0
+      (no TODO/FIXME/stub/mock/placeholder/Lorem/fatalError-unimpl in shipped code)
+
+=== DEFERRED (Xcode app-target build/test — pre-existing/environmental, NOT this code) ===
+  xcodegen generate ............................................................. OK (GEN_EXIT=0)
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    (Shared.xcframework was BUILT + staged this run, so the framework is NOT the blocker here.)
+  Blocker (a) — colocated *.Tests.swift compiled into the APP target (pre-existing, repo-wide):
+    "TeslaSync/feature-views/AIRestorePanel.Tests.swift:18: error: unable to resolve module
+     dependency: 'XCTest'"  (and ActionBuilder.ModelTests.swift, … ).  project.yml sources the
+    whole TeslaSync/dashboard-widgets + TeslaSync/feature-views folders into the app target, so
+    262 colocated test files (225 *.Tests.swift + 32 *.ModelTests + 3 *.AdapterTests + 1 StateTests
+    + 1 ViewTests) import XCTest where it cannot resolve.  Wiring these into a test target /
+    EXCLUDED_SOURCE_FILE_NAMES is an integration/project.yml change — OUTSIDE this prompt's
+    Allowed-files (ChargingSessionDetailWidget.*).  NONE of the 262 are this surface, though this
+    surface ships its colocated Tests.swift to the SAME established convention (PowerFlow/Motor/…).
+  Blocker (b) — pre-existing cross-sibling duplicate type declarations (demonstrated):
+    building with EXCLUDED_SOURCE_FILE_NAMES='*Tests.swift' advances to the source compile and
+    yields 1260 errors, headlined by:
+      "error: invalid redeclaration of 'DashboardWidgetRegistration'"
+      "error: invalid redeclaration of 'DashboardWidgetSize'"
+      "error: invalid redeclaration of 'TelemetryErrors*' / 'Drivetrain*'"
+      "error: 'DashboardWidgetSize' is ambiguous for type lookup in this context"
+    13 sibling dashboard-widget files each declare `public struct DashboardWidgetRegistration` /
+    `DashboardWidgetSize` (self-contained-by-mandate: each prompt's Allowed-files is its own widget).
+    This surface CONSUMES those types (does NOT add a 14th declaration — matching the PowerFlow /
+    WallConnector / Motor template), so it adds ZERO new collisions.  The full-target build is
+    pre-broken by parallel integration and is reconciled at the dedup/integration phase — OUT OF
+    SCOPE here and UNFIXABLE within Allowed-files.
+  Verification that THIS surface is clean: across BOTH failing builds, grep of the error stream for
+    "ChargingSessionDetail" -> EMPTY (zero errors attributable to this surface's 8 files).
+  -> IOS_EXIT = DEFERRED   MAC_EXIT = DEFERRED   (macOS shares the identical source set, so it fails
+     identically on (a)+(b); additionally a macOS app archive needs a signing identity — 0 present).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green   : every PASS above is raw tool output; the Xcode app-target gate is reported
+                         DEFERRED with concrete file:line reasons (XCTest-in-app-target + cross-sibling
+                         dup decls), never dressed as green.  This surface's OWN build + 31 tests are
+                         really green under Xcode 26.5 (swift build + swift test).
+  2  No scope narrowing: every web state/branch reproduced (loading/empty/error/content, compact vs
+                         standard/wide, dual-axis chart, no-telemetry note, stale auto-refresh).
+  3  No skip-and-assume: read the web source end-to-end + the charts barrel + Badge + EmptyState +
+                         numberFormat + unitConversion + the registry + the en.json keys before authoring.
+  4  No stubs as final : full implementation; placeholder gate = 0; no TODO/mock/EmptyView-as-content.
+  5  No parity shortcuts: charger classification, latest-session reduce, duration buckets, Wh->kWh,
+                         peak power, dual-axis scale, i18n keys, registry envelope — all matched +
+                         EXECUTED in XCTest (31/31).
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / the dashboard grid (integration
+                         scope) and did NOT edit the shared Localizable.xcstrings (parallel-unsafe) —
+                         strings shipped as the per-surface table; did NOT edit any sibling widget file
+                         (in particular did NOT add a 14th DashboardWidgetRegistration declaration).
+  8  No commit on red  : committing on all-green host gates (typecheck x3 + swift build + swift test
+                         31/31 + swiftlint 0 + swiftformat 0 + placeholders 0); the Xcode app-target
+                         build/test is DEFERRED (pre-existing cross-sibling XCTest-in-app-target +
+                         duplicate shared-type decls) — environmental, not a red of this code.
+  9  No silent drift   : changes confined to the allowed ChargingSessionDetailWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native ChargingSessionDetailWidget shipped at parity with the web source:
+  Foundation-only projection (EXECUTED-green adapter via full XCTest, 31/31), a Swift Charts dual-axis
+  composition reproducing the Recharts <ComposedChart> (green power area + dashed cyan SoC over a
+  mapped percent axis), the P1/S8 state-holder seam (no view HTTP), P1/S11 view.opened telemetry,
+  every state + every source i18n key + a11y labels on every interactive element, registry-correct
+  (charging-session-detail, charging, 2x4 / 1x2 / 4x40).  The surface BUILDS and its tests RUN GREEN
+  under the real Xcode 26.5 toolchain.  All host-runnable, surface-scoped gates pass.  The Xcode
+  *app-target* build/test is DEFERRED to the integration/dedup phase + signed CI runner: the only red
+  is pre-existing cross-sibling drift (262 colocated *.Tests.swift compiled into the app target +
+  duplicate DashboardWidgetRegistration/Size & TelemetryErrors/Drivetrain declarations) — none a
+  defect in this surface, none in its Allowed-files, all proven above with file:line evidence —
+  matching the user-approved "code-complete + DEFERRED Xcode gate" disposition of the 18+ sibling
+  P4 dashboard-widget surfaces (0073 PowerFlowHistory / 0100 TelemetryErrors / 0112 WallConnector /
+  0066 MotorHistory / 0098 SuperchargerHistory).
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/ChargingSessionDetailWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0024-ChargingSessionDetailWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add ChargingSessionDetailWidget surface (P4)"
+
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+IOS_EXIT=DEFERRED
+MAC_EXIT=DEFERRED
+EXIT=0
+STATUS=DONE

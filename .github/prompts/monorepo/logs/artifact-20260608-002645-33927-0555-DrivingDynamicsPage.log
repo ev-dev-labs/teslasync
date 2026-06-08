@@ -1,0 +1,143 @@
+=== p4-apple · P7 · page:driving/DrivingDynamics — SwiftUI / HIG ===
+unit            = page:driving/DrivingDynamics
+kind            = page
+web route       = /driving-dynamics
+web source      = web/src/features/driving/pages/DrivingDynamicsPage.tsx
+target          = apple (macOS + iOS/iPadOS, adaptive, ADR-002/006)
+delegation      = none (FORBIDDEN honored)
+
+--- Honesty covenant disclosures (verbatim rules 1-10 honored) ---
+This log reports the gate truthfully. The apple build/lint/test triad CANNOT be
+executed in this environment, so per the prompt ("If no Xcode runner is available,
+the gate -> STATUS=BLOCKED") and p4-apple/README.md ("Requires macOS + Xcode
+runners ... prompts that can't run their gate are BLOCKED, not DONE"), the final
+status is BLOCKED. The implementation is complete and the runnable gates
+(SwiftLint --strict, SwiftFormat --lint, placeholder scan) are green; the blocker
+is purely the toolchain/artifact prerequisites, not the code.
+
+--- Environment facts (measured, not assumed) ---
+$ xcode-select -p
+/Library/Developer/CommandLineTools                # Command Line Tools only — no full Xcode
+$ ls apps/apple/Frameworks/Shared.xcframework
+ls: .../Frameworks/Shared.xcframework: No such file or directory   # KMP xcframework absent
+                                                                   # (shared-ledger: "deferred to macOS CI per S3")
+Consequence: xcodebuild + xcodebuild test cannot run (require full Xcode), and even
+with Xcode the link step would fail because Frameworks/Shared.xcframework (imported
+by 15 Sources/* facade files) is not built on this host.
+
+--- Repo-layout note (generator template drift, disclosed) ---
+The prompt metadata lists Output/Allowed/Gate paths under
+apps/apple/TeslaSync/Features/Driving/**. That directory does not exist; the actual
+checked-in layout (project.yml globs it) is the flat
+apps/apple/TeslaSync/feature-views/** surface directory, the convention used by all
+1436 sibling P3/P5/P6 files. The page was implemented there to compile + ship with
+the rest of the module. The placeholder + lint gates below were run against the real
+file locations (the template path would scan zero files and pass vacuously).
+
+--- Files created (apps/apple/TeslaSync/feature-views/DrivingDynamicsPage.*) ---
+Inputs.swift Update.swift Format.swift Stats.swift Projection.swift
+AnalyticsProjection.swift Projector.swift AnalyticsProjector.swift Model.swift
+swift Chrome.swift LiveSections.swift StatsSections.swift HistoryCharts.swift
+AnalyticsCharts.swift Coach.swift CoachDetail.swift CoachTable.swift Route.swift
+Previews.swift Tests.swift ModelTests.swift  + DrivingDynamicsPage.strings
+Edited (navigation registration): apps/apple/Sources/App/AppRouteParser.swift
+  ( added "/driving-dynamics": .driving deep-link alias )
+All 22 .swift files <= 400 lines (max 324) for the SwiftLint file_length rule.
+
+--- Architecture ---
+Self-contained SwiftUI surface bound through one @Observable DrivingDynamicsPageModel
++ a DrivingDynamicsSource seam (InMemoryDrivingDynamicsSource for previews/tests),
+Foundation+SwiftUI+Charts only (no `import Shared`; the production source is wired at
+integration, like every sibling surface). Pure Foundation projector ports the web
+derivations (computeMotorStats, speed buckets, accel scatter, power profile, coach
+style breakdown, tips) with SI->display conversion at the render boundary
+(unitConversion.ts `*FromSI`). All 11 web sections reproduced in render order:
+LiveMotorStatus, GForcePanel, PedalUsage, SpeedGearPanel, AutopilotSection,
+MotorHistoryCharts, MotorEfficiencyInsights, SummaryStats, DrivingCoachSection,
+DriveAnalyticsSection (with functional date-range filter), DrivingTips. Charts use
+native Swift Charts; gauges/cards use the P3 token components (TSGlassPanel,
+TSStatCard, TSMetricBar, TSEmptyState, TSSkeleton, TSFadeIn); colors/typography via
+the P2 Color.TS / Font.TS tokens; every visible string via the P1/S10 facade.
+
+--- Symbol-existence cross-check (compiler unavailable; verified statically) ---
+All referenced TS* components (TSGlassPanel/TSStatCard/TSMetricBar/TSEmptyState/
+TSSkeleton/TSFadeIn/TSMetricValue/TSTone/TSSpacing/TSRadius) resolve in Sources/* or
+the generated tokens. All Color.TS.* and Font.TS.* members resolve in
+apps/design/generated/apple/Tokens.swift. No MISSING symbols.
+Type-name collision scan vs the whole module: 1 found (DriveNumberFormat already in
+DriveOverviewChart.Adapter.swift with a different 2-decimal API) -> renamed mine to
+DrivingDynamicsNumberFormat (and its test class) to avoid redeclaration. Re-scan: 0
+collisions across all declared types + protocols.
+
+=== GATE ===
+# Gate commands per the prompt, run where runnable; honest exit codes recorded.
+
+$ ./apps/tools/check-placeholders.ps1 -Path <feature-views/DrivingDynamicsPage*.swift> -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0          # (template path Features/Driving does not exist; scanned the real files)
+
+$ swiftlint lint --strict (23 files: the 22 page files + AppRouteParser.swift)
+Done linting! Found 0 violations, 0 serious in 23 files.
+LINT_EXIT=0
+
+$ swiftformat --lint (22 page files + AppRouteParser.swift)
+0/23 files require formatting.
+FORMAT_LINT_EXIT=0
+
+$ xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync build
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+directory '/Library/Developer/CommandLineTools' is a command line tools instance
+BUILD_EXIT=1               # BLOCKED: no full Xcode runner + Shared.xcframework absent
+
+$ xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync test
+TEST_EXIT=blocked          # not reachable: depends on the build step above
+
+=== PARITY ===
+PARITY_REQUIRED=5
+[x] state  · loading data state
+       evidence: DrivingDynamicsPhase.loading (DrivingDynamicsPage.Model.swift) ->
+       DrivingDynamicsPage.content switch (DrivingDynamicsPage.swift) ->
+       DriveLoadingView (DrivingDynamicsPage.Chrome.swift). resolvePhase(.loading)
+       unit-tested in DrivingDynamicsPhaseTests (DrivingDynamicsPage.ModelTests.swift).
+[x] state  · error data state
+       evidence: DrivingDynamicsPhase.error(String) (DrivingDynamicsPage.Model.swift) ->
+       DriveErrorView with Retry (DrivingDynamicsPage.Chrome.swift). resolvePhase(.failed)
+       unit-tested in DrivingDynamicsPhaseTests.
+[x] state  · success data state
+       evidence: DrivingDynamicsPhase.content (DrivingDynamicsPage.Model.swift) ->
+       DrivingDynamicsPage.sections renders all 11 section views
+       (DrivingDynamicsPage.swift). testContentPhaseAndProjection
+       (DrivingDynamicsPage.ModelTests.swift).
+[x] string · dynamics.title
+       evidence: header DrivingDynamicsStrings.text("dynamics.title","Driving Dynamics")
+       (DrivingDynamicsPage.swift) + key in DrivingDynamicsPage.strings.
+[x] string · dynamics.subtitle
+       evidence: header DrivingDynamicsStrings.text("dynamics.subtitle","Live motor
+       telemetry, G-forces & driving analysis") (DrivingDynamicsPage.swift) + key in
+       DrivingDynamicsPage.strings.
+PARITY_COVERED=5
+
+--- Data states for every data source (web parity beyond the 5 required items) ---
+useMotorLatest   -> Live Motor Status: data grid / "Awaiting live motor data" empty.
+useMotorHistory  -> 3 history charts + efficiency + summary: per-trace "Awaiting motor
+                    telemetry data" empty; "No motor data recorded yet" empty.
+useDrives        -> Speed & Gear + Drive Analytics: em-dash placeholders / empty charts.
+useDrivingCoach  -> Driving Coach: per-panel empty states (style, trend, recs, table).
+Page-level loading / error / content phases bound to the primary motor query lifecycle.
+
+--- Acceptance criteria status ---
+[x] Every named web section reproduced (11/11, render order preserved).
+[x] All 5 parity items render from the bound @Observable state holder.
+[x] loading / empty / error implemented per data source.
+[x] All visible strings from the per-surface table (folds into Localizable.xcstrings);
+    zero hardcoded literals; key names match web.
+[x] Dark mode + Dynamic Type + a11y labels/traits + SI display units; SwiftUI-native.
+[x] SwiftLint --strict + SwiftFormat --lint + placeholder gate green.
+[ ] xcodebuild build + test green — BLOCKED (no full Xcode + Shared.xcframework absent).
+[~] navigation: additive Route helper + /driving-dynamics deep-link alias added; the
+    composition-root mount is deferred to integration (needs the Shared-backed source),
+    matching the sibling-surface "slot in at integration time" convention.
+
+EXIT=1
+STATUS=BLOCKED

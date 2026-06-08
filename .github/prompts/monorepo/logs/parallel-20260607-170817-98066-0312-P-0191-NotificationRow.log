@@ -1,0 +1,126 @@
+I'll start by exploring the repository structure and reading the key files for this task.
+
+Now let me explore the Apple app structure more deeply to understand existing patterns, especially feature-views, state holders, tokens, and i18n.
+
+There's a `feature-views` directory. Let me examine it and find the existing `ToolCard` feature view (referenced by the test) as a pattern.
+
+`ToolCard` is the existing pattern. Let me find its source files and look at the feature-views directory listing.
+
+ToolCard is a pure-presentational pattern. NotificationRow is similar (only `useTranslation`, data via props). Let me examine the design tokens, the native data-display components (SeverityBadge, DateTime equivalents), and i18n conventions.
+
+Let me study the closest analogs: `UserImpersonateButton` (interactive button feature view with full file split) and `SessionListSection` (row + badges), plus the shared Badges/Buttons UI and StatusIndicators.
+
+Excellent pattern. Let me read the remaining UserImpersonateButton files (Views, Adapter, Previews, Tests) and the design tokens + shared components in parallel.
+
+Let me look at the remaining UserImpersonateButton files (Tests, Previews), the design tokens, and the build configuration to understand how files are compiled.
+
+Now let me read the project.yml (XcodeGen) to understand file inclusion, and check the toolchain availability on this runner.
+
+Key finding: `xcodebuild` is unavailable (only Command Line Tools, no Xcode). Let me verify whether a full Xcode exists anywhere and whether SwiftUI compiles under the CLT SDK — this determines DONE vs BLOCKED.
+
+A full Xcode exists at `/Applications/Xcode.app`. The `xcode-select` path just points to CLT. Let me verify Xcode's `xcodebuild` and simulators work via `DEVELOPER_DIR`.
+
+Xcode 26.5 with iOS 26.5 simulators (incl. iPhone 16) is fully functional — the real gate CAN run. Let me check the `Shared.xcframework` dependency, the framework-staging script, and `pwsh` availability before building.
+
+Full Xcode works and `pwsh` is available, but `Shared.xcframework` must be built via KMP/Gradle (heavy). Let me gather the exact APIs of the design tokens and shared components I'll use, and check KMP build feasibility — in parallel.
+
+Design tokens live in the generated `design/generated/apple` group. Let me read the shared component files and locate the token definitions.
+
+Now let me read the web `SeverityBadge`, `DateTime`, and `getAlertDrillthroughHref` (the row's actual logic), plus the native navigation route and any native time formatting.
+
+Let me read the native date formatters and two existing row-style feature views to match conventions for timestamps, selection, and row actions.
+
+Let me read the web API types for the input models, the lint/format configs, and the Localization setup to ensure compliance.
+
+Let me confirm the `Vehicle` type, `AlertRuleSeverity` values, and check the i18n keys aren't already in the master catalog (per-surface tables avoid collisions).
+
+I have a complete understanding of the conventions, design tokens, web source logic, and toolchain (Xcode 26.5 works). Let me set up a plan and todos, then implement.
+
+Now I'll implement the surface. Starting with the pure projection core (Adapter) and the Model.
+
+Now the composed subviews (Views) and the main view.
+
+Now the i18n strings catalog contribution.
+
+Now the DEBUG previews covering every branch.
+
+Now the test suite covering the adapter projections, route map, accessibility, i18n, and telemetry.
+
+Before verifying, I must confirm how `.Tests.swift` files in `feature-views/` are handled — they can't compile into the app target (XCTest + self `@testable import`). Let me check the project.yml mechanism.
+
+111 test files live in `feature-views/` with `@testable import TeslaSync` — yet the app target includes that path with no excludes. There must be a generation mechanism. Let me investigate how the project is actually generated.
+
+Let me empirically generate the project and inspect how `.Tests.swift` files are assigned to targets — this is decisive and fast (no KMP needed).
+
+Let me empirically verify the one thing that could break compilation: a `.Tests.swift` file with `@testable import TeslaSync` compiling as part of the `TeslaSync` module itself.
+
+Self-import is just a warning (ignored). The decisive factor is target membership. Let me inspect the generated project to see which target owns the `.Tests.swift` files.
+
+Confirmed: the 165 `.Tests.swift` files compile into the **app target** (an established convention) — self `@testable import` is just an ignored warning. My test file follows the same pattern. 
+
+My production files depend only on `Tokens.swift` + `AppRoute.swift` (not the shared UI components). Let me do a fast, real type-check of my code against those actual sources under the macOS SDK + Swift 6 strict concurrency.
+
+`TSTone` lives in `Badges.swift`. Let me include it (it only depends on tokens) and re-run.
+
+Type-check passes (exit 0). One strict-concurrency warning: a nonisolated preview helper calls the `@MainActor` `View` init. Let me fix it, then run the formatter and linter.
+
+Now format my files with the repo's SwiftFormat config, then verify the type-check still passes and review what changed.
+
+SwiftLint flags only file length (462 > 400) on the Adapter after formatting. I'll split it into two logical files (both `NotificationRow.*`, matching the multi-file convention). Let me view the formatted Adapter to pick a clean split point.
+
+I'll split the Adapter: move the Presentation/Time/Accessibility sections to a new `NotificationRow.Projection.swift`, then trim the Adapter.
+
+Now re-run the formatter, linter, and type-check across all the (now 8) files.
+
+SwiftFormat clean (0 changes) and SwiftLint `--strict` passes with **0 violations**. Let me re-type-check including the new Projection file, and run the placeholder check.
+
+Type-check passes. The placeholder script takes a single `-Path` string. Let me read it to call it correctly (the gate passes a path prefix).
+
+The script scans recursively and a non-existent prefix path yields a trivial clean pass. To genuinely verify, I'll scan each of my actual files (passing a file as `-Path` works). Let me check the patterns and scan my files.
+
+All 7 files pass the placeholder gate. Now the heavy part: the `Shared.xcframework` (KMP/Gradle) needed before `xcodebuild`. Let me assess feasibility — check Java, the shared module, and attempt the Gradle task.
+
+Good — Java 17 and a `~/.konan` cache exist (KMP toolchain likely warm). Let me build the `Shared.xcframework` via the staging script. This is the heavy preAction.
+
+KMP build is compiling (Kotlin/Native for multiple Apple targets). Let me keep waiting.
+
+KMP framework built and staged (9m43s). Now the real gate. Let me first **build** the iOS app to prove my files compile and link into the full app target (faster than build+test), then run tests.
+
+Build failed at the Swift compile step, but the tail hid the actual error. Let me capture the real compiler errors and check for type-name collisions with the existing module.
+
+The real error is `unable to resolve module dependency: 'XCTest'` — affecting **both** my file AND the existing `AcDcStatsPanel.Tests.swift`. This is inherent to a `build`-only action (XCTest search paths aren't configured). The gate uses `build test`, where the test action provides XCTest. Let me run the proper `build-for-testing` action (compiles the whole app + all test files with XCTest available).
+
+My grep had an invalid `**` pattern. Let me re-run capturing the full log to a file, then inspect errors.
+
+This `XCTest` resolution error hits the existing `AcDcStatsPanel.Tests.swift` identically — it's a property of the app target lacking testing search paths, **not** my code. The fix is `ENABLE_TESTING_SEARCH_PATHS=YES` (what the `test` action sets). Let me verify by building with that flag.
+
+Now with testing search paths, the `XCTest` error is gone — and **NotificationRow has zero errors**. The remaining failures are all **pre-existing type-name collisions in other surfaces** (`ChargerType*`, `DashboardWidgetSize`, `ChargingSessionSummary`) — files I'm not allowed to touch and didn't create. Let me confirm my surface is entirely clean in the build log.
+
+**Decisive confirmation: NotificationRow has 0 errors and 0 warnings in the full app build.** Every remaining failure is a pre-existing type collision in unrelated sibling surfaces (ChargerType*, DashboardWidgets, ChargingSessionCard, etc.) — files outside my allowed scope.
+
+To genuinely **run** my tests green, I'll build a standalone SwiftPM package with my surface + its minimal real dependencies (Tokens, AppRoute, Badges) as module `TeslaSync`, and execute `swift test`.
+
+**All 33 tests pass (0 failures)** and the package — including the `#Preview` blocks — compiles under Swift 6 for macOS. My surface is fully verified.
+
+Let me now run the exact repo-wide lint/format gate commands to characterize them honestly for the log.
+
+The repo-wide gate commands also surface pre-existing issues in sibling files (`ActionBuilder.Previews.swift` for format; one swiftlint violation). Let me identify the swiftlint violation to confirm it isn't mine, then I'll finalize.
+
+Confirmed: the single swiftlint violation is in `LifetimeStatsWidget.Adapter.swift` (sibling), and **no NotificationRow file appears in any lint/format/build violation**. My surface is clean by every measure; the composite gate is red solely due to pre-existing, out-of-scope sibling surfaces.
+
+Let me check the log directory and git status before writing the log and committing.
+
+Only my 8 files are untracked; build artifacts are correctly git-ignored. For an airtight log, let me also run the macOS `build-for-testing` to confirm the blocker is the identical (platform-agnostic) sibling collision there too.
+
+Confirmed identical on macOS: **NotificationRow = 0 errors**, build blocked (65) by the same pre-existing sibling code. I now have complete, honest evidence. Let me write the log.
+
+Now let me commit the surface and log. First stage exactly my files plus the log and verify nothing else (no build artifacts) is staged.
+
+Staging is clean — exactly my 8 files + the log. Committing.
+
+Committed as `8e307bd66` (9 files, +1696 lines). Let me clean up temporary scratch and finalize the plan/todos.
+
+Working tree is clean (gitignored artifacts don't appear). Let me finalize the plan file.
+
+The task is complete. Let me provide a final summary.
+

@@ -1,0 +1,168 @@
+I'll start by exploring the repository structure and understanding both the web source and the existing Apple app architecture.
+
+Now let me explore the Apple app structure, the web API hook, and supporting architecture.
+
+Let me explore the Apple app's Features directory and find existing similar pages to use as templates.
+
+This is a large, mature codebase. Let me find existing Page implementations and key architecture files to follow the established patterns.
+
+Let me check tool availability and examine the existing CommandSearch feature group (closely related) to learn the exact patterns.
+
+`xcodebuild` requires full Xcode (only CLT installed) — build/test gates will be BLOCKED, but swiftlint + placeholder scan work. Let me study the CommandSearch feature group thoroughly as the closest analog.
+
+Excellent — this is a sophisticated per-surface architecture. Let me read the remaining CommandSearch files plus the design tokens and a data-table example to fully internalize the patterns.
+
+Let me examine the design tokens, the remaining CommandSearch files (Views/Previews/Tests), and the app navigation/shell structure.
+
+Now let me read the design tokens, the SharedFacade (KMP core access), and survey the shared component library.
+
+Let me examine the SharedFacade (KMP core access), the App/navigation structure, and the shared component library.
+
+Let me read the navigation/routing files and the SharedFacade KMP core access pattern.
+
+Let me read AppShell and the SharedFacade core access pattern, and check how routes get registered.
+
+Let me read the registration pattern, KMP core access, and the shared components I'll reuse.
+
+`Shared.xcframework` is absent (only `.gitkeep`) — confirming build is BLOCKED regardless of Xcode. The CommandSearch pattern avoids `import Shared` via a Source protocol, which I'll follow. Let me check the route tests and reusable components before deciding on nav registration.
+
+`RouteHostRegistry` is explicitly "populated by P7 page prompts to host content at a route" — so adding an `AppRoute` case is the intended design. Let me verify the blast radius across allCases-iterating tests and the app wiring before deciding.
+
+Let me read the rest of project.yml (test targets) and the app entry point to understand wiring.
+
+There are 204 `.Tests.swift` files in `feature-views/` importing XCTest with no excludes — confirming the project is in a pre-integration (unbuildable) state. I'll follow the established co-located convention. Let me read the swiftlint config, Previews example, and the components I'll reuse.
+
+Let me read the reusable components: Cards, Tabs, States, Lists, Typography, and search for Pagination/PageContainer/RangePicker equivalents.
+
+I have the core patterns. Let me confirm the exact APIs of the remaining shared components I'll use (Tabs, States, Typography, Pagination, Pickers, Layout) via targeted searches.
+
+I now have all component APIs. Let me read the app entry point (to wire route registration) and inspect the xcstrings catalog structure.
+
+Now I'll verify the blast radius of adding an `AppRoute` case — specifically any exhaustive `switch` over routes that would fail to compile, plus the menu catalog test.
+
+I have enough architectural understanding. Let me read the container/live-connection seam and units facade to ground the production-source pattern, then start building.
+
+I now have a complete understanding of the architecture. Let me set up a plan and todo tracking, then verify the xcstrings round-trip approach before writing files.
+
+The file isn't sorted — re-dumping would reorder 131k lines. Let me test a no-sort round-trip to see if `json.dump` reproduces the exact format.
+
+`json.dumps(indent=2, ensure_ascii=False)` reproduces the file exactly — so I can append keys with a minimal diff. Now let me verify the swiftlint file-length convention (under `--strict`, default `file_length` warning at 400 fails the build).
+
+Baseline strict lint is clean. Now I'll create the directory and start building the Foundation-only core (Models, Projection, Adapter). Let me update todos and create the directory.
+
+Now let me write the Foundation-only core. First, the Models file:
+
+Now the Projection types (projected output + a11y + surface slug):
+
+Now the command-label catalog + name/time formatters (kept separate to keep files modular):
+
+Now the Adapter (the pure projector porting the web `stats`, `filtered`, `paginatedCommands`, `buildSubtitle`, and phase logic):
+
+Let me lint the Foundation-only core early to catch issues before building on it.
+
+Core lints clean. Let me typecheck the Foundation-only core to catch compile errors (these 4 files only import Foundation):
+
+Real compile error: the `page:` parameter shadows the static `page(_:page:pageSize:)` method. Let me qualify the call:
+
+Core typechecks cleanly under Swift 6. Let me mark core done and write the Observable model.
+
+Now the state-envelope views (loading / empty / error), reusing shared feedback components:
+
+Now the sub-views (stats grid, filter bar, search field, timeline rows, vehicle picker):
+
+Let me check the exact Typography APIs (TSText variants, TSSubhead, TSPageTitle) and Tabs rendering before writing the page.
+
+APIs confirmed. Let me add a `statPlaceholder` accessor to the model, then write the main page scaffold.
+
+Now the navigation registration file. Following the repo's `Unavailable*` pre-integration seam pattern (like `UnavailableVehicleCommanding`):
+
+Now wire the `commandHistory` route into `AppRoute` (case + pathSegment + systemImage + group):
+
+Now wire it into the app's route registry composition:
+
+Now add the new source directory to both app targets in `project.yml` (disambiguating the two identical source blocks via their unique bundle IDs):
+
+Now let me verify the View files typecheck against the real shared components. First, identify which Components/Design/App files import `Shared` (must be excluded from a standalone typecheck):
+
+No `Shared` imports in the component/design/app layers — so I can typecheck my view files against the real shared library. Let me run a full typecheck of the new page (minus the XCTest file) together with the design tokens, component library, and route files.
+
+Zero errors reference my files. Let me inspect what's failing (likely cross-dependencies from compiling only a subset of the library):
+
+All 52 errors are in `UnitFormatters.swift` (it depends on `Shared`-backed `UnitPreferences`, which I excluded). My files are clean. Let me re-run excluding that one Shared-dependent file to get a definitive verdict:
+
+My view files typecheck cleanly against the real component library under Swift 6. Let me add `initialStatus`/`initialQuery` params to the model init (useful for previews/tests of filtered states), then write previews and tests.
+
+Now the Previews file exercising every data state plus light/dark:
+
+Now the comprehensive unit tests (projector + model + accessibility):
+
+I spotted a test-setup bug: `InMemoryCommandHistorySource` pushes its `initial` update on `start()`, so content-expecting tests must seed `loaded()` rather than an empty update. Let me fix those tests:
+
+Now let me actually **run** the core projection logic to verify it produces correct values (compiling the Foundation core + a driver into an executable):
+
+Top-level code needs to be in `main.swift`. Let me rename and rerun:
+
+All runtime logic checks pass. Let me extract every catalog key my Swift references, to add them all to the string catalog:
+
+All 28 page keys captured (plus `route.commandHistory` derived in AppRoute). Let me inject all 29 keys into the catalog with a minimal, format-preserving append:
+
+All 30 keys added cleanly. Let me confirm the diff is minimal (pure additions) and verify a sample key resolves:
+
+Minimal, clean diff (330 additions + 1 comma change). Now let me run the gate checks — swiftlint `--strict` on the whole directory, then a full typecheck including previews (`-D DEBUG`):
+
+Swiftlint linted the whole project (config `included`) and found 1 violation. Let me locate it:
+
+The 1 violation is pre-existing in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (not my code — swiftlint expanded to the config's `included` dirs). Let me confirm my 11 files are clean under the repo config with an explicit-file lint:
+
+My 11 files lint clean; the lone project violation is in an untouched file. Now the full typecheck including previews (`-D DEBUG`), after all edits:
+
+The 2 errors are both the `#Preview` macro plugin being unavailable to CLI `swiftc` (Xcode-only) — it affects existing repo previews (Typography.swift) identically. Let me confirm there are no non-macro errors:
+
+Only the pre-existing `Typography.swift` preview-macro error (Xcode-only tooling); zero real errors in my code. Now the placeholder scan (gate step). Let me locate and run it:
+
+The scan flags the literal word "placeholder" — my legitimate uses (the em-dash fallback identifier, SwiftUI's `.redacted(reason: .placeholder)`, and comments). Let me read the scanner to understand exactly what it matches:
+
+The scanner flags the word "placeholder" and supports a `// parity:allow <reason>` opt-out. Let me see every occurrence to decide rename vs. reword vs. justified opt-out:
+
+The scanner matches the word "placeholder". I'll rename my `placeholder` identifier to `missingValue`, reword comments, and use the documented `// parity:allow` opt-out only for the two unavoidable cases (the SwiftUI `.placeholder` redaction API and the manifest-required `searchPlaceholder` key name). Starting with Models:
+
+Now Projection comment, Views (param rename + comment + opt-out), and Page (rename + opt-out):
+
+Now re-run the placeholder scan and re-verify typecheck + lint after the renames:
+
+Placeholder gate is green (COUNT=0, 2 justified opt-outs). Now re-verify typecheck and lint after the renames:
+
+Two lines now exceed 120 chars (swiftlint counts the opt-out comment). Let me restructure: move the `searchPlaceholder` key literal to a short dedicated constant line, and trim the redaction reason.
+
+Now re-verify all three gates (lint, placeholder, typecheck) together:
+
+All three gates green. Let me re-run the runtime logic driver (core files were edited) and confirm no stale identifier references, plus validate the project generates:
+
+Let me validate the project wiring by generating the Xcode project (confirms `project.yml` + new source path are valid):
+
+Project generates cleanly with my files in all targets (60 refs), and is gitignored. Now let me capture the honest `xcodebuild` status for the log (expected BLOCKED — only CLT, no full Xcode):
+
+`xcodebuild` confirmed BLOCKED (only Command Line Tools, no full Xcode) — the prompt's anticipated `STATUS=BLOCKED` condition. Let me check existing log conventions and the ledger schema before writing the artifacts.
+
+There's strong `STATUS=BLOCKED` precedent in the P4-apple feature-view logs. Let me read one as the canonical template for format, PARITY section, and BLOCKED representation:
+
+The precedent reveals Xcode may be available via `DEVELOPER_DIR` even though the default `xcode-select` path is CLT. Let me check for a full Xcode install:
+
+Xcode 26.5 **is** available via `DEVELOPER_DIR` (the default `xcode-select` is just CLT). This matches the precedent exactly — so I can run the full isolated gate suite. Let me check swiftformat and run it on my files:
+
+swiftformat wants to wrap some long lines (mostly in Tests). Let me auto-fix with the ecosystem tool, then re-verify everything:
+
+Excellent — swiftformat, swiftlint all green; files under 400 lines. With Xcode available, let me actually **run** the XCTest suite via a temporary SwiftPM package (the strongest verification). First checking for basename collisions in the library subset:
+
+No collisions. Let me build a temporary SwiftPM package and run the actual XCTest suite:
+
+All **29 XCTest tests pass** against the real component library under Swift 6. Now the dual-SDK isolated typechecks (iOS-simulator + macOS, ADR-002) including the `#Preview` macros, matching the precedent:
+
+Both SDKs compile clean with previews. Now let me document the full-app `xcodebuild` status by confirming the two pre-existing baseline blockers the precedent cites (absent KMP framework + a redeclaration in dashboard-widgets):
+
+Both pre-existing baseline blockers confirmed (absent KMP framework + 15 `DashboardWidgetSize` redeclarations — none in my files). Let me capture a time-boxed real `xcodebuild` attempt as additional evidence:
+
+The build is staging the KMP `Shared.xcframework` via Gradle (multi-minute, as the precedent documented). Let me wait a bit more, then stop and capture:
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: F4B6:DE6CE:111CE90:1212FAB:6A26F512)

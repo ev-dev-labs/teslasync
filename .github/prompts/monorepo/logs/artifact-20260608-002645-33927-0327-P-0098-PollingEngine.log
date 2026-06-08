@@ -1,0 +1,243 @@
+=== P4 Shared surface 0098 PollingEngine (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon).
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer.
+                       The active dir is /Library/Developer/CommandLineTools (so a bare `xcodebuild -version`
+                       errors "requires Xcode"); the DEVELOPER_DIR override is non-destructive (no sudo, no
+                       `xcode-select -s`), the SAME mechanism every prior P4 surface used (see
+                       p4-apple-feature-views-0237-AiUsageCard.log).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2.
+  Capability         : SwiftUI present; iOS / macOS / watchOS / visionOS 26.5 simulator runtimes installed
+                       (iPhone 16 sim present + booted). This surface uses NO Charts and NO MapKit (the web
+                       source has none either — prompt "Charts / maps used: (none)"), so the iOS 18 / macOS 15
+                       HIG primitives it needs are all available → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification — read end to end)
+  web/src/components/data-display/PollingEngine.tsx — the `PollingEnginePanel` (Adaptive Polling Engine card)
+  built on the two polling queries (`getPollingStatus` @ 15s, `getPollingSavings` @ 30s):
+
+    Gate            : `if (!status?.enabled) return null` — the WHOLE surface is withdrawn while the engine is
+                      disabled (or the status query has not resolved). No DOM mounts until enabled.
+    Header          : TrendingDown glyph + "Adaptive Polling Engine" + an "Active" badge.
+    SavingsCard     : when `savings` present — a 4-up metric grid
+                        [ savings_percent (1dp) + "%"  (emerald),
+                          "$" + estimated_savings (2dp) (emerald),
+                          polls_made (int),
+                          "$" + remaining_credit (2dp) ]
+                      then, when `total = Σ savings_breakdown > 0`, a stacked bar of the positive slices
+                      (fleet_telemetry blue / idle_detection amber / prediction purple / sleep_detection gray;
+                      width = value/total) + a legend listing all four categories.
+    VehicleActivity : for each vehicle — a tap-to-expand row: activity glyph (scale-pulsing ONLY when
+                      activity==='active'), vin.slice(-8) (mono), "{activity} · {profileLabel(profile)}" chip,
+                      "Next: {formatTimeUntil(next_poll_after)}", a disclosure chevron. Expanded (only when
+                      last_decision present): "Interval: {formatDuration(next_interval_ms)}",
+                      "Consecutive idle: {consec_idle}", "Battery: {battery_level}%", each reason as "→ {r}",
+                      and an optional prediction: "📊 Prediction: {next_state} in
+                      {formatDuration(estimated_in / 1e6)} ({round(confidence*100)}% conf)" + "Based on:
+                      {based_on}".
+    Empty           : enabled but `vehicles.length === 0` → "No vehicles tracked yet. Polling engine will
+                      activate on first poll."
+  Helpers (reproduced verbatim — arithmetic is the contract):
+    formatDuration(ms)   = ms<=0 ? "now" : floor(ms/1000)<60 ? "{s}s" : floor(s/60)<60 ? "{m}m"
+                             : "{h}h {m%60}m"   (bare template-literal numbers — NO grouping).
+    formatTimeUntil(iso) = diff = parse(iso)-now ; diff<=0 ? "now" : formatDuration(diff).
+    activityColor/icon   = active|critical → green/bolt · moderate → blue/battery · low → amber/waveform ·
+                             idle → gray/moon · sleeping → slate/moon · default → gray/gauge.
+    profileLabel         = driving/charging/idle/sleeping → Title-case; else the raw profile.
+    fmtNumber(v,d)       = safeNumber(v).toLocaleString(locale,{min/maxFractionDigits:d}) ; AnimatedNumber
+                             renders fmtNumber(value, decimals).
+  i18n  : the web source calls t() only in SavingsCard — the eight `polling.*` keys
+          (pollsSaved / savedAmount / pollsMade / creditLeft / fleetTelemetry / idleDetection / prediction /
+          sleep). Every other string is a hardcoded English literal; per the native no-English-literals rule
+          each is promoted to a `pollingEngine.*` key (table "PollingEngine"). The eight web keys are kept
+          VERBATIM so "every i18n key from source has a matching key" is literally satisfied.
+
+ARTIFACTS SHIPPED  (allowed files: apps/apple/TeslaSync/shared-surfaces/PollingEngine.* + this log)
+  PollingEngine.Adapter.swift     — pure Foundation core: PollingNumber (port of numberFormat.ts
+                                    fmtNumber/fmtInt + safeNumber guard), PollingISO (lenient parse),
+                                    PollingDuration (.bucket(ms) = formatDuration ; .until(iso,now) =
+                                    formatTimeUntil), PollingTint role, PollingActivity (activityColor/icon +
+                                    active-only pulse), PollingProfile, PollingPredictionMath (estimated_in/1e6,
+                                    round(conf*100)), the input DTOs (PollingSavings/Vehicle/Decision/Prediction),
+                                    PollingAccessibility.
+  PollingEngine.ViewState.swift   — the resolved value types (PollingResolved + Phase, PollingMetric(+emphasis),
+                                    PollingBreakdownSegment, PollingLegendItem, PollingSavingsViewData,
+                                    PollingVehicleViewData, PollingVehicleDetail, PollingPredictionViewData).
+  PollingEngine.Model.swift       — P1/S8 state-holder seam (PollingEngineSource + @Observable
+                                    PollingEngineModel + InMemory source), P1/S11 telemetry seam
+                                    (PollingEngineTelemetry + OSLog sink, view.opened surface="PollingEngine"
+                                    deferred past the gate), PollingConnection axis, the PollingEngineInput
+                                    snapshot, P1/S10 PollingEngineStrings facade (string + %@ format).
+  PollingEngine.Projection.swift  — pure PollingProjection: gate → error → loading → empty → data; the 4 savings
+                                    metrics, the breakdown bar (positive slices only) + the always-full legend,
+                                    the vehicle rows (chip / next-poll / expanded interval-idle-battery-reasons-
+                                    prediction); durationLabel + profileLabel leaf helpers.
+  PollingEngine.swift             — the surface: `!enabled` gate wrapper (EmptyView) + card chrome (header
+                                    title + Active badge + freshness chip + refresh, banner, phase switch,
+                                    TSFadeIn data body); static surfaceSlug = "PollingEngine"; onAppear start /
+                                    onDisappear stop.
+  PollingEngine.Views.swift       — the SavingsCard regions as scoped subviews: PollingTintStyle (tint role →
+                                    chart/status tokens), metric grid (numericText count-up), breakdown bar,
+                                    legend.
+  PollingEngine.Vehicles.swift    — the VehicleActivity rows: section header / inline empty note, expandable
+                                    row (pulsing glyph, mono VIN, activity chip, next-poll, chevron), expanded
+                                    decision detail, prediction sub-panel.
+  PollingEngine.Chrome.swift      — Active badge, freshness chip, refresh button, stale/offline banner, loading
+                                    skeleton, retryable error (TSButton), full-body empty state.
+  PollingEngine.Previews.swift    — #if DEBUG #Preview for data / savings-only / empty / loading / error /
+                                    stale / offline / gated.
+  PollingEngine.strings           — P1/S10 catalog (table "PollingEngine"): the 8 verbatim web `polling.*`
+                                    parity keys + the promoted literals + the P4 leaf chrome (42 keys total;
+                                    every key the Swift resolves is present — verified by diff).
+  PollingEngine.Tests.swift       — projection (gated/loading/empty/error/data, savings metrics + breakdown +
+                                    legend, vehicle rows + expanded detail + prediction) + model (wiring,
+                                    gated/deferred telemetry, stale one-shot auto-refresh, re-arm, slug).
+  PollingEngine.AdapterTests.swift— number/integer formatting, duration buckets + time-until, ISO parse,
+                                    activity tint/icon/pulse, profile parse, prediction math, breakdown total,
+                                    short-VIN, leaf labels, accessibility.
+  (12 files; the surface is split across .Adapter/.ViewState/.Model/.Projection and .Views/.Vehicles/.Chrome and
+   .Tests/.AdapterTests purely to keep every file within the repo's 400-line SwiftLint file_length budget — the
+   same multi-file decomposition the prior P4 surfaces use, e.g. feature-views/AiUsageCard.*. No name collision:
+   there is no pre-existing `pollingengine*` path anywhere under apps/apple, so the files write cleanly — unlike
+   0237's Ai/AI case-variant collision.)
+
+WIRING NOTE  (no predecessor bypass; disclosed in full)
+  apps/apple/TeslaSync/shared-surfaces is a NEW directory; it is NOT yet listed in the app targets' `sources:`
+  in apps/apple/project.yml, nor in `included:` in apps/apple/.swiftlint.yml. Adding those paths is cross-cutting
+  wiring owned by the P4-core / P99 acceptance integration — and this prompt's allowed-files are exactly
+  PollingEngine.* + this log, so project.yml / .swiftlint.yml were intentionally NOT touched. Consequences,
+  handled honestly:
+    • swiftlint --strict (whole .swiftlint.yml config) does not auto-include shared-surfaces, so the surface was
+      linted by passing the 11 files EXPLICITLY (raw exit below) — a genuine, non-vacuous strict lint.
+    • swiftformat --lint apps/apple DOES cover shared-surfaces (no exclusion) → already green there.
+    • The surface's real build/test verification is the ISOLATED SwiftPM gate below (it compiles the EXACT
+      shipped sources against the REAL design system); the full-app xcodebuild gate is DEFERRED for the
+      pre-existing reasons below AND would not compile these files until the P4-core wiring lands.
+
+PARITY MAPPING  (web → Apple platform tokens; no Tailwind ported, no raw hex)
+  SavingsCard metric grid (grid-cols-2 sm:grid-cols-4)  → LazyVGrid(.adaptive 120) of metric cells
+  AnimatedNumber(value, decimals)                       → pre-formatted value Text + .contentTransition(
+                                                          .numericText()) (rolls digits on a refreshed snapshot;
+                                                          deterministic at rest for snapshots); emerald vs
+                                                          text-primary → statusSuccess vs textPrimary
+  stacked breakdown bar (width value/total)             → GeometryReader capsules, width = geo.width * fraction
+  breakdown colours blue/amber/purple/gray              → chartSeriesSpeed / statusWarning / chartSeriesPower /
+                                                          textMuted (PollingTintStyle); activity slate →
+                                                          textMuted.opacity(0.65)
+  activityColor / activityIcon                          → PollingActivity.tint / .systemImage (bolt.fill /
+                                                          battery.100.bolt / waveform.path.ecg / moon.fill /
+                                                          gauge.medium); pulse only when active
+  vin.slice(-8)                                         → String(vin.suffix(8))
+  formatDuration / formatTimeUntil                      → PollingDuration.bucket / .until + durationLabel (bare,
+                                                          non-grouped magnitudes — matches `${s}s` / `${h}h`)
+  estimated_in / 1e6 ; round(confidence*100)            → PollingPredictionMath (verbatim)
+  fmtNumber                                             → PollingNumber.number/integer (NumberFormatter .decimal,
+                                                          grouping, halfUp, safeNumber)
+  "$" money prefix / "%" suffix                          → catalog keys pollingEngine.moneyValue "$%@" /
+                                                          pollingEngine.percentValue "%@%%" (web hardcodes "$";
+                                                          routed through the catalog so it stays localizable)
+  i18n                                                  → every string via PollingEngineStrings (NSLocalizedString
+                                                          table "PollingEngine", web literal as value: fallback);
+                                                          %1$@/%2$@ positional templates for word order
+  a11y                                                  → metric/legend/segment/row combined into single elements
+                                                          ("{label}: {value}"); row exposes isButton + expanded/
+                                                          collapsed value + hint; chevron/glyph/icons hidden;
+                                                          Dynamic Type via tokens; Reduce Motion gates the pulse,
+                                                          numericText, disclosure + TSFadeIn/TSSkeleton
+  telemetry                                             → view.opened surface="PollingEngine" emitted once on the
+                                                          first NON-gated apply (mirrors the web mounting nothing
+                                                          while disabled)
+
+STATES (every non-gated one renders — no hidden surface)
+  gated    → engine disabled / status unresolved → the whole surface is withdrawn (EmptyView), reproducing web
+             `!status?.enabled → null`. NOT a hidden section: when enabled but no vehicles, the empty state shows.
+  loading  → skeleton metric grid + bar + two vehicle rows (P4 leaf; the web mounts nothing while the first fetch
+             is in flight — the leaf shows chrome instead of a flash of nothing).
+  empty    → "No vehicles tracked yet. …" with a friendly icon (web enabled with no savings + no vehicles), never
+             a blank box. The savings-present + no-vehicles case renders savings + the same note inline.
+  error    → retryable error chrome (P4 leaf addition; the web has no error branch).
+  data     → SavingsCard (4 metrics + breakdown bar + legend) + the VehicleActivity rows with expandable detail.
+  stale    → header chip + banner + one-shot auto-refresh on the live→stale transition.
+  offline  → header chip + banner over last-known content; no auto-refresh.
+
+GATES  (raw exits below; per-surface scope)
+  [GREEN] swiftformat --lint  (.swiftformat, apps/apple)        : 0/11 files require formatting        FORMAT_EXIT=0
+  [GREEN] swiftlint --strict  (.swiftlint.yml, 11 swift files)  : 0 violations, 0 serious in 11 files  LINT_EXIT=0
+  [GREEN] check-placeholders.ps1 (-Language swift, shared-surfaces) : PLACEHOLDER_ALLOWED=0
+                                                                      PLACEHOLDER_COUNT=0               PLACEHOLDER_EXIT=0
+          (the gate's literal `-Path …/PollingEngine` prefix scans the same fileset; run here on the containing
+           directory — which holds ONLY PollingEngine.* — for a genuine, non-vacuous scan. Script self-test PASS.)
+  [GREEN] ISOLATED build + test — SwiftPM, swift-tools 6.0 (Swift 6 language mode = strict-concurrency complete,
+          same as the app), compiling the EXACT shipped PollingEngine.* sources (incl. the #Preview macro file
+          and all SwiftUI view files) against the REAL repo design-system files (generated apps/design Tokens +
+          Sources/Design TSDesign/TSMaterial + Sources/Components Typography/Badges/Buttons/Cards/Motion/Skeletons)
+          under the Xcode 26.5 toolchain (so the real #Preview macro + XCTest are available):
+              Build complete!  ·  Executed 49 tests, with 0 failures (0 unexpected)                    SWIFT_TEST_EXIT=0
+
+  [DEFERRED] Full-app iOS-Simulator + macOS `xcodebuild -scheme TeslaSync(-macOS) … build test`.
+          NOT run-to-green on this runner because the full app target is blocked by PRE-EXISTING, unrelated
+          conditions this prompt neither introduced nor is allowed to touch (each VERIFIED here, not assumed):
+            • apps/apple/Frameworks/Shared.xcframework is NOT staged (only .gitkeep present) — the scheme's
+              pre-build Run Script (`Scripts/build-shared-xcframework.sh`) runs the ~7-min Gradle
+              `:core:assembleSharedXCFramework`; the attempted `xcodebuild` here was observed sitting in exactly
+              that KMP assembly and did not reach app compile within the bounded window (a macos-pending row for
+              p1-shared/S3 in apps/macos-pending-verifications.md);
+            • `struct DashboardWidgetSize` is redefined 15× across Sources/DashboardWidgets/* +
+              TeslaSync/dashboard-widgets/* (parallel-merge collisions);
+            • 170 co-located `*.Tests.swift` under TeslaSync/feature-views import XCTest into the app target;
+            • macOS development-signing.
+          Additionally, shared-surfaces is not yet in project.yml `sources:` (see WIRING NOTE), so the full-app
+          target would not even compile these files until P4-core lands. This is the SAME sanctioned
+          "code-complete + DEFERRED full-app Xcode gate" disposition recorded by every prior P4 surface
+          (p4-apple-feature-views-0237-AiUsageCard.log) and is owned by the P4/P99 Apple acceptance gate on a
+          signed macos-latest runner. ZERO PollingEngine errors are attributable to this change (the isolated
+          gate compiles + tests them green).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED with raw, verified
+                           pre-existing-blocker evidence (Shared.xcframework absent, DashboardWidgetSize 15×,
+                           170 co-located tests) — never reported as passing.
+  2  No scope narrowing  : every web region + branch reproduced — the !enabled gate, the loading/empty messages,
+                           all 4 savings metrics, the breakdown bar (positive-only slices) + the full 4-category
+                           legend, the vehicle chip / next-poll / expanded interval-idle-battery-reasons, the
+                           prediction (ns→ms + round %), the activity colour/icon/pulse; all P4 states render.
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; raw exits pasted; the deferred full-app
+                           blockers were each re-confirmed by ls/grep (Frameworks holds only .gitkeep,
+                           DashboardWidgetSize 15×, 170 co-located XCTest files), not assumed.
+  4  No stubs as final   : complete production surface + 49 real tests; placeholder scanner COUNT=0; no
+                           TODO/FIXME/stub/Coming-soon/Placeholder/Lorem anywhere in the shipped code.
+  5  No parity shortcut  : the fmtNumber grouping, the non-grouped duration magnitudes, the floor-seconds
+                           bucketing, the value/total breakdown fractions, the micro→ vin.slice(-8), the
+                           estimated_in/1e6 + round(conf*100), the activityColor/icon + active-only pulse, and the
+                           summarize joins are each unit-asserted against the web expressions (en_US goldens
+                           verified empirically: "63.7%", "$18.42", "1,284", "active · Driving", "Next: 45s",
+                           "Interval: 15s", "Battery: 78%", "charging in 27m (82% conf)").
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened
+                           telemetry, and the established P4 "isolated-build + DEFERRED full-app" disposition all
+                           honoured; project.yml / .swiftlint.yml wiring left to its owning P4-core/P99 prompt
+                           (WIRING NOTE) rather than bypassed here.
+  8  No commit on red    : the committed artifact (12 PollingEngine.* files + this log) is GREEN on every
+                           per-surface gate AND on a real isolated Swift 6 strict-concurrency build + 49/49 XCTest;
+                           the deferred full-app gate is blocked only by pre-existing, unrelated conditions this
+                           commit does not touch.
+  9  No silent drift     : changes are confined to shared-surfaces/PollingEngine.{swift,Adapter,ViewState,Model,
+                           Projection,Views,Vehicles,Chrome,Previews,Tests,AdapterTests}.swift +
+                           PollingEngine.strings and this log; the new-directory wiring gap is disclosed above.
+                           The pre-existing unstaged feature-views/AIUsageCard.* working-tree edits (another
+                           slot's) were NOT staged.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic PollingEngine (Adaptive Polling Engine card) shipped at parity with the web
+  source and INDEPENDENTLY VERIFIED: it compiles and its 49 tests pass under the app's own Swift 6 strict-
+  concurrency rules, against the REAL design system, via the Xcode 26.5 XCTest runtime, with swiftformat /
+  swiftlint --strict / placeholder all green on the 11 surface files and the #Preview macro compiling. The
+  full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code) on pre-existing,
+  unrelated, out-of-allowed-files blockers (unstaged Shared.xcframework, the DashboardWidgetSize 15× redefinition,
+  the co-located-tests-into-app-target config, macOS signing) plus the shared-surfaces project.yml wiring owned by
+  the P4-core / P99 acceptance gate on a signed macos-latest runner per apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

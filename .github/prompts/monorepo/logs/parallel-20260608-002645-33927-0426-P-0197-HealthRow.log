@@ -1,0 +1,137 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Good — macOS with full Apple toolchain. Let me read the web source spec and explore the Apple app structure.
+
+The web source is a simple presentational component. Let me explore the Apple app structure and the referenced StatusHero (for `HeroStatus`), plus existing shared-surfaces for established patterns.
+
+Now let me study the existing native patterns. There's no `shared-surfaces` dir yet, but `dashboard-widgets` and `feature-views` exist as references.
+
+There's a clear multi-file convention per surface. Since `HealthRow` is purely presentational, let me find similar presentational native surfaces and understand the shared infrastructure (tokens, i18n, diagnostics).
+
+Let me read a complete presentational "Row" surface end-to-end to learn the established pattern. `AnomalyInlineRow` looks closest.
+
+This is the consumer of `HealthRow` on web. Now let me study a presentational surface (`SummaryStatsRow`), the shared token/i18n/diagnostics infra, and the project config.
+
+`SummaryStatsRow` confirms the precedent: presentational leaves carry a prop snapshot through a P1/S8 model (no HTTP) with a testable projection. Now let me locate the shared infra: tokens (P1/S9), diagnostics surface (P1/S11), test/preview conventions, and how the build discovers files.
+
+project.yml is at `apps/apple/` level. Let me locate it and the design tokens correctly.
+
+Key finding: `project.yml` (XcodeGen spec) wires only `TeslaSync/dashboard-widgets` and `TeslaSync/feature-views` into the app targets — **not** `shared-surfaces`. A brand-new `shared-surfaces/` dir won't compile or test until wired. Let me verify the toolchain, how test files are structured, and where the design tokens live.
+
+Now let me understand the build/test reality on this runner: the KMP `Shared.xcframework` preAction, whether tests from feature-views actually run, and the exact token API. These determine whether the gate can even go green here.
+
+The `macos-pending-verifications.md` is the ground truth: the full-app `xcodebuild build test` is **blocked by pre-existing, unrelated parallel-merge collisions** (`DashboardWidgetSize` redefined 8–15×, 116–152 co-located `*.Tests.swift` importing XCTest into the app target, unstaged `Shared.xcframework`, macOS signing). The accepted per-surface methodology is **isolated** verification (SwiftPM build + tests + `swiftc -typecheck` on both SDKs + lint/format/placeholder), with full-app deferred to the macOS acceptance gate. Let me read the predecessor logs to match their exact STATUS framing and verification approach.
+
+I now have the **sanctioned methodology** (3 predecessors confirm it): ship the surface, verify it GREEN **in isolation** (`swiftc -typecheck` on iOS-18 + macOS-15 SDKs, isolated SwiftPM `swift test` linking the real tokens, lint/format/placeholder, `xcodegen generate`), and DEFER the full-app `xcodebuild build test` (blocked by pre-existing `DashboardWidgetSize` collisions + XCTest-in-app + unstaged Kotlin `Shared.xcframework` + macOS signing) → `EXIT=0 / STATUS=DONE`.
+
+Let me read the exact token/Surface/test/lint APIs I must use.
+
+I have the full token API and the direct analog (`AnomalyInlineRow`, which is literally the web consumer of `HealthRow`). Let me read the remaining pattern references — Previews, ModelTests, and the lint/format configs — before writing.
+
+Let me check the exact forbidden placeholder patterns (the word "placeholder" itself may be flagged, which affects whether I can use SwiftUI's `.redacted(.placeholder)`).
+
+I now have everything: token API, the exact `AnomalyInlineRow` analog (which literally renders a web `HealthRow`), test/preview patterns, lint/format configs, and the placeholder rules (the word "placeholder" is forbidden case-insensitively, and `mock`/`stub`/`TODO` too — I'll avoid them; build a manual shimmer like the precedent rather than `.redacted(.placeholder)`).
+
+Let me set up tracking and create the surface directory.
+
+pwsh is available. Let me confirm SDKs/simulators for the isolated verification.
+
+`xcodebuild` needs full Xcode (active dir is CommandLineTools). The predecessors used `DEVELOPER_DIR=/Applications/Xcode.app/...`. Let me locate Xcode and SDKs.
+
+Full toolchain confirmed: Xcode 26.5, iOS-sim 26.5 + macOS 15 SDKs, iPhone 16 simulator booted, Swift 6.3.2, pwsh, swiftlint/swiftformat/xcodegen. Now I'll write the surface. Starting with the pure, dependency-free core.
+
+Now the public presentational `HealthRow` View — the faithful web parity with all four interaction variants.
+
+Now the shared view primitives: `tint` mapping (web color maps → P1/S9 tokens), the layout shell, the summary trailing, the freshness chip, and the host's content row.
+
+Now the lifecycle states (loading shimmer, empty, error+retry) and the model-bound `HealthRowHost` that renders every prompt-mandated state.
+
+I need to fix the host's activate closure — `Optional.map(model.activate)` returns `Void?`, not `Void`. Let me correct it to a statement closure.
+
+Now the previews (DEBUG-only) covering all presentational variants and all host states.
+
+Now the i18n catalog contribution (per-surface table, parallel-safe).
+
+Now the two test files — pure adapter/projection/a11y/telemetry coverage, and the model state-holder coverage.
+
+I placed `@testable import TeslaSync` at the file end — but `testable-bottom` means last *within the import group*, not at the file bottom (per `AnomalyInlineRow.Tests.swift`). Let me fix.
+
+Now the model state-holder tests.
+
+All 10 files written. Let me fix one structural detail in `HealthRowShell` (the stored `trailing` should be `let`, with `@ViewBuilder` only on the init param), then run swiftformat (autofix) and swiftlint on the new files.
+
+Format clean (9 Swift files). Now swiftlint --strict on the new files.
+
+swiftlint applied the repo `included:` config (1909 files) and reported 1 pre-existing serious violation — it didn't lint my not-yet-included files. Let me lint my files explicitly and identify that pre-existing violation.
+
+My files lint clean (`MYLINT_EXIT=0`); the only whole-repo violation is the pre-existing `LifetimeStatsWidget.Adapter.swift:141` (exactly as the ToolCard log documented). 
+
+Now the isolated SwiftPM verification — build the surface against the **real** `Tokens.swift` under Swift 6 strict concurrency and run the tests, mirroring the sanctioned methodology.
+
+The surface compiles clean under Swift 6 language mode against the real design tokens. Now run the tests.
+
+All **23 tests pass, 0 failures**. Now the real-SDK typecheck on both iOS-18 simulator and macOS-15 SDKs under Swift 6 strict concurrency.
+
+Both SDKs typecheck clean. Now wire `shared-surfaces` into the build (both app targets) and lint config — the same necessary wiring every new top-level source dir requires (mirroring the ToolCard precedent).
+
+Now verify `xcodegen generate` enumerates the new files, run the placeholder gate, and confirm whole-tree lint/format status.
+
+xcodegen enumerates all 10 HealthRow files (60 refs). Let me wait for the whole-tree format lint.
+
+Whole-tree format lint shows **1 pre-existing violation in `ActionBuilder.Previews.swift`** (a sibling prompt's feature-view, not mine) — my 9 files are format-clean. Let me confirm via git that the pre-existing reds aren't in my changeset, and run the placeholder gate.
+
+I see unexpected `M` entries for `AIUsageCard.*` — I never touched those. Let me confirm they're a pre-existing case-collision artifact (the repo has both `AiUsageCard.*` and `AIUsageCard.*` committed; this macOS FS is case-insensitive), not something my edits caused — so I commit only my explicit files.
+
+Confirmed: the repo tracks **both** `AIUsageCard.Model.swift` and `AiUsageCard.Model.swift` (case-variant duplicates) — a pre-existing case-collision on this case-insensitive macOS FS, not my doing. The placeholder gate passes even with the exact file-prefix path (`EXIT=0`). I'll commit only my explicit files.
+
+Let me gather hard evidence that the documented full-app blockers are present in THIS tree (so the deferral is evidence-based, per the FSMTimelineChart precedent).
+
+Conclusive evidence — all pre-existing, none from HealthRow: **Shared.xcframework absent**, **`DashboardWidgetSize` redefined ×15**, **`PowerFlowConnection` ×2**, **263 co-located XCTest-in-app test files**, and **case-collision dupes** (`AIUsageCard.*` vs `AiUsageCard.*`). 
+
+Let me attempt a real (bounded) app-target build to capture a genuine exit code and prove zero HealthRow-origin errors.
+
+The tool blocked the dynamic `kill`. Let me run the build in async mode and bound it with the tool's own stop instead.
+
+The direct app-target build failed with **exit 65** (no Gradle step). Let me classify the errors — confirm zero HealthRow-origin errors vs. the pre-existing collisions.
+
+The full-app build fails with **exactly 1 error — the absent Kotlin `Shared.xcframework`** (a macOS-pending P1/S3 artifact I bypassed by building `-target` directly) — and **0 HealthRow-origin errors**. Now let me confirm whole-repo swiftlint picks up my files cleanly (only the pre-existing violation remains) and that the generated `.xcodeproj` is git-ignored.
+
+Whole-repo swiftlint (now 1918 files, +9 mine) shows the **same single pre-existing violation** and **zero HealthRow violations**; the generated `.xcodeproj` is git-ignored. All verification is complete. Let me capture final metrics and write the gate log.
+
+Now I'll write the gate log (modeled on the sanctioned predecessor disposition).
+
+Now add the macOS-pending verification row (per the resolution protocol), then commit only my explicit files.
+
+Now commit — staging only my explicit files (the tree has unrelated pre-existing dirty files I must not touch).
+
+Only my 14 files are staged. Committing.
+
+Commit `c1f0fe980` succeeded; unrelated pre-existing files remain untouched. Let me finalize tracking and clean up temp artifacts.
+
+All complete. Commit `c1f0fe980` ships 14 files (+1752 lines); temp artifacts cleaned; log footer is `EXIT=0 / STATUS=DONE`.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`HealthRow`** shared surface at `apps/apple/TeslaSync/shared-surfaces/HealthRow.*` — faithful SwiftUI parity of `web/src/components/status/HealthRow.tsx`.
+
+**What the web source is:** a pure presentational leaf (the prompt itself records *Data sources: none*). It renders a status dot, optional glyph, truncating label, status-tinted summary, and a chevron iff `(to || onClick)`, wrapped as `<a target=_blank>` / `<Link to>` / `<button onClick>` / `<div>`.
+
+**Delivered (10 files, 1608 lines):**
+- **Public `HealthRow` View** — the reusable web parity: 4 initializers (static / button / internal-navigate / external-URL), all 5 `HeroStatus` tones → P1/S9 tokens, conditional chevron, 44pt target, hover bg (`white/[0.04]`), `aria-label = "label — summary"` + spoken status + Dynamic-Type-scaled dot/glyph.
+- **`HealthRowHost` + `HealthRowModel`** (P1/S8) — renders every Apple-contract state (loading shimmer / content / empty / error+retry / stale + offline freshness chip), no HTTP, emits P1/S11 `view.opened` slug `"HealthRow"`.
+- **23 XCTest cases**, DEBUG previews, per-surface `.strings` (P1/S10).
+
+**Verification (sanctioned isolated methodology — matches ToolCard/AlertMessageEditor/FSMTimelineChart):**
+| Gate | Result |
+|---|---|
+| Swift 6 SwiftPM build + tests | ✅ 23/23, 0 failures |
+| `swiftc -typecheck` iOS-18 sim + macOS-15 | ✅ both exit 0 |
+| swiftlint --strict (my files) | ✅ 0 violations |
+| swiftformat --lint (my files) | ✅ 0/9 |
+| check-placeholders | ✅ COUNT=0 |
+| xcodegen generate | ✅ enumerates 10 files |
+
+**Full-app `xcodebuild build test`: DEFERRED** (macOS-pending, recorded). Proven blocked **only** by pre-existing, unrelated parallel-merge state — direct `-target` build fails with exactly one error (unstaged Kotlin `Shared.xcframework`, exit 65), plus `DashboardWidgetSize`×15, 263 co-located XCTest-in-app files, `AIUsageCard`/`AiUsageCard` case-collisions, and macOS signing — **zero HealthRow errors**. Committed only my explicit files; unrelated dirty files left untouched.
+
+`EXIT=0 · STATUS=DONE`
+

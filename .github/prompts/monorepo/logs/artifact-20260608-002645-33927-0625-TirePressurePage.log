@@ -1,0 +1,151 @@
+=== P4-APPLE · P7 · page:vehicle-systems/TirePressure (SwiftUI / HIG) ===
+date: 2026-06-08T17:13:11Z  host: macOS 26.5.1  swift: Apple Swift 6.3.2 (swiftlang-6.3.2)
+git: c9c6fdb9f  branch: auto/20260608-002645-33927/625
+
+--- Capability probe (prompt requires SwiftUI + Swift Charts, iOS 18 / macOS 15 HIG) ---
+xcode-select -p            -> /Library/Developer/CommandLineTools  (Command Line Tools only)
+xcodebuild -version        -> error: tool 'xcodebuild' requires Xcode (CLT instance is active)
+xcodegen / swiftlint / swiftformat / swiftc / pwsh : present
+=> No full Xcode.app is installed on this runner, so the xcodebuild build + test triad
+   CANNOT execute. Per this prompt's gate contract ("If no Xcode runner is available, the
+   gate -> STATUS=BLOCKED"), the surface is implemented in full (no placeholders, ADR-011)
+   and every gate that does NOT require Xcode is executed below with its real exit code.
+CAPABILITY=UNAVAILABLE (xcodebuild)
+
+--- Path reconciliation (honesty: no silent drift) ---
+The prompt names apps/apple/TeslaSync/Features/VehicleSystems/ — that path is NOT in the
+TeslaSync scheme's source group (project.yml builds Sources/). Files were placed in the
+COMPILED tree so the lint/format/placeholder/codegen gates apply (matches the existing
+Sources/Features/Dashboard/ precedent and the reference DrivetrainHealth log's reconciliation):
+  apps/apple/Sources/Features/VehicleSystems/TirePressureReading.swift
+  apps/apple/Sources/Features/VehicleSystems/TirePressureStatus.swift
+  apps/apple/Sources/Features/VehicleSystems/TirePressureProjection.swift
+  apps/apple/Sources/Features/VehicleSystems/TirePressurePageModel.swift
+  apps/apple/Sources/Features/VehicleSystems/TirePressureLiveProvider.swift   (#if canImport(Shared))
+  apps/apple/Sources/Features/VehicleSystems/TirePressurePage.swift
+  apps/apple/Sources/Features/VehicleSystems/TirePressureSections.swift
+  apps/apple/Sources/Features/VehicleSystems/VehicleSystemsRouteRegistration.swift
+  apps/apple/Tests/Unit/VehicleSystems/TirePressureTests.swift
+  apps/apple/Localization/Localizable.xcstrings (+25 translation.* keys; 19 page strings covered)
+  apps/apple/Sources/TeslaSyncApp.swift          (route registration wiring)
+  apps/apple/Sources/App/AppRouteParser.swift    (/tire-pressure deep-link alias -> .vehicleSystems)
+
+--- Architecture (provider-seam, mirrors the DrivetrainHealth precedent) ---
+Pure (Foundation-only, host-testable): TirePressureReading + TirePressureMath + TireCorner +
+  TirePressureUnit; TirePressureStatus thresholds; TirePressureProjection (summary/series/table/
+  range filter). @Observable TirePressurePageModel (Observation only) republishes a
+  TirePressureViewState from an injected TirePressureDataProvider. LiveTirePressureProvider
+  (#if canImport(Shared)) binds the KMP VehiclesStore.vehicles + VehicleSystemsStore.tirePressure /
+  .tirePressureHistory feeds via FlowBridge + LoadableState (SI on the wire; display conversion at
+  the boundary). SwiftUI sections use only the P3 component library + P2 design tokens.
+
+--- swiftformat --lint (new + edited surface, 11 files) ---
+0/11 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict ---
+Surface (Sources/Features/VehicleSystems + Tests/Unit/VehicleSystems): violations=0
+LINT_EXIT=0
+Note (whole-project, honesty): swiftlint --strict over all 1918 files reports exactly ONE
+violation, and it is PRE-EXISTING and OUTSIDE this prompt's scope — it is in a different
+prompt's committed, unmodified file:
+  TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length, 78 lines)
+It is not in this change's allowed files (Features/VehicleSystems + nav + catalog + log) and was
+not introduced here (git shows the file unmodified). It is reported, not silently absorbed.
+
+--- placeholder gate (ADR-011) on shipped surface ---
+Sources/Features/VehicleSystems : PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+Tests/Unit/VehicleSystems       : PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- xcodegen generate (project integrates new files) ---
+Created project at apps/apple/TeslaSync.xcodeproj
+TirePressure*+VehicleSystemsRouteRegistration refs in project.pbxproj = 132
+(all 8 surface files + the test file are members of TeslaSync, TeslaSync-macOS + the test targets)
+XCODEGEN_EXIT=0
+
+--- Pure-core compile + EXECUTION vs the host macOS SDK (the runnable substitute for the
+    xcodebuild typecheck/test, which needs full Xcode) ---
+swiftc -O compiled TirePressureReading.swift + TirePressureStatus.swift + TirePressureProjection.swift
+  + an assertion harness:  COMPILE_EXIT=0  (0 errors, 0 warnings)
+Executed harness (decode/normalise/warnings/unit-golden/status/projection/range/strings):
+  ASSERTS_PASSED=44  ASSERTS_FAILED=0  HARNESS_EXIT=0
+  (psi golden parity confirmed: 250 kPa -> 36.25943597432077 psi, matching apps/shared/spec/units-golden.json)
+The committed XCTest suite (Tests/Unit/VehicleSystems/TirePressureTests.swift — 19 test methods)
+covers the same pure logic PLUS the @Observable model / provider seam; it runs under the deferred
+iOS/macOS xcodebuild test gate below.
+
+--- Full xcodebuild build + test (iOS + macOS) — BLOCKED ---
+Attempted prerequisite check: xcodebuild requires Xcode.app; only CommandLineTools is installed
+on this runner, so neither `xcodebuild ... build` nor `xcodebuild ... test` can be invoked.
+This is an environment capability gap, NOT a code failure: 0 errors were observed in the pure
+core compile, swiftlint/swiftformat/placeholder/xcodegen are all green, and the SwiftUI surface
+is written against verified P3 component signatures + the proven KMP-interop bindings (pinned on
+the macOS gate, per apps/macos-pending-verifications.md).
+BUILD_EXIT=BLOCKED  TEST_EXIT=BLOCKED
+
+=== PARITY ===
+PARITY_REQUIRED=34
+[x] panel  GlassPanel1   -> TirePressureSections.swift: struct TirePressureWarningBanner (TSGlassPanel; hard/soft active)
+[x] panel  GlassPanel2   -> TirePressureSections.swift: struct TirePressureGaugesPanel (outer TSGlassPanel + "Current Readings")
+[x] panel  GlassPanel3   -> TirePressureSections.swift: TirePressureGaugesPanel.gaugeCell (per-corner inner TSGlassPanel)
+[x] panel  Avg-Pressure  -> TirePressureSections.swift: TirePressureSummaryGrid TSMetricCard(TirePressureStrings.avgPressure)
+[x] panel  Min-Pressure  -> TirePressureSections.swift: TirePressureSummaryGrid TSMetricCard(TirePressureStrings.minPressure)
+[x] panel  Warning-Count -> TirePressureSections.swift: TirePressureSummaryGrid TSMetricCard(TirePressureStrings.warningCount)
+[x] panel  Last-Updated  -> TirePressureSections.swift: TirePressureSummaryGrid TSMetricCard(TirePressureStrings.lastUpdated)
+[x] panel  GlassPanel8   -> TirePressureSections.swift: struct TirePressureHistoryChartPanel (TSGlassPanel + chart)
+[x] panel  GlassPanel9   -> TirePressureSections.swift: struct TirePressureHistoryTablePanel (TSGlassPanel + table)
+[x] chart  RadialGauge   -> TirePressureSections.swift: TirePressureGaugesPanel.gaugeCell -> TSRadialGauge (P3 Swift Charts wrapper)
+[x] chart  LineChart     -> TirePressureSections.swift: TirePressureHistoryChartPanel.content -> TSLineChart + TSChartLegend (P3)
+[x] state  loading       -> TirePressurePage.swift: phaseBody .loading -> loadedBody(isLoading:true) (TSSkeleton/TSTableSkeleton)
+[x] state  empty         -> TirePressureSections.swift: TSEmptyState branches + OfflineTirePressureProvider (.ready, no data)
+[x] state  error         -> TirePressurePage.swift: failureBody (TSQueryError/TSErrorDisplay) + TSAlertBanner(hasError)
+[x] state  success       -> TirePressurePage.swift: loadedBody(isLoading:false) renders gauges/summary/chart/table from data
+[x] string Avg Pressure        -> TirePressureStrings.avgPressure       = "translation.Avg Pressure" (catalog: present)
+[x] string Current Readings    -> TirePressureStrings.currentReadings   = "translation.Current Readings" (catalog: present)
+[x] string Hard Warning        -> TirePressureStrings.hardWarning       = "translation.Hard Warning" (catalog: present)
+[x] string Hard Warning Active -> TirePressureStrings.hardWarningActive = "translation.Hard Warning Active" (catalog: present)
+[x] string History Table       -> TirePressureStrings.historyTable      = "translation.History Table" (catalog: present)
+[x] string Last Updated        -> TirePressureStrings.lastUpdated       = "translation.Last Updated" (catalog: present)
+[x] string Min Pressure        -> TirePressureStrings.minPressure       = "translation.Min Pressure" (catalog: present)
+[x] string No History Data     -> TirePressureStrings.noHistoryData     = "translation.No History Data" (catalog: present)
+[x] string Ok                  -> TirePressureStrings.ok                = "translation.Ok" (catalog: pre-existing)
+[x] string Pressure History    -> TirePressureStrings.pressureHistory   = "translation.Pressure History" (catalog: present)
+[x] string Soft Warning        -> TirePressureStrings.softWarning       = "translation.Soft Warning" (catalog: present)
+[x] string Soft Warning Active -> TirePressureStrings.softWarningActive = "translation.Soft Warning Active" (catalog: present)
+[x] string Time                -> TirePressureStrings.time              = "translation.Time" (catalog: pre-existing)
+[x] string Warning Count       -> TirePressureStrings.warningCount      = "translation.Warning Count" (catalog: present)
+[x] string Warnings            -> TirePressureStrings.warnings          = "translation.Warnings" (catalog: pre-existing)
+[x] string error.loadFailed    -> TirePressureStrings.loadFailed        = "translation.error.loadFailed" (catalog: pre-existing)
+[x] string tirePressure.selectVehicle -> TirePressureStrings.selectVehicle = "translation.tirePressure.selectVehicle" (catalog: present)
+[x] string tirePressure.subtitle      -> TirePressureStrings.subtitle      = "translation.tirePressure.subtitle" (catalog: pre-existing)
+[x] string tirePressure.title         -> TirePressureStrings.title         = "translation.tirePressure.title" (catalog: pre-existing)
+PARITY_COVERED=34
+
+=== ACCEPTANCE CRITERIA ===
+[x] Every named panel implemented; the 4 anonymous web GlassPanels are reproduced as the
+    warning banner, the gauges container, the per-corner gauge card, and the chart/table panels.
+[x] All 34 parity items render from the bound @Observable TirePressurePageModel state holder.
+[x] loading / empty / error / success implemented; each section (gauges/chart/table) renders its
+    own skeleton + EmptyState and the panel is never hidden when data is null (ADR-011 / rule #6).
+[x] All visible strings resolve from Localizable.xcstrings via LocalizedStringKey; zero hardcoded
+    user-facing literals; web key names preserved under the catalog `translation.` namespace.
+[x] Dark mode + Dynamic Type honored via P2 tokens (Color.TS / Font.TS) + the shared components;
+    a11y labels on the picker/gauges/warning; SI units converted only at the render boundary
+    (TirePressureUnit, factors == S5 golden vectors). SwiftUI-native (no web cloning).
+[x] swiftformat --lint clean; swiftlint --strict clean on the shipped surface (0 violations);
+    placeholder gate COUNT=0; xcodegen integrates all files; pure core compiles + 44 asserts pass.
+[~] xcodebuild build + test (iOS + macOS): BLOCKED — no Xcode.app on this runner (CLT only). Not
+    claimed as passing. Every Xcode-independent gate above was executed with its real exit code.
+[x] Navigation: .vehicleSystems route hosts TirePressurePage (VehicleSystemsRouteRegistration,
+    wired in TeslaSyncApp); /tire-pressure deep-link alias added to AppRouteParser.
+[x] apple ledger rows (apple-ios + apple-macos) for page:vehicle-systems/TirePressure recorded
+    (status=blocked, covered=34/34) with this log as evidence.
+
+Honesty covenant: no red reported as green. Every PASS above was executed and its real exit code
+recorded. The single non-green step (full xcodebuild) is explicitly marked BLOCKED with its precise,
+evidenced root cause (no Xcode.app on the runner) — not claimed as passing. The one whole-project
+swiftlint violation is pre-existing, in another prompt's file, and reported rather than hidden.
+
+EXIT=1
+STATUS=BLOCKED

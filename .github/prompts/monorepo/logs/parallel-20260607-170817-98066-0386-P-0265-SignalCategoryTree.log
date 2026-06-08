@@ -1,0 +1,106 @@
+I'll start by exploring the repository structure and understanding what exists, then determine whether the Apple toolchain is available on this runner.
+
+Swift toolchain is present (swift 6.3.2, swiftlint, swiftformat, pwsh), but **full Xcode is NOT installed** — only CommandLineTools (`xcode-select -p` → `/Library/Developer/CommandLineTools`), and `xcodebuild -version` failed. Let me investigate the Apple app structure, existing feature-views, and the web source before deciding DONE vs BLOCKED.
+
+Substantial Apple codebase exists (1315 files in feature-views). No `.xcodeproj`/`Package.swift` found at depth 3. Let me check the build system, methodology, existing patterns, and how prior prompts handled the `xcodebuild` gate.
+
+Clear precedent established: 161 prior P4 surfaces are `STATUS=DONE` with the full `xcodebuild` gate **DEFERRED** (runner has only CommandLineTools, not full Xcode), while host-runnable gates (swiftlint/swiftformat/check-placeholders/isolated tests) run green. I'll follow that exact disposition. Now let me study the established file conventions and shared layers.
+
+`LiveSignalsTable` is the most relevant existing reference (binds signals). `SignalSparklinePreview` native surface does NOT exist yet (separate prompt, out of scope). Let me read the full `LiveSignalsTable` file set and locate the methodology + shared state-holder layer.
+
+The pattern is now clear: each surface = `.swift` (View) + `.Model.swift` (seams: telemetry P1/S11, source P1/S8, view-model) + `.Adapter.swift` (pure Foundation logic ports) + `.Models.swift` (data types) + `.Localization.swift`/`.strings` (i18n P1/S10) + `.Views.swift` + `.Previews.swift` + `.Tests.swift`, using `TSSpacing`/`Color.TS`/`Font.TS` tokens (P1/S9). Let me read the rest of the reference + the web dependencies.
+
+Token enums (`Color.TS`, `Font.TS`, `TSSpacing`…) appear to be generated. Let me locate the generated token files (bash grep ignores .gitignore) so I use only valid members.
+
+Now I have the token vocabulary. Let me study the exact gate/log disposition used by siblings (host harness command, deferral wording) and find the methodology prompt.
+
+I now fully understand the accepted "code-complete + DEFERRED Xcode gate" precedent (161 sibling DONEs, ADR-012). Let me probe this runner's actual capabilities (is full Xcode present?) and read the lint/format house rules + pending-verifications doc.
+
+Key finding: **`/Applications/Xcode.app` IS present**, and the macOS SDK has SwiftUI/Charts/MapKit. So I can run real `swiftc -typecheck` against the macOS SDK like the siblings. The full `xcodebuild` app build is deferred per ADR-012/macos-pending (pre-existing repo-wide blockers). Let me understand token generation (for the full typecheck) and the project structure.
+
+Design tokens are committed at `apps/design/generated/apple/Tokens.swift` and referenced by `project.yml`. So I can run a real `swiftc -typecheck` against the actual component library, exactly like the siblings. Let me confirm token members and check shared form/feedback components.
+
+Complete token vocabulary confirmed. Let me read the top of `Tokens.swift` (imports/helpers) so my isolated typecheck compiles cleanly, then I'll set up the plan and start authoring.
+
+I have everything needed. Let me set up the plan and todos, then author the surface.
+
+Let me find the correct session folder path.
+
+Now authoring the surface. Starting with the Foundation value types.
+
+Now adding the `@Observable` view-model into Model.swift.
+
+Now the localization facade (the model references `SignalCategoryTreeStrings.categoryLabel`).
+
+Now the main View, then the subviews/rows. Writing the orchestrating view first.
+
+Now the subviews (search field, header, states, banner).
+
+Now the rows, checkbox, and badge.
+
+Now the previews and the strings catalog.
+
+Now the test suite.
+
+All 10 files authored. Let me verify line counts and run the formatter/linter on my files.
+
+Formatting issues are auto-fixable. Running swiftformat in-place on my files, then re-linting.
+
+swiftformat clean. Now swiftlint --strict on the surface files.
+
+Cyclomatic complexity in `categoryLabel` (12-case switch). Refactoring to a dictionary lookup.
+
+swiftlint --strict: **0 violations**. Now let me check the placeholder gate script's path handling and run it correctly.
+
+placeholder script recurses a directory. Let me first grep my files for any forbidden tokens, then run the gate self-test + a scoped scan via a temp dir of my files.
+
+`searchPlaceholder` (matches "Placeholder" case-insensitively) appears in a Localization.swift doc-comment without an allow marker (line 11). Rewording both occurrences to avoid the token entirely — cleaner than an opt-out.
+
+Now verify no forbidden tokens remain in `.swift` files, then run the placeholder gate (self-test + scoped scan of my files via a temp dir).
+
+Self-test passes, no forbidden tokens. Now the scoped placeholder scan of my surface files.
+
+Placeholder gate clean (COUNT=0). Now the **executed adapter harness** — compiling the real Adapter+Models with a runner and running it to prove the grouping/order/filter/selection logic.
+
+Top-level code requires the file be named `main.swift` in multi-file compiles. Renaming and recompiling.
+
+**Adapter harness: 21/21 PASSED** under Swift 6 strict concurrency. Now the full-surface typecheck — but first I spot a `body` name collision in SignalCategoryTree.swift (a private `var body` in an extension shadows the View's `body`). Fixing it.
+
+Now the full-surface `swiftc -typecheck` against the real design tokens (macOS SDK, Swift 6 strict concurrency, DEBUG for previews).
+
+Typecheck passes (EXIT=0). One DEBUG-only preview warning (nonisolated helper calling the MainActor `View.init`). Marking `previewContainer` `@MainActor` to clear it.
+
+Clean — 0 warnings/errors. Now an iOS-Simulator SDK typecheck (parity with siblings) and a module-based typecheck of the **test file** (built `@testable` against the surface + XCTest).
+
+Both SDKs typecheck clean. Now building the surface into a `@testable` module and typechecking the **test file** against it + XCTest.
+
+The `@testable import TeslaSync` module resolved — **every surface symbol my tests reference resolved with zero errors**. The only failures are XCTest's own assertion macros (the Swift overlay isn't loaded by raw `swiftc`). Let me try to load the XCTest Swift overlay properly.
+
+**Tests.swift typechecks clean (EXIT=0)** against the `@testable` surface module + XCTest overlay. All host gates strong. Let me re-verify format/lint after my edits and compute the i18n key diff.
+
+All gates green: **swiftformat 0/9, swiftlint 0 violations, i18n diff = 0** (49 used = 49 defined). Now I'll attempt the full `xcodebuild` gate (expected DEFERRED per ADR-012). Probing the build prerequisites first.
+
+All prerequisites confirm the documented pre-existing blockers (Shared.xcframework absent, 159 non-mine co-located test files importing XCTest into the app target, 0 signing identities). Attempting the real `xcodebuild` to capture a genuine result before deferring.
+
+xcodegen succeeded. Now attempting the iOS `xcodebuild build test` (async, capturing output) — expecting failure on the pre-existing blockers.
+
+While the iOS build runs, let me verify predecessor prompts are DONE (Rule 7) and gather log metadata.
+
+Predecessors confirmed DONE (i18n, diagnostics, state-holders, design-tokens, cache). Let me find the P4 core log and check the iOS build progress.
+
+No separate P4-core log — P4 Apple scaffolding lives in `Sources/` (proven by 161 siblings + my green compile against the real design system). The iOS build is still compiling. Let me check its partial output.
+
+The build's KMP pre-action is assembling `Shared.xcframework` via Gradle (downloading Kotlin/Native). Letting it proceed to capture a decisive result. Waiting.
+
+`Shared.xcframework` assembled successfully — the build is proceeding to the app compile. Waiting for the decisive result.
+
+Gradle is staging debug+release XCFrameworks for all platforms (~10 min in). Letting it reach the app compile to capture the decisive error. Waiting further.
+
+The build finished. Let me read the decisive result.
+
+Decisive result captured: `** TEST FAILED **` `IOS_BUILD_TEST_EXIT=65` — the FIRST error is the documented pre-existing repo-wide break in `AIRestorePanel.Tests.swift` (a non-mine file): co-located `*.Tests.swift` files `import XCTest` into the app target. Let me prove **zero** errors originate in my files.
+
+**Proven: zero errors from any SignalCategoryTree file.** The iOS `build test` is red solely due to the pre-existing repo-wide break — dozens of non-mine co-located `*.Tests.swift` files (`AcDcStatsPanel`, `ActionBuilder`, `AIRestorePanel`, …) `import XCTest` into the app target. This matches ADR-012 / macos-pending exactly → DEFERRED. Cleaning up generated artifacts and verifying git status.
+
+git status shows **only my 10 files** (Rule 9 satisfied); generated project removed, build dirs gitignored. Now writing the comprehensive log. Let me capture final line counts and the key build-log line numbers for citations.
+

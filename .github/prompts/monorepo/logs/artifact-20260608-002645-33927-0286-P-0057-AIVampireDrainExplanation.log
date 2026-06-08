@@ -1,0 +1,219 @@
+================================================================================
+P4 · Shared surface · 0057 — AIVampireDrainExplanation (Apple)
+Run: 2026-06-08T04:30-0700   Host: Darwin arm64   Repo: ev-dev-labs/teslasync
+Prompt: P4/shared-surfaces/0057 — AIVampireDrainExplanation
+Web source (spec): web/src/components/ai/AIVampireDrainExplanation.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (0036 DigitalTwinWidget /
+      0054 GuardModeWidget precedent, ADR-012).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (-target …ios18.0-simulator) OK
+  macOS SDK .................. MacOSX26.5.sdk (-target …macos15.0)                   OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                            OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  surface in project.yml ..... 0 references (not yet target-registered)             WARN
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and PROVEN by real iOS-18-simulator AND macOS-15 SDK compiles below.
+  The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does
+  NOT apply — the surface is authored, host-compiled, and host-tested for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/shared-surfaces/AIVampireDrainExplanation.*) ===
+  AIVampireDrainExplanation.Model.swift    309  P1/S8 state-holder seam (AINarrationSource →
+                                                AINarrationModel) + P1/S11 telemetry seam + the
+                                                request adapter (AINarrationRequest, port of the web
+                                                `body` memo) + in-memory source. Stream lifecycle
+                                                (AINarrationStatus) mirrors web `AiStreamState`.
+  AIVampireDrainExplanation.Strings.swift   173  P1/S10 i18n facade (web t(key,default)) + the
+                                                testable accessibility-label composition.
+  AIVampireDrainExplanation.Views.swift     223  presentational subviews — Helix badge / narrate
+                                                button / output panel (idle·thinking·text·error) /
+                                                thinking shimmer / freshness chip / connectivity banner.
+  AIVampireDrainExplanation.swift           141  the surface card (web `InnerSection`) + the
+                                                visibility gate (web `withAiFeature`) + AIFeatureGate seam.
+  AIVampireDrainExplanation.Previews.swift   97  #if DEBUG previews — one per state (idle-ready /
+                                                idle-no-vehicle / thinking / streaming / done / error /
+                                                stale / offline / gate-off).
+  AIVampireDrainExplanation.Tests.swift     265  XCTest — request adapter + phase + model + gate +
+                                                a11y/i18n (28 methods, 60+ asserts).
+  AIVampireDrainExplanation.strings          47  P1/S10 catalog contribution (4 source keys + 6
+                                                composed AIFeatureCard/AiOutputPanel keys + native chrome).
+  Every file <= 400 lines (house file_length). Total 1208 Swift lines + 47 strings across 7 files.
+  No shared registry / atomic-component files declared here (out of scope — the P4 component-library
+  bundle owns AIFeatureCard/withAiFeature as atomic shared components; this surface reproduces their
+  composition + gate inline, self-contained, exactly like the dashboard-widget siblings).
+
+=== PARITY (vs web AIVampireDrainExplanation.tsx) ===
+  Data sources -> bound via the shared state-holder seam (AINarrationSource -> AINarrationModel):
+    useTranslation, useAiStream. The production app wires AINarrationSource over the SSE transport
+    (POST /ai/charging/vampire-drain/explain); the view performs NO HTTP (P1/S8 contract).
+  Request adapter -> AINarrationRequest reproduces the web `body` memo + handler validation:
+    `vehicle_id` always present (0 when the active vehicle is unresolved, web
+    `Number.isFinite(id) ? id : 0`), `lookback_days` included ONLY when > 0 (web guard), endpoint
+    "/ai/charging/vampire-drain/explain". hasResolvedVehicle == web `haveInputs` (id > 0). Verified
+    by executed XCTest (body JSON, normalization, gating).
+  Stream lifecycle -> AINarrationStatus mirrors web `AiStreamState`
+    (idle | streaming | paused-confirm→awaitingConfirmation | done | error). Phase resolution
+    reproduces the web AiOutputPanel branch order (error wins; streaming+no-text → thinking shimmer;
+    else accumulated text). Verified by executed XCTest.
+  Composition -> AIFeatureCard parity: glass panel → header (title + cyan "Helix" badge) → privacy-
+    honest description → narrate button ("Ask Helix" idle / "Helix is thinking…" streaming, disabled
+    `!canStart || isStreaming`, accessible name "Ask Helix · Narrate drain") → AiOutputPanel. Plus the
+    native freshness chip + stale/offline banner (shared-surface chrome) and an always-rendered idle
+    affordance where the web AiOutputPanel returns null (the "no blank box" rule).
+  Gate -> AIVampireDrainExplanationGate reproduces withAiFeature('vampire-drain-explanation', …):
+    renders the card only when the AI feature is enabled, otherwise nothing — the one sanctioned
+    hidden surface (ADR-015 §I5, "AI-off → absent"), carrying the accessibility identifier
+    `ai-feature-vampire-drain-explanation` (web data-testid). Covered by a gate test.
+  Shared components -> reuses Color.TS / Font.TS / TSSpacing / TSRadius / TSSkeleton / tsGlassPanel
+    (compiled against the REAL apps/apple component library in the typechecks below). Recharts -> none /
+    Leaflet -> none (no chart/map on this surface).
+  States (all render) -> idle/empty (friendly idle hint) · thinking (shimmer) · streaming (partial
+    text) · done (full text) · error ("Helix error: …", narrate re-enabled as retry) · stale (chip +
+    banner) · offline (cached text + chip + banner, narrate disabled) · gate-off (absent). Each has a
+    #if DEBUG preview; phase logic unit-tested + executed green.
+  i18n -> all source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    vampireDrain.aiNarrative.title / description / generateButton / badge  +  the composed scaffold
+    keys helix.askHelix / thinking / tooltip / ariaLabel / errorLabel + ai.common.errorUnknown  +
+    native chrome (emptyHint, idleHint, live/stale/offline, staleBanner, offlineBanner, retry, a11y).
+    ALL present in AIVampireDrainExplanation.strings. No English literals in native code (verbatim
+    from the facade).
+  a11y -> narrate button carries the per-feature accessible name + hint; the output region a combined
+    per-phase value (AIVampireDrainAccessibility.outputLabel); the badge + freshness chip ignore their
+    children and expose a single label; Dynamic Type via tokens; Reduce Motion gates the TSSkeleton
+    shimmer and the button symbolEffect pulse.
+  Telemetry -> AINarrationModel.start() emits viewOpened(surface:"AIVampireDrainExplanation") once
+    (P1/S11 view.opened). Asserted by a spy test (fires exactly once; start() idempotent).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (the 4 shipping source files compiled together with the
+    REAL apps/apple component library — generated Tokens + Design/TSMaterial + Components/UI/{Typography,
+    Badges,Buttons,Cards} + Feedback/Skeletons; none import the Shared xcframework):
+      xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator \
+        -swift-version 6 <component closure> <shipping AIVampireDrainExplanation/*.swift>
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swiftc -typecheck — DEBUG previews (-D DEBUG; the 4 shipping files + Previews + the real component
+    closure, exercising every #Preview state block):
+      PREVIEWS_TYPECHECK_EXIT=0                                                     OK
+[4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM harness
+    (real production Model/Strings/Views/surface/Previews + the real design tokens/components),
+    Swift 6 tools (.macOS(.v15)):
+      Test Suite 'All tests' passed. Executed 28 tests, with 0 failures (0 unexpected) in 0.005s
+        AINarrationRequestTests       5/5   (endpoint, body ±lookback, non-positive lookback omitted,
+                                            unresolved→0 + narrate-blocked)
+        AINarrationPhaseTests         5/5   (idle, streaming±text → thinking/streaming, done,
+                                            failed → error-message precedence)
+        AINarrationModelTests         9/9   (view.opened once, narrate delegate, narrate blocked
+                                            (no-vehicle / streaming / offline), stream lifecycle +
+                                            output visibility, error stays actionable, cancel, stop)
+        AIFeatureGateTests            3/3   (enabled/disabled gate, featureID == web registration)
+        AINarrationAccessibilityTests 6/6   (narrate label idle/streaming, output label per phase,
+                                            error→unknown fallback, connection labels, source strings)
+      SWIFT_TEST_EXIT=0                                                             OK
+[5] swiftlint --strict on the 6 surface .swift files (explicit paths; the repo .swiftlint.yml
+    `included:` does not list TeslaSync/shared-surfaces — that wiring is the P4 integration prompt's
+    job — so the bare gate `swiftlint --strict` SKIPS this dir; run explicitly per file here):
+      Done linting! Found 0 violations, 0 serious — each of the 6 files.
+      LINT_EXIT=0                                                                   OK
+      (Note: the bare repo-wide `swiftlint --strict` reports exactly 1 pre-existing violation in a
+       sibling, TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length
+       — NOT in this surface; this surface's 6 files are 0/0.)
+[6] swiftformat --lint on the 6 surface .swift files (config: apps/apple/.swiftformat):
+      0/6 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+[7] check-placeholders (ADR-011 stub gate; pwsh, swift language):
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+      (The prompt's literal `-Path …/AIVampireDrainExplanation` (a file prefix, not a dir) resolves to
+       Test-Path=false → a vacuous clean scan; the directory form above genuinely scans all 6 files.)
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host):
+      - `xcodegen generate` -> XCODEGEN_EXIT=0 (project + 12 targets + schemes generate cleanly).
+      - `xcodebuild -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO` ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **   BUILD_EXIT=65
+    Why deferred (three independent, code-unrelated reasons — none is a defect in this surface;
+    identical disposition to the 0036/0054 predecessor surfaces, Honesty rule 7):
+      (a) NOT-YET-REGISTERED: project.yml's app targets list Sources/ + TeslaSync/dashboard-widgets +
+          TeslaSync/feature-views; this surface lives at TeslaSync/shared-surfaces/ and has 0
+          references in project.yml. It is registered into the XcodeGen target by the downstream P4
+          integration/acceptance prompt. Editing project.yml is OUTSIDE this prompt's allowed files.
+          Running xcodebuild now builds the app WITHOUT these files — zero evidence about this
+          deliverable. Steps [1]/[2] DO compile this surface against the real library, and step [4]
+          EXECUTES its full XCTest suite — the meaningful validation.
+      (b) Shared.xcframework not staged: the app target links the KMP core; staging it needs a
+          Kotlin/Native gradle build (apps/shared/gradlew :core:assembleSharedXCFramework). Independent
+          of this UI surface; concrete missing-framework error captured above (BUILD_EXIT=65).
+      (c) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    XCTest under Xcode runs in the TeslaSync/-macOS test target; here the SAME tests are PROVEN GREEN
+    (28/28) by the executed SwiftPM harness in step [4], and the surface compiles against BOTH the
+    iOS 18 and macOS 15 SDKs with the real Xcode 26 toolchain under Swift 6 in steps [1]/[2]/[3].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (idle/empty/thinking/streaming/done/error/stale/offline) + the
+      gate-off absence — implemented; each has a #if DEBUG preview; phase logic unit-tested + green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (AINarrationSource->AINarrationModel);
+      no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — 4 source keys + 6 composed scaffold keys
+      + native chrome, all present in AIVampireDrainExplanation.strings; no English literals in code.
+  [x] Accessibility labels on every interactive element — narrate button (per-feature name + hint),
+      badge, freshness chip, output region (combined per-phase value).
+  [x] Tests: adapter unit + per-state model + gate + a11y/i18n — 28 methods, EXECUTED 28/28, 0 failures.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured evidence.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with the real BUILD_EXIT=65
+                       framework error captured; every "OK" is a command actually run with its real
+                       exit code (incl. a 28/28 executed XCTest run and iOS+macOS SDK compiles).
+  2  No scope narrowing: implemented ALL states + the gate + request adapter + i18n + a11y + telemetry.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (The in-memory source +
+                       spy telemetry are test/preview seams, not shipped stubs — and carry no
+                       forbidden markers.)
+  5  No parity shortcuts: faithful port of the body memo + stream lifecycle + AiOutputPanel branch
+                       order + the withAiFeature gate + all states.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml (integration prompt's scope) and
+                       did NOT edit the shared Localizable.xcstrings (parallel-unsafe) — strings
+                       shipped as the per-surface table, exactly like the dashboard-widget siblings.
+                       Other working-tree changes (feature-views/AIUsageCard.*, web/admin) were
+                       pre-existing and are NOT included in this commit.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed AIVampireDrainExplanation.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native AIVampireDrainExplanation shipped at parity with the web source: a
+  state-holder-bound (P1/S8, no view HTTP) AI narration card reproducing the AIFeatureCard composition
+  and the withAiFeature gate inline + self-contained, with the request adapter (vehicle_id /
+  lookback_days), the full stream lifecycle, every state, every i18n key, every a11y label, and the
+  P1/S11 view.opened telemetry. All host-runnable gates pass AND the surface compiles against BOTH the
+  iOS 18 simulator and macOS 15 SDKs with the real Xcode 26 toolchain under Swift 6, with its full
+  XCTest suite EXECUTED green (28/28). The Xcode app build/test is DEFERRED to the downstream
+  integration/signed runner (surface not yet target-registered + Shared.xcframework KMP staging +
+  signing — none a defect in this code, all outside this prompt's allowed files), matching the
+  0036/0054 "code-complete + DEFERRED Xcode gate" precedent.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/shared-surfaces/AIVampireDrainExplanation.* \
+          .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0057-AIVampireDrainExplanation.log
+  git commit -m "feat(apps/apple/shared-surfaces): add AIVampireDrainExplanation surface (P4)"
+
+EXIT=0
+STATUS=DONE

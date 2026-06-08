@@ -1,0 +1,199 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The page wraps a `FeatureToggles` component. Let me explore the component and the Apple app structure in parallel.
+
+Let me check the manifest record, Apple app structure, and tooling availability in parallel.
+
+Key finding: **Xcode is not installed** (only Command Line Tools). `xcodebuild` requires full Xcode, so the build/test gate cannot run. Per the prompt, that forces `STATUS=BLOCKED`. But `swift` and `swiftlint` are available. Let me check for any Xcode.app and explore the Apple app structure thoroughly before deciding.
+
+Good news: **Xcode.app exists** at `/Applications/Xcode.app` and **pwsh is available**. The project uses XcodeGen (no checked-in `.xcodeproj`). Let me verify the toolchain works and map the actual Apple source layout, which doesn't yet match the target path.
+
+Toolchain is fully available (Xcode 26.5, xcodegen, swiftlint, pwsh) — so the gate **can** run; this is not a BLOCKED scenario. Now I need to reconcile the layout: real sources live in `apps/apple/Sources/`, but the prompt's target path is `apps/apple/TeslaSync/Features/Admin/`. Let me read the project spec and existing patterns.
+
+Now I understand: `TeslaSync/dashboard-widgets` and `TeslaSync/feature-views` are compiled source paths, but `TeslaSync/Features/Admin` is **not** yet in `project.yml`. Let me find how existing parity pages are structured — that's my template. Let me look at `feature-views`, the nav files, and any completed apple page logs.
+
+`FlagsTable.swift` already exists in `feature-views` — the feature-flag building blocks are likely built. This is the **first page (P7)** task (no `apple-page-*` logs yet). Let me examine the existing flag components, the navigation system, and the ledger format.
+
+Excellent — a full `FeatureToggles` Apple component already exists in `feature-views`. My P7 page task is the thin wrapper (the web page just renders `<FeatureToggles/>` inside a `PageContainer`). Let me read the component API, navigation system, layout components, and string catalog.
+
+Now let me understand the navigation system, page hosting, and how a production `FeatureTogglesSource` gets wired. This is the first page, so I need to see what scaffolding exists.
+
+Now let me find the composition root where routes get registered and the app entry point, plus the deep-link parser. This determines how I wire the page.
+
+Now I see the registration pattern via `SettingsRouteRegistration.registry(...)`. Let me read the composition root, the settings registration example, the string catalog format, and check for tests that assert the route set (to avoid breakage).
+
+Let me examine the web PageContainer (to replicate its structure), the SharedFacade (for production data wiring), the existing AppSettingsView precedent, and the feature-flag supporting types.
+
+No production `FeatureTogglesSource` exists yet — the P4 component left a seam (`FeatureTogglesSource`) for the page (P7) to wire to real data. This is the heart of the task. Let me understand the SharedFacade, the KMP framework situation, and the existing settings-page precedent.
+
+Critical insight: the app target compiles `Sources/SharedFacade` which `import Shared` (the KMP framework). Building requires `Shared.xcframework` (built via Gradle pre-action). Let me check toolchain feasibility and study the settings-page precedent plus feature-flag supporting types.
+
+JDK 17 + gradlew are available, so the KMP framework is buildable. The settings page (`AppSettingsView`) does **not** import Shared — pages bind through app-level models, not raw KMP. Let me kick off the long-pole KMP framework build in the background now, then study the remaining patterns.
+
+I now fully understand the `FeatureToggles` component. The manifest confirms the **page** has no API data of its own — it just composes the existing `FeatureToggles` region inside a titled container. Let me start the long-pole KMP framework build in the background and study the page-wiring precedent (`AppSettingsView`/`AppSettingsModel`) plus the previews.
+
+Framework build is running in the background. Let me check whether any production (non-preview/test) feature-view source/model wiring exists anywhere, and study the live/facade plumbing — this determines how my page binds data honestly.
+
+Let me check the Live layer (for a real non-KMP source) and the framework build progress before finalizing the data-binding design.
+
+The framework build failed in 36s. Let me see why — this is critical for the build gate.
+
+The KMP build failed only because `xcrun` pointed at CommandLineTools, not Xcode. Setting `DEVELOPER_DIR` fixes that. Let me restart the framework build correctly.
+
+The KMP framework build is running in the background (Kotlin/Native is slow). Meanwhile, let me study the design tokens and typography components my page will use, and confirm the route/registration approach.
+
+Let me read the placeholder scanner (critical — it gates the build and may flag certain words) and confirm the design tokens/motion APIs exist.
+
+Placeholder patterns noted — I must avoid "TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented" (case-insensitive) in my Swift files. The background build exited — let me check its result.
+
+The log path didn't persist. Let me restart the framework build as a proper detached async process with an absolute log path, then proceed to write code while it runs.
+
+Framework build is running. Let me inspect the exact `Localizable.xcstrings` serialization format so I can add keys with a minimal, faithful diff, and confirm the motion API.
+
+Format is `json.dumps(indent=2, ensure_ascii=False)` in insertion order. Let me verify a round-trip is byte-identical (so my edits produce a minimal diff), then check build progress.
+
+Round-trip is byte-identical and the framework build is progressing well. Let me read the lint config and confirm the exact design-token member names before writing code.
+
+swiftlint's `included` doesn't list `TeslaSync/Features` yet (I'll add it). Let me confirm the exact spacing/color/font token members available in the generated design tokens before writing.
+
+All design tokens confirmed. Before adding the `AppRoute` case, I must find any exhaustive `switch` over `AppRoute` (outside `AppRoute.swift`) that would break compilation, plus any route-count assertions. Let me check.
+
+`WatchDeepLink.swift` references AppRoute cases — let me check it for an exhaustive switch, and scan for any other exhaustive AppRoute mapping that adding a case would break.
+
+`WatchDeepLink` and `ReportKind` are their own enums — safe. Only `AppRoute.swift` switches exhaustively over `AppRoute`. Let me confirm Spotlight indexing (a test asserts `indexed.count == 2`) doesn't iterate all routes.
+
+Adding the route is safe (no count assertions break). Let me check the UI tests (the gate runs them) and the framework build progress.
+
+Framework build is nearly done (final macOS link). UI tests don't touch the sidebar by name. I have everything I need — let me set up tracking and start writing the implementation.
+
+Now writing the page implementation. Let me create the main page file with the View, `@Observable` model, and default feature-config binding.
+
+Now the navigation wiring. Let me edit `AppRoute.swift` to add the `teslaFeatures` route.
+
+The KMP framework build completed. Let me verify it and continue wiring the composition root.
+
+Framework built successfully (all 3 slices). Now let me chain the route registration in the composition root and wire the new source group into `project.yml` and swiftlint.
+
+Now let me add the three string-catalog keys, mirroring the existing entry shape exactly so the diff is minimal.
+
+Let me verify the catalog diff is minimal (only my additions) before moving on.
+
+Clean additive diff (3 entries, ~69 lines). Let me update tracking, create the apple ledger, then run the fast checks (lint + placeholder) on my new files.
+
+Let me check an existing apple gate log to replicate the exact build/lint/test invocation and log format the program uses.
+
+That log is gold — it shows the real gate: `swiftformat --lint`, full `swiftlint --strict`, placeholder scan, then `xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test` (iOS is canonical; macOS has documented signing blockers). Let me run the fast style checks first (swiftformat fix on my files, then full swiftlint, then placeholder scan).
+
+swiftlint linted all 1912 files and found 1 serious violation. Let me locate it.
+
+The single violation is in a **pre-existing** file (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`), not mine. Let me run lint exactly as the prompt's gate specifies (scoped to my dir) and the placeholder scan.
+
+My 3 files lint clean (0 violations). The full-tree violation is pre-existing and outside my scope. Now the placeholder scan via pwsh.
+
+Placeholder scan clean. Now let me add a focused unit test (strengthens the PARITY evidence and follows the program's per-surface test convention; auto-included via `Tests/Unit`).
+
+Let me format and lint the test file, then regenerate the Xcode project.
+
+Test file clean. Now let me regenerate the Xcode project to pick up the new source group.
+
+The YAML indentation broke. Let me inspect the edited region.
+
+The edit mangled indentation (4 spaces instead of 6). Let me fix both source blocks using the unique `deploymentTarget` anchors.
+
+Project generated. Let me confirm my files are included and find an available iOS simulator.
+
+My files are in the project (24 refs) and iPhone 16 is booted. Now the main event — the iOS build+test gate. Let me run it in the background with the proper toolchain env.
+
+The iOS build+test is running. Let me monitor it while preparing the ledger. Let me check progress.
+
+iOS gate returned exit 65 (failure). Let me investigate the log.
+
+The build failed on a **pre-existing** file: `feature-views/AIRestorePanel.Tests.swift` importing XCTest while compiled into the app target. Let me understand how feature-views test files normally coexist with the app build.
+
+This is a **pre-existing repo-wide breakage**: ~198 committed `feature-views/*.Tests.swift` files `import XCTest` but sit in the app-target source path (`TeslaSync/feature-views`), so the app target can't compile — independent of my work. Let me confirm my files compiled cleanly and that all errors are these pre-existing test files.
+
+Confirmed: the **only** error file is a pre-existing `feature-views` test file; my files have zero errors. Let me verify this breakage is committed at HEAD (not introduced by me) and check the scope.
+
+This is a pre-existing, committed repo-wide defect: **261 test files** in app-target source paths (`feature-views`/`dashboard-widgets`) import XCTest, breaking the app build — unrelated to my task. (Note: there are also other parallel-env uncommitted changes I must NOT commit.) The correct, necessary fix is to exclude test files from the app product target. Let me first confirm the exclude pattern covers all of them.
+
+All 261 are covered by the `*Tests.swift` pattern. Let me add the exclude to the app-target source entries (the correct fix: test files belong to the XCTest bundle, not the shipping app). I'll apply it to both app targets via the `deploymentTarget` anchors.
+
+All 261 covered. Let me regenerate, verify the test files are excluded from the app target, then re-run the iOS gate.
+
+Exclusions work: 0 test-file refs in the app target, my page (6) and test (6) present. Let me re-run the iOS build+test gate.
+
+Build running. Let me monitor while preparing the ledger and log scaffolding. Let me check progress.
+
+Build completed but with errors (159 error lines, 7 test failures). Let me get the exit code and the distinct errors — I need to know if any are mine.
+
+Now all 159 errors are in **`dashboard-widgets`** production files (none in feature-views, none mine). feature-views (my dependency) compiles cleanly. Let me examine these errors and their git state to confirm they're pre-existing.
+
+The dashboard-widgets errors are **duplicate type declarations** (`DashboardWidgetSize`/`DashboardWidgetRegistration` redeclared across many widget files) — a pre-existing parallel-collision, committed at HEAD, entirely unrelated to my page. Let me gauge how pervasive it is.
+
+This is a **pervasive pre-existing collision**: `DashboardWidgetSize` is defined in 16+ files (14 in `TeslaSync/dashboard-widgets` + 2 in `Sources/DashboardWidgets`), committed at HEAD — the app target has never compiled. This is far outside a single-page task. Let me confirm whether `Sources/` alone is also affected, which determines if any validation build is possible.
+
+Let me verify whether `Sources/` itself has a live duplicate (determines if any validation build is even possible) by viewing both definitions' context.
+
+Definitive: `Sources/DashboardWidgets/` itself has **two top-level `DashboardWidgetSize` definitions** (two parallel agents each "bootstrapping" it), plus 14 more in `TeslaSync/dashboard-widgets`. The app target cannot compile at HEAD — a pervasive parallel-collision committed before my task, far outside a single-page scope.
+
+Let me run one focused validation: back up my project.yml, exclude the broken widget tiers, and try to compile my page + its real dependencies.
+
+No non-widget Sources reference the widget types — so the widget tier is self-contained and I can exclude it to validate my page. Let me set up the validation exclusions on the iOS target.
+
+Regenerating and running `build` (app target only — `test` would pull in pre-existing widget tests) to validate my page compiles cleanly.
+
+The 4 refs are from the unmodified macOS target; I'm building iOS only. Let me run the iOS `build` to validate.
+
+Build validating in the background. Let me monitor it.
+
+Still failing. Let me see what errors remain.
+
+feature-views ALSO has pervasive pre-existing breakage (184 errors across many surfaces) that was masked behind the dashboard-widgets failure. Let me characterize these errors for the record.
+
+Conclusive: **0 errors in my files and 0 in FeatureToggles (my direct dependency)** — the 184 errors are all in *other* feature-views surfaces with their own duplicate-type collisions (e.g., `.loaded`/`.live`/`.kmh` ambiguity). The whole app target is pre-existing-broken from parallel collisions.
+
+Let me do one bounded probe: compile only `FeatureToggles*` + my page (excluding all other broken surfaces) to get real validation that my page builds.
+
+Regenerating and building the bounded probe (my page + FeatureToggles + clean Sources only).
+
+Probe building. Let me monitor it.
+
+**BUILD SUCCEEDED** (exit 0)! My page compiles cleanly with FeatureToggles + the rest of the app. Let me confirm my files were actually compiled and the success marker.
+
+BUILD SUCCEEDED, 0 errors. Critically, `TeslaSyncApp.swift` (always compiled) references my `TeslaFeatureFlagsRouteRegistration` + `AppRoute.teslaFeatures`, so a successful build proves my code resolved. Let me confirm my files appear in the compile and check the build-system log format.
+
+My page compiles into the iOS app target (BUILD SUCCEEDED, my files compiled, 0 errors). Now let me validate my **tests** pass by restricting the test target to just my test file (the rest of `Tests/Unit` references the pre-existing-broken surfaces).
+
+Regenerating and running my unit tests (only `TeslaSyncTests`).
+
+TEST_EXIT=0 — my tests pass. Let me confirm the test results and counts.
+
+**Validation complete and conclusive:**
+- ✅ BUILD SUCCEEDED — my page + FeatureToggles compile into the iOS app target (0 errors)
+- ✅ TEST SUCCEEDED — all 11 of my tests pass, **including both PARITY string resolutions** (`featureConfig.title`→"Feature Flags", `featureConfig.subtitle`→"Tesla account feature configuration")
+- ✅ swiftlint/swiftformat/placeholder clean
+
+The page is complete and correct. The **full-app gate is blocked solely by pre-existing, out-of-scope, repo-wide duplicate-type collisions** in other surfaces (dashboard-widgets + many feature-views), committed at HEAD. Let me restore project.yml to my intended state.
+
+Let me verify the restored state and reduce my `project.yml` footprint to the minimal change (just the `TeslaSync/Features` path), documenting the test-file/duplicate-type issues as pre-existing in the log rather than altering other surfaces' config.
+
+Now my `project.yml` change is minimal. Let me verify the diff and that it still generates cleanly.
+
+My `project.yml` change is now minimal (2 lines) and generates cleanly. Let me update tracking and write the deliverables (log + ledger). First, let me capture exact evidence strings for the log.
+
+All 4 test suites passed. Now let me create the deliverables — the apple ledger and the comprehensive parity log.
+
+Now the comprehensive parity log.
+
+Now final verification and cleanup. Let me confirm the page file's final state, re-run the scoped checks, and clean up temp artifacts.
+
+Page is clean (swiftformat normalized the `#if` modifier indentation — valid). Let me get the definitive lint line, regenerate the project from the restored config, and clean up temp files.
+
+Lint confirmed clean earlier (0 violations, 3 files). Let me do a final review of all my deliverables and the working-tree state.
+
+All deliverables are in place and my edits are correctly scoped (not touching the parallel-env's unrelated uncommitted changes). Let me verify the log's required ending and finalize tracking.
+
+All artifacts are correct: log ends `EXIT=65 / STATUS=BLOCKED`, `PARITY_COVERED=2/2`, ledger is valid JSON. Let me finalize tracking.
+
+I've completed the implementation and validation. Per the Honesty Covenant ("No commit on red"), I am **not** running the final commit because the full-app gate is red due to pre-existing breakage — all my work is written to the working tree and fully documented in the log + ledger.
+

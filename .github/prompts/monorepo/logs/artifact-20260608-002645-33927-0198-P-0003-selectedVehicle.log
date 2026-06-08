@@ -1,0 +1,182 @@
+=== P4 Misc surface 0003 selectedVehicle (Apple) ===
+Date: 2026-06-08
+Prompt: .github/prompts/monorepo/.../p4-apple-misc-surfaces-0003-selectedVehicle
+Web source (spec): web/src/store/selectedVehicle.tsx
+Native output: apps/apple/TeslaSync/misc-surfaces/selectedVehicle.*
+
+------------------------------------------------------------------
+RUNNER CAPABILITY (probed, not assumed)
+------------------------------------------------------------------
+macOS 26.5 (25F80)
+Xcode 26.5 (Build 17F42) at /Applications/Xcode.app  [DEVELOPER_DIR override]
+  iOS Simulator SDK 26.5 (deployment target iOS 18.0)   -> available
+  macOS SDK 26.5         (deployment target macOS 15.0)  -> available
+  iPhone 16 simulator                                    -> booted
+swift 6.3.2 | swiftlint 0.63.3 | swiftformat 0.61.1 | xcodegen 2.x | pwsh 7.x
+=> SwiftUI + Swift Charts + MapKit capability IS present. The surface is NOT
+   blocked on platform capability. (This surface is a store/provider; it uses
+   no charts/maps — none in the web source.)
+
+------------------------------------------------------------------
+SHIPPED FILES (apps/apple/TeslaSync/misc-surfaces/)
+------------------------------------------------------------------
+selectedVehicle.swift            surface view + surfaceSlug + Environment provider bridge
+selectedVehicle.Model.swift      i18n facade + telemetry seam + store (P1/S8) + projection + model
+selectedVehicle.Persistence.swift persistence seam (protocol + UserDefaults + InMemory + Inert)
+selectedVehicle.Adapter.swift    pure parse/encode + input->freshness + a11y seam
+selectedVehicle.Views.swift      per-state subviews (loading/empty/selected/error/chip/banner)
+selectedVehicle.Previews.swift   DEBUG previews for every state
+selectedVehicle.Tests.swift      XCTest: 34 tests (store parity + projection + model + a11y)
+selectedVehicle.strings          P1/S10 i18n catalog contribution (table "selectedVehicle")
+
+Parity mapping (web -> native), reproduced from the spec file end-to-end:
+  STORAGE_KEY 'teslasync-selected-vehicle'      -> SelectedVehicleID.storageKey (identical)
+  loadInitial finite & > 0 else null            -> SelectedVehicleID.parse (identical)
+  persist null->remove / else String(id)        -> SelectedVehicleID.encode + store.setVehicleID
+  localStorage                                  -> UserDefaults (key parity)
+  cross-tab 'storage' event                     -> UserDefaults.didChangeNotification re-read
+  React context Provider                        -> SwiftUI Environment (selectedVehicleProvider)
+  useSelectedVehicleStore outside provider      -> SelectedVehicleStore.disconnected() no-op
+  localStorage try/catch (session-only)         -> persistenceAvailable=false (ephemeral)
+Leaf states -> honest store conditions (no fabricated network layer):
+  loading=hydrating  empty=no selection  selected=has id
+  error=persistence READ failure (+retry)  stale=cross-process change applied (reconciling)
+  offline=persistence WRITE unavailable (ephemeral; session still works)
+
+==================================================================
+GATE STEPS (as specified) — REAL OUTCOMES
+==================================================================
+
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    IOS_EXIT = BLOCKED  (see BLOCKER PROOF below)
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    MAC_EXIT = BLOCKED  (see BLOCKER PROOF below)
+
+[3] swiftlint --strict            (scoped to the shipped files; whole-repo run only
+                                   surfaces 1 PRE-EXISTING violation in
+                                   feature-views/LifetimeStatsWidget.Adapter.swift, not ours)
+    $ swiftlint lint --strict --config apps/apple/.swiftlint.yml \
+        apps/apple/TeslaSync/misc-surfaces/selectedVehicle.{swift,Model,Persistence,Adapter,Views,Previews,Tests}.swift
+    -> Done linting! Found 0 violations, 0 serious in 7 files.
+    LINT_EXIT = 0
+
+[4] swiftformat --lint apps/apple  (scoped to the shipped dir)
+    $ swiftformat --lint apps/apple/TeslaSync/misc-surfaces
+    -> 0/7 files require formatting.
+    FORMAT_EXIT = 0
+
+[5] ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/misc-surfaces
+    -> PLACEHOLDER_ALLOWED=0
+       PLACEHOLDER_COUNT=0
+       EXIT=0
+    PLACEHOLDER_EXIT = 0
+
+==================================================================
+BLOCKER PROOF — why [1] and [2] cannot complete on this runner
+==================================================================
+The app build gate depends on the KMP shared core `Shared.xcframework`
+(ADR-004). It is ABSENT here and there is no Kotlin/Native toolchain on the
+runner to produce it:
+
+  $ ls apps/apple/Frameworks            -> (empty; no Shared.xcframework)
+  $ grep -rl 'import Shared' apps/apple/Sources | wc -l   -> 15  (app files import Shared)
+  $ printf 'import Shared\n' | swiftc -typecheck -sdk <iphonesimulator26.5> -
+      error: no such module 'Shared'
+      IMPORT_SHARED_EXIT = 1
+
+Therefore the TeslaSync / TeslaSync-macOS *application module itself* cannot
+compile on this runner, independent of this surface. (`build-shared-xcframework.sh`
+exists but produces the framework from the Kotlin module via Gradle — toolchain
+not provisioned here.)
+
+Two further predecessor/CI wiring gaps (owned by P4-core / misc-surfaces-0001,
+per "Depends on: P4 core"; out of this prompt's allowed-files scope):
+  - `apps/apple/TeslaSync/misc-surfaces` is NOT yet a source path in
+    apps/apple/project.yml, so a generated project does not include this surface:
+      $ xcodegen generate && grep -c 'misc-surfaces' TeslaSync.xcodeproj/project.pbxproj -> 0
+                                grep -c 'feature-views' ...                              -> 3
+  - The XCTest targets reference apps/apple/TeslaSync/Tests/Unit, which does not
+    exist in this snapshot:
+      $ ls apps/apple/TeslaSync/Tests   -> No such file or directory
+
+These are environment/predecessor gaps, NOT defects in the shipped surface.
+
+==================================================================
+COMPENSATING VERIFICATION — the surface IS green on the same toolchain/SDKs
+(run because the heavy app gate cannot link the absent KMP core here)
+==================================================================
+All run with DEVELOPER_DIR=/Applications/Xcode.app, Swift 6 language mode,
+strict concurrency, against the REAL design tokens
+(apps/design/generated/apple/Tokens.swift + Sources/Design + Sources/Components/Motion).
+
+[A] iOS 18 simulator type-check of the shipped surface + real tokens:
+    $ xcrun -sdk iphonesimulator swiftc -typecheck -swift-version 6 \
+        -target arm64-apple-ios18.0-simulator -D DEBUG \
+        selectedVehicle.{swift,Model,Persistence,Adapter,Views,Previews}.swift \
+        Tokens.swift Motion.swift TSDesign.swift TSMaterial.swift
+    IOS_TYPECHECK_EXIT = 0
+
+[B] macOS SwiftPM build of the surface module (module name TeslaSync, real tokens):
+    Build complete! (9.1s)
+    BUILD_EXIT = 0
+
+[C] XCTest suite via `swift test` (the shipped selectedVehicle.Tests.swift):
+    Executed 34 tests, with 0 failures (0 unexpected)
+      SelectedVehicleIDTests            6 passed
+      SelectedVehicleProjectionTests    7 passed
+      SelectedVehicleStoreTests        13 passed   (incl. the 8 web-store parity cases:
+                                                    null start / hydrate 42 / ignore garbage /
+                                                    ignore non-positive / set+persist /
+                                                    set(nil) clears / cross-tab reconcile /
+                                                    no-op fallback)
+      SelectedVehicleModelTests         7 passed   (incl. view.opened telemetry once)
+      SelectedVehicleAccessibilityTests 1 passed
+    TEST_EXIT = 0
+
+==================================================================
+ACCEPTANCE CRITERIA
+==================================================================
+[x] Surface renders all states from the web source (loading/empty/selected/error
+    + synced/reconciling/ephemeral) — previews + tests per state.
+[x] Hooks bind to the shared P1/S8 state-holder (SelectedVehicleStore); no direct
+    storage access in the view.
+[x] Every native string resolves through the P1/S10 facade; .strings catalog shipped.
+[x] Accessibility labels on every interactive element (Clear, Retry) + surface/chip.
+[x] Tests: adapter unit + store parity + projection per-state + model + a11y (34).
+[x] No TODO/stub/mock/placeholder/Lorem (check-placeholders EXIT=0).
+[ ] Literal `xcodebuild ... build test` EXIT=0 — BLOCKED: app module needs the
+    absent KMP Shared.xcframework (15 `import Shared`), and misc-surfaces is not yet
+    wired into project.yml (predecessor P4-core). Compensated by [A]/[B]/[C] above.
+
+==================================================================
+HONESTY COVENANT
+==================================================================
+1 No red-as-green ...... honored: xcodebuild reported BLOCKED, not green.
+2 No scope narrowing ... honored: full store semantics + all states implemented.
+3 No skip-and-assume ... honored: web source + its test read end-to-end.
+4 No stubs as final .... honored: placeholder gate EXIT=0, count=0.
+5 No parity shortcuts .. honored: 8 web-store test cases reproduced 1:1.
+6 No delegation ........ honored: implemented directly, no sub-agents.
+7 No predecessor bypass  honored: project.yml/Shared/Tests-dir wiring left to P4-core;
+                         documented, not worked around.
+8 No commit on red ..... the shipped code is GREEN (build+34 tests+lint+format+
+                         placeholder all 0). The only red is the environment-level
+                         KMP/app gate, which is BLOCKED with evidence and is the
+                         prompt-sanctioned terminal state.
+9 No silent drift ...... honored: leaf-state -> store-condition mapping documented
+                         in code headers and above.
+10 EXIT/STATUS line below.
+
+------------------------------------------------------------------
+FORMAT_EXIT=0
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+IOS_TYPECHECK_EXIT=0
+SPM_BUILD_EXIT=0
+SPM_TEST_EXIT=0   (34/34)
+IOS_EXIT=BLOCKED  (no such module 'Shared'; misc-surfaces not in project.yml)
+MAC_EXIT=BLOCKED  (no such module 'Shared'; misc-surfaces not in project.yml)
+------------------------------------------------------------------
+EXIT=1
+STATUS=BLOCKED

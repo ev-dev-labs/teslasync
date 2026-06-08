@@ -1,0 +1,123 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Swift 6.3.2, swiftlint, and swiftformat are available, but `xcodebuild` requires full Xcode (only Command Line Tools installed). Let me explore the Apple app structure and the web source.
+
+Now let me read the web source and explore the Apple app structure.
+
+Now let me explore the Apple app's existing structure, especially the `feature-views` directory and the P1/P4 infrastructure (theme, tokens, i18n, state holders).
+
+This is a large, established codebase with ~410 files in feature-views following a multi-file pattern. Let me understand the shared infrastructure: native equivalents of GlassPanel/Skeleton/FadeIn, the i18n facade, design tokens, telemetry contract, and a simple reference feature-view.
+
+Found the native equivalents. Let me read the key shared components: Cards (TSGlassPanel), Skeletons, Motion (FadeIn), and Feedback States.
+
+Excellent — the native building blocks (TSGlassPanel, TSSkeleton, TSFadeIn) already exist. Now let me understand the state-holder pattern (P1/S8), telemetry contract, i18n facade, and look at a reference feature-view to follow the established multi-file conventions.
+
+Now let me check the telemetry contract, whether LoadingSkeleton already exists, and pick a reference feature-view to follow conventions.
+
+LoadingSkeleton doesn't exist yet. `AlertsSection` is the clearest reference with the `view.opened` telemetry pattern. Let me read its full file set to learn the conventions.
+
+The pattern is well-established and thorough. Before deciding how to handle a *pure-presentational* surface (the web source has no data/states), let me find whether any already-shipped feature-view is similarly presentational, to match the established reconciliation.
+
+Let me examine presentational precedents — `SummarySlide`, `HighlightCard`, and `ResultPanel` — to see how surfaces without adapters handle states, telemetry, and tests.
+
+`HighlightCard` is the cleanest compact presentational precedent (with a dedicated `.Telemetry.swift`). Let me read its full set as my primary template.
+
+`HighlightCard` is the exact precedent: a presentational surface that documents that remote phases (loading/error/stale/offline) belong to the data-bound caller, and reproduces only the branches the web source owns. Let me read its Previews, Tests, and strings to match conventions precisely.
+
+I now have the complete template (HighlightCard is the exact presentational precedent). Let me verify the design tokens, typography components, and the gate tooling before writing.
+
+Color.TS, Font.TS, and spacing tokens are in the generated DesignTokens group. Let me locate them.
+
+I have all the design tokens. Let me read the web shared components (Skeleton, GlassPanel, FadeIn) for exact parity details, check `pwsh`/lint configs, and confirm the log directory.
+
+`pwsh` is available and the log dir exists. Let me read the web Skeleton component for the `rounded` prop, check an existing P4 log format, and find a responsive-grid idiom in the codebase.
+
+Critical finding: the established P4 precedent uses an Xcode install at `/Applications/Xcode.app` via `DEVELOPER_DIR` override (default `xcode-select` points to CLT). Let me verify Xcode's presence here and read the full precedent log to replicate the exact execution mode (Honesty rule 7 — no predecessor bypass).
+
+The full precedent is reproducible here (Xcode 26.5 + iPhone 16 sim both present). Let me read the conclusion of the precedent log to see how it reconciles the deferred `xcodebuild` steps with the final EXIT/STATUS.
+
+The precedent is fully reproducible here. Let me confirm the compile closure: the `.tsGlassPanel()` modifier, the `Design/` contents, and whether `onGeometryChange` is used elsewhere.
+
+There's a `SummaryStatsRow` precedent with a pure, testable responsive-grid layout (`SummaryStatsLayout`) using the exact `onGeometryChange` breakpoint idiom I want. Let me read it and its layout/tests.
+
+This `SummaryStatsLayout.columnCount(forWidth:)` breakpoint pattern is exactly what I'll mirror. Let me read the `.swiftformat` config and the adapter's layout section to match formatting precisely, then write the files.
+
+I have the complete picture. Let me confirm the `CGFloat` import convention before writing.
+
+`import Foundation` covers `CGFloat`. Before writing, I must check exactly what `check-placeholders.ps1` flags — my comments may use words like "placeholder" that could trip it.
+
+The gate flags the word "Placeholder" (case-insensitive) — I must avoid it in source. Let me empirically check the repo's trailing-comma convention (swiftformat vs swiftlint) to avoid a lint/format conflict, then I'll write the files.
+
+Convention confirmed: no trailing commas in multi-line collections (I'll keep mine single-line). I now have everything. Let me set up tracking and write the plan, then create all six files.
+
+Now I'll create all six surface files.
+
+All six files created. Now let me set up the host-verification harness following the BackendTool precedent. First, I need to determine the compile closure — let me check what the shared `Components`/`Design` files import (to ensure none pull in the unavailable `Shared` xcframework).
+
+`Components` + `Design` only import system frameworks (SwiftUI, Charts, MapKit, CoreLocation, Foundation) — no `Shared` dependency, so the whole library is a self-contained compile closure. Let me run an initial macOS-SDK typecheck of my production files against the real closure to catch errors early.
+
+Including the whole `Components` dir pulls in `DataDisplay/UnitFormatters.swift`, which depends on the `Shared`-backed `Units` facade. Let me find all such files that reference `Units` (or other external deps) and exclude them — my surface doesn't need them.
+
+Only `UnitFormatters.swift` is the offender. Excluding it makes the closure self-contained. Let me re-run the macOS typecheck.
+
+macOS typecheck passes. Now the iOS 18 simulator SDK typecheck and the DEBUG previews typecheck.
+
+iOS typecheck passes. The previews have one error: `accessibilityReduceMotion` is a read-only environment key and can't be set via `.environment`. Reduce-motion is honored structurally by `TSSkeleton`/`TSFadeIn`; I'll replace that preview with a valid Dynamic Type one.
+
+All three typechecks pass (iOS 18, macOS 15, DEBUG previews). Now let me build a self-contained SwiftPM harness and execute the XCTest suite (precedent step 4).
+
+Harness staged. Now let me run the XCTest suite via `swift test` (Xcode toolchain for the `#Preview` macro plugin).
+
+All 18 tests pass via the SwiftPM harness (real closure, Swift 6 mode). Now the swiftlint, swiftformat, and placeholder gates.
+
+swiftformat wants to wrap 6 long lines in the Tests file. Let me apply swiftformat to normalize, then re-verify.
+
+swiftformat passes. Let me verify the reformatted Tests lines and run swiftlint --strict.
+
+swiftlint --strict: **0 violations**; swiftformat: **0 files require formatting**. Now the placeholder/stub gate — I'll scan both my surface files in isolation and the whole feature-views dir (precedent parity).
+
+My surface files: **PLACEHOLDER_COUNT=0**. The 2 dir-wide violations are pre-existing in `InfrastructureSection.Views.swift` (not my files, outside this prompt's allowed files). All host-runnable gates are green. Now let me capture the real `xcodebuild` deferred evidence (precedent parity — not faked).
+
+`feature-views` is referenced as a source path (2×) and `Shared.xcframework` is unstaged (only `.gitkeep`). Let me read the rest of `project.yml` to accurately characterize the test-target wiring and the deferral cause.
+
+Let me check whether `project.yml` excludes `*.Tests.swift`/`*.Previews.swift` from the app targets, and whether the scheme's framework-staging preAction script exists — this determines the precise xcodebuild deferral cause.
+
+No `*.Tests.swift` excludes exist in `project.yml`, and `Shared.xcframework` is unstaged — confirming the app build/test is environmentally blocked (KMP framework staging + test-target segregation + signing), independent of my surface. Let me check gitignore, then capture a real `xcodebuild` failure as evidence and clean up.
+
+`*.xcodeproj/` and `DerivedData/` are gitignored, and git shows only my 6 files. Let me generate the project and capture a real `xcodebuild` failure (using `-target` to avoid the gradle pre-action).
+
+`xcodegen generate` succeeded and my files are members. Now let me capture the real `xcodebuild` failure.
+
+`-derivedDataPath` needs `-scheme`. Let me retry with `-target` and the default DerivedData (which lives outside the repo).
+
+Captured the real deferral cause: **`error: There is no XCFramework found at '.../Frameworks/Shared.xcframework'` → BUILD FAILED (exit 65)** — identical to the precedent, environmental (unstaged KMP framework), not a defect in my surface. Let me clean up generated artifacts and verify the repo is clean.
+
+Repo is clean: my 6 files (untracked) plus two **pre-existing** modified web files (`FleetApiSection.tsx`, `BackupRestorePage.tsx`) that are not mine — I'll leave those untouched and commit only my surface + log. Let me gather line counts and write the gate log.
+
+All gates captured. Let me write the gate log following the established precedent structure.
+
+Now let me do a final consolidated re-verification of all host gates on the committed files before committing.
+
+Let me re-confirm the test suite (18/18) and placeholder gate on the final files, then commit.
+
+All gates green: typechecks (iOS/macOS/previews) = 0, swiftlint = 0 violations, swiftformat = 0/5, swift test = 18/18, placeholder = 0. Let me update tracking and commit only my surface files + the log.
+
+Exactly 7 paths staged (6 surface files + log), and the two pre-existing web files are correctly excluded. Let me commit.
+
+Committed as `1687ad1e` (7 files, 953 insertions). The two pre-existing web modifications remain untouched. Let me finalize tracking and confirm no stray artifacts.
+
+All work is complete and verified. Let me mark the task done.
+
+Auto-merging apps/apple/TeslaSync/feature-views/LoadingSkeleton.Model.swift
+CONFLICT (add/add): Merge conflict in apps/apple/TeslaSync/feature-views/LoadingSkeleton.Model.swift
+Auto-merging apps/apple/TeslaSync/feature-views/LoadingSkeleton.Previews.swift
+CONFLICT (add/add): Merge conflict in apps/apple/TeslaSync/feature-views/LoadingSkeleton.Previews.swift
+Auto-merging apps/apple/TeslaSync/feature-views/LoadingSkeleton.Telemetry.swift
+CONFLICT (add/add): Merge conflict in apps/apple/TeslaSync/feature-views/LoadingSkeleton.Telemetry.swift
+Auto-merging apps/apple/TeslaSync/feature-views/LoadingSkeleton.Tests.swift
+CONFLICT (add/add): Merge conflict in apps/apple/TeslaSync/feature-views/LoadingSkeleton.Tests.swift
+Auto-merging apps/apple/TeslaSync/feature-views/LoadingSkeleton.strings
+CONFLICT (add/add): Merge conflict in apps/apple/TeslaSync/feature-views/LoadingSkeleton.strings
+Auto-merging apps/apple/TeslaSync/feature-views/LoadingSkeleton.swift
+CONFLICT (add/add): Merge conflict in apps/apple/TeslaSync/feature-views/LoadingSkeleton.swift
+Automatic merge failed; fix conflicts and then commit the result.

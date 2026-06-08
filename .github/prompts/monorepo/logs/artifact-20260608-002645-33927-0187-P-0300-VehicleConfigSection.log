@@ -1,0 +1,188 @@
+=== P4 Feature view 0300 VehicleConfigSection (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no `xcode-select -s`, so the shared runner is untouched). `xcodebuild -version`
+                       under the CommandLineTools dir errors ("requires Xcode") — hence the DEVELOPER_DIR override,
+                       the SAME mechanism every prior P4 surface used (see -0237-AiUsageCard.log).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2 · java 17.0.19
+  Capability         : SwiftUI present; iOS 18 / iPadOS 18 / macOS 15 deployment per project.yml. This surface uses
+                       NO Swift Charts and NO MapKit — the web source has neither (the prompt's "Charts / maps used:
+                       (none)"). It is a key/value panel built only from HIG primitives available on iOS 18 / macOS 15
+                       (Text, LazyVGrid, Divider, Image(systemName:), Button) → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification — read end to end)
+  web/src/features/vehicles/components/vehicle-detail/VehicleConfigSection.tsx — a pure presentational section that
+  receives `vehicleConfig: VehicleConfigSnapshot | null | undefined` and `softwareVersion: string | undefined` as
+  props from the vehicle-detail page (which reads them off the vehicle-state query). Render:
+
+    <GlassPanel className="p-6">
+      <header>  <Settings icon, neon-cyan/>  "Vehicle Configuration" (t('vehicles.detail.vehicleConfig')) </header>
+      configItems = vehicleConfig ? [12 rows] : []
+      configItems.length > 0 ? <KVList items columns={2}/> : <Skeleton lines={4} height={16}/>
+    </GlassPanel>
+
+  The 12 rows (order + label key + value rule, reproduced verbatim — the resolution IS the contract):
+     1 Car Type          t('vehicles.detail.carType')        car_type ?? '—'
+     2 Trim              t('vehicles.detail.trim')           trim ?? '—'
+     3 Exterior Color    t('vehicles.detail.color')          exterior_color ?? '—'
+     4 Wheels            t('vehicles.detail.wheels')         wheel_type ?? '—'
+     5 Roof Color        t('vehicles.detail.roofColor')      roof_color ?? '—'
+     6 Charge Port       t('vehicles.detail.chargePort')     charge_port ?? '—'
+     7 Right-Hand Drive  t('vehicles.detail.rhd')            right_hand_drive != null ? (… ? t('common.yes') : t('common.no')) : '—'
+     8 Europe Vehicle    t('vehicles.detail.europeVehicle')  europe_vehicle != null ? (yes/no) : '—'
+     9 Offroad Lightbar  t('vehicles.detail.offroadLightbar') offroad_lightbar_present != null ? (yes/no) : '—'
+    10 Rear Seat Heaters t('vehicles.detail.rearSeatHeaters') rear_seat_heaters ?? '—'
+    11 Sunroof           t('vehicles.detail.sunroofInstalled') sunroof_installed ?? '—'
+    12 Software          t('vehicles.detail.softwareVersion') software_update_version ?? softwareVersion ?? '—'
+  i18n  : 15 keys via t(key, default) — the 12 row labels + the panel title + common.yes / common.no.
+  Shared components used: @/components/ui (GlassPanel) · @/components/data-display (KVList) · @/components/feedback (Skeleton).
+
+ARTIFACTS SHIPPED  (allowed files: apps/apple/TeslaSync/feature-views/VehicleConfigSection.* + this log)
+  VehicleConfigSection.Adapter.swift     — pure Foundation core: the VehicleConfigSnapshot DTO (the fields the section
+                                          reads), VehicleConfigValue resolution (text → value-or-"—", boolean →
+                                          yes/no/dash, software → update_version ?? prop ?? "—" — each ported verbatim
+                                          from the web `??` / `!= null` expressions), VehicleConfigAccessibility.
+  VehicleConfigSection.Projection.swift  — pure VehicleConfigProjection: error → loading → empty → data; builds the 12
+                                          rows in the web source's exact order off a RowSpec table (label + yes/no
+                                          localized via the facade, values via VehicleConfigValue).
+  VehicleConfigSection.Model.swift       — P1/S8 state-holder seam (VehicleConfigSource + @MainActor @Observable
+                                          VehicleConfigModel + InMemory source), P1/S11 telemetry seam
+                                          (VehicleConfigTelemetry + OSLog sink, view.opened surface="VehicleConfigSection"),
+                                          VehicleConfigConnection axis, the VehicleConfigInput snapshot, the
+                                          VehicleConfigResolved view-state + VehicleConfigRow value type, the P1/S10
+                                          VehicleConfigStrings facade.
+  VehicleConfigSection.Views.swift       — the <KVList columns={2}> region as a scoped adaptive 2-column grid
+                                          (1 col compact / 2 cols regular — the md:grid-cols-2 idiom), the per-row
+                                          label/value cell with a hairline divider (web divide-y), the friendly empty state.
+  VehicleConfigSection.Chrome.swift      — P4 leaf chrome: freshness chip, refresh button, stale/offline banner, loading
+                                          skeleton rows (web <Skeleton/>), retryable error (TSButton).
+  VehicleConfigSection.swift             — the surface: TSGlassPanel (web GlassPanel) + header (gear glyph + title +
+                                          chip + refresh), banner, phase switch, TSFadeIn data body; static
+                                          surfaceSlug = "VehicleConfigSection"; onAppear start / onDisappear stop.
+  VehicleConfigSection.Previews.swift    — #if DEBUG #Preview for data / data-with-missing-fields / empty / loading /
+                                          error / stale / offline.
+  VehicleConfigSection.strings           — P1/S10 catalog (table "VehicleConfigSection"): the 15 web parity keys
+                                          (vehicles.detail.* + common.yes/no) + the native chrome keys
+                                          (vehicles.detail.config.* freshness / loading / empty / error).
+  VehicleConfigSection.Tests.swift       — projection (loading/empty/error/data, the 12-row order + labels + values,
+                                          booleans, the software fallback) + model (wiring, view.opened once,
+                                          stale one-shot auto-refresh + re-arm, offline no-refresh, stop re-arm).
+  VehicleConfigSection.AdapterTests.swift— VehicleConfigValue.text / boolean / software resolution + the dash sentinel
+                                          + the accessibility summary.
+  (10 files; the surface is split across .Adapter/.Projection/.Model and .Views/.Chrome and .Tests/.AdapterTests to keep
+   every file within the repo's SwiftLint budgets — the same multi-file decomposition the prior feature-views use, e.g.
+   0237 AiUsageCard.{Adapter,Projection,Model,Views,Chrome,Previews,Tests,AdapterTests}.swift.)
+
+PARITY MAPPING  (web → Apple platform tokens; no Tailwind ported, no raw hex)
+  <GlassPanel className="p-6">  → TSGlassPanel (Sources/Components/UI/Cards.swift — documented "web GlassPanel" peer)
+  <KVList items columns={2}>    → VehicleConfigRowsView: LazyVGrid(.adaptive 240) of label/value cells + divider
+                                  (web grid-cols-2 + divide-y). The atomic TSKVList peer is single-column + monospaced
+                                  (TSCode); the web here is columns=2 with prose values, so the 2-col grid is reproduced
+                                  as a scoped subview (the only files this prompt may touch) — same disposition as 0237.
+  <Skeleton lines={4}>          → VehicleConfigLoadingView (TSSkeleton rows) — web absent-while-fetching skeleton
+  lucide Settings               → SF Symbol "gearshape" (header) / "exclamationmark.triangle.fill" (error) / "gearshape" (empty)
+  value ?? '—'                  → VehicleConfigValue.text (em-dash sentinel "—" identical to the web `?? '—'`)
+  flag != null ? yes/no : '—'   → VehicleConfigValue.boolean (nil ⇒ dash, else localized Yes/No)
+  software_update_version ?? sw → VehicleConfigValue.software (update_version ?? prop ?? "—")
+  i18n                          → every string via VehicleConfigStrings (NSLocalizedString table "VehicleConfigSection",
+                                  web key + English value:fallback). The 15 web keys are reproduced VERBATIM
+                                  (vehicles.detail.carType/trim/color/wheels/roofColor/chargePort/rhd/europeVehicle/
+                                  offroadLightbar/rearSeatHeaters/sunroofInstalled/softwareVersion/vehicleConfig +
+                                  common.yes/no); the P4 leaf chrome adds vehicles.detail.config.*.
+  a11y                          → each row combined into one element ("{label}: {value}"); chip / refresh / retry labelled;
+                                  Dynamic Type via Font.TS tokens; Reduce Motion via TSFadeIn / TSSkeleton; the panel is an
+                                  a11y container titled "Vehicle Configuration".
+  telemetry                     → view.opened surface="VehicleConfigSection" emitted once on the first applied snapshot.
+
+STATES (every state renders — no hidden surface)
+  loading  → skeleton key/value rows (web `vehicleConfig` absent while fetching).
+  empty    → "No configuration reported yet" + a gear glyph (the web renders a perpetual skeleton when the snapshot is
+             null; the P4 leaf contract surfaces a friendly message instead) — never a blank box.
+  error    → retryable error chrome (P4 leaf addition; the web has no error branch).
+  data     → the 12 key/value rows in the web order, each value resolved (dash / yes-no / software fallback).
+  stale    → header chip + banner + one-shot auto-refresh on the live→stale transition.
+  offline  → header chip + banner over last-known content; no auto-refresh.
+
+GATES  (raw exits below; per-surface scope)
+  [GREEN] swiftformat --lint  (.swiftformat, 9 swift files)      : 0/9 files require formatting           FORMAT_EXIT=0
+  [GREEN] swiftlint --strict  (.swiftlint.yml, 9 swift files)    : 0 violations, 0 serious in 9 files     LINT_EXIT=0
+  [GREEN] check-placeholders.ps1 (-Language swift, the 10 VehicleConfigSection.* files, scoped via temp dir):
+                                                                   PLACEHOLDER_ALLOWED=0
+                                                                   PLACEHOLDER_COUNT=0                     PLACEHOLDER_EXIT=0
+          (A whole-feature-views scan reports COUNT=19 — all in OTHER, pre-existing surfaces; grep confirms ZERO of
+           those lines is a VehicleConfigSection.* file.)
+  [GREEN] ISOLATED build + test — SwiftPM, swift-tools 6.0 (Swift 6 language mode = strict-concurrency complete, the
+          SAME setting as the app: SWIFT_VERSION 6.0 + SWIFT_STRICT_CONCURRENCY complete), compiling the EXACT shipped
+          7 VehicleConfigSection production sources (incl. the #Preview macro file) against the REAL repo design-system
+          files (generated apps/design Tokens + Sources/Design TSDesign/TSMaterial + Sources/Components
+          Typography/Badges/Buttons/Cards/Skeletons/Motion) under the Xcode 26.5 toolchain (real #Preview macro + XCTest):
+              Build complete!  ·  Executed 34 tests, with 0 failures (0 unexpected)                       SWIFT_TEST_EXIT=0
+  [GREEN] xcodegen generate — the project regenerates cleanly WITH the 10 new VehicleConfigSection.* files included in
+          the TeslaSync + TeslaSync-macOS sources (TeslaSync/feature-views path).                          XCODEGEN_EXIT=0
+
+  [DEFERRED] Full-app iOS-Simulator + macOS `xcodebuild -scheme TeslaSync(-macOS) … build test`.
+          NOT run-to-green on this runner because the full app target is blocked by PRE-EXISTING, unrelated conditions
+          this prompt neither introduced nor is allowed to touch (each VERIFIED here on THIS runner, not assumed):
+            • apps/apple/Frameworks/Shared.xcframework is NOT staged (only .gitkeep present). A real, bounded
+              `xcodebuild -target TeslaSync … build` (scheme pre-action skipped) failed FAST and UNAMBIGUOUSLY with:
+                  error: There is no XCFramework found at '…/apps/apple/Frameworks/Shared.xcframework'.
+                         (in target 'TeslaSync' from project 'TeslaSync')
+              The framework is produced by the scheme's Gradle :core:assembleSharedXCFramework pre-action (~7 min KMP
+              build), a macOS-pending row for p1-shared/S3 in apps/macos-pending-verifications.md;
+            • 171 co-located `*.Tests.swift` under TeslaSync/feature-views import XCTest + `@testable import TeslaSync`
+              into the APP target (the established surface convention; this surface adds exactly one,
+              VehicleConfigSection.Tests.swift, like every prior surface);
+            • `struct DashboardWidgetSize` is redefined 15× across Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/*
+              (parallel-merge collisions);
+            • macOS development-signing.
+          Crucially, the captured xcodebuild error halts at framework resolution BEFORE compiling any source, and ZERO
+          errors reference VehicleConfigSection — this code is not implicated. This is the SAME sanctioned
+          "code-complete + DEFERRED full-app Xcode gate" disposition recorded by every prior P4 surface
+          (see p4-apple-feature-views-0237-AiUsageCard.log) and is owned by the P4 acceptance gate on a signed
+          macos-latest runner per apps/macos-pending-verifications.md.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED with the raw, verified
+                           pre-existing-blocker error pasted above — never reported as passing.
+  2  No scope narrowing  : every web region + branch reproduced — the GlassPanel + header (gear + title), all 12 rows in
+                           the exact web order with the per-field dash / yes-no / software-fallback resolution, the
+                           columns=2 layout, the absent-data skeleton; plus all P4 leaf states render.
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; raw exits pasted; the deferred full-app blocker
+                           was re-confirmed by a REAL bounded xcodebuild run (the XCFramework-missing error), not assumed,
+                           and the co-located-test (171) + DashboardWidgetSize (15) counts were re-grepped.
+  4  No stubs as final   : complete production surface + 34 real tests; placeholder scanner COUNT=0; no
+                           TODO/FIXME/XXX/Coming-soon/Placeholder/Lorem/not-implemented anywhere in the shipped files.
+  5  No parity shortcut  : the `?? '—'` dash, the `!= null ? yes/no : '—'` boolean branch, the
+                           `software_update_version ?? softwareVersion ?? '—'` fallback chain, the 12-row order, and the
+                           15 i18n keys are each unit-asserted / catalogued against the web source verbatim.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened telemetry, and
+                           the established P4 "isolated-build + DEFERRED full-app" disposition all honoured; no
+                           predecessor surface files were modified (only NEW VehicleConfigSection.* files were added).
+  8  No commit on red    : the committed artifact (10 VehicleConfigSection.* files + this log) is GREEN on every
+                           per-surface gate AND on a real isolated Swift 6 strict-concurrency build + 34/34 XCTest; the
+                           deferred full-app gate is blocked only by pre-existing, unrelated conditions this commit does
+                           not touch.
+  9  No silent drift     : changes are confined to feature-views/VehicleConfigSection.{swift,Adapter,Model,Projection,
+                           Views,Chrome,Previews,Tests,AdapterTests}.swift + VehicleConfigSection.strings and this log.
+                           Disclosure: `git status` on this case-insensitive checkout shows the 7 pre-existing
+                           AIUsageCard.* (capital-I, surface 0203) files as "modified" — that is the documented
+                           case-variant checkout artifact vs the Ai/AI 0237/0203 blobs (see -0237 log), NOT a change
+                           by this prompt; those paths were never written and are NOT staged.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic VehicleConfigSection shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 34 tests pass under the app's own Swift 6 strict-concurrency rules, against the REAL
+  design system, via the Xcode 26.5 XCTest runtime, with swiftformat / swiftlint / placeholder all green on the 10
+  surface files, the #Preview macro compiling, and `xcodegen generate` accepting the new files into both app targets.
+  The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code) on pre-existing,
+  unrelated, out-of-allowed-files blockers (unstaged Shared.xcframework — captured live; the DashboardWidgetSize 15×
+  redefinition; the co-located-tests-into-app-target convention; macOS signing), owned by the P4 acceptance gate on a
+  signed macos-latest runner per apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

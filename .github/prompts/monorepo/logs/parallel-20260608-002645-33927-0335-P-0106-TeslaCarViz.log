@@ -1,0 +1,142 @@
+I'll start by exploring the environment and understanding the task constraints. Let me check the key dependencies in parallel.
+
+Key finding: macOS with Swift 6.3.2, swiftlint, swiftformat, and pwsh available — but **xcodebuild only has Command Line Tools, not full Xcode** (no iOS Simulator). Let me explore deeper to understand the precedent and existing structure.
+
+Strong precedent exists. Let me study the closest analog (`DigitalTwinMiniWidget` — a car viz) and a precedent log to understand the multi-file pattern and how the xcodebuild gate was handled.
+
+Now I understand the precedent: prior P4 surfaces shipped **STATUS=DONE** with host gates (swiftlint/swiftformat/placeholder) green and the Xcode build/test **capability-deferred** with evidence. My allowed files are strict (`shared-surfaces/TeslaCarViz.*` + log only), so I must NOT touch shared `project.yml`/`xcstrings` — strings ship as a per-surface table. Let me study the closest analog (`DigitalTwinMiniWidget`) and finish the web source.
+
+Excellent — the conventions are now clear (TS tokens, shared components, Model/Adapter/Store/Glyph split, telemetry seam). Let me finish the web source and read the remaining DigitalTwin analog files plus locate the design tokens & shared components.
+
+I have the architecture pattern down. Let me read the remaining analog files (Inputs, Content), locate the shared tokens/components/facade types, and probe the exact Xcode capability — all in parallel.
+
+Big finding: **Xcode.app exists** in /Applications (just not selected via `xcode-select`). I may be able to run the real build via `DEVELOPER_DIR`. Also noted: unrelated `AIUsageCard.*` files are already modified in the tree — I'll scope my commit precisely and not touch them. Let me probe Xcode.app capability and read the facade/token/component definitions.
+
+Critical discovery: **full Xcode 26.5 is available** via `DEVELOPER_DIR`, with a booted iPhone 16 (iOS 26.5) simulator and `xcodegen` installed — so the real build/test gate IS runnable. But `project.yml` only globs `dashboard-widgets` + `feature-views`, **not** `shared-surfaces`, and I can't commit a `project.yml` edit (not in allowed files). I'll verify by temporarily wiring it, then revert. Let me read the full project config + the exact token/facade/component APIs I must code against.
+
+`LoadableState` imports the KMP `Shared` framework — that's the crux of why prior runs deferred: the full app build needs `Shared.xcframework`. Let me check whether it's prebuilt, read the facade/token/component APIs, and study the feature-view structural template + its tests.
+
+Now the full picture is clear: the full-app build needs the **KMP `Shared.xcframework`** (absent; built via Gradle) and my path added to `project.yml` — exactly why prior runs deferred the Xcode app gate. I'll write production code against the real APIs, run host gates (swiftlint/swiftformat/placeholder), and add an isolated compile+test harness for real verification. Let me read the token/component/feature-view APIs and probe the KMP toolchain.
+
+Let me read the design tokens, skeleton/status components, the feature-view structural template + its tests, and the documented deferral posture.
+
+`TSSpacing`/`TSRadius`/`TSMotion`/`Color.TS`/`Font.TS` live elsewhere (Theme.swift or generated tokens). Let me pin their exact members, read the StatusDot-equivalent component, and the feature-view template's test conventions.
+
+Tests use `XCTest` + `@testable import TeslaSync`. Let me pin the exact token members (generated Tokens.swift + Theme.swift), the StatusDot component, and the feature-view shell + `.strings` format — then I'll start writing.
+
+I have the tokens (`TSSpacing`/`TSRadius`/`TSMotion`) and components (`TSStatusDot`, `TSStatusBadge`, `TSEmptyState`, `TSQueryError`, `TSSkeleton`). Final reference batch: `TSTone`/`TSBadge`, exact `Color.TS`/`Font.TS` members, and the feature-view shell + `.strings` format. Then I'll write.
+
+I have everything needed. Let me confirm the exact `Color.TS`/`Font.TS` member names in the generated tokens, then I'll set up my plan and start writing.
+
+I now have the complete API surface. Let me set up tracking, kick off the heavy KMP `Shared.xcframework` build in the background (so it warms while I write), and create a plan.
+
+The KMP build is warming in the background. Before writing, I need the exact `batteryColor`/`boolColor` port from the web lib.
+
+I have every API and color value. Creating the surface directory and writing the files now, starting with the domain model.
+
+Key config notes: `swiftformat --lint apps/apple` **will** check my new dir (only Frameworks/build excluded), so format compliance matters (maxwidth 120, wrap-before-first). swiftlint's `included:` omits `shared-surfaces`, so I'll lint my files explicitly. Also: avoid single-char identifiers except `x/y/t`. Writing the model now.
+
+Now the palette — a faithful port of the web `useSvgPalette` (light/dark) as computed properties.
+
+Now the parity core — the `Canvas`-based side-view car renderer with an SVG path parser, per-model geometry, and reduce-motion-aware `TimelineView` animations. This is the largest file.
+
+That file has type-coercion issues (Double vs CGFloat) and some collision-prone global helper names. Let me fix all of them: make helpers `private`, prefix the structs, and add the needed `CGFloat(...)` conversions.
+
+Now the Double↔CGFloat coercion fixes and removing the forced aspect ratio on the full glyph (web stretches the fixed view-box per model).
+
+Glyph fixes applied. Updating progress and writing the data-source seam + view model.
+
+The KMP `Shared.xcframework` built successfully and is staged — so the **real `xcodebuild` gate is now viable**. I'll continue writing, then run host gates + a fast harness, then the real build/test. Writing the data-source seam and view model.
+
+Now the view chrome — shell, freshness chip, status row, empty/skeleton, and content composition.
+
+Now the public entry points — the bound `TeslaCarViz`, the pure presentational `TeslaCarVizCore`, and the `TeslaCarMini` variant.
+
+Now the per-surface i18n table.
+
+Refactoring the status mapping into a pure, testable model (DRY for both the view and the a11y label + unit tests). Updating the model and views.
+
+Now the previews covering every state, model, theme, and the mini variant.
+
+Now the comprehensive test suite — adapter, parser, palette, model state transitions, telemetry, and a11y/status mapping.
+
+All 11 source files written. Now running the host gates — auto-format, then lint, then the placeholder check.
+
+swiftformat lint is clean (0/10 require formatting). Waiting on swiftlint.
+
+swiftformat is clean. swiftlint ignored my path arg and linted the config's `included` set (which excludes `shared-surfaces`) — surfacing a **pre-existing** violation in `LifetimeStatsWidget.Adapter.swift` (not my code). I need to lint **my** files with the same rules via a scoped config.
+
+My sed mangled the YAML. Let me write a clean scoped config directly.
+
+swiftlint resolves `included` relative to the config file's directory (/tmp). Let me use an absolute path.
+
+Real swiftlint violations in `TeslaCarViz.Glyph.swift` only (file too long, type/function bodies too long, complexity, a 3-tuple, long verbatim path-string lines, one brace). I'll refactor: redesign the layout, split geometry/parser into their own file, move draw methods into `TeslaCarRenderer` extensions across files. Let me read the exact current code in chunks.
+
+The C-case brace is the line-217 issue (fixable on one line). Now let me read the remaining draw code exactly so I can re-split it faithfully into renderer extensions.
+
+I have all the code. Now I'll refactor into 4 files to satisfy swiftlint: a `Geometry` file (redesigned layout + parser + helpers), a slim `Glyph` file (renderer + views), and two renderer-extension files. Removing the monolith and writing the new files.
+
+Now the slim `Glyph` file — the renderer struct with its orchestrator, plus the two glyph views.
+
+Now the chassis renderer extension (shadow, body, model accents, detail lines, wheels, door handle).
+
+Now the effects renderer extension (lighting, battery, charging, lock, climate, sentry, speed lines).
+
+All 4 glyph files written. Re-formatting and re-running the scoped strict lint.
+
+One violation left: `TCVPath.parse` cyclomatic complexity (16). I'll split the command switch into per-command handlers so the dispatcher stays simple. Let me view the current parser block to replace it exactly.
+
+Both lint gates are **clean (0 violations)**. Now the placeholder gate.
+
+Placeholder gate clean (COUNT=0). Now I'll build an **isolated SwiftPM harness** to actually compile my code and **execute** the unit tests against faithful stubs (fast, reliable), then run the real whole-app `xcodebuild`. Setting up the harness.
+
+Now compiling and **executing** the tests via the harness with the Xcode toolchain.
+
+Good news: **all my surface files compiled** — the only errors are stub access levels (the real `FacadeError`/`LoadableState` are `public`; my stubs were `internal`). Fixing the stubs.
+
+All surface files compile cleanly now. One real bug in my **test** (argument order: `sentryMode` must precede `speed`). Fixing it in the committed test file and re-running.
+
+29 tests executed, 1 failure (the rest pass). Let me find the failing assertion.
+
+Another **test** bug: `boundingRect.contains` returns false for the zero-width rect of a vertical line — the parser is correct. Fixing the assertion to check the bounds directly.
+
+**All 29 unit tests pass** in the harness (real compile + execution; Swift 6 strict concurrency, real SwiftUI/Canvas/Observation). Now the authoritative gate: the real whole-app `xcodebuild` with `shared-surfaces` temporarily wired in (`Shared.xcframework` is staged). Backing up `project.yml` and wiring it.
+
+Wired correctly. Now regenerating the Xcode project and kicking off the iOS build + test (this is the long pole). I'll disable the KMP rebuild pre-action since the framework is already staged.
+
+Project regenerated with my files included (84 references). Kicking off the iOS build (whole app, incl. my surface) — the long pole. I'll skip the redundant Gradle pre-action since the framework is already staged, and run the target build first to validate compilation.
+
+The iOS build is running in the background. Let me monitor it.
+
+The foreground wrapper finished but the build subshell continues writing to the log. Let me check the log directly.
+
+The async log vanished (session teardown) and there's contention from parallel slots' `xcodebuild`. Let me inspect which processes are mine and check my derived-data before re-running cleanly.
+
+Now it's clear: my async job was torn down (no orphan from me), and the host is **heavily contended** — ~10+ parallel slots are running `xcodebuild ... build test` against the shared iPhone 16 simulator. To get a reliable integration signal without fighting the shared CoreSimulator, I'll do a **compile-only** app-target build against the real deps (skips the Gradle pre-action and the sim runtime). Running iOS in sync mode.
+
+`-derivedDataPath` needs `-scheme`. Dropping it and building the target directly (still skips the scheme's Gradle pre-action).
+
+The failure is **pre-existing**, not mine: `feature-views/AIRestorePanel.Tests.swift` (and other co-located `*.Tests.swift`) `import XCTest`, which a plain app-target build can't resolve — my own test file was correctly excluded. Enabling testing search paths so the app target (incl. my surface) compiles.
+
+The build failed, but I need to confirm **none** of the errors are mine. Every error shown is in other surfaces (`TwinVehicle` ambiguous, `DashboardWidgetSize` ambiguous, `ChargerType*`, `CommandTile*` — pre-existing cross-surface type collisions). Let me verify zero TeslaCarViz errors in the full log.
+
+**Decisive evidence: 543 compiler errors across the whole app, but ZERO in any TeslaCarViz file.** My 12 files compiled together (visible in the `SwiftCompile` batch) against the *real* module/tokens/facade with no errors. The 543 errors are all **pre-existing cross-surface collisions** in other surfaces (`TwinVehicle` defined twice, `DashboardWidgetSize`/`ChargerType*`/`CommandTile*` ambiguous) — outside my allowed files. Let me get symmetric macOS evidence.
+
+Symmetric macOS evidence: **3533 pre-existing errors, ZERO in TeslaCarViz.** My surface compiles cleanly on both iOS and macOS against the real module; the whole-app gate is blocked solely by pre-existing cross-surface collisions in other surfaces (integration scope, outside my allowed files). Now reverting the temporary `project.yml` wiring and cleaning generated artifacts.
+
+Now I'll write the gate log with fully honest, evidenced results, then commit. First, let me capture representative evidence lines for the log.
+
+Now writing the comprehensive, honest gate log.
+
+Now a final lint/format check on the surface (I edited the test file twice), then cleanup and commit.
+
+All final gates green. Cleaning up temp artifacts and committing the surface (scoped to my allowed files + log).
+
+14 surface files + log staged; `project.yml` clean; unrelated files untouched. Committing.
+
+Committed (`6731ae9`, 15 files, 2835 insertions) — `project.yml` and the unrelated `AIUsageCard` files are correctly excluded. Final verification of repo state.
+
+All verified. Let me confirm all tracked work is complete.
+
+All 16 tracked tasks are complete. The TeslaCarViz Apple surface is shipped and committed.
+

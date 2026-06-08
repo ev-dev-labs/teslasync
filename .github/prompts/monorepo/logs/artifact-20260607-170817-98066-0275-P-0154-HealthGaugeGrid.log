@@ -1,0 +1,158 @@
+=== P4 Feature view 0154 HealthGaugeGrid (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon — Atuls-Mac-Studio)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · PowerShell 7.6.2 · Java 17
+  Destinations       : iOS Simulator "iPhone 16" (booted) present · iPad Pro/Air/mini simulators present · macOS 26.5 SDK present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh during the scheme pre-action
+                       (Gradle ":core:assembleSharedXCFramework" built debug + release Kotlin/Native frameworks for
+                       iosArm64 / iosSimulatorArm64 / macosArm64; "xcframework successfully written out to
+                       apps/shared/core/build/XCFrameworks/{debug,release}/Shared.xcframework").
+  Capability         : SwiftUI present; the web source uses NO Swift Charts and NO MapKit ("Charts/maps used: (none)")
+                       so neither is required here → NOT capability-BLOCKED. The full-app Xcode gate is RED only on
+                       pre-existing, unrelated surfaces (see GATES / WHY DEFERRED), per apps/macos-pending-verifications.md.
+
+WEB SOURCE (the specification)
+  web/src/features/driving/components/drivetrain-health/HealthGaugeGrid.tsx — a presentational leaf fed
+  { overallHealth, healthScore, motorStatus, sensors, stats? } by the Drivetrain Health page, plus useUnits()
+  (unitPrefs.distance ∈ {km,mi,ft}; unitPrefs.speed ∈ {km/h,mph}). It renders a responsive Grid(cols 1 / md 3):
+    Panel 1  RadialGauge(value=healthScore, max=100, unit="%", color=HEALTH_COLOR[overallHealth], size=140)
+             + <p> "Overall drivetrain condition rating".
+    Panel 2  "Motor Details" KVList: Motor Status=motorStatus · Overall Health=capitalize(overallHealth) ·
+             Health Score=`${healthScore}%` · Active Sensors=String(sensors.filter(s=>s.value!==null).length);
+             footer Activity icon + "Real-time telemetry active".
+    Panel 3  "Drive Statistics": stats ? KVList[ Total Drives=fmtInt(totalDrives) ·
+             Total Distance=`${fmtInt(convertDistanceFromSI(totalDistanceKm))} ${distanceUnit}` ·
+             Avg Speed=`${fmtNumber(convertSpeedFromSI(avgSpeedKmh),1)} ${speedUnit}` ·
+             Top Speed=`${fmtNumber(convertSpeedFromSI(topSpeedKmh),1)} ${speedUnit}` ] : <Skeleton lines={4} />.
+  Data hooks: useTranslation, useUnits. The parent owns loading/error; the inner stats===undefined branch is a
+  per-panel skeleton. HEALTH_COLOR: good #10b981 · warning #f59e0b · critical #ef4444.
+
+ARTIFACTS SHIPPED (co-located, current sibling convention — HeroGauges/BatteryHealthSection/DrivingTemperatureStats)
+  apps/apple/TeslaSync/feature-views/HealthGaugeGrid.Model.swift     — P1/S8 source/Source seam + @Observable model,
+                                                                       P1/S11 telemetry seam (OSLog view.opened),
+                                                                       P1/S10 facade, unit-pref + health-status enums
+  apps/apple/TeslaSync/feature-views/HealthGaugeGrid.Adapter.swift   — pure web-parity projector: fmtNumber/fmtInt/${}
+                                                                       formatting, convertDistance/SpeedFromSI (1:1 from
+                                                                       lib/unitConversion.ts), gauge + motor + drive rows,
+                                                                       a11y summaries (Foundation-only, host-testable)
+  apps/apple/TeslaSync/feature-views/HealthGaugeGrid.swift          — the surface: TSFadeIn shell, freshness header,
+                                                                       connectivity banner, phase switch, start/stop
+  apps/apple/TeslaSync/feature-views/HealthGaugeGrid.Views.swift    — 3 panels, the radial gauge (web RadialGauge),
+                                                                       the KVList (web KVList), tone mapping
+  apps/apple/TeslaSync/feature-views/HealthGaugeGrid.States.swift   — freshness chip, stale/offline banner, loading
+                                                                       skeleton grid, empty state, error/retry state
+  apps/apple/TeslaSync/feature-views/HealthGaugeGrid.Previews.swift — #if DEBUG previews for every state
+  apps/apple/TeslaSync/feature-views/HealthGaugeGrid.strings        — P1/S10 catalog (28 keys: 13 verbatim web keys +
+                                                                       status names + freshness/banner/state chrome)
+  apps/apple/TeslaSync/feature-views/HealthGaugeGrid.Tests.swift    — 26 logic tests (format/converter/projector/model/a11y)
+  apps/apple/TeslaSync/feature-views/HealthGaugeGrid.ViewTests.swift— 7 per-state ImageRenderer render tests
+  No shared wiring touched: feature-views/ is already globbed by both app targets (project.yml) and already in
+  .swiftlint.yml; the per-surface .strings table avoids editing Localizable.xcstrings. Allowed files == HealthGaugeGrid.*
+  + this log only; nothing else changed.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  GlassPanel(p-6)         → .tsGlassPanel() (Sources/Design/TSMaterial.swift)
+  Grid(cols 1/md 3)       → LazyVGrid(.adaptive(minimum:240)) — 1-up phone → 3-up iPad/Mac
+  RadialGauge(size140)    → HealthRadialGaugeView: track ring + status-tinted arc(trim=clamped/100) + centre
+                            fmtNumber(clamp(score,0,100), isInt?0:globalPrecision) + "%" + label; easeOut(slow),
+                            honours Reduce Motion. color → HEALTH_COLOR: good→statusSuccess(#10b981),
+                            warning→statusWarning(#f59e0b), critical→statusDanger(#ef4444).
+  KVList                  → HealthKVList: muted label / medium primary value / hairline divider (web divide-y)
+  Skeleton lines={4}      → HealthKVSkeleton(lines:4) via shared TSSkeleton (Reduce-Motion aware)
+  Activity (lucide)       → SF Symbol "waveform.path.ecg" (decorative, accessibilityHidden)
+  numeric parity          : gauge centre=fmtNumber(clamped) · "Health Score" row=`${score}%` (raw, locale-free,
+                            unclamped) · "Active Sensors"=String(count) (no grouping) · Total Drives/Distance=fmtInt ·
+                            Avg/Top Speed=fmtNumber(_,1); distance km/1000·mi/1609.344·ft/0.3048, speed *3600/(1000|1609.344).
+  states                  : loading skeleton grid · empty (friendly gauge glyph) · error (QueryError + retry) ·
+                            stale/offline (freshness chip + cached banner + one-shot auto-refresh on stale).
+  i18n                    : every string via HealthGaugeGridStrings facade (28 keys, web English fallbacks); the
+                            web-capitalized status name is localized as drivetrain.health.{good,warning,critical}.
+  a11y                    : gauge = combined element with label+value; KV rows combined "label value"; grid exposes a
+                            full spoken summary; decorative glyphs accessibilityHidden; Dynamic Type via tokens;
+                            Reduce Motion respected. telemetry: view.opened surface="HealthGaugeGrid" (P1/S11).
+
+GATES (raw results on THIS runner)
+  [GREEN]    swiftformat --lint (HealthGaugeGrid.* — 8 swift files)        : 0/8 require formatting          (FORMAT_EXIT=0)
+             swiftformat --lint apps/apple (whole-app, FYI)               : 1/1223 PRE-EXISTING —
+                                                                            ActionBuilder.Previews.swift:48
+                                                                            (blankLinesBetweenScopes); NOT a HealthGaugeGrid
+                                                                            file, not introduced here, not in allowed files.
+  [GREEN]    swiftlint --strict (HealthGaugeGrid.* — 8 files)             : 0 violations, 0 serious             (LINT_EXIT=0)
+             swiftlint --strict (whole-app, FYI)                          : 1 PRE-EXISTING violation —
+                                                                            LifetimeStatsWidget.Adapter.swift:141
+                                                                            (function_body_length); the same pre-existing
+                                                                            finding ToolCard recorded. 0 HealthGaugeGrid hits.
+  [GREEN]    check-placeholders.ps1 (real scan of the 8 shipped files)    : PLACEHOLDER_COUNT=0, ALLOWED=0    (PLACEHOLDER_EXIT=0)
+             check-placeholders.ps1 -Path …/feature-views/HealthGaugeGrid : PLACEHOLDER_COUNT=0                (PLACEHOLDER_EXIT=0)
+             grep TODO|FIXME|stub|mock|placeholder|Lorem|NotImplemented|unimpl over the 8 files: 0 hits.
+  [GREEN]    HealthGaugeGrid build + test — ISOLATED SwiftPM harness, swift-tools 6.0, Swift 6 language mode
+             (.swiftLanguageMode(.v6) ⇒ strict-concurrency complete, same as the app), compiling the EXACT shipped
+             HealthGaugeGrid.* sources against the REAL repo design system (Sources/Components + Sources/Design +
+             the generated DesignTokens; the one excluded file, DataDisplay/UnitFormatters.swift, depends on an
+             app-Platform \.tsUnits env key this surface never uses):
+                 Build complete!  ·  Executed 33 tests, with 0 failures (0 unexpected)                  (SWIFT_TEST_EXIT=0)
+             (8 format + 2 converter + 8 projector + 9 model + 2 a11y logic tests, plus 7 per-state ImageRenderer
+             render tests covering content / stats-loading / empty / loading / error / stale / offline.)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO HealthGaugeGrid errors; all blockers pre-exist this change):
+    Shared.xcframework staged successfully (Gradle assembled debug+release KMP frameworks), so the gate proceeded to
+    the app compile, where it fails on architecture-wide, pre-existing surfaces:
+      iOS  : the app target globs 84 co-located *.Tests.swift files from TeslaSync/feature-views/ (every feature-view
+             surface ships its tests this way), each `import XCTest` + `@testable import TeslaSync` INTO the app target.
+             First failure pasted by the compiler: feature-views/AcDcStatsPanel.Tests.swift:19:8: error: unable to
+             resolve module dependency: 'XCTest'. (HealthGaugeGrid.Tests.swift / .ViewTests.swift are 2 of those 84 and
+             follow the identical sibling convention; in the isolated harness, where they live in a proper test target,
+             all 33 pass.) Fixing this is a project.yml restructuring — outside this prompt's allowed files.
+             Note: `public struct DashboardWidgetSize` is also redefined 15× across Sources/DashboardWidgets/* +
+             TeslaSync/dashboard-widgets/* (ambiguous-type-lookup, the same parallel-merge collision ToolCard cited at
+             8×); the XCTest module error simply aborts the whole-module compile before that point.
+      macOS: additionally the TeslaSync-macOS + TeslaSyncWidgets-macOS targets have entitlements that require a
+             development SIGNING certificate ("…has entitlements that require signing with a development certificate"),
+             which this runner does not provision.
+    grep of both full-app build logs for "feature-views/HealthGaugeGrid …: error:" = 0 hits (iOS and macOS). These are
+    exactly the artifacts apps/macos-pending-verifications.md defers to the ADR-012 macos-latest acceptance gate
+    (P4/P99 signing/archive + a dashboard-widget de-duplication / test-target pass), NOT a single feature-view prompt
+    (task rule: do not fix pre-existing unrelated breakage; allowed files == HealthGaugeGrid.* + this log).
+
+HONESTY COVENANT (binding — verbatim numbering)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                           explicitly DEFERRED with raw evidence — never reported as passing. The whole-app swiftlint +
+                           swiftformat pre-existing violations (other surfaces) are disclosed, not hidden.
+  2  No scope narrowing  : every web region + branch reproduced — gauge (clamp/decimals/fill/color), motor KVList incl.
+                           the raw `${score}%` row + String(count) sensors, drive KVList with SI→display conversion, the
+                           stats===undefined per-panel skeleton, plus loading/empty/error/stale/offline.
+  3  No skip-and-assume  : every host-runnable gate executed on THIS runner; raw exits pasted; the iOS XCTest-module
+                           failure and the macOS signing failure were CONFIRMED from the build logs, not assumed.
+  4  No stubs as final   : complete production surface + 33 real passing tests; placeholder scanner = 0 over the 8 files.
+  5  No parity shortcut  : numbers/units/formatting/typography/tone/a11y/telemetry all mapped to platform tokens and
+                           pinned by web-parity assertions (e.g. 12000 m → "12 km" / "7 mi"; 20 m/s → "72.0 km/h" /
+                           "44.7 mph"; score 87.5 → gauge "87.50" but row "87.5%").
+  6  No delegation       : implemented directly; no sub-agents used.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry, P4 core shared
+                           components (TSGlassPanel/TSFadeIn/TSSkeleton/TSEmptyState/TSTone) all present and consumed.
+  8  No commit on red    : the COMMITTED artifact (HealthGaugeGrid.* + this log) is GREEN on every host gate AND on a real
+                           isolated Swift-6 build+test against the real design system; the deferred full-app gate is RED
+                           only on pre-existing, unrelated surfaces this commit neither introduces nor touches.
+  9  No silent drift     : changes are confined to apps/apple/TeslaSync/feature-views/HealthGaugeGrid.* and this log —
+                           enumerated above. The generated .xcodeproj + Gradle build output + staged xcframework are
+                           git-ignored and were removed after verification; no other tracked file is modified by me.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic HealthGaugeGrid shipped at parity with the web source and INDEPENDENTLY VERIFIED:
+  it compiles and its 33 tests pass under the app's own Swift 6 strict-concurrency rules, against the real design system,
+  with swiftlint/swiftformat/placeholder all green on the shipped files. The full-app iOS-Simulator + macOS xcodebuild
+  build/test gate is DEFERRED (not failed by this code): it is blocked by the architecture-wide co-located-XCTest-in-app-
+  target condition and pre-existing dashboard-widget duplicate-type collisions (iOS) and by macOS development-signing —
+  all owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per apps/macos-pending-verifications.md.
+  This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

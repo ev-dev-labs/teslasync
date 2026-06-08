@@ -1,0 +1,128 @@
+I'll start by exploring the repository structure, reading the web source spec, and checking Apple development capability on this runner.
+
+Key finding: `xcodebuild` requires full Xcode (only Command Line Tools present), and `simctl` is unavailable — but `swift`, `swiftlint`, `swiftformat`, and `pwsh` all work. Let me examine the existing Apple app structure and how prior feature-views in this series were handled.
+
+Now let me read the FSM types file and study the conventions from existing feature-views (the most recently merged one, ComputedMetricEditor) plus the shared infrastructure.
+
+Let me locate the fsm types and study the ComputedMetricEditor template files in full.
+
+Let me read the FSM type registry, the rest of the template files, and check how prior surfaces were verified (logs).
+
+Now I understand the verification disposition (isolated `swift build`/`test` + lint/format/placeholder; xcodebuild deferred). Let me read the FSM registry data model and check for any existing native FSM port.
+
+Now let me read all 8 FSM definition files to port their states, edges, and variants accurately.
+
+Let me read the remaining 6 FSM files and explore the native design tokens + shared primitives in parallel.
+
+I now have all 8 FSM definitions. Let me explore the native design system (tokens, i18n facade, feedback/ui primitives) and study a presentational sibling surface to follow the established convention for states.
+
+The AcDcStatsPanel establishes the exact convention for a presentational surface: web props + P4 leaf lifecycle (loading/empty/error/data) + orthogonal connection axis (live/stale/offline). Let me read its full Model + Views, the native tokens, feedback primitives, and the shared LocalizedText.
+
+Let me find the design token definitions, the build/verification tooling, and the test conventions.
+
+The prior surface used an isolated SwiftPM package compiling the shipped files against the real design system. Let me locate the generated tokens, shared primitives, and study the test harness structure.
+
+The main-app design tokens are generated (not in tree). Let me find the token generator and read the shared primitives I'll depend on.
+
+The generated `Tokens.swift` is force-added at `apps/design/generated/apple/Tokens.swift`, so an isolated build is feasible. Let me read the primitives I'll depend on and a sample test/strings file.
+
+All primitives import only SwiftUI — isolated build is tractable. Let me read exact signatures of the primitives, the generated tokens, and test/strings conventions.
+
+Let me read the generated tokens, plus the strings/tests/previews conventions and lint configs.
+
+I have the full token + primitive picture. Let me check for native symbol collisions (FSM types) and read the test/previews conventions before authoring.
+
+No collisions; tests use plain `XCTest` (same-module). Let me verify which Components files are SwiftUI-only (safe for the isolated build) and inspect the rest of States.swift.
+
+I now have a complete understanding. Let me set up a plan, todos, and begin authoring the shipped files. I'll start with the pure (Foundation-only) registry + data layer.
+
+Now the SwiftUI layer. Let me write the flow layout, then the node/color/a11y components.
+
+Now the view layer (header, chips, banner, content router, chrome) and the surface view.
+
+Now the i18n catalog and DEBUG previews.
+
+Now the test files (pure projection/registry + MainActor model wiring).
+
+All 10 shipped files are written. Let me set up the isolated SwiftPM harness to build + test against the real design system.
+
+`#Preview` needs Xcode's macro plugin (absent in CLT-only). That's a toolchain limit, not a code issue — I'll exclude the DEBUG preview file from the harness and rebuild to surface real logic/type errors.
+
+My surface files all compiled — the only errors are in the real design-system files: `#Preview` macros (CLT can't expand them) and sibling refs (`TSBadge`, `TSInlineCallout`) to components I didn't include. Let me locate those and rebuild the harness with preview-stripped copies of the full SwiftUI component set.
+
+Clean path forward: copy the full SwiftUI component set into the harness with `#Preview` blocks stripped (CLT can't expand the macro), keeping my surface files as symlinks. Let me script this.
+
+One leftover: `FeedbackOverlays.swift` (not used by my surface) references `TSMetricBar` from DataDisplay. Let me drop that unused file and rebuild.
+
+Build green. Now run the test suites.
+
+`swift test` needs XCTest, which ships with Xcode (absent here). Let me confirm, and check whether the newer `Testing` framework is available in this toolchain.
+
+XCTest ships with Xcode (absent here), so `swift test` can't run. The sanctioned fallback (used by the predecessor surface) is a standalone Swift 6 runner that exercises the exact shipped logic. Let me add a harness-only check runner + executable that mirrors every test assertion.
+
+All 78 checks pass (exit 0) — the exact shipped logic verifies green under Swift 6. Now the host gates on the shipped files: format, lint, placeholder. Let me auto-format first, then re-verify the harness, then lint.
+
+swiftformat clean (0). swiftlint found 4 fixable issues: a superfluous `file_length` disable and three `empty_count` hits on `node.count`. Let me fix by removing the disable and adding a semantic `isActive` flag (avoiding `.count == 0` comparisons).
+
+Now add the `isActive` flag to the node model and use it in the view to avoid `.count` comparisons.
+
+Let me re-read the formatted Projection node struct.
+
+Now update the `nodes` builder to populate `isActive`, and view the current builder:
+
+Now update Nodes.swift to use `isActive` instead of `.count` comparisons:
+
+Now re-format, re-lint, and re-verify the harness.
+
+Format clean (0) and lint clean (0) on all shipped files. Let me re-verify the harness logic after the `isActive` change, then run the whole-project gates honestly.
+
+Harness green. Now the placeholder gate (via pwsh) and a self-scan for forbidden tokens.
+
+No forbidden tokens in shipped files. Let me run the placeholder gate both as specified and as a strict scan of an isolated copy of my files.
+
+Placeholder gate: COUNT=0, EXIT=0 (both the literal gate path and a strict isolated scan). Now the whole-project format/lint gates, for honest reporting and to confirm my files don't regress the project.
+
+Only pre-existing `ActionBuilder.Previews.swift` needs formatting (a different surface, cited by the predecessor too) — none of my files. Now whole-project swiftlint.
+
+Whole-project swiftlint: exactly ONE pre-existing violation (`LifetimeStatsWidget.Adapter.swift`, cited by the predecessor too) — ZERO FSMStateDiagram violations. Now let me capture the real xcodebuild evidence on this runner (no Xcode) for an honest log.
+
+xcodebuild is blocked (Xcode absent — CLT only; `simctl` unavailable) — a runner-capability limit, captured honestly. Every host-runnable gate is green. Let me gather final evidence (file inventory, line counts, git status) before writing the log.
+
+All 12 files are well-sized (≤258 lines), git shows only my new files + the 2 pre-existing edits (which I won't stage), and no harness pollution. Let me write the gate log.
+
+Log written. Now commit — staging only the FSMStateDiagram files + the log (not the two pre-existing unrelated web edits).
+
+Staged set is exactly my 12 files + the log; the 2 pre-existing web edits remain unstaged. Committing now.
+
+Committed as `67a3160c9` (13 files, 2077 insertions). Let me do a final integrity check and update todos.
+
+All verifications pass. The task is complete.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-feature-views-0229-FSMStateDiagram.log | 236 +++++++++++++++++++
+ .../feature-views/FSMStateDiagram.Flow.swift       |  96 ++++++++
+ .../feature-views/FSMStateDiagram.Model.swift      | 258 +++++++++++++++++++++
+ .../feature-views/FSMStateDiagram.ModelTests.swift | 105 +++++++++
+ .../feature-views/FSMStateDiagram.Nodes.swift      | 222 ++++++++++++++++++
+ .../feature-views/FSMStateDiagram.Previews.swift   |  93 ++++++++
+ .../feature-views/FSMStateDiagram.Projection.swift | 217 +++++++++++++++++
+ .../feature-views/FSMStateDiagram.Registry.swift   | 145 ++++++++++++
+ .../FSMStateDiagram.RegistryData.swift             | 214 +++++++++++++++++
+ .../feature-views/FSMStateDiagram.Tests.swift      | 175 ++++++++++++++
+ .../feature-views/FSMStateDiagram.Views.swift      | 212 +++++++++++++++++
+ .../feature-views/FSMStateDiagram.strings          |  36 +++
+ .../TeslaSync/feature-views/FSMStateDiagram.swift  |  68 ++++++
+ 13 files changed, 2077 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0229-FSMStateDiagram.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMStateDiagram.Flow.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMStateDiagram.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMStateDiagram.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMStateDiagram.Nodes.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMStateDiagram.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMStateDiagram.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMStateDiagram.Registry.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMStateDiagram.RegistryData.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMStateDiagram.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMStateDiagram.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMStateDiagram.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/FSMStateDiagram.swift

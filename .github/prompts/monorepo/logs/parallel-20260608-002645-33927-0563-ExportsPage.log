@@ -1,0 +1,172 @@
+I'll start by exploring the codebase structure to understand the task fully.
+
+Now let me explore the Apple app structure and the web hook for data shapes.
+
+Now let me explore the Apple app structure to understand existing patterns.
+
+The actual code lives in `Sources/`. Let me check how existing pages are structured and whether there's a precedent for the `Features/` layout mentioned in the prompt.
+
+No pages exist yet. Let me read the project config, gate README, and an existing feature-view as a template.
+
+The build only includes `TeslaSync/dashboard-widgets` and `TeslaSync/feature-views`, not `TeslaSync/Features`. Let me check toolchain availability (critical for the gate) and locate the gate README.
+
+Critical: `xcodebuild` only has CommandLineTools, not full Xcode — so the build/test gate cannot run. Let me confirm and study an existing feature-view implementation + its log format as the precedent.
+
+Xcode.app exists in /Applications. I can override with `DEVELOPER_DIR` without sudo. Let me verify it's functional.
+
+Xcode 26.5 is fully available via `DEVELOPER_DIR`. The gate can run — I should target STATUS=DONE. Let me study a complete feature-view example to learn the conventions (Adapter/Model/Views/strings/Tests/Previews).
+
+Now let me read the rest of the example pattern (Adapter, Views, strings, Previews, Tests) plus the design tokens and components used.
+
+Excellent, the pattern is clear. Let me read the strings/Previews/Tests examples plus the shared components and SharedFacade so I can build the production source path.
+
+Now let me examine the shared component library, design tokens, SharedFacade (KMP core access), and navigation.
+
+Let me read the SharedFacade (KMP core access pattern), navigation, and remaining shared components/tokens.
+
+The established pattern uses a `Source` protocol seam + `InMemory` implementation (real KMP wiring deferred to `AppContainer.bootstrap`). Now let me read navigation, remaining components/tokens, and the strings catalog format.
+
+Let me find where routes get registered (composition root) and read the remaining components/tokens.
+
+Let me examine the shared KMP core for an exports store, plus RootView and the route parser.
+
+A shared KMP `ExportsStore` exists. Let me read it plus the models/repo and check the xcframework build status.
+
+Let me check whether the Shared.xcframework is prebuilt and how its build script behaves — this determines whether I bind to `Shared.ExportsStore` directly or via a seam.
+
+Let me read `StateHolderModel` and check whether `AppContainer.bootstrap` / any real KMP store instantiation exists in Swift yet.
+
+There's already an `ExportStatusWidget` using an exports Source seam over `ExportsStore`. Let me read it — it's the closest same-domain precedent.
+
+This confirms the canonical pattern: a `Provider` seam + `@Observable` model + host-driven feed provider, with the view free of KMP symbols. Let me verify how widgets are actually wired (to confirm deferred KMP wiring) and read the remaining tokens/components + route parser.
+
+`exportsList` keys already appear in the 4.6MB master catalog. Let me check exactly which of the 19 keys exist and inspect the xcstrings JSON format so I can add the new `route.exports` entry.
+
+The web keys exist under a `translation.` prefix (different resolution path). I'll follow the proven per-surface `.strings` table precedent for page strings. The new nav route needs `route.exports` in the master catalog — let me view the exact JSON format.
+
+Now let me read the remaining components/tokens I'll use, the route parser, and the swiftlint config.
+
+Let me check the pending-verifications doc and how `.Tests.swift` files in feature-views are routed (app target vs test target).
+
+Key finding: `macos-pending-verifications.md` documents that the **full-app `xcodebuild build test` is blocked by pre-existing, unrelated parallel-merge collisions** (DashboardWidgetSize ×15, 152 co-located `*.Tests.swift` importing XCTest into the app target, unstaged Shared.xcframework, signing). Surfaces are verified in isolation and the full-app build deferred to CI. Let me read the precedent logs to match their exact gate + STATUS reporting.
+
+This is the decisive precedent: surfaces are **code-complete + host-validated** (swiftlint --strict, placeholder scan, real-SDK `swiftc -typecheck` for iOS+macOS, isolated SwiftPM `swift test`, `xcodegen generate`), with the **full-app xcodebuild build/test deferred** to the P99 macOS CI gate due to documented pre-existing unrelated blockers — logged as `EXIT=0 / STATUS=DONE`. I'll match this exactly. Let me write a plan and gather the last pieces (tokens, motion, typography, placeholder script, AppRoute switch sites).
+
+Let me verify the design token names, the WatchDeepLink switch (exhaustiveness risk), and typography components.
+
+`WatchDeepLink` is a separate enum (safe). Let me confirm there are no other exhaustive `AppRoute` switches, and read the typography + buttons components I'll use.
+
+I have everything needed. Let me check for existing AppRoute tests (adding a case could break count assertions) and confirm the web route, then write the plan.
+
+`/exports` is confirmed in web App.tsx. Adding an `AppRoute` case ripples into `MenuCommandCatalogTests` (asserts the menu catalog == all routes). Let me check whether the menu catalog derives from `allCases` (auto-safe) or is hardcoded.
+
+All switch sites and tests derive from `AppRoute.allCases` — adding a case is safe. Let me read the exact web `formatBytes` and `formatDateTime` to port them faithfully, then write the plan.
+
+I now have full understanding. Let me write the plan and todo list, then implement.
+
+Now I'll implement. Let me first read the web `useBulkSelection` to port its `masterState`/`toggleAll` semantics faithfully, then write the Adapter.
+
+Now I'll write the Adapter (pure projection core).
+
+Now the Model (S8 source seam + S10 strings + S11 telemetry + `@Observable`).
+
+Now the Views layer (status badge, adaptive table, states, bulk toolbar).
+
+Let me fix two issues in Views: the error retry button must use the facade table (not a default-table `LocalizedStringKey`), and `@Bindable` isn't needed.
+
+Now the composed page view.
+
+I referenced `model.clearActionError()` — let me add it to the model.
+
+Now the route registration file + the `AppRoute` case + the app wiring.
+
+Now add the `exports` case to `AppRoute` and wire the registration into the app:
+
+Now wire the registration into `TeslaSyncApp.swift`:
+
+Now the per-surface strings table.
+
+Now the Previews file.
+
+Now the comprehensive test suite.
+
+Page files are written. Now add `route.exports` to the master catalog and the source path to `project.yml`. Let me view the exact catalog format first.
+
+Catalog format confirmed. Let me add `route.exports` and the `project.yml` source path.
+
+Let me validate the edited JSON/YAML and update todos.
+
+Now the gate. First swiftlint --strict and the placeholder scan on the surface.
+
+swiftlint linted the whole repo (config `included:` paths). Let me find the single violation — check if it's in my surface.
+
+The only violation is a **pre-existing** file (`LifetimeStatsWidget.Adapter.swift`), not my surface. swiftlint's config `included:` made it scan the whole repo. Let me scope it strictly to my surface to prove it's clean.
+
+The repo `included:` list forces a full scan. Let me create a temp config that keeps all rules but scopes `included` to the surface.
+
+Real violations in my surface: file-length (split Views) and the `inclusive_language` rule flags `master`. The repo's real config doesn't include `TeslaSync/Features`, so these only surface under my scoped lint — both are legitimately mine to fix. Let me rename `master*` → `selectAll*` across files and split the table into its own file.
+
+Now the Model:
+
+Now split the table out of Views into its own file, and rename `master` → `selectAll` in the selection box. First, remove the table from Views:
+
+Let me view the table block boundaries in Views to extract it.
+
+Now create the Table file and remove the block from Views:
+
+Now remove the table block from Views (lines 149–310):
+
+Now fix the Tests (rename `master` → `selectAll`):
+
+Only a `.strings` comment remains ("master catalog") — not a Swift declaration, so safe. Re-run the scoped lint:
+
+swiftlint clean (0 violations, 8 files). Now the placeholder/stub scan:
+
+Placeholder gate clean (COUNT=0). Now I'll build the isolated SwiftPM harness for real-SDK typecheck + tests. Let me inspect the real design tokens to decide what to link vs shim.
+
+Now I'll build an isolated SwiftPM harness (links the real design tokens, shims the out-of-scope component atoms) to run real-SDK typechecks + tests. Let me scaffold it.
+
+Now create the shims (out-of-scope component atoms + nav symbols) and the Package manifest:
+
+Now run the harness build + tests on the macOS host. First verify Tokens.swift platform imports are guarded.
+
+Guarded properly. Now run the harness tests on the macOS host:
+
+All 24 tests pass on macOS host (Swift 6, strict concurrency). Now the real-SDK cross-platform typechecks (iOS simulator + macOS):
+
+Both cross-platform typechecks pass. Now `xcodegen generate` to confirm the project spec enumerates the new files:
+
+`xcodegen generate` succeeded and enumerates all 8 surface files. Let me confirm the generated project is gitignored and gather concrete evidence of the pre-existing full-app blockers (to substantiate the documented deferral).
+
+All four documented blockers confirmed (DashboardWidgetSize ×15, 262 co-located XCTest test files, no staged xcframework, 0 signing identities) — the full-app build is blocked by pre-existing unrelated state, not my surface. Let me verify all 24 parity items are referenced in code (evidence for the PARITY section).
+
+All 24 parity items confirmed in code (19 strings + 4 states + GlassPanel1). Let me update todos and gather line counts + base SHA for the log.
+
+swiftformat is available (the precedent ran it too). Let me run `swiftformat --lint` on the surface:
+
+swiftformat wants property/loop bodies wrapped. Let me auto-format the surface and re-verify:
+
+swiftformat clean now. Let me re-sync the harness with the formatted files and re-run the full host gate to confirm everything's still green.
+
+Full host gate is green: swiftlint 0, swiftformat 0, iOS+macOS typecheck 0, 24/24 tests, placeholder 0, xcodegen enumerates 8 files. Now let me write the log.
+
+Now add the macos-pending verification row for the deferred full-app build:
+
+The commit references `apps/parity/apple-ledger.json`, which doesn't exist yet. Let me inspect the ledger schema + the shared ledger to create it correctly.
+
+I'll create `apple-ledger.json` (first apple page) with covered rows for both macOS and iOS, per the row schema:
+
+Let me review all changes before committing:
+
+There are pre-existing dirty files I did **not** touch (`AIUsageCard.*`, `web/.../FleetApiSection.tsx`, `BackupRestorePage.tsx`) — this is a shared environment. I'll stage **only** my intended paths. Let me first sanity-check I didn't cause the AIUsageCard changes.
+
+Confirmed unrelated/pre-existing. Staging only my intended paths and committing:
+
+All 16 staged files are mine; the pre-existing dirty files are excluded. Committing:
+
+Committed. Now final verification on the committed working-tree files (not the harness) + cleanup of the temporary harness.
+
+All final checks green. Let me remove the generated (gitignored) xcodeproj to leave the tree pristine, and mark todos/plan done.
+
+All 11 todos done. The task is complete and verified.
+

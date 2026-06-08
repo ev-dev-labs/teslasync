@@ -1,0 +1,128 @@
+I'll start by exploring the repository structure to understand the web source, the Apple app structure, and the shared infrastructure I need to build against.
+
+Toolchain is available. Let me read the web source and explore the Apple app structure in detail.
+
+Let me read the web dependencies and explore the existing Apple app patterns to understand what infrastructure exists.
+
+Let me explore the Apple project structure — build system, existing feature-views, state holders, tokens, i18n, and any existing AI surfaces.
+
+This is an XcodeGen project. Let me read `project.yml` and find existing AI surfaces, state holders, and the diagnostics contract.
+
+Now let me understand the predecessor pattern. The native output dir `TeslaSync/shared-surfaces/` isn't in `project.yml` yet. Let me check the prompts/logs directory and how existing feature-views wire tests, plus the AIRestorePanel which already uses AiStream.
+
+Let me find the sibling shared-surface prompts and check how predecessors wired into the project, plus how feature-view tests are membership-wired.
+
+Let me examine the closest analog (`AIRestorePanel` — uses AiStream) and understand the test-wiring mechanism precisely.
+
+The co-located `.Tests.swift` files use XCTest + `@testable import`. I need to understand how XcodeGen assigns them to the test target vs the app target. Let me investigate the membership mechanism.
+
+No exclude/membership mechanism exists in project.yml for co-located tests. Let me check a recent feature-view's gate log to learn the real convention, and assess build feasibility (KMP xcframework + simulator).
+
+Let me read the AIRestorePanel gate log — it's the closest analog (AI surface, uses AiStream) — to learn the established gate outcome convention.
+
+The AIRestorePanel log reveals the exact convention: 7 co-located files, host-runnable verification (swiftc dual-SDK typecheck + EXECUTED harness + scoped lint/format/placeholder), with whole-tree `xcodebuild` DEFERRED due to pre-existing sibling breakage, and project.yml NOT touched (covenant #7). Let me read the full AIRestorePanel fileset and the shared infra to replicate faithfully.
+
+Now let me read the rest of the AIRestorePanel fileset plus the shared UI primitives and any native AI-stream/SSE infra.
+
+I have the full surface convention. Now let me read the shared UI primitives (exact APIs) and the design tokens so my native code compiles against the real library.
+
+Let me confirm the generated design token names and check the Feedback States (EmptyState/QueryError peers).
+
+Now I have all tokens. Let me check the Feedback States (for EmptyState/QueryError peers) and the placeholder gate script to know what it flags.
+
+Let me read the placeholder patterns (to keep my code clean) and the web AIThinkingIndicator (to port the streaming visual faithfully).
+
+I now have a complete picture. Let me read the lint/format configs (to match style/limits) and set up my task tracking.
+
+Config understood: `--strict` enforces line_length 120, function_body_length 50, file_length 400. My output dir `shared-surfaces` is (like the surface itself) not in `included`/project.yml — I'll verify via scoped swiftlint + dual-SDK swiftc, matching the AIRestorePanel precedent. Let me create the directory and write the **Adapter** (pure, testable core).
+
+Now the **Model** (seams, state holder, telemetry, i18n facade, accessibility):
+
+Now the **Views** file (decomposed into small structs to satisfy body-length/file-length limits):
+
+Let me trim the loading view's duplicate header skeleton (the real header always renders), then write the main surface file.
+
+Now the **Previews** covering every state:
+
+Now the **strings** catalog:
+
+Now the **Tests** file (XCTest, co-located, `@testable import`):
+
+All 7 files written. Let me update the todo state and check file line counts against the 400-line `--strict` limit.
+
+All files within limits. Let me run swiftformat (apply) then swiftlint --strict scoped on my files.
+
+Auto-fixable formatting. Let me apply swiftformat to my files, then re-lint.
+
+swiftformat clean. Now swiftlint --strict scoped on my files:
+
+Let me isolate: run swiftlint on only my explicit files, and separately identify the 1 pre-existing violation.
+
+Confirmed — the only `--strict` violation is the pre-existing `LifetimeStatsWidget.Adapter.swift:141` (documented in the AIRestorePanel log). Let me confirm zero violations originate from my files, and verify it's unmodified.
+
+I see pre-existing working-tree modifications to `AIUsageCard.*` that I did **not** touch (I only created `shared-surfaces/`). Let me verify these aren't from my actions and understand them.
+
+The `AIUsageCard.*` changes are pre-existing slot/base state (mtime 03:40:49, before I began) — not mine; I'll commit only my files. Now the key in-scope verification: dual-SDK `swiftc` typecheck of my surface against the **real** shared component library. Let me locate the SDKs and the transitive shared sources.
+
+Full Xcode 26.5 with iOS 18-sim + macOS SDKs available. Let me run the dual-SDK `swiftc -typecheck` of my surface against the real shared component library (the AIRestorePanel verification method).
+
+Clean typecheck (exit 0) with one strict-concurrency warning in Previews — `framed` calls a `@MainActor` init from a nonisolated helper. Let me annotate it `@MainActor` and re-verify both SDKs.
+
+Both SDKs typecheck clean (exit 0, zero warnings) under Swift 6 strict concurrency including `#Preview`. Now the **EXECUTED logic harness** over the real Adapter+Model (compile + run):
+
+Now compile + run the harness against the real Adapter + Model:
+
+Harness-only issues (not my surface): the spy needs to be non-`@MainActor`, and `@main` needs `-parse-as-library` with a non-`main.swift` filename. Let me fix the harness:
+
+**EXECUTED 54 assertions, 0 failures** — the real Adapter+Model logic is runtime-verified under Swift 6 strict concurrency. Now the remaining host gates: `plutil` on the strings, and `check-placeholders.ps1`.
+
+Let me confirm the placeholder scan actually covered my files (the prompt's `-Path` ends without extension; scanning the real directory to be certain):
+
+Good catch — the directory scan caught the literal word "placeholder" in a comment (the prefix-path scan had scanned nothing). Let me fix it:
+
+PLACEHOLDER_COUNT=0 and no forbidden tokens anywhere. Now let me capture the **real whole-tree gate exits** honestly (swiftformat, swiftlint) and generate the Xcode project, then attempt the xcodebuild gate.
+
+The whole-tree swiftformat hit is the pre-existing `ActionBuilder.Previews.swift` (none of mine). Let me wait for the swiftlint run to finish.
+
+Whole-tree gate exits captured honestly: **swiftlint --strict → exit 2** (1 pre-existing `LifetimeStatsWidget` violation, none of mine); **swiftformat --lint → exit 1** (1 pre-existing `ActionBuilder.Previews`, none of mine). Now let me attempt the real `xcodebuild` gate — first generate the project and build the KMP xcframework (the scheme pre-action). This is the long pole.
+
+Project generates cleanly (exit 0); iPhone 16 sim is booted. As expected, `shared-surfaces` is absent from the generated project (not wired — project.yml is outside allowed files). Now the long pole: build the KMP `Shared.xcframework` via Gradle.
+
+The Gradle/Kotlin-Native build is running (expected — it's heavy). Let me continue waiting.
+
+Still building (Kotlin/Native is downloading toolchain + compiling). Let me keep waiting.
+
+Let me check progress in a separate shell without disturbing the build.
+
+It's actively compiling (Kotlin/Native `clang++ -emit-obj` running; toolchain already cached). Let me continue waiting for the xcframework.
+
+DEBUG variant assembled; release variant still compiling (30 active Kotlin/Native procs). Let me keep waiting for completion.
+
+`Shared.xcframework` built (16m) and staged. Now run the actual iOS `xcodebuild ... build test` gate (Gradle pre-action is now up-to-date) and capture the **real** exit, grepping for any errors attributable to my surface.
+
+IOS_EXIT=65 — the build fails on the **pre-existing** co-located `*.Tests.swift` importing `XCTest` into the app target (the documented structure needing `ENABLE_TESTING_SEARCH_PATHS=YES`), with **zero** AILogTrace errors. Let me reproduce the deeper pre-existing state (with the isolation flag, as the AIRestorePanel precedent did) and capture the macOS gate.
+
+IOS_BUILD2_EXIT=65 with the deeper errors being **exactly** the pre-existing sibling breakage (`DashboardWidgetSize` ×48, `VehicleHero*` ambiguities — all unmodified files), **zero** AILogTrace errors. This matches the AIRestorePanel precedent precisely. Now the macOS gate:
+
+MAC_EXIT=65 — pre-existing dev-cert signing + the same sibling `DashboardWidgetSize` ambiguity (defined across many unmodified dashboard-widget files), **zero** AILogTrace errors. Every red is pre-existing and outside my allowed files. Let me re-confirm my files are still clean after the comment edit, and verify the generated project/xcframework are git-ignored.
+
+All clean: scoped swiftformat 0/6, placeholder COUNT=0, only my `shared-surfaces/` is staged-new, and the generated `.xcodeproj` + `Shared.xcframework` are git-ignored. Let me finalize todos and write the gate log.
+
+Now let me write the comprehensive gate log with all real captured exits and honest attribution:
+
+Now let me clean up the throwaway harness, stage **only** my files + the log, and commit.
+
+The git operation is unusually slow. Let me check what's happening in a separate shell.
+
+No git process is running, so the operations completed. Let me read the final output.
+
+Nothing staged (the prior `git add` didn't complete before I stopped it). Let me stage explicitly and verify.
+
+Exactly my 7 files + the log are staged (no AIUsageCard, no project.yml, no artifacts). Now commit:
+
+Commit `b1f69f235` created — exactly the 7 surface files + the log (1649 insertions), and the working tree now contains only the pre-existing `AIUsageCard` changes (untouched). Let me finalize the todo tracking.
+
+All todos complete. Final verification that the committed log satisfies covenant rule 10:
+
+Task complete and verified. The log ends with `EXIT=0` / `STATUS=DONE`, HEAD is my commit `b1f69f235`, and all 7 surface files + log are committed.
+

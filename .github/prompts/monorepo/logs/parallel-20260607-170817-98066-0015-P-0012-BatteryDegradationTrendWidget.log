@@ -1,0 +1,190 @@
+I'll start by exploring the repository structure, the web source specification, and the existing Apple app scaffolding.
+
+Apple toolchain is available (xcodebuild, swift, swiftlint, swiftformat). Let me explore the web source and the existing Apple app structure.
+
+Let me explore the Apple app structure and the web supporting components in parallel.
+
+Let me explore the Apple Sources structure and key web components in parallel.
+
+This is a large monorepo. Let me find where dashboard widgets actually live and look at sibling implementations and the existing Apple widget patterns.
+
+No existing `dashboard-widgets` dir or `TeslaSync/` subdir yet. Let me understand the established Apple surface patterns, the i18n/theme facades, and the prompt/logs layout.
+
+Now let me understand the SharedFacade (state holders), Components, Design tokens, i18n facade, and an existing surface pattern.
+
+Let me read the core facade, state-holder, and key component patterns.
+
+The architecture binds to a KMP `Shared.xcframework` via state holders. I need to assess buildability. Let me check the toolchain, whether the Xcode project/shared framework can be built, and the P4 prompt series layout.
+
+Building requires the KMP shared core via Gradle. Let me check the shared module and Java toolchain.
+
+Java 17 + Gradle are present and the shared core has `VehiclesStore`/`EnergyStore`. The long pole is building the KMP `Shared.xcframework`. Let me kick that off in the background while I study the patterns.
+
+`EnergyStore.batteryDegradation(vehicleId)` exists — exactly the binding I need. Let me check the Gradle build progress and read the i18n facade, AppContainer, chart components, and feedback states.
+
+The shared framework build failed at the Kotlin/Native link step because `xcrun xcodebuild -version` failed. Let me diagnose the Xcode toolchain setup.
+
+`/Applications/Xcode.app` exists — `xcode-select` just points to CLT. I can set `DEVELOPER_DIR` to use the full Xcode. Let me verify.
+
+Xcode 26.5 is available via `DEVELOPER_DIR`, and the iPhone 16 simulator exists. Let me relaunch the shared framework build with the correct toolchain and study the facade and existing surfaces in parallel.
+
+All 8 i18n keys exist in the catalog (`translation.widget.*`). Let me check the build progress and read the states, charts, design, and localization-usage patterns.
+
+Clear design-system patterns now. Let me verify how the `translation.*` catalog keys are consumed (i18n facade) and read the design tokens + chart components.
+
+Catalog keys are prefixed `translation.*` (the P1/S10 catalog projected to Apple, 7772 entries). Let me inspect the xcstrings structure and the exact widget key values, and check chart components + build progress.
+
+All 8 widget strings exist with correct English values. Let me check the build progress, chart models/container, the VehiclesStore API, and how stores are constructed/injected.
+
+The DI bootstrap isn't wired yet, so I'll architect the widget around an injected `@Observable` model with a pure JSON adapter (testable without the Shared graph). Let me confirm the exact API JSON shape and remaining token/chart details while the build runs.
+
+Now I have the JSON shape and full design tokens. Let me confirm the `monthly_trend` field names, check the build, and read the native Card/Typography/Banner components plus an existing test for style.
+
+I have the JSON shape and component inventory. Let me read the remaining pieces I'll use (Typography, Banners/freshness, a sample test's framework, diagnostics S11 API) while the link finishes.
+
+Tests use XCTest + `@testable import TeslaSync`. Let me read the diagnostics S11 API (Swift usage + Kotlin), find the freshness indicator, and check the build.
+
+Let me read the freshness indicator signature and the S11 diagnostics API, and check the build.
+
+Let me read the Telemetry API (to emit `view.opened`) and check build progress with a longer wait.
+
+S11 telemetry maps to `TelemetryEvent.ScreenView(screen:)`. Let me confirm `fmtNumber` semantics and `TSTone`/`TSButton` signatures, then poll the build.
+
+I have enough context. `fmtNumber` = `toLocaleString(en-US, {min/maxFractionDigits: d})`; `TSTone` = neutral/accent/success/warning/danger/info. Let me set up a plan and poll the still-running framework build.
+
+Let me record a brief plan and confirm the last few component signatures, while the framework keeps building.
+
+All signatures confirmed. Let me grab the `Vehicle.id` type for the default-vehicle binding and check the long-running build's progress.
+
+`Vehicle.id` is `Long` (→ `Int64`). To avoid KMP ObjC name ambiguity (two `Vehicle` classes), I'll keep my Shared references minimal and proven (mirroring `VehicleSettingsModel`). Let me confirm `VehiclesStore.vehicles()` and start writing.
+
+`VehiclesStore.vehicles()` confirmed. The build output is buffered by `tail`, so let me verify the build is actively progressing (not deadlocked) and then start writing the widget.
+
+Build is actively compiling Kotlin/Native (LLVM codegen at high CPU). Let me read the lint configs to ensure compliance, then write the widget while the framework finishes.
+
+`VehiclesStore.vehicles()` confirmed. Let me verify the existing environment-injection pattern (to mirror it safely under Swift 6 strict concurrency) and check the build.
+
+The Shared.xcframework built successfully (21m) and is staged. The app uses classic `EnvironmentKey` with `nonisolated(unsafe)` defaults — I'll mirror that. Let me find catalog keys for the chrome strings (stale/offline/retry/loading/error) so every string resolves.
+
+Useful chrome keys exist. Let me pin down the dashboard widget `freshness` keys and `queryError` title/message to use faithful, resolvable strings.
+
+All chrome keys confirmed and resolvable. Let me check the skeleton component name, then write the widget.
+
+All keys, components, and the framework are ready. Now writing the widget. Let me set up todos and create the source file.
+
+Directories created. Let me verify `FacadeError` cases (used in previews/tests) before writing the file.
+
+`FacadeError.network` needs a message; I'll use `.offline` in the error preview. Creating the source file now.
+
+Source file created. Now the test file with adapter, state, telemetry, a11y, and per-state snapshot-render tests.
+
+Both files created. Let me update todos and run swiftformat + swiftlint on the new files.
+
+Format passes. Now swiftlint --strict on the new files.
+
+swiftlint enforces ≤400 lines/file (escalated by `--strict`); my formatted file is 900. I'll split into focused, widget-prefixed files. Let me see the section boundaries to plan the split.
+
+Clean section boundaries. I'll split into three widget-prefixed files (each <400 lines), making the format/strings enums internal so the model and views can share them. Removing the original and creating the three files.
+
+Three files created. Let me format all of them and re-run swiftlint --strict with line counts.
+
+swiftlint --strict passes (0 violations) and all files are <400 lines. Let me verify swiftformat and regenerate the Xcode project.
+
+Format clean, project regenerated, new files wired into 24 build-file references. Now let me compile the iOS app first (fastest way to catch errors) before running the full test suite.
+
+iOS build running (includes the incremental gradle pre-action + full app compile). Let me wait and monitor.
+
+Build failed — my files have compile errors. Let me extract them from the full log.
+
+Swift 6 strict concurrency rejects `static let` of non-Sendable `LocalizedStringKey`. The fix: make them `static var` computed properties (no stored state). Let me view and fix.
+
+Fixed. Other errors may have been masked. Let me rebuild incrementally to surface any remaining compile errors.
+
+Incremental rebuild running. Let me wait for the result.
+
+Still building. Let me check the log file directly for progress and any errors.
+
+BUILD SUCCEEDED for iOS — all the Shared-framework binding compiles. Let me re-format/lint the edited file, then run my test class to validate logic.
+
+Format + lint clean. Now running my test class on the iOS simulator.
+
+Tests running. Let me wait for results.
+
+Build succeeded and the test bundle compiled, but the iOS **simulator** failed to launch ("CoreSimulator server died / simctl not found") — a toolchain/daemon issue because the global `xcode-select` still points to CLT. Let me fix the global selection and validate my tests on macOS (no simulator needed) in parallel.
+
+`sudo` needs a password (unavailable), so I can't change the global selection — but `DEVELOPER_DIR` works for builds. The macOS test runs on the host (no simulator). Let me wait for it to validate my logic.
+
+The macOS test couldn't find its test host — the host app may not have built. Let me inspect the full macOS log.
+
+The `-only-testing` flag with clean derivedData skipped building the test host. Let me run macOS with `build test` (builds the host) limited to my class to validate logic, and concurrently repair the iOS simulator service.
+
+The iPhone 16 sim is now **Booted** and `simctl` works with `DEVELOPER_DIR` — the earlier failure was a transient CoreSimulator crash. Let me retry the iOS test against the booted device while macOS validates in parallel.
+
+macOS test completed. Let me read the result.
+
+macOS build fails on **code signing** (entitlements need a dev certificate — a pre-existing environment limitation, not my code). Let me retry macOS with signing disabled to validate my code/tests, and check the iOS retry.
+
+Both running. Let me wait for the iOS retry result.
+
+All 18 of my tests **passed on iOS** (including the ImageRenderer per-state snapshot tests). The earlier sim crash was transient. Let me check the macOS (signing-disabled) result.
+
+macOS app **compiled** (BUILD SUCCEEDED with signing off), but the test action can't locate the host app bundle. Let me investigate whether the app bundle was actually produced and why.
+
+The macOS app builds as `TeslaSync.app` (its `PRODUCT_NAME` is overridden to `TeslaSync`), but the generated `TEST_HOST` points to `TeslaSync-macOS.app` — a pre-existing project mismatch. Let me confirm this in the pbxproj.
+
+Confirmed: the macOS `TEST_HOST` references `TeslaSync-macOS.app` but the app's `PRODUCT_NAME` override builds `TeslaSync.app` — a **pre-existing project.yml bug** (outside my allowed files) that breaks the macOS test host for everyone, plus there's no signing cert. Let me prove my code passes on the macOS host by overriding `TEST_HOST`, and run the cross-platform gate steps (lint/format/placeholder).
+
+The placeholder gate scans for stub/TODO/mock/placeholder patterns. Let me check `pwsh` availability, the Swift patterns, and scan my files. Meanwhile the macOS host test runs.
+
+`pwsh` is available and my files have **zero** forbidden tokens. Let me run the actual placeholder gate on my files and check the macOS host test.
+
+Placeholder gate passes (COUNT=0, EXIT=0). Let me run the exact tree-wide lint/format gate steps while the macOS host test compiles.
+
+swiftlint --strict (0 violations) and swiftformat --lint (0 require formatting) both pass tree-wide. Let me read the macOS host test result.
+
+My global `TEST_HOST` override broke the UI-test target's config. The macOS app compiles fine; the blocker is purely the pre-existing `TEST_HOST` path. Let me patch the (git-ignored, regenerated) pbxproj's macOS `TEST_HOST` to the real product path and run my unit tests on the macOS host for complete evidence.
+
+Let me wait for the macOS host test result.
+
+MAC exit was 1 with no matching output lines. Let me inspect the full log.
+
+The `grep -c` returning 0 short-circuited the `&&` chain, so xcodebuild never ran (but the pbxproj patch succeeded). Let me run the macOS test directly now.
+
+Let me wait for macOS while checking git status and gitignore (to ensure the commit only includes the right files).
+
+`.gitignore` correctly excludes the patched pbxproj and the xcframework; only my new source/test dirs are untracked. Let me wait for the macOS host test.
+
+Still compiling. Let me check the log directly for progress.
+
+0 errors, still building (the UI test target also compiles). Let me wait for completion.
+
+macOS host tests **pass 18/18** too. My code is verified on both platforms. Now let me run the full iOS `build test` (the literal gate step, all tests) to confirm the broader suite is green, then I'll finalize the log.
+
+Full iOS suite running. Let me update tracking and wait for it.
+
+Still running. Let me check the full log for progress and any failures.
+
+Still compiling all test targets (no tests run yet, no failures). Let me wait more.
+
+The full iOS suite hit the same intermittent CoreSimulator `simctl not found` issue (global `xcode-select`=CLT, no sudo) — though my scoped tests passed 18/18 earlier. Let me reboot the simulator and retry the full **unit** suite (all classes, skipping the flaky UI tests) on a warm sim.
+
+Sim rebooted cleanly. Now running the full iOS **unit** test bundle (all classes, including mine) on the warm sim.
+
+Let me wait for the full unit suite, then finalize the log.
+
+The iOS simulator is persistently unstable on this runner (CoreSimulator "server died" / `simctl` not found — caused by the machine's global `xcode-select` pointing to CLT, which I can't change without sudo). My scoped tests passed 18/18 in a stable window, and the **macOS host tests pass reliably (18/18)**. The build succeeds on both platforms. I've verified the deliverable thoroughly; the literal `build test` execution is environmentally blocked. Let me capture final evidence and write the gate log.
+
+I have complete evidence. Let me write the gate log.
+
+Now let me verify exactly what will be committed (only my source/tests + the log; generated project and framework are git-ignored), then commit.
+
+Two pre-existing modified web files (`FleetApiSection.tsx`, `BackupRestorePage.tsx`) are unrelated to my task — I'll exclude them and commit only my surface files + the log.
+
+Exactly the 5 intended files are staged. Committing with the conventional message, an honest verification note, and the co-author trailer.
+
+Committed as `62e3322b`. Let me regenerate the project (to undo the local pbxproj evidence-patch so the working tree matches `project.yml`), clean temp files, and finalize tracking.
+
+Working tree is clean (only the two pre-existing, unrelated web files remain — not mine, not committed). Let me finalize tracking.
+
+Task complete. Here's the summary.
+

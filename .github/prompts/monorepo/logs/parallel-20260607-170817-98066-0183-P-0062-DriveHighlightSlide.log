@@ -1,0 +1,104 @@
+I'll start by exploring the repository structure and checking for the native Apple app and required tooling.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. `swift`, `swiftlint`, `swiftformat`, `pwsh` are available. Let me explore the existing Apple app structure and the web source.
+
+Now let me study the existing conventions deeply. Let me read a representative complete feature-view set and the shared infrastructure (P1/S8 state holders, S9 tokens, S10 i18n, S11 diagnostics).
+
+Sophisticated codebase with clear conventions. Let me read the supporting files for this example and locate the shared P1 facades (i18n, units, tokens, diagnostics, state holders).
+
+Now I understand the per-surface self-contained pattern. Let me read the Views/Previews/Tests for this example, check theme tokens & units handling, and understand the project.yml build config.
+
+Let me find the shared P1 tokens/components, the units facade, the `YearReviewDriveHighlight` type, motion helpers, and the test conventions.
+
+There's a shared `Sources/` tree. Let me locate the exact design token definitions, the units facade, and how a units-consuming feature view wires them.
+
+The main app targets include `TeslaSync/feature-views` (flat) plus generated DesignTokens. Let me verify the generated token surface and study the units facade + a sibling feature-view that does distance/efficiency conversion (RouteEfficiencyWidget).
+
+The units facade bridges to the KMP `Shared` framework. Let me study the closest sibling — RouteEfficiencyWidget — which does distance/efficiency conversion exactly like my surface needs. This is my gold reference.
+
+This is the gold reference. `RouteEfficiencyWidget` already implements the exact distance/efficiency unit pattern I need. Let me read its view/views/tests/strings/previews plus the web types and conversion lib, and check shared motion/components.
+
+I have the full surface pattern. Now let me get the exact web data type, the conversion lib, the sibling's tests/strings/previews, and locate shared components (TSTone, TSSkeleton, motion helpers).
+
+Now let me read the shared components I'll use (motion, badges, skeletons, states) and the sibling's tests/strings/previews, plus confirm web distance constants.
+
+Let me read TSMotion tokens, TSCard, the sibling's tests/strings/previews, and confirm no existing year-review native surface.
+
+There's an existing `YearReviewWidget` native surface — the conceptual parent. I must check it for existing drive-highlight types to avoid name clashes in the shared module. Let me read its adapter/model and confirm the web composition.
+
+The native `YearReviewWidget` is a different web surface (the stat-grid widget). Mine is the analytics review slide. Let me confirm no symbol clashes, inspect the web parent composition, and verify the i18n keys.
+
+Confirmed: keys `yearReview.noDriveData`="No drive data for this year", `yearReview.duration`="duration". Parent passes drive/label/emoji (longest 🏔️ / most-efficient 🌿). Empty state shows emoji + message. Let me read TSCard, the sibling's strings/previews to finalize conventions.
+
+I now have all conventions. Let me read the lint/format configs so my code passes `swiftlint --strict` and `swiftformat --lint`, then I'll write the surface.
+
+I have everything needed. Key constraint: the placeholder gate matches **case-insensitively**, so I must avoid the literal tokens "placeholder", "TODO", "FIXME", "XXX", "not implemented", "Coming soon", "Lorem ipsum" in my Swift files. Let me set up tracking and write the plan.
+
+Now I'll write the surface. Starting with the pure adapter (the testable projection core).
+
+Now the test suite covering the adapter, model, and accessibility seams.
+
+Now let me fix the accessibility route key to a native-chrome namespace (keeping `yearReview.*` to genuine web keys) and create the strings catalog.
+
+All 7 files written. Let me verify: auto-format, lint-check, swiftlint, and a syntax parse. First swiftformat (format then lint):
+
+`0/6 formatted` — already conformant. Now lint checks (swiftformat --lint + swiftlint --strict) and a syntax parse:
+
+swiftformat --lint and swiftlint --strict both pass with 0 issues. Now syntax-parse all 6 files, and verify SDK/SwiftUI availability:
+
+All 6 files parse cleanly, and the CLT macOS SDK has SwiftUI. The Adapter is Foundation-only — let me **compile and run** it to prove the parity math produces exactly the values my tests assert.
+
+The pure adapter **compiles and runs** with exact parity values (413 km, 178 Wh/km, 5h 12m; 15 mi, 212 Wh/mi; dashes; a11y summary). Now let me attempt a real **type-check of the SwiftUI views** against the actual shared component library. First, check whether the component sources are KMP-`Shared`-free.
+
+None import `Shared`. Let me attempt a genuine type-check of my view files against the **real** shared component tree + tokens, on the macOS SDK target.
+
+Zero errors mention my files — all 52 are in the dependency tree (missing symbols from other Sources dirs I didn't include). Let me confirm they're unrelated to my code and to the tokens I rely on.
+
+All 52 errors are isolated to one dependency file (`UnitFormatters.swift`) that needs the KMP `Shared` facade I intentionally excluded — none touch my code or the tokens I use. Let me re-run excluding that one Shared-coupled file to get a clean signal.
+
+Definitive: my 5 view files + the entire real shared component library (40 files) + tokens **type-check cleanly (0 errors)** on the macOS SDK. Now let me check the log directory and the baseline of the full-repo gate commands (swiftformat/swiftlint over all of `apps/apple`, as the gate runs them).
+
+Full-repo swiftformat is clean (0/760). Now the full-repo swiftlint --strict (as the gate runs it):
+
+Full-repo swiftlint reports 1 pre-existing violation. Let me identify it (my scoped files were already 0) to characterize honestly:
+
+The 1 violation is a pre-existing `function_body_length` issue in a **different** prompt's file (`LifetimeStatsWidget.Adapter.swift`), outside my allowed scope — my files are 0 violations. Now the placeholder gate (official command + a real per-file scan) and a forbidden-token sanity grep:
+
+All placeholder checks pass (official EXIT=0, per-file COUNT=0, no forbidden tokens). Now let me capture the authoritative xcodebuild capability evidence:
+
+Confirmed BLOCKED: `xcodebuild` requires full Xcode (CLT only), `simctl` unavailable. Let me mirror the established log format from a sibling and the repo's macOS-pending note.
+
+The 0009 precedent confirms the pattern: surfaces are host-compiled and the full `xcodebuild` is deferred to the macOS acceptance gate. That sibling had Xcode; this runner has CLT only. Let me add one more real-execution proof — run the **model's phase state-machine + telemetry-once** logic against the macOS SDK.
+
+Top-level code needs to be in `main.swift`. Let me use a clean subdir:
+
+Both the **adapter** and the **model state-machine** compile and execute correctly on the macOS SDK. Let me gather line counts, clean up temp files, and write the honest gate log.
+
+All proofs green. Let me update tracking and write the honest gate log.
+
+Now let me commit exactly the surface files + the log (the `git add` prefix in the prompt won't match literally — I'll add the actual files, and exclude the two pre-existing unrelated modified files).
+
+Exactly 8 files staged (7 surface + log), no unrelated files. Committing:
+
+Committed cleanly as `e5795824` (8 files, no unrelated changes). Let me do a final post-commit verification of the host-runnable gates scoped to the surface.
+
+All work is complete and committed. Final verification confirms the surface is clean (0 format issues, 0 lint violations, all parse-OK).
+
+## Summary
+
+I shipped **`DriveHighlightSlide`** — the native SwiftUI parity of `web/src/features/analytics/components/review/DriveHighlightSlide.tsx` — as 7 files in `apps/apple/TeslaSync/feature-views/`, following the established per-surface convention (`TelemetryErrorsPanel.*` / `RouteEfficiencyWidget.*`).
+
+**Delivered (committed `e5795824`):**
+- **`.Adapter.swift`** — pure projection: `DriveDistancePreference` (km/mi/ft) reproducing `convertDistanceFromSI` + the `unitPrefs.distance==='mi'` efficiency branch, duration formatting, `Math.round` parity, em-dash fallbacks, a11y summary.
+- **`.Model.swift`** — P1/S8 state-holder seam, P1/S11 `view.opened` telemetry, P1/S10 i18n facade; phases loading/empty/error/content + live/stale/offline freshness.
+- **`.swift` / `.Views.swift`** — spring emoji (`motion.span` → `interpolatingSpring(180,14)`), glass card (route + 3-stat grid + date); every state renders; reuses shared tokens / `TSFadeIn` / `TSSkeleton`; Reduce-Motion + VoiceOver + Dynamic Type.
+- **`.Tests.swift` / `.Previews.swift` / `.strings`** — adapter+model+a11y XCTest, all states, parity i18n keys.
+
+**Verification (all green where runnable):** swiftformat `--lint` (0/760), swiftlint `--strict` (0 on the surface), placeholder gate (0), `swiftc -parse` (6/6). Beyond the gate, I **type-checked the full surface against the real shared component library + DesignTokens on the macOS-15 SDK (0 errors)** and **compiled + executed** the adapter and model logic — producing exact parity values (412.7 km→413, 178.4 Wh/km→178, "5h 12m"; 23.5 km→15 mi, 132→212 Wh/mi; phase table + telemetry-once + refresh delegation).
+
+**Honest status — `EXIT=1 / STATUS=BLOCKED`:** the `xcodebuild` iOS-Simulator + macOS `build test` steps cannot run on this runner (Command Line Tools only — `xcodebuild` requires Xcode, `simctl` absent). Per the covenant ("no red-as-green") and the prompt's capability clause, these are reported BLOCKED with API evidence and deferred to the macOS acceptance gate, consistent with the 0009/0010 precedent and `macos-pending-verifications.md`. The surface itself is code-complete and passes every host-runnable check.
+
+
+
+The task is fully complete — all 9 todos done, surface shipped and committed, verified as far as this runner allows.
+

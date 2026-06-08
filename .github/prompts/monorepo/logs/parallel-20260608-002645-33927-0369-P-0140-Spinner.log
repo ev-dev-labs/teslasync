@@ -1,0 +1,133 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Apple toolchain is fully available (xcodebuild, swiftlint, swiftformat, swift 6.3.2, pwsh). Let me explore the existing TeslaSync app structure and the canonical pattern.
+
+No `shared-surfaces` dir yet — I'll create it. The canonical pattern is the 7-file structure. Let me read the just-modified AIUsageCard files (the freshest reference) and understand the architecture.
+
+Let me read the remaining canonical files and the design tokens/infrastructure in parallel.
+
+Now let me read the spinner CSS animations, the design tokens, and the rest of the canonical files.
+
+Let me read the design tokens, motion infrastructure, and how reduce-motion is handled in existing surfaces.
+
+I have all the design tokens. Now the critical part — understanding the build setup (project.yml, schemes, how source files are included). Let me read project.yml and the test/preview patterns.
+
+Now I understand the build system (XcodeGen + Shared.xcframework). Critically, `shared-surfaces/` is not yet in `project.yml` sources. Let me check toolchain feasibility and read the remaining canonical files (Views, Previews, Tests) plus lint configs.
+
+Key findings: no iOS simulators, no `.xcodeproj` yet, and the app build depends on a Kotlin/Gradle-built `Shared.xcframework`. Let me probe these blockers and read the remaining canonical files (Views/Previews/Tests).
+
+`simctl` is unavailable — strong signal the iOS simulator gate can't run here. Let me confirm the Xcode capability precisely and read the Previews/Tests idioms plus check for existing animation patterns.
+
+Big discovery: `/Applications/Xcode.app` exists — I can likely use `DEVELOPER_DIR` to run the real gate without sudo. Also there's an existing `LoadingSkeleton` feedback leaf — the closest template. Let me test the Xcode override and read LoadingSkeleton.
+
+Major breakthrough — `DEVELOPER_DIR` gives **Xcode 26.5** with a **booted iPhone 16 simulator**. The real gate may run. Now I need to understand the test idiom. Let me read the test files and the closest template (LoadingSkeleton) and check how `.Tests.swift` files build.
+
+The tests use XCTest + `@testable import TeslaSync`, but they live in the app-target source dir. There must be an exclusion mechanism. Let me investigate how `.Tests.swift`/`.Previews.swift` are wired so my Spinner tests actually run in the gate.
+
+This is the key insight. `macos-pending-verifications.md` documents the established methodology: the full-app `xcodebuild build test` is **pre-existingly broken** (100+ co-located `*.Tests.swift` importing XCTest into the app target, `DashboardWidgetSize` redefined 15×, unstaged xcframework, signing). Prior surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) verify the surface **in isolation** (SwiftPM build + tests, `swiftc -typecheck` both SDKs, swiftlint/swiftformat/placeholder clean, xcodegen enumerates files) and defer the full-app gate to the P99 acceptance gate.
+
+Let me read the closest template — `LoadingSkeleton` (a presentational feedback surface like Spinner).
+
+`LoadingSkeleton` is the ideal template — a pure presentational surface that owns no data, explicitly documenting that "empty/error/stale/offline states belong to the parent surface." Let me read its Model, Views, Tests, Previews, and strings.
+
+I have the full pattern. Critical check before building: does a `Spinner` type already exist in the app module (collision risk)? Let me verify, and confirm KeyframeAnimator availability + SDK paths for verification.
+
+No collisions: `Spinner` is free (the existing atomic is `TSSpinner`, explicitly out of scope). SDKs for both platforms confirmed. I have everything needed. Let me set up tracking and create the directory.
+
+Now I'll write the surface. Starting with the host-free Model (the testable spec core).
+
+Now the Views file — the bolt `Shape`, the `KeyframeAnimator` draw cycle, the static reduced-motion bolt, the glow, and the label.
+
+Now the main `Spinner` view surface.
+
+Now the Previews and strings files.
+
+I'll add a host-free label-resolution helper to the Model (so the a11y label logic is testable), wire it into the view, then write the test suite.
+
+All 7 files written. Now wiring `shared-surfaces` into the build manifest and swiftlint config (required — it's a new directory).
+
+All wired. Now verification — starting with the fast checks: swiftformat, swiftlint, and the placeholder gate on the new files.
+
+Placeholder gate clean. swiftformat/swiftlint found formatting issues (trailing commas, line wraps, property-body wrapping). Let me auto-fix with the repo's canonical formatter, then re-verify.
+
+swiftlint clean (0 violations). Let me verify swiftformat's changes are semantically sound (it's a formatter, but I'll confirm the key spots).
+
+All formatting changes are cosmetic and correct; the code is intact. Now the isolated SwiftPM build + test under Swift 6 (the precedent's primary verification). Let me set up a throwaway package with a `TeslaSync` module so `@testable import TeslaSync` resolves.
+
+Build succeeded (SwiftUI + KeyframeAnimator compiled), 27/28 passed but 1 failure. Let me find it.
+
+Float-precision in the test assertion (`0.5000000000000001` vs `0.5`) — the production `segmentDuration` is correct; the test needs accuracy-based comparison. Fixing the test in the repo source.
+
+All 28 isolated tests pass under Swift 6. Now `swiftc -typecheck` against both the iOS 18 and macOS 15 SDKs (the precedent's cross-platform proof). Re-linting the edited test first.
+
+Both typechecks pass clean. Now confirm `xcodegen generate` enumerates the new files (proves the build wiring), then attempt the full-app gate to capture evidence.
+
+xcodegen enumerates all 7 Spinner files. Let me confirm the `shared-surfaces` group is wired into the app target, then attempt the full-app gate.
+
+All 7 files wired into both app targets via the `shared-surfaces` group. This confirms the documented reality: co-located `*.Tests.swift` (mine included, per the established convention) compile into the app target. Let me gather the pre-existing-blocker evidence, then attempt the real gate with a bounded timeout.
+
+The pre-existing blockers are confirmed: `DashboardWidgetSize` redefined 15×, **262** co-located `*.Tests.swift` import XCTest into the app target, and `Shared.xcframework` isn't staged (needs Gradle/Kotlin-Native). Let me attempt the real gate to capture genuine failure evidence (bounded).
+
+The Gradle/Kotlin-Native xcframework build is actually progressing (network is available). Let me keep waiting for it to reach the app-compile phase where the pre-existing collisions will surface.
+
+Kotlin-Native is linking the frameworks (the slow native step). Let me continue waiting for the app-compile phase.
+
+The debug xcframework built; now it's linking the release variant (what the script stages). Let me keep waiting for staging + app compile.
+
+The release Kotlin-Native link is the slow step. The debug xcframework already built. To get concrete app-compile error evidence faster (in parallel), let me stage the already-built debug xcframework and compile the app target directly in a separate shell while the official gate continues.
+
+The app needs the `Shared` module, so I'll let the official gate finish staging. Continuing to wait for the release link + app compile.
+
+The release xcframework is building link-by-link (iOS arm64 release done). It's progressing toward staging. Let me continue waiting for the app-compile phase.
+
+On the second release link (simulator). One more link + assemble + stage remain before app compile. Continuing to wait.
+
+Last release link (macOS arm64) is running. After this: assemble + stage + app compile. Nearly there.
+
+The gate completed with genuine evidence: the Kotlin-Native xcframework **built and staged successfully**, then the app target compile **failed** on the exact documented pre-existing blocker — `Unable to resolve module dependency: 'XCTest'` (the 262 co-located `*.Tests.swift` importing XCTest into the app target). `IOS_GATE_EXIT=65`. Let me extract the precise evidence lines.
+
+Conclusive evidence captured: the xcframework **built + staged successfully** (`✓ Shared.xcframework staged`), then the app target failed on the pre-existing repo-wide blocker — `Unable to resolve module dependency: 'XCTest'` from a **pre-existing** file (`feature-views/AIRestorePanel.Tests.swift`, not mine) and 261 peers → `TEST FAILED`, exit 65. Let me save the evidence excerpt and check git/ignore state.
+
+All confirmed: `.xcodeproj` and `Shared.xcframework` are gitignored; my changes are `shared-surfaces/` (7 files) + `project.yml` + `.swiftlint.yml`. The XCTest failure originates from pre-existing files. Now writing the honest, comprehensive gate log.
+
+Now appending a row to the `macos-pending-verifications.md` ledger (consistent with the 3 precedent surfaces), then cleaning up and committing.
+
+Now cleanup and a final consolidated verification pass before committing.
+
+All green. Staging only my changes (excluding the pre-existing AIUsageCard/web modifications that predate my work).
+
+Staged exactly my changes (7 Spinner files + log + minimal build wiring + ledger row); pre-existing AIUsageCard/web modifications excluded. Committing.
+
+Committed. To fully honor the covenant's "no skip-and-assume," let me actually run the macOS gate too (Gradle is now warm/cached) rather than infer it, then update the log with the real exit code.
+
+macOS gate also exits 65. Let me confirm the same root cause and update the log.
+
+Both gates RED on documented pre-existing/environment blockers (iOS: XCTest-in-app-target; macOS: development-signing entitlements), zero Spinner errors. Updating the log with the real macOS exit code (replacing my earlier inference).
+
+Cleaning up and amending the commit to include the updated log with the real macOS exit code.
+
+All committed and clean; the log ends with `EXIT=65` / `STATUS=BLOCKED`. Let me confirm final todo state.
+
+All 13 todos complete. The task is finished.
+
+## Summary
+
+I shipped **`Spinner`** — a production-polished native Apple parity of `web/src/components/feedback/Spinner.tsx` — as a new P4 shared surface at `apps/apple/TeslaSync/shared-surfaces/Spinner.*` (7 files, following the canonical 7-file pattern):
+
+- **Spinner.swift** — main view: `role="status"` VoiceOver, Reduce-Motion swap, `view.opened` telemetry on `.task`.
+- **Spinner.Model.swift** — host-free spec: size metrics (web `sizeMap`), the 6-vertex SVG bolt geometry, the `boltDraw` 5-stop keyframes + segment timing, P1/S10 i18n facade.
+- **Spinner.Views.swift** — bolt `Shape`, a `KeyframeAnimator` reproducing the web self-drawing cycle 1:1, the static reduced-motion mark, the cyan/emerald glow, the label.
+- **Spinner.Telemetry.swift / .Previews.swift / .Tests.swift (28 cases) / .strings**.
+
+**Faithful mapping:** `useMotionPreference`→`@Environment(\.accessibilityReduceMotion)`; Tailwind→P1/S9 tokens; `text-white`→`Color.TS.textPrimary`; glow→`Color.TS.accent`+`statusSuccess`.
+
+**Verification (all green):** isolated SwiftPM **28/28 tests** under Swift 6 strict concurrency · `swiftc -typecheck` on **iOS 18 + macOS 15** SDKs · swiftlint --strict / swiftformat --lint / placeholder gate clean (0 opt-outs) · `xcodegen generate` enumerates all 7 files into both app targets.
+
+**Honest gate status — `EXIT=65` / `STATUS=BLOCKED`:** I ran the real full-app `xcodebuild build test` on both iOS and macOS. The Kotlin-Native `Shared.xcframework` actually **built + staged successfully**, but both app builds are RED due to **pre-existing, unrelated, repo-wide** breakage (262 co-located `*.Tests.swift` importing XCTest into the app target; `DashboardWidgetSize` ×15; macOS dev-signing) — zero `Spinner`/`shared-surfaces` errors anywhere. This is deferred to the P99 acceptance gate per `apps/macos-pending-verifications.md`, matching the 3 precedent surfaces. Per Honesty Covenant rule 1 (no red-as-green), reported as BLOCKED with full captured evidence.
+
+Committed cleanly (7 files + required `project.yml`/`.swiftlint.yml` wiring for the new dir + the gate log + a ledger row), excluding the pre-existing AIUsageCard/web modifications already present in the slot.
+
+
+
+The work is fully complete, verified, and committed. Let me update the plan to reflect final status, then mark complete.
+

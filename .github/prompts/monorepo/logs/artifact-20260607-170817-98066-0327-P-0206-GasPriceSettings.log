@@ -1,0 +1,148 @@
+=== P4 Feature view 0206 GasPriceSettings (Apple) ===
+Run host: macOS (Darwin arm64), Xcode 26.5 (Build 17F42) via
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer (the active dir is the
+Command Line Tools instance; the full Xcode is selected per-invocation for the gate).
+Toolchain present: swift 6.3.2, swiftlint, swiftformat, xcodegen 2.45.4, Java 17 +
+apps/shared/gradlew (KMP). Capability (SwiftUI + Swift Charts + MapKit, iOS/macOS) is
+AVAILABLE — this is NOT a platform-capability block.
+
+Artifact: apps/apple/TeslaSync/feature-views/GasPriceSettings.{swift,Adapter.swift,
+Model.swift,Views.swift,Previews.swift,Tests.swift,strings}
+Web source of truth: web/src/features/settings/components/GasPriceSettings.tsx
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+GasPriceSettings surface: COMPLETE and VERIFIED GREEN on every surface-scoped gate.
+Aggregate full-app gate (iOS/macOS `xcodebuild build test` + whole-repo
+swiftlint/swiftformat): BLOCKED by PRE-EXISTING, UNRELATED parallel-merge collisions
+and macOS development-signing — ZERO errors originate from GasPriceSettings. This is
+the exact situation already recorded for the peer surface P-0010-ToolCard in
+apps/macos-pending-verifications.md; per that protocol the full-app build+test is
+deferred to p4-apple/P99-0001-apple-acceptance-gate (macos-latest with signing).
+
+--------------------------------------------------------------------------------
+GATE STEP RESULTS (commands from the prompt's Gate block)
+--------------------------------------------------------------------------------
+
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    IOS_EXIT=65  (FAILED — pre-existing, unrelated; 0 GasPriceSettings errors)
+    Root cause(s), none in GasPriceSettings:
+      * 118 co-located *.Tests.swift across TeslaSync/feature-views/ (e.g.
+        AcDcStatsPanel.Tests.swift) `import XCTest` into the TeslaSync APP target,
+        which has no XCTest search path → "unable to resolve module dependency:
+        'XCTest'" → "** TEST FAILED **". (project.yml has no ENABLE_TESTING_SEARCH_PATHS;
+        fixing it is out of this prompt's allowed-files scope.)
+      * Latent invalid redeclarations across dashboard-widgets:
+        `public struct DashboardWidgetSize` defined 15x and
+        `public struct PowerFlowConnection` defined 2x in
+        Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/*.
+    Verification that the failure is unrelated to this surface:
+        grep -i 'GasPriceSettings.*error:' ios-gate.log  ->  0 matches.
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    MAC_EXIT=65  (FAILED — pre-existing/environmental, unrelated; 0 GasPriceSettings errors)
+    Root cause(s), none in GasPriceSettings:
+      * Same app-target co-located-XCTest / redeclaration issues as [1].
+      * macOS development signing: targets 'TeslaSync-macOS' and
+        'TeslaSyncWidgets-macOS' "have entitlements that require signing with a
+        development certificate" — no dev certificate on this host.
+    Verification: grep -i 'GasPriceSettings.*error:' mac-gate.log  ->  0 matches.
+
+[3] swiftlint --strict        (cd apps/apple; whole-repo)
+    LINT_EXIT=2  (FAILED — 1 PRE-EXISTING offender, NOT this surface)
+    Sole offender: TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+      Function Body Length Violation (78 > 50).
+    GasPriceSettings offenders: 0.
+    Scoped re-run on the 6 GasPriceSettings.*.swift files: swiftlint --strict CLEAN (0).
+
+[4] swiftformat --lint apps/apple   (whole-repo)
+    FORMAT_EXIT=1  (FAILED — 1 PRE-EXISTING offender, NOT this surface)
+    Sole offender (1/1477 files): TeslaSync/feature-views/ActionBuilder.Previews.swift:48
+      (blankLinesBetweenScopes).
+    GasPriceSettings offenders: 0.
+    Scoped re-run on the 6 GasPriceSettings.*.swift files: swiftformat --lint CLEAN (0/6).
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/GasPriceSettings
+    PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0  (PASS)
+    Self-test: SELFTEST_EXIT=0. Thorough re-scan of the 6 GasPriceSettings.*.swift
+    files (-Language swift): PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0.
+
+--------------------------------------------------------------------------------
+SURFACE-SCOPED VERIFICATION (this is the binding evidence the surface is real + green)
+--------------------------------------------------------------------------------
+
+[S1] Isolated TYPECHECK of the full surface against the REAL shared components.
+     swiftc -typecheck -module-name TeslaSync -sdk <iphonesimulator> \
+            -target arm64-apple-ios18.0-simulator -strict-concurrency=complete \
+            -swift-version 6 -D DEBUG \
+            <design tokens + Sources/Design + Sources/Components/{UI:Cards,Buttons,
+            Pickers,Typography,Badges; Motion; Feedback/Skeletons}> \
+            GasPriceSettings.{swift,Adapter,Model,Views,Previews}.swift
+     RESULT: TYPECHECK_RC=0  (compiles clean against the real TSGlassPanel/TSButton/
+             TSSelect/TSSkeleton/TSFadeIn/Color.TS/Font.TS/TSSpacing/TSRadius, incl.
+             #Preview bodies under DEBUG, under Swift 6 strict concurrency complete).
+
+[S2] Isolated UNIT TESTS (SwiftPM, swift-tools 6.0 / Swift 6 language mode).
+     A standalone package wrapping the real design-system closure + the 5 non-test
+     surface files as module "TeslaSync", with GasPriceSettings.Tests.swift as the
+     test target, run with `swift test`.
+     RESULT: Executed 39 tests, 0 failures (SWIFT_TEST_RC=0). Covers: GasUnit,
+     GasPollInterval (wire round-trip + '7d' default), GasPriceFormat (currency,
+     price/unit truthiness gate, last-polled sentinel + ISO parsing, dateTime),
+     GasPriceStatus.hasData, the projection (loading/empty/error/data), the model
+     wiring + P1/S11 view.opened telemetry, the three actions (toggle/interval/poll)
+     and their toast.info success branch, the failed-mutation no-toast branch, the
+     in-flight poll flag, the stale one-shot auto-refresh, and the accessibility labels.
+
+[S3] swiftformat --lint  (6 GasPriceSettings.*.swift): 0/6 require formatting. PASS.
+[S4] swiftlint --strict  (6 GasPriceSettings.*.swift): 0 violations.            PASS.
+[S5] placeholder scan    (6 GasPriceSettings.*.swift): PLACEHOLDER_COUNT=0.     PASS.
+
+--------------------------------------------------------------------------------
+PARITY NOTES (web -> native)
+--------------------------------------------------------------------------------
+* Every i18n key from the web source is reproduced in GasPriceSettings.strings (table
+  "GasPriceSettings"): gas.title/subtitle/autoPoll/enabled/disabled/running/stopped/
+  pollInterval/intervalUpdated/daily/weekly/biweekly/monthly/currentPrice/lastPolled/
+  never/pollTriggered/pollNow/source, plus native-chrome keys for the P4 freshness/
+  loading/empty/error states and the VoiceOver hints. No English literals in Swift.
+* Data sources bound via the P1/S8 state-holder seam (GasPriceSettingsSource) — the
+  native mirror of useGasPriceStatus + usePollGasPrice + useToggleGasPrice +
+  useUpdateGasPriceConfig + useSettings(gas_unit) + useFormatting(currency) +
+  useToast. No HTTP in the view.
+* States rendered: loading (skeleton), empty (controls + friendly hint; web '—'/'Never'),
+  error (QueryError peer + retry), data (full controls), and the orthogonal
+  live/stale/offline freshness chip + banner with a one-shot auto-refresh on stale.
+* Charts/maps: none in this surface (per the web source).
+* Accessibility: VoiceOver labels/values/hints on every interactive element
+  (auto-poll toggle, interval picker, Poll Now, refresh) + Dynamic Type via Font.TS +
+  reduce-motion respected by TSFadeIn/TSSkeleton.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+The GasPriceSettings surface is implemented to production polish and verified green by
+isolated compilation against the real shared components (Swift 6 strict concurrency),
+39/39 isolated unit tests, and clean swiftlint/swiftformat/placeholder on its own
+files. The aggregate full-app iOS+macOS `xcodebuild build test` and the whole-repo
+swiftlint/swiftformat steps are RED solely because of PRE-EXISTING, UNRELATED
+parallel-merge collisions (co-located XCTest-in-app-target across 118 files;
+DashboardWidgetSize x15 / PowerFlowConnection x2 redeclarations;
+LifetimeStatsWidget.Adapter.swift function length; ActionBuilder.Previews.swift blank
+line) and macOS development-signing — every one outside this prompt's allowed files
+(apps/apple/TeslaSync/feature-views/GasPriceSettings.* + this log). These are the same
+class of blockers already parked in apps/macos-pending-verifications.md for
+P-0010-ToolCard and deferred to p4-apple/P99-0001-apple-acceptance-gate (macos-latest).
+
+Honesty covenant: not reporting red as green. The five gate commands are recorded with
+their true exit codes; the surface-scoped evidence is reproducible from the commands
+above.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=2
+FORMAT_EXIT=1
+PLACEHOLDER_EXIT=0
+EXIT=65
+STATUS=BLOCKED

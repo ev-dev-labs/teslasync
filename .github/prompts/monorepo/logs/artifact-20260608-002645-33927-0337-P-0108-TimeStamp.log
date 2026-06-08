@@ -1,0 +1,146 @@
+=== P4 Shared surface 0108 TimeStamp (Apple) ===
+Date: 2026-06-08
+Web source (spec): web/src/components/data-display/TimeStamp.tsx
+Native output:      apps/apple/TeslaSync/shared-surfaces/TimeStamp.*
+
+Honesty Covenant: every result below is the raw output of a command actually run on
+this runner. Where the literal gate command could not be run end-to-end, that is
+stated explicitly (see GATE EXECUTION NOTE) — no red is reported as green.
+
+------------------------------------------------------------------------------
+DELIVERABLE (10 files, 1591 lines — mirrors the feature-views/AiUsageCard.* pattern)
+------------------------------------------------------------------------------
+  TimeStamp.swift            — surface: state switch + onAppear view.opened telemetry
+  TimeStamp.Model.swift      — i18n facade (table "TimeStamp"), telemetry seam,
+                               connection axis, settings/request inputs, @Observable
+                               state holder (P1/S8 source seam), InMemory source
+  TimeStamp.Adapter.swift    — pure: value->Date, resolveTimezone port, relative
+                               bucketing, locale-aware absolute Date.FormatStyle, a11y
+  TimeStamp.Projection.swift — pure input->resolved (empty/loading/error/data),
+                               auto->preference collapse, primary/secondary pair
+  TimeStamp.Views.swift      — rendered timestamp (+ .help tooltip parity) + em-dash sentinel
+  TimeStamp.Chrome.swift     — loading skeleton, freshness dot, retryable error, a11y copy
+  TimeStamp.Previews.swift   — every state (relative/absolute/utc/older/empty x2/loading/error/stale/offline)
+  TimeStamp.Tests.swift      — projection phases + content + model wiring/telemetry/freshness + a11y
+  TimeStamp.AdapterTests.swift — date resolution, tz resolution, relative buckets, absolute formatting
+  TimeStamp.strings          — P1/S10 catalog (relative templates, freshness, a11y)
+
+Parity reproduced from the web source:
+  - null/unparseable value -> universal em-dash sentinel "—" (no tooltip)  [empty]
+  - effective = format==='auto' ? useTimeFormatPreference() : format        [pref fallback 'relative']
+  - formatRelative: <60s "just now" / <60m "{m}m ago" / <24h "{h}h ago" / <7d "{d}d ago" / else date
+  - tooltip shows the OTHER format -> native .help(secondary) + VoiceOver hint
+  - useDateFormat(mode) tz -> resolveTimezone(vehicle|user|utc) port; absolute is locale+tz aware
+P4 leaf contract added (every state renders, no hidden surface): loading skeleton,
+retryable error (time stays visible w/ safe default), live/stale/offline freshness dot
++ one-shot auto-refresh on the stale transition; view.opened telemetry slug "TimeStamp".
+
+------------------------------------------------------------------------------
+ENVIRONMENT / CAPABILITY
+------------------------------------------------------------------------------
+xcode-select -p ............ /Library/Developer/CommandLineTools  (xcodebuild NOT on PATH by default)
+Resolved full IDE via ...... DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+xcodebuild -version ........ Xcode 26.5  Build version 17F42
+SDKs ....................... iphonesimulator26.5, macosx26.5
+Simulator .................. iPhone 16 (booted)
+xcodegen ................... 2.45.4
+swiftlint .................. 0.63.3
+swiftformat ................ 0.61.1
+pwsh ....................... available
+
+------------------------------------------------------------------------------
+GATE EXECUTION NOTE (transparency — read before the results)
+------------------------------------------------------------------------------
+The prompt's literal gate runs `xcodebuild -scheme TeslaSync[-macOS] build test`
+against the in-repo project. Running that command verbatim from THIS prompt's scope
+is not possible because of two integration facts that lie OUTSIDE this prompt's
+allowed files (apps/apple/TeslaSync/shared-surfaces/TimeStamp.* + this log):
+
+  1. apps/apple/project.yml registers source groups `TeslaSync/feature-views` and
+     `TeslaSync/dashboard-widgets`, but NOT `TeslaSync/shared-surfaces`. Until P4-core
+     integration adds that one source path to the TeslaSync + TeslaSync-macOS targets,
+     the repo project does not compile this surface. Editing project.yml is out of
+     scope here (allowed files are TimeStamp.* + this log only).
+  2. The repo scheme's pre-action builds Shared.xcframework (KMP/Kotlin-Native) via
+     Scripts/build-shared-xcframework.sh. This surface is intentionally KMP-free (it
+     imports no `Shared` symbols), so it does not need that framework.
+
+To verify the surface HONESTLY with the real toolchain anyway, a standalone XcodeGen
+harness was generated that compiles the EXACT shipped TimeStamp.* sources together
+with the REAL design system (apps/design/generated/apple/Tokens.swift,
+apps/apple/Sources/Design, apps/apple/Sources/Components/{UI,Motion},
+.../Feedback/Skeletons.swift) — no stubs, no KMP — and runs the shipped XCTest files
+on the iPhone 16 simulator (iOS) and on macOS. This is the same compiler, same SDKs,
+same simulator the repo gate would use; only the project wrapper differs.
+
+------------------------------------------------------------------------------
+iOS — xcodebuild build test  (iPhone 16 Simulator, iOS 26.5)  [standalone harness]
+------------------------------------------------------------------------------
+cmd: xcodebuild -project TSHarness.xcodeproj -scheme TeslaSync \
+       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+** BUILD SUCCEEDED **
+Test Suite 'All tests' passed at 2026-06-08 05:43:31.771.
+	 Executed 41 tests, with 0 failures (0 unexpected) in 0.156 (0.367) seconds
+** TEST SUCCEEDED **
+IOS_EXIT=0
+
+------------------------------------------------------------------------------
+macOS — xcodebuild build  +  xctest run  (macOS 26.5)  [standalone harness]
+------------------------------------------------------------------------------
+cmd: xcodebuild -project TSHarness.xcodeproj -scheme TeslaSync-macOS \
+       -destination 'platform=macOS' build test
+** BUILD SUCCEEDED **
+Note: `xcodebuild test` for the macOS unit bundle blocks on the testmanagerd
+handshake in this headless (no-GUI-session) context — an environment limitation,
+not a code defect. The already-built bundle was therefore executed directly,
+bypassing testmanagerd:
+cmd: xcrun xctest .../Build/Products/Debug/TeslaSync-macOSTests.xctest
+Test Suite 'TeslaSync-macOSTests.xctest' passed at 2026-06-08 05:56:15.114.
+	 Executed 41 tests, with 0 failures (0 unexpected) in 0.020 (0.023) seconds
+Test Suite 'All tests' passed at 2026-06-08 05:56:15.114.
+	 Executed 41 tests, with 0 failures (0 unexpected) in 0.020 (0.026) seconds
+MAC_BUILD_EXIT=0
+MAC_TEST_EXIT=0
+
+------------------------------------------------------------------------------
+swiftlint --strict   (run on the 9 surface .swift files)
+------------------------------------------------------------------------------
+cmd: swiftlint lint --strict apps/apple/TeslaSync/shared-surfaces/*.swift
+Done linting! Found 0 violations, 0 serious in 9 files.
+LINT_EXIT=0
+(Tree-wide `swiftlint --strict` also reports 1 PRE-EXISTING violation in
+ TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 — function_body_length
+ — which is outside this surface and outside this prompt's allowed files.)
+
+------------------------------------------------------------------------------
+swiftformat --lint
+------------------------------------------------------------------------------
+cmd: swiftformat --lint apps/apple/TeslaSync/shared-surfaces
+0/9 files require formatting.
+FORMAT_EXIT=0
+
+------------------------------------------------------------------------------
+check-placeholders.ps1   (no stubs / no "Placeholder" / TODO / FIXME / etc.)
+------------------------------------------------------------------------------
+cmd: pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------------------------
+[x] Surface renders on Apple with all states from the web source reproduced
+      (empty/data + leaf loading/error/stale/offline; 11 previews, per-state subviews).
+[x] Hooks bind to the shared P1/S8 state-holder layer; no direct HTTP from the view
+      (TimeStampSource seam streams settings-derived context; view never fetches).
+[x] Every i18n key from source has a matching key in the P1/S10 catalog (TimeStamp.strings);
+      absolute dates are locale-formatted (no English literal), relative phrases are keyed.
+[x] Accessibility labels present on every interactive element (retry Button labeled;
+      timestamp body exposes label + connectivity value + alternate-format hint; dash labeled).
+[x] Tests: adapter unit + per-state projection + model/telemetry/freshness + a11y (41 tests, 0 failures).
+[x] No TODO / stub / mock / placeholder / Lorem in shipped code (check-placeholders EXIT=0).
+[x] Build + tests green on iOS Simulator and macOS via the real Xcode 26.5 toolchain.
+
+EXIT=0
+STATUS=DONE

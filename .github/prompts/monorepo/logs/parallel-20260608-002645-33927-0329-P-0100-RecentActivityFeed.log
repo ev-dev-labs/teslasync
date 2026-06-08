@@ -1,0 +1,151 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+The `shared-surfaces` directory doesn't exist yet. Let me examine the existing `TeslaSync/` subdirectories, the i18n facade, state holders, and the native EmptyState component to understand the patterns.
+
+A closely related `RecentActivity.*` feature view already exists. Let me study it as the canonical pattern, since the shared-surface `RecentActivityFeed` should follow the same conventions.
+
+Now let me read the remaining RecentActivity files (Adapter, Views, States, Previews, strings, Tests) to fully grasp the conventions.
+
+Now let me check the toolchain capability (critical for DONE vs BLOCKED) and the project.yml source wiring.
+
+Critical finding: **`xcodebuild` is unavailable** (only Command Line Tools, no full Xcode, no iOS simulator). Per the prompt's capability clause this points toward `STATUS=BLOCKED`, but I must still ship the complete, production-quality surface and run every verification that *is* possible. Let me gather the remaining infrastructure context.
+
+`shared-surfaces` isn't wired into `project.yml` yet (it's the P4-core's job — a documented dependency), and many sibling surface prompts target the same new directory. Before finalizing BLOCKED, let me check whether a full Xcode is installed anywhere (xcode-select may just be mispointed).
+
+`/Applications/Xcode.app` exists — `xcode-select` is just mispointed. I can use `DEVELOPER_DIR` to access the full toolchain without sudo. Let me verify it works.
+
+Full **Xcode 26.5 is available** via `DEVELOPER_DIR`, with a booted iPhone 16 simulator — so the gate *can* run and `STATUS=DONE` is achievable. Two things to resolve: how per-surface `.Tests.swift` files get into a test target, and the `Shared.xcframework` build step. Let me investigate the build wiring.
+
+The build uses an xcodegen-generated project. Let me resolve two key questions: how per-surface `.Tests.swift` files reach a test target, and whether a P4-core prompt is responsible for wiring `shared-surfaces` into `project.yml`.
+
+README confirms scope is `apps/apple/**` (includes `project.yml`). Since no other prompt wires the brand-new `shared-surfaces` dir, I'll mirror the `feature-views` wiring. Let me read the design tokens, motion/skeleton/feedback primitives, and the placeholder checker, then generate the project to confirm test-target wiring.
+
+Now I understand the forbidden patterns (avoid `TODO`/`FIXME`/`XXX`/`placeholder`/`stub`/`mock`/`Lorem`/`not implemented`). Let me generate the baseline project to confirm where `.Tests.swift` files land (app target vs test target).
+
+`.Tests.swift` files compile into the **app targets** (iOS + macOS) — they must compile cleanly (the gate builds them). The KMP `Shared.xcframework` (Gradle) is the long pole. Let me verify the shared module setup and kick off that build in the background while I write code.
+
+Let me kick off the Gradle `Shared.xcframework` build in the background (the long pole) while I write the surface code.
+
+While Gradle builds, let me read the web `formatRelative` source and check how native surfaces model row navigation/routes.
+
+Let me check the full available color-token palette so I can faithfully map the activity-icon accent colors.
+
+Let me check the web `formatDate` default (for the >7d fallback) and how the native `EventTimeline` renders its timeline connector, to faithfully reproduce the web `Timeline`.
+
+I have all the conventions I need. Let me set up tracking, write a plan, and check the Gradle build progress.
+
+Gradle is downloading/building. Let me write the plan and start creating the surface files in parallel with the build.
+
+Now I'll create the surface. First the directory, then the Types file (pure value types).
+
+Now the Adapter — the pure, testable projection (visual registry, entityHref, formatRelative, row projection, a11y).
+
+Gradle is still fetching its distribution. Let me continue with the Model file (state holder, telemetry, source seam, strings facade).
+
+Now the Views file — the timeline row (with connector), the list, and the empty state.
+
+Let me check the Gradle build, then write the States file.
+
+Gradle is still fetching its toolchain. Continuing with the States file (freshness chip, connectivity banner, loading, error).
+
+Now the main view that switches over phases.
+
+Now the i18n strings catalog contribution.
+
+Gradle is downloading its distribution (no output yet — first-run can take 10+ min). Continuing with Previews and tests.
+
+Now the adapter unit tests (registry, entityHref parity, formatRelative, subtitle, projection, phases).
+
+Now the model + accessibility tests.
+
+All 10 surface files written. Now wire `TeslaSync/shared-surfaces` into `project.yml` (mirroring `feature-views`) for both app targets.
+
+All files written and wired. Let me check the Gradle build and run fast local lint/format checks on the new files while it continues.
+
+SwiftFormat found line-wrap violations. Let me auto-format (the ecosystem tool) then re-verify, and run SwiftLint.
+
+Gradle `Shared.xcframework` build completed. Let me confirm the output and verify SwiftLint on the new files.
+
+The `Shared.xcframework` built successfully. The SwiftLint error is in a **pre-existing** file (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`), not mine — SwiftLint lints the whole config scope regardless of the path arg. Let me understand the config and whether this is a baseline issue.
+
+Two findings: (1) `.swiftlint.yml` has an `included:` list that doesn't yet include `shared-surfaces` (so my files aren't linted, and the path arg is ignored), and (2) there are **pre-existing working-tree modifications** (`AIUsageCard.*`) I didn't make. Let me see the full picture.
+
+The `AIUsageCard.*` changes are pre-existing working-tree state (not mine — I'll leave them untouched). Let me add `shared-surfaces` to `.swiftlint.yml`'s `included`, stage the xcframework, and regenerate the project.
+
+My files are in the project (60 refs) and the xcframework is staged. Now let me build for macOS to validate compilation (this compiles my code alongside everything else).
+
+While the macOS build runs, let me isolate my files' SwiftLint status with a temp config (since the real config's `included` list otherwise pulls in pre-existing files).
+
+Let me write a clean temp config without `included:` so the path argument is honored.
+
+Two SwiftLint issues in my files: a 6-param preview helper and the Adapter exceeding 400 lines. I'll split the visual registry into its own `RecentActivityFeed.Visuals.swift` (allowed by the glob) and slim the preview helper. Let me check the build, then refactor.
+
+The macOS failure is **code-signing** (no dev cert in this env), not a compile error — iOS Simulator builds need no signing, so I'll validate compilation there. First let me fix the two SwiftLint issues by splitting the visual registry into its own file and slimming the preview helper.
+
+Now remove the visuals section from the Adapter (it now lives in `RecentActivityFeed.Visuals.swift`). Let me view the exact boundaries.
+
+Adapter is now 241 lines. Now fix the 6-param preview helper by combining `type`/`entityId` into one tuple param.
+
+Now re-run SwiftFormat (auto-fix) and SwiftLint strict on my files to confirm clean, plus the placeholder check.
+
+My files are clean: SwiftFormat ✓, SwiftLint --strict 0 violations ✓, placeholders 0 ✓. Now regenerate (to include the new Visuals file) and build the iOS Simulator target to validate compilation.
+
+The iOS Simulator build is compiling. Let me update tracking and wait for it.
+
+Key finding: the build fails on `XCTest` module resolution in `.Tests.swift` files — and the **first** failure is a pre-existing file (`AIRestorePanel.Tests.swift`), not mine. My non-test code compiled cleanly (it even copied my `.strings`). The app target needs `ENABLE_TESTING_SEARCH_PATHS=YES` to compile co-located test files. Let me confirm that hypothesis.
+
+Now the real picture emerges: with XCTest resolved, the build reveals **many pre-existing "ambiguous type lookup" errors in sibling feature-view files** (`ChargerType*`, `ChargingSessionCard*`, `DashboardWidgets*`, `AIRestorePanel.Tests`) — duplicate type definitions across the generated feature-views. **None are my files.** Let me capture the complete error inventory to confirm my surface is clean, and prove my logic compiles standalone.
+
+While the build captures, let me build a standalone proof that my pure adapter logic (Types + Visuals + Adapter) compiles and produces the correct web-parity outputs.
+
+Standalone proof passes — my adapter logic compiles and all 30+ web-parity assertions hold. Now let me wait for the full build capture and analyze the error inventory.
+
+Let me analyze the captured build log to confirm none of the errors are in my files.
+
+Confirmed: **57 errors, zero in my files** — all are pre-existing duplicate-type collisions in sibling `*Widget*` / `ChargerType*` / `ChargingSessionCard*` files (generated dashboard-widgets & feature-views), outside this prompt's allowed files. My surface compiles cleanly within the real module. Let me verify the log directory and git-ignore status of generated artifacts.
+
+All clear: logs dir exists, generated artifacts are git-ignored, and my type names don't collide. Now let me run the **actual gate** (with my surface wired in) and capture honest results to the prompt's log file.
+
+The gate is running (two full `build test` cycles take ~10+ min). Let me wait and monitor.
+
+The gate ran. **Every failure is pre-existing and none touch my surface:**
+- iOS/macOS build (EXIT 65): duplicate-type collisions in sibling files (`ChargerType*`, `ChargingSessionCard*`, `CommandTile*`, `DashboardWidgets`) + macOS code-signing (no dev cert). **Zero `RecentActivityFeed` errors.**
+- SwiftLint `--strict` (EXIT 2): exactly **1** violation in 1919 files — pre-existing `LifetimeStatsWidget`, not mine.
+- SwiftFormat (EXIT 1): **1** pre-existing file (`ActionBuilder.Previews.swift`), not mine.
+- Placeholders: **0**.
+
+Let me confirm my files appear in none of the failures and capture the offenders precisely.
+
+All confirmed: 0 `RecentActivityFeed` errors; the lone SwiftLint violation and SwiftFormat file are both pre-existing siblings. Let me append the honest BLOCKED analysis and per-surface evidence to the log.
+
+The log is complete and honest. Now I'll revert the temporary wiring (project.yml/.swiftlint.yml — predecessor scope, used only for in-module validation) and commit exactly the surface + log per the prompt's commit command.
+
+Exactly the 11 surface files + log are staged (no pre-existing `AIUsageCard` changes, wiring reverted). Committing now.
+
+Committed: 11 surface files + log (2171 insertions), no pre-existing changes swept in. Let me update tracking and clean up temp artifacts.
+
+The task is complete. Let me do a final verification that the committed surface is intact and the log's terminal status is correct.
+
+I've completed the surface implementation. Here's the outcome.
+
+## Summary
+
+Shipped a production-complete, native Apple (SwiftUI) parity of `web/src/components/data-display/RecentActivityFeed.tsx` at `apps/apple/TeslaSync/shared-surfaces/RecentActivityFeed.*` — **11 files, committed** (`b4731264e`).
+
+**What was built**
+- Connected activity **timeline** (icon dot + connector, localized title, optional entity click-through, composed subtitle, relative time) — a faithful port of the web `Timeline` + `EmptyState`.
+- Faithful ports of `activityIcons.ts` (prefix-walk registry → SF Symbols + semantic tones), `entityHref` (route parity incl. `encodeURIComponent`), and `formatRelative`.
+- **Every state renders**: loading / content / empty / error + stale/offline freshness chip & banner — no hidden surfaces.
+- P1/S8 source seam (no networking in the view), P1/S10 i18n facade (web key `activity.myActivity.empty` + all registry titles), P1/S11 `view.opened` telemetry, VoiceOver labels / Dynamic Type / reduce-motion, adapter + model + a11y tests.
+
+**Per-surface verification (all green)**
+- SwiftLint `--strict`: 0 violations · SwiftFormat: 0 · placeholders: 0
+- 0 in-module compile errors in any `RecentActivityFeed.*` file (full iOS build)
+- Standalone adapter proof: 30+ web-parity assertions pass
+
+**Gate: `EXIT=65 / STATUS=BLOCKED`** (honest, per the prompt's sanctioned fallback). Full Xcode 26.5 + iPhone 16 sim were available and the KMP `Shared.xcframework` built, but the aggregate `xcodebuild build test` is red **entirely from factors outside this surface's allowed files**: pre-existing duplicate-type collisions in sibling generated surfaces (`ChargerType*`, `ChargingSessionCard*`, `CommandTile*`, `*Widget*` — 57 errors, 0 mine), the lone SwiftLint violation (`LifetimeStatsWidget`), one SwiftFormat file (`ActionBuilder.Previews.swift`), macOS dev-cert signing, and the P4-core `shared-surfaces` build wiring not yet landed. All documented with evidence in the log. I did not modify any pre-existing files; the temporary project.yml/.swiftlint.yml wiring used to validate in-module was reverted so the commit stays scoped to the surface + log.
+
+
+
+All work is complete and verified: the surface is fully implemented, committed, and per-file clean; the gate result is honestly captured as BLOCKED with comprehensive evidence; all 13 todos are done; temp files cleaned. The remaining blockers (pre-existing sibling-surface compile collisions, macOS dev-cert signing, P4-core wiring) are all outside this prompt's allowed files and cannot be resolved without violating scope or fabricating a green result.
+

@@ -1,0 +1,95 @@
+=== P4 Feature view 0295 QuickStatsGrid (Apple) ===
+Date: 2026-06-08
+Runner: Darwin (arm64). Toolchain: Apple Swift 6.3.2; SwiftLint 0.63.3; SwiftFormat 0.61.1; pwsh present.
+
+Artifact (apps/apple/TeslaSync/feature-views/QuickStatsGrid.*):
+  QuickStatsGrid.swift            (main view + phase switch)
+  QuickStatsGrid.Adapter.swift    (pure SI conversion + number formatting + value types)
+  QuickStatsGrid.Projection.swift (pure 8-card projection + phase resolution + a11y + slug)
+  QuickStatsGrid.Model.swift      (P1/S8 state holder + P1/S11 telemetry + P1/S10 i18n facade)
+  QuickStatsGrid.Views.swift      (grid + metric card + freshness chip + banner + loading/empty/error)
+  QuickStatsGrid.Previews.swift   (7 previews: content metric/imperial, empty, loading, error, stale, offline)
+  QuickStatsGrid.Tests.swift      (model lifecycle + accessibility XCTest)
+  QuickStatsGrid.AdapterTests.swift (pure adapter/projection XCTest)
+  QuickStatsGrid.strings          (P1/S10 catalog: 10 web-parity keys + native chrome)
+
+Web source reproduced: features/vehicles/components/vehicle-detail/QuickStatsGrid.tsx
+  8 MetricCards in source order: Battery / Range / Odometer / Speed / Inside Temp / Outside Temp /
+  Power / State. Data bound via shared state-holder seam (useTranslation + useUnits → P1/S8/S10).
+  SI conversion at the display boundary (meters/mps/°C → user units); Battery "%" + Power "kW" +
+  status slug reproduced verbatim (covenant: web is the spec, no silent drift). All 6 P4 states
+  rendered (loading / empty / error+retry / stale chip+auto-refresh / offline cached chip / content).
+
+--------------------------------------------------------------------------------------------------
+GATE STEP 1 — xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+  '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1   <<< BLOCKED: platform capability unavailable on this runner (see EVIDENCE)
+
+GATE STEP 2 — xcodebuild -scheme TeslaSync-macOS build test
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+  '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1   <<< BLOCKED: platform capability unavailable on this runner (see EVIDENCE)
+
+GATE STEP 3 — swiftlint --strict   (config: apps/apple/.swiftlint.yml; scope: QuickStatsGrid.* 8 swift files)
+  Linting 'QuickStatsGrid.swift' (1/8) ... 'QuickStatsGrid.AdapterTests.swift' (8/8)
+  Done linting! Found 0 violations, 0 serious in 8 files.
+LINT_EXIT=0
+
+GATE STEP 4 — swiftformat --lint apps/apple   (config: apps/apple/.swiftformat; scope: QuickStatsGrid.* 8 swift files)
+  SwiftFormat completed. 0/8 files require formatting.
+FORMAT_EXIT=0
+
+GATE STEP 5 — check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/QuickStatsGrid.*
+  (the gate's literal '/QuickStatsGrid' prefix is not a real path; Test-Path fails on it, so the
+   scanner was run against each real QuickStatsGrid.* file — 9 files, all languages/common patterns)
+  QuickStatsGrid.swift            PLACEHOLDER_COUNT=0
+  QuickStatsGrid.Adapter.swift    PLACEHOLDER_COUNT=0
+  QuickStatsGrid.Projection.swift PLACEHOLDER_COUNT=0
+  QuickStatsGrid.Model.swift      PLACEHOLDER_COUNT=0
+  QuickStatsGrid.Views.swift      PLACEHOLDER_COUNT=0
+  QuickStatsGrid.Previews.swift   PLACEHOLDER_COUNT=0
+  QuickStatsGrid.Tests.swift      PLACEHOLDER_COUNT=0
+  QuickStatsGrid.AdapterTests.swift PLACEHOLDER_COUNT=0
+  QuickStatsGrid.strings          PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------------------------
+SUPPLEMENTARY VERIFICATION (run because the XCTest targets cannot be exercised without Xcode)
+
+A) Pure adapter + projection — standalone swiftc -O compile + execute of QuickStatsGrid.Adapter.swift
+   + QuickStatsGrid.Projection.swift + a parity harness mirroring the AdapterTests assertions:
+     COMPILE_EXIT=0
+     23/23 assertions PASS — ALL_PASS, RUN_EXIT=0
+     Verified web-parity: SI converters (km/mi/ft, km/h/mph, °C/°F), fmtNumber (grouping, half-up,
+     NaN->0), `${n}` battery coercion, the 8-card metric values
+     ["82%","412 km","38,450 km","0 km/h","21.5°C","12.0°C","7.50 kW","parked"], the imperial driving
+     values ["47%","200 mi","50,000 mi","60 mph",...,"68.0°F","32.0°F","12.30 kW","driving"], the
+     battery accent threshold (>50 green else cyan), the resolvePhase matrix, the VoiceOver card
+     label ("Speed: 0 km/h, Parked"), and the diagnostics slug "QuickStatsGrid".
+
+B) SwiftUI layer — swiftc -typecheck of Adapter + Projection + Model + Views + main view against a
+   token shim mirroring the real P1/S9 API (Color.TS / Font.TS / TSSpacing / TSRadius / TSSkeleton /
+   TSFadeIn) + the system SwiftUI/Observation frameworks:
+     TYPECHECK_EXIT=0  (no type errors in the @Observable model, the phase switch, or the views)
+
+--------------------------------------------------------------------------------------------------
+EVIDENCE (platform-capability gap — required by the prompt's capability clause)
+  $ xcode-select -p
+  /Library/Developer/CommandLineTools
+  $ xcodebuild -version
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+  '/Library/Developer/CommandLineTools' is a command line tools instance   (exit 1)
+  $ find apps/apple -maxdepth 2 \( -name '*.xcodeproj' -o -name '*.xcworkspace' \)
+  (no results — no generated Xcode project/workspace on this runner)
+
+  => The gate's `xcodebuild ... build test` for the iOS Simulator and the macOS scheme cannot run:
+     this runner has the Command Line Tools only (no full Xcode.app) and no .xcodeproj/.xcworkspace
+     for the TeslaSync / TeslaSync-macOS schemes. This is the runner-capability case the prompt's
+     Capability clause anticipates ("If unavailable on the runner -> STATUS=BLOCKED with API
+     evidence"). The artifact is production-complete and every gate that the runner CAN execute is
+     green (lint, format, placeholder), plus the pure logic is compiled+tested and the SwiftUI layer
+     is type-checked. Re-run GATE STEPS 1-2 on an Xcode-equipped runner to obtain IOS_EXIT/MAC_EXIT.
+
+EXIT=1
+STATUS=BLOCKED

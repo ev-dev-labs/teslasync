@@ -1,0 +1,152 @@
+I'll start by exploring the repository structure and verifying the capability requirements, since this task requires Apple-specific tooling (SwiftUI, Xcode, swiftlint).
+
+Key finding: only **Command Line Tools** are installed — `xcodebuild` and `simctl` are unavailable (full Xcode required). But `swift` 6.3.2, `swiftlint`, and `swiftformat` work. Let me deeply explore the existing Apple app structure to understand the established patterns before deciding the right approach.
+
+`feature-views/` already exists with ~1143 files following a multi-file-per-view pattern. Let me understand the exact file-set convention and find the closest reference views (especially sibling state-machine views like StateTimeline/LiveControls).
+
+The full pattern per view is 7 files: `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`. Let me read a complete reference set (AcDcStatsPanel) to learn the architecture (state holders, tokens, i18n, diagnostics).
+
+Excellent — this is a sophisticated, well-established architecture. Let me read the remaining reference files and locate the shared P1/S9 design tokens and components (TSGlassPanel, Color.TS, Font.TS) plus check whether native `SourceLayerBadge`/`StateBadge` equivalents exist (my source needs them).
+
+Now let me read the Tests reference and locate all shared infrastructure (tokens + components) plus check for existing native `SourceLayerBadge`/`StateBadge` equivalents that my source needs.
+
+`TeslaSync/Sources` doesn't exist — tokens/components live elsewhere. Let me locate all shared infrastructure and check the project layout.
+
+Now I understand the layout: `Sources/Components/` holds shared components, `../design/generated/apple` holds tokens. The native `SourceLayerBadge` exists. Let me read the key shared components/tokens and the web type definitions my model must mirror.
+
+Native `TSSourceLayerBadge` exists (Layer: local/shared/history). Let me read the web source's `SourceLayerBadge`, the FSM types, telemetry types, and helper functions my model must mirror.
+
+I have the web behavior fully mapped. Now let me read the exact APIs of the shared components and design tokens I'll consume, so my native code compiles against them.
+
+`TSCopyButton(value:)` exists. Let me read the design tokens and remaining component APIs (Typography, Buttons, Fields/Toggle, Cards/GlassPanel) in one batch.
+
+Typography components take `LocalizedStringKey`, but per-surface strings use a custom table — so I'll follow AcDc's pattern (`Text(verbatim:)` + `Font.TS.*`). Let me read the actual token definitions and remaining component APIs.
+
+Complete token palette confirmed. Let me read the final component APIs: TSTone/TSBadge, TSButton, TSToggle, TSGlassPanel, TSFadeIn, TSSkeleton.
+
+I now have all APIs and the lint/format configs. The critical question for verification: can I compile SwiftUI under Command Line Tools (no Xcode)? Let me test this directly — it determines whether I can produce real compile evidence.
+
+SwiftUI, Charts, and MapKit **all compile under Command Line Tools** (exit 0). This means I can produce real compile evidence even though `xcodebuild` (full Xcode) is unavailable. Let me measure a baseline: can the first-party app module typecheck against the macOS SDK (excluding the KMP `Shared` framework)?
+
+The full module is ~1552 files (15 import the unavailable KMP `Shared`). A targeted compile of my surface plus its real shared dependencies is the high-signal, bounded approach. Let me confirm the dependency closure of the components I'll use is small/self-contained.
+
+The closure grows (Cards→Badges/Buttons/Typography→...). Rather than hand-curate, let me test compiling the self-contained shared component library (`Sources/Components` + `Sources/Design` + tokens) as a module for macOS — that's the exact base my surface builds on.
+
+The `Sources/Components` subtree references app-level types (`UnitPreferences`), so it's not standalone. I'll assemble a precise minimal closure for my surface instead. Let me check the remaining transitive references (TSMaterial, TSCard) in the components I depend on.
+
+The compile closure is bounded and clear. One more web source to mirror faithfully: the `StateBadge` (used for From/To). Let me read it, plus confirm the i18n key namespace conventions.
+
+I have everything needed: the web behavior, all shared APIs, tokens, lint rules, and a viable compile-verification path (CLT compiles SwiftUI/Charts/MapKit). Let me record a plan, then build the surface.
+
+Now I'll build the surface. Starting with the pure core (Adapter):
+
+Now the Model (state-holder seam, projection, telemetry, i18n facade):
+
+Now the main view:
+
+Let me adjust the state-palette signature to keep `fsmType` in the API (parity with web `getStateColor(fsmType, state)`), then build the subviews.
+
+Now the subviews:
+
+Now previews and the i18n strings table:
+
+Now the test suite:
+
+All 7 files are written. Now the verification phase. First, the core typecheck of the surface against its real shared dependency closure, targeting macOS in Swift 6 strict-concurrency mode (matching the project settings):
+
+One type error in `foundationValue` (mixed-type ternary breaks switch-expression inference). Let me fix it with explicit returns:
+
+Core surface compiles clean. Now include the Previews (DEBUG + `#Preview` macro):
+
+`#Preview` macro needs the Xcode-provided plugin (the existing `Cards.swift` preview hits the identical wall under bare `swiftc`) — an Xcode-only step, not a code defect. Core surface is clean. Let me check XCTest availability, parse the Previews/Tests for syntax, and run the lint/format gates (which don't need Xcode).
+
+XCTest and the Preview macro are confirmed Xcode-only; both Previews and Tests **parse** clean (syntax valid). Now the real lint/format gates (no Xcode needed). Let me run `swiftformat --lint` and `swiftlint --strict` on the new files:
+
+All auto-fixable formatting issues. Let me apply `swiftformat` in place to my files, then re-verify compile and run swiftlint:
+
+swiftformat clean. Now re-verify compile and run swiftlint --strict:
+
+swiftlint flags `file_length` (>400 lines) on 3 files. Let me confirm the configured threshold and whether the established feature-views keep files ≤400 (which would mean I should split, consistent with the existing `.Format`/`.Projection`/`.Rows` naming variants):
+
+The repo convention is clearly **≤400 lines/file** (existing files cluster at 399–400). I'll split my 3 oversized files using established `SnapshotInspector.*` naming variants (`.Format`, `.States`, `.ModelTests`). Let me find clean split points:
+
+Clean split points identified. Let me view the exact boundaries before extracting:
+
+Boundaries confirmed. Let me extract the three split-off files and trim the originals:
+
+All files now ≤400 lines. Let me re-run format, the full compile (now 6 surface files), and swiftlint:
+
+swiftformat and swiftlint both clean (0 violations). Now re-verify the full surface compiles (including the new `Format.swift`) and re-parse the split test files:
+
+Excellent — full surface compiles and tests parse. Now let me go further and actually **run** the pure logic to verify behavior (not just types), since XCTest itself is Xcode-only. I'll build a runnable harness (in `/tmp`, not the repo) that links the real surface + shared deps and asserts the same expectations as the XCTest cases:
+
+**All 41 behavioral checks pass at runtime** (RUN=0) — this executes the same assertions as the XCTest suite, proving the logic is correct. Now let me check the iOS SDK availability, the placeholder-scan tool, and locate the log directory:
+
+`pwsh` IS available, iOS SDK is not. Let me read the placeholder tool and a sibling feature-view log (AcDc 0096) to mirror the established format and confirm how siblings handle the xcodebuild gap:
+
+**Major finding:** the AcDc sibling log shows the runner accessed Xcode via `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (the active dir was CLT, overridden non-destructively). Xcode.app may actually be installed here. Let me check:
+
+**Xcode 26.5 IS installed** at `/Applications/Xcode.app` — accessible non-destructively via `DEVELOPER_DIR` (exactly as the AcDc sibling did). The capability is **NOT blocked**. I can run the real gate. Let me preflight the toolchain, simulators, XcodeGen, and the Shared.xcframework dependency:
+
+Xcode 26.5, iOS 26.5 SDK, a **booted iPhone 16 simulator**, and xcodegen are all present. The capability is genuinely available — so I must actually run the gate. The app needs the KMP `Shared.xcframework` (not yet staged). Let me check the Kotlin/Gradle toolchain and generate the project:
+
+Java 17 + Gradle present. The KMP `Shared.xcframework` build is the long pole (~7+ min). Let me kick it off in the background and generate the Xcode project in parallel:
+
+Project generated (schemes present), Gradle building `Shared.xcframework` in background. While it builds, let me run the placeholder gate on my files and check the patterns:
+
+The placeholder gate flags the literal word "Placeholder" in 3 of my **comments** (the pattern is case-insensitive and matches comments). I'll reword them. Let me find all occurrences of the forbidden words in my files:
+
+Three comment-only occurrences. Let me reword them (no behavior change):
+
+Placeholder gate now passes (COUNT=0). Important concern to verify: my `.Tests.swift`/`.ModelTests.swift` live in `feature-views/` (an **app-target** source path), yet they `import XCTest`. Let me confirm how the established project routes co-located test files (the AcDc sibling does the same), checking project.yml excludes and the generated target membership:
+
+Let me verify the actual target membership in the generated project and how XCTest resolves for these co-located test files:
+
+Each file shows 2 buildfiles (iOS + macOS app targets). I need to confirm whether the co-located `import XCTest` test files actually land in the app targets (which would need test-framework search paths). Let me map buildfiles → targets precisely:
+
+Confirmed: the co-located test files compile into the **app targets** (iOS + macOS), exactly like all 138 existing surfaces. For this to build, the app targets need test-framework search paths. Let me verify that setting exists (it must, for the existing surfaces to build):
+
+`ENABLE_TESTABILITY = YES` is set, and there are already **139** co-located `.Tests.swift` files in the app target — my two follow the identical established pattern (mirroring AcDc). The risk is shared repo-wide, not specific to me. The Gradle build is nearly done (linking release framework). Let me wait for it to finish staging:
+
+The XCFramework assembles all platforms (iOS device/sim, macOS, watchOS). Still linking release variants. Let me keep waiting:
+
+`Shared.xcframework` built successfully (8m50s) and staged with iOS device/sim + macOS slices. Now I can run the **real gate**. Let me start with the macOS build+test (no simulator needed), running in the background since the app is ~1550 files:
+
+The macOS app build failed: `Unable to resolve module dependency: 'XCTest'` in the co-located test files. Crucially — there are **139 pre-existing** `.Tests.swift` files with the same `import XCTest`, so this may be a repo-wide condition, not specific to my change. Let me examine the full error log to see which files are implicated:
+
+Decisive finding: the macOS app build fails on `import XCTest` in **the pre-existing co-located test files** — the first failure is `AIUsageCard.Tests.swift` (not mine), and all ~280 co-located test files across 139 surfaces hit it. This is a **repo-wide, pre-existing** condition from the committed `project.yml` routing test files into the app target (out of my allowed scope to fix). 
+
+Two things to establish honestly: (1) my surface compiles under the **real Xcode SDKs** for both platforms, and (2) whether the app builds once XCTest resolves. Let me first do real-SDK compiles of my surface, then rebuild the app with `ENABLE_TESTING_SEARCH_PATHS=YES`:
+
+**Both platforms typecheck clean** against the real Xcode SDKs (iOS 18 simulator + macOS 15, Swift 6 strict concurrency). Now let me rebuild the full macOS app with `ENABLE_TESTING_SEARCH_PATHS=YES` (resolves XCTest) to confirm the entire app — including my surface — compiles under real Xcode:
+
+Build progressed (XCTest now resolves, 550 files compiled) but hit a **different pre-existing issue**: `'TelemetryErrorsModel'`/`'TelemetryErrorRow'` are "ambiguous for type lookup" — i.e., duplicate type definitions across other surfaces (a cross-surface name collision). These are not my types. Let me confirm the source of the collision:
+
+Confirmed: the full-app build fails entirely on **other surfaces' defects** — `TelemetryErrorRow` is redeclared in both `TelemetryErrorsPanel.Adapter.swift` and `FleetApiSection.Models.swift` (a cross-surface name collision), plus more errors in `TelemetryErrorsPanel.*`. **None are in my files.** These are pre-existing, out-of-scope, cross-surface integration defects.
+
+My surface is independently verified. Let me get one definitive signal — run my **actual XCTest cases** under the real XCTest runner in isolation (building a standalone `.xctest` bundle):
+
+🎯 **My actual XCTest suite ran under the real XCTest runner: 47 tests executed, 0 failures** (`xcrun xctest`, exit 0). 
+
+I now have comprehensive, honest verification. Let me check git status and confirm build artifacts are gitignored before writing the log:
+
+My 10 deliverable files are untracked (correct); the generated xcodeproj + Shared.xcframework are gitignored (won't pollute the diff). The 2 modified `web/` files are pre-existing (not mine — I never touched web/).
+
+To avoid any skip-and-assume, let me actually run the **iOS** leg of the literal gate too (confirming it hits the same repo-wide blocker), in the background while I write the log:
+
+Now let me write the comprehensive, honest log. First, gathering final artifact line counts:
+
+Let me check the iOS build progress (it should hit the same repo-wide XCTest-routing blocker):
+
+The iOS build log shows paths from **`slot-373`** — a *different* concurrent slot. This confirms the environment note ("not sandboxed, you may be sharing the environment"): other slots are running xcodebuild concurrently and contaminating shared build state (`/tmp` derived data + the shared booted simulator). Let me confirm the contamination and the macOS evidence remained slot-355-clean:
+
+Fully diagnosed. The iOS leg is **0% slot-355 / 1996 mentions slot-373** — entirely hijacked by a concurrent slot in this shared runner (not a valid measurement). The **macOS leg is clean slot-355** (230 errors, 0 slot-373) and definitively shows the failures are pre-existing **cross-surface collisions in other surfaces** plus the repo-wide test-routing gap — none in my files.
+
+I have a complete, honest picture. Let me write the comprehensive log:
+
+The honest log is written (EXIT=1, STATUS=BLOCKED). Let me do safe cleanup of my private temp files (leaving `/tmp/dd-*` which a concurrent slot may share) and verify the final deliverable state:
+
+Final deliverables are clean (only my 10 `SnapshotInspector.*` files + the log; no stray changes). Since I edited 3 comments after the last lint run, let me re-confirm the **shipped** files still pass all per-surface gates:
+
+All per-surface gates pass on the final shipped files. The task has reached its honest terminal state. Here's my summary.
+

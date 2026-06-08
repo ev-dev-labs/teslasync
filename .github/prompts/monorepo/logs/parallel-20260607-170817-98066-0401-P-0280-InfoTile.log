@@ -1,0 +1,82 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the Apple app structure, the web source component, and tool availability in parallel.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are present, and `simctl` (iOS Simulator) is unavailable. `swift`, `swiftlint`, `swiftformat` ARE available. There's an existing `apps/apple` structure. Let me read the web source and study existing patterns before deciding the approach.
+
+The web `InfoTile` is a **pure presentational component** (icon + label + value + optional color/sub; boolean→Yes/No). `pwsh`, `swiftlint`, `swiftformat`, `swift` are available, but `xcodebuild` needs full Xcode (only CLT present) and `simctl` is missing. There's an established per-surface file pattern (`.swift` / `.Model.swift` / `.Adapter.swift` / `.Previews.swift`). Let me study existing patterns deeply.
+
+There's a `CommandTile` surface — the closest analog. Let me read its full file set as a structural template, plus the shared UI components and design tokens.
+
+The `CommandTile` pattern is rich (view + model + telemetry seam + i18n facade + in-memory seams). InfoTile is purely presentational, so I'll follow this file structure but adapt. Let me read the rest of the CommandTile set and find the shared state/loadable primitives and a surface that renders the full loading/empty/error/stale/offline state set.
+
+Now I understand the architecture well. Let me read the shared state primitives (P1/S8), design tokens (P1/S9), the remaining CommandTile files (previews/tests/strings), project.yml, and InfoTile's web consumers.
+
+Let me locate the full token system (TSTone, Color.TS, Font.TS, TSSpacing, TSRadius) and read TelemetryGrid usage plus CommandTile previews/tests/strings.
+
+The token grep came up short — they must live elsewhere. Let me search the whole `apps/apple` tree for the token definitions and read project.yml to understand target/source layout.
+
+Now I understand the build topology: design tokens (P1/S9) come from `apps/design/generated/apple`; feature-views compile into the app targets. The web `InfoTile` is presentational but used for live telemetry (Battery/Speed/Temp/etc.) with semantic colors. Let me read the remaining conventions: CommandTile previews/tests, the generated tokens, the Feedback components, and the placeholder checker.
+
+Critical detail to resolve: the test target sources are `Tests/Unit`, but `CommandTile.Tests.swift` lives in `feature-views`. I need to understand how per-surface tests get compiled. Let me read the tokens, TSTone, feedback states, placeholder checker, lint configs, and investigate the test wiring.
+
+There's a `Tests/Unit/FeatureViews` directory, yet `CommandTile.Tests.swift` sits in `feature-views`. Let me resolve how per-surface tests are wired (symlinks?), and read the placeholder checker, lint configs, and feedback components.
+
+Test convention is now clear: **170** per-surface `.Tests.swift` files live in `feature-views/` (only 1 in `Tests/Unit/FeatureViews`). I'll follow the dominant convention exactly. The feedback components (`TSEmptyState`, `TSQueryError`, `TSSpinner`) and tokens are all available. Let me read the lint configs, the placeholder checker (to avoid banned words), and the Cards/Typography components.
+
+Now I have the full picture, including the forbidden words (notably **"Placeholder"** is banned in `.swift` files). Let me establish lint/format baselines (in the background) and read the Card/Typography helpers.
+
+The format baseline shows **one pre-existing** violation in `ActionBuilder.Previews.swift` (outside my allowed scope). Important: before concluding the build gate is blocked, let me definitively check whether an Xcode.app exists anywhere (selectable via `DEVELOPER_DIR`), whether `xcodegen` is present, and run the swiftlint baseline.
+
+**Major finding: `/Applications/Xcode.app` exists** (just not `xcode-select`ed) and `xcodegen` is installed. I can override with `DEVELOPER_DIR`. This means I may be able to actually build AND test. Let me verify the toolchain, simulators, and whether the required `Shared.xcframework` is prebuilt.
+
+Xcode 26.5 with iOS 26.5 SDK and a **booted iPhone 16 simulator** are available — deployment targets (iOS 18/macOS 15) are minimums, so building is viable. The blocker is `Shared.xcframework` (KMP) isn't prebuilt — the scheme stages it via a script. Let me inspect that script and check for the Kotlin/Gradle toolchain.
+
+There's a KMP module at `apps/shared` with `gradlew`. Building `Shared.xcframework` needs Kotlin/Native (heavy). I'll kick off that build in the background now while I write the InfoTile code in parallel, then attempt the real xcodebuild gate. If the KMP build proves infeasible, I'll verify InfoTile in isolation.
+
+Java 17 is present and targets are arm64 (matches this Mac). Let me launch the `Shared.xcframework` build in the background, then write the InfoTile implementation while it runs.
+
+Let me check the gradle build progress and read the Skeletons/Buttons components before writing the views.
+
+`TSSkeleton` is available for the loading state. Gradle started (downloading). Now I'll write the full implementation. Let me create a plan file and the first two source files (Adapter + Model).
+
+Now the Views file with all composed subviews and per-state rendering.
+
+Now the public entry-point view with a parity convenience initializer.
+
+Now the previews covering every state, mirroring the CommandTile convention.
+
+Now the comprehensive test suite (adapter projections + model behavior + i18n facade).
+
+Now the i18n strings catalog contribution.
+
+All 7 files created. Let me check the gradle build progress and run swiftformat (auto-fix) on my files, then verify with lint.
+
+swiftformat: all 6 InfoTile files pass `--lint` (exit 0). Now swiftlint `--strict` on my files.
+
+swiftlint `--strict`: **0 violations** on all 6 InfoTile files. Now the placeholder gate — I'll run both the literal gate path and a real per-file scan of my shipped files.
+
+Placeholder gate: **0** in every shipped file and the literal gate path. Let me check the gradle build progress (the long pole for the real xcodebuild gate).
+
+**Gradle build succeeded** — `Shared.xcframework` is built. Now let me stage it, generate the Xcode project, and inspect how the per-surface `.Tests.swift` files are wired into targets (the key question for whether the full build can pass).
+
+Project generated. The pivotal question is whether the full app build passes (given 170 `.Tests.swift` files live in `feature-views`, globbed into the app target). Let me empirically run the real iOS gate in the background and monitor, while preparing an isolated verification of my own code as a fallback.
+
+Confirmed: each `.Tests.swift` (including pre-existing `CommandTile.Tests.swift`) is compiled into **both app targets** — they `import XCTest` + `@testable import TeslaSync`. This is a pre-existing, repo-wide structural condition outside my allowed scope. Let me empirically verify what the real gate does (it may fail fast on XCTest import, or XCTest may be importable here). Kicking off the iOS gate now.
+
+Let me monitor the iOS build for early failures (e.g., XCTest import errors) while it compiles.
+
+Empirically confirmed: the iOS gate fails with **`Unable to resolve module dependency: 'XCTest'`** in the **app target `TeslaSync`** — because all 170 per-surface `*.Tests.swift` files (the established repo convention, including pre-existing `CommandTile.Tests.swift`) are globbed into the app targets, which can't link XCTest. This is a pre-existing, repo-wide structural blocker outside my allowed scope (`InfoTile.*` + log only).
+
+To honestly verify MY code compiles against the real SDK and my tests pass, I'll build an isolated SwiftPM harness. Let me confirm my dependency files are `Shared`-free first.
+
+Dependencies are `Shared`-free. Let me assemble an isolated SwiftPM harness (copies of my 5 production files + their real token/UI deps + a minimal `TSSkeleton`) and actually run my XCTest suite against the real SDK.
+
+Harness assembled. Now compile my real production files against the real SDK (Swift 6 mode) and run my XCTest suite via `swift test`.
+
+**Isolated verification PASSED**: my real production files compiled against the real SwiftUI macOS SDK under **Swift 6 strict-concurrency mode**, and **all 27 unit tests passed** (18 adapter + 9 model, 0 failures). This proves the InfoTile deliverable compiles and its logic is correct.
+
+Now let me capture honest evidence for the remaining gate steps: the macOS gate (expected same pre-existing XCTest blocker) plus the full-tree swiftlint/swiftformat (which have pre-existing out-of-scope violations).
+
+FORMAT step: only `ActionBuilder.Previews.swift` fails (pre-existing, out-of-scope); my 6 files are clean among the 1916. Now the full swiftlint `--strict` (gate LINT step).
+
+Full swiftlint `--strict`: exactly **1** violation, in `LifetimeStatsWidget.Adapter.swift` (pre-existing, out-of-scope); **0** InfoTile violations. The macOS gate finished — let me read its result.
+

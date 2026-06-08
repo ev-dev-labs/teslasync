@@ -1,0 +1,98 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed, and `simctl` (simulator) is unavailable. Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me read the web source and explore the native architecture.
+
+Now I understand the web source. The `dashboard-widgets` directory doesn't exist yet. Let me understand the native architecture — project structure, state holders (P1/S8), tokens (P1/S9), i18n (P1/S10), and find any existing dashboard implementation.
+
+Let me understand the prompt series conventions and check for sibling dashboard-widget work and the actual intended path. There's a path tension: project.yml uses `Sources/` but the prompt specifies `apps/apple/TeslaSync/dashboard-widgets/`.
+
+No prior dashboard-widget logs exist — this is greenfield. Let me read the foundational native code I'll build on: state holders, components, design tokens, and i18n.
+
+This is a KMP-backed architecture: native binds to a `Shared.xcframework` via `StateHolderModel`/`LoadableState`. Let me study the established conventions deeply — a sibling widget prompt, the widget-primitives infra, native Badge/EmptyState APIs, design tokens, and the domain state-holder pattern.
+
+The convention is consistent across all siblings: `apps/apple/TeslaSync/dashboard-widgets/<Name>.*`. No feature surfaces exist yet — this is among the first. Let me inventory the real existing foundation: container/state-holder pattern, native Badge/EmptyState, tokens, diagnostics, the KMP shared core, and i18n format.
+
+Now I understand the facade pattern. Critically, `AppContainer` has no `bootstrap`/concrete stores wired yet, and no feature surfaces exist. Let me find the KMP shared-core command/vehicle stores and the remaining native foundation (Badge, EmptyState, tokens, diagnostics, i18n).
+
+Data shape confirmed. There's a KMP `CommandsStore` + `CommandsRepository`. Let me read the exact KMP command-store API and DTO, plus the native foundation (Badge, EmptyState, tokens, i18n catalog, diagnostics).
+
+I now have the exact KMP `CommandsStore` API (returns `StateFlow<Resource<JsonElement>>`) and the data shape. Let me verify the remaining foundation pieces in parallel: i18n keys/facade, native Badge & EmptyState APIs, design tokens, diagnostics (P1/S11), and the vehicles store.
+
+All 5 i18n keys already exist in the Apple catalog — no catalog edit needed. Now let me read the native Badge/EmptyState APIs, design tokens, the i18n resolution pattern from a real view, and pin down the diagnostics facade.
+
+Now I have the native component APIs (`TSBadge`, `TSEmptyState`, `TSQueryError`, tones, etc.) and confirmed i18n resolves via `LocalizedStringKey` against the xcstrings catalog. Let me read the design tokens, typography, card/panel container, and pin down the diagnostics (P1/S11) facade.
+
+Tokens are generated in `../design/generated/apple`. Let me confirm the exact generated token names (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`), the card/panel container, and find the diagnostics (P1/S11) facade precisely.
+
+Tokens confirmed. Now let me locate the P1/S11 diagnostics contract (likely in the KMP shared core), confirm `TSSpacing`/`TSRadius` enum members, the card/panel container, and how views obtain the container.
+
+Found the diagnostics contract in the shared core. Let me read the `Telemetry`/`Diagnostics` KMP API for the `view.opened` event, the `TSCardHeader` signature, and check for any native diagnostics usage pattern.
+
+P1/S11 contract is `Telemetry.track(TelemetryEvent.ScreenView(screen:platform:appVersion:))` (name `screen_view`) — the typed event for a surface becoming active. Now let me check for an established JsonElement-decode pattern, the test framework/style, and the lint/placeholder configs I must satisfy.
+
+Found the canonical KMP `JsonElement` decode pattern in `SharedLiveStreamProvider.swift`. Let me read it, plus the placeholder-gate matching logic (case sensitivity matters — SwiftUI's `.redacted(.placeholder)` could trip it).
+
+Let me confirm the placeholder-gate match casing (PowerShell `-match` is case-insensitive, which would flag SwiftUI's `.placeholder`).
+
+Confirmed: the placeholder gate matches **case-insensitively**, so I must avoid the substring "placeholder" (no `.redacted(.placeholder)`), plus TODO/FIXME/XXX/etc. Now let me read the web primitives I'm reproducing — `WidgetShell`, the shared `WidgetEventFeed`/`EventFeedItem`, `types.ts`, and the `Badge` variant mapping — for faithful parity.
+
+I now have full web parity behavior. Let me read `FacadeError` (cases for offline/error states) and check for any native freshness/stale/offline chip component in data-display to reuse.
+
+`FacadeError.offline` is `Equatable` (clean offline detection), and there's `TSFreshnessIndicator` for the stale chip. The chrome chips need existing catalog keys (I can't edit the catalog). Let me find suitable existing keys for stale/offline/refresh/live/updated.
+
+The xcstrings keys are namespaced (e.g. `translation.commandHistory.*`). Let me find the EXACT full key strings for my 5 widget keys and confirm the namespace convention used in native code.
+
+Exact keys confirmed: `translation.widget.command{History,Success,Failed,Pending}` and `translation.widget.noCommands`. Let me confirm native code references keys with the `translation.` prefix literally, and find existing generic keys for chrome (stale/offline/refresh/retry).
+
+The catalog is `translation.`-prefixed for my widget keys, so I'll use that prefix. For chrome (error/retry/stale/offline/refresh), I need keys that actually exist. Let me find valid `translation.*` keys for those concepts.
+
+Good — valid generic keys exist. Let me enumerate the full `translation.commands.*` and `translation.queryError.*` key sets to pick the most semantically precise ones for chrome.
+
+I now have everything needed. Let me verify the `TSButton` signature (used in error/offline retry) and set up my plan, todos, and the target directory.
+
+All APIs confirmed. Let me record the plan and todos, then implement.
+
+Now I'll write the main implementation file.
+
+Now the test file with the pure-logic, per-state, and a11y tests.
+
+Now let me format and lint the new files. First auto-format with swiftformat (which discovers the project `.swiftformat`), then verify.
+
+Formatting is clean. Now swiftlint with the project config on the new files.
+
+Under `--strict`, the default 400-line `file_length` warning becomes an error (my file is 797 lines post-format). Let me confirm the project keeps files <400 (so I match the convention) and then split into logical files.
+
+Confirmed — the project keeps every file ≤400 lines (largest 390). I'll split the widget into logical files (all match `CommandHistoryWidget.*`). Let me remove the monolith and create focused files.
+
+Now I'll create the split files. Starting with the pure projection logic.
+
+Let me wire reduce-motion respect into the loading skeleton (currently `reduceMotion` is unused). I'll extract a dedicated pulsing skeleton row that gates its animation on reduce-motion.
+
+Now the previews file.
+
+Now format and lint all the split files, and check line counts.
+
+All files are <400 lines and formatting is clean. Now swiftlint --strict on all files.
+
+swiftlint is clean (0 violations). Now the placeholder gate — I'll run it against the real directory (genuine check) and the gate's literal path.
+
+Lint, format, and placeholder gates all pass on my files. Now let me run the actual `xcodebuild` gate steps to capture honest evidence of the platform block, then assemble the log.
+
+Platform block confirmed (`xcodebuild` requires full Xcode; only Command Line Tools present). Let me capture the remaining real gate results.
+
+All runnable gates pass; only `xcodebuild` (iOS+macOS) is blocked by the missing Xcode. Let me generate the log by actually executing the gate sequence so it reflects real output.
+
+Now let me append the deliverable summary, rationale, and the mandatory closing lines to the log.
+
+The log is complete and honestly ends with `EXIT=1` / `STATUS=BLOCKED`. Let me update todos, verify final file sizes, and do a final review of the largest file.
+
+Let me do a final visual review of the edited Content file (loading view + skeleton) to confirm coherence before committing.
+
+Everything is coherent and verified. Now let me commit only my new files plus the log, leaving the pre-existing unrelated changes untouched.
+
+Only my 6 widget files and the log are staged. Now commit.
+
+Committed cleanly (7 files, 1128 insertions) — the pre-existing unrelated changes were left untouched. Let me mark the final todo done and verify the working tree state.
+
+The task is complete. Here's my summary.
+

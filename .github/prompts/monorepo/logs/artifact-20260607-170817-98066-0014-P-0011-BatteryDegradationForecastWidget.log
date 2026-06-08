@@ -1,0 +1,211 @@
+=== P4 Dashboard widget 0011 BatteryDegradationForecastWidget (Apple) ===
+Prompt: .github/prompts/monorepo/p4-apple/dashboard-widgets/P-0011-BatteryDegradationForecastWidget.prompt.md
+Date:   2026-06-07
+Runner: Darwin (macOS), arm64
+Honesty Covenant: this log obeys all 10 rules. Rule 1 (no red-as-green),
+Rule 3 (no skip-and-assume → BLOCKED, never DONE), Rule 7 (no predecessor
+bypass), Rule 8 (BLOCKED ⇒ commit ONLY this log, never code), Rule 9
+(no files outside Allowed-Files). Delegation FORBIDDEN — no sub-agents used.
+
+Allowed files (verbatim from prompt Artifact Metadata):
+  - apps/apple/TeslaSync/dashboard-widgets/BatteryDegradationForecastWidget.*
+  - this log file
+
+=== PREFLIGHT ===
+# Toolchain (capture, do NOT assume) — the Apple toolchain IS available here.
+xcode-select -p                         → /Library/Developer/CommandLineTools
+/Applications/Xcode.app                 → PRESENT (Xcode 26.5, Build 17F42)
+DEVELOPER_DIR override                  → /Applications/Xcode.app/Contents/Developer (no sudo needed)
+  xcodebuild -version                   → Xcode 26.5 / Build 17F42  (OK via override)
+  xcrun simctl                          → /Applications/Xcode.app/Contents/Developer/usr/bin/simctl (OK via override)
+  iOS Simulator "iPhone 16"             → 83717DEE-70A3-4325-AA61-CBDDD3140989 (Shutdown, usable)
+  iOS runtime                           → iOS 26.5 (com.apple.CoreSimulator.SimRuntime.iOS-26-5)
+swiftlint                               → 0.63.3 (/opt/homebrew/bin/swiftlint)
+swiftformat                             → 0.61.1 (/opt/homebrew/bin/swiftformat)
+xcodegen                                → present (/opt/homebrew/bin/xcodegen)
+pwsh                                    → present (/opt/homebrew/bin/pwsh)
+check-placeholders                      → apps/tools/check-placeholders.ps1 PRESENT
+NOTE: the SwiftUI/Swift-Charts/MapKit capability required by the prompt IS
+present. This prompt is NOT blocked on a missing macOS runner or SDK.
+
+# Clean-tree check (Rule 9)
+git status --porcelain                  → clean (empty) before and after this work.
+
+# Predecessor STATUS=DONE checks (Rule 7) — from .github/prompts/monorepo/logs/
+p4-p0-0001-apple-scaffold               → STATUS=DONE
+p4-p1-0001-shared-facade (P1/S8)        → STATUS=DONE
+p4-p2-0001-design-tokens (P1/S9)        → STATUS=DONE
+p4-p3-0001-ui-components                → STATUS=DONE
+p4-p3-0003-data-display-components      → STATUS=DONE
+p4-p3-0004-feedback-forms-components    → STATUS=DONE
+p4-p4-0001-app-structure-navigation     → STATUS=DONE
+p4-p6-0001-live-data-sse                → STATUS=DONE
+MISSING PREDECESSOR (no prompt / no log): an in-app **dashboard grid / widget
+registry host** for Apple. The prompt's "Depends on: P4 core (… state-holders)"
+and its Registry-metadata section require registering this surface into a
+"dashboard grid system" with ID `battery-degradation-forecast`, default size
+2×4, min 1×2, max 4×40. No such host exists in the Apple app (see SURVEY).
+There is no `WidgetShell` / `WidgetProps` / dashboard-registry equivalent —
+"dashboard" exists only as a top-level navigation tab (Sources/App/AppRoute.swift).
+
+=== SURVEY ===
+# Web source of truth (read end-to-end)
+web/src/features/dashboard/widgets/BatteryDegradationForecastWidget.tsx (189 lines).
+  Data hooks: useBatteryDegradation(idStr), useVehicles(), useTranslation('dashboard'),
+              useDateFormat().
+  Composition: <WidgetShell> chrome (title/icon/loading/updatedAt/isFetching/isStale/
+              isError/onRefresh) wrapping two layouts:
+    • Compact (size.cols ≤ 1): current_health_pct big number + health-tier Badge.
+    • Standard (2×4): hero "Projected 80% Capacity" date + tier Badge + −rate%/mo;
+      StatCard "Current Health"; Risk Factors list (icon + label + detail + score
+      Badge, max 5); Recommendations as WidgetTipCards (max 3).
+  Empty branch: <EmptyState> "No degradation forecast data" when
+      currentHealthPct == null && projected_80pct_date == null.
+  Helpers: riskIcon(name), healthTier(ratePctPerMonth)→{Healthy|Normal|Accelerated},
+           scoreToImpact(score)→high|medium|low.
+  i18n keys used: widget.forecast.tip ("Tip"), widget.forecast.recommendation,
+    widget.forecast.title ("Battery Forecast"), widget.forecast.projected80,
+    widget.forecast.{healthy|normal|accelerated}, widget.mo ("mo"),
+    widget.forecast.currentHealth, widget.forecast.riskFactors,
+    widget.forecast.recommendations, widget.forecast.noData.
+
+# Registry metadata (web/src/features/dashboard/widgets/registry/battery.ts)
+  id=battery-degradation-forecast, name="Battery Forecast", category=battery,
+  default 2×4, min 1×2, max 4×40.
+
+# Existing native Apple code (apps/apple)
+  Project model: XcodeGen. `project.yml` is checked in; `TeslaSync.xcodeproj` is
+  git-ignored and regenerated via `xcodegen generate`.
+  App targets `TeslaSync` (iOS) and `TeslaSync-macOS` compile ONLY these source roots:
+      - path: Sources
+      - path: Localization
+      - path: ../design/generated/apple   (name: DesignTokens)
+  Test bundles `TeslaSyncTests` / `TeslaSync-macOSTests` compile ONLY:
+      - path: Tests/Unit
+  There is NO `apps/apple/TeslaSync/` directory and NO source root that maps to
+  `apps/apple/TeslaSync/dashboard-widgets/`.
+    $ ls -ld apps/apple/TeslaSync            → No such file or directory
+    $ grep -rni 'dashboard-widgets' apps/apple → (no references anywhere)
+
+  Shared component counterparts DO exist (so the view layer is buildable in
+  principle): Sources/Components/UI/Badges.swift, Sources/Components/DataDisplay/
+  Metrics.swift (StatCard-equivalent), Sources/Components/Feedback/States.swift
+  (EmptyState/QueryError-equivalent). Design tokens: Sources/Design/TSDesign.swift.
+  Facade state-holder pattern: Sources/SharedFacade/{StateHolderModel,LoadableState,
+  FacadeError}.swift + Domains/VehicleSettingsModel.swift (the canonical S8 shape).
+
+# Data sources (P1/S8) — these DO exist in the KMP shared core (apps/shared/core)
+  EnergyStore … presentation/energy/EnergyStore.kt
+  EnergyRepository.batteryDegradation(vehicleId) → GET /analytics/battery-degradation
+    (commonMain/.../data/repo/EnergyRepository.kt L67-68; web `useBatteryDegradation`).
+  VehiclesStore … presentation/vehicles/VehiclesStore.kt  (web `useVehicles`).
+  BUT apps/apple/Frameworks/ contains only `.gitkeep` — `Shared.xcframework` is not
+  staged; it is built by the scheme pre-action `Scripts/build-shared-xcframework.sh`
+  (Gradle `:core:assembleSharedXCFramework`, full KMP/Kotlin-Native build).
+
+# i18n catalog (P1/S10)  apps/apple/Localization/Localizable.xcstrings
+  Contains widget.alerts.* and widget.charging.* (P8 WidgetKit) keys, but
+    grep '"widget.forecast' → (none)
+    grep '"widget.mo"'      → (none)
+  None of this surface's 10 required keys exist in the catalog yet.
+
+=== REASONING ===
+Goal: ship a production, native, parity version of BatteryDegradationForecastWidget
+at the Allowed-Files path, then pass the gate (xcodebuild build+test on iOS and
+macOS, swiftlint --strict, swiftformat --lint, check-placeholders).
+
+Three independent, evidence-backed structural blockers make this impossible
+WITHOUT editing files outside the single Allowed-Files path — which Rule 9
+forbids and the prompt does NOT authorize (project.yml, Localizable.xcstrings,
+and a new dashboard-host file are all out of scope):
+
+  B1 — Build wiring. The prescribed output path
+       `apps/apple/TeslaSync/dashboard-widgets/BatteryDegradationForecastWidget.*`
+       is not a source root in `project.yml`, and the generated project proves a
+       file there is compiled by NO target (and tested by NO test bundle). To
+       include it, `project.yml` (sources: Sources/…) must be edited — OUT OF
+       SCOPE. Therefore `xcodebuild -scheme TeslaSync … build test` and
+       `-scheme TeslaSync-macOS … build test` cannot build or test this surface.
+       Hard evidence (xcodegen generate from UNMODIFIED project.yml):
+         grep -c 'BatteryDegradationForecast' TeslaSync.xcodeproj/project.pbxproj → 0
+         grep -c 'dashboard-widgets'          TeslaSync.xcodeproj/project.pbxproj → 0
+
+  B2 — Missing predecessor host. The prompt requires registering the surface in
+       "the dashboard grid system" (draggable panel, registry id + size limits).
+       No such host/registry exists in the Apple app (Rule 7: no predecessor
+       bypass — do not invent one inside this single-file prompt; "Out of Scope"
+       also excludes shared/atomic infrastructure).
+
+  B3 — i18n catalog. Acceptance requires "Every i18n key from source has a
+       matching key in P1/S10 catalog." The 10 `widget.forecast.*` / `widget.mo`
+       keys are absent from Localizable.xcstrings; adding them edits a file
+       outside Allowed-Files (Rule 9).
+
+Rejected alternatives (and why):
+  • Place the file under `Sources/…` so it compiles → violates Allowed-Files
+    (Rule 9) and breaks the prompt's own commit / check-placeholders / native-
+    output paths, which are literally `apps/apple/TeslaSync/dashboard-widgets/…`.
+  • Edit project.yml / Localizable.xcstrings / add a dashboard host → out of
+    Allowed-Files (Rule 9) and out of the prompt's "Out of Scope" boundary.
+  • Ship the surface un-wired and report DONE → false green; the gate would never
+    compile or test it (B1). Rule 1 / Rule 5 violation.
+  • Fabricate a green xcodebuild log → Rule 1 violation.
+  • Commit the Swift code anyway → Rule 8 (BLOCKED ⇒ log only, never code) and it
+    would dirty the tree for downstream PREFLIGHT clean-tree checks (Rule 9).
+Per the methodology gate rule ("If a prompt cannot run its gate … it is BLOCKED,
+not DONE — note the missing capability in the log") the correct outcome is
+STATUS=BLOCKED. No code is written to the repo; only this log is committed.
+
+=== CHANGES ===
+None. No source files created or modified (Rule 8: BLOCKED ⇒ commit ONLY this
+log). The surface cannot be wired into a build target within the Allowed-Files
+scope (B1), so writing it would be un-buildable, un-testable, un-committable code.
+
+=== PARITY ===
+PARITY_UNIT=panel:dashboard/BatteryDegradationForecastWidget
+The parity unit (for a capable, in-scope run) comprises: 2 layouts (compact +
+standard), 4 sections (hero projected-80% + tier; Current Health StatCard; Risk
+Factors list; Recommendations tip cards), 6 states (loading, loaded, empty,
+error/QueryError, stale, offline), and 10 i18n strings — plus registry
+registration (id=battery-degradation-forecast, 2×4 / 1×2 / 4×40) and a
+view.opened telemetry event.
+PARITY_REQUIRED=22
+PARITY_COVERED=0   # surface cannot be added to a compiled target within scope (B1)
+PARITY_COVERED < PARITY_REQUIRED → STATUS=BLOCKED.
+
+=== GATE ===
+The mandated gate cannot certify THIS surface because the surface cannot be
+compiled/tested within Allowed-Files (B1, B2, B3 above).
+
+Toolchain availability (NOT the blocker):
+  $ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -version
+  Xcode 26.5 / Build version 17F42                                   EXIT=0
+  $ swiftlint version   → 0.63.3                                     EXIT=0
+  $ swiftformat --version → 0.61.1                                   EXIT=0
+
+Surface-presence probe (decisive):
+  $ xcodegen generate                                               EXIT=0
+  $ grep -c 'BatteryDegradationForecast' TeslaSync.xcodeproj/project.pbxproj → 0
+  $ grep -c 'dashboard-widgets'          TeslaSync.xcodeproj/project.pbxproj → 0
+  ⇒ A file at the prescribed path is in NO target's Compile Sources and NO test
+    bundle. `xcodebuild … build test` would never build or test it.
+  (generated TeslaSync.xcodeproj is git-ignored; removed after probe — tree clean.)
+
+Authentic gate attempt (time-boxed; the iOS scheme's pre-action builds the KMP
+Shared.xcframework via Gradle):
+  $ DEVELOPER_DIR=… timeout 90 xcodebuild -scheme TeslaSync \
+      -destination 'platform=iOS Simulator,name=iPhone 16' build
+  → Terminated by timeout at 90s (Gradle :core:assembleSharedXCFramework still
+    running).  GATE_PARTIAL_EXIT=124.  Even on completion this baseline build
+    would NOT exercise the (un-wired) surface, so it cannot certify this prompt.
+
+GATE_EXIT=1   # gate cannot be satisfied for this surface within Allowed-Files
+
+=== COMMIT ===
+BLOCKED commit discipline (methodology): `git add <log>` only.
+  git add .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0011-BatteryDegradationForecastWidget.log
+  git commit -m "chore(monorepo): BLOCKED p4-apple-dashboard-widgets-0011-BatteryDegradationForecastWidget — Allowed-Files path not wired into XcodeGen project.yml (out-of-scope) + missing dashboard-grid host predecessor + absent i18n keys"
+(See COMMIT_EXIT in the commit step output.)
+
+EXIT=1
+STATUS=BLOCKED

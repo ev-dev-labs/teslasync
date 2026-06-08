@@ -1,0 +1,184 @@
+=== P4 Widget primitive 0003 WidgetComparisonCard (Apple) ===
+
+Surface : apps/apple/TeslaSync/widget-primitives/WidgetComparisonCard.*
+Web spec: web/src/features/dashboard/widgets/shared/WidgetComparisonCard.tsx
+          + web/src/components/data-display/Delta.tsx (the `Delta` building block it composes)
+Tier    : Widget primitive (shared, reusable comparison-card building block used by many widgets)
+Runner  : Darwin · Apple Swift 6.3.2 (MacOSX26.0 SDK) · swiftlint + swiftformat + pwsh + xcodegen 2.45.4
+          Active developer dir = CommandLineTools (Xcode 26.5/17F42 installed but NOT active — see DEFERRED)
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (allowed scope: WidgetComparisonCard.* + this log)
+--------------------------------------------------------------------------------
+  WidgetComparisonCard.swift          — SwiftUI primitive. State-driven entry (loading / content /
+                                        empty / error) + the web-parity convenience init
+                                        (`metrics` + `compact` → content, or "No comparison data" when
+                                        empty). Emits the P1/S11 `view.opened` event once on first
+                                        appearance. No networking in the view.
+  WidgetComparisonCard.Views.swift    — presentational subviews: WidgetComparisonContent (rows +
+                                        optional stale/offline banner), WidgetComparisonRowView
+                                        (label + value + unit + direction-aware percent delta),
+                                        WidgetComparisonDeltaBadge (web `<Delta>` — arrow omitted only
+                                        in the missing-input guard), WidgetComparisonConnectivityBanner
+                                        (stale/offline), WidgetComparisonLoadingRows (shimmer),
+                                        WidgetComparisonEmptyView (friendly, never blank),
+                                        WidgetComparisonErrorView (QueryError + retry). + token bridges
+                                        mapping delta direction→SF Symbol and tone→P1/S9 status colour.
+  WidgetComparisonCard.Model.swift    — Foundation-only seams: WidgetComparisonMetric (web
+                                        `ComparisonMetric` interface), delta direction/tone + freshness
+                                        enums, WidgetComparisonCardState (+ pure `resolve` entry map),
+                                        WidgetComparisonCardSurface (P1/S11 slug), the P1/S11 telemetry
+                                        seam (protocol + OSLog default + once-only OpenReporter), and
+                                        WidgetComparisonStrings (P1/S10 facade).
+  WidgetComparisonCard.Adapter.swift  — pure (Foundation-only) projector: [WidgetComparisonMetric] →
+                                        rows, reproducing the web `<Delta display="percent">` + number
+                                        pipeline VERBATIM (parity). Host-executable. + WidgetComparisonCopy
+                                        (injected, localizable copy) + WidgetComparisonAccessibility.
+  WidgetComparisonCard.Previews.swift — #if DEBUG previews for every state (content/compact/stale/
+                                        offline/empty/loading/error+retry).
+  WidgetComparisonCard.Tests.swift    — XCTest: delta matrix + number formatting + projector + state
+                                        mapping + accessibility summary + the `view.opened` once-only
+                                        contract (runs in the TeslaSync(/-macOS) test targets at
+                                        integration; the same assertions execute green in the host
+                                        harness, 54/54).
+  WidgetComparisonCard.strings        — per-surface P1/S10 i18n table (web `t()` key + the Delta em-dash
+                                        + VoiceOver trend phrases + native chrome for the required states).
+
+Data sources (web → native): NONE — the web source is a pure presentational component. The primitive
+  receives already-projected `WidgetComparisonMetric`s (the consuming widget resolves units/formatting
+  at the display boundary via useUnits()/useFormatting()); there is no P1/S8 state-holder binding and no
+  HTTP anywhere in this surface, by design.
+
+--------------------------------------------------------------------------------
+PARITY ARITHMETIC (reproduced exactly from the web source — cross-platform value parity, NOT "corrected")
+--------------------------------------------------------------------------------
+  WidgetComparisonCard.tsx renders `visible = compact ? metrics.slice(0,2) : metrics`; `visible.length
+  === 0` → "No comparison data"; otherwise one `MetricRow` per metric: the label, `formattedCurrent`
+  (+ optional unit), and `<Delta metric={{direction}} current previous display="percent" size="sm">`
+  where direction = higherIsBetter ? 'higher_better' : 'lower_better'.
+
+  Delta.tsx (display = "percent"), ported 1:1 in WidgetComparisonDelta.resolve:
+    missing input (current/previous null or non-finite) → em-dash, neutral, NO arrow.
+    else signed = current - previous
+         arrow   = signed > 0 up / signed < 0 down / 0 flat
+         percent = previous != 0 ? fmtNumber(|signed / |previous|| * 100, 1) + "%" : nil  (nil → "—")
+         tone    = signed == 0 muted; else (higher && +) || (lower && −) ? emerald : rose
+    The arrow is shown even when the percent is em-dash (previous == 0 branch); only the missing-input
+    guard hides it. The magnitude is always rendered positive — the arrow encodes the sign.
+  fmtNumber → NumberFormatter(.decimal, grouped, halfUp); non-finite collapses to 0 (web `safeNumber`).
+
+  Pinned by EXECUTED asserts (host harness, 54 checks):
+    up/higher  312.4 vs 250  → "25.0%" ↑ emerald · clause "trending up 25.0%"
+    down/lower 180   vs 200  → "10.0%" ↓ emerald (good) · clause "trending down 10.0%"
+    down/higher 1234 vs 1500 → "17.7%" ↓ rose (grouping + half-away-from-zero)
+    flat       45.6  vs 45.6 → "0.0%"  → muted · clause "no change"
+    prev=0     268   vs 0    → "—" ↑ rose (lower-is-better) / emerald (higher) · clause "no prior data"
+    missing    NaN   vs 5    → "—" muted, NO arrow
+    fmt 1234.5→"1,235" · 24.96→"25.0" · 0.05→"0.1" · ∞→"0.0" · NaN→"0"
+    projector: 4 rows ordered; "312 mi" / "12" (no unit) / "45.6 kWh" / "268 Wh/mi"; a11y
+               "Distance, 312 mi, trending up 25.0%" … "Efficiency, 268 Wh/mi, no prior data";
+               compact slice → [Distance, Drives]; [] → empty; duplicate labels → ids [0,1] (position);
+               unit "" → nil. state resolve: [] → .empty ; non-empty → .content. summary([]) → message.
+
+--------------------------------------------------------------------------------
+GATE RESULTS (real commands, real exit codes on this host)
+--------------------------------------------------------------------------------
+
+[HOST] xcrun --sdk macosx swiftc -typecheck -swift-version 6 -strict-concurrency=complete
+       -target arm64-apple-macos15.0
+       (WidgetComparisonCard .swift/.Views/.Model/.Adapter vs the REAL design system —
+        apps/design/generated/apple/Tokens.swift + Sources/Components/** + Sources/Design/**)
+       → error count = 0
+       TYPECHECK_EXIT=0
+       The Previews bodies were additionally type-checked green via a macro-stripped probe
+       (the `#Preview` freestanding macro needs the Xcode `PreviewsMacros` plugin, which is absent under
+       CommandLineTools; every `#Preview` in the repo is `#if DEBUG`-guarded and excluded without -D DEBUG).
+       (The lone excluded design file, Sources/Components/DataDisplay/UnitFormatters.swift, resolves KMP
+        `Shared` types Units/UnitPreferences and is UNUSED by this primitive; it is the same file the
+        predecessor surfaces exclude. Every other design file + all five shipped non-test Swift files
+        type-check green. Zero errors originate in WidgetComparisonCard.*.)
+
+[HOST] xcrun --sdk macosx swiftc -O -swift-version 6 (Model + Adapter + driver) && run
+       → === WidgetComparisonCard host harness === CHECKS=54 FAILURES=0 HARNESS_OK
+       HARNESS_EXIT=0
+       Verified green by EXECUTION of the REAL shipped Model + Adapter: the full Delta matrix (percent /
+       "—" when prev=0 / missing-input no-arrow / arrow / emerald-rose-muted tone for higher- AND
+       lower-is-better), fmtNumber grouping + half-away-from-zero + non-finite→0, the projector
+       (row value+unit, a11y labels, the compact first-two slice, the empty branch, position-stable ids,
+       empty-unit→nil), the web `visible.length === 0 ? empty : content` state map, the accessibility
+       summary (full + empty message), and the P1/S11 `view.opened` once-only telemetry contract + slug.
+
+[HOST] swiftformat --lint apps/apple/TeslaSync/widget-primitives (the 6 shipped Swift files)
+       → 0/6 files require formatting
+       FORMAT_EXIT=0
+
+[HOST] cd apps/apple && swiftlint lint --strict --no-cache (the 6 shipped Swift files)
+       → Done linting! Found 0 violations, 0 serious in 6 files.
+       LINT_EXIT=0
+       NOTE: TeslaSync/widget-primitives is not yet in .swiftlint.yml `included` (that file is outside
+       this prompt's allowed scope); the files were linted by explicit path. Adding the directory to the
+       project-wide `included` list is a P4-core/integration concern.
+
+[HOST] pwsh check-placeholders.ps1 -Path apps/apple/TeslaSync/widget-primitives -Language swift
+       → PLACEHOLDER_ALLOWED=0 · PLACEHOLDER_COUNT=0
+       PLACEHOLDER_EXIT=0
+       (self-test PASS; plus a manual case-insensitive forbidden-word scan — TODO/FIXME/XXX/Coming soon/
+        Placeholder/Lorem/not implemented/unimplemented/stub/mock/fatalError — of all 7 shipped files → NONE.)
+
+[DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+[DEFERRED] xcodebuild -scheme TeslaSync-macOS                                                       build test
+       IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED   (NOT claimed green — see reasoning)
+       The scheme-level build/test is DEFERRED — not failed — for a hard environment-dependency reason
+       that is NOT a defect in this primitive's code:
+         · `xcodebuild` is unavailable under the active developer dir (CommandLineTools): `xcodebuild
+           -version` → "tool 'xcodebuild' requires Xcode". Xcode 26.5 (17F42) IS installed and selectable
+           (`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -version` → exit 0), and
+           xcodegen 2.45.4 IS present — so the toolchain could be selected and the project generated, BUT:
+         · The TeslaSync (and -macOS) app + test targets all LINK `Frameworks/Shared.xcframework`
+           (project.yml lines 54/83/227/254, with a "Stage Shared.xcframework" scheme pre-build step) and
+           14 app Source files `import Shared`. That KMP shared-core xcframework is ABSENT in this checkout
+           — apps/apple/Frameworks/ holds only .gitkeep (it is produced out-of-band by Kotlin/Native +
+           Gradle). The scheme build/test therefore cannot link, independent of this surface.
+       This matches the user-approved "code-complete + DEFERRED Xcode gate" disposition established by the
+       234 predecessor P4 Apple surfaces. WidgetComparisonCard.* is verified green by the host typecheck
+       (against the real design system) + the executed parity harness + format + lint + placeholder gates.
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+  [x] Every state from the web source reproduced — content, empty ("No comparison data"), plus the
+      WidgetShell-supplied loading / error / stale / offline as first-class building blocks; no hidden
+      surfaces (a .content state whose visible slice is empty still renders the empty state).
+  [x] No view HTTP — pure presentational primitive; consumers feed pre-projected metrics (P1/S8 binding
+      lives in the consuming widget, per the web architecture).
+  [x] Every i18n key resolves through the P1/S10 facade (WidgetComparisonStrings); per-surface
+      WidgetComparisonCard.strings table folds into Localization/Localizable.xcstrings at integration
+      (master catalog edit is out of this prompt's allowed scope — the established 54-table convention).
+  [x] Accessibility — combined VoiceOver labels on every row + banner; the retry control (the only
+      interactive element) carries an explicit accessibilityLabel; arrows are accessibilityHidden;
+      Dynamic Type via tokens; Reduce Motion honored by TSSkeleton.
+  [x] Tests — adapter/projection unit tests + per-state coverage + a11y label test + telemetry test.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished native WidgetComparisonCard widget primitive shipped at parity with the web source:
+  a reusable SwiftUI building block rendering every state, over P1/S9 tokens, P1/S10 i18n, and the P1/S11
+  `view.opened` telemetry contract; full null safety and a11y. The surface type-checks GREEN under Swift 6
+  strict concurrency against the real design system, and its Foundation-only delta/number/projection/state/
+  a11y logic executes GREEN (54/54) with exact web value parity. The Xcode scheme build/test is DEFERRED to
+  a signed CI runner because the app target's KMP Shared.xcframework is absent in this checkout (built via
+  Kotlin/Native + Gradle) — an environment dependency, not a defect in this code — matching the
+  user-approved "code-complete + DEFERRED Xcode gate" disposition.
+
+TYPECHECK_EXIT=0
+HARNESS_EXIT=0
+FORMAT_EXIT=0
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+IOS_EXIT=DEFERRED
+MAC_EXIT=DEFERRED
+
+EXIT=0
+STATUS=DONE

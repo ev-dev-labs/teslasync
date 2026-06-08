@@ -1,0 +1,227 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The InboxPage is a thin wrapper hosting `InboxBody`. The parity manifest declares only page-level concerns (2 data sources, 3 strings, success state = 4 items). Let me explore the existing Apple app structure to understand conventions before writing code.
+
+The output path mentions `Features/Notifications/` but the existing structure has `feature-views` and `dashboard-widgets`. Let me investigate the real structure and conventions.
+
+There's a rich existing structure. There's already an `InboxBody` in `feature-views/` and `Sources/Notifications`. Let me understand the project layout and existing conventions.
+
+The Xcode sources are `Sources`, `TeslaSync/dashboard-widgets`, `TeslaSync/feature-views`, `Localization`, and design tokens. Note: `TeslaSync/Features/` (the prompt's output path) is **not** in project.yml sources. The existing notification views live in `feature-views/`. Let me check for existing InboxPage and understand conventions.
+
+No page wrappers exist yet — `InboxBody` (the shared component) is built, but `InboxPage` is not. Let me read the existing `InboxBody.swift` to learn conventions, and find navigation registration.
+
+Let me check the Apple toolchain availability (critical for the gate) and read the gate contract plus navigation structure.
+
+Toolchain is present. Let me verify xcodebuild fully works (vs CLT-only shim) and check the KMP framework dependency, which the build requires.
+
+Critical finding: **only Command Line Tools are installed, not full Xcode** — so `xcodebuild` cannot run. Also `Shared.xcframework` is just a `.gitkeep` (KMP core not built). Per the prompt, "If no Xcode runner is available, the gate → STATUS=BLOCKED." But I must still produce the complete implementation (no placeholders, no scope narrowing). Let me read the gate contract and existing patterns.
+
+The README confirms: "**Requires macOS + Xcode runners** — prompts that can't run their gate are BLOCKED, not DONE." This is our situation (CLT-only). I must still produce the complete implementation. Let me write a plan and deeply study the model construction, scaffold, navigation, and strings conventions.
+
+Now I understand the `InboxBodyModel` seams. Let me study the production wiring (Adapter/Store), the ported `useVehicles`/`useAlertRules` hooks, and the page scaffold + navigation.
+
+Let me find the navigation host, page scaffold, production `InboxSource`, and the ported vehicle/rules facade.
+
+Now I understand the route-host registry pattern. Let me find where it's populated, the page scaffold/PageContainer equivalent, and production `InboxSource` implementations.
+
+Now I understand the registration pattern. Let me find production `InboxSource`/`InboxActionsPerforming` implementations and how vehicles/alert-rules are exposed via the shared facade.
+
+No production `InboxSource` exists yet (P7 is bootstrapping). Let me study the SharedFacade container and how an existing feature view (AlertsSection) binds to the shared core.
+
+The production data layer depends on `Shared` (KMP xcframework) which doesn't exist — reinforcing BLOCKED. The established pattern (InboxBody) is **seam-driven**, not direct `Shared` imports. Let me study the web PageContainer, the registered `AppSettingsView` page scaffold, and the design tokens/components.
+
+No shared `PageContainer` exists in Swift yet. Let me study the one registered route page (`AppSettingsView`) for the scaffold convention, plus the Typography/Cards components and the existing strings.
+
+I see the convention: pages use `.navigationTitle(localizedKey)`, `ScrollView`/`VStack`, `TSSpacing`, `Color.TS.bg`, and per-surface `.strings` files fold into the master catalog. The 3 page strings aren't defined yet. Let me inspect the master catalog and confirm string resolution.
+
+The master catalog has 39 `notifications.inbox` keys already (InboxBody strings were folded in). Let me check if the 3 page-specific keys exist and confirm `Color.TS`, `TSSpacing`, typography primitives.
+
+The catalog uses `translation.`-prefixed keys for web-derived i18n, while native surfaces resolve via per-surface `.strings` tables (e.g., `InboxBody.strings`). The 3 page keys don't exist yet. Let me read the core primitives I'll use: Typography, Cards (TSGlassPanel), Feedback states, design tokens, Buttons, and the SwiftLint config.
+
+Excellent — found `TSEmptyState`, `TSErrorDisplay`, `TSPageLoader`, and the lint rules (line length 120/160, type_name max 50/60, `--self remove`). Note SwiftLint's `included:` lacks `TeslaSync/Features`, but the gate lints by explicit path so my file is covered. Let me read the remaining primitives (TSGlassPanel, TSFadeIn, TSButton, design tokens) before writing.
+
+I now have all the primitives. Let me confirm the `InboxBodyModel` lifecycle methods (`start`/`stop`/`refresh`/`openContext`/`navigate`) and the exact catalog header formatting before writing.
+
+I have a complete understanding now. Let me record my design decisions and create the files. First, the directory and the model file.
+
+All tokens confirmed. Now let me write the model file.
+
+Now the main View file with the navigation registration.
+
+Now the previews file.
+
+Now let me add the 3 strings to the catalog, wire the registration, and update the build/lint config.
+
+Catalog valid with all 3 keys. Now wire the registration into `TeslaSyncApp.swift`.
+
+Now add `TeslaSync/Features` to the build (both app targets) and lint config.
+
+Now let me run the runnable gate steps. First SwiftLint on the new files.
+
+SwiftLint found 2 serious violations. Let me see exactly where.
+
+Two violations: one pre-existing (`LifetimeStatsWidget`, not mine), one in my `InboxPage.swift:86` (multiple closures with trailing closure). Let me fix mine.
+
+Now let me verify my files lint clean (scoped to just my 3 files to isolate from the pre-existing project violation), and test how path-scoped linting behaves.
+
+My 3 files lint clean (0 violations). The `LifetimeStatsWidget` violation is pre-existing baseline (not in my scope). Let me run SwiftFormat lint on my files and confirm my change set.
+
+SwiftFormat clean (0/3). Note: `AIUsageCard.*` and the `web/*` files were already modified in the worktree before I started — not my changes; I'll commit only my files. Let me verify the project generates and confirm the Features path is included.
+
+All 3 files are in the generated project. Now let me run the placeholder scan and attempt the build (expected to fail — no Xcode).
+
+Placeholder scan passes (0 placeholders). Now the build step — expected to fail since only Command Line Tools are installed.
+
+Build confirmed BLOCKED (`xcodebuild requires Xcode`, CLT-only). Since I can't compile, let me syntax-check the files with the Swift parser and do a careful review.
+
+All 3 files parse cleanly. Let me view the final InboxPage.swift and run a focused code review since I can't type-check without Xcode.
+
+All files parse clean, lint clean, format clean, placeholder-clean, and are included in the generated project. Since I can't type-check without Xcode, let me run a focused code review against the real types to catch any API/concurrency issues.
+
+Now let me verify the `InboxBodyModel.init` call in InboxPage.Model.swift. The new code calls:
+
+```swift
+inbox = InboxBodyModel(source: source, archived: false, actions: actions, navigate: navigate)
+```
+
+Looking at the actual `InboxBodyModel.init`:
+```swift
+public init(
+    source: any InboxSource,
+    archived: Bool = false,
+    telemetry: any InboxTelemetry = OSLogInboxTelemetry(),
+    toast: any InboxToastPresenting = OSLogInboxPresenter(),
+    announcer: any InboxAnnouncing = OSLogInboxPresenter(),
+    preferences: any InboxPreferences = DefaultInboxPreferences(),
+    actions: any InboxActionsPerforming,
+    navigate: @escaping @MainActor (String) -> Void = { _ in },
+    ...
+)
+```
+
+The call skips `telemetry`, `toast`, `announcer`, `preferences` (all have defaults) and provides `source`, `archived`, `actions`, `navigate`. This is valid — Swift allows skipping defaulted parameters.
+
+Now let me check the `TSButton` call. The new code uses:
+```swift
+TSButton(
+    variant: .ghost,
+    size: .small,
+    action: { model.viewArchived() },
+    label: { ... }
+)
+```
+
+The actual init is:
+```swift
+public init(
+    variant: TSButtonVariant = .primary,
+    size: TSButtonSize = .medium,
+    isLoading: Bool = false,
+    action: @escaping () -> Void,
+    @ViewBuilder label: @escaping () -> Label
+)
+```
+
+The call passes `variant`, `size`, `action`, `label` — skipping `isLoading` which has a default. This matches.
+
+Let me verify one potential issue — the `TSErrorDisplay` call in InboxPage.swift:
+```swift
+TSErrorDisplay(onRetry: { Task { await model.refresh() } })
+```
+
+The actual init:
+```swift
+public init(
+    title: LocalizedStringKey = "error.title",
+    message: LocalizedStringKey? = nil,
+    onRetry: (() -> Void)? = nil
+)
+```
+
+This is valid — `onRetry` takes `(() -> Void)?` and `{ Task { await model.refresh() } }` is `() -> Void` (the Task is fire-and-forget).
+
+Let me check one more thing — the preview file uses `InboxVehicle(id: 1, displayName: "Model Y")` but the actual init has `displayName: String?`:
+
+```swift
+public init(id: Int, displayName: String? = nil)
+```
+
+Passing a `String` literal to a `String?` is fine.
+
+And `InboxRule(id: 10, name: "Low battery", severity: "warn", vehicleId: 1, signalName: "BatteryLevel")` — the actual init:
+```swift
+public init(id: Int, name: String? = nil, severity: String? = nil, vehicleId: Int? = nil, signalName: String? = nil)
+```
+
+All match.
+
+Now let me check the concurrency concern about `LoggingInboxActions`. The protocol `InboxActionsPerforming` is `@MainActor public protocol InboxActionsPerforming: AnyObject`. `LoggingInboxActions` is `@MainActor public final class`. This satisfies it.
+
+Let me verify the `InboxUpdate` init call in the model's `load()`:
+```swift
+bodySource.push(InboxUpdate(
+    flatStatus: .empty,
+    groupStatus: .empty,
+    rules: loadedRules,
+    vehicles: loadedVehicles,
+    connection: .live,
+    updatedAt: Date()
+))
+```
+
+The actual init:
+```swift
+public init(
+    flatStatus: InboxLoadStatus = .loading,
+    groupStatus: InboxLoadStatus = .loading,
+    rows: [InboxNotification] = [],
+    groups: [InboxGroup] = [],
+    rules: [InboxRule] = [],
+    vehicles: [InboxVehicle] = [],
+    connection: InboxConnection = .live,
+    updatedAt: Date? = nil
+)
+```
+
+The call skips `rows` and `groups` (both default to `[]`). Passes `updatedAt: Date()` to a `Date?` parameter — that's fine. All labels match.
+
+Now the key concurrency questions. The `navigate` closure stored as `@ObservationIgnored private let navigate: @MainActor (String) -> Void` — this type is NOT `@Sendable`. In `InboxBodyModel.init`, it's typed `@escaping @MainActor (String) -> Void`. That matches. The `InboxPageModel.init` also types it the same way. The registry closure captures it. Since the registry itself is `nonisolated(unsafe)` for EnvironmentKey, and the SettingsRouteRegistration uses the same pattern, this is consistent.
+
+Let me check one last thing — whether `selection` in TeslaSyncApp.swift is a `@State` binding to `AppRoute?`:Good. `selection` is `@State private var selection: AppRoute?`. The navigate closure does `selection = route` which is the same pattern as `selection = .notifications` already used elsewhere.
+
+Now let me check one final Swift 6 concurrency issue. The `navigate` closure in TeslaSyncApp:
+```swift
+navigate: { path in
+    if let route = AppRouteParser.parse(path: path) { selection = route }
+}
+```
+
+This closure captures `selection` (a `@State` property). In Swift 6, `@State` properties can only be accessed from the `@MainActor`. Since `TeslaSyncApp` is implicitly `@MainActor` (it conforms to `App`), and the closure is typed `@escaping @MainActor (String) -> Void`, this is safe — the closure will only be called on the main actor.
+
+The `SettingsRouteRegistration` already captures `{ selection = .notifications }` in its `onOpenNotifications` parameter in the exact same way, proving the pattern is established and compiles.
+
+Let me verify one edge case — the `InboxPageModel.init` default argument:
+
+```swift
+public init(
+    data: any InboxPageData = InMemoryInboxPageData(),
+    ...
+)
+```
+
+`InMemoryInboxPageData()` is a `@MainActor` struct. Creating a default instance in a `@MainActor` init is fine because the init itself is `@MainActor` (the class is annotated `@MainActor`).
+
+No significant issues found in the reviewed changes.Code review found no significant issues — the patterns match existing working code (`SettingsRouteRegistration`). Let me update my plan and write the honest gate log.
+
+Now let me write the honest gate log with real evidence.
+
+Now let me verify the generated project is gitignored and stage only my intended files for commit.
+
+The generated project is gitignored. Let me verify the `TeslaSyncApp.swift` edit region, then stage only my files.
+
+The wiring looks correct. Let me stage only my files and commit with an honest BLOCKED message.
+
+Committed cleanly (bb3985a45, 8 files). Let me do a final post-commit verification — confirm the log terminal lines, that the generated project still includes my files, and that only the pre-existing unrelated changes remain unstaged.
+
+All checks confirm the work is complete and consistent. Final state verified: my 3 files lint clean (0 violations), the log terminates with `EXIT=1`/`STATUS=BLOCKED`, and only pre-existing unrelated worktree changes remain unstaged.
+

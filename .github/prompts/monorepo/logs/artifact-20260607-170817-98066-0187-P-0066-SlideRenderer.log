@@ -1,0 +1,134 @@
+=== P4 Feature view 0066 SlideRenderer (Apple) ===
+Artifact : apps/apple/TeslaSync/feature-views/SlideRenderer.*
+Web src  : web/src/features/analytics/components/review/SlideRenderer.tsx
+Date     : 2026-06-07
+
+------------------------------------------------------------------------------
+0. RUNNER CAPABILITY PROBE
+------------------------------------------------------------------------------
+xcode-select -p        : /Library/Developer/CommandLineTools   (CLT default)
+/Applications/Xcode.app: present -> Xcode 26.5 (Build 17F42) usable via DEVELOPER_DIR
+xcrun simctl           : iPhone 16 simulator AVAILABLE (iOS 26.5 runtime)
+SDKs                   : iphonesimulator26.5, macosx26.5
+swift                  : Apple Swift 6.3.2
+swiftlint              : 0.63.3
+swiftformat            : 0.61.1
+pwsh                   : present
+KMP Shared.xcframework : built via `apps/shared/gradlew :core:assembleSharedXCFramework`
+                         (DEVELOPER_DIR=Xcode 26.5) -> BUILD SUCCESSFUL (debug+release), staged.
+
+Conclusion: SwiftUI + Swift Charts + iOS 18 / macOS 15 toolchain IS available on this
+runner, so the surface is verified directly (not declared BLOCKED for lack of platform).
+The *full-app* xcodebuild gate is separately blocked by PRE-EXISTING, unrelated repo
+collisions documented in apps/macos-pending-verifications.md (see section 2).
+
+------------------------------------------------------------------------------
+1. SURFACE-ISOLATED VERIFICATION  (the host-runnable, in-scope gates -> ALL GREEN)
+   Methodology matches the sibling precedent p4-apple/feature-views/P-0010-ToolCard.
+------------------------------------------------------------------------------
+1a. swiftc -typecheck, Swift 6, -strict-concurrency=complete, incl. #Preview (-D DEBUG)
+    files: SlideRenderer.{Adapter,Catalog,Slides,Projector,Accessibility,Model,
+           Chrome,Views,CardViews,SummaryViews,Previews}.swift + SlideRenderer.swift
+           + design/generated/apple/Tokens.swift
+    iOS  -target arm64-apple-ios18.0-simulator   -> IOS_TYPECHECK_RC=0
+    macOS -target arm64-apple-macos15            -> MAC_TYPECHECK_RC=0
+
+1b. Isolated SwiftPM package (library = 12 production files + Tokens), `swift build`
+    Swift tools 6.0, platforms iOS 18 / macOS 15
+    -> Build complete!  BUILD_RC=0
+
+1c. `swift test` (XCTest: SlideRenderer.Tests.swift + SlideRenderer.ModelTests.swift)
+    -> Executed 42 tests, with 0 failures (0 unexpected)   TEST_RC=0
+       Suites: SlideDeckProjectorTests, SRFormatTests, SlideDispatchTests,
+               SlideRendererProjectionTests, SlideRendererModelTests, SlideAccessibilityTests
+       Coverage: cached snapshot -> deck value parity (km + mi: distance/energy/savings/
+       trees/coffee/earth-lap, busiest-month labels, fmtNumber vs Math.round); slide
+       dispatch incl. longest/efficient labels + catalog parity with slides.ts SLIDE_DEFS;
+       phase resolution loading/empty/error/content + stale/offline freshness gating;
+       model navigation clamping; view.opened telemetry once; per-slide a11y summaries.
+
+1d. swiftlint --strict  (the 14 SlideRenderer*.swift files)            -> 0 violations
+1e. swiftformat --lint  (the 14 SlideRenderer*.swift files)            -> 0 (clean)
+1f. check-placeholders.ps1 (honest scan of the actual files, temp copy)
+    -> PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+
+------------------------------------------------------------------------------
+2. FULL-APP GATE  (the prompt's gate commands, attempted in full)
+------------------------------------------------------------------------------
+$ xcodegen generate                                                    -> XCODEGEN_RC=0
+
+$ DEVELOPER_DIR=.../Xcode.app xcodebuild -scheme TeslaSync \
+    -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  ** BUILD FAILED ** / ** TEST FAILED **                               IOS_EXIT=65
+  Root cause (PRE-EXISTING, unrelated to this surface):
+    AuditPanel.Tests.swift:19:8: error: Unable to resolve module dependency: 'XCTest'
+    -> co-located *.Tests.swift files are compiled INTO the app target (project.yml
+       sources: TeslaSync/feature-views) and import XCTest, which the app target cannot
+       resolve. The Swift module compile aborts at the first such file (AuditPanel,
+       alphabetical) before reaching any SlideRenderer source.
+  SlideRenderer-attributable errors: 0   (grep 'error:' | grep -i SlideRenderer => 0)
+
+$ DEVELOPER_DIR=.../Xcode.app xcodebuild -scheme TeslaSync-macOS build test
+  ** BUILD FAILED ** / ** TEST FAILED **                               MAC_EXIT=65
+  Root cause (PRE-EXISTING / environmental):
+    TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing
+    with a development certificate. (also "TeslaSyncWidgets-macOS")
+    -> no development signing identity on this runner.
+  SlideRenderer-attributable errors: 0
+
+$ (cd apps/apple && swiftlint --strict)                                LINT_EXIT=2
+  Found 1 violation, 1 serious in 778 files. The single violation is PRE-EXISTING and
+  out of this surface's scope:
+    TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19:
+      Function Body Length Violation (function_body_length)
+  SlideRenderer violations: 0  (every SlideRenderer*.swift file is --strict clean, see 1d).
+
+$ swiftformat --lint apps/apple                                        FORMAT_EXIT=0
+
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/SlideRenderer
+  PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------------------
+3. SCOPE INTEGRITY
+------------------------------------------------------------------------------
+- Files created (allowed set only): apps/apple/TeslaSync/feature-views/SlideRenderer.*
+    SlideRenderer.swift, .Model.swift, .Adapter.swift, .Catalog.swift, .Slides.swift,
+    .Projector.swift, .Accessibility.swift, .Chrome.swift, .Views.swift, .CardViews.swift,
+    .SummaryViews.swift, .Previews.swift, .strings, .Tests.swift, .ModelTests.swift
+    (decomposed to keep every file <= 400 lines per swiftlint --strict, mirroring the repo's
+     multi-file per-surface convention).
+- No files outside the allowed set were modified (git status verified). The pre-existing
+  blockers in section 2 live in Sources/** + TeslaSync/dashboard-widgets/** + project
+  signing config, which are OUT OF SCOPE for this prompt.
+
+------------------------------------------------------------------------------
+4. CONCLUSION
+------------------------------------------------------------------------------
+The SlideRenderer surface is production-complete and verified GREEN on every host-runnable,
+in-scope gate: iOS 18 + macOS 15 typecheck under Swift 6 strict concurrency, an isolated
+SwiftPM build of all 12 production files, 42/42 XCTest cases, swiftlint --strict, swiftformat
+--lint, and the placeholder gate. It reproduces the web SlideRenderer's data, dispatch
+(renderSlideContent switch incl. the longest/most-efficient drive-highlight labels it owns),
+the AnimatePresence/motion transition (reduce-motion aware), the slide.bg gradients, and every
+state (loading/empty/error/stale/offline/content) with full i18n + VoiceOver labels.
+
+The prompt's FULL-APP xcodebuild build+test gate cannot reach EXIT=0 on this runner because of
+PRE-EXISTING, unrelated repo conditions (iOS: co-located *.Tests.swift importing XCTest into
+the app target; macOS: development signing) — the exact conditions recorded for the sibling
+surface p4-apple/feature-views/P-0010-ToolCard in apps/macos-pending-verifications.md, deferred
+to the macOS acceptance gate p4-apple/P99-0001-apple-acceptance-gate. Zero failures are
+attributable to SlideRenderer. Fixing those collisions is outside this prompt's allowed files.
+
+Per the prompt capability clause + Honesty Covenant #1/#8 (no red-as-green, no commit on a
+self-introduced red), the full-app gate is reported BLOCKED with evidence above rather than
+fabricated green.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=2 (pre-existing, 0 in SlideRenderer)
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+ISOLATED_BUILD=0  ISOLATED_TESTS=42/42  TYPECHECK_iOS=0  TYPECHECK_macOS=0
+
+EXIT=65
+STATUS=BLOCKED

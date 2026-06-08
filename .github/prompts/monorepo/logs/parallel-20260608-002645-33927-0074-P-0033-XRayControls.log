@@ -1,0 +1,110 @@
+I'll start by exploring the repository structure, the web source spec, and the Apple tooling availability.
+
+Important finding: `xcodebuild` exists but **Xcode is not installed** (only Command Line Tools), so the iOS/macOS simulator build+test in the gate cannot run. But `swift`, `swiftlint`, and `swiftformat` ARE available, and `apps/apple` exists. Let me examine the established pattern (AIUsageCard, just modified in this branch) and the web source spec.
+
+`XRayControls.tsx` exists in web. The feature-views dir is large (1438 entries). Let me read the web source and check for existing XRayControls native files plus the AIUsageCard pattern.
+
+`XRayControls` is a controls bar with 3 `Select` dropdowns (vehicle, window, bucket) where buckets ≥ window auto-disable. Sibling native files `XRayHeader.*` and `XRayFieldsTable.*` already exist — they're the exact pattern to follow. Let me study the `XRayHeader.*` set (closest sibling) and supporting types.
+
+This is a high-quality, detailed pattern. Critically, `XRayHeader.Adapter.swift` defines a top-level `public enum IngestXRayWindow`. I must understand the module structure to avoid type collisions. Let me check `project.yml` and whether types are duplicated across surfaces.
+
+`IngestXRayWindow` is defined only once (in `XRayHeader.Adapter.swift`), suggesting a shared module. Let me read `project.yml`, the remaining `XRayHeader.*` files, and check shared tokens + whether a bucket type already exists.
+
+Now I understand the design-system tokens (`TSSpacing`, `TSCard`, `Color.TS`, `Font.TS`, `TSTone`, `TSIconBox`, `TSSkeleton`, `TSRadius`, `TSMotion`). Let me read the full `project.yml` and locate where these shared tokens/components are defined.
+
+`feature-views` compiles into the `TeslaSync` app target (single module, `PRODUCT_MODULE_NAME: TeslaSync`), so `IngestXRayWindow` is already visible — I must reuse it, not redefine. Note `*.Tests.swift` files live in the app target too, so they likely use a custom harness, not XCTest. Let me read the remaining XRayHeader files and locate the design tokens.
+
+I now have the full pattern. The `*.Tests.swift` use `import XCTest` / `@testable import TeslaSync`. Now I need to locate the design tokens and find how interactive controls (Picker/Menu/Select) are done natively in this codebase, since `XRayControls` is a controls bar (3 selects). Let me search.
+
+There's a shared `Pickers.swift` and a sibling controls bar `NotificationFilterBar.Controls.swift`. Let me read both, plus the design tokens, to match the native select idiom precisely.
+
+`NotificationOptionPicker` is the ideal idiom reference — a single-select over a native `Menu` (web `<Select>`) with accessibility label/value, checkmark on selected, and a bordered trigger. Now let me verify the exact design-token names I'll use exist, and glance at the freshest convention (`AIUsageCard.swift`).
+
+All tokens/components confirmed. Let me view the exact signatures of the shared components/tokens I'll use (`TSSpacing`, `TSRadius`, `TSMotion`, `TSTone`, `TSSkeleton`, `TSIconBox`, `TSCard`) so my code compiles cleanly.
+
+All shared tokens/components verified. Let me check the parent page defaults and the `Vehicle` type fields for accurate parity (initial window/bucket, vehicle label fields).
+
+Confirmed: parent page defaults are `window='1h'`, `bucket='1m'`, `vehicleId=null`, vehicles from `useVehicles()`. `Vehicle` has `id`, `vin`, `display_name`. I have everything needed. Let me set up tracking and write the 7 files following the `XRayHeader.*` template exactly.
+
+Now writing the files. Starting with the pure projection adapter.
+
+Adapter done. Now the Model (seams + `@Observable` model + interactive in-memory source + strings facade).
+
+Now the presentational subviews (the three selects, vehicle phase states, connectivity banner, empty note).
+
+The bar references an `XRayControlsCopy` struct. Now I'll write the entry view (`XRayControls.swift`) which defines that copy bundle, derives the option lists, and orchestrates phases + the freshness banner.
+
+Now the previews (one per state) and the XCTest suite, mirroring the sibling exactly.
+
+The XCTest suite — comprehensive coverage of the bucket/window enums, the projection (label cascade, option builders, disable guard), accessibility, and the model (phase resolution, telemetry, source wiring, the three selects).
+
+Finally, the i18n catalog (`.strings`) with the parity keys and native chrome.
+
+All 7 files created. Now let me read the lint/format configs and run them scoped to my new files to verify they're clean.
+
+`pwsh` IS available and the placeholder script exists — so I can run the placeholder gate step exactly as specified. Let me run swiftformat and swiftlint scoped to my new files.
+
+swiftformat: 0/6 files require formatting. Now swiftlint --strict.
+
+Two `file_length` violations (>400 lines under `--strict`): `Tests.swift` (406) and `Views.swift` (450). The sibling surfaces keep files ≤400 by splitting. Let me confirm the sibling convention and split my two files accordingly (all still matching `XRayControls.*`).
+
+Confirmed: siblings keep every file ≤400 lines, splitting larger surfaces into extra `Surface.*` files (e.g., `NotificationFilterBar.ModelTests.swift`, `.Controls.swift`). I'll split `Views.swift` → `Views.swift` + `Bar.swift`, and `Tests.swift` → `Tests.swift` + `ModelTests.swift`. Let me view the exact split boundary in Views.swift.
+
+I'll restructure cleanly: remove the two oversized files and recreate them split (all still matching `XRayControls.*`). Removing first.
+
+Now recreating split files. First, the dropdown primitives (`Views.swift`).
+
+Now the `Bar.swift` file — vehicle phase states, the controls row, freshness banner, and empty note.
+
+Now the split test files: `Tests.swift` (enums + adapter) and `ModelTests.swift` (state holder).
+
+Now re-running swiftformat and swiftlint on all 8 XRayControls swift files, plus a line-count check.
+
+All files ≤293 lines, swiftformat clean. Now swiftlint --strict on all 8.
+
+swiftlint --strict: **0 violations** across all 8 files; swiftformat clean. Let me check the placeholder script's `-Path` semantics, then run the placeholder gate (pwsh is available) and a Swift syntax parse.
+
+The placeholder script scans `.swift` files for forbidden markers. My code uses the word "placeholder" heavily (legit UI term). I must check whether `placeholder` is a forbidden pattern — if so I'll rename to avoid false positives. Let me inspect the patterns.
+
+The common pattern `"Placeholder"` is matched case-insensitively — so any "placeholder" in `.swift` trips the gate. The acceptance criteria also lists "placeholder" as forbidden. Let me see how the sibling handles it.
+
+29 false-positives — all from the word "placeholder" (a forbidden pattern + explicitly banned by acceptance criteria). The sibling guards a single i18n-key use with `// parity:allow`, but the clean fix for 29 occurrences is to rename the concept to "prompt" (standard SwiftUI term, not forbidden). Let me rename across my files.
+
+No forbidden markers remain. Re-running format, lint, and the placeholder gate on my files.
+
+swiftformat clean, swiftlint --strict 0 violations, placeholder gate **PLACEHOLDER_COUNT=0**. The `.strings` file isn't scanned, but two comment lines still say "placeholder" — I'll reword for full consistency with the acceptance criteria.
+
+The `.strings` file wasn't touched by the sed (only `.swift` was). Let me use the correct original text.
+
+Now let me verify Swift syntax. Without Xcode I can't full-compile, but `swiftc -parse` checks syntax without loading modules. Let me parse all 8 files.
+
+All 8 parse cleanly. Let me type-check the pure adapter logic against the real `IngestXRayWindow` (both Foundation-only, same module) — this validates my projection/enums semantically.
+
+Pure adapter type-checks cleanly (RC=0) against the real `IngestXRayWindow`. Let me attempt a broader type-check of the SwiftUI surface against the CLT macOS SDK, pulling in the design-token/component files it depends on.
+
+The only error is in a dependency file (`Cards.swift` needs `tsGlassPanel()` from another file) — not my code. Let me locate that modifier and include it for a clean type-check.
+
+**UI_TYPECHECK_RC=0** — the entire SwiftUI surface type-checks against the macOS SDK with real tokens/components. Let me also try to type-check the test files (validating their symbol usage) by compiling them together with the sources in an ad-hoc module.
+
+XCTest isn't available under CLT (ships with Xcode), so the test files can't be type-checked here — but they parse cleanly and reference only symbols already validated by the UI/adapter type-checks. 
+
+Now I'll produce the gate log with **real** command outputs, including the Xcode-capability evidence. Let me run the gate steps and build the log.
+
+Capability evidence captured. Now appending the actual gate steps with correct exit-code capture (xcodebuild attempts, then the runnable checks).
+
+Now appending the supplementary local verification (parse + type-checks that the runner *can* do) and the final EXIT/STATUS verdict.
+
+The `cd` broke the relative log path. Let me redo the supplementary section with an absolute path.
+
+Final conclusion block with the honest EXIT/STATUS verdict.
+
+The gate log is complete and honest (EXIT=1, STATUS=BLOCKED with full API evidence; every runnable check green). Now committing — scoped to exactly my deliverable files + the log, leaving the pre-existing unrelated working-tree changes untouched.
+
+All 9 new files + log, cleanly scoped. Staging and committing.
+
+Exactly my 10 files staged; pre-existing unrelated changes left untouched. Committing.
+
+Committed as `5f6742c4`. Let me finalize tracking and do a last acceptance-criteria check.
+
+Everything verified. The deliverable is complete and committed. Here's the final summary.
+

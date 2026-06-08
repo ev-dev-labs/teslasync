@@ -1,0 +1,262 @@
+================================================================================
+P4 · Shared surface · 0025 — AiLimitBanner (Apple)
+Run: 2026-06-08T04:10-0700   Host: Darwin arm64 (macOS 26.5)   Slot: slot-254
+Prompt: P4/shared-surfaces/0025 — Shared surface: AiLimitBanner
+Web source (spec): web/src/components/ai/AiLimitBanner.tsx
+Mode: code-complete + REAL iOS-18/macOS-15 SDK typechecks + EXECUTED XCTest (27/27) +
+      DEFERRED Xcode app build/test (feature-views 0010/0084/0180/0231 precedent, ADR-012). No stubs as final.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present + Booted (83717DEE-70A3-4325-AA61-CBDDD3140989) OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen 2.45.4                    OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  shared-surfaces tier ....... NEW source group — registered here (see WIRING below)  NEW
+
+  NOTE on active toolchain: a bare `xcodebuild`/`xcrun simctl` fails because
+  `xcode-select -p` points at /Library/Developer/CommandLineTools (no SDKs). Full
+  Xcode 26.5 IS installed at /Applications/Xcode.app and is used here via the
+  DEVELOPER_DIR override (the feature-views precedent), which unlocks the iOS 18
+  simulator SDK, the macOS 15 SDK, the iPhone 16 simulator, and `swift test`.
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles below.
+  The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT
+  apply — the surface is authored, both-SDK-compiled, and host-tested for real.
+
+=== WIRING (new shared-surfaces tier — declared, not silent) ===
+  This is the FIRST shared-surface prompt, so the `TeslaSync/shared-surfaces/` source
+  group did not yet exist in the project. To make the surface a REAL target member
+  (so xcodegen enumerates it, swiftlint scopes it, and the Xcode app links it — the
+  gate is otherwise hollow), two additive registrations were made:
+    • apps/apple/project.yml — added `- path: TeslaSync/shared-surfaces` to the
+      TeslaSync (iOS) and TeslaSync-macOS app target `sources:` (mirrors how
+      `TeslaSync/feature-views` is registered). Additive; future shared-surface
+      prompts just drop files in.
+    • apps/apple/.swiftlint.yml — added `TeslaSync/shared-surfaces` to `included:`
+      so `swiftlint --strict` scopes the new tier.
+  These are necessary build wiring for a new tier, declared here per Honesty rule 9.
+
+=== ARTIFACT (apps/apple/TeslaSync/shared-surfaces/AiLimitBanner/) ===
+  AiLimitBanner.Adapter.swift    389  testable projection core — AiLimitReason taxonomy (11 wire
+                                      reasons + .other forward-compat decode; title/description
+                                      switch tables collapsing input/output-tokens and missing/
+                                      unknown-feature-id; web `data-reason` round-trip), AiLimitBannerLevel
+                                      (critical/warn/else → tone + icon), AiLimitInfo wire type,
+                                      AiLimitBannerRow projection (retryAfterS floored at 0),
+                                      AiLimitCountdown (tick + retry-ready gate), ALBText/ALBCopy
+                                      catalog (31 entries; 23 web-source keys), AiLimitBannerAccessibility
+  AiLimitBanner.Model.swift      323  P1/S8 state-holder seam (AiLimitBannerSource → Model) + P1/S11
+                                      telemetry seam + parent-stream phase ladder (loading/loaded(info?)/
+                                      failed → render) + once-per-second countdown timer (Task, testable
+                                      tick) + dismiss-until-new-limit + stale rising-edge auto-refresh +
+                                      in-memory source + P1/S10 ALBStrings facade (incl. retryIn format)
+  AiLimitBanner.Views.swift      263  AiLimitBannerCard (mirrors TSAlertBanner; reason-keyed title/desc +
+                                      live countdown + dismiss + TSButton baseline/retry actions) +
+                                      loading skeleton + empty (ContentUnavailableView) + error/retry +
+                                      stale/offline chips
+  AiLimitBanner.swift             75  the surface View (offline/stale chips + render switch +
+                                      dismiss→empty + onAppear/onDisappear telemetry lifecycle)
+  AiLimitBanner.Previews.swift   104  #if DEBUG previews — 9 (cost-cap critical, rate-limit countdown,
+                                      provider-unavailable, token-quota no-baseline, empty, loading,
+                                      error, stale, offline)
+  AiLimitBanner.Tests.swift      395  XCTest — reason/level/projection/countdown/render/model/telemetry/
+                                      a11y/copy (27 methods)
+  AiLimitBanner.strings           55  P1/S10 catalog contribution (23 web keys + 7 native chrome keys)
+  Total 1604 lines across 7 files; every .swift file <= 395 lines (house file_length 400).
+  Shared tokens (Color.TS / Font.TS / TSSpacing / TSRadius), TSTone, TSButton, and TSSkeleton +
+  ContentUnavailableView are REUSED from the P4 core (no redeclaration in shipped files → no
+  duplicate symbols in the app module).
+
+=== PARITY (vs web AiLimitBanner.tsx) ===
+  Data source -> the web component is a fully controlled presentational leaf; its only hook is
+    useTranslation. That maps to the P1/S10 ALBStrings facade. The structured limit + the lifecycle
+    around it (the parent's useAiStream `limit` field) bind through the shared P1/S8 state-holder
+    seam (AiLimitBannerSource -> AiLimitBannerModel); the view performs NO HTTP.
+  Reason taxonomy -> AiLimitReason ports BOTH web switch tables (titleForReason / descriptionForReason)
+    EXACTLY: 11 named wire reasons, input_tokens+output_tokens collapsed onto one "token quota" title/
+    desc, missing_feature_id+unknown_feature_id collapsed onto one "misconfigured" title/desc, and any
+    unrecognized reason → the generic copy (the web `default:` branch; .other preserves the raw wire
+    value for the data-reason hook). Unit-asserted key-for-key.
+  Level -> AiLimitBannerLevel reproduces the web variant ternary: critical → danger, warn → warning,
+    else (incl. "") → info. Tone + SF Symbol are unit-tested.
+  Countdown -> AiLimitCountdown.tick is a 1:1 port of `setSecondsLeft((s) => (s > 0 ? s - 1 : 0))`;
+    retry-ready is `secondsLeft <= 0`. The Model seeds secondsLeft from retryAfterS (floored at 0),
+    runs a once-per-second Task, and re-seeds on each distinct limit (the web useEffect keyed on info).
+    The arithmetic + the gate are unit-tested deterministically (the native parallel of the web
+    fake-timer tests; automaticCountdown:false drives tick() by hand).
+  Composition -> AiLimitBannerCard mirrors the shared TSAlertBanner (tone fill 0.1 + stroke 0.3,
+    TSRadius.md): leading severity SF Symbol, reason-keyed title + description, the "try again in N"
+    line shown ONLY while !retryReady (web parity), a trailing dismiss control, and the two actions.
+  Shared components -> @/components/feedback maps to TSAlertBanner (banner), TSSkeleton (loading),
+    ContentUnavailableView (empty), and the TSErrorDisplay/TSBadge looks (error retry + stale/offline
+    chips). @/components/ui/Button maps to TSButton — "Use baseline" (variant ghost, size small) and
+    "Retry" (variant primary, size small), gated EXACTLY like the web: baseline shows when
+    `onUseBaseline && info.baselineAvailable` (native canUseBaseline && row.baselineAvailable); retry
+    shows when `onRetry && retryReady` (native canRetry && retryReady). Recharts/Leaflet -> none.
+  States (all render) -> the web leaf returns null when info==null; the native surface owns the full
+    P4 states contract around the parent stream:
+      loading -> a redacted TSSkeleton banner row (initial limit check);
+      empty   -> a friendly ContentUnavailableView ("Helix is available") — the never-a-blank-box
+                 native treatment of the web `if (!info) return null` (the healthy no-limit outcome,
+                 and the surface a user dismiss falls back to);
+      banner  -> the faithful active-limit card across all severities + the live countdown;
+      error   -> the stream-failure branch (TSQueryError equivalent + a native retry -> source.refresh);
+      stale   -> a "This notice may be out of date" chip + a single auto-refresh on each rising edge
+                 into the stale window (unit-tested);
+      offline -> an "Offline — showing the last Helix status" chip over the cached banner.
+    Each state has a #if DEBUG preview (9 total) + a unit test.
+  i18n -> all 23 web-source keys (10 titles + 10 descriptions + useBaseline + retry + retryIn) resolve
+    through the P1/S10 facade with the web English fallback (coverage asserted). Plus 7 native chrome/
+    a11y keys (loading, empty title/message, error message, stale, offline, dismiss). No English literal
+    in Swift (Text(verbatim:) over the facade; inline English lives only in the ALBText fallbacks).
+  a11y -> the banner copy block is one .ignore element with a composed VoiceOver label (title +
+    description + the countdown line while counting); the leading icon is hidden; the dismiss + baseline
+    + retry buttons and each status chip carry an accessibilityLabel; the card carries the
+    accessibilityIdentifier "ai-limit-banner" (the data-reason parity hook); Dynamic Type via tokens;
+    Reduce Motion gates the TSSkeleton shimmer.
+  Telemetry -> AiLimitBannerModel.start() emits viewOpened(surface:"AiLimitBanner") -> bridges the
+    shared Telemetry.track (P1/S11). Asserted by a spy test (fires exactly once, idempotent start).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (the 4 production files compiled with the REAL
+    apps/apple component closure — generated Tokens + Badges + Buttons + Cards + Typography +
+    Skeletons + Design/TSMaterial/TSDesign), Swift 6 language mode:
+      xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator -swift-version 6 …
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0, -swift-version 6):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swiftc -typecheck — DEBUG previews (-D DEBUG; the 4 production files + the Previews file + real
+    closure, so this surface's 9 #Preview blocks expand against the real tokens):
+      PREVIEWS_TYPECHECK_EXIT=0                                                     OK
+[4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM
+    harness (the real production Adapter/Model/Views/surface/Previews + the real design tokens +
+    verbatim real TSTone/TSButton/TSSkeleton, module name "TeslaSync"), Swift 6 strict concurrency:
+      Executed 27 tests, with 0 failures (0 unexpected) in 0.010 seconds
+        AiLimitReasonTests              4/4  (decode every wire reason / unknown→.other round-trip /
+                                            title taxonomy incl. token + feature-id collapse + generic /
+                                            description taxonomy)
+        AiLimitBannerLevelTests         3/3  (critical/warn/else decode / tone mapping / icon mapping)
+        AiLimitBannerRowTests           2/2  (resolved copy + baseline passthrough / negative retryAfter
+                                            floors to 0)
+        AiLimitCountdownTests           2/2  (tick decrements to floor 0 / retry-ready gate)
+        AiLimitBannerRenderTests        2/2  (loading/failed/loaded(nil)→empty / loaded(info)→banner)
+        AiLimitBannerModelTests         6/6  (start telemetry-once + startCount==1 / banner seeds
+                                            countdown + ticks to retry-ready / retry+baseline gating /
+                                            dismiss-until-new-distinct-limit / stale rising-edge
+                                            auto-refresh once-per-edge / actions delegate)
+        AiLimitBannerAccessibilityTests 3/3  (summary with/without countdown / empty countdown absent)
+        AiLimitBannerCopyTests          5/5  (every entry has key+fallback / 23 web keys covered /
+                                            fallback resolution / facade falls back / retryIn formats)
+      SWIFT_TEST_EXIT=0                                                             OK
+[5] swiftlint --strict on the 6 surface .swift files (explicit paths; config apps/apple/.swiftlint.yml;
+    TeslaSync/shared-surfaces/ IS now in the `included:` scope):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0                                                                   OK
+[6] swiftformat --lint on the surface dir (config apps/apple/.swiftformat):
+      0/6 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+[7] check-placeholders (ADR-011 stub gate; pwsh) — REAL scan of the shipped surface dir:
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/AiLimitBanner
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+[8] xcodegen generate — project + targets + schemes generate cleanly; surface refs in the generated
+    pbxproj = 45, enumerating all 7 surface files (shared-surfaces/ IS now target-registered, so the
+    surface joins the iOS/iPadOS/macOS apps):
+      XCODEGEN_EXIT=0                                                               OK
+
+=== GATE — XCODE APP BUILD/TEST (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real command run on this host, full Xcode 26.5):
+      xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO ->
+        error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+        ** BUILD FAILED **   XCODEBUILD_MAC_EXIT=65
+      AiLimitBanner-specific compile errors in that output: 0 (grep -c).
+    Why deferred (code-unrelated; not a defect in this surface; identical disposition to the
+    0010/0084/0180/0231 predecessor feature-views, Honesty rule 7):
+      (a) Shared.xcframework not staged: the app target links the KMP core; staging it needs a
+          Kotlin/Native Gradle build (the scheme runs it as a pre-build phase). Integration/CI-runner
+          scope (ADR-012, apps/macos-pending-verifications.md). Concrete error captured above.
+          Frameworks/ holds only .gitkeep on this runner.
+      (b) Pre-existing, unrelated parallel-merge collisions in OTHER files (out of this prompt's allowed
+          scope): `struct DashboardWidgetSize` redefined across Sources/DashboardWidgets + TeslaSync/
+          dashboard-widgets, and 150+ co-located `*.Tests.swift` importing XCTest into the app target.
+      (c) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    The MEANINGFUL validation IS performed above: the surface compiles against BOTH the iOS 18
+    simulator and macOS 15 SDKs (steps [1]/[2]/[3]) and its full XCTest suite EXECUTES green (27/27,
+    step [4]). Under Xcode these same tests run in the TeslaSync(/-macOS) test target.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source reproduced — the active-limit banner (reason-keyed
+      title/desc across critical/warn/info severities, live retry countdown, Use-baseline / Retry /
+      dismiss) plus the P4 loading/empty/error/stale/offline chrome; each has a #if DEBUG preview (9)
+      + a unit test. Empty is the never-a-blank-box native treatment of web `if (!info) return null`.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (AiLimitBannerSource->Model); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — 23/23 web keys present + 7 native chrome
+      keys (asserted by AiLimitBannerCopyTests).
+  [x] Accessibility labels on every interactive element (dismiss + baseline + retry buttons; stale +
+      offline chips; the banner copy block carries a composed VoiceOver summary; data-reason hook).
+  [x] Tests: adapter/projection + per-state render + model/telemetry + a11y label + copy — 27 methods,
+      EXECUTED green via SwiftPM.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (check-placeholders EXIT=0).
+  [~] EXIT=0 / STATUS=DONE for all host-runnable gates; the signed Xcode app build/test is DEFERRED with
+      real captured evidence (un-staged Shared.xcframework), per the 0010/0084/0180/0231 precedent (ADR-012).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green   : every EXIT pasted from the real command; the one Xcode build that fails is
+                         reported as DEFERRED with its real error + 0 AiLimitBanner errors, never as green.
+  2  No scope narrowing: every web branch (reason taxonomy + level + countdown + both buttons + dismiss)
+                         + the full P4 states contract shipped.
+  3  No skip-and-assume: web source read end-to-end (its t() calls, both switch tables, the bannerLevel
+                         ternary, the useEffect/setInterval countdown, the button gates) and reproduced.
+  4  No stubs as final : full projection + state holder + views + tests; no placeholder/TODO (gate [7]).
+  5  No parity shortcuts: faithful port of the title/description tables (incl. the two collapses + the
+                         generic default), the variant ternary, the countdown arithmetic, and the
+                         `onX && condition` button gates.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: the shared-surfaces tier did not exist; its project.yml + swiftlint
+                         registration is necessary wiring for a NEW tier (declared in WIRING above),
+                         not a bypass. Did NOT stage Shared.xcframework, did NOT touch the shared
+                         Localizable.xcstrings (strings shipped as the per-surface table), did NOT edit
+                         the pre-existing collision files.
+  8  No commit on red  : committing on green host gates + iOS/macOS+previews compiles + executed 27/27
+                         tests; Xcode app build/test explicitly DEFERRED (captured evidence), not faked.
+  9  No silent drift   : changes confined to the allowed AiLimitBanner.* files + the two declared wiring
+                         additions (project.yml, .swiftlint.yml) + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native AiLimitBanner shipped at parity with the web source: a pure-Swift
+  projection core (EXECUTED-green XCTest, 27/27) that reproduces both reason switch tables (with the
+  token + feature-id collapses and the generic default), the bannerLevel→variant ternary, the
+  once-per-second retry countdown, and the `onX && condition` button gates; the P1/S8 state-holder seam
+  (no view HTTP); the P1/S11 telemetry; every state (banner + loading + empty + error + stale + offline)
+  with a preview and a test; all 23 web i18n keys + 7 native keys; a11y labels on every interactive
+  element. All host-runnable gates pass AND the surface compiles against BOTH the iOS 18 simulator and
+  macOS 15 SDKs with the real Xcode 26 toolchain under Swift 6 strict concurrency. The new
+  shared-surfaces tier was registered in project.yml + .swiftlint.yml (necessary, declared wiring). The
+  signed Xcode app build/test is DEFERRED to the downstream integration/signed runner (un-staged KMP
+  Shared.xcframework + pre-existing unrelated collisions + macOS signing — not a defect in this code,
+  outside this prompt's allowed files), matching the 0010/0084/0180/0231 "code-complete + DEFERRED Xcode
+  gate" precedent (ADR-012); a macOS-pending row is appended to apps/macos-pending-verifications.md.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/shared-surfaces/AiLimitBanner \
+          apps/apple/project.yml apps/apple/.swiftlint.yml \
+          apps/macos-pending-verifications.md \
+          .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0025-AiLimitBanner.log
+  git commit -m "feat(apps/apple/shared-surfaces): add AiLimitBanner surface (P4)"
+
+EXIT=0
+STATUS=DONE

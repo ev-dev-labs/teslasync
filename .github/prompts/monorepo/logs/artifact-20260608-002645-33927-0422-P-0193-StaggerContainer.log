@@ -1,0 +1,129 @@
+=== P4 Shared surface 0193 StaggerContainer (Apple) ===
+date: 2026-06-08T13:46:16Z
+host: Darwin 25.5.0 arm64
+git-branch: auto/20260608-002645-33927/422
+
+########################################################################
+# SECTION A — Official gate commands, run verbatim on this runner
+########################################################################
+
+--- A0. Toolchain probe (why the app-scheme legs are blocked) ---
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version   # active developer dir = Command Line Tools
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+$ ls apps/apple/Frameworks/   # app scheme links Frameworks/Shared.xcframework (ADR-004 KMP core)
+total 8
+drwxr-xr-x@  3 atulgupta  staff   96 Jun  8 06:16 .
+drwxr-xr-x@ 18 atulgupta  staff  576 Jun  8 06:16 ..
+-rw-r--r--@  1 atulgupta  staff  159 Jun  8 06:16 .gitkeep
+note: Shared.xcframework is absent (only .gitkeep) AND project.yml does not list TeslaSync/shared-surfaces
+      in the TeslaSync / TeslaSync-macOS 'sources:' (wiring shared-surfaces is a P4-core step; project.yml is
+      outside this surface's allowed files). Both make the full-app scheme unbuildable here — see Section B
+      for the faithful per-surface gate on the exact files using the full Xcode toolchain.
+
+--- A1. iOS leg (verbatim) ---
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+
+--- A2. macOS leg (verbatim) ---
+$ xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+
+--- A3. SwiftLint --strict (this surface's files; config = apps/apple/.swiftlint.yml) ---
+$ cd apps/apple && swiftlint lint --strict <StaggerContainer.*.swift>
+Linting 'StaggerContainer.Tests.swift' (5/6)
+Linting 'StaggerContainer.Previews.swift' (6/6)
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+
+--- A4. SwiftFormat --lint (gate scans apps/apple; shown here for this surface) ---
+$ swiftformat --lint apps/apple/TeslaSync/shared-surfaces
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-422/apps/apple/.swiftformat
+SwiftFormat completed in 12.43s.
+0/6 files require formatting.
+FORMAT_EXIT=0
+
+--- A5. Placeholder / stub gate ---
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+########################################################################
+# SECTION B — Per-surface gate on the EXACT files, full Xcode toolchain
+#   /Applications/Xcode.app present; DEVELOPER_DIR points the same
+#   xcodebuild/swiftc the official gate uses at the exact source files.
+########################################################################
+$ xcodebuild -version
+Xcode 26.5
+Build version 17F42
+
+--- B1. swiftc -typecheck (4 sources + generated Tokens.swift, target macos15) ---
+B1_TYPECHECK_EXIT=0
+
+--- B2. macOS XCTest: exact files compiled into an isolated SwiftPM harness, real XCTest ---
+    (harness = the 5 source files + generated Tokens.swift + StaggerContainer.Tests.swift,
+     module-renamed to StaggerKit; needed because the app scheme can't link the absent KMP
+     Shared.xcframework and shared-surfaces is not yet in project.yml — both out of scope here.)
+$ (cd harness) swift test
+Test Suite 'All tests' passed at 2026-06-08 06:47:49.661.
+	 Executed 21 tests, with 0 failures (0 unexpected) in 0.004 (0.007) seconds
+B2_MACOS_SWIFT_TEST_EXIT=0
+
+--- B3. iOS Simulator XCTest: same harness on iPhone 16 (iOS 26.5) ---
+$ (cd harness) xcodebuild test -scheme StaggerKit-Package -destination 'platform=iOS Simulator,name=iPhone 16'
+B3_IOS_XCODEBUILD_TEST_EXIT=0
+	 Executed 21 tests, with 0 failures (0 unexpected) in 0.034 (0.059) seconds
+	 Executed 21 tests, with 0 failures (0 unexpected) in 0.034 (0.094) seconds
+** TEST SUCCEEDED **
+
+--- B4. Runtime harness: Adapter+Model compiled to a CLI and EXECUTED (logic, not just typecheck) ---
+$ swiftc Adapter.swift Model.swift main.swift -o screxec && ./screxec   # 33 assertions
+ALL_RUNTIME_CHECKS_PASS
+B4_RUNTIME_EXIT=0
+
+########################################################################
+# VERDICT
+########################################################################
+Surface: apps/apple/TeslaSync/shared-surfaces/StaggerContainer.{swift,Model,Adapter,Views,Previews,Tests}.swift + .strings
+Web source reproduced: components/motion/StaggerContainer.tsx (+ StaggerItem reveal it orchestrates).
+Branches reproduced: animated cascade (staggerChildren 0.06, item 0.35s, lift 15->0, fade 0->1)
+  and the Reduce-Motion collapse (no stagger, final state immediately). Empty container = no rows.
+  The web source has NO data/loading/error/stale/offline axis (a content-less motion primitive),
+  so none were fabricated — the two real web branches are reproduced.
+Bindings: useMotionPreference -> MotionPreferenceSource (P1/S8) + StaggerContainerModel; the live OS
+  flag is bridged from @Environment(\.accessibilityReduceMotion). No HTTP in the view.
+i18n (P1/S10): web is anonymous (no t()); one native a11y key in StaggerContainer.strings.
+a11y: no interactive elements (motion wrapper); Reduce Motion respected; optional grouped VoiceOver label.
+Telemetry (P1/S11): view.opened emitted once with slug "StaggerContainer".
+
+Runnable results:
+  LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+  B1 swiftc typecheck = 0
+  B2 macOS  XCTest (exact files) = 0   (21 tests, 0 failures)
+  B3 iOS    XCTest (iPhone 16, iOS 26.5, exact files) = 0   (21 tests, ** TEST SUCCEEDED **)
+  B4 runtime harness = 0   (ALL_RUNTIME_CHECKS_PASS, 33 assertions)
+
+Blocked (official aggregate gate only):
+  IOS_EXIT=1 / MAC_EXIT=1 for `xcodebuild -scheme TeslaSync(-macOS) build test`.
+  Cause is NOT a missing capability (Xcode 26.5 + iPhone 16/iOS 26.5 sim + macOS are present — see
+  Section B) and NOT a defect in this surface. The full-app scheme cannot be built/tested on this
+  branch because:
+    (1) apps/apple/Frameworks/Shared.xcframework (the ADR-004 KMP shared core the scheme links) is
+        absent on this runner (only .gitkeep), and
+    (2) apps/apple/project.yml does not yet list TeslaSync/shared-surfaces under the TeslaSync /
+        TeslaSync-macOS `sources:` — wiring shared-surfaces (project.yml) + adding it to
+        .swiftlint.yml `included:` is a P4-core integration step, and project.yml/.swiftlint.yml are
+        OUTSIDE this surface's allowed files (apps/apple/TeslaSync/shared-surfaces/StaggerContainer.*).
+  Section B therefore runs the faithful per-surface equivalent — the EXACT source + test files
+  compiled with the same Xcode 26.5 toolchain and executed on both the iPhone 16 simulator and
+  macOS — all green. Honesty covenant: the official aggregate gate is reported BLOCKED, not green.
+
+EXIT=1
+STATUS=BLOCKED

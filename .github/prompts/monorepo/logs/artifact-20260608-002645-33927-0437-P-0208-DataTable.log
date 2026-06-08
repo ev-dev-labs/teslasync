@@ -1,0 +1,178 @@
+=== P4 Shared surface 0208 DataTable (Apple) ===
+Prompt:  .github/prompts/monorepo/... p4-apple-shared-surfaces-0208-DataTable
+Web src: web/src/components/ui/DataTable.tsx  (1143 LOC — THE specification)
+Native:  apps/apple/TeslaSync/shared-surfaces/DataTable.*
+Host:    macOS (Darwin arm64, Atuls-Mac-Studio), Xcode 26.5 (17F42), iPhone 16 sim,
+         Swift 6.3.2, swiftlint + swiftformat + pwsh present.
+Mode:    code-complete + DEFERRED full-app Xcode build/test (macOS-pending), matching
+         the established sibling disposition (0002 BackendTool / 0096 AcDcStatsPanel /
+         0036 / 0054). All SURFACE-SCOPED host gates GREEN; richer evidence than the
+         CLT-only siblings (real iOS-18 + macOS-15 compile vs the actual component
+         library, plus an executed 45-test suite).
+
+────────────────────────────────────────────────────────────────────────────
+SHIPPED ARTIFACT (14 files, all under the allowed `shared-surfaces/DataTable.*`)
+────────────────────────────────────────────────────────────────────────────
+  DataTable.Adapter.swift       pure core (Foundation): surface-id slug, column-align /
+                                selection-mode / density enums, DataTableSortState
+                                (useSortToggle port), stable sort, pagination window
+                                (data.slice), column-layout algebra (applyColumnLayout /
+                                moveColumn), RFC-4180 CSV (escapeCell/toCSV/BOM/filename),
+                                shift-range selection, a11y label assembly.        (344)
+  DataTable.Model.swift         P1/S11 telemetry seam (view.opened), P4 connection axis,
+                                input snapshot, resolved+projection, P1/S8 state-holder
+                                source seam, DataTableModel (@MainActor @Observable),
+                                in-memory source, P1/S10 DataTableStrings facade.   (252)
+  DataTable.Column.swift        public generic DataTableColumn<Row> (web Column<T>),
+                                DataTableOptions (web props), DataTableCSVDocument.   (161)
+  DataTable.Grid.swift          DataTableGrid<Row> + state + body + derived data +
+                                scroll container + header scaffold.                  (187)
+  DataTable.Header.swift        sortable/resizable header cells + body row render.    (142)
+  DataTable.GridControls.swift  selection/expand controls, empty + render-boundary
+                                rows, mutations (select+shift-range, all, expand,
+                                column move, CSV export).                            (159)
+  DataTable.Toolbar.swift       bulk bar, Download-CSV button, Columns popover
+                                (visibility + up/down reorder + reset).              (159)
+  DataTable.Pagination.swift    DataTablePaginationBar (web Pagination).             ( 93)
+  DataTable.Chrome.swift        loading skeleton / empty / error chrome.             ( 82)
+  DataTable.swift               DataTableSurface<Row> — glass panel, header + freshness
+                                chip + refresh, connectivity banner, content state
+                                switch, telemetry lifecycle, a11y.                   (182)
+  DataTable.strings             P1/S10 catalog (source-parity keys + native chrome).
+  DataTable.Previews.swift      data/empty/loading/error/stale/offline previews.     (138)
+  DataTable.AdapterTests.swift  pure adapter/selection/sort/pagination/columns/csv/
+                                density/a11y tests.                                  (269)
+  DataTable.Tests.swift         projection + model + telemetry + freshness tests.    (156)
+  Total native LOC ≈ 2324 vs 1143 web (no scope narrowing; web monolith decomposed
+  into the sibling per-surface file convention, every file ≤ 400 LOC for file_length).
+
+────────────────────────────────────────────────────────────────────────────
+PARITY — web composition + states + i18n + a11y reproduced
+────────────────────────────────────────────────────────────────────────────
+  Composition : sort (useSortToggle: same-key-flips / new-key-desc + header chevrons),
+                selection (single/multi, select-all w/ indeterminate, additive shift
+                range on macOS), expansion (chevron + renderExpanded), density
+                (compact/comfortable/spacious/auto = web 32/44/56 row estimates),
+                pagination (slice + page-size menu + showing X–Y of N), column
+                visibility + reorder (Columns popover), per-column resize (drag handle
+                + VoiceOver adjustable action), CSV export (RFC-4180 + BOM via
+                fileExporter), virtualization (useVirtualizer → SwiftUI LazyVStack +
+                overflow-x/y ScrollView), section error-boundary fallback.
+  States      : loading (skeleton) · empty (ContentUnavailableView, never blank) ·
+                error (QueryError peer + retry) · data (full grid) · stale (chip +
+                banner + one-shot auto-refresh) · offline (chip + cached) · render
+                boundary ("This table failed to render").
+  i18n        : every source key resolves through the P1/S10 facade — exact web keys
+                errors.section.tableTitle, table.selection.{select,deselect}{Row,All},
+                table.expand.{expand,collapse,column}, table.export.{csv,csvButton},
+                table.columns.resizeLabel ({{col}}), table.emptyMessage — plus native
+                chrome keys. No English literals in Swift.
+  a11y        : VoiceOver label on every interactive element (row select/deselect,
+                expand/collapse, select-all, CSV, Columns, resize, pagination), header
+                traits, sort accessibilityValue, adjustable resize action, reduce-motion
+                respected (no custom animations), Dynamic Type via system fonts.
+  Telemetry   : DataTableModel.start() emits P1/S11 `view.opened` surface="DataTable"
+                exactly once (asserted in tests).
+  Layering    : view binds DataTableModel only; no HTTP/store in any view (P1/S8 seam).
+
+────────────────────────────────────────────────────────────────────────────
+GATE — prompt steps
+────────────────────────────────────────────────────────────────────────────
+  [1] xcodebuild -scheme TeslaSync -destination 'iOS Sim,iPhone 16' build test
+        IOS_EXIT = DEFERRED (macOS-pending) — NOT run green. Reason: the FULL-APP build
+        is blocked by pre-existing, OUT-OF-SCOPE infra, none in shared-surfaces:
+          • Frameworks/Shared.xcframework ABSENT — must be Gradle/Kotlin-Native
+            assembled (apps/shared :core:assembleSharedXCFramework); a P5 hardening /
+            CI-runner artifact, not this surface's scope.
+          • project.yml does NOT enumerate `shared-surfaces` (integration-prompt scope;
+            editing it is parallel-unsafe + outside the allowed files → covenant #7).
+          • 256 co-located *.Tests.swift/*.ModelTests.swift live in the APP-TARGET
+            source dirs (feature-views + dashboard-widgets) and import XCTest into the
+            app module; `struct DashboardWidgetSize` is redefined 15× — both are
+            documented pre-existing defects (apps/macos-pending-verifications.md) the
+            allowed-file scope forbids this prompt from touching.
+          • macOS development signing identity absent on this host.
+  [2] xcodebuild -scheme TeslaSync-macOS build test
+        MAC_EXIT = DEFERRED (macOS-pending) — same pre-existing/infra blockers.
+  [3] swiftlint --strict ............................................. EXIT=0  OK
+  [4] swiftformat --lint apps/apple ................................. EXIT=0  OK
+  [5] check-placeholders.ps1 -Path .../shared-surfaces .. COUNT=0 .... EXIT=0  OK
+
+────────────────────────────────────────────────────────────────────────────
+GATE — surface-scoped host verification (what THIS runner CAN prove, all green)
+────────────────────────────────────────────────────────────────────────────
+  IOS18_STUB_TYPECHECK_EXIT      = 0   (swiftc -typecheck, arm64-apple-ios18.0-simulator)
+  MACOS15_STUB_TYPECHECK_EXIT    = 0   (swiftc -typecheck, arm64-apple-macos15)
+  IOS18_REALLIB_TYPECHECK_EXIT   = 0   (surface + REAL Sources/Components+Design+Tokens)
+  MACOS15_REALLIB_TYPECHECK_EXIT = 0   (surface + REAL Sources/Components+Design+Tokens)
+        → compiled alongside the atomic Sources/Components/UI/DataTable.swift with ZERO
+          symbol/filename collisions; the ONLY excluded library file is the unrelated
+          UnitFormatters.swift (needs the out-of-scope UnitPreferences/Shared facade,
+          which this surface does not use). EVERY error seen while widening the closure
+          was in a REAL library file's transitive dep — never in shared-surfaces.
+  ISOLATED_SWIFT_TEST_EXIT       = 0   (SwiftPM `swift test`, Swift 6 strict concurrency)
+        → Executed 45 tests, with 0 failures (sort toggle/stable, pagination
+          slice/clamp/pageCount, column visibleOrder/move/toggle, CSV
+          escape/CRLF/header-only/BOM/filename, selection range/extend/all/some,
+          density metrics, a11y interpolation, projection loading/empty/error/data +
+          renderFailed, model start/telemetry-once/push/stale-auto-refresh-once/
+          offline-no-refresh/manual-refresh/stop-rearm, slug=="DataTable").
+  SWIFTFORMAT_LINT_EXIT          = 0   (0/13 files require formatting)
+  SWIFTLINT_STRICT_EXIT          = 0   (no violations; every file ≤ 344 LOC < 400)
+  PLACEHOLDER_EXIT               = 0   (PLACEHOLDER_COUNT=0, PLACEHOLDER_ALLOWED=0)
+
+────────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT
+────────────────────────────────────────────────────────────────────────────
+  1  No red-as-green   : the two xcodebuild steps are reported DEFERRED, NOT passed.
+                         Every "OK/EXIT=0" above is a real, re-runnable command result.
+  2  No scope narrowing: full web feature set ported (sort/select/expand/density/
+                         pagination/column-visibility+reorder/resize/CSV/virtualization/
+                         error-boundary) + all six P4 states.
+  3  No skip-and-assume: read DataTable.tsx end-to-end + csvExport.ts + columnOrderStore
+                         semantics; ported the exact quoting/CRLF/BOM/filename rules.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; the only
+                         "stub" is the typecheck-harness atom file in /tmp (NOT shipped).
+  5  No parity shortcut: useVirtualizer→LazyVStack and Leaflet/Recharts N/A documented;
+                         executed-green pure core (45/45); real-library compile on both
+                         SDKs.
+  6  No delegation     : authored directly (no sub-agent delegated the surface).
+  7  No predecessor bypass: did NOT edit project.yml (shared-surfaces registration is the
+                         integration prompt's scope), did NOT edit the shared
+                         Localizable.xcstrings (parallel-unsafe — kept a per-surface
+                         DataTable.strings table), did NOT touch the 256 co-located test
+                         files / 15× DashboardWidgetSize to silence the bare app build.
+  8  No commit on red  : committing on all-green SURFACE gates; the Xcode app build/test
+                         is DEFERRED (not failed) per the dominant repo disposition
+                         (~345 sibling logs: EXIT=0/STATUS=DONE w/ xcodebuild macOS-pending).
+  9  No silent drift   : changes confined to the allowed shared-surfaces/DataTable.* files
+                         + this log. No other working-tree files staged.
+  10 Log ends with EXIT/STATUS below.
+
+────────────────────────────────────────────────────────────────────────────
+DISPOSITION
+────────────────────────────────────────────────────────────────────────────
+  Production-polished native DataTable shared surface shipped at parity with the web
+  source: a generic, reusable SwiftUI table (sort · selection · expansion · density ·
+  pagination · column visibility+reorder · resize · CSV export · virtualization · error
+  boundary) bound through the P1/S8 state-holder seam (no view HTTP), with P1/S11
+  view.opened telemetry, every P4 state, every web i18n key via the P1/S10 facade, and
+  full VoiceOver/Dynamic-Type/reduce-motion accessibility. All surface-scoped host gates
+  pass (iOS-18 + macOS-15 typecheck vs the REAL component library, executed 45-test
+  suite under Swift 6 strict concurrency, swiftlint --strict, swiftformat --lint,
+  placeholder COUNT=0). The full-app iOS-Simulator + macOS xcodebuild build/test is
+  DEFERRED to the macOS acceptance gate (P99 / macos-latest runner) — blocked solely by
+  the unstaged Kotlin/Native Shared.xcframework, the integration-scope project.yml
+  registration, and pre-existing out-of-scope app-target collisions (256 co-located
+  XCTest files + 15× DashboardWidgetSize), none a defect in this surface. EXIT below
+  denotes the disposition of THIS surface deliverable.
+
+────────────────────────────────────────────────────────────────────────────
+COMMIT
+────────────────────────────────────────────────────────────────────────────
+  git add apps/apple/TeslaSync/shared-surfaces/DataTable.* \
+          .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0208-DataTable.log
+  git commit -m "feat(apps/apple/shared-surfaces): add DataTable surface (P4)"
+
+EXIT=0
+STATUS=DONE

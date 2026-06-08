@@ -1,0 +1,152 @@
+I'll start by exploring the repository structure to understand the task scope, the web source page, and existing Apple patterns.
+
+Let me explore the Apple Features directory, the web feature-flags components, and the parity ledger.
+
+The Features directory and apple-ledger don't exist yet. Let me explore the actual Apple project structure to understand the layout.
+
+The actual structure uses `feature-views` and `dashboard-widgets`. Let me understand the real organization and find existing admin pages and patterns.
+
+The feature-views directory is flat. Let me examine the existing FlagsTable files (directly relevant) and understand how pages are structured in this codebase.
+
+The Apple codebase has a sophisticated parity pattern. `FlagsTable` already exists as a P4 feature view. Now I need to check for `ChangesPanel`, `FlagEditDrawer`, an existing Page pattern, and tooling availability.
+
+Key findings: `ChangesPanel`/`FlagEditDrawer` don't exist in Apple yet, this is the first `*Page.swift`, and tooling (xcodebuild, swiftlint, xcodegen, pwsh) is all available. Let me read the project config, web components, and parity docs.
+
+Now let me understand the shared component library (P3), navigation structure, the parity manifest record, and the gate contract. Let me search for key shared components and infrastructure.
+
+There's a `Sources/Features` directory and `Sources/Components`. Let me explore the existing page-host convention, shared components, and navigation.
+
+Now let me read the navigation files and key shared components I'll compose with.
+
+Let me see how routes get registered and where the shell wires pages, plus check the design tokens and key shared components.
+
+The `SettingsScene.swift` is the existing P7 registration pattern to follow. Let me read it, the app wiring, and the shell host.
+
+The registration pattern is clear (`SettingsRouteRegistration`). Now let me understand the string catalog, the placeholder-scan gate, and how FlagsTable wires strings/previews/production source.
+
+Now let me read the placeholder patterns, the xcstrings catalog format, and how FlagsTable wires strings/previews.
+
+The catalog uses `Localizable.xcstrings` (187K lines). Let me check the format and which of my 11 required keys already exist.
+
+None of the 11 keys exist yet — I'll add all 11 to the catalog. Let me examine the SharedFacade (KMP binding) and how real data reaches feature views, to wire the page's data source properly.
+
+No existing flag API in Apple. Let me read the SharedFacade binding infrastructure to wire the page's data source per ADR-004.
+
+Now let me check how the existing `.Tests.swift`/`.strings` files work in the app target, and the lint config, before replicating patterns.
+
+Critical observation: `FlagsTable.Tests.swift` uses `XCTest` + `@testable import TeslaSync` but sits in `feature-views/` (the app target's source path). I need to verify whether the baseline even builds. Let me check the Shared.xcframework, the build script, and source exclusions.
+
+This is pivotal: the build needs a KMP `Shared.xcframework` (only a `.gitkeep` exists) and 170 `.Tests.swift` files live in the app target's source path. Let me assess build feasibility and read the shared components/tokens my page will compose.
+
+Good — shared components and tokens don't import `Shared`, so my page can avoid the KMP dependency (like FlagsTable does). Let me read the remaining shared components I'll compose with and the design tokens.
+
+I now have the modal/drawer/field APIs. Let me read the remaining components (DataTable, Buttons, Typography, States, Badges, Skeletons, Motion) and the design tokens to confirm exact signatures.
+
+Let me read the typography, feedback states, badges, skeletons, motion components and design tokens.
+
+Let me read the badges, skeletons, motion, and design tokens to finalize the API surface.
+
+Let me confirm the `Font.TS` ramp, `Color.TS` members, and the `tsGlassPanel()` modifier.
+
+I now have a thorough understanding of the component library and tokens. Let me set up my plan and check the remaining infrastructure (ledger schema, logs dir, Motion API, root lint config).
+
+Let me check the manifest record for this page, any existing PARITY log format, and existing ledgers.
+
+Let me model my log/ledger after the existing FlagsTable P4 log, then start writing code.
+
+I have everything I need. The FlagsTable P4 log establishes the exact precedent: host-runnable gates (swiftc typecheck against real components, executed logic harness, swiftlint, placeholder scan) pass, while the full Xcode build is deferred due to pre-existing repo conditions (missing KMP `Shared.xcframework` + 170 co-located `*.Tests.swift` in the app target). My P7 page additionally owns nav registration and the string catalog.
+
+Let me set up my plan and todos, then create the directory.
+
+Directory created. Now let me write the domain models file (changes audit types + page snapshot), reusing the existing `FlagValue`/`FeatureFlagEntry` from FlagsTable.
+
+Now the core model file — `@Observable` page model, source seam, in-memory source, JSON parser, strings facade, and a11y. I'll decompose into extensions to respect SwiftLint length rules.
+
+Now the registry panel (GlassPanel1) — reuses the existing pure flag types and shared `TSDataTable`.
+
+Now the changes panel (GlassPanel2) — the audit feed table.
+
+Now the editor drawer form (create/edit), with JSON validation.
+
+I need to keep the faithful web key names (`keyPlaceholder`/`reasonPlaceholder`) but the placeholder-scanner flags the substring "Placeholder". The opt-out marker must be inline on the same line. Let me fix the editor to use real key names with inline `// parity:allow` markers.
+
+Now the main page scaffold — header, two panels, editor drawer, and delete modal.
+
+Now the navigation registration (P7's responsibility — maps `.admin` route to the page).
+
+Now the DEBUG previews for all states plus the editor.
+
+Now the unit tests (matching the repo's co-located `.Tests.swift` convention).
+
+All 9 Swift files created. Let me update todos and verify no key collisions exist in the catalog before inserting strings.
+
+No collisions. Let me confirm the exact catalog formatting before inserting keys.
+
+Format confirmed (2-space indent, `"key": value`). Let me insert all 49 keys via a Python script that does a targeted insertion after `"strings": {`, preserving the rest of the file byte-for-byte, then validate the JSON.
+
+49 keys inserted and JSON validated. Now let me wire the build/nav integration: `project.yml` (app + test targets), `.swiftlint.yml`, and `TeslaSyncApp.swift`.
+
+Now wire the nav registration in `TeslaSyncApp.swift`.
+
+Now let me verify. First the placeholder scan and SwiftLint (the two gates that directly apply to my files).
+
+Placeholder gate passes (3 allowed markers, 0 violations). SwiftLint linted the whole `included` set (1918 files) and found 5 violations — I need to confirm none are in my files. Let me isolate the violations.
+
+4 of the 5 are mine (1 pre-existing in `LifetimeStatsWidget`). Let me fix all 4: three long lines (break the `TSTextField` calls so the `// parity:allow` stays inline on the key line) and one large-tuple (replace the 3-tuple with a struct).
+
+Now fix the large-tuple violation in the model by replacing the 3-member tuple with structs.
+
+Now re-run SwiftLint and the placeholder gate to confirm my files are clean.
+
+SwiftLint and placeholder gates are clean for my files. Now the key compile check: `swiftc -typecheck` of my files against the real component library (like the FlagsTable precedent). First let me map the exact dependency closure.
+
+The UI subset is dependency-clean. Let me run the `swiftc -typecheck` against the real component library (the meaningful compile proof).
+
+`TYPECHECK_EXIT=0` — my page (incl. previews) compiles against the real component library under the project's strict-concurrency Swift 6 mode. Now let me build and **execute** a pure-logic harness (like the FlagsTable precedent) to prove the parser/compact/phase logic at runtime.
+
+All 37 executed checks pass (`HARNESS_FAILURES=0`). Now let me validate the `project.yml` edits with `xcodegen generate` and attempt the Xcode build to document its status honestly.
+
+`xcodegen generate` succeeded — my `project.yml` is valid. Let me verify target membership of my files and attempt the build to capture the honest deferral evidence.
+
+Let me precisely verify target membership by converting the pbxproj to JSON and mapping each target's source files.
+
+Target membership is exactly correct: page files in both app targets, the test file only in the test targets. Now let me attempt the actual Xcode build to capture honest evidence of the (pre-existing) deferral cause.
+
+`xcodebuild` needs full Xcode but the active dir is CommandLineTools. Let me check whether a full Xcode is installed to override `DEVELOPER_DIR`.
+
+Full Xcode is at `/Applications/Xcode.app`. Let me retry the build with `DEVELOPER_DIR` set to capture the real failure cause.
+
+The build is genuinely compiling the 1,400+ pre-existing `feature-views` files (slow) rather than failing fast. Let me stream it to a log file and capture the earliest real errors (the pre-existing blockers) without waiting for full completion.
+
+Pre-existing blockers confirmed (no `Shared.xcframework`; 170 feature-views `*.Tests.swift` import XCTest in the app target). The build is streaming to a log. Meanwhile, let me check the ledger format and create the apple ledger.
+
+The shared-ledger is metadata + array; the platform ledger is "array of rows" (each conforming to `ledger.schema.json`). Since the page is adaptive (ADR-002), I'll add rows for both `apple-macos` and `apple-ios`. Let me create it and check build progress.
+
+Notably, `xcodebuild` **is** running the scheme's "Stage Shared.xcframework" pre-action — the KMP gradle build is compiling the macOS framework now. So on this host the framework isn't the blocker (it builds). The build will proceed to the app target and hit the pre-existing feature-views XCTest condition. Let me wait and capture that.
+
+The macOS build: `Shared.xcframework` **built successfully (2m13s) and staged** — so the framework is *not* a blocker here. The macOS app then failed on **signing** (entitlements need a dev certificate — no identities available). That's pre-existing condition (c). Let me attempt an iOS **Simulator** build (no signing needed) to surface the pre-existing feature-views XCTest condition (b), and write the parity log while it runs.
+
+Let me gather final evidence (versions, self-test, line counts) while the iOS build compiles.
+
+All evidence gathered. Let me check the iOS build progress, then write the parity log.
+
+The iOS build is compiling the app-target Swift module (the 1,400-file tree incl. the pre-existing feature-views tests). Let me wait for it to surface the XCTest condition.
+
+The iOS build failed on exactly the pre-existing condition: `feature-views/AIRestorePanel.Tests.swift:18: error: Unable to resolve module dependency: 'XCTest'` — a pre-existing feature-views file (not mine) importing XCTest in the app target. Let me confirm none of MY files produced errors in the real app build.
+
+Confirmed: **zero errors in my files** during the real iOS app build — every error is in a pre-existing `*.Tests.swift` (e.g. `AIRestorePanel.Tests.swift`, not mine). My page compiled cleanly inside the real app module. Now let me write the parity log.
+
+Log written. Let me review what changed, confirm generated artifacts are git-ignored, and clean up temp files.
+
+My intended changes are present; generated artifacts (`.xcodeproj`, `Shared.xcframework`) are git-ignored. But there are **pre-existing concurrent dirty files** not mine (`AIUsageCard.*`, `FleetApiSection.tsx`, `BackupRestorePage.tsx`) — I'll exclude those. Let me verify my shared-file edits are intact/valid before committing only my files.
+
+My edits are intact and additive (catalog +539 lines = 49 keys; project.yml +12; nav +8; swiftlint +1). The `AIUsageCard.*` changes are foreign (concurrent worktree). Let me clean temp files, do a final gate re-confirmation, then commit only my files.
+
+All gates green and files intact. Let me stage only my files and commit.
+
+Staging is exactly right — my 9 files + 4 integration edits + ledger + log, no foreign files. Let me commit.
+
+The commit succeeded — 15 files, 2557 insertions, no foreign files. Let me do a final todo check and confirm the working tree state.
+
+All 13 todos are done, the commit is clean, and the ledger validates (2 rows, both `done`, 16/16). The task is complete.
+

@@ -1,0 +1,169 @@
+=== P4 Dashboard widget 0109 VehicleSpecsWidget (Apple) ===
+
+Surface : apps/apple/TeslaSync/dashboard-widgets/VehicleSpecsWidget.*
+Web spec: web/src/features/dashboard/widgets/VehicleSpecsWidget.tsx
+Registry: registry/vehicle.ts → "vehicle-specs" · category=vehicle · 2x4 / 1x2 / 4x40
+Runner  : Darwin (Apple Silicon) · Apple Swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · pwsh present
+          Xcode : ABSENT — only Command Line Tools installed (xcode-select -p = /Library/Developer/CommandLineTools)
+          xcodebuild : UNAVAILABLE · iOS Simulators available : 0
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (allowed scope: VehicleSpecsWidget.* + this log)
+--------------------------------------------------------------------------------
+  VehicleSpecsWidget.swift          — SwiftUI surface. 2 layouts (compact: icon + Model + "Trim: x" /
+                                      standard: scrollable detail list); header w/ doc.text icon + title +
+                                      freshness chip + refresh + open; every state; full a11y; i18n.
+  VehicleSpecsWidget.Row.swift      — SpecDetailRow: one detail row (label · value[mono for Car Version] ·
+                                      optional neutral badge) — native parity of a WidgetDetailCard row.
+  VehicleSpecsWidget.Model.swift    — P1/S8 state-holder seam (VehicleSpecsSource), @Observable
+                                      VehicleSpecsModel (+ nonisolated resolvePhase, autoRefreshIfStale),
+                                      P1/S11 telemetry seam, DTOs (specs/options/config + SpecScalar),
+                                      InMemory source, VehicleSpecsStrings (P1/S10),
+                                      VehicleSpecsSurface (slug + canonical registration).
+  VehicleSpecsWidget.Adapter.swift  — pure projection: 3 cached DTOs → localized detail rows, reproducing
+                                      the web coalescing VERBATIM (specs→config priority, asString, option
+                                      decode + 8-cap), + a11y summaries. SwiftUI-free.
+  VehicleSpecsWidget.Previews.swift — #if DEBUG previews for every state + layout (standard/wide/compact/
+                                      loading/empty/error/offline).
+  VehicleSpecsWidget.Tests.swift    — XCTest: asString + adapter value parity + model phases/telemetry/
+                                      refresh/auto-refresh + registry + accessibility (runs in the
+                                      TeslaSync(/-macOS) XCTest targets at integration).
+  VehicleSpecsWidget.strings        — per-surface i18n table (every web t() key + native chrome).
+
+Parity reproduced exactly from the web source (cross-platform row-for-row parity):
+  Model      = asString(specs.car_type) ?? asString(specs.model) ?? asString(config.car_type) ?? "—"
+  Trim       = asString(specs.trim_badging) ?? asString(specs.trim) ?? asString(config.trim) ?? "—"
+  Paint      = asString(specs.exterior_color) ?? asString(config.exterior_color) ?? "—"
+  Wheels     = asString(specs.wheel_type) ?? asString(config.wheel_type) ?? "—"
+  Interior   = asString(specs.interior) ?? asString(specs.interior_color) ?? "—"
+  Aux Battery= asString(specs.aux_battery_type) ?? "—"
+  Car Version= asString(config.version) ?? asString(specs.car_version) ?? "—"   (monospace)
+  Options    = first 8 of options.keys → { label: code, value: asString(options[code]) ?? code,
+               badge: neutral "Option" }
+  hasAnyData = specs!=nil || options!=nil || config!=nil  → else EmptyState "No specs available"
+  isCompact  = size.cols <= 1  → compact Model + "Trim: x"; else standard detail list.
+  asString   = non-empty String passes; finite Number → JS String(n) (no trailing ".0"); else nil.
+
+--------------------------------------------------------------------------------
+GATE RESULTS (real commands, real exit codes on this host)
+--------------------------------------------------------------------------------
+
+[HOST] swiftc -typecheck -target arm64-apple-macos15.0 -swift-version 6 -warnings-as-errors
+       Core shipped code (Model + Adapter + swift view + Row) vs the REAL design tokens
+       (apps/design/generated/apple/Tokens.swift: Color.TS / Font.TS / TSSpacing / TSRadius) +
+       a P4-core shim for the dependencies the app target supplies (DashboardWidgetSize,
+       DashboardWidgetRegistration, TSSkeleton), MacOSX26.5 SDK, strict concurrency complete.
+       → error count = 0   (warnings-as-errors)
+       CORE_TYPECHECK_EXIT=0
+
+[HOST] swiftc -typecheck -swift-version 6 -D DEBUG -warnings-as-errors  (everything)
+       Core + the Previews bodies (#Preview rewritten to plain @MainActor funcs so the bodies
+       type-check without Xcode's PreviewsMacros plugin) + the Tests file (XCTest stubbed; the
+       Command Line Tools ship no XCTest.framework) — proves the tests reference real widget APIs.
+       → error count = 0   (warnings-as-errors)
+       ALL_TYPECHECK_EXIT=0
+       (The #Preview macro and import XCTest both require the Xcode toolchain; they are exercised
+        by the real XCTest/Previews targets at integration. The transformation only swaps the
+        macro/import shell — the body + assertion code compiled here is the shipped code verbatim.)
+
+[HOST] swiftformat --lint  (the 6 shipped files, project .swiftformat config)
+       → 0/6 files require formatting
+       FORMAT_EXIT=0
+
+[HOST] swiftlint lint --strict --config apps/apple/.swiftlint.yml  (the 6 shipped files)
+       → Done linting! Found 0 violations, 0 serious in 6 files.
+       LINT_EXIT=0
+
+[HOST] pwsh check-placeholders.ps1 -Path .../dashboard-widgets/VehicleSpecsWidget -Language swift
+       → PLACEHOLDER_ALLOWED=0 · PLACEHOLDER_COUNT=0 · EXIT=0
+       PLACEHOLDER_EXIT=0
+       (also copied the 6 files into a temp dir and re-scanned so the scanner actually READ them
+        → PLACEHOLDER_COUNT=0; manual case-insensitive forbidden-word scan
+        [TODO|FIXME|XXX|coming soon|placeholder|lorem ipsum|not implemented|stub|mock] → NONE.)
+
+[BLOCKED] xcodebuild -scheme TeslaSync      -destination 'platform=iOS Simulator,name=iPhone 16' build test
+[BLOCKED] xcodebuild -scheme TeslaSync-macOS                                                     build test
+       IOS_EXIT=1   MAC_EXIT=1   (NOT green — genuinely could not execute on this runner)
+       API EVIDENCE (verbatim):
+         $ xcode-select -p
+           /Library/Developer/CommandLineTools
+         $ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+           xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+           '/Library/Developer/CommandLineTools' is a command line tools instance
+         $ xcrun simctl list devices available | grep -ci iphone
+           0
+       Two environment/capability gaps block this step — neither is a defect in this surface's code:
+         (1) PRIMARY: this runner has only the Command Line Tools, so `xcodebuild` is unavailable
+             and there are zero iOS Simulators. The prompt's capability clause says: "requires
+             SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG. If unavailable on
+             the runner → STATUS=BLOCKED with API evidence." → this clause is in force.
+         (2) SECONDARY (would also gate even with Xcode present): the TeslaSync scheme's pre-action
+             builds the KMP Shared.xcframework via Scripts/build-shared-xcframework.sh (Kotlin/Native
+             + Gradle) and both app targets require code signing; the xcframework is absent in this
+             checkout. (The surface dir IS a registered source path — apps/apple/project.yml lines
+             36 & 66 — so the scheme WOULD compile these files once the toolchain is present.)
+       Equivalent in-scope verification was performed instead and is GREEN above: a Swift-6
+       strict-concurrency `swiftc -typecheck` (warnings-as-errors) of every shipped file against the
+       REAL design tokens — the exact token symbols the app build resolves — plus format, lint, and
+       the placeholder gate. The XCTest cases are authored and type-check green against the real APIs;
+       they execute in the TeslaSync(/-macOS) test targets on an Xcode-equipped, signed CI runner.
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) + both layouts —
+      implemented; each state/layout has a #if DEBUG preview; phase + projection logic unit-tested.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (VehicleSpecsSource); no HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — 11 parity keys (Vehicle Specs, Model,
+      Trim, Paint Color, Wheels, Interior, Aux Battery, Car Version, Option, No specs available, +
+      description) + native chrome in VehicleSpecsWidget.strings; the view holds no English literals.
+  [x] Accessibility labels on every interactive element (refresh/open), every row, the list (full
+      spoken summary), and the compact value; decorative icons are accessibilityHidden.
+  [x] Tests: asString + adapter value-parity + per-phase model + registry + a11y label tests.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; word-scan clean.
+  [x] Telemetry: view.opened emitted once with surface slug "VehicleSpecsWidget" (P1/S11) — tested.
+  [~] EXIT=0 / STATUS=DONE — NOT claimed. The mandated iOS+macOS xcodebuild build+test gate cannot run
+      on this Command-Line-Tools-only runner → STATUS=BLOCKED with platform-capability API evidence
+      (the acceptance criteria's sanctioned alternative). All host-runnable gates are GREEN.
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+  1  No red-as-green : the two xcodebuild steps are shown BLOCKED (IOS_EXIT=1 / MAC_EXIT=1) with the
+                       verbatim xcode-select error; every "EXIT=0" above is a command really executed.
+  2  No scope narrowing: implemented BOTH layouts + ALL states + i18n + a11y + telemetry + registry +
+                       the full 7 fixed rows + decoded option chips (8-cap).
+  3  No skip-and-assume: each host gate executed and its real output captured; nothing assumed green;
+                       the blocked steps were actually attempted and their failure captured.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; the adapter/model logic is
+                       real and type-checks green; no "Coming soon"/skeleton-only content.
+  5  No parity shortcuts: the coalescing chains, asString narrowing, em-dash fallback, option decode +
+                       8-cap, mono Car Version, and hasAnyData/empty semantics ported VERBATIM.
+  6  No delegation     : authored directly (no sub-agent / background delegation of the surface).
+  7  No predecessor bypass: did NOT self-register a new target/scheme, did NOT build a fake
+                       Shared.xcframework, did NOT edit the shared Localizable.xcstrings; strings shipped
+                       as the per-surface table (matching siblings). Changes confined to allowed files.
+  8  No commit on red  : the shipped CODE is GREEN on every gate that can execute here (typecheck w/
+                       warnings-as-errors, format, lint, placeholder); the BLOCK is a host/integration
+                       capability gap, not a code failure. Committing the verified surface + this log
+                       (the prompt's deliverable) does not commit anything red.
+  9  No silent drift   : changes confined to the allowed VehicleSpecsWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished native VehicleSpecsWidget shipped at parity with the web source: a SwiftUI
+  surface (compact / standard) over a P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, P1/S10
+  i18n, P1/S9 tokens; every state, every i18n key, every interactive a11y label; registry-correct
+  (vehicle-specs, 2x4 / 1x2 / 4x40). The surface type-checks GREEN under Swift 6 strict concurrency
+  (warnings-as-errors) against the real design tokens, and passes swiftformat --lint, swiftlint
+  --strict, and the placeholder gate.
+  The mandated iOS+macOS `xcodebuild build test` gate CANNOT execute on this runner: only the Command
+  Line Tools are installed (no Xcode, 0 simulators) and the KMP Shared.xcframework / code-signing are
+  absent. Per the prompt's capability clause ("If unavailable on the runner → STATUS=BLOCKED with API
+  evidence") this is STATUS=BLOCKED, escalated to an Xcode-equipped, signed CI runner. The code is
+  complete and committed so the integration runner can build/test it without re-authoring.
+
+EXIT=1
+STATUS=BLOCKED

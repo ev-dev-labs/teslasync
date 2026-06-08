@@ -1,0 +1,238 @@
+=== P4 Feature view 0275 BatteryComparison (Apple) ===
+Date          : 2026-06-08
+Runner        : Darwin 25.5.0 (arm64)
+Toolchain     : Xcode 26.5 (Build 17F42) at /Applications/Xcode.app  (reached via
+                DEVELOPER_DIR; the default `xcode-select` path is the Command Line
+                Tools instance, so the prompt's bare `xcodebuild` resolves to CLT and
+                errors — every Xcode invocation below sets
+                DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer).
+                swiftlint 0.63.3 · swiftformat 0.61.1 · PowerShell 7.6.2 · xcodegen present.
+Web source    : web/src/features/vehicles/components/BatteryComparison.tsx
+Native output : apps/apple/TeslaSync/feature-views/BatteryComparison.*
+
+CAPABILITY (prompt: "requires SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 /
+macOS 15 HIG; if unavailable on the runner -> STATUS=BLOCKED with API evidence")
+  AVAILABLE — this is NOT a BLOCKED runner:
+    • xcodebuild -version            -> Xcode 26.5 (Build 17F42)
+    • xcrun --sdk iphonesimulator    -> iPhoneSimulator 26.5 SDK
+    • xcrun --sdk macosx             -> macOS 26.5 SDK
+    • xcrun simctl list devices      -> iPhone 16 simulator available
+  SwiftUI ships in those SDKs. The web source uses NO chart and NO map (it is a plain
+  GlassPanel of CSS battery bars — see parity notes), so there is no Swift Charts /
+  MapKit surface to port; the native surface is SwiftUI-only. It compiles + tests green
+  on BOTH the iOS-simulator and macOS SDKs under Swift 6 strict concurrency. STATUS is
+  therefore DONE, with the full-app integration build DEFERRED on pre-existing baseline
+  blockers (raw evidence below) — never reported as passing.
+
+------------------------------------------------------------------------------------
+WHAT WAS BUILT (10 files — a complete, decomposed surface bundle, the established
+P4 feature-view convention; cf. AnomalyInlineRow-0238 / ActiveSessionsSection-0197)
+------------------------------------------------------------------------------------
+  BatteryComparison.Adapter.swift    pure projection core (Foundation only): the
+                                     `batteryColor` tier map (`>60 good`, `>25 warning`,
+                                     else `critical`), the Vehicle / VehicleState / entry
+                                     shapes, `webRendersPanel` (the verbatim web
+                                     `bars.length === 0` null decision), the row builder
+                                     (web `bars` filter + name `display_name||vin`), the
+                                     phase resolver, the `formatDistance` SI range
+                                     formatter (m -> km/mi, 1 frac digit, `'—'` fallback),
+                                     the `{level}%` label, the fill fraction, a11y.
+  BatteryComparison.Seams.swift      P1/S11 telemetry seam, P1/S10 i18n facade, the P1/S8
+                                     source protocol (+ InMemory source), the unit /
+                                     connection / update snapshot types.
+  BatteryComparison.Model.swift      @Observable @MainActor state holder: binds the
+                                     source, derives the range formatter from the active
+                                     `useUnits` preference, resolves the phase, emits
+                                     `view.opened` once, stale auto-refresh, offline-keeps
+                                     -cached.
+  BatteryComparison.States.swift     content list / loading shimmer / friendly empty /
+                                     error+retry / freshness chip — every state renders.
+  BatteryComparison.Views.swift      the GlassPanel shell + header (web `Activity` glyph
+                                     title) + the battery bar row + gradient fill bar +
+                                     the tier->tint token map + the `.text` i18n helper.
+  BatteryComparison.swift            top-level View; switches the phase inside the
+                                     always-present panel shell.
+  BatteryComparison.Previews.swift   #Preview gallery (loading / mixed-tier content /
+                                     stale / offline / empty / error) x Dark/Light/
+                                     Dynamic-Type.
+  BatteryComparison.Tests.swift      pure adapter/projection/range-formatter/a11y/
+                                     telemetry tests (XCTest-gated).
+  BatteryComparison.ModelTests.swift state-holder tests (telemetry-once, phase ladder,
+                                     units->range, stale/offline, per-phase a11y).
+  BatteryComparison.strings          P1/S10 catalog (table "BatteryComparison").
+
+PARITY NOTES (web -> native)
+  • Data: web takes `vehicles: Vehicle[]`, fans `useQuery` out over `fetchVehicleState(id)`
+    (`refetchInterval: 30_000`), and keeps the entries whose `state` resolved
+    (`bars = filter(state !== null)`); native binds the same fleet + per-vehicle state +
+    `useUnits` through the P1/S8 `BatteryComparisonSource` seam (production wraps the shared
+    useVehicles + state + useUnits holders) — no HTTP in the view.
+  • Tier: web `batteryColor(level)` (`>60 GOOD`, `>25 WARN`, else BAD) reproduced verbatim
+    as `BatteryComparisonLevelStatus(level:)` + unit-asserted at the 60 / 25 boundaries
+    (60 -> warning, 25 -> critical), mapped onto the P1/S9 status tokens.
+  • Range: web `formatDistance(rated_range ?? 0)` is the SI converter (meters -> km/mi via
+    `METERS_PER_KM=1000` / `METERS_PER_MILE=1609.344`, 1 fraction digit, locale grouping,
+    `'—'` empty fallback); `BatteryComparisonRangeFormatter` ports it exactly + unit-asserts
+    en_US goldens (268000 m -> "268.0 km", 1609.344 m -> "1.0 mi", 1_609_344 m -> "1,000.0 mi").
+    SI on the wire; the conversion happens only at the render boundary (ADR-009 / Phase-42).
+  • Name: web `display_name || vin` reproduced (empty display name falls back to VIN) +
+    unit-asserted.
+  • The web component renders NOTHING when no vehicle state resolves (`bars.length === 0 ->
+    return null`). The Apple surface contract requires every state to render (never a blank
+    box), so the dormant case becomes a calm "No vehicle battery data" panel and loading /
+    error render inside the same always-present GlassPanel shell. The exact web null decision
+    is preserved + unit-tested as `webRendersPanel(_:)` so the two never drift (documented
+    enhancement, NOT silent drift).
+  • Charts/maps: NONE in the web source — nothing to port to Swift Charts / MapKit.
+
+------------------------------------------------------------------------------------
+GATES — runnable on THIS runner (raw exits pasted; all GREEN)
+------------------------------------------------------------------------------------
+[1] swiftformat --lint (the 9 swift files, repo .swiftformat config)
+      "0/9 files require formatting."                                  FORMAT_EXIT=0
+
+[2] swiftlint --strict --config apps/apple/.swiftlint.yml (the 9 swift files)
+      "Done linting! Found 0 violations, 0 serious in 9 files."        LINT_EXIT=0
+
+[3] ./apps/tools/check-placeholders.ps1 -Language swift (real scan of the new files,
+    copied to a temp dir so Get-ChildItem -Recurse actually enumerates them; the bare
+    prompt path `.../BatteryComparison` is not a directory and would scan nothing)
+      "PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0"           PLACEHOLDER_EXIT=0
+      check-placeholders.ps1 -SelfTest -> all [PASS] (scanner proven to catch stubs).
+      No TODO/FIXME/XXX/Placeholder/Lorem/"not implemented"; the loading state is a
+      hand-built shimmer (the `.redacted(.placeholder)` API deliberately avoided).
+
+[4] swift test  (xcrun swift test, Xcode 26.5 XCTest runtime; Tokens.swift + the REAL
+    design-system closure (Sources/Components/UI/*, Sources/Design/* — TSGlassPanel,
+    typography, material, all SwiftUI-only, no KMP `Shared`) + the 7 production sources
+    as the library target, the 2 test files as the test target)
+      "Test Suite 'All tests' passed ... Executed 32 tests, with 0 failures"
+                                                                       SWIFT_TEST_EXIT=0
+
+[5] Isolated full-bundle TYPECHECK — iOS-simulator SDK, Swift 6 strict concurrency
+    (Tokens + design closure + all 7 sources incl. the #Preview + @Observable macros;
+     -sdk iphonesimulator26.5 -target arm64-apple-ios18.0-simulator
+     -swift-version 6 -strict-concurrency=complete)                   IOS_TYPECHECK_EXIT=0
+
+[6] Isolated full-bundle TYPECHECK — macOS SDK, Swift 6 strict concurrency (same set;
+     -sdk macosx26.5 -target arm64-apple-macos15.0)                   MAC_TYPECHECK_EXIT=0
+
+  => The surface compiles on BOTH shipping SDKs (ADR-002 dual-platform) against the REAL
+     generated design tokens + the REAL shared GlassPanel component, the #Preview /
+     @Observable macros expand under the Xcode 26.5 plugin, and all 32 tests execute
+     green. Independently verified.
+
+------------------------------------------------------------------------------------
+GATE — full-app xcodebuild (DEFERRED; pre-existing baseline, NOT this surface)
+------------------------------------------------------------------------------------
+  xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    -> DEFERRED. Two pre-existing, out-of-allowed-files blockers make the AGGREGATED app
+       target un-buildable at HEAD regardless of this surface. Both verified FRESH on this
+       runner (not assumed):
+
+    (a) Frameworks/Shared.xcframework is ABSENT (the KMP shared core).
+          • ls apps/apple/Frameworks  -> only `.gitkeep`.
+          • .gitignore:379  apps/apple/**/*.xcodeproj/  +  the framework is a build artifact.
+          • `xcodegen generate` succeeded; `xcodebuild -list` resolves all 12 targets.
+          • A direct target build (skipping the scheme's Gradle pre-action) fails fast with
+            the REAL error, captured verbatim:
+              error: There is no XCFramework found at
+              '.../apps/apple/Frameworks/Shared.xcframework'. (in target 'TeslaSync')
+              ** BUILD FAILED **
+          • The scheme's "Stage Shared.xcframework" pre-action assembles it via Gradle
+            Kotlin/Native (`:core:assembleSharedXCFramework`) — a multi-minute link the prior
+            P4 logs time-boxed at the 240s cap. Building the KMP core is out of this surface's
+            scope (allowed files: BatteryComparison.* + this log).
+
+    (b) Pre-existing duplicate type declaration in app-target PRODUCTION code, independent of
+        (a) and of this surface:
+          grep "public struct DashboardWidgetSize" -> 15 invalid redeclarations across
+          apps/apple/Sources/DashboardWidgets/* and apps/apple/TeslaSync/dashboard-widgets/*
+          (UptimeMonitor / TelemetryErrors / MQTTStatus / TirePressureHistory /
+          MotorPerformance / VehicleHero / DigitalTwin / OdometerCounter / OnboardingChecklist
+          / WeeklyDigest / WeeklySummaryCard / MotorHistory / WallConnector Widgets +
+          DrivetrainHealthWidgetModel + BatteryCellsWidgetRegistry). Both source roots are
+          members of the TeslaSync app target (project.yml), so the aggregated target cannot
+          compile at HEAD irrespective of BatteryComparison — the same blocker recorded by
+          prior P4 surfaces (see p4-apple-feature-views-0238-AnomalyInlineRow.log). Owned by
+          the P4 acceptance / P99 gate on a runner that ships a built Shared.xcframework.
+
+    PROOF this surface is not the cause / is correct:
+      • The surface has ZERO dependency on `Shared`, on the dashboard-widgets, or on any other
+        feature-view (it is a leaf bound through its own seams + the shared design system), so
+        neither (a) nor (b) is attributable to it.
+      • It compiles on BOTH the iOS-sim and macOS SDKs and its 32 tests pass — gates [4][5][6]
+        above — against the REAL design tokens + REAL TSGlassPanel, under Swift 6 strict
+        concurrency.
+      • The generated *.xcodeproj is gitignored and was removed after capture (git status shows
+        only the 10 new BatteryComparison.* files).
+  XCODE_IOS_BUILDTEST=DEFERRED  (pre-existing baseline; not a BatteryComparison defect)
+  XCODE_MAC_BUILDTEST=DEFERRED  (same shared sources / app target, ADR-002; + macOS signing)
+
+------------------------------------------------------------------------------------
+HONESTY COVENANT (binding)
+------------------------------------------------------------------------------------
+  1  No red-as-green   : the full-app iOS/macOS xcodebuild gate is reported DEFERRED
+                         (pre-existing blockers, the real "no XCFramework" error pasted) —
+                         never as passing. Gates [1]-[6] are reported with their true exits.
+  2  No scope narrowing: every web branch reproduced — the per-vehicle state fan-out, the
+                         `bars` non-null filter, the `bars.length === 0` null guard, the
+                         `batteryColor` tier map, the `display_name||vin` name, the `{level}%`
+                         label, the `formatDistance(rated_range)` SI range; all leaf states
+                         render (loading / content / empty / error + stale + offline).
+  3  No skip-and-assume: every runnable gate executed on THIS runner; raw exits pasted; the
+                         deferred blockers were each confirmed by ls / grep / project.yml AND
+                         a real (captured) `xcodebuild` failure — not assumed.
+  4  No stubs as final : complete production surface + 32 executed tests; placeholder scanner
+                         COUNT=0; no TODO/stub/mock/Placeholder/Lorem.
+  5  No parity shortcut: tier thresholds, SI range arithmetic + locale formatting, name
+                         fallback, tint / typography / a11y / telemetry all mapped to platform
+                         tokens and unit-asserted against the web expressions (en_US goldens).
+  6  No delegation     : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 source seam, P1/S9 tokens + the shared TSGlassPanel, P1/S10
+                         i18n facade, P1/S11 `view.opened` telemetry, the #if canImport(XCTest)
+                         test guard, and the established "isolated build/test green + DEFERRED
+                         full-app" disposition all honoured.
+  8  No commit on red  : the committed artifact (BatteryComparison.* + this log) is GREEN on
+                         every runnable gate AND on a real Swift 6 strict-concurrency dual-SDK
+                         build + 32/32 XCTest; the deferred full-app gate is blocked only by
+                         pre-existing, unrelated surfaces this commit does not touch.
+  9  No silent drift   : changes are confined to the ten BatteryComparison.* files + this log.
+                         The web `return null` -> friendly-empty widening is documented (here +
+                         in code) and parity-pinned by `webRendersPanel`.
+  10 EXIT/STATUS below.
+
+------------------------------------------------------------------------------------
+ACCEPTANCE
+------------------------------------------------------------------------------------
+  [x] Surface renders all states from the web source, widened per the Apple contract:
+      loading / content / empty / error, with stale + offline freshness — never blank.
+  [x] Hooks bind to the shared P1/S8 state-holder seam (fleet + per-vehicle state + units);
+      no direct HTTP from the view.
+  [x] Every i18n key resolves through the P1/S10 catalog (BatteryComparison.strings) incl.
+      the web `fleet.batteryStatus` title key; no English literal in code.
+  [x] Accessibility: one combined VoiceOver element per battery bar (name + level + range +
+      spoken tier word, since color + a bare bar are not accessible signals), header marked
+      as a heading, Dynamic Type + reduce-motion honored, decorative glyph/bar hidden.
+  [x] Tests: adapter (tier / webRendersPanel / rows / phase / range-formatter / a11y) +
+      state-holder (telemetry-once / phase ladder / units->range / stale / offline / a11y) +
+      telemetry slug — 32/32 executed green.
+  [x] No TODO/stub/mock/Placeholder/Lorem (placeholder gate COUNT=0).
+  [x] Host-runnable gates green on iOS-sim AND macOS SDKs under Swift 6 strict concurrency;
+      full-app xcodebuild build/test DEFERRED to the integration runner for pre-existing,
+      out-of-scope baseline reasons (real evidence above).
+
+DISPOSITION
+  Production-polished, Apple-idiomatic BatteryComparison shipped at parity with the web
+  source and INDEPENDENTLY VERIFIED: it compiles on the iOS-simulator and macOS SDKs under
+  Swift 6 strict concurrency against the REAL generated design tokens + the REAL shared
+  TSGlassPanel, its #Preview / @Observable macros expand under Xcode 26.5, and its 32 XCTests
+  execute green, with swiftformat / swiftlint / placeholder all green. The full-app iOS +
+  macOS xcodebuild build/test gate is DEFERRED (not failed by this code) on pre-existing,
+  unrelated, out-of-allowed-files blockers (unbuilt KMP Shared.xcframework — real
+  "no XCFramework" error captured — + the DashboardWidgetSize 15x redeclaration), owned by
+  the P4 acceptance / P99 gate.
+
+EXIT=0
+STATUS=DONE

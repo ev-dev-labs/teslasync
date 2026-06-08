@@ -1,0 +1,227 @@
+================================================================================
+ p4-apple · P7 · page:vehicle-systems/SafetySettings — SwiftUI / HIG
+ Output: apps/apple/TeslaSync/Features/VehicleSystems/SafetySettingsPage.*.swift
+ Web source: web/src/features/vehicle-systems/pages/SafetySettingsPage.tsx
+ Runner: macOS (Darwin), full Xcode at /Applications/Xcode.app, swift 6.3.2
+================================================================================
+
+--------------------------------------------------------------------------------
+ IMPLEMENTATION (no placeholders, no scope narrowing — ADR-011)
+--------------------------------------------------------------------------------
+Native SwiftUI page mirroring the established feature-view architecture
+(feature-views/DriveStatCards + SecurityStatusCards): pure projection + Format
+(no SwiftUI / no Shared), an @Observable model behind a source-protocol seam with
+an in-memory source, design-token + P3-component views, Swift Charts, a per-surface
+.strings table, previews, and XCTest. 14 files:
+
+  SafetySettingsPage.Models.swift      value types (snapshot, security, view models)
+  SafetySettingsPage.Format.swift      SI distance + number fmt + safetyEnum port
+  SafetySettingsPage.Adapter.swift     core projection (score, metrics, chart, history)
+  SafetySettingsPage.Cards.swift       signal/driving/feature card builders (spec tables)
+  SafetySettingsPage.Model.swift       @Observable model + source seam + i18n facade
+  SafetySettingsPage.Charts.swift      RadialGauge + safety-states step LineChart
+  SafetySettingsPage.Views.swift       score/metric/signal/driving subviews
+  SafetySettingsPage.Chrome.swift      feature cards, chart panel, HIG states chrome
+  SafetySettingsPage.History.swift     history TSDataTable (adaptive, sortable)
+  SafetySettingsPage.swift             page scaffold + phase switch (adaptive)
+  SafetySettingsPage.Navigation.swift  deep link /safety-settings + NavigationDestination
+  SafetySettingsPage.Previews.swift    8 state previews (metric/imperial)
+  SafetySettingsPage.Tests.swift       20 XCTest cases (projection/format/model/route)
+  SafetySettingsPage.strings           59 parity keys + native chrome
+
+Registration (collision-free): TeslaSync/Features added to project.yml (both app
+targets) + .swiftlint.yml included; the page registers as a value-typed
+NavigationStack destination via `safetySettingsDestination(make:)` without editing
+the shared AppRoute enum.
+
+--------------------------------------------------------------------------------
+ GATE — host-runnable + isolated verification (real output)
+--------------------------------------------------------------------------------
+$ pwsh apps/tools/check-placeholders.ps1 -Path .../Features/VehicleSystems -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ swiftformat --lint TeslaSync/Features/VehicleSystems
+0/13 files require formatting.
+FORMAT_EXIT=0
+
+$ swiftlint --strict TeslaSync/Features/VehicleSystems    # violations in surface scope
+LINT_VIOLATIONS_IN_SURFACE=0
+LINT_EXIT=0
+  (note: one pre-existing, unrelated violation lives in
+   TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift — outside this
+   prompt's allowed files; not introduced here.)
+
+# Isolated SwiftPM build + tests — surface compiled as the `TeslaSync` module with
+# its Shared-free design-token/component deps, Swift 6 complete concurrency, full
+# Xcode toolchain (DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer).
+$ xcrun swift build
+Build complete!
+ISOLATED_BUILD_EXIT=0
+
+$ xcrun swift test
+Test Suite 'SafetySettingsFormatTests'        Executed 5 tests, 0 failures
+Test Suite 'SafetySettingsProjectionTests'    Executed 10 tests, 0 failures
+Test Suite 'SafetySettingsPageModelTests'     Executed 4 tests, 0 failures
+Test Suite 'SafetySettingsRouteTests'         Executed 1 test, 0 failures
+Test Suite 'All tests' passed — Executed 20 tests, with 0 failures
+ISOLATED_TEST_EXIT=0   TESTS=20  FAILURES=0
+
+# Dual-SDK typecheck (the page ships to both idioms — ADR-002).
+$ xcrun --sdk macosx  swiftc -typecheck -target arm64-apple-macos15.0 -swift-version 6 <surface+deps>
+MAC_TYPECHECK_EXIT=0
+$ xcrun --sdk iphoneos swiftc -typecheck -target arm64-apple-ios18.0  -swift-version 6 <surface+deps>
+IOS_TYPECHECK_EXIT=0
+
+$ xcodegen generate            # enumerates the new files into both app targets
+Created project at .../TeslaSync.xcodeproj
+XCODEGEN_EXIT=0   SafetySettingsPage files referenced in project.pbxproj: 14
+
+--------------------------------------------------------------------------------
+ GATE — full-app xcodebuild build test  (macOS-pending — pre-existing blockers)
+--------------------------------------------------------------------------------
+BUILD_EXIT=65   (blocked — see below)
+TEST_EXIT=65    (blocked — see below)
+
+The full-app `xcodebuild -scheme TeslaSync(/-macOS) build test` cannot reach green
+on this runner for PRE-EXISTING, repo-wide reasons that are unrelated to this
+surface and are already tracked in apps/macos-pending-verifications.md (same
+deferral as ToolCard / AlertMessageEditor / FSMTimelineChart):
+
+  1. Shared.xcframework is not staged (apps/apple/Frameworks/ holds only .gitkeep);
+     the scheme pre-action build-shared-xcframework.sh runs a Kotlin/Native Gradle
+     assemble that is deferred to the macOS CI matrix (ADR-012, p1-shared/S3).
+  2. `struct DashboardWidgetSize` is redefined in 15 files across
+     Sources/DashboardWidgets + TeslaSync/dashboard-widgets (parallel-merge
+     collision) — an invalid-redeclaration compile error in the app module.
+  3. 261 co-located *.Tests.swift import XCTest into the app target (the established
+     feature-view convention); an existing full-app build in this same monorepo
+     state fails with: "Unable to resolve module dependency: 'XCTest'"
+     (feature-views/AIRestorePanel.Tests.swift). This surface follows the same
+     co-location convention (SafetySettingsPage.Tests.swift).
+
+None of these originate in apps/apple/TeslaSync/Features/VehicleSystems. The surface
+itself is proven to compile + pass its tests + typecheck on both iOS-18 and macOS-15
+SDKs in isolation (above). The full-app build+test is deferred to
+p4-apple/P99-0001-apple-acceptance-gate on a macos-latest runner with a staged
+Shared.xcframework + signing identities:
+  cd apps/apple && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+
+================================================================================
+=== PARITY ===
+ PARITY_REQUIRED=79 — each item below bound to a Swift file + symbol that renders
+ it from the @Observable SafetySettingsPageModel state.
+================================================================================
+
+-- panels (14) ---------------------------------------------------------------
+[x] panel  GlassPanel1           SafetyScorePanel                 Views.swift (TSGlassPanel)
+[x] panel  GlassPanel2           SafetyMetricGrid / SafetyMetricTile  Views.swift
+[x] panel  GlassPanel3           SafetyLiveSignalsPanel           Views.swift (TSGlassPanel)
+[x] panel  Safety-Score          SafetySettingsProjection.metrics id="score" + SafetyScoreGauge
+[x] panel  Total-Features        SafetySettingsProjection.metrics id="total"   Adapter.swift
+[x] panel  Enabled               SafetySettingsProjection.metrics id="enabled" Adapter.swift
+[x] panel  Disabled              SafetySettingsProjection.metrics id="disabled" Adapter.swift
+[x] panel  GlassPanel8           SafetyDrivingStatsPanel          Views.swift (TSGlassPanel)
+[x] panel  GlassPanel9           SafetyFeatureGrid                Chrome.swift (TSGlassPanel)
+[x] panel  Distance-Since-Reset  SafetySettingsProjection.drivingStats[0] / SafetyDrivingStatTile
+[x] panel  Self-Driving-Distance SafetySettingsProjection.drivingStats[1] / SafetyDrivingStatTile
+[x] panel  GlassPanel12          SafetyStatesPanel                Chrome.swift (TSGlassPanel)
+[x] panel  GlassPanel13          SafetyHistoryPanel               History.swift (TSGlassPanel)
+[x] panel  GlassPanel14          SafetySignalTile (+ SafetyCountBadge)  Views.swift
+
+-- charts (2) ----------------------------------------------------------------
+[x] chart  RadialGauge           SafetyScoreGauge                 Charts.swift (Circle.trim, threshold band)
+[x] chart  LineChart             SafetyStatesChart                Charts.swift (Swift Charts LineMark .stepEnd, 3 series)
+
+-- data states (4) -----------------------------------------------------------
+[x] state  loading               SafetyPageSkeleton + model.phase=.loading   Chrome.swift / Model.swift
+[x] state  empty                 emptyState (TSEmptyState) + model.phase=.empty  SafetySettingsPage.swift
+[x] state  error                 SafetyErrorState + SafetyErrorBanner + model.phase=.error  Chrome.swift
+[x] state  success               resolvedContent + model.phase=.content      SafetySettingsPage.swift
+
+-- strings (59) — all resolve via SafetySettingsStrings (table "SafetySettingsPage",
+   NSLocalizedString tableName); keys present in SafetySettingsPage.strings -------
+[x] string  ADAS Features                                  Chrome.swift SafetyFeatureGrid header
+[x] string  ADAS features, safety score, and driving stats SafetySettingsPage.swift header subtitle
+[x] string  AEB                                            Charts/History (series + column)
+[x] string  Adaptive cruise headway setting                Cards.swift featureSpecs (cfd)
+[x] string  Alerts for blind-spot hazards                  Cards.swift featureSpecs (bscw)
+[x] string  Alerts when exceeding speed limit              Cards.swift featureSpecs (slw)
+[x] string  Auto Emergency Braking                         Cards.swift featureSpecs (aeb)
+[x] string  Automatic collision mitigation                 Cards.swift featureSpecs (aeb)
+[x] string  BSC                                            History.swift boolColumn
+[x] string  BSCW                                           Charts/History (series + column)
+[x] string  Blind Spot Camera                              Cards.swift featureSpecs (bsc)
+[x] string  Blind Spot Collision Warning                   Cards.swift featureSpecs (bscw)
+[x] string  CFD                                            History.swift enumColumn
+[x] string  Camera view when signaling                     Cards.swift featureSpecs (bsc)
+[x] string  Cruise Follow Distance                         Cards.swift featureSpecs (cfd)
+[x] string  Disabled                                       Adapter.metrics + Cards.featureCards toggle
+[x] string  ELDA                                           Charts/History (series + column)
+[x] string  Emergency Lane Departure Avoidance             Cards.swift featureSpecs (elda)
+[x] string  Enabled                                        Adapter.metrics + Cards.featureCards toggle
+[x] string  FCW                                            History.swift enumColumn
+[x] string  Forward Collision Warning                      Cards.swift featureSpecs (fcw)
+[x] string  LDA                                            History.swift enumColumn
+[x] string  Lane Departure Avoidance                       Cards.swift featureSpecs (lda)
+[x] string  No history records found.                      History.swift SafetyHistoryPanel empty
+[x] string  No safety data available for this vehicle.     SafetySettingsPage.swift emptyState
+[x] string  No safety state history to chart yet.          Chrome.swift SafetyStatesPanel empty
+[x] string  Off                                            Charts Y-axis + History SafetyBoolBadge
+[x] string  On                                             Charts Y-axis + History SafetyBoolBadge
+[x] string  PIN                                            History.swift boolColumn
+[x] string  Pin to Drive                                   Cards.swift featureSpecs (ptd)
+[x] string  Prevents unintentional lane changes            Cards.swift featureSpecs (lda)
+[x] string  Requires PIN before driving                    Cards.swift featureSpecs (ptd)
+[x] string  SLW                                            History.swift enumColumn
+[x] string  Safety Score                                   Adapter.metrics + SafetyScoreGauge label
+[x] string  Safety Settings                                SafetySettingsPage.swift title + navigationTitle
+[x] string  Safety Settings History                        History.swift SafetyHistoryPanel header
+[x] string  Safety States Over Time                        Chrome.swift SafetyStatesPanel header
+[x] string  Speed Limit Warning                            Cards.swift featureSpecs (slw)
+[x] string  Steers back on unintentional departure         Cards.swift featureSpecs (elda)
+[x] string  Time                                           History.swift time column
+[x] string  Total Features                                 Adapter.metrics id="total"
+[x] string  Warns of potential frontal collisions          Cards.swift featureSpecs (fcw)
+[x] string  enabled                                        Views.swift SafetyCountBadge
+[x] string  error.loadFailed                               Views.swift SafetyErrorBanner
+[x] string  safety.buckled                                 Cards.swift signalSpecs (belts)
+[x] string  safety.distanceAutopilot                       Cards.swift autopilotSubtitle (%@ template)
+[x] string  safety.distanceSinceReset                      Cards.swift drivingStats[0]
+[x] string  safety.driverBelt                              Cards.swift signalSpecs (driverBelt)
+[x] string  safety.driverSeat                              Cards.swift signalSpecs (driverSeat)
+[x] string  safety.drivingStats                            Views.swift SafetyDrivingStatsPanel header
+[x] string  safety.empty                                   Cards.swift signalSpecs (driverSeat off)
+[x] string  safety.liveSignals                             Views.swift SafetyLiveSignalsPanel header
+[x] string  safety.locked                                  Cards.swift signalSpecs (vehicleLock)
+[x] string  safety.occupied                                Cards.swift signalSpecs (driverSeat on)
+[x] string  safety.passengerBelt                           Cards.swift signalSpecs (passengerBelt)
+[x] string  safety.selfDrivingDistance                     Cards.swift drivingStats[1]
+[x] string  safety.unbuckled                               Cards.swift signalSpecs (belts off)
+[x] string  safety.unlocked                                Cards.swift signalSpecs (vehicleLock off)
+[x] string  safety.vehicleLock                             Cards.swift signalSpecs (vehicleLock)
+
+PARITY_COVERED=79
+PARITY_REQUIRED=79
+
+--------------------------------------------------------------------------------
+ SUMMARY
+--------------------------------------------------------------------------------
+PLACEHOLDER_EXIT=0  FORMAT_EXIT=0  LINT_EXIT=0(surface)  ISOLATED_BUILD_EXIT=0
+ISOLATED_TEST_EXIT=0(20/20)  MAC_TYPECHECK_EXIT=0  IOS_TYPECHECK_EXIT=0  XCODEGEN_EXIT=0
+PARITY_COVERED=79 / PARITY_REQUIRED=79
+BUILD_EXIT=65  TEST_EXIT=65  (full-app xcodebuild — macOS-pending; pre-existing
+  repo-wide blockers, deferred to P99 macOS gate; recorded in
+  apps/macos-pending-verifications.md)
+
+The surface is implemented in full (all 79 parity items, no placeholders/stubs) and
+verified green on every gate runnable on this host. The mandatory full-app
+xcodebuild build+test cannot be executed-to-green here due to pre-existing,
+repo-wide breakage outside this prompt's scope; per the artifact's gate contract
+("prompts that can't run their gate are BLOCKED, not DONE") the terminal status is
+BLOCKED on that gate, with the deferred verification tracked for the macOS CI matrix.
+
+EXIT=65
+STATUS=BLOCKED

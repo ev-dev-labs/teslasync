@@ -1,0 +1,157 @@
+=== P4 Feature view 0001 AlertDetailTimeline (Apple) ===
+Date: 2026-06-08
+Surface slug: AlertDetailTimeline
+Web source: web/src/features/admin/components/AlertDetailTimeline.tsx
+Native output: apps/apple/TeslaSync/feature-views/AlertDetailTimeline.{swift,Adapter,Model,Views,Previews,Tests,ModelTests,strings}
+Allowed files (this prompt): apps/apple/TeslaSync/feature-views/AlertDetailTimeline.* + this log
+
+------------------------------------------------------------------
+CAPABILITY / ENVIRONMENT
+------------------------------------------------------------------
+- Active developer dir defaulted to CommandLineTools; full Xcode present at
+  /Applications/Xcode.app. Used `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`
+  (no sudo / no xcode-select change) so xcodebuild/simctl resolve.
+- Xcode 26.5 (17F42); SDKs: iphonesimulator26.5, macosx26.5; iOS 26.5 runtime;
+  iPhone 16 simulator present + booted. swiftlint + swiftformat + pwsh + JDK17 present.
+- KMP Shared.xcframework was NOT vendored (.gitkeep only). Built it via
+  Scripts/build-shared-xcframework.sh (Gradle :core:assembleSharedXCFramework) →
+  BUILD SUCCESSFUL in 8m22s; staged ios-arm64 / ios-arm64-simulator / macos-arm64.
+
+==================================================================
+GATE STEPS (literal prompt gate, run over the whole apps/apple tree / 458 surfaces)
+==================================================================
+
+------------------------------------------------------------------
+[1] iOS  : xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+------------------------------------------------------------------
+RESULT: ** BUILD FAILED **    IOS_EXIT=65
+Cause A (repo project config, out of scope): the app target globs TeslaSync/feature-views,
+  which sweeps EVERY surface's *.Tests.swift (each `import XCTest`) INTO the app target.
+  The app target is not configured with testing search paths, so the literal run fails at:
+    feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'
+  (AIRestorePanel is alphabetically first; this is repo-wide, affects all 458 surfaces.)
+Cause B (pre-existing sibling breakage, out of scope): re-running with the
+  `ENABLE_TESTING_SEARCH_PATHS=YES` build-setting workaround (no file change) gets past XCTest
+  resolution and then surfaces 89 pre-existing COMPILE errors in 23 OTHER surfaces' files
+  (parallel-agent WIP), e.g.:
+    feature-views/NotificationSettings.Views.swift:92: invalid redeclaration of 'NotificationFreshnessChip'
+    dashboard-widgets/NotificationStatsWidget.Models.swift:192: ISO8601DateFormatter not concurrency-safe
+    Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift:30: 'DashboardWidgetSize' is ambiguous
+  Per-file error counts (89 total; ALL out of scope — none are AlertDetailTimeline):
+     11 dashboard-widgets/NotificationStatsWidget.Tests.swift
+      8 dashboard-widgets/OnboardingChecklistWidget.Model.swift
+      7 dashboard-widgets/OdometerCounterWidget.Model.swift
+      6 dashboard-widgets/NotificationStatsWidget.swift
+      6 Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift
+      5 dashboard-widgets/OdometerCounterWidget.Tests.swift
+      3 dashboard-widgets/{WeeklySummaryCardWidget,WeeklyDigestWidget,WallConnectorWidget,
+        VehicleHeroWidget,UptimeMonitorWidget,TirePressureHistoryWidget,TelemetryErrorsWidget,
+        MQTTStatusWidget,MotorPerformanceWidget,MotorHistoryWidget,DigitalTwinWidget}.{Model,Support}.swift
+      3 Sources/DashboardWidgets/DrivetrainHealthWidgetModel.swift
+      2 feature-views/NotificationSettings.Views.swift
+      2 dashboard-widgets/{OdometerCounterWidget.swift,OdometerCounterWidget.Projection.swift,
+        NotificationStatsWidget.Projection.swift,NotificationStatsWidget.Models.swift}
+  AlertDetailTimeline errors in this build: 0   (grep 'AlertDetailTimeline.*error:' => 0)
+
+------------------------------------------------------------------
+[2] macOS: xcodebuild -scheme TeslaSync-macOS build test
+------------------------------------------------------------------
+RESULT: ** BUILD FAILED **    MAC_EXIT=65
+Cause (environment capability, out of scope): code signing.
+    error: "TeslaSync-macOS" has entitlements that require signing with a development
+    certificate. Enable development signing in the Signing & Capabilities editor.
+  No development signing identity exists on this runner (DEVELOPMENT_TEAM=""), so the
+  hosted macOS app/test bundle cannot be signed. Failure is at GatherProvisioningInputs,
+  before source compilation. Not attributable to AlertDetailTimeline.
+
+------------------------------------------------------------------
+[3] swiftlint --strict            (whole tree, .swiftlint.yml included paths)
+------------------------------------------------------------------
+RESULT: Found 1 violation, 1 serious in 1916 files.    LINT_EXIT=2
+The single violation is out of scope (sibling):
+    dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length
+    Violation: ... currently spans 78 lines (function_body_length)
+AlertDetailTimeline violations: 0 (all 7 files linted, clean).
+
+------------------------------------------------------------------
+[4] swiftformat --lint apps/apple (whole tree)
+------------------------------------------------------------------
+RESULT: 1/1920 files require formatting.    FORMAT_EXIT=1
+The single file is out of scope (sibling):
+    feature-views/ActionBuilder.Previews.swift:48:1: (blankLinesBetweenScopes)
+AlertDetailTimeline files needing formatting: 0.
+
+------------------------------------------------------------------
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/AlertDetailTimeline
+------------------------------------------------------------------
+RESULT: PLACEHOLDER_COUNT=0    PLACEHOLDER_EXIT=0
+(Note: the literal -Path matches no directory; to genuinely verify, each shipped .swift file
+ was scanned individually with -Language swift → PLACEHOLDER_COUNT=0 for all 7 files. No
+ TODO/FIXME/Placeholder/stub/mock/Lorem in shipped code.)
+
+==================================================================
+SUPPLEMENTARY — IN-SCOPE PROOF FOR THE AlertDetailTimeline SURFACE
+(every check that pertains to THIS surface passes; the surface is production-complete)
+==================================================================
+- swiftformat --lint  (7 surface files) ............... PASS  (0/7 require formatting)
+- swiftlint --strict  (7 surface files) ............... PASS  (0 violations, 0 serious)
+- check-placeholders  (7 surface files, per file) ..... PASS  (PLACEHOLDER_COUNT=0 each)
+- Island typecheck — PRODUCTION (Adapter,Model,View,Views,Previews) compiled against the
+  REAL generated design tokens (apps/design/generated/apple/Tokens.swift) + exact real
+  signatures of the shared components it consumes (TSFadeIn, tsGlassPanel, TSEmptyState,
+  TSSkeleton), macosx SDK, -swift-version 6 ............ PASS  (swiftc -typecheck EXIT=0)
+  (This island compile CAUGHT + fixed a real bug: Date.FormatStyle.timeZone(_:) expects a
+   formatting symbol, not a TimeZone — corrected to the FormatStyle initializer's timeZone:.)
+- Island typecheck — TESTS (Tests + ModelTests) against my types + XCTest overlay .. PASS (EXIT=0)
+- SwiftPM `swift test` of the surface logic (production module + both test files):
+      Test Suite 'All tests' passed.
+      Executed 44 tests, with 0 failures (0 unexpected).   .... PASS
+- Full iOS app build (step [1] above): 0 compile errors in any AlertDetailTimeline file.
+
+Parity coverage (web AlertDetailTimeline.tsx → native, all reproduced):
+- Data states: events→Timeline rows (kind-tinted hollow dot + connector rail, title/time/note);
+  empty (no events)→EmptyState ("No events yet"). Plus the P4 leaf contract states required
+  by the prompt: loading (skeleton rows), error (QueryError-equivalent retry), and the
+  live/stale/offline connection axis (freshness chip + banner + one-shot stale auto-refresh).
+- i18n: every source key resolved via the P1/S10 facade (AlertDetailTimeline.strings):
+  alerts.timeline.title/empty, alerts.timeline.kind.{created,acknowledged,reopened,commented},
+  alerts.timeline.kindAnonymous.{created,acknowledged,reopened,commented} (actor interpolation),
+  + native-chrome keys. No English literals in Swift.
+- Color parity (ADR-006 semantic; exact in dark mode): created→accent(#00f0ff),
+  acknowledged→statusSuccess(#10b981), reopened→statusWarning(#f59e0b),
+  commented→chartSeriesPower(#a855f7), unknown→accent.
+- Icons: Bell/CheckCircle/RefreshCw/Edit3/Info → bell.fill / checkmark.circle.fill /
+  arrow.clockwise / square.and.pencil / info.circle.fill.
+- Data bound via shared state-holder seam (AlertDetailTimelineSource, P1/S8); no HTTP in view.
+- Telemetry: view.opened emitted with slug "AlertDetailTimeline" (P1/S11).
+- Accessibility: header isHeader trait; per-row combined VoiceOver summary (title, note, time);
+  freshness chip labeled; retry labeled; decorative glyphs hidden; Dynamic Type via system fonts.
+
+==================================================================
+CONCLUSION
+==================================================================
+The AlertDetailTimeline surface is production-complete and GREEN in isolation: it passes
+swiftformat --lint, swiftlint --strict, and the placeholder gate for its own files; it
+type-checks against the real design tokens and shared-component signatures; and its full
+44-test suite runs with 0 failures. It contributes ZERO errors to the app build.
+
+The literal whole-repo gate cannot reach EXIT=0 because of conditions OUTSIDE this prompt's
+allowed files (apps/apple/TeslaSync/feature-views/AlertDetailTimeline.* + this log):
+  (a) 89 pre-existing compile errors across 23 sibling surfaces (dashboard-widgets +
+      NotificationSettings) from concurrent parallel-agent WIP;
+  (b) the app target sweeps all surfaces' *.Tests.swift into itself without testing search
+      paths (repo-wide project-config defect);
+  (c) the macOS target requires a development signing certificate absent on this runner.
+None are fixable within the allowed file scope, and none originate from AlertDetailTimeline.
+Per the Honesty Covenant (1 No red-as-green, 8 No commit on red), this is reported as BLOCKED
+rather than DONE; the surface work itself is finished and independently verified above.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=2
+FORMAT_EXIT=1
+PLACEHOLDER_EXIT=0
+SURFACE_SCOPED_CHECKS=PASS (format0/lint0/placeholder0/island-typecheck0/swift-test 44-pass-0-fail)
+
+EXIT=1
+STATUS=BLOCKED

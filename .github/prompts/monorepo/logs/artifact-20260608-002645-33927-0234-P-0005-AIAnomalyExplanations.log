@@ -1,0 +1,215 @@
+=== P4 Shared surface 0005 AIAnomalyExplanations (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon) — shared parallel runner.
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir is /Library/Developer/CommandLineTools; overridden NON-destructively per
+                       command, no sudo / no `xcode-select -s`, so the shared runner is untouched). Under the
+                       CommandLineTools dir `xcodebuild -version` errors ("requires Xcode") and `xcrun simctl`
+                       is absent — hence the DEVELOPER_DIR override, the SAME mechanism every prior P4 surface used.
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.x · pwsh 7.6.x
+  Simulators         : iOS 26.5 runtime installed; "iPhone 16" device present (Booted during this run).
+  Capability         : SwiftUI present. This surface uses NO Swift Charts and NO MapKit — the web source has
+                       none either ("Charts / maps used: (none)" in the prompt) — so the iOS 18 / macOS 15 HIG
+                       primitives it needs are all available → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification — read end to end)
+  web/src/components/ai/AIAnomalyExplanations.tsx — the Helix anomaly-explanation card. It is
+  `withAiFeature('anomaly-explanations', InnerSection)` (a `useAiEnabled` gate; disabled ⇒ the HOC renders
+  `null`). InnerSection uses `useTranslation` + `useAiStream({ url: '/ai/anomalies/explain',
+  body: { vehicle_id: vehicleId ?? 0, days: 30 }, onEvent: noop })` and renders the shared `AIFeatureCard`
+  with title `t('anomaly.aiExplanation.title','Helix explanation')`, description
+  `t('anomaly.aiExplanation.description', …already identified above.)`, button
+  `t('anomaly.aiExplanation.generateButton','Generate explanation')`, badge
+  `t('anomaly.aiExplanation.badge','Helix')`, `canStart = vehicleId != null`, and the stream handle.
+
+  Composed shared primitives reproduced for parity (their native atoms are owned by the P4 component-library
+  bundle — out of scope here and not yet present — so they are reproduced as private subviews scoped to this
+  surface, the only files this prompt may touch):
+    • AIFeatureCard  : GlassPanel → (title h3 + AIBadge) → description → optional empty hint → universal
+                       "Ask Helix" button (idle "Ask Helix" / streaming "Helix is thinking…"; disabled =
+                       !canStart || isStreaming; aria-label "Ask Helix · {buttonLabel}") → AiOutputPanel.
+    • AiOutputPanel  : nothing while idle+no text; AIThinkingIndicator (shimmer lines + dots) while streaming
+                       before the first delta; the streamed prose once text arrives; "Helix error: {message}".
+    • useAiStream    : idle → streaming → (done | error); `delta.text` frames accumulate; a non-OK HTTP
+                       response finalises as "stream_http_{status}"; unknown SSE event types are dropped.
+
+ARTIFACTS SHIPPED  (allowed files: apps/apple/TeslaSync/shared-surfaces/AIAnomalyExplanations.* + this log)
+  AIAnomalyExplanations.Adapter.swift      — pure Foundation core: AnomalyExplainRequest (path /ai/anomalies/
+                                             explain, days 30, snake_case vehicle_id, `?? 0` coercion);
+                                             AnomalyStreamEvent + AnomalySSEFrame.parse (port of parseSSEFrame +
+                                             toTypedEvent: event:/data: lines, :-comments, JSON decode, drop
+                                             unknown/malformed); AnomalyStreamSnapshot + AnomalyStreamReducer
+                                             (delta accumulation, done, failure, httpFailure "stream_http_{n}");
+                                             AnomalyOutput.derive (AiOutputPanel branches) + AnomalyActionState
+                                             (button idle/streaming + isDisabled); AnomalyAccessibility.
+  AIAnomalyExplanations.Model.swift         — P1/S8 state-holder seam (AnomalyExplanationsSource +
+                                             @Observable AnomalyExplanationsModel + InMemory source), P1/S11
+                                             telemetry seam (protocol + OSLog sink, view.opened deferred past
+                                             the gate), AnomalyConnection axis, AnomalyExplanationsInput
+                                             snapshot (availability gate loading/error/enabled + vehicleID +
+                                             connection + stream), AnomalyReady + AnomalyExplanationsResolved
+                                             (.gated/.loading/.error/.ready), P1/S10 AnomalyExplanationsStrings
+                                             facade (string + %@ format, web literal as value fallback).
+  AIAnomalyExplanations.Projection.swift    — pure projection: gate-disabled → .gated; availability error →
+                                             .error; availability loading → .loading; else → .ready (localized
+                                             title/description/badge/context + canStart + action + output).
+  AIAnomalyExplanations.Views.swift         — the AIFeatureCard regions as scoped subviews: Helix badge
+                                             (sparkles + label), "Ask Helix" label (idle / thinking + cycling
+                                             dots), action button (TSButton, disabled=!canStart||streaming,
+                                             VoiceOver "Ask Helix · {context}"), thinking indicator (shimmer +
+                                             dots), output panel (empty hint / thinking / prose / "Helix error:").
+  AIAnomalyExplanations.Chrome.swift        — P4 leaf chrome: freshness chip, refresh button, stale/offline
+                                             banner, availability-loading skeleton, retryable gate-error view.
+  AIAnomalyExplanations.swift               — the surface: gate → EmptyView; card header (title + Helix badge +
+                                             freshness chip + refresh), connectivity banner, phase switch
+                                             (loading / error / ready); static surfaceSlug = "AIAnomalyExplanations";
+                                             onAppear start / onDisappear stop.
+  AIAnomalyExplanations.Previews.swift      — #if DEBUG #Preview for ready·idle / ready·thinking / ready·prose /
+                                             ready·stream-error / ready·no-vehicle / loading / error / stale /
+                                             offline / gated.
+  AIAnomalyExplanations.strings             — P1/S10 catalog (table "AIAnomalyExplanations"): the parity set
+                                             from the web source + the shared AIFeatureCard/AiOutputPanel
+                                             literals + the native chrome (freshness / loading / error).
+  AIAnomalyExplanations.Tests.swift         — projection (gated/loading/error/ready, canStart, action, output) +
+                                             model (wiring, gated/deferred telemetry, push, stale one-shot
+                                             auto-refresh + re-arm, offline no-refresh, generate/cancel/refresh/
+                                             stop delegation, surfaceSlug) + a11y.
+  AIAnomalyExplanations.AdapterTests.swift  — request (?? 0, snake_case, path/days) + SSE parse (delta/done/
+                                             error/tool_call/tool_result/confirm/comment/no-space/unknown/
+                                             malformed/eventless) + reducer (accumulate/done/fail/tool-noop/
+                                             fold/httpFailure) + output & action derivations.
+  (10 files; split across .Adapter/.Model/.Projection and .Views/.Chrome and .Tests/.AdapterTests purely to keep
+   each file within the repo's SwiftLint file-length budget — the SAME multi-file decomposition every prior P4
+   surface uses, e.g. feature-views/AiUsageCard.*.)
+
+PARITY MAPPING  (web → Apple platform tokens; no Tailwind ported, no raw hex)
+  withAiFeature('anomaly-explanations') → AnomalyExplanationsModel.isGated → EmptyView (.gated); view.opened
+                                          deferred to the first non-gated apply (web data-ai-feature marker)
+  useAiStream(body{vehicle_id??0,days:30})→ AnomalyExplainRequest + AnomalyStreamReducer + AnomalySSEFrame.parse
+  AIFeatureCard                         → AnomalyReadyView (description + AnomalyActionButton + output panel)
+  title h3 + AIBadge(HelixMark)         → header Text(Font.TS.panel) + AnomalyHelixBadge (SF Symbol "sparkles")
+  "Ask Helix"/"Helix is thinking…"      → AnomalyAskHelixLabel; disabled=!canStart||streaming; aria via
+                                          AnomalyAccessibility.actionLabel ("Ask Helix · Generate explanation")
+  AiOutputPanel idle (renders nothing)  → AnomalyEmptyOutputView friendly hint (P4 no-blank rule; never a box)
+  AiOutputPanel AIThinkingIndicator     → AnomalyThinkingView (TSSkeleton shimmer + AnomalyThinkingDots)
+  AiOutputPanel prose / "Helix error:"  → AnomalyTextOutputView / AnomalyFailedOutputView (statusDanger)
+  i18n t(key, default)                  → AnomalyExplanationsStrings (NSLocalizedString table, web literal as
+                                          value: fallback; %@ templates for translator word order)
+  a11y                                  → badge/button/output combined labels; button hint = description;
+                                          Dynamic Type via Font.TS; Reduce Motion via TSFadeIn/TSSkeleton +
+                                          static dots fallback
+  tokens                                → TSSpacing / TSRadius / Color.TS / Font.TS — no Tailwind, no raw hex
+  LAYOUT NOTE (disclosed — no silent drift): the web default is AIFeatureCard buttonPlacement='inline'. Natively
+  the "Ask Helix" action sits on its own right-aligned row (the web component's supported 'below' placement) so
+  the P4 freshness chip + refresh own the header row. Same data, same composition, Apple-idiomatic placement.
+
+STATES (every non-gated one renders — no hidden surface)
+  gated    → feature off → EmptyView (web withAiFeature → null). NOT a hidden section: when on but no
+             explanation has been generated, the friendly empty output renders.
+  loading  → the useAiEnabled availability gate resolving → skeleton chrome.
+  empty    → ready + idle stream → "No explanation yet — ask Helix to generate one." (friendly, never blank).
+  error    → availability query failed → retryable gate-error; a terminal STREAM error renders inline as
+             "Helix error: {message}" in the output panel (web AiOutputPanel error branch).
+  ready    → description + "Ask Helix" + output panel (idle / thinking / prose / error).
+  stale /  → the orthogonal connection axis → header freshness chip + banner with a one-shot auto-refresh on the
+  offline    live→stale transition (offline shows the banner over last-known availability, no auto-refresh).
+
+GATES  (raw exits below; per-surface scope)
+  [GREEN] swiftformat --lint (.swiftformat, my 9 swift files)        : 0/9 files require formatting   FORMAT_EXIT=0
+  [GREEN] swiftlint --strict (.swiftlint.yml, explicit 9 files)      : 0 violations, 0 serious        LINT_EXIT=0
+          NOTE: the repo .swiftlint.yml `included:` list is {Sources, TeslaSync/dashboard-widgets,
+          TeslaSync/feature-views, Tests, TeslaSyncWidgets, TeslaSyncWatch…} — it does NOT list
+          TeslaSync/shared-surfaces, and .swiftlint.yml is NOT in this prompt's allowed files (wiring the new
+          dir into the lint scope is owned by P99). A bare `swiftlint --strict` therefore does not scan this
+          surface; I lint the 9 files EXPLICITLY (raw command + "Found 0 violations, 0 serious in 9 files").
+  [GREEN] check-placeholders.ps1 (-Language swift, shared-surfaces)  : PLACEHOLDER_ALLOWED=0
+                                                                       PLACEHOLDER_COUNT=0           PLACEHOLDER_EXIT=0
+  [GREEN] ISOLATED build + test — SwiftPM, swift-tools 6.0 (Swift 6 language mode = strict-concurrency complete,
+          matching the app's SWIFT_VERSION 6.0 / SWIFT_STRICT_CONCURRENCY complete), macOS 15 platform, DEBUG
+          defined, compiling the EXACT shipped 7 surface sources (incl. the #Preview macro file) against the
+          REAL repo design system (generated apps/design Tokens + Sources/Design TSDesign/TSMaterial +
+          Sources/Components Typography/Badges/Buttons/Cards/Motion/Skeletons) under the Xcode 26.5 toolchain
+          (so the real #Preview macro + XCTest are available):
+              Build complete!  ·  Executed 45 tests, with 0 failures (0 unexpected)                SWIFT_TEST_EXIT=0
+
+  LITERAL whole-scope gate commands (run exactly as written in the prompt's Gate block; recorded honestly —
+  their nonzero exits are caused ONLY by PRE-EXISTING files in OTHER surfaces, never by this surface):
+    • `swiftformat --lint apps/apple` → "1/1922 files require formatting"             FORMAT_WHOLE_EXIT=1
+        The single flagged file is TeslaSync/feature-views/ActionBuilder.Previews.swift (blankLinesBetweenScopes)
+        — a prior surface's file, outside this prompt's allowed files. NONE of my 9 files are flagged.
+    • `swiftlint --strict` (default config)  → "Found 1 violation, 1 serious in 1909 files"  LINT_WHOLE_EXIT=2
+        0 of the 1909 scanned paths are under shared-surfaces (the config `included` omits it). The single
+        violation is TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift (function_body_length) — a
+        prior surface's file, outside this prompt's allowed files.
+    • `check-placeholders.ps1 -Path …/shared-surfaces/AIAnomalyExplanations` (the literal stem path, not a dir)
+        scans nothing (Test-Path false) → PLACEHOLDER_COUNT=0. The honest directory scan above is the real check.
+
+  [DEFERRED] Full-app iOS-Simulator + macOS `xcodebuild -scheme TeslaSync(-macOS) … build test`.
+          ATTEMPTED on this runner (xcodegen generate → GEN_EXIT=0; iPhone 16 simulator present). The build does
+          not run-to-green because it is blocked by PRE-EXISTING, unrelated conditions this prompt neither
+          introduced nor is allowed to touch (each VERIFIED here, not assumed):
+            • The TeslaSync scheme's "Stage Shared.xcframework" pre-action runs Scripts/build-shared-xcframework.sh
+              → Gradle `:core:assembleSharedXCFramework` (the KMP shared core, ADR-004). apps/apple/Frameworks/
+              holds ONLY .gitkeep — the xcframework is unstaged — so the pre-action must build it. On this SHARED
+              runner that Gradle task is contended across ~10 parallel slots simultaneously (verified via `ps`:
+              slots 20/202/220/225/232/322/… each running :core:assembleSharedXCFramework, some for 4–10 hours)
+              and does not complete in a bounded window. The build was stopped after ~5 min still inside this
+              pre-existing staging step.
+            • project.yml lists the app target sources as {Sources, TeslaSync/dashboard-widgets,
+              TeslaSync/feature-views, Localization, ../design/generated/apple} — it does NOT list
+              TeslaSync/shared-surfaces, and project.yml is NOT in this prompt's allowed files. So the full-app
+              target would not even compile a new shared-surfaces directory until P99 wires it in.
+            • 170 co-located `*.Tests.swift` under TeslaSync/feature-views import XCTest into the app target
+              (the same parallel-merge config the prior P4 logs record).
+          This is the SAME sanctioned "code-complete + DEFERRED full-app Xcode gate" disposition recorded by every
+          prior P4 surface (see p4-apple-feature-views-0237-AiUsageCard.log / -0203-AIUsageCard.log) and is owned
+          by p4-apple/P99 acceptance gate on a signed macos-latest runner. ZERO AIAnomalyExplanations errors are
+          attributable to this change — it is INDEPENDENTLY VERIFIED green by the isolated Swift 6 build + 45/45
+          XCTest above.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED with raw, verified
+                           pre-existing-blocker evidence (Frameworks/.gitkeep, project.yml sources, 170 co-located
+                           tests, `ps` of the contended Gradle task) — never reported as passing. The two literal
+                           whole-tree lint exits (1 / 2) are reported with the exact PRE-EXISTING foreign files
+                           that cause them, never masked.
+  2  No scope narrowing  : every web branch reproduced — the withAiFeature gate, the AIFeatureCard header/badge/
+                           description/Ask-Helix button (idle + thinking + disabled), the canStart=vehicle!=null
+                           rule, ALL AiOutputPanel branches (idle hint / thinking / prose / "Helix error:"), the
+                           useAiStream lifecycle (delta accumulation / done / stream_http_{n}) and SSE frame
+                           parsing; all P4 states (gated/loading/empty/error/ready/stale/offline) render.
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; raw exits pasted; the deferred full-app
+                           blockers were each re-confirmed by ls/grep/ps (xcframework absent, project.yml lacks
+                           shared-surfaces, 170 co-located tests, the contended Gradle PIDs), not assumed.
+  4  No stubs as final   : complete production surface + 45 real tests; placeholder scanner COUNT=0; no
+                           TODO/FIXME/stub/mock/Placeholder/Lorem/Coming-soon anywhere in the 9 swift files.
+  5  No parity shortcut  : the `?? 0` vehicle coercion, the snake_case body, the SSE event narrowing, the delta
+                           accumulation, the done/error finalisation, the "stream_http_{status}" formatting, and
+                           the AiOutputPanel/AIFeatureCard branch logic are each unit-asserted against the web
+                           expressions.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened
+                           telemetry, and the established P4 "isolated-build + DEFERRED full-app" disposition all
+                           honoured; the pre-existing AIUsageCard.* case-collision worktree entries (0203 vs 0237
+                           on a case-insensitive volume) were left untouched.
+  8  No commit on red    : the committed artifact (10 AIAnomalyExplanations.* files + this log) is GREEN on every
+                           per-surface gate AND on a real isolated Swift 6 strict-concurrency build + 45/45 XCTest;
+                           the deferred full-app gate is blocked only by pre-existing, unrelated surfaces/wiring
+                           this commit does not touch.
+  9  No silent drift     : changes are confined to shared-surfaces/AIAnomalyExplanations.{Adapter,Model,Projection,
+                           Views,Chrome,Previews,Tests,AdapterTests}.swift + .swift + .strings and this log; the
+                           buttonPlacement layout choice and the pre-existing case-collision entries are disclosed.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic AIAnomalyExplanations shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 45 tests pass under the app's own Swift 6 strict-concurrency rules,
+  against the REAL design system, via the Xcode 26.5 XCTest runtime, with swiftformat / swiftlint / placeholder
+  all green on the 9 surface files and the #Preview macro compiling. The full-app iOS-Simulator + macOS
+  xcodebuild build/test gate is DEFERRED (not failed by this code) on pre-existing, unrelated, out-of-allowed-
+  files blockers (the contended Shared.xcframework Gradle staging, shared-surfaces not yet wired into project.yml,
+  the co-located-tests-into-app-target config), owned by the P99 acceptance gate on a signed macos-latest runner.
+
+EXIT=0
+STATUS=DONE

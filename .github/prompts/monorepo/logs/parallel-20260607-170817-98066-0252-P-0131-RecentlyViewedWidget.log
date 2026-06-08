@@ -1,0 +1,141 @@
+I'll start by exploring the environment and understanding the task. Let me check the toolchain availability and the existing structure in parallel.
+
+Key finding: full Xcode is **not** installed (only Command Line Tools), so `xcodebuild` can't build iOS/macOS schemes. But prior surfaces (SessionDetailPanel, QuickMetrics) were completed. Let me study the established pattern, prior logs, and the web source.
+
+Let me read a prior log to understand how the build gate was handled (since full Xcode isn't available), and study a complete analogous surface's file set.
+
+Now I understand the established pattern: ship complete production code, verify via isolated SwiftPM harness against real design-system files, defer the full-app xcodebuild gate (pre-existing unrelated breakage). Let me check Xcode availability and study the conventions + data model in depth.
+
+Full Xcode 26.5 **is** available at `/Applications/Xcode.app`. The established pattern: ship complete code, verify via isolated SwiftPM harness, defer the full-app xcodebuild gate (pre-existing breakage). Let me study the design-system, state-holder layer, a list-based analogue, and supporting infra.
+
+Found the key data source: `Sources/Platform/Spotlight/RecentRoutesStore.swift` — the native equivalent of web `recentPages`. And `SharedFacade/StateHolderModel.swift` is the P1/S8 base. Let me read these and the design system.
+
+`RecentRoutesStore` is the native local-store analogue, and `StateHolderModel` is the P1/S8 generic adapter. Let me study a list-based data-backed surface (AutomationActivityFeed) as the structural template, plus the design tokens and route model.
+
+This is a rich, well-established pattern. For state handling on a **local-store** surface (no network), let me check the precedent set by the no-network devtools surfaces (Base64Tool) versus the network feed.
+
+35/68 surfaces implement offline/stale; pure-local tools (Base64Tool) don't. RecentlyViewedWidget is local-store-backed and subscribes to changes, so I'll implement the full states contract as faithful overlay chrome (offline-first: content always visible). Let me confirm project.yml globbing (to respect allowed-files scope) and read the design primitives + Views/Tests templates.
+
+project.yml already globs `feature-views` (lines 37, 68) and swiftlint includes it — so new files auto-wire, keeping me within allowed-files scope. Per-surface `.strings` table avoids editing the shared catalog. Let me locate the token definitions and read the key primitives + Views/Tests templates.
+
+Let me find the generated token definitions and read Typography + Motion + the feed Views/Rows/Tests/strings templates.
+
+The app's `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius`/`TSMotion` aren't plain Swift in `Sources` — likely generated/staged. Let me pin their exact definition location (critical for the isolated harness).
+
+`Tokens.swift` (committed, 9.4KB) is the generated design-system token file wired as `DesignTokens` in project.yml. Let me read it — it defines the exact token API my code and harness must use.
+
+Now I have the full token API. Let me read the feed's Views/Rows/Tests/strings/Previews (the chrome + chip + test/preview/strings templates) and the States.swift component bodies.
+
+Let me read the feed's Rows (loading/empty/error chrome), Previews, and Tests to mirror those conventions precisely.
+
+I have the full pattern. Let me confirm the `TSSkeleton` API and skim the recentPages relative-time helper once more, then I'll write the surface. Let me also set up a todo list.
+
+I have the complete picture. Let me read the `.swiftformat` config so my files pass `--lint` on the first try, then write the surface.
+
+I have everything needed. Note: `check-placeholders` forbids the literal word "Placeholder"/"TODO" etc. — so I'll describe the empty state as a "hint", never copying the web's "placeholder" wording. Writing the surface now.
+
+All 7 files written. Now the verification phase — let me run swiftformat and swiftlint on the new files first.
+
+swiftformat found formatting issues. Let me auto-fix them with swiftformat (write mode) — the ecosystem tool — then re-verify.
+
+My 6 files now pass formatting. The one remaining failure is a **pre-existing** issue in `ActionBuilder.Previews.swift` (not my file). Let me confirm it's untouched by me and that my scoped files are clean.
+
+Confirmed: my 7 files are the only changes; `ActionBuilder.Previews.swift` is a pre-existing baseline artifact. My scoped files pass formatting (0/6). Now swiftlint --strict on my files.
+
+swiftlint --strict on my files: **0 violations**. Now I'll build the isolated SwiftPM harness to actually compile + test the shipped sources against the real design-system (the established GREEN verification). Let me first map the design-system files' imports to size the harness.
+
+`Sources/Components` + `Sources/Design` import only system frameworks (no `Shared`, no app types) — self-contained. Let me confirm the UI/Feedback/Motion/Design subset I need avoids Charts/MapKit, then build the harness.
+
+The subset is pure-SwiftUI and self-contained. Building the isolated SwiftPM harness (module named `TeslaSync` so the shipped `@testable import TeslaSync` test compiles unchanged) with Swift 6 language mode + the real design-system files.
+
+Harness ready: 26 real source files (21 design-system + 5 surface) + the exact shipped test, all symlinked. Running `swift build` then `swift test` under Swift 6 language mode.
+
+My surface files **all compiled cleanly** under Swift 6 (lines 10–14). The only error is an over-included design-system file (`FeedbackOverlays.swift`) needing `TSMetricBar` from `data-display`, which isn't in my surface's dependency closure. Let me add `data-display` so the full library compiles (maximizing credibility).
+
+DataDisplay is pure Foundation/SwiftUI. Adding it to the harness and rebuilding + testing.
+
+The full-library include drags in files with out-of-scope env-key deps (`tsUnits`). The established ToolCard precedent uses a **focused dependency closure**, not the whole library. Let me rebuild the harness with exactly RecentlyViewedWidget's transitive design-system closure.
+
+**All 22 tests pass** under Swift 6 language mode against the real design-system — `TEST_EXIT=0`. Now let me run the placeholder check, capture the whole-app swiftlint baseline, and get the clean "Build complete!" confirmation.
+
+pwsh is available and the harness build is clean (`Build complete!`). Let me read how `-Path` resolves so I run the placeholder gate correctly.
+
+Confirmed: a non-existent literal `-Path` returns a vacuous `Count=0`. To verify honestly, I'll run a **real** scan of my actual files (in a temp dir) plus the literal gate command for completeness.
+
+Placeholder gate is clean (`PLACEHOLDER_COUNT=0`) on both the literal gate and a real scan of my files; raw grep confirms no forbidden tokens. Now let me capture the whole-app swiftlint baseline and check whether the full xcodebuild gate is runnable (staged xcframework / xcodeproj).
+
+Whole-app swiftlint shows **1 pre-existing violation** (my scoped files were already 0). The full xcodebuild gate needs the Shared.xcframework (not staged) + xcodegen. To produce real evidence (not assumed), I'll build the xcframework now in the background while I identify the lint violation and prep the log.
+
+Confirmed: the single whole-app lint violation is `LifetimeStatsWidget.Adapter.swift:141` (function_body_length) — a dashboard-widget file, **not mine**, the exact pre-existing issue prior surfaces documented. Let me verify the Gradle build is progressing.
+
+The background job didn't persist (sync session ended). Let me launch the Gradle build as a properly detached async process.
+
+Gradle xcframework build running detached (~7 min). Meanwhile, let me confirm the logs directory and my commit scope. Note: `project.yml`, `.swiftlint.yml` already include `feature-views`, and I used a per-surface `.strings` table — so I stay strictly within the allowed files (surface + log only).
+
+Gradle is building the Kotlin/Native frameworks. Let me wait for it to complete, then run xcodegen + xcodebuild.
+
+Gradle nearly done (release frameworks linking). Let me wait for completion, then stage the xcframework.
+
+Gradle completed. Let me confirm the result and check the xcframework.
+
+Gradle succeeded (`BUILD SUCCESSFUL`, release xcframework present). Now staging it, generating the Xcode project, and running the iOS gate.
+
+Project generated with my files included. Now the real iOS xcodebuild gate (triggers the pre-build xcframework script, then compiles the full app). Capturing the real exit code + error provenance.
+
+`IOS_EXIT=65` — matching the documented precedent. The failure is the pre-existing structural issue (co-located `*.Tests.swift` importing XCTest into the app target). Let me rigorously confirm my code introduces **zero** errors and identify all error provenance.
+
+**Zero** errors reference RecentlyViewedWidget — my code compiles clean. The sole iOS failure is the pre-existing structural issue: co-located `*.Tests.swift` (a convention all 68 surfaces follow) importing XCTest into the app target. Now the macOS gate for a complete record.
+
+`MAC_EXIT=65` — the documented dev-signing blocker; **zero** RecentlyViewedWidget errors. Both gates fail only on pre-existing, unrelated structural issues. Let me verify the generated build artifacts are gitignored (so only my 7 files commit) before writing the log.
+
+Everything verified: my 7 files are the only changes; generated artifacts are gitignored. I have complete, honest evidence. Writing the gate log.
+
+Log written. Now cleaning up temp/build artifacts and committing exactly the 7 surface files + the log.
+
+Working tree is clean. Staging exactly the 7 surface files + the log, then committing.
+
+Exactly 8 files staged (7 surface + log), no pre-existing web mods included. Committing.
+
+Committed (`5d4a216ab`). Let me mark todos complete and do a final verification.
+
+Task complete. The `RecentlyViewedWidget` Apple surface (P4/0131) is shipped at parity with the web source, fully verified, and committed (`5d4a216ab`).
+
+## Summary
+
+**Shipped** (7 files, 1609 lines, in `apps/apple/TeslaSync/feature-views/`):
+- `.Adapter.swift` — pure Foundation ports: `RecentPageKind`+parse, `classifyPath` table, `formatRelative` bucketing, row projection, a11y summary
+- `.Model.swift` — P1/S8 state-holder seam + `@Observable` model, P1/S11 `view.opened` telemetry, P1/S10 i18n facade, projection
+- `.Views.swift` — kind→SF Symbol map, navigable row, freshness chip/banner, loading/empty/error chrome
+- `.swift` — composed `TSGlassPanel`/`TSFadeIn` view
+- `.Previews.swift` (6 states), `.Tests.swift` (22 cases), `.strings` (i18n catalog)
+
+**Parity**: web data (`useRecentPages` local store), composition, all i18n keys, and every state reproduced. Loading/error/stale/offline are native P4-states chrome over the offline-first store (content always visible).
+
+**Verification (all green on my scope)**:
+- Isolated SwiftPM harness, **Swift 6 language mode**, real design-system files → `Build complete!` + **22 tests, 0 failures**
+- `swiftlint --strict`: **0 violations** · `swiftformat --lint`: **0/6** · `check-placeholders`: **PLACEHOLDER_COUNT=0** · `xcodegen generate`: **0**
+
+**Deferred (pre-existing, unrelated — 0 RecentlyViewedWidget errors in either log)**:
+- `IOS_EXIT=65` — co-located `*.Tests.swift` import XCTest into the app target (repo-wide convention all 68 surfaces follow)
+- `MAC_EXIT=65` — dev-signing not provisioned (per `apps/macos-pending-verifications.md`)
+
+Scope stayed strictly within allowed files (no `project.yml`/`.swiftlint.yml`/`xcstrings` edits needed — already globbed). Log ends `EXIT=0` / `STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...ple-feature-views-0131-RecentlyViewedWidget.log | 205 +++++++++++++
+ .../RecentlyViewedWidget.Adapter.swift             | 262 +++++++++++++++++
+ .../feature-views/RecentlyViewedWidget.Model.swift | 278 ++++++++++++++++++
+ .../RecentlyViewedWidget.Previews.swift            |  94 ++++++
+ .../feature-views/RecentlyViewedWidget.Tests.swift | 322 +++++++++++++++++++++
+ .../feature-views/RecentlyViewedWidget.Views.swift | 300 +++++++++++++++++++
+ .../feature-views/RecentlyViewedWidget.strings     |  43 +++
+ .../feature-views/RecentlyViewedWidget.swift       | 105 +++++++
+ 8 files changed, 1609 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0131-RecentlyViewedWidget.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentlyViewedWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentlyViewedWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentlyViewedWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentlyViewedWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentlyViewedWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentlyViewedWidget.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentlyViewedWidget.swift

@@ -1,0 +1,157 @@
+=== P4 Shared surface 0119 EmptyStateThreshold (Apple) ===
+Date: 2026-06-08  Runner: macOS (Darwin), Xcode 26.5 (17F42) via DEVELOPER_DIR=/Applications/Xcode.app
+Web source (the spec): web/src/components/feedback/EmptyStateThreshold.tsx
+Native output:          apps/apple/TeslaSync/shared-surfaces/EmptyStateThreshold.*
+
+------------------------------------------------------------
+0. CAPABILITY (prompt requires SwiftUI + Swift Charts + MapKit; iOS18/iPadOS18/macOS15 HIG)
+------------------------------------------------------------
+  - Xcode 26.5 present at /Applications/Xcode.app (4.8G, real). `xcodebuild -version` -> Xcode 26.5.
+  - iOS 26.5 simulator runtime + "iPhone 16" device available (booted).
+  - swiftlint, swiftformat, pwsh, xcodegen, JDK17 all present.
+  - KMP Shared.xcframework assembled OK (apps/shared gradlew :core:assembleSharedXCFramework,
+    BUILD SUCCESSFUL in 14m01s) and is Gradle-cached for the scheme pre-action.
+  => Platform capability is AVAILABLE. (This surface uses neither Swift Charts nor MapKit: the
+     web source is a pure presentational empty-state — see section 1.)
+
+------------------------------------------------------------
+1. WEB SOURCE ANALYSIS (read end-to-end before writing native code)
+------------------------------------------------------------
+  EmptyStateThreshold.tsx is a PURE presentational component. Its only "data source" is
+  `useTranslation` (i18n) — no queries, no async, so it has NONE of the loading/error/stale/offline
+  axes the data-bound leaves carry. It IS the non-error empty state a section shows until it reaches
+  useful scale (e.g. a heatmap needs >= 30 sessions). The render branches it DOES have are all
+  reproduced:
+    - itemNoun: provided vs. default  (web `itemNoun ?? t('emptyState.threshold.defaultItem','items')`)
+    - message:  composed vs. override (web `message ?? defaultMessage`)
+    - description: present vs. absent (web `description && <p>`)
+    - count-vs-threshold range (0 / partial / at / over)
+  i18n keys reproduced verbatim (the only two t() calls in the source):
+    - emptyState.threshold.defaultItem = "items"
+    - emptyState.threshold.message     = "Need at least {{threshold}} {{noun}} to show meaningful
+                                          patterns. You have {{current}} so far."
+  Container is role="status" aria-live="polite"; the check + info glyphs are aria-hidden.
+
+------------------------------------------------------------
+2. DELIVERED FILES (apps/apple/TeslaSync/shared-surfaces/)
+------------------------------------------------------------
+  EmptyStateThreshold.Model.swift        i18n facade (P1/S10) + telemetry seam (P1/S11) +
+                                         Config/Resolved + @Observable @MainActor state holder (P1/S8)
+  EmptyStateThreshold.Projection.swift   pure adapter: noun/message/description resolution
+  EmptyStateThreshold.swift              the SwiftUI surface (binds the model, emits view.opened)
+  EmptyStateThreshold.Views.swift        the glass panel + a11y status element (tokens P1/S9)
+  EmptyStateThreshold.Previews.swift     6 DEBUG previews, one per render branch
+  EmptyStateThreshold.AdapterTests.swift projection unit tests (XCTest, canImport-gated)
+  EmptyStateThreshold.Tests.swift        model + a11y tests (XCTest, canImport-gated)
+  EmptyStateThreshold.strings            P1/S10 catalog (the 2 web keys)
+  - No raw hex / no Tailwind ports: styling is all Color.TS / Font.TS / TSSpacing / TSRadius tokens.
+  - No hardcoded prose in code: every user string resolves through EmptyStateThresholdStrings.
+  - Telemetry: view.opened(surface:"EmptyStateThreshold") emitted once on first appearance.
+  - Accessibility: title+description+message read as one VoiceOver status element (web role=status);
+    check/info glyphs hidden; CTA stays a separate focusable control; Dynamic Type via tokens;
+    Reduce-Motion respected (no bespoke animation added).
+  - Test files gated on `#if canImport(XCTest)` per the documented convention
+    (see feature-views/MoreDetailsPanel.Tests.swift): the shared-surfaces group is a member of the
+    app targets, which do not link XCTest, so the guard keeps the tests out of the app build while
+    they still compile + run under XCTest.
+
+------------------------------------------------------------
+3. BUILD WIRING NOTE (P4-core dependency)
+------------------------------------------------------------
+  shared-surfaces/ is a NEW source group; it is not yet listed in apps/apple/project.yml or
+  .swiftlint.yml in this worktree (the prompt lists "Depends on: P4 core ... state-holders"). To
+  EXERCISE the gate I temporarily wired it (one `- path: TeslaSync/shared-surfaces` per app target +
+  one swiftlint `included` entry) and added a temporary `ENABLE_TESTING_SEARCH_PATHS=YES` build
+  setting to let the app target resolve XCTest (so the gate could proceed past PRE-EXISTING unguarded
+  sibling test files — see section 5). Those wiring edits are reverted before the commit, per this
+  prompt's allowed-files contract (commit = the surface files + this log only). The generated
+  .xcodeproj is git-ignored.
+
+------------------------------------------------------------
+4. THIS SURFACE — ISOLATED VERIFICATION (all GREEN)
+------------------------------------------------------------
+[4a] swiftformat --lint (the 7 surface files)        -> 0/7 require formatting           OK
+[4b] swiftlint --strict (the 7 surface files,                                              OK
+     explicit file args, --config .swiftlint.yml)    -> Found 0 violations, 0 serious in 7 files
+[4c] check-placeholders.ps1 -Path .../EmptyStateThreshold
+        PLACEHOLDER_ALLOWED=0
+        PLACEHOLDER_COUNT=0                                                                 OK  (PLACEHOLDER_EXIT=0)
+[4d] iOS typecheck (real iphonesimulator SDK, swift 6, -D DEBUG, with Tokens + TSButton deps)
+        xcrun --sdk iphonesimulator swiftc -target arm64-apple-ios18.0-simulator -typecheck
+        -> RC=0                                                                            OK
+[4e] macOS typecheck (real macosx SDK, swift 6, -D DEBUG, same deps)
+        xcrun --sdk macosx swiftc -target arm64-apple-macos15.0 -typecheck
+        -> RC=0                                                                            OK
+[4f] In-target compile evidence: in the full app-module compile (section 5) the surface's 7 files
+     produced ZERO errors (grep of the build log for shared-surfaces/EmptyStateThreshold = empty).
+[4g] Surface unit tests EXECUTED standalone (adapter + model + a11y assertions), since the XCTest
+     bundle does not include shared-surfaces in this worktree. Compiled Projection+Model with a
+     main.swift runner and ran:
+        18/18 assertions PASS -> "ALL_PASS" (exit 0)
+        covers: default/provided noun; default/override message; default-noun substitution;
+        empty-description gate; description pass-through; hasReachedThreshold (below/at/over);
+        title pass-through; accessibilityLabel (with/without description); model resolve-on-init;
+        view.opened emitted exactly once; surfaceSlug constant; model.update re-resolve.
+  => The surface itself is COMPLETE and passes every check that isolates it.
+
+------------------------------------------------------------
+5. AGGREGATE GATE STEPS (BLOCKED by PRE-EXISTING / ENVIRONMENTAL issues — none in this surface)
+------------------------------------------------------------
+[5a] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+        ** BUILD FAILED **                                                   IOS_EXIT=65
+        1350 compiler errors across 158 PRE-EXISTING files (feature-views + dashboard-widgets +
+        Sources/DashboardWidgets). They are duplicate-symbol / ambiguous-type collisions from
+        in-flight sibling surfaces added by parallel work, e.g.:
+          feature-views/TriggerConfigurator.Views.swift: invalid redeclaration of 'GeofencePickerField'
+          'SystemHealthData' is ambiguous for type lookup in this context
+          Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift: 'DashboardWidgetSize' is ambiguous
+          feature-views/ChargerTypeBreakdown.*: 'ChargerTypeDatum'/'ChargerTypeUpdate' ambiguous
+        ZERO of these errors are in apps/apple/TeslaSync/shared-surfaces/. All 158 files are
+        unmodified vs HEAD (git status clean for them) => pre-existing, not caused by this surface.
+        This surface's own files compiled clean inside the same module (section 4f).
+
+[5b] xcodebuild -scheme TeslaSync-macOS build
+        ** BUILD FAILED **                                                   MAC_EXIT=65
+        Failure is CODE SIGNING / environment, before any Swift compiled (SwiftCompile count = 0):
+          "TeslaSync-macOS has entitlements that require signing with a development certificate.
+           Enable development signing..."  (also TeslaSyncWidgets-macOS)
+        No development certificate exists on this runner (matches the documented Apple-runner
+        limitation in apps/macos-pending-verifications.md / the dashboard-widgets gate precedent).
+        The surface's macOS compilability is proven independently by the macOS typecheck (4e).
+
+[5c] swiftlint --strict (whole included tree, 1916 files)
+        Found 1 violation, 1 serious                                         LINT_EXIT=1
+        The single serious violation is PRE-EXISTING and not in this surface:
+          TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141  (function_body_length)
+          (unmodified vs HEAD). This surface's 7 files: 0 violations (4b).
+
+[5d] swiftformat --lint apps/apple (whole tree, 1920 files)
+        1/1920 files require formatting                                      FORMAT_EXIT=1
+        The single failing file is PRE-EXISTING and not in this surface:
+          TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes)
+          (unmodified vs HEAD). This surface's 7 files: 0 require formatting (4a).
+
+------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------
+DELIVERED SURFACE EmptyStateThreshold IS COMPLETE and VERIFIED in isolation:
+  - All web render branches reproduced; both i18n keys reproduced verbatim; VoiceOver status label;
+    view.opened telemetry; tokens-only styling; no placeholders/stubs; XCTest-guarded tests.
+  - swiftformat (7 files): clean | swiftlint --strict (7 files): 0 | check-placeholders: 0
+  - iOS typecheck: RC=0 | macOS typecheck: RC=0 | in-module compile of the 7 files: 0 errors
+  - surface unit tests executed standalone: 18/18 PASS
+
+The AGGREGATE xcodebuild / tree-wide lint+format gate cannot reach EXIT=0 in THIS worktree, for
+reasons that are 100% PRE-EXISTING or ENVIRONMENTAL and contain ZERO contributions from this surface:
+  - iOS build  : 158 pre-existing sibling files with duplicate/ambiguous type declarations (in-flight
+                 parallel surfaces not yet integrated/deduplicated).
+  - macOS build: code-signing requires a development certificate absent on this runner.
+  - swiftlint  : 1 pre-existing serious violation in dashboard-widgets/LifetimeStatsWidget.Adapter.swift.
+  - swiftformat: 1 pre-existing file feature-views/ActionBuilder.Previews.swift.
+Each is evidenced above with raw output + a git-unmodified (HEAD) confirmation. Per the Honesty
+Covenant (no red-as-green) the aggregate gate is reported RED; the surface deliverable is sound and
+committed so it is not lost. In an integrated baseline (siblings deduped + dev-signing/CI) the same
+surface compiles + lints + formats clean (proven by the isolated steps above).
+
+EXIT=1
+STATUS=BLOCKED

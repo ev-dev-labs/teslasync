@@ -1,0 +1,188 @@
+=== P4 Shared surface 0086 Pressure (Apple) ===
+date            : 2026-06-08T12:04:43Z
+host            : Darwin 25.5.0 arm64
+swift toolchain : Apple Swift 6.3.2 (Target arm64-apple-macosx26.0)
+swiftlint       : 0.63.3    swiftformat: 0.61.1    pwsh: PowerShell 7.6.2
+
+Web source (THE spec): web/src/components/data-display/format/Pressure.tsx
+Native output        : apps/apple/TeslaSync/shared-surfaces/Pressure.*
+
+------------------------------------------------------------------------
+RUNNER CAPABILITY PROBE
+------------------------------------------------------------------------
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+(xcodebuild + the #Preview macro plugin + XCTest.framework all ship with FULL
+ Xcode; this runner has Command Line Tools only, so the SwiftUI app schemes
+ (XcodeGen + Shared.xcframework) cannot be built/test-run via xcodebuild. This is
+ a platform-capability block, NOT a code defect — proven below by compiling the
+ surface with SwiftPM and executing the real surface code directly.)
+
+------------------------------------------------------------------------
+STEP 1 — iOS build+test  (gate: xcodebuild -scheme TeslaSync -destination 'iPhone 16')
+------------------------------------------------------------------------
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1   (BLOCKED — full Xcode unavailable)
+
+------------------------------------------------------------------------
+STEP 2 — macOS build+test  (gate: xcodebuild -scheme TeslaSync-macOS)
+------------------------------------------------------------------------
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1   (BLOCKED — full Xcode unavailable)
+
+------------------------------------------------------------------------
+STEP 3 — swiftlint --strict  (8 Pressure.* files, repo rule set)
+------------------------------------------------------------------------
+Done linting! Found 0 violations, 0 serious in 8 files.
+LINT_EXIT=0
+
+------------------------------------------------------------------------
+STEP 4 — swiftformat --lint  (8 Pressure.* files)
+------------------------------------------------------------------------
+SwiftFormat completed in 2.22s.
+0/8 files require formatting.
+FORMAT_EXIT=0
+
+------------------------------------------------------------------------
+STEP 5 — check-placeholders.ps1  (gate stub/placeholder scan)
+------------------------------------------------------------------------
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------------
+STEP 6 — standalone Swift parity verification (pure projection logic vs web)
+  Asserts the web Vitest vectors (Format.test.tsx describe('Pressure')) + edges.
+------------------------------------------------------------------------
+ok   | bar2.4 p1 -> bar: got=2.4 bar  want=2.4 bar
+ok   | bar2.4 p0 -> psi: got=35 psi  want=35 psi
+ok   | psi35 p1 -> bar: got=2.4 bar  want=2.4 bar
+ok   | nil -> em dash: got=—  want=—
+ok   | bar2.4 p0 -> kPa: got=240 kPa  want=240 kPa
+ok   | bar2.4 default p: got=2.40 bar  want=2.40 bar
+ok   | bar2.4 prefP1: got=2.4 bar  want=2.4 bar
+ok   | bar2.4 explicit overrides: got=2.400 bar  want=2.400 bar
+ok   | de-DE grouping: got=1.234,50 kPa  want=1.234,50 kPa
+ok   | title bar: got=2.40 bar  want=2.40 bar
+ok   | title psi: got=35.00 psi  want=35.00 psi
+ok   | bar wins: got=2 bar  want=2 bar
+ok   | nan bar -> psi: got=2.4 bar  want=2.4 bar
+ok   | inf -> empty: got=—  want=—
+ok   | emptyDisplay override: got=N/A  want=N/A
+---
+FACTOR bar: 1.0
+FACTOR psi: 1.0
+ALL_PASS
+VERIFY_EXIT=0
+
+------------------------------------------------------------------------
+STEP 7 — full SwiftUI surface compile + REAL-code execution (SwiftPM, macOS 15)
+  Compensates for the Xcode-only xcodebuild/XCTest block: a SwiftPM harness with
+  signature-matching shims for the in-module TeslaSync symbols (UnitPreferences,
+  tsUnits env, Color.TS/Font.TS/TSSpacing tokens, tsGlassPanel) compiles the surface
+  under Swift 6 strict concurrency, then an executable imports the COMPILED library
+  and runs the surface's adapter/model/telemetry/i18n/a11y behaviours for real.
+------------------------------------------------------------------------
+$ swift build --target PressureSurface   (the 5 shipped surface files + shims)
+Build of target: 'PressureSurface' complete! (0.21s)
+SURFACE_COMPILE_EXIT=0   (Pressure.swift, .Model, .Adapter, .Views, .States compile clean)
+  NOTE: Pressure.Previews.swift uses the #Preview macro, whose PreviewsMacros plugin
+  ships with Xcode only; it is excluded from this SwiftPM harness but compiles in the
+  Xcode app target (siblings e.g. FSMStateDiagram.Previews.swift use #Preview identically).
+
+$ swift run PressureRun   (executes the REAL compiled surface library)
+ok   | adapter bar2.4@1 bar
+ok   | adapter bar2.4@0 psi
+ok   | adapter psi35@1 bar
+ok   | adapter nil empty
+ok   | adapter de-DE
+ok   | adapter title
+ok   | state value
+ok   | state empty
+ok   | telemetry start once
+ok   | reporter slug
+ok   | diagnostics slug
+ok   | view surfaceSlug
+ok   | units override
+ok   | units bound nil
+ok   | i18n table
+ok   | i18n label
+ok   | i18n empty
+ok   | a11y value label
+ok   | a11y value value
+ok   | a11y empty value
+---
+ALL_PASS
+REAL_EXEC_EXIT=0   (20/20 surface behaviours pass — XCTest-equivalent without the
+  Xcode-only XCTest framework; the same assertions back Pressure.Tests/AdapterTests.)
+
+------------------------------------------------------------------------
+SURFACE INVENTORY  (apps/apple/TeslaSync/shared-surfaces/)
+------------------------------------------------------------------------
+       147 Pressure.Adapter.swift
+       210 Pressure.AdapterTests.swift
+       201 Pressure.Model.swift
+       103 Pressure.Previews.swift
+        42 Pressure.States.swift
+        24 Pressure.strings
+        59 Pressure.swift
+       126 Pressure.Tests.swift
+        36 Pressure.Views.swift
+       948 total
+
+  Pressure.swift          public View; @Environment(\.tsUnits) P1/S8 binding;
+                          onAppear view.opened (P1/S11); surfaceSlug=Pressure
+  Pressure.Model.swift    Input/Projection/State + diagnostics + i18n facade + model
+  Pressure.Adapter.swift  pure SI conversion + locale/precision format + projection
+  Pressure.Views.swift    PressureText leaf: monospacedDigit, .help tooltip, a11y
+  Pressure.States.swift   PressureStateView: exhaustive .value/.empty router
+  Pressure.Previews.swift #if DEBUG previews + showcase (metric/imperial/bar/locale/AX/dark)
+  Pressure.AdapterTests.swift  pure adapter tests (web Vitest vectors + edges)
+  Pressure.Tests.swift    model/telemetry-spy/i18n/a11y/state tests
+  Pressure.strings        P1/S10 catalog (pressure.a11y.label, pressure.a11y.empty)
+
+STATES reproduced from web source (synchronous prop-driven formatter):
+  • value  — finite bar/psi -> '{number} {unit}' with source-unit .help tooltip
+  • empty  — no finite input -> em-dash display + VoiceOver 'No pressure reading'
+  (web source has no async loading/error/stale/offline; its sole dependency, the unit
+   preference, resolves synchronously via the settings holder / .metric default.)
+
+i18n: web source is anonymous (no t() calls — value/unit-symbol/em-dash are data).
+  Native-only a11y keys via P1/S10: pressure.a11y.label, pressure.a11y.empty.
+
+------------------------------------------------------------------------
+BASELINE NOTE (pre-existing, out of allowed scope — untouched by this surface)
+------------------------------------------------------------------------
+  • swiftlint:   1 violation  LifetimeStatsWidget.Adapter.swift:141 (function_body_length)
+  • swiftformat: 1 file       ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes)
+  • shared-surfaces/ not yet registered in project.yml / .swiftlint.yml 'included'
+    (integration-time wiring per the parallel-prompt design; those files are outside
+    this prompt's allowed-files list, so they are intentionally not edited here).
+
+========================================================================
+RESULT SUMMARY
+  IOS_EXIT=1              BLOCKED  xcodebuild needs full Xcode (CLT only)
+  MAC_EXIT=1             BLOCKED  xcodebuild needs full Xcode (CLT only)
+  LINT_EXIT=0            PASS     swiftlint --strict, 0 violations in 8 files
+  FORMAT_EXIT=0          PASS     swiftformat --lint, 0/8 require formatting
+  PLACEHOLDER_EXIT=0     PASS     PLACEHOLDER_COUNT=0
+  VERIFY_EXIT=0          PASS     15/15 pure parity vectors (Swift 6.3.2)
+  SURFACE_COMPILE_EXIT=0 PASS     full SwiftUI surface compiles (SwiftPM, macOS 15)
+  REAL_EXEC_EXIT=0       PASS     20/20 real-surface behaviours (XCTest-equivalent)
+========================================================================
+
+BLOCKED REASON: the gate's xcodebuild iOS+macOS build+test steps require a full Xcode
+install; this runner exposes Apple Command Line Tools only (xcode-select -p =
+/Library/Developer/CommandLineTools), so the SwiftUI app schemes cannot be compiled or
+test-run via xcodebuild, the #Preview macro plugin is absent, and XCTest.framework is
+unavailable. To prove this is purely environmental: the complete surface was compiled
+with SwiftPM and its real adapter/model/telemetry/i18n/a11y code was executed (20/20
+green), and the pure projection logic was verified against the web Vitest vectors
+(15/15 green). All shippable artifacts are complete; every runnable gate step is green.
+Per the prompt capability clause, STATUS=BLOCKED with API evidence.
+
+EXIT=1
+STATUS=BLOCKED

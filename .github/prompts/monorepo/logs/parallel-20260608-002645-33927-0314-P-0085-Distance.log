@@ -1,0 +1,91 @@
+I'll start by exploring the task requirements: reading the web source, checking the Apple app structure, and verifying platform capabilities.
+
+macOS environment: `swiftlint`, `swiftformat`, `swift` available, but `xcodebuild` requires full Xcode (only Command Line Tools installed). Let me investigate the Apple app structure and the web source.
+
+Now I understand the web source — it's a pure synchronous distance formatter. Let me explore the existing Apple app structure to learn the conventions (P1/S8 state holders, S9 tokens, S10 i18n, S11 diagnostics, shared-surfaces patterns).
+
+Large established app. The `shared-surfaces` dir doesn't exist yet; allowed files restrict me to `Distance.*` + log. Let me study the key conventions I must bind to: the units/settings holder, i18n facade, design tokens, diagnostics, and existing data-display formatters.
+
+Found `Sources/SharedFacade/Units+Facade.swift` and existing `UnitFormatters`/`TypedFormatters`. Let me read the core conventions in parallel.
+
+Key finding: an atomic `TSDistance` already exists (out of scope per prompt). I'm building the **shared surface** port. Now let me find the i18n facade, diagnostics (`view.opened`), design tokens, and test conventions.
+
+Excellent — found the surface pattern. `Sources/SharedFacade/` is the P1/S8 state-holder layer, and `TeslaSync/feature-views/` shows the exact per-surface file-set convention. Let me read the full listing and a complete exemplar.
+
+The per-surface file-set is clear. Let me read a canonical exemplar end-to-end (`AcDcStatsPanel.*`) plus the SharedFacade core and telemetry pattern to mirror conventions exactly.
+
+This is the canonical pattern. Now let me read the supporting conventions: the SharedFacade core, an exemplar `.strings`/`.Tests`/`.Previews`/`.Views`/`.Adapter`, design tokens, lint config, and how surfaces consume units.
+
+Now let me read the Adapter exemplar, the `.strings` format, design tokens, lint config, the web formatting helpers, and how units are injected.
+
+Let me read the design tokens, the web formatting helpers I must reproduce, the units provider wiring, and confirm the shared UI component APIs.
+
+Now let me read the shared UI component APIs I'll use (Skeleton/Button/FadeIn/GlassPanel), the lint configs, and check how feature surfaces read units.
+
+I have enough to design faithfully. Let me verify a few final things: logs dir, placeholder script, any `Distance` name collisions, and a units-consuming feature view's exact env pattern.
+
+Critical: the placeholder gate scans my dir. Let me read its patterns to avoid self-inflicted failures (e.g., `.redacted(reason: .placeholder)` could trip it), plus the script's file selection/excludes.
+
+`IgnoreCase` matching — so I must avoid the substring "placeholder" entirely (e.g., no `.redacted(reason: .placeholder)`; use `TSSkeleton` instead), plus TODO/FIXME/XXX/"Coming soon"/"not implemented"/"Lorem ipsum". `.strings` files aren't scanned. Let me read the param block to mirror the gate's scan exactly, then start implementing.
+
+I now have a complete understanding of the conventions, constraints, and verification surface. Key facts:
+- **Pattern**: per-surface file set (`.swift` view, `.Model`, `.Adapter` pure core, `.Views`, `.Previews`, `.strings`, `.Tests`) — mirror `AcDcStatsPanel.*`.
+- **Units binding** = `@Environment(\.tsUnits) UnitPreferences` (the P1/S8 units state-holder). **Tokens** = `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius`. **i18n** = `NSLocalizedString` table facade. **Telemetry** = `view.opened` on `model.start()`.
+- **Capability**: `xcodebuild` BLOCKED (no Xcode, only CLT) → honest STATUS=BLOCKED with evidence. But `swiftlint`/`swiftformat`/placeholder-check/standalone `swiftc` all runnable — I'll make those green.
+- **Placeholder gate** is case-insensitive: must avoid substring "placeholder" (no `.redacted(reason: .placeholder)` → use `TSSkeleton`), plus TODO/FIXME/XXX/etc.
+
+Let me set up tracking and write the plan.
+
+Now let me create the directory and write the pure core Adapter file.
+
+Let me verify the pure Adapter compiles standalone right away (catch errors early), then continue with the Model.
+
+Adapter compiles clean standalone. Now the Model (state-holder + telemetry + i18n facade + source seam).
+
+Now the main surface view and its subviews.
+
+Now the previews, strings catalog, and the test suite.
+
+All 7 files written. Now let me run the verification suite: swiftformat lint, swiftlint, placeholder check.
+
+swiftformat wants auto-fixable formatting (redundant returns, numeric grouping). Let me apply it in-place, then re-lint.
+
+swiftformat passes and Adapter still typechecks. Let me confirm the auto-formatted switch logic is correct, then run swiftlint and the placeholder gate.
+
+swiftlint --strict: 0 violations. Now the placeholder gate — I'll run both the gate's exact path and the real directory for honest coverage.
+
+Placeholder gate clean. Now let me prove the pure core actually *runs* correctly (not just compiles) — compile the real Adapter with a test harness and execute the key assertions.
+
+33/33 core assertions pass against the **real** Adapter — the formatting/conversion/projection logic is verified, not just compiled. Now let me typecheck the SwiftUI view layer against minimal shims of the exact module APIs it uses (units facade + `TSSkeleton`) plus the real design tokens, to validate the view code beyond lint-parsing.
+
+The only errors are the `#Preview` macro plugin being absent in Command Line Tools (an Xcode-only plugin) — not a code defect; the note confirms my `#Preview` usage matches the real macro signature exactly. Let me re-run excluding the DEBUG-only Previews to confirm the shipping view layer typechecks clean.
+
+Shipping view layer typechecks clean. Every runnable check is green; only `#Preview` (Xcode plugin) and full `xcodebuild` are environment-blocked. Let me capture the authentic toolchain evidence and generate the gate log by actually running each gate step.
+
+Important finding: the whole-tree `swiftformat --lint apps/apple` has **one pre-existing failure** in `ActionBuilder.Previews.swift` (another surface, outside my allowed files) — my `Distance.*` files all pass. I'll document this honestly. Now let me generate the authentic gate log by running each gate step.
+
+The log is complete and honest. Let me clean up temp files, verify git status shows only my allowed files, and commit.
+
+There are pre-existing unrelated changes in the working tree (AIUsageCard.*, web admin files) — not mine and not in my allowed files. I'll stage **only** my `Distance.*` files + the log.
+
+Only my allowed files are staged. Now let me commit with the prompt's message.
+
+Commit succeeded with exactly the 8 allowed files (7 `Distance.*` + log); the pre-existing unrelated changes remain untouched. Let me finalize tracking and do a last green re-confirmation on the committed surface.
+
+Done. The `Distance` shared surface is implemented, verified to the maximum the runner allows, and committed.
+
+## Summary
+
+Ported `web/.../format/Distance.tsx` to a native Apple shared surface at `apps/apple/TeslaSync/shared-surfaces/Distance.*`, following the established `AcDcStatsPanel` house pattern (7 files, 1,113 lines):
+
+- **`Distance.Adapter.swift`** — pure core: SI conversion (port of `convertDistanceFromSI`), number formatting (port of `fmtNumber`), `make(miles:km:)` precedence, `rawTitle`, and `DistanceProjection.resolve` (cached→projection).
+- **`Distance.Model.swift`** — `@Observable DistanceModel` (P1/S8) + source seam + `view.opened` telemetry (P1/S11) + i18n facade (P1/S10).
+- **`Distance.swift` / `.Views.swift`** — binds units via `@Environment(\.tsUnits)` (web `useUnits`); renders data, em-dash empty, loading, error (retry), and stale/offline freshness; tokens only (P1/S9).
+- **`.Previews` / `.strings` / `.Tests`** — per-state previews, i18n table, and 30+ XCTest cases.
+
+**Verification (all green where runnable):** swiftlint `--strict` = 0 violations · swiftformat = 0 reformats · placeholder gate = 0 · pure core **compiled + 33 assertions executed, 0 failures** · shipping view layer **typechecked clean** against real design tokens.
+
+**`STATUS=BLOCKED` (honest):** the two `xcodebuild build test` steps cannot run — this runner has Command Line Tools only, no `Xcode.app` (`xcode-select -p` → `/Library/Developer/CommandLineTools`; `xcrun simctl` absent). This is the platform-capability outcome the prompt's capability clause explicitly permits, with full evidence in `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0085-Distance.log` (ends `EXIT=1` / `STATUS=BLOCKED`).
+
+Committed only the 8 allowed files; pre-existing unrelated working-tree changes were left untouched. Note: registering `shared-surfaces/` in `project.yml` + `.swiftlint.yml` is a P4-core wiring step outside this prompt's allowed files (documented in the log).
+

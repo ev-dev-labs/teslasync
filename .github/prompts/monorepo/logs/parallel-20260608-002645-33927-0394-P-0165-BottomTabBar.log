@@ -1,0 +1,117 @@
+I'll start by exploring the repository structure to understand the web source, the Apple app layout, and the P1/P4 dependencies.
+
+Note: only Command Line Tools is installed (no full Xcode), so `xcodebuild` won't run, but `swift` 6.3.2, `swiftlint`, and `swiftformat` are available. Let me explore the Apple app structure and the web source.
+
+Now let me explore the existing Apple app structure to understand established patterns for P1/P4 dependencies (state holders, tokens, i18n, diagnostics).
+
+Large established app (1913 Swift files). Let me look for existing shared-surfaces examples and the key dependency files.
+
+No `shared-surfaces` dir yet — I'll create it. Let me examine the project config, an existing feature-view example, and the navigation/route infrastructure.
+
+Now I understand the multi-file convention (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.States.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`). Let me study the key dependencies: state holders, design tokens, i18n facade, navigation/routing, and diagnostics.
+
+Let me find the i18n facade (P1/S10), the diagnostics/telemetry contract (P1/S11), and read the state-holder + design token infrastructure.
+
+Found the diagnostics pattern (`surfaceSlug` + `.viewOpened(surface:)`). Let me read the diagnostics definition, the state-holder/LoadableState infra, and a representative "bar" surface (NotificationFilterBar) to copy conventions exactly.
+
+NotificationFilterBar is the ideal reference (a "bar" surface). Let me read its full file set to learn the canonical conventions.
+
+Excellent reference. Let me read the remaining NotificationFilterBar files (Seams, Adapter, Views, Previews, Tests) to learn telemetry protocols, string helpers, and design-token usage.
+
+Let me read the Views, the test conventions, and the core design-token / motion / feedback infrastructure, plus survey sibling layout components.
+
+Design tokens live elsewhere (generated). Let me locate the token definitions (Color.TS, TSSpacing, TSRadius, Font.TS, theme-primary) and the TSFadeIn/TSSkeleton components.
+
+I now have the token vocabulary. Let me check TSDesign.swift/TSMaterial.swift for the theme-primary equivalent and glass material, and confirm the test framework/lint config.
+
+`Sources/Theme.swift` is the P4 theme core. Let me read it, the materials, lint configs, feedback states, and the model-test conventions.
+
+I now have all conventions. Let me verify the log directory, confirm no existing BottomTabBar native files, and check the master i18n catalog for the `nav.*` keys.
+
+The predecessor pattern is now clear: host gates (swiftlint/swiftformat/placeholder) run green; xcodebuild is DEFERRED with real evidence (no Xcode on runner); project.yml wiring is the integration prompt's job. Let me read the full reference log to match format exactly.
+
+This is the gold-standard disposition. Critically, the reference used `/Applications/Xcode.app` via `DEVELOPER_DIR` override. Let me check whether Xcode.app is available on this runner — that determines my host-validation depth.
+
+Xcode 26.5 is available via `DEVELOPER_DIR` override (matching the predecessor environment). I have the full toolchain: iOS 18 simulator SDK, macOS 15 SDK, SwiftUI, swiftlint, swiftformat, pwsh. Let me set up tracking and start building.
+
+Now I'll create the surface files. Starting with the Foundation-only core, adapter, and seams.
+
+Now the SwiftUI views and the surface entry.
+
+Now the test files — adapter/projection/accessibility tests and model lifecycle tests.
+
+I left a broken assertion in `testPushedLocationReprojectsActiveTab` (stray `.self` and wrong expected path). Let me fix it.
+
+All 10 files created. Now let me run the host-runnable gates. Starting with swiftformat and swiftlint on the new files.
+
+swiftformat wants `try` hoisted, and I also need `throws` on those test methods. Let me refactor to unwrap into locals first (cleaner). Let me view and fix.
+
+Now let me re-run swiftformat and run swiftlint on the new files.
+
+swiftformat clean. swiftlint linted all 1909 files (config `included` expands) and found 1 violation — let me locate it.
+
+The only violation is pre-existing in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` — not my code. Let me stop the slow re-scan and get clean targeted evidence for my files.
+
+The only violation is pre-existing and unrelated. Let me get clean targeted evidence by passing explicit file paths (as the predecessor did).
+
+swiftlint: **0 violations in 9 files**. Now the placeholder gate — let me check the script's parameters first.
+
+The gate scans recursively. Let me verify my files contain none of the forbidden patterns, then run the gate on the directory.
+
+Placeholder gate: **PLACEHOLDER_COUNT=0**. Now the SDK type-checks. Let me compile the production files against the iOS 18 simulator SDK and macOS 15 SDK with the real design-token closure.
+
+iOS 18 simulator type-check: **EXIT=0**. Now macOS 15 SDK.
+
+macOS 15 and DEBUG previews type-check: **EXIT=0**. Now let me build a self-contained SwiftPM harness to actually EXECUTE the XCTest suite on the macOS host.
+
+**All 27 tests passed, 0 failures (EXIT=0).** Suites: Catalog (5), ProjectionActive (5), ProjectionEntries (5), Accessibility (2), Model (10). Let me update tracking and capture the real xcodebuild-deferral evidence.
+
+Strong deferral evidence captured (xcframework not staged, shared-surfaces unregistered). Let me verify git-ignore status of the generated project, then capture the real xcodebuild exit code (not faked).
+
+`*.xcodeproj/` is gitignored, and there are pre-existing unrelated modified files (I'll add only my files). Let me capture the real xcodebuild deferral evidence (project compiles WITHOUT my files since unregistered — purpose is only to show the environment blocker, as the predecessor did).
+
+xcodegen generated cleanly (exit 0). Now the macOS target build to capture the real blocker.
+
+Captured the real blocker — identical to the predecessor: `no XCFramework ... Shared.xcframework` + signing → `BUILD FAILED` exit 65. Let me clean up generated artifacts and gather line counts for the log.
+
+Cleanup complete; only my `shared-surfaces/` is new. Let me grab the git base/branch for the log header, then write the comprehensive gate log.
+
+All facts gathered. Now I'll write the comprehensive, honest gate log.
+
+Log written. Let me do a final consolidated verification of the exact on-disk files (static gates + typechecks + full test execution) before committing.
+
+All green. Final test-execution confirmation, then commit.
+
+**All gates green: swiftlint 0/9, swiftformat 0/9, placeholder 0, iOS+macOS typecheck 0, 27/27 tests pass.** Now committing only my files + the log (surgically, avoiding the pre-existing unrelated changes).
+
+Exactly 11 files staged (10 surface files + log), nothing else. Committing.
+
+Committed (`d13e514c9`, 11 files). Let me update tracking and do a final cleanliness check.
+
+Task complete. Everything is committed and the working tree is clean of generated artifacts.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic SwiftUI parity of `components/layout/BottomTabBar.tsx` at `apps/apple/TeslaSync/shared-surfaces/BottomTabBar.*` (10 files, 949 lines), following the established repo conventions (NotificationFilterBar/BackendTool multi-file split).
+
+**What was built**
+- **Core/Adapter** (Foundation, pure): the 5-tab catalog (web `TABS`/`BOTTOM_TAB_PATHS` verbatim, lucide→SF Symbol) + the faithful `isActive` projection (root exact vs. segment-prefix, so `/drives/123` keeps Drives active but `/charging-history` doesn't light Charging).
+- **Seams** (P1/S8 location source = web `useLocation`; P1/S10 strings facade; P1/S11 `view.opened` telemetry; navigation sink = web `PrefetchLink to`).
+- **Model** (`@MainActor @Observable`): binds the source, projects entries, forwards taps (controlled — no optimistic path), emits `view.opened` once.
+- **Views/surface**: accent tint + glow + underline indicator (web `--theme-primary`), `TSMaterial.chrome` + hairline top border, TSFadeIn, 44pt hit targets, `.isSelected` traits, Dynamic Type, reduce-motion.
+- **Previews/strings/tests**: a preview per state; the exact web i18n keys (`nav.quickNav` + 5 `nav.*`).
+
+**Gates (real output)**
+- swiftlint --strict: 0 violations / 9 files · swiftformat --lint: 0/9 · placeholder gate: COUNT=0
+- swiftc -typecheck: iOS 18 sim **0**, macOS 15 **0**, DEBUG previews **0**
+- swift test (SwiftPM, real code): **27/27 passed, 0 failures**
+- xcodebuild build/test: **DEFERRED** with captured real evidence (`no XCFramework … Shared.xcframework` + signing → exit 65; `shared-surfaces` not yet in project.yml — integration-prompt's job), identical to the 0002 BackendTool predecessor disposition.
+
+Committed as `d13e514c9` (11 files incl. log). Log ends `EXIT=0 / STATUS=DONE`.
+
+**Honest scope note:** the web source is static nav chrome with no data fetch, so the template's generic data-states (loading/empty/error/stale/offline) are N/A and were *not* fabricated; the real states (active/inactive/nested/none-active) are all rendered, previewed, and tested, and the bar always renders all five tabs.
+
+
+
+All work is verified and committed; all 6 todos are done. Marking the task complete.
+

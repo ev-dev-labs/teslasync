@@ -1,0 +1,161 @@
+I'll start by exploring the repository structure to understand the task and existing patterns.
+
+Let me explore the Apple app structure and existing patterns to follow.
+
+There's no `Features` directory yet — the existing structure uses `feature-views`. Let me understand the existing patterns and project setup.
+
+The project uses a multi-file `feature-views` pattern, not a `Features/Telemetry` dir. Let me investigate the established conventions, parity ledger, and an existing comparable page-level feature.
+
+Existing logs use `feature-views`/`dashboard-widgets` naming. Let me read the manifest record for this page and the apple-ledger to find the real expected output path.
+
+`apple-ledger.json` doesn't exist yet. Let me study an existing signal-related feature-view (the real repo pattern) and how navigation/pages are structured.
+
+There's a `Sources/Features/Dashboard`. Let me examine it (likely the real page home), the App routing, and the LiveSignalsTable implementation to learn the KMP/model/adapter pattern.
+
+Now let me read the supporting files for the established pattern: Model, Adapter, Localization, strings, and the navigation/routing files.
+
+Let me check toolchain availability (critical for the gate) and read the remaining pattern files plus localization and navigation.
+
+Full toolchain is present (xcodebuild, xcodegen, swiftlint, swift 6.3.2, pwsh). Let me check the KMP framework, navigation registration, design tokens, and the strings catalog.
+
+Key finding: `Shared.xcframework` is absent (build needs Gradle/Kotlin-Native). Let me check `.xcodeproj` presence and read a prior P4-apple log to see exactly how predecessors placed files and ran the gate.
+
+The predecessor log reveals the established, user-approved P4 Apple disposition. Let me read the full log to replicate the exact host-gate commands and conventions.
+
+This gives me the exact, user-approved P4-Apple disposition. Let me confirm where "page" prompts (vs feature-views) place files and check `.swiftlint.yml` scope.
+
+No prior "page" logs exist — I'm establishing the page pattern, following the approved feature-views disposition. Let me read the manifest records for this unit and inventory the P2/P3 design tokens + shared components I should reuse.
+
+Let me read the design tokens and the shared components I'll compose (GlassPanel, Badge, Button, EmptyState, Banner, Typography, Pickers).
+
+Let me check for a page layout/scaffold component, how SSE/live binding is modeled, and whether sibling signal surfaces exist.
+
+Let me read RouteHost rendering, the shared facade (LoadableState/LiveConnection), and locate the `tsGlassPanel` modifier for my host-compile dependency set.
+
+I have the full component + token picture. Let me read the remaining LiveSignalsTable files (Models, Previews, Tests, strings) to exactly match the multi-file conventions, plus the `tsGlassPanel` material modifier.
+
+Let me read the Tests conventions and the material modifier, then start building.
+
+I have everything needed. Let me quickly confirm the web `useSignals` shape and that the component files don't import `Shared`, then I'll build.
+
+I now have a complete picture. Let me set up a plan and task tracking, then build the surface following the approved P4-Apple disposition.
+
+Now I'll build the surface. Starting with the Foundation-only value types, pure adapter, and model.
+
+Now the localization facade (all 15 parity strings verbatim + native chrome + a11y) and the `.strings` catalog.
+
+I referenced range-preset labels in the catalog; let me add their accessors to the facade.
+
+Now the main View scaffold with all four states, plus the GlassPanel1 controls.
+
+Let me add the one native summary-title string, then build the Controls + summary views.
+
+Now the Controls (GlassPanel1) + query summary + chip:
+
+I referenced a non-existent `retryKey`. Let me fix the retry button to use the verbatim label closure.
+
+Let me check the test conventions for the `@MainActor`/telemetry-spy pattern before writing my tests.
+
+Now the registration seam, previews, and tests.
+
+All 10 files created. Now the host gates — starting with the most important: a strict-concurrency `swiftc -typecheck` of the production surface compiled against the REAL tokens, TS components, and nav module.
+
+The `#Preview` macro needs the full-Xcode plugin (absent in CommandLineTools). Matching the predecessor, I'll typecheck the production surface without `-D DEBUG` (previews are validated under Xcode). Let me also check for a full Xcode to optionally cover previews.
+
+Production surface typechecks clean (EXIT=0). One strict-concurrency warning in the registration seam (building a MainActor `View` in the nonisolated registry closure). Let me resolve it cleanly, and a full Xcode is present so I can also typecheck previews.
+
+Production typecheck clean, zero warnings. Now a DEBUG pass via full Xcode to also typecheck the `#Preview` blocks.
+
+Previews compile (EXIT=0). One warning: the `previewContainer` helper is nonisolated. Let me annotate it `@MainActor`.
+
+Now let me typecheck the **test file** against the real surface API (strip the `@testable import` and compile tests + surface as one module, linking XCTest).
+
+The `XCTAssert*` C macros aren't resolvable in an ad-hoc `swiftc` invocation (environment limitation, not a code defect) — every error is a missing macro, none in my code. Let me validate the test bodies' API usage against the real surface via a thin XCTest shim.
+
+Good — the test typecheck caught a real strict-concurrency issue: `resolvePhase` (a pure function) inherits MainActor isolation from the model, so the non-MainActor phase test can't call it. Fix: mark it `nonisolated`.
+
+Those `Date`-not-found errors are purely from stripping `import XCTest` (which transitively imports Foundation) — not a code defect. Let me add `import Foundation` to the shim and re-run.
+
+The stripped test file lacks Foundation (the real file gets it transitively via `import XCTest`). Adding an explicit `import Foundation` is correct since the file uses `Date`/`Calendar` directly.
+
+Test bodies typecheck clean against the real API (EXIT=0). Now an **executed** harness that runs the pure adapter + strings + a11y logic and asserts parity with the web values.
+
+Top-level code is MainActor-isolated in Swift 6 mode. The harness is just an execution proof — let me compile it in Swift 5 language mode (the surface files are backward-compatible) to avoid top-level isolation noise.
+
+The executed harness works — it caught a miscalculation in my *expectation* (the adapter is correct: 2026-06-07 − 89 days = 2026-03-10, not 03-09). Let me correct the expectation and add last90d coverage to the XCTest too.
+
+Executed harness: **35/35 passed (RUN_EXIT=0)**. Now swiftformat, swiftlint, and the placeholder scan on my files.
+
+swiftformat flagged real items — notably an genuinely unused `timeZone` param in the private `iso` helper (I always format as UTC, which is correct for `toISOString()`). Let me fix that, then auto-format the rest.
+
+swiftformat passes (0/9 require formatting). Let me verify the auto-format didn't mangle anything and re-run typecheck + harness to confirm green after formatting.
+
+swiftformat mangled my `--- ... ---` sub-dividers into `// MARK: - --`. Let me clean those three to canonical `MARK:` form.
+
+Let me check for any other mangled MARKs, then re-run swiftformat lint + swiftlint --strict.
+
+4 swiftlint violations to fix: one long line and three `Label { } icon: { }` trailing-closure usages. Let me view the exact spots.
+
+Fixing: the `multiple_closures_with_trailing_closure` on the 3 TSButton calls (make `label:` explicit) and the over-long native help string.
+
+Now re-run format + lint, then re-verify the full typecheck + harness after these changes.
+
+Format + lint both clean (0 violations). Now a comprehensive re-verification: production typecheck, DEBUG/previews typecheck, test typecheck, executed harness, and the placeholder scan.
+
+The directory-wide scan picks up pre-existing "Placeholder" hits in **other** surfaces (InfrastructureSection, TemperatureSection) — not mine. Let me scope the scan to only my files (copy to a temp dir), and run the remaining typecheck/harness verifications.
+
+Scoped placeholder scan: **COUNT=0, EXIT=0** — my files are clean. Now re-verify DEBUG/previews typecheck, test typecheck, and the executed harness after the lint fixes.
+
+Both typechecks green. Let me re-run the executed harness (Adapter changed since last run) to confirm 35/35 holds.
+
+All host gates green: **typecheck (prod/DEBUG/tests) EXIT=0, harness 35/35, swiftlint 0, swiftformat 0, placeholder 0**. Now let me verify the Xcode app-build blockers honestly (don't just assume): signing identities, the missing `Shared.xcframework`, and confirm `xcodegen` includes my files in the target.
+
+Blockers confirmed: **0 codesigning identities** and **`Shared.xcframework` ABSENT**. Notably, `feature-views` IS now registered in `project.yml` (both targets) + `.swiftlint.yml`, so my files would compile if the framework existed. Let me generate the Xcode project to prove my files are included in the target.
+
+`xcodegen` succeeded — all 8 of my files are in the target (60 refs). Now let me attempt the real `xcodebuild` to capture the honest failure (the absent `Shared` KMP module), building the macOS target with signing disabled.
+
+My grep pattern was malformed. Let me re-run and capture the specific failure reason to a log.
+
+**Honest blocker captured:** `error: There is no XCFramework found at '.../Frameworks/Shared.xcframework'` → `** BUILD FAILED **` (EXIT=65). The app fails at KMP-framework resolution *before* compiling any source — a pre-existing, code-external blocker (the framework needs Kotlin/Native on a signed runner). My files are in the target and pass strict-concurrency typecheck standalone.
+
+Let me clean the generated artifacts and confirm git status is clean.
+
+My 10 new files are clean and isolated (the `AIUsageCard.*` modifications are pre-existing, not mine — I'll leave them untouched). Let me check the ledger format the commit references.
+
+All host gates pass; the Xcode app build is honestly blocked on the absent KMP framework (code-external, program-level deferral). Let me gather line counts and write the evidence log.
+
+Now I'll write the comprehensive evidence log with the binding `=== PARITY ===` section.
+
+Let me fix a path typo in the log to exactly match the captured build error.
+
+Let me run one final consolidated host-gate sweep to confirm the tree is fully green, then commit.
+
+All gates green. Let me commit my 10 surface files + the evidence log (explicitly excluding the pre-existing `AIUsageCard.*` changes, which aren't mine).
+
+Exactly my 11 files staged; the pre-existing `AIUsageCard.*` changes left untouched. Now committing.
+
+Committed cleanly (3d2350101) — only my 11 files. Let me do a final verification that the working tree is as expected and update the plan.
+
+All 12 todos complete. The task is done and verified.
+
+## Summary
+
+Implemented a native **SwiftUI / Apple‑HIG** parity of the web `SignalExplorerPage` (`page:telemetry/SignalExplorer`), committed as `3d2350101`.
+
+**What shipped** (10 files + evidence log under `apps/apple/TeslaSync/feature-views/SignalExplorerPage.*`, 1909 lines):
+- `GlassPanel1` controls (≤5 multi‑select bound to `useSignals`, time‑range presets, page size, Explore, Live/Stop, Help), header with vehicle picker + live connection badge + `>2 min` staleness (ADR‑013), error banner, no‑vehicle state, and a resolved‑query summary.
+- `@Observable SignalExplorerPageModel` (P1/S8 source seam, P1/S11 `view.opened` telemetry), pure `SignalExplorerLogic` (cap/toggle/canExplore/range/ISO), full per‑surface i18n facade + `.strings`, previews, and an XCTest suite. Composed from the P3 component library + P2 tokens; adaptive macOS + iOS.
+
+**Verification — all host gates GREEN (real runs):**
+- `swiftc -typecheck` swift6 `-strict-concurrency=complete` vs the **real** tokens/components/nav: EXIT=0 (prod + DEBUG/previews + test‑bodies‑vs‑real‑API).
+- Executed adapter harness: **35/35**. swiftlint `--strict`: **0**. swiftformat: **0/9**. Placeholder scan (scoped): **0**.
+- The typecheck/harness/lint caught real defects (2 strict‑concurrency, 1 expectation, lint) — all fixed and re‑run green.
+
+**`PARITY_COVERED = 20/20`** (1 panel + 4 states + 15 strings), each with file+symbol evidence in the log.
+
+**Honest deferral:** The Xcode app build was **attempted** and fails (`** BUILD FAILED **`, exit 65) on the absent KMP `Shared.xcframework` (Frameworks/ holds only `.gitkeep`) + 0 codesigning identities — code‑external, deferred to a signed `macos-latest` runner per `apps/macos-pending-verifications.md`. `xcodegen` proves my files **are** target‑registered (60 pbxproj refs). This matches the established, approved P4‑Apple disposition. Pre‑existing `AIUsageCard.*` changes were left untouched. `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and verified — all work is committed (`3d2350101`), all host gates are green, and `PARITY_COVERED=20/20`.
+

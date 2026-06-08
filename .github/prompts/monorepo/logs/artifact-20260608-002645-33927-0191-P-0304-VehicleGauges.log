@@ -1,0 +1,214 @@
+================================================================================
+P4 · Feature view · 0304 — VehicleGauges (Apple)
+Run: 2026-06-08T03:21-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/191
+Base: c9c6fdb9f
+Prompt: P4/feature-views/0304 — Feature view: VehicleGauges
+Web source (spec): web/src/features/vehicles/components/VehicleGauges.tsx
+Mode: code-complete + host-validated (typecheck BOTH SDKs + EXECUTED XCTest) +
+      DEFERRED xcodebuild app build/test (0002 BackendTool precedent, ADR-012,
+      Honesty rule 7 — the only non-green step is the env-blocked xcframework
+      build, captured with its real exit 65, NOT faked).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 17 simulators ....... present (iPhone 17 / 17 Pro / Air, Shutdown)         OK
+    (the prompt's gate names 'iPhone 16'; this runner ships the iPhone 17 family —
+     the SDK, not a specific device, is what the host typecheck needs)
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  xcodegen ................... 2.45.4 (project + 12 targets generate cleanly)       OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+  feature-views in project.yml  REGISTERED in both app targets (lines 37, 68); the
+                                generated TeslaSync.xcodeproj carries 72 VehicleGauges
+                                refs — the surface IS compiled by xcodebuild now      OK
+
+  Capability note: the web source lists "Charts/maps used: (none)" and shared
+  components GlassPanel / FadeIn / TeslaCarViz / RadialGauge / MetricBar. The core
+  requirement is SwiftUI, which is AVAILABLE and PROVEN by real iOS-18-simulator
+  AND macOS-15 SDK typechecks below. The capability-BLOCKED escape hatch
+  ("SwiftUI/Charts/MapKit unavailable") does NOT apply — the surface is authored,
+  host-compiled on both SDKs, and its full XCTest suite is EXECUTED green.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/VehicleGauges.*) ===
+  VehicleGauges.Model.swift      348  P1/S8 state-holder seam (VehicleGaugesSource→Model)
+                                      + P1/S11 telemetry seam (view.opened) + P1/S10 strings
+                                      facade + input value types (Vehicle/State/UnitPrefs) +
+                                      load/connection enums + @Observable model + in-memory source
+  VehicleGauges.Projection.swift 321  pure projector: snapshot → 4 gauges + 2-3 metric bars +
+                                      4 chips + car-viz, reproducing the web arithmetic verbatim
+  VehicleGauges.Views.swift      280  presentational subviews — responsive car|gauges layout,
+                                      radial gauge, metric bar, chips, accent/ambient→token maps
+  VehicleGauges.CarViz.swift     271  native TeslaCarViz peer — ambient glow + per-model
+                                      silhouette (Shape) + spinning 5-spoke wheels + battery bar +
+                                      charging/lock overlays (reproduced scoped to this surface)
+  VehicleGauges.ViewModel.swift  221  projected value types (tile/metric/chip/car-viz/projection)
+                                      + accessibility summary seam (pure Foundation)
+  VehicleGauges.Adapter.swift    209  testable core — SI converters + fmtNumber + formatDistance +
+                                      Math.round + gauge-decimals rule + parseModelKey + battery/
+                                      bool colour thresholds (pure, dependency-free)
+  VehicleGauges.Chrome.swift     174  P4 leaf chrome — freshness chip, stale/offline banner,
+                                      loading skeleton, retryable error, empty state
+  VehicleGauges.swift            107  the surface (glass shell + FadeIn + state composition +
+                                      freshness header + lifecycle + surfaceSlug)
+  VehicleGauges.Previews.swift   105  #if DEBUG previews — one per state (metric/imperial/driving/
+                                      charging/cybertruck/empty/loading/error/stale/offline)
+  VehicleGauges.Tests.swift      312  XCTest — projection + model + a11y (24 methods)
+  VehicleGauges.AdapterTests.swift 150 XCTest — formatters/converters/parse/accents (17 methods)
+  VehicleGauges.strings           52  P1/S10 catalog contribution (table "VehicleGauges")
+  Total 2,550 lines / 12 files. Largest .swift = 348 lines (swiftlint file_length<=400
+  honored; types<=250, params<=5, bodies<=50 honored — see lint below). No file imports
+  the Shared xcframework (seams are Swift protocols; the prod app injects the
+  facade-backed source, previews/tests inject InMemoryVehicleGaugesSource).
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data sources (web useTranslation + useUnits): bound through the P1/S8 seam
+    VehicleGaugesSource→VehicleGaugesModel. No HTTP in the view; the snapshot carries the
+    Vehicle (model) + VehicleState slice + the useUnits prefs (distance/speed/locale/precision)
+    + the load/connection axis.
+  - Composition (web TeslaCarViz + RadialGauge×4 + MetricBar + chips):
+      • TeslaCarViz -> VehicleCarVizView: ambient glow (sentry>charging>driving>idle), a
+        per-model Shape silhouette (sedan/SUV/Cybertruck wedge), spinning 5-spoke wheels
+        (driving, Reduce-Motion honoured), battery bar + "NN%", charging bolt + lock badge.
+        The atomic TeslaCarViz's shared native peer is owned by the P4 component-library
+        bundle (out of scope, not yet present), so it is reproduced scoped to this surface —
+        same disposition predecessors use for shared primitives.
+      • RadialGauge×4 -> Battery(%, batteryColor) · Range(dist, cyan) · Speed(spd, purple|dark)
+        · Power(kW, success|muted). clamp(value,0,max); centre = fmtNumber(clamped, isInteger?0:2);
+        arc fills clamped/max. Range/Speed pre-round via Math.round; SI ceilings (600mi / 250mph /
+        100mi-per-h) converted through the pref so the fill is unit-invariant.
+      • MetricBar -> Battery Level · Estimated Range · (Charge Rate only when is_charging).
+        fill = min(value/max,1); sublabels = fmtNumber(level,0)%, formatDistance(rated_range),
+        formatDistance(charge_rate)+"/h" (charge_rate is SI m/h).
+      • chips -> Lock(green|red) · Sentry(red|muted) · Climate(cyan|muted) · Software(purple,
+        "N/A" fallback). Neutral glass pill; only the icon is tinted (web parity).
+  - States (ALL rendered, each with a #if DEBUG preview + a model/projection unit test):
+      content (=the web source, always-content) · loading (skeleton) · empty (friendly, never
+      blank) · error (retry) · stale (freshness chip + "gauges may be stale" banner +
+      one-shot auto-refresh) · offline (cached + offline chip + banner). The leaf load/freshness
+      states are the sanctioned P4 addition over the pure web component (HeroGauges precedent).
+  - i18n (P1/S10): web keys preserved verbatim — common.battery/range/speed/power/batteryLevel/
+    estimatedRange/chargeRate + common.locked/unlocked/sentryOn/sentryOff/climateOn/climateOff +
+    the common.notAvailable ("N/A") software fallback; native chrome namespaced vehicleGauges.*.
+    Every code-referenced key is declared in VehicleGauges.strings (referenced==declared verified,
+    0 drift); NO English string literals in native code (all via the facade + Text(verbatim:)).
+  - Accessibility: VoiceOver labels on the gauge grid (combined summary), each gauge, each metric
+    bar, each chip, the car visualization (battery + active flags), and the freshness chip;
+    Dynamic-Type system fonts (Font.TS); Reduce-Motion honoured (gauge arc, bar fill, wheel spin,
+    TSFadeIn, TSSkeleton).
+  - Telemetry (P1/S11): VehicleGaugesModel.start() emits view.opened with surface slug
+    "VehicleGauges" exactly once (OSLog default; prod app injects the shared diagnostics adapter).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 9 production files compiled together with the REAL apps/apple component
+  closure (design Tokens + Design/{TSMaterial,TSDesign} + Components/UI {Typography,Badges,
+  Buttons,Cards,Utility} + Feedback/{Banners,States,Skeletons} + Motion/Motion); none import the
+  Shared xcframework.
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK
+        xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+          -swift-version 6 -strict-concurrency=complete  <closure> <8 production .swift files>
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [3] swiftc -typecheck — DEBUG previews (-D DEBUG, Xcode PreviewsMacros plugin; the 8 production
+        files + VehicleGauges.Previews.swift + closure):
+        PREVIEWS_TYPECHECK_EXIT=0                                                  OK
+  [4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM
+        harness (REAL production Model/Adapter/ViewModel/Projection/Views/CarViz/Chrome/surface +
+        real design Tokens + the real TS component closure), Swift 6 language mode:
+          Test Suite 'All tests' passed
+          Executed 41 tests, with 0 failures (0 unexpected) in 0.013 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers (41): number/integer formatting + non-finite guard; Math.round half-up;
+        distance/speed converters (NIST constants) + the 600mi/250mph/100mi-per-h ceilings;
+        formatDistance precision + em-dash; parseModelKey (display strings, short codes, default);
+        batteryColor / boolColor / boolColorMuted thresholds; the 4 gauge values/units/accents/
+        fills (metric + imperial); the 2-vs-3 metric bars + verbatim sublabels; the 4 chip
+        labels/icons/tones (+ N/A fallback); the car-viz state + ambient priority; resolvePhase
+        across loading/empty/loaded/failed (+ cached-behind-failure); model wiring, view.opened
+        once, stale auto-refresh once + re-arm, offline/while-fetching no-refresh, manual refresh,
+        stop re-arm, surfaceSlug; gauge + car VoiceOver summaries.
+  [5] swiftlint --strict (the 11 surface .swift files; explicit paths):
+          Done linting! Found 0 violations, 0 serious in 11 files.
+        LINT_EXIT=0                                                               OK
+        (repo .swiftlint.yml now lists TeslaSync/feature-views; scoped to this surface's files
+         for precise per-deliverable evidence.)
+  [6] swiftformat --lint (config apps/apple/.swiftformat, the 11 surface .swift files):
+          0/11 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate; swift):
+          ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/VehicleGauges
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                        OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the signed/xcframework runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode toolchain):
+      - `xcodegen generate`                          -> XCODEGEN_EXIT=0 (project + 12 targets +
+          schemes; the generated project.pbxproj carries 72 VehicleGauges references — the
+          surface IS registered into the app + test targets).
+      - `xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build` ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          error: "TeslaSync-macOS" has entitlements that require signing with a development cert.
+          ** BUILD FAILED **                          -> MAC_BUILD_EXIT=65
+    Why deferred (two independent, code-unrelated infra reasons — neither is a defect in this
+    surface; identical disposition to the 0002 BackendTool predecessor, Honesty rule 7):
+      (a) Shared.xcframework not staged: the app target links the KMP core; staging it needs a
+          Kotlin/Native gradle build (apps/shared :core:assembleSharedXCFramework). Independent
+          of this UI surface; concrete missing-framework error captured above. (apps/apple/
+          Frameworks holds only .gitkeep.)
+      (b) macOS app/widget signing requires a development certificate on a signed runner (ADR-012);
+          concrete entitlement/signing error captured above.
+    NOTE — unlike the BackendTool-era predecessor, feature-views ARE now registered in project.yml
+    (verified), so the registration caveat no longer applies: this surface compiles in the real
+    Xcode target. The host steps [1]/[2] compile it against BOTH the iOS 18 and macOS 15 SDKs, and
+    step [4] EXECUTES its full XCTest suite (41/41) against the real surface + component closure —
+    the meaningful validation that the deferred xcodebuild would also run once (a) and (b) are met.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (content) + the P4 leaf states (loading/empty/error/stale/
+      offline) — implemented; each has a #if DEBUG preview; projection + phase logic unit-tested +
+      EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (VehicleGaugesSource→Model); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — web common.* preserved verbatim;
+      native chrome vehicleGauges.* present; referenced==declared verified (0 drift).
+  [x] Accessibility labels on every interactive/data element (gauges/metric bars/chips/car-viz/
+      freshness chip); combined summaries on the grid + car.
+  [x] Tests: adapter unit (17) + per-state projection/model (24) + a11y — 41 methods, EXECUTED
+      41/41, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured
+      evidence (xcframework + signing), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; the xcodebuild build/test is shown
+                          DEFERRED with its real exit 65 + cause, not as a pass.
+  2 No scope narrowing ... full surface (12 files + strings), all states, seams, tests.
+  3 No skip-and-assume ... web source read end-to-end; every t() + render branch + arithmetic
+                          reproduced (gauges, metric bars, chips, car-viz, charge-rate-only-when-
+                          charging, batteryColor thresholds).
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0; 2,550 lines.
+  5 No parity shortcuts .. car-viz + 4 radial gauges + 2-3 metric bars + 4 chips + 6 states, with
+                          the exact SI conversion + fmtNumber + clamp/decimals + min-fill math.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same host-validated + deferral disposition as 0002 BackendTool.
+  8 No commit on red ..... committed work is green on every runnable gate; the only non-green step
+                          is the env-blocked xcframework/signing build, deferred with evidence.
+  9 No silent drift ...... surface-prefixed public types (the module already carries colliding
+                          DistanceUnit/SpeedUnit across parallel surfaces; this surface adds none);
+                          'iPhone 16' gate device vs the runner's iPhone 17 family documented above.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

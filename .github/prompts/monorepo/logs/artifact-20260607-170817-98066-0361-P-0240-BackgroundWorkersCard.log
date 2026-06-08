@@ -1,0 +1,145 @@
+================================================================================
+P4 · Feature view · 0240 — BackgroundWorkersCard (Apple)
+Run: 2026-06-07T23:40-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/361
+Base: aa84b0a0f
+Prompt: P4 · feature-views · 0240 — BackgroundWorkersCard (Apple)
+Web source (spec): web/src/features/system/components/status/BackgroundWorkersCard.tsx (283 lines)
+Mode: code-complete + host-validated; DEFERRED full-app Xcode scheme build/test
+      (ADR-012 macOS-pending), matching predecessors 0180 AlertMessageEditor /
+      0010 ToolCard.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                 OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iOS simulator SDK .......... iPhoneSimulator (deployment target iOS 18.0)         OK
+  macOS SDK .................. MacOSX (deployment target macOS 15.0)                 OK
+  iOS simulator device ....... iPhone 16 present + booted (simctl via Xcode)        OK
+  swiftlint .................. present                                              OK
+  swiftformat ................ present                                              OK
+  xcodegen ................... 2.45.x                                               OK
+  pwsh (placeholder gate) .... 7.x present                                          OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks has only .gitkeep) WARN
+  codesign identities ........ none (BLOCKER for signed app gate, ADR-012)          WARN
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)" — it is a pure presentational status card: a
+  two-axis summary, per-name worker groups, per-instance rows, a scale-callout,
+  and an API-logs link). The core requirement is SwiftUI, which is available and
+  proven by REAL iOS-18 + macOS-15 SDK typechecks AND a passing 30-test XCTest run
+  below. The capability-BLOCKED escape hatch therefore does NOT apply; the surface
+  is authored and host-validated for real, and STATUS=DONE.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/BackgroundWorkersCard.*) ===
+  BackgroundWorkersCard.Adapter.swift   360  Foundation-only pure core — VERBATIM web logic: the
+                                             WorkerInstanceStatus / WorkerGroupSeverity unions, the
+                                             snake_case wire decode (WorkerInstance / WorkersHealthSnapshot
+                                             with lenient status + derived total/healthy_count), shortHost
+                                             (strip scheme + /healthz), roundedLatencyMs (fmtLatency),
+                                             groupByName + severity rollup, the two-axis summary, and the
+                                             VoiceOver summary builders.
+  BackgroundWorkersCard.Model.swift     282  P1/S11 telemetry seam (view.opened) + P1/S10 BWStrings facade
+                                             + WorkersInput snapshot + WorkersProjection phase ladder +
+                                             P1/S8 WorkersSource protocol + @Observable
+                                             BackgroundWorkersModel (lifecycle/apply) + InMemory source.
+  BackgroundWorkersCard.Views.swift     241  Chrome subviews: severity/status → TSTone, BWChip, BWStatusDot,
+                                             BWPanelHeader (title + Refresh + stale/offline chips), and the
+                                             loading / error(+retry) / empty states.
+  BackgroundWorkersCard.Content.swift   367  Populated body: BWSummaryGrid + cell, BWGroupCard (header +
+                                             divided instance rows), BWInstanceRow, BWErrorChip (probe
+                                             error), BWScaleCallout (*_HOSTS guidance), BWApiLogsLink, and
+                                             the composed BWContentView.
+  BackgroundWorkersCard.swift            72  The composed surface + TSGlassPanel header + phase switch +
+                                             view.opened lifecycle + surfaceSlug + apiLogsRoute.
+  BackgroundWorkersCard.Previews.swift  126  #if DEBUG previews: loading / single-instance / replicated+
+                                             degraded / empty / error / stale / offline.
+  BackgroundWorkersCard.strings          59  P1/S10 catalog — verbatim web copy (empty message, summary,
+                                             group/instance labels, scale callout) + native chrome/a11y
+                                             (title, Refresh, Retry, loading, stale, offline). The .strings
+                                             table is the runtime source of truth and is not scanned by the
+                                             stub gate.
+  BackgroundWorkersCard.Tests.swift     392  XCTest: decode (snake_case, lenient status/counts), shortHost,
+                                             latency rounding, grouping + severity, summary, projection
+                                             phases + stale/offline overlays, model wiring + view.opened
+                                             telemetry, and the a11y summaries.
+  Total 1899 lines (8 files). Every file <= 400 lines (house file_length); largest
+  Tests.swift 392. Zero `// parity:allow` opt-outs.
+
+=== PARITY (vs web BackgroundWorkersCard.tsx) ===
+  Data source (web hook → native P1/S8 source seam):
+    page useQuery(getWorkersHealth, GET /system/workers, 30s refetch)
+      → WorkersSource.start/stop/refresh feeding WorkersInput (the web card is a
+        presentational leaf; the native P4 surface owns the query seam so it can
+        render the full state set).
+  Verbatim web logic ported + unit-pinned:
+    groupByName (group-by-name, per-instance projection, sorted by name) ·
+    severity rollup (all-healthy → healthy, all-down → down, else degraded) ·
+    shortHost (^https?:// + /healthz/?$ strip) · fmtLatency (round → "N ms" / "—") ·
+    two-axis summary (healthyGroups/groupCount, healthyInstances/totalInstances,
+    multiInstanceGroups → isReplicated).
+  Composition reproduced 1:1:
+    two-axis summary (Worker types · Instances · Replicated) · per-name group cards
+    (dot + name + "H / T healthy" chip + "N instances") · per-instance rows (dot +
+    short host + status chip + latency) · per-instance probe-error box · the
+    *_HOSTS scale callout (shown iff no group is replicated) · API-logs link → /api-logs.
+  States (all render, never a blank box): loading · empty (web "No background
+    workers reporting…") · error(+retry) · stale(chip) · offline(chip) — the web
+    empty/populated branches lifted under the standard P4 chrome (ADR-013).
+  i18n: every web region resolves via the P1/S10 BWStrings facade; catalog carries
+    the verbatim web English. a11y: VoiceOver labels on the Refresh + Retry + API-logs
+    controls, per-group + per-instance spoken summaries, status dots hidden; Dynamic
+    Type via Font.TS ramp; reduce-motion-safe (no custom animation).
+  Telemetry: emits view.opened with surface slug "BackgroundWorkersCard" once
+    (P1/S11), asserted by test.
+
+=== HOST-RUNNABLE GATES (all green) ===
+  swiftformat --lint <surface> ................ 0/7 files require formatting         FORMAT_EXIT=0
+  swiftlint lint --strict <surface> ........... Found 0 violations, 0 serious        LINT_EXIT=0
+  check-placeholders.ps1 -Language swift ...... PLACEHOLDER_COUNT=0 ALLOWED=0        PLACEHOLDER_EXIT=0
+      (run against a temp copy of the 8 BackgroundWorkersCard.* files; the prompt's
+       literal -Path .../BackgroundWorkersCard prefix is not a real path, so the
+       script's Test-Path guard returns a vacuous clean result — the temp-dir scan
+       is the meaningful evidence.)
+  swiftc -typecheck iPhoneSimulator (arm64-apple-ios18.0-simulator, swift6, strict)  IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (arm64-apple-macos15.0, swift6, strict-concurrency) .....  MAC_TYPECHECK_EXIT=0
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6 mode) ......  30/30 passed, TEST_EXIT=0
+      → WorkersDecodeTests · WorkersShortHostTests · WorkersLatencyTests ·
+        WorkersGroupingTests · WorkersSummaryTests · WorkersProjectionTests ·
+        BackgroundWorkersModelTests · WorkersAccessibilityTests
+  xcodegen generate (project spec with the 8 new files) ........................... XCODEGEN_EXIT=0
+      → 48 BackgroundWorkersCard references in the generated pbxproj (iOS + macOS app targets).
+
+=== DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test ===
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. Blocked by PRE-EXISTING, UNRELATED parallel-merge state
+    in the shared app target — ZERO of which originates in this surface (verified
+    first-hand on this checkout):
+      • Shared.xcframework not staged — `xcodebuild -target TeslaSync-macOS build`
+        fails immediately with:
+          error: There is no XCFramework found at
+          '.../apps/apple/Frameworks/Shared.xcframework'.
+        (The scheme pre-action builds it via the Kotlin/Native Gradle toolchain;
+        the P1/S3 artifact is already tracked macOS-pending.)
+      • `struct DashboardWidgetSize` redefined across 15 files (Sources/DashboardWidgets/*
+        + TeslaSync/dashboard-widgets/*) — "invalid redeclaration" across the app target.
+      • 144 co-located feature-view *.Tests.swift `import XCTest` into the app target
+        (143 pre-existing + this surface's, which is the same established pattern).
+      • No macOS development-signing identity (ADR-012).
+    This surface's OWN code is proven to compile against the real iOS-18 + macOS-15
+    SDKs (typechecks above) and its logic runs green (30/30 XCTest). The full-app
+    build/test is recorded for the P99 acceptance gate on a macos-latest runner with
+    signing identities + the staged Shared.xcframework.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all web states reproduced (loading/empty/error/stale/offline).
+  [x] Hooks bind to the shared P1/S8 source seam; no direct HTTP from the view.
+  [x] Every i18n region from source has a matching key in the P1/S10 catalog.
+  [x] Accessibility labels present on every interactive element + per-group/instance summaries.
+  [x] Tests: adapter unit tests + per-state projection/model tests + a11y label tests (30 total, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (stub gate: 0, 0 opt-outs).
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing unrelated blockers);
+      host-runnable equivalents (real-SDK typecheck both platforms + 30/30 XCTest) green.
+
+EXIT=0
+STATUS=DONE

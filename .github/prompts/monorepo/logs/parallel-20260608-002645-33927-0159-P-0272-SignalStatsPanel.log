@@ -1,0 +1,128 @@
+I'll start by exploring the repository structure and understanding what's available for this Apple native task.
+
+Key findings: `xcodebuild` is unavailable (only Command Line Tools, no full Xcode), but `swiftlint`, `swiftformat`, and `swift` 6.3.2 are present. There's an existing `AIUsageCard` feature-view pattern to follow. Let me examine the web source and the established native pattern.
+
+The web source is clear: a presentation-only stats summary table with min/max/avg/count per signal, placeholder rows for empty signals, a "Hide empty" toggle, loading skeleton, and empty state. Now let me study the established native pattern. `AcDcStatsPanel` looks like the closest analog (another stats panel).
+
+Case-insensitive filesystem quirk on the `AiUsageCard` files — those are unrelated pre-existing modifications, not my concern. `AcDcStatsPanel` is the canonical analog. Let me read all its files to learn the established pattern.
+
+Excellent, very thorough pattern. Let me read the remaining AcDcStatsPanel files and the shared theme primitives in parallel.
+
+Now let me read the Previews, Tests, strings, and the shared theme primitives to understand the full toolkit available.
+
+Now I fully understand the pattern. Let me locate the shared theme primitives (TSGlassPanel, TSDataTable, TSColumn, TSToggle, TSSkeleton, Color.TS, Font.TS, chart colors) to confirm exact APIs.
+
+Now let me read the remaining shared primitives — Cards (TSGlassPanel), Skeletons, Motion, design tokens, and the chart color palette.
+
+Let me locate the design tokens (TSSpacing, TSRadius, Color.TS, Font.TS) and chart color palette.
+
+Design tokens are generated at `apps/design/generated/apple`. Let me read those to confirm exact token names.
+
+I now have the full token vocabulary. Let me read the web data types and formatters I must port, plus check the parity harness and tooling.
+
+Let me confirm the formatter internals and check the parity harness, tooling, and whether surfaces need registration.
+
+Precision is 2, locale en-US — matches the AcDc port. Feature views need no central registration. Now let me check whether a full Xcode exists anywhere (to potentially unblock the build), and whether `pwsh` is available for the gate tooling.
+
+There's a full Xcode at `/Applications/Xcode.app`! The active dir just points at CommandLineTools. I can override with `DEVELOPER_DIR`. Let me verify this unblocks the build, and check the project generation toolchain.
+
+Major unblock: full Xcode 26.5, iOS 26.5 SDK, a booted iPhone 16 simulator, and `xcodegen` are all available. The project uses a shared `Shared.xcframework`. Let me check dependencies and establish a baseline build before adding my files.
+
+Important: `Shared.xcframework` is a hard dependency for both app targets but isn't checked in (only `.gitkeep`). It's built from the KMP shared core. My feature view doesn't depend on it, but the app-target build/test gate does. Let me assess whether the KMP toolchain can produce it.
+
+`Shared.xcframework` builds from KMP via Gradle (Java 17 present) as an Xcode pre-build phase. My feature view doesn't depend on it, but the app-target gate does. I'll write the surface, verify with the tooling I can run robustly, then attempt the authoritative build. Let me read the last few component APIs I'll use (TSButton, TSGlassPanel, TSFadeIn).
+
+I have the complete API surface. Let me set up tracking and confirm the log directory, then build the surface.
+
+Sibling logs exist. Let me check the AcDcStatsPanel (0096) log to learn the expected format and whether siblings reached DONE via real xcodebuild.
+
+This is the key insight: sibling P4 feature-view logs reveal the **sanctioned disposition** — ship the complete surface, prove it compiles in the real iOS+macOS targets with zero surface-specific errors, run isolated Swift 6 build+test of the pure core (green), pass lint/format/placeholder, and report the full-app `xcodebuild build test` as DEFERRED (IOS_EXIT=65) due to pre-existing baseline breakage in other files (which I may not touch). I'll follow this exactly, running every step for real.
+
+Let me confirm the component library is UI-only (no KMP `Shared` import) so I can do an authoritative isolated compile.
+
+I have everything needed. The component library imports only system frameworks (no KMP `Shared`), so I can authoritatively isolate-compile my surface. Let me write the plan and the foundational files.
+
+Now the Model and strings files.
+
+Now the Views file (table, toggle, chrome).
+
+Now the main panel View and the Previews.
+
+Now the comprehensive test suite (SwiftUI-free, referencing only Adapter + Model so it runs in an isolated SwiftPM package).
+
+All 7 files created. Now let me verify — starting with swiftformat and swiftlint on the new surface files, using the repo configs.
+
+Configs are clear (note `empty_count` opt-in rule). Let me run swiftformat and swiftlint on the new files.
+
+swiftformat found auto-fixable issues. One needs care: `redundantViewBuilder` on `numericCell` (it has an if/else that genuinely needs `@ViewBuilder`). Let me restructure `numericCell` to a single `Text` first, then run swiftformat apply.
+
+Now run swiftformat in apply mode to auto-fix the rest, then re-lint to confirm.
+
+swiftformat passes. Now swiftlint --strict on the surface files.
+
+The `empty_count` rule false-positives on my scalar `count == 0` (sample count, not a collection). Let me check how the codebase handles this precedent.
+
+Committed siblings use `count < 1` and even `count == 0 ?` — let me empirically determine which forms `empty_count` accepts.
+
+Empirically: `count == 0`, `count <= 0`, `self.count == 0` are flagged; `count < 1` and `count == .zero` pass (and `count < 1` matches committed siblings). Let me view current Adapter context and update both `isEmpty` properties.
+
+Both use `count == 0`. I'll switch to `count < 1` (committed-sibling form, lint-clean, identical for a non-negative count).
+
+Now re-run swiftlint + swiftformat + check-placeholders together to confirm all clean.
+
+All three fast gates are green (lint 0, format 0, placeholders 0). Now the high-signal proof: an isolated Swift 6 strict-concurrency build+test of the SwiftUI-free core (Adapter + Model + Tests), using the real Xcode 26.5 toolchain.
+
+Isolated core: **29 tests, 0 failures** under Swift 6.3.2 strict concurrency. Now let me prove the SwiftUI surface compiles against the **real** shared components + tokens + SDK. First, let me map the UI dependency closure (e.g., where `.tsGlassPanel()` lives).
+
+The UI library is 41 self-contained files (only system imports). Let me typecheck my 5 surface files against the **entire real UI component library + tokens** under Swift 6, targeting the macOS 15 SDK.
+
+0 SignalStatsPanel errors — my surface typechecks clean. The failures are in `UnitFormatters.swift` (an unrelated component needing `Units` from outside Components/Design). Let me locate `Units` and add its Shared-free closure so the compile reaches a clean exit.
+
+`Units` lives in `SharedFacade` and `import Shared` (KMP) — so `UnitFormatters` isn't Shared-free. I'll prune to my surface's actual Shared-free closure. Let me compile the production surface against that closure on **both** the macOS 15 and iOS 18 SDKs.
+
+Production surface compiles clean on **both macOS 15 and iOS 18 SDKs** (exit 0, 0 surface errors). The earlier full-library DEBUG pass already showed 0 SignalStatsPanel errors including Previews. Let me confirm a fully-clean DEBUG pass (production closure + Badges for the Cards preview) covering Previews.swift.
+
+All surface verifications green: lint 0, format 0, placeholders 0, **29/29 isolated tests pass**, and the surface typechecks clean on **macOS 15 + iOS 18** (production and with Previews). 
+
+Per the honesty covenant I must actually run the full-app `xcodebuild` gate (not assume). Let me generate the project and run it for real.
+
+Project generates cleanly. Now the real iOS gate (triggers the KMP Gradle xcframework pre-build). Running it for real and capturing the full log.
+
+The iOS gate is running (likely the KMP Gradle/Kotlin-Native build). Let me peek at progress while it continues.
+
+The KMP Gradle build is working — `Shared.xcframework` built successfully (Kotlin FROM-CACHE), now linking and proceeding to Swift compilation. Let me continue waiting for the app-target compile where my surface gets built.
+
+Still in the Kotlin/Native linking phase (slow). Swift compilation hasn't started yet. Let me keep waiting.
+
+Swift compilation started; my surface is being compiled (7 mentions). There are 2 errors so far — let me check whether they're in my surface or pre-existing baseline.
+
+The notification says the gate finished. The **only** errors are pre-existing `XCTest` module-resolution failures in sibling test files (`AIRestorePanel.Tests.swift`) co-located in the app target — the documented baseline-red condition. **Zero SignalStatsPanel errors.** Let me read the final exit code.
+
+Confirmed **IOS_GATE_EXIT=65**, failing solely on `Unable to resolve module dependency: 'XCTest'` from co-located `*.Tests.swift` files globbed into the app target (e.g. pre-existing `AIRestorePanel.Tests.swift`) — the exact documented baseline-red condition. **0 SignalStatsPanel errors.** Now the macOS gate for its real exit (Gradle is cached now).
+
+Confirmed **MAC_GATE_EXIT=65** — failing on pre-existing macOS development-signing entitlements (no dev cert in this env), again with **0 SignalStatsPanel errors**. Both gates defer on documented pre-existing conditions. Let me confirm the test-target wiring and that these conditions are pre-existing (not introduced by me).
+
+Now it's fully clear: the `TeslaSyncTests` target compiles `Tests/Unit/` — the co-located `*.Tests.swift` files (mine and all siblings like the committed `AIRestorePanel.Tests.swift`/`AuditPanel.Tests.swift`) only land in the app target where `XCTest` is unavailable. That's the pre-existing baseline-red, and the sibling convention is to prove tests via an isolated build (my 29/29). My new files are the only additions. Let me confirm my production files were compiled in the real iOS gate.
+
+The app-target compile aborts early at `XCTest` module resolution (a frontend error from the co-located test files), which is why per-file compile lines don't appear — exactly the baseline-red condition. The gates fail **only** on the two pre-existing signatures. For the deepest possible proof, let me compile the real app target with the test files excluded (`EXCLUDED_SOURCE_FILE_NAMES`), now that the real `Shared.xcframework` exists — this compiles my surface against the *full* app + KMP core.
+
+The exclusion glob missed `*.ModelTests.swift`/`*.AdapterTests.swift` variants. Let me broaden it to `*Tests.swift` and retry — still 0 SignalStatsPanel errors so far.
+
+Excellent — the deep compile got past XCTest and revealed the **third** documented baseline condition: pre-existing `DashboardWidgetSize` type-collisions across sibling dashboard-widget slots (the "~15 sibling widget slots" merge issue). Still **0 SignalStatsPanel errors**. Let me confirm all 60 errors are pre-existing widget collisions, none in feature-views.
+
+Definitive: **all 60 errors are pre-existing `DashboardWidgetSize` collisions in `dashboard-widgets/`** — **0 in feature-views, 0 in SignalStatsPanel**. My surface compiles clean in the real iOS app target with the full KMP `Shared.xcframework` linked. Every verification I can run is green; the full-app gate defers only on three documented pre-existing conditions.
+
+Let me write the honest gate log.
+
+Now let me re-verify the final files are still green, confirm git scope, and clean up before committing.
+
+All green, xcodeproj is gitignored, scope is exactly the 7 surface files + log. Let me stage precisely those and commit.
+
+Exactly the 7 surface files + log staged — no pre-existing dirty files included. Committing with the prompt's message and required trailer.
+
+Committed as `93fb4279d`. Pre-existing dirty files remain untouched/uncommitted (covenant #9). Let me finalize todos and remove the generated (gitignored) xcodeproj artifact to leave the tree as I found it.
+
+All 8 todos done; commit `93fb4279d` has 7 surface files + log (1543 insertions). Let me do a final working-tree sanity check.
+
+Task complete. Here's the summary.
+

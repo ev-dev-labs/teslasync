@@ -1,0 +1,135 @@
+I'll start by exploring the environment and understanding what's available, then read the web source component.
+
+Now let me read the web source component and explore the existing Apple app structure to understand conventions.
+
+Now let me examine the existing parity-surface conventions (predecessor patterns) and the shared infrastructure (state holders, tokens, i18n, diagnostics).
+
+The pattern is clear: each surface is multi-file (`.swift`, `.Adapter`, `.Model`, `.Previews`, `.strings`, `.Tests`, `.Views`). Let me study a complete representative example plus the shared infrastructure.
+
+This is a mature, well-defined pattern. Let me read the complete file set and shared infrastructure in parallel.
+
+Let me read the adapter, views, tests, and design tokens to complete my understanding.
+
+Let me locate the shared design token and component definitions used by these surfaces.
+
+Let me gather the real token vocabulary used by siblings and confirm environment facts in parallel.
+
+Xcode.app exists but there's no scheme/project in this slot (and project files are out of my allowed scope). Let me check token generation and find the closest sibling pattern for relative-time + reduce-motion handling.
+
+I have a clear picture of the architecture. Let me read the exact signatures of the shared components I'll use (Skeleton, Button, Badge, FadeIn, Motion tokens) so my calls compile.
+
+`TSMotion` and the `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius` tokens are all generated (P1/S9) — absent from this slot, so a standalone typecheck isn't possible; I'll mirror siblings exactly. Let me check the existing status-indicator/badge components for reuse.
+
+There's an atomic `TSFreshnessIndicator` (component-library, out of my scope) — my job is the bound *surface* (parity of the full `DataFreshness.tsx` incl. the query-bound `DataFreshnessAuto`). Let me read the test conventions and the placeholder checker so I avoid tripping the gate.
+
+Let me read the forbidden-pattern list and the lint/format configs so my code passes the gate cleanly.
+
+Let me establish the lint/format baseline over the whole tree (the gate scans everything) while I read the remaining adapter file.
+
+I now have a complete understanding of the canonical pattern. Let me check the lint/format baselines before writing.
+
+Key baseline findings (note: the printed `EXIT=0` was `tail`'s exit, not the tool's):
+- **swiftformat --lint**: 1 pre-existing violation in `ActionBuilder.Previews.swift:48` (outside my allowed scope).
+- **swiftlint --strict**: 1 pre-existing serious violation in the tree (outside my scope).
+
+So the whole-tree gate is already red before my change. Let me capture the exact swiftlint violation and the xcodebuild capability evidence for the honest log, and set up my workspace.
+
+I have everything I need. Confirmed evidence for the honest log:
+- `xcode-select -p` → CommandLineTools only; even with `DEVELOPER_DIR=Xcode.app` (Xcode 26.5), `xcodebuild -list` fails: **no Xcode project/workspace/scheme exists in this slot** (the app is assembled in CI). Project files are also outside my allowed scope.
+- Pre-existing whole-tree reds outside my scope: swiftlint `LifetimeStatsWidget.Adapter.swift:141` (function_body_length); swiftformat `ActionBuilder.Previews.swift:48`.
+
+Let me set up tracking and write the plan, then build the surface.
+
+Now I'll write the surface, starting with the pure testable core (Adapter).
+
+Now the main surface view, previews, strings, and tests.
+
+All 7 files created. Now let me verify them against the gate tooling. First, auto-format to the repo config, then lint-check my files specifically (note: the bare `swiftlint --strict` `included:` list doesn't cover `shared-surfaces`, and `.swiftlint.yml` is outside my allowed scope, so I'll lint my files explicitly).
+
+My files pass both swiftformat --lint and swiftlint --strict cleanly. Let me run the placeholder check, a best-effort syntax parse, and review what the formatter rewrapped.
+
+Placeholder check passes (COUNT=0) and all source files parse cleanly against the real macOS 26.5 SDK. Let me parse the test file too and locate the gate's log directory + a sibling log for format reference.
+
+The test file parses cleanly too. Let me examine a sibling log (the AcDcStatsPanel I mirrored) to match the exact format and see how predecessors recorded the gate in this environment.
+
+This is the key insight: the sanctioned disposition (used by every P4 surface) is an **isolated SwiftPM harness** that compiles the shipped sources against the *real* generated design system (`apps/design/generated/apple/Tokens.swift` + `Sources/Design` + `Sources/Components`) and runs the XCTests — yielding a genuine green build+test, while the full-app `xcodebuild` gate is recorded RED/DEFERRED on pre-existing infra (co-located XCTest into app target + macOS signing). Let me verify the real token path and the dependency surface.
+
+Real tokens live at `apps/design/generated/apple/Tokens.swift`, and `Sources/Design`+`Sources/Components` import only system frameworks (no app-only deps) — so an isolated `TeslaSync` SwiftPM harness is viable. Let me confirm the exact token symbols exist and check for any type-name collisions with the rest of the app (which would break the real build too).
+
+All token symbols confirmed in `Tokens.swift`; no type-name collisions with the rest of the app. Now I'll build the sanctioned isolated SwiftPM harness. Let me check my only shared-component dependency (`TSSkeleton`) to decide minimal vs. full inclusion.
+
+`TSSkeleton` transitively pulls in other Components, so I'll use the full sanctioned include (Tokens + Sources/Design + Sources/Components are self-contained — only system imports). Let me build the isolated `TeslaSync` SwiftPM harness compiling my exact shipped sources against the real design system and running my XCTests.
+
+The build failed only on a Components file (`UnitFormatters.swift`) referencing an app-only `Units` type I didn't include — unrelated to my surface. Let me locate `Units` and decide whether to add it or trim the harness to my surface's actual dependency set.
+
+`Units` comes from the KMP `Shared.xcframework` (a heavy Gradle dependency my surface doesn't use). Only one Components file (`UnitFormatters.swift`) needs it. Let me check whether excluding that single unrelated file is safe (i.e., nothing else in Components references its types).
+
+Excluding `UnitFormatters.swift` is safe — its types (`TSDistance`/`TSSpeed`/etc.) are referenced nowhere else in Components/Design, and my surface uses none of them. It's the sole file coupling Components to the KMP `Shared` framework. Let me drop it from the harness and run build + test.
+
+Build complete — my surface compiles cleanly against the real design system in Swift 6 mode. Now the tests.
+
+All 31 XCTests pass (0 failures) against the real design system in Swift 6 mode. The surface is genuinely verified. Now let me reproduce the official full-app gate faithfully. Let me check whether this slot has the xcodegen `project.yml` (as the sibling used) and whether `shared-surfaces` is wired into the project/lint configs by the P4-core predecessor.
+
+Key finding: the P4-core predecessor wired only `dashboard-widgets` + `feature-views` into `project.yml`/`.swiftlint.yml` — **not** `shared-surfaces` (this prompt introduces that tier, and registering it is integration-scope, outside my allowed files). So the full-app `xcodebuild` gate doesn't even compile my surface — which is exactly why the isolated harness is the authoritative verification. Let me capture the real xcodebuild evidence and check the KMP framework dependency.
+
+Confirmed: generated `.xcodeproj` and KMP `Shared.xcframework` are gitignored build artifacts; `Shared.xcframework` is **not staged** (needs a ~7-min Gradle assemble). Per the honesty covenant ("every gate executed on THIS runner"), I'll run the real xcodebuild gate and capture raw exits. Let me run xcodegen + xcodebuild and capture evidence.
+
+The grep pattern had a syntax error but xcodebuild is still running (resolving/compiling). Let me wait for it to fail on the missing KMP framework.
+
+xcodebuild is hanging (simulator boot / package resolution) and my grep broke the capture. Let me stop it and run a controlled capture (build-only, redirected to a file, with a timeout) to get a real exit code on the missing KMP framework.
+
+The iOS build is blocked on a **"Stage Shared.xcframework via Gradle"** build phase — the ~7-min KMP assemble (infra prerequisite the sibling staged). That's independent of my surface. To capture the real post-staging exit (matching the sibling's evidence), let me run the full iOS build+test to completion in the background with a generous cap, and compose the log meanwhile.
+
+While the iOS build runs, let me confirm I introduced zero whole-tree lint/format regressions (my files are already individually clean) and gather final counts.
+
+Zero new swiftformat regressions — the only whole-tree violation is the same pre-existing `ActionBuilder.Previews.swift:48` (out of my scope); no `shared-surfaces` file is flagged. Let me re-confirm the whole-tree swiftlint state and check iOS build progress.
+
+Whole-tree swiftlint is unchanged from baseline (1 pre-existing `LifetimeStatsWidget` violation; my files aren't in the `included` scope and were verified clean via scoped lint). Let me check the iOS build progress.
+
+The KMP Gradle assemble is mostly cached (UP-TO-DATE) from earlier attempts and nearly done. Let me wait for the app-compile/test phase to reach the pre-existing failure.
+
+iOS build+test completed: **IOS_EXIT=65**, failing on the exact pre-existing condition the sibling documented — `Unable to resolve module dependency: 'XCTest'` in the app target 'TeslaSync' (co-located `*.Tests.swift` from feature-views/dashboard-widgets compiled into the app target). The surface-error scan found **zero** DataFreshness errors (my surface isn't even in `project.yml`). Let me confirm the XCTest origin isn't my file and kick off the macOS build.
+
+Conclusive: the iOS `XCTest` failure comes from **pre-existing** co-located test files (`AIRestorePanel.Tests.swift`, `AcDcStatsPanel.Tests.swift`, …) in `feature-views/`; `shared-surfaces` appears **0 times** and there are **0** DataFreshness errors — my surface isn't in the app target. Now the macOS build+test (Gradle cache is warm).
+
+macOS: **MAC_EXIT=65**, in the code-signing/entitlements phase, with **0** shared-surfaces and **0** DataFreshness references. Let me extract the precise macOS failure reason for the log.
+
+macOS root cause confirmed: pre-existing dev-signing requirement (`"TeslaSync-macOS" has entitlements that require signing with a development certificate`) — **MAC_EXIT=65**, 0 DataFreshness references. All gate evidence is now gathered. Let me get my file line counts and write the comprehensive honest log.
+
+A complete surface (~1,295 lines across 7 files). One detail to make airtight: the first iOS run logged a transient "database is locked" (from my earlier overlapping attempts). Let me do one clean iOS re-run (warm Gradle cache, no concurrent builds) so the decisive failure is unambiguously the pre-existing XCTest-in-app-target condition.
+
+While the clean iOS run completes, let me verify my files one more time end-to-end (scoped swiftlint + swiftformat + placeholder) to capture final evidence for the log.
+
+All scoped gates are green (swiftlint 0, swiftformat 0/6, placeholder 0). Let me check the clean iOS re-run.
+
+Clean iOS re-run: **IOS_EXIT=65**, no lock noise — decisive condition is dozens of pre-existing `feature-views/*.Tests.swift` files being "part of module 'TeslaSync'" (app target) with their `import XCTest` failing; **0** DataFreshness errors, **0** shared-surfaces references. Let me grab the precise terminal lines, then write the log.
+
+All evidence is airtight. Now I'll write the comprehensive, honest gate log.
+
+Now let me clean up generated build artifacts and verify the git scope before committing.
+
+The only untracked items are my surface dir + log. The modified `AIUsageCard.*` and web files are **pre-existing dirty tree** (not touched by me — my only write was `swiftformat` scoped to `shared-surfaces`; all other format runs were `--lint`). I'll stage only my allowed files + log. Let me confirm the dir contents and commit.
+
+Staging is correctly scoped to my 7 files + log (the `AIUsageCard.*` diff is pre-existing, not mine). Let me commit.
+
+Commit succeeded (8 files, only my surface + log). Let me verify the commit, confirm pre-existing dirty files were left untouched, and finalize.
+
+Everything is clean and correctly scoped. Let me do a final verification of the committed log's terminal lines and update tracking.
+
+The task is complete and verified. Final summary:
+
+## P4 · Shared surface · 0079 — `DataFreshness` (Apple) — STATUS=DONE
+
+Shipped a production-polished, Apple-idiomatic SwiftUI parity of `components/data-display/DataFreshness.tsx` (the chip **and** the query-bound `DataFreshnessAuto`) at `apps/apple/TeslaSync/shared-surfaces/DataFreshness.*` — 7 files, ~1,295 lines, mirroring the canonical `AcDcStatsPanel` pattern.
+
+**Parity & states:** four web statuses with the exact precedence, the full relative‑time ladder (60/3600/86400/604800s, floor division, 30s `TimelineView` tick), ping/pulse/spin animations (Reduce‑Motion gated), tooltip variants, `compact`/`refetchable`/`forceStaleAfter`, plus every P4 leaf state — loading (skeleton chrome), empty ("Never updated", never blank), error (retry), data, stale (amber + one‑shot auto‑refresh), offline (cached value + muted `wifi.slash`).
+
+**Architecture:** P1/S8 state‑holder seam (no HTTP in view), P1/S9 tokens, P1/S10 i18n facade (all 12 web keys + native chrome; zero English literals), P1/S11 `view.opened` telemetry, full VoiceOver/Dynamic Type/Reduce‑Motion.
+
+**Verification (all executed on this runner, raw exits in the log):**
+- ✅ **Isolated SwiftPM build + 31 XCTests pass (0 failures)** in Swift 6 mode against the *real* design system (`Tokens.swift` + `Sources/Design` + `Sources/Components`).
+- ✅ swiftlint `--strict` (0) · swiftformat `--lint` (0/6) · placeholder (0) · `swiftc -parse` (0) on the shipped files; **zero** new whole‑tree regressions.
+- ⏸ Full‑app `xcodebuild` **DEFERRED**: `IOS_EXIT=65` (pre‑existing co‑located‑XCTest‑in‑app‑target across 1008 feature‑view test files) and `MAC_EXIT=65` (pre‑existing macOS dev‑signing) — **0 DataFreshness errors**, surface not even in `project.yml` (integration scope). Matches the repo's sanctioned disposition.
+
+**Committed** (`9bbde4eeb`) scoped to the 7 allowed files + the log; pre‑existing dirty files left untouched. Log ends `EXIT=0` / `STATUS=DONE`.
+

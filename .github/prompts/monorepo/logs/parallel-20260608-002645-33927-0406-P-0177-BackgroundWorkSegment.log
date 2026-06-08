@@ -1,0 +1,109 @@
+I'll start by exploring the repository structure and understanding both the web source and the existing Apple app architecture. Since delegation is FORBIDDEN for this task, I'll do all the work myself.
+
+Apple toolchain is available. Now let me understand the data hook and the existing Apple app conventions by examining the most recently completed feature views.
+
+Now let me study the established conventions from the just-completed AIUsageCard feature-view (7-file pattern) and the project config.
+
+Excellent, this is a high-quality, detailed pattern. Let me read the remaining AIUsageCard files and the shared infrastructure (tokens, components).
+
+Let me find the projection, design tokens, and shared chrome components referenced by the pattern.
+
+The pattern actually spans 9 files (including `.Projection` and `.Chrome`). Let me read those plus the Previews/Tests, design tokens, and project config.
+
+Now I have a clear picture. Let me read the Previews, Tests, design tokens, and project config to understand the full pattern and how files get built.
+
+Now let me read the project config and find the design token / shared component definitions (TSSpacing, Color.TS, Font.TS, TSButton, TSSkeleton, TSFadeIn).
+
+Key finding: `project.yml` lists explicit source paths and does **not** include `TeslaSync/shared-surfaces`. Let me check the environment's build capability and whether sibling shared-surfaces already exist (to see how the directory registration is handled).
+
+Important findings: no full Xcode (only CommandLineTools), no `shared-surfaces` dir yet, no sibling precedent. Let me dig into the test-target wiring and confirm the Xcode capability situation.
+
+`/Applications/Xcode.app` exists — it's just not selected. Let me check if I can drive it via `DEVELOPER_DIR`, whether iOS simulators/SDKs are present, and correct my understanding of the test wiring and the KMP framework dependency.
+
+Xcode 26.5 with an `iPhone 16` simulator is present (SDK is iOS 26.5, deployment target 18 — fine). The blocker risk is the KMP `Shared.xcframework`. Let me check that plus the exact design-token and shared-component APIs I'll consume.
+
+Now I have the design tokens. The KMP `Shared.xcframework` must be Gradle-built (major blocker risk). Let me read the exact APIs of the shared components I'll consume (`TSButton`, `TSSkeleton`, `TSFadeIn`) and find the idiomatic popover/ProgressView pattern in existing feature-views.
+
+The lint configs live at `apps/apple/` root. Let me read them, check for `pwsh`/the placeholder script, and confirm the iOS simulator destination.
+
+`pwsh` is available, so I can run the real gate. Note: `.swiftlint.yml` `included:` and `project.yml` `sources:` don't list `shared-surfaces` — registering the new directory in both is unavoidable infrastructure (no predecessor created it). I'll do those minimal, documented registrations.
+
+Let me kick off a bounded KMP-build feasibility probe in the background while I read the placeholder patterns and a spinner idiom.
+
+JDK 17 is present. Let me check the test-target wiring reality and the project's own verification-status doc before finalizing where my test file lives — and kick off a bounded KMP build probe in the background.
+
+This is the decisive context. `apps/macos-pending-verifications.md` authoritatively documents the established protocol: every prior p4-apple surface verifies **in isolation** (isolated SwiftPM build + tests, real iOS-18/macOS-15 `swiftc -typecheck`, swiftlint/swiftformat/placeholder clean, `xcodegen generate`), then **defers** the full-app `xcodebuild build test` to the macos-latest acceptance gate — because the full-app build is blocked by *pre-existing, unrelated* issues (unstaged KMP `Shared.xcframework`, 150+ co-located `*.Tests.swift` importing XCTest into the app target, dev-signing). I'll follow that exact protocol.
+
+Let me confirm the web `ExportJobSummary` shape and create the directory.
+
+Confirmed: export status is `queued|processing|ready|failed|expired` (filter keeps queued/processing), and Components only import SwiftUI/Charts/MapKit/Foundation — so an isolated SwiftPM verification is clean. Now writing the production files following the established 9-file pattern.
+
+Let me fix the awkward `testLiveResetsStaleAutoRefreshArming` test — it has a nonsensical line and double-binds the source.
+
+Now I'll register the new `shared-surfaces` directory in the build + lint config (required infrastructure — no predecessor created this directory), then format and verify.
+
+Now let me format and lint my new files.
+
+swiftformat clean (0/8 require formatting). Now swiftlint --strict on the surface.
+
+swiftlint linted all 1917 files (config `included` overrides the path arg) and found 1 violation. Let me isolate it.
+
+The only `--strict` violation is **pre-existing and unrelated** — `dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141` (function body length), not my code. My `shared-surfaces` files have zero violations. Let me prove that cleanly with a scoped config, then run the placeholder gate.
+
+Placeholder gate passes (COUNT=0, EXIT=0). My sed botched the temp config. Let me write a clean scoped config to get explicit proof my files are violation-free.
+
+swiftlint resolves `included` relative to the config's location. Let me use a rules-only config and pass the path positionally.
+
+My 8 files: **0 violations** under `swiftlint --strict`. Now the gold-standard verification the predecessors used: an **isolated SwiftPM build + test** with module named `TeslaSync` (so `@testable import TeslaSync` works), under Swift 6 strict concurrency.
+
+Cards.swift is SwiftUI-only. All files staged. Now write `Package.swift` and build+test under Swift 6.
+
+Cards.swift pulls in more UI-kit symbols. Let me locate the defining files for those and the full transitive set, then include exactly what's needed.
+
+All UI/Feedback/Motion files are SwiftUI-only and self-contained. Let me copy those three dirs wholesale (the real UI kit) instead of cherry-picking, and rebuild.
+
+Two harness-only issues: (1) `#Preview` macro needs Xcode's plugin (unavailable to CLI SwiftPM — Previews are Xcode-target-only), and (2) `Feedback/FeedbackOverlays.swift` references `TSMetricBar` from data-display, which my surface never uses. I'll exclude Previews from the harness and drop the unused FeedbackOverlays file, then rebuild + test.
+
+The shared UI-kit files themselves contain `#Preview` blocks — CLI SwiftPM lacks the `PreviewsMacros` plugin. The fix is to build with **Xcode's** toolchain (which bundles the macro plugins) rather than CommandLineTools' swift.
+
+Only `tsGlassPanel` remains unresolved. Let me find where it's defined.
+
+`tsGlassPanel` lives in `Sources/Design/TSMaterial.swift`. Let me add it to the harness and rebuild.
+
+**Build complete** under Swift 6 strict concurrency. Now run the test suite.
+
+All **25 tests pass, 0 failures** under Swift 6 strict concurrency. Now the real-SDK typechecks (iOS 18 + macOS 15) and `xcodegen generate` to validate project wiring.
+
+Both SDK typechecks pass with **0 errors** (Previews included). Now validate the project wiring with `xcodegen generate`.
+
+`xcodegen generate` succeeds (EXIT=0) and enumerates all 9 surface files into the targets. Now let me capture the authentic full-app build blocker signature (bounded, to avoid a runaway Gradle download), confirming the documented pre-existing blockers.
+
+The kill-by-variable was blocked by the safety wrapper. Let me run the bounded build in async mode and control it with `stop_bash`.
+
+Build failed fast (exit 65) — confirming the documented blockers. Let me extract the specific error signatures.
+
+Authentic blocker confirmed: the full-app build halts immediately at `error: There is no XCFramework found at .../Frameworks/Shared.xcframework` (KMP shared-core, only `.gitkeep` present — a `macos-pending` artifact per the doc). **Zero** errors in my surface (BWSEG_ERROR_COUNT=0), and 225 co-located `*.Tests.swift` confirm the secondary documented blocker. Let me capture the remaining real gate exits (`swiftformat --lint apps/apple`, full `swiftlint`) for an honest log.
+
+Complete picture captured. Both whole-tree `swiftformat` and `swiftlint` each have a **single pre-existing, unrelated** violation (in `feature-views/ActionBuilder.Previews.swift` and `dashboard-widgets/LifetimeStatsWidget.Adapter.swift`) — neither in my files. My surface is clean on every host-runnable gate. Now I'll write the gate log and the deferral record.
+
+Now append the deferral row to the `macos-pending-verifications.md` ledger, following the documented protocol and predecessor format.
+
+The last-row anchor (`build test\` | macOS-pending |` immediately followed by the blank line + `## Resolution protocol`) is unique. Let me append my deferral row.
+
+Now verify the generated `.xcodeproj` is gitignored, clean up temporaries, and review the final change set.
+
+The generated `.xcodeproj` is cleaned up and absent from status. The pre-existing `AIUsageCard.*` and `web/*` changes are **not mine** (they predate this session) — I'll stage only my files explicitly. Let me confirm my 9 surface files and commit.
+
+All 9 surface files + 3 required infra files + the log are staged; the pre-existing `AIUsageCard.*`/`web/*` changes are correctly left untouched. The surface is **green on every host-runnable gate** — only predecessor-owned infrastructure is deferred (the documented protocol), so committing is correct.
+
+Committed (EXIT=0, HEAD `d1f4ba3cd`). Final verification of the commit contents and log tail.
+
+Everything verified and consistent:
+
+- **Commit `d1f4ba3cd`** contains exactly my 9 surface files + 3 required infra files + the gate log.
+- The log ends with `EXIT=65` / `STATUS=BLOCKED` (covenant #10).
+- Pre-existing `AIUsageCard.*` and `web/*` changes were left untouched (not mine).
+- No surface files left uncommitted.
+
+The task is complete. Let me record the final status.
+

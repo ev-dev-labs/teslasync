@@ -1,0 +1,238 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. However, Swift 6.3.2, swiftlint, and swiftformat are available. Let me check if the Apple app is a Swift Package (buildable without Xcode) and explore its structure.
+
+The Apple app uses **XcodeGen** (`project.yml`) — no committed `.xcodeproj`, and `xcodebuild` requires full Xcode (only CLT installed). Let me explore the Sources structure and existing dashboard widgets to understand conventions before deciding on BLOCKED vs DONE.
+
+No existing "dashboard-widgets" dir yet — the `Widgets/` folder is WidgetKit (home-screen), not composable dashboard panels. Let me examine the shared facade (P1/S8 state holders, S10 i18n, S11 diagnostics), Design tokens (S9), parity docs, and project.yml.
+
+Let me read the key infrastructure files in parallel: project.yml, state holders, loadable state, and the components I'll need (Metrics, Feedback States, PieGauge).
+
+This is a **KMP (Kotlin Multiplatform) + SwiftUI** app: the main `TeslaSync` scheme depends on a prebuilt `Shared.xcframework` and requires full Xcode + iOS Simulator. Let me gather capability evidence and study existing conventions (DI container, a domain state holder, diagnostics, i18n, and the components I'll reuse) in parallel.
+
+`Xcode.app` IS present — but `xcode-select` points to CLT. I can override with `DEVELOPER_DIR` (no sudo needed). The big question is the missing `Shared.xcframework` (KMP binary). Let me check Xcode access, simulators, the KMP build script, and `pwsh`.
+
+Excellent — **Xcode 26.5 + iOS 26.5 simulators (incl. iPhone 16) + pwsh all available**. The remaining blocker is the KMP `Shared.xcframework`, built via Gradle. Let me check Java, the shared module, design tokens, and the pending-verifications note.
+
+The project's `macos-pending-verifications.md` documents the established convention: the **`Shared.xcframework` binary is a deferred macOS/CI verification** — code is written & committed, host-runnable gates green. But I'm on a real macOS host with Xcode 26.5 + Java 17, so I'll attempt the full build too.
+
+Priority now: write a complete, correct, convention-matching implementation. Let me study existing patterns — AppContainer (DI), a domain state holder/view, and the components I'll reuse.
+
+Now I understand the native conventions (`TS`-prefixed components, `Color.TS`, `Font.TS`, `LocalizedStringKey` i18n). Let me examine the gauge component, empty/error states, diagnostics contract (S11), the KMP shared core's driving API, localization catalog, and an existing test in parallel.
+
+Let me read the web widget infrastructure (WidgetShell, shared gauge hero, types, registry, useDriveScore hook), the diagnostics usage in AppSettingsModel, and the design tokens.
+
+No existing dashboard-widget or diagnostics facade found yet in Apple sources. Let me run comprehensive searches to ground my decisions: existing widget/registry/diagnostics patterns in Apple, the KMP shared core's driving API, the localization catalog format, and test conventions.
+
+Now I have the key facts: there's a KMP `DrivingStore` + `DrivingRepository` (DriveScore data), a shared-core diagnostics facade (`Telemetry.kt`/`Diagnostics.kt`), a single `Localizable.xcstrings` catalog, and a shared i18n catalog (`shared/i18n/catalog/en.json`). Let me read the critical sources in parallel.
+
+Let me read the KMP `DrivingStore`/repository/DTO, the diagnostics facade, design tokens, the web `useDriveScore` hook + DriveScore type, a sample logic test, and the i18n catalogs.
+
+Path correction — the KMP module is under `apps/shared`, not repo-root `shared`. Let me read from the correct location.
+
+Let me read the DrivingStore in targeted sections to find the drive-score API.
+
+`DrivingStore.driveScore(vehicleId:)` returns `StateFlow<Resource<JsonElement>>` (JSON payload, not a typed DTO). I need to understand how Swift decodes a KMP `JsonElement`. Let me check existing JSON-bridge patterns, the refresh API, the web hook/type, and the bridging helpers.
+
+Let me gather the remaining critical pieces: the `Telemetry` interface, how models/stores are injected into views, the JsonElement→Swift decode pattern, the i18n catalogs, design tokens, and a sample logic test.
+
+The shared i18n catalog already has all 6 `widget.driveScoreGauge.*` keys. Let me check whether the Apple `Localizable.xcstrings` already contains them, read the design tokens, a sample logic test, the full Telemetry interface, and how the app injects the container.
+
+The Apple `Localizable.xcstrings` is generated from the shared catalog and **already contains all 6 `translation.widget.driveScoreGauge.*` keys**. Now I need to confirm how Swift resolves i18n keys (prefix convention), read the design tokens, app container injection, and a sample test.
+
+I now understand i18n resolution: the catalog has `translation.`-prefixed keys (generated from the web catalog), so I'll reference `translation.widget.driveScoreGauge.*`. Let me read the design tokens, typography/cards primitives, a sample test, the full Telemetry interface, and confirm the DriveScore JSON shape from the web type + backend.
+
+The canonical `DriveScore` shape is `overall, efficiency, smoothness, speedDiscipline, grade, totalDrives, trend`. Let me confirm backend snake_case field names and read the token definitions, typography/card primitives, a sample test, and the full Telemetry interface.
+
+I have the full token vocabulary. The web score colors map cleanly to semantic tokens (excellent→statusSuccess, good→accent, fair→statusWarning, poor→statusDanger). Let me read the typography/card primitives + `TSTone`, a sample test, and the full Telemetry interface.
+
+Let me read the card primitives, a sample unit test (to match XCTest conventions), and the full Telemetry interface.
+
+Let me read the full Telemetry interface to wire the diagnostics correctly.
+
+I now have everything needed to write the implementation. Let me check the KMP build config (to assess the framework-build feasibility) and the swiftlint/swiftformat rules before writing, then kick off the framework build in the background.
+
+The KMP build applies the `android.library` plugin (needs Android SDK) and runs a pwsh OpenAPI codegen step before every compile — and the project's own `macos-pending-verifications.md` defers the actual `Shared.xcframework` binary to CI. Let me verify whether the Android SDK is present (a hard blocker for even configuring the Gradle build).
+
+KONAN (Kotlin/Native 2.4.0) and Gradle 8.14.5 are already cached — prior KMP builds happened here. But **no Android SDK** (ANDROID_HOME unset, no SDK dirs, no `local.properties`), which the `android.library` plugin requires to even configure. Let me confirm definitively and check the frozen contract.
+
+Android command-line tools are installed via Homebrew (`sdkmanager` on PATH, `~/.android` exists). Let me locate the SDK root and check for the required platform/build-tools, then I'll start writing code while a framework build attempt runs.
+
+The Android SDK (platform-36, build-tools-36) is fully installed. The framework build is **feasible** — I'm targeting a full **STATUS=DONE**. Let me create `local.properties` (so both my Gradle call and the xcodebuild pre-action find the SDK) and kick off the framework build in the background while I write code.
+
+`local.properties` is gitignored. Starting the framework build in the background now.
+
+Framework build is running in the background. Let me confirm the full public API of `DrivingStore` (especially refresh), the `FacadeError` cases, and the Skeleton component — needed for the model and view.
+
+`DrivingStore` has no public per-feed refresh (only `planTrip`/`bulkDeleteDrives`), so the widget's refresh re-subscribes (stop+start), matching the store's documented re-collection model. `FacadeError` has `.offline`/`.network`/`.circuitOpen` for connectivity. Let me find existing freshness/stale/offline i18n keys so my chips use real catalog keys.
+
+`Sources/Live/UI/LiveStateViews.swift` is the canonical template for loading/empty/error/stale/offline rendering with freshness chips (`TSFreshnessIndicator`, `LiveStaleBanner`). Let me read it fully to mirror the exact pattern and reuse components.
+
+`LiveStateViews.swift` is the ideal template. Let me confirm the exact freshness/refresh i18n keys I'll reuse, then check the background build status.
+
+All i18n keys confirmed in the catalog. Let me check the background framework build progress before writing code.
+
+The build is compiling (Kotlin/Native takes several minutes). I have all conventions confirmed. Let me write the implementation now. Creating the main widget file:
+
+Let me check the background build and fix two issues I spotted: the stats value font override and a method-name clarity issue.
+
+Now let me extract a small testable `ViewOpenRecorder` so the telemetry "emit-once" contract can be unit-tested without constructing a real KMP store, and refactor the model to use it.
+
+Let me check the framework build progress while I prepare the tests.
+
+Build still compiling. Let me write the tests now.
+
+Let me fix a convoluted assertion and the non-optional `XCTAssertNotNil` smoke checks.
+
+Now let me run the static gates (swiftformat, swiftlint) on my new files while the framework builds, and check build progress.
+
+swiftformat flagged formatting (the project wraps single-line property bodies, enforces trailing commas, etc.). Let me auto-format with the ecosystem tool, then re-verify.
+
+swiftformat passes. Now swiftlint --strict on my files:
+
+One violation: `file_length` (755 > 400 under `--strict`). I'll split into 3 cohesive `DriveScoreGaugeWidget*` files. Let me view the formatted file to split it precisely.
+
+I'll split into 4 cohesive `DriveScoreGaugeWidget*` files (each <400 lines) to satisfy `file_length`. Let me remove the combined file and create the split files.
+
+Now let me run swiftformat + swiftlint --strict on all split files and the test, and check the framework build.
+
+All static gates pass (swiftformat 0/5, swiftlint --strict 0 violations, all files <400 lines). Now the placeholder check and framework build status:
+
+Placeholder check passes (count=0). Let me check the framework build progress.
+
+The `tail` buffers until completion. Let me check build progress directly — process activity and output artifacts.
+
+The framework is actively compiling (Kotlin/Native LLVM codegen for all 3 Apple targets; generated API client present, `XCFrameworks` dir created). This is the slow phase. Let me wait for it to complete.
+
+Framework built successfully (`BUILD SUCCESSFUL in 16m58s`). Now let me inspect the generated ObjC/Swift header to confirm the exact KMP symbol names my code depends on (`driveScore`, `Telemetry`/`ScreenView`, `Platform`), before generating the project and building.
+
+`driveScore(vehicleId:)` confirmed (returns `StateFlow`). Let me confirm the Telemetry/ScreenView/Platform Swift names from the saved header.
+
+All KMP Swift symbol names confirmed (`driveScore(vehicleId:)`, `Telemetry.track(event:)`, `TelemetryEventScreenView(screen:platform:appVersion:)`, `Platform.shared`, `Resource`). My code matches. Let me stage the framework, generate the Xcode project, and start the iOS build.
+
+Project generated. Now let me run the iOS build (build-only first for fast compile validation) in the background, logging to a file so I can inspect errors.
+
+While the iOS build runs, let me verify the gate log directory exists and monitor early build output.
+
+Let me monitor the iOS build progress, focusing on any compile errors.
+
+Build failed with compile errors in my code. Let me extract all errors from my files to fix them together.
+
+One error: `bundleShortVersion` is internal but used in a public default argument. Let me make it public.
+
+Fixed. Let me re-lint the changed file and rebuild iOS (incremental).
+
+Incremental rebuild running. Let me wait for it to complete.
+
+**iOS app compiles cleanly (`IOS_BUILD_EXIT=0`)** — my widget integrates correctly with the real KMP framework. Now the full gate: `build test` (unit + UI tests). Let me run it in the background with full logging.
+
+The full iOS build+test is running. Let me monitor its progress.
+
+Let me peek at the test log to gauge progress (compilation vs test execution).
+
+Test targets compiling (my `DriveScoreGaugeWidgetTests.swift` included, no errors). Let me continue waiting for compilation and test execution.
+
+Exit 65 — let me find what failed (my tests, pre-existing tests, or a compile issue).
+
+The failure is **environmental, not my code**: "two concurrent builds running in the same filesystem location" (build.db locked) + "simctl not found" (a process didn't inherit `DEVELOPER_DIR`). My test file compiled fine. Let me check for stray xcodebuild processes and simulator state.
+
+Many stray `xcodebuild` processes from **other parallel slots** are saturating this shared host — the simulator test host was killed (signal kill) under resource pressure, and a post-crash diagnostics subprocess hit the CLT `simctl`. My widget compiled (iOS build exit 0) and my test file compiled. Let me isolate the unit-test bundle (which holds all my required tests) on a pre-booted iPhone 16 to get a clean run.
+
+Load average is **570** — the shared host is massively saturated by ~40+ parallel slots all running Xcode builds, starving/killing the simulator test host. The iPhone 16 is booted. Let me run just my unit-test classes via `test-without-building` (reusing the built bundle) — fast and less likely to be killed.
+
+**All 29 of my unit tests PASS on the iPhone 16 simulator against the real KMP framework** (adapter: 11, tone: 1, per-state render: 10, registry: 3, telemetry/view.opened: 2, a11y label-presence + state construction: 2). 
+
+Now let me confirm (a) no regressions in the full unit bundle and (b) the macOS app compiles. Running the full `TeslaSyncTests` bundle first:
+
+The cause is environmental: **CoreSimulator service died** ("Mach error -308 - server died", "Invalid device state") under the host's load-570 pressure from ~40 parallel slots — it crashed during test-runner install. My isolated 29 tests passed moments earlier before the sim service died. macOS tests run **on the host directly (no simulator)**, so let me validate the macOS leg — first a build to confirm compilation.
+
+The macOS build is compiling (heavy, under load). Let me prepare while it runs and then check it. Let me wait for progress.
+
+macOS build failed in 11s (too fast for a real compile failure — likely a setup/pre-action issue, no errors in my files). Let me see the actual cause.
+
+macOS build failed on **code signing** (entitlements need a dev certificate; none on this machine) — not my code (iOS-simulator builds skip signing, which is why iOS succeeded). Let me retry the macOS build with signing disabled to validate compilation.
+
+macOS build (signing disabled) compiling. Let me wait for it.
+
+**macOS build SUCCEEDED** (exit 0) — my widget compiles for iOS *and* macOS. macOS tests run on the host (no simulator), so they should execute reliably despite the load. Let me run my DriveScore tests on the macOS target.
+
+macOS tests building + running. Let me wait.
+
+Exit 70 in 4s — failed early (likely test-target signing or scheme config). Let me check.
+
+The macOS app builds fine, but its hosted test target can't resolve/launch the test host (dev-signing/host config). Both native **test-execution** legs are now hitting shared-host limits (iOS CoreSimulator dying under load ~570; macOS hosted-test signing). Let me confirm my changes are purely additive (so existing tests can't regress) and check the macOS host-app path.
+
+Confirmed: my changes are **purely additive** (2 new untracked dirs; zero existing files modified) — so existing behavior cannot regress. Load is still ~463. Let me make a clean single-invocation macOS test attempt (host-based, no simulator) in the background, and meanwhile reconfirm the iOS tests on a fresh simulator.
+
+While macOS recompiles, let me reconfirm the iOS tests on a fresh simulator (reusing the built bundle).
+
+The macOS clean test finished. Let me read its result while the iOS re-test continues.
+
+Same macOS test-host resolution failure (instant, pre-compile) — a hosted-test/dev-signing limitation in this headless environment, not my code. Let me get the iOS re-test result.
+
+The iOS host was OOM-killed again ("signal kill before establishing connection") under load — intermittent: my 29 tests passed cleanly at 18:22, retries die during simulator install. This is host resource starvation, not my code.
+
+Let me try the canonical two-phase macOS approach (`build-for-testing` → `test-without-building`), which is host-based and avoids the simulator entirely — the best shot at a fully-green native test leg.
+
+build-for-testing running. Let me wait for it.
+
+Root cause of the macOS test failure identified: a **pre-existing project-config bug** — the macOS test target's `TEST_HOST` points to `TeslaSync-macOS.app`, but the target overrides `PRODUCT_NAME: TeslaSync` (so the real product is `TeslaSync.app`). This breaks macOS hosted-test execution for *any* test, independent of my widget (which I can't fix — project.yml is out of scope). The macOS app itself compiles cleanly.
+
+Let me run the real gate static commands globally to capture authoritative exit codes for the log.
+
+Both global static gates are **fully green**: `swiftlint --strict` = 0 violations across all 261 files, `swiftformat --lint apps/apple` = 0/265 require formatting. Let me capture the placeholder exit and verify which build artifacts are git-ignored before writing the log and committing.
+
+All gates captured. Build artifacts (`.xcodeproj`, `Shared.xcframework`, `local.properties`) are correctly git-ignored. Let me write the comprehensive, honest gate log.
+
+The macOS `TEST_HOST` bug (`TeslaSync-macOS.app` vs actual `TeslaSync.app`) may be workaroundable via a command-line override without touching project.yml. A green macOS hosted-test leg (no simulator OOM risk) would meaningfully strengthen the result. Let me try `build-for-testing` with the corrected `TEST_HOST`.
+
+macOS `build-for-testing` (with corrected `TEST_HOST`) is compiling. Let me wait for it.
+
+The `TEST_HOST` override hit a secondary pre-existing constraint (the UI test target uses XCTRUNNER and rejects a global `TEST_HOST`), confirming the macOS hosted-test execution is blocked by project configuration I can't fix within scope. Let me record this in the log for full transparency, then commit.
+
+Now let me commit the artifact + log (staging only my files; the framework/xcodeproj/local.properties are git-ignored).
+
+Git is slow under the host load. Let me keep waiting.
+
+Git has hung for >3 minutes — likely an index lock or severe I/O contention under the host load. Let me investigate in a separate shell.
+
+No `index.lock` and no running git process — the `git add` likely completed but shell 69's output didn't flush. Let me verify the staged state directly.
+
+Nothing staged yet and shell 69 appears stuck without holding a lock. Let me stop it and retry the staging cleanly with a timeout.
+
+Exactly my 5 source/test files + the log are staged (no build artifacts). Let me commit.
+
+Committed (`0ce95b90`, 6 files, 1235 insertions). Let me verify the final repository state is clean and the pre-existing unrelated changes were not included.
+
+Everything is verified and committed cleanly. The commit `0ce95b90` contains exactly my 5 Swift files + the gate log (1235 insertions); the two pre-existing unrelated web modifications were correctly left untouched and uncommitted.
+
+## Summary
+
+I shipped a production-polished, native Apple (SwiftUI) parity port of **`DriveScoreGaugeWidget`** and committed it with an honest gate log.
+
+**Artifact** (`apps/apple/Sources/DashboardWidgets/`, + tests, all `<400` lines each):
+- **Data** — `DriveScoreProjection` JSON adapter (snake/camel/page-shape, clamping, graceful empty), score→tone mapping, pure `DriveScoreRenderState` derivation, and `DriveScoreGaugeRegistry` (mirrors `drive-score-gauge`: 1×2 default, 1×2 min, 2×40 max).
+- **Model** — `@Observable` model binding the shared **`DrivingStore.driveScore`** feed via `StateHolderModel`/`LoadableState` (no direct HTTP), plus the P1/S11 telemetry seam emitting **`view.opened`** as `ScreenView(screen:"DriveScoreGaugeWidget")` once per appearance.
+- **Views** — radial gauge + efficiency/smoothness/speed breakdown, reproducing **all 6 states** (loading, loaded, empty, error+retry, stale chip, offline+cached), compact/tall variants, 7 previews, VoiceOver labels, reduce-motion.
+- **i18n** — every string resolves through the P1/S10 catalog (verified by test, no English literals).
+- **29 unit tests** — adapter + per-state + registry + telemetry + a11y.
+
+**Verification (real, not claimed):**
+| Gate | Result |
+|---|---|
+| KMP `Shared.xcframework` build | ✅ exit 0 (16m58s) |
+| iOS app compile | ✅ exit 0 |
+| macOS app compile | ✅ exit 0 |
+| 29 widget unit tests (iPhone 16 sim) | ✅ 29/29 passed |
+| `swiftlint --strict` (261 files) | ✅ 0 violations |
+| `swiftformat --lint apps/apple` | ✅ 0 |
+| placeholder gate | ✅ 0 |
+
+**Honest status: `STATUS=BLOCKED`.** The full-scheme `build test` execution couldn't reach exit 0 on this **shared CI-class host** due to platform conditions, not my code: the iOS CoreSimulator was OOM-killed under load avg 200–570 (≈40 parallel slots; "server died", "signal kill"), and macOS hosted tests hit a **pre-existing** `TEST_HOST`/`PRODUCT_NAME` mismatch + absent dev-signing (out of scope to fix). These are exactly the Apple-native test-execution items the repo defers to dedicated `macos-latest` CI (CONTRACT_FROZEN.md / macos-pending-verifications.md / ADR-012). All host-runnable gates are green, and the change is purely additive (no regression risk).
+
+
+
+The task is complete. Let me clean up the temporary build artifacts I created in `/tmp` (courtesy on this contended shared host), then finalize.
+
+Task complete. Everything is committed and verified to the extent the shared host allows.
+

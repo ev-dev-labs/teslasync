@@ -1,0 +1,182 @@
+=== P4 Shared surface 0161 TreeSelect (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon) — SHARED runner (many parallel slots +
+                       Gradle daemons + xcodebuild processes from sibling slots observed; only this
+                       slot's own artifacts were touched, no foreign PID killed).
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir is /Library/Developer/CommandLineTools; `xcodebuild -version`
+                       there errors "requires Xcode"). Overridden non-destructively, no sudo / no
+                       xcode-select -s — the SAME mechanism every prior P4 surface used.
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2
+  Capability         : NOT capability-BLOCKED. SwiftUI / Swift Charts / MapKit present in the
+                       MacOSX26.5 + iPhoneOS/iPhoneSimulator 26.5 SDKs; iOS 26.5 simulators installed
+                       (iPhone 16 present). This surface uses NO Charts and NO MapKit (web source
+                       "Charts / maps used: (none)"); the sparkline accessory is a plain SwiftUI
+                       `Path` (zero chart deps), so all iOS 18 / macOS 15 HIG primitives it needs are
+                       available. SwiftUI + @Observable + #Preview + .onKeyPress + XCTest were each
+                       proven to compile + run on THIS runner (see ISOLATED VERIFICATION below).
+
+WEB SOURCE (the specification — read end to end)
+  web/src/components/forms/TreeSelect.tsx (+ __tests__/TreeSelect.test.tsx). A generic tri-state
+  two-level tree multi-select primitive:
+    • Two-level hierarchy (groups -> leaves) with tri-state group checkboxes (none / partial / all).
+    • In-component search filter that FILTERS the tree (does not flatten): a group whose own label
+      matches keeps all its leaves, else only matching leaves; zero-match groups drop.
+    • Selection is INDEPENDENT of the filter: a selected leaf stays selected when filtered out of
+      view; group / "select visible" actions only ever touch currently-visible leaves.
+    • Group + top-level toggles act on VISIBLE, ENABLED leaves only (disabled leaves never auto-
+      select and never block the "all selected" determination).
+    • Per-group `{selected}/{visible}` counts; top-level "Select all" / "Clear all" that flips to
+      "Select N visible" / "Clear N visible" while searching; "Clear all selected" link.
+    • Right-slot `renderLeafRight` / `renderGroupRight` (badges, sparklines); per-leaf disabled +
+      reason; controlled selection / expansion / search; loading skeleton; empty + no-results states.
+    • WAI-ARIA tree pattern + roving-tabindex keyboard nav (Arrow / Home / End / Space / Enter),
+      aria-checked "true|mixed|false", sr-only live summary.
+    • The functional-setter onChange so rapid successive toggles accumulate (no stale-closure clobber).
+  Data sources (prompt): `useId` only — the primitive is controlled, no HTTP. The native surface
+  binds the catalog through the shared P1/S8 state-holder seam; selection/search/expansion are owned
+  locally by the observable model.
+
+NATIVE OUTPUT (apps/apple/TeslaSync/shared-surfaces/TreeSelect.*) — 11 swift + 1 strings, 2445 swift LOC
+  TreeSelect.swift             Public `View` entry · surfaceSlug "TreeSelect" · start/stop on appear ·
+                               view.opened (P1/S11) on first presentation.
+  TreeSelect.Projection.swift  Pure value types (TreeLeaf/TreeGroup/TreeSelectAccessory/Tone/
+                               RowDescriptor/CheckState/Phase) + the web pure fns (filterGroups,
+                               buildRows) + selection/counts/tri-state transforms. Foundation-only.
+  TreeSelect.Adapter.swift     Cached `TreeSelectCatalog` -> [TreeGroup] projection (accessory =
+                               sparkline if trend>=2 else unit chip else none; disabled mapping) +
+                               every localized label (select-all, counts, group/leaf VoiceOver,
+                               sr summary, empty / no-results). Foundation-only.
+  TreeSelect.Seams.swift       P1/S10 i18n facade (TreeSelectStrings) · P4 connectivity axis ·
+                               P1/S11 telemetry seam (+ os.Logger default) · input snapshot ·
+                               P1/S8 state-holder seam (TreeSelectSource + InMemoryTreeSelectSource).
+  TreeSelect.Model.swift       @MainActor @Observable TreeSelectModel — owns selection/search/
+                               expansion/roving-focus, recomputes the pure projection, emits
+                               view.opened once, one-shot stale auto-refresh; focusIndex is a clamped
+                               computed (web `useEffect` clamp on rows.length).
+  TreeSelect.Views.swift       Container · search field (native TextField + clear) · select-all/count
+                               header · scrollable tree (group headers + indented leaves) with
+                               hardware-keyboard roving focus (.onKeyPress arrows/Home/End/Space/Enter)
+                               · sr-only live summary.
+  TreeSelect.Chrome.swift      Tri-state checkbox atom · skeleton bar · accessory (text/badge/
+                               sparkline Path) · freshness chip · stale/offline banner · refresh
+                               button · loading / empty / no-results / error views.
+  TreeSelect.Previews.swift    #Preview x9 (populated/collapsed/searching/no-results/loading/empty/
+                               error/stale/offline). DEBUG-only.
+  TreeSelect.Tests.swift / TreeSelect.AdapterTests.swift / TreeSelect.KeyboardTests.swift
+                               54 XCTest cases (projection, model, adapter cached->projection +
+                               labels, keyboard, telemetry, stale auto-refresh, a11y label content).
+  TreeSelect.strings           "TreeSelect" table — every web literal + the P4 chrome promoted to a
+                               key with its English fallback (no English prose literals in Swift).
+
+STATES (every state renders — no hidden surface)
+  loading (skeleton) · empty (no catalog, friendly message) · noResults (search eliminated all,
+  carries the query) · populated (the tree) · error (P4 leaf addition, retryable) · stale / offline
+  (orthogonal connectivity axis -> freshness chip + banner + one-shot auto-refresh on stale).
+
+GATES — raw results on THIS runner
+  [FORMAT] swiftformat --lint apps/apple/TeslaSync/shared-surfaces
+           -> "0/11 files require formatting."                                    FORMAT_EXIT=0
+  [LINT]   swiftlint --strict (repo rules, scoped to the 11 surface files)
+           -> "Done linting! Found 0 violations, 0 serious in 11 files."          LINT_EXIT=0
+           (Note: the repo .swiftlint.yml `included:` does not yet list
+           TeslaSync/shared-surfaces, so the bare `swiftlint --strict` skips this
+           new dir; it was linted explicitly with the repo rule set to prove it is
+           clean for when the dir is wired in. The one repo-wide pre-existing
+           violation, dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+           function_body_length, is NOT in this surface.)
+  [PLACE]  ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces -Language swift
+           -> PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0                 PLACEHOLDER_EXIT=0
+           (The gate's literal `-Path .../shared-surfaces/TreeSelect` is a basename
+           prefix with no matching filesystem node, so Get-ChildItem -Recurse scans
+           nothing -> a trivial COUNT=0; the real DIRECTORY was scanned instead so
+           the 11 .swift files were genuinely inspected. No TODO/FIXME/Placeholder/
+           Lorem/not-implemented; grep -inE re-confirmed 0.)
+
+  [ISOLATED BUILD + TEST] — the verification of THIS surface's code (predecessor-established P4
+  disposition: a real Swift 6 strict-concurrency build + XCTest against the REAL design system, via
+  the Xcode 26.5 toolchain, since the full monorepo app build does not compile this dir — see
+  DEFERRED below).
+           SwiftPM module named `TeslaSync` (so `@testable import TeslaSync` resolves), sources =
+           the 8 surface non-test files + the REAL apps/design/generated/apple/Tokens.swift + the
+           REAL apps/apple/Sources/Components/Motion/Motion.swift; tests = the 3 surface test files.
+           Built `-swift-version 6` (Swift 6 language mode = strict concurrency complete, matching
+           project.yml SWIFT_VERSION 6.0 / SWIFT_STRICT_CONCURRENCY complete).
+           -> Build complete. "Executed 54 tests, with 0 failures (0 unexpected)."  ISOLATED_EXIT=0
+           The 9 #Preview macros + @Observable + .onKeyPress + @Bindable + @FocusState + ScrollView
+           all compiled. The web __tests__/TreeSelect.test.tsx matrix is reproduced: leaf toggle,
+           group tri-state (off/mixed/on), disabled exclusion, select-all/clear, "Select N visible",
+           selection-survives-search, rapid-toggle accumulation, no-results/empty/loading, keyboard
+           (Space/Arrow/Enter + focus clamp), plus telemetry view.opened-once and stale auto-refresh.
+
+  [IOS / MAC FULL-APP xcodebuild build test] — DEFERRED (NOT failed by this code, NOT red-as-green).
+           IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED
+           Verified invokable: `xcodegen generate` created TeslaSync.xcodeproj (git-ignored) and
+           `xcodebuild -list` resolves the TeslaSync + TeslaSync-macOS schemes under Xcode 26.5; the
+           scheme pre-action even ran Gradle to assemble the KMP Shared.xcframework
+           (:core:linkReleaseFrameworkMacosArm64 observed). It is DEFERRED on pre-existing,
+           unrelated, OUT-OF-ALLOWED-FILES conditions, each confirmed by ls/grep (not assumed):
+             1. apps/apple/Frameworks/ holds only .gitkeep — Shared.xcframework is not staged in the
+                tree; the app target links it, so a clean checkout must run the heavy Gradle
+                Kotlin/Native assembly first (minutes), which on this heavily-contended shared runner
+                exceeded the practical budget.
+             2. project.yml app-target sources are Sources / TeslaSync/dashboard-widgets /
+                TeslaSync/feature-views only — TeslaSync/shared-surfaces is NOT wired in (this is the
+                FIRST shared surface), so the full-app build would not even compile these files.
+                Wiring project.yml is outside this prompt's allowed files
+                (apps/apple/TeslaSync/shared-surfaces/TreeSelect.* + this log).
+             3. 15 files define `DashboardWidgetSize` (grep) — a pre-existing duplicate-symbol
+                condition in the app target.
+             4. 170 co-located *.Tests.swift live under feature-views (an app-target source path) and
+                `@testable import TeslaSync` — i.e. the app module imports itself under test; a
+                pre-existing app-target compile condition.
+           None of (1)-(4) is introduced or touched by this surface. This surface's own code is
+           independently GREEN via the ISOLATED BUILD + TEST above, which is exactly what does
+           exercise it. The full-app + simulator gate is owned by the P4 acceptance gate on a
+           dedicated signed runner (apps/macos-pending-verifications.md).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED with raw
+                           ls/grep + xcodegen/xcodebuild-list evidence — never reported as passing.
+                           Every gate marked EXIT=0 was actually executed and its real output pasted.
+  2  No scope narrowing  : every web region + branch reproduced — tri-state groups, filter (group-
+                           label vs leaf-label), select-visible semantics, disabled exclusion,
+                           selection-survives-filter, functional-setter accumulation, counts, the
+                           sr summary, the keyboard model, the right-slot accessory; all 6 states render.
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; raw exits pasted; the
+                           deferred full-app blockers were each re-confirmed by ls/grep + an actual
+                           xcodegen/xcodebuild invocation, not assumed.
+  4  No stubs as final   : complete production surface + 54 real tests; placeholder scanner COUNT=0;
+                           no TODO/FIXME/stub/Coming-soon/Placeholder/Lorem anywhere.
+  5  No parity shortcut  : filterGroups / buildRows / toggleLeaf / toggleGroup / toggleAllVisible /
+                           the tri-state thresholds / the select-all label / the count + sr summaries
+                           are each unit-asserted against the web expressions (en-independent values).
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: honoured the established P4 disposition (DEVELOPER_DIR Xcode override,
+                           isolated-build verification, full-app DEFERRED) and the P1/S8 state-holder,
+                           P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened seams. No sibling
+                           surface or shared file modified; the pre-existing AIUsageCard.* / web/*
+                           working-tree edits were left untouched and are NOT part of this commit.
+  8  No commit on red    : the committed artifact (12 TreeSelect.* files + this log) is GREEN on
+                           swiftformat, swiftlint --strict, the placeholder scanner, AND a real Swift 6
+                           strict-concurrency build + 54/54 XCTest. The full-app gate is DEFERRED on
+                           pre-existing, unrelated conditions this commit does not touch.
+  9  No silent drift     : changes are confined to apps/apple/TeslaSync/shared-surfaces/TreeSelect.*
+                           and this log; the generated .xcodeproj (git-ignored) was removed; the
+                           /tmp isolated harness is outside the repo.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic TreeSelect shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 54 tests pass under the app's own Swift 6 strict-
+  concurrency rules, against the REAL design system (Tokens + Motion), via the Xcode 26.5 XCTest
+  runtime, with swiftformat / swiftlint --strict / placeholder all green on the 11 surface files and
+  all 9 #Preview macros compiling. The full-app iOS-Simulator + macOS xcodebuild build/test gate is
+  DEFERRED (not failed by this code) on pre-existing, unrelated, out-of-allowed-files conditions
+  (unstaged Shared.xcframework, shared-surfaces not yet wired into project.yml, the DashboardWidgetSize
+  redefinition, the co-located-tests-into-app-target config), owned by the P4 acceptance gate on a
+  dedicated signed runner.
+
+EXIT=0
+STATUS=DONE

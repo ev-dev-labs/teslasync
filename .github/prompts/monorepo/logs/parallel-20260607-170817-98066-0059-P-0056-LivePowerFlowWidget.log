@@ -1,0 +1,120 @@
+I'll start by exploring the repository structure and reading the web source specification.
+
+I've read the web source. Now let me explore the Apple app structure and the web dependencies in parallel. Note: `xcodebuild` reports only Command Line Tools are installed (no full Xcode) — I'll verify this thoroughly but first understand the full scope.
+
+There's an existing `DigitalTwinWidget` in the same `dashboard-widgets` directory — that's my canonical template. Let me read all of its files plus the web flow-diagram dependency.
+
+Excellent template. Let me read the rest of the DigitalTwin files (Model, Models, Builder, Palette, Badges, Previews, Tests, strings) and the web flow-diagram source.
+
+Now let me read the remaining template files (Builder, Palette, Badges, Previews, Tests, strings), the design tokens, and the web energy hooks for data shapes.
+
+Let me read the design tokens, palette/badges, project.yml, the web energy hooks, and the gate scripts.
+
+Let me read the energy types, design tokens, build config, placeholder checker, and check how the prior widget's gate log was handled.
+
+Let me read the energy types, design tokens, number format, prior log head, and project.yml.
+
+The prior 0036 log establishes the precedent clearly: host-validate via `swiftc -typecheck` + swiftlint + swiftformat + placeholder gate, with the Xcode app build/test deferred (ADR-012). Let me probe Xcode availability and locate the core tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSTone`) plus the States/number-format helpers and project.yml.
+
+`/Applications/Xcode.app` is present (the 0036 precedent used a `DEVELOPER_DIR` override but DEFERRED the app build/test due to codesign + unstaged xcframework per ADR-012). Now let me locate the exact token definitions (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSTone`) and the number formatter, plus confirm the project.yml wiring.
+
+The core tokens are referenced widely but I need their definition source. Let me search the whole Apple tree and read the project.yml wiring.
+
+The tokens come from `../design/generated/apple` (the `DesignTokens` group), and `DashboardWidgetSize`/`DashboardWidgetRegistration` are shared registry types defined in `DigitalTwinWidget.Model.swift`. Critically, I must reuse those (not redefine) to avoid module redeclaration. Let me read the full 0036 gate log to replicate its exact host-validation methodology, and confirm the design tokens exist.
+
+I now have the complete, established methodology from the 0036 gate log. Let me read the full design tokens and confirm the host `swiftc -typecheck` capability works.
+
+`swiftc -typecheck` against the macOS 15 SDK works (Canvas, `contentTransition`, etc. all resolve). I now have the full token vocabulary and the established 0036 methodology. Let me confirm the exact registry entry and the web AnimatedNumber/EmptyState nuances, then write a plan.
+
+Confirmed registry: `live-power-flow`, energy, 2×4/2×4/4×40. I have everything. Let me read the lint/format configs to avoid violations, then set up my plan and todos.
+
+I have the full picture, including lint/format constraints (line ≤120, file ≤400, function body ≤50, `empty_count`→`.isEmpty`, `--self remove`, testable-bottom imports). 
+
+Decision: I'll **reuse** the shared `DashboardWidgetSize`/`DashboardWidgetRegistration` from the module (redefining them would cause a redeclaration error in the real build), define surface-specific seams with a `PowerFlow`/`LivePowerFlow` prefix, and host-validate by compiling my files alongside the real DigitalTwin set + component closure (the proven 0036 methodology). Let me list the component dirs to finalize the compile closure and write my plan.
+
+Now I'll build the surface. Starting with the domain models and the pure projection builder.
+
+Now the state-holder seam, telemetry, model, strings facade, formatter, and a11y summary.
+
+Now the palette (node + arrow colors at web Tailwind parity, neutral chrome via tokens).
+
+Now the centerpiece — the flow diagram view (Canvas arrows + positioned nodes, animated dashes, reduce-motion aware).
+
+Now the main surface view (shell + header + all states + registration).
+
+Now previews (DEBUG-only, one per state) and the test suite.
+
+Now the i18n catalog contribution.
+
+All 9 files created. Let me verify every i18n key referenced in code exists in the catalog (and there are no forbidden placeholder words), then start the host validation.
+
+Perfect — i18n keys match exactly (0 drift), no forbidden words, all files ≤283 lines. Now the host validation. I'll first establish a green baseline by typechecking the existing DigitalTwin set + real component closure, then add my files.
+
+Baseline green. Now adding my 6 surface files (coexisting with DigitalTwin — proves no redeclaration).
+
+Typecheck green. Now validating under the project's actual build mode — Swift 6 + `-strict-concurrency=complete` (per `project.yml`).
+
+Swift-6 strict-concurrency clean. Now step [2] — compile the pure adapter to a native binary and **run** it to verify the cached→projection logic (real execution, not a typecheck).Swift 6 strict concurrency passes. Now the executed adapter harness — compiling the pure `Models` + `Builder` (no SwiftUI) with a runner and executing it to prove the cached→projection logic at runtime.
+
+Adapter harness: **26/26 passed** at runtime. Now swiftlint (strict) on the surface files, swiftformat lint on the whole tree, and the placeholder gate.
+
+Three fixable swiftlint issues: two trailing commas and `drawArrow` exceeding 5 params. Let me locate all trailing commas and fix all three.
+
+All three are quick fixes. I'll remove the two trailing commas and refactor `drawArrow` to bundle its params into a small render-context struct (keeping lines ≤120).
+
+That edit was wrong — the comma must be removed, not annotated. Let me correct it.
+
+Now properly remove the two trailing commas (DigitalTwin convention + swiftformat `--commas inline` both require none).
+
+Now refactor `drawArrow` to bundle params into a render-context struct (keeping all lines ≤120).
+
+Now re-run swiftlint strict and re-typecheck (Diagram changed).
+
+swiftlint strict: **0 violations**. Now re-typecheck the full set and run swiftformat lint.
+
+swiftformat wants formatting changes (wrap property bodies, blank lines, doc comments) — the convention DigitalTwin follows. I'll fix the one non-trivial case (the identity `map`) manually, then apply swiftformat (the ecosystem tool) to converge the rest.
+
+swiftformat applied. Re-verifying all gates converge (swiftformat lint, swiftlint strict, typecheck).
+
+Both converge (0 format, 0 lint). Re-running typecheck + adapter harness (Builder changed), then the full-tree gate commands.
+
+All green. Now the exact whole-tree gate commands: `swiftformat --lint apps/apple`, bare `swiftlint --strict`, and the placeholder gate.
+
+swiftformat 0/277, swiftlint 0/256 — both green. Now the placeholder gate (the literal prompt path + the real directory scan + self-test).
+
+All host gates pass: typecheck (Swift 6 strict), adapter harness 26/26, swiftlint 0, swiftformat 0/277, placeholder COUNT=0 + self-test PASS. Now gathering the honest evidence for the DEFERRED Xcode steps (mirroring the 0036 disposition).
+
+Every deferral reason confirmed (not registered in `project.yml`, no `Shared.xcframework`, 0 signing identities, no `.xcodeproj`, CLT-only). All host gates are genuinely green. Let me confirm git scope, then write the gate log.
+
+All 9 files are correctly scoped and within size limits. Now writing the honest gate log.
+
+Log written. Let me do a final consolidated verification of all host gates (post-edits) before committing.
+
+All host gates green in the final run. Cleaning up the temp harness and committing the allowed files + log.
+
+Committed (10 files, 1746 insertions, scope-clean). Marking todos done and confirming a clean tree.
+
+Working tree clean, all todos done, log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...-dashboard-widgets-0056-LivePowerFlowWidget.log | 184 ++++++++++++++
+ .../LivePowerFlowWidget.Builder.swift              | 120 +++++++++
+ .../LivePowerFlowWidget.Diagram.swift              | 220 ++++++++++++++++
+ .../LivePowerFlowWidget.Model.swift                | 283 +++++++++++++++++++++
+ .../LivePowerFlowWidget.Models.swift               | 182 +++++++++++++
+ .../LivePowerFlowWidget.Palette.swift              |  69 +++++
+ .../LivePowerFlowWidget.Previews.swift             | 107 ++++++++
+ .../LivePowerFlowWidget.Tests.swift                | 273 ++++++++++++++++++++
+ .../dashboard-widgets/LivePowerFlowWidget.strings  |  47 ++++
+ .../dashboard-widgets/LivePowerFlowWidget.swift    | 261 +++++++++++++++++++
+ 10 files changed, 1746 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0056-LivePowerFlowWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LivePowerFlowWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LivePowerFlowWidget.Diagram.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LivePowerFlowWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LivePowerFlowWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LivePowerFlowWidget.Palette.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LivePowerFlowWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LivePowerFlowWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LivePowerFlowWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LivePowerFlowWidget.swift

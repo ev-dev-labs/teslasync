@@ -1,0 +1,133 @@
+I'll start by exploring the repository structure and verifying the capability requirements before making any changes. The honesty covenant binds me to truthful reporting, so I need to establish what's actually present.
+
+I have key capability evidence already: `xcodebuild` reports **only Command Line Tools are installed, not full Xcode**. That's decisive for the iOS Simulator gate, but I must verify thoroughly and still do all the work I can. Let me gather definitive evidence and read the source in parallel.
+
+Decisive capability evidence captured:
+- `xcode-select -p` → `/Library/Developer/CommandLineTools` (**full Xcode not installed**)
+- `xcodebuild -showsdks` → error: requires Xcode
+- `xcrun simctl` → **no iOS simulators** ("simctl not a developer tool")
+- BUT `swiftc -typecheck` with `SwiftUI`/`Charts`/`MapKit` → **exit 0** (frameworks available in CLT macOS SDK)
+
+So the `xcodebuild` build/test gate can't run, but I can still write real, compile-checked Swift. Before concluding, let me check whether full Xcode exists anywhere and study the existing Apple project conventions thoroughly.
+
+**Major finding:** `/Applications/Xcode.app` **is present**, and `/Library/Developer/CoreSimulator` exists — `xcode-select` just points at CLT. I may be able to use full Xcode via `DEVELOPER_DIR`. This is decisive, so let me verify it can actually drive `xcodebuild`/`simctl` without sudo, while reading the project conventions.
+
+**Capability CONFIRMED available** — this is NOT blocked:
+- Xcode 26.5 usable via `DEVELOPER_DIR`, first-launch/license check exit 0
+- iOS Simulator SDK present; **iPhone 16 simulator already Booted**
+- macOS SDK present; swiftlint + swiftformat + pwsh all present
+
+So I must actually build the surface and pass the real gate. The project is a KMP-backed app (`import Shared`, binds Kotlin `StateFlow` via `StateHolderModel`). I need to understand the build system and study a complete exemplar surface before writing code.
+
+Critical build-system finding: the `TeslaSync`/`TeslaSync-macOS` targets glob `Sources`, `TeslaSync/dashboard-widgets`, `TeslaSync/feature-views` — but **NOT `TeslaSync/shared-surfaces`**. My files won't compile unless that path is globbed. I need to check build prerequisites (KMP framework, Gradle) and study the exemplar pattern. Let me read the closest analog (`DriveAnalyticsSection.*`) and assess build feasibility.
+
+Now I understand the conventions well. Two critical feasibility facts: (1) the app depends on `Frameworks/Shared.xcframework` built via **Gradle/Kotlin-Native** (no prebuilt copy present), and (2) `shared-surfaces` isn't globbed in `project.yml`. Let me read the remaining convention-defining exemplar files, find the telemetry `view.opened` contract, locate shared tokens/components, and assess KMP build feasibility — all in parallel.
+
+The pattern is now very clear and high-quality. I need the remaining convention files plus the design tokens and a build-feasibility read. Let me batch these.
+
+Java 17 is present (KMP build is *plausible* but heavy), the git baseline is **already dirty** (parallel harness pre-modified files), and `.Tests.swift` files use **XCTest** + `@testable import TeslaSync`. I need the design-token definitions and the Models file to write compiling code. Reading those now.
+
+I have the full pattern. Last pieces: the generated design tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`) and the `TSFadeIn`/`TSSkeleton` signatures, so my shipped code uses real names and my verification shim matches.
+
+Now let me confirm the exact token namespacing and the shared card/glass-panel components, then I'll have everything to write compiling code.
+
+Key config finding: `.swiftlint.yml` `included:` lists `feature-views`/`dashboard-widgets` but **NOT `shared-surfaces`** — confirming the `shared-surfaces` scaffolding isn't wired into project.yml sources or swiftlint (a P4-core predecessor gap, outside my allowed files). I'll ship + verify standalone and document precisely. Let me grab the exact web parity details (trendColor, formatCurrency) and the test-target wiring, then build.
+
+I now have full parity details. `trendColor` inverts (up→bad/red, down→good/green), `formatCurrency` = symbol + grouped fixed-decimals, and the XCTest unit-test targets host app-target test classes. The `shared-surfaces` dir is unwired in both `project.yml` and `.swiftlint.yml` (P4-core predecessor gap, outside my allowed files). 
+
+Let me set up tracking and start building the Foundation-only core.
+
+Now creating the surface. Starting with the Foundation-only core (Models, Projection, Adapter).
+
+Now the Adapter — the parity heart with all 8 analyzers. This is the most important file.
+
+Let me typecheck the Foundation-only core immediately to catch errors early.
+
+Core typechecks clean under Swift 6. Now the SwiftUI layer — the Model (state holder + telemetry + i18n facade + source).
+
+Now the Views layer. First I'll add a SwiftUI `text()` helper to the facade, then write the presentational chrome.
+
+Now the States (loading/empty/error) and the entry view.
+
+Now the Previews and the i18n strings catalog.
+
+Now the Tests file — the parity-pinning artifact. I've pre-computed exact expected strings for each analyzer.
+
+All 10 files created. Now the real verification: a standalone SwiftPM package with a token shim that compiles every file and runs the tests. First let me confirm exactly which token members my files reference.
+
+Now creating the standalone verification package with a token shim.
+
+Now build and test the verification package — this compiles every surface file and runs the parity tests.
+
+Build surfaced a real Swift 6 strict-concurrency issue in `Previews.swift` (MainActor inits called from a nonisolated helper) — all other files compiled clean. Let me check how the precedent handles this and the project's Swift mode before fixing.
+
+Confirmed: the real target is `SWIFT_VERSION 6.0` + `SWIFT_STRICT_CONCURRENCY: complete` — so my standalone check faithfully matches the real compiler. The precedent marks the preview `model(_:)` builder `@MainActor`. Applying the same fix.
+
+Re-syncing the fixed file and rebuilding + testing the verification package.
+
+Build clean under Swift 6 strict concurrency. Now running the parity tests.
+
+27 tests, 1 failure. Let me find it.
+
+Real bug caught: `optimalIdeal` is concatenated directly (not via `String(format:)`), so its `%%` stays doubled. It must use a literal `%`. Fixing in all three places (Projection default, Model facade fallback, .strings catalog).
+
+All 27 tests pass under Swift 6 strict concurrency. Now the linters and placeholder check on the shipped files.
+
+These are auto-fixable formatting issues (plus force-unwraps in tests). Let me run swiftformat autofix, then handle the force-unwraps manually, then re-verify.
+
+swiftformat now passes (0/9 require formatting). Let me re-sync all autofixed files to the verification package and confirm build+tests still pass.
+
+All 27 tests pass post-format. Now swiftlint on the shipped files.
+
+swiftlint scanned the whole repo (1909 files) and found 1 serious violation. I need to know whether it's in my files or pre-existing baseline. Let me isolate it.
+
+The single swiftlint violation is in a **pre-existing** file (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`) I never touched — my files have **0 violations**. Let me confirm that file is baseline (not mine) and run a focused swiftlint on only my files for definitive evidence.
+
+Let me see the actual focused-lint output (the pipe suppressed it).
+
+The focused config's relative path resolved against `/tmp`. Let me use an absolute path. (I already have strong evidence: the full-repo run's only violation is non-`shared-surfaces`.)
+
+The full-repo run skipped my files (not in `included`) — the focused lint reveals **3 real violations in my files**: `copy()` body too long, and `Tests.swift`/`Adapter.swift` exceed 400 lines. Let me view the current `copy()` and split points to fix all three cleanly.
+
+Refactoring `copy()` to source English defaults from `InsightsEngineCopy.fallback` — this both shrinks the body under 50 lines and removes duplicated literals (DRY).
+
+Now splitting `Adapter.swift`: moving the analyzer extensions into a new `InsightsEngine.Analyzers.swift`. Let me locate the boundary.
+
+Both Adapter (158) and Analyzers (322) are now under 400. Now splitting `Tests.swift` (503 lines). Let me find the model/accessibility test boundaries.
+
+Splitting `Tests.swift` into `Tests.swift` (adapter parity) + `ModelTests.swift` (projection + state-holder + a11y), each self-contained with file-scoped fixtures.
+
+All files now under 400 lines. Let me re-format, re-lint, and re-verify via the package (re-syncing the new split files).
+
+Both linters pass on all 11 files (0 violations). Re-syncing the full split file set to the package and re-verifying build + tests.
+
+Both linters and the package tests are green. Now the placeholder check. Let me first scan my files for forbidden markers, then run the actual gate script.
+
+Placeholder gate passes (COUNT=0, EXIT=0). Let me confirm the script actually scanned my files (not zero) and check whether "placeholder" in my comments is a tracked pattern, to be certain.
+
+The exact gate path scanned **zero files** (no dir named `InsightsEngine`), masking 2 real `Placeholder` pattern hits in my comments. Honesty requires fixing them. Rewording both comments.
+
+Re-verifying placeholder + format after the comment edits.
+
+All in-scope checks pass. Let me do a final clean re-sync + build/test, then capture the real gate-as-written outputs (including generating the Xcode project to concretely show the predecessor wiring gap).
+
+Final package verification clean (build + 27 tests). Now capturing the real gate-as-written evidence, starting with generating the Xcode project to concretely demonstrate the wiring gap.
+
+Decisive evidence: `xcodegen` succeeds but my files get **0 references** in the generated project (vs. 66 for the wired `DriveAnalyticsSection`) — confirming `shared-surfaces` isn't in `project.yml` sources (P4-core predecessor gap), so `xcodebuild` can't compile/test my surface in-scope. Now capturing the remaining gate-as-written steps, then cleaning up the generated project.
+
+Both gate lint steps are **red at baseline** on pre-existing files I never touched (`ActionBuilder.Previews.swift`, `LifetimeStatsWidget.Adapter.swift`). Let me confirm they're baseline (not mine), capture the placeholder step, and clean up the generated project.
+
+All evidence gathered and the generated project cleaned up. The two gate lint failures are confirmed **pre-existing baseline** files (unmodified, not mine). Let me gather final consolidated numbers for an honest log, then write it.
+
+Everything in-scope is green: format=0, lint=0, build=0, **27/27 tests pass**, files properly decomposed (all <400 lines). Now writing the honest gate log.
+
+Now let me commit — staging only my allowed files (the `shared-surfaces/` dir contains exclusively my new files) plus the log, not the harness's pre-existing dirty files.
+
+Exactly my 12 surface files + the log are staged (no harness files). Committing with an honest message.
+
+Committed cleanly (13 files, only my surface + log). Now cleaning up temporary artifacts and verifying repo cleanliness.
+
+Clean — temp artifacts removed, no stray build artifacts, and the only remaining working-tree changes are the pre-existing harness files (correctly untouched). Let me finalize tracking.
+
+Task complete. All work is committed and verified to the maximum extent possible within the prompt's allowed-files scope.
+

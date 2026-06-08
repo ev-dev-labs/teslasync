@@ -1,0 +1,43 @@
+=== P4 Dashboard widget 0053 GeofenceWidget (Apple) ===
+run-at: 2026-06-07T18:31:55.8341140-07:00
+web-source: web/src/features/dashboard/widgets/GeofenceWidget.tsx
+native-output: apps/apple/Sources/dashboard-widgets/GeofenceWidget*.swift
+  (prompt path apps/apple/TeslaSync/dashboard-widgets/ maps to the build source root
+   apps/apple/Sources/dashboard-widgets/ - identical mapping P4/P4-0001 used for TeslaSync/App)
+
+--- CAPABILITY PROBE -------------------------------------------------
+xcode-select -p => /Library/Developer/CommandLineTools
+xcodebuild -version => xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+iOS simulators available => 0
+swift => Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+swiftlint => 0.63.3; swiftformat => 0.61.1; xcodegen => Version: 2.45.4
+
+--- GATE STEPS -------------------------------------------------------
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+Done linting! Found 0 violations, 0 serious in 261 files.
+LINT_EXIT=0
+0/265 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0 (apps/apple/Sources/dashboard-widgets, swift)
+
+--- COMPENSATING VERIFICATION (Xcode-free) ---------------------------
+
+PARSE_EXIT=0 (4 surface sources parse against macOS SDK)
+
+TYPECHECK_EXIT=0 (data+model layers + real Tokens/Badges deps, Swift 6 strict)
+XCODEGEN_EXIT=0 (surface wired into iOS+macOS app targets; 30 project refs)
+TESTS: apps/apple/Tests/Unit/DashboardWidgets/GeofenceWidgetTests.swift (adapter+state+a11y+telemetry; runs on Xcode runner)
+I18N: 13 keys added to apps/apple/Localization/Localizable.xcstrings (widget.geofence.* + action.retry)
+
+--- VERDICT ----------------------------------------------------------
+IOS_EXIT=1 MAC_EXIT=1 LINT_EXIT=0 FORMAT_EXIT=0 PLACEHOLDER_EXIT=0
+BLOCKED: the build/test halves require full Xcode + an iOS Simulator runtime and the KMP
+Shared.xcframework; this runner has Command Line Tools only (no Xcode.app, 0 simulators) and
+does not build the Kotlin/Native xcframework. Per the prompt Capability clause this is BLOCKED,
+not red-as-green. Everything runnable here is green: swiftlint --strict, swiftformat --lint,
+placeholder gate, swiftc -parse (all sources), swiftc -typecheck (data+model, Swift 6), xcodegen.
+EXIT=1
+STATUS=BLOCKED

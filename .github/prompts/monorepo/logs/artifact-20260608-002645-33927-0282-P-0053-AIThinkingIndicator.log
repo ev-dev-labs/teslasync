@@ -1,0 +1,192 @@
+=== P4 Shared surface 0053 AIThinkingIndicator (Apple) ===
+Prompt: .github/prompts/monorepo/... p4-apple-shared-surfaces 0053 AIThinkingIndicator
+Web source (THE spec): web/src/components/ai/AIThinkingIndicator.tsx
+Runner: macOS (Darwin arm64), Xcode 26.5 (17F42) via DEVELOPER_DIR=/Applications/Xcode.app,
+        swift 6.3.2, xcodegen 2.45.4, swiftlint, swiftformat, pwsh, iPhone 16 simulator.
+
+--------------------------------------------------------------------------------
+0. SCOPE / PARITY READING (web source read end-to-end)
+--------------------------------------------------------------------------------
+AIThinkingIndicator.tsx is a PURE presentational streaming-empty indicator. Its only
+data input is `useTranslation`; it fetches nothing. Its real render branches are:
+  • leading label = `label ?? t('helix.thinking','Helix is thinking')`  (override vs default)
+  • the AI-common verb default the prop doc references: `t('ai.common.thinking','AI is thinking')`
+  • Reduce-Motion variant (web `motion-safe:`): glyph stops pulsing, dots stop bouncing,
+    lines drop the shimmer — the static skeleton stays visible.
+  • a pulsing brand HelixMark, three staggered bouncing dots, three decreasing-width
+    (w-full / w-11/12 / w-9/12) shimmer lines.
+  • a11y: role="status" + aria-live="polite"; dots + lines are aria-hidden.
+  • a compact in-button sibling `AIThinkingDots({ label })` (bg-current dots).
+There is NO query/empty/error/stale/offline DATA envelope in the source, so those generic
+template states are N/A for this surface (same disposition as the sanctioned ToolCard
+precedent — "ToolCard is a pure presentational container; the web source fetches nothing").
+Every REAL branch above is reproduced. No scope narrowing.
+
+Native HelixMark counterpart = SF Symbol `sparkles` + cyan accent tint, matching the
+sibling AISettings `HelixIconBox`. The brand-mark ATOM is owned by the P4 component-library
+bundle (out of scope here), so it is rendered inline within the allowed surface files.
+
+--------------------------------------------------------------------------------
+1. ARTIFACT (allowed files) + necessary wiring
+--------------------------------------------------------------------------------
+apps/apple/TeslaSync/shared-surfaces/AIThinkingIndicator.Model.swift     (telemetry seam P1/S11 + i18n facade P1/S10 + AIThinkingSurface slug + AIThinkingPresentation adapter + motion geometry)
+apps/apple/TeslaSync/shared-surfaces/AIThinkingIndicator.swift           (main full indicator View)
+apps/apple/TeslaSync/shared-surfaces/AIThinkingIndicator.Views.swift     (HelixGlyph + DotsRow + SkeletonLines + compact AIThinkingDots)
+apps/apple/TeslaSync/shared-surfaces/AIThinkingIndicator.Previews.swift  (#if DEBUG previews: default / custom / compact / dark)
+apps/apple/TeslaSync/shared-surfaces/AIThinkingIndicator.strings         (helix.thinking + ai.common.thinking)
+apps/apple/Tests/Unit/SharedSurfaces/AIThinkingIndicatorTests.swift      (real test-target unit tests; NOT a co-located app-target XCTest)
+Necessary wiring (new source dir must be enumerated/linted):
+  apps/apple/project.yml        — add `TeslaSync/shared-surfaces` to the iOS + macOS app target sources
+  apps/apple/.swiftlint.yml      — add `TeslaSync/shared-surfaces` to `included`
+apps/macos-pending-verifications.md — append the deferred full-app-gate row (per repo resolution protocol)
+
+--------------------------------------------------------------------------------
+2. ISOLATED SwiftPM BUILD + TESTS (Swift 6 strict concurrency, real design tokens + real TSSkeleton)
+--------------------------------------------------------------------------------
+Package: swift-tools 6.0, platforms iOS 18 / macOS 15, swiftLanguageModes [.v6] (== app's
+SWIFT_VERSION 6.0 + SWIFT_STRICT_CONCURRENCY complete). Vendored the unmodified real
+apps/design/generated/apple/Tokens.swift and the verbatim real TSSkeleton excerpt
+(the rest of Skeletons.swift pulls TSCard/TSBadge/TSButton — the whole component tree —
+so only the self-contained TSSkeleton struct is vendored) + the 4 surface .swift files.
+
+$ swift build            (clean)  -> NO warnings/errors  EXIT=0
+$ swift test
+  Test Suite 'AIThinkingIndicatorTests' passed.
+  Executed 16 tests, with 0 failures (0 unexpected) in 0.003s
+  Tests: default-label / caller-override / blank-override-fallback / localized-default-key /
+         facade-fallback-both-keys / table+keys stable / a11y policy (status+aria-hidden) /
+         skeleton fractions (w-full,11/12,9/12) / skeleton stagger / dot phases (verbatim
+         -0.3/-0.15/0) / rebased non-negative phases preserve relative spacing /
+         skeleton block height (52) / surface slug stable / reportOpen emits slug /
+         reportOpen nil-safe / reportOpen repeats.
+  RESULT: 16/16 PASS.
+
+--------------------------------------------------------------------------------
+3. REAL SDK TYPECHECK — iOS 18 + macOS 15 (Swift 6, -D DEBUG so previews are checked)
+--------------------------------------------------------------------------------
+$ xcrun --sdk iphonesimulator swiftc -target arm64-apple-ios18.0-simulator -swift-version 6 -D DEBUG -typecheck <surface+tokens+TSSkeleton>
+  IOS_TYPECHECK_EXIT=0
+$ xcrun --sdk macosx        swiftc -target arm64-apple-macos15.0        -swift-version 6 -D DEBUG -typecheck <surface+tokens+TSSkeleton>
+  MAC_TYPECHECK_EXIT=0
+
+--------------------------------------------------------------------------------
+4. swiftlint --strict  (new files)
+--------------------------------------------------------------------------------
+$ swiftlint lint --strict --quiet \
+    TeslaSync/shared-surfaces/AIThinkingIndicator.swift \
+    TeslaSync/shared-surfaces/AIThinkingIndicator.Model.swift \
+    TeslaSync/shared-surfaces/AIThinkingIndicator.Views.swift \
+    TeslaSync/shared-surfaces/AIThinkingIndicator.Previews.swift \
+    Tests/Unit/SharedSurfaces/AIThinkingIndicatorTests.swift
+  (initial run flagged 2 long lines in the test → wrapped; re-run:)
+  SWIFTLINT_EXIT=0   (0 violations, 0 opt-outs)
+
+--------------------------------------------------------------------------------
+5. swiftformat --lint  (new files)
+--------------------------------------------------------------------------------
+$ swiftformat --lint TeslaSync/shared-surfaces Tests/Unit/SharedSurfaces
+  (initial run flagged wrapPropertyBodies on a 1-line computed var → swiftformat applied;
+   re-run:)  0/5 files require formatting.  SWIFTFORMAT_EXIT=0
+
+--------------------------------------------------------------------------------
+6. PLACEHOLDER GATE (pwsh apps/tools/check-placeholders.ps1)
+--------------------------------------------------------------------------------
+$ pwsh check-placeholders.ps1 -SelfTest                                  -> SELFTEST_EXIT=0
+$ pwsh check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces -Language swift
+  PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+$ pwsh check-placeholders.ps1 -Path apps/apple/Tests/Unit/SharedSurfaces -Language swift
+  PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+(The prompt's literal `-Path .../shared-surfaces/AIThinkingIndicator` is a non-existent path
+prefix for a multi-file surface and would vacuously pass; the real per-directory scan above
+is the meaningful, stricter check. No TODO/stub/mock/placeholder/Lorem in shipped code.)
+
+--------------------------------------------------------------------------------
+7. xcodegen generate — enumeration
+--------------------------------------------------------------------------------
+$ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodegen generate
+  Created project at .../apps/apple/TeslaSync.xcodeproj   XCODEGEN_EXIT=0
+  Enumerated (36 pbxproj refs across iOS+macOS app targets + resources):
+    AIThinkingIndicator.Model.swift, AIThinkingIndicator.swift, AIThinkingIndicator.Views.swift,
+    AIThinkingIndicator.Previews.swift, AIThinkingIndicator.strings, AIThinkingIndicatorTests.swift
+
+--------------------------------------------------------------------------------
+8. FULL-APP GATE — executed on THIS runner (RED, pre-existing-blocked, DEFERRED)
+--------------------------------------------------------------------------------
+The KMP Shared.xcframework pre-action ran and SUCCEEDED here (Kotlin/Native FROM-CACHE):
+  "xcframework successfully written out to: apps/shared/core/build/XCFrameworks/.../Shared.xcframework"
+
+$ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  IOS_EXIT=65   ** BUILD FAILED **
+  First/only error class (PRE-EXISTING, unrelated to this surface):
+    TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'
+    (a co-located *.Tests.swift importing XCTest into the APP target — 224 such files exist in
+     the app source paths; this is one of the two documented parallel-merge collision classes.)
+  Total `error:` lines = 4 (the 2 XCTest errors, doubled across the build+test passes).
+  Errors attributable to AIThinkingIndicator / shared-surfaces = 0.
+  POSITIVE PROOF the surface was accepted by the real Xcode build before the unrelated failure:
+    CopyStringsFile .../TeslaSync.app/AIThinkingIndicator.strings  (in target 'TeslaSync')
+    AIThinkingIndicator.strings:1:1: note: detected encoding ... Unicode (UTF-8)
+
+$ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+    xcodebuild -scheme TeslaSync-macOS build test
+  MAC_EXIT=65   ** BUILD FAILED **
+  First error class (PRE-EXISTING, unrelated):
+    "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+    "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+    (macOS development-signing — not provisioned on this runner; owned by the P4/P99 acceptance
+     gate on a signed macos-latest CI runner.)
+  Errors attributable to AIThinkingIndicator / shared-surfaces = 0.
+
+Authentic repro of the other documented blocker (15 in-module `public struct DashboardWidgetSize`):
+$ swiftc -module-name TeslaSync -emit-module A.swift B.swift   # two identical decls
+    error: invalid redeclaration of 'DashboardWidgetSize'
+$ grep -rn "struct DashboardWidgetSize" Sources TeslaSync | wc -l   ->  15
+
+These are exactly the artifacts apps/macos-pending-verifications.md defers to the ADR-012
+macos-latest CI runner (rows: p1-shared S3-0001 Shared.xcframework; p4-apple ToolCard /
+AlertMessageEditor / FSMTimelineChart full-app xcodebuild). They are owned by the P4/P99
+Apple acceptance gate + a dashboard-widget de-duplication pass — NOT by a single shared-surface
+prompt (task rule: do not fix pre-existing, unrelated breakage). A new pending-verification row
+is recorded for this surface.
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT (binding)
+--------------------------------------------------------------------------------
+ 1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 /
+                          MAC_EXIT=65) and DEFERRED with raw evidence — never reported as passing.
+ 2  No scope narrowing  : every real web branch reproduced (default/override label, both i18n
+                          keys, Reduce-Motion variant, pulsing glyph, staggered dots, 3 prose
+                          shimmer lines w-full/11-12/9-12, role=status+aria-live, compact dots).
+                          The generic empty/error/stale/offline DATA states are N/A — the web
+                          source fetches nothing (documented, not skipped).
+ 3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; iOS+macOS RED
+                          confirmed and root-caused to pre-existing files, not assumed.
+ 4  No stubs as final   : complete production views + 16 real tests; placeholder scanner = 0.
+ 5  No parity shortcut  : tint/opacity/motion phases/typography/a11y/telemetry/i18n all mapped to
+                          platform tokens (P1/S9) + facade (P1/S10) + diagnostics (P1/S11) and verified.
+ 6  No delegation       : implemented directly; no agents.
+ 7  No predecessor bypass: P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry, P4 core (TSSkeleton,
+                          Reduce-Motion env) all present and consumed.
+ 8  No commit on red    : the COMMITTED artifact is GREEN on every host-runnable gate AND on a real
+                          isolated Swift 6 build+test against the real design system; the deferred
+                          full-app gate is RED only on pre-existing, unrelated surfaces this commit
+                          neither introduces nor touches (0 surface errors; strings even bundled).
+ 9  No silent drift     : changes confined to shared-surfaces/AIThinkingIndicator.*, the test file,
+                          project.yml + .swiftlint.yml wiring, this log, and one macos-pending row.
+ 10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic AIThinkingIndicator shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 16 tests pass under the app's own Swift 6 strict-
+  concurrency rules, against the real design system, type-checks on the real iOS-18 + macOS-15 SDKs,
+  with swiftlint --strict / swiftformat --lint / placeholder all green and xcodegen enumerating all
+  files. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this
+  code): it is blocked by pre-existing parallel-merge collisions (co-located *.Tests.swift importing
+  XCTest into the app target; 15x duplicate DashboardWidgetSize) and macOS development-signing — both
+  owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED
+  Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

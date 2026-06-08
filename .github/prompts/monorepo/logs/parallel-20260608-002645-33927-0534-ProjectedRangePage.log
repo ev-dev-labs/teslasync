@@ -1,0 +1,104 @@
+I'll start by exploring the repository structure to understand the task, then examine the web source and existing Apple app patterns.
+
+Xcode isn't available (only Command Line Tools), but swift, swiftlint, and pwsh are. Let me study the existing conventions by reading a representative feature-view set.
+
+Full Xcode is installed at `/Applications/Xcode.app`, and `xcodegen` is available. Let me verify whether I can actually build by overriding `DEVELOPER_DIR`.
+
+This BatteryTab log reveals the sanctioned verification approach. Let me check the dependency surface for an isolated build harness.
+
+This is a large, rich page. Let me read the web SI converters/formatters to port them precisely, then set up my plan.
+
+I have everything needed. Let me set up the plan and todos, then implement.
+
+Now I'll write the implementation. Starting with the Model file.
+
+Let me clean up the selection handling — `didSet` on an `@Observable` stored property is fragile. I'll use an explicit setter instead.
+
+Now the Adapter — the pure projection/conversion core (default `fmtNumber` precision is 2, confirmed).
+
+Now the Views file. Let me verify the `TSButton` initializer signature first.
+
+Now the Charts file (gauge + projection curve).
+
+Now the main page view with the scaffold and phase switching.
+
+Now the Navigation file — self-contained route primitives (kept independent of `Sources/App` so the isolated harness can verify them).
+
+Now the strings file with all 27 web keys plus native chrome.
+
+Now the Previews and Tests files.
+
+All 9 files written. Let me verify string-key coverage and scan for forbidden words before wiring the build.
+
+All keys covered and no forbidden patterns. Now wire the build config (project.yml + swiftlint) to include the new `Features` directory.
+
+Now let me run swiftformat-lint and swiftlint on the new files.
+
+SwiftFormat wants auto-fixes (line wrapping, redundant returns), and swiftlint linted the whole project. Let me apply swiftformat to my dir, then isolate my violations.
+
+SwiftFormat passes. Now let me isolate swiftlint violations to my files only.
+
+Real violations in my files (file length, function length, line length, param count). Let me check the full swiftlint config and how the repo handles large files/test files.
+
+The repo enforces ≤400 lines/file and ≤50 lines/function. My files are too big — I'll split them following the repo's small-file convention. Let me view the post-format files to extract content cleanly.
+
+I'll split the oversized files. Let me verify exact boundaries first.
+
+Boundaries confirmed. Let me perform all the file splits with a Python script.
+
+All files now ≤400 lines. Now the remaining lint fixes: `RangeFixture` visibility, `interpolate` param count, long lines, and two long functions. Let me view the relevant regions.
+
+Let me make the refactors. First, the `ProjectedRangeFormat` helpers (add `whPerKm`, wrap the temperature line).
+
+Now add `RangeWhatIfInputs` to Projection.swift and refactor `interpolate`. Let me view the what-if section in Projection.swift.
+
+Now refactor `interpolate` in Projector.swift and the scenario `efficiencyText` to use the new helpers.
+
+Now update `Model.whatIfResult` to build `RangeWhatIfInputs`.
+
+Now update the tests for the new `interpolate` signature and split the long fixture/preview functions. Let me view the test what-if calls and the fixture.
+
+Now split the `RangeFixture.projection()` function and make it internal. Let me view it.
+
+Now split the Previews `sampleProjection()`. Let me view it.
+
+Now re-run swiftformat and swiftlint to verify all violations are resolved.
+
+swiftformat + swiftlint both clean. Now the placeholder gate.
+
+Placeholder gate passes. Now I'll build an isolated SwiftPM harness (the sanctioned verification per the BatteryTab precedent) that compiles my exact sources against the real design system under Swift 6, and runs the tests.
+
+Two issues: a pre-existing component (`UnitFormatters.swift`) needs a `Units` type, and my `Navigation.swift` has a type-inference-heavy expression. Let me locate `Units` and fix my expression.
+
+Only `UnitFormatters.swift` depends on the KMP facade (unrelated to my page). Let me fix my `Navigation.swift` expression and exclude that one component from the harness.
+
+Library builds clean under Swift 6. Now run the tests.
+
+Test compile errors in my test files (arg order + Double inference). Let me fix them.
+
+I'll fix the argument-order and Double-inference issues in the test file.
+
+All 34 tests pass under Swift 6. Let me re-verify the host gates after edits, then attempt project generation + the full xcodebuild gate.
+
+Host gates all green. Now verify project generation includes the new feature, then attempt the full xcodebuild gate.
+
+Project generates cleanly (90 references to my files across targets). The full xcodebuild needs the KMP `Shared.xcframework`. Let me check whether I can stage it, then attempt the build.
+
+Java 17 + Gradle are available. Let me stage the KMP `Shared.xcframework` (needed for the real app build) in the background while I prepare the log and ledger.
+
+While the Shared framework builds, let me draft the ledger. Let me check the ledger format and whether any platform ledger exists yet.
+
+Gradle is still compiling. Let me create the apple-ledger.json while it runs.
+
+Let me continue waiting for the Shared framework build.
+
+Still building (Kotlin/Native compilation is slow). Let me draft the parity log while it runs.
+
+Let me check on the Shared framework build.
+
+Kotlin/Native compilation takes several minutes. Let me keep waiting.
+
+The Shared framework built successfully (9m44s). Let me stage it and run the full-app xcodebuild gate, capturing whether my files compile cleanly in the real target.
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: CD35:1C5AAC:2C22D4E:2E63AB3:6A26E725)

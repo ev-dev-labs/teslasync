@@ -1,0 +1,161 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the repo structure, the web source, and the Apple tooling availability in parallel.
+
+Key finding: `xcodebuild` is present but **only Command Line Tools** is installed — no full Xcode. Let me verify the capability situation thoroughly and read the web spec + existing Apple structure in parallel.
+
+Critical discovery: **full Xcode IS at `/Applications/Xcode.app`** — just not selected. I can likely override via `DEVELOPER_DIR` without sudo. Let me verify, and read `lib/unitInput.ts` (the format/parse spec) plus explore existing Apple patterns.
+
+**Capability CONFIRMED:** Xcode 26.5 works via `DEVELOPER_DIR` (no sudo), iOS 26.5 + macOS 26.5 SDKs present, iPhone 16 simulator **booted**. I will run the real gate — not BLOCKED.
+
+I now fully understand the web spec. Let me explore the established Apple patterns (state holders, tokens, i18n, diagnostics, tests, project config) before writing code.
+
+Structure differs from my assumption. Let me locate the real paths for `project.yml`, `Sources`, and the shared infrastructure.
+
+Now I understand the layout. Critical: `project.yml` lists `feature-views` and `dashboard-widgets` as sources but **not** `shared-surfaces` — I'll need to wire that in for the gate to actually compile my code. Let me study the established surface pattern (tests, adapter, i18n, tokens, diagnostics) by reading a representative surface and the shared infra.
+
+Now I understand the architecture (KMP `Shared` core, `@Observable` state holders, `LoadableState`, SI `Units` facade). Let me read a full representative surface to learn the exact file conventions (i18n `.strings` lookup, diagnostics `view.opened`, state rendering, adapter/model split) plus the native Input + state components.
+
+The pattern is now clear (`.swift`/`.Adapter`/`.Model`/`.Views`/`.Previews`/`.strings`/`.Tests`, per-surface `XxxStrings.string(key, default)`, `TS` design tokens, `phase`/`connection` states). Let me find the i18n helper definition, diagnostics emitter, native Input, LoadableState infra, and how surfaces obtain unit prefs.
+
+Excellent — I now have the full surface blueprint. Let me read the native input primitives, a test example, a previews example, and the design tokens to finalize my implementation against real APIs.
+
+Let me verify the biggest gate risks: the `Shared.xcframework` (KMP build dependency), the placeholder checker, and `pwsh` availability — plus finish reading the test conventions and confirm token names.
+
+The key gate risk is clear: **`Shared.xcframework` is absent** (only `.gitkeep`), and the scheme pre-action builds it via Gradle/Kotlin-Native. Let me assess whether that KMP build is feasible here, and read how the repo documents this verification.
+
+Crucial context from `macos-pending-verifications.md`: **3 prior P4 surface prompts** (ToolCard, AlertMessageEditor, FSMTimelineChart) all hit the **same pre-existing, unrelated full-app build blockers** (`DashboardWidgetSize` redefined 8–15×, 100+ co-located XCTest files, unstaged `Shared.xcframework`, macOS signing). The repo-sanctioned methodology: verify each surface **green in isolation** (SwiftPM build+tests, `swiftc -typecheck` on iOS-18+macOS-15, swiftlint/swiftformat/placeholder clean, xcodegen enumerates) and defer the full-app build to a macOS acceptance gate.
+
+Good news: `~/.konan` (1.6G) + `~/.gradle` (3.1G) caches **and network** are present, so I can attempt the KMP framework build too. Let me confirm the pre-existing collisions and Shared-free design deps.
+
+Confirmed: `DashboardWidgetSize` redefined **15×** and **261** XCTest-in-app files exist in this checkout — the documented pre-existing full-app blockers are real and unrelated to my surface. Design/Components are **Shared-free**, so I can verify my surface in isolation. 
+
+Strategy set. Let me locate the exact token/component definitions so my code compiles against real APIs.
+
+Tokens live in the generated DesignTokens path. Let me read them and the key components (`TSGlassPanel`, `TSSkeleton`, `TSFadeIn`, `Font.TS`).
+
+Now I have exact token APIs. Let me read the precise signatures of the components I'll compose with.
+
+I have everything I need. Let me create a plan file, then write the surface. Starting with the directory and the pure, testable Adapter.
+
+Now I'll write the surface. Starting with the pure Adapter (port of `lib/unitInput.ts`).
+
+Now the Model (telemetry seam, settings source, projection, `@Observable` model, i18n facade).
+
+Now the main interactive View with focus-aware buffer, commit-on-blur/Enter, and resync logic.
+
+Now the presentational subviews (field chrome, adornment, freshness chip, notice, keyboard modifier).
+
+Now the Previews (per-state and per-unit, DEBUG-only).
+
+Now the i18n `.strings` table (including the parity key `chargePlanner.batteryCapacity`).
+
+Now the comprehensive test suite (adapter, model, projection, accessibility, per-state, i18n parity key).
+
+Surface files written. Now the minimal, necessary build wiring (so the gate genuinely compiles/lints my code): add `shared-surfaces` to both app targets in `project.yml` and to `.swiftlint.yml`.
+
+Now let me format my files to the project style, then run swiftlint, swiftformat-lint, and the placeholder gate.
+
+swiftformat clean. Now swiftlint --strict on the surface, then the placeholder gate.
+
+Placeholder gate clean (0). swiftlint found 3 violations across the tree — let me see if they're in my files.
+
+Found my violations: cyclomatic complexity in `parse` and Tests file >400 lines. Let me stop the lingering lint and fix both.
+
+I'll refactor `parse` into helpers to cut complexity, and split the Tests file to satisfy the 400-line limit.
+
+Now split the Tests file. Let me view the section to move into a new `ModelTests` file.
+
+Let me tidy the Tests header and the de_DE assertion, then re-format and re-lint.
+
+Now re-format and re-lint the surface (only my files), and verify line counts.
+
+Under 400 lines each; swiftformat clean. Now the real `swiftlint --strict` (whole configured tree, as the gate runs it) — checking for any remaining violations.
+
+My surface is **swiftlint-clean** (0 violations). The full-tree `swiftlint --strict` shows exactly **1 pre-existing, unrelated** violation in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (not my code).
+
+Now the core verification: an isolated SwiftPM build + test run. Let me inspect the minimal real dependencies my surface needs.
+
+Clean dependency closure (all SwiftUI-only). Let me build an isolated SwiftPM package with the minimal real deps + my surface + tests, and run it under Swift 6.
+
+My surface compiled fine — the errors are in `Cards.swift`'s preview pulling `TSBadge`/`TSButton`. Let me include the full real `Components` + `Design` library so all cross-refs resolve.
+
+One unrelated component (`UnitFormatters.swift`) bridges to the Shared-backed `UnitPreferences` — not part of my surface's closure. Let me use a precise targeted dependency set instead.
+
+Real compile error in my code — `Text.init` ambiguity in `accessibilityLabel`. Let me fix it.
+
+Fixed. Let me sync my files into the harness and run the full test suite.
+
+Tests using `try XCTUnwrap` need `throws`. Let me add it to those four methods.
+
+**42/42 tests pass under Swift 6 strict concurrency (macOS).** Now: iOS-18 typecheck, `xcodegen generate` (enumeration check), and I'll kick off the `Shared.xcframework` Gradle build in the background for full-app evidence.
+
+iOS-18 typecheck **passes (0 errors)** — my surface compiles clean on both SDKs. Now `xcodegen generate` to confirm my files are enumerated in the project.
+
+`xcodegen` succeeds and enumerates **all 8 UnitInput files** (48 refs across iOS+macOS targets). Let me run the full `swiftformat --lint apps/apple` (the gate command) and check the background Gradle build's progress.
+
+My files are **clean** in both full gate commands — the only issues are **pre-existing/unrelated** (swiftlint: `LifetimeStatsWidget`; swiftformat: `ActionBuilder.Previews`). Gradle is actively building the KMP framework. Let me check the logs dir and let Gradle continue.
+
+Gradle still building. Let me check its detailed progress.
+
+Gradle is nearly done (debug XCFramework built, linking release now). Let me wait for completion.
+
+Gradle release linking is progressing through each arch (slow KMP step). Let me wait longer.
+
+Gradle completed. Let me verify the framework built and stage it.
+
+**Gradle BUILD SUCCESSFUL** (11m29s) — `Shared.xcframework` built and staged. Now I'll attempt the full-app iOS build (the gate command) to capture evidence that any failures are pre-existing, not from my surface.
+
+Full-app iOS build failed (exit 65) as expected. Let me prove the failures are pre-existing and **not** from my surface.
+
+**Conclusive evidence: 0 UnitInput errors.** The iOS build fails on the documented pre-existing blocker — co-located `*.Tests.swift` importing `XCTest` into the app target (`AIRestorePanel.Tests.swift`, one of 261 such pre-existing files). Let me capture the macOS build evidence too.
+
+**Both full-app builds fail only on documented pre-existing blockers** (iOS: XCTest-in-app-target; macOS: dev-signing) with **0 UnitInput errors**. My surface is fully green in isolation. This matches the 3 documented precedents exactly.
+
+Let me write the honest gate log and the macos-pending verification row.
+
+Now I'll generate the gate log by running the host-runnable verifications fresh (capturing real exit codes) plus the captured full-app build evidence.
+
+Now the full-app gate results, lint/format/placeholder, and final status.
+
+Log is complete and honest (EXIT=65, STATUS=BLOCKED). Now append the macOS-pending verification row following the repo protocol, then check git status precisely.
+
+Now let me check git status precisely — I need to ensure I commit only intended files and not build artifacts (xcframework, xcodeproj, generated Kotlin).
+
+Unexpected: `AIUsageCard.*` files show as modified — I never touched those. Let me investigate whether they were pre-existing dirty state.
+
+The `AIUsageCard.*` changes are **pre-existing** (mtime 05:49:16, before my session — a different prompt's in-flight work, renaming 0203→0237). Not mine. I'll stage only my files. Let me confirm my `project.yml`/`.swiftlint.yml` diffs are clean first.
+
+Both wiring diffs are exactly my intended one-line additions. Let me stage only my files (surface + wiring + pending row + log) and commit.
+
+Staged exactly my 11 files; pre-existing `AIUsageCard` changes correctly excluded. Committing now.
+
+Committed as `6315e7aba`. Let me do a final verification — confirm the commit contents and that no build artifacts leaked in.
+
+The commit is clean: **12 files, 1827 insertions** — my 8 surface files + log + the 3 supporting wiring/doc files. No build artifacts tracked; pre-existing `AIUsageCard` changes correctly left alone. Let me clean up temp build artifacts.
+
+The task is complete. Here's the final summary.
+
+## P4 · Shared surface · 0162 — `UnitInput` (Apple) — Complete
+
+Shipped a production-polished native SwiftUI `UnitInput` at parity with the web spec (`components/forms/UnitInput.tsx` + `lib/unitInput.ts`), committed as `6315e7aba`.
+
+**8 surface files** in `apps/apple/TeslaSync/shared-surfaces/`:
+- **`.Adapter`** — pure port of `parseForUnit`/`formatForUnit`/`unitSymbol`/`commit` (locale-aware separators, suffix tolerance, currency parens, °F/km conversions, blur-commit round-trip).
+- **`.Model`** — `@Observable` settings state-holder (P1/S8 `UnitInputSettingsSource`), `view.opened` telemetry (P1/S11), connection/phase projection, i18n facade (P1/S10).
+- **`.swift`/`.Views`** — focus-aware text buffer, commit on blur/Enter, resync-when-idle, unit-symbol adornment, and every P4 leaf state (loading/empty/error/stale/offline) as **non-blocking** chrome so the field stays usable (faithful to web's synchronous `useSettings`).
+- **`.Previews`/`.strings`/`.Tests`/`.ModelTests`** — per-state+per-unit previews, the `chargePlanner.batteryCapacity` parity key, and 42 tests.
+
+**Verification (green in isolation — the repo's documented methodology):**
+- Isolated SwiftPM build + **42/42 tests** under Swift 6 strict concurrency ✅
+- Real **iOS-18 `swiftc -typecheck`** + macOS SwiftPM build — 0 errors ✅
+- swiftlint/swiftformat/placeholder clean **on the surface** (0 violations, 0 opt-outs) ✅
+- `xcodegen generate` enumerates all 8 files into both app targets ✅
+- Built the KMP `Shared.xcframework` fresh (Gradle `BUILD SUCCESSFUL`) + staged ✅
+
+**Full-app `xcodebuild build test` — STATUS=BLOCKED (pre-existing, unrelated):** iOS fails on 261 co-located XCTest-in-app files (`AIRestorePanel.Tests.swift` first); macOS on dev-signing; `DashboardWidgetSize` redefined ×15 — **0 UnitInput errors in either build**. This matches the 3 documented P4 precedents and is deferred to the `p4-apple/P99-0001` macOS acceptance gate; recorded in `apps/macos-pending-verifications.md`. Log ends with `EXIT=65` / `STATUS=BLOCKED` per the gate's "every step 0" rule, with full evidence the block is external to this surface.
+
+Also wired the new `TeslaSync/shared-surfaces` path into `project.yml` (both app targets) + `.swiftlint.yml`. Pre-existing unrelated `AIUsageCard` working-tree changes were left untouched.
+
+
+
+The task is fully complete and verified. Let me record final status in the plan and mark complete.
+

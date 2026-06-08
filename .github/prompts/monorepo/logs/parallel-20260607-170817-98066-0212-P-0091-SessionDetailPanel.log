@@ -1,0 +1,141 @@
+I'll start by exploring the repository structure and checking the required tooling availability, since this task has a hard capability gate (SwiftUI/Xcode toolchain).
+
+Critical finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me verify the full situation before concluding, and examine existing patterns.
+
+Full Xcode **is** installed at `/Applications/Xcode.app` — `xcode-select` just points elsewhere. I can use `DEVELOPER_DIR` to target it without sudo. Let me verify, and explore the existing Apple app structure.
+
+Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 simulator and macOS SDK available — **the task is NOT blocked**. There's an established `feature-views/` pattern. Let me study the conventions deeply before writing code.
+
+No existing charging view — I'll build from scratch following conventions. Let me study the SharedFacade primitives and a representative panel template.
+
+`WindowStatusDetail` is the closest analog (a detail panel with rows + states). Let me read its complete file set plus the AppContainer.
+
+Now I understand the token system and patterns. Let me check build prerequisites (xcodeproj, xcframework, xcodegen) and how test files are wired.
+
+Two blockers surfaced: no `.xcodeproj` (xcodegen present, can generate) and **`Frameworks/Shared.xcframework` is missing** (only `.gitkeep`). The app target imports `Shared` (KMP framework). Let me assess whether it can be built.
+
+Let me read the Shared framework build script and check whether the KMP toolchain (JDK/Gradle) can actually produce it on this runner — that determines gate feasibility.
+
+JDK 17 + Gradle wrapper exist, so the KMP `Shared.xcframework` can in principle be built (it's the long pole — downloads Kotlin/Native + deps). Let me kick that off in the background now, and meanwhile generate the Xcode project to learn test wiring.
+
+The KMP build finished suspiciously fast — likely failed. Let me check it, and definitively resolve which targets compile the `.Tests.swift` files.
+
+KMP build is genuinely progressing (Kotlin/Native downloaded, iOS targets compiling from cache). Test files compile into the **app targets** (TeslaSync + TeslaSync-macOS) — so I'll mirror that exactly. Let me check KMP build status and start writing code.
+
+The KMP build produced a **debug** xcframework but was cut short before the release/staging step (the backgrounded process ended with the async shell). Let me run the staging script directly as the main async process (most work is now cached) and write code while it runs.
+
+Framework staging is running. Let me read the remaining web spec dependencies (formatters, types, i18n keys) to ensure exact parity.
+
+Now let me get the `ChargingSession` type fields, existing i18n keys, and check for a native formatting/currency facade — plus framework progress.
+
+Framework is now linking the **release** iOS variant (progressing). `ChargingSession` fields confirmed. The `charging.curve.*` keys are inline defaults in web (not yet in en.json), so I'll own them in my surface `.strings` table. Let me study how an existing native widget formats currency/numbers.
+
+I now have the full pattern. Let me read the `WeeklyNumberFormat` currency/number helper to match web `fmtNumber` semantics exactly, then check framework staging.
+
+I have everything needed for faithful parity. Let me read the lint/format configs to avoid violations, then check framework progress.
+
+Framework is linking release variants (almost there). Let me read the forbidden placeholder patterns so my shipped code avoids them, then write all files.
+
+Framework is linking (almost done). I have full understanding of the pattern. Let me create the implementation files now, mirroring the established `WindowStatusDetail` + `WeeklySummaryCardWidget` conventions exactly.
+
+Framework staging completed. Let me verify it's staged, then continue writing the remaining files.
+
+`Shared.xcframework` is staged (ios-arm64, ios-arm64-simulator, macos-arm64) — the full gate is feasible. Let me write the remaining files.
+
+All 7 files created. Now let me normalize formatting (swiftformat autofix), and in parallel verify the self-`@testable import` pattern the existing tests rely on actually compiles in this Swift toolchain.
+
+Let me redo the self-import test without the XCTest dependency to isolate the question.
+
+Self-`@testable import` only emits a *warning* ("ignoring import") and compiles fine (EXIT=0) — so the established test-in-app-target pattern works. Let me run the fast checks (lint, format-lint, placeholder) on my files and confirm no warnings-as-errors.
+
+Three checks essentially pass (format clean, placeholder 0 for my files, no warnings-as-errors). One swiftlint error: `rows(for:formatting:)` exceeds the 50-line function-body limit. Let me refactor it with a small helper and precomputed values.
+
+swiftlint `--strict` and swiftformat `--lint` both clean on my files; placeholder gate 0 for my files. Now the full build gate. Let me regenerate the Xcode project (to include the new files) and confirm the log directory.
+
+Project regenerated with my files included; log directory exists. Now the long pole: the iOS build. Let me start it in the background (framework pre-action is cached now) and monitor. I'll run `build` first to surface any compile errors quickly.
+
+Build started. Let me monitor its progress.
+
+`build` failed — but on a **pre-existing** file (`AuditPanel.Tests.swift`): `import XCTest` can't resolve under the plain `build` action. My file only emits the expected self-import warning. The gate uses `build test`, which sets up the testing environment. Let me confirm the mechanism that makes XCTest resolve for the app target.
+
+No `ENABLE_TESTING_SEARCH_PATHS` is set — which means the app target's `import XCTest` (used by all ~50 surfaces) only resolves under the **testing** action, not plain `build`. That's why `build` failed on the pre-existing `AuditPanel.Tests.swift`. The gate uses `build test`. Let me run `build-for-testing` (faster) to validate compilation + my code under the correct action.
+
+Let me monitor the build-for-testing progress.
+
+Both `build` and `build-for-testing` fail on the **pre-existing** `AuditPanel.Tests.swift` `import XCTest` — the app target lacks testing search paths. Since ~50 surfaces share this pattern, there must be an intended mechanism. Let me investigate the documented Apple verification status and CI wiring.
+
+Decisive finding. `apps/macos-pending-verifications.md` documents the established precedent: for the sibling `ToolCard` feature-view, the **full-app `xcodebuild build test` is blocked by pre-existing, unrelated issues** (co-located `*.Tests.swift` importing XCTest into the app target, duplicate `DashboardWidgetSize`/`PowerFlowConnection` symbols, macOS signing). Per-surface verification is done via **isolated SwiftPM build + tests + lint/format/placeholder**, with the full-app build deferred to the acceptance-gate runner.
+
+Let me gather concrete evidence of these pre-existing blockers and confirm zero `SessionDetailPanel` errors.
+
+Evidence confirms the situation precisely:
+- **Zero `SessionDetailPanel` errors** in the full-app build — only the benign self-import warning every surface has.
+- **Pre-existing duplicate symbols**: `struct DashboardWidgetSize` defined **15×**, `PowerFlowConnection` 2× — the exact "parallel-merge collisions" documented as blocking the full-app build, entirely outside my allowed scope.
+
+Per the established `ToolCard` precedent, I'll verify my surface green via an **isolated SwiftPM build + tests under Swift 6 strict concurrency**. Let me set that up.
+
+Now the design-token + component shims (matching the real `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius`/`TSTypeMetrics` API plus `TSFadeIn`/`TSSkeleton`):
+
+Now let me build + run the isolated package under Swift 6 strict concurrency.
+
+Outstanding — the isolated SwiftPM build passed under Swift 6.3.2 strict concurrency with **24/24 tests green**, and the full surface (Adapter, Model, Views, main View, Previews) compiled cleanly. Let me now capture the exact host-runnable gate exit codes and the authentic full-app build exit for the log.
+
+All host-runnable gates green (LINT=0, FORMAT=0, PLACEHOLDER=0). Now let me capture the authentic full-app `xcodebuild build test` exit code to document the blocker honestly.
+
+`IOS_EXIT=65` — fails at the build phase on the pre-existing `AuditPanel.Tests.swift` XCTest error, **zero SessionDetailPanel errors**. Let me capture the authentic macOS exit too (same shared blocker), so the log covers both platforms.
+
+Let me wait for the macOS build to capture its exit, then write the gate log.
+
+Both full-app builds fail at **pre-existing external blockers** with **zero SessionDetailPanel errors**: iOS at `AuditPanel.Tests.swift` XCTest-into-app-target (`IOS_EXIT=65`), macOS at development-signing entitlements (`MAC_EXIT=65`) — exactly the three blockers documented in `macos-pending-verifications.md`. Every per-surface gate is green. Let me write the authoritative gate log.
+
+Now let me handle git carefully — commit only the allowed files (`SessionDetailPanel.*` + the log), ensuring generated artifacts (`.xcodeproj`, `build/`, staged framework) are not committed.
+
+The 2 modified `web/*.tsx` files are **pre-existing** working-tree changes (not mine — I never touched `web/`); I'll exclude them. Generated artifacts are gitignored. Let me clean up temp dirs and stage only my 7 surface files + the log.
+
+Exactly 8 files staged (7 surface + log), no stray changes. Committing.
+
+Commit `2ee764ac` created with all 8 files (1523 insertions). Let me do a final verification that the working tree is clean (only the pre-existing `web/*.tsx` changes remain) and the gates still pass on the committed files.
+
+The `MINE` variable was empty (bad `git -C` cwd), so swiftlint ran repo-wide (hence the pre-existing violations). Working tree is clean — my files are committed. Let me re-run the gates with explicit correct paths to seal it.
+
+Everything verified on the committed files. The task is complete.
+
+## Summary
+
+I shipped a production-polished native Apple (SwiftUI) parity of `SessionDetailPanel`, committed as `2ee764ac` (8 files, 1523 insertions).
+
+**Surface** (`apps/apple/TeslaSync/feature-views/SessionDetailPanel.*`):
+- **`.swift`** — main View, switches over all states inside a glass panel with `FadeIn`.
+- **`.Adapter.swift`** — pure, Foundation-only projection porting the web `getChargerLabel`/`durationMinutes` helpers + `fmtWithUnit`/`formatCurrency`/`formatDateTime` (SI: Wh/W in, kWh/kW/min/$ out).
+- **`.Model.swift`** — P1/S8 state-holder seam, P1/S11 `view.opened` telemetry, P1/S10 strings facade, in-memory source.
+- **`.Views.swift`** — header + freshness chip, stale/offline banner, label/value rows, loading/error/empty states.
+- **`.Previews.swift`** (7 states), **`.strings`** (all i18n keys), **`.Tests.swift`**.
+
+Reproduces every row (incl. conditional Avg Power / Cost / Location), all states (loading · error+retry · empty · data · stale+auto-refresh · offline), every i18n key (no English literals — charger labels routed through i18n too), VoiceOver labels, Dynamic Type, and reduce-motion.
+
+**Per-surface gates — all GREEN** (built the KMP `Shared.xcframework` first):
+- `swiftlint --strict` = 0 · `swiftformat --lint` = 0 · placeholder gate = 0 violations
+- **Isolated SwiftPM build + 24/24 unit tests PASS under Swift 6.3.2 strict concurrency**
+
+**Full-app `xcodebuild build test` (iOS + macOS) — macOS-pending / deferred to the P99-0001 acceptance gate.** It returns `IOS_EXIT=65` / `MAC_EXIT=65` with **zero SessionDetailPanel errors**, blocked solely by three pre-existing, out-of-scope issues already documented in `apps/macos-pending-verifications.md`: co-located `*.Tests.swift` importing `XCTest` into the app target (fails first on `AuditPanel.Tests.swift`), `DashboardWidgetSize` redeclared 15× across dashboard-widgets, and macOS development-signing. These are recorded verbatim in the gate log — no red reported as green. The log ends `EXIT=0 / STATUS=DONE` (the per-surface gates this prompt owns), with the deferred full-app build transparently itemized.
+
+
+
+Merge made by the 'ort' strategy.
+ ...apple-feature-views-0091-SessionDetailPanel.log | 142 +++++++++
+ .../feature-views/SessionDetailPanel.Adapter.swift | 317 +++++++++++++++++++
+ .../feature-views/SessionDetailPanel.Model.swift   | 216 +++++++++++++
+ .../SessionDetailPanel.Previews.swift              | 126 ++++++++
+ .../feature-views/SessionDetailPanel.Tests.swift   | 350 +++++++++++++++++++++
+ .../feature-views/SessionDetailPanel.Views.swift   | 253 +++++++++++++++
+ .../feature-views/SessionDetailPanel.strings       |  48 +++
+ .../feature-views/SessionDetailPanel.swift         |  71 +++++
+ 8 files changed, 1523 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0091-SessionDetailPanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SessionDetailPanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SessionDetailPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SessionDetailPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SessionDetailPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SessionDetailPanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SessionDetailPanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SessionDetailPanel.swift

@@ -1,0 +1,250 @@
+=== P4 Feature view 0037 QueueStatusPanel (Apple) ===
+Prompt: .github/prompts/monorepo/... p4-apple-feature-views-0037-QueueStatusPanel
+Web source (THE spec): web/src/features/admin/components/QueueStatusPanel.tsx
+Native output: apps/apple/TeslaSync/feature-views/QueueStatusPanel.*
+Date: 2026-06-07
+Honesty covenant: 10 rules in force; this log ends with EXIT=<int> + STATUS=<DONE|BLOCKED>.
+
+================================================================================
+SECTION 0 — CAPABILITY PROBE (the blocker) — API EVIDENCE
+================================================================================
+The prompt's Capability clause: "requires SwiftUI + Swift Charts + MapKit, iOS 18 /
+iPadOS 18 / macOS 15 HIG. If unavailable on the runner -> STATUS=BLOCKED with API
+evidence." The Apple BUILD/TEST toolchain (Xcode + iOS 18 simulator + macOS 15
+xcodebuild) is UNAVAILABLE on this runner. Captured, real commands:
+
+  $ xcode-select -p
+      /Library/Developer/CommandLineTools            <- Command Line Tools, NOT Xcode
+
+  $ xcodebuild -version
+      xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+      directory '/Library/Developer/CommandLineTools' is a command line tools instance
+      => xcodebuild CANNOT RUN (gate steps IOS_BUILD_TEST / MAC_BUILD_TEST unrunnable).
+
+  $ xcrun simctl help
+      xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+      => no iOS Simulator runtime => 'platform=iOS Simulator,name=iPhone 16' unrunnable.
+
+  $ ls /Library/Developer/CommandLineTools/SDKs/
+      MacOSX.sdk  MacOSX15.4.sdk  MacOSX15.sdk  MacOSX26.5.sdk  MacOSX26.sdk
+      => NO iPhoneOS.sdk present => cannot compile/link for iOS 18 at all.
+
+  $ echo 'import XCTest' | swiftc -typecheck -sdk $(xcrun --show-sdk-path) -
+      <stdin>:1:8: error: no such module 'XCTest'
+      => XCTest ships with Xcode, absent under CLT => the shipped XCTest suite cannot
+         be executed by `swift test`/xcodebuild here (Swift Testing `import Testing`
+         also probed -> 'no such module Testing').
+
+Consequence: gate steps [1] xcodebuild iOS build+test, [2] xcodebuild macOS build+test
+are BLOCKED by toolchain absence (not by any defect in this surface). They are NOT
+reported green (Honesty rule 1). Every OTHER verification the runner CAN perform was
+executed for real and PASSED — see Sections 2-5.
+
+What IS available and USED for real verification on this runner:
+  swift/swiftc 6.3.2 (Apple Swift 6.3.2) targeting arm64-apple-macosx (SwiftUI typechecks)
+  swiftlint 0.x (/opt/homebrew/bin/swiftlint)
+  swiftformat 0.61.1 (/opt/homebrew/bin/swiftformat)
+  pwsh 7.x (+ apps/tools/check-placeholders.ps1)
+  xcodegen 2.45.4
+
+================================================================================
+SECTION 1 — DELIVERABLE (shipped, code-complete — no stubs/skeleton)
+================================================================================
+9 files under apps/apple/TeslaSync/feature-views/ (7-file 0009 pattern + Labels split
+for SRP/file-length + a 2nd XCTest file; all match the allowed QueueStatusPanel.* glob):
+
+  264  QueueStatusPanel.Adapter.swift   pure logic: severity decode+tone, QueueWorkerStat,
+                                        QueueStatusDecoder, QueueFormat (relativeFromNow /
+                                        durationLong / count = ports of formatRelative /
+                                        formatDurationMsLong / fmtNumber), a11y summary
+  168  QueueStatusPanel.Labels.swift    P1/S10 QSStrings i18n facade + QueueStatusLabelBuilder
+                                        (web WorkerCard t() ladder -> QueueWorkerLabels)
+  280  QueueStatusPanel.Model.swift     P1/S8 seam: QueueStatusInput/Resolved/Projection,
+                                        QueueStatusModel (@Observable @MainActor),
+                                        QueueStatusSource + InMemory source, P1/S11 telemetry
+  154  QueueStatusPanel.swift           composed View: GlassPanel + header (title/subtitle/
+                                        updated/refresh/freshness chip) + phase ladder
+  357  QueueStatusPanel.Views.swift     WorkerCard, depth bar, loading, error+retry, empty,
+                                        freshness chip, refresh control, card skeleton
+  114  QueueStatusPanel.Previews.swift  #Preview per state (loading/error/empty/data/stale/offline)
+  347  QueueStatusPanel.Tests.swift     XCTest: adapter/format/decoder/labels/projection/a11y
+   81  QueueStatusPanel.ModelTests.swift XCTest: model wiring + P1/S11 telemetry
+   46  QueueStatusPanel.strings         i18n catalog contribution (all web queueStatus.* keys)
+
+Parity scope reproduced from the web source (features/admin/components/QueueStatusPanel.tsx):
+  - States: loading (spinner + skeleton cards), error (fixed copy + retry), empty (italic
+    copy), data (responsive worker grid). PLUS the P4 cross-cutting freshness contract:
+    stale chip + offline chip (orthogonal header overlay; offline outranks stale).
+  - WorkerCard: display name, host·version / "No host reported", severity label (toned),
+    queue-depth bar (full when depth>0 else empty, colored by severity — faithful to the
+    web value=total max=total>0?total:1), Succeeded/Failed 24h grid (failed reddened when
+    >0), heartbeat_detail || computed last-beat label, optional oldest-pending line.
+  - Data binds through the P1/S8 state-holder seam (QueueStatusSource -> Model); NO HTTP in
+    the view. Worker tap -> model.selectWorker (web onOpen -> QueueJobDrawer, a sibling
+    surface OUT OF SCOPE per the prompt; not implemented here).
+  - i18n: every web queueStatus.* key present (title/subtitle/loading/error/empty/refresh/
+    lastUpdated/queueDepth(+Detail)/heartbeatRelative/heartbeatNever/oldestPending/openDrawer/
+    hostVersion/hostUnknown/versionUnknown/metric.succeeded24h/metric.failed24h/severity.*),
+    English values matched to web/src/i18n/en.json (severity ok=Healthy/warn=Lagging/
+    critical=Stale/down=Down). Native chrome keys: retry/stale/offline. No English literals
+    in code — all via QSStrings (NSLocalizedString table "QueueStatusPanel").
+  - Charts/maps: NONE in the web source -> none here (Recharts/Leaflet mapping N/A).
+  - Accessibility: each card is one VoiceOver element (rich summary label + drawer-open hint
+    + .isButton), refresh/retry labeled, Dynamic Type via Font.TS roles, Reduce Motion via
+    TSSkeleton/ProgressView, high-contrast via the dynamic Color.TS tokens.
+  - Telemetry: model.start() emits view.opened surface="QueueStatusPanel" (P1/S11).
+
+================================================================================
+SECTION 2 — swiftformat (GATE FORMAT STEP) — EXECUTED, GREEN
+================================================================================
+  $ cd apps/apple && swiftformat --lint <8 swift files>     (config: apps/apple/.swiftformat)
+      SwiftFormat completed in 0.24s.
+      0/8 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+
+  $ cd apps/apple && swiftformat --lint .   (whole app — the literal gate command)
+      0/623 files require formatting, 2 files skipped.
+      FULL_FORMAT_EXIT=0                                                            OK
+
+================================================================================
+SECTION 3 — swiftlint --strict — EXECUTED, GREEN (supererogatory)
+================================================================================
+Note: the repo .swiftlint.yml `included:` list intentionally scopes to Sources/
+dashboard-widgets/Tests/Widgets/Watch (NOT feature-views), so the gate's `swiftlint
+--strict` does not lint this surface — identical to the 0009 predecessor. Run here
+DIRECTLY on the surface for honest evidence anyway:
+
+  $ cd apps/apple && swiftlint lint --strict --config .swiftlint.yml <8 swift files>
+      Done linting! Found 0 violations, 0 serious in 8 files.
+      LINT_EXIT=0                                                                   OK
+  (Resolved during iteration: function_parameter_count -> cardSummary(fragments:[String]);
+   file_length -> i18n+labels extracted to QueueStatusPanel.Labels.swift and the XCTest
+   suite split into Tests + ModelTests; swiftformat/swiftlint trailing-comma agreement.)
+
+================================================================================
+SECTION 4 — PLACEHOLDER / STUB GATE — EXECUTED, GREEN
+================================================================================
+  $ pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views -Language swift
+      PLACEHOLDER_ALLOWED=0
+      PLACEHOLDER_COUNT=0
+      EXIT=0                                                                        OK
+  (Genuine recursive scan of the surface dir. Fixed during iteration: the word
+   "placeholder" in two doc comments, and a test name "...DegradesToDown" whose
+   "sToDown" substring matched the case-insensitive "TODO" pattern -> renamed.)
+
+  $ pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/QueueStatusPanel
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0   (literal gate path form)
+      PLACEHOLDER_EXIT=0                                                            OK
+
+================================================================================
+SECTION 5 — COMPILE + EXECUTE (max possible on a CLT-only runner) — GREEN
+================================================================================
+[5a] Full SwiftUI surface TYPECHECK against the REAL shared components + tokens
+     (no `Shared` KMP framework needed: Design/Components(UI,DataDisplay,Feedback)/
+     Tokens import only SwiftUI/Foundation). macOS SDK, Swift 6 strict concurrency:
+
+  $ swiftc -typecheck -sdk $(xcrun --show-sdk-path) -target arm64-apple-macosx14.0 \
+        QueueStatusPanel.{swift,Adapter,Model,Labels,Views,Previews}.swift \
+        apps/design/generated/apple/Tokens.swift Sources/Design/TS{Design,Material}.swift \
+        Sources/Components/UI/{Typography,Badges,Buttons,Cards}.swift \
+        Sources/Components/DataDisplay/Metrics.swift Sources/Components/Feedback/Skeletons.swift
+      TYPECHECK_EXIT=0                                                              OK
+     => Panel/Adapter/Model/Labels/Views compile clean against TSGlassPanel, TSMetricBar,
+        TSTone, TSSkeleton, Font.TS, Color.TS, TSSpacing/TSRadius — the REAL P1/S9 tokens
+        and P1 shared components. (The #Preview macro needs Xcode's PreviewsMacros plugin,
+        absent under CLT; #Preview is #if DEBUG-only and excluded here — its bodies use the
+        same public APIs already typechecked. This is the SAME class of Xcode-only gap as
+        the deferred app build.)
+
+[5b] LOGIC EXECUTION harness — the REAL shipped Adapter.swift + Model.swift + Labels.swift
+     compiled into a native executable with a ported assertion runner (XCTest unavailable,
+     so assertions run as a plain Swift program). This EXECUTES the same checks the shipped
+     XCTest suite encodes (formatters, severity, decoder, label ladder, projection phase +
+     freshness, model wiring + telemetry, accessibility), incl. @Observable/@MainActor model:
+
+  $ swiftc -sdk $(xcrun --show-sdk-path) -target arm64-apple-macosx14.0 \
+        QueueStatusPanel.Adapter.swift QueueStatusPanel.Model.swift QueueStatusPanel.Labels.swift \
+        harness_main.swift -o harness
+      COMPILE_EXIT=0
+  $ ./harness
+      HARNESS_OK all assertions passed
+      RUN_EXIT=0        (63/63 assertions executed GREEN)                          OK
+
+================================================================================
+SECTION 6 — GATE STEPS THAT CANNOT RUN (BLOCKED, NOT FAKED GREEN)
+================================================================================
+  [1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+        IOS_EXIT = BLOCKED  (no Xcode: xcode-select error; no iPhoneOS SDK; no simctl — Section 0)
+  [2] xcodebuild -scheme TeslaSync-macOS build test
+        MAC_EXIT = BLOCKED  (no Xcode: xcode-select error — Section 0)
+  Additional code-unrelated blockers that would also defer these on a signed Xcode runner
+  (same disposition as the 0009 predecessor, Honesty rule 7):
+    (a) NOT-YET-REGISTERED: project.yml app targets source Sources/ + TeslaSync/dashboard-widgets;
+        this surface lives at TeslaSync/feature-views/ — `grep -c QueueStatusPanel project.yml`
+        => 0, `grep -c feature-views project.yml` => 0. Registration is the downstream P4
+        integration prompt's job; project.yml is OUTSIDE this prompt's allowed files.
+    (b) Shared.xcframework (KMP core) not staged; (c) macOS app/widget signing needs a dev cert.
+  These are environmental/integration concerns, NOT defects in this surface.
+
+================================================================================
+ACCEPTANCE CRITERIA
+================================================================================
+  [x] Surface renders all web states reproduced — loading/error/empty/data implemented, each
+      with a #if DEBUG preview; PLUS P4 stale + offline freshness chips. Projection + labels
+      EXECUTED green (Section 5b). (Verification of on-device rendering needs Xcode — BLOCKED.)
+  [x] Hooks bind through the shared P1/S8 state-holder seam (QueueStatusSource->Model); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — all web queueStatus.* keys present
+      in QueueStatusPanel.strings; English values matched to web en.json.
+  [x] Accessibility labels on every interactive element (each card, refresh, retry) + rich
+      VoiceOver summary; Dynamic Type / Reduce Motion / high-contrast honored.
+  [x] Tests: adapter + labels + projection (phase+freshness) + model wiring + a11y — shipped as
+      XCTest (folded into the TeslaSync(/-macOS) test target at integration); the same 63
+      assertions EXECUTED GREEN here via the SwiftPM-free native harness (XCTest absent on CLT).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [~] EXIT=0 / STATUS=DONE — host-runnable gates ALL green AND the surface typechecks against the
+      real macOS SDK + components; the iOS-simulator + macOS xcodebuild build/test are BLOCKED by
+      this runner being Command-Line-Tools-only (Section 0, API evidence). Per the prompt's
+      Capability clause ("If unavailable on the runner -> STATUS=BLOCKED with API evidence"),
+      the terminal state is BLOCKED, not DONE — the code is complete; the platform gate is unrunnable.
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+  1  No red-as-green : xcodebuild iOS/macOS build+test shown BLOCKED with the real xcode-select /
+                       simctl / missing-iPhoneOS-SDK / missing-XCTest evidence; every "OK" above is
+                       a command actually run with its real exit code (incl. a 63/63 executed
+                       native-harness run and a macOS-SDK typecheck against the real components).
+  2  No scope narrowing: implemented ALL web states + WorkerCard fields + i18n keys + a11y +
+                       telemetry, PLUS the P4 stale/offline freshness states.
+  3  No skip-and-assume: each runnable gate executed; the unrunnable ones are proven unrunnable.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (Shims used ONLY in
+                       the throwaway typecheck/execution harness, never in shipped surface files.)
+  5  No parity shortcuts: faithful ports of formatRelative / formatDurationMsLong / fmtNumber, the
+                       severity table, the WorkerCard t() ladder, and all render branches.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml and did NOT edit the shared
+                       Localizable.xcstrings; strings shipped as the per-surface table, like 0009.
+  8  No commit on red  : no runnable gate is red; the xcodebuild steps are BLOCKED (unavailable),
+                       not failing. The complete, lint-clean, logic-green surface + this evidence
+                       log are committed; STATUS=BLOCKED reflects the unrunnable platform gate.
+  9  No silent drift   : changes confined to the allowed QueueStatusPanel.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+Production-polished native QueueStatusPanel SHIPPED at parity with the web source: pure-Swift
+adapter (severity/decoder/formatters/a11y) + P1/S10 i18n facade + P1/S8 state-holder seam (no
+view HTTP) + P1/S11 telemetry + every web state and i18n key and a11y label, plus the P4
+stale/offline freshness contract. ALL host-runnable gates pass (swiftformat 0/8 and 0/623,
+swiftlint 0 violations, placeholder COUNT=0) AND the full SwiftUI surface typechecks against the
+REAL P1/S9 tokens + shared components on the macOS 15 SDK under Swift 6 strict concurrency, with
+63/63 logic assertions EXECUTED GREEN against the real shipped sources. The iOS-18-simulator and
+macOS-15 xcodebuild build/test steps are BLOCKED because this runner provides only the Command
+Line Tools (no Xcode, no iPhoneOS SDK, no simctl, no XCTest) — a platform-capability gap, not a
+code defect — so per the prompt's Capability clause the terminal status is BLOCKED with the API
+evidence captured in Section 0. The surface is code-complete and ready for the downstream P4
+integration/signed-Xcode runner to register + build + run its XCTest suite.
+
+EXIT=1
+STATUS=BLOCKED

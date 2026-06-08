@@ -1,0 +1,175 @@
+=== P4 Shared surface 0214 FullscreenButton (Apple) ===
+Runner: macOS 26.5 (Darwin arm64) · Xcode 26.5 (17F42) via DEVELOPER_DIR=/Applications/Xcode.app
+        swiftlint 0.63.3 · swiftformat 0.61.1 · pwsh 7.x · iPhone 16 simulator booted
+Web source: web/src/components/ui/FullscreenButton.tsx
+Native output: apps/apple/TeslaSync/shared-surfaces/FullscreenButton.*
+
+------------------------------------------------------------
+DELIVERABLE — FullscreenButton shared surface (COMPLETE)
+------------------------------------------------------------
+Files (allowed scope: shared-surfaces/FullscreenButton.* + this log):
+  FullscreenButton.swift            — SwiftUI view (ghost icon-button, support gate,
+                                       enter/exit toggle, a11y, Dynamic Type, reduce-motion,
+                                       view.opened telemetry on .task)
+  FullscreenButton.Model.swift      — Surface slug, FullscreenButtonSize (web size union),
+                                       FullscreenButtonSymbols (Maximize/Minimize parity),
+                                       FullscreenButtonStrings (P1/S10 i18n facade),
+                                       FullscreenButtonPresentation (pure projection — every
+                                       web branch: support gate, icon+label+aria-pressed flip,
+                                       data-fullscreen-state token)
+  FullscreenButton.Telemetry.swift  — P1/S11 view.opened diagnostics seam + os_log sink
+  FullscreenButton.Previews.swift   — DEBUG previews: enter, already-fullscreen, sizes,
+                                       unsupported(hidden), custom-label
+  FullscreenButton.strings          — "FullscreenButton" table: common.fullscreen.enter/exit
+  FullscreenButton.Tests.swift      — 19 XCTest cases (projection branches, label resolution,
+                                       size adapter, a11y identity, telemetry slug)
+
+Web-parity mapping (read source end-to-end):
+  - targetRef + browser Fullscreen API  -> @Binding<Bool> isFullscreen; host owns the
+       presentation (.fullScreenCover on iOS / window toggle on macOS). Esc/swipe flips the
+       binding == the web fullscreenchange listener keeping the icon honest.
+  - document.fullscreenEnabled / testHookSupported -> `supported` flag (default true on Apple;
+       fullScreenCover/window toggle always available). Unsupported -> EmptyView (web return null).
+  - Lucide Maximize/Minimize -> SF Symbols arrow.up.left.and.arrow.down.right /
+       arrow.down.right.and.arrow.up.left, swapped with .contentTransition(.symbolEffect(.replace)).
+  - aria-label/title/aria-pressed flip together -> accessibilityLabel (Enter/Exit) + .help tooltip
+       + .isSelected trait; identifier "fullscreen-button" (web data-testid).
+  - ariaLabelEnter/ariaLabelExit -> optional label overrides (default from catalog).
+  - size 'sm'|'md'|'lg' -> FullscreenButtonSize -> shared TSButton(variant:.ghost,size:).
+  - i18n: every string via FullscreenButtonStrings (P1/S10); no English literals in code.
+  - Data sources: web hook = useTranslation only (no data fetch). Like ToolCard, this is a pure
+       presentational primitive that owns no data, so loading/empty/error/stale/offline belong to
+       the host content it expands, not the button. No direct HTTP from the view (acceptance met).
+
+------------------------------------------------------------
+[ISO] SURFACE VERIFICATION (real design system, isolation)
+------------------------------------------------------------
+Because the shared TeslaSync app module does NOT compile in the committed baseline (see BLOCKERS
+below — pre-existing, unrelated to this surface), the surface was verified by compiling and
+testing it as a standalone SwiftPM module against the REAL design-system sources
+(design/generated/apple/Tokens.swift + Sources/Design/* + the full Sources/Components/UI/* set —
+all SwiftUI-only) plus all four production files and the test (import retargeted to the iso module).
+
+  $ swift build            (FSBKit: Tokens + TSDesign + TSMaterial + Components/UI/* + FullscreenButton.*)
+  Build complete! (2.87s)                                            -> ISO_BUILD_EXIT=0
+
+  $ swift test
+  Test Suite 'FullscreenButtonTests' passed.
+  Executed 19 tests, with 0 failures (0 unexpected) in 0.003 seconds -> ISO_TEST_EXIT=0
+    testSupportedRendersAndUnsupportedHides, testSupportGateIsIndependentOfFullscreenState,
+    testEnterStateProjection, testExitStateProjection, testIconLabelAndPressedAllFlipTogether,
+    testSymbolsAreTheDistinctExpandCollapsePair, testDefaultLabelsComeFromCatalog,
+    testCustomLabelsOverrideCatalogDefaults, testPartialOverrideKeepsCatalogForTheOtherLabel,
+    testSizeWebTokenMapping, testSizeDefaultsToSmallForUnknownOrEmpty,
+    testSizeCasesAndControlSizeMapping, testIconPointSizeIncreasesWithControlSize,
+    testPresentationCarriesSizeIconPointSize, testAccessibilityIdentifierMatchesWebTestId,
+    testSurfaceSlugIsStable, testPresentationEquatable, testReportOpenEmitsSurfaceSlug,
+    testReportOpenIsTheExactSlugContract
+  => surface compiles against the real tokens/components AND all 19 tests pass.
+
+------------------------------------------------------------
+[1+2] xcodebuild — FULL-APP GATE (committed baseline)  ** BUILD FAILED **
+------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  ** BUILD FAILED **                                                 -> IOS_EXIT!=0
+  Root (BLOCKER A, pre-existing + committed, NOT this surface):
+    TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error:
+      unable to resolve module dependency: 'XCTest'
+    => The committed project.yml compiles 261 colocated *Tests.swift files
+       (205 *.Tests.swift + 56 *.ModelTests/.AdapterTests/.ViewTests/.StateTests) from
+       feature-views/dashboard-widgets INTO the app targets; they `import XCTest`, which cannot
+       resolve in an application target. Every one of those files is committed at HEAD and owned
+       by other surfaces. (0 such files belong to shared-surfaces — this surface's test is
+       correctly routed to the unit-test bundles via project.yml includes.)
+
+  Deeper (BLOCKER B, pre-existing + committed, NOT this surface): with the test files excluded
+  from the app target (verified locally), the app STILL does not compile — duplicate type
+  declarations across the dashboard-widgets directory:
+    TeslaSync/dashboard-widgets/WallConnectorWidget.Model.swift:235:15: error:
+      invalid redeclaration of 'DashboardWidgetSize'
+    ...'DashboardWidgetSize' is ambiguous for type lookup in this context (x49)
+  On-disk == HEAD (dashboard-widgets has 0 working-tree modifications). Committed duplicate counts:
+    DashboardWidgetSize           = 15 files
+    DashboardWidgetRegistration   = 13 files
+    VehicleHeroModel              = 2 files
+    VehicleHeroProjection         = 2 files
+  Deduplicating these shared types spans ~17 files owned by the dashboard-widgets surfaces / P4
+  core — out of scope for surface 0214 and not safe to refactor blind.
+
+$ xcodebuild -scheme TeslaSync-macOS build test
+  ** BUILD FAILED **                                                 -> MAC_EXIT!=0
+  Root (environmental, NOT this surface):
+    TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a
+      development certificate. Enable development signing ... (also TeslaSyncWidgets-macOS)
+    => No Apple Development signing identity is provisioned on this runner for the hardened-runtime
+       macOS app + widget extension. Pre-existing CI/runner limitation, independent of this surface.
+
+------------------------------------------------------------
+[3] swiftlint --strict   (apps/apple, 1914 files)
+------------------------------------------------------------
+$ swiftlint --strict
+  Done linting! Found 1 violation, 1 serious in 1914 files.          -> LINT_EXIT=2
+  The single violation is PRE-EXISTING and NOT in this surface:
+    TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error:
+      Function Body Length Violation: ... currently spans 78 lines (function_body_length)
+  Scoped to this surface:
+    $ swiftlint --strict TeslaSync/shared-surfaces/FullscreenButton.{swift,Model,Telemetry,Previews,Tests}.swift
+    Done linting! Found 0 violations, 0 serious in 5 files.           -> shared-surfaces LINT = 0
+
+------------------------------------------------------------
+[4] swiftformat --lint apps/apple   (1918 files)
+------------------------------------------------------------
+$ swiftformat --lint .
+  1/1918 files require formatting, 2 files skipped.                  -> FORMAT_EXIT=1
+  The single offender is PRE-EXISTING and NOT in this surface:
+    TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1: error: (blankLinesBetweenScopes)
+  Scoped to this surface:
+    $ swiftformat --lint TeslaSync/shared-surfaces
+    0/5 files require formatting.                                    -> shared-surfaces FORMAT = clean
+
+------------------------------------------------------------
+[5] check-placeholders.ps1  (scoped to this surface, per gate)
+------------------------------------------------------------
+$ pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/FullscreenButton -Language swift
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0                                                -> PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------
+THIS SURFACE (FullscreenButton) is COMPLETE and VERIFIED:
+  - Isolated build against the real design system: SUCCEEDED (ISO_BUILD_EXIT=0)
+  - This surface's tests: 19/19 PASS (ISO_TEST_EXIT=0)
+  - swiftlint --strict on this surface: 0 violations
+  - swiftformat --lint on this surface: clean
+  - placeholders (this surface): 0
+  - No TODO/stub/mock/placeholder/Lorem; no English literals; no direct HTTP from the view;
+    correct P1/S8 (state-free primitive), P1/S9 tokens, P1/S10 i18n, P1/S11 telemetry wiring.
+
+The FULL-APP gate steps cannot reach exit 0 — every failure is PRE-EXISTING / committed by OTHER
+surfaces or environmental, and NONE originate in apps/apple/TeslaSync/shared-surfaces:
+  (A) 261 committed colocated *Tests.swift in feature-views/dashboard-widgets are compiled into the
+      app targets (import XCTest unresolved) — a committed project.yml wiring bug owned by those
+      surfaces; this surface's own test is correctly routed to the unit-test bundles.
+  (B) 15x duplicate `DashboardWidgetSize` (+13x DashboardWidgetRegistration, 2x VehicleHeroModel,
+      2x VehicleHeroProjection) committed across the dashboard-widgets directory.
+  (C) 1 pre-existing swiftlint violation (LifetimeStatsWidget.Adapter.swift).
+  (D) 1 pre-existing swiftformat violation (ActionBuilder.Previews.swift).
+  (E) macOS build blocked by a runner code-signing/entitlements limitation (no dev certificate).
+Fixing A/B/C/D/E requires editing ~280 files owned by other surfaces / P4 core and is out of scope
+for this surface; none can be repaired from within shared-surfaces/FullscreenButton.*.
+
+Per the Honesty Covenant (1 No red-as-green, 8 No commit on red, 10 end with EXIT/STATUS): the
+surface is shipped and independently proven green, while the shared-repo gate is reported BLOCKED
+with raw evidence rather than asserted as passing.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=2
+FORMAT_EXIT=1
+PLACEHOLDER_EXIT=0
+ISO_BUILD_EXIT=0
+ISO_TEST_EXIT=0
+
+EXIT=1
+STATUS=BLOCKED

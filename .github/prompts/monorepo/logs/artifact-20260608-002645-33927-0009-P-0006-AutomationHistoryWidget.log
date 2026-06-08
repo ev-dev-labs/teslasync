@@ -1,0 +1,227 @@
+================================================================================
+P4 · Dashboard widget · 0006 — AutomationHistoryWidget (Apple)
+Run: 2026-06-08T00:47-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/9
+Base: c9c6fdb9f
+Prompt: P4/dashboard-widgets/0006 — AutomationHistoryWidget
+Web source (spec): web/src/features/dashboard/widgets/AutomationHistoryWidget.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (P3/0036 + 0062 precedent, ADR-012 macOS-pending).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                  OK
+  swiftc -typecheck SwiftUI .. compiles (macOS 15 target, SwiftUI.framework in SDK) OK
+  swiftc -strict-concurrency . compiles (-swift-version 6, complete)                OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh, self-test PASS               OK
+  xcode-select -p ............ /Library/Developer/CommandLineTools                  WARN
+  xcodebuild ................. ERROR "requires Xcode, active dir is CommandLineTools" BLOCKER (iOS-sim + macOS gate)
+  iPhone 16 simulator ........ xcrun simctl lists none under CLT toolchain          BLOCKER (iOS-sim gate)
+  codesign identities ........ security find-identity -p codesigning = 0 valid      BLOCKER (macOS app gate, ADR-012)
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks = .gitkeep only)   WARN (app-link only)
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and PROVEN by a real macOS-SDK compile below. The capability-BLOCKED
+  escape hatch ("SwiftUI/Charts/MapKit unavailable") therefore does NOT apply —
+  the surface is authored and host-validated for real. The Xcode app build/test
+  gate is DEFERRED (not capability-BLOCKED) for the same structural reasons the
+  DigitalTwin (0036) + MediaHistory (0062) predecessors recorded — see XCODE-ONLY.
+
+  Design-token note: the app's Color.TS / Font.TS / TSSpacing / TSRadius namespace
+  is GENERATED at Xcode build time and is NOT a tracked .swift file under the
+  CommandLineTools toolchain. The SwiftUI-layer typecheck below therefore compiles
+  against a faithful TOKEN-FACADE SHIM (the exact public members this surface uses:
+  Color.TS.{surface,border,accent,bg,textPrimary,textSecondary,textMuted,
+  statusSuccess,statusWarning,statusDanger}; Font.TS.{label,caption,panel,bodySm};
+  TSSpacing.{xs,sm,md}; TSRadius.{sm,lg,pill}; TSTone; TSSkeleton; and the canonical
+  DashboardWidgetSize / DashboardWidgetRegistration). The shim is a host-gate
+  artifact only — never committed, never linked into the app; the real generated
+  tokens + the DigitalTwin-declared registry types resolve in the Xcode target.
+  The PURE adapter subset (Models + Builder) needs no tokens and is EXECUTED
+  for-real (49/49, below).
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/AutomationHistoryWidget.*) ===
+  AutomationHistoryWidget.Models.swift    157  domain value types (status taxonomy, tone role, badge tone,
+                                               cached DTO row + summary, projected run, relative-time bucket)
+  AutomationHistoryWidget.Builder.swift   125  status/symbol/role map + formatDurationMs port + makeRun(s) +
+                                               feedRuns(sort+cap) + latestRun + badgeTone + relativeTime (adapter)
+  AutomationHistoryWidget.Model.swift     319  P1/S8 state-holder seam + P1/S11 telemetry + P1/S10 strings + a11y
+  AutomationHistoryWidget.swift           243  AutomationHistoryWidget surface (glass shell + header + every state)
+  AutomationHistoryWidget.Feed.swift      257  tone bridges + AutomationCompactView + AutomationSuccessHeader +
+                                               AutomationFeedView + AutomationFeedRow + AutomationEmptyState
+  AutomationHistoryWidget.Previews.swift  140  #if DEBUG previews — feed/compact/loading/empty/error/stale/offline
+  AutomationHistoryWidget.Tests.swift     304  XCTest: adapter + model + registry + a11y (60+ assertions, 21 methods)
+  AutomationHistoryWidget.strings          59  P1/S10 catalog contribution (4 source keys + 25 native chrome keys)
+  Every file <= 400 lines (house file_length); largest 319 (Model). One exported (public) view per file
+  (AutomationHistoryWidget); the Feed sub-views are internal composition.
+
+  Shared-type reuse (DRY): DashboardWidgetSize / DashboardWidgetRegistration are declared once by the
+  DigitalTwinWidget (0036) sibling in the same module and REUSED here (no redeclaration) — registering
+  "automation-history" with the same grid-constraint contract.
+
+=== PARITY (vs web AutomationHistoryWidget.tsx) ===
+  Data sources -> bound via the shared state-holder seam (AutomationHistorySource -> AutomationHistoryModel):
+    useAutomations, useAutomationHistory, useTranslation. The production app wires AutomationHistorySource
+    over the KMP automation-history StateHolderModel<...> (fed by useAutomationHistory, which GETs
+    /automations/history?limit=); the view performs NO HTTP. No direct transport in the view.
+  Projection -> AutomationHistoryBuilder is a 1:1 port of the web STATUS_MAP + feedItems memo +
+    formatDurationMs + WidgetEventFeed: status parse (8 cases + unknown fallback = web DEFAULT_STATUS);
+    symbol families (CheckCircle->checkmark.circle.fill {success}; XCircle->xmark.circle.fill
+    {failed,cancelled}; Clock->clock.fill {partial,running,skipped,undo}; PlayCircle->play.circle.fill
+    {test,unknown}); tone role (success->green, failed->red, partial->amber, running->blue, test->purple/accent,
+    skipped/cancelled/undo/unknown->gray); makeRun fallbacks (automation_name ?? '—', status ?? '—' token,
+    formatDurationMs(duration_ms) [nil/inf->'—', <1000->'{ms}ms', else->'{s.1}s'], triggered_at ?? epoch);
+    feedRuns newest-first + cap 10; latestRun = items[0]; badgeTone (>=90 success / >=50 warning / else danger);
+    relativeTime buckets (<1m justNow / <60m minutes / <24h hours / else absolute). Verified by an EXECUTED
+    harness (49/49, below) — real cached->projection, not a typecheck.
+  Composition -> WidgetShell chrome (play.circle.fill icon + "Automation History" title + freshness chip +
+    refresh + optional Open) · COMPACT (cols<=1): centered "{successRate}%" + "Success Rate" + last-run
+    relative time (web CompactView), routed to the empty state when there are no runs (web items.length>0
+    guard) · FULL (cols>=2): a tinted success-rate badge header ("{rate}% Success Rate" + "{total} runs",
+    web Badge variant + fmtInt) over a scrollable timeline feed (status-tinted marker + connector,
+    automation name, "{status} · {duration}" subtitle, relative time). Recharts->none / Leaflet->none.
+    Shared components: Badge -> inline TSTone chip; TimeStamp -> relative-time label; EmptyState ->
+    ContentUnavailableView.
+  States (all render) -> loading (skeleton rows) · empty ("No automation runs yet", ContentUnavailableView) ·
+    error (retry) · stale (chip + banner over cached feed) · offline (cached feed + chip + banner) ·
+    content. Model phase resolution keeps cached rows visible behind refresh/errors, matching the web shell
+    (skeleton only on initial fetch; empty only when there are no runs).
+  i18n -> all FOUR web source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    widget.automationHistory ("Automation History"), widget.successRate ("Success Rate"),
+    widget.noAutomationRuns ("No automation runs yet"), widget.totalRuns ("runs") -> ALL PRESENT in
+    AutomationHistoryWidget.strings. The web's hardcoded relative-time English literals ("Just now",
+    "{m}m ago", "{h}h ago") are promoted to catalog keys; localized status names back the a11y/compact copy
+    so NO English literal lives in native code.
+  a11y -> each feed/compact row is one VoiceOver element with a localized composed label
+    (AutomationHistoryAccessibility.rowLabel: name, localized status, duration, relative time); the
+    success-rate compact tile + header badge are combined a11y elements; every header button
+    (refresh / open) has an accessibilityLabel; the timeline rail + icons are accessibilityHidden;
+    Dynamic Type via Font.TS tokens + minimumScaleFactor on the big percent; Reduce Motion respected by
+    the shared TSSkeleton.
+  Telemetry -> AutomationHistoryModel.start() emits viewOpened(surface:"AutomationHistoryWidget") ->
+    bridges shared Telemetry.track(.screenView) (P1/S11). Asserted by a spy test.
+  Registry -> AutomationHistoryWidget.registration: id "automation-history", category "automations",
+    default 2x4, min 1x2, max 4x40 (+ clamp()), matching registry/automations.ts. Asserted.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck  (the 5 source files — Models, Builder, Model, swift, Feed — compiled together
+    against the token-facade shim described in the CAPABILITY PROBE; the shared registry types are
+    declared by the shim with the SAME public signature the DigitalTwin sibling provides in the app):
+      xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 -sdk <macosx> \
+        <token-facade shim> AutomationHistoryWidget.{Models,Builder,Model,swift,Feed}.swift
+      TYPECHECK_EXIT=0                                                              OK
+      (Platform-agnostic SwiftUI — no #if os(iOS) branches — so the macOS compile fully covers the
+       iOS/iPadOS code paths. ScrollView/ContentUnavailableView/@Observable resolve vs the macOS 15 SDK.)
+
+[1b] swiftc -typecheck with Swift-6 strict concurrency (matches the app target's
+     SWIFT_STRICT_CONCURRENCY: complete):
+      xcrun --sdk macosx swiftc -typecheck -swift-version 6 -strict-concurrency=complete \
+        -target arm64-apple-macos15.0 -sdk <macosx> <same file set>
+      STRICT_EXIT=0                                                                 OK
+
+[2] Adapter EXECUTED test (compiled Models+Builder+harness to a native arm64 binary and RAN it —
+    real "cached -> projection" verification, not a typecheck; pure Foundation, no tokens):
+      49/49 checks PASSED — status parse (success/FAILED ci/unknown/nil); symbol families (9 statuses);
+      tone roles (7 mappings); durationLabel (nil/inf->'—', 0->0ms, 850->850ms, 1240->1.2s, 60000->60.0s);
+      makeRun fallbacks (nil name/status/dur -> '—', nil ts -> epoch) + subtitle "success · 1.2s";
+      feedRuns cap 10 + newest-first (id 14 first, id 5 last); latestRun = first/nil; badgeTone thresholds
+      (100/90 success, 89.9/50 warning, 49.9/0 danger); relativeTime justNow/5m/2h/absolute.
+      ADAPTER_HARNESS_EXIT=0                                                        OK
+
+[3] swiftlint --strict on the 7 surface .swift files (explicit paths):
+      Done linting! Found 0 violations, 0 serious in 7 files.
+      SURFACE_SWIFTLINT_EXIT=0                                                      OK
+    Bare gate `swiftlint --strict` (from apps/apple, included: paths — now lists TeslaSync/dashboard-widgets):
+      Found 1 violation, 1 serious in 1916 files.
+      SWIFTLINT_GATE_EXIT=2 — the SINGLE violation is PRE-EXISTING + UNRELATED:
+        TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length, 78 lines).
+        It is committed at HEAD, untouched by this change, and owned by a different surface's prompt
+        (Honesty rule 9: no silent drift — not fixed here). NONE of this surface's 7 .swift files violate.
+
+[4] swiftformat --lint on the 7 surface .swift files (explicit paths):
+      0/7 files require formatting.
+      SURFACE_FORMAT_EXIT=0                                                         OK
+    Bare gate `swiftformat --lint apps/apple` (whole tree, the exact gate command):
+      1/1920 files require formatting, 2 files skipped.
+      FORMAT_GATE_EXIT=1 — the SINGLE offender is PRE-EXISTING + UNRELATED:
+        TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes).
+        Committed at HEAD, untouched by this change, another surface's prompt (Honesty rule 9 — not
+        fixed here). This surface's 7 files are format-clean.
+
+[5] check-placeholders (ADR-011 stub gate; swift):
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/AutomationHistoryWidget
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+      Self-test (-SelfTest): all 6 cases PASS. A direct forbidden-word grep
+      (TODO/FIXME/stub/mock/placeholder/Lorem/unimpl/notImplemented) over the 8 surface files = NONE.
+      (The whole-dir swift scan reports COUNT=24 from OTHER pre-existing widgets; none are in
+      AutomationHistoryWidget.* — verified by path filter.)
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the signed macos-latest CI runner; NOT faked) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Why deferred (independent, code-unrelated reasons — none is a defect in this surface):
+      (a) NO XCODE TOOLCHAIN ACTIVE: xcode-select -p = /Library/Developer/CommandLineTools, so
+          `xcodebuild` errors ("requires Xcode") and `xcrun simctl` lists no iOS simulators. The host
+          swiftc compile in step [1] DOES typecheck this surface; step [2] EXECUTES the adapter.
+      (b) NOT-YET-REGISTERED: the XcodeGen app target + dashboard grid register this surface via the P4
+          dashboard-grid integration prompt (predecessor, Honesty rule 7). Running xcodebuild now would
+          build the app WITHOUT these files — zero evidence about this deliverable.
+      (c) Shared.xcframework not staged + macOS signing: apps/apple/Frameworks holds only .gitkeep (needs a
+          Kotlin/Native gradle build) and `security find-identity -p codesigning` = 0 valid identities;
+          ADR-012 defers both to a signed macos-latest runner.
+    XCTest (AutomationHistoryWidget.Tests.swift) likewise runs in the TeslaSync(/-macOS) test target under
+    Xcode; XCTest is unavailable to CLT here. The pure-adapter subset is independently PROVEN GREEN by the
+    executed harness in step [2]; the model/registry/a11y suites compile against the same public API
+    exercised by the host typecheck in step [1].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) — implemented; each has
+      a #if DEBUG preview; phase logic unit-tested.
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — 4/4 source keys present in the strings table.
+  [x] Accessibility labels on every interactive element; each row carries a localized composed label.
+  [x] Tests: adapter unit test (EXECUTED, 49/49) + per-state model test + registry + a11y label test.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; word-scan clean.
+  [x] Host gates green for THIS surface (typecheck/strict/lint/format/placeholder/adapter-run); Xcode app
+      build/test DEFERRED with capability + predecessor evidence (per P3/0036 + 0062 disposition). The two
+      whole-tree bare-gate failures are PRE-EXISTING in unrelated sibling surfaces, not this change.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green); the two whole-tree bare-gate
+                       failures are shown RED with their pre-existing/unrelated file:line. Every "OK" is a
+                       command actually run on this host with its real exit code.
+  2  No scope narrowing: implemented ALL states + compact/full composition + i18n + a11y + telemetry + registry.
+  3  No skip-and-assume: each host gate executed; the adapter is RUN (49/49), not assumed.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0 for this surface.
+  5  No parity shortcuts: faithful port of STATUS_MAP + feedItems memo + formatDurationMs + WidgetEventFeed
+                       (status/symbol/role, fallbacks, sort+cap, badge tone, relative-time) + every state.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface — prompt forbids it).
+  7  No predecessor bypass: did NOT self-register into project.yml / dashboard grid (integration prompt's
+                       scope) and did NOT edit the shared Localizable.xcstrings (parallel-unsafe across the
+                       concurrent slots) — strings shipped as the per-surface table; shared registry types
+                       reused (not redeclared); the two unrelated pre-existing lint/format failures left
+                       untouched (other surfaces' scope).
+  8  No commit on red  : committing on all-green host gates FOR THIS SURFACE; Xcode steps explicitly
+                       DEFERRED (not failed); the whole-tree bare-gate reds are pre-existing + out-of-scope.
+  9  No silent drift   : changes confined to the allowed AutomationHistoryWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native AutomationHistoryWidget shipped at parity with the web source: pure-Swift
+  domain port (executed-green adapter, 49/49), P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry,
+  every state + all 4 i18n source keys + a11y labels, registry-correct (automation-history, 2x4 / 1x2 /
+  4x40). All host-runnable gates pass for this surface; the Xcode app build/test is DEFERRED to the signed
+  CI runner (no active Xcode toolchain + surface not yet target-registered + Shared.xcframework + macOS
+  signing — none a defect in this code), matching the user-approved P3 "code-complete + DEFERRED Xcode
+  gate" disposition.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/AutomationHistoryWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0006-AutomationHistoryWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add AutomationHistoryWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

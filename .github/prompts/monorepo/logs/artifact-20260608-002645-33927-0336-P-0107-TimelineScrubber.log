@@ -1,0 +1,137 @@
+=== P4 Shared surface 0107 TimelineScrubber (Apple) ===
+
+Surface : apps/apple/TeslaSync/shared-surfaces/TimelineScrubber.*
+Web src : components/data-display/TimelineScrubber.tsx
+Date    : 2026-06-08
+Host    : Darwin (arm64), Xcode 26.5 (17F42), iOS/macOS 26.5 SDKs
+
+------------------------------------------------------------------------
+PLATFORM CAPABILITY (prompt: requires SwiftUI + Swift Charts + MapKit, iOS 18 /
+iPadOS 18 / macOS 15 HIG — else BLOCKED with API evidence)
+------------------------------------------------------------------------
+CAPABILITY = PRESENT.
+  $ xcodebuild -version                 -> Xcode 26.5 (Build 17F42)
+  $ xcodebuild -showsdks                -> iphonesimulator26.5, macosx26.5
+  $ xcrun simctl list devices available -> iPhone 16 (booted), iPhone 17 family
+  $ xcrun --sdk macosx swiftc -typecheck <import SwiftUI; import Charts; import MapKit>
+        -> TYPECHECK_EXIT=0  (SwiftUI + Swift Charts + MapKit resolvable)
+The surface itself uses SwiftUI only (the web source uses no Recharts/Leaflet —
+charts/maps = none); Swift Charts / MapKit availability is proven above per the
+capability bar.
+
+------------------------------------------------------------------------
+SCOPE NOTE (honesty: what ran, and why — no red-as-green, no silent drift)
+------------------------------------------------------------------------
+Allowed files for this prompt = apps/apple/TeslaSync/shared-surfaces/TimelineScrubber.*
+plus this log. The literal gate command `xcodebuild -scheme TeslaSync ... build test`
+on the FULL app could not be run within that scope because:
+  1. apps/apple/project.yml `sources:` lists TeslaSync/feature-views and
+     TeslaSync/dashboard-widgets but NOT TeslaSync/shared-surfaces, so the app
+     scheme does not yet compile this directory. project.yml is OUTSIDE the
+     allowed files (a generator/wiring step owns it — confirmed by 170 colocated
+     *.Tests.swift already living in feature-views while Tests/Unit is the wired
+     test target).
+  2. The TeslaSync scheme's preAction stages Frameworks/Shared.xcframework via
+     Scripts/build-shared-xcframework.sh (KMP/Kotlin-Native); Frameworks/ holds
+     only .gitkeep and no Kotlin toolchain is provisioned. Also outside scope.
+Neither is a platform-capability gap. The surface is therefore verified through a
+TEMPORARY, scoped Xcode project (generated in /tmp, repo project.yml untouched)
+that compiles THESE surface files against the REAL design tokens
+(apps/design/generated/apple/Tokens.swift) + the REAL shared components it depends
+on (TSButton, TSSkeleton, TSCard, TSBadge, TSText, tsGlassPanel) and builds+tests
+on BOTH the iOS Simulator (iPhone 16) and macOS via the real `xcodebuild`. Module
+name = TeslaSync so the shipped `@testable import TeslaSync` tests run unmodified.
+Build settings match the app: SWIFT_VERSION=6.0, SWIFT_STRICT_CONCURRENCY=complete.
+
+------------------------------------------------------------------------
+GATE RESULTS
+------------------------------------------------------------------------
+
+[1] iOS — xcodebuild build test (real gate command, scoped project)
+  $ xcodebuild -project TLSurface.xcodeproj -scheme TLSurface-iOS \
+        -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    ** BUILD SUCCEEDED **
+    Test Suite 'All tests' passed.
+         Executed 37 tests, with 0 failures (0 unexpected)
+    ** TEST SUCCEEDED **
+  IOS_EXIT=0
+
+[2] macOS — xcodebuild build-for-testing + direct bundle run
+  $ xcodebuild -project TLSurfaceMac.xcodeproj -scheme TeslaSync-macOS \
+        -destination 'platform=macOS' build-for-testing
+    ** TEST BUILD SUCCEEDED **   (framework + test bundle compile + link, macOS)
+  # `xcodebuild test` orchestration hangs launching the macOS xctest host in this
+  # headless session (environment limitation, not a code fault). The built bundle
+  # was run directly:
+  $ xcrun xctest .../Debug/TeslaSyncTests.xctest
+    Test Suite 'All tests' passed.
+         Executed 37 tests, with 0 failures (0 unexpected)
+  MAC_EXIT=0
+
+[3] Cross-check — SwiftPM (Xcode toolchain, Swift 6 mode, complete concurrency)
+  $ swift build && swift test          (same surface files + real tokens/components)
+    Build complete!
+    Executed 37 tests, with 0 failures (0 unexpected)
+  SPM_EXIT=0
+
+[4] swiftlint --strict  (the 10 shipped .swift files)
+  $ swiftlint lint --strict --no-cache TeslaSync/shared-surfaces/*.swift
+    Done linting! Found 0 violations, 0 serious in 10 files.
+  LINT_EXIT=0
+
+[5] swiftformat --lint
+  $ swiftformat --lint apps/apple/TeslaSync/shared-surfaces
+    0/10 files require formatting.
+  FORMAT_EXIT=0
+
+[6] check-placeholders.ps1  (no TODO/stub/mock/placeholder/Lorem in shipped code)
+  $ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/TimelineScrubber
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+  # also scanned the real directory for non-vacuous evidence:
+  $ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces -Language swift
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------------------
+[x] Renders all web states reproduced + the P4 leaf states:
+      data (interactive track: buffered + neon fill + 8 marker kinds + hover ghost +
+            drag thumb w/ grow+ring + hover/drag preview tooltip + decorative bg),
+      loading (skeleton track), empty (friendly), error (retry),
+      stale/offline (freshness chip + banner + one-shot stale auto-refresh).
+[x] Hooks bind via the shared P1/S8 state-holder seam (TimelineScrubberSource +
+    TimelineScrubberModel); no direct HTTP in the view. useMotionPreference ->
+    @Environment(\.accessibilityReduceMotion) (fill/thumb transitions honor it);
+    useTranslation -> P1/S10 facade.
+[x] Every i18n key from source has a catalog entry: 22/22 used keys present in
+    TimelineScrubber.strings (parity `Playback progress`, `at {{pct}}%` ->
+    timelineScrubber.progress / timelineScrubber.markerAtPercent), 0 missing.
+[x] Accessibility on every interactive element: the track is one adjustable slider
+    (label + m:ss value + increment/decrement); each marker is a focusable button
+    with a localized label + `.help` tooltip.
+[x] Tests: adapter unit tests + per-phase projection tests + state-holder/UI-model
+    tests + a11y label tests = 37, all green on iOS + macOS + SwiftPM.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (gate [6]).
+[x] Telemetry: `view.opened` emitted once with surface slug "TimelineScrubber"
+    (P1/S11 seam; asserted by testStartAppliesInitialAndEmitsTelemetryOnce).
+
+------------------------------------------------------------------------
+SHIPPED FILES (apps/apple/TeslaSync/shared-surfaces/)
+------------------------------------------------------------------------
+  TimelineScrubber.swift            106  surface composition + states
+  TimelineScrubber.Model.swift      399  i18n facade, telemetry, source seam, model
+  TimelineScrubber.Adapter.swift    174  pure types + clamp/percent/time/throttle/a11y
+  TimelineScrubber.Projection.swift 140  pure resolve(input) -> resolved + markers
+  TimelineScrubber.Views.swift      312  interactive track + marker tick + preview
+  TimelineScrubber.Chrome.swift     172  chip + banner + refresh + loading/error/empty
+  TimelineScrubber.Fixtures.swift    65  in-memory source (previews/tests seam)
+  TimelineScrubber.Previews.swift   124  every state preview
+  TimelineScrubber.Tests.swift      256  adapter + projection tests
+  TimelineScrubber.ModelTests.swift 180  state-holder + telemetry + throttle tests
+  TimelineScrubber.strings           49  i18n catalog (table "TimelineScrubber")
+  (each .swift file <= 400 lines, swiftlint file_length budget)
+
+EXIT=0
+STATUS=DONE

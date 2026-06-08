@@ -1,0 +1,98 @@
+I'll start by exploring the environment and the web source that serves as the specification.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me check if Xcode is available elsewhere and explore the existing Apple app structure.
+
+Xcode.app IS present — just not selected. I can use `DEVELOPER_DIR` to point to it. Let me verify that works and explore the existing Apple Sources structure plus the helper types.
+
+Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 simulator is available, and `TeslaSync/feature-views` already exists. The gate CAN run. Let me study existing feature-views and shared infrastructure to follow conventions exactly.
+
+The project uses XcodeGen + a KMP `Shared.xcframework`. Critically, the iOS/macOS target sources list `TeslaSync/dashboard-widgets` but I need to confirm how `feature-views` gets compiled. Let me investigate the build infrastructure and find a chart-based feature-view to use as the template.
+
+`feature-views` is not referenced in `project.yml` — only `dashboard-widgets` is. Let me check how sibling feature-view prompts (0001–0046) handled wiring and look at the logs + git history.
+
+Six sibling feature-views passed their gates without `project.yml` changes. Let me read an existing gate log to understand what "passing" means here, plus study the simplest complete feature-view template and the shared Charts components.
+
+The established disposition is clear: ship code-complete native implementation, run all host-runnable gates (swiftlint/swiftformat/placeholder + standalone adapter self-test), and DEFER the full Xcode app build/test (feature-views aren't registered in `project.yml` — that's the integration prompt's scope, rule #7). Notably my host DOES have Xcode 26.5, so I'll re-probe honestly. Let me study the simplest sibling (Base64Tool), the chart pattern, and the shared Charts components.
+
+Now I understand the file structure. Let me read the rest of the Base64Tool template, the chart pattern, the states pattern from FleetTelemetryHealth, and the shared state-holder facade.
+
+Let me study the Swift Charts bar chart pattern, the Loadable states envelope from a data-driven feature-view, and the design tokens.
+
+Let me examine the design tokens, the Loadable states pattern from a data-driven feature-view, and the shared facade.
+
+I now understand the full convention. Let me examine the shared components the web source maps to (GlassPanel, FadeIn, EmptyState, ChartContainer/ChartTooltip) and the design token palette to pick the right colors for the blue/gray bars.
+
+Excellent — `chartSeriesSpeed` is `#3B82F6` (the web's blue) and `textMuted` maps cleanly to the gray. Let me check the shared Motion (FadeIn), Charts container/tooltip, Feedback states, and the TSButton signature so I map components faithfully.
+
+I have the full picture of shared APIs (`TSFadeIn`, `TSChartContainer`, `TSEmptyState`, `TSButton`). Let me confirm the web `formatDateShort` behavior, the `ChartTooltip`, and how the parent consumes this component, so I reproduce the data lifecycle faithfully.
+
+Let me look at how the parent page drives the data lifecycle (loading/error/stale) to model the state-holder seam faithfully.
+
+I have everything needed. Let me read the lint/format configs and the placeholder-check script so my code passes the host-runnable gates, then I'll write the implementation.
+
+Let me read the placeholder patterns and the FleetTelemetryHealth subviews (freshness chip / connectivity banner) to mirror them exactly.
+
+Let me verify which shared components avoid the `Shared` framework dependency (so I can both reuse them idiomatically and run a standalone type-check), and get the `TSSkeleton` signature.
+
+All referenced shared components are `Shared`-free, so I can both reuse them and run a standalone type-check. Let me set up tracking and write the implementation.
+
+All 7 files created. Now let me run the host gates. First, format my files to spec with swiftformat, then verify.
+
+My files pass swiftformat and swiftlint cleanly (0 violations). Now let me run the full gate commands, the placeholder check, and check how the placeholder script resolves its path.
+
+Let me get swiftlint's true exit code and identify the single violation's location (to confirm it's a pre-existing sibling, not mine), and run the placeholder gate.
+
+Confirmed: the single swiftlint violation is in a **pre-existing sibling** (`LifetimeStatsWidget.Adapter.swift:141`), outside my allowed files. My surface lints clean (0 violations). Now the placeholder gate + meaningful per-file scan.
+
+Placeholder gate passes (COUNT=0 across all files). Now the real logic verification: since the app target doesn't yet include `feature-views`, I'll (1) compile+run the pure adapter as an executed self-test, and (2) type-check the full SwiftUI/Charts view set against the macOS SDK under Swift 6 strict concurrency.
+
+Adapter self-test compiles under Swift 6 strict concurrency and runs **green**. Now type-check the full SwiftUI/Charts view set against the macOS SDK.
+
+The errors are in the sibling `Skeletons.swift` (it references `TSCard`), not my code. Let me isolate my files by shimming only the `TSSkeleton` dependency (real signature) while keeping the real `Tokens.swift` and `Motion.swift`.
+
+The strict-concurrency type-check caught a real issue in my `Previews.swift`: the `sentryModePreview` helper constructs `@MainActor`-isolated types from a nonisolated context. Let me fix it by marking the helper `@MainActor`.
+
+View set type-checks cleanly under Swift 6 strict concurrency. Let me re-verify format/lint on the edited Previews, confirm the generated project is gitignored, and probe the real xcodebuild path.
+
+My files stay clean after the fix. Now let me add an **iOS-Simulator** type-check (the gate's primary target) and check the `.xcodeproj` ignore status before probing `xcodebuild`.
+
+Both iOS-Simulator and macOS type-checks pass under Swift 6 strict concurrency. Generated `.xcodeproj` is gitignored (line 379). Now a real, bounded `xcodebuild` probe: generate the project, list schemes, and prove the app target excludes my surface (feature-views unregistered).
+
+`xcodegen generate` succeeded. Let me list schemes and prove the generated app target excludes my surface (since `feature-views` is unregistered).
+
+Definitive proof: the generated app project has **0** references to `SentryModeChart`/`feature-views` (vs 3 for the registered `dashboard-widgets`) — so the app `build test` gate cannot compile this surface until the integration prompt registers `feature-views` (rule #7). Let me run one bounded, real probe of the actual gate build to capture its true behavior (the KMP pre-action).
+
+Bounded build probe running. Let me wait and capture its real output.
+
+The backgrounded probe didn't persist across sessions. Let me run the real gate build directly with a generous wait so the tool manages it.
+
+The app build is stuck in the **"Stage Shared.xcframework" KMP Gradle pre-action** (>240s) — confirming the documented blocker. Since the pbxproj proves my surface isn't even compiled by this target, this gate is genuinely deferred. Let me capture the real state and stop it.
+
+Real evidence captured: the KMP `Stage Shared.xcframework` Gradle pre-action runs (it built `Shared.xcframework`) but is heavy/slow, and the pbxproj proves it never compiles this surface. My surface is fully verified via the type-checks + self-test. Let me clean up generated artifacts and check git status.
+
+Git status is clean — only my 7 `SentryModeChart.*` files are new; build artifacts are gitignored; the two pre-existing `web/` edits are untouched. Now let me write the gate log with all real results.
+
+Now let me clean up temp artifacts and commit exactly the 8 specified files (not the pre-existing `web/` edits).
+
+Committed. Let me do a final verification that the commit is clean and confined to the 8 intended files.
+
+All todos complete. The commit is confined to the 8 intended files (7 surface + log, 1585 insertions); the two pre-existing `web/` edits remain untouched and unstaged as documented.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-feature-views-0047-SentryModeChart.log | 201 +++++++++++
+ .../feature-views/SentryModeChart.Adapter.swift    | 312 +++++++++++++++++
+ .../feature-views/SentryModeChart.Model.swift      | 246 ++++++++++++++
+ .../feature-views/SentryModeChart.Previews.swift   |  85 +++++
+ .../feature-views/SentryModeChart.Tests.swift      | 251 ++++++++++++++
+ .../feature-views/SentryModeChart.Views.swift      | 374 +++++++++++++++++++++
+ .../feature-views/SentryModeChart.strings          |  46 +++
+ .../TeslaSync/feature-views/SentryModeChart.swift  |  70 ++++
+ 8 files changed, 1585 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0047-SentryModeChart.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SentryModeChart.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SentryModeChart.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SentryModeChart.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SentryModeChart.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SentryModeChart.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SentryModeChart.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SentryModeChart.swift

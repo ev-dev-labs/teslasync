@@ -1,0 +1,136 @@
+I'll start by exploring the repository structure and checking capabilities, since this task requires macOS + Xcode and depends on prior P4/P1..P8 infrastructure.
+
+Key finding: only Command Line Tools are installed (`/Library/Developer/CommandLineTools`), not full Xcode. `xcodebuild -version` failed. Let me verify the capability situation and examine prior context.
+
+Critical discovery: `/Applications/Xcode.app` IS present. The prior log shows using `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` as an override (no sudo). Let me verify this capability myself and read the full prior log.
+
+Now I have strong context. The prior run (committed at HEAD, then deleted in working tree) concluded **EXIT=70, STATUS=BLOCKED** on two blockers: (A) macOS code-signing failure (MAC_EXIT=70), and (B) P7 pages predecessor absent (0/153 page view-models). iOS was fully green (255 tests).
+
+I must independently verify rather than trust the stale log (different branch `feature/apps-ios`). Let me explore the actual current state.
+
+Independently confirmed: **no `Pages/Features` directory exists**, and **done.txt has no P7 entry** (P0–P6, P8 only). The 153 page specs exist under `.github/prompts/monorepo/p4-apple/pages/**` but were never generated into Swift. This confirms Blocker B (P7 predecessor) firsthand.
+
+Let me read the exact prompt, the macOS verification policy, and check the build toolchain (XcodeGen, pwsh, Shared.xcframework).
+
+Everything is confirmed. `pwsh`, `xcodegen`, Xcode 26.5 all available. `Shared.xcframework` is NOT built yet (only `.gitkeep`). macOS verification is explicitly deferred to a signed `macos-latest` runner per ADR-012. 153 page units exist as specs but none generated to Swift.
+
+Let me read the exact prompt and project wiring, then kick off the long-pole framework build.
+
+The scheme has a `preAction` that runs `Scripts/build-shared-xcframework.sh` to stage the KMP framework. macOS targets use hardened runtime + entitlements + automatic signing with empty team — that's the signing failure. Let me read the build script and entitlements, then kick off the long-pole framework build.
+
+Gradle caches (`~/.gradle`, `~/.konan`) are warm. The macOS entitlements (App Groups, aps-environment, associated-domains) + hardened runtime + automatic signing with empty team are exactly what fails macOS signing on a headless host — a documented ADR-012 capability gap.
+
+I'll run the **real gate** for fresh evidence. Starting the long-pole KMP framework build now in the background.
+
+Gradle (Kotlin/Native cold compile) is running in the background. Meanwhile, I'll run the three host-only gates (swiftlint, swiftformat, placeholder) which don't need Xcode or the framework.
+
+Three host gates GREEN with fresh evidence: **LINT_EXIT=0** (256 files), **FORMAT_EXIT=0** (0/260), **PLACEHOLDER_EXIT=0**. Let me check the framework build progress.
+
+Framework build is progressing fast (mostly FROM-CACHE). Debug XCFramework done, release linking now. Waiting for completion.
+
+Release framework linking is the slow part (not cached, optimized builds for 3 slices). Letting it continue.
+
+Release linking is genuinely slow (Kotlin/Native optimizes the whole binary). Waiting more.
+
+iosArm64 release link done; now iosSimulatorArm64, then macosArm64 remains. Progressing. Waiting for completion.
+
+Still linking the simulator slice. I'll wait — I'll be notified when gradle completes.
+
+~17 min elapsed; the release simulator-slice link is the bottleneck (Kotlin/Native linking is slow and single-threaded per slice). Let me verify the daemon is actively working, then continue waiting.
+
+Confirmed actively working: konan's `clang++ -cc1` (LLVM) at 80% CPU. The host is heavily contended (load avg 39 — shared with other parallel slots), explaining the slowness. The release link is legitimately progressing. Waiting for completion.
+
+Last slice now: `linkReleaseFrameworkMacosArm64` (iOS slices done). Almost there. Waiting for the final assembly.
+
+Framework built successfully (`BUILD SUCCESSFUL in 23m 24s`, GRADLE_EXIT=0) — the host contention made it slow. Now staging the framework and generating the Xcode project.
+
+Framework staged (3 slices), xcodeproj generated, all schemes present. Now running the **iOS gate** exactly as specified. This compiles 169 sources + runs 255 unit + 13 UI tests on the simulator — slow under the current host load. Starting in the background.
+
+iOS gate running. Let me monitor progress via the raw output file.
+
+iOS unit-test bundle (`TeslaSyncTests`) **PASSED** — the 255 unit tests that are the core of this task. UI tests now running (some transient simulator flakiness under load, xcodebuild auto-retrying). Waiting for final exit code.
+
+iOS gate returned **IOS_EXIT=65**: all **unit tests passed** (the P9-0001 deliverable), but **3 UI tests failed** — and the log is full of simulator-launch instability under the extreme host load (`Mach error -308 server died`, `XPC Connection interrupted`, `IDELaunchParametersSnapshot ... couldn't be completed`). UI tests are explicitly **P9-0002 / out of scope** here. The prior run had 13/13 UI green. Let me characterize these failures precisely before deciding.
+
+The grep caught source-echo lines. Let me extract the **actual** XCUITest failure reasons and confirm the root cause (env vs assertion).
+
+Definitive root cause: the 3 UI "failures" have **zero assertion failures** — they're caused by `Failed to launch app with identifier: io.teslasync.app`, i.e. CoreSimulator's launch service dying under the extreme host contention (`server died`, `XPC interrupted`, `no debugger version`). The **unit tests — the actual P9-0001 deliverable — all passed.** These UI tests are P9-0002 / out-of-scope and passed 13/13 in the prior run.
+
+I'll pre-boot the simulator to stabilize launches and re-run the exact iOS gate for an honest result. Checking host load first.
+
+**Load average is now 140** — extreme oversubscription from parallel slots running the same heavy builds. That's precisely why CoreSimulator's launch service died. The simulator is now pre-booted. The build is cached, so re-running the gate goes straight to the test phase. Let me attempt one clean re-run while the sim is warm.
+
+The re-run was fast (build cached) but still IOS_EXIT_2=65. Let me see exactly which tests failed this time and whether the unit bundle stayed green.
+
+Different UI test failed this time (`AppLaunchUITests.testAppLaunchesToForeground`) — **different failures each run = classic flakiness**. Let me confirm the unit bundle stayed green and see this failure's detail.
+
+Confirmed **flaky**: run 1 failed `AuthOnboarding×2 + LiveData`, run 2 failed a *different* test `AppLaunch×1` — non-deterministic environmental failures (CoreSimulator launch death under load 140), zero assertion failures. Unit tests (the deliverable) passed reliably in run 1.
+
+The re-run rebuilt because the preAction re-stages the framework (new mtime). Let me now gather the remaining firsthand evidence: signing identities (deterministic proof of macOS blocker) and kick off the macOS gate.
+
+**0 valid codesigning identities** — deterministic proof. The macOS app (hardened runtime + push `aps-environment` + App Groups entitlements) cannot be signed; iOS Simulator builds need no signing, which is why iOS gets past this. This is the ADR-012 capability gap. Now running the macOS gate firsthand to capture the actual `MAC_EXIT`.
+
+**MAC_EXIT=70** — definitive firsthand confirmation. The build fails *before* compilation with explicit errors:
+- `"TeslaSync-macOS" has entitlements that require signing with a development certificate`
+- `"TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate`
+
+Combined with 0 valid identities, this is the ADR-012 capability gap (deferred to a signed `macos-latest` runner). The macOS blocker forces STATUS=BLOCKED regardless of iOS.
+
+Now running the coverage pass on the unit bundle (the P9-0001 deliverable) — clean numbers + reaffirms unit green in isolation, avoiding the flaky UI tests.
+
+Coverage pass also hit COV_EXIT=65 even unit-only. Let me see exactly what failed — a real unit failure would be significant.
+
+The coverage pass failed during **test-host bootstrap**: `Early unexpected exit, operation never finished bootstrapping ... Test crashed with signal kill before establishing connection` — the test host was **killed by the system before any test ran** (0 assertion failures; the build itself succeeded and even ad-hoc "Sign to Run Locally" worked). This is OOM/watchdog kill under load 113-140, not a test failure.
+
+Load has worsened since run 1 (was ~39 when all 255 unit tests passed). Let me check load and make one more bounded coverage attempt.
+
+**Load average is now 488** with only **~3.6 MB free RAM** (916 free pages) — the shared host is catastrophically saturated by parallel slots. This is the OOM/watchdog killer that's terminating test hosts during bootstrap. Hammering the simulator now is futile and irresponsible. The escalating load (39→488) definitively explains the iOS UI flakiness.
+
+I have sufficient firsthand evidence. Let me gather lightweight inventory (no simulator needed) for the log while confirming there are genuinely zero page view-models.
+
+Complete inventory confirmed:
+- **Zero P7 page view-models** (no `*ViewModel*`/`*Page*` files, no `Pages/Features` dir anywhere; the 6 ObservableObjects are infra stores like LiveDataStore/AppSettingsStore).
+- **255 unit tests / 44 files** across all 9 non-page spec categories (Facade, Design/Components/Charts/DataDisplay/Forms/Maps, Auth/Live/Notifications, Widgets/Platform/App).
+- **153 P7 page units** specified but not generated.
+- Golden-vector tests present (`UnitsGoldenVectorTests.swift`).
+
+Let me capture exact run-1 numbers to cite accurately, then write the log.
+
+I have all firsthand evidence. Now writing the comprehensive, honest log. The verdict is **BLOCKED** on two independent hard blockers (P7 predecessor absent; macOS signing capability gap), with iOS UI flakiness as an environmental factor under catastrophic host load.
+
+Log written. Before committing, let me verify git state — confirm no source files changed, that build artifacts are git-ignored, and that I only stage the log (not the pre-existing unrelated web-file changes).
+
+Git state is clean and as expected:
+- **No `apps/apple` tracked files changed** (the generated `.xcodeproj` and `Shared.xcframework` are git-ignored — they don't appear in status).
+- The two `web/` files were pre-existing modifications, **not mine and out of scope** — I will not touch or commit them.
+- Only the log is my change.
+
+Load is still 268 (sustained catastrophic) — a fresh coverage/iOS pass would just be OOM-killed again, and wouldn't change the BLOCKED verdict (macOS + P7 are hard blockers). Committing **only the log** per Covenant rule 8.
+
+Committed — **only the log** was staged (the two `web/` files correctly remain untouched). Let me verify rule-10 compliance (log ends with EXIT/STATUS) and clean up the large temporary `xcresult` bundle from session state.
+
+Task executed and finalized. The committed log is rule-10 compliant (`EXIT=70` / `STATUS=BLOCKED`, each on its own line), and temporary artifacts are cleaned up.
+
+## Summary
+
+I ran the **P9-0001 Apple XCTest gate for real** on this macOS host (Xcode 26.5 via `DEVELOPER_DIR` override) rather than trusting the prior stale log. Outcome: **EXIT=70 / STATUS=BLOCKED** — matching the prior run, now re-confirmed with fresh firsthand evidence on this branch.
+
+**What I did:** built the KMP `Shared.xcframework` fresh (gradle, 3 SI slices, `GRADLE_EXIT=0`), generated the Xcode project, and executed all five gate commands.
+
+**Firsthand gate results:**
+| Gate | Result | Cause |
+|---|---|---|
+| iOS | `IOS_EXIT=65` | **255 unit tests PASSED** (the deliverable). 3 XCUITests flaked — *different tests each run*, zero assertion failures; `Failed to launch app … server died` under host load. XCUITests are P9-0002/out-of-scope. |
+| macOS | `MAC_EXIT=70` | **Deterministic.** `"TeslaSync-macOS"/"TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate`; `security find-identity` → **0 valid identities**. |
+| swiftlint | `0` | 0 violations, 256 files |
+| swiftformat | `0` | 0/260 need formatting |
+| placeholder | `0` | count 0 |
+
+**Two independent hard blockers (neither resolvable without violating the binding Honesty Covenant):**
+- **A — macOS signing:** No dev certificate on host; the app+widget push/App-Group/hardened-runtime entitlements can't be signed. This is the **documented ADR-012 capability gap** (`apps/macos-pending-verifications.md` → deferred to a signed `macos-latest` runner). I did *not* hack production signing config to mask it.
+- **B — P7 predecessor absent:** Per-parity-unit page view-model state tests are required, but **0/153** page sources exist (no `Pages/`/`Features/` tree; `done.txt` has no P7). Fabricating them would violate Covenant rules 4/5/7.
+
+**Aggravating factor:** the shared host hit **load 488 / ~3.6 MB free RAM** mid-run, OOM-killing simulator launches — this reddened the out-of-scope XCUITests and blocked a fresh `xccov` pass; the in-scope unit bundle passed when load permitted.
+
+**Committed only the log** (Covenant rule 8 — no code on red); `apps/apple` tracked files unchanged, and the pre-existing unrelated `web/` edits were left untouched.
+

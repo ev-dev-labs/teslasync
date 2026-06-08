@@ -1,0 +1,71 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Apple tooling is available. Let me read the web source and explore the existing Apple app structure.
+
+Now let me study the existing Apple conventions. Let me examine the project config, the core Sources (state holders, tokens, i18n, telemetry), and a representative full feature-view example.
+
+Key finding: `project.yml` lists `TeslaSync/dashboard-widgets` and `TeslaSync/feature-views` as sources but **not** `TeslaSync/shared-surfaces`. Let me check whether shared-surfaces is referenced anywhere and examine the core infrastructure (facades, tokens, i18n, telemetry).
+
+Critical capability finding: **only Command Line Tools are installed, not full Xcode** — so `xcodebuild`, the iOS Simulator, and the KMP `Shared.xcframework` (which needs Kotlin/Native + full Xcode) are unavailable. The `Frameworks/` dir is empty (`.gitkeep` only). This matches the prompt's capability clause (→ BLOCKED for the build/test gate with evidence). But `swiftlint`/`swiftformat` ARE available, and I must still ship a complete, production-quality implementation.
+
+Let me study the core infrastructure conventions deeply.
+
+The web banner is event-driven (listens to `teslasync:rate-limited` / `teslasync:upstream-down` from `resilientFetch`), using `useTranslation` + `useQueryClient`. Let me find the native equivalents: the resilience/breaker event source, the i18n facade, the query/cache invalidation, telemetry, and a representative full feature-view example.
+
+Found `Sources/Components/Feedback/Banners.swift` — likely the native banner infrastructure. Let me read it plus the facade error, app container, live store, and telemetry.
+
+Now I understand the architecture. `TSRateLimitBanner` in `Banners.swift` is the **atomic** component (out of scope per the prompt — owned by the component-library bundle). My job is the **shared surface**: the full stateful, event-driven composition. Let me find the telemetry contract, cache/query-invalidation facade, and read a complete representative feature-view set to nail conventions.
+
+Excellent — the conventions are clear. Let me read the rest of the Model (i18n facade + source seam + start/stop), plus the Views, strings, Tests, and Previews to nail every pattern.
+
+I have a thorough grasp. Let me read the test conventions, find where the surface-slug enum is defined, and confirm the available design-system components (TSButton signature, TSTone, chips, etc.).
+
+Let me read the button API, the Views file (content layout + chips), the ModelTests, the surface-slug/accessibility tail of the Adapter, and locate the remaining design primitives.
+
+Let me read the ModelTests, the design tokens (Theme/Material), lint/format configs, and verify the remaining primitives + the placeholder-check script.
+
+I now have the full convention. Let me confirm the exact design tokens/primitives I'll use and the log directory, then write a plan.
+
+All primitives and tokens confirmed. Let me read the exact prompt file, the remaining primitive signatures, and check for sibling logs to mirror the log format.
+
+I have everything needed. Let me read the placeholder checker (to ensure compliance) and check the done-log conventions, then write my plan.
+
+I now have a complete understanding of the architecture, conventions, and constraints. Key facts:
+- **Runner capability gap**: only Command Line Tools (no full Xcode/iOS Simulator), and `Frameworks/Shared.xcframework` (KMP, needs Kotlin/Native + full Xcode) is absent → the two `xcodebuild` gate steps **cannot run** (prompt's Capability clause → BLOCKED with evidence). `swiftlint`/`swiftformat`/placeholder checks **can** run.
+- `TSRateLimitBanner` in `Banners.swift` is the **atomic** component (explicitly out of scope). My job is the full stateful **surface**.
+- The `shared-surfaces` dir isn't registered in `project.yml`/`.swiftlint.yml` (that's P4-core infra, outside my allowed-files), so I won't touch those.
+
+Let me set up tracking and scaffold the directory.
+
+Now I'll create the surface files. Starting with the pure adapter core and the model (state-holder seams).
+
+Now the i18n strings, previews, and the two test files.
+
+Now the two test files, co-located per the established feature-view convention (adapter + a11y tests, and state-holder model tests).
+
+All 8 files created. Now let me run the available verifications — first auto-format my files with swiftformat, then lint, placeholder-check, and capture xcodebuild capability evidence.
+
+`swiftformat --lint` on my surface: **0/7 require formatting (FORMAT_EXIT=0)**. Note the `AIUsageCard.*` changes are pre-existing worktree modifications (not mine — I only formatted `shared-surfaces/`). Let me confirm the baseline and run the full gate's format/lint to understand pre-existing state.
+
+The baseline has pre-existing `AIUsageCard.*` modifications (harness setup — not mine). I'll only commit my files. Now let me run the runnable gate checks (swiftlint, placeholder) and capture the xcodebuild capability evidence.
+
+Outstanding: **swiftlint 0 violations**, **placeholder COUNT=0**, **swiftformat 0/7**. Now let me capture the `xcodebuild` capability evidence and additionally type-check the self-contained pure adapter + syntax-check all files against the macOS SDK that Command Line Tools provides.
+
+Definitive capability evidence captured: both `xcodebuild` steps fail with `requires Xcode... is a command line tools instance`, `simctl` is absent, and `Shared.xcframework` is missing. Meanwhile my **pure adapter type-checks cleanly under Swift 6** and **all 7 files parse with 0 errors**. Let me run the gate's whole-project swiftlint/swiftformat to capture their real exit codes.
+
+The gate's whole-project swiftlint found 1 violation — but my files lint clean (verified) and `shared-surfaces` isn't in swiftlint's `included` paths, so it's pre-existing. Let me identify it to confirm it's not mine.
+
+Confirmed: the 1 pre-existing violation is in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (not mine; `shared-surfaces` isn't scanned by swiftlint). Let me capture the gate's `swiftformat --lint apps/apple` result too.
+
+My surface is clean on every runnable check; the whole-tree `swiftformat` red is a pre-existing file (`ActionBuilder.Previews.swift`, not mine). Now I'll generate the authentic gate log (re-running the gate sequence, teeing real output) ending in `EXIT`/`STATUS`.
+
+The authentic log is generated, ending with `EXIT=1`/`STATUS=BLOCKED`. Let me verify the log head captured the gate steps and the xcodebuild evidence correctly.
+
+Log is authentic and complete (capability probe, both `xcodebuild` errors, all gate steps, deliverable verification, ending `EXIT=1`/`STATUS=BLOCKED`). Now let me stage only my surface files + the log (not the pre-existing `AIUsageCard` changes) and review before committing.
+
+Staging is correct — exactly my 8 surface files + the log; pre-existing `AIUsageCard` changes remain unstaged. Committing now with an honest message.
+
+Commit succeeded (`c9f1a17f2`), with the pre-existing `AIUsageCard` changes correctly excluded. Let me do a final verification of the commit contents and clean up.
+
+All work is complete and committed. Final state verified: 9 files committed (8 surface + log, 3199 insertions), no unrelated files swept in, log ends with `EXIT=1`/`STATUS=BLOCKED`, all todos done, temp files cleaned.
+

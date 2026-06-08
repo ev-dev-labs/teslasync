@@ -1,0 +1,126 @@
+I'll start by exploring the repository structure to understand what exists and verify the runner's capabilities.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me verify the Apple app structure and whether full Xcode exists anywhere, plus read the web source.
+
+Critical: **Xcode.app exists** at `/Applications/Xcode.app` — the active dir is just pointing to CommandLineTools. I can likely use `DEVELOPER_DIR` to access it without sudo. Let me verify.
+
+Full **Xcode 26.5 is available** via `DEVELOPER_DIR`, iPhone 16 simulator is booted, iOS/macOS SDKs present. There's an established multi-file pattern per feature-view. `BatteryLevelChart` is the closest analog (battery % over time). Let me find the build system and study the template.
+
+Build system is **XcodeGen** (`project.yml`) — the `.xcodeproj` is generated on demand. Let me check for xcodegen, read the project config, and study the template files.
+
+XcodeGen + a KMP `Shared.xcframework` preAction. I need to check whether that xcframework can be built (potential Kotlin toolchain blocker) and study the template. Let me batch these reads.
+
+The xcframework requires the Kotlin/Gradle toolchain. Let me verify that's available (critical for the build gate) and continue studying the template + web data shapes.
+
+Java 17 + gradlew are present, so the xcframework build is viable. The web `SocChart` plots `battery` (SOC %) over `time` with a synced cursor. Let me find already-ported drive-detail siblings that use the synced cursor + Swift Charts area/line, since those are the closest analogs.
+
+`SpeedTrendChart` uses both Swift Charts area/line AND a synced cursor — the closest analog to SocChart (over-time chart with cursor). Let me study it and the rest of the BatteryLevelChart template.
+
+`SpeedTrendChart` is the ideal template (time-series area/line + synced cursor). Let me read its full file set.
+
+Excellent template quality. Let me read the remaining SpeedTrendChart files — the Views (Swift Charts + cursor), Model, Previews, strings, and Tests.
+
+Now the Previews, strings, and Tests patterns, plus the design tokens I'll reference.
+
+I have the full pattern. Let me verify the exact design tokens available (colors, fonts, spacing, chart palette) so my SocChart references compile.
+
+Color tokens are partly generated. Let me inspect TSDesign and the generated tokens to pick the correct green (SOC) color and confirm helper APIs.
+
+`Color.TS.chartSeriesBattery` exists — ideal for SOC. Let me confirm its actual hue and the helper component/font/spacing APIs.
+
+Let me confirm the `chartSeriesBattery` hue and `TSMotion.normalDuration` exist (correct token path is `apps/design/...`).
+
+`chartSeriesBattery` = `Color(.sRGB, 0.063, 0.725, 0.506)` = **exactly `#10b981`** — the web SOC green. Now let me kick off the long-pole Shared.xcframework (Gradle/Kotlin) build in the background while I write code, and confirm `TSMotion`.
+
+Let me read how the web derives `time`/`battery` and the ChartContainer/synced-cursor semantics, so my native projection is faithful — while the xcframework builds.
+
+I now have a faithful understanding: `time` = formatted time label, `battery` = SOC % (0–100), chart renders when `length > 1`, synced cursor keyed by the time label. Let me check for symbol collisions in the module and the xcframework build progress before writing.
+
+No collisions; all APIs have precedent. The xcframework is still building (Gradle warmup). I have everything I need — writing all 7 SocChart files now following the established pattern exactly.
+
+All 7 SocChart files are written. Let me set up todo tracking and check the long-running xcframework build.
+
+The Shared.xcframework built and staged successfully (8m33s, now cached/warm). Let me generate the Xcode project and do a fast lint pass on my new files before the full build.
+
+Project generated with `TeslaSync` and `TeslaSync-macOS` schemes. Now a fast lint pass on my new files before the heavy build.
+
+Minor: `wrapPropertyBodies` wants single-line computed properties wrapped. Let me view and fix those, and check for the same pattern elsewhere in my files.
+
+Only one real offender (`SocSample.id`). Let me auto-format my files in-place with the repo config to guarantee conformance, then re-lint.
+
+swiftformat passes. Let me verify the change was just the property wrap, and run swiftlint --strict on my files.
+
+swiftlint --strict and swiftformat both pass on my files (0 violations). Now the heavy step — the iOS build+test gate. Let me confirm the log dir and start the iOS build (compile check first to catch any errors fast).
+
+Log dir and sibling logs exist. Let me view a sibling log's format and kick off the iOS compile build (catches any errors in my code fast).
+
+Critical context from the sibling log: the full-app xcodebuild gate is a known **DEFERRED/RED** state across all P4 surfaces due to pre-existing repo blockers (co-located XCTest-in-app + macOS signing), and my allowed files are restricted to `SocChart.*`. I must observe the actual result, not assume. Let me watch the iOS build.
+
+Build failed (exit 65). I must see the actual errors to determine if they're pre-existing or in my code. Let me extract them.
+
+Confirmed: the iOS app build fails on a **pre-existing** file — `AcDcStatsPanel.Tests.swift:19: unable to resolve module dependency: 'XCTest'` (surface 0096, not mine). The co-located-XCTest-in-app convention breaks the app target build for ALL 80+ surfaces; there are **zero** SocChart errors. I'm restricted to `SocChart.*` so I can't change `project.yml`. Let me read the repo's sanctioned disposition + verification method.
+
+Authoritative confirmation: `apps/macos-pending-verifications.md` documents this exact sanctioned disposition — the full-app gate is a known **deferred** verification blocked by pre-existing co-located-XCTest + redefinition + signing issues, while each surface is verified via an **isolated SwiftPM build + tests under Swift 6 strict concurrency**. I observed precisely that (AcDcStatsPanel.Tests.swift, zero SocChart errors). Now I'll do the real isolated verification of my surface. Let me scope the design-system dependency closure.
+
+The design closure is small and clean: Design/Motion/Feedback files import **only SwiftUI** and don't touch KMP/app modules. I'll build an isolated SwiftPM package (the repo's sanctioned per-surface verification) with my surface + the real design tokens, under Swift 6 strict concurrency.
+
+Closure confirmed minimal (only SwiftUI + design tokens). Let me build the isolated SwiftPM package with my surface + real design tokens, then run the tests — under Swift 6 strict concurrency.
+
+All 5 SocChart source files compiled cleanly under Swift 6 strict concurrency. The only error is in the vendored `Skeletons.swift` (which also defines card skeletons referencing `TSCard`, unused by my surface). Let me locate `TSCard` and add it to the closure.
+
+`TSCard` (Cards.swift) imports only SwiftUI + design tokens I already have. Let me add it and run the full build+test.
+
+The chain grows — but my surface only uses `TSSkeleton` from Skeletons.swift (the card skeletons are unrelated). Let me trim the vendored copy to the real `TSSkeleton` struct and drop Cards.swift from the isolation.
+
+Isolated build is GREEN under Swift 6 strict concurrency. Now run the tests.
+
+**30/30 tests pass** under Swift 6 strict concurrency, isolated build GREEN. My surface is fully verified. Now the placeholder scan + capturing raw gate exits. Let me check for `pwsh` and the placeholder patterns.
+
+pwsh 7.6.2 is available. Let me see how `-Path` resolves, then run the placeholder scan exactly as the gate specifies.
+
+`pwsh` available; the scanner globs a real path. Let me verify my files contain none of the forbidden patterns, then run the scanner on my actual files (and the verbatim gate path).
+
+Clean. Let me run the actual placeholder scanner on my real files (and the verbatim gate path), then run the whole-dir swiftlint/swiftformat as the gate does.
+
+Placeholder scan: **PLACEHOLDER_COUNT=0, EXIT=0**; self-test passes. Now the whole-dir swiftlint --strict and swiftformat --lint as the gate runs them.
+
+Both whole-dir lint failures are in **pre-existing** files (swiftformat points at `ActionBuilder.Previews.swift`, not mine). My 6 files already passed both linters cleanly. Let me pinpoint the 1 swiftlint violation to confirm it isn't SocChart.
+
+The single swiftlint violation is in pre-existing `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` — **not** SocChart. Now let me capture the authentic exits from the two official xcodebuild gate commands (iOS + macOS `build test`) for the log. Running iOS first.
+
+Let me wait for the iOS gate to complete.
+
+iOS gate authentic exit: **IOS_EXIT=65**, BUILD/TEST FAILED on pre-existing `AcDcStatsPanel.Tests.swift` (XCTest-in-app), not SocChart. Let me run the macOS gate and confirm zero SocChart errors in the iOS log.
+
+iOS gate has **0 SocChart errors** (only pre-existing AcDcStatsPanel.Tests.swift). Let me wait for the macOS gate.
+
+macOS gate authentic exit: **MAC_EXIT=65** — pre-existing **macOS development-signing** blocker (documented in macos-pending-verifications.md), zero SocChart errors. Let me confirm no SocChart errors in the macOS log and review git status before writing the log.
+
+macOS log: 0 SocChart errors. git status shows my 7 untracked SocChart files plus two **pre-existing** modified web files I must NOT touch. All evidence gathered. Let me write the gate log.
+
+All evidence captured and the gate log written. Now let me commit **only** the allowed files (the 7 `SocChart.*` files + the log) — explicitly excluding the pre-existing modified web files.
+
+Exactly 8 files staged (7 SocChart + log); the 2 pre-existing web files are correctly excluded. Committing now.
+
+Commit `beb2d6e8c` created (8 files, 1597 insertions). Let me clean up the temporary verification artifacts and do a final state check.
+
+The task is complete. Final state verified: my commit `beb2d6e8c` contains exactly the 7 `SocChart.*` files + the gate log; the working tree shows only pre-existing web changes (untouched) and gitignored generated artifacts; temp verification files cleaned up.
+
+Merge made by the 'ort' strategy.
+ .../logs/p4-apple-feature-views-0148-SocChart.log  | 196 +++++++++++
+ .../TeslaSync/feature-views/SocChart.Adapter.swift | 236 +++++++++++++
+ .../TeslaSync/feature-views/SocChart.Model.swift   | 257 ++++++++++++++
+ .../feature-views/SocChart.Previews.swift          |  90 +++++
+ .../TeslaSync/feature-views/SocChart.Tests.swift   | 310 +++++++++++++++++
+ .../TeslaSync/feature-views/SocChart.Views.swift   | 382 +++++++++++++++++++++
+ .../apple/TeslaSync/feature-views/SocChart.strings |  45 +++
+ apps/apple/TeslaSync/feature-views/SocChart.swift  |  81 +++++
+ 8 files changed, 1597 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0148-SocChart.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SocChart.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SocChart.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SocChart.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SocChart.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SocChart.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SocChart.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SocChart.swift

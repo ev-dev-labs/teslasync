@@ -1,0 +1,153 @@
+=== P4 Feature view 0214 SettingsExportImport (Apple) ===
+
+Surface : apps/apple/TeslaSync/feature-views/SettingsExportImport.*
+Web spec: web/src/features/settings/components/SettingsExportImport.tsx
+Runner  : Darwin (arm64) — Apple Swift 6.3.2 toolchain via Command Line Tools
+
+--------------------------------------------------------------------------------
+CAPABILITY PROBE (ADR-002/004/009 — SwiftUI + iOS18/iPadOS18/macOS15 build/test)
+--------------------------------------------------------------------------------
+The canonical gate requires a FULL Xcode install (xcodebuild + iOS Simulator +
+macOS SDK + XCTest). This runner has Command Line Tools ONLY:
+
+  $ xcode-select -p
+  /Library/Developer/CommandLineTools
+
+  $ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+  directory '/Library/Developer/CommandLineTools' is a command line tools instance
+  IOS_EXIT=1
+
+  $ xcodebuild -scheme TeslaSync-macOS build test
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+  directory '/Library/Developer/CommandLineTools' is a command line tools instance
+  MAC_EXIT=1
+
+  $ xcrun simctl list devices
+  xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+  SIMCTL_EXIT=72
+
+  Installed SDKs (no iOS/iPadOS SDK present):
+  MacOSX.sdk MacOSX15.4.sdk MacOSX15.sdk MacOSX26.5.sdk MacOSX26.sdk
+
+=> The xcodebuild iOS-Simulator + macOS build/test steps are BLOCKED by missing
+   platform capability (no Xcode app, no iOS SDK, no Simulator runtime). Per the
+   prompt: "If unavailable on the runner -> STATUS=BLOCKED with API evidence."
+   No red-as-green: these steps are reported BLOCKED, not passed.
+
+--------------------------------------------------------------------------------
+RUNNABLE GATE STEPS (executed on this runner)
+--------------------------------------------------------------------------------
+Tooling: swiftlint 0.63.3 | swiftformat 0.61.1 | pwsh 7.6.2 | swift 6.3.2
+
+[swiftlint --strict]  scope: the 11 shipped SettingsExportImport.*.swift files
+  cd apps/apple && swiftlint lint --strict --no-cache TeslaSync/feature-views/SettingsExportImport.*.swift
+  -> 0 violations.  LINT_EXIT=0
+
+[swiftformat --lint]  scope: the 11 shipped SettingsExportImport.*.swift files
+  cd apps/apple && swiftformat --lint TeslaSync/feature-views/SettingsExportImport.*.swift
+  -> all files pass.  FORMAT_EXIT=0
+
+  NOTE (whole-tree honesty): `swiftformat --lint apps/apple` (the literal gate
+  scope) also reports ONE pre-existing drift OUTSIDE this surface and outside
+  this prompt's allowed-files set:
+    TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1: error: (blankLinesBetweenScopes)
+  That file is not part of slice 0214 and cannot be edited here (allowed files =
+  SettingsExportImport.* + this log). It is a pre-existing scaffold drift, NOT a
+  regression introduced by this surface. Zero SettingsExportImport.* matches.
+
+[check-placeholders.ps1]  scope: the 11 shipped SettingsExportImport.*.swift files
+  pwsh apps/tools/check-placeholders.ps1 -Path <copy-of-surface> -Language swift
+  -> PLACEHOLDER_ALLOWED=0
+     PLACEHOLDER_COUNT=0
+     PLACEHOLDER_EXIT=0
+  Forbidden-token grep (TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/
+  not implemented/fatalError) across all shipped files: NONE found.
+
+[strings] plutil -lint SettingsExportImport.strings -> OK
+
+--------------------------------------------------------------------------------
+SUPPLEMENTARY VERIFICATION (compensating for the blocked xcodebuild step)
+--------------------------------------------------------------------------------
+Because xcodebuild cannot run, the surface was verified as far as the toolchain
+allows — real compilation and real test execution of the platform-agnostic core.
+
+1) Swift 6 strict-concurrency typecheck of the UI-free core (no stubs):
+     swiftc -typecheck -swift-version 6 \
+       SettingsExportImport.JSON.swift SettingsExportImport.Adapter.swift \
+       SettingsExportImport.Contracts.swift SettingsExportImport.Model.swift \
+       SettingsExportImport.Seams.swift
+     -> CORE_TYPECHECK_EXIT=0
+
+2) Full module build via a throwaway SwiftPM package (module name "TeslaSync",
+   platforms macOS 14, tools 6.0 => Swift 6 language mode):
+     [10/13] Emitting module TeslaSync   (all 5 core files compiled)
+     -> CORE_MODULE_BUILD: OK
+
+3) Real execution of EVERY shipped test body (XCTest is absent under CLT, so a
+   minimal XCTest shim + runner invoked all 50 test methods against the real
+   model/adapter/seams code):
+     SettingsExportImportValidatorTests        (10 tests)
+     SettingsExportImportJSONTests             ( 5 tests)
+     SettingsExportImportProjectionTests       ( 4 tests)
+     SettingsExportImportStringsTests          ( 4 tests)
+     SettingsExportImportModelTests            (12 tests)
+     SettingsExportImportModelActionTests      (15 tests)
+     -> CHECKS=134 FAILURES=0   RUN_EXIT=0
+   (A first run surfaced one contradictory test scenario — a successful dry-run
+   correctly clears the offline flag — which was fixed; re-run = 134/0.)
+
+4) SwiftUI layer (Views/ImportViews/entry/Previews) — `swiftc -parse` clean
+   (full type-check needs the in-repo TS component module + SwiftUI app target,
+   which only links under xcodebuild). Components, tokens, and APIs were matched
+   against the existing shipped feature-views (UserImpersonateButton, Cards,
+   Buttons, Typography, Badges, Skeletons, Banners, Motion, States).
+
+--------------------------------------------------------------------------------
+PARITY / ACCEPTANCE COVERAGE
+--------------------------------------------------------------------------------
+Shipped files (12; each < 400 lines, decomposed not monolithic):
+  SettingsExportImport.swift            (entry View + FileDocument + exporter/importer/drop)
+  SettingsExportImport.JSON.swift       (JSONValue model + parser)
+  SettingsExportImport.Adapter.swift    (validator, summary, diff rows, filename, a11y ids)
+  SettingsExportImport.Contracts.swift  (P1/S8 seams, toast, telemetry, i18n facade)
+  SettingsExportImport.Model.swift      (@Observable view-model)
+  SettingsExportImport.Seams.swift      (in-memory seams for previews/tests)
+  SettingsExportImport.Views.swift      (header/export row/connectivity/diff list)
+  SettingsExportImport.ImportViews.swift(dropzone/parse-error/preview/applied)
+  SettingsExportImport.Previews.swift   (#Preview per state)
+  SettingsExportImport.Tests.swift      (adapter/json/projection/strings/a11y)
+  SettingsExportImport.ModelTests.swift (model state machine + telemetry)
+  SettingsExportImport.strings          (i18n catalog)
+
+Data sources bound via shared P1/S8 seams (no direct HTTP in the view):
+  useExportSettings -> SettingsExporting | useDryRunImport -> SettingsImportDryRunning
+  useApplyImport -> SettingsImportApplying | useToast -> SettingsBackupToasting
+  useTranslation -> SettingsExportImportStrings | useId -> SettingsExportImportAccessibility
+  (+ live-state connectivity seam for stale/offline chrome, ADR-013)
+
+States rendered (every one; no hidden surfaces):
+  loading(skeleton) · idle · exporting · exported->fileExporter · parsing ·
+  parse-error · preview(diff list) · empty("Nothing to apply") · applying ·
+  applied · failed(inline) · stale · offline
+
+i18n: every web t() key reproduced verbatim in the table + native chrome +
+  validation keys; no English literal in Swift (resolved via NSLocalizedString).
+Accessibility: VoiceOver labels on every control; identifiers mirror web data-testid;
+  Dynamic Type via Font.TS ramp; reduce-motion via TSFadeIn.
+Telemetry: emits P1/S11 `view.opened` once with surface slug "SettingsExportImport"
+  (asserted by testStartEmitsViewOpenedOnceAndMonitors).
+
+--------------------------------------------------------------------------------
+RESULT
+--------------------------------------------------------------------------------
+IOS_EXIT=1            (BLOCKED — no Xcode/iOS SDK/Simulator)
+MAC_EXIT=1            (BLOCKED — no Xcode/macOS test host)
+LINT_EXIT=0           (surface clean)
+FORMAT_EXIT=0         (surface clean; pre-existing ActionBuilder.Previews drift is out of scope)
+PLACEHOLDER_EXIT=0
+CORE_TYPECHECK_EXIT=0
+CORE_TESTS: CHECKS=134 FAILURES=0
+
+EXIT=1
+STATUS=BLOCKED

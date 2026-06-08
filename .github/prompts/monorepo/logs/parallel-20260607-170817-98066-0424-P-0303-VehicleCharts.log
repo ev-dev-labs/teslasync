@@ -1,0 +1,8 @@
+I'll start by exploring the environment, the web source, and the existing Apple app structure in parallel.
+
+Critical finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Swift 6.3.2, swiftlint, swiftformat are available. Let me investigate deeper before concluding on the gate, and read the web source + existing Apple conventions.
+
+`xcodebuild` cannot run (no full Xcode, no `simctl`). The project.yml confirms `apps/apple/TeslaSync/feature-views` is the correct output path. Now let me deeply understand existing native conventions — feature-views, state holders, tokens, i18n, charts, maps, diagnostics.
+
+There are 1438 feature-view files. Let me find existing VehicleCharts files and a representative example that uses both charts and maps.
+

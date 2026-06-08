@@ -1,0 +1,174 @@
+I'll start by exploring the repository structure to understand the web source and the existing Apple app architecture.
+
+Xcode full toolchain isn't available (only CLI tools), but `swift`, `swiftlint`, `swiftformat` are present. There's an existing `AIUsageCard` feature-view that was recently modified — that's my template. Let me explore the web source and the Apple app structure.
+
+Now I understand the web source. Let me read the `MonthlyBucket` type and study the `AIUsageCard.*` files (the recently-modified sibling) as my template for conventions.
+
+There are two related concepts: on-disk `AiUsageCard.*` files (the freshly-modified template) and the broader infra. Let me study the AiUsageCard set end-to-end and map the shared infrastructure (state holders, tokens, i18n, diagnostics).
+
+The AiUsageCard is a great fresh template (a card). But MonthlyCostTable is a sortable DataTable, so I need a table-based example too. Let me read the full AiUsageCard set and locate the shared infrastructure (tokens, state-holders, i18n, diagnostics).
+
+Now I understand the architecture. Let me read the remaining AiUsageCard files (Projection, Views, strings, Previews, Tests) and locate the shared design tokens. I also need a table-based example since MonthlyCostTable is a sortable DataTable.
+
+Design tokens aren't where I guessed. Let me locate the exact token definitions used by feature-views and find a table/sortable example to model MonthlyCostTable on.
+
+Found table examples (`EntriesTable`, `LiveSignalsTable`, `XRayFieldsTable`) and the design tokens at `Sources/Design/TSDesign.swift`. Let me read the tokens and the closest analog — a sortable table feature-view.
+
+`Color.TS`/`TSSpacing`/`TSRadius`/`Font.TS` are generated tokens. Let me find their definitions and read the full XRayFieldsTable set (closest analog — a sortable table).
+
+`XRayFieldsTable` is the ideal analog — a sortable table feature view with identical state structure. Let me read its full set plus the theme tokens.
+
+This template is exactly what I need. Let me read the Views, strings, Tests, Previews for XRayFieldsTable plus the theme tokens to finalize my understanding.
+
+Excellent — I have a complete picture. Let me read the theme tokens, the test conventions, and verify the shared components I'll reference (TSCard, TSBadge, TSCardSkeleton, GlassPanel equivalent, Currency formatting).
+
+Let me verify the shared components/tokens exist and read the web number-format helpers (`fmtInt`, `fmtWithUnit`) and `Currency` component to port their exact semantics, plus the Previews convention.
+
+I now have the tokens and web formatting semantics. Let me check the native shared components I'll use (TSCard, TSBadge tones, TSTableSkeleton) and whether a native GlassPanel wrapper exists.
+
+Let me check the GlassPanel/TSCard native components and the TSMaterial glass treatment.
+
+I have everything needed. Let me quickly check whether a shared `TSDataTable` exists (to decide reuse vs. hand-roll like XRayFieldsTable), then I'll write the files.
+
+A shared `TSDataTable` exists, but I'll follow the XRayFieldsTable hand-rolled responsive pattern (full control over currency colors + savings +/- logic + 7-column compact layout). Let me confirm the target setup in project.yml and the lint/format config.
+
+Let me read the swiftlint config and the placeholder checker so my code passes the strict gates.
+
+`pwsh`, `swiftlint`, `swiftformat` are all available. Let me check whether full Xcode or xcodegen exists anywhere (to know if the build gate can possibly run), then I'll start writing.
+
+`/Applications/Xcode.app` and `xcodegen` are both present. I may be able to actually build. Let me verify the full toolchain works via `DEVELOPER_DIR` override.
+
+Full Xcode 26.5 + simulators are available via `DEVELOPER_DIR` — I can actually build and test. Let me quickly check how a multi-column sibling table (`LiveSignalsTable`) handles width, then I'll write the files.
+
+Full Xcode 26.5 + simulators are available — I can genuinely build, test, lint, and run the placeholder gate. `LiveSignalsTable`'s `Grid`/`GridRow` is the idiom for multi-column tables. I now have everything. Let me establish a baseline (lint/format/placeholder) in the background while I write the code, and set up my plan.
+
+Baseline noted: one **pre-existing** format issue in `ActionBuilder.Previews.swift` (not my file). Let me check the placeholder + lint baselines, then start writing code.
+
+All baseline issues are **pre-existing** (not my files): swiftformat flags `ActionBuilder.Previews.swift`; swiftlint has 1 serious violation somewhere; placeholder hits are in other surfaces. The actual gate scopes placeholders to `MonthlyCostTable` only. Let me pin down the pre-existing swiftlint violation (background) and confirm the placeholder script's path handling, then start writing.
+
+Key gate insight: the placeholder gate's `-Path .../MonthlyCostTable` resolves to a non-existent literal path → it scans nothing and trivially passes. I'll add an honest scoped scan in verification. Now let me write the code, starting with the Model (defines the domain types).
+
+Confirmed: the pre-existing swiftlint violation is in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (function_body_length) — outside my scope. Both baseline issues are pre-existing and outside my allowed files. Now the Adapter (pure projection).
+
+Model + Adapter done. Let me update tracking and write the Views (the sortable Grid table + compact cards + chrome).
+
+Now the entry view (`MonthlyCostTable.swift`) — TSGlassPanel wrapper, header, and the loading/empty/error/content state switch.
+
+Now the strings catalog, Previews, and Tests.
+
+Now the comprehensive test suite.
+
+All 7 source files written. Let me auto-format them and review what the formatter changes.
+
+New files are untracked so git diff is empty. Let me run scoped `swiftformat --lint` and `swiftlint --strict` on my files to confirm they're clean.
+
+Clean formatting, but `Views.swift` is 410 lines (exceeds the 400-line `file_length` rule). I'll split the chrome (freshness chip, connectivity banner, compact sort bar) into a new `MonthlyCostTable.Chrome.swift` — idiomatic (AiUsageCard does this) and keeps both files focused. Let me view the exact post-format text to move.
+
+I'll move the three chrome structs into a new `MonthlyCostTable.Chrome.swift`. Let me see the exact boundary before the chrome sections.
+
+I'll truncate Views.swift at line 289 (keeping the table + cards) and move the chrome into a new file.
+
+Now create the Chrome file with the extracted structs.
+
+Now re-run scoped format + lint across all 7 files (including the new Chrome.swift).
+
+My 7 files pass swiftformat and swiftlint --strict cleanly (0 violations). Now the real build + test. Let me generate the Xcode project with xcodegen.
+
+Project generated with `TeslaSync` + `TeslaSyncTests` targets. Critical: my `.Tests.swift`/`.Previews.swift` live in `feature-views` — I must confirm how project.yml routes test files vs app sources. Let me inspect.
+
+`feature-views` is included in the app target with no visible excludes, yet `*.Tests.swift` uses `@testable import TeslaSync` — so there must be an exclude/routing mechanism. Let me find it.
+
+Test bundle sources only `Tests/Unit`, but the app target includes all of `feature-views` (including `*.Tests.swift`). Yet siblings use `@testable import TeslaSync` + `import XCTest`. There must be a global exclude. Let me check the top of project.yml and how the generated project actually treats these files.
+
+No excludes — `*.Tests.swift` compile into the app target (same as all siblings like `XRayFieldsTable.Tests.swift`, which appears identically). My test file follows that exact convention. The build also has a KMP `Shared.xcframework` preAction. Let me check whether that framework/toolchain is present before attempting the (large) build.
+
+The KMP `Shared.xcframework` isn't prebuilt — the scheme preAction builds it via Gradle (Kotlin/Native), which the app links. Let me check whether the Java/Gradle toolchain is present to determine if the full build is feasible.
+
+Java 17 + Gradle 8.14.5 + the KMP `core` module are present, so the full build is feasible (the xcframework just needs building). Let me kick off the KMP xcframework build in the background and, meanwhile, do a fast standalone `swiftc` typecheck of my pure-logic files (Model + Adapter).
+
+My Model + Adapter typecheck cleanly under Swift 6 strict concurrency. The KMP build is running. Let me verify the log directory exists and check the Gradle progress.
+
+Log dir exists with many sibling logs. Let me check a sibling `feature-views` log to match the expected format/outcome while Gradle builds.
+
+This sibling log is the precedent template. It uses "code-complete + DEFERRED Xcode app build/test" with standalone SDK host-compiles. Let me read its build-evidence section and final STATUS to match the established honest pattern.
+
+This sibling log is the authoritative precedent: host gates green + **SwiftPM XCTest harness execution** + standalone SDK compiles, with `xcodebuild build test` DEFERRED (xcframework/signing). Crucially, my tests only exercise the pure Model+Adapter logic, so I can actually EXECUTE them via a SwiftPM harness. Let me check Gradle progress, then build that harness.
+
+Gradle is still downloading/compiling quietly. Let me build the SwiftPM harness now to actually **execute** my test suite (it only needs Model+Adapter, which are pure logic). I'll copy the real files verbatim into a `TeslaSync` module so `@testable import TeslaSync` resolves.
+
+Now run the test suite via the SwiftPM harness.
+
+All 27 tests **executed and passed** (0 failures) via SwiftPM. Let me check the Gradle xcframework progress — if it finishes, I'll run the real iOS `xcodebuild build` for full SwiftUI compile evidence.
+
+All 27 tests pass. Gradle is still in first-time Kotlin/Native setup (quiet, could be long). Meanwhile, let me get real SwiftUI compile evidence faster via a standalone `swiftc -typecheck` of my view files against the actual design-system sources (no KMP dependency needed).
+
+The full `Components` dir pulls in unrelated facade types (`UnitPreferences`) — that's why siblings deferred. The error is NOT in my files. Let me build a **narrow** real-source closure (only the components I actually use) for honest SwiftUI compile evidence, while Gradle continues. First, locate the exact defining files.
+
+The cascade keeps growing (Cards pulls TSButton/TSText/TSPanelTitle…), confirming the sibling's deferral rationale. The real `xcodebuild build` (xcframework building) is the authoritative check. While that builds, let me add a fast, honest SwiftUI compile check against a precise stub of the exact design-system API my views use. First, enumerate every design symbol my view files reference.
+
+I now have the exact design API surface my views use. Let me create a precise stub matching the real signatures and typecheck all my SwiftUI files against **both** the iOS‑18 simulator SDK and the macOS‑15 SDK (covering the `#if os(iOS)` size-class branch).
+
+The stub typecheck caught a **real cross-file bug**: `MonthlyCostColumns`/`MonthlyCostColumn` are `private` in Views.swift but referenced from Chrome.swift (different file). This would fail the real build too — swiftlint/format and the pure-logic test harness didn't catch it, but this SDK typecheck did. Let me fix the access level.
+
+Now re-run the dual-SDK SwiftUI typecheck to confirm the fix.
+
+Both SDK typechecks pass (exit 0) — the SwiftUI layer compiles against the real iOS 18 and macOS 15 SDKs. Let me re-verify lint/format after the edit and check the Gradle build.
+
+All 7 files: swiftformat clean + swiftlint --strict 0 violations. Gradle's still in first-run Kotlin/Native setup. Let me run the honest placeholder scan (scoped to my real files) and verify i18n keys (referenced == declared).
+
+Honest placeholder scan: **COUNT=0**. i18n: **27 referenced == 27 declared**, zero mismatches, zero orphans. Let me check whether the Gradle KMP build is actually progressing.
+
+Gradle is actively building — Kotlin/Native toolchain (1.6G) downloaded and per-arch `Shared.framework`s are being produced. It's near the xcframework assembly. Let me wait for it to finish.
+
+Gradle **BUILD SUCCESSFUL** — `Shared.xcframework` is built. Now the real test: an actual `xcodebuild` of the full app (the scheme preAction will stage the framework). Let me run the iOS‑simulator build — this compiles + links my SwiftUI surface into the real app against the real design system.
+
+The full iOS build is running (will take several minutes). While it compiles, let me gather metadata for the log (line counts, branch, base commit).
+
+Metadata gathered (8 files, 1798 lines; largest swift = 345 lines, under the 400 limit). Let me check the iOS build progress.
+
+Build failed at the Swift compile step (exit 65), but the actual error scrolled past the `tail`. I need the real error and to determine if it's in my files. Let me rebuild (derivedData is warm) capturing full output, then extract errors.
+
+The build failure is **pre-existing and not mine**: `AIRestorePanel.Tests.swift:18: error: unable to resolve module dependency: 'XCTest'`. The app target compiles **all** feature‑view `*.Tests.swift` (every sibling's + mine), but the app target can't resolve `XCTest` — a systemic project-registration issue affecting all test files equally, exactly what the predecessor logs deferred.
+
+Let me prove my non‑test surface genuinely compiles into the real app by temporarily relocating **all** `*.Tests.swift`, regenerating, and rebuilding (fully reversible).
+
+Confirmed: `AIRestorePanel.Tests.swift` is a committed sibling (not mine), and **171** feature‑view test files all hit the same XCTest issue — systemic and pre‑existing. With all tests relocated, let me build the real app to prove my surface compiles + links.
+
+More test files use other suffixes (`*.ModelTests.swift`, `*.AdapterTests.swift`). Let me relocate **all** `*Tests.swift`, regenerate, and rebuild.
+
+All 262 test files relocated (205 feature-views + 57 dashboard-widgets). Now rebuild the real app — this should compile cleanly if my surface is sound.
+
+The new errors are **all in `dashboard-widgets/`** (`DashboardWidgetSize`/`VehicleHeroModel` "ambiguous for type lookup" — pre-existing duplicate definitions from parallel authoring), **none in `feature-views/`**. Let me confirm zero feature-views errors, then isolate by also relocating dashboard-widgets to get a green build proving my surface links.
+
+**Decisive evidence: ZERO errors in any `feature-views/` file** — my surface (and all siblings) type-check against the real design system, module, and xcframework. The only failures are pre-existing: XCTest-in-app-target (262 test files) and committed dashboard-widgets duplicate-type collisions. Let me check whether `Sources` depends on dashboard-widgets before attempting a fully-green isolated build.
+
+The ambiguity is a pre-existing collision: `DashboardWidgetSize` is defined in **both** `Sources/DashboardWidgets/` and `TeslaSync/dashboard-widgets/`. Let me check whether `Sources` references the leaf widget types (to see if excluding `TeslaSync/dashboard-widgets` is safe for a final green-build attempt).
+
+This is a deep pre-existing duplicate-symbol issue spanning 15+ committed files across `Sources/` and `dashboard-widgets/` — entirely outside my scope and not safely resolvable. I have conclusive evidence (zero feature-views errors in the real build). Let me **restore all relocated files** and verify the tree is clean.
+
+Clean restore — the only other changes are the **pre-existing** `AIUsageCard.*` modifications (present before I started). Let me confirm the full tree state and that build artifacts are gitignored.
+
+Tree is clean: only my 8 new `MonthlyCostTable.*` files (untracked) plus pre-existing `AIUsageCard.*`/web modifications; build artifacts gitignored. Now let me run the official whole-tree gate steps to confirm my files add **zero** new violations, plus the exact placeholder gate command.
+
+Whole-tree swiftformat: still exactly **1 pre-existing** violation (`ActionBuilder.Previews.swift`), **0** in MonthlyCostTable (my 7 swift files added, all clean). Now whole-tree swiftlint and the placeholder gate.
+
+Whole-tree swiftlint: still exactly **1 pre-existing** violation (`LifetimeStatsWidget.Adapter.swift`, function_body_length), **0** in MonthlyCostTable. Both gates confirm my surface adds zero violations. Now the placeholder gate (official command + honest scoped scan).
+
+Both placeholder scans: **0**. Let me re-confirm the test harness passes (fresh run) and then write the comprehensive gate log.
+
+27/27 tests pass. I have all evidence. Let me capture final line counts and section markers, then write the comprehensive gate log.
+
+All metrics gathered (largest swift = 345 ≤ 400; 4 states + connection axis present). Now let me write the comprehensive gate log.
+
+The log is written. Now let me clean up all transient build artifacts and temp files, then verify the tree.
+
+Tree is clean: my 8 new files + the log are untracked; the `M` entries are pre-existing (present at task start). Frameworks restored to `.gitkeep`. Now let me commit exactly my files + the log, per the prompt.
+
+Let me verify the commit landed correctly with only my files (not the pre-existing modifications).
+
+Commit `9cbdc903` is clean — exactly my 8 files + the log (2010 insertions); the pre-existing `AIUsageCard.*`/web modifications remain unstaged (untouched). Let me finalize the todo tracking.
+
+All todos complete. Let me do a final sanity check that the committed tree builds my surface cleanly by confirming the committed files match what was verified.
+
+The task is complete and verified. Commit `9cbdc903a` contains exactly my 8 surface files + the gate log (`EXIT=0 / STATUS=DONE`); the working tree retains only pre-existing changes I didn't touch.
+

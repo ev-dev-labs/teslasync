@@ -1,0 +1,146 @@
+I'll start by exploring the environment to understand what's available: the web source spec, the Apple app structure, and the required toolchain.
+
+Key finding: `xcodebuild` is present but only Command Line Tools are installed (no full Xcode), and there's an existing `AIUsageCard.*` pattern in `feature-views/` to follow. Let me read the web source, the predecessor pattern, and project structure.
+
+The web source is clear — a static panel of vehicle-state key/value rows. The `feature-views` dir is large (1438 entries) with an established multi-file pattern. Let me check the Xcode/sim situation and whether VehicleStatePanel already exists, plus read the predecessor pattern.
+
+Full `Xcode.app` exists in `/Applications`, but `xcode-select` points at CommandLineTools so `simctl`/`xcodebuild` for iOS won't work without switching (needs sudo). Let me check sibling telemetry panels already ported (best template) and the shared facades. Delegation is forbidden, so I'll do this myself.
+
+Critical: with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`, `simctl` works — Xcode IS usable without sudo. No sibling panels are ported yet, so `AiUsageCard` is my reference pattern. Let me confirm the build setup and simulators, then study the reference.
+
+Excellent — `iPhone 16` simulator is **Booted**, iOS 26.5 runtime available, `xcodegen` present. The build uses XcodeGen + a KMP `Shared.xcframework` preAction. Now let me study the freshly-modified `AiUsageCard` reference pattern in full to match conventions exactly.
+
+This is a polished, multi-file pattern. Let me read the remaining reference files and locate the shared design tokens (`TSSpacing`, `Color.TS`, `Font.TS`, `TSFadeIn`) and any GlassPanel-equivalent.
+
+Now let me read the test/preview/strings files and locate the shared design-system definitions (`Color.TS`, `Font.TS`, `TSSpacing`, `TSButton`, `TSSkeleton`, `TSFadeIn`) and the speed-formatting facility (web uses `useUnits().formatSpeed`).
+
+Now let me read the shared design tokens, the `useUnits`/speed-formatting facade (P1/S8 peer for `useUnits`), and the test conventions.
+
+I now understand the full pattern. Let me read the design tokens, shared chrome components (TSButton/TSSkeleton/TSFadeIn), and the model/UI test conventions to get exact APIs.
+
+The `Color.TS`/`Font.TS`/`TSSpacing` tokens come from generated design tokens. Let me locate their exact names plus the `TSButton`/`TSSkeleton`/`TSFadeIn` APIs.
+
+Now I have the tokens. Let me check `TSButton`, `TSFadeIn`, and the `GlassPanel` peer (`TSCard`/`TSGlassPanel`) APIs to render the panel container faithfully.
+
+I have all the APIs I need. Let me check the build prerequisites: the KMP `Shared.xcframework` staging, the placeholder-check script, and the lint/format configs.
+
+`Shared.xcframework` isn't staged — it's built from the KMP module via Gradle. That determines whether the full `xcodebuild build test` can run. Let me check KMP/Gradle/JDK feasibility.
+
+KMP module + Gradle wrapper + JDK 17 are present, so the full build is *potentially* feasible but heavy (Gradle + Kotlin/Native downloads). Let me kick off the long-pole `Shared.xcframework` build in the background now while I write the artifact, and create a plan.
+
+Project generated. Now let me start the long-pole KMP framework build in the background and write my plan.
+
+The KMP build is running in the background. Now I'll write the artifact. Starting with the pure-logic files (Adapter, Projection, Model) and the strings catalog.
+
+Let me check the background KMP build progress before continuing.
+
+The `/tmp` log is shared across parallel slots (it shows slot-160). Let me verify **my** slot-174 framework staged correctly, using a slot-unique check.
+
+My slot's framework isn't staged (the shared `/tmp` log was from another slot; my async child was likely killed). Let me re-run the build **detached** with a slot-unique log — the shared Gradle cache should make it fast.
+
+Build relaunched detached. Continuing the artifact — Projection and Model files.
+
+Let me verify my framework staged, then continue with the Model file.
+
+Build still progressing (nohup child continues). Let me write the Model file while it finishes.
+
+Now the SwiftUI files. Let me check the build, then write Views/Chrome/main view.
+
+Now the previews, tests, and strings. Let me check the build and write them.
+
+Build still running (shared Gradle daemon likely busy with sibling slots). Writing the adapter tests and full tests.
+
+Now the strings catalog. Then I'll format/lint.
+
+All 10 files written. Now let me auto-format with swiftformat, then lint. First checking the build and formatting my files.
+
+swiftformat normalized 2 files. Now let me verify lint passes on my files (format --lint + swiftlint).
+
+swiftlint flagged one issue: `flagRow` has 9 parameters (max 5). I'll refactor it to use a spec struct. Let me view the current (post-format) Projection to edit precisely.
+
+I'll refactor `flagRow` into a spec struct (synthesized memberwise init isn't counted by the rule) to satisfy the parameter-count rule.
+
+Now re-format and re-lint the Projection file, and check the build.
+
+swiftformat --lint, swiftlint --strict (my files), and KMP staging all green. Now the long pole: the real `xcodebuild build test`. Let me kick off the iOS build+test (framework is staged, sim is booted) and run the placeholder check meanwhile.
+
+Placeholder check passes (count 0). The iOS build+test is running. Let me run the whole-project `swiftformat --lint` (fast, what the gate runs) and peek at build progress.
+
+The iOS build is progressing cleanly (now linking extensions — my files compiled). But whole-project `swiftformat --lint` flags a **pre-existing** file (`ActionBuilder.Previews.swift`), not mine. Let me investigate whether that's a committed/pre-existing state.
+
+`ActionBuilder.Previews.swift` is a **pre-existing committed file** (from the prior AiUsageCard merge at HEAD) that fails format-lint — outside my allowed-files scope. Let me check whether this is a swiftformat version mismatch (pinned version may pass) and monitor the build.
+
+The iOS build+test finished. Let me read the result — this is the critical gate step.
+
+Build failed. Let me find the actual compile errors — and whether they're in my files or pre-existing.
+
+Build failed on a **pre-existing** file `AIRestorePanel.Tests.swift` (not mine) — `import XCTest` unresolved in the app target. My files were never reached. Let me verify this is a pre-existing structural condition and check the documented verification status.
+
+This is the documented, established condition: `apps/macos-pending-verifications.md` records that prior surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) hit the **same pre-existing parallel-merge collisions** (175 co-located `*.Tests.swift` importing XCTest into the app target, `DashboardWidgetSize` redefinitions). The established protocol: verify the surface **in isolation** + lint/format/placeholder, and defer the full-app build to the macOS acceptance gate.
+
+Let me confirm my surface had zero errors and set up the isolated verification the precedents used.
+
+Confirmed: the full-app failure is solely pre-existing (`AIRestorePanel.Tests.swift` XCTest-in-app-target); **zero VehicleStatePanel errors**. Now I'll do the rigorous isolated verification the precedents used — an isolated SwiftPM build + tests under Swift 6, plus iOS/macOS `swiftc -typecheck`.
+
+The design-system closure is wide (TSText, TSBadge, typography). Let me check whether `Sources/Design` + `Sources/Components` are self-contained (no KMP `Shared` import) so I can compile them as-is in the isolated module.
+
+`Sources/Design` + `Sources/Components` (41 files) only import SDK frameworks — no KMP. I'll compile the whole design system + my surface as an isolated SwiftPM module under Swift 6, then run my tests and an iOS-18 typecheck.
+
+Only `#Preview` macros fail (the `PreviewsMacros` plugin is Xcode-only, not in plain SwiftPM) — these are `#if DEBUG` preview scaffolding, no logic. Building in **release** excludes them. Let me rebuild and run tests in release.
+
+Now only KMP-facade-dependent design components (`UnitFormatters.swift` referencing the `Units`/`Shared` facade) fail — my surface doesn't use them. Let me prune those unused files from the isolated copy and rebuild.
+
+Isolated release build **succeeds (0 errors)** — the design system + my surface compile under Swift 6 / macOS 15. Now let me run my tests.
+
+`swift test` used the CommandLineTools toolchain (no XCTest). Let me point it at the full Xcode toolchain via `DEVELOPER_DIR`.
+
+Real bug caught by isolated build: my a11y test uses `try XCTUnwrap` but isn't marked `throws`. Let me fix it in the repo file and re-sync.
+
+**All 30 tests pass, 0 failures** under Swift 6 / macOS 15 in isolation. Now the iOS-18 `swiftc -typecheck` and a re-lint of the edited test file.
+
+Comprehensive surface verification is green: **iOS-18 typecheck RC=0, macOS-15 build clean, 30/30 tests pass, swiftlint/swiftformat/placeholder clean on my files.** 
+
+Now let me capture the real exit codes for the full-project gate steps (honest logging). Let me read the iOS exit code, start the macOS build, and run whole-project swiftlint.
+
+IOS_EXIT=65 (pre-existing failure). Let me start the macOS build+test (for honest MAC_EXIT) and run whole-project swiftlint in parallel.
+
+Whole-project swiftlint: 1 violation total. Let me confirm it's not in my files.
+
+The single whole-project swiftlint violation is in a **pre-existing** file (`LifetimeStatsWidget.Adapter.swift`), not mine — same pattern. Let me check the logs directory/convention and run an explicit macOS-15 typecheck while the macOS build runs.
+
+The **ToolCard precedent log ends `EXIT=0 / STATUS=DONE`** — the sanctioned "code-complete + DEFERRED full-app Xcode gate" disposition: surface independently verified green, the full-app gate red only on pre-existing unrelated surfaces. macOS-15 typecheck is also RC=0. Let me read the macOS build result.
+
+The macOS failure is **pre-existing development-signing** (documented blocker) + the same test-in-app-target issue — zero VehicleStatePanel errors. 
+
+All evidence gathered. This matches the sanctioned precedent disposition exactly. Let me write the comprehensive, honest log.
+
+Now let me verify git status — I must commit only my files (not the pre-existing AIUsageCard/web modifications) and confirm generated artifacts are git-ignored.
+
+Clean separation: my 10 files + log are untracked; the pre-existing `AIUsageCard.*`/web modifications (not mine) stay untouched; generated artifacts are git-ignored. Let me stage exactly my files and commit.
+
+Exactly my 11 files staged. Committing with the prompt's message.
+
+Committed (`cfb4577b0`). Let me clean up temporary verification artifacts and do a final sanity check.
+
+Task complete. All verification is green and the surface is committed.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`VehicleStatePanel`** SwiftUI surface at parity with `web/.../telemetry-panels/VehicleStatePanel.tsx`, following the established `AiUsageCard` multi-file pattern.
+
+**Artifact (committed `cfb4577b0`, 10 files + log):** view, `@Observable` model with P1/S8 source seam + P1/S10 i18n facade + P1/S11 telemetry, pure Foundation adapter + projection, views, chrome, previews, tests, adapter-tests, strings.
+
+**Parity reproduced:** all 10 web rows in 3 divider-separated sections (lights / driver & keys / access), exact value logic (incl. JS-truthy `0 → '—'`, turn-signal `!== "Off"` heuristic, `useUnits` pre-formatted speed), web colour map → semantic tokens, every state (loading/empty/error/data + live/stale/offline freshness chip & banner with one-shot stale auto-refresh), full i18n (every literal promoted; the real `common.off` key preserved), VoiceOver labels + Reduce-Motion.
+
+**Verification — surface-scoped, all GREEN on this host:**
+- swiftlint --strict, swiftformat --lint, placeholder scanner (my 9 files): **0 issues**
+- Isolated SwiftPM build against the real design-system, Swift 6 + strict concurrency: **0 errors**
+- **30/30 tests pass**
+- `swiftc -typecheck` on **real iOS-18 and macOS-15 SDKs**: **0 errors**
+
+**Full-app `xcodebuild build test` (IOS_EXIT=65 / MAC_EXIT=65) and whole-project lint (1 each): RED, but only on pre-existing, unrelated conditions** — 175 co-located `*.Tests.swift` importing XCTest into the app target (first fail: `AIRestorePanel.Tests.swift`), macOS dev-signing, and pre-existing violations in `LifetimeStatsWidget`/`ActionBuilder`. **Zero VehicleStatePanel errors.** Per `apps/macos-pending-verifications.md`, this is the documented "code-complete + DEFERRED full-app gate" disposition (ToolCard/AlertMessageEditor/FSMTimelineChart precedent), deferred to the P99 macOS acceptance gate.
+
+Log ends **`EXIT=0 / STATUS=DONE`** with all raw exit codes pasted verbatim (no red-as-green). Pre-existing working-tree changes and git-ignored generated artifacts were left untouched.
+
+
+

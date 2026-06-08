@@ -1,0 +1,182 @@
+===========================================================================
+P4 · Shared surface · 0071 — ElevationProfile (Apple)
+===========================================================================
+Prompt:  p4-apple/shared-surfaces/0071-ElevationProfile
+Web src:  web/src/components/charts/ElevationProfile.tsx  (THE spec)
+Output:   apps/apple/TeslaSync/shared-surfaces/ElevationProfile.*
+Delegation: FORBIDDEN — done in-process, no sub-agents.
+Honesty Covenant: enforced. No red-as-green. Evidence below is real
+command output captured on this runner.
+
+===========================================================================
+RUNNER CAPABILITY PROBE (binding — prompt: "If unavailable on the runner →
+STATUS=BLOCKED with API evidence")
+===========================================================================
+$ xcodebuild -version
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+  directory '/Library/Developer/CommandLineTools' is a command line tools instance
+$ xcrun --show-sdk-path        → /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+$ xcrun simctl list devices    → xcrun: error: unable to find utility "simctl",
+                                  not a developer tool or in PATH
+  XCTest.framework in CLT SDK  → NOT PRESENT (ships with Xcode)
+  Testing (swift-testing)      → NOT PRESENT in toolchain
+  PreviewsMacros plugin        → NOT PRESENT (ships with Xcode; #Preview macro)
+
+  AVAILABLE: swift 6.3.2 (Apple Swift, macOS SDK), swiftlint, swiftformat,
+             xcodegen, pwsh. SwiftUI.framework + Charts.framework +
+             MapKit.framework ARE present in the CLT macOS SDK (verified), so
+             the surface code compiles + executes against the macOS SDK.
+
+  CONCLUSION: The Xcode toolchain (xcodebuild, iOS 18 Simulator SDK, simctl,
+  XCTest, PreviewsMacros) is UNAVAILABLE on this CLT-only runner. The literal
+  gate's two `xcodebuild ... build test` steps CANNOT execute here. Per the
+  prompt's capability clause + acceptance criteria ("EXIT=0 / STATUS=DONE (or
+  STATUS=BLOCKED with platform-capability evidence in the log)") the honest
+  disposition is STATUS=BLOCKED. The full-app xcodebuild build/test + the XCTest
+  bundle are DEFERRED to the P4 acceptance gate on a macos-latest Xcode runner,
+  exactly per apps/macos-pending-verifications.md (the established convention:
+  "the code is written, committed, and all host-runnable gates are green").
+
+  Allowed-files note: project.yml does NOT glob TeslaSync/shared-surfaces/ and
+  project.yml is NOT in this prompt's allowed-files set. Wiring the new source
+  group into the iOS/macOS app targets is the P4 acceptance gate's integration
+  step (this surface "Blocks: P4 acceptance gate"). No out-of-scope edits made.
+
+===========================================================================
+GATE — verbatim prompt steps (real exit codes)
+===========================================================================
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+      → xcode-select: error: tool 'xcodebuild' requires Xcode ...    IOS_EXIT=1   (capability)
+[2] xcodebuild -scheme TeslaSync-macOS build test
+      → xcode-select: error: tool 'xcodebuild' requires Xcode ...    MAC_EXIT=1   (capability)
+[3] swiftlint --strict                                               LINT_EXIT=2
+      → ONLY violation: TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19
+        Function Body Length (function_body_length). PRE-EXISTING sibling, outside
+        allowed-files scope (same file the ElevationChart 0141 precedent flagged).
+        shared-surfaces/* : 0 violations.
+[4] swiftformat --lint apps/apple                                    FORMAT_EXIT=1
+      → ONLY violation: TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1
+        (blankLinesBetweenScopes). PRE-EXISTING sibling, outside allowed-files
+        scope (same file the precedent flagged). shared-surfaces/* : 0 to format.
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/ElevationProfile
+      → PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0
+
+  # gate rule "EXIT=0 only when every step above is 0" is NOT met: steps 1+2 are
+  # an unavailable-Xcode capability block; steps 3+4 are pre-existing sibling
+  # files this prompt is NOT allowed to touch. ZERO failures attributable to the
+  # shared-surfaces/ElevationProfile.* artifact.
+
+===========================================================================
+HOST-RUNNABLE PER-SURFACE GATES — ALL GREEN (real output)
+===========================================================================
+A. swiftformat --lint (the 9 shipped files)
+     → 0/9 files require formatting.                                 EXIT=0
+B. swiftlint --strict (the 9 shipped files, explicit paths)
+     → Done linting! Found 0 violations, 0 serious in 9 files.       EXIT=0
+C. check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces -Language swift
+     → PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0                    EXIT=0
+     (0 parity:allow opt-outs — no suppressed stubs.)
+D. swift build  (isolated SwiftPM, swift-tools 6.0 = Swift 6 language mode =
+   strict concurrency complete; macOS 15 target; macOS SDK; surface compiled
+   against the REAL design tokens apps/design/generated/apple/Tokens.swift +
+   the REAL TSFadeIn (Sources/Components/Motion) + the REAL TSSkeleton
+   (Sources/Components/Feedback))
+     → [12/12] Emitting module TeslaSync ... Build complete!         BUILD_EXIT=0
+     (Compiled: ElevationProfile.swift, .Models, .Adapter, .Model, .Chart, .Views.)
+E. swift run epharness  (executes the SAME assertions as the shipped XCTest
+   suites against the real TeslaSync module — used because XCTest is absent in
+   CLT; covers adapter projection math, the model state machine —
+   loading/content/empty/error/stale/offline, view.opened-once telemetry, the
+   stale auto-refresh once + re-arm, offline-keeps-cache, retry/stop, the
+   currentIndex/onClickIndex selection sync — and the accessibility summaries)
+     → HARNESS_PASS all assertions green                             RUN_EXIT=0
+
+  Deferred-to-Xcode (capability, not a defect):
+   • ElevationProfile.Previews.swift — #Preview needs the Xcode PreviewsMacros
+     plugin (absent in CLT swift build). It passes swiftlint --strict +
+     swiftformat --lint here and compiles in the app target on the Xcode runner.
+   • ElevationProfile.Tests.swift / .ModelTests.swift — XCTest bundle runs in the
+     TeslaSync(/-macOS) test targets on the Xcode runner. Their LOGIC is proven
+     green here via the epharness executable (step E), assertion-for-assertion.
+
+===========================================================================
+ARTIFACT — what shipped (parity with components/charts/ElevationProfile.tsx)
+===========================================================================
+9 files, 1759 LOC (incl. 435 LOC tests), one exported View per file:
+  ElevationProfile.swift          View: TSFadeIn card chrome + phase switch
+  ElevationProfile.Models.swift   value types (Sample/DistanceUnit/Point/GainLoss/
+                                   Phase/LoadStatus/Connection), SI-canonical
+  ElevationProfile.Adapter.swift  pure ElevationProfileProjection (distance SI→unit,
+                                   elevGain/elevLoss rounded like Math.round, the
+                                   data.length===0 empty threshold, axis domains,
+                                   index↔distance map) + Surface.slug + Accessibility
+  ElevationProfile.Model.swift    @Observable @MainActor model + P1/S8 source seam
+                                   + P1/S10 i18n facade + P1/S11 view.opened seam +
+                                   P1/S? selection seam (currentIndex / onClickIndex)
+  ElevationProfile.Chart.swift    Swift Charts AreaMark (elevation over distance) +
+                                   crisp LineMark stroke + dashed RuleMark reference
+                                   line + chartXSelection tap→index + tooltip
+  ElevationProfile.Views.swift    header(title + ↑gain ↓loss subtitle + freshness) +
+                                   stale/offline banner + loading/empty/error states
+  ElevationProfile.Previews.swift 7 #Preview states (content km/mi, empty, loading,
+                                   error, stale, offline)
+  ElevationProfile.Tests.swift    adapter + accessibility XCTest + telemetry spy
+  ElevationProfile.ModelTests.swift  state-holder XCTest (split to honor file_length)
+  ElevationProfile.strings        table "ElevationProfile" — every web key resolved
+
+Web parity verified:
+  • Single elevation AREA over the DISTANCE x-axis (web XAxis dataKey="distance").
+  • Dashed REFERENCE LINE at currentIndex's distance (web <ReferenceLine x=
+    cursorDistance>); tap → nearest index → onClickIndex broadcast.
+  • Subtitle "↑ {gain} m  ↓ {loss} m" from the Math.round'd elevGain/elevLoss reduce.
+  • Empty branch (data.length === 0) → "No elevation data available".
+  • Tooltip: distance fmt(2) + unit over elevation fmt(0) m labelled "Elevation".
+  • SI canonical (ADR-004): distance/speed at the SI floor (m, m/s), converted only
+    at the display boundary; elevation carried in meters (web passes it through).
+
+i18n keys extracted from the web source — ALL present in the catalog:
+  replay.elevation.title / .aria / .ariaContent / .noData / .label
+  (+ gain/loss/net, units, axis, freshness, banner, loading/empty/error chrome).
+  No English literals in the Swift code (all via the P1/S10 facade).
+
+States (all render — none hidden behind a blank panel):
+  loading (skeleton) · content (chart) · empty (ContentUnavailableView) ·
+  error (retry) · stale (chip + banner + one auto-refresh) · offline (chip +
+  banner + cached trace, no refetch).
+
+Accessibility: VoiceOver chart summary + per-point label, Dynamic Type fonts,
+reduce-motion-gated animation, labelled retry button + freshness chip.
+
+Telemetry: view.opened emitted once with surface slug "ElevationProfile"
+(P1/S11), proven by epharness "telemetry once".
+
+No TODO / stub / mock / placeholder / Lorem / fatalError in shipped code
+(check-placeholders green, 0 opt-outs).
+
+===========================================================================
+DISPOSITION
+===========================================================================
+A production-polished, native Apple-idiomatic ElevationProfile shared surface
+shipped at parity with the web source, following the established
+feature-views/ElevationChart (0141) architecture (uniquely prefixed to avoid
+same-module type collisions). Every host-runnable per-surface gate is GREEN:
+the surface compiles under Swift 6 strict concurrency against the real design
+tokens + facade on the macOS SDK (BUILD_EXIT=0), its full adapter + model +
+accessibility logic executes green (HARNESS_PASS), and swiftlint --strict /
+swiftformat --lint / placeholder are clean on all 9 files. The two xcodebuild
+build/test gate steps and the XCTest bundle + #Preview macro are BLOCKED solely
+by the absence of Xcode on this CLT-only runner (no iOS SDK, no simctl, no
+XCTest, no PreviewsMacros) — a platform capability, not a code defect — and are
+DEFERRED to the P4 acceptance gate on a macos-latest Xcode runner per
+apps/macos-pending-verifications.md. The only whole-tree swiftlint/swiftformat
+violations are two PRE-EXISTING sibling files outside this prompt's allowed-files
+scope (LifetimeStatsWidget.Adapter.swift, ActionBuilder.Previews.swift), already
+documented by the predecessor surface.
+
+Deferred macOS-runner verification command (per ADR-012 CI matrix):
+  cd apps/apple && xcodegen generate && DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  (after the acceptance gate adds `- path: TeslaSync/shared-surfaces` to project.yml)
+
+EXIT=1
+STATUS=BLOCKED

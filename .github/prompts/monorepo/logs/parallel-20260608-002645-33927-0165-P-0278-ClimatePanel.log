@@ -1,0 +1,98 @@
+I'll start by exploring the repository structure, reading the web source specification, and checking platform capabilities.
+
+I've read the web source end-to-end. Critical finding: **`xcodebuild` requires full Xcode but only Command Line Tools is installed**. Swift 6.3.2, swiftlint, swiftformat, and pwsh are available. Let me explore the existing Apple app architecture deeply before writing code.
+
+The `feature-views/` directory uses a multi-file convention per panel (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`). Let me study the `AcDcStatsPanel` exemplar completely and check for any existing ClimatePanel files.
+
+Excellent, the convention is rich and well-defined. Let me read the remaining `AcDcStatsPanel` files and locate the shared design tokens, feedback/data-display components, and the units (temperature formatting) facade.
+
+Let me read the Previews and Tests exemplars, and locate the shared design tokens and units (temperature) facade.
+
+Now let me locate the shared design tokens, the units (temperature) facade, and the native equivalents of `MetricCard`, `EmptyState`, and `GlassPanel`.
+
+Let me read the units facade, the MetricCard/StatusIndicators, EmptyState, and design tokens.
+
+Let me see how existing feature-views bind the units facade (the web `useUnits` hook), and read the EmptyState/States and design tokens.
+
+Let me examine a temperature-focused panel to learn the units-binding pattern, plus the design tokens.
+
+The `TemperatureMetricCards` panel is the closest analog — it ports `useUnits().formatTemperature` as a self-contained math helper. Let me read the web `useUnits`/`formatTemperature` source for exact parity, the `ClimateSnapshot` type, and the design tokens.
+
+Tokens are generated to `apps/design/generated/apple/Tokens.swift`. Let me read it and the exact `formatTemperature`/`convertTempFromSI` web implementation.
+
+Let me read the full token API and the web formatter helpers (`DEFAULT_PRECISION`, `formatNumber`, `isFiniteNumber`, `resolveEmpty`).
+
+I have the full token API and exact web formatter semantics. Let me confirm the signatures of the shared components I'll compose (`TSGlassPanel`, `TSSkeleton`, `TSButton`, `TSFadeIn`) and the web `formatNumber` helper.
+
+I now have everything needed for parity. Let me verify the `TSButton` init forms, the project.yml wiring (how `feature-views/*.Tests.swift` and `.strings` are compiled), and what the placeholder-checker flags.
+
+Important: the test target sources may not include `feature-views`. Let me read the full `project.yml` to understand how `.Tests.swift` files are routed and how `.strings` are handled.
+
+Now I understand the wiring. The `.Tests.swift` files live in `feature-views/` per the established 170-panel convention. Let me read the lint/format configs and placeholder patterns so my code is compliant from the first write, and confirm the logs directory.
+
+Let me read the sibling `AcDcStatsPanel.log` to mirror the exact gate-log format and see how the build/test steps were recorded on this runner.
+
+This sibling log reveals the sanctioned disposition: ship complete parity code, verify via an **isolated SwiftPM harness** against the real design-system, run host gates (swiftformat/swiftlint/placeholder), and record the full-app xcodebuild gate honestly. Let me verify the actual toolchain availability here.
+
+Xcode 26 IS present at `/Applications/Xcode.app` (just not selected), and `Sources/Components`/`Sources/Design` are KMP-free. That means I can verify via an isolated SwiftPM harness AND potentially the real gate. Let me read the units-binding pattern from `TemperatureMetricCards` (Model/Projection/surface) and check the framework build script.
+
+I now have the complete pattern. Xcode 26 is present but `Shared.xcframework` isn't staged. Let me kick off the framework build in the background (it's a ~7min Gradle job) while I write the code, so I can attempt the real xcodebuild gate later.
+
+I have the complete pattern. Let me write a brief plan file, then create the Adapter (pure, Foundation-only, mirroring `TemperatureMetricsMath` + `AcDcFormat` precedents).
+
+Now the Views file — the data body subviews plus loading/empty/error chrome, with a small flow layout for the wrapping chip strip.
+
+Now the Previews and the per-surface strings. Let me also check the framework build progress.
+
+The framework build **succeeded but staged into a sibling slot (slot-160)** — these parallel slots share a Gradle build. That's fine; my `ClimatePanel` is KMP-Shared-free, so the isolated SwiftPM harness (which doesn't need the framework) is my primary proof. Let me write the Tests and strings, then verify.
+
+Now the per-surface i18n strings catalog.
+
+All 7 files are written. Now verification. Let me run swiftformat and swiftlint on the new files, and investigate the framework/slot situation.
+
+swiftformat flags one over-width line (Model.swift:195); slots 160/165 are separate dirs and the framework staged into slot-160 (a parallel agent's workspace — I won't touch it). Let me fix the line and check Components/Design for any KMP coupling that would affect my isolated harness.
+
+`UnitFormatters.swift` is the only Components file coupled to the KMP facade (`Units`/`UnitPreferences`) — and `ClimatePanel` doesn't use it. Let me confirm nothing else references its types (so I can exclude just that file from the isolated harness) and re-verify swiftformat.
+
+Model is clean now, and only `UnitFormatters.swift` couples to the KMP facade (nothing else references its types). Let me set up the isolated SwiftPM harness — first checking for filename collisions and confirming `tsDynamicColor` lives in the tokens file.
+
+No collisions; `tsDynamicColor` is in the tokens file; Charts/Maps use system frameworks. Let me build the isolated SwiftPM harness (module named `TeslaSync`, Swift 6 language mode) compiling the exact shipped sources against the real design-system, using Xcode 26's SDK, and run the tests.
+
+**Isolated SwiftPM harness GREEN: 40 tests, 0 failures** — the exact shipped `ClimatePanel` sources compiled against the real design-system (46 files: tokens + Design + Components) under Swift 6 language mode with Xcode 26's SDK. Now the remaining host gates.
+
+swiftlint `--strict` on my 6 files: **0 violations**. swiftformat whole-tree is RED only on a pre-existing non-ClimatePanel file (`ActionBuilder.Previews.swift` — another agent's surface). Let me confirm my files are format-clean, that ActionBuilder is untouched by me, and run the placeholder gate.
+
+My 6 Swift files are swiftformat-clean; all 7 ClimatePanel files are new/untracked (`??`); `ActionBuilder.Previews.swift` is a **committed** pre-existing file (so the whole-tree swiftformat RED is not mine). Note other agents' uncommitted changes (`AIUsageCard.*`) exist — I'll add only my files. Let me run the placeholder gate; first let me see how `-Path` is handled.
+
+The script's `-Path` does `Test-Path` then recursive `Get-ChildItem`. The literal gate path (`…/ClimatePanel`, no extension) scans nothing (vacuous pass), so — like the sibling — I'll run BOTH the literal gate path AND a real scan of my actual files in a temp dir.
+
+Both placeholder scans (literal gate path + real scan of shipped files) = **PLACEHOLDER_COUNT=0, EXIT=0**. Now let me get first-hand evidence for the full xcodebuild gate. First, let me understand why the framework staged into slot-160 (symlink check) so I can stage it correctly in slot-165.
+
+No symlinks — the framework staged to slot-160 due to a shared Gradle daemon/cache across the parallel batch. The `Shared.xcframework` is a build artifact of the (identical) KMP core, and my `ClimatePanel` doesn't even use it — it's only needed so the app target links. Let me stage it into slot-165 and generate the project to get first-hand xcodebuild evidence.
+
+Framework staged. Let me generate the Xcode project and build the iOS app **target** directly (skipping the scheme's 8-min framework-rebuild pre-action) to capture first-hand compile evidence.
+
+Project generated. Let me build the iOS app target directly (capturing to a log) — this is a large compile, so I'll run it in the background.
+
+The iOS app-target build is compiling in the background. Let me check its progress while I prepare the gate log.
+
+My target build finished (BUILD FAILED). Note: there are **other agents' `xcodebuild -scheme TeslaSync ... build test` gate processes** running concurrently on this shared machine — I won't touch those. Let me analyze MY build's actual errors and the ClimatePanel mentions.
+
+Decisive first-hand evidence: the **only `error:` lines in the entire iOS app-target build are `AIRestorePanel.Tests.swift: Unable to resolve module dependency: 'XCTest'`** — a pre-existing committed sibling. **Zero ClimatePanel `error:` lines**; `ClimatePanel.strings` processed fine. This is the known systemic co-located-XCTest-in-app-target condition. Let me re-run arm64-only (removing the cross-slot framework's x86_64-slice noise) to capture a clean exit code, plus the macOS target.
+
+Clean evidence (arm64-only): **IOS_TARGET_EXIT=65**, the **only** error is the pre-existing sibling `AIRestorePanel.Tests.swift` XCTest module-resolution failure, **zero ClimatePanel surface errors**. Now the macOS target for completeness.
+
+Comprehensive first-hand evidence captured: **macOS also exit 65** on the same pre-existing sibling XCTest condition, **zero ClimatePanel surface errors**. Let me gather line counts and write the gate log.
+
+All facts gathered (1632 lines across 7 files, 40 tests, baseline HEAD `c9c6fdb9f`). Let me write the gate log with the real first-hand evidence.
+
+Log written. Let me clean up my temp files and verify the git state so I commit only the ClimatePanel artifacts (the generated `.xcodeproj`/framework must be git-ignored and excluded).
+
+Clean: temp files removed, generated `.xcodeproj`/framework are git-ignored, and only my 7 ClimatePanel files + the log are new. Let me commit exactly those (the prompt's `git add` prefix needs the `.*` glob to match the files).
+
+Committed. Let me verify the commit contents are exactly the 8 intended files and the working tree is clean of my artifacts.
+
+Commit `a36ab05ab` contains exactly the 8 intended files; working tree is clean of ClimatePanel artifacts and no other agents' files were included. All todos complete.
+
+Task complete.
+

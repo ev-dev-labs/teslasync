@@ -1,0 +1,162 @@
+================================================================================
+p4-apple · P7 · page:settings/Safety — SwiftUI / Apple HIG parity
+log: .github/prompts/monorepo/logs/apple-page-settings-SafetyPage.log
+================================================================================
+
+CONTEXT
+  Web source : web/src/features/settings/pages/SafetyPage.tsx   (route /settings/safety)
+  Output     : apps/apple/TeslaSync/Features/Settings/SafetyPage.swift
+               (+ .Model.swift / .Navigation.swift / .Previews.swift)
+  Manifest   : page:settings/Safety
+               panels=[GlassPanel1]  states=[success]  strings=6  requiredCount=8
+               (no API data sources — renders from local state via an @Observable model)
+
+ENVIRONMENT
+  Xcode 26.5 (Build 17F42), reached via
+    DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+  (the machine's xcode-select default is the CommandLineTools instance, which cannot
+  run xcodebuild/Kotlin-Native; DEVELOPER_DIR is exported for every xcodebuild / xcrun /
+  gradle invocation so a real Xcode runner is used).
+  Shared.xcframework built from the KMP core
+    (apps/shared/gradlew :core:assembleSharedXCFramework  ->  BUILD SUCCESSFUL)
+  and staged to apps/apple/Frameworks/Shared.xcframework (ios-arm64, ios-arm64-simulator,
+  macos-arm64).
+
+FILES (this parity unit only)
+  + apps/apple/TeslaSync/Features/Settings/SafetyPage.swift             (view; GlassPanel1 listing + states)
+  + apps/apple/TeslaSync/Features/Settings/SafetyPage.Model.swift       (@Observable model + domain + i18n facade)
+  + apps/apple/TeslaSync/Features/Settings/SafetyPage.Navigation.swift  (route value + destination + link row)
+  + apps/apple/TeslaSync/Features/Settings/SafetyPage.Previews.swift    (previews)
+  ~ apps/apple/Sources/Platform/Settings/AppSettingsView.swift          (nav registration: safety link row + .safetyPageDestination())
+  ~ apps/apple/Localization/Localizable.xcstrings                       (+37 safetySettings.* / settings.* keys)
+  ~ apps/apple/project.yml                                              (add TeslaSync/Features to the iOS + macOS app target sources)
+  ~ apps/parity/apple-ledger.json                                       (ledger rows for page:settings/Safety)
+
+=== PARITY ===
+PARITY_REQUIRED=8
+
+[1] panel  — GlassPanel1
+      SafetyPage.swift  ::  extension SafetyPage.listingPanel
+      -> TSGlassPanel { listingHeader ; listingBody }  (native material, web <GlassPanel data-testid="safety-settings-listing">)
+
+[2] state  — success data state
+      SafetyPage.Model.swift  ::  SafetyPageModel.Phase.success  (set in reload(): phase = rows.isEmpty ? .empty : .success)
+      SafetyPage.swift        ::  listingBody  case .success -> successListing  (the deterministic 7-row listing)
+
+[3] string — safetySettings.listing.changeHint
+      SafetyPage.swift  ::  extension SafetyPage.changeHintFooter
+      -> SafetySettingsStrings.text("safetySettings.listing.changeHint", SafetyCopy.changeHint)
+      key present in Localizable.xcstrings (en/ar/he)
+
+[4] string — safetySettings.listing.docsLink
+      SafetyPage.swift  ::  extension SafetyPage.docsLink(for:)
+      -> SafetySettingsStrings.text("safetySettings.listing.docsLink", "Docs")  inside Link(destination:)
+      key present in Localizable.xcstrings
+
+[5] string — safetySettings.listing.subtitle
+      SafetyPage.swift  ::  extension SafetyPage.listingHeader
+      -> SafetySettingsStrings.text("safetySettings.listing.subtitle", SafetyCopy.listingSubtitle)
+      key present in Localizable.xcstrings
+
+[6] string — safetySettings.listing.title
+      SafetyPage.swift  ::  extension SafetyPage.listingHeader
+      -> SafetySettingsStrings.text("safetySettings.listing.title", "Your safety-related settings")
+      key present in Localizable.xcstrings
+
+[7] string — safetySettings.pageSubtitle
+      SafetyPage.swift  ::  SafetyPage.pageHeader
+      -> SafetySettingsStrings.text("safetySettings.pageSubtitle", SafetyCopy.pageSubtitle)
+      key present in Localizable.xcstrings
+
+[8] string — safetySettings.pageTitle
+      SafetyPage.swift  ::  SafetyPage.pageHeader + .navigationTitle(...)
+      -> SafetySettingsStrings.string/text("safetySettings.pageTitle", "Safety settings")
+      key present in Localizable.xcstrings
+
+PARITY_COVERED=8
+=== END PARITY ===
+
+BEYOND-MINIMUM (full web fidelity — not just the 8 required items)
+  - All 7 web SAFETY_ROWS ported in web order, each row = title + info value-badge + description + Docs link,
+    using the web i18n keys (safetySettings.rows.quietHoursEnabled / quietHoursStart / quietHoursEnd /
+    alertDigestMode / criticalFlashEnabled / tabBadgeEnabled / apiSuspended .title/.description).
+  - Value badges localized: On/Off, Active/Suspended, digest instant/hourly/daily, em-dash for unset,
+    and verbatim HH:MM window times (SafetyValue.localized/.literal + SafetyValueBadge, web Badge variant="info").
+  - loading / empty / error data states implemented (SafetyPageModel.Phase + listingBody) even though the
+    manifest declares only `success` — never renders a blank region (loading skeleton, ContentUnavailableView,
+    error + Retry).
+  - HIG/a11y: combined row accessibility labels, header traits, Docs-link labels + hints; Dynamic Type via
+    system fonts; light/dark/increased-contrast via Color.TS tokens; SwiftUI-native (no web cloning).
+  - Navigation: SafetyPageRoute + View.safetyPageDestination() registered on the settings NavigationStack;
+    SafetyPageLinkRow added to AppSettingsView (web sub-route /settings/safety).
+  - The web opt-in <AISafetySettingExplainer> panel is OUT of scope here (separate AI parity unit; the manifest
+    panel set for this page is the single deterministic listing GlassPanel1).
+
+GATES
+  $ pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Settings -Language swift
+      PLACEHOLDER_ALLOWED=0
+      PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0
+
+  $ swiftlint --strict  (each apps/apple/TeslaSync/Features/Settings/*.swift)
+      SafetyPage.swift             clean
+      SafetyPage.Model.swift       clean
+      SafetyPage.Navigation.swift  clean
+      SafetyPage.Previews.swift    clean
+      LINT_EXIT=0
+
+  $ xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete -target arm64-apple-macosx15.0 \
+        <Features/Settings/*.swift> + <P2 tokens + P3 component deps>
+      pass with no DEBUG (shipping code) AND with -DDEBUG (previews)
+      TYPECHECK_EXIT=0
+      -> this parity unit's Swift compiles cleanly under the project's Swift 6 / complete-concurrency mode.
+
+  $ xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync \
+        -destination 'generic/platform=iOS Simulator' -derivedDataPath <isolated> build
+      BUILD_EXIT=65   (** BUILD FAILED **)
+      Root cause is PRE-EXISTING, COMMITTED, and OUTSIDE this parity unit (HEAD c9c6fdb9f,
+      "merge(parallel): ... AiUsageCard"):
+        (a) `public struct DashboardWidgetSize` is redefined 15 times across committed files
+            apps/apple/Sources/DashboardWidgets/*.swift (2) and
+            apps/apple/TeslaSync/dashboard-widgets/*.swift (13)
+            -> "'DashboardWidgetSize' is ambiguous for type lookup in this context"
+            (a parallel-merge duplicate-symbol artifact; each widget prompt independently
+            declared the helper and the merge kept them all).
+        (b) The app-target source dir colocates XCTest unit tests
+            (apps/apple/TeslaSync/feature-views/*.Tests.swift, 166 files importing XCTest),
+            which only resolve with ENABLE_TESTING_SEARCH_PATHS=YES / build-for-testing.
+      All 57 compiler errors are in dashboard-widgets/*; ZERO are in this unit's files.
+      Verification:  grep 'error:' <build log> | grep -E 'Features/Settings|AppSettingsView'  ->  (none)
+      Note (isolation): a shared/colliding Xcode DerivedData across the parallel slots was first
+      observed compiling slot-583's sources; re-run with an isolated -derivedDataPath compiles
+      slot-586 (this slot) — confirming the breakage is in this slot's committed widget code, not
+      a cross-slot artifact.
+
+  $ xcodebuild ... test
+      NOT REACHED — the app target does not build (see above). BLOCKED.
+
+ASSESSMENT
+  The page:settings/Safety parity unit is COMPLETE and self-verified: all 8 required parity items
+  implemented (PARITY_COVERED==PARITY_REQUIRED==8) plus full web fidelity (7 rows, 3 data states,
+  a11y, i18n), placeholder gate clean, SwiftLint --strict clean, and a Swift 6 complete-concurrency
+  type-check clean.
+
+  The apple build+test TRIAD cannot be driven green in this repo slot because of pre-existing,
+  committed, duplicate-symbol breakage (DashboardWidgetSize x15) and colocated XCTest test files in
+  widget / feature-view code that this prompt is explicitly forbidden to modify
+  ("Out of Scope (reject): Other pages; backend changes; new product features").
+  Per the Honesty Covenant (1 No red-as-green; 7 No predecessor bypass; 8 No commit on red), the
+  triad gate is reported BLOCKED rather than DONE — the failure is in predecessor code, not in this
+  unit, which is proven to compile/lint/scan clean.
+
+SUMMARY
+  PARITY_REQUIRED=8
+  PARITY_COVERED=8
+  PLACEHOLDER_EXIT=0
+  LINT_EXIT=0
+  TYPECHECK_EXIT=0
+  BUILD_EXIT=65
+  TEST_EXIT=blocked
+
+EXIT=1
+STATUS=BLOCKED

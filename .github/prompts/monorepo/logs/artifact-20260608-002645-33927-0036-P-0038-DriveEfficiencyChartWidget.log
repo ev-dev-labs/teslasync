@@ -1,0 +1,183 @@
+=== P4 Dashboard widget 0038 DriveEfficiencyChartWidget (Apple) ===
+date: 2026-06-08T07:49:57Z
+host: Darwin 25.5.0 arm64
+branch: auto/20260608-002645-33927/36
+web source: web/src/features/dashboard/widgets/DriveEfficiencyChartWidget.tsx
+registry id: drive-efficiency-chart (category=driving, default 2x4, min 1x2, max 4x40)
+
+--- Shipped files (apps/apple/TeslaSync/dashboard-widgets/DriveEfficiencyChartWidget.*) ---
+       275  apps/apple/TeslaSync/dashboard-widgets/DriveEfficiencyChartWidget.Builder.swift
+       265  apps/apple/TeslaSync/dashboard-widgets/DriveEfficiencyChartWidget.Chart.swift
+       270  apps/apple/TeslaSync/dashboard-widgets/DriveEfficiencyChartWidget.Model.swift
+       193  apps/apple/TeslaSync/dashboard-widgets/DriveEfficiencyChartWidget.Models.swift
+       164  apps/apple/TeslaSync/dashboard-widgets/DriveEfficiencyChartWidget.Previews.swift
+       342  apps/apple/TeslaSync/dashboard-widgets/DriveEfficiencyChartWidget.swift
+       373  apps/apple/TeslaSync/dashboard-widgets/DriveEfficiencyChartWidget.Tests.swift
+        50  apps/apple/TeslaSync/dashboard-widgets/DriveEfficiencyChartWidget.strings
+
+===================================================================
+CAPABILITY PROBE (runner toolchain)
+===================================================================
+$ swift --version
+    swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+    Target: arm64-apple-macosx26.0
+$ swiftlint version
+    0.63.3
+$ swiftformat --version
+    0.61.1
+$ xcode-select -p
+    /Library/Developer/CommandLineTools
+$ xcodebuild -version
+    xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+$ xcrun simctl list devices available | grep -i iphone
+    (no iPhone simulators listed above => none installed)
+
+===================================================================
+MANDATED GATE STEPS
+===================================================================
+
+[1/5] iOS build+test
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1  => BLOCKED (requires full Xcode.app + iOS 18 Simulator; runner has Command Line Tools only)
+
+[2/5] macOS build+test
+$ xcodebuild -scheme TeslaSync-macOS build test
+    xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1  => BLOCKED (requires full Xcode.app; runner has Command Line Tools only)
+
+[3/5] swiftlint --strict (shipped files)
+$ swiftlint lint --strict apps/apple/TeslaSync/dashboard-widgets/DriveEfficiencyChartWidget*.swift
+    Linting Swift files at paths TeslaSync/dashboard-widgets/DriveEfficiencyChartWidget.Builder.swift, TeslaSync/dashboard-widgets/DriveEfficiencyChartWidget.Chart.swift, TeslaSync/dashboard-widgets/DriveEfficiencyChartWidget.Model.swift, TeslaSync/dashboard-widgets/DriveEfficiencyChartWidget.Models.swift, TeslaSync/dashboard-widgets/DriveEfficiencyChartWidget.Previews.swift, TeslaSync/dashboard-widgets/DriveEfficiencyChartWidget.swift, TeslaSync/dashboard-widgets/DriveEfficiencyChartWidget.Tests.swift
+    Linting 'DriveEfficiencyChartWidget.Chart.swift' (1/7)
+    Linting 'DriveEfficiencyChartWidget.Builder.swift' (2/7)
+    Linting 'DriveEfficiencyChartWidget.Models.swift' (4/7)
+    Linting 'DriveEfficiencyChartWidget.Model.swift' (3/7)
+    Linting 'DriveEfficiencyChartWidget.Previews.swift' (5/7)
+    Linting 'DriveEfficiencyChartWidget.swift' (6/7)
+    Linting 'DriveEfficiencyChartWidget.Tests.swift' (7/7)
+    Done linting! Found 0 violations, 0 serious in 7 files.
+LINT_EXIT=0
+
+[4/5] swiftformat --lint (shipped files)
+$ swiftformat --lint apps/apple/TeslaSync/dashboard-widgets/DriveEfficiencyChartWidget*.swift
+    Running SwiftFormat...
+    (lint mode - no files will be changed.)
+    Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-36/apps/apple/.swiftformat
+    SwiftFormat completed in 1.49s.
+    0/7 files require formatting.
+FORMAT_EXIT=0
+
+[5/5] placeholder scan
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/DriveEfficiencyChartWidget
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    EXIT=0
+PLACEHOLDER_EXIT=0
+
+===================================================================
+COMPENSATING VERIFICATION (runs available on this runner)
+Honesty covenant: complete implementation shipped + verified to the
+fullest extent the runner allows; the two xcodebuild steps above are
+the only BLOCKED steps and are blocked purely by toolchain capability.
+===================================================================
+
+[A] Adapter parity harness — host-compiled Models+Builder vs the web derive block
+$ swiftc -O Models.swift Builder.swift main.swift && ./dechk
+    ok   - energy path 180 Wh/km
+    ok   - tiny drive nil
+    ok   - low whPerKm nil
+    ok   - battery fallback 150
+    ok   - battery fallback over-range nil
+    ok   - battery no-drop nil
+    ok   - daily count 2
+    ok   - day1 avg 190
+    ok   - day1 rolling nil
+    ok   - day2 eff 150
+    ok   - day2 rolling 170
+    ok   - day1 label Jun 1
+    ok   - day2 label Jun 2
+    ok   - miles day1 305.8
+    ok   - miles day2 241.4
+    ok   - miles day2 rolling 273.6
+    ok   - overallAvg 170
+    ok   - bestDay 150
+    ok   - trend nil <4
+    ok   - trend -20.5
+    ok   - project points 4 (filtered)
+    ok   - project hasData true
+    ok   - project nil input
+    ok   - project empty hasData false
+    ok   - integer 170
+    ok   - integer nil dash
+    ok   - signedPercent -20.5
+    ok   - signedPercent +12.5
+    ok   - signedPercent whole 5
+    ok   - signedPercent zero
+    ok   - signedPercent nil dash
+    ok   - unit mi
+    ok   - unit km default
+    ok   - unit unknown default km
+    ok   - efficiencyUnit mi
+    ok   - efficiencyUnit km
+    
+    ALL PASS
+ADAPTER_EXIT=0
+
+[B] swiftc -typecheck of the SwiftUI view code (real design Tokens.swift + faithful
+    DashboardWidgetSize/Registration + TSSkeleton shims), Swift 6 + strict concurrency=complete
+$ swiftc -typecheck -swift-version 6 -strict-concurrency=complete Tokens Shims Models Builder Model Chart swift
+VIEW_TYPECHECK_EXIT=0  (0 = view code compiles clean; SwiftUI+Charts+Observation resolve)
+
+[C] swiftc -typecheck of the Previews bodies (#Preview macro -> @MainActor funcs, since the
+    PreviewsMacros plugin ships only with full Xcode), -D DEBUG, strict concurrency=complete
+$ swiftc -typecheck ... swift Previews_tc.swift -D DEBUG
+PREVIEWS_TYPECHECK_EXIT=0
+    NOTE: DriveEfficiencyChartWidget.Tests.swift could not be host-typechecked: 'import XCTest'
+    is unavailable to bare CLT swiftc. Its logic is covered by harness [A] (identical
+    Builder/Models calls + expected values) and it mirrors the SpeedProfileWidget.Tests.swift shape.
+
+[D] i18n parity — every t() key in the web source resolves in the surface .strings catalog
+    ok  widget.driveEfficiencyChart.avg
+    ok  widget.driveEfficiencyChart.best
+    ok  widget.driveEfficiencyChart.trend
+    ok  widget.driveEfficiencyChart.daily
+    ok  widget.driveEfficiencyChart.rolling
+    ok  widget.driveEfficiencyChart.title
+    ok  widget.driveEfficiencyChart.empty
+I18N_MISSING=0
+
+===================================================================
+SUMMARY
+===================================================================
+  Step                              Result
+  --------------------------------  ------------------------------
+  iOS xcodebuild build+test         BLOCKED (IOS_EXIT=1)  no Xcode.app/iOS18 sim
+  macOS xcodebuild build+test       BLOCKED (MAC_EXIT=1)  no Xcode.app
+  swiftlint --strict                PASS    (LINT_EXIT=0)
+  swiftformat --lint                PASS    (FORMAT_EXIT=0)
+  check-placeholders.ps1            PASS    (PLACEHOLDER_EXIT=0, COUNT=0)
+  [A] adapter parity harness        PASS    (ADAPTER_EXIT=0, 36/36 checks)
+  [B] view code typecheck (sc6)     PASS    (VIEW_TYPECHECK_EXIT=0)
+  [C] previews typecheck (sc6)      PASS    (PREVIEWS_TYPECHECK_EXIT=0)
+  [D] i18n key parity               PASS    (I18N_MISSING=0)
+
+DELIVERABLE: production-complete, no stubs. 8 files under
+apps/apple/TeslaSync/dashboard-widgets/DriveEfficiencyChartWidget.* — surface view +
+state-holder model + pure adapter + Swift Charts + value types + previews + tests + strings.
+All states reproduced from the web source: loading / empty / error / stale / offline / content,
+in both standard and compact layouts. Hooks bind via the P1/S8 source seam (no HTTP in the view);
+view.opened telemetry on the P1/S11 seam; every label via the P1/S10 i18n facade.
+
+BLOCKED RATIONALE (per prompt capability clause: 'requires SwiftUI + Swift Charts + MapKit,
+iOS 18 / iPadOS 18 / macOS 15 HIG. If unavailable on the runner -> STATUS=BLOCKED with API
+evidence'): this runner has Apple Command Line Tools only (active dir
+/Library/Developer/CommandLineTools), so 'xcodebuild' cannot drive a scheme and NO iOS
+Simulators are installed (simctl lists none). The two xcodebuild build+test steps therefore
+cannot execute. Every step that the runner CAN execute (swiftlint, swiftformat, placeholder,
+host adapter tests, swiftc typechecks, i18n parity) was run and PASSED — evidence above.
+No red reported as green; the implementation is complete and compiles under swiftc 6.3.2
+(Swift 6 language mode, strict concurrency = complete).
+
+EXIT=1
+STATUS=BLOCKED

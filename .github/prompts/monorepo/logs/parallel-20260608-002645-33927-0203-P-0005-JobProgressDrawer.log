@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure and checking tool availability, since this requires Apple-specific tooling.
+
+Key finding: only Command Line Tools are installed, not full Xcode — so `xcodebuild` cannot run. But swift, swiftlint, swiftformat, and pwsh are available. Let me explore deeply before deciding on approach.
+
+Now let me examine the existing P4 surface directories (siblings of the target), the web hooks, and the native architecture in parallel.
+
+The `dashboard-widgets` dir has 418 files following a `<Name>.<Part>.swift` multi-file pattern. Let me study a complete example surface, the build config, and core infrastructure.
+
+Now I understand the multi-file surface pattern. Let me read a complete representative surface plus the core infrastructure (state holders, tokens, i18n, diagnostics) in parallel.
+
+Let me read the complete template surface in parallel.
+
+Excellent template. Let me read the remaining template files plus core infra (tokens, motion, feedback states) in parallel.
+
+Let me read the remaining template files, the design tokens, motion, and build config in parallel.
+
+Now let me find the design token definitions, motion components, build config, and check for an SPM package to build with.
+
+`xcodegen` is available but full Xcode is not (CLT only) — so `xcodebuild` can't run. Let me locate the token definitions, check the macOS SDK for SwiftUI, and read the build config.
+
+The macOS SDK has SwiftUI/Charts/MapKit — so `swiftc -typecheck` against it is viable. Let me find the token definitions and read the build config.
+
+Tokens are generated (P1/S9). Let me locate the generated token file and read the build config to understand wiring.
+
+Found generated tokens at `apps/design/generated/apple/Tokens.swift`. Let me read it and the build config.
+
+I now have the full architecture. Let me read the lint/format configs, the placeholder-check script, and confirm the motion dependency closure before writing code.
+
+Let me read the placeholder patterns, the overlay UI primitives, and check for any existing drawer/overlay surface precedent.
+
+There's a `KioskOverlay` modal precedent. Let me read it to align overlay/dismiss semantics and telemetry conventions for the modal tier.
+
+Let me read the shared UI components I'll use (Button, Badge, Typography) to map them correctly.
+
+I have the full pattern. Let me read the exact web `formatBytes` and `formatRelative` implementations to port them faithfully, then start building.
+
+I have everything needed. Let me quickly confirm the P1/S8 state-holder base conventions, then write the surface.
+
+I now have a complete understanding of the architecture, conventions, tooling, and the exact web behavior. Let me set up tracking and the plan, then build the surface.
+
+Now I'll create the pure Adapter core.
+
+Now the Seams file (telemetry, strings, formatting, persistence, download, source).
+
+Now the Model (state holder).
+
+Adapter, Seams, Model done. Now the views.
+
+Now the Views file (panel, chip, header, body, sections).
+
+Now the Row, the States, and add the accessibility builder to the Adapter.
+
+Now add the pure accessibility builder to the Adapter.
+
+Now the i18n strings catalog.
+
+Now the Previews.
+
+Adapter, Views, Row, States, strings, Previews done. Now the tests.
+
+Now the adapter + accessibility Tests.
+
+All 11 surface files created. Now wire the build (project.yml, both app targets) and lint config.
+
+Now let me verify formatting, linting, and placeholders on the new surface.
+
+swiftformat flagged a few long lines in the test files. Let me let the formatter fix them (ecosystem-correct), then re-verify.
+
+swiftformat passes. Now swiftlint --strict on the new surface.
+
+One pre-existing violation in a sibling (`LifetimeStatsWidget`, not my file) and one in my `Row.swift` (trailing-closure rule on `TSButton`). Let me fix mine.
+
+Let me run the full gate `swiftlint --strict` and reformat-lint, then isolate my surface's results from any pre-existing baseline.
+
+swiftformat passes; my surface has **zero** swiftlint violations. The 1 repo-wide violation is pre-existing in a sibling (`LifetimeStatsWidget`, untouched by me). Now the placeholder gate and git confirmation.
+
+Placeholder gate passes (COUNT=0). Note: `AIUsageCard.*` and the two web files show as modified but were **not touched by me** (shared parallel workspace) — I'll exclude them from my commit. Now let me produce real compile evidence since `xcodebuild` can't run: first compile + run the pure core.
+
+Now compile and run the pure core against the macOS SDK (real evidence). First fix the localizer to `@Sendable` for Swift 6 mode.
+
+The multi-file build needs the entry file named `main.swift`. Let me rename and recompile.
+
+The standalone Swift 6 build caught a real strict-concurrency bug (`UserDefaults` non-Sendable). Fixing it.
+
+Temp files don't persist across sync commands. Let me do write+compile+run in a single command.
+
+Harness needs Swift 6 isolation-safe structure. Let me rewrite it cleanly (results array, no global mutable state).
+
+All 34 pure-core checks pass with a real Swift 6 compile+run. Now typecheck the full SwiftUI view layer against the macOS SDK (with its real token/motion/button dependencies).
+
+Both the pure core (runtime) and the full SwiftUI view layer (typecheck) pass under Swift 6. Now let me validate the test files compile against the API by locating XCTest for the CLT toolchain.
+
+XCTest ships only with full Xcode (confirmed unavailable) — same root cause as `xcodebuild`. Let me still validate the test bodies against my real API using a minimal XCTest shim (catches any test/API drift).
+
+Only `NSLock` is missing — because stripping `import XCTest` also removed its transitive Foundation import. Faithfully substituting `import Foundation` (which the real `import XCTest` provides):
+
+Test bodies typecheck cleanly against the real API. Now let me validate the `project.yml` wiring by generating the Xcode project (xcodegen is available) and confirming my surface is included.
+
+Surface is referenced 66× in the generated project across targets; `.xcodeproj` is gitignored and cleaned up. All runnable gates pass. Now let me produce the authentic gate log. First confirm the logs directory.
+
+Let me check how sibling Apple logs recorded the xcodebuild capability situation, to match conventions.
+
+The sibling DONE logs were produced on a CI runner that *had* Xcode (some show `IOS_EXIT=0`). This runner has CLT only. Let me run the real gate commands, capture authentic output, and assemble the log.
+
+Now append the standalone compile/run evidence (the real verification in lieu of the blocked xcodebuild) plus the final summary.
+
+Both standalone typechecks pass. The final `EXIT=0` is inconsistent with `STATUS=BLOCKED` (could read as green-washing). Let me correct it to an honest non-zero blocking code.
+
+Let me do a final consistency pass: verify every i18n key used in code exists in the strings catalog, and confirm no forbidden placeholder words, then re-confirm the surface still lints clean after my edits.
+
+All 28 prompt-extracted strings are present with exact values; the one "missing" hit is a false positive (a `hasPrefix("export.status.")` test literal). No forbidden words. Let me stage **only my files** (excluding the unrelated `AIUsageCard`/web changes from the shared workspace) and commit.
+
+Exactly my 14 files staged; the unrelated workspace changes are excluded. Now commit.
+
+Committed cleanly (14 files, 2442 insertions). Let me do a final working-tree sanity check and update the plan.
+
+Task complete. Here's the summary.
+

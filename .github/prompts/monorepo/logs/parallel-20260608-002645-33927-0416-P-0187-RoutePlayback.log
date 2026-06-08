@@ -1,0 +1,131 @@
+I'll start by exploring the task requirements: the web source component, the existing Apple app structure, and tool availability.
+
+Tools are available. Let me explore the Apple app structure and existing patterns to use as templates.
+
+Xcode is not the active developer dir (only Command Line Tools). Let me check for full Xcode and the project structure, plus study the existing AIUsageCard pattern.
+
+Full Xcode exists at `/Applications/Xcode.app`. The project uses XcodeGen (`project.yml`). Let me read the project config, an example feature-view set, and the tooling. Note: I can only touch `RoutePlayback.*` files, so I must understand how sources are auto-included.
+
+Key insight: `project.yml` lists explicit source paths (`feature-views`, `dashboard-widgets`) but **not** `shared-surfaces`. I can only touch `RoutePlayback.*` files. Let me investigate how this is meant to work, resolve the AIUsageCard mystery, and find the native equivalents I need (MapKit, PlaybackControls, GlassPanel, EmptyState, state holders, i18n, diagnostics).
+
+Resolved the AIUsageCard mystery (case-insensitive FS; actual files are `AiUsageCard.*`, pre-existing modifications from another task — not mine to touch). Critical finding: `shared-surfaces` isn't in `project.yml` and there's no native `PlaybackControls`. Let me assess build feasibility and find the native primitives (GlassPanel, EmptyState, state holders, tokens, i18n, diagnostics, a MapKit route example).
+
+Now I understand the build dependencies: `Shared.xcframework` must be built via KMP/Gradle (Kotlin toolchain), and `shared-surfaces` isn't in `project.yml`. Let me read the predecessor prompts to understand conventions, plus the key native primitives and a full exemplar (SOCRouteChart). Let me batch these reads.
+
+The `shared-surfaces` category is greenfield (no files, no logs, not in `project.yml`), while completed categories like `dashboard-widgets` ARE wired into `project.yml`. Let me find the actual RoutePlayback prompt and any P4-core scaffolding prompt, plus study a completed dashboard-widget as the canonical multi-file pattern.
+
+There's a `P0-0001-workspace-scaffold.prompt.md`. Let me read it (it likely owns `project.yml` wiring) and the actual RoutePlayback prompt to confirm scope.
+
+The scaffold (`P0-0001`, `Allowed files: apps/apple/**`) owns `project.yml`, and it wired `feature-views` + `dashboard-widgets` but **not** `shared-surfaces`. I'm forbidden from editing `project.yml`. Before deciding status, I must verify which native primitives actually exist (state holders, i18n facade, diagnostics, EmptyState, MapKit patterns). Let me investigate thoroughly.
+
+The native infrastructure exists. Let me read the key primitives: MapKit components, Feedback states (EmptyState), Motion, state holders, and find the diagnostics + i18n facade contracts.
+
+Major discovery: atomic components already exist — `TSRoutePlayback`, `TSMapView`, `TSPlaybackControls`, `TSTimelineScrubber`, `TSGeo`, `TSAnimatedMarker` (these are the out-of-scope "component-library bundle"). My job is the **shared surface** that binds state holders + all 5 states + telemetry. Let me read the states, playback controls, diagnostics contract, and i18n facade.
+
+Clear pattern now. Let me read the playback controls, the state-holder layer, the live/offline/stale store, and locate a feature-view template that exercises all five states + a central diagnostics facade.
+
+Let me read the DrivetrainHealthWidget set (telemetry seam + state pattern to mirror), the live store (stale/offline freshness), a `.strings` format, and check for a central Diagnostics facade.
+
+The DrivetrainHealthWidget pattern is the ideal template — **Shared-free, host-compiles in isolation**, with view-state enum + provider seam + telemetry seam + freshness. Let me read its main view, the `WidgetFreshness` type, a `.strings` format, design tokens, and verify the component library is Shared-free (key for isolated verification).
+
+`SOCRouteChart` (P4 feature-view 0176) is the ideal sibling template — Shared-free, freshness chip, connectivity banner, all states, per-surface strings table, and it's wired into the building target. Let me read its complete file set plus the design tokens to mirror conventions exactly.
+
+This is the canonical template. Let me read the rest of the SOCRouteChart set (Adapter, Views, Previews, ModelTests, Tests) and the design-token references to mirror precisely.
+
+I have the full pattern. Let me read the test/preview conventions and the design tokens, then start writing.
+
+I have the complete pattern. Let me grab the exact token symbols, then write the surface.
+
+Let me confirm the exact `TSSpacing`/`TSRadius`/`Font.TS`/`Color.TS` definitions before writing.
+
+I have everything needed. Let me set up tracking and read the lint/format configs before writing.
+
+Lint/format rules captured (maxwidth 120, `--self remove`, testable-bottom imports, before-first wrapping; placeholder check forbids words like TODO/placeholder/stub/mock/not implemented). Let me set up tracking and write the plan.
+
+Now I'll write the surface. Starting with the pure Adapter (the projection core).
+
+Adapter done. Now the i18n strings table.
+
+Now the Model — telemetry/i18n/source seams plus the `@Observable` playback engine.
+
+States chrome (Views), then the loaded map + transport (Map).
+
+Now the loaded map composition + transport controls (`RoutePlayback.Map.swift`).
+
+Now the entry view (mapping the web `GlassPanel` to `TSGlassPanel`).
+
+Previews per state.
+
+Pure adapter/format/a11y tests.
+
+Now the model/playback/lifecycle tests.
+
+All 9 files written. Let me verify formatting, linting, and placeholders on the new files.
+
+Auto-fixable formatting issues. Let me apply swiftformat (write mode) on my files, then re-lint.
+
+SwiftFormat clean. Now SwiftLint on the new files, and confirm the auto-format kept imports/numbers correct.
+
+SwiftLint linted the whole tree and found 1 violation. Let me isolate it.
+
+The only SwiftLint violation is in a **pre-existing** dashboard-widget file (`LifetimeStatsWidget.Adapter.swift`), not mine. My files are clean. Let me confirm it's a baseline condition and run the placeholder check on my files.
+
+My files: SwiftFormat-clean, SwiftLint-clean, placeholder-clean. The one SwiftLint error is pre-existing (`LifetimeStatsWidget`, committed at HEAD — baseline condition). Now the strongest honest check: a real Swift typecheck of my surface against the real Shared-free component library. Let me set up Xcode and inspect dependencies.
+
+Xcode 26.5 active; the component library imports only SDK frameworks (Shared-free, self-contained). Now a real typecheck of my shipping surface against the real component library + tokens.
+
+`.annotationTitles(.hidden)` isn't a real API. I'll remove it and pass empty annotation titles (web markers have no text labels; VoiceOver labels stay on the content views).
+
+The file was reformatted. Let me view the current Map block.
+
+The component library references `UnitPreferences` (defined outside Components/Design). My surface doesn't use it — it's an incomplete-closure artifact. Let me find that symbol's home to complete the Shared-free set, and check the KMP build feasibility for the real gate.
+
+`UnitFormatters.swift` uses a same-module type from a `Shared`-importing file, so the full component set can't host-compile. My surface uses none of the SI-formatter components. Let me find exactly which Component files touch the Shared facade, then typecheck my surface against the Shared-free remainder.
+
+Only `UnitFormatters.swift` touches the facade, and nothing else uses its symbols. Let me typecheck my surface against the Shared-free remainder of the real component library.
+
+Shipping code typechecks clean on iOS (Swift 6 strict concurrency). Now the DEBUG/previews pass and a macOS pass.
+
+iOS + macOS + previews all typecheck clean. Now verify the test files compile (as one ad-hoc module, with XCTest, stripping the `@testable import` line).
+
+The only errors are XCTest's function-like-macro assertions (unavailable under ad-hoc `-typecheck`; they work in a real Xcode test target). Let me confirm there are **no other** errors — i.e., every error is an `XCTAssert*` macro and my test expressions/types are valid.
+
+Those 4 non-macro errors are downstream of the unavailable `XCTAssertEqual` macro (no parameter type to anchor the bare `.loading` enum members). I'll make the expected values explicitly typed — valid in the real target and harness-friendly.
+
+Re-verifying: confirm the only remaining test errors are the unavoidable `XCTAssert*` macro references, plus re-lint the format.
+
+Outstanding — every honest static/compile check passes:
+- **iOS 18 typecheck** (shipping): clean
+- **macOS 15 typecheck** (shipping): clean
+- **iOS DEBUG/previews**: clean
+- **Tests**: 0 non-macro errors (only XCTest's C-macro assertions are unavailable to `swiftc -typecheck`; valid in a real test target)
+- **swiftformat --lint**: clean · **swiftlint**: my files clean · **placeholders**: 0
+
+Now I'll honestly probe the full `xcodebuild` gate's feasibility (KMP framework + project wiring).
+
+Confirmed: `shared-surfaces` is **not** wired into `project.yml` (predecessor P4-core gap; allowed-files forbids me editing it), and the full build needs the KMP `Shared.xcframework`. Java 17 is present. Let me capture concrete evidence: generate the project and check whether my files are even included.
+
+Definitive evidence: my files get **0 references** in the generated project (SOCRouteChart, a wired feature-view, gets 54) — confirming the predecessor wiring gap. Now let me attempt the KMP `Shared.xcframework` build (the other gate prerequisite) to record its real behavior.
+
+KMP build is running (likely downloading the Gradle distribution + Kotlin/Native). Let me wait for it.
+
+KMP build timed out at 300s (`KMP_EXIT=124`) without producing the framework — so `xcodebuild`'s "Stage Shared.xcframework" pre-action can't complete here. Let me run the deterministic gate steps for real, and confirm the framework is absent.
+
+`swiftformat --lint apps/apple` fails at **baseline** — the only offender is pre-existing `ActionBuilder.Previews.swift` (not mine); my surface passes. Placeholders: clean. Let me confirm both whole-tree-gate offenders are pre-existing and capture the real `swiftlint --strict` result.
+
+Both whole-tree-gate offenders are **pre-existing** (committed at HEAD, not mine); my only changes are the `shared-surfaces` files. I now have every real gate result. Let me gather line counts and write the honest log.
+
+Now I'll write the comprehensive, honest gate log.
+
+Log written. Now let me clean up the generated (gitignored) Xcode project, verify only my allowed files are staged, and commit.
+
+Only my two new paths are present (pre-existing AiUsageCard untouched). Staging the allowed files and committing.
+
+All 10 staged files are exactly the allowed set. Committing.
+
+Committed (`b6ef1e1a7`) with exactly the 10 allowed files. Let me do a final confirmation that the committed code still typechecks on both platforms (after my post-pass edits).
+
+Compilation is running. Let me wait for it.
+
+Final confirmation green: committed code typechecks on **iOS 18** and **macOS 15** (0 errors, Swift 6 strict concurrency) and is swiftformat-clean. Let me close out tracking.
+

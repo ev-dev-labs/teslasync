@@ -1,0 +1,84 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Let me explore the existing Apple app structure and the web source's dependencies.
+
+The target directory `apps/apple/TeslaSync/feature-views` exists. Let me examine existing feature-views there to follow conventions exactly.
+
+The closest analog is `ChargingSection` (charging + single Chart). Let me read its full file set as a template.
+
+Let me view these files individually for full content.
+
+Excellent pattern. Let me read the remaining ChargingSection files to understand the full structure.
+
+Now let me read the Views, Previews, Tests, and strings files to complete my understanding of the pattern.
+
+Now let me examine the web `ChartContainer` chrome and find existing native area-chart surfaces plus the design tokens.
+
+Let me read the web ChartContainer in sections, plus the chart defaults, gradient, and annotation helpers.
+
+Let me read the remaining web helpers, the palette/formatting hooks, and the native design tokens.
+
+Let me locate the remaining design token definitions (TSSpacing, TSRadius, Color.TS palette, Font.TS, TSMotion, TSFadeIn, TSSkeleton).
+
+The feature-views path is compiled into both app targets. I need to understand how `*.Tests.swift` files there reach the test target. Let me check.
+
+The feature-views convention (including `.Tests.swift` co-located) is established across 55 surfaces — I'll match it exactly. Let me confirm the generated design tokens, the placeholder script, and tooling availability.
+
+Let me read the lint/format configs to ensure my code passes `swiftlint --strict` and `swiftformat --lint`.
+
+I now have everything needed. Let me establish tooling baselines: test whether `swift -parse` works without the iOS SDK, and confirm swiftlint/swiftformat pass on an existing surface.
+
+Baseline tooling is green. Let me check the web `ChartTooltip` to match its value formatting, then I'll start building.
+
+I have full understanding of the web source, the native pattern, design tokens, and tooling. Let me verify no type-name collisions, then set up tracking.
+
+No collisions. Let me set up tracking and the plan.
+
+Now I'll build the surface, starting with the pure projection core (Adapter).
+
+All 8 files created. Now verification — first a syntax parse check on each new Swift file.
+
+Already compliant. Now the gate-level checks: `swiftlint --strict` and `swiftformat --lint apps/apple` over the whole tree.
+
+swiftformat clean (0/1015). Now `swiftlint --strict` over the whole tree.
+
+One violation. Let me locate it.
+
+My files are clean. The violation must be pre-existing. Let me confirm by finding the exact violating file.
+
+The single violation is pre-existing in an out-of-scope file. Let me confirm it's untouched by me and present at HEAD.
+
+Confirmed: only my 8 new files are added; the lone `swiftlint --strict` violation is pre-existing in an out-of-scope committed file (`LifetimeStatsWidget.Adapter.swift`), untouched by me. Now the placeholder gate + a genuine per-file scan and forbidden-word grep.
+
+A test method name (`...SymbolToDollar`) contains the substring "ToDo", which the case-insensitive scanner flags as "TODO". I'll rename it to avoid the substring.
+
+All clean. Now let me verify every i18n key used in Swift has a matching entry in the `.strings` catalog.
+
+Perfect i18n parity — all keys matched, none missing or unused. Let me validate the `.strings` plist and confirm the log directory exists.
+
+Let me view an existing surface log to match its format exactly.
+
+The reference log reveals the established disposition and confirms my pre-existing-violation finding. Crucially, that log's runner had full Xcode; **mine has only CommandLineTools (no Xcode)**, so I must report my real environment. Let me maximize real verification: check whether the macOS SDK can type-check SwiftUI + Charts, and run an executed adapter self-test.
+
+Major findings: the macOS 15 SDK **can** type-check SwiftUI + Charts (exit 0), and `xcodegen` is present — but there's **no Xcode** (so no `xcodebuild`) and **no iOS SDK** in CommandLineTools. I'll do the strongest real verification possible: an executed adapter self-test, then a macOS-15 out-of-module type-check of the full view set. First, the executed adapter self-test.
+
+Harness-only issue (Swift 6 top-level actor isolation), not an adapter problem — the adapter compiled clean. Let me fix the harness and rerun.
+
+Top-level globals are the issue — I'll nest the counters and helpers inside a function.
+
+Executed adapter self-test: **32/32 assertions pass** under Swift 6 strict concurrency. Now the macOS-15 out-of-module type-check of the full SwiftUI + Charts view set (real tokens + a TSSkeleton shim).
+
+The only errors are the `#Preview` macro plugin (Xcode-only tooling, absent from CommandLineTools) — not type errors in my code. `#Preview` is `#if DEBUG` scaffolding excluded from release builds. Let me re-run typechecking the production view set (Previews inert without `-D DEBUG`).
+
+Outstanding: **macOS-15 SwiftUI + Charts type-check of the production view set passes clean (exit 0)**, and the iOS simulator SDK is confirmed absent (capability evidence). Let me capture exact tool versions for the log, then write it.
+
+All checks captured. Let me write the honest gate log.
+
+Now a final consolidated re-verification of all my files before committing.
+
+All green. Now staging and committing exactly my 8 files plus the log.
+
+The MonthlyCostChart surface is complete, verified to the maximum extent this runner allows, and committed. Let me clean up the session plan tracking.
+
+Working tree clean; commit contains exactly the 8 surface files + log. Task done.
+

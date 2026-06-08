@@ -1,0 +1,126 @@
+I'll start by exploring the codebase structure to understand the task. Let me look at the web source, the Apple app structure, and related artifacts in parallel.
+
+Let me examine the parity manifest record in detail, the RegionSettings component, and existing Apple page patterns.
+
+The page parity unit is minimal (just title + subtitle wrapping `RegionSettings`). Let me understand the Apple project structure, navigation, and find existing page patterns to follow.
+
+There's a path discrepancy — real features live under `Sources/Features/`, not `TeslaSync/Features/`. Let me examine the App routing system and the existing Dashboard feature to understand the registration pattern.
+
+The build includes `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets`, not `TeslaSync/Features`. Let me find where existing P7 pages live and how routes get registered.
+
+Let me look at `TeslaSyncApp.swift` and the route registration mechanism (`SettingsRouteRegistration`).
+
+Now I understand the registration mechanism. There's no `teslaRegion` route yet, and only `.settings` is registered. Let me check prior page-prompt conventions (logs, ledger, git history) and tooling availability.
+
+No full Xcode (only Command Line Tools) — so `xcodebuild` build/test gates will be BLOCKED per the prompt, but `swiftlint` + `pwsh` placeholder scan ARE available. Let me examine the full logs list, an existing widget log format, a reference implementation, and search for an existing native RegionSettings component.
+
+Found it — a native `RegionSettings` component already exists (feature-views-0211). And `apple-ledger.json` doesn't exist yet (I'll create it). Let me locate the native RegionSettings, the ledger schema, placeholder tooling, and check for a full Xcode install.
+
+**Critical:** `/Applications/Xcode.app` IS installed — just not selected. I can use `DEVELOPER_DIR` to build/test without sudo. Let me verify that, and read the native RegionSettings component, the gate contract README, and the web RegionSettings.
+
+Confirmed: **Xcode 26.5 works via `DEVELOPER_DIR`** with simulators available — so build/test gates are runnable (STATUS=DONE achievable). The native `RegionSettings(model:)` component exists. Now let me understand routing/grouping decisions: the web route group, the route parser, route tests, and how to construct `RegionSettingsModel`.
+
+Let me examine how to construct `RegionSettingsModel`, how the existing registered page (`AppSettingsView`) scaffolds itself, the web `PageContainer`, and available scaffold/layout components.
+
+Now let me understand how the app provides live data sources (SharedFacade/AppContainer) and whether a production `RegionSettingsSource` exists, plus the design tokens and feedback/typography components I'll use for the scaffold.
+
+Now I understand the data-binding architecture (live shared-core wiring is deferred app-wide; DI pattern with model injection). Let me examine the localization setup — where `Localizable.xcstrings` lives and how existing `route.*`/`group.*` keys and the `RegionSettings.strings` table are defined.
+
+The catalog is a 4.6MB Apple String Catalog. The 2 parity strings live only in the component's `RegionSettings.strings` table, not the master catalog. Let me confirm how `route.*`/`group.*` keys are stored and grab the exact JSON block format to replicate.
+
+`route.*` keys are in the catalog with ar/en/he localizations. Let me see the complete `route.settings` block to replicate the exact multi-locale format.
+
+I have the exact catalog format. Let me check the design tokens (`Font.TS`, `Color.TS`, `TSSpacing`), the native typography components, and whether the shared i18n catalog has real ar/he translations for these keys.
+
+Real ar/he translations exist in the shared i18n catalog, and native `TSPageTitle`/`TSSubhead` typography components are available. Let me grab the translations and the typography component signatures.
+
+All translations and typography components are available. Let me read the rest of `Typography.swift` and check for any exhaustive `switch` over `AppRoute` elsewhere that adding a case could break.
+
+Let me verify no exhaustive `switch` over `AppRoute` exists elsewhere that adding a case would break, by searching for route-case usage in likely mapping files.
+
+I now have a complete understanding. Let me set up a plan, then verify the build prerequisites (Shared.xcframework, build script) while I begin implementation.
+
+Key finding: `Shared.xcframework` doesn't exist yet — it must be built from the KMP core via Gradle (heavy, requires Kotlin/Native toolchain). I'll kick that off in the background now (it's the long pole for the build gate) while I implement the page. Let me also set up my plan and todos.
+
+Gradle xcframework build is running in the background. Let me verify the lint config so my code matches house style, then write the page.
+
+Confirmed: SwiftLint's `included` paths are `Sources`, `TeslaSync/dashboard-widgets`, `TeslaSync/feature-views` — **not** `TeslaSync/Features`. This locks in `Sources/Features/Admin/` as the correct, lint-and-build-included home. Let me create the page.
+
+Need to create the directory first. Let me do that and check the Gradle build progress.
+
+Directory created. Gradle still running. Let me create the page file and the route registration.
+
+Now let me check the placeholder patterns to ensure my comments won't trip the gate, before writing the registration file.
+
+Patterns are simple textual markers — my files avoid them. Let me create the route registration and update `AppRoute.swift` (add the `teslaRegion` case across all switches).
+
+Let me verify the `AppRoute.swift` edits landed correctly, then wire the registration into `TeslaSyncApp.swift`.
+
+All `AppRoute` edits are correct. Now wire the registration into `TeslaSyncApp.swift`.
+
+Now add the three keys to the String Catalog, inserting at the top of the `strings` object (matching the existing `route.*` multi-locale format).
+
+Let me validate the catalog JSON is still well-formed and the keys resolve, then check the Gradle build progress.
+
+Catalog is valid (8124 keys, all 3 present). Gradle still compiling. Let me run SwiftLint and the placeholder gate on the new/modified files now (these don't need the xcframework).
+
+Placeholder gate is clean (EXIT=0). SwiftLint found 1 violation across all 1913 files — I need to identify whether it's mine. Let me isolate it.
+
+My 4 files are clean (0 violations). The 1 violation is pre-existing in an untouched file. Let me identify it for honest reporting and check the Gradle build.
+
+The lint violation is pre-existing and unrelated (`LifetimeStatsWidget.Adapter.swift` — a P3 dashboard widget I didn't touch); my 4 files are clean. The Admin-scoped lint gate passes. Gradle is still building the xcframework (the long pole). Let me wait for it.
+
+No streaming output (the `tail` buffers until completion). Let me verify the build is actively progressing (CPU/process check) rather than deadlocked.
+
+The build is very active (Gradle at 266%+201% CPU, konan LLVM + swift-frontend compiling; konan toolchain 1.6G downloaded, 690M build output). It's compiling the KMP core for the Apple targets — genuinely progressing. Let me continue waiting.
+
+**Shared.xcframework built successfully (9m31s).** Now let me stage it to the app's Frameworks dir and generate the Xcode project.
+
+Xcframework staged (ios-arm64, ios-arm64-simulator, macos-arm64) and project generated. Now let me build for the iOS Simulator (capturing to a log). This is a large build (~1900 files), so I'll run it in the background.
+
+The iOS build is running in the background. Let me monitor its progress.
+
+The build completed. Let me check whether it succeeded or failed.
+
+Build failed — but on a **pre-existing** issue unrelated to my change: `AIRestorePanel.Tests.swift` (a feature-views test file I didn't touch) imports `XCTest`, which isn't available to the app target. Let me investigate whether this is a known pattern with a guard/exclude mechanism, since many `.Tests.swift` files live in the app-target source dirs.
+
+This is a **pre-existing systemic issue**: 224 `*.Tests.swift` files in the app-target source dirs (`feature-views`/`dashboard-widgets`) import `XCTest` (unavailable to the app target) — they're meant for the XCTest targets but project.yml compiles them into the app. This breaks the app-target build independent of my change. 
+
+Following the documented precedent (widget logs neutralized pre-existing blockers via build-time settings without touching committed config, since `.xcodeproj` is git-ignored), I'll exclude `*.Tests.swift` at build time. Note `EXCLUDED_SOURCE_FILE_NAMES='*.Tests.swift'` excludes the mis-placed `Foo.Tests.swift` files but keeps real unit tests like `RouteTests.swift` (no dot before "Tests"). Let me build + run RouteTests.
+
+The build+test is running. Let me monitor progress while preparing artifacts.
+
+The build still failed despite exclusion. Let me see the actual errors.
+
+Another test-file naming pattern: `*.ModelTests.swift` (not caught by `*.Tests.swift`). Let me enumerate all test-file suffixes in the app-target dirs so I can exclude them all precisely.
+
+Five dot-suffixed test patterns exist (261 files total), all distinct from `Tests/Unit`'s `WordTests.swift` (no dot). Let me confirm `Sources/` has no stray test files, then rebuild excluding all five patterns.
+
+All mis-placed test files are isolated to the 5 dot-suffix patterns. Let me rebuild + run RouteTests excluding all five.
+
+Build+test running with all exclusions. Let me wait for it to compile and run.
+
+More pre-existing breakage surfaced — but now in **non-test** files: `ToolCard.swift` `#Preview` macros with stale APIs, and **duplicate type definitions** (`DashboardWidgetSize`, `DrivetrainTemperatureUnit` "ambiguous") across `Sources/DashboardWidgets/` vs `Sources/Features/Dashboard/Widgets/`. These are unrelated to my page. Let me gauge the full scope of pre-existing app-target breakage.
+
+My `TeslaRegion` files appear in zero errors. Let me view the full breakdown of pre-existing broken files.
+
+This confirms the app target is **pervasively pre-broken** by ~150 unrelated files across other surfaces (duplicate `DashboardWidgetSize`/`DrivetrainTemperatureUnit` type definitions causing "ambiguous" cascades, 216 stale `ToolCard` `#Preview` macro errors, mis-placed XCTest files). **Zero errors are attributable to my 4 files.** Let me definitively confirm my files are clean in the build and that none of this is my doing.
+
+Definitively confirmed: **my 4 files compiled with zero diagnostics** (`TeslaRegionPage.swift` shows a clean `SwiftCompile` invocation; no `error:` lines reference any of my files). The build/test failure is entirely from ~150 pre-existing broken files in **other surfaces** (duplicate `DashboardWidgetSize` types, 216 stale `ToolCard` `#Preview` errors) — unfixable within this page's scope.
+
+Per the Honesty Covenant ("No red-as-green", "prompts that can't run their gate are BLOCKED, not DONE"), the build/test gate is **BLOCKED** by pre-existing external breakage, while my deliverable is complete and every in-scope gate is green. Let me write the ledger and evidence log.
+
+Now the comprehensive evidence log with the `=== PARITY ===` section.
+
+Now let me verify the working-tree state and confirm the generated project/framework artifacts are git-ignored (not polluting the change set).
+
+The working tree already contained **unrelated pre-existing changes** (`AIUsageCard.*`, two `web/` files) that I did not make — confirming this is a shared/dirty snapshot, consistent with the pervasive pre-existing build breakage. My changes are isolated and clean. The generated `.xcodeproj` + `Shared.xcframework` are git-ignored.
+
+Per the Honesty Covenant's binding **"No commit on red"** (the build/test gate is red/BLOCKED by external breakage), I will **not** commit — the complete deliverable + BLOCKED log + ledger remain staged in the working tree. Let me finalize housekeeping.
+
+Let me update the plan with the final status.
+
+All work is finalized. Let me do a final confirmation of the complete change set and todos before summarizing.
+
+All deliverables are in place and verified. Calling task complete with an honest status.
+

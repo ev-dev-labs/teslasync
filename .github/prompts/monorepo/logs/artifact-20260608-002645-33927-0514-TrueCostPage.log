@@ -1,0 +1,186 @@
+================================================================================
+p4-apple · P7 · page:analytics/TrueCost — SwiftUI / HIG
+Native TrueCostPage at web parity (web/src/features/analytics/pages/TrueCostPage.tsx)
+Target: apps/apple (adaptive macOS + iOS/iPadOS, ADR-002/006)
+================================================================================
+
+ARTIFACT
+  Parity unit : page:analytics/TrueCost   (kind=page, requiredCount=51)
+  Web route   : /analytics/tco
+  Web source  : web/src/features/analytics/pages/TrueCostPage.tsx
+  Output dir  : apps/apple/TeslaSync/Features/Analytics/
+  Hooks ported: useCostBreakdown -> GET /analytics/tco [vehicle_id]
+                (shared-core AnalyticsStore.costBreakdown, StateFlow<Resource<JsonElement>>)
+
+FILES (apps/apple/TeslaSync/Features/Analytics/)
+  TrueCostPage.swift            — View scaffold: header (title/subtitle + VehicleSelect + freshness),
+                                  ScrollView, phase switch, adaptive macOS/iOS comparison-chart layout
+  TrueCostPage.Model.swift      — @Observable TrueCostPageModel, TrueCostSource seam, InMemory source,
+                                  config/input/connection types, telemetry seam, TrueCostStrings facade
+  TrueCostPage.DTO.swift        — SI read-model TrueCostBreakdown / TrueCostMonthlyEntry (snake_case CodingKeys)
+  TrueCostPage.ViewState.swift  — pure view-ready types (phase, accent/glow, hero/tile/series, resolved)
+  TrueCostPage.Adapter.swift    — TrueCostFormat (SI converters/formatters, web parity) + TrueCostProjection
+                                  + TrueCostAccessibility
+  TrueCostPage.Charts.swift     — 3 Swift Charts panels via P3 wrappers (TSChartContainer/TSAreaChart/TSBarChart)
+  TrueCostPage.Views.swift      — hero panels, savings-breakdown panel, no-data panel, loading/error, freshness chip
+  TrueCostPage.Live.swift       — #if canImport(Shared) LiveTrueCostSource over AnalyticsStore.costBreakdown
+                                  (FlowBridge + LoadableState + JsonElement decode) + TrueCostPageModel.live(...)
+  TrueCostPage.Registration.swift — AnalyticsRouteRegistration (.analytics route host) + Shared-free default model
+  TrueCostPage.Previews.swift   — #if DEBUG previews for loading/empty/error/data on macOS + compact idioms
+  TrueCostPage.Tests.swift      — XCTest: projection (4 states), formatting golden vectors, chart data/CSV,
+                                  accessibility, model (telemetry/selection/stale auto-refresh)
+
+WIRING (navigation registration + catalog, within apps/apple/**)
+  project.yml                   — added `TeslaSync/Features` source path to iOS + macOS app targets
+  .swiftlint.yml                — added `TeslaSync/Features` to included
+  Sources/TeslaSyncApp.swift    — chained AnalyticsRouteRegistration onto the route-host registry (.analytics)
+  Localization/Localizable.xcstrings — added the 32 manifest keys + 6 native-chrome keys + 7 shared-component
+                                  keys (chart/error/retry/picker) that the composed states surface
+
+ENVIRONMENT
+  Host        : Darwin (Apple Silicon). Xcode 26.5 (Build 17F42) present at /Applications/Xcode.app
+                (xcode-select defaults to CommandLineTools; used via DEVELOPER_DIR).
+  Toolchain   : swiftlint 0.63.3, swiftformat, pwsh, xcodegen, OpenJDK 17, Gradle 8.14.5 wrapper.
+  KMP core    : Shared.xcframework ASSEMBLED OK via `gradlew :core:assembleSharedXCFramework`
+                (BUILD SUCCESSFUL 8m42s) and staged to apps/apple/Frameworks/Shared.xcframework.
+
+================================================================================
+GATES
+================================================================================
+[placeholder]  pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Analytics -Language swift
+               PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+               PLACEHOLDER_EXIT=0   ✅ PASS
+
+[swiftformat]  swiftformat --lint apps/apple/TeslaSync/Features/Analytics
+               0/11 files require formatting
+               FORMAT_LINT_EXIT=0   ✅ PASS
+
+[swiftlint]    swiftlint --strict   (config included: lints the whole app source set)
+               Features/Analytics violations = 0   ✅ (my files clean)
+               1 PRE-EXISTING violation outside this prompt's scope (not introduced here):
+                 TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length
+               LINT_EXIT=2 (whole-repo) / LINT_EXIT(Features/Analytics)=0
+
+[typecheck]    xcrun swiftc -typecheck -swift-version 6 -sdk <MacOSX26.5> -F Shared.xcframework/macos-arm64 \
+                 <design tokens + Sources/Design + Sources/Components(*) + Sources/App + SharedFacade(loadable/
+                  facadeerror/flowbridge) + TeslaSync/Features/Analytics/*.swift (excl. Tests)>
+               TrueCostPage* (incl. Live.swift Shared interop) → TOTAL_ERRORS=0   ✅ PASS
+               (* UnitFormatters.swift excluded — unrelated Shared-facade component, not used by this page)
+               Module emit (-emit-module -enable-testing -module-name TeslaSync) of all page sources → 0 errors.
+               Tests.swift typechecked against the testable module: every TrueCost* / @testable symbol resolves
+               (0 page-symbol errors); only XCTest's own XCTAssert* macros are unresolved in the ad-hoc
+               standalone compile (framework-link path quirk, not a code defect).
+
+[build]        DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+               xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync-macOS -destination 'platform=macOS' \
+                 -configuration Debug build  ENABLE_TESTING_SEARCH_PATHS=YES CODE_SIGNING_ALLOWED=NO
+               RESULT: ** BUILD FAILED **
+               Errors in TeslaSync/Features/Analytics (this prompt's scope): 0   ✅
+               BUILD_EXIT=65  ❌ BLOCKED by PRE-EXISTING, out-of-scope repo defects (NOT this page):
+                 • Duplicate public type declarations collide at module scope:
+                     - `DashboardWidgetSize`  declared in 16 files (Sources/DashboardWidgets/* +
+                       TeslaSync/dashboard-widgets/*)  -> "ambiguous for type lookup"
+                     - `VehicleHeroModel`     declared in 2 files (VehicleHeroCardWidget.Model / VehicleHeroWidget.Model)
+                     - `DrivetrainTemperatureUnit` declared in 2 files (DrivetrainHealthWidgetModel /
+                       TemperatureMetricCards.Adapter)
+                   These cascade into the DrivetrainHealthWidget / DigitalTwinMiniWidget / VehicleHero* sources.
+                 • `import XCTest` from the app-target `.Tests.swift` files needs ENABLE_TESTING_SEARCH_PATHS=YES
+                   (latent across all ~1436 pre-existing feature-view *.Tests.swift files).
+               This is the documented "apps/macos-pending-verifications.md" state — the full macOS app target
+               has not previously been compiled. None of the failing files are in this change
+               (git status confirms: only apps/apple/TeslaSync/Features/** + the 4 wiring files are touched).
+
+[test]         xcodebuild ... test  — NOT REACHED (build gate blocked upstream by the pre-existing defects above).
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=51
+Each item: evidence = <file>::<symbol>. Implemented + typecheck-verified (0 errors compiling against the
+real P2 tokens, P3 components, and the built Shared.xcframework).
+--------------------------------------------------------------------------------
+PANELS (9)
+[x] panel  GlassPanel1 (Total EV Cost)        Views.swift::TrueCostHeroCard <- Adapter.swift heroMetrics id="totalEvCost"
+[x] panel  GlassPanel2 (Equiv Gas Cost)       Views.swift::TrueCostHeroCard <- Adapter.swift heroMetrics id="equivGasCost"
+[x] panel  GlassPanel3 (Total Savings)        Views.swift::TrueCostHeroCard <- Adapter.swift heroMetrics id="totalSavings"
+[x] panel  GlassPanel4 (Monthly Savings)      Views.swift::TrueCostHeroCard <- Adapter.swift heroMetrics id="monthlySavings"
+[x] panel  Cumulative-Savings-Over-Time       Charts.swift::TrueCostCumulativeChart
+[x] panel  Cost-per-Kilometer                 Charts.swift::TrueCostCostPerKmChart
+[x] panel  Monthly-EV-vs-Gas-Cost             Charts.swift::TrueCostMonthlyChart
+[x] panel  GlassPanel8 (Savings Breakdown)    Views.swift::TrueCostSavingsBreakdown (TSGlassPanel + 3 tiles)
+[x] panel  GlassPanel9 (No data)              Views.swift::TrueCostNoDataPanel (TSGlassPanel + TSEmptyState)
+CHARTS (6)  — P3 Swift Charts wrappers, never WKWebView
+[x] chart  ChartContainer  (cumulative)       Charts.swift::TrueCostCumulativeChart -> TSChartContainer("tco.cumulativeSavings")
+[x] chart  AreaChart                          Charts.swift::TrueCostCumulativeChart -> TSAreaChart(series:)
+[x] chart  ChartContainer  (cost/km)          Charts.swift::TrueCostCostPerKmChart -> TSChartContainer("tco.costPerKm")
+[x] chart  BarChart        (cost/km)          Charts.swift::TrueCostCostPerKmChart -> TSBarChart(series:[ev,ice])
+[x] chart  ChartContainer  (monthly)          Charts.swift::TrueCostMonthlyChart -> TSChartContainer("tco.monthlyEvVsGas")
+[x] chart  BarChart        (monthly)          Charts.swift::TrueCostMonthlyChart -> TSBarChart(series:[evCost,gasEquiv])
+STATES (4) — implemented for the cost-breakdown data source
+[x] state  loading                            ViewState.swift::TrueCostPhase.loading -> Views.swift::TrueCostLoadingView
+[x] state  empty                              ViewState.swift::TrueCostPhase.empty   -> Views.swift::TrueCostNoDataPanel
+[x] state  error                              ViewState.swift::TrueCostPhase.error   -> Views.swift::TrueCostErrorView
+[x] state  success                            ViewState.swift::TrueCostPhase.data    -> TrueCostPage.swift dataBody(_:)
+STRINGS (32) — Localizable.xcstrings + referenced in Features/Analytics (LocalizedStringKey / TrueCostStrings)
+[x] string common.unit.gallon        Adapter.swift TrueCostGasUnit.labelKey / Model.swift
+[x] string common.unit.liter         Adapter.swift TrueCostGasUnit.labelKey / Model.swift
+[x] string tco.costKm                Charts.swift TrueCostCostPerKmChart (TSLabel "tco.costKm")
+[x] string tco.costPerKm             Charts.swift TrueCostCostPerKmChart (TSChartContainer title)
+[x] string tco.costPerKm.aria        Charts.swift TrueCostCostPerKmChart (summary + accessibilityLabel)
+[x] string tco.cumulativeSavings     Charts.swift TrueCostCumulativeChart (title + series name)
+[x] string tco.cumulativeSavings.aria Charts.swift TrueCostCumulativeChart (summary + accessibilityLabel)
+[x] string tco.electricityVsGas      Adapter.swift breakdownTiles id="fuelSavings" caption
+[x] string tco.equivGasCost          Adapter.swift heroMetrics id="equivGasCost" label
+[x] string tco.evCost                Charts.swift TrueCostMonthlyChart (series + legend)
+[x] string tco.evElectric            Adapter.swift costPerKm.evSeriesName
+[x] string tco.fuelSavings           Adapter.swift breakdownTiles id="fuelSavings" label
+[x] string tco.gasEquiv              Charts.swift TrueCostMonthlyChart (series + legend)
+[x] string tco.iceGas                Adapter.swift costPerKm.iceSeriesName
+[x] string tco.maintenanceSavings    Adapter.swift breakdownTiles id="maintenanceSavings" label
+[x] string tco.monthlyEvVsGas        Charts.swift TrueCostMonthlyChart (TSChartContainer title)
+[x] string tco.monthlyEvVsGas.aria   Charts.swift TrueCostMonthlyChart (summary + accessibilityLabel)
+[x] string tco.monthlySavings        Adapter.swift heroMetrics id="monthlySavings" label
+[x] string tco.noData                Views.swift TrueCostNoDataPanel (TSEmptyState title)
+[x] string tco.noMonthlyData         Charts.swift TrueCostChartEmptyRow (cumulative + monthly)
+[x] string tco.noOilChanges          Adapter.swift breakdownTiles id="maintenanceSavings" caption
+[x] string tco.overMonths            Adapter.swift heroMetrics id="totalSavings" caption (String(format:))
+[x] string tco.perKmEv               Adapter.swift costPerKm.evCardLabel
+[x] string tco.perKmGas              Adapter.swift costPerKm.iceCardLabel
+[x] string tco.plusMaintenance       Adapter.swift heroMetrics id="monthlySavings" caption
+[x] string tco.savingsBreakdown      Views.swift TrueCostSavingsBreakdown header
+[x] string tco.sessions              Adapter.swift heroMetrics id="totalEvCost" caption
+[x] string tco.subtitle              TrueCostPage.swift header subtitle
+[x] string tco.title                 TrueCostPage.swift header TSPageTitle
+[x] string tco.totalEstSavings       Adapter.swift breakdownTiles id="totalEstSavings" label
+[x] string tco.totalEvCost           Adapter.swift heroMetrics id="totalEvCost" label
+[x] string tco.totalSavings          Adapter.swift heroMetrics id="totalSavings" label + breakdownTiles
+PARITY_COVERED=51
+=== END PARITY ===
+
+NOTES (HIG / parity adaptations, no scope narrowing)
+  • SI at the boundary (P1/S5): TrueCostFormat mirrors lib/numberFormat.ts (fmtNumber default precision 2,
+    fmtInt) + useUnits.formatEnergy (convertEnergyFromSI + unit) + convertDistanceFromSI (m->km/mi/ft) +
+    useFormatting.formatCurrency (symbol + fmtNumber). DTO stays SI (total_wh, total_km); converted only at render.
+  • Charts use the P3 wrappers (TSChartContainer/TSAreaChart/TSBarChart). The web a11y note marks these as
+    no-table charts whose values are announced via the value cells + accessible summaries — reproduced here
+    (per-bar EV/Gas value cells + min/max/latest chart summaries).
+  • Web hover "glow" -> a persistent, understated token-tinted border (touch idiom). neon-* -> design tokens.
+  • Freshness chip is the native peer of DataFreshnessAuto (live/stale/offline + one-shot stale auto-refresh).
+  • Live data path (TrueCostPage.Live.swift) wires the shared-core AnalyticsStore.costBreakdown feed and
+    decodes the bridged JsonElement (mirrors the proven LiveDrivetrainHealthProvider). Verified to typecheck
+    against the built Shared.xcframework. Until the app-level KMP bootstrap lands, the registered route uses
+    the Shared-free DirectoryBackedTrueCostSource (vehicle picker from the App-Group directory + the genuine
+    empty state) — a real state, not a stub.
+
+HONESTY
+  The page is fully implemented and INDEPENDENTLY VERIFIED: 0 errors type-checking all page sources (incl. the
+  Shared-interop Live source) against the real P2 tokens / P3 components / built Shared.xcframework in Swift 6
+  strict-concurrency mode; swiftformat/lint/placeholder gates green; 0 swiftlint violations in scope.
+  The full `xcodebuild build`/`test` triad CANNOT be certified green because of PRE-EXISTING, out-of-scope
+  module-level defects in the repo (duplicate public type declarations: DashboardWidgetSize x16, VehicleHeroModel
+  x2, DrivetrainTemperatureUnit x2; and the XCTest app-target search-path gap shared by all pre-existing
+  feature-view *.Tests.swift). Fixing those would require editing 30+ files outside this prompt's allowed scope
+  (apps/apple/TeslaSync/Features/Analytics/**). Per the Honesty Covenant (no red-as-green) this gate is reported
+  BLOCKED rather than DONE.
+
+EXIT=1
+STATUS=BLOCKED

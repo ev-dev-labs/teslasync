@@ -1,0 +1,239 @@
+================================================================================
+P4 · P7 · page:battery/EnergyFlow — EnergyFlowPage (Apple · SwiftUI / HIG)
+Run: 2026-06-08T08:35-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/530
+Base: c9c6fdb9f
+Prompt: .github/prompts/monorepo/p4-apple/pages/battery/EnergyFlowPage.prompt.md
+Web source (spec): web/src/features/battery/pages/EnergyFlowPage.tsx (638 lines, web route /energy-flow)
+Mode: code-complete + DEFERRED Xcode app build/test (P4 precedent 0056 LivePowerFlowWidget,
+      ADR-012 macOS-pending — the app target links the not-yet-staged Shared.xcframework and
+      the surface's source-path/route registration is the navigation-integration prompt's scope).
+================================================================================
+
+=== CAPABILITY PROBE (real, this host) ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)                  ✅
+  /Applications/Xcode.app .... PRESENT (full Xcode); active dir = CommandLineTools
+                               (xcode-select), so xcodebuild needs DEVELOPER_DIR override ⚠
+  swiftc -typecheck SwiftUI .. compiles for macOS 15 AND iOS 18 sim (Swift Charts,
+                               ViewThatFits, @Observable, ContentUnavailableView resolve)  ✅ (proven below)
+  PreviewsMacros plugin ...... present under Xcode.app MacOSX platform → #Preview expands   ✅ (proven below)
+  swiftlint .................. /opt/homebrew/bin/swiftlint                                 ✅
+  swiftformat ................ /opt/homebrew/bin/swiftformat                               ✅
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh, self-test PASS                      ✅
+  xcodegen ................... /opt/homebrew/bin/xcodegen                                  ✅ (not run — see deferral)
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks has only .gitkeep)        ⚠ (deferral input)
+  codesign identities ........ `security find-identity -p codesigning` → 0 valid          ⚠ (deferral input)
+  iOS Simulator runtimes ..... none under the active CLT toolchain                         ⚠ (deferral input)
+
+  Charts capability note: this page uses the P3 native Swift Charts wrappers (TSRadialGauge,
+  TSAreaChart, TSBarChart) — NEVER a WKWebView. SwiftUI + Swift Charts ARE available and are
+  proven by real macOS- AND iOS-SDK compiles below, so the capability-BLOCKED escape hatch
+  ("SwiftUI/Charts/MapKit unavailable") does NOT apply — the page is authored + host-validated
+  for real. No map (web "Maps (0)").
+
+=== ARTIFACT (apps/apple/TeslaSync/Features/Battery/EnergyFlowPage.*) ===
+  EnergyFlowPage.Adapter.swift   298  domain value types (stats/daily/flow), Shared-free unit prefs,
+                                      SI->display formatters + derivations ported 1:1 from web
+                                      lib/unitConversion + numberFormat + the page useMemo blocks.
+  EnergyFlowPage.Model.swift     252  P1/S8 state-holder seam + @Observable model + in-memory source,
+                                      P1/S11 telemetry seam, P1/S10 strings facade, pure projection.
+  EnergyFlowPage.swift           270  the public adaptive page (scaffold + header + freshness/banner +
+                                      the 4 HIG state branches + section composition + /energy-flow route).
+  EnergyFlowPage.Diagram.swift   315  Section 1 — the real-time flow diagram (GlassPanel1..8 +
+                                      RadialGauge); ViewThatFits horizontal/vertical adaptive flow.
+  EnergyFlowPage.Sections.swift  227  Section 2 summary metrics (GlassPanel9..14) + Section 5 efficiency
+                                      metrics (GlassPanel18..21) + the shared section header.
+  EnergyFlowPage.Charts.swift    183  Section 3 area chart (GlassPanel15) + Section 4 bar charts
+                                      (GlassPanel16..17) + the titled chart panel + chart empty state.
+  EnergyFlowPage.History.swift   161  Section 6 history TSDataTable (GlassPanel22, 4 sortable columns) +
+                                      both web empty messages.
+  EnergyFlowPage.Previews.swift  114  #if DEBUG previews — one per state (content/imperial/loading/empty/
+                                      error/offline) driven through the in-memory source.
+  EnergyFlowPage.Tests.swift     263  XCTest: projection / formatters / derivations / model / strings /
+                                      route (40+ assertions across 6 XCTestCase classes).
+  EnergyFlowPage.strings          75  P1/S10 catalog contribution: 44 web natural keys + 11 native chrome
+                                      keys. Per-surface table (parallel-safe; not the shared xcstrings).
+  Production Swift (excl. previews/tests) = 1706 lines vs web 638 (≈268%); every file ≤400 (house file_length).
+  One public View per surface file; section subviews are internal. No raw hex, no Tailwind ports.
+
+=== PARITY (vs web EnergyFlowPage.tsx) — PARITY_REQUIRED=74 ===
+  Data sources → bound via the P1/S8 seam (EnergyFlowSource → EnergyFlowPageModel; no view HTTP):
+    useEnergyFlow (GET /vehicles/{id}/energy/flow) + the historical GET /vehicles/{id}/energy stats.
+    The production app wires EnergyFlowSource over the shared EnergyStore; the view performs NO HTTP.
+  Units → SI in / display out at the render boundary ONLY (ADR-005): EnergyFlowFormat ports the web
+    convertEnergyFromSI(÷1000)/convertDistanceFromSI(km÷1000, mi÷1609.344)/efficiency(*1000 | *1609.344)
+    + Intl-equivalent number grouping (en-US). The live-flow scalars (kW/kWh/%) are carried verbatim as
+    the web renders them. EXECUTED-green parity proof below (31/31).
+
+  -- panel (22) --
+  [x] GlassPanel1   — EnergyFlowDiagramSection (TSGlassPanel)                 [Diagram.swift]
+  [x] GlassPanel2   — gridNode / EnergyFlowGlowPanel(glow green) + plug icon  [Diagram.swift]
+  [x] GlassPanel3   — batteryNode / EnergyFlowGlowPanel(glow cyan)+RadialGauge[Diagram.swift]
+  [x] GlassPanel4   — motorNode / EnergyFlowGlowPanel(dimmed "No live data")  [Diagram.swift]
+  [x] GlassPanel5   — breakdownRow DC / EnergyFlowPowerTile                   [Diagram.swift]
+  [x] GlassPanel6   — breakdownRow AC / EnergyFlowPowerTile                   [Diagram.swift]
+  [x] GlassPanel7   — breakdownRow HVAC / EnergyFlowPowerTile (N/A, dimmed)   [Diagram.swift]
+  [x] GlassPanel8   — breakdownRow Accessories / EnergyFlowPowerTile (N/A)    [Diagram.swift]
+  [x] Total-Energy  — EnergyFlowSummarySection tile / EnergyFlowMetricTile    [Sections.swift]
+  [x] Total-Charged — EnergyFlowSummarySection tile / EnergyFlowMetricTile    [Sections.swift]
+  [x] Distance      — EnergyFlowSummarySection tile (+ distanceUnit subtitle) [Sections.swift]
+  [x] Efficiency    — EnergyFlowSummarySection tile (+ efficiencyUnit)        [Sections.swift]
+  [x] CO-Saved      — EnergyFlowSummarySection tile (+ "kg")                  [Sections.swift]
+  [x] Period        — EnergyFlowSummarySection tile (+ "days")               [Sections.swift]
+  [x] GlassPanel15  — EnergyFlowUsageChartSection (TSGlassPanel + area chart) [Charts.swift]
+  [x] GlassPanel16  — distancePanel / EnergyFlowChartPanel (bar chart)        [Charts.swift]
+  [x] GlassPanel17  — efficiencyPanel / EnergyFlowChartPanel (bar chart)      [Charts.swift]
+  [x] GlassPanel18  — EnergyFlowEfficiencyMetricsSection (TSGlassPanel)       [Sections.swift]
+  [x] GlassPanel19  — EnergyFlowEfficiencyTile (efficiency rating + badge)    [Sections.swift]
+  [x] GlassPanel20  — EnergyFlowEfficiencyTile (CO₂ saved + "kg CO₂" badge)   [Sections.swift]
+  [x] GlassPanel21  — EnergyFlowEfficiencyTile (Avg Energy/Day + "per day")   [Sections.swift]
+  [x] GlassPanel22  — EnergyFlowHistorySection (TSGlassPanel + TSDataTable)   [History.swift]
+
+  -- chart (4) — P3 native Swift Charts wrappers (no WKWebView) --
+  [x] RadialGauge   — TSRadialGauge(value: soc/100) in batteryNode           [Diagram.swift]
+  [x] AreaChart     — TSAreaChart(series: energy)                            [Charts.swift]
+  [x] BarChart      — TSBarChart(series: distance)                           [Charts.swift]
+  [x] BarChart      — TSBarChart(series: efficiency)                         [Charts.swift]
+
+  -- state (4) — for the bound data source (driven by EnergyFlowProjection) --
+  [x] loading  — EnergyFlowPage.loadingState (TSStatSkeleton grid) ⇐ phase .loading  [swift/Model]
+  [x] empty    — EnergyFlowPage.emptyState (ContentUnavailableView) ⇐ phase .empty    [swift/Model]
+  [x] error    — EnergyFlowPage.errorState (error view + Retry) ⇐ phase .error        [swift/Model]
+  [x] success  — EnergyFlowPage.contentSections (all 6 sections) ⇐ phase .content     [swift/Model]
+
+  -- string (44) — every visible literal via EnergyFlowStrings.string(key, fallback);
+     keys defined in EnergyFlowPage.strings (web natural-key names, verbatim) --
+  [x] "AC Power"            [Diagram.swift breakdownRow]      [x] "Motor"                 [Diagram.swift motorNode]
+  [x] "Accessories"        [Diagram.swift breakdownRow]      [x] "N/A"                   [Diagram.swift]
+  [x] "Avg Energy/Day"     [Sections.swift efficiency]       [x] "No Data"               [swift emptyState/Sections rating]
+  [x] "Battery"            [Diagram.swift batteryNode gauge] [x] "No daily distance data available." [Charts.swift]
+  [x] "CO₂ Saved"          [Sections.swift summary+effic.]   [x] "No daily energy data available."   [Charts.swift]
+  [x] "Charging"           [Diagram.swift arrow+badge]       [x] "No efficiency data available."     [Charts.swift]
+  [x] "DC Power"           [Diagram.swift breakdownRow]      [x] "No energy flow data available for this vehicle and time range." [swift emptyState]
+  [x] "Daily Distance"     [Charts.swift distancePanel]      [x] "No energy history records available." [History.swift]
+  [x] "Daily Efficiency"   [Charts.swift efficiencyPanel]    [x] "No energy records found."          [History.swift table empty]
+  [x] "Daily Energy History"[History.swift header]           [x] "No live data"          [Diagram.swift motorNode]
+  [x] "Daily Energy Usage" [Charts.swift usage header]       [x] "Period"                [Sections.swift summary]
+  [x] "Date"               [History.swift dateColumn]        [x] "Power distribution and energy analysis" [swift header]
+  [x] "Distance"           [Sections/Charts/History]         [x] "Total Charged"         [Sections.swift summary]
+  [x] "Driving"            [Diagram.swift drivingArrow]      [x] "Total Energy"          [Sections.swift summary]
+  [x] "Efficiency"         [Sections.swift summary]          [x] "days"                  [Sections.swift summary]
+  [x] "Efficiency Metrics" [Sections.swift effic. header]    [x] "kW"                    [Diagram.swift power readouts]
+  [x] "Energy"             [Charts.swift series/History col] [x] "kWh"                   [Diagram/Sections/History energy]
+  [x] "Energy Flow"        [swift nav title + header]        [x] "kg"                    [Sections.swift CO-Saved]
+  [x] "Energy Flow Diagram"[Diagram.swift header]            [x] "kg CO₂"                [Sections.swift effic. badge]
+  [x] "Excellent"          [Sections.swift rating badge]     [x] "per day"               [Sections.swift effic. badge]
+  [x] "Good"               [Sections.swift rating badge]
+  [x] "Grid"               [Diagram.swift gridNode]
+  [x] "HVAC"               [Diagram.swift breakdownRow]
+  [x] "High"               [Sections.swift rating badge]
+
+  PARITY_COVERED=74   PARITY_REQUIRED=74   (22 panel + 4 chart + 4 state + 44 string)
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — the 7 production surface files compiled together with the REAL apps/apple
+    component library (all of Sources/Components/** except the Shared-backed UnitFormatters.swift,
+    + Sources/Design/** + the generated DesignTokens), under the project's real build mode
+    (-swift-version 6 -strict-concurrency=complete):
+      macOS  (arm64-apple-macos15.0, MacOSX26.5.sdk) ......... TYPECHECK_EXIT=0        ✅
+      iOS    (arm64-apple-ios18.0-simulator, +#if os(iOS)) ... TYPECHECK_IOS_EXIT=0    ✅
+      macOS + Previews (-D DEBUG, Xcode PreviewsMacros) ...... TYPECHECK_DEBUG_EXIT=0  ✅
+    (Adaptive macOS + iOS both green ⇒ ADR-002 single source set covers both idioms.)
+
+[2] EXECUTED logic harness — compiled the PURE core (EnergyFlowPage.Adapter.swift +
+    EnergyFlowPage.Model.swift + design tokens) into a native arm64 binary and RAN it (real
+    "SI → display" + projection, not a typecheck):
+      31/31 checks PASSED — energy(÷1000,2dp) "64.40 kWh"; distance metric "322.0 km" / imperial
+      "200.1 mi"; number grouping "1,234.5"; nan/nil → em dash; unit codes km/mi/Wh-per; dateShort
+      "Jun 1"; chargePower sum (nil→0); avgEnergyPerDay; avgEfficiency metric 191 / imperial 307;
+      efficiency-series metric/imperial; rating ladder noData/excellent/good/high (km+mi thresholds);
+      projection loading/empty/error/content + flow-defaults-none.
+      HARNESS_EXIT=0                                                                   ✅
+
+[3] swiftlint --strict on the 9 surface files (repo rule set; the bare gate's .swiftlint.yml
+    `included:` does not list TeslaSync/Features — that wiring is the integration prompt's job — so
+    the files were linted via an explicit-path config mirroring the repo rules):
+      Done linting! Found 0 violations, 0 serious in 9 files.
+      SWIFTLINT_EXIT=0                                                                 ✅
+    (Repo-wide `swiftlint --strict` shows 1 pre-existing violation in
+     TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift — out of this prompt's scope.)
+
+[4] swiftformat --lint apps/apple/TeslaSync/Features/Battery (repo .swiftformat config):
+      0/9 files require formatting.
+      SWIFTFORMAT_EXIT=0                                                               ✅
+
+[5] check-placeholders (ADR-011 stub gate; swift):
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Battery -Language swift
+        PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0                            ✅
+      ./apps/tools/check-placeholders.ps1 -SelfTest → SELFTEST_EXIT=0 (gate proven to detect stubs) ✅
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the signed macos-latest CI runner; NOT faked) ===
+    xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync build test
+    xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Why deferred (facts verified on this host — none is a defect in this surface):
+      (a) Shared.xcframework NOT staged (apps/apple/Frameworks has only .gitkeep). Both app targets
+          link it (project.yml `framework: Frameworks/Shared.xcframework`); building requires a
+          Kotlin/Native gradle build (apps/shared/gradlew) — independent of this UI surface. Step [1]
+          instead typechecks the WHOLE surface against the real component library (macOS + iOS).
+      (b) NOT-YET-REGISTERED: project.yml's app targets glob `Sources/` + `TeslaSync/dashboard-widgets`
+          + `TeslaSync/feature-views` (not `TeslaSync/Features`), and the page's /energy-flow route is
+          not yet mapped into the shared AppRoute enum + AppShell. Adding those is parallel-UNSAFE
+          across the concurrent page slots (Honesty rule 7) → the navigation-integration prompt's
+          scope. The page exposes a parallel-safe entry (EnergyFlowPage.hosted(model:) +
+          .matchesRoute) so that wiring is a one-line adoption.
+      (c) macOS signing: `security find-identity -p codesigning` → 0 valid identities; the app/widget
+          entitlements need a development certificate (ADR-012 → signed macos-latest runner).
+    XCTest (EnergyFlowPage.Tests.swift) runs in the TeslaSync(/-macOS) test targets under Xcode; the
+    pure subset of those assertions is independently PROVEN GREEN by the executed harness in step [2],
+    and every symbol the suite touches is exercised by the host typecheck in step [1].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Every named panel implemented (22) + every anonymous region reproduced (flow nodes, arrows,
+      breakdown tiles, efficiency sub-panels, history columns).
+  [x] All 74 parity items render from the bound @Observable EnergyFlowPageModel state.
+  [x] loading / empty / error implemented for the data source (+ success) — projection unit-tested
+      and harness-proven; each has a #if DEBUG preview.
+  [x] All visible strings from EnergyFlowPage.strings; zero hardcoded prose; key names match web (44).
+  [x] Dark mode + Dynamic Type (token fonts) + accessibility labels/traits + light/contrast tokens +
+      SI units honored; SwiftUI-native only (Swift Charts, no web cloning); adaptive macOS + iOS.
+  [x] Host gates green (typecheck macOS+iOS / executed harness 31/31 / swiftlint / swiftformat /
+      placeholder). Xcode app build/test DEFERRED with capability + predecessor evidence.
+  [x] PARITY_COVERED==PARITY_REQUIRED (74). apple-ledger.json rows (apple-macos + apple-ios) = covered.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green); 3 verified reasons given. Every
+                       "✅" is a command actually run on this host with its real exit code.
+  2  No scope narrowing: implemented ALL 22 panels + 4 charts + 4 states + 44 strings + the flow diagram,
+                       efficiency metrics, and history table in full.
+  3  No skip-and-assume: each host gate executed; the SI/derivation/projection parity is EXECUTED (31/31).
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; self-test confirms detection.
+  5  No parity shortcuts: faithful port of the web flow derivation, unit math, thresholds, and all states.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit project.yml / the shared AppRoute enum / AppShell / the shared
+                       Localizable.xcstrings (all parallel-unsafe across the concurrent page slots) —
+                       strings shipped as the per-surface table; route exposed via a parallel-safe
+                       EnergyFlowPage.hosted/.matchesRoute entry for the integration prompt to adopt.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to apps/apple/TeslaSync/Features/Battery/**, apps/parity/
+                       apple-ledger.json, and this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native EnergyFlowPage shipped at web parity: a Shared-free, host-typecheckable
+  surface (macOS + iOS green under Swift 6 strict concurrency) bound through the P1/S8 @Observable
+  state-holder seam (no view HTTP), with P1/S11 telemetry and the P1/S10 per-surface string table. All
+  22 panels, 4 Swift-Charts visualizations, 4 HIG data states, and 44 web strings are present and render
+  from bound state; the SI/derivation/projection parity is EXECUTED-green (31/31). The real-time flow
+  diagram is reproduced with an adaptive ViewThatFits (left-to-right on regular width, top-to-bottom on
+  compact — both faithful to the web FlowArrow). All host-runnable gates pass; the Xcode app build/test
+  is DEFERRED to the signed CI runner (Shared.xcframework unstaged + parallel-unsafe target/route
+  registration + macOS signing — none a defect in this code), matching the user-approved P4
+  "code-complete + DEFERRED Xcode gate" disposition established by 0056 LivePowerFlowWidget.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/Features/Battery apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-battery-EnergyFlowPage.log
+  git commit -m "feat(apps/apple): EnergyFlowPage at web parity (P7 battery)"
+
+EXIT=0
+STATUS=DONE

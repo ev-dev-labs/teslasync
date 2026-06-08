@@ -1,0 +1,114 @@
+I'll start by exploring the repository structure and reading the web source component, then understand the existing native Apple patterns.
+
+Now let me explore the native Apple structure to understand existing patterns, especially the recently-modified AIUsageCard files and the shared-surfaces directory.
+
+The `shared-surfaces` directory doesn't exist yet and isn't in `project.yml`. Let me investigate the AIUsageCard files (a presentational example), check the logs for prior shared-surface work, and understand the P1/S8/S9/S10/S11 infrastructure.
+
+Files are `AiUsageCard.*` (case-insensitive FS). Let me check the available toolchain (critical gating question), look at the AiUsageCard reference pattern, and find the P1/S8/S9/S10/S11 infrastructure plus other shared-surface prompts.
+
+Critical finding: **`xcodebuild` requires full Xcode but only Command Line Tools are installed** — the gate's iOS/macOS simulator build+test cannot run on this runner. However `swift` 6.3.2, `xcodegen`, `swiftlint`, and `swiftformat` ARE available. Let me read the AiUsageCard reference pattern fully and locate the P1 infrastructure before deciding my approach.
+
+Now let me read the rest of the AiUsageCard reference files and locate the shared P1 infrastructure (tokens, i18n facade, telemetry, state-holder base, connection enum, TSFadeIn).
+
+Excellent — the pattern is clear. Now let me read the Views/Chrome files and locate the shared P1/S9 design tokens (Color.TS, Font.TS, TSSpacing, TSRadius) and TSFadeIn motion primitive.
+
+Let me check key integration details: whether `shared-surfaces` was ever registered, how `.Tests.swift` files are wired, the placeholder-check script, PowerShell availability, and whether standalone `swift` can compile SwiftUI for macOS (for real compile evidence given no Xcode).
+
+Key finding: `shared-surfaces` IS an established directory in the broader project (other branches added SkipToContent, PageSkeleton, MetricCard, etc.) — just not on this slot yet. Let me examine an existing shared-surface commit (closest presentational analogs) to get the exact file convention and confirm whether `project.yml` gets modified.
+
+The convention is now crystal clear: shared-surface commits add only 7-8 surface files + the log, and **never touch `project.yml`** (directory registration is P4-core's job). SkipToContent is the ideal pure-presentational analog. Let me read all its files to mirror the exact idioms.
+
+I'll read the saved output file to study the full SkipToContent reference.
+
+I now have the complete convention. SkipToContent is the perfect pure-presentational analog. Let me run clean verification probes (real swiftc exit codes for SwiftUI/Charts/MapKit + XCTest availability) before implementing, since the iOS gate is blocked without full Xcode.
+
+All probes confirm my strategy. SwiftUI+Charts+MapKit and `onGeometryChange` compile cleanly for macOS 15 (EXIT=0). XCTest needs full Xcode (absent), so the `xcodebuild` gate steps are genuinely BLOCKED — I'll verify test logic via a standalone runtime harness instead. Let me read the lint/format configs, then write a plan and implement.
+
+Let me check the forbidden placeholder patterns so my code/comments avoid them.
+
+All probes are green where they can be, and the placeholder rules are clear (avoid "TODO/FIXME/Placeholder/Lorem ipsum/not implemented/XXX"). Let me set up tracking, create the plan, and scaffold the directory.
+
+Let me confirm the exact log filename from the actual prompt file before writing.
+
+Confirmed. Now writing the plan and all source files.
+
+Now writing the source files. Starting with the pure projection (the IntersectionObserver port).
+
+All 7 files created. Now formatting and verifying. First, normalize with swiftformat (scoped to my files only), then lint.
+
+swiftformat clean (0/6 require formatting). Now swiftlint `--strict` on the files (passing explicit paths since `shared-surfaces` isn't yet in the `included` list).
+
+swiftlint `--strict`: **0 violations in 6 files.** Now the real compile verification — building the production SwiftUI against the macOS 15 SDK with token stubs (Swift 6 mode + complete concurrency, matching the project).
+
+The only errors are the `#Preview` macro plugin (`PreviewsMacros`) — an Xcode-only compiler plugin absent from CLT, not a code defect (the prompt notes Previews are skipped by the gate scope). Let me confirm the 4 production files typecheck 100% clean without the Previews file.
+
+Typecheck passes (EXIT=0), but Swift 6 strict-concurrency surfaces 4 warnings in the scaffold's `onGeometryChange` transform closure (referencing a main-actor static prop + capturing generic metatypes via `Self.`). The project builds with `SWIFT_STRICT_CONCURRENCY: complete`, so I'll eliminate these for a genuinely clean build by moving the constants to file scope.
+
+The first edit applied but swiftformat had reformatted the static vars. Let me view the current scaffold section and fix the references.
+
+Now re-run swiftformat + swiftlint + the strict-concurrency typecheck to confirm zero warnings.
+
+Production files typecheck with **zero warnings** under Swift 6 strict concurrency. Now let me prove the Previews bodies are well-typed (the only blocker was the Xcode-only `#Preview` macro plugin) by transforming each `#Preview` into a `some View` function and typechecking.
+
+All 10 preview bodies typecheck cleanly. Now the runtime logic harness — exercising the **real** Projection/Summary/Accessibility/Model code with the same assertions as the XCTest suite (since XCTest itself needs Xcode), then running it.
+
+**All 31 runtime logic checks passed** against the real production code. Now the placeholder/stub gate.
+
+Placeholder gate clean (EXIT=0). Before declaring the `xcodebuild` steps blocked, let me check whether a full Xcode.app exists anywhere on this machine that I could point `DEVELOPER_DIR`/`xcode-select` at (which would let the real gate run).
+
+A full **`/Applications/Xcode.app` exists** — the active dir is just pointed at CommandLineTools. I can use `DEVELOPER_DIR` (no sudo) to access the real iOS 18 / macOS 15 SDKs, the `#Preview` macro plugin, XCTest, and simulators. Let me validate Xcode and run the real toolchain.
+
+Xcode 26.5 with iOS/macOS SDKs and a booted iPhone 16 simulator are present. Now I'll run the **real** toolchain. First, compile all 6 surface files against both the real iOS 18 simulator SDK and macOS 15 SDK (with the now-available `#Preview` macro plugin).
+
+Both **iOS 18 simulator and macOS 15** full compiles pass (EXIT=0, zero warnings). Now running the **actual XCTest suite** via a minimal SwiftPM `TeslaSync` module built from the shipped Projection+Model files.
+
+**Real XCTest suite: 19 tests, 0 failures** under the Xcode toolchain. Every verification within scope passes. Before finalizing the log/STATUS, let me check how the precedent shared-surface logs (e.g. SkipToContent) recorded their gate results and STATUS on this same kind of runner.
+
+The precedent is definitive: SkipToContent (and every shared-surface on this runner) records **STATUS=BLOCKED / EXIT=1** because the literal `xcodebuild -scheme` gate is blocked by (b) the absent KMP `Shared.xcframework` and (c) `shared-surfaces` not being wired into `project.yml` — both outside the prompt's allowed files. My in-isolation evidence is even stronger (real iOS+macOS compiles + a real 19-test XCTest run). Let me confirm the blocking facts first-hand for an accurate log.
+
+All three blocking facts confirmed first-hand. Let me do a bounded, first-hand run of the actual gate (with `DEVELOPER_DIR` set) to observe exactly where it stops — so my log reflects what I directly witnessed.
+
+`.xcodeproj` is gitignored (safe), and `build-shared-xcframework.sh` explicitly "Requires the Kotlin/Native Apple toolchain" + Gradle — confirming blocker (b). Let me confirm (c) my files aren't in the generated project, then witness the KMP stage with a bounded build.
+
+Confirmed (c) first-hand: `PageHeaderSticky` appears **0 times** in the generated project (not wired), while `AiUsageCard.swift` appears 6× (feature-views IS wired). Let me witness the KMP Gradle stage with a properly-bounded async build.
+
+The KMP Gradle toolchain is actually **provisioned and running** on this runner (downloading Kotlin/Native, linking frameworks) — unlike the precedent environment. So blocker (b) may resolve here, leaving only (c) the project.yml wiring. Let me let it continue and see if `Shared.xcframework` + the macOS app actually build.
+
+The KMP `Shared.xcframework` **actually builds** on this runner (provisioned) — so blocker (b) does NOT apply here; the only remaining scheme-gate blocker is (c): my surface isn't wired into `project.yml` (outside allowed files, P4-core's job). The full app build won't include/test my files regardless, so it can't validate this deliverable. I have comprehensive in-isolation evidence. Let me stop the build and check for any stray generated files.
+
+KMP `Shared.xcframework` built successfully here, and all generated artifacts are gitignored (clean tree; the only pre-existing `M` files are `AiUsageCard.*`, untouched by me). The sole remaining scheme-gate blocker is (c): the surface isn't wired into `project.yml` (outside allowed files, P4-core's job) — matching the accepted precedent (SkipToContent → BLOCKED/EXIT=1). My in-isolation evidence exceeds the precedent. Now writing the gate log.
+
+All 7 files present. Now writing the comprehensive, honest gate log.
+
+Let me fix a typo in the log and run a final clean-check on the deliverables before committing.
+
+All final gate-scope checks green (format 0/6, lint 0, placeholder 0). Now staging exactly the deliverables + log and committing.
+
+Exactly 8 files staged (7 surface + log); the pre-existing `AiUsageCard.*` changes are untouched. Committing.
+
+Committed as `2464d7f1d` (only pre-existing `AiUsageCard.*` remain unstaged, untouched by me). Cleaning up temp artifacts and finalizing todos.
+
+The task is complete. All todos done, temp files cleaned, and the surface committed.
+
+## Summary
+
+Built **`PageHeaderSticky`** — a production-grade SwiftUI parity of `web/src/components/layout/PageHeaderSticky.tsx` — as a P4 Apple shared surface, following the established shared-surfaces convention (mirroring `SkipToContent`).
+
+**Delivered (committed `2464d7f1d`, 8 files / 1019 lines):**
+- `PageHeaderSticky.swift` — generic surface View (renders nothing while hidden = web `return null`; interactive vs. static bar; reduce-motion reveal; string-summary convenience init)
+- `PageHeaderSticky.Model.swift` — P1/S10 i18n facade, P1/S11 telemetry seam, P1/S8 `@Observable` state-holder (geometry→visibility, `view.opened` once on first reveal, scroll-to-top action)
+- `PageHeaderSticky.Projection.swift` — pure `IntersectionObserver` port (`heroTop<0 && heroBottom<=topOffset`, incl. the long-page false-positive guard), summary em-dash elision, a11y label composition
+- `PageHeaderSticky.Views.swift` — tokenized bar chrome (material + hairline divider + arrow, no ported Tailwind) + end-to-end `PageHeaderStickyScaffold` (hero tracking via `onGeometryChange` + scroll-to-top)
+- `.Previews.swift` (10 states), `.Tests.swift` (19 XCTest cases), `.strings` (P1/S10 catalog)
+
+**Faithful states reproduced** (the only ones the source has — it's pure-presentational, no data axis): hidden / visible·interactive / visible·static / empty→em-dash. Generic loading/error/stale/offline are N/A and documented (not fabricated).
+
+**Verification (real Xcode 26.5 toolchain):**
+- swiftlint `--strict`: **0 violations / 6 files** · swiftformat `--lint`: **0/6** · placeholder gate: **0**
+- Compiles **0 errors / 0 warnings** for **iOS 18 simulator AND macOS 15** SDKs under Swift 6 complete strict-concurrency (Previews included via the real `#Preview` macro)
+- **Real XCTest run: 19 tests, 0 failures**
+
+**Gate: `EXIT=1 / STATUS=BLOCKED`** — honest and precedent-consistent. The `xcodebuild -scheme` step can't certify this surface only because `shared-surfaces` isn't wired into `project.yml`/`.swiftlint.yml` (verified: 0 occurrences in the generated project), which is **outside this prompt's Allowed files** and owned by P4 core. I confirmed the KMP `Shared.xcframework` actually builds on this runner, so that's not a blocker here — the surface itself is complete and fully verified in isolation.
+
+
+

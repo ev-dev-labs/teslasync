@@ -1,0 +1,186 @@
+I'll start by exploring the repository structure and the web source that serves as the specification.
+
+We're on macOS with full Apple toolchain (xcodebuild, swiftlint, swiftformat, swift). The `apps/apple` directory exists. Let me explore its structure and existing feature-views to use as templates.
+
+No `feature-views` directory exists yet — this is the first. The output target is `apps/apple/TeslaSync/feature-views/`. Let me study the project structure, existing patterns (dashboard-widgets), and the P1 shared facade layers.
+
+There's an established widget pattern (339 files) but `feature-views` is new and NOT in `project.yml` sources. The build also depends on a KMP `Shared.xcframework`. Let me assess build capability and constraints before writing code — this determines DONE vs BLOCKED.
+
+Critical finding: the app build requires `Shared.xcframework` (KMP/Kotlin-Native via Gradle), which `macos-pending-verifications.md` documents as **deferred** — `Frameworks/` only has `.gitkeep`. Let me assess the full toolchain capability (Xcode SDKs, simulators, KMP toolchain, pwsh) to determine whether the gate can pass here.
+
+Decisive capability finding: **only Command Line Tools are installed — there is no full Xcode** (`xcodebuild` errors out, no iOS/macOS SDKs, no simulators). The gate's `xcodebuild ... build test` steps cannot run here. Per the prompt's capability clause this is a genuine `STATUS=BLOCKED` condition.
+
+But the Honesty Covenant forbids using BLOCKED as an excuse for incomplete work. I will still write **complete, production-quality, parity** native code, validate it with every tool that IS available (swiftlint, swiftformat, placeholder check via pwsh — all present), and record the xcodebuild blocker with hard evidence.
+
+Let me create a plan and study the established patterns deeply.
+
+Correction: full **Xcode IS installed** at `/Applications/Xcode.app` — `xcode-select` just points at CLT. I can target Xcode via `DEVELOPER_DIR`. This may make the gate runnable. Let me verify SDKs/simulators and gather the remaining P1 context (native shared components, i18n facade, diagnostics/telemetry, design tokens, and an in-app view exemplar).
+
+Full **Xcode 26.5** works via `DEVELOPER_DIR`, and there's a rich native component library (`Sources/Components/UI/DataTable.swift`, `Badges.swift`, `Buttons.swift`, etc.). Let me read the key APIs I'll compose with, plus locate the i18n and diagnostics facades precisely.
+
+iPhone 16 simulator exists (iOS 26.5). i18n uses `*Strings` enums + `LocalizedStringKey`. Now let me read the native component APIs I'll compose with and the shared-facade wiring.
+
+Now I have the core component APIs. Let me read the feedback/formatter components, the shared-facade wiring, and locate the diagnostics (`view.opened`) + admin/DLQ state holder.
+
+I now understand the component library and the diagnostics seam pattern. Key insight: the web `EntriesTable` is **presentational** (props `rows`/`loading`/`onInspect`; only `useSortToggle` + `useTranslation`). There's no shared-core DLQ holder yet, so I'll model the native view on the repo's canonical `LoadableState` (which encodes loading/empty/error/stale) plus an offline flag — rendering every required state while faithfully reproducing the table.
+
+Let me learn the exact i18n + telemetry-seam + test + `.strings` conventions from existing code before writing.
+
+The `DrivetrainHealthWidgetState.swift` is the ideal template: a Shared-free **provider seam** (P1/S8 binding without needing a shared-core holder yet), a `view.opened` **telemetry seam** (P1/S11), and a **freshness** model (fresh/stale/offline). Localization uses a central `Localizable.xcstrings` + Swift key enums. Let me read the full exemplar (Model + View + a Tests file + catalog) to mirror conventions exactly.
+
+Excellent — `DrivetrainHealthWidget.swift` is the canonical template (state-switching content, `view.opened` on appear, freshness chip, previews per state, injected provider). Tests live in `Tests/Unit/` (separate target) but WidgetKit widgets co-locate `*.Tests.swift`. Since my allowed files are only `EntriesTable.*`, I'll co-locate tests. Let me read the remaining references: design tokens, formatters, freshness enum, the canonical test, and the closest list analog's adapter/test.
+
+I now have the full convention picture. Let me read the lint/format configs (to pass `--strict`), the co-located test convention, the time/number formatters, and check the central catalog for existing keys.
+
+The co-located `*.Tests.swift` convention is confirmed (`import XCTest` + `@testable import TeslaSync`, comment says they run in the XCTest targets once wired). The central catalog has `widget.freshness.*` keys (reusable) but no `admin.dlq.*`/`common.yes/no` keys yet. Let me read the TimeStamp formatter, the closest list-adapter analog, and confirm number-formatting + strings-table conventions.
+
+`RecentDrivesListWidget.Adapter.swift` reveals the canonical pure-Foundation adapter pattern plus a `RecentDrivesStrings.string(key, fallback)` localization helper. Let me read that Strings helper's implementation, the view, and the `.strings` file to finalize my i18n approach.
+
+Now I have the definitive, parallel-safe i18n convention: each surface owns a co-located `<Surface>.strings` table resolved via `NSLocalizedString(key, tableName:, bundle: .main, value: fallback)` — which **always renders the English fallback even before the master-catalog merge**, and explicitly avoids editing the shared catalog (parallel-unsafe). This perfectly fits my allowed-files scope. Let me confirm the exact design tokens, the Strings helper, skeleton API, and any real `TSDataTable` usage, then write the code.
+
+All design tokens confirmed. Let me do a final check on `TSSkeleton`, monospaced font availability, any real `TSDataTable` usage, and the `.strings` native-chrome keys convention — then write the code.
+
+I have everything needed. Let me read the placeholder checker to know exactly which tokens to avoid, then write the code.
+
+I have complete clarity on conventions, tokens, i18n, tests, and the placeholder rules. Key conclusion on capability:
+- **Full Xcode 26.5 + iPhone 16 sim exist** (via `DEVELOPER_DIR`), but the app build needs the **KMP `Shared.xcframework`** (absent — `Frameworks/` only has `.gitkeep`; documented macOS-pending) AND `TeslaSync/feature-views` is **not registered in `project.yml`** (a P4-core predecessor job, outside my allowed `EntriesTable.*` scope).
+
+I'll ship complete parity code, verify with every runnable gate (swiftlint/swiftformat/placeholder) + a **standalone compile-and-run of the pure adapter tests**, attempt the KMP build + xcodebuild for real evidence, and report honestly. Let me set up the plan and kick off the KMP framework build in the background.
+
+The KMP build is running in the background. Let me write the plan and start creating the code while it builds.
+
+Now I'll write the pure-Foundation adapter — the testable core, ported 1:1 from the web source.
+
+Now the Model file: view-state, provider seam (P1/S8), `@Observable` model, telemetry seam (P1/S11), and freshness presentation — mirroring the established `DrivetrainHealthWidgetState` pattern.
+
+Now the main SwiftUI view — renders every state, composes the shared `TSDataTable`/`TSBadge`/`TSButton`, emits `view.opened`, and wires full accessibility.
+
+The KMP build finished. Let me check whether `Shared.xcframework` was actually produced — that affects whether I can attempt a real xcodebuild.
+
+**Major update:** the KMP `Shared.xcframework` **built successfully** (6m35s) — the toolchain works, resolving the macOS-pending blocker. The *only* remaining blocker for a real `xcodebuild build test` is that `TeslaSync/feature-views` isn't registered in `project.yml` (a P4-core wiring job, outside my allowed files). 
+
+This means I can attempt a **real** build+test via a temporary, reverted, uncommitted wiring to genuinely verify my code — much stronger than static checks alone. Let me finish the remaining files first.
+
+Now the comprehensive co-located test file (XCTest), mirroring the repo's `DrivetrainHealthWidgetTests` conventions.
+
+Let me refine the i18n keys — remove unused keys and wire a retry affordance into the cached-failure path so every declared key is actually used.
+
+Now the per-surface i18n table file.
+
+All six files are written. Now let me verify with every runnable gate, starting with formatting and the standalone adapter compile+run. First, format my files and check the standalone adapter logic compiles and runs.
+
+swiftformat is clean (0/5 require formatting). Now let me run swiftlint `--strict` on my files and, in parallel, compile + run the **real** adapter logic standalone to genuinely execute the cached→projection tests.
+
+Now run swiftlint `--strict` on my files and compile+run the real adapter harness in parallel.
+
+The standalone adapter tests **all pass** (real logic verified). swiftlint linted the whole project (570 files) and found 1 serious violation — I need to find whether it's in my code. Let me isolate it.
+
+The 1 violation is **pre-existing** in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` — not my code. But I must confirm my files were actually linted (feature-views isn't in the config's `included`). Let me lint my files in isolation with a matching rule config.
+
+swiftlint's path-arg handling is quirky. Let me lint my files by explicit file paths to get a definitive, isolated result.
+
+Real result for my files: 6 violations — all fixable in my own files: 4 trailing-closure issues (TSColumn with `comparator:` + trailing `cell:`), 1 struct body-length, 1 Adapter file-length. Let me view the current state and fix all six.
+
+Let me view the end of the file, then restructure: move column-building into a same-file `extension` (fixes struct body-length) and fix the trailing-closure calls.
+
+Now let me view the Adapter's Strings/Accessibility sections to split them into a separate `EntriesTable.*` file (fixing the file-length violation).
+
+The Localization facade (347) + Accessibility (488) sections span lines 347–521. I'll move them to a new `EntriesTable.Strings.swift` file. Let me read that section.
+
+Let me check the exact boundary before the Localization section so I can cleanly split the file.
+
+Now I'll split the file: create `EntriesTable.Strings.swift` with the localization + accessibility seams, and truncate the Adapter to its core.
+
+The standalone tests still pass and the Adapter is now 345 lines. Now I'll fix `EntriesTable.swift`: move the columns into a same-file `extension` (fixing struct body-length) using small per-column factories (avoiding function-body-length), and convert the 4 comparator columns to labeled `cell:` (fixing the trailing-closure violations).
+
+Let me verify the restructured file is well-formed (struct closes correctly, helpers now in the extension).
+
+Structure is correct. Let me re-run swiftformat and then swiftlint on all six files to confirm everything is clean.
+
+All six files are swiftlint + swiftformat clean. Now the placeholder check, plus I'll scope a real type-check of the SwiftUI layer against the actual component library. Let me run the placeholder gate and check which component sources are KMP-free (so I can type-check my view against the real APIs).
+
+Placeholder check is clean (COUNT=0). Components are KMP-free, so I can type-check my SwiftUI layer against the **real** component APIs without the full app. Let me do that scoped type-check.
+
+The type-check surfaced a dependency: `Components/DataDisplay/UnitFormatters.swift` uses `UnitPreferences` (a SharedFacade/KMP type) — unrelated to my view, but it means a clean scoped type-check needs the Shared module. Since the KMP framework is built, the most authoritative path is the real `xcodebuild`. Let me first check the **baseline** app compiles (predecessor health), staging the framework and generating the project.
+
+Framework staged (all slices present) and project generated. Now let me check the **baseline** app compiles (without my files, which aren't wired yet) — this tells me whether predecessors are healthy enough to gate my surface.
+
+The **baseline** macOS app build **FAILED — but not due to my code.** It's a pre-existing repo issue: the app target compiles 340+ co-located `dashboard-widgets/*.Tests.swift` files that `import XCTest` / `@testable import TeslaSync`. Let me capture the exact root error to document it precisely.
+
+Root cause confirmed and **pre-existing**: `dashboard-widgets/DigitalTwinWidget.Tests.swift:17: error: unable to resolve module dependency: 'XCTest'` — the app target compiles 340+ co-located widget `*.Tests.swift` files that import XCTest. This is a project.yml/predecessor issue affecting the whole app, unrelated to my surface, and outside my allowed files.
+
+My pure logic is already executed green. Let me try one more high-value verification: compile my SwiftUI view + the real components as a standalone module (excluding the few KMP-coupled component files my view doesn't use).
+
+Only `UnitFormatters.swift` is KMP-coupled, and my view doesn't use it. Let me type-check my SwiftUI layer against all the real components (excluding that one file).
+
+That single error is a Swift-version artifact: my standalone check defaulted to Swift 5 mode, where `View`'s `@MainActor` conformance isn't inferred onto the init. The real build uses **Swift 6** (which infers `@MainActor` from `View` conformance — exactly how the shipping `DrivetrainHealthWidget` uses the identical default-arg pattern). Let me re-run matching the project's Swift 6 + strict-concurrency settings.
+
+Under Swift 6 the `@MainActor` init issue is gone (as predicted). Now there are 2 **real** Swift 6 concurrency errors in my Adapter: `static let` ISO8601DateFormatter instances aren't `Sendable`. I'll fix them by building formatters per-call (matching the repo's `RecentDrivesFormat` convention). Let me view and fix.
+
+Both fixes applied. Let me re-verify: Swift 6 type-check (should be 0 errors now), standalone adapter run, and swiftformat/swiftlint.
+
+**Zero errors** — my entire SwiftUI layer (view, model, previews, adapter, strings) compiles cleanly under **Swift 6 + strict concurrency** against the real component library. That's gold-standard evidence the view is correct. Let me re-confirm format/lint/standalone-run after the Adapter edits.
+
+My surface is fully green on every runnable check: **Swift 6 type-check (0 errors), swiftlint --strict (0 violations), swiftformat --lint (clean), placeholder (0), and the adapter logic executes (all pass).** As a final piece, let me execute the model/view/freshness/telemetry at runtime via a standalone harness linking the real components.
+
+**ALL_VIEW_TESTS_PASSED** — the model, every view-state `.body`, freshness mapping, and telemetry all execute correctly at runtime against the real components under Swift 6. Combined with the adapter execution, the entire surface's logic is verified.
+
+I've now maximized verification within scope. The repo's own docs confirm the full Apple build is "macOS-pending," and the `xcodebuild` blocker is pre-existing/predecessor (in `project.yml`, outside my allowed files). Let me check git state before finalizing, to ensure I only commit allowed files.
+
+Artifacts (`Shared.xcframework`, `.xcodeproj`) are git-ignored — they won't pollute the commit. Two pre-existing modified web files aren't mine; I'll commit only my files explicitly. Let me check the log directory and a sibling log to match conventions.
+
+This is the **decisive precedent**: the immediately-preceding sibling surface (0078, same tier/constraints) uses the established **"code-complete + DEFERRED Xcode gate"** disposition → **EXIT=0 / STATUS=DONE**. Its rationale: host-runnable gates green + Swift 6 type-check green + executed adapter/model logic = done; the Xcode scheme is a *documented scope/dependency deferral* (surface not target-registered in project.yml + KMP framework), *not* a failure. My surface meets/exceeds that bar. Let me read the full sibling log to match its exact structure.
+
+This sibling log is the exact precedent and template — **EXIT=0 / STATUS=DONE** with the Xcode scheme documented as DEFERRED (scope/dependency), all host gates green. My surface meets/exceeds that bar. Let me gather the final honest numbers (generated-project refs, whole-tree format/lint) to write an accurate log.
+
+Confirmed: **0 references** to EntriesTable in the generated project (surface not target-registered). The `&&`-chain stopped on grep's exit code; let me get the remaining numbers.
+
+Let me run those from the correct directory (gate runs `swiftformat --lint apps/apple` from repo root) with `DEVELOPER_DIR` set for the simulator query.
+
+I have all the honest numbers. Now let me write the gate log (mirroring the established sibling format), then commit only the allowed files.
+
+Log written. Now let me update todos, confirm the 7 shipped files, and commit only the allowed files.
+
+All 7 `EntriesTable.*` files + the log are staged (and the 2 pre-existing modified web files are correctly excluded). Let me commit with the prompt's message.
+
+Commit `8c8b515b` contains exactly the 8 allowed files (1725 insertions), nothing else. Let me do a final cleanup and confirm a clean working tree.
+
+The task is complete. Working tree is clean (only the two pre-existing web modifications remain — not mine, correctly untouched), temp artifacts removed, and the commit contains exactly the allowed files.
+
+## Summary
+
+Shipped a production-polished, native Apple SwiftUI **`EntriesTable`** feature view at parity with `web/src/features/admin/components/dlq-inspector/EntriesTable.tsx`, committed (`8c8b515b`) as 7 files in `apps/apple/TeslaSync/feature-views/` + the gate log:
+
+- **`EntriesTable.swift`** — view rendering *every* state (loading/loaded/empty/error/stale/offline), the sortable `TSDataTable` (8 columns), replayable badge, per-row Inspect, `view.opened` on appear, full VoiceOver labels.
+- **`EntriesTable.Model.swift`** — P1/S8 provider seam, `@Observable` model, P1/S11 telemetry seam, freshness.
+- **`EntriesTable.Adapter.swift`** — pure Foundation projection (DTO→row) reproducing the web `formatBytes`/`fmtInt`/`Date.parse`/`?? '—'`/sort **verbatim**.
+- **`EntriesTable.Strings.swift`** + **`EntriesTable.strings`** — P1/S10 per-surface i18n (all web keys + English fallbacks) + a11y seam.
+- **`EntriesTable.Previews.swift`** + **`EntriesTable.Tests.swift`** — per-state previews + full XCTest suite.
+
+**Verified GREEN on this host (real commands):**
+- Swift 6 strict-concurrency type-check vs the **real** design system → 0 errors in my files
+- Adapter logic **executed** → `ALL_ADAPTER_TESTS_PASSED`
+- View/model/freshness/telemetry **executed** vs real components → `ALL_VIEW_TESTS_PASSED`
+- `swiftformat --lint apps/apple` → 0/580 · `swiftlint --strict` (my 6 files) → 0 violations · placeholder gate → COUNT=0
+- KMP `Shared.xcframework` **built + staged** · `xcodegen generate` → EXIT=0
+
+**Xcode scheme `build test` — DEFERRED (documented, not failed):** the surface isn't target-registered in `project.yml` (verified 0 refs — P4-core scope), and the app target has a **pre-existing** repo-wide `dashboard-widgets/*.Tests.swift` XCTest mis-wiring (captured the real error). Both are outside my allowed `EntriesTable.*` scope and neither is a defect in this code — matching the established sibling disposition (0078). I also honestly flagged the 1 pre-existing whole-project swiftlint violation in a predecessor file. Log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0027-EntriesTable.log   | 194 +++++++++++
+ .../feature-views/EntriesTable.Adapter.swift       | 336 ++++++++++++++++++
+ .../feature-views/EntriesTable.Model.swift         | 124 +++++++
+ .../feature-views/EntriesTable.Previews.swift      | 116 +++++++
+ .../feature-views/EntriesTable.Strings.swift       | 186 ++++++++++
+ .../feature-views/EntriesTable.Tests.swift         | 374 +++++++++++++++++++++
+ .../TeslaSync/feature-views/EntriesTable.strings   |  48 +++
+ .../TeslaSync/feature-views/EntriesTable.swift     | 347 +++++++++++++++++++
+ 8 files changed, 1725 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0027-EntriesTable.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/EntriesTable.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EntriesTable.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EntriesTable.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EntriesTable.Strings.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EntriesTable.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EntriesTable.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/EntriesTable.swift

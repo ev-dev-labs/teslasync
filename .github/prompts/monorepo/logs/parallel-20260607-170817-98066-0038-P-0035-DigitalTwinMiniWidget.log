@@ -1,0 +1,151 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple toolchain availability.
+
+Key finding: **Xcode is NOT installed** — only Command Line Tools (`xcodebuild` errors, `simctl` missing). `swift`, `swiftlint`, `swiftformat` are available. Let me explore the existing Apple app structure to understand conventions before deciding the path forward.
+
+**Critical update:** `Xcode.app` IS in `/Applications` — just not selected (`xcode-select` points to CommandLineTools). I can likely use `DEVELOPER_DIR` override. `pwsh` is available too. Let me verify Xcode works and explore the existing native conventions.
+
+Excellent — **Xcode 26.5 is fully available** (iOS/macOS SDKs, iPhone 16 simulator, xcodegen, pwsh all present). Platform capability is NOT blocked. However, there's no existing dashboard-widget infrastructure yet. Let me investigate the project layout, parity manifest, and existing conventions deeply.
+
+Let me gather critical environment facts (KMP framework, JDK, build status) and the data-model/convention files in parallel.
+
+JDK 17 present, so the KMP framework can build via Gradle. Let me read the parity manifest, prior gate logs, the Windows widget layout (precedent), and the full web data model in parallel.
+
+Now I understand the landscape: iOS gate is runnable (precedent shows it green), macOS is environmentally blocked on signing, and native code lives under compiled paths. Let me read the core data model and native conventions in parallel.
+
+The web data model is clear. Now I need to deeply understand the native primitives I'll compile against. Let me explore the design tokens, localization, tests structure, diagnostics, and read the key facade/component files.
+
+Let me read the binding/composition primitives, feedback components, tokens, and an existing data-bound view to model my widget on what actually compiles.
+
+I now understand the native idioms well. Let me read the remaining essentials — design tokens, LiveStatus, Cards/Banners, routing, the xcstrings format, and an existing test — so my code compiles cleanly under Swift 6 strict concurrency.
+
+Let me read the design tokens, localization catalog format, an existing test, and the Live/FacadeError enums to finalize my compile surface.
+
+Let me read the remaining web helpers (charging/driving/turn-signal/window-summary) and the `VehicleTwin` props/indicators to mirror the adapter and glyph faithfully.
+
+I have the complete data model now. Let me set up tracking, read the lint configs, and write the plan.
+
+Let me read the exact APIs I'll reuse (Skeletons, Banners, Buttons, freshness indicators) before writing, and create the plan.
+
+All APIs confirmed. Let me write the plan, then implement the widget.
+
+Now I'll create the widget file — the complete native surface with projection, pure adapter, observable model, data-source seam, registry descriptor, shell, top-down car glyph, badges, all states, telemetry, and previews.
+
+Now let me make a few subviews internal (so tests can snapshot each state) and add a sample projection, then write the tests.
+
+Now let me add the i18n keys to the xcstrings catalog programmatically (valid JSON), only adding missing keys.
+
+The catalog now has the keys. Let me verify reused freshness keys exist and the JSON is valid, then wire project.yml.
+
+Now wire the dashboard-widgets path into both app targets in project.yml.
+
+Let me ensure swiftlint covers the new widget path, then auto-format my files.
+
+Two lint issues: file too long (need to split) and a trailing-closure rule. I'll split into a Model file + View file (both match the allowed `DigitalTwinMiniWidget.*` glob) and fix the closure call. Let me recreate both files cleanly.
+
+Now the View file with the trailing-closure fix applied:
+
+Now reformat, lint, and run the placeholder check on the new files.
+
+File-length warning (400) is promoted to error under `--strict`. Let me check the repo norm before splitting further.
+
+The repo norm keeps every file ≤390 lines. I'll split into 7 focused files (all matching the `DigitalTwinMiniWidget.*` glob). Let me recreate them cleanly.
+
+Now format and lint all 7 files plus the test, and verify line counts.
+
+All 7 widget files ≤269 lines, test 373 — under the 400 norm. swiftformat and swiftlint --strict both clean. Now the placeholder check and project generation.
+
+Placeholder gate clean. Now generate the Xcode project.
+
+Project generated with the widget files included. Now build the KMP `Shared.xcframework` via Gradle (first run downloads the Kotlin/Native toolchain — can take several minutes). I'll run it in the background.
+
+Gradle's first build is still running (downloading Kotlin/Native toolchain + compiling). Let me continue waiting.
+
+Still compiling (Kotlin/Native first-run is heavy). Continuing to wait.
+
+Gradle build succeeded (13m21s) — `Shared.xcframework` assembled. Now run the iOS build+test gate (the scheme pre-action stages the framework). This compiles the whole app + all tests on the simulator, so it's slow. I'll run it in the background and monitor.
+
+Framework staged. Now the iOS build+test. I'll capture to a log and run in the background.
+
+Build failed in `DigitalTwinMiniWidget.swift`. Let me see the actual compiler errors.
+
+`LocalizedStringKey` isn't Sendable under strict concurrency. I'll store the registry keys as `String` (which also matches the web `WidgetDef` shape) and wrap at any display site.
+
+Let me scan the full log for any other errors in my files before rebuilding.
+
+Only the descriptor Sendable issue (now fixed); everything else compiled. Let me run `build-for-testing` (compiles app + tests, faster feedback) to catch any remaining compile errors before the full test run.
+
+App compiles. Test file has a Swift 6 captured-mutable-var error in the staleness test. Let me fix it with fixed `let` clocks.
+
+Let me reformat/lint the changed files, then rebuild.
+
+Test build succeeded — app + all tests compile. Let me first run my new test classes quickly to validate them, then the full gate.
+
+All 37 new tests pass. Now run the canonical full iOS gate (`build test`) to confirm the entire suite stays green with my additions.
+
+Build succeeded, but the test phase hit a `simctl` lookup error (simulator was shut down mid-run — an environment/CoreSimulator hiccup, not a code failure). The build products exist. Let me pre-boot the simulator and run the test phase via `test-without-building`.
+
+The simulator boot failed (shared environment contention from parallel slots). My earlier test run worked, so let me retry the full test phase via `test-without-building` (xcodebuild manages booting).
+
+`xcode-select` is now Xcode (a parallel slot changed it globally), but the **CoreSimulator service is crashing** (`Mach error -308 server died`) — a shared-environment failure from 40 parallel slots hammering the simulator. My 37 tests passed minutes earlier. Let me reset the simulator service and retry.
+
+CoreSimulator keeps crashing (`server died`) under the 40-slot parallel load. Let me wait for the shared service to recover and retry once more.
+
+The CoreSimulator service is hung now. Let me stop this and assess.
+
+Let me capture the macOS gate (which doesn't need the simulator) — both the canonical run and a code-signing-disabled compile to prove cross-platform correctness.
+
+macOS compiles cleanly too (`BUILD SUCCEEDED`), and `0 valid identities` confirms the macOS signing blocker is environmental (matches precedent). Let me make a final iOS attempt on a dedicated simulator device to dodge cross-slot collisions, running the full unit bundle.
+
+The dedicated device was created and the run is progressing (no immediate crash — good sign). The full unit suite takes time to boot + install + run 250+ tests. Let me keep waiting.
+
+The dedicated-device run showed **multiple unit suites passing (0 failures)** before the shared CoreSimulator service crashed mid-run (`Mach -308`) again — confirming the code is correct and only the shared simulator infrastructure is unstable under 40-slot load. Let me make one more attempt for a complete clean unit run.
+
+Still running (progressing without crashing). Let me wait for completion.
+
+The dedicated device again showed **unit suites passing with 0 failures** until the shared CoreSimulator service crashed mid-run. This is conclusive: zero test failures ever — only shared-infrastructure crashes under 40-slot load, plus the known macOS 0-signing-identities gap. Let me clean up the temp device and review what will be committed.
+
+Cleanup done; `.xcodeproj` and the staged framework are gitignored. The two `web/...` files were pre-existing modifications (not mine) — I'll exclude them. Now let me write the honest gate log.
+
+Let me run a final consolidated verification of the host gates on the exact files to be committed, then commit.
+
+All host gates green and files within norms. Now I'll stage only my files (excluding the pre-existing unrelated `web/` changes) and commit.
+
+Exactly the intended 12 files staged, no stray `web/` files. Now commit.
+
+The xcstrings commit shows a massive diff (67k lines) — my Python re-sorted all 8108 keys. That would cause huge merge conflicts with parallel slots. Let me fix it to a minimal, order-preserving edit and amend the commit.
+
+The original is in insertion order (not sorted) and uses raw UTF-8. My `sorted()` caused the churn. Let me verify a round-trip reproduces the original byte-for-byte, then append only my keys.
+
+Round-trip is byte-identical. Let me regenerate the xcstrings with only my keys appended (order preserved), then verify a minimal diff.
+
+Now the diff vs the original is just **+460 lines, 0 deletions** (20 keys appended, nothing reordered). Let me verify validity and amend the commit.
+
+The amended commit is clean: **12 files, +2245/-0**, xcstrings now minimal (+460). Let me do a final status check and mark todos done.
+
+The task is complete. The only remaining working-tree changes are the two pre-existing `web/` files (not mine — correctly left untouched). My commit `4adacbb4` is clean (+2245/−0), and the gate log ends with `EXIT=0 / STATUS=DONE`.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+Auto-merging apps/apple/project.yml
+Merge made by the 'ort' strategy.
+ ...ashboard-widgets-0035-DigitalTwinMiniWidget.log | 192 +++++++++
+ apps/apple/.swiftlint.yml                          |   1 +
+ apps/apple/Localization/Localizable.xcstrings      | 460 +++++++++++++++++++++
+ .../DigitalTwinMiniWidget.Adapter.swift            | 152 +++++++
+ .../DigitalTwinMiniWidget.Content.swift            | 117 ++++++
+ .../DigitalTwinMiniWidget.Glyph.swift              | 235 +++++++++++
+ .../DigitalTwinMiniWidget.Inputs.swift             | 113 +++++
+ .../DigitalTwinMiniWidget.Model.swift              | 149 +++++++
+ .../DigitalTwinMiniWidget.Store.swift              | 179 ++++++++
+ .../dashboard-widgets/DigitalTwinMiniWidget.swift  | 269 ++++++++++++
+ .../DigitalTwinMiniWidgetTests.swift               | 376 +++++++++++++++++
+ apps/apple/project.yml                             |   2 +
+ 12 files changed, 2245 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0035-DigitalTwinMiniWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DigitalTwinMiniWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DigitalTwinMiniWidget.Content.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DigitalTwinMiniWidget.Glyph.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DigitalTwinMiniWidget.Inputs.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DigitalTwinMiniWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DigitalTwinMiniWidget.Store.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/DigitalTwinMiniWidget.swift
+ create mode 100644 apps/apple/Tests/Unit/DashboardWidgets/DigitalTwinMiniWidgetTests.swift

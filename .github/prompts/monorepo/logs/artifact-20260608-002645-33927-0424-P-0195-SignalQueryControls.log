@@ -1,0 +1,125 @@
+=== P4 Shared surface 0195 SignalQueryControls (Apple) ===
+generated: 2026-06-08T13:54:49Z
+host: Darwin 25.5.0 arm64 / macOS 26.5.1
+surface: apps/apple/TeslaSync/shared-surfaces/SignalQueryControls.*
+web source of truth: web/src/components/SignalQueryControls.tsx
+
+------------------------------------------------------------------------------
+CAPABILITY PROBE  (prompt: "requires SwiftUI + Swift Charts + MapKit, iOS 18 /
+iPadOS 18 / macOS 15 HIG. If unavailable on the runner -> STATUS=BLOCKED with
+API evidence.")
+------------------------------------------------------------------------------
+swift toolchain : swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+xcode-select -p : /Library/Developer/CommandLineTools
+xcodebuild      : xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+xcrun simctl    : ABSENT — no Xcode platforms
+xcrun xctest    : xcrun: error: unable to find utility "xctest", not a developer tool or in PATH
+#Preview macro  : PreviewsMacros plugin ABSENT under Command Line Tools (fires in
+                  shared dependency Components/UI/Cards.swift:97, not in this surface)
+
+VERDICT: Full Xcode is NOT installed on this runner (active developer dir is the
+Command Line Tools instance). Therefore the gate's xcodebuild build+test for the
+iOS Simulator and macOS, the SwiftUI #Preview macro expansion, and XCTest hosting
+cannot execute here. This is the prompt's explicit BLOCKED path. The surface is
+shipped COMPLETE and production-polished (no stubs); every check that CAN run on
+this runner is executed below and PASSES.
+
+------------------------------------------------------------------------------
+GATE STEPS (as written in the prompt)
+------------------------------------------------------------------------------
+# 1/4  xcodebuild -scheme TeslaSync -destination 'iOS Simulator,iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+
+# 2/4  xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+
+# 3/4  swiftlint --strict   (repo .swiftlint.yml ruleset, applied to the 12 surface files)
+Done linting! Found 0 violations, 0 serious in 12 files.
+LINT_EXIT=0
+
+# 4/4  swiftformat --lint apps/apple   (surface subtree)
+0/12 files require formatting.
+FORMAT_EXIT=0
+
+# placeholder gate  ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------------------
+SUPPLEMENTARY VERIFICATION runnable without full Xcode (real results, not claims)
+------------------------------------------------------------------------------
+# Swift syntax parse of all 12 surface files (swiftc -frontend -parse)
+PARSE_EXIT=0   -> all 12 files parsed OK
+
+# Swift 6 TYPE-CHECK of the full SwiftUI production layer (9 files) against the REAL
+# design tokens (apps/design/generated/apple/Tokens.swift) + the REAL shared
+# components (TSGlassPanel/TSButton/TSIconBox/TSSkeleton/TSFadeIn/TSTone/Typography),
+# under -swift-version 6 -strict-concurrency=complete (matches project.yml settings):
+TYPECHECK_EXIT=0   -> 0 errors
+0 error(s) reported by the type checker
+
+# Pure Foundation core (Adapter + Format) COMPILED and EXECUTED against 35 behavior
+# assertions (BE->FE adapter, value typing, ms timestamp, presets + matcher,
+# pagination math, catalog filter, grouped count, a11y summaries):
+ADAPTER_RUN_EXIT=0   -> ran clean
+core assertions: 35 PASS / 0 FAIL
+
+------------------------------------------------------------------------------
+SURFACE CONTENTS (parity with the web source; no stubs / no skeleton-only)
+------------------------------------------------------------------------------
+     225 SignalQueryControls.Adapter.swift
+     176 SignalQueryControls.Controls.swift
+     279 SignalQueryControls.Format.swift
+     271 SignalQueryControls.Model.swift
+     362 SignalQueryControls.ModelTests.swift
+     187 SignalQueryControls.Previews.swift
+     196 SignalQueryControls.States.swift
+     249 SignalQueryControls.Store.swift
+      83 SignalQueryControls.strings
+     135 SignalQueryControls.swift
+     271 SignalQueryControls.Table.swift
+     327 SignalQueryControls.Tests.swift
+     386 SignalQueryControls.Views.swift
+    3147 total
+
+States reproduced: catalog loading / empty / error(retry) / stale(chip+auto-refresh)
+/ offline(cached+chip); results idle / running / results(+server pagination) /
+empty / error(retry). i18n: 41 keys via the P1/S10 facade (incl. the 6 web-source
+keys signalQuery.from/to/quickRange/preset.aria/query/rows). Telemetry: view.opened
+with slug "SignalQueryControls". A11y: VoiceOver labels on every interactive control
++ row/results summaries; Dynamic Type via tokens; Reduce Motion via TSSkeleton/TSFadeIn.
+
+------------------------------------------------------------------------------
+INTEGRATION NOTE (not a defect — out of this surface's allowed-files scope)
+------------------------------------------------------------------------------
+The repo .swiftlint.yml 'included:' lists TeslaSync/feature-views + dashboard-widgets
+but not TeslaSync/shared-surfaces, and project.yml does not yet add the shared-surfaces
+source path to the TeslaSync (iOS) / TeslaSync-macOS targets. Registering the new
+shared-surfaces directory in project.yml (both app targets) and .swiftlint.yml is a
+P4-core integration step (this prompt's "Depends on: P4 core"). Those files are outside
+this prompt's allowed files (apps/apple/TeslaSync/shared-surfaces/SignalQueryControls.*),
+so they are intentionally NOT edited here to avoid cross-slot conflicts. The 12 surface
+files were verified with the identical ruleset/toolchain settings the gate uses.
+
+------------------------------------------------------------------------------
+HONESTY COVENANT
+------------------------------------------------------------------------------
+1 no red-as-green : IOS_EXIT/MAC_EXIT honestly recorded as 1 (xcodebuild unavailable)
+2 no scope narrowing : all four web controls + adapter + every state ported
+3 no skip-and-assume : web source read end-to-end; each t()/branch reproduced
+4 no stubs as final : complete production surface; placeholder gate = 0
+5 no parity shortcuts: SI/units N/A (signals are name/value); presets, pagination,
+                       typed value coloring, BE->FE adapter all reproduced
+6 no delegation : authored directly, no sub-agent
+7 no predecessor bypass : P4-core integration gap surfaced above, not faked
+8 no commit on red : committing a COMPLETE, independently-verified surface; the only
+                     red is the platform-unavailable xcodebuild, hence STATUS=BLOCKED
+9 no silent drift : integration note makes the project.yml/.swiftlint.yml gap explicit
+10 ends with EXIT + STATUS below
+
+EXIT=1
+STATUS=BLOCKED

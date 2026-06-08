@@ -1,0 +1,113 @@
+=== P4 Shared surface 0118 EditConflictBanner (Apple) ===
+Prompt : .github/prompts/monorepo/p4-apple/shared-surfaces/0118-EditConflictBanner.prompt.md
+Web src : web/src/components/feedback/EditConflictBanner.tsx  (read end-to-end)
+Native  : apps/apple/TeslaSync/shared-surfaces/EditConflictBanner.*
+Host    : macOS, Xcode 26.5 (DEVELOPER_DIR=/Applications/Xcode.app), iPhone 16 sim, swift 6.x
+Tier    : shared-surfaces (FIRST surface of this tier — directory wired into the build here,
+          mirroring the ToolCard commit acc76624a that first wired TeslaSync/feature-views)
+
+----------------------------------------------------------------------
+SHIPPED FILES (7) — mirrors the feature-views ConflictWarnings split
+----------------------------------------------------------------------
+  EditConflictBanner.Adapter.swift   pure projection + copy catalog + label-aware body + a11y summary
+  EditConflictBanner.Model.swift     @Observable state holder + P1/S8 source seam + P1/S11 telemetry + P1/S10 facade
+  EditConflictBanner.Views.swift     warning banner (TSAlertBanner contract) + take-over (TSButton) + states
+  EditConflictBanner.swift           public surface — offline/stale chips + render switch
+  EditConflictBanner.Previews.swift  DEBUG #Preview per state (conflict/labelled/empty/loading/error/stale/offline)
+  EditConflictBanner.Tests.swift     XCTest — projection/copy/model/telemetry/claim/a11y (18 methods)
+  EditConflictBanner.strings         P1/S10 i18n table "EditConflictBanner" (web keys + native chrome)
+
+  Integration wiring (first-of-tier, same disposition as ToolCard 0010):
+    apps/apple/project.yml      + TeslaSync/shared-surfaces under BOTH TeslaSync (iOS) and TeslaSync-macOS sources
+    apps/apple/.swiftlint.yml   + TeslaSync/shared-surfaces under included:
+
+----------------------------------------------------------------------
+PARITY (web EditConflictBanner.tsx → native)
+----------------------------------------------------------------------
+  useEditLease(resourceKey) -> EditConflictLeaseSource seam (start/stop/refresh/claim); no bus in the view.
+  isOwner || otherTab===null -> renders null  ==> native .owner -> never-a-blank-box empty; .electing -> loading.
+  !isOwner && otherTab       -> AlertBanner    ==> .peerEditing(peer) -> warning banner (exclamationmark.triangle.fill).
+  t('editConflict.banner.title')      -> ECBCopy.title       "Another browser tab is editing this"
+  t('editConflict.banner.body')       -> ECBCopy.body        generic copy
+  t('editConflict.banner.bodyWithLabel', {resource}) -> ECBCopy.bodyWithLabel  {{resource}} interpolation reproduced
+  t('editConflict.banner.takeOver')   -> ECBCopy.takeOver    ghost TSButton -> model.claim() (web claim())
+  t('editConflict.banner.switchHint') -> ECBCopy.switchHint  muted caption
+  + native P4 states the web leaf delegates to its parent: loading / empty / error+retry / stale chip+auto-refresh / offline chip.
+  + P1/S11 view.opened telemetry, surface slug "EditConflictBanner" (emitted once in model.start()).
+
+----------------------------------------------------------------------
+GATE RESULTS (each step, real output)
+----------------------------------------------------------------------
+[swiftformat --lint, scoped TeslaSync/shared-surfaces] ......... 0/6 require formatting        FORMAT_EXIT=0
+[swiftformat --lint apple  (exact gate cmd, whole tree)] ....... 1/1919 require formatting — the ONE is PRE-EXISTING
+        TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes), NOT this surface.
+[swiftlint  --strict, scoped TeslaSync/shared-surfaces] ........ 0 violations                  LINT_EXIT=0 (scoped)
+[swiftlint  --strict, whole tree] .............................. 1 violation — PRE-EXISTING:
+        TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length), NOT this surface.
+        shared-surfaces violation count = 0.
+[check-placeholders.ps1 -Path .../shared-surfaces] ............. PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0  EXIT=0
+[xcodegen generate] ........................................... Created project; "EditConflictBanner" enumerated 42×
+        in TeslaSync.xcodeproj/project.pbxproj across the iOS + macOS targets.
+
+[ISOLATED SwiftPM build+test vs the REAL design system, Swift 6 strict concurrency]
+  Harness: generated Tokens.swift + Sources/Design/* + Sources/Components/** (the self-contained design system;
+           only UnitFormatters.swift excluded — it needs the external Units facade this surface never uses)
+           + the 5 shipped EditConflictBanner view/model/adapter/surface/previews files, module name "TeslaSync";
+           test target compiles EditConflictBanner.Tests.swift via @testable import TeslaSync.
+  swift build .................................................. Build complete!                BUILD_EXIT=0
+  swift test  .................................................. Executed 18 tests, 0 failures  TEST_EXIT=0
+        EditConflictBannerProjectionTests        6/6
+        EditConflictBannerCopyCompositionTests   3/3
+        EditConflictBannerCopyTests              4/4
+        EditConflictBannerAccessibilityTests     1/1
+        EditConflictBannerModelTests             4/4   (incl. view.opened-once + stale rising-edge + claim delegation)
+
+[REAL-SDK swiftc -typecheck of the shipped sources + design system]
+  iOS 18  (arm64-apple-ios18.0-simulator, -swift-version 6) ..... IOS_TYPECHECK_EXIT=0
+  macOS 15 (arm64-apple-macos15.0, -swift-version 6, -D DEBUG) .. MAC_TYPECHECK_EXIT=0   (DEBUG covers the #Preview block)
+
+----------------------------------------------------------------------
+FULL-APP xcodebuild build test — DEFERRED (pre-existing, unrelated blocker)
+----------------------------------------------------------------------
+  Command (run, not faked):
+    DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  Observed:
+    * Pre-build "Stage Shared.xcframework" ran the Kotlin/Native Gradle assemble. It DID build + write the
+      debug Shared.xcframework, then spent 15+ min linking the RELEASE Kotlin/Native frameworks
+      (linkReleaseFrameworkIosArm64 / IosSimulatorArm64 / MacosArm64) — the app Swift compile had not started.
+      This is the "unstaged Kotlin Shared.xcframework" long-pole called out in apps/macos-pending-verifications.md.
+    * Independently confirmed the app-target will not compile regardless, due to PRE-EXISTING parallel-merge
+      collisions unrelated to this surface:
+        - `struct DashboardWidgetSize` redefined in 15 files (Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/*)
+        - 261 co-located *.Tests.swift importing XCTest into the app target.
+    Build was stopped after capturing this evidence rather than burning ~20 more min on a certain failure.
+  Disposition: this is the documented, predecessor-accepted condition (ToolCard 0010, AlertMessageEditor 0180,
+    FSMTimelineChart 0231, ClientUtilitiesSection 0003). The full-app iOS + macOS build/test (macOS shares the
+    identical platform-agnostic app-target sources, hence the identical blocker) is DEFERRED to the signed
+    macos-latest acceptance gate p4-apple/P99-0001. Recorded in apps/macos-pending-verifications.md.
+    NOT reported as a pass (no red-as-green).
+
+----------------------------------------------------------------------
+HONESTY COVENANT
+----------------------------------------------------------------------
+  1 No red-as-green ...... host + isolated + both-SDK gates are genuinely green; the full-app xcodebuild is shown
+                          DEFERRED with its real cause (KMP staging long-pole + pre-existing app-target collisions),
+                          never as a pass.
+  2 No scope narrowing ... full surface: 7 files + strings, every web state/branch + the 5 P4 states, all seams.
+  3 No skip-and-assume ... web EditConflictBanner.tsx + useEditLease.ts + AlertBanner.tsx read end-to-end; every
+                          t() key + the isOwner/otherTab gate + the label-aware body branch reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0, 0 opt-outs.
+  5 No parity shortcuts .. TSAlertBanner visual contract + ghost TSButton + per-surface i18n facade + 6 render states.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition + verification recipe as the feature-views/dashboard-widgets predecessors.
+  8 No commit on red ..... committed work is green on every runnable + isolated gate; the only non-green step is the
+                          environment-blocked full-app build (pre-existing collisions + KMP), deferred with evidence.
+  9 No silent drift ...... documented deviations from "allowed files": project.yml + .swiftlint.yml (first-of-tier
+                          directory wiring, mirrors ToolCard acc76624a) and apps/macos-pending-verifications.md
+                          (deferral audit row). The unrelated AIUsageCard.* working-tree edits (a different prompt's
+                          0203->0237 rename) were left untouched and are NOT in this commit.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

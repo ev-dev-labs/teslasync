@@ -1,0 +1,213 @@
+================================================================================
+P4 · Dashboard widget · 0066 — MotorHistoryWidget (Apple)
+Run: 2026-06-07T18:55-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/69
+Base: 830cb259
+Prompt: P4/dashboard-widgets/0066 — MotorHistoryWidget
+Web source (spec): web/src/features/dashboard/widgets/MotorHistoryWidget.tsx
+Mode: code-complete + host-validated (typecheck + executed XCTest + harness),
+      DEFERRED Xcode app build/test (0036 DigitalTwinWidget precedent / ADR-012).
+================================================================================
+
+=== CAPABILITY PROBE (every line is a command actually run on this host) ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                ✅
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        ✅
+  swiftc Charts capability ... `import Charts` + Swift Charts marks typecheck on
+                               macOS 15 SDK (see GATE [1]) — Swift Charts AVAILABLE ✅
+  iPhone 16 simulator ........ present (booted), iOS 26.5 runtime                   ✅
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           ✅
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         ✅
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               ✅
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep) ⚠
+  codesign identities ........ `security find-identity -p codesigning` → 0 valid    ⚠ (macOS app gate blocker, ADR-012)
+
+  Capability note: this surface requires SwiftUI + Swift Charts (the web source
+  composes a Recharts `ComposedChart`). BOTH are present and PROVEN by a real
+  macOS-15-SDK compile (GATE [1]) and an executed XCTest run (GATE [2]). The
+  capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") therefore
+  does NOT apply — the surface is authored and host-validated for real. (No MapKit:
+  the web source uses no map.)
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/MotorHistoryWidget.*) ===
+  MotorHistoryWidget.Projection.swift  269  Foundation-only pure domain: MotorSnapshotInput,
+                                            MotorChartDatum, temp conversion (convertTempFromSI port),
+                                            buildChartData adapter, MotorChartScale, MotorNumberFormat
+  MotorHistoryWidget.Model.swift       279  P1/S8 source seam + @Observable model + phase resolution +
+                                            P1/S11 telemetry + registry + P1/S10 facade + a11y summary
+  MotorHistoryWidget.Chart.swift       235  Swift Charts dual-axis (torque left / stator temp right),
+                                            100 °C danger band, wide-mode g-force overlays, time axis
+  MotorHistoryWidget.swift             300  MotorHistoryWidget surface: glass shell + header + freshness
+                                            chip + all states + compact/wide + stat row + banners
+  MotorHistoryWidget.Previews.swift    105  #if DEBUG previews — content (wide), imperial, loading,
+                                            empty, error, offline(cached)
+  MotorHistoryWidget.Tests.swift       332  XCTest: adapter + scale + model + registry + a11y (29 tests)
+  MotorHistoryWidget.strings            51  P1/S10 catalog contribution (6 source keys + registry +
+                                            unit symbols + native chrome)
+  Every .swift file ≤ 332 lines (house file_length 400). One exported View per file
+  (MotorHistoryWidget surface, MotorHistoryChart). No `any` escape types; no #if os branches.
+
+=== PARITY (vs web MotorHistoryWidget.tsx) ===
+  Data sources → bound via the shared state-holder seam (MotorHistorySource → MotorHistoryModel):
+    useMotorHistory, useVehicles, useUnits, useDateFormat, useTranslation. Production wires
+    MotorHistorySource over the KMP MotorStore (StateHolderModel<LoadableState<[MotorSnapshot]>>)
+    + the settings UnitStore; the view performs NO HTTP. No direct transport in the view.
+  Projection → MotorHistoryProjectionBuilder.build is a 1:1 port of web `buildChartData`:
+    drop rows without ts/created_at, stator = di_stator_temp ?? motor_temp_c_front (SI °C →
+    display unit via convertTempFromSI), torque = di_torque, gear = gear ?? shift_state,
+    lateral/longitudinal g carried, sorted ascending by time. Latest-value scan (newest-first,
+    skip nils), danger threshold (100 °C → display), temp-axis max (danger+20, expanded, ceil).
+    Verified by executed XCTest (13) + executed harness (27).
+  Composition → WidgetShell chrome (Cog icon + "Motor History" title + freshness chip + refresh +
+    optional Open) · WidgetChartSummary stat row (Torque Nm / Stator °unit) · the chart.
+    Recharts ComposedChart → Swift Charts: torque LineMark (cyan, left axis), stator LineMark
+    (orange, right axis), ReferenceArea danger band > 100 °C (red 10%), wide-mode dashed
+    lateral-G (purple) + longitudinal-G (green) overlays. The single Swift Charts Y scale renders
+    the web's dual axes faithfully via MotorChartScale (temp ↔ torque plotting space), so the
+    right temp axis and the danger band line up exactly with the stator line.
+  Shared components → reuses the REAL apps/apple library compiled in GATE [1]/[2]: Color.TS,
+    Font.TS, TSSpacing, TSRadius (tokens), TSChartPalette series colors, TSSkeleton (loading),
+    ContentUnavailableView (empty). Recharts→Swift Charts; Leaflet→none. Color tokens map the web
+    hex: torque #06b6d4→chartSeriesRegen, stator #f97316→chartSeriesEnergy, danger #ef4444→
+    statusDanger, lateralG #a78bfa→chartSeriesPower, longG #34d399→chartSeriesBattery.
+  States (all render) → loading (skeleton chrome) · empty ("No motor history" + Cog) · error
+    (retry) · stale (chip + banner, cached chart stays) · offline (chip + banner, cached chart) ·
+    content. Model phase resolution keeps cached values visible behind refresh/errors, matching
+    the web shell (which never hides the chart on background error).
+  i18n → all 6 source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    widget.motorHistory.title, .torque, .statorTemp, .noData, .lateralG, .longG → ALL PRESENT in
+    MotorHistoryWidget.strings (+ registry widget.motorHistory/.description + native chrome). No
+    English literals in native code (unit symbols Nm/g also routed through the facade).
+  a11y → the chart is one element with a localized label + a state-summary value
+    (MotorHistoryAccessibility.summary: latest torque, stator, danger flag); every button
+    (refresh / retry / open) and stat column has an accessibilityLabel; Dynamic Type via tokens;
+    TSSkeleton shimmer honors Reduce Motion.
+  Telemetry → MotorHistoryModel.start() emits viewOpened(surface:"MotorHistoryWidget") →
+    bridges shared Telemetry.track(.screenView) (P1/S11). Asserted by a spy test (executed).
+  Registry → MotorHistoryWidget.registration: id "motor-history", category "vehicle",
+    default 2×4, min 2×4, max 4×40 (+ clamp()), matching registry/vehicle.ts. Asserted (executed).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck  (the 4 surface source files compiled together with the REAL apps/apple
+    component library — Tokens + Design{TSDesign,TSMaterial} + Components/UI{Typography,Cards,
+    Buttons,Badges} + Feedback/Skeletons + Motion + Platform/Settings/MeasurementSystem — none of
+    which import the Shared xcframework), Swift 6 strict concurrency:
+      DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+      xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 -swift-version 6 \
+        <component-library closure> MotorHistoryWidget.{Projection,Model,Chart,swift,Previews}.swift
+      TYPECHECK_EXIT=0                                                              ✅
+      (Proves `import Charts` + the dual-axis Chart compile on the macOS 15 SDK. The surface is
+       platform-agnostic SwiftUI — no #if os branches — so the macOS compile fully covers the
+       iOS/iPadOS 18 code paths. @Observable / ContentUnavailableView / Swift Charts all resolve.)
+
+[2] swift test  (a throwaway SwiftPM package, module "TeslaSync", containing the surface + the
+    same real component-library closure, RAN the full XCTest suite — MotorHistoryWidget.Tests.swift —
+    not a typecheck; this is the suite that runs in the TeslaSync(/-macOS) XCTest target):
+      Executed 29 tests, with 0 failures —
+        MotorHistoryAdapterTests   13  (buildChartData parity: drop-no-ts, createdAt fallback,
+                                        ascending sort, °C/°F conversion, stator/gear fallbacks,
+                                        latest-skips-nils, danger threshold, tempMax, torqueMax, g)
+        MotorHistoryScaleTests      3  (temp↔torque round-trip, top-of-temp, zero-denominator guards)
+        MotorHistoryModelTests      8  (loading/empty/error/content phase resolution, cached-stays-
+                                        content, view.opened once, refresh delegation, connection+unit)
+        MotorHistoryRegistryTests   2  (canonical motor-history 2×4/2×4/4×40 + clamp)
+        MotorHistoryAccessibilityTests 3 (summary torque+stator, danger flag, empty)
+      SWIFT_TEST_EXIT=0                                                             ✅
+
+[3] Executed adapter harness (compiled Projection + MeasurementSystem + a harness main to a native
+    binary and RAN it — an independent second proof of the "cached → projection" logic):
+      27/27 checks PASSED — empty, drop-no-ts, createdAt fallback, ascending sort, °C/°F,
+      stator/gear fallbacks, latest-skips-nils, danger threshold °C/°F, tempMax floor/expand,
+      torqueMax fallback/ceiling, g carried, scale round-trip + guards, number-format em-dash.
+      ADAPTER_HARNESS_EXIT=0                                                        ✅
+
+[4] swiftlint --strict on the 6 surface files (explicit; the repo .swiftlint.yml `included:`
+    does not list TeslaSync/dashboard-widgets — that wiring is the P4 integration prompt's job —
+    so the bare gate scans the configured set and SKIPS this dir; run explicitly here via a temp
+    config carrying the SAME rules to prove the files are clean for integration):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      SURFACE_SWIFTLINT_EXIT=0                                                      ✅
+    Bare gate `swiftlint --strict` (from apps/apple, included: paths): 0 violations, 262 files.
+      SWIFTLINT_GATE_EXIT=0                                                         ✅ (does not scan the new dir — see note)
+
+[5] swiftformat --lint apps/apple   (the exact gate command, whole tree incl. the 7 new files):
+      0/281 files require formatting, 2 files skipped.
+      FORMAT_EXIT=0                                                                 ✅
+
+[6] check-placeholders (ADR-011 stub gate; pwsh):
+      pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/MotorHistoryWidget -Language swift
+        PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+      pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets -Language swift   (real dir scan)
+        PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+      PLACEHOLDER_EXIT=0                                                            ✅
+      (The prompt's literal -Path …/MotorHistoryWidget is a filename PREFIX that resolves to no
+       directory → a clean scan; the real per-file scan of the directory above is also clean.)
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the signed macos-latest CI runner; NOT faked) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Why deferred (three independent, code-unrelated reasons — each VERIFIED by a command here;
+    none is a defect in this surface):
+      (a) NOT-YET-REGISTERED: `grep -n dashboard-widgets apps/apple/project.yml` → NO MATCH. The
+          app target globs `Sources/`; this surface lives at TeslaSync/dashboard-widgets/ and is
+          registered into the XcodeGen target + the dashboard grid by the P4 dashboard-grid
+          integration prompt (predecessor scope, Honesty rule 7). Running xcodebuild now would
+          build the app WITHOUT these files and re-run the existing suite — ZERO evidence about
+          this deliverable. The swiftc compile in [1] and the executed XCTest in [2] DO validate
+          this surface against the real component library — the meaningful evidence.
+      (b) Shared.xcframework not staged: `ls apps/apple/Frameworks` → only .gitkeep. The app target
+          links the KMP core; staging it needs a Kotlin/Native gradle build (apps/shared/gradlew),
+          independent of this UI surface.
+      (c) macOS signing: `security find-identity -p codesigning` → "0 valid identities found"; the
+          macOS app/widget entitlements require a development certificate (MAC_EXIT=70 on this host
+          per the P9 gate). ADR-012 defers this to a signed macos-latest runner.
+    XCTest (MotorHistoryWidget.Tests.swift) runs in the TeslaSync/-macOS test target under Xcode;
+    here it was instead compiled + EXECUTED in full (29/29 green) via a SwiftPM host package [2],
+    plus an independent executed harness [3] — so the test suite is PROVEN GREEN, not merely typed.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) — implemented; each
+      has a #if DEBUG preview; phase logic unit-tested (executed).
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — 6/6 present in MotorHistoryWidget.strings.
+  [x] Accessibility labels on every interactive element; chart carries label + state-summary value.
+  [x] Tests: adapter unit test (executed 13 + harness 27) + per-state model test + registry + scale +
+      a11y label test — 29/29 executed green via SwiftPM.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; word-scan clean.
+  [x] Host gates green (typecheck/XCTest/harness/lint/format/placeholder); Xcode app build/test
+      DEFERRED with capability + predecessor evidence (per 0036 disposition).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green), each reason verified by a
+                       command. Every "✅" is a command actually run on this host with its real exit code.
+  2  No scope narrowing: implemented ALL sections/states + the full dual-axis chart + danger band +
+                       g-force overlays + i18n + a11y + telemetry + registry.
+  3  No skip-and-assume: each host gate executed; the XCTest suite RAN (29/29), nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of buildChartData + ComposedChart (dual axis, danger band,
+                       g overlays) + all states. The chart was NOT reduced to a single line.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / dashboard grid (integration
+                       prompt's scope) and did NOT edit the shared Localizable.xcstrings (parallel-
+                       unsafe across slots) — strings shipped as the per-surface table, mirroring 0036.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed MotorHistoryWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native MotorHistoryWidget shipped at parity with the web source: a Foundation
+  pure-domain adapter (executed-green: 13 XCTest + 27 harness), a Swift Charts dual-axis composition
+  (torque/stator lines + 100 °C danger band + wide-mode g-force overlays) faithfully reproducing the
+  Recharts ComposedChart, the P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, every state +
+  i18n key + a11y label, registry-correct (motor-history, 2×4/2×4/4×40). All host-runnable gates pass
+  and the FULL XCTest suite was compiled + executed (29/29). The Xcode app build/test is DEFERRED to
+  the signed CI runner for three verified, code-unrelated reasons (surface not yet target-registered +
+  Shared.xcframework unstaged + macOS 0 signing identities), matching the 0036 DigitalTwinWidget
+  "code-complete + DEFERRED Xcode gate" precedent.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/MotorHistoryWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0066-MotorHistoryWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add MotorHistoryWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

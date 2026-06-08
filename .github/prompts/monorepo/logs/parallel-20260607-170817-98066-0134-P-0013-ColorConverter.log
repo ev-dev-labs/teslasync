@@ -1,0 +1,119 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Let me read the web source specification and explore the Apple app structure.
+
+The web source is a hex color converter (HEX → RGB/HSL with copy). Now let me explore the Apple app architecture deeply to understand the established patterns.
+
+Now let me understand the build tooling availability and the established Apple patterns (since `feature-views/` doesn't exist yet, I need to learn conventions from `dashboard-widgets/` and `Sources/`).
+
+Key finding: full Xcode is **not** installed (only Command Line Tools), so `xcodebuild` cannot run. But `swift` 6.3.2, `swiftlint`, `swiftformat`, `xcodegen` are available. Let me verify SwiftUI compile capability and study the established conventions, prior logs, and the P1 layers (Design tokens, SharedFacade state holders, Localization).
+
+Excellent — the macOS SDK **can** typecheck SwiftUI + Charts via `swiftc` (EXIT=0), but the **iphonesimulator SDK and full Xcode are absent**, so `xcodebuild` build/test cannot run. This means iOS/macOS xcodebuild gates are genuinely BLOCKED, but I can still produce a fully compiling implementation and validate it. Let me study the sibling prompts and the P1 layers.
+
+No feature-views exist yet — I'll be creating the first one(s). Let me study the predecessor prompt, a representative implemented widget (to learn exact conventions), and the P1 layers (Design tokens, SharedFacade, Localization, diagnostics).
+
+Let me read the core shared infrastructure (Design tokens, state holders, key UI components) and locate the i18n facade + diagnostics/telemetry contract.
+
+Let me locate the i18n facade (P1/S10) and diagnostics contract (P1/S11) definitions, and study one complete reference widget end-to-end.
+
+Let me study the DrivetrainHealthWidget reference set (full pattern: i18n + diagnostics + states), a co-located `.strings` file, and the key UI components.
+
+This is a great reference. Now let me find where the string-key constants live, see a co-located `.strings` file format, the i18n catalog, and the key UI components (Card/Field/Button/EmptyState/Typography).
+
+Now I understand the architecture. Let me finalize research: find which Sources import `Shared` (to scope a standalone typecheck), the i18n `*Strings` helper pattern, the key token/component definitions, a co-located `.Tests.swift`, and the lint configs.
+
+Let me read the OdometerCounterWidget Model (closest analog: self-contained surface + i18n helper + states) and locate the design tokens + key components.
+
+The i18n facade is `NSLocalizedString(key, tableName:, bundle:.main, value: fallback)` with a per-surface table = co-located `.strings`. Now let me read the design tokens and the exact UI components I'll compose with.
+
+Now the remaining components: Fields (Input), Buttons, Typography, Badges (chip), Feedback (EmptyState), the glass material/TSTone, and any existing copy-to-clipboard affordance.
+
+Found `TSCopyButton` (web `CopyButton` equivalent). Let me read it plus `TSEmptyState`/`TSQueryError`, `TSButton`, `TSBadge`/`TSTone`, and the glass material modifier.
+
+Let me read the final components: `TSButton`, `TSBadge`/`TSTone`, and the glass material modifier.
+
+I now have all building blocks. Let me check the web i18n catalog for the exact English values of the keys (`Color Converter`, `Color Converter Desc`, `Hex Color`) to ship accurate parity strings, and confirm no `feature-views` wiring exists in project.yml.
+
+Web has no locale JSON (react-i18next returns keys as fallback), so `Color Converter Desc` renders literally on web — I'll supply a proper human value in the native catalog (declared polish). Let me set up tracking and check the placeholder-check tooling, then write the files.
+
+`pwsh` and the placeholder gate are available — I can run the real gate. Let me read the forbidden patterns so my code avoids them, then write the files.
+
+Now I'll write all five files following the established conventions. Starting with the Model (adapter + state + i18n facade + telemetry + a11y seams).
+
+Now the View file:
+
+Now the Previews file:
+
+Now the Tests file (XCTest, co-located convention):
+
+Now the co-located i18n `.strings` catalog:
+
+All five files written. Now let me verify — format, lint, typecheck, and run the adapter logic. First, swiftformat:
+
+swiftformat clean. Now swiftlint (passing my files explicitly since the config's `included:` doesn't yet list `feature-views`):
+
+One violation found across the full lint. Let me locate it:
+
+The only violation is **pre-existing** (`LifetimeStatsWidget.Adapter.swift`, outside my scope) — none in my files. Now the key compile validation: typecheck my View+Model+Previews against the real design tokens + shared components via `swiftc` (macOS SDK, Swift 6, strict concurrency), to match the project's build settings.
+
+The errors are all in an unrelated component (`UnitFormatters.swift` depends on a Shared-facade type) — none in my files. Let me typecheck against the exact components my surface uses:
+
+`TYPECHECK_EXIT=0` — the surface compiles cleanly against the real tokens + shared components under Swift 6 strict concurrency. Now let me prove the adapter's numeric parity with the web at **runtime** by compiling the Model into an executable and exercising it:
+
+All 20 runtime checks PASS — the math matches the web exactly. There's one Swift-6-mode concern flagged in Swift-5 compile (`defaultHex` actor isolation in the `init` default argument). My earlier Swift-6 typecheck passed, but I'll make it unambiguous by marking the constant `nonisolated`, then re-verify under `-swift-version 6`.
+
+Re-verifying under Swift 6 mode after the fix — format, full-surface typecheck, and runtime probe (now with `-swift-version 6`):
+
+Swift 6 full-surface typecheck **passed** (authoritative). The probe failure is only in my throwaway harness's top-level global var under Swift 6 — not in the Model. Let me fix the harness and get a clean Swift-6 runtime pass:
+
+Model compiles and runs clean under Swift 6 — all adapter checks pass. Now the placeholder gate (pwsh is available):
+
+The dir scan caught a real hit: the word "placeholder" appears in a comment in `ColorConverter.swift` (the gate's exact-prefix path scanned nothing — a false pass). Let me find and remove all forbidden words from my files:
+
+Now re-verify placeholder gate (dir scan, all languages), format, and Swift 6 typecheck:
+
+All green. Let me confirm my files specifically are swiftlint-clean (isolating from the pre-existing repo violation):
+
+Confirmed: **zero** violations in my files (the lone violation is pre-existing, out of scope). Now let me run the actual gate commands via `pwsh` to capture genuine evidence (including the BLOCKED xcodebuild steps), then assemble the log.
+
+Confirmed BLOCKED: `xcodebuild` requires full Xcode (only Command Line Tools present), no iPhone 16 simulator. Now the lint/format gate steps:
+
+All gate evidence captured. Now I'll write the honest log with full evidence, declared deviations, and the BLOCKED verdict (xcodebuild requires absent full Xcode; plus a pre-existing out-of-scope lint violation).
+
+Log written. Let me do a final visual QA of the two main files and clean up temp artifacts:
+
+Let me check a sibling log's precedent for the BLOCKED-vs-commit decision before finalizing:
+
+Sibling surfaces in this same Xcode-less runner use a **user-approved "code-complete + DEFERRED Xcode gate → STATUS=DONE"** disposition. Let me read that sanctioned guidance to align precisely (and how they handle non-green host gates).
+
+Authoritative resolution found. The **p4-apple README binding rule** states: *"Requires macOS + Xcode runners — prompts that can't run their gate are **BLOCKED, not DONE**."* This confirms my log's verdict (STATUS=BLOCKED) is the correct, covenant-compliant disposition for this Xcode-less runner (overriding the sibling logs' non-compliant DONE reframing). Let me cite this rule in the log, then commit.
+
+Staging only my deliverables (the 2 modified web files are pre-existing and not mine):
+
+Exactly the 6 deliverables staged (no unrelated files). Committing with the prompt's message:
+
+Committed cleanly (`08544576`). Let me finalize tracking and confirm the log's terminal markers:
+
+The task is complete. The native `ColorConverter` Apple feature-view surface is fully implemented, validated against the real shared design system, and committed with an honest gate log.
+
+## Summary
+
+Built a production-polished, Apple-idiomatic `ColorConverter` surface (SwiftUI parity of `features/admin/components/devtools/tools/ColorConverter.tsx`) — committed as `08544576` (6 files, 870 lines, no stubs):
+
+- **`ColorConverter.swift`** — glass tool-card: icon + title + description header, hex field with a live `@ScaledMetric` swatch, and an RGB/HSL/HEX grid of copyable cells. Reproduces the web's `parsed && …` branch as three always-rendered states (empty hint / inline-validated invalid / valid), never a blank panel.
+- **`ColorConverter.Model.swift`** — pure `ColorConversion` adapter (1:1 port of `helpers.rgbToHsl` + parse, incl. rounding), `@Observable` model, P1/S10 i18n facade (table `ColorConverter`), P1/S11 `view.opened` telemetry seam, and a testable a11y seam.
+- **`.Previews.swift`** (6 states incl. dark + Dynamic Type), **`.Tests.swift`** (XCTest: adapter/rows/model/telemetry/a11y), **`.strings`** (parity keys preserved verbatim).
+
+**Verification (all executed, shown in the log):**
+- ✅ Swift 6 strict-concurrency **typecheck** against the real `Tokens.swift` + shared `TS*` components — `EXIT=0`
+- ✅ Swift 6 **runtime adapter probe** — 20/20 pass (`#3b82f6 → rgb(59,130,246)/hsl(217,91%,60%)`, etc.)
+- ✅ swiftformat (whole tree `0/514`), swiftlint (**0** violations in `ColorConverter.*`), placeholder gate (`0`)
+
+## Status: BLOCKED (mandated, not a defect)
+
+The gate's `xcodebuild build test` (iOS Simulator + macOS) **cannot run** — the runner has Command Line Tools only, no full Xcode / iphonesimulator SDK. Per the binding p4-apple README rule (*"prompts that can't run their gate are BLOCKED, not DONE"*) and the prompt's capability clause, the log is filed **`EXIT=1 / STATUS=BLOCKED`** with full platform-capability evidence. The xcodebuild build/test must be re-run on a macOS+Xcode CI runner to clear it. (A pre-existing, out-of-scope swiftlint violation in `LifetimeStatsWidget.Adapter.swift` is also recorded honestly — not mine to fix.) No red was reported as green.
+
+
+
+All work is complete and committed. Calling task_complete.
+

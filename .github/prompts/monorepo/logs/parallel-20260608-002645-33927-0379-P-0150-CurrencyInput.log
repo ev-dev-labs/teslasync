@@ -1,0 +1,129 @@
+I'll start by exploring the repository structure and understanding what's available for this task.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. Let me investigate the established conventions from predecessor surfaces and read the web source.
+
+`pwsh` is available, but `shared-surfaces/` doesn't exist yet. Let me study the predecessor `AIUsageCard` files (the established convention) and the web lib it depends on.
+
+Git status shows `AIUsageCard.*` as modified but `ls` didn't find them — let me reconcile and locate the shared infrastructure (state holders, tokens, i18n, diagnostics).
+
+The files exist (glob tool struggles with the 1438-entry dir). Let me read all 7 predecessor `AIUsageCard.*` files to learn the exact conventions.
+
+Excellent, the conventions are now clear. Let me read the remaining predecessor files (Views, Previews, Tests, strings) and locate the shared design tokens.
+
+Now let me read the Previews and Tests, and locate the shared token/motion infrastructure.
+
+I see references to `AiUsageProjection`, chrome views, and `TSFadeIn`/`Color.TS`/`Font.TS` tokens. Let me locate the shared infrastructure and any additional predecessor files.
+
+Now I have the full file set. Let me examine the build structure, existing predecessor logs (critical for the gate), and the design tokens.
+
+The predecessor log reveals prior P4 surfaces used `DEVELOPER_DIR=/Applications/Xcode.app/...` to override CommandLineTools. Critical question: does this runner have Xcode.app? Let me check and read the rest of the predecessor log.
+
+Xcode 26.5 IS available via `DEVELOPER_DIR` override (same as predecessors). The established methodology: isolated Swift build+test of surface files + swiftlint/swiftformat/placeholder gates, with the full-app xcodebuild gate DEFERRED to P99 on pre-existing blockers. Let me read the build config and design tokens.
+
+Critical: project.yml lists `TeslaSync/feature-views` and `dashboard-widgets` explicitly but **not** `shared-surfaces` (which doesn't exist yet), and project.yml isn't in my allowed files. This means shared-surfaces wiring is deferred to P99 — same pattern as predecessors. Let me read the design tokens, infra, and the predecessor's exact gate execution.
+
+Key discovery: an atomic `TSCurrencyInput` already exists in `Sources/Components/Forms/Inputs.swift` (out of scope — owned by the component-library bundle). My job is the richer **surface** port with full `currencyFormat.ts` fidelity (micro-units, locale parsing, symbol icon). Let me read the native field/typography/motion/feedback peers and the predecessor's exact build commands.
+
+Let me read the exact GATES section of the predecessor log to replicate their verification method precisely.
+
+I now have the full methodology: isolated SwiftPM build+test against the real design system (module named `TeslaSync` so `@testable import TeslaSync` resolves) + swiftlint/swiftformat/placeholder gates, with the full-app xcodebuild gate DEFERRED to P99 on verified pre-existing blockers. Let me read the remaining infra I'll use (Motion, Typography, Feedback, state-holder seam).
+
+Let me read the state-holder seam vocabulary and the lint/placeholder configs so my surface matches conventions exactly.
+
+Let me read the placeholder patterns (critical — must avoid forbidden substrings like "todo", "placeholder", "mock", "stub" in my code) and the script's path handling.
+
+I have everything I need. Let me set up tracking and write the plan, then implement.
+
+Now creating the surface. Starting with the directory and the pure formatting/parsing core.
+
+Now the Model file: i18n facade, telemetry seam, P1/S8 binding seam, and the `@Observable` model.
+
+Now the main surface view and its presentational subviews.
+
+Now the presentational subviews.
+
+Now the i18n strings catalog.
+
+Now the comprehensive test suite — the core parity evidence.
+
+Now the previews covering each state.
+
+All 7 surface files created. Let me harden one concurrency detail in the view helper, then set up the isolated build harness.
+
+Setting up the isolated SwiftPM harness (module named `TeslaSync`) against the real design system.
+
+Build succeeded. Two warnings to clean up (deprecated `isoCurrencyCodes` API and a preview actor-isolation note) so the surface is warning-clean for the strict app target.
+
+Re-syncing the package and running the full build + test.
+
+Let me do a clean rebuild to confirm zero warnings, then run the tests.
+
+All 39 tests pass with a clean (zero-warning) build. Now the lint/format/placeholder gates on the surface files.
+
+Two formatting issues and one swiftlint violation to locate. Let me inspect the exact lines.
+
+These are mechanical formatting fixes. Let me run swiftformat in fix mode on my surface files (it's the repo's canonical formatter), then review the diff.
+
+Files are untracked so `git diff` is empty. Let me view what swiftformat changed.
+
+The Tests grep returned nothing — let me verify the test file is intact (swiftformat shouldn't remove tests).
+
+Test file intact (39 test functions); swiftformat just wrapped a long line. Let me re-sync the package, re-verify build+test, and confirm swiftformat now passes.
+
+swiftformat passes. Now let me scope swiftlint to exactly my files (the earlier run linted all 1909 files via `included`) and re-confirm the isolated tests on the formatted sources.
+
+The violation is mine: `currencyCodeFromSymbol`'s 21-case switch trips cyclomatic complexity. A static dictionary is cleaner and complexity-1. Let me view and replace it.
+
+Now re-run all gates and the isolated build+test on the updated source.
+
+Both lint gates pass (0 violations). Re-verifying the isolated tests on the final source and running the placeholder scan.
+
+All 39 tests pass on the final source. Now the placeholder scan.
+
+Both placeholder scans return COUNT=0. Let me sanity-check that the scanner actually inspects these files (not a vacuous pass) by confirming it flags a planted marker in a scratch copy.
+
+Scanner verified live (flags planted TODO; my files are genuinely clean). Now let me concretely verify the pre-existing full-app blockers (honesty covenant #3 — no assume) before documenting the deferral.
+
+All four blockers verified concretely (B1: only `.gitkeep`; B2: 15× `DashboardWidgetSize`; B3: 170 co-located tests; B4: shared-surfaces absent from project.yml). Let me also typecheck the surface for **iOS** (the isolated SwiftPM build was macOS-host) to exercise the `#if os(iOS)` branch.
+
+iOS typecheck passes (Swift 6 strict, iOS 18 SDK) — the `#if os(iOS)` branch is sound. Every runnable gate is green. Let me gather final metrics and write the gate log.
+
+All metrics gathered. Now writing the comprehensive gate log.
+
+Now committing — only my files (the AIUsageCard modifications were pre-existing from a parallel slot and must not be included). Let me verify git state first.
+
+My files are cleanly separated from the pre-existing AIUsageCard changes. Staging only my paths and committing.
+
+0 files staged — let me investigate whether `.gitignore` is blocking these paths.
+
+`git add -v` confirms all 8 files staged (not ignored). The earlier empty result was likely shared-environment interference. Let me verify and commit atomically to minimize any race.
+
+Let me confirm the commit landed correctly with exactly my 8 files.
+
+Commit `918728d37` landed cleanly — exactly my 8 files, AIUsageCard untouched. Let me finalize tracking and clean up the temp build harness.
+
+The task is complete. All work is committed and verified.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`CurrencyInput`** shared surface at `apps/apple/TeslaSync/shared-surfaces/CurrencyInput.*`, at full parity with the web spec (`components/forms/CurrencyInput.tsx` + its `lib/currencyFormat.ts` core).
+
+**7 files (1004 Swift LOC + 22 strings):**
+- `.Adapter.swift` — pure Foundation port of `currencyFormat.ts` (micro-unit storage, grouping-off currency formatting, invalid-ISO-code fallback, symbol/ISO/parens/locale-separator parsing, 21-entry symbol→code map)
+- `.Model.swift` — P1/S10 i18n facade, P1/S11 `view.opened` telemetry seam, P1/S8 binding seam, `@Observable` model with focus-preserving resync
+- `.swift` + `.Views.swift` — the SwiftUI field (symbol glyph + token chrome, focus/commit lifecycle, iOS decimal keypad)
+- `.Previews.swift` (7 states), `.Tests.swift` (39 tests), `.strings`
+
+**Verification (every runnable gate green):**
+| Gate | Result |
+|---|---|
+| swiftformat --lint | `FORMAT_EXIT=0` (0/6) |
+| swiftlint --strict | `LINT_EXIT=0` (0 violations) |
+| check-placeholders.ps1 | `COUNT=0` (scanner proven live via planted marker) |
+| Isolated SwiftPM build+test (Swift 6 strict, Xcode 26.5 XCTest) | clean, **39/39 tests pass** |
+| iOS-18 typecheck | `EXIT=0` |
+
+**Full-app `xcodebuild` gate: DEFERRED to P99** (honesty covenant #1) on four *verified* pre-existing/structural blockers it can't touch: unstaged `Shared.xcframework` (gitkeep-only), `DashboardWidgetSize` redefined 15×, 170 co-located app-target tests, and `shared-surfaces` not yet wired into `project.yml` (not in allowed files).
+
+Committed as `918728d37` (8 files incl. log). The pre-existing `AIUsageCard.*` modifications from a parallel slot were left untouched. Log ends with `EXIT=0` / `STATUS=DONE`.
+

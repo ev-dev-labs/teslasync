@@ -1,0 +1,163 @@
+=== P4 Feature view 0278 ClimatePanel (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon) — shared parallel-batch host.
+  Xcode              : 26.x at /Applications/Xcode.app — invoked via
+                       DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer (the active dir was
+                       /Library/Developer/CommandLineTools; overridden non-destructively per
+                       invocation, no sudo / no xcode-select -s, so the shared host is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint · swiftformat · xcodegen 2.x · pwsh.
+  Capability         : SwiftUI + Swift Charts + MapKit + the iOS/macOS SDKs are PRESENT (the surface
+                       was compiled + tested against them below) → NOT capability-BLOCKED. The web
+                       source uses neither a chart nor a map, so this surface needs only SwiftUI.
+  Shared.xcframework : the KMP core's static XCFramework (ADR-004) is required only so the full app
+                       *links* — ClimatePanel itself is KMP-Shared-FREE (pure Foundation temperature
+                       math, like TemperatureMetricCards/0161). The Gradle assemble was run; on this
+                       shared batch the daemon staged it into a sibling slot, so the (identical-core)
+                       artifact was staged read-only into apps/apple/Frameworks for the app-target
+                       build evidence below. No apps/shared sources were modified.
+
+WEB SOURCE (the specification)
+  web/src/features/vehicles/components/telemetry-panels/ClimatePanel.tsx — a PURE presentational leaf
+  fed `climateData: ClimateSnapshot | null | undefined` by its parent, plus `useUnits()`. Regions:
+    GlassPanel(p-6 h-full) → h3.section-title[ <Thermometer text-cyan-300/> + t('common.climate') ]
+      climateData ?
+        → grid-cols-2: <MetricCard label=t('common.insideTemp')  value=formatTemperature(inside_temp_c)>
+                       <MetricCard label=t('common.outsideTemp') value=formatTemperature(outside_temp_c)>
+        → grid-cols-2: Driver Setpoint  = formatTemperature(driver_setpoint_c)
+                       Passenger Setpoint = formatTemperature(passenger_setpoint_c)
+        → HVAC State  = hvac_state ?? '—'
+        → Fan Speed   = six width-stepped bars (w-1.5…w-4) filled when (fan_status ?? 0) >= level,
+                        + the raw numeric (fan_status ?? 0); Fan glyph on the label.
+        → chips (flex-wrap): Defrost (blue, active when defrost_mode && defrost_mode !== 'Off',
+                        shows the raw mode else t('common.off')); Climate (green, t On/Off on
+                        is_climate_on); Precondition (amber, t On/Off on is_preconditioning).
+      : <EmptyState message=t('telemetry.noClimateData','No climate data available') />
+  Data sources: `useTranslation` + `useUnits` (formatTemperature only). The web formatter is
+  `fmtNumber(convertTempFromSI(°C, pref), 1) + °unit` with NO space and the em-dash sentinel for a
+  non-finite reading (lib/unitConversion.ts L161/L345 + lib/numberFormat.ts safeNumber⇒0).
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/feature-views/ClimatePanel.*, the only allowed files + this log)
+  ClimatePanel.Adapter.swift  (336 L) — ClimateSnapshotModel; ClimateTemperatureUnit + ClimateUnitPrefs
+                                         (web useUnits temperature/locale/precision); ClimateFormat
+                                         (convertTempFromSI + fmtNumber + formatTemperature ports, no
+                                         space, em-dash, hvacState guard); ClimateFanModel (six-bar
+                                         fill + count); ClimateBadges (defrost/climate/precondition
+                                         verdicts + values); ClimateAccessibility. All pure + Foundation.
+  ClimatePanel.Model.swift    (304 L) — P1/S8 state holder (ClimatePanelModel + ClimatePanelSource +
+                                         InMemoryClimatePanelSource), P1/S11 telemetry seam
+                                         (ClimateTelemetry + OSLog default), P1/S10 facade
+                                         (ClimateStrings), ClimatePanelInput, the ClimateConnection
+                                         (live/stale/offline) axis, and the pure ClimateProjection
+                                         (loading/empty/error/data) + one-shot stale auto-refresh.
+  ClimatePanel.swift          (149 L) — the surface view: thermometer header + freshness chip +
+                                         connectivity banner + content switch, in a TSGlassPanel.
+                                         view.opened on appear.
+  ClimatePanel.Views.swift    (335 L) — the cabin/outside TSMetricCards, the setpoint + HVAC rows, the
+                                         graduated fan strip, the wrapping chip strip (a small flow
+                                         Layout = web flex-wrap), and the loading / empty / error chrome.
+  ClimatePanel.Previews.swift ( 85 L) — data / data-°F / empty / loading / error / stale / offline (DEBUG).
+  ClimatePanel.Tests.swift    (382 L) — 40 XCTest cases (number/temperature formatting, HVAC guard, fan
+                                         strip, chip verdicts, projection, model wiring + telemetry +
+                                         stale auto-refresh + re-arm, accessibility).
+  ClimatePanel.strings        ( 41 L) — per-surface i18n table (the 13 web keys + the native chrome keys).
+  NOT touched (parallel-unsafe / integration scope): project.yml + .swiftlint.yml already carry
+  "TeslaSync/feature-views"; the shared Localizable.xcstrings is NOT edited (strings ship per-surface).
+  Other agents' in-flight working-tree edits (e.g. AIUsageCard.*) were left untouched and NOT staged.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  GlassPanel(p-6)            → TSGlassPanel (Sources/Components/UI/Cards.swift)
+  <Thermometer text-cyan-300>→ SF Symbol "thermometer.medium" in Color.TS.accent (decorative → a11y-hidden)
+  MetricCard                 → TSMetricCard (Sources/Components/DataDisplay/Metrics.swift)
+  EmptyState                 → ContentUnavailableView (web "No climate data available")
+  Fan strip (6 bars)         → 6 RoundedRectangles, web widths 6…16pt, fill Color.TS.accent@0.7 vs border
+  Defrost blue chip          → Color.TS.chartSeriesSpeed ; Climate green → statusSuccess ;
+                               Precondition amber → statusWarning ; inactive → textMuted + hairline border
+  flex-wrap chip row         → ClimateChipFlow (a minimal SwiftUI Layout)
+  FadeIn → TSFadeIn ; Skeleton → TSSkeleton ; Button → TSButton
+  formatTemperature          → ClimateFormat.temperature (convertTempFromSI + fmtNumber, 1-digit default,
+                               no space, em-dash on non-finite — verbatim port; °C passthrough, °F = c*9/5+32)
+  i18n      : every web string via the P1/S10 facade (ClimateStrings, table "ClimatePanel"); zero English
+              literals in code. The web-hardcoded On/Off and the freshness/chrome copy are keyed too.
+  a11y      : every row / fan / chip carries a combined VoiceOver label; the icons are decorative;
+              Dynamic Type + Reduce Motion respected via the shared tokens/components.
+  telemetry : view.opened surface="ClimatePanel" via ClimatePanelModel.start (P1/S11), default OSLog sink.
+  states    : loading / empty (web EmptyState) / error (parent query failure, retry) / data, plus the P4
+              leaf freshness axis live / stale (chip+banner+one-shot auto-refresh) / offline (chip+banner).
+
+GATES (executed on THIS runner; raw exits pasted)
+  [GREEN]    swiftlint --strict  (the 6 ClimatePanel Swift files)        : 0 violations, 0 serious in 6 files (LINT_EXIT=0)
+  [GREEN]    swiftformat --lint  (the 6 ClimatePanel Swift files)        : 0/6 files require formatting        (FORMAT_EXIT=0)
+  [GREEN]    check-placeholders.ps1  (literal gate path …/ClimatePanel)  : PLACEHOLDER_COUNT=0                  (EXIT=0)
+  [GREEN]    check-placeholders.ps1  (REAL scan of the shipped ClimatePanel.*): PLACEHOLDER_COUNT=0            (EXIT=0)
+  [GREEN]    ClimatePanel build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode =
+             same as the app), compiling the EXACT shipped ClimatePanel.* (Adapter/Model/swift/Views/Previews
+             + Tests) against the REAL repo design-system (apps/design/generated/apple/Tokens.swift +
+             apps/apple/Sources/Design + apps/apple/Sources/Components, 46 source files) under the Xcode 26 SDK:
+                 Build complete!  ·  Executed 40 tests, with 0 failures                                       (SWIFT_TEST_EXIT=0)
+
+  [DEFERRED] xcodebuild  iOS app target (TeslaSync, iphonesimulator, arm64)  build                            : IOS_EXIT=65
+  [DEFERRED] xcodebuild  macOS app target (TeslaSync-macOS, arm64)           build                            : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO ClimatePanel surface-compile errors; the only blocker pre-exists):
+    The ONLY `error:` line in EITHER the iOS or macOS app-target build is
+        apps/apple/TeslaSync/feature-views/AIRestorePanel.Tests.swift:18: error: unable to resolve module
+        dependency: 'XCTest'
+    — a co-located per-surface test file (mandated by every surface prompt's allowed-files list) compiled
+    INTO the app target, because project.yml routes "TeslaSync/feature-views" into the app target while the
+    XCTest test target's sources are "Tests/Unit" only. AIRestorePanel is a COMMITTED sibling surface (HEAD
+    c9c6fdb9f), so this is PRE-EXISTING and baseline-RED — it is the exact "co-located *.Tests.swift importing
+    XCTest into the app target" condition AcDcStatsPanel/0096 already recorded. grep of both app-target build
+    logs for a ClimatePanel SURFACE (non-test) "error:" = 0 hits; ClimatePanel.strings is ingested cleanly;
+    the only ClimatePanel lines are the benign "file is part of module 'TeslaSync'; ignoring import" warning
+    every co-located test file emits. The macOS scheme additionally needs development-signing (the sibling's
+    second blocker), also outside a single feature-view's scope. Both blockers are owned by the P4/P99 Apple
+    acceptance gate (test-target membership + signing) on a signed CI runner per
+    apps/macos-pending-verifications.md — NOT by a single feature-view prompt (task rule: do not fix
+    pre-existing unrelated breakage). The authoritative proof that the ClimatePanel SURFACE + its 40 tests
+    compile + pass under the app's own Swift 6 strict-concurrency rules is the GREEN isolated harness above.
+
+  PRE-EXISTING (NOT introduced here, outside allowed files):
+    swiftformat --lint apps/apple (whole tree) is RED only on the COMMITTED sibling
+    TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes) — 1/1919 files; it is
+    not a ClimatePanel file and is outside this prompt's allowed-files list. The 6 ClimatePanel files pass
+    swiftformat (0/6, above).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65)
+                           and explicitly DEFERRED with raw evidence — never reported as passing.
+  2  No scope narrowing  : every web region + branch reproduced — thermometer header, cabin/outside cards,
+                           both setpoints, HVAC state, the six-bar fan strip + numeric, all three chips with
+                           their active verdicts + values, and the empty render.
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; the iOS + macOS failures were
+                           run and root-caused (co-located XCTest on the committed AIRestorePanel.Tests.swift),
+                           not assumed or copied from a sibling.
+  4  No stubs as final   : complete production surface + 40 real tests; placeholder scanner = 0.
+  5  No parity shortcut  : tints/opacity/typography/temperature formatting/fan strip/chips/a11y/telemetry/
+                           states all mapped to platform tokens + verified against the real design-system in a
+                           Swift 6 build+test.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics, P4 core all
+                           present and consumed; did NOT self-register project.yml/.swiftlint.yml (already
+                           carry feature-views) and did NOT edit the shared Localizable.xcstrings.
+  8  No commit on red    : the COMMITTED artifact (ClimatePanel.* + this log) is GREEN on every applicable host
+                           gate AND on a real isolated Swift 6 build+test; the deferred full-app gate is RED
+                           only on pre-existing, unrelated conditions this commit neither introduces nor touches
+                           (zero ClimatePanel surface errors in both app-target builds).
+  9  No silent drift     : changes confined to apps/apple/TeslaSync/feature-views/ClimatePanel.* + this log.
+                           Other agents' in-flight working-tree edits were left untouched and not staged.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic ClimatePanel shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 40 tests pass under the app's own Swift 6 strict-concurrency rules, against the
+  real design-system, with swiftlint/swiftformat/placeholder all green on the surface; and the SURFACE compiles
+  with ZERO errors inside the real iOS + macOS app targets. The full-app iOS-Simulator + macOS xcodebuild
+  build/test gate is DEFERRED (not failed by this code): it is blocked by the pre-existing co-located-XCTest
+  app-target condition (baseline-RED on the committed AIRestorePanel.Tests.swift) and by macOS development-
+  signing — both owned by the P4/P99 acceptance gate on a signed CI runner per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate"
+  disposition used by every P4 feature-view surface to date (e.g. 0096 AcDcStatsPanel).
+
+EXIT=0
+STATUS=DONE

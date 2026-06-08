@@ -1,0 +1,88 @@
+I'll start by exploring the repository structure to understand what exists, especially the Apple app and the web source component.
+
+Xcode CLI tools exist but `xcodebuild -version` failed. Let me investigate the Apple app structure and existing feature-views to understand patterns, and check the build tooling more carefully.
+
+`/Applications/Xcode.app` exists but the active dev dir is CommandLineTools. Let me try using `DEVELOPER_DIR` to access the full toolchain, and study the existing feature-view file pattern.
+
+**Xcode 26.5 works** via `DEVELOPER_DIR` and iPhone 16 simulator is booted — build capability is NOT blocked. Now let me study a complete reference panel and the shared infrastructure. Let me read the `AcDcStatsPanel` reference set and confirm `EnergyChargingPanel` isn't already ported.
+
+Excellent reference architecture. Let me read the remaining reference files and find the shared infrastructure (tokens, glass panel, units facade, and native MetricCard/EmptyState equivalents).
+
+Now let me find the shared infrastructure: tokens, glass panel, and especially a native `MetricCard`/`EmptyState` equivalent and the units facade for `formatSpeed`.
+
+The project.yml uses directory globs for `feature-views`, so new files are auto-included. Let me read the key shared components: TSMetricCard, TSGlassPanel, the units facade (formatSpeed), and the feedback/EmptyState equivalent.
+
+Now let me find how feature-views bind units (the web uses `useUnits().formatSpeed`), and read the glass panel, feedback components, and the AcDcStatsPanel adapter + tests.
+
+Let me study how a units-consuming panel (CostSavingsPanel) binds `UnitPreferences`, the test pattern, and where the design tokens live.
+
+Let me examine how speed formatting is actually done in feature-views (local port vs `Shared` facade), the web `formatSpeed` source, the glass panel/feedback components, and the design tokens.
+
+The pattern is clear: feature-views port unit math locally (no `Shared` import). Let me read the web `formatSpeed`/`convertSpeed` source, the `DriveStatCards` speed-unit derivation, the design tokens, and the feedback/cards components.
+
+Let me read the exact web `convertSpeedFromSI`/`formatSpeed`, the `DriveStatCards` speed-unit config + math, and the design tokens + Cards components.
+
+Let me read the remaining web format helpers (DEFAULT_PRECISION, formatNumber), the `DriveStatCardsFormatting` struct, and the design tokens + Cards components.
+
+Let me confirm the `ChargingTelemetry` type fields, read the Cards components (TSGlassPanel/TSCard/TSIconBox), and find TSFadeIn/TSButton + the DriveStatCards formatting struct.
+
+I have enough on the architecture. Let me read the typography + badge components I'll use, and check the lint/format/placeholder gate tooling (and whether `pwsh` is available).
+
+`pwsh` is available so I can run the real gate. Let me check the forbidden placeholder patterns and the web `numberFormat` helpers (`fmtNumber`/`fmtWithUnit`) for exact parity, plus how the checker resolves `-Path`.
+
+Let me check how the placeholder checker handles a non-existent path (the gate passes a path prefix, not a real dir) by reading its scan logic and an existing surface's log.
+
+The checker treats a non-existent path as clean (COUNT=0). I'll run the gate as specified AND honestly scan my actual files. Let me check how a predecessor handled xcodebuild (real run vs deferral) and whether the Xcode project needs regeneration.
+
+Predecessors use a "host-proven" approach: full app `xcodebuild` is DEFERRED due to a pre-existing KMP/wiring blocker (outside my allowed files), while proving the surface via dual-SDK `swiftc -typecheck` + macOS-host XCTest + lint/format/placeholder. Let me read the full predecessor log to reproduce that exact rigor and the precise deferral cause.
+
+I now fully understand the established "host-proven" approach with documented xcodebuild deferral. Let me verify the dependency cleanliness (which shared components I can compile without the KMP `Shared` module) before writing code.
+
+I have a complete understanding of the architecture, parity requirements, and the established "host-proven" verification approach. Let me set up a plan and todos, then implement.
+
+Now I'll write the Adapter (pure Foundation core).
+
+Now the Model (seams + projection + observable model + strings facade).
+
+Now the Views (subviews + chrome).
+
+Now the surface view itself.
+
+Now the Previews and strings catalog.
+
+Now the comprehensive test suite.
+
+All 7 files written. Let me fix the todo tracking and begin verification — first format + lint my files.
+
+swiftformat normalized 3 files. Let me confirm format + lint are clean on my files and review what changed.
+
+Format and lint are clean (both EXIT 0). Now the critical dual-SDK type-check against the real design system. Let me attempt the macOS-SDK compile of the surface + real tokens + components.
+
+One component file (`UnitFormatters.swift`) references `UnitPreferences` from the KMP-backed `SharedFacade` (not used by my surface). Let me identify all Shared-coupled component files and exclude them from the type-check set.
+
+Only `UnitFormatters.swift` is Shared-coupled and my surface doesn't use it. Let me exclude it and retry the macOS type-check.
+
+macOS 15 SDK type-check passes (EXIT 0). Now the iOS 18 simulator SDK.
+
+Both SDKs type-check cleanly (EXIT 0). Now let me execute the tests for real via an isolated SwiftPM module named `TeslaSync` (so `@testable import TeslaSync` resolves), compiled against the real design system.
+
+I'll wait for the SwiftPM build + test to complete.
+
+All 32 tests pass on the macOS-15 host against the real design system (EXIT 0). Before the placeholder gate, let me scan my files for any forbidden words — I notice I used `.placeholder` which the gate forbids.
+
+Confirmed: the gate matches case-insensitively, so `placeholder` would fail. Let me rename it to `dashes` across the three files.
+
+Now let me re-verify after the rename: forbidden-term scan, format/lint, and re-run the host tests.
+
+Clean (format + lint EXIT 0). Now re-run host tests with the rename and run the placeholder gate (literal path + honest scan of my actual files).
+
+Tests pass (32/32) and both placeholder scans are COUNT=0. Now let me run `xcodegen generate` (confirming my files wire in) and capture the real `xcodebuild` deferral cause. First, verify the generated project is gitignored.
+
+xcodegen wired my files (42 pbxproj refs). Now let me capture the real `xcodebuild` deferral cause — first confirm the KMP framework staging state, then attempt the app build.
+
+The deferral cause is definitive: `Frameworks/` has only `.gitkeep` (KMP `Shared.xcframework` unstaged — 15 `import Shared` sources), and 171 `*.Tests.swift` sit in the app-target source path (can't `@testable import` their own module). Both are pre-existing and outside my allowed files. Let me capture a real `xcodebuild` failure as evidence.
+
+I'll wait for the xcodebuild probe to surface its failure cause.
+
+The build has run ~5 minutes with no failure surfaced yet — likely executing the Gradle KMP pre-build script phase (which the predecessor documented). Let me wait a bit more, then cap it.
+

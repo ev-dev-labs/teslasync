@@ -1,0 +1,107 @@
+=== P4 Shared surface 0097 PlaybackSpeedMenu (Apple) ===
+date: 2026-06-08T12:11:27Z
+host: macOS 26.5.1 | swift swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+web source: web/src/components/data-display/PlaybackSpeedMenu.tsx
+native output: apps/apple/TeslaSync/shared-surfaces/PlaybackSpeedMenu.*
+
+### Files shipped
+PlaybackSpeedMenu.Adapter.swift
+PlaybackSpeedMenu.Model.swift
+PlaybackSpeedMenu.Previews.swift
+PlaybackSpeedMenu.strings
+PlaybackSpeedMenu.swift
+PlaybackSpeedMenu.Tests.swift
+PlaybackSpeedMenu.Views.swift
+
+============================================================
+STEP 1+2 — xcodebuild iOS + macOS (build test)  [official gate]
+============================================================
+-- default toolchain probe (xcode-select) --
+Xcode 26.5
+Build version 17F42
+-- Xcode availability via DEVELOPER_DIR --
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+Xcode 26.5
+Build version 17F42
+booted simulators:
+    iPhone 16 (83717DEE-70A3-4325-AA61-CBDDD3140989) (Booted) 
+
+RESULT: BLOCKED — the platform (Xcode 26.5 + iPhone 16 simulator) is PRESENT,
+but the official 'xcodebuild -scheme TeslaSync build test' cannot be executed
+end-to-end from THIS per-surface prompt for two infra reasons, both outside
+this prompt's allowed-files set (apps/apple/TeslaSync/shared-surfaces/PlaybackSpeedMenu.*):
+  (a) The 'TeslaSync/shared-surfaces' source group is not yet registered in
+      apps/apple/project.yml (only dashboard-widgets + feature-views are) nor in
+      apps/apple/.swiftlint.yml 'included:'. That registration is P4-core infra
+      (this surface's declared 'Depends on: P4 core'); editing the shared
+      project.yml/.swiftlint.yml from a parallel surface slot is unsafe + disallowed.
+  (b) The app target links Frameworks/Shared.xcframework (the KMP core, ADR-004),
+      which is NOT prebuilt here (Frameworks/ holds only .gitkeep) and is assembled
+      via the Kotlin/Native Gradle toolchain (apps/shared/gradlew
+      :core:assembleSharedXCFramework) — a separate dependency, not a UI-surface concern.
+Frameworks/ contents:
+apps/apple/Frameworks/.gitkeep
+IOS_EXIT=BLOCKED
+MAC_EXIT=BLOCKED
+
+Because the literal build+test could not run, the surface is verified with the
+real Xcode 26.5 SDKs at the compile + unit-test level (see SUPPLEMENTARY EVIDENCE).
+
+============================================================
+STEP 3 — swiftlint --strict   [runnable]
+============================================================
+(.swiftlint.yml 'included:' does not yet list shared-surfaces — P4-core infra —
+ so the surface files are linted by explicit path with the repo config.)
+Linting 'PlaybackSpeedMenu.Views.swift' (4/6)
+Linting 'PlaybackSpeedMenu.Previews.swift' (5/6)
+Linting 'PlaybackSpeedMenu.Tests.swift' (6/6)
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+
+============================================================
+STEP 4 — swiftformat --lint apps/apple   [runnable, scoped to surface]
+============================================================
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-326/apps/apple/.swiftformat
+SwiftFormat completed in 2.17s.
+0/6 files require formatting.
+FORMAT_EXIT=0
+
+============================================================
+STEP 5 — check-placeholders.ps1   [runnable]
+============================================================
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+============================================================
+SUPPLEMENTARY EVIDENCE — real Xcode 26.5 SDKs (surface verified end-to-end
+at compile + unit-test level; signature shim stands in for the design-token
+module that only links inside the app target)
+============================================================
+-- [A] iOS 18 simulator SDK: typecheck surface (Model+Adapter+View+Views+Previews) --
+IOS18_TYPECHECK_EXIT=0
+-- [B] macOS 15 SDK: typecheck surface --
+MAC15_TYPECHECK_EXIT=0
+-- [C] XCTest suite EXECUTED via swift test (real Xcode toolchain, macOS) --
+	 Executed 21 tests, with 0 failures (0 unexpected) in 0.038 (0.052) seconds
+SWIFT_TEST_EXIT=0
+-- [D] Real Model+Adapter logic harness (web nextSpeed/shiftSpeed parity) --
+LOGIC_RESULT=ALL_PASS
+LOGIC_HARNESS_EXIT=0
+
+============================================================
+ACCEPTANCE SUMMARY
+============================================================
+[x] Surface renders all web-source states (loading/empty/error/loaded) + stale/offline freshness
+[x] No direct HTTP from the view — controlled by parent via S8 (web parity: useTranslation only)
+[x] Web i18n key 'replay.controls.speed' preserved in PlaybackSpeedMenu.strings (+ native chrome keys)
+[x] Accessibility: label + value + hint + adjustable + named Faster/Slower actions; option labels
+[x] Tests: adapter unit tests + per-state construction + a11y label + i18n parity + telemetry (21 passed)
+[x] No TODO/stub/mock/Lorem in shipped code (placeholder gate COUNT=0)
+[x] swiftlint --strict: 0 violations ; swiftformat --lint: 0/6 ; iOS18 + macOS15 typecheck: 0/0
+[ ] Official 'xcodebuild build test': BLOCKED on P4-core shared-surfaces registration +
+    KMP Shared.xcframework assembly (infra deps outside this prompt's allowed files)
+
+EXIT=1
+STATUS=BLOCKED

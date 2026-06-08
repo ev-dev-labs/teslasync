@@ -1,0 +1,117 @@
+I'll start by exploring the environment, the web source specification, and the existing Apple app structure to understand what's needed.
+
+Key finding: `xcode-select` points to `CommandLineTools`, not a full Xcode. Let me verify the toolchain capability and examine the existing Apple app structure plus the web source.
+
+`xcodebuild` requires full Xcode but only Command Line Tools are installed — the iOS/macOS build+test gate physically cannot run here. Per the prompt this is a BLOCKED condition, but the Honesty Covenant forbids stubs/scope-narrowing, so I will still write the complete production implementation and run every gate I *can* (swiftlint, swiftformat, check-placeholders), then honestly record the xcodebuild blockage with evidence.
+
+Let me deeply understand the existing Apple architecture (state holders, tokens, i18n, diagnostics, UI components, test patterns) before writing code.
+
+Let me examine the prompt series context, whether a `feature-views` directory already exists, and how predecessors handled the same pattern (the covenant forbids predecessor bypass).
+
+A rich, established Apple codebase exists. The `feature-views` directory is new (this is the pattern's first surface in that folder). Let me learn the real native APIs I must bind to — i18n facade (S10), design tokens (S9), state holders (S8), diagnostics (S11), UI components — plus the web `ToolCard`, `constants`, and `fmtNumber`. Let me also check for any already-completed feature-view logs to follow precedent.
+
+No feature-view has been executed yet — I'm establishing the Apple pattern, following dashboard-widget + shared-component conventions. Let me read the real native APIs I must bind to.
+
+Now let me read the design tokens, typography, card, feedback components, the i18n + diagnostics facades, and a complete reference dashboard-widget (model + view + strings + tests) to mirror conventions exactly.
+
+Let me read the i18n facade, diagnostics facade, feedback states, and a complete reference widget (model + view + strings + test) to lock in conventions.
+
+Let me examine the reference widget set (view, telemetry registry, strings, and a unit test), plus the diagnostics contract, to mirror the exact conventions.
+
+Let me find the canonical P1/S11 diagnostics facade (not the dashboard-widget-local copy), the i18n mechanism (xcstrings + co-located .strings), and a reference unit test.
+
+The real P1/S11 contract appears to be `TelemetryEventScreenView` via `Telemetry.track` (ADR-016). Let me read that, the number formatter, the reference test, and the co-located strings mechanism.
+
+Let me resolve two key conventions: how co-located `.Tests.swift` files work (do they run?) and how co-located `.strings` tables are referenced, plus the central catalog format.
+
+Co-located `.Tests.swift` (XCTest) and `.strings` are the established convention; everything for a surface lives beside it. Now let me capture exact web parity details — `ToolCard`, `BYTE_UNITS`, `fmtNumber`, and the real i18n catalog strings — plus the model/adapter test patterns and a co-located strings file format.
+
+Let me confirm the real i18n strings, the design-token color names, the model/view wiring (DestinationETA), and the test patterns for telemetry + a11y.
+
+I now understand the architecture well. Let me read the final reference pieces: the co-located `.strings` format, the `DestinationETAWidget` view wiring (telemetry + a11y at this tier), `TSTone`/`TSBadge`/`TSSkeleton` APIs, and the rest of the reference test for telemetry/a11y patterns.
+
+I have nearly everything. Let me read the placeholder gate script, the lint/format configs, the reference test's telemetry/a11y sections, and the model test-init pattern — these determine the exact rules my files must satisfy.
+
+Two important findings: `.swiftlint.yml` `included:` doesn't list `feature-views` (an integration concern I can't edit), and `swiftformat --lint apps/apple` *will* scan my files. Let me read the placeholder enumeration logic, the forbidden patterns, and how a dashboard-widget prompt's gate path resolves (flat-file vs subdir question).
+
+Now I understand the full gate semantics. Critical facts:
+- **`check-placeholders.ps1`** forbids (case-insensitive) `TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented` + Swift stubs — I'll avoid all, including the word "placeholder".
+- **`swiftformat --lint apps/apple`** *will* scan my files; **`swiftlint --strict`** (gate) won't (config `included:` omits feature-views), but I'll lint my files directly anyway.
+- **`xcodebuild`** cannot run (no Xcode) → genuine BLOCKED with evidence.
+
+Let me confirm final API details (Logger import, model/test patterns) before writing.
+
+I have a complete, precise picture of every convention. Let me confirm the `@Observable` model import pattern, then write everything.
+
+Confirmed: `Color.TS.accent` is cyan (matches web `color="cyan"`), and the model/diagnostics patterns are clear. Before writing the surface, I'll **empirically verify the core numeric algorithm** with standalone `swift` and cross-check against JS `toLocaleString` with `node` — since I can run those even without Xcode. This validates the exact strings I'll pin in tests.
+
+Let me write the plan, then verify the algorithm.
+
+Now let me empirically verify the conversion algorithm (Swift `NumberFormatter` + `parseFloat` semantics) against the web's JS `toLocaleString`, so my pinned test strings are provably correct.
+
+The web (JS) ground-truth values are computed. My Swift regex-literal failed in script mode — I'll switch the algorithm to `Scanner.scanDouble()` (simpler, robust, matches `parseFloat`, no regex ambiguity) and re-verify against the JS outputs.
+
+**Verified byte-for-byte:** the Swift `Scanner`-based adapter matches the web JS output for all 15 cases (parse leniency, grouping, fraction digits, invalid→nil). Now I'll write the five co-located surface files with these exact pinned strings.
+
+All five files are created. Let me verify the two additional pinned values (`2 KB`→"2,048", `8 B`→"8") and run the three runnable gates: swiftformat, swiftlint, and the placeholder check.
+
+Both extra values confirmed (`2 KB`→"2,048", `8 B`→"8"). swiftformat flagged 4 style items — let me auto-fix them with swiftformat (touches only my files) and re-lint.
+
+swiftformat passes (0/4 require formatting). Now swiftlint on my files and the placeholder check against the real directory.
+
+All three runnable gates pass cleanly (swiftformat 0 issues, swiftlint 0 violations, placeholders 0). 
+
+Since the shipped `ByteSizeConverter.Model.swift` depends only on Foundation/Observation/OSLog (no SwiftUI/KMP), I can **compile-and-run the actual shipped model source** with the standalone `swift` toolchain — the strongest verification available without Xcode. Let me do that.
+
+The standalone Swift compiler caught a **real Swift 6 strict-concurrency bug**: making the whole protocol `@MainActor` propagated isolation to `Noop…init()`, which then can't be used as a default argument. The established `DestinationETADiagnostics` pattern marks only the *method* `@MainActor`. Let me fix it to match.
+
+Now re-run the compile-and-run verification with the fix:
+
+The shipped model **compiles and runs correctly** — 12/13 pass. The one "FAIL" is an error in my *verification harness's* expected value, not the code: for `2 KB`, bytes=2048, so KB=`2.0000`/MB=`0.0020` (the shipped output) is correct; I mistakenly wrote `1.9531`. Let me confirm against JS `node` and fix the harness to reach all-green.
+
+**Fully verified:** the shipped `ByteSizeConverter.Model.swift` compiles under the Swift 6 toolchain and all 13 checks pass — byte-exact web parity (confirmed against `node`/JS), empty/populated states, and `view.opened`-once telemetry. The earlier "fail" was my harness typo.
+
+Let me confirm the auto-formatted sections are valid, then view the final files once more.
+
+Let me review the auto-formatted view file end-to-end to confirm the `#if os(iOS)` block and layout survived formatting correctly.
+
+The view file is correct post-format. Before writing the authentic gate log, let me check how the whole-tree gate commands behave on this runner (xcodebuild, `swiftformat --lint apps/apple`, and bare `swiftlint --strict`).
+
+`swiftformat --lint apps/apple` passes on the whole 508-file tree (0 require formatting). The xcodebuild exit code was masked by the pipe — let me capture it directly, plus the bare `swiftlint --strict` behavior.
+
+Definitive BLOCKED evidence captured: `xcodebuild` exits 1 with "requires Xcode … command line tools instance". Let me capture the repo-wide `swiftlint --strict` status (intended cwd `apps/apple`) for the log.
+
+The repo-wide `swiftlint --strict` exits 2 due to a **pre-existing** violation in `LifetimeStatsWidget.Adapter.swift` (a dashboard-widget file I didn't touch). Let me confirm the full violation list and that none are in my `feature-views` files.
+
+Confirmed: the only repo-wide swiftlint violation is **pre-existing** in `LifetimeStatsWidget.Adapter.swift` (outside my allowed scope); my 4 files are 0-violation clean. I now have all evidence. Let me generate the authentic gate log.
+
+Now let me append the supplementary toolchain verification (compile+run of the shipped model, JS parity cross-check) and the final BLOCKED determination to the log.
+
+Let me review the complete log to confirm it's accurate and the supplementary verification rendered correctly.
+
+The log is complete and honest. Now I'll commit only my surface files + the log (the prompt's bare `ByteSizeConverter` pathspec wouldn't match the extensioned files, so I'll use the glob). I must avoid the two pre-existing unrelated `web/` modifications that predate my session.
+
+Exactly my 6 files staged; the two pre-existing `web/` changes correctly excluded. Committing with the prescribed message.
+
+Committed cleanly (`f710e46c`, 6 files, 713 insertions). Let me clean up temp files and do a final working-tree check.
+
+Task complete. Here's the honest, evidence-backed outcome.
+
+## What I built
+A production-complete, Apple-idiomatic SwiftUI parity of the web `ByteSizeConverter` devtools tool, as 5 co-located files under `apps/apple/TeslaSync/feature-views/` (committed `f710e46c`):
+
+- **`ByteSizeConverter.Model.swift`** — pure conversion adapter (`parseFloat`→bytes→grouped decimals, byte-exact web parity), `@Observable` model, P1/S11 diagnostics seam (Noop/OSLog/Buffered, `view.opened` slug `ByteSizeConverter`), a11y label builder.
+- **`ByteSizeConverter.swift`** — `ByteSizeConverterView`: `ToolCard` chrome (cyan icon + title + desc) via `TSGlassPanel`, `TSTextField`+`TSSelect` inputs, a 5-up results grid with the active unit emphasized, and an empty state — the two states the web source actually renders.
+- **`.Previews.swift`**, **`.Tests.swift`** (adapter parity with pinned strings + per-state + telemetry-once + a11y), **`.strings`** (P1/S10 per-surface catalog).
+
+## Verification (all green where runnable)
+- `swiftformat --lint apps/apple`: **0/508** need formatting.
+- `swiftlint --strict` on my 4 files: **0 violations** (the one repo-wide error is pre-existing in `LifetimeStatsWidget.Adapter.swift`, not mine).
+- check-placeholders: **0**.
+- **Compiled + ran the shipped model on the Swift 6 toolchain → 13/13 checks green**, cross-checked against the web's JS `Intl.NumberFormat` via `node`.
+
+## ⚠️ STATUS = BLOCKED (build+test gate)
+`xcodebuild` requires full Xcode, but this runner only has **CommandLineTools** (`xcode-select -p` → `/Library/Developer/CommandLineTools`; `xcodebuild` exits 1). The iOS/macOS build+test gate physically cannot run here. Per the prompt's capability clause this is a legitimate **BLOCKED** outcome — the log (`…/logs/p4-apple-feature-views-0012-ByteSizeConverter.log`) ends with `EXIT=1` / `STATUS=BLOCKED` and full capability evidence. Per the Honesty Covenant I did **not** fake a green build; the code is shipped complete and every runnable gate plus a toolchain compile/run passes.
+
+Integration steps intentionally left outside this per-surface prompt's allowed-files scope: adding `TeslaSync/feature-views` to `project.yml`/`.swiftlint.yml` and folding the strings into `Localizable.xcstrings`.
+

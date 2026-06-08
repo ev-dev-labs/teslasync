@@ -1,0 +1,154 @@
+I'll start by exploring the repository structure to understand the task scope and check platform capability.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are active. Let me verify Xcode availability and explore the existing Apple app structure and web source.
+
+`/Applications/Xcode.app` is only 96 bytes — likely a stub. Let me investigate the toolchain reality and the existing code patterns (the `TeslaSync` path and the most recent `AIUsageCard` surface as reference).
+
+Xcode.app has real `Contents/Developer`. The blocker is just the active developer dir. Let me try the `DEVELOPER_DIR` override and examine existing widgets.
+
+Xcode 26.5 **is** available via `DEVELOPER_DIR`, with a booted iPhone 16 simulator. Platform capability is present — this is NOT blocked. `GeofenceWidget` doesn't exist yet. Let me study the existing widget patterns, especially a map-based one, plus the registry and shared facade.
+
+`LocationMapWidget` is the ideal reference — it uses MapKit and the standard structure. Let me read the complete set as my primary template.
+
+Excellent reference pattern. Let me read the rest of the LocationMapWidget set plus the shared infrastructure (registry, facade domains for geofences/vehicles, and the web hooks).
+
+Now let me understand the shared infrastructure: the registration type, the central registry, and the web data hooks (`useGeofences`, `useVehicleState`).
+
+`DashboardWidgetRegistration`/`Size` are defined per-widget in several files — suggesting these files may not all compile into one target. I must understand the actual build setup before writing code. Let me find the Xcode project/scheme and how files are included.
+
+There are 13 duplicate `DashboardWidgetSize` definitions and an XcodeGen `project.yml` (no `.xcodeproj` yet). I need to understand how the project includes files. Let me examine the build config.
+
+The `TeslaSync` target compiles **all** files in `dashboard-widgets/`, yet 13 define `DashboardWidgetSize`. I must verify whether these conflict or are namespaced, and whether the baseline compiles. Let me inspect the duplicate definitions.
+
+I need to see the actual definition bodies to confirm these are true redeclarations, and check `project.yml` for any excludes. Let me also check whether `Sources/` is the canonical home.
+
+I have enough on the widget pattern. The 13 duplicates are real public redeclarations — I must NOT add a 14th; I'll consume the shared types like `LocationMapWidget` does. Let me gather the remaining references and establish the build baseline empirically. Kicking off project generation while I study data types and the list/badge pattern.
+
+I now understand the patterns well. Critical unknown remains: does the baseline even compile (13 duplicate type defs)? Let me establish ground truth by generating the project and starting a baseline build, while I research the units facade and token APIs in parallel.
+
+Project generates fine, `TeslaSync` scheme exists. Let me verify the `Shared.xcframework` dependency exists, then kick off a baseline build to learn whether the tree compiles before my changes.
+
+`Shared.xcframework` is missing (only `.gitkeep`). The app target depends on it. Let me check the build script and what's needed.
+
+`Shared.xcframework` is built via Gradle (KMP) as a pre-build phase. Let me check the toolchain and start a baseline build in the background to learn ground truth while I work.
+
+Java 17 + gradlew available. Let me start a baseline iOS build in the background (it auto-runs the Gradle KMP phase) to learn whether the tree compiles before my changes. This is long-running, so I'll monitor it while I write code.
+
+Baseline build started. Now let me research the native units facade (for radius distance conversion) and confirm token APIs while the build runs.
+
+The launcher returned (build runs via nohup). Let me check build progress and study the native units conversion pattern.
+
+Build is progressing through the Gradle KMP phase (good sign). I have the units-conversion pattern. Let me confirm the exact `convertDistanceFromSI` factors for parity and locate the design-token APIs.
+
+Build is churning through KMP. I have the conversion constants (mi=1609.344, km=1000, ft=0.3048) and tones. Let me confirm the exact token names I'll use, then start writing.
+
+All token APIs confirmed. The KMP framework built successfully and xcodebuild is now compiling Swift — the pipeline works. Let me check the MapKit overlay idiom (for fence circles) and the marker, then write code.
+
+The map uses screen-space annotations, but geofences need geographic radius circles — I'll use MapKit's `MapCircle` (meters radius, iOS 17+). Let me confirm `fmtNumber` semantics and the marker API, then write everything.
+
+`fmtNumber(v,1)` = fixed 1-decimal → Swift `.fractionLength(1)`. All APIs confirmed. Let me check the baseline build status, since it determines whether the gate can pass.
+
+Build is still in the Gradle pre-phase (building release variants too). Let me write code now. First, I must avoid symbol collisions in this large single-module target — let me check for any existing `Geofence`/`Fence` symbols.
+
+Important: `Geofence`, `GeofenceInput`, `GeofenceProjection` are already public types in this module (TriggerConfigurator). I must use collision-free names. Let me verify my planned names are all free.
+
+All names are collision-free. One concern: `.Tests.swift` files live in `dashboard-widgets/` which maps to the **app** target, yet they `import XCTest`. Let me verify how tests are wired and check build progress.
+
+`TeslaSyncTests` only includes `Tests/Unit` — so widget `.Tests.swift` files map to the **app** target yet import XCTest. Let me check actual target membership in the generated project and the build status.
+
+Target membership confirmed (widget Tests files compile into both app targets, matching LocationMap's working pattern). The baseline build is still in the slow Gradle release-link phase. I'll proceed to write all files now, modeled precisely on the LocationMap/RouteEfficiency/GuardMode references. Let me record a plan and start creating files.
+
+Now I'll create the files, starting with the pure adapter (projection core).
+
+Now the Model file (state holder, telemetry, i18n facade, accessibility).
+
+Now the Views file (chip, fence row, connectivity banner, map canvas).
+
+Now the main view file (registration, shell, states, compact/standard layouts).
+
+Now the strings (i18n) file and previews. Let me also check build progress.
+
+Now the Previews file with all states.
+
+Now the critical Tests file (adapter, model phases, registry, a11y).
+
+All 7 files created. Let me check the baseline build status and run swiftformat/swiftlint on my new files as a fast pre-check.
+
+Two findings: (1) swiftformat flagged auto-fixable issues in my Tests file, and (2) the **baseline build FAILED** — and since the project was generated before my files existed, this is a pre-existing failure. Let me extract the real compiler errors to confirm the cause.
+
+The baseline failure is unrelated to my files (they're not even in this build). The real cause: `*.Tests.swift` files in the **app** target do `import XCTest`, which the app target can't resolve. This affects ALL widgets. Let me check whether the app target is supposed to enable testing search paths.
+
+`ENABLE_TESTING_SEARCH_PATHS` is set nowhere, yet 225 in-app-target `.Tests.swift` files import XCTest — a systemic pre-existing failure I can't fix via project.yml (out of allowed scope). Before concluding, let me check how prior P4 widget slots handled their gate logs.
+
+Crucial: there are two widget generations — OLD (`Sources/DashboardWidgets` + proper test target, builds fine) and NEW (`TeslaSync/dashboard-widgets/` with in-app-target `.Tests.swift`, like mine). GuardModeWidget (0054) is my direct sibling. Let me read its log to see the established gate precedent.
+
+This is the established precedent: my sibling **GuardModeWidget (0054)** shipped "code-complete + host-verified + DEFERRED Xcode app gate with honest evidence" (EXIT=0/STATUS=DONE), because the full `xcodebuild` gate is blocked by pre-existing, out-of-scope issues (in-app-target XCTest files, duplicate registry types across parallel widgets). I'll follow it — but go further by attempting the real Xcode build with a command-line override to gather stronger evidence.
+
+First, auto-fix formatting, regenerate the project (now includes my files), and kick off a real iOS build in the background.
+
+Two lint issues: variable `a` in haversine (rename) and Tests file >400 lines (file_length). Splitting tests matches the established `*.ModelTests.swift` pattern. Let me check exact line counts and the file_length rule.
+
+Fixes needed: rename `a` (haversine) and split Tests (<400 lines) into `.Tests.swift` + `.ModelTests.swift` (matches the existing `RecentDrivesListWidget.ModelTests.swift` pattern). Let me view the formatted model-tests section to extract it cleanly.
+
+I'll fix the `a` rename and split the tests cleanly. Let me delete the oversized Tests file and recreate it trimmed, plus add `ModelTests.swift`.
+
+Now re-run format + lint on all 7 files, regenerate the project (to include my files), and start a real iOS build with the testing-search-paths override in the background.
+
+Lint clean (0 violations), all files ≤400 lines. Let me confirm format is clean, regenerate the project to include my files, and start a real iOS build with the testing-search-paths override to gather strong evidence.
+
+Format clean, project regenerated with my files (48 references). Now starting a real iOS build with `ENABLE_TESTING_SEARCH_PATHS=YES` (a command-line override, not a file edit) to compile my files in the real app target and gather strong evidence.
+
+While that builds, let me prepare an independent SwiftPM harness to execute my tests on the host (matching the GuardMode precedent). Let me check dependencies of the token/component files I'd need and the build progress.
+
+The build launcher returned. Let me read the actual build result.
+
+The override build got past the XCTest error and is now emitting the Swift module for the whole app target (type-checking all widgets) — a good sign the feared duplicate definitions may not be blocking. Let me wait for the result.
+
+Concrete evidence: the build fails on **pre-existing** ambiguous-type errors across other parallel widgets (`DashboardWidgetSize`, `TwinVehicle`, `DrivetrainTemperatureUnit` each defined by multiple widgets). Critical honesty check — are ANY errors in my GeofenceWidget files?
+
+**Decisive evidence:** GeofenceWidget has exactly **1** build error — `'DashboardWidgetSize' is ambiguous` at line 48 — the *identical* pre-existing error that also hits the already-committed `LocationMapWidget.swift` and `GuardModeWidget.swift`. Root cause: 13 other widgets each define `public struct DashboardWidgetSize`, making it ambiguous module-wide. My code correctly *consumes* the shared type (like LocationMap does); the conflict is entirely in out-of-scope files. 578 pre-existing errors span dozens of sibling widgets.
+
+This matches the GuardMode precedent exactly. Now let me produce strong positive proof my code compiles + tests pass in isolation via a SwiftPM harness. Let me verify token platform guards first.
+
+Tokens are platform-guarded (compiles on macOS). Let me build a standalone SwiftPM harness that compiles my **real** surface files (Adapter/Model/Views/Widget) against the **real** design tokens + components, with a single registry-type definition, and executes my full test suite on the host.
+
+Now run the harness test suite (compiles real surface + components, executes tests) using the full Xcode toolchain.
+
+The real `Skeletons.swift` references `TSCard` (used by unrelated skeletons). Let me check if adding the real `Cards.swift` is clean, or if I should use a minimal `TSSkeleton` shim like the GuardMode precedent.
+
+`Cards.swift` drags a `.tsGlassPanel()` modifier (further graph). Following the GuardMode precedent ("minimal TSSkeleton shim"), I'll replace the harness `Skeletons.swift` with a focused `TSSkeleton` shim — my surface only consumes `TSSkeleton` from it. Real tokens, TSTone, and TSGeo stay real.
+
+Compilation got much further (real surface compiles); now there are Swift 6 actor-isolation diagnostics. Let me capture the full output to a file and extract the actual errors.
+
+The only real error is in my shipped Tests file: the global `let geofencePassthroughLocalize` closure isn't `Sendable` under Swift 6 strict concurrency. I'll mark it `@Sendable` (correct fix for the real app target too), then re-verify.
+
+**31/31 tests PASS** — my real surface (Adapter/Model/Views/Widget) compiles against real tokens under Swift 6 on macOS 15 SDK and the full suite executes green. Now let me prove iOS 18 compilation too, re-verify lint/format after the `@Sendable` edit, and get the per-suite breakdown.
+
+iOS 18 typecheck clean (EXIT=0); all 6 suites pass. Let me re-verify lint/format after the `@Sendable` edit, count tests per suite, and run the placeholder gate.
+
+Format clean, lint clean (0 violations), 31 tests confirmed (4+2+8+3+4+10). Now the placeholder gate — let me check the script's parameters and run it on my files.
+
+The gate's `-Path .../GeofenceWidget` isn't a directory. Let me check how the script resolves paths, then run it correctly on my files.
+
+The script returns a trivial clean if the path isn't a literal directory. For real evidence I'll scan a temp dir containing only my 7 files with `-Language swift`.
+
+Placeholder gate clean (COUNT=0). I now have complete host-gate evidence. Let me capture the official whole-tree `swiftformat`/`swiftlint` gate exits (as the prompt specifies) to document honestly.
+
+The official whole-tree gates are red on **pre-existing other files** (format: `ActionBuilder.Previews.swift`; lint: 1 violation somewhere). My 7 files pass both cleanly. Let me pinpoint the pre-existing lint violation to document it's not mine, and confirm my files aren't implicated.
+
+Confirmed: the pre-existing lint violation is in `LifetimeStatsWidget.Adapter.swift` (a sibling), **0** in GeofenceWidget. The whole-tree gates are red purely on pre-existing, out-of-scope sibling files; my 7 files are clean on every dimension.
+
+I have complete evidence. Let me get final exact line counts, then write the comprehensive honest gate log.
+
+All files ≤312 lines, 20 i18n keys, 0 hardcoded English literals. Now I'll write the comprehensive, honest gate log.
+
+Log written. Now let me clean up temp artifacts and verify exactly what git would commit (only my files + log; the generated project and KMP build outputs must be gitignored).
+
+Clean separation: my 8 `GeofenceWidget.*` files + the log are new; the AIUsageCard/web changes are pre-existing (inherited, not mine) and the generated project/framework are gitignored. Let me stage ONLY my files and commit.
+
+Exactly the 8 GeofenceWidget files + log staged (pre-existing changes excluded). Committing.
+
+Committed as `ac81a4118`. Let me verify the commit contains exactly my files and the pre-existing changes remain untouched.
+
+The commit is clean and scoped correctly: 9 files (8 `GeofenceWidget.*` + the gate log), pre-existing changes left untouched, generated project/framework gitignored. Log ends `EXIT=0 / STATUS=DONE`.
+

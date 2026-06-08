@@ -1,0 +1,139 @@
+I'll start by understanding the environment, the web source specification, and the existing Apple app structure. Let me explore in parallel.
+
+Key finding: **xcodebuild requires full Xcode but only Command Line Tools are installed, and `simctl` (iOS Simulator) is unavailable.** Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me explore the existing Apple app patterns and read the web source before deciding on the build approach.
+
+Now I understand the structure. There's a well-established `feature-views/` pattern with multiple files per component (`.swift`, `.Adapter.swift`, `.Model.swift`, `.Views.swift`, `.States.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`, `.ModelTests.swift`). 
+
+Critical constraint: I can ONLY touch `feature-views/UpdateAvailableCallout.*` + the log. Let me study the shared facade layers (P1/S8/S9/S10/S11) and find a similar simple component to use as a template.
+
+`pwsh` IS available (placeholder check can run). The project uses XcodeGen + a prebuilt `Shared.xcframework`. Let me study the shared facade layers and find a good template component.
+
+Now let me understand the data source (`useDateFormat`, `/system/update-check`), how the web parent consumes this callout, and read a complete simple component set (`BatteryPill`) as a pattern reference, plus the i18n/diagnostics facades.
+
+`BatteryPill` is the ideal template — a "pure presentational" surface that "owns no data — exactly like the web component," documenting that loading/error/offline states belong to the embedding surface. Now I need the native date-format facade (for `useDateFormat`), design tokens, i18n patterns, and the link/button + Previews/Tests/strings conventions.
+
+The callout is gated behind `hasUpdate` in the parent and receives `current`/`latest`/`checked_at` props — pure presentational, exactly like `BatteryPill`. Now I need the native date-format facade, the `TSGlassPanel`/token definitions, and the strings/previews/tests conventions.
+
+Excellent — I now have the full pattern. Let me get the remaining specifics: the native date-format facade (how feature-views bind `useDateFormat`), `TSGlassPanel`'s API, and the `Font.TS`/`TSSpacing`/`TSMotion` token names.
+
+Feature-views format dates with a local `DateFormatter` in an Adapter/Projection (no shared date state-holder exists — `AuditPanel.Projection.swift:93`, `RateLimitStatusPanel.Adapter.swift:180`). Let me read the remaining token values, the `tsGlassPanel()` modifier, the date-format idiom, and find how an existing tinted "callout" panel is built.
+
+Let me read the `tsGlassPanel()` material modifier, the per-surface i18n string helper pattern (`*Strings.string(key, fallback)`), and how feature-views render external links/buttons.
+
+Let me read the external-link idiom and determine the true build capability (is there a full Xcode.app, xcodegen, and a real `Shared.xcframework`?).
+
+Critical findings: **Xcode.app IS present** and **xcodegen IS installed**, but the **`Shared.xcframework` (KMP core) is MISSING** — the app targets depend on it via `import Shared`. Let me investigate whether it can be built.
+
+The only hard blocker is the missing `Shared.xcframework` (built via KMP/Gradle). Xcode.app + xcodegen + a build script all exist. My plan: write the complete component first, pass the available gates (swiftformat/swiftlint/placeholders), then attempt the full xcodebuild path. Let me grab the final idiom details — how existing tinted "callout/banner" panels apply an accent, and confirm the UI deps don't need `Shared`.
+
+All idioms confirmed: `Color.TS.accent` is the cyan accent (matches web cyan), the `.opacity(...)` tint pattern is established, and `Components/UI` + `Design` tokens are `Shared`-free. Let me read the lint/format configs so my code passes `--strict` on the first try, then start writing.
+
+I have everything needed. Let me set up tracking, verify there's no warnings-as-errors setting, then write all six component files following the `BatteryPill` precedent exactly.
+
+Let me confirm how the existing `*.Tests.swift` files in `feature-views/` get compiled into a test target (since I can't edit `project.yml`, I must match the existing mechanism).
+
+The `feature-views/` dir is in both app targets; `BatteryPill.Tests.swift` co-locates tests gated on `#if canImport(XCTest)`. I'll follow that exact sibling convention. Now writing all six files.
+
+Let me remove the unused `@Environment(\.openURL)` (I use `Link`, not `openURL`), then create the Model, Telemetry, Previews, strings, and Tests files.
+
+I introduced a typo (full-width `），`) in the Model. Fixing it now.
+
+Now the Telemetry, Previews, strings, and Tests files.
+
+Now the i18n strings catalog and the test suite.
+
+All six files created. Now running the available gates — swiftformat (autofix + lint), swiftlint `--strict`, and the placeholder check.
+
+swiftformat reformatted 2 files and now reports clean. Running swiftlint `--strict` and the placeholder gate.
+
+All three available gates pass (format 0/5, lint 0 violations, placeholder COUNT=0). But I must confirm the placeholder check actually *scanned* my files (the gate path `…/UpdateAvailableCallout` isn't a real directory) — not a false zero. Let me verify the script's file enumeration.
+
+Confirmed: the script treats a non-existent `-Path` as "nothing to scan = clean" (lines 132–135), so the gate's literal path doesn't actually scan my files. To avoid a false pass, let me scan my real files directly, and in parallel probe the full build capability (Xcode env, simctl, JDK/Gradle for the KMP framework).
+
+Major update: with `DEVELOPER_DIR` set to Xcode 26.5, **xcodebuild works, the iPhone 16 simulator is booted, and Java 17 is present** — a full build is potentially achievable. The only gap is the prebuilt `Shared.xcframework`. Let me read the build script and KMP gradle config, then attempt to build it.
+
+Now I understand the full KMP build (`:core:assembleSharedXCFramework`, Gradle 8.14.5, Kotlin/Native, 3 Apple targets, pwsh codegen). This needs network for Gradle + Kotlin/Native + Maven deps. Let me probe connectivity, then kick off the framework build.
+
+Network is up, and crucially **Gradle 8.14.5 AND the Kotlin/Native 2.4.0 toolchain are already cached** (`~/.gradle`, `~/.konan`). This makes the framework build feasible. Kicking it off now.
+
+The KMP build is compiling (240s+). Let me continue monitoring.
+
+Still compiling (~7min). Output is buffered through `tail` so it'll appear on completion. Continuing to wait.
+
+Shared.xcframework built (7m58s) and staged. Now generating the Xcode project and starting the iOS build+test.
+
+Project generated; `TeslaSync` and `TeslaSync-macOS` schemes exist. The KMP framework now has ios-arm64, ios-simulator, and macos slices. Let me first compile the iOS app (build-only) to verify my code integrates, before the full test run.
+
+Build failed in the TeslaSync target's Swift compilation. Let me find the specific errors.
+
+The build failure is **pre-existing and unrelated to my change** — `AIRestorePanel.Tests.swift` (not mine) fails with `unable to resolve module dependency: 'XCTest'`. On Xcode 26.5, `canImport(XCTest)` returns true in the app target but can't link. My Tests file uses the same guard, so it'd hit this too. Let me check what guard the *other* (majority) feature-view test files use — they apparently don't trip this.
+
+178 test files exist, but only 5 use `#if canImport(XCTest)` — yet the failing `AIRestorePanel.Tests.swift` isn't one of them. I need to understand the real mechanism. Let me inspect the failing file and how XCTest is normally handled.
+
+Now I see it: **176 feature-view test files use a bare `import XCTest`** and are documented to "run in the TeslaSync XCTest targets." If they compile into the app target (where XCTest can't link), the whole app build breaks — independent of me. The real wiring must exclude tests from the app target or include feature-views in the test target. Let me find that mechanism in `project.yml`.
+
+Root cause found: the app target compiles **176 pre-existing `*.Tests.swift` files that `import XCTest`** directly into the app (documented to "run in the TeslaSync XCTest targets"). On Xcode 26.5's explicit-modules system, XCTest can't resolve in an app target, breaking the build repo-wide — independent of my change. The likely fix is enabling testing search paths so the app target can resolve XCTest. Let me try that.
+
+Progress: `ENABLE_TESTING_SEARCH_PATHS=YES` resolved the XCTest issue and compilation advanced much further. Now there are real compile errors to inspect. Let me extract them.
+
+Decisive finding: with the XCTest issue worked around, **all remaining errors are pre-existing duplicate-symbol errors in `dashboard-widgets/` (`invalid redeclaration of 'DashboardWidgetSize'`) — ZERO errors in my `UpdateAvailableCallout` files.** These are outside my allowed scope. Let me (a) confirm the dashboard duplicate is pre-existing, and (b) decisively compile+run my Model/Telemetry logic standalone to prove my surface is correct.
+
+Confirmed: the dashboard-widgets `DashboardWidgetSize` duplicate spans 15 pre-existing files, and `git status` shows **only my 6 files are new** — all build failures are pre-existing and outside my allowed scope (`feature-views/UpdateAvailableCallout.*`). 
+
+Now let me decisively prove my surface is correct: (1) compile+run my real Model/Telemetry logic standalone, and (2) type-check my view against the real UI/Design/token sources.
+
+Top-level code requires the file be named `main.swift` when compiling multiple files. Renaming and rebuilding.
+
+The standalone run caught a **real bug**: `accessibilitySummary` joined all parts with `". "`, producing a double period (`deployment.. Last checked`) since the body already ends in a period. The test expectation (single period) is correct — the implementation is wrong. Fixing the Model.
+
+Re-running the standalone logic check and re-linting the edited Model.
+
+19/19 logic checks pass and the Model stays lint-clean. Now let me type-check the **view** against the real SwiftUI + design tokens + UI components (the parts the app build never reached due to pre-existing breakage).
+
+No errors at all. Let me confirm decisively by capturing swiftc's actual exit code (not masked by the grep pipe).
+
+`VIEW_TYPECHECK_EXIT=0`, zero errors — my **view compiles cleanly against the real SwiftUI (iOS 18 SDK) + design tokens + the real `TSGlassPanel`/UI library**. My surface is fully verified. The full-app gate is blocked only by pre-existing, out-of-scope breakage. Let me check the project's documented convention for pending Apple verifications before finalizing.
+
+This is decisive. The project has a **documented convention** (`apps/macos-pending-verifications.md`) for exactly this situation. Two direct precedents — **ToolCard** and **AlertMessageEditor** — record the identical pre-existing blockers: `DashboardWidgetSize` redefined 15×, co-located `*.Tests.swift` importing XCTest into the app target, unstaged `Shared.xcframework`, macOS signing. Their surfaces were committed green; the full-app `xcodebuild build test` is deferred to the macOS acceptance-gate. `DashboardWidgetSize` is confirmed a `public struct` redeclared across 15 files — pre-existing, outside my allowed scope.
+
+Let me run the **exact gate commands** to capture authoritative evidence, then write the log. First, the iOS gate:
+
+iOS gate `IOS_EXIT=65` (failure). Let me extract the errors to confirm they're all pre-existing and none from my surface.
+
+The capture broke due to a bad grep regex (the `**`), losing xcodebuild's output. Let me re-run the exact iOS gate cleanly to a file (`IOS_EXIT=65` was real), then analyze.
+
+`IOS_EXIT=65`, 4 errors, **0 from my surface**. Let me view those 4 pre-existing errors.
+
+Authoritative iOS evidence captured: `IOS_EXIT=65`, the only errors are pre-existing `AIRestorePanel.Tests.swift` XCTest-in-app-target (matching the documented precedents) — **zero from my surface**. Now the exact macOS gate.
+
+Both gate steps captured: `IOS_EXIT=65` (pre-existing XCTest-in-app-target), `MAC_EXIT=65` (macOS development-signing + same collisions) — **zero surface errors in either**. This matches the documented `apps/macos-pending-verifications.md` precedents exactly. Now let me generate the authoritative log by re-running every surface-scoped gate and capturing real output.
+
+Let me review the complete log to ensure it's accurate and self-consistent.
+
+The log is thorough and honest, but line 12 has a misleading artifact: I accidentally passed the `.strings` file to swiftformat (which only handles `.swift`), producing a "File not found" line that contradicts `FORMAT_EXIT=0`. Let me fix that to show the real clean result.
+
+The log is now accurate. Let me do a final review of the view file's final state before committing.
+
+The view is complete and production-quality. Now let me commit precisely — staging only my 6 surface files + the log (verifying the generated `.xcodeproj` and `Shared.xcframework` are git-ignored so I don't stage build artifacts).
+
+Both build artifacts are git-ignored, and the only changes are my 6 surface files + the log. Staging and committing.
+
+Committed cleanly (`6d3d52a8d`, 7 files, 903 insertions — only my 6 surface files + the log). Let me update tracking and clean up scratch artifacts.
+
+The task is complete. Here's the summary.
+
+## Summary
+
+Shipped the native Apple `UpdateAvailableCallout` feature view (P4 · 0259) at parity with the web source, committed as `6d3d52a8d` (6 surface files + log, 903 insertions).
+
+**Delivered** (`apps/apple/TeslaSync/feature-views/UpdateAvailableCallout.*`), modeled on the sibling `BatteryPill` precedent:
+- **`.swift`** — the SwiftUI view: cyan-accented `TSGlassPanel` (web `GlassPanel`), `sparkles` glyph, title/body, and a release-notes `Link` with a 44pt HIG tap target.
+- **`.Model.swift`** — pure `Equatable` presentation reproducing all web branches (` — v{latest}` suffix, `You're running v{current}.` lead-in, ` · Last checked …` trailer), blank-normalization, the `useDateFormat` binding (locale/zone-aware), the P1/S10 i18n table, P1/S11 surface slug, and the release URL.
+- **`.Telemetry.swift`** — `view.opened` diagnostics seam. **`.Previews.swift`** — 5 branches × dark/light/Dynamic-Type. **`.strings`** — i18n catalog. **`.Tests.swift`** — adapter/projection + a11y + telemetry tests.
+
+**Verification (all green, real output in the log):** swiftformat `--lint` (0/5), swiftlint `--strict` (0), placeholder (0, scanned per-real-file since the gate's path is a non-existent dir), a real **iOS-18 `swiftc -typecheck` of the view against live SwiftUI + design tokens + the real `TSGlassPanel`** (0 errors), and **19/19 executed unit checks**. I also built+staged the KMP `Shared.xcframework`. A real bug was caught and fixed during verification (a doubled period in the VoiceOver summary).
+
+**STATUS=BLOCKED on the full-app `xcodebuild build test`** (`IOS_EXIT=65` / `MAC_EXIT=65`) — **with zero errors from this surface**. The blockers are pre-existing and outside this prompt's allowed-files scope: `public struct DashboardWidgetSize` redefined across 15 dashboard-widget files, 239 co-located `*.Tests.swift` importing `XCTest` into the app target (incompatible with Xcode 26.5 explicit modules), and macOS dev-signing. `git status` confirms only my 6 files changed. This is the **identical, already-documented** blocker set recorded in `apps/macos-pending-verifications.md` for the `ToolCard` and `AlertMessageEditor` siblings, deferred to the macOS acceptance gate — I did not edit that file as it's outside scope.
+
+
+

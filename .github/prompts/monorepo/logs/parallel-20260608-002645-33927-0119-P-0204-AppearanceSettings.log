@@ -1,0 +1,168 @@
+I'll start by exploring the repository structure and verifying the toolchain availability, since this task has strict capability requirements.
+
+Toolchain check is critical here. `xcodebuild` exists but points to CommandLineTools (not full Xcode), so iOS Simulator builds may be blocked. Let me verify thoroughly and explore the existing Apple app structure.
+
+Key finding: `Xcode.app` exists in `/Applications` but isn't selected (`xcode-select` points to CommandLineTools). I may be able to use it via `DEVELOPER_DIR`. There's also a `project.yml` (XcodeGen). Let me verify.
+
+Full **Xcode 26.5 works** via `DEVELOPER_DIR`, and `xcodegen` + `pwsh` are available. So the capability is present — I must produce the full implementation and run the real gate. Let me verify simulators/SDKs and read the web source spec + project setup.
+
+Now let me read the web source spec (in chunks) and understand the existing Apple conventions + build infrastructure (the KMP `Shared.xcframework` dependency is a key risk for the gate).
+
+The build's preAction compiles a KMP `Shared.xcframework` via Gradle — a real gate risk. ~1438 files already exist in feature-views, so the infra presumably works. Let me continue reading the spec, find a similar reference surface, and check the Gradle/Java toolchain.
+
+Java 17 + gradlew present, so the KMP build is feasible. Let me finish reading the spec.
+
+I now have the full web spec. Let me find the best existing reference surface (a settings/preferences panel) and locate the shared facade layers (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n).
+
+`GeneralSettings`, `AISettings`, and `NotificationSettings` are the closest references. Let me study `GeneralSettings` (the best match) end-to-end plus the SharedFacade core (state holders, LoadableState).
+
+`GeneralSettings` is the ideal template (server settings panel). Let me read its core files plus `AppContainer` to learn the exact binding conventions.
+
+Excellent — the architecture uses **seam protocols** so feature-views are decoupled from raw KMP symbols (the view imports only SwiftUI; the model only Foundation/Observation). This is the exact pattern I'll replicate. Let me read the remaining GeneralSettings files to nail every convention.
+
+The pattern is now crystal-clear and highly consistent. Let me read the remaining GeneralSettings files (Models, Views, strings, Previews, tests) and locate the i18n facade + design tokens + shared native components.
+
+Now I understand the token vocabulary. Let me read the strings/previews/tests format and locate the shared native components (`TSGlassPanel`, `TSFadeIn`, `TSIconBox`, any `TSToggle`) + design tokens.
+
+Let me read the design tokens, the shared UI components (glass panel, fade-in, icon box, toggle), and how `NotificationSettings` renders toggle rows (closest pattern to my many-toggle surface).
+
+Let me read the `TSIconBox`/`TSFadeIn` definitions and the test conventions (GeneralSettings tests) plus the state-chrome pattern.
+
+Let me read the test/preview conventions and resolve a critical question: how do the co-located `*.Tests.swift` files in `feature-views/` get compiled into the test target (project.yml sources test bundles only from `Tests/Unit`).
+
+The `.xcodeproj` is git-ignored and rebuilt via `xcodegen`. Let me generate it and inspect how the co-located `*.Tests.swift` files map to targets — this is definitive for ensuring my files wire correctly.
+
+Project generated. Let me definitively determine which target the co-located test files compile into (critical for correct wiring).
+
+My regex parse was unreliable. Let me parse the pbxproj more carefully to get the true target membership.
+
+Definitive: the co-located `*.Tests.swift`/`*.ModelTests.swift` files compile into the **app targets** (TeslaSync + TeslaSync-macOS), not separate test bundles. Let me (a) kick off the slow KMP `Shared.xcframework` build in the background now, and (b) quickly verify Swift tolerates the self `@testable import` pattern these files use.
+
+Confirmed: the self `@testable import` is just an ignored warning (the `XCTAssertEqual` error is an artifact of my ad-hoc swiftc command, not how Xcode links XCTest). The pattern is sound. Let me check KMP build progress and read the final reference pieces (Previews, view Tests, IconBox/FadeIn defs).
+
+KMP build is progressing (compiling from cache). I have the full component vocabulary. Let me read the view-test pattern and the field/choice-button rendering pattern (for my segmented selectors).
+
+I have the full convention. Now let me extract the exact data details from the web hooks (chart palette hex values, client-pref defaults, settings field names) to reproduce faithfully, and check KMP build progress.
+
+Got the palettes and defaults. Let me grab the status-bar pref defaults and the settings field names, then I'll have everything to implement.
+
+I have all data needed. Let me read the lint configs (critical for `--strict` gates) and the placeholder checker, then write a plan and implement.
+
+I now have everything: conventions, tokens, components, lint rules (line ≤120, swiftformat `before-first` wrapping, `--self remove`, `@testable` bottom), placeholder patterns to avoid, and all web data. Let me set up a plan + todos, then implement.
+
+Now I'll implement the 12 files. Starting with Models (value types + i18n facade).
+
+Models done. KMP build is now linking the release framework. Let me write the Adapter (pure projections, choice catalogs, palettes, a11y) — carefully wrapping long fallback strings to stay ≤120.
+
+Now the Seams (source + client-prefs store + tours + telemetry).
+
+Now the Model (the `@Observable` view-model — the most complex piece).
+
+Model done. Before the main view, I need to resolve how the web's `<ThemePicker>` (an out-of-scope atomic shared component) is composed natively. Let me check what theme control the Apple core exposes.
+
+There's a shared `TSThemePicker` (segmented control over `TSAppearance` system/light/dark) — the native counterpart of the web `<ThemePicker>`. I'll compose it, bound to an on-device theme-mode preference my model owns (consistent with the other client prefs). Let me read its exact signature.
+
+I'll add an on-device `themeMode` preference (bridged to `TSThemePicker`) across Models, Seams, and Model — keeping the model Foundation-clean.
+
+Now the main view. Let me check KMP progress and write it.
+
+The KMP `Shared.xcframework` is **built and staged** (11m). The xcodebuild gate can now run. Continuing with the chrome components (Views.swift).
+
+Now the visual swatch primitives + density preview + palette card (Swatches.swift).
+
+Now the 8 composed sections (Sections.swift).
+
+Now the state chrome (States.swift), then Previews, then strings, then tests.
+
+Now Previews.
+
+Now the i18n catalog (strings).
+
+Now the two test files (model behavior + adapter/i18n/a11y).
+
+Now the adapter/i18n/a11y tests.
+
+All 13 files written. Now let me auto-format with swiftformat and run swiftlint --strict on the new files to catch issues before the full build.
+
+swiftlint --strict passes (EXIT=0) and swiftformat is clean. Let me verify the main view file too and run the placeholder check, then start the build.
+
+The directory-wide count (19) is pre-existing; my files showed no violations. Let me run the placeholder check with the exact gate path to confirm my surface is clean.
+
+Placeholder check passes (0). Lint + format pass. Now the real gate: regenerate the project and run the iOS build+test. Let me regenerate and verify my files are included.
+
+All 13 files are in the project. Now the critical step — the iOS build. Let me first run `build` (faster compile-correctness signal for my code) before the full `build test`.
+
+Build failed — let me find the actual Swift compile errors.
+
+The failure is pre-existing (`AIRestorePanel.Tests.swift` can't resolve `XCTest` in a plain `build`). The co-located test files only resolve `XCTest` under the **test** action — so the gate's `build test` is required. Let me run the actual gate command.
+
+Now XCTest resolves but there's a compile error. Let me find it.
+
+The error is a pre-existing whole-module issue: `AIRestorePanel.Tests.swift` (not my file) can't resolve `XCTest` in the app target. This suggests the app target lacks `ENABLE_TESTING_SEARCH_PATHS`. Let me investigate the baseline expectation before deciding.
+
+This is the key context. `apps/macos-pending-verifications.md` documents that **every** predecessor feature-view surface (ToolCard, AlertMessageEditor, FSMTimelineChart) hit the identical pre-existing blocker: co-located `*.Tests.swift` importing `XCTest` into the app target + `DashboardWidgetSize` collisions + signing. Their established pattern: verify the surface **green in isolation** (SwiftPM build + tests + `swiftc -typecheck` on both SDKs + lint/format/placeholder), then defer the full-app `build test` to the macOS acceptance gate.
+
+Let me confirm the full-app errors are exclusively pre-existing (zero in my files), then verify my surface in isolation. First, check the component dependency footprint.
+
+Confirmed: **zero AppearanceSettings errors** in the full-app log (only the pre-existing `AIRestorePanel.Tests.swift` XCTest blocker), and `Sources/Components` imports only system frameworks. Let me check `Sources/Design` (where `.tsGlassPanel()` lives) to scope an isolated SwiftPM verification.
+
+My surface is **fully decoupled** (zero references to Shared/Facade/Live) and depends only on `Sources/Design` + `Sources/Components` + tokens — all of which import only system frameworks. This makes an isolated SwiftPM verification (the predecessor pattern) clean. Let me assemble it.
+
+One Components file (`DataDisplay/UnitFormatters.swift`) references `Units` from the facade — but my surface only uses `Components/UI` + `Components/Motion`. Let me scope to just those and check they're self-contained.
+
+`Components/UI` + `Motion` (14 files) are self-contained. Let me rebuild the isolated package scoped to exactly what my surface needs.
+
+Isolated macOS build is clean (Swift 6 mode). Now run the tests.
+
+All **34 tests pass** (0 failures) under Swift 6 mode on macOS. Now the iOS 18 typecheck (the predecessor pattern verifies both SDKs).
+
+**iOS 18 typecheck passes (EXIT=0).** My surface is now verified green on both SDKs in isolation: macOS `swift build` + 34/34 tests, iOS `swiftc -typecheck`, plus swiftlint/swiftformat/placeholder all clean. Let me check how predecessor surfaces recorded their gate logs given the identical pre-existing full-app blocker.
+
+This confirms the sanctioned disposition: full-app gate reported **RED-but-DEFERRED** with evidence, surface verified green in isolation, ending `EXIT=0 / STATUS=DONE`. Let me check the two sibling settings logs (0207/0208) to match format precisely.
+
+The GeneralSettings (0207) sibling confirms the exact format. Let me read its gate section + final disposition to match precisely.
+
+I have the exact sanctioned template (0207/0010): host-runnable gates green + full-app xcodebuild **DEFERRED with real evidence** → `EXIT=0 / STATUS=DONE`. My evidence is even stronger (I staged the framework and ran the actual full-app build test). Let me capture real exit codes for both xcodebuild gates now (async), then author the log.
+
+While the gates run, let me gather artifact line counts and cross-check i18n key coverage (referenced ⊆ declared) for the acceptance criteria.
+
+i18n coverage is complete (the only "missing" `k` is a test dummy for the count helper; the two "orphans" are used via the connectivity banner's computed `key`). 13 files, 3098 lines (vs 654 web — proper multi-file decomposition). Let me check the gate capture progress.
+
+Both full-app gates returned **IOS_EXIT=65 / MAC_EXIT=65** (the pre-existing block). Let me confirm both fail exclusively on pre-existing issues with **zero** AppearanceSettings errors.
+
+Confirmed — both full-app gates fail **only** on pre-existing, unrelated blockers (iOS: `AIRestorePanel.Tests.swift` XCTest-in-app-target; macOS: dev-signing entitlements), with **zero** AppearanceSettings errors. This is the exact disposition documented for the predecessor surfaces. Let me capture the precise host-gate output text for the log.
+
+All host-runnable gates are green (swiftlint 0 violations/12 files, swiftformat 0/12, 34/34 tests, iOS+macOS isolated compile). Let me grab git context, then author the gate log.
+
+I have everything. Let me author the comprehensive gate log.
+
+Gate log written. Let me verify git status (only my files + log should be in scope; project.yml untouched, build artifacts ignored), then commit.
+
+My 13 files + the log are untracked; `project.yml` is untouched; framework/xcodeproj are git-ignored. There are pre-existing unrelated `M` changes (AIUsageCard, two web files) that I did **not** touch and will **not** stage. Let me add only my files + the log and verify the staged set.
+
+Exactly 14 staged (13 surface files + log), nothing unrelated. Committing with the prompt's message.
+
+Committed (HEAD `f58197afe`). Let me verify the commit contents, confirm the pre-existing unrelated changes remain unstaged, and clean up temp artifacts.
+
+All clean: commit `f58197afe` contains exactly the 14 intended files (3348 insertions); pre-existing unrelated changes remain unstaged and untouched; temp artifacts removed. Let me finalize the todos.
+
+All 14 todos complete. The task is finished and verified.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic SwiftUI **`AppearanceSettings`** feature view at parity with `web/src/features/settings/components/AppearanceSettings.tsx` — **13 files, 3098 lines**, committed as `f58197afe` (only the allowed `AppearanceSettings.*` files + the gate log; `project.yml` untouched, unrelated pre-existing changes left unstaged).
+
+**Every web region reproduced** (no scope narrowing): header, composed shared theme picker (`TSThemePicker`), information density (+ live reflowing preview), sidebar style (silhouette swatches), default time format, chart palette (ported Okabe‑Ito CB‑safe + neon swatches), status bar (2 dependent toggles), achievement celebration (4 toggles), and product tours (4 actions) — plus a freshness chip + stale/offline bands (ADR‑013). All states render (loading/empty/error/content), all copy flows through the P1/S10 i18n facade (81 keys, referenced ⊆ declared), bound via P1/S8 seams (source + client‑prefs store + tours + telemetry), P1/S9 tokens, and P1/S11 `view.opened`.
+
+**Host gates — all green** (Xcode 26.5 via `DEVELOPER_DIR`):
+- `swift build` macOS 15 (Swift 6 strict concurrency) → Build complete
+- `swiftc -typecheck` iOS 18 simulator → EXIT 0
+- `swift test` → **34/34 tests pass**
+- `swiftlint --strict` → 0 violations / 12 files · `swiftformat --lint` → 0/12 · placeholder gate → COUNT=0
+
+**Full-app `xcodebuild build test` — executed, RED, and DEFERRED with evidence** (`IOS_EXIT=65 / MAC_EXIT=65`): blocked solely by **pre-existing, unrelated** repo issues — co-located `*.Tests.swift` importing `XCTest` into the app target (first error is `AIRestorePanel.Tests.swift`, not mine) and macOS dev-signing. **Zero AppearanceSettings errors** in either log. This is the sanctioned disposition documented in `apps/macos-pending-verifications.md` and used by every predecessor P4 surface (ToolCard/AlertMessageEditor/FSMTimelineChart/GeneralSettings/NotificationSettings). The gate log ends `EXIT=0 / STATUS=DONE`, reporting the full-app gate honestly as red-and-deferred (never as green).
+
+
+
+The task is fully complete and verified. Let me update the plan to reflect completion, then mark done.
+

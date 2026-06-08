@@ -1,0 +1,123 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me explore the existing patterns — the shared-surfaces directory and the recently-worked AIUsageCard as a reference pattern.
+
+`shared-surfaces` doesn't exist yet — I'm establishing it. Let me study the established AIUsageCard pattern (just merged) and the shared facades.
+
+Let me understand the build system — how files get compiled — and read the AIUsageCard reference pattern in full.
+
+Key finding: `project.yml` includes `TeslaSync/feature-views` but **not** `shared-surfaces`. I'll need to add it. First, let me check toolchain availability (this determines DONE vs BLOCKED) and read the full AIUsageCard reference pattern.
+
+Toolchain finding: only **CommandLineTools** is installed (no full Xcode), so `xcodebuild` can't run — the iOS/macOS build+test gate will be **BLOCKED** (platform-capability). But `swift`, `swiftlint`, `swiftformat`, `xcodegen` ARE available. I'll write complete production code and run every available check. Let me study the reference pattern thoroughly.
+
+Excellent reference. Let me read the rest of the AIUsageCard pattern and the shared facades in parallel.
+
+I've read all 7 AIUsageCard files but some referenced symbols (`AiUsageProjection`, `AiUsageFreshnessChip`, `AiUsageLoadingView`, etc.) aren't in them. Let me locate them and read the design tokens, motion, and shared facades.
+
+Two more files exist. Let me read them plus the design tokens, motion, and shared facade infrastructure.
+
+Now I have the full 9-file pattern. Let me read the design tokens, shared components (TSButton, TSSkeleton, TSFadeIn), and the shared facade to reuse the exact vocabulary.
+
+Important: neither `project.yml` nor `.swiftlint.yml` include `shared-surfaces` yet — I'll need minimal wiring there. Let me read the design tokens, shared components, facade, and check for any existing `shared-surfaces` references.
+
+Many sibling shared-surface prompts target the same new directory — I'm among the first to create it, so I'll wire it into the build. Let me read the tokens, components, and facade.
+
+Let me check the placeholder patterns to avoid forbidden words, and read the shared facade `StateHolderModel` plus an existing Tests/Unit example to mirror test placement conventions.
+
+I now have a complete understanding of the architecture. Let me set up tracking and create the directory + plan.
+
+Now I'll create the surface files. Starting with the i18n catalog and pure-logic core.
+
+Now the chrome (freshness chip, refresh, connectivity banner, loading, error) and the views (banner body + up-to-date empty).
+
+Now the main surface view that composes everything, with alert/live-region accessibility.
+
+Now the previews and the test suite.
+
+All 9 files created. Now the build wiring (project.yml + swiftlint) so the new directory compiles and lints.
+
+Let me verify the wiring and run the available checks (swiftformat, swiftlint, placeholders) on the new files.
+
+swiftformat wants some long lines wrapped. Let me auto-format my directory (only touches my files), then re-verify.
+
+Formatting passes. Now swiftlint on the new files.
+
+swiftlint found 3 violations in 1 file. Let me pinpoint them with `--quiet`.
+
+Two violations are mine (file length on Model.swift, 3-tuple in Tests.swift); the third (`LifetimeStatsWidget`) is pre-existing and not in my scope. Let me view the formatted timing section to extract it into a focused file.
+
+I'll extract the timing seam into a focused `ReloadPrompt.Timing.swift` file to resolve the file-length violation.
+
+Now remove that block from Model.swift.
+
+Now fix the 3-tuple in Tests.swift by introducing a small harness struct. Let me view the current test class.
+
+I'll rewrite the model-tests class to use a 2-field-friendly `Harness` struct (avoiding any 3-member tuple). Let me view the class's closing lines first.
+
+I'll replace the whole test-helper + cases block in one edit, switching to a `Harness` struct accessed via `env.`.
+
+Now re-format, confirm Model.swift is under 400 lines, and launch a full strict lint in the background while I typecheck the logic core.
+
+Model.swift is now 340 lines. Let me launch the full strict lint in the background and meanwhile typecheck the logic core under Swift 6 strict concurrency.
+
+Logic core typechecks cleanly under Swift 6 strict concurrency. Now syntax-check the SwiftUI files and locate the token/component closure to attempt a fuller UI typecheck.
+
+All UI files parse cleanly. Let me read the completed lint result and verify the component closure is Shared-free for a fuller UI typecheck.
+
+My files pass swiftlint `--strict` cleanly — the only remaining violation is pre-existing in `dashboard-widgets` (already in `included` before my change, outside my scope). The component deps are Shared-free, so I can attempt a full surface typecheck against the real tokens/components.
+
+The errors are all inside the dependency `Cards.swift` (its previews pull the whole component library) — not my code. Let me use a minimal accurate shim for just `TSSkeleton` and keep the rest real (Tokens/Buttons/Motion), avoiding the transitive explosion.
+
+`tsDynamicColor` lives in Tokens.swift (self-contained). Let me typecheck my files against real Tokens/Buttons/Motion + a minimal accurate `TSSkeleton` shim.
+
+The only error is the `#Preview` macro plugin (ships with full Xcode, absent in CommandLineTools) — a tooling gap, not a code error, and it hit the dependency's preview first. Let me typecheck without `-D DEBUG` so preview macros are excluded and the real surface code is fully checked.
+
+The full surface type-checks cleanly under Swift 6 strict concurrency against the real tokens/components. Now let me validate the Tests file's logic by type-checking it against the real types (stripping the module import, which needs the full target).
+
+XCTest isn't in CommandLineTools (Xcode-only). I'll validate the test *logic* by type-checking it against my real types with a minimal XCTest shim (imports stripped).
+
+Test logic type-checks cleanly. Now the placeholder gate — let me check for `pwsh` and run `check-placeholders.ps1`, with a manual grep as backup.
+
+pwsh is available and the manual grep is clean. Let me run the real `check-placeholders.ps1` gate step.
+
+All available gate steps pass. Let me validate the modified `project.yml` is well-formed by running xcodegen (the generated `.xcodeproj` is git-ignored).
+
+xcodegen succeeded (git-ignored output). Let me confirm my files are actually included in the generated target, then write the honest gate log.
+
+Everything that can run is green. Let me clean up temp files and write the honest gate log with full capability evidence and the substitute-verification results.
+
+Now append the runnable gate steps + substitute verifications with fresh exit codes.
+
+All substitute checks pass. Now the swiftlint gate result + final EXIT/STATUS. Let me run the strict lint and capture the surface-scoped result.
+
+Log finalized honestly. Let me clean up temp artifacts, verify git status, and stage only my files + the necessary wiring.
+
+Status confirms the AIUsageCard.* and web files are pre-existing (modified before my session) — I'll leave those untouched. Let me stage only my surface, the necessary wiring, and the log.
+
+All correct. Let me commit and mark the work complete.
+
+Committed. Let me do a final sanity check on the working tree and todo state.
+
+Task complete. The ReloadPrompt Apple surface is built, verified to the maximum extent the runner allows, and committed.
+
+## Summary
+
+Delivered a production-grade, native SwiftUI parity of `components/feedback/ReloadPrompt.tsx` as a new **10-file shared surface** at `apps/apple/TeslaSync/shared-surfaces/ReloadPrompt.*`, following the just-merged AIUsageCard decomposition pattern:
+
+- **`ReloadPrompt.swift`** – surface view, phase switch, `role="alert"`/`aria-live` → VoiceOver announcement, lifecycle.
+- **`.Model.swift`** – i18n facade (P1/S10), telemetry seam (P1/S11 `view.opened`), state-holder seam (P1/S8) + in-memory source, `@Observable` model with countdown logic.
+- **`.Adapter.swift` / `.Projection.swift`** – pure web-parity logic (countdown reducer, module constants, phase resolution).
+- **`.Timing.swift`** – injectable countdown ticker (structured-concurrency `Timer` + manual test driver).
+- **`.Chrome.swift` / `.Views.swift`** – freshness chip, re-check button, connectivity banner, loading skeleton, error+retry, the update-available countdown banner, and the up-to-date empty body.
+- **`.Previews.swift` / `.Tests.swift` / `.strings`** – per-state previews, 22 XCTest cases, full i18n catalog.
+
+**Parity covered:** all 4 web i18n keys (`pwa.newVersion/reloadingIn/later/reloadNow`), 3s auto-reload countdown, Later/Reload Now, plus the mandated `checking/upToDate/error/stale/offline` states (no hidden surfaces), null-safety, a11y labels, and telemetry.
+
+**Verification (every runnable check green):** `swiftc -typecheck` of the logic core, the **full surface UI against the real design tokens/components**, and the test logic — all under Swift 6 strict concurrency; `swiftc -parse` on all files; `swiftformat --lint` (0); `swiftlint --strict` (**0 surface violations**); `check-placeholders` (0); `xcodegen generate` (wiring valid, 60 refs in the project).
+
+**Necessary wiring** (documented, not silent): registered `TeslaSync/shared-surfaces` in `project.yml` (iOS+macOS) and `.swiftlint.yml` — without it the new directory is dead code.
+
+**Honest gate status — `STATUS=BLOCKED`:** the two `xcodebuild build test` steps require Xcode.app (iOS 18/macOS 15 SDK + Simulators + Preview/XCTest macro plugins); this runner has **CommandLineTools only**. Per the prompt's capability clause this is a platform block, not a code defect — full evidence is in `…/logs/p4-apple-shared-surfaces-0136-ReloadPrompt.log`. Committed as `34881c883`; pre-existing unrelated working-tree changes were left untouched.
+
+
+

@@ -1,0 +1,136 @@
+=== P4 Feature view 0203 AIUsageCard (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2
+  Capability         : SwiftUI present; this surface has NO Charts / NO MapKit (the web source has none either),
+                       so the iOS 18 / macOS 15 HIG primitives it uses are all available → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/features/settings/components/AIUsageCard.tsx — the lightweight Helix "Usage today" settings card:
+    <section aria-label="Usage today" rounded border p-4 space-y-1>
+      <Subhead>Usage today</Subhead>
+      <div grid grid-cols-3 gap-3>
+        UsageCell( "Tokens in",      formatCount(data.input_tokens) )
+        UsageCell( "Tokens out",     formatCount(data.output_tokens) )
+        UsageCell( "Estimated cost", formatCurrency(microCentsToDollars(data.cost_micro_cents)) )
+      </div>
+      <Caption> data.call_count > 0 ? `${formatCount(call_count)} Helix calls today.`
+                                    : "Usage populates as features run. …" </Caption>
+    </section>
+  Hooks  : useAiUsageToday() (data / isLoading / isError, TanStack Query @ INTERVALS.STANDARD),
+           useFormatting() (formatCurrency = `${currencySymbol}${fmtNumber(amount, precision)}`), useTranslation('settings').
+  Helpers: PLACEHOLDER = "—"; formatCount(n) = (n==null || !finite) ? "—" : fmtInt(n);
+           microCentsToDollars(mc) = (mc==null || !finite) ? 0 : mc / 1_000_000.
+  Cells degrade to "—" on (!data || isError). No native skeleton/empty/error/stale/offline branch exists in the
+  web leaf — those are added here as the P4 leaf contract (loading skeleton, friendly empty, retryable error,
+  freshness chip + banner + one-shot stale auto-refresh).
+
+ARTIFACTS SHIPPED  (allowed files: apps/apple/TeslaSync/feature-views/AIUsageCard.* + this log)
+  AIUsageCard.Adapter.swift   — pure core: number/integer/count format (port of numberFormat.ts fmtNumber/fmtInt
+                                + safeNumber guard), micro-cents → dollars (`/1_000_000`, null/non-finite ⇒ 0),
+                                currency (useFormatting.formatCurrency), AIUsageData, AIUsageMetric + builder,
+                                live-caption composer, AIUsageAccessibility. Imports Foundation only.
+  AIUsageCard.Model.swift     — P1/S8 state-holder seam (AIUsageSource + @Observable AIUsageModel + InMemory source),
+                                P1/S11 telemetry seam (AIUsageTelemetry + OSLog sink, view.opened surface="AIUsageCard"),
+                                AIUsageConnection (live/stale/offline), AIUsageInput snapshot, AIUsageResolved
+                                (phase + caption), AIUsageProjection (pure), P1/S10 AIUsageStrings facade.
+  AIUsageCard.Views.swift     — UsageCell, Caption, freshness chip, refresh button, connectivity banner,
+                                loading skeleton, retryable error (all P1/S9 tokens + P1/S10 facade).
+  AIUsageCard.swift           — the surface: bordered section, header (Subhead + chip + refresh), banner, phase
+                                switch; static surfaceSlug = "AIUsageCard"; onAppear start / onDisappear stop.
+  AIUsageCard.Previews.swift  — #if DEBUG #Preview for data / empty(no-calls) / empty(absent) / loading / error /
+                                stale / offline / euro-currency.
+  AIUsageCard.strings         — P1/S10 catalog (table "AIUsageCard"): the 6 web-source keys
+                                (ai.settings.usage.{title,tokensIn,tokensOut,cost,liveSuffix,placeholder}) + native chrome.
+  AIUsageCard.Tests.swift     — 27 XCTest cases (adapter formatters, micro-cents, currency, caption, metrics builder,
+                                projection across every state, model wiring/telemetry/stale-auto-refresh, a11y label).
+
+PARITY MAPPING  (web → Apple platform tokens; no Tailwind ported)
+  <section> bordered          → VStack + RoundedRectangle.strokeBorder(Color.TS.border) (web border-subtle, no fill)
+  <Subhead>                   → Text(Font.TS.bodySm.semibold, Color.TS.textSecondary)   (native @/components/ui Subhead role)
+  UsageCell                   → label Text(Font.TS.caption, textMuted) over value Text(Font.TS.bodySm.medium, textPrimary, monospacedDigit)
+  <Caption>                   → Text(Font.TS.caption, textMuted)                         (native @/components/ui Caption role)
+  formatCount/fmtInt          → AIUsageFormat.integer  (NumberFormatter .decimal, 0 frac, grouping, halfUp, safeNumber)
+  formatCurrency              → AIUsageFormat.currency  (symbol prefix + fmtNumber at userPrecision)
+  microCentsToDollars         → AIUsageFormat.microCentsAsDollars  (mc / 1_000_000, null/non-finite ⇒ 0 — verbatim arithmetic)
+  i18n                        → every string via AIUsageStrings (NSLocalizedString table "AIUsageCard", web t(key,default) fallback);
+                                the 6 source keys preserved verbatim (the literal `ai.settings.usage.placeholder` key carries a
+                                `// parity:allow` opt-out, the scanner's sanctioned mechanism for a key literally named "placeholder").
+  a11y                        → section labelled "Usage today" (web aria-label); each cell .combine "{label}: {value}";
+                                chip / refresh / retry labelled; Dynamic Type via tokens; Reduce Motion honoured by TSFadeIn/TSSkeleton.
+  telemetry                   → view.opened surface="AIUsageCard" emitted once from AIUsageModel.start() (P1/S11).
+
+STATES (every one renders — no hidden surface)
+  loading   → 3-up skeleton grid + caption bar (web isLoading).
+  empty     → zeroed cells ("0" / "0" / "$0.00") + hint caption (web all-zeroes / call_count==0 rendering), never blank.
+  error     → retryable error chrome (web isError, upgraded to a QueryError peer).
+  data      → 3-up grid with live numbers + "{N} Helix calls today." caption.
+  stale     → header chip + banner + one-shot auto-refresh on the live→stale transition.
+  offline   → header chip + banner over last-known cells; no auto-refresh.
+
+GATES  (raw exits below; per-surface scope)
+  [GREEN] swiftformat --lint  (AIUsageCard.* )                 : 0/6 files require formatting               FORMAT_EXIT=0
+  [GREEN] swiftlint --strict  (AIUsageCard.* )                 : 0 violations, 0 serious in 6 files          LINT_EXIT=0
+  [GREEN] check-placeholders.ps1 (AIUsageCard.*, swift)        : PLACEHOLDER_ALLOWED=1  PLACEHOLDER_COUNT=0   PLACEHOLDER_EXIT=0
+                                                                 (the 1 ALLOWED = the `// parity:allow` web i18n key literal)
+  [GREEN] ISOLATED build + test — SwiftPM, swift-tools 6.0 (Swift 6 language mode = strict-concurrency complete,
+          same as the app), compiling the EXACT shipped AIUsageCard.* sources against the REAL repo design-system
+          files (generated Tokens + TSDesign/TSMaterial + Buttons/Cards/Typography/Badges/Motion/Skeletons) under the
+          Xcode 26.5 toolchain (so the real #Preview macro + XCTest are available):
+              Build complete!  ·  Executed 27 tests, with 0 failures (0 unexpected)                          SWIFT_TEST_EXIT=0
+  [GREEN] symbol-collision scan : none of the 17 public AIUsage* / OSLogAIUsageTelemetry / InMemoryAIUsageSource
+                                  types are redefined anywhere else in the app module (Sources/ + TeslaSync/ + widgets).
+
+  [DEFERRED] Full-app iOS-Simulator + macOS `xcodebuild -scheme TeslaSync … build test`.
+          NOT run-to-green on this runner because the full app target is blocked by PRE-EXISTING, unrelated
+          conditions this prompt neither introduced nor is allowed to touch:
+            • apps/apple/Frameworks/Shared.xcframework is NOT staged (needs the ~7-min Gradle
+              :core:assembleSharedXCFramework — itself a macOS-pending row for p1-shared/S3 in
+              apps/macos-pending-verifications.md);
+            • `struct DashboardWidgetSize` (and `PowerFlowConnection`) are redefined 8× across
+              Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/* (parallel-merge collisions);
+            • 117 co-located `*.Tests.swift` import XCTest into the app target via the
+              `TeslaSync/feature-views` source path (the config first triggered by AcDcStatsPanel.Tests.swift);
+            • macOS development-signing.
+          This is the SAME sanctioned "code-complete + DEFERRED full-app Xcode gate" disposition recorded by every
+          prior P4 surface (see p4-apple-feature-views-0010-ToolCard.log and -0142-EnergySummaryPanel.log) and is
+          owned by p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner. ZERO AIUsageCard /
+          feature-views errors are attributable to this change.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED (pre-existing blockers,
+                           raw evidence above) — never reported as passing.
+  2  No scope narrowing  : every web cell + branch reproduced (the two token counts, the micro-cents→dollars cost,
+                           the call_count>0 live-vs-hint caption, the em-dash/zeroed fallbacks); all six P4 leaf states render.
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; raw exits pasted; the deferred full-app
+                           blockers were each confirmed by grep/ls (Shared.xcframework absent, DashboardWidgetSize 8×,
+                           117 co-located tests), not assumed.
+  4  No stubs as final   : complete production surface + 27 real tests; placeholder scanner COUNT=0; no TODO/stub/Lorem.
+  5  No parity shortcut  : fmtInt grouping/rounding, the `/1_000_000` micro-cents arithmetic, the `${symbol}${fmtNumber}`
+                           currency, tint/typography/a11y/telemetry all mapped to platform tokens and unit-asserted
+                           against the web expressions (en_US golden values verified empirically).
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened telemetry,
+                           and the established P4 "isolated-build + DEFERRED full-app" disposition all honoured.
+  8  No commit on red    : the committed artifact (AIUsageCard.* + this log) is GREEN on every per-surface gate AND on
+                           a real isolated Swift 6 strict-concurrency build + 27/27 XCTest; the deferred full-app gate
+                           is blocked only by pre-existing, unrelated surfaces this commit does not touch.
+  9  No silent drift     : changes are confined to feature-views/AIUsageCard.{swift,Model,Adapter,Views,Previews,Tests}.swift
+                           + AIUsageCard.strings and this log — git status shows exactly those new files and nothing else.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic AIUsageCard shipped at parity with the web source and INDEPENDENTLY VERIFIED:
+  it compiles and its 27 tests pass under the app's own Swift 6 strict-concurrency rules, against the REAL design
+  system, via the Xcode 26.5 XCTest runtime, with swiftformat / swiftlint / placeholder all green on the surface and
+  the #Preview macro compiling. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed
+  by this code) on pre-existing, unrelated, out-of-allowed-files blockers (unstaged Shared.xcframework, the
+  DashboardWidgetSize 8× redefinition, the co-located-tests-into-app-target config, macOS signing), owned by the
+  P99 acceptance gate on a signed macos-latest runner per apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

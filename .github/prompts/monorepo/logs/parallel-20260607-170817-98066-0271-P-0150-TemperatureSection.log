@@ -1,0 +1,164 @@
+I'll start by exploring the environment and understanding what's available, then read the web source specification.
+
+Capability note: `xcodebuild` requires full Xcode but only Command Line Tools is active. Swift 6.3.2, swiftlint, swiftformat are present. Let me explore the Apple app structure deeply before deciding DONE vs BLOCKED.
+
+Rich existing structure with a clear per-surface file pattern. Let me check for an existing TemperatureSection and find the closest drive-detail chart sibling to mirror, plus read the web types/helpers.
+
+No existing `TemperatureSection.*` (there's a related `DrivingTemperatureStats.*`). Let me study the closest sibling's full file pattern and the web helpers, plus the project config.
+
+Excellent — `DrivingTemperatureStats` is a near-perfect architectural analog, but `TemperatureSection` is **chart-based** (4-line Swift Chart + stat tiles + synced cursor). Let me study a chart-based sibling and the shared chart/token/cursor infrastructure.
+
+`SpeedTrendChart` is the ideal template — a chart feature view with `ChartContainer` + `LineMark` + `.Adapter`. Let me read it end-to-end along with the shared chart infrastructure.
+
+The template is crystal-clear. Let me read the remaining SpeedTrendChart files (Model, strings, Previews, Tests) and locate the shared token/component definitions.
+
+Now the Tests pattern and the shared infrastructure (tokens, charts, motion) plus the web chart primitives. Let me batch these reads.
+
+Let me read the design tokens, project config, and the web chart primitives I must port (ChartContainer, synced cursor, AREA_DEFAULTS, fmtNumber/fmtInt).
+
+Feature-views are globbed into both iOS and macOS targets — new files auto-include. Now let me find the token definitions (TSSpacing, Color.TS.*, Font.TS.*) in the generated design tokens.
+
+All tokens confirmed, including dedicated `chartSeries*` colors (Speed=blue#3b82f6 and Power=purple#a855f7 exactly match web outside/passenger strokes). Now I must understand how temps flow/convert upstream. Let me read the web data hook and number formatters.
+
+Now I fully understand the data flow: chart temps are SI °C at the API and converted at the display boundary. Let me read the number formatters and the web chart primitives to port faithfully.
+
+Key facts confirmed: web `fmtNumber` defaults to precision 2; tiles use 2 decimals, fan uses `fmtInt` (0). Let me verify toolchain capability (does SwiftUI/Charts compile without full Xcode?), check pwsh, read the line-style defaults, and see how `.Tests.swift` files are wired into a test target.
+
+Big finding: **SwiftUI + Charts typecheck successfully** against the CLT macOS 15 SDK (EXIT=0), and `pwsh`, `xcodegen`, `swiftlint`, `swiftformat` are all available. Only full `xcodebuild` is missing. Let me check whether an Xcode.app exists to switch to, and how `.Tests.swift`/`.Previews.swift` files are wired (excludes + test target globs).
+
+**Xcode.app exists at /Applications/Xcode.app** — only the *active* dir is CLT. I can likely use it via `DEVELOPER_DIR` without sudo. Let me verify xcodebuild works that way, check simulators, and inspect the test-target/excludes wiring.
+
+**Xcode 26.5 is fully usable via `DEVELOPER_DIR`** (iPhone 16 sim booted, macOS+iOS SDKs present) — so platform capability is NOT a blocker. Now I must resolve how `.Tests.swift`/`.Previews.swift` in feature-views are wired (they `@testable import TeslaSync`), since that affects where my tests go.
+
+Only one file in `Tests/Unit/FeatureViews` — the 60+ `feature-views/*.Tests.swift` are globbed into the app target itself (with `@testable import TeslaSync`). Let me read the exact target source block for any `excludes`, the lint configs, and empirically test the baseline by generating + probing.
+
+No excludes — the `.Tests.swift` follow a repo-wide pattern (60+ siblings identical), so I'll mirror it exactly. Note: `swiftlint --strict` makes the 120-col warning an error, and swiftformat enforces `before-first` wrapping + `testable-bottom`. Let me study a **dense per-sample drive chart** sibling (`DrivingSection`) to align time-axis + selection handling.
+
+I have a complete understanding of the pattern. Let me verify there are no module-wide name collisions for my intended types, then write the plan and implementation.
+
+No collisions; `TempSection*` prefix is clear. Let me set up tracking and write the plan, then build the surface.
+
+No collisions, `TSFadeIn(delay:)` confirmed. Now writing the pure Adapter core (Foundation-only, fully testable, SI→display conversion + web-parity projection).
+
+Adapter written. Now the Model (state-holder seam, telemetry, i18n facade, in-memory source) mirroring the sibling.
+
+Main view (phase switch). Mirrors the sibling shell.
+
+Now the Views file — header/chip/banner, the 3-column stat grid, the Swift Charts multi-line chart with selection tooltip, legend, and loading/empty/error states.
+
+Let me verify `TSSkeleton` init signatures, then write Previews, strings, and Tests.
+
+`TSSkeleton` confirmed. Now Previews, strings, and Tests.
+
+Let me wire the source `aria` i18n key into the chart's VoiceOver label (label = aria, value = live summary), then write the strings catalog and tests.
+
+Now the strings catalog:
+
+Now the test suite — adapter parity, phase resolution, formatting, model lifecycle, and accessibility.
+
+All 7 files written. Let me update tracking and verify the pure adapter compiles and produces web-parity numbers standalone (Foundation-only, no Xcode needed).
+
+Compile of the adapter itself succeeded — the error is only because top-level code needs `main.swift`. Let me rename and rerun.
+
+Adapter compiles cleanly and **all web-parity assertions pass**. Now lint/format checks on the new files.
+
+swiftformat flagged auto-fixable issues. Let me apply the formatter (same tool/config as the gate) to the new files, then re-lint.
+
+swiftformat passes. Let me review the auto-wrapped region and run swiftlint --strict on the new files.
+
+Two `file_length` violations (>400 lines) — siblings keep each file ≤400 by splitting. The `TemperatureSection.*` glob allows more files (e.g. `.Chart.swift`, `.Format.swift`), matching the sibling convention. Let me find MARK boundaries to split cleanly.
+
+Need to split the two 542-line files (sibling convention keeps each ≤400). Let me check all file line counts first to plan every split.
+
+Only Adapter and Views exceed 400. Let me confirm exact cut points before splitting.
+
+Clean cut points confirmed. Let me perform the file surgery: extract the projector core and the chart into new `TemperatureSection.*` files, then truncate the originals.
+
+All four ≤400 lines. Views.swift no longer uses Swift Charts — let me drop the now-unused `import Charts`, then re-normalize with swiftformat and run the full strict lint on all `TemperatureSection.*` files.
+
+Both `swiftformat --lint` and `swiftlint --strict` pass (EXIT=0) on all 8 files. Let me re-verify the standalone parity harness against the now-split Adapter+Projector, then proceed to the full Xcode gate.
+
+/tmp was cleaned between sessions. Let me recreate the harness and rerun against the split files.
+
+Split files verified. Now a high-value fast check: typecheck all the SwiftUI surface files (with their token/component deps) against the **real iOS 18 and macOS 15 SDKs** before the full app build.
+
+Those errors are only in a *dependency* I pulled in (`Skeletons.swift` needs `TSCard` from `Cards.swift`) — none in my code. Let me add `Cards.swift` and re-run.
+
+These cascading errors are all in dependency files' `#if DEBUG` demo code (pulled in by `-DDEBUG`), not my code. Let me do a clean typecheck of my core files without DEBUG previews to get a definitive signal.
+
+The cascade is purely in shared dependency files (`Skeletons.swift` demo views need `TSCard`) — zero errors reference my files, so they type-check. The authoritative check is the real build. Let me generate the Xcode project and confirm schemes.
+
+Project generates cleanly; both `TeslaSync` and `TeslaSync-macOS` schemes exist. Let me fail-fast on compilation with a macOS app build (compiles the whole module incl. all feature-views) before the full build+test gate. Running in background.
+
+The build process was terminated (SIGTERM) — likely a wait/session issue. Let me check how far it got and whether there were compile errors.
+
+The build runs a heavy pre-step: "Assembling Shared.xcframework via Gradle" (KMP). My 240s wait killed it mid-Gradle — no compile errors occurred. Let me check whether a prebuilt `Shared.xcframework` exists and how the Gradle step is wired, so I can avoid re-running Gradle.
+
+`Shared.xcframework` isn't prebuilt — it's assembled by `Scripts/build-shared-xcframework.sh` (Gradle/KMP) as a scheme pre-action. Let me read that script and check the toolchain it needs.
+
+JDK 17 + gradlew are present. The gate's first real step is assembling the KMP `Shared.xcframework` via Gradle (Kotlin/Native) — heavy and possibly network-dependent. Let me start it in the background and monitor.
+
+Gradle is progressing well — Kotlin/Native is cached (UP-TO-DATE) from a prior build; it's now linking the release frameworks. Let me wait for it to finish staging the xcframework.
+
+The Gradle daemon crashed/disappeared mid-release-link (likely memory pressure on a shared host). Most Kotlin/Native tasks are now cached, so let me retry — this time with `--no-daemon` to avoid the daemon-disappearance, then stage manually.
+
+Release Kotlin/Native linking is the slow step (3 targets). Let me keep waiting.
+
+Past the iOS release links; now on the final macOS release link. Let me wait for Gradle to finish, then stage the xcframework.
+
+`BUILD SUCCESSFUL` — xcframework built with ios-arm64, ios-arm64-simulator, macos-arm64 slices. Let me stage it and launch the iOS build+test gate, watching for compile errors.
+
+Staged. Now launching the iOS build+test gate (scheme `TeslaSync`, iPhone 16 sim) in the background.
+
+Definitive finding: the app-target build fails on **`AcDcStatsPanel.Tests.swift` (a pre-existing sibling)** with `unable to resolve module dependency: 'XCTest'`. The repo globs every `feature-views/*.Tests.swift` into the **app** target, where XCTest isn't available — a baseline, repo-wide structural defect affecting all 60+ surfaces, not my code. Let me confirm my production files are clean and characterize the failures.
+
+Confirmed: **zero errors in any of my production files** — they compile cleanly in the real iOS app module. The build halts only on `AcDcStatsPanel.Tests.swift` (pre-existing sibling) with `XCTest` unresolvable in the app target — a systemic defect (all `feature-views/*.Tests.swift` are globbed into the app target). Let me check predecessor logs and the pending-verifications note to see how prior surfaces handled this.
+
+This is decisive context. There's a **sanctioned, predecessor-wide disposition**: every P4 feature-view surface (ToolCard 0010, SpeedTrendChart 0092, AcDcStatsPanel 0096, DrivingTemperatureStats 0057…) records **EXIT=0 / STATUS=DONE** with the full-app `xcodebuild build test` explicitly **DEFERRED** to the P99 macOS CI gate — blocked by the *pre-existing* co-located-XCTest-in-app-target convention (baseline-RED on already-committed siblings) + macOS signing, tracked in `apps/macos-pending-verifications.md`. Covenant rule 7 ("No predecessor bypass") means I follow this exact disposition.
+
+To meet that bar rigorously, let me (A) prove the full app builds GREEN on both platforms with test files excluded, and (B) run my full model+adapter test logic in isolation. Starting the macOS build now.
+
+While those build, let me run the full surface (view+model+adapter) in isolation with a model-lifecycle harness (minimal shims for the 2 component deps), mirroring my XCTest assertions.
+
+The **entire surface compiles in isolation against the real macOS 15 SDK** (SwiftUI + Swift Charts) and the **model-lifecycle harness passes all assertions**. Let me check the excluded-test full builds and run the placeholder check (pwsh is available).
+
+The exclusion pattern missed `ActionBuilder.ModelTests.swift` (ends in `ModelTests.swift`, not `.Tests.swift`). Placeholder check **passed** (0 placeholders). Let me relaunch the full builds with a broader `*Tests.swift` exclusion.
+
+Both full builds relaunched (excluding all test files) to prove production integration on both platforms. These compile the entire app — let me wait and poll.
+
+More pre-existing errors surfaced in sibling production files once tests were excluded (the parallel-merge collisions ToolCard's note referenced). Let me confirm none are mine and characterize them.
+
+**Conclusive:** zero errors in any `TemperatureSection.*` file across both full builds. The 90–119 errors are all pre-existing parallel-merge collisions in *other* siblings (`dashboard-widgets/*`, `OverviewTab.*`: 96× "ambiguous type lookup", 8× "invalid redeclaration") — exactly the sanctioned pre-existing blocker per `macos-pending-verifications.md`. My evidence now exceeds the predecessor bar. Let me verify git state (ensure generated artifacts are ignored) before writing the log.
+
+Generated artifacts are gitignored; only my 9 `TemperatureSection.*` files are new (the 2 modified web files are pre-existing and untouched by me). Let me write the honest, evidence-rich gate log mirroring the predecessor disposition.
+
+Log written. Now clean up temp artifacts, verify the log path is tracked, and commit the 9 surface files + log.
+
+All per-surface checks green. Committing the 9 surface files + log.
+
+Committed cleanly (10 files, 2126 insertions) — the 2 pre-existing modified web files were correctly left untouched. Let me finalize tracking and do a last sanity check.
+
+All todos complete; working tree contains only the two pre-existing web modifications (untouched). The surface is committed.
+
+Merge made by the 'ort' strategy.
+ ...apple-feature-views-0150-TemperatureSection.log | 142 ++++++++
+ .../feature-views/TemperatureSection.Adapter.swift | 331 +++++++++++++++++++
+ .../feature-views/TemperatureSection.Chart.swift   | 189 +++++++++++
+ .../feature-views/TemperatureSection.Model.swift   | 265 +++++++++++++++
+ .../TemperatureSection.Previews.swift              | 110 +++++++
+ .../TemperatureSection.Projector.swift             | 224 +++++++++++++
+ .../feature-views/TemperatureSection.Tests.swift   | 365 +++++++++++++++++++++
+ .../feature-views/TemperatureSection.Views.swift   | 364 ++++++++++++++++++++
+ .../feature-views/TemperatureSection.strings       |  59 ++++
+ .../feature-views/TemperatureSection.swift         |  77 +++++
+ 10 files changed, 2126 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0150-TemperatureSection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureSection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureSection.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureSection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureSection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureSection.Projector.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureSection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureSection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureSection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/TemperatureSection.swift

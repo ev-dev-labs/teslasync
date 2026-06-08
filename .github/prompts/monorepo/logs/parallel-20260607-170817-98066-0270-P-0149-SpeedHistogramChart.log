@@ -1,0 +1,156 @@
+I'll start by exploring the environment and the web source specification in parallel.
+
+Swift 6.3, swiftlint, and swiftformat are available, but `xcodebuild` requires full Xcode (only Command Line Tools present). Let me read the web source and explore the established Apple patterns.
+
+Strong established multi-file pattern per feature-view. Let me study a representative chart-based feature-view, the web types, and the shared P1 infrastructure (state-holders, tokens, i18n).
+
+`SpeedTrendChart` is the sibling drive-detail chart — the ideal reference. Let me read its full file set plus the shared chart components and state-holder facade.
+
+Let me read the SpeedTrendChart files individually for clarity.
+
+Excellent, very clear pattern. Let me read the remaining SpeedTrendChart files (Adapter, Views, Previews, Tests, strings).
+
+Now let me understand how the parent computes `speedHistData` (for a faithful adapter) and locate the P1/S9 design tokens (`TSSpacing`, `Color.TS`, `Font.TS`, `TSChartPalette`, etc.).
+
+Now I understand the upstream bucketing. Let me locate the remaining token definitions and study an existing **bar chart** surface (since this is a histogram), plus check the placeholder tooling.
+
+`pwsh` and the placeholder script are available. Let me read the token/helper definitions (Motion, Skeletons) and locate the generated `Color.TS` / `Font.TS` / `TSSpacing` / `TSRadius` tokens.
+
+The tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read that canonical token file.
+
+Let me confirm the `BarMark` pattern from an existing bar-chart surface and check the project.yml inclusion + how `.strings` are handled.
+
+Let me read the Color.TS visibility, the SentryModeChart bar-chart body, and confirm `chartSeriesPower` (#a855f7 exact match for the web bar color).
+
+I have the full picture now. Let me check the lint/format configs to ensure `--strict` compliance, then set up a plan and todos.
+
+I now have a complete understanding of the established pattern, tokens, lint rules, and the exact web semantics. Key finding: the web bar color `#a855f7` maps exactly to the `Color.TS.chartSeriesPower` token. `xcodebuild` requires full Xcode (only CLT present), but `swift`, `swiftlint`, `swiftformat`, and `pwsh` (placeholder gate) are all available.
+
+Let me set up a plan and todos, then build the surface.
+
+Now I'll create the Adapter (pure projection core).
+
+Now the Model (state-holder seam + facade + telemetry).
+
+Now the Views file (header, chip, banner, single-series bar chart, tooltip, and all states).
+
+Now the composed main view, previews, and strings files.
+
+Now the comprehensive test suite. Let me verify my expected percentages with a quick calc first, then write the tests.
+
+All expected values confirmed. Now the test suite.
+
+All 7 files created. Let me update todos and run the formatter, linter, placeholder gate, and a standalone correctness check.
+
+swiftformat fixed 2 files. Let me confirm lint-clean state with both tools (scoped to my files) and run the placeholder gate.
+
+Both formatters pass with 0 issues. Now the placeholder gate. Let me check how the script resolves `-Path` (the gate passes a path prefix, not a directory).
+
+The script treats a non-existent path as a clean (empty) scan, so the gate's prefix path passes vacuously. For honest verification I'll run the exact gate command AND a meaningful scan of my actual files via a temp dir.
+
+Both placeholder scans pass (`COUNT=0`). Now the most important honest verification: compile and **run** the pure Adapter to prove the projection logic is correct against the web numbers.
+
+The Adapter compiles and all 19 logic checks pass — projection parity with the web is proven. Now let me probe whether SwiftUI + Swift Charts are even type-checkable on this Command-Line-Tools runner.
+
+SwiftUI + Charts type-check cleanly on this runner (macOS SDK 26.5). Let me attempt a bounded type-check of my SwiftUI files against their real shared dependencies. First, locate `TSCard` (needed by Skeletons.swift) and other deps.
+
+My SwiftUI files' dependency closure is small: Tokens, TSDesign, Motion, Skeletons→Cards. Let me check Cards.swift's dependencies, then attempt a bounded type-check.
+
+Cards.swift pulls in more UI symbols (TSButton, TSText, etc.), so a tight closure isn't trivial. The faithful check is to type-check against the real target sources. Let me inspect how the project separates test files from the app target.
+
+Let me determine the bounded dependency closure for my views — find the files for the remaining UI symbols and confirm none of them import the `Shared` xcframework (which would require linking).
+
+My 5 files have a small, self-contained closure (no `Shared` xcframework dependency). Let me attempt a bounded type-check against the real shared UI/design files, targeting macOS 15.
+
+The only errors are `#Preview` macro-plugin failures — the `PreviewsMacros` plugin ships with full Xcode, not CLT. Every other file type-checked. Let me confirm by excluding just the Previews file (which uses the same `#Preview` as all siblings).
+
+`TYPECHECK_PROD_EXIT=0` — my production SwiftUI files compile cleanly against the real shared deps (macOS 15, Swift 6). Only the `#Preview` macro (Xcode-only plugin) can't expand on CLT. Let me check whether a full Xcode is installed anywhere so I could run the real xcodebuild gate.
+
+A full **Xcode IS installed** at `/Applications/Xcode.app` — `xcode-select` just points elsewhere. I can use `DEVELOPER_DIR` to run the real gate. Let me verify Xcode, simulators, xcodegen, and the Shared.xcframework.
+
+Full Xcode 26.5 + iPhone 16 simulator + xcodegen are all available — but the `Shared.xcframework` (KMP core) the app target links is **not present** in this workspace. Let me investigate whether it can be built.
+
+`Shared.xcframework` is a git-ignored KMP build artifact (built by `Scripts/build-shared-xcframework.sh`). Let me read that script and check whether the KMP/Java toolchain is available to build it.
+
+Java 17 is available and the full Xcode provides the Kotlin/Native toolchain. Let me attempt to build the real `Shared.xcframework` so I can run the actual xcodebuild gate. This may take a while (Kotlin/Native first-run), so I'll run it in the background.
+
+The KMP build is progressing — Kotlin/Native is compiling for iOS arches with a warm cache (many `FROM-CACHE` tasks). Let me continue monitoring.
+
+The release XCFramework is linking now (debug already built). Let me wait for it to finish staging.
+
+The release frameworks are still linking. While that finishes, let me resolve a key question: how do the `*.Tests.swift` files in `feature-views/` get assigned to the test target vs the app target. Let me inspect the test target config precisely.
+
+The test targets only use `Tests/Unit` — yet 80 `*.Tests.swift` files live in `feature-views/` (the app target's source path). Let me check the pending-verifications doc, which likely explains the Apple build/test status.
+
+The pending-verifications doc is decisive: it documents that for P4 feature-view surfaces (e.g., `ToolCard`), the **full-app `xcodebuild build test` is blocked by pre-existing, unrelated issues** (duplicate `DashboardWidgetSize`/`PowerFlowConnection` symbols, co-located `*.Tests.swift` importing XCTest into the app target, and macOS signing) — and the established methodology is **isolated build + tests green + host gates green**, with the full-app build deferred to a provisioned macOS acceptance gate.
+
+Let me check the framework build status and the `Tests/Unit/FeatureViews` directory.
+
+`Tests/Unit/FeatureViews/` contains only `ToolCardTests.swift` — confirming the co-located `*.Tests.swift` convention (my allowed files restrict me to `feature-views/SpeedHistogramChart.*`, so co-location is correct). The full-app build breakage is pre-existing and affects all 80 surfaces equally.
+
+While the framework finishes linking, let me build an **isolated SwiftPM package** of my surface + real deps and **run the XCTest suite** (the ToolCard methodology). Let me set it up.
+
+Now run the isolated test suite with the full Xcode toolchain.
+
+Isolated library builds clean under Swift 6. Now run the full XCTest suite.
+
+**All 26 isolated XCTests pass** (11 projection + 2 format + 10 model + 3 accessibility), 0 failures, under Swift 6 — matching the ToolCard methodology. Let me check the framework build and then attempt the real full-app xcodebuild gate to capture evidence.
+
+The KMP Gradle daemon crashed (resource exhaustion on this shared machine) before staging the release framework — a flaky, infrastructure-level failure unrelated to my code. A debug xcframework was produced earlier, though. Let me assess the cleanest path: check whether sibling `feature-views` import the `Shared` framework (which determines if an integration compile is feasible) and free the stuck gradle process.
+
+Key finding: **no `feature-views` file imports `Shared`**, and all my public symbols are `SpeedHistogram*`-prefixed except `SpeedBand`. Let me free the stuck gradle worker and run a symbol-collision check against the whole Apple app (to substantiate "no collisions with sibling surfaces").
+
+No collisions — all my public symbols are unique across the Apple app. I now have comprehensive surface-green evidence. Let me make a genuine attempt at the real xcodebuild gate to capture this-run evidence (the gate literally asks for it). First, retry the now-cached Gradle assemble with freed resources, single-worker to avoid another OOM.
+
+While Gradle re-assembles, let me monitor its progress.
+
+Almost done — only the final `linkReleaseFrameworkMacosArm64` remains (everything else cached). Let me wait for it to complete and assemble.
+
+The final macOS release link is still running (single-worker, no daemon). Let me wait for it to complete.
+
+**Gradle BUILD SUCCESSFUL** — the release `Shared.xcframework` is built. Let me stage it (matching the build script's copy step) and verify.
+
+All 3 slices staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now I can run the real gate. Let me generate the Xcode project and attempt the iOS build, capturing full output.
+
+Project generated with the `TeslaSync` scheme. Now the real iOS build (the pre-build Gradle phase will be a fast no-op since the framework is up-to-date). Running it in the background with output captured.
+
+The iOS build failed (2 failures). Let me categorize the errors — critically, whether any are in my surface vs. the documented pre-existing issues.
+
+The build failed solely on `AcDcStatsPanel.Tests.swift` (alphabetically-first sibling) with `Unable to resolve module dependency: 'XCTest'` — **exactly the documented pre-existing blocker** (co-located `*.Tests.swift` importing XCTest into the app target). Let me confirm zero errors reference my surface.
+
+**Airtight result:** zero `SpeedHistogramChart` errors. The build fails only on `XCTest` module-dependency resolution from co-located `*.Tests.swift` (the documented pre-existing blocker affecting all 80 surfaces). My test file shows the same benign "ignoring import" warning as every sibling.
+
+Let me run the macOS build for log completeness while I draft the gate log.
+
+While the macOS build runs, let me verify the logs directory exists and check macOS build progress.
+
+Both gate builds fail on the exactly-documented pre-existing blockers — iOS on `XCTest`-in-app-target, **macOS on development-signing entitlements** — with **zero SpeedHistogramChart errors** in either. 
+
+To prove my production surface actually compiles within the real full-app module, let me run one more iOS build excluding the co-located test files (bypassing that pre-existing blocker).
+
+Let me monitor the no-test build (this one actually compiles the full production module, so it'll take several minutes).
+
+The no-test build compiled 54 actions then failed with 2 errors. Let me see the error category.
+
+My exclusion `*.Tests.swift` missed `ActionBuilder.ModelTests.swift` (a different test-naming variant) — still an XCTest-in-app-target case, still zero SpeedHistogramChart errors. Let me broaden the exclusion to catch all test files and reach a production-only compile.
+
+All XCTest files end in `Tests.swift` (142 total). Let me re-run with `*Tests.swift` excluded to reach a production-only compile.
+
+Let me monitor this production-only build (compiles the full app module, so several minutes).
+
+The production-only build compiled the full module and hit 90 errors / 11 failures — **none in SpeedHistogram**, and it's into dashboard-widgets. Let me wait for completion and categorize.
+
+**Conclusive evidence.** The production-only build (all test files excluded) compiled the full app module and failed with **90 errors — all `'DashboardWidgetSize'/'PowerFlowConnection' ambiguous/redeclaration** in `dashboard-widgets/` (the documented 8× parallel-merge collision) — and **0 SpeedHistogramChart errors**. My surface compiles cleanly inside the real full-app module (iOS, Xcode 26.5, Swift 6, linking the real `Shared.xcframework`).
+
+All three documented blockers are now reproduced in this run, none in my surface. Let me update todos and write the gate log.
+
+Now let me clean up scratch artifacts and verify the git working tree shows only my intended files.
+
+Git correctly ignores the generated `.xcodeproj`, staged framework, and gradle build output. There are 2 **pre-existing** unrelated modified web files I must NOT touch. Let me stage only my 7 surface files + the log (precisely), verify, and commit.
+
+Exactly 8 files staged; the 2 pre-existing web files are left untouched. Committing with the prescribed message.
+
+Committed cleanly (8 files, 1460 insertions). Let me do a final verification of the commit and working tree.
+
+All work is committed and verified. Final summary:
+

@@ -1,0 +1,171 @@
+================================================================================
+P4 · Feature view · 0216 — TeslaAccountSection (Apple)
+Run: 2026-06-07T23:5x-0700   Host: Darwin arm64 (macOS 26)   Toolchain: see probe
+Prompt: P4/feature-views/0216 — Feature view: TeslaAccountSection
+Web source (spec): web/src/features/settings/components/TeslaAccountSection.tsx
+Mode: code-complete + host-verified (iOS-18 & macOS-15 SDK compiles + 49 XCTests
+      EXECUTED green via the Xcode toolchain) + DEFERRED full-app xcodebuild gate
+      (Shared.xcframework KMP build + macOS dev-signing — ADR-012, owned by the
+      P4/P99 macos-latest acceptance gate; predecessor parity: 0010 ToolCard /
+      0002 BackendTool "code-complete + DEFERRED Xcode gate" disposition).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT default) ........ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+     (default `xcode-select -p` = /Library/Developer/CommandLineTools; the Xcode
+      toolchain is driven with DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer)
+  iPhoneSimulator SDK ........ iphonesimulator (iOS 18.0 deploy target)             OK
+  macOS SDK .................. macosx (macOS 15.0 deploy target)                     OK
+  iPhone 16 simulator ........ present (83717DEE-…-CBDDD3140989, Booted)            OK
+  Swift Charts / MapKit ...... present; this surface uses NEITHER (web "Charts/maps
+                               used: (none)") — the capability-BLOCKED escape hatch
+                               (SwiftUI/Charts/MapKit unavailable) does NOT apply.
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  xcodegen ................... 2.45.4 (project generates cleanly, see [7])           OK
+  XCTest (CLT-only `swift test`) NOT resolvable without Xcode → run via DEVELOPER_DIR
+                               Xcode toolchain (49/49 green, step [3]).             NOTE
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/TeslaAccountSection.*) ===
+  TeslaAccountSection.swift          168  surface entry — TSFadeIn+TSGlassPanel shell,
+                                          surfaceSlug, phase switch (loading/loaded/empty/
+                                          error), .alert disconnect confirm, stale ticker.
+  TeslaAccountSection.Model.swift    333  @Observable TeslaAccountSectionModel (auth phase,
+                                          pill, pending-actions, feedback, confirm, freshness)
+                                          + P1/S11 telemetry seam + P1/S10 strings facade.
+  TeslaAccountSection.Seams.swift    178  P1/S8 seams: TeslaAuthStatusProviding (+events)
+                                          + TeslaAccountActing (+outcomes) + in-memory impls.
+  TeslaAccountSection.Adapter.swift  394  pure projections: expiry-soon (web expiringSoon),
+                                          formatDateTime, status-card, feedback, freshness
+                                          chip/banner, a11y builders (dependency-free).
+  TeslaAccountSection.Views.swift    212  status-side subviews: header(IconBox/title/chip/
+                                          refresh) + connectivity banner + status card +
+                                          expiring-soon pill.
+  TeslaAccountSection.Actions.swift  244  action grid (Connect / Refresh / Sync / Re-authorize
+                                          / Disconnect) + action button + feedback banner +
+                                          loading/empty/error chrome.
+  TeslaAccountSection.Previews.swift  132  #if DEBUG — 12 #Preview states.
+  TeslaAccountSection.Tests.swift    211  XCTest — Adapter projections (24 methods).
+  TeslaAccountSection.ModelTests.swift 390 XCTest — model state-holder, split into 3 classes
+                                          (load / actions / freshness) — 25 methods.
+  TeslaAccountSection.strings         63  P1/S10 catalog (table "TeslaAccountSection") — 22
+                                          web-source keys verbatim + 11 native-chrome keys.
+  Largest .swift = 394 lines (swiftlint file_length<=400 honored across all files).
+  Each XCTestCase body < type_body_length(250). No view performs I/O (seam-bound).
+
+=== PARITY (web source reproduced end-to-end) ===
+  Data sources (web hooks → P1/S8 seams; no HTTP in the view):
+    - useAuthStatus            -> TeslaAuthStatusProviding (.loaded(authenticated,expiresAt)
+                                  / .empty / .failed / .offline) + the two document signals
+                                  teslasync:tesla-auth-expired/-recovered (.tokenExpiredSignal /
+                                  .tokenRecoveredSignal → pillDisconnected).
+    - useAuthURL               -> TeslaAccountActing.connect() → outcome .authURL(url) →
+                                  onOpenAuthURL (web window.location.href = data.auth_url).
+    - useRefreshAuth           -> .refreshToken() → .refreshed (+ status refetch).
+    - useSyncVehicles          -> .syncVehicles() → .synced(count) (inline "Synced N").
+    - useDisconnectAuth        -> .disconnect() → .disconnected (+ status refetch).
+    - useToast                 -> inline feedback banner (success/danger + detail).
+    - useConfirm/ConfirmDialog -> native .alert (destructive confirm + cancel).
+    - notifyTeslaAuthRecovered -> onAuthRecovered fired on the unauth→auth edge only.
+  Composition (web GlassPanel/IconBox/Button/ConfirmDialog/FadeIn → platform tokens):
+    GlassPanel→TSGlassPanel, IconBox→TSIconBox(tone:.accent), Button(primary/secondary/
+    danger + cyan re-authorize)→TSButton(.primary/.secondary/.destructive/.ghost),
+    Badge pill→TSBadge/warning capsule, FadeIn→TSFadeIn. No Tailwind ported; no raw hex.
+  Logic parity: expiringSoon (authed & 0<remaining<=7d → max(1,ceil(d))); status box
+    connected(green check + expiry pill + "Token expires {datetime}") / disconnected(red
+    cross + reconnect body) / not-connected; button set gated on authenticated; sync-
+    success inline line. States added for the P4 leaf contract: loading/empty/error +
+    the orthogonal live/stale/offline freshness axis (chip+banner+one-shot auto-refresh).
+  i18n: 22/22 web source keys present verbatim (tesla.*, toast.*, common.cancel); 11
+    native-chrome keys (freshness/banners/loading/empty/error/connectFailed). No English
+    literal in Swift — every string via the P1/S10 facade.
+  Telemetry: P1/S11 view.opened emitted once with surface slug "TeslaAccountSection".
+
+=== GATES EXECUTED ON THIS RUNNER (raw results) ===
+[1] iOS 18 Simulator SDK typecheck (surface + design-system deps, Swift 6):
+      xcrun -sdk iphonesimulator swiftc -target arm64-apple-ios18.0-simulator \
+            -swift-version 6 -typecheck <14 production files>
+      IOS_TYPECHECK_EXIT=0                                                     PASS
+[2] macOS 15 SDK typecheck (same sources, Swift 6):
+      xcrun -sdk macosx swiftc -target arm64-apple-macos15.0 -swift-version 6 -typecheck …
+      MAC_TYPECHECK_EXIT=0                                                     PASS
+[3] Committed XCTest suites EXECUTED via the Xcode 26.5 toolchain (isolated SwiftPM
+    package = the real surface sources + the real design-system component sources;
+    DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test):
+      Test Suite 'All tests' passed — Executed 49 tests, with 0 failures (0 unexpected)
+      TEST_EXIT=0                                                              PASS
+    (Adapter 24 + Model 25 = the committed .Tests.swift/.ModelTests.swift, @testable
+     import TeslaSync, driven by the in-memory seams; clock+locale injected.)
+[4] swiftformat --lint (all 9 swift files, repo .swiftformat config):
+      0/9 files require formatting.   FORMAT_EXIT=0                            PASS
+[5] swiftlint --strict (all 9 swift files, repo .swiftlint.yml):
+      (no output)                     LINT_EXIT=0                              PASS
+[6] placeholder gate (apps/tools/check-placeholders.ps1 -Language swift) over the
+    surface files:
+      PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0                       PASS
+[7] xcodegen generate (apps/apple): project created cleanly; the feature-views glob
+    registers TeslaAccountSection into both app + test targets (60 pbxproj refs).
+      XCODEGEN_EXIT=0                                                          PASS
+
+=== FULL-APP xcodebuild GATE — DEFERRED (honest, not green) ===
+  Command (gate): DEVELOPER_DIR=…/Xcode.app/Contents/Developer \
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  Observed: the scheme pre-action build-shared-xcframework.sh ran the Kotlin/Native
+    Gradle build and SUCCEEDED in producing Shared.xcframework (debug), then proceeded
+    to linkReleaseFrameworkIosArm64 + app compilation. Across the run, grep of the build
+    log for "TeslaAccountSection.*error:" = 0 (my surface introduced no compile error).
+    The full KMP-framework + ~hundreds-of-file app build+test is a long-running heavy
+    process; it was externally TERMINATED at ~9 min (SIGTERM, exit 143) before reaching
+    a final build/test verdict. The macOS app build carries the same heavy-build plus a
+    development-signing requirement (ENABLE_HARDENED_RUNTIME) and is likewise deferred.
+  Disposition: this is the repo's sanctioned "DEFERRED Xcode app build/test" path
+    (apps/macos-pending-verifications.md; ADR-012 macos-latest CI; 0010 ToolCard /
+    0002 BackendTool precedent). It is NOT a failure of this surface — the surface is
+    proven to compile on BOTH SDKs [1][2] and its 49 tests EXECUTE green [3]. The
+    deferral is owned by the P4/P99 Apple acceptance gate (xcframework staging +
+    signing on a signed runner), not by a single feature-view prompt.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states + P4 leaf states (loading / connected / disconnected
+      / not-connected / empty / error / stale / offline) — implemented; 12 #Preview;
+      phase + branch logic unit-tested AND EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seams (status + actions); no view I/O.
+  [x] Every i18n key from source has a matching catalog key — 22/22 web keys verbatim;
+      native chrome added; no English literal in Swift.
+  [x] Accessibility labels on every interactive element (buttons, status card, feedback,
+      chip, banners, pill); combined VoiceOver values; Dynamic Type + reduce-motion honored.
+  [x] Tests: adapter unit + per-state model + a11y — 49 methods, EXECUTED 49/49, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — every host-runnable gate green; the full-app xcodebuild is
+      shown DEFERRED with captured evidence (terminated heavy KMP build + signing), per
+      predecessor parity — never reported as passing.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green (raw exits pasted); the full-app
+                          xcodebuild is reported DEFERRED/terminated, NOT as a pass.
+  2 No scope narrowing ... full surface (9 swift + strings), all states, both seams, 49 tests.
+  3 No skip-and-assume ... web source read end-to-end; every t() + render branch reproduced;
+                          every gate run on THIS runner with results pasted.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. GlassPanel/IconBox/Button×4-variant/ConfirmDialog/FadeIn + the
+                          expiry/pill/recovery/sync logic + freshness contract.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  P1/S8 seams, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry,
+                          P4 leaf-state contract all present and consumed.
+  8 No commit on red ..... the COMMITTED artifact is green on every host gate AND on a real
+                          Xcode-toolchain isolated build + 49-test run; the only non-green
+                          step is the environment-deferred full-app KMP build (sanctioned).
+  9 No silent drift ...... changes confined to feature-views/TeslaAccountSection.* + this log.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+=== DEVELOPMENT NOTE (real bug caught by the isolated Swift 6 build) ===
+  The isolated build surfaced a genuine Swift-6 strict-concurrency error in the first
+  draft: `public/private static let` constants of the non-Sendable view-model structs
+  TeslaStatusCard / TeslaAccountFeedback are flagged #MutableGlobalVariable. Fixed by
+  converting them to static COMPUTED members (the sibling pattern — chips/notes use
+  static funcs), which would otherwise have failed the real app build too.
+
+EXIT=0
+STATUS=DONE

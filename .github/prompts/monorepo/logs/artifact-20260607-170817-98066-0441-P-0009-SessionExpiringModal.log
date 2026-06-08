@@ -1,0 +1,74 @@
+=== P4 Modal / dialog 0009 SessionExpiringModal (Apple) ===
+date: 2026-06-08T08:02:19Z
+runner: Darwin 25.5.0 arm64
+
+## Capability probe (prompt: requires SwiftUI + Swift Charts + MapKit; xcodebuild iOS/macOS schemes)
+$ swift --version
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+Target: arm64-apple-macosx26.0
+
+$ xcrun --sdk macosx swiftc -typecheck (import SwiftUI/Charts/MapKit)
+FRAMEWORKS_AVAILABLE=yes (SwiftUI+Charts+MapKit type-check OK)
+
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+xcodebuild_probe_exit=1
+
+## Gate step 1/2: xcodebuild iOS Simulator (scheme TeslaSync) build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+
+## Gate step 2/2: xcodebuild macOS (scheme TeslaSync-macOS) build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+
+>> BLOCKER: xcodebuild requires a full Xcode.app; this runner has Command Line Tools only.
+>> SwiftUI/Swift Charts/MapKit themselves ARE present (frameworks probe above). The xcodebuild
+>> scheme build+test harness cannot run here, so those two gate steps are BLOCKED by platform
+>> capability — NOT by code defects. Every other gate step + a full swiftc type-check pass below.
+
+## swiftformat --lint (gate: whole apps/apple; shown scoped to this surface)
+SwiftFormat completed in 1.2s.
+0/9 files require formatting.
+FORMAT_SURFACE_EXIT=0  (0/9 files require formatting)
+
+## swiftlint --strict (gate runs whole tree; this surface is isolated below)
+SURFACE_SWIFTLINT_VIOLATIONS=0 (no modals-dialogs violations; the 1 reported violation is pre-existing in dashboard-widgets/LifetimeStatsWidget.Adapter.swift, outside this prompt's allowed files)
+
+## check-placeholders.ps1 (gate path + the real surface directory)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+
+## swiftc -typecheck (substitute for the unavailable xcodebuild compile/test)
+   Surface files compiled against faithful shims of the shared TS tokens/components they use
+   (signatures copied verbatim from Tokens.swift / Components/UI/Buttons.swift / Feedback/Skeletons.swift).
+
+### production + #Preview bodies (Swift 6 language mode, -strict-concurrency=complete):
+PROD_TYPECHECK_EXIT=0  (Model, Adapter, Projection, Dialog, Chrome, swift, Previews x9)
+
+### production + unit tests (Swift 6 language mode, -strict-concurrency=complete):
+TESTS_TYPECHECK_EXIT=0  (40 XCTest cases across projection / model / adapter / a11y)
+
+## Integration note (outside this prompt's allowed files):
+   The new `TeslaSync/modals-dialogs` source group is not yet referenced by apps/apple/project.yml
+   (XcodeGen `sources:`) nor apps/apple/.swiftlint.yml `included:`. Both belong to the P4 core /
+   acceptance wiring, not this leaf surface (allowed files = modals-dialogs/SessionExpiringModal.*
+   + this log). Surface code follows the committed feature-views pattern so it compiles + tests
+   once that one-line tier wiring lands and a full Xcode runner is used.
+
+## Summary
+   - SwiftUI + Swift Charts + MapKit frameworks: AVAILABLE.
+   - xcodebuild scheme build+test: BLOCKED (no Xcode.app on runner; CLT only) — IOS_EXIT=1, MAC_EXIT=1.
+   - swiftformat (surface): PASS (0/9 need formatting).
+   - swiftlint (surface): PASS (0 violations; 1 pre-existing violation elsewhere, not in scope).
+   - check-placeholders: PASS (PLACEHOLDER_COUNT=0).
+   - swiftc -typecheck production+previews+tests under Swift 6 / complete concurrency: PASS.
+   - All web states reproduced: dormant/loading/empty/ready/error + live/stale/offline + refreshing.
+   - All web i18n keys present; no English literals (facade fallback pattern); telemetry view.opened wired.
+
+EXIT=1
+STATUS=BLOCKED
+# BLOCKED reason: xcodebuild (Xcode.app) unavailable on this CLT-only runner — the prompt's
+# capability clause mandates STATUS=BLOCKED with API evidence (captured above). The surface is
+# complete and green on every runnable check; no code defect blocks the gate.

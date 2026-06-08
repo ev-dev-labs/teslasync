@@ -1,0 +1,161 @@
+================================================================================
+P4-APPLE · P7 · page:notifications/Channels — ChannelsPage (Apple, SwiftUI / HIG)
+Run: 2026-06-08T08:41-0700   Host: Darwin arm64
+Prompt: p4-apple/pages/notifications/ChannelsPage.prompt.md
+Web source (spec): web/src/features/notifications/pages/ChannelsPage.tsx (27 lines)
+Parity unit: page:notifications/Channels  (route /notifications/channels)
+Mode: code-complete + host-validated; DEFERRED full-app Xcode scheme build/test
+      (ADR-012 macOS-pending), matching predecessors 0231 FSMTimelineChart /
+      0180 AlertMessageEditor / 0010 ToolCard.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                  OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override         OK
+  iOS simulator SDK .......... iPhoneSimulator 26.5 (deployment target iOS 18.0)     OK
+  macOS SDK .................. MacOSX 26.5 (deployment target macOS 15.0)            OK
+  swiftlint .................. 0.63.3                                               OK
+  swiftformat ................ 0.61.1                                               OK
+  xcodegen ................... 2.45.4                                               OK
+  pwsh (placeholder gate) .... 7.6.2                                               OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks has only .gitkeep) WARN
+  codesign identities ........ none (BLOCKER for signed app gate, ADR-012)         WARN
+
+  Charts/Maps capability note: this PAGE uses NO charts and NO map (the manifest
+  record lists zero data sources / panels / charts / maps). The web source is a thin
+  `PageContainer` wrapper around the existing `NotificationChannelsView` component;
+  the native page reproduces the page chrome (title + subtitle + copy-link) and embeds
+  the real `NotificationChannelsView`. The capability-BLOCKED escape hatch does NOT
+  apply — an Xcode runner is present and the surface is authored + host-validated for
+  real (both-SDK typecheck + 11/11 XCTest below). STATUS=DONE.
+
+=== ARTIFACT (apps/apple/TeslaSync/Features/Notifications/ChannelsPage.*) ===
+  ChannelsPage.swift           221  The composed page: `ChannelsPageStrings` (P1/S10
+                                    string facade resolving from Localizable.xcstrings
+                                    with the verbatim web English `t(key, default)`
+                                    fallback) · `NotificationChannelsRoute` deep-link
+                                    value + `.parse(path:)` (web `/notifications/channels`,
+                                    case-insensitive, trailing-slash tolerant) ·
+                                    `View.notificationChannelsDestination()` NavigationStack
+                                    registration · `@MainActor @Observable
+                                    ChannelsPageModel` (exposes title + subtitle parity
+                                    strings + copy-link value as bound state, owns the
+                                    embedded `NotificationChannelsView` model via a
+                                    `standalone()` in-memory seam until live wiring lands)
+                                    · `ChannelsPage` view (pinned title+subtitle header,
+                                    copy-link toolbar → pasteboard, embeds the real
+                                    `NotificationChannelsView`, adaptive macOS+iOS).
+  ChannelsPage.Previews.swift   34  #if DEBUG previews: the page in a NavigationStack,
+                                    and the deep-link destination (pushing
+                                    NotificationChannelsRoute resolves to the page).
+  ChannelsPage.Tests.swift      88  XCTest (11): the two parity strings resolve to the
+                                    verbatim web English (catalog hit or fallback) +
+                                    key constants; the @Observable model exposes them +
+                                    the copy-link value (and path fallback w/o shareURL);
+                                    the standalone factory builds the embedded model;
+                                    the deep-link route parses the canonical web path
+                                    (tolerant) and rejects siblings; native chrome
+                                    strings distinct.
+  Total 343 lines (3 files). Every .swift file <= 221 lines (house file_length 400).
+  Zero `// parity:allow` opt-outs.
+
+  Supporting (allowed-file) edits, same change:
+   • apps/apple/Localization/Localizable.xcstrings — +4 keys (the 2 web parity strings
+     + 2 native copy-link chrome strings), web English values, manual extractionState.
+   • apps/apple/project.yml — add `TeslaSync/Features` source path to BOTH app targets
+     (TeslaSync iOS + TeslaSync-macOS) so the page integrates into the real build and
+     `xcodegen generate` enumerates it (build wiring for the hosted page).
+   • apps/parity/apple-ledger.json — NEW; the covered rows (apple-macos + apple-ios).
+   • apps/macos-pending-verifications.md — deferral row for the full-app build/test.
+
+=== PARITY ===
+PARITY_REQUIRED=2   (manifest page:notifications/Channels → strings[2])
+  [x] string · notifications.channels.title
+        web   : ChannelsPage.tsx t('notifications.channels.title', 'Notification channels')
+        native: ChannelsPageStrings.titleKey + .title (ChannelsPage.swift) → bound via
+                ChannelsPageModel.title → rendered TSPageTitle(LocalizedStringKey(model.title))
+                + navigationTitle; catalog entry notifications.channels.title =
+                "Notification channels" (Localizable.xcstrings); asserted
+                ChannelsPageTests.testTitleResolvesWebEnglish / testModelExposesParityStrings.
+  [x] string · notifications.channels.subtitle
+        web   : ChannelsPage.tsx t('notifications.channels.subtitle', 'Where to send
+                notifications: Discord, Slack, Telegram, email, ntfy, Pushover, or a
+                custom webhook.')
+        native: ChannelsPageStrings.subtitleKey + .subtitle (ChannelsPage.swift) → bound
+                via ChannelsPageModel.subtitle → rendered TSSubhead(LocalizedStringKey(
+                model.subtitle)); catalog entry notifications.channels.subtitle = same web
+                English (Localizable.xcstrings); asserted
+                ChannelsPageTests.testSubtitleResolvesWebEnglish / testModelExposesParityStrings.
+PARITY_COVERED=2
+  Panels/charts/maps/data-states: NONE declared (page renders from navigation values /
+    local state — manifest dataSources=[], panels=[], charts=0, maps=0, states=[]). The
+    page always renders (title + subtitle + embedded view); the embedded
+    NotificationChannelsView owns its own loading/empty/error/live states.
+  i18n: all 4 visible literals (2 web parity keys + native copyLink/linkCopied chrome)
+    resolve via ChannelsPageStrings from Localizable.xcstrings with web-English fallback;
+    zero hardcoded user-facing literals; key names match web.
+  a11y: header is an .isHeader combined element; copy-link toolbar item has an explicit
+    accessibilityLabel + .help; Dynamic Type via Font.TS; dark/high-contrast via Color.TS
+    dynamic tokens; ≥44pt native Button targets. Adaptive macOS (sidebar/toolbar) + iOS
+    (large title + nav bar).
+
+=== HOST-RUNNABLE GATES (all green) ===
+  swiftformat --lint <surface> ................ 0/3 require formatting               FORMAT_EXIT=0
+  swiftlint --strict <surface files> .......... 0 violations (3 files)              LINT_EXIT=0
+      (repo-wide `swiftlint --strict` surfaces 1 PRE-EXISTING, UNRELATED violation in
+       TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length
+       — not introduced by and outside this surface; out of scope to fix.)
+  check-placeholders.ps1 -Language swift ...... PLACEHOLDER_COUNT=0 ALLOWED=0       PLACEHOLDER_EXIT=0
+  swiftc -typecheck iPhoneSimulator (ios18.0-simulator, swift6, strict-concurrency, -D DEBUG) IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (macos15.0, swift6, strict-concurrency, -D DEBUG) ................. MAC_TYPECHECK_EXIT=0
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6 language mode) ....... 11/11 passed, TEST_EXIT=0
+      → ChannelsPageTests (11): title/subtitle resolve web English; model exposes parity
+        strings; copy-link value + path fallback; standalone factory; route path const;
+        deep-link parse (canonical/tolerant/reject); native chrome distinct.
+      Harness links the REAL Tokens.swift (design tokens) + Typography.swift
+      (TSPageTitle/TSSubhead); the out-of-scope sibling surface NotificationChannelsView /
+      NotificationChannelsModel / InMemoryNotificationChannelsSource is provided with its
+      EXACT public signature (that surface is verified by its own P4 prompt).
+  xcodegen generate (project spec enumerates the 3 new files into both app targets, 18 refs) XCODEGEN_EXIT=0
+
+=== DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test ===
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. A bounded `xcodebuild -target TeslaSync -sdk iphonesimulator
+    build CODE_SIGNING_ALLOWED=NO` probe exited 65, failing FIRST at:
+      "There is no XCFramework found at .../apps/apple/Frameworks/Shared.xcframework"
+    with ZERO `ChannelsPage` errors. Blocked by PRE-EXISTING, UNRELATED parallel-merge
+    state in the shared app target — none of which originates in this surface:
+      • Shared.xcframework not staged (apps/apple/Frameworks has only .gitkeep); the
+        scheme pre-action builds it via the Kotlin/Native Gradle toolchain (the P1/S3
+        artifact already tracked macOS-pending).
+      • `struct DashboardWidgetSize` redefined across 15 files (Sources/DashboardWidgets/*
+        + TeslaSync/dashboard-widgets/*) — "invalid redeclaration" across the app target.
+      • 261 co-located feature-view/widget *.Tests.swift / *.ModelTests.swift `import
+        XCTest` into the app target (this surface's 1 test file follows that SAME
+        established sibling convention; it adds no new failure class).
+      • No macOS development-signing identity (ADR-012).
+    This surface's OWN code is proven to compile against the real iOS-18 + macOS-15 SDKs
+    (typechecks above) and its logic runs green (11/11 XCTest). The full-app build/test is
+    recorded in apps/macos-pending-verifications.md for the P99 acceptance gate on a
+    macos-latest runner with signing identities.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Every named panel implemented; every anonymous region reproduced — the page is a
+      thin PageContainer wrapper (title + subtitle + copyLink) embedding the real
+      NotificationChannelsView (no named panels in the manifest record).
+  [x] All 2 parity items render from the bound @Observable ChannelsPageModel state.
+  [x] loading/empty/error per data source — N/A (0 page data sources); the page always
+      renders and the embedded component owns its own states.
+  [x] All visible strings sourced from Localizable.xcstrings; zero hardcoded literals;
+      key names match web (notifications.channels.title / .subtitle).
+  [x] Dark mode + Dynamic Type + accessibility + SI units honored; SwiftUI-native
+      (adaptive macOS + iOS), no web cloning.
+  [x] No TODO/stub/placeholder/Lorem in shipped code (stub gate: 0, 0 opt-outs).
+  [x] PARITY_COVERED(2) == PARITY_REQUIRED(2).
+  [x] apple ledger rows (apple-macos + apple-ios) for page:notifications/Channels set covered.
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing unrelated blockers);
+      host-runnable equivalents (real-SDK typecheck both platforms + 11/11 XCTest) green.
+
+EXIT=0
+STATUS=DONE

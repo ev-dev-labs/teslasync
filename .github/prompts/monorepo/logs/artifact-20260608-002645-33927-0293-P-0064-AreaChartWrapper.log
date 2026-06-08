@@ -1,0 +1,78 @@
+=== P4 Shared surface 0064 AreaChartWrapper (Apple) ===
+run-utc: 2026-06-08T11:39:29Z
+host: Darwin 25.5.0 arm64
+
+### Capability: requires SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 (xcodebuild + simulators).
+--- xcode-select -p ---
+/Library/Developer/CommandLineTools
+--- xcodebuild -version ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+--- iOS simulators (iPhone 16) ---
+(no iOS simulators available — Command Line Tools only)
+
+CONCLUSION: This runner has Command Line Tools only (no Xcode.app), so the
+xcodebuild build+test gate steps CANNOT run. Per the prompt capability clause,
+those steps are STATUS=BLOCKED with the evidence above. Every other gate check
+(swiftlint, swiftformat, placeholders) plus a real swiftc typecheck of the
+surface against the macOS SDK were run and pass — see below.
+
+=== [1/2] xcodebuild iOS (build test) — gate step ===
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1  (non-zero == BLOCKED: requires Xcode.app)
+
+=== [2/2] xcodebuild macOS (build test) — gate step ===
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1  (non-zero == BLOCKED: requires Xcode.app)
+
+=== swiftformat --lint (surface files) — gate step ===
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-293/apps/apple/.swiftformat
+SwiftFormat completed in 2.19s.
+0/6 files require formatting.
+FORMAT_EXIT=0
+
+=== swiftlint --strict (surface files, scoped) — gate step ===
+LINT_EXIT(surface)=0   (0 == no violations in AreaChartWrapper.*)
+NOTE: project-wide 'swiftlint --strict' currently reports 1 PRE-EXISTING violation in
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift (function_body_length),
+      which is unmodified by this prompt and outside its allowed-files scope.
+
+=== check-placeholders.ps1 (surface dir) — gate step ===
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== swiftc -typecheck (Adapter+Model+View+Views vs real macOS SDK incl. SwiftUI + Swift Charts) ===
+TYPECHECK_CORE_EXIT=0   (0 == compiles clean against the real SDK)
+NOTE: Previews.swift typechecks except the Xcode-only #Preview macro plugin; Tests.swift
+      needs '@testable import TeslaSync' (the Xcode test target). Both run under xcodebuild.
+
+=== Summary ===
+Deliverable: production-polished native parity of web components/charts/AreaChartWrapper.tsx
+Files (apps/apple/TeslaSync/shared-surfaces/):
+  AreaChartWrapper.Adapter.swift   — pure projection core (data->per-series), y-domain, phase/status/connection, slug, a11y
+  AreaChartWrapper.Model.swift     — P1/S8 @Observable state holder + Source seam, P1/S10 i18n facade, P1/S11 view.opened telemetry
+  AreaChartWrapper.swift           — View (model-driven + web-ergonomic presentational inits), AreaChartSeries, AreaChartFormatting
+  AreaChartWrapper.Views.swift     — Swift Charts canvas (AreaMark gradient + LineMark, .unstacked), tooltip, freshness chip, loading/empty/error
+  AreaChartWrapper.Previews.swift  — one #Preview per state (content/multi/empty/loading/error/stale/offline/presentational)
+  AreaChartWrapper.Tests.swift     — XCTest: adapter + model (phases, telemetry-once, stale auto-refresh, offline) + a11y + formatting
+  AreaChartWrapper.strings         — P1/S10 catalog (state-envelope + axes + a11y keys; web source is anonymous, extracts none)
+
+States reproduced (none hidden): loading (skeleton), content (area chart), empty (ContentUnavailableView),
+  error (retry), stale (chip + one guarded auto-refresh), offline (cached trace + chip). Live renders the bare chart (web parity).
+
+Recharts -> Swift Charts: <Area type=monotone fill=url(gradient)> -> AreaMark(.monotone, stacking:.unstacked) + 2pt LineMark;
+  linearGradient stops 0.3->0 -> LinearGradient(opacity .3 -> 0); XAxis/YAxis tickFormatter -> AxisValueLabel via AreaChartFormatting;
+  CartesianGrid 3 3 -> dashed AxisGridLine; Tooltip -> chartXSelection RuleMark annotation. (No Leaflet/MapKit: source has no map.)
+
+Gate step results: FORMAT_EXIT=0  LINT_EXIT(surface)=0  PLACEHOLDER_EXIT=0  TYPECHECK_CORE_EXIT=0
+                   IOS_EXIT=1 (BLOCKED)  MAC_EXIT=1 (BLOCKED) — no Xcode.app / no iOS simulator on this runner.
+
+=== Integration follow-up (outside this prompt's allowed-files scope; required before the xcodebuild gate can run) ===
+  1. apps/apple/project.yml: add '- path: TeslaSync/shared-surfaces' to the TeslaSync + TeslaSync-macOS target sources
+     (alongside the existing TeslaSync/feature-views and TeslaSync/dashboard-widgets entries).
+  2. apps/apple/.swiftlint.yml: add 'TeslaSync/shared-surfaces' to 'included' so the strict lint covers this directory.
+  These two edits touch shared config files this prompt is not allowed to modify; a maintainer applies them at integration.
+
+EXIT=1
+STATUS=BLOCKED

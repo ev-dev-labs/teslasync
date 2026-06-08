@@ -1,0 +1,108 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Xcode is not installed (only Command Line Tools), so `xcodebuild` and iOS simulators are unavailable. SwiftLint, SwiftFormat, and Swift 6.3.2 are present. Let me explore the existing Apple app structure and the web source before deciding on the path forward.
+
+This is a large, established monorepo with a real Apple app. Let me examine the web source, the existing feature-views directory, and the sibling components/patterns.
+
+Now let me find where `sensors` data is built in the web app, check for existing `TemperatureGauges.*` native files, and study a sibling feature-view's file pattern.
+
+The pattern is clear. `HealthGaugeGrid` (radial gauges) and `TemperatureMetricCards` (same temperature domain, same page) are the best references. Let me read the page to understand `sensors` construction, plus the full HealthGaugeGrid file set.
+
+Now I understand the data flow. `sensors` derives from `useDrivetrainHealth` (front/rear motor, inverter, battery temps in SI Celsius). `TemperatureMetricCards` is the closest sibling (identical `sensors: TempSensor[]` data). Let me read its full file set to nail the canonical pattern.
+
+The pattern is crystal clear. Let me read the remaining reference files: TemperatureMetricCards Projection/Views/Previews/strings/Tests, and HealthGaugeGrid's view + states + the native radial gauge rendering.
+
+Now let me study HealthGaugeGrid (the radial-gauge sibling) and the design tokens to understand the native gauge rendering and token API.
+
+Let me read the design tokens, the glass/motion helpers, the States file, and the test/strings/preview patterns to finalize my understanding.
+
+Let me confirm the exact token APIs and read the strings/previews/tests patterns.
+
+Let me read the Tests pattern and confirm the design token definitions (Color.TS, Font.TS, TSSpacing, TSRadius, TSMotion).
+
+I have the full pattern. Let me read the design tokens API and the gauge projection model + view-test pattern to finalize.
+
+Let me confirm the exact `Font.TS` and `Color.TS` member names available in the tokens.
+
+I have the full design-token and pattern picture. Now a critical architecture question: are these per-surface types shared or duplicated across the single `TeslaSync` module? Let me check how sibling surfaces avoid type redeclaration and understand the target layout.
+
+Critical finding: `DrivetrainHealthStatus` is already defined in **both** `HealthGaugeGrid.Model.swift` and `TemperatureMetricCards.Adapter.swift` (sibling surfaces from parallel runs). To avoid adding new collisions and keep my surface self-contained, I'll uniquely namespace all my types. Let me verify the toolchain reality, the web parity math, and lint configs.
+
+Excellent — `Xcode.app` IS present; `xcode-select` just points to CommandLineTools. I can likely use it via `DEVELOPER_DIR`. Let me test that, and nail the exact web parity math (`getGlobalPrecision` default, `convertTempFromSI`, `fmtNumber`).
+
+`xcodebuild` works via `DEVELOPER_DIR` (Xcode 26.5, iPhone 16 sim booted). Parity math confirmed: `convertTempFromSI` (°C identity, °F=c·9/5+32), `getGlobalPrecision()` default **2**, RadialGauge center uses `isInteger ? 0 : globalPrecision`, Max caption always 0 decimals.
+
+Note: sibling surfaces already duplicate `DrivetrainHealthStatus` etc. — so I'll uniquely namespace all my types. Let me read the shared components I'll depend on to confirm their APIs and transitive deps.
+
+The shared components are self-contained and confirmed. Let me check the top of Tokens.swift (the `tsDynamicColor` helper) and the lint/format configs so my code matches house style.
+
+I now have complete understanding of the pattern, parity math, design tokens, shared components, and lint/format rules. Let me set up a plan and todos, then build the 9-file surface.
+
+Now I'll build the surface. Starting with the Foundation-only core (Adapter, Projection, Model).
+
+Core compiles conceptually. Now the SwiftUI surface + views.
+
+Now the strings catalog and previews.
+
+Now the unit tests (with precisely computed parity values) and per-state view tests.
+
+All 9 files created. Let me verify the test-target wiring in project.yml and run swiftformat/swiftlint on my files.
+
+Key finding: test bundles source from `Tests/Unit`, and the app target globs all of `feature-views` (including sibling `*.Tests.swift` + duplicate types) — so the aggregated slot won't cleanly build the full scheme for reasons outside my scope. My authoritative signal will be an isolated build+test plus the real lint/format/placeholder gates. Let me first lint/format my actual files.
+
+One file exceeds max-width. Let me auto-format all my files in place, then re-lint.
+
+swiftformat passes. Let me verify the auto-formatted section and run swiftlint --strict.
+
+swiftlint --strict: 0 violations. swiftformat: clean. Now the placeholder gate (PowerShell).
+
+The verbatim gate `-Path` is a non-existent literal (scans nothing → vacuous pass). I'll run a *meaningful* placeholder scan against a temp dir holding only my files. Then build an isolated SwiftPM package (faithful copies of the real tokens + components) to truly compile and test my surface.
+
+Placeholder gate clean (COUNT=0). Now the authoritative check: an isolated SwiftPM package with faithful copies of the real tokens + shared components, compiling my actual surface + running my tests. Let me set it up.
+
+Now build the isolated package using the Xcode toolchain (macOS 15 SDK).
+
+My surface compiles cleanly against the real tokens + components. Now run the tests.
+
+All 36 isolated tests pass (adapter parity, projection C/F values, severities, literal-zero null handling, clamping, model lifecycle, telemetry, a11y, and all 7 per-state ImageRenderer renders) on the macOS 15 SDK. Now let me empirically assess the real gate. First, quantify the pre-existing cross-surface conflicts (outside my scope) and confirm my files add none.
+
+Confirmed: the aggregated slot has **hundreds** of pre-existing duplicate public types across 1445 sibling files (e.g. `enum Phase` ×66, `DrivetrainHealthStatus` ×2) — so the full `TeslaSync` module cannot compile, independent of my work. Let me verify my uniquely-namespaced symbols collide with nothing, then attempt the real gate empirically.
+
+My surface is unique and self-contained. Now let me empirically attempt the real gate: generate the project and try the iOS build.
+
+xcodegen succeeded. Now the real iOS build (will compile the whole aggregated module). I'll capture output to analyze which files cause errors.
+
+Build still running (large module). Let me inspect the partial log for errors already emitted.
+
+The build is first compiling the Kotlin/Native `Shared.xcframework` via Gradle (a pre-build step) — no Swift errors yet. Let me keep waiting for it to reach the Swift compilation phase.
+
+Still in the Gradle/KMP pre-build. The `DrivetrainHealthStatus` duplicate is top-level in two sibling files, so the Swift module compile will certainly fail. Let me let the real build continue and prepare the gate log meanwhile, then capture the actual Swift errors. Waiting for it to reach the Swift phase.
+
+The Gradle KMP pre-build (building `Shared.xcframework` for iOS+macOS) is dominating wall-clock. The eventual Swift failure is certain (top-level duplicate `DrivetrainHealthStatus`). Let me capture that concrete compiler error directly via `swiftc` on the two real sibling files, in parallel.
+
+I have **concrete, definitive proof**: two real sibling files both declare top-level `public enum DrivetrainHealthStatus` → `error: invalid redeclaration` — pre-existing, outside my allowed scope. The full `TeslaSync` module therefore cannot compile regardless of my surface. Let me check whether the long-running xcodebuild has reached (and failed at) the Swift phase yet.
+
+Gradle finished; Swift compilation started (currently the `TeslaSyncWidgets` dependency). The `TeslaSync` app target compiles after its dependencies, where it'll fail on the sibling duplicates. Let me wait for that real failure.
+
+As predicted, the `TeslaSync` target's Swift compile failed. Let me extract the real errors and confirm none implicate my files.
+
+The full-scheme failure is now fully explained and **none of it is my code**: the app target globs sibling `*.Tests.swift` (e.g. `AIRestorePanel.Tests.swift`) which `import XCTest` (unavailable to an app target), plus hundreds of duplicate sibling public types. Both are pre-existing harness/aggregation defects outside my allowed scope. Let me capture the definitive `BUILD FAILED` marker and exit code.
+
+Definitive: **IOS_EXIT=65**, `** BUILD FAILED **`, first error = sibling `AIRestorePanel.Tests.swift` importing `XCTest` in the app target. Both blockers (XCTest-in-app-target via project.yml glob; duplicate sibling types) are pre-existing, outside my allowed scope, with **zero** errors on my files. Let me write the honest gate log.
+
+Now let me review the overall change set and confirm no stray generated artifacts would leak into version control.
+
+Code is complete and verified. Let me finalize todos and clean up generated build artifacts (the gitignored `.xcodeproj` and `/tmp` outputs), keeping only my 9 surface files + the log in the repo.
+
+Let me do a final QA cross-check: every i18n key referenced in code must exist in the strings catalog.
+
+All 16 i18n keys referenced in code are defined in the catalog (zero missing). Let me confirm the final log terminal and todo state.
+
+Everything is complete and verified. Let me do a final integrity check that I touched only my own files (no out-of-scope edits), then finalize.
+
+I've completed and thoroughly verified the surface. Here's my final honest assessment.
+
+I built the complete native Apple `TemperatureGauges` surface and verified it exhaustively on this capable runner (Xcode 26.5 / iOS 18 sim / macOS 15 SDK). The only failure is the full-scheme `xcodebuild`, which is blocked by **pre-existing, out-of-scope defects in committed sibling surfaces** — with zero errors referencing my files.
+
+Per the binding Honesty Covenant (rule 1 "no red-as-green", rule 8 "no commit on red"), I'm reporting `STATUS=BLOCKED` and have **not** committed on a red full-scheme gate. The 9 verified files + honest gate log are in the worktree.
+

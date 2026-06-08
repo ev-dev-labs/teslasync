@@ -1,0 +1,110 @@
+I'll start by exploring the repository structure, finding the web source, and checking available Apple tooling.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. However, `swift`, `swiftlint`, and `swiftformat` are available. There's an existing sibling `AIUsageCard.*` feature-view set I can use as the canonical pattern. Let me read the web source and the sibling files.
+
+The web source is a controlled toggle list driven by an `AI_FEATURES` registry. Now let me study the canonical sibling pattern (`AIUsageCard.*`, just modified) and the AI features registry.
+
+Files exist (huge directory confused glob). Let me read the canonical `AIUsageCard.*` sibling set — these are the exact pattern to follow.
+
+Excellent pattern clarity. Let me read the remaining sibling files and locate the projection + shared tokens.
+
+There's also a `.Projection.swift` and `.AdapterTests.swift` in the sibling set (macOS case-insensitive FS). Let me read those plus the previews/tests and the web AI features registry.
+
+Now the AI features registry (large file) and the test patterns. Let me extract the registry shape and read the test files.
+
+Now let me read the design tokens, motion component, test patterns, the sibling log, the placeholder checker, and how the project includes these files.
+
+Let me find the generated token definitions (`TSSpacing`, `TSRadius`, `Color.TS`, `Font.TS`) to use exact member names.
+
+The feature-views path is compiled into both app targets. Now let me read the sibling test files to match the testing framework/structure, and check the generated tokens + placeholder script + sibling log.
+
+I have the full pattern. Now let me check for full Xcode availability, the placeholder script, the sibling log format, and how tests get routed to the test target.
+
+This is the key precedent: full Xcode is at `/Applications/Xcode.app`, invoked via `DEVELOPER_DIR` override. The accepted verification is an **isolated Swift build + XCTest** plus swiftlint/swiftformat/placeholder, with the full-app xcodebuild gate deferred on pre-existing blockers. Let me verify tooling and read the placeholder script.
+
+Full Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 simulator is booted. Let me read the placeholder checker to avoid tripping it, then write the plan.
+
+The scanner is case-insensitive substring matching on `.swift` files only (`.strings` is not scanned). I must avoid "todo"/"placeholder"/"mock"/"stub"/"fixme"/"xxx" substrings in `.swift`. Let me check for a shared native Toggle component and an interactive sibling pattern.
+
+`TSToggle` forces a visible text label, so I'll use SwiftUI's `Toggle` with hidden label + `Color.TS.accent` tint + accessibility label (matching the web label-less switch). Let me confirm the generated token member names on iOS/macOS.
+
+I have everything needed. Let me read the lint configs and check the build's pre-existing blocker state, then write the plan.
+
+Confirmed: `Shared.xcframework` is unstaged (only `.gitkeep`) — the full-app gate's pre-existing blocker. There's also a `Chrome.swift` in the sibling set. Let me read it and a shared Button to mirror chrome subviews.
+
+I now have the complete pattern. Let me verify the `TSButton` and `TSSkeleton` APIs, then start writing.
+
+I have the complete pattern (10-file sibling set: swift, Model, Projection, Adapter, Views, Chrome, Previews, Tests, AdapterTests, strings). Let me set up the plan and todos.
+
+Now let me write the files. Starting with the pure-Foundation Adapter.
+
+Now the Projection. Since this surface has no locale-dependent formatting, I'll drop the unused `locale` ceremony from the Model and keep the projection clean.
+
+Now the Projection:
+
+Now the Chrome (chip, refresh button, banner, loading skeleton, error+retry):
+
+Now the Views (legend, row, data list, empty state):
+
+Now the main surface view:
+
+Now the Previews:
+
+Now the strings catalog:
+
+Now the test files — AdapterTests (pure) and Tests (projection + model + a11y):
+
+The `testLiveResetsStaleAutoRefreshArming` test got convoluted. Let me clean it up:
+
+All 10 files written. Let me mark progress and set up the isolated Swift 6 build + test verification (symlinking the real files into a throwaway SwiftPM package with a faithful token/component shim).
+
+Now the throwaway Package.swift and the faithful token/component shim:
+
+Now build and test the isolated package (using the full Xcode SDK via `DEVELOPER_DIR` for SwiftUI/Observation):
+
+Build succeeds with one Swift 6 strict-concurrency **warning** on the `Toggle` binding. Since the app uses `SWIFT_STRICT_CONCURRENCY: complete`, let me fix it cleanly. Let me see how existing feature-views handle Toggle bindings.
+
+The established repo pattern (`NotificationSettings.Sections.swift`) uses MainActor-isolated binding setters. The warning comes from my plain `(Bool) -> Void` callback. Let me annotate the callbacks `@MainActor` to match strict-concurrency expectations.
+
+A compiler crash — likely stale incremental state. Let me clean-build to confirm:
+
+Clean build still crashes — it's a compiler bug on `@MainActor` stored-closure properties. Let me switch to the proven repo idiom: pass the model and build the binding inline with `set: { model.setFeature(...) }` (exactly how `NotificationSettings.Sections.swift` does it).
+
+Let me re-read the current Views.swift to match exactly:
+
+Now I'll replace the RowView and DataView with the binding-based (model-passing) idiom:
+
+Now update the surface's `.data` case to pass the model:
+
+Clean build, zero warnings/errors. Now run the tests:
+
+All 27 tests pass under Swift 6 strict concurrency. Now swiftformat (auto-fix my files), then swiftlint --strict, then placeholder check.
+
+`0/9 files reformatted` — already compliant. Now confirm `--lint` and run `swiftlint --strict` on the files:
+
+swiftformat and swiftlint both pass (0 issues). Now the placeholder check — first a quick self-scan, then the actual script on an isolated copy:
+
+All five surface verifications pass. Now let me capture honest evidence of the full-app `xcodebuild` gate state (the precedent documents it as blocked by the unstaged `Shared.xcframework`). Let me check the project generation + staging script.
+
+The full gate needs `xcodegen` to generate the (git-ignored) project, then a mandatory pre-build phase that stages `Shared.xcframework` via the KMP Gradle toolchain. Let me generate the project (proving my files wire in) and probe the staging blocker:
+
+My files wire into both real app targets (60 pbxproj refs), and app sources `import Shared` — so the full build requires the KMP `Shared.xcframework` (unstaged). Let me capture real evidence by attempting the actual gate build (bounded), and read the pending-verifications doc.
+
+The pending-verifications doc confirms the exact precedent and disposition. My `kill`-with-variable command was blocked by policy (no harm). Let me instead do a real iOS-18 + macOS-15 `swiftc -typecheck` of my view files (extra proof) and quantify the documented pre-existing blockers.
+
+Both iOS-18 and macOS-15 typechecks pass. Let me quantify the documented pre-existing blockers (to honestly attribute the deferred full-app gate):
+
+Confirmed pre-existing blockers (independent of my code): `DashboardWidgetSize` redefined 15×, 263 co-located XCTest-in-app-target files, unstaged `Shared.xcframework`. My 2 test files follow the same established convention as all prior surfaces. Let me clean up temp artifacts and verify the logs dir.
+
+All 10 files staged-ready, temp artifacts cleaned. Now let me write the honest gate log.
+
+Now stage exactly my 10 files + the log (not the pre-existing unrelated changes) and verify before committing:
+
+Exactly 11 files staged (10 surface + log); the pre-existing unrelated changes are excluded. Committing:
+
+Committed cleanly as `fb7a33289` (11 files, 1403 insertions). Let me do a final sanity check that the tree is clean of my artifacts and the working tree only retains pre-existing unrelated changes.
+
+Everything is clean and committed. Let me finalize the tracking.
+
+Task complete. Committed as `fb7a33289`.
+

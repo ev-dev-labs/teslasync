@@ -1,0 +1,214 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure and understand the existing patterns.
+
+The output path in the prompt (`TeslaSync/Features/System/`) differs from project.yml's source paths. Let me examine the actual conventions used in existing feature views.
+
+The actual convention is a flat `TeslaSync/feature-views/` directory. The prompt's `Features/System/` path is generated/aspirational. Let me verify which is correct by checking existing page-level parity units, the ledger, and tooling availability.
+
+Tooling is available (xcodebuild, xcodegen, swiftlint), so the gate won't be BLOCKED. Now I need to resolve the path discrepancy. Let me examine the gate tooling, the prompt's location, and find any already-implemented page to mirror conventions.
+
+No page-level views exist yet — pages are this phase. The actual build convention is the flat `TeslaSync/feature-views/` directory. Let me read the real gate contract and a representative feature-view exemplar (with charts/tables/multiple sources) to mirror conventions exactly.
+
+`BackendStatusSection` is the ideal exemplar — same `system` domain, reads the connection pool + runtime-info. Let me read its full file set plus the gate contract README.
+
+Excellent exemplar — the source-seam + `@Observable` model + pure adapter pattern is clear. Let me read the gate contract, navigation registration, and the remaining exemplar files (Projection/Views/strings/Previews/Tests).
+
+Now let me read the navigation wiring (AppShell, route registration) and the remaining BackendStatusSection template files (Projection, Sections, strings, Previews, Tests).
+
+Now let me understand the web routing for `/db-health`, the deep-link parser, the existing registration example, and the RouteHost rendering.
+
+Let me check for exhaustive switches over `AppRoute` (to gauge nav-change risk), and read the exemplar's Sections/strings/Tests plus the component libraries I'll need.
+
+Adding an `AppRoute` case ripples to `WatchDeepLink.swift`. Let me check that blast radius plus existing AppRoute tests, and read the key components I'll consume (ChartContainer, BarCharts, Metrics/StatCard, States, Cards, Typography, DataTable).
+
+The blast radius confirms `AppRoute` is a curated, exhaustively-tested top-level set (MenuCommandCatalogTests asserts `Set(navigateRoutes) == Set(AppRoute.allCases)`), and `/db-health` is a standalone sub-route in the web — not a top-level nav item. So I'll register it as an additive `NavigationDestination` rather than perturbing the curated route set. Let me read the component APIs and the exemplar's remaining files.
+
+Let me read the chart models, design tokens, and the core display/feedback/UI components I'll consume.
+
+`TSBarChart` uses numeric x/y, but the web chart is categorical (table names on the axis). Let me check how existing feature-views use these chart wrappers, and read the design tokens + the component APIs I need.
+
+`TSChartContainer`/`TSBarChart` have no feature-view usages yet. Let me see how existing categorical bar-chart feature-views are built, and read the core display/feedback/UI component APIs.
+
+Let me read the categorical bar-chart implementation pattern and the remaining UI components (States, Cards, Typography, Skeletons, Banners, Buttons, DataTable).
+
+Now I understand the charting approach. Let me read the remaining components (Cards, Typography, Skeletons, Banners, Buttons, DataTable) and the Motion/Tone helpers.
+
+Let me read the remaining components (Skeletons, Banners, Buttons, DataTable, Motion) and the tone/icon helpers.
+
+Let me verify how feature-view `.Tests.swift` files are compiled (critical — feature-views is an app source path, but tests need XCTest). Let me also read the Buttons and DataTable components and the Tone/IconBox helpers.
+
+204 feature-view files import XCTest with `@testable import TeslaSync`, yet `feature-views` is an app-target source path. That can't compile in the app target. There must be source-routing logic. Let me investigate the build configuration thoroughly.
+
+The test-file-in-app-target paradox needs resolving before I trust any build. Let me check the framework script, whether the xcframework/xcodeproj exist, and actually generate the project to inspect target membership.
+
+`Shared.xcframework` is absent (only `.gitkeep`) and requires a Kotlin/Native Gradle build. Let me resolve the test-membership question by generating the project and inspecting, and probe whether the framework build is even feasible here.
+
+Confirmed: feature-view `.Tests.swift` files are compiled into the app targets (1262 entries) following a repo-wide convention — I'll mirror it exactly for consistency. The `Shared.xcframework` requires a Kotlin/Native Gradle build. Let me read the final pieces I need: the strings-file format, Localization setup, Motion (`TSFadeIn`), Buttons, DataTable, and Tone/IconBox.
+
+Now I understand the strings mechanism (main `Localizable.xcstrings` + per-surface `.strings` facade). Let me read the final component APIs (Buttons, Motion, Badges/Tone/IconBox, DataTable) and inspect the xcstrings structure.
+
+There are already 38 `dbHealth.` occurrences in the catalog. Let me see exactly which keys exist vs. which of the 41 required are missing.
+
+None of the 41 keys exist yet — I'll add all to the catalog. I have all component APIs now. Let me read the swiftlint config (to comply with limits) and the exemplar's Sections/Previews/ModelTests patterns, then start building.
+
+Now I understand the lint constraints (lines ≤120, files <400, function bodies <50 — hence the aggressive file/view decomposition). Let me read the exemplar's Sections and ModelTests to mirror the view-decomposition and model-test patterns.
+
+I now have all the patterns and constraints (lines ≤120, files <400, bodies <50 → aggressive decomposition). Let me verify no type-name collisions for my planned symbols, check the AppShell route-host area, and confirm the swiftformat config.
+
+No collisions, and I understand the formatting rules. Let me set up a plan and todos, then build the implementation.
+
+Now I'll build the implementation, starting with the pure, testable Adapter (DTOs + projected types).
+
+Now the pure Projection (phase resolution + formatting + accessibility).
+
+Now the `@Observable` model with the source seam, telemetry, strings facade, and snapshot.
+
+Now the Swift Charts bar chart + ChartContainer section (parity items: ChartContainer, BarChart, panel Table-Sizes-Top-15).
+
+Now the view layer. I'll split it across focused files (each <400 lines). Starting with summary grid, header, and error banner.
+
+Now the tables panel (GlassPanel6) with sort bar and adaptive grid/card table.
+
+Now the sidebar panels: Migration Status (GlassPanel7) and Connection Pool (GlassPanel8).
+
+Now the main page that composes everything into the adaptive scaffold.
+
+Now the navigation registration (additive `NavigationDestination` keeping the curated `AppRoute` set + its exhaustive tests untouched).
+
+Now the per-surface `.strings` facade table (convention) with all 41 keys plus the two freshness chips.
+
+Now insert the 41 keys (+2 freshness) into the master `Localizable.xcstrings` with a minimal-diff textual insertion, then validate JSON.
+
+Separator is `"key": {` (Python-style). Let me insert matching that exact format and validate.
+
+43 keys inserted, JSON valid. Let me verify the component keys I depend on already exist in the catalog, and that my inserted block matches the surrounding format.
+
+A few shared-component keys my page surfaces (`action.retry`, `chart.copyData`, `chart.export`, `chart.noData`, `error.queryTitle`, `error.queryMessage`) are absent from the catalog — they'd render as raw keys. Let me add them so my page shows no raw keys.
+
+Now the previews (one per state) and tests. Let me mark progress and write them.
+
+Now the pure unit tests (projection/format/accessibility/route) with shared fixtures.
+
+Now the model state-holder tests.
+
+All 12 files written. Now the verification phase. Let me run swiftformat, swiftlint, and the placeholder scan on my new files.
+
+Formatting violations are auto-fixable. Let me run swiftformat to format my files, then re-verify.
+
+swiftformat passes. Now swiftlint --strict on my files.
+
+One swiftlint error: trailing-closure with multiple closures. Let me fix it by passing the label explicitly.
+
+swiftformat and swiftlint both pass on my files. Now the placeholder scan — let me read the script to invoke it correctly against my files.
+
+Let me check the placeholder patterns (I use `.redacted(reason: .placeholder)` — need to ensure that's not flagged), then scan an isolated copy of my files.
+
+The `.placeholder` (SwiftUI `RedactionReasons`) matches the forbidden "Placeholder" pattern — a false positive for the prompt-required loading state. Let me see how the existing codebase handles this.
+
+The codebase uses `// parity:allow <reason>` for exactly these false positives. `.placeholder` is the legitimate SwiftUI `RedactionReasons` API the prompt endorses for loading. Let me add the opt-out, then scan an isolated copy.
+
+Now let me re-verify format/lint and run the placeholder scan on an isolated copy of my files.
+
+All three checks pass on my files (format clean, lint clean, placeholder count 0). Now let me attempt to typecheck my code against the real component APIs. First, let me understand the component dependency graph and SDK availability.
+
+Components are Shared-free (only SwiftUI/Charts/MapKit/CoreLocation/Foundation). I can typecheck my code against the real components without the KMP framework. Let me attempt an isolated typecheck.
+
+`TSChartPalette` is defined outside Components. Let me find it and include the right files.
+
+The only remaining error is the `#Preview` macro plugin (an Xcode-only tool, unavailable to raw `swiftc`) — not a code issue. Let me typecheck without `DEBUG` so preview blocks are excluded.
+
+A component file (`UnitFormatters.swift`) references `UnitPreferences` defined elsewhere. Let me locate it and check if it's Shared-free.
+
+`UnitPreferences` lives in `SharedFacade` (imports Shared). That one component file (`UnitFormatters.swift`) — which my page doesn't use — leaks the dependency. Let me exclude Shared-dependent component files my page doesn't use and re-run.
+
+My production code (10 files) typechecks cleanly against the real component library. Let me also validate the test files' type-correctness (strip `@testable` and compile in-module with XCTest, if available).
+
+Only CommandLineTools is installed — no full Xcode (so no project `xcodebuild`, no Simulator, no `#Preview`/XCTest plugins) and no Kotlin/Native toolchain for `Shared.xcframework`. Let me confirm `xcodebuild`'s state precisely to document the blocker honestly.
+
+Confirmed: `xcodebuild` requires full Xcode (only CommandLineTools present), and `Shared.xcframework` can't be built/consumed — so the xcodebuild build/lint/test portion is environment-BLOCKED, exactly the scenario the gate contract names. The runnable gates (swiftformat, swiftlint, placeholder, typecheck) all pass. Let me verify all 55 parity items are present in code and locate the log directory.
+
+All 41 keys are referenced in code. The log directory is `.github/prompts/monorepo/logs/`. Let me read an existing apple log to mirror the established format (especially the `=== PARITY ===` section).
+
+This reveals the established precedent: a full Xcode may live at `/Applications/Xcode.app` (accessed via `DEVELOPER_DIR`), the surface is validated via an **isolated SwiftPM `swift test`**, and the full app build is **deferred** (pre-existing unrelated baseline breakage). Let me check for full Xcode and read the log's verdict.
+
+Full Xcode IS present at `/Applications/Xcode.app`, and the accepted precedent reaches `STATUS=DONE` via: host gates green + an **isolated SwiftPM `swift test`** (surface compiled against the real design system, tests executed green) + full xcodebuild **deferred** (pre-existing baseline breakage, 0 surface errors). Let me follow that exact methodology. First, activate full Xcode and re-run the host gates.
+
+Full Xcode 26.5 / Swift 6.3.2 active; host gates green. Now the key precedent step — an isolated SwiftPM `swift test` compiling the surface against the real design system and executing my tests. Let me set up the package.
+
+Package ready (51 library files + 2 test files). Now run the isolated `swift test` under Swift 6 mode.
+
+A real Swift 6 strict-concurrency error in my test fixture (the `english` closure must be `@Sendable`). Good catch by the isolated test. Let me fix it in the source.
+
+Let me re-format/lint the test file, re-copy, and re-run `swift test`.
+
+Isolated `swift test`: **35/35 passed, 0 failures** — the entire surface compiles clean under Swift 6 strict concurrency against the real design system. This matches the accepted precedent's bar. Now let me attempt the full-app build attribution: kick off the `Shared.xcframework` build (needed for any app build) in the background while I finalize other checks.
+
+While the framework builds, let me re-run the canonical host gates over all 12 files and the placeholder scan on a fresh isolated copy.
+
+All host gates green (format 0/12, lint 0 violations/12 files, placeholder count 0). The framework build finished — let me check its result.
+
+The backgrounded build didn't persist. Let me run the framework build synchronously with a generous wait (the precedent took ~4.5 min).
+
+The framework build is running (first-run Gradle/Kotlin-Native dependency downloads can be slow). Let me check progress and keep waiting.
+
+Good — Gradle is linking the release frameworks now (debug XCFramework already built). Let me wait for completion.
+
+Release linking is the slow Kotlin/Native step. Let me continue waiting for the framework to finish and stage.
+
+`Shared.xcframework` built successfully (9m 5s) and staged. Now let me regenerate the project and attempt the full macOS app build for error attribution (using the documented `ENABLE_TESTING_SEARCH_PATHS=YES` for the co-located test files).
+
+Build failed (EXIT=65) as the precedent predicted. Now the critical attribution: how many errors are in **my** files vs. pre-existing unrelated breakage?
+
+Only 2 total errors, 0 in DBHealthPage. Let me see what those 2 errors are.
+
+Both errors are **macOS code-signing** failures (entitlements need a development certificate — an environment limitation), **not compile errors** — and **0 errors in any source file**. Let me confirm the Swift compilation actually ran and succeeded (that the build reached the signing phase after compiling my files).
+
+The macOS build halted at **code-signing planning** (entitlements need a dev certificate — environment limitation) *before* compiling. The precedent used the **iOS Simulator** build, which compiles without signing. Let me build the iOS target for the simulator with signing disabled to get the real compile attribution.
+
+iOS simulator build finished (EXIT=65). Let me analyze the compile errors and attribute them.
+
+48 total errors, **0 in DBHealthPage**. Let me confirm my files compiled and identify the pre-existing error sources.
+
+**Exact precedent match**: 48 total errors, **all** `DashboardWidgetSize is ambiguous` (45) + downstream (3) in **dashboard-widgets** files — the documented pre-existing cross-slot baseline breakage — and **0 errors in DBHealthPage** (my files compiled clean within the full iOS app target alongside the real `Shared.xcframework`). This is the accepted DEFERRED scenario. Let me generate the parity-evidence mapping for the log.
+
+All 41 keys map to real code references. Now let me write the gate log with the full `=== PARITY ===` section (55 items + evidence) and honest results.
+
+The log is written with full evidence (55/55 parity, honest gate results). Now let me verify git status (only intended files changed; build artifacts ignored) and clean up temp files.
+
+Build artifacts are correctly git-ignored. But 7 `AIUsageCard.*` files show as modified — I never touched those. Let me investigate whether that's pre-existing slot state or something I caused.
+
+The `AIUsageCard.*` changes are **pre-existing** (a struct rename `AIUsageCard`→`AiUsageCard` from the slot's prior state) — unrelated to my task; I won't touch them. Let me verify my `Localizable.xcstrings` edit is clean (only my keys) and not entangled with pre-existing catalog changes.
+
+Let me verify precisely that only my keys were added (4-space-indented key lines).
+
+The catalog diff is clean: exactly 49 keys added (41 parity + 2 freshness + 6 component-support), 0 removed, no foreign keys. The `AIUsageCard.*` changes are pre-existing/unrelated — I'll leave them untouched. Let me make a **scoped** commit of only my files (per the prompt's Commit step).
+
+All 13 surface files + catalog + log staged; AIUsageCard excluded. Let me commit.
+
+Committed cleanly (15 files, scoped — no unrelated changes). Let me finalize the todo tracking and restore the original `xcode-select` default as a courtesy (I only overrode it via env var, so nothing persistent to revert).
+
+All work is complete and committed. Final summary:
+
+## DBHealthPage — SwiftUI/HIG parity ✅ `STATUS=DONE`
+
+Delivered a native, adaptive (macOS + iOS) SwiftUI parity of `web/src/features/system/pages/DBHealthPage.tsx` at **55/55 parity**, shipped in the real compiled home `apps/apple/TeslaSync/feature-views/` (the prompt's nominal `Features/System/` path isn't a `project.yml` source root — reconciled & documented).
+
+**13 surface files** (source-seam + `@Observable DBHealthPageModel`, pure `Adapter`/`Projection` cores, no view networking):
+- 8 panels (4 summary `StatCard`s, Table-Sizes chart container, Tables/Migration/Pool `GlassPanel`s)
+- 2 charts — native **Swift Charts** `BarMark` (no WKWebView) inside `TSChartContainer`
+- 4 per-source data states (loading→redacted/skeleton · empty→`ContentUnavailableView` · error→banner/retry · success)
+- 41 i18n keys added to `Localizable.xcstrings` (+ per-surface facade), web key names verbatim
+- `/db-health` registered as an additive `NavigationDestination` (curated `AppRoute` set + its exhaustive tests untouched)
+
+**Verification (real, full Xcode 26.5 + KMP `Shared.xcframework` built from source 9m05s):**
+| Gate | Result |
+|---|---|
+| swiftformat --lint | `0/12` FORMAT_EXIT=0 |
+| swiftlint --strict | `0 violations/12` LINT_EXIT=0 |
+| check-placeholders | `PLACEHOLDER_COUNT=0` |
+| **swift test** (isolated, Swift 6 strict, real design system) | **35/35 green** |
+| iOS app build | **0 errors in DBHealthPage** (48 pre-existing `DashboardWidgetSize` errors in unrelated dashboard-widgets → DEFERRED, per documented precedent) |
+
+A real Swift 6 strict-concurrency defect (non-`Sendable` test closure) was caught by the isolated build and fixed. Committed scope-cleanly (15 files, no entanglement with the slot's pre-existing `AIUsageCard` changes). Log at `.github/prompts/monorepo/logs/apple-page-system-DBHealthPage.log` ends `EXIT=0 / STATUS=DONE`.
+

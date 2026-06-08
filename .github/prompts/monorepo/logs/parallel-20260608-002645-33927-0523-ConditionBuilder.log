@@ -1,0 +1,212 @@
+I'll start by exploring the repository structure to understand the task context.
+
+Now let me explore the Apple app structure and supporting files.
+
+The `Features` directory doesn't exist yet. Let me explore the existing structure and patterns.
+
+Let me examine the existing patterns, parity manifest, ledger, and check available tooling.
+
+Found existing `ConditionBuilder.*` files in `feature-views/` and all tooling is available. Let me examine the existing ConditionBuilder implementation and the gate contract.
+
+There's an existing P4 feature-view. This P7 task is the "page" unit. Let me check the parity manifest, ledger, README gate contract, and how other pages are structured.
+
+Now I understand the structure. The existing P4 feature-view implements the ConditionBuilder component; this P7 task needs a page wrapper. Let me examine the supporting files and navigation system.
+
+Let me check the manifest for related records and understand the navigation system.
+
+Let me investigate the build feasibility, test file handling, and navigation registration.
+
+Key finding: **Only Command Line Tools are installed, not full Xcode** — so `xcodebuild build`/`test` cannot run. Per the prompt contract, that makes the gate BLOCKED. But I must still deliver the complete, non-placeholder implementation and run every verification I can (swiftlint, placeholder scan, xcodegen). Let me read the rendering files, design system, and navigation.
+
+The existing P4 feature-view is comprehensive. Now let me examine the design system components, adapter, navigation registration, and the string catalog.
+
+Now let me read the design system component signatures and navigation registration files.
+
+Now I understand navigation. Let me check what shared-core geofence data binding exists in the Swift facade.
+
+There's no shared-core geofence source yet (only the in-memory one). Note `Sources/Features/` already exists as a compiled path. Let me check how BLOCKED gates were handled before and examine the test-file convention.
+
+The previous apple gates actually ran xcodebuild — so full Xcode may be available but not selected. Let me check.
+
+`/Applications/Xcode.app` exists — it's just not selected. Let me verify xcodebuild works via `DEVELOPER_DIR`.
+
+Full Xcode 26.5 + simulators + Java/Gradle are all available. STATUS=DONE is achievable. This is multi-phase work — let me set up a plan, kick off the slow shared-core build in the background, and read the remaining component APIs.
+
+xcodeproj generated. Let me kick off the slow shared-core XCFramework build in the background and read the remaining component/token APIs and string catalog.
+
+Let me inspect the string catalog format and verify `TSTone`/`Font.TS`, then check the build.
+
+The shared-core build is progressing (mostly cached). Let me confirm `TSTone` cases, then write the plan and start building.
+
+Let me resolve the test-file convention question and check build progress before writing code.
+
+Let me check the shared facade/container to wire a real geofence source for the live app entry.
+
+I now have all APIs needed. This requires adding many catalog strings (not just the 19 — the page renders signal/operator/timezone/day labels too, all needing catalog entries for "zero hardcoded text"). Let me set up the plan and check which keys already exist.
+
+All 75 keys need adding. Let me write the plan, set up todos, and check the background build.
+
+The background build died (sync session was torn down). Let me restart it properly as a detached async process, then write code while it runs.
+
+Build running detached. Let me create the feature directory and write the page files. Starting with the directory and the strings helper.
+
+Now the page-local field editors:
+
+Build check, then the main page file.
+
+Build is running (18 Gradle/Kotlin processes). Let me continue writing the main page file.
+
+Now the routing/registration file with a live geofence source:
+
+Now the previews and tests files:
+
+All 6 Swift files created. Now let me add the 75 catalog strings. First, let me confirm the xcstrings structure.
+
+Shared.xcframework is staged (iOS + simulator + macOS slices). Now let me add the 75 catalog strings.
+
+75 strings added. Let me validate the catalog and make the project.yml + app wiring edits.
+
+Catalog valid. Now let me wire `TeslaSync/Features` into project.yml for both app targets.
+
+Now compose the route registration into the app entry:
+
+Now regenerate the project and run swiftlint on the new files for fast feedback.
+
+swiftlint found 1 serious violation (it lints all files). Let me find it.
+
+The violation is in a pre-existing file I didn't touch. Let me check `.swiftlint.yml` config and confirm it's pre-existing.
+
+Two findings: `.swiftlint.yml` doesn't include `TeslaSync/Features` (my files aren't linted), and there are pre-existing modified `AIUsageCard.*` files I didn't touch. Let me investigate.
+
+Both the LifetimeStatsWidget violation (committed, in a dir outside my scope) and the AIUsageCard working-tree changes are pre-existing — not mine (timestamps match repo checkout). The gate lints my path explicitly. Let me verify swiftlint scoped to my files is clean.
+
+swiftlint's `included` config overrides the path arg, so my files (in `TeslaSync/Features`, not in `included`) aren't linted, and the 1 violation is the pre-existing committed `LifetimeStatsWidget` one. Let me lint my files in isolation to prove they're clean, then add my dir to the config.
+
+My files lint now — 3 violations to fix: Fields.swift too long (620 > 400 lines) and two 121-char lines. Let me view the long lines and split the file.
+
+Let me fix the long lines and find the split point.
+
+Now let me find the section boundaries to split the file cleanly.
+
+I'll split at the geofence section (line 349). Let me verify the boundary and split programmatically.
+
+Both files are now under the limit. Let me re-lint my files in isolation.
+
+My 7 files: 0 swiftlint violations. Now let me run swiftformat --lint on them and add my dir to the lint config.
+
+swiftformat found issues. Let me auto-format my files, then re-verify both linters.
+
+Both linters pass on my files. Let me add my dir to the lint config for proper coverage, regenerate the project, and start the build.
+
+Now regenerate the project and start the macOS build (validates compilation fastest, no simulator needed).
+
+My files are in the project. Let me start the macOS build (detached, monitored via log).
+
+The build launcher returned; the build runs in the background. Let me monitor its log.
+
+Build failed with a compile error. Let me find the errors.
+
+Filename collision: feature-views already has `ConditionBuilder.swift`/`.Fields.swift`/`.Previews.swift`/`.Tests.swift`, and Swift forbids duplicate base filenames in one target. I must rename my files to `ConditionBuilderPage*`. Let me do that.
+
+Let me fix any remaining stale filename references in the headers, then regenerate and rebuild.
+
+Now regenerate and rebuild macOS.
+
+Build started. Let me wait and monitor.
+
+Build failed again. Let me find the actual errors.
+
+The error still references the old filename — likely a stale pbxproj or DerivedData. Let me verify.
+
+xcodegen didn't update the pbxproj (still has 18 old-name refs). Let me regenerate explicitly and verify.
+
+Clean regen fixed it — now `ConditionBuilder.Fields.swift` (feature-views) and `ConditionBuilderPage.Fields.swift` (mine) have distinct base names. Let me rebuild.
+
+Still failing but my grep missed the errors. Let me search more broadly.
+
+The pbxproj was regenerated but the build still references the old path — likely stale DerivedData. Let me verify the pbxproj is clean and rebuild with a fresh derivedDataPath.
+
+pbxproj is clean — the stale path is from cached DerivedData. Let me rebuild with a fresh, isolated derivedDataPath.
+
+Still "used twice" even with fresh DerivedData. Let me see the exact current error and re-verify the filesystem.
+
+The pbxproj and filesystem are clean, yet the error persists — likely concurrent stale xcodebuild processes from earlier attempts. Let me find and kill them.
+
+Multiple builds overlapped. Let me identify whether the running xcodebuild (72337) is mine before acting.
+
+PID 72337 already exited. Let me definitively check whether that exact old path exists anywhere and inspect the macOS Sources phase.
+
+Filesystem and pbxproj are clean; no builds running. The earlier failures were stale overlapping builds. Let me do one clean, definitive build and wait fully.
+
+Build launched. Let me wait and monitor the final build log.
+
+The `/tmp` log vanished — the async build was killed on session teardown (I didn't use `detach:true`). Let me verify state and relaunch the build properly detached.
+
+Clean slate. Let me launch the build properly detached so it survives.
+
+The detached build completed. Let me read the result.
+
+The build finished. Let me stop the waiting monitor and read the log directly.
+
+The filename collision is gone (0 "used twice"), but now there are real compile errors. Let me find them.
+
+The real blocker is a **pre-existing** error in `feature-views/AIRestorePanel.Tests.swift`: the macOS app target compiles co-located `.Tests.swift` files (170 of them) that `import XCTest`, but XCTest isn't resolving — likely missing `ENABLE_TESTING_SEARCH_PATHS`. Let me check and test that fix.
+
+`ENABLE_TESTING_SEARCH_PATHS` is unset — that's why XCTest can't resolve for the app target (which compiles 170 co-located test files). Let me test whether enabling it fixes the build.
+
+While the test build runs, let me reconsider the architecture. Let me wait for the result.
+
+`ENABLE_TESTING_SEARCH_PATHS=YES` fixed XCTest, but revealed MORE pre-existing errors: `DashboardWidgetSize is ambiguous` across many dashboard-widgets files (not mine). Let me determine if the baseline itself is broken.
+
+Confirmed: `DashboardWidgetSize` is defined 15+ times across committed dashboard-widgets files — a pre-existing duplicate-symbol bug from parallel widget merges. The baseline app target doesn't compile, independent of my page. Let me catalog ALL pre-existing errors to plan an isolated verification.
+
+**Zero errors in my files** — all failures are pre-existing `dashboard-widgets` duplicate-symbol bugs. To definitively verify my page compiles, I'll build with the broken dashboard-widgets excluded. Let me first check if they're referenced elsewhere.
+
+All errors are pre-existing `dashboard-widgets` duplicate symbols (`DashboardWidgetSize` defined 15+ times across committed widget files + `Sources/DashboardWidgets`) — a parallel-merge artifact, not my code. My 7 files produced 0 diagnostics in the full-module type-check. Let me confirm my files were genuinely compiled and attempt a clean isolated build to fully verify my page.
+
+Let me find the SwiftFileList and plan an isolated verification build.
+
+My file IS in the compiled macOS SwiftFileList with zero diagnostics — strong evidence it compiles. Let me do a tight-closure isolated framework build to definitively verify my page without the broken dashboard-widgets. First, locate key dependencies.
+
+Tight closure is viable (Components self-contained, no Shared import). Let me verify Components don't pull in SharedFacade/Live, then build the isolated verify framework.
+
+Closure is clean (no `Shared` dependency). Let me build an isolated verification framework with a temporary spec.
+
+Let me see the verify build errors.
+
+Again 0 errors in my files — the failure is `Components/UnitFormatters` needing `UnitPreferences` (from SharedFacade, which I excluded). Let me add SharedFacade + the Shared framework to the closure and rebuild.
+
+Still 0 errors in my files. Let me see what's failing now.
+
+The framework path broke because I generated to `/tmp`. Let me generate the verify project in `apps/apple` so the relative framework path resolves.
+
+Closure keeps expanding (SharedFacade→Auth). My page doesn't use those — only a few Components files (like `UnitFormatters`) pull them in. Let me find and exclude just those, dropping SharedFacade.
+
+Only `UnitFormatters.swift` needs the facade. Let me exclude it and drop SharedFacade from the closure.
+
+**BUILD SUCCEEDED!** My ConditionBuilderPage compiles cleanly in isolation under Swift 6 strict concurrency. Now let me verify the test file compiles too (include it with testing search paths).
+
+All 7 files compile cleanly including tests. Let me run the model-logic tests in isolation to confirm they pass (the catalog-resolution test needs the app's `.main` bundle, so I'll run it in the app context conceptually and the pure-logic tests here).
+
+Let me exclude the real Tests file from the framework (the test target has the copy) to avoid duplicate test classes, then run.
+
+The test build is recompiling (24 processes active). Let me wait for it.
+
+The `/tmp` log keeps vanishing (environment cleanup), making results invisible. Let me stop and re-run writing to a stable in-repo (gitignored) build dir.
+
+The project got removed when I stopped the mid-regen shell. Let me regenerate and re-run the test cleanly.
+
+While the test runs, let me run the placeholder scan (a gate step).
+
+The placeholder scan flags 7 legitimate uses of the word "placeholder" (geofence dropdown placeholder, `statePlaceholder` key, etc.) as if they were stubs. Let me inspect the scanner's rules and the matched lines.
+
+Let me see the exact flagged lines and the pattern definition.
+
+These are all legitimate uses — the web i18n key `statePlaceholder` (a required parity string) and the geofence dropdown's empty-selection option, not stubs. Let me reword where clean and use the sanctioned `// parity:allow` opt-out for the verbatim web key name. Let me view exact contexts.
+
+Let me reword the two clean cases and add sanctioned opt-outs to the verbatim web-key references.
+
+Now add sanctioned opt-outs to the 4 references to the verbatim web key `statePlaceholder`:
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: D655:322388:160186:1772D6:6A26EA97)

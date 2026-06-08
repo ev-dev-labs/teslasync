@@ -1,0 +1,106 @@
+I'll start by exploring the repository structure and understanding the task requirements, including whether the Apple toolchain is available.
+
+Key finding: **xcodebuild requires full Xcode but only Command Line Tools are installed**, and **simctl (iOS Simulator) is unavailable**. Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me examine how previous feature views were implemented to follow established conventions, and read the web source.
+
+Established convention confirmed: `apps/apple/TeslaSync/feature-views/<Name>.*`. The previous `ChargerTypeChart` is my template. Let me read all of its files plus the web source's supporting types/helpers.
+
+The pattern is rich and well-established. Let me read the remaining ChargerTypeChart template files and the web supporting types/helpers.
+
+Now let me read the design tokens, motion components, the web supporting files, and the previous verification log to understand exactly how the gate was satisfied.
+
+Now let me find the token definitions (P1/S9), the web units/number-format helpers, and the previous verification log to mirror the gate approach.
+
+Found the tokens at `apps/design/generated/apple/Tokens.swift`. Let me read it, the project.yml, and the previous verification log to understand the build/gate approach.
+
+Let me read the previous verification log to mirror the gate approach, and check the Tests/FeatureViews structure plus the web `useUnits`/`fmtNumber` helpers and the data source for elevation/speed.
+
+Now I understand the full methodology and precedent. Let me check the host's actual Xcode availability (the prior log claimed Xcode 26.5 was present), pwsh, confirm no existing ElevationChart, and read the web units source + data source.
+
+Xcode.app IS available at `/Applications/Xcode.app` (activatable via `DEVELOPER_DIR`), plus pwsh + xcodegen. This matches the precedent exactly — toolchain is available, so this is a DONE path (not BLOCKED). Let me confirm how the web builds `chartData.speed`/`.elevation` and the elev stats.
+
+I now have the complete picture. Let me read the lint/format configs, placeholder patterns, and check the existing FeatureViews test convention before implementing.
+
+I have everything needed. Let me set up a plan and todos, then implement. Key facts: Xcode 26.x IS available via `DEVELOPER_DIR`, the gate methodology follows the `ChargerTypeChart` precedent (isolated SwiftPM build+tests + type-checks + lint/format/placeholder gates; full xcodebuild app-target gate deferred for the same pre-existing reasons).
+
+Now implementing. Starting with the pure value types.
+
+All 9 files written. Let me verify i18n key consistency and scan for forbidden placeholder words before running the gates.
+
+All keys resolve; no forbidden words; all files under 400 lines. Now let me format my files (write mode) then verify with `--lint`, mirroring the repo style.
+
+Zero formatting changes needed. Now the lint/format/placeholder gates.
+
+Both per-surface gates green (0 format changes, 0 lint violations). Now the whole-tree gate commands + placeholder check.
+
+check-placeholders → EXIT=0 ✅. The whole-tree swiftformat fails on a **pre-existing sibling** file (`ActionBuilder.Previews.swift`), not mine. Let me confirm it's pre-existing (committed, untouched by me) and run the whole-tree swiftlint to capture its baseline too.
+
+Confirmed: my changes are only the 9 ElevationChart files; `ActionBuilder.Previews.swift` (the format failure) is committed in HEAD, untouched by me. Whole-tree swiftlint shows 1 pre-existing violation. Let me identify it precisely for honest reporting.
+
+Both whole-tree gates have only **pre-existing sibling defects** (swiftlint: `LifetimeStatsWidget.Adapter.swift:141` function-length — identical to the precedent; swiftformat: `ActionBuilder.Previews.swift:48` — committed in HEAD). My 8 files are clean on both. Now the key verification: an **isolated Swift 6 strict-concurrency SwiftPM build + the real XCTest suite** against the real design tokens + real Motion. Let me set up the harness.
+
+Now the isolated Swift 6 strict-concurrency build, using the full Xcode toolchain (for the macOS 15 SDK + Charts).
+
+Real compiler error: `decimalString` needs qualification inside `ElevationAccessibility`. Let me fix the 5 call sites.
+
+Build green under Swift 6 strict concurrency. Now run the real XCTest suite.
+
+All **32 tests pass** (15 projection + 14 model + 3 accessibility), Swift 6 strict concurrency, against the real design tokens. Now the iOS-platform type-check (the macOS platform is already fully compiled+tested above), including the `#Preview` code.
+
+iOS type-check green (incl. `#Preview`). Now the explicit macOS type-check + the deterministic Xcode app-target probes (xcodegen, scheme list, pbxproj registration).
+
+macOS type-check green; Xcode 26.5 present; project generates; **ElevationChart registered in pbxproj (54 refs)**; the app-target build blocker is the **74 pre-existing co-located `*.Tests.swift`** (first: `AcDcStatsPanel.Tests.swift`), not my surface. Let me inspect the KMP pre-action + simulator before attempting the real app-target build probe.
+
+iPhone 16 simulator is booted. The app-target gate's KMP pre-action (`:core:assembleSharedXCFramework` via Gradle) is heavy. Let me run the **real** iOS xcodebuild build in the background to capture the actual outcome (no assuming), while I prepare the verification log.
+
+While the build runs, let me confirm the generated `.xcodeproj` is gitignored (so it won't be committed) and re-verify my working set is clean.
+
+Good — `.xcodeproj` is gitignored; working set is exactly my 9 files + 2 pre-existing `.tsx` edits (predating this task, won't be staged). Let me check the iOS build probe progress.
+
+The KMP Gradle pre-action is genuinely running (`:core:assembleSharedDebugXCFramework`). This takes several minutes, then the app compile will hit the pre-existing co-located test files. Let me wait for the real outcome.
+
+KMP framework assembly is nearly done (release iOS frameworks linking). No ElevationChart errors. Let me wait for the app-compile phase and the expected pre-existing test-file failure.
+
+iOS build failed with **exit 65** as predicted, but the KMP pre-action **succeeded**. Let me extract the root-cause errors and confirm **zero ElevationChart errors**.
+
+**Exact precedent evidence captured:** `IOS_BUILD_EXIT=65`, KMP pre-action **succeeded**, root cause is the pre-existing `AcDcStatsPanel.Tests.swift:19: error: unable to resolve module dependency: 'XCTest'` (co-located test files compiled into the app target). **`ELEV_PROD_ERRORS=0`** — zero ElevationChart errors; the only mention is the benign "part of module" note. Let me start the macOS app-target probe (real) and prepare the log meanwhile.
+
+While the macOS probe runs, let me write the verification log with all the real evidence gathered so far.
+
+The macOS probe finished quickly (warm Gradle daemon). Let me read its result and root cause.
+
+Complete real evidence gathered. macOS: `MAC_BUILD_EXIT=65`, root cause = entitlements requiring development signing (env), **`ELEV_MAC_PROD_ERRORS=0`**. Both app-target failures are pre-existing and surface-independent; my surface has zero errors. Now writing the comprehensive verification log.
+
+The Adapter was edited after the initial lint run, so let me re-verify format + lint on the final files before committing.
+
+swiftformat 0/8 ✅, swiftlint 0 ✅. The placeholder re-run errored only because I ran it from the wrong directory (`cd ..` landed in `apps/`). Let me re-run it correctly from the repo root.
+
+All per-surface gates green on the final files (format 0/8, lint 0, placeholder EXIT=0). Committing now — staging only my 9 files + the log (not the pre-existing `.tsx` edits).
+
+Exactly 10 files staged (9 surface + log); the 2 pre-existing `.tsx` edits left unstaged. Committing.
+
+Committed as `82bbfdaba`. Let me confirm the commit contents and clean up the generated build artifact from my probe.
+
+Task complete. Final state verified: commit `82bbfdaba` contains exactly the 9 `ElevationChart.*` files + the log; generated build artifact cleaned; only the 2 pre-existing `.tsx` edits remain untouched in the working tree.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0141-ElevationChart.log | 293 ++++++++++++++++
+ .../feature-views/ElevationChart.Adapter.swift     | 199 +++++++++++
+ .../feature-views/ElevationChart.Chart.swift       | 276 +++++++++++++++
+ .../feature-views/ElevationChart.Model.swift       | 302 ++++++++++++++++
+ .../feature-views/ElevationChart.Models.swift      | 206 +++++++++++
+ .../feature-views/ElevationChart.Previews.swift    | 107 ++++++
+ .../feature-views/ElevationChart.Tests.swift       | 386 +++++++++++++++++++++
+ .../feature-views/ElevationChart.Views.swift       | 302 ++++++++++++++++
+ .../TeslaSync/feature-views/ElevationChart.strings |  50 +++
+ .../TeslaSync/feature-views/ElevationChart.swift   |  76 ++++
+ 10 files changed, 2197 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0141-ElevationChart.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/ElevationChart.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ElevationChart.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ElevationChart.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ElevationChart.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ElevationChart.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ElevationChart.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ElevationChart.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ElevationChart.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/ElevationChart.swift

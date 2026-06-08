@@ -1,0 +1,140 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Key findings: `xcodebuild` requires full Xcode (only Command Line Tools present), but `swift`, `swiftlint`, `swiftformat` are available. Let me read the web source and existing native widget patterns.
+
+Let me examine the most recently created widgets to follow the established pattern, plus the web support files.
+
+Let me study the most recent widgets (RecentDrivesListWidget, LocationMapWidget) as architectural reference, plus the registry and useWatch hook.
+
+Excellent architecture pattern. Let me read the remaining RecentDrives files, shared tokens/components, and check for existing gauge/ring components.
+
+Let me find the shared tokens, registration types, and existing gauge/ring components.
+
+Let me locate the exact definitions of the shared tokens and registration types used by the widgets.
+
+Each widget appears to redefine shared types. Let me verify how this avoids clashes and check the build configuration.
+
+`dashboard-widgets` compiles into the app target. Let me read the registration struct, the freshest widget (LocationMap), its Previews/Tests, and check skeleton/feedback shared components.
+
+The pattern is clear. Let me read LocationMap (freshest non-list widget), the test patterns, and LifetimeStats (closest visual analog with stat grid).
+
+Let me read the web support components (WidgetBigNumber, StatusBadge, AnimatedNumber, RadialGauge, unitConversion temp) to port values exactly, plus LocationMap for visual-widget patterns.
+
+Let me check the lint/format configs and the freshest visual widget (LocationMap) for any additional idioms, plus confirm distance constants.
+
+Let me check the TimeStamp component (Last Seen rendering) to port it faithfully.
+
+Let me verify the logs directory and existing log format, then set up my task tracking.
+
+The established precedent is clear: host gates green + xcodebuild DEFERRED with evidence. Let me read the full RecentDrives log to replicate the exact host-verification commands.
+
+The precedent is the gold standard. Let me verify the generated design tokens (real symbols the app resolves) and confirm available symbols.
+
+I have everything needed. Let me confirm the exact registry entry text, then set up tracking and start building.
+
+All inputs gathered. Let me set up tracking and a plan, then build the files.
+
+Now building the files. Starting with the Model (state-holder, telemetry, registry, i18n facade).
+
+Model done. Now the Adapter — pure Foundation projection porting the web arithmetic verbatim.
+
+Now the SwiftUI subviews (battery ring gauge, pills, big number, stat cells, skeleton).
+
+Now the main SwiftUI surface composing compact + standard layouts and all states.
+
+Now the Previews and strings files.
+
+Now the test files (split to stay within the 400-line lint envelope, like the RecentDrives precedent).
+
+All 7 files created. Now the verification phase. Let me check the toolchain's SwiftUI capability and the token file's imports.
+
+macOS SwiftUI typecheck works and Tokens.swift has an AppKit branch. Let me format my files first, then set up the typecheck shim.
+
+The only errors are the `#Preview` macro plugin (ships with full Xcode, not CLT) — not a code defect; the precedent excludes DEBUG Previews from host gates. Let me typecheck the 5 non-preview surface files.
+
+Surface type-checks GREEN (0 errors). Let me verify the Previews bodies are type-correct by wrapping `#Preview` blocks as functions (the macro plugin is the only CLT gap).
+
+The awk regex broke on `)` inside preview titles. Let me use a line-based transform for any `#Preview ... {` opening line.
+
+The `grep -c` returning 0 (exit 1) broke the `&&` chain. Let me run the typecheck standalone.
+
+All preview bodies type-check GREEN. Now the executable harness that runs the real adapter/model logic.
+
+Top-level code requires the file be named `main.swift` in multi-file compilation. Let me rename and rerun.
+
+Let me refactor the harness into a `@MainActor` class to satisfy Swift 6 global-actor rules.
+
+Let me just rewrite `main.swift` cleanly with a `@MainActor` class harness.
+
+Harness GREEN: **CHECKS=131 FAILURES=0**. Now the format + lint + placeholder gates.
+
+swiftformat: **0/424 require formatting**. Now swiftlint --strict (project) and explicit lint of my files.
+
+One serious violation across 420 files. Let me locate it.
+
+The lone violation is in a **pre-existing predecessor file** (`LifetimeStatsWidget.Adapter.swift`, slot 0055) — outside my allowed scope. Let me confirm it's not mine and lint my files explicitly.
+
+My 7 files: **0 violations**. Now the placeholder gate.
+
+Placeholder gate: **COUNT=0**. Let me cross-check that every i18n key referenced in Swift exists in the `.strings` catalog.
+
+All i18n keys resolve. Let me guard against type-name collisions in the app target (my view types + the pre-existing `WatchBatteryRing` in the watch target) and confirm the LifetimeStats violation is pre-existing.
+
+No collisions; the pre-existing `WatchBatteryRing` is in the separate watchOS target. Let me confirm the LifetimeStats violation is committed/pre-existing, then I'll verify the `.strings` parses and review a final diff.
+
+I found a subtle parity gap: the web **standard** hero (`WidgetBigNumber`) shows `—` when battery is null, while the **compact** gauge shows `0` (`?? 0`). Let me add a faithful `batteryBigText` so both match the web exactly.
+
+Now update the projector to compute it, and wire the surface to use it:
+
+Now cover `batteryBigText` in the harness and the XCTest, then re-run all gates.
+
+Now re-run the full gate suite after the parity edit.
+
+Typecheck GREEN, harness **133/133**. Final re-run of my-files lint + placeholder gate.
+
+Only one real issue: the `batteryBigText` addition pushed `Adapter.swift` to 407 lines (>400 limit). The forbidden-word "hits" are all legitimate (doc comments describing the `—` em-dash, SwiftUI's `.placeholder` redaction). Let me trim ~10 comment lines from the Adapter.
+
+Need 2 more lines off. Let me condense two more comment blocks.
+
+Now re-run format (to confirm it doesn't re-add lines), the full lint of my files, typecheck, and harness in one pass:
+
+400 lines, format clean, my files lint clean. Final typecheck + harness confirmation:
+
+All host gates GREEN. Let me capture the exact `xcodebuild` capability evidence for the log (the gate's two scheme steps).
+
+Let me check how sibling logs handled the runner/xcodebuild capability and their terminal STATUS, to align my disposition honestly with repo convention.
+
+The MQTTStatusWidget (0068) precedent ran on an identical CLT-only runner and resolved as **DONE** with xcodebuild DEFERRED (capability-BLOCKED escape hatch ruled out because the SDK/SwiftUI/MapKit are present and proven by host compile). Let me confirm its terminal status.
+
+Confirmed: identical CLT-only runner → **EXIT=0 / STATUS=DONE** with xcodebuild DEFERRED is the repo-accepted convention (0068). Let me write my log following this precedent with my real evidence.
+
+Let me do a final visual sanity check on the surface's compact/standard layout and the projector, then commit exactly my files.
+
+Projector is correct. Working tree has 2 pre-existing modified admin files (not mine — I'll exclude them). Let me stage **only** my files + the log and commit.
+
+Exactly my 8 files + the log. Committing:
+
+Committed (`425396f3`). Let me verify the commit contents and clean up temp artifacts.
+
+Task complete. Cleanly committed (`425396f3`): 8 `WatchSummaryWidget.*` files + the gate log, 2306 insertions, temp artifacts removed.
+
+Merge made by the 'ort' strategy.
+ ...e-dashboard-widgets-0114-WatchSummaryWidget.log | 215 +++++++++++
+ .../WatchSummaryWidget.Adapter.swift               | 400 +++++++++++++++++++++
+ .../WatchSummaryWidget.Model.swift                 | 360 +++++++++++++++++++
+ .../WatchSummaryWidget.ModelTests.swift            | 197 ++++++++++
+ .../WatchSummaryWidget.Previews.swift              | 162 +++++++++
+ .../WatchSummaryWidget.Tests.swift                 | 257 +++++++++++++
+ .../WatchSummaryWidget.Views.swift                 | 324 +++++++++++++++++
+ .../dashboard-widgets/WatchSummaryWidget.strings   |  44 +++
+ .../dashboard-widgets/WatchSummaryWidget.swift     | 347 ++++++++++++++++++
+ 9 files changed, 2306 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0114-WatchSummaryWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WatchSummaryWidget.swift

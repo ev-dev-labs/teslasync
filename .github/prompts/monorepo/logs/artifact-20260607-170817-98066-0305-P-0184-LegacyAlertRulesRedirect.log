@@ -1,0 +1,117 @@
+=== P4 Feature view 0184 LegacyAlertRulesRedirect (Apple) ===
+date: 2026-06-08T05:40:44Z   host: Darwin 25.5.0 arm64   swift: Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+
+--- Web source (THE spec): features/notifications/components/LegacyAlertRulesRedirect.tsx ---
+  const { search } = useLocation();
+  return <Navigate to={`/notifications/rules${search}`} replace />;
+  data source: useLocation | charts/maps: none | i18n keys in source: none (anonymous surface)
+
+--- Platform-capability probe (ADR-002 Apple toolchain) ---
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+$ xcrun simctl list runtimes | grep -i ios   (iOS Simulator runtimes)
+  (none installed)
+$ xcodebuild -showsdks | grep -iE 'ios|macos'
+  (xcodebuild unavailable / no SDKs)
+$ ls apps/apple/Frameworks (KMP Shared.xcframework, ADR-004)
+  => Full Xcode is NOT the active developer dir; NO iOS Simulator runtime; NO staged Shared.xcframework.
+  => SwiftUI app build + iOS-18 simulator 'build test' are UNAVAILABLE on this runner (capability clause).
+
+=== GATE (as specified in the prompt) ===
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+$ xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+$ swiftlint --strict   (whole tree, run from apps/apple)
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-305/apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length Violation: Function body should span 50 lines or less excluding comments and whitespace: currently spans 78 lines (function_body_length)
+LINT_EXIT=2   NOTE: the single violation is PRE-EXISTING in dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+              (function_body_length) — NOT this surface, out of allowed-files scope. This surface: 0 (scoped below).
+$ swiftformat --lint apps/apple   (whole tree, from repo root)
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-305/apps/apple/TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1: error: (blankLinesBetweenScopes) Insert blank line before class, struct, enum, extension, protocol or function declarations.
+1/1392 files require formatting, 2 files skipped.
+FORMAT_EXIT=1  NOTE: the single file is PRE-EXISTING feature-views/ActionBuilder.Previews.swift:48
+              (blankLinesBetweenScopes) — NOT this surface. This surface: 0 (scoped below).
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/LegacyAlertRulesRedirect
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== SUPPLEMENTARY VERIFICATION OF THIS ARTIFACT (runnable on CLT macOS SDK — all green) ===
+[headless] swiftc compile+RUN of logic core (Adapter+Model + AppRoute/AppRouteParser) vs macOS SDK MacOSX.sdk:
+           ALL_LOGIC_OK (0 failures)   (30 assertions: target/query/replace/route/url/phase/model/telemetry/navigator/a11y)
+[headless] swiftc -typecheck of view layer (View+Views+Model+Adapter + REAL TSButton/tokens/TSMaterial/TSGlassPanel/AppRoute):
+           rc=0  (0 = type-checks clean against real component APIs)
+[scoped]   swiftlint --strict on the 6 surface files: Done linting! Found 0 violations, 0 serious in 6 files.
+[scoped]   swiftformat --lint on the 6 surface files: 0/6 files require formatting.
+[scoped]   check-placeholders on the 6 surface files (real dir): PLACEHOLDER_COUNT=0 EXIT=0
+[xcodegen] generated TeslaSync.xcodeproj — this surface integrated into iOS + macOS app targets:
+             LegacyAlertRulesRedirect.Adapter.swift
+             LegacyAlertRulesRedirect.Model.swift
+             LegacyAlertRulesRedirect.Previews.swift
+             LegacyAlertRulesRedirect.strings
+             LegacyAlertRulesRedirect.swift
+             LegacyAlertRulesRedirect.Tests.swift
+             LegacyAlertRulesRedirect.Views.swift
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/) ===
+LegacyAlertRulesRedirect.Adapter.swift   pure core: LegacyAlertRulesLocation (web useLocation), RedirectTarget
+                                         (web `to`+`replace`), Phase, Adapter (=> /notifications/rules${search}),
+                                         Surface slug, Accessibility summary. Foundation + in-module AppRoute only.
+LegacyAlertRulesRedirect.Model.swift     P1/S8 @Observable model; P1/S11 telemetry seam (view.opened); P1/S10 i18n
+                                         facade; navigation seam (NotificationCenterRedirectNavigator) + location seam.
+LegacyAlertRulesRedirect.swift           SwiftUI view; TSGlassPanel chrome; .task{ model.start() }; a11y container.
+LegacyAlertRulesRedirect.Views.swift     redirecting affordance + destination chip + unavailable fallback;
+                                         reduce-motion honored (spinner -> static glyph); VoiceOver labels/hints.
+LegacyAlertRulesRedirect.Previews.swift  #if DEBUG previews: redirecting (no query / with query) + unavailable.
+LegacyAlertRulesRedirect.strings         P1/S10 catalog contribution (table "LegacyAlertRulesRedirect"); all keys
+                                         are native-only chrome (web source is anonymous — no parity keys).
+LegacyAlertRulesRedirect.Tests.swift     XCTest: adapter (location->target, query/casing, URL parse, phase),
+                                         model (view.opened once, navigator dispatch, redirectNow, provider init,
+                                         NotificationCenter post), accessibility summary, telemetry/navigator spies.
+
+=== STATES reproduced (web-source parity; never a blank box) ===
+redirecting(target) : reads useLocation.search; builds "/notifications/rules"+search; replace=true; resolves
+                      .notifications via shared AppRouteParser; dispatches navigator on appear (web <Navigate>).
+unavailable         : defensive manual-open fallback if the destination can't resolve (constant target never
+                      produces it, but the surface must never dead-end). Verified by adapter/phase + subview preview.
+N/A (loading/empty/stale/offline): a synchronous client-side navigation has no fetch/freshness/connectivity axis;
+                      fabricating those states would violate the honesty covenant (#1, #9). Documented, not skipped.
+
+=== COMPLIANCE ===
+i18n        : every visible/a11y string flows through LegacyAlertRulesRedirectStrings (P1/S10) with English fallback;
+              no hardcoded literals in code. Source had 0 keys -> "every source key present" holds vacuously.
+a11y        : container label = phase summary; header trait .isHeader; chip label+value; button hint; reduce-motion.
+telemetry   : view.opened emitted exactly once with slug "LegacyAlertRulesRedirect" (P1/S11) — unit-tested.
+data binding: view performs no HTTP/routing I/O; reads via location seam; navigates via injected navigator (P1/S8 / DI).
+
+=== HONESTY COVENANT ===
+1 no red-as-green : IOS/MAC xcodebuild reds reported verbatim; whole-tree LINT=2/FORMAT=1 reported as PRE-EXISTING
+                    (LifetimeStatsWidget.Adapter.swift, ActionBuilder.Previews.swift) — NOT this surface.
+2 no scope-narrow : full 7-file surface shipped at parity (view+model+adapter+views+previews+strings+tests).
+3 no skip-assume  : web source read end-to-end; redirect semantics (search preserve, replace, route) reproduced+tested.
+4 no stubs        : no TODO/stub/mock/placeholder/Lorem (placeholder gate + grep clean); complete implementations.
+5 no parity-cut   : query preserved exactly incl. casing & empty "?"; replace=true; destination via shared route table.
+6 no delegation   : authored directly; no sub-agents used.
+7 no predecessor-bypass : matches the established Base64Tool/ToolCard file layout + co-located .Tests.swift (106 peers).
+8 no commit-on-red: only red is the unavailable Apple build toolchain (capability clause) + 2 pre-existing out-of-scope
+                    issues; this surface passes every runnable check. Committed as STATUS=BLOCKED, never as DONE.
+9 no silent drift : N/A states + pre-existing gate reds disclosed above.
+10 terminal line  : EXIT + STATUS below.
+
+=== BLOCKED REASON (capability clause) ===
+The prompt requires building/testing a SwiftUI app on iOS-18 Simulator + macOS-15. This runner has the active
+developer dir set to CommandLineTools (xcodebuild refuses to run), zero installed iOS Simulator runtimes, and no
+staged KMP Shared.xcframework (ADR-004; needs Kotlin/Native + Gradle). These are environment capabilities, not
+code defects: the artifact is complete and verified to the limit of the available toolchain (headless swiftc
+compile+run of the logic, headless type-check of the view layer vs real component APIs, swiftlint/swiftformat/
+placeholder all clean on the surface, and xcodegen integration into both app targets).
+
+GATE SUMMARY: IOS_EXIT=1  MAC_EXIT=1  LINT_EXIT=2(pre-existing,not-this-surface)  FORMAT_EXIT=1(pre-existing,not-this-surface)  PLACEHOLDER_EXIT=0
+
+EXIT=1
+STATUS=BLOCKED

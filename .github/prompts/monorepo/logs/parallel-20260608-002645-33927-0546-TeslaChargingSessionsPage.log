@@ -1,0 +1,112 @@
+I'll start by exploring the repository structure to understand the task scope.
+
+Let me read the web source page and explore the Apple app structure.
+
+Now let me explore the Apple app structure, existing pages, and supporting infrastructure.
+
+The actual structure uses `feature-views/`, not `Features/`. Let me understand the conventions by examining existing files.
+
+Let me examine the parity infrastructure and a representative existing feature to learn conventions.
+
+Let me check what Apple toolchain is available on this host.
+
+Full Apple toolchain is available — the gate is runnable. Let me verify xcodebuild and study existing feature patterns in depth.
+
+`xcodebuild` needs full Xcode (only CLT installed) and `Shared.xcframework` is absent. Let me check for full Xcode and study the component library, design tokens, and navigation registration.
+
+Full Xcode.app exists (usable via `DEVELOPER_DIR`). Now let me deeply study the existing patterns: the SharedFacade, component library, design tokens, and a representative charging feature.
+
+This is a clean seam-based architecture — feature-views don't import KMP `Shared` directly (they use Source protocols + in-memory sources). Let me read the rest of the ChargingSection fileset and find features using maps + data tables for closer parity.
+
+Let me study the previews/tests pattern, design tokens, placeholder checker, and app routing.
+
+Let me locate the shared primitives I'll reuse (TSFadeIn, TSSkeleton, TSChartPalette, Map wrapper) and read the placeholder checker.
+
+Let me check the app navigation/routing structure and whether feature-views get registered anywhere.
+
+Let me read the web hook to model the data types accurately, and check a feature-view that uses TSMapView for reference.
+
+I have enough to design the solution. Let me check the Shared.xcframework build feasibility (determines DONE vs BLOCKED) and locate remaining symbols.
+
+Building the KMP framework needs Gradle+Kotlin/Native (not on PATH) — the full `xcodebuild` triad will be BLOCKED on this host. I'll verify my code via swiftc isolated typecheck + lint + placeholder gates. Let me confirm `TSTone`, `TSVehicleAnnotation`, and map usage, then set up my plan.
+
+I now have a complete understanding. Let me set up my plan and todos, then build the feature following the established 8-file pattern.
+
+Now I'll create the Adapter (pure projection core). Starting with this since it's testable in isolation.
+
+Let me verify the Adapter compiles and behaves correctly via an isolated swiftc harness before building the rest.
+
+All adapter assertions pass. Now the Model with the Source seam.
+
+Now let me add a date formatter to the Adapter (for table + last-sync), then build the Views.
+
+Now the main View scaffold:
+
+Now the Views file with all panels, stat cards, table, and states:
+
+Now the monthly-cost chart panel (Swift Charts):
+
+Now the Session Locations map panel (GlassPanel9):
+
+Now the `.strings` catalog with all 32 web keys plus the two native state keys:
+
+Now the Previews and Tests. Updating todos first.
+
+All 9 files created. Now let me run the formatting/lint gates. First swiftformat (auto-fix), then verify.
+
+Mostly clean. Four issues: 3 file-length (need splitting) and one puzzling inclusive_language flag. Let me investigate the latter and check line counts.
+
+Found it: "te**slave**hicleOption" — `TeslaVehicleOption` contains the substring "slave". I'll rename it. Also need to split 3 files under the 400-line limit. Let me check for naming collisions first.
+
+No collisions. Let me rename `TeslaVehicleOption` → `FleetVehicleOption` everywhere, then split the oversized files.
+
+Now let me locate split boundaries in the Adapter and Views files.
+
+Now I'll split the three oversized files. Starting with the Adapter → Adapter + Format:
+
+Adapter split done. Now split Views → Views + Table:
+
+Now split Tests → Tests + ModelTests:
+
+All files now under 400 lines. Let me re-format and re-run the lint gates on the full split set.
+
+swiftformat clean, swiftlint **0 violations**. Now the placeholder gate (pwsh), scoped to just my new files via a temp scan dir.
+
+Placeholder gate passes (COUNT=0). Now for real compiler evidence of the SwiftUI layer: I'll attempt an isolated `swiftc -typecheck` of my view files together with their in-repo dependencies (design tokens + component primitives), which don't import the KMP `Shared` framework.
+
+The errors are all in a dependency file (`Skeletons.swift` needs `TSCard`), not my code — the component library is a connected graph. Let me identify exactly which external symbols my files use, then typecheck against the real design tokens plus precise shims for the few component primitives.
+
+The grep missed the main file (brace-expansion quirk) — `TSFadeIn` is used there. My files only depend on `Tokens.swift` symbols plus 6 component primitives. I'll typecheck my 8 files against the **real** `Tokens.swift` + precise real-signature shims for those 6 primitives (avoiding the component library's internal cascade).
+
+The view layer type-checks cleanly under Swift 6 + strict concurrency. Let me capture the precise exit code and any warnings for the log.
+
+Typecheck is clean (0 errors, 0 warnings). Let me confirm whether full Xcode is usable here and pin down the exact build blocker for honest logging.
+
+This matches a **documented, established precedent** in `macos-pending-verifications.md`: every P4 feature-view surface is verified green via isolated typecheck + lint + tests, while the full-app `xcodebuild` is macOS-CI-pending (unstaged `Shared.xcframework` + pre-existing parallel-merge collisions — not surface code). Let me run `xcodegen generate` (full Xcode) to prove my files are enumerated into the target.
+
+All 12 files are enumerated into the generated project. Before writing the log, let me verify every one of the 32 required string keys is actually referenced in my Swift source (not just the `.strings` file) and that all parity panels/charts have their symbols.
+
+The `ls` brace expansion mangled the main filename. Let me verify source references correctly.
+
+All 32 keys verified in both source and strings. Let me read the ledger schema to write a valid apple-ledger, then finalize artifacts.
+
+All 32 keys verified. Now let me write the evidence log with the `=== PARITY ===` section, then the ledger and macOS-pending row. Updating todos first.
+
+Now the apple parity ledger (two adaptive-platform rows) and the macOS-pending verification row:
+
+Now let me append a row to the macOS-pending verifications table, matching the existing format.
+
+Now let me clean up build artifacts and run a final consolidated gate pass before committing.
+
+I see pre-existing unrelated changes (`AIUsageCard.*`, `web/*`) that were modified before I started — I must NOT commit those. Let me do a final gate re-verification, then stage only my files.
+
+All gates green. Let me validate the JSON/strings artifacts, then stage only my files and commit.
+
+All artifacts valid. Staging only my files (excluding the pre-existing unrelated changes):
+
+Staging is correct — exactly my 15 files, with the pre-existing `AIUsageCard.*`/`web/*` changes excluded. Committing now:
+
+Committed cleanly (15 files, pre-existing unrelated changes excluded). Let me finalize the todos and do a last consistency check.
+
+The task is complete. All 12 todos are done, the commit contains exactly my 15 files, and the pre-existing unrelated changes (`AIUsageCard.*`, `web/*`) were correctly left untouched.
+

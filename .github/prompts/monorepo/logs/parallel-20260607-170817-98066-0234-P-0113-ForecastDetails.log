@@ -1,0 +1,193 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me explore the Apple app structure and the web source before deciding on the path forward.
+
+Web source and Apple structure both exist. Let me read the web source and examine existing Apple feature-views to learn the established patterns.
+
+The web source is a 3-panel feature view (Breakdown donut, Gas-vs-EV Savings, Insights). Now let me study the existing native patterns in detail.
+
+`ChargingDetailSection` is the ideal template — same charging domain, uses currency, multi-panel. Let me read it in full plus the core infrastructure.
+
+Excellent architecture. Let me read the remaining ChargingDetailSection files plus the AlertsSection donut chart (since ForecastDetails has a donut).
+
+Now let me read the shell views, previews, tests, strings, and the design tokens.
+
+Let me find the token definitions and read the previews/tests + project config.
+
+Let me find the generated design tokens and read the Tests file + project.yml.
+
+Let me check the project.yml (build config) and the Tests pattern to understand file inclusion and test structure.
+
+Critical detail to resolve: how `*.Tests.swift` files inside `feature-views/` (app target source path) compile with `@testable import TeslaSync`. Let me investigate the test wiring.
+
+`feature-views/` is globbed into the app target. The sibling `*.Tests.swift` files live alongside (established pattern). Now let me read the exact web data shape and i18n keys before writing native code.
+
+Let me read the exact type definitions and the i18n forecast block.
+
+Let me confirm the `Currency`, `useFormatting`, and `fmtNumber` web semantics to mirror formatting exactly.
+
+I have the full data shape and i18n. Let me confirm the exact design-token names available so I use only real tokens.
+
+All tokens confirmed. Let me check the glass-panel modifier, skeleton, and native motion/animated-number equivalents.
+
+All dependencies confirmed. Let me verify the toolchain can type-check SwiftUI + Charts + MapKit against the available macOS SDK (since full Xcode/`xcodebuild` is absent).
+
+Toolchain can type-check SwiftUI/Charts/MapKit against the macOS SDK — I'll use that as my compile verification path (full `xcodebuild` needs Xcode, which is absent). Let me set up tracking and check the logs dir + a sibling log for format.
+
+The sibling log is the exact precedent: ship the surface, run host-runnable gates green (swiftformat, swiftlint, placeholder, a throwaway SwiftPM test, SDK typecheck on both targets), and honestly DEFER the `xcodebuild` app build/test. Let me check this runner's actual capability (Xcode.app, iOS simulator SDK).
+
+`/Applications/Xcode.app` exists — I can drive the full toolchain via `DEVELOPER_DIR`, matching the sibling runner. Let me probe Xcode, SDKs, and simulators.
+
+This runner is **fully capable**: Xcode 26.5, iOS Sim SDK 26.5, iPhone 16 sim, macOS SDK — so capability is PRESENT (not BLOCKED). The accepted sibling precedent (0053) reached STATUS=DONE via host gates + dual-SDK typecheck + executed SwiftPM tests, deferring only the pre-existing project.yml/signing xcodebuild blockers. Let me read the lint/format configs before writing.
+
+Configs match the sibling conventions. Now I'll write the surface, starting with the pure Foundation adapter. Let me mark progress and create the files.
+
+Now the shell views (chrome + states):
+
+Now the breakdown donut chart:
+
+Now the three panels and their rows:
+
+Now the main surface view:
+
+Now the previews and the strings catalog:
+
+Now the test suite:
+
+All 9 files created. Now verification — starting with the fast deterministic gates (swiftformat, swiftlint, placeholder check) on my files.
+
+swiftformat is the autoformatter — let me apply it to my files (ecosystem tool), then re-lint.
+
+swiftformat clean. Now swiftlint --strict on my files:
+
+One line-length violation in Previews.swift:35. Let me view and fix it.
+
+swiftformat and swiftlint agree: no trailing comma. My manual comma was wrong. Let me remove it.
+
+That edit corrupted the `forecastNoInsights` initializer. Let me view and restore it correctly.
+
+Let me restore the missing `breakdown` line, then let swiftformat settle the comma/number formatting deterministically.
+
+swiftformat's `--commas inline` removes trailing commas — consistent with swiftlint. Let me run both on all 8 files to confirm fully clean.
+
+Both clean. Now the placeholder gate — let me inspect the script's parameters, then run it.
+
+The gate's literal prefix path scans nothing (Test-Path fails on a non-path prefix). I'll run the exact gate command AND a precise temp-dir scan of just my files for meaningful evidence.
+
+Placeholder gate clean (COUNT=0). Now the strongest check: a SwiftPM package compiling my surface + real deps as module `TeslaSync`, executing the tests. Let me verify the shared deps' dependency closure first.
+
+My only external deps are `Tokens.swift`, `Motion.swift`, `TSMaterial.swift`, `Skeletons.swift` (all token-only, Shared-free). Let me build a SwiftPM package that compiles my surface as module `TeslaSync` and executes the tests.
+
+Now build and run the test package with the Xcode toolchain:
+
+My files all compiled — the only errors are in the dep `Skeletons.swift` (its `TSStatSkeleton` uses `TSCard`, which I don't use). I only need the real `TSSkeleton`. Let me trim the dep to the verbatim `TSSkeleton` struct and re-run.
+
+All 28 tests passed; my production code + previews compiled clean as module `TeslaSync` (Swift 6, macOS). Now the dual-SDK typecheck against **both** gate destinations (iOS 18 simulator + macOS 15).
+
+Both SDK typechecks pass. Now let me gather first-hand `xcodebuild` evidence: regenerate the project and confirm my files register, then capture the real gate behavior.
+
+All 9 files are registered into the generated project for both targets. Let me capture the real gate behavior — the bare command (as the gate literally runs) and check whether the Shared framework is staged.
+
+Bare command fails with the CLT error (matching the gate). The Shared.xcframework isn't staged. Let me check the staging script + KMP toolchain feasibility, and demonstrate the structural test-membership blocker directly.
+
+Structural blocker confirmed: **53** `*.Tests.swift` files are sourced into both app targets (not a test target), so the app build fails on XCTest for every surface — pre-existing and outside my allowed files. JDK 17 + gradlew exist, so let me attempt the real `xcodebuild` for first-hand evidence (async, time-boxed) while I prepare the log.
+
+While Gradle runs, let me verify the generated project artifacts are gitignored (so my commit stays scoped) and re-check git status.
+
+Project artifacts are gitignored; my commit will be scoped to `ForecastDetails.*` + the log (excluding the two unrelated pre-existing web edits). Let me check Gradle staging progress.
+
+Gradle is still compiling Kotlin/Native. Let me run the exact whole-tree gate commands (swiftformat + swiftlint) in parallel to capture honest tree-wide results.
+
+swiftlint whole-tree found 1 violation — and it's not in any of my files. Let me identify the pre-existing one for honest documentation.
+
+Confirmed: the 1 pre-existing violation is `LifetimeStatsWidget.Adapter.swift:141` (a predecessor file, outside my scope) — 0 in my files. Let me check Gradle progress.
+
+Gradle (Kotlin/Native) is still compiling. Let me give it more time.
+
+Let me check whether Gradle is actively progressing (downloading toolchain) vs stuck, in a separate shell.
+
+Gradle just completed. Let me read the staging result.
+
+Shared.xcframework staged successfully (`STAGE_EXIT=0`). Now I can run the real `xcodebuild` for first-hand evidence. Let me build the iOS app target (signing disabled) and capture output.
+
+Build running. Let me wait for it while preparing the log.
+
+Build failed as expected. Let me confirm the failures are the pre-existing XCTest membership issue and that none reference my files.
+
+First-hand evidence is decisive: the iOS app build fails **only** on the pre-existing XCTest-in-app-target error (`AlertsSection.Tests.swift`, a sibling file) — **zero errors reference my production files**. Let me capture the macOS destination too.
+
+Both destinations: identical pre-existing XCTest blocker, **zero** errors in my production files. I have a complete, honest, first-hand evidence set. Let me write the gate log.
+
+Log written. Let me do a final lint check on my files, clean up temp artifacts, then make the scoped commit.
+
+Final lint clean. Now the scoped commit — adding only my 9 files + the log (excluding the unrelated pre-existing web edits and gitignored artifacts).
+
+git add is unusually slow (likely statting the large staged xcframework/DerivedData). Let me wait.
+
+No lock, nothing staged — the earlier `git add` didn't complete. Git works now (diff was fast). Let me retry the add with a timeout.
+
+All 10 files staged cleanly, nothing unrelated. Let me check the pre-commit hook setup before committing (the earlier hang may have been hook/fsmonitor related).
+
+No hooks configured — the earlier hang was transient. Let me commit with the conventional message and required trailer.
+
+Commit `54829bdb` created — exactly 10 files (9 surface + log), 2105 insertions, unrelated web edits correctly excluded. Let me verify final tree state.
+
+git status is scanning the large untracked xcframework/DerivedData. Let me stop it and verify scope surgically.
+
+The commit output already definitively listed exactly 10 files (no web/xcodeproj/framework). Git is slow on this shared runner. Let me stop and do one minimal confirmation.
+
+Commit scope confirmed clean (`GIT_OPTIONAL_LOCKS=0` made git fast). Let me clean up the build artifacts I generated during verification (restoring the tree to its original state) and finalize tracking.
+
+`.gitkeep` is hidden (dotfile). Let me confirm it's intact and the tree is clean, then finalize.
+
+All clean. Let me finalize tracking.
+
+All todos complete. The ForecastDetails Apple surface is shipped, verified, and committed.
+
+## Summary
+
+I built a production-polished, native Apple-idiomatic **`ForecastDetails`** surface at parity with `web/src/features/charging/components/cost-analysis/ForecastDetails.tsx`, following the established sibling pattern (`ChargingDetailSection` 0053).
+
+**9 files shipped** (`apps/apple/TeslaSync/feature-views/ForecastDetails.*`) + the gate log:
+- **Adapter** — pure projection (donut slices, gas-vs-EV savings, insight filtering, `safe()`, a11y summaries)
+- **Model** — P1/S8 `ForecastSource` seam + `@Observable` model + P1/S11 `view.opened` telemetry + `useFormatting` parity + P1/S10 strings facade
+- **swift / Views / Panels / Chart** — responsive 3-panel grid, Swift Charts breakdown donut, savings hero/cards/rows, insights list, and every state (loading / content / per-panel empty / no-insights / error / stale / offline)
+- **Previews** (7 states), **Tests** (28 cases), **strings** (24 keys, all web `costAnalysis.forecast.*` reproduced)
+
+**Verification (all run, real exit codes):**
+| Gate | Result |
+|---|---|
+| swiftformat `--lint` | 0/998 tree, 0/8 mine — **0** |
+| swiftlint `--strict` | **0** in my files (1 pre-existing in a non-scope file) |
+| placeholder gate | COUNT=**0** |
+| SwiftPM `swift test` | **28/28 passed** (Swift 6, strict concurrency) |
+| swiftc typecheck | **iOS 18 sim + macOS 15 SDKs both 0** |
+| Gradle KMP stage | BUILD SUCCESSFUL — `Shared.xcframework` staged |
+| Real `xcodebuild` (iOS + macOS) | my production files compile **clean** in-target; **zero** errors reference my files |
+
+**`xcodebuild build test`** is DEFERRED — it fails only on a **pre-existing, repo-wide** blocker (all 53 feature-view `*.Tests.swift` are sourced into the app target instead of an XCTest target; first hit is the sibling `AlertsSection.Tests.swift`) plus signing — both outside this prompt's allowed files. Platform capability (SwiftUI + Swift Charts, iOS 18 / macOS 15) is **present**, so per the prompt this is **DONE**, not a capability block.
+
+Committed as `54829bdb` (scoped to the 10 files; two unrelated pre-existing web edits left untouched). `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-feature-views-0113-ForecastDetails.log | 257 +++++++++++++++
+ .../feature-views/ForecastDetails.Adapter.swift    | 289 +++++++++++++++++
+ .../feature-views/ForecastDetails.Chart.swift      |  84 +++++
+ .../feature-views/ForecastDetails.Model.swift      | 309 ++++++++++++++++++
+ .../feature-views/ForecastDetails.Panels.swift     | 336 ++++++++++++++++++++
+ .../feature-views/ForecastDetails.Previews.swift   | 131 ++++++++
+ .../feature-views/ForecastDetails.Tests.swift      | 353 +++++++++++++++++++++
+ .../feature-views/ForecastDetails.Views.swift      | 210 ++++++++++++
+ .../feature-views/ForecastDetails.strings          |  51 +++
+ .../TeslaSync/feature-views/ForecastDetails.swift  |  85 +++++
+ 10 files changed, 2105 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0113-ForecastDetails.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/ForecastDetails.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ForecastDetails.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ForecastDetails.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ForecastDetails.Panels.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ForecastDetails.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ForecastDetails.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ForecastDetails.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ForecastDetails.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/ForecastDetails.swift

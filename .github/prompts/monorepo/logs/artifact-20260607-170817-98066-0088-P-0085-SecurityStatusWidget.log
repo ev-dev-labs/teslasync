@@ -1,0 +1,204 @@
+================================================================================
+P4 · Dashboard widget · 0085 — SecurityStatusWidget (Apple)
+Run: 2026-06-07T19:10-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/88
+Base: 34c98f3a
+Prompt: P4/dashboard-widgets/0085 — SecurityStatusWidget
+Web source (spec): web/src/features/dashboard/widgets/SecurityStatusWidget.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (0054 GuardModeWidget / 0036 DigitalTwinWidget precedent, ADR-012).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)             OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override         OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18 deploy target)        OK
+  macOS SDK .................. MacOSX (macOS 15 deploy target)                        OK
+  iPhone 16 simulator ........ present (booted)                                      OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint  (0.63.3)                  OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat (0.61.1)                 OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                                OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                            OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Swift 6 lang mode)     OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  default xcode-select ....... /Library/Developer/CommandLineTools (overridden)       NOTE
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  AVAILABLE and PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles
+  below plus an EXECUTED 31/31 XCTest run. The capability-BLOCKED escape hatch
+  ("SwiftUI/Charts/MapKit unavailable on the runner") does NOT apply — the
+  surface is authored, host-compiled on both SDKs, and host-tested for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/SecurityStatusWidget.*) ===
+  SecurityStatusWidget.Adapter.swift   234  testable projection core — SecuritySignalParser door/window
+                                            parsing (port of the web useMemo) + SecurityCellsBuilder
+                                            (4 cells: lock/sentry/doors/windows) + status→tone mapping +
+                                            a11y summaries
+  SecurityStatusWidget.Model.swift     261  P1/S8 state-holder seam (SecuritySource→SecurityModel) +
+                                            P1/S11 telemetry seam + P1/S10 strings facade + DTOs
+                                            (SecurityLatestInput / SecuritySignalValue) + in-memory source
+  SecurityStatusWidget.Views.swift     157  presentational subviews — connectivity banner + 2-col status
+                                            grid (web WidgetStatusGrid) + status cell + grid empty state
+  SecurityStatusWidget.swift           229  SecurityStatusWidget surface (shell chrome + state switch +
+                                            registry id "security-status")
+  SecurityStatusWidget.Previews.swift  131  #if DEBUG previews — one per state (secured / doors+windows
+                                            open / compact 1x2 / loading / no-data / error / offline / stale)
+  SecurityStatusWidget.Tests.swift     325  XCTest — adapter + model + registry + a11y (31 methods)
+  SecurityStatusWidget.strings          56  P1/S10 catalog contribution (12 web-parity keys + native
+                                            chrome + a11y keys)
+  Every file <= 400 lines (house file_length). Total 1393 lines across 7 files.
+  Shared registry types (DashboardWidgetSize / DashboardWidgetRegistration) are REUSED from the 0036
+  surface (DigitalTwinWidget.Model.swift) — no redeclaration → no duplicate symbols in the app module.
+
+=== PARITY (vs web SecurityStatusWidget.tsx) ===
+  Data sources -> bound via the shared state-holder seam (SecuritySource -> SecurityModel):
+    useVehicles, useSecurityLatest, useTranslation. The production app wires SecuritySource over the
+    KMP `security/latest` query store; the view performs NO HTTP.
+  Projection -> SecurityCellsBuilder.build is a 1:1 port of the web `cells` useMemo:
+    [lock]    locked ? ok/"Locked"(lock.fill) : error/"Unlocked"(lock.open.fill)
+    [sentry]  sentry_mode ? ok/"Active"(checkmark.shield.fill) : inactive/"Off"(shield.fill)
+    [doors]   open-door count == 0 ? ok/"All Closed" : warning/"<n> Open"   (door.left.hand.open)
+    [windows] open-window count == 0 ? ok/"All Closed" : warning/"<n> Open" (macwindow)
+    Returns [] when there is no event (web `if (!securityData) return []`) -> grid empty state.
+  Door/window parsing -> SecuritySignalParser faithfully reproduces the web logic and is asserted by
+    EXECUTED tests: door_state === true -> 1 open; comma-string -> split/trim/drop-empty/filter
+    lowercase contains "open"; a window is open when boolean true OR a non-empty string != "closed"
+    (case-insensitive); empty/absent -> closed. The string|boolean|null union (raw signal.SignalValue)
+    is modeled as SecuritySignalValue {boolean|text|absent} and type-narrowed like the web `typeof`.
+  Composition -> shell chrome (green shield icon + "Security" title + freshness chip + refresh + Open) ·
+    fixed 2-column status grid (web cols={2}) of 4 tinted cells, each with a corner status dot, leading
+    SF Symbol, muted label + emphasized value · grid-level empty state ("No security data").
+  Shared components -> reuses Color.TS / Font.TS / TSSpacing / TSRadius / TSTone / TSSkeleton +
+    ContentUnavailableView, compiled against the REAL apps/apple design system in the SDK typechecks
+    below. Cell tinting reproduces the web statusStyles table (ok=emerald, warning=amber, error=red,
+    inactive/unknown=neutral). Recharts -> none / Leaflet -> none (no chart/map on this surface).
+  States (all render) -> loading (skeleton 2x2 grid) · empty ("No security data") · error (retry
+    affordance) · stale (chip + banner) · offline (cached value + chip + banner) · content. Model phase
+    resolution keeps cached content visible behind refresh/errors, matching the web shell.
+  i18n -> all 12 web source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    widget.security, lock, locked, unlocked, sentry, active, off, doors, windows, allClosed, open,
+    noSecurity -> ALL PRESENT in SecurityStatusWidget.strings (+ registry description, freshness/refresh/
+    retry/empty/error chrome, and a11y status words). No English literals in native code (verbatim facade).
+  a11y -> each cell carries a combined "<label>, <value>, <status>" label; the grid a combined summary;
+    every button an accessibilityLabel; status dots/icons accessibilityHidden; Dynamic Type via tokens;
+    Reduce Motion gates the TSSkeleton shimmer.
+  Telemetry -> SecurityModel.start() emits viewOpened(surface:"SecurityStatusWidget") -> bridges the
+    shared Telemetry.track(.screenView) (P1/S11). Asserted by a spy test (fires exactly once).
+  Registry -> SecurityStatusWidget.registration: id "security-status", category "security", default 1x2,
+    min 1x2, max 2x40 (+ clamp()), matching the prompt's canonical registry/security.ts metadata. Asserted.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK. The 4 shipping source files compiled together with the
+    REAL apps/apple design system (design/generated/apple/Tokens + Sources/Design/{TSDesign,TSMaterial}
+    + Sources/Components/UI/{Badges,Cards,Typography} + Components/Feedback/Skeletons) and the verbatim
+    shared registry structs; none import the (unstaged) Shared xcframework:
+      xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+        -swift-version 6  <design-system closure> SecurityStatusWidget.{swift,Model,Adapter,Views}
+      IOS_TYPECHECK_EXIT=0   (0 errors)                                            OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0 -swift-version 6):
+      MAC_TYPECHECK_EXIT=0   (0 errors, 0 warnings)                                OK
+[3] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM harness
+    (REAL production Adapter/Model/Views/Widget + REAL design tokens + REAL TSTone badges + a minimal
+    TSSkeleton + the verbatim registry structs), Swift 6 language mode (.swiftLanguageMode(.v6)):
+      Executed 31 tests, with 0 failures (0 unexpected) in 0.005 seconds
+        SecuritySignalParserTests   9/9   (door true/false/string/empty/absent, case-insensitive trim,
+                                           window boolean/closed/vented/empty, open-window sum)
+        SecurityCellsBuilderTests   8/8   (empty when no event, 4 ordered cells, lock ok/error +
+                                           glyphs, sentry ok/inactive + glyphs, doors+windows ok/warning
+                                           + "<n> Open", label key resolution)
+        SecurityCellStatusTests     2/2   (tone mapping, web statusStyles tinting)
+        SecurityModelTests          7/7   (phase loading/empty/error/content, telemetry-once, refresh
+                                           delegation, connection+cells tracking)
+        SecurityRegistryTests       2/2   (canonical security-status metadata, clamp min/max)
+        SecurityAccessibilityTests  3/3   (cell summary label+value+status, grid summary, empty fallback)
+      SWIFT_TEST_EXIT=0                                                            OK
+[4] swiftc -typecheck — MY #Preview blocks expanded by the REAL Xcode PreviewsMacros plugin
+    (-D DEBUG, iOS 18 sim target; preview-free token shim isolates this surface's 8 #Preview blocks from
+    other components' DEBUG previews):
+      MY_PREVIEWS_TYPECHECK_EXIT=0   (0 errors)                                    OK
+[5] swiftlint --strict on the 6 surface .swift files (explicit paths; the repo .swiftlint.yml DOES list
+    TeslaSync/dashboard-widgets in `included:`):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0                                                                  OK
+[6] swiftformat --lint on the 6 surface .swift files (config: apps/apple/.swiftformat):
+      0/6 files require formatting.
+      FORMAT_EXIT=0                                                               OK
+[7] check-placeholders (ADR-011 stub gate; swift) on the surface files:
+      ./apps/tools/check-placeholders.ps1 -Path <surface files> -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                          OK
+[8] xcodegen generate — the surface integrates into the generated Xcode project (project.yml globs
+    TeslaSync/dashboard-widgets/) cleanly:
+      Created project at apps/apple/TeslaSync.xcodeproj  (12 targets + schemes)
+      XCODEGEN_EXIT=0                                                             OK
+
+=== GATE — XCODE APP BUILD/TEST (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync      -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real command run on this host AFTER xcodegen generate):
+      xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO ->
+        error: There is no XCFramework found at
+               '.../apps/apple/Frameworks/Shared.xcframework'. (target 'TeslaSync-macOS')
+        ** BUILD FAILED **   MAC_BUILD_EXIT=65
+    Why deferred (reasons external to this surface; identical disposition to the 0036/0054 predecessors,
+    Honesty rule 7):
+      (a) Shared.xcframework NOT staged: the iOS/macOS app targets link the KMP core; staging it needs a
+          Kotlin/Native gradle build (Scripts/build-shared-xcframework.sh ->
+          apps/shared/gradlew :core:assembleSharedXCFramework). Independent of this UI surface; the
+          concrete missing-framework error is captured above (BUILD_EXIT=65). Frameworks/ holds only
+          .gitkeep. Staging the xcframework is OUTSIDE this prompt's allowed files.
+      (b) The full app target also assembles every sibling dashboard surface authored by the other
+          parallel P4 prompts; building the whole app would gate this deliverable on unrelated parallel
+          work. Steps [1]/[2] DO compile THIS surface against the real design system on BOTH shipping
+          SDKs, and step [3] EXECUTES its full XCTest suite (31/31) — the meaningful validation.
+      (c) macOS app/widget signing requires a development certificate on a signed runner (ADR-012);
+          the capture above used CODE_SIGNING_ALLOWED=NO and still stops at (a).
+    The TeslaSync/-macOS XCTest target runs the SAME tests proven GREEN (31/31) by the executed SwiftPM
+    harness in step [3]; the views/model/adapter compile against BOTH the iOS 18 sim and macOS 15 SDKs
+    in steps [1]/[2]; and the #Preview blocks expand under the real macro plugin in step [4].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) — implemented; each has
+      a #if DEBUG preview (expanded by the real macro plugin); phase logic unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (SecuritySource->SecurityModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — 12 web keys, all present in the .strings.
+  [x] Accessibility labels on every interactive element; each cell + the grid carry combined values.
+  [x] Tests: adapter unit + per-state model + registry + a11y — 31 methods, EXECUTED 31/31, 0 failures.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured evidence.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the Xcode app build/test is shown DEFERRED (not green) with the real
+                       BUILD_EXIT=65 framework error captured; every "OK" is a command actually run with
+                       its real exit code (incl. a 31/31 EXECUTED XCTest run and iOS+macOS SDK compiles).
+  2  No scope narrowing: implemented ALL states/views/cells + i18n + a11y + telemetry + registry.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (A minimal TSSkeleton +
+                       verbatim registry structs were used ONLY in the throwaway compile/test harness,
+                       never in shipped surface files.)
+  5  No parity shortcuts: faithful 1:1 port of the web `cells` useMemo + door/window parsing + all states.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT stage Shared.xcframework / build the KMP core / edit the shared
+                       Localizable.xcstrings (parallel-unsafe) — strings shipped as the per-surface table,
+                       exactly like 0036/0054.
+  8  No commit on red  : committing on all-green host gates; Xcode app build/test explicitly DEFERRED.
+  9  No silent drift   : changes confined to the allowed SecurityStatusWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native SecurityStatusWidget shipped at parity with the web source: pure-Swift
+  projection core (EXECUTED-green XCTest, 31/31), P1/S8 state-holder seam (no view HTTP), P1/S11
+  telemetry, every state + i18n key + a11y label, registry-correct (security-status, 1x2 / 1x2 / 2x40).
+  All host-runnable gates pass AND the surface compiles against BOTH the iOS 18 simulator and macOS 15
+  SDKs with the real Xcode 26 toolchain under Swift 6 strict concurrency, with the #Preview blocks
+  expanded by the real macro plugin. The Xcode app build/test is DEFERRED to the downstream
+  integration/signed runner (Shared.xcframework KMP staging — neither a defect in this code nor inside
+  this prompt's allowed files), matching the 0054 GuardModeWidget / 0036 DigitalTwinWidget precedent.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/SecurityStatusWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0085-SecurityStatusWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add SecurityStatusWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

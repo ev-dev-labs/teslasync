@@ -1,0 +1,142 @@
+P4-APPLE · P7 · page:admin/APIKeys — SwiftUI / HIG parity
+prompt: .github/prompts/monorepo/p4-apple/pages/admin/APIKeysPage.prompt.md
+target: apple (adaptive macOS + iOS/iPadOS, ADR-002)
+mode:   code-complete; host-runnable gates executed on this machine; the Xcode-only
+        build/test gate could NOT run here (no full Xcode — see GATE). Per this prompt's
+        rule ("If no Xcode runner is available, the gate → STATUS=BLOCKED") the final
+        status is BLOCKED, NOT faked green (Honesty Covenant #1).
+
+=== PREFLIGHT ===
+Predecessors present: P4-0001 app shell + AppRoute/RouteHostRegistry/AppShell (host-typecheck DONE),
+P3 component library (TSGlassPanel/TSButton/TSBadge/TSIconBox/TSEmptyState/TSErrorDisplay/TSSkeleton/
+TSStagger*/TSFadeIn/typography/TSTextField/TSSelect), P2 design tokens (Color.TS/Font.TS/TSSpacing/…),
+P1 shared facade (LoadableState/StateHolderModel/FacadeError/AppContainer), P1/S8 AdminStore (apiKeys()
++ createApiKey/deleteApiKey/revokeApiKey).
+Environment: macOS, Command Line Tools only (xcode-select -p = /Library/Developer/CommandLineTools);
+no Shared.xcframework on disk (whole Apple app's shared-core graph is deferred/"pinned on the macOS
+build", per AppContainer/FacadeError/FlowBridge). No production page mounts a real store yet.
+
+=== SURVEY ===
+Web source: web/src/features/admin/pages/APIKeysPage.tsx (route /api-keys), hooks useApiKeys /
+useCreateApiKey / useDeleteApiKey / useRevokeApiKey (web/src/api/hooks/useAdmin.ts → AdminStore).
+Backend shape (internal/api/apikey/handler.go): GET /api-keys → [{id,name,key_prefix,permissions,
+last_used_at,created_at,expires_at}]; POST /api-keys {name,permissions} → {id,key,name,key_prefix,
+permissions}; DELETE /api-keys/{id}; POST /api-keys/{id}/revoke. Manifest record requiredCount=32
+(2 panels + 3 states + 27 strings).
+
+=== REASONING ===
+- Mirrored the established surface convention (NotificationChannelsView / DestinationETAWidget):
+  pure Adapter (decode/projection/i18n) + @Observable Model + Source seam + InMemory source for
+  previews/tests + a Shared-backed Live source (the single Shared-touching type) + Previews + Tests.
+- Reads bind via the verified StateHolderModel(flow:transform:) + LoadableState.from pattern
+  (identical to BatteryRadialGauge/DestinationETA), decoding the Resource<JsonElement> array through
+  String(describing:)→JSONSerialization (the DestinationETA precedent). Empty array → .loaded([]) →
+  empty phase (web safeArray parity).
+- Mutations call AdminStore.createApiKey/deleteApiKey/revokeApiKey; the created-secret is extracted
+  from the response object (web data.key). The exact bridged shape of the Kotlin Result-returning
+  suspend funcs is pinned on the macOS Xcode build against Shared.xcframework (ADR-004), the same
+  convention FacadeError/FlowBridge document for unverifiable Shared symbols.
+- Strings resolve from the platform catalog (Localizable.xcstrings) via LocalizedStringKey /
+  String(localized:) (ADR-014); keys are the verbatim web t() phrases. Delete-confirm keeps the
+  verbatim "{{name}}" token and substitutes at the display boundary.
+- 3 data states implemented (loading skeletons / empty ContentUnavailableView / success staggered
+  list); an additional error+Retry arm is included (ADR-011: never a blank region). Permission badge
+  uses token colours (read→statusSuccess, read-write→statusWarning, admin→chartSeriesPower purple),
+  no raw hex. Adaptive: toolbar primaryAction on macOS/iOS, list reflows; ≥44pt targets, VoiceOver
+  labels, Dynamic Type, light/dark/high-contrast via tokens.
+- Navigation: added AppRoute.apiKeys (system group, /api-keys deep link via AppRouteParser) +
+  APIKeysRouteRegistration (mirrors SettingsRouteRegistration). TeslaSyncApp composes the route
+  registry; the live SharedAPIKeysSource activates once AppContainer bootstraps the AdminStore
+  (deferred app-wide, like every other shared-backed route).
+
+=== CHANGES ===
+  + apps/apple/TeslaSync/Features/Admin/APIKeysPage.swift            View scaffold, toolbar Create, create sheet, delete alert, list phases
+  + apps/apple/TeslaSync/Features/Admin/APIKeysPage.Views.swift      APIKeyRow (GlassPanel2), permission/expired chips, masked reveal, copy
+  + apps/apple/TeslaSync/Features/Admin/APIKeysPage.Model.swift      @Observable APIKeysPageModel + APIKeysSource seam + InMemoryAPIKeysSource + telemetry
+  + apps/apple/TeslaSync/Features/Admin/APIKeysPage.Adapter.swift    APIKeyPermission, APIKey + JSON decode, date label, APIKeysStrings (27 keys)
+  + apps/apple/TeslaSync/Features/Admin/APIKeysPage.Live.swift       SharedAPIKeysSource (AdminStore) + APIKeysRouteRegistration
+  + apps/apple/TeslaSync/Features/Admin/APIKeysPage.Previews.swift   #if DEBUG previews: data/loading/empty/error/create/reveal/rows
+  + apps/apple/TeslaSync/Features/Admin/APIKeysPage.Tests.swift      XCTest: permission/decode/expiry/date + model phase/create/delete/revoke
+  ~ apps/apple/Sources/App/AppRoute.swift                            +case apiKeys (pathSegment api-keys, key.fill, .system group)
+  ~ apps/apple/Sources/TeslaSyncApp.swift                            makeRouteHosts() composes settings + apiKeys route hosts
+  ~ apps/apple/Localization/Localizable.xcstrings                    +27 web strings +route.apiKeys +7 native-chrome/a11y keys (35 total)
+  ~ apps/apple/project.yml                                           +TeslaSync/Features source path (iOS + macOS app targets)
+  ~ apps/apple/.swiftlint.yml                                        +TeslaSync/Features to included
+  + apps/parity/apple-ledger.json                                    apple-macos + apple-ios rows for page:admin/APIKeys (status=blocked)
+
+=== PARITY ===
+PARITY_REQUIRED=32   PARITY_COVERED=32   (verified by repo grep over Features/Admin + Localizable.xcstrings)
+
+panels (2):
+  [x] GlassPanel1  → APIKeysPage.swift `generatedReveal(_:)` → TSGlassPanel { APIKeyMaskedField } (// GlassPanel1)
+  [x] GlassPanel2  → APIKeysPage.Views.swift `APIKeyRow.body` → TSGlassPanel { … } (// GlassPanel2)
+states (3):
+  [x] loading  → APIKeysPage.Model.swift `APIKeysPhase.loading` ; APIKeysPage.swift `loadingList` (3× TSSkeleton)
+  [x] empty    → `APIKeysPhase.empty` ; APIKeysPage.swift `emptyState` (TSEmptyState noKeysTitle/noKeysMessage)
+  [x] success  → `APIKeysPhase.data([APIKey])` ; APIKeysPage.swift `keysList(_:)` (TSStaggerContainer→APIKeyRow)
+strings (27)  → all in Localizable.xcstrings, referenced from APIKeysPage.Adapter.swift `APIKeysStrings`:
+  [x] "API Key Created"                          → APIKeysStrings.keyCreatedTitle
+  [x] "API Keys"                                 → APIKeysStrings.title (+ AppRoute.apiKeys route.apiKeys)
+  [x] "API key, click to reveal"                 → APIKeysStrings.revealKeyA11y (APIKeyMaskedField a11y)
+  [x] "Admin"                                    → APIKeysStrings.admin (APIKeyPermission.admin.labelKey)
+  [x] 'Are you sure …delete the key "{{name}}"?' → APIKeysStrings.deleteConfirm(name:) (delete alert message)
+  [x] "Cancel"                                   → APIKeysStrings.cancel (create form + delete alert)
+  [x] "Copy"                                     → APIKeysStrings.copy (APIKeyCopyButton .help)
+  [x] "Copy API key"                             → APIKeysStrings.copyApiKeyA11y (APIKeyCopyButton a11y)
+  [x] "Copy this key now — it won't be shown again." → APIKeysStrings.copyOnce (reveal panel)
+  [x] "Create Key"                               → APIKeysStrings.createKey (toolbar action)
+  [x] "Create an API key to enable programmatic access to TeslaSync data and controls." → APIKeysStrings.noKeysMessage
+  [x] "Created"                                  → APIKeysStrings.created (APIKeyMetaRow)
+  [x] "Delete"                                   → APIKeysStrings.delete (row action + delete alert)
+  [x] "Delete API Key"                           → APIKeysStrings.deleteKeyTitle (delete alert title)
+  [x] "Done"                                     → APIKeysStrings.done (reveal panel)
+  [x] "Expired"                                  → APIKeysStrings.expired (APIKeyExpiredChip)
+  [x] "Generate Key"                             → APIKeysStrings.generateKey (create form)
+  [x] "Last used"                                → APIKeysStrings.lastUsed (APIKeyMetaRow)
+  [x] "Manage programmatic access to TeslaSync"  → APIKeysStrings.subtitle (header)
+  [x] "My Application"                           → APIKeysStrings.namePromptText (TSTextField prompt)
+  [x] "Name"                                     → APIKeysStrings.name (TSTextField label)
+  [x] "New API Key"                              → APIKeysStrings.newKeyTitle (create sheet title)
+  [x] "No API keys"                              → APIKeysStrings.noKeysTitle (TSEmptyState title)
+  [x] "Permissions"                              → APIKeysStrings.permissions (TSSelect label)
+  [x] "Read"                                     → APIKeysStrings.read (APIKeyPermission.read.labelKey + select)
+  [x] "Read-Write"                               → APIKeysStrings.readWrite (APIKeyPermission.readWrite.labelKey + select)
+  [x] "Revoke"                                   → APIKeysStrings.revoke (row action)
+
+=== GATE (host-runnable, executed on this machine) ===
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Admin -Language swift
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_EXIT=0   (PLACEHOLDER_COUNT=0)
+$ swiftlint --strict apps/apple/TeslaSync/Features/Admin
+  Done linting! Found 0 violations, 0 serious in 7 files.
+  LINT_EXIT=0          (also 0 violations under the project .swiftlint.yml strict config)
+$ swiftc -parse <each of the 7 Features/Admin/*.swift + edited AppRoute.swift>
+  PARSE_EXIT=0         (all files syntactically valid)
+$ swiftc -typecheck -target arm64-apple-macosx15.0 <shims:LoadableState/FacadeError/Color.TS> \
+      APIKeysPage.Adapter.swift APIKeysPage.Model.swift
+  TYPECHECK_EXIT=0     (logic core: decode, permission map, phase machine, mutations)
+$ xcodegen generate
+  Created project at apps/apple/TeslaSync.xcodeproj ; Features/Admin sources included (42 pbxproj refs)
+  XCODEGEN_EXIT=0
+
+=== GATE (Xcode-only — REQUIRED by this prompt, COULD NOT RUN here; not faked) ===
+$ xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync build
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+  '/Library/Developer/CommandLineTools' is a command line tools instance
+  BUILD_EXIT=1
+$ xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync test
+  (same — requires full Xcode + Shared.xcframework; neither present on this runner)
+  TEST_EXIT=1
+Reason: no full Xcode and no built Shared.xcframework on this host. The View/Views/Live layers
+(SwiftUI component library + Shared symbols) therefore could not be type-checked or executed here.
+This is the prompt's declared BLOCKED condition ("If no Xcode runner is available, the gate →
+STATUS=BLOCKED"). Code is complete and parity-verified (32/32); the build+test+UITest DoD completes
+when run on a macOS + Xcode + Shared.xcframework runner.
+
+=== COMMIT ===
+WITHHELD — Honesty Covenant #8 (No commit on red): the Xcode build/test gate is unrun (BLOCKED), so
+the change set is left staged-in-tree, not committed. The generated apps/apple/TeslaSync.xcodeproj is
+git-ignored and excluded.
+
+EXIT=1
+STATUS=BLOCKED

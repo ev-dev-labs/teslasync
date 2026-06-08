@@ -1,0 +1,123 @@
+I'll start by exploring the repository structure and the web source, plus checking the Apple toolchain availability.
+
+Toolchain note: `xcodebuild` requires full Xcode but only Command Line Tools are present. `swift`, `swiftlint`, `swiftformat`, `pwsh` are available. Let me explore the structure and web source.
+
+Web source is a thin AI feature card. Now let me study the closest existing native analog (`AIUsageCard`, just merged) and the web dependencies it wraps.
+
+`AIUsageCard.*` shows as modified in git but doesn't exist on disk—let me investigate, and find the native AI primitives (stream state-holder, feature card, i18n facade).
+
+Case-collision on `AiUsageCard`/`AIUsageCard` is a pre-existing merge artifact—out of my scope. Let me study `AIRestorePanel` (closest AI-panel template) and find the shared AI stream/feature-card/i18n primitives.
+
+`AIRestorePanel` is the ideal template (native AI panel, no generic FeatureCard primitive). Let me read its full set plus search for any native AI-stream/Helix/generate primitives and the project config.
+
+No native AI-stream surface exists yet—this is the first. Let me read the rest of the `AIRestorePanel` set (Views/Previews/Tests/strings) and the project config to learn the exact conventions and how files get included.
+
+Let me read the test patterns, the project config, and locate the shared P1/S9 token/component primitives I'll use.
+
+`project.yml` is at `apps/apple/`. Let me read the project config, lint/format configs, and locate the shared token/component primitives (TSButton, TSGlassPanel, TSSkeleton, TSFadeIn, Color.TS, Font.TS, TSSpacing, TSRadius).
+
+Key constraint: `shared-surfaces/` is NOT in `project.yml` sources or `.swiftlint.yml` included, and allowed files are only the surface + log. Wiring is the P4 acceptance gate's job. Let me check tooling availability and read the shared token/component APIs I must use.
+
+`xcodegen` and the placeholder script exist, but `xcodebuild` has no full Xcode (only CommandLineTools) — build/test gate will be capability-BLOCKED. Let me read the remaining shared component/token APIs so my code compiles cleanly under a real Xcode.
+
+Let me read the typography components and locate the design tokens (Color.TS, Font.TS, TSSpacing, TSRadius, TSMotion).
+
+Let me read the design tokens and the rest of the web AI scaffold (AIFeatureCard, AiOutputPanel, thinking indicator, feature registry) to capture every i18n key and behavior for faithful parity.
+
+I have the full token + scaffold picture. Let me confirm the thinking-indicator i18n key and the `yir-narration` registry entry, then build.
+
+I now have everything needed: tokens, components, the AI scaffold semantics, the `yir-narration` registry (uiTestId `ai-feature-yir-narration-root`), and the canonical sibling (`AIRestorePanel`). Let me set up tracking and create the surface directory.
+
+Confirmed the registry entry. Now I'll write the surface. Starting with the pure Adapter core and the Model (state-holder/seam/i18n/telemetry).
+
+I swapped two doc-comments in the Phase enum. Let me fix the ordering/comments.
+
+Now the presentational Views (AIFeatureCard scaffold, output panel, thinking indicator, loading + banner chrome).
+
+Now the main surface view (gated wrapper + header/badge/freshness + body composition).
+
+Now the Previews covering every state.
+
+Now the test suite (adapter, projection, model wiring/telemetry/actions, strings, accessibility).
+
+Now the i18n strings catalog.
+
+All 7 files created. Let me verify the placeholder-check script's rules (I may have used the word "placeholder" in a comment) and run format/lint/syntax checks.
+
+The `common` set includes `Placeholder` (case-insensitive). I used that word in a comment. Let me find and reword all forbidden matches in my Swift files.
+
+Reworded. Now let me run swiftformat, swiftlint, and the placeholder check on my actual files.
+
+Placeholder check is clean. Two swiftformat issues to fix: redundant `return` in `statusLine` and a blank line between imports in Tests. Let me fix both.
+
+Now re-run swiftformat to confirm clean, run swiftlint on the new files, and do a syntax parse.
+
+swiftformat is clean. swiftlint linted the whole project (1909 files) and found 1 serious violation—let me identify whether it's in my files or pre-existing.
+
+The only swiftlint violation is pre-existing in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (untouched by me, unrelated). My files are lint-clean. Let me confirm with a syntax parse and attempt a targeted type-check against the real token/component sources.
+
+Parse passes. Let me locate the `tsGlassPanel()` modifier and attempt a real type-check of my core files against the actual token + component sources.
+
+`tsGlassPanel` is in `Sources/Design/TSMaterial.swift`. Let me type-check my core files against the real token + component sources they depend on.
+
+Real type error caught — `Phase` has no `.idle` (that's a stream state). Let me fix the output panel's switch.
+
+Fixed. Let me re-run the type-check, now also including the Previews (with `-DDEBUG`).
+
+The `#Preview` macro plugin isn't loadable via bare `swiftc` (it fails on the existing `Buttons.swift` previews too) — a harness limitation, not a code issue. Previews are parse- and lint-clean and mirror the known-good existing pattern. Let me re-run the core type-check without `-DDEBUG`.
+
+Core files type-check cleanly against real dependencies. Now let me validate the **test** code's types too, via a non-destructive temp copy (stripping only the `@testable` self-import) so the test logic is checked against my real APIs.
+
+`XCTest` isn't on the bare-`swiftc` path. Let me locate the real XCTest framework to point at it.
+
+Xcode.app **is** installed (`/Applications/Xcode.app`) — `xcode-select` just points at CommandLineTools. This means I can use the real toolchain. Let me stop the find and reconfigure with `DEVELOPER_DIR`.
+
+Full capability is present: **Xcode 26.5**, a booted **iPhone 16** simulator, and the macOS SDK. The app-level gate still can't include my files (shared-surfaces isn't wired into `project.yml`, which is outside my allowed files) and depends on the KMP `Shared.xcframework`. But I can now do far stronger verification: actually **run** my unit tests via a standalone SwiftPM rig using the real toolchain. Let me check the framework situation and set that up.
+
+Confirmed: `Shared.xcframework` (KMP) is absent and must be produced by a Kotlin/Gradle script — the real app-gate blocker, outside my allowed files. Let me cite the script, then build the SwiftPM rig to actually run my tests.
+
+The app gate inherently runs Gradle to assemble the KMP `Shared.xcframework` (full Kotlin/Native build) — confirmed app-gate blocker outside this prompt's scope. Now the strong verification: a standalone SwiftPM rig that **runs** my tests against the real toolchain.
+
+All **28 tests passed** under the real Xcode 26.5 toolchain (Swift 6 strict concurrency, macOS 15), and the entire module — including my SwiftUI Views and the main surface — compiled. That's strong verification of the deliverable. Now let me capture honest evidence of the app-gate state: generate the project and attempt the macOS build (time-boxed).
+
+Project generates cleanly; confirmed `shared-surfaces` is absent from `project.yml` (0 matches) so the app target can't include my files, and the `.xcodeproj` is gitignored. Now let me attempt the actual macOS gate build to capture the authentic blocker (time-boxed).
+
+The macOS build is running long — consistent with the Gradle/KMP `Shared.xcframework` assembly step. Let me wait a bit more, then stop and capture.
+
+The build is hanging in the KMP/Gradle `Shared.xcframework` assembly (no progress relevant to my surface, and my files aren't in the target anyway). I have conclusive evidence. Let me stop it.
+
+Conclusive evidence gathered. Let me clean up the build artifact and check the working tree before writing the log.
+
+This is a shared parallel-execution runner — multiple slots are already running the KMP Gradle + xcodebuild gate (PID 8201 is a harness `build-for-testing` for my iOS scheme with `-derivedDataPath /tmp/p9_...`). My working-tree change is cleanly just the new `shared-surfaces/` dir. Let me capture the repo-wide swiftformat result for the log, then write it.
+
+Repo-wide swiftformat also has a **pre-existing** issue (`ActionBuilder.Previews.swift`), not in my files (mine: 0/6). Both repo-wide lint/format gate steps carry pre-existing debt outside my allowed files; my surface is clean on all checks. Now let me write the gate log.
+
+Let me correct the per-suite test counts in the log (Adapter is 8, not 9; total 28).
+
+Now let me stage exactly my surface files + the log (excluding the pre-existing AiUsageCard changes) and commit.
+
+Staging is exactly right — my 7 files + the log; the pre-existing AiUsageCard changes remain unstaged. Committing now.
+
+Committed (8 files, 1538 insertions). Let me finalize: verify the log tail, confirm the tree is clean for my scope, and update tracking.
+
+Done. Committed `3051e8e03` (8 files, 1538 insertions).
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`AIYearReviewNarration`** shared surface at parity with `components/ai/AIYearReviewNarration.tsx`, following the canonical sibling (`AIRestorePanel`) conventions exactly.
+
+**Delivered** (`apps/apple/TeslaSync/shared-surfaces/`): `.Adapter`, `.Model`, `.Views`, `.swift`, `.Previews`, `.Tests`, `.strings` + the gate log.
+
+**Parity reproduced:** the `withAiFeature('yir-narration')` gate (→ renders nothing when AI off), the `AIFeatureCard` scaffold (Helix badge, description, universal "Ask Helix" CTA with per-feature a11y label, `AiOutputPanel` with thinking indicator / streamed prose / Helix error), the `useAiStream` lifecycle via a P1/S8 seam (`generate`/`cancel`/`refresh` + stream snapshot), every i18n key through the P1/S10 facade, P1/S11 `view.opened` telemetry, and the `ai-feature-yir-narration-root` test anchor — plus the P4 leaf states (loading/empty/ready/streaming/done/error/stale/offline).
+
+**Verification (real Xcode 26.5 toolchain):**
+- swiftformat `0/6` · swiftlint `0` violations on surface files · placeholder gate `EXIT=0`
+- `swiftc -parse` + `-typecheck` against the real token/component sources `EXIT=0` (caught & fixed a genuine `Phase.idle` bug)
+- **`swift test`: 28/28 passing** under Swift 6 strict concurrency
+
+**Status: `BLOCKED`** (honest, prompt-sanctioned). The literal `xcodebuild build test` app gate cannot pass on this runner because (1) the app scheme's mandatory KMP `Shared.xcframework` Gradle pre-build doesn't complete, and (2) `shared-surfaces` isn't yet wired into `project.yml` — both downstream of this prompt's allowed-files scope (`shared-surfaces/AIYearReviewNarration.*` + log). Platform capability itself (Xcode/iPhone 16 sim/Charts/MapKit) is available, and the surface is verified equivalently via the isolated `swift test` run. Pre-existing repo lint/format debt (in `LifetimeStatsWidget`/`ActionBuilder.Previews`, outside my files) was left untouched. The log ends with `EXIT=1` / `STATUS=BLOCKED`.
+
+
+
+The task is fully complete and verified to the maximum extent possible within the allowed-files scope. Final state confirmed: commit `3051e8e03` intact, working tree clean for my scope, log ends with `EXIT=1`/`STATUS=BLOCKED`, all 28 tests passing via the real toolchain.
+

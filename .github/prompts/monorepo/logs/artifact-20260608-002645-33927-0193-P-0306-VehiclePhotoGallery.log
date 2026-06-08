@@ -1,0 +1,203 @@
+================================================================================
+P4 · Feature view · 0306 — VehiclePhotoGallery (Apple)
+Run:  2026-06-08T02:45-0700   Host: Darwin arm64 (macOS 26.5)   Branch: auto/20260608-002645-33927/193
+Base: c9c6fdb9f
+Prompt: P4/feature-views/0306 — Feature view: VehiclePhotoGallery
+Web source (spec): web/src/features/vehicles/components/VehiclePhotoGallery.tsx
+Mode:  code-complete + DEFERRED Xcode app build/test (0002 BackendTool / 0010 ToolCard
+       precedent, ADR-012, Honesty rule 7 — predecessor parity). The surface is authored,
+       compiled on BOTH the iOS-18 and macOS-15 SDKs, and host-tested (31/31 XCTest green).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)             OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override         OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iOS 18.0 deploy target                               OK
+  macOS SDK .................. macOS 15.0 deploy target                             OK
+  iPhone 16 simulator ........ present (83717DEE-…-CBDDD3140989, Booted)            OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. 0.63.3                                               OK
+  swiftformat ................ 0.61.1                                               OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  xcodegen ................... project generates cleanly (VehiclePhotoGallery=60 refs) OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep) WARN
+  development signing cert .... absent on this runner (ADR-012)                      WARN
+
+  Capability note: the prompt lists "Charts/maps used: (none)" and shared components
+  "@/components/ui/Lightbox". The core requirement is SwiftUI, which is AVAILABLE and
+  PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles below (steps [1][2])
+  plus the executed XCTest suite (step [4]). The capability-BLOCKED escape hatch
+  ("SwiftUI/Charts/MapKit unavailable") does NOT apply.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/VehiclePhotoGallery.*) ===
+  VehiclePhotoGallery.Model.swift       372  P1/S10 strings facade + VehiclePhoto value type
+                                             (web LightboxImage) + connectivity axis (live/stale/
+                                             offline) + P1/S11 telemetry seam + input snapshot +
+                                             resolved/phase + P1/S8 source seam + InMemory source +
+                                             @Observable model (selection + stale auto-refresh) +
+                                             a11y phrasing
+  VehiclePhotoGallery.Projection.swift   42  pure cached→projection adapter (resolve(input)→phase)
+  VehiclePhotoGallery.Views.swift       149  thumbnail grid + square thumbnail button + shared
+                                             AsyncImage wrapper (loading/failure surfaces) + press style
+  VehiclePhotoGallery.Chrome.swift      192  freshness chip + refresh + stale/offline banner +
+                                             loading skeleton grid + empty card (web placeholder
+                                             branch) + retryable error state
+  VehiclePhotoGallery.Lightbox.swift    279  immersive viewer shell (counter/close, paged image w/
+                                             zoom+pan gestures, prev/next, caption, zoom controls)
+  VehiclePhotoGallery.Viewer.swift      154  pure viewer controller (index/zoom/pan math) + keyboard
+                                             shortcut modifier (Esc/←/→/Home/End/＋/－/0)
+  VehiclePhotoGallery.swift             133  the surface: header (title+chip+refresh) + banner +
+                                             state switch + immersive cover presenter + prop-driven
+                                             convenience init + surfaceSlug
+  VehiclePhotoGallery.Previews.swift    103  #if DEBUG previews — grid/empty/loading/error/stale/
+                                             offline/dark + the immersive viewer
+  VehiclePhotoGallery.Tests.swift       331  XCTest — projection + viewer controller + model + a11y
+                                             (31 methods)
+  VehiclePhotoGallery.strings            50  P1/S10 catalog contribution (table "VehiclePhotoGallery")
+  Largest .swift = 372 lines (swiftlint file_length<=400 honored). No file imports the
+  Shared xcframework (seams are Swift protocols; the prod app injects the facade-backed
+  source, previews/tests inject InMemoryVehiclePhotoSource).
+
+=== PARITY (web source reproduced end-to-end) ===
+  The web component is a thin, display-only wrapper around the shared <Lightbox>: with no
+  photos it renders a friendly empty card (NOT a blank box); with photos a responsive grid
+  of square thumbnails (grid-cols-2 sm:3 md:4), each a button opening the lightbox at its
+  index. Reproduced:
+  - Data source (web useTranslation + the `photos`/`vehicleName` props): bound through the
+    P1/S8 seam VehiclePhotoSource→VehiclePhotoGalleryModel. No HTTP in the view; the
+    prop-driven convenience init mirrors `<VehiclePhotoGallery photos vehicleName />`.
+  - Composition:
+      • empty card  -> dashed glass card + photo glyph + "No photos uploaded yet." +
+                       "Photos uploaded for this vehicle will appear here."
+      • grid        -> LazyVGrid(adaptive) of square AsyncImage thumbnails (object-cover),
+                       each a Button opening the viewer (web handleOpen(i)).
+      • <Lightbox>  -> a self-contained immersive viewer (the atomic shared Lightbox is the
+                       P4 component-library prompt's deliverable; until it lands this surface
+                       ships a complete viewer in its own files): paged nav (←/→, swipe,
+                       Home/End), 1×–5× zoom in 0.5× steps (＋/－/0 + pinch) w/ drag-to-pan,
+                       "n / total" counter, optional caption, Esc / backdrop-tap close.
+                       Navigation resets zoom+pan (web useEffect(...,[index])).
+  - States (ALL rendered; each has a #if DEBUG preview + a unit test):
+      loading (skeleton grid) · empty (web placeholder branch) · error (message + Retry) ·
+      data (grid + viewer) · stale (freshness chip + "Reconnecting — photos may be out of
+      date" banner + one-shot auto-refresh) · offline (cached grid kept + "Offline — showing
+      cached photos" banner + offline chip, no auto-refresh).
+  - i18n (P1/S10): the 5 web keys preserved VERBATIM — vehicles.photos.empty / .emptyHelp /
+      .galleryNamed ("{{name}} photo gallery") / .gallery / .openAt ("Open photo {{index}} of
+      {{total}}"); native chrome + viewer keys namespaced vehicles.photos.* / .viewer.*.
+      Referenced==declared verified: 22 code keys, 22 catalog keys, 0 undeclared. NO English
+      string literals in native code (all via VehiclePhotoStrings + Text(verbatim:)).
+  - Accessibility: VoiceOver labels on every interactive element — thumbnail buttons
+      ("Open photo i of total" + alt as value), close/prev/next/zoom buttons, freshness chip,
+      refresh, viewer counter; grid carries the named/unnamed gallery label; viewer is
+      .isModal; Dynamic-Type system fonts (Font.TS); reduce-motion honored (press scale,
+      zoom/index animations, key-nav).
+  - Telemetry (P1/S11): VehiclePhotoGalleryModel.start() emits view.opened with surface slug
+      "VehiclePhotoGallery" exactly once (OSLogVehiclePhotoTelemetry default; prod app injects
+      the shared diagnostics adapter).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 9 production .swift files compiled together with the REAL apps/apple
+  closure (design Tokens + Components/UI/Buttons + Components/Motion/Motion); none import the
+  Shared xcframework.
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK
+        xcrun -sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator \
+          -swift-version 6  <closure> <production files>
+        IOS_TYPECHECK_EXIT=0                                                       OK
+        (exercises the #if os(iOS) fullScreenCover presenter branch)
+  [2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+        (exercises the #else sheet presenter branch)
+  [3] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained
+        SwiftPM harness (real production files + real design tokens + real TSButton/TSFadeIn),
+        Swift 6 language mode:
+          Test Suite 'VehiclePhotoProjectionTests'        passed —  7 tests, 0 failures
+          Test Suite 'VehiclePhotoViewerControllerTests'  passed —  8 tests, 0 failures
+          Test Suite 'VehiclePhotoGalleryModelTests'      passed — 13 tests, 0 failures
+          Test Suite 'VehiclePhotoAccessibilityTests'     passed —  3 tests, 0 failures
+          Executed 31 tests, with 0 failures (0 unexpected) in 0.006 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: projection per-state + branch precedence (data/empty/loading/error,
+        cached-behind-error/offline); viewer controller (index clamp, nav reset, 1×–5× 0.5×
+        steps, snap-to-1× pan reset, canReset, zoomPercent); model wiring (start/push/refresh/
+        stop), open()-clamp + viewer toggle, selection clamp on shrink, stale→one auto-refresh,
+        offline→none, live→re-arm, view.opened-once + slug; a11y gallery/open/counter phrasing.
+  [4] swiftlint --strict (9 surface .swift files; explicit paths — the repo .swiftlint.yml
+        `included:` lists TeslaSync/feature-views, run explicitly here on the new files):
+          Done linting! Found 0 violations, 0 serious in 9 files.
+        LINT_EXIT=0                                                               OK
+  [5] swiftformat --lint (config apps/apple/.swiftformat):
+          0/9 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+  [6] check-placeholders.ps1 (ADR-011 stub gate; swift) — run per shipped file (the gate's
+        literal -Path .../VehiclePhotoGallery is a path PREFIX, not a real node, so Test-Path
+        returns a clean no-op scan; run meaningfully here against each actual file):
+          PLACEHOLDER_COUNT=0 across all 10 shipped files (0 files with violations)
+          (also grep-verified: no TODO/FIXME/stub/mock/placeholder/Lorem/"not implemented")
+        PLACEHOLDER_EXIT=0                                                        OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode toolchain):
+      - `xcodegen generate`                          -> XCODEGEN_EXIT=0 (project + targets + schemes;
+                                                        VehiclePhotoGallery.* globbed in = 60 refs).
+      - `xcodebuild -target TeslaSync-macOS build`   ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+          ** BUILD FAILED **                         -> MAC_BUILD_EXIT=65
+    Why deferred (independent, code-unrelated reasons — none is a defect in this surface;
+    identical disposition to the 0002 BackendTool / 0010 ToolCard / 0054 GuardModeWidget
+    predecessors, Honesty rule 7):
+      (a) Shared.xcframework not staged: the app target links the KMP core; staging it needs a
+          Kotlin/Native gradle build (apps/shared :core:assembleSharedXCFramework, ~7m24s per the
+          0010 ToolCard log). Independent of this UI surface; concrete missing-framework error
+          captured above (exit 65).
+      (b) Signing: the macOS app/widget targets carry entitlements requiring a development
+          certificate on a signed runner (ADR-012); absent here.
+      (c) Test-target folding: the per-surface *.Tests.swift bundles (this one + ~170 siblings)
+          are globbed into the app target's feature-views source path; the downstream P4
+          integration/acceptance prompt folds them into the TeslaSync(/-macOS) XCTest targets
+          (as dashboard-widgets was wired once for all its surfaces). Editing project.yml is
+          OUTSIDE this prompt's allowed files (VehiclePhotoGallery.* + the log).
+    The SAME XCTest the scheme would run is PROVEN GREEN (31/31) by the executed SwiftPM harness
+    in step [3], and the surface compiles against BOTH the iOS 18 and macOS 15 SDKs (steps [1][2]).
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source (empty + grid) plus the P4 leaf contract
+      (loading/error/stale/offline) — each has a #if DEBUG preview; phase + connectivity logic
+      unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (VehiclePhotoSource→model); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — 5 web keys verbatim; 22 referenced
+      == 22 declared; 0 undeclared.
+  [x] Accessibility labels on every interactive element (thumbnails/close/prev/next/zoom/chip/
+      refresh/counter); gallery + viewer carry container labels; viewer .isModal.
+  [x] Tests: adapter (projection) unit + per-state model + viewer-controller + a11y — 31 methods,
+      EXECUTED 31/31, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured
+      evidence (xcframework + signing + test-target folding), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; the xcodebuild build/test is shown
+                          DEFERRED with its real exit 65 + cause, not as a pass.
+  2 No scope narrowing ... full surface (9 swift + strings), all states, seams, viewer, tests.
+  3 No skip-and-assume ... web source + shared Lightbox read end-to-end; every t() + branch +
+                          zoom/nav/keyboard behaviour reproduced.
+  4 No stubs as final .... complete implementation incl. a working immersive viewer; gate COUNT=0.
+  5 No parity shortcuts .. grid + empty card + lightbox (zoom/pan/paging/counter/caption) + 6 states.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same host-gate + deferral disposition as 0002 BackendTool / 0010 ToolCard.
+  8 No commit on red ..... committed work is green on every runnable gate; the only non-green step
+                          is the environment-blocked xcframework/signing build, deferred w/ evidence.
+  9 No silent drift ...... the self-contained viewer (pending the atomic shared Lightbox) and the
+                          deferral reasons are documented above.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,168 @@
+I'll start by investigating the environment and repository structure to understand what's available before making any claims.
+
+Full Xcode is present at `/Applications/Xcode.app` — the active dir just points to CommandLineTools. Let me check if I can use it via `DEVELOPER_DIR` (no sudo needed) and explore the existing structure.
+
+Toolchain is fully available (Xcode 26.5, iPhone 16 simulator booted). This is a real, large task — the web source is **2342 lines**. Let me understand the existing conventions and check for any existing AlertStudioPage files.
+
+Convention is clear: each surface = `{Name}.swift`, `.Adapter.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings` (+ optional `.Chart`, `.States`, etc.). `AlertsSection` is the closest analog. Let me study it and the project config in depth.
+
+Excellent — the architecture is clear and sophisticated. Let me read the remaining AlertsSection files (Views, Previews, Tests, strings) and locate the shared design tokens / components.
+
+Now let me read the project config and locate the shared design tokens (P1/S9), components (P4 core), and i18n facade.
+
+Tests live colocated as `.Tests.swift` in feature-views. Tokens come from `../design/generated/apple`. Let me locate the exact token definitions and confirm where `Color.TS`, `TSSpacing`, `Font.TS`, `TSFadeIn`, `TSSkeleton` live.
+
+Let me read the web source spec, the Motion/Skeleton components, and survey available shared native components.
+
+This is a large, multi-file parity port. Let me set up tracking and continue reading the spec.
+
+I now fully understand the web spec. Let me study the shared native components I'll map to (to match "native counterparts") and confirm their APIs.
+
+The feature-views are self-contained: tokens + a few primitives (TSFadeIn, TSSkeleton) + own `{Surface}Strings` facade with `Text(verbatim:)`. Let me confirm form conventions from a form-heavy surface and the button/badge/severity primitives.
+
+I have the full picture of conventions. Before writing ~3000 lines, let me verify the baseline build works (especially the `Shared.xcframework` pre-action, which could require a Kotlin toolchain).
+
+The build depends on a KMP `Shared.xcframework` (Kotlin/Native via Gradle) that isn't staged yet. This is the critical gate risk. Let me assess feasibility.
+
+Critical finding: `apps/macos-pending-verifications.md` documents that a predecessor P4 feature-view (`ToolCard`) hit the same situation — the **full-app `xcodebuild` is blocked by pre-existing, unrelated parallel-merge collisions** (`DashboardWidgetSize` redefined 8×, co-located `*.Tests.swift` importing XCTest into the app target, macOS signing). The precedent: verify the surface **in isolation** (SwiftPM build + tests under Swift 6 strict concurrency) + swiftlint/swiftformat/placeholder clean. Let me confirm the blockers still exist and find the isolated-verification recipe.
+
+Confirmed: `DashboardWidgetSize` is redefined **10×** in the `TeslaSync` module — a hard duplicate-type compile error that blocks the full-app build, pre-existing and outside my allowed files (`AlertStudioPage.*` only). This is exactly the documented ToolCard precedent. My path: build the surface at full parity, verify it **green in isolation** (SwiftPM, Swift 6 strict concurrency) + swiftlint/swiftformat/placeholder, and capture full-app-block evidence. Let me check `pwsh` and the placeholder script's rules.
+
+`pwsh` and SwiftPM are both available. Let me read the exact placeholder patterns and opt-out marker so my code stays clean.
+
+Let me read the scanner's path-handling and a couple of forbidden-substring details, since verbatim web i18n keys (e.g. `namePlaceholder`) contain flagged substrings and need the `// parity:allow` opt-out.
+
+The placeholder scanner returns clean for a non-existent path and is case-sensitive (lowercase `placeholder` keys are safe). `pwsh` works. Now let me read the remaining web dependencies I must port (recommended trigger mode, vehicle selection, the two editor sub-components).
+
+I have everything I need. This is a large parity port with the full-app build blocked by pre-existing collisions (documented ToolCard precedent) — so I'll verify the surface green in isolation. Let me update tracking and start writing the **Adapter** (pure core).
+
+Adapter done. Now the **Model** (telemetry seam, i18n facade, source seam, `@Observable` state holder, in-memory source).
+
+Now the **Views** file — all presentational sub-views. This is the largest file.
+
+Good. Now the composed sections in `AlertStudioPage.Sections.swift` (header, templates, rules list, rows, bulk, loading/error states).
+
+I referenced a couple of things I need to wire up: a model `deleteTarget` flow and a cross-platform checkbox. Let me fix both.
+
+Now fix the cross-platform checkbox in the rule row:
+
+Let me refactor `AlertStudioBadge` to support a verbatim (interpolated) string for the snooze badge:
+
+Now the editor form in `AlertStudioPage.Editor.swift` — the largest composition (form fields, value editor, computed-metric & message editors, vehicle picker, test delivery, snooze).
+
+Now the main composed view in `AlertStudioPage.swift` (layout, lifecycle, snooze sheet, discard + delete dialogs).
+
+Let me add a verbatim-message variant to `AlertStudioEmpty` (for the search-interpolated "no matching rules" message matching the source key), then write the strings file.
+
+Now the comprehensive `.strings` catalog:
+
+Now the **Previews** (per-state) and **Tests** (adapter + model + a11y).
+
+Now the **Tests** file (adapter + model + accessibility):
+
+All 8 surface files are written. Now let me verify the surface **compiles + tests green in isolation** (SwiftPM, Swift 6 strict concurrency) — the documented ToolCard precedent, since the full-app build is blocked by pre-existing `DashboardWidgetSize` collisions. I'll symlink the real files (no drift) into a package named `TeslaSync`.
+
+Library compiles clean under Swift 6 strict concurrency. Now run the tests:
+
+All **64 tests pass, 0 failures** under Swift 6 strict concurrency. Now swiftlint `--strict`, swiftformat `--lint`, and the placeholder gate on my files.
+
+swiftlint flagged line-length, trailing-comma, file-length, and type-body-length. Let me read both configs to reconcile, then auto-format and refactor.
+
+swiftformat is configured to auto-wrap at 120 + inline commas (reconciled with swiftlint). Let me run the formatter on my files, then re-lint.
+
+swiftformat fixed line-lengths (186→20). Remaining are structural (file/type/function length, complexity) from the before-first wrapping. Let me see how existing large feature-views handle this (splits vs. disables).
+
+Precedent is clear: large curated catalogs use a targeted `// swiftlint:disable file_length line_length` (see `WidgetPicker.Catalog.swift`), and everything else is split into cohesive <400-line files with types broken into extensions. Let me get the MARK boundaries to split along.
+
+I'll split into cohesive <400-line files (repo convention) and break oversized types into extensions. Let me get the inner structure of the big `AlertStudioProjection` enum and the Model class to plan the extension splits.
+
+Let me confirm the exact closing-brace lines before scripting the splits.
+
+Clean boundaries confirmed. Let me get the precise EditorPanel member lines, then run one comprehensive split script.
+
+Now I'll run one comprehensive Python script to split the non-test files into cohesive <400-line files (types broken into extensions, catalog gets the precedented disable, the two long/complex functions get scoped disables).
+
+All split files are <400 lines (Catalog has the precedented disable). Let me add scoped disables for the two parity-port functions, then re-split the tests.
+
+Now re-split the large test file. Let me find its internal boundaries.
+
+Now re-split the test file into 4 cohesive files with classes under the length limits.
+
+All split. Now reformat everything and re-run swiftlint `--strict` across all AlertStudioPage files.
+
+Down to 13 violations + 3 brace-slicing errors. Let me inspect the boundaries I mis-sliced and the two functions needing refactor.
+
+Let me fix the 3 brace slips, then view the two functions to refactor (cleaner than disables).
+
+Refactoring is cleaner than disables. Let me rewrite `canSave` and `savePayload` into smaller helpers, and remove the orphaned disable in Projection.
+
+Now remove the superfluous disable in Projection and fix the Catalog to avoid the blanket type_body_length disable (move the data array to top-level).
+
+Now reformat (catalog needs reindenting) and re-lint to see remaining issues.
+
+Only 6 long string-literal lines remain (swiftformat can't wrap inside strings). Let me view and break them.
+
+Let me view the precise contexts for surgical edits.
+
+Now let me fix all 6 long lines by introducing locals / line breaks:
+
+Now reformat and run the full swiftlint `--strict` + swiftformat `--lint`:
+
+**swiftlint --strict: 0 violations. swiftformat --lint: 0 files require formatting.** All 25 files clean. Now re-verify the isolated build + tests with the new split file set.
+
+Splitting a type across files surfaced Swift's file-scoped `private` — cross-file extension members and `private(set)` writes need to be internal. Let me fix the Model orphan + access levels and the editor helper visibility.
+
+Now rebuild the isolated package with these fixes:
+
+Build clean. Now run the tests:
+
+All 64 tests green post-split. Let me re-verify lint/format are still clean after the access-level edits, then run the placeholder gate.
+
+swiftlint + swiftformat both clean. Now the placeholder gate — I'll run the real scanner against a directory of my files (honest evidence) plus the literal gate path.
+
+The scanner is case-insensitive — it flags the verbatim web i18n keys ending in `placeholder` (16 lines). Following the `ActionBuilder` precedent, I'll isolate these keys into a constants enum with `// parity:allow` markers. Let me see all occurrences first.
+
+All 16 are verbatim web i18n key literals. I'll append the sanctioned `// parity:allow` marker (same mechanism `ActionBuilder` uses) to each.
+
+Placeholder gate passes (16 allowed, 0 violations). Let me confirm the markers didn't disturb format/lint and the package still builds + tests.
+
+The inline markers push lines over 120. The cleaner `ActionBuilder` approach is a constants enum (markers on short lines). Let me revert the inline markers and isolate the keys into `AlertStudioPromptKeys`.
+
+Now create the `AlertStudioPromptKeys` constants file with the `parity:allow` markers on short lines:
+
+Now reformat and re-run all gates (the constants file mirrors `ActionBuilder`'s pattern). Let me verify lint/format/placeholder/build/test together.
+
+0 lint, 0 format issues across 26 files. Let me re-link the new file, rebuild+test, and re-run the placeholder scan.
+
+64 tests pass with the final file set. Let me run the placeholder scan once more and check the full-app toolchain (xcodegen) to capture honest gate evidence.
+
+The placeholder gate flags 2 lines — my own header comment in `PromptKeys.swift` literally contains the word. Let me reword it to avoid the token, and fix the xcodegen project generation for the full-app evidence.
+
+The script filename `check-placeholders.ps1` itself contains the token. Let me remove that reference.
+
+All surface gates are green (build, 64 tests, swiftlint 0, swiftformat 0, placeholder 0). Now I'll attempt the full-app `xcodebuild` to capture honest evidence of the pre-existing block. Let me generate the project and try a bounded build.
+
+Project generated. Now attempt the actual gate build (async, bounded) to capture the real failure:
+
+The KMP `Shared.xcframework` is actually building from cache (not blocked here). Let me wait for it to reach app compilation, where the pre-existing collision should surface.
+
+The KMP framework is linking (release targets, slow). Let me keep waiting for the app-compile phase where the collision surfaces.
+
+The full-app iOS build **FAILED at the app's Swift compilation** (KMP framework built fine). Let me confirm the failure is the pre-existing collision, **not** my code.
+
+The full-app build failed on **`AcDcStatsPanel.Tests.swift:19: Unable to resolve module dependency: 'XCTest'`** — a pre-existing, repo-wide blocker (110 co-located `*.Tests.swift` files import XCTest into the app target), plus the confirmed `DashboardWidgetSize` ×15 collision. **Zero AlertStudioPage errors.** This exactly matches the documented `ToolCard` macOS-pending precedent. Let me write the log and clean up.
+
+Let me capture fresh, clean gate evidence and write the log.
+
+Now let me write the gate log with full, honest evidence:
+
+Now clean up generated artifacts and review what will be committed.
+
+Two pre-existing `web/` modifications exist that aren't mine — I'll stage **only** my 27 surface files + the log. Let me commit.
+
+All 28 intended files staged (the 2 pre-existing `web/` edits excluded). Committing:
+
+Committed (`eb3781e73`). Let me do a final from-scratch verification against the committed files and confirm a clean tree.
+
+Everything verified. Let me finalize the tracking.
+

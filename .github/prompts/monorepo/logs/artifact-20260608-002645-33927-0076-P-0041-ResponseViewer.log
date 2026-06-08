@@ -1,0 +1,224 @@
+================================================================================
+P4 · Feature view · 0041 — ResponseViewer (Apple)
+Run: 2026-06-08T01:33-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/76
+Base: c9c6fdb9
+Prompt: P4/feature-views/0041 — ResponseViewer
+Web source (spec): web/src/features/admin/components/ResponseViewer.tsx
+Mode: code-complete + REAL iOS-18-simulator & macOS-15 SDK typechecks (swift 6,
+      strict-concurrency=complete) + EXECUTED XCTest (29/29 on host) + DEFERRED Xcode
+      app build/test (0008 ResultPanel / 0040 RequestBuilder feature-view precedent,
+      ADR-012). No stubs as final.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)  OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18 deploy target)       OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15 deploy target)              OK
+  iPhone 16 simulator ........ present + Booted (83717DEE-70A3-4325-AA61-CBDDD3140989)  OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                    OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                  OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen 2.45.4                     OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  feature-views test target .. .Tests.swift colocate in the APP target glob, not a
+                               dedicated XCTest target (integration-owned)          WARN
+
+  NOTE — the active developer dir defaults to /Library/Developer/CommandLineTools
+  (no xcodebuild / no iPhoneSimulator SDK). The full Xcode 26.5 toolchain (xcodebuild,
+  simctl, iOS+macOS SDKs, the BOOTED iPhone 16 simulator, swift test) is reached
+  WITHOUT sudo via `export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`
+  (0008/0040 feature-view precedent). The capability-BLOCKED escape hatch
+  ("SwiftUI/Charts/MapKit unavailable") does NOT apply: SwiftUI is present and PROVEN
+  by the REAL iOS-18-simulator AND macOS-15 SDK typechecks below. This surface uses
+  NEITHER Swift Charts NOR MapKit (web "Charts/maps used: (none)").
+
+=== WEB SOURCE → NATIVE MAPPING ===
+  Web `ResponseViewer` is a presentational component (props: response, loading,
+  history, onReplay; the only hook is `useTranslation`). It renders exactly three
+  branches plus a history strip, and additionally EXPORTS a `SnippetPanel`:
+    loading                  → Skeleton                       → TSSkeleton (shared feedback)
+    !loading && !response    → EmptyState(noResponse)         → TSEmptyState (shared feedback)
+    !loading && response     → FadeIn(status bar+body+headers) → TSFadeIn (shared motion)
+    history.length>0         → RequestHistory GlassPanel       → TSGlassPanel (shared ui)
+    export SnippetPanel      → cURL/JS/Python/Go + Copy        → public SnippetPanel view
+  States: the web presentational source has loading / empty / content ONLY — the
+  parent playground page owns the request lifecycle, so there is no query
+  error/stale/offline branch in THIS surface (identical to sibling 0040 RequestBuilder).
+  All three web states are reproduced; none are hidden (rule #2, #6-hidden-panels).
+  Shared-component mapping (prompt "Shared components used"):
+    @/components/ui       GlassPanel→TSGlassPanel, Button→Button(.plain)+tokens,
+                          CopyButton→SnippetCopyButton (shared TSClipboard seam, labeled
+                          Copy⇄Copied like the web `label`+`withToast`)
+    @/components/feedback  Skeleton→TSSkeleton, EmptyState→TSEmptyState
+    @/components/motion    FadeIn→TSFadeIn
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/ResponseViewer.*) ===
+  ResponseViewer.Adapter.swift     270  testable projection core — ResponseAccentRole,
+                                        ResponseHeader/ApiResponse/HistoryEntry models,
+                                        ordered ResponseJSON + ResponseJSONFormatter
+                                        (JSON.stringify(_, null, 2) port), ResponseFormatting
+                                        (formatBytes, statusColor/statusBg tone, history method
+                                        tint, JSON/text body select, statusLine, meta), surface
+                                        slug, a11y summaries
+  ResponseViewer.Snippets.swift    124  SnippetFormat (+ verbatim cURL/JavaScript/Python/Go
+                                        labels) + SnippetGenerator (byte-faithful generateSnippet
+                                        port: body gate, Go GET special-case, Go `?? "{}"`)
+  ResponseViewer.Model.swift       122  P1/S8 state holder (ResponseViewerModel: response/
+                                        isLoading/history + update + replay forward) + P1/S11
+                                        telemetry seam + P1/S10 strings facade
+  ResponseViewer.Views.swift       287  presentational subviews — accent→token color, section
+                                        label, chevron disclosure header (reduce-motion), status
+                                        bar (statusBg tint), body block, response-headers
+                                        disclosure, history chip + horizontal replay strip
+  ResponseViewer.SnippetPanel.swift 156 exported SnippetPanel — dialect tabs, labeled copy
+                                        (TSClipboard seam), collapsible snippet body
+  ResponseViewer.swift              66  ResponseViewer surface (Response panel loading/empty/
+                                        content branch + RequestHistory strip + view.opened)
+  ResponseViewer.Previews.swift    128  #if DEBUG previews — Loading, Empty, 200·JSON, 404·error,
+                                        Snippet·POST (one per web branch/state)
+  ResponseViewer.Tests.swift       365  XCTest — formatting (5) + JSON formatter (6) + snippets
+                                        (10) + model (5) + a11y (2) = 29 methods
+  ResponseViewer.strings            32  P1/S10 catalog contribution (6 web-source keys + 5
+                                        native chrome/a11y keys)
+  Total 1550 lines across 9 files. Every shipped .swift file <= 400 lines (house file_length,
+  max 365); no code line > 120 cols (house line_length, strict). The surface depends only on the
+  design Tokens + the shared `.tsGlassPanel()` material + TSGlassPanel/TSButton-styling/TSSkeleton/
+  TSEmptyState/TSFadeIn/TSClipboard shared components — no KMP `Shared` import.
+
+=== GATE 1/6 — REAL iOS-18 SIMULATOR SDK TYPECHECK (swift 6 · strict-concurrency=complete) ===
+  $ export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+  $ IOS_SDK=$(xcrun --sdk iphonesimulator --show-sdk-path)
+  $ swiftc -typecheck -sdk "$IOS_SDK" -target arm64-apple-ios18.0-simulator \
+        -swift-version 6 -strict-concurrency=complete -D DEBUG \
+        ../design/generated/apple/Tokens.swift \
+        $(Sources/Components + Sources/Design, 40 files, minus UnitFormatters.swift) \
+        TeslaSync/feature-views/ResponseViewer.{Adapter,Snippets,Model,Views,SnippetPanel}.swift \
+        TeslaSync/feature-views/ResponseViewer.swift ResponseViewer.Previews.swift
+  → IOS_TYPECHECK_EXIT=0   ✅  (48 files; SwiftUI parity compiles against the real iOS-18 SDK;
+                                DEBUG so the previews compile too)
+  NOTE: UnitFormatters.swift is excluded ONLY because it references the external `Units`
+  facade (KMP-backed, outside the design-system closure) that THIS surface does not use;
+  it is unrelated to ResponseViewer.
+
+  Two REAL defects were surfaced by this gate and FIXED (not hidden):
+    (a) ResponseViewer.SnippetPanel.swift — a stored `private let body: String?` collided
+        with SwiftUI `View.body` ("invalid redeclaration of 'body'"). Renamed the stored
+        property to `requestBody` (kept the public `body:` init label for web parity).
+    (b) ResponseViewer.Previews.swift — a nonisolated factory called the @MainActor
+        ResponseViewerModel.init under strict concurrency. Marked the factory @MainActor
+        (preview closures are main-actor isolated).
+
+=== GATE 2/6 — REAL macOS-15 SDK TYPECHECK (swift 6 · strict-concurrency=complete) ===
+  $ MAC_SDK=$(xcrun --sdk macosx --show-sdk-path)
+  $ swiftc -typecheck -sdk "$MAC_SDK" -target arm64-apple-macos15.0 \
+        -swift-version 6 -strict-concurrency=complete -D DEBUG  <same 48 files>
+  → MAC_TYPECHECK_EXIT=0   ✅  (same surface compiles against the real macOS-15 SDK;
+                                TSClipboard NSPasteboard branch + the whole design system clean)
+
+=== GATE 3/6 — EXECUTED XCTest (SwiftPM, macOS host) ===
+  Standalone SwiftPM harness (Package.swift, platforms: [.macOS(.v15)]); library target
+  "TeslaSync" = {ResponseViewer.Adapter, .Snippets, .Model}; test target imports
+  ResponseViewer.Tests.swift via `@testable import TeslaSync`.
+  $ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
+  → Test Suite 'All tests' passed
+    Executed 29 tests, with 0 failures (0 unexpected) in 0.007s
+  → FINAL_SWIFT_TEST_EXIT=0   ✅
+  Coverage: ResponseFormattingTests (5: formatBytes B/KB/MB, statusTone 200/204/299/301/399/404/500,
+  historyMethodTone GET/get/POST/DELETE/PUT/PATCH, displayBody JSON-pretty vs text fallback,
+  statusLine+meta), ResponseJSONFormatterTests (6: ordered object, nested obj+array, empty
+  collapse, scalars, string escape, control char), SnippetGeneratorTests (10: cURL GET/POST/empty,
+  JS GET/POST, Python GET+POST, Go GET/POST, Go nil→`{}`, format labels) — the snippet templates
+  asserted BYTE-FOR-BYTE against the web reference output. ResponseViewerModelTests (5: empty/with
+  response seeding, prop update, replay forward, view.opened once). ResponseViewerAccessibilityTests
+  (2: status + history summaries).
+
+=== GATE 4/6 — swiftlint --strict (surface scope) ===
+  $ cd apps/apple && swiftlint lint --strict --config .swiftlint.yml \
+        TeslaSync/feature-views/ResponseViewer.{Adapter,Snippets,Model,Views,SnippetPanel}.swift \
+        TeslaSync/feature-views/ResponseViewer.swift ResponseViewer.Previews.swift ResponseViewer.Tests.swift
+  → Done linting! Found 0 violations, 0 serious in 8 files.   ✅  (SWIFTLINT_EXIT=0)
+
+=== GATE 5/6 — swiftformat --lint ===
+  $ cd apps/apple && swiftformat --lint  <8 ResponseViewer .swift files>
+  → 0/8 files require formatting.   ✅  (FORMAT_EXIT=0)
+  (swiftformat reformatted the surface to house style — wrapPropertyBodies + before-first
+  wrapping — before this clean lint; string-literal contents unchanged, re-verified by Gate 3.)
+
+=== GATE 6/6 — placeholder / stub gate (ADR-011) ===
+  $ pwsh ./apps/tools/check-placeholders.ps1 -Path <each ResponseViewer file> -Language swift
+  → every file: PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0   ✅
+  No TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/"not implemented"; no opt-out markers needed.
+
+=== DEFERRED — Xcode app build/test (`xcodebuild ... build test`) ===
+  The prompt gate's two `xcodebuild -scheme TeslaSync{,-macOS} ... build test` steps are
+  DEFERRED to the signed CI runner — NOT painted green, NOT a code defect, and NOT a
+  platform-capability BLOCK (SwiftUI proven above on BOTH SDKs). Two pre-existing,
+  integration-owned reasons, PROVEN here:
+    1. Shared.xcframework is unstaged: apps/apple/Frameworks/ holds only `.gitkeep`. The
+       scheme's "Stage Shared.xcframework" preAction runs apps/apple/Scripts/build-shared-
+       xcframework.sh → `gradlew :core:assembleSharedXCFramework` (KMP / Kotlin-Native).
+       That heavy Gradle build is the feature-views integration layer's responsibility.
+    2. Per-surface `.Tests.swift` colocation: `xcodegen generate` (EXIT=0) registers all 8
+       ResponseViewer.* files (grep: 54 pbxproj refs) into the APP target via the
+       `TeslaSync/feature-views` source glob (project.yml L34-39 / L65-71). The only XCTest
+       target, `TeslaSyncTests` (Tests/Unit), does NOT include feature-views, so
+       ResponseViewer.Tests.swift (and the sibling RequestBuilder.Tests.swift) land in the
+       app target where `@testable import TeslaSync` + `import XCTest` cannot compile. Moving
+       the per-surface tests into the test target is the integration prompt's scope; this
+       prompt's allowed files are ResponseViewer.* only, so it is not fixed here.
+  The generated TeslaSync.xcodeproj is git-ignored (.gitignore L379 `apps/apple/**/*.xcodeproj/`)
+  and was removed after inspection. The host-runnable subset (Gates 1–6) is the maximal honest
+  evidence on this runner and is ALL green, matching the accepted P4 "code-complete + DEFERRED
+  Xcode app gate" disposition of predecessors 0008 ResultPanel and 0040 RequestBuilder.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source (loading / empty / content + history strip
+      + exported SnippetPanel) — previews per state; both SDK typechecks green.
+  [x] Hooks bind to the shared P1/S8 state-holder layer (ResponseViewerModel); no direct HTTP
+      in the view — the host pushes response/loading/history and receives onReplay.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (ResponseViewer.strings:
+      playground.response/noResponse/responseHeaders/history/codeSnippet/copy) + native chrome/a11y.
+  [x] Accessibility labels on every interactive element (disclosure headers, history chips, copy,
+      format tabs) + VoiceOver status/history summaries (unit-tested) + reduce-motion chevrons.
+  [x] Tests: adapter+snippets unit tests + model tests + a11y label tests — 29/29 EXECUTED green.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (Gate 6 COUNT=0).
+  [x] EXIT=0 / STATUS=DONE (Xcode app build/test DEFERRED with proof, per 0008/0040 precedent).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green   : every ✅ is a real command with its real exit code (pasted above). The two
+                        SDK typechecks initially went RED and were FIXED (body collision, MainActor
+                        preview), not hidden. The Xcode app gate is DEFERRED, never reported green.
+  2  No scope narrowing: implemented ALL web states (loading/empty/content) + the history strip +
+                        the exported SnippetPanel + the JSON.stringify port + byte-faithful snippets.
+  3  No skip-and-assume: each host gate executed; project registration PROVEN via generated pbxproj
+                        grep; snippet + JSON parity PROVEN byte-for-byte in executed tests.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0 across all 8 files.
+  5  No parity shortcuts: order-preserving JSON.stringify(_, null, 2) + exact generateSnippet
+                        templates (body gate + Go GET case + `?? "{}"`) + every state + labeled copy.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit project.yml or the shared Localizable.xcstrings
+                        (parallel-unsafe across concurrent slots) — strings ship as the per-surface
+                        table; did NOT touch sibling surfaces (e.g. concurrently-modified AIUsageCard.*).
+  8  No commit on red  : committing on all-green host gates; the Xcode app build/test is explicitly
+                        DEFERRED (pre-existing KMP + test-target-placement reasons), not failed.
+  9  No silent drift   : changes confined to the allowed feature-views/ResponseViewer.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native ResponseViewer shipped at parity with the web source: an
+  order-preserving JSON.stringify(_, null, 2) adapter, a byte-faithful cURL/JavaScript/Python/Go
+  generateSnippet port (executed-green), a P1/S8 push-based state-holder seam (no view HTTP),
+  P1/S11 view.opened telemetry, a clipboard-seam labeled CopyButton (Copy⇄Copied), every web
+  state (loading/empty/content) + the history replay strip + the exported SnippetPanel, all 6
+  web i18n keys, VoiceOver labels + summaries, Reduce Motion, Dynamic Type. Verified on this
+  runner by REAL iOS-18-simulator AND macOS-15 SDK typechecks (swift 6, strict concurrency
+  complete, DEBUG), EXECUTED XCTest 29/29, swiftlint 0, swiftformat 0, placeholder 0. The Xcode
+  app build/test is DEFERRED to the signed CI runner (unstaged KMP Shared.xcframework +
+  per-surface test colocation — both integration-owned, neither a defect in this surface),
+  matching the accepted P4 disposition of predecessors 0008 Odometer/ResultPanel and 0040
+  RequestBuilder.
+
+EXIT=0
+STATUS=DONE

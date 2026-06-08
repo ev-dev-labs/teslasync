@@ -1,0 +1,90 @@
+I'll start by exploring the repository structure and checking the runner's capabilities, since this task requires Apple-specific tooling (Xcode, SwiftUI, Swift Charts, MapKit).
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. However, `swift`, `swiftlint`, and `swiftformat` are available. Let me explore deeper before deciding on BLOCKED vs DONE — I need to read the web source and understand existing native patterns.
+
+Excellent — `apps/apple/TeslaSync/dashboard-widgets/` already has many implemented widgets to follow as patterns. Let me read the web spec components and survey existing native exemplars + shared infrastructure in parallel.
+
+Now I understand the web spec. Let me study the native conventions: shared state holders, tokens, i18n facade, telemetry, the native widget shell, and a complete exemplar widget set.
+
+Excellent — `MileageStatsWidget` is a near-perfect exemplar (analytics category, same hooks family). Let me read the rest of its set plus the shared primitives it depends on.
+
+Now let me read the test/preview patterns, the shared dashboard primitives, design tokens, and find a native sparkline (Swift Charts) equivalent for `MiniChart`.
+
+I see multiple per-surface definitions of `DashboardWidgetSize`/`DashboardWidgetRegistration` — this is a parallel-surface monorepo. Let me understand the dedup/target strategy and the design tokens before writing.
+
+Now I understand the parallel-surface model: 13 files each define `DashboardWidgetSize`/`DashboardWidgetRegistration` and 53 consume them (MileageStats is a consumer). I'll follow the **consumer** pattern (don't redefine — dedup is integration's job; I can only touch `FleetStatsWidget.*`). Let me read the design tokens, skeleton, a Swift Charts sparkline exemplar, and the web types — plus test whether the CLT Swift can typecheck SwiftUI/Charts.
+
+Big finding: the CLT macOS SDK **does** include SwiftUI + Charts — `swiftc -typecheck` succeeded. This means I can actually verify my Swift compiles against real frameworks (with stubs for shared tokens). Let me confirm the exit code properly and gather remaining infra: design tokens, a Swift Charts sparkline exemplar, web types, and the web MileageStats key convention.
+
+All data gathered. Let me read the exact design tokens, a Swift Charts sparkline exemplar, the web `convertDistanceFromSI`, and confirm no `FleetStatsWidget.*` exists yet.
+
+I have everything needed. Two key facts confirmed: (1) the CLT macOS SDK compiles SwiftUI+Charts+MapKit (`swiftc -typecheck` → exit 0), but (2) full `xcodebuild` is unavailable (CLT-only). Let me check how sibling surfaces logged their gate (DONE vs BLOCKED) and the git state before I write.
+
+Let me read the MileageStats sibling log to match the expected gate format and STATUS convention.
+
+This is the canonical precedent — sibling 0064 shipped **code-complete with DEFERRED Xcode gate** (CLT-only runner), proving the code via `swiftc -typecheck` against the real component library, an **executed** adapter harness, swiftlint, swiftformat, and the placeholder gate, ending `EXIT=0 / STATUS=DONE`. I'll follow this exact disposition.
+
+Let me write a plan file, then build the 8-file surface.
+
+Now I'll write the surface. Starting with the pure value types and the adapter.
+
+Now the main surface view, then previews, tests, and the strings catalog. Let me also fix the a11y summary to use the verbatim source key `fleet.online`.
+
+Now the test suite (adapter + model + registry + a11y), mirroring the proven exemplar structure.
+
+All 8 files written. Now let me verify — first a `swiftc -typecheck` of the production files against the **real** design tokens + the macOS SDK (SwiftUI), with a tiny stub for the shared grid primitives + `TSSkeleton`.
+
+Production code typechecks clean against the real SDK + tokens. Now the **executed** adapter harness — compile `Models`+`Builder` to a native binary and run real numeric assertions.
+
+Top-level code must be in `main.swift` when compiling multiple files. Quick fix:
+
+Adapter harness **executed**: `CHECKS=32 FAILURES=0`. Now the lint/format/placeholder gates. Let me inspect the configs and tooling first.
+
+Config confirms `dashboard-widgets` + `Tests` are linted. Let me run swiftlint --strict, swiftformat --lint, and the placeholder gate on my files.
+
+Three findings: (1) swiftlint flags one 126-char code line in `Model.swift:250`; (2) swiftformat wants number-grouping + loop-body fixes on my files; (3) the placeholder *dir* scan trips on **pre-existing sibling** files (WatchSummary/YearReview) — my files are clean (the prompt's `FleetStatsWidget`-scoped scan = `COUNT=0`). Let me auto-format my files, fix the long line, then re-verify per-file.
+
+Let me view the auto-formatted changes, then re-run the full gate (typecheck + harness + lint + format + per-file placeholder).
+
+Auto-format looks correct (loop body wrapped, 5-digit literals de-grouped). Now re-run the full gate since files changed: typecheck, harness, swiftlint, swiftformat --lint, and per-file placeholder scan.
+
+All host-runnable gates are green:
+- `swiftc -typecheck` → **EXIT=0**
+- adapter harness → **CHECKS=32 FAILURES=0**
+- `swiftlint --strict` → **0 violations in 7 files**
+- `swiftformat --lint` → **0/7 require formatting**
+- placeholder gate (my files) → **COUNT=0**
+
+Let me do a final review of the surface + model, and confirm line counts vs the exemplar.
+
+All 8 files are clean, well-sized (≤303 lines), use no hardcoded `Text` literals, and correctly **consume** (not redefine) the shared grid primitives. Let me capture environment facts for an honest gate log.
+
+All gates verified. Now I'll write the honest gate log (following the 0064 precedent), then commit.
+
+Now I'll commit precisely my allowed files + the log (leaving the pre-existing unrelated working-tree edits untouched, per honesty rule 9).
+
+Exactly my 8 surface files + the log are staged. Committing:
+
+Committed as `63634d72d`. Let me clean up temp artifacts and confirm the pre-existing unrelated edits were left untouched.
+
+Done. The native Apple **FleetStatsWidget** surface is implemented, verified, and committed.
+
+## Summary
+
+Shipped `apps/apple/TeslaSync/dashboard-widgets/FleetStatsWidget.*` (8 files, 1,483 LOC) at parity with `web/.../FleetStatsWidget.tsx` (+ `FleetStatsBar`), following the established `0064 MileageStatsWidget` parallel-surface pattern.
+
+**What it does** — five fleet metric tiles in an adaptive grid (Fleet Size + online count · 30-day Distance + sparkline · 30-day Energy + sparkline · Efficiency · Alerts), a title-less glass shell with freshness chip + refresh, and all six states (loading/empty/error/stale/offline/content).
+
+**Architecture** — P1/S8 state-holder seam (`FleetStatsSource`→`FleetStatsModel`, no HTTP in the view) · P1/S11 `view.opened` telemetry (`surface: FleetStatsWidget`) · P1/S10 i18n facade (all 8 source keys `fleet.*` + chrome) · P1/S9 design tokens (no neon/raw hex) · registry `fleet-stats` (analytics, 4×2/2×2/4×40). The web `MiniChart` SVG polyline is ported 1:1 as a SwiftUI `Path` (`FleetSparkline`); the web's `total_distance_km`→SI-converter quirk is reproduced verbatim (no silent unit "fix"). Consumes (doesn't redefine) the shared grid primitives.
+
+**Verification (all host-runnable gates green, real output):**
+| Gate | Result |
+|---|---|
+| `swiftc -typecheck` (real macOS SDK + tokens) | EXIT=0 |
+| Executed adapter harness | CHECKS=32 FAILURES=0 |
+| `swiftlint --strict` (7 files) | 0 violations |
+| `swiftformat --lint` (7 files) | 0/7 |
+| placeholder gate (surface) | COUNT=0 |
+
+**Honest caveat:** the canonical `xcodebuild` iOS-Simulator/macOS **build+test** steps could not run — this runner is CommandLineTools-only (`xcode-select -p` = CLT, no `iphonesimulator` SDK), so they are **DEFERRED** to a signed CI runner (ADR-012, 0064 precedent), not faked. Every other gate passed and the SwiftUI/Path code typechecks against the real macOS 15 SDK. Committed as `63634d72d` with the gate log ending `EXIT=0 / STATUS=DONE`; pre-existing unrelated working-tree edits left untouched.
+

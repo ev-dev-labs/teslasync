@@ -1,0 +1,154 @@
+=== P4 Feature view 0101 DetailedStatistics (Apple) ===
+Date: 2026-06-07
+Runner: Darwin (Apple Silicon) · Xcode 26.5 (17F42) at /Applications/Xcode.app
+        (active dir was CommandLineTools; overridden via DEVELOPER_DIR)
+Toolchain: swiftlint 0.61-class (homebrew), swiftformat (homebrew), xcodegen 2.45.4,
+           pwsh 7.x, JDK 17 (KMP), Swift 6 / strict concurrency
+Surface: apps/apple/TeslaSync/feature-views/DetailedStatistics.{swift,Model,Adapter,Views,Previews,Tests}.swift + .strings
+Web source of truth: web/src/features/charging/components/charging-list/DetailedStatistics.tsx
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+The DetailedStatistics surface deliverable is COMPLETE and fully verified in
+isolation (typecheck + 29/29 unit tests + lint + format + placeholder, all green).
+
+The literal whole-app gate (`xcodebuild -scheme TeslaSync … build test` and
+`-scheme TeslaSync-macOS … build test`) CANNOT reach EXIT=0 on this checkout for
+reasons entirely OUTSIDE this surface and OUTSIDE this prompt's allowed file scope
+(`apps/apple/TeslaSync/feature-views/DetailedStatistics.*` + this log):
+
+  B1. Repo-wide: the iOS/macOS app targets compile the ~60 co-located
+      `*.Tests.swift` files (feature-views + dashboard-widgets) but do not set
+      ENABLE_TESTING_SEARCH_PATHS, so every one fails `import XCTest`
+      ("unable to resolve module dependency: 'XCTest'"). This is a project.yml
+      setting — project.yml is NOT in this prompt's allowed file set. Proven
+      non-blocking for THIS surface by passing ENABLE_TESTING_SEARCH_PATHS=YES on
+      the command line (no file edit), which clears all XCTest errors.
+
+  B2. Pre-existing compile errors in OTHER surfaces under
+      `apps/apple/TeslaSync/dashboard-widgets/*` (NOT this surface, NOT in scope):
+      `'DashboardWidgetSize' is ambiguous for type lookup` across ~25 widget files
+      (duplicate type definitions from sibling in-flight surfaces) and an
+      actor-isolation error in SpeedProfileWidget.Previews.swift. These abort the
+      shared app-module compile before/independent of this surface.
+
+  B3. macOS scheme additionally fails the signing gate first
+      ("TeslaSync-macOS has entitlements that require signing with a development
+      certificate") — no signing identity on this runner (environmental).
+
+Per the Honesty Covenant (#1 No red-as-green, #10 end with EXIT/STATUS) the
+composed gate is therefore BLOCKED. The surface itself passes every check that can
+isolate it from B1/B2/B3 — evidence below.
+
+================================================================================
+PART A — Literal gate steps (as specified)
+================================================================================
+
+--- A1. xcodegen generate ---------------------------------------------------- 0
+$ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodegen generate
+⚙️  Generating plists... / Generating project... / Writing project...
+Created project at apps/apple/TeslaSync.xcodeproj
+XCODEGEN_EXIT=0
+
+--- A2. KMP Shared.xcframework (scheme pre-build dependency) ------------------ 0
+$ apps/shared/gradlew :core:assembleSharedXCFramework
+BUILD SUCCESSFUL in 7m 17s
+xcframework written: ios-arm64, ios-arm64-simulator, macos-arm64
+GRADLE_EXIT=0
+
+--- A3. iOS: xcodebuild -scheme TeslaSync -destination 'iPhone 16' build test - 65
+First failure (verbatim), affecting ALL co-located *.Tests.swift (B1):
+  feature-views/AuditPanel.Tests.swift:19:8: error: unable to resolve module
+    dependency: 'XCTest'
+  …(repeats for ~60 *.Tests.swift incl. DetailedStatistics.Tests.swift)…
+  ** BUILD FAILED **
+Re-run with ENABLE_TESTING_SEARCH_PATHS=YES (CLI override, no file edit) clears B1
+and exposes B2 — pre-existing, out-of-scope:
+  dashboard-widgets/DigitalTwinWidget.Model.swift: error: 'DashboardWidgetSize' is ambiguous for type lookup in this context
+  dashboard-widgets/MotorHistoryWidget.Model.swift: error: 'DashboardWidgetSize' is ambiguous for type lookup in this context
+  dashboard-widgets/MQTTStatusWidget.Model.swift:  error: 'DashboardWidgetSize' is ambiguous for type lookup in this context
+  …(~25 dashboard-widgets files)…
+  dashboard-widgets/SpeedProfileWidget.Previews.swift:17:15: error: call to main
+    actor-isolated instance method 'start()' in a synchronous nonisolated context
+  ** BUILD FAILED **
+NOTE: zero errors originate from feature-views/DetailedStatistics.*.
+IOS_EXIT=65   (BLOCKED — B1 + B2; both out of scope)
+
+--- A4. macOS: xcodebuild -scheme TeslaSync-macOS build test ------------------ 65
+  TeslaSync-macOS: error: entitlements require signing with a development
+    certificate (B3, environmental) — then the same B2 dashboard-widgets errors.
+MAC_EXIT=65   (BLOCKED — B3 + B2; both out of scope)
+
+--- A5. swiftlint --strict (scoped to this surface) -------------------------- 0
+$ swiftlint lint --strict --config .swiftlint.yml DetailedStatistics.{swift,Model,Adapter,Views,Previews,Tests}.swift
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+
+--- A6. swiftformat --lint (scoped to this surface) -------------------------- 0
+$ swiftformat --lint DetailedStatistics.{swift,Model,Adapter,Views,Previews,Tests}.swift
+0/6 files require formatting.
+FORMAT_EXIT=0
+
+--- A7. check-placeholders.ps1 ----------------------------------------------- 0
+$ pwsh -NoProfile -c "& ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/DetailedStatistics"
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+================================================================================
+PART B — Surface-isolated verification (proves the deliverable is GREEN)
+================================================================================
+Because the shared app module cannot be compiled whole (B1/B2/B3 above), the
+surface was verified against the REAL shared component + design-token sources in
+isolation. No stubs, no mocks of production code — the actual shipped files.
+
+--- B1. swiftc -typecheck: full surface vs real shared closure --------------- 0
+$ xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 -swift-version 6 \
+    apps/design/generated/apple/Tokens.swift \
+    Sources/Design/TSMaterial.swift \
+    Sources/Components/UI/*.swift Sources/Components/Motion/*.swift \
+    Sources/Components/Feedback/{States,Skeletons,Banners}.swift \
+    feature-views/DetailedStatistics.{swift,Model,Adapter,Views}.swift
+TYPECHECK_EXIT=0   (Swift 6 strict concurrency, macOS 15 target — clean)
+
+--- B2. swift test: the surface's own XCTest suites, real components --------- 0
+$ swift test   (SwiftPM harness: library = shared closure + surface; tests = DetailedStatistics.Tests.swift, @testable import TeslaSync)
+Test Suite 'DetailedStatisticsAdapterTests' passed — Executed 19 tests, 0 failures
+Test Suite 'DetailedStatisticsModelTests'   passed — Executed 10 tests, 0 failures
+Test Suite 'All tests' passed — Executed 29 tests, with 0 failures (0 unexpected)
+SWIFT_TEST_EXIT=0
+
+Coverage (29 tests):
+  • Adapter: 6-tile projection order/labels/accents; AnimatedNumber-int /
+    fmtWithUnit / Currency(2 & 3dp) / formatDuration parity incl. non-finite →
+    dash and half-away rounding; empty Top-Charger → dash; (N×) suffix;
+    responsive 2/3/6-col breakpoints (640/768); freshness chip; a11y tile +
+    per-phase summary.
+  • Model: loading→loaded→empty→failed; offline keeps cached snapshot;
+    offline w/o cache → failure; stale after window; reloadIfStale guard;
+    fetch re-entrancy guard; view.opened telemetry emitted once (slug
+    "DetailedStatistics").
+
+================================================================================
+ACCEPTANCE CRITERIA
+================================================================================
+[x] Surface renders all web-source states + required P4 states (loading/loaded/
+    empty/error/stale/offline) — previews per state; body switch covers each.
+[x] Hooks bind via shared P1/S8 state-holder seam (DetailedStatisticsSource);
+    no direct HTTP in the view. (Web leaf takes only useTranslation — a pure
+    prop leaf, mirrored as a snapshot seam per the SecurityStatistics precedent.)
+[x] Every web i18n key present in the P1/S10 catalog (DetailedStatistics.strings):
+    charging.stats.detailedStatistics/totalSessions/avgDuration/avgPower/
+    topCharger/totalCost/avgCostPerKwh + common.noData (verbatim web keys).
+[x] Accessibility labels on every element (tiles, chip, banner, refresh button,
+    skeleton, header isHeader); Dynamic Type via tokens; reduce-motion honored by
+    shared FadeIn/Skeleton.
+[x] Tests: adapter unit + model lifecycle + a11y label tests — 29/29 pass.
+[x] No TODO/stub/mock/placeholder/Lorem (placeholder check = 0; grep clean).
+[x] Telemetry: view.opened with surface slug "DetailedStatistics" (P1/S11).
+[~] EXIT=0 — BLOCKED: whole-app xcodebuild gate red ONLY via out-of-scope,
+    pre-existing B1/B2/B3; the surface itself is green on every isolating check.
+
+EXIT=65
+STATUS=BLOCKED

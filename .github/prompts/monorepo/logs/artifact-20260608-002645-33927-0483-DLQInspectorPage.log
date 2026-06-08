@@ -1,0 +1,196 @@
+P4-APPLE — P7 — page:admin/DLQInspector — SwiftUI / HIG parity
+
+Native SwiftUI/Apple-HIG implementation of the web page DLQInspectorPage
+(web/src/features/admin/pages/DLQInspectorPage.tsx) at full panel/state/string
+parity, adaptive across macOS + iOS (ADR-002, ADR-006).
+
+================================================================================
+PREFLIGHT
+================================================================================
+- Toolchain present: swift 6.3.2, swiftlint, xcodegen, pwsh, JDK 17.
+- Xcode runner: /Applications/Xcode.app (Xcode 26.5, build 17F42) usable via
+  DEVELOPER_DIR (active xcode-select dir is CommandLineTools; no sudo needed).
+  iphonesimulator26.5 + macosx26.5 SDKs, iOS 26.5 simulators available.
+- KMP shared core (ADR-004) Shared.xcframework was NOT prebuilt; built it from the
+  repo's own Gradle (~/.gradle warm cache, 3.1G):
+      DEVELOPER_DIR=… apps/shared/gradlew :core:assembleSharedXCFramework
+      => BUILD SUCCESSFUL in 8m 3s ; staged to apps/apple/Frameworks/Shared.xcframework
+- Reused, already-present P4 sibling surfaces (DRY): the DLQ entries table
+  (TeslaSync/feature-views/EntriesTable.*) and the replay-audit panel
+  (TeslaSync/feature-views/AuditPanel.*). Both are Shared-free and expose
+  composition seams the page binds to.
+
+================================================================================
+WORK
+================================================================================
+New page (apps/apple/TeslaSync/Features/Admin/ — adaptive SwiftUI View + @Observable model):
+- DLQInspectorPage.swift           — page View: header, dismissible banners,
+  StatusHeader, GlassPanel1 (entries), GlassPanel2 (audit), entry drawer (.sheet),
+  replay .confirmationDialog. No business logic in the body.
+- DLQInspectorPage.Model.swift     — DLQInspectorSource seam (P1/S8), DLQListPhase /
+  DLQEntryPhase, @Observable DLQInspectorPageModel (faithful port of the web
+  selected/pendingReplay/replayDisabledBanner state machine + the 4 data hooks),
+  DLQEntriesProvider bridge to the reused EntriesTable, OSLog telemetry (P1/S11).
+- DLQInspectorPage.Models.swift    — DLQListData / DLQEntryFull / DLQReplayOutcome /
+  DLQReplayActionResult / DLQPayloadText (web decodeBase64Utf8). Foundation-only.
+- DLQInspectorPage.StatusHeader.swift — 3 stat tiles + "replay disabled" banner.
+- DLQInspectorPage.EntryDrawer.swift  — KV summary + inner/raw payload tabs + copy
+  (UIPasteboard/NSPasteboard) + replay footer (web disable rules), adaptive sheet.
+- DLQInspectorPage.Sources.swift   — InMemoryDLQInspectorSource (previews/tests) +
+  DLQInspectorUnavailableSource (honest offline default until AppContainer vends the
+  live feed — mirrors the app's UnavailableVehicleCommanding seam; never fake rows).
+- DLQInspectorPage.Strings.swift   — P1/S10 i18n facade (web keys + native chrome).
+- DLQInspectorPage.strings         — per-surface "DLQInspectorPage" string table.
+- DLQInspectorPage.Previews.swift  — content/loading/empty/error/replay-disabled + drawer.
+- DLQInspectorPage.Tests.swift     — XCTest: decode, list→table mapping, the replay
+  reducer branches (ok closes+refreshes; disabled/forbidden banner; failed error),
+  strings namespace, and the /admin/dlq deep-link.
+- DLQInspectorRoute.swift          — DLQInspectorRouteRegistration hosts the page at
+  AppRoute.admin; /admin/dlq deep-links to it via the existing AppRouteParser.
+
+Navigation/build registration (Allowed: navigation registration + string catalog):
+- Sources/TeslaSyncApp.swift  — chained DLQInspectorRouteRegistration.registry(base:)
+  onto the routeHosts environment.
+- project.yml                 — added `TeslaSync/Features` source path to the TeslaSync
+  (iOS) + TeslaSync-macOS targets.
+- .swiftlint.yml              — added `TeslaSync/Features` to `included`.
+
+SI units: DLQ has no SI-unit fields (byte sizes via the web formatBytes port, counts
+via fmtInt). No miles/mph/°F/psi/kWh introduced. No charts, no maps (manifest: 0/0).
+Live SSE: DLQ is a polled surface (web refetchInterval), not an SSE live surface;
+no >2min staleness indicator applies (ADR-013 scopes staleness to live SSE reads).
+
+================================================================================
+=== PARITY ===
+================================================================================
+PARITY_REQUIRED=15
+
+[x] panel  — GlassPanel1 (Dead-letter entries)
+      evidence: DLQInspectorPage.swift :: DLQInspectorPage.entriesPanel
+      (TSGlassPanel { panelHeader + EntriesTable(model:onInspect:) }), title key
+      admin.dlq.panels.entries via DLQInspectorStrings.panelEntries.
+[x] panel  — GlassPanel2 (Recent replay activity)
+      evidence: DLQInspectorPage.swift :: DLQInspectorPage.auditPanel
+      (TSGlassPanel { panelHeader + AuditPanel(rows:loading:) }), title key
+      admin.dlq.panels.audit via DLQInspectorStrings.panelAudit.
+[x] state  — loading
+      evidence: DLQInspectorPage.Model.swift :: DLQListPhase.loading +
+      DLQInspectorPageModel.isListLoading (StatusHeader em-dash) +
+      entriesState(.loading)→EntriesTable skeleton; auditLoading→AuditPanel loading;
+      DLQEntryPhase.loading→DLQEntryDrawer.content (TSPageLoader).
+[x] state  — error
+      evidence: DLQListPhase.failed→EntriesTable error state; DLQEntryPhase.failed→
+      DLQEntryDrawer.errorView (TSErrorDisplay); DLQInspectorPageModel.replayError
+      banner; DLQInspectorUnavailableSource emits .failed (honest offline).
+[x] state  — success
+      evidence: DLQListPhase.loaded→entriesState(.loaded)→EntriesTable rows +
+      DLQStatusHeader counts; auditRows→AuditPanel content; DLQEntryPhase.loaded→
+      DLQEntryDrawer detail + payload tabs.
+[x] string — admin.dlq.banners.replayBlockedMessage  (DLQInspectorStrings.replayBlockedMessage; .strings present)
+[x] string — admin.dlq.banners.replayBlockedTitle    (DLQInspectorStrings.replayBlockedTitle)
+[x] string — admin.dlq.confirm.confirm               (DLQInspectorStrings.confirmConfirm)
+[x] string — admin.dlq.confirm.message               (DLQInspectorStrings.confirmMessage(id:))
+[x] string — admin.dlq.confirm.title                 (DLQInspectorStrings.confirmTitle)
+[x] string — admin.dlq.pageTitle                     (DLQInspectorStrings.pageTitle)
+[x] string — admin.dlq.panels.audit                  (DLQInspectorStrings.panelAudit)
+[x] string — admin.dlq.panels.entries                (DLQInspectorStrings.panelEntries)
+[x] string — admin.dlq.subtitle                      (DLQInspectorStrings.subtitle)
+[x] string — common.cancel                           (DLQInspectorStrings.commonCancel)
+
+PARITY_COVERED=15
+(Asserted in code: DLQInspectorStrings.Key.parityRequired lists exactly these 10
+ string keys; DLQInspectorPage.Tests.swift testParityRequiredCountIsTen +
+ testParityRequiredAreNamespacedAndKnown pin the set.)
+
+================================================================================
+=== GATE === (raw output)
+================================================================================
+# 1) placeholder / stub scan (ADR-011)
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Admin -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# 2) swiftlint --strict
+# My page (apps/apple/TeslaSync/Features/Admin/**): 0 violations.
+# Repo-wide --strict surfaces 1 PRE-EXISTING, unrelated violation (untouched by this task):
+#   TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19 function_body_length
+LINT_PAGE_VIOLATIONS=0
+LINT_PREEXISTING_UNRELATED=1   (dashboard-widgets, not modified by this task)
+
+# 3) swiftc type-check — project settings: Swift 6 + strict-concurrency=complete
+# (page + full closed Shared-free dependency set: design tokens, Components,
+#  App routing, WidgetFreshness, the reused EntriesTable/AuditPanel surfaces)
+$ swiftc -typecheck -swift-version 6 -strict-concurrency=complete -sdk $(xcrun --show-sdk-path) <65 files>
+TYPECHECK_EXIT=0
+
+# 4) xcodegen (project + source-path validation)
+$ cd apps/apple && xcodegen generate
+Created project at .../apps/apple/TeslaSync.xcodeproj
+XCODEGEN_EXIT=0   (all 11 DLQInspector* files present in the generated TeslaSync target)
+
+# 5) KMP shared core
+$ DEVELOPER_DIR=… apps/shared/gradlew :core:assembleSharedXCFramework
+BUILD SUCCESSFUL in 8m 3s
+KMP_BUILD_EXIT=0
+
+# 6) xcodebuild build — iOS Simulator, Shared.xcframework linked
+$ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+    xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync \
+    -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/ts-dd \
+    CODE_SIGNING_ALLOWED=NO ENABLE_TESTING_SEARCH_PATHS=YES build
+BUILD_EXIT=65   (** BUILD FAILED **)
+PAGE_BUILD_ERRORS=0          # zero errors in apps/apple/TeslaSync/Features/Admin/**
+TOTAL_BUILD_ERRORS=52        # ALL pre-existing + unrelated, in 17 files:
+  - 15 x TeslaSync/dashboard-widgets/*.swift — "invalid redeclaration of
+    'DashboardWidgetSize'" / "'DashboardWidgetSize' is ambiguous". The type is
+    redeclared `public struct DashboardWidgetSize` in 15+ dashboard-widget files
+    (a parallel-scaffolding duplicate-symbol artifact, like the 1436 feature-views).
+  - 2 x TeslaSync/feature-views/LoadingSkeleton.{swift,Tests.swift}.
+  None of these files were created or modified by this task (git: untouched).
+  The page's own .strings resource was copied into the built TeslaSync.app, and the
+  Swift compiler reported NO error for any Features/Admin file.
+
+# 7) xcodebuild test — not reached: the TEST action must first build the same app
+#    module, which fails on the pre-existing DashboardWidgetSize duplication above.
+TEST_EXIT=blocked-by-preexisting-build-break
+
+================================================================================
+ACCEPTANCE
+================================================================================
+- [x] Every named panel implemented (GlassPanel1 entries, GlassPanel2 audit); the
+      StatusHeader + EntryDrawer regions from the web source reproduced natively.
+- [x] All 15 parity items render from the bound @Observable DLQInspectorPageModel.
+- [x] loading / empty / error implemented for every data source (list, audit, entry,
+      replay) — EmptyState/ContentUnavailableView for empty, error view + retry for
+      error, redacted/ProgressView for loading. No blank regions.
+- [x] All visible strings via the DLQInspectorPage string table; zero hardcoded
+      literals (swiftlint clean); web key names preserved.
+- [x] Dark mode + Dynamic Type + a11y labels + SI-safe formatting; SwiftUI-native
+      (NavigationStack/.sheet/.confirmationDialog/Swift formatters), no web cloning.
+- [x] placeholder gate green; swiftlint green on the page; Swift-6 strict-concurrency
+      type-check green; xcodegen green; KMP Shared.xcframework builds; page compiles
+      with PAGE_BUILD_ERRORS=0.
+- [ ] xcodebuild build/test GREEN — BLOCKED by pre-existing, unrelated
+      DashboardWidgetSize duplicate declarations in TeslaSync/dashboard-widgets
+      (+ LoadingSkeleton). Out of scope to fix (no unrelated changes); not caused by
+      this page (PAGE_BUILD_ERRORS=0).
+- [ ] apple ledger row set covered — NOT set: per the Honesty Covenant (#1 no
+      red-as-green, #8 no commit on red) the build/test triad is not green in this
+      tree, so the row is left uncovered and no commit is made.
+
+================================================================================
+NOTES / HONESTY
+================================================================================
+- The page itself is complete and verified-compilable: Swift-6 strict-concurrency
+  type-check passes against its full real dependency graph, and the real Xcode build
+  produced ZERO errors for any Features/Admin file (the iOS build also exercised the
+  #if os(iOS) branches the macOS type-check skips, since it targeted the Simulator).
+- The only thing preventing a green xcodebuild gate is PRE-EXISTING repo breakage in
+  the dashboard-widgets scaffolding (duplicate `DashboardWidgetSize`), which is
+  unrelated to admin/DLQInspector and outside this task's allowed scope.
+- No commit performed (no commit on red; the working tree also contains unrelated
+  modifications from a shared environment, e.g. feature-views/AIUsageCard.*).
+
+EXIT=65
+STATUS=BLOCKED

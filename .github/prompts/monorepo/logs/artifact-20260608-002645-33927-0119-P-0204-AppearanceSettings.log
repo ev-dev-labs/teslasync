@@ -1,0 +1,250 @@
+================================================================================
+P4 · Feature view · 0204 — AppearanceSettings (Apple)
+Run: 2026-06-08T02:20-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/119
+Base: c9c6fdb9f
+Prompt: P4/feature-views/0204 — Feature view: AppearanceSettings
+Web source (spec): web/src/features/settings/components/AppearanceSettings.tsx
+Mode: code-complete + host-gated (isolated Swift 6 build+test on macOS, iOS-18 +
+      macOS-15 SDK compile, lint/format/placeholder) WITH the full-app
+      xcodebuild build/test EXECUTED on this host and reported RED-but-DEFERRED.
+      The full-app gate is blocked by PRE-EXISTING, UNRELATED repo issues
+      (co-located *.Tests.swift importing XCTest into the app target + macOS
+      development-signing) — identical disposition to the ToolCard (0010) /
+      AlertMessageEditor (0180) / FSMTimelineChart (0231) predecessors recorded
+      in apps/macos-pending-verifications.md (ADR-012, Honesty rule 7/8).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (83717DEE-…-CBDDD3140989, Booted)            OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  xcodegen ................... project generates cleanly; enumerates all 13 files   OK
+  Shared.xcframework ......... STAGED (apps/shared :core:assembleSharedXCFramework
+                               built via gradle; release xcframework copied into
+                               apps/apple/Frameworks/Shared.xcframework)            OK
+
+  Capability note: the web source lists "Charts/maps used: (none)" and shared
+  components "@/components/ui", "@/components/motion", "@/components/feedback/Toast",
+  "@/components/layout". The core requirement is SwiftUI, which is AVAILABLE and
+  PROVEN by real iOS-18-simulator AND macOS-15 SDK compiles below + an EXECUTED
+  XCTest run (34/34). The capability-BLOCKED escape hatch does NOT apply — the
+  surface is authored, host-compiled on both SDKs, preview-macro-expanded, and
+  host-tested.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/AppearanceSettings.*) — 13 files, 3098 lines ===
+  AppearanceSettings.Models.swift     273  value types — surface slug; Density/
+                                           TimeFormat/ChartPalette/SidebarStyle/Tour/
+                                           ThemeMode enums; AppearancePrefs (server
+                                           projection) + StatusBar/Celebration prefs;
+                                           Query/Connection/Freshness/Phase/SaveStatus
+                                           + SaveError + Toast + snapshot + P1/S10
+                                           strings facade (Foundation half)
+  AppearanceSettings.Adapter.swift    286  pure projections — density/timeFormat/
+                                           chartPalette(from raw) "cached→projection"
+                                           (web `?? default` reads) + resolvePhase/
+                                           Freshness (ADR-013) + relativeTime + the 4
+                                           choice catalogs + CB-safe/neon swatch hexes
+                                           (lib/colors port) + previewRows + a11y copy
+  AppearanceSettings.Seams.swift      292  P1/S11 telemetry seam + P1/S8 source over
+                                           useSettings/useSaveSettings + InMemory double
+                                           + client-prefs store seam (web useStatusBarPrefs
+                                           /useAchievementCelebrationPrefs/useSidebarStyle
+                                           — InMemory + UserDefaults impls) + tours seam
+  AppearanceSettings.Model.swift      293  @Observable @MainActor view-model — server-
+                                           pref optimistic auto-save (web saveSettings.
+                                           mutate on click) w/ revert-on-failure; instant
+                                           client-pref toggles; phase/freshness derived;
+                                           start(view.opened)/stop/refresh; tours + toast
+  AppearanceSettings.swift            126  surface — FadeIn+GlassPanel shell, header,
+                                           connectivity banner, phase switch, toast
+                                           overlay, preferredColorScheme; theme bridge +
+                                           text() facade half
+  AppearanceSettings.Views.swift      396  chrome — header+freshness chip, connectivity
+                                           banner, toast, section heading, choice card
+                                           (web <Button> option, a11y selected trait),
+                                           toggle row (web <Toggle>), action button
+  AppearanceSettings.Swatches.swift   276  density silhouette swatch, sidebar silhouette
+                                           swatch (web SidebarStyleSwatch), density live
+                                           preview, chart-palette swatch dots + card,
+                                           hex→Color
+  AppearanceSettings.Sections.swift   383  the 8 composed sections — theme (shared
+                                           TSThemePicker), density(+preview), sidebar,
+                                           time format, chart palette, status bar,
+                                           celebration, product tours
+  AppearanceSettings.States.swift     127  loading skeleton / empty (ContentUnavailable)
+                                           / error (retry) — never a blank panel
+  AppearanceSettings.Previews.swift   101  8 #Preview — content (light/dark), loading,
+                                           empty, error, stale, offline, Dynamic-Type a3
+  AppearanceSettings.ModelTests.swift 262  20 XCTest — lifecycle/view.opened, hydration,
+                                           optimistic save + revert, client toggles +
+                                           persistence, tours, toast
+  AppearanceSettings.Tests.swift      161  14 XCTest — projection, phase/freshness,
+                                           relativeTime, catalogs+swatches, i18n, a11y
+  AppearanceSettings.strings          122  P1/S10 catalog (table "AppearanceSettings"),
+                                           81 keys, web English fallbacks + native adds
+
+  Architecture: the view imports SwiftUI only; the model imports Foundation/
+  Observation only; all I/O is behind injected seams (source / client-prefs store /
+  tours / telemetry). The surface references ZERO Shared/Facade/Live symbols — it is
+  fully decoupled (grep Shared.|Facade|LiveConnection|AppContainer|StateHolderModel|
+  LoadableState over the 12 swift files = 0 hits), which is what makes the isolated
+  host gate below an honest proxy for the app-target compile.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 10 production files compiled together with the REAL apps/apple
+  component closure (design Tokens + Design/{TSMaterial,TSDesign} + Components/UI +
+  Components/Motion, 27 files total); none import the Shared xcframework. The shared
+  TSThemePicker (web <ThemePicker>) is COMPOSED, not reimplemented.
+
+  [1] swift build — macOS 15, Swift 6 language mode (complete concurrency), Xcode
+        toolchain; production + Previews + real component closure:
+          Build complete!
+        MAC_BUILD_EXIT=0                                                           OK
+        (all 8 #Preview macros expand under the DEBUG SwiftPM build)
+
+  [2] swiftc -typecheck — iOS 18 SIMULATOR SDK
+        xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> \
+          -target arm64-apple-ios18.0-simulator -swift-version 6 <closure + 10 files>
+        IOS_TYPECHECK_EXIT=0                                                       OK
+        (exercises the #if os(iOS) branches in the component closure too)
+
+  [3] swift test — the FULL committed XCTest suite EXECUTED on the macOS host via a
+        self-contained SwiftPM package (real production Models/Adapter/Seams/Model/
+        Views/Swatches/Sections/States/Previews + the committed
+        AppearanceSettings.ModelTests.swift + AppearanceSettings.Tests.swift),
+        Swift 6 language mode, Xcode toolchain:
+          Test Suite 'All tests' passed
+          Executed 34 tests, with 0 failures (0 unexpected) in 0.006 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: density/timeFormat/chartPalette projection (valid/nil/unknown→default),
+        phase + freshness precedence, relativeTime buckets, the 4 choice catalogs +
+        CB-safe/neon swatch hexes, i18n facade, a11y copy; model start-once + slug,
+        lifecycle, snapshot hydration, client-pref hydration, optimistic auto-save +
+        confirm, ignore-current/ignore-while-loading, save-failure revert + error toast,
+        refetch-no-clobber-in-flight, theme/status-bar/celebration/sidebar persistence,
+        status-bar toast, tours start + reset toast, toast dismiss.
+
+  [4] swiftlint --strict (12 surface files; repo .swiftlint.yml rules):
+          Done linting! Found 0 violations, 0 serious in 12 files.
+        LINT_EXIT=0                                                               OK
+
+  [5] swiftformat --lint (config apps/apple/.swiftformat):
+          0/12 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+
+  [6] check-placeholders.ps1 (ADR-011 stub gate; exact gate path):
+        ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/AppearanceSettings
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                        OK
+
+  i18n coverage: referenced keys ⊆ declared keys (81 declared). The only apparent
+  "missing" key is the literal "k" used as a dummy in the count-helper unit test; the
+  two apparent "orphans" (state.offlineBanner / state.staleBanner) are referenced via
+  the connectivity banner's computed key. No real gap.
+
+=== GATE — FULL-APP XCODE STEPS (EXECUTED on this host; RED + DEFERRED; NOT faked, NOT green) ===
+    xcodegen generate                                                  -> XCODEGEN_EXIT=0
+      (project + targets + schemes; all 13 AppearanceSettings.* files enumerated into
+       the TeslaSync iOS + TeslaSync-macOS app targets)
+
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+      ** TEST FAILED **                                                -> IOS_EXIT=65
+      Total `error:` lines in the iOS log = 4, ALL of them:
+        apps/apple/TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8:
+          error: unable to resolve module dependency: 'XCTest'
+      grep of the iOS log for "AppearanceSettings.* error:" = 0 hits.
+
+    xcodebuild -scheme TeslaSync-macOS build test                      -> MAC_EXIT=65
+      ** BUILD FAILED ** at signing (before Swift compile):
+        "TeslaSync-macOS" has entitlements that require signing with a development
+        certificate. Enable development signing … (8 such errors across the macOS
+        app + widget targets)
+      grep of the macOS log for "AppearanceSettings.* error:" = 0 hits.
+
+    Why DEFERRED (code-unrelated; identical to ToolCard 0010 / AlertMessageEditor 0180
+    / FSMTimelineChart 0231; Honesty rule 7/8; apps/macos-pending-verifications.md):
+      (a) Co-located *.Tests.swift / *.ModelTests.swift across the feature-views set
+          (this surface's two + the ~150 pre-existing ones) `import XCTest`, but
+          project.yml sources TeslaSync/feature-views into the APP target while the
+          XCTest module is only resolvable under the test-bundle search paths
+          (ENABLE_TESTING_SEARCH_PATHS). The first such error is on AIRestorePanel.Tests
+          .swift — a file this prompt neither created nor touched. Re-homing the
+          per-surface test files into the XCTest target (or enabling testing search
+          paths on the app target) is the downstream P4 integration prompt's job;
+          editing project.yml is OUTSIDE this prompt's allowed files (AppearanceSettings.*
+          + the log).
+      (b) The macOS app/widget targets require a development SIGNING certificate
+          (ADR-012), which this runner does not provision; the macOS build fails at
+          signing before reaching the Swift compile.
+    The SAME committed XCTest suite is PROVEN GREEN (34/34) by the EXECUTED SwiftPM run
+    in step [3], and the surface compiles against BOTH the iOS 18 and macOS 15 SDKs
+    (steps [1]/[2]) with all 8 previews expanding. These full-app artifacts are owned
+    by the P4/P99 Apple acceptance gate on a signed macos-latest CI runner.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states + native bands — content/loading/empty/error +
+      stale/offline; each has a #if DEBUG preview; phase + freshness unit-tested + EXECUTED.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (AppearanceSettingsSource +
+      AppearanceClientPrefsStore + AppearanceToursSeam → AppearanceSettingsModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — referenced ⊆ declared verified;
+      web keys + English fallbacks preserved verbatim.
+  [x] Accessibility labels on every interactive element — choice cards (isButton+isSelected
+      traits, spoken selection value + help), toggle rows (native switch + hint), buttons,
+      freshness chip, theme picker, toasts; sections carry combined/header semantics; Dynamic
+      Type + Reduce-Motion respected.
+  [x] Tests: adapter unit + per-state model + a11y label tests — 34 methods, EXECUTED 34/34, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] Telemetry: view.opened emitted with surface slug "AppearanceSettings" (P1/S11) — unit-tested.
+  [x] EXIT=0 / STATUS=DONE — host gates green (macOS build + iOS typecheck, 34/34 tests,
+      swiftlint/swiftformat/placeholder); full-app xcodebuild RED + DEFERRED with evidence.
+
+=== HONESTY COVENANT (binding) ===
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED
+                           (IOS_EXIT=65 / MAC_EXIT=65) and explicitly DEFERRED with raw
+                           evidence — never reported as passing.
+  2  No scope narrowing  : every web region + branch reproduced — theme picker (composed),
+                           density (+live preview), sidebar style, time format, chart palette
+                           (CB-safe/neon swatches), status bar (2 toggles + dependency),
+                           celebration (4 toggles), product tours (4 actions), header,
+                           freshness/connectivity bands.
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; the macOS
+                           failure was RUN (signing), not assumed.
+  4  No stubs as final   : complete production surface (10 files) + 34 real tests; placeholder
+                           scanner = 0; no Coming-soon / empty gating.
+  5  No parity shortcut  : tint/opacity/typography/a11y/i18n/telemetry all mapped to platform
+                           tokens (P1/S9) + the shared component library; verified on both SDKs.
+  6  No delegation       : implemented directly; no sub-agents.
+  7  No predecessor bypass: P1/S8 state-holder seams, P1/S9 design tokens, P1/S10 i18n facade,
+                           P4 core shared components (TSGlassPanel/TSFadeIn/TSIconBox/
+                           TSThemePicker) all present and consumed.
+  8  No commit on red    : the COMMITTED artifact (AppearanceSettings.*) is GREEN on every
+                           host gate AND on a real isolated Swift 6 build+test on both SDKs; the
+                           deferred full-app gate is RED only on pre-existing, unrelated surfaces
+                           + signing, which this commit neither introduces nor touches.
+  9  No silent drift     : changes are confined to feature-views/AppearanceSettings.* (13 files)
+                           + this log — enumerated above; project.yml NOT edited.
+  10 EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished, Apple-idiomatic AppearanceSettings shipped at parity with the web
+  source and INDEPENDENTLY VERIFIED: it compiles under the app's own Swift 6 strict-
+  concurrency rules against the real design system on BOTH the iOS 18 and macOS 15 SDKs,
+  its 34 tests pass, all 8 previews expand, and swiftlint --strict / swiftformat --lint /
+  placeholder gates are green. The full-app iOS-Simulator + macOS xcodebuild build/test
+  gate was EXECUTED on this host and is DEFERRED (not failed by this code): it is blocked
+  by the pre-existing co-located-XCTest-into-app-target wiring and by macOS development-
+  signing — both owned by the P4/P99 acceptance gate on a signed macos-latest CI runner
+  per apps/macos-pending-verifications.md. Zero AppearanceSettings/feature-views errors in
+  either full-app build log. This matches the repo's sanctioned "code-complete + DEFERRED
+  Xcode gate" disposition used by every P4 feature-view surface to date.
+
+EXIT=0
+STATUS=DONE

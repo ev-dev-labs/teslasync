@@ -1,0 +1,141 @@
+=== P4 Widget primitive 0009 WidgetRankedList (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (active dir was /Library/Developer/CommandLineTools; overridden non-destructively —
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.x · swiftformat 0.61.x · xcodegen 2.45.4 · pwsh · Java 17 (OpenJDK)
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5) booted · macOS 26.5 SDK present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh (Gradle :core:assembleSharedXCFramework,
+                       Kotlin/Native FROM-CACHE). Slices staged to apps/apple/Frameworks/Shared.xcframework:
+                       ios-arm64, ios-arm64-simulator, macos-arm64 + Info.plist.
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS-18/macOS-15 SDKs + simulators all present
+                       → NOT capability-BLOCKED. (Surface itself uses no Charts/MapKit — it is presentational.)
+
+WEB SOURCE (the specification)
+  web/src/features/dashboard/widgets/shared/WidgetRankedList.tsx — a PURE presentational primitive
+  (prompt: "Data sources: (none — pure presentational component)"). Imports @/components/ui (Badge),
+  @/components/feedback (EmptyState).
+    props : items, maxItems?, compact=false, showBars=true, emptyMessage='No data available', emptyIcon?
+    derive: limit = maxItems ?? (compact ? 3 : 5) ; hideBars = compact || !showBars
+            visible = [...items].sort((a,b)=>b.value-a.value).slice(0,limit)
+            maxValue = visible.reduce(max, value)   ;  barPct = maxValue>0 ? value/maxValue*100 : 0
+    render: visible.length===0 → <EmptyState icon message py-8/>           (branch A — empty)
+            else <ul gap-1> rows: rank(idx+1, w-5 right muted) · label(trunc primary) · Badge? · value(semibold tabular)
+                 with absolute bg bar width=barPct% opacity-15 color=barColor ?? bg-blue-400, min-h-[44px]  (branch B)
+    badgeVariantMap: success→success, warning→warning, ERROR→danger, neutral→neutral
+  NOTE: a presentational primitive owns NO data, so loading/error/stale/offline are the HOST widget's concern
+  (identical to the shipped P4 ToolCard precedent). The two real source branches — populated list + empty
+  state — are reproduced; nothing is narrowed and nothing extra is invented.
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/widget-primitives/)
+  WidgetRankedList.Model.swift      — TSRankedBadgeTone(+colorRole, web badgeVariantMap), TSRankedColorRole,
+                                      TSRankedBadge, TSRankedTint, TSRankedItem, TSRankedRow(+accessibilitySummary),
+                                      WidgetRankedListLayout (pure adapter: sort→limit→bar-scale). Foundation only.
+  WidgetRankedList.Telemetry.swift  — WidgetRankedListSurface (slug "WidgetRankedList" + reportOpen),
+                                      WidgetRankedListTelemetry (Sendable seam) + OSLogWidgetRankedListTelemetry
+                                      (redaction-safe os_log "view.opened"). P1/S11.
+  WidgetRankedList.swift            — WidgetRankedList SwiftUI view + Row + Badge chip + token mappings + empty state
+                                      (TSEmptyState). Emits view.opened from .task.
+  WidgetRankedList.Previews.swift   — #if DEBUG previews: full(bars+badges) · compact(top-3, bar-less) · bars-off · empty.
+  WidgetRankedList.Tests.swift      — 24 XCTest cases (co-located, the dominant P4 convention).
+  Necessary shared wiring (the same minimal pattern every P4 surface uses; enumerated for rule 9):
+    project.yml                      — + "TeslaSync/widget-primitives" to TeslaSync and TeslaSync-macOS sources
+    .swiftlint.yml                   — + "TeslaSync/widget-primitives" to included
+    apps/macos-pending-verifications.md — + one deferred full-app row (resolution protocol)
+  i18n: NO Localizable.xcstrings edit — the empty default reuses the EXISTING P1/S10 key
+        "translation.common.noData" (catalog value "No data available", an EXACT match for the web default).
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported — per S9 cutover rule)
+  EmptyState               → TSEmptyState (Sources/Components/Feedback/States.swift) over ContentUnavailableView
+  Badge variant            → TSRankedBadgeTone.colorRole → Color.TS.status{Success,Warning,Danger}/textMuted
+                             (error→danger reproduces badgeVariantMap, asserted in tests)
+  barColor ?? bg-blue-400  → TSRankedTint (semantic) → Color.TS.{accent,statusSuccess,statusWarning,statusDanger,
+                             statusInfo,textMuted}; .accent default = web blue-400 fallback (Tailwind class NOT ported)
+  rank/label/value         → Text(verbatim:) + Font.TS.{caption,body} + Color.TS tokens (data text idiom)
+  bg bar opacity-15        → GeometryReader rect width = proxy.width * barFraction, tint.opacity(0.15), TSRadius.md
+  min-h-[44px]             → .frame(minHeight: 44)  (HIG hit target)
+  i18n   : empty message is a LocalizedStringKey (default translation.common.noData); zero English literals in code
+  a11y   : each row is ONE VoiceOver element (.accessibilityElement(.ignore) + .accessibilityLabel(accessibilitySummary)
+           "1. Model S, +12%, 320 mi"); the proportional bar is .accessibilityHidden(true); no animations → reduce-motion safe
+  telemetry: view.opened surface="WidgetRankedList" via WidgetRankedListSurface.reportOpen (P1/S11), default OSLog sink
+
+GATES
+  [GREEN]  swiftformat --lint  (TeslaSync/widget-primitives)          : 0/5 files require formatting        (FORMAT_EXIT=0)
+           swiftformat --lint  apps/apple  (whole, FYI)               : 1 PRE-EXISTING issue (blankLinesBetweenScopes)
+                                                                         in TeslaSync/feature-views/ActionBuilder.Previews.swift
+                                                                         — NOT a widget-primitives file (grep widget-primitives=0)
+  [GREEN]  swiftlint --strict  (widget-primitives scope)             : 0 violations in 5 files              (LINT_EXIT=0)
+           swiftlint --strict  (whole app, FYI)                      : 1 PRE-EXISTING violation (function_body_length)
+                                                                         in TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+                                                                         — NOT a widget-primitives file (grep widget-primitives=0)
+  [GREEN]  check-placeholders.ps1 -Path …/widget-primitives/WidgetRankedList : PLACEHOLDER_COUNT=0           (PLACEHOLDER_EXIT=0)
+           check-placeholders.ps1 -Path …/widget-primitives (real dir, honest): PLACEHOLDER_COUNT=0, ALLOWED=0 (EXIT=0)
+  [GREEN]  ISOLATED SwiftPM build + tests — swift-tools 6.0, .swiftLanguageMode(.v6) (= the app's Swift 6
+           strict-concurrency-complete), compiling the EXACT shipped WidgetRankedList.* sources against the
+           REAL repo design-system + components (Tokens.swift + Sources/Components/** + Sources/Design/**;
+           the one KMP-coupled file Components/DataDisplay/UnitFormatters.swift is unused by this surface and excluded):
+               Build complete!  ·  Executed 24 tests, with 0 failures                                       (SWIFT_TEST_EXIT=0)
+           Coverage: adapter sort/limit/maxItems/stable-tie/bar-fraction/all-zero/hidesBars (14) · tone→role
+           parity incl. error→danger (3) · a11y summary ±badge (2) · view.opened telemetry + slug (2) ·
+           i18n default key = translation.common.noData (1) · per-branch view + row/badge construction (2).
+  [GREEN]  swiftc -typecheck  iOS  18.0  (iphonesimulator26.5 SDK, -swift-version 6 -D DEBUG, full closure incl previews)
+                                                                                                            (IOS_TYPECHECK_EXIT=0)
+  [GREEN]  swiftc -typecheck  macOS 15.0 (macosx26.5 SDK,         -swift-version 6 -D DEBUG)                 (MAC_TYPECHECK_EXIT=0)
+  [GREEN]  xcodegen generate → TeslaSync.xcodeproj enumerates all 5 widget-primitives files
+           (WidgetRankedList{,.Model,.Telemetry,.Previews,.Tests}.swift) in the iOS + macOS app targets.
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO WidgetRankedList errors; every blocker pre-exists this change):
+    iOS  : app target fails at module-graph resolution — "Unable to resolve module dependency: 'XCTest'".
+           Root cause = 261 PRE-EXISTING co-located *.Tests.swift across TeslaSync/{dashboard-widgets,feature-views}
+           that `import XCTest` into the (non-test) app target. This surface's WidgetRankedList.Tests.swift
+           follows that SAME established P4 co-location convention; the module error is triggered by the 261
+           pre-existing files and the build fails IDENTICALLY with or without this surface's test file.
+           A second latent PRE-EXISTING collision also blocks the app target: `public struct DashboardWidgetSize`
+           is DEFINED 15× across Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/* ("invalid redeclaration").
+           widget-primitives defines/uses NO DashboardWidgetSize.
+    macOS: additionally requires a development SIGNING certificate ("TeslaSync-macOS"/"TeslaSyncWidgets-macOS" have
+           entitlements that require signing with a development certificate) — not provisioned on this runner.
+    Evidence: grep of BOTH build logs for 'widget-primitives|WidgetRankedList .* error:' = 0 hits.
+    These are exactly the artifacts apps/macos-pending-verifications.md defers to the ADR-012 macos-latest CI
+    runner; they are owned by the P4/P99 Apple acceptance gate (signing/archive) + a dashboard-widget
+    de-duplication pass — NOT by a single widget-primitive prompt (task rule: do not fix pre-existing unrelated
+    breakage; Out of Scope: other surfaces / atomic shared components). A pending-verification row is recorded.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                           explicitly DEFERRED with pasted exits + root-cause evidence — never reported as passing.
+  2  No scope narrowing  : both real source branches reproduced (ordered bar-scaled rows + empty state); badge map,
+                           bar tint, rank/label/value, 44pt hit target, py-8 empty padding all mapped.
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits captured; the macOS failure (signing) and
+                           the iOS failure (XCTest module + DashboardWidgetSize) were observed, not assumed.
+  4  No stubs as final   : complete production view + 24 real passing tests; placeholder scanner = 0; no TODO/Placeholder.
+  5  No parity shortcut  : sort/limit/maxValue/bar-fraction/hideBars, error→danger, a11y, i18n, telemetry all verified.
+  6  No delegation       : implemented directly; no sub-agents used.
+  7  No predecessor bypass: P1/S9 tokens (Color.TS/Font.TS/TSSpacing/TSRadius), P1/S10 i18n (translation.common.noData),
+                           P1/S11 diagnostics (view.opened), P4 core component (TSEmptyState) all consumed.
+  8  No commit on red    : the COMMITTED surface is GREEN on every surface-scoped host gate AND on a real isolated
+                           Swift 6 build+test and dual-SDK (iOS-18 + macOS-15) typecheck. The deferred full-app gate is
+                           RED only on PRE-EXISTING, unrelated breakage (261 co-located XCTest + 15× DashboardWidgetSize +
+                           macOS signing) that this commit does not introduce or fix; the build fails identically without it.
+  9  No silent drift     : changes confined to widget-primitives/WidgetRankedList.{swift,Model,Telemetry,Previews,Tests},
+                           project.yml (+1 path ×2 targets), .swiftlint.yml (+1 path), this log, and one
+                           macos-pending-verifications row — all enumerated above. No Localizable.xcstrings edit.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic WidgetRankedList primitive shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles for iOS-18 AND macOS-15 and its 24 tests pass under the app's own Swift 6
+  strict-concurrency rules, against the REAL design-system, with swiftlint/swiftformat/placeholder all green and
+  xcodegen enumerating every file. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not
+  failed by this code): it is blocked by pre-existing co-located-XCTest + duplicate-type collisions across unrelated
+  dashboard-widget/feature-view files and by macOS development-signing — both owned by the P4/P99 acceptance gate on
+  a signed macos-latest CI runner per apps/macos-pending-verifications.md. This matches the repo's sanctioned
+  "code-complete + DEFERRED Xcode gate" disposition used by every P4 Apple surface to date.
+
+EXIT=0
+STATUS=DONE

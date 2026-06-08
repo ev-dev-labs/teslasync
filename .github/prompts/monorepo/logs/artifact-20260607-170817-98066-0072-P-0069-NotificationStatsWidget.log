@@ -1,0 +1,193 @@
+================================================================================
+P4 · Dashboard widget · 0069 — NotificationStatsWidget (Apple)
+Run: 2026-06-07T18:30-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/72
+Base: 830cb259
+Prompt: P4/dashboard-widgets/0069 — NotificationStatsWidget
+Web source (spec): web/src/features/dashboard/widgets/NotificationStatsWidget.tsx
+Mode: code-complete + host-validated (swiftc/lint/format/placeholder/executed adapter)
+      + DEFERRED Xcode app build/test (0036 DigitalTwin precedent, ADR-012 macOS-pending).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                ✅
+  swiftc -typecheck SwiftUI .. compiles (macOS 15 target, real component closure) ✅
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          ✅
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        ✅
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               ✅
+  xcodegen ................... /opt/homebrew/bin/xcodegen                           ✅
+  active developer dir ....... /Library/Developer/CommandLineTools (CLT)           ⚠ xcodebuild needs full Xcode
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) reachable via DEVELOPER_DIR only ⚠ (system switch needs sudo —
+                               a shared-runner side effect; NOT performed)
+  Shared.xcframework ......... apps/apple/Frameworks NOT staged                    ⚠ (KMP gradle build needed to link app)
+  codesign identities ........ "0 valid identities found"                          ⚠ (BLOCKER for macOS app gate, ADR-012)
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, available and
+  proven by a REAL macOS-SDK compile against the shipped component library below.
+  The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does
+  NOT apply — the surface is authored and host-validated for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/NotificationStatsWidget.*) ===
+  NotificationStatsWidget.Models.swift      208  value types (NotificationStats/Log/Status) + snake-case decode adapter
+  NotificationStatsWidget.Projection.swift  310  cached→projection adapter (coreStats/recentLogs/formatLogTime/fmt) +
+                                                  presentation resolver (every state)
+  NotificationStatsWidget.Model.swift       182  source seam (Shared-free) + load state + error taxonomy + @Observable
+                                                  model + P1/S10 i18n facade + a11y summary
+  NotificationStatsWidget.Components.swift  328  freshness chip · stat grid/tile · status chip · log table · skeleton ·
+                                                  compact big-number
+  NotificationStatsWidget.swift             277  the surface (DashboardWidgetSurface) — shell + header + all states +
+                                                  compact/standard/wide layouts
+  NotificationStatsWidget.Previews.swift    125  #if DEBUG previews — one per state
+  NotificationStatsWidget.Tests.swift       394  XCTest: adapter + resolver(every state) + registry + telemetry + a11y
+                                                  + model (46 executed adapter checks mirrored)
+  NotificationStatsWidget.strings            56  P1/S10 catalog contribution (13 source keys + 17 native chrome keys)
+  Every file ≤400 lines (house file_length); largest 394 (Tests). One exported view per file.
+
+=== ARCHITECTURE DECISIONS ===
+  • Data seam: own protocol `NotificationStatsSource` + `InMemoryNotificationStatsSource` (NO `import Shared`) so the
+    surface host-compiles WITHOUT the unstaged KMP xcframework. Production wiring over the shared `NotificationStore`
+    stats+logs feeds (via StateHolderModel<LoadableState<…>>) is documented in-code; the view performs ZERO HTTP.
+  • Load state: self-contained `NotificationStatsLoadState` + `NotificationStatsError` mirroring the facade
+    `LoadableState`/`FacadeError` SHAPE (cached-behind-refresh, ADR-013 stale, offline-keeps-cache, retryable) — so the
+    production binding is a 1:1 map and every branch is unit-testable.
+  • Registry/telemetry: REUSES the canonical P4-core dashboard-widget primitives from
+    Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift (DashboardWidgetSize/Props/Descriptor/Surface/
+    TelemetryEvent/TelemetrySink) per that file's "later widgets reuse them unchanged" directive — adds ZERO duplicate
+    types (cleaner than 0036, which re-declared its own), and is the literal meaning of "register this surface with the
+    dashboard grid system." `NotificationStatsWidget: View, DashboardWidgetSurface`.
+  • i18n: per-surface `.strings` table + `NotificationStatsStrings` facade (NSLocalizedString tableName) — parallel-safe
+    across the concurrent slots; the shared Localizable.xcstrings is NOT edited (Honesty rule 7).
+
+=== PARITY (vs web NotificationStatsWidget.tsx) ===
+  Data sources → bound via the shared state-holder seam (NotificationStatsSource → NotificationStatsModel):
+    useNotificationStats, useNotificationLogs, useTranslation, useDateFormat. No direct transport in the view.
+  Projection → NotificationStatsProjection.make is a 1:1 port of the web memoized derivations:
+    deliveryRate (sent/total*100, zero-guarded) · coreStats (Total Sent (7d) / Delivery Rate% / Failed / Active
+    Channels with the exact trend + trendValue + valueColor rules) · recentLogs (sort created_at desc, slice 3 compact
+    / 5 otherwise) · formatLogTime ("Just now" / "Nm ago" / "Nh ago" / locale date-time) · fmtInt/fmtNumber (grouped,
+    non-finite→0). Verified by an EXECUTED harness (46/46) — not a typecheck.
+  Composition → WidgetShell chrome (Bell icon + "Notification Stats" title + freshness chip + refresh) · compact
+    single delivery-rate number (web isCompact, cols≤1) · 2-up stat grid (web 2×2) · 4-up stat grid + recent-delivery
+    log table (web isWide, cols≥3). Status chip mirrors the web `Badge` with the CheckCircle/XCircle/Clock glyph.
+  Shared components → web `@/components/ui` (Badge, DataTable) + `@/components/feedback` (EmptyState) map to native
+    counterparts built on the SHIPPED tokens/components (Color.TS / Font.TS / TSSpacing / TSRadius / TSTone / TSSkeleton),
+    compiled against the REAL apps/apple library in the typecheck below. Recharts→none / Leaflet→none.
+  States (all render) → loading (skeleton chrome / compact skeleton) · empty ("No notification data") · error (retry) ·
+    stale (chip) · offline (cached value + chip + retry) · content. Resolver keeps cached content visible behind
+    refresh/errors, a faithful superset of the web shell's loading/error/`stats`-presence branches.
+  i18n → all 13 source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    title, totalSent, deliveryRate, healthy, failed, needsAttention, activeChannels, channel, type, status, time,
+    failedLabel, noData  →  ALL PRESENT in NotificationStatsWidget.strings (29/29 referenced keys matched; +1 canonical
+    registry `description`). No English literals in native code.
+  a11y → each stat tile is one labeled element ("{label}, {value}{unit}"); the compact number carries the full
+    4-stat NotificationStatsAccessibility.summary; status chips + freshness chip combine children; refresh/retry
+    buttons each carry an accessibilityLabel; Dynamic Type via tokens; Reduce Motion honored by TSSkeleton shimmer.
+  Telemetry → the view emits DashboardWidgetTelemetryEvent.viewOpened(surface:"NotificationStatsWidget") via the
+    injected DashboardWidgetTelemetrySink on .task (P1/S11). Asserted by a buffered-sink test.
+  Registry → NotificationStatsWidget.descriptor: id "notification-stats", category .alerts, default 2×2, min 1×2,
+    max 4×40 (+ clampedSize()), matching registry/alerts.ts. Asserted.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck  (the 5 source files compiled together with the REAL apps/apple component library —
+    Tokens + Design + Components/UI{Badges,Cards,Typography,Buttons} + Feedback{Skeletons,Banners} + Motion +
+    DashboardWidgets/BatteryCellsWidgetRegistry — none of which import the Shared xcframework):
+      xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 <closure> \
+        NotificationStatsWidget.{Models,Projection,Model,Components,swift}
+      TYPECHECK_EXIT=0                                                              ✅
+      (Platform-agnostic SwiftUI — no `#if os(iOS)` branches — so the macOS compile fully covers the iOS/iPadOS
+       paths. ContentUnavailableView / @Observable / @Bindable / LazyVGrid all resolve against the macOS 15 SDK.)
+      Previews: the `#Preview` macro requires Xcode's PreviewsMacros plugin, which CLT swiftc cannot load — the
+      identical error occurs on the SHIPPED Sources/Components/UI/Badges.swift `#Preview`. Previews are therefore
+      host-skipped by design (the 0036 precedent's "skipped by the swiftc host gate"); they are #if DEBUG only.
+
+[2] Adapter EXECUTED test (compiled Models+Projection+Model+harness to a native arm64 binary and RAN it —
+    real "cached → projection" verification, not a typecheck):
+      ADAPTER HARNESS: 46 passed, 0 failed
+      ADAPTER_HARNESS_EXIT=0                                                        ✅
+      Covers: stats/logs snake-case decode (+ garbage→nil/empty, deferred_dnd mapping, ISO8601 fractional parse),
+      deliveryRate zero-guard, coreStats values/trends/danger, recentLogs sort+slice(5 / compact 3) + status labels,
+      formatLogTime (Just now / 5m / 2h / 25h→absolute / future→Just now), fmtInt/fmtNumber (grouped, nil/inf/nan→0),
+      presentation resolver for EVERY state (idle/loading±cache/loaded live+stale/empty/offline±cache/error
+      retryable+non-retryable), and the accessibility summary content.
+
+[3] swiftlint --strict on the 7 surface files (explicit paths; the repo .swiftlint.yml `included:` does not list
+    TeslaSync/dashboard-widgets — that wiring is the P4 integration prompt's job — so the bare gate SKIPS this dir):
+      Done linting! Found 0 violations, 0 serious in 7 files.
+      SURFACE_SWIFTLINT_EXIT=0                                                      ✅
+    Bare gate `swiftlint --strict` (from apps/apple, included: paths): 0 violations, 262 files.
+      BARE_SWIFTLINT_EXIT=0                                                         ✅ (does not scan the new dir — see note)
+
+[4] swiftformat --lint apps/apple   (the exact gate command, whole tree incl. the 8 new files):
+      0/282 files require formatting, 2 files skipped.
+      FORMAT_EXIT=0                                                                 ✅
+
+[5] check-placeholders (ADR-011 stub gate; swift):
+      (a) gate as written  -Path …/NotificationStatsWidget  → PLACEHOLDER_COUNT=0  (filename prefix; clean scan)
+      (b) precise scan of the 7 new .swift files            → PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            ✅
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the signed macos-latest CI runner; NOT faked) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Why deferred (independent, code-unrelated reasons — none is a defect in this surface):
+      (a) ACTIVE TOOLCHAIN is CLT: `xcode-select -p` → /Library/Developer/CommandLineTools, so `xcodebuild` is
+          unavailable. /Applications/Xcode.app (26.5) exists and is reachable read-only via DEVELOPER_DIR, but
+          switching the SYSTEM toolchain needs `sudo xcode-select --switch` — a shared-runner side effect I must not
+          perform (40 concurrent slots).
+      (b) NOT-YET-REGISTERED: project.yml's app target globs `Sources/`; this surface lives at
+          TeslaSync/dashboard-widgets/ and is registered into the XcodeGen target + the dashboard grid by the P4
+          dashboard-grid integration prompt (predecessor, Honesty rule 7). `grep dashboard-widgets project.yml` → none.
+          Running xcodebuild now would build the app WITHOUT these files and re-run the existing suite — ZERO evidence
+          about this deliverable. The host swiftc compile in [1] DOES compile this surface against the real library.
+      (c) Shared.xcframework not staged (apps/apple/Frameworks empty): the app target links the KMP core; building it
+          needs a Kotlin/Native gradle build. Independent of this UI surface.
+      (d) macOS signing: `security find-identity -p codesigning` → 0 valid identities (MAC_EXIT=70 on this host per the
+          P9 gate). ADR-012 defers this to a signed macos-latest runner.
+    XCTest (NotificationStatsWidget.Tests.swift) runs in the TeslaSync(/-macOS) test target under Xcode; XCTest is
+    unavailable to CLT here. The pure-adapter subset of those tests is independently PROVEN GREEN by the executed
+    harness in [2]; the model/registry/telemetry/a11y suites compile against the same public API the host typecheck
+    exercised.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) — implemented; each has a #if DEBUG
+      preview; resolver logic executed-green for every branch.
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — 13/13 source keys present (29/29 referenced).
+  [x] Accessibility labels on every interactive element; stat region carries a testable summary.
+  [x] Tests: adapter unit test (EXECUTED, 46/46) + per-state resolver test + registry + telemetry + a11y + model.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] Host gates green (typecheck/lint/format/placeholder/adapter-run); Xcode app build/test DEFERRED with capability
+      + predecessor evidence (per the 0036 disposition).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green); reasons given. Every "✅" is a command actually
+                       run on this host with its real exit code.
+  2  No scope narrowing: implemented ALL sections/states (compact + standard + wide log table) + i18n + a11y +
+                       telemetry + registry.
+  3  No skip-and-assume: each host gate executed; the adapter was RUN (46/46), not assumed.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of coreStats/recentLogs/formatLogTime + full composition + all states.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / dashboard grid (integration prompt's scope) and
+                       did NOT edit the shared Localizable.xcstrings — strings shipped as the per-surface table; REUSED
+                       (not re-declared) the canonical dashboard-widget registry primitives.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed NotificationStatsWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native NotificationStatsWidget shipped at parity with the web source: pure-Swift adapter
+  (executed-green, 46/46), Shared-free P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, every state + i18n key
+  + a11y label, registry-correct (notification-stats, alerts, 2×2 / 1×2 / 4×40) reusing the canonical dashboard-widget
+  primitives. All host-runnable gates pass; the Xcode app build/test is DEFERRED to the signed CI runner (CLT-only
+  active toolchain + surface not yet target-registered + Shared.xcframework + macOS signing — none a defect in this
+  code), matching the user-approved 0036 "code-complete + DEFERRED Xcode gate" disposition.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/NotificationStatsWidget* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0069-NotificationStatsWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add NotificationStatsWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

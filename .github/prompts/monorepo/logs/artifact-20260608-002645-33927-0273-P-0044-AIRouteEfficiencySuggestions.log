@@ -1,0 +1,110 @@
+=== P4 Shared surface 0044 AIRouteEfficiencySuggestions (Apple) ===
+Date: 2026-06-08
+Host: macOS (Darwin arm64), Xcode 26.5 (Build 17F42) via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+SDKs: iphonesimulator26.5 (deploy iOS 18.0), macosx26.5 (deploy macOS 15.0). Booted sim: iPhone 16.
+Toolchain: swiftlint + swiftformat (homebrew), pwsh 7 (placeholder gate). Swift 6 language mode, strict concurrency complete.
+
+WEB SOURCE (THE spec): web/src/components/ai/AIRouteEfficiencySuggestions.tsx
+  withAiFeature('route-efficiency-suggestions', Inner) → AI-off ⇒ surface withdrawn (returns null).
+  Inner: useAiStream({ url:/ai/routes/{vehicleId}/efficiency/suggest, body:{}, onEvent:()=>{} }) → AIFeatureCard.
+  Scaffolds composed: components/ai/AIFeatureCard.tsx (header + Helix badge + description + universal
+  "Ask Helix" CTA), components/ai/AiOutputPanel.tsx (idle→null · error→"Helix error:" · streaming&no-text→
+  AIThinkingIndicator · else→prose), components/ai/AIThinkingIndicator.tsx (shimmer lines + dots).
+  Data sources (bound via P1/S8 state holders, no HTTP in view): useTranslation, useAiStream.
+
+NATIVE OUTPUT: apps/apple/TeslaSync/shared-surfaces/AIRouteEfficiencySuggestions.* (8 files)
+  .swift          — surface View + orchestration (gated→EmptyView; onAppear/Disappear start/stop).
+  .Model.swift    — P1/S10 i18n facade · P1/S11 telemetry seam · AIRouteConnection · AIRouteSuggestionsInput ·
+                    AIRouteSuggestionsResolved · AIRouteSuggestionsSource seam + @Observable model · in-memory source.
+  .Adapter.swift  — pure (no SwiftUI): AIRouteStreamPhase, AIRouteOutput.resolve (AiOutputPanel branches verbatim),
+                    AIRouteActionButton (isDisabled/isThinking), AIRouteAccessibility summaries.
+  .Projection.swift — pure input→resolved (gate → context-error → loading → ready; canStart=!!vehicleId; output).
+  .Views.swift    — Helix badge, freshness chip, refresh, connectivity banner, loading skeleton, context-error
+                    retry, thinking indicator + in-button dots, output panel (empty/thinking/text/error), Ask button.
+  .strings        — P1/S10 catalog (table "AIRouteEfficiencySuggestions"): 4 parity + 4 scaffold + 13 chrome keys.
+  .Previews.swift — 11 previews (idle/thinking/streaming-text/done/stream-error/no-vehicle/loading/context-error/
+                    stale/offline/gated).
+  .Tests.swift    — 42 XCTest cases (adapter + projection + model + accessibility).
+
+PARITY NOTES (reproduced from web, NOT "fixed"):
+  • AiOutputPanel branching → AIRouteOutput.resolve: idle→.empty (web null → P4 friendly empty hint, the prompt's
+    `empty` state, never a blank box) · failed→"Helix error: {msg ?? 'unknown'}" · streaming&partial==''→thinking ·
+    else→prose (streaming flag preserved). Pinned by AIRouteOutputResolveTests / AIRouteProjectionOutputTests.
+  • AIFeatureCard button → AIRouteActionButton: visible "Ask Helix" idle / "Helix is thinking…" streaming;
+    aria-label "Ask Helix · Generate suggestions"; disabled = !canStart || streaming. Pinned by AIRouteActionButtonTests.
+  • withAiFeature off-gate → .gated phase (surface withdrawn); view.opened deferred past the gate (web data-ai-feature
+    marker parity). canStart = !!vehicleId → "select a vehicle" hint + disabled action when absent.
+  • P4 leaf freshness envelope (ADR-013): connection live/stale/offline → header chip + banner + one-shot stale
+    auto-refresh. Context-error phase (retry) is the sanctioned P4 leaf addition over the web.
+  i18n: the 4 source t() keys (routeEfficiency.aiSuggestions.title/description/generateButton/badge) + the scaffold
+    keys (helix.askHelix/helix.thinking/helix.errorLabel/ai.common.errorUnknown) + native chrome all resolve via the
+    P1/S10 facade; catalog carries the verbatim web English. No English literals in code.
+  a11y: card container label (title + badge), action-button accessible name + hint, per-output-state spoken label,
+    freshness chip label, loading label; Dynamic Type via Font.TS; reduce-motion-safe (TSSkeleton + dots).
+  Telemetry: emits view.opened with surface slug "AIRouteEfficiencySuggestions" once past the gate (P1/S11), asserted.
+
+=== HOST-RUNNABLE GATES (all green) ===
+  swiftformat --lint <surface> ................. 0/7 files require formatting              FORMAT_EXIT=0
+  swiftlint lint --strict <surface> ........... Found 0 violations, 0 serious in 7 files  LINT_EXIT=0
+      (scoped to the 7 shipped .swift via the repo rule set: opt_in_rules + line_length 120/160 +
+       identifier_name + type_name. The repo .swiftlint.yml `included:` does not yet list shared-surfaces,
+       so the surface was linted by explicit path; the one tree-wide violation found by the full config is
+       PRE-EXISTING + UNRELATED — dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length.)
+  check-placeholders.ps1 -Language swift ...... PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0   PLACEHOLDER_EXIT=0
+  swiftc -typecheck iPhoneSimulator (arm64-apple-ios18.0-simulator, -swift-version 6,
+      -strict-concurrency=complete, -D DEBUG; real iphonesimulator26.5 SDK) ............... IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (arm64-apple-macos15.0, -swift-version 6, -strict-concurrency=complete,
+      -D DEBUG; real macosx26.5 SDK) ........................................................ MAC_TYPECHECK_EXIT=0
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6 strict concurrency) 42/42 passed, TEST_EXIT=0
+      → AIRouteOutputResolveTests (6) · AIRouteActionButtonTests (5) · AIRouteProjectionPhaseTests (4) ·
+        AIRouteProjectionCanStartTests (3) · AIRouteProjectionOutputTests (5) ·
+        AIRouteSuggestionsModelTests (13) · AIRouteAccessibilityTests (6)
+      Harness links the REAL Tokens.swift (apps/design/generated/apple) + Motion.swift + Buttons.swift primitives;
+      the single out-of-scope shared atom (TSSkeleton) is provided with its exact public signature + real body
+      (the atom library is the P4 component-library bundle's scope).
+  xcodegen generate (project spec validates + writes TeslaSync.xcodeproj) ................. XCODEGEN_EXIT=0
+
+=== INTEGRATION PREREQUISITE (P4-core source-root wiring) ===
+  `apps/apple/TeslaSync/shared-surfaces` is a NEW app-target source root introduced by this first shared-surface
+  prompt. It is not yet a `sources:` path in apps/apple/project.yml, so xcodegen does not yet enumerate the surface
+  into the TeslaSync / TeslaSync-macOS targets. Wiring it is a P4-core integration step (one line per app target),
+  exactly as `TeslaSync/feature-views` is already wired — it is intentionally NOT done here because (a) project.yml
+  is outside this prompt's allowed-files scope and (b) a single shared file edited by every parallel shared-surface
+  prompt would collide. Exact addition required at integration (mirrors the feature-views entry), for both the
+  TeslaSync and TeslaSync-macOS targets and the .swiftlint.yml `included:` list:
+      - path: TeslaSync/shared-surfaces
+  The surface is proven via the isolated-harness equivalents above (real-SDK typecheck on both platforms + 42/42
+  XCTest under Swift 6 strict concurrency), which is the sanctioned primary proof per
+  apps/macos-pending-verifications.md (ToolCard / AlertMessageEditor / FSMTimelineChart precedent).
+
+=== DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test ===
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. Blocked by PRE-EXISTING, UNRELATED parallel-merge state in the shared app target —
+    ZERO of which originates in this surface (all verified present in THIS tree on 2026-06-08):
+      • Shared.xcframework not staged (apps/apple/Frameworks has only .gitkeep); the scheme pre-action builds it via
+        the Kotlin/Native Gradle toolchain (the P1/S3 artifact already tracked macOS-pending).
+      • `struct DashboardWidgetSize` redefined across 15 files (Sources/DashboardWidgets/* + TeslaSync/dashboard-
+        widgets/*) — "invalid redeclaration" across the app target.
+      • 261 co-located feature-view / dashboard-widget *.Tests.swift `import XCTest` into the app target (this
+        surface's 1 test file follows that SAME established sibling convention; it introduces no new failure class).
+      • No macOS development-signing identity (0 codesigning identities).
+      • Plus the shared-surfaces source-root wiring above (integration step).
+    This surface's OWN code is proven to compile against the real iOS-18 + macOS-15 SDKs (typechecks above) and its
+    logic runs green (42/42 XCTest). The full-app build/test is recorded for the P99 acceptance gate on a
+    macos-latest runner with signing identities + the staged Shared.xcframework + shared-surfaces wiring.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all web states reproduced (gated/loading/error/ready → idle/thinking/text/
+      stream-error, plus stale/offline freshness).
+  [x] Hooks bind to the shared P1/S8 source seam (AIRouteSuggestionsSource); no direct HTTP from the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (4/4 source keys + scaffold + chrome).
+  [x] Accessibility labels present on the card, the action button, the output region (per state), and the chip.
+  [x] Tests: adapter + projection + per-state model + a11y label tests (42 total, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate: COUNT=0, ALLOWED=0).
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing unrelated blockers + shared-surfaces
+      integration wiring); host-runnable equivalents (real-SDK typecheck both platforms + 42/42 XCTest +
+      swiftformat/swiftlint/placeholder) all green.
+
+EXIT=0
+STATUS=DONE

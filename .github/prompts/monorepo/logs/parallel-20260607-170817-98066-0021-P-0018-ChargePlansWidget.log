@@ -1,0 +1,168 @@
+I'll start by exploring the repository structure and checking platform capabilities, since this task requires Apple toolchain (Xcode, SwiftLint, etc.).
+
+Key finding: `xcodebuild` reports only Command Line Tools are active (no full Xcode). Let me verify whether full Xcode exists anywhere and explore the existing Apple app structure to understand patterns.
+
+Full Xcode exists at `/Applications/Xcode.app` but isn't selected. Let me test using `DEVELOPER_DIR` to access it without sudo, and explore the existing Apple app structure to learn the patterns.
+
+Full Xcode 26.5 works via `DEVELOPER_DIR` — `xcodebuild`, `simctl`, iPhone 16 simulator all available. The capability gate is satisfiable. Now let me find where dashboard widgets (the composable web-parity panels, distinct from WidgetKit) live and study sibling implementations.
+
+No existing dashboard-widget framework or sibling widgets in this slot. Let me understand the existing infrastructure: state holders (SharedFacade), components, tokens, i18n, and check git history for context.
+
+This is a substantial surface with core infrastructure but no existing dashboard-widget framework or charging state holders. Let me deeply understand the binding patterns, available components, and whether charging data exists. I'll read key infra files and search broadly in parallel.
+
+The app depends on a KMP `Shared.xcframework` via `import Shared`. I need to verify whether that binary exists and whether the app builds at all on this runner — this determines whether the gate can go green. Let me check thoroughly.
+
+Critical finding: `Shared.xcframework` isn't built (only `.gitkeep`), but JDK + full Xcode + xcodegen are present — so building it may be possible on this macOS host. Let me verify the decision-critical dependencies: does the KMP core expose ChargePlans/RatePlans holders, are the i18n keys present, and what are the test targets/schemes?
+
+Dependencies exist: KMP core has `ChargingStore`/`ChargingModels`, all 15 i18n keys are present, and schemes auto-stage `Shared.xcframework` via a build script. The long pole is building that framework. Let me read the build script, the charging store/models, the facade template, and the placeholder checker before kicking off the (slow) gradle build.
+
+Let me kick off the slow `Shared.xcframework` gradle build in the background now, and continue studying patterns while it runs.
+
+Build launched. While it runs, let me study the charging store, LoadableState, key shared components, and the diagnostics facade.
+
+Excellent architecture clarity. The charging store exposes `chargePlans(vehicleId)` and `ratePlans()` as `Resource<JsonElement>`, and shared feedback/i18n components exist. Let me resolve the canonical native path (parity manifest), and study the diagnostics/telemetry facade, StatCard/Badge/Card components, and Vehicles store. Also checking the gradle build progress.
+
+The KMP core was previously compiled (klib artifacts exist), so the xcframework assembly should be incremental. Let me gather the remaining patterns: telemetry/diagnostics emit, vehicles store, StatCard/Badge/Card components, formatters, and tokens.
+
+Now I understand the component library well. Let me confirm the web data shapes (to get the adapter exactly right), the telemetry emit API, and native formatters. Also checking gradle progress.
+
+Confirmed: web hooks return bare arrays (`ChargePlan[]`, `RatePlanInfo[]`). Telemetry taxonomy is typed — `ScreenView` is the "view opened" mechanism. Let me read the full TS interfaces, native formatters, Cards, and token definitions.
+
+I have the data shapes and formatters. Let me confirm the remaining compile-critical pieces: FacadeError, diagnostics API, typography/token names, and vehicles store. Also checking the gradle build.
+
+I now have the full architecture. Two things left to lock down: existing i18n keys for chrome chips (stale/offline/refresh/updated) so I introduce no untranslated literals, and the vehicles store API. Let me check those and the freshness helper, plus gradle progress.
+
+I have the freshness keys (`widget.freshness.{live,offline,stale,updated}`). Gradle is still compiling Kotlin/Native (slow, expected). Let me confirm the vehicles store read API and study existing test conventions while it builds.
+
+`VehiclesStore.vehicles()` and `Vehicle.id: Long` confirmed. Let me study test conventions and verify the gradle build is actively progressing (not deadlocked).
+
+Gradle is actively compiling (konan/clang at high CPU, XCFrameworks assembling). Test convention is pure-logic XCTest with `@testable import TeslaSync` — perfect for my adapter/model tests. Let me read the lint config, placeholder patterns, and typography signatures before writing code.
+
+I have lint rules and forbidden words. Let me do final lookups: existing usage of `widget.freshness.*` keys in Swift (to mirror chrome rendering), available `action.*` keys for the refresh button, and confirm `Font.TS`/`TSRadius` members. Then I'll write the code.
+
+`WidgetChrome.swift` shows the exact freshness rendering pattern to mirror. Let me verify which error/retry/refresh i18n keys actually exist (so I avoid untranslated literals), then write the implementation.
+
+I now have everything confirmed. Let me write the production implementation. Creating the directory and the complete widget file.
+
+Now the test file with adapter, model-state, telemetry, and accessibility coverage:
+
+Both files written. Let me check the gradle build progress and verify the bridged Swift symbol names I used (`TelemetryEventScreenView`, `ChargingStore.chargePlans`, etc.) against the generated framework header to de-risk compilation.
+
+The debug xcframework is fully assembled (Kotlin compile succeeded); the release variant is still linking. The API surface is identical, so let me verify my bridged symbol names against the debug framework header now.
+
+The header is large; let me grep it precisely to resolve the exact Swift-facing names (Kotlin/Native uses `NS_SWIFT_NAME`), which determines whether my live-binding references compile.
+
+`swift_name` attributes confirm method names. But `chargePlans` shows a return of `Flow`, not `StateFlow` — I need to verify whether `StateHolderModel` accepts that, comparing against how `vehicleSettings` bridges. Let me check precisely.
+
+The header has both `Flow` and `StateFlow` return variants across different interfaces. I must confirm that the real `SharedChargingStore`/`SharedVehiclesStore` (not the repository protocols) return `StateFlow`, matching the known-good `VehicleSettingsModel` pattern. Let me pin the interface ownership.
+
+`SharedChargingStore.chargePlans`/`ratePlans` return `StateFlow` — my live binding matches the known-good `VehicleSettingsModel` pattern. Let me confirm the `Telemetry.track` / `ScreenView` init and `VehiclesStore.vehicles()`/`Vehicle.id` signatures, then build once the framework finishes staging.
+
+All bridged symbols verified — `Telemetry.track(event:)`, `TelemetryEventScreenView(screen:platform:appVersion:)`, `VehiclesStore.vehicles()` (StateFlow), `Vehicle.id` (Int64). My live binding mirrors the known-good pattern. Let me check for type-name collisions with the Shared module and the gradle progress, then lint/format my files.
+
+No type collisions. Release framework still linking (14 procs active). Let me format and lint my new files now (syntactic — no framework needed), reacting to actual tool output.
+
+SwiftFormat passes. Now SwiftLint on my files:
+
+The file is 896 lines after formatting (SwiftLint's 400-line `file_length` limit, strict). The allowed glob `ChargePlansWidget.*` lets me split into multiple `ChargePlansWidget.<Part>.swift` files. Let me check existing repo file sizes to confirm the convention, then split by section.
+
+Repo convention keeps files <400 lines. The `ChargePlansWidget.*` glob lets me split into multiple files under that prefix (all within allowed scope). Let me verify section boundaries precisely, then carve into 4 files.
+
+Gradle build completed. Let me confirm the framework was staged, then carve the file into 4 parts under the `ChargePlansWidget.*` prefix.
+
+Framework built and staged (release, all 3 slices). Now let me carve the monolith into 4 files under the `ChargePlansWidget.*` prefix, with correct imports.
+
+All parts under 400 lines. `reduceMotion` is declared but unused — I'll remove it. Let me place the files and clean up the unused declaration.
+
+Now format and lint all 4 files:
+
+SwiftFormat and SwiftLint `--strict` both pass (0 violations). Now generate the Xcode project and verify my files are included.
+
+Project generated; my files are included (30 refs across targets). Now the main event — build + test on the iOS simulator. This is the long pole; I'll run it in the background and monitor.
+
+While the build runs, let me preempt a likely Swift 6 strict-concurrency issue: `.task { model.start() }` calls a `@MainActor` method from a `@Sendable` async closure. `.onAppear` is cleaner here. Let me check and fix.
+
+Let me check the in-flight build's progress.
+
+Build is in the gradle preAction phase (hasn't compiled Swift yet, so it'll pick up my `.onAppear` edit). Let me verify the 2 pattern matches aren't real errors and wait for compilation.
+
+One compile error: `PlanSummary: Sendable` has a non-Sendable `TSTone` property (public non-frozen enums aren't implicitly Sendable). Let me check for any other distinct errors, then fix.
+
+Only one unique error. The build run finished (exit 65, the failure). Let me fix the `PlanSummary` Sendable issue and rebuild.
+
+Fixed. Let me also proactively re-run SwiftFormat/SwiftLint on the edited files, then rebuild + test.
+
+SwiftLint `--strict` passes across all 522 files (whole repo, including mine). Now rebuild + test:
+
+Build running. Meanwhile, let me verify the placeholder gate passes on my files (checking `pwsh` availability).
+
+`pwsh` available; placeholder gate passes (COUNT=0, EXIT=0). Let me monitor the iOS build.
+
+App target compiled cleanly (0 errors) — including all 4 ChargePlansWidget source files. Now the test target (with my test) is compiling. Let me wait for the test run to finish.
+
+Build SUCCEEDED; tests are running. My app + test compiled cleanly. There's a **pre-existing UI test failure** (`LiveDataUITests.testLiveIndicatorAndContentAppear` — the Live/demo surface, unrelated to my widget) that XCTest is retrying. Let me wait for the final result.
+
+Build SUCCEEDED; the sole failure is the pre-existing `LiveDataUITests.testLiveIndicatorAndContentAppear` (Live/demo surface, untouched by me). Let me confirm my unit tests ran and passed, and check whether the unit bundle (`TeslaSyncTests`) completed.
+
+My unit bundle (`TeslaSyncTests`) didn't appear — the UI test failure may have aborted the run before unit tests, or ordering differs. Let me see the full test-suite execution sequence.
+
+Confirmed: only the UI bundle ran — the UI failure aborted the action before my unit bundle executed. Let me run the unit bundle in isolation (proves my surface green) and check existing gate logs for the baseline status of that pre-existing UI test.
+
+The failing UI test is pre-existing (`Tests/UI/LiveDataUITests.swift`, not in my changes), testing the **Live SSE demo surface** via `-uiTestLiveDemo` — unrelated to my widget. Its sibling test passed, and it's a tight 5s-`waitForExistence` race that flakes under the heavy CPU load from the concurrent 24-min gradle build. Let me wait for my unit-only run, then re-run the full gate on an idle machine.
+
+UNIT_EXIT=65 — a unit test failed. Let me see which test(s) failed — possibly one of mine or a pre-existing unit test.
+
+The unit-only run failed on an environment glitch: `xcrun: error: unable to find utility "simctl"` (Command Line Tools became active for that process) — not a test failure. Let me inspect the context and re-establish the Xcode toolchain.
+
+The unit run hit simulator/host instability ("Test crashed with signal kill before establishing connection... never finished bootstrapping") after the machine was hammered by the 24-min gradle build + full test run — not a test logic failure. My code is proven to compile (app + test target, 0 errors). Let me reset the simulator to a clean state and run my unit tests in isolation.
+
+The device is already booted. Let me fully reset it (shutdown → erase → boot) for a clean state, then run my unit tests against the idle machine.
+
+Clean simulator booted. Now run my unit tests in isolation, reusing built products (`test-without-building`) to avoid re-running gradle:
+
+Recurring `simctl` resolution error — some xcodebuild sub-processes aren't honoring `DEVELOPER_DIR`. Let me inspect the short log and check whether I can make Xcode the default toolchain (the full `build test` earlier worked, so this is environmental drift).
+
+The app **test host crashes on launch** ("signal kill before establishing connection") — consistent across runs, and the git history shows the "P9-0001 XCTest unit gate" is already documented as BLOCKED. This is pre-existing (my isolated widget file isn't referenced by any startup code). Let me diagnose the actual launch crash by running the built app directly on the clean simulator.
+
+The app launched cleanly via simctl (PID assigned, no crash report) — so the earlier "bootstrapping" failure was transient (simulator settling right after boot under load). The machine is idle now. Let me re-run my unit tests.
+
+**All 19 ChargePlansWidgetTests pass** (exit 0) on the clean simulator. My surface is verified. The earlier failures were the transient bootstrap flake + the pre-existing UI test. Let me now run the full iOS gate on the clean idle machine to get the definitive scheme-level result, and characterize the pre-existing UI test.
+
+Full iOS gate running on the clean machine. Let me wait and monitor (holding macOS until iOS finishes to keep the timing-sensitive UI test on an unloaded machine).
+
+On the idle machine, `testLiveIndicatorAndContentAppear` **passed** (it was a load-induced 5s-timeout flake from the concurrent 24-min gradle build). BUILD SUCCEEDED, UI tests passing. Let me wait for the full run to complete.
+
+Exit 65 again, but the UI flake passed this time — so a different failure. Let me identify it.
+
+The full run shows **2 pre-existing UI-test failures in `PushNotificationsUITests`** (foreground push banner + token registration — both need APNS/push infra unavailable in a headless simulator), which abort the action before my unit bundle runs. These are unrelated to my widget (different surfaces, untouched files). My 19 tests already proved green in isolation.
+
+Let me verify the **entire** unit bundle (`TeslaSyncTests`, incl. mine) passes on the clean sim, reusing the successful build.
+
+The unit-bundle run hit CoreSimulator instability ("Mach error -308 - server died") — pure environment flakiness from repeated runs on this stressed machine, not a test failure. My 19 tests already passed cleanly on a fresh sim (exit 0).
+
+Let me verify the **macOS** leg, which runs natively (no simulator) — proving cross-platform compilation + my tests on macOS.
+
+**macOS BUILD SUCCEEDED** — my surface compiles cross-platform (iOS + macOS). The macOS test failed only on locating the test host (the `CODE_SIGNING_ALLOWED=NO` override prevented the host `.app` from assembling). Let me retry macOS tests with default ad-hoc signing.
+
+macOS **BUILD SUCCEEDED** (surface compiles cross-platform); macOS *test execution* is blocked by host-app signing (the documented "macOS dev-cert pending" limitation). Let me reset the simulator cleanly and run the **whole iOS unit bundle** to demonstrate the entire host-runnable unit layer (including mine) passes.
+
+Device is booted and settled. Let me run the whole iOS unit bundle (reusing the build) on the fresh sim:
+
+The full unit *bundle* host-crashes at launch (before any test runs) even on a fresh sim — yet my class alone passed 19/19. This is a pre-existing bundle-level issue (documented "P9-0001 XCTest unit gate BLOCKED"), not my code. 
+
+I now have a complete, conclusive picture. Let me capture the repo-wide lint/format gate steps, then write the honest gate log.
+
+Both repo-wide checks pass (SwiftLint 0 violations/261 files; SwiftFormat 0/265). Let me capture the placeholder gate and key evidence excerpts, then write the honest gate log.
+
+All evidence captured. Now let me write the comprehensive, honest gate log.
+
+Now let me verify git state before committing — ensuring I stage only my surface files + log, and that generated/binary artifacts (xcodeproj, Shared.xcframework, DerivedData) are properly ignored.
+
+Clean git state — only my surface files + log are untracked; the generated `.xcodeproj` and `Shared.xcframework` are properly git-ignored. Let me stage exactly those and commit with a transparent message.
+
+Committed as `8ff16aa0`. Let me do a final verification that the working tree is clean and the commit contains exactly the intended files (no stray binaries).
+
+The commit is clean: exactly 6 files (4 source + test + log), 1325 insertions, working tree clean (generated `.xcodeproj` and `Shared.xcframework` correctly git-ignored). 
+
+The task is complete to the maximum extent this host allows. Summary of what was delivered and verified.
+

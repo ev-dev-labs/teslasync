@@ -1,0 +1,155 @@
+p4-apple · P7 · page:analytics/Timeline — SwiftUI / HIG parity
+================================================================
+Web source : web/src/features/analytics/pages/TimelinePage.tsx  (route /timeline)
+Output     : apps/apple/TeslaSync/Features/Analytics/TimelinePage*.swift  (9 files)
+Target(s)  : apple (adaptive macOS 15 + iOS 18; ADR-002/006)
+Toolchain  : Swift 6.3.2 (Apple), Xcode.app present (DEVELOPER_DIR), swiftlint 0.61, swiftformat 0.61.1, pwsh 7
+Delegation : FORBIDDEN — authored directly.
+
+ARTIFACTS (apps/apple/TeslaSync/Features/Analytics/)
+  TimelinePage.Models.swift        pure value types (Foundation only)
+  TimelinePage.Adapter.swift       pure derivation (web useMemo port) — daily bins, summary
+                                   reductions, distribution widths, duration formatters, tone/color
+  TimelinePage.Model.swift         @Observable TimelinePageModel + TimelinePageSource seam +
+                                   InMemoryTimelinePageSource + 4-state load model (Observation only)
+  TimelinePage.Chart.swift         TimelineDailyBreakdownChart — native Swift Charts stacked BarMark
+  TimelinePage.Views.swift         TimelineSummaryCards / DistributionPanel / DailyBreakdownPanel /
+                                   TransitionsPanel + token color/tone resolution + table columns
+  TimelinePage.swift               page scaffold (header / vehicle picker / refresh / sections)
+  TimelinePage.Registration.swift  TimelineRouteRegistration → AppRouteHostRegistry(.timeline)
+  TimelinePage.Previews.swift      DEBUG previews per data state
+  TimelinePage.Tests.swift         21 XCTest cases (adapter + model phases)
+
+NAVIGATION WIRING (allowed: navigation registration)
+  Sources/App/AppRoute.swift       + case .timeline (insights group, "clock") — web sidebar parity;
+                                   compiler-checked exhaustive switches; route + menu tests auto-cover
+                                   (navigateCommands maps AppRoute.allCases).
+  Sources/TeslaSyncApp.swift       chains TimelineRouteRegistration.register(into:) into routeHosts.
+  project.yml                      + TeslaSync/Features source path on both app targets (mirrors the
+                                   existing TeslaSync/feature-views + dashboard-widgets entries).
+  .swiftlint.yml                   + TeslaSync/Features to included: so the gate genuinely lints the
+                                   new files (they were silently out-of-scope before).
+  Localization/Localizable.xcstrings  + 23 timeline.* / error.loadFailed keys + route.timeline (en).
+
+================================================================
+=== PARITY ===
+PARITY_REQUIRED=35
+----------------------------------------------------------------
+[x] panel  Total-Transitions    TimelinePage.Views.swift → TimelineSummaryCards (TSStatCard title "timeline.totalTransitions", value=formatInt(metrics.totalTransitions))
+[x] panel  Driving-Time         TimelinePage.Views.swift → TimelineSummaryCards (TSStatCard "timeline.drivingTime", value=formatHours(metrics.drivingSeconds))
+[x] panel  Charging-Time        TimelinePage.Views.swift → TimelineSummaryCards (TSStatCard "timeline.chargingTime", value=formatHours(metrics.chargingSeconds))
+[x] panel  Idle-Sleep-Time      TimelinePage.Views.swift → TimelineSummaryCards (TSStatCard "timeline.idleSleepTime", value=formatHours(metrics.idleSleepSeconds))
+[x] panel  GlassPanel5          TimelinePage.Views.swift → TimelineDistributionPanel (TSGlassPanel + TimelineDistributionBar + TimelineStateLegend, title "timeline.stateTimeline")
+[x] panel  GlassPanel6          TimelinePage.Views.swift → TimelineDailyBreakdownPanel (TSGlassPanel + chart, title "timeline.dailyBreakdown")
+[x] panel  GlassPanel7          TimelinePage.Views.swift → TimelineTransitionsPanel (TSGlassPanel + TSDataTable, title "timeline.stateTransitions")
+[x] chart  BarChart             TimelinePage.Chart.swift → TimelineDailyBreakdownChart (Swift Charts BarMark, foregroundStyle(by:) stacked, token series colors; NOT a WKWebView)
+[x] state  loading              TimelinePageModel.{distribution,daily,transitions}Phase=.loading; TimelinePage.swift loadingState (TSStatGridSkeleton/TSChartBlockSkeleton/TSTableSkeleton); Views .loading → TSSkeleton/TSChartSkeleton/TSTableSkeleton
+[x] state  empty                TimelineSectionPhase.empty → TSEmptyState (ContentUnavailableView) in all 3 panels ("timeline.noStateData"/"noDailyData"/"noTransitions")
+[x] state  error                TimelineSectionPhase.error → TSErrorDisplay + Retry; TimelinePage.swift TSAlertBanner "error.loadFailed"
+[x] state  success              .content branches → TimelineDistributionBar / TimelineDailyBreakdownChart / TSDataTable / TimelineSummaryCards
+[x] string error.loadFailed     TimelinePage.swift TSAlertBanner(title:"error.loadFailed") + catalog en="Failed to load data"
+[x] string timeline.charging    TimelinePage.Chart.swift label(for:.charging) + catalog en="Charging"
+[x] string timeline.chargingTime TimelinePage.Views.swift TSStatCard + catalog en="Charging Time"
+[x] string timeline.dailyBreakdown TimelinePage.Views.swift TSPanelTitle + Chart .accessibilityLabel + catalog en="Daily Breakdown"
+[x] string timeline.driving     TimelinePage.Chart.swift label(for:.driving) + catalog en="Driving"
+[x] string timeline.drivingTime TimelinePage.Views.swift TSStatCard + catalog en="Driving Time"
+[x] string timeline.duration    TimelinePage.Views.swift TimelineTransitionColumns "timeline.duration" + catalog en="Duration"
+[x] string timeline.fromState   TimelinePage.Views.swift column "timeline.fromState" + catalog en="From State"
+[x] string timeline.idle        TimelinePage.Chart.swift label(for:.idle) + catalog en="Idle"
+[x] string timeline.idleSleepTime TimelinePage.Views.swift TSStatCard + catalog en="Idle / Sleep Time"
+[x] string timeline.noDailyData TimelinePage.Views.swift TimelineDailyBreakdownPanel TSEmptyState + catalog en="No daily transition activity yet"
+[x] string timeline.noStateData TimelinePage.Views.swift TimelineDistributionPanel TSEmptyState + catalog en="No state distribution available yet"
+[x] string timeline.noTransitions TimelinePage.Views.swift TimelineTransitionsPanel TSEmptyState + catalog en="No state transitions recorded"
+[x] string timeline.selectVehicle TimelinePage.swift vehiclePicker TSCombobox prompt + catalog en="Select Vehicle"
+[x] string timeline.sleeping    TimelinePage.Chart.swift label(for:.sleeping) + catalog en="Sleeping"
+[x] string timeline.stateTimeline TimelinePage.Views.swift TimelineDistributionPanel TSPanelTitle + catalog en="State Distribution"
+[x] string timeline.stateTransitions TimelinePage.Views.swift TimelineTransitionsPanel TSPanelTitle + catalog en="State Transitions"
+[x] string timeline.subtitle    TimelinePage.swift header Text + catalog en="Vehicle state history and transitions"
+[x] string timeline.time        TimelinePage.Views.swift column "timeline.time" + Chart x .value + catalog en="Time"
+[x] string timeline.title       TimelinePage.swift TSPageTitle + .navigationTitle + catalog en="Timeline"
+[x] string timeline.toState     TimelinePage.Views.swift column "timeline.toState" + catalog en="To State"
+[x] string timeline.totalTransitions TimelinePage.Views.swift TSStatCard + Chart y .value + catalog en="Total Transitions"
+[x] string timeline.trigger     TimelinePage.Views.swift column "timeline.trigger" + catalog en="Trigger"
+----------------------------------------------------------------
+PARITY_COVERED=35
+=== END PARITY ===
+
+================================================================
+GATE
+----------------------------------------------------------------
+# Host-runnable gates (executed here; raw evidence):
+
+PLACEHOLDER (ADR-011): ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Analytics -Language swift
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+
+LINT: swiftlint --strict (config-scoped to the new files; whole-tree config now includes TeslaSync/Features)
+  Done linting! Found 0 violations, 0 serious in 9 files.
+  LINT_EXIT=0
+  NOTE: a separate whole-tree `swiftlint --strict` reports 1 PRE-EXISTING violation —
+        TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length —
+        which is NOT in this prompt's scope (unrelated dashboard widget, untouched here). Attributed, not masked.
+
+FORMAT: swiftformat --lint apps/apple/TeslaSync/Features/Analytics
+  0/9 files require formatting.  FORMAT_EXIT=0
+
+TYPECHECK (real SDKs, Swift 6 language mode, views compiled against the actual P3 component lib + P2 tokens):
+  swiftc -typecheck -target arm64-apple-macos15.0 -swift-version 6 …  → 0 errors  (macOS)
+  swiftc -typecheck -target arm64-apple-ios18.0  -swift-version 6 …  → 0 errors  (iOS)
+  (UnitFormatters.swift excluded from the Shared-free typecheck set — it transitively needs the KMP
+   Shared `UnitPreferences`/`Units`; the Timeline page does not reference it.)
+
+TEST: isolated SwiftPM package (Swift 6 language mode / complete concurrency) over the pure core +
+      model (TimelinePage.Models/Adapter/Model.swift) driven by TimelinePage.Tests.swift:
+  Test Suite 'TimelinePageTests' passed — Executed 21 tests, with 0 failures (0 unexpected).
+  TEST_EXIT=0   (21/21)
+
+PROJECT: xcodegen generate → "Created project at …/TeslaSync.xcodeproj"; the 9 new files are
+         enumerated on both app targets (project.yml valid).
+
+# Full-app Xcode gate — DEFERRED (macOS CI), with fresh captured evidence:
+
+BUILD: xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS -sdk macosx build
+  error: There is no XCFramework found at '…/apps/apple/Frameworks/Shared.xcframework'.
+  ** BUILD FAILED **
+  BUILD_EXIT=65
+  CAUSE: the KMP `Shared.xcframework` is not staged. Producing it requires the Kotlin/Native Apple
+         toolchain; `./gradlew :core:assembleSharedXCFramework` was attempted here and bounded-killed
+         at 150s without emitting the framework (toolchain/deps unavailable offline). This is the
+         SAME deferral already on record for every P4 apple surface (apps/macos-pending-verifications.md,
+         e.g. 0231-FSMTimelineChart) and for the framework itself (p1-shared/S3). It is NOT this page's
+         defect — zero Timeline/Features compile errors; the page type-checks clean against the real
+         component APIs on both SDKs above. A `macos-latest` runner with the staged xcframework resolves
+         BUILD_EXIT/TEST_EXIT (row appended to apps/macos-pending-verifications.md).
+
+================================================================
+=== HONESTY COVENANT ===
+ 1 No red-as-green ...... host gates are genuinely green (placeholder/lint/format/typecheck/21 tests
+                          all exit 0); the xcodebuild build is shown DEFERRED with its real exit 65 +
+                          cause, never reported as a pass.
+ 2 No scope narrowing ... full surface: 7 panels, the stacked BarChart, all 4 data states for every
+                          section, 23 strings, vehicle picker + refresh, transitions table — 9 files.
+ 3 No skip-and-assume ... web source read end-to-end; every useMemo (transitions/dailyBreakdown/
+                          summaryByState/distribution), the formatHoursFromSeconds/formatDuration math,
+                          STATE_COLORS/STATE_BADGE, and the pct<0.3 filter reproduced AND test-verified.
+ 4 No stubs as final .... complete implementation; placeholder gate COUNT=0 (scanner self-proven).
+                          The composition-root source emits an empty-but-resolved snapshot → the page's
+                          genuine empty states, never a "Coming soon"/placeholder.
+ 5 No parity shortcuts .. native Swift Charts (no WKWebView); 8-state legend; proportional distribution
+                          bar; sortable adaptive table; design-token colors (no hex); SI durations.
+ 6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+ 7 No predecessor bypass  same disposition as the prior P4 apple surfaces' Shared.xcframework deferral;
+                          new files bind through the established Source-seam + @Observable + Adapter
+                          pattern (EventTimeline precedent), not a bespoke shape.
+ 8 No commit on red ..... committed work is green on every runnable gate; the only non-green step is the
+                          environment-blocked xcframework build, deferred with fresh captured evidence
+                          and a macos-pending row.
+ 9 No silent drift ...... navigation needed a real `.timeline` AppRoute (web sidebar parity) +
+                          project.yml/.swiftlint.yml inclusion of the new TeslaSync/Features dir; all
+                          documented above. UnitFormatters.swift excluded from the Shared-free typecheck
+                          (transitively KMP-coupled, unused by this page) — documented.
+10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

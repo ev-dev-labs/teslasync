@@ -1,0 +1,159 @@
+I'll start by exploring the repository structure to understand the task scope, the web source, and the existing Apple app architecture.
+
+Xcode toolchain is present (xcodebuild, swiftlint, swift, pwsh). Let me explore the Apple app structure, parity manifest, and existing feature pages to understand the established patterns.
+
+Critical finding: `xcodebuild` reports the active dir is CommandLineTools, not full Xcode. Let me verify whether a full Xcode exists and inspect the established patterns, manifest record, and ledger.
+
+Full Xcode.app exists and xcodegen is available — the gate may be runnable via `DEVELOPER_DIR`. Let me verify the toolchain and explore the project config, existing app structure, and the tooling in parallel.
+
+Xcode 26.5 is available via `DEVELOPER_DIR`. Key insight: the real source tree is `apps/apple/Sources/`, and `apps/apple/TeslaSync/` only holds `dashboard-widgets`/`feature-views`. I need to understand the established `Sources/Features` convention. Let me map the directory trees.
+
+`Sources/Features` currently only has Dashboard widgets — this is the first full page. Let me read the navigation system, SharedFacade (KMP data layer), and list the remaining key trees to understand established patterns.
+
+Now let me read the route parser, app shell, the data-layer facade patterns, and the SI units bridge — these define how I wire the page.
+
+This is a KMP-backed architecture. Critical question: does the shared core expose a `/share/{token}` repository, and is `Shared.xcframework` built? Let me check the shared core, frameworks, and the one existing feature model as prior art.
+
+`Shared.xcframework` isn't built (only `.gitkeep`), and the KMP core has no "share" endpoint. Let me determine whether the share data source exists anywhere and how the existing `VehiclesStore` is sourced — this decides the data-binding approach.
+
+The package is `io.teslasync.shared` so "shared" matches everything — let me search precisely. The OpenAPI has `/share/{token}`. Let me check the generated client, the full store list, and the exact web hook + types.
+
+The KMP core **does** have a Sharing domain (`SharingStore`, `SharingRepository`, `SharingModels`) — my earlier grep was polluted by the `io.teslasync.shared` package name. This is the binding target. Let me read these KMP files and how stores are obtained.
+
+Now I fully understand the data layer: `SharingStore.sharedDrive(token:)` → `StateFlow<Resource<SharedDrive>>`, with `SharedDriveData` (SI/v2) and `SharedDriveDataV1` (legacy) variants. Let me read the SI unit bridge, formatters, the dashboard widget view (prior art for wiring a store→model→view), and the app shell.
+
+I now understand the data + SI patterns. The crux for navigation wiring: how stores get constructed and how routes are hosted. Let me find store construction sites and read the app shell/entry.
+
+Navigation uses a `RouteHostRegistry`; `SettingsScene.swift` is the prior-art registration and `TeslaSyncApp.swift` wires it. Let me read both, plus `FacadeError` and the HTTP repo constructor to understand store availability.
+
+I have the registration pattern. Now I must determine gate feasibility (the KMP `Shared.xcframework` must be Gradle-built before `xcodebuild`). Let me read the gate contract, the pending-verifications note, a prior parity log for format, the placeholder tool, ledger schema, and check the JDK.
+
+JDK 17 is present and there are prior P4-apple widget logs. The `BatteryRadialGaugeWidget` log is the key precedent for how the gate + PARITY section + ledger were handled. Let me read it and the README gate contract.
+
+This precedent is decisive. It establishes: place files in `apps/apple/Sources/Features/Sharing/` (documenting path reconciliation), the KMP framework Gradle-builds in ~7min, the gate runs iOS sim build+test, and macOS has a documented pre-existing signing block. Let me confirm the store-construction story and read the placeholder tool + how live stores are provided.
+
+No live store is constructed anywhere yet — the app-graph bootstrap is genuinely deferred (only `.settings` is registered). My page will bind to `SharingStore` (like the widgets) and expose a real registration seam. Let me map the component-library API surface, the placeholder patterns, and the string catalog.
+
+Excellent — I have the full component map and the placeholder patterns (note: case-insensitive "placeholder"/"todo"/"not implemented" must be avoided even in comments). Let me read the exact APIs for the charts, maps, and key UI/feedback components I'll consume.
+
+Charts API is clear (`TSChartContainer`, `TSAreaChart`, `TSLineChart`, `TSElevationProfile`, `TSChartSeries`/`TSChartPoint`). Now the maps, stat card, empty/spinner/error states, motion, and typography APIs.
+
+Maps API is clear (`Map` + `tsPolyline` + `TSCircleMarker` annotations + `TSMapStyle`). Now the remaining UI building blocks: GlassPanel/Card, StatCard, EmptyState/Spinner/Error, FadeIn, Typography, and the theme tokens (`TSTone`, `Color.TS`, spacing/radius).
+
+Now the typography initializers (critical for rendering dynamic API strings vs localization keys), the theme tokens (`TSTone`, `Color.TS`, spacing), whether a `Logo` exists, and the string-catalog format.
+
+I now have the full component + typography picture (note: dynamic API strings need `Text(verbatim:)`+`Font.TS` since TS typography takes `LocalizedStringKey`). Let me grab the final pieces: `TSTone`, `Logo`, design tokens, and the ledger schema + manifest record for this unit.
+
+`TSTone` has `.success`/`.danger` (start/end markers), `TSLogo` exists, and tokens are confirmed. Let me read the design spacing/radius tokens, the ledger schema + a sample row, the manifest record for this unit, and the test directory layout.
+
+I have the full API surface. Final pre-implementation reads: the swiftlint/format config (to write compliant code), an existing test's style, and confirm the `page:` manifest record. Then I'll write the plan and implement.
+
+I have the complete manifest (43 items) and all APIs. One more: the exact `formatDurationSecondsAsMinutes` semantics to mirror the Duration panel faithfully.
+
+I now have complete understanding. Let me write a plan file, then implement. Let me set up tracking and the plan.
+
+Tokens confirmed. Now I'll implement. Starting with the pure-logic core (value types, SI units, formatters, projection, render-state) — these are framework-free and unit-testable.
+
+Now the `@Observable` model — the KMP boundary that binds `SharingStore.sharedDrive(token:)` and maps the `SharedDrive` union into the SI report.
+
+Let me verify the `TSButton` signature before writing the state views, and confirm a couple of i18n keys exist.
+
+Several component-referenced keys (`action.retry`, `chart.noData`, `group.operations`) appear absent — let me inspect the catalog's actual key namespace to understand what exists and what I must add.
+
+The catalog uses `"key": {` format. Let me precisely check which keys my page transitively surfaces actually exist, so I add exactly what's needed.
+
+Confirmed: the catalog is missing many component keys (pre-existing scaffold gap). I'll add the 20 required `share.*` keys plus the few common keys my page directly surfaces. Now writing the state/map/chart/stats/report/page views.
+
+Core Swift is written. Now I'll add the i18n keys to the catalog. Let me first confirm the exact catalog header/footer format before a surgical insert.
+
+The catalog round-trips via standard JSON. Let me verify a full re-dump is byte-identical to the original (so I can safely add keys without reformatting noise); otherwise I'll insert surgically.
+
+Byte-identical round-trip — I can add keys cleanly. Adding the 25 keys now.
+
+All 25 keys added cleanly (8146 total). Now the unit tests (pure, framework-free) mirroring the dashboard-widget precedent.
+
+All files written. Now the fast verification loop: forbidden-word audit, swiftformat, swiftlint, placeholder gate. Let me start.
+
+No forbidden words; swiftformat applied. Now swiftlint (strict, full tree as the gate runs it) and the placeholder gate.
+
+Placeholder gate passes (0). swiftlint reports 2 serious violations across the tree — let me identify them.
+
+The one shown is pre-existing (`LifetimeStatsWidget.Adapter.swift`, not mine). Let me get ALL violations and confirm none are in my Sharing files.
+
+My surface is lint-clean (0 violations); the single violation is pre-existing in an unrelated widget file. Now the heavy gate: generate the project and build the KMP framework. Let me confirm scope via git, generate the xcodeproj, and locate the JDK.
+
+Project generated; my changes are isolated to `Sources/Features/Sharing/`, `Tests/Unit/Sharing/`, and the catalog (other dirty files are pre-existing). Now the long pole: building the KMP `Shared.xcframework`. Let me start it and check simulators.
+
+iPhone 16 sim is booted. The KMP framework build is running — this takes ~7+ minutes. Let me wait for it.
+
+Still compiling (Kotlin/Native is slow on first run). Continuing to wait.
+
+KMP framework built and staged successfully (10m). Now building the iOS app to validate my Swift compiles against the real framework (interop names like `description_`, `doubleValue`, `SharingStore.sharedDrive`).
+
+The iOS build failed — but in a **pre-existing** file: `TeslaSync/feature-views/AIRestorePanel.Tests.swift` imports `XCTest` yet is compiled into the app target (not mine). Let me investigate the scope of this pre-existing breakage.
+
+170 committed `*.Tests.swift` files in `feature-views` all import XCTest — a pre-existing parallel-merge breakage of the app target, unrelated to my page. Let me check how `project.yml` intends to handle them before choosing a workaround.
+
+This is a pre-existing parallel-merge breakage: **224** co-located `*.Tests.swift` files (170 feature-views + 54 dashboard-widgets) are committed into the app target's sources and import XCTest. My test files use the no-dot `XxxTests.swift` convention in the test target. I'll exclude the misplaced files via a build flag (no committed-config change) to validate my surface compiles against the real framework.
+
+The exclusion glob missed other test-naming conventions (`.ModelTests.swift`). I need a per-target exclude (a global `*Tests.swift` flag would also kill the legit test target). Cleanest: temporarily add `excludes` to the two co-located app-source dirs in `project.yml`, regenerate, build+test, then revert `project.yml`. Let me confirm all such files are XCTest tests and get exact lines.
+
+All 224 files are confirmed XCTest tests; no app code is affected. I'll temporarily add per-source `excludes` to the two co-located app-source dirs (both app targets), regenerate, build, then revert `project.yml`.
+
+Regenerated with per-target excludes. Now building the iOS app to validate my code against the real framework.
+
+More pre-existing breakage surfaced: **ambiguous type** errors (`VehicleHeroModel`, `DashboardWidgetSize`) — duplicate type definitions from parallel merges across widget dirs. Let me assess the full scope of these pre-existing conflicts.
+
+All 59 errors are pre-existing duplicate-type conflicts confined to `TeslaSync/dashboard-widgets` (parallel-merge duplicates of `Sources/Dashboard*`) — **zero** in my `Features/Sharing`. To prove my surface compiles + tests pass against the real framework, I'll build the canonical `Sources/` tree with the two broken parallel-merge dirs excluded from the app target, then run my tests. First revert and re-patch project.yml.
+
+The `&&` chain short-circuited on grep's zero-match exit. Let me regenerate and build the canonical tree.
+
+**Decisive evidence: all 11 of my Sharing files compiled with ZERO errors** against the real `Shared.xcframework` (interop names, `LoadableState.from`, `StateHolderModel`, the `SharedDriveData`/`V1` casts all resolved). The remaining 59 errors are pre-existing duplicate-type conflicts now showing in `Sources/DashboardWidgets` too — the parallel merge duplicated dashboard types across multiple dirs. Let me quantify the duplication to decide if a minimal exclusion lets my tests run.
+
+The duplication is tiny and contained: `DashboardWidgetSize` + `DashboardWidgetDescriptor` are each defined twice in `Sources/DashboardWidgets/` (BatteryCells + DrivetrainHealth registries) — a parallel-merge collision, unrelated to sharing. My surface is proven to compile. To also run my tests, I'll isolate: exclude the conflicting dashboard dirs from the app target and scope the test target to my Sharing tests only (all documented, reverted after).
+
+Regenerating and running build + my isolated tests on the iPhone 16 simulator.
+
+The isolation worked — now the only error is a real one in **my** code: `Color.TS` has no member `background`. Let me find the correct background token.
+
+`Color.TS.bg` is the correct token (`background` is on `Theme`, not `Color.TS`). Fixing both usages.
+
+Fixed. Rebuilding + running tests (project structure unchanged, no regen needed).
+
+**BUILD SUCCEEDED and TEST SUCCEEDED** — my surface compiles against the real `Shared.xcframework` and all **18 unit tests pass** (SharedDriveFormat 5, RenderState 3, Projection 5, Units 3, Routing 2), plus the 13 existing UI tests. The only reason the *literal full-tree* gate fails is pre-existing parallel-merge breakage in unrelated dashboard/feature dirs.
+
+Let me run the final format/lint confirmation on my surface and revert the temporary `project.yml` workaround.
+
+swiftformat clean (0/12). project.yml reverted. Let me confirm the 2 swiftlint violations are both pre-existing (none in my surface), then regenerate the project to restore a consistent state.
+
+Confirmed: the only swiftlint violation is pre-existing (`LifetimeStatsWidget.Adapter.swift`), zero in my surface. Config reverted + regenerated. Let me verify final git scope, then check the framework is git-ignored.
+
+Clean git scope (only Sharing dirs + catalog; `project.yml` reverted; framework/xcodeproj git-ignored). All 18 unit tests + 13 UI tests passed; surface is lint/format/placeholder clean.
+
+Now I'll write the evidence log with the `=== PARITY ===` section (43/43) and the ledger. Given the honesty covenant, the *literal* full-tree gate is red due to pre-existing parallel-merge breakage I'm out-of-scope to fix, so the honest terminal status is BLOCKED — with the surface itself complete and independently verified.
+
+Now the ledger (the prompt references `apps/parity/apple-ledger.json`, which doesn't exist yet). I'll create it with covered 43/43 and an honest blocked gate status.
+
+Let me validate the ledger JSON, update the plan, and do a final scope check.
+
+All artifacts validated; git scope is exactly my intended changes (Sharing files, catalog keys, log, ledger) — `project.yml` clean, framework/xcodeproj git-ignored. Let me update the plan to reflect the outcome.
+
+The task is complete. Let me do a final sanity check that all deliverables are in place.
+
+All deliverables are in place and verified. The task is complete.
+
+## Summary
+
+I implemented the native **SwiftUI `SharedDrivePage`** (web parity for `SharedDrivePage.tsx`, route `/s/:token`) at **full 43/43 parity**, adaptive across macOS + iOS, following the repo's established architecture (shared component library, design tokens, KMP S8 binding, SI units at the render boundary, i18n, HIG/a11y).
+
+**Delivered** (`apps/apple/Sources/Features/Sharing/`, 11 files + 1 test + 25 catalog keys):
+- **Data**: `@Observable SharedDrivePageModel` binds `SharingStore.sharedDrive(token:)` → `StateHolderModel<LoadableState<SharedDriveReport>>`; normalizes the `SharedDriveData`(v2)/`SharedDriveDataV1`(legacy) union to SI like the web `normalizeSharedDriveData`.
+- **11 panels** (7 StatCards, vehicle GlassPanel, 2 ChartContainers, no-route GlassPanel), **4 charts** (2 ChartContainers + AreaChart + LineChart), **5 maps** (MapKit `Map` + `tsPolyline` + 2 `TSCircleMarker` start/end + `TSMapStyle`), **3 states** (loading/empty/success + expired error), **20 `share.*` strings**.
+- Navigation: `SharingRouteRegistration` registers `.sharing` + parses `/s/:token`.
+
+**Verification (all green for this surface):**
+- swiftformat `0/12`, swiftlint `--strict` **0 violations** in surface, check-placeholders **0**.
+- KMP `Shared.xcframework` **BUILD SUCCESSFUL** (10m); iOS app **BUILD SUCCEEDED** with my files compiling against the real framework; **18/18 unit tests + 13/13 UI tests PASS**.
+
+**Gate status: `BLOCKED` (EXIT=65), not committed.** The *literal* full-tree `xcodebuild build test` is red **solely** due to pre-existing parallel-merge breakage unrelated to sharing — 224 misplaced `*.Tests.swift` files importing XCTest into the app target (feature-views/dashboard-widgets) and duplicate dashboard type definitions (`DashboardWidgetSize`/`Descriptor`). Zero errors are in my code. Per the honesty covenant ("No red-as-green / No commit on red") I report BLOCKED and did not commit, while proving the surface itself is complete and correct via a documented, reverted `project.yml` regeneration. Evidence: `.github/prompts/monorepo/logs/apple-page-sharing-SharedDrivePage.log`; ledger `apps/parity/apple-ledger.json` (covered 43/43). `project.yml` is reverted clean; the framework + `.xcodeproj` are git-ignored.
+

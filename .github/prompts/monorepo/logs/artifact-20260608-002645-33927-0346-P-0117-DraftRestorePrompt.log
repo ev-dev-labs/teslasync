@@ -1,0 +1,141 @@
+=== P4 Shared surface 0117 DraftRestorePrompt (Apple) ===
+Surface : apps/apple/TeslaSync/shared-surfaces/DraftRestorePrompt.*
+Web src : web/src/components/feedback/DraftRestorePrompt.tsx (THE specification)
+Runner  : Darwin (macOS), Xcode 26.5 (17F42), Swift 6.3.2
+Note    : This log is produced by an isolated per-surface slot. The literal gate uses
+          `xcodebuild -scheme TeslaSync build test`. See [Gate analysis] for why the end-to-end
+          xcodebuild step cannot include this surface here, and the equivalent verification used.
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+[Capability] — required: SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG
+────────────────────────────────────────────────────────────────────────────────────────────────
+xcodebuild -version            -> Xcode 26.5 (Build 17F42)          [PRESENT]
+xcodebuild -showsdks           -> iphonesimulator26.5, macosx26.5   [PRESENT]
+xcrun simctl list (available)  -> iPhone 16 (iOS 26.5) Booted       [PRESENT]
+swiftlint / swiftformat / pwsh -> /opt/homebrew/bin/*               [PRESENT]
+This surface uses neither charts nor maps (web "Charts/maps used: (none)"), so Swift Charts /
+MapKit are not exercised here; the toolchain that provides them is nonetheless present.
+=> Platform capability is AVAILABLE (not a capability block).
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+[Surface files] — 9 files, multi-file decomposition mirroring the sibling AiUsageCard pattern
+────────────────────────────────────────────────────────────────────────────────────────────────
+DraftRestorePrompt.swift             surface View: card chrome + state switch + review sheet
+DraftRestorePrompt.Model.swift       P1/S8 state-holder seam + P1/S10 i18n facade + P1/S11
+                                     telemetry seam + P4 navigation seam + @Observable model
+DraftRestorePrompt.Adapter.swift     DraftRecoveryEntry (web DraftEntry), DraftRelative bucketing
+                                     (port of lib/dateFormat.ts formatRelativeTime), a11y summary
+DraftRestorePrompt.Projection.swift  pure input -> resolved (loading/empty/error/data + rows)
+DraftRestorePrompt.Views.swift       banner, review sheet, row, empty state
+DraftRestorePrompt.Chrome.swift      freshness chip, refresh, connectivity banner, loading, error
+DraftRestorePrompt.Previews.swift    DEBUG previews for every state
+DraftRestorePrompt.Tests.swift       XCTest: projection, relative-time, model, a11y (28 cases)
+DraftRestorePrompt.strings           P1/S10 i18n catalog (parity keys + native chrome keys)
+
+States rendered (no hidden surfaces): loading / empty / error / data + connection axis
+(live / stale / offline) with a stale chip + one-shot auto-refresh and an offline cached banner.
+i18n: every string resolves through the DraftRestoreStrings facade — no English literals in code.
+A11y: VoiceOver labels on every interactive element; Dynamic Type via the shared type ramp;
+Reduce-Motion respected via TSFadeIn / TSSkeleton.
+Telemetry: emits view.opened with surface slug "DraftRestorePrompt" (P1/S11) on first snapshot.
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+[Verify 1/5] Compile — SwiftPM, module TeslaSync, Swift 6 language mode, macOS 15, against the
+REAL design-system sources (apps/design/generated/apple/Tokens.swift + Sources/Components/* +
+Sources/Design/*). This is the equivalent-to-app-target compile of the surface (the app target's
+UI layer is KMP-`Shared`-free, so it compiles standalone).
+────────────────────────────────────────────────────────────────────────────────────────────────
+$ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swift build
+[3/19] Compiling TeslaSync DraftRestorePrompt.Model.swift
+... (Adapter, Projection, Chrome, Views, DraftRestorePrompt.swift, Previews all compiled) ...
+[19/19] Compiling TeslaSync Skeletons.swift
+Build complete! (15.58s)
+BUILD_EXIT=0
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+[Verify 2/5] Tests — SwiftPM XCTest (the surface's adapter + per-state projection + state-holder +
+a11y tests actually EXECUTED; note that per the established pattern these .Tests.swift live in the
+app target, so xcodebuild compiles-but-does-not-run them — SwiftPM runs them here).
+────────────────────────────────────────────────────────────────────────────────────────────────
+$ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swift test
+Test Suite 'DraftRestoreModelTests'            Executed 14 tests, 0 failures
+Test Suite 'DraftRestoreProjectionContentTests' Executed  6 tests, 0 failures
+Test Suite 'DraftRestoreProjectionPhaseTests'   Executed  4 tests, 0 failures
+Test Suite 'DraftRelativeTests'                 Executed  3 tests, 0 failures
+Test Suite 'DraftRestoreAccessibilityTests'     Executed  1 test,  0 failures
+Test Suite 'All tests' passed -> Executed 28 tests, with 0 failures (0 unexpected)
+TEST_EXIT=0
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+[Verify 3/5] swiftformat --lint
+────────────────────────────────────────────────────────────────────────────────────────────────
+$ swiftformat --lint TeslaSync/shared-surfaces      -> 0/8 files require formatting
+SURFACE_FORMAT_EXIT=0
+$ swiftformat --lint apps/apple        (whole tree)  -> 1/1921 require formatting:
+    feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes)  [PRE-EXISTING,
+    OUT OF SCOPE — not a shared-surfaces file, not editable under this prompt's allowed files]
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+[Verify 4/5] swiftlint --strict
+────────────────────────────────────────────────────────────────────────────────────────────────
+$ swiftlint lint --strict TeslaSync/shared-surfaces -> 0 violations in the surface
+SURFACE_LINT_EXIT=0
+$ swiftlint --strict                   (whole tree)  -> 1 violation, 1 serious in 1909 files:
+    dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length)  [PRE-EXISTING,
+    OUT OF SCOPE — not a shared-surfaces file, not editable under this prompt's allowed files]
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+[Verify 5/5] placeholder / stub gate (ADR-011)
+────────────────────────────────────────────────────────────────────────────────────────────────
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+(grep TODO|FIXME|XXX|Coming soon|Placeholder|Lorem ipsum|not implemented over the 7 .swift files:
+ NONE — clean.)
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+[Gate analysis] — why the literal `xcodebuild -scheme TeslaSync build test` cannot include this
+surface in THIS isolated slot, with evidence
+────────────────────────────────────────────────────────────────────────────────────────────────
+1. The Xcode project is generated from apps/apple/project.yml (the .xcodeproj is git-ignored). The
+   app targets list their sources explicitly:
+       - path: TeslaSync/dashboard-widgets
+       - path: TeslaSync/feature-views
+   project.yml does NOT list `TeslaSync/shared-surfaces`. After `xcodegen generate`:
+       grep -c DraftRestorePrompt TeslaSync.xcodeproj/project.pbxproj  -> 0   (surface EXCLUDED)
+       grep -c AiUsageCard        TeslaSync.xcodeproj/project.pbxproj  -> 60  (feature-views IN)
+   Wiring `shared-surfaces` into project.yml is OUTSIDE this prompt's allowed files
+   ("Allowed files: apps/apple/TeslaSync/shared-surfaces/DraftRestorePrompt.*, the log file").
+   It is a harness/build-config responsibility shared by all 117+ shared-surface prompts (editing
+   it per-prompt would collide across the parallel slots).
+2. The app build's pre-action stages a KMP `Shared.xcframework` (apps/shared Gradle). This IS
+   feasible on this runner — an offline probe progressed through real Kotlin/Native tasks:
+       :core:compileKotlinIosArm64 FROM-CACHE / :core:linkDebugFrameworkIosArm64 /
+       :core:compileKotlinIosSimulatorArm64 FROM-CACHE ...  (cached K/N toolchain present)
+   i.e. the framework is NOT the blocker; the project.yml wiring (item 1) is.
+
+=> Because the surface is not in the target, an `xcodebuild build test` here would build the app
+   WITHOUT this surface — it would neither compile nor exercise it, so reporting IOS_EXIT/MAC_EXIT=0
+   from such a run would be a hollow green (Honesty Covenant rule 1: "No red-as-green"). Instead,
+   the surface was verified by the equivalent app-settings compile + test above (Verify 1 & 2).
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+[Gate step summary]
+────────────────────────────────────────────────────────────────────────────────────────────────
+IOS_EXIT=BLOCKED   (surface not wired into project.yml target; not editable under allowed files)
+MAC_EXIT=BLOCKED   (same)
+LINT_EXIT=0        (shared-surfaces); whole-tree=1 PRE-EXISTING in an out-of-scope file
+FORMAT_EXIT=0      (shared-surfaces); whole-tree=1 PRE-EXISTING in an out-of-scope file
+PLACEHOLDER_EXIT=0
+SURFACE_BUILD_EXIT=0  (SwiftPM, Swift 6, macOS 15, real design system)
+SURFACE_TEST_EXIT=0   (28/28 XCTest cases passed)
+
+Conclusion: the surface is production-complete and independently verified GREEN (compile + 28
+tests + format + lint + placeholder). The literal end-to-end iOS/macOS `xcodebuild build test`
+gate is blocked on the harness-owned project.yml wiring of `shared-surfaces`, which is outside
+this prompt's allowed files. Once the harness wires that path (as it must for every shared-surface
+prompt), the literal gate compiles this surface with the rest of the app.
+
+EXIT=1
+STATUS=BLOCKED

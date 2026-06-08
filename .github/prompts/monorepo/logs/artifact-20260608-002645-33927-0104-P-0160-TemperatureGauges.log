@@ -1,0 +1,137 @@
+=== P4 Feature view 0160 TemperatureGauges (Apple) ===
+Artifact : apps/apple/TeslaSync/feature-views/TemperatureGauges.*
+Web src  : web/src/features/driving/components/drivetrain-health/TemperatureGauges.tsx
+Runner   : Darwin arm64 · Xcode 26.5 (17F42) via DEVELOPER_DIR=/Applications/Xcode.app
+           iOS 18 Simulator (iPhone 16, booted) · macOS 15 SDK · SwiftUI available
+Scope    : Allowed files = TemperatureGauges.* + this log ONLY (siblings are out of scope).
+
+--------------------------------------------------------------------------------
+DELIVERABLE — 9 files, production parity (no stubs / placeholders / TODOs)
+--------------------------------------------------------------------------------
+  TemperatureGauges.Adapter.swift     enums (phase/unit/severity), input, prefs, SI math (Foundation-only)
+  TemperatureGauges.Projection.swift  4-gauge projection, a11y summary, phase resolution (Foundation-only)
+  TemperatureGauges.Model.swift       P1/S8 source seam + @Observable model + P1/S11 telemetry + P1/S10 facade
+  TemperatureGauges.swift             SwiftUI surface (TSFadeIn + glass panel + phase switch)
+  TemperatureGauges.Views.swift       header, freshness chip, banner, radial gauge, grid, skeleton, error, empty
+  TemperatureGauges.Previews.swift    per-state previews × Celsius/Fahrenheit (DEBUG)
+  TemperatureGauges.strings           P1/S10 keys (drivetrain.tempGauges, drivetrain.maxLabel, 4 sensor labels, chrome)
+  TemperatureGauges.Tests.swift       adapter+projection(C/F parity)+model lifecycle+a11y unit tests
+  TemperatureGauges.ViewTests.swift   per-state ImageRenderer render tests (loading/empty/error/stale/offline/content×2)
+
+Parity locked vs web source:
+  - value = (reading==nil ? LITERAL 0 : convertTempFromSI(°C))  → Fahrenheit null shows 0°F, not 32°F
+  - centre = fmtNumber(clamped, isInteger ? 0 : globalPrecision[default 2]) + unit (no space)
+  - arc fill = clamp(displayValue,0,displayMax)/displayMax  (DISPLAY units → differs C vs F)
+  - arc color = tempSeverityColor(RAW °C, maxTempC): nil→muted, ≥0.85→danger, ≥0.65→warning, else success
+  - "Max: " + fmtNumber(displayMax, 0) + unit  ;  ceilings 150/150/120/60 °C  ;  FadeIn delay 0.15
+
+================================================================================
+GATE STEP 3 — swiftlint --strict     (real gate tool; ran on the 8 shipped .swift files)
+================================================================================
+$ cd apps/apple && swiftlint lint --strict --config .swiftlint.yml TemperatureGauges.*.swift
+Done linting! Found 0 violations, 0 serious in 8 files.
+LINT_EXIT=0
+
+================================================================================
+GATE STEP 4 — swiftformat --lint apps/apple   (real gate tool; ran on the 8 shipped .swift files)
+================================================================================
+$ cd apps/apple && swiftformat --lint TemperatureGauges.*.swift
+SwiftFormat completed. 0/8 files require formatting.
+FORMAT_EXIT=0
+
+================================================================================
+GATE STEP 5 — check-placeholders.ps1   (real gate tool)
+================================================================================
+Note: the verbatim gate arg `-Path …/TemperatureGauges` is a non-existent LITERAL
+path (files are `TemperatureGauges.*`); the script then scans nothing and returns
+clean. To make the check MEANINGFUL it was pointed at a temp dir holding exactly
+the 9 shipped files:
+$ pwsh check-placeholders.ps1 -Path <tmp>/TemperatureGauges -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+================================================================================
+GATE STEPS 1 & 2 — xcodebuild -scheme TeslaSync build test   (iOS + macOS)
+================================================================================
+$ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+...
+** BUILD FAILED **
+The following build commands failed:
+	SwiftDriver TeslaSync normal arm64 com.apple.xcode.tools.swift.compiler (in target 'TeslaSync')
+(2 failures)
+IOS_EXIT=65
+MAC_EXIT=65   (TeslaSync-macOS shares the identical target source set → identical blocker; not re-run)
+
+>>> BLOCKED — by PRE-EXISTING, OUT-OF-SCOPE sibling/harness defects. NOT by this surface. <<<
+
+Root cause #1 (the hard stop): the XcodeGen spec globs the whole `feature-views/`
+directory (incl. 173 sibling `*.Tests.swift` / `*.ViewTests.swift`) into the
+TeslaSync APP target, so `import XCTest` cannot resolve there. The compile aborts
+on the alphabetically-first such file, a sibling:
+  feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'
+(project.yml `sources: - path: TeslaSync/feature-views` — out of my allowed scope.)
+
+Root cause #2 (behind #1): this aggregated slot contains ~160 sibling surfaces from
+parallel runs with HUNDREDS of duplicate top-level public types in one module,
+proven directly on the real sibling files:
+  $ swiftc -typecheck HealthGaugeGrid.Model.swift TemperatureMetricCards.Adapter.swift
+  HealthGaugeGrid.Model.swift:69:13: error: invalid redeclaration of 'DrivetrainHealthStatus'
+  (also defined at TemperatureMetricCards.Adapter.swift:60) — both out of my allowed scope.
+  Static scan: `public enum Phase` ×66, `DrivetrainHealthStatus` ×2, DistanceUnit/SpeedUnit/… ×2, …
+
+Proof this surface is NOT implicated:
+  $ grep ' error:' build.log | grep TemperatureGauges.<any>.swift   →   (zero matches)
+  $ for sym in TempGauges* / TemperatureGauges* : grep across OTHER feature-views  →  (zero collisions)
+  Every one of this surface's public symbols is uniquely namespaced; it adds ZERO new conflicts.
+
+The runner IS capable (Xcode 26.5 / iOS 18 sim / macOS 15 SDK / SwiftUI all used below);
+the literal full-scheme command cannot go green here only because the harness co-located
+incompatible sibling artifacts. The surface's own dependencies per the prompt are
+"P4 core + P1/S8/S9/S10" — NOT the sibling surfaces.
+
+================================================================================
+AUTHORITATIVE SURFACE-ISOLATED VERIFICATION  (the gate's intent: does THIS surface
+build + test on Apple, against the REAL P1/S9 tokens + P1/S9 components + macOS 15 SDK)
+================================================================================
+SwiftPM package (faithful verbatim copies of the real Tokens.swift + Motion.swift/TSFadeIn +
+TSMaterial.swift/tsGlassPanel + TSSkeleton + TSEmptyState; this surface's 6 source files;
+this surface's 2 test files) — built + tested with the Xcode 26.5 toolchain, platform macOS 15:
+
+$ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swift build
+Build complete! (real Color.TS / Font.TS / TSSpacing / TSRadius / TSMotion / TSFadeIn /
+tsGlassPanel / TSSkeleton / TSEmptyState APIs all resolve)
+ISO_BUILD_EXIT=0
+
+$ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swift test
+Test Suite 'All tests' passed.
+   Executed 36 tests, with 0 failures (0 unexpected)
+     - TempGaugesMathTests           (conversion °C/°F, clamp, fill, fmtNumber, integer-precision, severity)
+     - TempGaugesProjectionTests     (4-gauge order, Celsius + Fahrenheit centre values + Max captions,
+                                       severities from RAW °C, fill differs C vs F, LITERAL-0 null, clamp-to-ceiling)
+     - TemperatureGaugesModelTests   (content/loading/error/empty phases, cached-stays-content,
+                                       refresh delegation, stale auto-refresh once/episode, view.opened once)
+     - TempGaugesAccessibilityTests  (VoiceOver "label, value, Max max")
+     - TemperatureGaugesViewStateTests (ImageRenderer renders: content Celsius, content Fahrenheit,
+                                       empty, loading, error, stale, offline)  ← all 6 states materialize
+ISO_TEST_EXIT=0
+
+================================================================================
+ACCEPTANCE CRITERIA
+================================================================================
+[x] Surface renders all web-source states (loading/empty/error/stale/offline/content) — 7 render tests green
+[x] Hooks bind via shared P1/S8 state-holder seam (TempGaugesSource); no direct HTTP in the view
+[x] Every web i18n key present in P1/S10 catalog (drivetrain.tempGauges, drivetrain.maxLabel,
+    drivetrain.{frontMotor,rearMotor,inverter,battery}) + native chrome keys
+[x] Accessibility labels on gauges (a11y summary), freshness chip, banner, retry button; a11y test green
+[x] Tests: adapter unit + per-state view/UI + a11y label — 36/36 green on real macOS 15 SDK
+[x] No TODO/stub/mock/placeholder/Lorem — PLACEHOLDER_COUNT=0
+[x] swiftlint --strict 0 violations · swiftformat --lint clean
+[~] Full-scheme xcodebuild build test — BLOCKED by pre-existing out-of-scope sibling/harness defects
+    (XCTest-in-app-target glob + duplicate sibling public types); ZERO errors reference this surface.
+
+LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0  ISO_BUILD_EXIT=0  ISO_TEST_EXIT=0  IOS_EXIT=65  MAC_EXIT=65
+
+EXIT=65
+STATUS=BLOCKED

@@ -1,0 +1,125 @@
+=== P4 Widget primitive 0008 WidgetMapView (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh · Java 17
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5, Booted) present · iOS/iphonesimulator + macOS 26.5 SDKs present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 9m57s; release XCFramework staged
+                       to apps/apple/Frameworks/Shared.xcframework — git-ignored, not committed).
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS-18/macOS-15 SDKs + simulator all present, AND the surface
+                       was typechecked against BOTH real SDKs (below) → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/features/dashboard/widgets/shared/WidgetMapView.tsx — a PURE presentational map primitive:
+    interface { center:[number,number]; zoom?=13; compact?=false; children?; className?;
+                emptyMessage?='No location data available'; isEmpty?=false }
+    isEmpty            → <EmptyState message={emptyMessage} className="py-4" />            (the only web branch)
+    else               → rounded-lg overflow-hidden container, MapContainer(center, zoom,
+                         scrollWheelZoom/zoomControl/dragging = !compact, bg '#1a1a2e')
+                         + MapTileLayer style="dark" + {children}
+  Data sources: (none — pure presentational). Shared components: @/components/maps, @/components/feedback.
+  i18n keys extracted: (none — anonymous surface; only the emptyMessage default literal).
+
+ARTIFACTS SHIPPED (apps/apple/TeslaSync/widget-primitives/)
+  WidgetMapView.Adapter.swift  — WidgetMapGeometry (center/zoom→MapKit camera span via Web-Mercator, validity via
+                                 shared TSGeo, toFixed(4), resolveState(isEmpty)), WidgetMapViewState / WidgetMapFreshness,
+                                 EmptyMapOverlay. Pure + Sendable (the unit-tested seam).
+  WidgetMapView.Model.swift    — WidgetMapViewTelemetry seam + OSLogWidgetMapTelemetry (redaction-safe os_log
+                                 "view.opened"), WidgetMapStrings (P1/S10 table facade), WidgetMapAccessibility.summary.
+  WidgetMapView.swift          — WidgetMapView<Overlay: MapContent> SwiftUI primitive: loading / empty / error / content
+                                 render branches + live/stale/offline freshness chip + compact interactivity gating +
+                                 dark MapKit canvas (WidgetMapCanvas) + a11y; web-parity AND state-driven initializers.
+  WidgetMapView.Previews.swift — #if DEBUG previews: content/loading/empty/error/stale/offline/compact.
+  WidgetMapView.Tests.swift    — 22 XCTest cases (adapter geometry/validity/format/state, a11y per-state, telemetry slug).
+  WidgetMapView.strings        — P1/S10 catalog contribution (table "WidgetMapView").
+  Necessary shared wiring (same pattern every P4 dashboard-widget / feature-view used):
+    project.yml      — + "TeslaSync/widget-primitives" to the TeslaSync and TeslaSync-macOS target sources
+    .swiftlint.yml   — + "TeslaSync/widget-primitives" to included
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  MapContainer (Leaflet)    → MapKit Map (camera owned by WidgetMapCanvas; recenters on center/zoom change)
+  MapTileLayer style="dark" → .environment(\.colorScheme, .dark) + the exact '#1a1a2e' backdrop fill
+  children (overlays)       → a caller @MapContentBuilder (generic Overlay: MapContent); EmptyMapOverlay default
+  compact                   → interactionModes = [] (web disables scrollWheelZoom/zoomControl/dragging)
+  isEmpty → EmptyState      → .empty branch (ContentUnavailableView), web className="py-4" → vertical padding
+  loading / error / chip    → native chrome (web feedback Skeleton/QueryError siblings) — every state renders, none hidden
+  i18n      : emptyMessage is a caller String (web prop); all chrome via WidgetMapStrings table facade — zero literals in code
+  a11y      : map element ignores children + carries a VoiceOver value (freshness + coordinates); retry labelled; chip hidden
+  telemetry : view.opened surface="WidgetMapView" (P1/S11) on appear, default OSLog sink
+
+GATES (raw exits pasted; commands run on THIS runner)
+  [GREEN]    swiftformat --lint  (TeslaSync/widget-primitives)      : 0/5 files require formatting              (FORMAT_EXIT=0)
+             swiftformat --lint  apps/apple (whole, FYI)            : 1 PRE-EXISTING file — blankLinesBetweenScopes in
+                                                                      TeslaSync/feature-views/ActionBuilder.Previews.swift
+                                                                      (NOT a WidgetMapView file; not introduced here).
+  [GREEN]    swiftlint --strict  (widget-primitives scope)          : 0 violations, 0 serious in 5 files         (LINT_EXIT=0)
+             swiftlint --strict  (whole app, FYI)                   : 1 PRE-EXISTING violation — function_body_length in
+                                                                      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift.
+  [GREEN]    check-placeholders.ps1 -Path …/widget-primitives/WidgetMapView : PLACEHOLDER_COUNT=0                (PLACEHOLDER_EXIT=0)
+  [GREEN]    xcodegen generate                                      : project parses; all 6 WidgetMapView.* files
+                                                                      enumerated in TeslaSync AND TeslaSync-macOS.
+  [GREEN]    ISOLATED SwiftPM harness — swift-tools 6.0 (Swift 6 language mode, strict-concurrency complete = same as the
+             app), compiling the EXACT shipped WidgetMapView.* sources against the REAL repo design-system
+             (Tokens + Sources/Components/** + Sources/Design/**, minus the one SharedFacade-coupled formatter):
+                 swift build      → Build complete!                                                              (BUILD_EXIT=0)
+                 swift test       → Executed 22 tests, with 0 failures                                           (SWIFT_TEST_EXIT=0)
+  [GREEN]    swiftc -typecheck — BOTH real SDKs, Swift 6, -strict-concurrency=complete, INCLUDING the #Preview file
+                 -sdk macosx        -target arm64-apple-macos15.0          : 0 errors                            (MAC_TYPECHECK_EXIT=0)
+                 -sdk iphonesimulator -target arm64-apple-ios18.0-simulator : 0 errors                           (IOS_TYPECHECK_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test  : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO WidgetMapView errors; every blocker pre-exists this change):
+    iOS  : the app target fails MODULE RESOLUTION because PRE-EXISTING co-located *.Tests.swift files import XCTest into
+           the app target. The verbatim blocking error is in a feature-views file, NOT mine:
+             TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'
+           This anti-pattern spans 262 co-located *.Tests.swift across TeslaSync/{dashboard-widgets,feature-views}; it
+           pre-dates and is independent of this surface. My WidgetMapView.Tests.swift follows the SAME established repo
+           convention and produces only a benign warning (".../WidgetMapView.Tests.swift:19: warning: file is part of
+           module 'TeslaSync'; ignoring import") — never an error. My WidgetMapView.swift + .strings compiled clean.
+    macOS: the app target requires a development SIGNING certificate this runner does not provision —
+             error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+             error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+    Corroborating pre-existing evidence: `struct DashboardWidgetSize` is DEFINED 15× across Sources/DashboardWidgets/* +
+    TeslaSync/dashboard-widgets/* (a parallel-merge duplicate-type collision). These are exactly the artifacts
+    apps/macos-pending-verifications.md defers to the ADR-012 macos-latest CI runner; they are owned by the P4/P99 Apple
+    acceptance gate (signing/archive) + a dashboard-widget de-duplication / test-target pass — NOT by a single widget
+    primitive prompt (task rule: do not fix pre-existing unrelated breakage). A pending-verification row is recorded in
+    apps/macos-pending-verifications.md.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and explicitly
+                          DEFERRED with verbatim evidence — never reported as passing.
+  2  No scope narrowing : every web region + branch reproduced (isEmpty→EmptyState, map+children+dark tile+compact gating);
+                          loading/error/stale/offline additionally rendered as the primitive's native chrome — none hidden.
+  3  No skip-and-assume : every gate executed on THIS runner; raw exits pasted; the iOS/macOS reds were CONFIRMED (real
+                          xcodebuild after staging Shared.xcframework), not assumed.
+  4  No stubs as final  : complete production primitive + 22 real tests; placeholder scanner = 0.
+  5  No parity shortcut : center/zoom→camera, dark tiles, compact interactivity, empty state, overlay children, a11y, i18n,
+                          telemetry all mapped to platform tokens + verified on both SDKs.
+  6  No delegation      : implemented directly; no agents.
+  7  No predecessor bypass: P1/S9 tokens, P1/S10 i18n, P1/S11 telemetry, P4 core + shared maps/feedback all consumed.
+  8  No commit on red   : the COMMITTED artifact (WidgetMapView.* + 2 wiring lines) is GREEN on every host gate AND on a real
+                          isolated Swift 6 build+test AND on both-SDK typecheck; the deferred full-app gate is RED only on
+                          pre-existing, unrelated surfaces (a feature-views XCTest import + macOS signing) which this commit
+                          neither introduces nor touches.
+  9  No silent drift    : changes are confined to widget-primitives/WidgetMapView.*, the two wiring lines (project.yml,
+                          .swiftlint.yml), this log, and one macos-pending-verifications row — all enumerated above.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic WidgetMapView primitive shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 22 tests pass under the app's own Swift 6 strict-concurrency rules against the real
+  design-system, it typechecks against BOTH the iOS-18 and macOS-15 SDKs, and lint/format/placeholder/xcodegen are all
+  green. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked
+  by pre-existing co-located-test XCTest imports (a feature-views file) and macOS development-signing — both owned by the
+  P4/P99 acceptance gate on a signed macos-latest CI runner per apps/macos-pending-verifications.md. This matches the repo's
+  sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4 Apple surface to date.
+
+EXIT=0
+STATUS=DONE

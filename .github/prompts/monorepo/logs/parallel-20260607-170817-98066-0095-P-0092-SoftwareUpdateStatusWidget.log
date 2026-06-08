@@ -1,0 +1,110 @@
+I'll start by exploring the repository structure to understand the web source and the existing Apple app architecture.
+
+Now let me explore the Apple app structure and the supporting P1 layers (state holders, tokens, i18n, diagnostics).
+
+There's an established pattern. Let me study a similar vehicle widget (GuardMode) and the supporting infrastructure in detail.
+
+Let me examine the supporting infrastructure: registration types, design tokens, the MetricBar component, and how a widget using vehicle state/config binds data.
+
+The registration types live in `DigitalTwinWidget.Model.swift`. Let me read those definitions plus the GuardMode strings/tests/previews and the design tokens.
+
+Let me read the GuardMode tests/views and locate the design tokens plus native Badge/MetricBar equivalents.
+
+Let me locate the design tokens, the MetricBar equivalent, and check the build toolchain availability (critical for DONE vs BLOCKED).
+
+Key finding: only Command Line Tools are installed (no full Xcode), so `xcodebuild` can't run. But `swift`, `swiftlint`, `swiftformat` are available. Let me check SwiftUI compilability, the placeholder script, project config, and read the token/component definitions.
+
+Good — `TSMetricBar(fraction:tone:)` exists. Now let me read the core design tokens (TSTone, Color.TS, Font.TS, TSSpacing, TSRadius), the Badge/Skeleton components, and the project.yml to confirm target membership.
+
+Let me locate the generated token definitions (Color.TS, Font.TS, TSSpacing, TSRadius, TSMotion) and TSSkeleton.
+
+I need to understand how `*.Tests.swift`/`*.Previews.swift`/`*.strings` files in `dashboard-widgets/` are routed to the right targets. Let me check for excludes/rules in project.yml.
+
+Let me read the web registry, hooks, WidgetShell, types, plus confirm TSSkeleton and the generated token member names.
+
+Registry and shell confirmed. Now let me read the web hooks/types for exact field shapes, plus confirm TSSkeleton API and token member names.
+
+I now have everything needed on tokens and data shapes. Let me check the native Motion component (web uses `FadeIn`) and confirm no pre-existing SoftwareUpdate native files, then check how `.strings` tables fold into the catalog.
+
+Let me check the SwiftLint/SwiftFormat configs so my code passes `--strict`, and glance at the placeholder checker.
+
+I have everything I need. Let me set up tracking and write the plan, then build the 7 files following the established GuardMode pattern.
+
+Now I'll create the files. Starting with the Model (state-holder seam + telemetry + i18n facade).
+
+Now the i18n strings catalog and the tests file.
+
+All 7 files created. Now let me verify with the available tooling — auto-format, then lint-check.
+
+SwiftFormat is clean (0/6 require formatting). Now SwiftLint `--strict` on my files.
+
+SwiftLint `--strict`: 0 violations. Now the placeholder check. Let me inspect and run it.
+
+Let me check the placeholder patterns and scan my files properly (the gate's bare-prefix path scans nothing, so I'll verify the real files in a temp dir).
+
+No risky words. Let me run the placeholder gate: self-test, the gate's literal path, and a real scan of my files copied to a temp dir.
+
+Placeholder gate passes (COUNT=0, EXIT=0). Now let me confirm the build capability definitively and attempt a standalone type-check of my code.
+
+`/Applications/Xcode.app` exists but isn't the active developer dir. I can point xcodebuild at it via `DEVELOPER_DIR` without sudo. Let me test that and assess the build chain.
+
+Xcode 26.5 is reachable via `DEVELOPER_DIR`, iOS 26.5 SDK supports the iOS 18 target, and an iPhone 16 simulator exists. The capability is actually available — so I should attempt the real gate. Let me assess the build chain (project generation + the KMP `Shared.xcframework` dependency).
+
+The capability is genuinely present. Let me first do a high-signal isolated `swiftc` type-check of my widget against the real SDK + real tokens, then generate the project and attempt the real gate. First, enumerate external symbols my code references.
+
+Only tiny value-types (`DashboardWidgetSize`, `DashboardWidgetRegistration`, `TSSkeleton`) need shimming; everything else resolves against the real `Tokens.swift`/`Badges.swift`/`Motion.swift`. Let me run an isolated `swiftc -typecheck` of my widget against the real SDK + real tokens.
+
+Tokens.swift is self-contained. Let me build the isolated type-check sandbox (real tokens/components + faithful shims for the 3 sibling value-types) and run it against both macOS and iOS SDKs using the Xcode toolchain.
+
+The macOS type-check passed, but it surfaced a real issue: `SoftwareUpdateBadge.Visual` is declared `Sendable` while storing a non-`Sendable` `TSTone` — a hard **error in Swift 6 mode** (which this project uses: `SWIFT_VERSION 6.0`, strict concurrency complete). Let me fix it and re-check under Swift 6 mode.
+
+Fixed. Now re-running the isolated type-check in **Swift 6 language mode with complete concurrency** (matching the real project settings) for both macOS and iOS SDKs.
+
+macOS Swift 6 strict: clean. Now the iOS Simulator SDK (iOS 18 target).
+
+Sync sessions are ephemeral — the temp dir was lost. Let me recreate the sandbox and run both SDK type-checks in a single command.
+
+Both macOS and iOS Simulator type-checks pass under **Swift 6 strict concurrency** — my code is type-correct against the real SDK, tokens, and components on both platforms. Now let me attempt the real gate. First, generate the Xcode project and assess the KMP `Shared.xcframework` build dependency.
+
+Project generated cleanly (my files are valid members) and JDK 17 is present. Now the gatekeeper for the full gate: building the KMP `Shared.xcframework` via Gradle. Let me attempt it (time-boxed, in the background).
+
+The Gradle KMP build is running (downloading Kotlin/Native + compiling). Let me continue waiting.
+
+Still compiling (first Kotlin/Native build downloads the toolchain). Let me keep waiting.
+
+`Shared.xcframework` built and staged successfully (7m). Now I can run the real gate. Let me build the full app (including my widget) for the iPhone 16 simulator — capturing to a log.
+
+The build failed — but the errors are about `*.Tests.swift` files being compiled into the **app** target (they `import XCTest` + `@testable import TeslaSync`). This affects many sibling widgets, not just mine. Let me confirm the exact errors and verify none come from my non-test widget code.
+
+Confirmed: exactly **2 errors**, both the same root cause — `import XCTest` can't resolve in the **app** target, originating from `DigitalTwinWidget.Tests.swift` (a sibling, not mine). This is a pre-existing, repo-wide project-wiring defect: `project.yml` compiles every `dashboard-widgets/*.Tests.swift` into the app target. None of my non-test code errors.
+
+Let me prove my own tests actually pass by running them as an isolated SwiftPM package (Swift 6 mode) against the real tokens/components.
+
+All **31 unit tests pass** in Swift 6 mode. Let me check the documented verification expectations before finalizing, since the build blocker is a repo-wide project-wiring issue.
+
+Key finding: the repo has **two conflicting test conventions** — the correct one (`Tests/Unit/DashboardWidgets/`, in the test target) and a broken co-located one (`dashboard-widgets/*.Tests.swift`, wrongly compiled into the **app** target). 9 sibling widgets already use the broken pattern, breaking the app build before my widget is even reached.
+
+Let me prove my widget's production code compiles in the **full app build** by temporarily excluding the pre-existing co-located test files (non-destructive — restored after).
+
+Build still fails (11 errors), but now with the test files gone — so these are pre-existing errors elsewhere. Let me see exactly where the 11 errors originate (and confirm none are mine).
+
+Decisive finding: the 11 errors are **all from sibling widgets**, zero from mine. The core defect is that `DashboardWidgetSize`/`DashboardWidgetRegistration` are **defined multiple times** across sibling files (`DigitalTwinWidget.Model.swift` vs `Sources/DashboardWidgets/*`), making them "ambiguous" — the app module was already non-compiling before my widget. Let me confirm the duplicate definitions and that my files/the stashed tests were restored.
+
+Definitive: `DashboardWidgetSize` is defined **3 times** across sibling files — a pre-existing module-wide compile failure independent of my widget. My files and the stashed tests are restored. Let me kick off the macOS build in the background (for a real exit code) while I write the honest gate log.
+
+The macOS build is running in the background. Let me verify the log directory exists and re-confirm the final state of my files while that runs.
+
+The macOS build finished. Let me get its result.
+
+Both iOS and macOS app builds fail (EXIT=65) with **zero errors from my widget** — confirmed pre-existing, platform-independent, out-of-scope defects. I have complete evidence now. Let me write the honest gate log.
+
+Now let me clean up the generated build artifacts and verify the git state is tidy (only my intended deliverable + log as changes).
+
+Generated artifacts were git-ignored and are cleaned. My 7 deliverable files + the log are present; the two ` M` web files are pre-existing and unrelated (I never touched them). Let me re-run the in-scope checks on the FINAL file state (after my `Sendable` fix) to confirm everything is still green.
+
+Final state confirmed green for my surface: swiftformat `0/6`, swiftlint `0 violations`, iOS 18 Swift 6 strict typecheck `EXIT=0`. Let me do a final repo-cleanliness check (ensure the KMP/gradle build outputs didn't leave tracked junk).
+
+Repo is clean: my 7 deliverable files + the log (untracked), gradle/Xcode outputs git-ignored, and the 2 ` M` web files are pre-existing (never touched by me). Let me finalize tracking.
+
+All work in scope is complete and verified. Here's the final summary.
+

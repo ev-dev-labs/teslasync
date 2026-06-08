@@ -1,0 +1,80 @@
+I'll start by exploring the environment and the repository structure to understand the task scope.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Swift 6.3.2, swiftlint, swiftformat, and pwsh ARE available. Let me explore deeper before concluding on capability — I need to understand existing conventions and whether there's a `dashboard-widgets` directory pattern already.
+
+I now understand the web source. Critical observation: the prompt's "Native output" is `apps/apple/TeslaSync/dashboard-widgets/` but the actual project uses `apps/apple/Sources/`. Let me understand the project structure, the shared facade (P1/S8 state holders), design tokens (P1/S9), i18n (P1/S10), and the check-placeholders tool before deciding placement.
+
+Now let me understand the dashboard widget system conventions, the i18n facade, design tokens, and whether sibling P4 widgets established a placement pattern. The prompt's templated path (`TeslaSync/dashboard-widgets/`) doesn't match the real XcodeGen `Sources/` layout, so I need to find the actual convention.
+
+Let me examine the sibling P4 Apple dashboard-widget prompts (for placement convention) and the shared facade/design/i18n infrastructure I must bind to.
+
+There's a canonical, more detailed prompt at `dashboard-widgets/P-0020-ChargeStatusLiveWidget.prompt.md`. Let me read it plus the P4 app-structure and README prompts to nail the real placement convention and binding contracts.
+
+The canonical prompt confirms the templated path `apps/apple/TeslaSync/dashboard-widgets/ChargeStatusLiveWidget.*` (consistent across Native output, Allowed files, gate, and commit). Now I must understand the real shared APIs to bind correctly. Let me read the facade, design tokens, i18n, telemetry, and the key shared components.
+
+This is a sophisticated KMP-backed facade (Kotlin StateFlows via `Shared.xcframework`, `LoadableState`, `StateHolderModel`). I now need the concrete component, design-token, i18n, units, and live-data APIs to write a genuine drop-in. Let me read the key files plus check existing i18n keys.
+
+Rich design system confirmed (`TSBadge`, `TSEmptyState`, `TSQueryError`, `TSAnimatedNumber`, `Color.TS.*`, `Font.TS.*`, `TSSpacing`, units facade). i18n is SwiftUI `LocalizedStringKey` → `Localizable.xcstrings`. "Charge Status **Live**" implies live signals — let me read the Live data store, the one existing domain model, design tokens, and the i18n convention.
+
+The native app has a sophisticated `LiveDataStore<Value, Event>` (cached-seed + live `LiveFleetEvent` merge, 5-state `presentation`, freshness, auth-retry) — exactly right for a "Charge Status **Live**" surface. Let me read the live-state API surface, design tokens, telemetry, i18n conventions, and a sample test to bind correctly.
+
+The live-surface idiom is fully formed (`LiveStateView`, `LiveConnectionBadge`, `.liveData`). Let me capture the remaining exact APIs: `LivePresentation`/`LiveConnectionState` defs, the stream provider/target + preview seam, telemetry, design tokens, charging signal fields, existing i18n keys, and a sample live test.
+
+Let me capture the final API details: `LivePresentation`/`LiveConnectionState`, the stream provider/target/envelope types, design tokens, existing i18n keys, the diagnostics contract, and a sample live test for XCTest conventions.
+
+Now the design tokens, existing i18n catalog keys, localization helper conventions, `LiveEventKind`, and a sample test. Critically, I'll check whether `widget.*` / `live.*` keys already exist in the String Catalog.
+
+Catalog uses Xcode String-Catalog auto-extraction (dotted `LocalizedStringKey` literals like `live.status.live`, `error.title` aren't pre-seeded) — so my approach (web keys as `LocalizedStringKey` literals) matches the codebase. Let me confirm typography components, the `LiveConnectionState`/`LiveEventKind` enums, token names, and XCTest conventions, then write.
+
+I now have the full picture: tokens, components, live infra, test conventions. Let me read the lint/format configs and the live test-support helpers so my code and tests are idiomatic and pass the style gates, then write a plan file.
+
+I have everything needed. Let me set up the directory and a brief plan, then write the implementation.
+
+Now the main implementation file:
+
+Now the test file (adapter, formatting, per-state machine, a11y values, diagnostics, registration):
+
+Let me verify the `FacadeError` cases and `LiveFleetEvent` payload shapes I referenced exist, then run the style/format gates.
+
+Two test-logic fixes: `.network` is retryable (would end `.loading`, not `.error`) — use non-retryable `.decode`; and align the staleness clock with real event timestamps.
+
+Now run the format gate (autoformat to satisfy the before-first wrapping rules, then verify lint-clean):
+
+swiftformat clean. Now swiftlint --strict on the widget files:
+
+swiftlint linted the 256 `included` files (0 violations) but may have ignored my out-of-tree path. Let me force it to lint exactly my two files:
+
+Under `--strict`, the 400-line warning becomes an error. I'll split into multiple `ChargeStatusLiveWidget.*` files (all match the allowed glob), each <400 lines, and fix the multiple-trailing-closure at the `WidgetShell` call. Let me restructure.
+
+Now the two test files (split to satisfy `--strict` file/type-body length limits):
+
+Now re-run swiftformat and swiftlint on all the split files, and check line counts:
+
+All files <400 lines, swiftformat clean. Now swiftlint --strict on all 7:
+
+swiftlint --strict: **0 violations across all 7 files.** Now the placeholder gate. Let me inspect how it resolves the patterns file and run it:
+
+check-placeholders: **PLACEHOLDER_COUNT=0, EXIT=0.** Let me also run the exact gate-path form to confirm behavior, then verify the pure logic actually computes correctly via a standalone compile+run:
+
+check-placeholders is clean (the bare gate path `Test-Path`-misses and scans nothing → vacuous 0; the directory form genuinely scanned all 7 files → 0). Now let me prove the pure logic actually computes the web-parity values via a standalone `swift` compile+run (the only execution path available without Xcode):
+
+**All standalone pure-logic checks pass** — the projection and web-parity formatting are proven correct. Now capture the genuine xcodebuild capability evidence for the BLOCKED gate steps:
+
+Capability confirmed BLOCKED: `xcodebuild` requires full Xcode (only CLT present), no `simctl`. This is the prompt-sanctioned BLOCKED condition. Let me generate the gate log with real command output for every step:
+
+Let me review the generated log and append the honest summary + acceptance criteria + final EXIT/STATUS footer:
+
+Let me verify there are no symbol-name collisions with the existing module (these files would compile into the `TeslaSync` module when wired), since I can't rely on the compiler here:
+
+No collisions. swiftformat and swiftlint already fully parse the files (so syntax is validated). As extra evidence, let me run a syntax-only `swiftc -parse` on each source file:
+
+All 5 source files pass `swiftc -parse` (syntax-valid); SwiftUI resolves under CLT. Let me do a final structural review of the main view file, then check git status:
+
+The two modified `web/...` files are pre-existing (not mine) — I'll leave them untouched and stage only my allowed files (the widget dir + log). Let me stage precisely and commit:
+
+Exactly my 8 files staged; pre-existing web edits untouched. Now commit:
+
+Committed cleanly (`2fbb9901`); pre-existing web edits left untouched. Let me clean up temp files and do a final post-commit gate confirmation:
+
+All gates confirmed. Task complete.
+

@@ -1,0 +1,143 @@
+=== P4 Feature view 0051 AchievementBadge (Apple) ===
+date: 2026-06-08T03:27:04Z
+host: Darwin 25.5.0 arm64
+
+########################################################################
+# RUNNER CAPABILITY PROBE (ADR-002 requires SwiftUI+SwiftCharts+MapKit,
+#  iOS 18 / iPadOS 18 / macOS 15 toolchain = full Xcode)
+########################################################################
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+(xcodebuild_exit=1)
+$ swift --version
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+Target: arm64-apple-macosx26.0
+$ swiftlint version => 0.63.3
+$ swiftformat --version => 0.61.1
+$ pwsh --version => PowerShell 7.6.2
+
+FINDING: active developer dir is /Library/Developer/CommandLineTools (Command
+ Line Tools only). xcodebuild + the iOS-18/macOS-15 SDKs + Simulators + the
+ #Preview (PreviewsMacros) plugin ship ONLY with full Xcode, which is not
+ installed on this runner. Per the prompt capability clause this is a BLOCKED
+ runner: the two xcodebuild build+test gate steps cannot execute here.
+
+########################################################################
+# GATE STEPS (run verbatim; results reflect this runner)
+########################################################################
+--- [1/5] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+--- [2/5] xcodebuild -scheme TeslaSync-macOS build test ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+--- [3/5] swiftlint --strict (repo-wide, config 'included' scope) ---
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-172/apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length Violation: Function body should span 50 lines or less excluding comments and whitespace: currently spans 78 lines (function_body_length)
+Done linting! Found 1 violation, 1 serious in 637 files.
+LINT_EXIT=2
+  NOTE: the single violation is pre-existing in
+  TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift (function_body_length),
+  a sibling file OUTSIDE this prompt's allowed-files scope (AchievementBadge.* + log).
+  feature-views/ is not in .swiftlint.yml 'included', so my files are linted separately below.
+--- [4/5] swiftformat --lint apps/apple (whole tree) ---
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-172/apps/apple/.swiftformat
+SwiftFormat completed in 0.35s.
+0/694 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+--- [5/5] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/AchievementBadge ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+########################################################################
+# SURFACE-SCOPED VERIFICATION (allowed files: AchievementBadge.* — all green)
+# Substitutes for the Xcode-only gate steps to prove the surface is real,
+# complete, and correct on the parts this runner CAN execute.
+########################################################################
+
+--- a) swiftformat --lint (my 7 swift files) ---
+0/7 files require formatting.
+  => FORMAT(my-files)_EXIT=0
+
+--- b) swiftlint --strict (my 7 swift files) ---
+Done linting! Found 0 violations, 0 serious in 7 files.
+  => SWIFTLINT(my-files)_EXIT=0 (0 violations)
+--- c) swiftc -typecheck Adapter.swift standalone (Foundation-only pure core) ---
+  => ADAPTER_TYPECHECK_EXIT=0
+--- d) swiftc -typecheck shipping view layer (real Tokens.swift + TSSkeleton/TSTone stubs) ---
+  => SHIPPING_VIEWLAYER_TYPECHECK_EXIT=0 (Previews #if DEBUG excluded — #Preview macro is Xcode-only)
+--- e) logic harness: real Adapter.swift + Model.swift compiled & executed (21 assertions) ---
+ok: unlocked tier hides ring, pct100
+ok: locked 41%
+ok: 0.8 near-complete
+ok: 0.7999 locked yet pct rounds 80
+ok: unlocked beats near-complete
+ok: round half away 0.125->13
+ok: ring clamps, raw pct 140
+ok: ring floor 0, raw pct -20
+ok: resolve loading
+ok: resolve error
+ok: resolve empty
+ok: resolve content+stale
+ok: content w/o achievement -> empty
+ok: model applied content
+ok: model size lg
+ok: view.opened emitted once
+ok: source started once
+ok: refresh delegated x2
+ok: push updates phase -> loading
+ok: a11y locked label
+ok: a11y unlocked label
+HARNESS_OK total_checks_passed
+  => HARNESS_EXIT=0
+--- f) check-placeholders.ps1 on isolated copy of my 8 files ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+  => PLACEHOLDER(my-files)_EXIT=0
+--- g) swiftc -parse all 8 source files (syntax) ---
+  parse OK: AchievementBadge.swift
+  parse OK: AchievementBadge.Adapter.swift
+  parse OK: AchievementBadge.Model.swift
+  parse OK: AchievementBadge.Views.swift
+  parse OK: AchievementBadge.States.swift
+  parse OK: AchievementBadge.Previews.swift
+  parse OK: AchievementBadge.Tests.swift
+
+########################################################################
+# PARITY + ACCEPTANCE NOTES
+########################################################################
+web source: web/src/features/analytics/components/AchievementBadge.tsx
+Reproduced web render branches: unlocked (gold tile, full-color glyph, "✓ Unlocked"),
+  → gold ring + pulse), and sizes sm/md/lg (ring 56/72/96, stroke 3/4/5, glyph 20/30/36).
+States contract rendered: loading · empty · error(+retry) · stale(chip) · offline(chip) · content.
+i18n: web key 'lifetime.unlocked' (= "✓ Unlocked") resolved via the P1/S10 facade table
+  "AchievementBadge"; all native chrome strings keyed (no English literals in code).
+Data binding: AchievementBadgeModel over the P1/S8 AchievementBadgeSource seam (no HTTP in view).
+Diagnostics: view.opened emitted once on start with surface slug "AchievementBadge" (P1/S11).
+Accessibility: combined VoiceOver label (name + unlock/percent), Reduce-Motion-gated pulse,
+  Dynamic Type fonts via P1/S9 tokens, decorative glyph/ring hidden.
+Tests: adapter projection (8) + projection.resolve (6) + model wiring/telemetry (4) + a11y (2).
+
+########################################################################
+# CAPABILITY ASSESSMENT / TERMINAL STATUS
+########################################################################
+BLOCKED cause (primary): full Xcode is not installed on this runner
+  (active dir = CommandLineTools). The two xcodebuild build+test steps and the
+  #Preview macro plugin require Xcode + the iOS-18/macOS-15 SDKs + Simulators,
+  which are unavailable here → IOS_EXIT=1, MAC_EXIT=1 (capability gap, not code).
+BLOCKED cause (secondary): repo-wide swiftlint --strict has 1 PRE-EXISTING violation
+  in dashboard-widgets/LifetimeStatsWidget.Adapter.swift, outside this prompt's
+  allowed-files scope (AchievementBadge.* + log) → not fixable here without violating scope.
+The AchievementBadge surface itself is COMPLETE and passes every check runnable here:
+  swiftformat(my-files)=0, swiftlint(my-files)=0, adapter typecheck=0, view-layer typecheck=0,
+  logic harness=21/21, placeholder(my-files)=0, parse=7/7, gate FORMAT=0, gate PLACEHOLDER=0.
+No stubs / no skeleton-only / no placeholder text shipped (Honesty Covenant ##1-9 upheld).
+
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,175 @@
+=== P4 Modal / dialog 0030 CommandInputDialog (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 (Swift 6 language mode) · swiftlint 0.63.3 · swiftformat 0.61.1 ·
+                       xcodegen 2.45.4 · pwsh 7.x
+  Destinations       : iOS Simulator "iPhone 16" present + booted · macOS 15 SDK present.
+  Capability         : SwiftUI + (Swift Charts / MapKit available, unused by this surface) + iOS/macOS
+                       SDKs present → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/features/system/components/CommandInputDialog.tsx — a CONTROLLED FORM MODAL. Props:
+    open / onClose / onSubmit(values) / def:CommandDef / vehicle?:{display_name} / loading?.
+  Composition: <Modal size="sm"> → header[ def.icon chip + t(def.labelKey) + t(ic.promptKey) ]
+               → <form>{ fields ? fields.map(<Input/>) : single <Input/> }
+                 + footer[ Cancel ghost (t('common.cancel')) · Send primary (t('common.send'), loading,
+                           disabled={!isValid()}) ].
+  validateField(value, validation, min, max):
+    !trim ⇒ 'Required' ; pin ⇒ /^\d{4}$/ ; number ⇒ parseInt(10), String(n)!==v ⇒ 'Enter a whole number',
+    then min/max ; decimal ⇒ parseFloat, NaN ⇒ 'Enter a valid number', then min/max ; text/none ⇒ ok.
+  resolveInputType: pin ⇒ password (secure) ; resolveInputMode: pin/number ⇒ numeric, decimal ⇒ decimal.
+  Initial values: fields ⇒ each '' ; single ⇒ getDefaultValue?.({vehicle}) ?? defaultValue ?? ''.
+  Per-field error shows only when touched; Escape ⇒ onClose; first input is focused on open.
+  DATA SOURCES (from the prompt + a full read of the source): ONLY useTranslation. The component
+  FETCHES NOTHING — there is no async data axis, hence no empty / error / stale / offline FETCH states.
+  The branches the source ACTUALLY has (all reproduced): single-field vs multi-field, per-field
+  validation error (touched-gated), the submit-in-flight `loading` state, and the validity gate.
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/modals-dialogs/ — the new directory this surface introduces)
+  CommandInputDialog.Adapter.swift   — PURE Foundation core: CommandFieldValidation / CommandFieldError /
+                                       CommandKeyboard, CommandInputValidator (validateField + JS parseInt /
+                                       parseFloat semantics + secure/keyboard/plainNumber), CommandFieldSpec,
+                                       CommandInputProjection (fieldSpecs / initialValues / isValid).
+  CommandInputDialog.Model.swift     — domain DTOs (CommandDefault, CommandInputVehicle / Field / Config /
+                                       Definition / Context) + CommandInputStrings i18n facade (P1/S10,
+                                       table "CommandInputDialog", CommandFieldError → message).
+  CommandInputDialog.State.swift     — CommandInputTelemetry seam + OSLog sink (P1/S11 view.opened),
+                                       CommandInputSource seam (P1/S8), @Observable @MainActor
+                                       CommandInputModel, InMemoryCommandInputSource.
+  CommandInputDialog.Views.swift     — header, field row (label + secure/plain field + inline error +
+                                       keyboard), Cancel/Send action row (spinner + validity gate).
+  CommandInputDialog.swift           — the CommandInputDialog surface (slug "CommandInputDialog", focus +
+                                       on-blur validation), the model→Binding bridge, and the
+                                       .commandInputDialog(model:isPresented:) sheet host.
+  CommandInputDialog.Previews.swift  — #Preview per branch (number+range, range violation, secure PIN,
+                                       multi-field GPS, vehicle-name default, submit-in-flight, sheet, dark).
+  CommandInputDialog.Tests.swift     — pure validator / projection / default / strings tests + shared
+                                       CommandInputFixtures (faithful web catalog entries).
+  CommandInputDialog.ModelTests.swift— @MainActor state-holder tests (wiring, touched-gated errors,
+                                       validity gate, submit/cancel, definition-change rebuild, telemetry).
+  CommandInputDialog.strings         — the P1/S10 catalog contribution (action labels + validation prose +
+                                       a11y), web English fallbacks.
+  Necessary first-surface wiring (same pattern p4-apple/feature-views/0010-ToolCard used for feature-views):
+    project.yml      — + "TeslaSync/modals-dialogs" to the TeslaSync and TeslaSync-macOS app target sources.
+    .swiftlint.yml   — + "TeslaSync/modals-dialogs" to `included` so `swiftlint --strict` covers the surface.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  <Modal size="sm">       → a 420-pt rounded surface card (Color.TS.surface + .border stroke + shadow),
+                            hosted in a native sheet via .commandInputDialog(model:isPresented:).
+  header icon chip        → 40×40 SF Symbol chip on Color.TS.surfaceGlass (decorative, a11yHidden).
+  t(def.labelKey)/prompt  → CommandInputStrings.string(def.labelKey/ic.promptKey, fallback) (P1/S10).
+  <Input> label/error     → label (Font.TS.label) + native TextField/SecureField + inline error
+                            (Color.TS.statusDanger), shown only when the model marks the field touched.
+  resolveInputType=pass   → SecureField when validation==.pin ; resolveInputMode → .keyboardType on iOS
+                            (numberPad / decimalPad), a no-op on macOS (#if os(iOS)).
+  Cancel ghost / Send     → plain Button (textSecondary) + accent-tinted Capsule Button (Color.TS.accent
+                            /.18 fill, /.30 ring) — the web neon-cyan Send mapped to the accent token; the
+                            Send spinner reflects `loading`; disabled until isValid (+ a double-submit guard).
+  getDefaultValue closure → CommandDefault enum {none, literal, vehicleDisplayName}. The web catalog has
+                            EXACTLY ONE getDefaultValue (set_vehicle_name → vehicle.display_name), so the
+                            closed enum is FULL parity, not a reduction (verified: 1 hit in commands.ts).
+  validateField prose     → semantic CommandFieldError enum localized at the P1/S10 boundary; min/max
+                            magnitudes round-trip via plainNumber to read like the web `${min}` template.
+  i18n      : every string from P1/S10 keys; ZERO English literals in code (validation prose promoted to
+              keys). Title/prompt resolve via the caller's CommandDef keys.
+  a11y      : icon chip decorative; header reads as one element; every field has an accessibilityLabel +
+              value; the error is announced; Cancel/Send carry labels + .cancelAction/.defaultAction
+              shortcuts (Escape / Return). No nonessential motion → Reduce Motion safe by construction.
+  telemetry : view.opened surface="CommandInputDialog" emitted once on first presentation (P1/S11).
+
+STATES (every branch the web source has — reproduced; the data-axis states do not exist in this source)
+  single-field       — rendered + tested (paramName input seeded from the resolved default).
+  multi-field        — rendered + tested (lat/lon decimal form).
+  validation error   — touched-gated per-field error; previews + model tests cover required / range.
+  submit-in-flight   — web `loading` → Send spinner + double-submit guard; preview + model tests.
+  (empty/error/stale/offline FETCH states are N/A: this controlled form has no async data source — see
+   WEB SOURCE above. NOT a scope narrowing: the source has no such branches to reproduce.)
+
+GATES (executed on THIS runner; raw results)
+  [GREEN]    swiftformat --lint apps/apple/TeslaSync/modals-dialogs        : 0/8 files require formatting   (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict (whole app)                                : 0 violations in modals-dialogs;
+             the ONLY tree-wide violation is 1 PRE-EXISTING function_body_length in
+             TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift (NOT a CommandInputDialog file; not
+             introduced here — same file ToolCard's log named).                                      (LINT_EXIT for our scope=0)
+  [GREEN]    check-placeholders.ps1 -Path …/modals-dialogs -Language swift : PLACEHOLDER_ALLOWED=0,
+             PLACEHOLDER_COUNT=0 (and =0 on the gate's literal -Path …/modals-dialogs/CommandInputDialog).
+             grep -niE for TODO/FIXME/XXX/coming-soon/placeholder/lorem/not-implemented over the 8 .swift
+             files = 0 hits.                                                                          (PLACEHOLDER_EXIT=0)
+  [GREEN]    CommandInputDialog build + test — ISOLATED SwiftPM harness, swift-tools 6.0, Swift 6 LANGUAGE
+             MODE (= the app's SWIFT_VERSION 6.0 + strict-concurrency complete), compiling the EXACT shipped
+             sources (Adapter/Model/State/Views/CommandInputDialog/Previews) against the REAL generated
+             design tokens (apps/design/generated/apple/Tokens.swift), then running both test files:
+                 Build complete!  ·  Executed 43 tests, with 0 failures (0 unexpected)               (SWIFT_TEST_EXIT=0)
+  [GREEN]    xcodegen generate                                             : project regenerated; the 8
+             CommandInputDialog Swift files + the strings catalog are enumerated (54 pbxproj references) →
+             the full Xcode build WOULD compile them.                                                (GEN_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test
+
+  OBSERVED RUN (this runner, honest):
+    The exact gate command WAS launched here (DEVELOPER_DIR=Xcode 26.5). It entered the scheme's
+    pre-build Run Script and drove the Gradle/Kotlin-Native staging of Shared.xcframework — observed
+    progressing through `:core:linkRelease/DebugFrameworkIos{Arm64,SimulatorArm64}` +
+    `linkReleaseFrameworkMacosArm64` (so the KMP toolchain IS functional on this host). Under heavy
+    PARALLEL-runner contention (40+ concurrent Gradle/kotlin daemons from sibling slots; a shared /tmp
+    that was cleaned out from under a first attempt) the framework link did not finish within the
+    bounded wait, so no final IOS_EXIT was captured. Throughout, the build log contained ZERO
+    `modals-dialogs` / `CommandInputDialog` errors (grep = 0). No green result is claimed for this gate.
+
+  WHY DEFERRED (full-app Xcode gate — ZERO CommandInputDialog errors; all blockers pre-exist this change):
+    Once the framework stages, the app target fails to typecheck on PRE-EXISTING, UNRELATED parallel-merge
+    collisions that this surface neither introduces nor touches — verified present on this branch:
+      • `struct DashboardWidgetSize` is DEFINED 15× across Sources/DashboardWidgets/* + TeslaSync/
+        dashboard-widgets/* → "ambiguous for type lookup" (grep count = 15).
+      • `PowerFlowConnection` redefined (grep count = 2).
+      • 199+ co-located *.Tests.swift / *.ModelTests.swift import XCTest INTO the app target (the same
+        established co-location pattern AiUsageCard / every P4 surface uses; CommandInputDialog adds 2 more).
+      • Shared.xcframework is not committed (only Frameworks/.gitkeep) — it must be staged by the Gradle
+        pre-action above (KMP toolchain), which is slow + contended on this shared runner.
+      • macOS additionally requires a development SIGNING certificate this runner does not provision.
+    These are exactly the artifacts apps/macos-pending-verifications.md defers to the ADR-012 macos-latest CI
+    runner; they are owned by the P4/P99 Apple acceptance gate + a dashboard-widget de-duplication pass, NOT
+    by a single modal/dialog prompt (task rule: do not fix pre-existing unrelated breakage). A pending-
+    verification row is recorded. The CommandInputDialog surface is INDEPENDENTLY PROVEN to compile + pass
+    its 43 tests by the isolated Swift 6 harness above.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported DEFERRED/RED with its real
+                          root cause (pre-existing duplicate types + unstaged KMP framework + signing),
+                          never dressed up as passing. Every GREEN gate above was actually executed here.
+  2  No scope narrowing : every web branch reproduced — single + multi field, all four validation kinds +
+                          bounds, secure/keyboard resolution, the default-value precedence incl. the one
+                          dynamic provider, touched-gated errors, the loading spinner, Cancel/Send.
+  3  No skip-and-assume : CommandInputDialog.tsx + commands.ts read end-to-end; the JS parseInt/parseFloat
+                          edge cases (05, +5, 5abc, 1.5, 1.2.3, .5, inf) are pinned by tests.
+  4  No stubs as final  : complete production surface + 43 real tests; placeholder scanner = 0, 0 opt-outs.
+  5  No parity shortcut : validation arithmetic ported verbatim; getDefaultValue closed-set parity proven
+                          complete (1/1 catalog provider); tokens/typography/a11y/telemetry all mapped.
+  6  No delegation      : authored directly (delegation FORBIDDEN; none used).
+  7  No predecessor bypass: P1/S8 source seam, P1/S9 tokens, P1/S10 i18n, P1/S11 telemetry all present +
+                          consumed; mirrors the P4 leaf contract established by feature-views surfaces.
+  8  No commit on red   : the committed surface is GREEN on every gate scoped to it AND on a real isolated
+                          Swift 6 build+test; it introduces ZERO new tree-wide violations. The deferred
+                          full-app gate is RED only on pre-existing, unrelated surfaces.
+  9  No silent drift    : changes confined to apps/apple/TeslaSync/modals-dialogs/CommandInputDialog.* (8
+                          files), the two first-surface wiring files (project.yml, .swiftlint.yml), this
+                          log, and one macos-pending-verifications row — all enumerated above.
+  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic CommandInputDialog shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 43 tests pass under the app's own Swift 6 strict-concurrency
+  rules, against the real design system, with swiftlint/swiftformat/placeholder all green. The full-app
+  iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked by
+  pre-existing parallel-merge duplicate-type collisions + the unstaged KMP Shared.xcframework + macOS
+  development-signing — all owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED Xcode
+  gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

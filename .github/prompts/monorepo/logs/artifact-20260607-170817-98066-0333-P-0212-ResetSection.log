@@ -1,0 +1,59 @@
+=== P4 Feature view 0212 ResetSection (Apple) ===
+date: 2026-06-08T06:14:51Z
+host: Darwin 25.5.0 arm64
+
+--- CAPABILITY PROBE (prompt Capability clause: SwiftUI+SwiftCharts+MapKit, iOS18/iPadOS18/macOS15) ---
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+$ xcrun simctl list runtimes (iOS)
+(no iOS simulator runtimes installed)
+>> FINDING: only Command Line Tools are installed (no full Xcode) => no iOS SDK, no iOS Simulator,
+>>          no iOS/macOS app (SwiftUI) build/test target. The two xcodebuild gate steps cannot run.
+>>          swiftc CAN typecheck SwiftUI against the macOS SDK, so surface type-correctness IS verified below.
+
+--- GATE STEP 1: xcodebuild iOS (build test, iPhone 16) ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1  (BLOCKED: requires full Xcode + iOS Simulator)
+
+--- GATE STEP 2: xcodebuild macOS (build test) ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1  (BLOCKED: requires full Xcode)
+
+--- GATE STEP 3: swiftlint --strict (scope: 0212 surface) ---
+Linting 'ResetSection.ModelTests.swift' (9/9)
+Linting 'ResetSection.Tests.swift' (8/9)
+Done linting! Found 0 violations, 0 serious in 9 files.
+LINT_EXIT=0
+
+--- GATE STEP 4: swiftformat --lint (scope: 0212 surface) ---
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-333/apps/apple/.swiftformat
+SwiftFormat completed in 0.68s.
+0/9 files require formatting.
+FORMAT_EXIT=0
+
+--- GATE STEP 5: check-placeholders.ps1 (scope: 0212 surface) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- SUPPLEMENTARY VERIFICATION (swiftc -typecheck vs the REAL shared component layer; macOS SDK) ---
+>> Compiles the surface together with the real P1/S9 tokens + shared components
+>> (Buttons/Badges/Cards/Typography/Skeletons/Motion/Design). No -DDEBUG (previews #if DEBUG-excluded).
+RUNTIME_TYPECHECK_EXIT=0
+PREVIEWS_TYPECHECK_EXIT=0  (#Preview macros->plain funcs; Xcode plugin absent)
+TESTS_TYPECHECK_EXIT=0  (XCTest shimmed; framework is Xcode-only on this runner)
+
+--- SUMMARY ---
+IOS_EXIT=1 (BLOCKED)  MAC_EXIT=1 (BLOCKED)
+LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+RUNTIME_TYPECHECK_EXIT=0  PREVIEWS_TYPECHECK_EXIT=0  TESTS_TYPECHECK_EXIT=0
+
+>> The surface is COMPLETE and independently verified (lint/format/placeholders/typecheck all 0).
+>> The xcodebuild build+test steps are BLOCKED by platform capability: this runner has only
+>> /Library/Developer/CommandLineTools (no full Xcode), so there is no iOS SDK / iOS Simulator and
+>> no SwiftUI iOS/macOS app build-test target. Per the prompt Capability clause, STATUS=BLOCKED.
+EXIT=1
+STATUS=BLOCKED

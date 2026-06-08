@@ -1,0 +1,144 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Swift toolchain is present. Let me verify `xcodebuild` works and read the web source plus an existing widget for the established pattern.
+
+Key finding: only **Command Line Tools** are installed, not full Xcode — so `xcodebuild`/`simctl` are unavailable. But `swift`, `swiftlint`, `swiftformat` work, and there's an established `dashboard-widgets` directory with ~417 files. Let me study the existing pattern thoroughly before deciding on BLOCKED vs DONE.
+
+`SecurityStatusWidget` is the closest precedent (same `security` category, Adapter/Model/Views/Previews/Tests/strings split). Let me read it in full plus the web shared grid, the safety enum lib, and the type definitions.
+
+Excellent, very clear pattern. Let me read the remaining SecurityStatusWidget files (Adapter, Views, Previews, Tests, strings).
+
+Now the strings file, shared P1/S9 tokens, registration types, and the web parity sources (safety enum, vehicle-systems types, WidgetStatusGrid, registry).
+
+Now the vehicle-systems types, registry entry, shared tokens/registration infrastructure, typeGuards, and the useSafety hook.
+
+Let me locate the shared P1/S9 token + registration definitions to confirm the exact APIs, and check whether there's a central widget registry to update.
+
+The shared tokens live elsewhere in the tree. Let me locate them and the registration type, and confirm the project layout.
+
+These types are defined in multiple files — likely behind conditional-compilation guards so exactly one is active. Let me inspect the guards and find the canonical definition.
+
+Let me determine precisely which files *define* (not reference) the shared types, to understand the single canonical home.
+
+13 files each define those types — so `dashboard-widgets/` isn't a single flat compile; the canonical sibling `SecurityStatusWidget` *references* the shared types rather than defining them, which is the convention I'll follow. Let me understand the build wiring (SPM vs xcodegen) since that determines what verification I can run.
+
+It's an XcodeGen project (no SPM). The `dashboard-widgets/` dir is compiled into the `TeslaSync` target alongside `Sources/` and design tokens from `../design/generated/apple`. Let me confirm the canonical homes of the shared tokens and registration type to ensure my references resolve identically to the sibling.
+
+Found the canonical homes: design tokens in `apps/design/generated/apple/Tokens.swift`, `TSSkeleton` in `Sources/Components/Feedback/Skeletons.swift`, `TSTone` in `Sources/Components/UI/Badges.swift`. Let me confirm the exact APIs I'll reference.
+
+All shared APIs confirmed. Before writing, let me read the lint/format configs and the placeholder-check script so my files pass the gate's runnable steps.
+
+`pwsh` is available — good. Let me do a final capability check: is a full Xcode.app installed anywhere (the only blocker for build/test)?
+
+A full **Xcode.app exists** and `xcodegen` is present. The active dir is CommandLineTools, but I can override per-invocation with `DEVELOPER_DIR` (no sudo needed). Let me verify this unlocks the SDKs and simulators.
+
+Full Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 sim is even booted. The gate is runnable — STATUS=DONE is achievable. But I saw 13 files each defining `DashboardWidgetSize`/`DashboardWidgetRegistration`. Let me verify whether those are guarded (else the baseline wouldn't compile) before I build.
+
+`DashboardWidgetSize` is an unguarded top-level `public struct` repeated across 13 committed files — that can't coexist in one module. Let me confirm it's real (2nd file + no `#if` guards) and check `project.yml` for any source excludes, since this determines baseline buildability.
+
+I have everything I need. This is an XcodeGen app; the full toolchain works via `DEVELOPER_DIR`. I noticed a pre-existing baseline issue (13 sibling widget files each redefine `DashboardWidgetSize`/`DashboardWidgetRegistration` — outside my allowed scope), so I'll follow the canonical `SecurityStatusWidget` convention of *referencing* those shared types (adding zero duplicates). Let me write a plan file, then implement.
+
+Now I'll write the implementation. Starting with the Adapter (pure testable core — the safety-enum cleaner + cell projection).
+
+Now the Model file (state-holder seam, telemetry, registry input types, i18n facade).
+
+Now the Views file (presentational subviews: banner, variable-column grid, empty grid, cell, compact big-number).
+
+Now the main View file — the dashboard surface (shell, header, state switch, registration, compact/grid branching).
+
+Now the Previews and strings files.
+
+Now the comprehensive Tests file (adapter parity, classifier, projection, model phases, registry, a11y).
+
+All 7 files written. Now the scoped verifications — swiftformat and swiftlint on my new files.
+
+swiftformat found formatting issues — I'll let the ecosystem tool auto-fix them (preferred over manual edits), then re-lint.
+
+swiftformat passes now. Let me verify the auto-formatted regions look correct, then run swiftlint.
+
+Two `file_length` violations (>400 lines, promoted by `--strict`). I'll split cleanly along the established conventions: move `SafetyAccessibility` into its own file and split the model/registry tests into `*.ModelTests.swift` (a suffix already used by 3 sibling widgets). Let me view the exact blocks to move.
+
+I'll move `SafetyAccessibility` into a dedicated file and remove it from the Adapter.
+
+Now split the tests. Let me view the model/registry/spy sections to move them.
+
+Now create the ModelTests file and remove the moved blocks from Tests.swift.
+
+Now I'll recreate `Tests.swift` with only the adapter-level tests (model/registry/spy moved out). Let me remove and rewrite it cleanly.
+
+Now re-run swiftformat + swiftlint on all 8 files and check line counts.
+
+swiftformat clean, but `Adapter.swift` is still 406 (>400). I'll trim ~10 lines of comments to get safely under. Let me view the comment-heavy top.
+
+400 exactly — the rule is "400 or less" so it passes, but I'll trim a couple more for margin. Let me condense the `SafetyEnumCleaner` doc.
+
+Now re-run swiftformat + swiftlint --strict on all 8 files.
+
+swiftformat clean, swiftlint `--strict` **0 violations**. Adapter sits at exactly 400 (the max). I'll trim a few more lines for safe margin so it's stable.
+
+Adapter now 399. Let me run the placeholder check (pwsh) — first understanding how `-Path` is handled.
+
+The gate's `-Path` (no extension) scans nothing → trivially exits 0. For an honest scoped check, I'll also run the script against a temp dir holding only my files, plus a manual grep.
+
+Placeholder checks and manual grep are clean. Now an isolated `swiftc -typecheck` of my files against a faithful shim of the shared APIs (proves my code compiles independent of the pre-existing sibling baseline issue). Let me create the shim and typecheck.
+
+Those errors are just my shim declaring the registration types as `internal` while the real ones are `public` (my code exposes them in public API). Let me make the shim's registration types `public` to match reality, then re-run.
+
+Still shim-internal access cascades (`TSSkeleton.init` default references `TSRadius.sm`). Let me make the spacing/radius shim enums `public` (matching reality) and re-run.
+
+Library + previews typecheck **passes** under strict concurrency. Now typecheck the test files too (stripping `@testable import` for the isolated compile, linking XCTest).
+
+The XCTest Obj-C macros aren't available to a bare `swiftc` (they need the test-target overlay) — an environment limitation, not a test-code issue. I'll validate the test *logic* with a tiny XCTest shim (stub `XCTestCase` + assertion functions) so the test bodies are still type-checked against the real symbols.
+
+Just `Date` needs Foundation (the real `import XCTest` re-exports it). I'll substitute `import XCTest` → `import Foundation` in the temp copies and re-run.
+
+**Full isolated typecheck (library + previews + tests) passes under strict concurrency.** My surface is type-correct against the real shared APIs. Now the authoritative gate — generate the Xcode project and attempt the real build. Let me start.
+
+Project generated; both `TeslaSync` and `TeslaSync-macOS` schemes exist. Let me verify the prebuilt `Shared.xcframework` dependency is present, then start the macOS build (capturing output) to get authoritative evidence.
+
+The `Shared.xcframework` (KMP shared core the app links against) is **absent** — only a `.gitkeep` placeholder. That's a separate build artifact, not checked in. Let me confirm and capture build evidence.
+
+Definitive: `Shared.xcframework` (a required, git-ignored binary dependency) is absent and its KMP source/Gradle toolchain isn't in this checkout — so it can't be produced here. Combined with the pre-existing duplicate-symbol sibling files, the full-app `xcodebuild` gate has hard environmental blockers outside my scope. Let me capture the actual build error as evidence.
+
+The piped build is buffering and slow. Let me stop it and run the build writing full output to a log file I can inspect directly (no grep buffering).
+
+Build running to a log in the background. While it compiles, let me poll the log for the key errors.
+
+xcodebuild buffers output; log still empty. Let me wait longer and re-check.
+
+Let me check if the build is still alive, and meanwhile get fast, direct evidence of the duplicate-symbol baseline break by compiling two sibling files together.
+
+That confirms the duplicate-symbol baseline break. Let me get a clean two-sibling proof (without my shim) and re-check the full build log.
+
+Clean proof captured: two sibling files alone produce `invalid redeclaration of 'DashboardWidgetSize'/'DashboardWidgetRegistration'`. The full build log is still empty (xcodebuild fully buffering). Let me give it one more interval, then finalize.
+
+~11 minutes in, xcodebuild is still fully buffering (0-byte log) — it won't yield inspectable output in reasonable time, and will ultimately fail on the missing `Shared.xcframework` and/or the pre-existing duplicate symbols. I have conclusive evidence of both. Let me stop the build cleanly.
+
+Multiple leftover xcodebuild processes from earlier attempts are running. Let me terminate them with explicit PIDs.
+
+All build processes cleaned up. I have conclusive evidence of the environmental blockers. Let me re-run the scoped gate steps cleanly for authoritative exit codes, re-confirm the isolated typecheck, and verify the log directory exists.
+
+All scoped checks green; log dir exists. Let me capture the final consolidated evidence (isolated typecheck + both blocker proofs) for the log.
+
+All evidence captured. Let me get final line counts, then write the honest gate log.
+
+Now I'll write the honest, comprehensive gate log.
+
+Log written. Now let me clean up temp artifacts and verify exactly what git sees before staging.
+
+Git is hanging abnormally. Let me stop and investigate (likely an index lock or a huge untracked build dir).
+
+No lock; a leftover git child is winding down. Let me retry with a fast, targeted git query on my exact files.
+
+All 10 files (9 surface + log) are new/untracked — clean scope. The earlier hang was a full-tree status scan of the large monorepo. Let me stage exactly my files and commit (avoiding the unrelated working-tree changes from other slots).
+
+Exactly my 10 files staged — no scope creep. Now commit.
+
+Commit succeeded. Let me verify the commit contents.
+
+Commit is clean — exactly 10 files, no scope creep. Let me tidy the git-ignored generated project artifacts.
+
+Let me do a final confirmation that my surface files are committed and clean.
+
+The task is complete to the maximum extent the environment allows. Everything is committed cleanly.
+

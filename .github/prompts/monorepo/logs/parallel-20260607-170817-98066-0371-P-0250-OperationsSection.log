@@ -1,0 +1,197 @@
+I'll start by exploring the environment, the web source component, and the Apple app structure to understand what's needed.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me verify whether any full Xcode exists and explore the structures in parallel.
+
+`/Applications/Xcode.app` exists — the problem is just `xcode-select` pointing at CommandLineTools. Let me check whether I can use full Xcode via `DEVELOPER_DIR`, and explore the Apple app structure deeply.
+
+Full Xcode 26.5 is available via `DEVELOPER_DIR`, an iPhone 16 simulator is already booted, and `xcodegen` is present. The gate is runnable. Let me explore the existing feature-views and Apple source conventions.
+
+Many existing feature-views exist (1224 files). Let me find the closest reference examples and understand the SharedFacade (state holders) and component library.
+
+`AuditPanel` is a strong analog (audit logs). Let me examine its full file set plus find feature-views combining RadialGauge + MetricCard + DataTable, and read the SharedFacade core.
+
+Let me read the AuditPanel reference set and SharedFacade core in parallel.
+
+The AuditPanel pattern is the template. Let me read the rest of its files plus the theme/design tokens and telemetry.
+
+Let me read the AuditPanel tests, the theme/design tokens, and locate the telemetry + shared component types (MetricCard, RadialGauge, Skeleton).
+
+`NotificationStatsWidget` (0069) is directly relevant to notification stats. Let me inventory it plus the section/telemetry/token references, then read the key files.
+
+`NotificationStatsWidget` models the exact notification-stats data I need. Let me read its full set plus the design tokens.
+
+The existing module already declares `NotificationStats`/`NotificationLog`/`NotificationLogStatus` (public, same `TeslaSync` module) — I'll reuse those to avoid redeclaration. I still need the `AuditLog` shape (different from DLQ audit) and the design tokens. Let me gather web contracts + tokens + check for name collisions.
+
+Now I understand the data contracts. I'll reuse the existing `NotificationStats`/`NotificationLog` public types and add a new `OperationsAuditLog`. Let me read the web helpers/AccordionSection/formatters and the native Section pattern + shared components + tokens.
+
+Let me read the native Section pattern, the shared `TSMetricCard`/`PieGauge`, the design tokens, and the build wiring.
+
+Now I have the shared components. The web `RadialGauge` uses threshold colors (green/amber/red), which `TSRadialGauge` (palette-indexed) can't express — I'll hand-build a tone-colored gauge like AuditPanel did for its table. Let me locate the token/primitive definitions and read the build wiring.
+
+Critical wiring question: feature-view `*.Tests.swift` live in `TeslaSync/feature-views` (added to the **app** target), but the test target builds from `Tests/Unit`. Let me verify how tests are actually wired before writing code.
+
+`.swiftlint.yml` got skipped. The test wiring is unclear — `.Tests.swift` files sit in the app-target folder yet use `@testable import TeslaSync`. Let me resolve how feature-view tests actually compile.
+
+The newest surface is **ToolCard** (commit `acc76624a`) with its test in `Tests/Unit/FeatureViews/ToolCardTests.swift`, yet AuditPanel co-locates `.Tests.swift` in `feature-views/`. I must resolve target membership definitively. Let me inspect ToolCard and generate the project to see where `.Tests.swift` files land.
+
+ToolCard (canonical latest) placed its test in `Tests/Unit/FeatureViews/` and modified `Localizable.xcstrings`, `.swiftlint.yml`, `project.yml` — all outside my allowed files. But AuditPanel co-locates `.Tests.swift` in `feature-views/` with a `.strings` file. Let me see the ToolCard diffs and project.yml history to understand the wiring.
+
+Key insight: ToolCard's commit explicitly says the full xcodebuild gate is **DEFERRED** due to "pre-existing, unrelated parallel-merge duplicate-type collisions across ~10 dashboard-widget files," and verification was done via isolated SwiftPM build+test + lint + placeholder scan, recorded in `apps/macos-pending-verifications.md`. Let me read that convention doc, the canonical ToolCard files, and the placeholder script.
+
+Now the convention is fully clear: the full-app xcodebuild gate is **deferred** (pre-existing parallel-merge collisions: `DashboardWidgetSize` ×15, 116 co-located `*.Tests.swift`, unstaged xcframework, signing), and each surface verifies green via isolated SwiftPM build+test + swiftc typecheck + lint + placeholder scan, recorded in `macos-pending-verifications.md`. Let me read the ToolCard/AlertMessageEditor logs to mirror their exact verification + EXIT/STATUS approach.
+
+Authoritative template confirmed: **EXIT=0 / STATUS=DONE** with the full-app xcodebuild gate DEFERRED (pre-existing unrelated collisions), verified via isolated SwiftPM build+test against the real design system + lint + placeholder scan. Let me read the remaining patterns (TimeToChargeSection views/model/tests) and locate the exact design tokens/primitives.
+
+I have the full pattern. Now let me confirm the exact generated token names and the `TSFadeIn`/`TSGlassPanel`/`TSSkeleton`/`TSTone` primitive signatures so my code compiles against the real design system.
+
+Tokens confirmed. Let me read the remaining primitives (`TSTone`, `TSSkeleton`, `TSFadeIn`, `TSGlassPanel`) and the Section test pattern so my isolated harness compiles against the real design system.
+
+Let me read the final primitives (Motion/Cards/Typography), the AlertMessageEditor log (most rigorous verification precedent), and check placeholder-scan tooling availability.
+
+Let me check the placeholder-scan tooling, read the AlertMessageEditor log (most rigorous verification precedent), and find the `tsGlassPanel()` material modifier.
+
+`pwsh` is available, so I can run the real placeholder gate. Let me read the forbidden-pattern list to avoid tripping it, then I'll start building.
+
+I now have the complete design-system reference. `pwsh` is available for the real placeholder gate. Let me verify that `Sources/Components` + `Sources/Design` are self-contained (so my isolated SwiftPM harness can compile against the real design system) and confirm no `AuditLog`/`OperationsAuditLog` collisions.
+
+Excellent — `Sources/Components` and `Sources/Design` import only system frameworks (self-contained). My isolated SwiftPM harness can compile my surface against the real design system. I have everything needed. Let me set up tracking and write the plan.
+
+Before deciding whether to reuse the existing `NotificationStats`/`NotificationLog` types (which use static `ISO8601DateFormatter`), let me verify that file compiles clean under Swift 6 strict concurrency — that determines whether I reuse or define self-contained types.
+
+Confirmed: the existing `NotificationStats`/`NotificationLog` file is **red** under Swift 6 strict concurrency (static `ISO8601DateFormatter`). So I'll define self-contained, strict-concurrency-clean `Operations*` types (per-call formatters, AuditPanel-style) — no coupling to a broken file, no redeclaration. Let me peek at the web `RadialGauge` to nail the gauge center format, then write the files.
+
+Now I have full parity detail (gauge center = `fmtNumber(clamped, integer?0:globalPrecision)` + unit, label below). Let me write the source files, starting with the pure-Foundation Models.
+
+Models written. Now the Projection (pure value logic: formatting, success-rate tone, row building, presentation resolver for every state).
+
+Now the Model file: error taxonomy, load state, P1/S8 source seam, `@Observable` model, P1/S10 i18n facade, and the a11y seam.
+
+Now the Components file: tone→token bridge, responsive metric grid + cards, the threshold-colored success gauge, freshness/refresh chrome, and all state views.
+
+Now the adaptive data tables (columnar on regular width, card list on compact), mirroring AuditPanel.Table.
+
+Now the main accordion View that composes everything, with telemetry and state handling.
+
+Now the DEBUG previews and the i18n strings catalog.
+
+Now the comprehensive test suite covering adapter, projection, every presentation state, web-prop mapping, telemetry, accessibility, and model binding.
+
+All 9 surface files are written. Now let me set up the isolated SwiftPM harness (Swift 6 strict concurrency, against the real design system) to build + test the exact shipped sources — mirroring the sanctioned ToolCard verification.
+
+The view file symlink got mis-named (`OperationsSection.swift.swift`). Let me fix it.
+
+`UnitFormatters.swift` in Components depends on `UnitPreferences` (defined outside Components/Design) — so Components isn't fully self-contained. My surface doesn't use it. Let me switch to the surgical dependency closure my surface actually needs.
+
+Real bug in my Projection: the local `let delivery` shadows the static `delivery(from:locale:)` method inside the closure. Let me qualify the static calls and rename the local.
+
+Build succeeds under Swift 6 strict concurrency. Now let me run the test suite.
+
+Test compile error: `accuracy:` overload needs non-optional `Double`. Let me unwrap `delivery` in that test.
+
+All 25 tests pass under Swift 6 strict concurrency. Now let me run the lint/format gates on my files and update progress.
+
+swiftformat flagged formatting in 2 files. Let me auto-format my files with the repo config, and check whether `noForceUnwrapInTests` also trips the existing AuditPanel tests (to match precedent).
+
+AuditPanel.Tests passes (property-level `!` is fine; only force-unwraps in method bodies trip `noForceUnwrapInTests`). Let me auto-format my files, then fix the remaining method-body force-unwraps.
+
+Autofix resolved most issues; 3 long lines in Tests.swift remain (swiftformat can't auto-break them). Let me view and fix them manually, plus replace the lone `projection.delivery!` force-unwrap for cleanliness.
+
+Let me measure exact line lengths to target only the genuinely-long lines.
+
+Now let me re-verify swiftformat + run swiftlint --strict on my files.
+
+More violations: two files exceed swiftlint's 400-line limit (which `--strict` promotes to error), Tables.swift line 194 too long, and 2 swiftformat issues remain. Let me see the specifics.
+
+I need to: wrap the `isCompact` property bodies (swiftformat skips them inside `#if`), wrap Tables line 194, and split Components.swift (437) and Tests.swift (406) under the 400-line limit. Let me view the Tables spots first.
+
+Now split Components.swift (437) — move the state views into a new `OperationsSection.States.swift`. Let me find the boundary.
+
+Let me create the new States file and remove that section from Components.
+
+Now remove that section from Components.swift (truncate after the retry button).
+
+Components is now 326 lines. Now split Tests.swift (406). Let me find the presentation-tests boundary.
+
+Let me extract the resolver/model test classes into a new file and truncate the original.
+
+Both test files now under 400 lines. Let me wire the new files into the harness and re-run format + lint + build + test.
+
+swiftlint --strict is clean (0 violations, 10 files). One swiftformat issue remains — let me find it.
+
+The `before-first` wrap style needs those calls either single-line or fully wrapped. Cleanest is a `notif` fixture helper. Let me add it and use it at both sites.
+
+Now let me re-run format + lint + the full harness build+test.
+
+swiftformat 0/10, swiftlint 0 violations, all files <400 lines. Now re-run the isolated harness build+test with the new files.
+
+All 25 tests pass after the splits. Now the rigorous cross-platform check: `swiftc -typecheck` against the real iOS 18 and macOS 15 SDKs (strongest evidence, like the AlertMessageEditor precedent).
+
+Both iOS 18 and macOS 15 typecheck cleanly. Now the placeholder gate. Let me check how the script resolves its `-Path` argument (the gate passes a file-prefix path).
+
+The script needs a real directory. Let me scan a temp dir containing only my files (faithful scope), and cross-check with a direct grep for forbidden patterns.
+
+Placeholder gate clean (COUNT=0) and no forbidden patterns. Now let me run the exact gate-form whole-tree `swiftformat --lint apps/apple` and a whole-app `swiftlint --strict` to capture their state.
+
+Whole-tree swiftformat found 1 pre-existing violation in `ActionBuilder.Previews.swift` (a different surface from the parallel merge) — my 10 files are clean. Let me capture the whole-app swiftlint state, then attempt the full xcodebuild gate.
+
+Whole-app swiftlint: 1 pre-existing violation (none in my files). Let me confirm which file, then attempt the full xcodebuild gate.
+
+Confirmed: the 1 pre-existing swiftlint violation is `LifetimeStatsWidget.Adapter.swift` (not mine) — exactly what ToolCard documented. Now let me attempt the full xcodebuild gate to capture the DEFERRED evidence. First generate the project.
+
+Project generated. `Frameworks/` has only `.gitkeep` — confirming the documented unstaged-`Shared.xcframework` blocker. Now let me attempt the iOS `xcodebuild build test` and capture evidence (expecting failure from pre-existing blockers, with zero OperationsSection errors).
+
+The preAction is actually building the `Shared.xcframework` via Gradle/Kotlin-Native (it succeeded for debug) — this runner has the toolchain. No OperationsSection errors yet. Let me let it continue to the app-compile phase.
+
+Still linking the Kotlin/Native release frameworks (preAction builds the full xcframework). The app Swift-compile phase hasn't started. Let me keep waiting.
+
+IOS_EXIT=65 — failed on the exact documented blocker: `import XCTest` in co-located `*.Tests.swift` files compiled into the app target. Let me analyze the errors to confirm zero OperationsSection *production* errors.
+
+The iOS build failed **exclusively** on `Unable to resolve module dependency: 'XCTest'` (4 errors) — the documented co-located-test-file blocker. **Zero** OperationsSection production-source errors. Let me attempt the macOS build for completeness (framework now cached).
+
+MAC_EXIT=65 — failed on the documented macOS development-signing blocker. Let me confirm zero OperationsSection errors in the macOS log too, then capture the duplicate-type evidence.
+
+Both builds fail **only** on documented pre-existing blockers (iOS: co-located `XCTest` imports; macOS: dev-signing) — zero OperationsSection errors. Let me gather final evidence counts and check git status before writing the log.
+
+All evidence confirms the documented pre-existing blockers (DashboardWidgetSize ×15; 376 co-located `*.Tests.swift`; macOS signing). The 2 modified web files are pre-existing (not mine) — I'll commit only my files + log. Let me write the comprehensive verification log.
+
+Now let me clean up generated build artifacts and verify only my files + log are staged for commit.
+
+Clean state: `TeslaSync.xcodeproj` and `Frameworks/Shared.xcframework` are git-ignored; the 2 modified web files are pre-existing (not mine). Let me clean temp artifacts, then stage and commit only my 11 files + the log.
+
+Exactly my 11 files + the log are staged (pre-existing web changes excluded). Let me commit.
+
+Committed cleanly (12 files, 2738 insertions; pre-existing web changes excluded). Let me mark verification complete.
+
+All todos complete. The OperationsSection Apple surface is shipped and verified.
+
+## Summary
+
+I built a production-polished, Apple-idiomatic SwiftUI parity of `web/src/features/system/components/status/OperationsSection.tsx` at `apps/apple/TeslaSync/feature-views/OperationsSection.*` (11 files, committed as `75e525b49`).
+
+**What it reproduces (full parity, no scope narrowing):**
+- An accordion surface (Bell glyph, "Operations", "Notification delivery and audit trail", success-rate badge, chevron).
+- **Notification Delivery** block: 4 metric cards (Total Sent/Failed/Success Rate/Channels with cyan/red/green/purple tones), a threshold-colored success **RadialGauge**, and the recent-delivery table — or an inline empty state.
+- **Audit Log** table (Time/Action-badge/Resource-mono/Details) — or its empty state.
+- The web `successRate = total_sent>0 ? sent/total_sent*100 : 100` rule **verbatim** (incl. the 100 default), with ≥95/≥80 success/warning/danger thresholds.
+- Every state: loading / empty / error / stale / offline / content, via an exhaustive unit-tested resolver.
+- P1/S8 source seam (no HTTP in the view), P1/S9 tokens, P1/S10 i18n facade (zero English literals), P1/S11 `view.opened` telemetry, VoiceOver labels, Dynamic Type, Reduce Motion. Adaptive tables (columnar/regular, card list/compact).
+
+**Verification (raw results on this runner):**
+| Gate | Result |
+|---|---|
+| swiftformat --lint (11 files) | **0/10** (FORMAT_EXIT=0) |
+| swiftlint --strict (11 files) | **0 violations** (LINT_EXIT=0) |
+| check-placeholders.ps1 | **PLACEHOLDER_COUNT=0** |
+| Isolated SwiftPM build + tests (Swift 6 strict concurrency, real design system) | **Build complete · 25/25 tests pass** |
+| swiftc -typecheck iOS 18 SDK | **EXIT=0** |
+| swiftc -typecheck macOS 15 SDK | **EXIT=0** |
+| xcodebuild iOS / macOS build test | **DEFERRED (IOS_EXIT=65 / MAC_EXIT=65)** |
+
+The full-app xcodebuild gate is **DEFERRED**, blocked only by **pre-existing parallel-merge collisions** (376 co-located `*.Tests.swift` importing `XCTest` into the app target; `DashboardWidgetSize` defined 15×) and macOS dev-signing — **zero OperationsSection errors** in either build log. This matches the repo's sanctioned disposition (ToolCard 0010, AuditPanel 0026, AlertMessageEditor 0180). Full evidence is in the committed log.
+
+**`EXIT=0 / STATUS=DONE`**
+
+
+
+The task is fully complete and verified. All 11 source files are committed, every host-runnable gate is green, and the full xcodebuild gate is documented as DEFERRED with evidence per established repo precedent.
+

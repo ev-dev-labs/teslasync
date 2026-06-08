@@ -1,0 +1,75 @@
+I'll start by exploring the repository structure to understand what exists and verify the dependencies this task requires.
+
+Key findings: web source exists, `apps/apple/` exists, swiftlint/swiftformat/swift are available, but `xcodebuild -version` failed. Let me investigate the Apple app structure and xcodebuild status.
+
+`xcodebuild` requires full Xcode but only Command Line Tools are installed — the build/test gate cannot run here. But before concluding, I must do the real work and verify dependencies. Let me investigate the Apple scaffold conventions, dependency layers (state holders, tokens, i18n, telemetry), and reference implementations.
+
+This is a substantial real SwiftUI app. The build gate needs full Xcode + iOS 18 simulator + a KMP `Shared.xcframework` (via `build-shared-xcframework.sh`) + `xcodegen` — but only Command Line Tools are installed. Let me verify the predecessor scaffolding (does `shared-surfaces` exist/wire into the build?) and learn the conventions (state holders, tokens, i18n, telemetry, an existing component + test, and the Windows parity reference).
+
+There are prior P4 execution logs. The disposition those used (DONE vs BLOCKED) under this same toolchain gap is critical for honest consistency. Let me inspect them, the predecessor surfaces (0001/0002), and whether any `VisuallyHidden`/announcer view already exists.
+
+Critical: prior P4 logs claim `xcodebuild` PASSED on "real Xcode 26.5", but this host has only Command Line Tools. Before concluding, I must check whether a full Xcode.app exists anywhere (I could point `DEVELOPER_DIR` at it without sudo). This is the pivotal check.
+
+Full Xcode **is** installed at `/Applications/Xcode.app` — so the toolchain blocker may be surmountable via `DEVELOPER_DIR` (no sudo needed). This changes things. Let me verify xcodebuild works, check the required `Shared.xcframework`/KMP pre-action, and confirm whether the `shared-surfaces` group is wired into the build.
+
+Decisive findings:
+- **Xcode 26.5 is available** (via `DEVELOPER_DIR`), iPhone 16 sim is even booted — so toolchain capability is *satisfied*.
+- But `shared-surfaces` is **not wired into `project.yml`**, and `project.yml` is **outside this prompt's allowed files** (it's the predecessor "P4 core" job). Predecessors P-0001/P-0002 in this same bundle have no logs — the bundle is unstarted.
+- `Shared.xcframework` is absent (needs KMP Gradle pre-action).
+
+So the prescribed `xcodebuild build test` gate cannot compile/exercise this surface without a forbidden predecessor bypass. I'll still produce real, production-quality code and run every runnable check. Let me learn the exact conventions (tokens, i18n, telemetry seam, a11y idioms) and the parity references.
+
+Let me read the telemetry seam pattern, an exemplar surface's structure (strings + telemetry + previews), the design-token APIs, and the predecessor AnnouncerRegion prompt (its data source `useAnnouncer` is shared with this surface).
+
+Conventions are clear now. Let me confirm the design-token symbol definitions (so the surface — and a real host compile/test — can use them), the `.strings` format, and the predecessor `AnnouncerRegion` prompt spec, then I'll write the surface.
+
+I have the token APIs and conventions. Before writing, let me read the lint/format configs (to pass `--strict`), the placeholder-checker, and a sample `.strings` so my files conform exactly.
+
+Now I understand the per-surface `.strings` table convention and the lint scoping nuance (repo `swiftlint` `included:` omits `shared-surfaces`, so predecessors lint the staged files explicitly). Let me read the placeholder checker to know exactly which words to avoid, then write the surface.
+
+I now have all conventions confirmed. The placeholder gate is **case-insensitive** and bans: `todo`, `fixme`, `xxx`, `coming soon`, `placeholder`, `lorem ipsum`, `not implemented` (I'll also avoid `mock`/`stub` per acceptance criteria). Let me create the directory and write the production surface.
+
+Let me verify the exact accessibility-announcement API symbols against the real SDK before relying on them.
+
+The SDK confirms an `AnnouncementPriority` enum exists with `low`/`high`/`default` cases under the Accessibility attribute scope, but I should verify the exact public spelling by compiling. Let me typecheck a snippet against the real SDK rather than guess.
+
+Setting `.high` and `.post()` compile fine — only the explicit type name was wrong. Let me discover the canonical type name via a deliberate type-mismatch probe.
+
+Confirmed: the property works; I just shouldn't name that unwieldy type. The cleaner approach is to inline the mapping (no type annotation needed). Let me fix the source.
+
+Now the tests, previews, and strings files.
+
+The trailing `import SwiftUI` is misplaced. Let me fix the import grouping (regular imports top, `@testable` bottom per the swiftformat config).
+
+Now let me build a host SPM package (in the session scratch dir, not the repo) that compiles the real surface against the real design tokens, then run the tests. First I need to confirm the token files are self-contained.
+
+Token files are self-contained. Let me assemble the host cross-check SPM package (outside the repo) with the real tokens + surface, and compile/test it under Swift 6 strict concurrency (matching the app).
+
+Library (surface + previews + real tokens) compiles clean under Swift 6 strict concurrency. Now run the tests.
+
+All 16 host tests pass; the surface compiles under Swift 6 strict concurrency. Now run the runnable repo gate steps. First swiftformat (preview, then normalize), then swiftlint with rules, then the placeholder check.
+
+swiftformat: 0/3 files require formatting. Now swiftlint with `--strict` on the new files.
+
+swiftlint `--strict`: 0 violations. The gate's `-Path .../VisuallyHidden` (no extension) and `git add .../VisuallyHidden` imply a per-surface **subdirectory**. Let me verify how the dashboard-widgets (same pattern) are laid out.
+
+Layout is flat (matches convention). The gate's `-Path .../VisuallyHidden` is a name-prefix that `Test-Path` won't resolve, so I'll run the **exact gate command** (fidelity) *and* a **meaningful scan** of the real directory to genuinely prove zero placeholders.
+
+Both placeholder checks pass (0). Now let me capture decisive evidence for the `xcodebuild` gate: generate the Xcode project (gitignored artifact) and check whether the new surface is even included in any target — proving the wiring gap.
+
+Decisive evidence: the generated Xcode project references the new surface **0 times** — it isn't a member of any target, so the prescribed `xcodebuild build test` gate cannot compile or exercise it. Let me run a bounded real `xcodebuild` attempt to capture authentic failure evidence, and confirm the project artifact is gitignored.
+
+The `xcodebuild` gate **is** running — its Gradle pre-action is actively building the KMP `Shared.xcframework` (downloading Kotlin/Native, compiling `:core`, linking iOS arm64). So even the heavy framework dependency builds here; the toolchain works. But the generated project has **0 references** to the surface, so this build won't exercise it. Let me let it progress a bit more to capture the phase it reaches.
+
+I have conclusive evidence: the real gate runs (even the heavy KMP `Shared.xcframework` pre-action builds successfully across iOS/macOS targets), but the generated project has **0 references** to the surface — so completing it wouldn't validate this deliverable. I'll stop the bounded attempt and record authentic evidence.
+
+Line counts: surface 300 + tests 122 + previews 108 + strings 19 = 549 lines. Note: the `AIUsageCard.*` "M" files are **pre-existing** slot state (I never touched feature-views) — I'll leave them untouched. Let me gather tool versions for the log and clean up the build artifacts I generated.
+
+Cleanup done. The `AIUsageCard.*` modifications are pre-existing slot state (72 insertions/41 deletions — I never touched `feature-views`); my only addition is the `shared-surfaces/` directory. Now let me write the gate log with full honest evidence.
+
+Let me reconsider the disposition: editing `project.yml` is excluded from both the Allowed files AND the prompt's own commit set, so wiring it would be a scope/predecessor violation — BLOCKED is correct. But I must ensure the surface is truly drop-in once wired: let me verify none of my public symbols collide with existing app symbols.
+
+No collisions — the surface is drop-in clean for the app target once wired. Let me do a final verification of the deliverable set and tree state.
+
+The task is in a clean, fully-verified BLOCKED state. Everything that can be validated on this runner is green; the only un-runnable step is the app-level `xcodebuild` gate, blocked by a predecessor wiring gap that's outside this prompt's allowed files.
+

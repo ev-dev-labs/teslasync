@@ -1,0 +1,169 @@
+=== P4 Shared surface 0007 AIAutoTripNameSuggestion (Apple) ===
+date: 2026-06-08
+host: Darwin arm64 (Apple Silicon) — SHARED runner (parallel prompt slots active)
+
+=== PREFLIGHT (capability check — Apple toolchain AVAILABLE) ===
+  Xcode 26.5 (Build 17F42) at /Applications/Xcode.app                         [present]
+  Swift 6.0 ; SwiftUI + Swift Charts + MapKit ; iOS 26.5 + iOS Simulator 26.5 SDK ; macOS 26.5 SDK
+  iPhone 16 simulator present (booted) ; swiftlint + swiftformat (homebrew) ; xcodegen ; gradle/JDK17 ; pwsh
+  NOTE: global `xcode-select -p` = /Library/Developer/CommandLineTools (NOT full Xcode); sudo is NOT
+        available on this runner, so the global selection cannot be changed. Overridden per-process with
+        DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer (the predecessor ExportStatusWidget
+        precedent). => SwiftUI/Swift-Charts/MapKit capability is AVAILABLE; this surface is NOT blocked
+        on platform capability.
+  KMP Shared.xcframework: built fresh via apps/apple/Scripts/build-shared-xcframework.sh (gradle
+        :core:assembleSharedXCFramework, BUILD SUCCESSFUL) and staged to apps/apple/Frameworks/.
+Predecessors:
+  P1/S8 (state holders): Sources/SharedFacade/{StateHolderModel,LoadableState,AppContainer,...}      [present]
+  P1/S9 (tokens): apps/design/generated/apple/Tokens.swift + Sources/Design/TSDesign.swift            [present]
+  P1/S10 (i18n): apps/apple/Localization/Localizable.xcstrings (~8088 keys, sourceLanguage en)        [present]
+  P1/S11 (diagnostics): view.opened seam pattern (DestinationETAWidgetModel SharedTelemetry…ScreenView)[present]
+  P4 component library: Sources/Components/** (TSButton/TSBadge/TSSkeleton/TSFreshnessIndicator/…)     [present]
+  Predecessor shared surface ExportStatusWidget (P-0049) establishes the PATH ADAPTATION + Shared-free
+  provider-seam architecture this surface follows.
+
+=== PATH ADAPTATION (declared up-front, honesty rule 9 — no silent drift) ===
+  The prompt's nominal native path `apps/apple/TeslaSync/shared-surfaces/AIAutoTripNameSuggestion.*` is
+  NOT a build root in this repo. apps/apple/project.yml (XcodeGen) compiles the app from:
+     Sources/**, TeslaSync/dashboard-widgets, TeslaSync/feature-views, Localization, design tokens
+  and the unit-test target from Tests/Unit/**. `TeslaSync/shared-surfaces` is absent and project.yml is
+  NOT in the allowed-files set (and is committed), so it cannot be added. For the surface to actually
+  compile + be testable, the files are placed under the existing XcodeGen roots (Sources/** is auto-
+  included), keeping the `AIAutoTripNameSuggestion*` basename — exactly the precedent ExportStatusWidget
+  used (Sources/Dashboard/Widgets + Tests/Unit):
+     apps/apple/Sources/SharedSurfaces/AIAutoTripNameSuggestion.swift   (surface; app target)
+     apps/apple/Tests/Unit/AIAutoTripNameSuggestionTests.swift          (tests; unit-test target — required
+                                                                          by the prompt's own acceptance
+                                                                          criteria, must live in the test
+                                                                          target)
+
+=== SURVEY (web source read end-to-end) ===
+  web/src/components/ai/AIAutoTripNameSuggestion.tsx (THE spec):
+    withAiFeature('auto-trip-naming', InnerSection)  -> AI-Off gate (ADR-015): renders null when disabled.
+    InnerSection: useAiStream({ url:`/ai/trips/${tripId||0}/name/draft`, body:{}, onEvent: ()=>{} });
+                  canStart = !!tripId; renders <AIFeatureCard title/description/buttonLabel/badge='Helix'>.
+  Shared deps read: AIFeatureCard.tsx (GlassPanel header+badge+description+button+AiOutputPanel),
+    AiOutputPanel.tsx (hidden | thinking-indicator | streamed text | "Helix error:"), useAiStream.ts
+    (AiStreamState idle|streaming|paused-confirm|done|error; SSE event union; parseSSEFrame/toTypedEvent),
+    useAiEnabled.ts / withAiFeature.tsx (the per-feature gate).
+  i18n catalog reality (verified present): keys are flattened under a `translation.` prefix —
+    translation.trips.detail.aiSuggestName.{title='Suggest a trip name',description,
+    generateButton='Suggest a name',badge='Helix'}; translation.chatbot.thinking='Helix is thinking…'
+    (the native catalog has NO helix.thinking key, so the canonical chatbot.thinking is used — same value);
+    translation.queryError.title; translation.common.{retry,refresh}; and the native, un-prefixed
+    widget.freshness.{offline,stale}. No English literal is hard-coded in native code.
+
+=== REASONING (architecture) ===
+  A fully native, Apple-idiomatic, Shared-FREE surface (imports Foundation/OSLog/SwiftUI only) composed of:
+   (1) pure reducer (AITripNameSuggestionReducer) — verbatim port of useAiStream.handleEvent (delta
+       accumulation, done/error terminals, inert tool frames, paused-confirm), the draft-path builder
+       (encodeURIComponent-parity percent-encoding + the `/ai/trips/0/name/draft` fallback), and the
+       staleness helper; framework-free, unit-testable in isolation;
+   (2) SSE frame parser (SSEFrameParser) — port of parseSSEFrame/toTypedEvent (event:/data: fields,
+       comment skip, multi-line data join, unknown-event drop);
+   (3) derived view-state machine (AITripNameSuggestionViewState) — port of AIFeatureCard + AiOutputPanel
+       (output none/thinking/text/error + buttonDisabled = !canStart||streaming||offline||!aiEnabled);
+   (4) telemetry seam (P1/S11 view.opened) with an OSLog default sink (slug-only, no PII, ADR-016);
+   (5) streaming-driver seam (AITripNameStreamDriver, the native analogue of useAiStream) + a REAL
+       URLSession SSE driver (faithful POST + text/event-stream parse + AbortController-style cancel) +
+       DEBUG preview/test doubles. The view performs NO HTTP and references NO KMP symbol directly; the
+       host injects the live driver (the bind-via-seam pattern ExportStatusWidget established, since the
+       composition root is out of allowed-files scope and the shared core exposes no AI-stream holder);
+   (6) @MainActor @Observable model (AITripNameSuggestionModel) owning the snapshot + gate/offline/trip
+       inputs, gating suggest() like the web button and coalescing in-flight calls (web runningRef),
+       emitting view.opened once;
+   (7) the SwiftUI view rendering EVERY state with the real TS component library (TSButton/TSBadge/
+       TSSkeleton/TSFreshnessIndicator + tokens), reduce-motion-aware symbol pulse, full VoiceOver labels/
+       traits, Dynamic-Type system fonts, + 5 #Preview state matrices. The gated-off branch reproduces
+       withAiFeature returning null (ADR-015) — the single legitimately-hidden state; every data-bearing
+       state always renders.
+
+=== CHANGES ===
+A apps/apple/Sources/SharedSurfaces/AIAutoTripNameSuggestion.swift   (1100 lines)
+A apps/apple/Tests/Unit/AIAutoTripNameSuggestionTests.swift          ( 368 lines; 33 XCTest cases:
+    reducer/draftPath/staleness, SSE parser, per-state view-state, a11y builders, @MainActor model
+    lifecycle [suggest→done+generatedAt, gated/no-trip/offline no-op, coalesce, cancel, view.opened-once,
+    async driver])
+
+=== VERIFICATION — added files (scoped; PASS) ===
+  swiftformat --lint (surface + tests, .swiftformat config) ............ 0/2 require formatting   PASS
+  swiftlint lint --strict (surface + tests, .swiftlint.yml) ........... 0 violations              PASS
+  check-placeholders.ps1 (surface) ................................... PLACEHOLDER_COUNT=0 EXIT=0 PASS
+  check-placeholders.ps1 (tests) ..................................... PLACEHOLDER_COUNT=0 EXIT=0 PASS
+
+=== VERIFICATION — compile + runtime proof (the surface is GREEN in isolation) ===
+  Because the baseline app/test targets do not build (pre-existing defects, see GATE below), the surface
+  was proven against the REAL shared UI library + design tokens, under the EXACT app build settings:
+
+  (A) Isolated swiftc -typecheck  [iphonesimulator26.5 SDK, -target arm64-apple-ios18.0-simulator,
+      -swift-version 6, -strict-concurrency=complete, -D DEBUG]
+        inputs: design tokens + Sources/Design/** + Sources/Components/** (Charts/Maps/UnitFormatters
+                excluded — unused by this surface) + AIAutoTripNameSuggestion.swift
+        result: typecheck_exit=0, 0 errors  => the surface (incl. previews + DEBUG doubles) type-checks
+                cleanly against the production TSButton/TSBadge/TSSkeleton/TSFreshnessIndicator/tokens
+                under Swift-6 complete concurrency.
+
+  (B) Standalone runtime harness  [compiled for macOS 15, same flags, surface + real components + a
+      main.swift exercising the logic the XCTest suite asserts; internal SSEFrameParser reachable in-module]
+        compiled: compile_exit=0 ; executed: run_exit=0
+        output : 32/32 assertions "ok", final line "ALL_RUNTIME_ASSERTIONS_PASSED" — reducer folding,
+                 draftPath encoding/fallback, staleness window, SSE delta/done/error/comment/unknown/flush,
+                 view-state none/thinking/text/error + buttonDisabled matrix, a11y builders, and the
+                 @MainActor model lifecycle (suggest→done+generatedAt, gated/offline no-op, coalesce,
+                 view.opened-once) all PASS at runtime.
+
+=== GATE (exact prompt commands; real exit codes; root-cause analysis) ===
+  xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+       IOS_EXIT=65   — BUILD FAILED. The ONLY errors are
+         "unable to resolve module dependency: 'XCTest'" in committed app-target sources
+         (TeslaSync/feature-views/*.Tests.swift, *.ModelTests.swift, etc.). project.yml compiles
+         TeslaSync/feature-views + TeslaSync/dashboard-widgets WHOLESALE into the app target, so ~224
+         misplaced XCTest-importing test files break the app target. PRE-EXISTING; not my files
+         (grep of the log for SharedSurfaces/AIAutoTripNameSuggestion => 0 errors).
+  xcodebuild -scheme TeslaSync-macOS build test
+       MAC_EXIT=65   — BUILD FAILED at signing: "TeslaSync-macOS / TeslaSyncWidgets-macOS has
+         entitlements that require signing with a development certificate. Enable development signing."
+         ENVIRONMENTAL capability gap (no dev signing identity provisioned), identical to the predecessor.
+         (A signing-disabled compile additionally surfaces a pre-existing duplicate-type defect:
+         `TelemetryErrorsModel` is defined in BOTH dashboard-widgets/TelemetryErrorsWidget.Model.swift and
+         feature-views/TelemetryErrorsPanel.Model.swift — committed, not mine.)
+  swiftlint --strict   (full tree)
+       LINT_EXIT=2    — pre-existing function_body_length in
+         dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (78 lines). 0 violations in my files.
+  swiftformat --lint apps/apple   (full tree)
+       FORMAT_EXIT=1  — pre-existing blankLinesBetweenScopes in
+         feature-views/ActionBuilder.Previews.swift:48 ("1/1915 files require formatting"). My files: clean.
+  check-placeholders.ps1 -Path apps/apple/Sources/SharedSurfaces/AIAutoTripNameSuggestion
+       PLACEHOLDER_EXIT=0
+
+  CONCLUSION: every non-zero gate step is a PRE-EXISTING baseline defect in OTHER committed files
+  (mis-placed XCTest files in the app target; a duplicate model type across two surfaces; a function-length
+  and a blank-line lint violation) or an ENVIRONMENTAL capability gap (macOS dev-signing cert). NONE is
+  attributable to this surface or its tests, and ALL lie outside the allowed-files scope to fix (project.yml
+  + 200+ committed files owned by other prompts). Honesty rule 1 (no red-as-green): the full repo gate does
+  NOT return 0 and is NOT claimed to; the surface itself is proven green by (A) the isolated strict-
+  concurrency type-check and (B) the executed runtime harness above, plus scoped lint/format/placeholder.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all web-source states reproduced (gated-off/no-trip/idle/thinking/
+      proposal/error/offline/stale) — view + 5 #Preview matrices; per-state view-state unit-/runtime-tested.
+  [x] Hooks bind to the shared state-holder seam (AITripNameStreamDriver, host-wired); no direct HTTP in view.
+  [x] Every i18n key resolves through the P1/S10 catalog (all keys verified present; no English literals).
+  [x] Accessibility labels/traits on every interactive element (button label+value+hint; badge; panels).
+  [x] Tests: adapter (reducer/parser) + per-state view-state + a11y-builder + model lifecycle (33 cases);
+      logic additionally EXECUTED green via the runtime harness (baseline test target unbuildable).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate = 0).
+  [~] Full `xcodebuild build test` gate: BLOCKED by pre-existing baseline defects + macOS dev-signing
+      (env), not by this surface (see GATE). Surface proven green in isolation.
+
+=== HONESTY COVENANT ===
+  1 no red-as-green: real non-zero gate exits reported verbatim + root-caused; surface-green proven separately.
+  2 no scope narrowing / 3 no skip-and-assume / 4 no stubs as final: all states + tests + live SSE driver shipped.
+  5 no parity shortcuts: web data/composition/states/i18n reproduced. 6 no delegation. 7 predecessor honored.
+  8 no commit on red: the COMMITTED files (surface+tests+log) are each green (typecheck/runtime/lint/format/
+    placeholder); the repo-baseline red is pre-existing and excluded from this commit. 9 path adaptation
+    declared above. 10 log ends with EXIT + STATUS.
+
+ARTIFACT_EXIT=0
+STATUS=DONE
+GATE_BLOCKED=ios-app-target-misplaced-xctest-files(pre-existing,not-in-scope); macos-dev-signing(env)+preexisting-duplicate-type; fulltree-swiftlint/swiftformat-preexisting-violations(other-files,not-in-scope)

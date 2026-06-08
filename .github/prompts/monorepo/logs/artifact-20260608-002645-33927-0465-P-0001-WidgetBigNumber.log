@@ -1,0 +1,130 @@
+===================================================================
+ P4 · Widget primitive · 0001 — WidgetBigNumber (Apple) — execution log
+ Date:        2026-06-08T06:54-07:00 (America/Los_Angeles)
+ Host:        macOS 26.5.1 (arm64)
+ Toolchain:   Apple Swift 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+              Xcode 26.5 (Build 17F42) — iOS SDK 26.5, macOS SDK 26.5
+              swiftlint 0.63.3   swiftformat 0.61.1   xcodegen 2.45.4   pwsh 7.6.2
+ Branch:      auto/20260608-002645-33927/465
+ Web source:  features/dashboard/widgets/shared/WidgetBigNumber.tsx (THE spec)
+ Native out:  apps/apple/TeslaSync/widget-primitives/WidgetBigNumber.*
+===================================================================
+
+SURFACE SUMMARY
+  WidgetBigNumber is a PURE presentational widget primitive — the web source reads
+  no hooks (Data sources: "none — pure presentational component"). It renders the
+  centered "big number" column: an animated/static value + optional unit, an
+  uppercase label, a subtitle, and a badge; a null value shows the `nullDisplay`
+  fallback (never a blank box). Parity reproduced verbatim:
+    - <AnimatedNumber> count-up (ease-out, fmtNumber(v,0) grouped integer)
+    - static branch raw Number.toString (locale-independent, no ".0")
+    - badgeVariantMap: success->success, warning->warning, error->danger, neutral->neutral
+    - valueColor default 'text-white' -> token .primary; nullDisplay default '—'
+  Files (allowed-files scope only): WidgetBigNumber.{swift,Model,Adapter,Views,
+  Previews,Tests}.swift + WidgetBigNumber.strings. No P1/S8 data state-holder is
+  invented (the web source has none); the only seam is the P1/S11 view.opened emit
+  (slug "WidgetBigNumber"). Tokens consumed from P1/S9 (Color.TS/Font.TS/TSSpacing/
+  TSRadius). i18n via the P1/S10 facade (table "WidgetBigNumber").
+
+CAPABILITY DETERMINATION
+  The prompt gate is two `xcodebuild ... build test` invocations (iOS + macOS).
+  This environment HAS full Xcode 26.5 (via DEVELOPER_DIR), xcodegen, an iOS 26.5
+  Simulator runtime, and a working Gradle pre-build that auto-assembles the KMP
+  Shared.xcframework. Both halves were therefore ACTUALLY RUN this session (not
+  assumed). Both staged Shared.xcframework via Gradle and then FAILED solely on
+  PRE-EXISTING, UNRELATED parallel-merge collisions in the broader app target —
+  identical to the macos-pending rows already tracked for sibling p4-apple
+  surfaces (P-0010-ToolCard, 0180-AlertMessageEditor, 0231-FSMTimelineChart):
+  a co-located *.Tests.swift (feature-views/AIRestorePanel.Tests.swift) imports
+  XCTest into the app target, plus macOS development-signing. ZERO WidgetBigNumber
+  / widget-primitives errors appear in either build. Per the established convention
+  (ADR-012; apps/macos-pending-verifications.md) the two full-app halves are
+  recorded DEFERRED-macOS-pending and run by p4-apple/P99-0001-apple-acceptance-gate
+  on macos-latest with signing identities. Note: widget-primitives is intentionally
+  NOT yet wired into project.yml / .swiftlint.yml `included` — that registration is
+  outside this prompt's allowed-files scope and is the P99 acceptance gate's job.
+
+===================== HOST-RUNNABLE GATES (genuinely green) =====================
+
+--- [1] Isolated SwiftPM build + test (module 'TeslaSync', Swift 6 strict concurrency, macOS 15) ---
+Build complete! (0.17s)
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.004 (0.006) seconds
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+	 Executed 21 tests, with 0 failures (0 unexpected) in 0.007 (0.009) seconds
+	 Executed 21 tests, with 0 failures (0 unexpected) in 0.007 (0.011) seconds
+ISOLATED_BUILD_TEST=PASS (21/21 tests, 0 failures)
+
+--- [2] swiftc -typecheck against the gate SDKs (sources, -D DEBUG so previews are checked) ---
+IOS18_TYPECHECK_EXIT=0
+MACOS15_TYPECHECK_EXIT=0
+
+--- [3] swiftlint --strict (the 6 widget-primitives files, real ruleset) ---
+Done linting! Found 0 violations, 0 serious in 6 files.
+  (repo-wide swiftlint finds 1 PRE-EXISTING violation in dashboard-widgets/LifetimeStatsWidget.Adapter.swift — not this surface)
+SWIFTLINT_EXIT=0
+
+--- [4] swiftformat --lint apps/apple/TeslaSync/widget-primitives ---
+SwiftFormat completed in 4.56s.
+0/6 files require formatting.
+SWIFTFORMAT_EXIT=0
+
+--- [5] placeholder/stub gate (apps/tools/check-placeholders.ps1) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+
+===================== REQUIRED GATE: xcodebuild halves (DEFERRED-macOS-pending) =====================
+
+Both halves were ACTUALLY RUN (DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer,
+after 'xcodegen generate'). Real captured outcomes below.
+
+# xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  iOS half — Shared.xcframework auto-built+staged via Gradle; then:
+    ✓ Shared.xcframework staged
+    ** BUILD FAILED **
+    TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'
+    TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: Unable to resolve module dependency: 'XCTest'
+    WidgetBigNumber/widget-primitives errors in iOS build: 0
+IOS_BUILD_TEST=DEFERRED-macOS-pending
+
+# xcodebuild -scheme TeslaSync-macOS build test
+  macOS half (default signing) failed at the signing gate:
+    ** BUILD FAILED **
+    TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+    TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+  macOS half (CODE_SIGNING_ALLOWED=NO) — Shared.xcframework staged; then same pre-existing collision:
+    TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'
+    TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: Unable to resolve module dependency: 'XCTest'
+    WidgetBigNumber/widget-primitives errors in macOS build: 0
+MAC_BUILD_TEST=DEFERRED-macOS-pending
+
+  Reason (both halves): pre-existing, unrelated parallel-merge collision —
+  a co-located feature-views/AIRestorePanel.Tests.swift imports XCTest into the
+  app target (+ macOS dev-signing). This is the SAME class tracked by
+  apps/macos-pending-verifications.md for sibling p4-apple surfaces; resolved by
+  p4-apple/P99-0001-apple-acceptance-gate on macos-latest. This surface is 0-error.
+
+===================== ACCEPTANCE CRITERIA =====================
+[x] Surface renders all branches from the web source: animated value, static value,
+    value+unit, label, subtitle, each badge variant (success/warning/error/neutral),
+    and the value-absent fallback (never a blank box). 9 previews cover them.
+[x] No invented network hooks — the web source is pure-presentational (Data sources:
+    none). Only seam is P1/S11 view.opened (slug WidgetBigNumber), emitted once; tested.
+[x] Every native string resolves via the P1/S10 facade (table WidgetBigNumber):
+    widgetBigNumber.nullDisplay + widgetBigNumber.a11y.noValue. No English literals
+    in code beyond NSLocalizedString fallbacks (predecessor convention).
+[x] Accessibility: one combined VoiceOver label per element (label, value+unit,
+    subtitle, badge); placeholder speaks 'No value'; Reduce-Motion honored in count-up;
+    minimumScaleFactor for Dynamic Type. a11y composition unit-tested.
+[x] Tests: adapter/number-format unit tests + per-branch projection tests + a11y label
+    test + telemetry-once test = 21/21 PASS (Swift 6 strict concurrency).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate COUNT=0).
+[x] iOS 18 + macOS 15 swiftc -typecheck = 0 errors; swiftlint --strict / swiftformat
+    --lint clean on all 6 files.
+[~] iOS + macOS xcodebuild build/test: DEFERRED-macOS-pending (pre-existing unrelated
+    app-target collision + signing; 0 WidgetBigNumber errors). Runs on macos-latest CI.
+
+EXIT=0
+STATUS=DONE

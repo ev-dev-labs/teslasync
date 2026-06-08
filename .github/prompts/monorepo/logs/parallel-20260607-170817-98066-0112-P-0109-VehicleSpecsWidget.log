@@ -1,0 +1,68 @@
+I'll start by exploring the environment capabilities and the web source specification in parallel.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swift`, `swiftlint`, `swiftformat`, `pwsh` are available. Let me examine the existing widget patterns and web source before deciding on approach.
+
+The widget files are flat (not directories). Let me examine the existing sibling widgets and the shared infrastructure.
+
+Now let me find the shared infrastructure (tokens, registration, skeleton components) and read the Previews/strings reference plus the web shared components.
+
+Multiple widgets each define `DashboardWidgetSize`/`DashboardWidgetRegistration`. Let me understand the target structure and how siblings avoid duplicate symbols.
+
+The Apple target compiles `dashboard-widgets/` into the app. I see pre-existing duplicate `DashboardWidgetSize` definitions across sibling widgets — a pre-existing condition outside my scope. The cleanest sibling (LifetimeStats) relies on shared types without redefining them. Let me locate the canonical shared tokens and read the web shared components + hooks.
+
+Let me verify the config snapshot type, test whether SwiftUI typechecks under CLT, and inspect lint/format/placeholder tooling.
+
+SwiftUI typechecks under CLT — I can do a real standalone compile of my widget. Let me read the lint/format configs and the placeholder checker.
+
+Let me inspect the shared skeleton/metric components I may reuse, to match the sibling architecture.
+
+I have the full picture. Let me confirm the canonical `DashboardWidgetRegistration`/`DashboardWidgetSize` shape used by siblings, then write my plan.
+
+I now have a complete understanding. Let me set up tracking and write the plan, then build the 6 widget files following the `LifetimeStatsWidget` template exactly.
+
+Now I'll write the Model file (state-holder seam, DTOs, registry, i18n facade).
+
+All 6 files are written. Now let me verify. First, a standalone `swiftc -typecheck` against a shim providing the P4-core deps + the **real** design tokens, to prove my code actually compiles.
+
+XCTest isn't bundled with Command Line Tools. Let me split: (A) typecheck the production files alone, and (B) typecheck the tests against a minimal XCTest shim to validate they reference real APIs.
+
+Two toolchain limitations (not code errors): the `#Preview` macro needs Xcode's macro plugin, and XCTest isn't in CLT. Let me transform previews into plain functions and strip the XCTest import so I can still typecheck the real body code.
+
+Production typecheck **passes (PROD_TYPECHECK_EXIT=0)** — my shipped code compiles. The test failure is a harness import artifact (`Date` came via `import XCTest`); there's also one concurrency warning I can clean up by marking the registry tests `@MainActor` (the View's statics are MainActor-isolated). Let me apply that and re-verify.
+
+Tests typecheck cleanly with warnings-as-errors. Let me confirm the core shipped code (Model + Adapter + View) is warning-free too.
+
+All standalone typechecks pass (core warning-free, previews bodies, and tests). Now let me apply the project's swiftformat rules to my files, then lint.
+
+swiftformat passes. swiftlint --strict found 2 violations: the projector function is too long, and the view file exceeds 400 lines. Let me extract `SpecDetailRow` into a `.Row.swift` companion (established sibling pattern) and split the projector's base-entry builder.
+
+Let me refactor the projector and extract the row component into a companion file.
+
+Now extract `SpecDetailRow` into a companion file and remove it from the view:
+
+Now re-run format, lint, and the standalone typecheck with the new file set.
+
+swiftformat lint = 0, swiftlint --strict = 0 violations. Let me re-verify compilation with the refactored files (new Row file, split projector).
+
+Harness copy script bug — the view file wasn't refreshed (it tried `VehicleSpecsWidget.swift.swift`), leaving a stale copy with the old `SpecDetailRow`. The real repo files are correct. Let me fix the copy and confirm.
+
+All typechecks pass (CORE_EXIT=0, ALL_EXIT=0); view file is 350 lines. Now the placeholder gate — I'll run it as the gate does, plus a rigorous scan that actually reads my files.
+
+All placeholder checks clean (COUNT=0, EXIT=0) and no forbidden markers. Now let me capture the xcodebuild-unavailability evidence and confirm the log directory.
+
+Let me check for existing P4 Apple logs to match conventions, then write the gate log.
+
+The sibling ran on an Xcode-equipped host (deferred for scope). This host has **no Xcode at all** — the prompt's capability clause is explicit: "If unavailable on the runner → STATUS=BLOCKED with API evidence." Let me capture the precise exit codes for the blocked steps.
+
+Captured: `IOS_EXIT=1`, `MAC_EXIT=1` (xcodebuild requires Xcode), 0 iPhone simulators. Note the surface dir **is** registered in project.yml (lines 36/66), so the only blockers are the absent Xcode toolchain + the KMP xcframework/signing — environment gaps, not code defects. Now let me write the gate log.
+
+Let me do a final review of the formatted view file and check git status before committing.
+
+The view file is intact post-format and git shows my 7 files + log as new (the 2 modified web admin files are pre-existing, not mine — I'll exclude them). Let me clean up temp artifacts and commit only my files.
+
+Exactly my 8 files staged. Now commit.
+
+Committed `b6cd3b11` (8 files, 1781 insertions). Let me do a final consolidated gate confirmation on the committed files.
+
+All final gates green; the surface is fully committed. Let me finalize tracking.
+

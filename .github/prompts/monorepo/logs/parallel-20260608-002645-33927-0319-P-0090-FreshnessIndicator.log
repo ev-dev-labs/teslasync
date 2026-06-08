@@ -1,0 +1,122 @@
+I'll start by exploring the repository structure and reading the web source component, plus checking the Apple toolchain availability.
+
+I have the web source. The Apple toolchain has `swift`, `swiftlint`, `swiftformat`, but **full Xcode is NOT installed** (only Command Line Tools) and **no iOS simulators**. Let me explore the existing Apple app structure to understand conventions before deciding on approach.
+
+Substantial existing Apple app (2156 files). Let me examine the target output directory, project config, and existing similar surfaces to learn the conventions.
+
+The `shared-surfaces` directory doesn't exist yet, and it's **not** in `project.yml` sources. Allowed files are restricted to `FreshnessIndicator.*` + the log. Critically, the gate needs full Xcode + iOS simulators, which are absent. Let me investigate the conventions deeply: state holders (P1/S8), tokens (S9), i18n (S10), diagnostics (S11), and find existing freshness/staleness patterns.
+
+Let me look at the DataDisplay components (native counterpart to web data-display), the staleness/live logic, design tokens, state holders, and the P4 shared-surfaces prompt series + logs.
+
+There's already a `FreshnessIndicator` in the atomic `Sources/Components/DataDisplay/StatusIndicators.swift`. Let me read it and examine the P4 shared-meaningful prompt series to understand the relationship and conventions.
+
+There's a 235-prompt series. Let me locate the exact FreshnessIndicator prompt and read the core infra: design tokens, state holders, and a representative feature-view to learn the multi-file split convention.
+
+The prompt matches. Now let me study the core infra: design tokens, state holders, staleness policy, and the diagnostics/telemetry contract.
+
+Let me find the exact diagnostics/telemetry contract (P1/S11) and how surfaces emit `view.opened`, plus a complete representative feature-view to learn the file-split + states + i18n conventions.
+
+`DestinationETAWidget` is the canonical reference (state holder + view.opened telemetry + states + i18n). Let me read it fully along with its model.
+
+Excellent reference. Now let me study the remaining infra: `StateHolderModel`, the i18n/Localization setup, feedback components (skeleton/empty/error), `FacadeError`, and the design tokens.
+
+Now the i18n pattern is clear (per-surface `.strings` with a named table). Let me read the feedback components, `FacadeError`, the design tokens, and a full feature-view split (AcDcStatsPanel) to learn how strings tables are referenced and how tests/previews are structured.
+
+Let me read the rest of `project.yml` (test targets, how `.Tests.swift`/`.strings` co-located files are handled) and confirm how the strings table is referenced in Swift + the exact design token names.
+
+Let me read the complete AcDcStatsPanel feature-view split to learn the exact file conventions — especially how co-located `.Tests.swift` works (since test target only includes `Tests/Unit`) and how the strings table is referenced.
+
+The co-located `.Tests.swift` uses `import XCTest` + `@testable import TeslaSync` (matching feature-views). `project.yml` wiring of `shared-surfaces` + test routing is handled by integration (and the build gate can't run here anyway). Let me confirm how the strings table is referenced in Swift and read the full AcDcStatsPanel source split.
+
+The localization facade is a per-surface `XxxStrings.string(key, fallback)` wrapping `NSLocalizedString(tableName:)`. Let me read the AcDcStatsPanel Model, entry view, and Adapter to capture the exact architecture.
+
+I now have the full architecture. Let me read the remaining reference files (Views, Previews, Tests, Adapter) and confirm exact design-token names so my code compiles against the real API.
+
+Let me confirm the spacing/radius/motion token members, the shared component signatures (TSGlassPanel/TSButton/TSBadge/TSTone), and read the lint/format configs (which I *can* run).
+
+Let me confirm `TSButton`/`TSCaption` signatures, the theme modifier, `Font.TS` roles, and the lint/format rules I must satisfy.
+
+Critical finding: swiftlint's `included:` doesn't list `shared-surfaces`, but swiftformat will check my files. Let me read the placeholder script, check `pwsh` availability, and confirm `TSButton`'s init.
+
+`pwsh` is available and `TSButton` API is clear. Let me read the forbidden placeholder patterns so my code/comments don't trip the gate, then start implementing.
+
+All forbidden patterns captured (avoid TODO/FIXME/XXX/Placeholder/Lorem ipsum/"not implemented"/`fatalError("not`). Let me see the script's file-discovery logic to run it correctly for verification.
+
+I now have all conventions. Let me verify no type-name collisions before writing the seven files.
+
+All conventions confirmed, no collisions. Let me check how the AcDc tests spy on telemetry and drive the model (to match concurrency-safe patterns), then write everything.
+
+I have everything needed. Let me set up the plan and create the directory + all seven files.
+
+Now creating the Model file (seams, types, i18n facade):
+
+Now the Adapter (pure projection — the web `computeAge`/`getStatus`/`formatAge`/`useIsStale` ports):
+
+Now the Views file (dot + per-state chips):
+
+Now the entry surface view:
+
+Now the Previews and the strings table:
+
+Now the comprehensive test suite:
+
+All seven files created. Now let me run the verification tools that *are* available: swiftformat, swiftlint, and the placeholder check.
+
+swiftformat auto-fixes these. Let me apply formatting and review the changes to confirm logic is preserved.
+
+Formatting passes. Let me verify the auto-formatted Adapter logic is intact (the `redundantReturn` changes), then run swiftlint and the placeholder gate.
+
+The `redundantReturn` rule cleanly converted the switches to switch-expressions (valid Swift 6, identical logic). Now swiftlint — since its config `included:` omits `shared-surfaces`, I'll lint the files explicitly.
+
+swiftlint linted the whole project (config `included` overrides the path arg). The only violation is in a **pre-existing** file (`LifetimeStatsWidget.Adapter.swift`), not mine. Let me confirm none of my files appear in violations.
+
+My files have zero swiftlint violations. Let me verify git status (only my files changed) and run the placeholder gate.
+
+Placeholder gate passes (0 violations). The pre-existing modified files (AIUsageCard, web) aren't mine — I'll only commit my scoped files. Now, since `xcodebuild` can't run, let me maximize confidence by type-checking the Foundation-only core logic (Adapter + Model) in isolation with `swiftc`.
+
+Core logic type-checks cleanly under Swift 6 strict concurrency. Let me check whether SwiftUI is even available with the CommandLineTools SDK (this determines if I can type-check the view layer at all).
+
+SwiftUI **is** available with the CLT SDK, and `TimelineView(.periodic)` type-checks. Let me type-check my full view layer against real SwiftUI by shimming only the design tokens to their real signatures.
+
+The entire view layer type-checks cleanly with real SwiftUI. Now let me validate the test file by compiling it in-module (stripping `@testable import`, since all sources compile together).
+
+XCTest needs full Xcode (more capability evidence). I'll validate the test *logic* against the real Model/Adapter APIs using a tiny XCTest shim.
+
+Module-visibility issue with my probe. Let me compile everything in one module (shim as plain same-module file with Foundation + asserts).
+
+Probe artifacts (I stripped `import XCTest` which transitively imports Foundation). Let me fix the probe shim to mirror real XCTest (Foundation + `throws` autoclosures).
+
+Test logic type-checks cleanly — the earlier errors were probe artifacts. 
+
+One real design gap: my convenience `init(timestamp:)` uses `@State` so it wouldn't react to a changing `timestamp` prop (the web component re-renders on prop change). Let me make it reactive via `.onChange` + a public `ingest` entry on the model.
+
+Now update the entry view to store and reactively sync the external timestamp prop:
+
+Re-running format + full type-check after the reactive-sync changes:
+
+Format and view type-check both pass. Let me re-verify the test logic and swiftlint after the model change:
+
+All runnable checks are green. There's a **pre-existing** swiftlint violation in `LifetimeStatsWidget.Adapter.swift` (not my file, not in my allowed scope). Let me confirm it predates my work and check the swiftlint version, then review my final files.
+
+Confirmed: the lint violation is in the committed baseline (`LifetimeStatsWidget`), unmodified by me and outside my allowed scope. Now let me capture the real gate evidence (xcodebuild) and verify the log directory.
+
+BLOCKED evidence captured: `xcodebuild` requires full Xcode (only CommandLineTools present) and `simctl` (iOS simulators) is absent. Let me capture the remaining gate steps and my supplementary verification.
+
+Two pre-existing baseline issues exist in files outside my scope (`ActionBuilder.Previews.swift` format, `LifetimeStatsWidget.Adapter.swift` lint). Let me confirm both are unmodified baseline, and capture the exact placeholder gate step.
+
+Both pre-existing issues are unmodified baseline; placeholder gate passes. Let me verify i18n key parity (every key used in Swift exists in the `.strings` table) and tally line counts for the log.
+
+My extraction left a trailing quote — false positive. Let me fix the comparison:
+
+Full i18n parity confirmed (17/17 keys). Now let me write the honest gate log with all captured evidence.
+
+Let me do a final polish review of the Model (post-edit) and a defense-in-depth scan for any forbidden words before committing.
+
+Everything is clean. Now let me stage exactly my scoped files + the log (excluding the pre-existing unrelated modifications) and verify the staged set before committing.
+
+Staged set is exactly my 7 files + the log; pre-existing unrelated changes remain unstaged. Committing:
+
+Commit succeeded (8 files, 1424 insertions). Let me clean up temp artifacts and do a final verification that the log ends per covenant and the tree is tidy.
+
+Task complete. Here's the summary.
+

@@ -1,0 +1,102 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+The web source is a simple year-review pie chart slide. Now let me examine the existing Apple app structure to understand the established patterns from predecessor prompts.
+
+Each feature follows a multi-file convention (`.swift`, `.Adapter.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`). Let me find examples that use Swift Charts (pie/donut) and the state-holder pattern, plus locate the P1 core infrastructure.
+
+No Xcode project/workspace/Package.swift exists anywhere in `apps/apple` — important for the build gate. Let me examine the shared infrastructure (facade, design tokens, i18n) and a complete representative feature-view to learn the exact conventions.
+
+Let me read the foundational infrastructure files and find feature-views using the state-holder pattern.
+
+Now let me read a complete representative data-bound feature-view plus the key shared components (Motion, PieGauge, Design tokens, telemetry). Let me read all files of `TelemetryErrorsPanel` and `FleetTelemetryHealth` as templates.
+
+Let me read the complete `TelemetryErrorsPanel` set as the primary template (it's data-bound with states).
+
+Now the remaining `TelemetryErrorsPanel` files plus the chart/motion/design infrastructure.
+
+Now let me read the design tokens, chart components, motion, the tests/adapter pattern, and locate the `YearReview` data type in the shared core.Now let me read the design tokens, chart components (PieGauge), motion, the Tests template, and find the `YearReview` data type in the shared core.
+
+Let me locate the design token definitions, chart models, status/stale chips, and the `YearReview` shared type.
+
+Let me read the design Tokens.swift to know exact token names, and find the shared UI components (TSStatusPill, TSSkeleton, TSMetricValue/Label, TSDataTable) and the stale/offline chip patterns.
+
+Let me read the Adapter and Tests templates, the Typography components, LiveStatus, and find the `YearReview` shared type plus any feature-view that renders stale/offline.
+
+Now let me find the `YearReview` type (web types + shared core) and check whether any feature-view renders stale/offline chips for precedent.
+
+Let me check the i18n catalog for the `yearReview` keys and study a dashboard-widget that models the full loading/empty/error/stale/offline state set.
+
+Let me study a dashboard-widget's full state model (loading/empty/error/stale/offline) and how it renders stale/offline chips, to match precedent.
+
+`SpeedProfileWidget` is the ideal chart-based precedent with all 6 states. Let me read its model, view, and chart files.
+
+The model is an ideal template. Now let me read the SpeedProfileWidget main view and chart to capture the stale/offline banner + chart rendering composition.
+
+I have a thorough understanding. Let me verify the `TSButton`/`TSPieChart` APIs, confirm no name collisions, and skim the SpeedProfile strings + tests for structure before writing.
+
+Let me check the build tooling situation (xcodegen/tuist/project config), `pwsh` availability, and the placeholder-check patterns — these determine the gate's build status.
+
+Critical finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed — so the simulator/macOS build+test gate **cannot run here** (platform-capability limit → BLOCKED for those steps). But `xcodegen`, `swiftlint`, `swiftformat`, and `pwsh` ARE available, so I can still verify project membership, lint, format, and placeholders. Let me read `project.yml`.
+
+I now have a complete picture. Key constraint: **`xcodebuild` requires full Xcode but only Command Line Tools are present**, so the simulator/macOS build+test gate steps are BLOCKED (platform-capability limit). `xcodegen`, `swiftlint`, `swiftformat`, `pwsh` ARE available. The `feature-views/` glob auto-includes my files. Let me set up the plan and todos, then write the 7 files.
+
+Now I'll write the files. Starting with the pure Adapter core.
+
+Now the main slide view (phase switch) and the presentational subviews.
+
+Let me confirm the `TSSkeleton` initializer before writing the subviews.
+
+Now the Previews and strings files.
+
+Now the comprehensive test suite.
+
+All 7 files created. Now let me verify — check for lint/format configs, then run swiftformat, swiftlint, and the placeholder check on my files.
+
+Now let me lint and format-check my new Swift files against the repo configs.
+
+The repo's swiftformat enforces `wrapPropertyBodies` (single-line computed properties must be multi-line). Let me view the flagged lines and fix them.
+
+swiftformat passes. Now swiftlint --strict on my files.
+
+swiftlint passes (0 violations). Now let me check the placeholder script's interface and run it.
+
+Let me run the placeholder check (both the exact gate command and a real scan over my files) and grep for any forbidden words.
+
+The honest scan caught the word "placeholder" in a Model comment. Even though the literal gate path doesn't resolve, this would fail a proper directory scan — I must fix it.
+
+Fixed. Let me re-verify placeholders, then run `xcodegen generate` to confirm my files become valid project members, and capture the xcodebuild capability evidence.
+
+Strong BLOCKED evidence: no iOS simulator SDK, no `simctl`. Let me capture the evidence cleanly, confirm gitignore, and run `xcodegen generate` to validate project membership.
+
+Let me run `xcodegen generate` to validate my files become project members, then clean up the throwaway project.
+
+All 7 files are project members (42 build-file refs across iOS+macOS targets); throwaway project cleaned up. Now I must validate Swift correctness without a full build. The Adapter imports only Foundation — I can type-check it standalone. Let me also verify the `String(format:)` `%d`/Int behavior and macOS SDK/SwiftUI availability.
+
+Excellent — the macOS SDK is present and the **Adapter type-checks cleanly standalone (exit 0)**. Let me try to type-check my SwiftUI files against the real shared components by assembling the dependency closure that doesn't import `Shared`.
+
+Strong validation opportunity: no Components/Design file imports `Shared`, and Charts+SwiftUI are in the SDK. Let me type-check my SwiftUI files together with the **real** design tokens and shared components under Swift 6 mode.
+
+The only error is the `#Preview` macro plugin (ships with full Xcode, not CommandLineTools) — a platform gap, not a code defect. Let me type-check the non-preview code by dropping `-D DEBUG`.
+
+The errors are in `UnitFormatters.swift` (depends on `UnitPreferences`, a `Shared`/KMP type) — not my files. My code doesn't use it. Let me compile the **minimal real dependency closure** my files actually need.
+
+`TSCard` needs `tsGlassPanel` (a material modifier). Rather than chase transitive deps of unused components, let me include the whole Components+Design library and exclude only the `Shared`-dependent files. Let me find those.
+
+Only `UnitFormatters.swift` needs `Shared`. Let me compile the full component+design library (excluding that one file) plus my files.
+
+**TYPECHECK_EXIT=0** — my main view, Model, Adapter, and Views type-check cleanly under Swift 6 strict concurrency against the real tokens, shared components, SwiftUI, and Charts. Now let me runtime-validate the pure adapter logic + the `String(format:)` subtitle behavior by building a tiny executable.
+
+All 13 runtime assertions pass, including the `%d%%` subtitle formatting. Let me update todos and check the logs directory format before writing the gate log.
+
+The established predecessor disposition + the prompt's capability clause are clear. The build/test toolchain (full Xcode) is genuinely unavailable, so per the prompt's capability rule this is **STATUS=BLOCKED with API evidence** — while every runnable gate is green and the code is fully implemented and type/runtime-validated. Let me write the gate log.
+
+The log is written. Before committing, let me re-run swiftformat + swiftlint one final time on all files (after the comment edit) to be certain nothing regressed, and confirm git status.
+
+All gates green. Let me stage my 7 files + the log and commit.
+
+Exactly 8 files staged (7 surface + log), nothing stray. Committing.
+
+Committed `cdb39b0e`, tree clean. Let me finalize tracking.
+
+Task complete. Final state verified: commit `cdb39b0e` on branch `auto/20260607-170817-98066/182`, clean tree.
+

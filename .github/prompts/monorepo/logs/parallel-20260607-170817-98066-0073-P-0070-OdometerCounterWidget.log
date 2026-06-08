@@ -1,0 +1,151 @@
+I'll start by exploring the repository structure to understand the web source, the existing Apple app structure, and whether the required toolchain is available.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is active. Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me check if Xcode is installed anywhere and read the web source + Apple structure.
+
+Xcode IS installed at `/Applications/Xcode.app` — I can point `xcodebuild` at it via `DEVELOPER_DIR`. Let me explore the existing Apple structure deeply, including the target output dir, existing widget patterns, and the shared facade/design/i18n layers.
+
+Excellent — there's a direct precedent: `DigitalTwinWidget` lives in the SAME target dir (`TeslaSync/dashboard-widgets/`). This is my pattern template. Let me read all its files plus `project.yml` and the BatteryCells reference.
+
+This is a rich, self-contained precedent. I need to understand the target/module layout to avoid type redeclaration conflicts (DigitalTwin defines `DashboardWidgetSize`, `DashboardWidgetRegistration` itself). Let me read `project.yml` and grep for shared type definitions.
+
+Key insight: the `TeslaSync/dashboard-widgets/` dir is NOT in any `project.yml` source path (app target uses `Sources/`), and `BatteryCellsWidgetRegistry.swift` also defines `DashboardWidgetSize` — so these per-surface widgets are self-contained parity artifacts compiled separately. Let me confirm the build mechanism and study how the DigitalTwin sibling is wired (git history, any Package.swift/xcodeproj, and the placeholder checker).
+
+Confirmed: per-surface widgets are self-contained parity artifacts (the DigitalTwin commit only added widget files + log, never touched `project.yml`). The predecessor's log is the key to understanding expected gate behavior. Let me read it, check toolchain availability, and look at the design tokens + placeholder patterns.
+
+I now fully understand the disposition. The predecessor (DigitalTwin 0036) established a **user-approved "code-complete + DEFERRED Xcode gate"** pattern: host-runnable steps (swiftc typecheck against the real component library, executed adapter harness, swiftlint, swiftformat, check-placeholders) are run green; the xcodebuild app build/test is DEFERRED because the surface isn't registered into `project.yml` (integration prompt's job — Honesty rule 7) and Shared.xcframework/signing are unavailable. I'll follow this precisely.
+
+Let me study the design tokens, the component library my surface needs, and the remaining DigitalTwin reference files.
+
+Let me read the design tokens and the specific components my surface needs (Metrics for MetricCard/AnimatedNumber, States for EmptyState, Skeletons, Typography, UnitFormatters).
+
+The component APIs are clear. Let me read the remaining UI components I'll use, the web data hooks (to get exact data shapes), and the native units facade.
+
+SI distance is meters; `convertDistanceFromSI(meters, unit)` → display. Now let me read the exact conversion math, the native units facade (P1/S8), the BatteryCells sibling (which IS compiled), and the DigitalTwin Builder/Tests/Previews/strings to mirror structure.
+
+Now the BatteryCells sibling (actually compiled in the target) and the DigitalTwin Builder/Tests/Previews/strings — these are my structural templates. Let me read them plus the SharedFacade units layer.
+
+Two seam patterns exist: DigitalTwin (self-contained, no `Shared` import — host-typecheckable) vs BatteryCells (`import Shared`, needs the xcframework). Since my surface must be host-validated via `swiftc` without the xcframework, I'll follow the **DigitalTwin self-contained pattern**. Let me read the DigitalTwin Builder/Tests/strings/Previews to mirror, plus check whether a Shared-free distance converter exists.
+
+`UnitFormatters.swift` exposes a Shared-free `Units.formatDistance(meters, UnitPreferences)` + `UnitPreferences` — the native DRY distance formatter. Let me find those definitions and read the DigitalTwin Tests/Builder to mirror the adapter + test structure.
+
+I now have the units picture: `Units.formatDistance` imports `Shared` (needs the xcframework), so — exactly like DigitalTwin ported `vehicleState.ts` self-contained — I'll port the tiny `convertDistanceFromSI` math into my adapter so the surface stays host-typecheckable. Let me read the web `WidgetShell`, `types.ts`, and the data hooks to nail the shell chrome and data shapes.
+
+Now I have the full shell contract. Let me confirm the exact data-hook field names, the registry entry for `odometer-counter`, and `fmtNumber`, then I'll start writing code.
+
+All data shapes confirmed. Let me read `Cards.swift` (for `TSCard`/`TSIconBox` API + deps) so I know my exact typecheck closure, then I'll start writing code.
+
+I have everything needed. Let me set up tracking, confirm which component files are `Shared`-free (for my host typecheck closure), and start writing.
+
+No Components file imports `Shared` directly (only `UnitFormatters.swift` transitively needs it via `Units`, which I'll exclude). Let me read the lint/format configs so my code passes `swiftlint --strict` and `swiftformat --lint`, then write all files.
+
+Configs noted: `swiftlint`'s `included:` omits `TeslaSync/dashboard-widgets/` (bare gate skips it — I'll run it explicitly too, like the predecessor), but `swiftformat --lint apps/apple` DOES scan my files. Line length ≤120. Let me write the plan and all surface files now.
+
+Now the i18n catalog:
+
+Now the projection adapter (the host-runnable, unit-tested core):
+
+Now the state-holder seam, telemetry, registry, i18n facade, and the observable model:
+
+Now the reusable subviews (animated readout + breakdown tile):
+
+Now the main surface view — shell, header/freshness, all states, compact/expanded composition:
+
+Now the previews and the XCTest suite:
+
+Surface files written. Now I'll refactor one detail to make the adapter independently executable for the harness: move the pure data types `DashboardWidgetSize` and `OdometerInput` into the Foundation-only `Projection.swift` so it compiles + runs standalone (mirroring how DigitalTwin's harness used only its pure domain files).
+
+Files written and refactored. Let me update tracking and begin host verification — first auto-format my files, then attempt the `swiftc` typecheck against the Shared-free component library.
+
+Formatting applied. Now the key validation — `swiftc -typecheck` of the production surface against the real Shared-free component library:
+
+Typecheck passes (EXIT=0). Let me also validate the `#if DEBUG` preview code paths compile (with `-D DEBUG`, pulling in the extra components the previews transitively touch):
+
+The DEBUG failure is purely a CLT limitation — the `#Preview` macro plugin (`PreviewsMacros`) ships with Xcode, not Command Line Tools, and it failed inside a *library* file's preview, not mine. The predecessor skipped previews for this reason. Let me validate previews properly using the **Xcode toolchain** (which has the macro plugin):
+
+The Xcode-toolchain typecheck caught a genuine Swift 6 concurrency bug in my previews: the `previewModel` helper calls `@MainActor` initializers but isn't itself `@MainActor`. Let me fix it:
+
+Previews compile clean under strict concurrency. Now the **executed adapter harness** — compile the Foundation-only `Projection.swift` with a test main into a real binary and run it:
+
+Top-level code needs to be in `main.swift` when compiling multiple files. Let me rename and rerun:
+
+Good — 23/24 passed; the single failure is a wrong **expected value in my test** (the code is correct). Let me compute the exact mile value and fix both the harness and the XCTest:
+
+Confirmed: correct value is **17679.25 mi** (text "17,679"); my test expectation was wrong. Fixing both the XCTest and harness:
+
+Adapter harness: **24/24 passed, EXIT=0**. Now let me validate the XCTest suite compiles against the real surface API. I can't use `@testable import TeslaSync` standalone, so I'll compile a copy (import stripped) in-module with the source files + XCTest:
+
+XCTest assertion macros (C preprocessor macros) can't be host-typechecked via bare `swiftc` — a known limitation (the predecessor deferred the XCTest suite for this reason). But I can do **better than the predecessor**: execute the model/registry/a11y logic for real via a `@main` harness compiled with the full surface. Let me write it:
+
+Model/registry/a11y harness: **25/25 passed, EXIT=0** — stronger than the predecessor (full model executed, not just the adapter). Now the lint/format/placeholder gates:
+
+swiftlint on surface files: **0 violations, EXIT=0**. Now `swiftformat --lint` (whole tree, scans my files) and the placeholder gate:
+
+swiftformat: **0/281 need formatting**; placeholder scan: **COUNT=0**. Now the prompt's literal placeholder path + the bare `swiftlint --strict` gate (confirms no regression across the included tree):
+
+All gates green: placeholder (both paths) EXIT=0, bare swiftlint **0 violations / 262 files**. Let me verify the deferred-Xcode facts are genuinely true on this host (for an honest log) plus file sizes and a word-scan:
+
+All deferral facts verified: Frameworks has only `.gitkeep` (no xcframework), **0 codesigning identities**, all files ≤400 lines, word-scan clean. Let me get **concrete proof** the surface isn't in the build target by generating the xcodeproj and checking for my files (faster + more rigorous than the predecessor's argument):
+
+`.xcodeproj` is git-ignored and generated. Now let me prove definitively whether my surface is in the build target:
+
+**Definitive proof**: `OdometerCounterWidget` = **0 refs** in the generated Xcode project (so is the DigitalTwin sibling), while a `Sources/` file (`BatteryCellsWidget`) has 36 — confirming the surface isn't in the build target (integration prompt's job, Honesty rule 7). All deferral reasons verified. Now let me write the honest gate log and commit. Updating tracking first:
+
+Now the comprehensive, honest gate log:
+
+Now a final clean sweep of all host gates to confirm the committed state is green (guards against any drift from my edits):
+
+The non-zero codes are a `cd ..` path bug in my combined command (swiftformat/pwsh got wrong relative paths), not real failures. Let me re-run cleanly from the repo root:
+
+All host gates green: typecheck 0, both harnesses (24/24, 25/25), swiftlint 0, swiftformat 0/281, placeholder 0. Now commit **only my allowed files** (leaving the pre-existing unrelated admin changes untouched):
+
+Exactly my 7 files + log staged; the unrelated pre-existing admin changes correctly remain unstaged. Committing:
+
+Committed (7f01e142, 8 files, 1408 insertions). Let me finalize tracking, confirm the working tree only has the unrelated pre-existing changes, and clean up temp artifacts:
+
+Task complete. All work is committed and verified.
+
+## Summary
+
+Shipped a production-polished native SwiftUI **`OdometerCounterWidget`** at parity with `web/src/features/dashboard/widgets/OdometerCounterWidget.tsx`, following the user-approved **"code-complete + DEFERRED Xcode gate"** disposition established by the sibling 0036 DigitalTwinWidget.
+
+**Files** (commit `7f01e142`, all ≤400 lines, word-scan clean):
+- `OdometerCounterWidget.Projection.swift` — Foundation-only adapter: layout resolver + `convertDistanceFromSI` port + projection/builder
+- `OdometerCounterWidget.Model.swift` — P1/S8 state-holder seam, P1/S11 telemetry, registry, P1/S10 strings facade, `@Observable` model
+- `OdometerCounterWidget.swift` — shell + header/freshness + all states + compact/expanded
+- `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`
+
+**Parity**: seam-bound data (no view HTTP), SI→display distance conversion, every state (loading/empty/error/stale/offline/content), all 5 source i18n keys, a11y labels, `view.opened` telemetry, registry `odometer-counter` (1×2/1×2/2×40).
+
+**Host gates — all green (real output):**
+| Step | Result |
+|---|---|
+| swiftc typecheck (vs real component library) | EXIT=0 |
+| swiftc typecheck + previews (Xcode toolchain) | EXIT=0 — *caught & fixed a real `@MainActor` concurrency bug* |
+| Executed adapter harness | **24/24** |
+| Executed model/registry/a11y harness | **25/25** (exceeds the adapter-only predecessor) |
+| swiftlint --strict (surface + bare) | 0 / 0 violations (262 files) |
+| swiftformat --lint apps/apple | 0/281 need formatting |
+| check-placeholders | COUNT=0 |
+
+**Xcode app build/test — DEFERRED** with proven (not assumed) evidence: the surface has **0 refs** in the generated `.xcodeproj` (vs 36 for a `Sources/` file) — registration is the integration prompt's job (Honesty rule 7); `Shared.xcframework` unstaged (only `.gitkeep`); 0 codesigning identities. `project.yml` and the shared catalog were left untouched (not in scope / parallel-unsafe). The unrelated pre-existing admin changes were deliberately not committed.
+
+**Log:** `.github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0070-OdometerCounterWidget.log` → `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...ashboard-widgets-0070-OdometerCounterWidget.log | 193 +++++++++++++
+ .../OdometerCounterWidget.Model.swift              | 263 ++++++++++++++++++
+ .../OdometerCounterWidget.Previews.swift           | 120 ++++++++
+ .../OdometerCounterWidget.Projection.swift         | 189 +++++++++++++
+ .../OdometerCounterWidget.Tests.swift              | 213 ++++++++++++++
+ .../OdometerCounterWidget.Views.swift              |  84 ++++++
+ .../OdometerCounterWidget.strings                  |  41 +++
+ .../dashboard-widgets/OdometerCounterWidget.swift  | 305 +++++++++++++++++++++
+ 8 files changed, 1408 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0070-OdometerCounterWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/OdometerCounterWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/OdometerCounterWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/OdometerCounterWidget.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/OdometerCounterWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/OdometerCounterWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/OdometerCounterWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/OdometerCounterWidget.swift

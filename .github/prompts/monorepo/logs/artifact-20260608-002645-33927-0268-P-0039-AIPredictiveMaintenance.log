@@ -1,0 +1,143 @@
+=== P4 Shared surface 0039 AIPredictiveMaintenance (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/AIPredictiveMaintenance.*
+Web src  : components/ai/AIPredictiveMaintenance.tsx
+             (composes AIFeatureCard + withAiFeature + useAiStream + AiOutputPanel)
+Runner   : Darwin arm64 · Xcode 26.5 (17F42) via DEVELOPER_DIR=/Applications/Xcode.app
+           swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7
+
+────────────────────────────────────────────────────────────────────────────────
+SHIPPED FILES (allowed scope: AIPredictiveMaintenance.* + this log)
+────────────────────────────────────────────────────────────────────────────────
+  AIPredictiveMaintenance.Adapter.swift     212  i18n facade + pure value types (Foundation)
+  AIPredictiveMaintenance.Projection.swift   78  pure context+stream -> resolved view-state
+  AIPredictiveMaintenance.Model.swift       266  telemetry seam + source seam + @Observable model
+  AIPredictiveMaintenance.swift              61  withAiFeature gate -> EmptyView | card
+  AIPredictiveMaintenance.Views.swift        77  AIFeatureCard scaffold (TSGlassPanel header/body)
+  AIPredictiveMaintenance.Chrome.swift      227  Helix badge, freshness chip, banner, Ask-Helix
+                                                 button, AiOutputPanel, thinking indicator
+  AIPredictiveMaintenance.Previews.swift    101  #Preview per state (DEBUG)
+  AIPredictiveMaintenance.Tests.swift       285  XCTest: projection + labels + model + a11y
+  AIPredictiveMaintenance.strings            —   P1/S10 catalog (parity keys + leaf chrome)
+  Every file < 400 lines (swiftlint file_length); each type/function within limits.
+
+────────────────────────────────────────────────────────────────────────────────
+PARITY (web -> native; every state renders, no hidden surface)
+────────────────────────────────────────────────────────────────────────────────
+  gated     withAiFeature('predictive-maintenance') closed -> EmptyView, no view.opened (ADR-015 §I5)
+  empty     enabled, no vehicle scope -> "Select a vehicle first." + disabled Ask-Helix (web emptyHint)
+  loading   stream open, no text yet -> AIThinkingIndicator shimmer (web text==='' && streaming)
+  data      accumulated maintenance narrative (web delta text)
+  error     terminal error -> "Helix error: <msg>"; re-run = retry (web state==='error')
+  stale     P4 leaf live-state axis -> amber chip + banner; start still allowed
+  offline   P4 leaf -> muted chip + banner; start disabled (provider unreachable)
+  Hooks bound via P1/S8 seam (AIMaintenanceSource: onContextUpdate / onStreamUpdate /
+    startStream / cancelStream); NO HTTP in the view. useAiStream lifecycle = idle/streaming/done/error.
+  i18n: all keys via P1/S10 facade table "AIPredictiveMaintenance"; 0 English literals in Swift.
+    Parity keys present: maintenance.aiPredictive.{title,description,button,badge,emptyHint},
+    helix.{askHelix,thinking,askHelixAria,errorLabel}, ai.common.errorUnknown (+ leaf chrome keys).
+  a11y: header trait, badge/chip combined labels, Ask-Helix accessible name keeps the per-feature
+    verb ("Ask Helix · Predict maintenance"), output/thinking labels; Dynamic Type + Reduce Motion
+    (TSSkeleton/symbolEffect) respected.
+  Telemetry: view.opened(surface:"AIPredictiveMaintenance") emitted once, deferred past the gate (P1/S11).
+
+────────────────────────────────────────────────────────────────────────────────
+IN-SCOPE, HOST-RUNNABLE GATES — ALL GREEN (real captured output)
+────────────────────────────────────────────────────────────────────────────────
+[1] EXECUTED logic harness over the REAL .Adapter + .Model + .Projection
+    (swiftc macOS SDK, Swift 6; mirrors AIPredictiveMaintenance.Tests.swift)
+      COMPILE_EXIT=0
+      HARNESS passed=39 failed=0
+      RUN_EXIT=0
+[2] Full-surface typecheck (incl. #Preview) vs the REAL shared design-system closure
+    (Tokens + TSDesign + TSMaterial + Motion + Cards + Buttons + Badges + Typography + Skeletons),
+    Swift 6 strict concurrency, BOTH SDKs:
+      macOS 15 SDK ...... MAC_TYPECHECK_EXIT=0
+      iOS 18 Sim SDK .... IOS_TYPECHECK_EXIT=0
+[3] swiftlint --strict (scoped, 8 files)
+      Found 0 violations, 0 serious in 8 files.   LINT_EXIT=0
+[4] swiftformat --lint (scoped)
+      0/8 files require formatting.                FORMAT_EXIT=0
+[5] placeholder/stub gate (apps/tools/check-placeholders.ps1 -Path .../shared-surfaces -Language swift)
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+[6] plutil -lint AIPredictiveMaintenance.strings
+      OK
+
+────────────────────────────────────────────────────────────────────────────────
+WHOLE-TREE GATES — RAN; RED SOLELY FROM PRE-EXISTING, OUT-OF-ALLOWED-FILES CAUSES
+(reported red, NOT painted green — honesty covenant #1/#8)
+────────────────────────────────────────────────────────────────────────────────
+Structural exclusion (root cause for the xcodebuild gates):
+  `TeslaSync/shared-surfaces` is NOT registered in project.yml (app/test target `sources:` list
+  only `feature-views` + `dashboard-widgets`) nor in .swiftlint.yml `included:`. Wiring it in is the
+  P4-core predecessor's responsibility and lies OUTSIDE this prompt's allowed files
+  (AIPredictiveMaintenance.* + this log). Proof, after `xcodegen generate`:
+      grep -c AIPredictiveMaintenance TeslaSync.xcodeproj/project.pbxproj  -> 0
+      grep -c AiUsageCard            TeslaSync.xcodeproj/project.pbxproj  -> 60 (sibling feature-view)
+  => the whole-tree Xcode build cannot compile/see this surface regardless of its correctness.
+
+[G1] xcodebuild -scheme TeslaSync -destination 'iPhone 16' build  (CODE_SIGNING_ALLOWED=NO)
+       Shared.xcframework assembled via Gradle/Kotlin-Native -> BUILD SUCCESSFUL; staged OK.
+       BUILD FAILED — pre-existing sibling, NOT this surface:
+         feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'
+       (the 170 sibling feature-views *.Tests.swift import XCTest but are members of the app target,
+        which does not link XCTest — a pre-existing project-membership issue in files this prompt
+        may not touch). shared-surfaces errors in the build log: 0.
+[G2] xcodebuild -scheme TeslaSync-macOS build
+       Shared.xcframework staged OK; ZERO Swift compile errors. BUILD FAILED — runner signing only:
+         error: "TeslaSync-macOS" has entitlements that require signing with a development certificate
+         error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate
+       (DEVELOPMENT_TEAM is empty; no dev cert on this runner). Not a code defect.
+[G3] swiftlint --strict (whole tree, 1909 files)
+       Found 1 violation, 1 serious — pre-existing sibling, NOT this surface:
+         dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141: Function Body Length (78 > 50)
+       shared-surfaces violations: 0.
+[G4] swiftformat --lint apps/apple (1921 files)
+       1/1921 require formatting — pre-existing sibling, NOT this surface:
+         feature-views/ActionBuilder.Previews.swift:48: (blankLinesBetweenScopes)
+       shared-surfaces issues: 0.
+
+────────────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT
+────────────────────────────────────────────────────────────────────────────────
+ 1 No red-as-green   : the 2 xcodebuild reds + 2 whole-tree lint reds are shown verbatim and
+                       attributed to pre-existing sibling / runner-signing causes — NOT painted green.
+ 2 No scope narrowing: ALL states (gated/empty/loading/data/error/stale/offline) + gate + scope +
+                       output lifecycle + i18n + a11y + telemetry implemented; nothing dropped.
+ 3 No skip-and-assume: iOS + macOS xcodebuild RAN (Shared.xcframework built via Gradle on this runner);
+                       whole-tree swiftlint/swiftformat RAN; the surface logic was EXECUTED (39/39);
+                       both SDK SDK-compiles RAN. Every blocker was directly OBSERVED, not assumed.
+ 4 No stubs as final : complete implementations; PLACEHOLDER_COUNT=0.
+ 5 No parity shortcuts: faithful port of withAiFeature gate + AIFeatureCard + AiOutputPanel +
+                       useAiStream lifecycle + every i18n key; leaf live-state axis added per contract.
+ 6 No delegation     : authored directly (no sub-agent delegation of the surface).
+ 7 No predecessor bypass: did NOT edit project.yml / .swiftlint.yml / .swiftformat / any sibling /
+                       the shared Localizable.xcstrings. Strings ship as the per-surface table; the
+                       generated .xcodeproj + Shared.xcframework are local git-ignored build artifacts.
+ 8 No commit on red  : committing on the GREEN in-scope host-runnable gates (executed 39/39 harness,
+                       dual-SDK full-surface compiles, scoped swiftlint, scoped swiftformat,
+                       placeholder, plutil). The whole-tree xcodebuild + whole-tree lint are DEFERRED,
+                       each blocked SOLELY by pre-existing out-of-allowed-files sibling breakage /
+                       runner signing / the un-wired shared-surfaces path — ZERO failures originate in
+                       any AIPredictiveMaintenance.* file. Matches the established "code-complete +
+                       DEFERRED Xcode gate" precedent of the sibling P4 feature-view surfaces.
+ 9 No silent drift   : the commit stages ONLY the 9 AIPredictiveMaintenance.* files + this log.
+10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED> below.
+
+────────────────────────────────────────────────────────────────────────────────
+DISPOSITION
+────────────────────────────────────────────────────────────────────────────────
+Production-polished native AIPredictiveMaintenance shipped at parity with the web source and verified
+by every in-scope, host-runnable means: an EXECUTED-green logic harness (39/39) over the real
+Adapter+Model+Projection, iOS-18-sim AND macOS-15 SDK compiles of the full surface (incl. #Preview)
+against the REAL shared design-system under Swift 6 strict concurrency, and green scoped swiftlint +
+scoped swiftformat + placeholder + plutil gates. The whole-tree `xcodebuild build test` (iOS + macOS)
+and whole-tree `swiftlint --strict` / `swiftformat --lint` are DEFERRED to the integration/signed
+runner because they are blocked SOLELY by (a) `TeslaSync/shared-surfaces` not yet being registered in
+project.yml/.swiftlint.yml by the P4-core predecessor — wiring outside this prompt's allowed files, so
+the surface is excluded from the project (0 pbxproj refs); (b) pre-existing sibling breakage
+(feature-views *.Tests.swift import XCTest in the app target; LifetimeStatsWidget body-length;
+ActionBuilder.Previews blank-line); and (c) macOS development-certificate signing on this runner.
+ZERO errors originate in any AIPredictiveMaintenance.* file.
+
+EXIT=0
+STATUS=DONE

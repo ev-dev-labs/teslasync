@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Toolchain is available. Let me read the web source and explore the Apple app structure.
+
+Now let me understand the Apple app architecture deeply — state holders, tokens, i18n, diagnostics, and existing patterns.
+
+Key finding: `shared-surfaces` is new and not yet in `project.yml` sources. Let me investigate build capability and learn the conventions from an existing forms-like feature-view.
+
+Critical finding: **`xcodebuild` is unavailable** — only Command Line Tools are installed, not full Xcode (no iOS simulators, no iOS18/macOS15 SDKs, no Kotlin/Native toolchain for `Shared.xcframework`). `xcodegen`, `swiftlint`, `swiftformat` ARE available. Let me confirm and study conventions in parallel.
+
+Major update: **Full Xcode IS installed** at `/Applications/Xcode.app`, but `xcode-select` points to CommandLineTools. I can use `DEVELOPER_DIR` to target it without sudo. Let me verify the full toolchain and the KMP framework dependency.
+
+Xcode 26.5, iPhone 16 simulator (booted), and Java 17 are all available — but `apps/shared/gradlew` is missing. Let me inspect the KMP shared module and full SDK list.
+
+`apps/shared/gradlew` exists, iOS 26.5 SDK + iPhone 16 sim booted, Java 17. The KMP framework build is the risk. Let me read the pending-verifications doc and check whether the facade depends on the KMP `Shared` module.
+
+The `apps/macos-pending-verifications.md` reveals the **established protocol**: prior P4 Apple surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) verify the surface green in **isolation** (SwiftPM build + tests, `swiftc -typecheck` on real SDKs, swiftlint/swiftformat/placeholder, `xcodegen generate`), while the full-app `xcodebuild build test` is **pre-existingly blocked** by unrelated parallel-merge collisions (`DashboardWidgetSize` redefined 15×, co-located `*.Tests.swift` importing XCTest into the app target, unstaged `Shared.xcframework`, signing). KMP core has no Kotlin source yet (scaffold only).
+
+Let me study the full conventions to build a parity surface. Reading the AddressInput set and finding the vehicles state-holder + i18n + tokens + telemetry patterns.
+
+Excellent — I now understand the full file-set convention. Let me read the remaining AddressInput files, design tokens, Badge component, lint configs, the placeholder checker, and find the vehicles state-holder pattern.
+
+I have the full pattern. Now let me read design tokens, native UI components (Badge), the placeholder checker, lint configs, and find how vehicles are modeled and bound.
+
+`.swiftlint.yml` `included` also lacks `TeslaSync/shared-surfaces` — I'll need to wire both `project.yml` and `.swiftlint.yml` for honest coverage (the P4-core integration step). Let me read the Badge component, locate design-token definitions, check `pwsh`, and study the Views/Previews + vehicle model.
+
+`pwsh` is available and there's a native `TSBadge` (web `Badge` parity) with `TSTone`. Let me read the design tokens, the placeholder checker, the Views/Previews pattern, and find the vehicle model.
+
+I have tokens, badges, previews. Let me read the Views file (freshness chip/banner), find the vehicle model shape, inspect the placeholder checker, and look for any isolated-SwiftPM harness convention.
+
+No native `Vehicle` struct exists — each surface defines its own Foundation-only DTOs (like AddressInput's `GeocodeResultDTO`). Let me confirm the web `Vehicle` shape and read the placeholder checker to avoid tripping it.
+
+Let me read the forbidden placeholder patterns, then I'll have everything to build the surface.
+
+I now have everything needed. Key facts: forbidden words include **"Placeholder"** (case-insensitive) — I'll avoid it in Swift. `pwsh`, `xcodegen`, full Xcode 26.5 (via `DEVELOPER_DIR`), iPhone 16 sim, `swiftlint`, `swiftformat` all available. KMP `Shared.xcframework` is unbuilt (scaffold) → full-app `xcodebuild` is pre-existingly blocked (documented precedent). Web `Vehicle` = `{id, vin, display_name, model, ...}`.
+
+Let me set up the plan and todos.
+
+Now I'll write the Foundation-only core (Models, Adapter, Projection) — these mirror the web logic exactly and are host-testable.
+
+I have a typo in a comment ("a ret& retry"). Let me fix it, then write the Adapter.
+
+Now the Adapter — the pure projector porting the web logic verbatim.
+
+Now the Projection file — row projection types, i18n keys, surface slug, summary formatter, and accessibility builders (all Foundation-only and testable).
+
+Now the Model — the `@Observable` state holder with Source/Telemetry/i18n seams and the in-memory source.
+
+Now the presentational Views and the per-state subviews.
+
+Now the per-state subviews (loading skeleton, error, empty-fleet help). I avoid the `.redacted(.placeholder)` API since "placeholder" is a forbidden token.
+
+Now the main view that wires everything together via the model and switches over every phase.
+
+Let me remove the two unused i18n keys from the registry to keep keys ↔ catalog aligned.
+
+Now the Previews (every state) and the Tests, plus the `.strings` catalog.
+
+Now the comprehensive test suite (adapter + model + accessibility), mirroring the AddressInput precedent.
+
+Now the i18n catalog `.strings` file with web-parity keys plus the native envelope keys.
+
+All 10 surface files are written. Now wire the new directory into `project.yml` (both app targets) and `.swiftlint.yml` so it's compiled and linted — the P4-core integration step.
+
+All files written and wired. Now the verification phase. First auto-format my files, scan for forbidden tokens, and lint.
+
+Two findings: the placeholder gate passes (COUNT=0), but my `Tests.swift` is **406 lines (>400 file_length limit)** — a real violation in my file (the dashboard-widgets one is pre-existing, not mine). I'll split tests into `.Tests.swift` + `.ModelTests.swift` (idiomatic per precedent). Let me view the current file to split precisely.
+
+I'll split the Model tests into a separate file. Creating `VehicleMultiSelect.ModelTests.swift`:
+
+Now remove the Model-tests section and the test-double from `Tests.swift` (now in ModelTests.swift):
+
+Now re-check lint scoped to my files and re-verify formatting after the edits.
+
+My files are length-, format-, lint-, and placeholder-clean. Now the real compile check: `swiftc -typecheck` against the macOS SDK for the full source set (surface + token/badge deps).
+
+macOS 15 typecheck passes clean under Swift 6. Now the iOS 18 typecheck against the simulator SDK.
+
+Both SDK typechecks pass clean under Swift 6 strict concurrency. Now the functional proof: an **isolated SwiftPM package** (module `TeslaSync`) in the session workspace that compiles the surface + deps and runs the XCTest suite.
+
+All **34 tests pass** (20 adapter + 10 model + 4 accessibility), 0 failures, Swift 6 strict concurrency. Now `xcodegen generate` to prove the project enumerates my files, then attempt the full `xcodebuild` gate to capture the (expected) pre-existing block.
+
+`xcodegen generate` succeeds and **all 11 surface files are enumerated** in the generated project. Now I'll attempt the full `xcodebuild` gate (bounded) to capture the expected pre-existing block evidence. First, let me quickly capture the KMP framework state (the scheme's pre-action), then attempt the build.
+
+The KMP core actually has 503 Kotlin files (sources are deeper than my first probe showed), but `Shared.xcframework` is **not staged** (only `.gitkeep`), and 199 feature-views co-located test files compile into the app target — the documented pre-existing pattern my 2 test files also follow. Let me kick off the full `xcodebuild` gate (bounded) and run the whole-tree format/lint gates in parallel.
+
+Whole-tree `swiftformat --lint`: only 1 pre-existing file flagged (`feature-views/ActionBuilder.Previews.swift`) — **none in shared-surfaces**. Let me check the xcodebuild progress and the global swiftlint exit.
+
+The KMP gradle build is actively progressing (downloading Kotlin/Native, compiling). Note: **other slots are concurrently running the P99 macOS acceptance gate** (`ddgate_mac2`) — the shared environment is running the full-app gate elsewhere, consistent with the deferral model. Let me capture the global swiftlint result and let my build progress.
+
+Global `swiftlint --strict`: exactly **1 violation total, 0 in mine** (the one is pre-existing in `dashboard-widgets`). Let me let the KMP build progress and poll.
+
+The KMP `Shared.xcframework` actually built (debug variant written), but my iOS build was **interrupted (exit 143/SIGTERM)** during the release-framework link — the heavy KMP build is contended across the concurrent parallel slots running P99 gates. Let me surgically stop only my own lingering iOS build (not other slots' processes) and capture final state.
+
+The tool requires literal numeric PIDs. Let me list them first, then kill explicitly.
+
+My iOS build is stopped. Let me capture the remaining pre-existing-block evidence for the log.
+
+I have comprehensive evidence. Now let me generate the gate log with real command outputs, re-running all host-runnable surface gates and documenting the full-app block.
+
+Let me review the complete log to ensure the captured outputs are correct.
+
+The log is complete and honest. Now let me append the deferral row to `apps/macos-pending-verifications.md` (the established audit protocol) and check git status before committing.
+
+Two things to handle carefully: the generated `.xcodeproj` is correctly git-ignored (absent from status), but there are **concurrent modifications to `AIUsageCard.*` by another agent in this shared working tree** — I must NOT commit those. Let me verify my 3 shared-file edits are clean (only mine) before staging selectively.
+
+All three shared-file diffs contain **only my intended additions**. Let me stage only my files explicitly (excluding the other agent's `AIUsageCard` changes) and commit.
+
+Staged set is exactly my files — `AIUsageCard` (the other agent's work) is correctly excluded. Committing:
+
+Committed (15 files, 2263 insertions). Let me do final sanity checks: confirm i18n keys ↔ catalog alignment and a clean post-commit state.
+
+Perfect i18n alignment: 23 keys referenced = 23 defined, all 9 web-source keys present, no orphans. Let me finalize todos and confirm the committed state.
+
+Everything is committed and clean. Let me clean up temp files.
+
+Task complete. Committed `b231f6d3d`.
+

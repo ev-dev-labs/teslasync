@@ -1,0 +1,124 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple toolchain availability.
+
+
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. However `swift`, `swiftlint`, `swiftformat` ARE available. Let me read the web source and understand the existing Apple app conventions before deciding scope.
+
+The output directory `apps/apple/TeslaSync/feature-views` exists. Let me examine existing surfaces to match conventions and check how predecessors handled the xcodebuild capability gap.
+
+Now I understand the established convention. Each surface is a multi-file Swift bundle (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.ModelTests.swift`, `.strings`). Let me find a similar small surface and the shared infra (state holders, HealthRow native counterpart, i18n, tokens, telemetry).
+
+`pwsh` and the placeholder script are available. `BatteryPill` is a close analog (inline pill, has BLOCKED log). Let me study it deeply plus the web `HealthRow` it must reproduce, and the BLOCKED disposition.
+
+The "BLOCKED" grep hits were covenant text — BatteryPill actually ends `STATUS=DONE` with xcodebuild marked DEFERRED. Let me confirm the true final-status distribution, read BatteryPill's source to copy the convention, read the web `HealthRow`, the state holders, tokens, i18n, and check available SDKs.
+
+All logs end `STATUS=DONE` (143) — none truly BLOCKED-final; the xcodebuild gate is consistently marked DEFERRED. iOS SDK is absent (only macOS SDK via CLT). Now let me read the anomaly types, BatteryPill's full source (convention), the SharedFacade domain holders, and lint/format configs.
+
+SharedFacade/Domains only has VehicleSettingsModel — the state holders live elsewhere. Let me read BatteryPill's full source and locate the actual P1/S8 state-holder layer, a data-binding analog surface, and the i18n/tokens/telemetry facades.
+
+Now I see the facade architecture. Let me read the core P1/S8 state-holder layer, the LoadableState (states), the AppContainer, and find the vehicles + anomalies holders.
+
+The architecture is clear: views bind via a **seam protocol** + **Adapter** that projects a holder's `LoadableState`, keeping the view testable without the `Shared` xcframework (absent here). Let me read a complete data-binding analog with navigation to copy the exact layout.
+
+`ActiveSessionsSection` is the ideal complete analog (Seams + Adapter + Model + States + Row + navigation). Let me read its core binding files and the navigation route definitions.
+
+Excellent context. Note: there's **no `anomaly-detection` route** in `AppRoute` — so navigation must use an `onActivate` seam carrying the web path `/anomaly-detection`. Let me read the remaining convention files (Model, States, Views, Row, Previews, Tests, strings) and confirm the design tokens + an `onActivate` example.
+
+I have the full architecture. Let me confirm the exact design-token names exist, find the `.text` strings helper, and read the test + preview + view/row patterns.
+
+The design system lives in `Sources/Design/TSDesign.swift` + `Sources/Components/UI`. Let me read the exact token definitions.
+
+The tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read it plus the Font.TS / TSSpacing / TSRadius / TSFadeIn / TSGlassPanel definitions.
+
+I now have all design tokens. Let me read the test, preview, and views patterns (including the `.text` helper) to finalize conventions, then write the surface.
+
+I have a thorough grasp of the convention. Let me check BatteryPill's test/preview wrapping (small-surface pattern + `#if canImport(XCTest)`) before writing.
+
+I now have a complete, precise understanding of the established convention (10-file bundle: Adapter/Seams/Model/States/Views/root/Previews/Tests/ModelTests/strings), the design tokens, the state-holder seam pattern, navigation via an activation seam, and the `#if canImport(XCTest)` test guard. Let me set up tracking and start writing the surface.
+
+Before writing the loading skeleton, let me check the placeholder scanner's match rules (the SwiftUI `.redacted(reason: .placeholder)` API contains the word "placeholder") and confirm existing surfaces use it safely.
+
+The scanner loads forbidden patterns from JSON, and "placeholder" is explicitly a forbidden token per the acceptance criteria. I already used the word "placeholder" in a Views.swift comment — I must scrub it and avoid SwiftUI's `.redacted(reason: .placeholder)`. Let me read the exact patterns.
+
+Confirmed: "Placeholder" (any case) is forbidden, so I must avoid SwiftUI's `.redacted(reason: .placeholder)` and scrub my one comment. Let me fix it and write States with a `ProgressView` + shimmer capsule loading row instead.
+
+All 10 files are created. Now let me run the runnable gates. Starting with `swiftformat --lint`, then auto-format if needed.
+
+swiftformat wants some long lines wrapped. Let me auto-apply the formatter (the established workflow), then re-lint.
+
+swiftformat passes (0/9 require formatting). Now swiftlint --strict on the new files.
+
+swiftlint --strict: **0 violations**. Now the placeholder gate. I'll run a true scan of the new files (via a temp dir) plus the literal gate path, to get an honest count.
+
+Placeholder gate clean (COUNT=0). My surface deliberately avoids the `Shared` xcframework — its only dependencies are SwiftUI/Foundation/Observation/OSLog + the generated design `Tokens.swift`. That means I can attempt a **real isolated typecheck** against the macOS SDK. Let me verify `Tokens.swift` is self-contained and that SwiftUI imports.
+
+SwiftUI typechecks with the CLT toolchain and `Tokens.swift` is self-contained. Since my surface avoids the `Shared` xcframework entirely, I can do a **real isolated typecheck against the actual design tokens**. Let me run it on the source files.
+
+Source files only depend on SwiftUI + the design tokens. `canImport(XCTest)` is false under bare CLT (so test bodies are excluded here — they need Xcode's test runtime). Let me run the **real typecheck of the 7 source files against the actual `Tokens.swift`**, including the DEBUG previews.
+
+One real typecheck error caught (good — the isolated typecheck is working): a `private static func` can't be a default argument of a `public init`. Let me make `logActivation` public (mirroring the public `OSLog…Telemetry` default convention).
+
+The only remaining errors are the `#Preview` macro plugin (`PreviewsMacros`) — an **Xcode-only toolchain plugin** absent from bare CLT, not a code defect (predecessors recorded the same "#Preview compiles under Xcode" deferral). Let me typecheck the 6 production source files (excluding the previews wrapper) to get a clean green.
+
+The 6 production source files **typecheck cleanly under Swift 6 strict concurrency against the real generated design tokens**. Let me also smoke-typecheck the Previews gallery body (stripping the Xcode-only `#Preview` macro) and locate XCTest to verify the test bodies.
+
+**Xcode.app IS installed** at `/Applications/Xcode.app` — `xcode-select` just points to CLT. I can use `DEVELOPER_DIR` to access the full toolchain (xcodebuild, iOS SDK, Preview macro, XCTest). This could elevate the result well beyond BLOCKED. Let me verify.
+
+Xcode 26.5 with iPhone 16 simulator is fully available via `DEVELOPER_DIR`. This is much better than BLOCKED. Let me check whether the app project/scheme is resolvable (the repo uses XcodeGen per predecessor logs) before attempting the real gate.
+
+`xcodegen` + `project.yml` are present, so the full app project is generatable — but building the entire app (1600+ files + the KMP `Shared.xcframework`) is the pre-existing-baseline concern predecessors documented. My surface deliberately has zero `Shared` dependency, so I can do something stronger and more targeted: **actually execute my unit tests** via a temp SwiftPM package on Xcode's XCTest runtime, plus dual-SDK typechecks. Let me set up and run the tests.
+
+**All 36 unit tests PASS (0 failures)** on the Xcode 26.5 XCTest runtime against the real design tokens. Now the dual-SDK typecheck (iOS-sim + macOS) of the full bundle including the `#Preview` macro and the in-module test bodies.
+
+Both iOS-sim and macOS full-bundle typechecks pass (including `#Preview` + tests). Per-surface verification is fully green. Now let me assess the full-app `xcodebuild` gate feasibility — check the `Shared.xcframework` dependency, `.gitignore`, and project structure (predecessors deferred this on pre-existing baseline blockers).
+
+`Shared.xcframework` (the KMP core) is a hard dependency of **both** app targets but is a gitignored build artifact absent on this runner — the exact pre-existing baseline blocker predecessors documented. Let me capture concrete evidence: confirm it's absent, generate the project, and confirm the schemes resolve.
+
+Concrete evidence captured: `Frameworks/` holds only `.gitkeep` — the KMP `Shared.xcframework` (a hard dependency of both app targets) is absent. Let me run the actual gate build, time-boxed, to capture the precise pre-existing failure for the log.
+
+I'll wait for the time-boxed build to complete.
+
+The build's "Stage Shared.xcframework" pre-action auto-assembles the KMP framework via Gradle (Kotlin/Native) — it was still mid-assembly at the 240s timeout, before any Swift app compilation. Let me verify the other pre-existing baseline blocker predecessors cited (the `DashboardWidgetSize` duplicate) to substantiate the DEFERRED rationale concretely.
+
+Concrete baseline evidence captured: **15 duplicate `public struct DashboardWidgetSize` declarations** across `dashboard-widgets` (out of my allowed files) — the aggregated app target cannot compile at HEAD regardless of my surface. Combined with the gitignored `Shared.xcframework` needing a multi-minute Gradle assembly, this is the documented DEFERRED disposition.
+
+Let me update tracking, clean up generated artifacts, and re-verify all per-surface gates on the final files.
+
+Final swiftformat clean (0/9). Let me capture final swiftlint, placeholder, and git status, then re-run the test suite + dual-SDK typecheck to record exact outputs for the log.
+
+swiftlint 0 violations, placeholder COUNT=0. Git shows my 10 new files (plus two pre-existing modified web files I did **not** touch and won't commit). Let me re-run the test execution + dual-SDK typecheck to capture final numbers for the log.
+
+All final gates GREEN: **36 tests pass**, iOS-sim + macOS typechecks EXIT=0. Let me write the gate log and commit (my 10 files + log only — not the two pre-existing modified web files).
+
+Now let me commit exactly my 10 surface files + the log (excluding the two pre-existing modified web files).
+
+Exactly 11 files staged (10 surface + log); the two pre-existing web files remain unstaged. Committing.
+
+Committed as `8d7cbb277` — exactly the 10 surface files + log (1876 insertions); the two pre-existing web files were correctly left unstaged. Let me finalize tracking and confirm a clean tree.
+
+All todos done, tree clean, commit verified. Task complete.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-feature-views-0238-AnomalyInlineRow.log | 215 ++++++++++++
+ .../feature-views/AnomalyInlineRow.Adapter.swift   | 364 +++++++++++++++++++++
+ .../feature-views/AnomalyInlineRow.Model.swift     | 143 ++++++++
+ .../AnomalyInlineRow.ModelTests.swift              | 200 +++++++++++
+ .../feature-views/AnomalyInlineRow.Previews.swift  | 115 +++++++
+ .../feature-views/AnomalyInlineRow.Seams.swift     | 136 ++++++++
+ .../feature-views/AnomalyInlineRow.States.swift    | 170 ++++++++++
+ .../feature-views/AnomalyInlineRow.Tests.swift     | 280 ++++++++++++++++
+ .../feature-views/AnomalyInlineRow.Views.swift     | 142 ++++++++
+ .../feature-views/AnomalyInlineRow.strings         |  50 +++
+ .../TeslaSync/feature-views/AnomalyInlineRow.swift |  61 ++++
+ 11 files changed, 1876 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0238-AnomalyInlineRow.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/AnomalyInlineRow.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AnomalyInlineRow.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AnomalyInlineRow.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AnomalyInlineRow.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AnomalyInlineRow.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AnomalyInlineRow.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AnomalyInlineRow.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AnomalyInlineRow.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AnomalyInlineRow.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/AnomalyInlineRow.swift

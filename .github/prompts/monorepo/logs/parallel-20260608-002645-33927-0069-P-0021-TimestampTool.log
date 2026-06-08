@@ -1,0 +1,80 @@
+I'll start by exploring the environment to understand what exists: the web source, the Apple project structure, and available tooling.
+
+Key finding: full Xcode is **not** installed (only Command Line Tools), so `xcodebuild` can't build iOS/macOS schemes. But Swift 6.3.2, swiftlint, and swiftformat are available. The Apple project exists with prior work (AIUsageCard just merged). Let me study the predecessor pattern and web source before deciding anything.
+
+Now I understand the web source: `TimestampTool` is a **client-side devtools utility** (live clock + Unix/ISO converters), no network hooks. Let me study the predecessor pattern (AIUsageCard, just merged) and the build/gate tooling.
+
+Excellent — this log reveals the **established predecessor pattern** precisely. Key facts: prior runner used full Xcode via `DEVELOPER_DIR=/Applications/Xcode.app/...` override; the sanctioned disposition is **per-surface green gates (swiftformat/swiftlint/check-placeholders) + ISOLATED SwiftPM build+test**, with the full-app xcodebuild DEFERRED due to pre-existing blockers. Let me verify Xcode presence and study the closest predecessors (helpers — which TimestampTool depends on — and an interactive-input surface).
+
+**Critical:** `/Applications/Xcode.app` **exists** on this runner — so the `DEVELOPER_DIR` override the predecessors used is viable. Let me verify it works and list simulators, while reading the closest predecessor surfaces (`helpers` — same devtools family, and ports `getRelativeTime`; plus `AddressInput` — interactive input).
+
+**Full capability confirmed:** Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 simulator is **booted**, iOS/macOS SDKs present. This is **NOT** capability-BLOCKED. Now let me study the seam shapes (Model/telemetry/strings facade) and the interactive-input pattern. Let me set up a todo plan and read the canonical predecessor files.
+
+Seam pattern is crystal clear. Now I need the interactive-input convention (TimestampTool has two text fields + a button) and the exact design-system primitives. Let me read `AddressInput` (interactive) and locate the design tokens/components.
+
+Now let me read the design system primitives and the interactive model details. Let me list the component/design files and read the key token definitions.
+
+Now let me read the design tokens and key UI primitives to know the exact APIs available, plus the build config and placeholder rules.
+
+`Color.TS`/`Font.TS` are generated tokens. Critical: the placeholder scanner forbids the word "Placeholder"/"TODO" etc. Let me check case-sensitivity of the scanner, read the generated token names, and the Skeleton/Motion/States primitives.
+
+Scanner is **case-insensitive** — I must avoid "placeholder", "todo", "fixme", "not implemented" etc. anywhere (use `prompt:` not the p-word). Let me read the exact generated token enums and the remaining primitives (GlassPanel, Button, Skeleton, Motion, States).
+
+I now have the token system. Let me read the exact `TSTextField` API, the predecessor test/preview structure, and the build config to plan the isolated build + gate.
+
+I have the full pattern. Let me read `TSMaterial`, map the design-system dependency surface for the isolated build harness, and verify the documented pre-existing full-app blockers still hold.
+
+Pre-existing full-app blockers confirmed (unstaged `Shared.xcframework`, `DashboardWidgetSize`×15, 170 co-located XCTest files, no `.xcodeproj`). Only Charts/Maps need external deps — I'll exclude those from the isolated harness. Let me check how co-located tests import symbols (determines harness module layout).
+
+Tests use `@testable import TeslaSync`. My isolated harness will be a `TeslaSync` library target (Tokens + Design + curated Components + my surface) plus a test target. Let me read the predecessor's test + content-view structure to mirror conventions precisely, then write the code.
+
+I have all conventions now. Let me read the lint/format configs and confirm the `TSButton`/`TSTone` APIs before writing — these determine file-length budgets and exact call sites.
+
+I now have every convention, API, and constraint (SwiftLint `--strict`: ≤120-char code lines, ≤400-line files, ≤40-line `func` bodies; case-insensitive placeholder scanner). Let me update my plan and write the Adapter (pure Foundation core).
+
+Now the Model — state-holder seam (P1/S8), telemetry (P1/S11), i18n facade (P1/S10), connection axis, and the live clock sources.
+
+Now the surface composition (`TimestampTool.swift`) with the ToolCard-equivalent header, freshness chip, refresh, connectivity banner, and phase switch.
+
+Now the Views file — freshness chip, connectivity banner, the live-clock row, the two converter fields, result lines, and the loading/empty/error chrome.
+
+Now the i18n catalog, the previews, and the tests.
+
+Now the test files — adapter tests (parsing/formatting/projection) and model tests (wiring/phase/telemetry/freshness). Splitting to respect the 400-line file budget.
+
+All 8 source files written. Let me normalize formatting with swiftformat, then run the per-surface lint/format/placeholder gates.
+
+swiftformat normalized 3 files. Now run the per-surface lint + format-lint gates on my files.
+
+swiftformat passes. One swiftlint violation: `epoch1_7e9` has an underscore. Let me rename it.
+
+All my files lint clean now. Let me re-run the full gate set and the placeholder scanner. First, let me check how `check-placeholders.ps1` resolves `-Path`.
+
+`-Path` must be a real directory (a non-existent path scans nothing — a vacuous pass). I'll scan a temp dir containing only my `.swift` files for an honest per-surface result. Running all three gates now:
+
+**Per-surface gates all green:** swiftformat 0/7, swiftlint 0 violations, placeholder COUNT=0. Now the critical verification — the isolated SwiftPM build + test (real compile + tests) against the actual design system, matching the predecessor disposition. Let me build the harness.
+
+Now build the isolated harness (DEVELOPER_DIR → Xcode for macros + XCTest).
+
+The build failed only on **unrelated** design-system files (`DataDisplay/UnitFormatters.swift` references a `\.tsUnits` environment key defined in a file I didn't pull in). My surface doesn't use those. Let me find where `tsUnits` lives and trim the harness to a coherent set my surface actually needs.
+
+`tsUnits`/`UnitPreferences` is internal to `DataDisplay/UnitFormatters.swift` — not needed by my surface (`TSCombobox` etc. live in `Forms`, not the `UI/Fields` I use). Let me drop `DataDisplay` and `Forms` from the harness and rebuild.
+
+All my surface files compiled. Last unrelated dep: `Feedback/FeedbackOverlays.swift` needs `TSMetricBar` (from excluded `DataDisplay`). My surface doesn't use it — drop it and rebuild + test.
+
+**Build complete** — my surface + the real design system compile under Swift 6 strict concurrency. Now run the tests.
+
+**All real verification green: 48/48 tests pass, build complete.** Let me capture tool versions for the log, then clean up the harness.
+
+Only my 8 `TimestampTool.*` files are new; harness fully cleaned. Now I'll write the gate log following the established predecessor structure, with raw evidence.
+
+Now commit only the allowed files (the 8 `TimestampTool.*` + the log), explicitly excluding the pre-existing working-tree changes.
+
+Exactly the 9 allowed files staged (no pre-existing changes included). Committing:
+
+Committed cleanly (9 files, 1802 insertions; largest file 354 lines, within the 400-line budget). Let me do a final reproducibility check of the per-surface gates on the committed files.
+
+The variable extraction was malformed — swiftlint fell back to linting the whole tree (13,412 files; those 7 violations are pre-existing in other surfaces, not mine). Let me re-run with the explicit file list.
+
+Confirmed: my 7 files are clean (swiftformat 0/7, swiftlint 0 violations). The earlier "7 violations" was the whole-tree fallback — pre-existing in other parallel-merged surfaces, outside my scope. Marking complete.
+

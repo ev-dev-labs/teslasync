@@ -1,0 +1,109 @@
+I'll start by exploring the repository structure, the web source component, and checking tooling availability.
+
+Tooling is available (xcodebuild, swift, swiftlint, swiftformat, pwsh). Let me read the web source and explore the Apple app structure.
+
+Now let me explore the Apple app structure in depth — feature-views, state holders, tokens, i18n, and existing shared components.
+
+No existing VehicleCard. There's a rich multi-file pattern per feature view. Let me find the native shared components, state holders, tokens, i18n facade, and study an exemplar. Let me create a plan file and search in parallel.
+
+`ChargingSessionCard` is an analogous card exemplar. Let me study it and find where GlassPanel, ProgressRing, StatusBadge, and a CarViz equivalent are defined.
+
+Excellent — `ChargingSessionCard` is the ideal template. Let me read its full set of files to learn the exact patterns for state holders, i18n, tokens, states, telemetry, and tests.
+
+Rich, well-structured template. Let me read the remaining template files and the native component/token/telemetry APIs in parallel.
+
+Now let me read the remaining native components (Cards, StatusIndicators, Buttons), tokens, and resolve the TeslaCarViz equivalent and the vehicle state-holder layer.
+
+No native TeslaCarViz or vehicle state-holder exists — feature views are self-contained (ChargingSessionCard defines its own source/model/domain). I'll follow that pattern. Let me read the web TeslaCarViz, the web types/hooks, and confirm no native car-viz exists under another name.
+
+Now let me read the unit conversion semantics and battery color logic for parity, plus the unit-conversion instruction file (since parity math matters).
+
+Now let me assess build feasibility — xcodegen, the generated project, the Shared.xcframework, test wiring, and the placeholder checker.
+
+xcodegen is available but the project must be generated and a KMP `Shared.xcframework` staged. Let me inspect the xcframework script, the pending-verifications note, and how feature-view tests are wired.
+
+The `macos-pending-verifications.md` clarifies the established convention: full-app `xcodebuild build test` is blocked by pre-existing parallel-merge collisions (DashboardWidgetSize ×15, 152 co-located test files importing XCTest into the app target, unstaged KMP xcframework, signing). Sibling prompts verify the **surface in isolation** (SwiftPM + swiftc -typecheck iOS/macOS + swiftlint + swiftformat + placeholder + xcodegen). Let me check the tooling harness and finish studying the template.
+
+The placeholder scan is case-insensitive over forbidden tokens — I'll avoid them all in my files. Let me check the shared component library's external dependencies (to design an isolated SwiftPM typecheck) and the sibling commit-path convention.
+
+The shared component library + design tokens are fully self-contained (only SwiftUI/Charts/MapKit/CoreLocation/Foundation). I can compile them as one `TeslaSync` module with my surface for an isolated, real-API typecheck. Let me confirm the toolchain/SDKs and sibling layout convention.
+
+Decisive environment finding: only **Command Line Tools** are installed (no full Xcode), `xcodebuild` errors out, and the **iphonesimulator SDK is absent** — so the gate's `xcodebuild build test` cannot run here. This matches the documented `macos-pending` convention: verify the surface in isolation (SwiftPM + Swift 6 + swiftlint/swiftformat/placeholder/xcodegen) and defer the full-app/simulator build. Let me capture this evidence and read the web StatusBadge + FSM statuses for parity.
+
+I now have complete parity data: the 7 vehicle states, `deriveVehicleStatus` logic, per-status dot colors, SI conversion math, and battery tone thresholds. Let me read the lint/format configs to ensure my files pass `--strict`/`--lint`, then write the surface.
+
+I now have complete parity data and patterns. Let me set up tracking and begin writing the surface. I'll create the plan and todos, then write the foundational Swift files.
+
+Now writing the foundational files — Adapter, Formatting, and Projection:
+
+All 13 files written. Now the verification phase. Let me format and lint my files first.
+
+Format and lint are clean (0 issues). Now the key check — an isolated SwiftPM build + tests of the surface against the **real** shared component library and design tokens, under Swift 6 strict concurrency. Let me build that harness.
+
+All my files compiled cleanly — the only errors are `#Preview` macro-plugin resolution in the **shared** `Badges.swift` (an Xcode-only plugin unavailable under Command Line Tools, not my code). Release mode strips `#if DEBUG` previews. Let me build + test in release.
+
+The shared `Components/DataDisplay/UnitFormatters.swift` depends on a `Units` type defined outside `Sources/Components`. My surface doesn't use those formatters. Let me find `Units` and trim the harness to the minimal closed set my surface actually needs.
+
+KMP dependency confirmed: `UnitFormatters.swift → Units → import Shared` (the unstaged KMP xcframework). My surface uses none of that. Let me trim the harness to the minimal closed set my surface needs (tokens, Design, Typography, Cards, Skeletons) and rebuild.
+
+Minimal closed set compiles. Let me do a clean release build + run the tests to get trustworthy results.
+
+Clean release build succeeds (whole-module, Swift 6 strict concurrency). Now run the test suite:
+
+`XCTest` may not ship with Command Line Tools. Let me verify, and check whether the toolchain's Swift Testing is available as an alternative runner.
+
+Confirmed: `XCTest` ships only with full Xcode (absent here), but the toolchain's **Swift Testing** is present. The committed tests correctly use XCTest (built by Xcode on the macOS gate, per convention). For local runtime proof, I'll mirror them as a Swift Testing harness (non-committed) using the public API and run in release.
+
+The Swift Testing module is a CLT-bundled framework not on SwiftPM's default search path. Let me add the framework search path explicitly.
+
+Compiles against the Testing framework now — the only errors are in my harness test file (`resolvePhase` is `@MainActor`-isolated). The committed XCTest class is already `@MainActor`, so it's fine; I just need `@MainActor` on the harness function. Fixing and rerunning.
+
+Build + link succeed; only a runtime dylib load path for `lib_TestingInterop.dylib` is missing. Let me locate it and add it to the loader path.
+
+All 13 Swift Testing functions pass at runtime (mirroring the committed XCTest assertions). The release build already type-checks every SwiftUI `body` (Views/States/CarViz/entry). Let me add one consumer-side view-composition test, then run the placeholder gate and xcodegen enumeration.
+
+14/14 pass including consumer view composition. Now the placeholder gate (real scan of my files + the official slug path) and `xcodegen generate` enumeration.
+
+The real scan caught a case-insensitive "todo" substring in my Tests file. Let me find and fix it.
+
+Caught it: the method name `testOdometerGroupedInteger` contains the case-insensitive substring "**tOdo**meter". Renaming to avoid it, then re-scanning.
+
+Placeholder, format, and lint all clean (0). Now `xcodegen generate` to confirm the project enumerates my files.
+
+xcodegen enumerates all 13 files across targets. Now let me run the actual gate `xcodebuild` commands to capture the honest platform-capability evidence for the log.
+
+Capability evidence captured: `xcodebuild` requires full Xcode (only Command Line Tools present), no iphonesimulator SDK, 0 simulators — the gate's `xcodebuild` steps cannot run here. All host-runnable surface gates are green. Let me verify the log directory and gitignore status, then clean up generated artifacts.
+
+I see pre-existing `AIUsageCard.*` modifications in the working tree (not mine — I only formatted my own files). Let me confirm they're unrelated and ensure I only stage my files.
+
+The `AIUsageCard.*` changes are pre-existing (a different prompt, 0237) — not mine; I'll stage only my files. Let me count the committed test methods, then write the log.
+
+All host-runnable gates are green; the `xcodebuild` gate is blocked on platform capability. Let me write the gate log with full honest evidence.
+
+Now staging only my files (not the unrelated AIUsageCard changes) and committing.
+
+Only my 13 files + the log are staged. Committing:
+
+Committed cleanly. Let me do a final verification of the commit contents and close out the todos.
+
+Commit is clean — exactly my 13 surface files + the log (0 unrelated files). Let me finalize tracking.
+
+All 14 todos done. The VehicleCard surface is built, verified, and committed.
+
+## Summary
+
+I shipped a production-grade native Apple (SwiftUI, Swift 6) parity of web `VehicleCard.tsx` as a self-contained P4 feature view — **13 files, 2403 LOC**, committed at `62e27d301`.
+
+**What was built** (mirroring the sibling `ChargingSessionCard` architecture): `VehicleCard.swift` (phase-switch entry), `.Model` (P1/S8 source seam, `@Observable` model, P1/S11 `view.opened` telemetry, P1/S10 i18n facade), `.Adapter` (ports of `parseModelKey`, `deriveVehicleStatus`+`VEHICLE_STATES`, `batteryColor`, `Vehicle`/`VehicleState`), `.Formatting` (SI display-boundary parity of `formatDistance`/`formatTemperature`/`convertDistanceFromSI`/`fmtInt`), `.Projection`, `.Labels` (i18n + VoiceOver), `.Views` (card composition: accent strip, status pill, battery ring, stat tiles, actions), `.CarViz` (native `TeslaCarViz` counterpart), `.States` (skeleton/error/empty/freshness chip), `.Previews`, `.Tests`+`.ModelTests` (35 XCTest methods), `.strings` (28 keys incl. the 4 web keys). All states render, full a11y, no hardcoded English.
+
+**Verification — host-runnable surface gates all GREEN:**
+- Isolated SwiftPM build of the **real** shared design system + surface, Swift 6 strict concurrency — **BUILD=0**
+- 14 Swift Testing functions mirroring the committed XCTest assertions — **all pass** (XCTest ships only with full Xcode; committed suite runs at the macOS gate)
+- `swiftformat --lint` 0/12 · `swiftlint --strict` 0 violations · placeholder gate **COUNT=0** · `xcodegen` enumerates all 13 files
+
+**`xcodebuild` gate → STATUS=BLOCKED (honest, per the prompt's capability clause):** this runner has only Command Line Tools — no full Xcode, no iphonesimulator SDK, 0 simulators — so `xcodebuild build test` cannot run. Deferred to `P99-0001-apple-acceptance-gate` (macos-latest), consistent with `apps/macos-pending-verifications.md` and sibling surfaces. Evidence + all green gates are recorded in the log ending `EXIT=1 / STATUS=BLOCKED`. Pre-existing unrelated `AIUsageCard.*` working-tree changes were left untouched.
+
+
+
+The task is fully complete. Let me record the final status in plan.md and close out.
+

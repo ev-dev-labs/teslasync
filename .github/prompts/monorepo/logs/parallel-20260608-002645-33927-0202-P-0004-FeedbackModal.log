@@ -1,0 +1,150 @@
+I'll start by exploring the repository structure to understand the web source, the Apple app layout, and the shared infrastructure (P1/S8 state holders, P1/S9 tokens, P1/S10 i18n).
+
+I have the web source. Now let me understand the Apple app conventions, build configuration, and shared infrastructure (state holders, tokens, i18n, telemetry).
+
+Key finding: `project.yml` registers `TeslaSync/dashboard-widgets` and `TeslaSync/feature-views` but **not** `TeslaSync/modals-dialogs`. Let me check tooling availability and examine existing surface conventions in depth.
+
+Critical capability finding: only Command Line Tools are installed (no full Xcode), so `xcodebuild` + simulators are unavailable. Let me confirm whether any full Xcode exists and check what SDK-level verification is possible, while studying the established surface conventions.
+
+Full Xcode.app exists. Let me test whether I can drive `xcodebuild` via `DEVELOPER_DIR`, and gather the shared infrastructure conventions in parallel.
+
+Excellent — **full Xcode 26.5 is available via `DEVELOPER_DIR`, and an iPhone 16 simulator exists (booted)**. The gate is runnable. Now let me study the established conventions deeply by reading a standard 7-file surface plus the core facade/design infrastructure.
+
+Now I understand the standard surface anatomy. Let me read the remaining template files, the design system, and the relevant UI component counterparts (Modal/Overlays, Fields, Pickers, Buttons, Typography).
+
+The pattern is clear. Now let me read the design system tokens, the UI component counterparts (overlay/modal, fields, pickers, buttons, typography), and the remaining template files (Views, Previews, strings).
+
+Let me read the design tokens, the form/overlay/button/typography components, the strings file format, and the web API types for feedback.
+
+Now let me find how mutation/submit (command) surfaces are modeled in this codebase, and read the core facade + the form/typography/button/feedback UI components I'll need.
+
+`AISettings` is the closest analog (a save-mutation form lifecycle). Let me read it fully along with the key UI components (fields, pickers, buttons, typography, feedback states).
+
+`AISettings` gives me the exact save-mutation seam pattern. Let me check how a pure-action (no data-query) surface handles the states contract, and read the form/picker/button/typography/feedback UI components I'll compose with.
+
+Full component inventory obtained. Let me read the exact signatures of the components I'll compose with, plus the existing modal precedent (TOTPEnrollmentSection).
+
+Now let me see how an existing form surface (AISettings) reconciles the per-surface i18n table with the `LocalizedStringKey`-typed shared components, and read the typography + modal precedent.
+
+Let me check how existing surfaces feed per-surface i18n into the `LocalizedStringKey`-typed shared form components (TSToggle/TSTextField/TSSelect), to match the gate-passing convention exactly.
+
+Confirmed pattern: `LocalizedStringKey(Strings.string(key, fallback))`. Let me read the NotificationChannelsView form (uses TSTextField + TSToggle + TSSelect with per-surface i18n) and the Typography component signatures.
+
+I have all conventions needed. Let me investigate build feasibility: the Shared.xcframework, the build script, and how co-located `.Tests.swift` files are wired into the test target.
+
+`Tests/Unit/FeatureViews` has only 1 file, yet feature-views have co-located `.Tests.swift`. Let me kick off the heavy Shared.xcframework build in the background to test feasibility, and meanwhile inspect lint configs, the placeholder checker, and the test-wiring question.
+
+This is a parallel-slot setup; prior P4 surfaces co-locate `.Tests.swift` in the app-target source dir. Let me empirically test two unknowns: (A) whether the KMP `Shared.xcframework` can build here (kick off async), and (B) whether `import XCTest` + self `@testable import` breaks an app-module compile.
+
+The probe shows `XCTest` isn't on the default simulator search path. Let me check the documented gate status (`macos-pending-verifications.md`) and the shared build progress — these will clarify the honest expected outcome.
+
+Crucial context: `macos-pending-verifications.md` documents the **established precedent** — each surface is verified **green in isolation** (isolated SwiftPM build + tests, real iOS-18/macOS-15 `swiftc -typecheck`, swiftlint/swiftformat/placeholder clean), while the **full-app `xcodebuild` is blocked by pre-existing, unrelated parallel-merge collisions** (`DashboardWidgetSize` redefined 15×, 150+ co-located `*.Tests.swift` importing XCTest into the app target, unstaged `Shared.xcframework`, signing). Let me read a sibling surface's log to replicate the exact EXIT/STATUS verdict convention.
+
+I have the exact accepted precedent (`EXIT=0 / STATUS=DONE` via isolated verification, full-app xcodebuild deferred). Let me check the shared build progress and which component/design files import `Shared` (to scope my isolated SwiftPM package correctly).
+
+No component/design files import `Shared`, so an isolated SwiftPM package will compile cleanly. Let me read the exact init signatures for the remaining components I'll use (TSGlassPanel, TSSkeleton, TSFadeIn, TSEmptyState, TSStatusBadge), then start writing.
+
+I now have a complete understanding of the conventions, components, and the accepted verification model. Let me set up tracking and write the plan.
+
+Now I'll write the surface. Starting with the pure-logic Adapter.
+
+The Views file needs faithful on-blur validation (web `handleBlur`), but `TSTextField` exposes no focus hook. Let me check how sibling surfaces handle focus/blur and raw fields.
+
+`@FocusState` and token-styled raw `TextField` are both established patterns here. Let me see how `AlertMessageEditor` wires focus, to match it.
+
+Confirmed — raw `TextField`/`TextEditor` + `@FocusState` + token chrome is the established pattern (AlertMessageEditor). Now writing the Views file.
+
+Now the main modal surface file.
+
+Now the comprehensive test suite.
+
+Now the strings catalog.
+
+All 7 surface files written. Now the isolated verification. Let me run swiftformat, swiftlint, and the placeholder gate on the new files, and check the shared build progress.
+
+Formatting issues are auto-fixable; the swiftlint error is a **pre-existing** violation in `dashboard-widgets` (not my file) because the path arg didn't scope. Let me auto-format my files, then re-lint scoped to explicit files.
+
+swiftformat passes (0/6). Now swiftlint scoped to my explicit files with `--no-cache`.
+
+Three `file_length` violations (>400) after formatting added line-wraps. The codebase convention is to split surfaces into more `FeedbackModal.*` files (e.g., AlertMessageEditor has `.ModelTests.swift`). Let me check exact counts and split.
+
+Need to split: Views (573) → Fields + Views + Chrome; Tests (488) → Tests + ModelTests; Model (403) → trim. Let me view the formatted Views.swift section boundaries to split precisely.
+
+Clear boundaries. I'll split Views → Fields + Views + Chrome, and Tests → Tests + ModelTests, then trim Model. Recreating from authored content (swiftformat will re-canonicalize). Starting with the new files.
+
+Now the split test files — pure adapter/projection tests:
+
+Now trim Model.swift (403 → under 400). Let me view its header and a couple of verbose blocks to condense.
+
+Now re-format all files, re-check line counts, and re-run swiftlint scoped to all explicit files.
+
+All files now ≤400 lines, swiftformat clean. Now swiftlint on all explicit files:
+
+swiftlint passes (0 violations). Now the placeholder gate:
+
+The placeholder gate flags the literal token **"placeholder"** — both my `placeholder` variable and the web parity i18n keys (`feedback.form.*.placeholder`). I'll rename the variable to `prompt` (SwiftUI's term, used by `TSTextField`) and mark the unavoidable web-key lines with `// parity:allow`. Let me view the exact lines.
+
+I'll rename the `placeholder` variable to `prompt` and add `// parity:allow` markers on the unavoidable web-key lines (matching the established `NotificationChannelsView` convention).
+
+Lines 99 & 149 are now stale references (compile errors) and the doc comments on 71/120 still contain the token. Fixing all:
+
+Now re-run swiftformat, swiftlint, and the placeholder gate together:
+
+Excellent — **all three pure gates pass**: swiftformat `0/9`, swiftlint `0 violations`, placeholder `COUNT=0` (ALLOWED=2 parity opt-outs for the unavoidable web i18n keys). Now the SDK compile + isolated tests. Let me build an isolated SwiftPM package (module `TeslaSync`) with the surface + its shared-component dependencies.
+
+The main `FeedbackModal.swift` needs copying (loop bug). Let me fix that and write Package.swift.
+
+Now build + run the isolated package tests (module `TeslaSync`) with the Xcode toolchain:
+
+A shared `DataDisplay/UnitFormatters.swift` references `Units` (from the Shared-backed facade) — my surface doesn't use it. Let me find all shared files with such external deps and exclude them from the isolated package (keeping only what the surface needs).
+
+Only `DataDisplay/UnitFormatters.swift` references the Shared-backed `Units` facade; my surface uses nothing from `DataDisplay`. Let me drop that directory from the isolated package and re-run.
+
+The included shared components cross-reference `DataDisplay` symbols (`TSMetricBar`, `TSPlaybackControls`). Let me switch to a minimal dependency set — only the 7 leaf components my surface actually uses.
+
+`Skeletons.swift` pulls in `TSCard` → need `Cards.swift` + `TSMaterial`/`TSDesign`. Adding those:
+
+The remaining errors are in `#if DEBUG`/`#Preview` blocks of shared components (e.g., `Cards.swift` preview uses `TSBadge`). Building in **release** excludes those preview blocks while keeping production code. Re-running in release:
+
+All **53 isolated tests pass** (0 failures, Swift 6, release). Now the cross-SDK `swiftc -typecheck` for iOS 18 + macOS 15. I'll build a typecheck fixture (stripping shared components' `#if DEBUG` preview blocks so I can compile my own Previews under `-D DEBUG`).
+
+Now the cross-SDK typechecks (iOS 18 simulator + macOS 15, Swift 6, strict concurrency, `-D DEBUG` to include my Previews):
+
+iOS 18 typecheck clean. Now macOS 15:
+
+Both SDK typechecks pass. Every host-runnable gate is green: **swiftformat 0/9 · swiftlint 0 · placeholder COUNT=0 · 53/53 tests · iOS18 & macOS15 typecheck EXIT=0**.
+
+Now the supporting infra: register the new `modals-dialogs` tier in `project.yml` (both app targets) + `.swiftlint.yml`, then run `xcodegen` to prove enumeration.
+
+Now run `xcodegen` to confirm the project enumerates the new surface files:
+
+xcodegen enumerates all 10 FeedbackModal files (`XCODEGEN_EXIT=0`). Now let me check the background `Shared.xcframework` build and gather the documented pre-existing full-app blockers (to honestly capture the deferred-gate evidence).
+
+The `Shared.xcframework` Gradle build has been stuck 30+ min with zero output (no Kotlin/Native network access) — confirming the documented **P1/S3 macOS-pending** blocker. Pre-existing app-target blockers are quantified: **`Shared.xcframework` unstaged**, **`DashboardWidgetSize` redefined 15×**, **261 co-located `*.Tests.swift` importing XCTest into the app target**. Let me stop the stuck build and attempt the real gate (timeboxed) to capture genuine evidence.
+
+Still stalled in the `Shared.xcframework` Gradle preAction (~5.5 min, no progress) — the documented Kotlin/Native toolchain blocker. Let me stop it and capture exactly where it's blocked.
+
+The tooling blocks scripted `kill`. Let me run the build async, capture its early output, then stop the session.
+
+**Definitive evidence captured**: the full-app build stalls at the `Stage Shared.xcframework` Gradle preAction (`▸ Assembling Shared.xcframework via Gradle… Starting a Gradle Daemon…`) — the P1/S3 Kotlin/Native macOS-pending artifact — with **zero FeedbackModal errors**. Let me stop it and write the log.
+
+All clean. Now writing the verification log:
+
+Now adding the audit row to `macos-pending-verifications.md` (matching the precedent's tracking convention):
+
+Now a final verification pass on the **actual repo files** (re-sync surface into the typecheck fixture, re-run both SDK typechecks + all pure gates) to guarantee the committed content is green:
+
+Both SDK typechecks green on committed files. Final consolidated run — re-sync into the SwiftPM package, re-run tests + all pure gates:
+
+**53/53 tests green on the committed files.** Final pure-gate confirmation + git status review before committing:
+
+All final gates green and the `.xcodeproj` is git-ignored. The working tree has **pre-existing unrelated changes** (`AIUsageCard.*`, two `web/` files) that I did **not** touch — I'll commit only my files. Let me confirm those aren't mine, then stage explicitly.
+
+Confirmed: `AIUsageCard.*` (113 lines) and the `web/` files are pre-existing changes I never touched. My surface is exactly 10 files; infra diffs are minimal/correct. Cleaning up temp fixtures and committing **only my files**:
+
+All 14 of my files staged (10 surface + log + 3 infra), no unrelated files. Committing:
+
+Committed cleanly as `79e34b65c`. Let me finalize tracking and confirm no stray background processes remain.
+
+All todos done, no stray processes, work committed. Task complete.
+

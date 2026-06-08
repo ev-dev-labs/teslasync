@@ -1,0 +1,105 @@
+=== P4 Dashboard widget 0019 ChargeSessionChartWidget (Apple) ===
+Runner: macOS (Darwin, arm64) · Xcode 26.5 (17F42) present at /Applications/Xcode.app
+Swift 6.3.2 · swiftlint + swiftformat (homebrew) · pwsh present
+Web source (spec): web/src/features/dashboard/widgets/ChargeSessionChartWidget.tsx
+Native surface: apps/apple/TeslaSync/dashboard-widgets/ChargeSessionChartWidget.{swift,Model,Models,Builder,Chart,Previews,Tests}.swift + .strings
+
+Registry parity: id="charge-session-chart" category="charging" default=2x4 min=1x2 max=4x40 (registry/charging.ts).
+States reproduced: loading · empty · error · stale · offline · content (compact / standard / wide layouts).
+i18n: all source keys (title/total/avg/sessions/empty + type.home/supercharger/dc) resolve through the
+      ChargeSessionChartWidget string table; no English literals in code.
+Charger color map (CHARGER_COLORS -> design tokens): home #10b981 -> statusSuccess,
+      supercharger #ef4444 -> statusDanger, dc #f59e0b -> statusWarning.
+
+----------------------------------------------------------------------
+GATE STEPS (as specified in the prompt)
+----------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    IOS_EXIT=1
+    > xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+    > '/Library/Developer/CommandLineTools' is a command line tools instance
+    BLOCKED — see "PLATFORM CAPABILITY" below.
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    MAC_EXIT=1
+    > xcode-select: error: tool 'xcodebuild' requires Xcode (active dir is CommandLineTools)
+    BLOCKED — see "PLATFORM CAPABILITY" below.
+
+[3] swiftlint --strict                       (whole-tree, gate command)
+    WHOLE_LINT_EXIT=2  -> 1 serious violation, in a PRE-EXISTING SIBLING file (NOT this surface):
+        TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length
+    This surface scoped:  LINT_EXIT=0  (Found 0 violations, 0 serious in 7 files)
+
+[4] swiftformat --lint apps/apple            (whole-tree, gate command)
+    WHOLE_FORMAT_EXIT=1 -> 1/1920 files require formatting, a PRE-EXISTING SIBLING file (NOT this surface):
+        TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes)
+    This surface scoped:  FORMAT_EXIT=0  (0/7 files require formatting)
+
+[5] check-placeholders.ps1 (this surface)
+    PLACEHOLDER_EXIT=0   PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+
+----------------------------------------------------------------------
+SURFACE-LEVEL VERIFICATION ACTUALLY EXECUTED ON THIS RUNNER
+(real macOS 15 SDK via Xcode 26.5 — SwiftUI + Swift Charts — Swift 6, strict concurrency = complete)
+----------------------------------------------------------------------
+[A] swiftc -typecheck of the shipped surface (swift/Model/Models/Builder/Chart/Previews)
+    + real apps/design/generated/apple/Tokens.swift + faithful stubs for the 3 shared symbols
+    (DashboardWidgetSize / DashboardWidgetRegistration / TSSkeleton):
+        SURFACE_TYPECHECK_EXIT=0   (0 errors, 0 warnings)
+
+[B] swiftc -typecheck of the test file vs the real surface API + a faithful XCTest shim
+    (raw swiftc cannot import XCTest's C-macro assertions; xcodebuild can):
+        TESTS_TYPECHECK_EXIT=0     (0 errors, 0 warnings)
+
+[C] host-compiled + EXECUTED the real adapter (Models + Builder, Foundation-only):
+        LOGIC_RUN_EXIT=0   ALL_LOGIC_PASS (26/26 web-parity checks), incl.:
+          - classify: supercharger/tesla -> .supercharger; non-empty/non-<invalid> -> .dc; ""/<invalid>/nil -> .home
+          - kwh: wh/1000; nil & non-finite -> 0
+          - shortDate: RFC3339 + date-only -> "MMM d" (UTC); unparseable -> "—"
+          - label: started_at ? shortDate : "#<preReverseIndex+1>"
+          - buildProjection: rows reversed oldest->newest, re-indexed 0..n-1; total/avg/count; hasData=length>0
+          - fmt rounding matches web toLocaleString halfExpand (4.25 -> "4.3"; .nan-safe)
+
+----------------------------------------------------------------------
+PLATFORM CAPABILITY (why steps [1]/[2] are BLOCKED — all out of scope)
+----------------------------------------------------------------------
+The SwiftUI + Swift Charts + macOS 15 / iOS 18 SDK capability the prompt requires IS present and was
+exercised (verification [A]/[B]/[C] all green). The full multi-target xcodebuild build+test cannot run
+end-to-end on this runner for reasons external to this surface:
+
+  i.   Active developer dir is CommandLineTools, so the literal `xcodebuild` the gate calls errors
+       ("requires Xcode"). Full Xcode 26.5 IS installed; with DEVELOPER_DIR=/Applications/Xcode.app/...
+       `xcodegen generate` succeeds and the TeslaSync / TeslaSync-macOS schemes resolve.
+
+  ii.  The app targets link the KMP core `Frameworks/Shared.xcframework`, which is NOT staged
+       (Frameworks/ holds only .gitkeep). It must be built by the Kotlin/Native + Gradle toolchain
+       (Scripts/build-shared-xcframework.sh -> apps/shared/gradlew :core:assembleSharedXCFramework),
+       which is not provisioned here. Concrete build output:
+         error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'
+         ** BUILD FAILED **
+
+  iii. The dashboard-widgets group currently carries duplicate public definitions of the shared grid
+       types contributed by sibling parallel-WIP surfaces (15x DashboardWidgetSize, 13x
+       DashboardWidgetRegistration). The module will not compile until those are de-duplicated at
+       integration. THIS surface deliberately does NOT add another definition — it references the shared
+       types (matching the clean SolarProductionWidget pattern), so it is integration-safe.
+
+Items (ii) and (iii) are pre-existing, environment/integration-level, and explicitly Out of Scope for a
+per-surface prompt. They are not defects in this surface, which type-checks cleanly against the real SDK.
+
+----------------------------------------------------------------------
+OUTCOME
+----------------------------------------------------------------------
+Surface IMPLEMENTED at full parity with the web source: every state rendered (no hidden surfaces), data
+bound via the shared P1/S8 state-holder seam (no HTTP in the view), per-charger Swift Charts bar chart
+with legend + tap tooltip, Total/Avg/Sessions summary, full i18n, VoiceOver labels/values + Dynamic Type,
+reduce-motion respect, and the P1/S11 view.opened telemetry. Adapter unit tests + per-state previews +
+a11y tests included; no TODO/stub/mock/placeholder.
+
+Every runnable gate for THIS surface is green (LINT_EXIT=0, FORMAT_EXIT=0, PLACEHOLDER_EXIT=0,
+SURFACE_TYPECHECK_EXIT=0, TESTS_TYPECHECK_EXIT=0, LOGIC_RUN_EXIT=0). The canonical end-to-end
+`xcodebuild build test` could not complete due to the out-of-scope infra above (missing KMP
+Shared.xcframework + sibling duplicate type defs).
+
+EXIT=1
+STATUS=BLOCKED

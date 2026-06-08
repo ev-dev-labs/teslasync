@@ -1,0 +1,111 @@
+I'll start by assessing the environment capabilities and exploring the repository structure, since this task requires Apple-native tooling (Xcode, SwiftUI, etc.).
+
+Key finding: **Xcode is NOT installed** (only Command Line Tools), and **iOS Simulator (`simctl`) is unavailable**. Swift 6.3.2, swiftlint, and swiftformat ARE available. This matches the prompt's capability-gate clause. Let me investigate the established patterns before deciding on the path forward.
+
+`pwsh` is available, so placeholder check can run. The native target dir `shared-surfaces/` doesn't exist yet. Critically, I need to understand how prior P4-apple prompts concluded given Xcode isn't installed. Let me examine the closest analog log and the AIUsageCard template (the nearest AI-card pattern, just modified).
+
+The CostForecastSection log reveals the established pattern: implement the full surface, run all host-runnable gates (swiftlint, swiftformat, placeholder, **and actual swift compile/test against SDKs**), and only DEFER the `xcodebuild` app-scheme step with honest evidence. Let me check SDK availability and locate the AI-stream native scaffolding (the web source depends on `AIFeatureCard`, `withAiFeature`, `useAiStream`).
+
+Now the picture is clear:
+- **iOS Simulator SDK: unavailable** ("cannot be located"). Only **macOS SDK** present — but it DOES contain SwiftUI, Charts, MapKit.
+- `AiUsageCard.*` is the nearest AI-card template (just modified in-tree by a sibling — NOT mine, will exclude from commit).
+- No native `AIFeatureCard`/`useAiStream` exists, so I'll build the surface self-contained.
+
+Let me study the AiUsageCard template thoroughly and check the BLOCKED/commit convention + facades.
+
+Excellent template. Now I need the supporting infrastructure: the strings facade (`AiUsageStrings`), design tokens (`TSSpacing`, `Color.TS`, `TSFadeIn`), the state-holder base (`AiUsageModel`), telemetry (`view.opened`), test harness, and how `project.yml` includes sources. Let me read these in parallel.
+
+The pattern is now clear and rich. My surface delegates to `AIFeatureCard` + `withAiFeature` + `useAiStream` — I must read those web definitions to faithfully reproduce composition and states. Let me read them plus confirm `project.yml` source globs and token definitions.
+
+Important: `project.yml` source paths include `TeslaSync/feature-views` but **NOT `TeslaSync/shared-surfaces`**. Since editing `project.yml` is out of scope (not in allowed files, rule 7), I'll document this integration dependency in the log. Now let me read the web AI component definitions and the remaining native template files to faithfully reproduce composition/states.
+
+Now I fully understand the web composition. Let me read the native token/primitive definitions and the AiUsageCard test/view/preview conventions — the final exploration before implementing.
+
+Tokens are generated under `../design/generated/apple`. Let me confirm the exact token surface (colors, spacing, fonts) plus the Typography/Motion/Skeleton primitive APIs and the preview harness convention.
+
+Let me confirm the last few token details (accent value, `Color.TS.bg`, `.tsGlassPanel()` modifier) and check `AIThinkingIndicator` for any strings I must localize.
+
+`Color.TS.accent` is bright cyan (dark: `0,0.941,1.0`) — the exact Helix accent. All primitives confirmed: `TSGlassPanel`, `TSButton`, `TSFadeIn`, `TSSkeleton`, `Font.TS.{title,body,bodySm,caption}`, `TSSpacing/TSRadius`, typography components. Let me read the lint configs and `AiUsageCard.Views.swift` conventions, then set up my plan.
+
+Critical: `shared-surfaces` is **not** in `.swiftlint.yml`'s `included` nor in `project.yml`'s sources — an integration gap I'll document (not edit those shared configs; out of scope). I'll lint/format my files directly. Let me read the placeholder patterns to avoid forbidden tokens, then set up my plan and implement.
+
+I now have everything needed. Let me set up my plan and todo tracking, then implement the 8-file surface following the established `AiUsageCard` pattern.
+
+Setting up the directory and writing the pure-Foundation Adapter (the unit-testable core: SSE parser, accumulator state machine, request body).
+
+Let me clean up the parser's no-space branch for readability.
+
+Now the Model file: strings facade (P1/S10), telemetry (P1/S11), connection axis, context snapshot, projection, the source + streamer seams (P1/S8), the `@Observable` model, and in-memory doubles.
+
+Let me verify the `TSSkeleton` width behavior and `TSFadeIn` API before writing the views.
+
+`TSSkeleton` expands when width is nil and is already a11y-hidden. Now writing the Views (badge, header, Helix CTA, thinking dots, output panel, thinking indicator).
+
+Now the Chrome file (freshness chip, connectivity banner, refresh button, loading skeleton).
+
+Now the entry View that gates, composes the chrome + content, and binds lifecycle.
+
+Now the Previews covering every state.
+
+Let me fix a typo in the preview sample text, then write the tests.
+
+Now the comprehensive XCTest suite (adapter + projection + model + accessibility).
+
+Now the i18n strings catalog.
+
+All 8 files written. Now the verification phase: format, lint, placeholder gate, then execute the pure core via SwiftPM. Starting with swiftformat (autofix) then lint.
+
+swiftformat normalized 3 files. Now confirm lint-clean with `swiftformat --lint` and `swiftlint --strict`.
+
+swiftformat lint passes (0/7 need formatting). Waiting for swiftlint to finish.
+
+swiftlint scanned the whole project (1909 files, via config `included`) and found 1 serious violation — I must confirm whether it's mine. Let me lint only my files explicitly.
+
+4 violations in my files — all fixable. Let me get exact line boundaries in the Model file to split it (file-length fix) and view the affected test region.
+
+Clear boundaries. Let me view the post-format state of the Adapter `typedEvent` and the two Tests regions so my edits match exactly.
+
+Let me view the rest of the Model test class so I can refactor the 4-tuple into a struct cleanly.
+
+All boundaries confirmed. Applying the four fixes: split the Model file (file-length), refactor `typedEvent` (complexity), and fix the two test violations.
+
+Now refactor the Model test class to use a struct (large-tuple fix):
+
+Now split the Model file (file-length fix): extract the strings facade and the in-memory doubles into their own files.
+
+Model is now 325 lines. Re-running swiftformat (autofix) then swiftlint on all 9 swift files.
+
+swiftformat + swiftlint both clean (0/9, 0 violations). Now the placeholder gate via pwsh.
+
+Caught one forbidden token ("Placeholder") in a Views doc comment. Let me find and remove all such words across my files.
+
+Re-running the placeholder gate plus a quick format re-check after the doc edit.
+
+All host gates green (format 0/9, lint 0, placeholder COUNT=0). Now the strongest executable evidence available on this runner: run the pure non-UI core (Adapter + Model + Projection + tests) via a temporary SwiftPM package.
+
+Now build and run the package tests:
+
+XCTest isn't in the CommandLineTools toolchain (expected — it ships with Xcode). There's also an AINCore emit-module error to diagnose. Let me build just the library to see if the non-UI core compiles cleanly against the macOS SDK.
+
+The non-UI core compiles cleanly against the macOS SDK (`BUILD_EXIT=0`). XCTest itself isn't installed (Xcode-only), so I'll execute the identical assertions through a small executable harness to prove the logic runs green.
+
+The `@MainActor` entry needs safe isolation from top-level. Let me wrap it and run the harness.
+
+62/62 pure-core checks executed green on macOS Swift 6. Now a best-effort `swiftc -typecheck` of the SwiftUI view files against the real design tokens + the macOS SDK.
+
+SwiftUI views type-check cleanly against the real tokens + macOS SDK (`TYPECHECK_EXIT=0`). Let me also type-check the DEBUG Previews (needs `-DDEBUG`, which activates `#Preview` blocks), pulling in any extra primitive files.
+
+Previews type-check fully except the `#Preview` macro itself (Xcode-only `PreviewsMacros` plugin — same capability gap; all other preview code is valid). Let me capture the whole-app gate exits (to honestly attribute any pre-existing issues) and clean up the temp package.
+
+The pre-existing swiftlint violation is in a sibling file (`LifetimeStatsWidget.Adapter.swift`) — not mine. Let me capture the whole-app swiftformat exit correctly from the repo root.
+
+Whole-app gate has only **pre-existing** non-zero from sibling files outside my scope (`ActionBuilder.Previews.swift`, `LifetimeStatsWidget.Adapter.swift`) — my 9 files are clean. The `xcodebuild` steps are genuinely BLOCKED (no Xcode/iOS SDK). Let me write the honest gate log.
+
+Now let me verify the working tree and stage only my files (excluding the unrelated AiUsageCard edits), then commit.
+
+Confirmed: only my `shared-surfaces/` dir + the log are mine; the `AIUsageCard.*` edits are pre-existing (not mine) and will be excluded. Staging precisely and committing.
+
+Exactly my 10 files + log staged, no sibling files. Committing.
+
+Task complete. Here's the summary.
+

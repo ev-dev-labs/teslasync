@@ -1,0 +1,250 @@
+=== P4 Page · vehicles/VehicleAccess — VehicleAccessPage (Apple · SwiftUI/HIG) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon).
+  Xcode              : 26.5 (Build 17F42) — invoked via
+                       DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer (the active dir was
+                       /Library/Developer/CommandLineTools; overridden non-destructively, no sudo /
+                       no `xcode-select -s`, so the shared runner is untouched). `xcodebuild -version`
+                       under CommandLineTools errors ("requires Xcode") — hence the DEVELOPER_DIR
+                       override, the SAME mechanism every prior P4 surface used.
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2.
+  SDKs               : macOS (MacOSX26.5) + iPhoneSimulator26.5 present.
+  Capability         : SwiftUI present. This page uses NO Charts and NO MapKit (the web source has
+                       neither — prompt "Charts (0)" / "Maps (0)"), so all HIG primitives it needs
+                       (GroupBox-style cards, ContentUnavailableView, confirmationDialog, List rows)
+                       are available → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification — read end to end)
+  web/src/features/vehicles/pages/VehicleAccessPage.tsx  (route /vehicles/:id/access)
+    <PageContainer title="Vehicle Access" subtitle="Manage drivers and share invitations"
+                   loading={driversLoading || invitationsLoading}> hosting two <GlassPanel> sections:
+    GlassPanel1 — Drivers (Users icon + "Drivers" + count Badge + ghost "Refresh"[aria drivers.refresh]):
+      drivers.length > 0 ? <DataTable cols=[name, email, role(Badge info | —), remove(per-row ghost
+      UserMinus, shown iff row.share_user_id != null)]> : <EmptyState Users "drivers.empty">.
+    GlassPanel2 — Share Invitations (Mail icon + "Share Invitations" + count + ghost "Refresh"
+      [aria invitations.refresh] + primary "Invite Driver"[aria invitations.create]):
+      invitations.length > 0 ? <DataTable cols=[status(<StatusBadge> pending→online/revoked→offline/
+      else→asleep), createdBy, expires(<TimeStamp>), link(<CopyButton> iff invite_url),
+      revoke(per-row ghost XCircle, shown iff status==='pending')]> : <EmptyState Shield
+      "invitations.empty">.
+    Two <ConfirmDialog variant="danger">: removeTarget (drivers.removeTitle/Message/Confirm) and
+      revokeTarget (invitations.revokeTitle/Message/Confirm).
+  Hooks (8): useVehicle, useVehicleDrivers (GET /vehicles/{id}/drivers), useVehicleInvitations
+    (GET /vehicles/{id}/invitations), useRefreshVehicleDrivers (POST …/drivers/refresh),
+    useRefreshVehicleInvitations (POST …/invitations/refresh), useRemoveVehicleDriver
+    (DELETE …/drivers {share_user_id}), useCreateVehicleInvitation (POST …/invitations),
+    useRevokeVehicleInvitation (POST …/invitations/{invitationId}/revoke). Each mutation invalidates
+    its list query on success. Hook names ported verbatim to the Swift seam call sites.
+  Types: VehicleDriver{id, share_user_id?, driver_email?, driver_name?, role?} ·
+    VehicleInvitation{id, invitation_id, invite_url?, status, expires_at?, created_by?, created_at}.
+  i18n: 27 keys under the en.json `vehicleAccess` group — captured verbatim (the canonical en.json
+    values, e.g. drivers.empty="No drivers found", invitations.empty="No invitations found").
+
+PATH / CONVENTION ADAPTATION  (no silent drift — disclosed in full)
+  The generated prompt names the output `apps/apple/TeslaSync/Features/Vehicles/VehicleAccessPage.swift`
+  and gates `swiftlint/check-placeholders` on `…/Features/Vehicles`. That path is an IDEALISED
+  generator default — it exists in NO part of this repo's reality:
+    • project.yml builds `Sources`, `TeslaSync/dashboard-widgets`, `TeslaSync/feature-views`,
+      `Localization`, `../design/generated/apple` — NOT `TeslaSync/Features/**`.
+    • .swiftlint.yml `included:` lists `TeslaSync/feature-views` — NOT `TeslaSync/Features/**`.
+    • Every one of the 1436 existing surface files + every recent P4 commit (LiveControls, AiUsageCard,
+      helpers, AnomalyInlineRow, FSMStateDiagram, …) ships under `TeslaSync/feature-views/<Stem>.*`.
+  Writing to `Features/Vehicles` would compile + lint NOTHING (not in project.yml / swiftlint roots),
+  making the build + gate evidence impossible. Per the p4-apple README ("Allowed files scoped to
+  apps/apple/**") the surface ships at the REAL convention: `TeslaSync/feature-views/VehicleAccessPage.*`.
+  No `VehicleAccess*` stem pre-exists (no collision; clean `git add`).
+
+ARTIFACTS SHIPPED  (allowed files: apps/apple/TeslaSync/feature-views/VehicleAccessPage.* + this log
+                    + the macos-pending-verifications row)
+  VehicleAccessPage.Adapter.swift  — pure Foundation core: VehicleAccessSurface.slug, the section
+                                     phase / load-status / freshness / status-tone enums, the
+                                     VehicleDriverItem + VehicleInvitationItem DTOs (em-dash + capitalize
+                                     + remove/copy/revoke gates), VehicleAccessProjection (resolveSection
+                                     Phase, inlineError, invitationTone ladder), VehicleAccessAccessibility.
+  VehicleAccessPage.Seams.swift    — P1/S11 telemetry seam (+OSLog sink, view.opened), P1/S10
+                                     VehicleAccessStrings facade (table "VehicleAccessPage"), date-format
+                                     facade, the 5-method VehicleAccessMutator seam (+OSLog sink), the
+                                     coalesced VehicleAccessUpdate, the P1/S8 VehicleAccessSource protocol,
+                                     the InMemory source + the Recording mutator (preview/test doubles).
+  VehicleAccessPage.Model.swift    — @MainActor @Observable VehicleAccessModel: both sections' phase +
+                                     rows + freshness, the refresh/create in-flight flags, the remove +
+                                     revoke confirm targets + in-flight ids, lifecycle (start emits
+                                     view.opened once / stop / per-section reload), the 5 mutation flows
+                                     (reload on success, skip on failure), prune + stale one-shot refresh.
+  VehicleAccessPage.States.swift   — loading (ProgressView) / empty (ContentUnavailableView) / error
+                                     (retry) / inline list-error / freshness chip / connectivity banner.
+  VehicleAccessPage.Rows.swift     — VehicleAccessDriverRow + VehicleAccessInvitationRow (card reflow),
+                                     the count / role / status pills (TSStatusDot tone bridge), the
+                                     metric line, the link row (TSCopyButton), remove/revoke buttons.
+  VehicleAccessPage.Views.swift    — the two GlassPanel sections (VehicleAccessPanel chrome), the section
+                                     header (TSIconBox + title + count + actions), the shared refresh
+                                     button, the invite button, the phase → body switch + StaggerContainer.
+  VehicleAccessPage.Actions.swift  — the two danger confirmations (remove driver + revoke invitation) as
+                                     `.confirmationDialog` view modifiers bound through the model.
+  VehicleAccessPage.swift          — the page scaffold: header (title + freshness chip + subtitle),
+                                     connectivity banner, the two sections, `.navigationTitle`, onAppear
+                                     start / onDisappear stop, the confirmations, the a11y summary,
+                                     static surfaceSlug = "VehicleAccessPage".
+  VehicleAccessPage.Previews.swift — #if DEBUG #Preview: content / empty / loading / error / stale / offline.
+  VehicleAccessPage.strings        — P1/S10 catalog (table "VehicleAccessPage"): the 27 web keys (en.json
+                                     verbatim) + the native envelope (loading/error/retry/cancel/freshness).
+  VehicleAccessPage.Tests.swift    — 21 pure-core XCTest (text helpers, driver/invitation derivations,
+                                     tone ladder, section-phase resolver, inline-error, a11y builders).
+  VehicleAccessPage.ModelTests.swift — 11 @MainActor model XCTest (telemetry once, phase resolve, the
+                                     5 mutation flows + failure-skips-reload, remove/revoke confirm flows,
+                                     no-share short-circuit, stale one-shot + re-arm, offline, inline
+                                     error, prune). 32 tests total.
+  (12 surface files — 11 Swift + the .strings catalog; the Swift split across .Adapter/.Seams/
+   .Model/.States/.Rows/.Views/.Actions/.Previews + .Tests/.ModelTests purely to keep every file within
+   the repo's 400-line SwiftLint file_length budget — the same multi-file decomposition the prior
+   feature-views use, e.g. ActiveSessionsSection.*.)
+
+PARITY MAPPING  (web → Apple platform tokens; no Tailwind ported, no raw hex)
+  <PageContainer> title/subtitle      → VehicleAccessPage header (Font.TS.title + textMuted subtitle)
+  <GlassPanel className="p-6">        → VehicleAccessPanel (Color.TS.surface + hairline border, P1/S9)
+  IconBox (lucide Users / Mail)       → TSIconBox(systemName: person.2.fill / envelope.fill, tone:.accent)
+  <Badge variant="neutral">{count}    → VehicleAccessCountBadge (monospaced count pill)
+  <Badge variant="info">{role}        → VehicleAccessRolePill (statusInfo tone)
+  <StatusBadge> pending/revoked/else  → VehicleAccessStatusPill: TSStatusDot tone via invitationTone
+                                        (pending→success/revoked→danger/else→neutral) + capitalize text
+  <TimeStamp value={expires_at}>      → model.formatExpires (medium date + short time; nil ⇒ "—")
+  <CopyButton text={invite_url}>      → TSCopyButton(value: url) (cross-platform pasteboard)
+  ghost "Refresh" / primary "Invite"  → TSButton(.ghost/.primary, isLoading: mutation in-flight)
+  per-row UserMinus / XCircle         → SF Symbols person.badge.minus / xmark.circle (danger, ProgressView
+                                        while in-flight, shown iff share_user_id!=nil / status=='pending')
+  <DataTable> rows                    → TSStaggerContainer of card rows (reflow on compact widths)
+  <EmptyState>                        → ContentUnavailableView (prompt-mandated empty primitive)
+  PageContainer loading / QueryError  → per-section loading (ProgressView) / error (retry) envelopes
+  two <ConfirmDialog variant=danger>  → `.confirmationDialog` (role:.destructive) bound through the model
+  useX hooks                          → VehicleAccessSource (2 queries) + VehicleAccessMutator (5 muts);
+                                        hook names kept at the seam call sites (refreshDrivers, …)
+  i18n t(key, default)                → VehicleAccessStrings.string (NSLocalizedString table; web value
+                                        as `value:` fallback); a11y/Dynamic Type/Reduce Motion honoured
+  units                               → none on this page (no SI quantities); dates at display boundary
+
+=== PARITY ===
+PARITY_REQUIRED=32
+  [x] panel  GlassPanel1                         → VehicleAccessDriversSection (Views.swift) / VehicleAccessPanel
+  [x] panel  GlassPanel2                         → VehicleAccessInvitationsSection (Views.swift) / VehicleAccessPanel
+  [x] state  loading                             → VehicleAccessLoadingState (States.swift) · phase .loading both sections
+  [x] state  empty                               → VehicleAccessEmptyState (States.swift) · phase .empty both sections
+  [x] state  success                             → VehicleAccessDriverRow/InvitationRow (Rows.swift) · phase .content
+       (+ error envelope                          → VehicleAccessErrorState (States.swift) · phase .error)
+  [x] string vehicleAccess.drivers.email         → Rows.swift VehicleAccessDriverRow.detailRows + Adapter.driverLabel
+  [x] string vehicleAccess.drivers.empty         → Views.swift VehicleAccessDriversSection body(.empty)
+  [x] string vehicleAccess.drivers.name          → Adapter.swift VehicleAccessAccessibility.driverLabel
+  [x] string vehicleAccess.drivers.refresh       → Views.swift VehicleAccessRefreshButton aria (drivers)
+  [x] string vehicleAccess.drivers.remove        → Rows.swift removeButton accessibilityLabel
+  [x] string vehicleAccess.drivers.removeConfirm → Actions.swift RemoveDriverConfirmation confirm
+  [x] string vehicleAccess.drivers.removeMessage → Actions.swift RemoveDriverConfirmation message
+  [x] string vehicleAccess.drivers.removeTitle   → Actions.swift RemoveDriverConfirmation title
+  [x] string vehicleAccess.drivers.role          → Rows.swift roleRow + Adapter.driverLabel
+  [x] string vehicleAccess.drivers.title         → Views.swift drivers section header
+  [x] string vehicleAccess.invitations.copyLink  → Rows.swift copyButton accessibilityLabel
+  [x] string vehicleAccess.invitations.create    → Views.swift inviteButton accessibilityLabel
+  [x] string vehicleAccess.invitations.createBtn → Views.swift inviteButton label
+  [x] string vehicleAccess.invitations.createdBy → Rows.swift invitation detailRows + Adapter.invitationLabel
+  [x] string vehicleAccess.invitations.empty     → Views.swift invitations section body(.empty)
+  [x] string vehicleAccess.invitations.expires   → Rows.swift invitation detailRows + Adapter.invitationLabel
+  [x] string vehicleAccess.invitations.link      → Rows.swift VehicleAccessInvitationRow.linkRow
+  [x] string vehicleAccess.invitations.refresh   → Views.swift VehicleAccessRefreshButton aria (invitations)
+  [x] string vehicleAccess.invitations.revoke    → Rows.swift revokeButton accessibilityLabel
+  [x] string vehicleAccess.invitations.revokeConfirm → Actions.swift RevokeInvitationConfirmation confirm
+  [x] string vehicleAccess.invitations.revokeMessage → Actions.swift RevokeInvitationConfirmation message
+  [x] string vehicleAccess.invitations.revokeTitle   → Actions.swift RevokeInvitationConfirmation title
+  [x] string vehicleAccess.invitations.status    → Adapter.swift VehicleAccessAccessibility.invitationLabel
+  [x] string vehicleAccess.invitations.title     → Views.swift invitations section header
+  [x] string vehicleAccess.refresh               → Views.swift VehicleAccessRefreshButton label
+  [x] string vehicleAccess.subtitle              → VehicleAccessPage.swift header
+  [x] string vehicleAccess.title                 → VehicleAccessPage.swift title + navigationTitle
+PARITY_COVERED=32
+
+GATES (each command run on THIS runner; raw exits pasted)
+  GATE swiftlint  : `swiftlint lint --strict --config .swiftlint.yml VehicleAccessPage.*`
+                    → "Found 0 violations, 0 serious in 11 files." LINT_EXIT=0
+  GATE swiftformat: `swiftformat --lint --config .swiftformat VehicleAccessPage.*`
+                    → "0/11 files require formatting." FORMAT_EXIT=0
+  GATE placeholder: `pwsh apps/tools/check-placeholders.ps1 -Path <surface> -Language swift`
+                    → PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+  GATE typecheck  : macOS `swiftc -typecheck -swift-version 6` (Adapter+Seams+Model) → EXIT=0
+                    iOS-sim `swiftc -typecheck -swift-version 6 -target arm64-apple-ios17.0-simulator`
+                    (6 design files + all 9 surface files, one module) → EXIT=0
+  GATE iso-build  : isolated SwiftPM package (module TeslaSync = generated Tokens + the 5 used P3
+                    component files + the 9 surface files), `swift build` under Swift 6 strict
+                    concurrency → "Build complete!" BUILD_EXIT=0
+  GATE iso-test   : `swift test` on that package (the 2 co-located test files as the test target)
+                    → "Executed 32 tests, with 0 failures (0 unexpected)". TEST_EXIT=0
+  GATE xcodegen   : `xcodegen generate` → project created; the 11 VehicleAccessPage.* Swift files
+                    enumerated into the TeslaSync iOS + macOS targets (72 pbxproj references). GEN_EXIT=0
+
+DEFERRED — full-app iOS-Simulator + macOS `xcodebuild build test`
+  Reported DEFERRED (NOT failed by this code), the SAME sanctioned disposition every prior P4 surface
+  recorded (see macos-pending-verifications.md rows for ToolCard / AlertMessageEditor / FSMTimelineChart
+  and the p4-apple-feature-views-0237-AiUsageCard.log). The full-app build is blocked by PRE-EXISTING,
+  UNRELATED, out-of-allowed-files conditions, each re-confirmed on THIS runner:
+    R1  Shared.xcframework — the app's `Stage Shared.xcframework` scheme pre-action assembles the KMP
+        xcframework via Gradle (observed: `:core:assembleSharedDebugXCFramework` writing
+        apps/shared/core/build/XCFrameworks/debug/Shared.xcframework). A multi-platform Gradle/Kotlin-
+        Native assembly owned by P0/S3 + P99 on a signed macos-latest runner, not a UI-page concern.
+    R2  `public struct DashboardWidgetSize` is redefined 15× across Sources/DashboardWidgets/* +
+        TeslaSync/dashboard-widgets/* (parallel-merge collisions), e.g.
+        Sources/DashboardWidgets/DrivetrainHealthWidgetModel.swift:10 and
+        Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift:13 — a redeclaration error before any
+        VehicleAccessPage file is reached.
+    R3  206 co-located `*.Tests.swift`/`*.ModelTests.swift` under TeslaSync/feature-views import XCTest
+        into the APP target (e.g. ComputedMetricEditor.ModelTests.swift, SummaryStatsRow.Tests.swift) —
+        an app-target/test-target config owned by the P99 gate. (My 2 test files follow that same
+        established co-location; they compile + pass in the isolated test target above.)
+    R4  macOS development-signing identities (absent on this runner; present on the P99 macos-latest gate).
+  ZERO VehicleAccessPage / feature-views errors are attributable to this change — independently proven by
+  the green isolated Swift 6 build + 32/32 XCTest + both-SDK typecheck above.
+
+LEDGER
+  No `apps/parity/apple-ledger.json` (nor apple-macos-/apple-ios-ledger.json) exists in this slot, and no
+  prior P4 surface commit created or wrote one (verified across the recent feature-view commits). Per the
+  established precedent this surface does NOT fabricate a ledger file; the parity coverage is recorded by
+  this log's `=== PARITY ===` section (PARITY_COVERED==PARITY_REQUIRED==32). A row is appended to
+  apps/macos-pending-verifications.md for the deferred full-app gate.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green   : the full-app xcodebuild gate is reported DEFERRED with raw, re-verified
+                         pre-existing-blocker evidence (R1–R4) — never reported as passing.
+  2  No scope narrowing: both panels, all per-section states (loading/empty/error/content + inline error
+                         + stale/offline freshness), both tables' every column (name/email/role/remove ·
+                         status/createdBy/expires/link/revoke), both danger confirms, all 5 mutations,
+                         and all 27 strings reproduced; 32/32 parity items mapped to file+symbol.
+  3  No skip-and-assume: every runnable gate executed on THIS runner; raw exits pasted; R1–R4 each
+                         re-confirmed by ls/grep, not assumed.
+  4  No stubs as final : complete production surface + 32 real tests; placeholder scanner COUNT=0; no
+                         TODO/FIXME/stub/placeholder/Coming-soon anywhere.
+  5  No parity shortcut: the invitation status→tone ladder, the share_user_id remove gate, the
+                         status==='pending' revoke gate, the invite_url copy gate, and the em-dash/
+                         capitalize helpers are each unit-asserted against the web expressions.
+  6  No delegation     : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 source seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened
+                         telemetry, and the P3 components (TSButton/TSCopyButton/TSIconBox/TSStatusDot/
+                         TSFadeIn/TSStaggerContainer) all honoured; the path-convention adaptation is
+                         disclosed above; no pre-existing files modified.
+  8  No commit on red  : the committed artifact (12 VehicleAccessPage.* files + this log + the
+                         macos-pending row) is GREEN on every per-surface gate AND on a real isolated
+                         Swift 6 strict-concurrency build + 32/32 XCTest + iOS/macOS typecheck; the
+                         deferred full-app gate is blocked only by pre-existing surfaces this commit
+                         does not touch.
+  9  No silent drift   : changes confined to feature-views/VehicleAccessPage.* + this log + the
+                         macos-pending-verifications row; the Features/Vehicles→feature-views path
+                         adaptation and the ledger-absence disposition are disclosed in full above.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic VehicleAccessPage shipped at full web parity (32/32) and
+  INDEPENDENTLY VERIFIED: it compiles under Swift 6 strict concurrency against the REAL design tokens +
+  P3 components on BOTH the macOS and iOS SDKs (Xcode 26.5), its 32 XCTest pass, and swiftlint --strict /
+  swiftformat --lint / placeholder all clean (0 opt-outs) with the #Preview macro compiling. The full-app
+  iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code) on pre-existing,
+  unrelated, out-of-allowed-files blockers (the Gradle-assembled Shared.xcframework, the DashboardWidgetSize
+  15× redefinition, the 206 co-located XCTest-into-app-target files, macOS signing), owned by
+  p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner per macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

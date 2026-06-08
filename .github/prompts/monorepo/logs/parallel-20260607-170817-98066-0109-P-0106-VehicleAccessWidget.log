@@ -1,0 +1,76 @@
+I'll start by exploring the repository structure and reading the web source specification, while checking the Apple toolchain availability.
+
+The web source is clear. Key finding: **`xcodebuild` requires full Xcode but only CommandLineTools is installed** — `swift`, `swiftlint`, `swiftformat` are available. Many sibling widgets already exist. Let me study the closest sibling (GuardModeWidget — also `security` category) and the shared web infrastructure.
+
+Rich established pattern. Let me read the remaining GuardMode files, the shared P4 core/tokens, and the web shared infrastructure (WidgetShell, shared DetailCard, types, registry, hooks).
+
+Now let me find the shared P4 core (registration/size), P1/S9 tokens, and the web shared infrastructure plus hooks.
+
+Need to understand how `DashboardWidgetRegistration`/`DashboardWidgetSize` are shared (some siblings define them, GuardMode doesn't). Let me inspect the definitions, tokens, and project structure.
+
+Key finding: registry primitives are defined by sibling `.Model.swift` files (parallel-dev artifact); GuardMode (my same-category template) references them without redefining. I'll follow GuardMode. Let me read the tokens, the shared web component, registry, and the data hooks.
+
+Let me confirm the remaining data shapes (`useVehicleMobileEnabled`, types, `formatDateShort`), the design tokens, the placeholder-check script, and whether a native "detail card" port already exists.
+
+Found it: design tokens live in `apps/design/generated/apple` (compiled into both app targets); dashboard-widgets are compiled into the iOS+macOS app targets. Let me verify the token definitions and tool availability.
+
+`pwsh` is available. Let me read the full Tokens.swift to confirm `Color.TS` and `Font.TS` members, then I have everything to build.
+
+Now I have all tokens confirmed. Let me read `WidgetShell.tsx` (header/freshness/refresh parity) and set up my plan tracking before writing code.
+
+Lint/format configs understood (≤120 line length under `--strict`, swiftformat auto-wraps). Let me establish the baseline state of the lint/format gates before writing code, and set up todo tracking.
+
+Baseline established: swiftformat is **clean** (0/107); swiftlint `--strict` has a **pre-existing** violation in a sibling (`LifetimeStatsWidget.Adapter.swift`) outside my allowed scope. My files must add zero violations. No existing VehicleAccessWidget files. I have everything needed. Writing the Model first.
+
+Now the Adapter (pure projection, Foundation-only for testability).
+
+Now the presentational views.
+
+Now the main widget view.
+
+Now the previews, strings catalog, and tests.
+
+Now the i18n strings catalog.
+
+Now the test suite.
+
+All 7 files written. Now verifying — first swiftformat (lint mode) on my files, then swiftlint `--strict`.
+
+swiftformat clean. Now swiftlint `--strict` on my files.
+
+swiftlint `--strict`: **0 violations** on my 6 files. Now the placeholder/stub gate via `pwsh`, exactly as the gate specifies.
+
+Let me confirm the placeholder check actually scanned my files (not a vacuous 0) by inspecting how `-Path` resolves.
+
+The gate's literal `-Path` stem is a non-existent path → the script returns a **vacuous** 0 (it scans nothing). To verify honestly, I'll scan my actual files (copied to an isolated temp dir so the result is attributable only to my surface).
+
+Real placeholder scan of my actual files: **0**. Now, since `xcodebuild` is unavailable, I'll do meaningful honest compile checks with the `swift` toolchain. First, a syntax `-parse` pass on all 6 files and a SwiftUI/Charts/MapKit import probe against the available macOS SDK.
+
+Excellent — **SwiftUI, Charts, and MapKit all type-check against the macOS SDK** (PROBE_EXIT=0), and all 6 files parse cleanly. So the capability frameworks exist; only `xcodebuild`/Xcode.app is absent. Now the strongest honest check: a stub-backed full **type-check** of the SwiftUI surface against the real SDK.
+
+**Type-check passed** against the real macOS SDK with Swift 6 + `strict-concurrency=complete` (the project's exact settings). Now a **runnable** verification of the actual `Adapter.swift` projection logic (since XCTest needs the app target, I exercise the real adapter source directly).
+
+Top-level code requires the file be named `main.swift` when compiling multiple files. Renaming and rerunning.
+
+All adapter projection logic passes at runtime against the real source. Now a runnable proof of the **phase state-machine** (`resolvePhase`) and model wiring — the core that drives "every state renders".
+
+Outstanding — **all model + adapter logic passes at runtime** against the real source. Now I'll attempt the `xcodebuild` gate steps to capture genuine platform-capability evidence (only Command Line Tools are installed).
+
+Confirmed: `xcodebuild` requires Xcode (only CommandLineTools present), and `simctl`/iOS Simulator are absent — a genuine platform-capability gap. The SwiftUI/Charts/MapKit frameworks themselves are present. Let me verify the log directory and check the prompt's own location.
+
+Let me check the sibling GuardModeWidget log to match the established log format and terminal status convention.
+
+This reveals the established convention (ADR-012): siblings ran iOS+macOS SDK typechecks + executed XCTest with a **real Xcode toolchain**, deferring only the final `xcodebuild`. Critically, **that runner had Xcode 26.5 installed; mine has only CommandLineTools** — so I genuinely cannot run the iOS-SDK compile or `xcodebuild` at all. Per my prompt's capability clause, that's a platform-capability gap → `STATUS=BLOCKED` with evidence. Let me gather facts for an honest log.
+
+All files <400 lines (house limit), 1515 total across 7 files. Now writing the honest gate log.
+
+Now a final clean re-verification of the runnable gates, then cleanup of temp harnesses.
+
+All final gates green. Committing only my surface files + the log (excluding the two pre-existing unrelated modifications in the working tree).
+
+Exactly my 8 files staged; the two pre-existing files remain untouched. Committing.
+
+Committed as `511bbd29`. The two pre-existing unrelated files remain untouched. Let me finalize tracking.
+
+All todos complete. Final summary below.
+

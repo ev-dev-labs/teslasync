@@ -1,0 +1,116 @@
+I'll start by understanding the task, the web source, and the Apple platform capability on this runner.
+
+Key finding: `xcodebuild` reports Xcode is **not** installed — only Command Line Tools (`/Library/Developer/CommandLineTools`). That means no iOS Simulator SDK / SwiftUI app-scheme builds. Let me verify the Apple app structure and predecessors before concluding anything.
+
+The Apple monorepo exists (XcodeGen `project.yml`, no committed `.xcodeproj`), with an established feature-view pattern (`AcDcStatsPanel.*`). Xcode itself is absent, so `xcodebuild`/`simctl` can't run — but `swift`, `swiftlint`, `swiftformat` are present. Let me study the established pattern and locate FSM types + the shared facades before deciding final approach.
+
+Let me re-test SwiftUI import correctly and study the canonical feature-view pattern (`AcDcStatsPanel.*`) plus the FSM-adjacent `WhyEndedPanel`.
+
+SwiftUI/Charts/MapKit **are** importable via the CLT macOS SDK (typecheck passed). So I can compile-verify Swift logic even though full `xcodebuild` app builds need Xcode. Let me internalize the full pattern from the canonical example and an FSM-adjacent panel.
+
+The pattern is now clear: a 7-file feature view (`.swift`, `.Model`, `.Adapter`, `.Views`, `.Previews`, `.strings`, `.Tests`). Let me read the remaining example files plus design tokens and shared UI components to map them precisely.
+
+Excellent — the pattern is comprehensive and production-grade. Let me read the remaining reference pieces: web FSM types, design tokens, shared components, lint/format configs, the placeholder gate, and the FSM-adjacent `WhyEndedPanel`.
+
+Let me locate the web FSM types + how the panel is fed, and the native design tokens + shared components I'll need (esp. an info/blue tone), plus the placeholder gate.
+
+`Color.TS.statusInfo` (blue) exists — maps the web's blue recovery alert. Let me read the web FSM type, design tokens, and the shared component signatures I'll compose with, plus the placeholder gate.
+
+Now I have the FSM data shape. Let me confirm the remaining tokens (`TSSpacing`, `TSRadius`, `Font.TS`, `Color.TS.bg/border/surface`) and read the placeholder gate to know forbidden words.
+
+Let me read the forbidden-pattern list, the exact color/font token names, and check for any existing FSM symbols in the Apple sources (to avoid redeclaration collisions in the shared app module).
+
+I now have the tokens, components, forbidden words (`Placeholder`, `TODO`, `FIXME`, `XXX`, `Coming soon`, `Lorem ipsum`, `not implemented`), and confirmed no FSM symbol collisions. Let me confirm `fmtInt`, the exact `TSButton` init, and double-check the test-wiring + a 2nd example before writing.
+
+Let me empirically check the self-`@testable import` behavior (since `.Tests.swift` co-locate in the app-target source dir), confirm the pattern against a 2nd example, and inspect the i18n/Localization setup.
+
+The test-file compile fails here purely because **XCTest ships with Xcode, not CLT** — strong evidence the gate's `build test` can't run on this runner. The self-`@testable import` is structurally the committed pattern. Let me confirm `TSGlassPanel`'s internal padding and that self-import compiles structurally, then start writing.
+
+Confirmed: self-`@testable import` yields only a warning (ignored), and XCTest is Xcode-only — so the gate's `xcodebuild build test` cannot run here, but `swiftlint`/`swiftformat`/placeholder gates and pure-logic compilation can. I have the full pattern. Let me set up tracking and confirm no existing files, then write the 7-file surface.
+
+No existing files. Writing the plan and all seven surface files now.
+
+Now the parity core — `FSMHealthPanel.Adapter.swift`:
+
+Now `FSMHealthPanel.Model.swift` (state-holder seam, telemetry, projection, strings):
+
+Now the surface View `FSMHealthPanel.swift`:
+
+Now `FSMHealthPanel.Views.swift` (subviews):
+
+Now the previews, strings catalog, and tests:
+
+Now the test suite:
+
+All seven files written. Now verifying: format, lint, and a real compile+run parity check of the pure analyzer logic.
+
+**Format + SwiftLint both clean (0 violations).** Now the key evidence — compiling and *running* the pure analyzer to numerically prove web parity:
+
+Top-level code must be in `main.swift` when compiling multiple files. Renaming and recompiling:
+
+**All 24 parity assertions pass** — the analyzer numerically matches the web algorithm (including the frozen flap-count quirk + full `computeFlapIds`, the 4h stuck horizon with latest-state-wins, recovery count, ordering, formatting). Let me also attempt a type-check of the SwiftUI layer against its real token/component dependencies.
+
+Dependencies are tractable. Let me type-check the SwiftUI layer against its real token + component sources (macOS target):
+
+Those errors are in `Cards.swift` (sibling components `TSPanelTitle`/`TSCaption`), not my code. Let me add the typography source so cross-references resolve:
+
+Type-checks clean against the real macOS 15 SDK. One strict-concurrency warning in my `Model.swift` (`Date.init` isn't `@Sendable`) — the project sets `SWIFT_STRICT_CONCURRENCY: complete`, so I'll eliminate it with a non-capturing literal.
+
+Two more strict-concurrency issues (Swift 6 errors): static `ISO8601DateFormatter` is non-`Sendable`. I'll switch to the value-type, `Sendable` `Date.ISO8601FormatStyle`:
+
+Strict-concurrency clean (0 diagnostics in my files) and the parity harness still passes. Re-running format/lint after the edits, plus a real placeholder scan of my files:
+
+Everything surface-scoped is green: **swiftformat --lint = 0, swiftlint --strict = 0, placeholder = 0, no forbidden words, strict-concurrency typecheck clean, 24/24 parity assertions pass.** Now I'll run the prompt's actual gate commands to capture real exit codes for the log, starting with the xcodebuild capability check and the full-tree lint/format:
+
+xcodebuild confirms the capability gap (Xcode absent). Now the full-tree `swiftformat --lint` and `swiftlint --strict` exactly as the gate runs them, to record real baseline-inclusive exits:
+
+Only 1/1604 files needs formatting and it's **not mine** — a pre-existing baseline issue. Let me identify it to document, then run the full swiftlint:
+
+Confirmed: the only unformatted file is `ActionBuilder.Previews.swift` (a different surface) — pre-existing baseline; my tree adds only the 7 `FSMHealthPanel.*` files. Now the full-tree swiftlint:
+
+Diagnosis is unambiguous and fully documented:
+- **iOS/macOS xcodebuild = BLOCKED** (Xcode absent — only CommandLineTools).
+- Full-tree `swiftlint --strict` (exit 2) and `swiftformat --lint` (exit 1) each fail on **one pre-existing file in a different surface** (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`) — outside my allowed scope.
+- **My surface: 0 lint, 0 format, 0 placeholder, 0 strict-concurrency diagnostics, 24/24 parity assertions.**
+
+Writing the honest gate log now:
+
+Surface + log written. Before committing, let me check for git hooks (so a whole-tree pre-commit hook doesn't block on the pre-existing baseline issues) and stage precisely my files:
+
+No active hooks — safe to commit. Staging exactly my files + the log:
+
+Exactly the 8 intended files staged. Committing:
+
+Committed as `eb9f79418`. Marking done and cleaning up temp artifacts:
+
+Task complete. The `FSMHealthPanel` Apple surface is implemented to full web parity and committed (`eb9f79418`), with all runnable gates green and the mandatory `xcodebuild` steps honestly reported as BLOCKED (Xcode is not installed on this runner).
+
+## What shipped — `apps/apple/TeslaSync/feature-views/FSMHealthPanel.*` (7 files, 1411 lines)
+
+| File | Role |
+|---|---|
+| `.Adapter.swift` | Pure parity core — flap/stuck/recovery analyzer, `computeFlapIds`, `fmtInt` port, a11y, ISO parsing |
+| `.Model.swift` | P1/S8 state-holder seam, P1/S11 `view.opened` telemetry, P1/S10 facade, projection, stale auto-refresh |
+| `.swift` | Surface View — glass panel, header, freshness chip/banner, phase switch |
+| `.Views.swift` | Alert grid (`ViewThatFits`), tinted alert card, all-clear row, loading/error chrome |
+| `.Previews.swift` | 6 previews (data/empty/loading/error/stale/offline) |
+| `.strings` | i18n table — every web key + native chrome |
+| `.Tests.swift` | analyzer/format/projection/model/a11y unit tests |
+
+## Parity (vs `FSMHealthPanel.tsx`)
+Flapping (>5 same-FSM/min, **frozen count + full `computeFlapIds`**), stuck sessions (latest state, >4h), recoveries (`to_state=="recovered"`), the green all-clear empty state, plus the P4 leaf live/stale/offline axis. All 8 source i18n keys reproduced; `view.opened surface=FSMHealthPanel` emitted.
+
+## Verification evidence
+- **swiftformat --lint** (my files): `0/6` ✅
+- **swiftlint --strict** (my files): `0 violations` ✅
+- **placeholder gate**: `PLACEHOLDER_COUNT=0` ✅
+- **Swift-6 strict-concurrency typecheck** against the *real* tokens + shared components: `0 diagnostics` ✅
+- **Pure-analyzer compile + run**: `24/24` parity assertions pass ✅
+
+## Why STATUS=BLOCKED (not DONE)
+The gate requires `xcodebuild … build test` for iOS + macOS, but the runner has **CommandLineTools only — no full Xcode**, so the iOS Simulator SDK and `XCTest` are unavailable (`IOS_EXIT=1`, `MAC_EXIT=1`). The two full-tree `swiftlint`/`swiftformat` failures are **pre-existing** violations in *other* surfaces (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`), outside this prompt's allowed-files scope. Per the prompt's Capability clause and Honesty Covenant rule 1 (no red-as-green), the log ends `EXIT=1 / STATUS=BLOCKED` with API evidence — no checks faked or skipped.
+
+
+
+All work is finished, verified, and committed; all 9 todos are done.
+

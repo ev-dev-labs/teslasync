@@ -1,0 +1,118 @@
+================================================================================
+ p4-apple · P7 · page:admin/DevTools — SwiftUI / HIG
+ Artifact: apps/apple/TeslaSync/feature-views/DevToolsPage.{swift,Model,Views,
+           Routing,Previews,Tests}.swift + DevToolsPage.strings
+ Web source: web/src/features/admin/pages/DevToolsPage.tsx   (route /dev-tools)
+ Host: Darwin (macOS), Xcode 26.5 via DEVELOPER_DIR=/Applications/Xcode.app
+================================================================================
+
+------------------------------------------------------------------------------
+ SCOPE / DESIGN
+------------------------------------------------------------------------------
+The web DevToolsPage is a thin tabbed shell: a PageContainer title+subtitle over
+a 5-tab TabNav (Fleet API / Telemetry / Infrastructure / Utilities / Reference,
+default fleet-api) that conditionally mounts one section per tab. The parity
+manifest record (page:admin/DevTools) declares the unit as a shell with NO data
+sources / NO panels / NO charts and requiredCount=2 (devtools.title,
+devtools.subtitle).
+
+Native implementation (SwiftUI, adaptive macOS + iOS/iPadOS, ADR-002/006):
+  • DevToolsPage (View) + @Observable DevToolsPageModel — owns the active tab
+    (web useUrlEnum) and the two parity strings (web usePageTitle/PageContainer).
+  • TSTabs (P3 shared component) reproduces the 5-tab strip in web source order
+    with SF Symbols mapped from the web lucide icons.
+  • Each tab composes the existing native section surface:
+        fleet-api      → FleetApiSection
+        telemetry      → FleetTelemetryHealth
+        infrastructure → InfrastructureSection
+        utilities      → ClientUtilitiesSection
+        reference      → DevToolsReferenceLinks (inline parity of
+                         ReferenceLinksSection.tsx; rendered in-page to avoid a
+                         top-level type collision with a sibling section prompt).
+  • Sections are seeded to their honest READY/empty state (the app-wide live
+    dev-tools source lands with the shared-core bridge; only InMemory sources
+    exist app-wide today). Client-side Utilities (15 tools) + Reference links
+    render in full — no placeholders (ADR-011).
+  • Registered at the .admin route via DevToolsRouteRegistration (web /devtools
+    aliases to .admin in AppRouteParser); chained into routeHosts in
+    Sources/TeslaSyncApp.swift (navigation registration).
+  • Strings: per-surface "DevToolsPage" table (DevToolsPage.strings) resolved via
+    DevToolsPageStrings.string(key, fallback); keys mirror the web t() keys.
+    a11y: headers, .isLink traits, VoiceOver labels, Dynamic Type (Font.TS),
+    light/dark + high-contrast (generated Color.TS dynamic tokens).
+
+------------------------------------------------------------------------------
+ FILES
+------------------------------------------------------------------------------
+  apps/apple/TeslaSync/feature-views/DevToolsPage.swift
+  apps/apple/TeslaSync/feature-views/DevToolsPage.Model.swift
+  apps/apple/TeslaSync/feature-views/DevToolsPage.Views.swift
+  apps/apple/TeslaSync/feature-views/DevToolsPage.Routing.swift
+  apps/apple/TeslaSync/feature-views/DevToolsPage.Previews.swift
+  apps/apple/TeslaSync/feature-views/DevToolsPage.Tests.swift
+  apps/apple/TeslaSync/feature-views/DevToolsPage.strings
+  apps/apple/Sources/TeslaSyncApp.swift   (navigation registration — 1 line wrap)
+
+------------------------------------------------------------------------------
+ GATE (host-runnable steps)
+------------------------------------------------------------------------------
+PLACEHOLDER_EXIT=0      # check-placeholders.ps1 -Language swift → PLACEHOLDER_COUNT=0, ALLOWED=0
+LINT_EXIT=0             # swiftlint --strict (7 surface files) → 0 violations
+FORMAT_LINT_EXIT=0      # swiftformat --lint (.swiftformat) → 0/7 files require formatting
+XCODEGEN_EXIT=0         # xcodegen generate → project written; DevToolsPage files enumerated
+TYPECHECK=PASS          # xcrun --sdk macosx swiftc -typecheck -swift-version 6 (real macOS 26.5 SDK)
+                        # over the feature-views + components + design-tokens layer:
+                        # ZERO DevToolsPage.* errors across 4 progressively-curated runs.
+                        # (Residual errors in other files are all the absent-Shared.xcframework
+                        #  boundary: UnitPreferences/Units/picker-model + co-located XCTest.)
+
+------------------------------------------------------------------------------
+ GATE (full-app triad — environmentally BLOCKED, deferred to macOS CI per ADR-012)
+------------------------------------------------------------------------------
+BUILD_EXIT=BLOCKED      # xcodebuild -scheme TeslaSync build
+TEST_EXIT=BLOCKED       # xcodebuild -scheme TeslaSync test
+  Reason (NOT this surface — see apps/macos-pending-verifications.md):
+   1. apps/apple/Frameworks/Shared.xcframework is absent (only .gitkeep). The app
+      target `import Shared` everywhere; the framework is a Kotlin/Native build of
+      apps/shared deferred to a macos-latest runner (p1-shared/S3, p5-hardening/H8).
+   2. Pre-existing parallel-merge collisions block the app target regardless of
+      this page: `struct DashboardWidgetSize` redefined 15×, and 150+ co-located
+      *.Tests.swift import XCTest into the app target. Plus macOS dev-signing.
+  This surface is independently verified green on every host-runnable gate above
+  and unit-tested (DevToolsPage.Tests.swift) for the macOS/iOS XCTest targets.
+
+------------------------------------------------------------------------------
+=== PARITY ===
+------------------------------------------------------------------------------
+PARITY_REQUIRED=2
+
+[x] string — devtools.title
+      key      : "devtools.title"  (web t('devtools.title','Developer Tools'))
+      catalog  : apps/apple/TeslaSync/feature-views/DevToolsPage.strings  →  "devtools.title" = "Developer Tools";
+      model    : DevToolsPageModel.title  (DevToolsPage.Model.swift)  → DevToolsPageStrings.string("devtools.title", …)
+      render   : DevToolsPage.header  (DevToolsPage.swift)  → Text(verbatim: model.title) .font(Font.TS.display)
+      test     : DevToolsPageModelTests.testTitleAndSubtitleAreWebDefaults  (DevToolsPage.Tests.swift)
+
+[x] string — devtools.subtitle
+      key      : "devtools.subtitle"  (web t('devtools.subtitle','Fleet API, telemetry, infrastructure & utilities'))
+      catalog  : apps/apple/TeslaSync/feature-views/DevToolsPage.strings  →  "devtools.subtitle" = "Fleet API, telemetry, infrastructure & utilities";
+      model    : DevToolsPageModel.subtitle  (DevToolsPage.Model.swift)  → DevToolsPageStrings.string("devtools.subtitle", …)
+      render   : DevToolsPage.header  (DevToolsPage.swift)  → Text(verbatim: model.subtitle) .font(Font.TS.body)
+      test     : DevToolsPageModelTests.testTitleAndSubtitleAreWebDefaults  (DevToolsPage.Tests.swift)
+
+PARITY_COVERED=2
+=== END PARITY ===
+
+------------------------------------------------------------------------------
+ RESULT
+------------------------------------------------------------------------------
+Surface complete; PARITY_COVERED==PARITY_REQUIRED (2). All host-runnable gates
+GREEN (placeholder, swiftlint --strict, swiftformat --lint, xcodegen, real-SDK
+typecheck). The full xcodebuild build+test triad cannot run to green in this
+environment — blocked by the absent Shared.xcframework and pre-existing,
+unrelated parallel-merge collisions (apps/macos-pending-verifications.md), both
+deferred to the macOS acceptance runner (p4-apple/P99-0001). Reporting BLOCKED
+honestly rather than red-as-green.
+
+EXIT=1
+STATUS=BLOCKED

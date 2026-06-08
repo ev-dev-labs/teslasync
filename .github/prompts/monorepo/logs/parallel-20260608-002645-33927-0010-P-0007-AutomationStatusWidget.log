@@ -1,0 +1,122 @@
+I'll start by exploring the repository structure and understanding the task requirements. Let me check the web source, the Apple app structure, and the available tooling in parallel.
+
+Key finding: full Xcode is **not** installed (only Command Line Tools), so `xcodebuild`/`simctl` won't work. But `swift` 6.3.2, `swiftlint`, and `swiftformat` are available. Let me check if the Apple app uses SPM (which would let me build/test) and examine the established widget patterns.
+
+No `Package.swift` or `.xcodeproj` found yet. Let me find the project structure and study the existing widget patterns (BatteryCells, DrivetrainHealth) which I must follow precisely.
+
+The build uses XcodeGen (`project.yml`). Now let me study the full widget pattern — models, state, providers, and the supporting infrastructure (tokens, i18n, telemetry, facade).
+
+Excellent — clear, well-established pattern. Now let me examine the Design tokens (P1/S9), shared components (Badge, Toggle), i18n catalog (P1/S10), the facade domains (P1/S8), and the test patterns.
+
+Now let me look at the web data layer (`useAutomations`, `Automation` type), the Battery widget for cross-reference, design tokens, feedback components, and an existing test to nail the conventions.
+
+Let me confirm the `Automation` model fields and read the remaining key references (Battery widget view/components/registry/model, design tokens, feedback states, button, an existing test, project.yml, placeholder checker).
+
+I see two i18n conventions in play (`widget.*` vs `translation.widget.*`). Let me resolve this by inspecting the actual string catalog and the test patterns, plus the remaining design tokens and Battery widget view/registry/model.
+
+The i18n convention is clear: newer widgets use `widget.<name>.*` keys (no `translation.` prefix), matching DrivetrainHealth. Now let me read the remaining tokens/components and the Battery widget's view + registry, plus the build config and placeholder checker.
+
+Critical finding: I see two competing definitions of `DashboardWidgetSize`/`DashboardWidgetDescriptor` (one in `BatteryCellsWidgetRegistry.swift`, one in `DrivetrainHealthWidgetModel.swift`). I need to understand target membership to avoid duplicate-symbol collisions. Let me read the build config and the Battery widget's main view/model/test.
+
+Now I understand the build wiring. Critically, `project.yml` compiles **both** `Sources/` and `TeslaSync/dashboard-widgets/` into the same `TeslaSync` module. Let me check the intended widget location, whether predecessors collide, and the remaining tooling (pwsh, xcodegen).
+
+Major correction: the real pattern lives in `apps/apple/TeslaSync/dashboard-widgets/` (50+ widgets, 1852 files), each as a self-contained `WidgetName.*` file set with co-located tests and per-widget `.strings`. `pwsh`, `xcodegen` are available; `xcodebuild` needs full Xcode (absent). Let me study this dominant pattern in depth — starting with a complete representative widget and how it namespaces shared types.
+
+`WallConnectorWidget.Model.swift` declares `public struct DashboardWidgetSize` — and ~15 sibling files do the same. This only makes sense if widgets are authored/verified in isolation (consistent with a parallel-slot harness). Let me confirm by reading a full widget set and checking for any shared base file or generator template.
+
+Pattern fully confirmed: each widget in `TeslaSync/dashboard-widgets/` is **self-contained** — it defines its own `DashboardWidgetSize`, namespaced telemetry/source/model/strings seams, a per-widget `.strings` table, and co-located tests. These are authored in isolation (which is why `DashboardWidgetSize` is redefined per widget). This means I can compile-check my widget standalone. Let me read a complete template widget (view + subviews + strings + tests) and a list-style widget for row patterns.
+
+I have the complete template. The `TeslaSync/dashboard-widgets/` widgets use the shared `Color.TS`/`Font.TS`/`TSSpacing`/`TSSkeleton` tokens plus a per-widget `Strings` facade + `.strings` table. Now let me study the test conventions and a list/interactive widget (for rows + toggle/mutation patterns), and check whether any sibling widget performs a mutation action.
+
+I now understand actions/mutations (OnboardingChecklist exposes `dismiss()`/`restart()` on its source). My toggle will mirror that with `toggle(id:enabled:)`. Let me read the interactive view + row rendering + the strings-facade helpers, and confirm the exact design token names available.
+
+I now have the full pattern, token names, action/mutation wiring, and test conventions. Let me read the web `WidgetShell` (to faithfully map loading/error/stale/empty behavior) and the `WidgetProps`/`WidgetSize` types before writing.
+
+I now have a complete, faithful understanding of the pattern and the web behavior. Let me check the lint/format configs, then build the widget. Let me also set up tracking.
+
+I have everything needed. Let me record a plan + todos and probe the host Swift capability (SwiftUI/Charts/MapKit importability + confirm `xcodebuild` is unavailable) — this is the capability evidence the covenant requires.
+
+Capability confirmed: SwiftUI + Charts + MapKit + Observation + OSLog **typecheck OK** on the host macOS SDK, but `xcodebuild`/iOS-simulator/`simctl` are **unavailable** (Command Line Tools only — no Xcode.app). So the `xcodebuild` gate can't run, but I can author production code and verify it via standalone `swiftc`, swiftlint, swiftformat, and the placeholder gate.
+
+Let me record a plan and start building the widget's foundation files (pure logic, state-holder/registry/i18n, and the strings table).
+
+Now let me create the foundation files — pure logic, state-holder/registry/i18n, and the strings table.
+
+Let me confirm the exact `TSSkeleton` initializer signature before writing the views.
+
+`TSSkeleton` confirmed. Now let me write the subviews, main view, previews, and co-located tests.
+
+Now let me rename the nested `Toggle` type (to avoid any confusion with SwiftUI's `Toggle`) and create the Previews + co-located Tests.
+
+All 7 files created. Now let me verify. First, auto-format with SwiftFormat (the gate runs `--lint`), then check what changed.
+
+SwiftFormat adjusted 2 files. Let me confirm `--lint` is now clean and run SwiftLint `--strict` + the placeholder gate.
+
+SwiftFormat clean. SwiftLint flags one issue: `Views.swift` exceeds the 400-line file limit (442). I'll split it into `Views.swift` + a new `Rows.swift` (matches the `AutomationStatusWidget.*` glob and the sibling component-file convention). Let me find the split point.
+
+I'll move the row/chrome components into a new `AutomationStatusWidget.Rows.swift` (matches the `AutomationStatusWidget.*` glob and the sibling component-file convention), then truncate `Views.swift`.
+
+Now truncate `Views.swift` to remove the moved section, then re-run format + lint on all widget files.
+
+SwiftFormat clean (0/7) and SwiftLint `--strict` clean (0 violations). Now the placeholder gate, then a real standalone compile+run of the pure logic.
+
+The placeholder gate flagged my `Models.swift:213` — I used the word "placeholder" in a comment (the scan is case-insensitive). Let me find and fix all forbidden words in my files.
+
+Only one occurrence. Let me reword that comment to avoid the forbidden word.
+
+Let me verify my files are placeholder-clean by running the actual gate script against an isolated copy of just my files.
+
+Placeholder gate clean (COUNT=0, EXIT=0). Now the strongest evidence I can produce on this runner: a **standalone compile + execution** of the pure logic layer (`.Models.swift`) against the macOS SDK, exercising the adapter/projection tests for real.
+
+Pure-logic layer: **compiled and all 26 assertions PASS**. Now let me attempt a full type-check of the SwiftUI widget against the real design tokens. First, locate where `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius` are defined to gauge the dependency closure.
+
+`Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius` all live in one self-contained generated `Tokens.swift`. Let me type-check the full SwiftUI widget against the **real** tokens (with a minimal `TSSkeleton` shim matching the confirmed signature) on the macOS SDK.
+
+Strict concurrency (Swift 6, matching `SWIFT_STRICT_CONCURRENCY: complete`) caught a **real** issue: my static `ISO8601DateFormatter`s aren't `Sendable`-safe and would fail the actual build. Let me fix by constructing formatters locally, then re-check.
+
+The **full SwiftUI widget type-checks cleanly under Swift 6 strict concurrency** against the real design tokens (`TYPECHECK_EXIT=0`). Now let me type-check the co-located test file too (compiled together with the sources, XCTest from the host SDK).
+
+XCTest needs full Xcode (unavailable), so the test file can't be type-checked directly. But I can verify the test **bodies reference my real APIs correctly** by compiling them against a tiny XCTest shim (catches signature mismatches — real value).
+
+The `import XCTest` line itself still needs stripping (the shim provides the symbols). Let me strip it and re-check.
+
+The test file relied on XCTest to transitively import Foundation. Let me swap `import XCTest` → `import Foundation` (shim provides the XCTest symbols).
+
+**Test bodies type-check against the real APIs (EXIT=0).** My verification suite is complete. Let me update tracking and prepare the honest gate log. First, confirm the log directory.
+
+Let me look at a sibling dashboard-widget log and a BLOCKED log to match the expected format.
+
+The sibling log shows that environment had full Xcode at `/Applications/Xcode.app` (driven via `DEVELOPER_DIR`, no sudo). Let me check whether Xcode.app actually exists on **this** runner — it may just be unselected, which would let me run the real gate.
+
+**Xcode 26.5 IS installed** at `/Applications/Xcode.app` (just not the selected `xcode-select` dir) — usable via `DEVELOPER_DIR`. The capability is actually available. Let me reassess the real gate empirically. First, check the Shared framework and the aggregated-worktree state (I earlier found ~15 sibling widgets each redefining `DashboardWidgetSize`, which would collide in one module).
+
+This confirms the aggregated worktree is **pre-existingly non-compiling as a whole**: 16 sibling files redefine `public struct DashboardWidgetSize` (hard redeclaration), 55 `.Tests.swift` files sit in an app-target source path (XCTest-in-app), and `Shared.xcframework` is absent. These are sibling-slot artifacts, not my surface. Let me gather precise evidence + run the strongest real-toolchain build of my surface for **both** iOS 18 and macOS 15 SDKs.
+
+Pre-existing sibling collision confirmed (`invalid redeclaration of 'DashboardWidgetSize'`). Now the definitive per-surface evidence — compile my surface with the **real Xcode 26.5 toolchain** for **both iOS 18 and macOS 15** targets under Swift 6 strict concurrency, against the real design tokens.
+
+Both **iOS 18 and macOS 15 type-check cleanly** with the real Xcode 26.5 toolchain. Let me do a full object-code compile (not just type-check) for macOS, and confirm `xcodegen generate` accepts the project with my files.
+
+`xcodegen generate` succeeds and references my files (48 refs). The emit-object error was just a CLI flag issue (multiple outputs with `-o`). Let me redo with whole-module mode for a clean single-object full compile.
+
+Full object-code compile **succeeds** (1MB `.o` produced). Let me verify the git working tree shows only my new files, then update tracking.
+
+I see 8 new files (mine ✓) but also 7 **pre-existing modified** `AIUsageCard.*` files (a different feature, not mine). Let me confirm I didn't cause those before scoping my commit correctly.
+
+Confirmed: the `AIUsageCard.*` changes are **pre-existing** (mtime 00:28:11 = checkout time; mine is 00:52+). Not caused by me, out of scope — I'll scope my commit to only my files + log.
+
+Let me update tracking and write the comprehensive, honest gate log.
+
+Now let me write the comprehensive, honest gate log.
+
+The log is written. Let me do a final consolidated re-verification against the **current** shipped files (the logic harness must run the post-fix `Models.swift`), then commit.
+
+All green against the shipped code (logic 26/26 PASS, format 0/7, lint 0 violations, placeholders 0). Now let me stage **only** my files + the log (excluding the pre-existing `AIUsageCard` changes) and commit.
+
+Exactly 9 files staged (8 surface + log), `AIUsageCard` correctly excluded. Now the commit.
+
+Committed (`ae826184b`, 9 files). Let me finalize tracking and clean up temp files.
+
+Task complete. Let me clean up the session plan tracking and summarize.
+
+I've completed and committed the native `AutomationStatusWidget` surface. Here's the summary.
+

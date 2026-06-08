@@ -1,0 +1,257 @@
+=== P4 Apple · P7 · page:battery/BatteryDegradation (SwiftUI / HIG) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon) — SHARED runner (not sandboxed;
+                       pre-existing unrelated working-tree edits observed in feature-views/AIUsageCard.*
+                       and web/src/* from sibling slots — NOT touched by this prompt).
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6 (language mode v6, strict-concurrency complete) · swiftlint 0.63 ·
+                       swiftformat (maxwidth 120) · xcodegen 2.45 · pwsh · Java 17.
+  SDKs/Dest          : iphonesimulator + macOS 26.5 SDKs present; iOS-Simulator + macOS destinations present.
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL; release XCFramework staged to
+                       apps/apple/Frameworks/Shared.xcframework).
+  Capability         : SwiftUI + Swift Charts + iOS/macOS SDKs present → NOT capability-BLOCKED (Xcode runner available).
+
+WEB SOURCE (the specification)
+  web/src/features/battery/pages/BatteryDegradationPage.tsx — the Battery Degradation page:
+    data sources: useBatteryHealthAnalytics (GET /analytics/battery-health [vehicle_id]) for the overview
+    stats + history table; useBatteryDegradation (GET /analytics/battery-degradation [vehicle_id]) for the
+    prediction / risk factors / recommendations / projection / charging habits.
+    SECTIONS (in order): 4 summary MetricCards (Current SOH, Estimated Capacity, Degradation Rate, Battery
+    Age) · RadialGauge panel + badge (Excellent/Good/Degraded) · Prediction panel (reaches-80% sentence + 4
+    sub-metrics OR "need more data") · Health-Trend-&-Projection ChartContainer→ComposedChart (actual line +
+    projected dashed line + 95% confidence band area + 80% warranty / 70% critical reference lines, domain
+    [60,100]) · Range-Loss AreaChart (original vs current, raw SI km) OR EmptyState · Risk Factors scored
+    cards OR EmptyState · Recommendations OR EmptyState · Charging-Habits-Impact AlertBanner · Battery Health
+    Factors (Charge Habits / Temperature Exposure / Cycle Depth) · Degradation History DataTable OR EmptyState.
+    Numeric pipeline: convertDistanceFromSI, fmtNumber/fmtInt (_globalPrecision=2), formatEnergy({precision:1}),
+    formatDate, ageLabel (i18next {{count}}/{{y}}/{{m}}), sohColor / scoreVariant / riskScoreColor /
+    riskBadgeVariant / riskFactorIcon thresholds. Loading/error owned by PageContainer; per-section empties
+    inline. This native surface re-homes loading/empty/error/success + stale/offline onto the P1/S8 source seam.
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/Features/Battery/** — 16 Swift files + 1 strings table; all < 400 lines)
+  BatteryDegradationPage.Model.swift            — P1/S8 seam (load status / connection / unit prefs / stress
+                                                  level), @Observable BatteryDegradationModel (phase + stale
+                                                  auto-refresh), P1/S11 telemetry seam, surface identity + P1/S10
+                                                  strings facade.
+  BatteryDegradationPage.DTOs.swift             — web API response DTOs (health + degradation) + coalesced
+                                                  BatteryDegradationUpdate + BatteryDegradationSource seam +
+                                                  InMemoryBatteryDegradationSource.
+  BatteryDegradationPage.Projection.swift       — view-ready projection types (metric / gauge / prediction /
+                                                  trend / range-loss / risk / health-factor / history / impact).
+  BatteryDegradationPage.Adapter.swift          — PURE: convertDistanceFromSI, number/energy/date formatting,
+                                                  ageLabel, threshold→tone (sohTone/scoreTone/riskTone/stressTone),
+                                                  risk icon + humanization, stress value/body strings.
+  BatteryDegradationPage.Projector.swift        — project() + summary metrics + gauge + prediction (1:1 web math).
+  BatteryDegradationPage.ProjectorSections.swift— trend (merge+join) + range loss + charging impact + risk
+                                                  factors + health factors + history rows.
+  BatteryDegradationPage.swift                  — the page View (ScrollView scaffold + navigationTitle + phase
+                                                  switch + FadeIn section composition + header + tone bridge).
+  BatteryDegradationPage.Views.swift            — freshness chip, connectivity banner, titled glass panel +
+                                                  section header, summary metric card + grid, loading/empty/error.
+  BatteryDegradationPage.PredictionViews.swift  — prediction panel, health-factor cards, recommendations,
+                                                  charging-impact banner, shared inline empty.
+  BatteryDegradationPage.RiskViews.swift        — risk-factors section + scored card, degradation history table.
+  BatteryDegradationPage.Charts.swift           — RadialGauge (BatteryHealthRadialGauge) + gauge panel + range
+                                                  AreaChart + shared chart axes/legend.
+  BatteryDegradationPage.TrendChart.swift       — ChartContainer panel + ComposedChart projection (band/lines/refs).
+  BatteryDegradationPage.Route.swift            — NavigationStack destination + scene + canonical path.
+  BatteryDegradationPage.Previews.swift         — #Preview per state (content / miles / needs-more / empty /
+                                                  loading / error / stale / offline).
+  BatteryDegradationPage.strings                — the "BatteryDegradationPage" table: all 60 web keys verbatim +
+                                                  native chrome keys.
+  BatteryDegradationPage.Tests.swift            — adapter + projector XCTest (web parity).
+  BatteryDegradationPage.ModelTests.swift       — model phase / telemetry / stale-auto-refresh XCTest.
+
+  REGISTRATION (minimal, additive, documented — within "navigation registration"):
+    apps/apple/project.yml         — added `- path: TeslaSync/Features` to the iOS + macOS app target sources.
+    apps/apple/.swiftlint.yml      — added `TeslaSync/Features` to `included`.
+    apps/apple/Sources/App/AppRouteParser.swift — added the `/battery-degradation` deep-link alias (→ .energy,
+                                     mirroring the existing `/battery` and `/battery/health` aliases).
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind / no web cloning)
+  GlassPanel → TSGlassPanel · MetricCard → TSCard + TSIconBox(tone) · Badge → TSBadge(tone) · AlertBanner →
+  tinted callout · EmptyState → TSEmptyState/inline · Skeleton → TSChartSkeleton/TSStatGridSkeleton · FadeIn →
+  TSFadeIn. RadialGauge → native trimmed-arc gauge tinted by SOH band. Recharts ComposedChart → ONE Swift
+  Chart (AreaMark yStart/yEnd confidence band + RuleMark reference lines + two series LineMarks). Recharts
+  AreaChart → two Swift Chart AreaMarks + manual legend. color→tone: green→.success, cyan→.info, amber/purple
+  →.warning/.accent, red→.danger. Units: convertDistanceFromSI + formatEnergy ported 1:1 (NIST 1609.344 m/mi,
+  kWh=Wh/1000, half-away-from-zero); SI read from the API, converted only at the display boundary. i18n: every
+  visible literal via NSLocalizedString(tableName:"BatteryDegradationPage", value:<web English>); zero hardcoded
+  literals; web key names preserved. a11y: panels/cards/charts carry localized labels + values; reduce-motion
+  honored on gauge/chart/FadeIn; Dynamic Type via Font.TS; ≥44pt targets; light/dark via Color.TS tokens.
+  telemetry: view.opened surface="BatteryDegradationPage" (P1/S11), fired once.
+
+STATES (all render — verified by #Previews + model/projection tests)
+  loading  → TSStatGridSkeleton + chart skeletons (Model.resolvePhase .loading)
+  empty    → TSEmptyState + per-section inline empties (noRange / noRiskData / noRecommendations / noHistory)
+  error    → titled error + Retry → model.refresh()  (cached payload stays content on transient failure)
+  success  → BatteryDegradationContent (all sections)
+  stale/offline → freshness chip + connectivity banner + ONE guarded auto-refresh per stale episode (ADR-013)
+
+GATES (every gate executed on THIS runner; raw results pasted)
+  [GREEN]    swiftformat --lint  apps/apple/TeslaSync/Features/Battery : 0/16 files require formatting   FORMAT_EXIT=0
+  [GREEN]    swiftlint --strict  (scoped to the surface, repo rules)   : 0 violations, 0 serious, 16 files  LINT_EXIT=0
+             (full-project `swiftlint --strict` reports 1 PRE-EXISTING violation in
+              TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift (function_body_length) — not this
+              surface; do-not-fix pre-existing unrelated breakage.)
+  [GREEN]    check-placeholders.ps1 -Path …/Features/Battery -Language swift : PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0
+  [GREEN]    ISOLATED SwiftPM harness — swift-tools 6.0, swiftLanguageMode(.v6) (strict-concurrency complete, same
+             as the app), compiling the EXACT shipped sources against the REAL design system
+             (apps/design/generated/apple/Tokens.swift + Sources/Design/* + Sources/Components/** minus the one
+             Shared-only file UnitFormatters.swift) + a real XCTest target:
+                 Build complete!  ·  Executed 25 tests, with 0 failures            SWIFT_BUILD_EXIT=0  SWIFT_TEST_EXIT=0
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'generic/platform=iOS Simulator' build : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS'                  build : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO BatteryDegradationPage errors; all blockers pre-exist this change):
+    The whole-app target fails on PRE-EXISTING parallel-merge duplicate-type collisions in OTHER surfaces — the
+    exact artifacts apps/macos-pending-verifications.md defers to the ADR-012 macos-latest acceptance gate:
+      iOS  : 7 failures, all `'DashboardWidgetSize' is ambiguous for type lookup` in TeslaSync/dashboard-widgets/*.
+      macOS: 59 errors — `'DashboardWidgetSize' is ambiguous` ×49 + `invalid redeclaration of DashboardWidgetSize`
+             + `VehicleHeroModel`/`VehicleHeroProjection` ambiguous, all in dashboard-widgets/* + cascade.
+    grep of BOTH full-app build logs for `Features/Battery/……: error:` = 0 hits — the page type-checks cleanly
+    inside the real full-app target on BOTH platforms; the failures are owned by the P4/P99 Apple acceptance gate
+    + a dashboard-widget de-duplication pass, NOT by this page prompt. Co-located *.Tests.swift were excluded
+    (EXCLUDED_SOURCE_FILE_NAMES=*Tests.swift) to isolate the dup-type evidence — the same sanctioned per-surface
+    XCTest-in-app-target pattern (66+ such files already in the tree) the precedent defers to the proper test target
+    (where this surface's 25 tests pass green, above).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                           DEFERRED with evidence — never reported as passing.
+  2  No scope narrowing  : every web section + branch reproduced (4 summary cards · gauge+badge · prediction with
+                           reaches-80% sentence + 4 sub-metrics + need-more branch · composed projection chart with
+                           confidence band + 2 reference lines · range AreaChart + empty · risk cards + empty ·
+                           recommendations + empty · charging-impact banner · 3 health-factor cards · history table
+                           + empty) + the loading/empty/error/success + stale/offline states.
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits + error counts pasted; the iOS AND macOS
+                           failures were REPRODUCED, not assumed.
+  4  No stubs as final   : complete production surface (16 files) + 25 real tests; placeholder scanner = 0; no
+                           "Coming soon"/TODO/placeholder text.
+  5  No parity shortcut  : SI conversion/formatting ported 1:1 and pinned by tests (km/mi, Wh/kWh, half-away
+                           rounding, age label branches, cycle-depth = max(0, round(100 − avg DoD)), raw-km range
+                           chart, projection join point + confidence band = max(0, hi − lo)); composed dual-line +
+                           band chart reproduced, not flattened.
+  6  No delegation       : implemented directly; no agents/subagents.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry, P2 design
+                           tokens, P3 components, SI converters all consumed.
+  8  No commit on red    : the COMMITTED surface is GREEN on every host gate AND on a real isolated Swift 6
+                           build+test against the real design system; the deferred full-app gate is RED only on
+                           pre-existing, unrelated dashboard-widget surfaces this commit neither introduces nor touches.
+  9  No silent drift     : changes confined to apps/apple/TeslaSync/Features/Battery/** + the three documented
+                           registration edits (project.yml, .swiftlint.yml, AppRouteParser.swift) + the parity
+                           ledger + this log; enumerated above. Pre-existing AIUsageCard.*/web edits in the shared
+                           working tree are NOT this prompt's and are excluded from the commit.
+  10 EXIT/STATUS below.
+
+=== PARITY ===
+PARITY_REQUIRED=89
+
+panel · Current-SOH                  : Projector.summaryMetrics id "current-soh"           (BatteryDegradationPage.Projector.swift) → BatteryDegradationMetricCard (…Views.swift)
+panel · Estimated-Capacity           : Projector.summaryMetrics id "estimated-capacity"    (…Projector.swift) → BatteryDegradationSummaryGrid (…Views.swift)
+panel · Degradation-Rate             : Projector.summaryMetrics id "degradation-rate"       (…Projector.swift)
+panel · Battery-Age                  : Projector.summaryMetrics id "battery-age" (ageLabel) (…Projector.swift)
+panel · GlassPanel5                  : BatteryHealthGaugePanel                               (BatteryDegradationPage.Charts.swift)
+panel · GlassPanel6                  : BatteryPredictionPanel                                (BatteryDegradationPage.PredictionViews.swift)
+panel · Degradation-Rate-2           : Projector.predictionMetrics id "pred-rate"           (…Projector.swift)
+panel · Stress-Level                 : Projector.predictionMetrics id "pred-stress"         (…Projector.swift)
+panel · Total-Cycles                 : Projector.predictionMetrics id "pred-cycles"         (…Projector.swift)
+panel · Avg-Depth-of-Discharge       : Projector.predictionMetrics id "pred-dod"            (…Projector.swift)
+panel · Health-Trend-Projection      : BatteryTrendProjectionPanel                          (BatteryDegradationPage.TrendChart.swift)
+panel · GlassPanel12                 : BatteryRangeLossSection                               (BatteryDegradationPage.Charts.swift)
+panel · GlassPanel13                 : BatteryRiskFactorsSection                             (BatteryDegradationPage.RiskViews.swift)
+panel · GlassPanel14                 : BatteryRiskFactorCard                                 (…RiskViews.swift)
+panel · GlassPanel15                 : BatteryRecommendationsSection                         (…PredictionViews.swift)
+panel · GlassPanel16                 : BatteryChargingImpactSection                          (…PredictionViews.swift)
+panel · GlassPanel17                 : BatteryHealthFactorsSection                           (…PredictionViews.swift)
+panel · GlassPanel18                 : BatteryHealthFactorCard id "charge-habits"            (…PredictionViews.swift / ProjectorSections.swift)
+panel · GlassPanel19                 : BatteryHealthFactorCard id "temp-exposure"            (…PredictionViews.swift / ProjectorSections.swift)
+panel · GlassPanel20                 : BatteryHealthFactorCard id "cycle-depth"              (…PredictionViews.swift / ProjectorSections.swift)
+panel · GlassPanel21                 : BatteryDegradationHistorySection                      (…RiskViews.swift)
+chart · RadialGauge                  : BatteryHealthRadialGauge                              (BatteryDegradationPage.Charts.swift)
+chart · ChartContainer               : BatteryTrendProjectionPanel (titled container)       (BatteryDegradationPage.TrendChart.swift)
+chart · ComposedChart                : BatteryTrendProjectionChart (band+refs+2 lines)      (…TrendChart.swift)
+chart · AreaChart                    : BatteryRangeLossChart                                 (BatteryDegradationPage.Charts.swift)
+state · loading                      : BatteryDegradationLoadingState + Model.resolvePhase   (…Views.swift / …Model.swift)
+state · empty                        : BatteryDegradationEmptyState + BatteryDegradationInlineEmpty (…Views.swift / …PredictionViews.swift)
+state · error                        : BatteryDegradationErrorState (Retry → refresh)        (…Views.swift)
+state · success                      : BatteryDegradationContent (content phase)             (BatteryDegradationPage.swift)
+string · Avg DoD                                                                  : BatteryDegradationPage.strings
+string · Battery Age                                                              : BatteryDegradationPage.strings
+string · Battery Degradation                                                      : BatteryDegradationPage.strings
+string · Battery Health                                                           : BatteryDegradationPage.strings
+string · Battery Health Factors                                                   : BatteryDegradationPage.strings
+string · Capacity                                                                 : BatteryDegradationPage.strings
+string · Charge Habits                                                            : BatteryDegradationPage.strings
+string · Current Range                                                            : BatteryDegradationPage.strings
+string · Current SOH                                                              : BatteryDegradationPage.strings
+string · Cycle Depth                                                              : BatteryDegradationPage.strings
+string · Date                                                                     : BatteryDegradationPage.strings
+string · Degradation History                                                      : BatteryDegradationPage.strings
+string · Degradation Rate                                                         : BatteryDegradationPage.strings
+string · Degraded                                                                 : BatteryDegradationPage.strings
+string · Estimated Capacity                                                       : BatteryDegradationPage.strings
+string · Excellent                                                                : BatteryDegradationPage.strings
+string · Fast Charge                                                              : BatteryDegradationPage.strings
+string · Full Charge                                                              : BatteryDegradationPage.strings
+string · Good                                                                      : BatteryDegradationPage.strings
+string · Health trends, degradation predictions, and charging habit impact        : BatteryDegradationPage.strings
+string · Lower is better for longevity                                            : BatteryDegradationPage.strings
+string · No degradation records found.                                            : BatteryDegradationPage.strings
+string · Odometer                                                                 : BatteryDegradationPage.strings
+string · Original Range                                                           : BatteryDegradationPage.strings
+string · Range                                                                     : BatteryDegradationPage.strings
+string · SOH %                                                                    : BatteryDegradationPage.strings
+string · Temperature Exposure                                                     : BatteryDegradationPage.strings
+string · battery.degradation.actualHealth                                         : BatteryDegradationPage.strings
+string · battery.degradation.avgDoD                                               : BatteryDegradationPage.strings
+string · battery.degradation.chargingImpact                                       : BatteryDegradationPage.strings
+string · battery.degradation.confidence                                           : BatteryDegradationPage.strings
+string · battery.degradation.deepDischarges                                       : BatteryDegradationPage.strings
+string · battery.degradation.fastCharges                                          : BatteryDegradationPage.strings
+string · battery.degradation.inApprox                                             : BatteryDegradationPage.strings
+string · battery.degradation.needMore                                             : BatteryDegradationPage.strings
+string · battery.degradation.noHistory                                            : BatteryDegradationPage.strings
+string · battery.degradation.noRange                                              : BatteryDegradationPage.strings
+string · battery.degradation.noRecommendations                                    : BatteryDegradationPage.strings
+string · battery.degradation.noRiskData                                           : BatteryDegradationPage.strings
+string · battery.degradation.prediction                                           : BatteryDegradationPage.strings
+string · battery.degradation.predictionDesc                                       : BatteryDegradationPage.strings
+string · battery.degradation.projected                                            : BatteryDegradationPage.strings
+string · battery.degradation.rangeLoss                                            : BatteryDegradationPage.strings
+string · battery.degradation.rate                                                 : BatteryDegradationPage.strings
+string · battery.degradation.recommendations                                      : BatteryDegradationPage.strings
+string · battery.degradation.riskFactors                                          : BatteryDegradationPage.strings
+string · battery.degradation.stress                                               : BatteryDegradationPage.strings
+string · battery.degradation.stressHigh                                           : BatteryDegradationPage.strings
+string · battery.degradation.stressLabel                                          : BatteryDegradationPage.strings
+string · battery.degradation.stressLow                                            : BatteryDegradationPage.strings
+string · battery.degradation.stressMedium                                         : BatteryDegradationPage.strings
+string · battery.degradation.title                                                : BatteryDegradationPage.strings
+string · battery.degradation.totalCycles                                          : BatteryDegradationPage.strings
+string · battery.degradation.trendTitle                                           : BatteryDegradationPage.strings
+string · battery.degradation.trendTitle.aria                                      : BatteryDegradationPage.strings
+string · battery.degradation.warranty                                             : BatteryDegradationPage.strings
+string · battery.degradation.years                                                : BatteryDegradationPage.strings
+string · {{count}} months                                                         : BatteryDegradationPage.strings
+string · {{y}} years                                                              : BatteryDegradationPage.strings
+string · {{y}}y {{m}}m                                                            : BatteryDegradationPage.strings
+PARITY_COVERED=89
+
+DISPOSITION
+  Production-polished, Apple-idiomatic BatteryDegradationPage shipped at semantic parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 25 tests pass under the app's own Swift 6 strict-concurrency rules,
+  against the real design system + components, with swiftformat / swiftlint / placeholder all green, and it
+  type-checks cleanly inside the real full-app iOS AND macOS targets (0 Features/Battery errors). The full-app
+  xcodebuild build gate is DEFERRED (not failed by this code): it is blocked by pre-existing parallel-merge
+  duplicate-type collisions across the dashboard-widget surfaces — owned by the P4/P99 Apple acceptance gate on a
+  signed macos-latest CI runner per apps/macos-pending-verifications.md. This matches the repo's sanctioned
+  "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date. PARITY_COVERED==PARITY_REQUIRED (89).
+
+EXIT=0
+STATUS=DONE

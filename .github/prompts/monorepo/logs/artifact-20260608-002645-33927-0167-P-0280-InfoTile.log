@@ -1,0 +1,154 @@
+=== P4 Feature view 0280 InfoTile (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no `xcode-select -s`, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh · Gradle/KMP
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5) present + booted · macOS 26.5 SDK present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh during the scheme pre-action
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL; debug + release XCFrameworks
+                       written to apps/shared/core/build/XCFrameworks and staged to apps/apple/Frameworks).
+  Capability         : SwiftUI present; no Swift Charts / MapKit needed (InfoTile draws neither). iOS + macOS
+                       simulators + SDKs present → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/features/vehicles/components/telemetry-panels/InfoTile.tsx — a PURE presentational tile:
+    GlassPanel(p-4, overflow-hidden) →
+       label row[ <Icon h-3.5 w-3.5 shrink-0> + <span truncate>{label}</span> ]  (text-muted, text-xs, mb-1.5)
+       value   <p class="text-lg font-semibold truncate" title={String(display)}>{display}</p>   (color, default text-primary)
+       sub?    <p class="text-[10px] text-muted mt-0.5">{sub}</p>
+    display = (typeof value === 'boolean') ? (value ? 'Yes' : 'No') : value
+    props   : icon, label:string, value:string|number|boolean, color?:string (default text-[var(--text-primary)]), sub?:string
+  No data hooks. The prompt records "Data sources: (none — pure presentational component)" and "Charts/maps: (none)".
+  No loading/empty/error/stale/offline branches exist in the source — those belong to whatever data the *caller*
+  feeds the tile (the same disposition prompt 0010 ToolCard recorded for the other pure-presentational surface).
+  The ONLY hardcoded literals the web source carries are the boolean display words 'Yes' / 'No'.
+  The single web call site (telemetry-panels/TelemetryGrid.tsx) confirms the live color palette:
+    text-emerald-300 (success), text-amber-300 (warning), text-rose-300 (danger), text-[var(--text-muted)], default primary.
+
+ARTIFACTS SHIPPED  (789 lines across 7 files, all apps/apple/TeslaSync/feature-views/InfoTile.*)
+  InfoTile.Telemetry.swift  — InfoTileTelemetry seam + OSLogInfoTileTelemetry (redaction-safe os_log "view.opened")
+  InfoTile.Model.swift      — InfoTileSurface (slug), InfoTileStrings (P1/S10 facade), InfoTileValue
+                              (text/number/boolean/empty + ExpressibleByStringLiteral, locale-aware display),
+                              InfoTileTint (web color string → semantic token, primary fallback),
+                              InfoTilePresentation (pure Equatable projection + a11y policy)
+  InfoTile.Views.swift      — InfoTileLabelRow / InfoTileValueText / InfoTileSubText subviews
+  InfoTile.swift            — InfoTile SwiftUI view (designated + web-color convenience init; .task view.opened)
+  InfoTile.Previews.swift   — #if DEBUG previews: live grid (light/dark), value variants + tints + empty,
+                              Dynamic Type (accessibility3), right-to-left
+  InfoTile.Tests.swift      — 19 XCTest cases (value projection, tint resolution, presentation, telemetry)
+  InfoTile.strings          — P1/S10 "InfoTile" table: infoTile.boolean.yes/no + infoTile.empty
+  No edits to project.yml / .swiftlint.yml (already enumerate feature-views) and NO edit to the shared
+  Localizable.xcstrings (parallel-unsafe) — the per-surface .strings table keeps this surface self-contained,
+  matching prompts 0096 AcDcStatsPanel / 0203 AIUsageCard.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  GlassPanel(p-4)         → TSGlassPanel (Sources/Components/UI/Cards.swift; pad TSSpacing.lg = 16 = web p-4)
+  label (text-xs muted)  → Font.TS.caption + Color.TS.textMuted, single-line truncate
+  icon (Lucide, h-3.5)   → SF Symbol (systemImage:), decorative → .accessibilityHidden(true)
+  value (text-lg semibold)→ Font.TS.section (18pt semibold = exact text-lg font-semibold), tinted, truncate
+  title={String(display)}→ .help(Text(verbatim: display))  (hover/long-press full value)
+  sub (text-[10px] muted)→ Font.TS.caption + Color.TS.textMuted, raised to the legible caption role for Dynamic Type
+  boolean → Yes/No        → InfoTileValue.boolean → InfoTileStrings infoTile.boolean.yes/no (P1/S10; no literals in code)
+  number                  → locale-aware NumberFormatter (idiomatic over the web bare String(n)); non-finite → em-dash
+  empty / blank value     → InfoTileStrings infoTile.empty "—"  (native addition: a tile is never a blank box)
+  color → InfoTileTint    : text-primary/(default/empty)→primary · text-secondary→secondary · text-muted→muted ·
+                            emerald/green/teal→success · amber/yellow/orange→warning · rose/red/pink→danger ·
+                            cyan/sky/blue/indigo→info · accent→accent ; unknown→primary (web `?? text-primary` parity)
+  a11y      : whole tile = one VoiceOver element (.accessibilityElement(children: .combine)); icon hidden.
+  telemetry : view.opened surface="InfoTile" via InfoTileSurface.reportOpen (P1/S11), default OSLog sink.
+
+STATES (every branch the web source carries is reproduced; the data-state axes do not apply to a pure
+        presentational tile and are owned by the caller's content — see prompt 0010 ToolCard precedent)
+  • value = string  → rendered verbatim, truncated, full text via .help                  [preview: Live grid]
+  • value = number  → locale-formatted (en_US golden values unit-tested)                  [preview: Value variants]
+  • value = boolean → localized Yes / No                                                   [preview: Value variants]
+  • value = empty / blank / non-finite → friendly em-dash (never a blank box)              [preview: Value variants]
+  • color default vs semantic tint (success/warning/danger/muted/…)                        [preview: Live grid + variants]
+  • sub present vs absent                                                                   [preview: Live grid]
+  • light / dark · Dynamic Type accessibility3 · right-to-left                              [previews: 5 total]
+
+GATES (every host-runnable gate executed on THIS runner; raw exits pasted)
+  [GREEN]    swiftformat --lint (InfoTile.* 6 swift files)        : 0/6 files require formatting        (FORMAT_EXIT=0)
+             swiftformat --lint apps/apple (whole tree, FYI)      : 1/1919 require formatting — the PRE-EXISTING
+                                                                    ActionBuilder.Previews.swift (blankLinesBetweenScopes),
+                                                                    NOT an InfoTile file; not introduced here.
+  [GREEN]    swiftlint --strict (InfoTile.* 6 files)              : 0 violations, 0 serious in 6 files   (LINT_EXIT=0)
+             swiftlint --strict (whole app, FYI)                  : 1 PRE-EXISTING violation — function_body_length
+                                                                    in dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+                                                                    (NOT an InfoTile file; the same row prompt 0010 noted).
+  [GREEN]    check-placeholders.ps1 -Path …/feature-views/InfoTile: PLACEHOLDER_COUNT=0, ALLOWED=0          (PLACEHOLDER_EXIT=0)
+             check-placeholders.ps1 (real scan of the 6 .swift)  : PLACEHOLDER_COUNT=0 — no TODO/FIXME/Placeholder/stub/Lorem.
+  [GREEN]    InfoTile build + test — ISOLATED SwiftPM harness, swift-tools 6.0, .swiftLanguageMode(.v6)
+             (Swift 6 language mode ⇒ strict-concurrency = complete, identical to the app's
+             SWIFT_VERSION 6.0 + SWIFT_STRICT_CONCURRENCY complete), compiling the EXACT shipped InfoTile.*
+             sources (incl. the #if DEBUG previews) against the REAL repo design system
+             (Tokens.swift / TSMaterial.swift / Typography.swift / Buttons.swift / Badges.swift / Cards.swift):
+                 Build complete!  ·  Executed 19 tests, with 0 failures                                 (SWIFT_TEST_EXIT=0)
+  [GREEN]    swiftc -typecheck — REAL iOS-18 + macOS-15 SDKs, -swift-version 6 -strict-concurrency=complete,
+             the InfoTile library sources against both platform SDKs:
+                 iphonesimulator arm64-apple-ios18.0-simulator                                          (IOS_TYPECHECK_EXIT=0)
+                 macosx          arm64-apple-macos15.0                                                  (MAC_TYPECHECK_EXIT=0)
+  [GREEN]    xcodegen generate                                    : project regenerated; InfoTile.* enumerated
+                                                                    (42 references in TeslaSync.xcodeproj)      (GEN_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO InfoTile errors; all blockers pre-exist and are unrelated to this change):
+    iOS  : Shared.xcframework staged fine (Gradle BUILD SUCCESSFUL), then the app-target Swift compile fails at the
+           FIRST co-located test file it reaches —
+             TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'
+           This is the PRE-EXISTING, systemic "co-located *.Tests.swift compiled into the app target" condition:
+           205 such *.Tests.swift files live under feature-views (every P4 surface ships its tests beside it, per the
+           0096/0203 convention), and `import XCTest` cannot resolve in a non-test app target. AIRestorePanel sorts
+           before InfoTile, so the app target is RED before InfoTile.Tests.swift is ever reached — i.e. the tree is
+           baseline-RED independent of this surface. (Also pre-existing: `struct DashboardWidgetSize` is defined 15×
+           across Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/* → "ambiguous for type lookup".)
+    macOS: additionally requires a development SIGNING certificate —
+             error: "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" has entitlements that require signing with a
+             development certificate. Enable development signing in the Signing & Capabilities editor.
+           — which this runner does not provision.
+    grep of BOTH build logs for `feature-views/InfoTile\. … error:` = 0 hits (pasted: "iOS InfoTile errors: 0",
+    "macOS InfoTile errors: 0"). These are exactly the artifacts apps/macos-pending-verifications.md defers to the
+    ADR-012 macos-latest CI runner, owned by p4-apple/P99-0001-apple-acceptance-gate (signing/archive) + a
+    dashboard-widget de-duplication / test-target-membership pass — NOT a single feature-view prompt (task rule:
+    do not fix pre-existing unrelated breakage; allowed files = InfoTile.* + this log).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                          explicitly DEFERRED with root-cause evidence — never reported as passing.
+  2  No scope narrowing : every web region + branch (boolean→Yes/No, number, string, empty, color→tint with the
+                          primary fallback, optional sub, truncation + title) reproduced; 5 previews cover the axes.
+  3  No skip-and-assume : every host gate executed on THIS runner; raw exits pasted; the iOS XCTest-in-app-target
+                          failure and the macOS signing failure were CONFIRMED from the build logs, not assumed.
+  4  No stubs as final  : complete production tile + 19 real tests; placeholder scanner COUNT=0; no TODO/stub/Lorem.
+  5  No parity shortcut : Yes/No promoted to P1/S10 keys; tint/opacity/typography/a11y/telemetry mapped to platform
+                          tokens; en_US number golden values unit-asserted; .help reproduces the web title tooltip.
+  6  No delegation      : implemented directly; no agents (delegation FORBIDDEN by this prompt).
+  7  No predecessor bypass: P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened telemetry, the TSGlassPanel shared
+                          component, and the established P4 "isolated-build + DEFERRED full-app" disposition all honoured.
+  8  No commit on red   : the COMMITTED artifact (InfoTile.* + this log) is GREEN on every per-surface gate AND on a
+                          real isolated Swift 6 strict-concurrency build + 19/19 XCTest + iOS-18/macOS-15 typecheck;
+                          the deferred full-app gate is RED only on pre-existing, unrelated conditions this commit
+                          neither introduces nor touches.
+  9  No silent drift    : staged changes are confined to feature-views/InfoTile.{swift,Model,Telemetry,Views,Previews,
+                          Tests}.swift + InfoTile.strings and this log. Pre-existing unstaged AIUsageCard.* working-tree
+                          modifications (not mine) are left untouched and NOT committed.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic InfoTile shipped at parity with the web source and INDEPENDENTLY VERIFIED:
+  it compiles and its 19 tests pass under the app's own Swift 6 strict-concurrency rules, against the REAL design
+  system, and the library type-checks against the real iOS-18 + macOS-15 SDKs, with swiftformat / swiftlint /
+  placeholder all green on the surface and the #Preview macro compiling. The full-app iOS-Simulator + macOS
+  xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked by the pre-existing, unrelated
+  co-located-XCTest-into-app-target condition (baseline-RED on AIRestorePanel.Tests.swift, plus the 15× DashboardWidgetSize
+  redefinition) and macOS development-signing — both owned by the P4/P99 acceptance gate on a signed macos-latest CI
+  runner per apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED Xcode
+  gate" disposition used by every P4 feature-view surface to date (0010 ToolCard, 0096 AcDcStatsPanel, 0203 AIUsageCard).
+
+EXIT=0
+STATUS=DONE

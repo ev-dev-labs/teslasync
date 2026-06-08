@@ -1,0 +1,109 @@
+=== P4 Feature view 0308 VehicleSettingsTab (Apple) ===
+Generated: Mon Jun  8 03:30:19 PDT 2026
+Runner: Darwin 25.5.0 arm64 | Xcode: Xcode 26.5 Build version 17F42 
+Note: active dev dir defaulted to CommandLineTools; set DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer to run xcodebuild/xcodegen.
+
+############################################################
+# SECTION A — Per-surface static gates (scoped to VehicleSettingsTab.*)
+############################################################
+
+--- swiftlint --strict (10 swift files) ---
+Linting 'VehicleSettingsTab.Views.swift' (10/10)
+Done linting! Found 0 violations, 0 serious in 10 files.
+LINT_EXIT=0
+
+--- swiftformat --lint (10 swift files) ---
+SwiftFormat completed in 3.35s.
+0/10 files require formatting.
+FORMAT_EXIT=0
+
+--- check-placeholders.ps1 (VehicleSettingsTab.* copied to an isolated dir) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+
+############################################################
+# SECTION B — Isolated Swift 6 strict-concurrency type-check
+#   (full app target cannot build due to sibling-surface errors — see Section D;
+#    this isolates VehicleSettingsTab.* + its design-system deps for a faithful check)
+############################################################
+cmd: swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG -target arm64-apple-ios18.0-simulator <deps> <VehicleSettingsTab.* shipped+previews+tests(shim)>
+TYPECHECK_EXIT=0 (0 = no errors)
+
+############################################################
+# SECTION C — Test execution (compiled for macOS host, run for real)
+############################################################
+RUNNER_COMPILE_EXIT=0
+ALL_TESTS_PASSED assertions=89 methods=42
+RUN_EXIT=0
+
+############################################################
+# SECTION D — Literal acceptance gate (xcodebuild) — REAL output
+#   DEVELOPER_DIR set to full Xcode (default active dir was CommandLineTools).
+############################################################
+
+--- iOS: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test ---
+first error: /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-195/apps/apple/TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'
+** BUILD FAILED **
+IOS_EXIT=65
+  -> the 'build' action compiles the app target, which includes ~100 sibling
+     feature-view *.Tests.swift files that 'import XCTest'; the app target cannot
+     resolve XCTest in a plain build. First failing file is a SIBLING surface
+     (AIRestorePanel.Tests.swift), not VehicleSettingsTab.
+
+--- macOS: xcodebuild -scheme TeslaSync-macOS build test ---
+first error: /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-195/apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+MAC_EXIT=65
+  -> blocked by code-signing (DEVELOPMENT_TEAM empty; entitlements require a dev
+     certificate) — an environment/signing gap, plus the same sibling compile errors.
+
+--- Diagnostic: same iOS build with ENABLE_TESTING_SEARCH_PATHS=YES (lets the
+    app-target test files resolve XCTest, exposing the real type errors) ---
+TOTAL_COMPILE_ERRORS=48
+VEHICLESETTINGSTAB_ERRORS=0   <-- zero errors attributable to this surface
+representative sibling-surface errors (NOT in allowed files):
+  TeslaSync/dashboard-widgets/DigitalTwinWidget.Model.swift:238:29: error: 'DashboardWidgetSize' is ambiguous for type lookup in this context
+  TeslaSync/dashboard-widgets/DigitalTwinWidget.Model.swift:239:25: error: 'DashboardWidgetSize' is ambiguous for type lookup in this context
+  TeslaSync/dashboard-widgets/DigitalTwinWidget.Model.swift:240:25: error: 'DashboardWidgetSize' is ambiguous for type lookup in this context
+  TeslaSync/dashboard-widgets/MotorHistoryWidget.Model.swift:224:29: error: 'DashboardWidgetSize' is ambiguous for type lookup in this context
+  TeslaSync/dashboard-widgets/MotorHistoryWidget.Model.swift:225:25: error: 'DashboardWidgetSize' is ambiguous for type lookup in this context
+  TeslaSync/dashboard-widgets/MotorHistoryWidget.Model.swift:226:25: error: 'DashboardWidgetSize' is ambiguous for type lookup in this context
+  TeslaSync/dashboard-widgets/MotorPerformanceWidget.Support.swift:42:22: error: 'DashboardWidgetSize' is ambiguous for type lookup in this context
+  TeslaSync/dashboard-widgets/MotorPerformanceWidget.Support.swift:43:18: error: 'DashboardWidgetSize' is ambiguous for type lookup in this context
+
+############################################################
+# SECTION E — Conclusion
+############################################################
+VehicleSettingsTab.* (this surface, the ONLY files I am allowed to create/edit):
+  - swiftlint --strict ........ 0 violations
+  - swiftformat --lint ........ 0 files require formatting
+  - check-placeholders ........ PLACEHOLDER_COUNT=0
+  - Swift 6 strict-concurrency typecheck (shipped+previews+tests) ... EXIT=0
+  - tests executed ............ ALL_TESTS_PASSED (42 methods / 89 assertions)
+  - errors in full app build .. 0 (see Section D diagnostic)
+
+The literal 'xcodebuild build test' gate cannot reach EXIT=0 because of
+PRE-EXISTING, repo-wide breakage in SIBLING P4 surfaces that are OUTSIDE this
+prompt's allowed-files scope (apps/apple/TeslaSync/feature-views/VehicleSettingsTab.*):
+  (1) ~100 co-located *.Tests.swift import XCTest but are compiled into the iOS/macOS
+      APP target (project.yml scopes feature-views into the app target with no test
+      exclusion); the app target cannot resolve XCTest on a plain build.
+  (2) Duplicate type-name collisions across parallel-generated surfaces
+      (e.g. DashboardWidgetSize / VehicleHeroModel 'ambiguous for type lookup').
+  (3) macOS leg additionally requires development code-signing (no certificate/team
+      configured on this runner).
+None of (1)-(3) are fixable within the allowed files; all are sibling/project scope.
+
+Platform capability (SwiftUI + Swift Charts + MapKit, iOS 18 / macOS 15) IS present
+on this runner (Xcode 26.5, iPhone 16 simulator, xcodegen). The block is the
+pre-existing sibling/project state, not a missing capability.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SURFACE_TYPECHECK_EXIT=0
+SURFACE_TESTS=PASS
+EXIT=1
+STATUS=BLOCKED

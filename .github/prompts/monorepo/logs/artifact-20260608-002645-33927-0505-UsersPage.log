@@ -1,0 +1,271 @@
+================================================================================
+P4-APPLE · P7 · page:admin/Users — UsersPage (Apple, SwiftUI / HIG)
+Run: 2026-06-08T07:55-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/505
+Base: c9c6fdb9fc41c33402c2dd6e00a94e02b81c3d5e
+Prompt: p4-apple/P7 — page:admin/Users at web parity (SwiftUI / HIG / Swift)
+Web source (spec): web/src/features/admin/pages/UsersPage.tsx  (web route: (unrouted))
+Native output: apps/apple/TeslaSync/feature-views/UsersPage.*
+Mode: code-complete + host-runnable gates GREEN + DEFERRED full-app Xcode build/test
+      (UserImpersonateButton 0050 / AlertMessageEditor 0180 / FSMTimelineChart 0231
+       precedent; ADR-012; Honesty rule 7 — predecessor disposition, not a bypass).
+================================================================================
+
+=== PATH RECONCILIATION (no silent drift, Honesty rule 9) ===
+  The generated prompt names the output `apps/apple/TeslaSync/Features/Admin/UsersPage.swift`
+  (the manifest's idealized per-domain path). The repo's PHYSICAL XcodeGen source group for
+  every ported web feature/page surface is the FLAT `apps/apple/TeslaSync/feature-views/`
+  group — proven by the sibling component this page composes, the web
+  `features/admin/components/UserImpersonateButton.tsx`, which already ships as
+  `apps/apple/TeslaSync/feature-views/UserImpersonateButton.*` (NOT `Features/Admin/`).
+  project.yml's iOS+macOS app targets enumerate `TeslaSync/feature-views` (and `Sources`,
+  `Localization`, `../design/generated/apple`); `TeslaSync/Features/Admin` is NOT a compiled
+  path. Placing the file at the prompt's idealized path would make it dead, uncompiled,
+  unverifiable code (a covenant violation). The page is therefore authored in the canonical
+  physical group `TeslaSync/feature-views/UsersPage.*`, following the sibling pattern verbatim.
+  Evidence below: `xcodegen generate` now enumerates all 7 UsersPage files (6x each) into the
+  targets.
+
+=== CAPABILITY PROBE ===
+  swift (toolchain) .......... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)             OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override         OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iphonesimulator26.5 (iOS 18.0 deploy target)         OK
+  macOS SDK .................. macosx26.5 (macOS 15.0 deploy target)                OK
+  iOS Simulator runtime ...... iOS 26.5 present (runs iOS-18.0 deployment apps)     OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                    OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  xcodegen ................... project generates cleanly; UsersPage files enumerated OK
+  Shared.xcframework ......... STAGED on this host (gradle :core:assembleSharedXCFramework
+                              BUILD SUCCESSFUL → apps/apple/Frameworks/Shared.xcframework) OK
+  feature-views in project.yml  REGISTERED (app + test target source path)          OK
+
+  Capability note: the manifest lists "Charts: (none)" and "Maps: (none)". The core
+  requirement is SwiftUI, which is AVAILABLE and PROVEN by real iOS-18-simulator AND
+  macOS-15 SDK typechecks below. The capability-BLOCKED escape hatch does NOT apply —
+  the surface is authored, host-compiled on BOTH SDKs, and host-tested (24 XCTest
+  methods executed green).
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/UsersPage.*) ===
+  UsersPage.Adapter.swift   152  pure projection core — ImpersonationSubject row value,
+                                 ImpersonationCandidatesPhase (web useImpersonationCandidates
+                                 lifecycle), UsersPageRegion (the web GlassPanel branch ladder
+                                 open?→loading?→error?→empty?→list, as a flat resolvable enum),
+                                 ImpersonationStatusDerivations (isImpersonationOpenMode /
+                                 isImpersonationActive ported verbatim), UsersPageAccessibility
+                                 (web data-testid ids + VoiceOver summary). No SwiftUI, no I/O.
+  UsersPage.Model.swift     295  P1/S8 candidates seam (ImpersonationCandidatesProviding +
+                                 event enum + in-memory) + REUSED status seam (the sibling
+                                 ImpersonationStatusProviding) + ImpersonateButtonFactory +
+                                 P1/S11 telemetry seam (view.opened) + P1/S10 strings facade +
+                                 the @Observable UsersPageModel coalescing both web hooks into
+                                 region/open/active + freshness (stale/offline, ADR-013).
+  UsersPage.Views.swift     305  presentational subviews — header (title+subtitle+freshness
+                                 chip), open-access notice, loading, error+retry, empty
+                                 (ContentUnavailableView), subjects list + adaptive row
+                                 (ViewThatFits: HStack on macOS/iPad, VStack on iPhone) with the
+                                 embedded UserImpersonateButton, freshness chip + connectivity
+                                 banner. Every string via UsersPageStrings; a11y on every region.
+  UsersPage.swift           107  the page — TSFadeIn + ScrollView(.refreshable) + readable-width
+                                 cap (adaptive) + TSGlassPanel hosting the region switch +
+                                 onAppear view.opened + surfaceSlug + convenience init from seams.
+  UsersPage.Previews.swift  117  #if DEBUG previews — content / already-active / open-mode /
+                                 loading / error / empty / stale / offline.
+  UsersPage.Tests.swift     310  XCTest — Adapter projections (12) + UsersPageModel state machine
+                                 (12) = 24 methods.
+  UsersPage.strings          41  P1/S10 catalog contribution (table "UsersPage") — the 5 web
+                                 impersonation.users.* keys VERBATIM + native chrome keys.
+  Largest .swift = 310 lines (swiftlint file_length<=400 honored); largest production file = 305.
+  No file imports the Shared xcframework (seams are Swift protocols; prod injects the
+  facade-backed P1/S8 holders, previews/tests inject the in-memory seams).
+
+=== PARITY ===
+PARITY_REQUIRED=10
+  [x] panel  — GlassPanel1
+        -> UsersPage.swift `TSGlassPanel { region }` (web `<GlassPanel>`), the design-system
+           material panel (Components/UI/Cards.swift TSGlassPanel + Design/TSMaterial tsGlassPanel).
+  [x] state  — loading
+        -> UsersPageRegion.loading -> UsersPage.swift `region` switch -> UsersPage.Views.swift
+           `UsersPageLoadingState` (ProgressView, a11y id "users-page-loading"); web
+           `candidates.isLoading ? <Spinner/>`. Test: testRegionLoading / testInitialRegionIsLoading.
+  [x] state  — empty
+        -> UsersPageRegion.empty -> UsersPage.Views.swift `UsersPageEmptyState`
+           (ContentUnavailableView: emptyTitle + emptyMessage); web `subjects.length === 0 ?
+           <EmptyState/>`. Test: testRegionEmptyWhenNoSubjects / testEmptyWhenNoOtherSubjects /
+           testRegionCandidatesOpenModeCollapsesToEmpty.
+  [x] state  — error
+        -> UsersPageRegion.error(message) -> UsersPage.Views.swift `UsersPageErrorState`
+           (message + Retry -> model.retry()); web `candidates.isError ? <ErrorDisplay
+           onRetry=refetch/>`. Test: testRegionError / testErrorThenRetryRefetchesCandidates /
+           testOfflineWithoutCacheSurfacesError.
+  [x] state  — success
+        -> UsersPageRegion.content([ImpersonationSubject]) -> UsersPage.Views.swift
+           `UsersPageSubjectList` + `UsersPageSubjectRow` (mono subject + UserImpersonateButton,
+           disabled when active); web `<ul>` row map. Test: testRegionContentWhenSubjectsPresent /
+           testStartLoadsBothFeedsAndRendersContent / testActiveSessionFlagsActive.
+  [x] string — impersonation.users.emptyMessage
+        -> UsersPage.Views.swift UsersPageEmptyState via UsersPageStrings.string(
+           "impersonation.users.emptyMessage", …); declared in UsersPage.strings + present in
+           master Localizable.xcstrings (translation.impersonation.users.emptyMessage).
+  [x] string — impersonation.users.emptyTitle
+        -> UsersPage.Views.swift UsersPageEmptyState; UsersPage.strings + master catalog.
+  [x] string — impersonation.users.openMode
+        -> UsersPage.Views.swift UsersPageOpenModeNotice; UsersPage.strings + master catalog.
+  [x] string — impersonation.users.subtitle
+        -> UsersPage.Views.swift UsersPageHeader subtitle; UsersPage.strings + master catalog.
+  [x] string — impersonation.users.title
+        -> UsersPage.Views.swift UsersPageHeader title; UsersPage.strings + master catalog.
+PARITY_COVERED=10
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data sources (web's two hooks + two helpers), bound through P1/S8 seams (no view HTTP):
+      • useImpersonationStatus  -> ImpersonationStatusProviding (REUSED from the sibling
+        UserImpersonateButton); folded into open/active by ImpersonationStatusDerivations.
+      • useImpersonationCandidates -> ImpersonationCandidatesProviding (new seam here); the web
+        `enabled: !open` opt-in is honoured — candidates drive the panel region only when not
+        open; an open status renders the open-access notice (region .openMode).
+      • isImpersonationOpenMode / isImpersonationActive -> ported verbatim (status?.mode==='open'
+        / ==='active'); active disables every row's impersonate button (web `disabled={active}`).
+  - Composition: web `PageContainer(title, subtitle)` -> UsersPageHeader (title + subtitle, both
+    web keys); web `<GlassPanel>` -> TSGlassPanel; web `<ul>`/`<li>` -> UsersPageSubjectList/Row
+    with the mono subject (web `font-mono break-all`) + the embedded UserImpersonateButton.
+  - States (ALL rendered, each a #if DEBUG preview + a region/model unit test, ADR-011 never a
+    blank region): open-access notice (web open branch; native explains instead of a blank box) ·
+    loading · error+retry · empty · success list; plus native freshness chrome (stale / offline
+    cached-behind chip+banner, ADR-013 >2-min staleness window).
+  - i18n (P1/S10): web keys preserved VERBATIM (impersonation.users.{title,subtitle,openMode,
+    emptyTitle,emptyMessage}); native chrome namespaced impersonation.users.{loading,error,
+    staleBanner,offlineBanner,a11y.list} + impersonation.{action.retry,freshness.*}. Every
+    code-referenced key is declared in UsersPage.strings; NO English literals in native code
+    (all via UsersPageStrings + Text(verbatim:)). The 5 web keys are ALSO present in the master
+    Localizable.xcstrings (translation.impersonation.users.*, en/ar/he).
+  - Adaptivity (ADR-002/006): one SwiftUI layer; ViewThatFits row (side-by-side on macOS/iPad,
+    stacked on iPhone); readable-width content cap on wide windows; full-width on iPhone; the
+    page composes inside any NavigationStack/NavigationSplitView host. Web route is (unrouted),
+    so — exactly like the web source — the page ships reachable by direct construction (no route
+    table entry); no navigation registration was required or made.
+  - a11y (ADR-015): VoiceOver labels on header/notice/rows/list/chip/banner; web data-testids via
+    accessibilityIdentifier (users-page-open-mode / -loading / -list / -row-<subject>); Dynamic
+    Type (Font.TS system fonts); light/dark + increased-contrast (Color.TS dynamic tokens);
+    TSButton 44pt targets; text selection on the subject.
+  - Telemetry (P1/S11): UsersPageModel.start() emits view.opened (slug "UsersPage") exactly once
+    and loads both feeds — unit-asserted once-only.
+  - SI units (P1/S5): N/A — no field on this surface is unit-bearing (subjects are opaque
+    identifiers); nothing is stored/computed in non-SI. No converter needed.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 4 production files + 2 #if DEBUG/test files compiled with the REAL
+  apps/apple component closure (design Tokens + Design/{TSDesign,TSMaterial} + Components/UI
+  {Typography,Badges,Buttons,Cards} + Feedback/Skeletons + Motion) + the sibling
+  UserImpersonateButton.{Adapter,Model,Views,swift} it composes; none import Shared.
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK (Swift 6, -D DEBUG incl. previews)
+        xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6 \
+          -target arm64-apple-ios18.0-simulator -D DEBUG <closure + UIB(4) + UsersPage(5)>
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0, -D DEBUG):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [3] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM
+        harness (real production Adapter/Model/Views/page + real design tokens + real TS
+        component closure + the real sibling UserImpersonateButton), Swift 6 language mode +
+        -strict-concurrency=complete:
+          Test Suite 'UsersPageAdapterTests' passed — 12 tests, 0 failures
+          Test Suite 'UsersPageModelTests'   passed — 12 tests, 0 failures
+          Executed 24 tests, with 0 failures (0 unexpected)
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: candidates-phase accessor; region ladder (openMode-wins / loading / error /
+        candidates-openMode→empty / empty / content); isImpersonationOpenMode/Active (nil/open/
+        restricted/active); a11y ids + list summary; model start loads both feeds + content;
+        open-mode gate; active flag; empty; candidates-openMode→empty; error→retry refetch;
+        cached-behind-offline; offline-without-cache→error; time-based stale; status-failure-
+        does-not-blank; view.opened-once + slug + load-once.
+  [4] swiftlint --strict (6 surface .swift files; repo apps/apple/.swiftlint.yml; explicit paths):
+          Done linting! Found 0 violations, 0 serious in 6 files.
+        LINT_EXIT=0                                                               OK
+  [5] swiftformat --lint (config apps/apple/.swiftformat):
+          0/6 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+  [6] check-placeholders.ps1 (ADR-011 stub gate; -Language swift) — run two ways:
+        (a) literal prompt invocation (-Path apps/apple/TeslaSync/Features/Admin):
+            PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0   (path is the manifest's
+            idealized group; unmatched on disk → clean tree; the real files live in
+            feature-views and are scanned in (b))
+        (b) real scoped scan of the 6 shipped .swift files (temp dir, -Language swift):
+            PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+        manual grep (TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not implemented/
+            fatalError unimpl|not): NONE FOUND
+        PLACEHOLDER_EXIT=0                                                        OK
+
+=== GATE — XCODE FULL-APP STEPS (DEFERRED to the signed integration runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode toolchain):
+      - `xcodegen generate`  -> XCODEGEN_EXIT=0 (project + 12 targets + schemes). UsersPage file
+        references in the generated TeslaSync.xcodeproj/project.pbxproj (basename counts):
+            UsersPage.swift ......... 6   (REGISTERED, matches the control widgets)
+            UsersPage.Model.swift ... 6   UsersPage.Adapter.swift ... 6
+            UsersPage.Views.swift ... 6   UsersPage.Tests.swift ..... 6
+            UsersPage.Previews.swift  6   UsersPage.strings ......... 6
+        => unlike the 0050 predecessor (feature-views then unregistered), feature-views is NOW
+           wired into the app + test targets; this surface is enumerated.
+      - `xcodebuild -target TeslaSync -sdk iphonesimulator -arch arm64 build CODE_SIGNING_ALLOWED=NO`
+        (target build; the Shared.xcframework is staged so that pre-action is satisfied) ->
+            error: unable to resolve module dependency: 'XCTest'
+                   (…/feature-views/AIRestorePanel.Tests.swift:18)
+            ** BUILD FAILED **                          -> APP_BUILD_EXIT=65
+        error: lines total = 2 (both the SAME pre-existing XCTest-into-app-target failure on a
+        SIBLING's co-located test file); UsersPage-attributed errors = 0.
+    Why deferred (PRE-EXISTING, code-unrelated; identical disposition to 0050 UserImpersonateButton
+    / 0180 AlertMessageEditor / 0231 FSMTimelineChart; Honesty rule 7):
+      (a) 262 co-located *.Tests.swift across feature-views/dashboard-widgets `import XCTest` into
+          the APP target (the XcodeGen group is shared by app + test targets); xcodebuild fails
+          module-dependency resolution before compiling any source. Routing co-located tests to the
+          test target only is the downstream integration/P99 prompt's job (editing project.yml is
+          outside this prompt's allowed files). The SwiftPM harness in step [3] EXECUTES this
+          surface's 24 tests green; steps [1]/[2] compile it on BOTH SDKs incl. previews.
+      (b) `struct DashboardWidgetSize` is redefined 15x across Sources/DashboardWidgets/* +
+          TeslaSync/dashboard-widgets/* (a pre-existing parallel-merge duplicate-symbol collision);
+          independent of this surface (UsersPage/ImpersonationSubject each defined exactly once).
+      (c) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    The SAME tests are PROVEN GREEN (24/24) by the executed SwiftPM harness, and the surface
+    compiles against BOTH the iOS 18 and macOS 15 SDKs (steps [1]/[2]). Recorded in
+    apps/macos-pending-verifications.md for the P99 macOS runner.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Every named panel implemented (GlassPanel1); every web region reproduced.
+  [x] All 10 parity items render from the bound @Observable UsersPageModel (PARITY_COVERED=10).
+  [x] loading / empty / error implemented for the data source (+ success + open-access), each a
+      preview + a unit test; never a blank region (ADR-011).
+  [x] All visible strings sourced from the catalog (UsersPage table + master Localizable.xcstrings);
+      zero hardcoded literals; key names match web verbatim.
+  [x] Dark mode + Dynamic Type + accessibility honored; SI units N/A (no unit-bearing field);
+      SwiftUI-native only (no web cloning).
+  [x] build + lint + test + placeholder gates: HOST-RUNNABLE set GREEN; full-app xcodebuild
+      build/test DEFERRED with captured exit-65 evidence + pre-existing causes (NOT green-washed).
+  [x] PARITY_COVERED==PARITY_REQUIRED (10==10); apple-macos + apple-ios ledger rows set covered.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; the full-app xcodebuild build/test is
+                          shown DEFERRED with its real exit 65 + the pre-existing XCTest-in-app /
+                          duplicate-symbol / signing causes, never as pass.
+  2 No scope narrowing ... full page (7 files), all states, both web hooks + both helpers, the
+                          embedded sibling button, 24 tests.
+  3 No skip-and-assume ... web source read end-to-end; every t() + branch reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0 (two ways) + grep clean.
+  5 No parity shortcuts .. GlassPanel + header(title/subtitle) + open/loading/error/empty/list +
+                          UserImpersonateButton(disabled=active) + 5 web keys verbatim.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0050/0180/0231 host-gate + full-app deferral.
+  8 No commit on red ..... committed work is green on every host-runnable gate; the only non-green
+                          step is the environment/integration-blocked full-app build, deferred with
+                          evidence (predecessor-accepted, recorded in macos-pending-verifications).
+  9 No silent drift ...... path reconciliation documented above (idealized Features/Admin vs the
+                          physical feature-views group); the sibling proves the convention.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

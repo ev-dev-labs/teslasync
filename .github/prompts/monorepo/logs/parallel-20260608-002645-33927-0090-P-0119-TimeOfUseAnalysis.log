@@ -1,0 +1,139 @@
+I'll start by exploring the environment and understanding the task. Let me check the platform capabilities and the repo structure in parallel.
+
+Key finding: only Command Line Tools is installed, not full Xcode (so `xcodebuild` with iOS Simulator may not work). Swift 6.3.2, swiftlint, swiftformat are available. Let me examine the web source and the existing AIUsageCard native template (a sibling feature-view that was just modified).
+
+Now let me study the AIUsageCard native template (the exact file pattern I must follow) and the placeholder checker.
+
+Let me read the rest of the AIUsageCard template and check whether TimeOfUseAnalysis files already exist.
+
+The TimeOfUseAnalysis files don't exist yet — I'll create them. Let me find where the shared chrome views (loading, error, freshness chip, banner, refresh button) are defined, and read the Previews/Tests/strings.
+
+There's also a `.Chrome.swift` file and an `AiUsageProjection` I haven't seen. Let me locate the projection, read the Chrome/Previews/Tests files, and find the design tokens.
+
+Now I understand the full file structure. The AiUsageCard surface has 10 files (`.swift`, `.Model`, `.Adapter`, `.Projection`, `.Views`, `.Chrome`, `.Previews`, `.Tests`, `.AdapterTests`, `.strings`). Let me locate the P1/S9 design tokens and P4 core shared components (Color.TS, Font.TS, TSSpacing, TSButton, TSSkeleton, TSFadeIn) and read the Projection/Previews/Tests.
+
+Let me find the design tokens, shared components, existing Swift Charts usage, and the placeholder checker.
+
+Let me read the design tokens and find the exact definitions of the shared primitives I'll use.
+
+The tokens (`TSSpacing`, `Color.TS`, `Font.TS`, `TSMotion`) only have a Watch definition — the main-target versions are generated at build time. This strongly implies the full Xcode/XcodeGen toolchain is required. Let me verify the build capability concretely before deciding DONE vs BLOCKED.
+
+Xcode.app **is** installed — `xcode-select` just points to CommandLineTools. I can override with `DEVELOPER_DIR`. `xcodegen` and `pwsh` are also available. Let me verify the full toolchain works via `DEVELOPER_DIR`.
+
+Full Xcode 26.5 toolchain works via `DEVELOPER_DIR`, iPhone 16 sim is booted, iOS/macOS SDKs present. I can build. Let me understand the project generation, token generation, and finish reading the template (Previews, Tests, AdapterTests).
+
+Design tokens live in `apps/design/generated/apple`, and the build depends on a `Shared.xcframework` (KMP core). Let me verify the tokens exist, check the framework dependency, and read the remaining template files.
+
+The full app build pulls in a KMP `Shared.xcframework` (Gradle/Kotlin) that isn't staged. I'll write the surface to the proven pattern, then verify via a focused compile against the real tokens + shared components, plus swiftlint/swiftformat/placeholder. Let me read the real tokens, the shared primitives I'll use, an existing Swift Charts feature-view, and the remaining template files.
+
+Now I have the real tokens. Let me read the shared primitives I'll use (TSButton, TSFadeIn, TSCard), an existing Swift Charts BarMark feature-view for the established pattern, and the remaining AiUsageCard template files (Previews/Tests/AdapterTests).
+
+Let me read the test patterns, an existing BarMark chart feature-view, and find the native glass panel/card primitive.
+
+Let me read the lint configs, find the card primitive, and study an existing BarMark chart for the established Swift Charts pattern.
+
+Excellent — `SentryModeChart` is a near-perfect Swift Charts reference. One critical thing to verify: how `*.Tests.swift` files inside `feature-views/` are wired (the app target source path includes that dir, but tests need the test target). Let me investigate the test wiring.
+
+There's a `Tests/Unit/FeatureViews/` convention, yet AiUsageCard's tests live in `feature-views/`. I need to find the exclusion mechanism that keeps `*.Tests.swift` out of the app target. Let me search for it.
+
+No exclusion in `project.yml`. Let me generate the project and inspect how AiUsageCard's test files are assigned to targets — this tells me the real wiring.
+
+Project generated. Let me inspect which target AiUsageCard's test files actually belong to in the generated project.
+
+`AiUsageCard.Tests.swift` (with `@testable import TeslaSync`) is compiled into the **app** targets, not test targets — a self-import that can't compile. This looks like a pre-existing repo state issue. Let me read the pending-verifications doc and README to confirm the Apple build status.
+
+This is the key context. `macos-pending-verifications.md` documents the exact precedent: prior P4 surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) verify the **surface in isolation** (SwiftPM build+tests, iOS/macOS `swiftc -typecheck`, swiftlint/swiftformat/placeholder, xcodegen enumeration), while the **full-app `xcodebuild build test` is blocked by pre-existing, unrelated collisions** (152 co-located `*.Tests.swift` importing XCTest into the app target, `DashboardWidgetSize` redefined 15×, unstaged KMP `Shared.xcframework`, macOS signing). My pbxproj probe confirmed AiUsageCard.Tests.swift lands in the app target. Let me read the remaining dependency files and confirm the log dir.
+
+Let me look at an existing surface log (for format) and the SentryModeChart main view + model (the chart-surface composition and i18n `.text` facade), then I'll start writing.
+
+I now have a complete understanding. The precedent is clear: deliver the surface (11 files following the AiUsageCard + SentryModeChart patterns), verify it in isolation (SwiftPM build+tests, iOS/macOS `swiftc -typecheck`, swiftlint/swiftformat/placeholder, xcodegen), and document the full-app `xcodebuild` as deferred/blocked by pre-existing unrelated collisions. Let me set up tracking and write the plan.
+
+Now I'll write the surface. Starting with the foundational pure-logic files (Adapter, Model, Projection).
+
+Now the Swift Charts bar chart (web Recharts `BarChart`).
+
+Now the presentational views (insights column, cards, legend, inline empties).
+
+Now the chrome (freshness chip, refresh, banner, loading, error).
+
+Now the main view that composes everything.
+
+Now the i18n strings catalog (table "TimeOfUseAnalysis").
+
+Now the previews.
+
+Now the test files. First the pure adapter tests.
+
+Now the main projection + model + telemetry tests.
+
+Let me fix an awkward construct in the re-arm test.
+
+All 11 files created. Let me set up the isolated verification. First, I need to understand the exact dependency closure — let me check the shared components my surface touches transitively.
+
+Dependency closure is clean: my surface uses real Tokens, TSDesign (TSChartPalette), TSFadeIn (Motion), TSButton (Buttons) — all self-contained — plus `TSSkeleton` (which pulls the full component library). I'll verify in an isolated SwiftPM package using the REAL token/component files, shimming only `TSSkeleton` in a clearly-labeled throwaway harness. Let me set it up.
+
+Now let me build and test the isolated package using the Xcode 26.5 toolchain.
+
+The isolated build succeeds with the real tokens/components under Swift 6. Now let me run the tests.
+
+All 30 tests pass under Swift 6. Now the cross-platform `swiftc -typecheck` against the real iOS-18 simulator and macOS-15 SDKs.
+
+iOS 18 typecheck clean. Now macOS 15.
+
+Both platform typechecks clean. Now the lint/format/placeholder gates, scoped to my files.
+
+swiftlint: 0 violations. Now swiftformat --lint and the placeholder gate (scoped to a temp copy of just my files for an accurate result).
+
+swiftformat: 0/10 require formatting. Now the placeholder gate, scoped to a clean copy of my files.
+
+Placeholder gate clean (0/0). Now regenerate the Xcode project and confirm it enumerates all 11 surface files.
+
+xcodegen enumerates all 11 files. Now let me review how a precedent chart-surface log captured the deferred full-app build evidence, so I replicate the exact approach and disposition.
+
+The precedent disposition is confirmed (EXIT=0/STATUS=DONE with the Xcode app build/test DEFERRED). Now let me gather honest, deterministic evidence of the pre-existing blockers and actually probe the Xcode build path.
+
+263 co-located test files import XCTest into the app target, 15 `DashboardWidgetSize` redefinitions, Shared.xcframework absent — all pre-existing/systemic. My 2 test files follow the same established pattern. Now let me actually probe the Xcode build path (capturing to a file) to confirm zero TimeOfUseAnalysis-attributable errors.
+
+Let me wait for the build probe to surface errors, then analyze.
+
+The probe (RC=65) failed at the very first dependency step — the unstaged KMP `Shared.xcframework` — before any Swift compilation, with **zero** TimeOfUseAnalysis mentions. Let me confirm the self-import collision class and then finalize.
+
+Complete, honest evidence gathered. Let me update tracking and write the verification log.
+
+Log written. Now let me clean up generated artifacts, verify git state, and stage only the allowed files.
+
+Cleaned up. Let me verify the ignore rule and check git state scoped to my paths (a full-repo `git status` is slow on this huge worktree).
+
+All 11 files + log are untracked. Let me confirm xcodegen left no stray artifacts under apps/apple before committing.
+
+Clean — the only other changes are the pre-existing `AIUsageCard.*` working-tree edits that predate my task (must stay unstaged per covenant #9). Let me stage exactly the 11 surface files + the log and commit.
+
+Exactly the 11 surface files + log staged (pre-existing AIUsageCard edits correctly excluded). Now commit.
+
+Committed (`23654da33`). Let me verify the commit contains exactly the intended files.
+
+The task is complete. Here's what I delivered.
+
+## Summary
+
+Shipped a production-polished, native Apple parity of `TimeOfUseAnalysis` — the SwiftUI + Swift Charts version of `web/src/features/charging/components/cost-analysis/TimeOfUseAnalysis.tsx` — committed as `23654da33`.
+
+**11 surface files** (`apps/apple/TeslaSync/feature-views/TimeOfUseAnalysis.*`) following the established `AiUsageCard` + `SentryModeChart` patterns:
+- **Chart** (Swift Charts `BarMark`): per-hour sessions, peak/mid-peak/off-peak band colouring (palette[0] for mid via `TSChartPalette` = the `useChartPalette` binding), selection tooltip, legend.
+- **4 insight cards** (Cheapest/Priciest/Busiest/Off-Peak%) with exact web number formatting (avgCost 3dp, pct 1dp, sessions int).
+- **Every state**: loading, data, inline "Not enough data", inline "No insights available", error+retry, stale, offline — plus freshness chip/banner + one-shot auto-refresh.
+- P1/S8 state-holder seam (no view HTTP), P1/S10 i18n facade (verbatim `costAnalysis.tou.*` keys), P1/S11 `view.opened` telemetry, VoiceOver/Dynamic Type/reduce-motion.
+
+**All host-runnable gates GREEN** (real output in the log):
+- Isolated SwiftPM build + **30/30 XCTest** (Swift 6 strict concurrency)
+- `swiftc -typecheck`: **iOS 18 = 0**, **macOS 15 = 0**
+- swiftlint --strict **0 violations**, swiftformat --lint **0/10**, placeholder **0/0**, xcodegen enumerates all 11 files
+
+**Full-app `xcodebuild build test`: DEFERRED** — probed for real (RC=65), failing first on the unstaged KMP `Shared.xcframework`, with **zero** TimeOfUseAnalysis-attributable errors. The blockers (260 co-located test self-imports, 15× `DashboardWidgetSize`, missing KMP framework, signing) are pre-existing, systemic, and outside the allowed files — matching the documented `macos-pending-verifications.md` precedent. Pre-existing `AIUsageCard.*` working-tree edits were left untouched.
+
+`EXIT=0 / STATUS=DONE`
+
+
+
+All 17 todos are complete, the surface is committed, and all verifications passed. Marking the task complete.
+

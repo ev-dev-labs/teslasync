@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure and checking the Apple toolchain availability, while reading the web source component.
+
+Key findings: `apps/apple/` exists, but `xcodebuild` requires full Xcode (only CommandLineTools active). `swift` 6.3.2, `swiftlint`, `swiftformat`, `pwsh` are available. Let me explore the existing Apple app structure and the web source in parallel.
+
+The web source is clear. There's a large established `feature-views/` directory (1243 entries). I must follow the exact sibling pattern. Let me examine the file-naming convention and find a similar status/query-based sibling.
+
+The canonical feature-view structure is 7 files: `.swift` (main view), `.Adapter.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`. Let me study the `AcDcStatsPanel` exemplar completely.
+
+Excellent—this is a deeply-established pattern. Let me read the remaining exemplar files and the shared design/facade infrastructure.
+
+Now let me read the Previews + strings exemplars and locate the shared design tokens/components infrastructure.
+
+The shared tokens/components live under `apps/apple/Sources/`. Let me locate all the shared primitives my component will need and understand how the project includes sources.
+
+Let me read the core shared primitives I'll need: design tokens, glass panel, buttons, fields, tabs, motion, skeletons.
+
+`Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius` are defined elsewhere (likely generated P1/S9 tokens). Let me locate them and read the field/tab/motion/skeleton primitives.
+
+Tokens aren't under `apps/apple/Sources`. They're likely in the shared package. Let me locate them repo-wide.
+
+Tokens are at `apps/design/generated/apple/Tokens.swift`. Let me read it plus the field/tab/motion/skeleton/formatter primitives.
+
+I now have tokens, `TSGlassPanel`, `TSButton`, `TSTextField`. Let me read the tab/segmented control, motion, skeleton, and feedback primitives, plus check how `project.yml` includes feature-view files.
+
+I have all the primitives. Let me confirm how `project.yml` includes feature-view sources/strings, check the shared `LiveConnection`/`LoadableState` seam, and the typography components.
+
+Let me verify whether a full Xcode exists anywhere (so I could run the real gate via `DEVELOPER_DIR`), check the placeholder script, and test whether SwiftUI compiles under CommandLineTools.
+
+`/Applications/Xcode.app` exists — I can drive the real toolchain via `DEVELOPER_DIR`. Let me verify xcodebuild, simulators, and whether the KMP `Shared.xcframework` is prebuilt (the scheme stages it via a preAction script).
+
+Major: Xcode 26.5 + iPhone 16 sim are available, but `Shared.xcframework` is NOT prebuilt — the scheme builds it via Gradle/Kotlin-Native (heavy, possibly network-dependent). My surface doesn't use `import Shared`, so I can verify it independently. Let me read the web number formatter and check sibling conventions for persisted settings, then kick off the project generation.
+
+I have all the infrastructure I need. Let me look at one UserDefaults-backed sibling for the persistence-seam convention, and kick off the project generation + KMP shared-framework build in the background (the long pole) so it progresses while I write.
+
+Project generated. The persistence convention is a `@MainActor protocol …Store` seam with an in-memory test double. Now let me kick off the heavy KMP `Shared.xcframework` build in the background (long pole) and probe its feasibility while I write the surface.
+
+Feasible — Kotlin/Native toolchain is cached and network is up. Let me start the `Shared.xcframework` build in the background, then write the surface while it compiles.
+
+Background Shared build is running. Let me read the lint/format configs and check for any naming collisions before writing the surface.
+
+No collisions. Configs: max width 120, swiftlint strict with opt-in rules. I'll write the 7 files modeled on the AcDc exemplar, then auto-format and lint. Let me start the plan tracking and write the Adapter (pure logic).
+
+Now the Model file (state-holder seam, telemetry, projection, target store, i18n facade).
+
+Now the Views file with all presentational subviews (target editor, metric, loading, empty, error, window selector, caveat).
+
+Now the main surface view that composes everything.
+
+Now the Previews and strings files, and let me check the background build progress.
+
+Let me check the background Shared build progress while I write the tests.
+
+The Shared framework is nearly built (linking release frameworks). The full gate is feasible. Let me write the comprehensive test file.
+
+All 7 files written. Let me auto-format my files, then run swiftformat/swiftlint to verify (scoped to my files first), and validate the strings file.
+
+swiftformat passes (0/6 require formatting). Now swiftlint on my files, plus validate the strings and run the placeholder check.
+
+Placeholder check passes (0 found), strings validate OK. Two swiftlint `file_length` violations to fix (Model 416, Tests 433 — limit 400). First, let me settle the critical question of how `*.Tests.swift` files are wired (app vs test target) by checking the generated project and the pending-verifications note.
+
+Decisive context: `macos-pending-verifications.md` documents the established methodology — each surface is verified green in **isolation** (SwiftPM build + tests under Swift 6, iOS-18/macOS-15 `swiftc -typecheck`, swiftlint/swiftformat/placeholder clean), while the **full-app** `xcodebuild build test` is blocked by *pre-existing, unrelated* collisions (`DashboardWidgetSize` ×15, 116 co-located `*.Tests.swift`, unstaged framework, signing) — confirmed by the pbxproj showing test files compiled into the app target. I'll match that bar exactly.
+
+First, fix my two `file_length` violations by splitting Model→Sources and Tests→ModelTests, and check which shared files are `import Shared`-free for the isolated build.
+
+All needed shared files import only SwiftUI — isolated build is clean. Now let me fix the file lengths by extracting the store/source seams into `SLOTrackingCard.Sources.swift`. Let me view the exact current sections post-format.
+
+Now let me create `SLOTrackingCard.Sources.swift` with the extracted seams and remove them from Model.swift.
+
+Now split the Tests file. Let me view its section boundaries.
+
+Now create `SLOTrackingCard.ModelTests.swift` with the state-holder tests and remove them from Tests.swift.
+
+Now remove the moved sections from Tests.swift (keeping the accessibility tests).
+
+Now re-format and re-lint all my files, and confirm file lengths are under 400.
+
+All 8 files: swiftformat clean, swiftlint --strict clean (0 violations), all under 400 lines. Let me check the Shared framework build and run the repo-wide lint/format gates (as the gate does).
+
+Shared framework built successfully (9m13s). Now the strongest evidence: an isolated SwiftPM build that actually compiles my surface against the real shared components and **runs my tests**. Let me identify the dependency closure (which shared files are `import Shared`-free).
+
+None import `Shared` — the isolated build needs no KMP framework. Let me build an isolated SwiftPM package (Swift 6 language mode) that compiles my surface against the real shared components and **runs my tests**.
+
+Isolated build succeeds under Swift 6 strict concurrency. Now run my tests.
+
+All 43 tests pass under Swift 6 strict concurrency. Now the iOS-18 + macOS-15 SDK `swiftc -typecheck` proof (both deployment targets).
+
+Both SDK typechecks pass. Now the repo-wide lint/format (gate scope) to confirm no regressions.
+
+Repo-wide runs surface **pre-existing violations in sibling files** (not mine): swiftformat flags `ActionBuilder.Previews.swift:48`. Let me identify the one swiftlint violation to confirm it's outside my scope.
+
+Confirmed: the only repo-wide violations are in **sibling files outside my scope** — `dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141` (swiftlint) and `feature-views/ActionBuilder.Previews.swift:48` (swiftformat). My 8 files have zero violations. These are the documented pre-existing blockers.
+
+Now let me capture honest evidence from the real full-app gate. Stage the framework and run the iOS xcodebuild in the background.
+
+My files are in the project. Now run the real iOS gate in the background to capture honest evidence of the pre-existing blockers.
+
+The iOS build failed (exit 65) with the documented systemic blocker: co-located `*.Tests.swift` importing `XCTest` into the app target. Let me extract the full error taxonomy for the honest log.
+
+Build failure is 100% the documented systemic blocker (225 co-located `*.Tests.swift` importing XCTest into the app target) — **zero SLOTrackingCard errors**. Let me capture the macOS gate exit too for an honest log.
+
+Both gates fail with exit 65 on the identical systemic blocker. Let me confirm the macOS cause and that my surface is error-free there too, then update progress.
+
+Both gates fail identically on the systemic pre-existing blocker with zero SLOTrackingCard errors. I have complete, honest evidence. Now let me write the official gate log.
+
+Let me verify git status (ensure only allowed files + log show, and generated artifacts are ignored), then clean up temp files.
+
+Clean: only my 9 surface files + the log are new; the generated `.xcodeproj`/framework are git-ignored; two pre-existing `web/` modifications are unrelated (not mine) and I'll exclude them. Let me commit only my allowed paths.
+
+Exactly my 9 files + log staged. Now commit with an honest message.
+
+Committed cleanly (ab4352c6f, 1918 insertions). Let me clean up temp artifacts and the git-ignored generated project/framework to restore the working tree.
+
+Working tree restored — only the 2 pre-existing unrelated `web/` modifications remain (not mine). My commit is HEAD. Let me finalize the todos.
+
+The SLOTrackingCard surface is complete, verified in isolation, and committed. Let me provide the final summary.
+

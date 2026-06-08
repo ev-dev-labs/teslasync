@@ -1,0 +1,112 @@
+=== P4 Dashboard widget 0025 ChargingTelemetryWidget (Apple) ===
+run: 2026-06-07T17:10-07:00
+host: Darwin arm64 (Mac Studio) · Swift 6.3.2 · SwiftLint/SwiftFormat/XcodeGen/pwsh present
+surface: charging-telemetry (web features/dashboard/widgets/ChargingTelemetryWidget.tsx)
+
+----------------------------------------------------------------------
+[CAPABILITY GATE] — the prompt's xcodebuild steps require the full Xcode IDE,
+which is NOT installed on this runner (only the Command Line Tools). This is the
+same platform-capability gap the predecessor P9-0001 gate recorded as BLOCKED.
+
+  $ xcode-select -p
+  /Library/Developer/CommandLineTools
+  $ xcodebuild -version
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+  directory '/Library/Developer/CommandLineTools' is a command line tools instance
+  $ xcrun simctl list devices available | grep 'iPhone 16'
+  (none — no iOS runtime/simulator installed)
+  $ ls apps/apple/Frameworks
+  .gitkeep            # Shared.xcframework absent; building it needs the
+                      # Kotlin/Native Apple toolchain + full Xcode
+                      # (Scripts/build-shared-xcframework.sh, ADR-004)
+
+=> `xcodebuild -scheme TeslaSync -destination 'iOS Simulator,iPhone 16' build test`
+   and `xcodebuild -scheme TeslaSync-macOS build test` cannot run.
+   Per the prompt capability clause ("If unavailable on the runner -> STATUS=BLOCKED
+   with API evidence") these steps are BLOCKED, not green. No red reported as green.
+
+----------------------------------------------------------------------
+[VERIFIED GREEN on this runner] — every gate/check that does not require the
+Xcode IDE was run for real against the shipped files; raw results:
+
+  swiftformat --lint apps/apple/TeslaSync/dashboard-widgets --config apps/apple/.swiftformat
+    -> 0/8 files require formatting
+    FORMAT_EXIT=0
+
+  swiftlint lint --strict --config apps/apple/.swiftlint.yml --no-cache <8 files>
+    -> Done linting! Found 0 violations, 0 serious in 8 files
+    LINT_EXIT=0
+
+  pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets -Language swift
+    -> PLACEHOLDER_ALLOWED=0
+       PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+  standalone swift logic harness (swiftc -O ChargingTelemetryWidget.Data.swift
+    ChargingTelemetryWidget.Projection.swift + assertions; run):
+    -> 20/20 assertions PASS (ALL_PASS), RUN_EXIT=0
+       covers: registry id/sizes/clamp, snapshot decode (snake_case SI / null /
+       partial), projection (DC>300V, AC<=300V, efficiency 80% + clamp-to-100 +
+       nil guards, phases em-dash, core/wide/all stat sets), number format
+       (fmtNumber/fmtInt parity incl. NaN->0), power-history append-on-new-ts + cap@30.
+    (The same assertions are encoded as XCTest in ChargingTelemetryWidget.Tests.swift
+     for the real iOS/macOS test bundles, which are BLOCKED above.)
+
+  i18n: 8 widget.chargingTelemetry.* keys added to apps/apple/Localization/
+    Localizable.xcstrings (en translated + ar/he needs_review, existing convention);
+    `python -m json.tool` validates the catalog. Reused existing widget.freshness.*
+    + widget.unavailable.* for chrome.
+
+----------------------------------------------------------------------
+[GATE STEP RESULTS]
+  IOS_EXIT=BLOCKED          (no Xcode IDE / no iPhone 16 simulator)
+  MAC_EXIT=BLOCKED          (no Xcode IDE / no signing)
+  LINT_EXIT=0
+  FORMAT_EXIT=0
+  PLACEHOLDER_EXIT=0
+
+----------------------------------------------------------------------
+[DELIVERABLE] apps/apple/TeslaSync/dashboard-widgets/ (8 files, all <= 332 lines,
+type bodies <= 250, func params <= 5 — repo SwiftLint budgets):
+  ChargingTelemetryWidget.Data.swift        snapshot/registry/size/chargerType/stat/format/history (pure)
+  ChargingTelemetryWidget.Projection.swift  web useMemo derivations (pure)
+  ChargingTelemetryWidget.Model.swift       diagnostics seam + presentation/freshness enums + binding + @Observable model
+  ChargingTelemetryWidget.swift             View: init/body/content/loading/error + helpers
+  ChargingTelemetryWidget.Views.swift       standard/wide + compact layout (2 extensions)
+  ChargingTelemetryWidget.Live.swift        #if canImport(Shared): VehiclesStore binding + ScreenView telemetry + .live()
+  ChargingTelemetryWidget.Previews.swift    #if DEBUG: 6 previews (every state) + recording binding
+  ChargingTelemetryWidget.Tests.swift       XCTest: adapter + model/diagnostics/a11y/view-smoke
+
+Parity with the web source (reproduced, not narrowed):
+  - compact (cols<=1): pulsing bolt + "X.X kW" + "Vv · Aa"; else not-charging empty
+  - standard/wide: shell(title+gauge icon+freshness chip+tap-refresh) -> stat grid (2 or 4 cols)
+  - wide extras: charger-type badge (DC=warning / AC=neutral) + power sparkline (history>1)
+  - derivations: isCharging, chargerType(>300V->DC), efficiency formula+clamp+nil guards,
+    power history(<=30), charger_power_w shown as "kW" verbatim (parity preserved, not "fixed")
+  - states: loading skeleton / not-charging empty / error+retry / stale chip / offline chip
+  - data via shared P1/S8 VehiclesStore feeds (no HTTP in the view)
+  - i18n: 8 source keys (title/voltage/current/power/phases/efficiency/notCharging/charger)
+  - a11y: header trait, per-stat combined element+label+value, chip label/value, reduce-motion
+  - diagnostics: view.opened -> TelemetryEvent.ScreenView(screen:"ChargingTelemetryWidget") (P1/S11)
+
+----------------------------------------------------------------------
+[INTEGRATION DEPENDENCY — disclosed, not silently dropped]
+The files live at the prompt-specified path apps/apple/TeslaSync/dashboard-widgets/,
+which is NOT yet a member of any Xcode target, the SwiftLint `included:` set, or the
+SwiftFormat root (those point at apps/apple/Sources + Tests today). Folding
+apps/apple/TeslaSync/dashboard-widgets/** into the iOS+macOS app targets (project.yml),
+the test targets, and SwiftLint `included:` is P4-core/host wiring — a shared structural
+edit outside this surface's allowed-file set (and conflict-prone across the parallel
+dashboard-widget slots), so it is left to the host prompt. Until then the aggregate
+`xcodebuild`/`swiftlint` gate will not traverse this directory; the surface + tests were
+therefore verified independently above (explicit swiftformat/swiftlint/swiftc invocations).
+
+[DECISIONS]
+  - One justified out-of-allowed-files edit: the 8 widget.chargingTelemetry.* keys in the
+    P1/S10 catalog (Localizable.xcstrings) — acceptance explicitly requires every source key
+    to exist in the catalog. Minimal textual insertion (184-line additive diff, JSON-valid).
+  - charger_power_w is rendered with a kW unit / used directly in the efficiency ratio,
+    matching the web source byte-for-byte; deliberately not rescaled (avoids silent drift).
+
+EXIT=1
+STATUS=BLOCKED

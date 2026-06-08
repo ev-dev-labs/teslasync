@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+The Apple toolchain is available. Let me read the web source and explore the Apple app structure.
+
+Substantial existing codebase with many native widgets already built. Let me study the patterns from similar existing widgets and the web shared components.
+
+`SentryEventLogWidget` is the closest analog (event-log feed). Let me read its full native implementation plus the web shared components and supporting libs.
+
+Excellent pattern match. Let me read the remaining SentryEventLogWidget files and the web supporting libs.
+
+Now let me read the Tests file, web supporting libs, and locate the shared design tokens.
+
+Now let me read the web data hook, the severity tokens, drill-through helper, and locate the shared Apple design primitives.
+
+Each widget file appears to redefine `DashboardWidgetSize`. I need to understand the target/compilation model. Let me examine project.yml and how sources are included.
+
+Now I understand the target structure — `TeslaSync/dashboard-widgets` compiles into the app. Many widgets each redefine `DashboardWidgetSize`, but `SentryEventLogWidget` (the clean reference) does not. Let me find the canonical shared definitions and check build tooling availability.
+
+Build tooling exists (xcodegen) but `Shared.xcframework` needs the Kotlin/Gradle toolchain. There are 15 duplicate `DashboardWidgetSize` definitions — a parallel-dev artifact. Let me locate the canonical shared design tokens that the clean reference (SentryEventLogWidget) relies on.
+
+Design tokens aren't in the obvious spots. They're likely in the generated DesignTokens dir. Let me locate them precisely.
+
+Found canonical design tokens at `apps/design/generated/apple/Tokens.swift`. Now let me read the token definitions, the shared widget-size shape, and the web data layer (hook + Alert type + severity normalization).
+
+Now let me read the Alert type, severity normalization, the drill-through helper, and the canonical widget-size/registration shape plus the TSSkeleton/TSTone primitives.
+
+Let me read the drill-through mapping, the WidgetShell, widget types, and the canonical Swift widget-size/registration + primitives.
+
+Let me read the canonical widget-size/registration shape and the shared `TSTone`/`TSSkeleton` primitives so my widget conforms exactly to the reference contract.
+
+I now understand both the reference contract and the data model. Let me check the lint/format configs, the placeholder checker, and whether PowerShell is available for the gate.
+
+I have the exact registration contract. Let me read the placeholder checker patterns so my code won't trip it, then start building.
+
+Let me see how the placeholder checker resolves the `-Path` prefix (it's given a file stem, not a dir).
+
+I have everything I need: the reference architecture (SentryEventLogWidget's 7-file layout), the canonical `DashboardWidgetRegistration` contract, design tokens, and the full web data model (alerts hook, severity normalization, drill-through map). Tooling (xcodegen, swiftlint, swiftformat, pwsh) is present; the KMP `Shared.xcframework` and pre-existing duplicate type definitions across the merged slot are the build risks I'll verify honestly.
+
+Let me set up tracking and start building.
+
+Now I'll write the Adapter (the pure, testable projection core).
+
+Now the Model (state-holder seam, DTO, registry, i18n facade).
+
+Now the main surface view.
+
+Now the presentational subviews.
+
+Now the previews for every state.
+
+Now the comprehensive test suite.
+
+Now the i18n catalog.
+
+All 7 files created. Now the verification phase. Let me run swiftformat, swiftlint, and the placeholder check on my files.
+
+Minor formatting. Let me auto-fix with swiftformat (ecosystem tool) and re-lint.
+
+swiftformat passes. Now swiftlint --strict on my files.
+
+One swiftlint violation — `previewAlerts` body too long. Let me trim one sample (all four severities still covered) and re-check.
+
+Format + lint both pass with 0 violations on my files. Now the placeholder gate — I'll run the real checker against an isolated copy of my files (the tool only scans `.swift`).
+
+Placeholder gate passes (COUNT=0, EXIT=0). Now I'll prove my adapter/model/drill-through/registry logic actually compiles and the tests pass, via an isolated SwiftPM package (the real View files need the full app's tokens, so I stub the shared types the logic depends on).
+
+The isolated compile surfaced a **real bug**: `AlertSeverityCatalog.Visual` is `Sendable` but held `tone: TSTone`, and the shared `TSTone` isn't `Sendable` — under the app's Swift 6 strict-concurrency mode that's a compile error. `tone` is unused by the views (they use `dotColor`/`systemImage`). I'll drop it. Let me fix the Adapter and the corresponding test.
+
+Now re-run the isolated tests cleanly with `xcrun` (for XCTest) and TSTone removed from stubs.
+
+The `swift test` can't find XCTest (SwiftPM/toolchain limitation here), and the Model module fails to emit without showing why. Let me get the real diagnostic by building just the logic target with full output.
+
+The logic builds cleanly (the TSTone fix resolved the emit-module failure). SwiftPM can't locate XCTest on this host, so to get genuine **runtime** verification I'll mirror the XCTest assertions in a small executable that links the compiled logic and runs every check.
+
+All 62 runtime checks pass (FAILURES=0) — adapter, builder, drill-through, layout, model phases, telemetry, registry, and accessibility logic are verified. Let me re-lint my edited files and probe the gate environment (simulators, xcodegen, the KMP prebuild).
+
+Key finding: re-lint passes (format 0/6, lint 0 violations). But **`xcodebuild` requires full Xcode** — the active developer dir is `CommandLineTools`, and there are no iOS simulators. Before declaring the build gate blocked, let me check whether a full Xcode is installed anywhere I could switch to.
+
+There's a full `/Applications/Xcode.app` — I can point to it via `DEVELOPER_DIR` without sudo. Let me verify and check simulators.
+
+Excellent — Xcode 26.5 + a booted iPhone 16 simulator are available via `DEVELOPER_DIR`. The build gate is runnable. First, let me prove my **entire widget (views + logic)** type-checks against the real design tokens and the iOS SDK, then attempt the full gate.
+
+My **entire widget type-checks cleanly** against the real design tokens + iOS 18 SDK (TYPECHECK_EXIT=0), previews included. Now let me run the actual gate. First generate the project, then attempt the build to capture real results.
+
+Project generates cleanly and the `TeslaSync` scheme exists. Now let me run the actual gate build (time-boxed) to capture real results. I'll start it in the background and monitor.
+
+Build running in the background. Let me monitor its progress.
+
+The Gradle KMP `Shared.xcframework` prebuild is actually progressing (cached). It will then compile the app target. Let me keep monitoring for the compile phase.
+
+Gradle produced the `Shared.xcframework`. Now it's finishing the release variant before compiling the app target. Let me continue monitoring for the Swift compile phase.
+
+The KMP release-framework link is slow (infrastructure, not my widget). While it grinds, let me gather concrete evidence of the pre-existing duplicate-type pollution in the merged slot and confirm my widget doesn't add to it.
+
+Confirmed: **15 sibling widget files** define `DashboardWidgetSize` (13 define `DashboardWidgetRegistration`) in the merged-slot target — my `AlertFeedWidget` correctly adds none. The full-target compile is pre-broken by sibling duplicates, independent of my widget. Let me check whether the build has reached the app-compile phase to capture the concrete error.
+
+Decisive evidence: the iOS gate build **failed (IOS_EXIT=65)** — but at the app-target compile stage, on a **sibling** file: `feature-views/AIRestorePanel.Tests.swift: error: unable to resolve module dependency: 'XCTest'`. The merged slot compiles every co-located `*.Tests.swift` into the app target (which doesn't link XCTest), and separately has 15 duplicate `DashboardWidgetSize` definitions — both pre-existing, neither caused by my widget.
+
+Let me capture the macOS result and the gate-scope lint numbers.
+
+Whole-tree swiftformat fails (sibling noise) but flags **0** of my files. Placeholder gate passes. Let me see which sibling trips swiftformat, check the macOS build, and run gate-scope swiftlint.
+
+The macOS build also failed identically (MAC_EXIT=65). The whole-tree swiftformat issue is a sibling (`ActionBuilder.Previews.swift`). Let me confirm the single whole-tree swiftlint violation isn't mine and capture the macOS failure reason.
+
+Complete evidence gathered. Every gate-scope failure is sibling/environment-caused; **none** of my 6 files have any lint/format/placeholder violation, and my widget type-checks against the real tokens + iOS SDK with 62/62 runtime logic checks passing. Let me confirm the log directory and `.xcodeproj` ignore status, then write the honest gate log.
+
+Everything is confirmed: logs dir exists, `.xcodeproj` is gitignored, my 7 files are staged-ready, and the first build failure is a sibling file. Now I'll write the honest, evidence-rich gate log.
+
+Now let me clean up temp artifacts and commit only my widget files plus the log (the slot has unrelated pre-existing changes I must not touch).
+
+Staged set is exactly my 7 widget files + the log. Committing.
+
+Committed (HEAD `3d8016eb1`). Let me run a final confirmation lint/format pass on the committed files and close out the todos.
+
+All tasks complete and verified. Final lint/format confirmation on the committed files: **0/6 require formatting**, **0 swiftlint violations**.
+

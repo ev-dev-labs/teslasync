@@ -1,0 +1,251 @@
+================================================================================
+P4 · Feature view · 0264 — SignalCatalogPanel (Apple)
+Run: 2026-06-08T02:38-0700   Host: Darwin arm64 (macOS 26.x)   Slot: slot-151
+Prompt: P4/feature-views/0264 — Feature view: SignalCatalogPanel
+Web source (spec): web/src/features/telemetry/components/SignalCatalogPanel.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (ADR-012; 0009/0096 precedent).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iphonesimulator26.5 (iOS 18.0 deploy target)         OK
+  macOS SDK .................. macosx26.5 (macOS 15.0 deploy target)                OK
+  iPhone 16 simulator ........ present (83717DEE-70A3-4325-AA61-CBDDD3140989)       OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                    OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                  OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                           OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  surface in project.yml ..... REGISTERED (feature-views/ is an app-target source;
+                               48 pbxproj refs after `xcodegen generate`)           OK
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles below.
+  The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT
+  apply — the surface is authored, host-compiled (both SDKs), and host-tested for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/SignalCatalogPanel.*) ===
+  SignalCatalogPanel.Adapter.swift   363  pure core — int/staleness/dateTime/relative
+                                          formatters (numberFormat.ts + dateFormat.ts) +
+                                          ISO8601 parse + staleness ladder (active/aging/
+                                          stale/never) + row build + search/filter/sort +
+                                          counts + a11y row label
+  SignalCatalogPanel.Model.swift     345  P1/S8 SignalCatalogSource seam → @Observable
+                                          SignalCatalogModel + P1/S11 telemetry seam +
+                                          P1/S10 facade + projection (loading/empty/error/
+                                          data) + derived visibleRows + optional selection
+                                          (max cap) + in-memory source
+  SignalCatalogPanel.swift           172  SignalCatalogPanel surface — summary + glass
+                                          panel header (title + "Refreshes every 5s" +
+                                          freshness chip + refresh) + connectivity banner +
+                                          content state switch; onAppear view.opened
+  SignalCatalogPanel.Views.swift     244  summary cards (TSStatCard grid) + search field +
+                                          filter/sort segmented controls + status chip
+                                          (web Badge dot) + loading/message/error chrome +
+                                          "Last refreshed" footer
+  SignalCatalogPanel.Table.swift     166  results gate + TSDataTable<SignalRow> 5 columns
+                                          (status/signal/value/lastUpdated/timeSince) +
+                                          optional add/remove selection column
+  SignalCatalogPanel.Previews.swift  112  #if DEBUG — one per state (data/selection/empty/
+                                          loading/error/stale/offline)
+  SignalCatalogPanel.Tests.swift     388  XCTest — formatters + ISO parse + ladder + rows +
+                                          filter/sort + counts + projection + model wiring +
+                                          telemetry + freshness + selection + a11y (40 funcs)
+  SignalCatalogPanel.strings          63  P1/S10 catalog contribution (39 keys: 21 web
+                                          source + 2 selection + 4 status + 12 chrome/a11y)
+  Every file <= 400 lines (house file_length). Total 1853 lines across 8 files
+  (1790 Swift + 63 strings). Shared TSStatCard/TSTextField/TSDataTable/TSColumn/TSSkeleton/
+  TSGlassPanel/TSCard/TSButton/TSFadeIn are REUSED from the real component library (no
+  redeclaration → no duplicate symbols when compiled in the app module).
+
+=== PARITY (vs web SignalCatalogPanel.tsx) ===
+  Data sources -> useTelemetry/useSignalGaps + useTranslation. The web wraps
+    `useSignalGaps(vehicleId)` (GET /signals/{id}/live, refetch every 5 s) + local
+    search/filter/sort `useState`. The native surface mirrors the split: the P1/S8
+    `SignalCatalogSource` delivers the coalesced live snapshot (the signal entries +
+    isLoading + error + connection + dataUpdatedAt); the view performs NO HTTP. The
+    search text / filter pill / sort mode are the view-model's own interactive state.
+  Projection -> 1:1 port of the web's two `useMemo` blocks: (1) rows — staleness =
+    ts ? (now - ts)/1000 : Infinity; category = !ts ? never : staleness > 300 ? stale :
+    active; value ?? "—". (2) filter+sort — case-insensitive name search, the all/stale
+    (stale|never)/active pill, and the staleness(desc)/alpha/category({never:0,stale:1,
+    active:2}) comparators. Plus the fine `getCatalogStalenessStyle` ladder
+    (Active<30 · Aging<300 · Stale>=300 · Never received) for the per-row badge, and the
+    summary counts over the FULL set. Verified by executed XCTest.
+  Composition -> the four `StatCard`s (Total/Active(<30s)/Stale(>5min)/Never Received),
+    the glass panel with its "Refreshes every 5s" header, the `Input` search +
+    filter/sort selectors (web ghost-button pills -> Apple-idiomatic segmented controls,
+    same modes+labels), the `DataTable` columns (status badge/signal mono/value mono/
+    lastUpdated/timeSince in level tone), the optional `selection` add/remove column
+    (Plus/X + max cap), and the `dataUpdatedAt` "Last refreshed: <relative>" footer.
+  Shared components -> @/components/ui -> TSGlassPanel/TSCard, TSDataTable/TSColumn (web
+    DataTable), TSTextField (web Input), TSButton (web Button), a custom status chip +
+    select button (mirror TSBadge/Button tokens, taking the runtime facade strings the
+    LocalizedStringKey-only TSBadge can't express); @/components/data-display -> TSStatCard
+    (web StatCard); @/components/feedback -> TSSkeleton (web Skeleton);
+    @/components/motion -> TSFadeIn (web FadeIn). Compiled against the REAL apps/apple
+    component library in the iOS+macOS typechecks below. Recharts -> none / Leaflet -> none.
+  States (all render) -> loading (8 TSSkeleton rows) · empty ("No signal data available")
+    · data (table; over-filtered -> inline "No signals match current filters") · error
+    (retry; the P4 leaf QueryError peer — the web leaf polls and has no error chrome, so
+    an upstream failure surfaces here) · stale / offline (the orthogonal `connection`
+    axis -> header freshness chip + banner + one-shot auto-refresh on the stale
+    transition, fitting this surface's live-polling nature, per the AcDcStatsPanel/0096
+    P4 leaf contract). Each state has a #if DEBUG preview and is projection-unit-tested.
+  i18n -> all 21 web source keys resolve through the P1/S10 facade with the web
+    t(key,default) fallback (signalGap.status/signal/lastValue/lastUpdated/timeSince/
+    totalSignals/active/stale/neverReceived/refreshInterval/filterPlaceholder/filterLabel/
+    all/staleOnly/activeOnly/mostStale/az/category/noMatch/noData/lastRefreshed), plus the
+    optional-selection add/remove keys (signalCatalog.addSignal/removeSignal), the 4 status
+    words the web hardcodes in getCatalogStalenessStyle, and 12 native chrome/a11y keys —
+    ALL present in SignalCatalogPanel.strings (39 keys). No English literals in native
+    code (Text(verbatim:) over the facade).
+  a11y -> the search field, both segmented controls, the refresh button, the retry button,
+    the status chip, and the per-row select button each carry an accessibilityLabel; the
+    select button carries .isSelected; the loading state is one labeled element;
+    SignalCatalogAccessibility.rowLabel is a tested combined-value seam; Dynamic Type via
+    tokens; Reduce Motion gates the TSSkeleton/TSFadeIn motion.
+  Telemetry -> SignalCatalogModel.start() emits viewOpened(surface:"SignalCatalogPanel")
+    (P1/S11). Asserted by a spy test (fires exactly once across repeated start()).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (the 5 shipped non-preview files compiled
+    together with the REAL apps/apple component closure — generated Tokens + TSDesign +
+    TSMaterial + Typography + Badges + Buttons + Cards + DataTable + Fields + Metrics +
+    Skeletons + Motion; none import the Shared xcframework):
+      xcrun swiftc -typecheck -sdk <iphonesimulator26.5> -target arm64-apple-ios18.0-simulator \
+        -swift-version 6  <12-file component closure> <surface/Adapter/Model/Views/Table>
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swiftc -typecheck — DEBUG previews (-D DEBUG; the 6 surface files + the real closure;
+    the surface's 7 #Preview blocks resolve against the real components, no shims):
+      PREVIEWS_TYPECHECK_EXIT=0                                                     OK
+[4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained
+    SwiftPM harness (the real production Adapter + Model + Tests as module `TeslaSync`,
+    plus a 1-line throwaway surfaceSlug shim for the SwiftUI View excluded from the
+    logic-only target), Swift 6 language mode:
+      Executed 40 tests, with 0 failures (0 unexpected) in 0.18 s
+        SignalCatalogFormatNumberTests    6/6  (int grouping + non-finite→0 + overload;
+                                               staleness s/m/h-m + non-finite→dash)
+        SignalCatalogFormatDateTests      6/6  (dateTime dash/components; relative
+                                               just-now/m/h/d/date-fallback/dash; ISO parse)
+        SignalStalenessLevelTests         2/2  (the active/aging/stale/never ladder + labels)
+        SignalCatalogRowsTests            2/2  (staleness/category/value map; row level)
+        SignalCatalogFilterSortTests      6/6  (search; filter stale=stale|never, active;
+                                               sort staleness/alpha/category)
+        SignalCatalogCountsTests          2/2  (counts over full set; zero)
+        SignalCatalogProjectionTests      4/4  (error/loading/empty/data precedence)
+        SignalCatalogModelTests          10/10 (start+telemetry-once; loading; push;
+                                               visibleRows search/filter/sort; stale
+                                               auto-refresh one-shot; offline no-refresh;
+                                               manual refresh + stop re-arm; selection cap;
+                                               selection off without config; surfaceSlug)
+        SignalCatalogAccessibilityTests   2/2  (row label joins; selection label interpolates)
+      SWIFT_TEST_EXIT=0                                                             OK
+[5] swiftlint --strict on the 7 surface .swift files (the repo .swiftlint.yml DOES list
+    TeslaSync/feature-views, but the bare gate `swiftlint --strict` is RED at baseline on
+    a PRE-EXISTING violation outside this prompt's scope —
+    dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length — so the
+    7 surface files are linted by explicit path here):
+      Done linting! Found 0 violations, 0 serious in 7 files.
+      LINT_EXIT=0                                                                   OK
+[6] swiftformat --lint on the 7 surface .swift files (config: apps/apple/.swiftformat):
+      0/7 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+[7] check-placeholders (ADR-011 stub gate; pwsh) on the surface files:
+      ./apps/tools/check-placeholders.ps1 -Path <surface>            (default -Language all)
+      PLACEHOLDER_ALLOWED=1   PLACEHOLDER_COUNT=0
+      (the single ALLOWED is the web i18n key name "signalGap.filterPlaceholder" — the
+       string trips the literal "Placeholder" stub pattern; opted out inline with
+       `// parity:allow i18n key`, a required-reason marker, NOT a stub.)
+      PLACEHOLDER_EXIT=0                                                            OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host):
+      - `xcodegen generate` -> XCODEGEN_EXIT=0 (project + targets + schemes generate cleanly).
+      - `grep -c SignalCatalogPanel TeslaSync.xcodeproj/project.pbxproj` -> 48 (the surface
+        IS registered into the app targets — project.yml sources TeslaSync/feature-views).
+      - `xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO` ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **   MAC_BUILD_EXIT=65
+    Why deferred (a single code-unrelated, repo-wide reason — not a defect in this surface;
+    identical disposition to the 0009/0096 predecessor surfaces, Honesty rule 7):
+      Shared.xcframework not staged: BOTH app targets link the KMP core; staging it needs a
+      Kotlin/Native gradle build (apps/shared/gradlew :core:assembleSharedXCFramework). It is
+      independent of this UI surface; the Frameworks/ dir holds only .gitkeep and the concrete
+      missing-framework error is captured above. Staging the framework / editing project.yml
+      is OUTSIDE this prompt's allowed files (SignalCatalogPanel.* + this log).
+    XCTest under Xcode runs in the TeslaSync(/-macOS) test target; here the SAME tests are
+    PROVEN GREEN (40/40) by the executed SwiftPM harness in step [4], and the surface
+    compiles against BOTH the iOS 18 and macOS 15 SDKs in steps [1]/[2].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/data+no-match) + the P4 leaf states
+      (error/stale/offline) — implemented; each has a #if DEBUG preview; projection
+      unit-tested + executed green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (SignalCatalogSource->Model);
+      no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — all 21 source keys (+ the 2
+      optional-selection keys) present in the strings (39 keys total).
+  [x] Accessibility labels on every interactive element (search, 2 segmented controls,
+      refresh, retry, status chip, per-row select button).
+  [x] Tests: adapter (formatters/parse/ladder) + processing (rows/filter/sort/counts) +
+      projection per-state + model wiring/telemetry/freshness/selection + a11y — 40 funcs,
+      EXECUTED 40/40 green.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0
+      (1 required-reason opt-out for the web i18n key name).
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured
+      real exit-65 evidence (the SwiftUI/Charts/MapKit capability IS present and proven, so
+      the capability-BLOCKED path does not apply).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with the real
+                       MAC_BUILD_EXIT=65 missing-XCFramework error captured; every "OK" is a
+                       command actually run with its real exit code (incl. a 40/40 executed
+                       XCTest run and iOS+macOS SDK compiles).
+  2  No scope narrowing: implemented ALL web regions/columns/states + the optional selection
+                       prop + i18n + a11y + telemetry.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (A shim is used
+                       ONLY in the throwaway SwiftPM test harness, never in shipped files.)
+  5  No parity shortcuts: faithful port of both useMemo blocks + getCatalogStalenessStyle +
+                       formatStaleness + fmtInt/formatDateTime/formatRelative + every column
+                       + the selection add/remove workflow.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT stage Shared.xcframework or edit project.yml/the shared
+                       Localizable.xcstrings (all outside the allowed files); strings shipped
+                       as the per-surface table, exactly like 0009/0096.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED,
+                       not failed.
+  9  No silent drift   : changes confined to the allowed SignalCatalogPanel.* files + this
+                       log. Pre-existing unstaged edits to sibling AIUsageCard.* (another
+                       slot's work) were left untouched and NOT staged.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native SignalCatalogPanel shipped at parity with the web source: the
+  pure staleness/format core + the search/filter/sort/counts pipeline (executed-green XCTest,
+  40/40), the P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, every web state plus
+  the P4 leaf freshness states, all 21 web i18n keys + the optional selection workflow, and
+  a11y labels on every control. All host-runnable gates pass AND the surface compiles against
+  BOTH the iOS 18 simulator and macOS 15 SDKs with the real Xcode 26 toolchain under Swift 6
+  strict concurrency. The Xcode app build/test is DEFERRED to the downstream integration/
+  signed runner (the KMP Shared.xcframework is not staged — a repo-wide infra dependency
+  outside this prompt's allowed files), matching the 0009/0096 "code-complete + DEFERRED
+  Xcode gate" precedent (ADR-012). The surface IS registered in the generated project
+  (48 pbxproj refs), so it builds with the app once the framework is staged downstream.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/SignalCatalogPanel.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0264-SignalCatalogPanel.log
+  git commit -m "feat(apps/apple/feature-views): add SignalCatalogPanel surface (P4)"
+
+EXIT=0
+STATUS=DONE

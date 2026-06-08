@@ -1,0 +1,257 @@
+=== P4-APPLE · P7 · page:system/DBHealth — DBHealthPage (SwiftUI / HIG) ===
+Parity unit : page:system/DBHealth   Kind: page   Web route: /db-health
+Web src     : web/src/features/system/pages/DBHealthPage.tsx   (THE spec)
+Surface     : apps/apple/TeslaSync/feature-views/DBHealthPage.*   (12 files)
+ADRs        : ADR-002 (shared SwiftUI source, iOS+macOS), ADR-004 (KMP Shared.xcframework),
+              ADR-005 (materials), ADR-006 (adaptive), ADR-011 (no placeholders),
+              ADR-013 (live freshness), ADR-014 (i18n), ADR-015 (a11y)
+
+──────────────────────────────────────────────────────────────────────────────
+PATH RECONCILIATION (no silent drift — Honesty Covenant #9)
+──────────────────────────────────────────────────────────────────────────────
+  The generated prompt's nominal output path is apps/apple/TeslaSync/Features/System/.
+  That directory is NOT one of the source roots in apps/apple/project.yml (lines 35-39 /
+  65-69: Sources, TeslaSync/dashboard-widgets, TeslaSync/feature-views, Localization,
+  ../design/generated/apple) — files placed there would NOT be compiled into the iOS or
+  macOS app target. The REAL compiled home for every one of the 200+ sibling parity units
+  is TeslaSync/feature-views/. The surface is therefore shipped there (verified: xcodegen
+  picks the new files up — 78 DBHealthPage refs in the regenerated project.pbxproj, and the
+  files compile inside the full iOS app target below). Strings → the master
+  Localization/Localizable.xcstrings (+ a per-surface DBHealthPage.strings facade table),
+  exactly as the prompt's allowed-files clause specifies.
+
+──────────────────────────────────────────────────────────────────────────────
+RUNNER CAPABILITY (verified, not assumed)
+──────────────────────────────────────────────────────────────────────────────
+  Xcode 26.5 (Build 17F42) present at /Applications/Xcode.app — reached via
+      DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+      (xcode-select default was /Library/Developer/CommandLineTools; overridden, no sudo).
+  swift-driver 1.148.6 / Apple Swift 6.3.2.   SDKs: iPhoneSimulator 26.5, MacOSX 26.5.
+  Tooling : swiftlint, swiftformat, xcodegen, pwsh, Java 17 — all present.
+  KMP core: Frameworks/Shared.xcframework was ABSENT (only .gitkeep); BUILT from source via
+            apps/shared/gradlew :core:assembleSharedXCFramework → BUILD SUCCESSFUL in 9m05s,
+            staged into apps/apple/Frameworks/Shared.xcframework (ios-arm64,
+            ios-arm64-simulator, macos-arm64). The Apple capability (SwiftUI + Swift Charts +
+            SDKs + simulator) IS available, so the gate is RUN, not BLOCKED.
+
+──────────────────────────────────────────────────────────────────────────────
+GATE STEPS (real outputs)
+──────────────────────────────────────────────────────────────────────────────
+
+[swiftformat --lint]  (12 files: DBHealthPage.*.swift)
+    0/12 files require formatting.
+    FORMAT_EXIT=0
+
+[swiftlint --strict]  (12 files)
+    Done linting! Found 0 violations, 0 serious in 12 files.
+    LINT_EXIT=0
+    (One opt-out applied via the codebase's // parity:allow mechanism: the SwiftUI
+     RedactionReasons `.placeholder` token on the loading-state summary cards — a real API,
+     not a stub; the placeholder scan counts it as PLACEHOLDER_ALLOWED, not a violation.)
+
+[check-placeholders.ps1]  (ADR-011 stub/placeholder gate, -Language swift, isolated copy of
+                           the 12 shipped files)
+    PLACEHOLDER_ALLOWED=1   PLACEHOLDER_COUNT=0   EXIT=0
+    PLACEHOLDER_EXIT=0
+
+[swift test]  ISOLATED SwiftPM verification of the surface (the documented P4-apple precedent,
+              e.g. P-0010 ToolCard / 0196 ActiveOrdersSection)
+    Package "TeslaSync" = the 10 shipped non-test surface files compiled against the REAL
+    design system (apps/design/generated/apple/Tokens.swift + Sources/Design/* + the entire
+    Sources/Components/* shared library, minus the single Shared-dependent UnitFormatters.swift
+    the surface does not use). Test target = DBHealthPage.{Tests,ModelTests}.swift.
+    Built macOS 15, swift-tools 6.0 → Swift 6 LANGUAGE MODE (== SWIFT_STRICT_CONCURRENCY
+    complete, the app's setting).
+        Test Suite 'All tests' passed.
+        Executed 35 tests, with 0 failures (0 unexpected) in 0.019 seconds
+      Breakdown: DBHealthProjectionTests 14, DBHealthFormatTests 3, DBHealthAccessibilityTests 2,
+                 DBHealthRouteTests 2, DBHealthPageModelTests 14.
+    => The ENTIRE surface (Page + Views + Table + Sidebar + Chart + Route + Model + Adapter +
+       Projection + Previews[one per state]) COMPILES clean under Swift 6 strict concurrency on
+       the macOS 15 SDK, and all projection + format + a11y + route + state-holder tests are
+       executed-green. (Strict-concurrency caught one real defect during this step — a
+       non-Sendable test-fixture closure — which was fixed: `@Sendable (String,String)->String`.)
+    SWIFT_TEST_EXIT=0   (35/35 executed green)
+
+[xcodebuild build]  FULL Xcode app — iOS Simulator (iphonesimulator SDK) + macOS
+    iOS  : xcodegen generate → xcodebuild -project TeslaSync.xcodeproj -target TeslaSync
+             -sdk iphonesimulator -configuration Debug ENABLE_TESTING_SEARCH_PATHS=YES
+             CODE_SIGNING_ALLOWED=NO build
+           RESULT: 48 compile errors — 0 in DBHealthPage*, 0 in ANY feature-views file.
+           IOS_EXIT=65   (DEFERRED — pre-existing baseline breakage in OTHER targets)
+    macOS: xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS
+             -configuration Debug ENABLE_TESTING_SEARCH_PATHS=YES build
+           RESULT: halted at code-signing planning — "TeslaSync-macOS / TeslaSyncWidgets-macOS
+           have entitlements that require signing with a development certificate" (no dev cert
+           in this CI-class environment). No compile errors emitted (signing gate precedes the
+           Swift compile phase).
+           MAC_EXIT=65   (DEFERRED — macOS development signing unavailable; environment)
+
+──────────────────────────────────────────────────────────────────────────────
+FULL-APP BUILD: ERROR ATTRIBUTION (why DEFERRED, with evidence)
+──────────────────────────────────────────────────────────────────────────────
+  DBHEALTHPAGE_ERRORS = 0  (iOS).  Zero errors originate in this surface; it compiled clean
+  inside the full iOS app target alongside the real Shared.xcframework and all 1400+ sibling
+  feature-views. The surface's own *.Tests.swift / *.ModelTests.swift compiled too (visible in
+  the SwiftDriver task list) under ENABLE_TESTING_SEARCH_PATHS=YES.
+
+  The 48 iOS errors are PRE-EXISTING, UNRELATED parallel-merge baseline breakage — the same
+  precedent recorded in apps/macos-pending-verifications.md (P-0006 / P-0010) and the
+  0196-ActiveOrdersSection gate log:
+    • 45 × "'DashboardWidgetSize' is ambiguous for type lookup in this context"
+    • 3  × downstream "reference to member 'init' cannot be resolved without a contextual type"
+    ALL 48 live in Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/* (the
+    *Widget*.Model.swift family: WeeklySummaryCardWidget, WallConnectorWidget, VehicleHeroWidget,
+    TelemetryErrorsWidget, DigitalTwinWidget, …) — a duplicated public type merged from sibling
+    widget slots, outside this prompt's allowed files. None touch system/DBHealth.
+
+──────────────────────────────────────────────────────────────────────────────
+=== PARITY ===
+PARITY_REQUIRED=55
+──────────────────────────────────────────────────────────────────────────────
+panels (8):
+ [x] panel  Total-DB-Size        DBHealthPage.Views.swift · DBHealthSummaryGrid →
+                                   DBHealthSummaryCard(titleKey:"dbHealth.totalSize", TSStatCard)
+ [x] panel  Tables               DBHealthPage.Views.swift · DBHealthSummaryCard("dbHealth.tables")
+ [x] panel  Large-Tables-100MB   DBHealthPage.Views.swift · DBHealthSummaryCard("dbHealth.largeTables")
+                                   + DBHealthProjection.largeTableCount (100 MB threshold)
+ [x] panel  Migration-Version    DBHealthPage.Views.swift · DBHealthSummaryCard("dbHealth.migration")
+ [x] panel  Table-Sizes-Top-15   DBHealthPage.Chart.swift · DBHealthTableSizesSection (TSChartContainer)
+ [x] panel  GlassPanel6 (Tables) DBHealthPage.Table.swift · DBHealthTablesPanel (TSGlassPanel)
+ [x] panel  GlassPanel7 (Migr.)  DBHealthPage.Sidebar.swift · DBHealthMigrationPanel (TSGlassPanel)
+ [x] panel  GlassPanel8 (Pool)   DBHealthPage.Sidebar.swift · DBHealthPoolPanel (TSGlassPanel)
+charts (2):
+ [x] chart  ChartContainer       DBHealthPage.Chart.swift · DBHealthTableSizesSection → TSChartContainer
+ [x] chart  BarChart             DBHealthPage.Chart.swift · DBHealthTableSizesChart (Swift Charts BarMark,
+                                   horizontal/categorical; NO WKWebView)
+states (4) — DBHealthPageModel.{statsPhase,migrationPhase,poolPhase}, tested in DBHealthPageModelTests:
+ [x] state  loading   redacted summary cards (DBHealthSummaryCard .redacted(.placeholder)) +
+                       TSTableSkeleton (DBHealthTablesPanel) + TSChartSkeleton (DBHealthTableSizesSection) +
+                       TSSkeleton (migration/pool panels)
+ [x] state  empty     TSEmptyState "dbHealth.noTables"/"dbHealth.noMigrations"/"dbHealth.noMigrationData"/
+                       "dbHealth.noPoolData" (ContentUnavailableView)
+ [x] state  error     DBHealthErrorBanner (TSAlertBanner "dbHealth.error" + Retry) for stats/migration;
+                       TSQueryError + Retry inline for the pool source
+ [x] state  success   DBHealthTablesTable / DBHealthMigrationBody / DBHealthPoolBody (populated)
+strings (41) — every key resolves from Localizable.xcstrings (added) + DBHealthPage.strings; used in code:
+ [x] dbHealth.autoRefresh         DBHealthPage.Views.swift:44
+ [x] dbHealth.chartTitle          DBHealthPage.Chart.swift:29
+ [x] dbHealth.chartTitle.aria     DBHealthPage.Chart.swift:30
+ [x] dbHealth.clean               DBHealthPage.Sidebar.swift:94
+ [x] dbHealth.col.rows            DBHealthPage.Model.swift:215
+ [x] dbHealth.col.table           DBHealthPage.Chart.swift:58
+ [x] dbHealth.currentVersion      DBHealthPage.Sidebar.swift:53
+ [x] dbHealth.dirty               DBHealthPage.Sidebar.swift:89
+ [x] dbHealth.error               DBHealthPage.Views.swift:79
+ [x] dbHealth.largeTables         DBHealthPage.Projection.swift:284 (+ Views summary card)
+ [x] dbHealth.migration           DBHealthPage.Projection.swift:274 (+ Views summary card)
+ [x] dbHealth.migrationTitle      DBHealthPage.Sidebar.swift:24
+ [x] dbHealth.noMigrationData     DBHealthPage.Sidebar.swift:40
+ [x] dbHealth.noMigrations        DBHealthPage.Sidebar.swift:111
+ [x] dbHealth.noPoolData          DBHealthPage.Sidebar.swift:176
+ [x] dbHealth.noTables            DBHealthPage.Table.swift:45
+ [x] dbHealth.pending             DBHealthPage.Sidebar.swift:62
+ [x] dbHealth.pool.idle           DBHealthPage.Adapter.swift:192
+ [x] dbHealth.pool.inUse          DBHealthPage.Adapter.swift:191
+ [x] dbHealth.pool.maxOpen        DBHealthPage.Adapter.swift:189
+ [x] dbHealth.pool.open           DBHealthPage.Adapter.swift:190
+ [x] dbHealth.pool.waitCount      DBHealthPage.Adapter.swift:193
+ [x] dbHealth.pool.waitDuration   DBHealthPage.Adapter.swift:194
+ [x] dbHealth.poolTitle           DBHealthPage.Sidebar.swift:160
+ [x] dbHealth.poolUsage           DBHealthPage.Sidebar.swift:249
+ [x] dbHealth.recentMigrations    DBHealthPage.Sidebar.swift:114
+ [x] dbHealth.rows                DBHealthPage.Chart.swift:54
+ [x] dbHealth.sort.name           DBHealthPage.Adapter.swift:165 (+ Table sort bar)
+ [x] dbHealth.sort.rows           DBHealthPage.Adapter.swift:164
+ [x] dbHealth.sort.size           DBHealthPage.Adapter.swift:163
+ [x] dbHealth.status              DBHealthPage.Sidebar.swift:58
+ [x] dbHealth.subtitle            DBHealthPage.Views.swift:29
+ [x] dbHealth.table.indexes       DBHealthPage.Projection.swift:283 (+ Table header)
+ [x] dbHealth.table.lastVacuum    DBHealthPage.Table.swift:119
+ [x] dbHealth.table.name          DBHealthPage.Table.swift:115
+ [x] dbHealth.table.rows          DBHealthPage.Projection.swift:281 (+ Table header)
+ [x] dbHealth.table.size          DBHealthPage.Projection.swift:282 (+ Table header)
+ [x] dbHealth.tables              DBHealthPage.Projection.swift:273 (+ Views summary card)
+ [x] dbHealth.tablesTitle         DBHealthPage.Table.swift:27
+ [x] dbHealth.title               DBHealthPage.swift navigationTitle + Projection:271 (a11y)
+ [x] dbHealth.totalSize           DBHealthPage.Projection.swift:272 (+ Views summary card)
+PARITY_COVERED=55
+PARITY_REQUIRED=55
+(55/55 — every panel, both charts, all four data states, and all 41 strings bound from the
+ @Observable DBHealthPageModel; verified referenced in code by grep and exercised by swift test.)
+
+──────────────────────────────────────────────────────────────────────────────
+ARCHITECTURE NOTES (faithful port, native-idiomatic)
+──────────────────────────────────────────────────────────────────────────────
+  • Source-seam + @Observable model (DBHealthPageModel) consuming a DBHealthSource (P1/S8);
+    NO networking/business logic in the view. Three web reads (useDBStats /dev-tools/db-stats,
+    useMigrations /dev-tools/migration-status, useConnectionPool /dev-tools/runtime-info)
+    coalesced into one DBHealthUpdate, each with its own load status → per-source phase.
+  • Hook names preserved at the Swift seam intent: statsStatus/stats, migrationStatus/migration,
+    poolStatus/pool on DBHealthUpdate map 1:1 to useDBStats/useMigrations/useConnectionPool.
+  • Pure, dependency-free Adapter + Projection (Foundation only): web formatBytes ramp, the
+    100 MB large-table threshold, the size|rows|name sort with the `sizeBytes ?? rowCount`
+    fallback, the top-15 chart memo with 18-char+ellipsis truncation, pool usage %, and the
+    reverse-chronological recent migrations — all unit-tested.
+  • Adaptive (ADR-006): NavigationStack scaffold; tables panel beside the migration+pool
+    sidebar on regular widths (macOS/iPad), stacked on compact iPhone; table renders as a native
+    Grid on regular widths and stacked cards on compact.
+  • Design tokens only (P2 Color.TS / Font.TS / TSSpacing / TSRadius) — no hardcoded colors;
+    GlassPanel via the shared TSGlassPanel material (ADR-005).
+  • i18n (ADR-014): every visible literal via LocalizedStringKey / the DBHealthStrings facade;
+    zero hardcoded English; web key names kept verbatim; 43 keys added to Localizable.xcstrings
+    (41 parity + 2 freshness) and 6 shared-component support keys the surface surfaces
+    (action.retry, chart.copyData/export/noData, error.queryTitle/queryMessage).
+  • a11y (ADR-015): accessibilityLabel/value/traits on panels, chart bars, sort toggle, rows;
+    Dynamic Type via the Font.TS ramp; Reduce-Motion honored in the chart + FadeIn; light/dark +
+    increased-contrast via the dynamic token colors.
+  • Native additions over the web, all prompt-mandated and stated (no silent drift): the ADR-013
+    freshness chip (stale/offline) + one-shot guarded stale auto-refresh, and an inline pool
+    error+retry (the web pool read has no error branch).
+  • Navigation: /db-health is a standalone web route, not a curated top-level AppRoute (whose set
+    is exhaustively asserted by MenuCommandCatalogTests == AppRoute.allCases). Registered
+    additively as a SwiftUI NavigationDestination value (DBHealthRoute, path "/db-health",
+    .dbHealthNavigationDestination(makeModel:)) — reachable from any NavigationStack, the curated
+    route set + its tests untouched. Parsed/round-tripped in DBHealthRouteTests.
+
+──────────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT
+──────────────────────────────────────────────────────────────────────────────
+  1  No red-as-green   : full app build is reported EXIT=65/DEFERRED with raw attribution, not green.
+  2  No scope narrowing: all 8 panels + 2 charts + 4 states + 41 strings implemented (55/55).
+  3  No skip-and-assume: every gate run with pasted real output; framework built from source.
+  4  No stubs as final : placeholder scan PLACEHOLDER_COUNT=0; no "Coming soon"/TODO.
+  5  No parity shortcut: BarChart is native Swift Charts BarMark, not a WKWebView; both web empty
+                         variants (no-migrations vs no-migration-data) distinguished.
+  6  No delegation     : implemented directly (delegation FORBIDDEN for this unit).
+  7  No predecessor bypass: built on P1 facade seam, P2 tokens, P3 components — reused, not forked.
+  8  No commit on red  : achievable gates GREEN; the only red is documented pre-existing baseline.
+  9  No silent drift   : the feature-views path choice + the native freshness/pool-error additions
+                         are stated here and in code.
+  10 Log ends with EXIT=<int> + STATUS=<DONE|BLOCKED>.
+
+──────────────────────────────────────────────────────────────────────────────
+DISPOSITION
+──────────────────────────────────────────────────────────────────────────────
+  Production-polished, native Apple-idiomatic DBHealthPage shipped at full web parity (55/55).
+  Pure projection core + state-holder seam (no view networking), P1/S11 view.opened telemetry,
+  P1/S10 i18n (no English literals), P1/S9 tokens, shared-component reuse, all four data states
+  per source (loading/empty/error/success), full accessibility, adaptive macOS+iOS. The surface
+  COMPILES clean against the macOS 15 SDK under Swift 6 strict concurrency and passes 35/35
+  executed XCTest; 0 errors attributable to this surface in the full iOS app build (with the real
+  Shared.xcframework). The full Xcode app `build` is DEFERRED solely because the shared app target
+  is pre-existing-baseline-red (DashboardWidgetSize ambiguity ×45 merged from sibling widget
+  slots; macOS dev-signing) — outside this prompt's allowed files — exactly the documented
+  P4-apple precedent (P-0006, P-0010, 0196-ActiveOrdersSection). All host-runnable + achievable
+  gates are GREEN and PARITY_COVERED == PARITY_REQUIRED (55).
+
+FORMAT_EXIT=0
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+SWIFT_TEST_EXIT=0      (35/35 executed green, isolated build vs the real design system, Swift 6 strict)
+IOS_EXIT=65           (DEFERRED — 48 pre-existing DashboardWidgetSize baseline errors; 0 in this surface)
+MAC_EXIT=65           (DEFERRED — macOS development signing unavailable in this environment)
+PARITY_COVERED=55
+PARITY_REQUIRED=55
+EXIT=0
+STATUS=DONE

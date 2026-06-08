@@ -1,0 +1,167 @@
+=== P4 Shared surface 0155 ListExportMenu (Apple) ===
+Prompt : .github/prompts/monorepo/p4-apple/shared-surfaces/... (P4 · Shared surface · 0155)
+Web src: web/src/components/forms/ListExportMenu.tsx (THE specification)
+Native : apps/apple/TeslaSync/shared-surfaces/ListExportMenu.* (8 files, 1009 lines)
+Runner : macOS (Darwin), Xcode 26.5 (Build 17F42), Apple Swift 6.3.2, swiftlint 0.63.3,
+         swiftformat 0.61.1, xcodegen 2.45.4, pwsh 7.x. DEVELOPER_DIR=/Applications/Xcode.app.
+Date   : 2026-06-08
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+ARTIFACT (8 files — the only files this prompt is allowed to touch + this log)
+────────────────────────────────────────────────────────────────────────────────────────────────
+  ListExportMenu.swift            (49)  — the surface: a system `Menu` affordance + onAppear telemetry
+  ListExportMenu.Views.swift      (90)  — trigger label (ghost download button) + menu content
+                                          (inline scope `Picker` + CSV/JSON `Button`s)
+  ListExportMenu.Model.swift     (208)  — P1/S10 i18n facade, P1/S11 telemetry seam, P1/S8 source
+                                          seam, the @MainActor @Observable model, in-memory source
+  ListExportMenu.Adapter.swift   (281)  — pure value types (ListExportScope/Format/Availability/
+                                          FormatOption), the projection, scope rules, a11y helper
+  ListExportMenu.Previews.swift   (74)  — one #Preview per state + a menu-content preview
+  ListExportMenu.Tests.swift     (180)  — projection + model + a11y XCTest (15 tests)
+  ListExportMenu.AdapterTests.swift(97) — pure value-type / scope / label XCTest (12 tests)
+  ListExportMenu.strings          (30)  — 11 keys (9 web-parity + 2 native chrome), table "ListExportMenu"
+  Shipped (non-test) Swift: 702 LOC. Tests: 27. i18n keys: 11.
+
+PARITY MAP (web → native, per the web source read end-to-end)
+  • web custom popover (manual click-outside + Escape)        → system `Menu` (native dismissal,
+                                                                 keyboard, anchored presentation, a11y)
+  • web `<Button variant=ghost>` trigger + `<button role=menuitem>`s → `Menu` label + native `Button`s
+  • web scope radios (Visible / Selected fieldset)            → inline `Picker` (checkmark radios)
+  • web `disabled` ("while loading or empty")                 → `.disabled` + reason-typed availability
+                                                                 (ready / loading-spinner / empty-dim)
+  • web `selectedCount>0` gates the scope fieldset            → `showsScopeChooser`
+  • web initial scope = selectedCount>0 ? selected : visible  → ListExportMenuScope.initialScope
+  • web effect: selected→visible when selection empties       → ListExportMenuScope.corrected
+  • web `visibleCount!=null ? "Visible (N)" : "Visible"`      → projection visibleLabel (ungrouped %@)
+  • web `onExportCsv(scope)` / `onExportJson(scope)`          → source.export(format, effectiveScope)
+  • web `useTranslation` t(key, default)                      → ListExportMenuStrings facade (P1/S10)
+  STATES (every one renders — the trigger is never hidden): ready (opens menu w/ optional scope +
+  CSV/JSON), loading (disabled trigger + spinner), empty (dimmed disabled trigger, "No data to export").
+  The web control is purely presentational (only `useTranslation`, no query), so there is no
+  data-fetch axis — no stale/offline/retry chrome is fabricated (that would be invented behaviour /
+  silent drift). The loading + empty reasons are the native split of the web `disabled` boolean,
+  which the web prop documents as used "while data is loading or empty".
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+HOST-RUNNABLE GATES (executed on THIS runner — raw results)
+────────────────────────────────────────────────────────────────────────────────────────────────
+[1] Isolated SwiftPM build — REAL design tokens (apps/design/generated/apple/Tokens.swift),
+    Swift 6 language mode (swiftLanguageMode(.v6)), macOS(.v15)/iOS(.v18):
+      $ DEVELOPER_DIR=…/Xcode swift build
+      [9/9] Compiling TeslaSync Tokens.swift
+      Build complete! (38.46s)            ← compiles, incl. the #Preview macro      ISO_BUILD_EXIT=0
+
+[2] Isolated XCTest (Xcode 26.5 XCTest runtime), final formatted sources:
+      $ DEVELOPER_DIR=…/Xcode swift test
+      Test Suite 'All tests' passed — Executed 27 tests, with 0 failures (0 unexpected)  ISO_TEST_EXIT=0
+
+[3] Real iOS-18 + macOS-15 swiftc -typecheck (surface + Tokens.swift, -swift-version 6, -D DEBUG):
+      $ xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator …
+        IOS_TYPECHECK_EXIT=0
+      $ xcrun --sdk macosx        swiftc -typecheck -target arm64-apple-macos15.0 …
+        MAC_TYPECHECK_EXIT=0
+
+[4] swiftformat --lint (apps/apple/.swiftformat config), my surface dir:
+      0/7 files require formatting.                                                 FORMAT_EXIT=0
+
+[5] swiftlint --strict — my surface files (isolated, same rule config):
+      Done linting! Found 0 violations, 0 serious in 7 files.                        LINT_MINE_EXIT=0
+    swiftlint --strict — project-wide (the gate's literal scope): Found 1 violation, 1 serious in
+    1909 files. The single violation is PRE-EXISTING and NOT mine:
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: Function Body Length
+      (currently 78 lines). Zero violations originate from shared-surfaces/ListExportMenu.*.
+    (NB: shared-surfaces is not yet in .swiftlint.yml `included:` — see WIRING below — so the
+     project-wide run does not even scan my files; they were linted explicitly to prove clean.)
+
+[6] Placeholder / stub gate (apps/tools/check-placeholders.ps1) on my surface:
+      PLACEHOLDER_ALLOWED=0
+      PLACEHOLDER_COUNT=0
+      EXIT=0                                                                        PLACEHOLDER_EXIT=0
+    No TODO / FIXME / stub / Coming-soon / Placeholder / Lorem / not-implemented anywhere; 0 opt-outs.
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+FULL-APP xcodebuild build test — DEFERRED (executed + observed; reported, NEVER as passing)
+────────────────────────────────────────────────────────────────────────────────────────────────
+  $ DEVELOPER_DIR=…/Xcode xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+  Observed live (ps): the scheme pre-action `Scripts/build-shared-xcframework.sh` is running
+  `apps/shared/gradlew :core:assembleSharedXCFramework` (Kotlin/Native), producing
+  apps/shared/core/build/XCFrameworks/… — i.e. the unstaged Shared.xcframework being assembled
+  for the first time, heavily contended across the parallel slots on this host. Stopped after
+  ~7 min (no app-target output yet) to free shared resources; the framework assembly + the
+  app-target compile that follows are owned by the signed macos-latest acceptance runner.
+
+  Re-confirmed blockers (grep/ls, NOT assumed) — all PRE-EXISTING + unrelated to this surface:
+    • Shared.xcframework ABSENT: apps/apple/Frameworks/ holds only .gitkeep; the scheme pre-action
+      requires the KMP/Kotlin-Native + Gradle toolchain (full Xcode; see
+      apps/macos-pending-verifications.md row `S3-0001-kmp-scaffold`).
+    • `struct DashboardWidgetSize` redefined in 15 files across Sources/* + TeslaSync/dashboard-widgets/*
+      (parallel-merge collision).
+    • 261 co-located *Tests.swift under TeslaSync/feature-views + TeslaSync/dashboard-widgets are
+      compiled INTO the app target (they `import XCTest` / `@testable import TeslaSync`), which the
+      app target cannot host.
+    • macOS development-signing identities absent on this runner.
+
+  WIRING (this surface specifically — owned outside the allowed-files scope):
+    • shared-surfaces is NOT in apps/apple/project.yml `sources:` (only dashboard-widgets +
+      feature-views are). xcodegen generate → 0 `ListExportMenu` refs in the generated pbxproj, so
+      the full-app build does not even compile this surface. Wiring the new directory into
+      project.yml + .swiftlint.yml `included:` is owned by P4 core / `P99-0001-apple-acceptance-gate`
+      (this prompt's declared "Depends on: P4 core" / "Blocks: P4 acceptance gate"), and both files
+      are outside this prompt's allowed files.
+
+  This is the SAME sanctioned "code-complete + DEFERRED full-app Xcode gate" disposition recorded by
+  every prior P4 surface (see p4-apple-feature-views-0010-ToolCard.log, -0180-AlertMessageEditor.log,
+  -0231-FSMTimelineChart.log, -0237-AiUsageCard.log and apps/macos-pending-verifications.md).
+  ZERO ListExportMenu / shared-surfaces errors are attributable to this change.
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT (binding)
+────────────────────────────────────────────────────────────────────────────────────────────────
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED with raw,
+                           live + grep/ls evidence — never reported as passing.
+  2  No scope narrowing  : every web branch reproduced — the disabled trigger (loading/empty), the
+                           ready menu, the selectedCount>0 scope fieldset, the visibleCount!=null
+                           count label, the initial-scope rule, the selected→visible auto-correction,
+                           the CSV/JSON items, the scope handed to the export callback.
+  3  No skip-and-assume  : every host-runnable gate executed on THIS runner; raw exits pasted; the
+                           deferred full-app blockers were re-confirmed by live ps + ls + grep
+                           (Shared.xcframework absent, DashboardWidgetSize 15×, 261 co-located tests,
+                           0 pbxproj refs), not assumed.
+  4  No stubs as final   : complete production surface + 27 real tests; placeholder scanner COUNT=0,
+                           0 opt-outs; no TODO/FIXME/stub/Coming-soon/Placeholder/Lorem.
+  5  No parity shortcut  : the ungrouped `{{count}}` interpolation, the scope initialiser + drop
+                           effect, the disabled-tooltip vs menu-label trigger text, the format order
+                           (CSV then JSON), and the SF-Symbol icon mapping are each unit-asserted
+                           against the web source's behaviour.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens (real Tokens.swift), P1/S10 i18n
+                           facade, P1/S11 view.opened telemetry, and the established P4
+                           "isolated-build + DEFERRED full-app" disposition all honoured.
+  8  No commit on red    : the committed artifact (8 ListExportMenu.* files + this log) is GREEN on
+                           every host-runnable gate AND on a real isolated Swift 6 strict-concurrency
+                           build + 27/27 XCTest + iOS-18/macOS-15 typecheck; the deferred full-app
+                           gate is blocked only by pre-existing, unrelated surfaces + unwired
+                           directory this commit does not (and is not allowed to) touch.
+  9  No silent drift     : changes are confined to TeslaSync/shared-surfaces/ListExportMenu.* + this
+                           log; git status shows exactly the new shared-surfaces/ directory and
+                           nothing else mine (the AIUsageCard.* working-tree edits are pre-existing,
+                           not authored or staged by this prompt). The native split of the web
+                           `disabled` boolean into loading/empty reasons is disclosed above.
+  10 EXIT/STATUS below.
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+DISPOSITION
+────────────────────────────────────────────────────────────────────────────────────────────────
+  Production-polished, Apple-idiomatic ListExportMenu shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 27 tests pass under Swift 6 strict concurrency, against
+  the REAL P1/S9 design tokens, via the Xcode 26.5 XCTest runtime, with real iOS-18 + macOS-15
+  swiftc -typecheck green and swiftformat / swiftlint / placeholder all green on the 8 surface files
+  (0 violations, 0 opt-outs) and the #Preview macro compiling. The full-app iOS-Simulator + macOS
+  xcodebuild build/test gate is DEFERRED (not failed by this code) on pre-existing, unrelated,
+  out-of-allowed-files blockers (the unstaged KMP Shared.xcframework + its Gradle pre-action, the
+  DashboardWidgetSize 15× redefinition, the 261 co-located-tests-into-app-target config, macOS
+  signing) plus the not-yet-wired shared-surfaces directory — owned by P4 core /
+  P99-0001-apple-acceptance-gate on a signed macos-latest runner per apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

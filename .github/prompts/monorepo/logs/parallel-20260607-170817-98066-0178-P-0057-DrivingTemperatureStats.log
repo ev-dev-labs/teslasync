@@ -1,0 +1,188 @@
+I'll start by exploring the repository structure to understand both the web source and the Apple native app layout.
+
+Good — tooling is available. Let me read the web source and explore the Apple app structure.
+
+The web source is clear. Now let me examine the existing Apple feature-views directory for established patterns and the shared facade layers.
+
+Let me study an existing analytics-style panel end-to-end plus the shared facade layers (state holders, units, i18n, diagnostics).
+
+This is a mature, well-patterned codebase. Let me study the shared facade layers (P1/S8 state holders, units) and a panel that uses the full loading/error/stale/offline lifecycle.
+
+Let me look at the project structure config and the remaining files of a complete example, plus search for units/offline/stale handling patterns in feature-views.
+
+The patterns are clear. Now let me locate the shared native components (GlassPanel, MetricCard, EmptyState, SectionTitle counterparts), the P1/S9 tokens, and how stale/offline states are rendered.
+
+`FleetTelemetryHealth` is the richest example with offline/stale. Let me study it fully along with the shared component inventories.
+
+This is the gold-standard example for my states. Let me read its Views/Adapter and inventory the shared UI/DataDisplay/Feedback components plus design tokens.
+
+Let me read the key shared components I'll compose with — Metrics (MetricCard), Cards (GlassPanel), States (EmptyState), Typography, design tokens, and unit formatters.
+
+Let me read the web components I must achieve parity with (MetricCard, GlassPanel, EmptyState, SectionTitle helper, safe, useUnits, convertTempFromSI, FleetAnalytics type).
+
+Now let me read the design tokens, typography/cards components, the FleetTelemetryHealth adapter/tests/previews/strings, and check how units conversion is handled across the Apple app.
+
+Let me check how dashboard-widgets handle unit conversion (the established app-target convention) and get exact signatures for the design tokens and typography components.
+
+The WeatherAtCar adapter confirms the pure-conversion convention. Let me read the design tokens, typography, the weather widget's unit-prefs model, and locate the remaining token/component definitions.
+
+The tokens live in `apps/design/generated/apple/Tokens.swift`. Let me read the tokens, badges (TSTone/TSIconBox/TSStatusPill), typography, and cards.
+
+I now have the full token/component picture. Let me read the typography components and the complete test/preview/strings patterns from the two reference surfaces.
+
+Let me read the adapter, previews, tests patterns and the TSCard component to finalize conventions before writing.
+
+Let me examine the test wiring — critically, how `*.Tests.swift` files in `feature-views/` get compiled into the test target.
+
+Let me understand the test-target wiring and build feasibility (xcodegen, Shared.xcframework, pre-generated project).
+
+There's a `Tests/Unit/FeatureViews` directory. Let me compare it against the `feature-views/*.Tests.swift` files to understand where tests actually belong.
+
+There's a `Tests/Unit/FeatureViews/` with only `ToolCardTests.swift`, yet 12 `.Tests.swift` live in `feature-views/`. Let me determine target membership definitively by generating the project and inspecting it, and check the Shared.xcframework build feasibility.
+
+Shared.xcframework isn't prebuilt (only `.gitkeep`); it's built from `apps/shared` via Gradle/Kotlin-Native. Let me generate the Xcode project (no build) to resolve test-target membership definitively, and check the KMP toolchain.
+
+Confirmed: `.Tests.swift` files have identical target membership (2 = iOS + macOS apps) as regular `.swift` files — they compile into the app targets and run via the hosted test bundle's runtime discovery. My co-located files will work the same way. Let me check the KMP build feasibility, then write code.
+
+Java 17 + gradlew are present. Let me check available simulators and kick off the long-pole KMP `Shared.xcframework` build in the background while I write code.
+
+`xcodebuild` requires full Xcode but the active toolchain is Command Line Tools — and no iOS simulators exist. This is a likely platform-capability blocker for the build/test steps. Let me gather precise evidence and check the standalone Swift compiler.
+
+There's a full `/Applications/Xcode.app` — only the active dir points to CLT. I can override with `DEVELOPER_DIR` (no sudo needed). Let me verify this unlocks `xcodebuild` and simulators.
+
+Breakthrough: `DEVELOPER_DIR` override unlocks Xcode 26.5 + iPhone 16 simulator. And the KMP framework build finished. Let me check its result.
+
+The KMP build failed only because it ran without `DEVELOPER_DIR` (it hit the CLT). Let me relaunch it with the correct Xcode env in the background (the long pole), then write code in parallel.
+
+Let me read the card/glass-panel and skeleton components, then write the surface files.
+
+I have all the patterns. Let me read the lint/format configs to match them exactly, then write the files.
+
+pwsh is available; forbidden tokens noted (I'll avoid "TODO/Placeholder/not implemented" etc.). I have everything needed. Let me set up tracking and write the surface files.
+
+Now the Model file (state-holder seam, telemetry, i18n facade):
+
+Now the Adapter (pure conversion/formatting/projection — Foundation only):
+
+Let me do a fast standalone typecheck of the pure Model+Adapter (Foundation/Observation only) to catch errors early, then write the Views.
+
+Model+Adapter typecheck cleanly under Swift 6. Let me check the framework build progress and write the Views.
+
+Framework still compiling (Kotlin/Native). Let me write the Views, main surface, Previews, Tests, and strings files.
+
+The framework build finished. Let me verify it succeeded and was staged, then continue writing files.
+
+Shared.xcframework built and staged successfully — the full gate is achievable. Let me write the main surface, previews, tests, and strings.
+
+Now the i18n strings catalog:
+
+Now the Previews:
+
+Now the comprehensive test suite:
+
+All 7 files written. Let me normalize formatting and run the fast checks (swiftformat, swiftlint, placeholder) on my files before the heavy build.
+
+Only the Tests file needs wrap fixes. Let me apply swiftformat write-mode to my files, then re-lint.
+
+swiftformat passes. Let me verify the auto-wrapped Tests lines, then run swiftlint and the placeholder check.
+
+swiftlint found 1 serious violation. Let me locate it.
+
+The violation is in a pre-existing file (`LifetimeStatsWidget.Adapter.swift`), not mine. Let me confirm it's pre-existing and outside my allowed scope.
+
+Confirmed: the lone swiftlint violation is in `LifetimeStatsWidget.Adapter.swift` — tracked, unmodified, pre-existing from a prior parallel merge, and outside my allowed-files scope. My 7 files are the only changes. I must regenerate the project (it predates my files) and run the real build. Let me regenerate and launch the iOS build+test.
+
+All 7 files are members of both app targets. Let me create the log directory and launch the iOS build+test (the long pole) in the background.
+
+iOS build+test is running. Let me monitor it.
+
+The app target failed compiling `import XCTest` — yet existing feature views also have `.Tests.swift` in the same app source path. There must be a build setting enabling XCTest search paths. Let me investigate how the baseline handles this.
+
+`ENABLE_TESTING_SEARCH_PATHS` isn't set. Let me determine exactly which targets own those test-file build refs — maybe they're the test targets, not the apps.
+
+Confirmed: `.Tests.swift` files compile into the **app** targets (not test bundles), and `ENABLE_TESTING_SEARCH_PATHS` isn't set anywhere — so the baseline itself can't resolve `XCTest` in the app target. Let me check how prior surfaces' gate logs handled this.
+
+Let me examine how a prior P4 feature-view surface logged its gate (especially the build/test step).
+
+The prior FleetTelemetryHealth surface hit the identical structural issue (`.Tests.swift` compiled into the app target without testing search paths) and deferred the Xcode gate, verifying via standalone compiles + executed test harness. I can do better: the project's missing `ENABLE_TESTING_SEARCH_PATHS` can be supplied as an ephemeral command-line override (no tracked-file change). Let me try the real iOS build+test with that override.
+
+Let me wait for the iOS build+test with the override to progress.
+
+A different, pre-existing breakage surfaced: `DashboardWidgetSize` is **ambiguous** across many sibling `dashboard-widgets/*` files (parallel-merge contamination), so the app target can't compile regardless of my work — which is why prior feature-view surfaces deferred the Xcode gate. Let me confirm it's pre-existing and outside my scope.
+
+Definitively pre-existing: `DashboardWidgetSize` is multiply-defined across 15 unmodified sibling `dashboard-widgets` files — the app target can't compile irrespective of my work (the documented reason prior surfaces deferred the Xcode gate). I'll verify my surface against the real SDKs the robust way. Let me check whether the shared Components/Design are `Shared`-free so I can compile against the real ones.
+
+Excellent — the 41 shared Components/Design files are `Shared`-free (only SDK frameworks). I can compile my surface against the **real** shared components + tokens. Let me build a throwaway harness that compiles the full surface against the macOS SDK and **executes** the XCTest suite.
+
+The shipped `Tests.swift` correctly uses `@testable import TeslaSync` (for the app-target build). For the standalone harness everything is one module, so I'll use a temp copy with that line stripped.
+
+Top-level expressions require the file be named `main.swift`. Let me rename and rerun.
+
+The XCTest Swift assertion overlay isn't available to a bare command-line `swiftc` link (the app-target build *did* get past `import XCTest` with testing search paths — proving my Tests compile in the real testing context — and only hit the pre-existing sibling error). For executed-logic evidence I'll use a direct-call harness exercising the real Adapter+Model. Let me write it.
+
+Swift 6 main-actor isolation on the top-level counters. Let me mark `check` `@MainActor` and rerun.
+
+**EXECUTED 55 assertions, 0 failures** — the real Adapter+Model logic runs green under Swift 6 on the macOS SDK. Now the dual-SDK compile of the full SwiftUI surface (incl. Previews) against the **real** shared components.
+
+One shared component file (`UnitFormatters.swift`) references the `Units` facade (which needs the `Shared` module). My surface doesn't use it — I over-included. Let me find the Shared-facade-dependent component files and exclude them.
+
+Only `UnitFormatters.swift` needs the `Shared` facade, and my surface doesn't use it. Let me exclude it and re-run the dual-SDK typecheck.
+
+Both dual-SDK typechecks pass (iOS 18 sim + macOS 15, Swift 6 strict, incl. Previews) against the real components. Let me run the remaining host gates: whole-tree swiftformat lint and the placeholder check.
+
+Host gates: **swiftformat --lint = 0** (whole tree), **placeholder = 0**. Let me capture scoped evidence (my files are swiftlint-clean; the sibling breakage is pre-existing) for the gate log.
+
+My 6 files: **0 swiftlint violations**. Let me cleanly capture the pre-existing sibling-breakage counts for the log.
+
+All evidence captured: my 7 files are the only changes; the swiftlint + xcodebuild blockers are pre-existing sibling breakage (`LifetimeStatsWidget` unmodified; `DashboardWidgetSize` defined in 15 unmodified files). Let me run the macOS build+test for real evidence (not assume) while I write the gate log.
+
+Let me wait for the macOS build to capture its real result.
+
+Both xcodebuild steps fail for out-of-scope reasons: iOS on the pre-existing sibling `DashboardWidgetSize` ambiguity, macOS on **code-signing** (no development certificate on this runner) — exactly the integration/signed-runner concerns the prior surfaces deferred. My surface is verified green by every in-scope means. Let me write the gate log.
+
+Gate log written. Let me clean up throwaway artifacts, confirm the staged set is exactly my files + log, and commit.
+
+Clean — only my 7 files + the log. Let me commit per the prompt's spec.
+
+Committed (c1521afd): 7 surface files + gate log, 1527 insertions. Let me verify the working tree is clean.
+
+Working tree is clean; the commit contains exactly the 7 surface files + gate log. The task is complete and verified.
+
+## Summary
+
+Shipped a production-polished, native SwiftUI **`DrivingTemperatureStats`** feature view at parity with `features/analytics/components/analytics/DrivingTemperatureStats.tsx`, committed as `c1521afd` (7 files + gate log, 1527 insertions).
+
+**What was built** (`apps/apple/TeslaSync/feature-views/DrivingTemperatureStats.*`)
+- **`.swift`** — surface view: GlassPanel + SectionTitle + freshness chip + state switch.
+- **`.Model.swift`** — P1/S8 state-holder seam (source protocol + `@Observable` model + in-memory source), P1/S11 `view.opened` telemetry seam, P1/S10 strings facade, load/connection/unit enums + DTOs.
+- **`.Adapter.swift`** — pure (Foundation-only) port of the web pipeline: `convertTempFromSI` (°C/°F), the chart-`safe` guard, `fmtNumber` (half-expand), the 6-cell catalog (Inside/Outside × Min/Avg/Max, cyan/green/amber), `value()`→formatted vs em-dash, a11y summary.
+- **`.Views.swift`** — metric cell, responsive grid, loading skeleton grid, empty/error states, freshness chip, stale/offline banner.
+- **`.Previews.swift`** — 9 previews (content/inside-only/outside-only/°F/empty/loading/error/stale/offline).
+- **`.Tests.swift`** — adapter + model (per-state) + a11y XCTest suites.
+- **`.strings`** — all 8 web i18n keys + native chrome keys.
+
+**Verification (real, captured)**
+- ✅ **EXECUTED 55/55** adapter+model assertions (Swift 6, macOS 15 SDK).
+- ✅ **iOS 18 sim + macOS 15 SDK** type-checks of the full surface incl. `#Preview`, against the **real** shared component library, Swift 6 strict concurrency.
+- ✅ `swiftformat --lint` = 0 · placeholder gate `COUNT=0` · scoped `swiftlint --strict` = 0 on my 6 files.
+
+**Honestly deferred (out-of-scope, fully disclosed in the log):** the whole-tree `xcodebuild build test` (iOS blocked by a pre-existing `DashboardWidgetSize` ambiguity across **15 unmodified** sibling `dashboard-widgets` files; macOS blocked by dev-certificate **signing**) and the single `swiftlint --strict` hit (pre-existing `LifetimeStatsWidget`, unmodified) — all in files this prompt forbids me to touch, matching the repo's established 0005/0086 "code-complete + deferred Xcode gate" precedent. Log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...-feature-views-0057-DrivingTemperatureStats.log | 115 +++++++
+ .../DrivingTemperatureStats.Adapter.swift          | 260 ++++++++++++++++
+ .../DrivingTemperatureStats.Model.swift            | 338 +++++++++++++++++++++
+ .../DrivingTemperatureStats.Previews.swift         |  90 ++++++
+ .../DrivingTemperatureStats.Tests.swift            | 329 ++++++++++++++++++++
+ .../DrivingTemperatureStats.Views.swift            | 283 +++++++++++++++++
+ .../feature-views/DrivingTemperatureStats.strings  |  37 +++
+ .../feature-views/DrivingTemperatureStats.swift    |  75 +++++
+ 8 files changed, 1527 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0057-DrivingTemperatureStats.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingTemperatureStats.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingTemperatureStats.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingTemperatureStats.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingTemperatureStats.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingTemperatureStats.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingTemperatureStats.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/DrivingTemperatureStats.swift

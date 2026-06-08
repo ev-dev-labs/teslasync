@@ -1,0 +1,137 @@
+=== P4 Shared surface 0002 RouteAnnouncer (Apple) ===
+Host: macOS 26.5.1 (25F80) · Xcode 26.5 (17F42) via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+Toolchain present: xcodebuild, xcodegen 2.45.4, swiftlint, swiftformat, pwsh, java 17 + gradlew, iPhone 16 simulator (booted)
+Web source (THE spec): web/src/components/a11y/RouteAnnouncer.tsx
+Native output: apps/apple/TeslaSync/shared-surfaces/RouteAnnouncer/RouteAnnouncer.{swift,Model,Adapter,Views,Previews,Tests}.swift + RouteAnnouncer.strings
+
+────────────────────────────────────────────────────────────────────────
+SECTION A — SURFACE-SCOPED VERIFICATION (the per-surface protocol)   ✅ ALL GREEN
+────────────────────────────────────────────────────────────────────────
+This is the verification the surface is judged on. Every step actually run; raw results below.
+
+A1. xcodegen generate (with TeslaSync/shared-surfaces wired into the two app targets — see C2)
+    → "Created project at .../TeslaSync.xcodeproj"
+    → all 7 files enumerated: RouteAnnouncer.{Model,Adapter,Views,Previews,Tests}.swift, RouteAnnouncer.swift, RouteAnnouncer.strings
+    → RouteAnnouncer.swift is a Sources member of BOTH app targets (TeslaSync + TeslaSync-macOS): 2 build-file refs.
+
+A2. Isolated SwiftPM build + tests — Swift 6 language mode, strict concurrency complete
+    (module named "TeslaSync" so `@testable import TeslaSync` compiles verbatim; SwiftUI linked on the macOS host)
+    → swift test: Executed 15 tests, with 0 failures.
+        RouteAnnouncementReducerTests        6/6  (first-render skip, empty→clear, dedup padding 1·2·3·0,
+                                                   identical-title re-announce, empty does-not-advance-counter)
+        RouteAnnouncerModelTests             7/7  (view.opened once, initial-route silent+unscheduled,
+                                                   scheduled fire speaks latest, rapid-change coalescing,
+                                                   empty clears+silent, stop cancels pending, surfaceSlug)
+        RouteAnnouncerStringsTests           2/2  (region label resolves non-empty, facade fallback)
+    → Building the test target compiles the WHOLE surface as a library (Model+Adapter+Views+entry+Previews): clean.
+
+A3. swiftc -typecheck — real SDKs, Swift 6, -strict-concurrency=complete (non-test files)
+    → iOS 18    (arm64-apple-ios18.0-simulator, MacOSX/iPhoneSimulator26.5 SDK): IOS_TYPECHECK_OK
+    → macOS 15  (arm64-apple-macos15.0):                                          MAC_TYPECHECK_OK
+
+A4. swiftlint --strict (explicit file paths — the 6 Swift files)
+    → "Done linting! Found 0 violations, 0 serious in 6 files."
+
+A5. swiftformat --lint (the surface)
+    → "0/6 files require formatting."
+
+A6. placeholder gate — ACTUAL non-vacuous scan of the shipped surface
+    & ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/RouteAnnouncer
+    → PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+    (Scans 7 real files. No TODO/FIXME/Placeholder/stub/mock/Lorem/"not implemented"; 0 parity:allow opt-outs.)
+
+────────────────────────────────────────────────────────────────────────
+SECTION B — FULL-APP GATE COMMANDS (prompt Gate block)   ⛔ BLOCKED by pre-existing/unrelated conditions
+────────────────────────────────────────────────────────────────────────
+Run verbatim. Each non-zero exit is caused by a PRE-EXISTING, repo-wide / environment condition that
+exists independently of RouteAnnouncer (zero RouteAnnouncer-attributed errors in either build).
+
+B1. xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+    → Scheme pre-action built the KMP Shared.xcframework via Gradle/Kotlin-Native successfully
+      (debug + release XCFrameworks assembled — the toolchain IS available on this host, just slow).
+    → ** BUILD FAILED **   IOS_EXIT=65
+    → First blocker (app target 'TeslaSync', shared by both platforms per ADR-002):
+        TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'
+      Root cause: 261 co-located *.Tests.swift files under feature-views/ + dashboard-widgets/ `import XCTest`
+      and are compiled INTO the app target (XcodeGen adds them to the app's Sources phase — verified in the
+      generated .pbxproj). XCTest is not linkable into an application target ⇒ whole-module compile fails.
+    → Second, independent pre-existing blocker (proven directly with swiftc, since the compiler bailed before it):
+        $ swiftc -typecheck Sources/DashboardWidgets/DrivetrainHealthWidgetModel.swift \
+                            Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift
+        error: invalid redeclaration of 'DashboardWidgetSize'
+      `struct DashboardWidgetSize` is defined 15× across Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/*.
+    → RouteAnnouncer-attributed errors: 0.
+
+B2. xcodebuild -scheme TeslaSync-macOS build
+    → ** BUILD FAILED **   MAC_EXIT=65
+    → Blocker (environment): error: "TeslaSync-macOS" has entitlements that require signing with a development
+      certificate. Enable development signing in the Signing & Capabilities editor.  (also "TeslaSyncWidgets-macOS")
+      No development signing identity exists on this host. Shares the B1 app-source collisions as well.
+    → RouteAnnouncer-attributed errors: 0.
+
+    (The exact `xcodebuild ... build test` was also launched; xcodebuild fully buffers stdout with no TTY and the
+     'build' phase gates 'test', so it re-enters the identical app-target compile failure as B1 — IOS_EXIT=65 —
+     before any test bundle can run. It was terminated after confirming re-entry to free shared Gradle resources.)
+
+B3. swiftlint --strict            → LINT_EXIT=1
+    Sole violation is PRE-EXISTING and unrelated:
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length (78 > 50 lines).
+    (shared-surfaces is not in .swiftlint.yml `included`, so the surface is verified via A4's explicit-path run.)
+
+B4. swiftformat --lint apps/apple → FORMAT_EXIT=1
+    Sole offender is PRE-EXISTING and unrelated (1/1919 files):
+      TeslaSync/feature-views/ActionBuilder.Previews.swift:48 blankLinesBetweenScopes.
+    The RouteAnnouncer surface passes (A5).
+
+B5. check-placeholders.ps1 -Path .../RouteAnnouncer → PLACEHOLDER_EXIT=0  (see A6)
+
+These B-blockers (XCTest-in-app, DashboardWidgetSize redeclaration, macOS dev-signing, slow KMP framework) are
+EXACTLY the conditions recorded for every prior P4-apple surface in apps/macos-pending-verifications.md
+(ToolCard, AlertMessageEditor, FSMTimelineChart). The full-app build/test is deferred to the
+p4-apple/P99-0001 acceptance gate on a macOS runner with signing identities + the repo-wide *.Tests.swift /
+DashboardWidgetSize de-duplication. A ledger row was appended.
+
+────────────────────────────────────────────────────────────────────────
+SECTION C — LAYOUT & WIRING NOTES
+────────────────────────────────────────────────────────────────────────
+C1. Layout: the surface is a directory apps/apple/TeslaSync/shared-surfaces/RouteAnnouncer/ holding the
+    RouteAnnouncer.* file set. This makes the Gate's `-Path .../RouteAnnouncer` an ACTUAL (non-vacuous) scan and
+    the Commit's `git add .../RouteAnnouncer` resolve — both would otherwise be a no-op/fatal on flat files,
+    because check-placeholders returns clean on a non-existent LiteralPath and `git add <prefix>` errors.
+C2. Build wiring: `TeslaSync/shared-surfaces` is owned by P4 core / the P99 acceptance gate (this surface
+    "Depends on: P4 core"). It was added to the two app targets in project.yml ONLY to capture A1 enumeration +
+    the B1/B2 evidence, then REVERTED so the change set stays scoped to the surface (the prompt's Commit adds
+    only .../RouteAnnouncer + this log). project.yml now contains 0 references to shared-surfaces.
+
+────────────────────────────────────────────────────────────────────────
+SECTION D — PARITY NOTES (web source is THE specification)
+────────────────────────────────────────────────────────────────────────
+D1. States reproduced are exactly those the web source has — it reads SYNCHRONOUS router state (useLocation) +
+    document.title; there is NO fetch/query/cache/connectivity, so there is NO loading/error/stale/offline
+    branch to reproduce. Inventing them would drift from the spec. The real states are all rendered:
+      idle (initial route → suppressed, region empty, silent),
+      announcing (route change → region carries title + rotating 0–3 ZWSP padding, VoiceOver speaks it),
+      cleared (settled title empty → region cleared, silent).
+D2. Data sources: bound to the navigation feed (native useLocation peer = RouteTitleSource). The web source
+    DELIBERATELY does not route through useAnnouncer (it documents why — route changes are declarative and need
+    their own region); the native port mirrors that by delivering through its own RouteAnnouncing port rather
+    than a shared announcer holder. The prompt's auto-listed "useAnnouncer" is superseded by the actual source.
+D3. Apple idiom: the web `<VisuallyHidden liveRegion priority="polite">` maps to
+    AccessibilityNotification.Announcement at .default (polite) speech priority — the sanctioned route-change
+    idiom (ADR-009), already used inline by Sources/App/AppShell.handle(); this surface extracts a reusable,
+    tested component. The hidden region view is zero-size + accessibilityHidden so it is never double-spoken.
+D4. i18n (P1/S10): table "RouteAnnouncer", no English prose literal in code. Telemetry (P1/S11): view.opened
+    emitted once with surface slug "RouteAnnouncer". Accessibility: no interactive elements (a hidden announcer);
+    Dynamic Type semantic font, reduce-motion respected (no animation), localized region label asserted by test.
+
+────────────────────────────────────────────────────────────────────────
+SUMMARY
+────────────────────────────────────────────────────────────────────────
+Surface verification (A1–A6): GREEN — SwiftPM build + 15/15 tests under Swift 6 strict concurrency;
+  iOS-18 + macOS-15 swiftc -typecheck; swiftlint --strict 0/6; swiftformat --lint clean; placeholder 0; enumerated.
+Full-app gate (B1–B5): IOS_EXIT=65, MAC_EXIT=65, LINT_EXIT=1, FORMAT_EXIT=1, PLACEHOLDER_EXIT=0 — every non-zero
+  caused by PRE-EXISTING, unrelated repo collisions (XCTest-in-app ×261, DashboardWidgetSize ×15) + macOS
+  development-signing; 0 RouteAnnouncer-attributed errors. Deferred to p4-apple/P99 (macos-pending-verifications.md).
+
+EXIT=65
+STATUS=BLOCKED

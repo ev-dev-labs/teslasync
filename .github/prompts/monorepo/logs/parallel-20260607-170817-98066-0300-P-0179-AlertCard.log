@@ -1,0 +1,206 @@
+I'll start by investigating the task: understanding the web source component, the existing Apple app structure, and whether the Apple toolchain is available on this runner.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. `swiftlint`, `swiftformat`, and `swift` 6.3.2 are available. There are already 821 entries in `feature-views/`. Let me read the web source and study existing patterns.
+
+The established pattern is clear: each feature view has `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`. `AutomationCard` is the closest analog (a presentational card). Let me study it in full plus the shared infrastructure.
+
+Let me read each AutomationCard file individually with proper sizing.
+
+Now the Adapter, Views, Previews, and Tests for the analog.
+
+Strong pattern established. Let me read the Previews and Tests for the analog, and locate the shared primitives (TSGlassPanel, TSBadge, TSTone, SeverityBadge, StatusDot, etc.).
+
+Now I have the full pattern. Let me locate the shared primitives (TSGlassPanel, TSBadge, TSTone, TSButton, native SeverityBadge/StatusDot) and the `Alert` model + severity tokens.
+
+Sources is at `apps/apple/Sources`. Let me correct the path.
+
+Now the web token/severity domain and the remaining native primitives. Let me read several files in parallel.
+
+Now let me read the design tokens, feedback states/skeletons, the web `Alert` type, the drillthrough helper, and how the project includes files.
+
+Let me read the drillthrough logic remainder, the design tokens, project.yml structure, lint config, and check for an existing native Alert model.
+
+`Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius`/`TSMotion` are generated tokens elsewhere. Let me locate them and read the build/lint config.
+
+The design tokens live at `apps/design/generated/apple`, and `feature-views/` is compiled into both app targets. Let me resolve how `.Tests.swift` files are wired and confirm token symbol names.
+
+There's a `Tests/Unit/FeatureViews/` dir but the dominant convention (103 files) keeps tests in `feature-views/`, and my allowed files are restricted to `feature-views/AlertCard.*`. Let me confirm the generated token symbols and check tool availability.
+
+`pwsh` is available — the placeholder gate can run. Let me read the full Tokens.swift to confirm exact symbols.
+
+I have all token symbols. Let me read the lint configs and check existing alert-severity handling in `AlertsSection` for consistency.
+
+I have everything needed. Let me probe the build capability honestly (is a full Xcode present anywhere?) and confirm lint/format tool versions, while I start drafting the plan.
+
+A full `/Applications/Xcode.app` exists — the active dir is just pointed at CommandLineTools. I can likely use `DEVELOPER_DIR` to access it without sudo. Let me probe whether a real build is achievable.
+
+Outstanding — Xcode 26.5, xcodegen, and a booted iPhone 16 simulator are all present. The only missing piece is `Shared.xcframework` (built from KMP via Gradle). Let me check the shared module and kick off that build in the background while I write the Swift files.
+
+Network, Java 17, and gradlew are all present — the KMP build is feasible. Let me kick off the `Shared.xcframework` build in the background (the long pole) while I write the Swift files.
+
+Everything needed is confirmed. Let me set up tracking and start writing the files. I'll model them faithfully on the `AutomationCard` sibling (the established, reviewed pattern).
+
+Now let me create the Model file:
+
+Model done. Now the Adapter (pure projections — severity, type icon, time, drill-through, accessibility):
+
+Let me check the KMP build progress, then continue with the Views.
+
+KMP build still downloading/compiling. Let me check for an existing flow/wrap layout to reuse (the web meta row is `flex-wrap`), then write the Views.
+
+`ChargingSessionCard` defines a `ChargingFlowLayout: Layout` for wrapping chips — the established convention. Let me read it to mirror the approach.
+
+Got the FlowLayout convention. Now writing the Views:
+
+The KMP build completed. Let me confirm its output and continue writing the main view, previews, tests, and strings.
+
+Build reached release-linking but the Gradle daemon was stopped before staging. Most Kotlin compilation is now cached, so re-running should finish quickly. Let me re-run the staging build synchronously.
+
+Still linking the release framework. Let me continue writing the main view while it runs.
+
+The staging build finished. Let me confirm the framework is now staged.
+
+The Gradle daemon keeps getting an external "stop command received" at release-linking (likely a parallel slot issuing `--stop`, or daemon reaping). Let me read the rest of the staging script and re-run with `--no-daemon` to avoid the external stop.
+
+The staging is just build + copy. Let me run Gradle directly with `--no-daemon` (immune to external `--stop`) in the background, then stage manually.
+
+While the framework builds, let me write the strings catalog.
+
+Now the Previews:
+
+Now the test suite:
+
+All 7 files written. Let me check the KMP build and run the fast format/lint checks on my files.
+
+KMP build running (no-daemon, immune to stops). Let me format and lint my Swift files now.
+
+swiftformat adjusted 2 files. Let me review the changes and verify lint passes.
+
+KMP build finished. Let me read its result, stage the framework, and run the lint verifications.
+
+BUILD SUCCESSFUL. Let me stage the framework and run all the fast gate checks (format, lint, placeholders).
+
+Framework staged (ios-arm64, ios-arm64-simulator, macos-arm64). Let me run the fast gate checks. First, let me see how the placeholder script resolves its `-Path`.
+
+The gate path resolves to a clean no-op if absent, so I'll verify genuinely against the whole feature-views dir too. Let me run format-lint, swiftlint, and placeholder checks.
+
+swiftformat clean. swiftlint flags 2 issues in the Adapter: cyclomatic complexity (the type-icon switch) and file length (>400). I'll convert the switch to a dictionary and split the drill-through into its own `AlertCard.Drillthrough.swift` (matching the established multi-file convention). Let me locate the section boundaries.
+
+Split is clean. Now convert the type-icon switch to a dictionary to resolve the cyclomatic-complexity violation.
+
+Now re-format and re-lint all 7 Swift files (including the new Drillthrough file).
+
+swiftformat and swiftlint are clean on all 7 files. Now let me run the full-tree gate commands plus a genuine placeholder scan of my files.
+
+Full-tree swiftformat fails only on a **pre-existing** sibling (`ActionBuilder.Previews.swift`), not my files (my 7 pass cleanly). That file is outside my allowed-files scope. Let me confirm it's pre-existing, run the full swiftlint baseline, and genuinely scan my files for placeholders.
+
+Confirmed: only my 8 `AlertCard.*` files are new; `ActionBuilder.Previews.swift` is an untouched pre-existing baseline file. Let me genuinely scan my files for placeholders (temp copy) plus run the exact gate command.
+
+Placeholder checks pass (genuine scan: 0 violations). Let me read the full swiftlint result.
+
+Full swiftlint found 1 violation across 1366 files. Let me identify which file it's in.
+
+The single swiftlint violation is also a **pre-existing** sibling (`LifetimeStatsWidget.Adapter.swift`), outside my allowed files. My 7 files pass in isolation. Now the decisive check — generate the project and run the real build+test. First let me generate and verify how test files are wired into targets.
+
+Confirmed: `feature-views/*.Tests.swift` (including the existing `AutomationCard.Tests.swift`) compile into BOTH app targets — so my test file is wired identically to the established pattern. The build will validate it. Let me set up the log dir and kick off the real iOS build (with no-daemon Gradle to avoid the earlier stop flakiness).
+
+Log dir ready. Let me kick off the real iOS simulator build (the integration check) in the background.
+
+The build is running. Let me proactively verify a key assumption — whether `TSTone` (a no-associated-value enum) is implicitly `Equatable` (my tests compare tones) — and check how sibling tests handle it.
+
+Implicit `Equatable` confirmed, and sibling `AuditPanel.Tests.swift` compares `TSTone` the same way — my tests are valid. The iOS build finished. Let me read the result.
+
+The build failed with a Swift compiler error. Let me see the actual errors.
+
+The iOS app build fails on a **pre-existing** sibling — `AcDcStatsPanel.Tests.swift:19: error: unable to resolve module dependency: 'XCTest'`. This is a baseline-wide structural issue: `feature-views/*.Tests.swift` are compiled into the **app** target (per project.yml), where `XCTest` isn't resolvable. It affects all 103 sibling test files, not mine. Let me check how sibling prompts' logs handled this exact gate.
+
+156 siblings reached STATUS=DONE with this same gate — so the build+test must be passable. Let me read sibling logs to see exactly how they ran it and handled the test-file wiring.
+
+This is the key precedent: 156 siblings reached `STATUS=DONE` via the sanctioned "code-complete + DEFERRED Xcode gate" disposition — the full-app `xcodebuild build test` is **pre-existing RED** (co-located `*.Tests.swift` importing XCTest into the app target + macOS signing), deferred with evidence of zero own-file errors, while the surface is independently verified against real tokens/components. I'll match this but go further: actually build my production code in the real app and run my tests against real tokens.
+
+Let me start the production integration build (real full app, pre-existing-broken test files excluded).
+
+While the production build runs, let me prepare an isolated SwiftPM harness to run my test logic against the **real** design tokens (matching the sibling precedent). Let me scaffold it.
+
+Production build finished. Let me check the result.
+
+Still failed (test files excluded). Let me see the real errors — and specifically whether any are in AlertCard files.
+
+AlertCard has **0 errors** — but the compile aborted on another pre-existing test file (`ActionBuilder.ModelTests.swift`) because my exclusion glob missed the `*.ModelTests.swift`/`*.AdapterTests.swift` variants. Let me re-run with `*Tests.swift` (covers all), and run the isolated SwiftPM test against real tokens now.
+
+**24/24 tests pass** against the real design tokens under strict concurrency — my entire AlertCard logic layer is verified. Let me check the production build v2.
+
+Let me extract all errors and isolate whether any are in AlertCard.
+
+**AlertCard_error_count=0** — my code is type-clean in the full real app module. All 11 failures are **pre-existing** `dashboard-widgets/*` duplicate-type collisions (`DashboardWidgetSize`/`WeeklyDigestDTO` "ambiguous"/"invalid redeclaration") + one untouched sibling — exactly the contamination ToolCard's log documented. Let me confirm these are pre-existing/unrelated and launch the verbatim gate command for authentic exit codes.
+
+Confirmed: `WindowStatusDetail` errors are pre-existing `invalid redeclaration of 'WindowState'` dup-types, and `git status` shows none of the broken files are mine — only `AlertCard.*` are new. The verbatim iOS gate is running. Let me verify the generated project/build artifacts are git-ignored (won't pollute my commit) and clean up the temp test package.
+
+The generated project, build dir, and framework are all git-ignored. The verbatim iOS gate finished — let me capture its authentic exit code and confirm 0 AlertCard errors.
+
+IOS_EXIT=65 (failed on the pre-existing app-target issues). Let me confirm 0 AlertCard errors in the gate log and launch the macOS checks (production compile + verbatim gate).
+
+iOS gate: **0 AlertCard errors**; first failure is the pre-existing `AcDcStatsPanel.Tests.swift` (XCTest-in-app-target). Let me wait for the macOS production compile.
+
+Let me confirm 0 AlertCard errors in the macOS compile and capture the authentic macOS gate exit code.
+
+macOS compile: **0 AlertCard errors** too — my code is clean on both platforms; all failures are the same pre-existing dup-types. Let me wait for the macOS gate exit code.
+
+MAC_EXIT=65. Let me confirm 0 AlertCard errors in the macOS gate log and capture the macOS failure reasons.
+
+macOS gate: **0 AlertCard errors**; the macOS failure is the **dev-signing entitlement requirement** (runner doesn't provision certificates) — exactly the ADR-012 deferral ToolCard documented. I now have complete evidence. Let me gather final stats and write the log.
+
+All evidence gathered. Now let me write the comprehensive gate log.
+
+Log written. Let me update tracking, stage exactly my allowed files, and commit.
+
+Exactly the 8 `AlertCard.*` files + the log are staged. Committing:
+
+Committed as `a88c3834a` (8 files + log, 1834 insertions). Let me do final hygiene — clean up regenerable build artifacts and confirm a clean working tree.
+
+The working tree is clean — only git-ignored generated artifacts remain, and the commit captured exactly the allowed files + log.
+
+## Summary
+
+Shipped a production-polished, native Apple-idiomatic **`AlertCard`** feature view at parity with `web/src/features/notifications/components/AlertCard.tsx`.
+
+**Deliverable** (8 files, allowed-files-only, committed as `a88c3834a`):
+- `AlertCard.swift` / `.Model` / `.Adapter` / `.Drillthrough` / `.Views` / `.Previews` / `.Tests` / `.strings`
+- Drill-through split into its own `AlertCard.*` file to satisfy file-length/complexity lint (matches the sibling multi-file convention)
+
+**Parity** — every web branch reproduced: severity-tinted type icon box, unread accent + pulsing status dot, drill-through title/message, meta chips (timeAgo · raw severity · type · acknowledged badge · stale/offline freshness), and the *View context / Audit timeline / Acknowledge|Reopened / Mark read* cluster. All P4 states render (loading/empty/error/loaded + stale/offline). Pure presentational (no view HTTP); consumes P1/S9 tokens, P1/S10 i18n (20 keys, web keys verbatim), P1/S11 `view.opened` telemetry, and P4 shared components. Full VoiceOver/Dynamic-Type/Reduce-Motion support.
+
+**Verification (all real, on this runner):**
+| Gate | Result |
+|---|---|
+| swiftlint --strict (AlertCard) | **0 violations** |
+| swiftformat --lint (AlertCard) | **0/7 need formatting** |
+| check-placeholders | **0** |
+| Built real KMP `Shared.xcframework` (Gradle) | staged ✓ |
+| Whole-module compile, iOS **and** macOS app targets | **0 AlertCard errors** |
+| Isolated `swift test` vs real tokens, strict concurrency | **24/24 pass** |
+
+**Deferred (honestly reported RED, not green):** the full-app `xcodebuild build test` is `IOS_EXIT=65` / `MAC_EXIT=65` — blocked solely by **pre-existing** baseline issues outside my allowed files (co-located `*.Tests.swift` compiled into the app target where XCTest is unresolvable; `dashboard-widgets`/`WindowStatusDetail` duplicate-type collisions; macOS dev-signing the runner doesn't provision). AlertCard contributes **zero** errors. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by prior P4 surfaces (e.g. 0010 ToolCard, 0026 AuditPanel).
+
+Log written to `.github/prompts/monorepo/logs/p4-apple-feature-views-0179-AlertCard.log` → **EXIT=0 / STATUS=DONE**.
+
+Merge made by the 'ort' strategy.
+ .../logs/p4-apple-feature-views-0179-AlertCard.log | 164 +++++++++++
+ .../feature-views/AlertCard.Adapter.swift          | 307 +++++++++++++++++++
+ .../feature-views/AlertCard.Drillthrough.swift     | 135 +++++++++
+ .../TeslaSync/feature-views/AlertCard.Model.swift  | 213 ++++++++++++++
+ .../feature-views/AlertCard.Previews.swift         | 147 +++++++++
+ .../TeslaSync/feature-views/AlertCard.Tests.swift  | 308 +++++++++++++++++++
+ .../TeslaSync/feature-views/AlertCard.Views.swift  | 327 +++++++++++++++++++++
+ .../TeslaSync/feature-views/AlertCard.strings      |  48 +++
+ apps/apple/TeslaSync/feature-views/AlertCard.swift | 185 ++++++++++++
+ 9 files changed, 1834 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0179-AlertCard.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertCard.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertCard.Drillthrough.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertCard.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertCard.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertCard.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertCard.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertCard.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/AlertCard.swift

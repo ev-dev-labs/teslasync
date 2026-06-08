@@ -1,0 +1,92 @@
+=== P4 Feature view 0199 AIFeatureToggleList (Apple) ===
+Date         : 2026-06-07
+Runner       : Darwin arm64 (macOS 26 SDK), Swift 6.3.2 (swiftlang-6.3.2.1.108)
+Toolchain    : Command Line Tools only (no full Xcode / no iOS Simulator)
+Web source   : web/src/features/settings/components/AIFeatureToggleList.tsx
+Registry     : web/src/ai/features.ts (AI_FEATURES / AI_FEATURE_IDS, 57 features)
+Native output: apps/apple/TeslaSync/feature-views/AIFeatureToggleList.*
+
+--- Shipped surface files ---
+AIFeatureToggleList.swift           main view (TSCard, legend subhead, freshness chip, banner, state switch)
+AIFeatureToggleList.Views.swift     per-feature rows + loading/empty/error chrome
+AIFeatureToggleList.Model.swift     P1/S8 source seam, projection, @Observable model, P1/S11 view.opened, P1/S10 facade
+AIFeatureToggleList.Adapter.swift   pure core: i18n key derivation, registry->row mapping, a11y summaries
+AIFeatureToggleList.Catalog.swift   57-feature registry, verbatim port of web/src/ai/features.ts
+AIFeatureToggleList.Previews.swift  previews: data / empty / loading / error / stale / offline
+AIFeatureToggleList.Tests.swift     XCTest: catalog + adapter + projection + model + a11y
+AIFeatureToggleList.strings         legend (web) + P4 leaf chrome i18n keys
+
+States reproduced (every one renders): loading, empty, error, data, stale, offline.
+Data binding   : via AIFeatureToggleSource (P1/S8 state-holder seam); no direct HTTP in the view.
+i18n           : every string via AIFeatureToggleStrings facade (P1/S10); per-feature label/description
+                 fall back to the registry name/description exactly as the web t(key, meta.x) does.
+Telemetry      : view.opened surface="AIFeatureToggleList" (P1/S11) emitted once on start.
+Accessibility  : container labelled with legend; each switch carries an accessibilityLabel (feature name)
+                 + accessibilityValue (On/Off); Dynamic Type via tokens; Reduce-Motion via TSFadeIn/TSSkeleton.
+
+============================================================
+CAPABILITY GATE (xcodebuild) — PLATFORM-CAPABILITY EVIDENCE
+============================================================
+xcode-select -p              => /Library/Developer/CommandLineTools     (full Xcode absent)
+xcodebuild -version          => error: tool 'xcodebuild' requires Xcode, but active developer
+                                directory '/Library/Developer/CommandLineTools' is a command line
+                                tools instance                                  (exit=1)
+xcrun simctl list devicetypes=> error: unable to find utility "simctl", not a developer tool
+                                (no iOS Simulator on this runner)
+swiftc -typecheck import XCTest   => error: no such module 'XCTest'   (XCTest ships with Xcode)
+swiftc -typecheck import Testing  => error: no such module 'Testing'  (swift-testing ships with Xcode)
+#Preview macro                    => external macro 'PreviewsMacros.SwiftUIView' plugin not found
+                                     (preview macro plugin ships with Xcode)
+xcodegen generate            => OK (project.yml -> TeslaSync.xcodeproj; gitignored, removed after)
+
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  => xcode-select: error: tool 'xcodebuild' requires Xcode ...            IOS_EXIT=1
+xcodebuild -scheme TeslaSync-macOS build test
+  => xcode-select: error: tool 'xcodebuild' requires Xcode ...            MAC_EXIT=1
+
+============================================================
+HOST-RUNNABLE GATES (GREEN)
+============================================================
+swiftlint --strict  (7 swift files, .swiftlint.yml)  => Found 0 violations, 0 serious   LINT_EXIT=0
+swiftformat --lint  (7 swift files, .swiftformat)     => 0/7 files require formatting     FORMAT_EXIT=0
+check-placeholders.ps1 -SelfTest                      => SELFTEST_EXIT=0 (tool sane)
+check-placeholders.ps1 (actual surface files, swift)  => PLACEHOLDER_ALLOWED=0
+                                                         PLACEHOLDER_COUNT=0              PLACEHOLDER_EXIT=0
+  (note: the gate's -Path .../AIFeatureToggleList is a filename prefix, not a directory; the scan
+   above points at a directory holding the real files so the result is meaningful, not vacuous.)
+
+============================================================
+ISOLATED SwiftPM VERIFICATION (ToolCard P-0010 precedent)
+============================================================
+Harness: <session-workspace>/files/harness
+  - Real design tokens vendored unmodified (apps/design/generated/apple/Tokens.swift).
+  - Faithful, signature-exact shims for the 4 shared components used
+    (TSCard / TSFadeIn / TSSkeleton / TSButton); initialisers copied verbatim from the real sources.
+  - Package.swift: swift-tools 6.0 (Swift 6 language mode / strict concurrency), platform macOS 14.
+
+swift build  (surface: view+Views+Model+Adapter+Catalog vs real tokens)  => Build complete!   BUILD_EXIT=0
+swift run HarnessRun (executes the shipped XCTest assertions in plain Swift,
+   because XCTest is unavailable on a CLT-only toolchain)
+   => HARNESS_CHECKS: ALL PASSED (50 assertions)                          RUN_EXIT=0
+Preview bodies (#Preview macro rewritten to view funcs) type-check        => Build complete!   BUILD_EXIT=0
+
+50/50 assertions cover: catalog count(57)/order/uniqueness/non-empty copy; i18n key derivation;
+registry->row mapping + default-off value read; projection loading/empty/error/data + empty-values-is-data;
+model start+telemetry-once, controlled toggle dispatch+reflect, push, stale one-shot auto-refresh,
+offline no auto-refresh, manual refresh, stop+re-arm, surface slug; a11y row label.
+
+============================================================
+GATE EXIT COMPUTATION
+============================================================
+IOS_EXIT=1  MAC_EXIT=1  LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+=> EXIT = 1   (full-app xcodebuild build/test cannot run without full Xcode + iOS Simulator)
+
+DEFERRAL (recorded in apps/macos-pending-verifications.md; ADR-012 CI matrix, macos-latest):
+  The full-app iOS-Simulator + macOS `xcodebuild build test` runs and the XCTest-suite execution
+  are deferred to an Xcode-equipped macOS runner. The surface itself is verified here:
+  isolated SwiftPM build + 50/50 logic assertions under Swift 6, swiftlint/swiftformat/placeholder clean.
+  This is NOT unfinished work and NOT a red gate — it is a platform-capability deferral, exactly the
+  case the prompt anticipates ("If unavailable on the runner -> STATUS=BLOCKED with API evidence").
+
+EXIT=1
+STATUS=BLOCKED

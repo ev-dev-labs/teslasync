@@ -1,0 +1,158 @@
+================================================================================
+P4 · Dashboard widget · 0059 — LocationFavoritesWidget (Apple)
+Run: 2026-06-07T18:46-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/62
+Base: e9e15143
+Prompt: P4/dashboard-widgets/0059 — LocationFavoritesWidget
+Web source (spec): web/src/features/dashboard/widgets/LocationFavoritesWidget.tsx
+Mode: code-complete + EXECUTED host gates (incl. real XCTest run) + DEFERRED Xcode
+      app build/test (0036 precedent, ADR-012 macOS-pending).
+================================================================================
+
+=== CAPABILITY PROBE (every line is a command actually run on this host) ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                 ✅
+  swiftc -typecheck macOS .... shipped files compile vs REAL component lib (below)  ✅
+  swiftc -typecheck iOS 18 ... shipped files + my #Preview compile (below)          ✅
+  swift test (Xcode tool) .... 22/22 XCTest assertions executed green (below)        ✅
+  swiftlint .................. /opt/homebrew/bin/swiftlint, --strict 0 violations    ✅
+  swiftformat ................ /opt/homebrew/bin/swiftformat, --lint 0/275           ✅
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh, COUNT=0                       ✅
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override         ✅
+  iOS 26.5 simulators ........ present (iPhone 17 Pro/Max/17e)                       ✅
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep) ⚠
+  surface in project.yml ..... NOT target-registered (grep dashboard-widgets = 0)   ⚠ (integration prompt scope)
+  codesign identities ........ "0 valid identities found"                            ⚠ (BLOCKER for macOS app gate, ADR-012)
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, available and
+  proven by REAL macOS- and iOS-SDK compiles below. The capability-BLOCKED escape
+  hatch ("SwiftUI/Charts/MapKit unavailable") therefore does NOT apply — the
+  surface is authored, host-compiled, and unit-tested for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/LocationFavoritesWidget.*) ===
+  LocationFavoritesWidget.Projection.swift  227  pure adapter: DTOs + presence badge + ranked items + fmtInt/formatRelative ports
+  LocationFavoritesWidget.Model.swift       291  P1/S8 state-holder seam + P1/S11 telemetry + P1/S10 strings facade + a11y summary
+  LocationFavoritesWidget.RankedList.swift  161  status badge/chip + freshness chip + ranked list + row (port of WidgetRankedList)
+  LocationFavoritesWidget.swift             346  the surface: header + every state (loading/empty/error/stale/offline/content) + compact
+  LocationFavoritesWidget.Previews.swift    123  #if DEBUG previews — one per state (content/compact/loading/empty/error/offline)
+  LocationFavoritesWidget.Tests.swift       310  XCTest: adapter + model + registry + a11y (22 methods, executed green)
+  LocationFavoritesWidget.strings            56  P1/S10 catalog contribution (6 source keys + native chrome/relative/a11y keys)
+  Every file ≤400 lines (house file_length); largest 346 (surface). One exported view per file.
+
+=== PARITY (vs web LocationFavoritesWidget.tsx) ===
+  Data sources → bound via the shared state-holder seam (LocationFavoritesSource → LocationFavoritesModel):
+    useLocations, useVehicles, useLocationSnapshotLatest, useTranslation. The production app wires the
+    source over the KMP LocationStore/VehicleStore (StateHolderModel<LoadableState<…>>); the view does
+    NO HTTP. The model coalesces the favorites list + latest snapshot into one update (the established
+    DigitalTwin multi-source coalescing pattern).
+  Projection → LocationFavoritesProjection is a 1:1 port of the web locationBadge() precedence
+    (home→work→favorite→other) + the `items` useMemo (label ?? "—", value=visitCount, formattedValue
+    "{fmtInt}× · {formatRelative|—}") composed with WidgetRankedList's sort-desc + top-N slice.
+    fmtInt → LocationFavoritesIntFormatter (locale grouping); formatRelative → LocationFavoritesRelativeFormatter
+    (just now / Xm / Xh / Xd / absolute). All verified by executed unit tests.
+  Composition → header (MapPin icon + "Favorite Locations" title + freshness chip + refresh + Open) ·
+    presence badge row (emoji 🏠/🏢/⭐/📍 + tinted chip + optional "→ destination") · favorites ranked
+    list (rank · label · "12× · 3d ago" over a relative blue bar). A 1-column instance collapses to the
+    centered presence badge — the web `size.cols <= 1` branch.
+  Shared components → reuses Color.TS / Font.TS / TSSpacing / TSRadius / TSTone / TSSkeleton /
+    ContentUnavailableView, compiled against the REAL apps/apple component library in the typechecks
+    below. Recharts→none / Leaflet→none (no chart/map on this surface).
+  States (all render) → loading (skeleton chrome) · empty ("No favorite locations" + hint) · error
+    (retry) · stale (chip + banner) · offline (cached rows + chip + banner) · content. Model phase
+    resolution keeps cached content visible behind refresh/errors, matching the web shell.
+  i18n → all 6 source keys (title/home/work/favorite/other/noData) resolve through the P1/S10 facade
+    with the web t(key,default) fallback; native chrome/relative/a11y keys added in the per-surface
+    "LocationFavoritesWidget" table (NOT the shared 4.6 MB Localizable.xcstrings — parallel-unsafe).
+  Registry → LocationFavoritesWidget.registration == registry/maps.ts "location-favorites":
+    category "maps", default 2×4, min 1×2, max 4×40; clamp() honors the same envelope (unit-tested).
+  Telemetry → start() emits the P1/S11 `view.opened` (screen_view) once for surface slug
+    "LocationFavoritesWidget" (unit-tested via spy).
+  Accessibility → VoiceOver labels on refresh/open/retry + combined labels on the badge, destination,
+    and every ranked row; presence emoji is decorative (accessibilityHidden) with the localized status
+    spoken instead. Dynamic Type via Font.TS roles; Reduce Motion honored by TSSkeleton.
+
+=== GATES (executed; real exit codes) ===
+  swift test (SwiftPM harness over the REAL component-lib closure + the surface, Xcode toolchain):
+    Test Suite 'All tests' passed — Executed 22 tests, with 0 failures (0 unexpected)
+      LocationFavoritesProjectionTests  7/7   (presence precedence, emoji+tone, sort/slice, formatted
+                                               value, missing-field dash, relative buckets, int grouping)
+      LocationFavoritesModelTests      10/10  (loading/empty/error/content phase resolution, content-on-
+                                               cache, telemetry-once, refresh delegate, connection+projection
+                                               tracking, destination trim, maxRows limit)
+      LocationFavoritesRegistryTests    3/3   (canonical metadata, surface slug, clamp min/max)
+      LocationFavoritesAccessibilityTests 2/2 (summary content with/without favorites + destination)
+    SWIFT_TEST_EXIT=0
+  swiftc -typecheck macOS (CLT MacOSX.sdk, target macosx15.0, -swift-version 6, shipped non-test files
+    + Tokens + Design + Components/{Typography,Badges,Buttons,Cards,Skeletons,States,Banners}):
+    MAC_TYPECHECK_EXIT=0
+  swiftc -typecheck iOS (iPhoneSimulator SDK, target ios18.0-simulator, -swift-version 6 -D DEBUG,
+    same closure + ALL my files incl. #Preview macros; sibling DigitalTwinWidget.Previews.swift excluded
+    — it has a pre-existing strict-concurrency issue in code outside this prompt's allowed scope):
+    IOS_TYPECHECK_EXIT=0
+  swiftformat --lint apps/apple : 0/275 files require formatting    → FORMAT_EXIT=0
+  swiftlint  --strict (my 6 files, apps/apple/.swiftlint.yml) : 0 violations, 0 serious → LINT_EXIT=0
+  pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets -Language swift:
+    PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0 → PLACEHOLDER_EXIT=0
+
+  xcodebuild -scheme TeslaSync / TeslaSync-macOS  build test :
+    IOS_EXIT=DEFERRED   MAC_EXIT=DEFERRED
+    Reason (none a defect in this surface's code; all infra/integration):
+      1. The surface is NOT registered in apps/apple/project.yml target sources
+         (grep dashboard-widgets = 0). Registration is the integration prompt's
+         scope, and project.yml is OUTSIDE this prompt's allowed-files set, so the
+         scheme would not even compile these files.
+      2. Shared.xcframework is NOT staged (apps/apple/Frameworks holds only
+         .gitkeep); the app targets link it. Producing it needs the KMP/Gradle
+         Kotlin-Native build (P5 store-packaging / ADR-012 macOS-pending).
+      3. macOS code-signing: `security find-identity -v -p codesigning` →
+         "0 valid identities found" (BLOCKER for the macOS app gate, ADR-012).
+    These are the same blockers recorded for the 0036 DigitalTwinWidget gate, which
+    shipped EXIT=0/STATUS=DONE under the user-approved "code-complete + DEFERRED Xcode
+    gate" disposition. This surface's xcodebuild app build/test is DEFERRED to the
+    signed CI runner once the integration prompt registers it + stages Shared.xcframework.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) — implemented; each has
+      a #if DEBUG preview; phase logic unit-tested (10/10 model assertions).
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — 6/6 source keys + chrome/relative/a11y in
+      LocationFavoritesWidget.strings.
+  [x] Accessibility labels on every interactive element; badge/rows carry combined labels; emoji decorative.
+  [x] Tests: adapter unit test + per-state model test + registry + a11y label test — EXECUTED 22/22 green.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; word-scan clean.
+  [x] Host gates green (swift test / macOS+iOS typecheck / lint / format / placeholder); Xcode app
+      build/test DEFERRED with capability + predecessor evidence (per 0036 disposition).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : xcodebuild app build/test shown DEFERRED (not green), with concrete blocker
+                       evidence. Every "✅" is a command actually run on this host with its real exit code.
+  2  No scope narrowing: implemented ALL states + compact branch + presence badge + ranked list + i18n +
+                       a11y + telemetry + registry.
+  3  No skip-and-assume: each host gate executed; the XCTest suite was really run (22/22), not assumed.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of locationBadge() + items useMemo + WidgetRankedList + fmtInt +
+                       formatRelative; all web states + compact layout reproduced.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / dashboard grid (integration prompt's
+                       scope) and did NOT edit the shared Localizable.xcstrings (parallel-unsafe across the
+                       concurrent slots) — strings shipped as the per-surface table.
+  8  No commit on red  : committing on all-green host gates (incl. executed tests); Xcode app steps
+                       explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed LocationFavoritesWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native LocationFavoritesWidget shipped at parity with the web source: pure-Swift
+  adapter (executed-green), P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, every state +
+  i18n key + a11y label, registry-correct (location-favorites, 2×4 / 1×2 / 4×40). All host-runnable
+  gates pass — including a real 22/22 XCTest run and macOS+iOS-18-SDK compiles against the actual
+  component library — and the Xcode app build/test is DEFERRED to the signed CI runner (surface not yet
+  target-registered + Shared.xcframework + macOS signing — none a defect in this code), matching the
+  user-approved 0036 "code-complete + DEFERRED Xcode gate" disposition.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/LocationFavoritesWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0059-LocationFavoritesWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add LocationFavoritesWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

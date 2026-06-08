@@ -1,0 +1,168 @@
+I'll start by exploring the repository structure to understand the task scope and existing infrastructure.
+
+The web source is large. Let me explore it in sections plus the Apple app structure in parallel.
+
+The Apple app has substantial existing structure. Let me understand the project layout, existing feature patterns, and tooling availability in parallel.
+
+This is a large, established codebase using XcodeGen + KMP shared framework. Tooling (xcodebuild, swiftlint, xcodegen) is available. Let me examine the parity infrastructure, existing feature patterns, and key supporting files before writing a plan.
+
+Found a strong template: `SessionList` is an existing list page. The string catalog is at `Localization/Localizable.xcstrings`, nav at `Sources/App/`. Note the output path `TeslaSync/Features/Driving/` differs from the existing `TeslaSync/feature-views/` convention. Let me assess build feasibility and study the template.
+
+Critical finding: `Shared.xcframework` doesn't exist (only `.gitkeep`); it's built via Gradle/Kotlin-Native, which the xcodebuild scheme runs as a pre-action. This determines whether the build gate can pass. `pwsh` and the placeholder scanner are available. Let me study the full feature-view pattern and probe build feasibility.
+
+I now understand the sophisticated multi-file feature-view architecture (View + Model + Adapter + Views + Row + States + Seams + strings + Previews + Tests). Let me read the full web source and remaining template files, and probe the build in parallel.
+
+xcodegen generates cleanly (GEN_EXIT=0), Java 17 present, shared module exists. The KMP xcframework build (needs Kotlin/Native + network) remains the build-gate risk. Let me continue reading the web page and the remaining template files.
+
+I now have the complete web page structure. Let me map the architecture I need: design tokens, components, the KMP SharedFacade for driving data, navigation, and how an existing driving feature binds. Let me explore these in parallel.
+
+Excellent — `MetricSwitcher.swift` chart, `Metrics.swift` (MetricCard), feedback `States.swift`, and a SharedFacade with `StateHolderModel`/`LoadableState`/`LiveConnection` all exist. Let me study the driving feature binding, the components I'll use, and the facade.
+
+The Seams/Strings/States patterns are clear. Now I need exact component and token APIs to write compile-correct code. Let me extract public signatures from the components, tokens, facade, and read the driving feature's data binding.
+
+I have the component APIs. The critical parity work is porting the aggregation logic. Let me read the web aggregation lib, the Drive type, the facade primitives, and navigation registration.
+
+Key insight: feature-view files use the seam pattern and do **not** `import Shared` (unlike `SharedFacade/*`), so they're self-contained against tokens + components. swiftlint and placeholder gates run without the framework; build/test need it. Let me read the parity-critical aggregation logic, the Drive type, design tokens, and core component signatures.
+
+Now I have the full aggregation logic to port. Let me get the `Drive` type, design tokens, remaining component signatures, navigation, and the string catalog format.
+
+I have the full token vocabulary. Let me grep the remaining component public APIs (typography, cards, badges, states, skeletons, motion, buttons) and read the navigation registration.
+
+I have the component vocabulary. Let me read the exact signatures for the components I'll use most (EmptyState, Button, Badge, Card), plus navigation registration and the string catalog format.
+
+Now the navigation registration and string catalog. Let me read those plus check for any existing drives route wiring.
+
+Navigation uses `AppRoute.driving` + an `AppRouteHostRegistry` that P7 pages populate. Let me find where pages register, check which of my 65 string keys already exist, and see a sample xcstrings entry format.
+
+Navigation registers via `AppRouteHostRegistry.register(_:)`, composed in `TeslaSyncApp.swift`. 64 of 65 string keys are missing (only `route.driving` exists) — I'll add them. The build needs the KMP `Shared.xcframework` (Gradle/Kotlin-Native). Let me kick off that framework build in the background to test feasibility, and read the registration pattern + placeholder rules.
+
+Navigation pattern is clear: a `RouteRegistration.registry(base:)` chain composed in `TeslaSyncApp.swift`. Let me check the KMP build progress.
+
+The KMP toolchain **is** installed (`~/.konan/llvm-21`, tasks running `FROM-CACHE`) and the build is progressing — so the build gate may be feasible. It's a heavily contended parallel environment though. Let me let it run and verify the test-file pattern + placeholder rules before writing code.
+
+Feature-view tests use `import XCTest` + `@testable import TeslaSync`. I need to confirm which target compiles the colocated `.Tests.swift` files (the app target can't `@testable import` itself). Let me inspect the generated project's target membership.
+
+Confirmed: colocated `.Tests.swift`/`.Previews.swift` compile into both app targets (2 build-file entries = iOS + macOS), using `import XCTest` + `@testable import TeslaSync`. I'll replicate the exact pattern and add `TeslaSync/Features` to project.yml. Let me read the lint config and placeholder patterns to avoid violations, and check build progress.
+
+KMP build **failed in 40s** (exit 1) after `generateApiClient`. Critical lint constraints noted: `--strict` makes the 120-char line limit and 2-char identifier minimum hard errors, and forbidden words include "Placeholder"/"TODO"/"XXX". Let me see the actual KMP failure.
+
+The KMP build failed at iOS framework **linking** — "xcrun execution" error suggesting full Xcode isn't installed (only Command Line Tools). This is the decisive build-gate factor. Let me confirm the Xcode toolchain status.
+
+Full Xcode.app exists but isn't selected (active dir is CommandLineTools). I can override without sudo via `DEVELOPER_DIR`. Let me test if Xcode.app is functional.
+
+`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` gives full Xcode 26.5 with iOS SDK + simulators. The build gate **is feasible** — the KMP build only failed because of the wrong toolchain. Let me restart the framework build with the correct toolchain and find the exact gate invocation.
+
+Gate contract uses iOS Simulator + macOS scheme builds. Let me read the p4-apple README gate contract precisely and check KMP build progress.
+
+The async build got cleaned up. Let me relaunch the KMP framework build **detached** so it persists, then begin writing code. The gate is achievable (Xcode available), so I'm targeting STATUS=DONE.
+
+KMP build is progressing (`UP-TO-DATE` tasks). swiftformat present; placeholder self-test passes. Before writing, I must decide how the page binds data. Let me study the facade's state-holder bridging pattern and whether the KMP core exposes a drives repository.
+
+There's a KMP `DriveRepository.kt` + generated `Drive.kt`, and `AppContainer` exposes `model`/`loadable` factories. Let me read the exact KMP drives API and the container so I can write a real (non-stub) data binding safely.
+
+The data architecture is clear: KMP `DriveRepository.drives()` returns `Flow<Resource<List<Drive>>>`, but the production wiring (`bootstrap`) is explicitly deferred — so the committed pattern (like SessionList) is the seam + in-memory source, with the page fully implementing all states. I'll follow that exactly. Last piece: the SI unit converters/formatters (P1/S5). Let me read those.
+
+`Units.convert*`/`Units.format*` (P1/S5 SI facade) are public in my module — usable without importing Shared. Let me confirm their exact signatures and check the build, then start implementing.
+
+The KMP framework builds successfully with the correct toolchain. I have all the context needed. Let me record the plan, set up tracking, and read the swiftformat rules before writing.
+
+I have complete context. Let me set up tracking and start implementing.
+
+Now I'll write the implementation. Starting with the pure projection core (split across a few files to respect SwiftLint's strict file/type/function length limits).
+
+Now the filter/search/sort/pagination + phase resolution:
+
+Now the Seams (Strings, Telemetry, Actions, Source, Update, Accessibility):
+
+Now the model — core state, lifecycle, and intents (derived accessors go in a separate extension file to respect type-body limits):
+
+Let me refine the model to faithfully port the deferred-search behavior (so `filter.pending` is meaningful), then add the derived accessors.
+
+Now the derived accessors (list pipeline + trend) and a formatting helper file:
+
+Now the formatting helpers and display/label accessors:
+
+Now the visual layer. First a small theme helper (grade/metric colors), then the drive row:
+
+Now the drive row (parity with web `DriveCard`):
+
+Now the row helper subviews and computed accessors:
+
+Now the data-state views (loading / empty / error / contextual empties + freshness):
+
+Now the KPI tile data (model extension) and the overview card:
+
+Now the overview card (the 6 KPI panels + glass container = panels 1–7):
+
+Now the trend chart, collections bar, and list controls sections:
+
+Let me fix the export button labels (web uses literal "CSV"/"JSON") and create the section building blocks:
+
+Now the list section (bulk toolbar, date-grouped rows, delete confirmation):
+
+Now pagination, sticky summary, and the bulk/group/page model helpers:
+
+Now the main page view:
+
+Now the navigation registration + range menu:
+
+I need to add active filter chips (to use `drives.filterLabel.search`/`collection`) and fix the range menu's a11y label. Let me create the filters view and wire it in.
+
+Now the previews (with sample fixtures) and tests:
+
+Now the tests — adapter/projection/search/pipeline coverage:
+
+Now the model behavior tests:
+
+All feature files written. Let me update tracking and wire up the build integration (project.yml, app registration). Let me view the exact project.yml target blocks.
+
+Adding `TeslaSync/Features` to both app targets' sources:
+
+Now wiring the driving route registration into the app:
+
+Now adding all string keys to the catalog. Let me first wire the `drives.overTime.empty` usage, then run a script to add missing keys.
+
+All 81 keys added and JSON is valid, but I re-sorted the whole catalog (the original wasn't sorted), creating unnecessary churn. Let me redo preserving original order.
+
+Catalog updated cleanly (order preserved, +81 keys). Now let me format and lint my files before building.
+
+swiftformat applies cleanly (0/23 need formatting). Now swiftlint --strict:
+
+swiftlint linted the whole project (config `included`) and found 1 serious violation. Let me locate it.
+
+The violation is in a **pre-existing** file (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`), not mine. But I must confirm my files were actually linted (my new dir isn't in the config's `included` list). Let me verify.
+
+My files **aren't** covered by the config's `included`, and they have real violations (e.g., `statement_position`). Let me get the full violation list for my files, then fix them and add my dir to `included`.
+
+17 violations in my files (none pre-existing-related). Key insight: `function_parameter_count` ignores defaulted params, and my new dir isn't in `included`. Let me view the exact lines to fix precisely.
+
+Now I'll fix all 17 violations. First the Adapter (rename single-char enum cases, rewrite grade functions to avoid `statement_position`):
+
+Now update grade references in Theme, Stats, and Tests. Let me check what bare references exist, then update them safely.
+
+Some refs were filtered out. Let me use perl (BSD sed lacks `\b`) to rename grade refs in the three files:
+
+Now fix the remaining violations (param defaults, empty_count, line length):
+
+Let me verify the Tests edit applied correctly (makeDrive is file-scope):
+
+Good, applied correctly. Now the Previews helper defaults:
+
+Now the empty_count fixes and line length:
+
+I need to define `resultsText`. Let me add it to the sticky summary:
+
+Now add my dir to the swiftlint `included` list, re-format, and re-lint:
+
+My files are lint-clean. Now I must determine the exact gate behavior — the gate command uses a repo-root-relative path. Let me test it precisely.
+
+The gate command (from repo root) lints only my 23 files: **0 violations, exit 0** — swiftlint gate is green. Now let me run the placeholder scan, regenerate the project, and start the build.
+
+The placeholder scan flags the literal word "Placeholder" in my comments. Let me find and reword all forbidden words:
+
+Three are comments (easy reword); the 4th is the **required** key `drives.searchPlaceholder` (can't rename — it's a parity key). Let me check the scanner's opt-out syntax.
+
+The scanner supports `// parity:allow <reason>` for legitimate cases (the self-test example is literally an i18n key). Let me reword the comments and mark the required key:
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: D867:200A97:32379B9:346B5FC:6A26EAB4)

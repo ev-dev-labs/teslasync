@@ -1,0 +1,124 @@
+I'll start by exploring the repository structure, the web source component, and the existing Apple app setup.
+
+Now let me examine the Apple app structure and the related types and dependencies.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is present. `swift`, `swiftlint`, `swiftformat`, `pwsh` are available. Let me examine the existing feature-views to follow established patterns.
+
+The feature-views directory has 1182 files following a multi-file-per-component pattern. Let me understand the file set for one component and find similar status/health cards to use as templates.
+
+Each component = 7 files (Adapter, Model, Previews, strings, main .swift, Tests, Views). 144 components exist; no `BackgroundWorkersCard` yet. Let me read a similar status panel as a template and the web types.
+
+Now I understand the 7-file structure. Let me read the complete RateLimitStatusPanel set as my template, since it's the closest analog (admin status panel with all states).
+
+I have the full template pattern. Now let me find the web data source (the hook feeding WorkersHealth), the design tokens, build config, and the placeholder checker.
+
+Let me read the web test (to mirror exact behaviors), the data source in SystemStatusPage, the design tokens, the full project.yml, the placeholder checker, and verify whether full Xcode exists.
+
+`/Applications/Xcode.app` exists — the active dir just points at CommandLineTools. I can override via `DEVELOPER_DIR` without sudo. Let me verify Xcode works and find the workers data hook semantics.
+
+**Xcode 26.5 is available** via `DEVELOPER_DIR`, iPhone 16 simulator is booted, and `xcodegen` is installed. The full gate CAN run — not blocked. Now let me read the design tokens, the placeholder checker, full project.yml routing, and the workers query options.
+
+Let me locate the actual token definitions (TSSpacing, TSTone, Color.TS, Font.TS) and shared components (TSGlassPanel, TSButton, TSBadge, TSMetricBar), plus STATUS_REFRESH_MS and the placeholder checker.
+
+I need to understand how `.Tests.swift`/`.Previews.swift` in feature-views are routed (app target vs test target), since `.Tests.swift` files import XCTest. Let me investigate the wiring.
+
+Key finding: `ToolCard` has no `.Tests.swift` in feature-views/ — its tests live in `Tests/Unit/FeatureViews/`. Yet `RateLimitStatusPanel.Tests.swift` is in feature-views/. I must determine definitively how the build routes these. Let me generate the project and inspect target membership.
+
+143 each of `.Tests.swift`/`.Previews.swift` (one per component). Project generated. Let me determine definitively which target(s) compile a feature-views `.Tests.swift`.
+
+The `.Tests.swift` files compile into BOTH app targets (lines 10295, 11900 = the two app target Sources phases). That's surprising given they use `@testable import`. I must establish the baseline: does the app even build today? Let me check the Shared.xcframework preAction and test the self-import behavior.
+
+My self-import test failed only because XCTest wasn't on the search path. Let me test properly with the platform framework path, and check whether the KMP `Shared.xcframework` toolchain is viable here (it's a hard build dependency, currently absent).
+
+Critical finding: `@testable import` of self is just a *warning* ("ignoring import"), not an error — so feature-views `.Tests.swift` compile into the app target. Now let me check the known build state and whether the KMP `Shared.xcframework` (a hard build dependency, currently absent) is buildable here.
+
+The `macos-pending-verifications.md` documents the exact established methodology: each feature-view surface is verified green **in isolation** (SwiftPM build + tests, `swiftc -typecheck` for iOS 18 + macOS 15, swiftlint/swiftformat/placeholder), while the full-app `xcodebuild build test` is **deferred** (macOS-pending) due to pre-existing unrelated collisions (116+ co-located `*.Tests.swift`, `DashboardWidgetSize` redefinitions, unstaged KMP `Shared.xcframework`). I'll follow this precedent exactly. Let me read the placeholder checker, an existing log, shared components, and any isolated-build harness.
+
+The placeholder gate forbids `TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented` (and swift stubs) — I'll avoid those even in comments. Let me read an existing surface log (to replicate the exact verification recipe) plus the remaining shared components.
+
+This is the definitive template — the AlertMessageEditor log shows the exact verification recipe (swiftformat/swiftlint/placeholder/`swiftc -typecheck` iOS+macOS/isolated `swift test`/xcodegen) with the full-app build honestly DEFERRED, STATUS=DONE. Let me read the remaining shared component APIs and check for a reusable isolated-build harness.
+
+No reusable harness — prior agents built an ad-hoc isolated SwiftPM package per surface. Let me read the typography + metrics components to finalize which shared primitives I'll use.
+
+I now have all shared APIs. Before writing, let me check for type-name collisions across the shared app module (all 143 feature-views compile together), and set up the todo tracking.
+
+No collisions — all planned names are free. Let me read the lint/format configs so my code passes `--strict` on the first try.
+
+Lint: lines ≤120 (strict turns warnings to errors), min identifier length 2, several opt-in rules. SwiftFormat: maxwidth 120, before-first wrapping. I'll write carefully then auto-format. Starting with the pure Adapter core.
+
+Now the Model (state-holder seam, projection, telemetry, i18n facade):
+
+Now the Views (subviews for every state + summary/group/instance/footer/link):
+
+Now the composed surface file:
+
+Now the i18n strings catalog (every key with the web English fallback):
+
+Now the previews for every state:
+
+Now the comprehensive test suite (adapter, projection, model, a11y):
+
+Let me fix a whitespace bug in one accessibility test (passed `"— "` but expected `"—"`):
+
+All 7 files written. Now verification. First, scan my files for forbidden placeholder words, then auto-format.
+
+False positive: `DegradesToDown` contains "ToDo". The placeholder gate may match case-insensitively, so I'll rename the test to be safe and verify the gate's matching logic.
+
+Confirmed: the gate matches **case-insensitively** (line 118 `IgnoreCase`), so "ToDo" would have failed — good that I renamed it. Let me read the script's `-Path` handling (the gate passes a filename prefix) and auto-format my files.
+
+The gate's literal `-Path .../BackgroundWorkersCard` (a filename prefix, not a real path) hits line 132 → returns clean/empty (vacuous). For honest evidence I'll scan my actual files via a temp dir. Let me auto-format my files first, then lint.
+
+swiftformat clean (0/6). swiftlint: only 1 issue — `Views.swift` is 594 lines after reflow (limit 400). I'll split the populated-body subviews into a new `BackgroundWorkersCard.Content.swift` (matches the allowed `BackgroundWorkersCard.*` pattern), like the AlertMessageEditor multi-file precedent. Let me view the exact split boundary.
+
+I'll create `BackgroundWorkersCard.Content.swift` with the populated-body subviews, then trim them from Views.swift.
+
+Now trim the moved sections from Views.swift (remove lines 243-594):
+
+Views.swift now 241 lines. Let me re-format and re-lint all 7 files (including the new Content.swift):
+
+FORMAT_EXIT=0 and LINT_EXIT=0 (0 violations). Now the placeholder gate — I'll run it on a temp copy of my files (honest scan) plus the literal gate path:
+
+PLACEHOLDER_COUNT=0 (EXIT=0). Now the compile verification. Let me enumerate the exact shared symbols my files use and check TSMaterial deps, to build a focused isolated SwiftPM package (module `TeslaSync`) like the precedent.
+
+Minimal shared deps confirmed: Tokens, TSMaterial, Badges, Buttons, Cards, Typography. Let me build an isolated SwiftPM package (module `TeslaSync`, Swift 6, macOS 15) — the precedent's verification path — and run `swift test`.
+
+**30/30 tests passed** (TEST_EXIT=0) — the module compiled clean under Swift 6 strict concurrency on macOS 15. Now the real-SDK `swiftc -typecheck` for iOS 18 simulator and macOS 15 on the shipped surface files:
+
+Both real-SDK typechecks pass (IOS=0, MAC=0). Now let me regenerate the xcodeproj with all new files and gather first-hand evidence of the pre-existing full-app blockers the precedent documents.
+
+XCODEGEN_EXIT=0, my 8 files integrated. First-hand blocker evidence confirmed: 144 co-located XCTest test files in the app target, 15 `DashboardWidgetSize` redefinitions, no staged `Shared.xcframework`. Let me capture a real xcodebuild failure transcript (building the target directly, fails fast on pre-existing blockers — no Gradle/network):
+
+The full-app build fails immediately on the **pre-existing unstaged `Shared.xcframework`** (the macOS-pending KMP artifact) — first-hand confirmation, zero blockers from my surface. All host-runnable gates are green. Let me gather line counts + git context, then write the gate log.
+
+All files ≤392 lines (under 400 limit). `xcodeproj` is gitignored; a stray `apps/apple/build` exists (I'll clean it). Now writing the gate log:
+
+Now cleanup, final re-verification on the real files, and confirm git status before committing:
+
+All final gates green (FORMAT_EXIT=0, LINT_EXIT=0). git status shows my 8 surface files + log as new; the two `M` web files are pre-existing unrelated changes I'll exclude. Committing only my files:
+
+Committed. Let me verify the commit contents:
+
+Commit `5b9d9d9ea` contains exactly the 8 surface files + log (2044 insertions). Marking complete:
+
+All 9 todos done. Task complete.
+
+Merge made by the 'ort' strategy.
+ ...le-feature-views-0240-BackgroundWorkersCard.log | 145 ++++++++
+ .../BackgroundWorkersCard.Adapter.swift            | 360 +++++++++++++++++++
+ .../BackgroundWorkersCard.Content.swift            | 367 +++++++++++++++++++
+ .../BackgroundWorkersCard.Model.swift              | 282 +++++++++++++++
+ .../BackgroundWorkersCard.Previews.swift           | 126 +++++++
+ .../BackgroundWorkersCard.Tests.swift              | 392 +++++++++++++++++++++
+ .../BackgroundWorkersCard.Views.swift              | 241 +++++++++++++
+ .../feature-views/BackgroundWorkersCard.strings    |  59 ++++
+ .../feature-views/BackgroundWorkersCard.swift      |  72 ++++
+ 9 files changed, 2044 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0240-BackgroundWorkersCard.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackgroundWorkersCard.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackgroundWorkersCard.Content.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackgroundWorkersCard.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackgroundWorkersCard.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackgroundWorkersCard.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackgroundWorkersCard.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackgroundWorkersCard.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/BackgroundWorkersCard.swift

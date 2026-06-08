@@ -1,0 +1,158 @@
+I'll start by exploring the environment and understanding what's available, since this task requires Apple/Swift tooling.
+
+Swift 6.3.2, swiftlint, swiftformat, and pwsh are available, but **xcodebuild requires full Xcode** (only Command Line Tools installed). Let me explore the existing Apple app structure and web source before concluding anything about capability.
+
+Now let me read the checklist data module and explore the Apple app's existing patterns (state holders, tokens, i18n, existing widgets).
+
+Found the predecessor pattern: `DigitalTwinWidget` (10 files). I must follow this exactly. Let me read the web checklist module and the full predecessor widget in parallel.
+
+Let me read the predecessor widget files individually to learn the exact pattern.
+
+Excellent, comprehensive predecessor pattern. Now I need the build system, shared types, and design tokens. Let me check whether these are duplicated or shared (to avoid redeclaration), and whether a `Package.swift` exists for building without full Xcode.
+
+Key insight: `TeslaSync/dashboard-widgets/` (predecessor `DigitalTwinWidget`) is staged separately from the compiled `Sources/` tree, and the build uses XcodeGen (no Package.swift). Let me read the rest of `project.yml`, the canonical compiled widget (`BatteryCells*` in `Sources/`), and test whether SwiftUI compiles under Command Line Tools.
+
+SwiftUI/Charts/MapKit **parse fine** under CLT (PARSE_EXIT=0), but `TeslaSync/dashboard-widgets/` is **not referenced in project.yml** — it's a staging area folded in at integration time, exactly like the predecessor `DigitalTwinWidget`. `xcodebuild` needs full Xcode (unavailable). Let me locate the design tokens and shared components I'll depend on, and read the remaining predecessor files.
+
+Let me read the design tokens and shared primitives I'll reuse, plus the predecessor's test/strings/preview files.
+
+The Previews header confirms a **"swiftc host gate"** is how these staged widgets are verified (not xcodebuild). Let me find that harness and read the shared primitives I'll reuse (Skeleton, Tone, Typography, Feedback/UI components).
+
+Now I understand the pattern: the predecessor resolves strings through its own per-widget facade (not shared `TSEmptyState`, which needs catalog-integrated keys). Let me read the shared primitives I may reuse (`TSSkeleton`, `TSTone`, `TSButton`, typography) plus the predecessor's badge/layout helpers to finalize my dependency surface.
+
+Let me read the canonical compiled widget's registry/model (to settle how registry types are shared) and the lint/format configs so my code passes `--strict`.
+
+This clarifies everything: my prompt targets the **staged DigitalTwin pattern** (self-contained, no `import Shared`), not the compiled BatteryCells tier. Let me de-risk my verification approach by smoke-testing whether `swift test` (SwiftUI + XCTest) works under Command Line Tools before writing the widget.
+
+`swift test` reveals two things: a `Sample.swift` emit-module error (need detail) and **XCTest is unavailable under CLT** (it ships with full Xcode). Let me get the SwiftUI error detail, check whether `swift-testing` works instead, and confirm XCTest's absence.
+
+`swift build` (lib) succeeds — SwiftUI compiles fine under CLT. **swift-testing IS available** (`Testing.framework` in CLT), while XCTest is not. 
+
+My verification strategy is now clear:
+- **Commit** XCTest tests (repo convention; runs in CI's XCTest bundle — matches predecessor).
+- **Locally verify** via a throwaway SwiftPM harness compiling my real sources + a `swift-testing` mirror of the same assertions (runs under CLT).
+
+Let me read the predecessor's `.Builder`/`.Models` files to mirror their structure, then write the widget.
+
+I now have a complete grasp of the conventions. Let me set up tracking and write the plan, then create the widget files.
+
+Now I'll create the widget files. Starting with the pure domain models and the adapter (the unit-testable core, a faithful port of `checklist.ts`).
+
+Now the Model file: state-holder seam (P1/S8), telemetry seam (P1/S11), `@Observable` model with phase resolution, registry types, i18n facade (P1/S10), and the testable a11y summary.
+
+Now the reusable sub-views (progress bar, task row, completion footer, freshness chip, connectivity banner, loading chrome).
+
+Now the main widget view with the registration metadata, header, and the full state switch.
+
+Now the DEBUG previews and the i18n strings catalog.
+
+Now the XCTest suite (repo convention — adapter, model, registry, a11y coverage).
+
+All 8 files written. Now let me build the verification harness: a throwaway SwiftPM package compiling my real sources (+ vendored tokens & `TSSkeleton`) and run `swift build`.
+
+Only `#Preview` macro errors (the `PreviewsMacros` plugin ships with Xcode, not CLT) — exactly why the predecessor excludes previews from the host gate. All other sources compiled. Let me exclude Previews and rebuild.
+
+Library compiles cleanly. Now the swift-testing mirror of the assertions, then `swift test` under CLT.
+
+`import Testing` isn't auto-resolved under CLT — I need to point at the `Testing.framework` search path and rpath. Let me retry with explicit flags.
+
+The suite **compiles and links** — only a runtime dylib (`lib_TestingInterop.dylib`) isn't on the load path, plus a MainActor warning on `registration`. Let me locate the dylib and fix the warning by making the registry tests `@MainActor` (cleaner than the predecessor).
+
+Found it at `.../Library/Developer/usr/lib/`. Let me fix the MainActor warning (committed + harness) and re-run with the dylib path added.
+
+**All 25 tests pass under CLT.** Production code compiles and logic is fully verified. Now the gate-equivalent static checks on the committed files: swiftformat, swiftlint, and the placeholder gate.
+
+swiftformat wants standard reformatting (trailing commas, line wraps, `hoistPatternLet`, property-body wraps). Let me auto-format my files in place, then re-verify lint is clean and the code still compiles/tests.
+
+swiftformat clean. Now swiftlint `--strict` on the widget files, then re-verify the formatted code still compiles and tests pass.
+
+swiftlint used the repo `included:` list (262 files) and skipped my dir. Let me lint my files explicitly with a config that targets them (same rules, no `included` override).
+
+Two real swiftlint violations (both would fire in CI too): a 3-member tuple (`large_tuple`) and an 87-line `catalog` function (`function_body_length`). Let me view the current (post-format) code and refactor both properly.
+
+Refactoring both: `catalog` → spec-driven map (short body), and `resolve` → a small struct instead of a 3-tuple.
+
+Now re-format, re-lint, and re-run swiftlint on the committed files, plus re-verify the harness compiles and tests pass with the refactored code.
+
+Both static gates pass: **swiftformat 0/16**, **swiftlint 0 violations**, and the refactored library compiles. Now re-run the test suite and the placeholder gate.
+
+All 25 tests pass. The placeholder gate flagged one line — my loading-skeleton doc comment literally contains the word "placeholder". Let me view and reword it (and scan for any other forbidden words).
+
+Only that one line. Let me reword it.
+
+Re-run the placeholder gate (on the real dir) plus reconfirm format/lint.
+
+All gates green. Let me do a final clean harness build+test, confirm there's genuinely no full Xcode (capability evidence), and prepare the log directory.
+
+**Full Xcode IS installed** at `/Applications/Xcode.app` — the active dir is just pointed at CLT. I can use `DEVELOPER_DIR` to access it without sudo, which means I can run my **committed XCTest file** verbatim (XCTest becomes available). Let me verify Xcode works and check simulator runtimes.
+
+This changes the picture: **full Xcode 26.5, an iOS 26.5 simulator (iPhone 16 booted), xcodegen, and XCTest are all available.** Since the capability is present, I should run the *real* `xcodebuild build test` rather than declare BLOCKED. My files are staged out of the repo's `project.yml` (can't edit it — allowed-files), so I'll build a scoped xcodegen project around my **actual** sources + committed XCTest and run real iOS-Simulator + macOS `xcodebuild test`.
+
+Project generated. Now the real iOS-Simulator `xcodebuild build test` against my actual sources + committed XCTest.
+
+**`** TEST SUCCEEDED **`** — real iOS Simulator build+test, 25/25 tests passed on iPhone 16, with the `view.opened surface=OnboardingChecklistWidget` telemetry firing. Now the macOS build+test.
+
+macOS test target couldn't resolve the `TeslaSync` module — likely the macOS framework didn't build (or a module-name clash). Let me capture the full macOS log and check whether the framework itself compiled.
+
+The macOS framework **builds successfully** — the failure was only `@testable import` module resolution colliding with the same-named iOS target in one project. Let me isolate macOS into its own project (no name clash) and run the real macOS build+test.
+
+Identical iOS structure worked, so the hyphenated target name is the likely culprit in module resolution. Let me mirror the working iOS project exactly (target named `TeslaSync`, macOS platform) and retry.
+
+**Both pass now: iOS `** TEST SUCCEEDED **` and macOS `** TEST SUCCEEDED **`, 25 tests each, 0 failures.** Every gate step is genuinely green. Let me generate the official log by capturing the real command outputs.
+
+Now append the real iOS and macOS `xcodebuild build test` runs to the log.
+
+The log path broke after `cd` (relative path). Let me use an absolute log path and append all gate sections (iOS from the saved run, then macOS, lint, format, placeholder).
+
+iOS + macOS both green in the log. Now append swiftlint, swiftformat, placeholder, and the host-gate cross-check.
+
+Finally, append the CLT host-gate cross-check, a states/parity summary, and the closing `EXIT`/`STATUS`.
+
+The log is complete and ends with `EXIT=0` / `STATUS=DONE`. There's a cosmetic duplicate iOS header to clean up. Let me fix it and verify the final git state.
+
+Git shows my 8 widget files + the log as new, plus **two pre-existing modified web files I did not touch** (`FleetApiSection.tsx`, `BackupRestorePage.tsx`). Per the prompt's commit spec, I'll stage **only** my files + the log, leaving those untouched. Let me clean temp artifacts and commit precisely.
+
+Exactly 9 files staged (8 widget + log); the two pre-existing web modifications are left untouched. Committing now.
+
+Commit `baa6f898` created with exactly the 9 intended files (1869 insertions). Let me do a final sanity check that nothing else (e.g., predecessor files) was inadvertently modified, then close out tracking.
+
+All clean: working tree shows only the two pre-existing web files (untouched), predecessor `DigitalTwin*` files unchanged, my commit contains exactly the 9 intended files, and all todos are done.
+
+## Summary
+
+I shipped a production-polished, native Apple parity of `OnboardingChecklistWidget`, following the predecessor `DigitalTwinWidget` staged pattern exactly.
+
+**Delivered** (`apps/apple/TeslaSync/dashboard-widgets/`, committed as `baa6f898`):
+- `…Models.swift` / `…Builder.swift` — pure adapter porting `useChecklistTasks` + `shouldHideChecklist` (7-step catalog verbatim from `checklist.ts`, `neon-cyan` default theme, 24h celebration window, `#open-command-palette` sentinel).
+- `…Model.swift` — P1/S8 source seam + `@Observable` model resolving **loading / empty / error / hidden / content** phases with stale+offline chrome, P1/S11 `view.opened` telemetry, dismiss/restart; registry `onboarding-checklist` (system, default 2×4, min 2×3, max 4×8, clamped); P1/S10 string facade; testable a11y summary.
+- `…Components.swift` / `…swift` — progress bar, task rows, completion footer, freshness chip, connectivity banner, loading skeleton, full header/state switch. Every string via the facade; a11y labels on every interactive element.
+- `…Previews.swift` (every state), `…Tests.swift` (XCTest: adapter/model/registry/a11y), `…strings` (all web-parity + chrome + a11y keys).
+
+**Verification — every gate genuinely green** (full Xcode 26.5 *is* available, so not BLOCKED):
+- iOS Simulator (iPhone 16) `xcodebuild build test`: **`** TEST SUCCEEDED **`**, 25/25.
+- macOS `xcodebuild build test`: **`** TEST SUCCEEDED **`**, 25/25.
+- `swiftlint --strict` 0 violations · `swiftformat --lint` 0 · `check-placeholders` 0.
+- Cross-checked under Command Line Tools (swift build + swift-testing mirror, 25/25).
+
+Because the surface is staged out of `project.yml` (same as the predecessor) and edits were restricted to `OnboardingChecklistWidget.*`, the real `xcodebuild` ran against a scoped project compiling the **actual committed sources + committed XCTest** — documented transparently in the log, which ends with `EXIT=0` / `STATUS=DONE`. The two pre-existing modified web files were left untouched.
+
+Merge made by the 'ort' strategy.
+ ...oard-widgets-0071-OnboardingChecklistWidget.log |  78 +++++
+ .../OnboardingChecklistWidget.Builder.swift        | 210 +++++++++++++
+ .../OnboardingChecklistWidget.Components.swift     | 308 +++++++++++++++++++
+ .../OnboardingChecklistWidget.Model.swift          | 331 +++++++++++++++++++++
+ .../OnboardingChecklistWidget.Models.swift         | 194 ++++++++++++
+ .../OnboardingChecklistWidget.Previews.swift       | 118 ++++++++
+ .../OnboardingChecklistWidget.Tests.swift          | 303 +++++++++++++++++++
+ .../OnboardingChecklistWidget.strings              |  74 +++++
+ .../OnboardingChecklistWidget.swift                | 253 ++++++++++++++++
+ 9 files changed, 1869 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0071-OnboardingChecklistWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/OnboardingChecklistWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/OnboardingChecklistWidget.Components.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/OnboardingChecklistWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/OnboardingChecklistWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/OnboardingChecklistWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/OnboardingChecklistWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/OnboardingChecklistWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/OnboardingChecklistWidget.swift

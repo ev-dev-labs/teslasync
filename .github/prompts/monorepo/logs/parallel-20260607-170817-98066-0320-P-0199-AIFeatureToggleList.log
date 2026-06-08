@@ -1,0 +1,139 @@
+I'll start by exploring the repository structure to understand what exists and what's needed for this task.
+
+Toolchain is mostly present. Let me check xcodebuild more carefully and read the web source plus explore the Apple app structure.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed, and `simctl` (simulators) is unavailable. `swift`, `swiftlint`, `swiftformat` ARE available. Let me explore the existing Apple structure deeply to understand patterns before deciding the path forward.
+
+There are existing feature-views (905 entries). Let me examine the complete file set for one sibling to understand the exact pattern I must follow.
+
+The pattern per component is 7 files: `.swift` (main view), `.Adapter.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`. Let me read a complete sibling set to learn the exact conventions.
+
+This is a mature, well-established pattern. Let me read the remaining sibling files plus the web AI features registry and find where shared design tokens live.
+
+Now let me read the Tests/Previews siblings, examine the web AI features registry structure, and locate the shared design tokens.
+
+Let me read the AI registry structure (meta shape, sample entries, the IDs array) and locate the native design-system primitives (TSToggle, tokens).
+
+Now let me examine the design-system primitives I'll need: `TSToggle`, the token definitions, and the glass panel / chrome components.
+
+Found the native counterparts: `TSToggle`, `TSSubhead`, `TSCaption`. Let me read the token definitions and the exact APIs of these primitives.
+
+Now let me check the build setup (is there an SPM manifest or only Xcode project?), read the material/feedback primitives, the web Toggle component, and see how a sibling renders a settings-style toggle row.
+
+No `.xcodeproj`/`Package.swift` exists and only Command Line Tools are installed — the xcodebuild gate genuinely cannot run here. Let me confirm the tooling situation and read the remaining primitives. This `macos-pending-verifications.md` file looks highly relevant.
+
+The `macos-pending-verifications.md` is decisive: it documents the exact established protocol. The `ToolCard` precedent (P-0010) shows the sanctioned approach — **isolated SwiftPM build + tests + swiftlint/swiftformat/placeholder green**, with full-app `xcodebuild build test` deferred to a `macos-latest` CI runner and recorded as "macOS-pending" (not a failure). `pwsh` and the token system are available. Let me gather the remaining APIs and confirm the toolchain.
+
+The web `Toggle` (used here without a visible label) maps to SwiftUI's `Toggle` with the row content as its label — the canonical Apple settings row. Sibling feature-views use raw `Toggle(isOn:)`/`labelsHidden`, confirming that precedent. I still need to locate the generated design tokens. Let me confirm both.
+
+The sibling precedent confirms the exact pattern: `Toggle(isOn:) { EmptyView() }.labelsHidden().tint(Color.TS.accent).accessibilityLabel(...)`. Now I must find where the generated tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`) are defined to use and shim them faithfully.
+
+Found the authoritative generated tokens at `apps/design/generated/apple/Tokens.swift`. Let me read it plus the component primitives I'll compose with.
+
+I have the full token API. Let me read the final component primitives (TSGlassPanel, TSButton, TSEmptyState, TSSkeleton, TSFadeIn) so my composition and shims are faithful.
+
+I have the full token + component API. Let me check for an existing shared AI-features catalog port (to bind rather than re-vendor), confirm the logs dir, and review the i18n facade convention used by a recent sibling.
+
+Everything needed is mapped. Two i18n conventions exist; I'll follow the canonical `AcDcStrings` enum + (key, fallback) row pattern (closest structural sibling). Now I need the AI feature catalog data (57 features, verbatim) for parity. Let me extract it programmatically from the web source to avoid transcription drift.
+
+57 entries, verbatim, order-matched to `AI_FEATURE_IDS` (longest description 2679 chars). Let me check the swiftlint/swiftformat configs to know the exact rules I must satisfy.
+
+Configs are clear: swiftlint `line_length` 120/160 (strict), swiftformat maxwidth 120. The 57-entry catalog (verbatim data, like the generated `Tokens.swift`) will get lint/format disables; all hand-written files stay strict-clean. Let me read the placeholder checker to ensure my code passes it, then start building.
+
+The placeholder gate is case-insensitive and scans string literals too. I must verify the verbatim catalog descriptions don't contain forbidden tokens (TODO/FIXME/XXX/placeholder/etc.).
+
+Catalog is clean of forbidden tokens. I have full understanding. Let me set up the plan and todos, then build all files.
+
+Now let me build the files. First, the verbatim catalog — I'll assemble it from the extracted body with a generated-style header.
+
+285 lines (57×5), no interpolation risk. Let me assemble the Catalog file.
+
+Let me verify the catalog compiles standalone (catches any escaping issues in the verbatim data) before writing the rest.
+
+Catalog compiles clean. Now the pure adapter core.
+
+Now the state-holder model (P1/S8 + S10 + S11), mirroring the sibling.
+
+Now the main view file with the P4 leaf chrome (header, freshness chip, banner, state switch).
+
+Now the content rows and state chrome subviews.
+
+Now the previews for every state.
+
+Now the comprehensive test suite.
+
+Now the i18n strings catalog.
+
+All 8 surface files written. Now I'll build the isolated SwiftPM harness to genuinely compile + test the surface (mirroring the ToolCard precedent). To avoid false-green from hand-shimming, I'll vendor the REAL token + component files. Let me verify their dependency closure is clean.
+
+`Buttons.swift`/`Motion.swift`/`Skeletons.swift` are token-only. I'll vendor the REAL `Tokens.swift` (zero drift on the heavily-used symbols) plus minimal faithful component shims (exact signatures I just verified). Let me set up the harness.
+
+Now let me build the harness to compile the surface against the real tokens.
+
+Expected: the `#Preview` macro plugin ships with Xcode, not the CLT SwiftPM toolchain. Per the Previews header, previews are compiled by the app target and out of the shipped-surface gate scope. I'll exclude Previews from the harness and rebuild the rest.
+
+Surface compiles clean under Swift 6. Now run the tests.
+
+`XCTest` (and the Preview macro plugin) ship with Xcode, absent from the CLT toolchain. The surface code itself compiled clean. Let me check whether Swift Testing or XCTest is importable so I can genuinely execute the logic assertions on this runner.
+
+Neither XCTest nor Swift Testing is available on the CLT toolchain (both Xcode-bundled). The surface code compiles, but to genuinely *execute* the test assertions on this runner I'll add an executable harness that runs the same checks with plain Swift. Let me build it.
+
+Now run the executable harness to genuinely execute all assertions.
+
+Swift 6 strict concurrency caught the global mutation — good (confirms the harness enforces it). Let me make the helpers `@MainActor`.
+
+All 50 assertions pass under Swift 6. Let me also verify the Previews bodies type-check (rewriting the Xcode-only `#Preview` macro into plain view functions), since the harness can't expand that macro.
+
+Preview bodies type-check clean. Let me remove the temp check file, then run the real gates: swiftlint, swiftformat, and the placeholder check on the shipped files.
+
+Three lint issues: trailing commas (Tests/Previews) and the blanket-disable in Catalog. The cleanest fix is targeted rule-scoping for the catalog plus running `swiftformat` to auto-fix formatting. Let me adjust the catalog header first.
+
+Now auto-format all surface swift files with the repo's swiftformat config.
+
+Formatting applied (catalog indentation + trailing commas fixed). Now re-run both linters to confirm clean.
+
+Only `type_body_length` remains on the catalog data enum — another generated-data concern. Let me add it to the targeted scope.
+
+Both linters clean (0 violations). Since swiftformat modified the catalog and tests, let me re-sync to the harness and re-verify the build + assertions still pass.
+
+Surface still green post-format. Now the placeholder gate. The gate's literal `-Path` is a filename prefix (not a real dir), so I'll also run a meaningful scan over copies of the actual files to genuinely prove they're clean.
+
+Placeholder gate clean (COUNT=0). Now let me capture authentic evidence for the deferred xcodebuild gate — attempt project generation and the actual `xcodebuild` invocations so the log shows the real platform-capability block.
+
+xcodegen generated the project (gitignored). Now the actual `xcodebuild` invocations from the gate — these will show the authentic CLT block.
+
+Authentic platform-capability evidence captured (iOS/macOS `xcodebuild` both blocked by CLT-only toolchain). Let me write the gate log honestly.
+
+Now record the deferral in the established tracking file.
+
+Let me do a final review of the key files and confirm the git scope before committing.
+
+The git scope shows my 8 files + log + the macos-pending edit, plus two pre-existing unrelated web file modifications (not mine). The prompt's allowed files are strictly `AIFeatureToggleList.*` + the log, and the acceptance criterion places the platform-capability evidence "in the log." To stay within allowed scope, I'll revert the macos-pending edit (the log already fully documents the deferral) and commit only the allowed files.
+
+Now stage only my surface files + the log (leaving the pre-existing unrelated web changes untouched) and commit.
+
+All 9 intended files staged, no collateral. Committing.
+
+Committed (HEAD `1b0c35dfe`). Let me update tracking, clean up temp files, and do a final verification.
+
+All committed cleanly (9 files, 1505 insertions; pre-existing web changes untouched). Let me do a final confirmation run of the host-runnable gates against the committed files.
+
+All verification complete. Final state confirmed on the committed sources.
+
+## Summary
+
+Delivered a production-complete, Apple-idiomatic SwiftUI parity of `AIFeatureToggleList`, committed as `1b0c35dfe` (9 files, 1505 insertions).
+
+**Surface** (`apps/apple/TeslaSync/feature-views/AIFeatureToggleList.*`) — mirrors the canonical sibling `AcDcStatsPanel` architecture:
+- **Catalog** — 57-feature registry **ported verbatim** from `web/src/ai/features.ts` (extracted programmatically, order-matched to `AI_FEATURE_IDS`, byte-faithful — no transcription drift).
+- **Adapter** (pure) — i18n key derivation, registry→row mapping with default-off reads (web `Boolean(values[id])`), a11y summaries.
+- **Model** — P1/S8 `AIFeatureToggleSource` seam (no HTTP in the view), projection, `@Observable` model, P1/S11 `view.opened` telemetry, P1/S10 facade, controlled-toggle dispatch, stale auto-refresh.
+- **View/Views** — `TSCard` + legend subhead + freshness chip/banner; per-feature `Toggle` rows (label+description, `labelsHidden` + accessibility label/value per the `AutomationCard` precedent); **every** state renders (loading skeletons / empty / error+retry / data / stale / offline).
+- **Previews** (6 states) + **XCTest suite** + **strings**.
+
+**Host-runnable gates — all GREEN:**
+- `swiftlint --strict`: **0 violations** · `swiftformat --lint`: **0/7** · `check-placeholders`: **COUNT=0**
+- Isolated SwiftPM build (real `Tokens.swift` vendored, Swift 6 language mode) + **50/50 logic assertions** pass (XCTest assertions mirrored in a plain-Swift runner since `XCTest` is Xcode-only).
+
+**STATUS=BLOCKED (EXIT=1)** — honestly recorded in the gate log with platform-capability evidence: this runner has **Command Line Tools only** (`xcode-select -p` = `/Library/Developer/CommandLineTools`), so `xcodebuild build test` (iOS+macOS), `simctl`, `XCTest`, and the `#Preview` macro plugin are unavailable. Per the prompt's explicit escape hatch and the repo's documented ADR-012 protocol (`macos-pending-verifications.md`, ToolCard P-0010 precedent), the full-app `xcodebuild` run is deferred to a `macos-latest` CI runner — this is a platform deferral, not failing code. I kept changes strictly within the allowed files (reverted an out-of-scope tracking-file edit; left two pre-existing unrelated web modifications untouched).
+

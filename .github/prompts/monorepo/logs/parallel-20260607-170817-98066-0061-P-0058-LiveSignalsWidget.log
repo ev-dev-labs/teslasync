@@ -1,0 +1,128 @@
+I'll start by understanding the environment, the capability requirements, and the existing code structure. Let me explore in parallel.
+
+Swift 6.3, swiftlint, swiftformat, and pwsh are available, but **`xcodebuild` requires full Xcode — only Command Line Tools are installed**. This is a capability concern for the gate. Let me verify whether Xcode exists anywhere and explore the existing Apple app structure to understand patterns.
+
+Key findings: **`/Applications/Xcode.app` exists** (just not selected via `xcode-select`), and there's a fully-implemented **`DigitalTwinWidget`** in `dashboard-widgets/` that serves as the exact template to follow. Let me verify I can drive the full Xcode toolchain via `DEVELOPER_DIR`, and read the template files.
+
+Full Xcode 26.5 is reachable via `DEVELOPER_DIR`, with an iOS 26.5 simulator and iPhone 16 booted. **The gate is runnable → I should target STATUS=DONE.** The `DigitalTwinWidget` is my exact template. Let me read all its supporting files to learn the P1/S8 state-holder, P1/S9 token, P1/S10 i18n, and P1/S11 diagnostics conventions.
+
+The template architecture is clear. Now I need to understand: (1) how `dashboard-widgets/*` files wire into the build target, (2) where P1/S9 tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSTone`, `TSSkeleton`) live, and (3) the units/formatting facade for temp/pressure conversion. Let me read the project config, design tokens, shared facade, and remaining template files.
+
+I need to verify how `dashboard-widgets/` wires into the build, since I can only touch `LiveSignalsWidget.*` files (not `project.yml`). Let me check the build wiring, existing xcodeproj state, the placeholder checker, and remaining template files.
+
+The `dashboard-widgets/` path is **not** referenced in `project.yml`, yet I can only edit `LiveSignalsWidget.*`. I must learn how the predecessor (DigitalTwin 0036) handled build wiring. Let me read its gate log, the done-list, and the placeholder checker.
+
+Now I fully understand the established precedent. The predecessor **DigitalTwinWidget (0036)** used a **"code-complete + DEFERRED Xcode gate"** disposition (STATUS=DONE), because: (a) registering `dashboard-widgets/` into `project.yml` is the integration prompt's job — forbidden here by Honesty rule 7 + allowed-files; (b) `Shared.xcframework` isn't staged; (c) no macOS signing identities. It instead ran **real host gates**: `swiftc -typecheck` against the real component library, an **executed adapter harness**, swiftlint, swiftformat, and the placeholder gate.
+
+Let me confirm this precedent is accepted and read the token/facade/component files I'll compile against.
+
+The precedent and conventions are clear. Now I'll read the exact token/facade/component APIs I must compile against, plus the web semantics for unit conversion and the data hooks.
+
+Critical insight: the `Units` facade `import Shared` (the KMP xcframework, which isn't staged in the host gate). So like the DigitalTwin precedent ported `lib/vehicleState.ts` as pure Swift, I'll port the web `convertTempFromSI`/`convertPressureFromSI`/`fmtNumber`/`fmtInt` math as a pure, unit-tested adapter. Let me read those web sources plus the Swift components I'll reference.
+
+Let me read the exact conversion math, number formatters, unit-pref labels, the four data hooks, and the WidgetShell/registry specs.
+
+Now the hooks' exact field shapes, the conversion constants, the WidgetShell chrome, and the registry entry.
+
+WidgetShell maps cleanly to the DigitalTwin header+content pattern. Now the exact response types, hook shapes, widget `types.ts`, and the `live-signals` registry entry.
+
+All data shapes confirmed (SI: temps °C, tire pressure kPa, hvac_power already kW, torque raw Nm). Let me read the widget `types.ts` (WidgetProps) and the `telemetry.ts` registry to lock the `live-signals` metadata, then I'll write a plan.
+
+Confirmed `live-signals` registry: id `live-signals`, name "Live Signals", desc "Real-time signal values with sparklines", category `telemetry`, default 2×4, min 2×2, max 4×40 — matches the prompt exactly. I have everything needed. Let me check which component files import `Shared` (to scope my host-typecheck closure) and write my plan.
+
+`Shared`-importing files are confined to `SharedFacade/*` and one `Live/` file — the entire component library and design tokens are `Shared`-free. So my surface (like DigitalTwin) will use a pure-Swift state-holder seam + ported conversion math, host-compilable without the KMP framework. I have full understanding now. Let me set up a plan and todos.
+
+Let me check the swiftlint/swiftformat config so my files pass `--strict` on the first try, then start writing the Foundation-only Models and Builder.
+
+Config understood — key constraints: lines ≤120, identifiers ≥2 chars, and the placeholder scanner is **case-insensitive** so I must avoid the words "placeholder/TODO/FIXME/XXX/not implemented/Coming soon" anywhere in `.swift` files. swiftlint's `included:` doesn't cover `dashboard-widgets`, so I'll lint my files explicitly (as the predecessor did). Now writing the Foundation-only Models.
+
+Now the pure Foundation-only adapter with the ported conversion/formatting math.
+
+Let me verify the adapter compiles and produces correct values with a quick harness before continuing.
+
+The harness needs to be named `main.swift` for top-level code when compiling multiple files. Let me fix and rerun.
+
+All 23 golden-vector checks pass — the adapter is faithful to the web. Let me mark progress and write the state-holder/telemetry/i18n/registry/a11y model layer.
+
+Now the main SwiftUI surface (shell chrome + all states).
+
+Now the section/row/badge sub-views.
+
+Now let me host-typecheck the SwiftUI surface against the real component library + the sibling registry types (excluding Previews/Tests), matching the predecessor's closure.
+
+Surface typechecks clean against the real component library with Swift 6 strict concurrency. Now the previews, the i18n catalog, and the tests.
+
+Now the test suite (adapter + model + registry + a11y), mirroring the proven predecessor structure.
+
+Let me verify every i18n key used in code exists in the `.strings` catalog, then auto-format and lint.
+
+The cross-check shows no missing keys (comm -23 empty). Let me confirm the defined-keys file actually populated, then auto-format and lint my files.
+
+All keys accounted for (the 3 flagged are used via the registry `descriptionKey` and the banner's variable key). Now auto-format my files and verify swiftformat/swiftlint pass.
+
+The gate command runs from repo root. Let me run it correctly.
+
+swiftformat lint passes (0/276 require formatting). Now swiftlint `--strict` on my files (run explicitly since `included:` doesn't cover the dir), and re-verify the typecheck after formatting — including the DEBUG previews.
+
+One `function_body_length` violation in the a11y summary. Let me refactor it into small per-section helpers.
+
+Now re-format, re-lint, and re-run both the release and DEBUG (with Previews) typechecks.
+
+swiftlint `--strict`: 0 violations. Now re-verify the full formatting lint and both typechecks (release + DEBUG-with-previews).
+
+The DEBUG failure is **not** my code — it's the `#Preview` macro plugin being unavailable to bare `swiftc` (it hits the sibling `Badges.swift:91` too). That's why the predecessor excluded Previews from the host typecheck. To still prove my preview bodies are well-typed, let me typecheck them with the `#Preview` macro rewritten to plain functions.
+
+I made an error — the `#if DEBUG` block was compiled out (no `-D DEBUG`), so that check was vacuous, and my awk didn't handle the parenthesized preview name. Let me redo it correctly: strip the `#if DEBUG` guard and robustly rewrite all `#Preview` headers, so the bodies are actually typechecked.
+
+All 8 preview bodies typecheck. Now the placeholder gate — let me run it on my files and also manually grep for forbidden words (the scanner is case-insensitive).
+
+All host gates are green. Now let me gather **concrete, honest evidence** for the Xcode-gate disposition: confirm the three structural blockers (surface not registered in `project.yml`, `Shared.xcframework` absent, no signing identities). I'll generate the Xcode project to definitively prove my files aren't in the target.
+
+Let me confirm the `.xcodeproj` ignore status, then definitively prove the surface isn't in the target by generating the project and grepping for it.
+
+Definitive: `.xcodeproj` is git-ignored, and **both** surfaces have **0 references** in the generated project — `xcodebuild` does not compile `dashboard-widgets/` (integration-prompt scope). Let me peek at the build pre-action, then attempt the real `xcodebuild` gate (bounded) to capture honest blocker evidence.
+
+The `Shared.xcframework` staging is a **scheme pre-action** (Gradle/Kotlin-Native) that `xcodebuild` doesn't run, and `Frameworks/` is empty. Let me attempt the literal iOS gate command to capture the real, honest failure.
+
+The grep-filtered pipe buffers until exit, hiding progress, and it's compiling the entire app target (which excludes the surface). The static evidence is already conclusive. Let me stop it and capture the missing-framework blocker directly with a bounded run.
+
+The sandbox blocks `kill -0`. The static evidence is already conclusive, so I won't force the heavy full build. Let me cleanly confirm the link-time blocker: the target references `Shared.xcframework` which is absent on disk.
+
+All blockers concretely confirmed; tree is clean (only my 8 files). Let me update todos and run a final consolidated adapter harness (mirroring the test vectors) to capture clean evidence for the log.
+
+Swift 6 strict concurrency flags the harness's top-level mutable counters (a test-driver concern, not a surface concern — the surface already passed Swift 6 typecheck). Let me compile the driver in Swift 5 mode.
+
+Final adapter harness: **38 passed, 0 failed**. Now let me run one clean consolidated host-gate pass capturing exact numbers, plus file line counts, to author the log accurately.
+
+All evidence captured: 8 files (1732 lines, each ≤311), swiftlint 0 violations, swiftformat 0 require formatting, adapter harness 38/0, base SHA `e9e15143`. Now authoring the gate log.
+
+Log written. Let me do a final consolidated green-state verification of all host gates immediately before committing.
+
+All host gates green. Let me verify the working tree has only my intended files, then commit.
+
+Clean — only my 8 surface files and the log. Committing now.
+
+Committed as `1f3269cc`. Let me finalize the todos and confirm a clean tree.
+
+Everything is committed and the tree is clean (9 files, 1923 insertions). Let me update the plan status for tidiness and finalize.
+
+Merge made by the 'ort' strategy.
+ ...le-dashboard-widgets-0058-LiveSignalsWidget.log | 191 +++++++++++++
+ .../LiveSignalsWidget.Builder.swift                | 172 ++++++++++++
+ .../LiveSignalsWidget.Model.swift                  | 310 ++++++++++++++++++++
+ .../LiveSignalsWidget.Models.swift                 | 241 ++++++++++++++++
+ .../LiveSignalsWidget.Previews.swift               | 150 ++++++++++
+ .../LiveSignalsWidget.Sections.swift               | 265 ++++++++++++++++++
+ .../LiveSignalsWidget.Tests.swift                  | 311 +++++++++++++++++++++
+ .../dashboard-widgets/LiveSignalsWidget.strings    |  58 ++++
+ .../dashboard-widgets/LiveSignalsWidget.swift      | 225 +++++++++++++++
+ 9 files changed, 1923 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0058-LiveSignalsWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LiveSignalsWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LiveSignalsWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LiveSignalsWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LiveSignalsWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LiveSignalsWidget.Sections.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LiveSignalsWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LiveSignalsWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LiveSignalsWidget.swift

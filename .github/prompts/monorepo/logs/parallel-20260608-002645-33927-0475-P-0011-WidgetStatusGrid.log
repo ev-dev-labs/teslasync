@@ -1,0 +1,121 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple toolchain availability.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. However, `swift`, `swiftlint`, and `swiftformat` are available. Let me read the web source and examine the existing Apple structure before deciding on approach.
+
+Now I understand the web component. The `widget-primitives` directory doesn't exist yet — I need to create it. Let me study the established file pattern (AIUsageCard's 7 files) and look for existing shared widget primitives.
+
+The AIUsageCard glob failed despite git showing modifications. Let me investigate and look at an established 7-file pattern (SecurityStatusWidget has the same .Adapter/.Model/.Views/.Previews/.Tests/.strings/.swift layout).
+
+There's a pre-existing case-rename in the working tree (`AIUsageCard`→`AiUsageCard`) — not mine, I'll leave it alone. Let me study the full 7-file pattern via SecurityStatusWidget and understand the build/i18n/telemetry conventions and the no-Xcode situation.
+
+The pattern is clear — `SecurityStatusWidget.Views.swift` already contains a `SecurityStatusGrid` that is a security-specific port of this exact web primitive. I need the generic, reusable version. Let me read the Model, strings, Previews, Tests, a recent log (to see how the no-Xcode gate is handled), and locate the shared token/strings facade definitions.
+
+Now I understand the precedent fully. Let me empirically test what I can compile on this runner (no Xcode, only CLT), check the project wiring, and read the Previews/Tests/Adapter patterns.
+
+SwiftUI typechecks against the CLT macOS SDK (`PROBE_EXIT=0`), but `xcodebuild` needs full Xcode (unavailable). Let me probe Charts/MapKit/XCTest harness capability and read the Tests + Adapter patterns + project wiring.
+
+Framework probe (SwiftUI+Charts+MapKit) typechecks clean. Let me wait for the `swift test` harness and locate the shared token definitions.
+
+Critical findings: **XCTest is unavailable** with CLT (`no such module 'XCTest'`), and `xcodebuild` needs full Xcode. But SwiftUI/Charts/MapKit typecheck fine against the macOS SDK. So I can compile-verify shipped code and run logic via a plain executable harness, but the literal `xcodebuild`+XCTest gate is environmentally blocked. Let me locate the exact shared-token APIs so my code matches the real target.
+
+Now I understand the project wiring: the `TeslaSync` target includes `dashboard-widgets`/`feature-views` as folder refs, but **not** `widget-primitives` (a new dir). Editing `project.yml` is parallel-unsafe and outside my allowed files, so wiring is a downstream step (like the precedent's xcframework deferral). Let me read the exact token APIs I must consume.
+
+Let me read the generated design tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`) so my code uses the exact real APIs.
+
+I now have the exact token APIs. Let me check the native feedback/EmptyState counterpart, the lint/format rules, and the Tests pattern so my artifact passes strict gates.
+
+Native `TSEmptyState` (over `ContentUnavailableView`) is the counterpart to web `EmptyState`. Let me read its exact API.
+
+Native `TSEmptyState` (over `ContentUnavailableView`) maps cleanly to web `EmptyState`. Let me confirm the web `EmptyState` API and check whether any prior log used `STATUS=BLOCKED` to match repo convention.
+
+Both dispositions exist in-repo (234 DONE, 11 BLOCKED), so BLOCKED is an accepted, precedented outcome. Let me read two BLOCKED logs to match the exact convention for EXIT value and capability-evidence framing.
+
+The DONE precedents relied on a real Xcode runner (dual-SDK compile + executed XCTest), deferring only the full-app link. This runner has **no Xcode at all** — so I can't honestly reproduce that evidence. Let me confirm Xcode is truly absent, then proceed: ship complete parity code, pass every host-runnable gate, and record an honest BLOCKED disposition per the capability clause.
+
+`/Applications/Xcode.app` **exists** — the developer dir just points to CLT. I can override with `DEVELOPER_DIR` (no sudo needed). This could unblock the real gate. Let me verify.
+
+Major unblock: with `DEVELOPER_DIR=/Applications/Xcode.app/...` I have **full Xcode 26.5** (iOS sim SDK 26.5, simulators, macOS SDK). My earlier "no XCTest" was only true for bare CLT. Let me verify XCTest works under the Xcode toolchain via `swift test`, and check `xcodegen`.
+
+XCTest now resolves under the Xcode toolchain (the probe error was just a name collision, not a missing module), and `xcodegen` is available. The path to a real DONE is open: isolated compile against both SDKs + executed XCTests, matching the precedent. Let me lock in the harness end-to-end before writing the artifact.
+
+Confirmed: full Xcode 26.5 + iOS simulators + XCTest all work via `DEVELOPER_DIR`, and Swift 6 `swift test` executes green. I can now match the precedent's real DONE disposition (dual-SDK compile + executed XCTest), deferring only the full-app build. Let me set up tracking and create the artifact.
+
+Now I'll write all 7 artifact files.
+
+All 7 files created. Let me apply the repo's swiftformat config to my files, then run swiftlint, before the compile/test harness.
+
+swiftformat passes (0/6 need formatting). swiftlint linted the whole tree (1909 files) and found 1 serious violation — I need to confirm whether it's in my files. Let me isolate it.
+
+The only violation is in a **pre-existing** file (`LifetimeStatsWidget.Adapter.swift`, function_body_length) — not mine. My files are clean. Let me confirm the second check finished and then verify my files lint clean in isolation.
+
+Confirmed clean — the only violation is pre-existing and out of scope. Let me run swiftlint scoped to just my files (for an honest LINT_EXIT=0), plus the placeholder scan.
+
+Placeholder scan is clean (COUNT=0). The scoped lint config needs the path positionally. Let me retry, then build the verification harness.
+
+swiftlint --strict on my 6 files: **0 violations**. Now let me build the isolated verification harness (SwiftPM target `TeslaSync` = shipped files + real Tokens.swift + minimal shims) and execute the XCTests.
+
+Build is clean under Swift 6 strict concurrency (including the `#Preview` file). Now execute the XCTests.
+
+Swift 6 strict concurrency flags the two top-level localizer closures as non-Sendable globals. The fix is to mark them `@Sendable` (they're pure). Let me fix the shipped test file and re-run.
+
+Two fixes needed: `surfaceSlug` must be `nonisolated` (View is MainActor-isolated), and the `.noop` test must use contextual typing. Both are real improvements to the shipped code.
+
+The test file uses `Color` but doesn't import SwiftUI. Let me add the import (swiftformat orders regular imports above `@testable`).
+
+All **24 XCTests pass** under Swift 6 strict concurrency. Since I edited 3 shipped files, let me re-verify format/lint, then compile against the iOS-simulator SDK, then attempt the full-app build for the deferral evidence.
+
+Every host-runnable gate is green: **swiftformat 0/6, swiftlint 0 violations, iOS-18 SDK typecheck EXIT=0, macOS build + 24 XCTests EXIT=0, placeholder COUNT=0**. Now let me gather the full-app build deferral evidence (the documented pre-existing blocker) rather than running a long doomed KMP build.
+
+Confirmed the documented pre-existing blocker: `Frameworks/` has only `.gitkeep` — the KMP `Shared.xcframework` (a hard dependency of both `TeslaSync` and `TeslaSync-macOS` in `project.yml`) is **absent** (generated upstream, not committed). Let me capture concrete build evidence by generating the project and attempting the macOS build.
+
+The project generates and both schemes exist (and iPhone 16 is actually booted). Let me attempt the macOS app build to capture the genuine deferral failure (missing `Shared.xcframework`).
+
+The full-app build is compiling the large app tree (hundreds of files). Let me wait further for it to reach the link/dependency error.
+
+The build auto-builds the KMP `Shared.xcframework` via Gradle (so that's not the blocker here) and then fails at **code signing** (`exit 65` — no development certificate on this runner) — a pure environment limitation, not a code defect. Let me retry with signing disabled to confirm the baseline otherwise builds (incremental now).
+
+Decisive evidence captured. With signing disabled the full-app build auto-builds the KMP xcframework and compiles widgets, then **fails (exit 65)** on a **pre-existing, unrelated** baseline error:
+```
+apps/apple/TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: Unable to resolve module dependency: 'XCTest'
+```
+That's another surface's file (mine aren't even wired in). My surface is independently green. Let me clean generated artifacts and check the tree before writing the log.
+
+Tree is clean: only my new `widget-primitives/` is untracked; the pre-existing dirty files (AIUsageCard.*, 2 web .tsx) are untouched. Let me run one consolidated final verification to capture authoritative exit codes for the log.
+
+**All gates green**: FORMAT_EXIT=0, LINT_EXIT=0, PLACEHOLDER_COUNT=0, macOS build + **24/24 XCTests** EXIT=0, iOS-18 SDK typecheck EXIT=0. Full-app build deferred on pre-existing unrelated blockers. Let me write the gate log.
+
+Now let me commit only my allowed files (the 7 surface files + the log), leaving the pre-existing dirty files untouched.
+
+Exactly 8 files staged (7 surface + log); the pre-existing dirty files remain untouched. Committing now.
+
+Committed as `76b889e0f`; working tree shows only the untouched pre-existing files. Let me clean up temp harness artifacts and do a final integrity check.
+
+Task complete. The native Apple `WidgetStatusGrid` widget primitive is shipped at parity with the web source, fully verified, and committed.
+
+## Summary
+
+**Delivered** `apps/apple/TeslaSync/widget-primitives/WidgetStatusGrid.*` — 7 files, 869 lines — a production-polished SwiftUI port of `features/dashboard/widgets/shared/WidgetStatusGrid.tsx`:
+
+- **`.Adapter.swift`** — pure, testable projection: `WidgetCellStatus` (5 statuses → `TSTone`/tint/dot, web `statusStyles`), `StatusCell`, `StatusGridColumns`, the responsive `columnCount` resolver (web container-query `@xs`/`@sm` collapse), and VoiceOver summary builders.
+- **`.Model.swift`** — P1/S11 `view.opened` telemetry seam (OSLog + `.noop`) and P1/S10 i18n facade.
+- **`.Views.swift`** — the tinted status cell (corner dot, SF Symbol, label, value-hidden-in-compact) + empty state mapped onto the shared `TSEmptyState`.
+- **`.swift`** — the primitive view: responsive grid via `onGeometryChange`, empty-vs-content branches, telemetry-on-appear.
+- **`.Previews.swift`** (10 previews), **`.Tests.swift`** (24 XCTests), **`.strings`** (i18n).
+
+**Verification (full Xcode 26.5 unlocked via `DEVELOPER_DIR`, no sudo):**
+| Gate | Result |
+|---|---|
+| swiftformat --lint | 0/6 need formatting ✅ |
+| swiftlint --strict | 0 violations ✅ |
+| placeholder scan | COUNT=0 ✅ |
+| macOS build + XCTest (Swift 6 strict) | **24/24 executed, 0 failures** ✅ |
+| iOS-18 simulator SDK typecheck | clean ✅ |
+
+The full-app `xcodebuild` is **DEFERRED** (evidenced): it auto-builds the KMP xcframework then fails on pre-existing, unrelated baseline issues (`AIRestorePanel.Tests.swift` XCTest-in-app-target + macOS dev signing) and the fact that `widget-primitives/` is intentionally unwired in `project.yml` (parallel-unsafe to edit) — same DONE-with-deferral disposition as the 0085/0238 precedents.
+
+**Committed** `76b889e0f` — only the 7 surface files + log. Pre-existing dirty files (AIUsageCard.*, 2 web .tsx) left untouched. Log ends `EXIT=0 / STATUS=DONE`.
+
+
+
+The task is fully complete and verified. All gates green, committed cleanly.
+

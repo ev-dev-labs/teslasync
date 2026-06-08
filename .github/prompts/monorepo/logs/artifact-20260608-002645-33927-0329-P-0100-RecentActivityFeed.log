@@ -1,0 +1,161 @@
+=== P4 Shared surface 0100 RecentActivityFeed (Apple) ===
+date: Mon Jun  8 05:25:37 PDT 2026
+host xcode-select: /Applications/Xcode.app/Contents/Developer
+DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
+xcodebuild: Xcode 26.5 Build version 17F42 
+swiftlint: 0.63.3  swiftformat: 0.61.1
+
+=== [1/5] xcodebuild iOS Simulator build test ===
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift:30:48: error: 'DashboardWidgetSize' is ambiguous for type lookup in this context
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeBreakdown.Previews.swift:29:41: error: 'ChargerTypeUpdate' is ambiguous for type lookup in this context
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeBreakdown.Previews.swift:18:27: error: 'ChargerTypeDatum' is ambiguous for type lookup in this context
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeBreakdown.Model.swift:141:21: error: 'ChargerTypeConnection' is ambiguous for type lookup in this context
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeBreakdown.Model.swift:142:16: error: 'ChargerTypeDatum' is ambiguous for type lookup in this context
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeChart.Model.swift:78:21: error: 'ChargerTypeConnection' is ambiguous for type lookup in this context
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeBreakdown.Previews.swift:49:34: error: cannot infer contextual base in reference to member 'loaded'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeBreakdown.Previews.swift:62:64: error: cannot infer contextual base in reference to member 'empty'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeBreakdown.Previews.swift:69:81: error: cannot infer contextual base in reference to member 'loading'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeBreakdown.Previews.swift:76:64: error: cannot infer contextual base in reference to member 'failed'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeBreakdown.Previews.swift:86:34: error: cannot infer contextual base in reference to member 'loaded'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeBreakdown.Previews.swift:87:38: error: cannot infer contextual base in reference to member 'stale'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeBreakdown.Previews.swift:102:34: error: cannot infer contextual base in reference to member 'loaded'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeBreakdown.Previews.swift:103:38: error: cannot infer contextual base in reference to member 'offline'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeChart.Previews.swift:52:47: error: 'ChargerTypeUpdate' is ambiguous for type lookup in this context
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeChart.Previews.swift:63:40: error: cannot infer contextual base in reference to member 'loaded'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeChart.Previews.swift:63:104: error: cannot infer contextual base in reference to member 'live'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeChart.Previews.swift:70:55: error: cannot infer contextual base in reference to member 'loaded'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeChart.Previews.swift:70:90: error: cannot infer contextual base in reference to member 'live'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeChart.Previews.swift:76:55: error: cannot infer contextual base in reference to member 'loading'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeChart.Previews.swift:76:91: error: cannot infer contextual base in reference to member 'live'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeChart.Previews.swift:83:40: error: cannot infer contextual base in reference to member 'failed'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeChart.Previews.swift:83:96: error: cannot infer contextual base in reference to member 'live'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeChart.Previews.swift:91:40: error: cannot infer contextual base in reference to member 'loaded'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeChart.Previews.swift:91:104: error: cannot infer contextual base in reference to member 'stale'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeChart.Previews.swift:99:40: error: cannot infer contextual base in reference to member 'loaded'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargerTypeChart.Previews.swift:99:104: error: cannot infer contextual base in reference to member 'offline'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargingDetailSection.Adapter.swift:132:24: error: 'ChargerTypeDatum' is ambiguous for type lookup in this context
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargingSessionCard.Model.swift:70:18: error: 'ChargingSessionSummary' is ambiguous for type lookup in this context
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargingSessionCard.Previews.swift:88:34: error: cannot infer contextual base in reference to member 'loaded'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargingSessionCard.Previews.swift:103:34: error: cannot infer contextual base in reference to member 'loaded'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargingSessionCard.Previews.swift:118:34: error: cannot infer contextual base in reference to member 'loaded'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargingSessionCard.Previews.swift:120:35: error: cannot infer contextual base in reference to member 'compact'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargingSessionCard.Previews.swift:133:34: error: cannot infer contextual base in reference to member 'loaded'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargingSessionCard.Previews.swift:147:91: error: cannot infer contextual base in reference to member 'empty'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargingSessionCard.Previews.swift:155:91: error: cannot infer contextual base in reference to member 'loading'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargingSessionCard.Previews.swift:164:63: error: cannot infer contextual base in reference to member 'failed'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargingSessionCard.Previews.swift:174:34: error: cannot infer contextual base in reference to member 'loaded'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargingSessionCard.Previews.swift:175:38: error: cannot infer contextual base in reference to member 'stale'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargingSessionCard.Previews.swift:189:34: error: cannot infer contextual base in reference to member 'loaded'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ChargingSessionCard.Previews.swift:190:38: error: cannot infer contextual base in reference to member 'offline'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/CommandTile.Previews.swift:65:14: error: 'CommandTileDef' is ambiguous for type lookup in this context
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/CommandTile.swift:38:14: error: 'CommandTileDef' is ambiguous for type lookup in this context
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/CommandTile.Adapter.swift:87:18: error: 'CommandTileVariant' is ambiguous for type lookup in this context
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/InputCommandTile.Adapter.swift:72:18: error: 'CommandTileVariant' is ambiguous for type lookup in this context
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/CommandTile.Previews.swift:24:27: error: reference to member 'init' cannot be resolved without a contextual type
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/CommandTile.Previews.swift:32:23: error: cannot infer contextual base in reference to member 'success'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/CommandTile.Previews.swift:35:29: error: reference to member 'init' cannot be resolved without a contextual type
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/CommandTile.Previews.swift:41:23: error: cannot infer contextual base in reference to member 'danger'
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/CommandTile.Previews.swift:143:21: error: type 'Any' has no member 'offline'
+IOS_EXIT=65
+
+=== [2/5] xcodebuild macOS build test ===
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+** BUILD FAILED **
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSync-macOS' from project 'TeslaSync')
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate. Enable development signing in the Signing & Capabilities editor. (in target 'TeslaSyncWidgets-macOS' from project 'TeslaSync')
+	Testing cancelled because the build failed.
+** TEST FAILED **
+MAC_EXIT=65
+
+=== [3/5] swiftlint --strict (whole app) ===
+Linting 'WatchStatusRow.swift' (1911/1919)
+Linting 'WatchStateViews.swift' (1912/1919)
+Linting 'WatchBatteryRing.swift' (1913/1919)
+Linting 'TeslaSyncWatchWidgetsBundle.swift' (1914/1919)
+Linting 'WatchComplicationProvider.swift' (1915/1919)
+Linting 'WatchComplicationViews.swift' (1916/1919)
+Linting 'WatchComplications.swift' (1917/1919)
+Linting 'WatchDesignTokens.swift' (1918/1919)
+Linting 'SessionListSection.Views.swift' (1919/1919)
+Done linting! Found 1 violation, 1 serious in 1919 files.
+LINT_EXIT=2
+
+=== [4/5] swiftformat --lint apps/apple ===
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/.swiftformat
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-329/apps/apple/TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1: error: (blankLinesBetweenScopes) Insert blank line before class, struct, enum, extension, protocol or function declarations.
+SwiftFormat completed in 28.82s.
+Source input did not pass lint check.
+1/1923 files require formatting, 3 files skipped.
+FORMAT_EXIT=1
+
+=== [5/5] check-placeholders (surface) ===
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+GATE_SUMMARY IOS_EXIT=65 MAC_EXIT=65 LINT_EXIT=2 FORMAT_EXIT=1 PLACEHOLDER_EXIT=0
+
+=== PER-SURFACE VERIFICATION (RecentActivityFeed.* — all green) ===
+swiftlint --strict (surface only, isolated config) : 0 violations in 10 files
+swiftformat --lint  (surface only)                 : 0 files require formatting
+check-placeholders  (surface, swift)               : PLACEHOLDER_COUNT=0 EXIT=0
+in-module compile (iOS sim, full app build)        : 0 errors in any RecentActivityFeed.* file
+                                                     (verified: `grep -c RecentActivityFeed.*error:` == 0)
+standalone adapter parity (xcrun swiftc -O + run)  : STANDALONE_ADAPTER_OK (30+ assertions:
+                                                     registry prefix-walk, entityHref routes/aliases/
+                                                     encodeURIComponent, formatRelative thresholds,
+                                                     subtitle join, row projection/order, phase matrix,
+                                                     a11y row label + link hint + surface slug)
+
+=== BLOCKED RATIONALE ===
+Capability IS present on this runner: full Xcode 26.5 (Build 17F42) reached via
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer (host xcode-select points at
+CommandLineTools); iPhone 16 simulator (iOS 26.5) booted; KMP Shared.xcframework built
+from apps/shared via Gradle (:core:assembleSharedXCFramework, BUILD SUCCESSFUL) and staged
+to apps/apple/Frameworks. xcodegen generated the project with TeslaSync/shared-surfaces wired
+into the iOS + macOS app targets.
+
+The aggregate gate is RED for reasons entirely OUTSIDE this surface's allowed files
+(apps/apple/TeslaSync/shared-surfaces/RecentActivityFeed.* + the log). Every failure is
+pre-existing or environmental:
+
+1. iOS build test (IOS_EXIT=65): pre-existing duplicate-type collisions in sibling
+   generated surfaces — `ChargerTypeUpdate/ChargerTypeDatum/ChargerTypeConnection`
+   (ChargerTypeBreakdown.*, ChargerTypeChart.*), `ChargingSessionSummary`
+   (ChargingSessionCard.*), `CommandTileDef/CommandTileVariant` (CommandTile.*,
+   InputCommandTile.*), `DashboardWidgetSize` (Sources/DashboardWidgets/*), and many
+   *Widget*.Model.swift. 57 compile errors, 0 in RecentActivityFeed.*.
+2. macOS build test (MAC_EXIT=65): TeslaSync-macOS / TeslaSyncWidgets-macOS entitlements
+   require signing with a development certificate not available on this runner (plus the
+   same pre-existing collisions). Code-signing/provisioning environment limitation.
+3. swiftlint --strict (LINT_EXIT=2): exactly 1 violation in 1919 files —
+   dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length, 78 lines),
+   pre-existing, not in allowed files.
+4. swiftformat --lint apps/apple (FORMAT_EXIT=1): exactly 1 file —
+   feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes), pre-existing,
+   not in allowed files.
+5. shared-surfaces build wiring (project.yml sources + .swiftlint.yml included) is a P4-core
+   predecessor responsibility ("Depends on: P4 core"); it was applied temporarily to validate
+   this surface in-module, then reverted so the commit stays scoped to the allowed files.
+
+Per the P4 README ("prompts that can't run their gate are BLOCKED, not DONE") and the
+Honesty Covenant (1 No red-as-green, 7 No predecessor bypass, 8 No commit on red), this
+surface is delivered COMPLETE and per-file-clean, but its gate cannot go green until the
+pre-existing sibling-surface collisions are fixed (their own prompts), macOS signing is
+provisioned, and the P4-core wiring lands. No RecentActivityFeed.* defect contributes.
+
+=== DELIVERABLE ===
+apps/apple/TeslaSync/shared-surfaces/RecentActivityFeed.{Types,Visuals,Adapter,Model,Views,
+States,strings,Previews,Tests,ModelTests}.swift + RecentActivityFeed.swift (11 files):
+parity port of web components/data-display/RecentActivityFeed.tsx — connected activity
+timeline (icon + localized title + entity click-through + subtitle + relative time) with the
+full state envelope (loading / content / empty / error + stale/offline freshness chip+banner),
+P1/S8 source seam, P1/S10 i18n facade (web key activity.myActivity.empty + the activityIcons
+registry titles), P1/S11 view.opened telemetry, VoiceOver labels + Dynamic Type + reduce-motion,
+adapter unit tests + model/a11y tests.
+
+EXIT=65
+STATUS=BLOCKED

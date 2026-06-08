@@ -1,0 +1,149 @@
+=== P4 Dashboard widget 0043 DrivingCoachWidget (Apple) ===
+run-host: Darwin 25.5.0 arm64  date: 2026-06-08T01:22:23Z
+
+### CAPABILITY PROBE (why the Xcode build+test gate is BLOCKED) ###
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+xcodebuild_rc=1
+$ xcrun simctl list devices available | head -1
+xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+simctl_rc=0
+$ ls apps/apple/Frameworks/Shared.xcframework  (KMP core — git-ignored, built only on the Xcode runner)
+ls: apps/apple/Frameworks/Shared.xcframework: No such file or directory
+--- available native toolchain (used for the runnable gates below) ---
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+Target: arm64-apple-macosx26.0
+swiftlint 0.63.3   swiftformat 0.61.1   pwsh PowerShell 7.6.2
+
+### PATH RECONCILIATION (no silent drift) ###
+Prompt template names apps/apple/TeslaSync/dashboard-widgets/DrivingCoachWidget.*, but this repo's
+XcodeGen spec (apps/apple/project.yml) compiles ONLY the 'Sources/' group into the TeslaSync /
+TeslaSync-macOS targets. Files under a non-Sources path would be dead, uncompiled code (itself a
+'stub as final' violation). Surface shipped under the real, compiled location, mirroring the repo's
+own XView.swift / XModel.swift convention (cf. Platform/Settings/AppSettings{View,Model}.swift):
+
+DELIVERABLES:
+  ?? apps/apple/Sources/Dashboard/
+  ?? apps/apple/Tests/Unit/Dashboard/
+
+  line counts:
+       399 apps/apple/Sources/Dashboard/Widgets/DrivingCoachWidget.swift
+       330 apps/apple/Sources/Dashboard/Widgets/DrivingCoachWidgetModel.swift
+       199 apps/apple/Tests/Unit/Dashboard/DrivingCoachWidgetTests.swift
+       928 total
+
+############ RUNNABLE GATES (executed on this host — real output) ############
+
+[1] swiftc -typecheck -strict-concurrency=complete  (new view+model vs REAL components/tokens)
+TYPECHECK_EXIT=0  (pure model also typechecks standalone; KMP #if canImport(Shared) VM deferred)
+
+[2] standalone logic proof — compile pure model + harness, RUN it (adapter/savings/reduce/descriptor)
+== DTO decode -> projection ==
+  ok: roundedScore 87.4 -> 87 (got 87)
+  ok: 3 recommendations
+  ok: first impact high
+  ok: second impact medium
+  ok: unknown impact -> nil
+  ok: null category -> em dash
+  ok: null tip -> em dash
+  ok: hasTips true
+== savingsPercent (web formula) ==
+  ok: round((165-140)/165*100)=15 (got 15)
+  ok: zero efficiency -> 0%
+  ok: (200-150)/200=25%
+  ok: zero scaffold has no tips
+== view-state reduce (every state) ==
+  ok: idle -> loading
+  ok: loading no cache -> loading
+  ok: loading w/ cache -> ready fresh fetching
+  ok: loaded stale -> ready stale
+  ok: empty -> ready zero scaffold
+  ok: offline w/ cache -> ready offline chip
+  ok: offline no cache -> failed(offline)
+  ok: generic error -> failed(generic) (web replaces panel)
+  ok: isOffline overlay -> offline freshness even when loaded
+== descriptor parity with web registry ==
+  ok: id driving-coach
+  ok: category driving
+  ok: default 2x4
+  ok: min 1x2
+  ok: max 4x40
+  ok: cols<=1 compact
+  ok: cols>1 not compact
+== impact i18n key parity ==
+  ok: impact key namespacing
+
+ALL LOGIC TESTS PASSED
+LOGIC_RUN_EXIT=0
+
+[3] swiftlint --strict   (gate: LINT step)
+Linting 'DrivingCoachWidgetTests.swift' (3/3)
+Done linting! Found 0 violations, 0 serious in 3 files.
+LINT_EXIT=0   (full project: Done linting! Found 0 violations, 0 serious in 259 files.)
+
+[4] swiftformat --lint apps/apple   (gate: FORMAT step)
+0/263 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+[5] check-placeholders.ps1   (gate: PLACEHOLDER step — ADR-011 no-stubs)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_SRC_EXIT=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_TEST_EXIT=0
+
+############ XCODE BUILD+TEST GATE — BLOCKED (platform capability) ############
+Attempted for real; captured failure is the API evidence (no Xcode.app, Command Line Tools only):
+
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=BLOCKED  (xcodebuild requires Xcode; rc was non-zero — see message above)
+
+$ xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=BLOCKED  (same cause)
+
+Also deferred by the same blocker (need Shared.xcframework + Xcode):
+  - DrivingCoachWidgetModel.swift  #if canImport(Shared)  view-model (StateHolderModel + LoadableState binding)
+  - DrivingCoachWidgetTests.swift   XCTest run (compiles vs the module; logic separately PROVEN green in [2])
+  - #Preview macro expansion (PreviewsMacros plugin ships with Xcode; same as every existing *.swift here)
+
+REPRODUCE ON A macOS + Xcode RUNNER (expected green):
+  ./apps/shared/gradlew -p apps/shared :core:assembleSharedXCFramework
+  cd apps/apple && xcodegen generate
+  xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+
+############ i18n PARITY EVIDENCE (P1/S10 String Catalog — keys already present) ############
+  translation.widget.drivingCoach.title -> 1
+  translation.widget.drivingCoach.potentialSavings -> 1
+  translation.widget.drivingCoach.noTips -> 1
+  translation.widget.drivingCoach.scoreLabel -> 1
+  chrome keys: translation.common.offline=1 translation.common.refresh=1
+  (impact.{high,medium,low}: resolved via Bundle.localizedString fallback to raw value — web t(key, impact) parity)
+
+############ ACCEPTANCE CRITERIA ############
+[x] All web states reproduced: loading(skeleton) / error(QueryError+retry) / content(compact+expanded)
+    / empty(inline no-tips EmptyState) / stale(amber chip) / offline(cached + offline chip).
+[x] Data binds via shared state-holder layer (StateHolderModel + LoadableState, P1/S8); no HTTP in view.
+[x] i18n: every source key resolves to translation.widget.drivingCoach.* (verified above); no English literals.
+[x] Accessibility: VoiceOver labels/values on score, badges, freshness chip, refresh; Reduce-Motion via TSSkeleton.
+[x] Tests: adapter decode->projection, savings formula, 5-state reducer, descriptor, tone/i18n, diagnostics spy,
+    per-state build smoke (DrivingCoachWidgetTests.swift). Pure logic ALSO proven green here (logic harness).
+[x] Telemetry: view.opened emitted with slug 'DrivingCoachWidget' via os.Logger diagnostics seam (P1/S11).
+[x] Registry parity: id=driving-coach, default 2x4, min 1x2, max 4x40, category=driving.
+[x] No TODO/stub/mock/placeholder/Lorem (placeholder gate COUNT=0).
+[~] Xcode build+test (iOS+macOS) BLOCKED — no Xcode/Shared.xcframework on this runner (evidence above).
+
+############ GATE EXIT MARKERS ############
+TYPECHECK_EXIT=0   LOGIC_RUN_EXIT=0   LINT_EXIT=0   FORMAT_EXIT=0   PLACEHOLDER_EXIT=0
+IOS_EXIT=BLOCKED   MAC_EXIT=BLOCKED
+
+# Per the prompt capability clause ('requires ... iOS18/iPadOS18/macOS15 ... if unavailable -> BLOCKED
+# with API evidence'): implementation is COMPLETE and every runnable gate is green; the build+test gate
+# is blocked solely by the absent Xcode toolchain, not by the code.
+
+EXIT=1
+STATUS=BLOCKED

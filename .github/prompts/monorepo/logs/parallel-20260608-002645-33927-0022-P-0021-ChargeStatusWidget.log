@@ -1,0 +1,143 @@
+I'll start by exploring the repository structure and reading the web source specification, then understand the existing Apple app architecture.
+
+Let me explore the Apple app structure and the reference pattern files (AIUsageCard) along with the web dependencies.
+
+This is a mature codebase with established patterns. Let me study a complete reference widget (GuardModeWidget — same 7-file structure) and the shared facade layer.
+
+Strong reference pattern established. Let me read the rest of the GuardModeWidget files and find the shared facade for vehicle state + units.
+
+Now let me examine the design tokens, registration types, and find how widgets wire to the real shared facade (plus a widget using vehicle-state + units).
+
+`RangeEstimateWidget` looks like the closest data-source match (vehicle state + units + distance). Let me study it fully plus the design tokens and registration types.
+
+This is a near-perfect template. Let me read the rest of RangeEstimateWidget (Adapter, View, Previews, Tests, strings) and the registration type definition.
+
+Let me read the Previews, Tests, strings, the registration type, and the design tokens.
+
+I now understand the per-surface pattern. But I see `DashboardWidgetRegistration`/`DashboardWidgetSize` are defined in many widget files — I need to understand the build setup (target membership, whether xcodebuild exists). Let me investigate.
+
+xcodebuild/swiftlint/swiftformat are available. But there's no project file at shallow depth, and the registration structs are redefined in 13-15 files — suggesting staged files compiled separately. Let me find the actual project/scheme and verify the build reality.
+
+XcodeGen `project.yml` exists but no generated `.xcodeproj`. Let me read it and check whether `xcodegen` is available and how sources/targets are wired.
+
+XcodeGen, pwsh, swiftlint, swiftformat all available, and `dashboard-widgets` is in the TeslaSync target. But 13 files literally define `struct DashboardWidgetRegistration` — that should collide. I must understand the baseline before writing code. Let me inspect the duplicate definitions and the Shared.xcframework situation.
+
+Critical finding: 13 widgets each define their own `public struct DashboardWidgetRegistration` — a guaranteed redeclaration collision in one module. RangeEstimate/GuardMode (the clean newer pattern) reference it instead. Let me confirm the baseline reality and gather the exact API types for charge state.
+
+Now I understand the full landscape. Two pre-existing, out-of-scope blockers exist for the full gate: (1) `Shared.xcframework` must be built via a heavy Kotlin/Gradle step, and (2) 13 sibling widgets each redefine `public struct DashboardWidgetRegistration` (a redeclaration collision). My widget must follow the clean pattern (reference, not redefine). Let me get exact number-format semantics and confirm token/units details before writing.
+
+I now have everything: exact API fields, number-format semantics (default precision 2, `fmtInt`=0 decimals), units (km/mi), and confirmed design tokens. Let me check for naming collisions and simulator availability, then write my plan.
+
+No collisions; placeholder patterns are clear. No "iPhone 16" simulator showed up — let me verify simulator/SDK availability thoroughly (key evidence for the gate) and review the placeholder checker's interface.
+
+Definitive evidence: this runner has **only Xcode Command Line Tools, not full Xcode** — `xcodebuild` and `simctl` cannot run. The prompt's capability clause explicitly maps this to `STATUS=BLOCKED with API evidence`. But I must still ship a complete, parity-faithful widget and verify with every tool that DOES work (swiftformat, swiftlint, placeholder check, and an isolated `swiftc` typecheck). Let me probe those toolchains and grab the `TSSkeleton` signature.
+
+All fallback tools work: `swiftc -typecheck` (macOS SDK + SwiftUI) succeeds, swiftlint 0.63.3, swiftformat 0.61.1, and pwsh are available. Only full Xcode (xcodebuild/simctl) is missing — exactly the sanctioned BLOCKED capability case. Let me write the plan, then build the widget.
+
+Now I'll create the widget. Starting with the Model (state-holder seam, telemetry, registry, i18n facade).
+
+Now the Adapter (pure Foundation projector — SI conversion + number formatting matching the web pipeline exactly).
+
+Now the main SwiftUI surface — header chrome, all states, the charging grid, and the idle layout, with accessibility and reduce-motion handling.
+
+Now the Previews (DEBUG, every state/layout).
+
+Now the Tests (adapter value-parity, phase matrix, model wiring, registry, accessibility).
+
+Now the i18n strings table.
+
+All 6 files created. Now let me verify them with every tool available on this runner. First, check the CLT SDK version and set up an isolated type-check with faithful stubs of the shared tokens/types.
+
+SDK is macOS 26.5 — all modern SwiftUI APIs available and the probe type-checked. Now let me create faithful stubs of the shared tokens/types and type-check my widget sources in isolation.
+
+Pass A clean. Now type-check including Previews (DEBUG) and the Tests file (with the module import stripped since everything compiles as one unit).
+
+Both failures are **environmental, not code defects**: `#Preview` needs the `PreviewsMacros` plugin (full-Xcode only) and `XCTest` isn't in the CLT SDK. Same root cause as the xcodebuild block. Let me prove the Previews and Tests *logic* type-checks by transforming `#Preview` into plain functions and adding a minimal XCTest shim.
+
+Previews logic type-checks (8/8 blocks). Now the Tests file against a minimal XCTest shim.
+
+That error is from my *shim* (`XCTFail` should return `Void`, not `Never?`), not the test code. In real XCTest, `return XCTFail(...)` is valid in a `Void` test. Fixing the shim and re-running.
+
+Only `Date` is missing now — because stripping `import XCTest` also removed its transitive Foundation. In the real target `import XCTest` provides it. Replacing with `import Foundation` in the isolated copy.
+
+All three type-check passes are green (core surface, previews logic, tests logic). My Swift is correct against the real API surface. Now the gate tools that run on CLT: swiftformat, swiftlint, and the placeholder check — on my files.
+
+Two lines exceed the 120-width limit. Let me view and fix them, then auto-format my files to be safe.
+
+Line 124 exceeds 120. Since these are my files, I'll let swiftformat auto-fix them to match the repo's wrapping style, then re-lint.
+
+swiftformat clean (0/5 need formatting). Let me verify the auto-fix kept the test correct, then run swiftlint --strict.
+
+One swiftlint violation: `project()` body is 53 lines (limit 50). Let me extract the charging-grid construction into a helper to slim it down.
+
+I'll split the projector into focused helpers (`idleProjection` + `chargingProjection`) so each body is well under 50 lines.
+
+Now re-verify: re-run the isolated type-check (core), swiftformat, and swiftlint on my files.
+
+A line is 124 chars. Let me add a small local formatter in the `charging` helper to shorten the value lines (DRY + within width).
+
+Re-running all verification (typecheck core + previews + tests, swiftformat, swiftlint).
+
+swiftformat, swiftlint, and all type-checks are green. Now the placeholder gate. Let me check how the script resolves `-Path`, then run it.
+
+The gate's `-Path .../ChargeStatusWidget` (no extension) won't resolve, so it trivially passes by scanning nothing. To get *real* evidence, I'll run the scanner against each of my actual `.swift` files plus a grep cross-check.
+
+All placeholder scans pass (COUNT=0) and grep confirms no forbidden markers. Now let me capture the exact xcodebuild/platform evidence for the log and confirm I added no duplicate type definitions.
+
+Evidence captured. Now let me check the log directory and an existing sibling log to match the expected format.
+
+The logs directory exists with sibling logs. Let me read the RangeEstimate sibling log (my template) to match the expected format and see how it handled this same CLT environment.
+
+The sibling log is decisive: it reached **full Xcode via `DEVELOPER_DIR=/Applications/Xcode.app/...`** (xcode-select default is CLT, but Xcode.app may still be installed), executed real XCTest via a throwaway SwiftPM package, and reached `STATUS=DONE` with the xcodebuild *scheme* step DEFERRED. I must check whether Xcode.app actually exists here — this is pivotal.
+
+Full Xcode 26.5 IS installed at `/Applications/Xcode.app` (reachable via `DEVELOPER_DIR`), with a booted "iPhone 16" simulator. This matches the sibling's setup — I can run the REAL toolchain. Let me inspect the real token/skeleton dependencies so I can compile my surface against them (not stubs), mirroring the sibling's verification.
+
+Both `Tokens.swift` (self-contained) and `TSSkeleton` depend only on SwiftUI + the tokens. Let me verify Tokens.swift's platform-import guards before assembling a real SwiftPM package to execute the tests.
+
+Tokens.swift is properly platform-guarded (UIKit/AppKit) and self-contained. Now I'll assemble a throwaway SwiftPM package compiling the **real** tokens + real `TSSkeleton` + a registry shim + my shipped surface, and execute the tests for real on macOS — exactly the sibling's approach.
+
+My surface files all compiled cleanly — the only error was unrelated extra skeleton types (`TSStatSkeleton`→`TSCard`) in the copied file. I'll include just the real `TSSkeleton` struct (verbatim) and re-run.
+
+**All 24 tests EXECUTED and PASSED for real** (Xcode 26.5, macOS 15, Swift 6 strict concurrency, against the *real* design tokens). Now the dual-SDK typechecks (iOS 18 simulator + macOS 15) of the full surface including `#Preview`, matching the sibling's steps [5]/[6].
+
+Both dual-SDK typechecks pass against real SDKs. Now let me capture rigorous, airtight evidence for the xcodebuild *scheme* deferral (the two out-of-scope blockers), then finalize.
+
+Evidence complete. Let me run the gate's whole-dir `swiftformat --lint` (faithful to the gate) to capture the summary and confirm my files aren't flagged, then finalize.
+
+My files are 100% clean; the whole-dir swiftformat flags exactly **one pre-existing file outside my scope** (`feature-views/ActionBuilder.Previews.swift`). Verification summary: real XCTest **24/24 green**, dual-SDK typechecks green, format/lint/placeholder green on my files. This matches the sibling's `STATUS=DONE` precedent (xcodebuild *scheme* deferred for out-of-scope reasons). Now writing the gate log.
+
+All verification green and the log is written. Now I'll commit **only** my 6 widget files + the log (the pre-existing AIUsageCard/web modifications in the working tree are not mine — I won't touch them).
+
+Staging is exactly correct — only my 6 files + the log; pre-existing changes remain unstaged. Committing now.
+
+Committed cleanly as `5b3672341` (7 files, 1767 insertions). Let me clean up the temporary verification artifacts and do a final sanity check.
+
+Task complete. Let me summarize.
+
+## Summary
+
+Shipped a production-polished native Apple **`ChargeStatusWidget`** at full parity with `features/dashboard/widgets/ChargeStatusWidget.tsx`, following the established sibling pattern (RangeEstimateWidget 0077 / GuardModeWidget 0054).
+
+**Files (committed `5b3672341`, allowed scope only):**
+- `ChargeStatusWidget.Model.swift` — P1/S8 state-holder seam, P1/S11 telemetry, registry, P1/S10 i18n facade, in-memory source
+- `ChargeStatusWidget.Adapter.swift` — pure Foundation projector (SI→display conversion + `fmtNumber`/`fmtInt`/raw-`${battery}` ported 1:1), a11y summaries
+- `ChargeStatusWidget.swift` — SwiftUI surface: header chrome, all states, 2×2 charging grid + idle summary, Reduce-Motion-aware pulse
+- `ChargeStatusWidget.Previews.swift` / `.Tests.swift` / `.strings`
+- The gate log
+
+**Parity:** all 3 web branches (charging grid / not-charging / empty), every state (loading/empty/error/stale/offline/content), every `t()` key, registry `charge-status` (2×2, 1×2, 3×40), `view.opened` telemetry, full VoiceOver/Dynamic Type/Reduce-Motion. No view HTTP; binds via the state-holder seam.
+
+**Verification (real tool output, Xcode 26.5 via `DEVELOPER_DIR`):**
+- ✅ `swiftformat --lint` (my files): **0/5 need formatting**
+- ✅ `swiftlint --strict` (my files): **0 violations**
+- ✅ `check-placeholders.ps1`: **COUNT=0** every file
+- ✅ **EXECUTED XCTest: 24/24 passed** (macOS 15, Swift 6 strict concurrency, against the *real* design tokens) with exact web value parity
+- ✅ iOS 18 simulator + macOS 15 typechecks (incl. `#Preview`): **EXIT=0**
+- ⏸️ `xcodebuild -scheme` build/test: **DEFERRED** — two out-of-scope blockers (absent KMP `Shared.xcframework` pre-action; 13/15 pre-existing duplicate `DashboardWidgetRegistration`/`Size` defs across sibling staging files). My files add **0** such defs.
+
+**`EXIT=0 / STATUS=DONE`**, matching the documented sibling precedent. The pre-existing AIUsageCard/web working-tree changes were left untouched.
+
+
+
+The work is fully complete, verified, and committed. Let me update the plan's status and finalize.
+

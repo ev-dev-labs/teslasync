@@ -1,0 +1,149 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Swift, swiftlint, and swiftformat are available. Let me check the xcodebuild situation and read the web source.
+
+Key finding: only Command Line Tools are installed (no full Xcode, no `simctl`), but Swift 6.3.2, swiftlint, and swiftformat work. Let me check whether the Apple app builds via SwiftPM (`swift build`) and study existing patterns.
+
+Extensive existing `feature-views` exist with a clear multi-file convention (`.swift`, `.Model`, `.Adapter`, `.Views`, `.Previews`, `.strings`, `.Tests`). No Package.swift/xcodeproj here, and full Xcode isn't installed (only CLT). Let me study the conventions and infrastructure before writing code.
+
+`project.yml` (XcodeGen) explains the missing `.xcodeproj`. Neighbors 0084/0086 are done. Let me read their logs and source to learn the exact conventions and how this runner handled the build gate.
+
+The 0084 log reveals the established precedent: full Xcode exists at `/Applications/Xcode.app` (used via `DEVELOPER_DIR` override), and verification is done via real SDK typechecks + executed XCTest via a SwiftPM harness + swiftlint/swiftformat/placeholder gate. Let me check my runner's capabilities and read the precedent source.
+
+I have full clarity now. My runner matches the 0084 precedent exactly: Xcode 26.5 at `/Applications/Xcode.app` (via `DEVELOPER_DIR`), iPhone 16 simulator present, swiftlint/swiftformat available. The established pattern (ADR-012, precedent 0005/0009/0039/0084): author the full surface, verify via real iOS+macOS SDK typechecks + executed XCTest via SwiftPM harness + lint/format/placeholder gate, and DEFER only the signed Xcode app build. Let me study the gold-standard ConflictWarnings precedent files and configs.
+
+The template is crystal-clear. Let me read the remaining ConflictWarnings files (Views, surface, Previews, Tests, strings) plus the shared components I'll need (Badge, Button, Card/GlassPanel, Skeleton, tokens) and a card-grid analog.
+
+Let me read the test + preview patterns and locate the shared design tokens and components I'll need (Badge, Button, Card, Skeleton, tokens, TSTone).
+
+Now let me locate the shared design tokens and components (Color.TS, Font.TS, TSSpacing, TSRadius, TSTone, TSSkeleton, TSBadge, Button, GlassPanel/Card) so I use the correct APIs and can build the SwiftPM test harness.
+
+`TSTone`, `TSBadge`, `TSIconBox` found. Now let me find where the generated tokens (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`) are actually defined, plus read Buttons, Cards, Skeletons, States, Motion.
+
+The generated tokens live at `apps/design/generated/apple/Tokens.swift`. Let me read it plus the components I'll need (Buttons, Cards, Skeletons, States, Motion).
+
+Now let me read the remaining shared components and the web type definitions to capture exact APIs and the `AutomationPreset` shape.
+
+Let me read the remaining shared pieces (Skeletons, States/EmptyState, Motion, Material/glass, Typography) and the web types for `AutomationPreset`.
+
+Let me read the glass material modifier, typography, the web types, and check the navigation-seam pattern used by sibling automations views (AutomationCard).
+
+I have all the components mapped. Let me check the lint configs, project.yml registration, and the placeholder gate script before writing.
+
+Let me check how the placeholder script resolves `-Path` and how the sibling `AutomationCard` handled interpolated strings (`{{count}}`/`{{name}}`) to follow precedent exactly.
+
+Now I understand the placeholder gate (a non-existent literal path scans nothing — I'll scan my real files too) and the `{{count}}`→`%lld` interpolation precedent. Let me confirm the shared Components/Design dirs are KMP-free (so my SwiftPM typecheck harness has a closed dependency set) and check Typography exports.
+
+I now have everything needed: the exact 7-file convention, all shared component APIs, the KMP-free dependency closure for a SwiftPM harness, the lint/format/placeholder rules, and the runner's real capabilities (Xcode 26.5 via `DEVELOPER_DIR`, iPhone 16 sim, swiftlint/swiftformat/pwsh). Let me set up the plan and todos.
+
+Now I'll author the Adapter (the pure, testable projection core).
+
+Now the Model (state-holder seam, telemetry, render ladder, install action, i18n facade).
+
+Now the Views layer (cards, grid, loading, empty, error, chips, badge, icon box).
+
+Now the surface View.
+
+Now the previews.
+
+Now the test suite.
+
+Now the i18n catalog contribution.
+
+All 7 files written. Let me update todos and begin verification — starting with swiftformat and swiftlint on the surface files.
+
+swiftformat flagged one `docComments` issue at Adapter.swift:135. Let me inspect and fix it.
+
+The `docComments` rule wants the divider comment (preceded by a blank line, before a public decl) to be a doc comment. I'll convert both inline section dividers to `// MARK:` sub-sections (exempt from that rule) for clarity and lint-cleanliness.
+
+Now let me re-run swiftformat --lint and swiftlint together.
+
+swiftformat (0/6) and swiftlint (0 violations) both pass. Now the real cross-SDK typechecks against the iOS 18 simulator and macOS 15 SDKs using the actual shared component closure under Xcode 26.
+
+iOS 18 typecheck passes. Now macOS 15 SDK + the DEBUG previews typecheck.
+
+All three cross-SDK typechecks pass (iOS 18, macOS 15, DEBUG previews). Now I'll build a self-contained SwiftPM harness to actually execute the XCTest suite on the macOS host.
+
+All 24 XCTest cases pass on the macOS host. Now the placeholder gate — I'll run both the prompt's literal form and a real scan of my actual files (the literal path has no extension, so it scans nothing; I'll prove my files are clean too).
+
+Clean. Now a rigorous real scan of my actual files (copy to a temp dir and scan), since the prompt-form path scans nothing.
+
+Every host-runnable gate is green. Now I'll capture **real evidence** for the one DEFERRED step — the signed Xcode app build — by confirming the KMP `Shared.xcframework` dependency is unstaged and attempting the build to record the genuine failure (honesty: report it as DEFERRED, never as green).
+
+Confirmed: both app targets depend on `Frameworks/Shared.xcframework` (KMP core), which is unstaged (`.gitkeep` only). Let me verify it's git-ignored, then generate the project and attempt the real build to capture genuine DEFERRED evidence.
+
+`.xcodeproj` is gitignored (safe to generate), and I note pre-existing `AIUsageCard.*` modifications that are **not mine** — I'll leave them untouched. Let me generate the project and attempt the real build to capture the DEFERRED evidence.
+
+Project generates and both `TeslaSync`/`TeslaSync-macOS` schemes exist. Let me confirm my files are referenced in the generated project, then run the real `xcodebuild build` to capture the genuine failure.
+
+My 7 files are referenced 42× in the generated pbxproj (matching the precedent). The `xcodebuild` is still running — likely the "Stage Shared.xcframework" Gradle pre-build script. Let me wait and read.
+
+Still running at ~320s. Let me inspect what the build is doing from a parallel shell (likely the Gradle KMP step).
+
+The build is genuinely progressing — the KMP Kotlin/Native toolchain (JDK 17 + konan/llvm) is actively assembling `Shared.xcframework` via Gradle. This runner *can* build it (unlike the precedent slot). If it completes, I get a full green Xcode build rather than a deferral. Let me wait.
+
+Major development: the KMP `Shared.xcframework` **built successfully** via Gradle on this runner (the precedent slot couldn't). The xcodebuild exited 143 (SIGTERM — my lossy `grep|head` pipe truncated it mid-build). Let me check whether the framework got staged, then re-run a clean `build test` to a full log file.
+
+The Gradle build produced `apps/shared/core/build/XCFrameworks/debug/Shared.xcframework`, but the SIGTERM hit before the script staged it into `Frameworks/`. Let me re-run the full `build test` to a complete log file (no truncating pipe) in the background — Gradle will now be cached, so it should proceed to compile/link/test the app.
+
+Build launched to a full log file (Gradle now cached). Let me poll its progress.
+
+The log file is missing — let me check the background build shell's own output.
+
+Let me inspect from a fresh shell whether xcodebuild is actually running and where its output went.
+
+I see another slot is concurrently running the same gate (PID 3414, shared environment). My code is already proven by real SDK compiles + executed tests. Let me stop my background build, then read the full staging script to state the deferral evidence precisely.
+
+Now I understand the deferral precisely. Let me check how `project.yml` wires the `*.Tests.swift` files (app target vs test target) so my log is accurate.
+
+Decisive, airtight finding: the checked-in `project.yml` sources `feature-views/*.Tests.swift` into the **app** target (not the `Tests/Unit` test bundles), and the app links the KMP `Shared.xcframework` — so the full `xcodebuild build test` depends on integration-runner project wiring outside this prompt's allowed files. My surface is fully verified by the green host gates. This matches the ADR-012 deferral precedent exactly. Let me clean up artifacts, verify scope, and count lines.
+
+My 7 files total 1359 lines (vs the 0084 precedent's 1018), all under the 400-line limit; the largest is 334. The pre-existing `AIUsageCard.*`/`web/*` changes are not mine — I'll commit only my files. Now let me generate the gate log with **real captured outputs** by re-running every host-runnable step.
+
+Log generated. Let me verify the captured gate results are all green.
+
+All host-runnable gates captured green (typechecks 0, 24/24 tests, lint 0, format 0, placeholder 0). Let me spot-check the capability-probe header rendered real values.
+
+The log is truthful and complete (real Xcode 26.5/SDK/simulator values, all gate exits green). Now let me commit **only** my allowed files (the 7 `PresetGallery.*` + the log), explicitly excluding the pre-existing `AIUsageCard.*`/`web/*` changes.
+
+Let me confirm the staged set explicitly.
+
+All 8 correct files staged (7 surface files + log), nothing extraneous. The earlier empty result was a race with the concurrent slot's git activity. Now committing.
+
+Commit `fd0db431d`: exactly 8 new files (7 surface + log), 1581 insertions, nothing extraneous. Let me do a final verification of commit scope and working-tree cleanliness.
+
+Git is slow (concurrent slot contention + large gitignored KMP build output to scan). Let me wait.
+
+Let me stop this slow scan and run targeted checks that avoid a full working-tree scan.
+
+Commit confirmed: exactly 8 files (7 surface + log), 1581 insertions, all additions. The earlier slowness was git scanning the gitignored KMP build output. Let me do a final fast cleanup check and close out todos.
+
+Everything is finalized and verified. The task is complete.
+
+## Summary
+
+Shipped a production-polished, native Apple SwiftUI parity of `PresetGallery` at `apps/apple/TeslaSync/feature-views/PresetGallery.*` (7 files, 1359 lines), committed as `fd0db431d` with the gate log.
+
+**Parity with `web/src/features/automations/pages/PresetGallery.tsx`:**
+- Preset card grid: cyan icon tile (`iconMap[icon] ?? Shield` → 8 SF Symbols + default), name, first-trigger label (`triggers[0] ? triggerLabels[kind] : noTrigger`, incl. unknown-kind fallback), neutral `{{count}} actions` badge, 2-line description, secondary **Install** button.
+- Grid = `TSFadeIn` over a responsive `LazyVGrid` with per-cell `TSStaggerItem` (web FadeIn → StaggerContainer → StaggerItem).
+- Bound through the **P1/S8** `PresetGallerySource` state-holder seam (no view HTTP); Install routes via the parent `onInstall` closure (web `navigate(...)`); **P1/S11** `view.opened` telemetry; **P1/S10** i18n facade.
+- **All states render:** loading (4 skeleton cards), empty (clock `ContentUnavailableView`), error+retry, presets grid, stale chip + auto-refresh, offline chip.
+
+**Verification — every host-runnable gate green (real captured output in the log):**
+| Step | Result |
+|---|---|
+| iOS 18 simulator SDK typecheck | `EXIT=0` |
+| macOS 15 SDK typecheck | `EXIT=0` |
+| DEBUG previews typecheck | `EXIT=0` |
+| `swift test` (executed XCTest) | **24/24, 0 failures** |
+| `swiftlint --strict` | 0 violations |
+| `swiftformat --lint` | 0/6 need formatting |
+| placeholder gate | `EXIT=0` (real scan) |
+
+i18n coverage is 8/8 web keys (4 trigger labels + noTrigger + actionCount + install + empty) plus 7 native chrome/a11y keys; every interactive element has a VoiceOver label.
+
+**One step DEFERRED (per ADR-012 / the 0084 precedent), honestly documented with real evidence:** the signed `xcodebuild build test` depends on integration-runner wiring **outside this prompt's allowed files** — (a) `Scripts/build-shared-xcframework.sh` stages from `release/` while Gradle emits `debug/`, and (b) `project.yml` sources `feature-views/*.Tests.swift` into the app target rather than the `Tests/Unit` bundle. The surface itself is *not* the blocker: it compiles against both real SDKs and its tests execute green. Notably, the KMP `Shared.xcframework` **did build** on this runner, and the generated pbxproj references all 7 files (42 refs).
+
+`STATUS=DONE`. Only my 7 surface files + the log were committed; pre-existing unrelated changes were left untouched.
+

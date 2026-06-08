@@ -1,0 +1,186 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+I have the web source. Now let me explore the existing Apple app structure to understand the established patterns (P4 core, P1/S8 state holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics).
+
+The `shared-surfaces/` dir doesn't exist yet—I'll create it. The established multi-file pattern is clear. Let me study a complete example (AIUsageCard, just modified) and locate the P1/S8 state holders, P1/S9 tokens, P1/S10 i18n, and P1/S11 diagnostics infrastructure.
+
+Excellent, this is a well-architected pattern. Let me read the remaining AIUsageCard files and locate the shared design tokens (P1/S9), and reusable view primitives.
+
+Let me find the design tokens (P1/S9), the i18n facade infrastructure, and read the remaining AIUsageCard files (Previews, Tests) plus the chrome subviews.
+
+Let me find the actual token definitions (TSSpacing, TSRadius, Color.TS, Font.TS) and the state-holder facade infrastructure.
+
+Key finding: tokens come from `../design/generated/apple`, and sources are wired per-directory in `project.yml`. `shared-surfaces/` isn't listed yet. Let me check Xcode availability, the web hook data shape, the SharedFacade (P1/S8), and the rest of the AIUsageCard pattern.
+
+Xcode.app exists (just not selected) and xcodegen is available. Let me test whether I can use Xcode via `DEVELOPER_DIR`, and read the web hook data shape directly.
+
+`xcodebuild` works with `DEVELOPER_DIR` (Xcode 26.5, iPhone 16 booted, macOS SDK present). The capability IS available — I should target STATUS=DONE. Let me read the `SystemHealth` type, the SharedFacade conventions (P1/S8), and the rest of the AIUsageCard pattern (Tests/Previews + chrome subviews).
+
+Let me find where `AiUsageProjection` lives, list the complete AIUsageCard file set, and locate the `SystemHealth` type definition.
+
+Found the `SystemHealth` shape. Now let me read the rest of project.yml (test targets), the AiUsageCard.Projection + AdapterTests, and check how feature-views tests are wired, plus the design tokens available.
+
+Critical wiring question: how do `*.Tests.swift` files in `feature-views/` (which use `@testable import TeslaSync`) get routed to the test bundle vs the app target? Let me investigate the project.yml membership mechanism.
+
+The test-in-app-target puzzle needs resolving before I write code. Let me check the generation scripts, framework presence, and whether a baseline build even works.
+
+Important findings: `Shared.xcframework` is absent (only `.gitkeep`), and the app/test targets depend on it. Let me assess whether I can build it, and check `pwsh` availability for the placeholder gate.
+
+`pwsh` is available, the KMP module + gradlew exist, and tokens are generated. Let me decisively learn the real test-target wiring by generating the project and inspecting membership of a sample `*.Tests.swift`.
+
+Confirmed: `*.Tests.swift` files are compiled into the **app targets** (1816 files each), not a separate test bundle — a pre-existing monorepo wiring reality. Let me verify the design token + primitive APIs I'll use, then start writing the surface. Let me read the generated tokens and locate the UI primitives.
+
+Let me confirm the `TSButton` and `TSSkeleton` APIs (used in chrome) and check `TSBadge` for the chip pattern.
+
+I have all the APIs I need. Let me read the lint/format configs to match conventions exactly, then write a plan and start creating the surface.
+
+Key wiring insight: neither `project.yml` nor `.swiftlint.yml` lists `shared-surfaces/` (it's owned by other prompts per the narrow allowed-files list), and `Shared.xcframework` must be Gradle-built. Let me kick off the Shared framework build in the background while I write code, and check network.
+
+Network is up and Gradle/Kotlin-Native caches exist. Let me kick off the Shared.xcframework build in the background, then write code while it runs.
+
+The Gradle log shows cross-slot activity (references slot-304 — there are concurrent agent sessions sharing the Gradle daemon/cache). Let me check whether my slot-356 build is progressing and whether the framework landed in my slot.
+
+This is a heavily-contended parallel environment: 10+ agent slots share one Gradle daemon (each build ~10min), and `*.Tests.swift` files with `@testable import TeslaSync` compile **into the app target**. Let me empirically test whether that self-import even compiles — it's decisive for whether the gate is structurally achievable here.
+
+Decisive findings: self-`@testable import` only warns (non-fatal); the heavyweight monorepo gate (Shared.xcframework via a contended shared Gradle daemon + 1816-file app target) is an integration concern owned by other prompts. I'll ship the complete, polished surface and verify it independently (standalone compile + logic harness + swiftformat + swiftlint + placeholder check). Let me write the plan and create the files.
+
+Now I'll create the surface files. Starting with the pure-logic Adapter.
+
+Now the Model (i18n facade, telemetry seam, input/resolved types, dismissal store, source seam, observable model).
+
+Now the pure Projection.
+
+Now the active banner Views (icon tile, text, live countdown via `TimelineView`, dismiss) plus the shared surface modifier + tone style.
+
+Now the leaf chrome (freshness chip, connectivity note, loading skeleton banner, error banner).
+
+Now the top-level surface view.
+
+Now the i18n catalog (`.strings`).
+
+Now the previews (every state).
+
+Now the test suite (adapter + projection + model + a11y).
+
+All 9 files created. Now let me format and lint them. First run swiftformat (fix) using the repo config, then verify with `--lint`, then swiftlint.
+
+swiftformat adjusted 3 files. Let me view the changes, then confirm `--lint` is clean and run swiftlint.
+
+New files are untracked (no diff baseline). Let me confirm `--lint` passes and run swiftlint `--strict`.
+
+swiftlint ignored my path arg (used config's `included`, which excludes `shared-surfaces`) and found 1 pre-existing violation elsewhere. Let me (1) identify that violation, and (2) lint my files via a temp config that targets them.
+
+The lone violation is pre-existing in a sibling (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`) — not mine. So the baseline `swiftlint --strict` is already red independent of my work. Let me lint **my** files via a temp config mirroring the real rules.
+
+My files have 4 fixable violations (two files >400 lines, a 3-tuple, a brace-wrap). I'll split `Model` → `Model`+`Seams` and `Tests` → `Tests`+`AdapterTests`, and fix the tuple/brace. Let me delete and recreate those files.
+
+Now the Seams file (telemetry, dismissal store, in-memory source).
+
+Now the adapter test file (split out) and the trimmed projection+model test file with the tuple/brace fixes.
+
+Now the projection + model test file with the harness struct (fixes the 3-tuple) and pre-wrapped helper (fixes the brace).
+
+Let me re-format and re-lint all surface files, and confirm line counts are under 400.
+
+All files now ≤331 lines. Let me confirm clean format and lint.
+
+My surface passes **swiftformat --lint (0/10)** and **swiftlint --strict (0 violations)**. Now let me build a standalone logic harness (compile + run the ported arithmetic/state machine) and check on the Shared.xcframework. Let me first check framework status.
+
+My slot's framework is absent and the shared Gradle daemon is contended across ~10 slots. Let me restart my framework build (unique log, detached) and proceed with the standalone logic harness in parallel.
+
+Now the standalone logic harness — compile + **run** the Foundation-only ported logic (Adapter, Projection, Model, Seams) with parity assertions.
+
+Top-level code must live in `main.swift`. Let me rename and recompile.
+
+Swift 6 makes `main.swift` top-level MainActor-isolated. Let me annotate the harness helpers `@MainActor` and call directly.
+
+The standalone logic harness **compiles (Swift 6, strict concurrency) and runs — all 50+ parity checks PASS**, proving the ported arithmetic, projection state machine, telemetry, dismissal, and stale auto-refresh. Now the placeholder gate step and a SwiftUI typecheck. Let me inspect the placeholder script and run it.
+
+The gate's exact `-Path .../MaintenanceBanner` is a prefix (not a real path → scans nothing). I'll scan the actual directory. Let me run the placeholder check on my files and verify none of the forbidden tokens appear.
+
+Placeholder gate passes (COUNT=0, EXIT=0) with no forbidden tokens. Now a SwiftUI typecheck of the view layer against the **real** design tokens (with faithful shims for the two primitives I consume). Let me check the token helper and set it up.
+
+`tsDynamicColor` is self-contained. Let me set up the SwiftUI typecheck with the real tokens + faithful primitive shims, and run it.
+
+SwiftUI layer **typechecks cleanly (RC=0)** against the real tokens. One preview helper triggers a MainActor warning — let me mark it `@MainActor` for cleanliness, re-typecheck, and check the framework build progress.
+
+The earlier `nohup` build died with its session. Let me start the framework build properly (detached/persistent) so it survives, then re-verify the previews fix.
+
+SwiftUI typecheck is now fully clean (RC=0, no warnings). The detach launcher returned (Gradle continues under setsid). Let me check its progress.
+
+Gradle is actively building (downloading Kotlin-Native, compiling iOS arm64). Let me apply **temporary** build wiring (to be reverted before commit) so I can attempt the real gate once the framework is ready, then poll the build.
+
+Temp wiring applied (backups in `/tmp`). Now let me wait for the Gradle framework build to complete.
+
+Progressing through framework linking. Let me continue waiting.
+
+Framework build is progressing but slow under daemon contention. Let me keep waiting for the release XCFramework assembly.
+
+The debug XCFramework assembled; the release variant (which gets staged) is next. Let me wait for the full task to finish.
+
+Release linking has started (the slow, uncached part). Let me wait for it to finish staging the framework.
+
+Release linking is on the simulator slice now. Let me wait for the release XCFramework to finish assembling.
+
+Last release link (macOS arm64) in progress, then assembly. Let me wait for completion.
+
+**Gradle BUILD SUCCESSFUL** — the release `Shared.xcframework` is built. Let me stage it, regenerate the project (with temp wiring + my files), and start the real iOS build.
+
+Framework staged, project regenerated, my files present (66 refs). Now the real iOS build. Let me start it (async) and monitor.
+
+Build started. Let me monitor its progress.
+
+The build linked the Shared framework and reached the TeslaSync Swift compilation, then failed. Let me find the actual compiler errors and whether they're in my files.
+
+The failure is **pre-existing and not mine**: sibling `feature-views/AIRestorePanel.Tests.swift` (and all `*Tests.swift`, including my own) `import XCTest`, which can't resolve in the **app target** — confirming the monorepo routes test files into the app target (they belong in a test bundle). **Zero errors in my MaintenanceBanner files.** To get real in-module compile evidence for my app code, let me temporarily exclude `*Tests.swift` from the app target and rebuild.
+
+Tests excluded from app target, my app files retained. Let me rebuild — this is the real in-module compilation test.
+
+Build running. Let me monitor.
+
+Real, valuable signal: my files compile **except for name collisions** — `MaintenanceConnection` (and likely other `Maintenance*` types) is **ambiguous**, meaning something else in the single TeslaSync module already defines it. (The `DashboardWidgetSize` errors are pre-existing sibling dup-definitions, not mine.) Let me find which of my type names collide.
+
+Found it: a sibling surface `dashboard-widgets/MaintenanceTrackerWidget` already defines `MaintenanceConnection`, `MaintenanceProjection`, `MaintenanceTelemetry`, `MaintenanceAccessibility`, etc. Since the whole app is one module, my bare `Maintenance*` names collide. This is a **real bug I must fix** — I'll uniquely prefix all my types with `MaintenanceBanner` (following the `AiUsage*` convention). Let me apply the renames carefully (preserving user-facing strings and the already-unique `MaintenanceBannerModel`/`MaintenanceBannerStrings`/`MaintenanceBanner`).
+
+Renames applied correctly — user-facing strings and the unique `MaintenanceBannerModel`/`MaintenanceBannerStrings` are intact. Only a file-private `MaintenancePreviewData` remains (no module collision, but I'll rename for consistency). Let me finish that, then reformat/relint.
+
+swiftformat is clean. swiftlint crashed (`Abort trap: 6`) — an environmental crash under heavy parallel load, not a lint result. Let me retry it.
+
+swiftlint crashes consistently now (was clean before). Let me isolate whether it's a specific file or environmental SourceKit contention by linting one file at a time.
+
+Individual files lint clean (rc=0) using the auto-discovered real config. The crash is tied to the `/tmp` config's absolute `included` path under load. Let me lint all my files via explicit paths (auto-discovering the real `.swiftlint.yml`).
+
+swiftlint clean (0). Now let me re-verify: rebuild the iOS app to confirm my collision is resolved (my files compile in-module), and re-run the harness with the renamed types. Let me start the iOS build, then re-run the harness while it builds.
+
+Harness still passes after renames. Now let me wait for the iOS build and check specifically whether **my** files compile cleanly.
+
+**Decisive result: `MY_ERR_COUNT=0`** — after the collision fix, my files compile cleanly in the real TeslaSync module. The remaining failures are all in pre-existing sibling `dashboard-widgets/*` files I never touched (the same `DashboardWidgetSize`-style duplicate-definition collisions seen before my work). Let me confirm those sibling errors are pre-existing dup-defs unrelated to me.
+
+**Conclusive:** zero errors mention "Maintenance" and zero in `shared-surfaces/` — my surface compiles cleanly in-module. The 22 error files are all pre-existing sibling `dashboard-widgets/*` duplicate-definition collisions (`DashboardWidgetSize` defined twice, etc.) that I never touched. My collision fix is verified.
+
+Now let me revert the temporary wiring, clean generated artifacts, and prepare the honest gate log.
+
+The `/tmp` backups were clobbered (shared `/tmp` across slots). Since `project.yml`/`.swiftlint.yml` are tracked and were unmodified before my temp edits, let me restore them via `git checkout`.
+
+Restored to committed state (0 refs). Let me verify the full working-tree status to ensure I only stage my files.
+
+Working tree is clean except pre-existing modifications (not mine) and my new `shared-surfaces/`. Let me capture the real full-tree gate-step exit codes (format + lint + placeholder) for an honest log.
+
+Real gate-step results captured: full-tree FORMAT and LINT are red due to **1 pre-existing sibling file each** (not mine); my surface is clean on all three. Let me identify the sibling format file for the log, then write the honest gate log.
+
+The pre-existing format issue is a sibling (`feature-views/ActionBuilder.Previews.swift`), confirmed not mine. Let me grab the exact iOS build exit code, then write the honest gate log.
+
+Confirmed `IOS_EXIT=65` (the fast 32s was incremental reuse from the prior build; my renamed files recompiled to **0 errors**, siblings still fail). I have all the data. Let me write the honest gate log.
+
+Let me do a final consistency check — verify i18n keys in Swift match the `.strings` catalog, confirm no dangling old type names, and list the final file set.
+
+All consistent: every Swift i18n key is in the `.strings` catalog, 11 files present, no dangling type names. Let me stage **only** my surface files + the log (not the pre-existing unrelated modifications) and commit.
+
+All 12 of my files are staged; the pre-existing unrelated modifications are correctly left out. My surface is verified-green on every applicable check; the gate's red is entirely external (documented honestly in the log as BLOCKED). Committing my complete, verified work with the transparent log is correct. Let me commit.
+
+Committed cleanly (12 files, 1896 insertions). Let me verify the working tree has no stray build artifacts and clean up temp files.
+
+The working tree is clean: only pre-existing unrelated modifications remain, the temp wiring is reverted (0 refs), no generated project/framework artifacts linger, and temp dirs are cleaned. My commit (`25abb5eff`) contains exactly the 11 surface files + the gate log.
+
+The task is complete. Here's the summary.
+

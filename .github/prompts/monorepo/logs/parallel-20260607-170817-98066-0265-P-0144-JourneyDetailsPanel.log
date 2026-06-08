@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Web source is simple (a presentational panel). Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are present. However, `swift`, `swiftlint`, and `swiftformat` are available. Let me explore the existing Apple app conventions before deciding anything—there are 586 existing feature-views to match.
+
+This uses XcodeGen (`project.yml`, no checked-in `.xcodeproj`). The gate's `xcodebuild` needs full Xcode (only CLT present). I'll still produce production code matching conventions and run available tools. Let me study a representative simple panel and find drive-detail siblings to reuse the `DriveDetail` model and state holders.
+
+No drive-detail siblings exist yet. I need to deeply learn the 7-file panel convention. Let me read the full `AcDcStatsPanel.*` set as the canonical example.
+
+Now I understand the 7-file convention. Let me read the remaining AcDcStatsPanel files and explore the shared `Sources/` infrastructure (tokens, glass panel, motion, DateTime equivalent) that these reference.
+
+Let me locate the shared tokens, glass panel, motion, and the DateTime/vehicle-timezone formatter, plus check for any existing Drive model in Swift.
+
+A sibling `RecentDrivesListWidget` already models drives (startAddress, endAddress, battery). Let me read it and locate the actual token declarations (Color.TS, TSSpacing, Font.TS) in the generated design tokens.
+
+Let me read the design Tokens, the most-similar sibling's Model file, and the typed DateTime formatter.
+
+I now understand the conventions well. Let me read the remaining references: the web `DriveDetail` type & `DateTime` component, the native `TSGlassPanel`/`TSFadeIn`/typed DateTime formatter, a Tests file, and the placeholder checker.
+
+Let me read the web DateTime component, the native typed formatters, a Tests file, and the placeholder checker—plus check for `pwsh`.
+
+Let me read the web `formatDateTime` (the 'full' variant output) and the native `TSDateTime` view to decide reuse vs. project-to-string.
+
+I have a full picture of conventions. Let me read the placeholder checker to ensure my files pass it, then start building.
+
+I have everything needed. Critical check: is a full **Xcode.app** present anywhere (the gate needs it, and `xcode-select` currently points at CommandLineTools)? If so, I can run the real gate and reach STATUS=DONE honestly.
+
+`/Applications/Xcode.app` exists. I can run the real gate via `DEVELOPER_DIR`. Let me verify it works and enumerate SDKs/simulators.
+
+Full toolchain present: Xcode 26.5, iPhone 16 simulator (booted), xcodegen, swiftc 6.3.2. I can run the real gate. Let me establish a baseline first — check the `Shared.xcframework` staging (its preAction could need a KMP toolchain) and confirm the existing project builds before I add files.
+
+`Shared.xcframework` isn't staged (only `.gitkeep`); the scheme preAction builds it via Gradle (KMP toolchain). Let me check whether that toolchain/prebuilt output is available, and set up my plan.
+
+Java 17 + gradlew are present, so the KMP `Shared.xcframework` can likely be built. This is the long pole, so I'll start it in the background while I write code. Let me set up my plan and todos first.
+
+Now let me launch the long-pole Gradle build in the background and start writing code in parallel.
+
+Let me confirm the web `fmtNumber` default precision (matters for coordinate formatting parity).
+
+Confirmed: default precision 2, locale en-US, `safeNumber`→0. Let me verify the remaining shared component signatures I'll use (`TSSkeleton`, `TSButton`) before writing.
+
+All APIs confirmed. Now I'll write the surface. Starting with the pure Adapter core.
+
+Now the Model file (state-holder seam, projection, telemetry, strings facade).
+
+Now the SwiftUI surface file with header, freshness chip, connectivity banner, and content switch.
+
+Now the Views file — the two-up start/destination grid plus loading/empty/error chrome.
+
+Now the Previews and Tests files, plus the strings catalog.
+
+Now the comprehensive Tests file.
+
+The Shared.xcframework Gradle build finished. Let me check its result and write the strings file.
+
+Shared.xcframework built & staged successfully (8m56s). Now the strings catalog.
+
+All 7 files written. Now verification. Let me format/lint my files and run the placeholder scan.
+
+Expected formatting nits. Let me autofix with swiftformat and re-verify.
+
+swiftformat passes. Now swiftlint --strict on the new files.
+
+One swiftlint issue: `coordinate(...)` has too many parameters. I'll group the four hemisphere words into a small struct. Let me view the current (post-format) sections to craft precise edits.
+
+Now let me make the edits to introduce `JourneyHemispheres` and reduce the parameter count.
+
+Now update the Tests that call `coordinate` with the old signature.
+
+Now re-run swiftformat and swiftlint to confirm both clean, plus the placeholder scan.
+
+File length is 409 (limit 400). Let me trim verbose comments in the Adapter header to get under the limit.
+
+Trimmed 5 lines (now ~404). Need a few more. Let me condense two more doc comments.
+
+Need 4 more lines. Let me view the tail (Accessibility) and trim a couple low-value inline comments.
+
+Structural fix: move the small `JourneyAccessibility` seam to the Model file (both Foundation-only) to get the Adapter comfortably under 400.
+
+swiftformat and swiftlint --strict both clean, all files under length limits. Now the placeholder scan on my files (honest, scoped to a temp copy since the gate's prefix path matches nothing).
+
+Placeholder scan clean (COUNT=0, EXIT=0). Now the build phase. Let me generate the Xcode project and inspect how `*.Tests.swift` files in `feature-views/` are associated with targets (to anticipate the `@testable import` concern).
+
+The pbxproj references each file 6×. Let me verify the core logic compiles standalone (host typecheck under Swift 6 strict concurrency) and investigate which target the `*.Tests.swift` files belong to.
+
+Host typecheck of the core passed under Swift 6 strict concurrency. Key finding: the `*.Tests.swift` files are compiled into the **app targets themselves** (not a test bundle) — a pre-existing repo structure affecting all 584 surfaces. To definitively prove MY tests pass, I'll run them in an isolated SwiftPM harness.
+
+All 34 unit tests pass in isolation (0 failures) — covering formatters, coordinate asymmetry, tz dates, projection states, presenter, accessibility, and model wiring. Now let me validate the real gate. I'll run the macOS scheme build first as a canary to see how the app target handles the (repo-wide) test-files-in-app-target structure.
+
+While that builds, let me confirm the log directory exists.
+
+The macOS build failed on **code signing** (entitlements need a dev certificate) — an environment limitation, not my code, and it happens before linking. The gate's primary destination is the **iOS Simulator**, which doesn't require signing. Let me run the iOS simulator build (the gate's exact build) to verify my code compiles in the real app and observe the test-files behavior.
+
+RC=65, but my grep filled with ~584 benign "ignoring import" warnings (confirming `@testable import` self-import is just a warning, repo-wide). The real error is hidden. Let me capture full output to a file and extract only errors.
+
+Definitive root cause: `error: unable to resolve module dependency: 'XCTest'` from **`AcDcStatsPanel.Tests.swift`** (a pre-existing sibling) — every `*.Tests.swift` is compiled into the app target, which has no XCTest. This is a repo-wide structural defect outside my allowed scope. To prove MY view code compiles cleanly in the real app, I'll build the app target with test files excluded (a command-line-only override that doesn't modify any file).
+
+Now I see the full picture: the baseline app module has **pre-existing compile errors in many sibling files** (e.g., `WeeklyDigestWidget`, `DigitalTwinWidget`, `MQTTStatusWidget`, `MotorHistoryWidget` — duplicate `DashboardWidgetSize`/`DashboardWidgetRegistration` declarations, non-Equatable conformances). Zero errors reference my files. Let me enumerate exactly which files have errors to prove none are mine and gauge scope.
+
+20 distinct sibling files have pre-existing errors — **none are mine**. `JourneyDetailsPanel` appears once in the whole log with zero error/warning association. Let me confirm that single occurrence's context (proving my files were compiled and clean).
+
+Airtight evidence: my 5 production files were in the real iOS app-target `SwiftCompile` batch with **zero** errors/warnings; `Tests.swift` was correctly excluded. The gate is blocked by ~20 pre-existing broken sibling files + the repo-wide XCTest-in-app-target defect — none in my scope. Let me run the gate's actual lint/format steps over the whole tree to capture truthful exit codes.
+
+Even the gate's whole-tree lint/format steps are red on **pre-existing sibling files** (`ActionBuilder.Previews.swift` for format; 1 swiftlint violation elsewhere) — my scoped runs are 0. Let me identify the exact pre-existing swiftlint violation (background) while I write the gate log.
+
+Let me retrieve the pre-existing swiftlint violation identity, then write the comprehensive gate log.
+
+The lone pre-existing swiftlint violation is in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141` — another sibling, not mine. I have complete evidence. Writing the honest gate log now.
+
+Now let me verify git state and ensure I only commit my allowed files (the generated `.xcodeproj` and staged framework should be git-ignored).
+
+Only my 7 surface files + the log are untracked; the generated `.xcodeproj` and staged framework are git-ignored. Committing the verified surface with the honest gate log.
+
+Committed as `e926612a2`. Let me finalize todos and clean up temporary build artifacts.
+
+The task is complete to the maximum extent achievable within the allowed file scope. Final state is clean and committed.
+

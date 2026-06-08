@@ -1,0 +1,102 @@
+I'll start by exploring the repository structure and checking for the Apple toolchain and dependencies.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me verify this thoroughly and explore the existing structure before concluding anything.
+
+Both full Xcode (`/Applications/Xcode.app`) and `xcodegen` exist, but `xcode-select` points to CommandLineTools. Let me investigate switching and explore the existing Apple structure deeply.
+
+Full Xcode works via `DEVELOPER_DIR` override — `simctl` lists a **booted iPhone 16** simulator. The capability IS available. Now let me deeply study the existing `feature-views` conventions to match them exactly.
+
+157 feature-views already shipped with a consistent multi-file convention. Let me study a complete reference set and the log format. Let me find the closest analog (a presentational status card) and read the shared facades.
+
+The ToolCard log reveals the sanctioned disposition: host gates (swiftlint/swiftformat/placeholder) + an **isolated SwiftPM harness** compiling the exact sources against real design-system files must be GREEN; the full-app `xcodebuild` gate is DEFERRED due to pre-existing duplicate-type collisions. Let me study the reference implementation and design-system deps.
+
+SecurityStatusCards is the closest analog (severity tones + badges). Let me read it fully along with the ToolCard tests and the design-system primitives.
+
+Excellent patterns established. Let me read the test conventions, strings format, previews, and the core design-system primitives (Cards, Typography, Tokens, Badge) plus navigation handling.
+
+Let me locate and read the Badge, Typography, and Tokens primitives, plus how feature-views handle CTA navigation, and the full test pattern.
+
+Let me read the remaining primitives — Badge tones, Typography variants, design tokens, Button — and inspect a feature-view CTA/route convention.
+
+Let me find the design tokens (Color.TS, Font.TS, TSSpacing, TSRadius) and examine how a feature-view exposes a navigation/CTA callback.
+
+Design tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read it and check the project.yml + swiftlint config to understand wiring.
+
+I have all the design tokens. Now let me confirm the wiring (project.yml/swiftlint already include feature-views), check the i18n catalog approach, and study how a card exposes a CTA action.
+
+I now have the full design-system picture. Let me confirm no existing TeslaAuthCard files, read the deferral policy doc, check the test-target wiring, and see how the web parent uses the component.
+
+This matches the sanctioned disposition precisely (isolated SwiftPM + tests + `swiftc -typecheck` green; full-app xcodebuild deferred to P99 acceptance gate). Let me read the last design-system dependency and check xcframework staging before building.
+
+Confirmed: `Shared.xcframework` is unstaged (only `.gitkeep`) — a documented pre-existing full-app build blocker. iOS 26.5 SDK is available (supports iOS 18 APIs). Let me check the project's Swift version/concurrency settings and deployment targets to match my isolated harness exactly.
+
+I have complete context. This is a pure-presentational card (like the sanctioned ToolCard precedent). Full Xcode is reachable via `DEVELOPER_DIR`, but the full-app `xcodebuild` is a documented deferral (unstaged `Shared.xcframework` + pre-existing duplicate-type collisions) — so verification is via host gates + an isolated SwiftPM build/test + iOS18/macOS15 `swiftc -typecheck`, exactly as predecessors did. Let me set up tracking and write the plan.
+
+Now I'll write all five source files. Starting with the Model (pure logic + seams):
+
+I left a stray placeholder helper in the severity enum — removing it (it's dead and would trip the placeholder scanner):
+
+Now the View — a live-clocked, Apple-idiomatic card composed from shared material + tokens:
+
+Now the previews:
+
+Now the comprehensive XCTest suite (mirrors the web test cases + every branch):
+
+Now the i18n catalog contribution:
+
+All five files created. Now running the host gates — first format my files and verify, then swiftlint and the placeholder check.
+
+pwsh is available. Let me inspect the placeholder checker's `-Path` semantics, then run format-lint, swiftlint, and the placeholder gate.
+
+The placeholder scanner matches "Placeholder" case-insensitively — my comments may contain "placeholders". Let me audit my files for every forbidden token before running the gate.
+
+One hit — the word "placeholders" in a comment. Let me reword it:
+
+Now running the format, swiftlint, and placeholder gates together:
+
+All scoped host gates are green (swiftformat 0/4, swiftlint 0 violations, placeholder 0). Now the whole-tree gate commands plus setting up the isolated SwiftPM harness.
+
+The whole-tree gates surface only **pre-existing** issues in other surfaces (not mine). Let me confirm: identify the swiftlint violation, verify the swiftformat issue predates my work, and confirm git shows only my files changed.
+
+The whole-tree gates show only **pre-existing** drift in other surfaces — `LifetimeStatsWidget.Adapter.swift` (swiftlint, the same one ToolCard documented) and `ActionBuilder.Previews.swift` (swiftformat), both tracked in HEAD and outside my allowed files. My scoped gates are green. The 2 modified web files are pre-existing dirty state (not mine). 
+
+Now the primary real-compiler verification: an isolated SwiftPM harness compiling the exact sources against the real design system under Swift 6.
+
+Two Swift-6 strict-concurrency fixes needed in the test file: the global `echo` closure (non-Sendable function type) should be a global function, and the `TeslaAuthCard.surfaceSlug` reference (MainActor-isolated via `View`) needs a `@MainActor` test class. Let me fix both:
+
+Re-formatting the edited test, then re-running the isolated build+test:
+
+Isolated SwiftPM harness: **35 tests, 0 failures** under Swift 6 strict concurrency against the real design system. Now the iOS 18 + macOS 15 `swiftc -typecheck` (proving platform compilation):
+
+Both platform typechecks pass (EXIT 0). Now I'll attempt the full-app `xcodebuild` gate to capture honest DEFERRED evidence (it's blocked by the unstaged `Shared.xcframework` + pre-existing collisions). First, generate the project:
+
+Project generated. Now attempting the full-app iOS build+test (expected to fail on pre-existing blockers) — capturing to a log for honest evidence:
+
+The full-app build is compiling the 1780-file app target. Let me wait for it to fail on the pre-existing blockers:
+
+Let me peek at the in-progress build log to check for any TeslaAuthCard errors while it continues:
+
+The build is running the Gradle KMP `Shared.xcframework` assembly first (the ~7min step). No TeslaAuthCard errors. Let me continue waiting:
+
+The full-app iOS build failed with **IOS_EXIT=65** on the documented pre-existing blocker: `Unable to resolve module dependency: 'XCTest'` (co-located `*.Tests.swift` across surfaces importing XCTest into the app target). Let me analyze the log to confirm zero TeslaAuthCard *production* errors:
+
+Conclusive evidence: **IOS_EXIT=65**, with all 4 errors being the systemic `import XCTest` co-located-test issue. My **production sources (Model/swift/Previews) compiled with ZERO errors**, and `TeslaAuthCard.strings` was copied into the app bundle (proving the i18n table is wired). Let me identify the offending test files and run the macOS gate too:
+
+Confirmed: the XCTest error originates from the first co-located test alphabetically (`AIRestorePanel.Tests.swift`) — there are ~157 such `*.Tests.swift` files (the established convention; `TeslaAuthCard.Tests.swift` is just one). `Shared.xcframework` got built locally (git-ignored, won't be committed). Now the macOS gate:
+
+macOS: **MAC_EXIT=65**, blocked on development-signing entitlements (the documented blocker). Let me confirm zero TeslaAuthCard production errors there too:
+
+All evidence gathered. The macOS errors are all the documented dev-signing blocker; **zero TeslaAuthCard production errors** on both platforms. Let me check the full git/working-tree state so cleanup is precise:
+
+Working tree is clean — only my 5 files (untracked) plus 2 pre-existing web modifications (not mine); the generated `.xcodeproj` and built `Shared.xcframework` are git-ignored. Let me grab tool versions for the log, then clean up ephemeral artifacts:
+
+Cleanup complete. Now writing the comprehensive gate log with all the real evidence:
+
+Now committing only my files (the 5 sources + log), explicitly excluding the pre-existing web modifications:
+
+Exactly my 6 files staged; the 2 pre-existing web files left untouched. Committing:
+
+Committed cleanly (a30f76ef7, 6 files, 1219 insertions). Final verification:
+
+All complete and verified. The log ends with `EXIT=0 / STATUS=DONE`, the working tree is clean except for two pre-existing web modifications I correctly left untouched, and every todo is done.
+

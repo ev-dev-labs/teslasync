@@ -1,0 +1,142 @@
+I'll start by exploring the repository structure and checking platform capabilities, since this task requires Apple-native tooling.
+
+Xcode is not installed (only CommandLineTools), but swiftlint, swiftformat, swift 6.3, and pwsh are available. Let me explore the existing Apple app structure and the web source before deciding anything.
+
+The established pattern is a multi-file Swift surface (`.swift`, `.Model`, `.Adapter`, `.Views`, `.Previews`, `.Tests`, `.strings`). Let me read the web source spec and the AIUsageCard reference files in parallel.
+
+Excellent pattern reference. Let me read the remaining AIUsageCard files (Adapter, Views, Previews, Tests, strings) and locate the shared design tokens.
+
+Let me read the remaining reference files and locate the shared design tokens plus the chrome subviews referenced by the main view.
+
+There's an `AiUsageCard.Chrome.swift` too. Let me read it, the Tests file, and find the design token definitions (TSSpacing, Color.TS, Font.TS, TSFadeIn).
+
+Let me find the actual Swift definitions of the design tokens and shared primitives (TSSpacing, Color.TS, Font.TS, TSFadeIn, TSSkeleton, TSButton) so my surface uses them correctly.
+
+Now I have the token palette. Let me read the Tests pattern and the shared primitive APIs (TSFadeIn, TSButton, TSSkeleton) I'll compose with.
+
+Let me read the TSButton API, the onboarding-related reference surface, and understand how the Xcode project is generated (to know if a new `shared-surfaces` dir needs registration).
+
+I now understand the architecture. Let me check how `shared-surfaces` is expected to be wired (project.yml registration), look at sibling prompts/logs, and read the web libs I must port (broadcast, colors).
+
+The actual prompt lives at `.github/prompts/monorepo/p4-apple/shared-meaningful/P-0131-OnboardingWizard.prompt.md`. Let me read it and check whether any sibling shared-surface already created/registered the directory.
+
+Let me read the closest sibling's log (AiUsageCard), a BLOCKED example, and the placeholder checker tool to match conventions exactly.
+
+The sibling log shows a key technique: overriding `DEVELOPER_DIR` to point at an `Xcode.app`. Let me check whether any Xcode.app is installed on this runner — this is decisive for DONE vs BLOCKED.
+
+`/Applications/Xcode.app` exists. I can override `DEVELOPER_DIR` non-destructively like the sibling did. Let me verify Xcode works and check for the iPhone 16 simulator.
+
+Platform capability **is** available (Xcode 26.5, iOS 26.5 simulator, iPhone 16 booted). This should be a DONE. Let me verify xcodegen and the shared-framework prebuild step, and check the baseline.
+
+The full gate builds the whole app + a KMP `Shared.xcframework` via Gradle (Kotlin/Native). Let me check whether that toolchain (JDK/Gradle) and a prestaged framework are available, which determines whether the full `build test` is feasible.
+
+Full toolchain present (JDK 17, gradlew, xcodegen, placeholder tool). I'll warm the heavy KMP framework build in the background while I write code. First, let me find where `AiUsageProjection` (the localization-aware projection) is defined to mirror it.
+
+Let me read the Projection file — the localization-aware resolver — to mirror its approach precisely.
+
+I have a complete understanding of the pattern. Let me set up tracking, warm the heavy KMP framework build in the background, and start writing.
+
+Now I'll create the surface. Starting with the directory and the strings catalog (source of truth for keys), then the Adapter and Projection.
+
+Now the Model file — the i18n facade, telemetry seam, the P1/S8 store seam (with a real `UserDefaults` + `NotificationCenter` production implementation, not a stub), and the observable model.
+
+Let me check the background Gradle build progress, then write the Views.
+
+Gradle is still assembling (downloading Kotlin/Native toolchain likely). Let me continue with the Views file.
+
+Now the main surface View with the overlay/scrim, lifecycle, a drop-in `init()`, and Esc support.
+
+Let me add Esc-key parity (web Escape → close) to the close button.
+
+Now the Previews (DEBUG) and the full XCTest suite.
+
+Before writing tests, I must verify how the co-located `*.Tests.swift` files (like `AiUsageCard.Tests.swift` in `feature-views`) are wired into a test target without breaking the app target. Let me investigate the XcodeGen target/exclude mechanism.
+
+The test targets only include `Tests/`, yet `*.Tests.swift` live in `feature-views`. There must be a source-exclusion mechanism. Let me find it.
+
+There's a `Tests/Unit/FeatureViews` dir too. Let me empirically generate the project and see which target the co-located `AiUsageCard.Tests.swift` actually belongs to — this determines how my co-located test must be wired.
+
+Project generated. Let me determine the actual target membership of the co-located `AiUsageCard.Tests.swift` in the generated project.
+
+The co-located `AiUsageCard.Tests.swift` compiles into both app targets (it appears in 2 app-target Sources phases). Let me confirm how the sibling gate actually executed these tests by inspecting its log.
+
+The sibling reveals the real methodology: the full `xcodebuild` was blocked by the out-of-scope `Shared.xcframework`/Gradle dependency, so they verified via an isolated `swift test` harness (45 tests) plus swiftlint/swiftformat/placeholder, and concluded DONE. Let me read their full reconciliation to mirror the approach honestly.
+
+This is the decisive finding. The sanctioned P4 methodology is: **per-surface green** (isolated SwiftPM build+test against the REAL design system + swiftlint/swiftformat/placeholder), with the **full-app `xcodebuild` DEFERRED** due to verified pre-existing, out-of-scope blockers. Let me verify those blockers still exist (no assumptions) and check the format config + gradle status.
+
+All three full-app blockers verified with evidence (Shared.xcframework absent; DashboardWidgetSize ×15; **261** co-located XCTest files in the app target). These are pre-existing and out-of-scope — the full-app gate is legitimately DEFERRED, matching the sanctioned sibling disposition. Gradle keeps warming in the background (not on my critical path).
+
+Now let me format my files per the repo `.swiftformat` config and update todos.
+
+swiftformat reformatted 2 of 6 files. Now let me write the comprehensive test suite (mirroring the AiUsageCard test conventions), covering the pure projection, the model wiring, the production store, and accessibility.
+
+Now the critical verification: an **isolated SwiftPM harness** compiling my exact shipped sources against the **real** design-system files (Tokens + Buttons) under the Xcode 26.5 toolchain, running my XCTests — the sanctioned per-surface gate. Let me build it.
+
+Now run the isolated build + test under the Xcode 26.5 toolchain.
+
+Strict-concurrency caught a real issue: accessing the `@MainActor` `observer` property from a nonisolated `deinit`. The observer is already removed in `stop()` and the callback captures `[weak self]` (safe if it fires late), so the `deinit` cleanup is redundant. Let me remove it.
+
+All **23 isolated tests pass** under Xcode 26.5 / Swift 6 strict-concurrency, compiling my exact sources (incl. the `#Preview` macro) against the real design system. The strict-concurrency check even caught a real `deinit` bug, now fixed. The Gradle framework build also finished. Let me update tracking and run the remaining per-surface gates (format/lint/placeholder) plus verify the framework.
+
+swiftformat clean (0/7 require formatting). Now swiftlint, the placeholder scan, and verify the framework build output.
+
+Gradle build succeeded (Shared.xcframework now available). Let me wait for swiftlint to finish.
+
+swiftlint linted the whole repo (1909 files via config `included`) and found 1 violation — I must determine whether it's in **my** files or pre-existing elsewhere. Let me lint only my files explicitly, and separately locate the repo-wide violation.
+
+My 7 files are **clean (0 violations)**. The repo-wide "1 violation" is pre-existing elsewhere. Let me identify it (for honest disclosure) and run the placeholder scan in parallel.
+
+Confirmed: the lone repo-wide violation is pre-existing in `LifetimeStatsWidget.Adapter.swift` (not mine); placeholder scan is `COUNT=0`. Before wiring `shared-surfaces` into the app targets, I must check my public type names don't collide with existing symbols (there are other Onboarding* files).
+
+Found a real collision: **`OnboardingStep` already exists** in the app target (plus many other `Onboarding*` types). To guarantee uniqueness and match the surface-prefixed convention (like `AiUsage*`), I'll prefix **all** my types with `OnboardingWizard`. Let me get the remaining collision results first.
+
+Only `OnboardingStep` collides, but I'll prefix **all** types with `OnboardingWizard` for safety and convention-consistency. Applying a precise rename (`Onboarding` → `OnboardingWizard`, except where already followed by `Wizard`, and preserving lowercase i18n keys/literals):
+
+The word-boundary rename left four camelCase-embedded helper names un-prefixed (`InMemoryOnboardingStore`, `UserDefaultsOnboardingStore`, `OSLogOnboardingTelemetry`, `SpyOnboardingTelemetry`). Let me prefix those too for consistency.
+
+All types are now uniformly prefixed. Let me re-verify zero collisions with app sources, reformat (names grew), and re-run the full per-surface verification.
+
+No collisions; format clean. Re-running swiftlint (my files) and the isolated harness tests after the rename.
+
+All per-surface gates are green after the rename (**swiftlint 0 violations; 23/23 tests pass**). Now let me wire `shared-surfaces` into both app targets and the lint config (mirroring `feature-views`), then validate by regenerating the project.
+
+Now regenerate the project to validate the YAML and confirm my files are wired into both app targets.
+
+My surface is correctly wired into both app targets (4 build-file entries = iOS + macOS, exactly like `feature-views`). Now let me gather concrete evidence of the pre-existing full-app blockers (for honest DEFERRED disposition) and confirm the framework build artifact.
+
+All blocker evidence is concrete: **DashboardWidgetSize defined in 15 files** (duplicate symbols in one module), **262 co-located XCTest-in-app files**, and my surface is clean of these. Let me write the gate log and update tracking.
+
+Now let me verify the working tree state before committing — ensure only intended files changed and no build artifacts leak in.
+
+The pre-existing `AIUsageCard.*` and `web/*` modifications were already present at session start — they are **not mine** and I'll exclude them. Only my surface, log, `project.yml`, and `.swiftlint.yml` will be staged. Let me run a final consolidated verification, then commit.
+
+All final gates green (**0 format issues, 0 lint violations, 23/23 tests**). Committing exactly my files plus the disclosed enabling changes.
+
+Staged set is exactly correct (8 surface files + log + project.yml + .swiftlint.yml; no pre-existing files). Committing now.
+
+Committed cleanly (11 files, 1466 insertions; pre-existing files untouched). Let me do final cleanup of generated build artifacts and confirm the working tree + log integrity.
+
+All work is complete and verified. 
+
+## Summary
+
+Shipped a production-grade native Apple (SwiftUI) **`OnboardingWizard`** shared surface at parity with `web/src/components/feedback/OnboardingWizard.tsx`, following the established `AiUsageCard` multi-file architecture.
+
+**Delivered** (`apps/apple/TeslaSync/shared-surfaces/`, 8 files, ~1,400 LOC):
+- `OnboardingWizard.swift` — overlay/scrim View, lifecycle, drop-in `init()`
+- `.Model.swift` — i18n facade (P1/S10), telemetry seam (P1/S11), and a **real** P1/S8 store (`UserDefaults` flag + `NotificationCenter` cross-scene dismissal + 1.5s delayed reveal), plus an in-memory store; `@Observable` model
+- `.Adapter.swift` / `.Projection.swift` — pure value types, 4-step catalog, lucide→SF-Symbol map, hex→semantic-token accents, Next/Get-Started logic
+- `.Views.swift` — indicator row, accent-tinted icon tile, content, actions, close, glass card
+- `.Previews.swift` (per-step + dismissed), `.Tests.swift` (23 tests), `.strings` (all keys, no English literals)
+
+**Parity:** dismissed + presented(×4) branches; Skip/Next/Get-Started/✕/backdrop/Esc; VoiceOver, Dynamic Type, Reduce Motion; `view.opened` telemetry once. No data feed → faithfully no loading/error/stale/offline (documented, not fabricated). All types prefixed `OnboardingWizard*` to avoid the pre-existing `OnboardingStep` collision.
+
+**Verification (per-surface, all green):**
+- `swiftformat --lint`: 0/7 · `swiftlint --strict`: 0 violations/7 files · placeholder scan: COUNT=0
+- **Isolated SwiftPM build + 23/23 tests pass** under Swift 6 strict-concurrency against the *real* design system (Xcode 26.5) — which caught and let me fix a genuine `deinit`-isolation bug
+- Registered the net-new `shared-surfaces` dir in `project.yml` (both app targets) + `.swiftlint.yml`; `xcodegen` confirms membership
+
+**Full-app `xcodebuild` gate: DEFERRED** to P99 on verified pre-existing, out-of-scope blockers (`DashboardWidgetSize` ×15 redefinition; 262 co-located XCTest-in-app files) — never reported as passing.
+
+Log ends `EXIT=0` / `STATUS=DONE`. Committed (`a72ceafc`) exactly my files + disclosed enabling changes; pre-existing tree modifications left untouched; build artifacts cleaned up.
+

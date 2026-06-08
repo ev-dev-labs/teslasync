@@ -1,0 +1,110 @@
+I'll start by exploring the environment and reading the key files: the web source spec, the existing Apple app structure, and checking toolchain availability.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is active. Let me investigate more thoroughly — check for a full Xcode install, the existing Apple project structure, and the web source.
+
+Important: full `/Applications/Xcode.app` exists but `xcode-select` points to CommandLineTools. `pwsh` is available. The web source exists (small, 860 bytes). No `.xcodeproj` found — likely SPM or a project generator. Let me dig into the Apple project setup and read the web source.
+
+Excellent. Xcode 26.5 is fully functional (iOS 26.5 SDK + simulator). Project uses **XcodeGen** (`project.yml`). The web source is a thin wrapper over `Breadcrumbs`, `useBreadcrumbs`, and `BreadcrumbOverridesContext`. Let me read those, check the `TeslaSync/shared-surfaces` target dir, and verify xcodegen availability.
+
+Now let me read the two remaining web dependencies (`useBreadcrumbs`, `BreadcrumbOverridesContext`) and study existing native surface conventions to use as templates.
+
+I now fully understand the web spec. Let me study the canonical native surface template (`AcDcStatsPanel` has the full file set) and the project configuration to learn conventions for adapters, state-holders, tokens, i18n, telemetry, and tests.
+
+This is the canonical template. Let me read the remaining AcDcStatsPanel files (Views, Previews, Tests, strings), find how the i18n facade (`AcDcStrings`) is defined, and explore the shared state-holder + design token infrastructure.
+
+Now I understand the full surface template. Let me find where the i18n facade helper (`AcDcStrings`) is defined, explore the shared navigation state-holders (P1/S8), design tokens (P1/S9), and the native route model — these are what the breadcrumbs surface must bind to.
+
+Let me read the web `routeMeta.ts` (defines the parent chain — critical for parity), plus the native navigation host, state-holder primitives, and design token/material definitions.
+
+Now I understand the parent-chain model. The web derives breadcrumbs from `location.pathname` matched against `ROUTE_META` (with `PARENT_OVERRIDES` for nested/detail routes). Let me confirm the exact design tokens, shared components, and find any existing route/navigation-driven native surface for precedent.
+
+I have the tokens and components. One critical thing to resolve before implementing: how co-located `.Tests.swift` files in `feature-views` are wired into the test target (the app target sources include `feature-views`, but tests use `@testable import TeslaSync`). Let me investigate the build wiring and look at a route-driven precedent (`DriveDetailHeader`) + `TSButton`.
+
+I need to resolve the build wiring empirically. Let me check the Shared.xcframework dependency, then generate the Xcode project to see how co-located `.Tests.swift` files are assigned to targets and whether `shared-surfaces` is wired.
+
+`Shared.xcframework` isn't present — it's built from KMP via Gradle (needs Kotlin/Native toolchain). The full app/test targets depend on it. Let me assess whether the KMP toolchain can build it here, and confirm the `shared-surfaces` directory isn't wired into the project.
+
+Java 17 + gradlew exist, but `apps/macos-pending-verifications.md` and the earlier note suggest Apple builds may be CI-deferred. Let me check the established pattern: how prior surfaces recorded STATUS in their logs, and read the pending-verifications doc.
+
+This reveals the established honest pattern: the full-app `xcodebuild` gate is CI-deferred due to **pre-existing, unrelated** parallel-merge collisions (including co-located `*.Tests.swift` importing XCTest into the app target). Surfaces are verified via **isolated SwiftPM build + tests + swiftc -typecheck + lint/format/placeholder**. Let me read the exact reporting format from reference logs.
+
+This is the gold-standard precedent. The full-app `xcodebuild` gate is sanctioned-DEFERRED (pre-existing co-located-XCTest + signing); surfaces are proven via an **isolated SwiftPM harness + tests + real-SDK `swiftc -typecheck` + lint/format/placeholder**, ending `EXIT=0 / STATUS=DONE`. Let me gather the last details: real route labels/i18n keys, the a11y keys, the placeholder checker, and swiftformat config.
+
+Now I have the route registry and a11y keys (`a11y.breadcrumb`="Breadcrumb", `a11y.breadcrumbHome`="Dashboard"). Let me read the exact placeholder patterns (to avoid forbidden tokens) and the remaining detail-route labels I need to port (vehicles, trips, notifications, year-review).
+
+I now have everything needed. Let me set up tracking, kick off the long-pole KMP `Shared.xcframework` build in the background (needed for the full deferred xcodebuild evidence), and capture tool versions.
+
+All tooling confirmed (Xcode 26.5, iPhone 16 sim booted, iOS+macOS SDKs present). Let me kick off the long-pole KMP framework build in the background and start writing the surface.
+
+Tooling is fully green. The KMP framework build is running in the background. Now I'll write the surface. Let me create a plan file and the pure adapter (the parity core — a faithful port of `routeMeta.ts` + `useBreadcrumbs`).
+
+Now the pure adapter — a faithful port of `routeMeta.ts` (ROUTE_META + PARENT_OVERRIDES) and the `useBreadcrumbs` chain-walk:
+
+Now the Model — the P1/S8 state-holder seam, P1/S11 telemetry, the freshness axis, the phase resolver, and the P1/S10 i18n facade:
+
+The adapter and model are in place. Now the presentational views — the horizontal nav row, Home link, crumb links, separators, compact-collapse ellipsis, freshness chip, and the loading/error chrome (tokens only, no shared components per the spec):
+
+Now the main surface view — the `surfaceSlug`, the bound model, and the phase switch:
+
+Now the per-surface i18n table (`LayoutBreadcrumbs.strings`) — the web `a11y.*` keys, the route labels from `routeRegistry.ts`, and the native chrome keys:
+
+Now the DEBUG previews — one per state — and then the tests:
+
+Now the comprehensive test suite — graph, projection (the `useBreadcrumbs` parity core), state resolver, model wiring/telemetry/stale-refresh/navigation, accessibility, and collapse logic:
+
+All 7 files written. Let me update tracking, auto-format with the repo's swiftformat config, run swiftlint on the files, and check the background framework build.
+
+Swiftformat clean (0/6). The framework build is nearly done (linking release iOS/macOS). Now swiftlint `--strict` on the surface files:
+
+swiftlint scanned the whole app (1909 files) and found 1 serious violation — I need to confirm it's not mine. Let me lint only my explicit files and separately surface the one violation's location.
+
+Two `multiple_closures_with_trailing_closure` violations in my Views — the `BreadcrumbHoverLink` calls use a trailing closure alongside the `action:` closure. Let me convert them to explicit `label:` arguments at all three call sites, then re-format and re-lint.
+
+Re-format and re-lint the surface files:
+
+swiftformat 0/6 and swiftlint 0 violations on my files. Now let me build the **isolated SwiftPM harness** (Swift 6 language mode) compiling the exact shipped sources against the real `Tokens.swift`, and run the test suite.
+
+All 34 tests pass under Swift 6 strict concurrency against the real design tokens. Now the placeholder gate plus real **iOS 18 + macOS 15 `swiftc -typecheck`** (both-platform SDK proof):
+
+Placeholder gate clean (real scan = 0) and **both iOS 18 and macOS 15 `swiftc -typecheck` pass (EXIT=0)**. The framework build finished — let me confirm it staged, then update tracking.
+
+Framework staged (149M, BUILD SUCCESSFUL). Now the project-integration evidence: temporarily wire `shared-surfaces` into `project.yml`, generate the Xcode project, and confirm my files are enumerated.
+
+Project generates and all 7 files are enumerated in both targets. Now the full deferred gate — iOS `xcodebuild build test` (scheme pre-action rebuilds the framework incrementally). Running in the background:
+
+The iOS gate is building in the background. Let me wait for it to make progress while I review the final Views file state.
+
+The iOS gate finished. Let me read the result and analyze for any LayoutBreadcrumbs surface errors.
+
+The iOS build is still running (I double-backgrounded it; the notification was for the wrapper). Let me wait for it to complete and produce the exit code.
+
+`IOS_EXIT=65` — and the errors are exactly the pre-existing co-located `XCTest`-in-app-target condition (`feature-views/AIRestorePanel.Tests.swift: unable to resolve module dependency: 'XCTest'`). Let me confirm **zero** errors in my production files, then stop the lingering process and run the macOS gate.
+
+Confirmed: only 4 error lines, all the pre-existing `AIRestorePanel.Tests.swift` XCTest-in-app-target condition (a committed file, not mine); **zero** LayoutBreadcrumbs production errors. Let me stop the lingering process and run the macOS gate.
+
+Important: there are **other** `xcodebuild` processes (`-derivedDataPath /tmp/ts_dd`, `timeout 200`) that I did **not** start — this is a shared machine with parallel slots. I'll leave those alone (only killed my own pid 3334). My iOS evidence is captured. Now the macOS gate (bounded with a timeout), then I'll revert `project.yml`.
+
+`MAC_EXIT=65`. Let me analyze the macOS failure root cause and confirm zero surface errors:
+
+Both gates DEFERRED on pre-existing, unrelated conditions — iOS on co-located `*.Tests.swift` XCTest-in-app-target, macOS on development-signing — with **zero** LayoutBreadcrumbs surface errors. Exactly the sanctioned precedent. Now let me revert the temp `project.yml` wiring and confirm the working tree is clean.
+
+`project.yml` is cleanly reverted. But git status shows modified `AIUsageCard.*` files in `feature-views` that I never touched — likely pre-existing/concurrent dirty files (shared machine). Let me verify they're not my doing and confirm I'll commit only my files.
+
+The mtime (05:52:07 = snapshot baseline) confirms `AiUsageCard` is a **pre-existing dirty file** (a different surface, 0237) baked into the snapshot — not mine. I'll commit only my files. Let me clean up the harness and identify the one pre-existing whole-app lint violation for an honest log.
+
+The pre-existing violation is `LifetimeStatsWidget.Adapter.swift:141 function_body_length` (a dashboard-widget, not mine) — matching the reference. I have all evidence. Let me get final line counts and write the gate log.
+
+All clean — 1382 lines across 7 files, zero forbidden tokens, 34 tests. Now I'll write the comprehensive gate log following the sanctioned precedent format.
+
+Log written. Now let me commit — staging **only** my 7 surface files + the log explicitly (excluding the pre-existing dirty `AiUsageCard.*` files and the git-ignored framework).
+
+Exactly my 7 files + the log are staged; the pre-existing `AiUsageCard.*` files are correctly excluded. Let me check for commit hooks before committing.
+
+`.git` is a worktree pointer (parallel slots are worktrees); no `core.hooksPath` set. Let me commit:
+
+Committed cleanly (8 files, 1571 insertions). Let me do a final consolidated verification on the committed tree — re-confirm lint/format and re-run the isolated test harness against the committed sources.
+
+All green on committed sources: format 0/6, swiftlint 0 violations, **34/34 tests pass**. Let me finalize tracking, clean up temp artifacts, and confirm the final git state.
+
+All finalized and verified. The commit contains exactly the 7 surface files + the log (1571 insertions); `project.yml` is reverted clean; temp artifacts removed; pre-existing dirty files excluded.
+

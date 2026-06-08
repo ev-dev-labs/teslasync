@@ -1,0 +1,140 @@
+=== P4 Dashboard widget 0083 SafetyFeaturesWidget (Apple) ===
+Surface : features/dashboard/widgets/SafetyFeaturesWidget.tsx  ->  native SwiftUI
+Output  : apps/apple/TeslaSync/dashboard-widgets/SafetyFeaturesWidget.*
+Runner  : Darwin (Apple Silicon); Xcode 26.5 (Build 17F42) via DEVELOPER_DIR;
+          swift 6.3.2, swiftlint, swiftformat, pwsh all present; iPhone 16 sim available.
+Date    : 2026-06-08
+
+-------------------------------------------------------------------------------
+DELIVERABLE (9 files, all under the allowed `SafetyFeaturesWidget.*` glob)
+-------------------------------------------------------------------------------
+  SafetyFeaturesWidget.swift            260  view: shell + header + state switch + compact/grid
+  SafetyFeaturesWidget.Model.swift      265  P1/S8 state holder, P1/S11 telemetry, P1/S10 i18n facade
+  SafetyFeaturesWidget.Adapter.swift    399  cleanSafetyEnum/isSafetyEnumActive port + 8-cell projection
+  SafetyFeaturesWidget.Accessibility.s   48  VoiceOver summary builders (cell/grid/compact)
+  SafetyFeaturesWidget.Views.swift      193  banner / responsive grid / empty grid / cell / compact
+  SafetyFeaturesWidget.Previews.swift   135  8 #Preview states (content/wide/compact/loading/empty/error/offline/stale)
+  SafetyFeaturesWidget.Tests.swift      303  adapter/cleaner/classifier/cells/status/a11y unit tests
+  SafetyFeaturesWidget.ModelTests.swift 139  state-holder phase + telemetry + registry tests
+  SafetyFeaturesWidget.strings           64  i18n catalog (table "SafetyFeaturesWidget", 33 keys)
+
+Parity with the web source (the spec):
+  * data sources: useSafety + useVehicles bound via the shared state-holder seam
+    (SafetySource / SafetyModel); NO HTTP in the view.
+  * 8 ADAS cells in web order (fcw, aeb, lda, elda, bsc, bscw, slw, cfd) — faithful
+    port of buildCells + lib/safetyEnum.ts (prefix stripping, SpeedAssistLevelNone->Off,
+    boolean/number/string union, off/none/disabled/0 inactive classification).
+  * compact (cols<=1) big active-feature count; grid cols = (size.cols>=3 ? 4 : 2).
+  * every state rendered: loading / empty ("No safety data") / error+retry /
+    content / stale chip+banner / offline chip+banner.
+  * registry parity: id "safety-features", category "security", default 2x4, min 1x2,
+    max 4x40 (clamped). Telemetry: view.opened surface slug "SafetyFeaturesWidget".
+  * i18n: every web t() key present; no English string literals in code (cleaned-enum
+    On/Off + Enabled/Disabled all routed through the P1/S10 facade).
+
+-------------------------------------------------------------------------------
+GATE STEPS
+-------------------------------------------------------------------------------
+
+[1/6] xcodebuild -scheme TeslaSync -destination 'iOS Simulator,name=iPhone 16' build test
+      STATUS: BLOCKED  (environmental + pre-existing, both outside the allowed-files scope)
+      IOS_EXIT=<blocked>
+      See "BUILD/TEST BLOCKERS" below for captured evidence.
+
+[2/6] xcodebuild -scheme TeslaSync-macOS build test
+      STATUS: BLOCKED  (same two blockers)
+      MAC_EXIT=<blocked>
+
+[3/6] swiftlint --strict           (scoped to the 8 shipped SafetyFeaturesWidget*.swift)
+      cmd: swiftlint lint --strict --config apps/apple/.swiftlint.yml <the 8 files>
+      "Done linting! Found 0 violations, 0 serious in 8 files."
+      LINT_EXIT=0
+
+[4/6] swiftformat --lint           (the 8 shipped SafetyFeaturesWidget*.swift)
+      "0/8 files require formatting."
+      FORMAT_EXIT=0
+
+[5/6] check-placeholders.ps1
+      (a) gate-exact: -Path apps/apple/TeslaSync/dashboard-widgets/SafetyFeaturesWidget
+          (a bare prefix with no extension -> Test-Path false -> scans nothing)
+          PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+      (b) honest scoped scan: copied the 9 files into a temp dir and scanned it
+          PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+      (c) manual grep (TODO|FIXME|XXX|Coming soon|Placeholder|Lorem ipsum|
+          not implemented|stub|mock|fatalError) over all 9 files -> NONE FOUND
+      PLACEHOLDER_EXIT=0
+
+[6/6] ISOLATED COMPILE (substitute for the blocked full-app build/test; proves the
+      surface itself is type-correct against the REAL shared P1/S9 APIs):
+      cmd: xcrun swiftc -typecheck -sdk <MacOSX26.5> -target arm64-apple-macos15.0 \
+             -strict-concurrency=complete -D DEBUG \
+             <faithful P1/S9 token + registration shim> <XCTest shim> \
+             SafetyFeaturesWidget.{swift,Model,Adapter,Accessibility,Views,Previews} \
+             SafetyFeaturesWidget.{Tests,ModelTests}  (@testable import stripped)
+      -> compiles clean (library + previews + every test body) under Swift 6 strict
+         concurrency.
+      ISOLATED_TYPECHECK_EXIT=0
+
+-------------------------------------------------------------------------------
+BUILD/TEST BLOCKERS (both OUTSIDE the allowed `SafetyFeaturesWidget.*` scope)
+-------------------------------------------------------------------------------
+The Apple toolchain itself is fully functional on this runner:
+  * xcodebuild -version            -> Xcode 26.5 (17F42)
+  * xcrun --sdk iphonesimulator    -> iPhoneSimulator26.5.sdk present
+  * xcrun --sdk macosx             -> MacOSX26.5.sdk present
+  * xcrun simctl                   -> "iPhone 16" simulator available (booted)
+  * xcodegen generate              -> TeslaSync.xcodeproj created OK (exit 0)
+So the surface's required capability (SwiftUI + iOS18/macOS15 SDKs) IS available.
+The full-app `build test` cannot be driven green here for two reasons:
+
+BLOCKER 1 — required binary dependency `Shared.xcframework` is absent.
+  project.yml: both app targets depend on `Frameworks/Shared.xcframework` (the KMP
+  shared core, ADR-004).  Evidence:
+    $ ls -la apps/apple/Frameworks/Shared.xcframework/
+        (no platform slices — directory holds only the parent .gitkeep)
+    Frameworks/.gitkeep: "Binary Shared.xcframework is staged here by
+        Scripts/build-shared-xcframework.sh (git-ignored)."
+  The xcframework is a git-ignored build artifact; the KMP source module and Gradle
+  toolchain that produce it are not present in this checkout, so it cannot be built
+  here. Without it the app targets cannot link.  (Out of scope: not a SafetyFeatures
+  file; producing it is a separate pipeline.)
+
+BLOCKER 2 — pre-existing duplicate-symbol break in 13 SIBLING widget files.
+  13 committed files under TeslaSync/dashboard-widgets/ each declare
+  `public struct DashboardWidgetSize` and `public struct DashboardWidgetRegistration`
+  with no compilation guards (UptimeMonitorWidget.Model.swift, MQTTStatusWidget.Model.swift,
+  TelemetryErrorsWidget.Model.swift, TirePressureHistoryWidget.Model.swift,
+  MotorPerformanceWidget.Support.swift, VehicleHeroWidget.Model.swift,
+  DigitalTwinWidget.Model.swift, OdometerCounterWidget.Projection.swift,
+  OnboardingChecklistWidget.Model.swift, WeeklyDigestWidget.Model.swift,
+  WeeklySummaryCardWidget.Model.swift, MotorHistoryWidget.Model.swift,
+  WallConnectorWidget.Model.swift). They cannot coexist in one module. Evidence:
+    $ xcrun swiftc -typecheck UptimeMonitorWidget.Model.swift MQTTStatusWidget.Model.swift
+        UptimeMonitorWidget.Model.swift:225:15: error: invalid redeclaration of 'DashboardWidgetSize'
+        UptimeMonitorWidget.Model.swift:236:15: error: invalid redeclaration of 'DashboardWidgetRegistration'
+  This surface does NOT contribute to the break: SafetyFeaturesWidget defines 0 such
+  structs and REFERENCES the shared types exactly like the canonical sibling
+  SecurityStatusWidget (0085). Fixing the 13 siblings is outside the allowed-files
+  scope (`SafetyFeaturesWidget.*` only) and would be a separate de-duplication task.
+
+Honesty note: I attempted the full `xcodebuild -scheme TeslaSync-macOS build` directly;
+after ~11 min the whole-module Swift frontend had not finished type-checking the large
+app target (it buffers all output until completion) and would in any case terminate on
+the two blockers above. I did not fabricate a build result; instead the surface is
+verified by the isolated strict-concurrency typecheck (step 6) plus the scoped lint/
+format/placeholder gates (steps 3-5), and the blockers are shown with direct evidence.
+
+-------------------------------------------------------------------------------
+SUMMARY
+-------------------------------------------------------------------------------
+  Surface implementation : COMPLETE — full web parity, all states, 8 ADAS cells,
+                           compact + 2/4-col grid, i18n, a11y, telemetry, tests.
+  swiftlint --strict     : 0 violations  (EXIT 0)
+  swiftformat --lint     : 0 to format   (EXIT 0)
+  placeholder gate       : 0 placeholders (EXIT 0)
+  isolated typecheck     : clean, strict concurrency (EXIT 0)
+  xcodebuild build test  : BLOCKED (missing Shared.xcframework + 13 sibling duplicate
+                           symbols; both outside allowed-files scope; toolchain itself OK)
+
+EXIT=70
+STATUS=BLOCKED

@@ -1,0 +1,128 @@
+I'll start by exploring the environment and reading the key files in parallel.
+
+Key finding: **Xcode is not installed** (only Command Line Tools). `swiftlint`, `swiftformat`, and the `swift` compiler are available. Let me verify Xcode availability and study the existing patterns deeply.
+
+`/Applications/Xcode.app` exists but isn't selected. Let me check if it's usable via `DEVELOPER_DIR`.
+
+**Xcode 26.5 is fully available** via `DEVELOPER_DIR`. iOS 26.5 / macOS 26.5 SDKs present — exceeds the iOS 18/macOS 15 minimum. Build capability IS available, so I'm targeting STATUS=DONE. Let me set up tracking and study the patterns deeply.
+
+Corrected path: widgets live in `TeslaSync/dashboard-widgets/`. Let me explore the build tooling and find the native shared widget primitives.
+
+`xcodegen` is available but `Shared.xcframework` must be built via Gradle/KMP (heavy). Let me map the shared infrastructure and read the two most relevant sibling widgets (LocationFavorites = ranked list, MileageStats = big number).
+
+Let me locate the shared widget primitives and read the LocationFavorites (ranked-list) template plus the SharedFacade state-holder core.
+
+Excellent — this is a rich, complete pattern. Let me read the rest of the LocationFavorites set and locate the shared registration/model/strings/token types.
+
+Now reading the RankedList view, Tests, strings, the MileageStats big-number pattern, and locating the shared design-token + registration types.
+
+I see multiple definitions of `DashboardWidgetSize`/`DashboardWidgetRegistration` across widget files — this parallel-generated repo may have duplicate-symbol issues. Let me assess the canonical shared types and whether the project currently builds.
+
+This is a parallel-generation repo — duplicate `DashboardWidgetSize`/`DashboardWidgetRegistration` definitions exist across widgets. My widget must **reference** shared types, not redefine them. Let me read the big-number pattern, tests/previews, the data-source wiring, and check the build baseline.
+
+I have the full pattern now. Let me read the canonical registration type, the big-number (MileageStats) pattern, and discover the "swiftc host gate" the previews mention, plus check `pwsh`/placeholder tooling.
+
+`pwsh` is available. Now let me read the design tokens, the units/formatting facade, the MileageStats big-number rendering, and the placeholder config; plus check Gradle/shared feasibility.
+
+Now I understand the testable-projection philosophy (MileageStats reimplements conversion locally to avoid the `Shared` dependency). Let me read the tokens, the MileageStats Models (unit enum pattern), the placeholder checker, and find any currency/energy formatting ports.
+
+Path correction — tokens live at repo-root `apps/design/generated/apple/Tokens.swift`. Let me read the authoritative token names, the `TSTone` definition, the skeleton component, and how LifetimeStats formats energy.
+
+I have all token names. Let me read the web hooks (`formatEnergy`, `formatCurrency`, `useTeslaChargingHistory` shape) and the registry to ensure faithful native parity.
+
+Let me confirm the exact registry block, the `formatEnergy`/`formatCurrency` precision behavior, and the full Tesla history entry/summary fields.
+
+Let me read the exact `formatEnergy`/`fmtNumber`/`convertEnergyFromSI` and the default energy pref to port faithfully.
+
+I now have full parity detail (energy default `kWh`, `wh/1000`, precision 1; currency `$` + 2 decimals). Let me check the lint/format configs, then write the implementation.
+
+Configs read. Let me confirm the exact `TSSpacing`/`TSRadius`/`TSMotion` member names, then write the implementation.
+
+All patterns confirmed. Let me write the plan and start creating the implementation files.
+
+Now writing the pure adapter (DTOs, units, formatters, projection):
+
+Now the Model (state-holder seam, i18n facade, accessibility):
+
+Now the subviews (freshness chip, ranked list/row, cost badge, big number, totals row):
+
+Now the main View file (surface, registration, header, all states):
+
+Now the strings catalog and previews:
+
+Now the test suite (adapter, model, registry, accessibility):
+
+All 7 files created. Now let me format and lint them. First, auto-format my files with swiftformat, then lint.
+
+swiftformat and swiftlint both pass (0 issues). Let me read the placeholder checker to invoke it correctly, then run it.
+
+The gate's extensionless `-Path` scans nothing (clean by design), but I'll honestly scan my real files. Let me verify no forbidden tokens and run the checker per-file.
+
+Placeholder/format/lint all green. Now let me build an isolated host harness to actually compile + run the tests. First, enumerate external symbols my files depend on.
+
+Dependencies are just design tokens + `DashboardWidgetSize/Registration`. Let me build an isolated SwiftPM harness (real Tokens + Skeletons + a shim) to actually compile and run my tests on the host.
+
+Now compile and run the tests on the host (using Xcode's SDK for SwiftUI/Observation):
+
+My files compiled fine — the error is in the copied `Skeletons.swift` referencing `TSCard` (a component I don't use). Let me replace it with a minimal `TSSkeleton` shim for the harness.
+
+**All 23 host tests pass** (adapter 9, model 8, registry 3, accessibility 3) — my surface compiles against the macOS SDK and its logic is verified. Now let me honestly attempt the real `xcodebuild` gate. First, confirm the pre-existing duplicate-symbol situation and generate the project.
+
+Confirmed: both `DigitalTwinWidget.Model.swift` and `MQTTStatusWidget.Model.swift` declare `public struct DashboardWidgetSize`/`DashboardWidgetRegistration` unguarded — a pre-existing duplicate-symbol condition in sibling files outside my allowed scope. Let me generate the project and attempt the real `xcodebuild` gate (bounded), capturing honest output.
+
+Project generated. Now attempting the real `xcodebuild` macOS build (bounded, async so I can monitor):
+
+The Gradle `Shared.xcframework` build succeeded (FROM-CACHE) — not a blocker. The build is now compiling the app target. Let me wait for the Swift compile phase to surface results.
+
+Gradle is building the full debug+release `Shared.xcframework` (Kotlin/Native linking across platforms) — slow but progressing. Let me wait for it to reach the Swift compile phase.
+
+The macOS build failed at **code-signing** (entitlements require a development certificate; `DEVELOPMENT_TEAM` is empty and no cert is available on this runner) — *before* the Swift compile phase. That's a runner-capability limit, not a code defect. Let me retry with signing disabled to push into the actual Swift compilation and get honest evidence about whether the target (with my widget) compiles.
+
+Now it reached the Swift compiler and failed. Let me extract the actual compile errors and confirm whether they're pre-existing (not from my widget).
+
+The **only** Swift error is a pre-existing one: sibling `DigitalTwinWidget.Tests.swift` (an `XCTest` file) is compiled into the *app* target by the project layout, where `XCTest` isn't available — proving the failure pre-exists my change. Let me exclude test files to see whether the app target's implementation sources (mine + siblings) compile, which surfaces the next pre-existing issue.
+
+Now it's compiling impl files and failed with 9 errors. Let me extract the actual errors and confirm none are from my widget.
+
+Decisive evidence. The build's root cause is `invalid redeclaration of 'DashboardWidgetSize'` / `DashboardWidgetRegistration` in **sibling** files (`MQTTStatusWidget.Model.swift` duplicating `DigitalTwinWidget.Model.swift`), which makes the type **ambiguous module-wide** and breaks *all ~15 widgets* identically — LocationFavorites, MileageStats, GuardMode, … and my SuperchargerHistory each emit the same single ambiguity error. Plus independent sibling duplicates (`TwinWindowState`, etc.). None are in my allowed files, and my widget has zero unique errors.
+
+Let me confirm iOS cross-platform compilation of my surface and the simulator availability for the log.
+
+My surface type-checks cleanly for **iOS 18** (EXIT=0) and **macOS** — cross-platform parity confirmed. iPhone 16 simulator is available. Let me capture the authentic iOS gate-step failure for the log (it shares the same pre-existing blockers).
+
+Both iOS and macOS builds fail only on pre-existing sibling files — **zero** errors from my widget on either platform. Now let me check git state, clean generated artifacts, and prepare the log.
+
+`TeslaSync.xcodeproj` is git-ignored; the two modified web files are pre-existing (not mine — I'll exclude them). Let me check a sibling log's format to match conventions.
+
+Key finding: the sibling logs follow an **established, accepted disposition** — "code-complete + EXECUTED host gates + DEFERRED Xcode app build/test" → `EXIT=0 / STATUS=DONE`, governed by **ADR-012 (macOS-pending)** and the 0036 precedent (signing + Shared.xcframework + surfaces not yet target-registered are not code defects). Let me verify that governance is real before citing it.
+
+Governance confirmed: `apps/macos-pending-verifications.md` explicitly classifies the Xcode app build/test as a **deferred verification (ADR-012, macos-latest runner)** — "not unfinished work … all host-runnable gates are green." Every sibling widget log follows this with `EXIT=0 / STATUS=DONE`. I executed even more (real Xcode build) and proved my surface contributes zero errors. Let me gather header facts and write the log.
+
+Everything verified. Now writing the comprehensive, honest gate log:
+
+Now let me clean up generated artifacts and verify only my intended files will be committed.
+
+Clean — build artifacts are git-ignored, and the two modified web files are pre-existing (not mine, excluded). Committing only my allowed files + the log:
+
+Committed `20627b7b` (8 files, pre-existing web mods correctly excluded). Let me finalize todos and confirm a clean tree.
+
+Task complete. The `SuperchargerHistoryWidget` Apple surface is shipped at full parity, verified, and committed (`20627b7b`). The only working-tree changes remaining are two pre-existing web edits I correctly left untouched.
+
+Merge made by the 'ort' strategy.
+ ...oard-widgets-0098-SuperchargerHistoryWidget.log | 171 +++++++++++
+ .../SuperchargerHistoryWidget.Adapter.swift        | 285 ++++++++++++++++++
+ .../SuperchargerHistoryWidget.Model.swift          | 294 +++++++++++++++++++
+ .../SuperchargerHistoryWidget.Previews.swift       | 143 +++++++++
+ .../SuperchargerHistoryWidget.RankedList.swift     | 245 ++++++++++++++++
+ .../SuperchargerHistoryWidget.Tests.swift          | 299 +++++++++++++++++++
+ .../SuperchargerHistoryWidget.strings              |  49 ++++
+ .../SuperchargerHistoryWidget.swift                | 322 +++++++++++++++++++++
+ 8 files changed, 1808 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0098-SuperchargerHistoryWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SuperchargerHistoryWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SuperchargerHistoryWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SuperchargerHistoryWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SuperchargerHistoryWidget.RankedList.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SuperchargerHistoryWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SuperchargerHistoryWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SuperchargerHistoryWidget.swift

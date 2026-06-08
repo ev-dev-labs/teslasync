@@ -1,0 +1,134 @@
+I'll start by exploring the task: reading the web source, understanding the existing Apple app structure, and checking platform capability.
+
+Key findings: Swift 6.3.2, swiftlint, swiftformat available, but `xcodebuild` requires full Xcode (only CommandLineTools present). There's an established multi-file pattern in `feature-views/` (AIUsageCard.*). Let me study that pattern and check SwiftUI availability.
+
+SwiftUI + Charts + MapKit typecheck cleanly with CLT (PROBE_EXIT=0) — frameworks are available, so this is not a framework-capability BLOCK. Now let me study the established AIUsageCard pattern in full to mirror conventions exactly.
+
+Excellent — the pattern is clear and rich. Let me read the remaining AiUsageCard files (Views/Previews/Tests/strings), the design tokens (P1/S9), and check the build system (Package.swift/xcodeproj).
+
+Let me read the test conventions, design tokens, the projection definition, the missing chrome subviews, and the build config.
+
+The surface uses 10 files. Let me locate the design tokens (TSSpacing/TSRadius/Color.TS/Font.TS), read the Chrome + Projection reference files, the Motion component, and the build config.
+
+Let me find the token/component definitions and read the build config (the earlier `&&` chain short-circuited).
+
+Now I understand the build wiring. Critical: `project.yml` lists `TeslaSync/feature-views` and `dashboard-widgets` but NOT `shared-surfaces` — that directory wiring is owned by P4 core (a declared dependency), and `project.yml` is outside my allowed files. I'll place files per spec. Let me read the token/component APIs I'll depend on.
+
+Let me read the full Tokens.swift to get exact token names, then check how the test bundle references existing surfaces and look at one more sidebar/nav-like reference if it exists.
+
+There's an `EndpointSidebar` surface — the closest analog (a sidebar). Let me study it thoroughly as my primary reference for native sidebar idioms.
+
+EndpointSidebar is an ideal template. Let me read its remaining files (Views, Builder, Models, Tests, Previews, strings) to capture the exact sidebar idioms.
+
+Let me read the final reference pieces (Models, Tests, Previews, strings) to nail the test + model conventions.
+
+I have the full pattern. Let me verify a couple of API details (TSTone, the strings/preview format, and how `Text` with verbatim is used) before writing.
+
+Let me verify the lint configs and how `.Tests.swift`/`.Previews.swift` files get split into the right targets (since `feature-views` is in the app target, there must be a suffix-based mechanism).
+
+Let me confirm the component dependency graph (TSCard, Badges) so I can build a self-contained `swiftc` typecheck harness for verification (since xcodebuild needs full Xcode, unavailable here).
+
+The only failure is the `#Preview` macro (needs Xcode's macro plugin). Re-running without `-D DEBUG` so `#if DEBUG` preview blocks are excluded — that's the correct way to `swiftc`-verify here.
+
+Dependency set compiles cleanly (PROBE_EXIT=0) — that's my verification harness base. Now I'll set up tracking and write the surface. Let me record the plan and todos.
+
+Now writing the surface files. Starting with the domain value types.
+
+Let me clean up the projection struct — make `hasPinnedSource` an explicit init parameter rather than a defaulted property.
+
+Now the pure projection logic (Builder), porting the web view-locals exactly.
+
+Now the Model file — i18n facade, telemetry seam, state-holder seam, `@Observable` model, in-memory source, accessibility seam.
+
+Now the subviews (Views file) — nav rows, section headers, favorites, badges, filter field, freshness chrome.
+
+Now the main surface view with all states and the stateful section view.
+
+Let me typecheck the production surface files against the dependency set early, to catch issues before writing tests/previews.
+
+Production surface compiles clean. Now the Previews and Tests files.
+
+Now the comprehensive test suite.
+
+Now the i18n strings catalog.
+
+All 8 files written. Let me update tracking and verify — first a combined typecheck of deps + production + tests (with the `@testable` self-import stripped, no `-D DEBUG` so preview macros are excluded).
+
+XCTest isn't in the SDK framework path. Let me locate XCTest / `swift test` availability on this CommandLineTools runner.
+
+XCTest is absent on this CommandLineTools runner (no `xctest`, no XCTest.framework) — so `xcodebuild`/`swift test` genuinely cannot run here. To still execute the test logic honestly, I'll build a minimal XCTest-compatible shim + an auto-generated runner that invokes **every** test method, compiled with my real sources (no subset). First, the shim and generator.
+
+Now a generator that extracts every test class/method and emits a runner that invokes them all.
+
+All 37 methods captured. Let me fix the summary line in the generated runner, then compile everything into an executable and run it.
+
+Compiled successfully (only a shim warning). Now run the headless test executable.
+
+One genuine test-fixture bug: `testTrailingBadgesAttachedToRows` references `/notifications/alerts`, but my fixture sections don't include it. Let me add an "Activity" section (alerts + data-repair) to the fixture and update the two count assertions — this makes both special-route badges testable in the projection.
+
+Now regenerate the test copy and re-run the full suite.
+
+All 37 tests / 75 assertions pass headlessly (RUN_EXIT=0). Now the formatting + lint gates. Let me apply swiftformat (repo config), then verify with `--lint`.
+
+swiftformat clean (0/7 require formatting). Let me see what it adjusted, run swiftlint --strict, and re-typecheck after the format change.
+
+swiftlint linted all 1909 files (config `included` wins) and found 1 violation. Let me locate it — is it in my files?
+
+The only violation is in a **pre-existing** file (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`), outside my scope. My files (`shared-surfaces`) produced zero. Let me prove that by linting only my files with a config that drops the global `included`.
+
+Now I see the real picture: the broad run skipped my files (config `included` excludes `shared-surfaces`); linting them directly surfaces 5 violations in my code. Let me fix all 5:
+1+2. Parameter-count (8 and 6) in Builder — switch to the `LinearSidebarUpdate` snapshot.
+3. `empty_count` — rename `count` param.
+4. `multiple_closures_with_trailing_closure` — explicit `label:`.
+5. `file_length` — split tests into `.Tests` + `.AdapterTests`.
+
+Starting with the Builder refactor.
+
+Now refactor the Model to store the `snapshot` and derive the rest (also simplifies the projection call).
+
+Now simplify `apply()` to store the snapshot:
+
+Now fix the `empty_count` (rename `count`→`itemCount`) in the section header and its call site, plus the `multiple_closures` TSButton call.
+
+Now split the tests to satisfy `file_length`. Creating `LinearSidebar.AdapterTests.swift` (fixtures + adapter/projection/a11y) and slimming `LinearSidebar.Tests.swift` to the model suite. Also updating the projection helper to the new `project(_ update:query:)` API.
+
+Now rewrite `LinearSidebar.Tests.swift` to contain only the model suite (fixtures now live in AdapterTests):
+
+The file exists — let me remove it and recreate with the slimmed model-only content.
+
+All 9 files in place. Re-running the full verification: swiftformat, swiftlint (surface-only), production typecheck.
+
+swiftformat clean (0/8), swiftlint --strict clean (0 violations), all files ≤362 lines. Now re-run the production typecheck and the headless test suite (regenerating the runner from both test files).
+
+Production typecheck clean. Now rebuild + run the headless test suite, regenerating the runner from both test files.
+
+All 37 tests / 75 assertions pass (0 failures). Now the placeholder scan (acceptance: no TODO/stub/mock/placeholder/Lorem in shipped code).
+
+Every runnable gate is green: production typecheck EXIT=0, headless tests 37/37 (75 assertions) EXIT=0, swiftlint --strict 0 violations, swiftformat 0/8, placeholder scan clean. Now let me check the log directory/conventions before writing the gate log.
+
+The reference runner's log shows a full Xcode at `/Applications/Xcode.app` driven via `DEVELOPER_DIR`. Let me check whether THIS runner has it (and xcodegen/simulators) — that changes my verification options significantly.
+
+Major update: this runner DOES have full Xcode 26.5, xcodegen 2.45.4, and iOS simulators. Let me read the sibling BatteryCellsWidget log fully to learn the exact build process, test-target handling, and how they ran the real gate.
+
+That precedent is gold: the verified sibling runs the **real** Xcode gate (build SUCCEEDED both platforms; surface tests pass; iOS-sim *test* exec is environmentally blocked by the CLT simctl daemon). This runner has full Xcode 26.5. I'll keep my files at the prompt's path but verify with the **real Xcode toolchain**: iOS+macOS SDK typecheck and a **real XCTest** run via a temporary SwiftPM package. Setting it up.
+
+iOS-simulator typecheck passes under strict Swift 6. Now a **real XCTest** run via a temporary SwiftPM package using the Xcode toolchain (module named `TeslaSync` so `@testable import` resolves).
+
+The copy loop mangled `LinearSidebar.swift` (became `.swift.swift`), so the main view file wasn't copied. Fixing the copy and re-running.
+
+**Real XCTest: "Executed 37 tests, with 0 failures" (SWIFT_TEST_EXIT=0)** via the Xcode toolchain under Swift 6 strict concurrency. Combined with iOS+macOS SDK typechecks, this is strong evidence. To match the sibling precedent, let me check if a real full-app `xcodebuild` is feasible here (prebuilt Shared.xcframework? baseline buildable?).
+
+Decisive finding: the full-app `xcodebuild` is baseline-blocked here — `Shared.xcframework` isn't prebuilt (needs the KMP pre-action) and 170 pre-existing `feature-views/*.Tests.swift` sit in the app-source path (would break the app target). That's exactly why the sibling used isolated verification. My surface is fully verified by the runnable paths. Let me run the gate-faithful full-tree `swiftformat --lint apps/apple` and re-confirm the whole-tree swiftlint baseline for the log.
+
+Gate-faithful results captured. The only whole-tree format issue (`feature-views/ActionBuilder.Previews.swift`) and the one swiftlint violation (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`) are both **pre-existing and outside my files** — my surface is clean in both the scoped and full runs. Now writing the gate log.
+
+Log written. Now cleanup temp artifacts and stage **only** the allowed files (the new `shared-surfaces/` dir + the log) — not the pre-existing AIUsageCard working-tree changes.
+
+Clean separation — only my new `shared-surfaces/` dir and the log are untracked; the AIUsageCard changes are pre-existing and I'll leave them unstaged. Staging and committing the allowed files.
+
+Exactly the 10 allowed files staged. Committing with the prompt's message.
+
+Committed cleanly (10 files, 2055 insertions; AIUsageCard left untouched). Let me finalize tracking and do a last sanity check.
+
+Task complete. Final state verified: commit `44c7a8c43` contains exactly the 10 allowed files; the working tree retains only the pre-existing AIUsageCard changes (untouched); surface re-confirmed swiftformat-clean (0/8) and swiftlint `--strict` clean (0 violations).
+

@@ -1,0 +1,158 @@
+I'll start by exploring the repository structure and verifying the platform capability requirements, since this task requires the Apple/Swift toolchain.
+
+Toolchain note: `swift` 6.3.2, `swiftlint`, `swiftformat`, `pwsh` are present, but `xcodebuild` fails (only Command Line Tools, no full Xcode) and `simctl` is missing. Let me explore the Apple app structure deeply before deciding anything.
+
+Now let me read the web source spec in full and study the established native feature-view pattern.
+
+Now I understand the spec. Let me study the native conventions: a complete example feature-view set plus the shared P1/S8/S9/S10/S11 infrastructure.
+
+Let me read the rest of the canonical set and locate the shared design system + a form/mutation-based example to match conventions precisely.
+
+Let me read the Tests pattern and locate the shared design-system + form components and any existing form/mutation-based surface.
+
+The shared library lives in `Sources/Components/UI/`. Let me read the form/button/card components and the design tokens.
+
+Now let me find the Select/Picker component, typography primitives (Subhead/HelperText/Caption/Label), GlassPanel, FadeIn, and the design tokens.
+
+Let me read the key shared components: Pickers, Typography, Cards (GlassPanel), Motion, Skeletons, States, and the design tokens.
+
+Now the design tokens and remaining chrome components (GlassPanel, FadeIn, Skeleton, States).
+
+Let me read the feedback States/Skeletons and find an existing feature-view that models an async action/mutation seam (closest analog to my Validate mutation).
+
+`UserImpersonateButton` is the closest analog (async action/mutation seam). Let me study its full set to mirror the mutation pattern precisely.
+
+This `UserImpersonateButton` set is the ideal template (settings provider + mutation seam + freshness). Let me read its entry view, adapter, strings, and key test sections.
+
+Let me confirm the remaining primitives (TSTone/TSBadge/TSInlineCallout), the freshness-chip rendering pattern, and the lint/format configs the gate enforces.
+
+I have the full pattern. Let me check the placeholder gate (critical — I must avoid forbidden words), lint/format configs, and the impersonate strings/tests/previews to mirror exactly.
+
+Now the decisive capability check (can `swiftc` see SwiftUI/Charts/MapKit?), plus the mutation test + preview conventions.
+
+SwiftUI/Charts/MapKit **typecheck cleanly** with the available toolchain (PROBE_EXIT=0) — so I can verify compilation even though `xcodebuild`/simulators are absent. Let me confirm the shared `Sources` are self-contained (no `import Shared`) so I can typecheck my surface against them.
+
+Baseline is self-contained (no `import Shared`). Let me confirm the shared `Sources/Components` + tokens typecheck in isolation on macOS — establishing a clean baseline before I add my surface.
+
+`Maps` references `TSChartPalette` (defined outside Components). My surface uses no maps/charts, so I'll scope the harness to the files I actually depend on. Let me locate that symbol and check my dependency files are mutually self-contained.
+
+`TSChartPalette` and the glass modifier live in `Sources/Design/`. Let me include that and retry the baseline across all Components.
+
+The full Components set pulls in `UnitPreferences` (lives outside). I'll scope the harness to exactly my surface's dependency closure. Let me verify that minimal set typechecks cleanly.
+
+Baseline dependency closure (11 files) typechecks cleanly. I now have everything needed. Let me record the plan/todos and start writing the surface.
+
+Now writing the surface. Starting with the pure projection core (Adapter).
+
+Now the Model: seams (P1/S8), the observable view-model, telemetry (P1/S11), and the i18n facade (P1/S10).
+
+Now the entry view with the section container, header (freshness chip + refresh), state switch, and the freshness timer.
+
+Now the largest file — the form and chrome subviews.
+
+Early typecheck before previews/tests. First, let me confirm how the codebase handles responsive columns cross-platform (`horizontalSizeClass` is macOS-unavailable).
+
+`horizontalSizeClass` is used by several shipped feature-views. Let me confirm the cross-platform pattern and run the strict-concurrency typecheck of my source files now.
+
+Typecheck **passed (EXIT=0)** under strict concurrency. `horizontalSizeClass` compiles on macOS, but I'll adopt the codebase's proven `#if os(iOS)` guard (matching `LiveSignalsTable`) for cross-target robustness since I can't run the iOS build.
+
+Now the previews (DEBUG-only, one per state).
+
+Now the test suite (adapter projections, model wiring/telemetry/validate flow/freshness, a11y seam).
+
+Now the i18n catalog (web parity keys + native chrome keys).
+
+All 7 files written. Now the verification phase — format first, then lint, then full typecheck (core + previews + tests), then the placeholder gate.
+
+New files (untracked, so no diff). Let me confirm `swiftformat --lint` and `swiftlint --strict` both pass on my files.
+
+SwiftLint `--strict` promotes the 400-line warning to an error, plus two structural issues. Let me check how existing surfaces stay under 400 and find the trailing-closure line.
+
+Existing surfaces cap at ~399 lines via multi-file decomposition (the sanctioned pattern). My files exceed 400, so I'll split them idiomatically and fix the two structural lints. Let me restructure.
+
+Now the Validate file (validate payload, banner, enablement, cost cap, test IDs).
+
+Now the Model (seams + observable model), with the in-memory doubles and i18n facade moved to a Seams file.
+
+Now the Seams file (in-memory doubles + i18n facade + localisation helper).
+
+Now the form-composition view file (uses the shared `aiLoc`), with field primitives and chrome split into their own files.
+
+Now the reusable field primitives (with the trailing-closure lint fixed).
+
+Now the chrome file (loading / disabled / error states + freshness chip + connectivity banner).
+
+Now splitting the tests: pure projection tests here, model tests next (fixing the large-tuple lint).
+
+Now the model/state-holder tests (large-tuple lint fixed via a harness struct).
+
+All restructured. Now re-run format, check line counts, and run swiftlint --strict across all files.
+
+All files ≤327 lines, formatting clean. Now swiftlint --strict.
+
+swiftlint --strict: **0 violations**. Now the full typecheck — production module + previews (with `-D DEBUG`), then the tests against a testable build.
+
+The `#Preview` macro needs the Xcode-only `PreviewsMacros` plugin (absent with CommandLineTools — it fails even in the shared `Typography.swift`). That's a toolchain limitation, not a code issue. I'll typecheck production without `-D DEBUG` (previews are all `#if DEBUG`), then build a testable module and typecheck the tests against it.
+
+Step A passes. Now Step B — emit a testable module, then typecheck both test files against it.
+
+Module emits cleanly (production API verified). `XCTest` itself is unavailable under CommandLineTools (same toolchain gap as xcodebuild). To still verify the test bodies typecheck against my real API, I'll compile them against the emitted module with a tiny XCTest shim.
+
+Those errors are just the stripped `import XCTest` removing Foundation transitively. Substituting `import Foundation` instead:
+
+Test bodies typecheck against the real module (EXIT=0). Now the placeholder gate — I'll run it against a directory containing exactly my Swift files (real scan), and confirm the single `parity:allow` marker is honored.
+
+The `parity:allow` marker must be on the **same line** as the match (the checker is line-scoped). Let me move it inline.
+
+Now re-verify: format, lint, and the placeholder gate on the fixed file.
+
+Placeholder gate passes (ALLOWED=1, COUNT=0). But the inline comment pushed the line to 124 chars (>120). Let me shorten the marker reason and reformat.
+
+Line is 100 chars, format + lint clean. Now the full final verification across all 11 files.
+
+Format, lint, and production typecheck all pass. Now rebuild the testable module + re-typecheck tests, and final placeholder scan.
+
+All compensating verifications pass. Let me verify i18n key parity (every web `t()` key has a catalog entry), then write the gate log.
+
+All 28 web keys present. Let me also confirm every key referenced in Swift exists in the catalog (catch typos).
+
+Bidirectional i18n parity confirmed. Now let me capture authentic evidence from the mandated gate commands (xcodebuild) for the log, then assemble it.
+
+Authentic blocker evidence captured: `xcodebuild` requires full Xcode (only CommandLineTools present) → `IOS_EXIT=1`, `MAC_EXIT=1`; `simctl` absent. Now I'll generate the gate log by actually running every step and teeing real output.
+
+Let me view the log and fix exit-code capture (piped `$?` caught `tail`, not the real command).
+
+Exit codes are accurate (all genuinely passed). Now append the test-typecheck, placeholder, i18n-parity, inventory, and the final EXIT/STATUS — with robust exit capture.
+
+The append used a stale relative path after `cd`. Let me redo with an absolute log path.
+
+Log is complete and honest. Let me view the appended middle section to confirm the placeholder + parity lines rendered correctly.
+
+The log is complete and honest (ends `EXIT=1` / `STATUS=BLOCKED` with full evidence; all runnable checks green). Let me finalize: update todos, clean temp files, and check git state before committing.
+
+All 12 surface files + the gate log are new and isolated. Committing per the prompt (adapting the add path to the actual files).
+
+Committed (f92a9be95, 13 files). Final check: ensure no stray build artifacts were left untracked in the repo.
+
+The task is complete. The two modified `web/` files shown are pre-existing working-tree changes from the shared environment — I never touched `web/`; my commit staged only my 13 files.
+
+## Summary
+
+I shipped a production-complete, native Apple SwiftUI parity of `AIProviderSection` — **no stubs, no skeletons** — committed as `f92a9be95`.
+
+**Delivered (12 files + gate log, each ≤400 lines per SwiftLint `--strict`):**
+- `Adapter` / `Validate` — pure projections: draft, provider catalog, per-field visibility (Azure/Foundry/cloud/local branches), validate-payload builder, banner ladder (`pinned→probed→generic`), cents↔dollars cap arithmetic, test IDs
+- `Model` / `Seams` — P1/S8 settings + validate seams, `@Observable` model, P1/S11 `view.opened` telemetry, P1/S10 i18n facade, in-memory doubles
+- `swift` / `Views` / `Fields` / `Chrome` — entry view + every web field, the reusable field/select/validate primitives, and loading/disabled/error/freshness chrome
+- `Previews` (11 states) · `Tests` + `ModelTests` (adapter, model, telemetry, validate flow, freshness, a11y) · `.strings` catalog
+
+**All web states reproduced:** loading, empty (AI-off), error+retry, **stale** (chip + one-shot auto-refresh), **offline** (cached + chip), and the full data form. Bindings clear the validate banner on edit; cloud/local validate semantics match the source exactly.
+
+**Verification (every runnable check GREEN):**
+- `swiftlint --strict` → **0 violations** (11 files) · `swiftformat --lint` → **0 require formatting**
+- `swiftc -typecheck` of production **and** test bodies against the real shared component closure (emitted testable module) → **0 errors** under Swift 6 strict concurrency
+- Placeholder gate → `COUNT=0` (one sanctioned `// parity:allow` for the web key `apiKeyPlaceholder`)
+- i18n parity → **28/28** web `t()` keys present, bidirectional
+
+**STATUS=BLOCKED (honest):** the mandated `xcodebuild build test` gate cannot run — the runner has only CommandLineTools (`xcode-select -p = /Library/Developer/CommandLineTools`), so `xcodebuild` errors (`IOS_EXIT=1`/`MAC_EXIT=1`), and `simctl`/`XCTest` are absent. Per the prompt's Capability clause, this is the correct terminal state, with the platform-capability evidence recorded in `…/logs/p4-apple-feature-views-0200-AIProviderSection.log` (ends `EXIT=1` / `STATUS=BLOCKED`). The code itself is complete and verified to the maximum extent the toolchain permits.
+

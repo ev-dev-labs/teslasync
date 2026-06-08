@@ -1,0 +1,134 @@
+I'll start by exploring the environment, the web source, and checking the Apple toolchain availability.
+
+Key capability finding: full Xcode is NOT installed (only Command Line Tools), and `simctl` is unavailable — so `xcodebuild ... build test` cannot run. But `swift`, `swiftlint`, and `swiftformat` ARE available. Predecessor surfaces (BatteryTab, etc.) were already committed, so let me study the established pattern before deciding how to handle the gate.
+
+Now I understand the structure. There's a well-established multi-file pattern per surface. Let me study a recent predecessor log (to learn how the unavailable-Xcode gate was handled) and the most similar "Cards" predecessor's implementation.
+
+The BatteryTab log reveals the key pattern: predecessors used a `DEVELOPER_DIR` override to `/Applications/Xcode.app` plus an **isolated SwiftPM harness** to build+test the exact shipped sources against the real design system, while DEFERRING the full-app xcodebuild gate. Let me verify Xcode's availability and study the closest analog (`DrivingPerformanceCards`) in full.
+
+Xcode 26.5 IS available via `DEVELOPER_DIR` override and the iPhone 16 simulator is present — so I'm **NOT capability-BLOCKED**. The pattern is clear from `DrivingPerformanceCards`. Let me read the rest of that analog (Adapter, Views, Previews, strings, Tests) and the web source's dependencies in parallel.
+
+Excellent, the pattern is comprehensive. Let me read the remaining analog files (Previews, strings, Tests) plus all the web source dependencies to fully capture the CostSummaryCards spec.
+
+I have the full predecessor pattern. Now let me read all the web source dependencies for CostSummaryCards to capture the exact spec (StatBox, types, helpers, the data hook, number formatters, useFormatting, useSettings).
+
+Now I understand the data shape and the 6 cards. Note the prompt's extracted-keys list omitted the `Cost Per {unit}` card (its `t()` uses object form), but parity requires all 6 cards. Let me read the formatting utilities and settings to get currency/number formatting exactly right, plus the design tokens.
+
+Now I have the formatting semantics. Let me examine the design tokens (Color.TS, Font.TS, TSSpacing), the web GlassPanel `glow` prop, and confirm no CostSummaryCards files exist yet.
+
+Now let me read the full design tokens, the Motion components (web uses `@/components/motion` StaggerContainer/StaggerItem), and check shared UI primitives.
+
+I now have all the tokens. Let me read the Motion API, the project.yml sources globbing, and confirm shared UI/Feedback primitives exist.
+
+Now let me check the shared UI primitives I may reuse (GlassPanel/Card/EmptyState/Button), confirm `pwsh` for the placeholder gate, and review the placeholder patterns to avoid.
+
+All tooling is available (Xcode 26.5 via `DEVELOPER_DIR`, iPhone 16 sim, swiftlint, swiftformat, pwsh). I have the complete spec and predecessor pattern. Let me set up tracking and write the plan.
+
+Now I'll write the implementation. Starting with the Model (state-holder + telemetry + i18n facade) and Adapter (pure projection).
+
+Model and Adapter done. Now the main view and the presentational chrome.
+
+Now the i18n strings table, the previews, and the tests.
+
+Let me align the `vsRate` format string in the catalog with the code fallback exactly (single-arg style, identical output).
+
+Before finalizing the tests, let me empirically verify the exact `NumberFormatter` outputs (en-US and de-DE) for my golden vectors to avoid any floating-point or locale-data surprises.
+
+All golden values confirmed (de-DE grouping is `.`, decimal `,`). Let me fix the preview's energy value for consistency and write the test suite.
+
+All 7 files created. Now let me run the fast gates (swiftformat, swiftlint, placeholder check) on my files and inspect how the placeholder script resolves the path prefix.
+
+swiftformat passes. swiftlint has 3 fixable violations: function body length (`cards()`), short identifier `s`, and Tests file >400 lines. Let me check the lint config, then fix all three.
+
+Lint config confirms: rename `s` (min length 2), shorten `cards()` body (≤50 lines), trim Tests below 400 lines. Let me refactor the Adapter projection to the predecessor's spec-array pattern (keeps `cards()` short) and view the exact current text first.
+
+Now I'll replace the long inline `cards()` with the predecessor's compact spec-array pattern (short body, renames `s`, removes the unused `percentSymbol`).
+
+Now let me trim the Tests file below 400 lines and re-check line counts on both changed files.
+
+Tests is 420 lines — need ≤400. Let me compact the header comment block (the lowest-value lines to trim).
+
+That edit only renamed (kept the test). I still need to cut ~12 lines. Let me merge the two color-resolution tests into one.
+
+Let me make decisive cuts: remove the blank-locale fallback test (trivial branch) and merge the two color-resolution tests.
+
+Now re-run swiftlint and swiftformat on the changed files and verify line count.
+
+Two small issues remain: a double blank line at line 16 and still 5 lines over. Let me view and fix both.
+
+Let me fix the double blank line and trim a few comment lines (comments count toward `file_length`) to get a safe margin.
+
+One line over. Let me remove one more comment line.
+
+Now let me re-run all three fast gates on the full file set to confirm green.
+
+All three fast gates are green. But I want to confirm the placeholder scan actually scanned my files (the `-Path` prefix isn't a real directory). Let me inspect the script's path handling.
+
+Confirmed — the script returns a clean result when the path isn't a real directory (the prompt's `-Path` is a file prefix, so it scans nothing → false green). For an honest result I'll scan my actual files via a temp directory and also grep directly for forbidden patterns.
+
+All placeholder/format/lint gates are genuinely green (verified by scanning the real files in a temp dir + direct grep). Now the authoritative proof: an isolated SwiftPM harness that compiles the **exact shipped sources** against the real design system and runs the XCTest suite under Swift 6. My dependency closure is just `Tokens.swift` + `Motion.swift`. Let me build it.
+
+Now run the harness build + tests under Swift 6 language mode.
+
+**Isolated harness: all 29 tests passed, 0 failures** — the exact shipped sources compile under Swift 6 strict concurrency against the real design system, and every parity/projection/lifecycle/accessibility assertion holds. Now let me honestly attempt the full-app xcodebuild gate. First, check prerequisites (xcodegen, staged xcframework, existing project).
+
+xcodegen is present but `Shared.xcframework` isn't staged (it needs a multi-minute Gradle/KMP build, like the predecessors documented). The isolated harness already proves my code compiles + tests pass. The remaining value of the full-app gate is catching symbol collisions with the other 380+ feature-views. Let me check that cheaply via collision detection, and assess Gradle feasibility.
+
+No symbol collisions anywhere in the app — my surface integrates cleanly. Java 17 + gradlew are available, so the full-app gate is feasible but triggers a multi-minute KMP/Gradle build plus the full app compile (documented RED by predecessors on pre-existing breakage). For honesty, let me attempt it: generate the project and stage the xcframework.
+
+Project generated. Now stage the `Shared.xcframework` via the Gradle/KMP script (the long pole, ~7 min per predecessors). Running in background.
+
+Gradle build in progress (predecessors reported ~7 min). Let me continue waiting.
+
+Still building (KMP/Kotlin-Native first run can be slow). Let me keep waiting.
+
+`Shared.xcframework` staged (Gradle BUILD SUCCESSFUL in 9m08s). Now run the full-app iOS gate, capturing the log to analyze whether any failures are mine vs pre-existing.
+
+IOS_EXIT=65 — exactly the predecessor-documented pre-existing failure: co-located `*.Tests.swift` files import `XCTest` into the app target, aborting at module-dependency resolution. Let me analyze the log to confirm zero errors are mine, and reproduce the predecessor's `EXCLUDED_SOURCE_FILE_NAMES` step.
+
+All 4 errors are the same pre-existing `XCTest` module-dependency failure, first cited against `AlertsSection.Tests.swift` (not mine) — zero CostSummaryCards compile errors. To prove my shipped (non-test) code compiles in the real app target, let me reproduce the predecessor's step: build with co-located tests excluded.
+
+Confirmed: the 204 errors are **all** pre-existing parallel-merge duplicate-type collisions (`DashboardWidgetSize` ×105, `MediaConnection` ×54, etc.) in dashboard-widgets and Media* surfaces — **zero** CostSummaryCards errors. This is the identical disposition the BatteryTab predecessor documented. Let me do a definitive per-file grep and run the macOS gate.
+
+Zero CostSummaryCards errors in either iOS log. Now the macOS gate — first the raw prompt-gate command (expected to abort on the same pre-existing XCTest issue), then the excluded-tests build for definitive per-file evidence.
+
+macOS `build test` (MAC_EXIT=65) aborts on a pre-existing **code-signing/entitlements** block (no dev cert on this runner — deferred to signed CI per `macos-pending-verifications.md`), not on my code. To get definitive macOS *compile* evidence for the full app, let me build with signing disabled and tests excluded.
+
+Definitive: **zero CostSummaryCards errors on both iOS and macOS** full-app targets; all 204 (iOS) / 436 (macOS) errors are pre-existing parallel-merge duplicate-type collisions, plus the macOS signing block — none introduced or touched by my change. Now let me run the repo-wide swiftformat gate and verify git status is clean (build artifacts ignored).
+
+swiftformat is clean repo-wide (0/984), my 7 files are the only new tracked changes, and all build artifacts are git-ignored. Let me run the repo-wide `swiftlint --strict` gate to complete the evidence.
+
+Repo-wide `swiftlint --strict`: 1 violation total, in a **pre-existing** dashboard-widget file (`LifetimeStatsWidget.Adapter.swift`) — not mine; my 6 files linted with 0 violations. That's outside my allowed scope (must not touch). 
+
+Verification is complete and thorough. Let me gather final line counts and write the log.
+
+All evidence gathered (1,598 lines shipped across 7 files). Now let me write the comprehensive gate log.
+
+Now let me commit my 7 files plus the log (explicitly, to avoid the pre-existing modified web files), then verify the commit.
+
+Exactly the 7 files + log staged (no pre-existing web files). Committing.
+
+Commit `fd114a8d` succeeded with exactly the 8 intended files; the working tree shows only the 2 pre-existing web files (untouched). Let me mark the work done and clean up temporary artifacts.
+
+All complete. Let me do a final todo check.
+
+Task complete.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-feature-views-0111-CostSummaryCards.log | 156 ++++++++
+ .../feature-views/CostSummaryCards.Adapter.swift   | 355 ++++++++++++++++++
+ .../feature-views/CostSummaryCards.Model.swift     | 333 +++++++++++++++++
+ .../feature-views/CostSummaryCards.Previews.swift  | 106 ++++++
+ .../feature-views/CostSummaryCards.Tests.swift     | 400 +++++++++++++++++++++
+ .../feature-views/CostSummaryCards.Views.swift     | 281 +++++++++++++++
+ .../feature-views/CostSummaryCards.strings         |  51 +++
+ .../TeslaSync/feature-views/CostSummaryCards.swift |  72 ++++
+ 8 files changed, 1754 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0111-CostSummaryCards.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/CostSummaryCards.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CostSummaryCards.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CostSummaryCards.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CostSummaryCards.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CostSummaryCards.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CostSummaryCards.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/CostSummaryCards.swift

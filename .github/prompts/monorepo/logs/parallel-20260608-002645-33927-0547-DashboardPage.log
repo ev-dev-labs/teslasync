@@ -1,0 +1,186 @@
+I'll start by exploring the repository structure to understand both the web source and the existing Apple app infrastructure.
+
+Let me read the web source and explore the Apple app structure in parallel.
+
+This is a large parity task. Let me explore the target structure, existing patterns, and the parity infrastructure more deeply.
+
+Key finding: target dir `apps/apple/TeslaSync/Features/Dashboard/` doesn't exist yet, and there's no `apple-ledger.json`. Let me check tooling availability and the project structure.
+
+Tooling is available (xcodebuild, swiftlint, xcodegen, pwsh, swift). Note: target dir `TeslaSync/Features/` isn't in `project.yml` sources yet, and there's no `apple-ledger.json`. Let me read the rest of the web source, the manifest record, and the app shell/navigation.
+
+I now have the full web source and manifest record. Let me assess build feasibility (KMP framework) and learn the established Apple conventions by reading the app shell, shared facade, and a representative feature-view.
+
+Critical: `Frameworks/Shared.xcframework` is NOT staged (only `.gitkeep`), and `gradle` isn't installed — building the KMP core requires the Kotlin/Native toolchain via `gradlew`. This affects whether a full `xcodebuild` can pass. Let me learn the conventions: routing, shared facade, and design system.
+
+Now let me find where pages register into the route host registry, and read the shared facade + design system in parallel.
+
+Everything imports the KMP `Shared` framework, which isn't staged and needs Gradle/Kotlin to build. Let me read the app composition, shared facade, and design system to learn conventions, and find how existing views bind data and register routes.
+
+Let me kick off `xcodegen generate` and probe KMP build feasibility in the background, while reading the design system and finding a representative feature-view exemplar.
+
+`xcodegen` works. The KMP build needs to download Gradle 8.14.5 + Kotlin/Native (network). Let me probe build feasibility while reading the design system and a feature-view exemplar.
+
+Excellent news: Gradle 8.14.5 **and** Kotlin/Native 2.4.0 are **cached** in `~/.gradle` and `~/.konan`, and network works. A full build may be feasible. Let me kick off the `Shared.xcframework` build now (long pole) while I write code.
+
+KMP build is progressing using the cache. Now let me read the design tokens, buttons, and a complete feature-view exemplar to nail the conventions (model, adapter, states, strings, tests).
+
+Found the components. Let me read the panel, banner, state, button, and material/token sources.
+
+Strong component library available (`TSGlassPanel`, `TSAlertBanner`, `TSEmptyState`, `TSButton`, `TSLiveStaleDataBanner`). Let me read buttons, tokens, status indicators, and find `TSTone`, plus check the build.
+
+The KMP build **failed in 20s**. Let me see the error and locate `TSTone`.
+
+The KMP link failed because `xcrun xcodebuild -version` fails — likely only Command Line Tools are active, not full Xcode. Let me verify, since this determines DONE vs BLOCKED.
+
+`/Applications/Xcode.app` exists but `xcode-select` points to CommandLineTools. I can override with `DEVELOPER_DIR` (no sudo needed). Let me verify.
+
+`DEVELOPER_DIR` override works — Xcode 26.5 with iOS/macOS 26.5 SDKs. Full build is feasible. Let me restart the KMP framework build with `DEVELOPER_DIR` set, and read the gate contract, `TSTone`, tokens, and status indicators.
+
+`TSTone`: neutral/accent/success/warning/danger/info. Let me find the gate contract script, status indicators, tokens, and check build progress.
+
+The 2nd build was killed when its sync shell ended. Let me run it as a **detached** async process so it survives, then read the gate script, status indicators, and a feature-view exemplar while it builds.
+
+I understand the placeholder gate. Let me read the patterns file, the gate contract, ledger schema, and status indicators in parallel.
+
+KMP build finished. Let me check its result and read the gate contract (p4-apple README), the monorepo README, and status indicators.
+
+KMP tasks are cached/up-to-date. Let me confirm the build succeeded and locate the produced xcframework.
+
+Build succeeded — `Shared.xcframework` (debug) produced with ios-arm64, ios-arm64-simulator, macos-arm64. The scheme's preAction stages a `release` variant, so let me run the canonical staging script in the background while I study a feature-view exemplar and the localization catalog.
+
+I see the per-surface `.strings` table convention. Let me check how feature-views reference their keys (custom table vs default) and whether the 36 dashboard keys already exist in the master catalog.
+
+Per-surface `.strings` tables are the established convention (feature-views resolve pre-localized strings in their model layer via `Text(verbatim:)`). None of the 36 dashboard keys exist in the master catalog. Let me read the exemplar's model/states/view to learn the exact localization call + structure, and check the staging result.
+
+The convention is clear: `View` + `@State model`, `TSFadeIn` + `TSGlassPanel`, a `phase` switch, and `NSLocalizedString(key, tableName:, value:)` in the model. Let me read the exemplar's Model, States, Adapter, Previews, and Tests to mirror them exactly.
+
+I now understand the full convention. Let me verify how `.Tests.swift` files in the app-target path work (XCTest vs Swift Testing), read the Previews, and confirm `TSFadeIn`/`TSSkeleton` exist.
+
+Feature-view `.Tests.swift` files use `import XCTest` + `@testable import TeslaSync` — yet live under an app-target source path. That's contradictory unless XcodeGen routes them by suffix. Let me verify target membership in the generated project, since adding test files to an app-target path could break the build.
+
+Confirmed: feature-view `.Tests.swift` are members of both app targets (XcodeGen includes them) and use `import XCTest` + `@testable import TeslaSync` — the established pattern across 204 files. I'll mirror it exactly. Let me set up tracking, read the Previews + Adapter exemplar, and check the shared facade for auth/sync domains.
+
+Let me read the Adapter (production KMP binding + surface enums) and confirm the shared freshness/connection convention and `TSSkeleton` signature.
+
+I have the full pattern. Let me quickly check the real auth + vehicle state available for an honest production binding, then start writing.
+
+I have everything needed. Let me start writing. First the per-surface strings table (matching the repo's 1436-surface convention) and the pure projection adapter.
+
+Directory created; staging still linking the release framework. Let me write the strings table now.
+
+Now the pure projection adapter (Foundation-only, unit-testable).
+
+Now the Model: strings facade, seams, `@Observable DashboardPageModel`, and an in-memory source.
+
+Now the States file — loading, error+retry, onboarding (GlassPanel1 + GlassPanel2), and the success host.
+
+Let me fix the error state — I introduced a hacky button and an off-manifest key. I'll use the existing catalog `action.retry` key (already used by shared components).
+
+Let me verify `action.retry` exists in the master catalog, then write the Views file (header, banners, edit hint).
+
+Release framework staged successfully. But `action.retry` isn't matching in the catalog — let me check the catalog structure and whether shared keys exist there.
+
+The catalog has `action.cancel/close/ok` but not `action.retry`. I'll keep my page self-contained: add a small native-chrome key (`dashboard.retry`) to my table (the same pattern ActiveOrdersSection used for non-parity chrome). Let me fix the strings and error button, then write Views.
+
+Now the Views file — banners, header, and edit hint.
+
+Now the main page view + registration. Let me check the stale-banner keys first, then write the page.
+
+stale keys aren't in the catalog. I'll add a self-contained `dashboard.stale` chrome key (ADR-013 indicator) and write the page + registration.
+
+Now the route registration + production source bound to real app auth/refresh.
+
+Now the Previews and tests (mirroring the convention). Let me write Previews first.
+
+Let me read the exemplar's spy/test patterns to mirror Swift 6 concurrency correctly in my tests.
+
+Now the two test files, mirroring the spy/concurrency patterns exactly.
+
+All Dashboard files are written. Let me wire the build (project.yml) and navigation (TeslaSyncApp), then regenerate the project.
+
+Now wire the dashboard route registration into the app composition.
+
+Now let me run the placeholder gate and SwiftLint on the new files (fast checks before the full build).
+
+Placeholder gate clean (0). SwiftLint found 1 serious violation but the detail scrolled off. Let me capture it and the real exit code.
+
+The 1 violation is **pre-existing** (`LifetimeStatsWidget.Adapter.swift`), not in my files. But SwiftLint linted 1909 files despite the path arg. Let me check the config and run the exact gate command from repo root.
+
+The exact gate command lints only my dir — good (the pre-existing violation is out of scope). I have 8 real violations in my `Views.swift` (line-length + `Label`-with-two-closures). Let me view and fix them cleanly.
+
+Let me view the other flagged region (around line 146) before fixing.
+
+All 8 violations are in `Views.swift` (single-line `Label`-two-closures + the dismiss+trailing banner). Let me fix them with a clean icon+label helper and explicit `actions:`.
+
+Let me re-run the exact lint gate to confirm my files are clean now.
+
+4 remain — the buttons passing both `action: { … }` (closure literal) and a trailing label closure. I'll pass the label explicitly (no trailing closure). Let me view and fix.
+
+SwiftLint is clean (0 violations). Now let me regenerate the Xcode project (to include `TeslaSync/Features`) and verify my files are picked up.
+
+All 10 files are in the project. Now the big step — building the iOS scheme (the gate target). Let me start it and monitor.
+
+Build started. Let me monitor it while I prepare the evidence log and ledger.
+
+Build failed, but the errors are `unable to resolve module 'XCTest'` — affecting pre-existing feature-view tests too (`AIRestorePanel.Tests.swift`) plus the missing `x86_64` sim slice. This is a destination issue (generic sim builds x86_64 + can't resolve XCTest). Let me check there are no errors in my non-test code, then rebuild with a concrete arm64 simulator.
+
+Only XCTest-resolution errors — my actual code compiles clean. The app target includes `*.Tests.swift` files (mine + pre-existing) that import XCTest, which a plain `build` can't resolve. Let me investigate how the repo handles this and what destinations exist.
+
+Simulators are available (iPhone 16 **booted**, arm64) and my code compiles clean — the only blocker is XCTest resolution in the app target (which holds `*.Tests.swift`). The fix is a concrete arm64 sim destination + `ENABLE_TESTING_SEARCH_PATHS=YES` (what the `test` action does internally). Let me rebuild.
+
+Build running. Let me poll for early errors while it compiles.
+
+XCTest is resolved now. New errors: `'DashboardWidgetSize' is ambiguous` across many **pre-existing** widget files. I didn't define that type — let me find how many definitions exist and whether my files triggered it.
+
+The errors are all pre-existing: `DashboardWidgetSize` is defined in **10+ files I didn't author** (rampant cross-surface duplication). My code has zero errors. Before concluding, let me check how existing surface prompts handled their build gate — this tells me the intended verification approach.
+
+This is the canonical pattern: existing surfaces verify via an **isolated build/test against the real design system** (Swift 6 strict), and the full-app `xcodebuild` returns 65 due to **pre-existing baseline breakage in other targets** — recorded as DEFERRED, surface clean, `STATUS=DONE`. Let me read the full log to replicate the isolation method exactly.
+
+This is the exact established precedent: surfaces are verified via an **isolated SwiftPM build+test against the real design system** (Swift 6 strict), with the full `xcodebuild` recorded as `65 / DEFERRED` due to the documented pre-existing `DashboardWidgetSize ×15` baseline breakage — `EXIT=0 / STATUS=DONE`. My situation is identical. Let me replicate the isolated verification. First, map dependencies.
+
+Dependencies are SwiftUI-only (no `Shared`). Let me confirm `TSAlertBanner` is only in a comment (so I don't need Banners.swift), then build the isolated verification package.
+
+`TSAlertBanner` is comment-only; all tokens live in `Tokens.swift`. Let me build the isolated SwiftPM verification package (the canonical surface check) against the real design system under Swift 6.
+
+Package laid out. Now let me run the isolated Swift 6 build + tests.
+
+Isolated verification is **green**: the full surface compiles under Swift 6 strict concurrency against the real design system, and **22/22 tests pass**. Now let me run `swiftformat --lint` and attribute the full-app build errors (confirm 0 in my surface).
+
+The full-app errors are 100% pre-existing (585 errors, **0 in my surface**; `DashboardWidgetSize` redeclared in **15** files — matching the documented precedent). But `swiftformat --lint` flags 3 of my files. Let me auto-format them and re-verify lint + format + tests.
+
+Format (0/9) and lint (0) both green after auto-format. Let me re-verify the isolated tests with the formatted files and re-run the placeholder gate.
+
+All gates green: isolated tests 22/22, placeholder 0, lint 0, format 0. Let me verify the 41 parity items have binding evidence (keys present in `.strings` + referenced in code, panels, states).
+
+35/36 keys are referenced in code; only `dashboard.newDashboard` (the web default name for `createDashboard`) isn't wired. Let me wire it faithfully into the command payload (the layout subsystem uses it for blank-dashboard creation), then re-verify.
+
+All 36 keys now wired. Let me re-verify every gate after this edit.
+
+My edit introduced 1 lint/format issue. Let me see it and auto-fix.
+
+Fixed (trailing comma). Lint 0, format 0. Let me re-run the isolated tests with the final files to confirm green.
+
+Final isolated tests: **22/22 green**. All achievable gates pass. Let me check the existing ledger format, then write the evidence log and ledger.
+
+All gates verified. No `apple-ledger.json` exists yet (I'm the first Apple page). Let me write the evidence log, then the ledger.
+
+Now the ledger. Let me create `apps/parity/apple-ledger.json` with rows for both idioms (apple-ios + apple-macos), per the ledger schema.
+
+Let me validate the ledger against its schema, confirm the full set of changes, and do a final gate recap.
+
+The `AIUsageCard.*` and `web/*` modifications are **pre-existing dirty files** in this slot — I never touched them. I'll commit ONLY my files explicitly. Let me first confirm my two edited files contain only my intended changes.
+
+Both edits are exactly my intended changes. Let me confirm `TeslaSyncApp.swift` had no errors in the full-app compile, then commit only my files.
+
+Clean — 0 errors in my navigation wiring. Let me stage **only my files** (excluding the pre-existing dirty files) and commit.
+
+Exactly my files are staged (no pre-existing dirty files included). Let me commit.
+
+Committed (`b0de1ced6`, 14 files, all mine). Let me clean up temp artifacts and do a final verification that nothing stray is left.
+
+Clean — all my changes committed; only pre-existing dirty files remain untouched. Let me run the prompt's exact gate commands one final time on the committed state as authoritative evidence.
+
+All gates verified on the committed state. Let me finalize the task tracking.
+
+Task complete. Final verification on the committed state passed all achievable gates.
+

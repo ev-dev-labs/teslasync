@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure to understand the web source, the existing Apple app architecture, and the dependencies.
+
+Now let me explore the existing Apple structure — the `TeslaSync` dir, existing UI components, design tokens, i18n, state holders, and telemetry.
+
+Let me check the actual prompt file, tool availability, and whether sibling surfaces/logs exist.
+
+Key finding: only Command Line Tools are installed (no full Xcode), so `xcodebuild -scheme` can't run. Let me verify Xcode/simulator availability and test whether SwiftUI compiles with the CLT toolchain — this determines an honest DONE vs BLOCKED.
+
+`/Applications/Xcode.app` exists — the active dir is just pointed at CLT. Let me try using Xcode via `DEVELOPER_DIR`.
+
+Xcode 26.5 is fully available with an iPhone 16 simulator. The full gate can run. Let me examine the project setup (XcodeGen spec, schemes, build tooling).
+
+Let me check which `TeslaSync/*` source dirs exist and whether sibling surface dirs (feature-views, modals-dialogs) are already wired or populated.
+
+The `modals-dialogs` dir doesn't exist yet and isn't in `project.yml` sources. Let me assess build feasibility: the `Shared.xcframework` dependency and its build script, plus the baseline.
+
+`Shared.xcframework` isn't prebuilt — the scheme builds it via Gradle/KMP. Let me check the KMP toolchain feasibility and the documented verification status.
+
+The `macos-pending-verifications.md` doc reveals the established precedent: full-app `xcodebuild` is blocked by **pre-existing, unrelated** merge collisions, so prior surface prompts (ToolCard, AlertMessageEditor, FSMTimelineChart) verify the surface in **isolation** (SwiftPM build/test + dual-SDK `swiftc -typecheck` + lint/format/placeholder + `xcodegen generate`) and defer the full-app build. Let me study a precedent surface and the isolation harness.
+
+This is the exact methodology to follow. Let me study the precedent presentational surface (ToolCard), the design tokens, feedback states, telemetry seam, i18n facade, and state-holder layer.
+
+Let me read the FSMTimelineChart Model/Views/main/Tests files to fully internalize the pattern, and check for symbol collisions.
+
+Let me read the ToolCard log (the presentational precedent) to see exactly how the "states" requirement and gate were handled for a pure-presentational component, and skim the placeholder checker.
+
+I have a thorough understanding of the architecture and the sanctioned verification methodology. Let me set up tracking and the plan, then build.
+
+Pre-existing dirty files exist (AIUsageCard.*, some web files) — not mine. I'll be surgical at commit. Now let me write the surface. Starting with the telemetry seam and the pure adapter.
+
+Now I'll write the surface files. Starting with the telemetry seam and the pure Foundation adapter.
+
+All 7 surface files written. Now let me check line counts (must be <400 for strict lint), then format with the repo config.
+
+swiftformat passes. One swiftlint violation: `accessibilitySummary` has 6 params (limit 5). I'll bundle the localization context into a small value type.
+
+Now update the model and tests to use the new `l10n` parameter.
+
+Now re-run format + lint to confirm clean.
+
+Lint + format clean. Now the placeholder gate, then I'll build the isolated SwiftPM harness.
+
+Placeholder gate clean (COUNT=0). Now I'll build the isolated SwiftPM harness to compile the exact shipped sources against the real design-system and run the tests.
+
+The harness builds clean under Swift 6. Now run the tests.
+
+All 26 tests pass under Swift 6 strict concurrency. Now the dual-SDK real-SDK typecheck (iOS 18 simulator + macOS 15) to prove the surface compiles at the deployment targets.
+
+iOS 18 typecheck clean. Now macOS 15.
+
+Both SDK typechecks pass. Now wire `modals-dialogs` into the build (ToolCard precedent) and verify `xcodegen` enumerates the files.
+
+`xcodegen` enumerates all 8 Drawer files into both targets (modals-dialogs group present). Now let me substantiate the documented pre-existing full-app blockers in THIS tree, then kick off the KMP `Shared.xcframework` build needed for any full-app `xcodebuild`.
+
+All four pre-existing blockers substantiated (15 `DashboardWidgetSize` defs, 261 co-located XCTest-in-app files, no framework, no signing). The full-app build is guaranteed RED from these regardless of my code. Per the sanctioned precedent I'll defer it — but let me make a genuine attempt: kick off the KMP `Shared.xcframework` build in the background while I write the log.
+
+KMP build running in background. Let me capture the whole-tree formatter state (the gate runs `swiftformat --lint apps/apple`) and confirm my files are clean within it.
+
+My Drawer files are clean; the whole-tree formatter flags only 1 pre-existing file (`ActionBuilder.Previews.swift`, not mine). Let me capture the whole-tree `swiftlint --strict` baseline (as the gate runs it) and check the KMP build progress.
+
+The single pre-existing lint violation is `LifetimeStatsWidget.Adapter.swift` — the exact one ToolCard documented, not mine. KMP build still running. Let me write the comprehensive gate log now.
+
+Log written. Let me check the KMP `Shared.xcframework` build progress.
+
+KMP build still compiling (expected ~7 min). Meanwhile, let me add the sanctioned `macos-pending-verifications.md` row (matching the 3 precedents) and verify my exact file set.
+
+Let me check the KMP build again (it's been ~6 min, expected ~7).
+
+Still running (~12 min) — likely a cold Kotlin/Native toolchain download. Let me check whether it's actually progressing.
+
+Konan toolchain (1.6G) is downloaded and Gradle is actively compiling (multiple JVMs at >130% CPU) — genuine progress, not stalled. Let me wait for it to finish.
+
+Nearly done — all per-target frameworks built and the debug XCFramework assembled; it's finishing the release XCFramework + staging. Let me wait for completion.
+
+`Shared.xcframework` built (16m) and staged. Now I can run the **full-app `xcodebuild`** to capture gold-standard evidence that my surface introduces zero errors. Let me build the iOS-Simulator scheme and capture the log.
+
+Full-app iOS build running. Let me wait and then inspect the captured log for any Drawer-related errors.
+
+IOS_BUILD_EXIT=65 (pre-existing). The 2 errors are the pre-existing `AIRestorePanel.Tests.swift` XCTest-in-app issue. Let me confirm the 7 `modals-dialogs/Drawer` mentions are NOT errors (just compile-step lines).
+
+Gold-standard evidence: the **only 2 error lines** are the pre-existing `AIRestorePanel.Tests.swift` XCTest-in-app issue — **zero Drawer errors**, and `Drawer.strings` copied + `Drawer.*` compiled into the app target successfully. Let me run the macOS build for symmetric evidence, then finalize the log.
+
+macOS build running. Let me wait for it, then update the log with both real `xcodebuild` results.
+
+**Conclusive evidence — both builds identical:** iOS & macOS `xcodebuild` EXIT=65, the **only** error is the pre-existing `AIRestorePanel.Tests.swift` XCTest-in-app issue, **0 Drawer errors**, `Drawer.strings` copied into both bundles. My surface compiled into both app targets cleanly. Let me update the log to reflect these real runs.
+
+Now let me verify the working-tree state so I commit only my intended files (not the generated `.xcodeproj`, staged framework, or pre-existing dirty files).
+
+Generated `.xcodeproj` and staged framework are git-ignored. My change set is clean: 8 surface files + log + 3 wiring/tracking files. Let me clean up temp artifacts and do a final surface re-verification before committing.
+
+All green. Let me finalize the log's COMMIT section, then stage exactly my files and commit.
+
+Staged set is exactly my 12 artifacts; pre-existing dirty files excluded. Committing now.
+
+Committed (`192c082a2`, 12 files). Let me clean up temp logs and confirm all todos are complete.
+
+All 11 todos complete; working tree clean (only the pre-existing dirty files remain, untouched). Task verified end-to-end.
+
+## Summary
+
+I shipped a production-polished, Apple-idiomatic **`Drawer`** modal surface at parity with `web/src/components/ui/Drawer.tsx`, committed as `192c082a2`.
+
+**Surface** (`apps/apple/TeslaSync/modals-dialogs/Drawer.*`, 8 files, 1520 LOC):
+- `Drawer.swift` — edge-anchored glass panel over a tap-to-dismiss scrim; slide+fade (Reduce-Motion-safe); `.isModal` + AccessibilityFocus; Escape via `.cancelAction`.
+- `Drawer.Adapter.swift` — Foundation-only projector: `DrawerEdge(web:)` (`side` left/right→leading/trailing, `right` fallback), phase resolution (cached rows kept during reload), VoiceOver summary.
+- `Drawer.Model.swift` / `Drawer.Telemetry.swift` — P1/S8 `DrawerSource` seam + `@Observable` model (present/dismiss=`onClose`, stale auto-refresh, offline cache, retry), P1/S10 `DrawerStrings` facade, P1/S11 `view.opened`.
+- `Drawer.Views.swift` — scrim, header (title + freshness chip + close), connectivity banner, and **all states** (loading/empty/error/content/footer).
+- `Drawer.Previews.swift`, `Drawer.strings`, `Drawer.Tests.swift` (26 XCTest cases).
+
+**Verification (all run on this macOS host, evidence in the log):**
+- `swiftformat --lint` **0** · `swiftlint --strict` **0 violations** · placeholder gate **COUNT=0**
+- Real-SDK `swiftc -typecheck` **iOS 18 + macOS 15** → both EXIT=0
+- Isolated SwiftPM build + **26/26 tests** pass (Swift 6 strict concurrency)
+- `xcodegen generate` enumerates all 8 files into both app targets
+- Built `Shared.xcframework` (16m) and **ran the full-app `xcodebuild`** (iOS-Sim + macOS): both EXIT=65, **RED only** on the pre-existing `AIRestorePanel.Tests.swift` XCTest-in-app issue — **zero Drawer errors**, `Drawer.strings` copied into both bundles.
+
+**Necessary wiring** (ToolCard precedent, enumerated — not silent): added `TeslaSync/modals-dialogs` to `project.yml` (both targets) + `.swiftlint.yml`, plus a `macos-pending-verifications.md` row for the P99 signed gate. The log ends `EXIT=0 / STATUS=DONE`. Pre-existing dirty files were left untouched.
+

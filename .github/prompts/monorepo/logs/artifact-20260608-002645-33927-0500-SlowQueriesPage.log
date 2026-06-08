@@ -1,0 +1,199 @@
+================================================================================
+p4-apple · P7 · page:admin/SlowQueries — SwiftUI / Apple HIG
+Artifact: apps/apple/TeslaSync/Features/Admin/SlowQueriesPage.swift
+Web source: web/src/features/admin/pages/SlowQueriesPage.tsx
+Web route: /admin/slow-queries
+Generated prompt: .github/prompts/monorepo/p4-apple/pages/admin/SlowQueries.prompt.md
+Host: Darwin (macOS), Swift 6.3.2, swiftlint 0.63.3, swiftformat 0.61.1,
+      xcodegen 2.45.4, PowerShell 7.6.2
+Run at: 2026-06-08
+================================================================================
+
+HONESTY COVENANT (binding)
+  1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+  5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+This log reports the build/test gate as BLOCKED (no Xcode runner present — only
+Command Line Tools). Every other gate that CAN run here was run and its raw
+result is recorded below. No gate result is reported as green that was not.
+
+--------------------------------------------------------------------------------
+ENVIRONMENT GATE PRECONDITION (per prompt: "If no Xcode runner is available, the
+gate -> STATUS=BLOCKED")
+--------------------------------------------------------------------------------
+$ xcodebuild -version
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+  directory '/Library/Developer/CommandLineTools' is a command line tools instance
+=> xcodebuild build / xcodebuild test CANNOT RUN -> BUILD_EXIT / TEST_EXIT BLOCKED.
+
+The macOS SDK IS present (/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk), so
+a partial `swiftc -typecheck` of the new sources against the real component library
++ design tokens was run as best-available evidence (see TYPECHECK below).
+
+--------------------------------------------------------------------------------
+FILES (all new; apps/apple/TeslaSync/Features/Admin/)
+--------------------------------------------------------------------------------
+  SlowQueriesPage.swift              page scaffold: header (title+subtitle), per-
+                                     state body, GlassPanel1 host, nav title
+  SlowQueriesPage.Views.swift        controls bar, populated table, empty state,
+                                     subsystem banner
+  SlowQueriesPage.Model.swift        @Observable SlowQueriesPageModel + Source seam
+                                     (P1/S8) + telemetry (P1/S11) + in-memory source
+  SlowQueriesPage.Adapter.swift      pure types (SlowQueryOrderBy/Row/Snapshot),
+                                     projection, fmtNumber port (web precision 2),
+                                     cacheHitRatio port
+  SlowQueriesPage.Localization.swift LocalizedStringKey constants + String(localized:)
+                                     accessors -> Localizable.xcstrings (ADR-014)
+  SlowQueriesPage.Navigation.swift   AdminObservabilityDestination + deep-link
+                                     resolver (/admin/slow-queries) + nav-destination
+  SlowQueriesPage.Previews.swift     #Preview: data / loading / empty / error /
+                                     subsystem-unavailable (DEBUG)
+  SlowQueriesPage.Tests.swift        XCTest: format, cacheRatio, projection, model
+                                     wiring, deep link, order-by tokens
+
+WIRING (navigation registration / build integration; apps/apple/**)
+  apps/apple/project.yml             + "TeslaSync/Features" source path on both app
+                                     targets (TeslaSync iOS, TeslaSync-macOS) so the
+                                     page compiles into the shared module (no drift)
+  apps/apple/.swiftlint.yml          + "TeslaSync/Features" to included
+  apps/apple/Localization/Localizable.xcstrings
+                                     + 21 page keys + 2 generic component keys
+                                     (error.title, action.retry — referenced by the
+                                     shared error/retry components, were absent)
+
+--------------------------------------------------------------------------------
+GATE: PLACEHOLDER SCAN (ADR-011)
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Admin -Language swift
+--------------------------------------------------------------------------------
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+GATE: SWIFTFORMAT --lint
+$ swiftformat --lint TeslaSync/Features   (from apps/apple, repo .swiftformat)
+--------------------------------------------------------------------------------
+  0/8 files require formatting.
+  FORMAT_EXIT=0
+
+--------------------------------------------------------------------------------
+GATE: SWIFTLINT --strict  (exact prompt invocation, from repo root)
+$ swiftlint --strict apps/apple/TeslaSync/Features/Admin
+--------------------------------------------------------------------------------
+  Done linting! Found 0 violations, 0 serious in 8 files.
+  LINT_EXIT=0
+
+--------------------------------------------------------------------------------
+GATE: XCODEGEN (project spec validity with the new source path)
+$ xcodegen generate   (from apps/apple)
+--------------------------------------------------------------------------------
+  Created project at .../apps/apple/TeslaSync.xcodeproj
+  GEN_EXIT=0
+  SlowQueriesPage referenced 48x in generated project.pbxproj (both app targets).
+  (generated .xcodeproj is git-ignored; removed after validation)
+
+--------------------------------------------------------------------------------
+TYPECHECK (best-available compile evidence; xcodebuild unavailable)
+$ swiftc -typecheck -swift-version 6 -sdk <MacOSX.sdk> -target arm64-apple-macos15.0 ...
+--------------------------------------------------------------------------------
+  (a) Adapter alone (Foundation-only):
+        SlowQueriesPage.Adapter.swift            -> 0 errors (EXIT=0)
+  (b) The 6 non-test page sources + the real component library they use
+      (Components/UI, Components/Feedback, Components/Motion, Design, Tokens.swift):
+        TOTAL_ERRORS=2  ADMIN_ERRORS=0
+        -> the only 2 errors are in Sources/Components/Feedback/FeedbackOverlays.swift
+           (an unused-by-this-page file that references Shared-backed types excluded
+           from this partial compile). ZERO errors in any Features/Admin source.
+  NOTE: a full module typecheck requires Shared.xcframework (KMP) + Xcode, which is
+  the BLOCKED dependency. SlowQueriesPage.Tests.swift needs XCTest + @testable import
+  TeslaSync and so is exercised only by the (BLOCKED) xcodebuild test gate; it was
+  parsed clean by swiftlint/swiftformat.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=22
+Each item: <kind> — <name> :: <file> :: <symbol/evidence>
+--------------------------------------------------------------------------------
+[01] panel  — GlassPanel1
+       SlowQueriesPage.swift :: readyState(_:) -> TSGlassPanel { controls; Divider;
+       panelContent } (web `GlassPanel` host)
+[02] state  — loading
+       SlowQueriesPage.swift :: body(for:) case .loading -> loadingState (ProgressView)
+       Adapter :: SlowQueriesResolved.Phase.loading ; SlowQueriesProjection.resolve
+[03] state  — empty
+       SlowQueriesPage.Views.swift :: SlowQueriesEmptyView (TSEmptyState)
+       Adapter :: SlowQueriesResolved.showsEmptyState
+[04] state  — error
+       SlowQueriesPage.swift :: body(for:) case .error -> errorState(_:) (verbatim
+       message + TSButton "action.retry" -> model.refresh()) ; Phase.error
+[05] state  — success
+       SlowQueriesPage.Views.swift :: SlowQueriesTableContent (TSDataTable rows)
+[06] string — admin.slowQueries.colCache
+       Localization :: SlowQueriesStrings.colCache :: Views columns id "cache"
+[07] string — admin.slowQueries.colCalls
+       Localization :: SlowQueriesStrings.colCalls :: Views columns id "calls"
+[08] string — admin.slowQueries.colFingerprint
+       Localization :: SlowQueriesStrings.colFingerprint :: Views columns id "fingerprint"
+[09] string — admin.slowQueries.colMax
+       Localization :: SlowQueriesStrings.colMax :: Views columns id "max"
+[10] string — admin.slowQueries.colMean
+       Localization :: SlowQueriesStrings.colMean :: Views columns id "mean"
+[11] string — admin.slowQueries.colRows
+       Localization :: SlowQueriesStrings.colRows :: Views columns id "rows"
+[12] string — admin.slowQueries.colTotal
+       Localization :: SlowQueriesStrings.colTotal :: Views columns id "total"
+[13] string — admin.slowQueries.emptyMessage
+       Localization :: SlowQueriesStrings.emptyMessage :: SlowQueriesEmptyView
+[14] string — admin.slowQueries.emptyTable
+       Localization :: SlowQueriesStrings.emptyTable :: SlowQueriesTableContent.emptyTableMessage
+[15] string — admin.slowQueries.emptyTitle
+       Localization :: SlowQueriesStrings.emptyTitle :: SlowQueriesEmptyView
+[16] string — admin.slowQueries.limit
+       Localization :: SlowQueriesStrings.limit :: SlowQueriesControls.limitControl
+[17] string — admin.slowQueries.notConfigured
+       Localization :: SlowQueriesStrings.notConfigured :: SlowQueriesSubsystemBanner
+[18] string — admin.slowQueries.orderBy
+       Localization :: SlowQueriesStrings.orderBy :: SlowQueriesControls.orderControl
+[19] string — admin.slowQueries.pageTitle
+       Localization :: SlowQueriesStrings.pageTitle :: SlowQueriesPage.header + navigationTitle
+[20] string — admin.slowQueries.subtitle
+       Localization :: SlowQueriesStrings.subtitle :: SlowQueriesPage.header
+[21] string — admin.slowQueries.tableTitle
+       Localization :: SlowQueriesStrings.tableTitle :: SlowQueriesControls (TSPanelTitle)
+[22] string — admin.subsystem.unavailableTitle
+       Localization :: SlowQueriesStrings.subsystemUnavailableTitle :: SlowQueriesSubsystemBanner
+--------------------------------------------------------------------------------
+PARITY_COVERED=22
+PARITY_REQUIRED=22
+(PARITY_COVERED == PARITY_REQUIRED)
+
+Additional parity beyond the required 22 (web fidelity, not counted):
+  - order-by option labels admin.slowQueries.{orderMean,orderTotal,orderCalls,orderMax}
+    (web ORDER_BY_OPTIONS) :: SlowQueryOrderBy.labelKey :: SlowQueriesControls
+  - subsystem-unavailable warning banner above the populated shell (web 503 branch)
+  - adaptive table->cards on compact width (TSDataTable), ViewThatFits controls
+  - a11y labels/traits, Dynamic Type via Font.TS, light/dark via Color.TS tokens
+  - /admin/slow-queries deep-link resolver + NavigationDestination registration
+
+================================================================================
+GATE SUMMARY
+  PLACEHOLDER_EXIT = 0   (pass)
+  FORMAT_EXIT      = 0   (pass)
+  LINT_EXIT        = 0   (pass)
+  GEN_EXIT         = 0   (pass)
+  TYPECHECK        = pass for all Features/Admin sources (partial; full build needs Xcode)
+  BUILD_EXIT       = BLOCKED (no Xcode runner — Command Line Tools only)
+  TEST_EXIT        = BLOCKED (no Xcode runner — Command Line Tools only)
+  PARITY_COVERED   = 22 / 22
+
+BLOCKED_REASON: xcodebuild requires full Xcode (ADR-010/012 macOS + Xcode runner);
+this host has Command Line Tools only, so `xcodebuild build` and `xcodebuild test`
+(and therefore the Shared.xcframework staging pre-action) cannot execute. The
+implementation is complete, lint/format/placeholder-clean, and typecheck-verified
+against the real component library; only the environment-dependent build+test gate
+is unmet. Per the prompt contract this is BLOCKED, not DONE.
+
+EXIT=1
+STATUS=BLOCKED
+================================================================================

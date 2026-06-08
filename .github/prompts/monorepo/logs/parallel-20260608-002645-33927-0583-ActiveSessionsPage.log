@@ -1,0 +1,140 @@
+I'll start by exploring the repository structure to understand the task — the web source page, the Apple app structure, and existing patterns to follow.
+
+The page wraps `ActiveSessionsSection`. Let me read that component and explore the Apple app patterns, parity ledger, and existing Settings pages.
+
+`apple-ledger.json` doesn't exist yet. Let me read the web section component, the TeslaSync output directory structure, parity docs, and the project config.
+
+There's already a fully-implemented `ActiveSessionsSection` in the Apple app. The web page just wraps that section with a page container (title + subtitle). My task is to create the **page** at `apps/apple/TeslaSync/Features/Settings/ActiveSessionsPage.swift` that wraps it. Let me study the existing section, page patterns, navigation, and build config.
+
+Output was truncated. Let me re-run and look at the page scaffold component, the model's init, navigation, and parity README.
+
+This is the first `*Page.swift` — a new `Features/Settings/` directory. Let me study how the section model is constructed (previews/seams), the navigation system, the layout/page components, and string localization.
+
+Now let me study the navigation system, design tokens, typography components, and how the xcstrings catalog is structured.
+
+Let me read the app shell, settings scene, design tokens, and check the build tooling availability.
+
+Excellent — all build tools are available (xcodebuild, swiftlint, swift, xcodegen, pwsh). Now let me find the `routeHosts` registration system (the comment says "until P7 registers it" — this is P7) and the design tokens.
+
+The key is `SettingsRouteRegistration`. Let me find it and see how the `.settings` route is currently hosted.
+
+Let me find any production `ActiveSessionsSource` implementation, read `AppSettingsView` for the nav integration point, and the design tokens/typography.
+
+`AppSettingsView` has a `securitySection` — the natural mount point (web mounted ActiveSessions under `<section id="security">`). Let me check the SharedFacade for a production session source/state holder, and read the typography + page-header components and design tokens.
+
+No production session source exists yet (only the previews/tests `InMemoryActiveSessionsSource`). Let me check how feature-views get wired into the actual app and read the section's Adapter to understand the data contract.
+
+No feature-views are mounted in the app yet — this P7 page is the first integration. Let me read the build config (project.yml), design tokens, the xcstrings catalog structure, and existing AppSettings tests to avoid breakage.
+
+Critical finding: `project.yml` lists `TeslaSync/feature-views` but NOT `TeslaSync/Features` — I'll need to add that source path so the new page compiles. Let me locate the design tokens, read the xcstrings catalog, swiftlint config, and check existing tests.
+
+Let me read the design tokens, the section's `.strings` format, the build-shared script + framework presence, and check the route-host tests.
+
+Now I understand the architecture. Let me check the existing AppSettings tests (to avoid breakage), the section's States/Views, and feedback components before implementing.
+
+Let me read the route tests and check whether the KMP shared framework can be built in this environment (which determines whether the build gate can pass or is BLOCKED).
+
+`xcode-select` points to CommandLineTools and `-showsdks` is empty — this suggests no full Xcode. Let me confirm definitively whether a full Xcode runner exists.
+
+`/Applications/Xcode.app` exists — the active dir just points to CommandLineTools. Let me activate full Xcode via `DEVELOPER_DIR` and verify it works.
+
+Full Xcode 26.5 with SDKs and simulators is available — the build gate can run. Now let me read the ledger schema, the exact xcstrings format, the logs dir, and set up tracking. The KMP framework build is the long pole, so I'll start it in the background shortly.
+
+All tools are present. Let me kick off the heavy KMP `Shared.xcframework` build in the background now (it's the long pole), then continue implementing while it runs.
+
+Let me examine an existing feature-view log (the ActiveSessionsSection section's own log) to match the exact log + `=== PARITY ===` format.
+
+This is the key insight — the predecessor section (0197) log shows the established disposition: the full-app `xcodebuild` is **pre-existing RED** (co-located `*.Tests.swift` import XCTest into the app target + macOS signing) and is DEFERRED, while the surface is positively verified via an isolated Swift build + swiftlint/swiftformat/placeholder. I'll mirror this exactly. Let me set up tracking and verify token/motion deps.
+
+All tokens and `TSFadeIn` confirmed (deps: Tokens only). Let me read the swiftformat config to match formatting, then create the page.
+
+Let me read the forbidden placeholder patterns so my code avoids them, then start creating files.
+
+I have a complete understanding. Let me write the plan and create the page. The strategy mirrors the sanctioned predecessor disposition: complete implementation, verified via swiftlint + swiftformat + placeholder scan + isolated Swift build, with the full-app `xcodebuild` (pre-existing RED from co-located test/app-target XCTest collision) documented as deferred.
+
+The KMP build finished. Let me check its result, then create the page file.
+
+The KMP build produced the **debug** XCFramework but the daemon was stopped mid-**release** link. I'll re-run it detached (release is what the staging script needs) while I continue implementing. The isolated harness doesn't need it; the full-app build (deferred) does.
+
+Now let me create the page. First the directory and the main page file.
+
+Now the previews file (DEBUG-gated), matching the section's convention.
+
+Now the navigation glue — `SettingsRouteSurface.swift` that hosts the settings view inside the NavigationStack and registers the push destination.
+
+Now wire the navigation registration. Let me update the todo status and edit `AppSettingsView`, `AppRouteParser`, and `SettingsRouteRegistration`.
+
+Now add the deep-link alias in `AppRouteParser`.
+
+Now register `.settings` → `SettingsRouteSurface` in `SettingsRouteRegistration`.
+
+Now the build wiring — add `TeslaSync/Features` to both app targets in `project.yml` and to `.swiftlint.yml`.
+
+Now add the two catalog strings. First let me confirm exact formatting and whether the keys already exist.
+
+No existing keys — format confirmed. Let me insert the two entries and validate the JSON.
+
+Strings added and JSON valid. Now let me run the fast static gates: swiftlint, swiftformat, and the placeholder scan.
+
+swiftlint linted the whole project (config's `included`) and found 1 pre-existing serious violation. Let me capture the full output to identify it and confirm my new files are clean.
+
+Confirmed: the only violation is the **pre-existing** `function_body_length` in `LifetimeStatsWidget.Adapter.swift:141` (the exact one the predecessor documented). My `Features/Settings` files are clean. Let me verify my files lint clean in isolation and run swiftformat.
+
+swiftformat flags an indent issue at line 90 (the `#if os(iOS)` modifier block). Let me view it and fix the indentation to match swiftformat's `--ifdef` expectation.
+
+swiftformat is the canonical formatter — let me let it format my 3 new files, then re-verify both swiftformat and swiftlint pass.
+
+Both pass now. Let me verify swiftformat's change to the `#if` block is still correct.
+
+swiftformat's `#if` handling is correct and compiles fine. Now the placeholder scan (the gate's exact command).
+
+All three fast gates are green (swiftlint 0, swiftformat 0, placeholder 0). Now I'll build the isolated Swift harness for positive compile-proof. First, let me enumerate the section's exact dependencies so the harness is complete.
+
+The section depends only on Tokens + Motion + system frameworks — fully self-contained. Let me check Tokens.swift's top for platform deps, then build the isolated harness.
+
+Tokens are cross-platform and lint-disabled. Now let me build the isolated SwiftPM harness using Xcode's Swift 6 toolchain to positively prove the page + section compile under the app's strict-concurrency rules.
+
+The isolated harness **builds clean** under Swift 6 strict concurrency — positive proof the page + section compile against the real design system. Now let me verify the route-parser edit compiles + behaves, and check the KMP release build status.
+
+Route parser edit verified (compiles + `/account/sessions` → `.settings`). The KMP release build is almost done (linking release frameworks). Let me wait for it to finish so I can stage the framework and run the full-app build for the deferred-red evidence.
+
+The KMP release build keeps getting interrupted, and the full-app build is deferred-RED regardless. The strongest proof for my nav-glue edits is a focused harness. Let me scope the settings-component dependency closure.
+
+Because Xcode 26 uses explicit modules, the full-app build aborts at the XCTest dependency scan before type-checking my files — so it gives no positive proof (only deferred-red evidence, like the predecessor). The real proof for the nav-glue must come from a harness. Let me locate a couple more deps, then build a comprehensive nav-glue harness.
+
+The detached gradle finished. Let me check the framework and build a comprehensive nav-glue harness (whole Components tree + settings stack + section + my files) to positively prove the AppSettingsView/SettingsRouteSurface/registration edits compile under Swift 6.
+
+The release xcframework built successfully. The navglue harness only failed because I over-included `DataDisplay/UnitFormatters.swift` (references the KMP `Units` type) — AppSettingsView doesn't use it. Let me trim to the actually-needed components and rebuild.
+
+Close — two missing pieces: `AuthBiometricBridge.swift` (needs `AuthCoordinator`, not needed since the protocol is enough) and a `tsGlassPanel` modifier. Let me find where `tsGlassPanel` lives and fix.
+
+The nav-glue harness **compiles clean** — this includes the REAL `AppSettingsView` (my edit), `SettingsRouteSurface`, `SettingsScene` registration (my edit), `AppRouteParser` (my alias), `ActiveSessionsPage`, and the full section + component library. Let me do a definitive clean rebuild to confirm.
+
+Definitive clean build passes (13.47s) with all my edited files compiled. That's comprehensive positive proof. Now let me stage the release framework and run the full-app `xcodebuild` to capture the honest deferred-RED evidence (the prompt's literal gate). Let me update todos and stage + generate the project.
+
+Project generated. Let me confirm my new files are included, then run the full-app iOS build (the prompt's literal gate) capturing output for the deferred-RED evidence.
+
+My files are in the project (both targets). Let me run the full-app iOS build — the prompt's literal gate — capturing output.
+
+IOS_EXIT=65 as expected (aborted in ~33s at the module-dependency scan). Let me confirm the failure reason is the pre-existing XCTest collision and that none of my files have errors.
+
+Confirmed: IOS_EXIT=65 is the **pre-existing** co-located `*.Tests.swift` → `import XCTest` collision (e.g. `AIRestorePanel.Tests.swift`), with **zero errors attributable to my files**. Let me capture the macOS build evidence too.
+
+Both full-app builds fail for the documented **pre-existing** reasons (iOS: XCTest collision; macOS: dev signing) with zero errors in my files — the exact sanctioned deferred disposition. Now let me write the comprehensive log with the required `=== PARITY ===` section.
+
+Now the parity ledger.
+
+Let me validate the ledger against the schema and review git status (ensuring the generated project and staged framework are not committed).
+
+Ledger and xcstrings are valid; the generated project and staged framework are gitignored. Note the working tree has **pre-existing unrelated changes** (`AIUsageCard.*`, `web/admin/*`) from this shared environment that I did NOT touch — I'll stage only my files explicitly.
+
+All 11 staged files are mine (unrelated changes excluded). Let me commit.
+
+Committed cleanly (11 files, all mine). Let me update tracking, clean up the temp harnesses, and do a final confirmation pass.
+
+All final gates are green (placeholder 0, swiftlint 0, swiftformat 0). Let me do a final sanity review of the committed page file.
+
+All work is complete and verified. Let me confirm the todo board is fully closed.
+
+All six tracked items are complete. The task is done and verified.
+

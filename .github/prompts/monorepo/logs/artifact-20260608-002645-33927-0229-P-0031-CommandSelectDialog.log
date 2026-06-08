@@ -1,0 +1,176 @@
+=== P4 Modal / dialog 0031 CommandSelectDialog (Apple) ===
+
+Surface : apps/apple/TeslaSync/modals-dialogs/CommandSelectDialog.*
+Web spec: web/src/features/system/components/CommandSelectDialog.tsx
+Tier    : Modal / dialog (overlay surface — focus trap + dismiss semantics)
+Depends : P4 core (theme/nav/live/cache/state-holders) · P1/S8 state holders · P1/S9 tokens · P1/S10 i18n · P1/S11 diagnostics
+ADR refs: ADR-002 (shared SwiftUI source) · ADR-005 · ADR-009
+Runner  : Darwin · CommandLineTools only (NO Xcode.app) · swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+Tools   : swiftc + swiftformat + swiftlint + pwsh + xcodegen present; xcodebuild + iOS SDK + simctl ABSENT (see CAPABILITY)
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (allowed scope: CommandSelectDialog.* + this log)
+--------------------------------------------------------------------------------
+  CommandSelectDialog.swift          — SwiftUI overlay surface. Phase switch (loading/empty/
+                                       error/data) inside a focus-trapped scaffold (icon+title
+                                       header, option list, Cancel) + the View.commandSelectDialog
+                                       sheet modifier (web <Modal open onClose>): detents/drag on
+                                       iOS, glass background, Escape→Cancel via .cancelAction,
+                                       swipe/tap dismiss, .isModal a11y. Full a11y + i18n.
+  CommandSelectDialog.Adapter.swift  — pure, dependency-free model: CommandSelectVariant(+accent),
+                                       CommandSelectOption (web SelectOption), CommandSelectDef (web
+                                       CommandDef subset + flattened selectConfig), CommandSelect-
+                                       Accessibility (VoiceOver summaries). No SwiftUI/store/bundle.
+  CommandSelectDialog.Model.swift    — P1/S8 state-holder seam (CommandSelectDialogSource),
+                                       @Observable CommandSelectDialogModel, pure CommandSelect-
+                                       DialogProjection (Input→Resolved), CommandSelectConnection
+                                       (live/stale/offline), P1/S11 telemetry seam (view.opened),
+                                       InMemory source, CommandSelectStrings (P1/S10 facade).
+  CommandSelectDialog.Views.swift    — presentational subviews: header, freshness chip, offline
+                                       note, option row(+ButtonStyle, reduce-motion aware),
+                                       loading/empty/error bodies. Tokens (P1/S9) + facade only.
+  CommandSelectDialog.Previews.swift — #if DEBUG #Preview for every state (data / web-loading /
+                                       empty / loading / error / stale / offline).
+  CommandSelectDialog.Tests.swift    — XCTest: adapter + projection(all states) + model wiring
+                                       (telemetry-once, select/cancel gating, stale auto-refresh)
+                                       + a11y. Runs in TeslaSync(/-macOS) test targets at integration.
+  CommandSelectDialog.strings        — per-surface i18n table: web key (common.cancel) + native
+                                       chrome + the previews' command-catalog sample (web fallbacks).
+
+--------------------------------------------------------------------------------
+PARITY (web source → native, ADR-006 semantic not literal)
+--------------------------------------------------------------------------------
+  web <Modal open onClose size=sm>      → .sheet(isPresented:) + commandSelectSheetChrome()
+  web header icon box + <h2> title      → CommandSelectHeader (SF Symbol box + Font.TS.panel title)
+  web sc.options.map(ControlButton)     → CommandSelectOptionRow list (label + optional detail)
+  web Button variant=ghost size=sm      → TSButton(.ghost,.small) (Cancel) ; option = token surface
+  web hover:border-neon-cyan/30         → variant-accent stroke, faint at rest → brighter on press
+  web disabled={loading}/opacity-50     → isSubmitting → inert + dimmed options + header spinner
+  web t('common.cancel','Cancel')       → CommandSelectStrings.string('common.cancel','Cancel')
+  web onKeyDown Escape → onClose         → Cancel .keyboardShortcut(.cancelAction)
+  web force-unwrap selectConfig!         → hasOptions guard → friendly empty state (never a crash)
+  P4 overlay axis (not in web)          → CommandSelectConnection live/stale/offline header chip +
+                                          one-shot stale auto-refresh + offline-disables-actuation
+
+--------------------------------------------------------------------------------
+GATE RESULTS — runnable steps (real commands, real exit codes on this host)
+--------------------------------------------------------------------------------
+
+[HOST] swiftformat --lint apps/apple/TeslaSync/modals-dialogs
+       0/6 files require formatting.
+       FORMAT_EXIT=0
+
+[HOST] swiftlint --strict (repo config; included= Sources + feature-views + dashboard-widgets + Tests + widgets)
+       repo summary: Done linting! Found 1 violation, 1 serious in 1909 files.
+       violations in CommandSelectDialog.* (mine) = 0
+       (the lone repo violation is pre-existing: dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+        function_body_length — OUTSIDE this prompt's allowed files. Zero originate in this surface.)
+       LINT_EXIT(this surface)=0
+
+[HOST] pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/modals-dialogs/CommandSelectDialog -Language swift
+       PLACEHOLDER_ALLOWED=0
+       PLACEHOLDER_COUNT=0
+       EXIT=0
+       (also whole-dir rescan ↓, + manual forbidden-word scan of shipped files → NONE)
+       dir PLACEHOLDER_COUNT=0
+       PLACEHOLDER_EXIT=0
+
+[HOST] swiftc -parse -sdk <MacOSX.sdk>  (syntax, all 6 Swift files incl. SwiftUI views + XCTest)
+       PARSE_VIEWS_EXIT=0
+       PARSE_TESTS_EXIT=0
+
+[HOST] swiftc -typecheck -swift-version 6 (strict concurrency complete) — View+Model+Adapter+Previews
+       vs the REAL design system: design/generated/apple/Tokens.swift + 40 files of Sources/Components
+       + Sources/Design (UnitFormatters.swift excluded: it depends on the KMP Shared units layer,
+       same file the predecessor logs document excluding), MacOSX SDK.
+       total errors = 0 ; errors in CommandSelectDialog.* = 0
+       TYPECHECK_EXIT=0   (0 ⇒ surface type-checks green against the real tokens + TSButton + components)
+
+[HOST] swiftc -swift-version 6 + EXECUTE adapter/model harness (Adapter + Model + driver)
+       === CommandSelectDialog host harness ===  CHECKS=44 FAILURES=0  HARNESS_OK
+       HARNESS_EXIT=0
+       Verified by EXECUTION: variant→accent, option/def guards, VoiceOver summaries, projection
+       across loading/empty(nil+no-options)/error/data + interactivity gate (submitting+offline),
+       telemetry-once, select/cancel delegation + gating, stale one-shot auto-refresh, stop/re-arm.
+
+--------------------------------------------------------------------------------
+CAPABILITY — xcodebuild scheme build/test (BLOCKED on this runner; API evidence)
+--------------------------------------------------------------------------------
+This prompt's capability clause: 'requires SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 /
+macOS 15 HIG. If unavailable on the runner → STATUS=BLOCKED with API evidence.' The two gate steps
+below require Xcode.app (iOS Simulator SDK + simctl + the TeslaSync .xcodeproj scheme). This runner
+has Command Line Tools ONLY. Real probes:
+
+  === capture real xcodebuild / sdk evidence ===
+  $ xcodebuild -version
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+  RC=1
+  
+  $ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+  IOS_EXIT=1
+  
+  $ xcodebuild -scheme TeslaSync-macOS build test
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+  MAC_EXIT=1
+  
+  $ xcrun --sdk iphonesimulator --show-sdk-path
+  xcrun: error: SDK "iphonesimulator" cannot be located
+  xcrun: error: SDK "iphonesimulator" cannot be located
+  xcrun: error: unable to lookup item 'Path' in SDK 'iphonesimulator'
+  RC=1
+  
+  $ xcrun simctl list devices
+  xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+  RC=0
+  
+  $ xcrun --show-sdk-path (macOS)
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+  RC=0
+
+  IOS_EXIT=1   MAC_EXIT=1   (xcodebuild unavailable — NOT claimed green, NOT a defect in this surface)
+
+  Two independent reasons the scheme gate cannot run here, neither a code defect:
+   (1) PLATFORM: no Xcode.app ⇒ xcodebuild errors out; iphoneos/iphonesimulator SDKs cannot be
+       located; simctl is absent. iPhone 16 simulator destination is therefore unreachable.
+   (2) INTEGRATION SCOPE (covenant #7 — no predecessor/integration bypass): TeslaSync/modals-dialogs
+       is NOT yet a source path in apps/apple/project.yml (sources = Sources / dashboard-widgets /
+       feature-views / Localization / DesignTokens). Registering modals-dialogs (and folding the
+       per-surface .strings into the shared Localizable.xcstrings) is the integration prompt's job
+       and is OUTSIDE this prompt's allowed files (CommandSelectDialog.* + this log). The scheme
+       pre-action also stages the KMP Shared.xcframework (Gradle/Kotlin-Native).
+
+  COMPENSATING COVERAGE: the surface is verified to the maximum extent the runner allows — green
+  swiftformat, zero swiftlint violations in-surface, zero placeholders, full syntax parse of all 6
+  files, a Swift-6 strict-concurrency type-check of the View+Model+Adapter+Previews against the REAL
+  design system (0 errors), and an EXECUTED 44-assertion logic harness (0 failures). Only the
+  simulator-hosted UI/snapshot execution is unverified, and solely for lack of Xcode on this host.
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+  [x] Every web state reproduced + P4 overlay states (loading/empty/error/data/stale/offline).
+  [x] Hooks bind via the shared P1/S8 state-holder seam (CommandSelectDialogSource); no HTTP in view.
+  [x] Every i18n key from source (common.cancel + def/option label keys) resolves via P1/S10 facade.
+  [x] Accessibility labels on every interactive element (option rows, Cancel) + .isModal container.
+  [x] Tests: adapter unit + per-state projection + model wiring + a11y (XCTest; executed via harness).
+  [x] No TODO / stub / mock / placeholder / Lorem in shipped code (placeholder gate = 0).
+  [~] xcodebuild scheme build/test → BLOCKED (no Xcode on runner) — platform-capability evidence above.
+
+--------------------------------------------------------------------------------
+GATE SUMMARY
+--------------------------------------------------------------------------------
+FORMAT_EXIT=0
+LINT_EXIT=0            (in-surface; repo's single violation is a pre-existing dashboard-widgets file)
+PLACEHOLDER_EXIT=0
+PARSE_EXIT=0
+TYPECHECK_EXIT=0       (surface vs real design system, Swift 6 strict concurrency)
+HARNESS_EXIT=0         (CHECKS=44 FAILURES=0)
+IOS_EXIT=1             (xcodebuild unavailable — no Xcode.app on runner)
+MAC_EXIT=1             (xcodebuild unavailable — no Xcode.app on runner)
+
+EXIT=1
+STATUS=BLOCKED
+# Surface is production-complete and green on every runnable check. BLOCKED solely on the
+# xcodebuild iOS/macOS scheme gate: Xcode.app + iOS Simulator SDK are absent on this runner
+# (CommandLineTools only), and project.yml registration is integration scope (covenant #7).

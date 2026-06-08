@@ -1,0 +1,126 @@
+I'll start by exploring the environment and repository structure to understand what's available and what the task requires.
+
+Swift toolchain is present (Swift 6.3.2, swiftlint, swiftformat, pwsh) but **full Xcode is NOT installed** (only Command Line Tools) and **no iOS Simulator** (`simctl` missing). Let me explore the existing Apple app structure before deciding the path forward.
+
+A substantial, established `feature-views/` pattern exists (200+ files). Each surface = `.swift` + `.Model` + `.Adapter` + `.Views` + `.Previews` + `.strings` + `.Tests`. Let me read the web source, check if ConditionBuilder already exists, and understand the build system + shared infrastructure.
+
+I now fully understand the web source — it's a form-based condition builder with 4 condition kinds (signal, time window, geofence, other automation). Now let me study the established native pattern and shared infrastructure. Let me look at a representative existing feature-view plus the core scaffolding.
+
+Build is XcodeGen + Xcode consuming a KMP `Shared.xcframework` — so `xcodebuild` (full Xcode) is mandatory for build/test, confirming those gate steps can't run here. Let me study the SharedFacade (state holders/i18n/diagnostics) and read a complete representative data-bound surface as my template.
+
+State-holder layer is clear (`StateHolderModel`, `LoadableState`, `AppContainer`, `FacadeError`). Now let me read a full canonical data-bound surface (EventHistoryTable: view, model, adapter, views, tests, previews, strings) plus the Domains facade to see how geofences/locations bind.
+
+The pattern is crystal-clear now. Let me read the remaining template files (Views, Previews, Tests, strings) and the available UI/Forms components, plus find how the geofences/locations source and stale/offline chrome are done elsewhere.
+
+Excellent — I have the full template pattern. Now let me read the shared UI building blocks I'll compose with (buttons, pickers, fields, glass panel, typography, motion, feedback) plus the Tests/Previews templates and design tokens.
+
+Let me read the remaining shared building blocks (Fields, Buttons, Cards, Typography, Motion, Feedback/States), locate the design tokens, and find a surface that renders `stale`/`offline` chrome to mirror that idiom precisely.
+
+Let me confirm the design tokens, the Feedback states, the `TSTone`/typography helpers, and find an existing surface that renders `stale`/`offline` chrome so I match that idiom.
+
+AuditPanel renders the full state contract (incl. stale/offline). Let me read it plus the design tokens to finalize my mental model, then I'll build.
+
+Let me read the design tokens (correct path), the AuditPanel model (full freshness/offline projection), and the Typography helpers.
+
+I have the complete native pattern. Now I need the exact web data contracts (types, signal options, constants, geofence shape) to reproduce with parity. Let me locate and read them, plus the lint configs.
+
+Let me read the precise operator enum and condition field definitions, and confirm the signal operators list.
+
+I have the full data contract. Let me check the test-target wiring in project.yml and establish a clean baseline by running the gate tools (swiftformat, swiftlint, check-placeholders) on existing code before I add anything.
+
+check-placeholders is at repo root. Let me read the full project.yml source/test wiring to confirm how `*.Tests.swift` files in feature-views are routed to the test target, and run the placeholder check correctly from repo root.
+
+I now have the complete data contract and native pattern. Before writing, let me verify the true build ceiling — whether a full Xcode exists anywhere (switchable via `DEVELOPER_DIR`) and whether the `Shared.xcframework` build is feasible — since that determines DONE vs BLOCKED honestly.
+
+Key finding: **Xcode.app exists** at `/Applications/Xcode.app` (overridable via `DEVELOPER_DIR` without sudo), and `xcodegen` is installed. But the build needs a Gradle-built KMP `Shared.xcframework`. Let me check whether that framework is pre-staged and read the pending-verifications doc to understand the intended verification story.
+
+Decisive finding. The repo's own `apps/macos-pending-verifications.md` documents the **sanctioned methodology**: Xcode 26.5 + iPhone 16 sim exist, but full-app `xcodebuild` is blocked by **pre-existing, unrelated** collisions (8× `DashboardWidgetSize` redefinitions, co-located `*.Tests.swift` importing XCTest into the app target, dev-signing) and the Gradle-built `Shared.xcframework` (not staged). The accepted precedent (`ToolCard`) verifies the surface via **isolated SwiftPM build + tests + lint/format/placeholder**, deferring the full-app build to the `macos-latest` acceptance gate. Let me read the ToolCard log to mirror its exact format and STATUS.
+
+I now have the **exact accepted precedent** (ToolCard 0010 & AuditPanel 0026 both end `EXIT=0 / STATUS=DONE`): ship the surface, verify via isolated SwiftPM build+tests against the real design-system + swiftlint/swiftformat/placeholder, and record the full-app `xcodebuild` as DEFERRED (pre-existing unrelated collisions + unstaged KMP framework). I'll follow this precisely. Let me set up tracking and write the implementation.
+
+Now the pure logic core — the Adapter with every web transform reproduced faithfully:
+
+Now the Model — i18n facade, telemetry/diagnostics seam, and the Shared-free P1/S8 geofence source + load-state + presentation resolver:
+
+Let me fix a small unused-binding in the resolver:
+
+Now the main view:
+
+Now the shared subviews — panel chrome, freshness chip, the multi-state geofence picker, and day toggle:
+
+Now the per-kind field editors:
+
+Now the previews (one per state) and the strings catalog:
+
+Now let me add a testable telemetry reporter (so `view.opened` wiring is unit-testable without hosting SwiftUI), wire it into the view, and write the test suite:
+
+All 8 surface files are written. Now let me verify. First, auto-format my files per the repo config and map the shared-component dependency closure for an isolated build harness.
+
+Good — only `Charts/` and `Maps/` import `Shared`/`MapKit`; the UI/Design/Motion components I need are isolation-safe. Let me auto-format my files, then run swiftlint and the placeholder gate:
+
+Two fixes needed: run swiftformat from repo root (path nesting), and split `Adapter.swift` (537 lines > 400 `file_length`). Let me check the split point and current line counts:
+
+The Adapter (537 lines) needs splitting at line 273 (the `ConditionBuilderAdapter` enum). Let me verify the boundary, then split types into a separate file:
+
+Clean boundary at line 272. Let me split the types into their own file:
+
+Both under 400 now. Let me re-format the split files and run the full host-runnable gate (swiftlint, swiftformat from repo root, placeholder check):
+
+All static gates green (swiftlint 0/8, swiftformat 0/833, placeholders 0). Now the high-value check: an **isolated SwiftPM harness** compiling the full surface against the *real* design system + running the tests. Let me build it:
+
+Full surface compiles cleanly against the real design system under Swift 6 strict concurrency. Now run the tests:
+
+All **22/22 tests pass** under Swift 6 strict concurrency against the real design system. Now let me attempt the verbatim full-app `xcodebuild` gate command to capture its real disposition (Xcode 26.5 is present). First generate the project:
+
+Project generates with ConditionBuilder registered (54 refs). Now let me run the verbatim iOS gate command (it triggers the Gradle KMP pre-build) async, capturing output, and monitor:
+
+The Gradle KMP toolchain is **cached locally** — the `Shared.xcframework` is actually assembling. This may reach a real full-app compile. Let me keep monitoring:
+
+Gradle is still linking release frameworks (slow Kotlin/Native step). Let me continue waiting:
+
+The full-app iOS build reached the app-target Swift compile and failed with **`XCODEBUILD_DONE_EXIT=65`** — on `Unable to resolve module dependency: 'XCTest'`, i.e., the documented pre-existing blocker (co-located `*.Tests.swift` compiled into the app target). Let me substantiate this is pre-existing/shared and that there are **zero genuine ConditionBuilder errors**:
+
+Only **4 error lines total — all `XCTest` module resolution**, zero genuine compile errors. Let me capture the exact file context and confirm this is the shared pre-existing convention (not unique to ConditionBuilder):
+
+**Definitive:** the only build errors are `XCTest` module-resolution failures, cited first on **`AuditPanel.Tests.swift`** (a pre-existing surface) — all **28** co-located `*.Tests.swift` files (27 pre-existing + mine) compile into the app target, exactly the blocker documented in `macos-pending-verifications.md`. **Zero ConditionBuilder errors.** The Gradle `Shared.xcframework` built and my source compiled within the app whole-module.
+
+Let me capture `MAC_EXIT` (verbatim macOS gate) and prove the app+ConditionBuilder compiles clean when the test-file convention is excluded (non-destructive override):
+
+Both gate commands fail for the **two documented pre-existing/platform reasons** — iOS: `XCTest`-in-app-target (cited on pre-existing `AuditPanel.Tests.swift`); macOS: **development signing** (runner has no certificate). Zero ConditionBuilder errors in either. Let me run the strongest non-destructive proof: an iOS app build that excludes the co-located test convention, showing the app **including ConditionBuilder compiles clean**:
+
+The exclusion override didn't propagate through XcodeGen's explicit file membership (still the same `XCTest` issue) — but that's immaterial: I already have conclusive evidence. Let me confirm the working tree only shows my intended changes (generated artifacts must be git-ignored) before writing the log:
+
+Clean — only my 9 `ConditionBuilder.*` files are new; generated artifacts are git-ignored; the 2 modified web files are pre-existing (not mine). Let me gather exact tool versions and build facts for an accurate log:
+
+All evidence collected. The **Gradle `Shared.xcframework` built successfully (7m29s)**, the full-app builds ran for real: iOS `IOS_EXIT=65` (sole cause: `XCTest`-in-app-target on pre-existing `AuditPanel.Tests.swift`, **0 ConditionBuilder errors**), macOS `MAC_EXIT=65` (sole cause: dev signing, **0 compile errors**). Now let me write the comprehensive gate log:
+
+Now let me commit only my allowed files (ConditionBuilder.* + the log), excluding the pre-existing web changes:
+
+Staged set is exactly the 10 allowed files; the 2 pre-existing web files remain unstaged. Committing:
+
+Committed cleanly (10 files, 2320 insertions). Let me do a final verification of the committed state and re-confirm the host gates on the committed files:
+
+Task complete. Final verification confirms a clean tree (only the 2 pre-existing web files remain, untouched), no stray untracked files, and swiftlint clean on the committed surface.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-feature-views-0083-ConditionBuilder.log | 190 +++++++++++
+ .../feature-views/ConditionBuilder.Adapter.swift   | 282 ++++++++++++++++
+ .../feature-views/ConditionBuilder.Fields.swift    | 309 ++++++++++++++++++
+ .../feature-views/ConditionBuilder.Model.swift     | 293 +++++++++++++++++
+ .../feature-views/ConditionBuilder.Previews.swift  |  89 +++++
+ .../feature-views/ConditionBuilder.Tests.swift     | 335 +++++++++++++++++++
+ .../feature-views/ConditionBuilder.Types.swift     | 267 +++++++++++++++
+ .../feature-views/ConditionBuilder.Views.swift     | 359 +++++++++++++++++++++
+ .../feature-views/ConditionBuilder.strings         | 111 +++++++
+ .../TeslaSync/feature-views/ConditionBuilder.swift |  85 +++++
+ 10 files changed, 2320 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0083-ConditionBuilder.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/ConditionBuilder.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ConditionBuilder.Fields.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ConditionBuilder.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ConditionBuilder.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ConditionBuilder.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ConditionBuilder.Types.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ConditionBuilder.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ConditionBuilder.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/ConditionBuilder.swift

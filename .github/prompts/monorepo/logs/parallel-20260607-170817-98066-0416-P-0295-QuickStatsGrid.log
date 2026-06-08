@@ -1,0 +1,24 @@
+I'll start by exploring the environment and understanding what exists for this task.
+
+Good — `apps/apple` exists with an established pattern (AIUsageCard sibling files). Key finding: full **Xcode is NOT installed** (only CommandLineTools), so `xcodebuild`/`simctl` can't run, but `swift`, `swiftlint`, `swiftformat`, and `pwsh` are available. Let me explore the established pattern and the web source.
+
+`apps/apple` is a full multi-platform Swift app using XcodeGen (`project.yml`). Let me study the established `feature-views` pattern (AIUsageCard sibling) and the shared facade dependencies I'll bind to.
+
+QuickStatsGrid doesn't exist yet. There's a large established pattern (1436 files). Let me study a representative sibling (`AcDcStatsPanel` — a stats panel, structurally close to QuickStatsGrid) and the shared facade I must bind to.
+
+Excellent — this is a sophisticated, well-established pattern. Let me study the remaining pattern files (Views/Previews/Tests/strings), the shared Units facade & design tokens, and the relevant web sources. I'll also test whether `swiftc` can compile SwiftUI on this runner.
+
+Key finding: `swiftc -typecheck` handles SwiftUI on this runner. Now let me verify whether full Xcode exists anywhere (xcode-select may just be mispointed), check for `xcodegen`, the placeholder-check script, and how prior sibling surfaces logged their gate status.
+
+**Critical finding: `/Applications/Xcode.app` exists** — `xcode-select` is just mispointed. With `DEVELOPER_DIR` I can likely run the real gate. Let me verify Xcode, simulators, and read a sibling log to learn the exact convention.
+
+**Decisive findings:**
+- **Xcode 26.5 is fully available** via `DEVELOPER_DIR`, with **iPhone 16 simulator booted** — NOT capability-blocked.
+- The sibling log reveals the **sanctioned convention**: ship the 7-file surface, verify GREEN via an isolated SwiftPM harness (real build+test against the actual design-system) + swiftlint + swiftformat + placeholder scan, and the full-app `xcodebuild` gate is the accepted DEFERRED step (pre-existing XCTest-in-app-target + macOS signing). `EXIT=0 / STATUS=DONE`.
+
+Let me record a plan, then study the web sources + native shared symbols I must bind to.
+
+Now let me read the remaining critical inputs: web number/color/type sources, and the native design tokens, cards, typography, units facade, and feedback components I'll compose with.
+
+Let me read the API types, the unit-conversion lib (to get SI input semantics), the native Units facade, typography atoms, and the web color token map.
+

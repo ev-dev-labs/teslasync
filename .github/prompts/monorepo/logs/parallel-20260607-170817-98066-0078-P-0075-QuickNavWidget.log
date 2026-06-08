@@ -1,0 +1,146 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+The web source wraps a `QuickNav` component. Let me read that component (the real spec) plus the existing widget implementations as reference patterns.
+
+Key finding: `simctl` is missing and there's no `.xcodeproj`/`Package.swift` in `apps/apple`. Let me investigate the toolchain and the existing widget architecture in depth.
+
+`xcode-select` points at CommandLineTools but `/Applications/Xcode.app` exists, and there's a `project.yml` (XcodeGen). Let me test whether I can use the full Xcode via `DEVELOPER_DIR` and check xcodegen.
+
+Toolchain is fully available (Xcode 26.5, iPhone 16 simulator booted, xcodegen 2.45.4) via `DEVELOPER_DIR`. Now I need to reconcile where `TeslaSync/dashboard-widgets/` fits in the build. Let me read the rest of `project.yml` and examine the existing widget structure.
+
+There's a structural split: `Sources/DashboardWidgets/` (wired into the build) vs `TeslaSync/dashboard-widgets/` (where my output goes, but NOT referenced in `project.yml`). I must understand how the existing widgets there compile. Let me examine them and check for a generated project.
+
+Now I understand the dependency pattern. Let me read the full reference widget set (GuardMode) plus the shared core types (registration, tokens, i18n facade, navigation, telemetry) to match conventions exactly.
+
+Excellent — the conventions are clear now. Let me locate the shared core types (registration, tokens, navigation, skeleton) and the build script to understand compilation feasibility.
+
+`Shared.xcframework` is absent (needs a KMP/Gradle pre-build). Let me kick off that build in the background while I read the remaining core types, tokens, navigation, and test conventions.
+
+I see the architecture now: each `TeslaSync/dashboard-widgets/` bundle is largely self-contained (defines its own registration/telemetry/i18n) but uses shared design tokens. Let me confirm where `DashboardWidgetRegistration` is defined, read the tokens and navigation, and kick off a time-boxed KMP framework build to test full-gate feasibility.
+
+KMP build got far but failed at the framework link step because Gradle's `xcrun` used CommandLineTools. Let me retry with `DEVELOPER_DIR` set (in background) and locate the exact token/navigation/registration definitions I need.
+
+KMP build is progressing with `DEVELOPER_DIR` set (past the earlier failure point) — letting it run. Let me read the token files, navigation, and remaining GuardMode composition files.
+
+`Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius` are generated design tokens under `apps/design/generated/apple`. Let me read those plus navigation and the GuardMode composition/adapter files.
+
+Now let me confirm the web route targets (`/drives`, `/battery`) for correct native `AppRoute` mapping, see how the app navigates with `AppRoute`, and read the GuardMode composition + adapter files.
+
+Let me read the deep-link parser (authoritative web→native path mapping for `/drives` and `/battery`), confirm `TSTone`/`Font.TS.bodySm`, and check the navigation style + KMP build progress.
+
+I now have the full picture. Key facts confirmed:
+- **Toolchain works** (Xcode 26.5 via `DEVELOPER_DIR`, iPhone 16 sim booted, KMP framework builds).
+- **Route mapping**: `/battery`→`.energy` (alias), `/charging`→`.charging`, `/analytics`→`.analytics`, `/drives`→`.driving`.
+- **Each widget bundle is self-contained** (GuardMode + DigitalTwin both redefine `DashboardWidgetSize`/`DashboardWidgetRegistration` → they compile independently, not together), depending only on generated design tokens + a callback seam.
+
+Let me read the lint configs and the adapter reference, then write my plan.
+
+I have all reference patterns. Note: `swiftformat --lint apps/apple` *will* scan my files (so they must be format-clean), while `swiftlint`'s `included:` list doesn't cover the bundle (I'll lint explicitly anyway). Let me check the shared `TSSkeleton` (to reuse for loading chrome) and then write my plan.
+
+`TSSkeleton` is standalone (SwiftUI + tokens only). Before coding, let me verify my candidate SF Symbols actually exist on this toolchain (definitive check via AppKit), then write the plan.
+
+All SF Symbols verified. I have complete reference patterns. Let me write the plan, then implement the 7-file bundle.
+
+Now implementing the bundle. Starting with the pure adapter layer:
+
+All 7 files created. Now let me format and lint them per the repo configs.
+
+Format and lint are clean on my files (0 format diffs, 0 swiftlint violations). Now the critical verification: compile + run the tests. Let me build a standalone SPM harness against the *real* generated tokens, and check placeholder tooling.
+
+pwsh is available and manual scan is clean. Let me run the real placeholder gate, then set up the SPM harness.
+
+Placeholder gate passes (COUNT=0, EXIT=0). Now the key verification — compiling and running the tests via a standalone SPM harness against the real generated tokens.
+
+Harness laid out. Now compiling and running the full test suite against the real toolchain:
+
+All 30 tests pass — including the per-state render (snapshot) tests via `ImageRenderer`, compiled in **Swift 6 strict-concurrency mode** against the real generated tokens. Now let me verify iOS-18 cross-platform compilation and definitively confirm whether `project.yml`/xcodegen includes the bundle.
+
+iOS-18 typecheck passes (EXIT=0), and the generated project confirms the bundle is **not wired into xcodebuild** (count 0, like its committed siblings). Let me confirm the Sources/ widgets *are* wired (sanity), then clean up the generated artifact.
+
+Definitive: `BatteryCellsWidget` (Sources/) = 36 pbxproj refs; `dashboard-widgets/` = 0. The bundle integrates separately (like its committed siblings). Working tree shows only my 7 files. Now let me capture the real exit codes of the tree-wide gate lint/format steps.
+
+`swiftformat --lint apps/apple` (literal gate step) = **0/287 require formatting, FORMAT_EXIT=0** — with my files included. Now the literal `swiftlint --strict` step:
+
+`swiftlint --strict` = **0 violations in 262 files, LINT_EXIT=0**. To faithfully reproduce the gate's *iOS* build+test for this surface, let me build a minimal xcodegen iOS app+test target that actually compiles my widget through `xcodebuild` on the iPhone 16 simulator.
+
+Now running the actual iOS Simulator build+test through xcodebuild:
+
+**iOS Simulator (iPhone 16) via xcodebuild: BUILD SUCCEEDED, TEST SUCCEEDED, 30/30 tests passed, EXIT=0.** My widget compiles into a real iOS app and all states render. Let me add a macOS target for symmetry with the gate's macOS step.
+
+**macOS xcodebuild: BUILD SUCCEEDED, TEST SUCCEEDED, 30 tests, EXIT=0** (the `linkd` lines are benign macOS test-host noise). Both platforms verified. Now let me write the gate log. Let me check the log directory and a sibling log for format.
+
+The sibling GuardMode log establishes the precedent: Xcode app build deferred (surface not target-registered + KMP staging), verified via iOS+macOS compile + executed tests, EXIT=0/STATUS=DONE. My evidence is stronger (actual `xcodebuild build test` on both platforms). Let me read the full sibling log header to match format.
+
+Critical catch from the sibling log: GuardMode **reuses** `DashboardWidgetSize`/`DashboardWidgetRegistration` from the 0036 DigitalTwin surface rather than redeclaring them — so the bundles don't collide when compiled together in the app module. My Model.swift currently redeclares them. Let me verify DigitalTwin's exact definitions and fix this.
+
+Confirmed: DigitalTwin (0036) solely owns those types; GuardMode reuses them (0 redeclarations). My bundle must do the same to avoid duplicate symbols. Let me remove my redeclarations and reuse the predecessor's.
+
+Now let me add the shared-types shim (representing the 0036-owned types) to both harnesses, re-format/lint my repo files, and re-run both xcodebuild suites to confirm still green.
+
+swiftlint clean; swiftformat wants 1 file reformatted after my edit. Let me apply it and re-verify.
+
+Clean again (0/6). Since I edited Model.swift, let me rebuild a combined iOS+macOS harness (shared module name) and re-run both `xcodebuild build test` suites to confirm green after removing the duplicate types.
+
+The combined project collided on a shared module name (a harness artifact, not a code issue). Let me run clean single-platform harnesses sequentially — the configs that already passed — to re-confirm green after my edit.
+
+iOS post-edit: **TEST SUCCEEDED, 30 tests, EXIT=0.** Now the macOS run post-edit:
+
+Both platforms post-edit: **iOS EXIT=0, macOS EXIT=0, 30/30 tests each.** All verifications green with the corrected code. Now let me gather metadata and write the gate log.
+
+All green. Now writing the gate log:
+
+Log written. Let me do a final review of the edited Model.swift, run a final lint pass, and confirm only my intended files are staged (excluding pre-existing unrelated changes).
+
+All final gates green (format 0/6, lint 0 violations, placeholder COUNT=0). Now committing only my files (excluding the pre-existing unrelated web changes):
+
+Exactly my 7 files + log staged; the pre-existing unrelated web changes are excluded. Committing:
+
+Committed as `a8f3e611`. Let me do a final repo-cleanliness check to ensure no stray artifacts were left behind.
+
+Task complete. Everything is clean and verified — the commit contains exactly my 8 files (7-file bundle + gate log, 1286 insertions), and the only remaining working-tree changes are pre-existing web edits I correctly left untouched.
+
+## Summary
+
+Shipped a production-polished native **`QuickNavWidget`** SwiftUI surface (P4 · dashboard-widgets · 0075) at full parity with `web/.../QuickNavWidget.tsx` → `QuickNav.tsx`.
+
+**Bundle** (`apps/apple/TeslaSync/dashboard-widgets/QuickNavWidget.*`, 1125 lines / 7 files):
+- **Adapter** — `QuickNavDestination` catalog reproducing the 4 `NAV_ITEMS` verbatim (web i18n keys, exact accent hex `#00f0ff/#10b981/#a855f7/#f59e0b`, SF Symbols, and native `AppRoute` mapping verified against `AppRouteParser`: `/drives→/driving`, `/battery→/energy`), plus item builder, responsive layout, and a11y copy.
+- **Model** — P1/S8 state-holder seam (`QuickNavSource→QuickNavModel`), P1/S11 `view.opened` telemetry (slug `QuickNavWidget`), P1/S10 strings facade, Static + InMemory sources. **Reuses** the 0036-owned `DashboardWidgetSize/DashboardWidgetRegistration` (no duplicate symbols).
+- **Views/Widget** — header-less glass card (matching the web `noPadding` shell), responsive `LazyVGrid` (2/4 cols), tappable tiles with reduce-motion press feedback, and loading/empty/error states.
+- Previews per state, i18n `.strings`, and 30 XCTest methods.
+
+**Verification (real Xcode 26.5, Swift 6 strict concurrency):**
+| Gate | Result |
+|---|---|
+| iPhone 16 sim `xcodebuild build test` | ✅ BUILD + TEST SUCCEEDED, 30/30 |
+| macOS `xcodebuild build test` | ✅ BUILD + TEST SUCCEEDED, 30/30 |
+| `swiftformat --lint apps/apple` | ✅ 0/287 |
+| `swiftlint --strict` | ✅ 0 violations |
+| `check-placeholders.ps1` | ✅ COUNT=0 |
+
+Because the per-surface bundle isn't yet target-registered in `project.yml` (identical to the committed 0036/0054 siblings), the literal `xcodebuild -scheme TeslaSync` step can't compile it — so I verified by embedding the **unmodified** surface sources + the **real** generated design tokens in a faithful harness and running actual `xcodebuild build test` on both platforms. This is documented transparently in the gate log (`EXIT=0 / STATUS=DONE`). **stale/offline** states are honestly marked N/A (the web source is presentational with no data/network), not fabricated.
+
+Committed as `a8f3e611`.
+
+
+
+The task is fully complete and verified — all gates green, both platforms build+test clean, and the work is committed. Calling task_complete.
+
+Merge made by the 'ort' strategy.
+ ...apple-dashboard-widgets-0075-QuickNavWidget.log | 161 ++++++++++++
+ .../dashboard-widgets/QuickNavWidget.Adapter.swift | 195 ++++++++++++++
+ .../dashboard-widgets/QuickNavWidget.Model.swift   | 239 ++++++++++++++++++
+ .../QuickNavWidget.Previews.swift                  |  70 ++++++
+ .../dashboard-widgets/QuickNavWidget.Tests.swift   | 280 +++++++++++++++++++++
+ .../dashboard-widgets/QuickNavWidget.Views.swift   | 207 +++++++++++++++
+ .../dashboard-widgets/QuickNavWidget.strings       |  41 +++
+ .../dashboard-widgets/QuickNavWidget.swift         |  93 +++++++
+ 8 files changed, 1286 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0075-QuickNavWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/QuickNavWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/QuickNavWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/QuickNavWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/QuickNavWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/QuickNavWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/QuickNavWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/QuickNavWidget.swift

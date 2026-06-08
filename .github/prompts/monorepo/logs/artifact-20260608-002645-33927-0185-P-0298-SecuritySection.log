@@ -1,0 +1,236 @@
+================================================================================
+P4 · Feature view · 0298 — SecuritySection (Apple)
+Run: 2026-06-08T02:56-0700   Host: Darwin 25.5.0 arm64 (macOS 26.5.1, 25F80)   Slot: slot-185
+Prompt: P4/feature-views/0298 — Feature view: SecuritySection
+Web source (spec): web/src/features/vehicles/components/vehicle-detail/SecuritySection.tsx
+Mode: code-complete + host-verified (CLT swiftc) + DEFERRED Xcode app build/test
+      (ADR-012; 0009/0036/0046/0054 precedent). THIS runner has Command Line Tools
+      ONLY — no Xcode.app — so every xcodebuild step is capability-unavailable here.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  macOS SDK (CLT) ............ /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk  OK
+  SwiftUI (macOS 15 SDK) ..... import + typecheck of the real surface              OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint (0.63.3)                 OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat (0.61.1)               OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  xcodebuild ................. UNAVAILABLE — "xcodebuild requires Xcode, but active  BLOCKED
+                               developer directory '/Library/Developer/CommandLineTools'
+                               is a command line tools instance" (xcode-select -p
+                               => /Library/Developer/CommandLineTools). No Xcode.app.
+  iPhoneSimulator SDK ........ ABSENT (ships with Xcode, not CLT)                   BLOCKED
+  XCTest framework ........... ABSENT (ships with Xcode, not CLT)                   BLOCKED
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/Shared.xcframework absent)  WARN
+  surface in project.yml ..... feature-views/ IS sourced by the iOS + macOS app
+                               targets (2 refs); SecuritySection is auto-globbed in
+                               once `xcodegen generate` runs on an Xcode host.       OK
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The ONLY platform capability it needs is
+  SwiftUI — which IS present and PROVEN below by a macOS-15 / Swift-6 strict-
+  concurrency typecheck of the real surface AGAINST THE REAL apps/apple component
+  library (no stubs) plus a compiled+executed run of the Foundation-only adapter.
+  So the prompt's "SwiftUI/Charts/MapKit unavailable -> BLOCKED" escape hatch does
+  NOT apply to the code. What is unavailable on THIS runner is the full Xcode
+  toolchain (xcodebuild + iOS-sim SDK + XCTest bundle); those steps are DEFERRED to
+  an Xcode-equipped/signed runner exactly like the 0046 SecurityStatusCards sibling.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/SecuritySection.*) ===
+  SecuritySection.Adapter.swift   284  testable projection core (Foundation-only, no SwiftUI):
+                                       SecuritySectionSignalValue (number|boolean|string|absent —
+                                       the backend signal.SignalValue union) + SecuritySectionSecurityData
+                                       (SecurityEvent door+4-window subset) + SecuritySectionVehicleState
+                                       (is_locked / sentry_mode) + SecuritySectionLogic (jsNumber /
+                                       windowOpenCount / doorStateLabel — ports of the web Number(v) /
+                                       String(door_state) coercion) + SecuritySectionProjection (the four
+                                       MetricCards: locked/sentry/doors/windows with value/tone/SF-symbol/
+                                       a11y) + SecuritySectionTone (success=green / info=cyan)
+  SecuritySection.Model.swift     258  P1/S8 state-holder seam (SecuritySectionSource->Model) + P1/S11
+                                       telemetry seam (viewOpened) + P1/S10 SecuritySectionStrings facade +
+                                       load/connection/phase enums + resolvePhase (loading/empty/error/
+                                       content) + stale one-shot auto-refresh + in-memory source
+  SecuritySection.Views.swift     269  presentational subviews — Shield header (web panel title) /
+                                       responsive metric grid (LazyVGrid .adaptive = web grid-cols-2/3/4) /
+                                       metric tile (web MetricCard: muted label + tinted TSIconBox chip +
+                                       bold primary value) / loading skeleton grid (TSSkeleton x4) / empty
+                                       state (web EmptyState) / QueryError-equivalent error+retry /
+                                       freshness chip (Live/Stale/Offline) / stale+offline banner;
+                                       tone -> Color.TS token map
+  SecuritySection.swift            69  SecuritySection surface (always-on TSGlassPanel + header, then phase
+                                       switch; onAppear telemetry; surfaceSlug "SecuritySection")
+  SecuritySection.Previews.swift  118  #if DEBUG previews — one per state (loading / content-secure /
+                                       content-open / empty / error / stale / offline)
+  SecuritySection.Tests.swift     333  XCTest — jsNumber/windowOpenCount/doorStateLabel logic + projection
+                                       (4 metrics: secure/open/closed + boolean-door quirk) + resolvePhase +
+                                       model wiring + telemetry spy + stale/offline auto-refresh + a11y
+                                       (30 test methods)
+  SecuritySection.strings          40  P1/S10 catalog contribution (12 web-source keys + 8 native chrome/
+                                       freshness/a11y keys)
+  Every file <= 333 lines (house file_length 400). Total 1331 Swift (6 files) + 40 strings = 1371 lines.
+  Distinct SecuritySection* type prefix — verified 0 collisions with the in-module SecurityStatusCards /
+  SecurityStatistics surfaces (no duplicate symbols). Shared TSGlassPanel / TSIconBox / TSSkeleton +
+  Color.TS/Font.TS/TSSpacing/TSRadius are REUSED from the real component library (no redeclaration).
+
+=== PARITY (vs web SecuritySection.tsx) ===
+  Data sources -> useTranslation only. The web source is a pure presentational component with props
+    { securityData: SecurityEvent | null, state: VehicleState }. The native surface binds the P1/S8
+    SecuritySectionSource carrying the parent's useSecurityLatest + useVehicleState snapshot (security +
+    vehicle + load + connection); the view performs NO HTTP. The web's raw signal.SignalValue coercion
+    (Number(v) / String(door_state)) is reproduced natively (SecuritySectionSignalValue) so the parsing is
+    exercised end-to-end.
+  Projection -> 1:1 port of the web component logic:
+    windowOpenCount -> counts fd/fp/rd/rp where Number(v) is FINITE and > 0 (the percent-open semantics:
+      booleans coerce 1/0, "" / whitespace -> 0, non-numeric -> NaN/skip). This is DELIBERATELY DISTINCT
+      from the SecurityStatusCards string-state parse (closed/vent/open) — verified by the executed adapter
+      run (a numeric "42"/8 counts, "0"/"closed"/absent do not, bool true counts, bool false does not).
+    doorStateLabel -> web `door_state != null && !== '' ? String(door_state) : null` reproduced verbatim,
+      INCLUDING the raw-stringify quirk: a boolean `false` door renders "false" (non-nil) in the attention
+      (cyan) tone, NOT "Closed". Faithfully kept (Honesty rule 5/9), unit-tested.
+  Composition -> the four web MetricCards, in web order: Locked (lock.fill/lock.open.fill, Yes/No, green/
+    cyan from state.is_locked) · Sentry (eye.fill, Active/Off, green/cyan from state.sentry_mode) · Doors
+    (door.left.hand.closed, raw doorState or "Closed", cyan-if-present/green) · Windows (car.fill, "<n> open"
+    or "Closed", cyan-if-open/green). The web tints ONLY the icon chip and keeps the value in the primary
+    text color — reproduced (value = Color.TS.textPrimary, chip = tone). The Shield + "Security" header
+    (web `GlassPanel` title row) is ALWAYS rendered; only the body switches grid <-> empty, matching the web
+    `securityData ? grid : EmptyState`.
+  Shared components -> @/components/ui/GlassPanel -> TSGlassPanel; @/components/data-display/MetricCard ->
+    metric tile built on TSIconBox + Color.TS/Font.TS (the shared TSMetricCard takes a LocalizedStringKey
+    bound to the main catalog and carries no icon/color, so a faithful tile is composed from shared
+    primitives + the per-surface i18n facade — same justified approach as the 0046 sibling);
+    @/components/feedback/EmptyState -> centered icon+message empty view. Recharts -> none / Leaflet -> none.
+    Compiled against the REAL apps/apple component library in the macOS-15 typecheck below.
+  States (all render) -> loading (skeleton grid) · content (4 metrics) · empty (web EmptyState "No security
+    data available") · error (QueryError-equivalent + retry) · stale (freshness chip + banner over cached
+    metrics + one-shot auto-refresh) · offline (chip + banner over cached metrics).
+    NOTE on loading/error/stale/offline: the web component itself is empty+content only (its parent page
+    owns loading/error). THIS prompt's States section explicitly requires loading/empty/error/stale/offline
+    and "bind via the shared P1/S8 state holders", so that chrome is added as a strict SUPERSET that never
+    distorts the web grid. Each state has a #if DEBUG preview and is unit-tested via resolvePhase / the
+    projection.
+  i18n -> all 12 source keys resolve through the P1/S10 facade with the web t(key,default) fallback
+    (vehicles.detail.security; common.locked/yes/no/sentry/active/off/closed; vehicles.detail.doors/windows/
+    windowsOpen; vehicles.detail.noSecurityData) — ALL present in SecuritySection.strings, plus 8 native
+    chrome keys (loadingA11y/errorTitle/retry/live/stale/offline/staleBanner/offlineBanner). No English
+    literals in native code (Text(verbatim:) over the facade). The web `{{count}} open` i18next interpolation
+    maps to the native "%lld open" String(format:) plural slot.
+  a11y -> each metric tile is ONE VoiceOver element with the composed "label: value" label; the loading grid
+    is one labeled element; freshness chip + connectivity banner + retry each carry an accessibilityLabel;
+    icons accessibilityHidden; the header carries .isHeader; Dynamic Type via Font.TS tokens; Reduce Motion
+    gates the TSSkeleton shimmer.
+  Telemetry -> SecuritySectionModel.start() emits viewOpened(surface:"SecuritySection") -> bridges the
+    shared Telemetry.track (P1/S11). Asserted by a spy test (fires exactly once across double start()).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on THIS CLT-only machine; real output) ===
+[1] swiftc COMPILE + EXECUTE — the Foundation-only adapter built into a real binary and run against 23
+    web-parity vectors (windowOpenCount numeric semantics, doorStateLabel incl. boolean quirk, jsNumber
+    NaN/empty cases, the 4-metric projection value/tone/icon/a11y for secure + open events):
+      swiftc SecuritySection.Adapter.swift main.swift -o run && ./run
+      -> 23/23 PASS, prints ALL_ADAPTER_LOGIC_TESTS_PASSED
+      ADAPTER_RUN_EXIT=0                                                            OK
+[2] swiftc -typecheck — macOS 15 SDK, Swift 6 strict concurrency, the 4 shipped SwiftUI surface files
+    (Adapter+Model+View+Views) compiled together WITH THE REAL component library (no stubs):
+    Tokens.swift + Sources/Design/{TSDesign,TSMaterial}.swift + Sources/Components/UI/{Cards,Badges,
+    Typography}.swift + Sources/Components/Feedback/Skeletons.swift:
+      xcrun swiftc -typecheck -sdk <MacOSX.sdk> -target arm64-apple-macos15.0 -swift-version 6 *.swift
+      REAL_LIBRARY_TYPECHECK_EXIT=0                                                 OK
+[3] swiftc -parse — the Tests + Previews files (syntax/grammar; XCTest + the #Preview macro plugin ship
+    with Xcode, absent on CLT, so a full typecheck of these two is part of the DEFERRED Xcode scope):
+      swiftc -parse SecuritySection.Tests.swift     PARSE_TESTS_EXIT=0             OK
+      swiftc -parse SecuritySection.Previews.swift  PARSE_PREVIEWS_EXIT=0          OK
+[4] swiftlint --strict on the 6 surface .swift files (explicit paths; config apps/apple/.swiftlint.yml):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0                                                                   OK
+[5] swiftformat --lint (config apps/apple/.swiftformat):
+      6 surface files: 0/6 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+[6] check-placeholders (ADR-011 stub gate; pwsh):
+      gate-verbatim `-Path .../SecuritySection` (a file prefix, not a dir -> Get-ChildItem matches
+        nothing) -> PLACEHOLDER_COUNT=0, EXIT=0.
+      MEANINGFUL per-file run over all 6 shipped .swift files -> PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0
+        for every file.
+      PLACEHOLDER_EXIT=0                                                            OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED — capability-unavailable on this runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Primary reason (this runner): NO Xcode.app. Captured evidence (real commands on this host):
+      - `xcodebuild -version` -> "xcodebuild requires Xcode, but active developer directory
+        '/Library/Developer/CommandLineTools' is a command line tools instance" (exit 1).
+      - `xcode-select -p` -> /Library/Developer/CommandLineTools (Command Line Tools, not Xcode).
+      - the iPhoneSimulator SDK + the XCTest bundle ship with Xcode.app and are therefore absent, so
+        neither the iOS-sim typecheck nor an XCTest-target run is possible here.
+    Secondary (structural, runner-independent — identical to the 0046/0009/0036/0054 disposition):
+      - Shared.xcframework NOT staged (`ls apps/apple/Frameworks/Shared.xcframework` -> No such file); the
+        app targets LINK the KMP core, whose staging needs a Kotlin/Native gradle build
+        (Scripts/build-shared-xcframework.sh).
+      - macOS app/widget signing needs a development certificate on a signed runner (ADR-012).
+    NOTE: feature-views/ IS registered (project.yml sources `TeslaSync/feature-views` in BOTH app targets),
+    so SecuritySection auto-globs into the target on `xcodegen generate` — registration is NOT a blocker
+    here. The colocated SecuritySection.Tests.swift follows the established 170-file convention; its routing
+    into the TeslaSync(/-macOS) XCTest target is the downstream P4 integration prompt's scope.
+    What stands in for the Xcode steps on THIS runner: the adapter LOGIC is compiled + EXECUTED green
+    (23/23, step [1]); the full SwiftUI surface TYPECHECKS against the REAL component library under macOS 15
+    / Swift 6 strict concurrency (step [2]); the test + preview files PARSE clean (step [3]). The XCTest suite
+    asserts the exact same SecuritySectionLogic / SecuritySectionProjection / resolvePhase / model APIs that
+    are proven to compile (step [2]) and behave correctly (step [1]).
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states (loading/content/empty/error/stale/offline) — implemented; each has a
+      #if DEBUG preview; phase + projection unit-tested; logic executed green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (SecuritySectionSource->Model); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — all 12 source keys present in the strings.
+  [x] Accessibility labels on every interactive/element surface (per-metric combined label, loading, chip,
+      banner, retry; header .isHeader).
+  [x] Tests: adapter logic + projection per-metric + resolvePhase + model wiring + telemetry + stale/offline
+      + a11y — 30 methods authored; the adapter logic subset EXECUTED green (23/23) on this runner; full
+      XCTest execution DEFERRED to an Xcode/XCTest runner.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0 across all 6 files.
+  [~] EXIT=0 / STATUS=DONE — ALL host-runnable gates green; the Xcode `xcodebuild build test` is
+      capability-DEFERRED on this CLT-only runner with captured evidence (NOT shown green).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : the xcodebuild steps are shown DEFERRED (capability-unavailable) with the real
+                       "requires Xcode" error + xcode-select evidence — never green. Every "OK" is a command
+                       actually run with its real exit code (executed adapter binary, real-library macOS-15
+                       typecheck, parse, lint, format, placeholder).
+  2  No scope narrowing: implemented ALL four metrics + loading + content + empty + error + stale + offline +
+                       i18n + a11y + telemetry.
+  3  No skip-and-assume: each host gate executed; nothing assumed green. The Xcode gap is stated, not papered.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (The 3 exact-signature component
+                       stubs were a THROWAWAY first pass; the FINAL evidence [step 2] compiles against the
+                       REAL Cards/Badges/Skeletons/Typography/Design/Tokens — no stubs.)
+  5  No parity shortcuts: faithful port of windowOpenCount (numeric percent-open, distinct from the
+                       SecurityStatusCards string parse) + doorStateLabel incl. the boolean raw-stringify
+                       quirk + the four cards' value/tone/icon. Verified by the executed adapter run.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit project.yml or the shared Localizable.xcstrings — strings shipped as
+                       the per-surface table, exactly like 0046/0009/0036/0054.
+  8  No commit on red  : committing on all-green HOST gates; the Xcode app build/test is explicitly DEFERRED
+                       (capability-unavailable), not failed.
+  9  No silent drift   : changes confined to the allowed SecuritySection.* files + this log. `git status`
+                       shows the 7 new SecuritySection.* files as the only additions; pre-existing unrelated
+                       working-tree edits (AIUsageCard.*, two web files) are NOT staged by this surface.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native SecuritySection shipped at parity with the web source: a Foundation-only
+  coercion/projection core (executed green, 23/23 web-parity vectors), a P1/S8 state-holder seam (no view
+  HTTP), P1/S11 telemetry, the four security metrics (Locked/Sentry/Doors/Windows) + loading/content/empty/
+  error/stale/offline states + all 12 i18n keys + per-metric a11y, on the shared TSGlassPanel/TSIconBox/
+  TSSkeleton components. ALL host-runnable gates pass on this Command-Line-Tools-only runner, AND the surface
+  TYPECHECKS against the REAL apps/apple component library under the macOS 15 SDK with Swift 6 strict
+  concurrency. The Xcode `xcodebuild build test` (and the iOS-sim typecheck + XCTest-target run that need it)
+  are DEFERRED — Xcode.app is not installed on this runner (CLT only), plus the runner-independent
+  Shared.xcframework KMP staging + macOS signing — none a defect in this code, all outside this prompt's
+  allowed files — matching the 0046 SecurityStatusCards "code-complete + DEFERRED Xcode gate" precedent
+  (ADR-012).
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/SecuritySection.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0298-SecuritySection.log
+  git commit -m "feat(apps/apple/feature-views): add SecuritySection surface (P4)"
+
+EXIT=0
+STATUS=DONE

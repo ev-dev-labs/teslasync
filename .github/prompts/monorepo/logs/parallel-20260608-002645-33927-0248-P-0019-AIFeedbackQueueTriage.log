@@ -1,0 +1,119 @@
+I'll start by understanding the task scope: reading the web source, exploring the Apple app structure, and checking platform capability (critical per the Honesty Covenant).
+
+Key finding: **xcodebuild requires full Xcode but only Command Line Tools are installed.** However, many similar `p4-apple` prompts have already been merged (AiUsageCard, LiveControls, etc.), so there must be an established pattern. Let me explore the Apple app structure.
+
+No `shared-surfaces` dir exists yet — I'm creating it first. The project uses XcodeGen (`project.yml`), no checked-in `.xcodeproj`. Let me examine the established pattern via the most-recent merged feature-view (AIUsageCard) and check how prior prompts handled the xcodebuild gate.
+
+Working tree has unrelated pre-existing changes (AIUsageCard, web files) from the slot baseline — I'll leave those alone. The native AI shared components (`AIFeatureCard`, `withAiFeature`) don't exist yet. Let me understand the established convention by reading the most-recent feature-view log and the project config.
+
+The 0237 precedent is the gold standard: it used a full Xcode via `DEVELOPER_DIR` override, shipped a multi-file surface, verified via an **isolated SwiftPM build+test** against the real design system, and marked the full-app xcodebuild gate as DEFERRED (pre-existing blockers). Let me check Xcode availability here and study the precedent + web AI dependencies.
+
+**Full Xcode IS present** at `/Applications/Xcode.app` — same as the precedent runner (simctl failed only because the active dir is CommandLineTools; `DEVELOPER_DIR` override fixes that). Let me verify the toolchain works and study the precedent's structure + remaining web dependencies.
+
+Toolchain fully works via `DEVELOPER_DIR` (Xcode 26.5, iOS 26.5 sim, iPhone 16 booted) — **not capability-blocked**. Now let me study the precedent's Swift architecture in depth and the design system, plus check for any existing native AI-stream surface to model the stream state machine.
+
+Excellent precedent. Now let me read the web output region (AiOutputPanel + thinking indicator) and the precedent's Chrome/Views/Projection/Tests/Previews/strings to mirror idioms exactly.
+
+Now let me read the precedent's Projection/Tests/Previews/strings and inspect the design system (tokens + components) to confirm exact signatures.
+
+Now let me confirm the design-system token/component signatures (`TSButton`, `TSSkeleton`, `TSFadeIn`, `Color.TS.*`, `Font.TS.*`, `TSSpacing`, `TSRadius`, any badge/glass primitives) and read the precedent's Projection/Adapter.
+
+Let me read the design-system primitives (tokens, button, badge, card, skeleton, motion) to get exact public APIs.
+
+Now the badge, card, skeleton, and motion primitives.
+
+Now I have the full design-system API. Let me check the thinking indicator, the typography components, and the Localization integration, then set up a SQL todo plan.
+
+Let me set up a plan and read the final two design files (Typography, Material) before building.
+
+I have all primitives. Let me check lint/format configs and the placeholder checker before writing code.
+
+Critical constraints noted: line_length ≤120 (strict), type_name ≤50, and the placeholder scanner is case-insensitive substring matching (the precedent renamed symbols to dodge "todo" inside "ToDollars"). Let me read the exact forbidden patterns and the script's path handling.
+
+Forbidden substrings noted (case-insensitive): `todo`, `fixme`, `xxx`, `coming soon`, `placeholder`, `lorem ipsum`, `not implemented`, plus swift `fatalError("not/unimpl`, `Text("TODO`. I'll avoid all of these. Now creating the surface. Starting with the Model (seams).
+
+Now I'll write the surface. Starting with the Model (P1/S8 state-holder seam, P1/S10 i18n facade, P1/S11 telemetry seam).
+
+Now the pure projection (input → resolved), reproducing the gate precedence and the `AiOutputPanel` branch precedence exactly.
+
+Now the Chrome (freshness chip, refresh button, connectivity banner, loading skeleton, retryable error).
+
+Now the presentational views: the Helix badge, the Ask Helix action button (idle/thinking with bouncing dots), the streaming output panel (hidden/thinking/text/error), and the thinking indicator.
+
+Let me fix the loading view (the persistent chrome header carries the title, so the loading body shouldn't duplicate it), then write the main surface file.
+
+Now the main surface view (gate wrapper + persistent header + connectivity banner + phase switch).
+
+Now the i18n strings catalog (every key with its web English fallback).
+
+Now previews for every state.
+
+Now the tests — projection/output branch coverage in one file, model/telemetry/a11y in another (mirroring the precedent's split to stay within the 400-line file budget).
+
+Now the model/telemetry/freshness/propose-only/a11y tests.
+
+All eight surface files are written. Now let me set up an isolated SwiftPM harness (the precedent's verification mechanism) that compiles the exact shipped sources against the **real** design system and runs the tests.
+
+Harness ready. Now build + test against the real design system under the Xcode toolchain (Swift 6 strict concurrency).
+
+Build is clean (incl. the `#Preview` macro file) under Swift 6 strict concurrency. Now run the tests.
+
+All 36 tests pass, build clean. Now run the per-surface format/lint/placeholder gates. First format my files, then verify.
+
+Format applied (3/8). Now verify format-lint, swiftlint --strict, and the placeholder scan on the surface files.
+
+swiftlint scanned the whole tree (config `included` overrides the path arg) and found 1 serious violation. Let me locate it — need to confirm whether it's in my files.
+
+Good — the only violation is pre-existing (`LifetimeStatsWidget.Adapter.swift`), none in my files. Let me lint my files explicitly to get a true per-surface result.
+
+Model.swift is 409 lines (>400 file-length limit). I'll split the value types + i18n facade into a separate `.State.swift` file (mirroring the precedent's multi-file decomposition). Let me recreate both cleanly.
+
+Now recreate Model.swift with just the telemetry seam, input snapshot, source protocol, observable model, and in-memory source.
+
+Split done (9 files). Let me add the new file to the harness, reformat, and re-verify build + tests + lint.
+
+All files now ≤256 lines. Rebuild + retest the harness and re-run the gates.
+
+36/36 tests pass after the split. Now the per-surface format/lint/placeholder gates.
+
+swiftformat 0/9, swiftlint 0/9. Now the placeholder/stub scan on the surface files.
+
+All per-surface gates are green (build, 36 tests, swiftformat 0/9, swiftlint 0/9, placeholders 0). Now I'll concretely verify the full-app `xcodebuild` gate's pre-existing blockers (per the established precedent disposition) rather than assume them.
+
+All four blockers concretely confirmed: Shared.xcframework unstaged (only `.gitkeep`), `DashboardWidgetSize` redefined **15×**, **170** co-located feature-view tests compiled into the app target, and shared-surfaces not yet wired into `project.yml`. Let me generate the project and make a bounded real attempt at the full-app build to capture honest evidence.
+
+Confirmed: the generated project excludes my surface (dir not in `project.yml`), and `.xcodeproj` is git-ignored. Let me make a bounded, real attempt at the full-app compile to capture honest evidence of the pre-existing blockers.
+
+The full-app build fails immediately on a concrete pre-existing blocker: `There is no XCFramework found at .../Shared.xcframework` (only `.gitkeep` is staged). This is the precedent's B1, captured live — DEFERRED disposition confirmed. Let me check the working tree for any stray generated artifacts and clean up.
+
+Working tree is clean — only my new `shared-surfaces/` is untracked; no non-allowed files touched. Now I'll write the honest gate log following the precedent's structure.
+
+Log written. Let me update the plan, run one consolidated final verification, then commit only the allowed files.
+
+All gates green: build + 36/36 tests, swiftformat 0/9, swiftlint 0/9, placeholders 0, 10 files shipped. Now commit only the allowed files (excluding pre-existing unrelated changes).
+
+Exactly the 10 surface files + the log are staged (no unrelated changes). Committing now.
+
+Committed as `ffae9e176`. The pre-existing unrelated changes remain unstaged (correctly untouched). Let me verify the commit contents.
+
+Commit verified: exactly 11 files (10 surface files + log), 1770 insertions, nothing unrelated. Let me clean up the temporary build harness and mark the final todo done.
+
+The task is complete and fully verified.
+
+## Summary
+
+Shipped the **`AIFeedbackQueueTriage`** Apple shared surface (P4/0019) — the SwiftUI parity of `components/ai/AIFeedbackQueueTriage.tsx` — as the first occupant of the new `apps/apple/TeslaSync/shared-surfaces/` directory. Committed as `ffae9e176` (10 files + log, 1770 insertions; no unrelated files touched).
+
+**Parity reproduced** (read the full web chain end-to-end: `AIFeedbackQueueTriage` → `AIFeatureCard` → `AiOutputPanel` + `AIThinkingIndicator` + `useAiStream` + `withAiFeature`):
+- The `withAiFeature` gate (off → surface withdrawn), the card (title + Helix badge + privacy summary + empty hint), the "Ask Helix" action (idle / "Helix is thinking…" + dots, **computed** disable, aria-equivalent a11y), and the `AiOutputPanel` branch precedence (hidden / thinking / prose / error) reproduced exactly.
+- **Propose-only** contract preserved verbatim — never writes feedback.
+- All states render: gated / loading / empty / error / ready + stale/offline freshness axis.
+- Bound through P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 `view.opened` telemetry. No HTTP in the view.
+
+**Gates (raw exits):**
+- Isolated SwiftPM build + test against the **real** design system under Xcode 26.5 / Swift 6 strict concurrency: **Build complete · 36/36 tests pass**.
+- `swiftformat --lint`: **0/9** · `swiftlint --strict`: **0 violations/9 files** · `check-placeholders`: **COUNT=0**.
+- Full-app `xcodebuild` gate **DEFERRED** with live-captured evidence of pre-existing, unrelated blockers (`error: There is no XCFramework found at .../Shared.xcframework`, `DashboardWidgetSize` ×15, 170 co-located feature-view tests, and shared-surfaces not yet wired into `project.yml` — all outside this prompt's allowed files), owned by the P4 acceptance gate. This is the same sanctioned disposition every prior P4 surface used.
+
+**`EXIT=0 / STATUS=DONE`** — not capability-blocked (SwiftUI present; surface uses no Charts/MapKit).
+

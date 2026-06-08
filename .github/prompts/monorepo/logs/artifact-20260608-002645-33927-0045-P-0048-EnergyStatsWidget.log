@@ -1,0 +1,152 @@
+=== P4 Dashboard widget 0048 EnergyStatsWidget (Apple) ===
+
+Surface: EnergyStatsWidget (registry id `energy-stats`, category energy, sizes 2x4 / 1x2 / 4x40)
+Web source: web/src/features/dashboard/widgets/EnergyStatsWidget.tsx (reproduced end-to-end)
+Date: 2026-06-08
+Runner: Darwin (Apple Silicon)
+
+------------------------------------------------------------
+CAPABILITY VERIFICATION (runner)
+------------------------------------------------------------
+- Full Xcode present: /Applications/Xcode.app -> Xcode 26.5 (Build 17F42)
+  (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is driven
+   via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer.)
+- SDKs: iphonesimulator26.5 / macosx26.5 (backward-compatible with the project's
+  iOS 18.0 / macOS 15.0 deployment targets) -> SwiftUI + Swift Charts available.
+  (MapKit not required by this surface — the web source has no map.)
+- Simulator: iPhone 16 (iOS 26.5) present + Booted.
+- Toolchain: swift 6.3.2, swiftlint, swiftformat, pwsh, xcodegen 2.45.4, Java 17 all present.
+
+=> Native Apple capability is AVAILABLE. The official scheme build/test, however, is
+   BLOCKED in THIS workspace by two pre-existing, out-of-scope conditions (see BLOCKER
+   ANALYSIS). They are not defects in this surface; the surface itself compiles against
+   BOTH the iOS 18 and macOS 15 SDKs and passes a 70/70 runtime test harness (below).
+
+------------------------------------------------------------
+FILES (8 cohesive EnergyStatsWidget* files, swiftlint file_length<=400 honored)
+------------------------------------------------------------
+  EnergyStatsWidget.Model.swift     330 lines  (telemetry + state-holder seams, DTO, @Observable model, sources)
+  EnergyStatsWidget.Registry.swift   98 lines  (registry metadata + grid primitives + i18n string facade)
+  EnergyStatsWidget.Adapter.swift   316 lines  (Foundation projector: stats + chart points + a11y, web math verbatim)
+  EnergyStatsWidget.swift           351 lines  (SwiftUI surface: header, all states, compact/standard/wide)
+  EnergyStatsWidget.Views.swift      66 lines  (EnergyStatTile — web StatCard parity)
+  EnergyStatsWidget.Chart.swift     159 lines  (Swift Charts area chart, web Recharts AreaChart parity)
+  EnergyStatsWidget.Previews.swift  154 lines  (DEBUG previews: every state x layout)
+  EnergyStatsWidget.Tests.swift     323 lines  (adapter + model + registry + a11y + chart tests)
+  EnergyStatsWidget.strings          28 keys (P1/S10 i18n catalog contribution)
+
+------------------------------------------------------------
+PARITY (web source reproduced — data, composition, states, i18n)
+------------------------------------------------------------
+- Data sources: useEnergyStats + useVehicles + useUnits + useTranslation bound via the P1/S8
+  shared state-holder seam (EnergyStatsSource -> EnergyStatsUpdate -> EnergyStatsModel).
+  No HTTP in the view. Mirrors the LifetimeStatsWidget (0055) state-holder pattern.
+- Composition: daily-usage area chart (energy series) above a responsive stat grid:
+  Total Used / Total Charged (kWh, formatEnergy precision 1) + Avg Efficiency (Wh/km|Wh/mi via
+  toEfficiencyDisplay *1000 | *1609.344) + CO2 Saved (kg). Wide (cols>=3) appends Total Cost ($)
+  + Net Energy (charged-used, kWh). Compact (cols<=1) shows the big total-kWh number
+  (total_wh/1000, 0 dp) + unit caption. isCompact=cols<=1, isWide=cols>=3 reproduced.
+- fmtNumber / formatEnergy / convertEnergyFromSI parity reproduced VERBATIM (EnergyStatsFormat,
+  locale-aware, halfExpand rounding). Pinned by the runtime harness below (e.g. 0.165 Wh/m ->
+  "165.0 Wh/km" and "265.5 Wh/mi"; 345_600 Wh -> "345.6 kWh"; compact 345_600 -> "346").
+- Chart: web plots raw `energy_wh` yet labels the axis/tooltip/series "kWh". This surface converts
+  energy_wh -> kWh at the display boundary (documented in EnergyStatsWidget.Adapter.swift) so the
+  chart + tooltip read correctly — matching the web "kWh" labels, the SI display-boundary rule, and
+  the SolarProductionWidget (0093) sibling. NO SILENT DRIFT: the single deviation is documented.
+- States (all rendered): loading (skeleton chrome), empty ("No energy data available"), error
+  (retry affordance), content; plus stale (amber freshness chip + "values may be stale" banner +
+  auto-refresh) and offline (muted chip + "last known energy" banner, cached values kept visible).
+  Chart is shown only when daily_breakdown is non-empty (web `hasChartData`); the stat grid always
+  shows.
+- i18n: all 10 source keys (title/totalUsed/totalCharged/avgEfficiency/co2Saved/totalCost/
+  netBalance/noData/dailyUsage/energyKwh) resolve via the widget.energyStats.* table, plus native
+  chrome keys (freshness, retry, banners, chart, a11y). Cross-checked: every key used in code is
+  declared in EnergyStatsWidget.strings. NO English string literals in native code.
+- Accessibility: combined VoiceOver labels on every stat tile, the freshness chip, the chart
+  (label + spoken summary "Daily Usage. N days. Peak X.XX kWh"), refresh/open buttons; Dynamic Type
+  via Font.TS system fonts; Reduce Motion honored (TSSkeleton shimmer + chart animation gated).
+- Telemetry (P1/S11): emits view.opened with surface slug "EnergyStatsWidget" once on appear
+  (OSLogEnergyStatsTelemetry -> shared Telemetry.screenView at the composition root).
+
+------------------------------------------------------------
+GATE RESULTS (actual command output)
+------------------------------------------------------------
+[1] iOS build/test  (DEVELOPER_DIR=…Xcode; xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test)
+    After `xcodegen generate`, the target compile is BLOCKED before reaching this surface:
+      error: There is no XCFramework found at '…/apps/apple/Frameworks/Shared.xcframework'.
+      ** BUILD FAILED **                                            -> IOS_EXIT=65 (BLOCKED, pre-existing)
+    Root cause is environmental/pre-existing, NOT this surface — see BLOCKER ANALYSIS.
+
+[2] macOS build/test  (xcodebuild -scheme TeslaSync-macOS build test)
+    Same pre-existing blockers (missing Shared.xcframework; sibling redeclarations).
+      ** BUILD FAILED **                                            -> MAC_EXIT=65 (BLOCKED, pre-existing)
+
+[3] swiftlint --strict  (scoped to the 8 EnergyStatsWidget* files; full .swiftlint.yml config)
+    Done linting! Found 0 violations, 0 serious in 8 files          -> LINT_EXIT=0
+
+[4] swiftformat --lint  (scoped to the 8 EnergyStatsWidget* files; apps/apple/.swiftformat)
+    0/8 files require formatting                                    -> FORMAT_EXIT=0
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/EnergyStatsWidget -Language swift
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0                                             -> PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------
+SUPPLEMENTAL VERIFICATION (this surface, on this runner — authoritative)
+------------------------------------------------------------
+[S1] iOS 18 SDK typecheck of the full bundle (SwiftUI + Swift Charts, strict concurrency)
+     xcrun -sdk iphonesimulator swiftc -target arm64-apple-ios18.0-simulator -swift-version 6
+        -typecheck <8 bundle .swift files> + real generated Tokens.swift
+        + accurate signatures for the 2 consumed shared components (TSSkeleton, TSAnimatedNumber)
+     -> IOS_TYPECHECK_EXIT=0   (the surface compiles for the actual deployment platform)
+
+[S2] macOS 15 SDK typecheck of the full bundle (same inputs, arm64-apple-macos15)
+     -> MAC_TYPECHECK_EXIT=0
+
+[S3] Runtime test harness (SwiftUI-free Model + Registry + Adapter compiled to an executable and RUN)
+     Mirrors EnergyStatsWidget.Tests.swift: projector value-parity (km + mi + currency), chart
+     kWh conversion, empty-state zeros, fmtNumber/formatEnergy/efficiency parity + non-finite
+     guards, resolvePhase matrix (8), registry metadata + clamp (min/max/mid), accessibility stat
+     + chart summaries, and @MainActor model lifecycle (phases, view.opened-once telemetry, refresh
+     delegation, stale-only auto-refresh).
+     -> 70/70 assertions PASS, "==== ALL PASS ====", HARNESS_EXIT=0
+
+------------------------------------------------------------
+BLOCKER ANALYSIS (why the scheme build/test is BLOCKED — pre-existing + out of scope)
+------------------------------------------------------------
+(a) Shared.xcframework absent. apps/apple/Frameworks/Shared.xcframework is a required build input
+    (ADR-004) produced by Scripts/build-shared-xcframework.sh (the KMP/Kotlin-Native core via
+    Gradle, wired as the scheme pre-action). It is not staged in this workspace; building it is a
+    separate, heavyweight provisioning step outside this surface's allowed files
+    (apps/apple/TeslaSync/dashboard-widgets/EnergyStatsWidget.* + this log).
+
+(b) Sibling redeclarations. The TeslaSync/dashboard-widgets group (compiled wholesale into BOTH app
+    targets per project.yml) currently contains 14 parallel-slot bundles that each declare the
+    shared grid primitives `DashboardWidgetSize` / `DashboardWidgetRegistration`. Compiling any two
+    together already fails — demonstrated directly with the toolchain on two UNRELATED siblings:
+      $ swiftc -typecheck MQTTStatusWidget.Model.swift UptimeMonitorWidget.Model.swift
+      error: invalid redeclaration of 'DashboardWidgetSize'
+      error: 'DashboardWidgetSize' is ambiguous for type lookup in this context
+    These per-bundle primitives are deduplicated at integration time (the established convention —
+    e.g. the 0010 BatteryCellsWidget bundle's *Registry.swift likewise declares them). This surface
+    follows that convention (EnergyStatsWidget.Registry.swift) so it compiles standalone; it neither
+    causes nor can resolve the aggregate conflict (which exists with or without this surface).
+
+Neither blocker is fixable from this surface's allowed file set, and neither reflects a defect in
+EnergyStatsWidget. No green result is being claimed for the scheme build/test (no red-as-green).
+
+------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------
+Delivered surface is COMPLETE and VERIFIED to the maximum extent this workspace allows:
+  - iOS 18 SDK typecheck: PASS    - macOS 15 SDK typecheck: PASS
+  - Runtime tests: 70/70 PASS (projector parity, phases, registry, a11y, model lifecycle), exit 0
+  - swiftlint --strict: 0 violations   - swiftformat --lint: clean   - placeholders: 0
+The official `xcodebuild -scheme … build test` cannot reach a clean exit on this workspace because
+of two PRE-EXISTING, out-of-scope conditions documented above (absent KMP Shared.xcframework +
+14 sibling parallel-slot redeclarations of the shared grid primitives). Per the prompt's capability
+clause, the build/test gate is therefore reported BLOCKED with evidence; the surface implementation
+itself is finished and independently proven to compile (iOS + macOS) and behave correctly (70/70).
+
+EXIT=65
+STATUS=BLOCKED

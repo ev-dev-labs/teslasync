@@ -1,0 +1,127 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Toolchain is fully available. Let me read the web source spec and explore the Apple app structure.
+
+Now I understand the web source — it's a **redirect component**, not a data-driven visual surface. Let me study existing Apple feature-views to learn the conventions, especially any redirect-style ones.
+
+No existing redirect views. Let me examine the file-set convention and find the shared infrastructure (state holders, tokens, i18n, telemetry). Let me look at a representative simple view fully and locate shared modules.
+
+`SharedFacade`, `Design`, and `Notifications/Routing` look key. Let me explore these shared modules and a representative complete feature-view.
+
+Let me understand navigation/routing, i18n facade, and telemetry. The `Notifications/Routing` and existing feature-views will show the patterns.
+
+Now let me examine the build setup (project.yml / XcodeGen) and a complete representative feature-view to mirror its exact file structure, i18n, telemetry, and test conventions.
+
+XcodeGen auto-includes the whole `feature-views` directory, so new files are picked up automatically. Let me read a complete representative view set (BatteryPill) to mirror exact conventions — especially how tests work inside the app target and how telemetry/i18n are wired.
+
+I now have a clear picture of the conventions. Let me examine the navigation host, design tokens, build tooling, and placeholder checker before designing the redirect surface.
+
+Let me check the critical build risk — the KMP `Shared.xcframework` build — and the notifications sub-destinations the redirect targets.
+
+Key finding: `Shared.xcframework` is **not** prebuilt (only `.gitkeep`) — it must be built via Gradle/KMP, which is the long pole. Let me check simulators and kick off the framework build in the background while I write code.
+
+`xcodebuild -version` and the simulator list both returned empty — a critical capability signal. Let me verify whether full Xcode is actually installed.
+
+There's a full `/Applications/Xcode.app`, but the active dev dir is Command Line Tools. I can override per-invocation with `DEVELOPER_DIR` (no sudo needed). Let me verify that works.
+
+Full Xcode 26.5 + booted iPhone 16 simulator are available via `DEVELOPER_DIR`. The long pole is the KMP framework build — let me start it in the background now while I write code.
+
+Build is running in the background. Let me study the design tokens, feedback components, and how surfaces express navigation while it builds.
+
+Build finished. Let me confirm the framework was produced and study a navigation-callback feature-view plus the parity manifest.
+
+Build cache is warm — the Debug xcframework built; the Release one was interrupted by the window close. Let me restart it detached to completion, and read the lint/format configs to conform.
+
+Now I understand the full design system and constraints (line ≤120, `--strict`). Let me read the placeholder patterns to avoid forbidden words and confirm the log directory.
+
+The detached launcher didn't persist. Let me build the release xcframework synchronously now (compiles are cached, so mainly linking) and stage it.
+
+The Gradle daemon keeps receiving external "stop" commands — likely cross-slot interference in this parallel environment. Let me check memory config and re-run with `--no-daemon` to isolate.
+
+44 parallel slots are sharing one Gradle daemon registry and stopping each other. Let me retry with `--no-daemon` (the project's own `build/` already has UP-TO-DATE compiles, so only the release link remains).
+
+It's been progressing without a "stop" — good. Let me write the six feature-view files now while it links, then verify. Starting with the model (pure resolver logic).
+
+Gradle finished. Let me check the result and continue writing the remaining files.
+
+Release `Shared.xcframework` built successfully (8m). Let me stage it and continue writing the remaining source files.
+
+Now the main view, previews, tests, and strings files.
+
+Now the comprehensive tests and the i18n strings file.
+
+All six files created. Now let me run the fast checks — auto-format my files, then lint, and the placeholder gate.
+
+swiftformat ✓, placeholder gate ✓. Two swiftlint issues in Model.swift. Let me view the exact lines.
+
+swiftformat and swiftlint disagree on the multi-line `else if` brace. Let me refactor `decode` to a `switch` (avoids the multi-line condition brace) and use the lint-preferred `String(bytes:encoding:)`.
+
+All fast gates pass on my files: **swiftformat 0/5**, **swiftlint --strict 0 violations**, **placeholder EXIT=0**. Now the full build. Let me generate the Xcode project.
+
+Project generated. Let me verify my files are included and test the pre-action script (gradle staging) runs cleanly now that outputs are UP-TO-DATE.
+
+Pre-action now completes in 1s (all UP-TO-DATE) and stages the framework. My files are in the project. Let me run the iOS build (build-only first, to fast-fail on any compile error in my code).
+
+Build failed at Swift compilation. Let me extract the actual errors.
+
+The failure is in a **pre-existing** file (`AcDcStatsPanel.Tests.swift`), not mine: `canImport(XCTest)` resolves true in the app target but `import XCTest` can't link. This affects all ~850 co-located test files. Let me check the documented build approach.
+
+Key finding: `apps/macos-pending-verifications.md` **documents this exact situation** for the sibling ToolCard P4 feature-view: the full-app build is blocked by *pre-existing, unrelated* issues (co-located `*.Tests.swift` doing bare `import XCTest` into the app target, `DashboardWidgetSize` redefined 8×, macOS signing) — deferred to the acceptance gate. The surface itself is verified in isolation.
+
+Let me try an invocation-level workaround (excluding test files, which aren't app code) to compile my code in the real app context and see what pre-existing errors remain.
+
+Confirmed: the full-app build is blocked by **pre-existing, unrelated** issues outside my allowed files — **105** co-located test files do unguarded `import XCTest`, and `DashboardWidgetSize` is redefined 10+ times. This is exactly what `macos-pending-verifications.md` documents for the sibling ToolCard surface.
+
+Following that established precedent, let me verify **my** surface in isolation (isolated SwiftPM build + tests under Swift 6 strict concurrency).
+
+All external symbols are simple design tokens + `AppRoute.notifications`. Let me create the package manifest and minimal stubs, then build and test.
+
+Now build and test the isolated package under Swift 6 strict concurrency.
+
+My surface compiles cleanly under Swift 6 strict concurrency (including Previews). Now run the tests.
+
+**Isolated verification: 27/27 tests pass under Swift 6 strict concurrency, clean build.** This matches the documented ToolCard precedent. 
+
+Let me gather one more piece of evidence — compile the full app with test files excluded — to confirm my non-test sources integrate and only the documented pre-existing issues remain.
+
+The exclusion worked for `.Tests.swift` but there are other variants (`.ModelTests.swift`, `.AdapterTests.swift`). Let me broaden to `*Tests.swift` to get past all test files and reach the real pre-existing blocker.
+
+Now it compiled past test files and reached real type-checking. Let me categorize the 26 failures and confirm none are mine.
+
+**Definitive evidence: zero errors from any `LegacyAlertsRedirect` file in the full iOS app compile.** All 26 failures are in `dashboard-widgets/*` from the pre-existing `DashboardWidgetSize` 10× redeclaration — exactly the documented blocker, none in my scope.
+
+Let me confirm the same for macOS and characterize the whole-tree lint/format gate steps.
+
+macOS build finished. Let me read its result.
+
+Comprehensive, consistent evidence on **both platforms**: zero errors from my files; all 26 failures are pre-existing `dashboard-widgets/*` `DashboardWidgetSize` redeclarations. Whole-tree lint/format also have pre-existing failures in other files (`ActionBuilder.Previews.swift`, `LifetimeStatsWidget.Adapter.swift`) — none mine.
+
+Let me write the gate log with the honest, evidence-backed record.
+
+Surface verified and log written. Let me clean up build artifacts and confirm git status shows only my intended files before committing.
+
+Only my 6 surface files + the log are untracked. Let me confirm no tracked files were modified and `.gitkeep` is intact, then commit.
+
+All clean. Committing the surface and log.
+
+Committed as `9af1eb8cb`. Let me do a final clean-tree check and re-confirm the surface gates on the committed files.
+
+Everything is verified and committed with a clean working tree. Task complete.
+
+## Summary
+
+I shipped a production-quality native Apple parity of the web `LegacyAlertsRedirect` surface (P4 · 0185), committed as `9af1eb8cb`.
+
+**Delivered** (`apps/apple/TeslaSync/feature-views/LegacyAlertsRedirect.*`):
+- **`.Model.swift`** — pure resolver reproducing every web branch: `TAB_TO_ROUTE` map (alerts→/notifications/alerts, history→/notifications/inbox, preferences→/notifications/quiet-hours), absent‑tab default, unknown/empty‑tab fallback, and a **byte‑exact `URLSearchParams`** query model (ordered pairs, first‑value `get`, delete‑all, x‑www‑form‑urlencoded with `+`). Binds the real `AppRoute`.
+- **`.Telemetry.swift`** — P1/S11 `view.opened` + redaction‑safe redirect event (os_log sink).
+- **`.swift`** — SwiftUI interstitial (spinner + localized title + destination chip + subtitle) that dispatches the decision to the host nav seam once on appear (parity of `<Navigate replace>`); VoiceOver label/value, Dynamic Type, never blank.
+- **`.Previews.swift`** (6 branches), **`.Tests.swift`** (27 cases), **`.strings`** (P1/S10 i18n table).
+
+**Verification — surface‑scoped gates all GREEN:**
+- swiftformat `--lint`: 0/5 · swiftlint `--strict`: 0 violations · placeholder gate: `EXIT=0`
+- **Isolated SwiftPM build + `swift test`: 27/27 pass** under Swift 6 complete strict concurrency
+- **0 errors compiling inside the real iOS *and* macOS app targets**
+
+**Full‑app `xcodebuild build test`: `STATUS=BLOCKED`** (logged honestly). It cannot reach `EXIT=0` due to **pre‑existing, unrelated** breakage *outside this prompt's allowed files* — `DashboardWidgetSize` redeclared 10× across `dashboard-widgets/*` (26 errors, none mine), 105+ unguarded `import XCTest` test files, and macOS dev‑signing. This is the exact condition `apps/macos-pending-verifications.md` already records for the sibling ToolCard surface, deferred to the P4 acceptance gate on `macos-latest`. No red‑as‑green: the log proves zero failures originate from `LegacyAlertsRedirect`.
+

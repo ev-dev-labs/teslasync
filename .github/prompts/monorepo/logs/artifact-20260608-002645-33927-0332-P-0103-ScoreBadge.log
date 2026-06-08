@@ -1,0 +1,153 @@
+=== P4 Shared surface 0103 ScoreBadge (Apple) ===
+date: 2026-06-08T12:13:30Z
+runner: Darwin 25.5.0 arm64
+cwd: /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-332
+
+Artifact: apps/apple/TeslaSync/shared-surfaces/ScoreBadge.{swift,Model.swift,Telemetry.swift,Previews.swift,Tests.swift,strings}
+Web source: web/src/components/data-display/ScoreBadge.tsx (+ web/src/lib/scoreScale.ts)
+
+########################################################################
+# CAPABILITY PROBE (ADR: Apple gate requires full Xcode + XCTest)      #
+########################################################################
+--- xcode-select -p ---
+/Library/Developer/CommandLineTools
+--- swift --version ---
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+Target: arm64-apple-macosx26.0
+--- swiftlint --version ---
+0.63.3
+--- swiftformat --version ---
+0.61.1
+--- pwsh --version ---
+PowerShell 7.6.2
+
+########################################################################
+# GATE STEP 1/2 — iOS build+test (per prompt Gate)                     #
+#   xcodebuild -scheme TeslaSync -destination 'iOS Simulator' build test#
+########################################################################
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+
+########################################################################
+# GATE STEP 2/2 — macOS build+test (per prompt Gate)                   #
+#   xcodebuild -scheme TeslaSync-macOS build test                       #
+########################################################################
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+
+########################################################################
+# GATE STEP — swiftlint --strict (project-wide, as prompt Gate)        #
+########################################################################
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-332/apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length Violation: Function body should span 50 lines or less excluding comments and whitespace: currently spans 78 lines (function_body_length)
+Done linting! Found 1 violation, 1 serious in 1909 files.
+LINT_EXIT=2
+  note: the single violation is PRE-EXISTING and UNRELATED to this surface
+        (TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift, function_body_length),
+        outside this prompt's allowed-files scope. Per-file swiftlint on the
+        ScoreBadge.* surface itself = 0 violations:
+    CLEAN  TeslaSync/shared-surfaces/ScoreBadge.Model.swift
+    CLEAN  TeslaSync/shared-surfaces/ScoreBadge.Previews.swift
+    CLEAN  TeslaSync/shared-surfaces/ScoreBadge.swift
+    CLEAN  TeslaSync/shared-surfaces/ScoreBadge.Telemetry.swift
+    CLEAN  TeslaSync/shared-surfaces/ScoreBadge.Tests.swift
+
+########################################################################
+# GATE STEP — swiftformat --lint apps/apple (as prompt Gate)           #
+########################################################################
+1/1918 files require formatting, 2 files skipped.
+FORMAT_EXIT=1
+  scope check — ScoreBadge.* require formatting:
+0/5 files require formatting.
+
+########################################################################
+# GATE STEP — placeholder/stub gate (pwsh check-placeholders.ps1)      #
+########################################################################
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+  note: the single tree-wide swiftformat diff is PRE-EXISTING and UNRELATED
+        (TeslaSync/feature-views/ActionBuilder.Previews.swift:48 blankLinesBetweenScopes),
+        outside this prompt's allowed-files scope. ScoreBadge.* = 0/5.
+
+########################################################################
+# SUBSTITUTE VERIFICATION — standalone SwiftPM (xcodebuild unavailable) #
+#   Proves the surface compiles under Swift 6 strict concurrency and    #
+#   the ported adapter logic executes correctly. XCTest is unavailable  #
+#   under Command Line Tools, so ScoreBadge.Tests.swift (XCTest) runs   #
+#   in the Xcode CI targets; the same assertions are executed here via  #
+#   a plain harness for runtime evidence on this runner.                #
+########################################################################
+--- swift build (ScoreBadgeKit: Model + Telemetry + View, language mode v6) ---
+Building for debugging...
+[0/1] Write swift-version--1AB21518FC5DEDBE.txt
+Build of target: 'ScoreBadgeKit' complete! (0.22s)
+SPM_LIB_BUILD_EXIT=0
+--- swift run sb-harness (executes the ScoreBadge.Tests assertions) ---
+Building for debugging...
+[0/3] Write swift-version--1AB21518FC5DEDBE.txt
+Build of product 'sb-harness' complete! (0.18s)
+CHECKS=57 FAILURES=0
+ALL ADAPTER CHECKS PASSED
+SPM_HARNESS_EXIT=0
+
+########################################################################
+# ANALYSIS / HONESTY COVENANT                                          #
+########################################################################
+Surface-scoped results (this prompt's responsibility) — ALL GREEN:
+  swiftformat ScoreBadge.*        : 0/5 require formatting        ✅
+  swiftlint   ScoreBadge.*        : 0 violations (per-file)       ✅
+  placeholder gate                : PLACEHOLDER_COUNT=0, EXIT=0   ✅
+  SwiftPM build (Swift 6 strict)  : SPM_LIB_BUILD_EXIT=0          ✅
+  adapter runtime harness         : 57/57 checks, FAILURES=0      ✅
+
+Blocked / pre-existing (NOT attributable to this surface):
+  IOS_EXIT=1, MAC_EXIT=1  : BLOCKED — runner has Command Line Tools only,
+                            not full Xcode. `xcodebuild` hard-errors
+                            ("tool 'xcodebuild' requires Xcode … is a command
+                            line tools instance"). XCTest is likewise bundled
+                            with Xcode and unavailable under CLT, so the shipped
+                            XCTest target (ScoreBadge.Tests.swift) executes in
+                            the Xcode CI targets only. Its assertions are
+                            reproduced and PASS via the SwiftPM harness above.
+  LINT_EXIT=2             : 1 PRE-EXISTING violation in an unrelated file
+                            (LifetimeStatsWidget.Adapter.swift, function_body_length),
+                            outside this prompt's allowed-files scope.
+  FORMAT_EXIT=1          : 1 PRE-EXISTING diff in an unrelated file
+                            (ActionBuilder.Previews.swift), outside scope.
+
+Per the prompt's capability clause ("requires SwiftUI + Swift Charts + MapKit,
+iOS 18 / iPadOS 18 / macOS 15 HIG. If unavailable on the runner → STATUS=BLOCKED
+with API evidence.") the Apple build+test gate cannot be executed on this runner.
+The surface code is COMPLETE, production-polished, and verified to the maximum
+extent the runner allows (compile under Swift 6 strict concurrency + full adapter
+execution). No stubs / no skeleton-only content.
+
+Integration note (outside allowed-files {ScoreBadge.*, this log}): a separate
+integration step adds `TeslaSync/shared-surfaces` to the iOS/macOS target source
+lists in apps/apple/project.yml and to `.swiftlint.yml included:`, and folds the
+per-surface `ScoreBadge` strings table into Localizable.xcstrings — the same
+pattern already used for `TeslaSync/feature-views`. This mirrors the established
+parallel-surface methodology where each leaf prompt owns only its own files.
+
+########################################################################
+# ACCEPTANCE CRITERIA                                                  #
+########################################################################
+[x] Renders all states the web source carries: resolved grade + '—' no-data
+    sentinel (the canonical empty state). ScoreBadge owns no data (a pure
+    presentational leaf, like the shipped ToolCard surface); cache/loading/
+    error/stale/offline belong to the embedding data-bearing surface.
+[x] No direct HTTP from the view; the only web data source (useTranslation) is
+    bound via the P1/S10 i18n facade (NSLocalizedString table "ScoreBadge").
+[x] Every i18n key from source present: score.aria → ScoreBadge.strings.
+[x] Accessibility: VoiceOver label on the badge (score.aria), Dynamic Type via
+    @ScaledMetric anchored per size, no decorative element exposed.
+[x] Tests: adapter (grade scale, thresholds, averaging, color contract, sizes),
+    a11y wording, surface slug, view.opened telemetry spy — executed 57/57.
+[x] No TODO / stub / mock / placeholder / Lorem — placeholder gate EXIT=0.
+[~] EXIT=0 / STATUS=DONE — Apple xcodebuild/XCTest gate BLOCKED (no full Xcode);
+    platform-capability evidence captured above. All runnable, surface-scoped
+    checks are green.
+
+EXIT=1
+STATUS=BLOCKED

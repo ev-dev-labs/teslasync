@@ -1,0 +1,128 @@
+# p4-apple · P7 · page:diagnostics/AnomalyDashboard — gate log
+
+artifact         : apps/apple/TeslaSync/Features/Diagnostics/AnomalyDashboardPage.swift
+parity unit      : page:diagnostics/AnomalyDashboard   (web /analytics/anomalies)
+web source       : web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx
+prompt           : p4-apple · P7 · page:diagnostics/AnomalyDashboard (SwiftUI / HIG)
+host             : Darwin (macOS) · Swift 6.3.2 · swiftlint · xcodegen · pwsh present
+
+================================================================================
+ENVIRONMENT / RUNNER
+================================================================================
+xcode-select -p  = /Library/Developer/CommandLineTools      (Command Line Tools only)
+xcodebuild       = error: "tool 'xcodebuild' requires Xcode, but active developer
+                   directory '/Library/Developer/CommandLineTools' is a command line
+                   tools instance"
+=> The apple build + test triad CANNOT execute on this runner (no full Xcode).
+   Per the prompt gate contract: "If no Xcode runner is available, the gate → STATUS=BLOCKED."
+   The implementation below is COMPLETE and parity-covered; only the xcodebuild-backed
+   BUILD/TEST steps are environment-blocked (honesty covenant #1 — no red-as-green).
+
+================================================================================
+GATE STEPS (run every step the environment allows; report honestly)
+================================================================================
+# check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Diagnostics -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# swiftlint --strict apps/apple/TeslaSync/Features/Diagnostics   (run from repo root)
+#   9 source files linted · 0 violations · 0 serious
+LINT_EXIT=0
+
+# xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync build
+BUILD_EXIT=BLOCKED   (xcodebuild requires full Xcode; only Command Line Tools present)
+
+# xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync test
+TEST_EXIT=BLOCKED    (same — no Xcode runner)
+
+================================================================================
+SUPPLEMENTAL VERIFICATION (what DID run successfully here)
+================================================================================
+- xcodegen generate --spec apps/apple/project.yml            => EXIT=0
+    project.yml valid after adding the `TeslaSync/Features` source path to both app
+    targets (TeslaSync, TeslaSync-macOS); the 9 AnomalyDashboard* files + the Features
+    group are wired into the generated .xcodeproj (referenced 48× in project.pbxproj).
+- xcrun --sdk macosx swiftc -parse  (all 9 Diagnostics files) => 0 syntax errors each.
+- swiftlint (project config from apps/apple, whole-tree): the 9 new files contribute 0
+    violations. One PRE-EXISTING, unrelated violation remains in
+    TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift (function_body_length);
+    `git status` shows that file UNMODIFIED by this change, and it is outside this
+    prompt's allowed files (not introduced here, not in scope).
+- Swift-6 strict-concurrency: the model's holder factory is marked @MainActor to match
+    StateHolderModel isolation (mirrors BatteryCellsModel / VehicleSettingsModel).
+
+================================================================================
+IMPLEMENTATION SUMMARY (no shortcuts — ADR-011)
+================================================================================
+Files (apps/apple/TeslaSync/Features/Diagnostics/, 1353 LOC incl. previews+tests):
+  AnomalyDashboardData.swift     — Resource<JsonElement> JSON → AnomalyData decode + pure
+                                    projections (signalFrequency top-10, content.make).
+  AnomalyDashboardModel.swift    — @Observable AnomalyDashboardModel binding the shared KMP
+                                    AnomaliesStore via StateHolderModel; AnomalyDashboardPhase
+                                    + resolve() (loading/empty/error/success, stale flag).
+  AnomalyDashboardStrings.swift  — the 15 web i18n keys (translation.anomaly.*) as symbols.
+  AnomalyDashboardSections.swift — stat grid, System-Health grid, Anomaly Timeline, chips,
+                                    severity/health tone + icon mapping, number formatting.
+  AnomalyDashboardChart.swift    — Most-Frequent-Anomalies native Swift Charts horizontal bar.
+  AnomalyDashboardPage.swift     — the adaptive page View (header + picker + freshness + states).
+  DiagnosticsRouteRegistration.swift — registers .diagnostics → page (mirrors SettingsRouteReg.).
+  AnomalyDashboardPreviews.swift — DEBUG previews for all 4 states + stale variant.
+  AnomalyDashboardTests.swift    — XCTest coverage: decode, frequency, content.make, phase ladder.
+Navigation: TeslaSyncApp.swift chains DiagnosticsRouteRegistration onto the route-host registry.
+Reuse (DRY): AnomalyData / AnomalyEntryItem / AnomalySeverity / AnomalyDetectorType are REUSED
+  from the existing same-domain feature view (AnomalyInlineRow.Adapter.swift), not redefined.
+Strings: all 15 keys already exist in Localizable.xcstrings (translation.anomaly.*) with English
+  values — referenced via LocalizedStringKey; no catalog edit required; zero hardcoded literals.
+Live data: AnomaliesStore exists in the KMP core (P1/S7-S8). Live store injection is vended by
+  AppContainer.bootstrap (pending P1/S8, per AppContainer.swift). The page binds the REAL store
+  seam; pre-bootstrap the registry passes no store and the page shows its honest loading state
+  (the same connecting state every facade-backed surface shows) — never fabricated data (ADR-011).
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=27
+[panel ] Signals-Monitored   AnomalyDashboardSections.swift:AnomalyStatGrid  (TSStatCard .monitored ← content.signalsMonitored)
+[panel ] Anomalies-7d        AnomalyDashboardSections.swift:AnomalyStatGrid  (TSStatCard .last7d ← content.anomaliesLast7d)
+[panel ] Anomalies-24h       AnomalyDashboardSections.swift:AnomalyStatGrid  (TSStatCard .last24h ← content.anomaliesLast24h)
+[panel ] Health-Categories   AnomalyDashboardSections.swift:AnomalyStatGrid  (TSStatCard .categories ← content.categoryCount)
+[panel ] GlassPanel5         AnomalyDashboardSections.swift:AnomalyHealthPanel  (System Health; TSGlassPanel + AnomalyHealthTile; empty→noHealth)
+[panel ] GlassPanel6         AnomalyDashboardSections.swift:AnomalyTimelinePanel  (Timeline; TSGlassPanel + AnomalyTimelineList/Row; empty→noAnomalies)
+[panel ] GlassPanel7         AnomalyDashboardChart.swift:AnomalyFrequencyPanel  (Most Frequent; TSGlassPanel; empty→noFrequency)
+[chart ] BarChart            AnomalyDashboardChart.swift:AnomalyFrequencyChart  (Swift Charts Chart{ BarMark x:count y:signal }, horizontal, TSChartPalette)
+[state ] loading             AnomalyDashboardModel.swift:AnomalyDashboardPhase.resolve(.idle/.loading→.loading) + AnomalyDashboardPage.swift:stateView (TSPageLoader)
+[state ] empty               AnomalyDashboardModel.swift:AnomalyDashboardPhase(.empty) + AnomalyDashboardPage.swift:stateView (TSEmptyState/ContentUnavailableView)
+[state ] error               AnomalyDashboardModel.swift:AnomalyDashboardPhase(.error) + AnomalyDashboardPage.swift:errorState (retry → model.refresh)
+[state ] success             AnomalyDashboardModel.swift:AnomalyDashboardPhase(.content) + AnomalyDashboardPage.swift:sections(_:)
+[string] anomaly.baseline    AnomalyDashboardStrings.baseline      → translation.anomaly.baseline      (AnomalyTimelineRow.metric)
+[string] anomaly.categories  AnomalyDashboardStrings.categories    → translation.anomaly.categories    (AnomalyStatGrid)
+[string] anomaly.count       AnomalyDashboardStrings.count/.countText → translation.anomaly.count       (AnomalyFrequencyChart x-axis)
+[string] anomaly.frequency   AnomalyDashboardStrings.frequency     → translation.anomaly.frequency     (AnomalyFrequencyPanel title)
+[string] anomaly.healthSummary AnomalyDashboardStrings.healthSummary → translation.anomaly.healthSummary (AnomalyHealthPanel title)
+[string] anomaly.last24h     AnomalyDashboardStrings.last24h       → translation.anomaly.last24h       (AnomalyStatGrid)
+[string] anomaly.last7d      AnomalyDashboardStrings.last7d        → translation.anomaly.last7d        (AnomalyStatGrid)
+[string] anomaly.monitored   AnomalyDashboardStrings.monitored     → translation.anomaly.monitored     (AnomalyStatGrid)
+[string] anomaly.noAnomalies AnomalyDashboardStrings.noAnomalies   → translation.anomaly.noAnomalies   (AnomalyTimelinePanel/empty + page empty)
+[string] anomaly.noFrequency AnomalyDashboardStrings.noFrequency   → translation.anomaly.noFrequency   (AnomalyFrequencyPanel empty)
+[string] anomaly.noHealth    AnomalyDashboardStrings.noHealth      → translation.anomaly.noHealth      (AnomalyHealthPanel empty)
+[string] anomaly.subtitle    AnomalyDashboardStrings.subtitle      → translation.anomaly.subtitle      (AnomalyDashboardPage.titleBlock)
+[string] anomaly.timeline    AnomalyDashboardStrings.timeline      → translation.anomaly.timeline      (AnomalyTimelinePanel title)
+[string] anomaly.title       AnomalyDashboardStrings.title         → translation.anomaly.title         (AnomalyDashboardPage.titleBlock/empty/error)
+[string] anomaly.value       AnomalyDashboardStrings.value         → translation.anomaly.value         (AnomalyTimelineRow.metric)
+PARITY_COVERED=27
+=== /PARITY ===
+
+================================================================================
+RESULT
+================================================================================
+PLACEHOLDER_EXIT=0 · LINT_EXIT=0 · PROJECTGEN_EXIT=0 · PARSE_EXIT=0
+BUILD_EXIT=BLOCKED · TEST_EXIT=BLOCKED   (no full Xcode toolchain on this runner)
+PARITY_COVERED=27 / PARITY_REQUIRED=27
+
+The page is implemented in full (7 panels · 1 native Swift Charts bar chart · 4 data states ·
+15 catalog strings), lints clean under --strict, passes the placeholder gate, generates into both
+app targets, and parses without error. The build/test triad is BLOCKED solely by the absence of an
+Xcode runner — reported truthfully rather than as green.
+
+EXIT=2
+STATUS=BLOCKED

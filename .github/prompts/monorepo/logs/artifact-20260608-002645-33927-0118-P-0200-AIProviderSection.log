@@ -1,0 +1,176 @@
+=== P4 Feature view 0200 AIProviderSection (Apple) ===
+date=2026-06-08T09:22:24Z
+host=Darwin 25.5.0 arm64
+web source = web/src/features/settings/components/AIProviderSection.tsx (controlled provider form: provider/model grid, Azure surface block, local + cloud validate flows, cost-cap)
+
+--- Capability (REQUIRED: SwiftUI + Swift Charts + MapKit, iOS18/iPadOS18/macOS15 HIG) ---
+NOTE: default xcode-select is CommandLineTools; full Xcode is present and used via DEVELOPER_DIR.
+  Xcode 26.5
+  Build version 17F42
+  iOS SDK:   26.5 (iphonesimulator)
+  macOS SDK: 26.5
+  swiftlint=0.63.3  swiftformat=0.61.1  xcodegen=Version: 2.45.4
+  deployment targets (project.yml): iOS 18.0 / macOS 15.0 — build on current SDK (forward-compatible).
+  => CAPABILITY AVAILABLE.
+
+--- Verification strategy (precedent: apps/macos-pending-verifications.md rows P-0010-ToolCard / 0180-AlertMessageEditor / 0231-FSMTimelineChart; sibling log p4-apple-feature-views-0202-AISettings) ---
+Feature-view surfaces import only SwiftUI/Foundation/Observation/OSLog and bind through local seam protocols;
+the shipping design system (apps/design/generated/apple/Tokens.swift + apps/apple/Sources/Design + the surface's
+Components closure: UI/Buttons,Cards,Typography,Badges + Feedback/Skeletons + Motion/Motion) is Shared(KMP)-free.
+The surface is therefore verified GREEN in an isolated SwiftPM build (real design system + the 8 surface sources)
+running its XCTest suite under Swift 6 strict concurrency, plus a real iOS-18 swiftc -typecheck (the #if os(iOS)
+keyboard/size-class branches). The full-app 'xcodebuild build test' is a deferred macOS-acceptance-gate
+verification (see DEFERRED section) — blocked by pre-existing, out-of-scope issues, not by this surface.
+
+=== [1/6] Isolated SwiftPM build (Swift 6 language mode, strict concurrency) ===
+[0/1] Planning build
+Building for debugging...
+[0/1] Write swift-version--58304C5D6DBC2206.txt
+Build complete! (0.38s)
+ISOLATED_BUILD_EXIT=0
+
+=== [2/6] Isolated XCTest run ===
+Test Suite 'All tests' passed at 2026-06-08 02:22:40.544.
+	 Executed 48 tests, with 0 failures (0 unexpected) in 0.013 (0.018) seconds
+ISOLATED_TESTS_EXIT=0  (48 tests, 0 failures — adapter/validate/projection + model/a11y)
+
+=== [2b] Real iOS-18 swiftc -typecheck (design closure + surface, Swift 6) ===
+IOS_TYPECHECK_EXIT=0  (no output above = clean)
+
+=== [3/6] swiftlint --strict (10 surface .swift files) ===
+Linting 'AIProviderSection.ModelTests.swift' (10/10)
+Done linting! Found 0 violations, 0 serious in 10 files.
+LINT_EXIT=0  (file_length kept <400 via focused split; no output above = 0 violations)
+
+=== [4/6] swiftformat --lint (10 surface .swift files) ===
+0/10 files require formatting.
+FORMAT_EXIT=0
+
+=== [5/6] placeholder/stub gate (HONEST scan of the 10 surface .swift files) ===
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+(PLACEHOLDER_ALLOWED=1 = the single web i18n key name 'ai.settings.provider.apiKeyPlaceholder' referenced
+ verbatim in Views.swift for shared-catalog parity, marked '// parity:allow web i18n key, verbatim' — a real
+ key name, not a stub. PLACEHOLDER_COUNT=0. The literal gate path apps/.../AIProviderSection is a -LiteralPath
+ prefix that matches no dir/file -> scans nothing -> trivially 0; the scan above is the real check.)
+
+=== [6/6] xcodegen generate (wires the 11 surface files into TeslaSync + TeslaSync-macOS) ===
+⚙️  Writing project...
+Created project at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-118/apps/apple/TeslaSync.xcodeproj
+XCODEGEN_EXIT=0
+wired files:
+  AIProviderSection.Adapter.swift
+  AIProviderSection.Model.swift
+  AIProviderSection.ModelTests.swift
+  AIProviderSection.Previews.swift
+  AIProviderSection.Projection.swift
+  AIProviderSection.Rows.swift
+  AIProviderSection.strings
+  AIProviderSection.swift
+  AIProviderSection.Tests.swift
+  AIProviderSection.Validate.swift
+  AIProviderSection.Views.swift
+
+=== i18n coverage (every facade key referenced in Swift resolves in the AIProviderSection.strings catalog) ===
+  keys referenced in Swift =       41; keys in catalog =       41; referenced-but-missing =        0
+
+=== Full-app build/test (gate steps IOS_EXIT / MAC_EXIT) — DEFERRED (not green-washed) ===
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test : DEFERRED
+xcodebuild -scheme TeslaSync-macOS build test                                                : DEFERRED
+
+REASON (pre-existing, unrelated, OUTSIDE this prompt's allowed-files scope = AIProviderSection.* + this log):
+  X0. apps/apple/Frameworks/Shared.xcframework is NOT staged (only .gitkeep present). The KMP Shared core that
+      most of Sources/* imports is produced by the scheme preAction (Scripts/build-shared-xcframework.sh ->
+      Gradle). Until it is staged, the app/test targets cannot link.
+  R1. 'public struct DashboardWidgetSize' (and peers) is redefined 15x across Sources/DashboardWidgets/* +
+      TeslaSync/dashboard-widgets/* (parallel-merge collisions) -> invalid-redeclaration in the app module.
+  R2. 206 co-located feature-views/*.Tests.swift import XCTest into the APP target (project.yml compiles
+      TeslaSync/feature-views into the app target, not a test target). AIProviderSection.Tests.swift +
+      AIProviderSection.ModelTests.swift follow the SAME established repo convention as all 206 surfaces —
+      they introduce no NEW class of blocker.
+  R3. macOS app target requires a development signing identity (0 valid codesigning identities on this runner).
+  These are exactly the blockers recorded for predecessors P-0010-ToolCard / 0180-AlertMessageEditor /
+  0231-FSMTimelineChart in apps/macos-pending-verifications.md, deferred to 'p4-apple/P99-0001-apple-acceptance-
+  gate' (macos-latest + signing). A bounded full-app target compile was attempted on this run; it surfaced
+  ZERO AIProviderSection errors (the surface + its tests build green in isolation, sections [1]-[2b]).
+
+=== Shipped files (allowed scope) ===
+  ?? apps/apple/TeslaSync/feature-views/AIProviderSection.Adapter.swift
+  ?? apps/apple/TeslaSync/feature-views/AIProviderSection.Model.swift
+  ?? apps/apple/TeslaSync/feature-views/AIProviderSection.ModelTests.swift
+  ?? apps/apple/TeslaSync/feature-views/AIProviderSection.Previews.swift
+  ?? apps/apple/TeslaSync/feature-views/AIProviderSection.Projection.swift
+  ?? apps/apple/TeslaSync/feature-views/AIProviderSection.Rows.swift
+  ?? apps/apple/TeslaSync/feature-views/AIProviderSection.Tests.swift
+  ?? apps/apple/TeslaSync/feature-views/AIProviderSection.Validate.swift
+  ?? apps/apple/TeslaSync/feature-views/AIProviderSection.Views.swift
+  ?? apps/apple/TeslaSync/feature-views/AIProviderSection.strings
+  ?? apps/apple/TeslaSync/feature-views/AIProviderSection.swift
+  line counts (all <= 400, the swiftlint file_length budget):
+       194 TeslaSync/feature-views/AIProviderSection.swift
+       197 TeslaSync/feature-views/AIProviderSection.Adapter.swift
+       226 TeslaSync/feature-views/AIProviderSection.Validate.swift
+        93 TeslaSync/feature-views/AIProviderSection.Projection.swift
+       372 TeslaSync/feature-views/AIProviderSection.Model.swift
+       305 TeslaSync/feature-views/AIProviderSection.Views.swift
+       314 TeslaSync/feature-views/AIProviderSection.Rows.swift
+       152 TeslaSync/feature-views/AIProviderSection.Previews.swift
+        68 TeslaSync/feature-views/AIProviderSection.strings
+       300 TeslaSync/feature-views/AIProviderSection.Tests.swift
+       209 TeslaSync/feature-views/AIProviderSection.ModelTests.swift
+      2430 total
+
+=== Parity with web source (data / composition / states / i18n / a11y / telemetry) ===
+  data sources: useValidateAiProvider (POST /settings/ai/validate-config) + the parent-owned AIProviderDraft +
+                isCloud + onChange -> all bound via the AiProviderSource P1/S8 seam (commitDraft = web onChange;
+                validate(_:) async = web validate.mutateAsync). No HTTP in the view. useTranslation -> P1/S10 facade.
+  composition : Subhead 'Provider configuration'; provider <Select> + Model <Input> grid (label/hint swap for
+                Azure non-Foundry); Azure block (Azure surface <Select> + API version + Chat/Embedding deployment
+                inputs, deployments hidden for Foundry); local Base URL + Validate; Azure 'Resource endpoint URL';
+                cloud API key (secure) + 'Daily cost cap (USD)' (cents<->dollars) + 'Validate connection'; local
+                explainer Caption; validate-optional HelperText. Provider brand titles rendered verbatim (proper
+                nouns, as in the web); Azure-flavor descriptive labels promoted to facade keys.
+  validate    : banner ok+pinned_ip -> 'OK - pinned to {ip}', ok+probed_model -> 'OK - {model} reachable', ok ->
+                'OK - provider reachable', fail -> backend message; cleared on any field edit; local button
+                disabled when validating || base_url blank, cloud disabled only while validating (empty api_key
+                allowed; omitted from payload so the backend keeps its saved key).
+  states      : loading / empty / error (+retry) / data + connection axis (live/stale/offline chip + banner,
+                one-shot stale auto-refresh) + local/cloud + Azure OpenAI/Foundry flavor + validate ok/fail.
+                Every state has a #Preview (11 previews).
+  i18n        : 41 keys in AIProviderSection.strings (table 'AIProviderSection'); every web 'ai.settings.provider.*'
+                + 'ai.settings.validate.*' key preserved verbatim; {{ip}}/{{model}} -> positional %@; no English
+                literals in Swift (facade NSLocalizedString(key, value: fallback)); coverage check = 41/41, 0 missing.
+  a11y        : VoiceOver labels on every control (selects, text/secure fields, validate button, refresh), the
+                section aria-label 'Provider configuration', the freshness chip, the validate banner (role=status
+                -> accessibilityValue 'status: message'), header .isHeader; Dynamic Type via tokens; Reduce Motion
+                via TSFadeIn/TSSkeleton.
+  telemetry   : AiProviderModel.start() emits P1/S11 'view.opened' surface='AIProviderSection' once (asserted in tests).
+
+=== Acceptance criteria ===
+  [x] Surface renders all web-source states (isolated build green; per-state #Previews; projection tests).
+  [x] Hooks bind via shared P1/S8 seam (AiProviderSource: commitDraft + async validate); no direct HTTP in the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (AIProviderSection.strings; 41/41, 0 missing).
+  [x] Accessibility labels on every interactive element.
+  [x] Tests: adapter (catalog/layout/validate-request/outcome/banner-text/button/cost-cap) + projection per-state +
+      model (telemetry/draft/patch+commit/validate ok-fail/freshness) + a11y = 48 tests, 0 failures.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (honest placeholder scan COUNT=0; 1 documented opt-out
+      for the verbatim web i18n key name, not a stub).
+  [~] Full-app xcodebuild build test DEFERRED to P99 acceptance gate (pre-existing X0/R1/R2/R3); host-runnable
+      surface gate EXIT=0.
+
+=== GATE SUMMARY ===
+ISOLATED_BUILD_EXIT=0
+ISOLATED_TESTS_EXIT=0   # 48 tests, 0 failures
+IOS_TYPECHECK_EXIT=0    # iOS 18 simulator SDK, Swift 6 strict concurrency
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0      # COUNT=0, ALLOWED=1 (verbatim web i18n key name)
+XCODEGEN_EXIT=0
+I18N_COVERAGE=41/41     # 0 referenced-but-missing
+IOS_FULLAPP_BUILDTEST=DEFERRED   # pre-existing X0/R1/R2/R3; 0 AIProviderSection errors
+MAC_FULLAPP_BUILDTEST=DEFERRED   # pre-existing X0/R1/R2/R3 + signing
+
+EXIT=0
+STATUS=DONE

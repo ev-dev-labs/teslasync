@@ -1,0 +1,110 @@
+I'll start by exploring the repository structure, reading the web source component, and checking the Apple app conventions and runner capabilities.
+
+Tooling is present (xcodebuild, swiftlint, swiftformat). Let me read the web source and explore the Apple app structure.
+
+Now let me explore the Apple app structure in depth — feature-views directory, existing surfaces, and the P1/P4 infrastructure (tokens, i18n, state holders, nav, diagnostics).
+
+The feature-views directory has 1438 entries. Let me examine the complete file set for one existing surface to learn the conventions, and check whether QuickLinksSection already exists.
+
+`QuickLinksSection` doesn't exist yet. The established per-surface file pattern is clear. Let me read a complete example surface and locate the P1 infrastructure (tokens, i18n facade, state holders, diagnostics).
+
+This is a rich, well-established pattern. `AcDcStatsPanel` is data-driven though; `QuickLinksSection` is a static nav grid. Let me read the rest of that example, the shared infra (theme/nav), the project.yml, and find a navigation/static precedent.
+
+project.yml is at the `apps/apple` level. Let me read it and locate the shared theme/nav infrastructure (TSGlassPanel, Color.TS, Font.TS, TSSpacing, nav layer).
+
+Key finding: `feature-views/` is globbed into the app targets, so new files auto-include. But tests live in `Tests/Unit`. Let me understand how `.Tests.swift` files in feature-views are compiled, check for xcodegen, and whether the Shared.xcframework/KMP toolchain is buildable on this runner.
+
+Let me understand the test inclusion mechanism and build feasibility — these determine whether the gate can pass or must be BLOCKED with evidence.
+
+Now I understand the architecture. The web source is static (nav grid), but the established convention wraps everything in the P4 leaf contract (like AcDcStatsPanel). Let me find the nav layer (`AppRoute`), how surfaces navigate, the shared theme primitives, and the ToolCard analog.
+
+Let me examine ToolCard (closest analog), the route parser, the web App routes for these paths, and the shared theme primitives.
+
+ToolCard is a dataless container (precedent for static surfaces), but AcDcStatsPanel's full leaf-contract is the dominant pattern and matches the prompt's explicit state list — I'll follow it. Now let me resolve navigation: find the exact web route paths, the route parser, how feature-views navigate, and the theme primitives.
+
+There's a `QuickNav` feature-view — the closest analog. Let me study it fully, confirm the web route mappings, and locate the theme primitives.
+
+Now let me study QuickNav in full (the closest analog) and locate the theme primitives (TSGlassPanel, Color.TS, TSSpacing, TSPanelTitle, etc.).
+
+`QuickNav` is a near-perfect template — same nature (static nav catalog, only `useTranslation`, `nav.*` keys), implementing the full P4 leaf contract. Let me read its remaining files and locate the theme primitives.
+
+Excellent template. Now let me read QuickNav's tests and verify the exact theme primitive APIs I'll use (TSGlassPanel, Color.TS.*, Font.TS.*, TSSpacing, TSRadius, TSMotion, TSSkeleton, TSPanelTitle).
+
+I have a thorough picture. Let me confirm the exact APIs of the theme primitives I'll use before writing code.
+
+Paths are under `apps/apple/Sources`, not `TeslaSync/Sources`. Let me read the correct files.
+
+Let me confirm the design tokens (Color.TS, Font.TS, TSSpacing, TSRadius, TSMotion) and the cyan accent, then I'll have everything needed.
+
+I now have all the theme APIs. Key parity insight: the web icons are uniformly `text-muted` (no per-item colors), only the header chevron and hover-glow are cyan. Let me check the lint/format configs, placeholder checker, and pwsh availability before writing.
+
+Tooling confirmed (pwsh, swiftlint, swiftformat all present). Since all feature-views compile into one module, I must ensure my type names don't collide. Let me check for collisions and write the plan.
+
+No collisions. I have a complete understanding. Let me set up the plan and todos, then build the 7 surface files modeled on the `QuickNav` precedent.
+
+Now I'll create the surface files, modeled on the `QuickNav` precedent. Starting with the pure core adapter.
+
+All 7 files created. Now let me format and lint them.
+
+One violation: `QuickLinksSection.Tests.swift` is 401 lines (max 400). Let me trim the header comment by two lines.
+
+swiftlint `--strict` and swiftformat `--lint` both pass with 0 violations on the new files. Now the placeholder gate.
+
+Let me verify the placeholder gate actually scanned my files (the `-Path` is a filename prefix, not a directory) — I want to be sure it's not a trivial pass on zero files.
+
+Let me confirm the script's behavior on a prefix path and verify my actual files are scanned (honest check, not a zero-file pass).
+
+Confirmed: the prefix path scans zero files (a trivial pass). For an honest check, let me run the placeholder gate against a temp copy of my actual files.
+
+Honest placeholder scan of my actual files: **0 violations**. Now I'll attempt the build/test gate, capturing real evidence. First let me probe the KMP `Shared.xcframework` prerequisite and project generation, since these gate the whole build.
+
+Decisive finding: only **Command Line Tools** are installed (no full Xcode), so `xcodebuild` and iOS/macOS simulators are unavailable — the gate's platform capability is missing. The prompt says this → `STATUS=BLOCKED` with evidence. But `swiftc` IS available, so I'll produce positive compile evidence for my code. Let me capture the capability evidence and locate the theme closure for a standalone typecheck.
+
+Major positive: `swiftc` imports **SwiftUI + Charts + MapKit** successfully against the macOS SDK (RC=0). So although full `xcodebuild`/simulators are absent, I can typecheck my surface against the real SDK. Let me assemble the dependency closure and typecheck.
+
+Closure confirmed (TSBadge/TSButton are only in DEBUG previews, excluded). Let me typecheck my surface against the macOS SDK with the dependency closure.
+
+Excellent — my surface **type-checks cleanly (RC=0)** against the real macOS SDK with the actual theme/route closure. Let me also typecheck the test logic (strip the self `@testable import`, compile against my real types + XCTest).
+
+XCTest isn't in the CLT SDK (further BLOCKED evidence — XCTest needs full Xcode). I'll validate the test *logic* against my real types using a minimal XCTest shim.
+
+Test logic type-checks (RC=0) against my real types. Let me also validate the Previews body (unwrap `#if DEBUG`, compile against the closure).
+
+The only Previews errors are the `#Preview` macro *plugin* missing (Xcode-only) — not code errors. Let me confirm the preview bodies themselves are type-correct by rewriting the macro to plain functions.
+
+All my verifications pass: swiftformat (0), swiftlint --strict (0), placeholder (0), and swiftc typechecks of the shipped surface, test logic, and preview bodies all RC=0. The full `xcodebuild` gate is blocked (no Xcode). Let me check the log directory and a sibling log for format, then run the gate faithfully and write the log.
+
+The sibling log reveals the established disposition: host gates (swiftlint/swiftformat/placeholder/swiftc + executed logic tests) are the green gates; `xcodebuild build test` is captured as real evidence and deferred when the runner lacks the full toolchain. Let me check whether a full Xcode exists anywhere (to run xcodebuild for real) and prepare a runtime test-execution harness.
+
+Full **Xcode.app exists** at `/Applications/Xcode.app` — `xcode-select` just points to CLT. I can run the real `xcodebuild` via `DEVELOPER_DIR`. Let me verify it and inspect how a sibling documented test execution + the xcodebuild deferral.
+
+Real **Xcode 26.5** + a **booted iPhone 16 simulator** are available via `DEVELOPER_DIR`. The established disposition (sibling 0003): swiftc typecheck for iOS-sim + macOS are the green compile gates; the full `xcodebuild build test` is deferred because `Shared.xcframework` (KMP) is absent + target not yet registered (integration-scoped). Let me run the iOS-simulator typecheck, then build a runtime harness that actually executes the test logic.
+
+iOS-sim typecheck passes (RC=0). Now let me build a runtime harness that actually **executes** the test logic (real assertions + render smoke) against my types and exits 0/1.
+
+The harness needs to be named `main.swift` for top-level code. Let me rename and recompile.
+
+Swift 6 top-level concurrency: helper funcs need `@MainActor`. Let me annotate and rerun.
+
+Runtime harness: **63 checks, 0 failures, exit 0** — the full state machine and all 6 render states execute correctly. Now let me capture the real `xcodebuild` evidence (it's deferred per the established disposition due to the absent KMP `Shared.xcframework`). First confirm the generated project is git-ignored, then generate it and attempt a bounded real build.
+
+Project generates cleanly (RC=0) with my files included; `Shared.xcframework` is confirmed absent (only `.gitkeep`). Now a bounded real `xcodebuild` attempt to capture the genuine blocker (the KMP xcframework pre-action).
+
+The async background build was killed on session shutdown (no detach), producing no log. Let me capture decisive, bounded evidence instead: a target-level build (skips the Gradle pre-action) that fails fast on the absent `Shared.xcframework`.
+
+Decisive, real evidence captured: `xcodebuild` exits **65** — `error: There is no XCFramework found at '.../Frameworks/Shared.xcframework'`. This is the KMP artifact built by the scheme's Gradle pre-action (integration-scoped, absent here) — identical to the predecessor's exit-65 deferral. Let me capture the whole-tree lint baseline the gate uses, then clean up the generated project.
+
+Whole-tree swiftformat surfaces **1 pre-existing violation in a *different* surface** (`ActionBuilder.Previews.swift`) — outside my allowed files; my 6 files pass. This matches the established disposition (surface green; broader monorepo issues integration-scoped). Let me clean up the generated project and check git status.
+
+Working tree has unrelated pre-existing changes (AIUsageCard, two web files) — I'll commit **only** my `QuickLinksSection.*` files + the log, as the prompt specifies. Now let me write the gate log with all the real evidence.
+
+Now let me do a final scoped verification and commit only my surface files + the log (excluding the unrelated pre-existing changes).
+
+Final gates green. Let me stage only my surface files + the log, verify the staged set, and commit.
+
+Committed cleanly (commit `70bbd20ad`, 8 files, 1594 insertions) — only my surface files + log. Let me clean up temp artifacts and do a final verification.
+
+All clean and committed. Let me finalize the plan and todo tracking.
+
+All todos complete; work committed and verified. Task finished.
+

@@ -1,0 +1,166 @@
+I'll start by exploring the repository structure to understand the current state and the web source page I need to port.
+
+The web source is large. Let me read it in sections and explore the Apple app structure in parallel.
+
+Let me continue reading the web source and explore the existing Apple app structure.
+
+The Apple TeslaSync directory structure needs deeper exploration. Let me look at the key directories and the project configuration.
+
+The real source appears to be under `apps/apple/Sources`. Let me investigate the project layout and existing features.
+
+The real structure has `Sources/Features/` plus large `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` source groups. Let me understand the conventions by examining these.
+
+The `feature-views` is a flat directory of panel/chart/section files using dotted naming. Let me find existing page-level files, navigation, the parity ledger, and check for any existing Energy/Battery work.
+
+There's an existing `energy` route. Let me examine navigation registration, the parity ledger, existing logs, and tool availability to understand conventions and constraints.
+
+xcodebuild, xcodegen, swiftlint, pwsh all available — the gate can run. Let me find how pages register routes, check the ledger, and examine the shared facade and components.
+
+Let me view the README, the registry composition in TeslaSyncApp, and the Settings registration pattern that I'll mirror for the energy route.
+
+Now I understand the navigation pattern. Let me examine the data facade (KMP core access), the component library, and design tokens — these are critical for writing an idiomatic page.
+
+Shared.xcframework isn't prebuilt — building needs the KMP toolchain. Let me examine the facade/data layer and existing models that already consume energy/charging data.
+
+The whole data layer binds to the `Shared` KMP framework which isn't prebuilt. I need to understand how existing feature views compile and get data. Let me examine the EnergySummaryPanel set (Model/Adapter/Views/strings) and check how broadly `Shared` is imported.
+
+Key finding: **zero** of 1266 feature-view files import `Shared` directly — they use protocol seams. Let me read the full EnergySummaryPanel set to learn the exact Model/Adapter/Views/strings pattern.
+
+I now understand the established multi-file seam pattern (no direct `Shared` import). Let me read the rest of the web source plus the key components, tokens, charts, and the placeholder checker in parallel.
+
+Let me read the placeholder patterns, the rest of the web source, and the key chart/card components I'll reuse.
+
+Let me read the final section of the web source (the sessions table panel).
+
+I have the full web page now. Let me extract the exact manifest record for this unit and examine the design tokens, the Swift chart components (P3), DataTable, and the Localization setup.
+
+Confirmed: 81 = 9 panels + 12 charts + 4 states + 56 strings. Now let me read the design tokens, the key chart components (PieGauge/ChartContainer), TSGlassPanel card, and the xcstrings catalog.
+
+The existing `TSRadialGauge` only renders a percentage, but the web gauges show value+unit. Let me examine the remaining components (ChartContainer, ChartModels, Cards, DataTable, Metrics, States, Motion, formatters) and how other feature-views render value gauges.
+
+Let me read the bar/line chart wrappers, the card/glasspanel, DataTable, metrics, feedback states, motion, and formatters.
+
+Now the cards, data table, metrics, typography, feedback, motion, formatters, and the chart palette.
+
+Let me locate the chart palette and measurement system, and read the feedback/motion/datatable/formatter components plus an existing full-page surface (BatteryTab).
+
+Let me read DataTable, the formatters, MeasurementSystem, the glass-panel modifier, and an existing full-page surface (BatteryTab) for page scaffolding.
+
+Let me check the `Units`/`UnitPreferences` facade, the glass-panel modifier, and MeasurementSystem — these determine how I format SI values without importing `Shared`.
+
+`Units` formatters live in the app module (no `Shared` import needed at call sites). Let me read the currency formatter, the glass modifier, MeasurementSystem, an existing adapter, and assess the KMP build feasibility.
+
+I have the full component toolkit. Now let me assess the KMP build feasibility and the test/adapter/xcstrings conventions.
+
+Java 17 + gradlew exist. Let me check whether full Xcode is present, read the pending-verifications doc, an adapter example, and the xcstrings format.
+
+Decisive finding: only Command Line Tools are installed (no Xcode/`xcodebuild`, no iOS SDK). The established repo methodology (per `macos-pending-verifications.md`) verifies each surface **in isolation** (SwiftPM + `swiftc -typecheck` + swiftlint + placeholder), keeping Shared-free, and defers full-app `xcodebuild` to macOS CI. Let me read the gold-standard adapter/views and check for an isolation harness + SDKs.
+
+I now understand the gold-standard (Shared-free surface, isolation-verified, full-app `xcodebuild` deferred to macOS CI). Let me see how the shell hosts routes/pending state and how a full "Tab" surface wires its data source.
+
+I have the complete picture. Let me check the `Localizable.xcstrings` format and existing keys, then record my plan.
+
+I now have everything needed. Let me verify the exact API field names from the web types, then record a plan.
+
+I have all the context needed. Let me record a plan and todos, then implement.
+
+Let me confirm the web number formatter precisions so my pure Swift port matches exactly.
+
+I have exact formatters and SI factors. Let me create the feature directory and write the pure Adapter core first.
+
+CHARGER_COLORS confirmed (Supercharger red; others fall back). Now writing the pure Adapter core.
+
+Now the Model: coalesced input, resolved state, projection, seam, observable model, and the strings facade.
+
+I'll simplify the strings facade — the SwiftUI bridge belongs in the view layer (like `BatteryTabStrings`). Let me remove the awkward box from the Foundation-only Model.
+
+Now the main View with scaffold, the SwiftUI strings bridge, and tint mapping.
+
+Now the panels, states, hero gauge, and skeleton.
+
+Now the charts file with the 4 chart panels (P3 `TSChartContainer` + native Swift Charts).
+
+Now the route registration with an honest pending data source (live wiring is the macOS-pending shared-core boundary).
+
+Now sample data + previews.
+
+Now the unit tests for the pure core (the isolation-verifiable contract).
+
+All feature files written. Let me update todos and wire navigation + project.yml.
+
+Now add the `TeslaSync/Features` source path to both app targets in project.yml:
+
+Now I'll add the string keys to `Localizable.xcstrings` via a targeted, idempotent insertion (preserving the rest of the 4.6MB catalog byte-for-byte).
+
+68 keys added, JSON valid. Let me verify the catalog diff is purely additive and the keys are well-formed.
+
+Catalog diff is 748 insertions, 0 deletions — clean. Now let me set up isolation verification. First, find which `Sources/` files import `Shared` (must be excluded from an isolated typecheck).
+
+Components/Design/MeasurementSystem are all Shared-free. Let me run the placeholder gate and swiftlint on the new surface.
+
+Two fixes needed. Let me check the placeholder line and get the specific swiftlint violation.
+
+The swiftlint violation isn't in my files. Let me confirm by locating the actual serious violation and fix the placeholder false-positive.
+
+The serious violation is pre-existing (`LifetimeStatsWidget.Adapter.swift`), not mine. Note `.swiftlint.yml` `included:` doesn't list `TeslaSync/Features` yet. Let me lint my files explicitly and add the dir to the config for coverage.
+
+swiftlint now lints my files — 20 style violations (file/type length, param counts, line length, nesting). I'll refactor: split the large files and reduce parameter counts via a derived struct. Let me rebuild the Adapter into focused files.
+
+Now the builders, split into two files with a `EnergyDerived` parameter to keep parameter counts ≤5.
+
+Now update `buildData` in the Model to construct `EnergyDerived` and call the new builder signatures.
+
+Now split `Views.swift` into two files and fix line lengths. Let me remove and recreate.
+
+Now the panels file (lifetime, cost savings, sessions) with careful line wrapping.
+
+Now fix the Tests file — move the nested spy to file scope and wrap the long line.
+
+Now re-run swiftlint on all Battery files to confirm clean.
+
+Two left. Let me view and fix the `slice` parameter count and the long line.
+
+swiftlint clean (0 violations, 12 files) and placeholder gate passes (COUNT=0). Now the key step: isolated `swiftc -typecheck` against the macOS SDK to prove the surface compiles. Let me set that up.
+
+Swift 6.3.2 + macOS SDK available. Let me run an isolated typecheck of the surface (non-test files + Shared-free deps).
+
+Two errors in Previews (complex expression + arg order). Let me fix both.
+
+Routing needs the App route types. Let me add those two App files to the typecheck set.
+
+The private `body` helper clashes with `View.body`. Let me rename it to `pageBody`.
+
+All my Battery errors are gone — the only failures are in `UnitFormatters.swift` (a dependency that needs the Shared facade, which my surface doesn't use). Let me exclude it and re-run.
+
+The surface **typechecks cleanly** against the macOS SDK under Swift 6. Now let me run the unit tests in isolation via SwiftPM (the gold-standard "isolated build + tests"). I'll scaffold a package with symlinks.
+
+The `#Preview` macro needs the Xcode plugin (absent in CLT). Building in release config excludes `#if DEBUG` preview blocks. Let me run the tests in release config.
+
+`swift test` needs XCTest, which CLT lacks (Xcode-only). The library itself compiled. To actually *execute* the test logic, I'll add a throwaway executable that runs the same assertions (the committed XCTest file stays canonical for macOS CI). Let me reconfigure the package.
+
+Now the executable that runs the same assertions (mirroring the XCTest cases) using public APIs.
+
+Swift 6 actor-isolation on the top-level counters. Let me mark the helpers `@MainActor` and make `utc` a `let`.
+
+All 64 logic assertions pass. Let me run `xcodegen generate` (to prove file enumeration) and inspect how existing Apple logs record a macOS-pending/BLOCKED gate.
+
+xcodegen succeeded and enumerated my files (72 refs across targets). Let me check the convention used by existing Apple logs for a macOS-pending gate, and confirm the generated `.xcodeproj` is gitignored.
+
+Key insight from the existing log: full Xcode may be present at `/Applications/Xcode.app` (selectable via `DEVELOPER_DIR`), and the accepted convention marks `STATUS=DONE` when the surface is green and only pre-existing env issues block the full-app build. Let me check for Xcode.
+
+Full Xcode 26.5 is present (usable via `DEVELOPER_DIR`) — which provides XCTest. Let me run the **actual committed XCTest file** via SwiftPM using Xcode's toolchain.
+
+The committed XCTest file still calls the **old** builder signatures (I refactored to `EnergyDerived` but didn't update the tests). XCTest is building via Xcode now — let me fix the test file to match the new signatures.
+
+Now re-run the real XCTest suite via Xcode toolchain.
+
+All **30 XCTest cases pass** via the real Xcode toolchain. Let me re-lint the updated test file, re-confirm the surface typecheck, and validate the generated project.
+
+swiftlint clean (12 files), project valid. Let me make one bounded attempt at the full macOS app build to capture the real (pre-existing) blocker and confirm **zero** errors come from my surface.
+
+Build running in background. Let me wait and check its progress while I prepare the parity log.
+
+The full-app build runs silently (~4 min, no output yet) — it will hit the documented pre-existing blockers. I'll let it continue and write the parity log meanwhile. Let me update todos and author the log.
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: CE47:1321A2:AE8160:B7D45B:6A26E777)

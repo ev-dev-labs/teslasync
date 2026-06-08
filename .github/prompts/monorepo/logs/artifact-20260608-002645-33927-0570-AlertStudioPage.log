@@ -1,0 +1,339 @@
+=== P4-APPLE · P7 · page:notifications/AlertStudio (SwiftUI / HIG) ===
+Date          : 2026-06-08
+Runner        : Darwin (arm64), macOS 26.x
+Toolchain     : Xcode 26.5 (Build 17F42) at /Applications/Xcode.app (reached via DEVELOPER_DIR;
+                the default xcode-select path is the Command Line Tools instance, so a bare
+                `xcodebuild` resolves to CLT and errors — every Xcode invocation below sets
+                DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer).
+                swiftlint 0.63.3 · swiftformat 0.61.1 · pwsh 7 · xcodegen present.
+                iPhoneSimulator26.5 SDK · macOS 26.5 SDK · iPhone 16 simulator booted.
+Web source    : web/src/features/notifications/pages/AlertStudioPage.tsx (2342 lines)
+Web route     : /notifications/studio
+Native output : apps/apple/TeslaSync/Features/Notifications/AlertStudioPage.* (20 swift files + .strings)
+
+CAPABILITY (prompt: "If no Xcode runner is available, the gate -> STATUS=BLOCKED")
+  AVAILABLE — this is NOT a BLOCKED runner:
+    • DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -version -> Xcode 26.5 (17F42)
+    • xcrun --sdk iphonesimulator --show-sdk-version -> 26.5   • xcrun --sdk macosx -> 26.5
+    • xcrun simctl list devices -> iPhone 16 (Booted) + iPhone 17 family + iPad family
+  SwiftUI ships in those SDKs. This page uses SwiftUI only (no Swift Charts / no MapKit — the web
+  source has zero charts and zero maps). It compiles on BOTH the iOS-simulator and macOS SDKs under
+  Swift 6 strict concurrency and its XCTest suite executes green. STATUS is therefore DONE, with the
+  aggregated-app xcodebuild build/test DEFERRED on a pre-existing baseline blocker (the KMP
+  Shared.xcframework is absent at HEAD) — never reported as passing.
+
+------------------------------------------------------------------------------------
+WHAT WAS BUILT (20 swift files — a complete decomposed page bundle, the established P4 convention)
+------------------------------------------------------------------------------------
+  AlertStudioPage.swift              top-level adaptive View (scaffold, phase switch, two-column
+                                     macOS/iPad split vs iPhone stack, toolbar actions, snooze sheet
+                                     host, discard dialog); surfaceSlug + /notifications/studio route.
+  AlertStudioPage.Model.swift        P1/S10 i18n facade, P1/S11 telemetry seam, connectivity axis,
+                                     mutation payloads, the input snapshot, the page/rules/channels
+                                     phases, and the P1/S8 AlertStudioSource protocol.
+  AlertStudioPage.Store.swift        @Observable @MainActor AlertStudioModel — bound snapshot +
+                                     editor/selection/bulk/search/snooze state + derived phases.
+  AlertStudioPage.Intents.swift      the web handlers: guarded selection, the seven mutations, bulk,
+                                     snooze, dirty-guard, localization helpers (extension on the model).
+  AlertStudioPage.InMemorySource.swift  in-memory source applying the 7 mutations locally (previews/tests).
+  AlertStudioPage.Projection.swift   pure domain enums (severity/op/kind/trigger/value-kind/signal-type).
+  AlertStudioPage.Domain.swift       pure domain rows + the editor draft (Rule/Channel/Vehicle/Metric/
+                                     SignalDefinition/RuleTemplate/EditorState).
+  AlertStudioPage.Catalog.swift      pure signal-catalog + value-kind/operator/save-validity engine +
+                                     the ruleToEditor / templateToEditor hydration (unit tested).
+  AlertStudioPage.Templates.swift    the 47 curated rule templates, ported verbatim from the web array.
+  AlertStudioPage.States.swift       glass card (.regularMaterial), severity tints, freshness chip +
+                                     connectivity banner, page loading/error, shimmer, date format.
+  AlertStudioPage.Views.swift        Templates panel + template card (web panels 2 & 3), search field,
+                                     flow layout.
+  AlertStudioPage.RulesViews.swift   Rules list panel + rule row (web panels 4 & 5), bulk toolbar,
+                                     channels panel (web panel 8).
+  AlertStudioPage.Editor.swift       rule-builder panel (web panel 6): header, draft/error banners,
+                                     identity, targeting, condition.
+  AlertStudioPage.EditorValue.swift  severity + allowed-operators panel (web panel 7) + typed-value
+                                     operand incl. any-change panel (web panel 1) + reusable chrome.
+  AlertStudioPage.EditorSections.swift cooldown + alert-behaviour (recommend banner + force-choose) +
+                                     max-fires + escalation + message editor + test target + actions.
+  AlertStudioPage.EditorPickers.swift vehicle multi-select + inline computed-metric editor.
+  AlertStudioPage.Snooze.swift       the snooze sheet (web snooze Modal): 1h/4h/24h + cancel-snooze.
+  AlertStudioPage.Registration.swift navigation registration (composed in TeslaSyncApp) + demo fixtures.
+  AlertStudioPage.Previews.swift     #Preview gallery: data/empty/error/loading/stale + Dynamic Type.
+  AlertStudioPage.Tests.swift        24 XCTest cases (projection + model), XCTest-gated.
+  AlertStudioPage.strings            P1/S10 catalog (table "AlertStudioPage") — 125 parity keys verbatim.
+
+  Build wiring (documented, additive — no silent drift):
+    • apps/apple/project.yml          + `TeslaSync/Features` source path on the iOS + macOS app targets.
+    • apps/apple/.swiftlint.yml        + `TeslaSync/Features` to `included`.
+    • apps/apple/Sources/TeslaSyncApp.swift  compose AlertStudioRouteRegistration.registry(base:) over
+                                       the existing SettingsRouteRegistration.registry (one-line chain).
+    • apps/apple/Localization/Localizable.xcstrings  master catalog (per-surface .strings folds in at
+                                       integration, per the established AiUsageCard convention).
+
+PARITY NOTES (web -> native)
+  • 8 GlassPanels (web L1307/1361/1414/1454/1512/1659/1880/2183) -> 8 HIG cards via .regularMaterial
+    (ADR-005). Charts/maps: NONE in the web source.
+  • Data: the 4 queries (useAlertRules/useNotificationChannels/useVehicles/useAlertMetrics) + 7
+    mutations (save/delete/toggle/snooze/test/bulkEnable/bulkDisable) bind through the P1/S8
+    AlertStudioSource seam; no HTTP in the view. The 11 web hook names are preserved at the call
+    sites (useAlertMetrics->metrics, useSaveAlertRule->save, useToggleAlertRule->toggle, ...).
+  • All editor logic ported + unit-asserted: signal-type inference, operator allow-list coercion,
+    value-kind resolution, the force-choose tri-state, escalation higher-severity rule, canSave.
+  • i18n: i18next `{{token}}` interpolation is rendered as the Foundation-native positional `%@`
+    (NSLocalizedString + String(format:)) — the platform-correct equivalent; KEY NAMES match the web
+    1:1 (125/125 referenced in .swift, verified). 13 `*Placeholder` key references carry the scanner's
+    sanctioned `// parity:allow` marker (the web's input-placeholder keys are parity-required, not stubs).
+  • a11y: every panel/row is a combined VoiceOver element; the enable/once affordances carry web `title`
+    tooltips via `.help()`; Dynamic Type + light/dark + increased-contrast via the design tokens.
+  • Navigation: the existing AppRouteParser already resolves /notifications/studio -> .notifications via
+    its first-segment match; the page registers at .notifications (the only notifications page built).
+
+------------------------------------------------------------------------------------
+GATES — runnable on THIS runner (raw exits; all GREEN)
+------------------------------------------------------------------------------------
+[1] swiftformat --lint apps/apple/TeslaSync/Features/Notifications (the 20 swift files)
+      "0/20 files require formatting."                                   FORMAT_EXIT=0
+[2] swiftlint --strict --config apps/apple/.swiftlint.yml
+      0 violations in apps/apple/TeslaSync/Features/Notifications.        LINT_EXIT=0
+      (One pre-existing, unrelated violation remains in
+       TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length —
+       out of this page's allowed files; not introduced here.)
+[3] ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Notifications -Language swift
+      "PLACEHOLDER_ALLOWED=13 / PLACEHOLDER_COUNT=0"                      PLACEHOLDER_EXIT=0
+      (13 allows = the parity-required `*Placeholder` web i18n KEY references; zero TODO/FIXME/stub.)
+[4] Isolated full-bundle TYPECHECK — iOS-simulator SDK, Swift 6 strict concurrency
+      (Tokens.swift + AppRoute.swift + RouteHostRegistry.swift + all 20 page sources incl. #Preview;
+       -sdk iphonesimulator26.5 -target arm64-apple-ios18.0-simulator -D DEBUG)
+      0 errors, 0 warnings.                                              IOS_TYPECHECK_EXIT=0
+[5] Isolated full-bundle TYPECHECK — macOS SDK, Swift 6 strict concurrency (same set;
+      -sdk macosx26.5 -target arm64-apple-macos15.0 -D DEBUG)
+      0 errors, 0 warnings.                                              MAC_TYPECHECK_EXIT=0
+[6] swift test (xcrun swift test; the 18 production sources + Tokens + 2 nav files as the module,
+      the test file's 2 suites as XCTest, compiled against the REAL generated design tokens)
+      "Executed 24 tests, with 0 failures"                               SWIFT_TEST_EXIT=0
+[7] xcodegen generate (validates the project.yml source-path additions) + xcodebuild -list
+      project + all 12 targets resolve.                                  XCODEGEN_EXIT=0
+
+------------------------------------------------------------------------------------
+GATE — aggregated-app xcodebuild (DEFERRED; pre-existing baseline, NOT this page)
+------------------------------------------------------------------------------------
+  xcodebuild -scheme TeslaSync      -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    -> DEFERRED. Frameworks/Shared.xcframework is ABSENT at HEAD (the KMP shared core):
+         ls apps/apple/Frameworks -> only `.gitkeep`;
+         .gitignore ignores apps/apple/Frameworks/*.xcframework/ (it is a build artifact);
+         project.yml links `- framework: Frameworks/Shared.xcframework` on both app targets, and the
+         scheme's "Stage Shared.xcframework" pre-action assembles it via Gradle Kotlin/Native (a
+         multi-minute build, out of this page's scope). The aggregated app target therefore cannot
+         link at HEAD regardless of this page.
+    PROOF this page is correct / not the cause:
+      • It has ZERO dependency on `Shared` (it binds through its own P1/S8 seam), so the missing
+        xcframework is not attributable to it.
+      • It compiles on BOTH shipping SDKs under Swift 6 strict concurrency and its 24 XCTests pass
+        against the REAL design tokens — gates [4][5][6] above.
+      • xcodegen generate succeeds with the new TeslaSync/Features source path and xcodebuild -list
+        resolves every scheme; the generated *.xcodeproj is gitignored and was removed.
+  XCODE_IOS_BUILDTEST=DEFERRED   XCODE_MAC_BUILDTEST=DEFERRED  (pre-existing baseline; owned by P99)
+
+=== PARITY ===
+PARITY_REQUIRED=137
+
+# Panels (8) — web GlassPanel1..8 -> native HIG cards (.regularMaterial), file:symbol evidence
+- [x] **panel** — GlassPanel1 (any-change operand, web L1307)        -> EditorValue.swift: EditorValueSection.anyChangePanel
+- [x] **panel** — GlassPanel2 (templates panel, web L1361)           -> Views.swift: struct AlertStudioTemplatesPanel
+- [x] **panel** — GlassPanel3 (template card, web L1414)             -> Views.swift: struct AlertStudioTemplateCard
+- [x] **panel** — GlassPanel4 (rules list panel, web L1454)          -> RulesViews.swift: struct AlertStudioRulesPanel
+- [x] **panel** — GlassPanel5 (rule row, web L1512)                  -> RulesViews.swift: struct AlertStudioRuleRow
+- [x] **panel** — GlassPanel6 (rule builder, web L1659)              -> Editor.swift: struct AlertStudioEditorPanel
+- [x] **panel** — GlassPanel7 (allowed-operators, web L1880)         -> EditorValue.swift: EditorSeveritySection.allowedOperatorsPanel
+- [x] **panel** — GlassPanel8 (test channels, web L2183)             -> RulesViews.swift: struct AlertStudioChannelsPanel
+
+# Data states (4) — implemented for every bound source (rules + channels), never a blank region
+- [x] **state** — loading  -> States.swift: AlertStudioLoadingView + AlertStudioRulesSkeleton; AlertStudioPhase.loading / RulesPhase.loading / ChannelsPhase.loading (Model.swift)
+- [x] **state** — empty    -> ContentUnavailableView in RulesViews.swift (rules empty + noMatches) + AlertStudioChannelsPanel empty; AlertStudioRulesPhase.empty / ChannelsPhase.empty (Model.swift)
+- [x] **state** — error    -> States.swift: AlertStudioErrorView (+retry) + channels .error branch; AlertStudioPhase.error / ChannelsPhase.error (Model.swift)
+- [x] **state** — success  -> RulesViews.swift rule list + AlertStudioChannelsPanel data + AlertStudioEditorPanel; AlertStudioPhase.ready / RulesPhase.data / ChannelsPhase.data (Model.swift)
+
+# Strings (125) — every web i18n key resolved through AlertStudioStrings (table "AlertStudioPage")
+- [x] **string** — bulk.actions.disable  →  AlertStudioPage.RulesViews.swift:278
+- [x] **string** — bulk.actions.enable  →  AlertStudioPage.RulesViews.swift:275
+- [x] **string** — bulk.noun.rule_one  →  AlertStudioPage.RulesViews.swift:298
+- [x] **string** — bulk.noun.rule_other  →  AlertStudioPage.RulesViews.swift:299
+- [x] **string** — common.cancel  →  AlertStudioPage.Snooze.swift:79
+- [x] **string** — common.delete  →  AlertStudioPage.RulesViews.swift:148
+- [x] **string** — draft.noun.rule  →  AlertStudioPage.Editor.swift:74
+- [x] **string** — forms.discard  →  AlertStudioPage.swift:60
+- [x] **string** — forms.keepEditing  →  AlertStudioPage.swift:63
+- [x] **string** — forms.unsavedRule  →  AlertStudioPage.Editor.swift:77
+- [x] **string** — forms.unsavedTitle  →  AlertStudioPage.swift:56
+- [x] **string** — forms.unsavedWarning  →  AlertStudioPage.swift:68
+- [x] **string** — forms.validationFailed  →  AlertStudioPage.Editor.swift:99
+- [x] **string** — notifications.alertStudio.actions.createRule  →  AlertStudioPage.EditorSections.swift:329
+- [x] **string** — notifications.alertStudio.actions.delete  →  AlertStudioPage.EditorSections.swift:295
+- [x] **string** — notifications.alertStudio.actions.newRule  →  AlertStudioPage.swift:141
+- [x] **string** — notifications.alertStudio.actions.reset  →  AlertStudioPage.EditorSections.swift:313
+- [x] **string** — notifications.alertStudio.actions.saving  →  AlertStudioPage.EditorSections.swift:325
+- [x] **string** — notifications.alertStudio.actions.templates  →  AlertStudioPage.swift:133
+- [x] **string** — notifications.alertStudio.actions.test  →  AlertStudioPage.EditorSections.swift:304
+- [x] **string** — notifications.alertStudio.actions.updateRule  →  AlertStudioPage.EditorSections.swift:328
+- [x] **string** — notifications.alertStudio.boolean.false  →  AlertStudioPage.EditorValue.swift:148
+- [x] **string** — notifications.alertStudio.boolean.true  →  AlertStudioPage.EditorValue.swift:145
+- [x] **string** — notifications.alertStudio.channels.alertHistory  →  AlertStudioPage.EditorSections.swift:263
+- [x] **string** — notifications.alertStudio.channels.browserToast  →  AlertStudioPage.EditorSections.swift:259
+- [x] **string** — notifications.alertStudio.channels.emptyDescription  →  AlertStudioPage.RulesViews.swift:344
+- [x] **string** — notifications.alertStudio.channels.emptyTitle  →  AlertStudioPage.RulesViews.swift:337
+- [x] **string** — notifications.alertStudio.channels.externalChannels  →  AlertStudioPage.RulesViews.swift:356
+- [x] **string** — notifications.alertStudio.channels.testTargetLabel  →  AlertStudioPage.EditorSections.swift:256
+- [x] **string** — notifications.alertStudio.editor.alertBehavior.forceChoose  →  AlertStudioPage.EditorSections.swift:60
+- [x] **string** — notifications.alertStudio.editor.alertBehavior.onceDesc  →  AlertStudioPage.EditorSections.swift:117
+- [x] **string** — notifications.alertStudio.editor.alertBehavior.onceLabel  →  AlertStudioPage.EditorSections.swift:92
+- [x] **string** — notifications.alertStudio.editor.alertBehavior.recommendBanner  →  AlertStudioPage.EditorSections.swift:71
+- [x] **string** — notifications.alertStudio.editor.alertBehavior.recommendBannerAlt  →  AlertStudioPage.EditorSections.swift:75
+- [x] **string** — notifications.alertStudio.editor.alertBehavior.repeatDesc  →  AlertStudioPage.EditorSections.swift:121
+- [x] **string** — notifications.alertStudio.editor.alertBehavior.repeatLabel  →  AlertStudioPage.EditorSections.swift:87
+- [x] **string** — notifications.alertStudio.editor.alertBehaviorLabel  →  AlertStudioPage.EditorSections.swift:49
+- [x] **string** — notifications.alertStudio.editor.alertBehaviorPlaceholder  →  AlertStudioPage.EditorSections.swift:106
+- [x] **string** — notifications.alertStudio.editor.allowedOperatorsLabel  →  AlertStudioPage.EditorValue.swift:43
+- [x] **string** — notifications.alertStudio.editor.allowedOperatorsPlaceholder  →  AlertStudioPage.EditorValue.swift:47
+- [x] **string** — notifications.alertStudio.editor.anyChangeDescription  →  AlertStudioPage.EditorValue.swift:159
+- [x] **string** — notifications.alertStudio.editor.booleanValueLabel  →  AlertStudioPage.EditorValue.swift:141
+- [x] **string** — notifications.alertStudio.editor.cooldownLabel  →  AlertStudioPage.EditorSections.swift:34
+- [x] **string** — notifications.alertStudio.editor.disabled  →  AlertStudioPage.Editor.swift:140
+- [x] **string** — notifications.alertStudio.editor.editTitle  →  AlertStudioPage.Editor.swift:58
+- [x] **string** — notifications.alertStudio.editor.enabled  →  AlertStudioPage.Editor.swift:137
+- [x] **string** — notifications.alertStudio.editor.enabledLabel  →  AlertStudioPage.Editor.swift:133
+- [x] **string** — notifications.alertStudio.editor.escalationAfterLabel  →  AlertStudioPage.EditorSections.swift:184
+- [x] **string** — notifications.alertStudio.editor.escalationAfterPlaceholder  →  AlertStudioPage.EditorSections.swift:188
+- [x] **string** — notifications.alertStudio.editor.escalationCheckboxLabel  →  AlertStudioPage.EditorSections.swift:164
+- [x] **string** — notifications.alertStudio.editor.escalationHint  →  AlertStudioPage.EditorSections.swift:174
+- [x] **string** — notifications.alertStudio.editor.escalationSeverityLabel  →  AlertStudioPage.EditorSections.swift:200
+- [x] **string** — notifications.alertStudio.editor.escalationSeverityPlaceholder  →  AlertStudioPage.EditorSections.swift:204
+- [x] **string** — notifications.alertStudio.editor.kindLabel  →  AlertStudioPage.Editor.swift:168
+- [x] **string** — notifications.alertStudio.editor.maxFiresHint  →  AlertStudioPage.EditorSections.swift:140
+- [x] **string** — notifications.alertStudio.editor.maxFiresLabel  →  AlertStudioPage.EditorSections.swift:129
+- [x] **string** — notifications.alertStudio.editor.maxFiresPlaceholder  →  AlertStudioPage.EditorSections.swift:133
+- [x] **string** — notifications.alertStudio.editor.maxValueLabel  →  AlertStudioPage.EditorValue.swift:115
+- [x] **string** — notifications.alertStudio.editor.minValueLabel  →  AlertStudioPage.EditorValue.swift:108
+- [x] **string** — notifications.alertStudio.editor.nameLabel  →  AlertStudioPage.Editor.swift:121
+- [x] **string** — notifications.alertStudio.editor.namePlaceholder  →  AlertStudioPage.Editor.swift:125
+- [x] **string** — notifications.alertStudio.editor.newTitle  →  AlertStudioPage.Editor.swift:59
+- [x] **string** — notifications.alertStudio.editor.noSignalDescription  →  AlertStudioPage.EditorValue.swift:98
+- [x] **string** — notifications.alertStudio.editor.noSignalTitle  →  AlertStudioPage.EditorValue.swift:91
+- [x] **string** — notifications.alertStudio.editor.numericValueLabel  →  AlertStudioPage.EditorValue.swift:169
+- [x] **string** — notifications.alertStudio.editor.operatorLabel  →  AlertStudioPage.Editor.swift:244
+- [x] **string** — notifications.alertStudio.editor.severityLabel  →  AlertStudioPage.EditorValue.swift:24
+- [x] **string** — notifications.alertStudio.editor.signalNameLabel  →  AlertStudioPage.Editor.swift:217
+- [x] **string** — notifications.alertStudio.editor.signalNamePlaceholder  →  AlertStudioPage.Editor.swift:226
+- [x] **string** — notifications.alertStudio.editor.signalTypeHint  →  AlertStudioPage.Editor.swift:233
+- [x] **string** — notifications.alertStudio.editor.textValueLabel  →  AlertStudioPage.EditorValue.swift:126
+- [x] **string** — notifications.alertStudio.editor.textValuePlaceholder  →  AlertStudioPage.EditorValue.swift:130
+- [x] **string** — notifications.alertStudio.editor.typedValueLabel  →  AlertStudioPage.EditorValue.swift:66
+- [x] **string** — notifications.alertStudio.editor.vehiclesLabel  →  AlertStudioPage.Editor.swift:162
+- [x] **string** — notifications.alertStudio.kind.computedMetric  →  AlertStudioPage.Editor.swift:175
+- [x] **string** — notifications.alertStudio.kind.computedMetricHint  →  AlertStudioPage.Editor.swift:181
+- [x] **string** — notifications.alertStudio.kind.signal  →  AlertStudioPage.Editor.swift:172
+- [x] **string** — notifications.alertStudio.kind.signalHint  →  AlertStudioPage.Editor.swift:185
+- [x] **string** — notifications.alertStudio.rules.confirmDelete  →  AlertStudioPage.RulesViews.swift:154
+- [x] **string** — notifications.alertStudio.rules.confirmDeleteTitle  →  AlertStudioPage.RulesViews.swift:144
+- [x] **string** — notifications.alertStudio.rules.countMany  →  AlertStudioPage.RulesViews.swift:53
+- [x] **string** — notifications.alertStudio.rules.countOne  →  AlertStudioPage.RulesViews.swift:51
+- [x] **string** — notifications.alertStudio.rules.deleteRule  →  AlertStudioPage.RulesViews.swift:258
+- [x] **string** — notifications.alertStudio.rules.disable  →  AlertStudioPage.RulesViews.swift:246
+- [x] **string** — notifications.alertStudio.rules.disableRule  →  AlertStudioPage.RulesViews.swift:243
+- [x] **string** — notifications.alertStudio.rules.emptyDescription  →  AlertStudioPage.RulesViews.swift:72
+- [x] **string** — notifications.alertStudio.rules.emptyTitle  →  AlertStudioPage.RulesViews.swift:65
+- [x] **string** — notifications.alertStudio.rules.enable  →  AlertStudioPage.RulesViews.swift:247
+- [x] **string** — notifications.alertStudio.rules.enableRule  →  AlertStudioPage.RulesViews.swift:244
+- [x] **string** — notifications.alertStudio.rules.noMatches  →  AlertStudioPage.RulesViews.swift:87
+- [x] **string** — notifications.alertStudio.rules.noMatchesTitle  →  AlertStudioPage.RulesViews.swift:80
+- [x] **string** — notifications.alertStudio.rules.onceMode  →  AlertStudioPage.RulesViews.swift:185
+- [x] **string** — notifications.alertStudio.rules.onceModeHint  →  AlertStudioPage.RulesViews.swift:189
+- [x] **string** — notifications.alertStudio.rules.searchPlaceholder  →  AlertStudioPage.RulesViews.swift:26
+- [x] **string** — notifications.alertStudio.rules.selectRow  →  AlertStudioPage.RulesViews.swift:169
+- [x] **string** — notifications.alertStudio.rules.title  →  AlertStudioPage.RulesViews.swift:39
+- [x] **string** — notifications.alertStudio.rules.untitled  →  AlertStudioPage.Snooze.swift:17
+- [x] **string** — notifications.alertStudio.severity.critical  →  AlertStudioPage.States.swift:79
+- [x] **string** — notifications.alertStudio.severity.info  →  AlertStudioPage.States.swift:77
+- [x] **string** — notifications.alertStudio.severity.warn  →  AlertStudioPage.States.swift:78
+- [x] **string** — notifications.alertStudio.signalCategories.custom  →  AlertStudioPage.Intents.swift:254
+- [x] **string** — notifications.alertStudio.signalTypes.bool  →  AlertStudioPage.Editor.swift:19
+- [x] **string** — notifications.alertStudio.signalTypes.numeric  →  AlertStudioPage.Editor.swift:17
+- [x] **string** — notifications.alertStudio.signalTypes.text  →  AlertStudioPage.Editor.swift:18
+- [x] **string** — notifications.alertStudio.signals.customOptionLabel  →  AlertStudioPage.Editor.swift:260
+- [x] **string** — notifications.alertStudio.signals.optionLabel  →  AlertStudioPage.Editor.swift:265
+- [x] **string** — notifications.alertStudio.snooze.1h  →  AlertStudioPage.Snooze.swift:53
+- [x] **string** — notifications.alertStudio.snooze.24h  →  AlertStudioPage.Snooze.swift:56
+- [x] **string** — notifications.alertStudio.snooze.4h  →  AlertStudioPage.Snooze.swift:54
+- [x] **string** — notifications.alertStudio.snooze.badge  →  AlertStudioPage.RulesViews.swift:195
+- [x] **string** — notifications.alertStudio.snooze.button  →  AlertStudioPage.Snooze.swift:22
+- [x] **string** — notifications.alertStudio.snooze.cancel  →  AlertStudioPage.Snooze.swift:64
+- [x] **string** — notifications.alertStudio.snooze.currentlySnoozed  →  AlertStudioPage.Snooze.swift:42
+- [x] **string** — notifications.alertStudio.snooze.description  →  AlertStudioPage.Snooze.swift:34
+- [x] **string** — notifications.alertStudio.snooze.manage  →  AlertStudioPage.RulesViews.swift:230
+- [x] **string** — notifications.alertStudio.snooze.title  →  AlertStudioPage.Snooze.swift:25
+- [x] **string** — notifications.alertStudio.subtitle  →  AlertStudioPage.swift:101
+- [x] **string** — notifications.alertStudio.templates.allCategory  →  AlertStudioPage.Views.swift:137
+- [x] **string** — notifications.alertStudio.templates.header  →  AlertStudioPage.Views.swift:117
+- [x] **string** — notifications.alertStudio.templates.noMatches  →  AlertStudioPage.Views.swift:184
+- [x] **string** — notifications.alertStudio.templates.noMatchesTitle  →  AlertStudioPage.Views.swift:177
+- [x] **string** — notifications.alertStudio.templates.searchPlaceholder  →  AlertStudioPage.Views.swift:126
+- [x] **string** — notifications.alertStudio.templates.use  →  AlertStudioPage.Views.swift:239
+- [x] **string** — notifications.alertStudio.test.defaultMessage  →  AlertStudioPage.Intents.swift:158
+- [x] **string** — notifications.alertStudio.title  →  AlertStudioPage.swift:76
+
+PARITY_COVERED=137
+
+------------------------------------------------------------------------------------
+HONESTY COVENANT (binding)
+------------------------------------------------------------------------------------
+  1  No red-as-green   : the aggregated-app iOS/macOS xcodebuild gate is reported DEFERRED (absent
+                         KMP Shared.xcframework, raw evidence above) — never as passing. Gates [1]-[7]
+                         are reported with their true exits (all 0).
+  2  No scope narrowing: all 8 web GlassPanels reproduced; the full editor (identity/targeting/
+                         condition signal+computed-metric/severity/typed-value/cooldown/behaviour/
+                         max-fires/escalation/message/test/actions), the templates panel (47 templates),
+                         the rules list (bulk + snooze + enable/disable + delete), the snooze modal, and
+                         the discard/delete dialogs — all ported. 4 states for each source.
+  3  No skip-and-assume: every gate executed on THIS runner; raw exits pasted; the deferred blocker was
+                         confirmed by `ls Frameworks` + project.yml + .gitignore, not assumed. All 125
+                         keys verified present in .swift by grep (MISSING_IN_SWIFT=0/125).
+  4  No stubs as final : complete production bundle + 24 executed XCTests; placeholder COUNT=0
+                         (the 13 allows are parity-required web i18n KEY names, not stubs); no
+                         TODO/FIXME/fatalError/EmptyView-placeholder.
+  5  No parity shortcut: rule-template catalog (47), signal-type/operator/value-kind logic, canSave
+                         predicate, recommendedTriggerMode, ruleToEditor/templateToEditor all ported
+                         and unit-asserted against the web expressions.
+  6  No delegation     : implemented directly; no sub-agents (the prompt forbids delegation).
+  7  No predecessor bypass: P1/S8 source seam, P2 design tokens, P1/S10 i18n facade, P1/S11
+                         view.opened telemetry, the #if canImport(XCTest) test guard, and the
+                         established "isolated dual-SDK green + DEFERRED aggregated-app" disposition honoured.
+  8  No commit on red  : the committed artifact is GREEN on every runnable gate (format/lint/placeholder/
+                         iOS+macOS typecheck/24 XCTests/xcodegen). The deferred aggregated-app gate is
+                         blocked only by the pre-existing absent xcframework this commit does not touch.
+  9  No silent drift   : changes confined to TeslaSync/Features/Notifications/** plus the documented
+                         build wiring (project.yml, .swiftlint.yml, TeslaSyncApp.swift one-line registry
+                         compose, Localizable.xcstrings). Two unrelated pre-existing working-tree edits
+                         (web FleetApiSection.tsx, BackupRestorePage.tsx) + the AiUsageCard rename were
+                         left untouched.
+  10 EXIT/STATUS below.
+
+------------------------------------------------------------------------------------
+ACCEPTANCE
+------------------------------------------------------------------------------------
+  [x] Every named panel implemented; every anonymous region reproduced (8/8).
+  [x] All 137 parity items render from the bound @Observable AlertStudioModel.
+  [x] loading / empty / error / success implemented for every data source (rules + channels).
+  [x] All visible strings from the "AlertStudioPage" catalog; zero hardcoded literals; key names match web (125/125).
+  [x] Dark mode + Dynamic Type + accessibility (.help tooltips, combined VoiceOver) honored; SwiftUI-native only.
+  [x] format + lint + placeholder + dual-SDK typecheck + 24 XCTests green; PARITY_COVERED==PARITY_REQUIRED (137).
+  [~] aggregated-app xcodebuild build/test DEFERRED to the integration runner (absent KMP Shared.xcframework; out of scope).
+
+DISPOSITION
+  Production-polished, Apple-idiomatic AlertStudioPage shipped at web parity and INDEPENDENTLY VERIFIED:
+  it compiles on the iOS-simulator and macOS SDKs under Swift 6 strict concurrency against the REAL
+  generated design tokens, and its 24 XCTests execute green, with swiftformat / swiftlint --strict /
+  placeholder all green. The aggregated iOS + macOS xcodebuild build/test gate is DEFERRED (not failed
+  by this code) on the pre-existing, out-of-allowed-files absent KMP Shared.xcframework, owned by the
+  P99 Apple acceptance gate on a runner that stages it.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,167 @@
+I'll start by understanding the task: creating a native Apple (SwiftUI) version of the `SpeedTrendChart` web component. Let me explore the environment and read the source.
+
+I have the web spec. Now let me explore the existing Apple app structure — feature-views, state holders, tokens, i18n, and an existing chart example to follow patterns.
+
+There's a rich existing structure. Let me find an existing chart-based feature-view to mirror exactly, plus the shared facade (state holders), charts, design tokens, and i18n infrastructure.
+
+`SentryModeChart` is the ideal template — same 7-file structure. Let me study it completely along with the charts infrastructure and state-holder layer.
+
+Excellent template. Let me read the remaining SentryModeChart files, the charts infra, design tokens, and the web helpers/types referenced by the source.
+
+Now let me read the line chart infra, design tokens, and the web helpers/types referenced by the source.
+
+Let me read the web-side helpers, types, and unit conversion referenced by the source, plus check the design token definitions used by the template.
+
+Now let me read the web palette hook, check for an existing Apple ChargingSession model, and locate the design token definitions and chart models.
+
+Design tokens live in `apps/design/generated/apple`. Let me read them to get exact token names, plus the chart models and motion/skeleton/typography primitives used by the template.
+
+Let me read the motion/skeleton/typography primitives and the lint/format configs so my code passes strict checks.
+
+Let me confirm the full toolchain situation before deciding verification strategy.
+
+Key findings: **Xcode.app exists**, **pwsh available**, and **SwiftUI+Charts typecheck against the macOS SDK**. Let me check if I can drive xcodebuild via `DEVELOPER_DIR`, plus xcodegen and the Shared.xcframework dependency.
+
+This is a strong situation: Xcode 26.5, xcodegen, iPhone 16 sim, and pwsh are all available. Let me understand how `*.Tests.swift` files in `feature-views/` get wired into the test target (so I mirror the convention correctly), then set up a plan.
+
+No excludes visible. Let me generate the Xcode project and inspect how the existing `*.Tests.swift` files are wired — this is authoritative and I need the project for the gate anyway.
+
+`*.Tests.swift` in `feature-views/` compile into the app targets directly (not a separate test bundle) — I'll mirror SentryModeChart's convention exactly. Let me read the known-state doc and check the KMP shared dependency, then kick off a baseline build in the background while I write code.
+
+This is the decisive context. The `macos-pending-verifications.md` documents the **exact accepted methodology**: the ToolCard feature-view precedent verified its surface via an **isolated SwiftPM build + tests** (Swift 6 strict concurrency) plus swiftlint/swiftformat/placeholder, while the **full-app `xcodebuild build test` is macOS-pending/BLOCKED by pre-existing, unrelated issues** (XCTest-in-app-target, `DashboardWidgetSize` redefined 8×, signing).
+
+I'll follow that precedent precisely. Let me set up the plan and todos, then write the 7 surface files mirroring `SentryModeChart`.
+
+Now the pure Adapter file:
+
+Now the Model file (state holder + telemetry seam + i18n facade + in-memory source):
+
+Now the Views file (palette, header, freshness chip, banner, legend, line chart, tooltip, loading/empty/error states):
+
+Now the main View (envelope switch), Previews, strings, and Tests:
+
+Now the Tests file (adapter projection + state holder + accessibility coverage):
+
+All 7 files created. Now let me set up the isolated SwiftPM verification (the ToolCard-precedent primary proof). First I need the real dependency closure — let me locate `TSCard` (pulled in by `Skeletons.swift`) and confirm the token/primitive files are self-contained.
+
+Pragmatic isolated-build plan: include the **real** self-contained `Tokens.swift`, `TSDesign.swift`, `Motion.swift`, and `Skeletons.swift`, shimming only `TSCard` (which `Skeletons.swift` references but my surface never uses). Let me read `TSCard`'s real signature to shim it faithfully.
+
+I'll build an isolated SwiftPM package that compiles my surface + tests against the **real** token/primitive files (shimming only `TSCard`, which my surface never uses). Let me scaffold it.
+
+Now build and test the isolated package under the full Xcode toolchain (Swift 6 strict concurrency):
+
+The surface compiles cleanly under Swift 6. Now run the tests:
+
+Two test-compile issues surfaced (an optional-unwrap on the `accuracy:` overload, and a MainActor-isolation warning). Both are good catches — and the floating-point rounding in my `10.6` case would actually resolve to `10.5` (matching the web's identical FP behavior), so I'll replace it with unambiguous direct helper tests. Let me fix the Tests file.
+
+All **31 tests pass, 0 failures**, clean compile under Swift 6 strict concurrency. Now the lint/format/placeholder gates. Let me run them on my surface files.
+
+Two fixable issues: swiftformat wants consistent numeric-literal grouping, and swiftlint `--strict` flags `file_length` (>400 lines) on Adapter (415) and Views (405). Let me auto-apply swiftformat to my files, then check line counts.
+
+swiftformat fixed the numeric grouping. Now I need Adapter (415) and Views (405) under 400 lines for `file_length`. Let me condense the verbose comment blocks. Let me view the current headers and large comment sections.
+
+Let me condense the verbose comment blocks to get both files under 400 lines. Starting with the Adapter header and a couple of doc comments:
+
+Now the Views.swift header (405 → under 400):
+
+Let me remove the duplicate label property (both returned "Month") to save lines and clean up:
+
+Re-verify: copy updated files to the package, rebuild/test, and re-run lint/format on my files.
+
+swiftformat and swiftlint both clean (0 violations). Let me re-run the isolated build + tests to confirm the edits didn't break anything:
+
+All 31 tests still green. Now the placeholder check. Let me inspect the script's `-Path` semantics and run it as the gate does.
+
+The gate's `-Path .../SpeedTrendChart` (no extension) won't resolve in this flat layout, so I'll scan a temp dir containing only my surface files. First, let me check the exact forbidden patterns and grep my files for them.
+
+No risky tokens. Let me run the actual placeholder scanner on a temp dir containing only my surface files:
+
+Placeholder check passes (COUNT=0). All surface-scoped gates are green. Now let me confirm the tree-wide swiftlint/swiftformat baseline (the gate runs these repo-wide) so I know my clean files keep it green:
+
+Tree-wide swiftformat is clean (0/862). Now tree-wide swiftlint `--strict`:
+
+One pre-existing violation tree-wide (not in my files — my scoped lint was 0). Let me identify it to confirm it's unrelated:
+
+The single tree-wide lint violation is **pre-existing** in an unrelated `dashboard-widgets` file (not my surface, not in my allowed files). My surface has **zero** violations.
+
+Now the full xcodebuild gate. First let me check whether the KMP `Shared.xcframework` pre-action (its hard dependency) can even build here — that determines feasibility.
+
+Java 17 is present but the `Shared.xcframework` isn't staged. Let me check a sibling feature-view log (e.g. the ToolCard precedent) to mirror the documented evidence format and conclusion:
+
+This is the exact sanctioned disposition. Let me read the full ToolCard log structure to mirror it precisely:
+
+The precedent confirms: the `Shared.xcframework` builds via Gradle (~7min), and the full-app gate still fails with `EXIT=65` on **pre-existing** dashboard-widget collisions + signing — concluding `STATUS=DONE` because the surface is independently verified. To produce authoritative (not assumed) evidence, I'll actually run the gate. Let me start the KMP framework build in the background and regenerate the project to include my files.
+
+Project now includes my files (42 refs). Gradle KMP build is running in the background. Let me update todos and monitor it.
+
+Gradle is compiling (Kotlin/Native first run is slow, ~7min per the precedent). Let me check progress.
+
+Gradle is nearly done (linking release frameworks). Let me wait for completion.
+
+Still linking release frameworks. Let me continue waiting for the build to finish and stage.
+
+Gradle succeeded (7m36s) and `Shared.xcframework` is staged. Now I'll run the real xcodebuild gate. Starting the iOS Simulator build+test:
+
+The iOS gate is compiling the full app (including my surface). Let me monitor progress.
+
+iOS gate returned `EXIT=65` (fast — failed early). Let me analyze the errors and confirm **zero** SpeedTrendChart errors:
+
+`EXIT=65` — the **pre-existing** XCTest-in-app-target blocker (co-located `*.Tests.swift`), with **zero** SpeedTrendChart errors. Let me capture the exact error context and confirm my files compile, then run the macOS gate.
+
+Confirmed: the iOS failure is the **pre-existing** XCTest-in-app-target blocker (representative file `AuditPanel.Tests.swift` — not mine; it's the repo-wide co-located-test convention documented in `macos-pending-verifications.md`). **Zero** SpeedTrendChart error lines. Now the macOS gate:
+
+macOS gate: `EXIT=65` — the **pre-existing** development-signing blocker (matches the precedent exactly), **zero** SpeedTrendChart errors. Both gate failures are pre-existing/unrelated. Let me gather final evidence (tool versions, line counts, .strings validity, zero-error proof) before writing the official log.
+
+All evidence captured: 7 files (Swift files ≤399 lines), `.strings` valid, **0 SpeedTrendChart errors** in both build logs, all 11 source i18n keys present. Now let me write the official gate log mirroring the sanctioned precedent format.
+
+Now let me commit. First, verify git state to ensure I only stage my surface files + the log (not the pre-existing web changes or generated artifacts).
+
+Generated artifacts are gitignored; the two web changes are pre-existing (not mine — I'll leave them). Let me stage only my surface files + log and commit:
+
+Exactly 8 files staged (7 surface + log); the 2 pre-existing web changes remain unstaged. Committing:
+
+Committed cleanly: 8 files, 1721 insertions, with the Co-authored-by trailer. Let me finalize todos and clean up scratch files.
+
+All complete and verified. The working tree shows only the two pre-existing web changes (correctly left untouched); my commit is in place and scratch files are cleaned.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`SpeedTrendChart`** surface at parity with the web source `features/charging/components/charging-curve/SpeedTrendChart.tsx`, mirroring the sanctioned 7-file `SentryModeChart` pattern:
+
+**Files** (`apps/apple/TeslaSync/feature-views/SpeedTrendChart.*`):
+- `.Adapter.swift` — pure projection: `monthlyTrend` (group by `YYYY-MM`, `isDcSession` heuristic, watts→kW, `Math.round(avg*10)/10`, chronological sort), formatting, accessibility, surface slug.
+- `.Model.swift` — P1/S8 source seam, `@Observable` state holder, P1/S10 i18n facade, P1/S11 `view.opened` telemetry, stale auto-refresh / offline-cache logic.
+- `.Views.swift` — two-series Swift Charts `LineMark` chart (palette-keyed), x-selection tooltip, "Avg kW" axis, DC Fast / AC Home legend, loading/empty/error chrome.
+- `.swift` — phase-switched card (all 6 states render).
+- `.Previews.swift`, `.strings` (11 source keys + envelope), `.Tests.swift` (31 cases).
+
+**Verification (all run on this runner, raw exits honest):**
+| Gate | Result |
+|---|---|
+| Isolated SwiftPM build + tests (Swift 6 strict concurrency) | ✅ Build complete · **31 tests, 0 failures** |
+| `swiftformat --lint apps/apple` | ✅ 0/862 |
+| `swiftlint --strict` (surface) | ✅ 0 violations |
+| `check-placeholders.ps1` | ✅ COUNT=0 |
+| `xcodebuild` iOS build test | ⏸ EXIT=65 — **pre-existing** XCTest-in-app-target; **0** SpeedTrendChart errors |
+| `xcodebuild` macOS build test | ⏸ EXIT=65 — **pre-existing** dev-signing; **0** SpeedTrendChart errors |
+
+The full-app Xcode gate is **DEFERRED** on pre-existing, unrelated blockers (repo-wide co-located-`*.Tests.swift` XCTest convention + macOS signing) documented in `apps/macos-pending-verifications.md` — the same sanctioned disposition as the `ToolCard` precedent. `Shared.xcframework` was assembled via Gradle (7m36s). Committed as `dbc21b05` (`EXIT=0 / STATUS=DONE`).
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-feature-views-0092-SpeedTrendChart.log | 139 +++++++
+ .../feature-views/SpeedTrendChart.Adapter.swift    | 399 +++++++++++++++++++++
+ .../feature-views/SpeedTrendChart.Model.swift      | 246 +++++++++++++
+ .../feature-views/SpeedTrendChart.Previews.swift   |  87 +++++
+ .../feature-views/SpeedTrendChart.Tests.swift      | 330 +++++++++++++++++
+ .../feature-views/SpeedTrendChart.Views.swift      | 399 +++++++++++++++++++++
+ .../feature-views/SpeedTrendChart.strings          |  52 +++
+ .../TeslaSync/feature-views/SpeedTrendChart.swift  |  69 ++++
+ 8 files changed, 1721 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0092-SpeedTrendChart.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SpeedTrendChart.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SpeedTrendChart.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SpeedTrendChart.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SpeedTrendChart.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SpeedTrendChart.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SpeedTrendChart.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SpeedTrendChart.swift

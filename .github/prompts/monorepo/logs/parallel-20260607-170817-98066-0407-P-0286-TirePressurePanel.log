@@ -1,0 +1,86 @@
+I'll start by exploring the task requirements: checking platform capability, reading the web source, and understanding the existing Apple app structure.
+
+Platform note: `xcodebuild` requires full Xcode but only CommandLineTools is present. Swift 6.3.2, swiftlint, and swiftformat ARE available. I'll write complete production code and verify with everything available. Let me read the web source and explore the Apple app structure.
+
+The `feature-views` directory already exists with an established multi-file pattern (`.Adapter`, `.Model`, `.Previews`, etc.). I need to follow it exactly. Let me check whether TirePressurePanel files already exist and study a reference panel.
+
+Established 7-file pattern per panel: `.swift`, `.Adapter.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`. Let me study the web siblings, the helpers/types it depends on, and find the closest-ported telemetry panel as reference.
+
+None of the telemetry panels are ported yet. Let me read the helper constants, the `useUnits` formatPressure, and locate the shared Apple infrastructure (tokens, i18n, state-holders, diagnostics) plus a structurally similar reference panel.
+
+Let me read the pressure formatter implementation and map out where the shared P1 layers (state-holders, tokens, i18n, diagnostics) live by inspecting project.yml and the source tree.
+
+The project.yml is at `apps/apple/project.yml`. Let me read it and the pressure SI converter, and locate the shared P1 layers (state-holders, tokens, i18n, diagnostics) in the Apple tree.
+
+Now I understand the targets. Let me read the complete AcDcStatsPanel reference set (all 7 files) to learn the exact conventions for state-holders, tokens, i18n, diagnostics, adapters, and tests.
+
+Now let me read the Model, Adapter, Views, and Tests files to learn the state-holder, diagnostics, i18n facade, and test conventions.
+
+This is a rich, well-established pattern. Let me read the Views and Tests files, find the design token palette (Color.TS, TSSpacing, etc.), and locate the placeholder-check tool.
+
+Let me read the Tests pattern, the design token definitions, and find the placeholder-check tool.
+
+I have the full pattern. Now let me read the exact design token names and find any existing native units/pressure formatting infrastructure to bind to (since this panel uses `useUnits`).
+
+`pwsh` is available, and there's native units infrastructure (`Units+Facade.swift`, `UnitFormatters.swift`, `MeasurementSystem.swift`). Let me read the design tokens, units facade, and placeholder checker.
+
+The units facade is clear: `Units.formatPressure(kpa, prefs)` (KMP-backed) and `TSPressure` view reading `@Environment(\.tsUnits)`. Now let me read the design tokens, the placeholder checker, the pressure-unit settings, and shared component signatures.
+
+Let me read the generated design tokens (the actual Color.TS / Font.TS / TSSpacing / TSRadius definitions) and the shared component signatures I'll use.
+
+Let me read the full Tokens.swift to confirm namespaces, color values, font roles, spacing, and radius.
+
+Complete token reference acquired. The web cyan gauge maps to `Color.TS.accent`. Now let me confirm the exact initializers of the shared components I'll use (`TSGlassPanel`, `TSFadeIn`, `TSSkeleton`, `TSButton`) plus the `UnitPreferences.metric` default and pressure label values.
+
+Confirmed `TSGlassPanel`, `TSFadeIn`, `TSSkeleton`. Let me confirm `TSButton` variants, check for a shared status badge/chip component, and find the `UnitPreferences` presets used by previews.
+
+I now have all conventions confirmed. Let me verify how units are consumed/injected in existing views and previews, confirm the log directory, and check for naming collisions.
+
+`SummaryStats` is the precedent — a feature-view that consumes units. Let me study how it threads `UnitPreferences` so I match that pattern.
+
+SummaryStats establishes the convention: feature-views port the conversion math themselves (pure, testable) rather than calling the KMP facade. I'll follow that for `formatPressure`. Let me extract the exact web constants (KPA_PER_PSI, KPA_PER_BAR, default pressure precision, empty sentinel, number formatting).
+
+Exact web constants captured (KPA_PER_PSI=6.894757, KPA_PER_BAR=100, pressure precision=1, empty='—'). Let me see how SummaryStats threads its formatting/units through the Model and view to finalize my design.
+
+I now have the complete pattern (SummaryStats threads a pure `Formatting` struct through the Input; AcDc adds the connection/refresh axis). I'll combine both. Let me read the lint/format configs to match style, then write the plan.
+
+I have everything needed. Let me set up the plan and todos, then build the 7 files following the AcDc + SummaryStats conventions exactly.
+
+Now creating the Adapter (pure core):
+
+Let me typecheck the Adapter standalone immediately to catch issues early:
+
+Adapter typechecks clean under Swift 6. Now the Model (state-holder + projection + telemetry + i18n facade):
+
+Now typecheck Adapter + Model together using a temporary shim for the view's `surfaceSlug`:
+
+Adapter+Model typecheck clean under Swift 6 strict concurrency. Now the main View and the subviews:
+
+Now the subviews (grid, tile, overall chip, tone map, loading/empty/error):
+
+Now the Previews for every state:
+
+Now the i18n strings catalog:
+
+Now the comprehensive XCTest suite:
+
+All 7 files created. Let me harden one fragile rounding assertion, then validate the pure-logic expectations by actually executing them via a temporary runtime driver.
+
+Temp-driver issues (not repo code): `TirePressureValues` lives in Model, and Swift 6 actor isolation. Let me fix the driver:
+
+All 25 runtime checks pass — the test expectations are real, not fabricated. Now let me run the formatters/linters on the new files.
+
+swiftformat wants the single-line computed property bodies wrapped. Since these are my files, I'll let swiftformat auto-format them, then re-verify:
+
+swiftformat passes now. Running swiftlint --strict on the new files:
+
+swiftlint --strict: 0 violations. Let me re-verify typecheck post-format and run the placeholder checker on the new files.
+
+Now running the real placeholder checker on the new Swift files:
+
+Placeholder check passes (COUNT=0, EXIT=0). Let me view what swiftformat reformatted, then capture the xcodebuild capability evidence for the log.
+
+Capability gap confirmed with evidence: no full Xcode, no iOS Simulator SDK. The build/test gate steps genuinely cannot run on this runner. Per the prompt, that's STATUS=BLOCKED with evidence — but I'll record that every *runnable* gate passes. Let me generate the authoritative log by actually executing each step.
+
+The log is written. Let me verify its full content is coherent and captures the evidence:
+

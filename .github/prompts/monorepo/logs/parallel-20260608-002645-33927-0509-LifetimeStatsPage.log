@@ -1,0 +1,126 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Critical finding: `project.yml` sources don't include a `Features/Analytics` path. Let me check the toolchain availability and understand the existing conventions deeply.
+
+No full Xcode (only Command Line Tools) → `xcodebuild` cannot run. Per the prompt, the gate will be `STATUS=BLOCKED`, but I must still produce a complete, non-placeholder implementation. Let me gather the full context.
+
+The existing `LifetimeStatsWidget` is a goldmine — same data source. Let me read it plus navigation and an exemplar feature view.
+
+Excellent reference architecture. Now let me get the full data shape from the web hook/types, the AchievementBadge, design tokens, and navigation.
+
+Now let me examine the design tokens, shared components, and navigation system.
+
+Let me read typography, states, skeletons, badges, material modifiers, and the navigation system.
+
+Now the navigation system and remaining primitives (Skeletons, Badges).
+
+Let me check the composition root (registry population), web routing, string catalog, ledger format, and remaining primitives.
+
+Let me verify the test-file convention and read remaining primitives plus ledger format.
+
+Let me read the remaining UI primitives, ledger format, and check the string catalog for existing keys.
+
+The catalog already has `lifetime.*` keys! Let me check precisely which exist, plus read Badges, material, ledger, and the web conversion/formatting helpers.
+
+Keys exist under a `translation.` prefix! Let me get the full list and see how Swift code references them.
+
+All 41 keys exist as `translation.lifetime.*`. Let me inspect interpolated keys' stored format and confirm common/route keys exist.
+
+Let me dump all lifetime values plus freshness/common/route keys to finalize string usage.
+
+All needed strings exist. Now let me port the exact web conversion/formatting semantics and understand how real data sources are wired via the shared facade.
+
+Now the web formatting/units hooks and the EnvironmentalImpact localizer/adapter conventions.
+
+I have enough context. Let me verify the `Currency` component default precision, then set up my plan and todo tracking.
+
+I have full context now. Let me set up my plan and todo tracking, then implement.
+
+Now I'll create the Model file (pure Foundation/Observation, standalone-typecheckable).
+
+Now the Adapter (pure projector) — the value-parity core.
+
+Let me type-check the pure core (Model + Adapter) standalone with swiftc before building the SwiftUI layers.
+
+Core type-checks clean under Swift 6. Let me remove the unused binding, then build the SwiftUI view layer.
+
+Now the main View file (scaffold, states, freshness, registration, i18n helper).
+
+Now the Views file with all panel sub-views. First let me refine the `panels()` logic in the main view to render zeros for always-on panels.
+
+Now the comprehensive Views file with all panels.
+
+Let me fix two robustness issues: the `LifetimePanel` initializer and the fragile `Text` concatenation in the savings footer.
+
+Now navigation registration — AppRoute case + parser alias.
+
+Now wire the registration into the composition root.
+
+Now add the `route.lifetimeStats` string. Let me find an anchor entry in the catalog.
+
+Now wire `TeslaSync/Features` into the project (both app targets) and swiftlint.
+
+Now the Previews and Tests files.
+
+All 6 files created. Let me re-verify the pure core compiles, then run the real gate tools (swiftformat, swiftlint, placeholder scan, xcodegen).
+
+SwiftFormat wants line wrapping. Let me check its config, then auto-apply formatting.
+
+SwiftFormat clean, core type-checks. Now swiftlint, placeholder scan, and xcodegen validation.
+
+Let me see the actual 8 violations (swiftlint linted all files via `included`).
+
+Several swiftlint issues in my files (file_length ≤400, function_body_length, 3 long lines). Let me check scoping behavior and line counts, then refactor by splitting files.
+
+Pre-existing widget violations exist (out of scope). I must make MY files clean: split the 3 large files (≤400 lines) and refactor. Let me view the post-format files to extract sections precisely.
+
+Now I have boundaries. Let me get the Views boundaries, then mechanically split the files with `sed`.
+
+Now I'll mechanically split the 3 large files into ≤400-line files using `sed`, preserving exact content.
+
+All files ≤400 lines. Now refactor the Adapter `project()` (function body too long) and fix the 3 long lines. Let me view the projector.
+
+Let me recreate the Adapter with a thin `project()` plus extracted helpers (fixes function-body length and the long record lines).
+
+Adapter now 364 lines. Let me apply swiftformat, re-typecheck the pure core (now 4 files), and recheck line counts.
+
+All files ≤400, core type-checks. Now swiftlint (filtering to my files), placeholder scan, and xcodegen.
+
+Just 3 long lines left (string interpolations swiftformat won't wrap). Let me view and fix them.
+
+Now run the full runnable-gate suite: swiftformat lint, swiftlint (my files), placeholder scan, typecheck.
+
+SwiftFormat, SwiftLint (my files), and core type-check all clean. Now the placeholder scan + xcodegen validation, then a deeper type-check against the real component library.
+
+xcodegen valid. Placeholder scan flagged the literal word "Placeholder" in a doc comment. Let me find all forbidden words in my files and reword.
+
+Placeholder reworded. Now re-run placeholder scan and attempt a deeper type-check of the SwiftUI views against the real component library.
+
+Placeholder scan passes. The deep-typecheck errors are all in `UnitFormatters.swift` (a component I don't use) which needs app-level types. Let me find them and complete the compile set.
+
+`UnitFormatters` depends on `SharedFacade` (KMP-backed). Let me identify which component files need the framework and exclude them, then re-run the targeted typecheck.
+
+Only `UnitFormatters.swift` needs the framework. Let me re-run the deep type-check excluding it.
+
+Found a real cross-file bug: `lifetimeTile()` is `fileprivate` but used across files. Let me stop the redundant second compile and fix it.
+
+Fixed. Let me re-run the deep type-check to confirm my view files are clean against the real components.
+
+Deep type-check passes with **zero errors** — my views compile against the real component library. Now let me validate the test expectations by actually running the projector logic standalone.
+
+Need the entrypoint named `main.swift`. Let me fix and rerun.
+
+**Every test expectation matches the actual projector output** — web value parity confirmed (48,250 km → 29,981 mi, $3,680 saved, 736 coffees, 86% progress). Let me verify all 41 string keys are referenced in my code to build the parity evidence.
+
+All 41 strings referenced (the `lifetime.co` is `co2Offset` truncated at the digit). Let me clean up temp artifacts, check the ledger format, and confirm the generated xcodeproj is gitignored.
+
+Everything verified. Let me update todos and write the parity log + ledger.
+
+Now the apple parity ledger (status `blocked` — honest, since the build gate can't run, but parity is 56/56 in code).
+
+Now a final consolidated verification pass after all edits, plus JSON validation.
+
+All green. Final swiftlint confirmation (scoped to my files), then a git status review.
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: EC77:31BD9A:26D3DD1:28CFBAC:6A26DD46)

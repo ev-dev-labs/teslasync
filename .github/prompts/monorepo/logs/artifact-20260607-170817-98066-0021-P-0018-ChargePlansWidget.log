@@ -1,0 +1,140 @@
+=== P4 Dashboard widget 0018 ChargePlansWidget (Apple) ===
+Date: 2026-06-07
+Host: Darwin arm64 (Mac Studio), Xcode 26.5 (17F42) via DEVELOPER_DIR, JDK 17, xcodegen, swiftlint, swiftformat, pwsh.
+
+--------------------------------------------------------------------------------
+CAPABILITY ASSESSMENT (prompt requires SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15)
+--------------------------------------------------------------------------------
+- Full Xcode 26.5 present at /Applications/Xcode.app and reachable via
+  `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` (default xcode-select is
+  CommandLineTools; no sudo available to switch it, DEVELOPER_DIR override used throughout).
+- iOS 26.5 + macOS 26.5 SDKs (>= the iOS 18 / macOS 15 HIG floor); iPhone 16 simulator available.
+- KMP `Shared.xcframework` was NOT committed (only Frameworks/.gitkeep). Built it from source on
+  this macOS host (JDK 17 + Kotlin/Native) via Scripts/build-shared-xcframework.sh:
+      > Task :core:assembleSharedReleaseXCFramework
+      xcframework successfully written out to: .../core/build/XCFrameworks/release/Shared.xcframework
+      BUILD SUCCESSFUL in 23m 51s
+      ✓ Shared.xcframework staged -> apps/apple/Frameworks/Shared.xcframework
+  => Platform capability is AVAILABLE; the surface was built and tested against the real framework.
+
+--------------------------------------------------------------------------------
+PATH RECONCILIATION (honesty: no silent drift)
+--------------------------------------------------------------------------------
+The prompt's templated native path `apps/apple/TeslaSync/dashboard-widgets/ChargePlansWidget.*`
+does not exist in this repo and is not in apps/apple/project.yml's source roots. The Xcode app
+targets (TeslaSync, TeslaSync-macOS) glob `apps/apple/Sources/` recursively. To make the surface
+actually COMPILE + TEST into both targets (instead of producing a file the build ignores — which
+would be a fake green), the surface lives at the real compiled location, basename-matching the
+allowed `ChargePlansWidget.*` glob:
+  - apps/apple/Sources/Dashboard/Widgets/ChargePlansWidget.swift          (View + chrome + detail rows)
+  - apps/apple/Sources/Dashboard/Widgets/ChargePlansWidget.Model.swift    (view model + telemetry seam)
+  - apps/apple/Sources/Dashboard/Widgets/ChargePlansWidget.Adapter.swift  (cache->projection adapter + models)
+  - apps/apple/Sources/Dashboard/Widgets/ChargePlansWidget.Previews.swift (SwiftUI previews, #if DEBUG)
+  - apps/apple/Tests/Unit/Dashboard/ChargePlansWidget.Tests.swift         (XCTest, in TeslaSyncTests)
+(Split into 4 source files only to honor SwiftLint's 400-line file_length rule under --strict;
+all basenames remain within the `ChargePlansWidget.*` allowed scope.)
+
+Line counts:
+  220 ChargePlansWidget.Adapter.swift
+  238 ChargePlansWidget.Model.swift
+   90 ChargePlansWidget.Previews.swift
+  350 ChargePlansWidget.swift
+  287 ChargePlansWidget.Tests.swift
+
+--------------------------------------------------------------------------------
+PARITY (web source: features/dashboard/widgets/ChargePlansWidget.tsx)
+--------------------------------------------------------------------------------
+- Data bound through the shared P1/S8 state holders (NO HTTP in the view):
+    useChargePlans -> Shared.ChargingStore.chargePlans(vehicleId:)  (StateFlow<Resource<JsonElement>>)
+    useRatePlans   -> Shared.ChargingStore.ratePlans()
+    useVehicles    -> Shared.VehiclesStore.vehicles()  (default-vehicle resolution)
+  Projected via LoadableState<[ChargePlan]> / <[RatePlanInfo]> exactly like VehicleSettingsModel.
+- useFormatting/useDateFormat reproduced at the display boundary (currency/number/date formatters,
+  injected locale + timeZone + currencyCode).
+- States reproduced: loading (skeleton/loader), empty (friendly EmptyState), error (TSQueryError +
+  retry), stale (freshness chip + auto-refresh on appear), offline (cached value + offline chip),
+  plus fetching indicator; compact (cols<=1) and full (2x4) layouts; active-plan StatCards + detail
+  card; rate-plan section. Registry id `charge-plans`, 2x4 default / 1x2 min respected by `Size`.
+- i18n: every label resolves through P1/S10 keys (widget.chargePlans.* [15 keys present in
+  Localization/Localizable.xcstrings] + widget.freshness.* + translation.common.refresh). No English literals.
+- Telemetry: emits the P1/S11 diagnostics ScreenView ("view opened") event with surface slug
+  "ChargePlansWidget" (SharedChargePlansTelemetry -> Shared.Telemetry.track(TelemetryEvent.ScreenView)).
+- Accessibility: VoiceOver labels/values on the compact metric and freshness chips; Dynamic Type via
+  shared typography tokens; SF Symbols marked decorative.
+
+--------------------------------------------------------------------------------
+GATE STEP RESULTS (real outputs)
+--------------------------------------------------------------------------------
+[xcodegen generate]            OK (TeslaSync.xcodeproj generated; 30 ChargePlansWidget refs across targets)
+
+[iOS BUILD]                    ** BUILD SUCCEEDED **   (app target + all 4 surface files + test target compiled clean)
+[iOS unit tests — surface]     xcodebuild test -only-testing:TeslaSyncTests/ChargePlansWidgetTests
+                               Executed 19 tests, with 0 failures (0 unexpected) in 0.031s  => EXIT 0
+                               (adapter decode/projection, active-plan selection, status tone, summary
+                                formatting, rate rows, every model state [loading/loaded/empty/error/
+                                stale/offline/fetching], telemetry view.opened once w/ slug, a11y value,
+                                view construction for every state — all PASS.)
+
+[macOS BUILD]                  ** BUILD SUCCEEDED **   (surface compiles for macOS — cross-platform parity)
+
+[swiftlint --strict]           Done linting! Found 0 violations, 0 serious in 261 files.   => LINT_EXIT 0
+[swiftformat --lint apple]     0/265 files require formatting.                              => FORMAT_EXIT 0
+[check-placeholders.ps1]       PLACEHOLDER_COUNT=0                                          => PLACEHOLDER_EXIT 0
+
+--------------------------------------------------------------------------------
+FULL-SCHEME `build test` — BLOCKED by pre-existing / environment-capability factors (NOT this surface)
+--------------------------------------------------------------------------------
+The literal gate runs the whole scheme `test` (TeslaSyncTests + TeslaSyncUITests). It returns non-zero
+in this environment for reasons entirely outside this surface's scope and allowed files:
+
+1. iOS UI bundle (TeslaSyncUITests) — pre-existing, infrastructure-dependent failures:
+     Tests/UI/PushNotificationsUITests.swift:42  testForegroundChargingPushShowsBannerThenDeepLinks
+       XCTAssertTrue failed - a foreground charging push raises the in-app banner   (needs APNS/push infra)
+     Tests/UI/PushNotificationsUITests.swift:64  testRegisterTokenMarksDeviceRegistered
+       Lost connection to the application ... mach_error=10000003                    (push/registration infra)
+     Tests/UI/LiveDataUITests.swift:22  testLiveIndicatorAndContentAppear
+       passed on an idle machine (6.4s); flaked once under the concurrent 24-min Kotlin/Native build
+       (5s waitForExistence race). Its sibling testGoStaleShowsStaleBannerThenReconnectClearsIt passes.
+   These exercise the Push/Live SSE surfaces — different surfaces, untouched files, out of scope.
+
+2. iOS unit bundle (TeslaSyncTests) full run — pre-existing host crash:
+     "TeslaSync encountered an error (Early unexpected exit, operation never finished bootstrapping ...
+      Test crashed ... before establishing connection.)"
+   The app test-host crashes at LAUNCH when the WHOLE bundle is injected (before any test runs), yet the
+   ChargePlansWidgetTests class alone runs 19/19 green on a fresh sim (see above). This is the repo's
+   already-documented "P9-0001 XCTest unit gate BLOCKED" condition — not introduced here (this surface's
+   files are isolated and referenced by no app-startup/routing code).
+
+3. macOS test EXECUTION — host signing:
+     "Could not find test host for TeslaSync-macOSTests: TEST_HOST evaluates to .../TeslaSync-macOS.app/..."
+   macOS unit-test hosting needs a signed host app; the repo documents this as "macOS dev-cert pending"
+   (apps/macos-pending-verifications.md). macOS BUILD SUCCEEDED (the surface compiles); only signed
+   test execution is deferred.
+
+4. CoreSimulator instability on this loaded host across repeated runs:
+     "Mach error -308 - (ipc/mig) server died" / runner check-in failures — transient, load-induced.
+
+Raw logs retained: /tmp/cpw_ios_build2.log, /tmp/cpw_ios_full.log, /tmp/cpw_mytests2.log,
+/tmp/cpw_macos.log (BUILD SUCCEEDED on both platforms; the 19 surface tests pass).
+
+--------------------------------------------------------------------------------
+CONCLUSION
+--------------------------------------------------------------------------------
+The ChargePlansWidget surface is COMPLETE and verified to the maximum extent this host allows:
+  - Compiles into BOTH iOS and macOS app targets (BUILD SUCCEEDED).
+  - 19 surface unit tests PASS (adapter + every state + telemetry + a11y).
+  - swiftlint --strict, swiftformat --lint, and the placeholder gate are all GREEN (0/0/0).
+The full-scheme `xcodebuild build test` cannot reach EXIT=0 here ONLY because of pre-existing,
+unrelated UI tests (Push/Live infra), the already-documented P9 full-unit-bundle host crash, macOS
+test-host signing ("macOS dev-cert pending"), and transient CoreSimulator instability — none of which
+this surface caused or can fix within its allowed files. Per the prompt, that is a platform-capability
+block, so STATUS=BLOCKED with the evidence above (no red reported as green).
+
+IOS_EXIT=65
+MAC_EXIT=70
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+EXIT=65
+STATUS=BLOCKED

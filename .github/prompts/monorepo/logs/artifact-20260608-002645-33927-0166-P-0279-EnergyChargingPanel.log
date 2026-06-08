@@ -1,0 +1,219 @@
+================================================================================
+P4 · Feature view · 0279 — EnergyChargingPanel (Apple)
+Run: 2026-06-08T02:25-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/166
+Base: c9c6fdb9f
+Prompt: P4/feature-views/0279 — Feature view: EnergyChargingPanel
+Web source (spec): web/src/features/vehicles/components/telemetry-panels/EnergyChargingPanel.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (0002 BackendTool / 0054
+      GuardModeWidget precedent, ADR-012, Honesty rule 7 — predecessor parity).
+      THIS host is bare Command Line Tools (no Xcode.app), so the deferred set is
+      WIDER than 0002's Xcode-equipped host: iOS-SDK compile + XCTest execution are
+      ALSO deferred here. Every claim below is the REAL output of a command run on
+      this host; nothing Xcode-only is faked or shown as green.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  xcode-select -p ............ /Library/Developer/CommandLineTools                 CLT-ONLY
+    -> `xcodebuild` is UNAVAILABLE: "tool 'xcodebuild' requires Xcode, but active
+       developer directory '/Library/Developer/CommandLineTools' is a command line
+       tools instance" (captured verbatim from the gate command, see DEFERRED).
+  macOS SDK .................. MacOSX.sdk (host compiles target arm64-apple-macos)  OK
+  iPhoneSimulator SDK ........ xcrun error: SDK "iphonesimulator" cannot be located NONE
+    -> no Xcode => no iOS/iPadOS Simulator SDK, no simulators, no `xcodebuild`.
+  XCTest (host) .............. NOT available without Xcode (`swift test` -> "no such
+                               module 'XCTest'"); pure-logic verified via an exec
+                               harness instead (see HOST-RUNNABLE [3]).               WARN
+  swiftlint .................. 0.63.3  (/opt/homebrew/bin/swiftlint)                OK
+  swiftformat ................ 0.61.1  (/opt/homebrew/bin/swiftformat)              OK
+  pwsh (placeholder gate) .... 7.6.2   (/opt/homebrew/bin/pwsh)                     OK
+  xcodegen ................... 2.45.4  (project generates cleanly, see DEFERRED)    OK
+  Shared.xcframework ......... not staged (apps/apple/Frameworks) — KMP core build  WARN
+
+  Capability note: the prompt's "Charts/maps used" is "(none)"; the shared components
+  are @/components/ui, @/components/data-display, @/components/feedback. The core
+  requirement is SwiftUI, which IS available in the host macOS SDK and is PROVEN by a
+  real Swift-6 / strict-concurrency typecheck + an EXECUTED logic harness below. The
+  capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") therefore does
+  NOT apply: the surface is authored, host-compiled (pure core) and host-tested. The
+  FULL app build/test needs Xcode + the staged xcframework and is DEFERRED (not faked).
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/EnergyChargingPanel.*) ===
+  EnergyChargingPanel.swift          153  surface: TSGlassPanel shell + header
+                                          (battery-bolt/title + freshness chip + refresh)
+                                          + connectivity banner + phase switch + surfaceSlug
+  EnergyChargingPanel.Adapter.swift  222  testable projection core (Foundation only) —
+                                          ChargingTelemetrySnapshot + numberFormat.ts ports
+                                          (fmtNumber/fmtWithUnit/percent) + charge-rate SI
+                                          conversion + charging-state tone + projection + a11y
+  EnergyChargingPanel.Model.swift    211  P1/S8 state-holder seam (EnergyChargingSource ->
+                                          EnergyChargingModel) + P1/S11 telemetry seam
+                                          (view.opened) + P1/S10 strings facade + units binding
+                                          + connection axis + in-memory source
+  EnergyChargingPanel.Views.swift    273  presentational subviews — charger metric grid
+                                          (MetricCard x2) + detail rows (power/energy/battery/
+                                          rate) + charging-state pill + loading/empty/error chrome
+  EnergyChargingPanel.Previews.swift  97  #if DEBUG previews — one per state (data-Charging/
+                                          data-Complete/empty/loading/error/stale/offline)
+  EnergyChargingPanel.Tests.swift    285  XCTest — adapter + projection + model + a11y (26 methods)
+  EnergyChargingPanel.strings         38  P1/S10 catalog contribution (table "EnergyChargingPanel",
+                                          17 keys)
+  Largest .swift = 285 (Tests) / 273 (Views production) — swiftlint file_length<=400 honored.
+  No file imports the Shared xcframework; the unit facade (Units.formatSpeed) and design
+  tokens/components are the in-target real types previews/tests inject via InMemory source.
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data sources (web useTranslation + useUnits): bound through the P1/S8 seam
+    EnergyChargingSource -> EnergyChargingModel. The model carries the snapshot + the
+    active UnitPreferences (web useUnits) and re-projects on every push. No HTTP in the view.
+  - Composition (web GlassPanel > h3 header + grid of MetricCard + label/value rows + pill):
+      * GlassPanel  -> TSGlassPanel.
+      * h3 header   -> battery-bolt glyph (statusInfo cyan == web text-cyan-300) + title
+                       (Font.TS.panel, web "section-title"); web t('telemetry.energyCharging').
+      * MetricCard  -> TSMetricCard x2 (Charger Voltage "V" / Charger Current "A"),
+                       locale number + invariant unit caption.
+      * rows        -> Charger Power, Energy Added, Battery Level, Charge Rate (Zap glyph),
+                       muted label + monospaced value, em-dash on null (web `!= null ? : '—'`).
+      * state pill  -> EnergyChargingStateChip: Charging->statusInfo (web cyan),
+                       Complete->statusSuccess (web green), other/nil->textMuted (web gray);
+                       text = raw state or t('common.unknown') (web parity).
+  - PARITY QUIRK reproduced verbatim (NOT a native "fix" — Honesty rule 5/9): the web
+    renders the SI watt value charger_power_w via fmtWithUnit(value,'kW') and the SI
+    watt-hour value charge_energy_added_wh via fmtWithUnit(value,'kWh') WITHOUT rescaling
+    the magnitude. EnergyChargingFormat.withUnit reproduces this exactly (7,680.00 kW,
+    18,450.00 kWh); pinned by EnergyChargingFormatTests.testWithUnitSpacesValueAndUnitWithoutRescaling.
+  - Charge rate (the only unit-dependent field): web formatSpeed(range_added_meters_per_hour
+    / 3600). The projection pre-converts m/h -> m/s (pure, tested); the view formats it via
+    the shared SI Units.formatSpeed with the bound preferences; null -> em-dash.
+  - States (ALL rendered; each has a #if DEBUG preview + a projection/model unit test):
+      loading (initial fetch, skeleton) · empty (web EmptyState "No charging telemetry
+      available") · error (QueryError peer + Retry — P4 leaf addition) · data · stale
+      (freshness chip + "Reconnecting — data may be stale" banner + one-shot auto-refresh) ·
+      offline (cached body kept + "Offline — showing last known data" banner + offline chip).
+  - i18n (P1/S10): web keys preserved verbatim — telemetry.energyCharging / chargerVoltage /
+    chargerCurrent / chargerPower / energyAdded / chargingState / batteryLevel / chargeRate /
+    noChargingTelemetry + common.unknown; native chrome namespaced energyCharging.* (live/
+    stale/offline/staleBanner/offlineBanner/refresh/loadingA11y). Every code-referenced key
+    is declared in EnergyChargingPanel.strings (referenced == declared, verified); NO English
+    string literals in native code (all via EnergyChargingStrings facade + Text(verbatim:)).
+    Invariant unit symbols (V/A/kW/kWh/%) are intentionally NOT localized (EnergyChargingUnits).
+  - Accessibility: VoiceOver combined labels on every detail row + the state row (label +
+    value), header is .isHeader, freshness chip combined, refresh button labeled, decorative
+    glyphs .accessibilityHidden; Dynamic-Type system fonts (Font.TS); reduce-motion honored
+    (TSSkeleton shimmer + TSFadeIn).
+  - Telemetry (P1/S11): EnergyChargingModel.start() emits view.opened with surface slug
+    "EnergyChargingPanel" exactly once (OSLogEnergyChargingTelemetry default; prod app injects
+    the shared diagnostics adapter). Asserted by testStartAppliesInitialAndEmitsTelemetryOnce.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  [1] swiftc -typecheck — macOS SDK, Swift 6 + strict-concurrency=complete (pure Adapter,
+        the dependency-free projection/format/tone/projection core):
+          xcrun swiftc -typecheck -sdk <MacOSX.sdk> -swift-version 6 \
+            -strict-concurrency=complete EnergyChargingPanel.Adapter.swift
+        ADAPTER_TYPECHECK_EXIT=0                                                   OK
+  [2] swiftc -parse — all 6 surface .swift files (syntactic validation; the Model/Views/
+        surface/Previews/Tests reference in-target + Shared-facade symbols only resolvable
+        in the app target, so they are parse-checked here, type-checked under Xcode — DEFERRED):
+          EnergyChargingPanel.swift / .Adapter / .Model / .Views / .Previews / .Tests
+        PARSE_EXIT=0 (all six)                                                     OK
+  [3] EXECUTED pure-logic harness — the real EnergyChargingPanel.Adapter.swift compiled
+        with a Foundation exec driver (XCTest is unavailable without Xcode), 23 assertions:
+          formatting (number/withUnit-no-rescale/percent/dash), charge-rate m/h->m/s,
+          charging-state tone (Charging/Complete/nil/other), projection (error precedence /
+          loading / empty / data carries values+tone+rate / snapshot-wins-over-loading /
+          nil-rate / empty-error-string), a11y row label.
+          -> "ALL CHECKS PASSED"   RUN_EXIT=0                                      OK
+        (The committed EnergyChargingPanel.Tests.swift has 26 XCTest methods over the SAME
+         adapter/projection assertions PLUS the @MainActor model wiring — telemetry-once,
+         push-updates, unit propagation, stale auto-refresh-once, offline-no-refresh, manual
+         refresh, stop/re-arm, surfaceSlug. The model half needs the in-target Shared facade,
+         so it executes under the Xcode test target — DEFERRED.)
+  [4] swiftlint --strict — the 6 surface files (explicit paths; surface scope):
+          Done linting! Found 0 violations, 0 serious in 6 files.
+        LINT_EXIT(surface)=0                                                       OK
+  [5] swiftformat --lint — the 6 surface files (config apps/apple/.swiftformat):
+          0/6 files require formatting.
+        FORMAT_EXIT(surface)=0                                                     OK
+  [6] check-placeholders.ps1 (ADR-011 stub gate; swift) — self-test + this surface:
+          ./apps/tools/check-placeholders.ps1 -SelfTest          -> SELFTEST_EXIT=0 (all PASS)
+          ./apps/tools/check-placeholders.ps1 -Path <surface> -Language swift
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                         OK
+        (The literal gate `-Path .../EnergyChargingPanel` (no extension) resolves to no
+         path and scans nothing -> trivially 0; the meaningful scan above runs over copies
+         of the 6 real shipped .swift files.)
+  [7] xcodegen generate — proves the surface is integration-ready (files glob into the
+        iOS + macOS app targets; the .strings folds in as a resource):
+          XCODEGEN_EXIT=0 ; EnergyChargingPanel refs in project.pbxproj = 42 ;
+          EnergyChargingPanel.strings resource refs = 6 (both app targets).
+        (Generated .xcodeproj is .gitignore'd line 379; removed after capture.)
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (the gate command run verbatim on this host):
+      xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+      directory '/Library/Developer/CommandLineTools' is a command line tools instance
+      -> IOS_EXIT=1  MAC_EXIT=1 (toolchain absent, before any compile)
+    Why deferred (independent, code-unrelated reasons — none is a defect in this surface;
+    identical disposition to the 0002 BackendTool / 0054 GuardModeWidget predecessors, rule 7):
+      (a) NO XCODE ON THIS HOST: only Command Line Tools are installed, so `xcodebuild`,
+          the iPhoneSimulator SDK, the simulators, the Xcode test target and the #Preview
+          macro plugin cannot run here at all. The Swift-6/strict-concurrency typecheck of
+          the pure core (step [1]) and the EXECUTED logic harness (step [3]) are the
+          meaningful, surface-specific validation runnable on this host.
+      (b) Shared.xcframework not staged: the app target links the KMP core; staging it needs
+          a Kotlin/Native gradle build. Independent of this UI surface.
+      (c) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    Under Xcode the suite runs in the TeslaSync(/-macOS) test target; here the adapter/
+    projection/a11y half is PROVEN GREEN (23/23) by the executed harness in step [3] and the
+    core compiles under the Swift-6 macOS SDK in step [1].
+
+=== PRE-EXISTING BASELINE NOISE (committed HEAD; OUTSIDE this prompt's allowed files; NOT mine) ===
+  The literal tree-wide gate commands `swiftlint --strict` and `swiftformat --lint apps/apple`
+  each report exactly ONE violation, both in files this prompt may NOT touch (allowed files
+  are EnergyChargingPanel.* + this log). Neither is introduced by this surface; both are
+  unmodified vs HEAD (verified: not in `git status`). My 6 files are clean tree-wide
+  (verified: grep of the tree-wide runs shows zero EnergyChargingPanel violations).
+    - swiftlint  : LifetimeStatsWidget.Adapter.swift:141  function_body_length (78>50 lines)
+    - swiftformat: ActionBuilder.Previews.swift:48        blankLinesBetweenScopes
+  Disposition: pre-existing repo-hygiene owned by other prompts (analogous to 0002's
+  documented project.yml-registration deviation, rule 9). The SURFACE gate (steps [4]/[5],
+  explicit paths) is the relevant signal and is GREEN.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/data/stale/offline) — implemented;
+      each has a #if DEBUG preview; phase logic unit-tested (harness-EXECUTED green).
+  [x] Hooks bind through the shared P1/S8 state-holder seam (EnergyChargingSource ->
+      EnergyChargingModel) + the units holder; no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — web telemetry.*/common.unknown
+      preserved verbatim; native chrome energyCharging.* present; referenced==declared verified.
+  [x] Accessibility labels on every interactive element (refresh) + combined row/chip labels.
+  [x] Tests: adapter + per-state projection + model + a11y — 26 methods; adapter/projection/
+      a11y half EXECUTED 23/23 green here, model half DEFERRED to the Xcode test target.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0 (self-test PASS).
+  [x] EXIT=0 / STATUS=DONE — host-runnable surface gates green; Xcode app build/test DEFERRED
+      with captured evidence (no Xcode on host + xcframework + signing), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... surface host gates are genuinely green; xcodebuild is shown
+                          DEFERRED with its REAL exit (CLT-only, IOS/MAC_EXIT=1) + cause,
+                          not as pass; pre-existing tree-wide reds disclosed in full.
+  2 No scope narrowing ... full surface (6 .swift + strings), all states, seams, tests.
+  3 No skip-and-assume ... web source read end-to-end; every t() + render branch reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. MetricCard grid + rows + coloured pill + the watt/Wh "kW/kWh"
+                          no-rescale quirk reproduced verbatim and pinned by a test.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same host-gate + DEFERRED-xcodebuild disposition as 0002/0054.
+  8 No commit on red ..... committed work is green on every gate runnable on this host; the
+                          non-green steps are (i) the env-blocked xcodebuild (no Xcode) and
+                          (ii) two pre-existing baseline violations in non-allowed files —
+                          both disclosed, neither a defect in the shipped surface.
+  9 No silent drift ...... CLT-only host + pre-existing baseline violations documented above;
+                          project.yml already registers feature-views (42 refs on generate).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

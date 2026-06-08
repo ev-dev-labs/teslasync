@@ -1,0 +1,102 @@
+I'll start by exploring the repository structure and reading the web source component, plus checking the native Apple app structure and toolchain availability.
+
+Key findings: `xcodebuild` requires full Xcode but only Command Line Tools are installed (no simulators). `swift`, `swiftlint`, `swiftformat` ARE available. The web source exists; `modals-dialogs/` doesn't exist yet. There's an established sibling pattern in `feature-views/AIUsageCard.*`. Let me read the web source and study the established pattern.
+
+Now I understand the web source — a complex signal configuration modal with presets, interval options, categorized signal list, search, and master controls. Let me study the established Swift pattern by reading the AIUsageCard sibling files and supporting infrastructure.
+
+Excellent — this is a sophisticated, well-architected pattern. Let me read the remaining AIUsageCard files and the shared P1/S9 token + P1/S10 i18n + P1/S11 diagnostics infrastructure.
+
+Let me find the `AiUsageProjection` definition (referenced but not yet seen), the shared P1/S9 design tokens, the project.yml build config, and the placeholder check script.
+
+Let me read the remaining reference files (Projection, Chrome), locate the design tokens, check the placeholder script, and review how project.yml evolved for new surface dirs.
+
+Now I have the full pattern. Let me locate the exact design-token and shared-component APIs (Color.TS, Font.TS, TSSpacing, TSRadius, TSButton, TSFadeIn, TSSkeleton, plus any Modal/Select/TextField/Toggle primitives), the placeholder script, and how project.yml handles new dirs.
+
+Clear precedent: the first `feature-views` surface (ToolCard, commit `acc76624a`) added `TeslaSync/feature-views` to project.yml in the same commit. So this first `modals-dialogs` surface must register `TeslaSync/modals-dialogs` the same way. Let me read the design tokens, shared UI components, and the placeholder checker.
+
+Now let me read the shared UI component APIs I'll compose with (Buttons, Fields, Pickers, Overlays, Motion, Skeletons) and the placeholder checker to know exactly what's scanned.
+
+Now let me read the modal/overlay primitives, motion/skeleton atoms, and the placeholder checker to finalize my composition approach.
+
+`pwsh` IS available and `swiftc` has the macOS SDK. Note `.swiftlint.yml` `included:` lists `feature-views` but not `modals-dialogs`. Let me verify what the precedent ToolCard commit touched and whether SwiftUI compiles under the CLT SDK.
+
+Strong precedent confirmed: ToolCard's commit registered the new dir in both `project.yml` and `.swiftlint.yml`. But the active in-run sibling (AiUsageCard) co-locates everything as `Name.*` (Model/Projection/Adapter/Views/Chrome/Previews/Tests/strings) — which matches this prompt's allowed-files glob `SignalConfigModal.*` and its P1/S8–S11 references. I'll follow the AiUsageCard template. SwiftUI type-checks under the CLT SDK, and pwsh is available, so I can verify substantially. Let me read the last reference APIs and check for an isolated build harness.
+
+The `macos-pending-verifications.md` reveals the authoritative methodology: co-located `Name.*` files + dir registration, verified via isolated SwiftPM build+tests, `swiftc -typecheck` against both SDKs, swiftlint/swiftformat/placeholder, with full-app xcodebuild deferred to the macOS CI gate. Let me read the sibling gate logs to mirror their exact log + EXIT/STATUS format.
+
+I now have the complete, authoritative methodology (from `macos-pending-verifications.md` + the ToolCard gate log): co-locate `Name.*` files, register the dir in `project.yml` + `.swiftlint.yml`, verify via isolated SwiftPM build+tests and dual-SDK `swiftc -typecheck` + swiftlint/swiftformat/placeholder, and defer full-app `xcodebuild` to the macOS CI gate with a pending-verification row. The accepted disposition is `EXIT=0 / STATUS=DONE`.
+
+Let me set up the plan/todos and scaffold the directory.
+
+Now I'll write the surface files, starting with the pure domain core (Adapter) and the pure Projection.
+
+Let me add facade-resolved display/formatting helpers to the Model (used by the menus and VoiceOver), then write the Views and Chrome.
+
+Let me fix an `accessibilityValue` mistake in the disclosure (nested `Text`):
+
+Now the Chrome file (master controls, subtitle, footer bar, empty state):
+
+Now the entry View that composes the surface:
+
+Now the Previews and the i18n strings table:
+
+Now the comprehensive test suite:
+
+All nine surface files are written. Now let me wire the new directory into `project.yml` (both app targets) and `.swiftlint.yml`, mirroring the ToolCard precedent.
+
+All wiring registered. Now let me run the verification gates — first auto-format my files with swiftformat, then lint-check the whole tree, then swiftlint, then the placeholder gate.
+
+My files are clean (0/8). The whole-tree lint flags ONE pre-existing file — `feature-views/ActionBuilder.Previews.swift` (a sibling, not mine). Let me run swiftlint scoped to my files, then the placeholder gate.
+
+swiftlint lints the whole `included` set (9 pre-existing violations across 1917 files). Let me isolate whether ANY are in my files.
+
+swiftlint found 8 real violations in MY files (7 `inclusive_language` on "master", 1 `cyclomatic_complexity`). Both are legitimate — let me fix them. First, let me see the complexity site:
+
+Converting the glyph switch to a dictionary lookup (removes the complexity violation), and renaming all "master" identifiers to "global" (inclusive language) across Model, Projection, Chrome, entry, and Tests. The user-facing "Master Interval" string/key stays (it's a literal, not flagged).
+
+Both are legitimate. I'll rename all `master*` identifiers to `global*` (the `inclusive_language` rule; user-facing "Master Interval" text is unaffected since it's a string literal). Let me apply the renames consistently across code + the i18n key, then fix one web-reference comment.
+
+Two parity comments referencing the web function `setMasterIntervalAll` got mangled. Since comments aren't flagged by `inclusive_language` (only declarations are), I'll restore the accurate web name:
+
+Now re-run the formatting + lint + placeholder gates to confirm my files are clean:
+
+swiftformat clean (0/8), swiftlint clean in my files (the only remaining violation is the pre-existing `LifetimeStatsWidget`, same one ToolCard noted). Now the placeholder gate via pwsh:
+
+All host gates green so far. Now the strongest verification — an isolated SwiftPM build+test of the **exact shipped sources** against the **real design-system** (Tokens/Buttons/Motion), matching the sibling methodology. Let me set up the harness.
+
+The only failures are `#Preview` macro expansion — that macro plugin is Xcode-only and unavailable to command-line `swift build` (it hit the shared `DS_Buttons`/`DS_Motion` previews too, not just mine). The actual surface code compiled to [13/13]. Previews are DEBUG-only dev tooling whose macro expansion belongs to the Xcode build. Let me strip the preview blocks from the harness (keeping all production sources) and rebuild + test.
+
+Production surface compiles clean under Swift 6 strict concurrency against the real design-system. Now run the tests:
+
+`swift test` can't run because XCTest isn't available under Command-Line-Tools-only SwiftPM (it's an Xcode framework). The shipped `Tests.swift` (XCTest) is correct for the app's XCTest target and runs on the Xcode CI runner. To actually *execute* the production logic on this host, I'll add an executable verifier that drives the exact shipped sources with the same assertions (Swift 6, strict concurrency).
+
+**123/123 checks pass** against the exact shipped sources under Swift 6 strict concurrency, and all view files compiled against the real design-system (macOS-15 SDK). Let me check iOS-SDK availability for the dual-SDK typecheck, and do an explicit macOS typecheck of the view files.
+
+Confirmed: only the macOS SDK exists here (CLT-only); iOS SDK + simulators require full Xcode. So macOS-15 is verified (the `swift build` + 123 checks); iOS-18 typecheck and full-app `xcodebuild` are platform-blocked — exactly what the repo's `macos-pending-verifications.md` tracks. Let me run an explicit macOS `swiftc -typecheck` artifact, verify `Previews.swift` parses, and capture the real `xcodebuild` BLOCKED exit codes for the log.
+
+macOS-15 typecheck clean (EXIT=0); `Previews.swift` has no syntax/type errors (only the Xcode-only `#Preview` macro can't expand on CLT). Now let me capture the real `xcodebuild` BLOCKED evidence for the log.
+
+All evidence captured: `xcodebuild` is environmentally blocked (CLT-only, no Xcode/iOS SDK) → `IOS_EXIT=1`/`MAC_EXIT=1`, exactly the deferral the repo's `macos-pending-verifications.md` tracks. Let me check `xcodegen` availability, then write the gate log.
+
+Excellent — `xcodegen generate` succeeds (`XCODEGEN_EXIT=0`) and the generated project references `SignalConfigModal` 54 times, confirming my `project.yml` edit enumerates all 9 files into both app targets. Let me confirm the generated project is git-ignored and clean it up, then write the gate log.
+
+`*.xcodeproj/` is git-ignored (root `.gitignore:379`). Now let me confirm the exact set of changes I'm introducing:
+
+All changes scoped correctly: 9 new files in `modals-dialogs/` + 2 wiring edits. Now let me write the gate log (mirroring the accepted ToolCard format) and the `macos-pending-verifications.md` deferral row.
+
+Now append the deferral row to `macos-pending-verifications.md`:
+
+Now let me re-sync the harness with the final committed file bytes and re-run the full verification suite one last time to guarantee the committed sources pass.
+
+Final swiftlint confirmation on my files, then I'll stage and commit:
+
+All gates green. Let me do a final consistency audit — verify no stray `master` identifiers remain, the i18n key rename is consistent between code and the `.strings` table, and every facade key used in code exists in the table.
+
+Perfect i18n consistency (62/62 keys, zero missing/unused). Everything is verified green. Let me stage my changes (surface files + log + the two wiring files + the pending-verifications row, per the ToolCard precedent) — explicitly excluding the unrelated pre-existing working-tree changes — and commit.
+
+All staged correctly (2351 insertions; unrelated pre-existing changes excluded). Now the commit:
+
+Let me verify the commit landed cleanly and clean up the temporary harness.
+
+The commit `91013e7f8` landed with exactly my 13 files; the remaining unstaged changes are the pre-existing unrelated working-tree files I correctly left untouched. Let me finalize the todo tracking.
+

@@ -1,0 +1,137 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Key finding: Xcode is not installed (only Command Line Tools), but Swift 6.3.2, swiftlint, swiftformat, and pwsh are available. There's already an `apps/apple/TeslaSync` structure with an established pattern. Let me explore it.
+
+Let me read the web source and the existing native pattern (AIUsageCard is the established template).
+
+Let me examine the AIUsageCard native template (closest AI analog, recently modified), the web shared components I must map, and check for prior shared-surface work.
+
+The AIUsageCard files show as modified in git but don't exist — likely a parallel agent is working on them (shared environment). I'll avoid that scope. Let me find native AI infrastructure (AIFeatureCard, withAiFeature, useAiStream equivalents) and a close AI template.
+
+Filesystem is case-insensitive (`AiUsageCard` = `AIUsageCard`), and a parallel agent is editing it. Now I understand: there's no native AI streaming infra. Let me deeply study the closest AI analog (`AIRestorePanel`) and the shared facade/design/i18n infrastructure.
+
+This `AIRestorePanel` is the perfect template — same AI-panel pattern with state-holder seam (P1/S8), telemetry seam (P1/S11), i18n facade (P1/S10), projection, and connection axis. Let me read the rest of its files plus design tokens and shared UI.
+
+Excellent, very clear template. Let me read the remaining template files (Previews, Tests, strings), the design tokens, shared UI components, and check the project/build setup.
+
+Now let me read the design tokens and locate the shared UI components, plus check the build/lint setup.
+
+The project uses XcodeGen (`project.yml`), no checked-in `.xcodeproj`. Let me read the shared UI components, locate the design tokens (Color.TS, Font.TS, TSSpacing, TSRadius), and read the lint configs and project.yml.
+
+Important: `shared-surfaces/` isn't yet in `project.yml` sources or `.swiftlint.yml` `included`, and the design tokens live in `apps/design/generated/apple`. Let me verify the toolchain capabilities and token availability before deciding the verification strategy.
+
+`swiftc` can typecheck SwiftUI/Charts/MapKit for macOS 15 with the CLT SDK (real compile verification is possible!), and `xcodegen` is installed. Let me assess the dependency graph and the `Shared.xcframework`/placeholder-check situation to design a real verification.
+
+Good — feature-views don't import `Shared` (only `Foundation/SwiftUI/Observation/OSLog`), so my surface won't need the KMP framework, and a curated `swiftc` typecheck against the macOS SDK is viable. Let me read the `useAiStream` hook and `withAiFeature` HOC to faithfully model the AI stream lifecycle, and confirm the Components/Design import closure.
+
+I now fully understand the web semantics (AI SSE stream: `idle→streaming→done|error`, `paused-confirm`; `tool_result`/`draft_location_name` → `LocationNameDraft`; `withAiFeature` gate). Let me verify the exact available design tokens, font/color/spacing members, and the `Color.TS` API before writing, plus confirm `ContentUnavailableView`/`@Observable` availability.
+
+I have everything needed: the AIRestorePanel template, the web semantics (AI SSE stream + propose-only draft + `withAiFeature` gate), the exact design-token API, and confirmation that `swiftc` can typecheck SwiftUI for macOS. Let me set up tracking and write the plan.
+
+Now I'll write the surface. Starting with the pure Adapter (the data adapter: raw SSE `tool_result` → typed `LocationNameDraft`, faithfully porting the web `handleEvent` type guards).
+
+Now the Model file — the state-holder seam (P1/S8), projection, telemetry seam (P1/S11), connection axis, and i18n facade (P1/S10).
+
+Now the presentational subviews. Updating todos and writing `Views.swift`.
+
+Now the main surface View, composing the panel, header, freshness, and phase content.
+
+Now the i18n strings catalog and the DEBUG previews.
+
+Now the comprehensive test suite (adapter parser, projection, model wiring, telemetry, actions, freshness, i18n).
+
+All 7 files written. Now the verification phase. Let me run swiftformat (fix in place, then lint) and swiftlint --strict on the new files.
+
+The `\` line-continuation is invalid inside a regular (non-`"""`) string literal — Swift only allows it in multiline literals. Let me fix the description string with `+` concatenation (keeps each line short for SwiftLint).
+
+SwiftFormat lint passes (0/6 require formatting). SwiftLint is still running — let me wait.
+
+SwiftLint linted all 1909 files (config `included` paths) and found 1 serious violation — I need to know if it's in my files. Let me scope it to my explicit files and capture the full violation.
+
+3 violations in my files. Let me view the exact lines to fix them precisely.
+
+Three real violations in my files. Let me fix them: (1) suggest button's trailing-closure, (2) the multi-line `if` brace, and (3) split the oversized Tests file.
+
+Now split the oversized Tests file. Creating `AdapterTests.swift` with the pure-logic tests, then trimming `Tests.swift` to the model tests.
+
+Now rewrite `Tests.swift` to contain only the model tests + spy (the pure-logic tests now live in `AdapterTests.swift`).
+
+The file exists — let me overwrite it.
+
+Now re-run swiftformat + swiftlint on the scoped files to confirm all violations are resolved.
+
+Both gates green on all 7 files (swiftformat 0/7, swiftlint 0 violations). Now the highest-value verification: a real `swiftc` typecheck of the SwiftUI surface against the macOS 15 SDK, compiled together with the actual shared components and design tokens. Let me locate `.tsGlassPanel` and attempt it.
+
+41-file component library + tokens. Let me typecheck my 4 SwiftUI/model/adapter files together with the real components, design, and tokens against the macOS 15 SDK.
+
+Zero errors reference my files — the 52 are all in the dependency component library. Let me inspect them to confirm they're environmental (CLT SDK) and not caused by my code.
+
+All 52 are in one unrelated file (`UnitFormatters.swift`) that references `UnitPreferences`, a type defined outside my curated subset — an artifact of my file selection, not my code (my files: 0 errors). Let me find `UnitPreferences` and include it so the dependency set is complete.
+
+`UnitPreferences` lives in a `Shared`-importing facade file, and `UnitFormatters.swift` isn't used by my surface. Let me compile the **minimal real closure** my surface actually needs instead. Finding the typography/badge component files.
+
+Components/UI, Motion, Feedback, and Design are free of `Shared`/`UnitPreferences`. Let me typecheck that clean closure + my files.
+
+Down to 2 errors in another unused file (`FeedbackOverlays.swift` needs `TSMetricBar` from the excluded DataDisplay). My files: still 0 errors. Let me compile the precise dependency closure my surface actually uses for a fully clean result.
+
+**Typecheck EXIT=0** — my 5 SwiftUI/model/adapter files compile cleanly against the real shared components + tokens (module TeslaSync, macOS 15, Swift 6 strict concurrency). Now a runtime verification: compile the pure Adapter+Model with a harness and actually execute the parser/projection/model logic.
+
+The pure-logic compiled; only the `@MainActor` model calls need main-actor isolation. Let me wrap that block in `MainActor.assumeIsolated` (top-level runs on the main thread).
+
+Found a real bug via runtime testing: `value is Bool` is unreliable for the integers `0`/`1` (JSON `location_id:1` was wrongly excluded as a boolean). The robust fix is `CFGetTypeID` to distinguish CFBoolean from CFNumber. Let me fix it.
+
+Let me add a regression test for the 0/1 edge case, then re-run the harness and all gates.
+
+ALL PASS at runtime (bug fixed). Let me re-run the full gate suite on the final files: format, lint, typecheck, and the placeholder check.
+
+30/30 runtime checks pass; swiftformat clean. Now swiftlint --strict, the re-run typecheck, and the placeholder check.
+
+swiftlint **0 violations**, typecheck **EXIT=0**. Now the placeholder check. Let me read the script to invoke it correctly, then run it via pwsh.
+
+The script needs an existing path to scan (the gate's no-extension prefix path won't match a real dir). To honestly prove no placeholders, I'll run it against the real directory, plus the literal gate path, plus the built-in self-test.
+
+The placeholder gate flagged the literal word "placeholder" in my doc comment (line 47). Per the acceptance criteria, none of these words may appear in shipped code. Let me find the exact patterns and all occurrences in my files.
+
+One occurrence — the word "placeholder" in a comment. Let me reword it, then re-verify the placeholder gate on the real directory.
+
+The comment is correctly placed and reworded. Let me re-run the full verification battery to confirm everything is green after the edits.
+
+All gates green (format 0/7, lint 0 violations, placeholder 0). Let me capture the final typecheck, harness summary, and the exact `xcodebuild` capability error (the BLOCKED evidence) for the log.
+
+All verifications captured: typecheck EXIT=0, harness 30/30 PASS, xcodebuild BLOCKED (Xcode.app not installed). Let me write the honest log file.
+
+Now writing the comprehensive, honest log.
+
+Let me update tracking and do a final review of the deliverables (line counts, full surface file) before committing only my files.
+
+Deliverable is complete (1788 lines across 8 files — full implementation, not a stub). Git shows my files are isolated; other agents' changes (AIUsageCard, web files) must stay untouched. Let me check the pre-commit config before committing only my files.
+
+`.git` is a worktree pointer. Let me confirm whether pre-commit is actually installed, and ensure my non-Swift files (`.strings`, `.log`) have no trailing-whitespace / final-newline issues that a hook might trip on.
+
+No pre-commit hook installed; files are clean. Let me stage only my files (the shared-surfaces dir + log) and commit with the prompt's message.
+
+Only my 8 files + the log are staged (all `A`). Committing with the prompt's message.
+
+Committed (77270ecd5) — 9 files, 1943 insertions, only my files (other agents' changes untouched). Let me clean up temp artifacts and do a final state check.
+
+All clean. My commit (77270ecd5) contains only my 9 files; the other agents' in-progress changes remain untouched in the working tree; temp artifacts removed.
+
+## Summary
+
+I shipped the native Apple (SwiftUI) parity of `web/src/components/ai/AIAutoNameUnnamedLocations.tsx` as a production-complete shared surface, following the established `AIRestorePanel` 7-file pattern.
+
+**Delivered** (`apps/apple/TeslaSync/shared-surfaces/`, 1,788 lines across 8 files):
+- `…swift` — surface View: glass panel, header + Helix badge + freshness chip/refresh, description, Suggest action (disabled from live state, never a literal), current-label, phase content, trailing output, `withAiFeature` gate parity, VoiceOver summary.
+- `…Model.swift` — P1/S8 state-holder seam (`AIAutoNameSource` + `@Observable AIAutoNameModel` + in-memory source), P1/S11 telemetry seam (`view.opened`, emitted only when visible), P1/S10 i18n facade, live/stale/offline axis, projection.
+- `…Adapter.swift` — pure core: stream lifecycle, `DraftStatus`, `LocationNameDraft`, and `AINameDraftParser` faithfully porting the web `handleEvent` `typeof` guards.
+- `…Views.swift`, `…Previews.swift` (8 states), `…Tests.swift` + `…AdapterTests.swift`, `…strings` (all 8 web i18n keys + chrome).
+
+**Every state renders**: gated/loading/empty/error/draft(accepted+rejected)/stale/offline. All 8 source i18n keys resolve via the facade (no English literals); every interactive control is accessibility-labeled.
+
+**Verification (all real)**:
+- `swiftlint --strict`: **0 violations** · `swiftformat --lint`: **0/7** · placeholder gate: **COUNT=0**
+- `swiftc -typecheck` of the SwiftUI surface against the **macOS 15 SDK** compiled with the **real** shared components + tokens (Swift 6, strict concurrency): **0 errors**
+- Runtime logic harness (parser/projection/model): **30/30 PASS** — which caught and let me fix a real bug (`value is Bool` misclassifying integer `0`/`1` as JSON booleans → now `CFGetTypeID`, with a regression test).
+
+**STATUS=BLOCKED** (honest, per the prompt's capability clause): the `xcodebuild` iOS-simulator/macOS build+test steps require a full **Xcode.app**, but the runner has **Command Line Tools only** (`xcode-select -p` → `/Library/Developer/CommandLineTools`). Evidence and all passing compensating checks are recorded in `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0006-AIAutoNameUnnamedLocations.log` (ends with `EXIT=1` / `STATUS=BLOCKED`). Committed as `77270ecd5` (only my files; other agents' in-progress changes left untouched).
+

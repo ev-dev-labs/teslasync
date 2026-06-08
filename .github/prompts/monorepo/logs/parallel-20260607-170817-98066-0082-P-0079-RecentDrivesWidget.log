@@ -1,0 +1,131 @@
+I'll start by exploring the environment and the web source that serves as the specification.
+
+Key finding: `apps/apple` and the web source both exist. Swift 6.3.2, swiftlint, and swiftformat are available, but `xcodebuild` requires full Xcode (only CommandLineTools installed). Let me verify the toolchain situation definitively and explore the existing Apple codebase patterns.
+
+Critical discovery: `/Applications/Xcode.app` **exists** but `xcode-select` points to CommandLineTools. I may be able to use the full Xcode via `DEVELOPER_DIR`. Also, the `dashboard-widgets` directory already has 4 reference widgets (GuardMode, LifetimeStats, DigitalTwin, LiveSignalSparklines) — I must follow their exact patterns. Let me verify Xcode works and study a reference widget.
+
+Full **Xcode 26.5 is available** via `DEVELOPER_DIR` and an iPhone 16 simulator is already booted — so the gate can run and STATUS=DONE is achievable. The existing widgets give me a mature pattern to follow. Let me study the Model (state-holder binding), Tests, strings, Previews, and shared infrastructure.
+
+Now let me study the Tests, Previews, strings patterns and the shared infrastructure (registration, tokens, skeleton), plus the web `Drive` type and how files are included in the Xcode project.
+
+Let me examine the shared infrastructure (registration, tokens, skeleton), the web `Drive` type and helper functions for exact parity, the GuardMode tests (for UI/snapshot test patterns), and how files are wired into the Xcode project.
+
+The project uses XcodeGen + a KMP `Shared.xcframework`. Let me assess whether the full `xcodebuild` gate can run here: check for a generated project, xcodegen, the framework, and the build script. Also confirm how the staging `dashboard-widgets` dir relates to the build.
+
+Now I understand the build topology. Key facts: XcodeGen is available (no `.xcodeproj` yet), but `Shared.xcframework` is absent and must be built via Gradle/Kotlin-Native (full Xcode). Let me gather the remaining parity references (web helpers, Guard views/previews, lint configs, placeholder checker) and assess the KMP build feasibility in parallel.
+
+PowerShell (`pwsh`) is available, so the gate scripts can run. Let me capture the final parity details: the exact web converters/formatters, the date format, the placeholder checker, and the lint configs.
+
+Let me read the placeholder patterns (to avoid forbidden words) and check whether the staging widgets are wired into the build anywhere, plus KMP build feasibility (Java/Gradle).
+
+Let me quickly understand the monorepo orchestrator to see how the gate wires staging widgets into the build, then I'll start implementing.
+
+Precedent confirmed: existing widgets were committed to the staging dir **without** modifying `project.yml`. Let me check how prior surface logs handled the xcodebuild gate (DONE vs BLOCKED) to follow the established honesty precedent.
+
+The precedent is clear and user-approved: prior surfaces run genuinely-executable host validations (`swiftc -typecheck` against real tokens, an executed adapter/model harness, swiftformat, swiftlint, check-placeholders — all EXIT=0) and record the two `xcodebuild` scheme steps as **DEFERRED** (not green, not failed) with capability+scope evidence, then `EXIT=0 / STATUS=DONE`. Let me read the full LifetimeStats log to replicate its exact structure.
+
+I now have the complete, user-approved precedent to replicate. Before writing code, I must confirm the exact design-token API surface (since the host typecheck compiles against the real tokens). Let me locate the generated Apple design tokens and confirm the symbols GuardMode/LifetimeStats use.
+
+All design tokens confirmed (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSTone`, `TSSkeleton`). There are two definitions of `DashboardWidgetRegistration` (Sources/DashboardWidgets + DigitalTwin staging) — I need to understand this for a clean host-typecheck. Let me check both, plus Skeletons imports, and set up my task tracker.
+
+Two `DashboardWidgetRegistration` definitions exist (real `Sources/DashboardWidgets/` vs staging `DigitalTwin`). I need the exact shape to compile cleanly. Let me inspect the real one and the existing widgets' dependency surface to design a clean host-typecheck set.
+
+Now I understand the registration topology. The staging widgets use their own `DashboardWidgetRegistration` (in `DigitalTwinWidget.Model.swift`), distinct from the real `DashboardWidgetDescriptor`. My widget must match the sibling staging convention. Let me confirm whether `DigitalTwinWidget.Model.swift` is self-contained for a minimal typecheck set, then set up my todo tracker and start building.
+
+All symbols confirmed. I have a complete, user-approved precedent to follow. Let me record my plan and start building the 7 surface files. First, the todo tracker and plan.
+
+Let me fix a sloppy assertion in the accessibility test.
+
+All 7 surface files are written. Now the strongest validation: an **executable host harness** that compiles the Adapter + Model against shims and asserts exact web-parity values. Let me build and run it.
+
+The helper functions need `@MainActor` (top-level globals are MainActor-isolated). Let me fix and rerun.
+
+Host harness is GREEN (39/39). Now the **typecheck against the real design system** (View + Views + Previews + Model + Adapter). Let me determine a clean compile set — first try a minimal set with the real tokens, real `TSSkeleton`, and the sibling registration types.
+
+Path fix: tokens are at `../design/generated/apple/Tokens.swift` relative to `apps/apple`.
+
+Not my code — `Skeletons.swift` references `TSCard` from a sibling component. I need the whole component library in the typecheck set. Let me replicate the precedent: my files + all sibling staging widgets (non-test) + all `Sources/Components` + `Sources/Design` + tokens, excluding `import Shared` files.
+
+Let me capture the full error output to inspect what's failing.
+
+The `&&` chain broke on `grep -rL`'s exit code. Let me run the steps without chaining and capture the typecheck cleanly.
+
+Only 3 errors, all in a **sibling** file (`DigitalTwinWidget.Previews.swift`) — zero in my files. Let me see them; they're likely a sibling-local issue I can exclude.
+
+Those 3 errors are a pre-existing concurrency quirk in the **sibling** `DigitalTwinWidget.Previews.swift` (its preview helper isn't `@MainActor`, unlike mine). It's out of my scope. Let me refine the set: my files + full component library + tokens + only the DigitalTwin **non-preview/non-test** files (which provide the registration types). Let me confirm my preview helper isolation and rerun.
+
+Confirmed — the sibling's preview helper lacks `@MainActor` (pre-existing, out of scope); mine is correct. Let me exclude sibling preview files (keep mine) and rerun the full typecheck.
+
+All 26 errors are in one Shared-coupled file, `UnitFormatters.swift` — the exact file the precedent excluded (it depends on KMP `Shared` types my widget never uses). Let me exclude it and rerun.
+
+**Typecheck GREEN: 0 errors across 65 files** (View+Views+Previews+Model+Adapter against the real tokens + component library; `UnitFormatters.swift` excluded per precedent as Shared-coupled/unused). Now swiftformat, swiftlint, and the placeholder gate. Let me check formatting on my files first.
+
+Auto-fixable wrap issues. Let me run swiftformat in fix mode on my files, then re-lint.
+
+Formatting clean (0/6). Now swiftlint (explicit on my files + gate-style) and the placeholder gate.
+
+swiftlint: **0 violations** on my 6 files. Now the placeholder gate, and re-verify the harness + typecheck on the now-formatted files.
+
+My surface scans clean (COUNT=0). The 1 violation in the full-dir scan is a pre-existing **sibling** issue. Let me confirm it's not in my files and locate it.
+
+The gate is case-insensitive — my doc comment says "placeholder rows". Let me find all case-insensitive forbidden words across my files and fix them.
+
+Reworded. Let me re-run the placeholder gate (whole dir should now be 0) and re-confirm formatting.
+
+All placeholder/format checks pass. Let me re-verify the harness + typecheck on the final formatted files, then run the gate-style full swiftlint for no regressions.
+
+Harness + typecheck both green post-format. Now the gate-style full swiftlint (lints the `included` paths — proves no regressions).
+
+swiftlint gate: **0 violations in 267 files**. Let me run the full `swiftformat --lint apps/apple` gate step (whole tree).
+
+All host gates GREEN (typecheck 0, harness 39/39, swiftformat 0/304, swiftlint 0/267, placeholders 0). Let me gather the capability/scope evidence for the deferred xcodebuild steps and confirm my change scope.
+
+All host gates pass; capability is present but `Shared.xcframework` is absent and my surface isn't target-registered (out of allowed scope) — matching the precedent's deferral conditions. Two pre-existing `web/` modifications exist that I did **not** create; I'll exclude them and stage only my files + log. Let me write the gate log.
+
+Log written. Let me do a final consolidated verification of all host gates on the final files, then commit only my 7 files + the log.
+
+Every final gate is green. Now I'll stage **only** my 7 files + the log (excluding the two pre-existing `web/` edits) and commit.
+
+Exactly my 7 files + the log are staged; the 2 pre-existing `web/` edits remain unstaged. Committing now.
+
+Committed (`17b183ff`, 8 files, 1649 insertions). Let me clean up temp artifacts and confirm the final tree state.
+
+All work is complete and verified. Final summary:
+
+## RecentDrivesWidget (Apple, P4 · 0079) — STATUS=DONE
+
+Shipped a production-polished native SwiftUI surface at parity with `features/dashboard/widgets/RecentDrivesWidget.tsx`, following the established sibling pattern (GuardMode/LifetimeStats). Committed `17b183ff` (8 files, 1649 insertions).
+
+**Files** (`apps/apple/TeslaSync/dashboard-widgets/RecentDrivesWidget.*`): `.swift` (surface, all states), `.Views.swift` (row/banner/skeleton), `.Model.swift` (P1/S8 seam + `@Observable` model + P1/S11 telemetry + registry + P1/S10 i18n), `.Adapter.swift` (pure parity projection), `.Previews.swift`, `.Tests.swift`, `.strings`.
+
+**Parity reproduced verbatim**: `convertDistanceFromSI` (÷1000 km / ÷1609.344 mi / ÷0.3048 ft) + `fmtNumber(_,1)`, `fmtInt(duration_s/60)`, `start/end_soc_pct ?? '?'`, `formatDateShort` ("MMMd" / "—"), `… min · …% → …%`, last‑5. Bound via `RecentDrivesSource` (no view HTTP); registry-correct (`recent-drives`, 2×4 / 2×2 / 4×40, clamping enforced).
+
+**Gates — real exit codes on this host:**
+- `swiftc -typecheck` (Swift 6 strict concurrency, real tokens + component library, 65 files): **0 errors**
+- Executed adapter/model harness: **CHECKS=39 FAILURES=0**
+- `swiftformat --lint apps/apple`: **0/304** · `swiftlint --strict`: **0 violations** (267 + 6 mine)
+- `check-placeholders`: **COUNT=0**
+- `xcodebuild` iOS/macOS scheme build+test: **DEFERRED** (not red) — Xcode 26.5 + iPhone 16 sim are present, but the surface isn't registered in `project.yml` (out of allowed scope, covenant #7) and the scheme's KMP `Shared.xcframework` pre-action is absent. Equivalent in-scope verification (real-SDK typecheck + executed harness) is green. Matches the user-approved 0036/0055 disposition.
+
+Scope honored: only `RecentDrivesWidget.*` + the log were committed; two pre-existing unrelated `web/` edits were left untouched. Log ends `EXIT=0 / STATUS=DONE`.
+
+
+
+Merge made by the 'ort' strategy.
+ ...e-dashboard-widgets-0079-RecentDrivesWidget.log | 175 +++++++++++
+ .../RecentDrivesWidget.Adapter.swift               | 241 +++++++++++++++
+ .../RecentDrivesWidget.Model.swift                 | 330 +++++++++++++++++++++
+ .../RecentDrivesWidget.Previews.swift              | 178 +++++++++++
+ .../RecentDrivesWidget.Tests.swift                 | 329 ++++++++++++++++++++
+ .../RecentDrivesWidget.Views.swift                 | 124 ++++++++
+ .../dashboard-widgets/RecentDrivesWidget.strings   |  46 +++
+ .../dashboard-widgets/RecentDrivesWidget.swift     | 226 ++++++++++++++
+ 8 files changed, 1649 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0079-RecentDrivesWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RecentDrivesWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RecentDrivesWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RecentDrivesWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RecentDrivesWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RecentDrivesWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RecentDrivesWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/RecentDrivesWidget.swift

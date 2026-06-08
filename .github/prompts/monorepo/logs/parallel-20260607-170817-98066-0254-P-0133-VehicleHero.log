@@ -1,0 +1,158 @@
+I'll start by understanding the task environment and the web source. Let me explore in parallel.
+
+Key capability finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me check for full Xcode and explore the Apple app structure deeply before deciding DONE vs BLOCKED.
+
+Full Xcode exists at `/Applications/Xcode.app` — just not selected. I can likely use `DEVELOPER_DIR` without sudo. Let me verify the build capability and explore conventions.
+
+xcodebuild works via `DEVELOPER_DIR` (Xcode 26.5, iPhone 16 simulator present). Capability is available → target STATUS=DONE. The `feature-views/` dir already has sibling surfaces. Let me study conventions and check if VehicleHero exists.
+
+`HeroGauges` is the ideal reference (radial gauges + vehicle state) with the canonical 7-file pattern. Let me read it end-to-end plus the shared facade infrastructure.
+
+Excellent reference. Let me read the rest of HeroGauges and the shared design tokens/components it depends on.
+
+Let me read the Previews pattern and locate the shared design tokens and components.
+
+project.yml globs `TeslaSync/feature-views`, so new files are auto-included. I need to understand how `.Tests.swift`/`.Previews.swift` get routed to test targets. Let me read the full project.yml and the shared infra files.
+
+I need to resolve how `.Tests.swift` files in `feature-views/` (an app-target source path) reach the test target. Let me investigate the build wiring.
+
+There's a `Tests/Unit/FeatureViews` dir. Let me see how feature-view tests are wired and whether `.Tests.swift` files are excluded from the app target.
+
+`HeroGauges.Tests.swift` is a plain file in the app-target source path, yet uses `@testable import TeslaSync`. I must understand the real build wiring. Let me check the Shared.xcframework dependency and the framework staging script, then generate the project to inspect target membership.
+
+`Shared.xcframework` isn't prebuilt — it's produced by a KMP Gradle build (the build pre-action). That's the long pole for the gate. Let me resolve target membership by generating the project, and assess the KMP build feasibility.
+
+Project generates cleanly, and the Kotlin/Native toolchain is already cached (`~/.konan/...-2.4.0`) — so the KMP build is feasible. Let me start the Shared.xcframework build in the background (long pole) and simultaneously resolve the test-file target membership.
+
+The membership question is answered (HeroGauges.Tests.swift compiles into the app target — the repo's accepted convention). And the KMP build's only failure was `xcrun` resolving to CommandLineTools — fixable via `DEVELOPER_DIR`. Let me re-run the framework build correctly, in the background.
+
+Framework build is running in the background. Let me read the web unit-conversion logic, the `VehicleState`/`Vehicle` types, and how the dashboard wires `VehicleHero`, so my native adapter reproduces the exact displayed numbers.
+
+Let me capture the exact temperature/distance constants and the `useDateFormat` semantics, then check the framework build progress.
+
+Got the exact SI formulas. Now I must inventory the native shared components I'll consume (gauge, status badge, freshness, empty state, skeleton, tokens, buttons) to match their real APIs. Let me locate and read them.
+
+Found native counterparts: `TSRadialGauge`, `TSStatusBadge`, `TSFreshnessIndicator`, `TSEmptyState`, `TSSkeleton`, `TSMetricValue`, `TSButton`. Let me read their exact signatures plus the token definitions.
+
+`TSRadialGauge` is percent-only (loses value+unit), so—like the HeroGauges sibling—I'll compose a faithful custom gauge in my Views file. I need exact signatures for `TSEmptyState`, `TSButton`, `TSMetricValue`, `TSSkeleton`, `TSTone`, tokens, and a glass-panel/card. Let me read them and the web `RadialGauge`/`StatusBadge` for mapping fidelity.
+
+Now the typography, skeleton, glass-panel/card, and the full token set. Let me read those and check the framework build.
+
+Let me read the card/panel APIs and the full token set (colors, fonts, spacing, radius, motion, chart palette).
+
+Let me confirm the exact `Color.TS` and `Font.TS` member names from the generated tokens, and check the framework build.
+
+Shared.xcframework built & staged (9m) — the full gate is now runnable. Let me capture the exact `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius` members from Tokens.swift.
+
+Shared.xcframework is staged and the full token vocabulary is captured. Let me check the web `StatusBadge` mapping, the native route/nav convention, and confirm there are no `VehicleHero*` symbol collisions before writing.
+
+Critical: a `VehicleHeroWidget` surface already claims `VehicleHeroModel`, `VehicleHeroSource`, `VehicleHeroStrings`, etc. in the same module. I'll name my view `VehicleHero` and prefix supporting types with `VehicleHeroView` to avoid collisions. Let me confirm the taken set and read the FSM status→color mapping.
+
+`VehicleHeroView*` prefix is free; I'll use it for all supporting types, with the main view named `VehicleHero`. Let me read the FSM status→color definitions to map the status badge faithfully.
+
+`types/fsm` is a directory, and the existing `VehicleHeroWidget` already implemented a status catalog for this exact surface family — the ideal reference. Let me read the widget's status/convert/gauge/destination logic and the FSM dir.
+
+The `VehicleHeroWidget` adapter already encodes the native parity for this exact surface family. Let me read its Model, Adapter, Projection, and main view to mirror the status catalog, converters, and gauge/stat models precisely.
+
+The widget is a near-complete parity reference. Let me read its Model (DTO shapes), StatCards, main view (Destination/nav), and the web `numberFormat.ts` default to finalize my SI DTO and formatting.
+
+I have the full reference. Two last checks: the web `fmtNumber` default decimals (for power parity) and the widget's main view (Destination/nav pattern + freshness composition).
+
+I have a complete reference. Let me confirm the web default precision, then write a plan and start building.
+
+I now have a complete, authoritative picture. Let me write a plan and build the 8-file surface (mirroring the canonical `HeroGauges` structure + the validated `VehicleHeroWidget` parity logic, with distinct `VehicleHeroView*` names, fully-SI DTO, and the required loading/empty/error/stale/offline + asleep states).
+
+Now let me build the surface. Starting with the model (seams + state holder).
+
+Let me refine the charging detail to carry a pre-formatted, testable "done at" clock (threading `now`), then update the model call site.
+
+Now the SwiftUI presentational chrome.
+
+Now the main view file (nav seam + phase composition).
+
+Now the previews.
+
+Now the i18n catalog.
+
+Now the comprehensive test suite.
+
+Let me fix an awkward optional-unwrap in the charging test.
+
+Now let me lint/format-check the new files against the repo's config.
+
+swiftformat flagged style issues. Let me auto-format my files with the ecosystem tool, then re-verify.
+
+swiftformat passes. Now swiftlint on the new files.
+
+swiftlint flags file-length (>400) on Views & Tests, and short identifiers (`p`/`v`) in tests. Let me check all line counts and split accordingly.
+
+File-length (>400) and short identifiers. Let me split Views and Tests into smaller files and rename `p`/`v`. Removing the oversized files first.
+
+Now the three split test files.
+
+Now format and lint all the (split) files and confirm line counts.
+
+All files under 400 lines. Now swiftlint on all of them.
+
+swiftlint clean. Let me check the placeholder script, run it, and regenerate the project to include the new files.
+
+The new files are wired in. Let me run the placeholder gate exactly as specified and inspect how it resolves the path.
+
+Let me verify the script's path handling and confirm my files are genuinely placeholder-free (not a vacuous pass).
+
+The gate path is non-existent so it's a vacuous pass — but honesty demands a real scan. My grep found `"placeholder"` in a Chrome.swift comment, which the acceptance criteria forbids. Let me check the exact forbidden patterns and reword.
+
+The forbidden word `Placeholder` appears in a comment. Let me reword it.
+
+Let me verify cleanliness with a real scan: copy my files to a temp dir and run the actual script against them.
+
+My files are genuinely placeholder-clean. One correctness fix before building: the wake button uses a raw key that won't resolve through my per-surface table. Let me fix it to use the localization facade.
+
+Let me re-lint the edited file, then kick off the iOS build+test (the long pole) in the background.
+
+iOS build+test now (long-running, in background). Starting it and monitoring for compile errors first.
+
+My grep pattern was malformed and broke the pipe. Let me check the partial log and re-run cleanly to a file.
+
+The pipe broke before the build ran. Let me launch it cleanly to a log file and monitor separately.
+
+The app target is trying to compile test files (`import XCTest` fails in target 'TeslaSync'). I need to understand how sibling `*.Tests.swift` files avoid this. Let me inspect the build log and the project's handling of test files.
+
+The sibling `.Tests.swift` files only *warn* ("part of module; ignoring import") — so they DO compile into the app target. Let me find the exact XCTest error context (which files/phase) and check for a testing-search-paths setting.
+
+The first XCTest error is from a **pre-existing** file (`ActionBuilder.ModelTests.swift`), not mine — 520 test files compile into the app target and all `import XCTest`, which the app target can't resolve. Let me verify this is a baseline condition by building without my files, and check the documented Apple-verification status.
+
+This is the key finding. `apps/macos-pending-verifications.md` **explicitly documents** that the full-app `xcodebuild build test` is blocked by **pre-existing, unrelated** issues (co-located `*.Tests.swift` importing XCTest into the app target — exactly my error from `ActionBuilder.ModelTests.swift` — plus `DashboardWidgetSize` 8× redefinition + macOS signing). The accepted methodology (predecessor `ToolCard`) is **isolated SwiftPM build + tests** + lint/format/placeholder clean.
+
+Let me follow that predecessor pattern: verify my surface via an isolated SwiftPM build. First, check the shared component dependency surface.
+
+Design + Components only depend on SDK frameworks (SwiftUI/Foundation/Charts/MapKit/CoreLocation) — self-contained. So I can build an isolated `TeslaSync` module = Design + Components + Tokens + my 8 source files, with my 3 test files as the test target. Let me set it up.
+
+50 source + 3 test files assembled. Now the Package manifest, then build under Swift 6 strict concurrency.
+
+The build fails only in `Components/DataDisplay/UnitFormatters.swift`, which depends on `Units` (from SharedFacade) — a file my surface doesn't use. Let me find all Component files with such external deps and check whether anything I need references them.
+
+Only `UnitFormatters.swift` has the external dep, and nothing I use references it. Let me exclude it and rebuild.
+
+Build succeeds. Now the real proof — compile + run the tests.
+
+All **51 tests pass, 0 failures** under Swift 6 strict concurrency (incl. 8 view-render smoke tests across every state). Let me confirm zero VehicleHero warnings and also compile the package for the iOS Simulator to prove cross-platform parity.
+
+macOS isolated build + 51 tests are clean. The iOS scheme name differs — let me list schemes and compile for iOS.
+
+The scheme is `TeslaSync-Package`. Let me compile it for iOS.
+
+Isolated package compiles for **iOS Simulator too** (BUILD SUCCEEDED) — all VehicleHero files. So the surface is verified on macOS (build + 51 tests) and iOS (compile). The full-app gate fails only on pre-existing, out-of-scope issues. Let me confirm the macOS full-app build hits the same pre-existing blocker, then assemble the official gate log.
+
+Both full-app failures are the documented pre-existing blockers (iOS: co-located XCTest test files; macOS: dev-signing entitlements) with **zero VehicleHero errors**. Let me run the remaining host-runnable gates (swiftlint/swiftformat/placeholder) repo-wide as specified, then check the log directory.
+
+Repo-wide lint also fails only on **pre-existing** non-VehicleHero files (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`). Let me confirm there are zero VehicleHero *compile* errors in the full iOS build and re-confirm my files pass scoped lint, before writing the log.
+
+Confirmed: **zero VehicleHero compile errors** in the full-app build; surface-scoped swiftlint/swiftformat both clean (0). Every gate failure is pre-existing and outside my `VehicleHero.*` scope. Let me write the official gate log honestly.
+
+Let me verify the repository state (ensure only my files changed, generated artifacts are git-ignored) and confirm the final file set.
+
+Repo state is clean: my 12 files + the log are the only additions; the generated `.xcodeproj`/`Shared.xcframework` are git-ignored; the 2 modified `web/...` files are pre-existing (not mine). Let me update the plan, tidy temp artifacts, and do a final confirmation.
+
+The VehicleHero feature view is delivered and verified. Final state confirmed: 12 `VehicleHero.*` files + the gate log, temp artifacts cleaned, repo otherwise untouched.
+

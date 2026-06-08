@@ -1,0 +1,145 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Key finding: `xcodebuild` exists but only Command Line Tools are installed (no full Xcode), so the iOS Simulator build/test steps in the gate may be blocked. Let me gather full evidence and read the spec source. Let me explore deeply.
+
+`Sources`/`Tests` are under `apps/apple/`, not under `TeslaSync/`. Let me explore the full Apple structure and read the helper functions the web source depends on.
+
+Now let me understand the Apple app conventions. Let me look at the feature-views directory, the project config, a closely-related existing widget, and the shared infra (tokens, i18n, state holders, components).
+
+The `feature-views` directory exists with a clear multi-file pattern per surface (`.swift`, `.Model`, `.Adapter`, `.Views`, `.Previews`, `.Tests`, `.strings`). Note: `project.yml` sources do NOT list `TeslaSync/feature-views`, and `xcodebuild` requires full Xcode (only CLT present). Let me verify Xcode availability and study the existing pattern + shared infra in depth.
+
+`/Applications/Xcode.app` exists but isn't selected (CLT is active). `pwsh` is available. Let me verify whether Xcode can be used via `DEVELOPER_DIR`, check for `xcodegen`, and study a complete existing feature-view example plus the shared infra.
+
+**Critical update:** Xcode 26.5 **is** usable via `DEVELOPER_DIR`, and `xcodegen` is available. The feature-view pattern is now clear (Input→Projection→Resolved→Model→Source, OSLog telemetry, Strings facade). Let me study the rest of the example set, the shared components to map (GlassPanel/FadeIn/Skeleton), the live/loadable infra (for stale/offline), and the SecurityEvent model.
+
+The pattern is crystal-clear and self-contained (SwiftUI + shared `TS*` tokens/components, `@testable import TeslaSync` for tests). Now I need: the KMP/Shared build feasibility, the shared tokens/components to map, the SecurityEvent shape, and the live/stale/offline infra. Let me investigate in parallel.
+
+KMP `Shared.xcframework` is absent and must be built via Gradle (heavy, requires Kotlin/Native toolchain) — and feature-views aren't wired into `project.yml` (outside my allowed files). Both make the literal `xcodebuild build test` gate unable to validate this surface on the pristine tree. I'll deliver complete code, verify via real out-of-tree compile + lint/format/placeholders, and document the build/test gate honestly. Let me read the parity types, design tokens, and shared components to map.
+
+Design tokens and the components I'll map (Cards/Motion/Skeletons/States) import **only SwiftUI** — no KMP `Shared` dependency. That means I can do a real out-of-tree `swiftc` compile of my surface against the actual design system to validate it. Let me read these to use the correct APIs.
+
+`TSGlassPanel` = native GlassPanel. Core tokens (`TSSpacing`, `Color.TS`, `Font.TS`, `TSRadius`, `TSMotion`) live in the generated `apps/design/generated/apple`. Let me read the token definitions and the remaining components I'll use.
+
+Now I have the component vocabulary: `TSFadeIn`, `TSSkeleton`, `TSGlassPanel`, `TSEmptyState`, `TSQueryError`. Let me read the token definitions, materials, typography, and badges to finalize the API surface.
+
+I now have the full token + component vocabulary. Let me finalize by reading typography/badges, the security widget's native parsing semantics, the stale/offline chip precedent, and the lint/format configs.
+
+Good — `FleetTelemetryHealth` has the exact freshness/stale/offline chip + banner pattern I need. Let me read its Model + the chip Views section, plus the native security parsing semantics and the shared `LiveConnection` type.
+
+Now I have the freshness/connection pattern (self-contained enum, no `Shared` import). Let me read the chip/banner Views, the main view composition, the native security-parsing semantics, and the placeholder checker to avoid forbidden tokens.
+
+I now have the full pattern, including a same-domain precedent (`SecurityStatusWidget`) — so I must use a **distinct type prefix** (`SecurityCards*`) to avoid in-module collisions. Two final reads: the placeholder checker (to avoid forbidden tokens) and the exact `asNonEmptyString` semantics for parity.
+
+`asNonEmptyString` = non-empty by `length > 0` (no trimming) — I'll port that exactly. The placeholder checker uses a pattern file and the literal gate path (`.../SecurityStatusCards` with no extension) won't match my files, so I'll also run it against the real `feature-views` dir for an honest check. Let me read the forbidden patterns to ensure my code/comments avoid them.
+
+I now have everything needed. Key forbidden tokens to avoid in `.swift` files (case-insensitive): `TODO`, `FIXME`, `XXX`, `Coming soon`, `Placeholder`, `Lorem ipsum`, `not implemented`. I'll use a distinct `SecurityCards*` type prefix to avoid colliding with the existing `SecurityStatusWidget`'s `Security*` types. Let me set up tracking and write the deliverable.
+
+Now writing the deliverable, starting with the pure-logic Adapter (Foundation-only, fully testable).
+
+I need `import SwiftUI` in the Model for the `Text` helper (matching the precedent). Let me fix that.
+
+Now the main view file.
+
+Now the subviews (grid, tile, loading, error, empty hint, freshness chip, banner) and the tone→color mapping.
+
+Now the previews (DEBUG-only, one per state).
+
+Now the i18n strings file (parity keys + native chrome).
+
+Now the test suite — logic, projection (all six cards × states), phase resolution, model wiring/telemetry/stale-auto-refresh, and accessibility.
+
+All 7 files written. Now verification phase — let me run swiftformat and swiftlint on the new files (with Xcode toolchain available), iterating until clean.
+
+swiftformat found 4 auto-fixable style issues. Let me apply the formatter (ecosystem tool) and re-lint.
+
+swiftformat clean. Let me verify the auto-fix and run swiftlint on the new files.
+
+One swiftlint issue: the private `make` helper has 9 parameters (max 5). Initializers are exempt, so I'll inline the `SecurityCardViewModel(...)` construction in each card builder and drop the helper. Let me view the exact current text and refactor.
+
+I'll add an exempt convenience initializer and inline it in each builder (removing the 9-param helper).
+
+Re-running swiftformat and swiftlint on the new files:
+
+swiftformat and swiftlint both clean on all 6 files. Now the placeholder gate — both the literal path and an honest scan of the real `feature-views` directory:
+
+Placeholder check clean. Now the key verification: a real out-of-tree compile of the SwiftUI surface against the actual design system + running the unit tests. First, let me confirm the shared `Components`/`Design` trees are free of the KMP `Shared` dependency so I can compile them standalone.
+
+`Components`/`Design` (41 files) are KMP-free (only SwiftUI/Charts/MapKit/CoreLocation/Foundation). I'll build a real out-of-tree SwiftPM module named `TeslaSync` that compiles the actual design system + my surface, then run the unit tests against it.
+
+Excellent — all my files compiled; the only failures are in `Components/DataDisplay/UnitFormatters.swift`, an unused component that references the KMP-backed `Units` facade. Let me drop that one unrelated file from the harness and rebuild + run tests.
+
+Build complete — my full SwiftUI surface compiles against the real design system. Now running the unit tests:
+
+The pure `resolvePhase` static is `@MainActor`-isolated (inherited from the class), so nonisolated tests can't call it under Swift 6 strict concurrency. The correct fix is to mark it `nonisolated` since it's pure. Let me update the Model and re-verify.
+
+Global `let echo` must be `@Sendable` under Swift 6. Let me fix the test helper and re-run.
+
+All 30 unit tests pass against the real design-system module, and the SwiftUI surface compiles. Let me run the gate's whole-tree lint/format commands to capture their real results.
+
+`swiftlint --strict` found 1 pre-existing violation — and since `feature-views` isn't in swiftlint's `included` list, it can't be from my files. Let me identify it to document in the log.
+
+Confirmed: the lone `swiftlint --strict` violation is pre-existing in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (out of my scope; `feature-views` isn't even in swiftlint's `included` list). My 6 files are clean. Now the gate's whole-tree swiftformat, then I'll confirm my changes are the only ones in the tree.
+
+Gate evidence so far: swiftformat clean (0/671), placeholders clean, and git confirms I changed **only** my 7 files (the lone swiftlint violation pre-exists in `dashboard-widgets`). Now the xcodebuild steps — let me generate the project and gather evidence on the KMP/wiring blockers.
+
+Definitive evidence captured: the generated project contains **0** references to `SecurityStatusCards`/`feature-views` (so the gate's `xcodebuild` can't compile my surface — `project.yml` is outside my allowed files), and `Shared.xcframework` is absent (the app target needs a KMP/Gradle build). The iPhone 16 sim does exist. Let me capture the actual `xcodebuild` failure as evidence.
+
+The macOS build is compiling the 600+ app sources (slow) and will ultimately fail at link since `Shared.xcframework` is absent — but it doesn't include my surface anyway. Let me stop it and capture targeted evidence instead.
+
+All evidence captured; the generated project (git-ignored) is cleaned, leaving only my 7 files. Let me verify the log directory and write the comprehensive, honest log.
+
+Let me read a sibling log to match the established format, then write mine.
+
+This is the key precedent: the sibling **0009** log concludes **EXIT=0 / STATUS=DONE** by treating the Xcode app build/test as **DEFERRED** (not faked green) — host-runnable gates green, app build/test deferred to the integration/signed runner for the same three out-of-scope reasons (project.yml registration, KMP `Shared.xcframework`, macOS signing). My surface meets that bar and exceeds the test evidence (30/30 executed). Let me match their evidence by adding explicit iOS‑18 and macOS‑15 SDK typechecks.
+
+iOS 18 simulator SDK typecheck: clean (EXIT=0). Now the macOS 15 SDK typecheck:
+
+Both SDK typechecks pass. All host-runnable gates are green; the Xcode app build/test is deferred exactly per the 0009 precedent. Let me gather final stats and write the log.
+
+All files <400 lines, 30 tests, host macOS 26.5.1. Let me verify there's no symbol collision with the existing `SecurityStatusWidget` (since both would compile in the same module), then write the log.
+
+No real type-name collisions (only the awk artifact "class"); my distinct `SecurityCards*` prefix cleanly avoids the existing `SecurityStatusWidget` `Security*` types. All verification complete. Writing the log:
+
+Log written. Final combined lint/format check on all 6 files, then commit:
+
+Both clean. Updating todos and committing the surface + log:
+
+Committed cleanly — working tree is clean, exactly the 7 allowed surface files + the log. The task is complete and fully verified.
+
+## Summary
+
+Shipped a production-polished, native Apple SwiftUI **`SecurityStatusCards`** feature view at parity with the web spec (`features/admin/components/security-access/SecurityStatusCards.tsx` + `./helpers.ts`), following the established `feature-views` pattern.
+
+**Deliverable** (7 files, 1429 lines, committed `31350ff5`):
+- `.Adapter.swift` — Foundation-only logic (faithful port of `doorClosed`/`parseWindowState`/`allWindowsClosed`/`windowSummary`/`asNonEmptyString` + JS truthiness incl. the sentry `"Off"` quirk) + the six-card projection
+- `.Model.swift` — P1/S8 state-holder seam, P1/S11 `view.opened` telemetry, P1/S10 strings facade, phase resolution + stale one-shot auto-refresh
+- `.swift` / `.Views.swift` — the surface + responsive grid, glass tiles, skeleton grid, empty hint, QueryError-equivalent, freshness chip + stale/offline banner (`TSGlassPanel`/`TSSkeleton`/`TSFadeIn` + `Color.TS` tokens)
+- `.Previews.swift` (7 states), `.Tests.swift` (30 tests), `.strings` (22 source keys + 9 chrome keys)
+
+**Verification (real Xcode 26.5 toolchain) — all host gates green:**
+- iOS‑18 simulator SDK typecheck **EXIT=0**; macOS‑15 SDK typecheck **EXIT=0** (Swift 6 strict concurrency, against the real component library)
+- SwiftPM DEBUG build **EXIT=0**; **30/30 XCTest executed green**
+- swiftlint `--strict` **0 violations** on the 6 files; swiftformat **0/6** (and 0/671 whole-tree); placeholder gate **COUNT=0**
+
+**Xcode app `build test` — DEFERRED** (documented with captured evidence, per the 0009/0036/0054 / ADR‑012 precedent): the surface isn't registered in `project.yml` (editing it is outside allowed files; 0 pbxproj refs), `Shared.xcframework` needs a KMP/Gradle build, and macOS targets need signing — none a defect in this code.
+
+A distinct `SecurityCards*` type prefix avoids collisions with the in-module `SecurityStatusWidget`. Log: `…/logs/p4-apple-feature-views-0046-SecurityStatusCards.log` → **EXIT=0 / STATUS=DONE**.
+
+Merge made by the 'ort' strategy.
+ ...pple-feature-views-0046-SecurityStatusCards.log | 233 +++++++++++++
+ .../SecurityStatusCards.Adapter.swift              | 384 +++++++++++++++++++++
+ .../feature-views/SecurityStatusCards.Model.swift  | 243 +++++++++++++
+ .../SecurityStatusCards.Previews.swift             |  99 ++++++
+ .../feature-views/SecurityStatusCards.Tests.swift  | 332 ++++++++++++++++++
+ .../feature-views/SecurityStatusCards.Views.swift  | 238 +++++++++++++
+ .../feature-views/SecurityStatusCards.strings      |  58 ++++
+ .../feature-views/SecurityStatusCards.swift        |  75 ++++
+ 8 files changed, 1662 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0046-SecurityStatusCards.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecurityStatusCards.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecurityStatusCards.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecurityStatusCards.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecurityStatusCards.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecurityStatusCards.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecurityStatusCards.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SecurityStatusCards.swift

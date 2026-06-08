@@ -1,0 +1,169 @@
+I'll start by exploring the environment and understanding the task requirements.
+
+Xcode is not fully installed (only Command Line Tools), but swift, swiftlint, swiftformat are available. Let me explore the existing Apple app structure and conventions before deciding on approach.
+
+`shared-surfaces/` doesn't exist yet—I need to create it. The established pattern is multi-file (`.swift`, `.Adapter.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`). Let me read the web source and study a representative example.
+
+Now let me understand the data layer, the shared Input component, the build config, and a representative native example.
+
+Let me check whether a full Xcode is available anywhere, and explore the shared infrastructure (Sources) plus the build wiring for the new directory.
+
+`/Applications/Xcode.app` exists. Let me try overriding `DEVELOPER_DIR` (no sudo needed) to access the full toolchain.
+
+Full Xcode 26.5 with a booted iPhone 16 simulator is available via `DEVELOPER_DIR`. STATUS=DONE is achievable. Let me study the shared infrastructure and a representative example before writing code.
+
+`CommandSearch` and `AddressInput` are close analogs. Let me study `CommandSearch` end-to-end as the primary template, plus the SharedFacade state-holder model and how tests are wired.
+
+This is a sophisticated, well-established pattern. Let me read the remaining CommandSearch files to fully internalize the conventions.
+
+Let me locate the exact design-token definitions (TSSpacing, TSRadius, Color.TS.*, Font.TS.*) so I reference only valid tokens.
+
+I now fully understand the conventions. Let me check for potential type-name collisions (single module) and any existing debounce-scheduler precedent before designing.
+
+`AddressInput` is the ideal analog—an input with `Task.sleep`-based debounce (injectable interval, 0 bypasses) and a dropdown. Let me read its Model, Adapter, and Views to mirror the debounce and dropdown patterns precisely.
+
+`AddressInput` is a near-perfect template (input + debounce + dropdown + states + freshness). I have everything I need. Let me check the gate's tooling (placeholder checker, pwsh, lint config) and the `TSSearchInput` atomic before writing.
+
+**Critical:** the placeholder gate forbids the word `Placeholder` (case-insensitive) in `.swift` files — I'll use "prompt"/"hint" instead, never "placeholder". Let me read the lint configs and the `TSSearchInput` atomic.
+
+The placeholder gate forbids the literal word "Placeholder" — I'll use "prompt"/"hint". Now the critical question: how are the in-`feature-views` `*.Tests.swift` files routed to a test target (they use `@testable import TeslaSync`, so they can't be in the app target). Let me generate the project and inspect membership, plus check the KMP shared-framework dependency.
+
+Confirmed: feature-view `*.Tests.swift` compile into the app targets (self `@testable import` is an ignored warning) and the gate's `test` runs `Tests/Unit`. I'll mirror this precedent exactly. Let me set up tracking, then kick off a baseline build in the background to validate the toolchain (incl. the KMP Gradle pre-action) and warm caches while I write code.
+
+Baseline build is running (compiling 1816 files + KMP framework). Let me check its progress briefly, then proceed to write code in parallel.
+
+Build still compiling (no errors surfaced). Let me create the directory and start writing the Foundation-only core files while it runs.
+
+Now the state holder — the largest file. Let me write `SearchInput.Model.swift` (telemetry seam, i18n facade, source seam, `@Observable` model, in-memory + stored sources).
+
+Let me check the baseline build progress before writing the view layer.
+
+Build still compiling (output buffered). Let me continue with the view layer — `SearchInput.States.swift` and `SearchInput.Views.swift`.
+
+Now the main composition with focus + keyboard wiring.
+
+Now the previews and the i18n strings catalog.
+
+Let me check the baseline build now (it's been running a while).
+
+Let me fix a swiftlint concern: the `q` property (1-char identifier) in the store. I'll use `CodingKeys` to keep the `q`/`ts` JSON wire keys while satisfying the linter.
+
+Now the comprehensive test file:
+
+All 11 source files written. Let me check the baseline build status.
+
+The build is slow (19+ min, output buffered). Let me verify it's actually progressing (not stuck on Gradle) by checking build activity, and meanwhile format/lint my new files in a separate shell.
+
+Key finding: the **KMP Gradle pre-action** (`Shared.xcframework`) is the bottleneck — `Frameworks/` is still empty after 19 min, with many contending `java`/Gradle processes (shared environment). This cold Kotlin/Native compile is slow but caches for later builds. Let me keep it running and be productive: format my files, run the Foundation-only core tests standalone (real green evidence now), and wire configs.
+
+swiftformat applied (5 files reformatted). Now let me run the Foundation-only core (Store + Projector + Age) standalone via `swiftc` to get real green evidence immediately, independent of the slow Xcode build.
+
+The standalone core tests **ALL PASSED** (real parity evidence for the store/projector/age/a11y logic), and the baseline build completed. Let me confirm the build succeeded, then wire the configs.
+
+The **baseline build FAILED** — and this is *without* my files (project.yml wasn't regenerated to include them). This is a pre-existing breakage in the slot (the already-modified `AIUsageCard.*` files). My `tail` hid the actual errors. Let me capture them.
+
+The actual error is pre-existing: `AIRestorePanel.Tests.swift: unable to resolve module dependency: 'XCTest'` — a plain `build` can't resolve XCTest for the in-app-target test files. The **gate uses `build test`**, which provides XCTest. My plain `build` was the wrong validation. 
+
+Before the long gate run, let me get fast real-green evidence for the **state-holder** logic too by compiling the whole surface (minus XCTest) as a macOS executable and driving the model directly.
+
+The surface files compiled cleanly — the only errors are my scratch `main.swift` actor annotations. That's a great signal. Let me fix the scratch harness and run.
+
+**ALL MODEL TESTS PASSED** — full state-holder logic (debounce, focus/blur, select/remove/clear, keyboard nav, submit/escape, stale/offline auto-refresh, async debounce, production source) verified, and the entire surface compiles under Swift 6 strict concurrency. 
+
+Now let me wire the new directory into the build + lint config.
+
+Now regenerate the project and run the fast checks (swiftlint, swiftformat, placeholder gate) before the long build.
+
+Both app targets now include all 10 SearchInput sources. Let me run the fast quality gates scoped to my files.
+
+Two issues to fix: the placeholder gate flags the literal word "placeholder" in my comments (3 spots), and swiftlint reports 4 violations somewhere. Let me pinpoint both.
+
+Clear violations to fix. 3 are mine (Model file >400 lines, Tests file >400 lines, Store nesting), plus 3 "placeholder" comment words. The `LifetimeStatsWidget` one is pre-existing/unrelated (not in my allowed scope). Let me fix all of mine — first the "placeholder" words and the Store nesting.
+
+Now fix the Store nesting — move `Entry`/`Envelope` to file scope:
+
+Now update the references to the renamed types and make `load`/`save` private:
+
+Now split `Model.swift` (>400 lines). Let me view the source-seam and concrete-source sections to extract them into a new `SearchInput.Sources.swift`.
+
+Now remove the moved sections from `Model.swift`:
+
+Model.swift is now 373 lines. Now split the 610-line Tests file. Let me find class boundaries.
+
+All test files now under 400 lines. Let me format, re-lint, re-run the placeholder gate, and re-verify the standalone core+model tests still pass after the refactor.
+
+My 13 files pass swiftformat AND swiftlint cleanly. Now re-verify the placeholder gate and re-run the standalone tests after the refactor (Store renamed types, Model split).
+
+Everything green: placeholder gate **EXIT=0**, and both standalone suites still pass after the refactor. Now the full Xcode gate. Let me regenerate (picks up the 3 new files) and run the iOS `build test`.
+
+`build test` still can't resolve XCTest for the **app target** — the in-app-target `*.Tests.swift` files (AIRestorePanel and others, pre-existing) need testing search paths. This affects my test files too. Let me investigate the intended test wiring (this is a pre-existing setup question).
+
+There's a CI workflow `apps-apple.yml`. Let me read the authoritative build/test invocation.
+
+The CI workflow reveals the Apple build+test has **never been wired to actually run** (it's a documented no-op guard until the project lands). The pre-existing scaffold compiles `*.Tests.swift` into the *app target*, which can't resolve/link XCTest — so `xcodebuild build` fails before my code is even involved. The architecturally-correct fix is to keep test files in the test targets, not the app target. Let me check the test-file patterns and verify this is the blocker.
+
+Clear picture now: ALL 264 `*Tests.swift` files (mine + pre-existing) are wrongly compiled into the **app target**, which can't link XCTest — so `xcodebuild build` fails before my code matters. No non-test file imports XCTest, so the correct, necessary fix is to keep test files in the **test targets**, not the app target. Let me view the relevant project.yml blocks and make this wiring fix.
+
+Now I'll fix the wiring: exclude `*Tests.swift` from both app targets (so the app links cleanly) and add my shared-surface tests to both unit-test targets (so they actually run against the app module).
+
+Now regenerate and verify the membership flipped correctly (test files out of app target, my tests into test targets).
+
+Membership is correct: **0 test files in app targets**, my 3 test files in the test targets, all 10 non-test SearchInput files in the app. Now let me build the macOS app target (the build half of the gate).
+
+The macOS failure is **code signing** (entitlements need a dev certificate) — an environment/signing constraint, not a code issue (compilation is separate). The iOS *simulator* build needs no signing, and I've now fixed the XCTest issue. Let me re-run the iOS simulator build to validate my surface compiles in-target.
+
+A new, deeper pre-existing breakage surfaced once the XCTest blocker was removed: `TelemetryErrorsModel`/`TelemetryErrorRow` are **ambiguous (defined more than once)** in non-test code. Let me confirm this is pre-existing duplication unrelated to my surface.
+
+This is now definitive: the Apple app scaffold has **multiple pre-existing, app-wide compile breakages** unrelated to my surface and outside my allowed scope:
+- `*Tests.swift` files compiled into the app target (XCTest can't link) — affects 264 pre-existing test files.
+- Duplicate type definitions across unrelated modules: `TelemetryErrorsModel` (TelemetryErrorsWidget vs TelemetryErrorsPanel), `TelemetryErrorRow` (TelemetryErrorsPanel vs FleetApiSection) — neither modified in this slot.
+- macOS targets require code-signing certs unavailable here.
+
+This matches the CI workflow's own admission that the Apple build is a **documented no-op guard** ("never actually built"). I'll follow the established precedent exactly (Tests.swift alongside the surface in the app target, like every feature-view) rather than restructure the whole app's test membership. Let me revert the broad test-wiring experiment to the minimal, precedent-faithful wiring.
+
+Final membership matches the precedent exactly (13 files incl. tests in the app target, like every feature-view). Now let me gather the remaining gate evidence (full swiftlint/swiftformat) and confirm the log directory.
+
+All remaining failures in the full-repo gate are **pre-existing and unrelated** to my surface (`ActionBuilder.Previews.swift` formatting; `LifetimeStatsWidget.Adapter.swift` function length) — none in my allowed scope. Let me capture a consolidated, current evidence snapshot for the honest log.
+
+Model-test line produced no output (stderr was suppressed in the `&&` chain). Let me re-run it cleanly to confirm it still passes after the refactor.
+
+Copy-loop bug (`SearchInput.swift.swift`). Let me copy via glob (excluding test files) and re-run.
+
+**ALL MODEL TESTS PASSED** again — the full surface (incl. Previews + design tokens) compiles under Swift 6 for macOS and every state-holder behavior is verified. I now have complete evidence. Let me write the honest gate log.
+
+Now let me verify the generated `.xcodeproj` is git-ignored and review exactly what to stage (only my surface + wiring + log, not the pre-existing modifications).
+
+git status is slow due to the huge untracked `build/DerivedData` tree I created. Let me clean that up and check ignore rules with targeted commands.
+
+All build artifacts are gitignored (the slow status was just walking the ignored `build/` tree). Let me stage precisely — only my surface, the two wiring files, and the log — and verify.
+
+Staged set is exactly correct (13 surface files + `.strings`, 2-line `project.yml`, 1-line `.swiftlint.yml`, the log) — pre-existing `AIUsageCard`/web modifications correctly excluded. Let me commit with an honest message.
+
+Commit `c081378e2` created cleanly (pre-existing `AIUsageCard`/web files correctly excluded). Let me do a final confirmation of the commit contents and update tracking.
+
+Let me clean up the temporary scratch directories.
+
+Done. Here's the outcome.
+
+## P4 · Shared surface 0158 — `SearchInput` (Apple)
+
+**Shipped** a complete, production-polished SwiftUI parity of `web/src/components/forms/SearchInput.tsx` (+ `lib/searchHistory.ts`) — 13 Swift files + i18n catalog under `apps/apple/TeslaSync/shared-surfaces/`, decomposed like the established `CommandSearch`/`AddressInput` surfaces (every file ≤ 400 lines). Committed as `c081378e2`.
+
+**Faithful to the web spec (no stubs):** debounced `onChange` (250 ms) with buffered local value + external re-sync; leading magnifier + clear button; focused-empty-field recent-searches dropdown (record on submit/blur ≥ `MIN_QUERY_LEN`, select/remove/clear-history, ArrowUp/Down/Enter/Escape nav); **every state renders** (loading/content/empty/error within live/stale/offline) — never blank; source i18n keys reproduced verbatim (`common.clear`, `search.history.title/removeAria/clear`); `view.opened` telemetry; VoiceOver labels throughout; zero English literals in Swift.
+
+**Verified — actual results:**
+- swiftlint `--strict`: **0 violations / 13 files**
+- swiftformat `--lint`: **0/13 require formatting**
+- placeholder gate: **PLACEHOLDER_COUNT=0**
+- Foundation core suite (store↔`searchHistory.ts` parity, projector, age, a11y): **ALL PASSED**
+- Full state-holder suite (debounce/focus/blur/select/remove/clear/keyboard/submit/escape/stale/offline/async/production-source, Swift 6 strict concurrency): **ALL PASSED**
+- Full-surface compile (Swift 6, macOS SDK): **clean**
+
+**Integrated `xcodebuild build test` gate: STATUS=BLOCKED (EXIT=1)** — by **pre-existing, out-of-scope** app-target breakage, not my surface: 264 pre-existing `*Tests.swift` are compiled into the app target (XCTest can't link → `AIRestorePanel.Tests.swift` error), duplicate type definitions across unrelated modules (`TelemetryErrorsModel`, `TelemetryErrorRow`), and macOS dev-signing. The Apple CI build is itself a documented no-op guard. Per the Honesty Covenant I did not mark these green; full evidence is in `.github/prompts/monorepo/logs/p4-apple-shared-surfaces-0158-SearchInput.log`. The surface is wired so it will build and its tests will run once the pre-existing scaffold is repaired.
+
+Pre-existing `AIUsageCard.*` and web modifications in the slot were left untouched and excluded from the commit.
+
+
+
+The task is complete to the maximum extent achievable within scope. I've shipped, verified, committed, and honestly documented the surface. The only unmet item — the integrated `xcodebuild build test` gate — is blocked by pre-existing, out-of-scope app breakage that I'm explicitly forbidden to touch (allowed files are `shared-surfaces/SearchInput.*` only). All acceptance criteria I can satisfy are satisfied, and STATUS=BLOCKED-with-evidence is the explicitly-allowed fallback.
+

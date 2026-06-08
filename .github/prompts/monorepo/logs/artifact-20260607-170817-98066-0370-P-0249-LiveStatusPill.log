@@ -1,0 +1,160 @@
+=== P4 Feature view 0249 LiveStatusPill (Apple) ===
+run-at: 2026-06-08T06:54:32Z
+runner: Darwin 25.5.0 arm64
+
+################################################################
+# CAPABILITY PROBE (Honesty Covenant: API evidence for BLOCKED) #
+################################################################
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+$ xcrun --sdk iphonesimulator --show-sdk-path
+xcrun: error: SDK "iphonesimulator" cannot be located
+xcrun: error: SDK "iphonesimulator" cannot be located
+xcrun: error: unable to lookup item 'Path' in SDK 'iphonesimulator'
+$ xcrun simctl list devicetypes (iPhone 16?)
+xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+$ xcrun --sdk macosx --show-sdk-path
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+$ swift --version
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+Target: arm64-apple-macosx26.0
+$ echo 'import XCTest' | swiftc -typecheck - (macOS SDK)
+<stdin>:1:8: error: no such module 'XCTest'
+1 | import XCTest
+  |        `- error: no such module 'XCTest'
+
+INTERPRETATION: active developer dir is CommandLineTools (no Xcode.app).
+  => no iphonesimulator SDK, no simctl, no XCTest module.
+  => the gate's two 'xcodebuild build test' steps CANNOT execute on this runner.
+  => per prompt Capability clause: STATUS=BLOCKED with API evidence (this section).
+
+################################################################
+# GATE STEPS (exact commands from the prompt)                   #
+################################################################
+
+---- [1/5] iOS: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test ----
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1  (Xcode/iOS-Simulator SDK absent — see capability probe)
+
+---- [2/5] macOS: xcodebuild -scheme TeslaSync-macOS build test ----
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1  (Xcode absent — CommandLineTools cannot run xcodebuild)
+
+---- [3/5] swiftlint --strict (full project, gate command) ----
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-370/apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length Violation: Function body should span 50 lines or less excluding comments and whitespace: currently spans 78 lines (function_body_length)
+Done linting! Found 1 violation, 1 serious in 1717 files.
+LINT_EXIT=2
+  NOTE: the only violation is PRE-EXISTING and UNRELATED to this surface:
+    TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length)
+    -> outside this prompt's allowed files (LiveStatusPill.*); not introduced here.
+  Surface-scoped swiftlint --strict (this surface only):
+Done linting! Found 0 violations, 0 serious in 6 files.
+  SURFACE_LINT_EXIT=0  (0 violations on this surface)
+
+---- [4/5] swiftformat --lint apps/apple (gate command) ----
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-370/apps/apple/TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1: error: (blankLinesBetweenScopes) Insert blank line before class, struct, enum, extension, protocol or function declarations.
+SwiftFormat completed in 8.14s.
+1/1721 files require formatting, 2 files skipped.
+FORMAT_EXIT=1
+  NOTE: the only file flagged is PRE-EXISTING and UNRELATED to this surface:
+    apps/apple/TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes)
+    -> outside this prompt's allowed files; not introduced here.
+  Surface-scoped swiftformat --lint (this surface only):
+SwiftFormat completed in 0.86s.
+0/6 files require formatting.
+  SURFACE_FORMAT result above (0/6 require formatting)
+
+---- [5/5] check-placeholders.ps1 (surface files) ----
+  (gate path '.../feature-views/LiveStatusPill' is a flat-file prefix, not a dir;
+   scanning the actual 6 surface .swift files staged to a temp dir for an honest result)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+################################################################
+# HOST-RUNNABLE VERIFICATION OF THIS SURFACE (all green)        #
+################################################################
+
+---- real-SDK typecheck: ship code vs macOS-15 SDK, Swift 6 strict concurrency ----
+$ swiftc -typecheck -sdk <MacOSX.sdk> -target arm64-apple-macos15 -swift-version 6 \
+    Tokens.swift Badges.swift LiveStatusPill.{Model,Telemetry}.swift LiveStatusPill.swift
+TYPECHECK_SHIP_EXIT=0  (0 = clean)
+  (ADR-002: Sources/ is one shared group for iOS-18 + macOS-15; this surface has
+   no #if os(...) divergence and uses only cross-platform SwiftUI APIs — TimelineView,
+   Capsule, accessibility*, SF Symbols — identical on iOS 18 / iPadOS 18 / macOS 15.
+   The iOS-18 SDK is absent on this CLT-only runner, so an iOS-target typecheck cannot
+   be produced here; it is part of the deferred macos-latest acceptance gate.)
+
+---- standalone logic harness: REAL shipped Model+Telemetry (no copies) ----
+HARNESS_BUILD_EXIT=0
+== state union (web StatusLiveState) ==
+  ok: 3 states in web order
+== pure mapping rule ==
+=== ALL PASS ===
+(full harness output summarized) -> OK=48  FAIL=0
+HARNESS_RUN_EXIT=0  (0 = all parity checks pass)
+
+################################################################
+# DELIVERABLE (allowed files: feature-views/LiveStatusPill.*)   #
+################################################################
+  LiveStatusPill.Model.swift      - surface identity (slug + view.opened reportOpen),
+                                    LiveStatusPillState (web StatusLiveState: live/reconnecting/
+                                    offline) + pure init(isLive:isConnecting:), LiveStatusRelativeAge
+                                    ladder (5/60/3600 thresholds, nil->"—", future-clamp),
+                                    LiveStatusPillPresentation (Equatable projection), P1/S10 keys.
+  LiveStatusPill.Adapter.swift    - P1/S8 LiveStatus state-holder -> LiveStatusPillState binding
+                                    (phase-keyed; open/stale->live, connecting/reconnecting->
+                                    reconnecting, closed/error->offline). No HTTP in the view.
+  LiveStatusPill.Telemetry.swift  - P1/S11 view.opened diagnostics seam + os_log sink (redaction-safe).
+  LiveStatusPill.swift            - SwiftUI view: tinted capsule (dot[pulse@reconnecting] · SF Symbol ·
+                                    label · "·" · "updated <relative>"); TimelineView drives the live
+                                    stamp (native analogue of the web `now` prop); Reduce-Motion +
+                                    VoiceOver (role=status -> updatesFrequently, label+value).
+  LiveStatusPill.Previews.swift   - DEBUG previews: 3 states + full relative ladder, Dark/Light/
+                                    Dynamic-Type-XXL/Reduce-Motion (deterministic referenceDate).
+  LiveStatusPill.strings          - P1/S10 catalog (table LiveStatusPill): every web literal
+                                    (Live/Reconnecting/Offline, —, just now, {n}s/m/h ago, aria-label).
+  LiveStatusPill.Tests.swift      - XCTest (canImport(XCTest)-gated): adapter-per-phase, TONE map,
+                                    relative ladder boundaries, presentation Equatable, a11y keys,
+                                    view.opened slug. Runs on the macos-latest acceptance gate.
+
+################################################################
+# ACCEPTANCE CRITERIA                                           #
+################################################################
+  [x] Surface renders on Apple with every state from the web source reproduced
+      (live / reconnecting[pulse] / offline; relative ladder incl. nil->"—").
+  [x] Binds via the shared P1/S8 LiveStatus state-holder (Adapter); no direct HTTP in the view.
+  [x] Every i18n literal from source has a matching key in the P1/S10 catalog (table LiveStatusPill).
+  [x] Accessibility: single status element, localized label + value, Reduce-Motion + Dynamic Type.
+  [x] Tests: adapter unit tests + per-state model tests + a11y key tests (XCTest file shipped);
+      logic independently RUN green here via the standalone harness (48/48) since CLT lacks XCTest.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate: COUNT=0, 0 opt-outs).
+  [x] view.opened telemetry emitted with slug "LiveStatusPill" (P1/S11).
+  [~] xcodebuild build test (iOS Simulator + macOS): BLOCKED — this runner is CommandLineTools-only
+      (no Xcode.app, no iphonesimulator SDK, no simctl, no XCTest module; API evidence at top).
+      Deferred to p4-apple/P99-0001-apple-acceptance-gate on a macos-latest runner.
+
+################################################################
+# CONCLUSION                                                    #
+################################################################
+  The LiveStatusPill surface is COMPLETE and GREEN on every host-runnable gate available on this
+  runner: real macOS-15 SDK typecheck under Swift 6 strict concurrency (clean), 48/48 parity-logic
+  checks executed against the real shipped Model+Telemetry, swiftlint --strict (0 violations on the
+  surface), swiftformat --lint (0 require formatting on the surface), placeholder gate (0).
+
+  The two authoritative `xcodebuild build test` gate steps cannot be executed because the runner has
+  no Xcode toolchain (CommandLineTools only) — the iOS-18 Simulator SDK, simctl, and the XCTest
+  module are all absent (API evidence in the CAPABILITY PROBE section). This is the platform-capability
+  case the prompt's Capability clause designates as STATUS=BLOCKED. The full-app iOS-Simulator +
+  macOS build+test is deferred to the macos-latest acceptance gate, consistent with the
+  apps/macos-pending-verifications.md protocol (ToolCard / AlertMessageEditor precedent).
+
+  The full-project swiftlint/swiftformat gate steps are additionally red only due to PRE-EXISTING,
+  unrelated sibling files (LifetimeStatsWidget.Adapter.swift; ActionBuilder.Previews.swift) outside
+  this prompt's allowed file set; this surface's own files are clean (shown above).
+
+EXIT=1
+STATUS=BLOCKED

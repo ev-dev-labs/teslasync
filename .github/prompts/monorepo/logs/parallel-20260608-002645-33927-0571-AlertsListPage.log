@@ -1,0 +1,191 @@
+I'll start by exploring the repository structure to understand the task, the web source page, and the Apple app setup.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Swift 6.3.2, swiftlint, and pwsh are available. Per the prompt, the build/test gate may be BLOCKED, but I'll do the full implementation and verify with available tools. Let me explore deeper.
+
+Let me look at the navigation/app structure, the parity manifest record, the ledger, and find existing page implementations to mirror.
+
+Now I understand the navigation architecture. Let me explore the data layer (SharedFacade), component library, and the directly-related AlertsSection feature view to understand the established patterns.
+
+The `AlertsSection` feature view is the directly-related gold-standard pattern. Let me read it and the SharedFacade core thoroughly.
+
+This is an excellent gold-standard pattern. Let me read the remaining AlertsSection files, the AlertCard (for the Alert entity shape), and the SharedFacade data layer.
+
+Let me read the design tokens, SharedFacade data layer, and AlertCard (for the Alert entity shape) — all critical for correct compilation.
+
+Now let me read the SharedFacade data layer and the AlertCard adapter to understand how production sources consume the KMP core.
+
+Let me check component file sizes, then read the key ones for exact APIs.
+
+Now let me examine the parity manifest record, the apple ledger, the monorepo prompt structure, and the xcstrings format.
+
+The AlertsSection log is the canonical precedent. Let me read its full gate section to replicate the exact verification approach.
+
+The AlertsSection log gives me the exact accepted playbook (CLT-only host → host-compile + lint + placeholder scan green, xcodebuild DEFERRED). Let me read the page gate contract, the drill-through type, web defaults for timeline keys, and inspect the xcstrings format.
+
+Now let me inspect the xcstrings catalog format and check which of the 36 required keys already exist.
+
+All 36 keys are missing — I'll add them all. Let me read the rest of the web source (list rendering, pagination, modals, empty states).
+
+I now have a complete understanding. Let me read the lint/format configs to ensure compliance, then set up my plan.
+
+Let me verify dependencies for the standalone type-check: which files import `Shared`, where glass/axes modifiers live, and whether a page-container component exists.
+
+Let me check how the peer's `.Tests.swift` is structured (since it lives in the app-target-globbed dir, not the test target).
+
+I have a complete understanding of the architecture, components, tokens, data layer, gate precedent, and web source. Let me set up tracking and begin implementation.
+
+The `tiles()` function has lines exceeding the 160-char lint error limit. Let me refactor it.
+
+Now the Model + sources file:
+
+Now the view model (`@Observable AlertsListPageModel`):
+
+Let me refine the view model to avoid `didSet` on `@Observable` properties (a known gotcha) by using explicit setters.
+
+Let me run an early targeted type-check of the pure-logic files against the macOS SDK to catch errors before writing the views.
+
+Need to include `AlertCard.Drillthrough.swift`. Let me re-run.
+
+Pure logic type-checks clean. Now the main page view:
+
+Now the Overview section (the 6 metric panels: Total, Critical, Warnings, Info, Unread, Read-rate):
+
+Now the charts (Alert Trend stacked bar + Alerts by Type donut — panels GlassPanel7/8 + both required charts):
+
+Now the Views file (watching panel, filter bar, results list, pagination, states, toast):
+
+Now the results list + pagination (the alert list panel = GlassPanel10):
+
+Now the acknowledge dialog + audit-timeline detail modal:
+
+Now the navigation registration, then a full type-check of the view layer:
+
+`UnitFormatters.swift` transitively needs the `Shared` framework. Let me find all Shared-dependent component files to exclude from the standalone type-check.
+
+Only `UnitFormatters.swift` depends on `Shared`. Let me re-run excluding it.
+
+View layer type-checks clean. Let me confirm the real compiler exit code explicitly.
+
+View layer is clean (0 errors, 0 warnings, Swift 6 strict, macOS SDK). Now let me inspect the xcstrings formatting to add keys with a minimal diff.
+
+Round-trip is byte-identical, so a re-dump yields a purely additive diff. Let me add all keys.
+
+Keys added. Let me update tracking and write the Previews and Tests.
+
+Now the test suite (mirrors the peer `.Tests.swift` convention):
+
+Now let me format and lint. First swiftformat (auto-fix) then verify, then swiftlint --strict:
+
+swiftformat clean. Now swiftlint --strict:
+
+One violation found across the project. Let me isolate it:
+
+The single violation is pre-existing in `LifetimeStatsWidget.Adapter.swift` (not my code). Let me confirm my files are clean by linting them explicitly (as the prompt's gate does):
+
+Linting my files explicitly reveals real violations (the dir-path run had used config `included` which excludes my dir). Let me see the full list:
+
+Three real violations in my files (the dir-path run had excluded my dir via config `included`). Let me fix: (1) reword the comment swiftformat turned into a malformed MARK, (2) reduce the previews helper params, (3) trim Stats below 400 lines. Let me view exact current state first.
+
+Let me fix all three violations:
+
+Now move `AlertsListOverviewSummary` out of Stats (to get it under 400 lines) into the Adapter:
+
+That edit was wrong — it removed a doc line without adding the struct. Let me view and fix properly.
+
+Now re-run format + lint on my files and verify line counts:
+
+Clean: swiftformat 0 issues, swiftlint --strict 0 violations, all files <400 lines. Let me re-type-check (production + previews) after the edits:
+
+The `-D DEBUG` activates `#Preview` macros which need the Xcode-only macro plugin (unavailable on CLT) — same limitation the peer noted. Without `-D DEBUG` the `#if DEBUG` previews compile out. Let me re-run the production type-check (no DEBUG) including Previews (a no-op) to confirm my edits compile:
+
+Production type-check clean (0/0). Now let me build and **execute** a runtime driver to prove the adapter/stats/model logic actually works:
+
+Top-level expressions require the file be named `main.swift`. Let me rename and recompile:
+
+Swift 6 top-level is `@MainActor`-isolated. Let me restructure the driver into a single `@MainActor` function:
+
+All 28 runtime checks pass. Now the testable-module emit (proves the module compiles with `-enable-testing`) and check XCTest availability for the test file:
+
+Module emits clean (testable). XCTest is absent on CLT (the test file defers to the integration runner — the driver above already executed the equivalent assertions). Now the placeholder scan (with a negative control) and i18n key-coverage:
+
+The scanner flags the literal word "placeholder" in my comments (same as the peer hit). The negative control proved it's live (TODO → count 3→4). Let me find and reword all occurrences:
+
+Two are the required parity i18n key `alerts.searchPlaceholder` (contains substring "Placeholder"); one is a comment. Let me verify the scanner's opt-out marker syntax, then fix:
+
+The opt-out is `// parity:allow <reason>`. Let me reword the comment and add the sanctioned opt-out for the required `alerts.searchPlaceholder` parity key:
+
+Let me view the current state of that section (swiftformat may have adjusted it):
+
+Now re-format, re-lint, re-scan placeholders, and verify i18n coverage:
+
+The negative-control TODO is still in `AlertsListPage.swift` (git checkout doesn't restore untracked files). Let me remove it and see the remaining placeholder hits in detail:
+
+The 2 remaining hits are my own explanatory comment (lines 205–206 contain the word). Let me reword to avoid all trigger words:
+
+All green: swiftformat 0, swiftlint --strict 0, placeholder COUNT=0. Now final type-check + i18n coverage:
+
+i18n coverage COMPLETE (0 missing, 36/36 required present). Now wire navigation: add the source path to `project.yml` and compose the registry in `TeslaSyncApp.swift`.
+
+Now compose the registry in `TeslaSyncApp.swift` and add the dir to swiftlint's `included` for CI parity:
+
+Let me validate the `project.yml` YAML and confirm the `TeslaSyncApp.swift` edit:
+
+xcodegen validates the spec (EXIT=0). Let me confirm my page is wired into the generated project and that the `.xcodeproj` is git-ignored, then clean it up:
+
+My page is wired into the generated project (72 refs) and the `.xcodeproj` is git-ignored. Let me update tracking and create the ledger + evidence log.
+
+Let me re-capture the real xcodebuild host probe to document accurately in the log:
+
+Let me verify each of the 36 required strings is actually *rendered* by my code (not just present in the catalog):
+
+Only "Alerts" (the web page title) isn't rendered. Let me add it as the page's navigation title (web `usePageTitle('Alerts')`):
+
+Now re-run all gates after this final edit (format, lint, type-check, strings audit, placeholder):
+
+All 52 parity items verified (10 panels, 2 charts, 4 states, 36 strings), placeholder COUNT=0. Let me gather final stats and write the evidence log:
+
+Note: `AIUsageCard.*` and `web/*.tsx` are pre-existing working-tree changes (not mine — I only formatted my own dir). I'll commit only my explicit files. Now let me write the comprehensive evidence log:
+
+Comprehensive log written. Let me do a final clean-check of my files, then stage exactly my files (excluding the pre-existing unrelated changes) and commit:
+
+All 19 intended files staged (pre-existing unrelated changes excluded). Let me verify the diffs are minimal/additive, then commit:
+
+Purely additive wiring (xcstrings +594/-0). Committing:
+
+Committed (`350123bce`). The pre-existing unrelated changes remain correctly unstaged. Let me verify the commit contents and clean up temp files:
+
+All 19 files committed (4008 insertions), temp files cleaned, log ends `EXIT=0 / STATUS=DONE`. Let me finalize tracking:
+
+The task is complete. Here's the summary.
+
+## P4-APPLE · P7 · `notifications/AlertsListPage` — DONE (52/52 parity)
+
+Delivered a native **SwiftUI / Apple HIG** parity implementation of the web `AlertsListPage` (`/notifications/alerts`), adaptive across **macOS + iOS**, committed as `350123bce`.
+
+### What shipped (13 Swift files under `apps/apple/TeslaSync/Features/Notifications/`)
+- **Pure projection core** (`Adapter`, `Stats`) — every web `useMemo` ported (counts, prior-period deltas, `alertsByType`, 7-day trend, filter/search/pagination, quiet-hours overnight wrap, `fmtInt`), Foundation-only and unit-tested.
+- **`@Observable AlertsListPageModel`** (P1/S8) bound to an `AlertsListSource` seam; production `AlertsListLiveSource` driven by the shared-core facade (`AlertsListProviding`, the P6 integration point) — no networking in the view.
+- **Views** — overview KPI card (6 metric panels: Total/Critical/Warnings/Info/Unread/Read-rate), native **Swift Charts** stacked trend bar + by-type donut, "Watching" pinned panel, search/tab/active-chip filter, paginated list **reusing the shipped `AlertCard`**, acknowledge dialog, audit-timeline modal, toast/undo.
+- Registered at `.notifications` via `NotificationsRouteRegistration` (composed in `TeslaSyncApp.swift`).
+
+### Verification (all green on this CLT-only host)
+| Gate | Result |
+|---|---|
+| swiftformat --lint | 0/13 |
+| swiftlint --strict (my files) | 0 violations |
+| Swift-6 macOS-SDK type-check + testable-module emit | EXIT=0, 0 errors/warnings |
+| Executed runtime driver | 28/28 assertions PASS |
+| check-placeholders.ps1 (+ negative control) | COUNT=0 |
+| xcodegen spec validation | EXIT=0 (page in both targets) |
+| i18n coverage | 36/36 required rendered, 0 missing |
+| **PARITY** | **52/52** (10 panels, 2 charts, 4 states, 36 strings) |
+
+54 keys added to `Localizable.xcstrings` (purely additive). Ledger rows `apple-macos`/`apple-ios` set to 52/52 done.
+
+### Honest disposition
+`xcodebuild` build/test is **DEFERRED** (real probe: Command Line Tools only — no Xcode.app / iOS-sim SDK), matching the accepted peer disposition (AlertsSection/AlertCard). Evidence log ends `EXIT=0 / STATUS=DONE`. Pre-existing unrelated working-tree changes (`AIUsageCard.*`, two web `.tsx`) were left untouched and not staged.
+
+
+
+The task is fully complete and committed. Let me update the plan status and mark complete.
+

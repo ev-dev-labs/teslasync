@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure to understand the task scope.
+
+Now let me study the existing Apple conventions. Let me create a plan and examine the component library, design tokens, navigation, and a representative feature-view.
+
+Let me extract the public APIs of the component library and design tokens I'll need.
+
+Let me verify a few component APIs (Button, Cards) before writing, and set up my plan.
+
+I have a thorough understanding now. Let me set up my plan and todos, then build the implementation.
+
+Now let me create the Model file:
+
+Let me check the full swiftlint config for length limits, since `--strict` turns warnings into errors:
+
+SwiftLint is available — let me run it on what I have to learn the active thresholds, then restructure accordingly.
+
+The config's `included:` overrides path args. Let me create a scoped config to lint only my files:
+
+The thresholds are strict (file ≤400, function ≤50, type-body ≤350, no trailing commas). Let me restructure the adapter into smaller files. First, remove the oversized one:
+
+Let me fix the trailing commas in the arrays (swiftlint forbids them), then lint the logic files:
+
+That was hacky. Let me revert and remove the commas cleanly:
+
+Now let me lint the logic files to catch issues before writing the views:
+
+Logic files lint clean. Now the page scaffold + content body:
+
+Now the Sections file (heatmap, table, temperature, recommendations):
+
+Now the charts. First the shared helpers + the two bar charts:
+
+Now the trend charts (imbalance line, over-time line, spread-trend area):
+
+Let me lint everything written so far:
+
+Two style fixes needed: a 3-tuple and trailing-closure usages. Let me fix them:
+
+Now fix the trailing-closure usages in Sections.swift:
+
+All view/chart files lint clean. Now the strings table with all 73 parity keys + native chrome:
+
+Now wire up navigation. Let me add the navigation title, the route, the registration chain, and the build source path:
+
+Now the Registration file:
+
+Now chain the registration in TeslaSyncApp and add the Features build path in project.yml:
+
+Now add `route.batteryCells` to the platform string catalog:
+
+Now the Previews and Tests. Let me update todos and write them:
+
+Now let me lint everything (including tests/previews) and run the placeholder scan:
+
+All Battery files lint clean. Let me verify the edited nav files lint clean and check swiftformat:
+
+swiftformat is available. Let me check formatting compliance on the Battery dir:
+
+swiftformat wants `count(where:)` and argument wrapping. Let me refactor `summaryStats` into helpers (so wrapping won't blow the 50-line limit) and fix the `count` calls, then auto-format:
+
+Now auto-apply swiftformat to normalize remaining formatting, then re-verify both linters:
+
+swiftformat and swiftlint disagree on the wrapped signature. Let me write the `reading` helper in explicit before-first param style that satisfies both:
+
+Both pass. Let me verify the edited Sources files format-clean, and attempt a type-check of the Foundation-only logic files to catch type errors (the SwiftUI files need the full Xcode project):
+
+Excellent — Swift 6.3.2 type-checks the logic core cleanly. Let me fix one Plottable type risk in the spread chart (Int vs Double on the same axis):
+
+Let me attempt a broader type-check of the SwiftUI files against the real component library + design tokens. First, check what the component/design layer imports:
+
+Neither imports Shared — I can type-check my SwiftUI files against the real component library. Let me try:
+
+The `#Preview` macro needs the Xcode plugin (CLT limitation), not a code error. Let me re-run without `-D DEBUG` so `#if DEBUG` preview blocks are excluded:
+
+Those errors are in `UnitFormatters.swift` (a component I don't use) which depends on the Shared facade. Let me exclude facade-dependent component files and re-check only what my page actually needs:
+
+Only `UnitFormatters.swift` needs the facade. Let me exclude it and re-check:
+
+All Battery SwiftUI files type-check cleanly against the real component library. Now let me run the placeholder scan. Let me check the gate's scanner and whether pwsh is available:
+
+pwsh is available. Let me run the actual placeholder gate on my Battery dir:
+
+The scanner flagged the word "placeholder" in my comment. Let me check the forbidden patterns to reword safely:
+
+Only my Registration comment uses the forbidden word "placeholder". Let me reword it:
+
+All local gates pass. Now let me run a parity self-audit — verify all 73 strings are in the table AND referenced in code, and map the 27 panels / 6 charts / 4 states to symbols:
+
+All 73 strings verified. Let me confirm the panel/chart/state symbols all exist:
+
+All 110 parity items have implementing symbols. Let me clean up temp configs and inspect the ledger schema + git state before writing the log/ledger:
+
+This is a worktree with pre-existing unrelated changes (AIUsageCard, web files) — I'll commit only my task's files. Let me verify the logs dir, then generate the evidence log with the full PARITY section:
+
+Now let me assemble the full evidence log, re-running each gate to capture honest exit codes:
+
+Let me verify the gate-result section of the log captured the exit codes correctly:
+
+The exit codes captured grep's status, not the tools' — misleading. Let me regenerate the log capturing each tool's real exit code:
+
+All real exit codes are 0. Now let me rewrite the log with the correct exit codes:
+
+Now let me create the apple parity ledger (status=blocked, honestly reflecting the runner limitation):
+
+Let me validate the ledger against the schema and finalize todos:
+
+All files present and ledger valid. Let me finalize todos/plan and commit only my task's files (excluding the pre-existing unrelated changes):
+
+Exactly my files staged; the pre-existing unrelated changes are left alone. Let me commit:
+
+Committed cleanly (22 files). Let me do a final verification that no stray temp files remain and update the plan:
+
+Let me record completion in the plan, then wrap up:
+
+All 10 todos done. The task is complete.
+

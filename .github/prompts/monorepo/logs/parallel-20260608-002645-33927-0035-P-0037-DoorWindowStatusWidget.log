@@ -1,0 +1,90 @@
+I'll start by exploring the environment to understand the task scope, the web source, the existing Apple app structure, and tooling availability.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed, and `simctl` is unavailable. However, `swift`, `swiftlint`, and `swiftformat` ARE available. Let me explore the existing Apple app structure and the web source to understand conventions.
+
+I now understand the web source. Let me examine the existing Swift widget conventions (GuardModeWidget — same security category) and the web shared components it references.
+
+Now let me study the closest existing native widget (GuardModeWidget — same security category) to match conventions exactly.
+
+Now let me locate the shared design tokens, the registration types, and any existing status-grid widget, plus the `useSecurityLatest` data shape.
+
+I need to understand the scaffolding/target structure and verify real capabilities. Let me check for a full Xcode install, the registration scaffolding source, PowerShell, and the placeholder check script.
+
+Xcode.app **is** installed (just not selected), and `pwsh` + the placeholder script exist. This changes everything — I can likely run the real gate. Let me set `DEVELOPER_DIR` and inspect the project structure and simulators.
+
+XcodeGen project with iPhone 16 simulator booted and iOS 26.5 available. Let me read `project.yml` to understand targets and check whether the `.xcodeproj` is generated.
+
+Critical insight: both app targets compile the **entire** `TeslaSync/dashboard-widgets` directory, yet 13 files each define `public struct DashboardWidgetRegistration`. That would be a duplicate-definition error. The platform IS capable (Xcode 26.5, iOS 26.5, iPhone 16 booted), so I need to understand the real build baseline. Let me investigate.
+
+`xcodegen` is available; the 13 duplicate scaffold definitions are real and identical — a pre-existing condition in this merged tree (GuardMode, my template, defines none and relies on the shared scaffold). Let me check the Shared.xcframework build dependency and whether a focused build is feasible.
+
+Now the full picture is clear: this merged tree has pre-existing non-buildable conditions (13× duplicate scaffold structs, 224 misplaced `.Tests.swift` in app-target dirs, and a Kotlin/Gradle-built `Shared.xcframework` that's absent). The per-prompt gate runs against an isolated baseline. My job: build the widget faithfully modeled on the known-good `GuardModeWidget` sibling. Let me verify the exact shared-token API surface before writing.
+
+Now let me confirm the `TSTone` and `TSSkeleton` APIs that GuardMode uses.
+
+Let me determine whether there's a canonical (non-widget) home for the registration scaffold, to decide if my widget should define it or reference it like GuardMode does.
+
+The convention is clear: 40+ widgets (including my template GuardMode) **reference** the shared scaffold rather than defining it. I'll follow that. I now have the complete API surface. Let me set up a plan and todos, then write the 7 files.
+
+Let me read the lint configs and an existing widget log to match the expected format.
+
+The GuardMode log establishes the exact accepted precedent: **code-complete + host-runnable gates green (iOS+macOS SDK typecheck, executed XCTest, lint, format, placeholder), with the Xcode app build/test DEFERRED with real captured evidence** (Shared.xcframework needs KMP/Gradle; surface not yet in project.yml — both outside allowed files). I'll replicate this rigor. First, let me confirm the exact `asNonEmptyString` semantics for faithful parsing parity.
+
+`asNonEmptyString` = string with length>0, else null (no trim). Window parsing uses the raw string un-trimmed; door parsing trims each CSV part. I have exact parity rules now. `TSTone`/`TSSkeleton` depend only on Tokens. Let me write the deliverable, starting with the Model and Adapter.
+
+Now the Adapter — the pure, testable projection core with faithful parity ports of the web parsing logic.
+
+Now the presentational subviews (Views), mirroring the web `WidgetStatusGrid`, `Badge`, and section layout.
+
+Now the main widget view — shell chrome, freshness, state switch, and the compact/standard/tall layout, with registration metadata.
+
+Now the Previews and the strings catalog.
+
+Now the comprehensive test suite — adapter parity, projection, model phases/telemetry, registry, accessibility.
+
+All 7 files created. Let me now verify — starting with swiftformat (auto-fix), then `--lint`, then swiftlint `--strict`.
+
+swiftformat fixed 3 files. Now verify `--lint` is clean and run `swiftlint --strict`.
+
+`swiftformat --lint` passes. One swiftlint violation: a 6-param helper. Let me refactor `summary` to use a small copy struct (3 params).
+
+Lint + format both clean. Now the placeholder check. Let me inspect the script's parameters, then run it.
+
+The script treats a missing path as clean (no scan). For a *meaningful* scoped check of my actual files, I'll copy my shipped files into a temp dir and scan that with `-Language swift`.
+
+Placeholder gate clean (COUNT=0). Now the strongest verification: compile my surface against the real iOS + macOS SDKs. Let me check whether the real `Badges.swift`/`Skeletons.swift` are self-contained (only depend on Tokens) so I can include them in the typecheck closure.
+
+Placeholder gate clean. `Badges.swift` (TSTone) is self-contained, but `Skeletons.swift` drags in `TSCard`. Matching the GuardMode precedent, I'll typecheck my **real shipping files** against **real Tokens + real Badges**, with minimal faithful shims only for the registry types + `TSSkeleton` (whose real file pulls in `TSCard`). Let me set up the harness and run the iOS + macOS SDK typechecks.
+
+iOS 18 SDK typecheck passes (EXIT=0). Now the macOS 15 SDK typecheck and the DEBUG previews typecheck.
+
+macOS 15 SDK and DEBUG previews typechecks both pass (EXIT=0). Now the gold standard — **execute** the full test suite on the macOS host via a SwiftPM harness (module named `TeslaSync` so the test's `@testable import TeslaSync` works unchanged).
+
+All **32 tests executed and passed** (0 failures) on the macOS host. Let me capture the per-suite breakdown for the log.
+
+All **32 tests pass** on the host: WindowParser 3, DoorParser 7, Format 3, Projection 7, Model 8, Registry 2, Accessibility 2. Now let me capture honest `xcodebuild` evidence (the deferred Xcode gate), matching the GuardMode precedent. First, generate the project and attempt the macOS build to capture the real blocker.
+
+Project generates (EXIT=0) and my surface IS globbed in (42 pbxproj refs). Now attempt the macOS build to capture the real blocker honestly.
+
+Confirmed: `BUILD_EXIT=65` — the build fails because `Shared.xcframework` (the Kotlin/Native KMP core) isn't staged, exactly matching the GuardMode precedent. This is an infra blocker, not a defect in my surface. Let me confirm my files add no duplicate scaffold, clean up generated artifacts, and check the working tree is clean.
+
+Working tree clean — only my 7 files, no pollution, no duplicate scaffold added. Now let me gather line counts and write the gate log, then commit.
+
+I have all the data. Let me count assertions for an honest log, then write the gate log.
+
+Log written. Let me do a final consolidated verification run (rebuild harness, re-run all host gates) to confirm the committed state is green end-to-end, then commit.
+
+My consolidated script had a path-stripping bug (`${FILES#apps/apple/}` only fixed the first path → swiftlint scanned the whole repo, swiftformat got a doubled path). The typechecks (full paths) passed: IOS=0 MAC=0. My earlier correct runs already showed 0 lint/format issues. Let me re-run lint + format + tests with correct paths to confirm cleanly.
+
+All clean (the earlier 2/70 were my script bug). Let me do one final `swift test` to confirm the exact committed code passes 32/32, then commit.
+
+I'll wait for the test build to complete.
+
+Final `swift test`: **All tests passed (32/32), EXIT=0.** Every host gate is green. Now let me stage only my surface files + the log (not the pre-existing unrelated modifications) and commit.
+
+Exactly my 7 surface files + the log are staged; the pre-existing unrelated modifications are left untouched. Now commit.
+
+Commit `c82b20b25` created with all 8 files (7 surface + log). Let me mark the todo done and do a final clean-state check.
+
+Task complete. The working tree is clean (no leftover generated project or temp artifacts), and everything is committed.
+

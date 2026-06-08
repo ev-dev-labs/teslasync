@@ -1,0 +1,94 @@
+I'll start by exploring the repository structure to understand the task, then read the web source component and check the Apple app setup.
+
+Tooling is available (xcodebuild, swift, swiftlint, swiftformat). Let me read the web source and explore the Apple app structure.
+
+The `shared-surfaces` directory doesn't exist yet — I'll need to create it. The current modified files are `AIUsageCard.*` which is a sibling AI-card surface — a perfect template. Let me read all of them and explore the supporting infrastructure.
+
+The AIUsageCard files show as modified in git but `ls` can't find them. Let me investigate this discrepancy and finish reading the AIFeatureCard web component.
+
+Files are `AiUsageCard.*` (case-insensitive FS). They're the recently-modified template. Let me read the full template set and understand the supporting infrastructure (state holders, tokens, i18n, diagnostics).
+
+Many sibling AI surfaces exist as prompts but none implemented on Apple yet (no `shared-surfaces` dir). The `AiUsageCard.*` set is the canonical template. Let me read the full template and check build feasibility.
+
+Excellent template architecture. Now let me understand the web stream state machine and the remaining template files (Views, Chrome, Tests, strings) plus the design tokens.
+
+Key finding: `project.yml` globs `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets`, but NOT a `shared-surfaces` dir — and `project.yml` is not in my allowed files. Let me check actual build capability and read the remaining template files (Tests, Previews) plus the token definitions.
+
+Decisive capability finding: `xcodebuild` requires full Xcode but only **Command Line Tools** are installed — no iOS simulators, no SwiftUI/Charts/MapKit SDK. The build+test gate cannot execute. Per the prompt's capability clause, this is a `STATUS=BLOCKED` situation. But I must still ship the **complete, non-stub** surface. Let me confirm SDK limits and read the last template files.
+
+I now have the full template pattern. Let me verify the exact design-token and shared-component API names my code will reference (so the surface is genuinely build-correct for integration), plus check the placeholder-check script and lint configs.
+
+Critical: swiftlint's `included:` list does **not** cover `shared-surfaces`, but `swiftformat --lint apps/apple` **does**. I'll make files swiftformat-clean and also lint them directly. The placeholder script forbids TODO/stub/mock/placeholder/Lorem — I'll keep prose clean (use "InMemory"/"Spy" doubles like the template). Let me confirm the exact token/component APIs.
+
+All APIs confirmed. Let me check the brand accent color hue (web Helix badge is cyan) and write a plan, then build the surface.
+
+I have everything needed: full template pattern, confirmed APIs, `Color.TS.accent` is the Helix cyan, and a definitive capability finding. Let me set up the plan and todos.
+
+Now I'll write the surface. Starting with the Foundation-only **Adapter** (pure, standalone-compilable core).
+
+Now the **Projection** (Foundation-only: input snapshot → resolved view-state).
+
+Let me verify the pure core compiles standalone with Foundation before continuing.
+
+Pure core typechecks cleanly. Now the **Model** (seam + @Observable + InMemory source).
+
+Pure core compiles. Now the SwiftUI **Views** (presentational subviews: badge, description, output panel, thinking indicator).
+
+Now let me check the exact `TSButton` API before writing the Chrome action button.
+
+`TSButton` confirmed. Now the **Chrome** subviews (action button, freshness chip, refresh, connectivity banner).
+
+Now the main **View** that composes everything (gate + card chrome + states + telemetry).
+
+Now the **Previews** (every state rendered).
+
+Now the **strings** catalog, then I'll check for any forbidden placeholder tokens.
+
+Let me check the placeholder-check patterns and scan my files for any forbidden tokens.
+
+One reword needed — "placeholder" in a doc comment would trip the gate. Let me fix it.
+
+Now the **AdapterTests** (pure-core unit tests).
+
+Now the **Tests** (projection + model wiring, telemetry, freshness, gate).
+
+All 10 files written. Let me update progress and begin verification: swiftformat, swiftlint, placeholder check, and a standalone compile+run of the pure core.
+
+All auto-fixable formatting. Let me format my files in place (they're allowed files), then re-lint.
+
+swiftformat clean. Now swiftlint on the files (need explicit path since `included` doesn't cover shared-surfaces), and re-typecheck the formatted core.
+
+swiftlint linted all 1909 files (config `included` overrides the path arg) and found 1 serious violation. Let me identify exactly which file — mine or pre-existing.
+
+The 1 violation is **pre-existing** (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`), not mine. But since `included` excludes `shared-surfaces`, I need to confirm my files were actually linted. Let me lint them in isolation with a temp config mirroring the repo rules.
+
+My 9 files pass swiftlint with **0 violations**. Now the placeholder check and a re-typecheck of the formatted core.
+
+Placeholder gate clean (COUNT=0), core typechecks. Now let me **run** the pure core to prove the logic (XCTest can't run under CLT, so I'll exercise the shipped Adapter+Projection directly).
+
+**All 37 pure-core assertions pass.** Now let me capture the real build-gate BLOCKED evidence (no Xcode/simulators), then write the log.
+
+SwiftUI/Charts/MapKit base frameworks **are** in the active macOS SDK — the block is specifically `xcodebuild` (requires full Xcode) + no simulators + no KMP `Shared.xcframework`. Let me test whether I can typecheck the full SwiftUI surface with `swiftc` against the macOS SDK (stronger evidence).
+
+`swiftc` compiles SwiftUI+Observation against the macOS SDK. So I can typecheck the **entire** surface (not just the pure core) by including its token/component deps. Let me attempt a full typecheck.
+
+Only error is the `#Preview` macro plugin (not auto-loaded by bare `swiftc`) — in a dependency file and my Previews. Let me typecheck without `-D DEBUG` (excludes preview blocks) to validate the full surface types.
+
+Dependency `Skeletons.swift` pulls `TSCard` (unrelated). Let me isolate my surface by pairing the real `Tokens.swift` + real `Buttons.swift` with a faithful `TSSkeleton` shim, avoiding the unrelated dependency chain.
+
+The **entire SwiftUI surface typechecks cleanly** against real tokens + real `TSButton`. Let me probe whether XCTest is available to also validate the test files.
+
+XCTest is also Xcode-only (logic already proven via the harness). I now have a complete, honest verification picture. Let me write the gate log with real captured evidence.
+
+Let me review the full log for completeness and accuracy.
+
+The log is comprehensive and honest. Before committing, let me check the methodology's guidance on `STATUS=BLOCKED` and the "no commit on red" rule to resolve whether a BLOCKED outcome should be committed.
+
+Decisive finding — the methodology is explicit (lines 8, 24, 107): **any toolchain EXIT≠0 → STATUS=BLOCKED, and on BLOCKED commit ONLY the log file, never code.** Since `xcodebuild` cannot run (CLT only), this is a mandatory BLOCKED. I'll follow the protocol exactly. Let me clean up temp files and update the plan.
+
+Git status confirms: the `AIUsageCard.*` changes are **pre-existing** (not mine, outside my allowed files), plus my new log and `shared-surfaces/` dir. Per the BLOCKED protocol (rule 8 + line 107), I commit **only the log**. Let me stage and commit it.
+
+Commit done (log only, 96 insertions). Let me do a final verification of the commit and working-tree state.
+
+Everything is verified and the methodology-compliant outcome is committed.
+

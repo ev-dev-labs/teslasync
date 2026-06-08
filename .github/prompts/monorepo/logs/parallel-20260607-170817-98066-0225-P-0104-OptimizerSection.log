@@ -1,0 +1,157 @@
+I'll start by exploring the repository structure, the web source, and the Apple app conventions in parallel.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Swift 6.3.2 CLI, swiftlint, and swiftformat ARE available. Let me explore the build system and existing patterns before deciding on the gate strategy.
+
+Now let me study the closest sibling (`ChargingDetailSection`, same charging feature) end-to-end, plus the `CostHeatmap` web source and supporting scripts.
+
+Now let me read the remaining reference files and supporting infrastructure in parallel.
+
+Now let me examine the design tokens, the test patterns, an existing native gauge (RadialGauge equivalent), the project build config, and the placeholder checker.
+
+Let me read the design tokens, the existing gauge component, the placeholder patterns, and the build config; and check `pwsh` availability.
+
+Let me confirm the exact design-token symbol names I'll depend on (so the code matches the real API), plus how `.strings`, feature-views, and Tests targets are wired in `project.yml`.
+
+The tokens live in generated design files. Let me read those plus the material/typography/skeleton definitions and the Tests target wiring.
+
+Let me confirm the test-file wiring (how `*.Tests.swift` in `feature-views/` reaches the test target), check for any existing Optimizer files, and read the web number formatter.
+
+Let me verify the real i18n values in the web catalog and check `TSSkeleton`/`useFormatting` so my strings and formatting match exactly.
+
+i18n values confirmed (parent path `charging.optimizer.*`). Let me peek at the web `RadialGauge` and `useFormatting` for exact center-value + currency parity, then I'll start building.
+
+I have everything I need. Key facts confirmed:
+- **`xcodebuild` is BLOCKED** (Command Line Tools only, no Xcode) — iOS/macOS build+test gates cannot run. `swift` 6.3.2, `swiftlint`, `swiftformat`, `pwsh` ARE available.
+- The surface is **chart-free** (gauge = Shape arc, heatmap = rectangles), matching the prompt's "Charts/maps used: none".
+- All i18n values + token APIs confirmed.
+
+Let me set up the plan and todos, then build.
+
+Now I'll build the surface. Starting with the pure adapter (Foundation-only, fully testable).
+
+Now the Model layer (seams + `@Observable` view-model + in-memory source + strings facade).
+
+Now the presentational subviews (panels, gauge, banners, empty/error/skeleton).
+
+Now I'll add two small pure helpers to the adapter (busiest-cell + heatmap overview summary) for the heatmap's accessibility, then build the heatmap view.
+
+Now the heatmap grid view.
+
+Now the main surface view (phase switch + loaded composition + reduce-motion handling).
+
+Now the i18n strings table and the per-state previews.
+
+Now the comprehensive test suite (adapter projections, heatmap math, formatting, accessibility, and the `@MainActor` model phases).
+
+All 8 files created. Now let me normalize with swiftformat, then lint, then set up a real compile+test harness. First, format my files and check what changes.
+
+All swiftformat changes are cosmetic (line-wrapping, redundant `Color` prefix removal) — semantics intact. Now swiftlint on my files + placeholder check.
+
+Two things to address in my files: (1) `file_length` ≤400 (Adapter 513, Views 667, Tests 488 — the reference keeps every file ≤400), and (2) two >120-char lines. The placeholder hits are pre-existing `InfrastructureSection` files, not mine. Let me view the long lines and current structure, then split files.
+
+Now let me see the section markers in Adapter and Tests to find clean split points.
+
+Let me view the exact split boundaries before cutting.
+
+Clean boundaries confirmed. Let me split the three oversized files (each must be ≤400 lines per the repo convention), keeping everything within the `OptimizerSection.*` allowed-file glob.
+
+All files ≤400 lines now. Let me fix the two long lines: refactor the cost-rate rows with a helper, and shorten the sample detail string.
+
+Now re-run swiftformat + swiftlint --strict on all 10 files, and the placeholder check against the actual files.
+
+swiftlint --strict: **0 violations** across all 10 files. Now prove my files pass the placeholder gate (scan the actual OptimizerSection files in isolation).
+
+A false-positive: my comment `$x.xxx/kWh` contains "xxx" (matches the `XXX` marker). Let me reword it.
+
+Placeholder gate clean (COUNT=0). Now the substantive proof: since `xcodebuild` is unavailable, I'll compile my real code against the **real design tokens** in a standalone SPM harness (module named `TeslaSync`) on the macOS SDK and run the actual unit tests. Let me set it up.
+
+`Skeletons.swift` pulls in `TSCard` (cascade). I'll extract just the real `TSSkeleton` struct (self-contained, lines 1–44) so the harness compiles my code against the genuine token + skeleton APIs without unrelated deps. Building the harness now.
+
+Now compile and run the real tests through the harness.
+
+Only `#Preview` macro errors — the `PreviewsMacros` plugin ships with Xcode, not Command Line Tools. Everything else compiled. Since Previews is DEBUG-only scaffolding (it compiles under the real Xcode gate), I'll exclude just that file from the harness to verify the rest compiles and the tests pass.
+
+Production code compiles cleanly under strict concurrency. Now run the full test suite.
+
+`XCTest` isn't available under Command Line Tools either (ships with Xcode). My XCTest files are structurally identical to the repo's existing `ChargingDetailSection.Tests.swift` and are swiftlint-clean, so they'll run under the real Xcode gate. To **actually prove the test assertions are correct at runtime**, I'll add an executable target that runs the same computations my XCTests assert (including the `@MainActor` model) and exits nonzero on any mismatch.
+
+Trivial access-control fix in the harness runner (not production code) — make the check methods `private`.
+
+**70/70 runtime assertions passed** under strict concurrency against the real tokens. Now let me (1) syntax-check the two XCTest files, and (2) run the whole-tree `swiftlint --strict` and `swiftformat --lint apps/apple` exactly as the gate does, to record honest results.
+
+Parse-check clean. Whole-tree swiftlint shows **1 violation in 938 files** — my 10 files already passed scoped lint with 0, so let me identify the source.
+
+The single whole-tree violation is **pre-existing** in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` — outside my allowed files. All 10 OptimizerSection files linted with **0 violations**. Let me confirm `swiftformat --lint` (scoped + whole-tree), capture the `xcodebuild` blocker evidence, and check git status.
+
+Everything in my scope is clean: **swiftformat 0/10 (and 0/942 tree-wide), my files 0 lint violations, placeholder 0, 70/70 runtime checks, compile OK**. The only blockers are platform-capability (`xcodebuild` needs Xcode; only CommandLineTools present) and one pre-existing lint issue outside my files. The 2 modified web files pre-date my work — I won't touch them.
+
+Let me capture the real `xcodebuild` exit codes and prepare the log directory.
+
+Let me check an existing sibling log to match the house format (especially whether any are `BLOCKED`).
+
+The sibling logs reference a host `swiftc -typecheck` against the real design system (matching my approach) and claim Xcode 26.5. Let me check whether a full Xcode is actually installed here (I might be able to run the real gate), and read the full sibling log format.
+
+**A full Xcode IS installed** at `/Applications/Xcode.app` — `xcode-select` just points to CommandLineTools. I can use `DEVELOPER_DIR` to access the real toolchain (no sudo needed). The sibling 0053 log confirms the house pattern: run **real XCTest via host** + iOS/macOS SDK compiles, mark the signed simulator `xcodebuild` app build/test DEFERRED (pre-existing project.yml test-membership + signing). Let me leverage the real toolchain — re-add Previews and run the actual XCTest suites.
+
+Excellent — with the Xcode 26.5 toolchain, **all 8 production files including Previews (`#Preview` macros) compile**. Now run the real XCTest suites.
+
+**Real XCTest: 42 tests, 0 failures** via Xcode 26.5. Now let me prove the iOS 18 simulator SDK compile (matching the sibling's cross-platform standard) and attempt the actual `xcodebuild` app gate to capture its real disposition.
+
+iOS 18 simulator typecheck: **EXIT=0**. Now attempt the real app gate — generate the project and try a build to capture its actual disposition.
+
+`xcodegen` produced no project — let me see the actual error.
+
+`xcodegen` now succeeded (RC=0). Let me confirm the generated project is git-ignored, then attempt the actual `xcodebuild` to capture its real disposition (timeboxed).
+
+`xcodeproj` is git-ignored (won't pollute commit). Now attempt the real `xcodebuild` macОS build to capture its disposition.
+
+The full app build is compiling (900+ files). Let me continue waiting.
+
+This is decisive evidence. The app build staged `Shared.xcframework` fine (Gradle worked), then **failed at RC=65 on a pre-existing issue**: `AlertsSection.Tests.swift:20: error: unable to resolve module dependency: 'XCTest'` — the project.yml compiles `*.Tests.swift` into the app target (which doesn't link XCTest), affecting **all** surfaces. My production files produced no errors (only the benign "ignoring import" warning on my test files, same as every surface).
+
+Let me prove the app builds with my production files by excluding test files via a command-line override (no tracked-file edits).
+
+The exclusion glob missed `*.ModelTests.swift` files. Let me broaden it to `*Tests.swift` (catches both `.Tests.swift` and `.ModelTests.swift`).
+
+**Decisive result:** With the Xcode 26.5 toolchain, the app build staged `Shared.xcframework` and **compiled all my `OptimizerSection.*` production files (visible in the SwiftCompile batch) with zero diagnostics**. The build (RC=65) fails only on **pre-existing, unrelated** issues — `EndpointSidebar`/`RequestBuilder` duplicate `HTTPMethod`/`ParsedEndpoint` declarations and `*.Tests.swift` XCTest membership — none in my files. This matches the sibling 0053 "DEFERRED" disposition exactly.
+
+Let me verify the working tree is clean of build artifacts and confirm no OptimizerSection errors exist anywhere.
+
+Working tree is clean — only my 11 `OptimizerSection.*` files are new; the 2 modified web files are pre-existing (not mine, excluded — same as sibling 0053); build artifacts are git-ignored. Now let me write the honest gate log.
+
+Let me do a final lint/format verification on all my files (after the last edits) and the placeholder scan, then commit.
+
+All green: swiftformat 0/10, swiftlint 0 violations, placeholder COUNT=0. Now commit my files + the log (scoped, excluding the pre-existing web edits).
+
+All 12 of my files staged; the 2 pre-existing web edits remain unstaged (correctly excluded). Committing.
+
+Committed: **12 files, 2,743 insertions** (commit `1280c175`); pre-existing web edits correctly excluded. Let me update tracking and clean up temp scratch.
+
+All 10 todos complete. The task is fully delivered and verified.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-feature-views-0104-OptimizerSection.log | 174 +++++++++
+ .../feature-views/OptimizerSection.Adapter.swift   | 243 +++++++++++++
+ .../feature-views/OptimizerSection.Heatmap.swift   | 197 ++++++++++
+ .../feature-views/OptimizerSection.Model.swift     | 310 ++++++++++++++++
+ .../OptimizerSection.ModelTests.swift              | 258 ++++++++++++++
+ .../feature-views/OptimizerSection.Panels.swift    | 396 +++++++++++++++++++++
+ .../feature-views/OptimizerSection.Previews.swift  | 153 ++++++++
+ .../OptimizerSection.Projection.swift              | 281 +++++++++++++++
+ .../feature-views/OptimizerSection.Tests.swift     | 241 +++++++++++++
+ .../feature-views/OptimizerSection.Views.swift     | 288 +++++++++++++++
+ .../feature-views/OptimizerSection.strings         |  64 ++++
+ .../TeslaSync/feature-views/OptimizerSection.swift | 138 +++++++
+ 12 files changed, 2743 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0104-OptimizerSection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/OptimizerSection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/OptimizerSection.Heatmap.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/OptimizerSection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/OptimizerSection.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/OptimizerSection.Panels.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/OptimizerSection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/OptimizerSection.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/OptimizerSection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/OptimizerSection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/OptimizerSection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/OptimizerSection.swift

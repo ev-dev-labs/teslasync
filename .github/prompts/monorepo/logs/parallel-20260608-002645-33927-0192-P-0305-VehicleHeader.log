@@ -1,0 +1,114 @@
+I'll start by exploring the repository structure to understand what exists and what's required for this task.
+
+Key findings: `apps/apple/TeslaSync/feature-views/` exists with an established pattern (`AIUsageCard.*`). Toolchain check: `swift`, `swiftlint`, `swiftformat`, `pwsh` are available, but **`xcodebuild` is NOT** (only CommandLineTools installed, not full Xcode). Let me explore the existing pattern and the web source in depth.
+
+The web source exists (small, 2182 bytes); no native `VehicleHeader.*` yet. There's an established multi-file pattern per surface. Let me read the web source and a complete representative native example (`AiUsageCard.*`) to learn all conventions.
+
+Now let me study the full `AiUsageCard.*` set (the template) and search for the shared primitives I'll need (state holders, tokens, i18n facade, telemetry, native counterparts of Button/StatusBadge/FadeIn).
+
+Excellent — this is a rich, well-defined pattern. Let me gather the web logic to replicate (`getVehicleStatus`, `useWakeVehicle`, types, `StatusBadge`, `Button`) and the native shared primitives (tokens, FadeIn, Button, StatusBadge, vehicle types/state-holders).
+
+Now I have the full web status→color mapping. Let me survey the native side: shared tokens, `TSFadeIn`, native Button/StatusBadge, any existing vehicle source/status, the nav seam, and the build config.
+
+Design tokens are generated at `apps/design/generated/apple`. Feature-views are a directory glob, so my new files will be picked up automatically. Let me read the token API and the remaining shared primitives (Buttons, Feedback states, the state-holder seam).
+
+The closest analog is `DriveDetailHeader` (also a header surface). Let me read it as a template, plus `TSTone`/`TSBadge`, native Buttons, and Feedback states.
+
+`TSButton` confirmed. Now reading the closest analog `DriveDetailHeader` end-to-end plus `TSTone`/`TSBadge` and feedback states.
+
+This is the ideal template. Let me read the rest of the `DriveDetailHeader` set plus `TSTone`/`TSBadge` and feedback states.
+
+Complete template understood. Let me read the Previews, Tests, strings, plus `TSTone`/`TSBadge` and `TSSkeleton` signatures, and the placeholder/lint gate configs.
+
+I now have the complete template. Let me confirm the last primitives (`TSTone`, `TSSkeleton`), the gate scripts/configs, and check for prior BLOCKED precedents + toolchain (xcodegen).
+
+Prior BLOCKED precedents exist and their code is committed — that confirms the convention. Let me read a BLOCKED feature-view log for format, the placeholder patterns/enumeration, and lint configs.
+
+Critical discovery: the precedent log shows **full Xcode 26.5 IS installed** at `/Applications/Xcode.app` (reachable via `DEVELOPER_DIR`); the bare `xcodebuild` only failed because `xcode-select` points at CommandLineTools. The established disposition is: build/test the surface **isolated against both SDKs** + lint/format/placeholder green, with the full-app `xcodebuild` **DEFERRED** on two pre-existing baseline blockers. I must independently verify all of this. Let me check the toolchain and baseline blockers.
+
+All verified: Xcode 26.5 present, both SDKs + iPhone 16 sim available; baseline blockers confirmed (Shared.xcframework absent, `DashboardWidgetSize` ×15). Capability is **AVAILABLE** → target STATUS=DONE with full-app xcodebuild DEFERRED on baselines. Let me read the lint/format/placeholder configs and `TSSkeleton` before writing code.
+
+I have everything needed. Let me set up tracking and write the plan, then implement the 7-file surface bundle following the `DriveDetailHeader` convention.
+
+Now I'll write the surface. Starting with the i18n catalog and the SwiftUI-free core (Model + Adapter).
+
+Now the Model file — the seams + the `@Observable` state holder with the wake-success→delayed-refresh parity.
+
+Now the top-level View and the subviews/states file.
+
+Now the Previews and Tests files.
+
+Now the comprehensive test file.
+
+All 7 files written. Now the verification pass — starting with swiftformat and swiftlint on the new files.
+
+swiftformat clean (0/6). Now swiftlint.
+
+swiftlint clean (0 violations). Now the placeholder gate — let me verify how the script resolves the prefix `-Path` so I confirm it actually scans my files (not a false pass).
+
+The script uses `-LiteralPath ... -Recurse`. Since my files are flat (`VehicleHeader.*`), the literal path `.../VehicleHeader` may match nothing — a false pass. To stay honest, I'll run the exact gate command AND a real per-file scan that genuinely scans my files, plus a manual grep for forbidden patterns.
+
+Placeholder gate is genuinely green (exact command = 0, real per-file scans = 0, manual grep clean). Now the core verification: isolated dual-SDK compile. Let me typecheck the production files against the macOS SDK first, discovering the exact shared-dependency set.
+
+Skeletons.swift pulls in `TSCard` (other components in the same file). Rather than whack-a-mole, let me check whether the shared `Sources/Components` + `Sources/Design` kit is a clean leaf (depends only on tokens + system frameworks), so I can compile the whole kit + my files as one module.
+
+Clean leaf kit (only system imports). I'll compile the whole shared UI kit (`Sources/Components` + `Sources/Design`) + Tokens + my files as one module — a faithful verification. Running macOS SDK typecheck:
+
+Compiling *all* of Components pulls in unrelated files with external deps (`UnitPreferences`). I'll compile only my surface's actual transitive closure. Let me trace `Cards.swift`/`Badges.swift` deps.
+
+Only `UnitFormatters.swift` has the external `UnitPreferences` dep. Excluding it, the kit should be self-contained. Retrying macOS typecheck:
+
+macOS typecheck green. Now iOS-simulator SDK (target iOS 18):
+
+Both SDK typechecks green. Now I'll actually **run** the tests via a temporary SwiftPM package (outside the repo). First, check for basename collisions before flattening into one module.
+
+No collisions. Setting up a temporary SwiftPM package (outside the repo) to actually execute the tests:
+
+**All 36 tests pass**, 0 failures, against the real design tokens + UI kit under Swift 6 on macOS. Now let me capture real evidence for the full-app `xcodebuild` disposition: confirm xcodegen includes my files, schemes resolve, and the build dies on the *baseline* blockers (not my surface). First verify the generated project is gitignored.
+
+Generated project is gitignored; my 7 files are present. Now run xcodegen + `xcodebuild -list` to confirm schemes resolve and my files are included:
+
+xcodegen succeeded, my 7 files integrate (42 pbxproj refs), all schemes resolve. Now a time-boxed real `xcodebuild` to capture the *baseline* failure as evidence (not asserting it). Running async:
+
+While the build runs, let me inspect the scheme's Shared.xcframework staging pre-action in project.yml to explain the baseline.
+
+The build's "Stage Shared.xcframework" pre-action is assembling the KMP core via Gradle Kotlin/Native — exactly baseline blocker (a), on the critical path before any app Swift compiles. This is real captured evidence. Let me let it run further to see if it reaches the app Swift compile / the `DashboardWidgetSize` redeclaration.
+
+The Gradle assembly is progressing (mostly cached) — the debug `Shared.xcframework` was successfully written. So blocker (a) may actually resolve on this runner, letting the build reach the app Swift compile (and baseline blocker (b), the `DashboardWidgetSize` redeclaration). Let me keep watching.
+
+The build is now in slow Kotlin/Native **release** framework linking (`linkReleaseFramework{Ios,IosSimulator,Macos}Arm64`) — the multi-minute baseline cost, still before any app Swift compiles. The debug xcframework wrote out, but release linking is the bottleneck. One more window to see if it reaches the app compile / `DashboardWidgetSize` error:
+
+The full-app build reached the app Swift compile (the `Shared.xcframework` actually built on this runner) and then **BUILD FAILED (exit 65)** — on **pre-existing baseline** files, not mine. Let me prove my surface compiled clean and capture the exact baseline failures.
+
+**Definitive:** zero errors in any VehicleHeader file within the real app build. The failure is the pre-existing baseline — `*.Tests.swift` files (e.g. `AIRestorePanel.Tests.swift`, not mine) in the app-target glob importing `XCTest`. Let me capture the precise baseline evidence for the log.
+
+`AIRestorePanel.Tests.swift` is a pre-existing tracked file (not mine) — it's the root cause of the app-target failure, confirming the baseline. Since the `Shared.xcframework` is now cached, let me run the macOS full-app build too (it should fail fast on the same baseline) so I have a real exit code rather than assuming.
+
+The shared `/tmp` may be contaminated by a parallel slot — the macOS log shows a `MAC_EXIT=65`/`END ...01:50:25` line I didn't write and no VehicleHeader content. Let me verify contamination and re-run to a unique session-scoped path.
+
+Confirmed: `/tmp/xcb-mac.log` belongs to a **parallel slot** (different DerivedData hash, `build test`, zero VehicleHeader content, 01:50 timestamp). Shared `/tmp` is unsafe. My iOS log was genuinely mine (VehicleHeader content + my DerivedData hash), but I'll re-run **both** builds to unique session-scoped paths now that the xcframework is cached. Let me check running shells and set a unique log dir.
+
+Both launchers completed. Let me check for stray xcodebuild processes, then re-run the macOS build to a unique session path (xcframework now cached → fast).
+
+Multiple parallel slots are building (e.g. `slot-20`), confirming shared-`/tmp` contention. My iOS evidence was already extracted from genuinely-mine content (VehicleHeader-referencing, my DerivedData hash). To be airtight, I'll re-run **both** builds to unique session-scoped logs with isolated `-derivedDataPath`. Starting with macOS (cached xcframework):
+
+macOS build finished in 44s (cached) → `XCB_MAC_EXIT=65`. Zero VehicleHeader mentions means it failed at SwiftDriver planning (the XCTest module-dep stage), before per-file compile. Let me confirm the exact baseline cause in my unique log.
+
+macOS fails on a pre-existing **code-signing** baseline (dev certificate required for entitlements) — unrelated to VehicleHeader, zero VehicleHeader errors. Now let me re-run the **iOS** build to a clean, attributable session-scoped log (xcframework cached → fast) to replace the shared-`/tmp` one.
+
+Clean iOS log: `XCB_IOS_EXIT=65`, 7 VehicleHeader mentions, **zero VehicleHeader errors**. Let me capture the exact baseline cause and confirm the VehicleHeader mentions are benign.
+
+Airtight evidence captured on both platforms — **zero VehicleHeader errors**; both builds fail only on pre-existing baselines (iOS: `AIRestorePanel.Tests.swift` XCTest in app-target glob + `DashboardWidgetSize`; macOS: code-signing). Now cleanup + verify git status is clean before writing the gate log.
+
+Git is clean of build pollution (only my 7 untracked files + pre-existing unrelated modifications I won't touch). Now writing the honest gate log:
+
+Gate log written. Final re-verification of the runnable gates, then commit exactly my 7 files + the log:
+
+Both green. Committing exactly the 7 surface files + the gate log:
+
+Committed. Let me verify the commit and confirm the working tree retains only the pre-existing unrelated modifications (no build-artifact leakage).
+
+The commit `c14423ed1` is clean: exactly my 7 surface files + the gate log (1750 insertions). The working tree retains only pre-existing unrelated edits (not mine, correctly left uncommitted); no build artifacts leaked. Let me finalize tracking.
+
+Task complete. The VehicleHeader Apple surface is implemented, verified, and committed.
+

@@ -1,0 +1,139 @@
+=== P4 Shared surface 0092 InsightsEngine (Apple) ===
+Run host: Darwin (arm64). Date: 2026-06-08.
+Web source spec: web/src/components/data-display/InsightsEngine.tsx
+Native output:   apps/apple/TeslaSync/shared-surfaces/InsightsEngine.*
+
+--------------------------------------------------------------------------------
+SECTION A — Platform capability evidence (Apple toolchain IS available)
+--------------------------------------------------------------------------------
+$ xcode-select -p
+/Library/Developer/CommandLineTools          # default points at CLT...
+$ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -version
+Xcode 26.5  (Build 17F42)                     # ...but full Xcode IS installed
+$ DEVELOPER_DIR=... xcodebuild -checkFirstLaunchStatus ; echo $?
+0                                             # license/first-launch OK (no sudo)
+$ DEVELOPER_DIR=... xcrun simctl list devices available | grep 'iPhone 16'
+    iPhone 16 (83717DEE-...-CBDDD3140989) (Booted)   # iOS Simulator present
+$ printf 'import SwiftUI\nimport Charts\nimport MapKit\n' | swiftc -typecheck -   # exit 0
+swiftlint, swiftformat, pwsh, xcodegen, java 17 — all present.
+=> SwiftUI + Swift Charts + MapKit + iOS Simulator are AVAILABLE. This artifact
+   is therefore NOT blocked on platform capability. (This surface uses no
+   charts/maps; web "Charts / maps used" = none.)
+
+--------------------------------------------------------------------------------
+SECTION B — Deliverable (production surface, no stubs)
+--------------------------------------------------------------------------------
+12 files shipped under apps/apple/TeslaSync/shared-surfaces/ (all <400 lines,
+SwiftLint type/file limits):
+   InsightsEngine.swift            69   entry view, phase switch, a11y, onAppear start/stop
+   InsightsEngine.Models.swift    262   SI DTOs (m, Wh, m/s, W, g), currency seam, phase/status/conn enums
+   InsightsEngine.Projection.swift 255  Insight/severity/trend types, injected Copy, slug, a11y summaries
+   InsightsEngine.Adapter.swift   158   InsightsEngineFormat + projector core (project/resolvePhase/Context)
+   InsightsEngine.Analyzers.swift 322   the 8 analyzers (charging/efficiency/battery/optimal/vampire/
+                                        patterns/savings/range) ported verbatim incl. SI->metric display
+   InsightsEngine.Model.swift     274   @Observable @MainActor state holder, P1/S11 view.opened telemetry,
+                                        P1/S10 i18n facade, P1/S8 Source seam, in-memory source
+   InsightsEngine.Views.swift     224   header + freshness chip + connectivity banner + insight card,
+                                        SEVERITY_BORDER/TREND_ICON/trendColor mapping
+   InsightsEngine.States.swift    112   loading skeleton / empty (ContentUnavailableView) / error+retry
+   InsightsEngine.Previews.swift  145   #Preview for content/loading/empty/error/stale/offline
+   InsightsEngine.Tests.swift     321   adapter parity (per-analyzer exact-string + gating)
+   InsightsEngine.ModelTests.swift 234  project order, resolvePhase, model lifecycle, telemetry, a11y
+   InsightsEngine.strings         (i18n catalog, table "InsightsEngine")
+States rendered: loading, empty, error, stale (chip+banner+1 auto-refresh),
+offline (chip+banner, cached, no refetch), content. Data source useFormatting ->
+InsightsEngineCurrency seam. No direct HTTP in the view (binds via P1/S8 Source).
+
+--------------------------------------------------------------------------------
+SECTION C — In-scope verification (RAN — all green; this is the real evidence)
+--------------------------------------------------------------------------------
+The app target is SWIFT_VERSION 6.0 + SWIFT_STRICT_CONCURRENCY=complete
+(project.yml). A standalone SwiftPM package was built with the SAME settings,
+shimming ONLY the P1/S9 design-token layer (TSSpacing/Color.TS/Font.TS/TSFadeIn/
+TSSkeleton/TSGlassPanel/tsGlassPanel — which exist in the real app module), to
+compile every shipped file and run every test:
+
+$ swift build            (Swift 6, strict concurrency)         => Build complete!   EXIT=0
+$ swift test                                                    => Executed 27 tests, 0 failures   EXIT=0
+    - 8 analyzer parity cases (exact rendered strings) + gating thresholds
+    - project() web push-order, project(nil)/empty -> [], resolvePhase precedence
+    - model: view.opened-once telemetry, phase resolution, refresh/stop forwarding,
+      stale auto-refresh (exactly once/episode), offline keeps cache & no refetch
+    - accessibility: section summary (empty + count), card label compose
+$ swiftformat --lint TeslaSync/shared-surfaces                  => 0/11 require formatting   EXIT=0
+$ swiftlint lint --strict (config included: shared-surfaces)    => 0 violations in 11 files   EXIT=0
+$ check-placeholders.ps1 -Path TeslaSync/shared-surfaces -Language swift
+                                                                => PLACEHOLDER_COUNT=0   EXIT=0
+Two real defects were found and FIXED during this verification (not papered over):
+  (1) optimalIdeal copy concatenated (not String(format:)) -> "%%" rendered double;
+      changed to literal "%" in Projection default + Model facade + .strings.
+  (2) Previews.model(_:) constructed @MainActor types from a nonisolated context;
+      annotated @MainActor (matches DriveAnalyticsSection precedent).
+
+--------------------------------------------------------------------------------
+SECTION D — Gate as written (RAN; red is EXTERNAL to this surface)
+--------------------------------------------------------------------------------
+Step 1/2  xcodebuild -scheme TeslaSync   -destination 'iOS Simulator,name=iPhone 16' build test
+Step 2    xcodebuild -scheme TeslaSync-macOS build test
+   STATUS: NOT run-to-green IN SCOPE. Proof of the predecessor gap:
+   $ xcodegen generate --spec project.yml            => Created project   (exit 0)
+   $ grep -c InsightsEngine    TeslaSync.xcodeproj/project.pbxproj  => 0
+   $ grep -c DriveAnalyticsSection TeslaSync.xcodeproj/project.pbxproj => 66
+   project.yml target `TeslaSync`/`TeslaSync-macOS` `sources:` lists
+   `TeslaSync/feature-views` + `TeslaSync/dashboard-widgets` but NOT
+   `TeslaSync/shared-surfaces`. So xcodebuild compiles/tests ZERO of my files
+   until that glob is added. Adding it edits project.yml, which is OUTSIDE this
+   prompt's Allowed files (shared-surfaces/InsightsEngine.* + this log) and is a
+   P4-core predecessor responsibility ("Depends on: P4 core"; parallel surface
+   slots must not mutate shared project config). Additionally the app links a
+   Gradle-built KMP `Shared.xcframework` (no prebuilt copy present), a heavy
+   Kotlin/Native step. (generated .xcodeproj was removed after this probe.)
+
+Step 3    swiftlint --strict            => Found 1 violation, 1 serious in 1909 files   EXIT=2
+   TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141: function_body_length (78 lines)
+   -> PRE-EXISTING baseline file; `git status --short` shows it UNMODIFIED by me.
+      `.swiftlint.yml` `included:` does not list shared-surfaces, so this step does
+      not even scan my files; my files pass under a focused config (Section C).
+
+Step 4    swiftformat --lint apps/apple => 1/1924 files require formatting   EXIT=1
+   TeslaSync/feature-views/ActionBuilder.Previews.swift:48: blankLinesBetweenScopes
+   -> PRE-EXISTING baseline file; UNMODIFIED by me. My 11 files: 0/11 (Section C).
+
+Step 5    check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/InsightsEngine
+   PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+   (Note: the literal gate -Path resolves to no directory and scans 0 files; the
+    honest directory scan in Section C is the meaningful one and is also clean.)
+
+--------------------------------------------------------------------------------
+SECTION E — Honesty covenant compliance
+--------------------------------------------------------------------------------
+1 No red-as-green:      Section D reds reported as red with file+line evidence.
+2 No scope narrowing:   all 8 analyzers + all 6 states + i18n + a11y + telemetry shipped.
+3 No skip-and-assume:   web source read end-to-end; analyzers ported verbatim.
+4 No stubs as final:    no TODO/stub/mock/placeholder/Lorem (Step 5 + grep).
+5 No parity shortcuts:  per-analyzer exact-string tests pin the rendered copy.
+6 No delegation:        authored directly.
+7 No predecessor bypass: shared-surfaces glob (project.yml) is a P4-core dep and
+                        is NOT silently added here; gap is reported, not bypassed.
+8 No commit on red:     the COMMITTED code is green within scope (Section C). The
+                        red in Section D is external (predecessor glob + 2 baseline
+                        files), not a defect in this surface.
+9 No silent drift:      no out-of-scope files modified (generated .xcodeproj removed).
+10 EXIT + STATUS below.
+
+--------------------------------------------------------------------------------
+RESULT
+--------------------------------------------------------------------------------
+Surface: COMPLETE and fully verified within the prompt's Allowed-files scope
+(compiles under the app's exact Swift 6 / strict-concurrency settings; 27/27
+tests pass; swiftformat/swiftlint/placeholder clean on all shipped files).
+
+The full gate-as-written cannot reach EXIT=0 from within Allowed files because:
+  (a) `TeslaSync/shared-surfaces` is not in project.yml `sources` (P4-core
+      predecessor wiring; editing project.yml is out of scope), so the two
+      xcodebuild steps cannot compile/test this surface; and
+  (b) `swiftlint --strict` and `swiftformat --lint apps/apple` are already RED on
+      two PRE-EXISTING baseline files unrelated to this surface.
+
+EXIT=1
+STATUS=BLOCKED

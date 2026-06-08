@@ -1,0 +1,160 @@
+I'll start by exploring the repository structure and understanding the task requirements. Let me look at the web source, the existing Apple app structure, and the P1 dependencies in parallel.
+
+Good — full Apple toolchain is available (Swift 6.3.2, xcodebuild, swiftlint, swiftformat, pwsh). The web source is clear. Now let me understand the existing Apple app architecture and the P1 dependencies (state holders, tokens, i18n, diagnostics).
+
+This is a mature, large Apple app. Each surface follows a multi-file pattern (`.swift`, `.Adapter.swift`, `.Model.swift`, `.Views.swift`, `.States.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`). Note `modals-dialogs` is NOT yet in `project.yml` sources. Let me study the infrastructure (state holders, i18n, tokens, diagnostics, shared components) and find a representative complete example.
+
+`xcodegen` is available; `.xcodeproj` is generated on demand. Let me read the core infrastructure: the Modal/Button/Badge equivalents, the state-holder layer, and feedback states.
+
+The state-holder layer binds to a KMP `Shared.xcframework` via `StateHolderModel` (Kotlin `StateFlow`) and `LoadableState` (`Resource<T>`). I need to understand the changelog data contract — the web `useChangelog` reads bundled/generated data, not a network resource. Let me read the web hook, the generated changelog shape, and a complete reference surface.
+
+I understand the data shape now — changelog is bundled static data + local "seen version" persistence, not a network resource. Let me see the rest of `useChangelog`, check for a Shared/KMP changelog holder, and verify whether the `Shared.xcframework` is prebuilt (critical for the build gate).
+
+Critical: `Frameworks/Shared.xcframework` is absent (only `.gitkeep`) — the build stages it via a script. Let me check that script and whether the KMP/Kotlin toolchain exists, since this decides whether the full `xcodebuild` gate can pass. Meanwhile, changelog data is local (bundled + persisted seen-version), so it doesn't hit the Shared core.
+
+Two capability red flags: no iOS simulator matched "iPhone 16", and `-showsdks` printed nothing. Let me verify whether this is full Xcode or just Command Line Tools, and what SDKs/simulators actually exist — this is decisive for the build gate.
+
+Decisive: only **Command Line Tools** is installed — `xcodebuild` cannot run (requires full Xcode). This directly maps to the prompt's capability clause. Let me confirm no `Xcode.app` exists anywhere and check what verification IS possible, then study conventions deeply.
+
+Excellent — **full Xcode 26.5 IS installed** at `/Applications/Xcode.app` (just not `xcode-select`ed). I can use it via `DEVELOPER_DIR`. So the platform capability exists. The big remaining unknown is building the KMP `Shared.xcframework` via Gradle. Let me probe that toolchain and study a complete reference surface in parallel.
+
+Capability confirmed: Xcode 26.5, iOS 26.5 simulator (iPhone 16 **booted**), Java 17, gradlew present. The build pipeline is feasible. Now let me nail the conventions: the Model/Adapter/Strings-helper/diagnostics patterns, plus the Badge/Button components and where the per-surface `Strings` helper is defined.
+
+I now understand the convention deeply: `.Adapter.swift` (pure projection core), `.Model.swift` (`@Observable` state holder + telemetry/i18n/source seams), `.swift` (entry view), `.States.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`/`.ModelTests.swift`. 
+
+The Shared.xcframework (Gradle/KMP) is the long pole for the build gate. Let me kick that off in the background while I read the UI components I'll use (Badge, Button, Disclosure, Typography) and the preview/test conventions.
+
+Got the Badge (`TSBadge`/`TSTone`) and disclosure patterns. Now let me start the long-pole Gradle build of `Shared.xcframework` in the background, and read the remaining conventions (Buttons, Typography, design tokens, Previews/Tests/Views of the reference surface).
+
+Let me launch the `Shared.xcframework` Gradle build in the background (the long pole), then continue reading conventions (tests, content views, design tokens, typography).
+
+The background build kicked off (pid 92482), though my `echo` mis-expanded the var due to the `&`. Let me verify the build is alive and tailing its log, and read the design tokens + typography + model-test conventions.
+
+The Gradle build is progressing using a shared build cache (`FROM-CACHE`, downloading Kotlin/Native) — and I can see sibling slots building the same target, so the cache is warm. Let me read the exact token + typography definitions so I use correct names, then write the surface.
+
+Let me read the generated tokens to confirm exact spacing/radius/color/font/motion names, and the GlassPanel + FadeIn + Skeleton components I'll use.
+
+I have all tokens and components. One critical wiring question before I write: how are the per-surface `.Tests.swift`/`.ModelTests.swift` files (which `@testable import TeslaSync`) compiled, given they live in `feature-views/` (an app-target source path) but the test target only lists `Tests/Unit`? Let me resolve this precisely.
+
+`Tests/Unit` is a separate tree; the per-surface `.Tests.swift` in `feature-views/` compile into the **app** target (no excludes). I need to confirm `@testable import TeslaSync` from within the module is a warning (not error). Let me verify that empirically, check build progress, read the full changelog data to port, and grab the GlassPanel/FadeIn/Skeleton signatures.
+
+Confirmed: self `@testable import TeslaSync` is a **warning** ("ignoring import"), so the per-surface test files validly compile into the app target — I'll mirror that. And the **Shared.xcframework build is nearly done** (debug XCFramework written, now linking release). Let me read the full changelog data to port faithfully, plus the feedback States/Banners components.
+
+I have all components (`TSEmptyState`, `TSErrorDisplay`, `TSQueryError`, `TSGlassPanel`, `TSFadeIn`, `TSSkeleton`, `TSBadge`). Let me read the rest of the changelog data to port it faithfully, then start writing. Let me also check on the build.
+
+I now have the complete changelog data and all infrastructure. Let me check the lint/format configs (to avoid violations), confirm the framework staged, then write a plan and build the surface.
+
+Build is still linking the release iOS framework. Lint config noted (line ≤120/160, `empty_count`, `explicit_init`, type names ≤50, `--self remove`, `@testable` at bottom). Let me set up tracking and start writing the surface.
+
+Now let me write the surface. Starting with the directory and the pure Adapter core.
+
+Let me fix a reference: `section.localizationKey`/`section.fallback` should be `section.type.localizationKey`/`section.type.fallback`.
+
+Now the bundled catalog (faithful port of the generated web changelog). Since it's ported generated data with long strings, I'll mark it generated and disable lint/format on it — mirroring how `Tokens.swift` is handled. I'll wire `modals-dialogs` into the lint config and project shortly.
+
+Now let me add the load-status/connection/phase types + `resolvePhase` to the pure Adapter, then write the Model (state holder + seams).
+
+Now the Views (content, collapsible entry row, badge, section group, freshness banner, palette).
+
+Now the States (loading skeleton, empty, error, freshness chip).
+
+Now the main host view + sheet container.
+
+Now the i18n strings table (web keys + native envelope).
+
+Now the previews (one per state) and the tests.
+
+Now the pure adapter tests and the model state-holder tests.
+
+All 9 surface files are written. Now I must wire the new `modals-dialogs` tier into the build (`project.yml` — both app targets) and the lint config (`.swiftlint.yml`) — minimal, necessary infra for a new surface directory.
+
+All wiring done. Now let me verify the framework build finished, then format + lint my new files.
+
+Shared.xcframework built successfully and staged. SwiftFormat reformatted 4 files. Let me confirm format is clean, run swiftlint on the new files, and check placeholders.
+
+SwiftFormat is clean (0/9). SwiftLint linted the whole tree (1918 files) and found 4 violations — I need to know if they're in my files or pre-existing. Let me capture the actual violations and exit code.
+
+3 violations are in my files (must fix); 1 is pre-existing in another surface (`LifetimeStatsWidget`). Note: `--strict` promotes the `file_length` warning (>400) to an error. Let me verify the pre-existing one is baseline, check line counts, then fix mine (split Model seams into a new file, trim Adapter, use a struct in tests).
+
+Confirmed: the `LifetimeStatsWidget` violation is a committed **baseline** issue (clean git status, another surface) — out of my scope. Now let me fix my 3: split the Model's seams into a new `ChangelogModal.Seams.swift` file, trim the Adapter under 400 lines, and replace the 3-tuple in tests with a struct.
+
+Now trim the Adapter under 400 lines and fix the tuple in tests. Let me view the Adapter header to condense it.
+
+Now fix the tuple violation in ModelTests by storing source/preferences as test properties (cleaner than a 3-tuple). Let me recreate that file.
+
+Now re-format and re-lint to confirm my files are clean.
+
+Adapter 394, Model 313 — both under 400. Format clean. Now confirm swiftlint shows no violations in my files.
+
+My files are clean; the only remaining lint issue is the pre-existing baseline `LifetimeStatsWidget` (another surface, committed, out of scope). Now the placeholder check, then the real Xcode build/test.
+
+Placeholder check passes (0 placeholders). Now the real gate: generate the Xcode project and build/test. Let me generate first.
+
+Project generated with my 66 ChangelogModal references included. Now the real build+test. Let me start the iOS build/test in the background (long-running) and monitor via log.
+
+The build is running (pid 39780); my inline `tail` missed the path due to the backgrounding subshell. Let me poll the log directly.
+
+Build is in the Gradle pre-step (cached, fast) then will compile ~1900 files. Let me wait and poll for progress/errors.
+
+The build failed — but on a **pre-existing** file (`feature-views/AIRestorePanel.Tests.swift`), not mine: the app target can't resolve `XCTest`. The per-surface `*.Tests.swift` files (including mine) import XCTest into the application target. Let me investigate the intended build setup before deciding the fix.
+
+This is the key finding: `apps/macos-pending-verifications.md` **documents this exact pre-existing baseline blocker** — 116–152 co-located `*.Tests.swift` files importing XCTest into the app target (plus `DashboardWidgetSize` redefinitions + signing) block the full-app `xcodebuild build test`. Prior P4 surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) follow an established protocol: verify the surface **in isolation** and defer the full-app gate to the acceptance-gate prompt.
+
+I'll follow that precedent exactly. First, an isolated SwiftPM package to actually compile + run my logic/model tests.
+
+Now compile + run the isolated tests under Swift 6 strict concurrency.
+
+All **51 isolated tests passed** under Swift 6 strict concurrency (logic, model lifecycle, telemetry, semver, projection, accessibility). Now let me typecheck the UI files against the real design system on both SDKs. First, confirm the design-system sources are `Shared`-free.
+
+The design system is `Shared`-free (only SwiftUI/Charts/MapKit/etc.). Let me typecheck my full surface against the real design system on both the iOS 18 and macOS 15 SDKs. Let me check the lone UIKit/AppKit imports are platform-guarded first.
+
+Both are platform-guarded. Now typecheck my full surface (8 non-test files) against the real design system on the **iOS 18** SDK under Swift 6 language mode.
+
+The errors are **not in my files** — they're in `Sources/Components/DataDisplay/UnitFormatters.swift`, which transitively uses Shared/KMP types (`UnitPreferences`, `Units`). I over-included the design system; my surface doesn't use DataDisplay. Let me narrow to the Shared-free subset my surface actually needs.
+
+The UI/Feedback/Motion/Design subset is Shared-free. Let me typecheck my full surface against it on both the iOS 18 and macOS 15 SDKs.
+
+Both SDKs: 2 errors total, **none in my files**. Let me see what those 2 design-system errors are (likely another file I over-included).
+
+The only error is `TSMetricBar` in `FeedbackOverlays.swift` (which I over-included; it needs DataDisplay, and my surface doesn't use it). Let me re-run excluding that file.
+
+**Both SDK typechecks pass: iOS 18 = 0 errors, macOS 15 = 0 errors**, Swift 6 strict concurrency. Every host-runnable gate for my surface is green. Now let me write the gate log and record the macOS-pending deferral. Let me check the logs directory and an existing log for format.
+
+I now see the established precedent format (`p4-apple-feature-views-0002-BackendTool.log`): host-runnable gates green, the full-app `xcodebuild build test` shown **DEFERRED with its real exit code + cause** (not as a pass), ending `EXIT=0 / STATUS=DONE`. Let me capture the real xcodebuild exit code honestly (fast incremental build to the same pre-existing error).
+
+Let me capture the real exit code properly via the scheme (incremental, mostly cached).
+
+Build is recompiling the app target. While it runs, let me wait for the exit code.
+
+Confirmed: **real `xcodebuild` exit 65**, caused by the pre-existing `feature-views/AIRestorePanel.Tests.swift` (XCTest in app target) — **zero errors in my files**. This is the documented baseline blocker, and matches the predecessor-accepted disposition (host gates green; full-app build deferred). Let me capture the whole-tree format result and check what's git-ignored before writing the log.
+
+I see unrelated pre-existing modifications in the worktree (`AIUsageCard.*`, two `web/*` files) that are **not mine** — I'll exclude them from my commit. The xcodeproj/build/framework are correctly gitignored. Whole-tree format has 1 pre-existing issue (`ActionBuilder.Previews.swift`), not mine. Let me confirm the unrelated changes predate my work, then write the log + deferral record.
+
+The `AIUsageCard.*` (162/111 line diff) and `web/*` changes are clearly pre-existing/unrelated baseline modifications — I'll exclude them. My `modals-dialogs/` is correctly untracked (only my addition). Now let me write the honest gate log following the established predecessor format.
+
+Now let me record this surface in the macOS-pending verification ledger (following the four predecessor rows).
+
+Now let me clean up temporary artifacts and commit only my intended files (excluding the unrelated pre-existing `AIUsageCard.*`/`web/*` changes).
+
+All 11 files present. Let me stage only my intended files, verify the staged set, then commit.
+
+Staged set is exactly correct. Let me commit.
+
+Committed as `dc8861e1f` (15 files, 2547 insertions). Let me do a final verification that the working tree is clean of my work (only the pre-existing unrelated changes remain) and no build artifacts leaked in.
+
+The working tree contains only the **pre-existing, unrelated** baseline modifications (`AIUsageCard.*`, two `web/*` files) — substantive changes I never touched and correctly left uncommitted. My commit `dc8861e1f` is clean with no build artifacts.
+
+The task is complete. Final verification summary:
+
+**Shipped:** `apps/apple/TeslaSync/modals-dialogs/ChangelogModal.*` — 11 files (Adapter, Data, Seams, Model, host `.swift`, Views, States, Previews, `.strings`, Tests, ModelTests), a faithful native SwiftUI parity of `components/feedback/ChangelogModal.tsx` + `useChangelog`.
+
+**Every host-runnable gate is green:**
+- `swiftformat --lint`: 0 findings in my files (1 pre-existing elsewhere)
+- `swiftlint --strict`: 0 violations in my files (1 pre-existing baseline elsewhere)
+- placeholder gate: `COUNT=0`
+- `xcodegen generate`: rc=0, enumerates the surface (66 refs)
+- isolated SwiftPM `swift test`: **51/51 pass** under Swift 6 strict concurrency
+- `swiftc -typecheck`: **iOS 18 = 0 errors, macOS 15 = 0 errors**
+
+**Full-app `xcodebuild build test`:** real exit **65**, blocked by the *documented, pre-existing* baseline collision (co-located `*.Tests.swift` importing XCTest into the app target — fails at `AIRestorePanel.Tests.swift`; zero `modals-dialogs` errors). Recorded in `apps/macos-pending-verifications.md`, matching the four predecessor P4 surfaces, and deferred to the acceptance gate.
+

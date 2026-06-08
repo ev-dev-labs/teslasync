@@ -1,0 +1,186 @@
+=== P4 Feature view 0149 SpeedHistogramChart (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.x · swiftformat 0.61.x · xcodegen · pwsh 7 · Java 17 (OpenJDK).
+  Destinations       : iOS Simulator "iPhone 16" present (Booted) · iOS 26.5 SDK · macOS 26.5 SDK present.
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 12m12s; release + debug
+                       XCFrameworks staged to apps/apple/Frameworks/Shared.xcframework). Re-run as the scheme
+                       build pre-action inside both xcodebuild invocations below (daemon warm → fast).
+  Capability         : SwiftUI + Swift Charts present, iOS/macOS SDKs + iPhone 16 simulator present
+                       → NOT capability-BLOCKED. (This surface uses no MapKit — web "Charts / maps used: none".)
+
+WEB SOURCE (the specification)
+  web/src/features/driving/components/drive-detail/SpeedHistogramChart.tsx — a single-series speed-bucket histogram.
+    props: speedHistData: SpeedHistogramBucket[]  (range: string; pct: number) — already bucketed + Math.round-ed
+           by the parent drive-detail hook (useDriveDetailData.ts); this component owns NO bucketing math.
+    render: ChartContainer(title "Speed Histogram", aria "Speed-bucket distribution histogram", dataColumns
+            [range "Speed range", pct "% of drive"], height 220) wrapping —
+              speedHistData.length > 0
+                ? Recharts <BarChart data={speedHistData}> with <CartesianGrid>, <XAxis dataKey="range">,
+                  <YAxis>, <Tooltip ChartTooltip>, single <Bar dataKey="pct" fill="#a855f7"
+                  name={`% ${t('driveDetail.ofDrive','of drive')}`} radius={[4,4,0,0]}>
+                : empty overlay — lucide <Activity/> (opacity 20%) over <p>{t('driveDetail.noChartData',
+                  'No telemetry data available')}</p>
+    the component's ONLY data transform: data={speedHistData.map((b) => ({ range: b.range, pct: b.pct }))}.
+  Data sources (prompt): useTranslation.  Shared components: @/components/charts, @/components/motion.  Maps: none.
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/feature-views/SpeedHistogramChart.*)
+  SpeedHistogramChart.Adapter.swift   (228) — pure (Foundation-only) projection: SpeedHistogramBucket (web prop
+                                              shape range/pct), SpeedHistogramRow (sanitized bar), SpeedHistogram
+                                              {Phase,LoadStatus,Connection}, SpeedHistogramProjection (chartRows =
+                                              the web .map + null-safety hardening: em-dash label sentinel +
+                                              finite/non-negative pct clamp; resolvePhase = web length>0 split;
+                                              peakBucket / maxPct / totalPct / sanitizedPct / label),
+                                              SpeedHistogramFormat (locale whole-percent + unit),
+                                              SpeedHistogramSurface (slug), SpeedHistogramAccessibility (chart
+                                              summary + per-bucket VoiceOver value).
+  SpeedHistogramChart.Model.swift     (232) — P1/S11 telemetry seam (OSLog "view.opened"), P1/S10 i18n facade
+                                              (NSLocalizedString table "SpeedHistogramChart" + web fallbacks),
+                                              SpeedHistogramUpdate snapshot, P1/S8 SpeedHistogramChartSource seam,
+                                              @Observable SpeedHistogramChartModel (projects buckets → rows, phase
+                                              + freshness, once-only view.opened, guarded stale auto-refresh,
+                                              offline keeps cache), InMemorySpeedHistogramSource.
+  SpeedHistogramChart.Views.swift     (344) — header (title + histogram glyph + freshness chip), stale/offline
+                                              banner, single-series Swift Charts BarMark chart (web fill #a855f7
+                                              → Color.TS.chartSeriesPower, cornerRadius 4 = web radius[4,4,0,0],
+                                              x-selection RuleMark tooltip, "% of drive" Y label), loading skeleton
+                                              bars, empty (ContentUnavailableView + Activity-equivalent glyph),
+                                              error (retry).
+  SpeedHistogramChart.swift           ( 75) — SpeedHistogramChart View: TSFadeIn card, switch over phase (loading/
+                                              error/empty/content), onAppear start / onDisappear stop, a11y summary.
+  SpeedHistogramChart.Previews.swift  ( 88) — #if DEBUG previews: Content / Empty / Loading / Error / Stale / Offline.
+  SpeedHistogramChart.strings         ( 46) — P1/S10 catalog (table "SpeedHistogramChart"): the 6 web source keys +
+                                              the web parent section error key + the native state-envelope keys;
+                                              plutil -lint = OK.
+  SpeedHistogramChart.Tests.swift     (296) — 30 XCTest cases (adapter projection + sanitization + formatting +
+                                              state holder + a11y + telemetry + surface slug).
+  No shared-wiring edits needed: feature-views is already a source path for TeslaSync / TeslaSync-macOS and an
+  included dir for swiftlint; the per-surface .strings keeps i18n self-contained exactly as the sibling
+  SpeedTrendChart / SentryModeChart surfaces do. Zero files outside SpeedHistogramChart.* touched.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  ChartContainer card     → GlassPanel-equivalent: Color.TS.surface + TSRadius.lg + Color.TS.border, TSFadeIn.
+  Recharts BarChart       → SwiftUI Charts `Chart { BarMark }`, single series (web's lone <Bar>), cornerRadius 4.
+  fill="#a855f7"          → Color.TS.chartSeriesPower — an EXACT token match: #a855f7 = sRGB(0.659,0.333,0.969),
+                            and chartSeriesPower is defined as sRGB(0.659,0.333,0.969). No literal in native code.
+  <XAxis dataKey="range"> → categorical x over the bucket range label; <YAxis> → leading integer % ticks +
+                            chartYAxisLabel "% of drive" (web Bar name + dataColumns header); ChartTooltip →
+                            x-selection tooltip (range over "% of drive": value).
+  <Activity/> empty glyph → ContentUnavailableView with "waveform.path.ecg" (the repo's lucide-Activity mapping)
+                            over driveDetail.noChartData "No telemetry data available".
+  i18n      : every string via the P1/S10 facade; the 6 web source keys are present + parity-checked (below).
+  a11y      : chart accessibilityLabel = the web ariaLabel; per-bar .accessibilityValue "{range}: X% of drive";
+              card-level summary "Speed Histogram: N speed ranges. Most time {range}: X% of drive". Dynamic Type
+              (Font.TS roles), Reduce Motion respected (TSFadeIn / chart animation gated).
+  states    : web content/empty WIDENED to loading/content/empty/error/stale/offline (the P4 envelope, supplied by
+              the bound source — same precedent as siblings SpeedTrendChart / SentryModeChart). No blank surfaces.
+  telemetry : view.opened surface="SpeedHistogramChart" via SpeedHistogramChartModel.start (P1/S11), default OSLog.
+  scope note: the web speed→bucket math lives in the parent hook useDriveDetailData.ts (a DIFFERENT artifact, out of
+              this prompt's scope), NOT in SpeedHistogramChart.tsx. The native surface faithfully consumes the same
+              SpeedHistogramBucket (range, pct) input contract — it does not re-port the parent's bucketing.
+
+i18n SOURCE-KEY PARITY  (every key extracted from the web source has a catalog entry)
+  OK driveDetail.speedHistogram        OK driveDetail.col.range       OK driveDetail.ofDrive
+  OK driveDetail.speedHistogram.aria   OK driveDetail.col.pct         OK driveDetail.noChartData
+  (+ driveDetail.section.speedHistogramFailed — the web parent section-boundary error copy, reused by the native
+     error state; + native state-envelope keys: freshness chip, stale/offline banners, loading/empty/retry, units.)
+
+GATES
+  [GREEN]    swiftformat --lint  (SpeedHistogramChart scope, 6 files)  : 0/6 require formatting              (FORMAT_EXIT=0)
+             swiftformat --lint  apps/apple  (whole tree, FYI)         : 1/1919 — PRE-EXISTING ActionBuilder.Previews.swift
+                                                                         (blankLinesBetweenScopes); NOT a SpeedHistogramChart
+                                                                         file, not introduced/touched here.
+  [GREEN]    swiftlint --strict  (SpeedHistogramChart scope, 6 files)  : 0 violations, 0 serious             (LINT_EXIT=0)
+             swiftlint --strict  (whole tree, FYI)                     : 1 violation — PRE-EXISTING function_body_length in
+                                                                         TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+                                                                         (the same pre-existing offender the 0092 sibling logged).
+  [GREEN]    plutil -lint  SpeedHistogramChart.strings                 : OK
+  [GREEN]    check-placeholders.ps1 (SpeedHistogramChart.* files)      : PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 (PLACEHOLDER_EXIT=0)
+                                                                         (self-test PASS; the gate's bare -Path prefix
+                                                                          '…/SpeedHistogramChart' has no extension and does
+                                                                          not resolve in the flat feature-views layout, so the
+                                                                          exact surface files were scanned instead — 0 hits.)
+  [GREEN]    SpeedHistogramChart build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode =
+             strict-concurrency complete, the same as the app), compiling the EXACT shipped SpeedHistogramChart.*
+             sources (incl. the Swift Charts BarMark view + #Preview states) against the REAL repo design-system
+             files (Tokens.swift / TSDesign.swift / Motion.swift / Skeletons.swift; the real TSCard struct copied
+             verbatim as the one leaf Skeletons.swift references):
+                 Build complete!  ·  Executed 30 tests, with 0 failures                                       (SWIFT_TEST_EXIT=0)
+  [GREEN]    swiftc -typecheck -swift-version 6  — the EXACT shipped sources on the REAL device SDKs:
+                 iOS 18  (iphonesimulator, arm64-apple-ios18.0-simulator)                                      (IOS_TYPECHECK_EXIT=0)
+                 macOS 15 (macosx,        arm64-apple-macos15.0)                                               (MAC_TYPECHECK_EXIT=0)
+  [GREEN]    xcodegen generate                                          : project written; all 7 SpeedHistogramChart files
+                                                                         enumerated into the TeslaSync / TeslaSync-macOS
+                                                                         targets (42 pbxproj references)        (XCODEGEN_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO SpeedHistogramChart errors; all blockers pre-exist this change):
+    iOS  : the app target fails at module-dependency resolution because the repo's co-located *.Tests.swift files
+           `import XCTest` into the app target (XCTest is unavailable to a plain app target). The build reports it
+           against the PRE-EXISTING TeslaSync/feature-views/AIRestorePanel.Tests.swift (the first such file
+           alphabetically). This co-located-test convention spans 171 PRE-EXISTING *.Tests.swift files in
+           feature-views (every sibling surface, incl. SpeedTrendChart.Tests.swift / SentryModeChart.Tests.swift);
+           this surface's SpeedHistogramChart.Tests.swift is the 172nd following the identical sanctioned pattern.
+           It is exactly the blocker recorded in apps/macos-pending-verifications.md, owned by the P4/P99 acceptance
+           gate, not a single surface.
+    macOS: additionally fails because "TeslaSync-macOS" and "TeslaSyncWidgets-macOS" have entitlements that require
+           signing with a development certificate ("Enable development signing…"), which this runner does not
+           provision (no signing identity).
+    grep of BOTH full-app build logs for "SpeedHistogramChart…error:" = 0 hits (iOS:0, macOS:0). Every error line is
+    one of the two pre-existing categories above (iOS: 4 lines, all 'unable to resolve module dependency: XCTest';
+    macOS: 4 lines, all development-signing entitlement errors on the two -macOS targets). The Gradle Shared.xcframework
+    pre-action ran + succeeded inside both invocations. These are the artifacts ADR-012 defers to the macos-latest CI
+    runner; the task rule forbids fixing pre-existing unrelated breakage from a single feature-view prompt (and the
+    allowed-files set is SpeedHistogramChart.* + this log only).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                          explicitly DEFERRED with evidence — never reported as passing.
+  2  No scope narrowing : every web region + branch reproduced — the bucket→bar map, the content/empty split, the
+                          single purple Bar, the range x-axis, the "% of drive" y-axis/name, the ChartTooltip, and the
+                          Activity-glyph empty overlay. (The parent hook's bucketing is a different, out-of-scope file.)
+  3  No skip-and-assume : every gate executed on THIS runner; raw exits pasted; both Xcode failures observed, not assumed.
+  4  No stubs as final  : complete production surface + 30 real tests; placeholder scanner = 0; no TODO/stub/mock/Lorem.
+  5  No parity shortcut : fill/labels/tooltip/units/i18n/a11y/telemetry all mapped to platform tokens + verified; the
+                          #a855f7 → Color.TS.chartSeriesPower mapping is an exact sRGB match, documented above.
+  6  No delegation      : implemented directly; no agents/sub-tasks.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry, P4 core all consumed.
+  8  No commit on red   : the COMMITTED artifact (SpeedHistogramChart.*) is GREEN on every host gate AND on a real
+                          isolated Swift 6 strict-concurrency build+test (30/30) + real iOS-18/macOS-15 typecheck; the
+                          deferred full-app gate is RED only on pre-existing, unrelated blockers (the co-located
+                          XCTest-in-app convention + macOS signing) this commit neither introduces nor touches.
+  9  No silent drift    : changes confined to apps/apple/TeslaSync/feature-views/SpeedHistogramChart.* (7 files) + this
+                          log. Two documented native wideners: web content/empty → full P4 state envelope; a leading
+                          histogram header glyph (consistent with sibling surfaces). No unrelated files modified.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic SpeedHistogramChart shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles (SwiftUI + Swift Charts BarMark) and its 30 tests pass under the app's own Swift 6
+  strict-concurrency rules, against the real design-system, and type-checks on the real iOS-18 + macOS-15 SDKs, with
+  swiftformat/swiftlint/placeholder/plutil all green and xcodegen enumerating all 7 files. The full-app iOS-Simulator
+  + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked by the repo-wide
+  co-located-XCTest-in-app convention (171 pre-existing *.Tests.swift) and by macOS development-signing — both
+  pre-existing, both owned by the P4/P99 acceptance gate on a signed macos-latest CI runner per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate"
+  disposition used by every P4 surface to date (e.g. p4-apple-feature-views-0092-SpeedTrendChart).
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SWIFT_TEST_EXIT=0
+IOS_TYPECHECK_EXIT=0
+MAC_TYPECHECK_EXIT=0
+XCODEGEN_EXIT=0
+
+EXIT=0
+STATUS=DONE

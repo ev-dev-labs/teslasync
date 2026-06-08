@@ -1,0 +1,80 @@
+I'll start by exploring the repository structure to understand what exists and what tooling is available.
+
+Toolchain mostly present. Let me verify xcodebuild actually works and explore the Apple app structure plus the web source.
+
+Critical finding: `xcodebuild` requires full Xcode but only CommandLineTools is installed, and no iOS simulators exist. Let me gather full evidence and understand the existing Apple codebase patterns before deciding scope.
+
+Now I understand the landscape. Let me examine the existing native formatters, state holders, i18n, tokens, diagnostics, and the multi-file convention used by feature-views.
+
+Let me read the unit facade, design tokens, feedback states, and locate the i18n + diagnostics facades, plus the web-side helpers that Speed.tsx depends on.
+
+Let me read the web helpers Speed.tsx depends on, the design tokens, i18n/diagnostics facades, the placeholder checker, and an example test file to learn conventions.
+
+Let me locate the diagnostics/telemetry facade and a reference feature-view that emits `view.opened`, plus examine the multi-file convention and the placeholder checker.
+
+The peer surface `SpeedTrendChart` (0092) establishes the exact conventions. Let me read its model (for the P1/S11 `view.opened` telemetry pattern), view, previews, strings, and find the diagnostics facade + tokens + placeholder checker.
+
+I have a strong grasp of conventions. Let me gather the final references: design tokens, the `.strings` and `.Previews` conventions, the placeholder checker, `UnitPreferences.metric`, and the exact web speed constants.
+
+Let me read the design token roles I'll use, `UnitPreferences.metric/.imperial`, and the placeholder pattern list to avoid forbidden words.
+
+I have all references. Let me verify there are no name collisions for the public types I'll introduce before writing.
+
+No collisions. Let me read the lint/format configs so my code passes `--strict`, then I'll write the surface.
+
+I now have everything needed. Let me create the `shared-surfaces` directory and write the six `Speed.*` files following the established conventions (pure adapter, model seams, view, previews, XCTest, strings).
+
+Now let me verify the core logic by compiling and **running** the pure Foundation adapter with a temporary driver that asserts the same values as the test suite — this proves both compilation and numeric web-parity.
+
+Top-level code needs to be in `main.swift` when compiling multiple files. Let me rename and rerun.
+
+All 21 web-parity checks pass and the adapter compiles cleanly. Now let me run the gate tools that work on this runner: swiftformat, swiftlint (explicit paths, since the config's `included` doesn't yet list `shared-surfaces`), syntax-parse the SwiftUI files, and the placeholder check.
+
+Syntax parse passes, placeholder check passes. swiftformat wants redundant `return`s removed from the single-`switch` functions (Swift expression-switch). Let me auto-format in place, then re-lint and run swiftlint explicitly.
+
+swiftformat now clean. Let me confirm the auto-edit is correct and run swiftlint with explicit paths.
+
+The auto-format is correct. swiftlint flags `render(...)` for having 6 parameters (max 5). I'll group `mph`/`kmh` into a small `SpeedInput` value (which also mirrors the web's two-optional-props shape), bringing it to 5 params. Let me update the adapter, view, and tests.
+
+Now transform the multi-line test call sites to the new `SpeedInput` first argument, then regenerate the driver and re-verify.
+
+Transform succeeded. Let me regenerate the driver with the new API, re-run parity, and re-run both linters.
+
+All parity checks pass with the new API. Let me re-normalize formatting and re-run both linters and the parser on the final files.
+
+Everything that can run on this runner is green: adapter compiles+runs (parity proven), swiftformat clean, swiftlint clean, parse clean, placeholder clean. The `xcodebuild` gate steps need full Xcode. Let me check the project's established convention for runner-blocked Apple work and the logs directory.
+
+This matches the project's documented convention exactly: Apple surfaces are committed with all **host-runnable** gates green, while full-app `xcodebuild build test` is deferred to a `macos-latest` runner (the `Shared.xcframework`/KMP toolchain + full Xcode aren't present here). Let me strengthen verification with an isolated Swift 6 typecheck of the View/Model/Previews using a minimal shim for the app symbols.
+
+View + Model + Adapter typecheck cleanly under Swift 6 strict concurrency. Let me try including the Previews (with `-D DEBUG` for the `#Preview` macro).
+
+Two findings: (1) the `#Preview` macro plugin ships only with full Xcode (runner limitation, same class as the blocked `xcodebuild`); (2) a **real** concurrency warning — my preview helper needs `@MainActor`, matching the sibling `SpeedTrendChart.Previews` convention. Let me fix that.
+
+Let me verify the `@MainActor` fix resolves the warning by typechecking the real preview bodies (transforming the `#Preview` macro to plain main-actor functions, since the macro plugin needs full Xcode).
+
+The preview bodies typecheck cleanly with no warnings under strict concurrency. Let me re-run the full host-runnable gate set on the final files and capture exits for the log.
+
+All host-runnable gates are green. Let me capture the platform-capability evidence for the blocked `xcodebuild`/simulator steps, and confirm the `shared-surfaces` wiring status in `project.yml`.
+
+Evidence confirmed: CommandLineTools-only (no full Xcode), no `simctl`, and `Shared.xcframework` absent (needs the KMP/Gradle toolchain). Let me match the exact terminal `EXIT`/`STATUS` convention used by sibling macOS-pending surface logs.
+
+The repo's sanctioned disposition (per the ToolCard sibling) is: surface independently verified green on all host gates **plus an isolated Swift 6 build + passing tests** → `EXIT=0 STATUS=DONE`, with the full-app `xcodebuild` deferred to macOS CI. I've done the typecheck; let me go the final step and actually **run my XCTest suite** via an isolated SwiftPM package on this runner.
+
+`swift test` can't run here — **XCTest itself ships only with full Xcode** (CommandLineTools lacks it), the same capability blocker as `xcodebuild`. There's also a module emit error I must inspect. Let me isolate whether the library module builds.
+
+The **library module builds cleanly** (`swift build` exit 0) — the earlier emit error was just a cascade from the XCTest-target failure. `XCTest` itself is unavailable on CommandLineTools (same Xcode-only blocker). Let me run the surface's logic — including the telemetry-once reporter — through the **real compiled module** via an executable harness (the strongest runtime proof available without XCTest).
+
+The error is in my **harness** (`@MainActor` class can't satisfy the `nonisolated` protocol requirement) — which actually confirms my committed test file's pattern (a plain `@unchecked Sendable` class, not `@MainActor`) is the correct Swift 6 design. Let me fix the harness and run.
+
+All 17 checks pass through the **real compiled module**, including the telemetry-once reporter. This is the strongest runtime verification possible without the Xcode-only XCTest framework. Let me capture final file metrics, clean up temp artifacts, and write the gate log.
+
+All temp artifacts cleaned. Now let me write the comprehensive, honest gate log.
+
+Log written. Now let me stage the deliverable + log and commit with an honest message.
+
+Let me verify the commit contains only my files (the pre-existing modified `AIUsageCard.*` files were unstaged and should not be included).
+
+Commit is clean — exactly the 6 `Speed.*` files + the log (889 insertions), no unrelated files. Let me do a final working-tree sanity check to confirm no stray build artifacts leaked into the repo.
+
+The task is complete to the maximum extent this runner allows, and honestly reported. Final state verified: the `shared-surfaces` directory holds exactly the six `Speed.*` files, no build artifacts leaked, and the commit is clean.
+

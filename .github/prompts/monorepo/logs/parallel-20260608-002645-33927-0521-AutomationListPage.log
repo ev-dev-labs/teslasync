@@ -1,0 +1,184 @@
+I'll start by exploring the codebase to understand the task — the web source page, the Apple app structure, and the supporting infrastructure.
+
+The web page is clear. Now let me explore the Apple app's existing Features structure and patterns, especially any existing list pages and the shared core.
+
+The `Features` dir doesn't exist yet. Let me find the actual structure of the Apple app and an existing page to use as a template.
+
+Let me understand the broader source layout, project config, and existing patterns.
+
+Now let me check tooling availability, the parity ledger, existing logs, and reconcile the `Features` vs `feature-views` directory question.
+
+Critical finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed — no Xcode runner. Let me confirm the precedent from existing P4-apple logs and locate the ledger and tooling.
+
+The `ls` hint suggests an Xcode.app may exist. Let me verify whether full Xcode is actually usable via `DEVELOPER_DIR` (the widget log used that trick), and check pwsh/KMP availability.
+
+Full Xcode 26.5 IS available via `DEVELOPER_DIR`, plus KMP toolchain, pwsh, swiftlint, xcodegen. This is a capable runner — I should target `STATUS=DONE`. Note `Sources/Features/Dashboard` already exists, confirming the real compiled path is under `Sources/`. Let me study the existing patterns in depth.
+
+Now let me read the canonical patterns: the existing `@Observable` model + shared facade, navigation, and the gate contract.
+
+Now the container, navigation, and the KMP automations domain. Let me read these together.
+
+Let me examine the shell/parser, how routes get registered, and the KMP automations domain.
+
+Let me find where routes get registered, the KMP automations store, and the components I'll need.
+
+The Settings page is already registered — that's my template. Let me read it, the KMP automations store/models, and the app wiring.
+
+The KMP store maps cleanly to both hooks. Now the model fields, bulk-op enum, app wiring, and the shared components I'll compose.
+
+Now I understand the architecture. The critical question is how to construct an `AutomationsStore` for registration since `AppContainer.bootstrap` is pending. Let me check for a KMP DI/factory and how stores are instantiated.
+
+No live DI graph exists yet. Let me study a concrete landed KMP-backed surface — the BatteryRadialGauge widget + its model + test — to see exactly how it obtains its store and gets instantiated.
+
+Let me see how tests construct a KMP `Shared` store from Swift — that reveals whether I can build an `AutomationsStore` for registration and tests.
+
+The precedent is clear: KMP-backed views take an injected `Shared` store and compile against the xcframework, while **all logic lives in pure KMP-free value types** that are unit-tested without the live graph. Let me confirm shared-core reachability, the route tests, and the composition root.
+
+Now let me look at the components I'll compose, the string catalog, the gate contract, and confirm what KMP construction (if any) already happens in app sources.
+
+None of the 22 strings exist yet; only `Shared.UnitPref` (a value type) is constructed in app sources, confirming the graph is pre-bootstrap. Let me read the components I'll compose, the gate contract, the placeholder scanner, and confirm exact i18n defaults from the web locale.
+
+Let me read the remaining components, layout, gate contract, placeholder scanner, and confirm exact i18n defaults.
+
+Let me read typography/tokens, the DataTable component, the gate README, the placeholder scanner, and locate the web i18n source for exact defaults.
+
+Let me extract the exact i18n defaults, read the placeholder patterns, the gate README, and the design tokens.
+
+I have the exact i18n defaults (missing en.json keys are covered by the page's inline fallbacks). Now the gate contract, swiftlint rules, and the DataTable component.
+
+`TSDataTable` is purpose-built for this (adaptive grid/cards, multi-selection, bulk bar) — ideal for parity. Let me read its full API, the rest of swiftlint rules, and the precedent test's i18n-key approach.
+
+`TSDataTable`'s selection chrome uses its own a11y labels, but parity requires MY 22 keys (incl. `bulk.selectAll`, `bulk.selectRow`, `automationList.selectAutomation`) to be used — so I'll build a purpose-built adaptive table in the feature. Let me read the web `useBulkSelection` + `BulkActionToolbar` to port semantics faithfully, and confirm `Font.TS` roles.
+
+Now the BulkActionToolbar component to mirror its behavior (visibility, pluralized noun, confirm flow).
+
+I have everything needed on semantics. Let me confirm the render pattern for string keys (how the precedent renders `labelKey`), the `TSButton` API, and which supporting catalog keys already exist.
+
+The render/string patterns are clear. One critical risk to verify before coding: Kotlin `suspend fun ...: Result<T>` (like `bulkAutomationsUpdate`) historically does **not** bridge to Swift. Let me check the repository signatures and whether the KMP core exposes a Swift-callable mutation path.
+
+The mutations return Kotlin `Result<T>`, which historically isn't Swift-bridgeable. I must verify the ground truth. Let me read the facade bridging files and the build script, then kick off the Shared.xcframework build in the background (the gate needs it anyway) to inspect the generated header.
+
+Let me kick off the Shared.xcframework build now (slowest gate step) so I can inspect the generated header to settle the `Result`-bridging question, and continue planning while it runs.
+
+The KMP build is running. Let me set up tracking and the plan while it compiles.
+
+The DEBUG xcframework is built — its header is identical to release for bridging purposes. Let me inspect it NOW to settle the `Result` question while the release build continues.
+
+The `Result`-returning suspend mutation **IS** exported — bridged to Swift `async throws` via completion handler (`bulkAutomationsUpdate(ids:op:completionHandler:)`). This de-risks the whole task. Let me confirm the exact `AutomationsStore` class signatures, the `AutomationBulkOp` enum cases, and `KotlinLong` Swift name.
+
+Everything needed is confirmed: `AutomationBulkOp.enable/.disable/.delete_`, store `bulkAutomationsUpdate(ids:op:)`→async, `automations()`→StateFlow. Let me verify `KotlinLong` init and the `Automation` property Swift names (esp. `description`, which may collide with NSObject).
+
+All header facts confirmed: `Automation.description_`, `.enabled`, `.executionCount`, `.id`, `.name`; `AutomationBulkOp.enable/.disable/.delete_`; `KotlinLong(longLong:)`; store `bulkAutomationsUpdate(ids:op:)` bridges to Swift `async throws`. Now I'll write the code.
+
+Now writing the source files. Starting with the pure, KMP-free string keys and value types.
+
+Now the `@Observable` page model that binds the KMP `AutomationsStore`.
+
+Now the view layer. First the bulk action bar with delete confirmation.
+
+Now the adaptive table (regular grid on macOS/iPad, cards on iPhone) with selection checkboxes and status badges.
+
+Now the panel that switches on phase (loading / error / empty / success).
+
+Now the page scaffold that owns the model and composes the header, bulk bar, and panel.
+
+Now the navigation registration helper and the unit tests.
+
+I referenced two format helpers in the views — let me add them to the strings file.
+
+Now the unit tests covering all pure logic, key parity, deep-link, and registration.
+
+Now I'll add the 27 string-catalog entries (22 mandated + 5 supporting) to `Localizable.xcstrings`, inserting them precisely and validating the JSON.
+
+The re-sort reordered all 8121 keys — a noisy diff. Let me redo preserving original order, appending only my 27 keys.
+
+Clean append (+297, −0). Let me verify the entries and check the framework build status.
+
+Framework built & staged ✅, strings in place ✅. Now let me lint my new files before the slow build.
+
+swiftlint scans the whole project via its config. Let me see all violations in my files specifically.
+
+All 26 are in my files: `inclusive_language` ("master"), `trailing_comma`, and one `multiple_closures_with_trailing_closure`. Let me fix them all — renaming `master*` → `selectAll*` (which also aligns with the `bulk.selectAll` string), removing trailing commas, and fixing the closure syntax.
+
+I need to fix the actual `masterState:` argument in the page's panel call. Let me view and fix it.
+
+Now the table file — rename `masterState`/`masterCheckbox`/`masterSymbol` → `selectAll*`:
+
+Now the content file — rename `masterState` prop + pass-through + preview, and remove the trailing comma:
+
+Now the bulk bar closure fix and the test fixes:
+
+The `testToggleAllIsSymmetric` test and the expected-Set trailing comma still need fixing:
+
+I removed the count assertion by mistake and still left the trailing comma. Let me fix the Set literal properly — remove the trailing comma and restore the count check.
+
+Now re-run swiftlint on my files to confirm zero violations:
+
+Zero violations in my files. Let me verify the full-project lint is clean and run swiftformat --lint on my files.
+
+swiftformat wants single-line bodies wrapped (repo `.swiftformat` rule). I'll auto-format my files with the ecosystem tool. First let me locate the 1 remaining project-wide lint error to confirm it isn't mine.
+
+The 1 remaining error is **pre-existing** in `LifetimeStatsWidget.Adapter.swift` (not my file). swiftformat fixed 5/9 of mine. Let me confirm my files now pass both swiftformat AND swiftlint.
+
+Both formatters pass on my files. Now generate the Xcode project and build. Let me run xcodegen, then the macOS build.
+
+Project generated. Now the macOS build — the real test of my KMP bindings. Let me build it (streaming to a log).
+
+The wrapped-subshell approach got torn down. Let me run the build directly in sync mode (auto-backgrounds, notifies on completion).
+
+Build failed on a **pre-existing** file: `TeslaSync/feature-views/AIRestorePanel.Tests.swift` imports `XCTest` but sits in the app source group. Let me determine whether these `feature-views` files are part of the committed baseline or stray artifacts.
+
+`AIRestorePanel.Tests.swift` and ~170 other `*.Tests.swift` files in `feature-views/` (plus `dashboard-widgets/`) are tracked baseline files wrongly compiled into the **app target** (they import XCTest) — a pre-existing breakage from the parallel merge, unrelated to my change. My files (`Sources/Features/Automations/`, `Tests/Unit/Automations/`) are untracked/clean.
+
+To get honest compile evidence for my code, I'll **temporarily** exclude `*.Tests.swift` from the app source groups, build, then revert project.yml (leaving the baseline untouched). Let me confirm the scope first.
+
+224 pre-existing XCTest files pollute the app target. Let me verify the naming pattern to exclude, then temporarily patch project.yml.
+
+All XCTest files end in `Tests.swift`. Let me temporarily patch project.yml to exclude them from the app targets, regenerate, and rebuild.
+
+Patched (4 occurrences = 2 dirs × 2 targets). Now rebuild macOS to compile my code.
+
+More pre-existing breakage: `TelemetryErrorsModel`/`TelemetryErrorRow` are "ambiguous" (duplicate definitions) — again not my code. The merged baseline has multiple defects. Let me locate the duplication to confirm it's in the merged P7 dirs, then isolate my code by excluding those whole dirs.
+
+Confirmed: `TelemetryErrorsModel` is duplicated across `dashboard-widgets/` and `feature-views/` (parallel-merge collision) — pre-existing, out of scope. The clean library is `Sources/` (which holds my code). Let me isolate by excluding both merged dirs from the app targets, then build.
+
+The breakage is pervasive in the merged baseline — even `Sources/DashboardWidgets` has a duplicate `DashboardWidgetSize`. The full app target cannot build regardless of my code. To get honest compile evidence for **my** code, I'll build an isolated framework target containing only my files + their real curated dependencies. Let me map the minimal dependency closure.
+
+Clean dependency closure identified: `Design`, `Components`, `SharedFacade` (only Foundation/Observation/Shared), + `Auth/AuthSeams.swift` (the auth protocols), + 3 small `App` files. No duplicate types among them. Let me verify `AuthSeams.swift` is self-contained, then build an isolated framework target.
+
+`AuthSeams.swift` is self-contained and Components has no facade coupling. Let me build an isolated framework target (my code + its real curated deps) plus a test bundle, to get honest compile + test evidence.
+
+Now build the isolated framework target to compile my code against its real dependencies.
+
+The isolation build surfaced **real errors in my code** (not pre-existing): `AutomationListPageModel` is `public` but exposes `internal` pure types. The model is an internal implementation detail (only `AutomationListPage` + `AutomationsRouteRegistration` are the public surface). Let me make the model internal.
+
+**BUILD SUCCEEDED** — my code compiles cleanly against its real dependencies + the Shared.xcframework. Now run the unit tests:
+
+The test can't resolve `@testable import TeslaSync` because the framework product is `AutoVerify.framework`. The committed test must keep `import TeslaSync` (correct for the real bundle). Let me make the isolation framework's product name `TeslaSync` so the import resolves.
+
+**TEST SUCCEEDED — 21/21 tests pass.** My code compiles and all logic tests pass. Now let me also verify the iOS branch compiles (my `#if os(iOS)` horizontalSizeClass code only compiles on iOS), then run the placeholder scan.
+
+The `-target` mode conflicts with `-derivedDataPath`. Let me build without it.
+
+The Swift compile succeeded; only **linking** failed (a packaging concern, not code correctness). Let me see the linker detail.
+
+iOS Swift compilation **succeeded** (EmitSwiftModule ran for both arches, 0 swift errors). The link failure is only an arch mismatch — the Shared sim slice is arm64-only on this Apple-Silicon runner, but the default build also tried x86_64. Let me link arm64-only.
+
+**iOS build SUCCEEDED (arm64)** — my code compiles + links on both macOS and iOS. Now the placeholder scan:
+
+**Placeholder scan: 0 (EXIT=0)** for both source and tests. All gate checks pass for my surface. Now let me revert the temporary project.yml verification scaffolding and confirm the baseline is restored.
+
+Baseline restored cleanly. Let me do a final review of my deliverable files and confirm git status shows only my intended changes.
+
+All deliverable files are clean and within limits; the model is internal. Now I'll write the parity log. Given the runner-capability findings, let me determine the honest final status.
+
+The literal gate (`xcodebuild -scheme TeslaSync build/test`) cannot run cleanly because the **merged baseline app target is pre-broken** (224 XCTest files wrongly compiled into the app target + duplicate types in `feature-views`/`dashboard-widgets`), which is outside my allowed scope. Per the README ("prompts that can't run their gate are BLOCKED, not DONE"), the honest aggregate status is BLOCKED — while my surface itself is fully green (isolated build macOS+iOS, 21/21 tests, lint/format/placeholders clean, 27/27 parity). Let me write the log.
+
+Let me reconsider the commit decision and do final verification. Given STATUS=BLOCKED (aggregate gate un-runnable due to pre-existing baseline breakage), the honesty covenant rule 8 ("No commit on red") means I should **not** commit. Let me verify the final working-tree state is clean and contains only my intended deliverables.
+
+Final state is exactly right: my changes are the xcstrings (M), the 8 source files + 1 test (untracked), and the log (untracked); `project.yml` is clean (scaffolding reverted); the `.xcodeproj`/`Shared.xcframework` are gitignored. The pre-existing `AIUsageCard.*`/`web/*` modifications were already in the tree and are correctly untouched.
+
+Per covenant rule 8 ("No commit on red") and STATUS=BLOCKED, I will not commit. Let me update tracking and clean up temp artifacts.
+
+The task is complete. Let me provide the final summary.
+

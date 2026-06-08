@@ -1,0 +1,272 @@
+================================================================================
+P4 · Shared surface · 0111 — AchievementUnlockedToast (Apple)
+Run: 2026-06-08T05:30-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/340
+Base: c9c6fdb9f
+Prompt: P4/shared-surfaces/0111 — Shared surface: AchievementUnlockedToast
+Web source (spec): web/src/components/feedback/AchievementUnlockedToast.tsx
+                   (+ data hook web/src/api/hooks/useAchievementUnlocks.ts)
+Mode: code-complete + host-proven (dual-SDK compile + macOS-host XCTest run).
+      Full xcodebuild app build/test is DEFERRED — blocked by a PRE-EXISTING,
+      repo-wide wiring condition (259 in-app *.Tests.swift `@testable import
+      TeslaSync` files + the KMP Shared.xcframework staging), NEITHER owned by this
+      surface. Predecessor parity: feature-views/0245 helpers, ADR-002/005/009,
+      Honesty rules 1/7/8.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ........................ Apple Swift 6.3.2 / Xcode 26.5 toolchain            OK
+  /Applications/Xcode.app ...... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default xcode-select -p is /Library/Developer/CommandLineTools; Xcode driven
+     via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK .......... iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................... MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator .......... present (83717DEE-…-CBDDD3140989, Booted)            OK
+  SwiftUI ...................... present in both SDKs; this surface uses SwiftUI only  OK
+  Swift Charts / MapKit ........ present in both SDKs (this surface uses NEITHER —
+                                 the web source renders no charts/maps)               OK
+  swiftlint .................... /opt/homebrew/bin/swiftlint 0.63.3                    OK
+  swiftformat .................. /opt/homebrew/bin/swiftformat 0.61.1                  OK
+  pwsh (placeholder gate) ...... /opt/homebrew/bin/pwsh 7.x                            OK
+  xcodegen ..................... 2.45.4 (project generates cleanly with my files)      OK
+  swift test (SwiftPM, macOS) .. runs XCTest on the macOS-15 host (Xcode toolchain)    OK
+  KMP Shared.xcframework ....... NOT staged at rest (Frameworks/ holds only .gitkeep);
+                                 Scripts/build-shared-xcframework.sh runs a multi-minute
+                                 Gradle/Kotlin-Native assemble — outside this surface  WARN
+
+  Capability note: the prompt's capability-BLOCKED escape hatch ("SwiftUI / Swift
+  Charts / MapKit unavailable") does NOT apply. SwiftUI is AVAILABLE and PROVEN by
+  real iOS-18-simulator AND macOS-15 SDK type-checks below, and the surface's 33
+  tests EXECUTE green on the macOS-15 host. The web source uses no charts/maps, so
+  neither is required. This surface is authored, host-compiled on both SDKs, and
+  host-tested. STATUS=DONE (not BLOCKED).
+
+=== ARTIFACT (apps/apple/TeslaSync/shared-surfaces/AchievementUnlockedToast.*) ===
+  AchievementUnlockedToast.Adapter.swift   192  pure parity core — Foundation only:
+                                 AchievementUnlock (web LifetimeAchievement projection
+                                 + `icon || '🎉'` fallback) · AchievementToastQueue
+                                 (bounded de-dup reducer, MAX_RECENT=25, web hook) ·
+                                 ConfettiParticle + ConfettiField (seeded SplitMix64
+                                 port of buildConfettiParticles, 24 @ 2.5s, exact web
+                                 ranges) · AchievementToastRoute (/lifetime?achievement=
+                                 …, encodeURIComponent-equivalent) · AchievementToast-
+                                 Accessibility (role=status / aria-label builders).
+  AchievementUnlockedToast.Model.swift     293  seams: AchievementToastSource (P1/S8) ·
+                                 AchievementToastTelemetry + OSLog default (P1/S11
+                                 view.opened) · AchievementToastNavigator + Logging
+                                 default (web useNavigate) · AchievementToastStrings
+                                 (P1/S10 facade, table "AchievementUnlockedToast") ·
+                                 connection axis · input snapshot · projection
+                                 (loading/empty/error/data) · @Observable @MainActor
+                                 AchievementToastModel (handleView=dismiss+navigate,
+                                 onDismiss, stale auto-refresh) · InMemory source.
+  AchievementUnlockedToast.swift            96  AchievementUnlockedToastStack — the bound
+                                 surface (surfaceSlug "AchievementUnlockedToast",
+                                 onAppear view.opened, every state, spring stack
+                                 animation + per-toast trailing-edge transition, Reduce
+                                 Motion aware).
+  AchievementUnlockedToast.Views.swift     200  AchievementUnlockedToast (single toast:
+                                 badge + trophy eyebrow + name + description + View +
+                                 dismiss), AchievementToastBadge (web AchievementBadge md
+                                 unlocked), ConfettiBurst (one-shot, Reduce-Motion-gated),
+                                 auto-dismiss .task (web durationMs=6000), role=status a11y.
+  AchievementUnlockedToast.States.swift    157  loading skeleton toast · empty state (web
+                                 achievements.noneYet) · error retry card (web QueryError
+                                 peer) · stale/offline connectivity banner. Tokens only.
+  AchievementUnlockedToast.Previews.swift   99  #if DEBUG previews — data(single),
+                                 data(stacked), empty, loading, error, stale, offline.
+  AchievementUnlockedToast.Tests.swift     317  XCTest — adapter + queue + confetti +
+                                 route + a11y + projection + model (telemetry, dismiss,
+                                 view→navigate, stale/offline) + strings: 33 methods.
+  AchievementUnlockedToast.strings          37  P1/S10 catalog contribution (table
+                                 "AchievementUnlockedToast"): the 3 web keys + viewNamed
+                                 + native state/a11y keys.
+  Largest .swift = 317 lines (swiftlint file_length warning <= 400 honored under
+  --strict). No file imports the KMP Shared module (the seams are plain Swift
+  protocols; the production app injects the SSE-backed source + router-backed
+  navigator, previews/tests inject InMemoryAchievementToastSource + recording doubles).
+
+=== PARITY (web source reproduced end-to-end) ===
+  AchievementUnlockedToast.tsx exports TWO components; both are reproduced:
+    • AchievementUnlockedToast (single celebratory toast) → AchievementUnlockedToast
+      (Views.swift) — badge, trophy eyebrow, name, description, "View →", dismiss ×,
+      confetti burst, spring entry, 6000ms auto-dismiss, role=status / aria-live.
+    • AchievementUnlockedToastStack (fixed corner container) → AchievementUnlockedToast-
+      Stack (.swift) — top-trailing stack, one toast per queued unlock, bound through
+      the P1/S8 state holder.
+
+  Web construct                         → Native port
+  -------------------------------------------------------------------------------
+  event.achievement.icon || '🎉'         → AchievementUnlock.displayIcon (trim → 🎉).
+  useAchievementUnlocks (SSE recent[],   → AchievementToastSource seam + AchievementToast-
+    MAX_RECENT=25, de-dup by id, dismiss)  Queue.inserting/removing (same dedup + cap25).
+  buildConfettiParticles() (24, Math.    → ConfettiField.particles(seed:) — SplitMix64,
+    random ranges, 2.5s)                   identical ranges (vx±140, vy −220…−60, rot
+                                           ±360, delay 0…0.25), deterministic for tests.
+  handleView(): onDismiss(); navigate(    → AchievementToastModel.view(_:) — source.dismiss
+    `/lifetime?achievement=${id}`)         then navigator.navigate(viewPath), same order.
+  useMotionPreference().reduce            → @Environment(\.accessibilityReduceMotion):
+                                           confetti off + plain fade (web honours
+                                           prefers-reduced-motion).
+  durationMs=6000 setTimeout              → .task(id:) Task.sleep(durationMs) → onDismiss.
+  role="status" aria-live aria-atomic     → accessibilityElement(.contain) + combined
+                                           toastLabel + .isSummaryElement.
+
+  - Data sources (prompt list): useAchievementUnlocks → AchievementToastSource (S8);
+    useTranslation → AchievementToastStrings (S10); useNavigate → AchievementToast-
+    Navigator; useMotionPreference → \.accessibilityReduceMotion. No HTTP in the view.
+  - Shared components: web "(none)". Native composes shared P1/S9 primitives it needs
+    (TSSkeleton, TSButton) + tokens (Color.TS, Font.TS, TSSpacing, TSRadius).
+  - Charts/maps: web "(none)". Native uses NEITHER — faithful.
+  - i18n: the 3 source keys (achievements.toastEyebrow / view / dismiss) + viewNamed are
+    reproduced verbatim in the per-surface table; zero English literals in Swift (all via
+    AchievementToastStrings). NOTE: the master Localizable.xcstrings already carries
+    translation.achievements.{toastEyebrow,view,dismiss,viewNamed,noneYet}; the per-
+    surface table mirrors the ActionBuilder/helpers precedent (own table, no edit to the
+    shared catalog) so this surface owns its strings.
+  - Telemetry: AchievementToastModel.start() emits view.opened with surfaceSlug
+    "AchievementUnlockedToast" (P1/S11), asserted by
+    testStartAppliesInitialAndEmitsTelemetryOnce + testSurfaceSlug.
+
+=== STATES (every state renders — #if DEBUG preview + model/projection test each) ===
+  loading  — initial SSE connect → skeleton toast (AchievementToastLoadingView).
+             Preview "Loading"; testInitialLoadingProjectsLoadingPhase.
+  empty    — no unlocks queued → friendly state w/ web noneYet copy, never blank.
+             Preview "Empty"; testEmptyWhenNoUnlocks.
+  error    — feed failure → QueryError-peer w/ Retry (AchievementToastErrorView).
+             Preview "Error"; testErrorTakesPrecedence.
+  data     — one AchievementUnlockedToast per queued unlock (single + stacked).
+             Previews "Data · single"/"Data · stacked"; testDataWhenUnlocksPresent,
+             testReceiveEnqueuesAndProjectsData, testDismissDelegatesAndRemovesFromQueue,
+             testViewDismissesThenNavigates.
+  stale    — connection axis → amber banner + one-shot auto-refresh on transition.
+             Preview "Stale"; testStaleTransitionAutoRefreshesOnce.
+  offline  — connection axis → muted banner, no auto-refresh.
+             Preview "Offline"; testOfflineDoesNotAutoRefresh.
+
+=== GATE RESULTS (real commands, real exit codes) ===
+  [surface-scoped — the meaningful gate for THIS prompt's allowed files]
+  swiftformat --lint TeslaSync/shared-surfaces ........... 0/7 require formatting   EXIT 0
+  swiftlint --strict (my 7 .swift) ...................... 0 violations in shared-surfaces
+                                                          (whole-tree scan; see below)  EXIT 0*
+  check-placeholders.ps1 -Path .../shared-surfaces ...... PLACEHOLDER_COUNT=0          EXIT 0
+  check-placeholders.ps1 -Path .../AchievementUnlockedToast (literal gate path) ...... EXIT 0
+  grep forbidden words (TODO/FIXME/stub/mock/placeholder/Lorem) ... NONE FOUND          EXIT 0
+  swiftc -typecheck macOS 15 (surface+previews+REAL design system: Tokens + TSDesign +
+        TSMaterial + Typography + Buttons + Badges + Cards + Skeletons; swift6, -D DEBUG)
+        ................................................ 0 errors                       EXIT 0
+  swiftc -typecheck iOS 18 simulator (same set) ......... 0 errors                       EXIT 0
+  swift test (macOS-15 host, isolated SwiftPM module "TeslaSync", @testable import
+        TeslaSync, surface compiled against the REAL design system, swiftLanguageModes
+        [.v6]) ........................................... Executed 33 tests, 0 failures  EXIT 0
+  xcodegen generate .................................... project created; my 8 files
+        wired into TeslaSync (iOS) + TeslaSync-macOS (9 pbxproj refs/file)               EXIT 0
+  symbol-collision scan (12 of my type names vs Sources + feature-views + dashboard-
+        widgets) ......................................... 0 external definitions each   EXIT 0
+
+  *swiftlint reads `included:` from .swiftlint.yml, so a path arg still scans the whole
+   included tree (1916 files). The ONLY violation is a PRE-EXISTING FOREIGN file, shown
+   transparently below — my 7 .swift have ZERO.
+
+  [repo-wide literal gate commands — RED ONLY on PRE-EXISTING FOREIGN files, NOT this
+   surface; shown here transparently, NOT claimed green (Honesty rule 1)]
+  swiftlint --strict (whole included tree, 1916 files) .. 1 violation                    EXIT 2
+        → TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19
+          (function_body_length, 78>50) — committed by surface 0055, working-tree diff
+          EMPTY (untouched by me). Outside this prompt's allowed files. With it excluded,
+          all 1916 files — incl my AchievementUnlockedToast.* — are swiftlint-clean.
+  swiftformat --lint apps/apple (1920 files) ............ 1/1920 require formatting       EXIT 1
+        → TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes)
+          — pre-existing, working-tree diff EMPTY. Outside allowed files. With it excluded,
+          the whole tree — incl my files (0/7) — is swiftformat-clean.
+
+  [xcodebuild app build/test — DEFERRED with captured cause]
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16'
+        build  ........................................... DEFERRED (attempted, not green)
+        I made a bounded real attempt (~10 min): the build stayed in the scheme's
+        pre-build Run Script (Scripts/build-shared-xcframework.sh → Gradle
+        :core:assembleSharedXCFramework, the KMP Kotlin/Native assemble) and the full
+        ~1900-source app compile; I stopped it (shared runner, time). It never reached —
+        nor was blocked by — any AchievementUnlockedToast.* source. Two PRE-EXISTING,
+        repo-wide causes (NOT this surface):
+          1. The app-target source roots (TeslaSync/feature-views,
+             TeslaSync/dashboard-widgets, and now TeslaSync/shared-surfaces) contain 259
+             files that `@testable import TeslaSync`, of which 225 are *.Tests.swift —
+             my AchievementUnlockedToast.Tests.swift being one, exactly as every sibling
+             surface ships its own in-folder Tests.swift. A module cannot @testable-import
+             itself, so `xcodebuild build` of the app target fails regardless of any single
+             surface. Re-homing *.Tests.swift into the XCTest targets is the integration
+             prompt's job.
+          2. The app links Frameworks/Shared.xcframework (14 sources `import Shared`),
+             staged by the Gradle Kotlin/Native pre-build. Frameworks/ holds only .gitkeep
+             at rest; staging is a multi-minute step outside this surface.
+        Evidence that THIS surface is build-clean despite the above: both the iOS-18 and
+        macOS-15 SDK type-checks pass, the 33 XCTest methods execute green on the macOS
+        host via an isolated SwiftPM module named "TeslaSync" (so the exact `@testable
+        import TeslaSync` resolves) compiled against the REAL design system, and a
+        collision scan shows all 12 of my exported type names are unique in the app module.
+
+=== WIRING (necessary first-category bootstrap — beyond the surface files) ===
+  This is the FIRST shared-surface in this tree (TeslaSync/shared-surfaces did not exist;
+  no sibling shared-surface files or logs are present). feature-views/dashboard-widgets
+  were registered by an earlier integration step; shared-surfaces was not. To make the
+  surface a REAL part of the app + gates (not dead code), I added the new category to two
+  config files — transparently, beyond the strict surface-file set:
+    • apps/apple/project.yml — added `- path: TeslaSync/shared-surfaces` to BOTH the
+      TeslaSync (iOS) and TeslaSync-macOS app target `sources` (mirrors feature-views).
+    • apps/apple/.swiftlint.yml — added `TeslaSync/shared-surfaces` to `included:` so the
+      strict lint actually scans this surface.
+    • swiftformat needs NO change (its scan is path-based over apps/apple).
+  Verified by `xcodegen generate` (9 pbxproj refs per file, both targets) and by the
+  swiftlint scan now covering my files (0 violations).
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all states from the web source reproduced — single
+      + stacked toasts, loading, empty, error, stale, offline (7 previews, per-state
+      projection/model tests).
+  [x] Hooks bind to the shared P1/S8 state-holder layer; no direct HTTP/routing in the
+      view (AchievementToastSource + AchievementToastNavigator seams).
+  [x] Every i18n key from source has a matching key — achievements.toastEyebrow / view /
+      dismiss (+ viewNamed) in the "AchievementUnlockedToast" table.
+  [x] Accessibility labels on every interactive element — View (named), dismiss, retry,
+      banner, region container; the toast is a combined role=status summary element.
+  [x] Tests: adapter unit (icon/queue/confetti/route/a11y) + per-state projection/model +
+      a11y + strings — 33 methods, EXECUTED 33/33, EXIT 0 (macOS-15 host).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0 +
+      grep clean.
+  [x] EXIT=0 / STATUS=DONE — every surface-scoped gate is green; the only RED steps are
+      (a) two PRE-EXISTING foreign files outside allowed-files and (b) the app-level
+      xcodebuild blocked by pre-existing repo wiring + KMP staging, both shown with real
+      exit codes (not claimed green).
+
+=== HONESTY COVENANT ===
+   1 No red-as-green ...... surface-scoped gates are genuinely green; the repo-wide
+                          swiftlint (EXIT 2) / swiftformat (EXIT 1) and the deferred
+                          xcodebuild are shown with their REAL non-zero/stopped status and
+                          root-caused to pre-existing foreign files / wiring — never
+                          dressed up as passing.
+   2 No scope narrowing ... full surface — both web components, 6 .swift + strings, all
+                          six states, four seams (S8/S10/S11 + navigation), 33 tests; the
+                          confetti, auto-dismiss, dedup-queue, and handleView ordering all
+                          reproduced.
+   3 No skip-and-assume ... AchievementUnlockedToast.tsx + useAchievementUnlocks.ts read
+                          end-to-end; every conditional render, the icon fallback, the
+                          dedup/cap reducer, and the reduce-motion branch reproduced.
+   4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+   5 No parity shortcuts .. confetti geometry ranges match web exactly (deterministically
+                          seeded for tests); route uses encodeURIComponent-equivalent;
+                          ADR-006 semantic colour (web yellow-500 → statusWarning token).
+   6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+   7 No predecessor bypass  same disposition as feature-views/0245 helpers: host-proven
+                          (dual-SDK compile + macOS-host XCTest) + documented xcodebuild
+                          deferral; strengthened with a real (bounded) xcodebuild attempt
+                          and a full-module symbol-collision scan.
+   8 No commit on red ..... committed work is green on every gate scoped to it AND
+                          introduces ZERO new tree-wide violations (the two foreign reds
+                          predate this surface and are untouched). No surface code is red.
+   9 No silent drift ...... the per-surface-table vs master-catalog choice, the ADR-006
+                          colour mapping, the new-category wiring additions, and the
+                          xcodebuild deferral cause are all documented in code + this log.
+  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,199 @@
+I'll start by exploring the repository structure to understand the task — the web source page, the existing Apple app structure, and related artifacts.
+
+The web page is large. Let me read it in sections and explore the Apple app structure in parallel.
+
+Let me continue reading the web source and explore the Apple app structure in detail.
+
+The Apple app structure needs deeper exploration. Let me look at the actual source layout and continue reading the web page.
+
+Let me understand the Apple project layout — examine project.yml, existing feature views, and how pages are structured.
+
+The sub-components (FSMStateDiagram, LiveControls, SnapshotInspector) are already ported in `feature-views/`. My job is the composing page. Let me understand the existing page conventions, navigation registration, parity ledger, and toolchain availability.
+
+xcodebuild is unavailable (Command Line Tools only) — the build/test gate will be BLOCKED per the prompt. But swiftlint, xcodegen, and swift 6.3 are available. Let me examine navigation and the parity ledger.
+
+Let me find the AppRoute enum, the routeHosts registry, and any existing registered page to use as a template.
+
+Now let me examine the route parser, menu catalog, app assembly, and the SharedFacade (KMP core access) to understand data fetching patterns.
+
+Let me study the data-layer facade pattern — how `@Observable` models consume the KMP core, the loadable state types, and the existing domain model example.
+
+Let me inspect the Shared KMP framework's exposed FSM symbols and the existing FSM-related feature views the page must compose.
+
+The Shared.xcframework is a placeholder (built only on the Xcode runner), confirming the build gate will be BLOCKED. Let me study the existing FSM components in depth — they're my composition building blocks and the canonical pattern.
+
+This is the canonical pattern: components bind through a `Source` protocol seam (not direct `import Shared`), so they compile standalone. Let me finish reading the web page body and absorb the component conventions (views, strings catalog, LiveControls).
+
+Let me finish the web page, inspect the Localization catalog, and gather the public initializers of the FSM components I must compose.
+
+All 47 keys are missing from the catalog. Let me verify the catalog structure and confirm how existing surface strings are stored.
+
+The master catalog (~8122 keys) stores route keys but not the FSM page keys — I'll add all 47. Now let me map the components I must compose and check AppRoute switch exhaustiveness.
+
+Now I understand the architecture. The page composes existing Swift components and shares the `TS`-prefixed UI library. Let me extract exact public signatures of the components and shared UI I'll use, so my page compiles on a real Xcode runner.
+
+Let me read the precise initializers for the key components and the chart/token infrastructure.
+
+I have the chart wrappers. Now let me read the composed FSM components' public APIs (FSMStateDiagram, FSMSubFSMPanel, LiveControls) and their model/source seams so I can construct them from the page.
+
+FSMStateDiagram has a clean web-prop init taking `[FSMTransition]`. Let me find the `FSMTransition`/`FSMConnection` types and check whether the other components offer similarly clean initializers.
+
+I now understand the composition pattern fully. Let me read the remaining Input types for the components I'll compose, plus the typography wrappers and token names, so everything compiles.
+
+Let me gather the final pieces: typography wrappers, token names, the full project.yml, and remaining enum types.
+
+Let me confirm the exact design-token member names (colors, spacing, radius) and the test-target wiring before writing.
+
+Let me verify the color tokens, chart palette, and how `feature-views` test files are structured.
+
+I have enough architectural understanding. Let me confirm the final few signatures (TSButton, TSChartPalette, TSToggle for Live/Freeze) and then start building.
+
+I have a complete understanding of the architecture. Let me set up the workspace and plan, then build. xcodebuild is unavailable (the build/test gate will be honestly BLOCKED), but I'll deliver a complete, lint-clean, build-ready implementation.
+
+Let me check the SwiftLint config to ensure my code passes `--strict`, then start writing the implementation.
+
+SwiftLint `--strict` is active (line length ≤120 for code, no TODOs). The gate lints my explicit path. Now let me build. Starting with the data model layer.
+
+Now I have the exact web types (3 FSM options, matching transition shape). Let me build the implementation. Starting with the data-model layer.
+
+Now the projection layer. Let me check the web flap-detection logic so I reproduce it faithfully.
+
+Now the pure projection layer (distribution, per-state counts, flap detection, formatting) mirroring the web `useMemo`s.
+
+Now the `@Observable` page model that drives all sections.
+
+Now the inline UI helpers (state badge, live-controls bar, state timeline, snapshot inspector, transition detail, health summary).
+
+Let me fix the transition detail to properly render the context section instead of the empty overlay.
+
+Now the panels and the main page view. Let me create the panels file.
+
+Now the main page view composing all sections in web order, plus the toolbar and the composed sub-components.
+
+Now navigation wiring. Let me first verify no exhaustive `switch` over `AppRoute` exists outside `AppRoute.swift` (which would break when I add a case), then make the edits.
+
+`WatchDeepLink` is its own enum — safe. Now let me wire navigation: add the `AppRoute` case, the route registration, and project.yml source paths.
+
+Now the route registration helper and the previews file:
+
+Now add the source path to both app targets in project.yml:
+
+Now the previews with seeded data (proves every panel renders with content):
+
+The implementation files are written. Let me extract every string key I referenced so I can add them all to the catalog (no hardcoded/missing keys allowed).
+
+Let me locate the bare-token matches and fix the help-tooltip aria labels (the two `.aria` keys must be referenced).
+
+All bare tokens are non-display (state matching, URL params, SF Symbols, identity tags) — good. Now fix the help-tooltip aria labels and the distribution `isEmpty` handling.
+
+All display strings use catalog keys. Now let me add all the keys to `Localizable.xcstrings` via a safe insertion script (preserving the existing 8000+ entries byte-for-byte).
+
+73 keys inserted, JSON valid. Let me verify the formatting, remove the helper script (it's outside the allowed paths), then run SwiftLint.
+
+The catalog is correctly formatted. Now let me run the gate's static checks — SwiftLint and the placeholder scan.
+
+SwiftLint linted the whole config set (1909 files) and found 1 violation. Let me isolate whether it's in my files.
+
+The only violation is pre-existing in an unrelated file (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`) — my files are clean. Let me confirm it's pre-existing and test the exact gate invocation.
+
+The project config excludes my dir, so the gate lints my files with default rules — which found 3 real `multiple_closures_with_trailing_closure` violations (TSColumn with `comparator:` + trailing `cell:`). Let me fix them.
+
+Now let me re-run the gate's lint invocation and also lint against the project config to catch opt-in rule violations.
+
+Trailing-closure fixed. Now 4 remain: 2 long lines + 2 files over 400 lines. Let me view the long lines and fix all four.
+
+Let me fix the two long lines first.
+
+Now let me view the table panels + helpers at the end of Panels.swift to relocate them into a new file.
+
+Let me split the files. First, create the table file (moving the table/detail panels + helpers, made internal):
+
+Now remove the moved content from Panels.swift and update the `compare` reference in the counts panel:
+
+Now split Components.swift — move the detail grid + health summary into a new file.
+
+Both files are now under 400 lines. Let me re-run the gate lint to confirm everything is clean.
+
+All my files pass `swiftlint --strict` cleanly. Let me verify the placeholder scan, check the gate tooling, and validate the project generates.
+
+pwsh and the placeholder script are available. Let me run the actual gate placeholder scan and validate the project generates.
+
+Placeholder scan passes (0 placeholders). Let me validate the project generates with my new source path wired in.
+
+Let me self-review for compile-correctness. One risk: `@Bindable` with custom `init` and unused projected values. Since I create bindings explicitly and never use `$model`, plain `let model` is correct and safer with `@Observable`. Let me switch.
+
+Good catch needed — a `private let` stored property privatizes the synthesized memberwise init. Let me check `FSMSummaryCards` (has `private let columns`) which is constructed from another file.
+
+`FSMSummaryCards` is constructed from `Page.swift` — its `private let columns` would make the memberwise init private (compile error). Let me make it computed.
+
+Let me re-lint and verify the helper rename and Detail.swift structure.
+
+Lint clean and structure verified. Let me get a rubber-duck review focused on Swift/SwiftUI compile-correctness, providing the verified external API signatures so it doesn't false-flag.
+
+No compile-breaking errors found in the reviewed Swift files. I did find a few clear logic bugs:
+
+## Blocking Issues
+
+None found.
+
+## Non-Blocking Issues
+
+1. `StateMachineDebuggerPage.swift:153` — failed transition loads are mapped to `.loaded` for `FSMTimelineChartUpdate`, so timeline errors render as loaded/empty instead of failed.  
+   **Suggested fix:** map all cases:
+   ```swift
+   let status: FSMTimelineLoadStatus = switch model.transitionsStatus {
+   case .loading: .loading
+   case .loaded: .loaded
+   case .failed(let message): .failed(message)
+   }
+   ```
+
+2. `StateMachineDebuggerPage.swift:134,146,157` — connection state is hardcoded to `.live` for SubFSM, state diagram, and timeline chart, ignoring `model.connection`. Stale/offline source states will never surface in these child components.  
+   **Suggested fix:** pass `model.connection` to `FSMStateDiagram`, and map it to `FSMSubFSMConnection` / `FSMTimelineConnection` for the other two child components.
+
+3. `StateMachineDebuggerPageModel.swift:82-84` — when vehicles arrive asynchronously after an initial empty update, the model defaults `selectedVehicleID` to the first vehicle but does not re-issue the query with that vehicle ID.  
+   **Suggested fix:** when defaulting from `nil` to a real vehicle ID, call `applyQuery()` if `started` is true.
+
+## Files that look correct
+
+- `StateMachineDebuggerModels.swift` — no compile-breaking issues found.
+- `StateMachineDebuggerProjection.swift` — no compile-breaking issues found.
+- `StateMachineDebuggerComponents.swift` — no compile-breaking issues found.
+- `StateMachineDebuggerDetail.swift` — no compile-breaking issues found.
+- `StateMachineDebuggerPanels.swift` — no compile-breaking issues found.
+- `StateMachineDebuggerTable.swift` — no compile-breaking issues found.
+- `StateMachineDebuggerPage.Previews.swift` — no compile-breaking issues found.
+- `StateMachineDebuggerRouteRegistration.swift` — no compile-breaking issues found.No compile-breaking errors found. The rubber-duck flagged 3 worthwhile correctness improvements (surface error/stale states in child components, re-issue query when defaulting the vehicle). Let me apply all three.
+
+Now fix #3 — re-issue the query when the vehicle selection defaults:
+
+Let me re-lint after the correctness fixes.
+
+Both gates pass. Now let me check the ledger format and create the apple ledger + the evidence log.
+
+Ledger is an array of per-platform rows. Let me generate the string-evidence map for the log, then write the log and ledger.
+
+All 47 required strings are referenced in code with evidence. Let me run the exact gate sequence to capture honest exit codes, then write the log.
+
+Confirmed: `xcodebuild` requires full Xcode (BUILD_EXIT=1, TEST_EXIT=1) — the gate is honestly BLOCKED on the Xcode runner. Lint and placeholder gates pass. Let me write the evidence log.
+
+Now the apple ledger (two platform rows, status BLOCKED on the Xcode runner):
+
+Let me align the ledger with the "array of rows" format (each row validates against `ledger.schema.json`) and validate.
+
+Ledger validates. Let me do final verification — confirm no other exhaustive `AppRoute` switches break, review the complete change set, line counts, and a final gate pass.
+
+Let me verify the `AIUsageCard.*` modifications are pre-existing (I never touched those files) and not something I caused.
+
+The `AIUsageCard.*` changes are pre-existing (mtime 09:15 = worktree setup, before my 10:05 work) — not mine, so I leave them untouched. My change set is isolated and complete. Per the Honesty Covenant ("No commit on red"), I will not commit since the build/test gate is BLOCKED. Let me run a final consolidated verification.
+
+The core deliverable is complete and verified. Let me strengthen robustness by adding the error+retry data state (the spec mentions error handling) to the transitions-driven panels, plus the two supporting catalog keys.
+
+Now add the error+retry branch to the three transitions-driven panels.
+
+Let me re-run the gates after adding error states.
+
+All gates that can run on this host are green (SwiftLint `--strict` clean, placeholder scan clean), the catalog and ledger are valid JSON, and the project generates with all 10 files wired into both targets. The implementation is complete; the build/test legs are environmentally blocked (no full Xcode + KMP `Shared.xcframework` is staged only on the macOS runner), exactly the condition the prompt anticipates.
+
+Per the Honesty Covenant ("No commit on red"), I have not committed since the build/test gate is BLOCKED.
+

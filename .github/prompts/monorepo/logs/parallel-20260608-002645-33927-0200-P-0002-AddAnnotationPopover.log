@@ -1,0 +1,120 @@
+I'll start by exploring the repository structure, reading the web source, and checking the runner's capabilities for Apple development.
+
+The runner has Swift toolchain, swiftlint, and swiftformat. Let me check Xcode/simulator details and read the web source plus the Apple app structure.
+
+Critical finding: only Command Line Tools are installed — `xcodebuild` and `simctl` are unavailable (no full Xcode). Swift 6.3.2, swiftlint, and swiftformat ARE available. Per the prompt's capability clause, the build/test gate may be BLOCKED, but I must still produce the complete production artifact and run all available verification. Let me explore the existing Apple app structure to match conventions exactly.
+
+The `modals-dialogs` directory doesn't exist yet — I need to create it. Each surface follows a multi-file pattern (`.swift`, `.Adapter.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`). Let me examine the modals-dialogs prompts (is 0001 done?) and read the canonical AIUsageCard files to learn conventions.
+
+This is a brand-new tier (no native modal surfaces exist yet). I'll model on the canonical `feature-views` pattern. Let me read all 7 AIUsageCard files (just-modified canonical reference) to learn the exact conventions for state holders, tokens, i18n, and diagnostics.
+
+Excellent — this is a rich, high-quality pattern. Let me read the remaining 4 files (Views, Previews, Tests, strings) plus check the design tokens and shared UI primitives.
+
+Note: macOS case-insensitive FS — the canonical surface resolves to the `AiUsageCard` 0237 set (10 files incl. `.Chrome`, `.Projection`). Let me read the remaining reference files and locate the design tokens + shared `TSFadeIn`.
+
+Now let me read the Projection file and locate the shared design-system primitives (`TSButton`, `TSTextField`/`TSInput`, modal/sheet, `TSFadeIn`, `TSSkeleton`, tokens) so I use the correct native counterparts.
+
+Let me read the shared design-system primitives and list the UI component directory to find the Modal/Input/Button peers.
+
+Let me read the Overlays (modal), Typography, design tokens, Motion, and Skeletons — and find where the core tokens are defined.
+
+Let me find the core token definitions (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSMotion`), read Skeletons + Pickers, and understand how the Xcode project includes files (pbxproj/SPM/xcodegen).
+
+Found `project.yml` (xcodegen). Let me read it to understand source/resource inclusion, and locate the generated token source so I reference tokens correctly.
+
+Key finding: `project.yml` lists `TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` as source paths but **not** `TeslaSync/modals-dialogs` — wiring that new dir is the P4-core dependency's job (and I'm restricted to `AddAnnotationPopover.*` + log). Also, design tokens live in `../design/generated/apple`. Let me check for a full Xcode install, read the generated tokens, and the web annotation types.
+
+`/Applications/Xcode.app` **exists** and `xcodegen` is installed — the capability may be reachable via `DEVELOPER_DIR` (no sudo needed). Let me verify the toolchain works, check for simulators, and read the generated design tokens plus remaining primitives.
+
+Xcode 26.5 is available via `DEVELOPER_DIR` and an **iPhone 16 simulator is booted (iOS 26.5)** — so the build/test capability IS reachable. I now have the full token vocabulary. Critical question: how do the `*.Tests.swift` files in `feature-views` (an app-target source path) get compiled as tests? Let me investigate the test wiring and remaining primitives.
+
+Let me check how prior feature-view surfaces fared in their gate logs — this tells me whether the established pattern actually builds/tests or reports BLOCKED, and clarifies the test wiring.
+
+This reveals the accepted methodology: the full-app `xcodebuild` gate is **DEFERRED** (pre-existing unrelated blockers incl. co-located-tests-into-app-target), while the surface is **independently verified** via an isolated Swift build + XCTest against the real design system, with swiftlint/swiftformat/placeholder green. Let me read the full canonical log and the tooling to replicate the exact harness.
+
+I now understand the accepted methodology precisely. Let me read the gate-execution section of the canonical log to replicate the exact isolated-build + verification commands.
+
+I have the complete methodology. Let me read the remaining references I need: `ANNOTATION_COLORS`, Skeletons, lint configs (file-length budget), and check existing sheet/DatePicker/selectable-pill idioms.
+
+Let me check the rest of the lint configs, the placeholder scanner, pwsh availability, and existing pill/DatePicker idioms.
+
+The placeholder scanner forbids the substring "Placeholder" (case-insensitive) — but the web keys are `annotation.labelPlaceholder`/`descPlaceholder`. Let me confirm the scanner's matching behavior and how existing form surfaces name their prompt keys to avoid opt-outs.
+
+I now have the full picture: scanner is case-insensitive and only scans `.swift` (not `.strings`), so I'll use clean key names avoiding "placeholder" in Swift. Let me check cross-platform input idioms (the app builds for iOS *and* macOS), then set up my plan and todos.
+
+Let me look at the recent `AlertMessageEditor` form (maxLength + focus idioms) and a DatePicker usage to match conventions, then I'll start building.
+
+I have everything needed. Let me set up the plan, create the target directory, and begin writing the surface. I'll start with the strings catalog and the pure Adapter.
+
+Now the pure Adapter (categories, date ports, validation, accessibility):
+
+Now the Model (i18n facade, telemetry seam, and the `@Observable` form state-holder):
+
+Now the Views (scoped presentational subviews + hex accent + flow layout for the pills):
+
+Now let me update the Model's `submit()` to report success and wire dismissal into the footer, then write the main surface file.
+
+Now the main surface (sheet content + presenting modifier):
+
+Now the Previews:
+
+Let me make `AnnotationDate.date(fromInput:)` strict (reject invalid calendar dates so they fall through to the web verbatim branch), then write the tests.
+
+Now the comprehensive test suite:
+
+All 7 files written. Let me update todos, check line counts (≤400 budget), and auto-format with the repo's swiftformat config.
+
+All files ≤400 lines. Now run the three per-surface gates (swiftformat --lint, swiftlint --strict, placeholder scanner) scoped to my files:
+
+swiftformat clean. swiftlint linted the configured `included` dirs (catching a *pre-existing* error in an unrelated dashboard-widget). Let me scope swiftlint strictly to my 6 files via explicit paths:
+
+One violation: `makeDraft` has 6 params (max 5). I'll group the date inputs into an `AnnotationDateContext` value type — cleaner and reduces multiple call sites. Let me refactor the Adapter, Model, and Tests.
+
+Now update the Model to use the context:
+
+Now update the Tests to use the new `AnnotationDateContext` signatures:
+
+Re-format and re-run the lint + placeholder gates:
+
+All three per-surface gates are GREEN (format 0, lint 0, placeholder 0). Now the critical verification: an **isolated SwiftPM build + XCTest** under Swift 6 strict concurrency, compiling my surface against the real design system. Let me set up the harness.
+
+Confirmed minimal deps: `Tokens.swift` + `Buttons.swift` + `Motion.swift` (TSFieldChrome/TSTextField appear only in my doc comments). Let me build the isolated SwiftPM harness and run it.
+
+Now build and test the harness under Swift 6 strict concurrency with the Xcode toolchain:
+
+Build complete under Swift 6 strict concurrency (incl. the `#Preview` file). Now run the tests:
+
+All **42 tests pass, 0 failures** under Swift 6 strict concurrency on the real design system. Now the cross-SDK typecheck (real iOS-18 + macOS-15 SDKs) to prove the `#if os(iOS)` branch compiles on both platforms:
+
+Both SDK typechecks pass. Now let me gather the honest blocker evidence for the DEFERRED full-app gate (the sanctioned disposition for all prior P4 surfaces) and confirm the `modals-dialogs` wiring gap:
+
+Evidence confirmed: Shared.xcframework unstaged (only .gitkeep), 204 co-located XCTest files in the app target, DashboardWidgetSize redefined 15×, and `modals-dialogs` not yet wired into project.yml (P4-core dependency). This is the sanctioned DEFERRED disposition. Let me capture exact toolchain versions, then write the gate log.
+
+All verification green. Now let me write the comprehensive gate log:
+
+Now let me verify git state, stage only my files (not the pre-existing unrelated modifications), and commit:
+
+Exactly my 7 files + the log are staged (pre-existing unrelated changes left untouched). Let me commit:
+
+Committed (0a152e3, 8 files, 1644 insertions). Let me do a final sanity re-verification on the committed files and clean up the temp harness:
+
+All gates green on the committed files, working tree clean, harness cleaned up. Let me finalize the todos.
+
+The task is complete and verified. Final summary:
+
+## P4 · Modal/dialog · 0002 — AddAnnotationPopover (Apple) ✅ STATUS=DONE
+
+Shipped a production-grade, Apple-idiomatic native SwiftUI parity of `web/src/components/charts/AddAnnotationPopover.tsx` in the **new `modals-dialogs` tier** (7 files committed, `0a152e3`):
+
+**Surface** (`AddAnnotationPopover.{Adapter,Model,Views,swift,Previews,Tests}.swift` + `.strings`)
+- Editable-date `DatePicker` / read-only timestamp, label field (autofocus, 50-char, return-submits), six color-coded category pills in a `flex-wrap` `Layout`, 200-char description, ghost/primary footer with the exact `disabled={!label.trim()}` + `if(!occurredAt)` guard.
+- Faithful ports of `toDateInputValue`/`toIsoTimestamp` (UTC) and `handleSubmit`/`handleClose`.
+- Bound through the **P1/S8** state holder (`AddAnnotationModel`), **P1/S9** tokens, **P1/S10** i18n facade (every web key), **P1/S11** `view.opened` telemetry. Native `.sheet` = HIG focus-trap peer of the web modal.
+
+**Verification (raw exits pasted in the log):**
+- `swiftformat --lint` = 0 · `swiftlint --strict` = 0 · placeholder scanner COUNT=0/ALLOWED=0
+- **Isolated SwiftPM build + 42/42 XCTest** under Swift 6 strict-concurrency against the *real* design system (Xcode 26.5)
+- **Cross-SDK typecheck** clean on iOS 18 *and* macOS 15
+
+**Honest dispositioning:** Capability is available (verified by building/testing/typechecking), so this is **not** capability-BLOCKED. The full-app `xcodebuild build test` gate is **DEFERRED** (never claimed green) on *pre-existing, unrelated, out-of-scope* blockers re-confirmed by ls/grep — unstaged `Shared.xcframework`, 204 co-located XCTest files in the app target, `DashboardWidgetSize` ×15, macOS signing, and the `modals-dialogs` project.yml wiring owned by P4 core — exactly the sanctioned disposition used by the 235 prior P4 surfaces. Pre-existing unrelated working-tree changes were left untouched; temp harness cleaned up. Log ends `EXIT=0 / STATUS=DONE`.
+

@@ -1,0 +1,117 @@
+I'll start by exploring the repository structure, reading the web source, and checking what Apple tooling is available.
+
+The web source is a simple client-side VIN decoder (no API calls). Critically, there's already a sibling `AIUsageCard` feature-view that establishes the pattern. Let me study it and the existing structure.
+
+A well-established pattern exists (~180 feature-views, each with Model/Adapter/Views/Previews/Tests/strings). `AiUsageCard` is the actively-modified sibling — my closest template. Let me read its full file set plus the web VIN constants.
+
+This is a sophisticated, mature pattern. Since `VinDecoder` is a pure-client devtool (no API), let me find an existing native feature-view that was built from a sibling devtool tool — that's my exact precedent. Let me also read the VIN constants and remaining AiUsageCard files.
+
+8 sibling devtools tools already have native versions — perfect precedents. Let me examine their structure and read the VIN constants fully.
+
+`UnixPermissionTool` is the closest structural twin (input → decode → fields, no API). Let me read its complete file set as my template.
+
+Excellent template. Let me read the remaining `UnixPermissionTool` files (Adapter, Previews, Tests, strings) and verify the design tokens exist.
+
+Now let me read the Tests pattern, the web i18n values, and verify the design tokens that the views reference.
+
+There's a native `ToolCard.swift` already, but `UnixPermissionTool` inlines its chrome with `TSGlassPanel` to stay self-contained (matching my allowed-files constraint). Let me check the exact i18n values in en.json and locate the design token definitions.
+
+Confirmed i18n state: `Unknown` and `Vin` exist; `Vin Decoder`, `Vin Decoder Desc`, and the `devtools.utils.vin_*` keys are missing (so web renders the key string verbatim). Let me confirm nothing defines `vin_mfr` elsewhere, and locate the full token set.
+
+There's a `devtools` block at line 2675. Let me inspect it directly and read the design token definitions.
+
+`devtools.utils` exists but lacks the `vin_*` keys — so web renders those keys verbatim. Let me see how sibling `.strings` files handled `devtools.utils.*` keys to set the right precedent, and read the remaining token/material files.
+
+The precedent is definitive: native fallback = **exactly** what the web renders, even when ugly (e.g. `base64Desc` → "Base64Desc"). Let me confirm i18next's missing-key behavior via the config, then read the token/material/motion definitions.
+
+Confirmed: i18next uses default separators with no missing-key handler, so `t('devtools.utils.vin_mfr')` renders the key verbatim. Strict parity it is. Now let me locate the full token set I need (`Color.TS.*`, `Font.TS.*`, `TSSpacing/TSRadius`, `TSCopyButton`, `TSFadeIn`, `surfaceOverlay`).
+
+Found the generated tokens at `apps/design/generated/apple/Tokens.swift`. Let me read it plus the `TSCopyButton` and `TSFadeIn` definitions.
+
+I now have the full token reference. Let me read `TSCopyButton`/`TSFadeIn` APIs, check for `pwsh` + the placeholder script, and confirm no `VinDecoder.*` files exist yet.
+
+`pwsh` is available, so I can run the real placeholder gate. Let me read that script to know exactly what it flags (case sensitivity, banned words), then I'll start building.
+
+Key facts: the placeholder scan is **case-insensitive** (I must avoid the literal word "placeholder" in `.swift` files; `.strings` aren't scanned). `pwsh` works. Now the decisive question — is a full Xcode available, or only CommandLineTools? Let me check, plus the lint configs and tool versions.
+
+`/Applications/Xcode.app` exists — xcode-select is just pointed at CommandLineTools. If the full Xcode is usable, I can legitimately run the build/test gate. Let me probe it and check the project generation setup.
+
+Full **Xcode 26.5** is available via `DEVELOPER_DIR`, and `xcodegen` is installed. A legitimate build/test is feasible. Let me read `project.yml` to confirm scheme names and that `feature-views/` is auto-included.
+
+The app targets auto-include `feature-views/`, so my files will be picked up. But a full build needs the KMP `Shared.xcframework` (a preAction) and mixes test files into the app target. Let me assess build feasibility: check the Shared framework, the preAction script, and whether tests are excluded.
+
+Now the build feasibility is clear: `Shared.xcframework` is unbuilt (only `.gitkeep`); building it needs the KMP Kotlin/Native + Gradle toolchain via a scheme preAction. Let me check the documented verification policy and how a sibling feature-view's log concluded (DONE vs BLOCKED), to match precedent exactly.
+
+This is the key precedent. The sibling `UnixPermissionTool` (0022) concluded **STATUS=DONE** by: verifying the surface GREEN via real `swiftc -typecheck` against both iOS 18 + macOS 15 SDKs, executing adapter/model logic tests, and passing swiftlint/swiftformat/placeholder — while the full-app `xcodebuild` scheme build is a *documented deferral* (absent KMP `Shared.xcframework`, co-located test files, signing). Let me read that log's methodology to replicate it exactly.
+
+I now have the authoritative methodology (sibling 0022 → **STATUS=DONE**: surface verified via real `swiftc -typecheck` on iOS 18 + macOS 15 SDKs + executed logic harness + swiftlint/swiftformat/placeholder green; Xcode scheme build/test documented as DEFERRED — absent KMP `Shared.xcframework`, co-located test files, signing). I'll replicate this exactly. Let me write a brief plan, then build the 6 files.
+
+Now I'll create the six files. Starting with the pure-logic Adapter (VIN tables verbatim from web `constants.ts`).
+
+Now the Model (state holder + telemetry + i18n facade + surface slug).
+
+Now the SwiftUI surface view.
+
+Now the previews, tests, and strings files.
+
+All six files created. Now verification — starting with the fast, authoritative style gates (`swiftformat --lint`, `swiftlint --strict`) scoped to my files.
+
+Both style gates pass (FORMAT_EXIT=0, LINT_EXIT=0, 0 violations). Now the logic-parity harness — compile the real Adapter+Model with a driver and execute it to prove web parity.
+
+Swift 6 makes top-level globals MainActor-isolated. I'll mark the helper functions `@MainActor`.
+
+Harness is GREEN: **CHECKS=78 FAILURES=0**, proving exact web parity. Now the key step — real `swiftc -typecheck` of the full surface against the actual design system on both SDKs. Let me enumerate the design-system sources and resolve SDK paths.
+
+No direct `Shared` imports in Components+Design (41 files). Let me run the iOS 18 typecheck of the full surface against the real design system, excluding only the known KMP-dependent `UnitFormatters.swift`.
+
+iOS 18 typecheck **GREEN** (TYPECHECK_IOS_EXIT=0). Now macOS 15, same file set.
+
+Both typechecks **GREEN** (iOS 18 + macOS 15, 0 errors). Now the placeholder gate (self-test + verbatim path + an isolated real scan of my files) and `xcodegen generate`.
+
+All placeholder scans clean (COUNT=0), self-test passes, `xcodegen generate` GREEN and enumerates all 6 VinDecoder files. Let me confirm the generated project is gitignored and run the whole-tree lint/format gate commands to capture an honest baseline.
+
+Whole-tree swiftformat: only **1/1918** files need formatting — `ActionBuilder.Previews.swift`, a pre-existing sibling file (NOT mine; my 5 files passed). Let me check the still-running git status and confirm the generated project is ignored.
+
+Project is gitignored (`IGNORED_OK`). Now the whole-tree `swiftlint --strict` (verbatim gate) to capture baseline and confirm my files add no violations.
+
+One pre-existing violation tree-wide. Let me confirm it's not in my files.
+
+Confirmed: the lone tree-wide swiftlint violation is the **pre-existing predecessor** `LifetimeStatsWidget.Adapter.swift:141` (same file the sibling 0022 log flagged) — not mine. My 5 files show zero violations. Now let me gather concrete evidence for the `xcodebuild` deferral (absent `Shared.xcframework`, co-located test files) rather than assume it, and check the simulator/JDK.
+
+Concrete deferral evidence confirmed: `Shared.xcframework` absent (only `.gitkeep`), **171** co-located `*.Tests.swift` compile into the app target, iPhone 16 sim present (same UDID as sibling), JDK 17 present. This is the identical, user-approved deferral precedent. Every host-runnable gate is GREEN. Let me write the comprehensive log.
+
+Now cleanup (remove the gitignored generated project + temp harness) and stage only my 6 files + the log.
+
+Exactly my 6 files + the log staged — no sibling files. Committing.
+
+Committed (HEAD `235713376`, 7 files, +1124). Final confirmation that the tree is clean and sibling files were untouched.
+
+Task complete. All work is committed and verified.
+
+## Summary
+
+Shipped a production-polished native Apple (SwiftUI) **`VinDecoder`** surface at parity with `web/src/features/admin/components/devtools/tools/VinDecoder.tsx`, mirroring the proven sibling `UnixPermissionTool` (0022) architecture.
+
+**6 files** (`apps/apple/TeslaSync/feature-views/VinDecoder.*`):
+- `.Adapter.swift` — pure VIN tables (verbatim from web `constants.ts`) + decoder + projection + a11y summary
+- `.Model.swift` — `@Observable` state holder (P1/S8), telemetry seam (P1/S11), i18n facade (P1/S10), surface slug
+- `.swift` — `ToolCard` chrome + VIN input + decoded 6-field grid / too-short hint, built on design tokens (P1/S9)
+- `.Previews.swift`, `.Tests.swift`, `.strings`
+
+**Every host-runnable gate GREEN** (real commands, real exit codes on Xcode 26.5):
+| Gate | Result |
+|---|---|
+| `swiftc -typecheck` iOS 18 sim (real design system) | **0 errors** |
+| `swiftc -typecheck` macOS 15 | **0 errors** |
+| Executed logic harness (Adapter+Model) | **78/78, exact web parity** |
+| `swiftformat --lint` (surface) | **0/5** |
+| `swiftlint --strict` (surface) | **0 violations** |
+| `check-placeholders.ps1` | **COUNT=0** |
+| `xcodegen generate` | enumerates all 6 files |
+
+**Parity faithfully reproduced**, including the web's verbatim missing-i18n-key labels (`devtools.utils.vin_*` echo as-is, exactly as i18next renders them — documented).
+
+**`xcodebuild` scheme build/test: DEFERRED** with *verified* (not assumed) evidence — KMP `Shared.xcframework` absent (only `.gitkeep`), 171 co-located `*.Tests.swift` compiled into the app target, macOS signing — identical to the user-approved P4 disposition (predecessors 0010/0022/0180/0231). The two whole-tree lint/format findings are pre-existing predecessor files outside scope (flagged honestly, untouched).
+
+Committed as `235713376` (7 files, +1124) — only my files + the log; pre-existing sibling changes left untouched. Log ends `EXIT=0 / STATUS=DONE`.
+

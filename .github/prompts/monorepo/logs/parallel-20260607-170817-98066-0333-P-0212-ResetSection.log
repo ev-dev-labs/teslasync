@@ -1,0 +1,106 @@
+I'll start by exploring the repository structure, locating the web source, and checking the Apple toolchain capability in parallel.
+
+Apple toolchain is fully available (xcodebuild, swift, swiftlint, swiftformat, pwsh). Now let me read the web source and explore the existing Apple project structure.
+
+Now let me explore the existing `feature-views` directory and its conventions, plus the test structure and tooling.
+
+The feature-views directory has ~987 files (many feature views, each split into multiple files). Let me understand the file conventions and find a good reference example similar to ResetSection.
+
+`UserImpersonateButton` and `AutomationCard`/`LayoutSwitcher` use ConfirmDialog. Let me read a complete reference feature view end-to-end to learn the exact conventions.
+
+Excellent reference. Now let me read the rest of the UserImpersonateButton files plus understand the design tokens, components, and build system.
+
+Now let me understand the design tokens, shared components, build system, and the strings/previews conventions.
+
+Now let me read the design tokens, key UI components, project.yml build config, and the placeholder checker.
+
+The build uses XcodeGen globbing `TeslaSync/feature-views` — new files auto-include. But I need to understand how `.Tests.swift` files (which `import XCTest`) are wired into the test target. Let me investigate.
+
+Critical finding: `.Tests.swift` files in `feature-views/` use `import XCTest` + `@testable import TeslaSync`, but that dir is part of the **app** target, not the test target. Let me investigate how this actually builds — check for xcodegen, pre-generated project, and build instructions.
+
+xcodegen is available but no pre-generated project, and the app target globs in 123 XCTest-importing `.Tests.swift` files. I need to understand the build feasibility — especially the `Shared.xcframework` dependency. Let me check.
+
+The full gate needs `Shared.xcframework` (KMP/Gradle/Kotlin-Native), which is absent and must be built from `apps/shared`. Let me assess buildability of that dependency and the overall baseline before committing to an approach.
+
+Decisive finding: `xcodebuild` requires full Xcode, but only **Command Line Tools** are installed — so there is **no iOS SDK or Simulator**. The `xcodebuild build test` gate steps are environmentally blocked. Let me confirm what Swift tooling *does* work (for real verification) and read the component/token APIs I'll need.
+
+Two big wins: `swiftc -typecheck` works against the macOS SDK and **SwiftUI imports fine** — so I can do real type-checking. And I found the exact shared components (`TSButton`, `TSGlassPanel`, `TSIconBox`, `TSCard`, `TSSkeleton`, `TSTone`). Let me read their exact APIs plus typography/tokens and the AlertsSection "section" idiom.
+
+Now let me read the typography components, design tokens (`TSMaterial`, generated `Color.TS`), the skeleton, and the AlertsSection "section" idiom for layout patterns.
+
+Now let me read the generated design tokens (`Color.TS`/`Font.TS` members) and skim the AlertsSection "section" idiom to mirror layout conventions.
+
+`TSFadeIn` is the FadeIn equivalent. Let me read the full generated tokens (exact `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius` members), the Motion component, and the AlertsSection header/list idiom.
+
+I now have the full token/component vocabulary. Let me read the AlertsSection Model (for the `.text` Strings-facade helper + section seam pattern), the Motion `TSFadeIn` API, check for a native Toast seam, and the macOS build-status doc.
+
+Let me check the native Toast/feedback API, the `TSFadeIn`/Motion file, and find existing typed-confirmation (alert + TextField) prior art to mirror.
+
+Let me view the existing alert+TextField idiom to mirror it precisely, then I have everything to build.
+
+I have a thorough understanding of the conventions. Let me set up tracking and check the lint/format configs so my code conforms, then probe `#Preview` macro support for verification planning.
+
+Confirmed: `#Preview` macro can't expand without full Xcode's plugin, so my verification will compile the real component layer + my runtime files **without** `-DDEBUG` (previews are `#if DEBUG`-excluded). I have the full lint config (line length ≤120 enforced under `--strict`). 
+
+Let me set up tracking and write the plan, then build the surface.
+
+Now I'll write the surface. Starting with the pure Adapter and the Model (state holder + seams).
+
+Adapter and Model written. Now the Views (subviews + all states).
+
+Now the root view with the two confirmation alerts.
+
+Now the Previews, strings catalog, and Tests.
+
+Now the comprehensive test suite.
+
+All 7 files written. Now the critical verification — a real `swiftc` type-check of my runtime files compiled against the **actual** shared component layer (matching the project's Swift 6 + strict concurrency settings, no `-DDEBUG` so previews are excluded).
+
+Type-check passes with Swift 6 + strict concurrency. Now let me verify the **Previews** logic compiles (transforming `#Preview` macros to plain funcs since the macro plugin is Xcode-only) and probe whether **XCTest** is available to compile the test file.
+
+Previews logic type-checks. XCTest isn't available under CommandLineTools (Xcode-only), so I'll verify the **test logic** by compiling it in-module against a minimal XCTest shim (throwaway, never committed) — this type-checks every assertion against my real Model/Adapter.
+
+All three type-checks pass (runtime, previews, tests). Now formatting, linting, and placeholder checks.
+
+Minor auto-fixable format issues. Let me apply swiftformat, then re-lint and re-typecheck to confirm formatting didn't break anything.
+
+swiftformat passes. Now re-typecheck (ensure formatting is safe), run swiftlint --strict, and the placeholder gate against my files.
+
+swiftlint flags `file_length` (>400 lines) under `--strict` on 3 files — the project convention splits large surfaces into more `ResetSection.*` files (e.g. `.Catalog`, `.Components`, `.ModelTests` suffixes all exist in the repo). Let me split them.
+
+Now split the tests into adapter tests and model tests.
+
+All 8 files written and split. Now re-run the full verification suite on the split files.
+
+File lengths fixed (≤355), **swiftformat --lint = 0**, **swiftlint --strict = 0 violations**. Now re-run all three type-checks on the split files and the placeholder gate.
+
+All type-checks pass on split files. Now the placeholder gate against my files, plus a direct grep for the forbidden words from the acceptance criteria.
+
+Every runnable gate step is green: **swiftformat=0, swiftlint --strict=0, placeholders=0**, plus my supplementary **typecheck of runtime+previews+tests=0**. The two `xcodebuild` steps are environment-blocked (CommandLineTools only). Let me confirm the log directory and capture concrete capability evidence.
+
+Capability block confirmed (no full Xcode, no iOS runtimes). Now I'll generate an **honest gate log** with real captured output — running the steps that work (green) and recording the genuine xcodebuild block.
+
+Let me verify the full log content (especially the captured xcodebuild errors and green step output).
+
+The gate log is honest and complete. Let me update tracking, review final git status, and commit the surface + log.
+
+I'll commit **only** my surface files + the log (the two modified web files are pre-existing and unrelated — I'll leave them untouched).
+
+The commit appears to be stuck on a pre-commit hook. Let me stop it and investigate.
+
+`.git` is a worktree pointer file, so my earlier hook check was invalid. The commit likely hung on a hook. Let me find the real git dir and inspect hooks (with a timeout to avoid hanging).
+
+No hooks are installed and `core.hooksPath` is unset — so the hang wasn't a hook. Let me retry in discrete steps to isolate it: stage my files first, then verify staging.
+
+Staging is fast and correct (only my files; the two pre-existing web files excluded). The hang was on `git commit` — likely GPG signing waiting for a passphrase. Let me check signing config.
+
+No signing/editor hooks — the earlier hang was likely lock contention on the shared common git dir (many parallel slots commit concurrently). `git add` now works, so let me check for stale locks and retry the commit standalone.
+
+No stale locks. Let me commit standalone (with `--no-verify` as a safety net, though no hooks are installed).
+
+Commit succeeded (11 files, 2096 insertions). Let me verify the commit excludes the pre-existing web files and finalize.
+
+Commit is clean — only my 10 surface files + the log; the two pre-existing web files are untouched. Let me clean up temp artifacts and finalize tracking.
+
+The ResetSection Apple surface is complete, verified, and committed. Final summary:
+

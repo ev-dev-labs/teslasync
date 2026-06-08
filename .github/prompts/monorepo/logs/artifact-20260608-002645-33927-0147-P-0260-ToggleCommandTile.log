@@ -1,0 +1,163 @@
+=== P4 Feature view 0260 ToggleCommandTile (Apple) ===
+Artifact : apps/apple/TeslaSync/feature-views/ToggleCommandTile.*
+Web src  : web/src/features/system/components/ToggleCommandTile.tsx (THE spec)
+Runner   : Darwin (arm64), Swift 6.3.2 (swiftlang-6.3.2). Delegation FORBIDDEN — authored directly.
+
+────────────────────────────────────────────────────────────────────────
+RUNNER CAPABILITY DETERMINATION (ADR-002 Apple target requires full Xcode)
+────────────────────────────────────────────────────────────────────────
+$ xcode-select -p
+/Library/Developer/CommandLineTools                     <- Command Line Tools ONLY, no Xcode.app
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+directory '/Library/Developer/CommandLineTools' is a command line tools instance
+$ xcrun simctl list devices available | grep -i iphone
+(empty)                                                 <- no iOS Simulator runtimes/devices
+
+=> The gate's `xcodebuild ... build test` (iOS + macOS) cannot execute on this runner.
+   Per this prompt's Capability clause ("requires SwiftUI + Swift Charts + MapKit,
+   iOS 18 / iPadOS 18 / macOS 15 HIG. If unavailable on the runner → STATUS=BLOCKED
+   with API evidence."), the disposition is STATUS=BLOCKED on the Xcode-hosted steps.
+   NOTE: this differs from sibling 0002/0054 (Xcode present, build dep gap → exit 65);
+   here the platform capability itself is absent, so the explicit BLOCKED clause governs.
+
+────────────────────────────────────────────────────────────────────────
+GATE STEPS (verbatim commands, real captured exit codes)
+────────────────────────────────────────────────────────────────────────
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode ... command line tools instance
+IOS_EXIT=1        [BLOCKED — no Xcode/iOS Simulator on runner; not run, not faked]
+
+$ xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode ... command line tools instance
+MAC_EXIT=1        [BLOCKED — no Xcode on runner; not run, not faked]
+
+$ swiftlint --strict        (.swiftlint.yml included: tree, 1918 files)
+Done linting! Found 1 violation, 1 serious in 1918 files.
+  -> the ONLY violation is PRE-EXISTING and OUTSIDE this surface's allowed files:
+     TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length)
+  -> all 9 ToggleCommandTile.* files linted (660,686,694,1129,1190,1579,1586,1761,1764) — 0 flagged.
+LINT_EXIT=2 (tree)  |  LINT_EXIT(ToggleCommandTile.* only)=0   [SURFACE CLEAN]
+
+$ swiftformat --lint apps/apple   (whole tree, 1922 files)
+1/1922 files require formatting
+  -> the ONLY violation is PRE-EXISTING and OUTSIDE allowed files:
+     TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes)
+FORMAT_EXIT=1 (tree)  |  FORMAT_EXIT(ToggleCommandTile.* only)=0   [SURFACE CLEAN]
+
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/ToggleCommandTile
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+  -> corroborated by an isolated real scan of the 9 shipped files (-Language swift):
+     PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0   [SURFACE CLEAN]
+
+────────────────────────────────────────────────────────────────────────
+SUPPLEMENTARY HOST VERIFICATION (compensating for the BLOCKED Xcode steps)
+A temporary SwiftPM module mirroring the surface (the 4 generated/design-token deps
++ the 5 production files) was built and tested with the open-source toolchain so the
+code is proven to COMPILE and the tests proven to PASS — not merely asserted.
+────────────────────────────────────────────────────────────────────────
+$ swift build        (TeslaSync target: tokens + Adapter+Model+Harness+Views+entry
+                      + transformed Previews typecheck; #Preview macro needs Xcode so
+                      its 13 bodies were rewritten to returning funcs for typecheck)
+Build complete!  -> EXIT=0   [production + previews TYPECHECK CLEAN, incl. SwiftUI views]
+
+$ swift run Runner   (41 shipped XCTest methods executed via an XCTest shim +
+                      -enable-testing @testable import; 3 classes)
+RAN=41 FAILURES=0
+ALL_TESTS_PASSED   -> EXIT=0   [adapter 16 + model 14 + lifecycle 11, EXECUTED, all green]
+
+────────────────────────────────────────────────────────────────────────
+SHIPPED FILES (allowed scope: apps/apple/TeslaSync/feature-views/ToggleCommandTile.*)
+────────────────────────────────────────────────────────────────────────
+  ToggleCommandTile.swift             66  SwiftUI View entry + view.opened on appear
+  ToggleCommandTile.Adapter.swift    384  pure projections (params, variant→tone, def,
+                                          outcome parse, resolution, value line, phase,
+                                          freshness chip, a11y builders)
+  ToggleCommandTile.Model.swift      332  surface slug, telemetry/dispatch/favorite/
+                                          vehicle-state seams, @Observable model, i18n facade
+  ToggleCommandTile.Harness.swift    114  in-memory seam doubles (previews + tests)
+  ToggleCommandTile.Views.swift      335  tile/panel/iconBox/labelBlock/valueLine/
+                                          statusLine/freshnessChip/favorite/statusDot
+  ToggleCommandTile.Previews.swift   214  every state + grid (DEBUG)
+  ToggleCommandTile.Tests.swift      225  adapter projection tests (16)
+  ToggleCommandTile.ModelTests.swift 263  initial-resolution + activate-routing tests (14)
+  ToggleCommandTile.LifecycleTests.swift 230  lifecycle/seam/favorite/freshness/telemetry (11)
+  ToggleCommandTile.strings           45  i18n catalog contribution (table "ToggleCommandTile")
+  (each file < 400 lines, each type body < 350 — split per the sibling convention so
+   swiftlint file_length/type_body_length pass --strict)
+
+────────────────────────────────────────────────────────────────────────
+WEB → NATIVE PARITY MAP (every branch + t() of the web source reproduced)
+────────────────────────────────────────────────────────────────────────
+  isOn = def.stateField&&state ? state[field] : localToggle
+        -> ToggleCommandTileResolution (pending/unknown/resolved) via P1/S8 ToggleStateProviding
+           + local optimistic flip for uncontrolled defs.
+  onStyles[variant] ON treatment (panel/icon/dot/text tint)
+        -> variant.tone (default→accent, danger→danger, success→success); panel border+tint,
+           icon box tint, status dot, ON value line all take the tone when on.
+  Icon = isOn ? def.icon : def.iconOff ?? def.icon  -> def.iconName(isOn:) SF Symbol swap.
+  handleClick: loading→noop; isOn→onExecute(commandOff); else inputConfig→onRequestDialog
+               else onExecute(command, params); uncontrolled flips localToggle.
+        -> model.activate() reproduces all four branches exactly (execute-off / dialog /
+           execute-on + optimistic flip), guarded while executing/offline/loading.
+  loading→spinner+opacity-50  -> isExecuting (+ pending) spinner, panel opacity 0.5.
+  lastStatus startsWith('✓')  -> ToggleCommandTileOutcome.parse (green/red + SF Symbol).
+  favorite star (amber, stopPropagation) -> sibling overlay Button, TSTone.warning, own a11y id.
+  corner on/off dot           -> ToggleCommandTileStatusDot (tone when on, muted when off).
+  t('commands.toggleFavorite'|'commands.on'|'commands.off') -> verbatim keys via P1/S10 facade.
+  Charts/maps: none in source -> none added (Swift Charts/MapKit N/A for this surface).
+
+STATES RENDERED (all): loading(pending controlled state, skeleton + spinner, non-interactive),
+  empty(unknown/missing field → muted localized fallback), error(failed outcome, tile stays
+  tappable = retry), stale(freshness window → stale chip), offline(cached value + offline chip,
+  blocked), plus executing / on / off.
+
+i18n KEYS: source keys commands.toggleFavorite="Toggle favorite", commands.on="ON",
+  commands.off="OFF" — present in master Localizable.xcstrings (translation.commands.*) AND
+  declared verbatim in ToggleCommandTile.strings. Native chrome keys commands.toggle.* all
+  declared + referenced (referenced==declared verified). No English literals in code (every
+  string via NSLocalizedString value: fallback through the facade).
+
+────────────────────────────────────────────────────────────────────────
+ACCEPTANCE CRITERIA
+────────────────────────────────────────────────────────────────────────
+  [~] Surface renders on Apple with all states reproduced — code complete + typechecks +
+      previews for every state; on-device render BLOCKED (no Xcode) — see capability evidence.
+  [x] Hooks bind to shared P1/S8 state-holder seams (dispatch + favorite + vehicle-state);
+      no direct HTTP in the view (view performs zero I/O).
+  [x] Every i18n key from source has a matching catalog key (verbatim) + native chrome keys
+      declared; referenced==declared.
+  [x] Accessibility labels on every interactive element (tile label/value/hint/id, favorite
+      label+selected trait+id, status dot/badge hidden with combined value spoken).
+  [x] Tests: adapter unit (16) + per-state model (14) + lifecycle/a11y/telemetry (11) =
+      41 methods, EXECUTED 41/41, FAILURES=0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0
+      (verbatim gate + isolated real scan).
+  [BLOCKED] xcodebuild iOS+macOS build test — platform capability unavailable (CLT only),
+      API evidence captured above; every RUNNABLE gate is green.
+
+────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT
+────────────────────────────────────────────────────────────────────────
+  1 No red-as-green ...... IOS_EXIT/MAC_EXIT shown as 1 (BLOCKED), never as pass; host
+                          gates are genuinely green (swift build + 41/41 tests executed).
+  2 No scope narrowing ... full surface (9 files + strings), all states, all seams, all tests.
+  3 No skip-and-assume ... web source read end-to-end; every t() + conditional reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. toggle on/off resolution + variant ON treatment + icon swap +
+                          status dot + ON/OFF line + commandOff/inputConfig routing + 8 states.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  BLOCKED (not DONE) because — unlike 0002/0054 (Xcode present,
+                          exit 65 dep gap) — Xcode is wholly absent here; this prompt's
+                          explicit Capability clause mandates BLOCKED + API evidence.
+  8 No commit on red ..... committed work is green on every runnable gate; the only non-green
+                          steps are the environment-blocked xcodebuild iOS/macOS build+test.
+  9 No silent drift ...... whole-tree swiftlint(1)/swiftformat(1) failures are PRE-EXISTING
+                          in non-ToggleCommandTile files (LifetimeStatsWidget.Adapter.swift,
+                          ActionBuilder.Previews.swift) — outside allowed scope, documented.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=1
+STATUS=BLOCKED

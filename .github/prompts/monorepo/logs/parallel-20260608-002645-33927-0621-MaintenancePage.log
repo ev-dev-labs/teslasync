@@ -1,0 +1,34 @@
+I'll start by exploring the repository structure to understand the web source, existing Apple app architecture, and parity requirements.
+
+Tools are available (xcodebuild, swiftlint, pwsh). Let me read the web source and explore the Apple Features structure.
+
+The project uses XcodeGen (`project.yml`). Let me read more of the web source and the project configuration.
+
+Key finding: the target sources are `Sources`, `TeslaSync/dashboard-widgets`, `TeslaSync/feature-views`, `Localization`. Let me explore the feature-views directory and existing page patterns.
+
+The feature-views directory is large. Let me find existing full-page implementations to use as templates and understand navigation registration.
+
+Let me find how routes get registered (to see existing P7 page examples) and check the web routing for `/maintenance`.
+
+Now let me examine the parity infrastructure, gate scripts, and AppShell rendering to understand the real conventions.
+
+This is one of the first P7 page implementations (no existing apple-page logs). Let me study the established patterns: an existing widget, the component library, design tokens, localization, and the shared facade.
+
+Let me read the typography, buttons, metrics, pickers, data table, banners, skeletons, motion, and forms components in parallel.
+
+Let me read the rest of the web page and the remaining key components (pickers, datatable, banners, skeletons, filters, motion) plus the SharedFacade.
+
+A `MaintenanceTrackerWidget` already exists — excellent template. Let me read it along with the rest of the web page and the SharedFacade state primitives.
+
+Let me read the widget's Model, strings, main file, and the SharedFacade state primitives to understand the data/state and localization patterns.
+
+Now let me understand route rendering, the widget builder/main, and the app container (KMP wiring).
+
+Now let me read the route parser/tests, app container (KMP wiring), and the remaining components I'll need (Select, VehicleSelect, AlertBanner, DataTable, Timeline, Skeletons, Motion, formatters) plus design tokens.
+
+Let me read RootView, design tokens, and the remaining UI components I'll use.
+
+Let me read the remaining components (Pickers, Filters, Banners, Lists, DataTable, Skeletons, Motion) and the widget's strings/tests/previews to learn conventions.
+
+
+Authorization error, you may need to run /login (Request ID: E421:15CE6D:334C47F:35A7FA1:6A26EF8E)

@@ -1,0 +1,90 @@
+I'll start by exploring the codebase to understand the structure, the web source page, and the existing Apple app architecture.
+
+The Apple `TeslaSync` directory structure is unexpected. Let me explore it more thoroughly.
+
+The actual source is in `apps/apple/Sources/`. Let me examine the project config and existing patterns.
+
+Now I understand the real structure. The parity pages live in `TeslaSync/feature-views/` (flat, 1436 files). Let me check for existing Climate files and the parity manifest/ledger.
+
+No existing Climate files. Let me understand the conventions by examining the manifest, the generator, and existing page-level files.
+
+No `Page.swift` files exist yet and no `apple-ledger.json`. The P7 pages are new work. Let me examine the conventions deeply.
+
+Let me read the rest of the web source and explore the Apple architecture in parallel.
+
+Now I have the full web source. Let me study the Apple architecture — navigation, facade, and an existing feature-view pattern.
+
+Let me check the available Swift/Xcode toolchain and the deep-link parser, since these determine my build/verification approach.
+
+Toolchain is fully available (xcodebuild, swift 6.3.2, xcodegen, swiftlint, pwsh). Let me understand how pages are wired and study an existing feature-view component pattern.
+
+Let me examine the logs, the generator's path logic, the Localization setup, and the model/strings pattern to finalize the file-placement decision.
+
+Excellent — the AcDcStatsPanel log is the definitive guide. It confirms the real convention: files go flat in `TeslaSync/feature-views/`, strings ship per-surface `.strings` (not the shared catalog), and verification uses an isolated SwiftPM harness + swiftlint/swiftformat/placeholder gates (full-app xcodebuild is DEFERRED on pre-existing conditions). Let me study the full multi-file pattern and design system.
+
+Now let me study the design system and component library available to me.
+
+Let me read the charts, feedback, typography, badges, tokens, and motion components.
+
+Let me study the SharedFacade (state holders, units, KMP binding) and design tokens.
+
+Let me check whether feature-views import the KMP `Shared` framework, and read the web converters/types I must port, plus remaining components.
+
+Confirmed: 0/1266 feature-view files import `Shared` — the convention is a Shared-free injectable seam. Let me read the exact converter, full type, formatters, and remaining components/tokens.
+
+Let me read the design tokens, typography, motion, and the remaining AcDcStatsPanel reference files (strings, previews, tests, views, adapter) to mirror conventions exactly.
+
+I have the full design system. Let me read typography, motion, the placeholder scanner, swiftlint config, and the reference strings/previews/views files before implementing.
+
+Let me read the placeholder scanner, the route-registration pattern, and the reference Previews/Adapter/Views files.
+
+Let me read the reference Adapter, Views, Previews, and Tests to mirror exact conventions, plus the placeholder patterns.
+
+I now have a comprehensive understanding. Let me quickly check the web formatters to port faithfully, then set up my plan and todos.
+
+I have a complete understanding of the architecture, conventions, and constraints. Let me set up my plan and todos, then implement.
+
+Now I'll implement. Starting with the pure foundation — `Adapter.swift` (data model, SI conversion, formatting, chart/efficiency builders).
+
+Now the pure status/label helpers (`Status.swift`).
+
+Now the state-holder seam, observable model, telemetry, and strings facade (`Store.swift`).
+
+Now the shared SwiftUI tiles. First `Tiles.swift` (metric tile, status chip, section header, empty).
+
+Now `Gauges.swift` — the radial temperature gauges, comfort dials, seat cards, and legend.
+
+Let me add a convenience to the strings facade (web keys are English text), then build the sections.
+
+Now the metric grid and protection row (`Grid.swift`) — the 13 climate metric tiles + 4 protection tiles, built data-driven.
+
+Now the Seat Heaters section (`Seats.swift`).
+
+Now the native Swift Charts (`Charts.swift`) — temperature line chart + AC/fan area chart with loading/empty states.
+
+Now the history table (`HistoryTable.swift`).
+
+Now the main surface view (`ClimateControlPage.swift`).
+
+Now the navigation registration + deep-link mapping (`Navigation.swift`).
+
+Now the per-surface strings table (`ClimateControlPage.strings`) — the 84 parity keys + native chrome keys.
+
+Now the previews (`Previews.swift`).
+
+Now the test suite (`Tests.swift`).
+
+All files written. Let me verify file sizes (swiftlint `file_length` warning is 400) and run the formatter/linter early.
+
+Two code lines exceed 120 chars. Let me fix them.
+
+All files are within limits. Now let me set up the isolated SwiftPM Swift-6 harness to build + test the exact shipped sources against the real design system + components (the sanctioned verification approach).
+
+The Components library has files depending on SharedFacade's `UnitPreferences` (Shared-backed). Let me identify which Components files reach outside, then exclude them from the harness (my page doesn't use them).
+
+Only `UnitFormatters.swift` reaches into the Shared-backed facade, and my page doesn't use it. I'll exclude it from the harness only and rebuild.
+
+The only errors are `#Preview` macros (a SwiftPM-vs-Xcode plugin limitation, not a code defect) — all guarded by `#if DEBUG`. Building in release config excludes them. Let me verify the production code compiles under Swift 6 strict concurrency.
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: F50A:2E590A:1226F81:1318DC1:6A26F532)

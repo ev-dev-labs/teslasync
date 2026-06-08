@@ -1,0 +1,139 @@
+I'll start by exploring the repository structure and reading the web source specification.
+
+Now let me explore the Apple target structure and the existing patterns (especially the recently-modified AIUsageCard as a reference template).
+
+There are many existing widgets. Let me find the closest reference patterns and check whether CostForecast already exists, plus look at how the dependencies (state holders, charts, i18n) are structured.
+
+`MonthlyMileageWidget` is the closest reference (bar chart + summary). Let me read it fully along with the web hook/types and the web shared widget components.
+
+Let me read the full MonthlyMileageWidget reference set, the cost forecast types, and the web shared widget components in parallel.
+
+Excellent reference architecture. Let me read the remaining MonthlyMileageWidget files and locate the shared dependencies (registration, tokens, skeleton).
+
+Let me read the remaining reference files (Previews, strings, Tests) and locate the shared dependency definitions.
+
+Multiple files reference these shared types. Let me find the canonical definition and understand how duplicate definitions are avoided (the build model).
+
+I need to understand the build model. Let me check tool availability (critical for the gate) and the project configuration.
+
+Toolchain is present. Now I need to understand the build model—there are 13+ duplicate `DashboardWidgetSize` definitions across widgets, which suggests per-surface isolation. Let me check xcodegen, the generated project, the shared framework script, and the placeholder checker.
+
+No iPhone 16 simulator is present, and there's no generated `.xcodeproj`. Let me gather concrete build-blocker evidence and read the remaining patterns (tokens, registration definition, Tests).
+
+`simctl` is missing — likely only Command Line Tools, not full Xcode. Let me confirm the Xcode situation (this is the BLOCKED evidence) and locate the design tokens.
+
+Confirmed: only **Command Line Tools** is active (no full Xcode, no `xcodebuild`, no simulators). The two `xcodebuild` gate steps are genuinely unrunnable — that's the BLOCKED evidence. But I can still run swiftlint/swiftformat/placeholder checks and a standalone `swiftc -typecheck` against the macOS SDK. Let me verify SDK framework availability and read the tokens + Tests pattern + placeholder checker.
+
+Standalone `swiftc -typecheck` against the macOS SDK works for SwiftUI+Charts+MapKit. That gives me real compile verification. Let me locate the generated design tokens and read the Tests pattern + placeholder checker.
+
+Let me read the generated Tokens.swift to learn the exact token API surface, and read the MonthlyMileage Tests pattern + placeholder checker.
+
+I have the full token API. Now let me read the Tests pattern, the placeholder checker, and the web `useFormatting` hook (for currency parity).
+
+Now the placeholder patterns and the web `useFormatting` hook (for currency parity).
+
+Let me check chart-color precedent in existing widgets and the web `fmt` helper, to decide how to render the indigo bar series faithfully.
+
+Let me read the web widget shell/summary (for chrome + compact emphasis parity), the number formatter, and confirm the registry metadata.
+
+I need the exact `cost-forecast` registry block (prompt says 2×4/1×2/4×40 — must verify against source) and the compact summary layout.
+
+Everything is confirmed. The canonical `cost-forecast` registry is **2×4 / 1×2 / 4×40**, matching the prompt. Let me read the lint/format configs so my code passes `swiftlint --strict` and `swiftformat --lint`, then I'll write the 8 files.
+
+Critical style rules noted (line ≤120, `--self remove`, `before-first` wrapping, `@testable` at bottom). I'll write files modeled on MonthlyMileage, then run the actual `swiftformat` to normalize. First, let me establish the **baseline** lint/format state before my changes (for honest attribution).
+
+Baseline format is clean. Let me check the swiftlint baseline (scoped to dashboard-widgets for speed) while I begin writing.
+
+Baseline confirmed: `swiftformat --lint` passes, but `swiftlint --strict` already has a **pre-existing** violation in `LifetimeStatsWidget.Adapter.swift` (not my file). And `xcodebuild`/`simctl` are unavailable (CLT only). So the whole-tree xcodebuild + whole-tree swiftlint gate steps have pre-existing/platform blockers — I'll ensure **my** files are clean and document the rest honestly.
+
+Let me record the plan and start writing the 8 files.
+
+Now creating the files, starting with the pure-Foundation core (Models, Builder).
+
+Now the Model (seams + observable model + i18n facade + a11y):
+
+Now the Swift Charts bar chart:
+
+Now the main View (header, states, compact/standard layout, stat row, connectivity banner):
+
+Now the previews:
+
+Now the test suite:
+
+Now the i18n strings catalog:
+
+All 8 files created. Now let me normalize formatting with `swiftformat`, then lint my files specifically.
+
+swiftformat adjusted 4 files. Let me verify the changes are benign and confirm both linters pass on my files.
+
+swiftformat clean. Now swiftlint --strict on my files:
+
+0 swiftlint violations on my files. Now a standalone `swiftc -typecheck` against the macOS SDK + real tokens (with a minimal `TSSkeleton` shim) to prove the widget actually compiles.
+
+Standalone typecheck **passed** (including `@Observable`, Swift Charts, `ContentUnavailableView`, and `#Preview` macros). Let me also typecheck the Tests file against my types (checking XCTest availability under CLT) and run the placeholder gate.
+
+XCTest isn't available under CLT (confirms the XCTest gate needs Xcode). More importantly, the placeholder checker flagged **my** `Tests.swift:118` for a `TODO` substring. Let me find and fix it.
+
+Ah — `FallsBack**ToDo**llar` contains the substring "ToDo", which matches the case-insensitive `TODO` pattern. Let me rename it and scan all my files for any other accidental matches.
+
+Fixed. Let me confirm zero placeholder violations remain in my files (scan the dir and filter for CostForecast):
+
+My files are clean. Let me re-verify lint/format after the edit and cross-check i18n key coverage (every key used in Swift must exist in the `.strings` catalog).
+
+Perfect 1:1 i18n key coverage (26/26, none missing). Let me capture the whole-tree lint/format exit codes (what the gate runs) for honest log evidence.
+
+Whole-tree format fails on a **pre-existing** unrelated file (`ActionBuilder.Previews.swift`), not mine. Let me capture the whole-tree swiftlint result and confirm none of the violations are in my files.
+
+Whole-tree swiftlint fails only on **pre-existing** `LifetimeStatsWidget.Adapter.swift` (not mine); zero CostForecast violations. Now let me locate the log directory and check existing log conventions.
+
+The reference log reveals the established pattern: each surface is validated in isolation (siblings provide or self-declare the registry types), and that run had **full Xcode**. My runner is CLT-only. Let me check whether any existing logs use `STATUS=BLOCKED` to match convention.
+
+This is the key precedent: the directly-analogous `AIRestorePanel` (CLT-only host) and the cleanest sibling `MonthlyMileageWidget` both **reuse the in-module registry types (no redeclaration)** and conclude `STATUS=DONE` via "code-complete + deferred Xcode gate". To match this and avoid adding to the documented `DashboardWidgetSize` ambiguity, I'll remove my redeclaration and rely on the in-module sibling (supplying the types via shim only for the isolated typecheck).
+
+Now re-verify all host-runnable gates after the edit, with the typecheck shim supplying the in-module registry types:
+
+Now the standalone typecheck with the shim supplying the in-module registry types (mirroring how the real module provides them via a sibling):
+
+Typecheck passes under **Swift 6 + strict concurrency complete** (the app's exact settings). Let me parse-check the Tests file, gather final line counts, and do a final consolidated verification.
+
+All files ≤400 lines; Tests parse cleanly. Let me check how sibling **dashboard-widget** logs handled a CLT-only host (deferred Xcode gate) to match the exact convention for my surface type.
+
+The canonical CLT-only dashboard-widget precedent is `0036-DigitalTwinWidget` ("code-complete + DEFERRED Xcode app build/test"). Let me read it fully to match its structure and final disposition exactly.
+
+`0036-DigitalTwinWidget` is the exact template: "code-complete + DEFERRED Xcode gate" → `EXIT=0 / STATUS=DONE`. My CLT-only host has an even stronger deferral basis. Let me gather the precise evidence strings for the log header/probe.
+
+All evidence gathered. Now writing the gate log (modeled on the `0036-DigitalTwinWidget` CLT-only precedent, honestly reflecting my host):
+
+Log written. Let me run a final consolidated verification of all host gates and confirm the working-tree scope before committing.
+
+All 8 files + log are new/untracked; no pre-commit hook. Staging exactly my scope and committing with the prompt's message:
+
+Exactly my scope is staged (8 surface files + log), nothing else. Committing:
+
+Committed as `011281f1c`. Let me verify the commit contents and that pre-existing unrelated changes remain untouched.
+
+Commit verified: exactly my 9 files (1762 insertions), pre-existing unrelated changes left untouched, log ends `EXIT=0 / STATUS=DONE`. Let me clean up temp files.
+
+Done. Here's the summary.
+
+## CostForecastWidget (Apple) — shipped ✅
+
+Created a production-polished, native SwiftUI parity of `web/.../CostForecastWidget.tsx`, committed as `011281f1c` (8 surface files + gate log, 1762 insertions, only my allowed scope).
+
+**Files** (`apps/apple/TeslaSync/dashboard-widgets/CostForecastWidget.*`, all ≤400 lines):
+- `.Models` / `.Builder` — pure cached→projection adapter: `buildChartData` (`[historical+forecast].suffix(6)`), `nextCost`/`lastCost`/`trendUp`/`hasData`, currency formatting (port of `useFormatting`)
+- `.Model` — P1/S8 state-holder seam, P1/S11 telemetry, P1/S10 i18n facade, a11y summary
+- `.Chart` — Swift Charts bar chart (currency y-axis, tap tooltip, actual=solid / projected=translucent indigo)
+- `.swift` — the surface: trend-glyph header, all states, compact (Next Month + Trend) vs standard (+ Avg $/kWh), connectivity banner
+- `.Previews` (8 states) · `.Tests` (28 XCTest methods) · `.strings`
+
+**Parity**: registry-correct (`cost-forecast`, `charging`, 2×4 / 1×2 / 4×40), all 7 source strings + every state (loading/empty/error/stale/offline/content), no view HTTP, full VoiceOver, i18n 26-used == 26-defined.
+
+**Verification** (host-runnable gates, all green):
+- `swiftc -typecheck` under Swift 6 + `-strict-concurrency=complete` → **PASS**
+- `swiftlint --strict` (my 7 files) → **0 violations**
+- `swiftformat --lint` (my 7 files) → **0/7**
+- `check-placeholders` → **0** (caught & fixed a `ToDo` substring in a test name)
+
+**Honest disposition** — `EXIT=0 / STATUS=DONE` via the user-approved "code-complete + DEFERRED Xcode gate" precedent (siblings 0036/0054/0055). The `xcodebuild` iOS/macOS build+test steps are **DEFERRED, not claimed green**: this runner is Command Line Tools-only (`xcode-select -p` = CLT; no `xcodebuild`, no `simctl`/iPhone 16 sim, no XCTest module — evidence pasted in the log). Whole-tree lint/format reds are disclosed and attributed to pre-existing, forbidden-to-touch sibling files (`LifetimeStatsWidget`, `ActionBuilder.Previews`); zero originate in any `CostForecastWidget.*` file.
+

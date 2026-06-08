@@ -1,0 +1,168 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure and supporting infrastructure.
+
+Let me look at existing feature pages to understand the established patterns, and check if Trips already exists.
+
+The `SettingsScene.swift` shows the established route registration pattern. Let me study it and the app entry point.
+
+Let me check the build tooling availability, since the gate depends on it.
+
+`xcodebuild` only has Command Line Tools — no full Xcode. Let me check for any full Xcode install and explore the parity infrastructure in parallel.
+
+Full Xcode exists at `/Applications/Xcode.app`. Let me verify I can use it via `DEVELOPER_DIR` and grab the manifest record.
+
+Xcode 26.5 works via `DEVELOPER_DIR` — the real gate can run. Now let me study the core building blocks: SharedFacade, design tokens, and key components.
+
+The KMP core has a full Trips presentation layer. Let me read it and the key components/tokens.
+
+Let me examine the Shared framework build script and the p4-apple gate contract.
+
+This reveals the established "code-complete + DEFERRED Xcode gate" disposition. Let me study the gate mechanism (SwiftPM harness, typecheck) and a data-bound feature-view for conventions.
+
+The seam/adapter pattern is clear. Let me read the adapter, views, previews, tests conventions and the key components I'll compose with.
+
+Now I understand the conventions well. Let me read the design tokens, chart components, cards, and data-display/feedback components.
+
+Let me check how existing surfaces handle SI conversion and how the page gate is defined in the generator.
+
+No `TeslaSync/*` file imports Shared — feature-views are Shared-free. Let me see how they do conversion/currency and check `TypedFormatters`.
+
+The convention is clear: `TeslaSync/*` surfaces are Shared-free with pure-Swift projection math (e.g. `DriveAnalyticsUnits`). Let me confirm how a page-like surface (DrivingTab) wires its data source and check the Trips repository constructor.
+
+`#if canImport(Shared)` is the key idiom for production bridges. Let me check how `RootView`/`AppContainer` are wired to decide the registration approach, and read the generator's exact page gate.
+
+`AppContainer` isn't composed yet (matches the deferred-bootstrap reality). Let me read the string catalog, remaining components (Button/IconBox/Pagination/tokens), and the data-bound test/preview conventions.
+
+I have all components. Let me read the data-bound surface conventions (DrivingTab page/previews/tests), the glass modifier, and lint config.
+
+I have all the pieces. Let me kick off the long Shared.xcframework build in the background (it's the long pole for the real macOS compile gate) while I read the final conventions.
+
+Let me check the formatter config, the motion component, and the deferred-gate disposition doc, then start writing.
+
+Key insight from the pending-verifications doc: every P4 surface defers the full-app build (pre-existing collisions) and verifies via **isolated SwiftPM build + tests + `swiftc -typecheck` (both SDKs) + lint/format/placeholder**. Let me confirm which Sources import Shared (to scope my typecheck) and check for any harness template.
+
+`Sources/Components/**` and `Sources/App/**` are Shared-free — good for the isolated harness. Now let me pin the exact web formatting math to port faithfully.
+
+I now have full fidelity on the web math. Let me check the gradle build progress, then write a plan and start implementing.
+
+Gradle is building (Java 17 present). Let me set up tracking and start implementing while it builds.
+
+Let me check how DrivingTab implements labeled bar charts (the precedent for my top-trips chart) and confirm gradle progress.
+
+DrivingTab uses Swift Charts `BarMark` directly for labeled bars wrapped in container chrome. Let me confirm `tsChartAxes()` and gradle, then write code.
+
+I have the complete design. Let me create the directory and write the pure projection first.
+
+Gradle is still building. Let me write the pure projection file (the parity-critical core).
+
+Now the model with the source seam. Let me write it.
+
+Now the strings facade (catalog-backed). Let me write it.
+
+Gradle finished — let me check the result, then continue with the export logic and views.
+
+Excellent — the Shared.xcframework built successfully (debug + release, all slices). Let me stage it and inspect the KMP Swift symbol names for my Live bridge.
+
+I have the exact KMP Swift symbols. Let me write the Live bridge (guarded), then the views.
+
+Let me verify `FacadeError.message` exists for the Live bridge, then write the Views.
+
+`FacadeError` has no `.message` — let me add a mapping helper in the Live bridge.
+
+Now the views (the largest file). Let me write it with all sections, states, and the chart.
+
+I referenced `TripListExport` and `TripRowView`. Let me add the pure export logic to the projection and create the row view.
+
+Now the trip row view (web `TripRow`), adaptive across idioms.
+
+Now let me add the raw `trips` accessor to the model (for export), then write the main Page view.
+
+Now the main Page view (adaptive scaffold + all states + toolbar + pagination).
+
+Now the navigation registration. Let me write it (mirroring `SettingsRouteRegistration`).
+
+Now the previews (DEBUG, per-state). Let me write them.
+
+Now the unit tests (projection parity + states + model behavior).
+
+Page implementation is complete. Let me update tracking and add the catalog keys safely via a script.
+
+28 keys added and JSON re-parses. Let me check the catalog diff size to confirm formatting stayed stable.
+
+Clean catalog diff (+308/-0). Now let me wire the registration into the app and update `project.yml`.
+
+Now let me run the text-based gates: placeholder scan, SwiftFormat lint, and SwiftLint strict on the new files.
+
+Placeholder gate passes (0). SwiftFormat found auto-fixable style issues. Let me apply the formatter, then re-lint.
+
+SwiftFormat passes. Now SwiftLint strict.
+
+SwiftLint reported 1 violation — let me locate it.
+
+The 1 violation is pre-existing (dashboard-widgets, unrelated). Let me verify how the gate-specified invocation scopes from repo root, and confirm my files are clean in isolation.
+
+My real violation: `TripListProjection.swift` is 568 lines (>400 under `--strict`). Let me check all file sizes, then split it.
+
+Only the projection file exceeds 400. Let me split out the formatters and export into separate files. Let me find the section boundaries.
+
+Let me create the two split-out files, then remove those sections from the projection.
+
+Now let me remove those two sections from the projection file (keeping the projection logic).
+
+Projection is now 328 lines. Let me re-run format + lint on the new files.
+
+Format clean. Let me confirm SwiftLint's exit code and summary scoped to my files.
+
+SwiftLint strict passes (EXIT=0). Now let me build an isolated SwiftPM harness to actually compile and run the parity tests against the Shared-free core.
+
+All 27 harness tests pass under Swift 6 strict concurrency. Now let me typecheck the full SwiftUI surface (views + page + registration) against the design system for the macOS SDK.
+
+Just a missing dependency in my typecheck set — `Sources/Design/**` (defines `TSChartPalette`). Let me add it and re-run.
+
+Zero errors in my files. Let me confirm where the other 52 errors live (to ensure they're pre-existing dependency gaps, not mine).
+
+All 52 errors are confined to one Shared-dependent component (`UnitFormatters.swift`, which needs the SharedFacade `Units` type) that my page doesn't use. Let me exclude it and confirm a clean typecheck for both SDKs.
+
+Both SDKs typecheck clean (0 errors). Now the critical one — let me verify the `Live` KMP bridge compiles against the real staged `Shared.xcframework`.
+
+0 errors in my Live file. Let me check the 4 errors elsewhere (likely pre-existing SharedFacade symbol placeholders).
+
+The 2 facade errors are just a missing `AuthTokenProviding` (from `Sources/Auth`, not in my minimal set). Let me add it to confirm the Live bridge fully resolves.
+
+The Live bridge fully resolves against the real Shared framework (0 errors). Now let me validate the project spec with `xcodegen generate`.
+
+xcodegen validates the spec and enumerates my files. Let me run a final consolidated verification sweep and check git status.
+
+All gates green. Let me check git status and ensure build artifacts are ignored, then handle the parity ledger.
+
+I see unexpected `AIUsageCard.*` modifications I didn't make. Let me investigate before proceeding.
+
+These `AIUsageCard.*` changes are from a **concurrent process** (the file is being renamed `AIUsageCard`→`AiUsageCard`, a different surface) — not mine. I'll exclude them and stage only my files. Let me inspect the ledger schema to create the apple ledger.
+
+These `AIUsageCard.*` edits are from a concurrent agent — I'll stage only my files. Build artifacts are git-ignored. Let me add my source dir to the lint config, create the apple ledger, and re-confirm the exact gate invocations.
+
+Now let me re-run the exact gate commands capturing exits, and kick off the full macOS `xcodebuild` in the background to honestly document the deferred gate.
+
+SwiftLint's exit 2 is from a **pre-existing** violation in another file (my Trips files = 0 violations). The gate runs from repo root (no config discovery → scopes to my path). Let me confirm that, and kick off the full macOS `xcodebuild` to document the deferred gate.
+
+The gate's exact command passes: **`swiftlint --strict apps/apple/TeslaSync/Features/Trips` → EXIT 0, "Found 0 violations in 12 files."** Let me start the full macOS `xcodebuild` (documenting the deferred gate) and write the log while it runs.
+
+The macOS build is running in the background. Let me write the evidence log while it builds.
+
+The macOS build finished. Let me check its result and whether any errors are attributable to my Trips files.
+
+**TRIPS_ERR_COUNT=0** — my surface compiled cleanly. The macOS build's only 2 failures are pre-existing (`AIRestorePanel.Tests.swift` importing XCTest into the app target — a feature-view convention, unrelated to me; my test file is excluded from app targets). Let me update the log with the actual observed evidence.
+
+Let me update tracking, then stage only my files (excluding the concurrent `AIUsageCard` edits) and commit.
+
+All my files are cleanly separable from the 7 concurrent `AIUsageCard` files. Let me stage only my files and verify the staged set.
+
+Staged set is exactly my files — no concurrent edits, no build artifacts. Let me commit.
+
+Committed cleanly (bdc168d1e); the concurrent `AIUsageCard` edits remain untouched in the working tree. Let me clean up the temporary verification artifacts and do a final confirmation.
+
+Let me do a final verification of the committed contents.
+
+All 18 files committed cleanly (12 Trips source files + nav registration + catalog + ledger + log), with the concurrent `AIUsageCard` edits and git-ignored build artifacts correctly excluded. The task is complete and verified.
+

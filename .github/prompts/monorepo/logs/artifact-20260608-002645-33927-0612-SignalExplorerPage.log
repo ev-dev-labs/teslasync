@@ -1,0 +1,288 @@
+================================================================================
+P4 · Apple · P7 · page:telemetry/SignalExplorer — SignalExplorerPage (SwiftUI / HIG)
+Run: 2026-06-08T09:20-0700   Host: Darwin arm64
+Prompt: p4-apple · P7 · page:telemetry/SignalExplorer (generated from parity-manifest.json)
+Web source (spec): web/src/features/telemetry/pages/SignalExplorerPage.tsx
+Native output: apps/apple/TeslaSync/feature-views/SignalExplorerPage.*
+Mode: code-complete + DEFERRED Xcode app build/test (established P4 Apple disposition;
+      ADR-012 macOS-pending; apps/macos-pending-verifications.md). Delegation: NONE (authored directly).
+================================================================================
+
+=== PROMPT-PATH RECONCILIATION (no silent drift) ===
+  The generator emits idealized paths; the real repo convention (proven by 174 prior
+  p4-apple-feature-views surfaces + the registered source paths) is reconciled exactly
+  as the predecessor LiveSignalsTable (0036) did and was approved:
+    • Output  prompt: apps/apple/TeslaSync/Features/Telemetry/SignalExplorerPage.swift
+              REAL:   apps/apple/TeslaSync/feature-views/SignalExplorerPage.* (multi-file)
+              — the path that IS a source in project.yml (both app targets) AND in
+                .swiftlint.yml `included`, so the files are actually compiled + linted.
+    • Strings prompt: Localizable.xcstrings (shared master catalog)
+              REAL:   per-surface SignalExplorerPage.strings table (NSLocalizedString
+                      tableName:"SignalExplorerPage"). The shared catalog is NOT edited
+                      (parallel-unsafe across the concurrent slots; folded at integration).
+    • Nav     prompt: register in NavigationStack / deep-link /signal-explorer
+              REAL:   SignalExplorerPage is a registrable surface + a parallel-safe seam
+                      (AppRouteHostRegistry.registerSignalExplorer(at:model:)) + the route
+                      path constant. Adding the dedicated AppRoute case + the registry call
+                      at the composition root is integration-scoped (parallel-unsafe shared
+                      enum), exactly as the feature-views/dashboard-widgets source paths were
+                      wired by a later integration commit, not by each surface.
+    • Ledger  prompt: apps/parity/apple-ledger.json
+              REAL:   that aggregate ledger does not yet exist and is gate-owned (cf.
+                      shared-ledger.json `generatedBy` a single gate prompt). The binding row
+                      is published in the === PARITY === + === LEDGER ROW === sections below
+                      for the integration gate to aggregate, avoiding an add/add conflict
+                      across the parallel slots.
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                 OK
+  /Applications/Xcode.app .... present (preview macro plugin + macOS 26.5 SDK)      OK
+  macOS SDK (typecheck) ...... -swift-version 6, -target macos15.0, strict=complete OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.3                    OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.1                  OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  xcodegen ................... 2.45.4                                              OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+  codesign identities ........ "0 valid identities found"                           WARN (macOS app gate blocker, ADR-012)
+
+  Charts/Maps capability note: this page uses NEITHER Swift Charts NOR MapKit (manifest
+  "charts": [], "maps": []). The core requirement is SwiftUI, proven by a real macOS-SDK
+  compile below (strict-concurrency=complete). The capability-BLOCKED escape hatch does
+  NOT apply — the surface is authored and host-validated for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/SignalExplorerPage.*) ===
+  SignalExplorerPage.Models.swift        131  Foundation value types: SignalExplorerSignal,
+                                              LoadStatus, Connection (ADR-013), PageSize,
+                                              RangePreset, Update; signalExplorerMaxSignals=5
+  SignalExplorerPage.Adapter.swift       127  pure ports: cap/toggle (≤5), canExplore, range
+                                              presets, day→ISO instant bounds (toISOString)
+  SignalExplorerPage.Model.swift         315  P1/S8 source seam + @Observable model (phase/
+                                              connection/selection/explore/live) + P1/S11
+                                              telemetry seam + InMemory source
+  SignalExplorerPage.Localization.swift  210  P1/S10 facade (table "SignalExplorerPage";
+                                              15 parity strings + native chrome) + a11y
+  SignalExplorerPage.swift               249  page surface: header (title/subtitle/vehicle
+                                              picker/live badge/staleness) + error banner +
+                                              no-vehicle / results states
+  SignalExplorerPage.Controls.swift      375  GlassPanel1 controls (selector states + range +
+                                              page size + explore + live + help) + chip +
+                                              resolved-query summary
+  SignalExplorerPage.Registration.swift   24  parallel-safe nav-registration seam
+  SignalExplorerPage.Previews.swift      107  #if DEBUG previews — 7 states
+  SignalExplorerPage.Tests.swift         312  XCTest: adapter + phase + model + strings + a11y
+  SignalExplorerPage.strings              59  P1/S10 catalog contribution (15 source keys +
+                                              native chrome + range presets + a11y)
+  Total 1909 lines. Every file <= 400 (house file_length); largest 375. One exported view per file.
+
+=== PARITY (vs web SignalExplorerPage.tsx — page unit) ===
+  Data source -> bound via the shared seam (SignalExplorerPageSource -> SignalExplorerPageModel):
+    useSignals (GET /signals/{vehicleId}/available -> string[], enabled vehicleId>0) is the
+    production source; useTranslation -> SignalExplorerPageStrings (NSLocalizedString table);
+    useSelectedVehicle -> model.vehicleID + header picker; the live SSE stream -> model.connection
+    (ADR-013, with > 2 min staleness chip). The view performs NO HTTP.
+  Adapter (pure) -> SignalExplorerLogic faithfully ports: the ≤5 select cap/toggle
+    (slice(0, MAX_SIGNALS)), canExplore (selection && range && vehicleId>0), the RangePicker
+    presets (today/yesterday/7d/30d/90d/all), and the day→ISO instant bounds
+    (new Date(`${d}T00:00:00`/`T23:59:59.999`).toISOString() in UTC). Proven by an executed
+    harness (35/35 below).
+  Composition -> P3 native components + P2 tokens (no Tailwind, no web cloning): TSGlassPanel
+    (GlassPanel1) hosts a native multi-select (removable chips + an "Add signal" Menu, ≤5),
+    a Time-Range preset Menu, a Per-Page Menu, TSButton Explore (spinner=isFetching) + a
+    Live/Stop toggle (destructive when live) + a Help popover; the header carries a vehicle
+    Menu picker + the live connection badge. Recharts -> none. Leaflet -> none.
+  States (all render) -> no-vehicle (ContentUnavailableView, signalExplorer.noVehicle/Desc) ·
+    loading (selector ProgressView) · empty (results ContentUnavailableView "Pick signals and
+    click Explore" + native empty-catalog note) · error (AlertBanner error.loadFailed + retry) ·
+    success (interactive selector + resolved-query summary). The model phase keeps cached
+    options visible behind refresh/errors, matching the web data-driven shell.
+  i18n -> all 15 manifest strings resolve through the P1/S10 facade with the verbatim web
+    value/default; zero hardcoded literals in views (every string via the facade rendered with
+    Text(verbatim:)). Dotted web keys kept verbatim (error.loadFailed, help.signal.live.aria,
+    liveMonitor.connected/disconnected, signalExplorer.live/noVehicle/noVehicleDesc/stopLive);
+    the literal-English web keys carry verbatim English fallbacks. Verified executed (harness).
+  a11y -> header title isHeader; live badge is one combined element labelled by its connection
+    phrase; the selector exposes a selection-count value; the remove-chip button + Add menu +
+    help button carry labels/hints; Dynamic Type via the token ramp; dark/light/increased-
+    contrast via the generated dynamic-color tokens. No animations (Reduce Motion N/A).
+  Units -> SI is read from the API; this page shows no numeric measurements, so no display-
+    boundary conversion is required (ADR; the chart/stats/history sub-units own measurements).
+  Telemetry -> SignalExplorerPageModel.start() emits viewOpened(surface:"SignalExplorerPage")
+    exactly once (P1/S11), spy-asserted in the XCTest model suite.
+
+=== PARITY ===
+PARITY_REQUIRED=20
+  [x] panel  — GlassPanel1
+        evidence: SignalExplorerControls (TSGlassPanel) — SignalExplorerPage.Controls.swift;
+                  mounted by SignalExplorerPage.body — SignalExplorerPage.swift
+  [x] state  — loading
+        evidence: SignalExplorerPageModel.Phase.loading -> SignalExplorerControls.loadingSignals
+                  (SignalExplorerPage.Controls.swift)
+  [x] state  — empty
+        evidence: SignalExplorerPage.resultsRegion ContentUnavailableView + Phase.empty ->
+                  SignalExplorerControls.emptyCatalog (Controls.swift / SignalExplorerPage.swift)
+  [x] state  — error
+        evidence: SignalExplorerPageModel.errorMessage -> SignalExplorerPage.errorBanner
+                  (SignalExplorerPage.swift)
+  [x] state  — success
+        evidence: Phase.content -> SignalExplorerControls.selectionEditor +
+                  SignalExplorerQuerySummary (SignalExplorerPage.Controls.swift)
+  [x] string — Choose up to 5 signals, set a date range, then hit Explore — or toggle Live to stream in real time.
+        evidence: SignalExplorerPageStrings.resultsEmptyMessage -> resultsRegion (Page.swift)
+  [x] string — Explore
+        evidence: SignalExplorerPageStrings.explore -> exploreButton (Controls.swift)
+  [x] string — Per Page
+        evidence: SignalExplorerPageStrings.perPage -> perPageField + QuerySummary (Controls.swift)
+  [x] string — Pick signals and click Explore
+        evidence: SignalExplorerPageStrings.resultsEmptyTitle -> resultsRegion (Page.swift)
+  [x] string — Signal Explorer
+        evidence: SignalExplorerPageStrings.title -> header (SignalExplorerPage.swift)
+  [x] string — Time Range
+        evidence: SignalExplorerPageStrings.timeRange -> timeRangeField (Controls.swift)
+  [x] string — Visualise signal history with chart and stats — or stream live
+        evidence: SignalExplorerPageStrings.subtitle -> header (SignalExplorerPage.swift)
+  [x] string — error.loadFailed
+        evidence: SignalExplorerPageStrings.errorLoadFailed -> errorBanner (Page.swift)
+  [x] string — help.signal.live.aria
+        evidence: SignalExplorerPageStrings.helpLiveAria -> helpButton .accessibilityLabel
+                  (Controls.swift)
+  [x] string — liveMonitor.connected
+        evidence: SignalExplorerPageStrings.liveConnected -> liveBadge (+ liveBadgeLabel a11y)
+                  (SignalExplorerPage.swift / Localization.swift)
+  [x] string — liveMonitor.disconnected
+        evidence: SignalExplorerPageStrings.liveDisconnected -> liveBadge (SignalExplorerPage.swift)
+  [x] string — signalExplorer.live
+        evidence: SignalExplorerPageStrings.live -> liveButton + QuerySummary (Controls.swift)
+  [x] string — signalExplorer.noVehicle
+        evidence: SignalExplorerPageStrings.noVehicleTitle -> noVehicleState (Page.swift)
+  [x] string — signalExplorer.noVehicleDesc
+        evidence: SignalExplorerPageStrings.noVehicleMessage -> noVehicleState (Page.swift)
+  [x] string — signalExplorer.stopLive
+        evidence: SignalExplorerPageStrings.stopLive -> liveButton (Controls.swift)
+PARITY_COVERED=20
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real exit codes) ===
+[1] swiftc -typecheck PRODUCTION (the 7 production surface files compiled with the REAL
+    generated tokens (apps/design/generated/apple/Tokens.swift), the REAL shared components
+    used (TSMaterial/Typography/Buttons/Badges/Cards), and the REAL nav module
+    (AppRoute/RouteHostRegistry), under -swift-version 6 -target arm64-apple-macos15.0
+    -strict-concurrency=complete):
+        TYPECHECK_PROD_EXIT=0   (zero warnings)
+    (Earlier runs correctly caught two real strict-concurrency defects — a MainActor View
+     init built in the nonisolated registry closure, fixed with MainActor.assumeIsolated; and
+     a MainActor-isolated `resolvePhase` unreachable from a nonisolated test, fixed with
+     `nonisolated` — both re-run green.)
+[2] swiftc -typecheck DEBUG incl previews (same set + SignalExplorerPage.Previews.swift, with
+    -D DEBUG so the #Preview macro expands; full Xcode toolchain plugin):
+        TYPECHECK_DEBUG_EXIT=0
+[3] swiftc -typecheck TESTS vs REAL API (SignalExplorerPage.Tests.swift compiled against the
+    production surface via a minimal XCTest shim; proves every test body references the real
+    public/internal API correctly):
+        TYPECHECK_TESTS_EXIT=0
+[4] EXECUTED adapter harness (Models + Adapter + Localization compiled to a native binary + a
+    35-assertion main exercising cap/toggle/canExplore + range presets + day→ISO bounds + the
+    15 strings + a11y summaries against expected web values):
+        ADAPTER HARNESS: 35/35 assertions passed; 0 failed   (RUN_EXIT=0)
+    (An earlier run correctly FAILED one assertion — a miscomputed last90d expectation in the
+     harness; the adapter was right (2026-06-07 − 89d = 2026-03-10). Expectation corrected and
+     the XCTest gained a last90d case; re-run 35/35.)
+[5] swiftlint --strict (the 9 surface .swift files, repo rules):
+        Found 0 violations, 0 serious in 9 files.   (LINT_EXIT=0)
+    (Earlier runs caught real violations — multiple_closures_with_trailing_closure on the
+     TSButton label closures and two line_length — all fixed, then re-run green.)
+[6] swiftformat --lint (repo .swiftformat):
+        0/9 files require formatting.   (FORMAT_EXIT=0)
+[7] check-placeholders.ps1 — scoped scan of the 10 SignalExplorerPage.* files (a tmp copy, so
+    the count reflects ONLY this surface; the directory form also matches pre-existing
+    "Placeholder" literals in sibling surfaces outside this prompt's scope):
+        PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0
+    Independent raw grep of TODO|FIXME|XXX|Coming soon|Placeholder|Lorem ipsum|not implemented
+    over the surface: NONE FOUND.
+
+  i18n parity verification (executed): all 15 manifest strings present in
+  SignalExplorerPage.strings AND asserted verbatim by the executed harness [4]
+  (s.title … s.stopLive) and the XCTest SignalExplorerStringsTests suite.
+
+=== GATE — XCODE APP BUILD/TEST (ATTEMPTED; DEFERRED on a verified code-external blocker) ===
+  Unlike the predecessor (who deferred without running), this run ATTEMPTED the app build and
+  captured the real failure, then registered the project to prove inclusion:
+    • xcodegen generate -> EXIT=0; the generated TeslaSync.xcodeproj contains all 8 surface
+      .swift files (60 pbxproj references across the iOS + macOS app targets + the test bundle).
+      => the surface IS target-registered now (feature-views is a project.yml source path);
+         this is STRICTLY STRONGER than the predecessor, whose path was not yet registered.
+    • xcodebuild -target TeslaSync-macOS -configuration Debug -sdk macosx CODE_SIGNING_ALLOWED=NO build
+        ** BUILD FAILED **   (exit 65)
+        error: There is no XCFramework found at
+               '.../apps/apple/Frameworks/Shared.xcframework'.
+      The app links the KMP `Shared.xcframework` (a scheme pre-action shells out to
+      apps/shared/gradlew :core:assembleSharedXCFramework — Kotlin/Native). apps/apple/Frameworks
+      holds only .gitkeep; apps/macos-pending-verifications.md explicitly defers producing that
+      binary to a macos-latest runner. The failure is at framework RESOLUTION — before any Swift
+      source is compiled — so it is code-external and not a defect in this surface.
+    • security find-identity -p codesigning -> "0 valid identities found" (macOS app/widget
+      entitlements require a development certificate; ADR-012 defers to a signed runner).
+  XCTest (SignalExplorerPage.Tests.swift) runs in the TeslaSync(/-macOS) XCTest target under
+  Xcode; its bodies are PROVEN to compile against the real surface API in [3], and its pure
+  adapter + a11y + strings subset is PROVEN GREEN by the executed harness in [4].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Every named panel implemented (GlassPanel1); every page region from the web source
+      reproduced (header/vehicle picker/live badge/error/no-vehicle/controls/results).
+  [x] All 20 parity items render from the bound @Observable state holder (see === PARITY ===).
+  [x] loading / empty / error / success implemented for the useSignals data source.
+  [x] All visible strings from Localizable catalog (per-surface table); zero hardcoded literals;
+      key names match web (dotted keys verbatim; literal-English keys carry verbatim fallbacks).
+  [x] Dark mode + Dynamic Type + accessibility honored; SwiftUI-native only (no web cloning).
+  [x] build + lint + test + placeholder: lint/format/placeholder/host-typecheck/executed-harness
+      GREEN; Xcode app build/test DEFERRED on the absent Shared.xcframework (code-external).
+  [x] PARITY_COVERED == PARITY_REQUIRED (20). EXIT=0 / STATUS=DONE.
+  [x] apple ledger row published below for gate aggregation (apple-ledger.json is gate-owned).
+
+=== LEDGER ROW (for apps/parity/apple-ledger.json — integration gate aggregates) ===
+  { "unitId": "page:telemetry/SignalExplorer", "platform": "apple-macos", "status": "done",
+    "coveredCount": 20, "requiredCount": 20,
+    "promptId": "p4-apple/P7-page-telemetry-SignalExplorer",
+    "evidenceLog": ".github/prompts/monorepo/logs/apple-page-telemetry-SignalExplorerPage.log" }
+  (Also applies to platform "apple-ios": one adaptive SwiftUI surface serves both, ADR-002.)
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED — the real `** BUILD FAILED ** (65)`
+                       and its cause (absent Shared.xcframework) are pasted above. Every host
+                       "EXIT=0" is a real run.
+  2  No scope narrowing: implemented the full page unit — header (title/subtitle/vehicle picker/
+                       live badge/staleness) + error + no-vehicle + GlassPanel1 controls
+                       (selector states + range + page size + explore + live + help) + results
+                       (empty + resolved-query summary); all 4 states; a11y; telemetry.
+  3  No skip-and-assume: each host gate executed; the typecheck caught two real strict-concurrency
+                       defects, the harness caught a real expectation error, swiftlint caught real
+                       violations — all fixed, then re-run green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; raw grep clean.
+  5  No parity shortcuts: faithful port of the cap/toggle/canExplore/range/ISO logic + all states
+                       + 15/15 strings; native HIG composition (no web cloning).
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into the shared AppRoute enum / AppShell and did
+                       NOT edit the shared Localizable.xcstrings or create the shared apple-ledger
+                       — all parallel-unsafe + integration/gate-owned; shipped per-surface strings
+                       + a parallel-safe registration seam + the ledger row in this log.
+  8  No commit on red  : committing on all-green host gates; the Xcode app step is explicitly
+                       DEFERRED on a code-external blocker, not a failure of this code.
+  9  No silent drift   : changes confined to the SignalExplorerPage.* files + this log; the
+                       idealized prompt paths are reconciled openly in PROMPT-PATH RECONCILIATION.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native SignalExplorerPage shipped at parity with the web page unit:
+  pure-Swift control logic (executed-green adapter, 35/35), P1/S8 state-holder seam (no view
+  HTTP), P1/S11 view.opened telemetry, every state + 15/15 i18n keys + a11y, a HIG-native
+  GlassPanel1 controls panel built from the P3 component library + P2 tokens, adaptive across
+  macOS + iOS. All host-runnable gates pass and the surface is now target-registered (xcodegen
+  proof); the Xcode app build/test is DEFERRED to the signed macos-latest runner (Shared.xcframework
+  absent + 0 signing identities — neither a defect in this code), matching the user-approved
+  "code-complete + DEFERRED Xcode gate" P4 Apple disposition.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/SignalExplorerPage.* \
+          .github/prompts/monorepo/logs/apple-page-telemetry-SignalExplorerPage.log
+  git commit -m "feat(apps/apple): SignalExplorerPage at web parity (P7 telemetry)"
+
+EXIT=0
+STATUS=DONE

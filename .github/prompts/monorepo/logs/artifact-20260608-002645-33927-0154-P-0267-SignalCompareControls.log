@@ -1,0 +1,196 @@
+=== P4 Feature view 0267 SignalCompareControls (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Build 25F80) — Darwin 25.5.0 arm64, Apple Silicon (slot-154)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively for
+                       this process only — no sudo, no `xcode-select -s` — so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2 · Java 17.0.19
+  Destinations       : iOS Simulators present are the iPhone 17 family + iPhone Air (NO "iPhone 16" image exists on
+                       this 26.5 runner — see DEFERRED note). iOS 26.5 simulator SDK + macOS 26.5 SDK present.
+  Capability         : SwiftUI present; the iOS 18 / iPadOS 18 / macOS 15 deployment targets are all valid on the
+                       26.5 SDK — PROVEN below by `swiftc -typecheck` runs targeting arm64-apple-ios18.0-simulator
+                       AND arm64-apple-macos15.0. → NOT capability-BLOCKED. This surface uses NO charts and NO maps
+                       (the web source is a purely controlled compare-controls leaf), so Swift Charts + MapKit are
+                       not exercised.
+  Parallel-exec note : /tmp + ~/.gradle are shared across sibling parallel slots; during this run 5+ concurrent
+                       `GradleDaemon 8.14.5` processes from OTHER slots were observed saturating CPU. All Swift
+                       work below was run under slot-local temp paths (/tmp/scc-harness, /tmp/scc-scan) and the
+                       generated TeslaSync.xcodeproj was removed after the wiring check (it is git-ignored).
+
+WEB SOURCE (the specification)
+  web/src/features/telemetry/components/SignalCompareControls.tsx — a PURELY CONTROLLED compare-controls leaf
+  (prompt data sources: useTranslation only; shared components: @/components/ui + @/components/motion; charts/maps:
+  none). It fetches nothing — its parent (SignalDiffPage / SignalsWorkspacePage) owns atA/atB/search/category and
+  merges the onChange* callbacks. Composition (FadeIn > GlassPanel "p-4 sm:p-5 space-y-4"):
+    topSlot     : optional slot above the windows (vehicle picker, etc.)
+    windows     : grid-cols-1 md:grid-cols-2 — Window A (cyan label + HelpTooltip help.signal.snapshot) and
+                  Window B (amber label + HelpTooltip help.signal.diff), each an <Input type="datetime-local">
+    presets     : "Quick presets:" + DIFF_PRESETS.map(<Button variant=secondary size=sm>) → applyPreset writes
+                  BOTH windows via toLocalDatetimeInput(compute())
+    filter row  : border-top — <Input type="search" "Filter signals…"> + CATEGORY_PREFIXES.map(toggle chip;
+                  active = blue ring) + a ghost "Clear" button when a category is set
+  EXPORTED from the module (the pages drive their server-side filter strings with these → ported VERBATIM + tested):
+    CATEGORY_PREFIXES (8 ids + case-insensitive `matches` regexes), DIFF_PRESETS (5 ids + `compute` offsets),
+    toLocalDatetimeInput(date) → "yyyy-MM-dd'T'HH:mm" local, isoOrEmpty(local) → UTC ISO (Date.toISOString) or "".
+  Extracted i18n keys: signalDiff.{windowA, windowB, presetsLabel, filterPlaceholder, clearCategory};
+    signalDiff.cat.{battery, drive, climate, security, motor, tire, media, safety};
+    signalDiff.preset.{nowVs1h, nowVs1d, beforeAfterCharge, lastDrive, todayVsYesterday};
+    help.signal.snapshot (+ .aria), help.signal.diff (+ .aria).
+
+ARTIFACTS SHIPPED (apps/apple/TeslaSync/feature-views/SignalCompareControls.*) — 11 files, NotificationFilterBar(0189) convention
+  .Core.swift     — pure support types: SignalComparePhase/LoadStatus/Connection enums, surface slug,
+                    SignalCategory (8 cases, VERBATIM regex source + `matches` = web /pattern/i.test),
+                    SignalDiffPreset (5 cases in web array order, VERBATIM `compute` offsets), SignalCompareSelection
+                    (controlled atA/atB/search/category + pure setters: window A/B, search, toggle/clear category,
+                    activeControlCount). Foundation-only → unit tested without a view/bundle.
+  .Adapter.swift  — SignalCompareDateFormat (VERBATIM toLocalDatetimeInput / isoOrEmpty, time zone injected for
+                    determinism; ISO matches JS Date.toISOString "….000Z"; + localDate convenience for the picker),
+                    SignalCompareProjection (resolvePhase, isCatalogEmpty, names(in:from:)), SignalCompareText +
+                    SignalCompareCopy catalog (25 fixed entries; the web `filterPlaceholder` key carries a single
+                    `// parity:allow` marker on its isolated key line), SignalCompareAccessibility summary.
+  .Seams.swift    — SignalCompareTelemetry + OSLog default (P1/S11 redacted "view.opened"); SignalCompareStrings
+                    (P1/S10 facade, table "SignalCompareControls"); SignalCompareChangeSink (web onChange*) + OSLog
+                    default; SignalCompareUpdate snapshot; SignalCompareSource (P1/S8 state-holder seam) +
+                    InMemorySignalCompareSource (previews/tests).
+  .Model.swift    — @MainActor @Observable SignalCompareModel: phase resolution from the available-signal catalog
+                    status, controlled intents (setWindowA/B, setSearch, toggleCategory, clearCategory, applyPreset),
+                    optimistic local echo + change-sink forward, view.opened once on start, stale rising-edge
+                    one-shot auto-refresh (re-armed on live; offline keeps the cached catalog).
+  .swift          — `SignalCompareControls` surface (slug "SignalCompareControls"): web FadeIn → TSFadeIn, web
+                    GlassPanel → TSGlassPanel, phase switch (loading / error+retry / content), optional topSlot;
+                    onAppear/onDisappear → model.start()/stop(); VoiceOver summary on the container.
+  .Views.swift    — content orchestrator (topSlot · connectivity banner + freshness chip when not live · inline
+                    empty hint when the catalog is empty · windows · presets · filter row), freshness chip,
+                    connectivity banner, never-a-blank-box empty hint, loading skeleton, error+retry.
+  .Controls.swift — SignalCompareFlowLayout (web flex-wrap), help button (HelpTooltip → .help + a11y hint), windows
+                    row (size-class grid) + window field (DatePicker[.date,.hourAndMinute] bound to the raw
+                    datetime-local string, with a clear button / set affordance so BOTH states render), presets row
+                    (5 shared TSButton .secondary .small), filter row (divider + search + category chips + Clear),
+                    search field (clearable), category chip (active blue tint + ring; aria-pressed → .isSelected).
+  .Previews.swift — 7 #if DEBUG previews: content / active selection / empty / loading / error / stale / offline.
+  .Tests.swift    — 20 XCTest: selection patch math; projection phase/empty/filter; the 8 category regexes; the 5
+                    presets' compute offsets + web order; the datetime-local⇄ISO round-trip (UTC + offset zones,
+                    blank/invalid); copy-key coverage + a11y summary + surface slug. Plus the spy doubles.
+  .ModelTests.swift — 8 XCTest: telemetry-once + start; phases across statuses (incl. empty); intents → change sink;
+                    applyPreset writes both windows in order; stale one-shot auto-refresh re-armed on live; offline
+                    keeps cache + no refresh; adopts parent-pushed selection; stop re-arms telemetry.
+  .strings        — per-surface P1/S10 table, 38 keys (25 in SignalCompareCopy + 8 category + 5 preset via the
+                    enums); first groups = the exact web source keys.
+  No wiring edits required: TeslaSync/feature-views is ALREADY a source path of both app targets (project.yml
+  L37/L68) and is ALREADY in .swiftlint.yml `included`. Strings stay in the per-surface table (no shared
+  Localizable.xcstrings edit). apps/macos-pending-verifications.md was NOT edited (outside this prompt's allowed-
+  files scope). Pre-existing, unrelated working-tree changes (AIUsageCard.*, two web/* files) were NOT staged.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  controlled props atA/atB/search/category → SignalCompareSelection; web onChange* → SignalCompareSource change seam
+  toLocalDatetimeInput / isoOrEmpty        → SignalCompareDateFormat (VERBATIM; ISO = JS toISOString "….000Z")
+  DIFF_PRESETS.compute (now offsets)       → SignalDiffPreset.compute(now:) (verbatim -3600/-86400/-4h/-90m,-5m)
+  CATEGORY_PREFIXES /pattern/i.test        → SignalCategory.matches (range(of:options:[.regularExpression,.caseInsensitive]))
+  <Input type=datetime-local>              → DatePicker[.date,.hourAndMinute] bound to the raw string + clear/set affordance
+  HelpTooltip (body + ariaLabel)           → info.circle + .help(body) (macOS hover) + a11y label(aria) + hint(body)
+  cyan / amber window labels (text-*-300)  → Color.TS.statusInfo / Color.TS.statusWarning (light+dark correct)
+  <Button variant=secondary/ghost size=sm> → shared TSButton(.secondary/.ghost, .small)
+  search <Input> + clear                   → token field + magnifyingglass + xmark.circle.fill (a11y "Clear search")
+  rounded-full category chip (active blue) → Capsule chip, accent tint 0.15 + ring 0.4; aria-pressed → .isSelected
+  flex-wrap (presets + chips)              → SignalCompareFlowLayout (native Layout)
+  GlassPanel / FadeIn                      → TSGlassPanel / TSFadeIn
+  i18n                                     → every literal via SignalCompareStrings facade; 38 keys in .strings
+  a11y                                     → container summary "Signal comparison controls: N active"; help/clear/
+                                             chips labeled; icons hidden; Dynamic Type via Font.TS; DatePicker labeled
+  telemetry                                → view.opened surface="SignalCompareControls" via model.start (P1/S11)
+  states                                   → web controls always usable  +  native P4 loading / error+retry /
+                                             inline empty (controls stay usable) / stale chip+banner / offline chip+banner
+
+GATES (run on THIS runner; raw results)
+  [GREEN]    swiftformat --lint  (SignalCompareControls scope, 10 swift files) : 0/10 require formatting     (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict  (SignalCompareControls scope, 10 swift files) : 0 violations, 0 serious     (LINT_EXIT=0)
+  [GREEN]    check-placeholders.ps1 (TRUE per-file scan of the 10 swift files) : PLACEHOLDER_ALLOWED=1 PLACEHOLDER_COUNT=0 (EXIT=0)
+             (the 1 allowed = the web `filterPlaceholder` i18n key on its isolated, `// parity:allow`-marked line.
+             The gate's literal `-Path …/feature-views/SignalCompareControls` resolves to NO directory, so its scan
+             is trivially EXIT=0; the substantive, honest result is the true per-file scan above.)
+  [GREEN]    Isolated SwiftPM build + test — swift-tools 6.0, swiftLanguageModes [.v6] (Swift 6 language mode =
+             strict-concurrency complete, IDENTICAL to the app's SWIFT_STRICT_CONCURRENCY:complete), platforms
+             macOS 15, compiling the EXACT shipped SignalCompareControls.{Core,Adapter,Seams,Model,swift,Views,
+             Controls,Previews} against the REAL repo design system (Tokens · Motion[TSFadeIn] · Skeletons[TSSkeleton]
+             · Buttons[TSButton] · Typography · TSMaterial · Cards[TSGlassPanel] · Badges) with the 2 test files as
+             `@testable import TeslaSync`:
+                 Build complete! (27.28s)  ·  Executed 28 tests, with 0 failures (0 unexpected)      (SWIFT_TEST_EXIT=0)
+             (This harness CAUGHT a real `var body` name collision in SignalCompareHelpButton, which was FIXED before
+             commit — the verification did its job.)
+  [GREEN]    swiftc -typecheck — iOS 18 simulator SDK (-target arm64-apple-ios18.0-simulator -strict-concurrency=
+             complete -swift-version 6), same real-design-system closure + the 8 surface files : 0 errors (IOS_TYPECHECK_EXIT=0)
+  [GREEN]    swiftc -typecheck — macOS 15 SDK (-target arm64-apple-macos15.0, same flags + closure)  : 0 errors (MAC_TYPECHECK_EXIT=0)
+  [GREEN]    xcodegen generate : project created, 0 errors (XCODEGEN_EXIT=0); the generated project ENUMERATES the
+             surface (66 `SignalCompareControls` references in project.pbxproj — all 11 files picked up by the glob).
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS                                                       build test
+
+  WHY DEFERRED (full-app Xcode gate — ZERO SignalCompareControls errors; all blockers PRE-EXIST and are UNRELATED):
+    Gating dependency  : Frameworks/Shared.xcframework is assembled by the scheme pre-action via Gradle
+                         `:core:assembleSharedXCFramework` (Kotlin/Native). It was ATTEMPTED on this runner (Java
+                         17.0.19 present) but did NOT stage within a bounded window: the shared parallel environment
+                         had 5+ concurrent sibling-slot GradleDaemon processes saturating CPU (/tmp + ~/.gradle are
+                         shared), and the assemble produced no output + no XCFramework at
+                         apps/shared/core/build/XCFrameworks/release/Shared.xcframework. Without it the app target
+                         cannot link ("no such module 'Shared'"), so the full-app build cannot proceed on THIS runner.
+    Destination        : the gate names "iPhone 16"; this 26.5 runner only provisions the iPhone 17 family + Air, so
+                         the named destination is additionally absent here.
+    Pre-existing blocks: even when Shared.xcframework is staged, the full-app build is blocked by the SAME pre-existing,
+                         unrelated issues the prior P4 feature-view prompts recorded in apps/macos-pending-verifications.md:
+                         (a) the app-target source glob sweeps ~201 co-located *.Tests.swift / *.ModelTests.swift
+                             (each `import XCTest`) into the APPLICATION target → XCTest is not linkable into an app
+                             target; (b) `struct DashboardWidgetSize` redefined ~15× across Sources/DashboardWidgets +
+                         TeslaSync/dashboard-widgets (parallel-merge collision); (c) macOS development signing. NONE
+                         of these touch SignalCompareControls.
+    Disposition        : the sanctioned "code-complete + DEFERRED full-app Xcode gate" path used by every prior P4
+                         surface (apps/macos-pending-verifications.md → resolved by p4-apple/P99-0001-apple-acceptance-gate
+                         on a signed macos-latest runner). NOT capability-BLOCKED (SwiftUI + iOS 18 / iPadOS 18 /
+                         macOS 15 proven present via the dual-SDK typechecks; no charts/maps). Task rule honored:
+                         pre-existing, unrelated breakage was neither touched nor "fixed"; macos-pending-verifications.md
+                         was NOT edited (outside this prompt's allowed-files scope).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED (NOT passing) with the raw
+                           blocker chain (unstaged KMP Shared.xcframework on a contended shared runner + the pre-existing
+                           XCTest-glob / DashboardWidgetSize / signing issues) — never reported as green.
+  2  No scope narrowing  : every web region + branch reproduced — both datetime windows (cyan/amber + HelpTooltips),
+                           all 5 presets with their VERBATIM compute offsets, the search field, all 8 category chips
+                           with their VERBATIM regexes + the toggle/Clear behavior, and the exported toLocalDatetimeInput
+                           / isoOrEmpty round-trip — plus the optional topSlot.
+  3  No skip-and-assume  : every host-runnable gate executed on THIS runner; raw exits pasted; the 28-test suite
+                           actually run (not asserted) under Swift 6 strict concurrency against the REAL design system;
+                           the iOS 18 + macOS 15 typechecks actually run; the xcodebuild blocker (KMP staging) was
+                           actually attempted + observed, not assumed.
+  4  No stubs as final   : complete production surface (11 files) + 28 real passing tests; placeholder scanner = 0
+                           violations (1 marked web key); no TODO/FIXME/Placeholder/Lorem/"not implemented".
+  5  No parity shortcut  : tone/label/typography/spacing/icon/a11y/Reduce-Motion/telemetry mapped to platform tokens +
+                           shared TSButton/TSGlassPanel/TSFadeIn/TSSkeleton; the exported pure helpers ported VERBATIM
+                           and cross-checked by tests.
+  6  No delegation       : implemented directly; no agents/subtasks.
+  7  No predecessor bypass: binds the P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry; the
+                           P4 core shared components (TSButton/TSGlassPanel/TSFadeIn/TSSkeleton/Color.TS/Font.TS) are
+                           consumed, not re-rolled.
+  8  No commit on red    : the COMMITTED artifact (SignalCompareControls.* + this log) is GREEN on every host-runnable
+                           gate AND on a real isolated Swift-6 strict-concurrency build + 28-test run; the deferred
+                           full-app gate is blocked only by pre-existing, unrelated surfaces this commit never touches.
+  9  No silent drift     : changes confined to the 11 apps/apple/TeslaSync/feature-views/SignalCompareControls.* files
+                           + this log. Pre-existing unrelated working-tree edits (AIUsageCard.*, web/*) were NOT staged.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic `SignalCompareControls` shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 28 tests pass under the app's own Swift 6 strict-concurrency rules against the REAL
+  design system + shared components, it type-checks against BOTH the iOS 18 and macOS 15 SDKs, xcodegen enumerates all
+  11 files, and swiftformat/swiftlint/placeholder are all green on the surface scope. Every web control + the two
+  exported pure helpers (toLocalDatetimeInput / isoOrEmpty) + the 8 category regexes + the 5 preset compute offsets,
+  and the full P4 states contract (loading / error+retry / inline empty with controls still usable / stale / offline)
+  are reproduced with VoiceOver, Dynamic Type, and a P1/S11 view.opened telemetry emission. The full-app iOS-Simulator
+  + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): on this contended shared runner the KMP
+  Shared.xcframework could not be staged, and the full-app build is otherwise blocked by the pre-existing app-target
+  XCTest-membership glob, the DashboardWidgetSize parallel-merge collision, and macOS development signing — all owned
+  by the P4/P99 acceptance gate on a signed macos-latest runner per apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

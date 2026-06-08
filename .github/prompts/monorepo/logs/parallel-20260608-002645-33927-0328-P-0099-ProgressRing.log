@@ -1,0 +1,87 @@
+I'll start by exploring the repository structure, reading the web source, and checking tooling availability.
+
+Key findings: `xcodebuild` requires full Xcode but only Command Line Tools are installed, and `simctl` (simulators) is unavailable. `swift`, `swiftlint`, `swiftformat` ARE available. Let me explore the existing Apple app structure to match conventions before deciding on approach.
+
+No `shared-surfaces` dir exists yet — I'll create it. The recently-modified `AiUsageCard.*` feature-view set is the predecessor template. Let me study it and the P1 core infrastructure (tokens, i18n, diagnostics, state-holders) plus the build config.
+
+Conventions are clear. Let me read the remaining AiUsageCard files (model, adapter, strings, chrome, previews, tests) and locate the P1 design tokens, i18n facade, diagnostics, and motion infrastructure, plus the build config.
+
+Now let me locate the P1 design tokens, motion, and shared primitives, and read the Previews/Tests/Adapter/Projection conventions plus the build config.
+
+Let me find the actual P1/S9 token definitions and the motion/skeleton/button primitives, plus the project.yml build config and the Adapter (which holds `AiUsageAccessibility`).
+
+Important: project.yml's app target `sources` includes `TeslaSync/feature-views` but NOT `TeslaSync/shared-surfaces`, and project.yml is **not** in my allowed-files list. Let me check where the design tokens live and how tests are written, so my files are self-consistent with the codebase.
+
+Let me read the token catalog, the test conventions (framework), the projection file, lint configs, and check the gate's helper script + logs dir.
+
+I now understand the conventions fully. Let me check: (1) is a full Xcode.app present anywhere (to unblock xcodebuild), (2) is `pwsh` available for the gate script, (3) the lint configs, (4) the projection file, and (5) the logs dir + placeholder checker.
+
+Good news: a full `/Applications/Xcode.app` exists (xcode-select is just pointed at CLT), and `pwsh` is available. Let me verify Xcode is usable via `DEVELOPER_DIR`, check for `xcodegen`, simulators, an existing `.xcodeproj`, and the `Shared.xcframework` dependency.
+
+Xcode 26.5 + iPhone 16 simulator + xcodegen + pwsh are all available. The real blockers for the full `xcodebuild` gate are: (1) `Shared.xcframework` (KMP artifact) is absent, and (2) `shared-surfaces/` isn't in `project.yml` (which I'm not allowed to edit). Let me verify a standalone SwiftUI typecheck works against the real iOS SDK, inspect the Shared framework build script, and read the AdapterTests convention.
+
+All prerequisites confirmed: standalone SwiftUI typechecks pass on **both** iOS 18 and macOS 15 SDKs (exit 0) — that's my reliable per-platform build evidence. The full `xcodebuild` app gate needs the KMP `Shared.xcframework` (absent; Gradle-built) and `project.yml` wiring for the new `shared-surfaces/` tier (which I'm not permitted to edit). 
+
+Let me set up the plan and todos, then implement the surface to full production quality.
+
+Now I'll implement the surface. Starting with the three Foundation-only files (Model, Adapter, Projection):
+
+Now the SwiftUI layer — subviews and the public surface:
+
+Let me add a testable telemetry "emit-once" reporter to the model seam and wire the surface to use it, then create the strings file:
+
+Now the two XCTest files (pure-math adapter tests and projection/telemetry/accessibility tests):
+
+All 9 files created. Let me update todos and begin verification — starting with standalone `swiftc` typechecks against both the iOS 18 and macOS 15 SDKs.
+
+The standalone typecheck caught a real issue (which would also break the real module build): a `public` initializer's default argument can't reference the `internal` `Color.TS.accent` token. Fixing by resolving the brand default inside the body via `tint: Color? = nil`:
+
+Re-running both iOS 18 and macOS 15 typechecks:
+
+Both platforms typecheck clean (exit 0). Now let me (a) typecheck the XCTest files via a single-module trick with the XCTest framework, and (b) compile+run a Foundation-only harness that actually executes the ported math/projection:
+
+The XCTest assertion macros (C function-like macros) aren't resolvable by standalone `swiftc` — a tooling limitation affecting any XCTest file, not my code. I'll get stronger evidence two ways: (1) **execute** the ported logic via a Foundation harness, and (2) typecheck the test bodies against the real API using a small `XCTAssert` shim.
+
+Top-level code must live in `main.swift`. Quick rename and re-run:
+
+Swift 6 actor isolation on top-level globals — marking `check` `@MainActor`:
+
+All 28 logic checks passed. The harness then deadlocked at `sem.wait()` (main-thread blocked while the `@MainActor` Task needs it). Since top-level `main.swift` is already `@MainActor`, I can call the reporter directly. Let me stop and fix:
+
+Top-level vars can't carry a global actor. I'll hold state in a reference type to sidestep isolation entirely:
+
+Harness runs green (ALL PASS, exit 0) — the ported math, projection, and telemetry emit-once are verified at runtime. Now typechecking the **test bodies** against the real production API using an `XCTAssert` shim (works around the C-macro limitation):
+
+Test bodies typecheck against the real API (exit 0). Now the style gates — running `swiftlint --strict` and `swiftformat --lint` on the new files to see current state:
+
+Two findings. swiftformat flags a redundant type in Views.swift; swiftlint reports 1 violation but linted all 1909 files (config `included` overrode my path arg) — I need to pinpoint it. Let me auto-fix formatting and isolate the lint violation to my files:
+
+swiftformat now passes (0/8 require formatting). Let me re-run the iOS typecheck (the format auto-fix touched Views.swift) and isolate swiftlint to my files via a config without an `included` override:
+
+iOS re-typecheck clean (exit 0) and swiftlint on my 8 files: **0 violations**. (The earlier "1 violation in 1909 files" is pre-existing elsewhere, outside my scope — my files are clean.) Now the placeholder check via `pwsh`, exactly as the gate invokes it:
+
+Placeholder check: 0 placeholders, EXIT=0. Now let me gather precise evidence on the `xcodebuild` gate blockers — confirm the KMP `Shared.xcframework` dependency and that `shared-surfaces/` isn't wired into the generated project:
+
+Decisive evidence captured:
+- **`Shared.xcframework` is ABSENT** (only `.gitkeep`); app targets depend on it, built by a heavy Gradle/KMP scheme pre-action.
+- **`project.yml` app sources lack `TeslaSync/shared-surfaces`** (only `feature-views`/`dashboard-widgets`) — and `project.yml` is outside my allowed files.
+- **The generated `pbxproj` has 0 `ProgressRing` references** (vs 60 for the wired `AiUsageCard`) — so `xcodebuild ... build test` wouldn't even compile my surface.
+
+So the literal `xcodebuild` gate is BLOCKED on downstream integration I'm not permitted to touch — but the surface itself compiles on both platforms and passes all runnable checks. Let me clean up the generated project, then write the gate log with fresh, real output:
+
+Now generating the gate log with fresh, real command output plus the blocker evidence:
+
+Now appending the surface-level verifications with fresh output, plus the terminal status:
+
+All surface-level checks pass. Writing the terminal summary and honest EXIT/STATUS:
+
+Log complete (ends with `EXIT=1` / `STATUS=BLOCKED`). Let me do a final review of the post-format files and confirm git will stage only my allowed files:
+
+All good — `trackColor` became `var trackColor: Color = .TS.border` (valid; confirmed compiling in V1/V2), and only my two new paths are untracked. Let me confirm the full file set and commit the allowed files + log:
+
+Committed. Let me verify the commit and confirm the pre-existing dirty files were left untouched:
+
+Commit is clean: 10 files (9 surface + log), 1102 insertions, and the pre-existing dirty files were correctly left untouched. Let me do a final cleanup/sanity check for stray build artifacts:
+
+Task complete. Cleanup verified — no stray artifacts, working tree contains only the pre-existing changes I correctly left untouched.
+

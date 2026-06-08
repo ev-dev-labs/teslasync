@@ -1,0 +1,228 @@
+=== p4-apple · P7 · page:battery/BatteryHealthPage — gate log ===
+timestamp=2026-06-08T09:00:34
+target=apple (iOS 18 + macOS 15, adaptive; ADR-002/006)
+output=apps/apple/TeslaSync/Features/Battery/ (15 files: 14 .swift + 1 .strings)
+web_source=web/src/features/battery/pages/BatteryHealthPage.tsx
+
+--- Honesty Covenant: this log reports the REAL state. The Xcode build/test
+--- gate cannot run in this environment (Command Line Tools only, no Xcode),
+--- so per the prompt the gate terminal state is STATUS=BLOCKED, not DONE.
+--- No red is reported as green. Partial verifications that CAN run were run.
+
+=== ENVIRONMENT ===
+xcodebuild: xcode-select error — 'xcodebuild requires Xcode, but active developer
+            directory /Library/Developer/CommandLineTools is a command line tools instance'
+swift: Apple Swift 6.3.2 (CommandLineTools) — usable for parse/typecheck of SDK-only code
+swiftlint: /opt/homebrew/bin/swiftlint — available
+pwsh: available; xcodegen: available
+
+=== GATE (apple triad: build + lint + test + placeholder scan) ===
+# check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Battery -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0   # PASS
+
+# swiftlint --strict apps/apple/TeslaSync/Features/Battery
+battery_files_violations=0
+LINT_EXIT=0          # PASS (0 serious violations across the 14 new .swift files)
+
+# xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync build
+BUILD_EXIT=BLOCKED   # cannot run: no Xcode runner (Command Line Tools only)
+# xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync test
+TEST_EXIT=BLOCKED    # cannot run: no Xcode runner (Command Line Tools only)
+
+=== PARTIAL VERIFICATION THAT DID RUN (not a substitute for the Xcode gate) ===
+* xcodegen generate  -> EXIT=0; generated project references Battery files (90 refs).
+  Confirms project.yml source-path wiring (TeslaSync/Features) is valid for both targets.
+* swiftc -typecheck -swift-version 6 (Foundation-only logic core, 6 files) -> EXIT=0:
+  Model.swift DTO.swift Types.swift Format.swift Adapter.swift Insights.swift
+  (projector + @Observable model + DTOs compile under Swift 6 complete concurrency).
+* swiftc -parse (7 SwiftUI/test files) -> all PARSE OK (no syntax errors).
+  Full type-check of the SwiftUI views requires the app target SDK graph (design tokens +
+  shared components) and is therefore part of the BLOCKED xcodebuild step.
+
+=== PARITY ===
+PARITY_REQUIRED=147
+
+-- panels (27) --
+[x] panel  — GlassPanel1  ::  BatteryForecastPanel  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Sections.swift
+[x] panel  — GlassPanel2  ::  BatteryHeroPanel  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Hero.swift
+[x] panel  — State-of-Health  ::  BatteryHealthProjector.summaryCards id=soh  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Adapter.swift
+[x] panel  — Current-Capacity  ::  summaryCards id=current-cap  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Adapter.swift
+[x] panel  — Original-Capacity  ::  summaryCards id=original-cap  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Adapter.swift
+[x] panel  — Degradation-Rate  ::  summaryCards id=degradation  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Adapter.swift
+[x] panel  — Total-Cycles  ::  summaryCards id=cycles  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Adapter.swift
+[x] panel  — Battery-Age  ::  summaryCards id=age  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Adapter.swift
+[x] panel  — Full-Charge-Complete  ::  summaryCards id=full-charge  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Adapter.swift
+[x] panel  — GlassPanel10  ::  BatteryMetricBarsPanel  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Hero.swift
+[x] panel  — Module-Temp-Max  ::  thermalCards id=module-temp-max  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Adapter.swift
+[x] panel  — Module-Temp-Min  ::  thermalCards id=module-temp-min  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Adapter.swift
+[x] panel  — Battery-Heater  ::  thermalCards id=battery-heater  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Adapter.swift
+[x] panel  — Temperature-Spread  ::  thermalCards id=temp-spread  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Adapter.swift
+[x] panel  — GlassPanel15  ::  BatteryThermalPanel  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Hero.swift
+[x] panel  — Capacity-Trend-Prediction  ::  BatteryCapacityTrendPanel  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Sections.swift
+[x] panel  — Estimated-Range-Over-Time  ::  BatteryRangeTrendPanel  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Sections.swift
+[x] panel  — GlassPanel18  ::  BatteryInsightsSection  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Sections.swift
+[x] panel  — GlassPanel19  ::  BatteryInsightCard  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Sections.swift
+[x] panel  — GlassPanel20  ::  BatteryChargeDistributionPanel  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Sections.swift
+[x] panel  — GlassPanel21  ::  BatteryNewVsNowPanel  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Views.swift
+[x] panel  — GlassPanel22  ::  BatteryComparisonTile capNew  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Views.swift
+[x] panel  — GlassPanel23  ::  BatteryComparisonTile capNow/rangeNew/rangeNow  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Views.swift
+[x] panel  — AC-DC-Energy-Breakdown  ::  BatteryEnergyStatsRow.acdcPanel  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Views.swift
+[x] panel  — GlassPanel25  ::  BatteryEnergyStatsRow.statsPanel  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Views.swift
+[x] panel  — GlassPanel26  ::  BatteryQuickLinksPanel  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Views.swift
+[x] panel  — GlassPanel27  ::  BatteryRecommendationsPanel  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Views.swift
+
+-- charts (11) — native Swift Charts / SwiftUI shapes, no WKWebView --
+[x] chart  — RadialGauge  ::  BatteryRadialGauge gauge=health  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Charts.swift
+[x] chart  — RadialGauge  ::  BatteryRadialGauge gauge=capacity  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Charts.swift
+[x] chart  — RadialGauge  ::  BatteryRadialGauge gauge=degradation  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Charts.swift
+[x] chart  — RadialGauge  ::  BatteryRadialGauge gauge=cycles  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Charts.swift
+[x] chart  — ChartContainer  ::  TSChartContainer in BatteryCapacityTrendPanel  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Sections.swift
+[x] chart  — ComposedChart  ::  BatteryCapacityTrendChart  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Charts.swift
+[x] chart  — ChartContainer  ::  TSChartContainer in BatteryRangeTrendPanel  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Sections.swift
+[x] chart  — AreaChart  ::  BatteryRangeTrendChart  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Charts.swift
+[x] chart  — BarChart  ::  BatteryChargeDistributionChart  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Charts.swift
+[x] chart  — ChartContainer  ::  TSChartContainer in BatteryEnergyStatsRow.acdcPanel  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Views.swift
+[x] chart  — PieChart  ::  BatteryEnergyPieChart (TSPieChart)  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Charts.swift
+
+-- data states (4) — implemented for every bound source --
+[x] state  — loading data state  ::  BatteryHealthLoadingState / BatteryHealthPageModel.Phase.loading  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Views.swift
+[x] state  — empty data state  ::  BatteryHealthEmptyState / Phase.empty  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Views.swift
+[x] state  — error data state  ::  BatteryHealthErrorState / Phase.error  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.Views.swift
+[x] state  — success data state  ::  BatteryHealthContent / Phase.content  ::  apps/apple/TeslaSync/Features/Battery/BatteryHealthPage.swift
+
+-- strings (105) — defined in BatteryHealthPage.strings (table "BatteryHealthPage"),
+   resolved via BatteryHealthStrings.string/format + BatteryHealthText.text/label --
+[x] string — battery.bar.capacity  ::  BatteryHealthPage.strings:18
+[x] string — battery.bar.cycles  ::  BatteryHealthPage.strings:19
+[x] string — battery.bar.degradation  ::  BatteryHealthPage.strings:20
+[x] string — battery.chart.acdc  ::  BatteryHealthPage.strings:21
+[x] string — battery.chart.acdc.aria  ::  BatteryHealthPage.strings:22
+[x] string — battery.chart.actual  ::  BatteryHealthPage.strings:23
+[x] string — battery.chart.capacityTrend  ::  BatteryHealthPage.strings:24
+[x] string — battery.chart.capacityTrend.aria  ::  BatteryHealthPage.strings:25
+[x] string — battery.chart.chargeDist  ::  BatteryHealthPage.strings:26
+[x] string — battery.chart.chargeDistSub  ::  BatteryHealthPage.strings:27
+[x] string — battery.chart.chargeEnded  ::  BatteryHealthPage.strings:28
+[x] string — battery.chart.chargeStarted  ::  BatteryHealthPage.strings:29
+[x] string — battery.chart.dashedProjected  ::  BatteryHealthPage.strings:30
+[x] string — battery.chart.noBreakdown  ::  BatteryHealthPage.strings:31
+[x] string — battery.chart.noRange  ::  BatteryHealthPage.strings:32
+[x] string — battery.chart.noSessions  ::  BatteryHealthPage.strings:33
+[x] string — battery.chart.noTrend  ::  BatteryHealthPage.strings:34
+[x] string — battery.chart.predicted  ::  BatteryHealthPage.strings:35
+[x] string — battery.chart.range  ::  BatteryHealthPage.strings:36
+[x] string — battery.chart.rangeTrend  ::  BatteryHealthPage.strings:37
+[x] string — battery.chart.rangeTrend.aria  ::  BatteryHealthPage.strings:38
+[x] string — battery.empty  ::  BatteryHealthPage.strings:39
+[x] string — battery.gauge.capacity  ::  BatteryHealthPage.strings:40
+[x] string — battery.gauge.cycles  ::  BatteryHealthPage.strings:41
+[x] string — battery.gauge.degradation  ::  BatteryHealthPage.strings:42
+[x] string — battery.gauge.health  ::  BatteryHealthPage.strings:43
+[x] string — battery.habit.avgEnd  ::  BatteryHealthPage.strings:44
+[x] string — battery.habit.avgStart  ::  BatteryHealthPage.strings:45
+[x] string — battery.habit.home  ::  BatteryHealthPage.strings:46
+[x] string — battery.habit.supercharger  ::  BatteryHealthPage.strings:47
+[x] string — battery.health.degraded  ::  BatteryHealthPage.strings:48
+[x] string — battery.health.excellent  ::  BatteryHealthPage.strings:49
+[x] string — battery.health.good  ::  BatteryHealthPage.strings:50
+[x] string — battery.insight.concernDesc  ::  BatteryHealthPage.strings:51
+[x] string — battery.insight.concernTitle  ::  BatteryHealthPage.strings:52
+[x] string — battery.insight.deepDischargeDesc  ::  BatteryHealthPage.strings:53
+[x] string — battery.insight.deepDischargeTitle  ::  BatteryHealthPage.strings:54
+[x] string — battery.insight.excellentDesc  ::  BatteryHealthPage.strings:55
+[x] string — battery.insight.excellentTitle  ::  BatteryHealthPage.strings:56
+[x] string — battery.insight.goodDesc  ::  BatteryHealthPage.strings:57
+[x] string — battery.insight.goodHabitsDesc  ::  BatteryHealthPage.strings:58
+[x] string — battery.insight.goodHabitsTitle  ::  BatteryHealthPage.strings:59
+[x] string — battery.insight.goodTitle  ::  BatteryHealthPage.strings:60
+[x] string — battery.insight.highFastChargeDesc  ::  BatteryHealthPage.strings:61
+[x] string — battery.insight.highFastChargeTitle  ::  BatteryHealthPage.strings:62
+[x] string — battery.insight.highSuperchargerDesc  ::  BatteryHealthPage.strings:63
+[x] string — battery.insight.highSuperchargerTitle  ::  BatteryHealthPage.strings:64
+[x] string — battery.insight.lowDegDesc  ::  BatteryHealthPage.strings:65
+[x] string — battery.insight.lowDegTitle  ::  BatteryHealthPage.strings:66
+[x] string — battery.insights.empty  ::  BatteryHealthPage.strings:67
+[x] string — battery.insights.title  ::  BatteryHealthPage.strings:68
+[x] string — battery.metric.age  ::  BatteryHealthPage.strings:69
+[x] string — battery.metric.currentCap  ::  BatteryHealthPage.strings:70
+[x] string — battery.metric.cycles  ::  BatteryHealthPage.strings:71
+[x] string — battery.metric.degradation  ::  BatteryHealthPage.strings:72
+[x] string — battery.metric.fullChargeComplete  ::  BatteryHealthPage.strings:73
+[x] string — battery.metric.originalCap  ::  BatteryHealthPage.strings:74
+[x] string — battery.metric.soh  ::  BatteryHealthPage.strings:75
+[x] string — battery.months  ::  BatteryHealthPage.strings:76
+[x] string — battery.newVsNow.capNew  ::  BatteryHealthPage.strings:77
+[x] string — battery.newVsNow.capNow  ::  BatteryHealthPage.strings:78
+[x] string — battery.newVsNow.lost  ::  BatteryHealthPage.strings:79
+[x] string — battery.newVsNow.rangeNew  ::  BatteryHealthPage.strings:80
+[x] string — battery.newVsNow.rangeNow  ::  BatteryHealthPage.strings:81
+[x] string — battery.newVsNow.title  ::  BatteryHealthPage.strings:82
+[x] string — battery.perYear  ::  BatteryHealthPage.strings:83
+[x] string — battery.recommendations.title  ::  BatteryHealthPage.strings:84
+[x] string — battery.section.acdcFailed  ::  BatteryHealthPage.strings:85
+[x] string — battery.section.capacityRangeFailed  ::  BatteryHealthPage.strings:86
+[x] string — battery.section.chargeDistFailed  ::  BatteryHealthPage.strings:87
+[x] string — battery.section.heroFailed  ::  BatteryHealthPage.strings:88
+[x] string — battery.section.insightsFailed  ::  BatteryHealthPage.strings:89
+[x] string — battery.section.metricBarsFailed  ::  BatteryHealthPage.strings:90
+[x] string — battery.section.quickLinksFailed  ::  BatteryHealthPage.strings:91
+[x] string — battery.section.recommendationsFailed  ::  BatteryHealthPage.strings:92
+[x] string — battery.section.summaryCardsFailed  ::  BatteryHealthPage.strings:93
+[x] string — battery.section.thermalFailed  ::  BatteryHealthPage.strings:94
+[x] string — battery.stats.acSessions  ::  BatteryHealthPage.strings:95
+[x] string — battery.stats.cycles  ::  BatteryHealthPage.strings:96
+[x] string — battery.stats.dcSessions  ::  BatteryHealthPage.strings:97
+[x] string — battery.stats.empty  ::  BatteryHealthPage.strings:98
+[x] string — battery.stats.title  ::  BatteryHealthPage.strings:99
+[x] string — battery.stats.totalEnergy  ::  BatteryHealthPage.strings:100
+[x] string — battery.stats.totalSessions  ::  BatteryHealthPage.strings:101
+[x] string — battery.subtitle  ::  BatteryHealthPage.strings:102
+[x] string — battery.thermal.heater  ::  BatteryHealthPage.strings:103
+[x] string — battery.thermal.moduleNumber  ::  BatteryHealthPage.strings:104
+[x] string — battery.thermal.moduleTempMax  ::  BatteryHealthPage.strings:105
+[x] string — battery.thermal.moduleTempMin  ::  BatteryHealthPage.strings:106
+[x] string — battery.thermal.tempSpread  ::  BatteryHealthPage.strings:107
+[x] string — battery.thermal.title  ::  BatteryHealthPage.strings:108
+[x] string — battery.tip.aboveAvg  ::  BatteryHealthPage.strings:109
+[x] string — battery.tip.avoid100  ::  BatteryHealthPage.strings:110
+[x] string — battery.tip.avoidDeep  ::  BatteryHealthPage.strings:111
+[x] string — battery.tip.great  ::  BatteryHealthPage.strings:112
+[x] string — battery.tip.reduceFast  ::  BatteryHealthPage.strings:113
+[x] string — battery.title  ::  BatteryHealthPage.strings:114
+[x] string — battery.warrantyLimit  ::  BatteryHealthPage.strings:115
+[x] string — battery.warrantyNote  ::  BatteryHealthPage.strings:116
+[x] string — battery.yearsTo80  ::  BatteryHealthPage.strings:117
+[x] string — battery.yr  ::  BatteryHealthPage.strings:118
+[x] string — common.no  ::  BatteryHealthPage.strings:119
+[x] string — common.off  ::  BatteryHealthPage.strings:120
+[x] string — common.on  ::  BatteryHealthPage.strings:121
+[x] string — common.yes  ::  BatteryHealthPage.strings:122
+
+PARITY_COVERED=147
+PARITY_OK=true
+
+=== DATA SOURCES (web hooks ported; same names at the Swift call sites) ===
+useBatteryHealthAnalytics   -> BatteryHealthUpdate.health     (GET /analytics/battery-health)
+useBatteryDegradation       -> BatteryHealthUpdate.degradation(GET /analytics/battery-degradation)
+useChargingSessionsPaginated-> BatteryHealthUpdate.sessions
+useChargingTelemetryLatest  -> BatteryHealthUpdate.charging   (GET /charging-telemetry/latest)
+Bound through BatteryHealthPageSource seam (P1/S8) + @Observable BatteryHealthPageModel.
+Production KMP facade deferred (AppContainer.bootstrap); BatteryHealthBootstrapSource emits
+a realistic SI snapshot so the registered .energy route renders the COMPLETE page today.
+
+=== NAVIGATION ===
+BatteryHealthRouteRegistration.register(into:) -> registers .energy route host
+(web /battery & /battery/health -> .energy via AppRouteParser). Wired in Sources/TeslaSyncApp.swift.
+
+=== NOTES ===
+* SI honored end-to-end: meters/Wh/°C in DTOs; display conversion only at the render boundary
+  (convert*FromSI in BatteryHealthPage.Format.swift), matching web lib/unitConversion.ts.
+* Dark mode + Dynamic Type + increased-contrast via Color.TS dynamic tokens; a11y labels on
+  every gauge/chart/card; >2 min staleness via freshness chip + connectivity banner (ADR-013).
+* i18n: zero hardcoded user-facing literals; 105 web keys ported verbatim + 18 native-chrome keys.
+
+EXIT=1
+STATUS=BLOCKED
+

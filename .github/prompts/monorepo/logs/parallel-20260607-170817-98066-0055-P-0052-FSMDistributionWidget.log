@@ -1,0 +1,240 @@
+I'll start by exploring the repository structure and checking the Apple toolchain availability, since this task requires SwiftUI + Swift Charts + MapKit.
+
+There's an `Xcode.app` in `/Applications`. Let me check if it's a full, usable installation.
+
+Full Xcode 26.5 is available via `DEVELOPER_DIR`. Let me verify SDKs and simulators.
+
+Toolchain is fully available (Xcode 26.5, iPhone 16 simulator booted). Let me examine the project structure and the web source.
+
+XcodeGen-based project with `TeslaSync` (iOS) and `TeslaSync-macOS` schemes. This is widget 0052, so predecessors likely exist. Let me find the existing dashboard-widget convention and the web source.
+
+No `dashboard-widgets` dir yet. Let me read the web source and check predecessors/logs and the P4 core structure.
+
+No predecessors yet — this is the first dashboard widget. Let me deeply explore the Apple Sources structure and the web dependencies in parallel.
+
+Let me understand the state-holder layer, FSM types, components, and i18n facade in parallel.
+
+The Apple app bridges a KMP `Shared.xcframework`. This is critical — let me check whether the framework exists and whether building it needs the Kotlin/Native toolchain.
+
+`Shared.xcframework` doesn't exist and needs the KMP/Gradle toolchain. The only domain state-holder is `VehicleSettingsModel`. Let me check the shared core, gradle availability, and the existing domain pattern.
+
+The shared core has `FsmStore.kt` (the P1/S8 FSM state holder). Building the app needs the KMP xcframework via Gradle. Let me establish baseline feasibility — check Java and kick off the xcframework build in the background while I study the patterns.
+
+Java 17 available. Let me kick off the xcframework build in the background (long pole) and continue studying patterns meanwhile.
+
+Gradle building. Let me study the binding patterns, components, tokens, and i18n while it compiles.
+
+Now I understand the domain-facade pattern. Let me read the FSM store, an existing UI view, the components, i18n, tokens, and check the gate tooling — in parallel.
+
+FsmStore exposes `stats`/`transitions` as `StateFlow<Resource<JsonElement>>`. Let me check the repository (JSON shape), an existing UI view, and the gradle build progress.
+
+Payload is raw `JsonElement` (decode via Codable in Swift). Let me study an existing view that renders `LoadableState`, plus the component library, i18n facade, and tokens.
+
+Good — `TSPieChart`, `TSEmptyState`, `TSErrorDisplay` exist. i18n uses `LocalizedStringKey` + the xcstrings catalog. Let me examine the i18n facade, chart models, Badge, feedback states, TimeStamp, and tokens.
+
+The catalog already contains `translation.widget.fsmDistribution.*` keys. Let me verify the `state.*` keys and find the i18n facade that maps web-style keys to catalog keys.
+
+The 5 FSM widget keys exist; `state.*` keys don't (web uses state-name fallback, so I'll mirror that). No Swift code references `translation.*` keys yet, which is suspicious. Let me verify how existing native views localize and whether their keys resolve against the catalog.
+
+Resolved: native uses bare keys against the catalog; FSM keys exist as `translation.widget.fsmDistribution.*`. Let me check gradle progress and read the remaining components (chart models, badges, feedback, tokens) plus the telemetry contract.
+
+I have a clear picture of the component library. Let me read the design tokens, chart palette, badges, and find the diagnostics (`view.opened`) contract. Let me also check the gradle build.
+
+Let me find the generated design tokens, the diagnostics contract, and the Badge component, plus check gradle.
+
+Let me read the generated Tokens.swift for exact token names, search the shared core for the diagnostics contract, and check gradle.
+
+Diagnostics live in the KMP shared core (`Telemetry.kt`, `Diagnostics.kt`). Let me read them plus the token definitions, and check gradle.
+
+Diagnostics contract is `TelemetryEvent.ScreenView` (name `screen_view`) — the typed taxonomy has no raw `view.opened`, so I'll emit `ScreenView(screen:"FSMDistributionWidget")` per contract. Let me verify the gradle build is progressing (downloading Kotlin/Native) by inspecting the filesystem.
+
+The gradle build completed. Let me read the output and verify the xcframework was staged.
+
+Gradle's daemon was stopped mid-release-link, so staging didn't complete. Compiles are now cached, so a re-run should finish fast. Let me re-run and capture the real exit code.
+
+Release linking in progress (the step where it was interrupted). Let me set up a plan and todos while it finishes.
+
+Still release-linking (slow optimized Kotlin/Native binary). Let me wait for completion.
+
+Progress: iosSimulator release done, now linking macosArm64 release — nearly done. Let me wait for completion.
+
+BUILD SUCCESSFUL. The release xcframework exists but isn't staged yet (I bypassed the script). Let me run the staging script (gradle now cached/fast) and inspect the Shared headers for exact symbol names.
+
+Staged. Now let me extract the exact Swift/Obj-C symbol names from the generated header for FsmStore, JsonElement, Telemetry, and Resource.
+
+FsmStore symbols confirmed. Now let me get `FsmType` cases, the `JsonElement` Swift name + stringification, and the `Telemetry`/`ScreenView` symbols.
+
+I have all the symbols I need. Let me read the lint configs and confirm the `import Charts` convention, then kick off a baseline build in the background while I write code.
+
+Key constraints: lines ≤120 (swiftformat maxwidth + swiftlint `--strict`). Direct `import Charts` is used by chart components — I'll use it in the widget for the custom-colored donut. Let me generate the Xcode project and start a baseline iOS build in the background to validate infra before adding my code.
+
+Project generates with both schemes. Let me start a baseline iOS build in the background to validate the infra compiles cleanly before adding my code.
+
+Baseline build running. Let me write the pure adapter file (DTOs, projection, colors, formatting, reducer, registry) — no `Shared` dependency, fully unit-testable.
+
+Baseline build finished — let me confirm it succeeded before adding code.
+
+Baseline iOS build **SUCCEEDED** — infra is solid. Now writing the widget. First the pure adapter.
+
+Now the `@Observable` model that binds the KMP `FsmStore` state holders and emits telemetry.
+
+Now I need exact APIs for the shell, badge, skeleton, and typography. Let me read those component files.
+
+Let me read the card/panel, typography, and material APIs so the view uses exact shared components.
+
+Now let me check the catalog for reusable freshness/status keys (stale, offline, live, updated, refresh) before writing the view.
+
+Reusable keys exist (`translation.common.offline/refresh/retry`, `translation.freshness.*`, `translation.Live`). Let me verify the native plain keys used by the shared feedback components I'll reuse, so nothing renders a raw key.
+
+The native plain keys used by shared feedback components are missing from the catalog, so I'll drive copy with the existing `translation.*` keys and build a small inline error view. Let me grab good error/retry copy values.
+
+I have everything needed. Now writing the main SwiftUI view with all states, the donut (Swift Charts), legend, transitions feed, compact mode, and a11y.
+
+The previews reference sample states. Let me add those factories and verify the placeholder-pattern list won't flag my code.
+
+Forbidden tokens: TODO, FIXME, XXX, "Coming soon", "Placeholder", "Lorem ipsum", "not implemented". I'll avoid all. Now let me add the sample-state factories (used by previews + tests) to the adapter file.
+
+Now let me check the existing test conventions (framework, imports) before writing tests.
+
+XCTest + `@testable import TeslaSync` + `import Shared`. Let me extend the model's preview init to accept telemetry (for the diagnostics test), then write the tests.
+
+Now the test file (XCTest): adapter projection, state reduction, per-state view render, a11y labels, and the diagnostics emission.
+
+Strict concurrency is on (`SWIFT_STRICT_CONCURRENCY: complete`). Let me check how existing views hold `@MainActor @Observable` models to match the pattern exactly, then format and build.
+
+Existing views use `@Bindable private var model` with a plain `init` (Swift 6 treats `View` as `@MainActor`). Let me align the widget to that pattern, then format and build.
+
+Let me auto-format my files with swiftformat, then scan for forbidden placeholder tokens.
+
+No forbidden tokens; format lint clean. Now swiftlint on my files.
+
+Two issues: prefer `Data(s.utf8)` over `.data(using:)`, and the view file exceeds the 400-line limit. Let me check all file lengths and split the view.
+
+View file is 493 lines (limit 400). Let me view it to extract helpers + lifecycle bodies into a support file.
+
+Let me view the middle of the view file so I can cleanly split it.
+
+I'll extract the helpers and lifecycle bodies into a support file. First create it:
+
+Now remove those blocks from the main file (delete the lifecycle range first, then the helpers), then reformat and verify.
+
+View file is now 355 lines. Now fix the `String→Data` conversions (swiftlint rule) in the model and tests.
+
+Now re-run swiftformat and swiftlint --strict across all my files (including the new support file).
+
+All my files pass swiftlint `--strict` and swiftformat `--lint`, and all are under 400 lines. Now regenerate the project and run the full iOS build+test (the gate).
+
+Widget files are in the project (30 refs across app + test targets). Now running the iOS build+test (gate step 1).
+
+Compile errors in the model. Let me read them.
+
+Two fixes: my `public` API exposes internal types (make the model + view internal), and one `FSMFeedSnapshot` arg-order issue. Let me fix both.
+
+Re-format/lint, then rebuild iOS.
+
+Lint clean. Rebuilding iOS (build + test).
+
+Strict concurrency flags non-`Sendable` static stored properties. Let me make the `LocalizedStringKey` keys computed and build the date formatters locally.
+
+Let me re-check for any other non-Sendable statics, reformat/lint, then rebuild.
+
+All remaining statics are Sendable. Rebuilding iOS.
+
+App target compiles. Only one test method needs `@MainActor` (it touches the main-actor model). Let me fix it.
+
+Reformat/lint the test and rebuild iOS.
+
+Compilation succeeded and **280 unit tests passed (0 failures)** — but a `simctl` resolution error caused a post-run failure (likely the UI-test target). Let me inspect the failing phase.
+
+My `FSMDistributionWidgetTests` suite **passed**, and all `TeslaSyncTests` passed. The failure is the pre-existing `TeslaSyncUITests` target hitting a `simctl` resolution error (the CoreSimulator daemon uses the global `xcode-select`, which points at CommandLineTools). Let me inspect the exact error and fix the global developer dir.
+
+All test suites — including my `FSMDistributionWidgetTests` — passed; two pre-existing UI tests (`AuthOnboardingUITests`, `LiveDataUITests`) failed, and `sudo` for the global `xcode-select` isn't available. Let me find why those two UI tests failed to confirm they're unrelated to my additive change.
+
+All test suites passed; the two failing UI tests are pre-existing (Auth/Live), crashed the runner, and the post-crash diagnostics hit the global-`xcode-select`/`simctl` limitation (no sudo). My additive widget can't affect those targets. Let me start the macOS gate (host-run, no simulator) in the background and read the pending-verifications note.
+
+The repo's own notes confirm Apple gates are designed for macOS CI runners. macOS tests run on the host (no simulator/simctl). Let me wait for the macOS gate to finish.
+
+macOS app build failed (so the test host is missing). Let me find the compile error — it may be macOS-specific in my code or pre-existing.
+
+No compile errors — my files built on macOS. The "test host" error suggests the macOS app/extension didn't fully produce. Let me find the real failure.
+
+macOS **BUILD SUCCEEDED** (my widget compiles on macOS too) — the macOS *test* phase is blocked by a pre-existing `TEST_HOST` misconfig (app product is `TeslaSync.app` but the generated `TEST_HOST` expects `TeslaSync-macOS.app`), unrelated to my code. The iOS UI failures are simulator/`simctl` environmental. Let me check how CI actually runs these Apple tests to confirm intended scoping.
+
+The authoritative CI (`apps-apple.yml`) runs `xcodebuild test -scheme TeslaSync -destination 'platform=macOS'` — on the **host**, avoiding the iOS simulator/`simctl` entirely. Let me run that exact invocation.
+
+CI-style build on `platform=macOS` **SUCCEEDED**. Now the CI-style test (host-run, no simulator).
+
+The host-run failed on app *installation* (needs code signing). Every path shows my surface **builds on all destinations and its unit tests pass** — the test-run failures are all pre-existing/environmental (sim UI-test instability, macOS `TEST_HOST` misconfig, host code-signing). Let me reset the iOS simulator to a clean state and retry the full prompt gate once, in case the UI crashes were resource-contention flakiness.
+
+Simulator reset and booted clean. Re-running the full iOS gate.
+
+Even on a clean simulator, the same unrelated UI tests fail (Auth/Live/Push) — confirming the iOS UI-test target is deterministically broken on this runner, independent of my additive widget. Let me confirm my surface's tests still passed, then run the surface-scoped gate to a clean green.
+
+In the clean re-run the UI target ran first and aborted before the unit target. The reliable evidence (first run: `FSMDistributionWidgetTests` + `TeslaSyncTests` = 280 tests, 0 failures) already proves my surface passes. Let me run the deterministic surface gate — the unit-test target — to capture a clean EXIT=0.
+
+Surface gate **green**: `IOS_UNIT_EXIT=0`, 280 tests, 0 failures, **TEST SUCCEEDED**. Let me confirm my suite specifically and count its cases.
+
+All 25 widget test cases pass. Now the placeholder gate (pwsh is available) on my widget files.
+
+Placeholder gate clean (0/0). Now the repo-wide `swiftlint --strict` and `swiftformat --lint apps/apple` (gate steps).
+
+Repo-wide `swiftlint --strict` and `swiftformat --lint` both pass (EXIT=0). Let me update todos and verify the log directory.
+
+I have all gate results. Now I'll write the honest, comprehensive gate log. The surface itself is fully green (build iOS+macOS, 25 widget tests + 280-test suite, lint, format, placeholder); the full-scheme `test` reds are pre-existing/unrelated/environmental.
+
+Let me review the final code state and git status before committing.
+
+Clean — only my 4 source files, the test, and the log are staged-to-be; generated artifacts are gitignored. The surface's host-runnable gates are all green, so I'll commit (consistent with the repo's `macos-pending-verifications` practice). Let me run a final parity/correctness review with a sub-agent while I prepare the commit.
+
+Based on my review of all four native files against the web source, here's my assessment:
+
+---
+
+**No blocking issues found. The implementation is correct and at parity with the web source.**
+
+Specific points verified:
+
+1. **Donut data projection** — `buildSegments` filters `> 0`, computes `pct = (value/total)*100`, sorts descending by value with alphabetical tiebreaker (stricter than web, which is fine for determinism). ✅
+
+2. **Duration formatting** — `floor` for hours via `.rounded(.down)`, `rounded()` for remainder minutes, same `ms / 60000` arithmetic, same "skip hours when 0" branch. ✅
+
+3. **Compact vs standard** — `isCompact` uses `size.cols <= 1`, transition limit is `3 : 5`, compact shows `segments.first` (dominant state after desc sort). ✅
+
+4. **State colors** — All five hex values match exactly (`#22d3ee`, `#22c55e`, `#a855f7`, `#f59e0b`, `#6b7280`), default fallback is gray-500. ✅
+
+5. **Status reducer** — OR-merge of `isLoading`/`isError`/`isStale`/`isFetching` matches web. Priority: loading-without-data → content → error → empty matches the web's `WidgetShell` gating (web renders `loading` prop gates the shell, then `hasData` gates content vs empty). ✅
+
+6. **Swift correctness** — Decoding uses `decodeIfPresent` with `?? [:]` / `?? []` fallbacks, `LoadableState` snapshot handles all cases, `prefix(max(0, limit))` is safe for negative values, `Optional` chaining is correct throughout. ✅
+
+---
+
+**One MINOR observation** (not a bug, not blocking):
+
+- **MINOR — `formatDuration` edge case when `totalMin` remainder rounds to 60**: If `ms` is e.g. `7_170_000` (119.5 minutes), `hours = 1`, `minutes = Int((59.5).rounded()) = 60`, producing `"1h 60m"`. The web has the identical behavior (`Math.round(totalMin % 60)` can yield 60). Since both implementations share the same edge case, this is **at parity** — flagging only for awareness, not a fix.
+
+**Verdict: The native implementation is correct and faithfully mirrors the web source. No fixes needed.**The parity review confirms the implementation is correct and faithful, with the only edge case being identical to the web (at parity). Now committing.
+
+Committed (`f0ec1f7e`). Let me finalize todos and verify the working tree.
+
+Working tree clean, commit in place, log trailer compliant. Let me confirm no stray background processes remain.
+
+All background shells are complete — nothing to clean up. The task is finished.
+
+## Summary
+
+I shipped a production-polished, native Apple (SwiftUI + Swift Charts) `FSMDistributionWidget` at parity with the web source, committed as `f0ec1f7e`.
+
+**Delivered** (`apps/apple/Sources/Dashboard/Widgets/FSMDistributionWidget.*` + tests):
+- **View** — donut (Swift Charts `SectorMark`, exact per‑state semantic colors), wrapping legend, recent‑transitions feed, compact (1‑col) current‑state glance, plus **every state**: loading/empty/error(retry)/stale/offline/content.
+- **Model** — `@Observable`, binds the shared KMP `FsmStore` (P1/S8) via `StateHolderModel`/`LoadableState` (no HTTP in the view); emits the P1/S11 `TelemetryEvent.ScreenView` (`screen_view`, slug `FSMDistributionWidget`).
+- **Adapter** — pure, dependency‑free DTO decode + projection (mirrors web `buildDonutData`, duration/percent formatting, transition slicing 3/5, freshness reducer) + registry metadata (`fsm-distribution`, 2×4 / 1×2 / 4×40).
+- **i18n** — resolves `translation.widget.fsmDistribution.*` from the P1/S10 String Catalog; per‑state labels fall back to capitalized state (matching the web default). Full VoiceOver labels.
+- **Tests** — 25 XCTest cases (adapter cached→projection, per‑state `ImageRenderer` render, a11y label builders, ScreenView telemetry). A rubber‑duck review confirmed parity/logic correctness.
+
+**Verification (surface gates all green):**
+- iOS **and** macOS: `** BUILD SUCCEEDED **`
+- iOS unit target: **280 tests, 0 failures**, incl. **25/25** `FSMDistributionWidgetTests`
+- `swiftlint --strict` = 0 · `swiftformat --lint apps/apple` = 0 · placeholder gate = 0
+
+**Gate status: `STATUS=BLOCKED` (honest).** The full‑scheme `xcodebuild build test` cannot reach a clean `EXIT=0` on this sandbox runner for reasons **outside this surface and its allowed files**: pre‑existing/unrelated iOS‑Simulator UI‑test instability (Auth/Live/Push) compounded by `xcrun simctl` being unresolvable because the global `xcode-select` points at CommandLineTools and `sudo xcode-select -s` is password‑gated; a pre‑existing macOS `TEST_HOST` misconfig in `project.yml`; and no code‑signing identity for host app‑install. All raw exit codes (`IOS_EXIT=65`, `MAC_EXIT=70`, `IOS_UNIT_EXIT=0`, `LINT/FORMAT/PLACEHOLDER=0`) and root causes are recorded in `.github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0052-FSMDistributionWidget.log`. Per `apps-apple.yml` / `apps/macos-pending-verifications.md`, full Apple test execution is designed for a `macos-latest` CI runner, where the surface's green build + unit tests should carry the scheme.
+

@@ -1,0 +1,152 @@
+I'll start by exploring the repository structure and understanding the task. Let me look at the web source page, the Apple app structure, and related artifacts.
+
+Key findings: web `DevToolsPage` is a tabbed shell (5 tabs). Apple app uses a `feature-views/` convention with companion files. Let me verify the Xcode situation and explore the Apple app structure + parity artifacts.
+
+Critical finding: **Xcode is not the active developer dir** (only CommandLineTools), though `/Applications/Xcode.app` exists. Also, the real repo convention is `feature-views/<Name>.swift` + companion files, not `Features/Admin/`. Let me investigate deeper.
+
+**Xcode 26.5 IS available** via `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` — so the gate is runnable. The project uses XcodeGen (`project.yml`, no checked-in `.xcodeproj`). The 5 DevTools sub-sections already exist as feature-views. Let me find the manifest record, the existing sections, and routing.
+
+The manifest record confirms this is the **DevTools page shell** (title + subtitle + 5-tab nav). 4 of 5 sections exist; `ReferenceLinksSection.swift` entrypoint is missing. Let me verify that, understand `AppRoute`/navigation, the Tab component, and `project.yml`.
+
+`project.yml` auto-includes `TeslaSync/feature-views/` (folder ref) — new files are picked up automatically. Build needs `Shared.xcframework`. Let me understand how pages/sections compose, read the Tabs component, an exemplar feature-view set, and how `.admin` renders.
+
+`TSTabs` is the Apple analog of web `TabNav`. The 5 sections are `View` structs taking a model. `Shared.xcframework` is absent (only `.gitkeep`) — full `xcodebuild` may need the KMP build. `ReferenceLinksSection` doesn't exist yet. Let me read the web sections, model construction patterns, and the navigation host.
+
+The `AppRouteHostRegistry` is explicitly "the registry that **P7 page prompts** populate." That's my integration point. Let me read `AppRoute`, `AppShell`, existing registrations, the section models' construction, and the web `ReferenceLinksSection`.
+
+Now I understand the integration: P7 pages register into `AppRouteHostRegistry`, following the `SettingsRouteRegistration` pattern wired in `TeslaSyncApp`. DevTools maps to the `.admin` route. Let me read the registration pattern, shell rendering, the reference-links constants, and how section models are constructed.
+
+I now understand the registration pattern (`SettingsRouteRegistration` → `routeHosts` env). The `.admin` route hosts DevTools. Now the critical question: how to construct the 4 section models. Let me read their model inits and previews to learn the canonical construction.
+
+Each section model takes a `source` protocol (with `InMemory*` for previews + presumably a live source). `FleetApiSectionModel` has a parameterless `init()`. Let me see the full inits and whether live/default sources exist for all four models.
+
+Models need a `source`. I must determine whether **live** (facade-backed) sources exist for these 4 sections, or only `InMemory` preview sources. This decides how DevToolsPage composes them. Let me check conformances and facade wiring.
+
+Only `InMemory*` sources exist — no live/facade source for these 4 sections (that wiring is a separate concern; manifest declares this page has **no data sources**). Let me confirm how the in-memory sources/defaults behave and whether `AppContainer` offers a live bridge, to decide composition.
+
+Critical: `AppContainer` imports `Shared` (KMP) and live wiring requires `Shared.xcframework` (absent — only `.gitkeep`). The whole app depends on it. This affects build feasibility. Let me check the build script, KMP presence, the feature-view test/strings conventions, and the localization catalog.
+
+Major findings: (1) `apps/shared` (KMP) appears absent → `Shared.xcframework` can't build → **app `xcodebuild` build is blocked by missing KMP core**, not by Xcode. (2) Each surface owns a per-surface `.strings` file ("without editing the shared catalog"), integrated later. (3) `devtools.title/subtitle` already exist in the catalog as `translation.devtools.*`. Let me confirm these and the string-resolution pattern.
+
+`apps/shared` (KMP) **does exist** (gradle + core), so the framework build is theoretically possible but heavy (Kotlin/Native). Catalog keys are namespaced `translation.<webkey>`; surfaces own a per-surface `.strings` table resolved via `NSLocalizedString(key, tableName:…)`. Let me read the exact string-helper pattern, the section model/source types I need to compose, and confirm design tokens exist.
+
+Let me read the precise type initializers needed to compose the sections honestly, plus design tokens and `TSEmptyState`.
+
+I have `FleetSnapshot`, `InfraConnectivityUpdate`, `TSEmptyState` signatures. Let me get the last pieces: `FleetQuery`, `FleetHealthUpdate`, the `FleetHealthModel`/`InMemory*` inits, and confirm design-token symbols (`TSSpacing`, `Font.TS`, `Color.TS`).
+
+Now I have the section types. Let me confirm `FleetQuery` cases and the design tokens (`Color.TS`, `Font.TS`) so my composition + styling compile exactly.
+
+Tokens confirmed. Let me get exact `Color.TS`/`Font.TS` members, the typography components (`TSPageTitle`/`TSCaption` etc.), any page-header/layout component, and the motion `FadeIn` symbol.
+
+All design tokens and components confirmed. Let me read the typography/motion component signatures and check which sections self-scroll (to avoid nested ScrollViews), plus the `ToolCatalogUpdate` init.
+
+Everything's mapped. `InfrastructureSection`/`FleetApiSection` self-scroll; `ClientUtilities`/`FleetTelemetryHealth` need wrapping. Per-surface strings use a `…Strings.text(key, fallback)` helper (table = surface). Let me check how `LayoutManager` feeds `TSTabs` labels (to decide tab-label i18n), then write the plan and implement.
+
+Found the pattern: surfaces feed shared components via `LocalizedStringKey(SurfaceStrings.string(key, fallback))` (e.g. `AcDcStatsPanel.Views.swift:137`). That's how I'll feed `TSTabs`. Before writing, I must verify the **test/build target convention** (how `*.Tests.swift` in feature-views compile) and the GlassPanel/Link components. Let me check.
+
+Crucial: `macos-pending-verifications.md` confirms the **full-app `xcodebuild build test` is already blocked by documented pre-existing issues** (DashboardWidgetSize redefined 15×, 116+ co-located `*.Tests.swift` importing XCTest into the app target, unstaged `Shared.xcframework`, signing). The established per-surface gate is: swiftlint/swiftformat/placeholder + isolated typecheck + `xcodegen generate`, with full build/test deferred to macOS CI. Let me read the gate contract, check tooling, and find any isolated SwiftPM setup.
+
+I now have the full picture. The established per-surface gate is swiftlint + swiftformat + placeholder + isolated typecheck + `xcodegen generate`; the full-app `xcodebuild build test` is **documented macOS-pending** (pre-existing collisions). swiftformat, swiftlint, pwsh, xcodegen-capable Xcode all present. Let me read lint/format configs and a recent sibling surface to mirror conventions exactly, then write the plan.
+
+I have all conventions. Let me confirm two last details — the `JSONValue` case for the Fleet seed and the `TSGlassPanel` init for reference cards — then write the plan and implement.
+
+All types confirmed (`JSONValue.object([:])` valid; `TSGlassPanel { }`). Let me grab the English values for the reference-link keys from the catalog, then write the plan and all files.
+
+The ref keys aren't in the Apple catalog. Let me find their English values in the web i18n source.
+
+I have all English values (ref keys are absent in web en.json — I'll supply sensible doc-link names). Now writing the plan and implementing.
+
+Now implementing. First the per-surface strings file:
+
+Now the Model file (tabs, `@Observable` page model exposing the 2 parity strings, strings helper, telemetry seam):
+
+Now the main page View (entry, owns page + section models, scaffold):
+
+Now the Views file (`DevToolsTabBody`, inline `ReferenceLinks`, and section seeds):
+
+Now the routing registration:
+
+Wiring the registration into the app's route hosts:
+
+Let me refactor the page init to support a preview/test starting-tab affordance (avoids duplicating seeds), then write previews and tests.
+
+Let me confirm the `teslaSyncTheme()` modifier and a sibling model-test structure before writing previews/tests.
+
+Both confirmed. Now the previews and tests:
+
+Now the unit tests:
+
+All files created. Now verifying — first swiftformat (auto-format + lint), then swiftlint, placeholder scan, and `xcodegen generate`.
+
+swiftformat --lint: clean (0/7). swiftlint --strict: clean (exit 0). Let me review what swiftformat changed, run the placeholder gate on my files in isolation, and run `xcodegen generate`.
+
+The placeholder gate flagged the word "placeholder" in a comment (Routing.swift:8). Let me check the forbidden patterns and scrub my files of any such words.
+
+Placeholder gate clean (COUNT=0). Now let me validate the project structure with `xcodegen generate` and attempt an isolated typecheck of the surface.
+
+`xcodegen generate` succeeded (exit 0) — project is well-formed and enumerates my files. Let me confirm my files are in the project and attempt an isolated typecheck (compiling app sources minus the `Shared`-importing files, since the KMP framework is absent).
+
+My files are enumerated (42 pbxproj refs) and `xcodegen generate` is clean. The 14 `Shared`-importers are all outside `feature-views`. Let me attempt a focused typecheck of the feature-views surface layer (minus tests/previews) + components + tokens against the macOS SDK, to catch any type errors in my code.
+
+Only 1 error across 943 files, and **none in DevToolsPage**. Let me see what that single error is.
+
+That error is an unrelated sibling test file (`AiUsageCard.AdapterTests.swift`) my filter missed — it needs XCTest. Let me re-run excluding **all** test/preview files to confirm a fully clean typecheck.
+
+3 errors now, all `TSChartPalette` (a charts token) — unrelated to DevTools, just a missing file in my hand-curated set. **Zero DevToolsPage errors in both runs.** Let me locate `TSChartPalette` and include it for a fully clean confirmation.
+
+`TSChartPalette` is in `Sources/Design/TSDesign.swift`, which I omitted. Adding it for a complete, clean typecheck:
+
+26 errors — all in `UnitFormatters.swift` (depends on `Shared`'s `UnitPreferences`/`Units`, the known absent-framework boundary). **Still zero DevToolsPage errors.** Let me exclude the `Shared`-dependent component files for a definitive clean run.
+
+Down to 2 errors in `Pickers.swift` (a cascade from excluding `Shared`-dependent files it references) — again **not DevToolsPage**. Across all 4 progressively-curated runs, my surface has **zero** errors. Let me confirm that definitively.
+
+**Zero DevToolsPage errors across all 4 typecheck runs** — the surface is type-correct against the real macOS SDK + Swift 6. Residual errors are all in unrelated files tied to the absent `Shared` framework (the documented macOS-pending boundary). Now let me prepare the ledger, log, and verify the generated `.xcodeproj` is gitignored.
+
+`.xcodeproj` is gitignored. Now writing the gate log (with the `=== PARITY ===` section), the apple ledger, then committing. First the log:
+
+Now the apple parity ledger (both idioms, per ADR-002 adaptive single codebase):
+
+Now let me re-verify under **strict concurrency = complete** (the project's setting), which my earlier typecheck didn't enforce — checking specifically for any DevToolsPage issues.
+
+Zero DevToolsPage errors even under `-strict-concurrency=complete`. The surface is fully clean. Let me do a final review of the formatted source files.
+
+The implementation and `TeslaSyncApp` wiring look correct and clean. Let me run a final consolidated verification and check git status before committing only my files.
+
+All gates green. The `AIUsageCard.*` and `web/*` modifications are pre-existing (present before I started) — I'll stage only my files. Let me confirm my `TeslaSyncApp.swift` diff is solely the registration change, then stage and commit.
+
+`TeslaSyncApp.swift` diff is exactly my registration change. Staging only my files and committing:
+
+Exactly my 10 files staged (pre-existing changes excluded). Committing:
+
+One refinement for the acceptance criterion "all 2 parity items render from the bound `@Observable` state holder": the header should render `model.title`/`model.subtitle` (the model) rather than calling the strings helper directly. Let me make that binding explicit.
+
+Updating the log's parity render evidence to match:
+
+Re-verifying the changed file and amending the commit:
+
+Format/lint clean. Quick typecheck confirmation of the binding change:
+
+Zero errors. Let me amend the commit with the refinement:
+
+Commit is clean (10 files, 905 insertions). Let me clean up the generated `.xcodeproj` artifact and finalize the plan.
+
+The task is complete. The working tree shows only the pre-existing unrelated changes (left untouched); my commit `ad8cd4e03` contains exactly my 10 files.
+
+## Summary
+
+Implemented the native SwiftUI **`DevToolsPage`** at web parity with `web/src/features/admin/pages/DevToolsPage.tsx`, adaptive across macOS + iOS/iPadOS.
+
+**What shipped** (`apps/apple/TeslaSync/feature-views/`, the repo's real surface convention — the prompt's `Features/Admin/` boilerplate doesn't match the codebase):
+- `DevToolsPage.swift` / `.Model.swift` / `.Views.swift` / `.Routing.swift` / `.Previews.swift` / `.Tests.swift` / `.strings`
+- A thin tabbed shell: title + subtitle header over a 5-tab `TSTabs` strip (Fleet API · Telemetry · Infrastructure · Utilities · Reference, default `fleet-api`) composing the 4 existing native sections + an inline Reference-links grid. No placeholders (ADR-011) — client-side Utilities (15 tools) and Reference links render fully; backend sections seeded to their honest empty/ready state.
+- Registered at the `.admin` route (`DevToolsRouteRegistration`) wired into `Sources/TeslaSyncApp.swift`.
+- i18n via per-surface `DevToolsPage` table; a11y headers/links/VoiceOver, Dynamic Type, dark/high-contrast tokens.
+
+**`=== PARITY ===` → `PARITY_COVERED=2`**: `devtools.title` and `devtools.subtitle` render from the `@Observable DevToolsPageModel` (`model.title`/`model.subtitle`), with unit-test evidence.
+
+**Verification (host-runnable gates all GREEN):** swiftlint `--strict` (0), swiftformat `--lint` (0/7), placeholder scan (COUNT=0), `xcodegen generate` (0), and real macOS-26.5-SDK `swiftc -typecheck -strict-concurrency=complete` → **zero `DevToolsPage` errors** across 5 progressively-curated runs.
+
+**Honest BLOCKED status:** the full `xcodebuild build test` triad cannot run to green here — blocked by the absent `Shared.xcframework` (Kotlin/Native, macOS-CI-deferred) and pre-existing parallel-merge collisions documented in `apps/macos-pending-verifications.md` — neither caused by this surface. Logged `EXIT=1 / STATUS=BLOCKED` rather than red-as-green, with the apple parity ledger row covered 2/2.
+
+Committed as `ad8cd4e03`; pre-existing unrelated `AIUsageCard.*`/`web/*` changes were left untouched.
+

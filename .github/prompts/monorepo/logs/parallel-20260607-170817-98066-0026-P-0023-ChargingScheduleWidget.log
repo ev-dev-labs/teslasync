@@ -1,0 +1,113 @@
+I'll start by exploring the repository structure to understand the task — the web source, the existing Apple app structure, and the runner's capabilities.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. However, `swift`, `swiftlint`, and `swiftformat` are available. Let me read the web source and explore the existing Apple app conventions in parallel.
+
+The `dashboard-widgets` directory doesn't exist yet. I need to understand the existing conventions deeply — state holders (P1/S8), tokens (P1/S9), i18n (P1/S10), diagnostics (P1/S11), and shared components. Let me explore the key Sources subdirectories.
+
+Rich component library and a SharedFacade state-holder layer exist, but no dashboard feature yet. I need to understand the path mapping and core conventions. Let me investigate how sources are wired and read the core facade/component files.
+
+Let me reconcile the path/build situation and learn the established native screen+state-holder pattern, the i18n approach, and the freshness/widget-shell handling.
+
+Full Xcode exists at `/Applications/Xcode.app` (but not selected) and a rich native component library mirrors the web. Let me verify build feasibility (XcodeGen, the KMP `Shared.xcframework`, DEVELOPER_DIR override) and check for the dashboard/widget infra, vehicle/signal state holders, diagnostics, and test patterns.
+
+Critical findings: `DEVELOPER_DIR=/Applications/Xcode.app/...` unlocks full Xcode 26.5, and `xcodegen` is installed — but `Shared.xcframework` must be built from the KMP module (`apps/shared`), and there's **no dashboard/widget infra, no vehicle/signal state holders, and no diagnostics facade** in the tree yet (declared predecessors P4-core, P1/S8, P1/S11 are absent). Let me study the established model+view binding pattern, the design tokens, the Badge API, and an existing test to mirror conventions precisely.
+
+Now I understand the established model/view + token + component conventions. Let me check whether the i18n keys exist in the catalog, learn the typography tokens, the test style (XCTest vs Swift Testing), and the lint/format/placeholder rules I must satisfy.
+
+The i18n catalog has 14 `chargingSchedule` occurrences already, plus reusable `widget.freshness.*` keys. Tests use XCTest with `@testable import TeslaSync` and are pure-logic (no Shared dependency). Let me confirm the exact i18n keys, read the freshness/card components for a WidgetShell equivalent, the placeholder checker behavior, and a component test for style.
+
+The precise grep found nothing but the loose count found 14 — let me see the actual key format used in the catalog for `chargingSchedule` and `notCharging`.
+
+The catalog uses a `translation.` prefix for web-mirrored keys: `translation.widget.chargingSchedule.*` and `translation.widget.notCharging` all exist. Let me confirm the `translation.widget.charging` leaf and the freshness English values, and verify the placeholder checker's matching behavior.
+
+All 15 source i18n keys exist in the P1/S10 catalog (`translation.widget.chargingSchedule.*`, `translation.widget.charging`, `translation.widget.notCharging`), plus reusable `widget.freshness.*`. The placeholder checker forbids TODO/FIXME/XXX/"Placeholder"/"not implemented"/`fatalError("unimpl"`. Let me read `FacadeError` and `LiveConnection` to align the error/offline seam, then I'll write the widget.
+
+I now have full understanding. Key facts confirmed:
+- **Full Xcode 26.5** is available via `DEVELOPER_DIR` override; `xcodegen` installed; but **`Shared.xcframework` is unbuilt** (KMP), and **declared predecessors are absent** (no dashboard core, no vehicle/signal state holders, no diagnostics facade).
+- All 15 source i18n keys exist in the catalog. A rich native component library mirrors the web (`TSTimeline`, `TSStatusPill`/`TSBadge`, `TSEmptyState`, `TSQueryError`, tokens, `WidgetFreshness`).
+- Tests are XCTest + `@testable import`, pure-logic style.
+
+Let me record a plan and todos.
+
+Let me confirm exact component initializer signatures and the generated design-token names so my API usage is precise.
+
+I have all the API signatures and tokens confirmed. Let me verify the few a11y/action i18n keys I plan to reference exist in the catalog before writing.
+
+The component library references keys (`action.retry`, `error.queryTitle`) that aren't in the catalog — so missing keys aren't build errors (they render as the key). But to keep my chrome a11y labels valid, let me find existing refresh/reload keys in the catalog.
+
+All keys resolved: I'll use `translation.common.refresh` for the refresh button label and the existing `widget.freshness.*` keys for the chip. The missing `error.*`/`action.*` keys are a pre-existing app-wide P1/S10 gap (the shared `TSQueryError` already references them). Now writing the surface. First the support file (model, projection, seams):
+
+Now the view file with the shell, state machine, subviews, descriptor, and previews:
+
+Let me refactor the routing logic into testable pure helpers so each state branch is unit-testable without a rendering host. Adding a display-routing section to the support file:
+
+Now update the view to use the testable routing helpers:
+
+Now the tests file — adapter unit tests, per-state routing, model behavior, time formatter, descriptor, and a11y-label mapping:
+
+Now let me set up a standalone SwiftPM verification harness (outside the repo) to genuinely compile and test the widget logic against a faithful shim of the component library. First, a small safety edit (drop `Sendable` from the descriptor, which stores `LocalizedStringKey`):
+
+Confirmed: `LocalizedStringKey` isn't `Sendable`, and the app uses strict concurrency `complete`, so stored `static let` constants are flagged. The fix (also correct for the real app build) is to make them computed `static var`. Let me convert the strings namespace:
+
+Build succeeds under strict concurrency. Now run the tests:
+
+All 21 tests pass against the shimmed library under strict concurrency with the Xcode 26.5 toolchain. Now let me run the real gate checks (swiftformat, swiftlint, placeholder) on the actual files.
+
+swiftformat flagged formatting issues. Let me auto-apply swiftformat to my files, then re-verify:
+
+swiftformat passes (0/3 require formatting). Now swiftlint `--strict` on the files explicitly:
+
+Three swiftlint issues: two files exceed the 400-line limit (swiftformat's before-first wrapping inflated them) and one multiple-closures trailing violation. I'll split the support file, move previews to their own file, and fix the closure call. Let me read the current formatted files to split accurately.
+
+I'll fix the closure call and split the oversized files. First the closure fix:
+
+Now split the support file into Support + Model, and extract previews into their own file:
+
+Files split cleanly and all pass swiftformat. Now re-run swiftlint `--strict` on all five files:
+
+swiftlint `--strict` → **0 violations in 256 files**. Now re-verify the split files build and test in the harness:
+
+All 21 tests pass with the split files. Now the placeholder gate:
+
+Placeholder gate passes (COUNT=0). Now let me capture honest evidence for the `xcodebuild` gate — first generate the project and inspect whether my files are wired in and whether `Shared.xcframework` exists:
+
+Definitive evidence captured: `xcodegen` works, but my files are **not in the generated project** (project.yml `Sources` excludes `TeslaSync/dashboard-widgets/`, and project.yml isn't an allowed file), and `Shared.xcframework` is **unbuilt**. Let me capture the actual `xcodebuild` failure mode (bounded) for the log:
+
+The gate is running the "Stage Shared.xcframework" pre-action (the KMP gradle build). Let me read a bit more, then stop it since this confirms the blocker:
+
+I have conclusive evidence — the gate's pre-action is attempting the KMP gradle build for the unbuilt `Shared.xcframework`. Let me stop it:
+
+I have a complete, honest BLOCKED rationale. Let me do a quick bounded probe of the gradle/JDK setup (supplementary evidence) and clean up the generated project artifacts:
+
+JDK 17 + Gradle 8.14.5 are present (so the KMP build is theoretically possible but heavy), yet the **decisive blocker stands**: my files aren't in the project.yml-driven scheme and project.yml isn't an allowed file to edit — so the `xcodebuild` gate can't compile/test this surface regardless. Let me run a clean final verification sweep capturing exit codes, then clean up generated artifacts.
+
+All gates green: FORMAT=0, LINT=0 (strict, 0 violations), PLACEHOLDER=0, standalone build+21 tests pass under strict concurrency. Now clean up generated artifacts and check git status:
+
+The log directory exists with many sibling logs. Let me check the conventions of sibling logs to match the expected format:
+
+Let me view a sibling BLOCKED log to mirror its structure:
+
+This sibling log is an authoritative precedent: BLOCKED runs use a HONESTY COVENANT + DISPOSITION structure ending in `EXIT`/`STATUS`. The `done.txt` confirms no dashboard-widgets predecessors and no P7 page/holder layer exist yet. Note: rule 10 treats BLOCKED as a legitimate disposition distinct from "red" — and my code passed every *runnable* gate. Let me write the honest gate log.
+
+Let me update todos and do a final review of the committed files (post-format):
+
+Let me verify the current on-disk state (checking `Sendable` conformances) and definitively re-run the harness on the actual committed files:
+
+The `Sendable` conformances are gone — let me look at the actual file to understand and confirm the state is clean:
+
+Mystery resolved: swiftformat normalized the files (removed the no-default redundant init on `DashboardGridSize`, dropped additive `Sendable`, expanded one-line bodies) — all harmless and consistent. The current files are byte-identical to what passed earlier (no edits since). For certainty, let me regenerate the harness and run one final definitive build+test on the exact on-disk files:
+
+Build + 21 tests pass on the current files. But there's **one strict-concurrency warning**: `testDescriptorMatchesRegistry` accesses the `@MainActor`-isolated `descriptor` (since `View` is `@MainActor` in Swift 6) from a non-isolated context — this would be an error in the app's Swift 6 / `complete` concurrency mode. Let me fix it:
+
+Now re-verify format, lint, and a clean rebuild with no warnings:
+
+Clean: no warnings, 21 tests pass, format 0, lint 0. Now clean up the harness and commit the surface + log (explicitly staging only my files, never the pre-existing unrelated changes):
+
+Exactly the 5 surface files + log staged; the pre-existing unrelated changes are untouched. Committing:
+
+Committed cleanly (6 files, 1396 insertions); unrelated pre-existing changes untouched. Let me confirm the committed test file includes the strict-concurrency fix:
+
+Everything is verified and committed. Final state confirmed: the committed test has the `@MainActor` fix, all 5 source files within the lint budget, swiftformat clean, and swiftlint `--strict` reports **0 violations in 256 files**.
+
+The task is complete to the maximum extent this runner allows. Summary:
+

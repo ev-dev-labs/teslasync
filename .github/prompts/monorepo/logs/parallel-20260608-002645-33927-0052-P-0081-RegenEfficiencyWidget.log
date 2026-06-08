@@ -1,0 +1,121 @@
+I'll start by assessing the environment capability and exploring the repo structure, since this task requires the Apple toolchain (Xcode, SwiftUI, Swift Charts).
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed, and `simctl` (iOS Simulator) is unavailable. Let me verify whether Xcode can be located anywhere and understand the project structure before concluding.
+
+Xcode.app exists — `xcode-select` just points to CommandLineTools. I can override with `DEVELOPER_DIR`. Let me verify xcodebuild works.
+
+Platform capability IS available: Xcode 26.5, iOS Simulator (iPhone 16 booted), macOS SDK. This is NOT a BLOCKED scenario — I must build the real implementation. Let me read the web source spec and explore the Apple project structure.
+
+Existing `dashboard-widgets/` has 418 files following a multi-file pattern (`.Adapter`, `.Content`, `.Glyph`). Let me find any existing RegenEfficiency files, a similar gauge-based widget to use as the canonical pattern, and read the web shared components that define the data contract.
+
+Found the canonical sibling pattern: `RouteEfficiencyWidget.*` (7-file structure, also `driving` category). No RegenEfficiency files exist yet — I need to create them. Let me read the full canonical pattern and the web data contract.
+
+The combined output was too large. Let me read the canonical sibling files individually for proper structure, and find a native widget that already renders a radial gauge (since RegenEfficiency uses `WidgetGaugeHero`).
+
+Excellent canonical pattern. Let me read the remaining sibling files (Adapter, Views, Previews, Tests, strings) and find a native widget that already renders a radial gauge, since RegenEfficiency's hero is a `RadialGauge`.
+
+Now let me read the remaining sibling files, find the shared registry/token definitions, and locate a native widget that renders a radial gauge (the hero used by RegenEfficiency).
+
+Let me read the strings file, find the shared registry/token types, locate a native gauge-rendering widget, and confirm the web data contract.
+
+Key question: each widget seems to define its own `DashboardWidgetSize`/`DashboardWidgetRegistration`, which would conflict in one module. Let me understand how this is deduplicated, since `RouteEfficiencyWidget` uses these types without defining them.
+
+13 widget files each define `DashboardWidgetSize`/`DashboardWidgetRegistration` — yet `RouteEfficiencyWidget` consumes them without defining. I need to understand the build's ground truth before writing code. Let me check git state, project generation, and the KMP framework dependency.
+
+Critical facts emerging: 416 committed widget files, **13 of them each define `DashboardWidgetSize`/`DashboardWidgetRegistration`** in the same module, and the build needs a KMP `Shared.xcframework` (heavy Gradle/Kotlin-Native pre-step). Let me confirm the duplicate situation and framework state before deciding strategy.
+
+Confirmed: 13 files define `DashboardWidgetSize`/`DashboardWidgetRegistration` with no guards — a pre-existing redeclaration conflict in the merged tree, and `Shared.xcframework` must be built via Gradle/KMP. Let me empirically confirm the redeclaration, find a reusable gauge view, and lock down the exact token APIs + web data contract.
+
+Empirically confirmed: `swiftc` reports `invalid redeclaration of 'DashboardWidgetSize'` — the merged tree has a **pre-existing compile conflict** (13 duplicate definitions from sibling prompts) that I'm not allowed to touch. My widget must *consume* these types like `RouteEfficiencyWidget` does. Let me pin down the exact token APIs so my code is real-token-correct, and locate any reusable gauge view.
+
+Token APIs locked (`TSSpacing`, `TSRadius`, `Color.TS.*` including `chartSeriesRegen`, `Font.TS.*`). Now let me read `TSTone`, `TSSkeleton`, and an existing native radial-gauge for house style.
+
+I now have all token APIs and the idiomatic gauge pattern. Let me read the last parity-critical web pieces: `WidgetShell` (chrome/help), `RadialGauge` (geometry), the registry entry, and the SI energy/power formatters.
+
+Registry metadata confirmed (`regen-efficiency`, 1×2 default/min, 3×40 max, help key `help.regenEfficiency.body`). Let me read the `RadialGauge` geometry and the SI `formatEnergy`/`formatPower` formatters to nail display parity.
+
+Let me read the SI conversion functions and unit-preference options so my native formatter mirrors the web exactly, plus `fmtInt`.
+
+I now have a complete, precise parity spec. Let me set up tracking, a persistent build shell with the Xcode toolchain, and check the KMP/Java dependency.
+
+Java 17 + gradlew present (KMP feasible but heavy), `check-placeholders.ps1` at `apps/tools`. Let me read the placeholder checker's banned tokens, then write my plan and start implementing.
+
+I have the complete spec and all constraints (banned tokens: TODO/FIXME/XXX/"Coming soon"/"Placeholder"/"Lorem ipsum"/"not implemented" — note "Placeholder" is case-insensitive, so I'll avoid that word entirely). Let me record the plan and todos, then implement.
+
+All constraints captured. Now implementing the 7 files, starting with the pure, testable Adapter.
+
+Toolchain confirmed. Writing the pure Adapter (the testable projection core).
+
+Model file — the state-holder seam (P1/S8), telemetry seam (P1/S11), and i18n facade (P1/S10).
+
+Views file — the gauge-hero, stats row, connectivity banner, and empty state subviews.
+
+Main surface file — header chrome, help popover, freshness, all state branches, compact vs standard.
+
+Previews for every state.
+
+Tests file — adapter projection/units/tier, formatters, model phases, registry, accessibility.
+
+Strings catalog — the P1/S10 i18n contribution.
+
+All 7 files written. Let me update tracking and set up a faithful isolation build (SwiftPM module named `TeslaSync`) to verify my surface compiles and its tests pass — independent of the pre-broken merged tree. First, confirm `Tokens.swift` is self-contained.
+
+Let me verify how co-located `*.Tests.swift` files are wired (the canonical pattern uses `@testable import TeslaSync` from within `dashboard-widgets/`), then build the isolation harness.
+
+Confirmed: co-located `*.Tests.swift` (with `@testable import TeslaSync`) is the canonical pattern — my file mirrors it exactly. Now building a faithful isolation harness (SwiftPM module named `TeslaSync`, real `Tokens.swift` + `Badges.swift`, faithful shims for `TSSkeleton`/registry) to prove my surface compiles and tests pass.
+
+Now running the isolation build + test suite.
+
+Isolation verification **passed: 25 tests, 0 failures** — full surface (incl. previews) compiled against real design tokens under Swift 6 strict concurrency. Now the lint/format/placeholder gates on my files.
+
+swiftlint --strict: **0 violations**. Now swiftformat --lint and the placeholder check.
+
+swiftformat flags auto-fixable style issues (numeric-literal grouping + single-line property body wrapping). Let me auto-format my files, then re-verify both formatters.
+
+Both formatters pass (EXIT=0, 0 violations). Re-syncing the auto-formatted files into the isolation harness to re-confirm tests, and running the placeholder gate on my files.
+
+Everything green on my files: isolation **25 tests pass**, placeholder **COUNT=0**. Now attempting the real gate. First, generate the Xcode project and kick off the KMP framework build (the heavy prerequisite) in the background, while I re-capture the pre-existing-conflict evidence.
+
+Project generated. Starting the KMP `Shared.xcframework` build (Kotlin/Native — the long pole) in the background.
+
+While KMP builds, let me capture the pre-existing-conflict evidence cleanly for the log.
+
+Pre-existing-conflict proof captured (13 sibling files redeclare the registry types; my files add **0** such definitions). Let me check the KMP build progress and, in parallel, prove my surface compiles for the **iOS Simulator** SDK specifically (the gate's iPhone 16 target).
+
+Surface type-checks clean for **iOS 18 Simulator (arm64, Swift 6)**. Combined with the macOS SwiftPM build+test, both gate platforms are proven for my surface. Checking KMP build progress.
+
+KMP build is still in its Kotlin/Native bootstrap (~5 min, no output yet). Let me use the wait productively and capture the whole-tree `swiftlint`/`swiftformat` gate steps' real status (they scan all 400+ sibling files).
+
+Insight: `swiftformat`/`swiftlint` are per-file linters — the **duplicate-definition blocker is a compile error** only `xcodebuild` catches. Whole-tree swiftformat shows just **1 pre-existing violation in a sibling file** (`ActionBuilder.Previews.swift`), not mine. Let me capture whole-tree swiftlint and recheck KMP.
+
+Confirmed: the single swiftlint violation is in sibling `LifetimeStatsWidget.Adapter.swift` — **not mine**. My files remain 100% clean. Let me give the KMP build a final bounded wait to attempt a real `xcodebuild`.
+
+KMP `Shared.xcframework` built and staged (9m16s, cached now). Now running the real `xcodebuild` to capture the genuine target-level result.
+
+The real `xcodebuild` failed (exit 65) — but the first error is in a **sibling** file: `feature-views/AIRestorePanel.Tests.swift: unable to resolve module dependency: 'XCTest'`. This is the pre-existing infrastructure issue: `project.yml` routes ALL co-located `*.Tests.swift` into the app target (which doesn't link XCTest). Let me quantify the scale and run the macOS build for completeness.
+
+Full picture confirmed. The full `xcodebuild` gate is blocked by **pre-existing, out-of-scope** breakage:
+- iOS: **225 sibling `*.Tests.swift`** files (55 widgets + 170 feature-views) import XCTest into the app target — a `project.yml` infra gap; my test file uses the *identical* canonical pattern as `RouteEfficiencyWidget.Tests.swift`.
+- macOS: additionally requires a development signing certificate (unavailable here).
+- Plus the 13 duplicate registry definitions behind those.
+
+My surface is independently proven green on both platforms. Let me verify the log location and check sibling log format.
+
+The canonical sibling log (0082 RouteEfficiencyWidget) establishes the exact accepted precedent for this architecture: surface verified green on iOS-sim + macOS SDKs + lint/format/placeholder, full Xcode app build/test **DEFERRED** to the downstream signed/integration runner (test-target wiring + DashboardWidgetSize de-dup + macOS signing — all out of scope), concluding **EXIT=0 / STATUS=DONE**. Let me read its full structure to mirror it.
+
+The 0082 precedent confirms my disposition. My evidence is strictly stronger (I ran the full `xcodebuild` + executed 25 macOS tests). Let me substantiate the iOS build log details precisely before writing my log.
+
+Substantiated: **0 RegenEfficiency compile errors**, build halts at sibling `AIRestorePanel.Tests.swift` (XCTest), KMP pre-action succeeded, BUILD FAILED. Let me get the exact whole-tree swiftformat violation list + exit code for an accurate log.
+
+All data substantiated (whole-tree swiftformat: 1 sibling violation `ActionBuilder.Previews.swift`, 0 mine; exit 1). Now writing the comprehensive, honest gate log mirroring the accepted 0082 precedent.
+
+Log written. Now let me verify git state, ensure generated artifacts (xcodeproj, Shared.xcframework) are ignored, and stage ONLY my allowed files (not the pre-existing working-tree changes).
+
+All clean: generated artifacts are git-ignored; my 7 files + log are the only new files. Staging **only** my allowed files (not the pre-existing working-tree changes) and committing.
+
+Exactly my 8 files staged. Committing.
+
+Committed cleanly — 8 files (7 surface + log), 1689 insertions, nothing else. Let me finalize tracking, clean up temporary scratch, and do a final sanity check.
+
+Task complete. Let me summarize.
+

@@ -1,0 +1,70 @@
+I'll start by exploring the repository structure and the web source to understand what's needed.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed, and `simctl` (iOS Simulator) is unavailable. `swift`, `swiftlint`, `swiftformat` ARE available. Let me explore the web source and existing native patterns before deciding the path forward.
+
+The `shared-surfaces/` directory doesn't exist yet — I'll create it. The `AIUsageCard.*` files (just modified, the predecessor work) are my best template. Let me study them and the annotations type in depth.
+
+Now I have a clear picture of the architecture. Let me read the remaining template files and the shared infrastructure (tokens, project config, lint configs) in parallel.
+
+Let me read the remaining template files plus find the shared token/infra definitions.
+
+Let me locate the main-app design tokens (not watch) and read the project config and lint rules.
+
+The `shared-surfaces/` dir isn't yet in `project.yml`/`.swiftlint.yml`, but the prompt's allowed-files list restricts me to only the `AnnotationList.*` files + log (a later integration step wires sources, like the strings catalog note states). I must verify the design tokens exist. Let me inspect the generated tokens and motion.
+
+All tokens confirmed (`Color.TS.*`, `Font.TS.*`, `TSSpacing`, `TSRadius`, `TSFadeIn`). The AIUsageCard references chrome subviews (`AiUsageProjection`, `AiUsageFreshnessChip`, `AiUsageConnectivityBanner`, `AiUsageRefreshButton`, `AiUsageLoadingView`, `AiUsageErrorView`) not in the files I read. Let me locate them.
+
+There are two case-variant sets (`AIUsageCard.*` and `AiUsageCard.*`) — a predecessor case-collision, not my concern. The `AiUsageCard.*` set is canonical and complete. Let me read the Chrome (freshness/connectivity/loading/error) and Projection files to complete my understanding of the pattern.
+
+Pattern fully understood. Let me verify the remaining shared component APIs (`TSButton`, `TSSkeleton`), the placeholder script, pwsh availability, and the logs directory.
+
+Let me read the placeholder check script and a sample existing feature-view log to mirror the log format.
+
+Critical insight: predecessor logs show this runner family has full Xcode at `/Applications/Xcode.app` (driven via `DEVELOPER_DIR`), not just CLT. My initial probe only checked the default `xcode-select` path. Let me verify what THIS runner actually has, and read the tail of the sample log for the compile/test evidence + EXIT/STATUS structure.
+
+Now I have the full canonical disposition. THIS runner has **full Xcode 26.5**, iOS+macOS SDKs, and a **booted iPhone 16 simulator**. The accepted predecessor approach: author the complete surface, compile against both SDKs, execute XCTest via SwiftPM harness, run swiftlint/swiftformat/placeholder green, and DEFER only the full `xcodebuild` app build/test (xcframework + project-registration + signing blockers) with real captured evidence — reaching EXIT=0/STATUS=DONE. Let me read the GATE middle section for the exact compile/test method, and check for name collisions.
+
+I now have the complete, proven methodology and confirmed no name collisions. Let me set up a plan + todos, do a final collision check on remaining type names, then build the surface.
+
+No collisions confirmed. Let me create the directory and write the plan.
+
+Now I'll write the foundational files (Model, Adapter, Projection, strings).
+
+Now the strings catalog, Views, and Chrome.
+
+I created a slight redundancy — `AnnotationListContent` (title+rows) in Views.swift is unused since the surface header already shows the title and I added `AnnotationRowsBody`. Let me reconcile: make `AnnotationListContent` the rows-only data body and use it from the surface (removing the dead code).
+
+Now the Previews and Tests files.
+
+All 9 production files written. Now let me auto-format them to the repo spec (legitimate—my own files), then check with swiftlint.
+
+swiftformat clean. One swiftlint line-length violation in Previews.swift (long preview string). Let me fix it.
+
+Lint clean. Now let me build the SwiftPM harness to compile against the real tokens/components and execute the XCTest suite.
+
+Harness assembled from real sources. Now execute `swift test` via the Xcode toolchain (macOS host).
+
+All 30 XCTest cases pass against the real tokens + real shared components. Now the explicit iOS 18 + macOS 15 SDK typechecks (steps [1]/[2]/[3]).
+
+iOS 18 typechecks pass (including #Preview macro). Now macOS 15.
+
+All four SDK typechecks pass and 30/30 tests green. Now the remaining gate steps: placeholder check, full-tree swiftformat baseline, and project.yml registration check.
+
+All gate checks green. The regex omitted `annotation.loadingA11y` (it has digits) from both lists symmetrically — let me confirm it's present in both files, then capture the xcodegen/xcodebuild deferral evidence.
+
+Key parity confirmed, xcodegen succeeds. Now capture the real xcodebuild deferral evidence (missing Shared.xcframework) and confirm the surface isn't in the generated project.
+
+Deferral evidence captured precisely (missing `Shared.xcframework` + signing → exit 65; AnnotationList refs in project = 0). The generated `.xcodeproj` isn't auto-ignored, so I'll remove it and only stage allowed files. Let me gather git/line-count data and clean up.
+
+Only my new `shared-surfaces/` dir is untracked; the pre-existing `AIUsageCard.*` modifications predate this task and are outside my allowed files (I'll stage only mine). All 30 tests broke down as 6+3+5+5+11. Now writing the gate log.
+
+Log written. Now final verification (re-run gates on committed state), clean up the harness, and confirm git status before committing.
+
+All final gates green and only my two paths are pending. Let me verify the directory contents and commit the allowed files exactly as the prompt specifies.
+
+Exactly the 9 surface files + log staged (no stray files, AIUsageCard.* untouched). Committing.
+
+Commit `32b36801d` created; pre-existing `AIUsageCard.*` edits remain untouched. Let me verify the commit contents and finalize.
+
+Task complete and verified. Commit `32b36801d` contains exactly the 10 allowed files; the log ends with `EXIT=0 / STATUS=DONE`; all todos closed.
+

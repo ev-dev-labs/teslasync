@@ -1,0 +1,161 @@
+================================================================================
+P4 · Dashboard widget · 0075 — QuickNavWidget (Apple)
+Run: 2026-06-07T19:10-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/78
+Base: 39201cea
+Prompt: P4/dashboard-widgets/0075 — QuickNavWidget
+Web source (spec): web/src/features/dashboard/widgets/QuickNavWidget.tsx
+                   → web/src/features/dashboard/components/QuickNav.tsx (the real content)
+Mode: code-complete + REAL host xcodebuild build/test of the surface via a faithful
+      embedding harness (surface not yet target-registered in project.yml — 0036/0054 precedent).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18 deploy target)       OK
+  macOS SDK .................. MacOSX (macOS 15 deploy target)                       OK
+  iPhone 16 simulator ........ present (booted)                                     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen 2.45.4                     OK
+  surface in project.yml ..... 0 references (not yet target-registered, like 0036/0054)  WARN
+
+  Capability note: this surface uses NEITHER Swift Charts NOR MapKit (web
+  "Charts/maps used: (none)") and binds NO data hook (web "Data sources: (none)" —
+  QuickNav is a pure-presentational static shortcut grid). The sole core requirement
+  is SwiftUI, which is available and PROVEN by REAL iPhone-16-simulator AND macOS-15
+  `xcodebuild build test` runs below (30/30 tests executed green on each). The
+  capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT
+  apply — the surface is authored, host-compiled, and host-tested for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/QuickNavWidget.*) ===
+  QuickNavWidget.Adapter.swift    195  testable projection core — QuickNavDestination catalog (port of
+                                       web NAV_ITEMS: i18n keys + icon + accent hex + native route map),
+                                       QuickNavItem(+Builder), QuickNavLayout (responsive cols), a11y copy
+  QuickNavWidget.Model.swift      239  P1/S8 state-holder seam (QuickNavSource→QuickNavModel) + P1/S11
+                                       telemetry seam + P1/S10 strings facade + Static + InMemory sources.
+                                       REUSES DashboardWidgetSize/DashboardWidgetRegistration from 0036
+                                       (no redeclaration → no duplicate symbols in the app module)
+  QuickNavWidget.Views.swift      207  presentational subviews — responsive grid, shortcut tile (web
+                                       GlassPanel link) + press style, skeleton grid, empty, error states
+  QuickNavWidget.swift             93  QuickNavWidget surface (own glass card + state switch + registry +
+                                       view.opened on appear); header-less like the web WidgetShell noPadding
+  QuickNavWidget.Previews.swift    70  #if DEBUG previews — one per state (content 4×2 / content 2×2 /
+                                       loading / empty / error)
+  QuickNavWidget.Tests.swift      280  XCTest — catalog/builder/layout/model/registry/a11y + per-state
+                                       ImageRenderer render smoke (30 test methods)
+  QuickNavWidget.strings           41  P1/S10 catalog contribution (8 web nav.* parity keys + registry +
+                                       native chrome + a11y = 16 entries)
+  Every file <= 400 lines (house file_length). Total 1125 lines across 7 files.
+
+=== PARITY (vs web QuickNavWidget.tsx → QuickNav.tsx) ===
+  Composition -> QuickNavWidget.tsx renders <WidgetShell noPadding><QuickNav/></WidgetShell> with NO
+    title → the native surface is likewise header-less: just the padded shortcut grid inside the widget's
+    own glass card (sibling-widget convention). QuickNav.tsx maps a static NAV_ITEMS[4] into a
+    `grid grid-cols-2 sm:grid-cols-4 gap-3` of GlassPanel links → native LazyVGrid (2 cols narrow / 4 cols
+    full-width via QuickNavLayout) of QuickNavTile (tinted icon square + label + description + chevron).
+  Catalog -> the 4 destinations reproduce NAV_ITEMS verbatim:
+    Drives  (nav.drives/nav.drivesDesc, "Trip history",        #00f0ff) -> /driving
+    Charging(nav.charging/nav.chargingDesc,"Sessions & costs",  #10b981) -> /charging
+    Analytics(nav.analytics/…Desc, "Fleet insights",           #a855f7) -> /analytics
+    Battery (nav.battery/nav.batteryDesc,"Health & degradation",#f59e0b) -> /energy
+    Order preserved (CaseIterable). Accent colors are the exact web hex (verified by test).
+  Icons -> web lucide Route/BatteryCharging/Gauge/Activity → SF Symbols
+    point.topleft.down.to.point.bottomright.curvepath / battery.100.bolt / gauge.medium /
+    waveform.path.ecg (+ chevron.right). All confirmed present on the toolchain (AppKit probe).
+  Routing -> web <Link to="/drives|/charging|/analytics|/battery"> → delegated to the host via an injected
+    `onNavigate(QuickNavDestination)` seam (the view performs no navigation itself), carrying the native
+    canonical route path resolved by AppRouteParser (/drives→/driving, /battery→/energy alias). webPath +
+    routePath both asserted in tests.
+  i18n -> useTranslation('dashboard') t('nav.X', default) → QuickNavStrings table "QuickNavWidget"; the 8
+    web nav.* keys carry the exact web English defaults. No hardcoded literals in the view.
+  Data -> web "Data sources: (none)". QuickNav has NO query/hook; the production StaticQuickNavSource
+    publishes the catalog (native analogue of the NAV_ITEMS module constant) through the P1/S8 seam.
+
+=== STATES (every state renders) ===
+  content  -> the responsive shortcut grid (the real, always-on web state).
+  loading  -> skeleton grid (defensive framework state; web shell Skeleton intent).
+  empty    -> ContentUnavailableView "No shortcuts" (defensive — catalog resolved empty).
+  error    -> icon + title + Retry (defensive — catalog failed; web QueryError intent).
+  stale/offline -> N/A and intentionally NOT fabricated. The web source is purely presentational with
+    NO data fetch and NO network/freshness dimension (no query, no LiveConnectionState), and the
+    shortcuts are local routes that work offline by nature. Rendering a "Live/Stale/Offline" chip would
+    imply live data that does not exist (silent drift). This is faithful reproduction of the source, not
+    scope-narrowing — there is no stale/offline branch in QuickNav to port. All four reachable phases are
+    snapshot-rendered green below.
+
+=== GATE RESULTS ===
+  [host] swiftformat --lint apps/apple ........ 0/287 files require formatting (incl. this surface)  FORMAT_EXIT=0
+  [host] swiftlint --strict (config included) . 0 violations in 262 files                            LINT_EXIT=0
+         swiftlint --strict (this surface, 6 .swift explicitly) ... 0 violations in 6 files          OK
+  [host] check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets .. PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0
+  [host] iOS-18 typecheck (swiftc -sdk iphonesimulator -target …ios18.0-simulator -swift-version 6)  IOS_TYPECHECK_EXIT=0
+
+  Surface build+test (REAL xcodebuild, via faithful embedding harness — the surface is not yet
+  registered in apps/apple/project.yml, identical to the already-committed 0036/0054 bundles, so the
+  literal `xcodebuild -scheme TeslaSync` compiles the app, not this bundle. The harness embeds the
+  UNMODIFIED surface sources + the REAL generated design tokens (apps/design/generated/apple/Tokens.swift)
+  + a verbatim TSSkeleton/0036-registry shim, builds an app + XCTest bundle, and runs them on-device):
+
+  [iOS ] xcodebuild -scheme … -destination 'platform=iOS Simulator,name=iPhone 16' build test
+         ** BUILD SUCCEEDED **   ** TEST SUCCEEDED **   Executed 30 tests, 0 failures               IOS_EXIT=0
+  [mac ] xcodebuild -scheme … -destination 'platform=macOS' build test
+         ** BUILD SUCCEEDED **   ** TEST SUCCEEDED **   Executed 30 tests, 0 failures               MAC_EXIT=0
+  [host] swift test (SwiftPM, macOS, real tokens) ... Executed 30 tests, 0 failures                 OK
+
+  Test coverage (30 methods, all executed green on iPhone 16 + macOS):
+    • Adapter/catalog (7) — web NAV_ITEMS order, i18n keys, English fallbacks, webPath, native routePath
+      (AppRouteParser parity), distinct icons, exact accent hex.
+    • Builder/layout (5) — localized projection (order/count/key-tap), icon+color carry, empty input,
+      responsive columns (2/2/4).
+    • Model (8) — phase resolution (loading/empty/error/content + cached-items-stay-content),
+      view.opened emitted once, source start-once + refresh delegation, StaticQuickNavSource catalog.
+    • Registry (2) — canonical quick-nav metadata (system, 4×2 / 2×2 / 4×40) + clamp min/max.
+    • Accessibility (4) — tile label combine, empty-detail omit, "Opens %@" hint, built-item a11y copy.
+    • Render smoke (4) — content/loading/empty/error each rasterize via ImageRenderer (snapshot).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green   : every EXIT/STATUS above is the real captured value; the literal
+                         `xcodebuild -scheme TeslaSync` step is NOT claimed — it cannot compile a
+                         not-yet-registered bundle — and is replaced by a REAL xcodebuild build+test of
+                         the surface itself on both platforms (stronger evidence, fully disclosed).
+  2  No scope narrowing: all 4 web shortcut tiles + the responsive grid + header-less shell reproduced.
+  3  No skip-and-assume: SF Symbols probed for existence; route map verified against AppRouteParser;
+                         tokens are the REAL generated Tokens.swift (not stubbed).
+  4  No stubs as final : zero placeholders (pwsh gate COUNT=0); StaticQuickNavSource is the real catalog
+                         provider (web NAV_ITEMS analogue), not a stub.
+  5  No parity shortcuts: exact web hex colors, web i18n keys + English defaults, web NAV_ITEMS order,
+                         web noPadding/header-less composition. stale/offline correctly N/A (not faked).
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: REUSED DashboardWidgetSize/DashboardWidgetRegistration from 0036 (no
+                         redeclaration → no duplicate symbols when bundles compile together), exactly like
+                         0054; did NOT self-register into project.yml / the dashboard grid (integration
+                         prompt's scope); did NOT edit the shared Localizable.xcstrings (parallel-unsafe) —
+                         strings shipped as the per-surface table.
+  8  No commit on red  : committing on all-green host gates + REAL iOS+macOS xcodebuild build/test.
+  9  No silent drift   : changes confined to the allowed QuickNavWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native QuickNavWidget shipped at parity with the web source: a header-less,
+  responsive shortcut grid (web QuickNav) with the 4 NAV_ITEMS reproduced verbatim (i18n keys, exact
+  accent hex, icons, native route mapping), a pure testable projection core, a P1/S8 state-holder seam
+  (no view HTTP / no in-view item building), P1/S11 view.opened telemetry, P1/S10 strings, full
+  loading/empty/error/content states, VoiceOver labels+hints, Dynamic-Type-friendly tokens, and
+  reduce-motion-aware press feedback. Registry-correct (quick-nav, system, 4×2 / 2×2 / 4×40, clamp).
+  All host-runnable gates pass AND the surface BUILDS + TESTS green (30/30) on BOTH the iPhone 16
+  simulator and macOS 15 with the real Xcode 26.5 toolchain under Swift 6 strict concurrency. This is
+  strictly stronger than the 0054/0036 "DEFERRED Xcode gate" precedent (which typechecked / ran SwiftPM
+  only) — here the surface is compiled into a real app and its XCTest bundle is executed on-simulator
+  and on-macOS via xcodebuild. The app-target registration into apps/apple/project.yml is the downstream
+  integration prompt's scope (outside this prompt's allowed files), matching the committed 0036/0054
+  bundles which are likewise not yet target-registered.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/QuickNavWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0075-QuickNavWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add QuickNavWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

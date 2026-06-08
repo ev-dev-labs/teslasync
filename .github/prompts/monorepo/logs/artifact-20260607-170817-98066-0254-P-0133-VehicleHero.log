@@ -1,0 +1,147 @@
+=== P4 Feature view 0133 VehicleHero (Apple) ===
+Host: Darwin arm64 (Mac Studio), Xcode 26.5 (DEVELOPER_DIR=/Applications/Xcode.app),
+      Swift 6 strict concurrency, iPhone 16 simulator present.
+Scope: apps/apple/TeslaSync/feature-views/VehicleHero.* (+ this log) ONLY.
+Web source of truth: web/src/features/dashboard/components/VehicleHero.tsx
+
+----------------------------------------------------------------------
+SURFACE DELIVERED (9 files, all VehicleHero.*)
+----------------------------------------------------------------------
+  VehicleHero.swift              main feature view (phase switch, header, composition, nav seam)
+  VehicleHero.Model.swift        P1/S8 state-holder seam + @Observable model + P1/S10 facade + P1/S11 telemetry
+  VehicleHero.Adapter.swift      pure SI->display converters, fmtNumber/fmtInt/jsRound/doneClock, firmware, status catalog, a11y
+  VehicleHero.Projection.swift   gauge / charging / header projector (web RadialGauge + is_charging panel)
+  VehicleHero.StatCards.swift    context + always stat cards (web buildStatCards)
+  VehicleHero.Views.swift        gauge arc + grid, charging panel, stat tiles (data-display chrome)
+  VehicleHero.Chrome.swift       status badge, freshness chip, cached banner, quick actions, asleep panel, loading/empty/error
+  VehicleHero.Previews.swift     per-state Xcode previews (driving/charging/idle/asleep/empty/loading/error/stale/offline)
+  VehicleHero.Tests.swift +
+  VehicleHero.ProjectorTests.swift +
+  VehicleHero.ModelTests.swift   51 unit + view-render tests
+  VehicleHero.strings            P1/S10 i18n catalog (every extracted key + native chrome)
+
+======================================================================
+A. ACCEPTANCE GATE (verbatim commands) — REAL results on this host
+======================================================================
+[1] DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+    xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+        IOS_EXIT=65
+        Root cause (PRE-EXISTING, NOT VehicleHero): 129 co-located `*.Tests.swift`/`*.ModelTests.swift`
+        files across feature-views/ + dashboard-widgets/ `import XCTest` into the app module. First
+        failure is `ActionBuilder.ModelTests.swift:11:8: error: Unable to resolve module dependency:
+        'XCTest'`. The app target does not link XCTest, so the plain `build` action cannot compile any
+        co-located test file. 520 `@testable import TeslaSync ... ignoring import` warnings confirm the
+        whole co-located-test population compiles into the app module.
+        VehicleHero NON-TEST source files: ZERO compile errors (grep of the log:
+        `VehicleHero[^ ]*: error:` excluding the shared XCTest-import class = empty).
+
+[2] DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+    xcodebuild -scheme TeslaSync-macOS build test
+        MAC_EXIT=65
+        Root cause (PRE-EXISTING, NOT VehicleHero): macOS development-signing —
+        `"TeslaSync-macOS" has entitlements that require signing with a development certificate`.
+        Fails before compilation; ZERO VehicleHero involvement.
+
+[3] swiftlint --strict   (repo-wide, as the gate runs it)
+        LINT_EXIT=2
+        Root cause (PRE-EXISTING, NOT VehicleHero):
+        `LifetimeStatsWidget.Adapter.swift:141:19: Function Body Length Violation (function_body_length)`.
+        ZERO VehicleHero violations (see section C).
+
+[4] swiftformat --lint apps/apple   (repo-wide, as the gate runs it)
+        FORMAT_EXIT=1   (1/1119 files require formatting)
+        Root cause (PRE-EXISTING, NOT VehicleHero):
+        `ActionBuilder.Previews.swift:48:1: (blankLinesBetweenScopes)`.
+        ZERO VehicleHero issues (see section C).
+
+[5] ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/VehicleHero
+        PLACEHOLDER_EXIT=0   (PLACEHOLDER_COUNT=0)
+
+======================================================================
+B. TRIAGE — every full-gate failure is PRE-EXISTING and OUT-OF-SCOPE
+======================================================================
+The three blockers above are exactly the ones recorded for the predecessor surface in
+apps/macos-pending-verifications.md (row `p4-apple/feature-views/P-0010-ToolCard`):
+
+  "The full-app build is blocked by pre-existing, unrelated parallel-merge collisions —
+   public struct DashboardWidgetSize (and PowerFlowConnection) redefined 8x ...,
+   co-located *.Tests.swift importing XCTest into the app target, and macOS development-signing.
+   Zero ToolCard/feature-views errors."
+  Deferred to: `p4-apple/P99-0001-apple-acceptance-gate` (runs on macos-latest with signing identities).
+
+This surface is restricted to VehicleHero.* files (per the prompt's Allowed-files list), so these
+cross-surface collisions and the signing identity are NOT fixable here; they are owned by the P99
+acceptance-gate prompt. No red is introduced by VehicleHero.
+
+======================================================================
+C. SURFACE-SCOPED GATES (VehicleHero.* only) — ALL GREEN
+======================================================================
+  swiftlint --strict  <11 VehicleHero files>          => 0  (clean)
+  swiftformat --lint  <11 VehicleHero files>          => 0  (0/11 require formatting)
+  check-placeholders.ps1 (real scan of a temp copy of the 11 files, -Language swift)
+                                                       => PLACEHOLDER_COUNT=0, EXIT=0
+  (case-insensitive grep for TODO/FIXME/Placeholder/Lorem/stub/mock/fatalError/NotImplemented = none)
+
+======================================================================
+D. ISOLATED VERIFICATION (predecessor ToolCard methodology) — ALL GREEN
+======================================================================
+Isolated SwiftPM package `TeslaSync` = shared component library (Sources/Design + Sources/Components +
+generated Tokens.swift) + the VehicleHero surface, with the 3 test files as the test target. Excludes
+the other feature-views/dashboard-widgets so the documented cross-surface collisions cannot pollute the
+surface verification. (UnitFormatters.swift — the one Component that depends on SharedFacade `Units`,
+unused by this surface — is excluded.) Swift language mode v6 (strict concurrency complete).
+
+  [D1] swift build            (macOS host)                 => Build complete!  (exit 0)
+  [D2] swift test             (macOS host)                 => Executed 51 tests, with 0 failures (exit 0)
+            VehicleHeroViewConvertTests          4 passed
+            VehicleHeroViewFormatTests           6 passed
+            VehicleHeroViewFirmwareTests         1 passed
+            VehicleHeroViewStatusCatalogTests    3 passed
+            VehicleHeroViewAccessibilityTests    4 passed
+            VehicleHeroViewProjectorTests       16 passed
+            VehicleHeroViewModelTests            9 passed
+            VehicleHeroViewStateTests            8 passed  (ImageRenderer per-state render smoke:
+                                                            driving / charging / asleep / empty /
+                                                            loading / error / stale / offline)
+  [D3] xcodebuild -scheme TeslaSync-Package \
+       -destination 'platform=iOS Simulator,name=iPhone 16' build  => ** BUILD SUCCEEDED **  (exit 0)
+            All 8 VehicleHero source files compiled for arm64 iOS-simulator.
+
+=> The VehicleHero surface compiles cleanly on BOTH macOS and iOS and all 51 tests pass under
+   Swift 6 strict concurrency. Zero VehicleHero warnings/errors.
+
+======================================================================
+E. PARITY COVERAGE (web VehicleHero.tsx -> native)
+======================================================================
+States (all render — verified by the 8 ImageRenderer tests + previews):
+  loading (skeleton chrome) · empty (friendly) · error (TSQueryError + retry) ·
+  stale (chip + auto-refresh) · offline (cached + chip) · content (gauges/charging/stats/actions) ·
+  asleep (web `state == null` wake panel).
+Data: bound via the P1/S8 state-holder seam (`VehicleHeroViewSource`); no HTTP in the view.
+SI canonical on the wire, converted only at the render boundary (web convert*FromSI, NIST factors).
+i18n: every web key resolves through the P1/S10 facade (table "VehicleHero") — Battery, Range, Speed,
+  Power, Inside, Outside, Charging, Rate, Time to Full, Done, Details, Commands, Live Map, Digital Twin,
+  Wake Up, Status, Locked, Unlocked, Sentry, Active, Off (+ FSM state labels + native chrome). No English
+  literals in code.
+a11y: VoiceOver labels on every gauge/stat/action, header summary, Dynamic Type (minimumScaleFactor),
+  Reduce Motion (shared TSSkeleton).
+Telemetry: `view.opened` (surface slug "VehicleHero") emitted once on start (P1/S11) — asserted by
+  testStartEmitsViewOpenedOnce.
+
+======================================================================
+CONCLUSION
+======================================================================
+The VehicleHero feature view is COMPLETE and fully verified green via the established
+isolated-build methodology (D) and surface-scoped gates (C): isolated SwiftPM build + 51/51 tests
+under Swift 6 strict concurrency + iOS-simulator compile + swiftlint/swiftformat/placeholder clean.
+
+The literal full-app acceptance gate (A) does NOT reach EXIT=0 on this host, but every failure is
+PRE-EXISTING and OUTSIDE the VehicleHero.* scope (co-located XCTest test files; macOS dev-signing;
+unrelated LifetimeStatsWidget/ActionBuilder lint debt) — identical to the predecessor ToolCard, and
+deferred to the P99 apple-acceptance-gate per apps/macos-pending-verifications.md. Honesty covenant
+rule 1 (no red-as-green): the terminal status below reports the literal gate truthfully rather than
+fabricating EXIT=0. Per rule 8 (no commit on red) the commit is withheld until P99 resolves the
+cross-surface collisions + signing; the verified surface files are in the working tree.
+
+EXIT=65
+STATUS=BLOCKED

@@ -1,0 +1,104 @@
+I'll start by exploring the environment to understand the runner capabilities and the web source. This task explicitly requires a capability check first (SwiftUI + Swift Charts + MapKit, Xcode toolchain) — if unavailable, I must report STATUS=BLOCKED with API evidence.
+
+Key capability finding: `xcodebuild` reports **Xcode is not installed** (only Command Line Tools). `swift`, `swiftlint`, `swiftformat` ARE available. Let me verify Xcode availability thoroughly and read the web source + existing Apple project conventions.
+
+Critical update: **Xcode.app IS present** at `/Applications/Xcode.app` — it's just not selected. And `feature-views/` already has 804 files following a clear pattern (`.Adapter`, `.Model`, `.Previews`, etc.). Let me verify Xcode works via `DEVELOPER_DIR` and study the existing conventions.
+
+**Not blocked** — Xcode 26.5 works via `DEVELOPER_DIR`, iOS 26.5 simulator is available. There's a closely-related existing `SocChart.*` surface and many `.Chart.swift` examples. Let me study the closest analogs to match conventions exactly.
+
+This `SocChart` surface is the ideal template. Let me read all its remaining files plus the design-token/shared infrastructure it references.
+
+Excellent pattern. Let me read the remaining SocChart files (Previews, strings, Tests) and locate the shared design-token infrastructure.
+
+Now let me locate the design-token infrastructure, the web data types, and understand the build configuration.
+
+Tokens live in `../design/generated/apple`. Let me locate them, find the `TripSOCPoint`/`TripChargeStop` web types, and check the test-target config + XcodeGen availability.
+
+Let me read the full project.yml (to understand test-target file routing), the design tokens, and the exact web trip types.
+
+I now have the full pattern. Two critical things to resolve before writing: how `.Tests.swift` files in `feature-views` get routed to a test target, and what a real gate run looks like. Let me check sibling logs, the Shared.xcframework setup, and the shared infra components.
+
+The `Shared.xcframework` needs the KMP/Gradle toolchain and isn't staged. The sibling **SocChart (0148) log** is the most informative artifact — it shows what a real passing run produced. Let me read it and the pending-verifications note.
+
+This is the key artifact. The sibling SocChart (0148) log reveals the **sanctioned methodology**: the full-app `xcodebuild build test` is a KNOWN-DEFERRED gate (blocked by a pre-existing repo-wide co-located-XCTest convention + macOS signing — not by any surface). Each surface proves itself green via an **isolated SwiftPM build+test against the real design system**, plus surface-scoped swiftlint/swiftformat/placeholder. I'll replicate this exactly.
+
+Let me record a plan and gather the last infra details.
+
+I have everything needed. The methodology is clear: build the 7-file surface to full parity, then prove it green via an **isolated SwiftPM build+test against the real design system** + surface-scoped swiftlint/swiftformat/placeholder, and honestly record the known-deferred full-app gates. Let me set up tracking and write the plan.
+
+Now I'll write the surface. Starting with the pure adapter core and the model.
+
+Now the Views file — the Swift Charts composition with the gradient area, reference lines, and all states.
+
+Now the main composable view, previews, strings catalog, and tests.
+
+All 7 files written. Now I'll build the **isolated SwiftPM harness** against the real design system. First, let me confirm the real `TSFadeIn`/`TSSkeleton` source files are self-contained (depend only on tokens).
+
+Real `TSFadeIn` (Motion.swift) is fully self-contained. `TSSkeleton` is self-contained, but other skeleton variants in that file pull in `TSCard` — my surface only uses `TSSkeleton`, so I'll include the verbatim `TSSkeleton` struct. Let me build the isolated harness (module named `TeslaSync` so `@testable import` resolves) against the real `Tokens.swift` + `Motion.swift` + `TSSkeleton`.
+
+Now run the isolated build + tests against the real design system.
+
+**Isolated build + 38/38 tests PASS** against the real design system (Tokens + Motion `TSFadeIn` + real `TSSkeleton`) under Swift 6 language mode — the full surface including SwiftUI + Swift Charts views compiles. Now the surface-scoped swiftlint/swiftformat gates.
+
+swiftformat: clean. swiftlint: only `file_length` (>400 lines) on Views (479) and Tests (449). The repo enforces ≤400 lines/file — I'll split into additional allowed `SOCRouteChart.*` files, matching the existing `.Chart.swift`/`.ModelTests.swift` conventions. Let me confirm the ceiling and an existing split pattern.
+
+Confirmed: 400-line ceiling, and chart surfaces conventionally split `.Views.swift` (chrome) + `.Chart.swift` (Swift Charts), plus `.ModelTests.swift` for tests. I'll relocate code into these established sibling files (all within the allowed `SOCRouteChart.*` set) — no logic changes. Let me restructure.
+
+Now the split test files — `SOCRouteChart.Tests.swift` (projection + format + accessibility) and `SOCRouteChart.ModelTests.swift` (model state machine + spy).
+
+Re-synced into 9 files (all ≤400 lines now). Let me update the harness and re-run all surface-scoped gates together.
+
+All surface-scoped gates GREEN: isolated build + **38/38 tests**, all files ≤400 lines (max 341), **swiftlint 0 violations**, **swiftformat 0 violations**. Now the placeholder gate. Let me inspect the script's `-Path` semantics so I run it meaningfully.
+
+Script confirms: non-existent `-Path` returns clean (Count=0) — matching the 0148 note. Let me verify my files are genuinely placeholder-free (raw grep) and run the scan meaningfully against a temp dir of the 9 files, plus the verbatim prompt invocation.
+
+Placeholder gate clean: raw grep finds nothing, meaningful scan of the 9 files = `PLACEHOLDER_COUNT=0 EXIT=0`. Now the known-deferred full-app gates. Let me first confirm my files wire into the project (xcodegen, fast/no-network), then attempt the heavier KMP staging + xcodebuild to capture authentic exits.
+
+Project generates cleanly; all 9 SOCRouteChart files are wired into the targets. Now attempting the KMP `Shared.xcframework` staging (prerequisite for the full-app build). Starting it in the background.
+
+Network is available and gradle staging is running. Let me wait for it to complete.
+
+Still building (KMP/Kotlin-Native toolchain download + compile — 0148 noted ~8.5 min). Continuing to wait.
+
+`Shared.xcframework` staged (gradle BUILD SUCCESSFUL, 9m23s). Now the full-app iOS xcodebuild gate. Let me pick a valid simulator and run it, capturing output for analysis.
+
+iPhone 16 is booted. Running the iOS full-app gate (expected RED at the pre-existing XCTest-in-app-target blocker — I'll verify SOCRouteChart contributes zero errors).
+
+iOS gate reproduces the **exact pre-existing blocker** from the 0148 precedent: `IOS_EXIT=65`, first error at `AcDcStatsPanel.Tests.swift:19` (`unable to resolve module dependency: 'XCTest'`), **SOCRouteChart error count = 0**. Now the macOS gate.
+
+Both full-app gates RED for **pre-existing infra reasons** (iOS: XCTest-in-app-target at AcDcStatsPanel; macOS: dev-signing of `-macOS` entitlements), **0 SOCRouteChart errors** in each — matching the sanctioned disposition. Now the whole-tree swiftlint/swiftformat (the prompt's exact gate commands) to capture raw exits and confirm zero SOCRouteChart contribution.
+
+Let me precisely confirm those 8 "SOCRouteChart" lines in the lint log are progress messages, not violations.
+
+Confirmed: zero SOCRouteChart violations whole-tree (the 8 lines are progress messages; the only violation is pre-existing `LifetimeStatsWidget`). All evidence gathered. Now writing the comprehensive gate log following the sanctioned 0148 template.
+
+Log written. Now let me verify git status (ensuring generated artifacts are ignored) and commit precisely the 9 surface files + the log.
+
+Clean — only the 9 surface files + log are untracked; generated xcodeproj/xcframework/DerivedData are properly ignored. Committing.
+
+Committed (`dd8e81185`). Let me finalize tracking, clean up temp files, and do a final clean-tree verification.
+
+Task complete and verified. The commit (`dd8e81185`) contains exactly the 9 surface files + the gate log (2044 insertions); the working tree is clean.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0176-SOCRouteChart.log  | 242 +++++++++++++++
+ .../feature-views/SOCRouteChart.Adapter.swift      | 341 +++++++++++++++++++++
+ .../feature-views/SOCRouteChart.Chart.swift        | 301 ++++++++++++++++++
+ .../feature-views/SOCRouteChart.Model.swift        | 277 +++++++++++++++++
+ .../feature-views/SOCRouteChart.ModelTests.swift   | 170 ++++++++++
+ .../feature-views/SOCRouteChart.Previews.swift     | 106 +++++++
+ .../feature-views/SOCRouteChart.Tests.swift        | 288 +++++++++++++++++
+ .../feature-views/SOCRouteChart.Views.swift        | 184 +++++++++++
+ .../TeslaSync/feature-views/SOCRouteChart.strings  |  54 ++++
+ .../TeslaSync/feature-views/SOCRouteChart.swift    |  81 +++++
+ 10 files changed, 2044 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0176-SOCRouteChart.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SOCRouteChart.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SOCRouteChart.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SOCRouteChart.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SOCRouteChart.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SOCRouteChart.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SOCRouteChart.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SOCRouteChart.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SOCRouteChart.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SOCRouteChart.swift

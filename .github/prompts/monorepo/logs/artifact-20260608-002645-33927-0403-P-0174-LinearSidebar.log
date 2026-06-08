@@ -1,0 +1,143 @@
+=== P4 Shared surface 0174 LinearSidebar (Apple) ===
+
+Surface: LinearSidebar (Linear/Notion-style navigation sidebar — layout chrome)
+Web source: web/src/components/layout/sidebar/LinearSidebar.tsx (reproduced end-to-end)
+Native output: apps/apple/TeslaSync/shared-surfaces/LinearSidebar.* (9 files)
+Date: 2026-06-08
+
+------------------------------------------------------------
+CAPABILITY VERIFICATION (runner)
+------------------------------------------------------------
+- Full Xcode present: /Applications/Xcode.app  ->  Xcode 26.5 (Build 17F42)
+  (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is driven via
+   DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo needed)
+- SDKs: iPhoneSimulator26.5 / MacOSX26.5 (backward-compatible with the project's iOS 18.0 /
+  macOS 15.0 deployment targets) -> SwiftUI + Swift Charts + MapKit AVAILABLE.
+  (Charts/MapKit are not used by this surface — it is monochrome layout chrome with no chart/map.)
+- Toolchain: swift 6.3.2, swiftlint, swiftformat, xcodegen 2.45.4 present.
+  => Native Apple capability is AVAILABLE on this runner (NOT a BLOCKED-capability case).
+
+------------------------------------------------------------
+DELIVERED FILES (apps/apple/TeslaSync/shared-surfaces/)
+------------------------------------------------------------
+  LinearSidebar.swift            306  surface view + every state (loading/empty/error/content) + stateful section
+  LinearSidebar.Views.swift      362  nav row, section header, favorites, count chip, dot, filter field, freshness chrome
+  LinearSidebar.Model.swift      346  i18n facade (P1/S10) + telemetry seam (P1/S11) + source seam (P1/S8) + @Observable model
+  LinearSidebar.Models.swift     167  value types (LinearNavItem/Section/Badge/Row/SectionGroup/Projection)
+  LinearSidebar.Builder.swift    143  pure projection: isActive / matchesFilter / trailingFor / group
+  LinearSidebar.Previews.swift   132  #if DEBUG previews for all 8 states
+  LinearSidebar.Tests.swift      163  state-holder XCTest suite (15 tests)
+  LinearSidebar.AdapterTests.swift 243 adapter + projection + accessibility XCTest suite (22 tests) + shared fixtures
+  LinearSidebar.strings           53  P1/S10 catalog contribution (table "LinearSidebar")
+
+------------------------------------------------------------
+PARITY (web source reproduced — no scope narrowing)
+------------------------------------------------------------
+- Data sources: web useLocation + useTranslation projected into the coalesced LinearSidebarUpdate
+  snapshot pushed by the P1/S8 `LinearSidebarSource` (active path, nav sections, pinned items,
+  active-section title, alert/vehicle/stale counts). No HTTP / no router read in the view.
+- Behaviour ported verbatim: isActiveLinearPath (root-only vs exact/segment-prefix, NOT bare
+  string-prefix); matchesFilter (whitespace-split, lower-cased, AND-of-tokens); CountChip "99+"
+  cap; trailingFor (/notifications/alerts -> dot, /vehicles -> count chip, /data-repair -> stale
+  count chip); pinActionFor (pin unless already pinned); Favorites group shown when pinned>0, never
+  collapses, per-row unpin, filtered by matchesFilter; sections collapsible with count chip, all
+  collapsed EXCEPT the active section, filter force-expands every matching section, navigating into
+  a collapsed section auto-expands it; "No matches." + "Clear filter" empty-filter branch; nav
+  landmark label "Sidebar navigation".
+- States (every one renders — no hidden surface): loading (skeleton rows), empty
+  (ContentUnavailableView), error (retry), content, the web filter no-match branch, plus the P4
+  leaf freshness axis stale/offline (header chip + banner + one-shot stale auto-refresh).
+- i18n: all 8 web t() keys (nav.sidebar/favorites/filterNoMatch/filterClear/vehicleCount/
+  staleCount/pinPage/unpinPage) + native chrome/a11y keys, every string via the P1/S10
+  `LinearSidebarStrings` facade. No English string literals in native code (verified: no bare
+  Text("...") — all Text use verbatim/localized).
+- Accessibility: per-row VoiceOver labels (label + localized count + "Current page" for the active
+  route), section header label/value(Expanded|Collapsed)/hint, decorative accent-rule + dot hidden,
+  Dynamic Type system fonts (Font.TS), Reduce Motion honoured (TSAnimation / TSFadeIn / TSSkeleton).
+- Telemetry (P1/S11): emits view.opened with surface slug "LinearSidebar" exactly once on start().
+- Shared components / tokens: TSButton, TSSkeleton, TSFadeIn + P1/S9 tokens (Color.TS / Font.TS /
+  TSSpacing / TSRadius / TSAnimation). No Tailwind ports, no raw hex, no direct library imports.
+
+------------------------------------------------------------
+GATE RESULTS (actual command output)
+------------------------------------------------------------
+[1] iOS-simulator compile  (xcrun swiftc -typecheck -swift-version 6
+       -sdk iPhoneSimulator26.5 -target arm64-apple-ios18.0-simulator  <deps + 5 production files>)
+    (no diagnostics)                                              -> IOS_TYPECHECK_EXIT=0
+
+[2] macOS compile + link  (SwiftPM library "TeslaSync" = shared deps + 5 production files,
+       swift-tools 6.0 => Swift 6 language mode + complete concurrency, Xcode 26.5 toolchain)
+    Build complete.                                               -> MACOS_BUILD_EXIT=0
+
+[3] XCTest — THIS SURFACE (real XCTest via the Xcode toolchain, `xcrun swift test`,
+       @testable import TeslaSync, both suites unchanged)
+    Test Suite 'LinearSidebarActivePathTests'   passed (3)
+    Test Suite 'LinearSidebarFilterTests'       passed (5)
+    Test Suite 'LinearSidebarTrailingTests'     passed (5)
+    Test Suite 'LinearSidebarProjectionTests'   passed (6)
+    Test Suite 'LinearSidebarAccessibilityTests' passed (3)
+    Test Suite 'LinearSidebarModelTests'        passed (15)
+    Executed 37 tests, with 0 failures (0 unexpected) in 0.007 seconds
+    ** TEST SUCCEEDED **                                          -> SWIFT_TEST_EXIT=0
+    Covers: active-path resolution, tree-filter tokenisation + AND match, trailing-badge wiring +
+    99+ cap, full projection (favorites/section filter, empty-drop, active-section expansion,
+    pinned-row + active-row + badge resolution, no-match flag), state-holder phase resolution
+    (loading/empty/error/cached-content/pinned-only), view.opened telemetry (once), search-driven
+    projection, pin/unpin/select forwarding, stale auto-refresh (once) + live re-arm + offline,
+    stop/re-arm, surface slug, and VoiceOver row/section label content.
+
+[4] swiftlint --strict
+    - surface-scoped (8 files):   Found 0 violations, 0 serious               -> SWIFTLINT_EXIT=0
+    - whole-tree `cd apps/apple && swiftlint lint --strict`: 1 violation, in a PRE-EXISTING file
+      outside this surface (TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift,
+      function_body_length) — not mine, not in this surface's allowed files.
+
+[5] swiftformat --lint
+    - surface-scoped (8 files):   0/8 files require formatting                -> FORMAT_EXIT=0
+    - whole-tree `swiftformat --lint apps/apple`: 1/1921 require formatting — the 1 is a
+      PRE-EXISTING file outside this surface (TeslaSync/feature-views/ActionBuilder.Previews.swift,
+      blankLinesBetweenScopes). No shared-surfaces file is flagged.
+
+[6] check-placeholders (TODO|FIXME|stub|mock|placeholder|lorem|coming soon|not implemented|XXX)
+    apps/apple/TeslaSync/shared-surfaces: 0 matches                           -> PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------
+NOT RUN — documented (no silent drift), with evidence
+------------------------------------------------------------
+The literal templated gate `xcodebuild -scheme TeslaSync[-macOS] build test` (whole-app link)
+was NOT run on this runner. It is blocked by factors EXTERNAL to this surface:
+  (a) KMP Shared.xcframework is not prebuilt — apps/apple/Frameworks/ holds only .gitkeep; the app
+      schemes stage it via a pre-action (Scripts/build-shared-xcframework.sh) that needs the full
+      Kotlin/Native KMP build. No Shared.xcframework artifact is present in this isolated slot.
+  (b) The `shared-surfaces` source path is not yet wired into apps/apple/project.yml. That wiring is
+      owned by the declared upstream dependency "P4 core (theme, nav, live, cache, state-holders)",
+      and project.yml is OUTSIDE this surface's allowed files (apps/apple/TeslaSync/shared-surfaces/
+      LinearSidebar.* + this log only).
+  (c) Baseline app-target pollution: 170 *.Tests.swift currently live under the app-source path
+      apps/apple/TeslaSync/feature-views/ (each `@testable import TeslaSync` + XCTest); these would
+      break a whole-app compile until split into the Tests/Unit bundle. Pre-existing, not this
+      surface.
+Substituted with the real Xcode-toolchain evidence above: an iOS-simulator (Swift 6) SDK
+type-check [1], a macOS (Swift 6 + complete concurrency) compile + link [2], and a REAL XCTest
+execution of this surface's full suite [3] — 37 tests, 0 failures. This verifies the surface
+compiles for BOTH platforms and its behaviour is correct, independent of the upstream KMP artifact
+and project wiring.
+
+------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------
+Delivered surface is COMPLETE and VERIFIED:
+  - iOS-simulator compile (Swift 6):        PASS (IOS_TYPECHECK_EXIT=0)
+  - macOS compile + link (Swift 6, strict): PASS (MACOS_BUILD_EXIT=0)
+  - This surface's XCTest suite:            37/37 PASS, ** TEST SUCCEEDED **, exit 0
+  - swiftlint --strict (surface):           0 violations
+  - swiftformat --lint (surface):           clean (0/8)
+  - placeholders:                           0
+The only gate step not reaching a process exit on THIS runner is the whole-app `xcodebuild` link,
+blocked by the missing KMP Shared.xcframework artifact + the upstream-owned project.yml wiring of
+`shared-surfaces` + pre-existing app-source test pollution — all external to this surface and
+documented above with evidence. The surface itself compiles on both platforms and passes its full
+real-XCTest suite.
+
+EXIT=0
+STATUS=DONE

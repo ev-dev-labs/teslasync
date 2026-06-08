@@ -1,0 +1,209 @@
+================================================================================
+p4-apple · P7 · page:system/StateMachineDebugger — SwiftUI / HIG parity
+Apple native (adaptive macOS + iOS) implementation of the web page
+web/src/features/system/pages/StateMachineDebuggerPage.tsx  (web route /state-debugger)
+================================================================================
+
+ARTIFACT
+  unit            page:system/StateMachineDebugger
+  kind            page
+  web route       /state-debugger
+  output          apps/apple/TeslaSync/Features/System/*.swift
+  targets         TeslaSync (iOS 18) + TeslaSync-macOS (macOS 15) — one adaptive codebase (ADR-002)
+
+TOOLCHAIN DETECTED (this host)
+  swift           Apple Swift 6.3.2 (swiftlang-6.3.2)            present
+  swiftlint       0.63.3                                          present
+  xcodegen        2.45.4                                          present
+  pwsh            7.x                                             present
+  xcodebuild      REQUIRES FULL XCODE — only CommandLineTools active on this host  >>> NOT AVAILABLE
+  Frameworks/Shared.xcframework   placeholder (.gitkeep) — KMP core is staged by the
+                                  Xcode build pre-action on the macOS runner (ADR-004)
+
+  => Per the prompt contract: "If no Xcode runner is available, the gate -> STATUS=BLOCKED."
+     The build + test legs of the gate CANNOT execute on this host. They are reported
+     honestly below as BLOCKED (not green). Lint + placeholder legs DID run and PASS.
+
+--------------------------------------------------------------------------------
+FILES CREATED (apps/apple/TeslaSync/Features/System/)
+--------------------------------------------------------------------------------
+  StateMachineDebuggerModels.swift            value types, query, coalesced update,
+                                              StateMachineDebuggerSource seam (P1/S8),
+                                              InMemoryStateMachineDebuggerSource, SMDStrings
+  StateMachineDebuggerProjection.swift        pure derivations: flapIDs (computeFlapIds),
+                                              distributionSlices (pieData), summaryRows,
+                                              timelineInputs, windowed, FSMDebuggerFormatter
+  StateMachineDebuggerPageModel.swift         @MainActor @Observable page state holder
+  StateMachineDebuggerComponents.swift        FSMStateBadge, FSMLiveControlsBar,
+                                              FSMStateTimelineStrip, FSMSnapshotInspectorView
+  StateMachineDebuggerDetail.swift            FSMTransitionDetailGrid, FSMHealthSummary
+  StateMachineDebuggerPanels.swift            FSMFiltersPanel, FSMCurrentStatePanel,
+                                              FSMLiveControlsPanel, FSMDistributionPanel,
+                                              FSMCountsPanel, FSMSummaryCards
+  StateMachineDebuggerTable.swift             FSMTransitionTablePanel, FSMTransitionDetailPanel
+  StateMachineDebuggerPage.swift              StateMachineDebuggerPage (adaptive scaffold)
+  StateMachineDebuggerPage.Previews.swift     #Preview Loaded / Empty / Loading + seeded sample
+  StateMachineDebuggerRouteRegistration.swift route-host registration for .stateDebugger
+
+FILES MODIFIED (navigation registration + string catalog — within allowed scope)
+  Sources/App/AppRoute.swift                  + case .stateDebugger (pathSegment state-debugger,
+                                              group .system, systemImage) -> /state-debugger deep link
+  Sources/TeslaSyncApp.swift                  chained StateMachineDebuggerRouteRegistration.register(into:)
+  project.yml                                 + path TeslaSync/Features/System to both app targets
+  Localization/Localizable.xcstrings          + 73 keys (47 required parity keys + 26 supporting)
+
+--------------------------------------------------------------------------------
+GATE (apple triad: placeholder + build + lint + test)   exact prompt invocation
+--------------------------------------------------------------------------------
+  $ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/System -Language swift
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0                                                                 [PASS]
+
+  $ xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync build
+    xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+    directory '/Library/Developer/CommandLineTools' is a command line tools instance
+  BUILD_EXIT=1                                                                       [BLOCKED — no Xcode runner]
+
+  $ swiftlint --strict apps/apple/TeslaSync/Features/System
+    (0 violations in the 10 feature files)
+  LINT_EXIT=0                                                                        [PASS]
+
+  $ xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync test
+    xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+    directory '/Library/Developer/CommandLineTools' is a command line tools instance
+  TEST_EXIT=1                                                                        [BLOCKED — no Xcode runner]
+
+  PROJECT GENERATION (xcodegen) succeeded; all 10 feature files are wired into both the
+  TeslaSync (iOS) and TeslaSync-macOS targets (verified in the generated .pbxproj).
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=63
+--------------------------------------------------------------------------------
+PANELS (11) — every named panel + every anonymous region from the web source
+--------------------------------------------------------------------------------
+[COVERED] panel  GlassPanel1        :: FSMFiltersPanel            @ StateMachineDebuggerPanels.swift  (FSM Type + Per Page filters; no-vehicles empty state)
+[COVERED] panel  GlassPanel2        :: FSMCurrentStatePanel       @ StateMachineDebuggerPanels.swift  (vehicle live-state hero; loading/empty/success)
+[COVERED] panel  GlassPanel3        :: FSMLiveControlsPanel       @ StateMachineDebuggerPanels.swift  (LiveControls bar + StateTimeline strip + SnapshotInspector)
+[COVERED] panel  State-Distribution :: FSMDistributionPanel       @ StateMachineDebuggerPanels.swift  (donut + legend; loading/empty/success)
+[COVERED] panel  GlassPanel5        :: FSMCountsPanel             @ StateMachineDebuggerPanels.swift  (per-state transition counts TSDataTable)
+[COVERED] panel  Transitions-Page   :: FSMSummaryCards/TSStatCard("fsm.totalOnPage")     @ StateMachineDebuggerPanels.swift
+[COVERED] panel  Total-Transitions  :: FSMSummaryCards/TSStatCard("fsm.totalTransitions") @ StateMachineDebuggerPanels.swift
+[COVERED] panel  Flap-Warnings      :: FSMSummaryCards/TSStatCard("fsm.flapCount")        @ StateMachineDebuggerPanels.swift
+[COVERED] panel  Current-State      :: FSMSummaryCards/TSStatCard("fsm.currentState")     @ StateMachineDebuggerPanels.swift
+[COVERED] panel  GlassPanel10       :: FSMTransitionTablePanel    @ StateMachineDebuggerTable.swift   (transition log TSDataTable + TSPagination)
+[COVERED] panel  GlassPanel11       :: FSMTransitionDetailPanel + FSMTransitionDetailGrid @ StateMachineDebuggerTable.swift / StateMachineDebuggerDetail.swift
+--------------------------------------------------------------------------------
+CHARTS (2) — native Swift Charts wrappers (no WKWebView)
+--------------------------------------------------------------------------------
+[COVERED] chart  ChartContainer     :: TSChartContainer in FSMDistributionPanel @ StateMachineDebuggerPanels.swift
+[COVERED] chart  PieChart           :: TSPieChart (Swift Charts SectorMark donut) in FSMDistributionPanel @ StateMachineDebuggerPanels.swift
+--------------------------------------------------------------------------------
+DATA STATES (3) — implemented for every bound data source
+--------------------------------------------------------------------------------
+[COVERED] state  loading  :: TSSkeleton / TSTableSkeleton / TSChartSkeleton driven by *.stateStatus/statsStatus/transitionsStatus == .loading (Panels + Table)
+[COVERED] state  empty    :: TSEmptyState (ContentUnavailableView) — no-vehicles / no-state / emptyRangeMessage across all panels (Panels + Table)
+[COVERED] state  success  :: content branches render bound model data (FSMTransition / VehicleFSMState / FSMStatsSummary / SignalSnapshotRecord)
+--------------------------------------------------------------------------------
+STRINGS (47) — every visible literal resolves from Localizable.xcstrings; web key names kept
+--------------------------------------------------------------------------------
+[COVERED] string debugger.share                :: Localizable.xcstrings + StateMachineDebuggerPage.swift:88
+[COVERED] string fsm.allTime                    :: Localizable.xcstrings + StateMachineDebuggerPageModel.swift:271
+[COVERED] string fsm.autoRefresh                :: Localizable.xcstrings + StateMachineDebuggerPage.swift:96
+[COVERED] string fsm.avgInterval                :: Localizable.xcstrings + StateMachineDebuggerPanels.swift:271
+[COVERED] string fsm.col.count                  :: Localizable.xcstrings + StateMachineDebuggerPanels.swift:219
+[COVERED] string fsm.col.state                  :: Localizable.xcstrings + StateMachineDebuggerPanels.swift:219
+[COVERED] string fsm.count                      :: Localizable.xcstrings + StateMachineDebuggerPanels.swift:263
+[COVERED] string fsm.currentState               :: Localizable.xcstrings + StateMachineDebuggerPanels.swift:313
+[COVERED] string fsm.detail.context             :: Localizable.xcstrings + StateMachineDebuggerDetail.swift:76
+[COVERED] string fsm.detail.duration            :: Localizable.xcstrings + StateMachineDebuggerDetail.swift:43
+[COVERED] string fsm.detail.from                :: Localizable.xcstrings + StateMachineDebuggerDetail.swift:36
+[COVERED] string fsm.detail.guard               :: Localizable.xcstrings + StateMachineDebuggerDetail.swift:40
+[COVERED] string fsm.detail.id                  :: Localizable.xcstrings + StateMachineDebuggerDetail.swift:31
+[COVERED] string fsm.detail.name                :: Localizable.xcstrings + StateMachineDebuggerDetail.swift:34
+[COVERED] string fsm.detail.timestamp           :: Localizable.xcstrings + StateMachineDebuggerDetail.swift:45
+[COVERED] string fsm.detail.to                  :: Localizable.xcstrings + StateMachineDebuggerDetail.swift:37
+[COVERED] string fsm.detail.trigger             :: Localizable.xcstrings + StateMachineDebuggerDetail.swift:38
+[COVERED] string fsm.detail.vehicleId           :: Localizable.xcstrings + StateMachineDebuggerDetail.swift:32
+[COVERED] string fsm.detailTitle                :: Localizable.xcstrings + StateMachineDebuggerTable.swift:112
+[COVERED] string fsm.distributionByState        :: Localizable.xcstrings + StateMachineDebuggerPanels.swift:178
+[COVERED] string fsm.distributionByState.aria   :: Localizable.xcstrings + StateMachineDebuggerPanels.swift:179
+[COVERED] string fsm.flapCount                  :: Localizable.xcstrings + StateMachineDebuggerDetail.swift:143
+[COVERED] string fsm.from                       :: Localizable.xcstrings + StateMachineDebuggerTable.swift:76
+[COVERED] string fsm.fsmType                    :: Localizable.xcstrings + StateMachineDebuggerPanels.swift:36
+[COVERED] string fsm.mode                       :: Localizable.xcstrings + StateMachineDebuggerPanels.swift:114
+[COVERED] string fsm.noState                    :: Localizable.xcstrings + StateMachineDebuggerPanels.swift:87
+[COVERED] string fsm.noTransitionsInRange       :: Localizable.xcstrings + StateMachineDebuggerModels.swift:303
+[COVERED] string fsm.noVehicles                 :: Localizable.xcstrings + StateMachineDebuggerPanels.swift:22
+[COVERED] string fsm.perPage                    :: Localizable.xcstrings + StateMachineDebuggerPanels.swift:50
+[COVERED] string fsm.selectVehicle              :: Localizable.xcstrings + StateMachineDebuggerPage.swift:81
+[COVERED] string fsm.since                      :: Localizable.xcstrings + StateMachineDebuggerPanels.swift:116
+[COVERED] string fsm.state                      :: Localizable.xcstrings + StateMachineDebuggerPanels.swift:257
+[COVERED] string fsm.subtitle                   :: Localizable.xcstrings + StateMachineDebuggerPage.swift:66
+[COVERED] string fsm.time                       :: Localizable.xcstrings + StateMachineDebuggerTable.swift:65
+[COVERED] string fsm.timelineTitle              :: Localizable.xcstrings + StateMachineDebuggerTable.swift:34
+[COVERED] string fsm.title                      :: Localizable.xcstrings + StateMachineDebuggerPage.swift:56
+[COVERED] string fsm.to                         :: Localizable.xcstrings + StateMachineDebuggerTable.swift:77
+[COVERED] string fsm.total                      :: Localizable.xcstrings + StateMachineDebuggerModels.swift:309
+[COVERED] string fsm.totalOnPage                :: Localizable.xcstrings + StateMachineDebuggerPanels.swift:298
+[COVERED] string fsm.totalTransitions           :: Localizable.xcstrings + StateMachineDebuggerDetail.swift:144
+[COVERED] string fsm.transitionCounts           :: Localizable.xcstrings + StateMachineDebuggerPanels.swift:235
+[COVERED] string fsm.trigger                    :: Localizable.xcstrings + StateMachineDebuggerTable.swift:78
+[COVERED] string fsm.type                       :: Localizable.xcstrings + StateMachineDebuggerPanels.swift:113
+[COVERED] string fsm.vehicleLiveState           :: Localizable.xcstrings + StateMachineDebuggerPanels.swift:65
+[COVERED] string fsm.viewDetail                 :: Localizable.xcstrings + StateMachineDebuggerTable.swift:82
+[COVERED] string help.fsm.liveState.aria        :: Localizable.xcstrings + StateMachineDebuggerPanels.swift:67
+[COVERED] string help.fsm.type.aria             :: Localizable.xcstrings + StateMachineDebuggerPanels.swift:38
+--------------------------------------------------------------------------------
+PARITY_COVERED=63
+=== END PARITY ===
+================================================================================
+
+WEB-SOURCE SECTION COVERAGE (every region of StateMachineDebuggerPage.tsx reproduced)
+  filters panel ......... FSMFiltersPanel                     (own)
+  FSM health panel ...... FSMHealthSummary                    (own — web FSMHealthPanel flap indicator)
+  AI narrator ........... omitted by design — web withAiFeature returns null in the default
+                          AI-off mode; the narrator is its own parity unit (documented in
+                          StateMachineDebuggerPage.swift aiNarratorSection)
+  current vehicle state . FSMCurrentStatePanel                (own)
+  active sub-FSM panel ... FSMSubFSMPanel                     (COMPOSED existing P3/P4 unit)
+  live controls + timeline
+    + snapshot inspector . FSMLiveControlsPanel               (own — bar + strip + inspector)
+  FSM state diagram ..... FSMStateDiagram                     (COMPOSED existing P3/P4 unit)
+  distribution donut .... FSMDistributionPanel (TSChartContainer + TSPieChart)
+  transition counts ..... FSMCountsPanel
+  summary stat cards .... FSMSummaryCards (4x TSStatCard)
+  transition timeline ... FSMTimelineChart                   (COMPOSED existing P3/P4 unit)
+  transition log table .. FSMTransitionTablePanel (+ TSPagination)
+  selected detail ....... FSMTransitionDetailPanel / FSMTransitionDetailGrid
+
+HONESTY COVENANT
+  1 No red-as-green ....... build/test are reported BLOCKED, not pass. EXIT/STATUS reflect reality.
+  2 No scope narrowing .... all 11 panels + 2 charts + 3 states + 47 strings implemented; every
+                            web section reproduced (composed or own).
+  3 No skip-and-assume .... lint + placeholder gates actually executed; outputs pasted above.
+  4 No stubs as final ..... 0 placeholders (check-placeholders PASS); full implementations.
+  5 No parity shortcuts ... SwiftUI-native (Swift Charts donut, ContentUnavailableView empties,
+                            HIG cards/GroupBoxes), not a web clone.
+  6 No delegation ......... implemented directly (a rubber-duck review was used only to find
+                            compile risks; all code authored here).
+  7 No predecessor bypass . binds through the P1/S8 state-holder seam + composes the shipped
+                            P3/P4 components; design tokens from P2.
+  8 No commit on red ...... the gate is BLOCKED (no Xcode runner) — see STATUS below.
+  9 No silent drift ....... navigation + project.yml + catalog changes documented above.
+ 10 Log ends with EXIT/STATUS.
+
+BLOCKED RATIONALE
+  Parity is COMPLETE in code: PARITY_COVERED == PARITY_REQUIRED (63/63), SwiftLint --strict
+  clean, placeholder scan clean, and xcodegen wires every file into both app targets. The
+  ONLY unmet gate legs are `xcodebuild build` and `xcodebuild test`, which require a full Xcode
+  install — unavailable on this Command-Line-Tools-only host. Per the prompt's explicit rule
+  ("If no Xcode runner is available, the gate -> STATUS=BLOCKED"), this artifact is BLOCKED
+  pending execution of the build + test legs on a macOS Xcode runner. No green is claimed for
+  the unrun legs.
+
+================================================================================
+EXIT=1
+STATUS=BLOCKED
+================================================================================

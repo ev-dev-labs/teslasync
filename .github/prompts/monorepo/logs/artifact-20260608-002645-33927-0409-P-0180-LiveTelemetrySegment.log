@@ -1,0 +1,176 @@
+=== P4 Shared surface 0180 LiveTelemetrySegment (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Build 25F80) — Darwin 25.5.0 arm64, Apple Silicon
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively for
+                       this process only — no sudo, no `xcode-select -s` — so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2
+  Destinations       : iOS Simulator "iPhone 16" present (Booted) · macOS 26.5 SDK present
+  Capability         : SwiftUI + iOS 18 / iPadOS 18 / macOS 15 deployment targets all present on the 26.5 SDK →
+                       NOT capability-BLOCKED. This surface uses NO charts and NO maps — the web source is a dense
+                       presentational status-bar segment — so Swift Charts + MapKit are not exercised (prompt lists
+                       charts/maps: none).
+  Parallel-exec note : /tmp is shared across sibling parallel slots; all isolated SwiftPM build/test below ran under
+                       slot-unique paths (/tmp/slot409-lts-harness, /tmp/slot409-lts-dd) and the generated
+                       .xcodeproj was removed after the wiring probe — the working tree is left pristine.
+
+WEB SOURCE (the specification)
+  web/src/components/layout/status-bar/LiveTelemetrySegment.tsx — a DENSE single-line footer status-bar segment
+  mirroring the SSE/MQTT pipeline freshness from `useLiveConnection()` (prompt data sources: useTranslation +
+  useLiveConnection; shared components used: @/components/ui; charts/maps: none). Composition:
+    container  : <Tooltip side=top><Link to="/signal-diff" aria-label=ariaLabel className="inline-flex … text-[11px]">
+    dot        : <span h-1.5 w-1.5 rounded-full> tone-colored, STATIC (no animation in this segment), aria-hidden
+    icon       : <Icon h-3 w-3>, Loader2 `animate-spin` ONLY for reconnecting; aria-hidden
+    label      : if !iconOnly → <span font-medium>{short}</span> + (connected && lastMessageAt ? <span text-muted>· {age}</span>)
+    variants (web `cfg[status]`, VERBATIM):
+      connected    → Wifi    · emerald (text-emerald-300 / bg-emerald-400 dot) · short t('statusBar.live.short','Live')
+      reconnecting → Loader2 · amber   (text-amber-300 / bg-amber-400)         · short t('…reconnecting','Reconnecting') · spin
+      disconnected → WifiOff · rose    (text-rose-300 / bg-rose-400)           · short t('…offline','Offline')
+      unknown      → WifiOff · muted   (text-[var(--text-muted)] / surface-2)  · short t('…unknown','Idle')
+    ageSecondsLabel (VERBATIM): null/!finite/neg → "—"; sec<60 → "Xs"; min<60 → "Xm"; else "Xh" (each floored)
+    tooltipBody : connected ? "{tooltip} · {lastMessage(age)}" : "{tooltip} · {short}"
+    ariaLabel   : "{aria}: {short}"   ·   prop iconOnly:Bool=false
+  Extracted i18n keys (7): statusBar.live.{short, reconnecting, offline, unknown, tooltip, lastMessage, aria}. The
+                            i18next `{{age}}` token in lastMessage → printf `%@` for String(format:).
+
+ARTIFACTS SHIPPED (apps/apple/TeslaSync/shared-surfaces/LiveTelemetrySegment.*) — 8 files, LiveControls(0233) convention
+  LiveTelemetrySegment.Adapter.swift  — pure projection core: LiveTelemetryStatus (web union), LiveTelemetrySnapshot
+                                        (+isStale/isOffline), LiveTelemetryTone, LiveTelemetryText/Copy catalog (12
+                                        keys), LiveTelemetryVariant.variant(for:) (the VERBATIM web cfg map → SF
+                                        Symbols wifi / arrow.triangle.2.circlepath(spin) / wifi.slash), LiveTelemetryAge
+                                        (the VERBATIM ageSecondsLabel), LiveTelemetryProjection.make/.showsAge/.isEmptyValue,
+                                        LiveTelemetryFormat.tooltip/.aria. SwiftUI-free → unit tested without a view/bundle.
+  LiveTelemetrySegment.Model.swift    — LiveTelemetryTelemetry seam + OSLogLiveTelemetryTelemetry (P1/S11 redacted
+                                        "view.opened"); LiveTelemetryPhase/Render/Input; LiveTelemetrySource (P1/S8 state-
+                                        holder seam, incl. refresh); LiveTelemetryModel (@MainActor @Observable: render
+                                        resolution, DERIVED stale/offline, stale rising-edge auto-refresh, injected clock);
+                                        InMemoryLiveTelemetrySource; LiveTelemetryStrings (P1/S10 facade, table
+                                        "LiveTelemetrySegment").
+  LiveTelemetrySegment.Views.swift    — presentational core: LiveTelemetryDot (static tone circle — faithful: the web
+                                        dot does NOT animate here), LiveTelemetryIcon (SF Symbol; rotates only for the
+                                        reconnecting spinner; Reduce-Motion → steady), LiveTelemetrySegmentLabel (short +
+                                        "· {age}" only when connected-with-timestamp), LiveTelemetrySegmentButton (web
+                                        <Link>; .help tooltip + a11y label/hint + .isLink trait).
+  LiveTelemetrySegment.States.swift   — P4 states-contract chrome: LiveTelemetryLoadingView (TSSkeleton segment),
+                                        LiveTelemetryErrorView + LiveTelemetryRetryButton (web QueryError equiv → refresh),
+                                        LiveTelemetryStatusChip (stale/offline). Split out so each file is well under the
+                                        swiftlint 400-line file_length.
+  LiveTelemetrySegment.swift          — `LiveTelemetrySegment` surface (slug "LiveTelemetrySegment"; destinationRoute
+                                        "/signal-diff"); offline/stale chips + render switch (loading/failed/ready);
+                                        onAppear/onDisappear → model.start()/stop().
+  LiveTelemetrySegment.Previews.swift — #if DEBUG previews: connected(age) / connected(no message → empty value) /
+                                        reconnecting(stale) / disconnected(offline) / unknown(idle) / icon-only / loading / error.
+  LiveTelemetrySegment.Tests.swift    — 36 XCTest cases (age formatting · variant table · snapshot flags · projection ·
+                                        render · format + per-state a11y label/tooltip · copy catalog · model: telemetry-once
+                                        + stale rising-edge auto-refresh + offline derivation + injected clock + delegation).
+  LiveTelemetrySegment.strings        — per-surface P1/S10 table (12 keys); first group = the 7 web source keys.
+  Wiring NOTE (honest): apps/apple/TeslaSync/shared-surfaces is NOT yet a source path of the app targets in
+  apps/apple/project.yml, nor in .swiftlint.yml `included`. BOTH files are OUTSIDE this prompt's allowed-files scope
+  (allowed: apps/apple/TeslaSync/shared-surfaces/LiveTelemetrySegment.* + this log), so they were intentionally NOT
+  edited. Wiring the new source group is owned by the P4 acceptance gate (see DISPOSITION). Verification therefore used
+  an isolated SwiftPM harness that compiles the EXACT shipped files against the REAL design system (below).
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  useLiveConnection()        → LiveTelemetrySnapshot (status + lastMessageAt) via LiveTelemetrySource seam (P1/S8)
+  cfg[status] record         → LiveTelemetryVariant.variant(for:) (icon · tone · short · spin) — VERBATIM
+  ageSecondsLabel            → LiveTelemetryAge.label(since:now:) — VERBATIM thresholds + "—"/Xs/Xm/Xh (clock injected)
+  text-emerald/amber/rose/mut→ LiveTelemetryTone → Color.TS.statusSuccess / statusWarning / statusDanger / textMuted
+  Wifi / Loader2 / WifiOff   → SF Symbols wifi / arrow.triangle.2.circlepath(rotate) / wifi.slash; spin honors Reduce-Motion
+  font-medium short + · age  → LiveTelemetrySegmentLabel (Font.TS.caption .medium + muted monospacedDigit suffix)
+  Tooltip content            → .help(...) (macOS hover) + .accessibilityHint(...) (web tooltipBody, VERBATIM branches)
+  <Link to="/signal-diff">   → Button(action: onOpen) + .accessibilityAddTraits(.isLink); destinationRoute constant
+  iconOnly prop              → LiveTelemetryProjection.iconOnly (carried from the model)
+  i18n                       → every literal via LiveTelemetryStrings facade; 12 keys in LiveTelemetrySegment.strings
+  a11y                       → segment = one ignored-children element; aria label "{aria}: {short}"; dot/icon hidden;
+                               Dynamic Type via Font.TS; Reduce-Motion collapses the reconnecting spin
+  telemetry                  → view.opened surface="LiveTelemetrySegment" via LiveTelemetryModel.start (P1/S11), OSLog sink
+  states                     → web connected/reconnecting/disconnected/unknown  +  native P4 loading(skeleton) /
+                               empty(connected-no-timestamp → bare "Live") / error+reconnect / stale chip+auto-refresh /
+                               offline chip+cached value
+
+GATES (every host-runnable gate ACTUALLY EXECUTED on this runner; raw results pasted)
+  [GREEN]    swiftformat --lint  (LiveTelemetrySegment scope, 7 swift files)  : 0/7 files require formatting   (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict  (LiveTelemetrySegment scope, 7 swift files)  : Found 0 violations, 0 serious   (LINT_EXIT=0)
+  [GREEN]    check-placeholders.ps1 (TRUE scan of shared-surfaces, swift)     : PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 (EXIT=0)
+             check-placeholders.ps1 -Path …/shared-surfaces/LiveTelemetrySegment : EXIT=0 (the gate's literal prefix path
+                                                                         resolves to no directory; the true per-dir scan
+                                                                         above is the substantive, honest result).
+  [GREEN]    LiveTelemetrySegment build — ISOLATED SwiftPM harness, swift-tools 6.0, Swift 6 LANGUAGE MODE (=
+             strict-concurrency complete, IDENTICAL to the app's SWIFT_VERSION 6.0 + SWIFT_STRICT_CONCURRENCY:complete),
+             platforms macOS 15, compiling the EXACT shipped LiveTelemetrySegment.{Adapter,Model,Views,States,swift,
+             Previews} (symlinks to the real files) against the REAL repo design system (the unmodified
+             Tokens.swift + Typography · Badges · Buttons · Cards · Skeletons[TSSkeleton] · TSDesign · TSMaterial):
+                 Build complete! (12.80s)                                                            (BUILD_EXIT=0)
+  [GREEN]    LiveTelemetrySegment test — same harness, LiveTelemetrySegment.Tests.swift as `@testable import TeslaSync`:
+                 Executed 36 tests, with 0 failures (0 unexpected)                                   (TEST_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS                                                       build test
+
+  WHY DEFERRED (full-app Xcode gate — it cannot exercise THIS surface, and its blockers PRE-EXIST and are UNRELATED to
+               this change; evidence captured via `xcodegen generate`, raw, not assumed):
+    (1) Surface unwired : shared-surfaces is NOT in apps/apple/project.yml sources (nor .swiftlint included), and BOTH
+                          files are OUTSIDE this prompt's allowed-files scope so were not edited. `xcodegen generate`
+                          (XCODEGEN_EXIT=0) produces a project with EXACTLY 0 references to "LiveTelemetrySegment" — the
+                          full-app gate would not compile a single shipped file of this surface. Adding the source group
+                          is a P4/P99 acceptance-gate wiring task, not a per-surface prompt's job.
+    (2) Pre-existing XCTest-membership: the app target source glob sweeps the 224 distinct co-located `*.Tests.swift`
+                          files under feature-views/dashboard-widgets into the APPLICATION target (e.g.
+                          AiUsageCard.Tests.swift × 6 refs); `import XCTest` is not linkable into an app target →
+                          "Unable to resolve module dependency: 'XCTest'". This is the identical, GROWN blocker the
+                          predecessor logged at 138 files (p4-apple-feature-views-0233-LiveControls.log). 0 of these are
+                          LiveTelemetrySegment files.
+    (3) Shared.xcframework + signing: Frameworks/ holds only .gitkeep — the static KMP Shared.xcframework is assembled
+                          by the scheme pre-action (Gradle Kotlin/Native, shared across parallel slots), and the macOS
+                          target additionally requires a development signing certificate this runner does not provision.
+    Disposition        : exactly the artifacts apps/macos-pending-verifications.md defers to the ADR-012 signed
+                          `macos-latest` CI runner + a project source-wiring + test-target-membership pass — the
+                          sanctioned "code-complete + DEFERRED full-app Xcode gate" disposition every prior P4 surface
+                          used. The heavy KMP assembly was NOT triggered (it would not compile this surface and would
+                          contend for the shared Gradle daemon). Pre-existing, unrelated breakage was neither touched
+                          nor "fixed". (project.yml / .swiftlint.yml / macos-pending-verifications.md NOT edited —
+                          outside allowed-files scope.)
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED with raw `xcodegen` evidence
+                          (0 surface refs · 224 pre-existing XCTest files) — never reported as passing.
+  2  No scope narrowing  : every web region + branch reproduced — the 4 status variants (icon/tone/short/spin), the
+                          static dot, the connected-only "· {age}" suffix incl. the connected-no-timestamp empty value,
+                          the VERBATIM ageSecondsLabel thresholds, and the tooltipBody/ariaLabel composition; plus the
+                          iconOnly prop.
+  3  No skip-and-assume  : every host-runnable gate executed on THIS runner; raw outputs pasted; the xcodebuild deferral
+                          is backed by an EXECUTED `xcodegen generate` (not assumed), proving surface-absence + the
+                          pre-existing XCTest glob; the 36-test suite was actually run under Swift 6 strict concurrency.
+  4  No stubs as final   : complete production surface (8 files) + 36 real passing tests; placeholder scanner = 0; no
+                          TODO/FIXME/Placeholder/Lorem/"not implemented" tokens in shipped code.
+  5  No parity shortcut  : tone/icon/spin/typography/age-format/tooltip/aria/Reduce-Motion/telemetry mapped to platform
+                          tokens + the shared TSSkeleton and verified by the isolated build+test.
+  6  No delegation       : implemented directly; no agents/subtasks.
+  7  No predecessor bypass: binds P1/S8 state-holder seam, P1/S9 tokens (Color.TS/Font.TS/TSSpacing/TSRadius), P1/S10
+                          i18n facade, P1/S11 telemetry; the shared TSSkeleton is consumed, not re-rolled.
+  8  No commit on red    : the COMMITTED artifact (LiveTelemetrySegment.* + this log) is GREEN on every host-runnable
+                          gate AND on a real isolated Swift-6 strict-concurrency build+test against the real design
+                          system; the deferred full-app gate is RED only on pre-existing, unrelated surfaces this commit
+                          neither introduces nor touches (and which do not even reference this surface).
+  9  No silent drift     : changes confined to the 8 apps/apple/TeslaSync/shared-surfaces/LiveTelemetrySegment.* files +
+                          this log. The pre-existing AIUsageCard casing modifications in the working tree are NOT mine
+                          and were left untouched / NOT staged.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic `LiveTelemetrySegment` shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 36 tests pass under the app's own Swift 6 strict-concurrency rules, against the REAL
+  design system + shared TSSkeleton, with swiftformat/swiftlint/placeholder all green on the surface scope and the
+  age/tooltip/aria interpolation cross-checked on the toolchain. Every web variant (connected/reconnecting/disconnected/
+  unknown), the VERBATIM freshness-age derivation, the connected-only age suffix + the connected-no-timestamp empty
+  value, and the full P4 states contract (loading / empty / error+reconnect / stale+auto-refresh / offline) are
+  reproduced with VoiceOver labels, Dynamic Type, Reduce-Motion support, and a P1/S11 view.opened telemetry emission.
+  The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): the surface's
+  source group is not yet wired into project.yml (outside this prompt's allowed-files scope) so the gate cannot compile
+  it, and the gate is independently blocked by the pre-existing 224-file app-target XCTest-membership glob, the
+  KMP Shared.xcframework assembly, and macOS development signing — all owned by the P4/P99 acceptance gate on a signed
+  macos-latest CI runner per apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

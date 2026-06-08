@@ -1,0 +1,136 @@
+I'll start by exploring the repository structure to understand what exists and whether the Apple toolchain is available.
+
+Key finding: **`xcodebuild` requires full Xcode but only Command Line Tools are installed** — so the build/test gate steps cannot run. swift, swiftlint, swiftformat, pwsh, xcodegen are all available. The web source exists and `feature-views/` already has an established pattern (770 files). Let me study the conventions before implementing.
+
+Now I understand the web component. Let me study the established Apple conventions — find a similar existing feature-view (Adapter/Model/View/Tests) and the shared infra (state holders, tokens, i18n, diagnostics).
+
+`HeroGauges` is the ideal template (gauges + full file set). Let me study it completely and map the shared infrastructure.
+
+Let me read the complete HeroGauges template (closest analog — gauges) and the shared facade infrastructure.
+
+Excellent — the convention is very thorough. Let me read the remaining HeroGauges files and the design-token/shared infrastructure.
+
+Now let me read the Tests file and the shared design-token + UI component infrastructure.
+
+I have the full pattern. Now let me locate the design tokens (Color.TS, Font.TS, TSSpacing, TSMotion) and shared UI components (TSGlassPanel, TSEmptyState, TSSkeleton, TSAnimatedNumber).
+
+The tokens live in `apps/design/generated/apple`. Let me read them to use exact token names, plus the shared UI components I'll reference.
+
+Now let me read the shared UI components I'll reference (TSGlassPanel, TSEmptyState, TSSkeleton, Badge) and the units facade, plus check how temperature-unit surfaces are modeled.
+
+Let me verify `TSGlassPanel`, the units facade, the web `MotorSnapshot` type + `RadialGauge`, and how existing surfaces handle temperature units.
+
+`DrivingTemperatureStats` is the perfect same-domain analog for temperature handling. Let me study it.
+
+I have both ideal templates (HeroGauges for gauges, DrivingTemperatureStats for temp units). Now let me read the web `RadialGauge`, `fmtNumber`, and `Badge` to reproduce exact rendering.
+
+I now have everything needed for faithful parity. Let me read the lint/format configs and the placeholder checker to ensure my files will pass the runnable gate steps.
+
+Let me read the forbidden-pattern list and verify the tooling runs clean on the existing HeroGauges as a baseline.
+
+I have a complete understanding. Let me set up tracking and verify the lint/format toolchain works on the existing HeroGauges baseline.
+
+Toolchain works, HeroGauges is clean. Let me confirm the swiftc type-check approach works on the Foundation-only logic (best-effort compile evidence).
+
+Toolchain confirmed: lint/format clean on baseline, and `swiftc -typecheck` compiles the Foundation-only logic. Now I'll write the surface. Starting with the Model (state-holder seam).
+
+Now writing the Model file (state-holder seam, P1/S8 + telemetry P1/S11 + i18n facade P1/S10):
+
+Now the Adapter — the pure projection core reproducing the web numeric pipeline verbatim:
+
+Let me type-check the Foundation-only core immediately to catch errors early:
+
+Core compiles cleanly. Now the main view file:
+
+Now the Views file (presentational chrome — gauge row, radial gauge, shift badge, freshness chip, skeleton):
+
+Now the Previews and strings files:
+
+Now the Tests file (adapter projection, model phases, accessibility, per-state view render):
+
+All 7 files written. Let me independently verify the parity math by compiling the core into an executable and printing actual computed values, then run format/lint.
+
+Every computed value exactly matches my test assertions — parity math is verified by real execution. Now format and lint all files:
+
+Files are new/untracked (no diff baseline). Let me confirm both lint gates are clean and run the placeholder check:
+
+Three swiftlint issues to fix. Let me inspect the affected regions:
+
+I'll refactor the 8-param `gauge` helper into a `GaugeSpec` struct (like HeroGauges) — fixing both the parameter-count and line-length violations. Let me view the remainder first:
+
+Now trim the Tests file below the 400-line limit. Let me check current length and the header:
+
+14 lines removed. Let me re-format and re-run all lint gates plus re-verify the core compiles:
+
+One line over. Let me trim one more line from the header:
+
+All lint gates green (0 violations, 400-line tests). Let me re-verify the refactored adapter still produces identical parity values, run the placeholder check, and scan for forbidden words:
+
+The placeholder gate passes and no forbidden words exist. The smoke test just needs `main.swift` naming for top-level code — let me re-verify the refactored adapter:
+
+Refactored adapter produces identical values. Now let me attempt a best-effort type-check of the SwiftUI **view** files against the real design tokens + shared component library (to validate beyond lint). First, check the component library's import surface:
+
+The component library is fully self-contained (SwiftUI/Charts/MapKit only — no `Shared`). This means I can type-check my SwiftUI view files against the **real** tokens + component library on the macOS SDK. Let me try:
+
+All 26 errors are isolated to one unrelated file (`UnitFormatters.swift`, which depends on the KMP `Shared` framework). My surface doesn't use it. Let me exclude that one file and re-check:
+
+**`typecheck_exit=0`** — all 5 surface files type-check cleanly against the **real** design tokens + shared component library (macOS 15 SDK, Swift 6). Now let me also validate the Tests file's type-correctness by compiling it in-module (XCTest is in the macOS SDK):
+
+Only the `XCTest` module is unavailable under CLT (needs Xcode) — the test file's syntax is already validated by swiftlint. Let me check the logs directory and how prior prompts structured BLOCKED logs:
+
+The predecessors faced the identical Xcode-unavailable situation and established a clear disposition. Let me read a full predecessor log to match the convention exactly (covenant rule 7 — no predecessor bypass):
+
+Critical finding: the predecessor accessed a **full Xcode at `/Applications/Xcode.app` via `DEVELOPER_DIR`** (even though `xcode-select -p` points to CommandLineTools). This changes everything — let me check for it:
+
+Xcode 26.5 is available via `DEVELOPER_DIR` — exactly as the predecessor used. This means I follow the established disposition (host gates green + xcodebuild deferred = STATUS=DONE), and I can now compile against **both** the iOS-18 simulator SDK and macOS-15 SDK, plus **execute** my XCTest suite via a SwiftPM harness. Let me run the dual-SDK type-checks:
+
+iOS-18 simulator SDK type-check passed (0 errors). Waiting for the macOS SDK check:
+
+Both SDKs pass with 0 errors. Now the key step — **executing** the full XCTest suite via a self-contained SwiftPM harness (real production + component + token sources), exactly as the predecessor did. Let me build it:
+
+Library builds completely (including Previews + the real component closure). Now **execute** the test suite:
+
+**All 32 tests executed, 0 failures (exit 0)** — including the 6 per-state `ImageRenderer` render tests (content/empty/error/loading/stale/offline) that render the real SwiftUI surface. Let me capture the per-suite summary and the xcodebuild deferral evidence:
+
+Test breakdown: Format(5) + Projector(11) + Model(9) + Accessibility(1) + ViewState(6) = **32 executed, 0 failures**. Now capture the xcodebuild deferral evidence (note: my `project.yml` already registers `feature-views`, so the only blocker should be the unstaged `Shared.xcframework`):
+
+`.xcodeproj` is git-ignored (safe to generate). Let me capture the xcodebuild deferral evidence:
+
+xcodegen generated 12 targets cleanly. Now capture the real `xcodebuild` build error (the unstaged `Shared.xcframework` blocker):
+
+Captured the real deferral evidence: `MAC_BUILD_EXIT=65` — missing `Shared.xcframework` (Frameworks holds only `.gitkeep`) + signing-certificate requirement (both code-unrelated, exactly the predecessor blockers). Let me gather final stats (line counts, simulator availability) and clean up build artifacts:
+
+All verified: 1621 lines total, largest .swift = 400 (file_length ≤400 honored), iPhone 16 simulator booted, 15 i18n keys referenced = 15 declared. Let me confirm the key **sets** match exactly (not just counts):
+
+Every referenced key is declared, zero orphans — i18n catalog is exactly in sync. All evidence gathered. Now let me write the gate log (following the predecessor `STATUS=DONE` disposition: host gates executed green + xcodebuild deferred with captured evidence):
+
+Now let me do a final consolidated re-verification on the committed-state files (rebuild the harness fresh + re-run all gates) to ensure nothing drifted:
+
+Lint/format/placeholder all green. Waiting for the final test execution:
+
+All gates green and reproducible on the committed-state files: **swiftlint 0 violations, swiftformat 0/6, placeholder COUNT=0, swift test 32/32 exit 0**. Let me review git status and commit only my allowed files (the 7 surface files + log), leaving the pre-existing unrelated changes untouched:
+
+Clean — only my 7 files + log are new; the 2 pre-existing unrelated changes stay unstaged. Committing exactly the allowed files:
+
+Committed cleanly (8 files, 1836 insertions). Let me do a final post-commit verification and close out the todos:
+
+Task complete. All work is committed and verified.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-feature-views-0170-LiveMotorStatus.log | 215 +++++++++++
+ .../feature-views/LiveMotorStatus.Adapter.swift    | 317 ++++++++++++++++
+ .../feature-views/LiveMotorStatus.Model.swift      | 350 ++++++++++++++++++
+ .../feature-views/LiveMotorStatus.Previews.swift   | 101 ++++++
+ .../feature-views/LiveMotorStatus.Tests.swift      | 400 +++++++++++++++++++++
+ .../feature-views/LiveMotorStatus.Views.swift      | 257 +++++++++++++
+ .../feature-views/LiveMotorStatus.strings          |  36 ++
+ .../TeslaSync/feature-views/LiveMotorStatus.swift  | 160 +++++++++
+ 8 files changed, 1836 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0170-LiveMotorStatus.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveMotorStatus.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveMotorStatus.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveMotorStatus.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveMotorStatus.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveMotorStatus.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveMotorStatus.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/LiveMotorStatus.swift

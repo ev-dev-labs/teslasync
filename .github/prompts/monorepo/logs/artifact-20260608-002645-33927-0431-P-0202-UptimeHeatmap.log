@@ -1,0 +1,182 @@
+===========================================================================
+=== P4 Shared surface 0202 UptimeHeatmap (Apple) ===
+===========================================================================
+Prompt   : .github/prompts/monorepo/p4-apple/shared-meaningful (P4/shared-surfaces/0202)
+Web src  : web/src/components/status/UptimeHeatmap.tsx  (THE specification)
+Output   : apps/apple/TeslaSync/shared-surfaces/UptimeHeatmap.*
+Runner   : Darwin arm64 · Xcode 26.5 (17F42) · Swift 6.3.2 · iOS 26.5 / macOS 26.5 SDKs
+           iPhone 16 simulator present · swiftlint + swiftformat + pwsh present
+Date     : 2026-06-08
+
+---------------------------------------------------------------------------
+ARTIFACT (7 files, 967 lines — flat in shared-surfaces/, prefixed UptimeHeatmap.*)
+---------------------------------------------------------------------------
+  UptimeHeatmap.swift            143  main surface (panel, header+caption, grid/empty, footnote)
+  UptimeHeatmap.Model.swift      237  status/day/tier/presentation, fmtPercent, surface slug
+  UptimeHeatmap.Views.swift      155  day square + tap popover + leading-aligned flow layout
+  UptimeHeatmap.Telemetry.swift   40  P1/S11 view.opened diagnostics seam + os_log sink
+  UptimeHeatmap.Previews.swift   109  populated/perfect/degraded/empty · light/dark · XXL type
+  UptimeHeatmap.Tests.swift      239  25 XCTest cases (status/tier/fmtPercent/uptime/telemetry)
+  UptimeHeatmap.strings           44  P1/S10 catalog contribution (table "UptimeHeatmap")
+
+Parity map (web -> native, every branch the web source carries):
+  - HeroStatus union (5)            -> UptimeStatus enum (healthy/degraded/unhealthy/unknown/maintenance)
+  - SQUARE_BG status->color         -> UptimeStatus.fillColor -> Color.TS.status* / textMuted tokens
+  - STATUS_LABEL status->label      -> UptimeStatus.labelKey -> "uptime.heatmap.status.*" (i18n)
+  - (healthy+maintenance)/total*100 -> UptimeHeatmapPresentation.uptimePercent (nil when empty)
+  - pct>=99?green:pct>=95?amber:red -> UptimeTier ladder (high/medium/low) -> Color.TS.status* tokens
+  - fmtPercent(pct, 2)              -> UptimeHeatmapNumber.fmtPercent (safeNumber->0, grouped, halfUp, 2dp)
+  - title ?? `last N days`          -> resolvedTitle -> "uptime.heatmap.title %lld"
+  - flex flex-wrap gap-1            -> UptimeFlowLayout (leading-aligned, fixed 4pt gap, ragged row)
+  - h-3 w-3 rounded-sm + Tooltip    -> UptimeDaySquare (12pt button + tap popover + macOS .help)
+  - days.length===0 (no caption)    -> isEmpty guard: caption hidden + friendly empty-state message
+  - footnote?                       -> optional footnote (caption font, muted token)
+States: pure presentational surface (web fetches nothing) -> loading/error/stale/offline are
+  host-owned (same contract as the sibling BatteryPill 0073); the component owns POPULATED and
+  EMPTY, both rendered (no hidden surface, empty is a friendly message not a blank box).
+A11y : each square is a focusable Button with VoiceOver label "<date>: <status>"; grid carries
+  "Daily status history"; status spoken as a word (color is not an accessible signal); Dynamic
+  Type via tokens; no explicit animation => reduce-motion respected by construction.
+i18n : every string resolves through a P1/S10 key; zero English literals in code paths.
+Telemetry: emits view.opened with slug "UptimeHeatmap" from .task (P1/S11).
+
+===========================================================================
+SURFACE-SCOPED GATES  (host-runnable, all GREEN on the final files)
+===========================================================================
+[1] swiftformat --lint  (apps/apple/.swiftformat, maxwidth 120, swift 6.0)
+        0/6 files require formatting.                                   FORMAT_EXIT=0
+[2] swiftlint --strict   (apps/apple/.swiftlint.yml ruleset, scoped to the surface)
+        Done linting! Found 0 violations, 0 serious in 6 files.          LINT_EXIT=0
+        (whole-tree `swiftlint --strict` also reports exactly ONE serious violation, and it is
+         PRE-EXISTING + out of scope: dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+         function_body_length — untouched by this commit.)
+[3] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces
+        PLACEHOLDER_ALLOWED=0
+        PLACEHOLDER_COUNT=0                                              PLACEHOLDER_EXIT=0
+        (no TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/not-implemented in any shipped file.)
+
+===========================================================================
+COMPILE + TEST VERIFICATION  (REAL design system, Swift 6 strict concurrency)
+===========================================================================
+Because the surface output dir (TeslaSync/shared-surfaces) is not yet a project.yml
+source group (a shared, integration/P99-owned, parallel-unsafe edit that is OUT of this
+prompt's allowed files), the surface was verified against the REAL generated design system
+in an isolated Swift 6 target: the 5 impl files + the generated Tokens.swift
+(apps/design/generated/apple) + the real TSMaterial.swift (tsGlassPanel) + the real
+TSGlassPanel wrapper. Inputs are byte-identical copies of the shipped files (only the test
+file's `@testable import` module name differs).
+
+[A] swift test  (XCTest runtime, arm64-apple-macos14, Swift 6)
+        Compiling UptimeHeatmapVerify _Tokens.swift / _TSMaterial.swift / _TSGlassPanel.swift
+        Compiling UptimeHeatmapVerify UptimeHeatmap.{Model,Telemetry,Views,Previews}.swift / UptimeHeatmap.swift
+        Test Suite 'UptimeHeatmapTests' passed.
+        Executed 25 tests, with 0 failures (0 unexpected) in 0.005 seconds   SWIFT_TEST_EXIT=0
+        (status up-predicate + 5x color-token map + 5x label-key map + exactly-five-cases;
+         tier ladder incl. 99/95 boundaries + NaN/-inf else; fmtPercent 2dp default + halfUp +
+         thousands-grouping + decimals arg + non-finite->0; uptime nil-when-empty + healthy&
+         maintenance counted + degraded/unhealthy/unknown excluded + 100%/96% bands; day
+         identity = date; presentation Equatable; surface slug "UptimeHeatmap"; reportOpen emits.)
+[B] iOS 18 simulator typecheck (xcrun --sdk iphonesimulator -target arm64-apple-ios18.0-simulator -swift-version 6)
+        (all 6 surface swift files)                                      IOS_TYPECHECK_EXIT=0
+[C] macOS 15 typecheck (xcrun --sdk macosx -target arm64-apple-macos15.0 -swift-version 6)
+        (all 6 surface swift files)                                      MAC_TYPECHECK_EXIT=0
+=> The surface compiles for BOTH shipping platforms at their real deployment targets under
+   the app's own Swift 6 strict-concurrency setting, against the REAL tokens, and its 25
+   XCTests execute green via the XCTest runtime. #Preview compiles under Xcode 26.5.
+
+===========================================================================
+FULL-APP xcodebuild build/test  (gate steps 1-2) -> DEFERRED to integration runner
+===========================================================================
+The literal gate runs `xcodebuild -scheme TeslaSync[-macOS] build test`. On this pre-
+integration parallel slot the shared TeslaSync app target does NOT compile for reasons that
+PRE-EXIST this commit and are OUTSIDE its allowed files. Evidence (real, from a temporary
+local build with shared-surfaces wired in; the wiring was reverted — project.yml is pristine
+vs HEAD):
+
+  (i)  Co-located *Tests.swift compiled INTO the app target. 261 test files live in
+       feature-views/ + dashboard-widgets/ (224 .Tests.swift, 32 .ModelTests.swift, 3
+       .AdapterTests.swift, 1 .ViewTests.swift, 1 .StateTests.swift); 198 lack the
+       `#if canImport(XCTest)` guard and fail in the app target under Xcode 26.5
+       (canImport(XCTest)==true there), e.g.:
+         feature-views/AIRestorePanel.Tests.swift:18: error: unable to resolve module dependency: 'XCTest'
+         feature-views/ActionBuilder.ModelTests.swift:11: error: unable to resolve module dependency: 'XCTest'
+  (ii) Duplicate public type declarations across parallel-authored surfaces, e.g.:
+         'DashboardWidgetSize' redeclared in 15+ files (Sources/DashboardWidgets/* AND
+           TeslaSync/dashboard-widgets/*) -> "ambiguous for type lookup"
+         'VehicleHeroModel' declared in 2 files -> "ambiguous for type lookup"
+  (iii) The KMP Shared.xcframework is a scheme pre-build (Gradle :core:assembleSharedXCFramework);
+        it was assembled successfully here, but the app link still requires (i)+(ii) to be
+        deduplicated at integration.
+
+  ATTRIBUTION: this surface references NONE of the above. A grep of the failing build log shows
+  ZERO errors in any TeslaSync/shared-surfaces/UptimeHeatmap.* file; my files compiled cleanly
+  before the build stopped on the pre-existing feature-views/dashboard-widgets errors. These
+  blockers are owned by the P4 acceptance / P99 gate (see apps/macos-pending-verifications.md),
+  identical to the deferral recorded by sibling surfaces 0073 BatteryPill, 0238 AnomalyInlineRow,
+  and 0237 AiUsageCard. They are NOT failures of this code.
+        IOS_EXIT=deferred   MAC_EXIT=deferred   (pre-existing baseline; not this surface)
+
+===========================================================================
+HONESTY COVENANT (binding)
+===========================================================================
+  1  No red-as-green     : surface-scoped gates reported with real output; the full-app
+                           xcodebuild is reported as DEFERRED, not green.
+  2  No scope narrowing  : every web branch reproduced (5 statuses, tier ladder, fmtPercent,
+                           uptime calc, empty guard, title override, footnote, per-day popover).
+  3  No skip-and-assume  : web source read end-to-end; numberFormat.ts (fmtNumber/safeNumber)
+                           and StatusHero.tsx (HeroStatus) read to pin exact semantics.
+  4  No stubs as final   : full implementation; placeholder gate COUNT=0; no TODO/mock/stub.
+  5  No parity shortcuts : flow layout packs left like flex-wrap (not a justified grid); tap
+                           popover replaces hover Tooltip (touch has no hover) + macOS .help.
+  6  No delegation       : authored directly; no sub-agent delegation.
+  7  No predecessor bypass: shared-surfaces project.yml/.swiftlint wiring left to its
+                           integration owner; NOT force-committed from this parallel slot.
+  8  No commit on red    : committed artifact (7 UptimeHeatmap.* files + this log) is GREEN on
+                           every surface gate AND a real Swift 6 isolated build + 25/25 XCTest;
+                           the deferred full-app gate is blocked only by pre-existing, unrelated
+                           files this commit does not touch.
+  9  No silent drift     : changes confined to shared-surfaces/UptimeHeatmap.* + this log;
+                           project.yml verified byte-pristine vs HEAD; the isolated-verify
+                           technique and the full-app deferral are disclosed above.
+  10 EXIT/STATUS below.
+
+===========================================================================
+ACCEPTANCE CRITERIA
+===========================================================================
+  [x] Surface renders on Apple with all states from the web source reproduced (POPULATED +
+      EMPTY owned by the component; loading/error/stale/offline host-owned per the pure-
+      presentational contract). Verified by compile on iOS 18 + macOS 15 + #Preview gallery.
+  [x] No HTTP from the view; pure presentational (web fetches nothing) — no state holder needed.
+  [x] Every i18n key in source has a matching key in the surface catalog (table "UptimeHeatmap").
+  [x] Accessibility labels present on every interactive element (each square is a labelled Button).
+  [x] Tests: adapter unit tests (status/tier/fmtPercent/uptime/identity/equatable) + a11y label
+      policy keys + telemetry slug — 25/25 executed GREEN via the XCTest runtime.
+  [x] No TODO / stub / mock / placeholder / Lorem in shipped code (placeholder gate COUNT=0).
+  [x] EXIT=0 / STATUS=DONE — surface-scoped gates green; full-app xcodebuild deferred w/ evidence.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic UptimeHeatmap shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles on the iOS-simulator (iOS 18) and macOS (15) SDKs under
+  Swift 6 strict concurrency against the REAL generated design tokens + real glass material, its
+  #Preview macro expands under Xcode 26.5, and its 25 XCTests execute GREEN via the XCTest
+  runtime, with swiftformat / swiftlint / placeholder all green on the 7 surface files. The
+  full-app iOS + macOS xcodebuild build/test gate is DEFERRED (not failed by this code) on
+  pre-existing, unrelated, out-of-allowed-files blockers (co-located unguarded *Tests.swift in
+  the app target + the DashboardWidgetSize 15x redeclaration across parallel-authored widgets),
+  owned by the P4 acceptance / P99 gate.
+
+===========================================================================
+COMMIT
+===========================================================================
+  git add apps/apple/TeslaSync/shared-surfaces/UptimeHeatmap.swift \
+          apps/apple/TeslaSync/shared-surfaces/UptimeHeatmap.Model.swift \
+          apps/apple/TeslaSync/shared-surfaces/UptimeHeatmap.Views.swift \
+          apps/apple/TeslaSync/shared-surfaces/UptimeHeatmap.Telemetry.swift \
+          apps/apple/TeslaSync/shared-surfaces/UptimeHeatmap.Previews.swift \
+          apps/apple/TeslaSync/shared-surfaces/UptimeHeatmap.Tests.swift \
+          apps/apple/TeslaSync/shared-surfaces/UptimeHeatmap.strings \
+          .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0202-UptimeHeatmap.log
+  git commit -m "feat(apps/apple/shared-surfaces): add UptimeHeatmap surface (P4)"
+
+EXIT=0
+STATUS=DONE

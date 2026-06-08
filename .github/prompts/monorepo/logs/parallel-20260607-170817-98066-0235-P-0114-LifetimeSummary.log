@@ -1,0 +1,152 @@
+I'll start by exploring the repository structure, the web source component, and checking what Apple tooling is available on this runner.
+
+I have the web source. Key finding: **full Xcode is NOT installed** (only Command Line Tools), so `xcodebuild` won't run. But `swift`, `swiftlint`, `swiftformat`, and `pwsh` are all available. Let me explore the existing Apple app structure to understand patterns before writing code, and verify the xcodebuild limitation.
+
+A clear, established pattern exists: each feature-view has `.swift`, `.Model.swift`, `.Adapter.swift`/`.Projection.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`. Let me study the shared infrastructure (state holders, tokens, i18n, telemetry) and a representative exemplar with a metric-grid layout.
+
+XcodeGen-based project (`project.yml` → `.xcodeproj`). Shared infra is under `Sources/`. Let me study a close exemplar (`BatteryHealthSection` — a Section with metric tiles) end-to-end and the shared infrastructure it relies on.
+
+Let me read these exemplar files individually with the view tool.
+
+Excellent — the pattern is very clear and rich. Let me read the remaining exemplar files (Adapter, Tiles, Views, Previews, strings, Tests) to capture all conventions.
+
+Now the Tests file plus the shared design tokens and components it relies on. Let me locate and read those.
+
+Let me locate the design token definitions (TSSpacing, TSRadius, Font.TS, Color.TS, TSTone) and read the key shared component signatures.
+
+Paths were off — `Sources` is under `apps/apple`. Let me read the generated tokens and locate the shared component/token extensions correctly.
+
+Now the shared components I'll use, the web formatting helpers I must port, and the parent that supplies this component's data.
+
+Let me read the `numberFormat` helpers and find the parent that renders `LifetimeSummary` to understand the data/states semantics.
+
+Let me see how `CostAnalysisPage` computes the data and handles loading/error/empty, to map the native model's states faithfully.
+
+I now have the full data model and formatting semantics. Let me verify there are no Swift symbol collisions and understand how `.Tests.swift`/`.strings` files in `feature-views/` map to targets (since I must mirror a known-good pattern precisely).
+
+`.Tests.swift` lives in `feature-views/` as a real file, yet the app target globs that dir. Let me find the XcodeGen wiring/exclusion rule that separates test files, and check the build/generation scripts — this confirms the pattern my files must match.
+
+53 `.Tests.swift` files follow this in-place pattern with `@testable import TeslaSync`. Let me read the pending-verifications note, the lint/format configs, and the exact signatures of `TSButton`/`TSSkeleton`/`TSFadeIn` I'll call.
+
+I have a complete picture. Critically, `macos-pending-verifications.md` documents the exact precedent: the **ToolCard P4 feature-view** was verified green via *isolated SwiftPM build + tests + swiftlint/swiftformat/placeholder*, with the full-app `xcodebuild` deferred to the macOS acceptance gate (blocked by pre-existing collisions + no signing). My runner has **no full Xcode** (only CommandLineTools), so I'll follow that exact accepted methodology.
+
+Let me do a precise collision check on my planned type names, then create a plan.
+
+No collisions; toolchain can typecheck SwiftUI. I have everything needed. Let me set up a plan and todo tracking, then build the 8-file surface following the `BatteryHealthSection` pattern exactly.
+
+Now creating the surface files, starting with the pure adapter core.
+
+Now the Model file (state holder, telemetry seam, i18n facade).
+
+Now the Tiles file (kind→label/value extensions, chip, metric tile).
+
+Now the Views file (header + state bodies).
+
+Now the main View, Previews, and strings files.
+
+Now the test suite.
+
+All 8 files are created. Now I'll verify rigorously. First, the formatting/lint gates I can run, then an isolated SwiftPM build+test harness (the accepted precedent for this prompt class). Let me start by setting up the harness and running the real lint/format tools in parallel.
+
+Three quick fixes needed. Let me view the offending lines and the placeholder script's `-Path` handling.
+
+Fixing the one long line in the Adapter (wrap the currency call), then re-running all gates.
+
+swiftformat and swiftlint pass cleanly. The placeholder gate flagged `Tests.swift:74` for "TODO" — let me inspect.
+
+False positive: `testBlankSymbolFallsBackToDollar` contains the substring "ToDo**llar**" → matches "TODO". Let me read the exact patterns and scan all my files for any accidental substring matches.
+
+Only that one method name collides. Renaming it to avoid the "ToDo" substring, then re-running the placeholder gate.
+
+Renamed. Re-running the placeholder gate and setting up the isolated SwiftPM verification harness in parallel.
+
+Placeholder gate now passes (0/7). Now creating the harness `Package.swift` and faithful component shims, then building + testing.
+
+Now building the harness (Swift 6 strict concurrency, macOS 15).
+
+The harness caught a **real bug**: my `displayValue` switch mixed bare-expression cases with a multi-statement `.freeSessions` case, breaking implicit-return. (The Preview-macro error is just a harness limitation — `#Preview` needs Xcode's plugin; it compiles in the app target.) Let me fix `displayValue` to make every case a single expression, matching the codebase's implicit-return idiom.
+
+Re-syncing the harness (re-copy fixed Tiles, drop Previews which needs Xcode's preview plugin), then build + test, and re-lint Tiles.
+
+Harness builds clean under Swift 6 strict concurrency. Now running the test suite.
+
+`swift test` needs XCTest, which ships only with full Xcode (not CommandLineTools) — same root cause as the xcodebuild block. The shipped XCTest file runs on the macOS acceptance gate. To still get **genuine runtime verification** of all the pure logic on this runner, I'll add a dependency-free executable that exercises the same assertions against the real surface API.
+
+Need to prep directories first. Let me remove the old test target dir, create the executable dir, and reset Package.swift.
+
+Now building and running the runtime verification (library at Swift 6 strict concurrency, runner executes all logic assertions).
+
+Harness-only access issue: `labelKey`/`labelFallback`/`displayValue` are correctly `internal` (matching the exemplar's encapsulation), and the shipped `Tests.swift` reaches them via `@testable import`. My runner used a plain import. Let me enable testability on the harness library and switch the runner to `@testable import` — mirroring how the real XCTest target accesses internals.
+
+All **69 runtime checks pass**; the surface compiles under Swift 6 strict concurrency (macOS 15) and every piece of logic executes with the exact expected outputs. Now gathering final clean gate numbers, validating the `.strings` file, and capturing xcodebuild capability evidence.
+
+All host-runnable gates are green; xcodebuild is definitively blocked (CommandLineTools only, no `simctl`). Let me check an existing feature-view log to mirror the project's log format, then write the log.
+
+The ToolCard precedent reached `STATUS=DONE` by setting `DEVELOPER_DIR=/Applications/Xcode.app/...` non-destructively (the active dir was CommandLineTools, but full Xcode was installed). Let me check whether Xcode.app exists on this machine — if so, I can run the real xcodebuild gate the same way.
+
+Full **Xcode 26.5 is installed** at `/Applications/Xcode.app` (active dir is just CommandLineTools) — and `xcodegen` is available. So I'm **not** capability-blocked; I can run the real gate via `DEVELOPER_DIR` exactly like the ToolCard precedent. Note `feature-views` is already wired into `project.yml`/`.swiftlint.yml`, so my files need no extra wiring. Let me check the Shared.xcframework dependency and whether the known pre-existing collisions still exist.
+
+Not capability-blocked (Xcode 26.5 present), but the full-app build is pre-determined RED by **pre-existing, unrelated** breakage: `Shared.xcframework` isn't staged (KMP/Gradle build — itself a sanctioned macOS-pending deferral) and the `DashboardWidgetSize` duplicate-type collision still exists across 10+ dashboard-widget files. This is exactly the ToolCard precedent. Let me (1) generate the real Xcode project to confirm my files wire in, and (2) typecheck the **actual shipped sources against the real iOS 18 + macOS 15 SDKs**.
+
+Project generates cleanly with my files wired in (48 references). Now typechecking the **actual shipped sources** against the real iOS 18 and macOS 15 SDKs (Swift 6, strict concurrency), and confirming the generated project won't be committed.
+
+Both **iOS 18 and macOS 15 SDK typechecks of the shipped sources pass (EXIT=0)** under Swift 6. Now let me capture authoritative evidence for the full-app gate's deferral: attempt a real macOS app-target build and confirm it fails only on the pre-existing infra (missing `Shared.xcframework` / `import Shared`), with **zero** LifetimeSummary errors.
+
+The full-app build fails with **exactly one error** — the missing `Shared.xcframework` (the KMP/Gradle artifact) — and **zero LifetimeSummary errors**. Java 17 is present, so I can stage that framework and run the real scheme gate to get the app target to actually compile my files (matching the ToolCard precedent exactly). Let me assemble it (time-boxed).
+
+Gradle (KMP/Kotlin-Native) is still assembling — ToolCard noted ~7m for this. Let me keep waiting.
+
+Let me check the Gradle progress log from a separate shell while it continues.
+
+Gradle is nearly done — debug XCFramework written, release frameworks linking. Let me wait for completion.
+
+Gradle **BUILD SUCCESSFUL** (9m16s). Now staging the framework into `Frameworks/` and re-running the full-app macOS build — this time it should compile the Swift sources (including my files in the real app target) and fail only on the pre-existing collisions.
+
+The full-app macOS build now compiles past the framework and fails with **4 errors — zero in LifetimeSummary**. Let me confirm the 4 are the pre-existing collisions.
+
+The real blocker is now revealed and it's **pre-existing and repo-wide**: `AlertsSection.Tests.swift:20: unable to resolve module dependency: 'XCTest'` — the co-located `*.Tests.swift` files (53 pre-existing ones) import XCTest into the app target. This is exactly the blocker documented in `macos-pending-verifications.md`/ToolCard, affects every surface identically, and **zero errors are LifetimeSummary-specific**. Let me capture the iOS exit for completeness.
+
+iOS build: same pre-existing XCTest-in-app-target blocker, **zero LifetimeSummary errors**. Now, one final authoritative proof — compiling the **literal shipped `LifetimeSummary.Tests.swift`** against XCTest + a testable `TeslaSync` module on the macOS 15 SDK (the runtime harness verified the logic; this verifies the actual XCTest file).
+
+Looks like the harness `Shims.swift` went missing from `/tmp`. Let me check and recreate it if needed, then re-run the two-step proof.
+
+**Environment contention detected**: a concurrent agent (slot-247) reused `/tmp/ls-harness` and overwrote it with their own `LayoutSwitcher` harness. My earlier runs passed when my files were intact; the repo-file builds are unaffected. To avoid further collisions, I'll redo the final XCTest-file proof in a **private session dir**.
+
+Module build (shipped production sources → testable Swift 6 module on macOS 15) **passed (MODULE_EXIT=0)**. The `XCTAssertFalse` error is an artifact of hand-invoking `swiftc` without XCTest's Swift overlay (a C-macro import limitation) — not a defect. Let me add the overlay path and retry step 2 once.
+
+The shipped `LifetimeSummary.Tests.swift` **typechecks cleanly against XCTest + the testable module on macOS 15 (EXIT=0)** once the overlay path is supplied. 
+
+I now have a complete, authoritative evidence package. Let me update the plan, then write the honest gate log.
+
+Log written. Now let me verify the working tree, ensure generated build artifacts are ignored (not committed), and confirm only my intended files will be staged.
+
+All generated artifacts (xcodeproj, staged framework, Gradle outputs) are gitignored. The two pre-existing modified web files aren't mine — I'll stage only my 8 surface files + the log. Committing now.
+
+Committed cleanly as `c958e743` (exactly the 8 surface files + log; pre-existing web changes left untouched). Let me clean up generated build artifacts and do a final confirmation.
+
+Commit is exactly the 9 intended files (1498 insertions); working tree now shows only the two pre-existing (non-mine) web edits. Final consolidated gate run on the committed files as confirmation.
+
+The placeholder loop ran from the wrong directory (path error). Let me re-run it correctly from the repo root for a clean final confirmation (it passed earlier in shell 30).
+
+All gates green. Let me mark the plan complete and finalize.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-feature-views-0114-LifetimeSummary.log | 147 ++++++++++
+ .../feature-views/LifetimeSummary.Adapter.swift    | 241 ++++++++++++++++
+ .../feature-views/LifetimeSummary.Model.swift      | 276 ++++++++++++++++++
+ .../feature-views/LifetimeSummary.Previews.swift   |  96 +++++++
+ .../feature-views/LifetimeSummary.Tests.swift      | 317 +++++++++++++++++++++
+ .../feature-views/LifetimeSummary.Tiles.swift      | 134 +++++++++
+ .../feature-views/LifetimeSummary.Views.swift      | 183 ++++++++++++
+ .../feature-views/LifetimeSummary.strings          |  43 +++
+ .../TeslaSync/feature-views/LifetimeSummary.swift  |  61 ++++
+ 9 files changed, 1498 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0114-LifetimeSummary.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/LifetimeSummary.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LifetimeSummary.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LifetimeSummary.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LifetimeSummary.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LifetimeSummary.Tiles.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LifetimeSummary.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LifetimeSummary.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/LifetimeSummary.swift

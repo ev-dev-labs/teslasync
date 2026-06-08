@@ -1,0 +1,120 @@
+I'll start by exploring the repository structure, the web source file, and checking tool availability.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. However `swift` 6.3.2, `swiftlint`, and `swiftformat` are available. Let me explore the existing Apple app structure to understand patterns and whether it's a SwiftPM package.
+
+This is an XcodeGen project (`project.yml`, no checked-in `.xcodeproj`) — `xcodebuild` needs full Xcode which isn't present. Let me examine the existing feature-views, tests, and shared infrastructure to follow established patterns exactly.
+
+`SentryModeChart` is the closest analog (a chart feature-view). Let me examine its full file set to mirror the exact pattern.
+
+The 7-file pattern is clear and all files live in the feature-views dir (matching my allowed files). Let me read the entire `SentryModeChart` set as my template.
+
+Excellent detailed template. Let me read the remaining files: Adapter, Views, Previews, strings, and Tests.
+
+Now the remaining template files plus the web source's data dependencies (helpers, types, palette).
+
+Now the web data dependencies and the native design-token/motion infrastructure used by the template.
+
+Now let me locate and read the native design tokens, motion (`TSFadeIn`), skeleton (`TSSkeleton`), and the project config to understand build wiring.
+
+I need the actual token definitions (`TSSpacing`, `TSRadius`, `TSMotion`, `Color.TS`, `Font.TS`). Let me find them and read the Charts LineCharts + ChartContainer for native chart idioms.
+
+The tokens appear to be generated at build time. Let me check the project config, Scripts, and Resources to understand token generation.
+
+The token source is `apps/design/generated/apple`. Let me read the generated tokens, the native LineCharts/ChartContainer idioms, and the placeholder checker.
+
+Now I have the full token vocabulary. Let me read the web charts barrel (for `AREA_DEFAULTS`, grid, tooltip styling), the native ChartModels/ChartContainer/Interaction, and check for an existing flow-layout to reuse.
+
+I have a complete picture. Let me read the lint configs and verify the toolchain works against the existing `SentryModeChart` (baseline), and check for `pwsh`/xcodegen availability.
+
+`pwsh`, `xcodegen`, `swiftformat`, `swiftlint` are all available. Only full Xcode (for `xcodebuild`) is missing — that's the platform-capability gap I'll document honestly. Let me confirm the swiftlint baseline and read the placeholder checker.
+
+Comprehensive understanding achieved. Let me probe whether the macOS SDK (via CommandLineTools) can compile SwiftUI + Swift Charts, which determines how much real verification I can do beyond lint/format.
+
+SwiftUI + Swift Charts typecheck cleanly via CommandLineTools. This means I can do real `swiftc -typecheck` verification of my actual surface files (not just lint). Let me locate the transitive token dependencies (`TSCard`, etc.) so I can assemble a scoped typecheck.
+
+I now have a complete design. Let me set up tracking and inspect the logs directory + an existing surface log for format parity.
+
+Let me read an existing feature-view log (especially the `SentryModeChart` one) to match the established honest format for the xcodebuild capability gap.
+
+This is the key precedent. The same parallel run (different slot) shows **Xcode 26.5 is available via `DEVELOPER_DIR` override** even though `xcode-select` points to CommandLineTools. Let me verify that on this machine — it changes my entire verification capability.
+
+Confirmed: **Xcode 26.5 with iOS Simulator SDK and iPhone 16 simulator is available via `DEVELOPER_DIR`** — same environment as the precedent (BackendTool 0002, slot 123). The established honest disposition is: run all host gates green (typecheck on both SDKs, execute XCTest via SwiftPM harness, lint/format/placeholder), and DEFER xcodebuild with captured evidence → `STATUS=DONE`.
+
+Let me write the plan, then build the surface starting with the pure adapter.
+
+Now the pure adapter core:
+
+Adapter written. Let me immediately validate the curve math with a real standalone execution before building the rest.
+
+Adapter math proven correct by real execution. Now the Model (state holder + seams):
+
+Now the presentational layer (Views):
+
+Now the main view, strings catalog, previews, and tests:
+
+Now the previews and the XCTest suite:
+
+All 7 files written. Let me run formatting/lint checks and line counts first.
+
+swiftformat flagged fixable style issues, and `Views.swift` (441 lines) exceeds the 400-line limit. Let me split the chart/legend out into `SessionComparisonChart.Chart.swift` (allowed by `SessionComparisonChart.*`), then auto-format. Let me view the exact section boundaries.
+
+I'll split into two files. ComparisonStyle + chart/tooltip/legend belong together in `Chart.swift`; the rest stays in `Views.swift`. Let me recreate both cleanly.
+
+Now the `Chart.swift` file with the chart/tooltip/legend/flow-layout (fixing the long lines proactively):
+
+Now let me auto-format all files, then re-check line counts and lint:
+
+All files under 400 lines. Let me confirm both linters pass:
+
+Both linters pass (0/0). Now the real compile verification against the actual component closure. Let me assemble the closure and typecheck the production files on the macOS 15 SDK using the Xcode toolchain.
+
+macOS 15 typecheck passes with the real closure. Now iOS 18 simulator SDK + the DEBUG previews:
+
+All three typechecks pass (iOS 18 sim, macOS 15, DEBUG previews). Now the strongest evidence — **executing** the XCTest suite via a SwiftPM harness using the real production + component-closure files.
+
+**All 26 XCTest tests pass, 0 failures**, executed on the macOS host with the real production + closure files. Now the placeholder gate (isolated to my files) and a forbidden-word grep:
+
+Placeholder gate clean (COUNT=0). Note: in this slot, `project.yml` **already registers** `TeslaSync/feature-views` in the app targets (unlike the precedent). Let me capture the real `xcodegen`/`xcodebuild` evidence for the deferred step and confirm the actual blocker.
+
+`xcodegen generate` succeeded; `Frameworks/` has only `.gitkeep` (Shared.xcframework not staged — the blocker). Let me capture the real `xcodebuild` failure as evidence:
+
+Captured: `error: There is no XCFramework found at .../Frameworks/Shared.xcframework` → BUILD FAILED, exit 65 — the same pre-existing blocker as the precedent. Let me confirm the generated `.xcodeproj` is git-ignored and verify my working tree:
+
+All 8 files present and untracked; `.xcodeproj` is git-ignored. Let me verify i18n key parity (every referenced key is declared in the catalog):
+
+All 25 referenced keys (including the 4 web-source keys + aria) are declared — none missing. Let me gather version/commit facts for an accurate log:
+
+Now let me write the verification log following the established precedent format:
+
+Now let me clean up build/temp artifacts and commit only my surface files + the log (not the pre-existing unrelated modified files):
+
+Exactly my 8 files + the log staged (pre-existing unrelated changes excluded). Committing:
+
+Committed as `29028e62`; working tree shows only the pre-existing unrelated changes (correctly untouched). Final confirmation that the committed bytes pass lint/format:
+
+Path doubling — let me re-run with correct relative paths (the 5971-file run was the whole repo via `included:`, not my files):
+
+All gates green on the committed files: swiftformat `0/7`, swiftlint `--strict` `0 violations in 7 files`. (The earlier "7 violations" was a whole-repo fallback over 5971 files — pre-existing issues in other surfaces, not mine.)
+
+All todos complete. The P4 SessionComparisonChart Apple surface is shipped and verified.
+
+Merge made by the 'ort' strategy.
+ ...e-feature-views-0089-SessionComparisonChart.log | 216 ++++++++++++
+ .../SessionComparisonChart.Adapter.swift           | 381 +++++++++++++++++++++
+ .../SessionComparisonChart.Chart.swift             | 272 +++++++++++++++
+ .../SessionComparisonChart.Model.swift             | 238 +++++++++++++
+ .../SessionComparisonChart.Previews.swift          | 113 ++++++
+ .../SessionComparisonChart.Tests.swift             | 348 +++++++++++++++++++
+ .../SessionComparisonChart.Views.swift             | 189 ++++++++++
+ .../feature-views/SessionComparisonChart.strings   |  56 +++
+ .../feature-views/SessionComparisonChart.swift     |  68 ++++
+ 9 files changed, 1881 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0089-SessionComparisonChart.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SessionComparisonChart.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SessionComparisonChart.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SessionComparisonChart.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SessionComparisonChart.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SessionComparisonChart.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SessionComparisonChart.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SessionComparisonChart.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SessionComparisonChart.swift

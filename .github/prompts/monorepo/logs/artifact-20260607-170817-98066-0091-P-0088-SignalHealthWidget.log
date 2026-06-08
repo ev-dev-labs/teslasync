@@ -1,0 +1,107 @@
+=== P4 Dashboard widget 0088 SignalHealthWidget (Apple) ===
+generated: 2026-06-08T02:17:33Z
+host: Darwin 25.5.0 arm64
+
+--- Capability probe (ADR: requires SwiftUI + Swift Charts + MapKit, Xcode iOS18/macOS15) ---
+swift:       swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+swiftlint:   0.63.3
+swiftformat: 0.61.1
+pwsh:        PowerShell 7.6.2
+xcode-select dir: /Library/Developer/CommandLineTools
+xcodebuild:  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+simctl:      xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+
+VERDICT: full Xcode is NOT installed (only CommandLineTools); no iOS simulators.
+         => the xcodebuild build+test gate steps are BLOCKED by platform capability.
+         => all non-xcodebuild checks were run and MUST pass; logic verified headless.
+
+--- [1/5] iOS: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1  (BLOCKED: requires Xcode)
+
+--- [2/5] macOS: xcodebuild -scheme TeslaSync-macOS build test ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1  (BLOCKED: requires Xcode)
+
+--- [3/5] swiftlint --strict ---
+Linting Swift files at paths TeslaSync/dashboard-widgets/SignalHealthWidget.swift, TeslaSync/dashboard-widgets/SignalHealthWidget.Models.swift, TeslaSync/dashboard-widgets/SignalHealthWidget.Adapter.swift, TeslaSync/dashboard-widgets/SignalHealthWidget.Model.swift, TeslaSync/dashboard-widgets/SignalHealthWidget.Views.swift, TeslaSync/dashboard-widgets/SignalHealthWidget.Accessibility.swift, TeslaSync/dashboard-widgets/SignalHealthWidget.Previews.swift, TeslaSync/dashboard-widgets/SignalHealthWidget.Tests.swift, TeslaSync/dashboard-widgets/SignalHealthWidget.strings
+Linting 'SignalHealthWidget.Models.swift' (2/8)
+Linting 'SignalHealthWidget.swift' (1/8)
+Linting 'SignalHealthWidget.Adapter.swift' (3/8)
+Linting 'SignalHealthWidget.Model.swift' (4/8)
+Linting 'SignalHealthWidget.Accessibility.swift' (5/8)
+Linting 'SignalHealthWidget.Previews.swift' (6/8)
+Linting 'SignalHealthWidget.Views.swift' (7/8)
+Linting 'SignalHealthWidget.Tests.swift' (8/8)
+Done linting! Found 0 violations, 0 serious in 8 files.
+LINT_EXIT_MYFILES=0  (0 = my 8 swift files are swiftlint-clean)
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-91/apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length Violation: Function body should span 50 lines or less excluding comments and whitespace: currently spans 78 lines (function_body_length)
+Done linting! Found 1 violation, 1 serious in 323 files.
+LINT_NOTE: full-project swiftlint --strict reports 1 PRE-EXISTING violation in
+  TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (P4/0055, function_body_length)
+  — outside this prompt's allowed files (SignalHealthWidget.*); unmodified committed state.
+
+--- [4/5] swiftformat --lint apps/apple ---
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-91/apps/apple/.swiftformat
+SwiftFormat completed in 0.16s.
+0/327 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+--- [5/5] check-placeholders.ps1 ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT_GATEPATH=0
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT_REALSCAN=0  (real scan of my 8 swift files)
+
+--- [supplementary] headless verification (swift 6.3.2, CommandLineTools SDK) ---
+Compensates for the BLOCKED xcodebuild build/test by proving the code compiles +
+the adapter logic matches the web source, to the extent possible without Xcode.
+
+[A] swiftc -typecheck (Swift 6 strict) — Foundation logic: Models + Adapter + Accessibility
+TYPECHECK_LOGIC_EXIT=0
+[B] swiftc -typecheck (Swift 6 strict) — ALL SwiftUI surfaces vs signature-accurate dep stubs
+TYPECHECK_VIEWS_EXIT=0  (Model+Views+swift+Previews vs stubs; #Preview excluded w/o -DDEBUG)
+[C] runtime parity harness — adapter values vs web source (executed)
+  PASS totalSignals==8
+  PASS active==3
+  PASS stale==3
+  PASS gapOrder F,E,D
+  PASS freshnessAge==5
+  PASS level==red(0.5)
+  PASS stats 8/3/3/5s
+  PASS compactBadge 3/6
+  PASS amber 5/1
+  PASS green 5/0
+  PASS formatAge 60=1m
+  PASS rel 2d
+  PASS integer 1000
+  PASS phase loaded/false=empty
+  PASS phase failed/true=content
+  PASS fresh offline>error
+  PASS a11y Status Critical
+  PASS a11y gap nil dash
+HARNESS_RESULT=ALL_PASS (19 checks)
+HARNESS_EXIT=0
+
+--- Acceptance criteria ---
+[x] Surface renders all web states (loading/empty/error/stale/offline/content) + 3 layouts (compact/standard/wide)
+[x] Hooks bound via shared P1/S8 state-holder seam (SignalHealthSource); no HTTP in the view
+[x] Every web i18n key present in P1/S10 table (SignalHealthWidget.strings)
+[x] Accessibility labels on every element + VoiceOver summary (SignalHealthAccessibility)
+[x] Tests: adapter parity + per-state model + registry clamp + a11y (SignalHealthWidget.Tests.swift)
+[x] No TODO/stub/mock/placeholder/Lorem (placeholder gate = 0)
+[~] xcodebuild build+test: BLOCKED (CommandLineTools only; no Xcode/simulators) — see capability probe
+
+--- Gate roll-up ---
+IOS_EXIT=1 (BLOCKED) ; MAC_EXIT=1 (BLOCKED) ; LINT(myfiles)=0 ; FORMAT=0 ; PLACEHOLDER=0
+Headless: TYPECHECK_LOGIC=0 ; TYPECHECK_VIEWS=0 ; HARNESS=ALL_PASS
+Gate requires every step==0; iOS+macOS xcodebuild cannot run on this runner (platform capability).
+
+EXIT=1
+STATUS=BLOCKED

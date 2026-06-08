@@ -1,0 +1,111 @@
+I'll start by exploring the repository structure, reading the web source, and checking platform capabilities.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swift`, `swiftlint`, `swiftformat` ARE available. Let me explore the structure deeply before deciding on approach.
+
+Now I understand the web widget. Let me explore the existing Apple app conventions, the predecessor surfaces, and the supporting layers (state holders, tokens, i18n, diagnostics).
+
+Critical discrepancy: the XcodeGen project builds from `apps/apple/Sources/`, not `apps/apple/TeslaSync/`. Let me check where predecessor dashboard-widget surfaces live and examine the supporting layers.
+
+No predecessor dashboard-widget surfaces exist yet — this is the first. The supporting layers (Components, SharedFacade, Design, Localization) exist. Let me read them to follow conventions.
+
+Good — I understand the design-system components. Now let me read the data layer (web hook + types), the SharedFacade state-holder pattern, and lint configs.
+
+The Apple app binds to a KMP `Shared.xcframework` (Kotlin core) — and git history shows that's BLOCKED on this runner (no JDK/Shared.xcframework), plus no full Xcode and no pwsh. Let me confirm the facade/telemetry conventions and the shared-core API surface before implementing.
+
+The binding pattern is clear (StateHolderModel + LoadableState over a KMP `Shared` flow). Now let me gather the telemetry contract, design tokens, data-display components, lint configs, capability evidence, and the i18n catalog format.
+
+pwsh and xcodegen ARE available, but `Frameworks/Shared.xcframework` is empty (just `.gitkeep`) and there's no full Xcode — so anything importing `Shared` can't compile/build here. Let me gather the remaining conventions: design tokens, diagnostics sink, data-display components, lint configs, and prior BLOCKED-log format.
+
+pwsh + xcodegen + JDK17 exist, but `Shared.xcframework` is empty and there's no full Xcode — so the KMP-linked app can't build here. Also note: `.swiftlint.yml` only includes `Sources/`, and the XcodeGen app targets root at `Sources/`. Let me read the tokens, data-display components, logging convention, and check for an existing diagnostics contract.
+
+Excellent — I now have the full design-token + component picture. Let me read the web composition pieces (WidgetShell, WidgetGaugeHero, types) and the Apple logging/diagnostics + test conventions + i18n catalog format.
+
+I now fully understand the web composition (gauge hero + stat wrap, shell with skeleton/queryerror/freshness). Let me read the remaining native conventions: feedback/typography/badge components, logging style, a test example, and a Live view binding pattern.
+
+I have the component inventory. Let me read exact signatures for the components I'll use, a Live view's binding/`.task` pattern, a test example, and the xcstrings format.
+
+I have the complete component inventory. Let me read one Live view's model/`.task` binding pattern, a test example, and the xcstrings format before implementing.
+
+The 9 i18n keys already exist in the catalog (P1/S10 dependency populated them). Let me confirm the exact keys/values and check connectivity + registry conventions, then I can implement.
+
+All 9 i18n keys already exist (prefixed `translation.widget.batteryHealthAnalytics.*`) with ar/en/he. Let me confirm the key-reference convention in native code and the connectivity/offline source, then implement.
+
+There's an existing `WidgetChrome.swift` with a freshness model (`widget.freshness.*` keys) I should reuse for consistency. Let me read it and the freshness model.
+
+I now have everything needed. Let me read the `WidgetFreshness` model (to reuse it) and confirm the Tests layout, then implement.
+
+All 9 i18n keys exist (`translation.widget.batteryHealthAnalytics.*`), plus reusable `widget.freshness.*` keys and a `WidgetFreshness` model. Let me read `FacadeError` to finalize the model's error handling, then write a plan and implement.
+
+I now have a complete understanding. Let me set up tracking and write the implementation. Key decisions:
+- **Path**: honor the prompt's `apps/apple/TeslaSync/dashboard-widgets/` and wire it into `project.yml` + `.swiftlint.yml` (both required for the surface to actually build/lint).
+- **i18n**: all 9 keys already exist in the catalog (`translation.widget.batteryHealthAnalytics.*`) — no catalog edit needed.
+- **Capability**: no full Xcode + empty `Shared.xcframework` → `xcodebuild` BLOCKED; but `swiftlint`/`swiftformat`/pure-logic `swift` compile CAN run.
+
+Now let me write the pure projection file (Foundation-only, isolation-testable):
+
+Now the SwiftUI view + model + telemetry file:
+
+Now let me add a testable render-branch helper to the projection and refactor the surface to use it (prevents drift and enables per-state tests):
+
+Now refactor the surface body to switch on the shared `renderBranch`:
+
+Now the XCTest file covering adapter, per-state, formatting, a11y/i18n keys, footprint, and telemetry:
+
+Now wire the new source group into the build (`project.yml`, both app targets) and lint (`​.swiftlint.yml`):
+
+Now let me verify with the available tooling. First, auto-format my new files to the project style, then run the strict linters:
+
+Only my 3 new files need formatting (the other 260 are clean). Let me auto-format them to the project style:
+
+swiftformat `--lint` passes (0/263 require formatting). Now swiftlint --strict:
+
+File-length rule (400 lines max) — my main view file is 528 lines after formatting. Let me check all line counts and split the view file:
+
+Clean split needed. Let me view the sections to extract the Surface + GaugeHero + Previews into a second file:
+
+Now create the Surface file and trim the main file to resolve the file-length violation:
+
+Now trim the main file to remove the moved sections. Let me confirm the cut point:
+
+All files now under 400 lines. Let me re-run both linters to confirm clean:
+
+Both pass: **swiftformat `--lint` = 0 issues**, **swiftlint `--strict` = 0 violations**. Now let me get real executable proof of the pure adapter/formatting/state logic by compiling and running it standalone with `swift` (since XCTest can't run without Xcode/Shared):
+
+**All 38 pure-logic assertions pass** — real executable proof of the adapter, formatting, states, and footprint. Now let me validate the project spec (xcodegen), run the placeholder check, and capture the xcodebuild capability evidence:
+
+xcodegen validates the spec (exit 0) and the widget files are now target members (24 refs). The generated `.xcodeproj` isn't gitignored in this worktree, so I'll remove that build artifact. Let me clean up, run the placeholder check (pwsh), and capture the xcodebuild capability evidence:
+
+Placeholder check passes (`PLACEHOLDER_COUNT=0, EXIT=0`). Note: the two `web/...admin` files were already modified in this worktree before I started — not mine; I'll stage only my files. Now let me capture the real xcodebuild capability evidence for the log:
+
+All evidence captured. The xcodebuild gate is genuinely BLOCKED (CommandLineTools only + empty `Shared.xcframework`), while every runnable check is green. Let me write the honest gate log:
+
+Let me review the SwiftUI files for correctness (linters don't type-check). Checking imports and `lastUpdated` usage:
+
+Two fixes: add `import Observation` (needed for `@Observable`/`withObservationTracking`, per repo convention) and surface the `lastUpdated` relative time in the header (web parity):
+
+Re-run the linters after these edits:
+
+Let me do a final type-correctness review of the Shared-dependent model file (can't compile it here):
+
+The model and view code follow established repo patterns correctly. Let me add `import Foundation` to the test file (uses `String(localized:)`, `NSDictionary`) and re-lint:
+
+All green: **swiftformat `--lint` = 0**, **swiftlint `--strict` = 0 violations**. Let me clean up the temp harness and commit only my files (the pre-existing `web/...admin` changes stay unstaged):
+
+Exactly my 7 intended files staged. Now commit:
+
+Committed cleanly (7 files, 1227 insertions); the pre-existing `web/...admin` changes remain untouched. Let me finalize tracking:
+
+## Summary
+
+I shipped a production-complete, Apple-idiomatic SwiftUI implementation of **`BatteryHealthAnalyticsWidget`** at parity with the web source, and verified everything runnable on this runner.
+
+**Delivered** (`apps/apple/TeslaSync/dashboard-widgets/`):
+- **`.Projection.swift`** — Foundation-only adapter: null-safe `from(json:)/from(any:)`, score bands (80/50 thresholds), locale-aware `fmtInt/fmtNumber`, the 6 stat descriptors (exact web order/keys/units), gauge fraction, and view-state resolution + render-branch.
+- **`.swift`** — `@Observable` model binding the P1/S8 shared `StateFlow<Resource>` (StateHolderModel + LoadableState + `AppContainer.loadable`), offline/stale/fetching/lastUpdated derivation, `view.opened` telemetry seam, and the widget entry view.
+- **`.Surface.swift`** — renders **every** state (loading skeleton / content / empty / QueryError+retry / stale chip / offline chip / fetch spinner / cached-with-retry), score-banded SoH gauge + adaptive stat grid; VoiceOver labels, Dynamic Type, Reduce Motion; previews per state.
+- **Tests** + wired the `dashboard-widgets` group into both app targets (`project.yml`) and `.swiftlint.yml`. i18n needed no edits — all 9 `translation.widget.batteryHealthAnalytics.*` keys already exist (ar/en/he).
+
+**Verification (all green):** swiftlint `--strict` = 0 · swiftformat `--lint` = 0 · placeholder check = 0 · `xcodegen generate` valid (files are members of iOS+macOS targets) · standalone `swiftc` compile+run of the pure projection = **38/38 assertions pass**.
+
+**Gate status: `STATUS=BLOCKED` (EXIT=1)** — honest, per the prompt's capability clause. `xcodebuild` iOS+macOS build/test cannot run here: only CommandLineTools is installed (no full Xcode) and `Frameworks/Shared.xcframework` is empty (KMP core not built), so the `Shared`-linked app module + XCTest bundle can't build. Evidence is in `.github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0014-BatteryHealthAnalyticsWidget.log`. Committed as `d286c1f2`.
+

@@ -1,0 +1,112 @@
+=== P4 Feature view 0001 AlertDetailTimeline (Apple) ===
+date: 2026-06-08T02:41:26Z
+host: Darwin 25.5.0 arm64
+web source (spec): web/src/features/admin/components/AlertDetailTimeline.tsx
+native output: apps/apple/TeslaSync/feature-views/AlertDetailTimeline.{swift,Model.swift,Adapter.swift,Previews.swift,Tests.swift,strings}
+
+############################################################
+## RUNNER CAPABILITY PROBE (ADR-002 SwiftUI/Charts/MapKit, iOS18/iPadOS18/macOS15)
+############################################################
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+$ xcrun simctl list devices
+xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+$ swift --version
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+Target: arm64-apple-macosx26.0
+
+FINDING: the active developer dir is Command Line Tools, NOT a full Xcode.
+  => xcodebuild build/test, the iOS Simulator (simctl), the XCTest runner, and the
+     SwiftUI #Preview macro plugin (PreviewsMacros) are ALL unavailable on this runner.
+     Per the prompt Capability clause the xcodebuild gate is BLOCKED here; every
+     non-Xcode verification was still executed (below) and passes.
+
+############################################################
+## GATE STEPS (verbatim from the prompt)
+############################################################
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1   # BLOCKED: requires full Xcode + iOS 18 Simulator (see probe)
+
+$ xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1   # BLOCKED: requires full Xcode (macOS 15 app target)
+
+$ swiftlint --strict   (whole tree, repo apps/apple/.swiftlint.yml 'included')
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-122/apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length Violation: Function body should span 50 lines or less excluding comments and whitespace: currently spans 78 lines (function_body_length)
+LINT_EXIT=2  # 1 PRE-EXISTING violation: TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+             # (function_body_length). NOT this surface; NOT in this prompt's allowed-files scope.
+             # The 5 shipped AlertDetailTimeline.* files lint CLEAN (supplementary run below).
+
+$ swiftformat --lint apps/apple
+0/453 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/AlertDetailTimeline
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+############################################################
+## SUPPLEMENTARY VERIFICATION (non-Xcode; executed + green on this runner)
+############################################################
+--- swiftlint --strict on ONLY the 5 AlertDetailTimeline.* files (repo rules) ---
+Done linting! Found 0 violations, 0 serious in 5 files.
+
+--- swiftformat --lint TeslaSync/feature-views ---
+0/5 files require formatting.
+
+--- swiftc -typecheck  (Swift 6, strict concurrency, arm64-apple-macos15.0) ---
+    AlertDetailTimeline.Model.swift + .Adapter.swift + .swift  (+ faithful shared-symbol shim)
+TYPECHECK_EXIT=0  (0 = type-correct vs the real macOS 15 SDK + shared signatures)
+
+--- swiftc -typecheck of the 8 #Preview BODIES (macro wrapper -> plain funcs; PreviewsMacros is Xcode-only) ---
+    transformed preview functions: 8
+PREVIEW_BODIES_TYPECHECK_EXIT=0
+
+--- swiftc -parse (syntax) Previews + Tests (full check/run needs Xcode XCTest + PreviewsMacros) ---
+PREVIEWS_PARSE_EXIT=0
+TESTS_PARSE_EXIT=0
+
+############################################################
+## PARITY / ACCEPTANCE NOTES
+############################################################
+web leaf is presentational (parent useAlertDetail owns load/error/freshness). This feature view sits
+one level below the page, so — like the GuardModeWidget precedent — it owns those surfaces directly.
+* Data: bound via shared state-holder seam AlertTimelineSource/AlertTimelineModel (P1/S8); NO HTTP in view.
+* Every state renders: loading (TSSkeleton) / empty (TSEmptyState) / error (retry) / content (TSTimeline)
+    + live/stale/offline freshness chip + reconnecting/offline banner.
+* Shared components -> native counterparts: <Timeline> -> TSTimeline; <EmptyState> -> TSEmptyState.
+* i18n (P1/S10): all strings via AlertTimelineStrings table 'AlertDetailTimeline'. Web keys reproduced:
+    alerts.timeline.title, .empty, .kind.{created,acknowledged,reopened,commented},
+    .kindAnonymous.{created,acknowledged,reopened,commented}. No English literals in code paths.
+* a11y: VoiceOver labels on header/chip/refresh/retry/banner; AlertTimelineAccessibility.summary tested;
+    Dynamic Type (AX3) preview; reduce-motion honored via shared TSSkeleton.
+* Telemetry (P1/S11): AlertTimelineModel.start() emits viewOpened(surface:"AlertDetailTimeline") once (tested).
+* Tests: adapter cached->projection (titles/keys/actor-trim/note/glyph/tone/date) + model phase/telemetry/wiring
+    + a11y summary. (Execution needs the Xcode XCTest runner — BLOCKED here; syntax parsed clean.)
+* check-placeholders: PLACEHOLDER_COUNT=0 (no TODO/stub/mock/placeholder/Lorem).
+
+INTEGRATION (P4-core / project wiring; OUTSIDE this prompt's allowed files = AlertDetailTimeline.* + this log):
+  1. apps/apple/project.yml  -> add source path 'TeslaSync/feature-views' to TeslaSync & TeslaSync-macOS.
+  2. apps/apple/.swiftlint.yml -> add 'TeslaSync/feature-views' to 'included:'.
+  3. test target -> include AlertDetailTimeline.Tests.swift (same convention as dashboard-widgets *.Tests.swift).
+  Deliberately NOT modified here to honor the allowed-files constraint.
+
+############################################################
+## RESULT
+############################################################
+The shipped surface is COMPLETE and verified to the maximum extent this runner allows:
+  TYPECHECK_EXIT=0, PREVIEW_BODIES_TYPECHECK_EXIT=0, PREVIEWS_PARSE_EXIT=0, TESTS_PARSE_EXIT=0,
+  surface swiftlint=0 violations, swiftformat=clean, PLACEHOLDER_COUNT=0.
+The xcodebuild build/test gate (IOS_EXIT/MAC_EXIT) cannot run: the runner has only Command Line Tools
+(no full Xcode, no iOS Simulator, no XCTest, no PreviewsMacros plugin). Per the prompt Capability clause
+and the Acceptance criterion that allows STATUS=BLOCKED with platform-capability evidence, this is a
+platform BLOCK — evidenced above by 'xcode-select -p' (CommandLineTools), the xcodebuild error, and the
+missing simctl. No source defect is implicated.
+
+EXIT=1
+STATUS=BLOCKED

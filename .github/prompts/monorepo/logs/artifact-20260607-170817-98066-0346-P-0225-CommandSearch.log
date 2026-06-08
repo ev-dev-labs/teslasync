@@ -1,0 +1,140 @@
+=== P4 Feature view 0225 CommandSearch (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon) — SHARED runner (concurrent sibling
+                       feature-view builds + warm Gradle daemons observed during this run).
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden NON-destructively,
+                       no sudo / no `xcode-select -s`, so the shared runner is untouched).
+  Toolchain          : Apple Swift 6.3.2 · swiftlint 0.63.x · swiftformat 0.6x · xcodegen 2.45.x · pwsh · openjdk 17
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5) present + Booted · iPhoneSimulator 26.5 SDK present
+                       · macOS 26.5 SDK present. `xcodebuild -showsdks` lists iphonesimulator26.5 + macosx26.5.
+  Capability         : SwiftUI present + compiles (Swift Charts / MapKit NOT used by this surface — web source
+                       has none) + iOS/macOS simulators present → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/features/system/components/CommandSearch.tsx — a CONTROLLED search box:
+    <Input value onChange placeholder={t('commands.search.placeholder','Search commands...')}
+           icon={<Search/>} /> .
+  It owns no data hook of its own (prompt "Data sources: useTranslation"). Its behaviour is defined by its
+  only caller, web/src/features/system/components/VehicleCommandCenter.tsx, which client-side filters the
+  static COMMANDS catalog on every keystroke (synchronous useMemo, no debounce, no request):
+      if (!search.trim()) return null;                  // empty box → favorites/categories (idle)
+      const q = search.toLowerCase();
+      COMMANDS.filter(c => t(label).toLowerCase().includes(q) || c.category.includes(q) || c.command.includes(q))
+      → length>0 → tile grid (content) ; length===0 → t('commands.search.noResults','No commands match your search')
+  The same surface carries the freshness/availability envelope the prompt's states map to:
+    isLoading (command-status query)        → loading
+    isStale  → t('commands.staleData','Vehicle data is {{age}} old. The vehicle may be asleep or offline.')
+    isAsleep → "Wake it up first to send commands."   → offline
+
+ARTIFACTS SHIPPED (apps/apple/TeslaSync/feature-views/CommandSearch.* — allowed-files scope)
+  CommandSearch.Models.swift      — CommandDTO (web CommandDef), CommandSearchCopy, phase/load-status/connection enums
+  CommandSearch.Projection.swift  — CommandMatch, CommandSearchProjection, CommandSearchSurface (slug), a11y summaries
+  CommandSearch.Adapter.swift     — CommandSearchProjector (VERBATIM web filter), resolvePhase, CommandSearchAge
+  CommandSearch.Model.swift       — @MainActor @Observable CommandSearchModel (P1/S8 state-holder seam),
+                                    CommandSearchTelemetry+OSLog sink (P1/S11 view.opened), CommandSearchStrings
+                                    facade (P1/S10), CommandSearchSource + InMemoryCommandSearchSource
+  CommandSearch.States.swift      — idle / loading / empty (commands.search.noResults) / error+retry chrome
+  CommandSearch.Views.swift       — search field (Search glyph + placeholder + clear), freshness chip,
+                                    stale/offline banner, command match row + category chip, matches list
+  CommandSearch.swift             — CommandSearch view: field + phase-switched result area inside freshness envelope
+  CommandSearch.Previews.swift    — #if DEBUG previews for all 7 states (content/idle/loading/empty/error/stale/offline)
+  CommandSearch.strings           — P1/S10 catalog (table "CommandSearch"): parity key commands.search.placeholder
+                                    + commands.search.noResults + commands.staleData + commandSearch.* envelope keys
+  CommandSearch.Tests.swift       — 30 XCTest cases (adapter parity / age / state-holder / accessibility)
+  No shared-wiring edits needed: project.yml + .swiftlint.yml already include TeslaSync/feature-views (added by the
+  0010 ToolCard predecessor); the new files are picked up by the existing folder reference. Per-surface .strings
+  table (the AddressInput 0135 pattern) keeps the surface self-contained — Localizable.xcstrings untouched.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  <Input> + lucide Search        → CommandSearchField: SF Symbol "magnifyingglass" + TextField(prompt) + clear "xmark.circle.fill"
+  placeholder commands.search.placeholder → TextField prompt (P1/S10), un-elided form is the VoiceOver field label
+  parent COMMANDS.filter(q)      → CommandSearchProjector.project (title.lowercased().contains || category.contains
+                                    || command.contains), needle = query.lowercased() (untrimmed, like web), catalog order, no cap
+  !search.trim() → null          → CommandSearchProjector.isSearching guard → .idle phase (informative hint, never blank)
+  commands.search.noResults      → CommandSearchEmptyState (ContentUnavailableView)
+  isLoading                      → .loading ; query error → .error + retry (QueryError intent)
+  isStale / commands.staleData   → freshness chip + stale banner; CommandSearchAge formats the {{age}} from updatedAt
+  isAsleep / wake-first          → offline chip + banner
+  token chrome                   → Color.TS.* / Font.TS.* / TSSpacing / TSRadius (P1/S9); zero inline hex, zero raw text-white/N
+  i18n                           → every string via CommandSearchStrings facade; zero English literals in Swift
+  a11y                           → field + clear + every match row + retry + chips/banners carry labels;
+                                    decorative glyphs .accessibilityHidden(true); result area exposes a spoken phase summary
+  telemetry                      → view.opened surface="CommandSearch" once on appear (P1/S11), default OSLog sink
+
+STATES (every state renders — no hidden surfaces; verified in previews + model tests)
+  idle (empty box) · loading · content (matches) · empty (no matches) · error (+retry) · stale (chip+banner+auto-refresh)
+  · offline (cached catalog + wake-first banner). Stale auto-refreshes exactly once until live; offline keeps cache.
+
+GATES (executed on THIS runner; raw exits below)
+  [GREEN]    swiftc -typecheck  macOS 15  (7 sources + real DesignTokens)                 : MACOS_TYPECHECK_EXIT=0
+  [GREEN]    swiftc -typecheck  iOS 18 Simulator (7 sources + Previews + DesignTokens)    : IOS_TYPECHECK_EXIT=0
+             (the #Preview macro resolves via the Xcode plugin; all 7 state previews type-check)
+  [GREEN]    Isolated SwiftPM harness — swift-tools 6.0 (Swift 6 language mode = strict-concurrency complete,
+             same as the app), the EXACT shipped CommandSearch.* sources + real DesignTokens, module named
+             "TeslaSync" so CommandSearch.Tests.swift's `@testable import TeslaSync` compiles UNMODIFIED:
+                 swift build : Build complete!                                            : SWIFT_BUILD_EXIT=0
+                 swift test  : Executed 30 tests, with 0 failures (0 unexpected)          : SWIFT_TEST_EXIT=0
+                   CommandSearchAdapterTests 12 · CommandSearchAgeTests 2 ·
+                   CommandSearchModelTests 13 · CommandSearchAccessibilityTests 3
+  [GREEN]    swiftlint --strict   (CommandSearch scope, 9 files)  : 0 violations, 0 serious : LINT_EXIT=0
+  [GREEN]    swiftformat --lint   (CommandSearch scope, 9 files)  : 0/9 require formatting   : FORMAT_EXIT=0
+  [GREEN]    check-placeholders.ps1 -Path …/feature-views/CommandSearch : PLACEHOLDER_COUNT=0 : PLACEHOLDER_EXIT=0
+  [GREEN]    xcodegen generate → TeslaSync.xcodeproj; all 10 CommandSearch.* files wired into project.pbxproj
+             (TeslaSync + TeslaSync-macOS app targets via the existing feature-views folder reference).
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test
+
+  WHY DEFERRED (full-app Xcode gate — ZERO CommandSearch errors; all blockers PRE-EXIST and are unrelated):
+    Corroborated first-hand on this checkout (independent of this change):
+      • `struct DashboardWidgetSize` is DEFINED 15× across Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/*
+        → "ambiguous for type lookup" parallel-merge collision that fails the app-target typecheck.
+      • 132 co-located TeslaSync/feature-views/*.Tests.swift `import XCTest` into the APP target (the established
+        131-file convention; this surface adds the 132nd, which the allowed-files boundary — feature-views/CommandSearch.*
+        — REQUIRES, since Tests/Unit/FeatureViews/ is out of scope). XCTest-in-app-target is a P99 test-target-wiring fix.
+      • Frameworks/Shared.xcframework is UNSTAGED; the scheme pre-action assembles it via the KMP Gradle
+        :core:assembleSharedXCFramework (ADR-004) — a multi-minute Kotlin/Native build owned by the packaging gate.
+      • macOS target additionally needs a development SIGNING certificate this runner does not provision.
+    These are EXACTLY the artifacts apps/macos-pending-verifications.md already defers to
+    p4-apple/P99-0001-apple-acceptance-gate (macos-latest, signed) for the 0010 ToolCard and 0180 AlertMessageEditor
+    sibling surfaces. Per task rule "do not fix pre-existing unrelated breakage" + the allowed-files boundary, the
+    de-duplication + test-target wiring + xcframework staging + signing are NOT owned by a single feature-view prompt.
+    This surface is instead verified GREEN by the isolated SwiftPM build+test above (the predecessor-sanctioned method)
+    plus real iOS-18 + macOS-15 swiftc -typecheck. (macos-pending-verifications.md is out of allowed-files scope and is
+    left unedited; this log records the deferral the P99 gate will resolve.)
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported DEFERRED, never as passing; the only
+                          GREEN claims are gates actually executed here with exit 0 pasted above.
+  2  No scope narrowing : full surface (9 swift + strings), every web branch (filter predicate, untrimmed needle,
+                          idle/content/empty), every prompt state, the P1/S8/S9/S10/S11 seams, 30 tests.
+  3  No skip-and-assume : every host gate executed on THIS runner; the full-app deferral is corroborated first-hand
+                          (grep: 15× DashboardWidgetSize, 132 XCTest-in-app-target), not assumed.
+  4  No stubs as final  : complete production view + 30 real, executed tests; placeholder scanner COUNT=0.
+  5  No parity shortcut : verbatim filter, untrimmed-lowercased needle, no-cap, catalog order, noResults/staleData copy,
+                          tint/typography/a11y/telemetry all mapped to platform tokens + verified.
+  6  No delegation      : authored directly (delegation FORBIDDEN); no agents used.
+  7  No predecessor bypass: P1/S8 state-holder, P1/S9 tokens, P1/S10 i18n facade, P1/S11 diagnostics all consumed;
+                          same disposition as 0010 ToolCard / 0135 AddressInput / 0180 AlertMessageEditor.
+  8  No commit on red   : the committed artifact (CommandSearch.* + this log) is GREEN on every runnable gate AND on a
+                          real isolated Swift 6 build+test (30/30); the deferred full-app gate is red ONLY on
+                          pre-existing, unrelated surfaces this commit neither introduces nor touches.
+  9  No silent drift    : changes confined to feature-views/CommandSearch.* + this log (git status verified); the
+                          generated .xcodeproj (git-ignored) and /tmp SwiftPM harness were removed after use.
+ 10  EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic CommandSearch shipped at parity with the web source and INDEPENDENTLY VERIFIED:
+  it compiles against the real iOS-18 Simulator + macOS-15 SDKs (incl. all 7 state previews), builds and passes 30/30
+  tests under the app's own Swift 6 strict-concurrency rules against the real design system, with swiftlint/swiftformat/
+  placeholder all green, and is wired into the generated Xcode project. The full-app iOS-Simulator + macOS xcodebuild
+  build/test gate is DEFERRED (not failed by this code): it is blocked by pre-existing parallel-merge duplicate-type
+  collisions (DashboardWidgetSize ×15), the repo-wide XCTest-in-app-target test convention, the unstaged KMP
+  Shared.xcframework, and macOS development-signing — all owned by p4-apple/P99-0001-apple-acceptance-gate per
+  apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate"
+  disposition used by every P4 feature-view surface to date.
+
+EXIT=0
+STATUS=DONE

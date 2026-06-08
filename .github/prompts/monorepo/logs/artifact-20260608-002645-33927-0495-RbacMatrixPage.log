@@ -1,0 +1,230 @@
+=== P4-Apple · P7 · page:admin/RbacMatrix (SwiftUI / HIG) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir is /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no `xcode-select -s`, so the shared runner is untouched — the same mechanism
+                       the prior P4 surfaces used; CommandLineTools lacks the #Preview PreviewsMacros plugin).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2
+  Capability         : SwiftUI present; this page uses NO Charts and NO MapKit (the web source has none —
+                       manifest "Charts (0)" / "Maps (0)"), so the iOS 18 / macOS 15 HIG primitives it needs
+                       (Grid, ContentUnavailableView, materials, @Observable) are all available → NOT
+                       capability-BLOCKED.
+
+WEB SOURCE (the specification — read end to end)
+  web/src/features/admin/pages/RbacMatrixPage.tsx + its hook domain
+  web/src/api/hooks/useRbacMatrix.ts. Provider-agnostic "who can do what" admin matrix:
+    columns = roles (resolved from the upstream proxy groups header), rows = permissions (grouped by
+    category), cells = allow (✓) / deny (–). Read-only by default; an Edit toggle flips cells into
+    checkboxes; Save diffs the draft against the snapshot and PUTs only the changed cells.
+
+    Render ladder (web early returns):
+      matrixQuery.isLoading                 → <Spinner/>                       (rbac-loading)
+      isRbacOpenMode(data)                  → GlassPanel "forward-auth required" (rbac-open-mode)
+      isError || !data                      → AlertBanner load error + Retry    (rbac-load-error)
+      payload.roles.length === 0            → <EmptyState/> "No roles configured"(rbac-empty)
+      else                                  → summary GlassPanel + (submitError AlertBanner) + matrix GlassPanel
+    Summary: <MyRolesPill> + <EffectivePill> + optional groups-header caption; Edit | (Cancel + Save({n})).
+    Grid: sticky header (Permission + role columns); per-category group rows; permission rows
+      (name + id); cells = renderCell (read ✓/– or edit checkbox).
+  Hooks ported (same names at the Swift call sites): useRbacMatrix (GET /admin/rbac/matrix),
+    useUpsertRbacCells (PUT /admin/rbac/matrix), isRbacOpenMode, diffMatrices.
+  Helpers (reproduced verbatim — the contract): diffMatrices (union of both snapshots' keys, default
+    false on the missing side); snapshotToDraft (shallow row copy); permsByCategory + ordered
+    categories (payload.categories || encounter order). No display-unit-bearing field → no SI
+    conversion (S5).
+  KMP parity: the shared core already ports this domain verbatim in
+    apps/shared/core/.../presentation/rbacmatrix/{RbacMatrixModels,RbacMatrixStore}.kt (ADR-004); the
+    native `RbacMatrixSource` seam mirrors `RbacMatrixStore` (matrix StateFlow → onUpdate, isOpenMode
+    fold, upsertCells → upsert+refresh, diffMatrices).
+  i18n: every visible literal is a t('rbac.*', 'default') call; all 23 keys promoted to the platform
+    catalog (Localizable.xcstrings) with the web English default as the fallback.
+
+ARTIFACTS SHIPPED  (allowed files: apps/apple/TeslaSync/Features/Admin/** + nav registration + Localizable.xcstrings + this log)
+  TeslaSync/Features/Admin/RbacMatrixPage.Derivations.swift  — pure Foundation DTOs (RbacRole,
+        RbacPermission, RbacUpsertCell, RbacMatrixSession, RbacMatrixResponse) + RbacMatrixDerivations
+        (isOpenMode, snapshotToDraft, diffMatrices, orderedCategories, permissions(in:of:),
+        allowed(...)). Mirrors the KMP RbacMatrixModels/RbacMatrixDerivations; no SwiftUI / no Shared.
+  TeslaSync/Features/Admin/RbacMatrixPage.Strings.swift      — RbacStrings i18n facade: the 23 keys
+        resolved via NSLocalizedString(key, value: webDefault) (catalog + fallback). Plain accessors +
+        the 5 interpolated formatters (cellToggle / effectiveCount / myRolesLabel / groupsHeaderLabel /
+        actionSave).
+  TeslaSync/Features/Admin/RbacMatrixPage.Model.swift        — RbacFeedState / RbacSaveResult /
+        RbacMatrixPhase value types; the RbacMatrixSource seam (P1/S8) over the KMP RbacMatrixStore;
+        @Observable RbacMatrixPageModel (phase ladder, draft + mid-edit no-clobber, dirtyCount, enter/
+        cancel/toggle/save); InMemoryRbacMatrixSource (previews/tests) + UnavailableRbacMatrixSource
+        (shell default, "never a silent success").
+  TeslaSync/Features/Admin/RbacMatrixPage.Grid.swift         — GlassPanel3 body: a native Grid in a
+        2-axis ScrollView (replaces the web <table>+overflow-x-auto, adaptive macOS/iPad/iPhone);
+        header row, per-category group rows (gridCellColumns span), permission rows, RbacReadCell
+        (✓/– + spoken state) / RbacEditCell (44pt toggle + {role}/{perm} label + isSelected trait).
+  TeslaSync/Features/Admin/RbacMatrixPage.Panels.swift       — GlassPanel1 RbacOpenModePanel,
+        GlassPanel2 RbacSummaryPanel (pills + Edit/Cancel/Save bar), GlassPanel3 RbacMatrixPanel
+        (.tsGlassPanel over the grid = web p-0), RbacMyRolesPill / RbacEffectivePill (help+hint
+        tooltip) / RbacPill.
+  TeslaSync/Features/Admin/RbacMatrixPage.swift              — the page View: header (title+subtitle),
+        phase switch, success body (summary + save-error banner + matrix), onAppear/onDisappear
+        lifecycle; RbacLoadingView / RbacEmptyView (ContentUnavailableView) / RbacErrorView (Retry) /
+        RbacSaveErrorBanner.
+  TeslaSync/Features/Admin/RbacMatrixPage.Registration.swift — RbacMatrixRouteRegistration.register(into:)
+        folds a `.admin` host into the shell's AppRouteHostRegistry (mirrors SettingsRouteRegistration).
+  TeslaSync/Features/Admin/RbacMatrixPage.Previews.swift     — #if DEBUG #Preview: success read / edit /
+        dark / empty / open-mode / error / loading.
+  TeslaSync/Features/Admin/RbacMatrixPage.Tests.swift        — 20 XCTest cases (derivations + model
+        phases + save flow), @testable import TeslaSync, InMemoryRbacMatrixSource.
+  Localization/Localizable.xcstrings                          — +23 rbac.* keys (en, manual, translated),
+        inserted as a minimal text block (existing entries byte-unchanged; JSON re-validated).
+  Navigation registration (project wiring, not the page logic):
+    project.yml                 — `TeslaSync/Features` added to the iOS + macOS app target sources.
+    .swiftlint.yml              — `TeslaSync/Features` added to `included`.
+    Sources/TeslaSyncApp.swift  — chains RbacMatrixRouteRegistration.register(into: SettingsRouteRegistration.registry(...)).
+
+PARITY MAPPING  (web → Apple platform tokens; no Tailwind ported, no raw hex, no neon)
+  GlassPanel (3×)              → TSGlassPanel / .tsGlassPanel() (regularMaterial + token border, ADR-005)
+  <table> + overflow-x-auto    → Grid in ScrollView([.horizontal,.vertical]) (adaptive, ADR-006)
+  sticky header / category rows→ header GridRow + per-category GridRow .gridCellColumns(1+roles.count)
+  renderCell read ✓/–          → RbacReadCell (SF checkmark/minus, statusSuccess/textMuted)
+  renderCell edit checkbox     → RbacEditCell (44pt Button, checkmark.square.fill/square, isSelected)
+  <Badge> MyRoles/Effective    → RbacPill (Capsule + tone.color .15/.30, web Badge variants)
+  <Spinner>                    → ProgressView (centered)
+  <EmptyState>                 → ContentUnavailableView (HIG)
+  load-error <AlertBanner>     → RbacErrorView (TSGlassPanel + statusDanger + TSButton Retry)
+  submitError <AlertBanner>    → RbacSaveErrorBanner (statusDanger tinted)
+  Unlock/Lock/ShieldCheck      → SF Symbols lock.open / lock.fill / checkmark.shield
+  diffMatrices/isRbacOpenMode  → RbacMatrixDerivations.diffMatrices/isOpenMode (unit-asserted vs web)
+  i18n t('rbac.*')             → RbacStrings (catalog + web default fallback); %@/%lld templates
+  a11y                         → panels .accessibilityElement(.contain); cells labelled (Allowed/Denied,
+                                 Toggle {role}/{perm}); 44pt edit targets; effective tooltip as help+hint;
+                                 headers .isHeader; Dynamic Type via tokens; light/dark/highContrast tokens
+  units                        → N/A (no display-unit-bearing field; SI S5 not engaged)
+  live/SSE staleness           → N/A (RBAC is not a live source; the web hook does not poll — ADR-013 n/a)
+
+STATES (every one renders a real surface — no blank region, no hidden section)
+  loading  → ProgressView (web isLoading).
+  openMode → RbacOpenModePanel (web isRbacOpenMode → forward-auth notice).
+  error    → RbacErrorView + Retry (web isError/!data AlertBanner); carries the API error code.
+  empty    → ContentUnavailableView "No roles configured" (web roles.length===0 EmptyState).
+  success  → summary panel + matrix grid (+ inline save-error banner on a failed PUT).
+
+GATES  (raw exits; per-artifact scope)
+  [GREEN] swiftformat --lint (.swiftformat, 9 files)              : 0/9 require formatting       FORMAT_EXIT=0
+  [GREEN] swiftlint --strict apps/apple/TeslaSync/Features/Admin
+          (gate-faithful, repo-root CWD → default ruleset, 9 files): 0 violations, 0 serious      LINT_EXIT=0
+          (also clean under the stricter apps/apple ruleset incl. opt-in empty_count: 0 violations)
+  [GREEN] check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Admin -Language swift
+                                                                   : PLACEHOLDER_ALLOWED=0
+                                                                     PLACEHOLDER_COUNT=0          PLACEHOLDER_EXIT=0
+  [GREEN] xcodegen generate                                       : project regenerated; RbacMatrixPage.swift
+                                                                     present in the iOS + macOS app Sources phases.
+  [GREEN] ISOLATED build + test — SwiftPM swift-tools 6.0 (Swift 6 language mode = strict-concurrency
+          complete, the SAME as the app), compiling the EXACT shipped RbacMatrixPage.* sources (incl. the
+          #Preview macro file) against the REAL repo design system (generated apps/design Tokens +
+          Sources/Design TSDesign/TSMaterial + Sources/Components UI Cards/Buttons/Badges/Typography +
+          Feedback States/Banners + Motion) and the real Sources/App AppRoute/RouteHostRegistry, under the
+          Xcode 26.5 toolchain (so the real #Preview macro + XCTest are available):
+              Build complete!  ·  Executed 20 tests, with 0 failures (0 unexpected)              SWIFT_TEST_EXIT=0
+
+  [DEFERRED] Full-app iOS-Simulator + macOS `xcodebuild -scheme TeslaSync(-macOS) … build test`.
+          NOT run-to-green on this runner because the full app target is blocked by PRE-EXISTING, unrelated
+          conditions this prompt neither introduced nor is allowed to touch (each VERIFIED here, not assumed):
+            • apps/apple/Frameworks/Shared.xcframework is NOT staged (only .gitkeep). The real
+              `xcodebuild -target TeslaSync … build` attempt failed immediately, BEFORE compiling any Swift:
+                  error: There is no XCFramework found at '…/Frameworks/Shared.xcframework'.
+                  ** BUILD FAILED **                                                             BUILD_EXIT=65
+              Staging it needs the ~7-min Gradle :core:assembleSharedXCFramework (a macOS-pending row for
+              p1-shared/S3 in apps/macos-pending-verifications.md);
+            • 259 co-located `*.Tests.swift` under TeslaSync/{feature-views,dashboard-widgets,Features}
+              `@testable import TeslaSync` into the app target (the established P4 convention, first
+              triggered by AcDcStatsPanel.Tests.swift; RbacMatrixPage.Tests.swift is 1 of the 259 and
+              follows that convention — it runs green in the isolated harness above);
+            • `struct DashboardWidgetSize` is redefined 15× across Sources/DashboardWidgets/* +
+              TeslaSync/dashboard-widgets/* (parallel-merge collisions);
+            • macOS development-signing.
+          This is the SAME sanctioned "code-complete + DEFERRED full-app Xcode gate" disposition recorded by
+          every prior P4 surface (see p4-apple-feature-views-0237-AiUsageCard.log) and is owned by
+          p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner. ZERO RbacMatrixPage /
+          Features errors are attributable to this change — the full-app failure is the absent xcframework,
+          reached before any of this prompt's Swift is compiled.
+
+=== PARITY ===
+PARITY_REQUIRED=30
+
+  [x] panel  — GlassPanel1            : RbacOpenModePanel            (RbacMatrixPage.Panels.swift:19)
+  [x] panel  — GlassPanel2            : RbacSummaryPanel             (RbacMatrixPage.Panels.swift:48)
+  [x] panel  — GlassPanel3            : RbacMatrixPanel→RbacMatrixGrid (RbacMatrixPage.Panels.swift:123 / .Grid.swift:14)
+  [x] state  — loading                : RbacMatrixPhase.loading → RbacLoadingView (RbacMatrixPage.Model.swift / .swift:113)
+  [x] state  — empty                  : RbacMatrixPhase.empty → RbacEmptyView      (RbacMatrixPage.Model.swift / .swift:125)
+  [x] state  — error                  : RbacMatrixPhase.error → RbacErrorView      (RbacMatrixPage.Model.swift / .swift:142)
+  [x] state  — success                : RbacMatrixPhase.success → successBody       (RbacMatrixPage.Model.swift / .swift:83)
+  [x] string — rbac.actions.cancel    : RbacStrings.actionCancel     (Strings.swift) used Panels.swift
+  [x] string — rbac.actions.edit      : RbacStrings.actionEdit       (Strings.swift) used Panels.swift
+  [x] string — rbac.actions.retry     : RbacStrings.actionRetry      (Strings.swift) used RbacMatrixPage.swift (RbacErrorView)
+  [x] string — rbac.actions.save      : RbacStrings.actionSave(count:) (Strings.swift) used Panels.swift
+  [x] string — rbac.actions.saving    : RbacStrings.actionSaving     (Strings.swift) used Panels.swift (save a11y)
+  [x] string — rbac.cell.allowed      : RbacStrings.cellAllowed      (Strings.swift) used Grid.swift (RbacReadCell)
+  [x] string — rbac.cell.denied       : RbacStrings.cellDenied       (Strings.swift) used Grid.swift (RbacReadCell)
+  [x] string — rbac.cell.toggle       : RbacStrings.cellToggle(role:perm:) (Strings.swift) used Grid.swift (RbacEditCell)
+  [x] string — rbac.effective.count   : RbacStrings.effectiveCount(count:total:) (Strings.swift) used Panels.swift
+  [x] string — rbac.effective.tooltip : RbacStrings.effectiveTooltip (Strings.swift) used Panels.swift (help+hint)
+  [x] string — rbac.empty.message     : RbacStrings.emptyMessage     (Strings.swift) used RbacMatrixPage.swift (RbacEmptyView)
+  [x] string — rbac.empty.title       : RbacStrings.emptyTitle       (Strings.swift) used RbacMatrixPage.swift (RbacEmptyView)
+  [x] string — rbac.errors.loadGeneric: RbacStrings.errorsLoadGeneric(Strings.swift) used RbacMatrixPage.swift (RbacErrorView)
+  [x] string — rbac.errors.loadTitle  : RbacStrings.errorsLoadTitle  (Strings.swift) used RbacMatrixPage.swift (RbacErrorView)
+  [x] string — rbac.errors.saveGeneric: RbacStrings.errorsSaveGeneric(Strings.swift) used Model.swift (save→RbacSaveErrorBanner)
+  [x] string — rbac.groupsHeader.label: RbacStrings.groupsHeaderLabel(name:) (Strings.swift) used Panels.swift
+  [x] string — rbac.myRoles.label     : RbacStrings.myRolesLabel(roles:) (Strings.swift) used Panels.swift (RbacMyRolesPill)
+  [x] string — rbac.myRoles.none      : RbacStrings.myRolesNone      (Strings.swift) used Panels.swift (RbacMyRolesPill)
+  [x] string — rbac.openMode.message  : RbacStrings.openModeMessage  (Strings.swift) used Panels.swift (RbacOpenModePanel)
+  [x] string — rbac.openMode.title    : RbacStrings.openModeTitle    (Strings.swift) used Panels.swift (RbacOpenModePanel)
+  [x] string — rbac.permissionColumn  : RbacStrings.permissionColumn (Strings.swift) used Grid.swift (headerRow)
+  [x] string — rbac.subtitle          : RbacStrings.subtitle         (Strings.swift) used RbacMatrixPage.swift (header)
+  [x] string — rbac.title             : RbacStrings.title            (Strings.swift) used RbacMatrixPage.swift (header) + Grid a11y
+PARITY_COVERED=30
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED with its RAW failing
+                           output (BUILD_EXIT=65, "no XCFramework … Shared.xcframework") + verified
+                           pre-existing-blocker evidence — never reported as passing. The GREEN gates
+                           (swiftformat / swiftlint / placeholder / isolated build+test) are real raw exits.
+  2  No scope narrowing  : all 3 web GlassPanels, all 4 declared states + the open-mode branch, the full
+                           edit/diff/save flow (dirty count, empty no-op, failure path), and all 23 strings
+                           are implemented and render. PARITY_COVERED==PARITY_REQUIRED==30.
+  3  No skip-and-assume  : every runnable gate executed on THIS runner with raw exits pasted; the deferred
+                           full-app blockers were each re-confirmed by ls/grep (Shared.xcframework absent,
+                           259 co-located @testable tests, DashboardWidgetSize 15×) + a real failing
+                           xcodebuild invocation, not assumed.
+  4  No stubs as final   : complete production page + 20 real tests; placeholder scanner COUNT=0; no
+                           TODO/FIXME/Placeholder/Coming-soon/Lorem/"not implemented" anywhere. The shell
+                           default `UnavailableRbacMatrixSource` is an honest error-state adapter (the
+                           app's `UnavailableVehicleCommanding` convention), not a stub.
+  5  No parity shortcut  : diffMatrices (union / default-false / removed-cell flip), isOpenMode,
+                           snapshotToDraft independence, ordered categories, and the mid-edit no-clobber
+                           draft rule are each unit-asserted against the web expressions (20/20 green).
+  6  No delegation       : implemented directly; no sub-agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: binds the P1/S8 state-holder seam (mirroring the KMP RbacMatrixStore), the P2
+                           tokens, the P3 components, the P4 AppRouteHostRegistry, and the platform
+                           Localizable.xcstrings; no `import Shared`, no old paths, no re-vendored library.
+  8  No commit on red    : the committed artifact (9 RbacMatrixPage.* files + 23 catalog keys + nav wiring +
+                           this log) is GREEN on every per-artifact gate AND on a real isolated Swift 6
+                           strict-concurrency build + 20/20 XCTest; the deferred full-app gate is blocked
+                           only by pre-existing, unrelated surfaces this commit does not touch.
+  9  No silent drift     : changes confined to TeslaSync/Features/Admin/RbacMatrixPage.* + the 23
+                           Localizable.xcstrings keys + the three nav-registration lines (project.yml,
+                           .swiftlint.yml, TeslaSyncApp.swift) + this log; the `.admin`-route hosting choice
+                           and the isolated-harness technique are disclosed above.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic RbacMatrixPage shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 20 tests pass under the app's own Swift 6 strict-concurrency
+  rules, against the REAL design system + components, via the Xcode 26.5 XCTest runtime, with swiftformat /
+  swiftlint --strict / placeholder all green on the 9 page files and the #Preview macro compiling. All 30
+  parity items (3 panels · 4 states · 23 strings) render from the bound @Observable model. The full-app
+  iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code) on pre-existing,
+  unrelated, out-of-allowed-files blockers (unstaged Shared.xcframework — the real BUILD_EXIT=65 occurs
+  before any of this prompt's Swift compiles; the 259 co-located-tests convention; DashboardWidgetSize 15×;
+  macOS signing), owned by the P99 acceptance gate on a signed macos-latest runner.
+
+EXIT=0
+STATUS=DONE

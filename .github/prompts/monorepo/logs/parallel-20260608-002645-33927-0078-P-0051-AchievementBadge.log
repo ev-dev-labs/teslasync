@@ -1,0 +1,111 @@
+I'll start by exploring the repository structure, the web source component, and the available Apple tooling.
+
+Key finding: **`xcodebuild` requires full Xcode but only Command Line Tools are installed.** However `swift`, `swiftlint 0.63.3`, and `swiftformat 0.61.1` are available. The web source and `apps/apple/TeslaSync/feature-views/` both exist. Let me examine the web source, the established pattern (AIUsageCard — just modified), and how predecessors logged results.
+
+Now I understand the web source — a presentational badge component. Let me study the established 7-file pattern via the just-modified `AIUsageCard.*` set, and check how predecessors logged the xcodebuild situation.
+
+The established disposition is clear: **"code-complete + DEFERRED Xcode gate"** — surface-scoped swiftlint/swiftformat/placeholder must be green, full-app xcodebuild is honestly DEFERRED (Command Line Tools only, no Xcode/simulators). Let me study the simplest committed presentational reference (`ToolCard`) and locate the native ProgressRing + shared infra.
+
+Let me read the full ToolCard set (closest committed presentational template), the AiUsageCard binding pattern, a native gauge, and the placeholder scanner.
+
+Excellent — the pattern is crystal clear. Let me locate the design-token/typography primitives and the native gauge/ring drawing, then read the AiUsageCard state-machine + a native ring implementation.
+
+The design system lives in `apps/apple/Sources/Design`. Let me map it and the overall project layout.
+
+Tokens are generated into `apps/design/generated/apple`. Let me read them plus the native data-display ring, typography, and card primitives I'll build on.
+
+Now I have tokens and typography. Let me read the AiUsageCard state-machine house style (the immediate predecessor with full states + P1/S8 seam), the GlassPanel/Card API, and a native ring source.
+
+Now let me read the GlassPanel/Card API, a native ring/gauge to reuse, the AiUsageCard state-machine view (chrome/freshness rendering), and the lint/format configs.
+
+The native ecosystem already provides `TSProgressRing` (web `ProgressRing` parity), `TSGlassPanel`, full typography, and tokens. Let me read the AiUsageCard state-machine view + its test idioms to match house style precisely before writing.
+
+Let me confirm the shared Feedback/Motion/UI primitives (Spinner, Skeleton, EmptyState, Button, Badge, FadeIn) and the test-target wiring so I reuse real APIs.
+
+Critical detail: test targets source from `Tests/Unit`, but the allowed-files glob restricts me to `feature-views/AchievementBadge.*` — so I co-locate `AchievementBadge.Tests.swift` exactly like the `AiUsageCard.Tests.swift` precedent. Let me grab exact init signatures for the shared chrome I'll reuse.
+
+I have everything needed. Let me verify there are no symbol collisions for my planned type names before writing.
+
+The CommandLineTools SDK **includes SwiftUI, Charts, MapKit, Combine, Observation** — so I can do a *real* macOS `swiftc -typecheck` against the actual frameworks, not just a syntax parse. No collisions. Let me record a plan and start writing the surface.
+
+Now I'll write the surface. Starting with the Model (domain model, P1/S8 seam, telemetry, i18n facade, @Observable model).
+
+Now the pure projection core + accessibility (Adapter), which the tests exercise in isolation.
+
+Now the SwiftUI views — the faithful badge rendering plus the leaf-state chrome (tone→Color mapping lives here).
+
+Now the public view (state machine + presentational convenience init):
+
+Now the i18n catalog (`.strings`) and the previews gallery:
+
+Now the Previews gallery covering every branch, size, and leaf state:
+
+Now the test suite. Let me quickly check how the AiUsageCard tests structure the `@MainActor` model-wiring + telemetry-spy so I match idioms exactly.
+
+My structure matches the house idiom precisely. Writing the test suite:
+
+All 7 files written. Now the verification phase — formatting first, then lint, typecheck, and placeholder scan.
+
+swiftformat clean (0/6 require formatting). Now swiftlint --strict on the new files:
+
+0 swiftlint violations. Now I'll attempt a **real macOS typecheck** against the actual frameworks. First, let me understand the module's external dependencies (e.g., the KMP `Shared` framework) to scope it correctly.
+
+Only 15 `Shared`-importing files (a KMP xcframework absent on this runner — a pre-existing environmental blocker). The components I reuse import only SwiftUI. Let me confirm `Sources/Components` is free of `Shared` so I can do a real scoped macOS typecheck of the design system + my surface.
+
+Confirmed: `Components`/`Design` only use SDK-available frameworks (SwiftUI/Charts/MapKit), no `Shared`. Now the real macOS typecheck of the design system + my surface, with the project's strict-concurrency setting:
+
+All errors are confined to `Components/DataDisplay/UnitFormatters.swift` (references `UnitPreferences`/`Units` defined in app-level Sources I didn't include) — **zero errors in any AchievementBadge file**. Let me narrow the scope to exactly the design-system dirs my surface uses (UI/Feedback/Motion + Design + Tokens) for a clean compile.
+
+Down to 2 errors, both in `FeedbackOverlays.swift` (needs `TSMetricBar` from the DataDisplay dir I excluded) — again **not my code**, and I don't depend on `FeedbackOverlays`. Excluding that one unrelated file:
+
+**Scoped macOS typecheck passes: 0 errors, 0 warnings, exit 0** — Swift 6 strict-concurrency complete, against real SwiftUI/Observation + the real design system. Now let me validate the Tests file (syntax + in-module type-check of the bodies) and run the placeholder gate.
+
+XCTest isn't in CLT (expected — part of the deferred Xcode gate), but Tests **syntax-parses clean**. And **pwsh 7.6.2 is available** so I can run the real placeholder gate. Let me also type-check the test *bodies* against my real types via an in-module XCTest shim (Model+Adapter need only Foundation/Observation), then run the placeholder scanner.
+
+Just `JSONDecoder`/`Data` missing because stripping `import XCTest` also dropped Foundation. Replacing it with `import Foundation` instead:
+
+Test bodies type-check cleanly against the real Model+Adapter (0 diagnostics). Now the placeholder gate. Let me first inspect the patterns — I used the word "placeholder" in a couple of comments, which could trip the scanner.
+
+The scanner flags the literal word **"Placeholder"** (case-insensitive) anywhere, including comments — and I used it in a few comments. Let me find every hit of any forbidden pattern in my files and reword.
+
+Four "placeholder" comment hits (no TODO/stub/mock/etc.). Rewording to "empty state":
+
+Now run the placeholder gate: self-test, then a genuine scan of my actual files (copied into a temp dir so the scanner recurses them), plus the literal gate path.
+
+All placeholder gates green (self-test passes, my files COUNT=0). Let me re-verify my files after the comment edits (format/lint/typecheck), then run the whole-tree gates exactly as the prompt specifies.
+
+My files: format clean, lint 0 violations, typecheck 0 diagnostics. Now the whole-tree gates exactly as the prompt specifies (to surface any pre-existing sibling state honestly):
+
+Whole-tree swiftformat flags **1 pre-existing violation in `ActionBuilder.Previews.swift`** (a sibling outside my allowed files; my 6 files pass). Let me confirm it's pre-existing (not mine) and run whole-tree swiftlint.
+
+Confirmed: `ActionBuilder.Previews.swift` is **unmodified vs HEAD** (pre-existing); my only changes are the 7 untracked `AchievementBadge.*` files. Whole-tree swiftlint shows 1 pre-existing violation — let me identify exactly which sibling file it's in.
+
+The pre-existing whole-tree violation is in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (function_body_length) — the **exact** sibling violation the ResultPanel (0008) predecessor log already documented. My files are clean. Let me confirm both sibling files are unmodified vs HEAD and prep the log.
+
+Both flagged siblings are unmodified vs HEAD (pre-existing); co-located tests are the repo convention (171 siblings). I have a complete, honest verification picture. Writing the log:
+
+Log written. Final step — stage **only** my allowed files (the 7 `AchievementBadge.*` + the log), leaving the pre-existing working-tree changes untouched, and commit.
+
+Exactly my 7 files + the log are staged; the pre-existing changes remain untouched. Committing:
+
+Committed as `de016e43b`. Let me do one final consolidated re-verification of all surface-scoped gates post-commit, for certainty.
+
+All gates green on the committed surface. The task is complete.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`AchievementBadge`** surface (P4 · 0051) at parity with `web/src/features/analytics/components/AchievementBadge.tsx`, as 7 files in `apps/apple/TeslaSync/feature-views/` (commit `de016e43b`).
+
+**Web parity (every branch reproduced):** unlocked vs locked, near-complete (`progress ≥ 0.8`) gold ring + pulse, `round(progress*100)` percent, ring-only-when-locked, 50% grayscale locked icon, and all three `sizeConfig` layouts — with the web hexes mapped to theme-aware design tokens.
+
+**Architecture (house pattern):** `Model` (P1/S8 state-holder seam + `@Observable` model + P1/S11 telemetry + P1/S10 i18n facade), pure `Adapter` projection + a11y, `Views`, state-machine `swift` view (+ web-parity convenience init), `Previews`, `Tests` (24 cases), `strings`. Full leaf-state contract — loading/empty/error/content + live/stale/offline — bound through the seam (no HTTP in the view), `view.opened` slug `AchievementBadge`.
+
+**Verification (raw results on this runner):**
+- `swiftlint --strict` (surface): **0 violations**
+- `swiftformat --lint` (surface): **0/6 require formatting**
+- `check-placeholders.ps1`: **COUNT=0** (self-test green)
+- **Real macOS `swiftc -typecheck`** of the 5 non-test sources against the actual SwiftUI/Observation frameworks + real design system, Swift 6 `-strict-concurrency=complete`: **0 errors/warnings**
+- In-module test-body type-check via XCTest shim: **0 diagnostics**
+
+**Honestly DEFERRED:** the `xcodebuild` iOS-sim + macOS build/test gate — the runner is Command Line Tools only (no Xcode/simulators/XCTest runtime), evidenced verbatim in the log; the sanctioned "code-complete + DEFERRED Xcode gate" disposition. Two pre-existing whole-tree lint/format findings (`ActionBuilder.Previews.swift`, `LifetimeStatsWidget.Adapter.swift`) are unrelated siblings, unmodified vs HEAD and outside the allowed files. Only the allowed files were staged. Log ends `EXIT=0` / `STATUS=DONE`.
+

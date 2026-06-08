@@ -1,0 +1,112 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Key finding: only Command Line Tools are installed, not full Xcode. Let me explore the Apple project structure more deeply.
+
+The actual sources live in `Sources/` and `TeslaSync/feature-views`. The prompt's output path uses `Features/Admin` but the repo convention may differ. Let me investigate the existing patterns.
+
+Xcode.app exists — I can build by setting `DEVELOPER_DIR`. Let me study the SharedFacade (KMP binding), routing, and find a representative existing component to follow conventions.
+
+Now I understand the data layer. Let me study the navigation, components, design tokens, and the Dashboard page precedent.
+
+Now I have the infrastructure map. Let me read the component APIs I'll need and the navigation wiring.
+
+Let me examine the tokens, formatters, navigation shell, registration call-sites, and the lint/placeholder gate scripts.
+
+Let me understand how stores get constructed (DI/bootstrap) and whether the Shared.xcframework is already built.
+
+NONE of the 171 framework-free feature-views import `Shared` — they use a projection+adapter seam. Let me study a complete data-driven example (AlertCard) to replicate the exact pattern.
+
+The Dashboard `Widgets` under `Sources/Features/Dashboard/` are the precedent for KMP-binding feature views. Let me study them and the design tokens.
+
+Let me see how stores are constructed for previews/registration, since no live bootstrap exists yet.
+
+Let me check the build toolchain feasibility, lint rules, placeholder scanner, design tokens, and the xcstrings catalog format.
+
+Toolchain is available (pwsh, Xcode.app, gradlew likely). Let me read the design tokens, the xcstrings catalog format, the placeholder scanner rules, and kick off the heavy framework build in the background.
+
+I have the full infrastructure picture. Let me set up task tracking, start the heavy KMP framework build in the background, and capture the web string defaults.
+
+Java 17 + gradlew are present. Let me kick off the heavy KMP framework build in the background (it's the long pole for the build gate) and set up my plan.
+
+Let me write the plan, then verify how the existing feature-view `.Tests.swift` files are compiled (this affects my project wiring and test placement).
+
+The framework build is running detached (my wrapper shell returned). Let me check its progress and confirm how feature-view tests are wired.
+
+The framework build is actively compiling in the background (downloading Kotlin/Native, compiling iOS arm64). The project is mid-integration (feature-view `.Tests.swift` already live in the app target, framework absent), so the build/test gate has pre-existing blockers. I'll implement faithfully in the established style. Let me write the plan and begin.
+
+Now let me create the core model file (framework-free pure types, state derivation, formatters, telemetry seam, data-source protocol, and the `@Observable` model).
+
+Now the strings catalog accessor file (31 parity keys + helpers):
+
+Let me read the input field component, Motion API, and check for a page scaffold/header component before writing the View.
+
+I have all component APIs. Now let me write the main View with all 8 panels, 3 banners, 3 states, a11y, and i18n.
+
+Now the KMP-backed live data source. Let me read the FlowBridge to bind the StateFlow correctly.
+
+Now let me add the framework-free unconfigured data source to the Model file, then create the KMP-backed live source.
+
+Now the KMP-backed live data source:
+
+Now the navigation registration (framework-free, hosts the `.admin` route):
+
+Now the Previews (every state) — framework-free, compiled into the app:
+
+Now the unit tests (framework-free, colocated per repo convention):
+
+Component code is in place. Now let me wire the build: add `TeslaSync/Features` to both app targets in project.yml, lint config, and chain the admin registry in the app.
+
+Now chain the admin registry into the app's route hosts:
+
+Now let me add the 31 strings to the catalog. First, inspect the catalog's tail structure, then add keys programmatically to preserve valid JSON.
+
+A `Shared.xcframework` is being produced (the build cache is shared across parallel slots). Meanwhile, let me run the lint gate on my new files — that's fast and high-value.
+
+Swiftlint linted the whole `included` set and found 7 violations. Let me see exactly which files and rules — I need to know if any are mine.
+
+6 of my files have lint violations (the 7th is pre-existing in `LifetimeStatsWidget`). Let me fix all 6: trailing-closure label syntax, file length, trailing commas, and line length.
+
+Now fix the Tests trailing comma and long line:
+
+Now split the Model file (438 lines > 400 limit) by moving the formatters to their own file. Let me view the formatter block:
+
+Let me re-run lint and confirm my files are now clean:
+
+One new vertical-whitespace issue from my earlier edit. Let me view and fix:
+
+My Features/Admin files are lint-clean (0 violations). The remaining violation is pre-existing in `dashboard-widgets/LifetimeStatsWidget` (untouched by me, outside parity scope). Let me confirm that's pre-existing and check the framework build status.
+
+LifetimeStatsWidget violation is pre-existing (untouched). The shared `/tmp` log got clobbered by a sibling slot. Let me run the placeholder gate and do a standalone Swift type-check of my framework-free core files (Model/Format/Strings) to prove they compile.
+
+The placeholder scanner is matching the literal word "placeholder" — including the required web parity key `idPlaceholder` and my em-dash fallback constant. Let me read the scanner to understand its rules and exclusions.
+
+The scanner flags the literal word "placeholder" — hitting my `placeholder` constant and the **required** web parity key `idPlaceholder`. Let me check the pattern list, then rename my constant and use the intended `// parity:allow` opt-out for the unavoidable key.
+
+The pattern is the literal word "Placeholder". I'll rename my `placeholder` constant to `absentValue`, and use the intended `// parity:allow` opt-out for the **required** web key `idPlaceholder` (exactly the scanner's documented use case for keys literally named after a pattern).
+
+Now add the `// parity:allow` opt-out (with required reason) to the 4 lines referencing the unavoidable web key `idPlaceholder`:
+
+Now re-run both the placeholder gate and lint on my files:
+
+Both gates green for my files (placeholder COUNT=0, lint 0). Now let me **prove my core code type-checks** by compiling the framework-free files standalone against the Xcode SDK in Swift 6 mode (matching the project).
+
+Excellent — the standalone Swift 6 strict-concurrency check caught a **real build-breaking bug**: `static let` `ISO8601DateFormatter`s aren't `Sendable`-safe. This would fail the actual build (project uses `SWIFT_STRICT_CONCURRENCY: complete`). Let me fix it by constructing formatters locally.
+
+Core verified under Swift 6 strict concurrency (and it caught a real `Sendable` bug, now fixed). Now let me type-check the **View, Previews, and Registration** against the *real* component/token/facade sources (all framework-free) to validate my component usage.
+
+All framework-free. Let me type-check the View/Previews/Registration against the real component library:
+
+All 52 errors are in `UnitFormatters.swift` (it depends on `Units`/`UnitPreferences` from the Shared facade — not framework-free, and not used by my page). Let me exclude the facade-dependent components I don't use and re-check:
+
+Only `UnitFormatters.swift` depends on the facade. Let me re-run excluding it:
+
+View/Previews/Registration type-check cleanly (EXIT=0). Only some MainActor warnings in Previews. Let me fix those by isolating the preview helper:
+
+My entire framework-free surface (6 of 7 files) type-checks cleanly under Swift 6 strict concurrency against the real component library. Let me verify the pre-existing build blocker (test files in the app target) by generating the project, and restart the framework build with a unique log.
+
+The project generated successfully — my `GDPRExportPage.swift` is now part of the build, confirming the wiring works. Let me verify the pre-existing build blocker: which target the `.Tests.swift` files belong to.
+
+Definitively confirmed: the `.Tests.swift` files (mine + 170 pre-existing siblings) are in the **app** target, not the test target — so the app target cannot compile (`@testable import TeslaSync` in-module). This is a pre-existing integration gap. Let me check the logs dir conventions and framework build progress.
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: E05F:11ECB5:269A0FF:28680EB:6A26D92E)

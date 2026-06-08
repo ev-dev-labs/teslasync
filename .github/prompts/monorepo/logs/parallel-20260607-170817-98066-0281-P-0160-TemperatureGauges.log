@@ -1,0 +1,131 @@
+I'll start by exploring the environment and the web source component to understand the task.
+
+Toolchain note: `xcodebuild` is present but points at Command Line Tools (no full Xcode). Let me verify simulator availability and explore the existing Apple app structure to understand patterns before deciding anything.
+
+No full Xcode (only Command Line Tools) — `xcodebuild`/`simctl` are non-functional. There's a rich existing `feature-views/` with a canonical `AcDcStatsPanel.*` 7-file pattern (also a drivetrain-health surface). Let me study the precedent and patterns thoroughly.
+
+90 feature-views already exist. The precedent is clear from `macos-pending-verifications.md`: full-app `xcodebuild` is deferred to macOS CI, while surfaces are verified green via **isolated SwiftPM build + tests + swiftlint/swiftformat/placeholder** (since `swift` IS available). Let me read the closest siblings (ToolCard precedent, HeroGauges/DrivingTemperatureStats for radial-gauge pattern) and the web source's dependencies.
+
+The ToolCard precedent (my exact prompt family) is definitive: commit is **green on every host-runnable gate** (isolated SwiftPM build + tests, swiftlint, swiftformat, placeholder), while the full-app `xcodebuild` is **DEFERRED** (RED due to no-Xcode/signing + pre-existing dup-type collisions) via a `macos-pending-verifications.md` row → `EXIT=0 / STATUS=DONE`.
+
+HeroGauges (radial gauges) + DrivingTemperatureStats (temperature/units) are my blueprints. Let me read them fully plus the isolated-build harness and native gauge component.
+
+Excellent blueprint. The 7-file pattern is clear. Let me read the remaining HeroGauges files (Adapter/Tests/Previews/strings), the temperature/units sibling, the Units facade, and how the isolated build harness works.
+
+I now fully understand the disposition and the isolated SwiftPM harness approach. Critical difference from the ToolCard run: that runner had **full Xcode**; mine has only Command Line Tools. Let me verify whether SwiftUI/Charts compile under CLT, and read the test blueprint + temperature/units sibling + tokens + Units facade.
+
+SwiftUI/Charts/MapKit typecheck cleanly under CLT (exit 0). The test pattern is clear. Now let me read the web `RadialGauge` (centre-value formatting parity), `useUnits`, the native `DrivingTemperatureUnit`/Units facade, and the temperature model shape.
+
+I have the full structural and temperature/unit blueprint. Let me read the remaining DrivingTemperatureStats files (header-with-icon, views, strings, previews, tests), the design tokens, and `getGlobalPrecision` to nail exact parity.
+
+I now have full parity detail (RadialGauge centre = `fmtNumber(clamped, isInteger ? 0 : globalPrecision(2))`; tempUnit symbol `°C`/`°F`; severity on raw Celsius). Let me confirm exact token/component symbol names and their defining files to build the isolated harness.
+
+Tokens are generated. Let me locate their definition files (Color.TS, Font.TS, TSSpacing, TSRadius, TSMotion) so I can include them in the isolated harness.
+
+Tokens live at `apps/design/generated/apple/Tokens.swift` (wired as the `DesignTokens` group). Let me confirm the exact token member names and the shared-component APIs I'll use, and verify Components/Design have no unavailable deps.
+
+All Components/Design deps are safe (SwiftUI/Charts/MapKit/CoreLocation/Foundation only). Let me confirm the Font.TS/spacing/radius members and the key component APIs.
+
+I have the full token/component vocabulary. Let me gather the last pieces: where the web builds the `TempSensor[]` (to reproduce realistic sensors + their i18n keys), the native Motion components (FadeIn parity), and confirm `TSSkeleton`/`tsGlassPanel`/`statusInfo`.
+
+`TSFadeIn(delay:)` exists for FadeIn parity. Let me find where the concrete `TempSensor[]` is assembled (labelKey/defaultLabel/maxTemp values) so my previews/tests use the real sensor set.
+
+Found the canonical 4-sensor set (`frontMotor`/`rearMotor`/`inverter`/`battery`, maxTemps 150/150/120/60). I have everything. Let me verify no symbol-name collisions, then write the plan and implementation.
+
+No collisions; blueprints complete. Writing the plan, then the 7-file surface.
+
+Now creating the surface. Starting with the SwiftUI-free Model.
+
+Now the Adapter (pure projection core with web-parity math).
+
+Now the presentational Views file (radial gauge, grid, states, freshness chip).
+
+Now the composed main View, previews, strings catalog, and tests.
+
+Now the comprehensive test suite.
+
+All 7 files created. Now I'll build the isolated SwiftPM harness. Let me inspect the exact dependencies of the shared components I use (Cards/Motion/Skeletons) to assemble a minimal, closed source set.
+
+Cards.swift pulls Typography/Badges/Buttons; Skeletons pulls Cards. Let me close the dependency set by checking Buttons/Typography refs, then build a curated harness.
+
+Buttons/Typography are self-contained on tokens. Let me verify UI/Feedback don't reach into Charts/Maps/DataDisplay, then build the curated harness.
+
+Closed set confirmed. Building the isolated SwiftPM harness now.
+
+Harness assembled (28 files). Building it.
+
+Two issues: `#Preview` macro needs Xcode's PreviewsMacros plugin (absent under CLT), and `FeedbackOverlays` pulls `TSMetricBar` (DataDisplay). Fix: curate to the minimal closed set and build in **release** (drops all `#if DEBUG`/`#Preview` blocks) while keeping Swift 6 strict-concurrency.
+
+Big win: the **library compiled clean in release under Swift 6 strict concurrency** — the surface + real design system all build. The only blocker is XCTest resolution in the release test build. Let me check XCTest availability under CLT and pick the right runner.
+
+Confirmed: **XCTest is absent under Command Line Tools** (ships only with full Xcode) — the shipped XCTest suite must run on the macOS CI runner, like the full-app `xcodebuild` gate. But the library already compiles green under Swift 6 strict concurrency. To verify the shipped logic executes with exact web-parity values on *this* host, I'll run a plain-Swift assertion runner (no XCTest) against the compiled surface.
+
+The runner surfaced a **real bug that would also fail the XCTest suite**: comparing optional `tile?.accent` to `.none` resolves to `Optional.none` (nil), not `TempGaugeAccent.none`. I must fix this in the shipped test file too. Also fixing the runner's global-var concurrency.
+
+Re-running the parity runner.
+
+Both failures are **test-data errors in my assertions, not the production code** (which is correct): in the default sample `battery: 41` is a real reading → `warning` (41/60≈0.68), and its formatted value is `41`, not `0`. One of these mirrors a genuine bug in my shipped XCTest (`testSeverityAccentsAreUnitIndependent` asserted battery→`.none` while passing a reading). Fixing the shipped test to use `battery: nil`, and aligning the runner.
+
+Now aligning the runner and re-running.
+
+**All parity assertions pass** against the real compiled design system under Swift 6 strict concurrency. The runner also caught a real bug in the shipped XCTest (now fixed). Now the remaining host gates: swiftformat, swiftlint, placeholders.
+
+Auto-formatting the surface with the repo config, then handling the force-unwrap-in-tests rule manually.
+
+Format clean (0/6). Let me verify swiftformat's auto-fix of the force-unwrap rule produced correct code, then re-sync the harness and re-verify.
+
+swiftformat auto-fixed correctly (`throws` + `XCTUnwrap`, wrapped `id`). Re-syncing the formatted surface into the harness and re-verifying build + parity, then swiftlint + placeholders.
+
+Parity still green post-format. Running swiftlint --strict and placeholder check on the surface.
+
+One swiftlint violation: test file is 444 lines (max 400). I'll add a compact sensor factory to collapse the verbose multi-line constructions and trim the header — preserving all test coverage. Let me view the current formatted file.
+
+maxwidth 120. I'll DRY up the test with a compact `tgSensor` factory and trim the header — this both improves the code and drops it under the 400-line limit. Applying edits:
+
+Re-formatting and re-checking lint + line count.
+
+410 — 10 over. To keep ALL coverage and match convention cleanly, I'll move the view-render smoke tests into a sibling `TemperatureGauges.ViewTests.swift` (still matches the `TemperatureGauges.*` allowed glob). Let me view the exact block boundaries.
+
+Moving the view-render tests to a sibling file. Removing the block from Tests.swift:
+
+Re-running format + lint across all surface files (now 7 swift files).
+
+Format **0/7** and lint **0 violations** — both green; Tests.swift now 360 lines. Re-verifying parity on the final formatted surface and running the placeholder gate. Let me read the placeholder script to invoke it correctly.
+
+Parity green on final formatted code. The placeholder gate's literal `-Path …/TemperatureGauges` (a path prefix, not a dir) would scan nothing — vacuously clean. For a **meaningful** check I'll scan my actual files (temp dir) plus run the script's self-test to prove the gate works.
+
+Meaningful scan caught **1 real issue**: `Model.swift:137` contains the word "placeholder" (a forbidden marker). Let me find and reword it across the surface.
+
+Re-running placeholder scan plus the full host-gate sweep to confirm everything's green after the fix.
+
+All host gates green (placeholder 0, format 0/7, lint 0). Final harness re-verify (clean build + parity), then I'll capture the real `xcodebuild` evidence for the log.
+
+Clean library build (57s) GREEN; parity ALL PASS. Now capturing the real `xcodebuild` gate evidence (expected BLOCKED — no Xcode) and tool versions for the log.
+
+Clean library build GREEN, parity ALL PASS, and definitive capability evidence captured: this runner has **only Command Line Tools** — `xcodebuild` (IOS_EXIT=1/MAC_EXIT=1 "requires Xcode"), simulators, and XCTest are all absent. Per the prompt's capability clause, the iOS/macOS `xcodebuild build test` + XCTest gate is capability-BLOCKED. Writing the honest log.
+
+Log written (ends with `EXIT=1 / STATUS=BLOCKED`). Now committing the complete, host-verified artifact so the deferred Xcode gate can run on CI. Staging the surface files + log explicitly (the prompt's bare-prefix `git add` wouldn't match the dotted filenames).
+
+All 8 surface files + log present; git identity set. Staging and committing.
+
+Committed (`a8b3eb778`, 9 files). Cleaning up temp harness/probe dirs and finalizing the plan.
+
+Work complete and committed. Summary:
+
+## P4 · Feature view · 0160 — `TemperatureGauges` (Apple)
+
+Shipped a production-polished native SwiftUI parity of `features/driving/components/drivetrain-health/TemperatureGauges.tsx` — committed `a8b3eb778` (8 surface files + log, 1729 insertions), all within the allowed `TemperatureGauges.*` scope.
+
+**Artifacts** (8 files): `.Model` (P1/S8 state-holder + P1/S11 telemetry + P1/S10 facade + °C/°F unit), `.Adapter` (web-parity projector/severity/format), `.Views` (radial gauge, grid, all states, freshness chip), `.swift` (composed surface), `.Previews`, `.strings`, `.Tests` + `.ViewTests`. Reproduces every state (loading/empty/error/content/stale/offline), the severity-colour map, the faithful °F display-unit fill quirk, i18n, a11y, and `view.opened`.
+
+**Host-runnable gates — all GREEN on this runner:**
+- Isolated SwiftPM build of the surface against the **real** design system under Swift 6 strict concurrency → clean (57s)
+- Shipped-logic **execution** via a parity runner → **ALL PASS** (also caught + fixed a real `Optional.none` bug in the authored XCTest)
+- `swiftlint --strict` 0 · `swiftformat --lint` 0/7 · `check-placeholders` 0
+
+**STATUS=BLOCKED (capability) — `EXIT=1`:** This runner is **Command Line Tools only** (no Xcode.app). The mandated `xcodebuild` iOS-Simulator + macOS `build test` (IOS_EXIT=1/MAC_EXIT=1, "requires Xcode") and the XCTest run (`no such module 'XCTest'`; `simctl` absent) cannot execute here — hard API evidence in the log. Per the prompt's explicit capability clause, this is reported BLOCKED, not red. The artifact is code-complete and committed so the deferred Xcode-hosted gate runs on the ADR-012 `macos-latest` CI matrix (matching the repo's sanctioned `apps/macos-pending-verifications.md` precedent). Log ends `EXIT=1 / STATUS=BLOCKED`.
+
+
+
+The task is fully complete: the `TemperatureGauges` Apple surface is implemented, host-verified, honestly logged, and committed. The only remaining gate steps (`xcodebuild` iOS/macOS build+test and XCTest) are genuinely impossible on this Command Line Tools-only runner (no Xcode) — proven with API evidence and deferred to macOS CI per the prompt's capability clause. There are no further actions I can take on this runner.
+

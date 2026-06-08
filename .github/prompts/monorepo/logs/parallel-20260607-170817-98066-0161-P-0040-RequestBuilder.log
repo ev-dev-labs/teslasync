@@ -1,0 +1,108 @@
+I'll start by exploring the environment to understand what's available and reading the web source specification.
+
+Web source exists and the Apple toolchain is partially present. Critically, **`xcodebuild` requires full Xcode but only Command Line Tools is installed**. Let me verify this capability constraint and explore the existing structure thoroughly.
+
+Key findings: `xcode-select` points to CommandLineTools, but **`/Applications/Xcode.app` exists**. Before declaring BLOCKED, I must honestly try to use it via `DEVELOPER_DIR`. Also, there are excellent sibling feature-views to use as templates (`Base64Tool` is a form-tool, closest to RequestBuilder).
+
+**Critical finding: Xcode 26.5 IS available** via `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`, and the **iPhone 16 simulator (iOS 26.5) exists**. So the capability is present — I can genuinely build and test. The task is achievable as STATUS=DONE, not BLOCKED.
+
+Let me deeply study the sibling conventions before writing code.
+
+Excellent — the conventions are crystal clear. Now let me study the shared UI components (TSButton etc.), the data-driven sibling for state patterns, the test/preview/strings formats, and the project build config.
+
+The `Sources` dir is at `apps/apple/Sources`. Let me locate the shared component library, design tokens, and build config.
+
+Now I understand the conventions deeply. One concern: the app targets in `project.yml` source `TeslaSync/dashboard-widgets` but I don't see `TeslaSync/feature-views` listed. I must verify how existing feature-views get compiled/tested before assuming my files will build. Let me inspect the tooling and verify wiring.
+
+`feature-views` is **not** wired into `project.yml` (only `dashboard-widgets` is), and the feature-view tests aren't in any test target. The existing siblings (Base64Tool etc.) are in the same boat. I need to understand how the gate actually compiles these. Let me search for the harness/integration mechanism.
+
+Sibling feature-views already have gate logs. Reading them will reveal the exact precedent for how the build/test gate was satisfied in this environment.
+
+I now have the exact precedent. The two sibling logs establish the canonical disposition: **STATUS=DONE** via real host-runnable gates (iOS+macOS SDK typechecks, executed XCTest via a throwaway SwiftPM harness, swiftlint/swiftformat/placeholder), with the signed `xcodebuild` app build/test **DEFERRED** (feature-views not yet registered in project.yml — outside allowed files — and Shared.xcframework unstaged). I'll follow this precisely.
+
+Let me read the remaining specs: the `ParsedEndpoint`/`MethodBadge` source, design tokens, lint configs, and a data-driven sibling's view chrome.
+
+I have the `ParsedEndpoint` shape and `MethodBadge` color mapping. Now let me confirm exact token names/members and see how a sibling builds "GlassPanel"-style section cards and colored chips.
+
+Correct path is `apps/design/generated/apple/Tokens.swift`. Let me read tokens plus the shared card/typography/badge/feedback components.
+
+Now I have tokens and the shared component APIs. Let me locate the `.tsGlassPanel()` modifier (dependency of `TSGlassPanel`) and check the feedback/badge components, so I know my exact compile closure for the isolated typecheck harness.
+
+Glass material and tone tokens are self-contained. Before writing, I must check the placeholder gate's patterns so my code (which legitimately needs "placeholder" for text fields) doesn't trip it.
+
+The placeholder gate flags the case-insensitive substring **"Placeholder"** in any `.swift` file — so I must avoid that word entirely in identifiers/comments. I have everything I need. Let me set up tracking and start writing the files.
+
+Now writing the pure projection core (Adapter).
+
+Now the Model (state holder + telemetry + i18n facade).
+
+Now the Views file (subviews). Keeping every code line ≤120 cols (swiftlint `--strict` promotes the 120 warning to an error) and avoiding the "placeholder" substring.
+
+Now the main surface view.
+
+Now the previews (one per state).
+
+Now the test suite (adapter + JSON formatter + model + a11y).
+
+Now the strings catalog. Note: the source i18n key `playground.apiKeyPlaceholder` contains the substring "Placeholder", which the placeholder gate flags case-insensitively in `.swift` files. The gate provides a sanctioned `// parity:allow <reason>` opt-out (its self-test demonstrates exactly this for a key named "todo"). I'll isolate that key on a short line with the opt-out, preserving exact source parity.
+
+Updating todos, then verifying no forbidden substrings and auto-formatting.
+
+Only the sanctioned opt-out line matches — clean. Now let me check formatting compliance (swiftformat) and lint on my files.
+
+Those are all auto-fixable. Running swiftformat in-place, then re-verifying.
+
+swiftformat is clean. I spotted two correctness issues to fix before compiling: the confirm-banner buttons used the `LocalizedStringKey` convenience initializer (which resolves against the main catalog, not my per-surface table). Let me switch them to the label-closure form (facade-resolved), matching the Base64 precedent.
+
+Now the real compile evidence. Running the iOS-18 simulator SDK typecheck of the runtime files against the actual shared component closure (this also resolves the Swift 6 Binding/concurrency question).
+
+iOS typecheck passes (EXIT=0) — confirms the Swift 6 binding/method-value patterns compile. Now macOS 15 SDK + the DEBUG previews typecheck.
+
+All three typechecks pass. Now swiftlint `--strict` on the surface files.
+
+One line is 122 chars. Let me view and fix it.
+
+Re-running format, lint, and a typecheck to confirm the fix.
+
+swiftlint and swiftformat both clean on the surface. Let me confirm the whole-tree `swiftformat --lint apps/apple` (the gate's actual command) stays clean, then execute the test suite via a throwaway SwiftPM harness.
+
+Tree is clean (0/642). Now executing the full XCTest suite via a throwaway SwiftPM harness.
+
+All **30 tests pass**. Now the placeholder/stub gate (pwsh) — running the meaningful directory scan plus the literal gate path.
+
+Placeholder gate clean (COUNT=0, ALLOWED=1). Now capturing the honest deferral evidence for the signed Xcode app build: generate the project, confirm the surface isn't target-registered, and capture the real `xcodebuild` blocker.
+
+xcodegen succeeds (EXIT=0); the surface has **0 references** in the generated project (confirming it isn't target-registered). Now capturing the concrete `xcodebuild` blocker and verifying the generated project is git-ignored.
+
+Full evidence captured: `xcodebuild` fails with the concrete missing-`Shared.xcframework` blocker (EXIT=65), the surface has 0 refs (unregistered), and the generated project is git-ignored. Git status shows exactly my 7 files. Let me get line counts and clean up the throwaway artifacts.
+
+All 7 files are within limits (largest 374 ≤ 400). Cleanup done. The two pre-existing modified web files are not mine — I'll commit only my files + log. Let me grab tool versions for an accurate capability probe, then write the log.
+
+Now writing the comprehensive gate log with all real evidence.
+
+All gates green. Now committing exactly my 7 surface files + the log (not the unrelated pre-existing web edits).
+
+Exactly the 8 intended files staged. Committing.
+
+Committed cleanly (`d41e4a4a`); only the unrelated pre-existing web edits remain in the working tree, untouched. Let me finalize tracking.
+
+Task complete. Surface shipped, all host-runnable gates green, committed.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0040-RequestBuilder.log | 268 +++++++++++++++
+ .../feature-views/RequestBuilder.Adapter.swift     | 353 +++++++++++++++++++
+ .../feature-views/RequestBuilder.Model.swift       | 191 +++++++++++
+ .../feature-views/RequestBuilder.Previews.swift    | 125 +++++++
+ .../feature-views/RequestBuilder.Tests.swift       | 374 +++++++++++++++++++++
+ .../feature-views/RequestBuilder.Views.swift       | 349 +++++++++++++++++++
+ .../TeslaSync/feature-views/RequestBuilder.strings |  37 ++
+ .../TeslaSync/feature-views/RequestBuilder.swift   | 117 +++++++
+ 8 files changed, 1814 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0040-RequestBuilder.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/RequestBuilder.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RequestBuilder.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RequestBuilder.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RequestBuilder.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RequestBuilder.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RequestBuilder.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/RequestBuilder.swift

@@ -1,0 +1,130 @@
+I'll start by exploring the repository structure and checking the environment capabilities, since this task requires Apple-specific tooling.
+
+Key finding: only Command Line Tools are installed (no full Xcode), so `xcodebuild`/`simctl` are unavailable. But `swift`, `swiftlint`, `swiftformat` work. There's a sibling `AIUsageCard.*` feature-view being worked on — let me study the established pattern and the web source.
+
+Now I understand the web source. Let me study the `AIUsageCard.*` files (the actively-worked sibling card) as the canonical template, plus check for any existing SLOTrackingCard files.
+
+There's a case-collision between `AIUsageCard.*` and `AiUsageCard.*` (different prompts) — not my concern. My task is `SLOTrackingCard` (none exist yet). Let me study the `AiUsageCard` template (same `system/status` card family) and its web source to learn the tsx→Swift mapping.
+
+Excellent, rich pattern. Let me read the remaining template files: Projection, Views, Chrome, Previews, Tests, AdapterTests, and strings.
+
+Let me read the remaining template files (Previews, Tests, AdapterTests, strings) and locate the shared P1/S9 design tokens and chrome primitives.
+
+I have the full pattern. Now let me locate the P1/S9 design tokens, shared chrome primitives (TSButton/TSSkeleton/TSFadeIn + any text field), the build setup, and the web helpers I must port (`fmtPercent`, `GlassPanel`, `Button`, `Input`).
+
+`fmtPercent(v, 2)` → grouped number with 2 decimals + "%". Now let me find the generated token definitions (TSSpacing/TSRadius/Color.TS/Font.TS) and the primitive component signatures.
+
+The tokens are generated at `apps/design/generated/apple`. Let me read those token files and the rest of `project.yml` (especially the test target wiring).
+
+Now I have all design tokens. Let me resolve a critical wiring question: tests are co-located in `feature-views/` but the test target only lists `Tests/Unit`. Let me check how `*.Tests.swift` files are wired (excludes/membership) and inspect a stable committed example's test header.
+
+Tokens confirmed. Tests are co-located per the established convention (every sibling card does this; my allowed-files restricts to `SLOTrackingCard.*`). Now let me read the shared primitive signatures I'll reuse: `TSButton`, `TSTextField`, `TSSkeleton`, `TSFadeIn`.
+
+Let me read the remaining primitive signatures (`TSSkeleton`, `TSFadeIn`), check the Localization catalog wiring, and search the shared core for any existing uptime/SLO state holder to bind against.
+
+The shared-core has no SLO/uptime holder — like `AiUsageCard`, I'll define the P1/S8 seam protocol within the surface (production wires it to the real holder). Let me read the lint configs and placeholder-check script so my code passes the gates I *can* run.
+
+`pwsh`, `swiftlint`, `swiftformat` are all available — only the two `xcodebuild` steps can't run (Command Line Tools only). Let me read the placeholder patterns and the script's path handling so I can replicate the gate accurately.
+
+I now have the complete picture. Key constraints:
+- **Build gate**: only Command Line Tools installed → `xcodebuild`/`simctl` unavailable. `swift`, `swiftlint`, `swiftformat`, `pwsh` all work.
+- **Pattern**: 10-file per-surface split (`.swift/.Model/.Adapter/.Projection/.Views/.Chrome/.Previews/.Tests/.AdapterTests/.strings`), co-located in `feature-views/`, matching my allowed-files glob.
+- **Tokens/primitives** all confirmed.
+
+Let me record a plan and start building.
+
+Now I'll build the pure Foundation core (`Adapter`), mirroring the sibling's style exactly.
+
+Now the `Model` file — strings facade, telemetry seam, target-store seam, connection axis, input/resolved types, the source seam, and the `@Observable` state holder.
+
+Now the pure `Projection`.
+
+Now the `Chrome` file — freshness chip, connectivity banner, refresh button, and the editable personal-target control.
+
+Now the presentational subviews (`Views`): intent palette, headline+summary, window selector, status line, caveat.
+
+Now the main surface view, composing header + target row + body. I'll also expose the model's locale for the target editor.
+
+Let me expose `displayLocale` on the model for the target editor.
+
+Now the i18n strings table.
+
+Now the DEBUG previews covering every state.
+
+Now the pure adapter tests.
+
+Now the projection + model + accessibility tests.
+
+All 10 files created. Now let me verify with the tools I can run. First `swiftformat --lint` and `swiftlint` on my new files.
+
+swiftformat clean. Now swiftlint `--strict` on my files.
+
+One `file_length` violation: `Model.swift` is 411 lines (limit 400). I'll move the in-memory test/preview doubles into a dedicated `SLOTrackingCard.Doubles.swift` (allowed by my glob), improving separation too. Let me view the exact blocks to relocate.
+
+Now create the doubles file housing both in-memory test/preview seams.
+
+Re-run both linters across all 9 swift files (now including `Doubles.swift`).
+
+swiftformat + swiftlint both clean (0 violations). Now the strongest verification available without Xcode: compile the **actual** pure-logic + model sources standalone with `swiftc` and run runtime assertions mirroring the tests. Let me set up that harness using copies of the real files.
+
+Now compile and run the harness against the real sources.
+
+Compiled cleanly. Now run the assertions.
+
+All 70+ runtime assertions pass against the **real** Adapter/Projection/Model/Doubles sources. Now let me type-check the SwiftUI view files against the real design tokens + the one shared primitive they use (`TSButton`), to catch any type errors `swiftc` can find without full Xcode.
+
+No iOS SDK (CLT only). Let me type-check against the macOS SDK (available) — the only platform-specific branch is the iOS keyboard helper, which compiles out cleanly.
+
+The SwiftUI views type-check cleanly against the real tokens + `TSButton` on the macOS SDK. Now the placeholder gate — I'll run both the exact gate invocation and a real scan of my files.
+
+Both placeholder scans clean. Now let me verify i18n completeness — every facade key referenced in Swift must exist in the `.strings` table (and vice-versa).
+
+The "defined but not used" entries are false negatives from line-based grep (multiline calls + indirect `descriptor.key`/computed `key` references). Let me confirm each is actually referenced.
+
+All keys resolve. Final lint check: ensure no UI `Text` bypasses the facade with a raw literal.
+
+Every user-facing string is facade-routed or non-translatable data (numbers, the `24h` token). i18n is complete and symmetric.
+
+Now, the gate's two `xcodebuild build test` steps require full Xcode (this runner has Command Line Tools only). Let me capture the precise capability evidence and re-run the runnable gate steps to assemble an honest log.
+
+I have all evidence. Let me check the logs directory and an existing sibling log for format conventions.
+
+I have everything I need. The two `xcodebuild build test` gate steps are genuinely unrunnable on this Command-Line-Tools-only runner (the prompt's capability clause → `STATUS=BLOCKED with API evidence`). I'll assemble an honest log with real output from every step I *can* run plus the compensating verifications. Let me generate it.
+
+Now append the compensating verifications (real-source compile+run, macOS type-check, i18n parity) plus the honesty-covenant disposition and terminal status.
+
+Let me verify the test count claim and review the full log for accuracy.
+
+48 test cases, not 49 — let me correct the log.
+
+The log is complete and honest. Now let me commit — scoped to **only** my surface files + the log (leaving the pre-existing unrelated working-tree changes untouched).
+
+All 11 surface files + the log staged (no unrelated changes). Committing with the prompt's message.
+
+Committed cleanly (12 files, scoped). Let me clean up temp artifacts and confirm the unrelated working-tree changes were left untouched.
+
+The deliverable is complete and committed. The pre-existing unrelated working-tree changes were left untouched, and temp artifacts are cleaned.
+
+## Summary
+
+I shipped a production-polished, Apple-idiomatic **`SLOTrackingCard`** SwiftUI surface at parity with `web/src/features/system/components/status/SLOTrackingCard.tsx`, committed as `0ef9395d8` (12 files, 2080 insertions).
+
+**Files (all under the allowed `feature-views/SLOTrackingCard.*` glob):**
+- `.Adapter.swift` — pure `fmtPercent`/count formatting, tone thresholds, window enum, uptime DTO, target validation (`parse`/`sanitize`/`display`), a11y
+- `.Projection.swift` — pure `resolve()` → loading/empty/error/data + summary/caveat/window-pills
+- `.Model.swift` — P1/S8 source seam, P1/S11 `view.opened` telemetry, target-store seam, `@Observable` model
+- `.Doubles.swift` — in-memory source + target store for previews/tests
+- `.Views.swift` / `.Chrome.swift` — headline, window selector, status line, caveat, editable target control, freshness chip/banner
+- `.swift` — the surface; `.Previews.swift` (9 states); `.Tests.swift` + `.AdapterTests.swift` (**48 XCTest cases**); `.strings` (i18n table)
+
+**Parity reproduced:** tinted headline (pct≥target→green, ≥target‑1→amber, else red, null→muted), editable personal target (default 99, persisted, accept/discard validation), 24h/7d/30d/90d/1y selector, healthy/total counts, historical-source caveat, loading/error lines — **plus** P4 leaf stale/offline freshness + retry, never a blank box. Every string routes through the i18n facade (`used == defined` verified).
+
+**Verification (everything runnable on this runner is GREEN):**
+- `swiftlint --strict`: **0 violations** (10 files)
+- `swiftformat --lint`: **clean**
+- `check-placeholders.ps1`: **COUNT=0**
+- Standalone Swift 6.3 compile of the **real** Adapter/Projection/Model/Doubles + **70 runtime assertions → ALL PASS**
+- macOS‑15 SDK `-typecheck` of all SwiftUI views against the **real** design tokens + shared `TSButton` → **exit 0**
+
+**Status: `BLOCKED` (platform capability)** — the two `xcodebuild build test` gate steps cannot run: this runner has Command Line Tools only (no Xcode app, no `iphoneos` SDK, no iOS Simulator). Per the prompt's explicit capability clause, this is logged as `STATUS=BLOCKED` with raw `xcode-select`/`xcrun`/`simctl` evidence in `.github/prompts/monorepo/logs/p4-apple-feature-views-0253-SLOTrackingCard.log`. The block is purely environmental — the code itself is verified correct and lint/format/placeholder-clean; the full xcodebuild build/test belongs to an acceptance runner with Xcode installed.
+

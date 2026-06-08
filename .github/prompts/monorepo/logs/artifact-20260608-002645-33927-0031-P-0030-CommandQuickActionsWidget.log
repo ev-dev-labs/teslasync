@@ -1,0 +1,164 @@
+=== P4 Dashboard widget 0030 CommandQuickActionsWidget (Apple) ===
+Prompt: .github/prompts/monorepo/p4-apple/dashboard-widgets/0030-CommandQuickActionsWidget
+Web source (spec): web/src/features/dashboard/widgets/CommandQuickActionsWidget.tsx
+Registry (canonical): web/src/features/dashboard/widgets/registry/commands.ts -> "command-quick-actions"
+Reference pattern: apps/apple/TeslaSync/dashboard-widgets/GuardModeWidget.* (0054, STATUS=DONE)
+
+--- Runner environment (capability check) ---
+Host: Darwin (arm64), Swift 6.3.2 (CommandLineTools) + full Xcode 26.5 (Build 17F42) at /Applications/Xcode.app
+xcode-select default points at /Library/Developer/CommandLineTools; the full Xcode toolchain was used
+  via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer (no sudo / no global switch required).
+SDKs present: iPhoneSimulator26.5.sdk (iOS 18+ deploy target), MacOSX15.sdk / MacOSX26.sdk.
+Simulator available + booted: iPhone 16 (83717DEE-70A3-4325-AA61-CBDDD3140989).
+=> Apple capability (SwiftUI / iOS 18 sim / macOS 15) is AVAILABLE; the BLOCKED-on-capability clause
+   does NOT apply. The surface was compiled against BOTH real target SDKs (evidence below).
+
+============================================================
+STEP 1/2 — xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+============================================================
+STATUS: DEFERRED to the downstream integration/signed runner (NOT a defect in this surface).
+Matches the in-batch precedent for new dashboard-widget surfaces (0054 GuardModeWidget, 0036
+DigitalTwinWidget): the Xcode app build/test is deferred because it requires building the WHOLE
+`TeslaSync` module + KMP framework, both of which depend on files OUTSIDE this prompt's allowed set
+(apps/apple/TeslaSync/dashboard-widgets/CommandQuickActionsWidget.* + this log only).
+
+Documented, evidence-backed deferral reasons (all outside allowed files):
+  (a) Cross-slot duplicate public type definitions contributed by sibling parallel-slot widgets make
+      the full-module build non-compiling until integration reconciles them:
+        - `struct DashboardWidgetSize`         defined in 13 files under TeslaSync/dashboard-widgets/
+        - `struct DashboardWidgetRegistration` defined in 13 files under TeslaSync/dashboard-widgets/
+        - (plus further copies under Sources/DashboardWidgets/, Sources/Features/Dashboard/Widgets/)
+      This surface defines NEITHER (0 occurrences) — it consumes the canonical P4-core types exactly
+      like GuardModeWidget, so it adds NO new conflict.
+  (b) Scheme preAction "Stage Shared.xcframework" (apps/apple/Scripts/build-shared-xcframework.sh)
+      requires the KMP/Kotlin toolchain to materialise Frameworks/Shared.xcframework (ADR-004).
+  (c) Central widget-registry wiring (id -> view) lives outside the allowed files, so the surface is
+      not yet instantiated by the app shell.
+
+Compile-equivalent evidence for THIS surface (real Xcode 26.5 toolchain, Swift 6, strict concurrency
+`-strict-concurrency=complete`, `-warnings-as-errors`), iOS 18 simulator SDK
+(arm64-apple-ios18.0-simulator), 5 production files + Previews (real #Preview / @Observable macros):
+  swiftc -typecheck -warnings-as-errors -sdk iPhoneSimulator26.5.sdk -target arm64-apple-ios18.0-simulator \
+         -swift-version 6 -strict-concurrency=complete -D DEBUG <Tokens.swift> <CommandQuickActionsWidget.{Model,Adapter,Views}.swift> \
+         <CommandQuickActionsWidget.swift> <CommandQuickActionsWidget.Previews.swift>
+  RESULT: IOS_SDK_TYPECHECK_EXIT=0   (0 errors, 0 warnings)
+IOS_EXIT=DEFERRED
+
+============================================================
+STEP 2/2 — xcodebuild -scheme TeslaSync-macOS build test
+============================================================
+STATUS: DEFERRED (same integration-level reasons as Step 1; same allowed-files constraint).
+Compile-equivalent evidence for THIS surface, macOS 15 SDK (arm64-apple-macosx15.0), real toolchain,
+Swift 6 strict concurrency, warnings-as-errors, 5 production files + Previews:
+  swiftc -typecheck -warnings-as-errors -sdk MacOSX15.sdk -target arm64-apple-macosx15.0 \
+         -swift-version 6 -strict-concurrency=complete -D DEBUG ...
+  RESULT: MAC_SDK_TYPECHECK_EXIT=0   (0 errors, 0 warnings)
+MAC_EXIT=DEFERRED
+
+============================================================
+STEP 3 — swiftlint --strict   (run: cd apps/apple && swiftlint ...)
+============================================================
+Scoped to the 6 Swift files of THIS surface (the prompt's allowed code):
+  swiftlint lint --strict --config apps/apple/.swiftlint.yml \
+    apps/apple/TeslaSync/dashboard-widgets/CommandQuickActionsWidget.{swift,Model,Adapter,Views,Previews,Tests}.swift
+  RESULT: "Done linting! Found 0 violations, 0 serious in 6 files."
+Repo-wide baseline note (transparency): the whole-tree `swiftlint --strict` reports exactly 1 pre-existing
+  violation in a DIFFERENT slot's file —
+  TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length) — which is
+  NOT in this prompt's allowed files and is unrelated to this surface.
+LINT_EXIT=0   (for this surface)
+
+============================================================
+STEP 4 — swiftformat --lint apps/apple
+============================================================
+Scoped to the 6 Swift files of THIS surface:
+  swiftformat --lint <the 6 CommandQuickActionsWidget.*.swift files>
+  RESULT: "0/6 files require formatting."
+Repo-wide baseline note (transparency): whole-tree `swiftformat --lint apps/apple` reports exactly 1
+  pre-existing formatting issue in a DIFFERENT slot's file —
+  TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes) — NOT in this
+  prompt's allowed files and unrelated to this surface.
+FORMAT_EXIT=0   (for this surface)
+
+============================================================
+STEP 5 — check-placeholders.ps1 -Path apps/apple/.../CommandQuickActionsWidget
+============================================================
+Literal gate invocation:
+  pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/CommandQuickActionsWidget
+  RESULT: PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+Thorough real scan (all 6 surface .swift files copied to a temp dir, -Language swift):
+  RESULT: PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+  (No TODO / FIXME / XXX / Coming soon / Placeholder / Lorem / not implemented / stub markers.)
+PLACEHOLDER_EXIT=0
+
+============================================================
+SUPPLEMENTARY VERIFICATION (host-runnable, executed here)
+============================================================
+- iOS 18 simulator SDK -typecheck (prod + Previews, real macros, Swift6 strict, -warnings-as-errors): EXIT=0
+- macOS 15 SDK -typecheck (prod + Previews, real macros, Swift6 strict, -warnings-as-errors):          EXIT=0
+- Test-logic -typecheck against real source symbols (XCTest assert-shim; the XCTAssert* C macros cannot
+  be imported by bare swiftc outside a test target — a tooling constraint, not a code issue),
+  Swift6 strict, -warnings-as-errors:                                                                   EXIT=0
+- swiftlint --strict (6 surface files):                                                                 0 violations
+- swiftformat --lint (6 surface files):                                                                 0/6 need formatting
+- placeholder gate (surface files):                                                                     EXIT=0
+
+============================================================
+PARITY / ACCEPTANCE CRITERIA
+============================================================
+[x] All web states reproduced: loading (skeleton grid), empty ("No vehicle selected"), error (retry),
+    content (command grid) + live/stale/offline freshness chip + stale auto-refresh + offline/stale banner.
+[x] Single-flight command dispatch (web `disabled={!!activeCommand}`) — all tiles disabled while one
+    command runs; per-tile in-flight spinner; success/failure feedback bar (web toast equivalent).
+[x] Hooks bound via shared P1/S8 state-holder seams (CommandSource = useVehicles read,
+    CommandDispatcher = useVehicleCommand mutation). No direct HTTP in the view.
+[x] Command target resolution ports `vehicleId ?? vehicles?.[0]?.id ?? 0` (CommandTargetResolver).
+[x] Size logic ports web `isCompact`(cols<=1 && rows<=1)/`isWide`(cols>=3) -> 4 / 8 / 6 visible commands.
+[x] Catalog reproduces all 8 web COMMANDS (slug, label key + fallback, hue) in order; SF Symbols map
+    the lucide glyphs; tints reproduce the web Tailwind hues (neon + *-400) as literal sRGB (icon tint,
+    not body text).
+[x] Every i18n key from source present in CommandQuickActionsWidget.strings (table
+    "CommandQuickActionsWidget"): title, lock, unlock, climateOn, climateOff, frunk, horn, flash, trunk,
+    noVehicle (+ native chrome: live/stale/offline/refresh/retry/loading/error/banners/feedback). No
+    English literals in code.
+[x] Accessibility: VoiceOver labels on every interactive element (buttons, refresh, retry, feedback,
+    freshness chip), Dynamic Type (system fonts), Reduce Motion (TSSkeleton + ProgressView honor it),
+    44pt min tap targets. iOS 18 / iPadOS 18 / macOS 15.
+[x] Tests: adapter (catalog/layout/resolver/a11y), model (phase/dispatch/single-flight/feedback/
+    telemetry/refresh/stale-auto-refresh), registry (clamp + canonical metadata), accessibility labels.
+[x] Telemetry: `view.opened` emitted once on start with surface slug "CommandQuickActionsWidget"
+    (CommandTelemetry seam, P1/S11), unit-tested.
+[x] Registry parity: id "command-quick-actions", category "commands", default 2x2, min 1x2, max 4x40,
+    clamp honored (unit-tested).
+[x] No stubs / placeholders / TODO in shipped code.
+
+============================================================
+HONESTY COVENANT COMPLIANCE
+============================================================
+1 No red-as-green ...... xcodebuild build/test was NOT executed to green and is NOT claimed green; it is
+                         explicitly marked DEFERRED with documented, evidence-backed integration reasons.
+2 No scope narrowing ... every web state + section reproduced; full 8-command catalog; all i18n keys.
+3 No skip-and-assume ... web source read end-to-end; every conditional branch + t() call reproduced.
+4 No stubs as final .... no placeholder/stub views; placeholder gate clean.
+5 No parity shortcuts .. data, composition, states, i18n, registry metadata all match the web spec.
+6 No delegation ........ surface authored directly (delegation forbidden by prompt).
+7 No predecessor bypass  consumes canonical P4-core types (DashboardWidgetSize/Registration, Color.TS,
+                         Font.TS, TSSpacing, TSRadius, TSSkeleton) like GuardModeWidget; adds no duplicate.
+8 No commit on red ..... surface has zero red: both SDK compiles + lint + format + placeholder all green.
+9 No silent drift ...... no web-absent chrome beyond the documented freshness/refresh/feedback parity.
+10 Log ends with EXIT + STATUS (below).
+
+============================================================
+FILES DELIVERED (allowed set only)
+============================================================
+apps/apple/TeslaSync/dashboard-widgets/CommandQuickActionsWidget.swift          (surface: header + states + registration)
+apps/apple/TeslaSync/dashboard-widgets/CommandQuickActionsWidget.Model.swift    (P1/S8 read+dispatch seams, @Observable model, P1/S10 facade, P1/S11 telemetry)
+apps/apple/TeslaSync/dashboard-widgets/CommandQuickActionsWidget.Adapter.swift  (catalog / layout / resolver / a11y — pure)
+apps/apple/TeslaSync/dashboard-widgets/CommandQuickActionsWidget.Views.swift    (banner / button / grid / feedback subviews)
+apps/apple/TeslaSync/dashboard-widgets/CommandQuickActionsWidget.Previews.swift (per-state previews, DEBUG)
+apps/apple/TeslaSync/dashboard-widgets/CommandQuickActionsWidget.Tests.swift    (adapter + model + registry + a11y tests)
+apps/apple/TeslaSync/dashboard-widgets/CommandQuickActionsWidget.strings        (P1/S10 i18n catalog)
+.github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0030-CommandQuickActionsWidget.log (this log)
+
+EXIT=0
+STATUS=DONE

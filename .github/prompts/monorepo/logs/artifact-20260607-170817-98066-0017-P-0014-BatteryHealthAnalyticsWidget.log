@@ -1,0 +1,106 @@
+=== P4 Dashboard widget 0014 BatteryHealthAnalyticsWidget (Apple) ===
+Date: 2026-06-07
+Runner: Darwin (arm64), Swift 6.3.2
+Artifact: apps/apple/TeslaSync/dashboard-widgets/BatteryHealthAnalyticsWidget.*
+Web source (spec): web/src/features/dashboard/widgets/BatteryHealthAnalyticsWidget.tsx
+Registry: id=battery-health-analytics  default=2x4  min=1x2  max=4x40  category=battery
+
+--------------------------------------------------------------------------------
+DELIVERABLE (complete, no stubs/placeholders)
+--------------------------------------------------------------------------------
+apps/apple/TeslaSync/dashboard-widgets/BatteryHealthAnalyticsWidget.Projection.swift
+    Pure (Foundation-only) adapter + formatting + view-state, unit-testable in isolation:
+      - BatteryHealthAnalyticsData (+ from(json:) / from(any:) null-safe coercion; web `data?.x ?? 0`)
+      - BatteryHealthBand (web scoreColor thresholds 80/50 -> good/fair/poor)
+      - BatteryHealthAnalyticsFormat (locale-aware fmtInt / fmtNumber)
+      - statDescriptors() (the 6 gauge-hero stats, exact web order/keys/units)
+      - BatteryHealthAnalyticsViewState (+ resolve + renderBranch; cached stays visible, ADR-013)
+      - BatteryHealthAnalyticsFootprint / Registry (size constraints + identity)
+apps/apple/TeslaSync/dashboard-widgets/BatteryHealthAnalyticsWidget.swift
+    @Observable model binding the shared-core StateFlow<Resource> (P1/S8 facade: StateHolderModel
+    + LoadableState + AppContainer.loadable), offline/stale/fetching/lastUpdated derivation,
+    BatteryHealthAnalyticsTelemetry seam (view.opened), widget entry view (lifecycle + telemetry).
+apps/apple/TeslaSync/dashboard-widgets/BatteryHealthAnalyticsWidget.Surface.swift
+    SwiftUI surface rendering EVERY state (loading skeleton / content gauge-hero / empty /
+    error QueryError+retry / stale chip / offline chip / background-fetch spinner / cached+retry),
+    score-banded SoH gauge, 6-stat adaptive grid; VoiceOver labels+values, Dynamic Type
+    (Font.TS roles), Reduce Motion honored; #Preview for each state.
+apps/apple/Tests/Unit/Dashboard/BatteryHealthAnalyticsWidgetTests.swift
+    XCTest: adapter projection/coercion/null-safety, score band, formatting, per-stat
+    composition (i18n keys), view-state resolution + render branch (per-state), catalog
+    resolution (en), footprint clamp, telemetry slug.
+
+Wiring (required for the surface to build + lint at the prescribed path):
+    apps/apple/project.yml      -> add `TeslaSync/dashboard-widgets` to TeslaSync + TeslaSync-macOS sources
+    apps/apple/.swiftlint.yml   -> add `TeslaSync/dashboard-widgets` to `included`
+
+i18n: all 9 keys already present in Localization/Localizable.xcstrings (ar/en/he) under
+    translation.widget.batteryHealthAnalytics.{title,score,totalCycles,avgChargeDepth,
+    avgDischargeDepth,dcFastRatio,tempExposure,chargeHabits,noData}  (P1/S10) — no catalog edit.
+
+--------------------------------------------------------------------------------
+GATE RESULTS
+--------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+    '/Library/Developer/CommandLineTools' is a command line tools instance
+    IOS_EXIT=1   -> BLOCKED (platform capability: full Xcode absent)
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+    '/Library/Developer/CommandLineTools' is a command line tools instance
+    MAC_EXIT=1   -> BLOCKED (platform capability: full Xcode absent)
+
+[3] swiftlint --strict
+    Done linting! Found 0 violations, 0 serious in 260 files.
+    LINT_EXIT=0  -> PASS
+
+[4] swiftformat --lint apps/apple
+    0/264 files require formatting, 2 files skipped.
+    FORMAT_EXIT=0 -> PASS
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/BatteryHealthAnalyticsWidget
+    PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+    PLACEHOLDER_EXIT=0 -> PASS  (no TODO/stub/mock/placeholder/Lorem in shipped code)
+
+--------------------------------------------------------------------------------
+SUPPLEMENTARY VERIFICATION (runnable on this runner)
+--------------------------------------------------------------------------------
+[A] xcodegen generate --spec project.yml
+    Created project ... XCODEGEN_EXIT=0  (project.yml valid; new source group accepted)
+    grep -c BatteryHealthAnalyticsWidget TeslaSync.xcodeproj/project.pbxproj = 24
+    (widget files are members of the iOS + macOS app targets; generated .xcodeproj removed
+     afterwards — it is a build artifact, regenerated via xcodegen, not committed.)
+
+[B] swiftc -O BatteryHealthAnalyticsWidget.Projection.swift <harness>.swift && run
+    Compiled + executed the pure adapter/formatting/state logic standalone (Foundation-only,
+    no Xcode/KMP needed). 38/38 assertions passed, exit 0:
+      adapter (incl. NSDictionary bridge, string/NSNumber coercion, empty-object parity),
+      score band 80/50, gauge fraction clamp + value text, fmtInt/fmtNumber, the 6 stat
+      descriptors (keys+values+units), viewState.resolve, renderBranch per state,
+      footprint clamp 1x2..4x40, registry id.
+    HARNESS_EXIT=0 -> PASS
+
+--------------------------------------------------------------------------------
+CAPABILITY EVIDENCE (why [1]/[2] are BLOCKED, not failing)
+--------------------------------------------------------------------------------
+xcode-select -p                -> /Library/Developer/CommandLineTools  (no full Xcode.app)
+apps/apple/Frameworks/Shared.xcframework -> empty (.gitkeep only); KMP `Shared.xcframework`
+                                  not built (needs JDK+Kotlin/Native AND the iOS/macOS SDKs
+                                  that only ship with full Xcode). Every facade type
+                                  (LoadableState/StateHolderModel/AppContainer/FacadeError)
+                                  `import Shared`, so the app module + its XCTest bundle
+                                  cannot link/run here. Same constraint already recorded for
+                                  this repo at logs/... "P9-0001 XCTest unit gate BLOCKED".
+xcrun simctl list devices available | iPhone  -> (none; no iOS runtimes without Xcode)
+
+Available: swift 6.3.2, swiftlint, swiftformat, pwsh, xcodegen, JDK 17.
+Absent:    Xcode.app (iOS/macOS SDK + simulators), built Shared.xcframework.
+
+The implementation is complete and idiomatic; [1]/[2] (and the XCTest bundle they run) require
+full Xcode + a built KMP Shared.xcframework, neither present on this runner. All checks that CAN
+run on this runner are green, and the pure projection logic the surface depends on is proven by a
+standalone compiled+executed harness.
+
+EXIT=1
+STATUS=BLOCKED

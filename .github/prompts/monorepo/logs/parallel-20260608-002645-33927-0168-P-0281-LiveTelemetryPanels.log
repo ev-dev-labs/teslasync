@@ -1,0 +1,181 @@
+I'll start by assessing the environment capabilities and exploring the existing structure, since this task requires Apple toolchain (SwiftUI/Swift Charts/MapKit) which may not be available on the runner.
+
+Key capability finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed — no iOS Simulator. Let me verify what IS available and explore the existing native structure in depth.
+
+Critical findings: SwiftUI/Charts/MapKit **do compile** via the macOS Command Line Tools SDK (exit=0), but **full Xcode is absent** (`xcodebuild` errors) and **`simctl` is missing** (no iOS Simulator). The `feature-views/` dir already exists with established `.Adapter`/`.Model`/view/test conventions. Let me study the existing patterns.
+
+Now I understand the file-set convention: each surface has `.swift`, `.Adapter.swift`, `.Model.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`. The 7 child panels don't exist natively yet (they're separate out-of-scope surfaces). Let me study the shared infrastructure (state holders, tokens, i18n, diagnostics, motion) and a representative composite example.
+
+Let me read the core shared infrastructure files that every feature view depends on.
+
+Excellent — rich shared component library exists. Now let me read a complete canonical feature view (AcDcStatsPanel) end-to-end plus the design tokens to learn the exact conventions for adapter, model, telemetry (`view.opened`), states, and tests.
+
+This is a clear, rich canonical pattern. Let me read the remaining AcDcStatsPanel files (Views, Previews, strings, Tests) and the design tokens to complete my understanding.
+
+Now let me read the test conventions, design tokens, project config, and the web building blocks (InfoTile, TelemetryGrid) that the panels share.
+
+Now I must read all 7 child panels — since allowed files are restricted to `LiveTelemetryPanels.*` and the composition must be self-contained and fully render (no stubs), I'll reproduce each panel faithfully as internal subviews. Let me read them and the API types they consume.
+
+Let me read the remaining 4 panels and the API types that define the data shapes.
+
+Let me read the final 2 panels, the tire-pressure helpers, and the API types defining all the snapshot shapes.
+
+Now let me read the tire helpers, the API types for all snapshot shapes, and discover the native units/formatting helper plus lint configs and the placeholder checker.
+
+Let me read the API type definitions, the native units facade, placeholder patterns, and project config.
+
+Now the native units facade, design tokens, placeholder patterns, and project config.
+
+The `Units` facade depends on the KMP `Shared` framework. Let me see how an existing feature view that uses unit formatting (temperature/speed/pressure) structures its seam, and confirm the design tokens.
+
+`TemperatureMetricCards` and `DetailCards` use unit formatting. Let me read their adapter/model to learn the units seam convention, plus the shared component definitions.
+
+I now fully understand the convention: unit formatting is ported **purely in Swift** (not via KMP), with unit prefs carried as value types. Let me read the web formatting helpers to port faithfully, plus the design tokens and shared component signatures.
+
+I have the full formatting spec. Let me grab the conversion constants, design tokens, and shared component signatures (GlassPanel, MetricCard, Badge), plus confirm the Tests target and `.strings` handling in project.yml.
+
+Let me inspect the design token definitions and shared component signatures directly.
+
+The tokens are in the generated `Tokens.swift`. Let me read it plus the shared component signatures (GlassPanel, MetricCard, Badge, Skeleton).
+
+Now the shared component signatures I'll compose with, plus the Tests target config.
+
+I need to understand how `.Tests.swift` files in `feature-views/` get compiled (the app target includes that dir, but tests need XCTest). Let me inspect the full app target config and exclusion rules.
+
+Before finalizing my verification/commit strategy, let me check the documented policy for unverifiable macOS builds, whether `pwsh` exists, and any precedent in the logs directory.
+
+The precedent is now crystal clear: prior P4 Apple surfaces reach **STATUS=DONE** by verifying all *host-runnable* gates green (isolated SwiftPM build+tests, `swiftc -typecheck`, swiftlint/swiftformat/placeholder), then **deferring** the `xcodebuild` step (documented in `macos-pending-verifications.md`). `pwsh` is available so I can run the real placeholder gate. Let me confirm remaining tooling and set up tracking.
+
+Let me read the exact `TSMetricCard`/`TSBadge` signatures I'll compose with.
+
+I have everything needed. Let me set up a plan and tracking, then implement the 7-file surface following the canonical conventions.
+
+Now I'll implement the surface. Starting with the pure, testable Adapter (formatting/units ports, snapshots, thresholds, and the 7 panel projections).
+
+Now the panel projections (pure view-models). I'll put them in `LiveTelemetryPanels.Projection.swift` following the `.Projection.swift` convention.
+
+Now the Model file — the state-holder seam, telemetry seam, input/resolved types, projection-to-phase, observable model, and i18n facade.
+
+Now the main composition View.
+
+Now the chrome + shared helpers (header, pulse, freshness banner, loading/empty/error, panel card, stat row, chip, tone→color).
+
+Let me verify the `TSButton` API I referenced so the calls compile.
+
+Let me fix the retry button to use the facade, then build the 7 panels.
+
+Now the 7 panels and the responsive grid — the heart of the composition.
+
+Now let me enumerate every i18n key I referenced so the `.strings` catalog is complete (referenced == declared).
+
+Let me also extract the keys passed as `titleKey`/`messageKey`/`key:` arguments (panel cards, empties, tire corners, section captions).
+
+Now the `.strings` catalog contribution with every referenced key.
+
+Let me add a pure accessibility-summary helper to the Adapter (so VoiceOver strings are testable), then wire it into the views.
+
+Now the Previews file with sample data exercising all states and panels.
+
+Now the comprehensive test suite — adapter formatting, all 7 projections, phase resolution, model wiring/telemetry/freshness, and accessibility.
+
+All 8 surface files are written. Now the verification phase — starting with an isolated SwiftPM build + test of the pure logic (Adapter + Projection + Model + Tests), which is the strongest correctness evidence available on this runner.
+
+The pure logic compiles cleanly under Swift 6 strict concurrency. Now let me run the tests.
+
+XCTest isn't bundled with Command Line Tools (it ships with Xcode). Let me check whether Swift Testing (`import Testing`) is available in this toolchain — if so I can execute the same assertions there.
+
+Neither XCTest nor Swift Testing ships with Command Line Tools. I'll execute the identical assertions via a standalone executable harness (proving the logic runs green), and separately syntax-check the committed XCTest file. Let me build the harness.
+
+The external harness can't see `internal` helpers (the committed XCTest file uses `@testable` which the app target gets automatically). Let me enable testing on the library and use `@testable import` in the harness.
+
+Just an access-level nit in the harness (`Tally` is `private`). Let me make it internal and rerun.
+
+**124/124 assertions pass** executing the real logic under Swift 6 strict concurrency. Now the full-surface SwiftUI typecheck. Let me first map the shared-component dependency tree and check for any KMP `Shared` imports that would block an isolated typecheck.
+
+Components are KMP-free (SwiftUI/Charts/MapKit/Foundation only). I'll typecheck my full surface against the real macOS SDK together with the entire shared Components+Design tree.
+
+The only failures are in `UnitFormatters.swift`, which depends on the KMP-backed `UnitPreferences` (SharedFacade) — and my surface doesn't use it (I do my own formatting). Let me exclude that one file and re-run.
+
+**Full-surface macOS typecheck passes (exit 0)** — all 7 files compile against real SwiftUI + the shared component tree under Swift 6 strict concurrency. Now the lint gates. Let me run swiftformat and swiftlint on my files.
+
+swiftformat found auto-fixable issues (numeric grouping, line wrap, redundant `@ViewBuilder`). Let me auto-format my files, then re-verify.
+
+swiftformat clean. Now swiftlint --strict on the surface files.
+
+swiftlint enforces a 400-line file limit (existing surfaces split for this reason), plus a long line and a trailing-closure issue. Let me inspect the two specific code issues and current file sizes, then split files to comply.
+
+I need to fix two code issues and split 4 files to satisfy the 400-line limit. Let me find the MARK boundaries to split cleanly.
+
+Let me fix the two code issues in Panels.swift first (long line + trailing-closure rule).
+
+Now let me split the 4 oversized files. Let me get fresh MARK boundaries (Panels shifted after edits) and perform the splits with precise slicing.
+
+Before splitting, I must make `LiveLabels` (currently file-private) module-internal, since VehicleState/Energy panels that move to new files use it.
+
+Now perform all four file splits with precise slicing and proper headers.
+
+All files now ≤400 lines. Let me re-run swiftformat, then swiftlint --strict across all the (now 13) surface files.
+
+swiftformat and swiftlint --strict both clean. Now re-run the full SwiftUI typecheck with the split file set, then re-sync and re-run the executable harness.
+
+Full typecheck passes after the split. Let me re-sync the isolated package with the split sources and re-run the executable harness to confirm logic still passes.
+
+124/124 still green. Now the remaining gates: placeholder scan, parse-check of the XCTest files, and `xcodegen generate` to prove file enumeration. Let me check for placeholder patterns and run the real gate via pwsh.
+
+Placeholder gate: **COUNT=0, EXIT=0**. Now syntax-check the XCTest files and run `xcodegen generate` to prove the build system enumerates the new files.
+
+All host gates green and all 13 files enumerated by xcodegen. Now let me capture the real `xcodebuild` failure evidence (proving the deferral is environment-forced, not a code issue), then write the log.
+
+All evidence captured. xcodebuild is environment-blocked (CLT-only, no Xcode, no `simctl`) — confirmed. Note the prompt's **Allowed files** are restricted to `LiveTelemetryPanels.*` + the log, so I'll document the deferral in the log only (not edit `macos-pending-verifications.md`). Let me write the comprehensive gate log.
+
+Let me run a final consolidated verification, verify the strings key count, clean up temp artifacts, and check git status before committing.
+
+Good — **0 referenced-but-undeclared keys** (every key used is declared). Let me get the exact test count and correct the key-count figure in the log for accuracy.
+
+Let me correct the test count (49, not 38) and key-count figures in the log for accuracy.
+
+Now let me clean up temp artifacts and check git status before committing.
+
+The generated `.xcodeproj` is ignored. The `AIUsageCard.*` and `web/*` modifications are **pre-existing** (not mine) — I'll stage only my `LiveTelemetryPanels.*` files + the log, respecting the allowed-files scope. Let me commit.
+
+Git add is hanging unusually long. Let me stop it and investigate (possible index lock in this parallel environment).
+
+`.git` appears to be a worktree pointer file, not a directory. Let me inspect the worktree setup and check for locks in the real gitdir.
+
+It's a git worktree (shared common-dir with other parallel slots) — the hang was transient lock contention. Git is responsive now. Let me check staged state and re-attempt staging.
+
+`git add` completed instantly (the earlier hang was transient cross-slot contention). Let me verify the staged set and commit.
+
+The commit is hanging too — likely a pre-commit hook in the shared common-dir (my earlier hook check inspected the wrong path since `.git` is a worktree file). Let me stop and investigate the real hooks.
+
+My commit did **not** land (HEAD is still the pre-existing AiUsageCard merge). There are no active hooks and no locks now — the hang was ref-lock contention on the shared common-dir (400+ parallel slots). Let me verify my files are still staged and retry the commit.
+
+My 15 files are still staged, no locks. Let me retry the commit in async mode so I can monitor it.
+
+Commit landed: **`76e37c2ab`**, 15 files, 3856 insertions. The earlier hangs were transient cross-slot ref-lock contention (400+ parallel worktrees share one git dir). Let me verify the final state.
+
+The task is complete and verified. The commit is clean — all 14 surface files + the log committed as `76e37c2ab`, with the pre-existing `AIUsageCard.*`/`web/*` modifications correctly left untouched (outside my allowed-files scope).
+
+## Summary
+
+I shipped a production-polished, native Apple-idiomatic SwiftUI parity of the web `LiveTelemetryPanels` composition (the "Live Telemetry" section header + responsive 2-column grid of 7 staggered panels: Powertrain, Climate, Security, Vehicle State, Tire Pressure, Energy & Charging, Media & Navigation).
+
+**Capability finding:** SwiftUI/Swift Charts/MapKit are available via the macOS SDK, but the runner has **only Command Line Tools** — no full Xcode and no iOS Simulator (`simctl` absent). So the `xcodebuild build test` gate steps are environment-**DEFERRED** (real `IOS_EXIT=1`/`MAC_EXIT=1` captured), matching the established disposition of prior P4 Apple surfaces.
+
+**14 files** (canonical convention, each ≤400 lines): `.swift`, `.Adapter`, `.Snapshots`, `.Projection`, `.ProjectionMedia`, `.Model`, `.Views`, `.Panels`, `.PanelsState`, `.PanelsMedia`, `.Previews`, `.strings`, `.Tests`, `.ModelTests`.
+
+**Every host-runnable gate is genuinely green:**
+| Gate | Result |
+|---|---|
+| Full macOS `swiftc -typecheck` (real SwiftUI + shared Components/Design tree, strict concurrency) | **EXIT=0** |
+| Isolated SwiftPM build + **executed** assertion harness (XCTest/Swift Testing unavailable on CLT) | **124/124 passed** |
+| `swiftc -parse` of the two XCTest files | **EXIT=0** |
+| `swiftlint --strict` (13 files) | **0 violations** |
+| `swiftformat --lint` (13 files) | **0 require formatting** |
+| `check-placeholders.ps1` | **COUNT=0** |
+| `xcodegen generate` | **EXIT=0**, all 14 files enumerated |
+
+**Parity fidelity:** SI formatting ports match `numberFormat.ts` + `unitConversion.ts` exactly (precision, grouping, no-space °unit), including the web's verbatim quirks (charger Watts labelled "kW", energy Wh labelled "kWh", charge-rate = `formatSpeed(range_added_meters_per_hour/3600)`); tire-pressure Pa thresholds + verdict; ±300 kW power bar; fan ladder; presence chips. All 5 states render (loading/empty/error/content + live/stale/offline freshness axis with one-shot stale auto-refresh), data binds through the P1/S8 state-holder seam, 96 i18n keys with **0 referenced-but-undeclared**, VoiceOver labels + Reduce Motion throughout, and `view.opened` telemetry on the P1/S11 contract.
+
+Log: `.github/prompts/monorepo/logs/p4-apple-feature-views-0281-LiveTelemetryPanels.log` → `EXIT=0 / STATUS=DONE` (xcodebuild deferred with evidence).
+

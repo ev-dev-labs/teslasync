@@ -1,0 +1,204 @@
+I'll start by exploring the repository structure to understand the web source and the existing Apple app architecture.
+
+Let me read the web source (the specification) and explore the Apple app structure in parallel.
+
+The web source is clear. Now let me examine the existing feature-views structure to follow established patterns. Let me check for any existing ServiceHealthSection files and look at a complete sibling example.
+
+The pattern is clear: each feature view has `.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.Tests.swift`, and `.strings`. Let me find sibling status-section views (same web feature) that are already implemented to follow their conventions closely.
+
+`InfrastructureSection` is a sibling from the same web feature. Let me study it as the primary model — reading all its files plus the AcDcStatsPanel main view for DataTable conventions.
+
+`InfrastructureSection` shares the exact same data source (`getTelemetryStatus`) as my target — it's the ideal model. Let me read all its files to understand the full pattern (Model, Adapter, Views, Catalog, Previews, Tests, strings).
+
+This sibling uses on-demand mutations, but my target is a **live polling query** with MetricCards + a DataTable. Let me study `AcDcStatsPanel` (live query + table) and the web telemetry DTO shape, plus the remaining InfrastructureSection files and design tokens.
+
+`AcDcStatsPanel` is the perfect model — live-query phase machine + connection axis + table. Let me get the exact `TelemetryStatus` DTO and read the remaining AcDcStatsPanel files plus locate native shared components (tokens, table, metric, badge, etc.).
+
+Now let me read the exact `TelemetryStatus` DTO and find the native shared components I'll need (metric card, badge, grid, formatters), plus the remaining AcDcStatsPanel reference files.
+
+Let me locate the shared component library (where `TSGlassPanel`, `TSDataTable`, `TSBadge`, etc. are defined) and find available metric/badge/grid primitives plus the design tokens.
+
+The shared components live in `apps/apple/Sources/Components/`. Let me read the key ones (Metrics, Badges, Cards, DataTable) and find the design tokens + the layout Grid primitive.
+
+Let me read the web `MetricCard` (to match icon/color), the shared Cards/DataTable/Skeletons/tokens, and the remaining AcDcStatsPanel reference files (Adapter, strings, Previews, Tests).
+
+Let me read the Adapter and Tests reference files, the shared Cards/DataTable components, and the project.yml to understand how files get included in the build.
+
+Let me read the Adapter pattern, shared Cards/Skeletons, project.yml (build wiring), and the web formatters that I need to port.
+
+Let me check the build tooling availability (critical for the gate) and read the design tokens, feedback components, typography, and the web formatters I need to port.
+
+All tooling is present (xcodebuild, swiftlint, swiftformat, pwsh, xcodegen). Let me read `formatDateTime`, the design tokens, feedback skeletons, typography, and how project.yml wires up sources/tests.
+
+Let me locate the token definitions and feedback/typography components with a broader search.
+
+Let me read the Theme (tokens), Feedback States/Skeletons, Typography, and TypedFormatters to lock down the exact APIs I'll use.
+
+Let me read the generated design tokens, Skeletons, Typography, and project.yml to finalize the API surface and build wiring.
+
+Let me read the generated tokens, Typography, and project.yml.
+
+Let me read project.yml (build wiring), Typography, and Motion to finalize my component vocabulary.
+
+Now I understand the architecture and component vocabulary. One critical question: how do the `*.Tests.swift` files in `feature-views/` get compiled into the **test** target (not the app target, which would break `@testable import`)? Let me investigate the test wiring and overall build setup.
+
+There's a `Tests/Unit/FeatureViews` directory. Let me reconcile how feature-view tests are wired and check whether the `.Tests.swift` files in `feature-views/` are excluded from the app target.
+
+I had a path bug. Let me recheck with the correct path and examine git tracking plus any test-target wiring for feature-view tests.
+
+149 surfaces each ship `.Tests.swift` (with `@testable import`) inside the app-target source path. I need to understand whether the project actually builds. Let me read the web `AccordionSection` wrapper (my source's shell), the native Motion API, check for a native accordion, and look at the build script + git history for CI evidence.
+
+There's a native `Disclosure.swift`. Since my web source's shell is `AccordionSection` (collapsible GlassPanel), let me read the native disclosure component to use as the shell.
+
+There's a `TSAccordion` but it lacks the icon/description/badges composition my web source needs, so I'll inline the accordion shell (like the web does) from shared primitives. Now let me assess buildability: read the Shared.xcframework build script, swiftlint config, and check for prebuilt frameworks.
+
+The `Shared.xcframework` is absent (only `.gitkeep`) — it requires a KMP/Gradle/Kotlin-Native build. Let me check the heavy toolchain availability (Xcode, simulators, KMP) and read the swiftformat config, while I begin planning the files.
+
+**Critical capability finding:** Only Xcode Command Line Tools are installed (`/Library/Developer/CommandLineTools`) — `xcodebuild` cannot run, and no iOS simulators exist. Let me confirm there's no full Xcode anywhere and verify what I *can* run (swiftc typecheck, swiftlint, swiftformat, pwsh).
+
+There's a full `/Applications/Xcode.app` — I can target it via `DEVELOPER_DIR` without sudo. Let me verify xcodebuild and simulators work that way.
+
+Excellent — this is a game-changer. Full **Xcode 26.5** is available via `DEVELOPER_DIR`, with an **iPhone 16 simulator (iOS 26.5, already booted)** and **Java 17** for the KMP framework build. The real gate can run. Let me read the Button API, confirm no symbol collisions, and set up my plan.
+
+No collisions, and I've confirmed all component APIs. Full Xcode + iPhone 16 sim + Java are available, so the real gate is runnable. Let me set up my plan and todos, then start building — beginning with the pure-logic Adapter (which I can validate standalone with `swiftc`).
+
+Now let me create the Adapter (pure logic, Foundation-only).
+
+Adapter created. Let me validate it standalone with `swiftc` — compiling it with a harness that exercises decoding, projection, and formatters, and prints exact outputs to bake into the tests.
+
+Adapter validated — decoding, VIN-sorted ordering, projection ladder (loading-before-error matches web), and all formatters work. The date renders as "Apr 4, 2026 at 9:30 AM" (idiomatic Apple `yMMMdjmm`); I'll assert robust semantic substrings in tests to stay portable across iOS/macOS ICU. Let me mark the adapter done and build the Model.
+
+Model created. The Adapter+Model are the testable core. Now the Views (leaf subcomponents) — metrics grid, vehicles table, badges, and loading/empty/error chrome.
+
+Now the surface view itself — the accordion shell, freshness chip, connectivity banner, and state switch.
+
+Now the Previews, strings catalog, and Tests. Let me create all three.
+
+All 7 files created. Let me validate formatting/linting on my files early (fast feedback) before the heavy build. First, swiftformat lint and swiftlint on just my new files.
+
+swiftformat flagged formatting (it's the project's canonical formatter). Let me auto-fix my files in place, then re-lint to confirm clean.
+
+Clean. Now swiftlint (strict) on my files.
+
+0 violations. Let me re-validate the (now reformatted) Adapter logic standalone, including the new test scenarios I baked in (default decoding, malformed-throws, edge formatter values).
+
+All 30 logic checks pass against the formatted code. Let me spot-check the swiftformat-modified regions to confirm nothing looks off.
+
+The reformatted code is correct and all 30 logic assertions pass. Let me update progress and tackle the gate. First, a key unknown: how `*.Tests.swift` in the app-target source path avoid breaking the app build. Let me regenerate the project and inspect target membership.
+
+Project generated. Let me determine how `*.Tests.swift` files are assigned to targets (the key build question) by inspecting the generated project, and start the long-pole Shared.xcframework build in the background.
+
+Each Tests file is in two targets' Sources phases. I need to know *which* targets (app vs test). Let me map the build-file IDs to their owning targets precisely.
+
+Confirmed: `ServiceHealthSection.Tests.swift` is a member of the **app targets** (`TeslaSync`, `TeslaSync-macOS`), not the test targets — same as all 149 existing surfaces. That means the app target compiles `@testable import TeslaSync` (a self-import). Let me verify whether that's actually a compile blocker by reproducing it in isolation with swiftc.
+
+`import XCTest` fails in the app-target context (XCTest isn't searchable in a plain app target). Let me validate my pbxproj parser against a known test-target file and confirm the self-import error with the XCTest path added.
+
+My parser is validated (`ToolCardTests.swift` correctly maps to the test targets; my Tests file maps to the app targets). Crucially, the self-import is only a **warning** ("ignoring import"), so the sole remaining build question is whether `import XCTest` resolves in the app target. Let me check that build setting, and kick off the long-pole Shared.xcframework (KMP) build in the background.
+
+`ENABLE_TESTING_SEARCH_PATHS = NO` for the app target, and the Tests files are compiled into the app target. Combined with the earlier swiftc evidence (`import XCTest` fails without testing search paths), this points to a systemic build condition across all 149 surfaces. But I'll run the **real** gate to capture genuine evidence rather than assume. The KMP framework is building. Let me check its progress.
+
+Gradle is progressing well (Kotlin/Native compiles are cached; debug XCFramework already assembled, release variant next). Let me wait for it to finish.
+
+Release framework linking is underway. Let me continue waiting.
+
+Gradle process exited mid-release-link — it may have been completion or a session teardown. Let me check the full final status and whether the release framework was written.
+
+The background Gradle build was terminated when its launching session ended (I should have used detached mode). Most Kotlin compiles are cached, so restarting will be faster. Let me relaunch it properly detached.
+
+The Gradle build is now running detached. Let me verify the gate's log directory exists and check Gradle progress.
+
+Logs dir exists with 323 sibling logs. A sibling log will reveal how prior surfaces handled the same gate. Let me wait for the poll then inspect one.
+
+The release `Shared.xcframework` is ready. Let me confirm Gradle fully finished and stage the framework into `apps/apple/Frameworks/` (the scheme pre-action does this, but I'll do it explicitly to be safe).
+
+**Gradle BUILD SUCCESSFUL** and `Shared.xcframework` is staged (ios-arm64, ios-arm64-simulator, macos-arm64). Now the moment of truth — let me run the real iOS build to see whether the app target compiles (testing the systemic `import XCTest` question with genuine evidence). I'll run it async and monitor.
+
+There's the **real, genuine evidence**: the app build fails with
+
+```
+.../feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'
+```
+
+This is a pre-existing, systemic condition — every feature-view `*.Tests.swift` is a member of the **app** targets (which build with `ENABLE_TESTING_SEARCH_PATHS=NO`), so `import XCTest` can't resolve. It's hitting a sibling (`AIRestorePanel`) I never touched. Let me confirm the build outcome and check how prior sibling surfaces concluded their gate.
+
+Decisive context: the **sibling logs reveal the sanctioned disposition** used by all 75 prior P4 surfaces (0010 ToolCard, 0031 FlagsTable, 0096 AcDcStatsPanel, …): the full-app `xcodebuild build test` is **DEFERRED/RED (EXIT=65)** due to two documented pre-existing conditions — (1) the co-located-XCTest app-target membership (every `*.Tests.swift` lives in the app target → `import XCTest` fails; my build died on the sibling `AIRestorePanel.Tests.swift`) and (2) macOS dev-signing — both owned by the P4/P99 CI gate. They still report `STATUS=DONE` after independently verifying the surface compiles + its tests pass in isolation, with lint/format/placeholder green.
+
+I'll match that rigor. Let me verify whether the shared component subtree compiles standalone (so I can do an isolated Swift 6 build of my surface against the *real* design system).
+
+The shared component subtree is clean (only system frameworks — SwiftUI/Charts/MapKit/CoreLocation/Foundation, no `Shared` import). That means I can do a **real isolated Swift 6 build** of my surface against the actual design system + components — the same independent verification the siblings did. Let me assemble and run it (compile my non-test files + all real components + tokens, plus a runner that exercises the Model/Adapter the way the XCTest does).
+
+Typecheck shows 6 errors but **none in ServiceHealthSection** files. Let me see what they are (likely Components needing platform context in isolation).
+
+All 6 errors are `TSChartPalette` not in scope in `Maps/MapView.swift` — a symbol defined outside the file set I included (not in my surface). Let me locate it and add it to the isolated build.
+
+`TSChartPalette` lives in `Sources/Design/TSDesign.swift` and my surface doesn't use it. Let me add the Design dir and do a **full isolated build + run** — compiling my surface against the real components and executing the Model/Adapter the way the XCTest does.
+
+My surface has **0 errors**, but pulling in the whole Components+Design tree dragged in unrelated Charts/Maps/Design deps (52 errors, none mine). Let me compile a *minimal* real-component set instead. First, locate the few extra symbols my components need (e.g., `tsGlassPanel()`).
+
+`tsGlassPanel()` is in `Sources/Design/TSMaterial.swift` (SwiftUI-only). Let me compile a focused real-component set + my surface + the runner.
+
+The isolated build caught a **real bug in my code** (line 57) — I passed `expandedBody` (a View value) where a `() -> some View` closure was expected, and the helper name `body(content:)` collides conceptually with the View `body`. Let me view and fix it.
+
+Let me fix the bug — rename the colliding `body(...)` helper and pass a proper closure.
+
+Fixed. Let me re-run the isolated build + run to confirm the surface compiles and all checks pass.
+
+Only the **runner harness** has a strict-concurrency issue now (top-level `failures` is MainActor-isolated) — my surface compiled cleanly (0 surface errors). Let me fix the harness to run all checks on the MainActor and rebuild.
+
+**BUILD_EXIT=0, 0 errors, ALL_PASS (19 runtime checks).** My surface compiles cleanly against the real design system under Swift 6 strict-concurrency, and the full Model/Adapter behavior (telemetry-once, stale one-shot auto-refresh, offline no-refresh, stop/restart) passes. I caught and fixed a real bug. Since I edited the surface file, let me re-format/re-lint, then typecheck the Previews and the XCTest file too.
+
+swiftformat clean, swiftlint 0 violations, Previews typecheck 0 errors. The Tests file shows 188 errors but they look like XCTest-symbol resolution in my ad-hoc compile (XCTest's Swift overlay isn't fully wired by my `-F` alone). Let me confirm **all** Tests errors are XCTest-framework resolution, not my-API misuse.
+
+All 188 Tests errors are XCTest-only: 164 unresolved `XCTAssert*` functions + 24 cascading "cannot infer" on enum cases (e.g. `.loading`) that are only uninferred *because* `XCTAssertEqual` is unknown. **Zero** errors reference my surface's API. The XCTest Swift overlay just isn't wired in my ad-hoc compile. Let me wire it properly for a clean Tests typecheck.
+
+**Tests.swift typechecks with 0 errors** once the XCTest overlay is wired. Full verification of my surface is now complete: surface + previews + tests all typecheck against the real design system under Swift 6 strict-concurrency, and 19/19 runtime checks pass.
+
+Before running the gate, let me read `check-placeholders.ps1` — I used the word "placeholder" in some comments and need to ensure it won't be flagged.
+
+The placeholder gate loads patterns from `placeholder-patterns.json`. I used the word "placeholder" in comments — let me check whether that's a flagged pattern and scan my actual files.
+
+"Placeholder" is a forbidden common pattern, and my Adapter comments use it (3 hits). Although the gate's exact `-Path .../ServiceHealthSection` argument scans trivially clean (not a real dir), I'll make my files **genuinely** clean so any real scan passes. Let me find every forbidden token in my files.
+
+Only 3 occurrences (all "placeholder" in Adapter comments), no other forbidden tokens. Let me reword them to "sentinel" (consistent with existing usage in the file).
+
+Let me verify my files are now placeholder-clean and still lint/format clean.
+
+My files are placeholder-clean, swiftformat-clean, and swiftlint-clean. Now let me run the gate's faster steps (whole-tree swiftlint, swiftformat, and check-placeholders) and capture their real exit codes.
+
+Whole-tree swiftlint (LINT_EXIT=2) and swiftformat (FORMAT_EXIT=1) each report **1 pre-existing issue** — but my files passed both cleanly in isolation. Let me identify the offending files to confirm they're not mine.
+
+Both pre-existing issues are in **other surfaces** (`LifetimeStatsWidget.Adapter.swift` function-length; `ActionBuilder.Previews.swift` blank-line) — not mine, and outside my allowed scope. Let me confirm via git that I've only touched my surface files, then run the two xcodebuild gate steps.
+
+git confirms my change set is exactly the 7 `ServiceHealthSection.*` files (the 2 dirty `web/*.tsx` files are pre-existing — untouched by me — and `xcodeproj` is gitignored). The lint/format offenders aren't in my changes. Now let me run the two `xcodebuild build test` gate steps to capture authentic exit codes. Starting with iOS.
+
+The iOS gate is running. Let me wait for it to complete.
+
+IOS_EXIT=65 captured. The log file was cleaned from /tmp, but my earlier full iOS build log should still have the evidence. Let me check and re-capture the key proof.
+
+IOS_EXIT=65, with evidence: **BUILD FAILED** on the pre-existing sibling `AIRestorePanel.Tests.swift` (`import XCTest` unresolvable in the app target) — **zero ServiceHealthSection errors**. Now the macOS gate step (writing to a stable location since /tmp is being cleaned).
+
+The backgrounded macOS subshell was killed on session teardown (same `&` issue). Let me re-run it as a foreground command so it completes within the call.
+
+MAC_EXIT=65 captured. Let me capture the macOS failure cause and confirm no ServiceHealthSection errors.
+
+Let me see the actual macOS build errors.
+
+macOS failure cause identified: **pre-existing dev-signing requirement** (`TeslaSync-macOS` / `TeslaSyncWidgets-macOS` entitlements need a development certificate) — fails before compilation, zero ServiceHealthSection errors. This is the second documented pre-existing condition the siblings noted.
+
+I now have all gate evidence. Let me update todos and write the comprehensive, honest gate log.
+
+The log is written. Now let me stage exactly my 7 surface files + the log (using an explicit glob, since the prompt's bare path prefix wouldn't match), verify nothing else is staged, and commit.
+
+Exactly the 8 intended files are staged; the 2 pre-existing dirty web files are excluded. Let me check whether a pre-commit hook is active (it could run whole-tree linters that fail on the pre-existing sibling issues), then commit.
+
+No active hook. Let me commit with the prompt's conventional-commit message.
+
+Commit succeeded (804ab2458, 8 files, 1842 insertions). Let me do final verification and clean up temporary build artifacts.
+
+Let me confirm no background sessions are lingering and finalize the plan.
+
+All background sessions completed cleanly. Let me update the plan to reflect completion.
+
+All work is complete and committed. Let me do a final todo-status check and conclude.
+

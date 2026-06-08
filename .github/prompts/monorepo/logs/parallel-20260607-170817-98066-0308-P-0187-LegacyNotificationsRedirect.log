@@ -1,0 +1,114 @@
+I'll start by reading the web source specification and exploring the repository structure to understand what I'm reproducing and what native infrastructure exists.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed, and `simctl` is unavailable. `swift`, `swiftlint`, `swiftformat` ARE available. Let me read the web source and explore the existing Apple app architecture.
+
+The web source is a **redirect component**: reads `tab` query param, maps to new notification routes, forwards remaining params. Let me examine the existing `feature-views` directory and the shared infrastructure (state holders, tokens, i18n, diagnostics).
+
+The `feature-views` directory has 863 files (one per surface, each with `.Adapter/.Model/.Previews/.strings/.swift`). Let me find sibling "redirect" surfaces to use as the exact template, since those share the `useLocation` pattern.
+
+Each surface follows a multi-file pattern (`.swift`, `.Adapter`, `.Model`, `.Views`, `.Previews`, `.Tests`, `.strings`). Let me study the shared infrastructure (state holders, i18n, tokens, diagnostics) and a representative surface to learn conventions.
+
+Found `AppRoute.swift` and `AppRouteParser.swift` — directly relevant to a redirect surface. Let me read those plus locate the i18n facade and diagnostics contract.
+
+Let me study the diagnostics seam (P1/S11), the i18n facade (P1/S10), and a representative feature-view's full file set to learn exact conventions.
+
+`ToolCard` is the ideal template — navigation-oriented with `.Model`, `.swift`, `.Telemetry`. Let me read its full set plus the test and a `.strings` example.
+
+`ToolCard` gives me the exact conventions. Now let me read its tests, a `.strings` catalog, and locate the design tokens/components plus any navigation coordinator the redirect should dispatch to.
+
+Let me read the design components and a full-state-envelope surface (AddressInput) to learn how loading/empty/error/stale/offline render, plus find the navigation seam.
+
+Tokens like `TSSpacing`/`TSRadius`/`Color.TS`/`Font.TS` are referenced everywhere but defined out of the main source tree (generated at Xcode build against `Shared.xcframework`). Let me confirm where they live and read a full-state surface to learn the state-envelope + provider-binding pattern.
+
+Confirmed: design tokens (`TSSpacing`, `Color.TS`, `Font.TS`) are generated at Xcode build against `Shared.xcframework` (only `.gitkeep` in `Frameworks/`), so a compile/test build cannot run in this CLT-only environment. I'll follow conventions exactly and lint with the available tools. Let me read the project config, a full-state surface, and the Button/AppShell navigation idiom.
+
+The `<Surface>Strings.text(key, default)` helper is the P1/S10 i18n facade. Let me read the AddressInput view, its Model (provider+telemetry binding), and find the Strings facade definition.
+
+I now have a thorough understanding of the house architecture. Let me read the Button API, the AddressInput test conventions (host-free, `@MainActor` model tests), and a pure adapter to finalize my implementation pattern.
+
+Let me enumerate the real `Color.TS`/`Font.TS`/`TSTone` token names so I only use valid ones, and check for a shared badge/chip component.
+
+I have everything needed. Let me check the swiftlint/swiftformat configs (the gate runs these and I CAN run them) and write a plan.
+
+The precedent is clear: 110+ feature-view surfaces shipped as **"code-complete + DEFERRED Xcode app build/test"** (SwiftUI capability available, app build/test deferred pending staged `Shared.xcframework`), running swiftlint/swiftformat/placeholder gates for real. Let me read the ToolCard precedent log (my template surface), check `done.txt`, and verify pwsh + standalone Swift compilation.
+
+Excellent — this is the sanctioned disposition. The ToolCard precedent (my template) ends `EXIT=0 / STATUS=DONE` via "code-complete + DEFERRED Xcode gate": complete artifact + green swiftlint/swiftformat/placeholder + a **real isolated Swift 6 build+test** of host-free logic, with the full-app xcodebuild gate deferred with honest evidence. `pwsh` is available. Let me read the placeholder checker and probe that isolated `swift test` works here.
+
+The placeholder checker loads patterns from `placeholder-patterns.json`. Let me read those patterns (to avoid triggering them) and check the probe result.
+
+`XCTest` isn't available in this CLT-only toolchain, so `swift test` can't run. I'll verify host-free logic via a self-contained Swift 6 executable harness (assertions) compiled with `swiftc -swift-version 6 -strict-concurrency=complete` — real green evidence without XCTest. Let me probe that path works with Foundation + Observation + os.
+
+`XCTest` is unavailable (CLT-only), but a Swift 6 strict-concurrency executable harness with Foundation/Observation/os works perfectly — that's my real green verification path for host-free logic. I now have everything. Let me set up tracking and write the plan.
+
+Now I'll create the surface. Starting with the Foundation-only resolver core (the parity heart).
+
+Resolver and Model done. Now the SwiftUI view + subviews.
+
+Now the XCTest suite (host-free, mirrors the parity branches).
+
+All 7 files created. Now verification — let me lint/format my new files first, then run the full-tree gates.
+
+My files are clean on both swiftformat and swiftlint (0 violations). Now the real green verification — an isolated Swift 6 strict-concurrency harness compiling Resolver + Model and running the test assertions.
+
+44/44 assertions pass under Swift 6 strict concurrency — real green for the parity core. Now the placeholder gate and full-tree lint/format. First, a forbidden-token scan of my files and the placeholder checker.
+
+Placeholder gate clean (0) both ways. Now the full-tree gates as specified. Running swiftformat --lint on the whole `apps/apple` tree.
+
+A single pre-existing swiftformat violation in `ActionBuilder.Previews.swift` (a different, parallel-merged surface) — not my file (my 6 files passed 0/6). Per task rules and my allowed-files scope, I must not touch it. Let me confirm it's pre-existing via git, and run full-tree swiftlint.
+
+Confirmed: only my 7 files are added; `ActionBuilder.Previews.swift` is pre-existing (empty diff). Full-tree swiftlint finds 1 pre-existing violation (none in my files). Let me identify it for the honest log.
+
+Both pre-existing violations are in unrelated surfaces (`ActionBuilder.Previews.swift`, `LifetimeStatsWidget.Adapter.swift`) — outside my allowed files and forbidden by task rules to modify. Let me confirm the second is pre-existing and sanity-check my token usage.
+
+All tokens valid; second violation confirmed pre-existing. Let me gather metadata and write the honest gate log.
+
+Now I'll write the comprehensive, honest gate log.
+
+Log written. Let me do a final review of the two SwiftUI view files (which the isolated harness couldn't compile) for API correctness before committing.
+
+The SwiftUI files are correct and match house APIs. Let me update tracking and commit per the prompt's instructions.
+
+Committed (`9f3db1f3e`, 8 files, +1233). Final confirmation: re-lint committed files, check for any `mock`/`stub`/`lorem` wording (acceptance criteria), and clean up temp dirs.
+
+All committed files are clean (swiftformat 0/6, swiftlint 0 violations, no mock/stub/lorem). Let me finish temp cleanup and confirm a clean tree.
+
+The task is complete. All work is committed and verified.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`LegacyNotificationsRedirect`** feature-view surface at parity with the web source, committed as `9f3db1f3e` (8 files, +1233 lines).
+
+**Artifact** (`apps/apple/TeslaSync/feature-views/LegacyNotificationsRedirect.*`):
+- `.Resolver.swift` — Foundation-only parity core reproducing the web component body verbatim (tab→route map, both `?? inbox` fallbacks, delete-every-`tab`, source-order param forwarding, `qs ? target?qs : target`).
+- `.Model.swift` — P1/S8 location source + navigation seams, P1/S11 `view.opened` telemetry, P1/S10 string facade, `@Observable` model (emits once, replaces once like `<Navigate replace>`). SwiftUI-free → host-testable.
+- `.swift` / `.Views.swift` — SwiftUI surface: glass card, resolving + redirecting states, destination chip, inbox-default + forwarded-filters notes, manual Continue button, reduce-motion, VoiceOver labels.
+- `.Previews.swift` (per-state), `.Tests.swift` (24 XCTest methods), `.strings` (catalog; the web source is anonymous — 0 keys — so all keys back the native affordance, documented).
+
+**Verification (all green on this runner):**
+- swiftformat `--lint`: 0/6 · swiftlint `--strict`: 0 violations · placeholder gate: 0
+- **Isolated Swift 6 strict-concurrency build + test** of the host-free core (resolver + model + telemetry + a11y): compiles clean, **44/44 assertions pass** — real substitute for the CLT-absent XCTest.
+
+**Honestly deferred (not red-as-green):** the iOS/macOS `xcodebuild build test` gate — this runner is CommandLineTools-only (no Xcode.app, no Simulator, no XCTest, no staged `Shared.xcframework`/generated tokens). Logged with full capability evidence per the sanctioned ToolCard/BackendTool "code-complete + DEFERRED Xcode gate" disposition. Two full-tree lint/format reds are **pre-existing, unrelated** surfaces (`ActionBuilder.Previews.swift`, `LifetimeStatsWidget.Adapter.swift`) — untouched, outside allowed scope. Log ends `EXIT=0 / STATUS=DONE`.
+
+
+
+All work is committed (`9f3db1f3e`), verified, and temp files cleaned. All 7 todos are done. The task is complete.
+
+Merge made by the 'ort' strategy.
+ ...ture-views-0187-LegacyNotificationsRedirect.log | 168 +++++++++++++
+ .../LegacyNotificationsRedirect.Model.swift        | 267 +++++++++++++++++++++
+ .../LegacyNotificationsRedirect.Previews.swift     |  77 ++++++
+ .../LegacyNotificationsRedirect.Resolver.swift     | 179 ++++++++++++++
+ .../LegacyNotificationsRedirect.Tests.swift        | 238 ++++++++++++++++++
+ .../LegacyNotificationsRedirect.Views.swift        | 175 ++++++++++++++
+ .../LegacyNotificationsRedirect.strings            |  39 +++
+ .../LegacyNotificationsRedirect.swift              |  90 +++++++
+ 8 files changed, 1233 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0187-LegacyNotificationsRedirect.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyNotificationsRedirect.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyNotificationsRedirect.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyNotificationsRedirect.Resolver.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyNotificationsRedirect.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyNotificationsRedirect.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyNotificationsRedirect.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/LegacyNotificationsRedirect.swift

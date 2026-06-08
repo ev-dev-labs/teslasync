@@ -1,0 +1,174 @@
+=== p4-apple · P7 · page:battery/BatteryCells — apple gate log ===
+artifact: page:battery/BatteryCells  kind: page  route: /battery-cells
+web source: web/src/features/battery/pages/BatteryCellsPage.tsx
+output: apps/apple/TeslaSync/Features/Battery/BatteryCellsPage.swift
+  (+ Model/Adapter/Projection/Projector/Metrics/Insights/Views/Sections/Charts/ChartsTrend/Registration/strings/Previews/Tests/ModelTests)
+nav registration: Sources/App/AppRoute.swift (.batteryCells), Sources/TeslaSyncApp.swift (routeHosts chain),
+  Localization/Localizable.xcstrings (route.batteryCells), project.yml (TeslaSync/Features source path)
+generatedAt: 2026-06-08T15:50:14Z
+host: Darwin 25.5.0 arm64
+
+=== ENVIRONMENT / RUNNER ===
+swift: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+swiftlint: 0.63.3
+swiftformat: 0.61.1
+xcode-select: /Library/Developer/CommandLineTools
+xcodebuild: xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+NOTE: only Xcode Command Line Tools are installed (no full Xcode.app), so the xcodebuild
+      build + test legs of the gate CANNOT execute on this runner. Per the prompt
+      ('If no Xcode runner is available, the gate -> STATUS=BLOCKED') and p4-apple/README.md
+      ('prompts that can't run their gate are BLOCKED, not DONE'), STATUS=BLOCKED.
+      Every runnable leg (placeholder scan, SwiftLint --strict, SwiftFormat --lint) PASSES,
+      and a best-effort 'swiftc -typecheck' of the implementation against the REAL P2/P3
+      component library + design tokens PASSES (real tool exit codes recorded below).
+
+=== GATE: placeholder scan (apps/tools/check-placeholders.ps1 -Language swift) ===
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== GATE: SwiftLint --strict (scoped to apps/apple/TeslaSync/Features/Battery) ===
+(no output == no violations)
+LINT_EXIT=0
+
+=== GATE: SwiftFormat --lint apps/apple/TeslaSync/Features/Battery ===
+0/15 files require formatting.
+FORMAT_EXIT=0
+
+=== BEST-EFFORT: swiftc -typecheck — logic core (Foundation only; 6 files) ===
+(no output == typechecks clean)
+TYPECHECK_LOGIC_EXIT=0
+
+=== BEST-EFFORT: swiftc -typecheck — SwiftUI page vs real P2/P3 components + tokens + nav ===
+(no output == typechecks clean)
+TYPECHECK_UI_EXIT=0
+  (Previews excluded: #Preview macro plugin ships with Xcode.app, absent under CLT;
+   Tests excluded: require @testable import of the built TeslaSync module.)
+
+=== GATE: xcodebuild build (BLOCKED — no full Xcode runner) ===
+BUILD_EXIT=BLOCKED(no_xcode_runner)
+=== GATE: xcodebuild test (BLOCKED — no full Xcode runner) ===
+TEST_EXIT=BLOCKED(no_xcode_runner)
+
+=== PARITY ===
+PARITY_REQUIRED=110
+[x] panel  — GlassPanel1            :: BatteryCellsPage.Sections.swift :: struct BatteryCellsHeatmap (cell-voltage heatmap GlassPanel)
+[x] panel  — Total-Cells            :: BatteryCellsPage.Metrics.swift :: summaryMetrics id=total-cells → BatteryCellsMetricCardView
+[x] panel  — Avg-Voltage            :: BatteryCellsPage.Metrics.swift :: summaryMetrics id=avg-voltage → BatteryCellsMetricCardView
+[x] panel  — Min-Cell               :: BatteryCellsPage.Metrics.swift :: summaryMetrics id=min-cell → BatteryCellsMetricCardView
+[x] panel  — Max-Cell               :: BatteryCellsPage.Metrics.swift :: summaryMetrics id=max-cell → BatteryCellsMetricCardView
+[x] panel  — Imbalance              :: BatteryCellsPage.Metrics.swift :: summaryMetrics id=imbalance → BatteryCellsMetricCardView
+[x] panel  — Pack-Voltage           :: BatteryCellsPage.Metrics.swift :: summaryMetrics id=pack-voltage → BatteryCellsMetricCardView
+[x] panel  — GlassPanel8            :: BatteryCellsPage.Charts.swift :: struct BatteryCellsBarChartPanel (Cell Voltage Bar Chart)
+[x] panel  — GlassPanel9            :: BatteryCellsPage.Charts.swift :: struct BatteryCellsDistributionPanel (Voltage Distribution)
+[x] panel  — GlassPanel10           :: BatteryCellsPage.ChartsTrend.swift :: struct BatteryCellsImbalanceTrendPanel (Imbalance Trend)
+[x] panel  — GlassPanel11           :: BatteryCellsPage.ChartsTrend.swift :: struct BatteryCellsOverTimePanel (Cell Voltage Over Time)
+[x] panel  — GlassPanel12           :: BatteryCellsPage.Sections.swift :: struct BatteryCellsTableSection (Cell Details table)
+[x] panel  — GlassPanel13           :: BatteryCellsPage.Sections.swift :: struct BatteryCellsHeatmapEmpty (no-readings GlassPanel)
+[x] panel  — Voltage-Spread-Trend   :: BatteryCellsPage.ChartsTrend.swift :: struct BatteryCellsSpreadTrendSection (TSChartContainer)
+[x] panel  — GlassPanel15           :: BatteryCellsPage.Sections.swift :: struct BatteryCellsTemperatureSection (Temperature Summary)
+[x] panel  — Avg-Temperature        :: BatteryCellsPage.Metrics.swift :: temperatureMetrics id=avg-temp → BatteryCellsMetricCardView
+[x] panel  — Min-Temperature        :: BatteryCellsPage.Metrics.swift :: temperatureMetrics id=min-temp → BatteryCellsMetricCardView
+[x] panel  — Max-Temperature        :: BatteryCellsPage.Metrics.swift :: temperatureMetrics id=max-temp → BatteryCellsMetricCardView
+[x] panel  — Temp-Spread            :: BatteryCellsPage.Metrics.swift :: temperatureMetrics id=temp-spread → BatteryCellsMetricCardView
+[x] panel  — GlassPanel20           :: BatteryCellsPage.Sections.swift :: struct BatteryCellsRecommendationsSection (Health Recommendations)
+[x] panel  — GlassPanel21           :: BatteryCellsPage.Sections.swift :: struct BatteryCellsInsightCard (recommendation card)
+[x] panel  — GlassPanel22           :: BatteryCellsPage.Insights.swift :: summaryStats id=total-cells → BatteryCellsStatPanel
+[x] panel  — GlassPanel23           :: BatteryCellsPage.Insights.swift :: summaryStats id=pack-voltage → BatteryCellsStatPanel
+[x] panel  — GlassPanel24           :: BatteryCellsPage.Insights.swift :: summaryStats id=avg-voltage → BatteryCellsStatPanel
+[x] panel  — GlassPanel25           :: BatteryCellsPage.Insights.swift :: summaryStats id=voltage-spread → BatteryCellsStatPanel
+[x] panel  — GlassPanel26           :: BatteryCellsPage.Insights.swift :: summaryStats id=temp-spread → BatteryCellsStatPanel
+[x] panel  — GlassPanel27           :: BatteryCellsPage.Insights.swift :: summaryStats id=normal-cells → BatteryCellsStatPanel
+[x] chart  — BarChart               :: BatteryCellsPage.Charts.swift :: BatteryCellsBarChartPanel.chart — Swift Charts BarMark per cell + RuleMark avg/min/max
+[x] chart  — BarChart               :: BatteryCellsPage.Charts.swift :: BatteryCellsDistributionPanel.chart — Swift Charts BarMark histogram
+[x] chart  — LineChart              :: BatteryCellsPage.ChartsTrend.swift :: BatteryCellsImbalanceTrendPanel.chart — Swift Charts LineMark + nominal/warning rules
+[x] chart  — LineChart              :: BatteryCellsPage.ChartsTrend.swift :: BatteryCellsOverTimePanel.chart — Swift Charts LineMark min/avg/max
+[x] chart  — ChartContainer         :: BatteryCellsPage.ChartsTrend.swift :: BatteryCellsSpreadTrendSection — TSChartContainer frame + aria
+[x] chart  — AreaChart              :: BatteryCellsPage.ChartsTrend.swift :: BatteryCellsSpreadTrendSection.chart — Swift Charts AreaMark spread trend
+[x] state  — loading data state     :: BatteryCellsPage.Views.swift :: BatteryCellsLoadingState + BatteryCellsPageModel.Phase.loading (TSStatGridSkeleton/TSChartBlockSkeleton)
+[x] state  — empty data state       :: BatteryCellsPage.Views.swift :: BatteryCellsEmptyState + Phase.empty (TSEmptyState / ContentUnavailableView)
+[x] state  — error data state       :: BatteryCellsPage.Views.swift :: BatteryCellsErrorState + Phase.error (error view + Retry TSButton)
+[x] state  — success data state     :: BatteryCellsPage.swift :: BatteryCellsContent + Phase.content (bound @Observable projection)
+[x] string — Avg                                                :: BatteryCellsPage.strings + BatteryCellsPage.Charts.swift
+[x] string — Avg Voltage                                        :: BatteryCellsPage.strings + BatteryCellsPage.Metrics.swift
+[x] string — Bar View                                           :: BatteryCellsPage.strings + BatteryCellsPage.Sections.swift
+[x] string — Battery Cells                                      :: BatteryCellsPage.strings + BatteryCellsPage.Tests.swift
+[x] string — Cell                                               :: BatteryCellsPage.strings + BatteryCellsPage.Sections.swift
+[x] string — Cell #                                             :: BatteryCellsPage.strings + BatteryCellsPage.Sections.swift
+[x] string — Cell Count                                         :: BatteryCellsPage.strings + BatteryCellsPage.Charts.swift
+[x] string — Cell Details                                       :: BatteryCellsPage.strings + BatteryCellsPage.Sections.swift
+[x] string — Cell Voltage Bar Chart                             :: BatteryCellsPage.strings + BatteryCellsPage.Charts.swift
+[x] string — Cell Voltage Heatmap                               :: BatteryCellsPage.strings + BatteryCellsPage.Sections.swift
+[x] string — Cell Voltage Over Time                             :: BatteryCellsPage.strings + BatteryCellsPage.ChartsTrend.swift
+[x] string — Cells                                              :: BatteryCellsPage.strings + BatteryCellsPage.Charts.swift
+[x] string — Cells colored by deviation from average            :: BatteryCellsPage.strings + BatteryCellsPage.Sections.swift
+[x] string — Delta (mV)                                         :: BatteryCellsPage.strings + BatteryCellsPage.Sections.swift
+[x] string — Grid View                                          :: BatteryCellsPage.strings + BatteryCellsPage.Sections.swift
+[x] string — Imbalance                                          :: BatteryCellsPage.strings + BatteryCellsPage.Metrics.swift
+[x] string — Imbalance (mV)                                     :: BatteryCellsPage.strings + BatteryCellsPage.ChartsTrend.swift
+[x] string — Imbalance Trend                                    :: BatteryCellsPage.strings + BatteryCellsPage.ChartsTrend.swift
+[x] string — Individual cell voltage monitoring and analysis    :: BatteryCellsPage.strings + BatteryCellsPage.swift
+[x] string — Max                                                :: BatteryCellsPage.strings + BatteryCellsPage.Charts.swift
+[x] string — Max Cell                                           :: BatteryCellsPage.strings + BatteryCellsPage.Metrics.swift
+[x] string — Max Voltage                                        :: BatteryCellsPage.strings + BatteryCellsPage.ChartsTrend.swift
+[x] string — Min                                                :: BatteryCellsPage.strings + BatteryCellsPage.Charts.swift
+[x] string — Min Cell                                           :: BatteryCellsPage.strings + BatteryCellsPage.Metrics.swift
+[x] string — Min Voltage                                        :: BatteryCellsPage.strings + BatteryCellsPage.ChartsTrend.swift
+[x] string — No cell details available.                         :: BatteryCellsPage.strings + BatteryCellsPage.Sections.swift
+[x] string — No cell readings available.                        :: BatteryCellsPage.strings + BatteryCellsPage.Sections.swift
+[x] string — Nominal                                            :: BatteryCellsPage.strings + BatteryCellsPage.Sections.swift
+[x] string — Pack Voltage                                       :: BatteryCellsPage.strings + BatteryCellsPage.Insights.swift
+[x] string — Significant Deviation                              :: BatteryCellsPage.strings + BatteryCellsPage.Sections.swift
+[x] string — Slight Deviation                                   :: BatteryCellsPage.strings + BatteryCellsPage.Sections.swift
+[x] string — Status                                             :: BatteryCellsPage.strings + BatteryCellsPage.Sections.swift
+[x] string — Total Cells                                        :: BatteryCellsPage.strings + BatteryCellsPage.Insights.swift
+[x] string — Voltage                                            :: BatteryCellsPage.strings + BatteryCellsPage.Charts.swift
+[x] string — Voltage (V)                                        :: BatteryCellsPage.strings + BatteryCellsPage.Sections.swift
+[x] string — Voltage Distribution                               :: BatteryCellsPage.strings + BatteryCellsPage.Charts.swift
+[x] string — Warning                                            :: BatteryCellsPage.strings + BatteryCellsPage.ChartsTrend.swift
+[x] string — battery.cells.chart.noSpreadTrend                  :: BatteryCellsPage.strings + BatteryCellsPage.ChartsTrend.swift
+[x] string — battery.cells.chart.spreadTrend                    :: BatteryCellsPage.strings + BatteryCellsPage.ChartsTrend.swift
+[x] string — battery.cells.chart.spreadTrend.aria               :: BatteryCellsPage.strings + BatteryCellsPage.ChartsTrend.swift
+[x] string — battery.cells.chart.voltageSpread                  :: BatteryCellsPage.strings + BatteryCellsPage.ChartsTrend.swift
+[x] string — battery.cells.insight.balanced                     :: BatteryCellsPage.strings + BatteryCellsPage.Insights.swift
+[x] string — battery.cells.insight.balancedDesc                 :: BatteryCellsPage.strings + BatteryCellsPage.Insights.swift
+[x] string — battery.cells.insight.criticalCells                :: BatteryCellsPage.strings + BatteryCellsPage.Insights.swift
+[x] string — battery.cells.insight.criticalCellsDesc            :: BatteryCellsPage.strings + BatteryCellsPage.Insights.swift
+[x] string — battery.cells.insight.goodTemp                     :: BatteryCellsPage.strings + BatteryCellsPage.Insights.swift
+[x] string — battery.cells.insight.goodTempDesc                 :: BatteryCellsPage.strings + BatteryCellsPage.Insights.swift
+[x] string — battery.cells.insight.healthy                      :: BatteryCellsPage.strings + BatteryCellsPage.Insights.swift
+[x] string — battery.cells.insight.healthyDesc                  :: BatteryCellsPage.strings + BatteryCellsPage.Insights.swift
+[x] string — battery.cells.insight.highSpread                   :: BatteryCellsPage.strings + BatteryCellsPage.Insights.swift
+[x] string — battery.cells.insight.highSpreadDesc               :: BatteryCellsPage.strings + BatteryCellsPage.Insights.swift
+[x] string — battery.cells.insight.highTemp                     :: BatteryCellsPage.strings + BatteryCellsPage.Tests.swift
+[x] string — battery.cells.insight.highTempDesc                 :: BatteryCellsPage.strings + BatteryCellsPage.Insights.swift
+[x] string — battery.cells.insight.watchSpread                  :: BatteryCellsPage.strings + BatteryCellsPage.Tests.swift
+[x] string — battery.cells.insight.watchSpreadDesc              :: BatteryCellsPage.strings + BatteryCellsPage.Insights.swift
+[x] string — battery.cells.insight.watchTemp                    :: BatteryCellsPage.strings + BatteryCellsPage.Insights.swift
+[x] string — battery.cells.insight.watchTempDesc                :: BatteryCellsPage.strings + BatteryCellsPage.Insights.swift
+[x] string — battery.cells.noInsights                           :: BatteryCellsPage.strings + BatteryCellsPage.Sections.swift
+[x] string — battery.cells.recommendations                      :: BatteryCellsPage.strings + BatteryCellsPage.Sections.swift
+[x] string — battery.cells.stat.avgVoltage                      :: BatteryCellsPage.strings + BatteryCellsPage.Insights.swift
+[x] string — battery.cells.stat.normalCells                     :: BatteryCellsPage.strings + BatteryCellsPage.Insights.swift
+[x] string — battery.cells.stat.packVoltage                     :: BatteryCellsPage.strings + BatteryCellsPage.Insights.swift
+[x] string — battery.cells.stat.tempSpread                      :: BatteryCellsPage.strings + BatteryCellsPage.Insights.swift
+[x] string — battery.cells.stat.totalCells                      :: BatteryCellsPage.strings + BatteryCellsPage.Insights.swift
+[x] string — battery.cells.stat.voltageSpread                   :: BatteryCellsPage.strings + BatteryCellsPage.Insights.swift
+[x] string — battery.cells.temp.avg                             :: BatteryCellsPage.strings + BatteryCellsPage.Metrics.swift
+[x] string — battery.cells.temp.empty                           :: BatteryCellsPage.strings + BatteryCellsPage.Sections.swift
+[x] string — battery.cells.temp.max                             :: BatteryCellsPage.strings + BatteryCellsPage.Metrics.swift
+[x] string — battery.cells.temp.min                             :: BatteryCellsPage.strings + BatteryCellsPage.Metrics.swift
+[x] string — battery.cells.temp.spread                          :: BatteryCellsPage.strings + BatteryCellsPage.Metrics.swift
+[x] string — battery.cells.temp.title                           :: BatteryCellsPage.strings + BatteryCellsPage.Sections.swift
+[x] string — battery.cells.title                                :: BatteryCellsPage.strings + BatteryCellsPage.swift
+[x] string — cells                                              :: BatteryCellsPage.strings + BatteryCellsPage.Sections.swift
+PARITY_COVERED=110
+
+=== SUMMARY ===
+PARITY: 27 panels + 6 charts + 4 states + 73 strings => PARITY_COVERED=110 / PARITY_REQUIRED=110
+placeholder=PASS(0)  swiftlint --strict=PASS(0)  swiftformat --lint=PASS(0)  typecheck logic=PASS(0)  typecheck ui=PASS(0)
+xcodebuild build=BLOCKED  xcodebuild test=BLOCKED  (Command Line Tools only; no Xcode.app on this runner)
+
+EXIT=1
+STATUS=BLOCKED

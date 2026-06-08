@@ -1,0 +1,168 @@
+=== P4 Shared surface 0102 SavedViewMenu (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/SavedViewMenu.*
+Web src  : web/src/components/data-display/SavedViewMenu.tsx (639 lines)
+Runner   : Darwin (arm64) · Xcode 26.5 (Build 17F42) · Swift 6.3.2 · xcodegen 0.61-class · swiftlint/​swiftformat present
+Date     : 2026-06-08
+
+------------------------------------------------------------------------------
+HONESTY COVENANT NOTE (rule 1 / rule 10)
+------------------------------------------------------------------------------
+The literal gate command `xcodebuild -scheme TeslaSync ... build test` builds the
+WHOLE TeslaSync app. It cannot be executed to green for THIS surface on this
+runner, for two structural reasons that are OUTSIDE this prompt's allowed-files
+set ({ apps/apple/TeslaSync/shared-surfaces/SavedViewMenu.*, this log }):
+
+  B1. project.yml does not compile the surface.
+      apps/apple/project.yml target `TeslaSync` lists these source paths:
+          - path: Sources
+          - path: TeslaSync/dashboard-widgets
+          - path: TeslaSync/feature-views        <-- shared-surfaces is NOT listed
+          - path: Localization
+          - path: ../design/generated/apple
+      `TeslaSync/shared-surfaces` is absent, so the `TeslaSync` scheme would not
+      compile SavedViewMenu.*. Wiring it in is a P4-core dependency (this prompt
+      "Depends on: P4 core … state-holders"); project.yml is not an allowed file
+      here, so it is intentionally left untouched (no scope drift — rule 2/9).
+
+  B2. The scheme build pre-action needs a KMP framework that is absent.
+      schemes.TeslaSync.build.preActions runs Scripts/build-shared-xcframework.sh
+      → `apps/shared/gradlew :core:assembleSharedXCFramework` (Kotlin/Native).
+      apps/apple/Frameworks/ contains only `.gitkeep` (no Shared.xcframework),
+      and the app target links it as a required dependency.
+
+  => I will NOT fabricate IOS_EXIT=0 / MAC_EXIT=0 for the full-app scheme.
+     Instead, the surface is verified with the SAME real Xcode toolchain in a
+     scoped harness (the only deliverable is the surface; it has no dependency on
+     Shared.xcframework). Platform capability IS present (Xcode + iPhone 16
+     Simulator + iOS/macOS 15 SDKs), so this is NOT a capability gap — it is a
+     predecessor-wiring block. Evidence of the equivalent build+test below.
+
+==============================================================================
+A. SURFACE-SCOPED BUILD + TEST ON THE REAL TOOLCHAIN  (equivalent of the gate's
+   iOS/macOS build+test, scoped to the deliverable surface + its real deps:
+   apps/design/generated/apple/Tokens.swift + Sources/Components/UI/Buttons.swift)
+==============================================================================
+
+A1. iOS — xcodebuild test on the iPhone 16 Simulator (temp xcodegen project,
+    module name TeslaSync, @testable import resolves):
+      $ xcodebuild test -scheme TeslaSync \
+          -destination 'platform=iOS Simulator,name=iPhone 16'
+      Test Suite 'TeslaSyncTests.xctest' passed
+        Executed 32 tests, with 0 failures (0 unexpected)
+      ** TEST SUCCEEDED **
+    IOS_SCOPED_EXIT=0
+
+A2. macOS — swift test (Xcode toolchain, real macOS test execution):
+      $ DEVELOPER_DIR=…/Xcode.app/… xcrun swift test
+      Test Suite 'All tests' passed
+        Executed 32 tests, with 0 failures (0 unexpected)
+    MAC_SWIFT_TEST_EXIT=0
+
+A3. macOS — xcodebuild compile of the surface + test bundle (standalone temp
+    project): SwiftDriver Compilation TeslaSyncTests … + Touch …TeslaSyncTests.xctest,
+    0 compile errors. (Test-host *launch* stalled under heavy shared-box load — an
+    environmental issue, not a code issue; macOS execution is covered by A2.)
+    MAC_XCODEBUILD_COMPILE_ERRORS=0
+
+A4. iOS-simulator typecheck of every production file (exercises the
+    `#if os(iOS)` dialog branches: navigationBarTitleDisplayMode / presentationDetents):
+      $ swiftc -typecheck -sdk <iphonesimulator> -target arm64-apple-ios18.0-simulator \
+          Tokens.swift Buttons.swift SavedViewMenu.{swift,Model,Source,Adapter,
+          Projection,Views,Chrome,Dialogs,Previews}.swift
+      (no diagnostics)
+    IOS_TYPECHECK_EXIT=0
+
+==============================================================================
+B. STATIC GATES  (these are the gate's swiftlint / swiftformat / placeholder
+   steps, run literally on the surface files)
+==============================================================================
+
+B1. swiftformat --lint (config: apps/apple/.swiftformat — maxwidth 120, swift 6.0):
+      SwiftFormat completed. 0/11 files require formatting.
+    FORMAT_EXIT=0
+
+B2. swiftlint --strict (config: apps/apple/.swiftlint.yml):
+      Linting 11 files … Done linting! Found 0 violations, 0 serious in 11 files.
+    LINT_EXIT=0
+
+B3. check-placeholders.ps1 (swift) on apps/apple/TeslaSync/shared-surfaces:
+      PLACEHOLDER_ALLOWED=0
+      PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+==============================================================================
+C. PARITY + ACCEPTANCE EVIDENCE
+==============================================================================
+Files (apps/apple/TeslaSync/shared-surfaces/), 2073 Swift LOC + strings catalog:
+  SavedViewMenu.swift          surface View: trigger + applied badge + popover/
+                               sheets/confirmationDialog wiring + lifecycle +
+                               AccessibilitySavedViewAnnouncer (view.opened slug).
+  SavedViewMenu.Model.swift    i18n facade, connection axis, telemetry + announcer
+                               seams, input/resolved types, SavedViewSource port,
+                               @Observable model (once-only default auto-apply =
+                               web mount effect; stale auto-refresh; view.opened once).
+  SavedViewMenu.Source.swift   InMemorySavedViewSource + typed recorded-mutation
+                               structs (previews/tests).
+  SavedViewMenu.Adapter.swift  SavedView value type + pure logic (active/default
+                               selection, query label, save/rename guards) + a11y labels.
+  SavedViewMenu.Projection.swift  pure resolve(input)->resolved (loading/error/ready).
+  SavedViewMenu.Views.swift    popover body, row (+ per-row pull-down Menu actions),
+                               empty state, applied badge.
+  SavedViewMenu.Chrome.swift   freshness chip, refresh, connectivity banner, loading
+                               skeleton, error+retry.
+  SavedViewMenu.Dialogs.swift  save sheet, rename sheet, manage sheet (Form + HIG toolbars).
+  SavedViewMenu.Previews.swift surface + popover(loading/error/empty/rows/stale/offline)
+                               + save/rename/manage dialog previews.
+  SavedViewMenu.Tests.swift / .AdapterTests.swift  32 unit tests (projection phases,
+                               model wiring/telemetry/auto-apply/auto-refresh/mutations/
+                               announcements, adapter logic, a11y labels).
+  SavedViewMenu.strings        table "SavedViewMenu": 38 keys.
+
+States rendered (no hidden surface): loading (skeleton), empty (friendly + Save action),
+  error (retry), ready (rows), + connectivity stale/offline (chip + banner + 1-shot
+  auto-refresh) + the applied badge. Previews cover every state.
+
+i18n: 37/37 string keys referenced in Swift resolve through the P1/S10 facade and are
+  defined in the catalog (verified by diff). Every web t()/literal is represented
+  (Saved views, Manage views, No saved views yet, Save current view…, Default,
+  Set as default, Clear default, Pin, Unpin, Rename view, Delete, Delete saved view “%@”?,
+  View, Clear applied view, No filters, Name, View name, Apply automatically…,
+  View %@ applied, Saved view cleared, Cancel, Save, Saving…, Close). No English literals
+  in Swift (Text(verbatim: facade) throughout).
+
+Accessibility: accessibilityLabel on every interactive element (trigger, applied-clear,
+  row apply, per-row actions Menu, refresh, save/cancel/close); rowLabel encodes
+  Default/Applied traits; SwiftUI announcer posts "View … applied"/"Saved view cleared"
+  (web useAnnouncer parity); Reduce-Motion respected (static skeleton; TSButton); Dynamic
+  Type via lineLimit + minimumScaleFactor.
+
+Telemetry: SavedViewMenu.surfaceSlug = "SavedViewMenu"; view.opened emitted once on first
+  presentation via the P1/S11 SavedViewTelemetry seam (OSLog default; asserted in tests).
+
+No TODO/stub/mock/placeholder/Lorem in shipped code (B3). No delegation. Predecessor
+  layers (P1/S8 source, P1/S9 tokens, P1/S10 i18n, P1/S11 telemetry) consumed, not bypassed.
+
+==============================================================================
+SUMMARY
+==============================================================================
+Surface implemented at full parity and INDEPENDENTLY VERIFIED on the real Xcode
+toolchain: iOS `xcodebuild test` on iPhone 16 Simulator = ** TEST SUCCEEDED ** (32/32);
+macOS `swift test` = 32/32; iOS typecheck, swiftformat --lint, swiftlint --strict,
+placeholder = all 0.
+
+The literal full-app `xcodebuild -scheme TeslaSync build test` could not be executed
+to green here because (B1) project.yml does not list TeslaSync/shared-surfaces and
+(B2) the absent KMP Shared.xcframework pre-action — both outside this prompt's
+allowed-files set. Per the Honesty Covenant I do not report the full-app scheme as
+green; it is BLOCKED on a P4-core predecessor wiring dependency, with the equivalent
+surface-scoped build+test passing on both platforms above.
+
+FORMAT_EXIT=0
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+IOS_SCOPED_TEST=SUCCEEDED(32/32)
+MAC_SCOPED_TEST=PASSED(32/32)
+FULLAPP_SCHEME=BLOCKED(project.yml wiring [P4-core] + absent KMP Shared.xcframework; both outside allowed files)
+
+EXIT=1
+STATUS=BLOCKED

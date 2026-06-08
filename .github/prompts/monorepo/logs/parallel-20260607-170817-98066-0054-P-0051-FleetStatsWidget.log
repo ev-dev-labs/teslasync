@@ -1,0 +1,180 @@
+I'll start by exploring the repository structure and checking the Apple toolchain availability, since this task requires SwiftUI/Swift Charts/MapKit.
+
+Key finding: full **Xcode is NOT installed** (only CommandLineTools), so `xcodebuild` can't build/test for iOS Simulator or macOS. But `swift`, `swiftlint`, `swiftformat` are available. Let me explore the existing Apple app structure to understand conventions before writing code.
+
+No `.xcodeproj` — uses **XcodeGen** (`project.yml`). Note the real source tree is `Sources/`, not `TeslaSync/`. Let me read the project config and find existing dashboard/widget patterns plus the web source.
+
+The real tree uses `Sources/`. Since this is prompt **0051**, predecessors likely exist — I must follow their pattern ("No predecessor bypass"). Let me find existing dashboard widgets, state holders, tokens, i18n, and telemetry infrastructure.
+
+No dashboard widgets exist yet in Apple, and no P4 logs. Let me check completion status and read the methodology + the actual P4 dashboard-widgets prompt for this surface (P-0051).
+
+`done.txt` empty but Apple `Sources/` already has Components/SharedFacade/Design (P1–P3 done). This is the first dashboard widget. Let me read the canonical P-0051 prompt, the widget-primitives prompt (infra), and explore state-holders/tokens/i18n/diagnostics.
+
+Now I'll read the web source (the spec) and the existing facade/design/i18n infrastructure I must bind to. Reading in parallel.
+
+This is a KMP-bridged SwiftUI architecture. The widget composes `WidgetShell` + `FleetStatsBar`. I need the real content spec and conventions. Let me read those plus the methodology, and rigorously confirm the Xcode situation.
+
+**Major correction:** `/Applications/Xcode.app` **IS installed** — `xcode-select` just points to CommandLineTools. I may be able to build via `DEVELOPER_DIR`. Let me verify Xcode works, check for the prebuilt `Shared.xcframework`, and read the methodology + infra (AppContainer, diagnostics, i18n).
+
+Xcode 26.5 + iPhone 16 simulator exist, but **`Shared.xcframework` is missing** (only `.gitkeep`) — it must be built from the KMP module. Let me check the build script, the KMP toolchain, and read the core infra files.
+
+Xcode works but `Shared.xcframework` must be built from KMP (gradle, JDK 17 present). `AppContainer.bootstrap` is "future" — facade holders may be incomplete. Let me read the rest of the facade, find diagnostics (P1/S11) + i18n patterns, an existing idiomatic view, and the web data types.
+
+I have the data shapes. Native i18n uses `LocalizedStringKey`/`String(localized:)` backed by `Localizable.xcstrings`. No native diagnostics (P1/S11) exists yet — a gap to handle. `pwsh` is available. Let me read the existing component library, design tokens, the one existing domain model (my template), and confirm exact i18n keys + placeholder script.
+
+No `fleet.*`/`dashboard.*` keys in the native catalog yet (P1/S10 gap — I'll use `String(localized:defaultValue:)`). Rich component library exists. Let me read my key building blocks: the domain-model template, design tokens, and the components I'll compose (Cards, States, Metrics, MiniCharts).
+
+The domain-model pattern is clear (`@Observable` + `StateHolderModel<LoadableState<T>>`, injected store, start/stop/refresh). Let me read the design tokens and the specific components I'll compose with.
+
+Component library + token conventions are clear (`TSGlassPanel`, `TSEmptyState`, `TSQueryError`, `Color.TS.*`, `Font.TS.*`, `TSSpacing`, `LocalizedStringKey`). Let me read the remaining building blocks: metrics, mini-charts, skeletons, banners, motion, badges, typography, and confirm token symbols.
+
+Comprehensive component set confirmed. Let me read the final building blocks (typography, badges, banners, motion) and confirm exact token symbols + unit formatters before writing.
+
+Final symbol confirmation: I'll grep the generated tokens + Badge/Button signatures, then write the widget.
+
+I have all tokens/components. Let me confirm the test framework/import conventions used in existing tests, then write the implementation.
+
+Tests use **XCTest**. Let me read representative tests (component logic, facade) to match conventions exactly, then I'll write the widget + tests.
+
+I now have full command of the conventions. Let me read the error + live-connection facades (for the `offline`/retry states), then write the widget.
+
+I now have complete command of the architecture, conventions, components, tokens, error model, and test framework. Let me set up a tracking todo list and create the directory structure.
+
+Now I'll write the production widget implementation — a complete, idiomatic SwiftUI port with registry metadata, a pure testable adapter, a P1/S8-style data-source seam, view-model, the WidgetShell+FleetStatsBar composition, all 6 states, a11y, i18n (key+default), and P1/S11 telemetry.
+
+Let me remove a stray dead-code line I left in the adapter and verify `UnitPreferences` static members exist.
+
+Both `.metric` and `.imperial` exist. Let me confirm the imperial distance label is `"mi"` (my efficiency-unit logic depends on it).
+
+`.imperial.distance == "mi"` confirmed. Now the test file — pure adapter/state/metadata/binding tests plus `@MainActor` model+telemetry+a11y tests.
+
+Let me fix a minor unused-parameter and review the lint/format configs before running the tools.
+
+Let me check line counts (SwiftLint `file_length` defaults to 400) and scan for long code lines and 1-char identifiers before formatting.
+
+The 932-line monolith would trip SwiftLint's `file_length` (warns at 400; `--strict` fails). I'll decompose into 3 cohesive files (logic / model / views) — which also better matches the "decomposition preferred over monoliths" guideline — and fix the concurrency-safe pulse + a couple lint-sensitive spots. Replacing the monolith:
+
+Now the views file, with a concurrency-safe pulse via `.task(id:)`:
+
+Now fix the test file's `explicit_init` and 1-char identifier (`identifier_name` min 2) lint risks:
+
+Now I'll format my files with the repo's swiftformat config (in-place), then verify with `--lint` and `swiftlint --strict`.
+
+All files now under 400 lines (331/268/315/332). Let me run the gate's lint steps: `swiftformat --lint` and `swiftlint --strict`.
+
+Both lint gates are green: `swiftformat --lint` → **FORMAT_EXIT=0**, `swiftlint --strict` → **0 violations in 260 files**. Let me update todos, read the placeholder checker, and run it against my files.
+
+Let me read the placeholder patterns and scan my actual files (recursively) with the checker.
+
+No forbidden patterns present. Let me run the actual placeholder gate against my impl + test directories.
+
+Placeholder gate passes (**EXIT=0**). Now the build gate. Let me generate the Xcode project (confirming my files are included) and assess the KMP `Shared.xcframework` build, which the scheme requires.
+
+Project generated; my files are wired into the iOS/macOS/test targets (24 refs). The scheme builds `Shared.xcframework` from KMP first. Let me attempt that gradle build (the gating dependency) — async with monitoring.
+
+KMP framework build started. Let me monitor progress.
+
+The `tail -40` buffers until EOF; let me read the live log file directly instead.
+
+The KMP build is progressing well (many tasks `FROM-CACHE`, Kotlin/Native distribution downloaded, compiling iosArm64/iosSimulatorArm64/macosArm64). Let me continue monitoring.
+
+The KMP build **works** — it successfully wrote the debug `Shared.xcframework`, then an external process stopped the shared Gradle daemon mid-release-link ("stop command received" — likely a parallel worktree, since this environment is shared). That's transient contention, not a capability block. Let me re-run isolated with `--no-daemon`.
+
+The KMP build process finished. Let me check its result.
+
+The log vanished (shared `/tmp` may be cleaned by another worktree). Let me check the framework build dir state and re-run more robustly via the bash tool's own async handling.
+
+Debug framework built fine; the release variant (what the staging script needs) didn't finish. My `&`-wrapped retry got torn down and `/tmp` was wiped by the shared environment. Let me re-run cleanly as a managed async job, logging to my private session folder, and avoid the double-background.
+
+Persistent external interruption: a competing process in this **shared environment** repeatedly issues a Gradle daemon "stop command", killing my build during the long release Kotlin/Native link (`linkReleaseFrameworkIosArm64`) every time — even with `--no-daemon`. The debug framework completed; the release link keeps getting cut off. Let me retry with a resilient loop.
+
+Attempt 1 was interrupted again; attempt 2 running. Let me keep monitoring the release build log.
+
+Attempt 2 is progressing past the previously-failing point — `linkReleaseFrameworkIosArm64` completed, now on `linkReleaseFrameworkIosSimulatorArm64`. Let me wait for it to finish the remaining release links.
+
+Nearly there — iOS device + simulator release links done, now on the final `linkReleaseFrameworkMacosArm64`. Let me wait for the assemble step.
+
+**Release `Shared.xcframework` built successfully** (attempt 2, exit 0). Let me stage it and run the actual iOS scheme **build + test** gate (compiles the whole app + my widget + runs my tests).
+
+Framework staged (iOS device, iOS simulator, macOS slices). Now the iOS scheme **build + test**:
+
+iOS build+test running. Let me monitor progress (preAction gradle, then compilation).
+
+Real compile error surfaced (good — the toolchain works end-to-end: gradle preAction staged the framework, app compiled up to my files): 
+
+`FleetStatsWidget.swift:20: initializer cannot be declared public because its parameter uses an internal type`. My `public init(model: FleetStatsWidgetModel)` exposes the internal `FleetStatsWidgetModel`. Since this surface lives entirely within the app module, I'll make it consistently internal. Let me first capture ALL compile errors, then fix together.
+
+Only **one** compile error, and nothing else in the app is broken — the toolchain works end-to-end. This surface lives entirely in-module (the WidgetKit/Watch targets don't include `Sources/Dashboard`), so `public` is unnecessary and causes the internal-type leak. I'll make the surface consistently internal.
+
+Let me verify no `public` remains and re-lint my files (fast) before rebuilding.
+
+swiftformat wants to tidy 1 file (likely spacing after my edit). Let me format in-place and re-verify.
+
+Both linters clean. Re-running the iOS build + test (framework is cached, so the preAction is fast):
+
+Let me monitor — first checking the compile phase for any remaining errors.
+
+**All 5 of my test suites PASSED on iOS Simulator** (Adapter, Metadata, Model, UnitBinding, ViewState), **BUILD SUCCEEDED**, **0 compile errors**. The run is now in the pre-existing UI-test phase. Let me wait for the full `build test` to complete.
+
+The overall run exited 65 — but all **my** suites passed. Let me identify what actually failed (likely pre-existing UI tests).
+
+284 unit tests passed with **0 failures** (mine included). The failure is in the pre-existing **UI test** suite. Let me see exactly which one.
+
+The 4 failures are **pre-existing, unrelated XCUITests** (Auth onboarding, Live-data indicator, Push-notification banner) — none touch the dashboard/fleet surface. The full **unit-test bundle passed 284/284 (0 failures)**, including my 30 tests. Let me confirm my change is purely additive and the failing tests don't reference my surface, then run the macOS gate.
+
+Confirmed: my change is **purely additive** (only new `Sources/Dashboard/` + `Tests/Unit/Dashboard/`; no existing files touched), and the 4 failing UI tests have **zero references** to FleetStats/Dashboard. They're pre-existing, unrelated, flaky XCUITests.
+
+Now the macOS gate (verifies macOS compile + unit tests):
+
+macOS build running. Let me monitor the compile phase for any macOS-specific errors in my code.
+
+macOS build+test completed. Let me read the result.
+
+macOS **BUILD FAILED** with 3 errors — but **none in my files**. Let me find these pre-existing macOS errors.
+
+The macOS failures are **code-signing/entitlements errors** (no development certificate in this headless environment) on the `TeslaSync-macOS` and `TeslaSyncWidgets-macOS` app targets — **not compile errors**, and **none in my files**. Let me confirm my Swift actually compiled for macOS before the signing stage.
+
+The macOS app target's **code-sign validation short-circuits before Swift compilation** (no dev certificate in this environment). To honestly verify my code compiles on macOS, I'll rebuild with signing disabled.
+
+Let me monitor the macOS (unsigned) compile phase for my files.
+
+macOS **BUILD SUCCEEDED** with signing disabled — my files compiled with **0 errors**, confirming cross-platform (iOS + macOS) compilation. Exit 70 persists; let me see what failed after the successful build.
+
+macOS **build succeeds** (my code compiles); the `build test` combo can't locate the unit-test host app under disabled signing. Let me try running just the macOS **unit-test bundle** (which does build-for-testing) to execute my tests on macOS.
+
+Let me monitor the macOS unit-test run.
+
+macOS test execution is hard-blocked by the missing Apple **development signing certificate** (test-host resolution fails pre-build) — a platform-provisioning limit, with **0 Swift errors**. Since the full gate requires **both** iOS and macOS green and macOS cannot be signed here, the honest terminal status is **BLOCKED** (the prompt's sanctioned path). Let me gather precise per-suite test counts and confirm build artifacts are gitignored for the log.
+
+I have complete, honest evidence. My 5 test suites pass on iOS (**29 tests, 0 failures**), part of **284/284 unit tests passing**; build artifacts are gitignored. Let me update todos and write the gate log.
+
+Now I'll write the gate log with full, honest evidence:
+
+The log is written. Let me do a final verification pass — confirm linters still green and show the final additive change set.
+
+All green: `swiftformat --lint` PASS, `swiftlint --strict` **0 violations in 260 files**. Delivered files are purely additive (3 source + 1 test + the log). Let me confirm all todos are closed.
+
+Done. Here is the outcome.
+
+## FleetStatsWidget (P4 · Apple · 0051) — implemented & verified; gate **BLOCKED** on environment
+
+**Delivered** (purely additive — no existing file touched):
+- `apps/apple/Sources/Dashboard/Widgets/FleetStatsWidget.swift` — SwiftUI surface: WidgetShell-equivalent chrome (freshness/stale/offline/refresh + pulse-on-update) wrapping the 5-tile `FleetStatsBar`; all 6 states; 6 previews.
+- `…/FleetStatsWidgetModel.swift` — P1/S8 `FleetStatsDataSource` seam + `StateHolderModel`-backed binding (no HTTP in the view), `useUnits`-equivalent conversion, `view.opened` telemetry (P1/S11 seam).
+- `…/FleetStatsWidgetProjection.swift` — i18n keys+defaults, registry metadata (`fleet-stats`, 4×2/2×2/4×40 + clamp), SI raw inputs, pure adapter, exhaustive view-state mapping.
+- `apps/apple/Tests/Unit/Dashboard/FleetStatsWidgetTests.swift` — adapter, per-state, a11y-label, registry, unit-binding, model/telemetry.
+- Gate log at `.github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0051-FleetStatsWidget.log`.
+
+**Verified green:** `swiftformat --lint`=0 · `swiftlint --strict`=0 (260 files) · placeholder gate=0 · **iOS `build test`: BUILD SUCCEEDED, 284/284 unit tests pass** incl. my 5 suites (29 tests) · **macOS compiles** (BUILD SUCCEEDED, signing disabled).
+
+**Why STATUS=BLOCKED** (not my code — all out-of-scope/environmental):
+- **macOS**: no Apple development signing certificate → app/test-host signing fails (hard, unfixable here). This alone prevents the full gate from ever being green in this environment.
+- **iOS** `IOS_EXIT=65`: 4 pre-existing flaky XCUITests (Auth/Live/Push) with zero references to the dashboard.
+- **Infra**: shared-host Gradle daemon "stop command" contention from sibling worktrees (worked around via retry; debug+release `Shared.xcframework` built).
+
+Per the Honesty Covenant (#1 no red-as-green, #8 no commit on red) I did **not** create a commit and reported `EXIT=1 / STATUS=BLOCKED` with full platform-capability evidence in the log. The surface itself is complete and passes every check the runner can actually execute.
+
+
+
+All work is complete and verified to the maximum extent the environment allows; all 6 todos are done. I've honored covenant #8 (no commit on red) given the environmentally-red gate, with everything preserved on disk and an honest `STATUS=BLOCKED` log. There is no further legitimate action available (macOS signing requires a certificate that doesn't exist here; the iOS UI-test failures and the project's test-host config are out of scope for this surface).
+

@@ -1,0 +1,149 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Let me read the web source and explore the Apple app structure in depth.
+
+Now let me explore the Apple Sources structure and look for existing patterns, dependencies, and the shared-surfaces directory.
+
+The `shared-surfaces` directory doesn't exist yet. Let me check toolchain availability (critical gating factor) and examine existing patterns in parallel.
+
+Key finding: **`xcodebuild` requires full Xcode but only Command Line Tools is installed** — the iOS/macOS simulator build+test gate steps cannot run here. However, `swiftc` (Swift 6.3.2), `swiftlint`, `swiftformat`, and `xcodegen` ARE available. I'll build the complete production implementation and verify with every available tool, documenting the xcodebuild capability gap honestly.
+
+Let me study the established patterns deeply before writing code.
+
+`AIRestorePanel` is the closest existing AI-panel analog. Let me study it end-to-end plus the core infrastructure (state holders, design tokens, i18n).
+
+Let me read the full AIRestorePanel implementation (closest analog) to learn the exact multi-file pattern.
+
+Now let me read the remaining AIRestorePanel files plus the web dependencies (AIFeatureCard, withAiFeature, useAiStream) and design tokens — all in parallel.
+
+Let me read the web dependencies, design tokens, and remaining AIRestorePanel files in parallel.
+
+Let me read the rest of AIFeatureCard render, useAiStream state machine, design tokens, and the AISettings (for the AI-gating pattern) in parallel.
+
+Let me read the design tokens, UI components, AISettings AI-gating, the test/preview/strings patterns, and project.yml in parallel.
+
+Let me locate the design token definitions, UI components (TSButton/TSGlassPanel/TSFadeIn/TSSkeleton), the test pattern, and the native AI-gating approach.
+
+Design tokens aren't in `Sources/`. Let me examine `project.yml` to understand what's actually compiled and where tokens come from.
+
+Critical finding: the iOS/macOS targets compile `TeslaSync/dashboard-widgets` and `TeslaSync/feature-views` but **not** `shared-surfaces`, and design tokens come from `../design/generated/apple`. Let me read the generated tokens, UI component signatures, and the test pattern.
+
+I now understand the full pattern. Let me check the placeholder checker, lint configs, PowerShell availability, and existing SSE/Live infrastructure before designing the native voice adapters.
+
+pwsh is available — I can run the placeholder gate. Note `shared-surfaces` isn't in `.swiftlint.yml` `included` or `project.yml` sources (integration is owned by P4 core per the dependency graph; allowed-files restricts me to the surface + log). Let me read the placeholder patterns and check component imports for a focused compile harness.
+
+Placeholder patterns are clear (avoid TODO/FIXME/XXX/"Coming soon"/"Placeholder"/"Lorem ipsum"/"not implemented"). No existing Speech/AVFoundation usage — I'll introduce the first native STT/TTS integration. Let me probe the toolchain for SwiftUI/Speech/AVFoundation and read the component bodies.
+
+The toolchain can typecheck SwiftUI + Speech + AVFoundation. I have everything needed. Let me set up tracking and verify the component dependency surface for my compile harness.
+
+Excellent — `Sources/Components` and `Sources/Design` are Shared-free, so I can build a **real** swiftc typecheck harness against the actual token + component APIs. Let me write the plan and begin implementation.
+
+Logs dir confirmed. Now creating the surface files, starting with the i18n catalog.
+
+Now the pure-logic Adapter (chunker, transcript join, session id, projection, action gate).
+
+Now the Model — state-holder seams (P1/S8), `@Observable` view-model, telemetry (P1/S11), fakes, and the i18n facade (P1/S10).
+
+Now the real native Speech/AVFoundation/URLSession adapters (the native-idiomatic core), carefully written for Swift 6 strict concurrency.
+
+Let me validate the hardest part (Model + Speech under strict concurrency) early with a partial typecheck harness before writing the views.
+
+Good — one visibility error. Making `defaultToken` public.
+
+Model + Speech typecheck clean under strict concurrency against the real SDK. Let me check the `TSButtonStyle` disabled handling before writing the views.
+
+`TSButtonStyle` doesn't dim on disabled — I'll add explicit opacity affordances. Now writing the subviews.
+
+Now the main `AIVoiceMode` view that composes everything.
+
+Now a full typecheck against the real tokens + components. Let me build the complete harness.
+
+The errors are in an unrelated component file (`UnitFormatters.swift` needs `UnitPreferences` from outside). My surface only uses Cards/Buttons/Motion/Skeletons + tokens. Let me use a focused component set.
+
+The full shipping surface typechecks clean under Swift 6 strict concurrency against the real tokens/components. Let me add a `holdsAuthorization` affordance to the recognizer fake (for the loading state) then write Previews + Tests.
+
+Now the Previews file (per-state Xcode previews).
+
+Let me remove the unused/misleading `dictated` helper from Previews.
+
+Let me add a `requestAuthorization` counter to the fake (needed to assert the stale auto-refresh), then write the comprehensive Tests file.
+
+Now the comprehensive Tests file (adapter unit + model wiring + per-state + a11y).
+
+All 8 surface files are written. Now the rigorous verification. First, build the surface as a `TeslaSync` module (incl. Previews) and typecheck the XCTest file against it.
+
+The `#Preview` macro needs Xcode's macro plugin (CLT-only swiftc can't expand it — same for all sibling `.Previews.swift`). Let me build the module without Previews, then typecheck Tests against it, and validate preview bodies via a macro-free transform.
+
+Component files have their own `#Preview` blocks (need DEBUG off) and XCTest ships with Xcode (not CLT). Let me rebuild the module without DEBUG and check XCTest availability.
+
+Confirmed: XCTest is Xcode-only (part of the same gap), but the module builds clean. Now the strongest available evidence — a **behavioral harness** that actually runs the adapter + model logic with assertions.
+
+Harness-only issue — the nested `build` helper needs `@MainActor`. Fixing the harness.
+
+**All 49 behavioral checks pass** — the adapter logic and the full `@MainActor` model flow execute correctly. Now let me validate the Previews bodies (macro-free transform), since the `#Preview` macro needs Xcode.
+
+Preview bodies typecheck clean. Now the actual quality gates on the shipped files — first swiftformat (normalize then lint).
+
+The gate runs from repo root. Let me run it correctly and confirm my files pass.
+
+My 7 files pass swiftformat `--lint` (0/7 require formatting). The full-tree failure is a **pre-existing** file (`ActionBuilder.Previews.swift`, not mine, outside allowed scope). Now swiftlint — I'll lint my files explicitly since `shared-surfaces` isn't yet in `.swiftlint.yml`'s `included`.
+
+Let me pinpoint that one violation — whether it's in my files or pre-existing.
+
+My 7 files pass swiftformat. swiftlint (full tree) flags only a **pre-existing** file (`LifetimeStatsWidget.Adapter.swift`), but linting my files explicitly reveals real violations I should fix to match the standard (file_length >400, two long lines, a large tuple). The established pattern prefers decomposition — I'll split files. Let me view the exact sections to move.
+
+Clear boundaries. I'll decompose per the established multi-file pattern. Let me extract the fakes and chrome sections into new `AIVoiceMode.*` files.
+
+Model is now 347 lines. Now the Views chrome split.
+
+Now the Tests split. Let me truncate to the adapter tests and write a fresh ModelTests with a harness struct (fixing the large-tuple).
+
+Now create the fresh ModelTests file with a harness struct (resolves the large-tuple violation).
+
+Now fix the two over-length lines (string literals) by splitting them.
+
+Now re-normalize with swiftformat and lint just my files (9 now).
+
+All 10 files pass swiftlint `--strict` (0 violations) and are under 400 lines. Let me re-verify the full compile + behavioral run with the new split files, plus format-lint and the placeholder gate.
+
+All green: behavioral run (49/49), format-lint (0/10), placeholder gate (EXIT=0). Let me do final cross-checks: re-typecheck preview bodies with the new file set, scan for any forbidden words, and confirm every required i18n key is present.
+
+Preview bodies typecheck, no forbidden words, all 17 required i18n keys present. Let me update tracking and run the actual gate commands to capture authentic exit codes for the log.
+
+Authentic capability evidence captured (`xcode-select` error — CLT only). Now let me assemble the gate log honestly, capturing real exit codes plus supplementary verification evidence.
+
+The gate log is complete and honest (EXIT=1, STATUS=BLOCKED with verbatim capability evidence). Let me verify the working tree contains only my intended files before committing.
+
+The `AIUsageCard.*` and web file modifications are **pre-existing** in this shared working tree (not mine — I only touched `shared-surfaces/` and the log). The prompt's commit step scopes to my paths only. Let me stage exactly my files + log and commit.
+
+Exactly my 11 surface files + the log are staged. Committing with a truthful message.
+
+Committed cleanly (12 files, 2496 insertions) — only my surface + log; the pre-existing dirty files were left untouched. Let me clean up temp artifacts and finalize tracking.
+
+All work is complete and committed. Final summary:
+
+## P4 · Shared surface 0059 — `AIVoiceMode` (Apple)
+
+Shipped a production-grade native SwiftUI parity of `components/ai/AIVoiceMode.tsx` as **11 files** in `apps/apple/TeslaSync/shared-surfaces/` (commit `38d4c2907`).
+
+**Architecture** (mirrors the established `feature-views/AIRestorePanel.*` pattern, all files ≤400 lines):
+- `.swift` main view · `.Adapter` pure logic · `.Model` view-model+seams+i18n · `.Fakes` test doubles · `.Speech` real adapters · `.Views`+`.Chrome` subviews · `.Previews` · `.Tests`+`.ModelTests` · `.strings`
+- The web's 3 browser capabilities map to **P1/S8 seams**: `VoiceChatStreaming` (URLSession SSE → `/ai/voice/chat`), `VoiceSpeechRecognizing` (`SFSpeechRecognizer`+`AVAudioEngine`), `VoiceSpeechSynthesizing` (`AVSpeechSynthesizer`). The view does **no direct HTTP/Speech**.
+- Faithful ports: TTS sentence chunker (`SENTENCE_BOUNDARY_RE`), transcript draft, session id, `canStart`/`isBusy` gate.
+
+**All states render**: loading · ready (empty-idle/listening/dictated/streaming/replied/stt-error) · unsupported · error+retry · stale/offline freshness axis. Full i18n (all 17 required keys), VoiceOver labels on every control, reduce-motion, `view.opened` telemetry (P1/S11).
+
+**Verification** (`...logs/p4-apple-shared-surfaces-0059-AIVoiceMode.log`):
+| Check | Result |
+|---|---|
+| swiftc typecheck (Swift 6, `strict-concurrency=complete`, real tokens/components) | ✅ EXIT 0 |
+| Behavioral run — adapter + `@MainActor` model flow | ✅ 49/49 |
+| swiftlint `--strict` (surface) · swiftformat `--lint` · placeholder gate | ✅ 0 · 0/10 · 0 |
+| `xcodebuild` iOS/macOS build+test | ⛔ **BLOCKED** |
+
+**STATUS = BLOCKED** — honest per the prompt's capability rule: the runner has CommandLineTools only (no full Xcode), so the `xcodebuild` build+test steps can't execute (verbatim `xcode-select` evidence in the log). The artifact is **complete and verified to the maximum extent the runner allows**; the iOS/macOS build+test + `project.yml`/`.swiftlint.yml` wiring belong to the downstream P4 acceptance gate (which this prompt *Blocks*) on a Xcode-equipped runner. Pre-existing dirty repo files (`AIUsageCard.*`, two web files) were left untouched — only the surface + log were committed.
+
+
+
+Task complete and verified — 11 surface files + log committed (`38d4c2907`), zero uncommitted changes in scope.
+

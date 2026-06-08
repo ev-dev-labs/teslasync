@@ -1,0 +1,161 @@
+=== P4 Feature view 0281 LiveTelemetryPanels (Apple) ===
+Prompt: .github/prompts/monorepo/... p4-apple-feature-views-0281-LiveTelemetryPanels
+Web source (THE spec): web/src/features/vehicles/components/telemetry-panels/LiveTelemetryPanels.tsx
+Delegation: FORBIDDEN — authored directly. No sub-agents used.
+
+──────────────────────────────────────────────────────────────────────────────
+RUNNER CAPABILITY ASSESSMENT (decides host-runnable vs deferred gates)
+──────────────────────────────────────────────────────────────────────────────
+  swift            : Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)              OK
+  SwiftUI/Charts/MapKit : import OK against macOS SDK (swiftc, exit 0)      OK
+  swiftlint        : /opt/homebrew/bin/swiftlint                            OK
+  swiftformat      : /opt/homebrew/bin/swiftformat                          OK
+  pwsh             : /opt/homebrew/bin/pwsh                                 OK
+  xcodegen         : /opt/homebrew/bin/xcodegen                             OK
+  xcodebuild       : BLOCKED — "tool 'xcodebuild' requires Xcode, but active
+                     developer directory '/Library/Developer/CommandLineTools'
+                     is a command line tools instance"
+  simctl (iOS Sim) : BLOCKED — "xcrun: error: unable to find utility 'simctl',
+                     not a developer tool or in PATH"
+  iOS SDK          : ABSENT (only MacOSX*.sdk under CommandLineTools/SDKs)
+  ⇒ Disposition: SwiftUI+Charts+MapKit ARE available; the surface is fully
+    built + verified on every host-runnable gate. The full-app iOS-Simulator
+    + macOS `xcodebuild build test` is the only environment-blocked step and is
+    DEFERRED with captured evidence, per predecessor disposition
+    (p4-apple/feature-views 0002-BackendTool / P-0010-ToolCard /
+    0180-AlertMessageEditor / 0231-FSMTimelineChart).
+
+──────────────────────────────────────────────────────────────────────────────
+ARTIFACT — files authored (allowed scope: apps/apple/TeslaSync/feature-views/LiveTelemetryPanels.* + this log)
+──────────────────────────────────────────────────────────────────────────────
+  LiveTelemetryPanels.swift              66   composition View (header + grid + state switch)
+  LiveTelemetryPanels.Adapter.swift     263   number/SI formatting ports, tones, cleanNil, a11y seam
+  LiveTelemetryPanels.Snapshots.swift   270   typed input snapshots (7 panels + live record)
+  LiveTelemetryPanels.Projection.swift  253   Powertrain / Climate / Security projections
+  LiveTelemetryPanels.ProjectionMedia.swift 317  Tire / Energy / Media-Nav projections
+  LiveTelemetryPanels.Model.swift       354   telemetry seam, connection axis, input/resolved, @Observable model, i18n facade
+  LiveTelemetryPanels.Views.swift       383   header, pulse, freshness chip/banner, loading/empty/error, shared row/chip/card
+  LiveTelemetryPanels.Panels.swift      300   grid + LiveLabels + Powertrain + Climate panels + PowerBar/FanBars
+  LiveTelemetryPanels.PanelsState.swift 284   Security + VehicleState panels
+  LiveTelemetryPanels.PanelsMedia.swift 371   Tire + Energy + Media-Nav panels
+  LiveTelemetryPanels.Previews.swift    162   #Preview per state (content/empty/loading/error/stale/offline)
+  LiveTelemetryPanels.strings           ~130  i18n catalog (96 keys: web parity + native chrome)
+  LiveTelemetryPanels.Tests.swift       363   XCTest: formatting + units + cleanNil + 6 panel projections
+  LiveTelemetryPanels.ModelTests.swift  189   XCTest: composition phase + model wiring/telemetry/freshness + a11y
+  (All .swift ≤ 400 lines — swiftlint file_length compliant.)
+
+──────────────────────────────────────────────────────────────────────────────
+HOST-RUNNABLE GATES (all executed on this runner)
+──────────────────────────────────────────────────────────────────────────────
+[1] Full-surface macOS type-check (real SwiftUI + shared Components/Design tree)
+    swiftc -typecheck -sdk <MacOSX.sdk> -target arm64-apple-macos15.0 \
+      -swift-version 6 -strict-concurrency=complete -module-name TeslaSync \
+      <Sources/Components/** + Sources/Design/** + Tokens.swift + 11 surface source files>
+    TYPECHECK_EXIT=0   (UnitFormatters.swift excluded — KMP SharedFacade dep, unused by this surface)
+
+[2] Isolated SwiftPM build + EXECUTED assertion harness (Swift 6 strict concurrency)
+    Pure cores (Adapter+Snapshots+Projection+ProjectionMedia+Model) compiled in an
+    isolated package; an executable harness mirrors every assertion in the two
+    committed XCTest files and RUNS them (XCTest/Swift Testing are unavailable under
+    Command Line Tools, so execution is proven via the harness):
+      swift build  → Build complete (exit 0)
+      swift run LiveTelemetryCheck → "LiveTelemetryCheck: 124 passed, 0 failed"  (exit 0)
+    Coverage executed: fmtNumber/fmtInt/fmtWithUnit/safe; convert+format
+    distance/speed/temperature/pressure (+ precision override + em-dash); cleanNil;
+    Powertrain shift-tone/power-fraction/peak-temp/regen/dash; Climate defrost/fan-clamp;
+    Security remote-start tri-state + detail cleanNil; Tire paToKpa/tone/verdict;
+    Energy raw-W"kW"/raw-Wh"kWh" quirks + charge-rate + battery%; Media cleanNil +
+    distance + presence; composition phase (error/loading/empty/content×3) + panel
+    presence gating; model view.opened-once + stale one-shot auto-refresh + re-arm +
+    offline-no-refresh + manual refresh + stop/re-arm + slug; a11y row/tile labels.
+
+[3] swiftc -parse of the committed XCTest files (syntax validity; XCTest module
+    absent on CLT so full -typecheck of the test targets is part of the deferred gate)
+    PARSE_EXIT=0
+
+[4] swiftlint --strict (.swiftlint.yml) over all 13 .swift files
+    "Done linting! Found 0 violations, 0 serious in 13 files."   LINT_EXIT=0
+
+[5] swiftformat --lint over all 13 .swift files
+    "0/13 files require formatting."                              FORMAT_EXIT=0
+
+[6] check-placeholders.ps1 (ADR-011 definition-of-done) over the surface files
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0                                           PLACEHOLDER_EXIT=0
+    (No TODO/FIXME/stub/mock/placeholder/Lorem; 0 opt-out markers.)
+
+[7] xcodegen generate --spec project.yml
+    "Created project at .../TeslaSync.xcodeproj"                  XCODEGEN_EXIT=0
+    All 13 LiveTelemetryPanels.* files enumerated into the generated project
+    (12 .swift across app + XCTest targets, .strings as a resource).
+
+──────────────────────────────────────────────────────────────────────────────
+DEFERRED GATE (environment-blocked — NOT claimed as passing)
+──────────────────────────────────────────────────────────────────────────────
+  xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    → IOS_EXIT=1   cause: xcodebuild requires full Xcode (CLT-only) + no iOS Simulator (simctl absent)
+  xcodebuild -scheme TeslaSync-macOS build test
+    → MAC_EXIT=1   cause: same — xcodebuild requires full Xcode; macOS dev-signing identities absent
+  Disposition: DEFERRED to a macos-latest runner (the P4 acceptance gate). The
+  surface's own code is verified green by gates [1]–[7]; zero LiveTelemetryPanels /
+  feature-views errors were produced. This is the same predecessor-accepted
+  disposition recorded in apps/macos-pending-verifications.md for prior P4 Apple
+  surfaces. (That tracker file is OUTSIDE this prompt's allowed-files scope —
+  LiveTelemetryPanels.* + this log — so the deferral is recorded here.)
+
+──────────────────────────────────────────────────────────────────────────────
+ACCEPTANCE CRITERIA
+──────────────────────────────────────────────────────────────────────────────
+  [x] Surface renders on Apple with all states from the web source reproduced —
+      loading / empty / error / content (7-panel grid; each panel self-empties
+      per its web child) + the orthogonal live / stale / offline freshness axis;
+      Previews exercise all six. sseConnected drives the header pulse + the
+      VehicleState "Live" chip (web parity).
+  [x] Hooks bind to the shared P1/S8 state-holder layer (LiveTelemetryPanelsSource
+      → LiveTelemetryPanelsModel); no direct HTTP in any view.
+  [x] Every i18n key from source has a matching key in the surface catalog — the
+      web `common.liveTelemetry`="Live Telemetry" + all panel `t()` keys are
+      reproduced verbatim; native-chrome (VehicleState labels, tire corners,
+      freshness/loading/empty/error) localized too. 96 keys declared, 95 referenced
+      in code, 0 referenced-but-undeclared (referenced ⊆ declared, verified).
+  [x] Accessibility labels on every interactive element + combined summaries on
+      rows / tiles / chips; pulse + decorative glyphs accessibilityHidden; headers
+      carry .isHeader; Reduce Motion honored on the pulse + fade-ins.
+  [x] Tests: adapter unit + per-state model/projection + a11y — 49 XCTest methods
+      across Tests.swift (32) + ModelTests.swift (17); the identical assertions
+      EXECUTED 124/124 green via the isolated harness (gate [2]).
+  [x] No TODO / stub / mock / placeholder / Lorem in shipped code — gate [6] COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — every host-runnable gate green; full-app xcodebuild
+      build/test DEFERRED with captured evidence (predecessor disposition).
+
+──────────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT
+──────────────────────────────────────────────────────────────────────────────
+  1 No red-as-green ...... host gates [1]–[7] are genuinely green; the xcodebuild
+                          build/test is shown DEFERRED with its real exit 1 + cause,
+                          never as a pass.
+  2 No scope narrowing ... full composition + all 7 panels reproduced (Powertrain,
+                          Climate, Security, VehicleState, TirePressure,
+                          EnergyCharging, MediaNavigation), all states, seams, tests.
+  3 No skip-and-assume ... web source + all 7 children + InfoTile/TelemetryGrid +
+                          api/types + unitConversion/numberFormat/cleanNil read
+                          end-to-end; every t() + render branch reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. SI formatting ports match numberFormat.ts +
+                          unitConversion.ts (precision, grouping, no-space °unit);
+                          web quirks reproduced verbatim (charger Watts labelled
+                          "kW", energy Wh labelled "kWh", charge-rate = speed of
+                          range_added_meters_per_hour/3600); tire Pa thresholds +
+                          verdict; power ±300 bar; fan ladder; presence chips.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as prior P4 Apple feature-views
+                          host-gate-green + xcodebuild deferral.
+  8 No commit on red ..... committed work is green on every runnable gate; the only
+                          non-green step is the environment-blocked xcodebuild,
+                          deferred with evidence (predecessor-accepted disposition).
+  9 No silent drift ...... files split to satisfy swiftlint file_length (≤400);
+                          tracker-file deferral recorded here (allowed-files scope).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,76 @@
+=== P4 Dashboard widget 0080 RecentlyUnlockedAchievements (Apple) ===
+date=2026-06-08T02:01:25Z  host=Darwin 25.5.0 arm64  cwd=/Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-83
+
+############################################################
+# CAPABILITY PROBE (ADR-002: SwiftUI + Swift Charts + MapKit, iOS18/macOS15)
+# The build+test gate steps require full Xcode (xcodebuild + iOS 18 sim).
+############################################################
+--- swift --version ---
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+Target: arm64-apple-macosx26.0
+--- xcode-select -p ---
+/Library/Developer/CommandLineTools
+--- xcodebuild -version (capability evidence) ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+--- xcrun simctl list devices available | grep -i iphone ---
+(no iOS simulators available)
+
+### GATE STEP 1/2: xcodebuild iOS build test ###
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1  (BLOCKED: xcodebuild requires full Xcode; only CommandLineTools present)
+
+### GATE STEP 2/2: xcodebuild macOS build test ###
+$ xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1  (BLOCKED: xcodebuild requires full Xcode; only CommandLineTools present)
+
+############################################################
+# RUNNABLE GATE STEPS (these CAN run on this runner)
+############################################################
+### swiftlint --strict (cwd=apps/apple, where .swiftlint.yml lives) ###
+Linting 'WatchComplicationViews.swift' (271/272)
+Linting 'WatchComplicationProvider.swift' (272/272)
+Done linting! Found 0 violations, 0 serious in 272 files.
+LINT_EXIT=0
+
+### swiftlint --strict explicit on the 6 new RecentlyUnlockedAchievements sources ###
+Linting 'RecentlyUnlockedAchievements.Previews.swift' (5/6)
+Linting 'RecentlyUnlockedAchievements.Tests.swift' (6/6)
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_NEWFILES_EXIT=0
+
+### swiftformat --lint apps/apple ###
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260607-170817-98066/slot-83/apps/apple/.swiftformat
+SwiftFormat completed in 0.15s.
+0/309 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+### check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets/RecentlyUnlockedAchievements ###
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+############################################################
+# SUPPLEMENTARY VERIFICATION (compensating for the blocked xcodebuild gate):
+# swiftc -typecheck under -swift-version 6 -strict-concurrency=complete
+# (matches project.yml SWIFT_VERSION 6.0 + SWIFT_STRICT_CONCURRENCY complete),
+# using minimal stand-ins for the shared registry + design-token symbols that
+# the real module provides (DigitalTwinWidget.Model.swift, design tokens, TSSkeleton).
+############################################################
+Foundation layer (Model + Adapter): typecheck EXIT=0  [verified earlier this session]
+SwiftUI layer (Model + Adapter + Badge + View): typecheck EXIT=0  [verified]
+Preview bodies (8 previews, macro-free transpile, -D DEBUG): typecheck EXIT=0  [verified]
+Note: #Preview macro (PreviewsMacros plugin) and XCTest module ship with full Xcode
+      only, so Previews macro-expansion + XCTest execution are part of the BLOCKED gate.
+
+############################################################
+# RESULT
+############################################################
+IOS_EXIT=BLOCKED  MAC_EXIT=BLOCKED  LINT_EXIT=0  FORMAT_EXIT=0  PLACEHOLDER_EXIT=0
+Runnable gate steps: PASS (lint/format/placeholder = 0). Build+test steps: BLOCKED (no full Xcode).
+Implementation is complete + production-polished (no stubs) and typechecks clean under Swift 6.
+
+EXIT=1
+STATUS=BLOCKED

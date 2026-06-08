@@ -1,0 +1,126 @@
+I'll start by exploring the repository structure to understand what exists and whether the Apple app infrastructure is present.
+
+Both `apps/apple/` and the web source exist. Let me read the web source and explore the Apple app structure in parallel.
+
+I have the web source and see the established Apple feature-view file pattern. Critical finding: `xcodebuild` is present but **requires full Xcode** — the active dir is CommandLineTools only. Let me verify the toolchain situation and study the existing conventions in depth.
+
+**Xcode.app IS present** — `xcodebuild` just needs `DEVELOPER_DIR` set (no sudo needed). And `pwsh` is available. Let me verify the toolchain works and study an existing feature-view log for precedent.
+
+Toolchain is fully available (Xcode 26.5, iPhone 16 sim, xcodegen, pwsh). Let me read the full precedent log to match the established methodology.
+
+I now fully understand the established methodology (code-complete + real iOS/macOS SDK typechecks + executed XCTest via SwiftPM harness + deferred Xcode app build). Let me study the precedent code files and shared infrastructure in detail.
+
+The P1/S8 state-holder layer lives in `Sources/SharedFacade/`. Since `TriggerConfigurator` binds `useGeofences()` (a real data hook with all states), I need to study the LoadableState pattern and a data-bound exemplar. Let me read the facade core and find the best exemplar.
+
+Now let me study a data-bound exemplar that handles all states (loading/empty/error/stale/offline) plus the shared UI components I'll need (Pickers, Fields, Toggle, Feedback states). Let me read these in parallel.
+
+`RateLimitStatusPanel` is the ideal data-bound exemplar (Input snapshot → Phase + stale/offline overlays → Source seam → Observable model → in-memory source, no `Shared` import). My surface combines this with the controlled-form pattern. Let me read the web-source dependencies and design foundation.
+
+Now let me read the design tokens, material, and the shared UI components I'll compose with, plus the Geofence type.
+
+Let me read the shared UI components I'll compose with (material, pickers, fields, buttons, feedback, skeletons).
+
+Now the key exemplar — how RateLimitStatusPanel renders/tests all states. Let me read its View/surface/previews/tests/strings.
+
+Let me read the RateLimit previews/tests/strings and verify `TSGlassPanel`, lint configs, and the placeholder gate's banned patterns.
+
+I have the full pattern now. Let me verify `TSGlassPanel`, check which shared component files import `Shared` (to build a clean typecheck closure), and read the placeholder gate + lint configs.
+
+None of the component/design files import `Shared` — I can typecheck against the **entire real component library**. Let me read the placeholder gate and lint configs, then start building.
+
+Now let me read the exact banned-pattern list (critical to avoid gate failure) and the `TSGlassPanel` signature.
+
+Now I understand the critical gotcha: the gate bans the substring **"Placeholder"** (case-insensitive) in `.swift` files, and the web source has keys `cronPlaceholder`/`statePlaceholder`. `.strings` files aren't scanned, but `.swift` references are. Let me check how existing files handle this.
+
+The precedent uses `// parity:allow web i18n key` markers. Let me run the actual placeholder gate now to establish ground truth (both the literal gate path and the real-directory scan).
+
+Ground truth established: the literal gate path → `EXIT=0`; the real-dir scan has 2 **pre-existing** hits in `InfrastructureSection` (outside my allowed files). The house i18n convention is facade-resolved `Text(verbatim:)`. Let me confirm how existing surfaces build localized pickers, then start building.
+
+I have everything I need. Let me set up tracking and write the plan, then build the surface.
+
+Now building the surface. Starting with the pure projection core.
+
+Adapter and catalog done. Now the state-holder model with the geofence data seam.
+
+Now the presentational primitives and the geofence picker with all its states.Now the presentational primitives (chips, select rows, fields, day toggles, geofence picker states).
+
+Now the four per-kind editors.
+
+Now the main surface that composes the editors and emits `view.opened`.
+
+Now the i18n catalog (every web key + native chrome/a11y keys).
+
+Now previews (one per branch/state) and the test suite.
+
+All 9 files written. Let me fix one Swift 6 concurrency detail (the `onChange` callback should be `@MainActor`, like the source's `onUpdate`), then format and run the real typechecks.
+
+The Tests file (434) exceeds SwiftLint's `file_length` warning (400 → error under `--strict`). Let me re-measure post-format and split the tests.
+
+Tests is 439 — I'll split the model tests into a separate file (existing `.ModelTests.swift` pattern). Let me view the boundaries.
+
+I'll move the model tests + doubles into a separate `.ModelTests.swift` file (existing pattern), keeping a11y tests in `Tests.swift`.
+
+Now remove the moved sections from Tests.swift (model tests + doubles), keeping the a11y tests.
+
+All files now ≤400 lines. Let me format the two test files, then run `swiftlint --strict` and `swiftformat --lint` on my files.
+
+SwiftLint flags the 3-member tuple (`large_tuple`). Let me refactor `makeModel` to return a small struct.
+
+`swiftformat --lint` clean, `swiftlint --strict` clean, all files ≤400 lines. Now the real iOS 18 SDK typecheck against the full component library.
+
+The full library pulls in `Units` (needs `Shared`). Per the precedent, I compile the **minimal closure** my surface actually touches. Let me confirm my shared dependencies, then typecheck that closure.
+
+`TSBadge`/`TSSelect` appear only in my explanatory comments (the code uses `TSTone` + tokens). Minimal closure = Tokens + Badges + my 6 runtime files. Let me typecheck it for iOS 18 and macOS 15.
+
+Both SDK typechecks pass. Now the DEBUG previews typecheck.
+
+All three typechecks (iOS 18, macOS 15, DEBUG previews) pass. Now the critical step — **executing** the XCTest suite via a throwaway SwiftPM harness (the non-SwiftUI core compiles standalone).
+
+**46/46 XCTest tests executed green.** Now the placeholder gate, whole-tree lint/format, and `xcodegen`, plus capturing the Xcode-app-build deferral evidence.
+
+Literal gate `EXIT=0`; my files contribute **0** violations (the 2 remaining `COUNT` are pre-existing in `InfrastructureSection`, my 2 opt-outs are the verbatim web i18n keys). Now the whole-tree lint/format, `xcodegen`, and the Xcode-build deferral evidence.
+
+`swiftformat` clean across the whole tree. The bare `swiftlint --strict` reports **1** violation in 838 files — let me confirm it's not in my files.
+
+The single bare-lint violation is in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` — pre-existing, not my file. Now `xcodegen` + capturing the Xcode-app-build deferral evidence (missing `Shared.xcframework`).
+
+`xcodegen` succeeded; `feature-views` is registered (so my files are in the project), but `Shared.xcframework` is **not** staged (only `.gitkeep`). Let me confirm my files are in the generated project and capture the Xcode-build blocker.
+
+All host-runnable gates pass. The Xcode app build is blocked solely by the missing `Shared.xcframework` (KMP core, not staged — outside my files), `XCODEBUILD_TARGET_EXIT=65`. My files are registered (60 refs in the project). Let me verify the generated project is git-ignored and clean up.
+
+All 10 files present and clean; generated project removed (git-ignored) and harness cleaned. Now writing the comprehensive completion log.
+
+Now committing only my files + the log (not the unrelated pre-existing `web/*.tsx` working-tree edits). Final verification first.
+
+Final lint clean (the `.strings` "unsupported file type" is expected — swiftformat only handles `.swift`; the 9 swift files passed). Committing now.
+
+Committed as `355d85fa`. Let me verify the commit is clean (no unrelated files) and confirm the pre-existing `web/*.tsx` edits were excluded.
+
+Commit is clean — 11 files (10 surface + log), 2514 insertions; the 2 unrelated pre-existing `web/*.tsx` edits remain uncommitted as they should. Let me finalize tracking.
+
+All 13 todos complete. Task finished and verified.
+
+Merge made by the 'ort' strategy.
+ ...pple-feature-views-0086-TriggerConfigurator.log | 274 +++++++++++++++
+ .../TriggerConfigurator.Adapter.swift              | 285 +++++++++++++++
+ .../TriggerConfigurator.Catalog.swift              | 206 +++++++++++
+ .../TriggerConfigurator.Editors.swift              | 257 ++++++++++++++
+ .../feature-views/TriggerConfigurator.Model.swift  | 384 +++++++++++++++++++++
+ .../TriggerConfigurator.ModelTests.swift           | 193 +++++++++++
+ .../TriggerConfigurator.Previews.swift             | 125 +++++++
+ .../feature-views/TriggerConfigurator.Tests.swift  | 279 +++++++++++++++
+ .../feature-views/TriggerConfigurator.Views.swift  | 340 ++++++++++++++++++
+ .../feature-views/TriggerConfigurator.strings      | 117 +++++++
+ .../feature-views/TriggerConfigurator.swift        |  54 +++
+ 11 files changed, 2514 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0086-TriggerConfigurator.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/TriggerConfigurator.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TriggerConfigurator.Catalog.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TriggerConfigurator.Editors.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TriggerConfigurator.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TriggerConfigurator.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TriggerConfigurator.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TriggerConfigurator.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TriggerConfigurator.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TriggerConfigurator.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/TriggerConfigurator.swift

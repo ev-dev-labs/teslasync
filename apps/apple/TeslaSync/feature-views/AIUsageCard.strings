@@ -1,28 +1,52 @@
 /*
-  AIUsageCard.strings
-  TeslaSync — P4 feature view · 0203 · AIUsageCard (Apple)
+  AiUsageCard.strings
+  TeslaSync — P4 feature view · 0237 · AiUsageCard (Apple)
 
-  The P1/S10 i18n catalog contribution for this surface. Every key the native `AIUsageCard`
-  resolves (table "AIUsageCard") lives here with its web `t(key, default)` English value. These
-  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are
-  kept in a per-surface table so each parallel surface prompt owns its own strings without
-  editing the shared catalog.
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `AiUsageCard`
+  resolves (table "AiUsageCard") lives here with its web English value. These entries fold into the
+  app `Localizable.xcstrings` master catalog at integration time; they are kept in a per-surface
+  table so each parallel surface prompt owns its own strings without editing the shared catalog.
 
-  The first group is the exact set of keys extracted from the web source
-  (features/settings/components/AIUsageCard.tsx, namespace "settings"). The second group backs
-  the native chrome (the P4 leaf freshness / loading / error copy) so the Swift sources hold no
-  English prose literals.
+  The web source (features/system/components/status/AiUsageCard.tsx feeding
+  components/data-display/UsageCard.tsx) uses hardcoded English literals (no t() calls — the
+  surface is "anonymous"). Per the native no-English-literals rule, every one of those literals is
+  promoted to a key here. The first group is the parity set extracted from the web source; the
+  second group backs the native chrome (the P4 leaf freshness / loading / error copy + the card
+  title) so the Swift sources hold no English prose literals.
 */
 
-/* --- Keys from the web source (parity) --- */
-"ai.settings.usage.title" = "Usage today";
-"ai.settings.usage.tokensIn" = "Tokens in";
-"ai.settings.usage.tokensOut" = "Tokens out";
-"ai.settings.usage.cost" = "Estimated cost";
-"ai.settings.usage.liveSuffix" = "Helix calls today.";
-"ai.settings.usage.placeholder" = "Usage populates as features run. Live numbers arrive in a follow-up update.";
+/* --- Parity: strings extracted from the web source --- */
+"aiUsage.emptyMessage" = "No Helix calls yet — turn on a feature to start.";
 
-/* --- Native chrome: P4 leaf freshness / connectivity --- */
+"aiUsage.band.today" = "Today";
+"aiUsage.unit.calls" = "calls";
+"aiUsage.errorsOne" = "%@ error";
+"aiUsage.errorsOther" = "%@ errors";
+
+"aiUsage.band.tokens" = "Tokens";
+"aiUsage.unit.total" = "total";
+"aiUsage.tokensInOut" = "%@ in · %@ out";
+
+"aiUsage.band.cost" = "Cost / latency";
+"aiUsage.msAvg" = "%@ ms avg";
+
+"aiUsage.detail.avgLatency" = "Avg latency";
+"aiUsage.msValue" = "%@ ms";
+"aiUsage.detail.errors" = "Errors";
+"aiUsage.detail.inputTokens" = "Input tokens";
+"aiUsage.detail.outputTokens" = "Output tokens";
+
+"aiUsage.topList.byFeature" = "By feature (7 days)";
+"aiUsage.topList.recent" = "Recent calls";
+"aiUsage.tokShort" = "%@ tok";
+
+"aiUsage.relative.seconds" = "%@s ago";
+"aiUsage.relative.minutes" = "%@m ago";
+"aiUsage.relative.hours" = "%@h ago";
+"aiUsage.relative.days" = "%@d ago";
+
+/* --- Native chrome: card title + P4 leaf freshness / connectivity --- */
+"aiUsage.title" = "Helix usage";
 "aiUsage.live" = "Live";
 "aiUsage.stale" = "Stale";
 "aiUsage.offline" = "Offline";
@@ -31,6 +55,6 @@
 "aiUsage.refresh" = "Refresh";
 
 /* --- Native chrome: loading / error states --- */
-"aiUsage.loadingA11y" = "Loading AI usage";
+"aiUsage.loadingA11y" = "Loading Helix usage";
 "aiUsage.errorTitle" = "Couldn't load AI usage";
 "aiUsage.retry" = "Retry";

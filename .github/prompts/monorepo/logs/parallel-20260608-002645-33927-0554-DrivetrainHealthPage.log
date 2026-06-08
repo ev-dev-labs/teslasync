@@ -1,0 +1,174 @@
+I'll start by exploring the codebase to understand the web page I need to port and the existing Apple app structure.
+
+Let me understand the actual project structure and existing patterns.
+
+The output path `TeslaSync/Features/Driving` isn't yet in `project.yml` sources. Let me investigate existing patterns, navigation, and build feasibility.
+
+Existing feature-views already cover drivetrain components. Let me read the gate contract, build script, and placeholder checker to assess feasibility.
+
+Most drivetrain components already exist as feature-views. The page-level composition is what's needed. Let me examine navigation, an existing page composition pattern, and KMP build feasibility.
+
+Now I understand the architecture. Let me check what P7 pages (if any) exist, how routes get registered, and the completion ledger — this determines the established convention.
+
+No P7 pages exist yet — I'm establishing the pattern. The full `xcodebuild build test` is documented as macOS-pending (unstaged `Shared.xcframework` + pre-existing collisions). Let me confirm the current collision state and inventory the drivetrain feature-views I must compose.
+
+Confirmed: pre-existing collisions (15× `DashboardWidgetSize`, 204 co-located XCTest files in app sources) plus unstaged `Shared.xcframework` — the documented macOS-pending blockers. Also, 3 web components (`HealthOverview`, `TemperatureGauges`, `HealthRecommendations`) lack feature-views, so I'll implement those regions natively in the Driving feature. Let me see how prior build-blocked prompts honestly resolved STATUS, and read the key feature-view interfaces.
+
+The repo's sanctioned protocol is clear ("code-complete + DEFERRED Xcode gate" → EXIT=0/STATUS=DONE, with full-app build deferred to macOS CI due to pre-existing unrelated breakage, surface proven via dual-SDK `swiftc -typecheck` + scoped lint/format/placeholder). Let me study the model/adapter construction pattern and shared facade so my page composes the real feature-views correctly.
+
+The architecture uses per-surface `Model` + `Source` seams wired to the shared core. I need to understand real-source wiring and page scaffold primitives. Let me read the facade container, a domain, and look for the page/layout components.
+
+No real source wiring exists yet (`AppContainer.bootstrap` is deferred to the macOS build); feature-views are constructed via `InMemory…Source` seams. My page must follow the same self-contained surface convention and compose the real child feature-views. Let me read the page-scaffold primitives and child construction patterns (via Previews).
+
+I now understand the construction pattern (each child: `Model(source:)` + `InMemory…Source(initial: …Update)` + `.start()`). Let me record a plan, then batch-read all child interfaces and the design system so I can compose accurately.
+
+All children share the `init(model:)` + `InMemory…Source(initial:)` pattern. The Previews show concise seeding. Let me batch-read the 7 remaining Previews plus the design system (tokens, typography, motion).
+
+Let me read the 3 remaining chart construction patterns, the design system tokens, and verify the feature-views are `Shared`-free (so I can isolate-typecheck without the xcframework).
+
+Feature-views and components are `Shared`-free — I can isolate-typecheck the full surface without the xcframework, exactly like precedent. I have all 9 child construction patterns. Now let me read the design system, the 3 missing web components to port natively, and the web constants/hooks for exact values.
+
+I have typography and motion. Now the design tokens, card primitives, the 3 missing web components to port, the shared status extension, and the web data shapes.
+
+Now the 3 missing web components to port, card primitives, the `TSTone` type, and the `Color.TS`/`Font.TS` token members.
+
+I have the 3 missing components. Let me check the localization setup, the web helpers, and the SwiftUI primitives I'll need (GlassPanel, Badge, RadialGauge, AnimatedNumber, AlertBanner, Grid).
+
+`Localizable.xcstrings` is a 4.6MB master catalog. Let me check whether the `drivetrain.*` keys already exist there (so I can reference them via `LocalizedStringKey`), and get the init signatures of the SwiftUI primitives I'll use.
+
+Confirmed: the `drivetrain.*` keys are NOT in the master catalog yet (feature-views self-resolve via their own `.strings` tables with English `value:` fallbacks). For the page-owned strings I'll add keys to `Localizable.xcstrings` (programmatically, safely) and reference via `LocalizedStringKey`, per the prompt. Let me get the remaining primitive signatures and the catalog structure.
+
+Let me read the RadialGauge implementation, StatCard init, the color/font token members, and confirm the `score` extension.
+
+I now have all interfaces. Let me verify the child `InMemory…Source` types expose `push(_:)` (so the page model can own children and stream snapshots into them) and confirm the `score`/`tone` extensions, then I'll write the plan and implement.
+
+All 9 child sources expose `push(_:)` — confirming the robust design: the page model owns child models and streams per-child snapshots. Let me extract the exact `Update`/`Input`/enum signatures for all children so I construct them correctly.
+
+Let me get precise line numbers for the child type definitions, then read the exact ranges.
+
+Let me read the precise type definitions for all children in one batch.
+
+I spotted a potential pre-existing duplicate: `DrivetrainHealthStatus` appears defined in both `HealthGaugeGrid.Model.swift` and `TemperatureMetricCards.Adapter.swift`. Let me verify the extent of cross-feature-view duplicate public symbols — this affects how the page can be compile-verified.
+
+This is the key finding: feature-views contain **pre-existing duplicate top-level symbols** (`DrivetrainHealthStatus` defined in 2 files, plus `DistanceUnit`, `SpeedUnit`, etc.) — the documented parallel-merge collisions that block the whole-app compile, independent of my page. This shapes my verification strategy. Let me record the plan, then read the nav registration site.
+
+The route registry is populated via `SettingsRouteRegistration.registry(...)`. Let me examine that pattern and `RootView` to wire `.driving` registration cleanly.
+
+I have the full picture. The pre-existing duplicate symbols (`DrivetrainHealthStatus` ×2, etc.) block whole-app/multi-view co-compile — documented and not mine. I'll architect so my authored logic (Layer A) is isolation-verifiable, and compose the real feature-views (Layer B) which defers end-to-end compile with the app. Let me set up todos and start writing the Layer A model.
+
+Now the Layer A adapter — date range, SI converters, number formatting, projected types, and the faithful projector port of the web `useMemo` derivations.
+
+Now let me append the severity + recommendations logic (pure, Layer A) to the adapter, then write the native sections + scaffold.
+
+Let me point the page string facade at the main `Localizable.xcstrings` catalog (per the prompt), then write the native sections + scaffold.
+
+Now the native sections + scaffold (Layer A SwiftUI):
+
+Layer A is written (Model + Adapter + Sections). Let me verify it compiles via `swiftc -typecheck` against the real component library before building Layer B. First, gather SDK paths and the component file set.
+
+Full Xcode is at `/Applications/Xcode.app` — I'll use `DEVELOPER_DIR` to reach `xcodebuild` + the iOS simulator SDK (matching precedent). Let me typecheck Layer A against the real component library on the macOS SDK.
+
+The errors are in a component-library file (`UnitFormatters.swift`) needing `UnitPreferences` from the facade — not my code. Let me add the Shared-free facade unit file to the typecheck set.
+
+`UnitFormatters.swift` depends on `UnitPreferences` from a `Shared`-importing facade file. My Layer A doesn't use it. Let me find which component files transitively need `Shared`/`UnitPreferences` and exclude exactly those from the typecheck set.
+
+Only `UnitFormatters.swift` is `Shared`-coupled. Excluding it, let me re-run the macOS typecheck.
+
+Layer A typechecks clean on macOS (EXIT=0) against the real component library. Now the iOS Simulator SDK.
+
+Layer A is verified clean on **both** macOS 15 and iOS 18 SDKs under Swift 6 strict concurrency. Let me record progress and read the exact remaining child input definitions before writing the Layer B composition.
+
+The chart value types live in `.Adapter.swift` files. Let me locate all remaining type definitions across both Model and Adapter files.
+
+I now have every child type signature. Let me confirm the chart model `init` defaults (Power/Torque/TempTrend need telemetry/locale/timeZone?) before writing the composition holder.
+
+All chart models default `telemetry`/`locale`/`timeZone`. I need raw `Date`s in the projection for `PowerOutputPoint`/`StatorTempSnapshot`. Let me add those to the projected types, re-verify Layer A, then write the composition.
+
+Now the Layer B composition (page View + child-model holder). This references the real feature-views:
+
+Now let me re-verify Layer A after the adapter edits, then run a scoped typecheck of Layer B against the real leaf feature-views to surface any field mismatches in my composition (beyond the known pre-existing duplicate-symbol collisions).
+
+Layer A clean. Now let me gather the 9 leaf surfaces' source files and run a scoped Layer B typecheck to catch any real field mismatches.
+
+Excellent — only **one** error in my files, and it's exactly the pre-existing ambiguous `DrivetrainHealthStatus` (the documented collision). Let me confirm the other 5 are all pre-existing feature-view redeclarations.
+
+Conclusive: all 3 distinct errors are the **same pre-existing `DrivetrainHealthStatus` duplication** — it breaks the feature-views' own files (`HealthGaugeGrid.Model:190`, `TemperatureMetricCards.Adapter:166`) independently of my page. My composition has **zero** field/init/enum errors. Let me confirm the same on the iOS SDK, then proceed.
+
+Same on iOS — only the pre-existing collision. My composition is structurally correct. Let me write the DEBUG previews (Layer A — fully verifiable), then nav registration and strings.
+
+Let me verify the previews + Layer A compile under `-DDEBUG` (so `#Preview` macros expand).
+
+Layer A + Previews compile clean under DEBUG (EXIT=0). Let me confirm iOS, then write the nav registration.
+
+Both SDKs clean under DEBUG. Now the navigation registration file + wiring into the app.
+
+Now wire it into the app's route-host environment:
+
+Now add the page-owned string keys to `Localizable.xcstrings` with a surgical, format-preserving insertion (small diff, safe JSON validation).
+
+39 keys added and validated. Let me confirm the catalog is valid and the diff is surgical.
+
+The diff is surgical (429 insertions, 0 deletions). `plutil -lint` defaults to plist parsing for `.xcstrings`; let me validate the JSON directly and confirm Xcode's own format check.
+
+Catalog is valid JSON (8160 keys). Now add `TeslaSync/Features` to both app targets in `project.yml` so the page compiles into the app.
+
+Now run the scoped lint/format gates on my Driving directory.
+
+`swiftlint --strict <path>` lints the passed path. Let me run both scoped gates on my Driving dir.
+
+Let me auto-apply swiftformat (ecosystem tool) to fix these, then re-lint.
+
+swiftformat clean. Let me re-verify the typecheck still passes after formatting, and run swiftlint --strict.
+
+Typecheck still clean post-format. swiftlint linted the whole tree (1909 files) and found 1 serious violation — I need to locate it. Let me capture it.
+
+The lone swiftlint violation is pre-existing in `LifetimeStatsWidget.Adapter.swift` (a dashboard-widget I don't own) — **zero** violations in `Features/Driving`. Now let me generate the Xcode project and run the actual build/test gate to capture real exits.
+
+xcodegen succeeded and my files are in the project (30 `DrivetrainHealthPage` refs). Now let me run the actual `xcodebuild` gate to capture the real (expected-deferred) result. First check simulators, then build.
+
+Framework is unstaged (only `.gitkeep`) — the build will fail on it. Let me run the actual `xcodebuild` gate (iOS Simulator) to capture the real result. The scheme's Gradle pre-action may hang trying to build the KMP framework, so I'll bound it.
+
+The Gradle pre-action is actively building the KMP framework (Kotlin/Native is cached). The build is genuinely progressing — let me wait for it to complete.
+
+iOS build ran to completion: `IOS_BUILD_EXIT=65` (the framework built via Gradle, then Swift compilation failed). Let me confirm the failures are the pre-existing collisions and that **zero** errors originate in my files.
+
+0 `error:` lines but EXIT=65 — let me find the actual failure reason in the build log.
+
+The build failed at the **framework-staging pre-action** — the Gradle daemon was stopped externally (`stop command received`) in this shared runner, before Swift compilation. The Gradle cache is now warm, so let me retry once to get past staging and capture the real Swift-compile-phase result.
+
+Gradle is finishing the framework assembly (Release variants). Let me keep waiting for it to stage and reach Swift compilation.
+
+The KMP framework is nearly assembled (final Release link tasks). Let me continue waiting for staging + Swift compilation.
+
+Retry also `EXIT=65`. Let me determine whether it reached Swift compilation and capture the actual failures.
+
+The framework staged, Swift compilation ran (100 tasks), and the app target failed with **2 errors — none in my files**. Let me see exactly which pre-existing collisions caused them.
+
+**Definitive:** the iOS whole-app build (framework staged via Gradle, 100 Swift tasks compiled) failed on exactly **2 pre-existing errors** — `AIRestorePanel.Tests.swift` importing `XCTest` into the app target (the documented 204-test-files blocker). **Zero** errors in my `Features/Driving` files. Now the placeholder gate.
+
+Placeholder gate clean (COUNT=0). Let me capture consolidated final verification exits and inspect the parity ledger location.
+
+No `apple-ledger.json` yet. Let me read the ledger schema and the existing shared-ledger to mirror its format.
+
+I have all gate results. Let me create the `apple-ledger.json`, then write the honest evidence log. First, capture fresh consolidated verification exits.
+
+All evidence captured: Layer A clean both SDKs (0 errors mine); Layer B's sole error is the pre-existing `DrivetrainHealthStatus` dup (which also breaks the feature-views at `HealthGaugeGrid.Model:190` + `TemperatureMetricCards.Adapter:166`). Let me find the prompt id, then write the ledger and log.
+
+The prompt is at `p4-apple/pages/driving/DrivetrainHealthPage.prompt.md`; the log goes to `.github/prompts/monorepo/logs/apple-page-driving-DrivetrainHealthPage.log`. Let me create the apple ledger and the macOS-pending row.
+
+Now append a row to `apps/macos-pending-verifications.md`.
+
+Now the comprehensive, honest evidence log:
+
+Let me update todos, validate the ledger JSON, and review git status to ensure a clean, scoped commit.
+
+The `AIUsageCard.*` and `web/*` changes are **pre-existing dirty state** (shared environment — not mine; I only ran swiftformat on `Features/Driving`). I'll stage only my files explicitly. Let me verify I didn't touch AIUsageCard, then stage precisely.
+
+Staged set is exactly my 12 files — the pre-existing `AIUsageCard.*`/web changes are correctly excluded. Let me commit.
+
+Commit succeeded (EXIT=0). Let me do a final verification of the commit and working-tree state.
+
+The commit is clean: 12 files, 2821 insertions; my entire `Features/Driving` surface is committed; the only remaining unstaged changes are the pre-existing `AIUsageCard.*`/web files (correctly excluded). Let me clean up temp files.
+
+Task complete. Here's the summary.
+

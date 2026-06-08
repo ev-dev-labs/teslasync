@@ -1,0 +1,102 @@
+I'll start by exploring the repository structure to understand the task, then read the web source specification and the existing Apple app structure.
+
+Toolchain is present (Swift 6.3.2, swiftlint, swiftformat, xcodebuild). Let me check Xcode/simulator details and read the web source spec plus the Apple app structure.
+
+Critical finding: `xcodebuild` requires full Xcode but only CommandLineTools is active — so the iOS/macOS simulator build+test gate cannot run here. swiftlint/swiftformat/xcodegen ARE available. I'll produce the complete implementation, run what I can, and honestly mark the xcodebuild gate BLOCKED with evidence. First, let me study the existing native widget patterns thoroughly.
+
+The `LifetimeStatsWidget` shares the exact same data source (`useLifetimeStats` / `/analytics/lifetime`) as my target. It's the canonical sibling template. Let me read it end-to-end along with the shared facade layer.
+
+Excellent architecture. Let me read the rest of the LifetimeStats sibling (Adapter, Previews, strings, Tests) and the web dependencies (AchievementBadge, WidgetShell, types, prefs hook) in parallel.
+
+Now let me read the Tests file, the shared design/registry types, and the web-side dependencies (AchievementBadge, WidgetShell, achievement types, prefs hook).
+
+Multiple files reference the registry types. Let me pinpoint the canonical definitions and understand the design tokens (Color.TS, Font.TS, TSSpacing) plus the skeleton/animated-number components.
+
+Key insight: `TeslaSync/dashboard-widgets/` is a separate widget bundle where `DigitalTwinWidget.Model.swift` defines the canonical `DashboardWidgetSize`/`DashboardWidgetRegistration` that siblings reuse. I must NOT redefine them. Let me confirm the target layout via project.yml and read the design tokens + the DigitalTwin registry definition.
+
+Now I understand the layout: `TeslaSync/dashboard-widgets/` is a staged widget bundle (siblings: DigitalTwin defines the shared registry types). project.yml is out of my allowed scope. Let me read the web dependencies (AchievementBadge, achievement types, prefs hook, useLifetimeStats) and the lint/placeholder tooling.
+
+swiftformat lints all of `apps/apple` so my files must be swiftformat-clean. Let me read the web parity dependencies and the achievement/badge data shapes.
+
+Now I have the full data model. Let me read the design tokens, the registry metadata, the useLifetimeStats hook (to confirm `achievements` shape), the skeleton component, and the placeholder patterns.
+
+Registry confirmed (maxSize 4×4, unlike LifetimeStats' 4×40). Let me read the design tokens, the `LifetimeAchievement` type, and the skeleton/feedback components.
+
+`Color.TS` tokens live in generated design tokens. Let me locate all the design-token + component APIs I'll use and the `LifetimeAchievement` web type.
+
+Let me check the GuardMode sibling for chrome consistency and whether a shared flow/wrap layout or widget-shell helper already exists to reuse.
+
+Let me read the web `WidgetShell` to precisely mirror the chrome semantics (especially the disabled branch which omits refresh/error props).
+
+I now have complete understanding of the architecture, tokens, data shapes, and conventions. Let me verify no type-name collisions, check `pwsh` availability for the placeholder gate, then set up my plan.
+
+Everything's confirmed: no collisions, `pwsh` available (placeholder gate can run), tokens/components understood. Now I'll set up the plan and build the 7 surface files following the `LifetimeStatsWidget` sibling pattern precisely.
+
+Now I'll create the Model file (state-holder seam, telemetry, registry, i18n facade, DTO).
+
+Now the Adapter (pure Foundation projection: filter/sort/slice, ISO8601 parse, route builder, accessibility).
+
+Now the Badge view (web `AchievementBadge` sm/unlocked parity).
+
+Now the main surface view (chrome + all states + adaptive badge grid).
+
+Now the Previews, strings catalog, and Tests.
+
+Let me fix a double-optional issue and the `.capitalized` fragility in the tests.
+
+Now let me verify. First, swiftformat lint on my files to catch formatting deviations.
+
+One `redundantType` deviation. Let me auto-format my files (applying swiftformat only to my files) and re-lint.
+
+The gate runs from repo root. Let me re-run the exact gate command from there.
+
+swiftformat passes (0/309). Let me verify the auto-formatted Adapter change is correct, then run swiftlint and the placeholder gate.
+
+swiftlint and swiftformat both pass. Since swiftlint's `included:` doesn't cover the dashboard-widgets dir, let me explicitly lint my files to be thorough, then run the placeholder gate (pwsh) and a best-effort Swift typecheck of the Foundation layer.
+
+All available gate steps pass (swiftlint 0 violations, swiftformat 0/309, placeholder EXIT=0). Now a best-effort Swift typecheck of the Foundation-only layer (Model + Adapter) using a minimal stub for the shared registry types, under Swift 6 strict concurrency.
+
+Excellent — the typecheck caught a real Swift 6 strict-concurrency violation (static non-Sendable `ISO8601DateFormatter`). The sibling avoids this by creating formatters locally per call. Let me fix it the same way.
+
+Now re-run the typecheck to confirm the fix.
+
+The Foundation layer typechecks cleanly. Now let me verify the SwiftUI layer (View + Badge) by typechecking against minimal token stubs matching the real shared API shapes.
+
+SwiftUI layer typechecks cleanly too. Let me also attempt to typecheck the Previews (DEBUG) and the Tests logic (stripping `@testable import` so types resolve in-unit) for extra confidence.
+
+The Previews/Tests failures are purely toolchain limitations — `#Preview`'s macro plugin and `XCTest` ship only with full Xcode, not CommandLineTools (further confirming the BLOCKED gate). To still verify the preview bodies are type-correct, let me transpile `#Preview {…}` into plain functions and typecheck.
+
+My awk regex didn't transpile the two previews whose display names contain parentheses. Let me fix the regex (greedy to last `)` before `{`) and re-run.
+
+All 8 preview bodies typecheck cleanly. My full implementation is type-correct under Swift 6 strict concurrency. The only un-runnable steps (`xcodebuild`, `#Preview` macro, `XCTest`) all require full Xcode, confirming the BLOCKED gate. Let me locate the log directory and check git state before writing the gate log.
+
+Everything verifiable passes. The log dir is `.github/prompts/monorepo/logs/` and there are 2 pre-existing unrelated modified files I must not touch. Let me generate the honest gate log by running the real gate steps (including capturing the genuine `xcodebuild` capability failure as evidence).
+
+Log written with honest evidence. Let me do a final forbidden-pattern sweep over my files, confirm the file set, then stage only my allowed files (not the 2 pre-existing unrelated web edits) and commit.
+
+Only match is a doc-comment using the word "placeholder" to describe the `%@` format specifier (the real placeholder gate already passed with count 0). I'll reword it to remove even that token, then commit.
+
+Now stage only my 7 widget files + the log (excluding the 2 pre-existing unrelated web edits), do a final format/lint re-check, and commit.
+
+All 7 files + log staged; the 2 unrelated web edits correctly excluded. Committing with the prescribed message.
+
+Task complete. Here's the summary.
+
+## RecentlyUnlockedAchievements (Apple, P4 · 0080) — shipped
+
+Implemented a production-polished SwiftUI parity of `features/dashboard/widgets/RecentlyUnlockedAchievements.tsx`, following the `LifetimeStatsWidget` sibling pattern (same `/analytics/lifetime` source). Committed as `fa65da44`.
+
+**7 files** in `apps/apple/TeslaSync/dashboard-widgets/`:
+- `.Model.swift` — P1/S8 source seam, P1/S11 telemetry (slug `RecentlyUnlockedAchievements`), registry (`recently-unlocked-achievements`, 2×2/1×2/**4×4**), P1/S10 i18n facade, `AchievementSnapshot` DTO, phase resolution (incl. `disabled` short-circuit for the `showOnDashboard` opt-out).
+- `.Adapter.swift` — pure projection: filter unlocked+dated → sort newest-first → `visible(isWide:)` slice (5/3), ISO-8601 parse, `encodeURIComponent`-faithful `/lifetime?achievement=…` deep link, a11y summary.
+- `.Badge.swift` — `AchievementBadgeView` (gold unlocked badge parity).
+- `.swift` — glass shell; every state: disabled / loading / empty / error+retry / stale+offline chip+banner+auto-refresh / content (adaptive badge grid, deep-link buttons with VoiceOver labels).
+- `.Previews.swift`, `.strings`, `.Tests.swift` (adapter/phase/model/telemetry/registry/a11y).
+
+**Verification (honest):**
+- ✅ `swiftlint --strict` (0 violations), `swiftformat --lint apps/apple` (0/309), placeholder gate (count 0).
+- ✅ `swiftc -typecheck` under `-swift-version 6 -strict-concurrency=complete` for Foundation + SwiftUI layers + all 8 preview bodies (caught & fixed a real static-formatter Sendable violation).
+- ⛔ **`xcodebuild` iOS/macOS build+test BLOCKED** — runner has only CommandLineTools (no full Xcode/simulator); `#Preview` macro + `XCTest` likewise need Xcode. Documented with evidence in the gate log → **`EXIT=1 / STATUS=BLOCKED`** (an accepted terminal state per the prompt's acceptance criteria).
+
+Only my allowed files + the log were committed; 2 pre-existing unrelated web edits were left unstaged. `project.yml`/swiftlint-config wiring is out of scope (P4 integration, consistent with the other staged sibling widgets).
+

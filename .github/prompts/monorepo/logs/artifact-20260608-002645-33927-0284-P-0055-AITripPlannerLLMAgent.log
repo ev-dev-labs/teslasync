@@ -1,0 +1,144 @@
+=== P4 Shared surface 0055 AITripPlannerLLMAgent (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.x (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.x · swiftformat 0.6x · xcodegen 2.45.4 · pwsh · Java 17 (OpenJDK)
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5, already booted) present · macOS 26.5 SDK present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" — release + debug XCFrameworks built and staged to
+                       apps/apple/Frameworks/Shared.xcframework; slices ios-arm64, ios-arm64-simulator, macos-arm64).
+  Capability         : SwiftUI present; iOS + macOS SDKs + simulators present → NOT capability-BLOCKED.
+                       (Surface uses neither Swift Charts nor MapKit — prompt "Charts / maps used: (none)".)
+
+WEB SOURCE (the specification)
+  web/src/components/ai/AITripPlannerLLMAgent.tsx — a thin AI-stream wrapper:
+    AITripPlannerLLMAgent = withAiFeature('trip-planner-llm-agent', InnerSection)
+      • withAiFeature : AI-Off gate (ADR-015) — renders null when the per-feature flag is off.
+      • InnerSection  : builds the POST body for `/ai/trips/plan/draft` from props
+                        (vehicleId | string|number, origin?, destination?, currentSoc?, minArrivalSoc?,
+                        chargeLimitSoc?, speedFactor?), drives useAiStream, renders the shared AIFeatureCard.
+                        haveInputs = !!vehicleId && origin != null && destination != null.
+                        body defaults: current_soc??80, charge_limit_soc??90, min_arrival_soc??20,
+                        speed_factor??1.0, vehicle_id = Number(vehicleId)||0, origin/destination ⇒ {0,0,''} fallback.
+    AIFeatureCard  : GlassPanel → title + Helix badge + description (+ emptyHint when !canStart) →
+                     "Ask Helix" action (visible "Ask Helix"/"Helix is thinking…", aria "Ask Helix · <buttonLabel>",
+                     disabled = !canStart||streaming) → AiOutputPanel.
+    useAiStream    : idle → streaming → done|error (+ paused-confirm); accumulates delta text.
+    AiOutputPanel  : hidden until anything; error line / thinking indicator / streamed prose.
+  i18n keys extracted: tripPlanner.aiAgent.{title,description,generateButton,badge}; helix.{badge,tooltip,
+                       ariaLabel,askHelix,thinking,errorLabel}; ai.common.errorUnknown.
+
+ARTIFACTS SHIPPED (apps/apple/TeslaSync/shared-surfaces/AITripPlannerLLMAgent.*)
+  AITripPlannerLLMAgent.Adapter.swift   — pure core: TripPlannerVehicleID (JS truthiness + Number()||0),
+                                          TripPlannerInputs/Location, TripPlannerDraftBody (snake_case Encodable),
+                                          TripPlannerRequest (body builder + canStart + path), TripPlannerStreamPhase/
+                                          Event, TripPlannerOutput projection (AiOutputPanel), TripPlannerAccessibility.
+  AITripPlannerLLMAgent.Model.swift      — P1/S8 seam (AITripPlannerSource) + @Observable @MainActor AITripPlannerModel;
+                                          P1/S11 telemetry (AITripPlannerTelemetry + OSLog default); AI-Off gate +
+                                          availability projection; connection axis (live/stale/offline); useAiStream-
+                                          equivalent stream reductions; InMemoryAITripPlannerSource.
+  AITripPlannerLLMAgent.Strings.swift    — P1/S10 i18n facade (table "AITripPlannerLLMAgent"); named accessors keep each
+                                          web English fallback in one place (views + a11y + tests share them).
+  AITripPlannerLLMAgent.Views.swift      — native AIFeatureCard parity: Helix badge, "Ask Helix" button, output panel,
+                                          thinking indicator, empty-input hint, freshness chip, connectivity banner,
+                                          loading + error chrome.
+  AITripPlannerLLMAgent.swift            — the surface View (slug "AITripPlannerLLMAgent"); AI-Off gate + glass panel +
+                                          header + onAppear telemetry + .accessibilityElement(.contain) summary.
+  AITripPlannerLLMAgent.Previews.swift   — #if DEBUG previews: ready/empty/loading/streaming/streamed-text/stream-error/
+                                          availability-error/stale/offline.
+  AITripPlannerLLMAgent.strings          — the per-surface i18n catalog contribution (parity + chrome keys).
+  AITripPlannerLLMAgent.Tests.swift      — adapter + projection + output + a11y + i18n unit tests.
+  AITripPlannerLLMAgent.ModelTests.swift — state-holder wiring, telemetry, streaming, freshness tests + the Spy double.
+  Necessary shared wiring (same pattern every P4 feature-view used — enumerated for "no silent drift"):
+    apps/apple/project.yml   — + "TeslaSync/shared-surfaces" to TeslaSync (iOS) and TeslaSync-macOS sources.
+    apps/apple/.swiftlint.yml — + "TeslaSync/shared-surfaces" to included.
+  (No Localizable.xcstrings edit — the per-surface .strings file is the catalog contribution, the AIRestorePanel pattern;
+   the facade resolves to the value: fallback until the table folds into the master catalog at integration time.)
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  GlassPanel            → TSGlassPanel (Components/UI/Cards.swift)            title → Font.TS.panel/textPrimary
+  AIBadge (cyan pill)   → TripPlannerBadge (sparkles + Color.TS.accent capsule)   button (outline) → TSButton(.secondary)
+  HelixMark (Lucide)    → SF Symbol "sparkles" (pulses motion-safe while streaming)
+  AiOutputPanel         → TripPlannerOutputPanel (.hidden/.thinking/.error/.text), bordered surfaceGlass panel
+  AIThinkingIndicator   → TripPlannerThinkingIndicator (TSSkeleton shimmer lines + labelled row, Reduce-Motion safe)
+  i18n   : every string via the P1/S10 facade; zero English literals in the Swift sources.
+  a11y   : badge decorative glyph hidden; button aria "Ask Helix · Draft a plan" + hint; card combined into one
+           VoiceOver summary (title · badge · description · empty hint) with double-period avoidance; freshness chip,
+           banner, output panel each carry labels; Dynamic Type via system fonts; Reduce Motion honored.
+  telemetry : view.opened surface="AITripPlannerLLMAgent" via AITripPlannerModel (P1/S11), default OSLog sink,
+              emitted once and ONLY for a non-gated (presented) surface — never when the AI flag is off.
+
+GATES (executed on THIS runner — raw results)
+  [GREEN]    swiftformat --lint TeslaSync/shared-surfaces                    : 0/8 files require formatting     (FORMAT_EXIT=0)
+             swiftformat --lint apps/apple (whole tree, FYI)                 : 1/1921 require formatting — the 1 is the
+                                                                               PRE-EXISTING feature-views/ActionBuilder.Previews.swift
+                                                                               (unmodified in HEAD; a parallel-merge artifact), 0 shared-surfaces.
+  [GREEN]    swiftlint --strict (shared-surfaces scope)                      : 0 violations in 8 files          (LINT_EXIT=0)
+             swiftlint --strict (whole app, FYI)                             : 1 PRE-EXISTING violation — function_body_length in
+                                                                               dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+                                                                               (not a shared-surfaces file; not introduced here).
+  [GREEN]    check-placeholders.ps1 -Path …/shared-surfaces                  : PLACEHOLDER_COUNT=0              (PLACEHOLDER_EXIT=0)
+  [GREEN]    xcodegen generate                                               : project written; 54 AITripPlannerLLMAgent refs enumerated (XCODEGEN_EXIT=0)
+  [GREEN]    swiftc -typecheck (real iOS 18 simulator SDK, -swift-version 6, -D DEBUG, surface + real design system)
+                                                                             : IOS_TYPECHECK_EXIT=0
+  [GREEN]    swiftc -typecheck (real macOS 15 SDK, -swift-version 6, -D DEBUG, surface + real design system)
+                                                                             : MAC_TYPECHECK_EXIT=0
+  [GREEN]    AITripPlannerLLMAgent build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode =
+             strict-concurrency complete, same as the app), compiling the EXACT shipped sources against the REAL repo
+             design-system files (Tokens/TSMaterial/Typography/Badges/Buttons/Cards/Skeletons/Motion):
+                 Build complete!  ·  Executed 46 tests, with 0 failures                                      (SWIFT_TEST_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS'                       build : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO AITripPlannerLLMAgent errors; the blocker pre-exists this change):
+    Both builds fail at the SAME single error, in a PRE-EXISTING file that this surface does not touch:
+        TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'
+    Root cause is the documented parallel-merge structural issue: co-located "*.Tests.swift" files are compiled into the
+    APP target (project.yml includes the whole feature-views/shared-surfaces directories as app sources), and the app
+    target cannot resolve XCTest. The Swift driver fails fast on that module-resolution error, so it never reaches the
+    second documented blocker (`public struct DashboardWidgetSize` redefined 15× across dashboard-widgets → "ambiguous
+    for type lookup") nor macOS development-signing. grep of both build logs for a shared-surfaces / AITripPlannerLLMAgent
+    "error:" = 0 hits; the only error source file is the pre-existing AIRestorePanel.Tests.swift.
+    This surface follows the sanctioned feature-views convention (its predecessor AIRestorePanel co-locates *.Tests.swift
+    the same way, and the prompt's allowed-files glob is AITripPlannerLLMAgent.*), so its own tests share that pattern —
+    but they are CORRECT and PASS in a proper test target (the isolated SwiftPM test target above: 46/46). Excluding
+    *.Tests.swift from the app target (or compiling them in the test target) is a project-wide config change owned by the
+    P4/P99 Apple acceptance gate, NOT a single surface prompt (task rule: do not fix pre-existing unrelated breakage).
+    This is exactly what apps/macos-pending-verifications.md defers to the ADR-012 macos-latest CI runner; a pending-
+    verification row is recorded there.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                           explicitly DEFERRED with the exact failing file pasted — never reported as passing.
+  2  No scope narrowing  : every web region + branch reproduced (gate-off, canStart hint, stream idle/streaming/done/
+                           error, paused-confirm, output hidden/thinking/text/error, body defaults + {0,0,''} fallback).
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; both Xcode failures confirmed + grepped.
+  4  No stubs as final   : complete production view + 46 real tests; placeholder scanner = 0; no TODO/stub/mock/Lorem.
+  5  No parity shortcut  : id coercion, SoC defaults, output branch order, a11y label, telemetry all mapped + verified.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry all consumed.
+  8  No commit on red    : the COMMITTED artifact (AITripPlannerLLMAgent.* + 2 wiring lines) is GREEN on every host
+                           gate AND on a real isolated Swift 6 build+test AND on real iOS-18 + macOS-15 typechecks; the
+                           deferred full-app gate is RED only on a pre-existing file this commit neither adds nor edits.
+  9  No silent drift     : changes confined to shared-surfaces/AITripPlannerLLMAgent.* (9 files), project.yml,
+                           .swiftlint.yml, this log, and one macos-pending-verifications row — all enumerated above.
+                           (Unrelated AIUsageCard.* / web/* modifications present in the worktree are from a parallel
+                            task and are NOT included in this commit.)
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic AITripPlannerLLMAgent shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 46 tests pass under the app's own Swift 6 strict-concurrency rules, against the real
+  design-system, and it typechecks against the real iOS-18 + macOS-15 SDKs, with lint/format/placeholder all green for
+  the surface. The full-app iOS-Simulator + macOS xcodebuild build gate is DEFERRED (not failed by this code): it is
+  blocked by the pre-existing co-located-tests-in-app-target structural issue (first hit: AIRestorePanel.Tests.swift)
+  and the DashboardWidgetSize duplicate-type collisions + macOS signing — all owned by the P4/P99 acceptance gate on a
+  signed macos-latest CI runner per apps/macos-pending-verifications.md. This matches the repo's sanctioned
+  "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

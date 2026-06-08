@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure, the web source specification, and the Apple app scaffolding to understand what exists.
+
+Apple toolchain is available (Swift 6.3.2, xcodebuild, swiftlint, swiftformat). Let me read the web source and explore the existing Apple feature-views structure.
+
+The native target is `apps/apple/TeslaSync/feature-views/` with a multi-file pattern (Model/Adapter/Projection/Views/Previews/Tests/Telemetry/.strings). Let me understand the build system, shared facade (P1/S8), design tokens (P1/S9), i18n (P1/S10), telemetry (P1/S11), and study a complete existing feature view.
+
+xcodegen-based (project.yml), 427 feature-view files. Let me read the project.yml, the closely-related `SavingsSlide` set, and locate the shared infrastructure (Design tokens, SharedFacade, i18n, telemetry).
+
+`SavingsSlide` is the closest analog with a full multi-file set. Let me study it thoroughly as the template, plus the shared infrastructure.
+
+Excellent template. Let me read the rest of the SavingsSlide set (Content, Components, Projection, Previews, Tests, strings) to capture every convention.
+
+Now let me read the SavingsSlide Previews/Tests/strings and the web data layer (types, constants, the parent hook computing `gasComparison`), plus the shared design tokens and telemetry contract.
+
+Now the web data layer and the shared design/telemetry infrastructure.
+
+Now I understand the full computation. Let me read the shared infrastructure: design tokens, telemetry contract, shared view primitives (TSFadeIn/TSSkeleton/TSTone), the Units facade, and an existing feature view that uses **text inputs** (since SavingsCalculator has number inputs).
+
+Let me read the telemetry contract definition and the full design tokens.
+
+Let me read the shared view primitives (TSFadeIn, TSSkeleton, TSTone, glass panel, fields) and a feature view that uses number inputs, to match conventions exactly.
+
+Let me read TSTone (Badges), TSCard/glass (Cards), TSTextField (Fields), and TSButton (Buttons) to map the web `GlassPanel`/`Input`/`Button`.
+
+Now let me assess the real toolchain situation (critical for an honest gate) and find the verification harness (host-compile, placeholder checker).
+
+Key finding: only Command Line Tools are installed — **`xcodebuild` and `simctl` are unavailable** (full Xcode required). `swift`, `swiftlint`, `swiftformat`, `xcodegen` work. Let me check `pwsh`, whether `swiftc` can typecheck SwiftUI under CLT, and read the lint/format/placeholder configs.
+
+pwsh is available and **swiftc can typecheck SwiftUI under the CLT SDK** (probe passed) — so I can host-typecheck the pure-logic files even though `xcodebuild` can't run. Let me read Typography, the placeholder checker, the unit-conversion instructions, and see how feature views wire a facade-backed source.
+
+I now have a complete understanding of the conventions. Let me check the telemetry file's dependencies (for host-compile scoping) and skim the unit-conversion instruction, then set up my plan.
+
+I have everything I need. Let me set up tracking and write the plan, then implement the surface.
+
+Now I'll create the files, starting with the three pure-logic files (Models, Projection, Model).
+
+I left a typo in a Projection doc comment. Let me fix it and create the Model file.
+
+Let me host-typecheck the pure trio early to catch issues before building the views.
+
+Pure trio typechecks clean. Let me confirm the cross-platform numeric-keyboard convention used by existing input feature views before writing the view files.
+
+`keyboardType` is used in feature-views. Let me confirm the cross-platform guard pattern.
+
+Confirmed: `.keyboardType` needs `#if os(iOS)`. Now I'll create the view layer — Components, Content, and the main surface.
+
+Now the main surface view.
+
+Now the Previews, Tests, and strings catalog.
+
+All 9 files created. Now the verification phase: format, lint, host-typecheck, placeholder gate.
+
+The gate runs from repo root. Let me run the format/lint checks correctly from the repo root.
+
+Only failing file is `ActionBuilder.Previews.swift` — a pre-existing file I never touched. Let me confirm my files are clean and that this failure is pre-existing.
+
+My 8 files pass swiftformat cleanly (0/8). The sole tree failure is `ActionBuilder.Previews.swift`, a pre-existing file outside my allowed scope. Now swiftlint and re-typecheck.
+
+swiftlint clean (exit 0) and trio typechecks. Let me check whether the telemetry registry file is self-contained so I can do a broader real-dependency host-typecheck of the view files.
+
+`BatteryCellsWidgetRegistry.swift` is self-contained (122 lines). I'll do a **real-dependency** host-typecheck: compile all my product files together with the actual shared design/telemetry source files (no shims).
+
+The `#Preview` macro needs the full-Xcode PreviewsMacros plugin (unavailable under CLT). Re-running without `-DDEBUG` so DEBUG-only preview blocks are excluded (as the host gate does).
+
+Just a missing shared dependency (`tsGlassPanel()` lives in `TSMaterial.swift`). Adding it.
+
+Broad host-typecheck passes (exit 0) — the entire surface compiles against the **real** design tokens, material, UI components, skeletons, and telemetry registry. Now the placeholder gate.
+
+Placeholder gate passes (COUNT=0, EXIT=0). Let me do a final independent forbidden-word sweep and verify i18n key coverage against the web source.
+
+One cosmetic doc-comment in Projection.swift contains "x.xxx" (a benign format example that my case-insensitive grep flagged as `XXX`). The gate already passed, but I'll reword it to remove all ambiguity.
+
+Re-verifying after the edit and checking the log directory + established BLOCKED conventions in this repo.
+
+All checks pass post-edit. There are prior BLOCKED sibling Apple feature-view logs. Let me read a BLOCKED sibling and a DONE sibling to mirror the exact house log convention.
+
+This is the key house convention: the accepted sibling (HeroGauges) ends **STATUS=DONE** with the full-app `xcodebuild` step explicitly **DEFERRED** to the macOS acceptance gate, provided surface-scoped gates pass and the surface compiles/tests against the real components via an isolated harness. I'll match that precedent — and additionally **execute** the parity-critical logic (not just typecheck) via a throwaway verifier, since my runner has CLT only.
+
+Top-level code requires the file be named `main.swift` when compiling multiple files. Let me rename and recompile.
+
+All 60/60 executed logic checks pass. Before deciding the terminal status, let me read the project's canonical macОS-pending ledger and confirm the DONE-vs-BLOCKED convention across sibling logs.
+
+Decisive: the **entire** Apple feature-views family (all 40+ siblings, including the direct sibling `0065-SavingsSlide`) ends `STATUS=DONE`, and the canonical `macos-pending-verifications.md` ledger explicitly classifies the full-app `xcodebuild build test` as a **deferred** verification (P99 acceptance gate) — "not unfinished work." I'll match that precedent exactly, with scrupulous honesty about what ran here. Let me capture clean capability evidence and tool versions for the log.
+
+All evidence gathered. Now I'll write the verification log, mirroring the accepted sibling structure with scrupulous honesty about what ran on this CLT-only runner.
+
+Now final consolidated verification, cleanup of throwaway files, and commit of only the allowed files.
+
+All five gates green. Cleaning up throwaway files and committing only the allowed files.
+
+Exactly the 10 allowed files staged (the pre-existing unrelated web edits are excluded). Committing.
+
+Committed cleanly (10 files, only allowed paths; pre-existing unrelated web edits left untouched). Let me finalize tracking.
+
+Merge made by the 'ort' strategy.
+ ...-apple-feature-views-0118-SavingsCalculator.log | 198 +++++++++++
+ .../SavingsCalculator.Components.swift             | 317 ++++++++++++++++++
+ .../feature-views/SavingsCalculator.Content.swift  |  60 ++++
+ .../feature-views/SavingsCalculator.Model.swift    | 249 ++++++++++++++
+ .../feature-views/SavingsCalculator.Models.swift   | 234 +++++++++++++
+ .../feature-views/SavingsCalculator.Previews.swift |  91 +++++
+ .../SavingsCalculator.Projection.swift             | 173 ++++++++++
+ .../feature-views/SavingsCalculator.Tests.swift    | 367 +++++++++++++++++++++
+ .../feature-views/SavingsCalculator.strings        |  50 +++
+ .../feature-views/SavingsCalculator.swift          | 173 ++++++++++
+ 10 files changed, 1912 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0118-SavingsCalculator.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SavingsCalculator.Components.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SavingsCalculator.Content.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SavingsCalculator.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SavingsCalculator.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SavingsCalculator.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SavingsCalculator.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SavingsCalculator.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SavingsCalculator.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SavingsCalculator.swift

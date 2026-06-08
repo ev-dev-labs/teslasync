@@ -1,0 +1,164 @@
+=== P4 Dashboard widget 0007 AutomationStatusWidget (Apple) ===
+
+Surface: AutomationStatusWidget (registry id `automation-status`, category automations, sizes 2x4 / 1x2 / 4x40)
+Web source: web/src/features/dashboard/widgets/AutomationStatusWidget.tsx (reproduced end-to-end)
+Registry:   web/src/features/dashboard/widgets/registry/automations.ts (canonical metadata)
+Date: 2026-06-08
+
+------------------------------------------------------------
+CAPABILITY VERIFICATION (runner)
+------------------------------------------------------------
+- `xcode-select -p` -> /Library/Developer/CommandLineTools  (Command Line Tools is the *selected* dir).
+- Full Xcode IS installed but UN-selected: /Applications/Xcode.app -> Xcode 26.5 (Build 17F42),
+  driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer (no sudo required).
+- SDKs: iPhoneSimulator26.5.sdk / MacOSX26.5.sdk (backward compatible with the project's
+  iOS 18.0 / macOS 15.0 deployment targets). SwiftUI + Swift Charts + MapKit + Observation + OSLog
+  all import and type-check on both SDKs.
+- Toolchain present: xcodegen 2.45.4, swiftlint, swiftformat, pwsh 7.x, swift 6.x.
+  => Native Apple *capability* is AVAILABLE on this runner.
+
+------------------------------------------------------------
+PATH MAPPING (documented — no silent drift)
+------------------------------------------------------------
+Output written to the prompt's canonical native-output directory:
+  apps/apple/TeslaSync/dashboard-widgets/AutomationStatusWidget.*
+
+This matches both the prompt's "Native output" field AND the dominant in-repo convention:
+this directory already holds 50+ sibling dashboard-widget surfaces, each self-contained
+(own DashboardWidgetSize / DashboardWidgetRegistration / per-widget telemetry+source+strings
+seams, per-widget `.strings` table, co-located `.Tests.swift`). project.yml feeds this path
+into BOTH the iOS `TeslaSync` and macOS `TeslaSync-macOS` app targets (ADR-002 shared source group).
+
+Files (8) — all share the `AutomationStatusWidget` prefix; each Swift file <= 400 lines
+(swiftlint file_length rule):
+  AutomationStatusWidget.swift           215  (the View: glass shell, header, content-state switch)
+  AutomationStatusWidget.Model.swift     310  (telemetry+source seams, @Observable model, in-mem source, registry, strings facade)
+  AutomationStatusWidget.Models.swift    229  (pure logic: DTO, status classify, relative time, summary, ISO parse, a11y)
+  AutomationStatusWidget.Views.swift     209  (subviews: badge, count chip, compact tile, summary stat row)
+  AutomationStatusWidget.Rows.swift      245  (subviews: automation row, run stamp, freshness chip, empty, loading)
+  AutomationStatusWidget.Previews.swift  148  (state gallery: loaded/wide+toggles/compact/loading/empty/error/stale/offline)
+  AutomationStatusWidget.Tests.swift     364  (co-located XCTest: adapter + model + registry + i18n)
+  AutomationStatusWidget.strings          48  (P1/S10 i18n table)
+  Total Swift LOC: 1720.
+
+------------------------------------------------------------
+PARITY (web source reproduced end-to-end)
+------------------------------------------------------------
+- Data sources (P1/S8 state-holder seam — no HTTP in the view):
+    useAutomations      -> AutomationStatusSource.start/stop/refresh -> AutomationStatusUpdate
+    useToggleAutomation -> AutomationStatusSource.toggle(id:enabled:) (optimistic flip in InMemory source)
+    useTranslation      -> AutomationStatusStrings facade (NSLocalizedString table "AutomationStatusWidget")
+- Composition: CompactView (cols<=1 || rows<=1) = icon + enabled/total + "Active" + failing dot-badge;
+  FullView (2x2+) = summary stats row (Active / Failing / Auto-disabled) + scrollable automation rows.
+  Per-row toggle shown only when isWide (cols>=3), exactly as web. Title/icon hidden when cols<=1.
+- Per-row status badge precedence reproduced branch-for-branch (web getStatusBadge):
+    auto_disabled -> "Auto-disabled" (danger); !enabled -> "Disabled" (neutral);
+    consecutive_failures>0 -> "Failing" (warning); last_success_at -> "OK" (success); else "Idle" (neutral).
+- Relative time reproduced (web formatRelativeTime): nil -> "—"; <1m -> "Just now";
+  <60m -> "{m}m ago"; <24h -> "{h}h ago"; else "{d}d ago". Future next_fire_time deltas land in the
+  "<1 min" branch -> "Just now", faithful to the web Math.floor(diff/60000)<1 guard (audited in tests).
+- Summary reductions reproduced: enabled = a.enabled; failing = consecutive_failures>0 && enabled;
+  autoDisabled = a.auto_disabled.
+- States (every state renders — no hidden surfaces):
+    loading (skeleton chrome), empty ("No automations configured" + icon), error (title+message+Retry),
+    content, plus live/stale/offline freshness chip (ADR-013) over cached content.
+- i18n: all 11 web-source strings mapped to widget.automationStatus.* keys (title, active, failing, ok,
+  idle, disabled, autoDisabled, toggle, noAutomations, justNow, ago) + registry displayName/description
+  + native chrome (live/stale/offline/refresh/retry/errorTitle/loading) + a11y (lastRun/nextRun).
+  No English string literals in native code; every literal is a facade fallback only.
+- Accessibility: VoiceOver labels on every interactive control (toggle = "Toggle {name}", refresh, retry),
+  combined row label (name, status, last/next run with em-dash dropped), Dynamic-Type system fonts
+  (Font.TS), reduce-motion honored (TSSkeleton shimmer is reduce-motion gated).
+- Telemetry: P1/S11 `view.opened` emitted once with surface slug "AutomationStatusWidget"
+  (idempotent start(); re-arms after stop()).
+- Registry: id "automation-status", category "automations", default 2x4, min 1x2, max 4x40 (clamped).
+
+------------------------------------------------------------
+GATE STEPS
+------------------------------------------------------------
+[iOS]  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+       NOT RUN GREEN on this runner -> IOS_EXIT=1   (see BLOCKER below — pre-existing aggregation)
+       Per-surface substitute (real Xcode 26.5 toolchain, iOS 18.0 simulator SDK, Swift 6 strict
+       concurrency, real design Tokens.swift):
+         swiftc -typecheck -swift-version 6 -target arm64-apple-ios18.0-simulator
+                -sdk <iPhoneSimulator26.5.sdk> <surface .swift files + Tokens.swift>  -> EXIT=0  PASS
+
+[mac]  xcodebuild -scheme TeslaSync-macOS build test
+       NOT RUN GREEN on this runner -> MAC_EXIT=1   (see BLOCKER below — pre-existing aggregation)
+       Per-surface substitute (real Xcode 26.5 toolchain, macOS 15.0 SDK, Swift 6 strict concurrency):
+         swiftc -typecheck -swift-version 6 -target arm64-apple-macos15.0 -sdk <MacOSX26.5.sdk> ... -> EXIT=0 PASS
+         swiftc -wmo -c    -swift-version 6 -target arm64-apple-macos15.0 ... (full object codegen) -> EXIT=0 PASS
+                                                                       (emitted asw.o, 1,002,192 bytes)
+       Test bodies (AutomationStatusWidget.Tests.swift) type-checked against the real surface APIs via a
+       minimal XCTest shim (XCTest module needs full Xcode test bundle) -> EXIT=0 PASS — every assertion's
+       symbols (AutomationStatusModel, InMemoryAutomationStatusSource.ToggleCall, registration, surfaceSlug,
+       DashboardWidgetSize, resolvePhase, …) resolve against the shipped sources under Swift 6.
+       Pure-logic suite compiled AND executed (26 assertions) -> LOGIC_TESTS=PASS, run exit 0:
+         status classify precedence(5) · tone mapping · key namespacing · relative-time branches incl. future ·
+         summary counts(total/enabled/failing/autoDisabled/empty) · ISO parse(plain/fractional/nil/empty/invalid) ·
+         a11y row label(join + em-dash drop).
+
+       One real defect was found and fixed by the macOS strict-concurrency type-check (proof the check is live):
+         static `ISO8601DateFormatter` properties are not Sendable -> would fail SWIFT_STRICT_CONCURRENCY=complete.
+         Fixed: AutomationTimestamp builds a local formatter per call (no shared mutable global). Re-checked PASS.
+
+[3] swiftlint --strict  (cd apps/apple; swiftlint lint --strict --config .swiftlint.yml <8 files>)
+       Done linting! Found 0 violations, 0 serious                  -> LINT_EXIT=0
+       (Views.swift was split into Views.swift + Rows.swift to satisfy file_length<=400 under --strict.)
+
+[4] swiftformat --lint <8 files>
+       0/7 files require formatting                                 -> FORMAT_EXIT=0
+
+[5] check-placeholders.ps1 (isolated copy of the 8 surface files, -Language swift)
+       PLACEHOLDER_ALLOWED=0
+       PLACEHOLDER_COUNT=0                                          -> PLACEHOLDER_EXIT=0
+
+[6] xcodegen generate (DEVELOPER_DIR=Xcode 26.5)
+       Project spec valid; generated pbxproj references the surface files (48 refs) -> XCODEGEN_EXIT=0
+       (generated .xcodeproj is git-ignored; removed after validation.)
+
+------------------------------------------------------------
+BLOCKER (why the literal whole-target xcodebuild gate is BLOCKED here — NOT this surface)
+------------------------------------------------------------
+This worktree is a PARALLEL-SLOT AGGREGATION: 50+ sibling dashboard-widget surfaces (each authored by a
+separate slot to be verified in ISOLATION) are checked out together under apps/apple/TeslaSync/dashboard-widgets/.
+Each sibling follows the established self-contained pattern and therefore re-declares the same shared types.
+Compiling the whole TeslaSync / TeslaSync-macOS target (which globs that directory) cannot succeed:
+
+  (a) 16 files declare `public struct DashboardWidgetSize` in the app-target source paths
+      (2 in Sources/DashboardWidgets/, 14 in TeslaSync/dashboard-widgets/). Concrete proof:
+        $ swiftc -typecheck WallConnectorWidget.Model.swift OnboardingChecklistWidget.Model.swift
+        error: invalid redeclaration of 'DashboardWidgetSize'
+        error: 'DashboardWidgetSize' is ambiguous for type lookup in this context
+      (same collision for DashboardWidgetRegistration and the per-widget seam types).
+  (b) 55 `*.Tests.swift` files live in TeslaSync/dashboard-widgets/, which project.yml feeds into the
+      APP target (not the test bundle) -> `import XCTest` into an app target is itself a compile error.
+  (c) Frameworks/Shared.xcframework is absent; the scheme pre-action build-shared-xcframework.sh must build
+      the KMP core (Kotlin/Native) before either app target links.
+
+These (a)/(b)/(c) are PRE-EXISTING and belong to sibling slots + harness state — none are in this surface,
+and the allowed-files scope for this prompt is `AutomationStatusWidget.* + this log` only, so they cannot be
+remediated here without out-of-scope deletion of other slots' work. In a clean per-slot environment (only this
+surface + shared infra) the whole-target build+test would run; the surface itself is proven to compile for both
+iOS 18 and macOS 15 (object codegen) under Swift 6 strict concurrency above.
+
+Verified that THIS surface does not add any NEW collision class beyond the established per-widget pattern, and
+that the working tree changes are scoped to the 8 AutomationStatusWidget.* files (the modified AIUsageCard.*
+feature-view files are pre-existing harness state, mtime = checkout time, untouched here).
+
+------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------
+Delivered surface is COMPLETE and VERIFIED to the maximum extent this shared worktree allows:
+  - iOS 18 compile (typecheck, real Xcode SDK, Swift 6 strict concurrency): PASS
+  - macOS 15 compile (typecheck + full object codegen): PASS
+  - Pure-logic tests executed: 26/26 PASS         - Test bodies type-check vs real APIs: PASS
+  - swiftlint --strict: 0 violations              - swiftformat --lint: clean (0/7)
+  - check-placeholders: 0                         - xcodegen generate: valid (48 refs)
+The only steps that do NOT reach a clean process exit on THIS runner are the two LITERAL whole-target
+`xcodebuild … build test` invocations, BLOCKED by the pre-existing parallel-slot aggregation documented above
+(duplicate sibling type declarations + in-app sibling test files + missing KMP Shared.xcframework) — environmental
+and out-of-scope, not a defect or omission in this surface.
+
+EXIT=1
+STATUS=BLOCKED

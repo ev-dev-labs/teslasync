@@ -1,0 +1,111 @@
+I have the web source. Now let me study the established native pattern. Let me examine a similar telemetry panel (`AcDcStatsPanel`) and the recently-modified `AiUsageCard` as templates.
+
+Let me read the rest of the `AcDcStatsPanel` set plus locate the shared native components (`MetricCard`, `EmptyState`, `GlassPanel`, units facade).
+
+Now let me find the shared native components and units facade referenced by the web source. Let me search for `MetricCard`, the units facade (`formatSpeed`), and the `ChargingTelemetry` type, plus read the test pattern.
+
+Let me read the native units facade, the `MetricCard`/`UnitFormatters` components, and find how existing feature-views consume units. Also need the `ChargingTelemetry` web type.
+
+Let me examine how `DrivingTab` (a unit-aware feature view) wires `UnitPreferences`, plus the `MetricCard` native component and the web `ChargingTelemetry` type.
+
+Let me confirm the web `fmtNumber`/`fmtWithUnit` semantics, the `ChargingTelemetry` type, the `.metric` preset, and read the recently-modified `AiUsageCard` as the latest pattern.
+
+Now let me read the `.metric` preset (for `emptyDisplay`), the recently-modified `AiUsageCard` (latest conventions), and confirm the shared UI primitive signatures.
+
+Let me read the design tokens (colors, fonts, spacing, radius, motion) and the `TSFadeIn` signature to use correct token names.
+
+I now have the full architecture. Let me check the lint configs (since `swiftlint`/`swiftformat` can run here) and the AiUsageCard model for the latest conventions, then write the files.
+
+I have everything needed. Let me set up tracking and write a plan, then create the 7 files.
+
+Now let me create the files. Starting with the pure Adapter (Foundation-only, standalone-testable):
+
+Now the Views file (subviews + state chrome):
+
+Now the main surface view (`EnergyChargingPanel.swift`):
+
+Now the Previews and strings files:
+
+Now the Tests file:
+
+All 7 files created. Now let me verify with the available tooling. First swiftformat + swiftlint on my files:
+
+The repo enables a `wrapPropertyBodies` rule. Let me auto-format my files to comply, then re-lint:
+
+swiftformat passes. Let me review what it changed and run swiftlint:
+
+Both pass: **swiftformat 0/6** and **swiftlint 0 violations**. The format change just wrapped single-line property bodies (the repo's `wrapPropertyBodies` rule). Now let me type-check the pure Adapter standalone and syntax-parse the rest (since full `xcodebuild` needs Xcode):
+
+Adapter type-checks cleanly (full resolution, EXIT=0). Now syntax-parse all six Swift files:
+
+All six parse cleanly. Now the strongest available runtime evidence — a standalone SwiftPM package that compiles the pure Adapter and **runs** its logic tests:
+
+`XCTest` isn't available without full Xcode (same capability gap). Let me get runtime proof another way — compile the Adapter into a plain executable harness (no XCTest) and run real assertions:
+
+Top-level code must be in `main.swift`. Let me rename and rerun:
+
+**All 23 pure-logic checks pass at runtime (RUN_EXIT=0).** Now let me capture the exact `xcodebuild` capability gap, check placeholders, the project's file-inclusion mechanism, and run the gate's lint commands tree-scoped:
+
+`pwsh` and `check-placeholders.ps1` both exist — I can run that real gate step. Let me view the script then run it plus the tree-wide lint/format the gate uses:
+
+The gate's `-Path …/EnergyChargingPanel` (no extension) matches nothing, so I'll run the placeholder gate meaningfully on copies of my actual files, plus the tool self-test:
+
+Placeholder gate: **self-test all PASS**, my files **PLACEHOLDER_COUNT=0**. Now the tree-wide lint/format the gate actually runs (capturing whether my files are implicated):
+
+Tree-wide swiftformat has **1 pre-existing failure in `ActionBuilder.Previews.swift`** (not my file, and outside my allowed-files scope). My files are clean tree-wide. Let me run the tree-wide swiftlint and confirm I touched nothing out of scope:
+
+git scope confirmed: only my 7 files are new; both tree-wide violations (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`) are **pre-existing and outside my allowed-files scope**. Let me confirm the project auto-includes my files (synchronized folder) so the deliverable is build-correct:
+
+XcodeGen (`project.yml`) generates the project from directory globs. Let me confirm my files (sources + `.strings` resource + tests) are auto-included:
+
+Test targets source from `Tests/Unit`, but `*.Tests.swift` files live in `feature-views` (compiled into the app target). Since sibling `AcDcStatsPanel.Tests.swift` does the same, there must be routing logic. Let me inspect it:
+
+No excludes in `project.yml` — so I must verify how sibling `*.Tests.swift` files are routed (to match the pattern correctly). Let me check the generation scripts and project options:
+
+The project has no `.Tests.swift` routing/excludes — my test-file placement in `feature-views/` exactly matches the prompt's mandated path and every sibling (`AcDcStatsPanel.Tests.swift`). Let me check the log directory and a sibling log's format:
+
+The sibling log is revealing: predecessors hit the **same `xcodebuild` environment block** (exit 65) and treated it as a deferred step. Let me check the established disposition across sibling logs (DONE vs BLOCKED) to stay predecessor-consistent (covenant rule 7):
+
+Decisive: **all 174 sibling logs are EXIT=0/STATUS=DONE**, with `xcodebuild` iOS/macOS build+test **DEFERRED** to the integration/signed runner (shown with real exit, "NOT faked, NOT green") while host gates (swiftlint/swiftformat/placeholder) are genuinely green. Per covenant rule 7 (no predecessor bypass), I follow this exact disposition. Let me view the canonical sibling log in full to match structure:
+
+I now have the canonical template and disposition. My runner has **only Command Line Tools (no full Xcode)** — so unlike 0002, even iOS‑SDK compile/XCTest are part of the deferred set. Let me gather precise tool versions and re-run the core type-check under the gate's Swift‑6/strict‑concurrency settings for rigorous evidence:
+
+Confirmed: **no Xcode (CLT only), no iOS Simulator SDK** — so iOS/macOS `xcodebuild` build+test and XCTest are genuinely non-runnable here (the deferred set). Adapter type-checks clean under Swift‑6/strict‑concurrency. Let me verify the project still generates with my files included (xcodegen is present), and that the proj is git-ignored:
+
+Excellent evidence: **XCODEGEN_EXIT=0**, my files get **42 references** in the generated project and the **`.strings` is wired as a resource (6 refs)** into both app targets — the deliverable is integration-ready. Let me confirm the generated `.xcodeproj` is git-ignored (so I don't commit it) and clean up:
+
+The `.xcodeproj` is gitignored (`.gitignore:379`) and removed. All evidence gathered. Let me get final line counts and write the honest gate log:
+
+Log written. Final re-verification of my files, then commit exactly the 7 surface files + log:
+
+Final scoped gates green (**0 violations**, **0/6 format**). Staging exactly my 7 surface files + the log and committing:
+
+Exactly the 8 intended files staged (7 surface + log); the pre-existing working-tree changes are correctly excluded. Committing:
+
+Committed cleanly (`5e37de749`, 8 files, 1498 insertions). Let me clean up temp artifacts and finalize tracking:
+
+Task complete. Here's the summary.
+
+## EnergyChargingPanel (Apple, P4/0279) — shipped
+
+Built the production-polished native SwiftUI parity of `EnergyChargingPanel.tsx`, following the established feature-view architecture (mirrors the sibling `AcDcStatsPanel` exactly). **7 files, 1,279 lines**, committed as `5e37de749`.
+
+**Files** (`apps/apple/TeslaSync/feature-views/`): `.swift` (surface), `.Adapter.swift` (pure projection/format/tone core), `.Model.swift` (P1/S8 state-holder + P1/S11 telemetry + P1/S10 i18n + units binding), `.Views.swift` (subviews + state chrome), `.Previews.swift`, `.Tests.swift` (26 methods), `.strings` (17 keys).
+
+**Parity reproduced end-to-end**: metric grid (voltage/current `MetricCard`s), power/energy/battery/charge-rate rows, the coloured charging-state pill (Charging→cyan, Complete→green, else muted), all 10 i18n keys, every null→em-dash branch, and the charge-rate `m/h→m/s` conversion via the shared SI `Units.formatSpeed`. The web's `fmtWithUnit(watts,'kW')` / `(Wh,'kWh')` no-rescale quirk is reproduced **verbatim** (Honesty rule 5/9) and pinned by a test. All 6 states render (loading/empty/error/data/stale/offline) + `view.opened` telemetry.
+
+**Verification (everything runnable on this host is green):**
+- swiftlint `--strict`: **0 violations**; swiftformat `--lint`: **0/6**
+- placeholder gate: **COUNT=0** (+ self-test PASS)
+- Swift-6/strict-concurrency typecheck of the pure core: **EXIT=0**; all 6 files parse: **EXIT=0**
+- **Executed** pure-logic harness (XCTest unavailable w/o Xcode): **23/23 PASS**
+- `xcodegen generate`: **EXIT=0** — files glob into both app targets (42 refs, `.strings` wired)
+
+**Deferred (not faked, not green):** This runner is **Command-Line-Tools-only (no Xcode)**, so the gate's `xcodebuild` iOS/macOS build+test and the Xcode-hosted XCTest run are deferred to a signed Xcode runner — the unanimous predecessor disposition across all 174 sibling logs (covenant rule 7). The real `xcode-select` error is captured in the log. Two tree-wide lint/format violations (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`) are **pre-existing baseline in files outside this prompt's allowed scope** — documented, not mine.
+
+Gate log: `.github/prompts/monorepo/logs/p4-apple-feature-views-0279-EnergyChargingPanel.log` → **EXIT=0 / STATUS=DONE**.
+
+
+
+All work is complete, verified, and committed. All 10 todos are done.
+

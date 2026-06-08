@@ -1,0 +1,121 @@
+I'll start by assessing the environment capability and exploring the codebase structure, since this task requires Apple-specific tooling.
+
+## Capability assessment
+
+**Critical finding:** The runner has **Command Line Tools only, not full Xcode**:
+- ❌ `xcodebuild` → error: "requires Xcode, but active developer directory is `/Library/Developer/CommandLineTools`"
+- ❌ `simctl` → "unable to find utility, not a developer tool"
+- ✅ `swift` 6.3.2, ✅ `swiftlint` 0.63.3, ✅ `swiftformat` 0.61.1
+
+So the `xcodebuild ... build test` gate steps **cannot** run. Per the prompt's capability clause, that points toward `STATUS=BLOCKED` on the build gate. But the honesty covenant also forbids stubs/scope-narrowing — so I must still **ship the real, production-quality artifact + tests**, run every check that *is* available, and document the build gate as BLOCKED with API evidence.
+
+Let me explore the existing Apple app conventions thoroughly before writing code.
+
+There's a `TeslaSync/feature-views/` directory — that's my target. Let me examine existing feature views, the test reference, and the build config.
+
+XcodeGen-based (`project.yml`). Feature views live in `TeslaSync/feature-views/` and are compiled into both iOS & macOS targets. Let me study the existing feature-views file conventions and the test reference.
+
+Clear convention: each feature view is a multi-file set (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`). Let me study a driving-domain exemplar that uses units/formatting, plus the telemetry & facade infrastructure.
+
+Excellent — rich, well-established pattern. Let me read the rest of the DriveStatCards set and locate the design tokens & shared component equivalents.
+
+Now let me read the remaining DriveStatCards files (Format/Previews/strings/Tests) and locate the design tokens.
+
+Design tokens live in `../design/generated/apple/Tokens.swift`. Let me read that plus the test conventions.
+
+I have the full pattern now. Let me read the design tokens and the web type/hook definitions I need to reproduce faithfully.
+
+Now let me read the exact web type shapes and the hook/formatter behaviors I must reproduce.
+
+I have the formatter internals. Two critical things to verify: the empty-display sentinel + `fmtNumber` grouping, and **how `.Tests.swift`/`.Previews.swift` co-located in feature-views are split between app vs test targets** (so I don't break the build).
+
+Important wrinkle: test targets only reference `Tests/Unit`, but `.Tests.swift` files are co-located in `feature-views/` (an app-target source). I must understand how the build separates them before adding files. Let me investigate the wiring.
+
+Convention is definitive: 100+ feature views co-locate `.swift/.Model/.Adapter/.Views/.Previews/.strings/.Tests/.AdapterTests` as `<Name>.*` in `feature-views/`. I'll match it exactly. Now let me read the lint/format configs, the placeholder checker, and establish the lint baseline (since `swiftlint`/`swiftformat` are the checks I *can* run).
+
+`pwsh`, `swiftlint`, and `swiftformat` are all available — I can run 3 of the 5 gate steps. Forbidden words noted (TODO/FIXME/Placeholder/etc.). Let me check the motion (FadeIn) equivalent and confirm the empty/panel idioms, then I'll have everything to build.
+
+`TSGlassPanel` and `TSFadeIn` are shared components. Let me confirm the shared UI/feedback component APIs (GlassPanel, EmptyState equivalents) before writing.
+
+I now have the complete picture: the established 9-file convention, design tokens, shared components (`TSGlassPanel`, `TSFadeIn`), formatter semantics, and the exact web behaviors to reproduce (including a faithful-parity quirk in leg duration). Let me set up the plan + todos, then build.
+
+Now building the files. Starting with the pure logic layers — Format (unit math) and Adapter (projection + accessibility).
+
+Format + Adapter done. Now the Model (state holder, telemetry, strings facade, input/formatting types).
+
+Now the presentational subviews (Views) — leg card, charge-stop card, freshness chip, banner, skeleton, error, empty.
+
+Now the main view (`TripLegList.swift`) — panel, header, banner, phase switch with the fade-in leg list.
+
+Now the i18n catalog, previews, and the two test files.
+
+Now the two test files (projection + model, and unit-math + accessibility), with precisely computed expected values.
+
+Let me fix the awkward optional handling in the charge-stop test.
+
+Now the AdapterTests (unit-math + accessibility), then I'll run the available checks.
+
+All 9 files created. Now running the checks I *can* run. Starting with format-lint, strict lint, and the placeholder gate on my files.
+
+Mostly auto-fixable (numeric underscores, wrapping). Let me auto-format my files, then re-lint.
+
+swiftformat clean. Now swiftlint --strict on my files.
+
+One line-length violation. Let me view and fix it.
+
+swiftformat + swiftlint both pass (EXIT=0) on my files. Now the placeholder gate. Let me check how the script resolves `-Path` so I invoke it correctly.
+
+The gate's literal `-Path …/TripLegList` (no extension) resolves to nothing → trivially clean. To *actually* validate, I'll scan a temp copy of just my files. First a quick grep for forbidden tokens.
+
+All three runnable gate steps pass. Now I'll attempt a best-effort standalone typecheck (with shims for design tokens / shared components) to gain real compile confidence, since `xcodebuild` is unavailable. First, confirm SwiftUI/Observation are importable with the Command Line Tools SDK.
+
+SwiftUI/Observation/OSLog all typecheck standalone. Let me enumerate the external symbols my files use, then typecheck the non-test files against a matching shim.
+
+Now I'll typecheck the 6 non-test files against a matching shim — a best-effort compile validation given `xcodebuild` is unavailable.
+
+The only errors are the `#Preview` macro plugin being unavailable in the standalone CLT toolchain (environmental, not a code defect — the macro itself resolves; full Xcode ships the plugin). Let me re-typecheck without `-D DEBUG` so the `#if DEBUG` previews are excluded, validating all shipping code paths compile.
+
+Core code typechecks cleanly (EXIT=0). Two deprecation **warnings** about `Text + Text` concatenation (deprecated in the macOS 26 SDK on this machine). Let me check whether the existing shipping feature-views use that pattern — if not, I'll switch to a warning-free approach.
+
+Confirmed: `Text(...) + Text(...)` is an established, shipping pattern in the codebase (EnvironmentalImpact, BatteryPill, etc.). The warning is only from this machine's macOS 26 SDK and isn't an error — I'll keep parity with the codebase convention. 
+
+All runnable checks pass; typecheck of shipping code is clean. Now let me generate the gate log with honest results + BLOCKED evidence for the Xcode-dependent steps.
+
+Log dir exists. Let me match the format of an existing feature-view gate log.
+
+The predecessor logs are highly informative. Two key findings:
+1. The co-located `*.Tests.swift` files get swept into the **app target** by `project.yml`, which doesn't link XCTest — a known pre-existing breakage. The **newer/better convention (KioskOverlay 0124)** wraps tests in `#if canImport(XCTest)` so the surface contributes **zero** errors to the app build.
+2. Tests are actually executed via a standalone SwiftPM harness (works without Xcode).
+
+I'll adopt the superior guarded-test convention and actually execute my tests via SwiftPM. Let me view KioskOverlay's guard style to match formatting exactly.
+
+I'll adopt the superior guarded-test convention (KioskOverlay precedent): wrap both test files in `#if canImport(XCTest)` so my surface contributes **zero** errors to the app-target build, then let swiftformat handle the indentation.
+
+Now auto-format (to indent the `#if` bodies) and re-lint both test files.
+
+Both linters green on all 8 files (guarded tests indented correctly). Now let me **actually execute** the tests via a standalone SwiftPM harness (works without Xcode, matching the KioskOverlay precedent).
+
+Compiling the harness — let me wait for completion.
+
+Build succeeded with exit 0, but I want to confirm the tests actually **executed** (not zero tests). Let me re-run and capture the XCTest summary explicitly.
+
+No summary captured — let me capture the full raw output to inspect how the runner reports.
+
+`swift test` builds but runs 0 tests. Let me diagnose whether the XCTest runner (`xctest`) is even available under Command Line Tools.
+
+Root cause: the `xctest` runner is **not** in Command Line Tools (Xcode-only), so `swift test` builds the bundle but can't execute it. To get **genuine execution evidence**, I'll compile the real `Format`+`Adapter`+`Model` sources into a standalone executable that runs the same web-parity assertions and exits non-zero on any failure.
+
+**49/49 web-parity assertions passed** against the real compiled logic (RUN_EXIT=0). I now have genuine execution evidence. Let me gather final stats (git status, line counts) and confirm no stray repo changes before writing the gate log.
+
+Only my 9 files are new; the two modified web files are pre-existing (not touched by me) — I'll exclude them from the commit. Let me capture exact exit-code evidence for the BLOCKED Xcode steps and the whole-tree lint baseline for the log.
+
+The single pre-existing unformatted file is `ActionBuilder.Previews.swift` (a sibling I never touched); **zero** TripLegList files flagged. All evidence gathered. Now writing the honest gate log.
+
+Now committing only my 9 surface files + the log (excluding the two pre-existing modified web files).
+
+Let me verify the commit is clean and tidy up temp artifacts.
+
+Commit is clean — exactly my 9 surface files + the log (2083 insertions); the only remaining working-tree changes are the two **pre-existing** modified web files I never touched. Temp harnesses cleaned up. Let me close out the todos.
+
+The TripLegList Apple surface is complete, verified by every available means, and committed. Final status summary below.
+

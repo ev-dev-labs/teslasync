@@ -1,0 +1,159 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Now let me explore the Apple app structure, parity manifest, and existing patterns.
+
+Target dir `Features/Telemetry/` doesn't exist yet — this is a new "page" category. Let me examine the manifest record, ledger, and closest existing patterns.
+
+Toolchain is available (xcodebuild, swiftlint, xcodegen, swift 6.3.2). This is the **first P7 page** — no `Features/` dir yet. Let me understand the project config and existing conventions.
+
+Key finding: `project.yml` sources don't include `TeslaSync/Features` — I'll need to add it. Also no `.xcodeproj` (xcodegen generates it). Critical question: does the build need `Shared.xcframework`? Let me investigate the build feasibility and existing patterns.
+
+Now I understand the navigation mechanism. Let me read the registration pattern (`SettingsScene`) and the app entry point to replicate it correctly.
+
+The shared-ledger mentioned Apple builds were deferred on a Windows host. Let me check whether xcodebuild was ever actually run and the build feasibility — this is critical for the gate.
+
+This is the critical insight: prior P4 prompts verified surfaces in **isolation** (SwiftPM + `swiftc -typecheck` against real iOS/macOS SDKs + isolated XCTest + swiftlint + placeholder gate) and **deferred** the full signed `xcodebuild` due to pre-existing out-of-scope blockers (unstaged `Shared.xcframework`, parallel-merge collisions). Let me study the conventions deeply before writing.
+
+`Localizable.xcstrings` exists and this page prompt explicitly authorizes editing it (unlike feature-views which used per-surface tables). Let me check existing `mqtt.*` keys, the catalog format, and how the shared MQTTStatus model is consumed.
+
+No `mqtt.*` page keys exist in the catalog yet — I'll add all 29. Let me find the authoritative web i18n values and study the shared model + state-holder seam + a complete page example.
+
+I now have all 29 authoritative web values. Let me study the shared MQTT model consumption and the state-holder/page conventions.
+
+The pattern is clear: each surface defines its own **pure-Swift seam** (protocol + value types + projection) so it compiles in isolation without `import Shared`; the production root wires it to the KMP core. Let me read the MQTT data shape and a complete feature-view page structure.
+
+Excellent — the pattern is crystal clear now. Let me study the design tokens and P3 component library (charts wrapper, cards, stat cards, empty/loading states, badges).
+
+Let me read the charts wrappers, skeletons, badges, typography, and DataTable components — plus confirm the generated design tokens.
+
+I have the full component vocabulary. Let me confirm the pre-existing collision (the documented build blocker), read the model+test patterns, and the placeholder gate rules.
+
+Confirmed: 15× `DashboardWidgetSize` redefinitions + 261 co-located XCTest files = documented pre-existing, out-of-scope full-build blockers. My surface will be verified in isolation (the established precedent). Let me read the facade/composition layer to wire a real data source.
+
+I have enough architectural understanding. Let me read the placeholder gate rules (to avoid flagged patterns) and the test convention, then start building.
+
+Let me check the exact placeholder patterns to avoid, then set up my plan and todos.
+
+I have everything needed. Let me verify the dependency surface (which `Sources` files import `Shared`, to scope my isolated harness) and set up my plan.
+
+Components + Design are `Shared`-free — my isolated harness scope is clear. Let me set up tracking and the plan, then build.
+
+Now I'll build the surface. Starting with the Foundation-only Projection (pure, testable core).
+
+Now the Views file — all section subviews with full parity.
+
+Let me refine: make the breakdown compute stale count from the same render-time clock (web parity), and add a reference-clock accessor to the model.
+
+Now the main page View scaffold:
+
+Now the navigation registration:
+
+Now the Previews and Tests:
+
+Surface files complete. Now the wiring edits (project.yml, app entry, route parser):
+
+Now insert the 35 `mqtt.*` keys into the string catalog (preserving the rest of the 187K-line file byte-for-byte):
+
+Catalog updated and valid. Let me verify the inserted formatting and update progress.
+
+Now verification. First confirm the project graph enumerates the new files (xcodegen), then isolated SDK typecheck.
+
+All 7 files enumerated in the project graph. Now the isolated typecheck against the real macOS 15 SDK (Swift 6, strict concurrency — matching `project.yml`):
+
+The harness pulled in `UnitFormatters.swift` which needs `UnitPreferences` (a SharedFacade type) — but my surface doesn't use those SI-formatter components. Let me scope the harness to the Shared-free component set my surface actually needs.
+
+Only one file (`UnitFormatters.swift`) is Shared-coupled. Excluding it (my surface doesn't use SI-formatter components) and re-running:
+
+Clean. Let me capture explicit exit codes for both macOS **and** iOS 18 SDK typechecks:
+
+iOS has 2 errors — let me see them:
+
+A full `/Applications/Xcode.app` exists with the iOS platform — the active dir was just pointed at CommandLineTools. Using `DEVELOPER_DIR` (per the documented verification command) unblocks the iOS SDK and xcodebuild. Re-running both typechecks:
+
+Both SDKs typecheck clean (0 errors, Swift 6 + strict concurrency). Now execute the unit tests in an isolated SwiftPM harness, and run swiftlint + the placeholder gate in parallel.
+
+All **19 tests passed**. Now swiftlint --strict and the placeholder gate:
+
+swiftlint linted the whole project (config `included:`) and reported 1 violation — I need to know if it's in **my** files. Let me scope it precisely and capture the true exit code:
+
+2 violations in my files: a 124-char line in Tests, and Views.swift exceeds the 400-line `file_length` cap (555). The other project violation is pre-existing (`LifetimeStatsWidget`). Let me fix both — split Views into two files and shorten the test line.
+
+Both files now under the 400-line cap. Let me re-verify: swiftlint (scoped, real exit), both-SDK typecheck (now includes Table.swift), and re-run tests:
+
+Just a trailing-newline issue from the split. Let me normalize the end of Views.swift:
+
+The `cat -A` failure short-circuited the `&&` chain, so the Python fix never ran. Let me fix the trailing newline standalone:
+
+swiftlint clean (0 violations). Let me re-run the remaining gates after the refactor — placeholder, xcodegen, and the test harness with updated files:
+
+All core gates are green:
+- **macOS 15 + iOS 18 SDK typecheck**: 0 errors (Swift 6, strict concurrency)
+- **19 unit tests EXECUTED**: 0 failures
+- **swiftlint --strict**: 0 violations
+- **placeholder gate**: 0
+- **xcodegen**: all 8 files enumerated in both app targets
+
+Now let me capture honest evidence of the **pre-existing, out-of-scope** full-app build blockers. I'll compile the macOS app target directly (no scheme pre-action) to surface the pre-existing errors quickly:
+
+The probe confirms: the app build is blocked **first** by the unstaged `Shared.xcframework` (KMP, deferred to macOS CI per `macos-pending-verifications.md`), and critically **0 errors reference my files**. Per "no skip-and-assume," let me attempt staging the framework via Gradle (bounded) to get fuller evidence:
+
+Gradle is feasible (Java 17, task exists). Let me assemble the `Shared.xcframework` — this may take a while (Kotlin/Native), so I'll run it async and continue preparing the log/ledger meanwhile.
+
+The Kotlin/Native build is running in the background. Meanwhile, let me verify every parity string is actually referenced in my Swift source (real evidence for the `=== PARITY ===` section):
+
+All 29 parity strings are referenced in source and present in the catalog. Let me check the Kotlin/Native build progress:
+
+The KMP build is on its final linking tasks (debug framework already written). Let me wait for it to complete:
+
+The KMP `Shared.xcframework` built successfully (9m 14s). Let me stage it and now run the full app-target build to capture the real result — confirming my files compile and isolating the pre-existing collisions:
+
+The build surfaced the pre-existing XCTest-in-app-target blocker (`AIRestorePanel.Tests.swift`, a feature-views file). Let me examine the full error set and confirm my non-test files compile cleanly:
+
+The full build is blocked **only** by pre-existing, out-of-scope issues (co-located XCTest module resolution in `AIRestorePanel.Tests.swift` + the 15× `DashboardWidgetSize` redefinitions behind it) — **0 errors reference my files**, and I built + staged the previously-missing `Shared.xcframework`. Let me verify git ignore status before writing artifacts:
+
+Both generated artifacts are gitignored. Note: `AIUsageCard.*` and `web/*` changes are pre-existing/foreign (not mine) — I'll commit only my specific paths. Now let me write the parity log with full `=== PARITY ===` evidence:
+
+Now the `apple-ledger.json` (first apple parity row — the page is adaptive, so rows for both macOS and iOS):
+
+Let me record the deferred full-build verification in the canonical tracker (matching precedent), then validate the ledger JSON:
+
+All artifacts validate. Let me run a final consolidated verification of all in-scope gates (after all edits), then commit:
+
+All in-scope gates green. Let me update tracking and commit my files (only mine — excluding the pre-existing foreign `AIUsageCard.*`/`web/*` changes):
+
+git add is unusually slow — let me check for a lock or contention in a separate shell:
+
+All my files staged, zero foreign files. Now commit:
+
+Committed cleanly (15 files, 2228 insertions). Let me verify the commit excluded foreign files and clean up temp artifacts:
+
+The commit is clean — **zero foreign files** included; the pre-existing `AIUsageCard.*`/`web/*` changes were left untouched in the working tree. Temp artifacts cleaned. Let me confirm all todos are complete:
+
+All 11 todos complete. The task is finished and committed.
+
+## Summary
+
+Delivered a native **SwiftUI / Apple-HIG `MQTTInspectorPage`** at full parity with the web source (`web/src/features/telemetry/pages/MQTTInspectorPage.tsx`), adaptive across macOS + iOS, with **`PARITY_COVERED=41/41`**.
+
+**New surface** (`apps/apple/TeslaSync/Features/Telemetry/`, 8 files):
+- `MQTTInspectorPage.swift` — adaptive page scaffold (ScrollView, nav title, onAppear/Disappear lifecycle)
+- `.Projection.swift` — pure Foundation core: DTOs, totals reduces, stale rule (120s), the throughput `useEffect` port, `formatUptime`/`formatRelative`/`fmtInt`, i18n facade, a11y summary
+- `.Model.swift` — `@Observable MQTTInspectorPageModel` over a pure-Swift `/telemetry` seam (no `import Shared`); loading/empty/error/content phases + live freshness
+- `.Views.swift` / `.Table.swift` — all **8 panels** (error banner, 4 StatCards, connection-info, **Swift Charts `TSAreaChart`** throughput, adaptive vehicle table)
+- `.Registration.swift`, `.Previews.swift` (5 states), `.Tests.swift` (19 tests)
+
+**Wiring** (navigation registration + catalog): registered `.telemetry` route, added `/mqtt-inspector` deep-link alias, registered `TeslaSync/Features` in both app targets, and added **35 `mqtt.*` keys** (29 parity + 6 native, verbatim web values) to `Localizable.xcstrings`.
+
+**Verification — all in-scope gates green:**
+| Gate | Result |
+|---|---|
+| swiftc -typecheck **macOS 15** (Swift 6, strict concurrency) | 0 errors |
+| swiftc -typecheck **iOS 18 sim** | 0 errors |
+| 19 unit tests (isolated SwiftPM, **executed**) | 0 failures |
+| swiftlint --strict | 0 violations |
+| placeholder gate | `PLACEHOLDER_COUNT=0` |
+| xcodegen | all 8 files enumerated, both targets |
+| KMP `Shared.xcframework` | **built + staged** (9m14s) |
+
+The **full-app `xcodebuild`** is deferred to the macOS acceptance gate (`P99-0001`): I built/staged the missing framework, then ran the real build — it stops on **pre-existing, out-of-scope** app-target collisions (261 co-located `*.Tests.swift` importing XCTest; `DashboardWidgetSize` redefined 15×), with **zero errors referencing my files**. Recorded in `macos-pending-verifications.md`. Committed cleanly (15 files, no foreign changes); `apple-ledger.json` row set `done` 41/41. Log ends `EXIT=0 / STATUS=DONE`.
+

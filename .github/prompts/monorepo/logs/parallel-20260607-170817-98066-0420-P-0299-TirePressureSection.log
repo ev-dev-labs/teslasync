@@ -1,0 +1,22 @@
+I'll start by exploring the task requirements: the web source specification, the existing Apple app structure, and the available tooling. Since delegation is forbidden for this task, I'll do all the work myself.
+
+Tooling is available (xcodebuild, swiftlint, swiftformat, swift, xcrun). Let me read the helpers, types, and explore the Apple app structure deeply to understand the established patterns.
+
+Each surface has multiple files (Adapter, Model, Previews, strings). There are 1438 entries. Let me find a closely-related example surface to use as the canonical pattern — ideally one that also uses `useUnits` + `useTranslation` with similar states.
+
+Let me study the complete `ActiveOrdersSection` surface as the canonical pattern — reading all its files to understand structure, states, i18n, telemetry, and tests.
+
+This is a richly-detailed pattern. Let me read the remaining ActiveOrdersSection files (States, Views, Cards, Previews, strings, Tests, ModelTests) to complete my understanding of the full surface contract.
+
+Now the Previews, strings, and tests, plus I need to understand the shared design tokens and how units/pressure formatting is done natively. Let me read these in parallel.
+
+Let me read the adapter/a11y tests and locate the shared design system + native units/pressure facade. These are critical for parity.
+
+Design tokens aren't in feature-views — they must be in a shared core module. Let me locate the design system, the native units/pressure facade, and how a surface formats pressure.
+
+Found the shared core: `Sources/Design/`, `Sources/SharedFacade/Units+Facade.swift`, `Sources/Components/`. There are also existing TirePressure widgets in dashboard-widgets. Let me read the units facade, design tokens, and an existing tire-pressure widget for direct parity reference.
+
+Existing `TirePressureVisualWidget` is the most directly relevant parity reference — same data, same thresholds. Let me read its full implementation to stay consistent with established tire-pressure handling.
+
+The existing `TirePressureVisualWidget` is a parity of a *different* web component (the car-diagram widget with bar thresholds). My target `TirePressureSection.tsx` uses distinct `TIRE_PRESSURE_PA` Pascal thresholds + `tirePressureVariant` + `useUnits().formatPressure`. Let me examine the web `useUnits` hook precisely, and find how feature-views bind the units facade + design tokens.
+

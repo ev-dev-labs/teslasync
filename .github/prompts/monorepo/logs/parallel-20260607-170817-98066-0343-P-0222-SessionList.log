@@ -1,0 +1,128 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Now let me explore the Apple app structure to understand existing patterns, state holders, tokens, i18n, and other feature-views.
+
+`SessionListSection` is the closest existing analog. Let me study it thoroughly along with the shared infrastructure (P1/S8 state-holders, P1/S9 tokens, P1/S10 i18n, P1/S11 telemetry).
+
+This is a rich, well-established pattern. Let me understand the shared infrastructure (tokens, core protocols, i18n facade, telemetry) and read the rest of the reference component.
+
+The tokens are generated in `apps/design/generated/apple` and included via XcodeGen. Let me read the generated tokens, the SharedFacade core, and the relevant components.
+
+Now let me read the SharedFacade core infrastructure (P1/S8 state holders) and key shared components.
+
+Let me read the rest of the reference component to fully grok the conventions: seams (protocols), adapter, views, previews, strings, and tests.
+
+Let me read the reference views, strings, tests, core/item, and the shared components I'll need (Buttons, Cards, Fields, Typography, States, Banners, Motion).
+
+Now let me read the shared components I'll map to (Buttons, Fields, Overlays/ConfirmDialog, Cards, feedback States, Motion) and the reference Item/Previews/Tests for test conventions.
+
+Let me read the remaining shared components (Overlays for ConfirmDialog, Fields, Cards, Typography, Skeletons) and the reference test/preview files, plus the web types.
+
+Let me read Cards/Typography/Skeletons, the reference Previews+Tests, the web `ChatSessionInfo` type + `formatRelative`, and find how confirm dialogs are done natively.
+
+Let me check the reference Previews/Tests, how confirm dialogs are done natively, and whether the build toolchain (xcodebuild/swiftlint/xcodegen) is available on this runner.
+
+Key finding: `xcodebuild` requires full Xcode but only CommandLineTools is active. Let me verify build capability precisely and read the confirm-dialog pattern + pending-verifications doc.
+
+There's a full Xcode at `/Applications/Xcode.app`. Let me test whether I can use it via `DEVELOPER_DIR` without sudo.
+
+Full Xcode 26.5 + iPhone 16 simulator are available via `DEVELOPER_DIR`. Build/test is feasible. Let me read the confirm-dialog pattern, the Item model, the placeholder checker, and the pending-verifications doc.
+
+The `macos-pending-verifications.md` reveals the exact precedent (ToolCard): verify the surface via an **isolated SwiftPM build + tests** + swiftlint/swiftformat/placeholder clean; the full-app `xcodebuild` is deferred to the macOS acceptance gate (blocked by pre-existing, unrelated collisions + the git-ignored `Shared.xcframework`). I'll follow that exact model.
+
+Let me confirm component imports are SwiftUI-only, read the lint configs, and check for name collisions.
+
+No collisions for `ChatSession*`. Let me read the rest of the lint configs and the project.yml test wiring.
+
+I now have a complete understanding. Let me check existing idioms for inline editing (FocusState/TextField) and confirm the SwiftPM isolated-build path, then set up my plan.
+
+Let me read the placeholder patterns to ensure my copy won't trip the gate, then I'll start writing.
+
+I have everything I need. Let me set up a plan and todos, then build the surface.
+
+Now I'll create the surface. Starting with the pure projection core (Adapter):
+
+Now the Seams file (protocols, in-memory source, i18n facade, accessibility):
+
+Now the state holder (Model):
+
+Now the main view:
+
+Now the view chrome (Views), the row (Row), and the state envelopes (States):
+
+Now the Previews and the i18n strings catalog:
+
+Now the tests:
+
+All 10 files are written. Let me update todos and verify: cross-check i18n keys, file lengths, then run formatters/linters.
+
+All real i18n keys are defined (the "missing" ones are OSLog log strings/subsystem categories, not i18n keys). File lengths are all under 400. Now let me format and lint.
+
+Only `Row.swift` needs formatting (single-line property bodies). Let me auto-format all my files with the project config, then re-lint.
+
+swiftformat passes. Let me verify the reformatted Row and run swiftlint --strict on my files.
+
+Two easy lint fixes: avoid trailing closure on `TSButton` (multiple closures) and shorten an over-long preview string.
+
+Format + lint are clean (0 violations). Now let me run the placeholder gate. Let me first check how the script resolves its `-Path`.
+
+The script uses `LiteralPath`, so the gate's `-Path .../SessionList` (no such dir) would scan nothing. To verify honestly, I'll run the script's self-test, then scan a temp dir containing copies of my actual files. Let me see the script's tail first.
+
+Placeholder gate is clean (and the self-test proves the gate works). Now the meaningful compile/test verification: an **isolated SwiftPM build + XCTest** (the ToolCard precedent) under Swift 6 strict concurrency, bundling the design tokens + shared components + my surface into one module.
+
+The build compiled my SessionList files fine — it only failed on a shared component (`UnitFormatters.swift`) that references a `Units` facade backed by the KMP core (not needed by my surface). Let me find all such externally-dependent component files and exclude them from the harness.
+
+Only `UnitFormatters.swift` has an external dependency. Let me exclude it and build + test.
+
+Build succeeds under Swift 6 strict concurrency. Now run the tests:
+
+All **27 tests pass** under Swift 6 strict concurrency; build clean. Now let me produce honest evidence for the full-app gate status (the ToolCard precedent's macOS-pending path). First, can the project even generate, and what blocks the full build?
+
+Project generates; `Shared.xcframework` is absent (only `.gitkeep`) — the KMP dependency is git-ignored and built on `macos-latest`. Let me run the full-app gate to capture honest evidence of the blocker and confirm no SessionList errors.
+
+The build is still compiling (1700 log lines, zero SessionList mentions so far — a good sign). Let me wait for it to finish.
+
+The full build is actually compiling the KMP `Shared.xcframework` via Gradle (Kotlin/Native) — that's why it's slow. Zero errors and zero SessionList mentions so far. Let me let it progress past Gradle into the Swift compile to capture the error classification.
+
+Build finished (exit 65). Let me classify the errors — confirm they're pre-existing and unrelated to SessionList.
+
+Decisive result: the full-app build's **only** errors are pre-existing `*.Tests.swift` importing `XCTest` into the app target (first hit: `AcDcStatsPanel.Tests.swift` — not mine). **Zero SessionList errors.** The KMP `Shared.xcframework` Gradle build even succeeded. This is the exact pre-existing, repo-wide blocker documented for ToolCard. Let me verify the log dir, check git status, and clean up generated artifacts.
+
+Clean result. Only the 10 SessionList files are new (the 2 modified web files are pre-existing, not mine). Let me also capture the macOS scheme's real result (the Gradle framework is now cached, so it should reach the Swift compile faster) to avoid claiming an unverified step.
+
+Both full-app builds (iOS + macOS) fail with exit 65 on the identical pre-existing `XCTest`-in-app-target error, **zero SessionList errors**, with `Shared.xcframework` built successfully. Now let me write the gate log with all real evidence.
+
+The macOS build fails on a different pre-existing blocker — **development signing** (the third documented ToolCard blocker), before Swift compile. My non-test SessionList sources compiled cleanly (only `SessionList.Tests.swift` appears, sharing the pre-existing co-located-XCTest condition). Now I'll write the gate log with all real evidence.
+
+Now let me clean up generated artifacts and the temp harness, then verify the final git state.
+
+Clean — only my 10 files + the log. Let me commit exactly those (leaving the pre-existing modified web files untouched), using the prescribed message.
+
+Committed cleanly (the 2 pre-existing web mods correctly excluded). Let me do a final confirmation re-run of the surface gates on the committed files and update todos.
+
+All final gates green: swiftformat `0/9`, swiftlint `--strict` `0 violations`, all 14 web i18n keys present.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0222-SessionList.log    | 111 +++++++
+ .../feature-views/SessionList.Adapter.swift        | 228 +++++++++++++
+ .../feature-views/SessionList.Model.swift          | 234 ++++++++++++++
+ .../feature-views/SessionList.Previews.swift       | 124 +++++++
+ .../TeslaSync/feature-views/SessionList.Row.swift  | 163 ++++++++++
+ .../feature-views/SessionList.Seams.swift          | 201 ++++++++++++
+ .../feature-views/SessionList.States.swift         | 160 +++++++++
+ .../feature-views/SessionList.Tests.swift          | 360 +++++++++++++++++++++
+ .../feature-views/SessionList.Views.swift          |  91 ++++++
+ .../TeslaSync/feature-views/SessionList.strings    |  58 ++++
+ .../TeslaSync/feature-views/SessionList.swift      |  98 ++++++
+ 11 files changed, 1828 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0222-SessionList.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SessionList.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SessionList.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SessionList.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SessionList.Row.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SessionList.Seams.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SessionList.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SessionList.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SessionList.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SessionList.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SessionList.swift

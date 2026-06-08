@@ -1,0 +1,150 @@
+=== P4 Modal / dialog 0001 ConfirmDialog (Apple) ===
+Surface : apps/apple/TeslaSync/modals-dialogs/ConfirmDialog.*
+Web spec: web/src/components/ai/ConfirmDialog.tsx (AiConfirmDialog)
+Slug    : ConfirmDialog  (P1/S11 view.opened)
+Runner  : Darwin (arm64), Swift 6.3.2, Command Line Tools (no full Xcode)
+Date    : 2026-06-08
+
+--------------------------------------------------------------------------------
+ARTIFACT (all under the only allowed path — TeslaSync/modals-dialogs/ConfirmDialog.*)
+--------------------------------------------------------------------------------
+ConfirmDialog.Model.swift      AiToolPreview, ConfirmArgsValue (JSON port of
+                               JSON.stringify(args ?? {}, null, 2)),
+                               ConfirmDialogPresentation (adapter), ConfirmIntro,
+                               ConfirmDialogStrings, ConfirmDialogSurface.
+ConfirmDialog.Telemetry.swift  ConfirmDialogTelemetry protocol + os_log sink (P1/S11).
+ConfirmDialog.Views.swift      intro / tool / arguments / footer sub-sections.
+ConfirmDialog.swift            dialog body (emits view.opened) + self-presenting
+                               `aiConfirmDialog(...)` sheet modifier (overlay +
+                               interactive-dismiss semantics).
+ConfirmDialog.Previews.swift   5 previews: mutating+args+desc, read+no-desc,
+                               no-arguments, submitting, presenter sheet.
+ConfirmDialog.Tests.swift      XCTest: JSON adapter, decode+sort, description
+                               truthiness, intro selection, projection flags,
+                               i18n key drift guard, telemetry slug, a11y policy.
+ConfirmDialog.strings          P1/S10 catalog: 7 web-parity keys + native chrome.
+
+State / branch mapping (presentational dialog — web source fetches nothing; the
+only data binding is useTranslation = P1/S10):
+  loading  -> isLoading: both buttons disable, Approve shows a spinner, the modal
+              cannot be dismissed (native analogue of web onClose=loading?noop:onCancel).
+  empty    -> args == {} : the <pre> renders "{}" exactly like
+              JSON.stringify({}, null, 2), plus a VoiceOver "no arguments" hint.
+  error/stale/offline -> N/A: the dialog owns no query; the continuation endpoint
+              and the parent own request lifecycle (web contract).
+  branches reproduced + tested: mutates vs read intro, description present/absent,
+              arguments present/empty.
+
+================================================================================
+GATE STEPS (prompt order). xcodebuild steps require full Xcode + the KMP
+Shared.xcframework, neither of which exists on this runner — see EVIDENCE.
+================================================================================
+
+[1/5] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+      STATUS: BLOCKED — platform capability unavailable.
+      $ xcode-select -p
+        /Library/Developer/CommandLineTools
+      $ xcodebuild -version
+        xcode-select: error: tool 'xcodebuild' requires Xcode, but active
+        developer directory '/Library/Developer/CommandLineTools' is a command
+        line tools instance
+      $ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+        xcode-select: error: tool 'xcodebuild' requires Xcode, but active
+        developer directory '/Library/Developer/CommandLineTools' is a command
+        line tools instance
+      $ xcrun simctl list runtimes
+        xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+      IOS_EXIT=1 (BLOCKED: no Xcode.app, no iOS Simulator runtime)
+
+[2/5] xcodebuild -scheme TeslaSync-macOS build test
+      STATUS: BLOCKED — same toolchain gap; additionally the app target links the
+      KMP shared core which is not staged on this runner:
+      $ ls -la apps/apple/Frameworks
+        .gitkeep            (Frameworks/Shared.xcframework is ABSENT)
+      The scheme's pre-action Scripts/build-shared-xcframework.sh requires the
+      Kotlin/Gradle/Kotlin-Native toolchain (not present), so even with Xcode the
+      app + hosted XCTest targets could not link. ConfirmDialog itself does NOT
+      import Shared (parity with the web source — it fetches nothing).
+      MAC_EXIT=1 (BLOCKED: no Xcode.app + Shared.xcframework not staged)
+
+[3/5] swiftlint --strict
+      $ swiftlint lint --strict --no-cache --config apps/apple/.swiftlint.yml \
+          TeslaSync/modals-dialogs/ConfirmDialog.{swift,Model,Telemetry,Views,Previews,Tests}.swift
+        Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0  (the 6 ConfirmDialog files are clean under --strict)
+      NOTE: the bare `swiftlint --strict` over the configured `included:` set
+      reports 1 pre-existing serious violation in
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+      (function_body_length) — unrelated to this surface and outside the allowed
+      files. (modals-dialogs/ is not yet listed in `included:`; wiring the
+      directory into project.yml + .swiftlint.yml is the P4 integration step and
+      is outside this surface prompt's allowed-files scope.)
+
+[4/5] swiftformat --lint apps/apple   (scoped to the surface)
+      $ swiftformat --lint TeslaSync/modals-dialogs
+        SwiftFormat completed in 1.68s.
+        0/6 files require formatting.
+      FORMAT_EXIT=0
+
+[5/5] check-placeholders.ps1 -Path apps/apple/TeslaSync/modals-dialogs/ConfirmDialog
+      $ pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/modals-dialogs -Language swift
+        PLACEHOLDER_ALLOWED=0
+        PLACEHOLDER_COUNT=0
+        EXIT=0
+      $ grep -rniE 'TODO|FIXME|XXX|Coming soon|placeholder|Lorem ipsum|not implemented|fatalError' \
+          apps/apple/TeslaSync/modals-dialogs/    ->    (no matches)
+      PLACEHOLDER_EXIT=0
+
+================================================================================
+COMPENSATING VERIFICATION (run because the Apple xcodebuild gate is BLOCKED — the
+production code does NOT depend on the KMP Shared.xcframework, so it can be
+compiled and exercised directly against the macOS SDK with the CLT `swiftc`).
+================================================================================
+
+A) Standalone swiftc type-check — production sources, Swift 6, strict-concurrency:
+   $ swiftc -sdk $(xcrun --show-sdk-path) -target arm64-apple-macos15 -swift-version 6 \
+       -typecheck ../design/generated/apple/Tokens.swift \
+       Sources/Components/UI/Typography.swift Sources/Components/UI/Buttons.swift \
+       TeslaSync/modals-dialogs/ConfirmDialog.{Model,Telemetry,Views}.swift \
+       TeslaSync/modals-dialogs/ConfirmDialog.swift
+     TYPECHECK_EXIT=0   (no errors, no warnings)
+
+B) Standalone swiftc type-check — preview bodies (the #Preview macro plugin
+   ships with Xcode and is unavailable under CLT, so the macro wrappers were
+   rewritten to plain @MainActor funcs to type-check the preview bodies + helpers):
+     PREVIEW_TYPECHECK_EXIT=0   (no errors, no warnings)
+
+C) Runtime adapter harness — compiled Model+Telemetry into an executable and ran
+   the exact assertions the XCTest target encodes (XCTest is unavailable under
+   CLT: `import XCTest` -> "no such module"). 32/32 assertions passed:
+     empty->{}, []  | 2-space + nested indent | 2.0->"2" (JS parity), 21.5
+     | string + control-char escaping | decode sorts keys + types numbers/bools/null
+     | nil/malformed -> {} | description truthiness (nil/blank/present)
+     | intro mutates/read keys | projection: mutating+args & read+nil+loading
+     | in-flight disables both buttons + locks dismiss | surfaceSlug=ConfirmDialog
+     | reportOpen emits ["ConfirmDialog","ConfirmDialog"] | i18n key drift guard
+     HARNESS_FAILURES=0   HARNESS_RUN_EXIT=0
+
+================================================================================
+ACCEPTANCE CRITERIA
+================================================================================
+[x] Surface renders all web-source branches (intro mutates/read, description
+    present/absent, arguments present/empty, in-flight) — type-checked + previews.
+[x] No direct HTTP from the view; the only binding is i18n (P1/S10) + telemetry
+    (P1/S11), matching the web source (no P1/S8 data hook exists for this surface).
+[x] Every web i18n key has a matching key in ConfirmDialog.strings (P1/S10).
+[x] Accessibility: VoiceOver labels on dialog + every interactive control
+    (Approve/Cancel/Close), args value + no-arguments hint, busy hint while
+    submitting; tool header combined; Dynamic Type via design-system ramp.
+[x] Tests: JSON adapter unit tests + per-branch projection tests + a11y policy +
+    telemetry slug (encoded as XCTest; executed via the runtime harness here).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate = 0).
+[ ] iOS + macOS xcodebuild build test — BLOCKED (no Xcode.app + no Simulator +
+    Shared.xcframework not staged). API evidence captured above.
+
+The deliverable is production-complete and every locally-runnable gate is green;
+the only non-green steps are the two xcodebuild build/test invocations, which the
+runner cannot satisfy (full Xcode toolchain + staged KMP framework required).
+
+EXIT=1
+STATUS=BLOCKED

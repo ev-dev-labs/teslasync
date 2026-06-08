@@ -1,0 +1,158 @@
+I'll start by exploring the codebase structure and understanding both the web source and the existing Apple app setup.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swiftlint`, `swiftformat`, and `swift` are available. There's an established pattern with many sibling widgets already. Let me study the patterns and web dependencies thoroughly.
+
+Now let me study the most relevant template (`GuardModeWidget` — security domain) and the web source dependencies in parallel.
+
+Excellent. The pattern is now clear. Let me read the rest of the GuardMode template files plus the web dependencies and shared theme tokens.
+
+Now let me read the web source dependencies and locate the shared theme/registration tokens that the native code compiles against.
+
+Now let me find the security data shape, the type guard, and the shared native theme/registration tokens.
+
+Two source trees exist. Let me examine the Xcode project config and pinpoint exact token definitions to compile against.
+
+The TeslaSync target compiles `Sources/`, `TeslaSync/dashboard-widgets/`, and design tokens. I need to confirm where `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius` are defined for the app target (not just Watch). Let me verify the shared tokens and the `DigitalTwinWidget.Model.swift` registration types.
+
+`Sources/Theme.swift` holds the app token namespace. Let me read it plus `TSTone`, `TSSkeleton`, and the registration types to lock the exact APIs.
+
+Now let me confirm the generated token API and read the security data shape and hook.
+
+I now have all token APIs and data semantics. Let me check for naming collisions and read the placeholder-check rules before writing.
+
+No collisions. The placeholder gate forbids the literal substring "placeholder" (and TODO/FIXME/XXX/etc.) in `.swift` files — I'll avoid all. Let me read the lint configs and establish a baseline by linting the known-good template files.
+
+Template passes both linters cleanly (swiftformat 0/2, tools confirmed). I have everything needed. Let me set up a todo list and the plan, then write the 7 files.
+
+Both linters pass on the template. Let me write the plan file, then create the implementation files.
+
+Now writing the Model file (state-holder seam, telemetry seam, i18n facade).
+
+Now the Adapter (pure projection core — door/window parsing, cell building, accessibility).
+
+Now the main widget View (registration, header chrome, state switching).
+
+Now the presentational subviews (grid, cell, connectivity banner).
+
+Now the Previews file covering every state.
+
+Now the strings catalog, and I'll remove an unused helper from the Model for cleanliness.
+
+Now the comprehensive test suite (adapter, model, registry, accessibility).
+
+All 7 files written. Now let me verify: swiftformat, swiftlint, placeholder scan, and check tooling availability.
+
+swiftlint passes. swiftformat flagged auto-fixable issues in the Adapter. Let me apply swiftformat (the ecosystem tool) to fix them, then re-verify both linters.
+
+Both linters pass clean. Let me verify the auto-formatted Adapter code is correct.
+
+The auto-formatted code is correct and faithful. Now let me run the placeholder gate and probe whether semantic type-checking is feasible without Xcode.
+
+Placeholder scan clean (COUNT=0) and SwiftUI type-checking works under CommandLineTools. Let me probe the macros my code uses (`@Observable`, `#Preview`) so I can run a real semantic type-check against a faithful token shim.
+
+`@Observable` type-checks; `#Preview` needs the Xcode-only macro plugin (expected). Let me run a real semantic type-check of the 4 core files against a faithful token shim, targeting macOS 15.
+
+Core files type-check clean against the shim (Swift 6, macOS 15). Now let me type-check the test file too and parse-check the Previews.
+
+XCTest ships only with full Xcode (not CLT) — expected. Previews parse clean. Let me type-check the full Tests file against a minimal XCTest shim so the test logic is semantically verified against my real types.
+
+The `import XCTest` line also needs stripping. Let me fix the sed and re-run.
+
+Two probe results: the `Date` error is a probe artifact (I stripped `import XCTest`, which transitively provides Foundation — matching the GuardMode template). The real signal is a benign Swift 6 warning: `SecurityStatusWidget.registration` is MainActor-isolated (because SwiftUI `View` infers `@MainActor`), referenced from non-isolated registry tests. I'll make the registry tests `@MainActor` to be warning-clean, then re-verify.
+
+Now re-running the full tests type-check (injecting `import Foundation` to replace the stripped XCTest transitive import) and checking for any remaining warnings/errors.
+
+Outstanding — the entire surface (4 sources + full test file) type-checks under **Swift 6 / macOS 15 with 0 errors and 0 warnings**, and Previews parse clean. The only unrunnable step is `xcodebuild` itself (requires full Xcode; runner has CommandLineTools only). Let me set up the log file at the canonical path.
+
+Let me read the GuardMode sibling log to match the established format and see how the xcodebuild capability was handled.
+
+The GuardMode runner had full Xcode 26.5. This runner reported only CommandLineTools. Before settling the status, let me check whether an Xcode.app exists anywhere (GuardMode used a `DEVELOPER_DIR` override) — if so I can run the real gates.
+
+`/Applications/Xcode.app` **exists** — `xcode-select` just points elsewhere. Like the GuardMode runner, I can use a `DEVELOPER_DIR` override to access the full toolchain. Let me verify it works.
+
+Full **Xcode 26.5** toolchain is available via `DEVELOPER_DIR` (iOS Simulator 26.5 SDK, iPhone 16 booted) — the same setup the GuardMode runner used. I can run the real gates. Let me inventory the real component-library closure (the GuardMode precedent compiled against it).
+
+Let me check which component/DigitalTwin files import the unstaged `Shared` framework (must exclude those), then assemble the real closure.
+
+None import `Shared` — the closure is self-contained (SwiftUI/Foundation/Observation/OSLog only). Let me run the real **iOS 18 simulator SDK** type-check of my surface compiled against the actual component library + DigitalTwin registry suite.
+
+A real-library inter-dependency: `Cards.swift` uses `tsGlassPanel` defined elsewhere. Let me locate it and the few other modifiers so I can complete the closure.
+
+`tsGlassPanel` lives in `Sources/Design/` (the "Design" group GuardMode referenced). Let me add it and re-run.
+
+The component library has more groups (`TSMetricBar` lives in another). Let me include the entire `Sources/Components` tree to capture all design-system deps.
+
+Let me expand the closure to UI + Feedback + DataDisplay + Forms + Motion (excluding Charts/Maps, which my surface doesn't use) and re-run.
+
+The dependency web deepens (DataDisplay → Platform `UnitPreferences`). My surface only needs the design-system core (Tokens, TSTone, TSCard, TSSkeleton, Design) + the 2 registry structs — not the whole app. Let me compile against a **minimal real design-system closure** plus the verbatim registry structs.
+
+My surface compiles cleanly against the **real design system on the iOS 18 simulator SDK** (0 errors). Now the macOS 15 SDK, then I'll execute the actual XCTest suite.
+
+Both SDKs type-check clean (0 errors) against the real design system. Now the highest-value step — **executing the actual XCTest suite** via a self-contained SwiftPM harness (the GuardMode precedent), using my real production source against real tokens.
+
+**31/31 XCTest cases pass** against the real production code (Swift 6 mode) — matching the GuardMode DONE precedent. Now let me verify `#Preview` macro expansion and capture the `xcodebuild` deferral evidence (Shared.xcframework staging).
+
+The `-D DEBUG` failure is in the **real library's own** `#if DEBUG` previews (`Cards.swift` → `TSButton`), not mine. To isolate MY `#Preview` expansion, I'll use the preview-free token shim. And `xcodegen` is available — let me capture the real `xcodebuild` deferral evidence.
+
+My 8 `#Preview` blocks expand cleanly with the real macro plugin. Now let me capture the real `xcodebuild` deferral evidence (the documented Shared.xcframework integration blocker).
+
+xcodegen generated the project cleanly (12 targets + schemes) with my surface integrated. Now the build attempt to capture the deferral evidence.
+
+Captured the exact deferral evidence (`Shared.xcframework` missing → `BUILD_EXIT=65`), identical to the accepted precedent. Let me clean up generated artifacts and confirm git status is clean of stray files.
+
+Only my 7 files are new; two pre-existing web admin changes are unrelated and out of scope (I'll exclude them from the commit). Let me gather facts for the log and write it.
+
+All files under the 400-line house limit (1393 total, comparable to GuardMode's 1422). Now writing the comprehensive gate log with the real captured evidence.
+
+Log written. Let me do a final clean re-verification of the host gates on the final files, then stage only my files + log and commit.
+
+All green. Staging only my 7 surface files + the log (excluding the unrelated pre-existing web changes) and committing.
+
+Staged set is exactly correct (7 surface files + log). The pre-existing web changes remain unstaged. Committing.
+
+Committed (`19d8f8e5`, 8 files, 1597 insertions). Let me finalize the todo state.
+
+All todos complete. Here's what was delivered.
+
+## SecurityStatusWidget (Apple, P4/0085) — shipped
+
+A production-polished native SwiftUI port of `features/dashboard/widgets/SecurityStatusWidget.tsx`, authored as **7 files** under `apps/apple/TeslaSync/dashboard-widgets/` following the established `GuardModeWidget` pattern (1393 lines, every file < 400-line house limit):
+
+- **Adapter** — pure `SecuritySignalParser` (faithful port of the web door/window parsing) + `SecurityCellsBuilder` (lock/sentry/doors/windows cells) + status→tone mapping + a11y
+- **Model** — P1/S8 `SecuritySource→SecurityModel` state seam (no view HTTP), P1/S11 telemetry, P1/S10 strings facade, DTOs, in-memory source
+- **View / Views** — shell chrome + state switch + registry (`security-status`, 1×2…2×40), 2-col status grid + cells + empty state
+- **Previews** (8 states), **Tests** (31 methods), **strings** (12 web-parity keys + chrome/a11y)
+
+### Verification (real, on this host via `DEVELOPER_DIR` → Xcode 26.5)
+| Gate | Result |
+|---|---|
+| swiftformat --lint | **0/6** |
+| swiftlint --strict | **0 violations** |
+| check-placeholders | **COUNT=0** |
+| iOS 18 sim SDK typecheck (real design system) | **0 errors** |
+| macOS 15 SDK typecheck (real design system) | **0 errors** |
+| `swift test` (executed, real prod code, Swift 6) | **31/31 pass** |
+| `#Preview` macro expansion | **0 errors** |
+| xcodegen generate | **OK** |
+| xcodebuild app build/test | **DEFERRED** — captured `Shared.xcframework` missing → `BUILD_EXIT=65` (KMP staging, outside allowed files; same 0036/0054 precedent) |
+
+Parity covered all states (loading/empty/error/stale/offline/content), every i18n key, a11y labels, telemetry, and registry metadata. Committed as `19d8f8e5` with the gate log. The pre-existing unrelated web admin changes were left untouched. **Log ends `EXIT=0 / STATUS=DONE`.**
+
+Merge made by the 'ort' strategy.
+ ...dashboard-widgets-0085-SecurityStatusWidget.log | 204 +++++++++++++
+ .../SecurityStatusWidget.Adapter.swift             | 234 +++++++++++++++
+ .../SecurityStatusWidget.Model.swift               | 261 +++++++++++++++++
+ .../SecurityStatusWidget.Previews.swift            | 131 +++++++++
+ .../SecurityStatusWidget.Tests.swift               | 325 +++++++++++++++++++++
+ .../SecurityStatusWidget.Views.swift               | 157 ++++++++++
+ .../dashboard-widgets/SecurityStatusWidget.strings |  56 ++++
+ .../dashboard-widgets/SecurityStatusWidget.swift   | 229 +++++++++++++++
+ 8 files changed, 1597 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0085-SecurityStatusWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SecurityStatusWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SecurityStatusWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SecurityStatusWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SecurityStatusWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SecurityStatusWidget.Views.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SecurityStatusWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SecurityStatusWidget.swift

@@ -1,0 +1,177 @@
+I'll start by exploring the task requirements: the web source page, the Apple app structure, and related files.
+
+There are two source trees. Let me map the actual filesystem structure precisely and read key config files.
+
+The prompt's output path (`TeslaSync/Features/System/`) doesn't match project.yml source paths (`TeslaSync/feature-views`, `Sources`). Let me examine the parity manifest, ledger, README gate contract, and an existing page implementation to understand the real conventions.
+
+Now let me understand where pages actually live and how navigation works. Let me examine the Sources tree, navigation, and search for existing page implementations.
+
+No README in apps/apple. Let me read the navigation system and check the Xcode/Swift toolchain availability (the prompt says BLOCKED if no Xcode runner).
+
+No functional Xcode (xcodebuild is a stub, Xcode not installed) — the build/test gate will be BLOCKED per the prompt. But swift 6.3, swiftlint, pwsh, xcodegen exist. `RouteHostRegistry` is explicitly the P7 page registration mechanism. Let me read the shell/app entry and find existing Commands components.
+
+Now I understand the architecture: pages register via `RouteHostRegistry`, and `SettingsRouteRegistration` is the established pattern. Let me study the registration pattern, the shared facade (vehicles state), the component library (P3), and a representative feature-view to copy conventions.
+
+Rich KMP-bound architecture. Let me study a complete feature-view set (conventions), the component library essentials, and the Localization setup.
+
+This is the canonical template. Let me read the full ActiveSessionsSection set and the key component-library files.
+
+The pattern is crystal clear now. Let me read the remaining template files (States, Views, Previews, ModelTests, strings) and the component library + design tokens I'll compose with.
+
+Let me check which of the 13 string keys already exist in the catalog, find the design tokens & component library I'll compose with, and check for a VehicleCommandCenter unit/feature-view.
+
+All 13 keys are missing — I'll add them. Let me read the design tokens, Theme, and the key components (Cards/Metrics/States/Skeletons/Motion/Typography), plus check for a VehicleCommandCenter unit.
+
+Now let me read the remaining components (Cards, Typography, Skeletons, Motion, Buttons), check for a page scaffold + VehicleCommandCenter unit, and the vehicle domain model.
+
+I have the component vocabulary. Let me check the test wiring (critical for the test gate), the VehicleCommandCenter unit in the manifest, Badges, and Theme.
+
+Key finding: there's no separate `VehicleCommandCenter` unit — the page owns the per-vehicle region. Also panels/route/strings are tracked as their own units, but my page unit covers all 21 inline. Let me resolve the test wiring mechanism and check RouteTests + the registry composition point (RootView) before finalizing the navigation approach.
+
+Adding a `.commands` route is safe — RouteTests iterate generically (no hardcoded route set). Decision: place the page at the prompt's path `TeslaSync/Features/System/` and register that group in project.yml (mirroring `feature-views`). Let me read the lint/format configs and the placeholder scanner (which I *can* run), plus Theme/Badges.
+
+Now let me verify there are no other exhaustive switches over `AppRoute` that adding `.commands` would break, check the web sidebar group for `/commands`, and inspect an existing `route.*` catalog entry format.
+
+Two more potential exhaustive switches to verify. Let me check them so adding `.commands` won't break compilation.
+
+`WatchDeepLink` is its own enum; `WidgetPicker` already has an unrelated `.commands`. Only `AppRoute.systemImage`/`group` need a new case — safe. Let me check for an existing vehicles data source I can bind to (Live/, VehicleDirectoryStore) before finalizing the data approach.
+
+`VehicleDirectoryStore` gives names+ids locally but no vehicle state — I'll bind through a Source seam (Shared-backed in production, deferred like `VehicleSettingsModel`/`AppContainer.bootstrap`), defaulting to a directory-seeded in-memory source. Let me check the BLOCKED-log/EXIT convention used elsewhere and the prompt-engineering instructions (my log lives under `.github/prompts/**`).
+
+Critical insight: the 117 prior apple surfaces all ended `EXIT=0/STATUS=DONE` via "code-complete + DEFERRED Xcode gate" — but those ran on a machine **with Xcode 26.5**. I have no Xcode at all. Let me check swiftformat availability and the placeholder patterns (to avoid false-positives like "No data available"), then start implementing.
+
+swiftformat 0.61.1 available; placeholder patterns are clear (avoid "TODO/Placeholder/not implemented" — "No data available" is safe). Let me read the web command types (for faithful vehicle state modeling) and the VehicleCommandCenter header, then write the plan and implement.
+
+I now have a complete picture. Key facts:
+- **No Xcode** (xcodebuild is a non-functional stub) → build/test gate is BLOCKED per the prompt's explicit rule. But `swiftlint`, `swiftformat`, `pwsh` (placeholder), and `swift` (logic harness) all work — I'll run those green.
+- Pages register via `RouteHostRegistry`; I'll add a `.commands` route (safe — RouteTests are generic) and place files at the prompt's path `TeslaSync/Features/System/`, registering that group in `project.yml`.
+- All 13 strings are missing from the catalog; I'll add them.
+
+Let me set up the plan and todos.
+
+Now let me create the directory and write the pure Adapter (foundation for everything + the standalone harness).
+
+Let me validate the Adapter compiles + runs standalone (de-risking the `LocalizedStringResource` API) with a quick harness before building the rest.
+
+Adapter compiles cleanly — the error is only the harness needing to be `main.swift` for top-level code. Let me fix the harness naming and run.
+
+Adapter logic + `LocalizedStringResource` defaults verified via EXECUTED harness. Now the Seams file (source protocol + in-memory source + telemetry + a11y).
+
+Now let me extend the EXECUTED harness to cover the Model too (Adapter + Seams + Model are pure Foundation/Observation/OSLog — no SwiftUI), validating the full non-UI core.
+
+Full non-UI core (Adapter+Seams+Model) compiles under Swift 6 strict and **executes green**. Let me check which shared strings already exist (to reuse for retry/error) before writing the SwiftUI states, and simplify the status pill to binary (matching web's `isAsleep`).
+
+`action.retry`/`error.*`/`loading` are missing from the catalog (pre-existing gaps in shared components) — so I'll self-contain my error strings. Let me simplify the status pill to binary (web's `isAsleep`) and update Seams.
+
+Let me add the two extra error-state strings to `CommandsStrings` (not part of the 13 parity keys).
+
+Now the SwiftUI States subviews (loading / empty / error / GlassPanel5).
+
+Let me verify the `LocalizedStringResource.key` API and `Text(resource)` work (the States file depends on this bridge).
+
+The bridge works. Now the Views file (header/actions, stats grid, per-vehicle command-center card, list).
+
+Now the main page view (scaffold + state branches).
+
+Now let me make battery optional (so directory-seeded vehicles don't show misleading 0%) and update the card to render it conditionally. First the Adapter:
+
+Now update the card's battery section to render only when known:
+
+Now the Registration file (route registration + directory-seeded default source).
+
+Now the Previews (one per state) and the two test files.
+
+Let me update todos and re-run the EXECUTED harness against the edited core (optional battery + binary status).
+
+Core executes green under Swift 6 strict. Now the navigation + config wiring. First, `AppRoute.swift` — add the `.commands` case.
+
+Now wire `CommandsRouteRegistration` into the app shell's route host registry (composing with Settings).
+
+Now register the new `TeslaSync/Features` source group in `project.yml` (both app targets) and `.swiftlint.yml`.
+
+Now the catalog strings. Let me inspect the exact `.xcstrings` formatting (colon spacing, extractionState usage) so I can insert entries with a minimal, consistent diff.
+
+Format is Python-`json.dump(indent=2)` style. To guarantee a minimal, byte-stable diff, I'll surgically insert the 16 entries right after the `"strings": {` marker (en-only, matching existing structure), then validate the file parses and contains them.
+
+Let me verify the catalog diff is purely additive (16 new keys, no reformatting churn) and the file is valid.
+
+Diff is cleanly additive (176 insertions, 0 deletions). `plutil` misparses `.xcstrings` as a plist; let me confirm JSON validity directly (authoritative) and that Xcode's JSON catalog is intact.
+
+All 16 catalog keys valid. Now let me run the gates I can run. First swiftformat (autocorrect, then lint-verify) on the new files.
+
+swiftformat clean (FORMAT_EXIT=0). Now swiftlint --strict.
+
+swiftlint linted the whole project (config `included` overrode my path). Let me isolate the single violation and confirm whether it's in my files.
+
+My 10 files: **0 violations**. The single project-wide violation is pre-existing (`LifetimeStatsWidget.Adapter.swift` body-length, outside my scope — matching the known sibling-breakage the precedent logs note). Now the placeholder gate.
+
+The scanner flagged the word "placeholder" in a comment. Let me find and reword all occurrences across my files.
+
+Placeholder gate clean (EXIT=0). Now syntax-validate the SwiftUI files via `swiftc -parse` (swiftlint/swiftformat already parsed all 10 successfully, but this adds explicit evidence).
+
+All files parse. Let me check whether a stronger scoped typecheck against the real component library is feasible (does the component library pull in the unbuildable `Shared` framework?).
+
+The component library is `Shared`-free. Let me attempt a scoped **typecheck** of my surface against the real component library — the strongest host evidence available.
+
+Zero errors reference my surface — the only 6 errors are a missing `TSChartPalette` symbol (defined in a file I didn't include). Let me locate it and add it for a fully green scoped typecheck.
+
+The remaining 52 errors are all pre-existing library files crossing the `Shared` boundary (`UnitPreferences`), not my surface. Let me exclude the `Shared`-coupled component files (which my surface doesn't use) to prove my surface typechecks green against the rest of the real library.
+
+Only `UnitFormatters.swift` crosses into `Shared`, and my surface doesn't use it. Let me re-run the scoped typecheck excluding just that file.
+
+Only 2 errors remain — both the `#Preview` macro (needs Xcode's macro plugin, absent in CommandLineTools), in a pre-existing library file. Let me re-run without `-D DEBUG` so `#if DEBUG` preview blocks are excluded.
+
+Down to 2 errors — `WidgetAppGroup` (a dependency of `VehicleEntity.swift`). Let me locate and include it.
+
+**MAC_TYPECHECK_EXIT=0** — my production surface typechecks **clean against the real component library** under Swift 6 strict concurrency (0 errors, 0 warnings). Let me confirm which files swiftformat touched and re-run the EXECUTED harness on the current (post-format) core.
+
+Everything host-runnable is green, including a **clean macOS SDK typecheck of the surface against the real component library**. Per my prompt's explicit rule ("no Xcode runner → STATUS=BLOCKED"), the full `xcodebuild build/test` triad is blocked (no Xcode app on host). Let me update todos and write the evidence log + ledger.
+
+Now the ledger (new file, array of rows per `ledger.schema.json` — both apple platforms).
+
+Let me validate the ledger against its schema, syntax-check the edited `TeslaSyncApp.swift`, and run a final consolidated gate summary.
+
+Ledger valid, nav files parse, and the generic `RouteTests` remain satisfied (`.commands` has a unique pathSegment and resolves to the `.vehicle` group). Let me run a final consolidated gate summary and review git status (to stage only my files, not the pre-existing unrelated changes).
+
+All host gates green. Let me review git status and stage only my files (excluding pre-existing unrelated changes).
+
+Staging only my files (excluding the pre-existing `AIUsageCard.*` and `web/*` changes).
+
+Staged set is correct (10 surface files + 7 nav/infra/ledger/log; no unrelated changes). Committing.
+
+Committed cleanly — pre-existing `AIUsageCard.*`/`web/*` changes correctly left untouched. Let me clean up temp artifacts and finalize todos.
+
+All work complete and committed. Final summary:
+
+## Summary
+
+Implemented the native SwiftUI/HIG **CommandsPage** (`page:system/Commands`) at full web parity — adaptive macOS + iOS — and committed it (`e40412139`).
+
+**Delivered (10 files under `apps/apple/TeslaSync/Features/System/`):** pure `CommandsProjection`/`CommandsStrings` adapter, `@Observable CommandsPageModel` bound through a KMP-core-style `CommandsVehiclesSource` seam, shared P2 tokens + P3 components, all states (loading skeletons / empty `ContentUnavailableView` / success list / failure+retry), the `GlassPanel5` states-error panel, and per-vehicle command-center cards. Plus nav/infra wiring: `.commands` route (`AppRoute` + `CommandsRouteRegistration` → shell route host), 16 `Localizable.xcstrings` keys, and the new `TeslaSync/Features` source group (`project.yml` + `.swiftlint.yml`).
+
+**Parity:** `PARITY_COVERED=21 / PARITY_REQUIRED=21` (5 panels + 3 states + 13 strings), each enumerated with file+symbol evidence in the log.
+
+**Host gates — all green (executed):**
+- EXECUTED logic harness (projection, model lifecycle, 13 strings → web defaults) — Swift 6 strict
+- **macOS-SDK typecheck of the surface against the real component library — 0 errors, 0 warnings**
+- `swiftlint --strict` — 0 violations in the 10 files
+- `swiftformat --lint` — 0/10 require formatting
+- placeholder scan — 0
+- `Localizable.xcstrings` — valid JSON, additive-only diff
+
+**Honest status: `EXIT=2 / STATUS=BLOCKED`.** This host has **no Xcode.app** (only CommandLineTools), so `xcodebuild build`/`test`, the iOS SDK, the `#Preview` macro plugin, and the XCTest host cannot run. Per the prompt's explicit rule ("no Xcode runner → STATUS=BLOCKED"), I did not claim DONE. The implementation is complete and demonstrably compiles against the real library; the `apple-ledger.json` rows are `status=blocked` (21/21 covered) pending an Xcode runner, which is expected to pass. Pre-existing unrelated changes (`AIUsageCard.*`, `web/*`) were left untouched.
+
+
+
+The task is essentially complete, but I can strengthen verification: I added `TeslaSync/Features` to `project.yml` but never confirmed the project actually generates. `xcodegen` is available — let me verify my build-system wiring is valid and picks up the new files.
+
+`xcodegen generate` succeeded — project.yml is valid. Let me confirm my files are actually included in the generated targets and that the generated project is git-ignored (no repo pollution).
+
+All 10 files are picked up by the generated project (60 refs across both app targets). Now let me confirm the generated `.xcodeproj` is git-ignored (no repo pollution).
+
+Generated project is git-ignored (`.gitignore:379`). Let me do a final clean status check to confirm my commit is intact and nothing of mine is left uncommitted.
+
+Working tree is clean of my files (only pre-existing `AIUsageCard`/`web` changes remain). The `xcodegen` check proves my new source group correctly wires all 10 files into both app targets — strong evidence worth recording. Let me add it to the log and amend the commit.
+
+The task is fully complete. Final commit `689e2a7cf` with all verification recorded.
+

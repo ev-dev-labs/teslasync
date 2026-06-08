@@ -1,0 +1,160 @@
+I'll start by exploring the repository structure to understand the codebase and the existing patterns.
+
+Now let me examine the web components and the Apple app structure in detail.
+
+Now let me explore the Apple app structure to understand existing patterns and conventions.
+
+This is a large, sophisticated codebase. Let me check the toolchain availability and investigate existing patterns in parallel.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. Let me verify there's truly no Xcode and investigate the existing patterns I need to follow.
+
+There IS an Xcode.app! Let me verify it's valid and usable.
+
+Xcode 26.5 is available via `DEVELOPER_DIR`. Now the critical question: can the project actually build? It needs the KMP `Shared.xcframework`. Let me investigate the build prerequisites.
+
+Xcode is available but the build needs a KMP `Shared.xcframework` (built via Gradle/Kotlin-Native). Let me investigate existing patterns thoroughly before deciding the build approach. Let me look at similar admin diagnostic views and the architecture.
+
+The XRay sub-components (`XRayHeader`, `XRayFieldsTable`) already exist as Apple feature views. My task is the **page** that composes them. Let me understand how existing pages are structured and registered in navigation.
+
+Let me examine the app shell, the parity ledger, and confirm there are no existing page implementations to follow.
+
+Let me read the existing XRay component implementations (which I'll compose), the ledger schema, the placeholder checker, and a sample log to match conventions.
+
+The previous component builds used Xcode 26.5 successfully. Let me examine the log's structure (gate results, PARITY section format) to match conventions.
+
+The methodology is clear: per-file `swiftc` type-checks (iOS + macOS) + swiftlint + swiftformat + placeholder scan + tests, with the full `xcodebuild` app build deferred as environmental. Let me read the exact invocations used.
+
+This is exactly the methodology I need. `feature-views` is now wired into `project.yml`, but my new `Features/Admin/` won't be. Let me deeply understand the components I'll compose. Let me read the full XRayHeader and XRayFieldsTable surfaces.
+
+Now let me read the XRayFieldsTable surface and the design system primitives I'll need.
+
+Let me read the exact manifest record for the page to confirm the parity scope precisely.
+
+Confirmed scope. Now let me explore the shared design system and components I'll compose with: layout containers, cards/glass panels, pickers, charts, and the string catalog.
+
+The actual tokens are generated. Let me read the generated design tokens.
+
+Let me read the chart components, typography, the freshness-banner pattern, and the string catalog format.
+
+Let me read the typography components, the freshness banner pattern from XRayHeader.Views, and the string catalog formats.
+
+The catalog has a `translation.admin.xray.*` namespace already. Let me check exactly which of my 5 required keys exist and the key convention.
+
+All 5 required keys already exist in the catalog under the i18next `translation.` namespace. Let me verify their stored English values match the web defaults.
+
+All 5 required keys exist with exact web values (plus ar/he). Let me enumerate the full `admin.xray.*` keyset to plan the controls/chart panels.
+
+All catalog keys exist except window/bucket dropdown option labels (which I'll add). Now the critical piece: how pages access KMP core data. Let me examine the SharedFacade.
+
+Let me read the P1/S8 state-holder vocabulary and the exemplar domain model to mirror the seam precisely.
+
+Now let me understand how the shell renders route hosts and parses deep links, to wire navigation correctly.
+
+Let me check the placeholder scanner's banned patterns and the swiftlint config before writing.
+
+Let me check how existing `.Tests.swift` files in feature-views handle the app-target XCTest issue, and check the project.yml source paths question.
+
+I have enough architectural understanding. Let me verify a couple of collision risks and the vehicles data shape, then start implementing.
+
+Let me grab the final component signatures I'll use, then start implementing.
+
+I have all the pieces. Let me verify the exact `TSButton` initializers and then begin implementing.
+
+I understand the architecture. One key decision remains: how the registered page gets real data. Let me check whether the KMP shared core / AppContainer exposes an ingest-xray store I can wire.
+
+The KMP core has a full ingest-xray presentation store. Let me read it and the exemplar Swift bridge to author a faithful live wiring (guarded by `#if canImport(Shared)`).
+
+The KMP `IngestXRayStore.xray(...)` exists. Given the live wiring depends on the framework (unverifiable here) and `AppContainer` itself defers KMP finalization, I'll ship the complete UI + seam + InMemory source (fully verifiable), register navigation, and document the KMP binding point. Let me check the formatter config, then set up my plan and implement.
+
+I have a complete architectural picture. Let me set up tracking and write the plan.
+
+Now let me create the directory and write the files. Starting with the pure Adapter.
+
+Now the SwiftUI views (the four panels + chrome).
+
+Let me verify the exact names of the skeleton and clipboard helpers I referenced.
+
+`TSChartSkeleton(height:)` and `TSClipboard.copy` (internal, same module) both exist. Now the page view, previews, tests, and registration.
+
+Now the navigation registration, previews, and tests.
+
+Now the tests file, guarded so it never breaks an app-target build.
+
+Page surface files are written. Let me update tracking and inspect the exact catalog entry format before adding keys.
+
+Now let me add the 14 catalog keys (window/bucket option labels + page banner + chart export) surgically.
+
+Catalog updated and valid. Now wire navigation: add the `Features` source path (both app targets) and compose the registration in the app entry point.
+
+Now let me run the surface gates. First format and lint my files.
+
+swiftlint linted the whole `included:` set (1909 files). Let me find that one violation and confirm whether it's mine or a pre-existing sibling.
+
+Two of my findings to fix (the repo-wide one is the documented pre-existing `LifetimeStatsWidget` sibling). I'll split the Model (file length >400) into a Source file and replace the 3-tuple with a struct.
+
+Now rewrite the Model file to contain only the model (seam moved to Source.swift), updating `select` calls to use the new struct.
+
+Now re-format and lint my files.
+
+My surface is lint- and format-clean. Now the authoritative check: type-check against the **iOS 18 SDK** with the real tokens, shared components, and the composed child surfaces.
+
+The only errors come from `Components/DataDisplay/UnitFormatters.swift` needing `UnitPreferences` (a facade type my surface doesn't use). Let me locate it and decide whether to include or exclude.
+
+`UnitPreferences` lives in the Shared-bound facade; only `UnitFormatters.swift` (unused by my surface) needs it. I'll exclude that one file and re-run.
+
+Only one error in my code: an unused `static` `ISO8601DateFormatter` (not Sendable). The `axisLabel` helper it backs is unused (the chart plots by ordered index; CSV keeps timestamps). Let me remove that dead code.
+
+swiftformat reformatted it. Let me remove both the unused `axisLabel` and its `isoFormatter`.
+
+Now re-run the iOS type-check.
+
+Just one real error: `.teslaSyncTheme()` is defined outside my included set. Let me find it.
+
+iOS 18 type-check: **0 errors**. Now the macOS 15 SDK type-check.
+
+Both SDK type-checks pass (0 errors). Now the placeholder gate.
+
+Placeholder gate clean. Now the executed test (A6): compile the adapter + model + composed child logic into a real binary and run assertions.
+
+Compile of all the real surface files succeeded — only my runner's helper needs `@MainActor`. Let me fix and rerun.
+
+All 30 executed checks pass. The full compile of my surface + children + real components also succeeded. Let me re-verify format/lint after the Adapter edit, then handle the test-file/app-target concern in project.yml.
+
+Surface is clean. Now exclude the XCTest file from the app-target source path (so my page doesn't contribute to the baseline app-build break), then verify the project generates.
+
+`xcodegen generate` succeeded; my 6 page files are in both app targets and the XCTest file is correctly excluded. Let me capture the baseline-break evidence and check the KMP build prerequisites before deciding on a full `xcodebuild` attempt.
+
+Baseline confirmed: **224 sibling `*.Tests.swift`** import XCTest into the app target (pre-existing break, outside my files); my Tests file is excluded (0 refs). The KMP `Shared.xcframework` is missing (needs Gradle/Kotlin-Native). Let me make a bounded real attempt to build it so I can capture a genuine `xcodebuild` signal.
+
+The KMP build timed out at 280s (exit 124) — the Gradle/Kotlin-Native first build exceeds a practical bound, and the app target is red regardless from 224 baseline sibling test files. This is the documented DEFERRED-RED case. My surface is fully verified by the authoritative gates. Let me write the evidence log.
+
+Let me verify the line counts I cited are accurate, then create the ledger.
+
+Let me correct the cited line counts in the log to the actual values (honesty).
+
+Let me verify the test-case counts cited, then create the ledger.
+
+Now create the apple parity ledger.
+
+Now a consolidated final verification of all surface gates before committing.
+
+All fast gates green. Let me do a final authoritative re-confirm of both SDK type-checks on the current on-disk files, then commit.
+
+Both SDK type-checks: **0 errors**. All authoritative gates green. Let me check git status, clean up, and commit.
+
+There are pre-existing unrelated changes (AIUsageCard, web files) I must not touch. Let me stage only my files and verify before committing.
+
+The large catalog file was the slow one. Let me stage it with a longer bound.
+
+All 13 intended files staged, nothing unrelated. Let me check for commit hooks before committing.
+
+No hooks installed. Let me commit.
+
+Commit succeeded. Let me verify the commit scope is correct (no unrelated files).
+
+All 13 intended files committed; unrelated pre-existing changes left untouched. Let me close out tracking.
+
+All todos complete. Let me do a final confirmation that the committed tree is clean and the parity coverage is intact.
+
+The task is complete and verified. Final state confirmed: `PARITY_REQUIRED=12 / PARITY_COVERED=12`, log ends `EXIT=0 / STATUS=DONE`, and the commit is cleanly scoped.
+

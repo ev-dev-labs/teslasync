@@ -1,0 +1,87 @@
+I'll start by exploring the repository structure to understand the task — the web source, the existing Apple app structure, and toolchain availability.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. However `swift`, `swiftlint`, and `swiftformat` ARE available. Let me explore the web source and existing native patterns deeply before deciding approach.
+
+Now I understand the web source. The real i18n keys are `pwa.offline.title` and `pwa.offline.banner` (the prompt's "You" extraction is truncated). Let me study the existing native conventions deeply — state holders, tokens, i18n facade, telemetry, and shared components.
+
+A native `AlertBanner` exists in `Sources/Components/Feedback/Banners.swift`. Let me examine the key infrastructure: the Feedback banners, SharedFacade (state holders), Design (tokens), and find the online-status holder + i18n facade.
+
+There's already an atomic `TSOfflineBanner` component (out of scope — owned by the component-library bundle). My surface must **bind** it to the online-status state holder with telemetry, states, a11y, and tests. Let me study the state-holder infrastructure, i18n facade, design tokens, and a representative feature-view pattern.
+
+Now let me find the connectivity/online-status holder, the i18n facade, telemetry contract, AppContainer, and a representative feature-view pattern.
+
+This is the canonical multi-file surface pattern. Let me read the full `ConflictWarnings` set (closest analog — it uses AlertBanner) plus the telemetry seam to learn every convention.
+
+Excellent — the pattern is crystal clear. Let me read the remaining ConflictWarnings files (Views, Previews, strings, Tests) and the design tokens to nail every convention.
+
+Let me read the Previews, strings, design tokens, and check the project.yml test-target wiring.
+
+Let me locate the token definitions (TSTone, TSSpacing, TSRadius, Color.TS, Font.TS) and verify the project.yml test-target wiring.
+
+Let me read the token definitions (TSTone, Tokens.swift), find TSSkeleton/TSButton, and confirm the placeholder-check script exists.
+
+I now have all design tokens. Let me read the web `useOnlineStatus` hook and `AlertBanner` to model connectivity faithfully, plus the placeholder script and component signatures.
+
+Let me check the web `resilience` connection-status model and the placeholder-check script (to know forbidden words), then I'll have everything to build faithfully.
+
+Web connectivity is binary (`online`/`offline`) backed by `navigator.onLine`. Let me read the exact forbidden-pattern list so my shipped code stays clean.
+
+Now I have everything. Key constraints captured: forbidden words (`TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented`), use `InMemory*` (not "Mock"), swiftlint `--strict` (empty_count→use `.isEmpty`, type names ≤50). Let me probe whether standalone `swiftc -typecheck` with SwiftUI works (for extra verification beyond lint, since xcodebuild needs full Xcode).
+
+Standalone SwiftUI typecheck works under CLT (`PROBE_EXIT=0`) — so I can compile-verify the surface even without full Xcode. I have everything needed. Let me set up tracking and create the surface directory.
+
+Repo-root log dir confirmed. Now I'll write the surface files, starting with the pure projection core (Adapter), the Model (seams), and the strings catalog.
+
+All 7 files created. Now let me run the checks that work on this runner: swiftformat lint, swiftlint, placeholder check, and a standalone `swiftc` typecheck of the surface against its real dependencies.
+
+swiftformat passes. The swiftlint run scanned the whole tree (config `included` overrides my path arg) and found 1 violation — let me locate it.
+
+The single violation is in a **pre-existing** file (`LifetimeStatsWidget.Adapter.swift`), not mine — and my `shared-surfaces` dir isn't in the repo swiftlint `included` list, so my files weren't linted at all. Let me lint my files explicitly with a temp config using the same rules.
+
+My 6 Swift files pass `swiftlint --strict` with **0 violations**. Now the placeholder check and a standalone type-check against real dependencies.
+
+Placeholder check passes (`PLACEHOLDER_COUNT=0`). The typecheck error is from the `#Preview` macro plugin (unavailable under CLT) in a dependency — not my logic. Let me typecheck the 4 shipping files without DEBUG (excludes preview macros), then separately verify the preview bodies via a transform.
+
+Core shipping files typecheck cleanly under **Swift 6 + complete concurrency**. Now let me verify the preview bodies by transforming `#Preview` macros into functions (the macro plugin is the only blocker) and type-checking.
+
+Preview bodies typecheck cleanly. Now verify the test logic compiles by building a same-module harness (drop `@testable import`, keep XCTest) alongside the surface sources.
+
+XCTest isn't available under CLT (it ships with full Xcode) — so I'll do something stronger than a typecheck: compile and **execute** a harness that runs the actual test logic (projection, copy, accessibility, model wiring, telemetry-once, stale rising-edge) against the real surface sources.
+
+**The logic harness built and ran — all assertions passed** (projection, copy/web-keys, accessibility, telemetry-once, online→hidden, stale rising-edge, delegation). Now let me run the actual gate commands to capture real exit codes for the log, including the xcodebuild capability check.
+
+Captured the key evidence: **xcodebuild requires full Xcode (only CLT present)** — the prompt-anticipated capability block. Whole-tree swiftformat/swiftlint each surface one *pre-existing* violation in unrelated sibling files (`ActionBuilder.Previews.swift`, `LifetimeStatsWidget.Adapter.swift`), outside my allowed scope; my files pass cleanly. Let me capture clean per-file evidence and write the honest gate log.
+
+All per-file checks pass cleanly. Let me update tracking and write the honest gate log.
+
+Now let me verify git state and commit only my allowed files (the surface + log), being careful not to stage anything else in this shared worktree.
+
+Staged set is exactly my 7 files + the log (pre-existing sibling changes left untouched). Committing now.
+
+Committed cleanly — 8 files, 1053 insertions, nothing leaked. Let me clean up temp artifacts and finalize tracking.
+
+Done. The OfflineBanner shared surface is implemented, verified to the maximum extent this runner allows, and committed.
+
+## Summary
+
+Built the native Apple parity of `components/feedback/OfflineBanner.tsx` as a decomposed 7-file surface in `apps/apple/TeslaSync/shared-surfaces/` (1053 lines), following the repo's established surface convention (Adapter / Model / view / Views / Previews / strings / Tests).
+
+**Parity & architecture**
+- **Data bindings:** `useOnlineStatus` → `OfflineBannerConnectivitySource` (P1/S8 seam, no HTTP in the view); `useTranslation` → `OBStrings` facade (P1/S10). 
+- **i18n:** the exact web source keys `pwa.offline.title` ("You're offline") and `pwa.offline.banner` are in both the `.strings` catalog and `OBCopy`, resolved via the facade — no hardcoded literals.
+- **Every state renders:** loading (`determining` chip), online/empty → `.hidden` (faithful port of web `if (online) return null`), offline (warning `wifi.slash` banner with both strings), stale (chip + rising-edge auto-refresh), error/degraded (re-check affordance).
+- **Telemetry:** `view.opened` emitted once with slug `OfflineBanner` (P1/S11).
+- **A11y:** VoiceOver labels on every element, combined title+message, polite announcement on going offline (role=status/aria-live parity), Reduce-Motion via `TSAnimation`, Dynamic Type via tokens.
+- No prohibited words; uses `InMemory*` sources (not "mock").
+
+**Verification run on this runner (all green):**
+- `swiftlint --strict` (repo rule set) → **0 violations** on all 6 Swift files
+- `swiftformat --lint` → **0/6 need formatting**
+- `check-placeholders.ps1` → **PLACEHOLDER_COUNT=0**
+- `swiftc -typecheck` (Swift 6, strict-concurrency=complete) of shipping files + previews → **0 diagnostics**
+- Compiled + **executed** a harness of the test assertions against the real sources → **ALL_HARNESS_CHECKS_PASSED**
+
+**Status: BLOCKED on xcodebuild** (the prompt's sanctioned capability path). The runner has Command Line Tools only — `xcodebuild` requires full Xcode and there's no iOS 18 Simulator, so the two `xcodebuild build test` gate steps cannot run. Evidence and all real exit codes are in the gate log; it ends with `EXIT=1` / `STATUS=BLOCKED`. The surface code itself is complete and passes every check executable here. (An integration note in the log flags that registering the new `shared-surfaces/` dir in `project.yml` sources + `.swiftlint.yml` `included` is owned by the P4-core step and is outside this prompt's allowed files.)
+
+Committed as `6c8b3f743` (only the 7 surface files + log; pre-existing sibling-slot changes left untouched).
+

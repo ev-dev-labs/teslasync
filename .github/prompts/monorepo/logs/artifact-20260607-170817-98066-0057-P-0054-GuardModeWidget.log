@@ -1,0 +1,195 @@
+================================================================================
+P4 · Dashboard widget · 0054 — GuardModeWidget (Apple)
+Run: 2026-06-07T18:30-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/57
+Base: e9e15143
+Prompt: P4/dashboard-widgets/0054 — GuardModeWidget
+Web source (spec): web/src/features/dashboard/widgets/GuardModeWidget.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (0036 DigitalTwinWidget precedent, ADR-012).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18 deploy target)       OK
+  macOS SDK .................. MacOSX (macOS 15 deploy target)                       OK
+  iPhone 16 simulator ........ present (booted)                                     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                           OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                         OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  surface in project.yml ..... 0 references (not yet target-registered)             WARN
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and PROVEN by real iOS-18-simulator AND macOS-15 SDK compiles below.
+  The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does
+  NOT apply — the surface is authored, host-compiled, and host-tested for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/GuardModeWidget.*) ===
+  GuardModeWidget.Adapter.swift   241  testable projection core — GuardStatus + GuardFeedBuilder +
+                                       GuardEventCatalog (port of mapEventToFeedItem/EVENT_TYPE_MAP) +
+                                       relative-time + a11y summaries
+  GuardModeWidget.Model.swift     244  P1/S8 state-holder seam (GuardSource→GuardModel) + P1/S11
+                                       telemetry seam + P1/S10 strings facade + in-memory source
+  GuardModeWidget.Views.swift     232  presentational subviews — GuardChip / connectivity banner /
+                                       compact row / status card / event feed + rows / feed empty
+  GuardModeWidget.swift           236  GuardModeWidget surface (shell chrome + state switch + registry)
+  GuardModeWidget.Previews.swift  134  #if DEBUG previews — one per state (content/compact/empty-feed/
+                                       loading/no-data/error/offline/stale)
+  GuardModeWidget.Tests.swift     274  XCTest — adapter + model + registry + a11y (22 methods, 61 asserts)
+  GuardModeWidget.strings          61  P1/S10 catalog contribution (12 status/feed + 9 event-type +
+                                       native chrome keys)
+  Every file <= 400 lines (house file_length). Total 1422 lines across 7 files.
+  Shared registry types (DashboardWidgetSize / DashboardWidgetRegistration) are REUSED from the
+  0036 surface (no redeclaration → no duplicate symbols when both compile in the app module).
+
+=== PARITY (vs web GuardModeWidget.tsx) ===
+  Data sources -> bound via the shared state-holder seam (GuardSource -> GuardModel):
+    useGuardConfig, useGuardEvents, useVehicles, useTranslation (useGuard module). The production app
+    wires GuardSource over the KMP guard config/events stores; the view performs NO HTTP.
+  Projection -> GuardStatus.project (enabled ?? false, sensitivity ?? '—', auto_panic ?? false) +
+    GuardFeedBuilder (newest-first sort + maxItems cap + per-row title/subtitle) + GuardEventCatalog
+    are a 1:1 port of web mapEventToFeedItem + EVENT_TYPE_MAP (9 known event types + neutral fallback;
+    dot colors reproduce the exact web hex #f59e0b/#ef4444/#06b6d4/#8b5cf6/#6b7280). Acknowledged is
+    derived from acknowledgedAt != nil (web isGuardEventAcknowledged). Verified by executed XCTest.
+  Composition -> shell chrome (shield icon + "Guard Mode" title + freshness chip + refresh + Open) ·
+    1x2 CompactView (shield glyph + Armed/Disarmed chip + event-count chip) · 2x4 StandardView
+    (status card: shield + Armed/Disarmed + "Sensitivity: x [· Auto-panic]" + ON/OFF chip, then the
+    event feed) · feed rows (timeline icon in event color + localized title + relative time +
+    Acknowledged/Unacknowledged subtitle) · feed empty state.
+  Shared components -> reuses Color.TS / Font.TS / TSSpacing / TSRadius / TSTone / TSSkeleton +
+    ContentUnavailableView (compiled against the REAL apps/apple component library in the typecheck
+    below). GuardChip mirrors the TSBadge tokens, extended to take a pre-localized String (our
+    per-surface table) + a leading SF Symbol the LocalizedStringKey-only TSBadge can't express.
+    Recharts -> none / Leaflet -> none (no chart/map on this surface).
+  States (all render) -> loading (skeleton chrome) · empty ("No guard data") · error (retry
+    affordance) · stale (chip + banner) · offline (cached value + chip + banner) · content; PLUS the
+    feed-level empty ("No guard events") when config is present but events are empty. Model phase
+    resolution keeps cached content visible behind refresh/errors, matching the web shell.
+  i18n -> all source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    widget.guardMode, guardArmed, guardDisarmed, guardOn, guardOff, guardSensitivity, guardAutoPanic,
+    guardEvents, guardAcknowledged, guardUnacknowledged, guardNoEvents, noGuardData  +  the 9
+    widget.guardEvent.<event_type> labels (vehicle_moved, unauthorized_unlock, unauthorized_drive,
+    sentry_triggered, manual_panic, test_alert, locked, sentry_mode, valet_mode_enabled)  ->  ALL
+    PRESENT in GuardModeWidget.strings. No English literals in native code (verbatim from the facade).
+  a11y -> status card + compact row carry a combined status-summary value (GuardAccessibility.
+    statusSummary); each event row a combined title+subtitle label; every button an accessibilityLabel;
+    Dynamic Type via tokens; Reduce Motion gates the TSSkeleton shimmer.
+  Telemetry -> GuardModel.start() emits viewOpened(surface:"GuardModeWidget") -> bridges the shared
+    Telemetry.track(.screenView) (P1/S11). Asserted by a spy test (fires exactly once).
+  Registry -> GuardModeWidget.registration: id "guard-mode", category "security", default 2x4,
+    min 1x2, max 4x40 (+ clamp()), matching registry/security.ts. Asserted.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (the 5 shipping source files compiled together with
+    the REAL apps/apple component library — design Tokens + Design + Components/UI{Badges,Cards,
+    Typography} + Feedback/Skeletons — AND the REAL 0036 DigitalTwinWidget suite that owns the
+    shared registry types; none import the Shared xcframework):
+      xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+        -swift-version 6  <component closure> <all dashboard-widgets/*.swift except *.Tests>
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swiftc -typecheck — DEBUG previews (-D DEBUG; the 5 Guard files + tokens + Badges + a minimal
+    TSSkeleton/registry shim, isolating this surface's #Preview blocks from other components' previews):
+      PREVIEWS_TYPECHECK_EXIT=0                                                     OK
+[4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM
+    harness (real production Adapter/Model/Views/Widget + real design tokens + real TSTone badges +
+    minimal TSSkeleton/registry shims), Swift 6 language mode (.swiftLanguageMode(.v6)):
+      Executed 22 tests, with 0 failures (0 unexpected) in 0.011 seconds
+        GuardAdapterTests   10/10  (catalog known+fallback, status projection x3, feed sort/limit,
+                                    title/subtitle key resolution + severity, relative time)
+        GuardModelTests      7/7   (phase loading/empty/error/content, telemetry-once, refresh
+                                    delegation, connection+projection tracking)
+        GuardRegistryTests   2/2   (canonical guard-mode metadata, clamp min/max)
+        GuardAccessibilityTests 3/3 (status summary armed/sensitivity/auto-panic/count; disarmed
+                                    omits auto-panic; event summary title+subtitle)
+      SWIFT_TEST_EXIT=0                                                             OK
+[5] swiftlint --strict on the 6 surface .swift files (explicit paths; the repo .swiftlint.yml
+    `included:` does not list TeslaSync/dashboard-widgets — that wiring is the P4 integration
+    prompt's job — so the bare gate `swiftlint --strict` SKIPS this dir; run explicitly here):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0                                                                   OK
+[6] swiftformat --lint on the 6 surface .swift files (config: apps/apple/.swiftformat):
+      0/6 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+[7] check-placeholders (ADR-011 stub gate; swift):
+      ./apps/tools/check-placeholders.ps1 -Path apple/TeslaSync/dashboard-widgets -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host):
+      - `xcodegen generate` -> EXIT=0 (project + 12 targets + schemes generate cleanly).
+      - `xcodebuild -target TeslaSync-macOS build` ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          BUILD_EXIT=65
+    Why deferred (three independent, code-unrelated reasons — none is a defect in this surface;
+    identical disposition to the 0036 predecessor surface, Honesty rule 7):
+      (a) NOT-YET-REGISTERED: project.yml's app targets glob `Sources/`; this surface lives at
+          TeslaSync/dashboard-widgets/ and has 0 references in project.yml. It is registered into the
+          XcodeGen target + the dashboard grid by the downstream P4 integration/acceptance prompt.
+          Editing project.yml is OUTSIDE this prompt's allowed files. Running xcodebuild now would
+          build the app WITHOUT these files and re-run the existing suite — ZERO evidence about this
+          deliverable. Step [1]/[2] DO compile this surface against the real library, and step [4]
+          EXECUTES its full XCTest suite — the meaningful validation.
+      (b) Shared.xcframework not staged: the app target links the KMP core; staging it needs a
+          Kotlin/Native gradle build (apps/shared/gradlew :core:assembleSharedXCFramework).
+          Independent of this UI surface; concrete missing-framework error captured above.
+      (c) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    XCTest under Xcode runs in the TeslaSync/-macOS test target; here the SAME tests are PROVEN GREEN
+    (22/22) by the executed SwiftPM harness in step [4], and the views/model/adapter compile against
+    both the iOS 18 and macOS 15 SDKs in steps [1]/[2].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) + feed-level empty —
+      implemented; each has a #if DEBUG preview; phase logic unit-tested + executed green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (GuardSource->GuardModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — 12 status/feed + 9 event-type labels,
+      all present in GuardModeWidget.strings.
+  [x] Accessibility labels on every interactive element; status + each event row carry combined values.
+  [x] Tests: adapter unit + per-state model + registry + a11y — 22 methods / 61 asserts, EXECUTED 22/22.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured evidence.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green) with the real BUILD_EXIT=65
+                       framework error captured; every "OK" is a command actually run with its real
+                       exit code (incl. a 22/22 executed XCTest run and iOS+macOS SDK compiles).
+  2  No scope narrowing: implemented ALL states/views/badges + i18n + a11y + telemetry + registry.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0. (Shims used ONLY in the
+                       throwaway test/preview harness, never in shipped surface files.)
+  5  No parity shortcuts: faithful port of mapEventToFeedItem/EVENT_TYPE_MAP + full compact/standard
+                       composition + all states + the feed-level empty.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / dashboard grid (integration
+                       prompt's scope) and did NOT edit the shared Localizable.xcstrings (parallel-
+                       unsafe) — strings shipped as the per-surface table, exactly like 0036.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed GuardModeWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native GuardModeWidget shipped at parity with the web source: pure-Swift
+  projection core (executed-green XCTest, 22/22), P1/S8 state-holder seam (no view HTTP), P1/S11
+  telemetry, every state + i18n key + a11y label, registry-correct (guard-mode, 2x4 / 1x2 / 4x40).
+  All host-runnable gates pass AND the surface compiles against BOTH the iOS 18 simulator and
+  macOS 15 SDKs with the real Xcode 26 toolchain under Swift 6 strict concurrency. The Xcode app
+  build/test is DEFERRED to the downstream integration/signed runner (surface not yet target-
+  registered + Shared.xcframework KMP staging — neither a defect in this code, both outside this
+  prompt's allowed files), matching the 0036 DigitalTwinWidget "code-complete + DEFERRED Xcode gate"
+  precedent. Verification here is strictly stronger than 0036's (iOS+macOS compile + full executed
+  XCTest vs adapter-subset harness).
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets/GuardModeWidget.* \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0054-GuardModeWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add GuardModeWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

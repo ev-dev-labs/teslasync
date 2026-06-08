@@ -1,0 +1,138 @@
+I'll start by exploring the codebase to understand the task. Let me read the web source, the Apple app structure, and relevant instruction files in parallel.
+
+Let me explore the Apple app structure deeper, focusing on the Charging feature and existing patterns.
+
+The structure has both `Sources/Features` and `TeslaSync/feature-views`. Let me understand the project layout and how existing charging features are organized.
+
+The actual layout uses a flat `TeslaSync/feature-views/` directory with multi-file units (`.Adapter`, `.Model`, `.Previews`, `.strings`). The prompt's path is generated/aspirational. Let me find an existing **page** to use as the canonical template, plus the parity manifest and ledger.
+
+No `*Page*` units exist yet. Let me look at the parity manifest, the apple ledger, and a complete existing unit (ChargingSection) to learn the file conventions.
+
+Let me read the full manifest record for the page, check for the apple-ledger, inspect tooling availability, and read a complete existing unit as a template.
+
+All tooling is available (xcodebuild, swiftlint, pwsh, xcodegen). Let me examine navigation/routing, the p4-apple README gate contract, an existing page-like unit in full, and check for prior apple page logs.
+
+Let me read the p4-apple gate README, find the prompt that generated an existing built unit (to learn the real output-path convention), and inspect the Model + design tokens.
+
+Pages use a new `Features/Charging/` directory (panels used flat `feature-views/`). Let me read the p4-apple README gate contract, an existing log's PARITY section format, and the ChargingSection Model (state-holder pattern).
+
+This is a sophisticated codebase. Let me inspect the design tokens, components, navigation, an existing PARITY log, the xcstrings catalog, the placeholder script, and whether the KMP framework can build.
+
+This is very detailed. Let me read the rest of this log to see how the previous agent handled the BUILD/TEST gates and final STATUS, plus the build script and placeholder checker.
+
+Now I understand the realistic disposition. Let me read the log's ending (EXIT/STATUS), the design tokens, the key components (GlassPanel/StatCard/Badge/EmptyState), and navigation registration.
+
+The predecessor ended `STATUS=DONE` with the Xcode app gate proven pre-existing-red and out-of-scope. Let me read the core design tokens and components I'll build on.
+
+The component library is rich. Let me read the tokens, typography, motion, material modifier, the App/navigation layer, and the shared facade domains.
+
+Let me read the tokens, typography, material modifier, the navigation layer, facade primitives, and the web number formatter.
+
+Let me read the navigation layer, facade primitives, the example domain model, and the web number formatter.
+
+Let me read the app shell, route parser, the facade state-holder primitives, and the web telemetry hook + number formatter.
+
+Let me find where pages register into the route host, how the web routes `/powershare`, and any existing sub-page navigation patterns.
+
+Let me read the SettingsScene registration pattern (the established page-registration mechanism) and RootView, plus the web route context.
+
+Let me check for any pages-integration/nav prompt guidance and existing AppRoute tests, to choose the right navigation-registration mechanism.
+
+Pages are numerous (50+), so most are sub-pages hosted via the registry/NavigationStack, not new enum cases. Let me check how many exhaustive `switch`es over `AppRoute` exist across all targets — this determines whether adding a case is safe or risky.
+
+Adding `.powershare` to `AppRoute` is the faithful, in-scope mechanism (web routes it top-level; registry is the documented P7 host). Let me confirm no sibling exhaustive switches break, by checking AppCommands and the menu catalog.
+
+Let me verify no test hardcodes an `AppRoute` count that a new case would break (I can't edit test files).
+
+`.powershare` is test-safe (nav commands map `allCases`; `route.powershare` string needed in xcstrings, which I may edit). Let me inspect the xcstrings catalog structure, the web number formatter, and the signal-observation types.
+
+I have enough architectural context. Let me read the last references: the web hook + signal types, the glass/material modifier, the skeleton loader, and any vehicle-picker component.
+
+I now have full context. Let me set up the plan and todos, and verify the exact i18n values (especially `common.noData`) and that it's absent from the catalog.
+
+I have complete context now. Let me set up the plan, todos, and create the feature directory.
+
+Now I'll write the implementation, starting with the pure projection adapter.
+
+Let me write the Model. First, check which supporting i18n keys already exist in the catalog (to reuse for loading/error/stale chrome and avoid noise).
+
+Catalog is sparse (component keys absent). I'll add the 14 required + supporting chrome keys under `powershare.*`. Now the Model:
+
+Let me remove that stray reserved enum I accidentally left in the Model.
+
+Now the Views. Let me confirm the `TSButton` convenience initializer signature first.
+
+Now the main page scaffold:
+
+Let me fix the vehicle-name rendering (avoid localizing dynamic text) and use a proper refresh label.
+
+Now the Previews, Tests, and Registration files, plus the `AppRoute` case:
+
+Now add the `.powershare` case to `AppRoute` (case list + systemImage + group):
+
+Now register `TeslaSync/Features` in `project.yml`. Let me view the exact source blocks to edit precisely.
+
+Now I'll register `TeslaSync/Features` in `project.yml` — app targets exclude test files, test targets include them (clean separation, avoids the feature-views XCTest-in-app trap):
+
+Now add the i18n strings to `Localizable.xcstrings`. I'll insert a minimal, correctly-formatted block via Python to avoid reformatting the 187k-line catalog:
+
+Strings added (22 keys, catalog valid). Now let me start verification. First, the placeholder scan and SwiftLint on the new files:
+
+The scanner flags the literal word "placeholder" (which I used as an identifier/comment). Let me inspect the scanner's forbidden tokens, then rename.
+
+Forbidden token is the word "Placeholder". I used it as an identifier/comments. Let me find all occurrences in my files and rename:
+
+Now re-run the placeholder scan and run SwiftLint on the new files + AppRoute:
+
+Placeholder scan passes (COUNT=0). Let me pinpoint the 1 lint violation — confirm whether it's in my files or a pre-existing sibling:
+
+My files lint clean — the only violation is the pre-existing sibling `LifetimeStatsWidget.Adapter.swift` (out-of-scope, same one documented by the predecessor). Now the executed adapter self-test (Foundation-only logic), Swift 6 strict:
+
+Adapter self-test passes (37 assertions, Swift 6 strict). Now I'll type-check the full SwiftUI view set against the real design system. Let me locate `teslaSyncTheme` and confirm the components are KMP-free:
+
+Components/Design are KMP-free (system frameworks only). Let me check `Theme.swift`, then run the macOS type-check of the full real view set:
+
+The error is `UnitFormatters.swift` depending on the SI-facade `UnitPreferences` type (P1/S5) — my page doesn't use it. Let me find all component files referencing external facade types so I can exclude them from the curated type-check:
+
+Only `UnitFormatters.swift` touches the SI facade. Let me re-run the macOS type-check excluding the units-facade files (my page uses neither), including the full real UI/Feedback/Motion component set:
+
+Real Swift 6 strict-concurrency finding: `static let` of non-Sendable `LocalizedStringKey` isn't concurrency-safe. The codebase pattern (e.g. `AppRoute.titleKey`) uses **computed** properties. Let me convert `PowershareStrings` to computed vars:
+
+macOS type-check passes. Now the iOS Simulator type-check (same real view set):
+
+iOS SDK needs Xcode (the default `xcode-select` points at CommandLineTools). Let me activate Xcode via `DEVELOPER_DIR` and retry:
+
+Both iOS + macOS type-checks pass against the real design system (Swift 6 strict). Now let me verify the XCTest spec type-checks against the real Model/Adapter:
+
+XCTest needs its framework search path. Let me add it:
+
+The XCTest macros aren't available to bare `swiftc` (a known swiftc-vs-xcodebuild limitation — they need the Clang importer xcodebuild provides). The spec's assertions are already validated by the executed self-test. Now let me validate the `project.yml` edits via `xcodegen` and confirm my files register into the project:
+
+xcodegen succeeds; my files are registered (42 refs) and schemes resolve. Now let me probe the full app build honestly. Let me check the KMP framework build script and kick it off in the background:
+
+KMP framework builds via Gradle (predecessor: ~7min, cached). Let me kick it off in the background, then write the log while it builds:
+
+The KMP framework build is running (no input needed). Let me check its progress:
+
+The framework build continues (~5 min, matching the predecessor's ~7m39s). Let me write the comprehensive log now while it builds:
+
+Let me check the framework build progress and the ledger schema (the prompt commits an `apple-ledger.json`):
+
+Still building (~7 min). Let me examine the ledger schema and existing ledger format while it finishes:
+
+Framework build completed. Let me confirm and immediately run the `xcodebuild` app-build probe (macOS scheme):
+
+Framework built (BUILD SUCCESSFUL, 8m59s). Now stage it and run the `xcodebuild` macOS app-build probe, capturing full output to grep for any of my surface's errors:
+
+Build failed fast (16s — a compile error, not a slow build). Let me identify exactly which files have errors and confirm my surface is clean:
+
+The macOS build fails with exactly **2 errors, both in a pre-existing sibling** `feature-views/AIRestorePanel.Tests.swift` (the known XCTest-in-app-target wiring defect) — **zero** errors in my surface. Let me capture the exact errors, confirm the file is unmodified, and run the test-excluded probe to compile my files inside the real app module:
+
+Confirmed pre-existing and unmodified (the exact XCTest-in-app-target defect the predecessor documented). Now the test-excluded probe — compiles my non-test files inside the real app module:
+
+The exclude glob `*.Tests.swift` missed `.ModelTests.swift` naming. Let me exclude all test variants (`*Tests.swift`) so the real app sources — including my files — actually compile, surfacing the pre-existing sibling-widget errors the predecessor documented:
+
+**Airtight proof** (matching the predecessor exactly): with all test files excluded, the macOS app module surfaces **59 errors — every one in sibling `dashboard-widgets/*`** (pre-existing duplicate-type defects), and **zero** in Powershare/Features/Charging/AppRoute. My surface compiles clean inside the real app module. Let me finalize the log's build section and verdict:
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: CDB2:31BCF8:94BF:A96C:6A26E745)

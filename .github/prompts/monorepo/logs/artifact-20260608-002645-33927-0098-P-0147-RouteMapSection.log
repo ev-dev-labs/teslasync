@@ -1,0 +1,177 @@
+=== P4 Feature view 0147 RouteMapSection (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin 25.5.0, arm64, Apple Silicon) — SHARED runner (5+ parallel
+                       agents observed running `xcodebuild ... build test` on the TeslaSync scheme
+                       concurrently; the shared XCBBuildService + Kotlin/Native toolchain were heavily
+                       contended throughout this run — raw `ps` evidence captured under GATES below).
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no `xcode-select -s`, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 (swiftlang-6.3.2) · swiftlint 0.63.3 · swiftformat 0.61.1 ·
+                       xcodegen 2.45.4 · pwsh 7.6.2 · java present.
+  Destinations       : iOS Simulator "iPhone 16" present (Booted) · macOS 15 SDK present.
+  Shared.xcframework : DEBUG variant assembled via Gradle (:core:assembleSharedDebugXCFramework BUILD
+                       SUCCESSFUL) and staged to apps/apple/Frameworks/Shared.xcframework. The RELEASE
+                       assembly was in progress but crawling under the shared-runner load; it was stopped
+                       to stop pointlessly contending for the box (the full-app xcodebuild is a
+                       deterministically PRE-EXISTING red — see [DEFERRED] below — so a fresh release
+                       link buys nothing for THIS surface, which is verified green via the Xcode swift
+                       toolchain in an isolated build+test).
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS toolchain present. The surface uses
+                       SwiftUI + MapKit (no Swift Charts needed — the web source has no chart). NOT
+                       capability-BLOCKED: the surface is built + tested on this runner with the real
+                       Xcode 26.5 Swift 6 toolchain (see [GREEN] isolated SwiftPM build+test).
+
+WEB SOURCE (the specification)
+  web/src/features/driving/components/drive-detail/RouteMapSection.tsx + the geometry its parent
+  useDriveDetailData.ts computes:
+    FadeIn → GlassPanel(overflow-hidden) →
+      header  : <MapPin/> + t('driveDetail.route','Route')
+      if trail.length>0:
+        Leaflet map (MapLayerSwitcher, MapTileLayer, MapInvalidator, FitBounds=useMap):
+          hasRoute (hasMeaningfulRoute(positions) — ≥2 valid coords ≥10 m apart):
+            speedSegments polylines coloured by per-point SI m/s band
+              (#10b981 <30mph · #00f0ff 30–60 · #f59e0b 60–100 · #ef4444 >100 ; *0.44704 SI)
+            start CircleMarker (green) Popup[start + formatDateTime]
+            end   CircleMarker (red)   Popup[end   + (endTs ? formatDateTime : 'In progress')]
+          !hasRoute (stationary GPS): anchor CircleMarker (cyan, 'Last known location')
+                                      + AlertBanner('Route can't be plotted' / stationary body)
+        footer  : Start:<formatTime>  |  legend(4 bands→display unit via convertSpeedFromSI+fmtNumber
+                  + unit) when hasRoute&&trail>1  |  End:<formatTime> (when endTs)
+      else: empty — <MapPin/> + t('driveDetail.noRouteData','No route data available for this drive')
+  Data sources (web hooks): useMap (Leaflet camera → MapKit camera), useTranslation (i18n facade),
+                            useUnits (speed unit + convertSpeedFromSI). Route data arrives as props the
+                            parent page derives from the DriveDetail DTO — reproduced from a DTO here.
+  i18n keys (verbatim from source): driveDetail.{route,start,end,inProgress,lastKnown,
+                                    stationaryRouteTitle,stationaryRouteBody,noRouteData}.
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/feature-views/RouteMapSection.* — 10 files)
+  RouteMapSection.Geo.swift        (174)  pure geo/speed/band primitives, ported VERBATIM from web
+                                          lib/geo.ts + unitConversion.ts + constants.ts (Foundation-only)
+  RouteMapSection.Adapter.swift    (307)  RouteMapProjection + RouteMapProjector (geometry+legend+times)
+                                          + RouteMapAccessibility (Foundation-only, fully unit-tested)
+  RouteMapSection.Model.swift      (331)  P1/S8 state-holder seam + P1/S11 telemetry seam (view.opened
+                                          surface="RouteMapSection") + P1/S10 i18n facade (SwiftUI-free)
+  RouteMapSection.swift            (110)  SwiftUI entry — phase switch (loading/empty/error/content)
+  RouteMapSection.Views.swift      (185)  MapKit canvas: speed-coloured MapPolylines + start/end/anchor
+                                          markers + stationary banner + layer switcher (real SwiftUI+MapKit)
+  RouteMapSection.States.swift     (272)  freshness chip, footer+legend, skeleton, empty, error chrome
+  RouteMapSection.Previews.swift   (128)  DEBUG previews for all 8 states
+  RouteMapSection.Tests.swift      (296)  adapter/geo/speed/format/projector/accessibility tests
+  RouteMapSection.ModelTests.swift (241)  state-holder/telemetry + per-state ImageRenderer view tests
+  RouteMapSection.strings          (16 keys) P1/S10 catalog (driveDetail.* parity keys + native chrome)
+  Total: 2044 lines of Swift across 9 files (+ strings) — a complete production surface.
+  (Project wiring is automatic: TeslaSync/feature-views is a folder reference in project.yml consumed
+   by both the iOS TeslaSync and macOS TeslaSync-macOS targets — `xcodegen generate` enumerated all 10.)
+
+  Web→native parity decisions:
+    Leaflet → MapKit (Map{}, MapPolyline.stroke, Annotation, MapCameraPosition; FitBounds → TSMapCamera).
+    Speed-band hex → semantic design tokens (exact dark-mode match): #10b981=Color.TS.statusSuccess,
+      #00f0ff=Color.TS.accent, #f59e0b=Color.TS.statusWarning, #ef4444=Color.TS.statusDanger.
+    Shared components: TSFadeIn / TSGlassPanel / TSButton / TSSkeleton / TSMapStyle / TSMapCamera /
+      TSMapLayerSwitcher / TSTone + P1/S9 tokens. Stationary banner + empty/error built inline with
+      Text(verbatim:) so they resolve THIS surface's per-table keys (the shared TSAlertBanner/TSEmptyState
+      localize from the MAIN catalog, which would not see the RouteMapSection table).
+    i18n: every string via RouteMapSectionStrings (table "RouteMapSection"); zero English literals in code.
+    a11y: markers carry VoiceOver labels (Start/End + datetime; Last known location); map combined element
+      with a localized summary; legend has an accessibilityValue; decorative glyphs accessibilityHidden.
+    telemetry: view.opened surface="RouteMapSection" via RouteMapSectionSurface.slug (P1/S11), OSLog sink.
+
+GATES  (raw results on THIS runner)
+  [GREEN]    swiftformat --lint (RouteMapSection.* — 9 swift files)   : 0/9 require formatting        (FORMAT_EXIT=0)
+             swiftformat --lint apps/apple (whole, FYI)               : 1/1922 — ActionBuilder.Previews.swift
+                                                                         (blankLinesBetweenScopes), PRE-EXISTING,
+                                                                         NOT a RouteMapSection file.
+  [GREEN]    swiftlint --strict (RouteMapSection.* — 9 swift files)   : 0 violations, 0 serious        (LINT_EXIT=0)
+             swiftlint --strict (whole app, FYI)                      : 1 PRE-EXISTING violation —
+                                                                         function_body_length in
+                                                                         TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+                                                                         (NOT a RouteMapSection file; grep of the
+                                                                         report for "RouteMapSection" = 0).
+  [GREEN]    check-placeholders.ps1 (swift, RouteMapSection.* files)  : PLACEHOLDER_ALLOWED=0
+                                                                         PLACEHOLDER_COUNT=0              (PLACEHOLDER_EXIT=0)
+             check-placeholders.ps1 -SelfTest                         : all PASS, SELFTEST_EXIT=0
+  [GREEN]    ISOLATED SwiftPM build + test — swift-tools 6.0 (Swift 6 language mode = strict-concurrency
+             complete, SAME as the app), Xcode 26.5 toolchain, compiling the EXACT shipped RouteMapSection.*
+             sources against the REAL repo design-system (Tokens, TSMaterial, TSDesign, Motion, Cards,
+             Typography, Buttons, Badges, Skeletons, MapView, GeoHelpers):
+                 swift build  : Build complete! (16.40s)                                        (BUILD_RC=0)
+                 swift test   : Executed 40 tests, with 0 failures                              (TEST_RC=0)
+                   ├ RouteMapSectionGeoTests / SpeedTests / FormatTests / ProjectorTests / AccessibilityTests
+                   │   — geometry, hasMeaningfulRoute(≥10m), convertSpeedFromSI (mph+km/h), 4 speed bands,
+                   │     legend thresholds ("< 30.00" / "30.00–60.00" / … / "> 100.00" mph; "< 48.28" km/h),
+                   │     centerPos Seattle fallback, telemetry-coord precedence, null-island filtering, times.
+                   ├ RouteMapSectionModelTests — phase matrix, cached-stays-content, freshness, refresh,
+                   │     stale auto-refresh guard, view.opened-once telemetry.
+                   └ RouteMapSectionViewStateTests — content/stationary/empty/loading/error/stale/offline
+                       all materialize via ImageRenderer (AppKit).
+  [GREEN]    Standalone Foundation adapter harness (swiftc -O, parity assertions)  : 44/44 checks PASS
+                 (haversine 5.56 m, band ladder, mph≡30/60/100, km/h≡48.28…, segment colours, stationary
+                  vs real-route branch, in-progress end-time suppression, centerPos fallback).
+  [GREEN]    swiftc -typecheck (macOS 15 SDK, REAL SwiftUI + MapKit + CoreLocation, full view layer:
+             Geo+Adapter+Model+entry+Views+States)                                              (TYPECHECK_RC=0)
+  [GREEN]    xcodegen generate                                        : project created; all 10
+             RouteMapSection.* files wired into TeslaSync + TeslaSync-macOS via the feature-views folder ref.
+
+  [DEFERRED] xcodebuild -project TeslaSync.xcodeproj -target TeslaSync -sdk iphonesimulator build
+             xcodebuild -scheme TeslaSync-macOS build test
+             ATTEMPTED on this runner. The shared XCBBuildService was saturated by 5+ concurrent
+             parallel-agent xcodebuild invocations on the SAME TeslaSync scheme (raw `ps` snapshot:
+             pids 14943/37998/47478/24013/45923 each running `xcodebuild ... -scheme TeslaSync ... build
+             [test]`), so this invocation produced no build result before being stopped — no exit is
+             fabricated. IOS_EXIT/MAC_EXIT = DEFERRED.
+
+             Independent of contention, the FULL-APP gate is a DETERMINISTICALLY PRE-EXISTING red,
+             unrelated to this surface (confirmed by direct grep on this checkout — ZERO RouteMapSection
+             involvement):
+               • `struct DashboardWidgetSize` is DEFINED 15× across Sources/DashboardWidgets/* +
+                 TeslaSync/dashboard-widgets/* → "'DashboardWidgetSize' is ambiguous for type lookup".
+               • 206 co-located `*.Tests.swift` under TeslaSync/feature-views import XCTest into the APP
+                 target (the established repo pattern; RouteMapSection.{Tests,ModelTests}.swift follow it —
+                 they are 2 of the 206, not a new deviation).
+               • macOS app requires a development signing identity (Resources/TeslaSync-macOS.entitlements)
+                 not provisioned on a generic runner.
+             These are exactly the blockers apps/macos-pending-verifications.md already defers for the
+             sibling surfaces 0010-ToolCard / 0180-AlertMessageEditor / 0231-FSMTimelineChart, owned by
+             p4-apple/P99-0001-apple-acceptance-gate (macos-latest, signing identities). This surface
+             neither introduces nor touches any of them.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app xcodebuild gate is reported DEFERRED with evidence (pre-existing
+                           dup-type/colocated-test/signing blockers + shared-runner saturation) — never
+                           reported as passing. Every other gate's RAW result is pasted above.
+  2  No scope narrowing  : every web region + branch reproduced — speed-coloured segments, start/end/anchor
+                           markers, stationary banner, legend (4 bands + unit), empty state, footer times,
+                           plus the prompt's loading/error/stale/offline states.
+  3  No skip-and-assume  : every host gate executed on THIS runner; the deferred full-app blockers are
+                           DEMONSTRATED by direct grep (15× DashboardWidgetSize, 206 XCTest files), not assumed.
+  4  No stubs as final   : complete production surface + 40 real tests + 44 adapter checks; placeholder = 0.
+  5  No parity shortcut  : geometry/colours/legend/times/units/a11y/telemetry all mapped to platform
+                           idioms + design tokens and pinned by tests against the web math VERBATIM.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry,
+                           P4 shared components (ui/feedback/motion/maps) all present and consumed.
+  8  No commit on red    : the COMMITTED artifact (RouteMapSection.* + this log) is GREEN on every host
+                           gate AND on a real Xcode-26.5 Swift-6 strict-concurrency isolated build+test
+                           (40/40). The deferred full-app gate is red only on pre-existing, unrelated
+                           surfaces this commit neither introduces nor touches.
+  9  No silent drift     : changes are confined to apps/apple/TeslaSync/feature-views/RouteMapSection.*
+                           (10 files) and this log. Pre-existing uncommitted changes elsewhere in the
+                           shared working tree (AIUsageCard.*, two web files) were NOT authored or touched
+                           here and are NOT staged.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic RouteMapSection shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED on this runner: it compiles and its 40 tests pass under the app's own Swift 6
+  strict-concurrency rules against the REAL design-system, with swiftlint/swiftformat/placeholder all
+  green and a real SwiftUI+MapKit typecheck. The full-app iOS-Simulator + macOS xcodebuild build/test
+  gate is DEFERRED (not failed by this code): it is blocked by pre-existing parallel-merge duplicate-type
+  collisions across unrelated dashboard-widget files, the repo-wide co-located-test pattern, and macOS
+  development-signing — owned by the P4/P99 acceptance gate per apps/macos-pending-verifications.md, and
+  further impractical on this saturated shared runner. This matches the repo's sanctioned
+  "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

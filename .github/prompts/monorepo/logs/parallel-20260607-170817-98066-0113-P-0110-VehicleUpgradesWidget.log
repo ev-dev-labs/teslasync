@@ -1,0 +1,134 @@
+I'll start by exploring the environment and the web source spec to understand what needs to be built.
+
+Key finding: **No full Xcode on this runner** — only Command Line Tools (`xcodebuild` errors out), and `simctl` is unavailable. swiftlint/swiftformat ARE available. Let me explore the existing Apple app structure deeply before deciding the path forward.
+
+There's a rich existing widget ecosystem. Let me study the conventions by examining the full widget directory and a representative complete sibling widget (MaintenanceTracker — similar list-style, no charts).
+
+144 files for ~20 widgets — consistent multi-file split per widget. `MaintenanceTrackerWidget` is the best analog (list-style, no charts). Let me read its complete file set plus project.yml to learn the conventions.
+
+Excellent, clear conventions. Let me read the remaining MaintenanceTracker files (Builder/Content/Previews/Tests/strings), plus the registry types and design tokens.
+
+Let me read the Previews, Tests, registry types, design tokens, and project config.
+
+Now let me read the registry types, design tokens, project config, the placeholder checker, and the web hooks/types for the data I'm modeling.
+
+Let me read the design tokens, shared components I'll use, project config, the placeholder checker, and the web hooks/types I'm modeling.
+
+Let me read the full project.yml, placeholder patterns, and design tokens.
+
+Now let me check Swift framework availability (SwiftUI/Charts/MapKit) and read the design tokens + web hook/type definitions I need to model faithfully.
+
+SwiftUI/Charts/MapKit all typecheck against the macOS SDK — real verification is possible. Let me read the design tokens (generated), the shared components I'll use, and the web hook/types I'm modeling.
+
+Let me read the color/font tokens and the web hooks/types I need to model faithfully.
+
+Let me read `WidgetShell.tsx` (shell states to mirror) and the registry metadata, and confirm no native file exists yet.
+
+I have the full picture. Let me check the lint/format configs and verify no symbol-name collisions for my planned types before writing.
+
+I have everything needed. Let me set up tracking and the plan, then build the 8 files following the established `MaintenanceTrackerWidget` template.
+
+Now I'll build the widget. Starting with the domain models and the pure adapter (the parity-critical core), following the `MaintenanceTrackerWidget` template precisely.
+
+Let me verify `useDateFormat().formatDate` formatting to keep the nearest-expiry date parity-faithful, then write the Builder.
+
+`formatDate` uses `{year:'numeric', month:'short', day:'numeric'}` → `.medium` ("Apr 4, 2024"), matching the sibling convention. Now the Builder:
+
+Models + Builder are Foundation-only. Let me compile and run them now with a parity harness for real verification before continuing.
+
+Need `main.swift` for top-level code. Let me fix and rerun.
+
+All 31 parity assertions PASS — the core adapter is verified. Let me update tracking and create the state-holder Model file.
+
+Now the main surface view with chrome and state switching:
+
+Now let me thread the currency symbol through the projection (web hardcodes `$`, but I'll keep the view literal-free), then write the content body.
+
+Now the content body (compact + standard layouts, upgrade rows, share-links section):
+
+Now the Previews, Tests, and strings catalog:
+
+Now the i18n strings catalog:
+
+All 8 files created. Now the verification phase — first re-run the parity harness against the updated models, then format + lint.
+
+Parity holds. Now format + lint my new files.
+
+All auto-fixable. Let me apply swiftformat (write), then re-verify the adapter still compiles, then run swiftlint --strict.
+
+swiftformat clean. Let me verify the reformatted Builder still compiles & passes parity (the `redundantReturn` rewrite touched `parseUpgrades`), then run swiftlint.
+
+Adapter still passes after reformat. Now swiftlint --strict on my files:
+
+swiftlint --strict: **0 violations**. Now check placeholders (needs pwsh) and assess the whole-tree lint/format state the gate would see.
+
+check-placeholders returned EXIT=0. Let me confirm it actually scanned my files (the gate passes a path *prefix*, not a dir) and sanity-check the patterns directly.
+
+Confirmed: the script treats a non-existent literal path as clean. To get an *honest* read on my surface, let me scan a temp dir containing exactly my files.
+
+My surface is placeholder-clean and lint/format-clean. Now let me attempt a **real scoped type-check of the SwiftUI view files** against the actual design-token + shared-component sources (the highest-signal verification short of full Xcode). First, check what my UI deps themselves require.
+
+Good — my UI deps only need SwiftUI + the design tokens. Let me do a scoped type-check of my view code against the **real** token/component sources (shimming only the 2 registry value types I already matched exactly).
+
+Only errors are in the *sibling* `_Skeletons.swift` (its composite skeletons use `TSCard` from another file) — not my code. Let me shim `TSCard` and re-run.
+
+Core SwiftUI view code **type-checks cleanly** against the real tokens + components. Now the Previews file (DEBUG, `#Preview` macro):
+
+Previews are blocked **only** by the missing Xcode `#Preview` macro plugin (an environment limitation — the same macro every sibling widget uses), not a code defect. Now let me type-check the Tests file (XCTest is in the SDK) by compiling it with my sources as one module.
+
+XCTest isn't in the CommandLineTools SDK. Let me verify the test *logic/references* compile by type-checking against a faithful XCTest shim (proves the model/registry/a11y test code calls my real APIs correctly).
+
+The `import XCTest` line remains. Let me neutralize both import lines for the isolated check:
+
+Just needs the view struct in scope. Let me run the complete combined type-check: all my source files + Tests against the real tokens/components.
+
+Those 3 errors are shim artifacts: stripping `import XCTest` removed Foundation (the real file gets it transitively), plus the generic shim confuses `\.id` inference. Let me add `import Foundation` to the test copy and give the shim both XCTest overloads, then re-check.
+
+**Everything type-checks clean** — all source + test files against the real tokens/components. Now let me check whole-tree lint/format (as the gate runs them) to know the true state.
+
+swiftformat whole-tree clean. swiftlint --strict found **1 pre-existing violation** somewhere. Let me confirm it's not in my files.
+
+The single violation is in a **sibling** (`LifetimeStatsWidget.Adapter.swift`, out-of-scope, pre-existing) — not my files. I must not touch it. Let me verify the log directory and the prompt path, then assemble the gate log with real captured evidence.
+
+Let me check the sibling log format to match convention, then assemble my gate log with real evidence.
+
+Let me read the tail of the sibling log to match the exact ending convention (EXIT/STATUS).
+
+I see the established predecessor disposition (0061/0036): plain SwiftUI is available + host-proven, so the surface is **code-complete + host-validated**, with only the Xcode app build/test **DEFERRED** to a full-Xcode CI runner (→ EXIT=0/STATUS=DONE). My surface is analogous (no Charts/MapKit). Let me capture the real gate command outputs/exit codes to author an authentic log.
+
+All real evidence captured. Let me gather file metrics (line counts, i18n key coverage) for the log.
+
+All 11 parity keys present; every code key resolves in the catalog; all files ≤345 lines. Let me get the git context and author the gate log.
+
+Now I'll author the comprehensive, honest gate log.
+
+Log authored. Let me do a final clean re-verification of my surface, then commit.
+
+Surface is format- and lint-clean (0/0). Let me update tracking, clean temp files, stage exactly my files + log, and commit.
+
+Exactly my 8 surface files + the log are staged. Now commit:
+
+Committed cleanly. Let me mark complete and do a final confirmation of the commit contents.
+
+All 10 todos done; commit `853c8277` contains exactly the 8 surface files + the gate log (1960 insertions), and the log closes with `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...ashboard-widgets-0110-VehicleUpgradesWidget.log | 195 ++++++++++++
+ .../VehicleUpgradesWidget.Builder.swift            | 156 ++++++++++
+ .../VehicleUpgradesWidget.Content.swift            | 256 +++++++++++++++
+ .../VehicleUpgradesWidget.Model.swift              | 272 ++++++++++++++++
+ .../VehicleUpgradesWidget.Models.swift             | 230 ++++++++++++++
+ .../VehicleUpgradesWidget.Previews.swift           | 187 +++++++++++
+ .../VehicleUpgradesWidget.Tests.swift              | 345 +++++++++++++++++++++
+ .../VehicleUpgradesWidget.strings                  |  53 ++++
+ .../dashboard-widgets/VehicleUpgradesWidget.swift  | 266 ++++++++++++++++
+ 9 files changed, 1960 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0110-VehicleUpgradesWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleUpgradesWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleUpgradesWidget.Content.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleUpgradesWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleUpgradesWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleUpgradesWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleUpgradesWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleUpgradesWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/VehicleUpgradesWidget.swift

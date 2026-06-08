@@ -1,0 +1,108 @@
+I'll start by exploring the repository structure and checking tool availability, since this task requires Apple/Xcode tooling.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. However, `swift` 6.3.2, `swiftlint`, and `swiftformat` are available. Let me explore the Apple app structure and the web source before deciding capability.
+
+XcodeGen-based project (`project.yml`, no committed `.xcodeproj`). Let me read the web source and explore the Apple app's internal structure.
+
+Now let me examine the existing surface precedents (`dashboard-widgets`, `feature-views`) and key infrastructure to follow established patterns.
+
+The surface pattern is multi-file with a shared `<Name>.` prefix (`.swift`, `.Model`, `.Adapter`, `.Views`, `.Tests`, `.Previews`, `.strings`). Let me study the infrastructure (Design tokens, SharedFacade, i18n, diagnostics) and a presentational precedent, plus how `project.yml` includes these files.
+
+Critical build-config finding: `project.yml` includes `TeslaSync/dashboard-widgets` and `TeslaSync/feature-views` but **not** `TeslaSync/shared-surfaces`. And `xcodebuild` needs full Xcode. Let me verify the exact toolchain situation and read the core infra + a presentational precedent.
+
+Major finding: **full Xcode IS at `/Applications/Xcode.app`** (just not `xcode-select`'ed), `xcodegen` and `pwsh` are installed, and SwiftUI+Charts+MapKit **typecheck successfully** via CLI. Let me verify the real toolchain works via `DEVELOPER_DIR` override and establish the baseline (simulators, KMP framework).
+
+Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 simulator is **booted**. But `Shared.xcframework` (KMP) isn't prebuilt and needs a Gradle/Kotlin build. Since `Select` is pure-presentational (no `Shared` dependency), let me map its real dependencies (Design tokens, i18n facade, diagnostics) and check KMP feasibility.
+
+Java 17 + gradlew present (KMP build feasible but slow). Now let me learn the exact conventions: the telemetry `view.opened` emitter, the i18n facade, and the directly-relevant native field/picker components.
+
+Now I understand the token system and field-chrome conventions. Let me read the typography/picker components, a full presentational surface (telemetry + i18n table + tests + previews), and the feature-view telemetry seam.
+
+The atomic `TSSelect` already exists in `Components/UI/Pickers.swift` (out of scope — owned by the component-library prompt). My job is the **surface** `Select` that reproduces the full web composition + states + telemetry + i18n. Let me read the strings-helper/adapter/test/preview patterns and the telemetry seam.
+
+Let me resolve a critical question: how co-located `.Tests.swift` files (which `import XCTest` + `@testable import TeslaSync`) compile when their directory is in the app target. I'll check the pending-verifications doc, CI, and the strings/telemetry helpers.
+
+This is the key context. The `macos-pending-verifications.md` documents the **established precedent**: prior P4 Apple surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) verify the surface green via **isolated SwiftPM build+tests + real iOS-18/macOS-15 `swiftc -typecheck` + swiftlint/swiftformat/placeholder**, while the full-app `xcodebuild build test` is **BLOCKED by pre-existing, unrelated parallel-merge collisions** (`DashboardWidgetSize` ×15, 152 co-located XCTest files, unstaged KMP framework, signing) and deferred to the macOS acceptance gate.
+
+Let me read the telemetry seam, the i18n strings helper, and the design tokens to mirror them exactly.
+
+Now I have the telemetry seam and i18n facade patterns. Let me read the design tokens API, the surface view wiring (surfaceSlug + telemetry on appear), and the Feedback state components I may reuse.
+
+I now have the full pattern. Before writing, let me read the lint/format configs and the placeholder checker — critical because the web `Select` has a `placeholder` prop and I must ensure the placeholder-checker doesn't flag legitimate usage.
+
+Critical: `swiftlint`'s `included:` and the placeholder scanner. Let me read the placeholder patterns (the web `Select` has a `placeholder` prop — I must know if that word is flagged) and the AddressInput envelope/views to mirror the freshness/connection pattern.
+
+Key constraint discovered: **`"Placeholder"` is a forbidden pattern (case-insensitive)** in the common set. So my Swift code must avoid the word "placeholder" entirely — I'll use SwiftUI-idiomatic **`prompt`** (as AddressInput does), and build the loading skeleton manually (no `.redacted(.placeholder)`). Let me read the freshness/connection chip + field rendering to mirror the stale/offline envelope.
+
+I now have a complete picture of every convention, token, gate, and constraint. Key constraints locked in:
+- **`"Placeholder"` is a forbidden token** (case-insensitive) → I'll use SwiftUI-idiomatic **`prompt`** everywhere, and build the loading skeleton manually (no `.redacted(.placeholder)`).
+- **Full-app `xcodebuild` is BLOCKED** by pre-existing infra (unstaged KMP `Shared.xcframework`, 150+ co-located XCTest files, `DashboardWidgetSize` ×15, signing) — documented in `macos-pending-verifications.md`. The accepted precedent verifies surfaces via **isolated SwiftPM build+tests + dual-SDK `swiftc -typecheck` + swiftlint/swiftformat/placeholder**.
+
+Let me set up tracking and the directory.
+
+Now I'll write the surface. Starting with the model (seams, i18n, telemetry, state holder):
+
+I added a `fieldLabel` field to `SelectCopy`. Let me update `SelectStrings.copy()` in the Model to match.
+
+Now the presentational chrome (`Select.Views.swift`) — runtime-string styling keeps the surface dependent only on tokens (minimal isolation):
+
+Now the load-state envelope (`Select.States.swift`) — manual skeleton (no `.redacted(.placeholder)`), friendly empty, error+retry:
+
+Now the main surface view (`Select.swift`):
+
+Now the previews (one per state) — `Select.Previews.swift`:
+
+Now the comprehensive XCTest suite (`Select.Tests.swift`):
+
+Now the i18n strings table (`Select.strings`):
+
+All 8 files created. Let me update tracking and begin verification — first auto-format with the repo's swiftformat config, then lint.
+
+swiftformat is clean (0/7). The swiftlint run used the repo `included:` (which excludes shared-surfaces), so it linted 1909 pre-existing files (1 pre-existing violation, not mine) and skipped my files. Let me lint my files explicitly with the same rules via a scoped config.
+
+One `function_body_length` violation in `project()`. Let me refactor it into smaller helpers.
+
+Now re-run format + scoped lint to confirm clean:
+
+Format + lint both clean (0 violations across 7 files). Now the placeholder gate:
+
+Found it — my Adapter header comment contains the literal "placeholder" (from the web prop name). Let me find every case-insensitive occurrence across the Swift files and reword.
+
+Only one occurrence. Let me reword it to avoid the forbidden token:
+
+Re-running the placeholder gate (default all-languages, on the actual surface dir):
+
+Placeholder gate clean (COUNT=0, ALLOWED=0). Now the **isolated SwiftPM build + tests** (the precedent's primary surface-level proof). Let me scaffold a package with a `TeslaSync` library target (vendored Tokens + my surface) and run `swift test`.
+
+Isolated build succeeds under Swift 6 strict concurrency (incl. previews). Now run the tests:
+
+Two argument-order errors in the test file (Swift requires declared order: `options` before `selected`). Let me fix both call sites:
+
+swiftformat reflowed those lines. Let me view the current text:
+
+Now I can fix both with the exact text:
+
+Re-copy the fixed test file and re-run the isolated tests:
+
+All **29 tests pass** under Swift 6 strict concurrency. Now the **dual-SDK `swiftc -typecheck`** (iOS 18 + macOS 15) — the new platform-compatibility evidence:
+
+iOS 18 typecheck passes (incl. previews/macros). Now macOS 15:
+
+Both dual-SDK typechecks pass. Let me re-verify lint/format on the final files (post test-edit) and gather the full-app blocker evidence.
+
+Final files are lint/format clean. Blockers confirmed (all pre-existing, outside allowed files): **Shared.xcframework unstaged**, **261 co-located XCTest files** in the app target, **`DashboardWidgetSize` ×15**, and shared-surfaces not yet registered centrally. Let me confirm the project spec generates and check for a timeout tool for a bounded xcodebuild attempt.
+
+`xcodegen generate` succeeds. Let me verify enumeration correctly (my files vs a registered file) and run a bounded full-app build to capture the real pre-existing compile blockers:
+
+**Decisive evidence captured.** The full-app build fails fast: `error: There is no XCFramework found at .../Frameworks/Shared.xcframework` → BUILD FAILED (rc 65). Surface files are not enumerated (central registration is a deferred step). Let me clean the generated project artifact and review what will be committed.
+
+The working tree has **pre-existing unrelated changes** (`AIUsageCard.*`, two web files) that are **not mine** — I'll stage only my `Select.*` files + the log. Now let me write the gate log:
+
+Now final verification on the committed files and stage only my surface + log:
+
+All final gates green; staged set is exactly my 8 `Select.*` files + the log (pre-existing unrelated changes excluded). Committing:
+
+Commit succeeded (`566c71452`, 9 files, 1841 insertions — exactly my surface + log). Let me clean up temp artifacts and confirm the repo tree is tidy:
+
+Task complete. Final summary:
+

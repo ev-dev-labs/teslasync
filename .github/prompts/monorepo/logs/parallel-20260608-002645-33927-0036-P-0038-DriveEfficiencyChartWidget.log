@@ -1,0 +1,128 @@
+I'll start by exploring the repository structure to understand the web source and the existing Apple app architecture.
+
+Let me read the web source and explore the Apple app structure in parallel.
+
+Now let me explore the Apple app structure, especially existing dashboard widgets and the P1 shared layers.
+
+There are 416 existing widget files. Let me study the most relevant examples — a drives-based widget and chart widgets — plus the shared facade layers.
+
+`SpeedProfileWidget` is the closest analog (chart-based driving widget). Let me read its full file set plus the drives-based `RecentDrivesWidget` for the data source pattern.
+
+Excellent pattern. Let me read the remaining SpeedProfileWidget files (Builder, Models, Previews, Tests, strings) plus the shared dashboard primitives and design tokens.
+
+Let me read the Previews, strings, the shared dashboard primitives, and design tokens.
+
+Multiple files appear to define the dashboard primitives. Let me understand how duplicate definitions are avoided across these parallel-built widgets.
+
+I need to understand the duplicate-definition handling. Let me inspect how these are defined and check the project structure.
+
+All dashboard-widgets compile into one target, yet 13-15 files redefine the primitives. This is a key constraint. But first, the gating question: is the Apple toolchain even available on this runner? Let me check.
+
+Critical finding: **full Xcode is not installed** (only Command Line Tools), and **no iOS simulators** are available — so the mandated `xcodebuild ... build test` gate steps cannot execute. However, `swift` 6.3.2, `swiftlint`, `swiftformat`, and `xcodegen` ARE available.
+
+Per the prompt's capability clause this means the final STATUS will be BLOCKED — but the Honesty Covenant forbids stubs/scope-narrowing, so I will still ship the **complete, production-quality** surface and verify everything I can (swiftlint, swiftformat, host-compiled adapter tests, placeholder check). Let me gather the remaining reference details: the dashboard primitives and design tokens.
+
+Let me read the full design tokens file and find the remaining primitives (TSSpacing, TSRadius, Font.TS, TSSkeleton) plus the web chart palette to match series colors.
+
+Let me find the web chart palette's `series[0]`, the `TSSkeleton` component, and confirm the `Drive` type fields used by the web source.
+
+Let me confirm the distance conversion factors and verify no `DriveEfficiencyChartWidget` files already exist.
+
+Let me check the web date-format facade and how an existing Swift time-series widget formats date labels.
+
+I have everything needed. Let me quickly test whether `swiftc` can import SwiftUI and Charts on this runner (determines supplementary verification), then set up tracking.
+
+`swiftc` can type-check SwiftUI + Charts against the CLT SDK (EXIT=0) — so I can do real type-check verification of the view code plus run the pure adapter tests. Let me read the web shared widget helpers (`WidgetShell`, `WidgetChartSummary`) to faithfully reproduce compact/empty behavior, then set up tracking.
+
+I now have complete understanding of the web source and the established native pattern. Let me set up tracking and write the plan.
+
+Now I'll write the files. Starting with the pure-logic Models and Builder (Foundation-only, host-verifiable).
+
+Now let me verify the pure-logic adapter compiles and runs correctly with a host `swiftc` harness before writing the rest — this catches parity bugs early.
+
+All 36 adapter parity checks pass. The core logic is verified correct. Let me mark progress and write the Model (state-holder seam).
+
+Now the Chart file (Swift Charts leaf views: stat cell, legend, area chart with rolling line + reference line).
+
+Now the main surface view, mirroring the established `SpeedProfileWidget.swift` structure.
+
+Now the strings (i18n) and Previews files.
+
+Now the comprehensive test suite (XCTest), porting the verified adapter parity checks plus model, registry, and accessibility coverage.
+
+All 8 files are written. Now I need to lock the floating-point test expectations to the actual IEEE-754 double results (JS and Swift share float64, so parity = whatever the double math yields). Let me empirically compute the exact values used in the XCTest assertions.
+
+All XCTest expectations match the actual float64 results (mi.overallAverage = 281.7, trend = -20.5, etc.) — no adjustment needed. Now let me run the linters on my new files using the repo config.
+
+swiftformat flagged formatting. I'll use the ecosystem tool to auto-fix (preferred over manual edits), then re-verify.
+
+swiftformat passes (0/7 require formatting). Now swiftlint --strict on the new files.
+
+swiftlint --strict passes (0 violations). Let me re-verify the adapter still passes after formatting, then run a `swiftc -typecheck` of the SwiftUI view code using the real design tokens plus faithful shims for the shared primitives.
+
+Adapter passes post-format. Now the SwiftUI typecheck of the view code with real tokens + faithful shims.
+
+The core view code (Models, Builder, Model, Chart, surface) type-checks. The only errors are from the `#Preview` macro, which needs the `PreviewsMacros` plugin that ships with full Xcode (not CLT) — the same toolchain limitation that blocks `xcodebuild`. There's also one Swift 6 strict-concurrency warning about `Date.init` I should fix for cleanliness. Let me fix it and re-run the typecheck excluding the preview macro.
+
+Core view code type-checks cleanly under Swift 6 strict concurrency (EXIT=0, no warnings). As bonus verification, let me type-check the Previews bodies (transforming the `#Preview` macro into functions since the macro plugin is unavailable on CLT) and the Tests bodies.
+
+`import XCTest` isn't loadable under bare CLT swiftc (needs the Xcode toolchain). Let me confirm the Previews bodies type-check (sources + transformed previews, without Tests).
+
+My verification caught a real Swift 6 strict-concurrency issue: the `previewModel` helper calls `@MainActor`-isolated initializers from a nonisolated context. The `#Preview` body is `@MainActor`, so the helper should be too. Let me fix it (this would fail under the project's `complete` concurrency setting).
+
+Everything type-checks cleanly under Swift 6 strict concurrency now (core + previews EXIT=0). Since I edited two files, let me re-confirm format + lint, then run the placeholder scan.
+
+Format and lint both pass (EXIT=0). Now the placeholder scan. Let me check for the PowerShell checker and also run a direct grep across all 8 files.
+
+pwsh and the checker script are both available. Let me run the actual `check-placeholders.ps1` as the gate specifies.
+
+Placeholder check passes (COUNT=0, EXIT=0). Let me cross-verify every i18n key referenced in code has a matching entry in the `.strings` catalog.
+
+All i18n keys referenced in code have matching catalog entries. Now let me generate the gate log with genuine evidence, running the real gate steps (capturing the xcodebuild BLOCKED evidence) plus the compensating verifications.
+
+Now append the compensating-verification section (the checks that CAN run on this runner), re-run fresh, then finalize EXIT/STATUS.
+
+Append the final summary and the covenant-required `EXIT`/`STATUS` trailer.
+
+The log is complete and ends with `EXIT=1` / `STATUS=BLOCKED`. Let me review git status and commit the allowed files. The implementation is complete and every executable check passed; only the xcodebuild capability is blocked (environmental, not a code failure), and the log documents this transparently.
+
+Exactly the 8 allowed widget files plus the log — nothing else. Let me clean up the temp verification dirs and commit.
+
+Only my 9 allowed files are staged (the other modified files are pre-existing and remain unstaged). Let me commit with the specified message.
+
+Commit `fc40dd055` landed with exactly the 9 allowed files (2115 insertions), no unrelated changes. Let me finalize tracking and do a last sanity check.
+
+All 14 todos are done, all 9 allowed files are committed (`fc40dd055`), and the working tree is clean for my paths.
+
+## Summary
+
+I shipped a production-complete, native Apple parity of `DriveEfficiencyChartWidget` — **8 files** under `apps/apple/TeslaSync/dashboard-widgets/DriveEfficiencyChartWidget.*` following the established `SpeedProfileWidget` pattern:
+
+- **`.Models.swift`** — value types (distance/efficiency unit, cached `Drive` subset, daily point, projection, locale-aware number formatting)
+- **`.Builder.swift`** — pure adapter: faithful port of `estimateEfficiency`, `buildDailyEfficiency` + 7-day rolling average, 30-day window filter, Wh/km→Wh/mi conversion, and the overallAvg/bestDay/trend memos (JS `Math.round` semantics preserved)
+- **`.Model.swift`** — P1/S8 source seam + `@Observable` model (no HTTP in the view), P1/S11 `view.opened` telemetry, P1/S10 strings facade, testable a11y summary
+- **`.Chart.swift`** — Swift Charts area + dashed rolling-average line + dashed average reference line, legend, stat cells
+- **`.swift`** — surface view: loading / empty / error / stale / offline / content states, standard + compact layouts, VoiceOver labels on every control
+- **`.Previews.swift`**, **`.Tests.swift`** (adapter + per-state model + registry + a11y), **`.strings`**
+
+Registry parity: `drive-efficiency-chart`, category `driving`, 2×4 default, 1×2 min, 4×40 max.
+
+### Verification
+| Check | Result |
+|---|---|
+| swiftlint --strict | **PASS** (0) |
+| swiftformat --lint | **PASS** (0) |
+| check-placeholders.ps1 | **PASS** (count 0) |
+| Adapter parity harness (host swiftc) | **PASS** 36/36 |
+| `swiftc -typecheck` view + previews (Swift 6, strict concurrency) | **PASS** |
+| i18n key parity (7 source keys) | **PASS** (0 missing) |
+
+My typecheck caught and I fixed a real Swift 6 strict-concurrency issue (`@MainActor` on the preview helper; `Date.init` → `{ Date() }`).
+
+### STATUS: BLOCKED (per the prompt's capability clause)
+The runner has **Apple Command Line Tools only** (`/Library/Developer/CommandLineTools`) — `xcodebuild` cannot drive a scheme and **no iOS 18 simulators** are installed, so the two mandated `xcodebuild build test` gate steps can't execute (`IOS_EXIT=1`, `MAC_EXIT=1`). Per the prompt (*"If unavailable on the runner → STATUS=BLOCKED with API evidence"*), the gate log ends with `EXIT=1` / `STATUS=BLOCKED` and records the toolchain evidence plus every passing compensating check. The implementation itself is complete and compiles cleanly under swiftc 6.3.2.
+
+
+
+The task is complete and fully verified to the extent the runner allows; all work is committed. Calling task_complete.
+

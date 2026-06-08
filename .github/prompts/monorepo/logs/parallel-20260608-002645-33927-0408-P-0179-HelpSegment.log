@@ -1,0 +1,70 @@
+I'll start by exploring the repository structure and the web source, and checking platform capability (Xcode/SwiftUI tooling).
+
+Key finding: Xcode is NOT installed (only Command Line Tools), but `swift`, `swiftlint`, `swiftformat` are available. Let me explore the Apple app structure and locate the web source.
+
+Found the web source and the Apple app structure. Let me read the web source and study existing Apple conventions (state holders, tokens, i18n, diagnostics, and an existing surface for reference).
+
+Now I understand the web source: a static status-bar segment with three help action buttons (keyboard shortcuts, tour, report bug), driven only by i18n. Let me study the existing Apple conventions — core infra (tokens, i18n, diagnostics, state holders) and a representative simple feature-view file set.
+
+Let me read the core infrastructure: state-holder layer, design tokens, i18n facade, diagnostics, and a representative simple feature-view to learn conventions.
+
+This is the key pattern. Let me read the design tokens, the localization seam pattern, a simple bar view, and the telemetry-on-appear usage.
+
+Excellent template. Let me read the Views, Previews, Tests, the shared component tokens, the placeholder script, and the "pending verifications" doc to understand the accepted convention when Xcode is unavailable.
+
+The `macos-pending-verifications.md` reveals the established convention precisely. Let me check sibling logs to see the exact ending convention, plus tool availability (pwsh, SDKs).
+
+This matches a Command-Line-Tools-only precedent exactly (EnvironmentalImpact 0112). Let me read its full log to replicate the exact gate harness, plus the Tests/Previews structure and the shared component/token definitions the view needs.
+
+I now have the complete sanctioned methodology (CLT-only runner: isolated SwiftPM build + logic-exec + lint/format/placeholder, with xcodebuild DEFERRED). Let me inventory the shared components/tokens the view will use, and mirror the Tests/Previews structure.
+
+Let me read TSTone, the lint/format configs, and check existing patterns for `.help()` tooltips and NotificationCenter action decoupling.
+
+I have everything I need. This is a presentational status-bar surface (three help buttons driven only by i18n) and the runner is Command-Line-Tools-only — matching the sanctioned EnvironmentalImpact-0112 precedent exactly. Let me set up tracking and write the plan.
+
+Now let me create the surface directory and write the Model file.
+
+Now the Views file (sub-views + token-driven compact button style), then the main View. Let me also add an accessibility-identifier mapping to the action enum.
+
+Now the main View entry file.
+
+Now the Previews and strings files.
+
+Now the comprehensive XCTest file.
+
+All 7 files written. Let me format them with the repo's swiftformat config, then verify with swiftlint.
+
+swiftformat is clean (0/6). One swiftlint violation: a `Notification.Name` symbol exceeds 40 chars. But first — let me verify those `AIUsageCard.*` changes in `git diff` are pre-existing (not caused by me), since my files are untracked.
+
+Confirmed: the `AIUsageCard.*` and web `.tsx` changes are pre-existing slot-setup modifications (mtime 06:02:29), **not** mine — my files are untracked. I'll only stage my own files. Now fix the one lint violation (symbol name >40 chars).
+
+swiftformat and swiftlint are both **clean (0 violations)**. Now the core verification: an isolated SwiftPM build (compiles the surface against the real design tokens) + a logic-exec harness running the same assertions as the XCTest file. Let me set up the harness.
+
+Tokens.swift is self-contained (201 lines, SwiftUI/AppKit only). Let me build the isolated SwiftPM harness.
+
+Now build the harness (SWIFTPM_BUILD) and run it (LOGIC_EXEC).
+
+The surface files **all compiled cleanly** — the only errors are Swift 6 main-actor isolation in my `main.swift` harness (top-level vars are `@MainActor`, helpers are not). Let me fix the harness helpers.
+
+SWIFTPM_BUILD_EXIT=0 — surface compiles clean. Now run the logic-exec assertions.
+
+LOGIC_EXEC: **CHECKS=75 FAILURES=0 ALL GREEN**. Now the placeholder gate. Let me check the patterns and run it.
+
+Clean. Now run the actual placeholder gate script scoped to the surface.
+
+All host-runnable gates green. Now let me capture the exact xcodebuild/XCTest/Preview capability evidence for an honest DEFERRED record in the log.
+
+Let me verify the `#Preview` macro claim directly (no assumptions) and confirm swiftformat lint on the strings-excluded set is clean.
+
+`#Preview` macro confirmed absent (`PreviewsMacros plugin not found`). All evidence captured. Let me validate the `.strings` syntax, then write the log.
+
+All 7 files complete, strings valid (7 keys). Now let me write the verification log.
+
+Now let me commit — staging **only** my files (the pre-existing AIUsageCard/web edits stay untouched). Final verification first.
+
+Staged set is exactly my 7 files + the log. Committing.
+
+Commit `03714a755` succeeded — exactly my 8 files; the pre-existing edits remain untouched/unstaged. Let me clean up the temp harness and finalize tracking.
+
+Task complete. The HelpSegment shared surface is shipped, verified, and committed.
+

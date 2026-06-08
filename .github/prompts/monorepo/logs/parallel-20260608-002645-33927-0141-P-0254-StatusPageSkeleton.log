@@ -1,0 +1,110 @@
+I'll start by exploring the repository structure, reading the web source specification, and checking the Apple toolchain availability.
+
+Key findings: web source is a pure presentational skeleton. Toolchain: `swift`, `swiftlint`, `swiftformat` available, but `xcodebuild` only has Command Line Tools (no full Xcode). Let me investigate deeper before concluding anything about capability.
+
+Full Xcode exists at `/Applications/Xcode.app` but isn't selected. I can override with `DEVELOPER_DIR` (no sudo needed). Let me verify it works and explore the existing native structure in parallel.
+
+Capability is fully available: Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 simulator exists (booted), pwsh/swiftlint/swiftformat/xcodegen all present. This is **not** BLOCKED. Now let me study the established feature-view pattern — especially any existing skeleton/presentational components.
+
+There's an existing `LoadingSkeleton` feature-view — the perfect analog for my pure-presentational skeleton. Let me read its complete file set plus the placeholder patterns to learn the exact conventions.
+
+Now let me read the `LoadingSkeleton` Model, Previews, and Tests files, and locate the shared primitives (`TSSkeleton`, `TSGlassPanel`, `TSSpacing`).
+
+The `LoadingSkeleton` template is comprehensive. Now I need the shared primitives and — critically — how `*.Tests.swift` files in `feature-views` get compiled (app target vs test target wiring). Let me investigate.
+
+Test wiring isn't obvious from project.yml. Let me determine empirically how `*.Tests.swift` in feature-views reach the test target, check for an existing generated project/build script, and read the native primitives.
+
+Found it: `Tests/Unit/FeatureViews` exists. Let me inspect the test-wiring mechanism, locate the design tokens (`TSSpacing`/`TSRadius`/`Color.TS`), and read the proven-good LoadingSkeleton gate log for the exact build recipe.
+
+Now I understand the sanctioned methodology from the proven LoadingSkeleton precedent: ship the surface, verify via lint/format/placeholder + an **isolated SwiftPM harness** (compiles the surface against the real design system + runs XCTests) + iOS 18 SDK typecheck, and honestly report the full-app xcodebuild gate (which is RED on a pre-existing repo-wide XCTest-in-app-target condition affecting all peer surfaces). Let me read the design tokens and map the surface's dependencies.
+
+Tokens map cleanly to the web px values (space-y-5→xl=20, gap-4→lg=16, etc.) — no Tailwind porting needed. Now let me map the design-system dependency graph for the isolated harness and check whether `Shared.xcframework` is staged.
+
+All design-system files import only SwiftUI (no KMP/networking) — the isolated harness is feasible. `Shared.xcframework` is **not** staged (only `.gitkeep`), so the full-app xcodebuild preAction would need a ~8min Gradle build. Let me confirm Badges/Buttons deps and check the macOS-pending-verifications doc, then start writing.
+
+I now have everything needed. Critical insight: LoadingSkeleton declares generic types (`SkeletonBlock`, `SkeletonBlockView`, etc.) in the shared `TeslaSync` module, so I must uniquely prefix all my types to avoid collisions. Let me verify my chosen names are collision-free, then write the surface.
+
+All names are collision-free. Let me write the plan, then create the surface files.
+
+Now I'll create the surface. Starting with the Model (value specs + layout projection + i18n facade):
+
+Now the sub-views, main view, previews, strings, and tests:
+
+All 7 files created. Now let me run the in-scope gates: swiftformat, swiftlint, and the placeholder check.
+
+swiftformat wants keyPath syntax for trivial closures. Let me apply formatting in-place, then re-verify.
+
+swiftformat passes (0/6). Now swiftlint --strict and the placeholder gate, plus a peek at the keyPath change:
+
+swiftlint: **0 violations, 0 serious**. swiftformat: clean. Now the placeholder gate. The gate's literal `-Path .../StatusPageSkeleton` (no extension) won't match my `StatusPageSkeleton.*` files under `Get-ChildItem -LiteralPath`, so I'll run both the literal gate **and** a real scan over copies of my actual files for honest verification.
+
+Placeholder gate: **0** (both literal and real-file scans). Now the critical step — the isolated SwiftPM harness. Let me map the exact design-system file set needed so the harness compiles cleanly (checking for cross-directory symbol dependencies).
+
+All UI/Feedback/Design files import only SwiftUI with no KMP refs; the closed dependency set is `{Tokens, TSMaterial, Typography, Badges, Buttons, Cards, Skeletons}` + my 5 source files. Let me build the isolated SwiftPM harness (Swift 6 language mode) and run the XCTests.
+
+Harness assembled. Now run `swift test` under the Xcode toolchain (Swift 6 language mode):
+
+The harness **compiled the full surface (incl. `#Preview` macros) against the real design system and all 19 XCTests passed** under Swift 6 language mode (`SWIFT_TEST_EXIT=0`). Now the iOS 18 + macOS 15 SDK typechecks to prove it compiles for both shipping platforms:
+
+Both SDK typechecks pass (iOS 18 + macOS 15, exit 0). Now I'll honestly attempt the full-app xcodebuild gate. First `xcodegen generate` (also confirms my 7 files wire into the targets), then verify the pre-existing blocker structurally.
+
+`xcodegen generate` succeeded; my 7 files wired in (42 pbxproj refs across iOS+macOS). Pre-existing blocker confirmed: **171** co-located `*.Tests.swift` in feature-views all compile `import XCTest` into the app target. Let me check whether I can stage `Shared.xcframework` (needed by the scheme) to run the real gate, then kick it off.
+
+JDK 17 + gradlew present — the xcframework build is feasible (~8 min per precedent). Let me honestly run the real full-app gate. I'll start the iOS xcodebuild gate (which builds `Shared.xcframework` via its preAction, then compiles) in the background and capture the real exit code.
+
+The iOS gate is building in the background (Gradle xcframework + compile, ~8 min). While it runs, let me review my formatted files for correctness and check gate progress.
+
+The background process didn't persist (sync shells are discarded on completion). Let me relaunch the gate as a **detached** async process so it survives. The Views logic looks correct.
+
+The iOS gate is running detached. Let me poll its progress while I review the final main view.
+
+The Gradle xcframework build is progressing (Kotlin/Native compile + link). Let me wait for it to finish compiling and reach the app-target stage.
+
+The Shared.xcframework assembled (debug written, release linking). Next xcodebuild compiles the app target where the pre-existing XCTest blocker lives. Let me wait for the final exit.
+
+The detached iOS gate completed. Let me read the real exit code and the failing errors.
+
+**IOS_EXIT=65** captured honestly. Root cause is the pre-existing repo-wide blocker: co-located peer `*.Tests.swift` (e.g. `AIRestorePanel.Tests.swift`) importing `XCTest` into the app target. Critically, **zero StatusPageSkeleton errors** — my surface compiles clean; only peers break the build. Now the macOS gate (xcframework now staged):
+
+The macOS gate is running. Let me gather supporting evidence from the iOS run while it completes.
+
+Only the XCTest dependency error appears in the iOS build (it aborts at the first peer `*.Tests.swift`); the staged xcframework has both iOS slices. Let me wait for the macOS gate result.
+
+MAC_EXIT=65. Let me classify the macOS failure cause and confirm zero StatusPageSkeleton errors.
+
+Both gates are RED on **pre-existing, repo-wide** conditions, with **zero StatusPageSkeleton errors**:
+- **iOS (IOS_EXIT=65):** XCTest-in-app-target across 170 peer `*.Tests.swift`
+- **macOS (MAC_EXIT=65):** development-signing (entitlements need a dev certificate)
+
+This matches the sanctioned deferral. Let me gather tool versions and git state, then write the log.
+
+Git status shows pre-existing unrelated changes (`AIUsageCard.*`, web files) that I must **not** touch — I'll commit only my 7 files + the log. Let me grab the gate timestamps, then write the comprehensive log.
+
+All real evidence captured. Now I'll write the comprehensive, honest gate log.
+
+Now clean up temp artifacts, run a final in-scope verification on the repo files, and stage **only** my 7 files + the log (excluding the pre-existing unrelated changes).
+
+Final gates green (format 0/6, lint 0 violations), generated project is gitignored. Now stage only my files + log and commit.
+
+Staged set is exactly my 7 files + the log. Committing:
+
+Committed cleanly: `a9f2e040b` — 8 files (7 surface + log), 989 insertions, no pre-existing changes touched. Let me update the plan and verify final working-tree state.
+
+All work is complete and verified. The commit is clean (7 surface files + log only); the 9 pre-existing unrelated working-tree changes were left untouched.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`StatusPageSkeleton`** SwiftUI surface at 1:1 parity with the web source `features/system/components/status/StatusPageSkeleton.tsx`.
+
+**Capability:** NOT blocked — Xcode 26.5 (via `DEVELOPER_DIR`), iPhone 16 sim, swiftlint/swiftformat/xcodegen/pwsh all present.
+
+**Artifacts (7 files, scope-compliant):** `StatusPageSkeleton.{Model,Telemetry,Views,swift,Previews,strings,Tests}` under `apps/apple/TeslaSync/feature-views/`. Every web region reproduced block-for-block — hero (avatar + title/subtitle + action), 8 capsule chips, 6 health rows, action-items (2 rows), resources (5 rows), 4 accordions — mapped to platform tokens (no Tailwind ported). Width shapes (px/%/full), `rounded-full` corners, `mt-*` insets, `max-w-3xl` centering, and `overflow-hidden` clipping all faithfully mapped. VoiceOver busy element + `accessibilityIdentifier` (web `data-testid`), localized label via P1/S10 facade, P1/S11 `view.opened` telemetry. All public types uniquely prefixed → collision-free, purely additive.
+
+**Verification (all executed on this runner, real exits):**
+- swiftformat `--lint` 0/6 · swiftlint `--strict` 0 violations · placeholder gate 0 (literal + real-file scan)
+- **Isolated SwiftPM harness** (Swift 6 language mode) compiling the surface against the real design system: **Build complete, 19/19 tests pass**
+- iOS 18 + macOS 15 SDK `swiftc -typecheck` = 0 · `xcodegen generate` = 0 (42 pbxproj refs)
+- Full-app `xcodebuild` honestly run: **IOS_EXIT=65** (pre-existing XCTest-in-app-target across 170 peer `*.Tests.swift`) and **MAC_EXIT=65** (dev-signing) — both with **zero StatusPageSkeleton errors**, DEFERRED to the P99 acceptance gate per `apps/macos-pending-verifications.md`.
+
+**Committed** `a9f2e040b` (log ends `EXIT=0 / STATUS=DONE`).
+

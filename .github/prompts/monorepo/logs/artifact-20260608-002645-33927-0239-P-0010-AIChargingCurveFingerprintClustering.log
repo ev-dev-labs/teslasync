@@ -1,0 +1,178 @@
+=== P4 Shared surface 0010 AIChargingCurveFingerprintClustering (Apple) ===
+Run host: Darwin (Apple Silicon, macOS). Date: 2026-06-08.
+Web source (THE specification): web/src/components/ai/AIChargingCurveFingerprintClustering.tsx
+Native output: apps/apple/TeslaSync/shared-surfaces/AIChargingCurveFingerprintClustering.*
+
+--------------------------------------------------------------------------------
+SECTION 0 — PLATFORM CAPABILITY (ADR-002: SwiftUI + Swift Charts + MapKit; iOS18/iPadOS18/macOS15)
+--------------------------------------------------------------------------------
+Capability is AVAILABLE on this runner. This run is NOT capability-blocked.
+
+  * /Applications/Xcode.app present. `xcode-select -p` defaulted to
+    /Library/Developer/CommandLineTools, so all xcodebuild/swiftc invocations below were
+    run with DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer (no sudo required).
+  * xcodebuild -version           => Xcode 26.5 (Build 17F42)
+  * xcodebuild -showsdks          => iphonesimulator26.5, iphoneos26.5, macosx26.5
+  * xcrun simctl list devices     => "iPhone 16 (…CBDDD3140989) (Booted)" available
+  * KMP Shared.xcframework (ADR-004) built + staged successfully:
+        ./Scripts/build-shared-xcframework.sh
+        > Task :core:assembleSharedXCFramework  BUILD SUCCESSFUL in 16m 44s
+        xcframework written: apps/shared/core/build/XCFrameworks/release/Shared.xcframework
+        staged: apps/apple/Frameworks/Shared.xcframework  (FRAMEWORK_BUILD_EXIT=0)
+  * xcodegen generate             => TeslaSync.xcodeproj generated OK
+
+--------------------------------------------------------------------------------
+SECTION 1 — SURFACE DELIVERABLE (complete, parity-faithful, no stubs)
+--------------------------------------------------------------------------------
+apps/apple/TeslaSync/shared-surfaces/
+  AIChargingCurveFingerprintClustering.swift          (view: gate + AIFeatureCard composition + states)
+  AIChargingCurveFingerprintClustering.Model.swift    (i18n facade P1/S10, telemetry seam P1/S11,
+                                                       state-holder seam P1/S8, @Observable model)
+  AIChargingCurveFingerprintClustering.Adapter.swift  (pure-Foundation projection core)
+  AIChargingCurveFingerprintClustering.Chrome.swift   (Helix badge / output panel / thinking
+                                                       indicator / action button / freshness chip /
+                                                       banner / loading / gate-error subviews)
+  AIChargingCurveFingerprintClustering.Previews.swift (DEBUG #Preview per state)
+  AIChargingCurveFingerprintClustering.Tests.swift    (XCTest, #if canImport(XCTest)-guarded)
+  AIChargingCurveFingerprintClustering.strings        (P1/S10 i18n catalog contribution)
+  Swift LOC total: 1526 (web source is a 138-line thin wrapper; native reproduces the AIFeatureCard /
+  AiOutputPanel / AIThinkingIndicator / AIBadge composition inline because their atomic native peers
+  are owned by the P4 component-library bundle and are not yet present — the same sanctioned pattern
+  documented in the sibling AiUsageCard.Views.swift "scope note").
+
+Parity with the web source:
+  * withAiFeature('charging-curve-fingerprint-clustering', …) gate (ADR-015): settings resolved AND
+    (ai_mode==='off' OR feature toggle off) => .gated (renders nothing, view.opened suppressed),
+    reproducing the web HOC `null`. Settings unresolved => .loading skeleton (leaf). Settings load
+    failure => .error retry (leaf).
+  * InnerSection -> AIFeatureCard: Helix badge, title, description, "Ask Helix" CTA (per-feature verb
+    "Explain clusters" preserved as the accessibility label + tooltip, exactly as the web does),
+    streamed AiOutputPanel.
+  * useAiStream lifecycle reproduced as AiStreamPhase idle|streaming|pausedConfirm|done|error;
+    button disabled == !canStart || isStreaming (computed, never a literal); haveInputs ==
+    isFinite(vehicleId) && vehicleId>0; AiOutputPanel visible == text||streaming||done||error.
+  * States rendered: gated / loading / gate-error / presented(idle, streaming-thinking,
+    streaming-partial, done, stream-error) + orthogonal connection axis (live/stale/offline)
+    => freshness chip + banner + one-shot gate re-resolve on stale.
+  * Every string resolves through the P1/S10 facade (table "AIChargingCurveFingerprintClustering");
+    keys include the three source keys (charging.aiClustering.title / .generateButton / .badge)
+    plus the helix.* shared atoms and the leaf chrome. No English prose literals in Swift.
+  * Accessibility: VoiceOver labels on every interactive element, .isHeader title trait,
+    Dynamic Type (system fonts), Reduce Motion respected (TSFadeIn/TSSkeleton/dots), role=status
+    on the thinking indicator.
+  * Telemetry: view.opened emitted once with slug "AIChargingCurveFingerprintClustering", deferred
+    until the gate is open (web data-ai-feature marker parity).
+
+Build-wiring applied (necessary scaffolding, mirrors the existing TeslaSync/feature-views entry):
+  apps/apple/project.yml — added `TeslaSync/shared-surfaces` to the TeslaSync (iOS) and
+  TeslaSync-macOS source groups so the surface compiles into the app targets. Verified the 7 files
+  (incl. the .strings resource) are members of both app targets in the generated project.
+
+--------------------------------------------------------------------------------
+SECTION 2 — SURFACE-SCOPED VERIFICATION  (ALL PASS)
+--------------------------------------------------------------------------------
+[PASS] swiftformat --lint TeslaSync/shared-surfaces        => "0/6 files require formatting."
+[PASS] swiftlint --strict (surface files)                  => 0 violations in shared-surfaces/*
+[PASS] check-placeholders.ps1 -Path …/shared-surfaces      => PLACEHOLDER_COUNT=0  EXIT=0
+[PASS] swiftc -typecheck (surface + full design system)    => 0 errors attributable to shared-surfaces
+[PASS] Full TeslaSync module compile (xcodebuild)          => 0 errors attributable to shared-surfaces
+                                                              (all reported errors are pre-existing,
+                                                              in dashboard-widgets/* — see Section 3)
+[PASS] Logic harness (projection + @Observable model)      => 36/36 assertions  HARNESS_RESULT=ALL_PASS
+       Independent swiftc build+run of Model.swift + Adapter.swift exercising the gate split,
+       haveInputs truth table, button-disabled/thinking logic, AiOutputPanel visibility, the
+       connection axis, view.opened-once telemetry (and suppression in off mode), generate()
+       wiring, and the one-shot stale gate re-resolve. (This substitutes for an in-bundle XCTest
+       run, which is impossible while the app target does not compile — Section 3.)
+
+--------------------------------------------------------------------------------
+SECTION 3 — GATE COMMANDS  (BLOCKED by PRE-EXISTING baseline defects outside allowed scope)
+--------------------------------------------------------------------------------
+The prompt gate runs `xcodebuild -scheme TeslaSync … build test` and `… TeslaSync-macOS build test`.
+Both require the whole TeslaSync app target to COMPILE. It does not — for reasons entirely outside
+this surface (0 errors are attributable to shared-surfaces/*; confirmed across the full-module
+compile and standalone type-checks).
+
+iOS  — xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+       => ** BUILD FAILED **   IOS_EXIT=65   (test phase never reached)
+   Pre-existing root causes (NOT in shared-surfaces; not modified by this prompt):
+   (R1) 'DashboardWidgetSize' is ambiguous for type lookup — the COMMITTED baseline declares
+        `public struct DashboardWidgetSize` in 15 files (e.g. Sources/DashboardWidgets/
+        DrivetrainHealthWidgetModel.swift:10, Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift:13,
+        TeslaSync/dashboard-widgets/UptimeMonitorWidget.Model.swift:225, MQTTStatusWidget.Model.swift:226,
+        TelemetryErrorsWidget.Model.swift:238, VehicleHeroWidget.Model.swift:339, …). ~18 dashboard-widget
+        files fail with this ambiguity + companion "reference to member 'init' cannot be resolved".
+   (R2) feature-views/*.Tests.swift use an UNGUARDED `import XCTest` while the app target has
+        ENABLE_TESTING_SEARCH_PATHS=NO. 166 of 170 feature-tier test files are unguarded (only 4 use
+        the documented `#if canImport(XCTest)` guard). First failure surfaced:
+        feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'.
+        (This surface's own AIChargingCurveFingerprintClustering.Tests.swift IS correctly guarded with
+        `#if canImport(XCTest)`, matching the 4 correct siblings, so it never breaks the app build.)
+        NOTE: setting ENABLE_TESTING_SEARCH_PATHS=YES clears R2 but then unmasks R1 — confirmed in a
+        separate build: 48 'DashboardWidgetSize' ambiguity errors across 18 dashboard-widget files,
+        still BUILD FAILED, still 0 errors in shared-surfaces.
+
+macOS — xcodebuild -scheme TeslaSync-macOS build
+       => ** BUILD FAILED **   MAC_EXIT=65
+   Pre-existing root cause(s) (NOT in shared-surfaces):
+   (R3) Code signing: "TeslaSync-macOS has entitlements that require signing with a development
+        certificate" (project.yml DEVELOPMENT_TEAM is empty); same for TeslaSyncWidgets-macOS.
+   (R1) the macOS app target compiles the identical dashboard-widgets sources => same ambiguity.
+
+swiftlint --strict (whole tree, per .swiftlint.yml `included:`)
+       => Found 1 violation, 1 serious in 1909 files.  LINT_EXIT=2
+   Pre-existing, NOT in shared-surfaces:
+   dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19 — Function Body Length Violation
+   (LifetimeStatsProjector.project body spans 78 lines > 50). 0 violations in shared-surfaces/*.
+
+swiftformat --lint apps/apple
+   shared-surfaces/* PASS (0/6). The full-tree result is governed by pre-existing files outside scope.
+
+--------------------------------------------------------------------------------
+SECTION 4 — SCOPE STATEMENT & HONESTY COVENANT
+--------------------------------------------------------------------------------
+Allowed files (this prompt): apps/apple/TeslaSync/shared-surfaces/AIChargingCurveFingerprintClustering.*
+and this log. (project.yml build-wiring is the minimal necessary scaffolding to compile the surface,
+mirroring the existing feature-views entry, and is disclosed here — no silent drift.)
+
+The blockers R1/R2/R3 + the swiftlint violation live in apps/apple/Sources/DashboardWidgets/*,
+apps/apple/TeslaSync/dashboard-widgets/*, and apps/apple/TeslaSync/feature-views/* — other tiers
+owned by their own prompts. `git status` confirms this surface modified ONLY shared-surfaces/* (new)
+and project.yml; the dashboard-widgets duplicate-definition defect is present in the COMMITTED baseline
+(`git grep -l "public struct DashboardWidgetSize"` => 15 files). The working tree also arrived with
+pre-existing UNCOMMITTED edits to feature-views/AIUsageCard.* and web/src/features/admin/* that this
+prompt did not make.
+
+Repairing the baseline would require editing 170+ files across two tiers (deduplicating
+DashboardWidgetSize and guarding/relocating 166 test files) with unbounded hidden-error risk — far
+outside "ship shared surface 0010". Per the Honesty Covenant (1 no red-as-green, 2 no scope narrowing,
+8 no commit on red, 9 no silent drift) and the engineering rule "don't fix unrelated pre-existing
+issues", these are REPORTED with evidence rather than silently worked around or faked green. The
+success commit specified by the prompt is WITHELD (covenant #8: no commit on red).
+
+--------------------------------------------------------------------------------
+SECTION 5 — CONCLUSION
+--------------------------------------------------------------------------------
+The AIChargingCurveFingerprintClustering Apple surface is COMPLETE, parity-faithful to the web source,
+convention-compliant (P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n, P1/S11 view.opened), fully
+accessible, with every state rendered and no stubs/placeholders. It is independently VERIFIED:
+swiftformat clean, swiftlint clean, placeholder-gate clean, type-checks with 0 errors, and 36/36
+projection+model logic assertions pass.
+
+The xcodebuild build/test gate CANNOT reach EXIT=0 because the TeslaSync iOS and macOS app targets do
+not compile, due to PRE-EXISTING baseline defects in the dashboard-widgets and feature-views tiers
+(R1 duplicate DashboardWidgetSize, R2 unguarded feature-views XCTest, R3 macOS signing) plus a
+pre-existing swiftlint violation — all outside this prompt's allowed-files scope and none caused by
+this surface. Platform capability is present and was exercised (KMP framework built, simulator
+available); this is a baseline-dependency block, not a capability block.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=2
+FORMAT_EXIT=0   (surface files; full-tree governed by pre-existing files)
+PLACEHOLDER_EXIT=0
+SURFACE_TYPECHECK=PASS (0 errors in shared-surfaces)
+SURFACE_LOGIC_HARNESS=ALL_PASS (36/36)
+
+EXIT=65
+STATUS=BLOCKED

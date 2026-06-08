@@ -1,0 +1,196 @@
+================================================================================
+P4 · Dashboard widget · 0037 — DoorWindowStatusWidget (Apple)
+Run: 2026-06-07T18:1x-0700   Host: Darwin arm64 (macOS 26.5.1)   Branch: auto/20260607-170817-98066/40
+Prompt: P4/dashboard-widgets/0037 — DoorWindowStatusWidget
+Web source (THE spec): web/src/features/dashboard/widgets/DoorWindowStatusWidget.tsx
+================================================================================
+
+=== CAPABILITY PROBE ===
+  xcode-select -p ............ /Library/Developer/CommandLineTools  (CLT only)
+  /Applications/Xcode.app .... PRESENT → DEVELOPER_DIR override (no sudo):
+      DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+  xcodebuild -version ........ Xcode 26.5 (17F42)                           OK
+  iOS SDKs ................... iphoneos26.5 + iphonesimulator26.5            OK
+  macOS SDK .................. macosx26.5 (targets macOS 15 deployment)      OK
+  iPhone 16 simulator ........ present (iOS 26.5 runtime 23F77)             OK
+  java -version .............. OpenJDK 17.0.19 (Homebrew)                    OK
+  ~/.konan / ~/.gradle ....... warm (kotlin-native-prebuilt 2.4.0)          OK
+  swiftlint / swiftformat .... 0.63.3 / 0.61.1                              OK
+  pwsh / xcodegen ............ present                                       OK
+  → SwiftUI + Swift Charts + MapKit toolchain (iOS 18 / macOS 15 targets) IS
+    available. The "no macOS/Xcode runner" capability hatch does NOT apply;
+    the gate is RUN FOR REAL below. Two HOST-CAPABILITY gaps remain and are
+    documented with evidence: (A) macOS dev-cert signing, (B) shared iOS
+    Simulator contention across the parallel-slot workspaces.
+
+  Shared.xcframework built + staged for real (Gradle :core:assembleSharedXCFramework):
+    apps/apple/Frameworks/Shared.xcframework {ios-arm64, ios-arm64-simulator,
+    macos-arm64}   BUILD SUCCESSFUL in 23m39s (first cold compile; then cached).
+
+=== REPO REALITY vs PROMPT PATH (logged per "no silent drift") ===
+  The prompt's native path apps/apple/TeslaSync/dashboard-widgets/ does NOT exist
+  in this repo and is not a project.yml source root. Real SwiftUI sources live
+  under apps/apple/Sources/ (compiled by the iOS + macOS app targets). No native
+  dashboard-widget framework exists yet (this is the first such surface). The
+  surface was therefore implemented under the real tree and wired so xcodegen +
+  xcodebuild compile + test it:
+    Sources/Features/Dashboard/Widgets/DoorWindowStatusModels.swift   (310 L)
+    Sources/Features/Dashboard/Widgets/DoorWindowStatusModel.swift    (200 L)
+    Sources/Features/Dashboard/Widgets/DoorWindowStatusViews.swift    (274 L)
+    Sources/Features/Dashboard/Widgets/DoorWindowStatusWidget.swift   (148 L)
+    Tests/Unit/Dashboard/DoorWindowStatusWidgetTests.swift            (305 L)
+  Decomposed into 4 source files because swiftlint --strict enforces file_length
+  ≤ 400 (a single file lands at ~908 after swiftformat wrapping); the repo's own
+  guidelines prefer decomposition over monoliths. Surface-local chrome
+  (shell/grid/cell) is internal to the feature, not added to the shared library
+  (per "Out of Scope: atomic shared components").
+
+=== PARITY (web DoorWindowStatusWidget.tsx → SwiftUI) ===
+  Registry (registry/security.ts):  id="door-window-status", category=security,
+    defaultSize 2×2, minSize 1×2, maxSize 4×40, icon DoorOpen → SF Symbol
+    "door.left.hand.open". Reproduced verbatim in DoorWindowStatusWidget.descriptor
+    + DashboardWidgetDescriptor.clampedSize (size-constraint honoring, unit-tested).
+  Data: /security/latest?vehicle_id= → SecurityEvent{door_state, fd/fp/rd/rp_window:
+    string|bool|null}. Modeled by DoorWindowRawValue(.string/.bool/.absent).
+  Adapter: parseDoorStates (bool→all; all_closed/allclosed; comma descriptors
+    driver/passenger × front/rear × open, positional front/rear left/right open,
+    bare "open"→all) + parseWindowState (bool; "closed"; vent/partial→partial;
+    else open) + counts (doors strictly==open; windows !=closed && !=unknown) +
+    toGridStatus (closed→ok, open/partial→warning, unknown). Ported verbatim.
+  Composition: compact 1×1 = two summary badges; ≥2 rows = Doors grid(2) +
+    Windows grid(2); isTall (rows≥2) widens spacing. All branches reproduced.
+  States (all render, none hidden): loading skeleton; empty grid "No
+    door/window data"; error → TSQueryError + retry; stale chip; offline →
+    cached value kept + offline chip. Mapped onto LoadableState + FacadeError.
+  Binding (P1/S8): view performs NO IO; DoorWindowStatusModel owns an injected
+    DoorWindowStatusDataSource seam (production wires the shared state-holder/HTTP
+    layer; previews/tests inject fixtures) — same injected-store pattern as
+    VehicleSettingsModel / AppSettingsModel.
+  i18n (P1/S10): all 15 widget.doorWindow.* keys already exist in the neutral
+    catalog apps/shared/i18n/catalog/en.json (acceptance "matching key in P1/S10
+    catalog" = MET). The generated Apple Localizable.xcstrings was stale for them;
+    18 keys (15 + displayName + description + freshness.refresh) were added to the
+    Apple resource with the canonical values, matching the existing native widget-
+    key convention (e.g. widget.alerts.displayName). No hardcoded English in Swift.
+  Telemetry (P1/S11): DashboardWidgetDiagnostics seam emits view.opened with
+    surface slug "DoorWindowStatusWidget" once on first onAppear (forwardable to
+    Telemetry.track(.ScreenView(...))). Unit-tested.
+
+=== TESTS (adapter + per-state model + a11y + registry) ===
+  Tests/Unit/Dashboard/DoorWindowStatusWidgetTests.swift — 20 tests:
+    DoorWindowStatusAdapterTests (9): bool/all_closed/single-open/positional/
+      generic-open/empty door parsing, window parsing, grid-status, snapshot counts.
+    DoorWindowAccessibilityTests (3): value-label + position-label key presence,
+      cell identity/status.
+    DoorWindowRegistryTests (2): descriptor matches web registry; clampedSize
+      respects 1×2…4×40.
+    DoorWindowStatusModelTests (6): loaded / empty / error(no-cache) / offline-
+      keeps-cached / stale-after-window / view.opened-emitted-once.
+
+================================================================================
+=== GATE EXECUTION (exact prompt commands) ===
+================================================================================
+[iOS]  xcodebuild -scheme TeslaSync \
+         -destination 'platform=iOS Simulator,name=iPhone 16' build test
+       ** BUILD SUCCEEDED **
+       Test Suite 'TeslaSyncTests.xctest' PASSED — Executed 275 tests, 0 failures
+         (255 pre-existing + 20 new DoorWindow* — ALL 20 GREEN).
+       Test Suite 'TeslaSyncUITests.xctest' — flaky FAILURES (see BLOCKER B).
+       Across 3 simulator-alive runs the UNIT suite was GREEN every time and the
+       20 new tests passed every time; only *UITests entries failed, a DIFFERENT
+       set each run (run1: AppLaunch+LiveDataStore; run2: PushCoordinator; run3:
+       AppLaunch+LiveDataUI×2+Accessibility×2), and two further reruns died with
+       "Invalid device state (Mach -308 server died)" / "Early exit: SIGTERM
+       before bootstrapping" — i.e. the CoreSimulator service was killed mid-run.
+       Failure triage paths reference a SIBLING workspace
+       (.../20260607-170817-98066/slot-2/.../AccessibilityUITests.swift) and the
+       Gradle pre-action reported "8 busy daemons": the iOS Simulator is SHARED
+       and concurrently driven by parallel slots. This is environmental, not a
+       defect in this surface (which adds no UITests and is not yet wired into
+       navigable UI). Post-edit `build-for-testing` = ** TEST BUILD SUCCEEDED **.
+       IOS_BUILD=OK   IOS_UNIT=0 (275/275)   IOS_UI=flaky(shared-simulator)   → BLOCKER B
+
+[macOS] xcodebuild -scheme TeslaSync-macOS build test
+       error: "TeslaSync-macOS" has entitlements that require signing with a
+         development certificate. Enable development signing in Signing &
+         Capabilities.  → ** BUILD FAILED ** (Could not find test host for
+         TeslaSync-macOSTests).
+       MAC_EXIT=70                                                    → BLOCKER A
+       ROOT CAUSE (capability gap, NOT a code defect):
+         security find-identity -v -p codesigning → "0 valid identities found".
+         TeslaSync-macOS.entitlements + TeslaSyncWidgets-macOS.entitlements
+         require a *development certificate*; a real-Mac build enforces it and it
+         cannot be ad-hoc satisfied on this headless host without an Apple
+         Developer signing identity. Identical to the predecessor P9-0001 finding;
+         deferred to a signed macos-latest runner per ADR-012 +
+         apps/macos-pending-verifications.md.
+       PROOF the code itself is macOS-clean (signing bypassed):
+         xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS,arch=arm64' \
+           build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+         → ** BUILD SUCCEEDED ** (compiles + links for macOS 15 incl. this surface).
+
+[swiftlint --strict] ........ 0 violations, 0 serious (5 files)        LINT_EXIT=0
+[swiftformat --lint apps/apple (new files)] . 0/5 require formatting   FORMAT_EXIT=0
+[check-placeholders.ps1 -Path .../Features/Dashboard/Widgets]
+       PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0                     PLACEHOLDER_EXIT=0
+
+Gate formula: EXIT=0 only if IOS/MAC/LINT/FORMAT/PLACEHOLDER all 0.
+  IOS(build+unit)=0  MAC=70  LINT=0  FORMAT=0  PLACEHOLDER=0
+  → MAC=70 (dev-cert capability gap) ⇒ overall gate EXIT is NON-ZERO.
+
+================================================================================
+=== ACCEPTANCE CRITERIA ===
+================================================================================
+[x] Surface renders all web states (loading/empty/error/stale/offline + compact/
+    tall) — implemented + per-state model unit tests GREEN.
+[x] Hooks bind via shared state-holder seam (P1/S8); no direct HTTP from the view.
+[x] Every i18n key from source has a matching key in the P1/S10 catalog
+    (all 15 widget.doorWindow.* present in apps/shared/i18n; Apple xcstrings
+    updated to render them).
+[x] Accessibility labels on cells/badges/refresh; Dynamic Type via Font.TS; Reduce
+    Motion respected by reused TS components. A11y key-presence unit-tested.
+[x] Tests: adapter unit tests + per-state model tests + a11y label test. 20/20 GREEN.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate = 0).
+[~] EXIT=0/STATUS=DONE — host-controllable gates GREEN; STATUS=BLOCKED with
+    platform-capability evidence (A: macOS dev-cert signing; B: shared iOS
+    Simulator contention) per the prompt's allowance + ADR-012.
+
+================================================================================
+=== HONESTY COVENANT ===
+================================================================================
+1  No red-as-green : MAC_EXIT=70 + UI flakiness shown FAILED with cause; iOS unit
+                     shown GREEN only because it actually is (275/275, 20/20 mine).
+2  No scope narrowing: ran the EXACT gate commands; supplementary no-sign compile
+                     + build-for-testing clearly marked supplementary.
+3  No skip-and-assume: every gate actually executed; nothing assumed.
+4  No stubs as final: complete surface — all states, real adapter, real tests.
+5  No parity shortcuts: data/composition/states/i18n/telemetry reproduced 1:1.
+6  No delegation: performed directly (no sub-agents).
+7  No predecessor bypass: no native dashboard framework existed → surface kept
+                     self-contained using EXISTING shared infra; nothing fabricated.
+8  No commit on red: the only "red" is host-capability (macOS dev-cert) + shared-
+                     simulator contention — NOT a code defect; every code-
+                     controllable gate is GREEN. Per ADR-012 / macos-pending model
+                     the complete code IS committed with the macOS verification
+                     deferred (row added to apps/macos-pending-verifications.md).
+9  No silent drift: repo-path adaptation + the 18 xcstrings additions + 4-file
+                     decomposition all disclosed above.
+10 Log ends with EXIT/STATUS, each on its own line, below.
+
+================================================================================
+=== DISPOSITION ===
+================================================================================
+The DoorWindowStatusWidget surface is COMPLETE and CORRECT: it compiles for iOS
+AND macOS, its 20 unit tests pass, the full iOS unit suite is 275/275 GREEN, and
+swiftlint/swiftformat/placeholder are clean. The overall gate cannot reach EXIT=0
+on THIS host because of two evidence-backed HOST-CAPABILITY gaps, both outside
+this surface's code:
+  A. macOS `build test` needs a development signing certificate; the host has 0
+     identities (ADR-012 → signed macos-latest runner). MAC_EXIT=70.
+  B. The iOS Simulator is shared/contended across parallel-slot workspaces
+     (slot-2… cross-references, Mach -308 server death, SIGTERM pre-bootstrap,
+     8 busy Gradle daemons), which destabilizes UI-test execution; the in-process
+     unit suite (incl. this surface) is GREEN whenever the simulator survives.
+
+EXIT=70
+STATUS=BLOCKED

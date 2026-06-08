@@ -1,0 +1,185 @@
+================================================================================
+=== P4 · Dashboard widget · 0046 — EnergyFlowWidget (Apple) ===
+=== Gate log — run on local macOS host (Darwin), Xcode 26.5 via DEVELOPER_DIR ===
+================================================================================
+
+SURFACE
+  Native output : apps/apple/Sources/Dashboard/Widgets/EnergyFlowWidget.swift
+                  apps/apple/Sources/Dashboard/Widgets/EnergyFlowWidgetView.swift
+                  apps/apple/Sources/Dashboard/Widgets/EnergyFlowProjection.swift
+  Tests         : apps/apple/Tests/Unit/Dashboard/EnergyFlowWidgetTests.swift
+  Web source    : web/src/features/dashboard/widgets/EnergyFlowWidget.tsx (parity contract)
+  Registry      : id=energy-flow, category=battery, default 2x4, min 2x4, max 4x40
+                  (mirrors web/src/features/dashboard/widgets/registry/battery.ts)
+
+NOTE ON PATHS: the prompt's nominal output path
+  apps/apple/TeslaSync/dashboard-widgets/EnergyFlowWidget.*
+does not exist in this repo. The real Apple app is laid out under
+  apps/apple/Sources/** (single SwiftUI source group, ADR-002; see project.yml).
+The surface was placed under Sources/Dashboard/Widgets/ accordingly and is
+picked up by both the iOS and macOS app targets. The file was split into three
+EnergyFlow* files to satisfy the repo SwiftLint file_length(<=400) rule (a single
+file tripped file_length=660 + one function_body_length=58); all three plus the
+test file are scoped strictly to this surface.
+
+ENVIRONMENT (capability probe)
+  xcode-select -p            : /Library/Developer/CommandLineTools  (CLT only)
+  /Applications/Xcode.app    : present → used via DEVELOPER_DIR override
+  xcodebuild -version        : Xcode 26.5 (Build 17F42)
+  iPhone 16 simulator        : present + booted
+  KMP Shared.xcframework     : NOT checked in → built from apps/shared via Gradle
+  Java                       : OpenJDK 17.0.19 (for the Kotlin/Native toolchain)
+  swiftlint / swiftformat    : present ; pwsh present ; xcodegen present
+
+--------------------------------------------------------------------------------
+STEP 0 — Build the KMP Shared.xcframework (apps/shared, Gradle)  [prereq]
+--------------------------------------------------------------------------------
+$ ./apps/shared/gradlew -p apps/shared --console=plain --no-daemon :core:assembleSharedXCFramework
+  BUILD SUCCESSFUL in 3m 20s
+  → release Shared.xcframework written, staged into apps/apple/Frameworks/
+  (ios-arm64, ios-arm64-simulator, macos-arm64 slices present)
+  HOST HAZARD OBSERVED: a co-tenant on this shared host repeatedly issues
+  `gradle --stop`, which killed the daemon mid-link twice. Worked around with an
+  isolated GRADLE_USER_HOME (private daemon registry, shared caches symlinked).
+
+$ xcodegen generate → Created TeslaSync.xcodeproj   XCODEGEN_EXIT=0
+
+--------------------------------------------------------------------------------
+STEP 1 — iOS build + test  (iPhone 16 simulator)
+--------------------------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+
+  ** BUILD SUCCEEDED **   ← full app + both test bundles compiled against the
+                            REAL Shared.xcframework, including all 3 new surface
+                            files AND EnergyFlowWidgetTests. ZERO compile errors.
+
+  Surface unit suite (deterministic, isolated):
+  $ xcodebuild ... -only-testing:TeslaSyncTests/EnergyFlowWidgetTests test
+    Test Suite 'EnergyFlowWidgetTests' passed
+    Executed 10 tests, with 0 failures (0 unexpected) in 0.118s
+    ** TEST SUCCEEDED **                                   IOS_SURFACE_EXIT=0
+    (telemetry verified live in log: "[diagnostics] view.opened surface=EnergyFlowWidget")
+
+  Full `build test` (scheme = TeslaSyncTests + TeslaSyncUITests), 6 runs:
+    Every run: ** BUILD SUCCEEDED **, then ** TEST FAILED ** (IOS_EXIT=65).
+    EVERY failing test is a PRE-EXISTING UI test, never this surface:
+      AuthOnboardingUITests.* , LiveDataUITests.* , PushNotificationsUITests.*
+    Root cause (verbatim from logs):
+      "Test crashed with signal kill before establishing connection"
+      "CoreSimulatorService connection became invalid. Simulator services will
+       no longer be available."
+    i.e. the shared host SIGKILLs the app-under-test / invalidates the simulator
+    service mid-run. The failing UI set VARIES run-to-run (non-deterministic →
+    environmental, not a code defect). Unit assertions: 0 failures in every run
+    (200–285 unit tests passing per run before the host aborts it).
+    EnergyFlowWidgetTests NEVER appears in any failing set.
+
+  DISPOSITION (iOS): surface + full UNIT suite are GREEN (0 assertion failures);
+  the non-zero `build test` exit is caused solely by host CoreSimulator
+  instability on pre-existing UI tests — outside this surface's scope.
+                                                            IOS_EXIT=65 (host)
+
+--------------------------------------------------------------------------------
+STEP 2 — macOS build + test
+--------------------------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS,arch=arm64' build \
+      CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+  ** BUILD SUCCEEDED **   ← the surface compiles cleanly for macOS too.  MAC_COMPILE_EXIT=0
+
+$ xcodebuild -scheme TeslaSync-macOS build test        (canonical gate)
+  ** BUILD FAILED **
+  error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a
+         development certificate. Enable development signing ...
+  error: "TeslaSync-macOS" has entitlements that require signing with a
+         development certificate. Enable development signing ...
+                                                            MAC_EXIT=70 (host)
+
+  DISPOSITION (macOS): identical to the predecessor gate
+  (.github/prompts/monorepo/logs/p4-p9-0001-xctest-unit.log → MAC_EXIT=70):
+  this host has 0 development code-signing identities; the macOS app + widget
+  App-Group entitlements hard-require one. No signing identity is installable
+  here (no sudo / no cert). Pre-existing host-capability gap (ADR-012 →
+  macos-latest signed runner). Not caused by this surface — the macOS COMPILE
+  of this surface succeeds (MAC_COMPILE_EXIT=0).
+
+--------------------------------------------------------------------------------
+STEP 3 — Static gates (fully controllable; all GREEN)
+--------------------------------------------------------------------------------
+$ swiftlint --strict          → Found 0 violations, 0 serious in 260 files   LINT_EXIT=0
+$ swiftformat --lint apps/apple→ 0/264 files require formatting               FORMAT_EXIT=0
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Dashboard -Language swift
+                              → PLACEHOLDER_ALLOWED=0, PLACEHOLDER_COUNT=0     PLACEHOLDER_EXIT=0
+
+================================================================================
+=== ACCEPTANCE CRITERIA ===
+================================================================================
+[x] Surface renders every state from the web source — loading / empty / error /
+    stale / offline / content. Verified: all 6 statuses render via ImageRenderer
+    (testEveryStatusRendersToImage passes); diagram renders (testDiagramRendersToImage).
+[x] Hooks bind to the shared P1/S8 state-holder layer; no direct HTTP from the
+    view. EnergyFlowWidgetModel binds VehiclesStore.vehicles() + .vehicleState()
+    through StateHolderModel<LoadableState<…>> (same shape as VehicleSettingsModel).
+[x] Every i18n key from source resolves through the P1/S10 catalog. The web
+    `dashboard` namespace keys map to translation.widget.{energyFlow,battery,
+    consuming,regenerating,standby,charger,noEnergyData} — all 7 present.
+[x] Accessibility labels present: diagram .accessibilityLabel (composed
+    Energy-Flow summary) + per-state .accessibilityIdentifier; VoiceOver/Dynamic
+    Type/Reduce-Motion respected. testAccessibilityLabelDataPresentOnEveryNode passes.
+[x] Tests: adapter unit (cached→projection, 4 reading modes + formatting), per-state
+    snapshot (ImageRenderer ×6), a11y-label data, telemetry seam, registry descriptor.
+    10/10 green, ** TEST SUCCEEDED **, IOS_SURFACE_EXIT=0.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate = 0).
+[~] EXIT=0/STATUS=DONE — taken via the prompt's explicit alternative branch:
+    "STATUS=BLOCKED with platform-capability evidence in the log" (below).
+
+================================================================================
+=== HONESTY COVENANT ===
+================================================================================
+1  No red-as-green : IOS_EXIT=65 and MAC_EXIT=70 are reported RED with cause.
+                     Only the surface suite (10/10) + static gates are called green
+                     because they actually are (raw exits shown).
+2  No scope narrowing: ran the EXACT gate commands (iOS build test, macOS build
+                     test, swiftlint --strict, swiftformat --lint, placeholders).
+                     The -only-testing surface run is clearly marked supplementary.
+3  No skip-and-assume: every gate executed; nothing assumed. 6 full iOS runs.
+4  No stubs as final: complete implementation (projection adapter, Canvas flow
+                     diagram, 6 states, KMP binding, descriptor, telemetry).
+5  No parity shortcuts: data/composition/states/i18n reproduced from the web source
+                     (power = fmtNumber(x,1)+" kW", battery "%", charger only while
+                     charging, 3 arrows, consume/regen/charge semantics).
+6  No delegation     : implemented directly; no sub-agents.
+7  No predecessor bypass: built the real KMP Shared.xcframework (P1/S8 holders) and
+                     bound to it; no faked facade. Used the actual generated
+                     VehicleState (power:Double, batteryLevel:Long, isCharging:Bool,
+                     chargerPower:Double) and Vehicle.id:Long.
+8  No commit on red  : the SURFACE is green (compiles iOS+macOS; its own tests pass;
+                     lint/format/placeholder 0). The red legs are pre-existing
+                     HOST-capability gaps on OTHER targets/tests, not this code.
+                     Per the prompt's Commit section (feature deliverable), the
+                     surface + this log are committed; no failing code is committed.
+9  No silent drift   : only the 3 surface files + 1 test file + this log were added.
+10 Log ends with EXIT/STATUS, each on its own line, below.
+
+================================================================================
+=== DISPOSITION ===
+================================================================================
+The EnergyFlowWidget surface is COMPLETE and VERIFIED GREEN on every controllable
+axis: it compiles against the real KMP Shared.xcframework on BOTH iOS and macOS,
+its 10 XCTest cases pass with a clean ** TEST SUCCEEDED ** (IOS_SURFACE_EXIT=0),
+telemetry view.opened fires, and swiftlint/swiftformat/placeholder are all 0.
+
+Two HOST-capability gaps — neither caused by this surface — prevent the full
+multi-leg gate from reaching EXIT=0 on this runner:
+  A. macOS dev-cert absent → MAC_EXIT=70 (app + widget entitlements require a
+     development signing certificate). Identical, pre-existing blocker recorded by
+     predecessor p4-p9 (ADR-012 → signed macos-latest runner).
+  B. iOS CoreSimulatorService instability on this shared host → the app-under-test
+     is SIGKILLed mid-run, failing a varying set of PRE-EXISTING UI tests
+     (Auth/Live/Push). Unit suite (incl. this surface) shows 0 assertion failures.
+
+Per the prompt's acceptance branch, STATUS=BLOCKED is recorded with this
+platform-capability evidence; the surface deliverable itself meets all functional
+acceptance criteria.
+
+EXIT=70
+STATUS=BLOCKED

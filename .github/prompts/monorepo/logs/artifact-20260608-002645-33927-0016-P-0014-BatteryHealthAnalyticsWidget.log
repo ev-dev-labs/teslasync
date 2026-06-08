@@ -1,0 +1,104 @@
+=== P4 Dashboard widget 0014 BatteryHealthAnalyticsWidget (Apple) ===
+date: 2026-06-08T08:03:33Z
+host: macOS 26.5.1 (arm64); swift Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+
+--- Surface files delivered (allowed scope: dashboard-widgets/BatteryHealthAnalyticsWidget.*) ---
+       319  BatteryHealthAnalyticsWidget.swift
+       367  BatteryHealthAnalyticsWidget.Model.swift
+       244  BatteryHealthAnalyticsWidget.Adapter.swift
+       121  BatteryHealthAnalyticsWidget.Content.swift
+       127  BatteryHealthAnalyticsWidget.Previews.swift
+       298  BatteryHealthAnalyticsWidget.Tests.swift
+        46  BatteryHealthAnalyticsWidget.strings
+
+=== GATE STEP: swiftformat --lint (FORMAT) ===
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-16/apps/apple/.swiftformat
+SwiftFormat completed in 1.11s.
+0/6 files require formatting.
+FORMAT_EXIT=0
+
+=== GATE STEP: swiftlint --strict (LINT) ===
+Linting Swift files at paths TeslaSync/dashboard-widgets/BatteryHealthAnalyticsWidget.swift, TeslaSync/dashboard-widgets/BatteryHealthAnalyticsWidget.Model.swift, TeslaSync/dashboard-widgets/BatteryHealthAnalyticsWidget.Adapter.swift, TeslaSync/dashboard-widgets/BatteryHealthAnalyticsWidget.Content.swift, TeslaSync/dashboard-widgets/BatteryHealthAnalyticsWidget.Previews.swift, TeslaSync/dashboard-widgets/BatteryHealthAnalyticsWidget.Tests.swift
+Linting 'BatteryHealthAnalyticsWidget.swift' (1/6)
+Linting 'BatteryHealthAnalyticsWidget.Model.swift' (2/6)
+Linting 'BatteryHealthAnalyticsWidget.Adapter.swift' (3/6)
+Linting 'BatteryHealthAnalyticsWidget.Content.swift' (4/6)
+Linting 'BatteryHealthAnalyticsWidget.Tests.swift' (5/6)
+Linting 'BatteryHealthAnalyticsWidget.Previews.swift' (6/6)
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+
+=== GATE STEP: check-placeholders.ps1 (PLACEHOLDER; isolated copy of the 6 swift files) ===
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== SUPPLEMENTARY: standalone SwiftPM compile + logic test of Model+Adapter (no Xcode dep) ===
+=== BatteryHealthAnalyticsWidget standalone logic tests ===
+ALL PASS
+LOGIC_HARNESS_EXIT=0
+
+=== SUPPLEMENTARY: type-check the REAL SwiftUI surface (View+Content) vs faithful design-system stubs, Xcode 26.5 SwiftUI SDK ===
+[0/1] Planning build
+Building for debugging...
+[0/1] Write swift-version--58304C5D6DBC2206.txt
+Build complete! (0.14s)
+VIEW_TYPECHECK_EXIT=0
+
+=== CANONICAL GATE: xcodebuild build test (iOS + macOS) ===
+xcode-select -p           : /Library/Developer/CommandLineTools   (xcodebuild not selected by default)
+Xcode present             : /Applications/Xcode.app  -> Xcode 26.5 (17F42), usable via DEVELOPER_DIR
+iOS SDK / simulator       : iphonesimulator26.5 ; "iPhone 16" simulator available
+xcodegen generate         : OK (TeslaSync.xcodeproj created; the 6 surface files are members of TeslaSync + TeslaSync-macOS)
+
+IOS_EXIT=BLOCKED
+MAC_EXIT=BLOCKED
+Reason — the canonical full-app build/test cannot reach green on this runner due to THREE
+conditions, all outside this prompt's allowed scope (dashboard-widgets/BatteryHealthAnalyticsWidget.*):
+
+  1. Missing KMP core. apps/apple/Frameworks/Shared.xcframework is absent (only .gitkeep). The
+     TeslaSync scheme stages it via a pre-action that runs a Kotlin/Native Gradle build
+     (apps/shared/gradlew :core:assembleSharedXCFramework). The app's shared facade (e.g.
+     Sources/SharedFacade/FacadeError.swift) does `import Shared`, so the target cannot compile or
+     link without that framework being built first. Building it is a heavy, separate toolchain step.
+
+  2. Pre-integration duplicate symbols. The dashboard-widgets directory is a parallel-authored
+     scaffold in which 15 sibling files declare `public struct DashboardWidgetSize` and 13 declare
+     `public struct DashboardWidgetRegistration` in the SAME TeslaSync module — a hard
+     "invalid redeclaration" set that fails the whole-module compile. These live in OTHER surfaces'
+     files (e.g. DigitalTwinWidget.Model.swift, WallConnectorWidget.Model.swift, UptimeMonitorWidget
+     .Model.swift, …) which this prompt may not edit. THIS surface deliberately avoids the collision
+     by using namespaced, surface-private primitives (BatteryHealthGridSize / BatteryHealthRegistration),
+     so it adds zero new duplicate symbols.
+
+  3. xcode-select points at CommandLineTools (worked around for every sub-step above via DEVELOPER_DIR).
+
+A direct `xcodebuild -target TeslaSync` compile was started to capture raw output; it spawned the
+whole-module swift-frontend compile (~1850 files, buffered) and was stopped after ~5 min without a
+flush rather than burn the runner on a build whose failure cause (1 + 2) is already established
+statically. The surface's own correctness is instead proven by the five passing steps above
+(swiftformat 0, swiftlint --strict 0, placeholder 0, standalone logic suite ALL PASS, and the real
+SwiftUI View+Content type-checking clean against the Xcode 26.5 SwiftUI SDK).
+
+=== Per-surface acceptance evidence ===
+  States reproduced            : loading / empty / error / content + stale & offline banners + freshness chip
+  Hooks via shared state holder : BatteryHealthAnalyticsSource (P1/S8); no HTTP in the view
+  i18n (P1/S10)                 : every string via BatteryHealthAnalyticsStrings table; web parity keys present
+  Accessibility                 : VoiceOver summary, gauge value, per-tile labels, refresh/open labels; Reduce Motion honored
+  Telemetry (P1/S11)            : view.opened emitted once with slug "BatteryHealthAnalyticsWidget"
+  Tests                         : adapter projection + bands + phase matrix + model + registry/clamp + a11y
+  Registry parity               : id battery-health-analytics, category battery, default 2x4, min 1x2, max 4x40
+  No TODO/stub/placeholder/Lorem in shipped code (placeholder gate = 0)
+
+FORMAT_EXIT=0
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+LOGIC_HARNESS=PASS
+VIEW_TYPECHECK=PASS
+IOS_EXIT=BLOCKED
+MAC_EXIT=BLOCKED
+EXIT=1
+STATUS=BLOCKED

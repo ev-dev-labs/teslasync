@@ -1,0 +1,72 @@
+I'll start by exploring the repository structure to understand the task scope.
+
+Now let me explore the Apple app structure and the parity manifest.
+
+Let me check tooling availability and look at existing similar page implementations and the manifest entries.
+
+Xcode is unavailable (only Command Line Tools), but `swiftlint`, `swift`, and `pwsh` are present. Let me study existing patterns and the ledger.
+
+Key finding: `project.yml` compiles from `TeslaSync/feature-views`, not `TeslaSync/Features`. Let me examine the App navigation and a representative full feature (BatteryTab) to learn the real conventions.
+
+Excellent architecture. Let me read the rest of BatteryTab and the App navigation files in parallel.
+
+Now let me read the App navigation files, the BatteryTab Adapter, strings, Previews, and Tests.
+
+Let me find where the route registry is populated and how deep-link parsing works.
+
+Let me examine the route tests, shared components, the BatteryTab adapter/strings/tests/previews, and how energy live-status data is sourced.
+
+Let me explore the shared components, the SharedFacade, how surfaces consume the KMP core, and existing energy/live-status wiring.
+
+Power-flow widgets already exist. Let me study them and the SharedFacade KMP binding pattern.
+
+Let me read the history widget model/adapter, the SharedFacade live/state contracts, and the web energy types/hooks for exact field parity.
+
+I have a strong grasp now. Let me read the web data contracts and the key shared components/tokens I'll build on.
+
+Now let me read the design tokens and the shared components I'll compose with.
+
+Let me read the test conventions, the forms filters (range picker), and the lint config.
+
+Let me inspect the SharedFacade container/state-holder/live primitives to decide how to wire a production source for navigation registration.
+
+Let me check the route tests for breakage risk before deciding on adding a route case.
+
+Adding `.powerFlow` is test-safe. Let me check the Localization catalog setup.
+
+I have everything I need. Xcode is unavailable (gate will be BLOCKED on `xcodebuild`), but `swiftlint`, `swift`, `pwsh` work. Let me set up tracking and start building.
+
+The precedent (ADR-012, widget 0056) is "code-complete + DEFERRED Xcode gate → STATUS=DONE", not BLOCKED. Let me confirm the approved disposition.
+
+Now I'll implement the surface. Starting with the pure, SwiftUI-free Model (state-holder seam) and Adapter (projection core) so I can compile/execute them for real verification.
+
+Now I'll create the Model file (Foundation-only state-holder seam):
+
+Now the Adapter (pure projection core, web-parity numeric pipeline):
+
+Let me typecheck the pure Model + Adapter immediately to catch errors early.
+
+Pure logic compiles clean under Swift 6 strict concurrency. Now the Views file (SwiftUI chrome):
+
+I need to fix a parity detail: the web page's area chart plots **raw watts** (axis formatted via `fmtWatts`), not kilowatts. Let me correct the chart projection.
+
+Now the Charts file (Swift Charts area + line, web-parity colors):
+
+Now the projector needs em-dash tiles for the empty state (web renders the 4 stat cards even with no data). Let me add that, then write the main page file.
+
+Now let me add the `emptyTiles` helper after the `tiles` function:
+
+Now the main page file with the SwiftUI string bridge and full composition:
+
+Now I'll verify the full SwiftUI surface compiles against the real component library. Let me check the component dependency graph is self-contained.
+
+DataDisplay bridges to the Shared facade — I don't use it. Let me typecheck against only the components I actually use.
+
+Only `UnitFormatters.swift` needs Shared. Let me typecheck against all components except that one.
+
+Clean on macOS 15. Now the iOS 18 SDK typecheck (precedent verifies both):
+
+macOS-only SDK under CLT (iOS SDK needs full Xcode — deferred; surface is platform-agnostic so macOS covers it). Now the Previews, strings, and Tests files:
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: F55A:AB822:29514CC:2B4F380:6A26E02B)

@@ -1,0 +1,124 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Swift toolchain, swiftlint, swiftformat, and pwsh are available. Let me check xcodebuild status and explore the existing Apple app structure plus read the web source.
+
+`xcodebuild` requires full Xcode but only CommandLineTools is present — that's a capability constraint I'll document. But `swift`, `swiftlint`, `swiftformat`, `pwsh` all work. Let me read the constants and examine existing Apple feature-views to learn the established conventions.
+
+`HealthGaugeGrid` is a sibling from the same web `drivetrain-health` directory and has the closest structure (States + ViewTests). I'll study it as my primary template. Let me read all its native files plus the web source.
+
+Now let me read all the HealthGaugeGrid native files to learn the exact conventions for state-holders, tokens, i18n, and tests.
+
+This is an excellent template. Let me read the remaining HealthGaugeGrid files: Adapter, Views, States, Previews, Tests, ViewTests, and strings.
+
+Let me read the remaining HealthGaugeGrid reference files: States, Previews, Tests, ViewTests, and strings.
+
+Now the test files and strings, plus I'll verify the shared tokens exist.
+
+I have the complete template. Now let me verify the shared P1/S9 tokens, P1 motion primitives, and shared components exist, plus check the build config and logs location.
+
+Motion primitives exist. Let me read the Motion file and locate the design tokens (Color.TS, Font.TS, TSSpacing, etc.) and shared components.
+
+Let me read the design tokens, material (glass panel), feedback components, and TSTone.
+
+The tokens are generated (P1/S9). Let me find where `TSSpacing`, `Color.TS`, `Font.TS`, `TSMotion`, `TSRadius` are defined, and read the feedback components (TSEmptyState, TSSkeleton) and the glass panel modifier.
+
+Let me read the build config, the glass panel material, skeletons, and check the token generation + logs directory.
+
+Tokens are generated in `apps/design/generated/apple`. Let me verify those token files, the skeleton component, the placeholder checker, and the logs directory + an existing log for format.
+
+All tokens confirmed. Let me read the skeleton component, verify no HealthRecommendations files exist yet, locate the placeholder checker and logs dir, and check an existing log format.
+
+Let me examine how sibling P4 feature-views handled the gate (especially the xcodebuild constraint) and read the placeholder checker.
+
+This gives me the exact sanctioned disposition. Let me verify whether full Xcode exists on this specific runner, check toolchain versions, and read the placeholder checker.
+
+`/Applications/Xcode.app` exists — so I can run xcodebuild via `DEVELOPER_DIR` override (non-destructive), exactly as the sibling did. Let me read the placeholder patterns and the full token color palette, then verify the xcodebuild override works.
+
+Xcode.app is present, so I can run the full gate via `DEVELOPER_DIR`. The placeholder gate forbids the literal words TODO/FIXME/XXX/"Coming soon"/Placeholder/"Lorem ipsum"/"not implemented" — I'll keep those out of code and comments. Critically, the app module globs ALL feature-views together, so I must avoid type-name collisions with `HealthGaugeGrid` (which already defines `DrivetrainHealthStatus`, etc.). Let me check for collisions and verify the xcodebuild override works.
+
+All names are collision-free and `xcodebuild` works (Xcode 26.5, iPhone 16 booted). Let me read the lint/format configs, then set up my plan and todos.
+
+I now have everything needed. Let me set up the plan and todo tracking, then author the files.
+
+Now authoring the files. Starting with the Foundation-only Model and Adapter.
+
+Model done. Now the pure projector (Adapter) — the core parity logic mirroring the web `useMemo`.
+
+Model and Adapter done. Now the main SwiftUI view file.
+
+Now the Views file: header, staggered tip content, the tip card, and priority→tone/glyph mapping.
+
+Now the States file: freshness chip, connectivity banner, loading skeleton, empty, and error states.
+
+Now the strings catalog, Previews, Tests, and ViewTests files together.
+
+Now the logic tests (projector, model, accessibility).
+
+Now the per-state view render tests.
+
+All 9 files created. Now let me canonicalize formatting and run the lint/format/placeholder gates on the shipped files.
+
+swiftformat is clean. Now swiftlint --strict and the placeholder gate on the shipped files.
+
+swiftlint passes. The placeholder scan ran over the whole 1436-file directory (the 19 hits are pre-existing sibling files, mostly `.placeholder` redaction). I need a real scan of just my 8 files. Let me isolate them and also grep directly.
+
+My 8 files are clean (PLACEHOLDER_COUNT=0). Now the key proof: an isolated SwiftPM harness compiling the shipped sources + real design system + running the tests, exactly as the sibling did. Let me map the design-system source tree.
+
+Only `UnitFormatters.swift` has app-only deps (the `\.tsUnits` env key) — matching the sibling's single exclusion. Let me check imports across the design system, then build the isolated SwiftPM harness (module named `TeslaSync` so `@testable import TeslaSync` resolves).
+
+All system frameworks — the harness will compile cleanly. Let me build the isolated SwiftPM harness (module `TeslaSync`, Swift 6 language mode) against the real design system.
+
+Harness assembled (41 design-system + 6 surface + 2 test files). Running the build+test under Swift 6 language mode with the full Xcode SDK.
+
+Isolated harness: **32 tests pass, 0 failures** — my exact shipped sources compile and pass against the real design system under Swift 6 strict concurrency. Now let me attempt the full xcodebuild gate (expected DEFERRED per the sibling pattern) to capture real exit codes and prove my files add zero errors. First, check the framework/project state.
+
+The full xcodebuild gate needs a from-scratch Gradle KMP `Shared.xcframework` build (no prebuilt framework present) plus generated project. Per the sanctioned sibling disposition this gate is DEFERRED, but I'll actually run it to capture real evidence (no assumptions). First, generate the project and confirm the pre-existing app-target blocker.
+
+Project generates cleanly; 173 co-located feature-view test files get globbed into the app target (the first alphabetically, `AcDcStatsPanel.Tests.swift`, is not mine) — confirming the pre-existing arch-wide XCTest-in-app-target condition. Now let me actually run the full xcodebuild gate to capture real exit codes, starting the iOS build (it triggers the Gradle `Shared.xcframework` pre-action).
+
+Let me monitor the build while I prepare the log. Checking progress.
+
+The background subshell was killed when the async wrapper exited. Let me relaunch xcodebuild as a detached process that persists, writing to a log.
+
+Good — Gradle is staging `Shared.xcframework` (using build cache, "FROM-CACHE"), so it's progressing. The detached xcodebuild continues. Let me keep polling for the app-compile phase.
+
+`Shared.xcframework` staged successfully. The build should now move into the app-compile phase. Let me confirm the xcodebuild process is alive and keep polling.
+
+There are concurrent xcodebuilds from another agent sharing this environment (writing to `/tmp/xcb-ios.log`, isolated DerivedData). Mine writes to `/tmp/hr-ios-build.log` and is staging its release framework now. Let me continue polling my log for the app-compile phase.
+
+Gradle release-framework linking is the slow pole, worsened by the concurrent builds. My xcframework already staged successfully. Let me wait in a longer block for the app-compile phase to surface the (pre-existing) XCTest error and the real exit code.
+
+The app-compile phase surfaced the exact pre-existing blocker the sibling documented: `AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'` — a co-located feature-view test file compiled into the app target (not my code). Let me confirm zero HealthRecommendations errors and capture the terminal exit.
+
+The iOS build failed (`** BUILD FAILED **`) — and crucially the **only** distinct compile error is the pre-existing `XCTest` module dependency in `AIRestorePanel.Tests.swift` (a co-located feature-view test compiled into the app target). Let me confirm the process exited, enumerate every distinct error, and verify zero HealthRecommendations errors.
+
+My iOS build failed **solely** on the pre-existing `AIRestorePanel.Tests.swift` XCTest condition. My surface contributes zero errors — and notably my `HealthRecommendations.strings` was validated (UTF-8) and **copied into the app bundle** successfully. The only HealthRecommendations lines are benign "part of module; ignoring import" warnings (the same co-located-test convention all 173 siblings use).
+
+Let me capture explicit exit codes for both platforms in one sequential detached run (isolated DerivedData, reusing the Gradle cache).
+
+While the exit-code capture runs, let me poll for results. Checking progress.
+
+`IOS_EXIT=65` confirmed — the only error is the pre-existing `AIRestorePanel.Tests.swift` XCTest condition. The macOS build should be running now. Let me poll for `MAC_EXIT` and start drafting the log.
+
+Both real exit codes captured: `IOS_EXIT=65`, `MAC_EXIT=65`. Let me characterize the macOS failure cause and confirm zero HealthRecommendations errors on both platforms.
+
+macOS failure = the pre-existing dev-signing entitlements requirement (`TeslaSync-macOS` / `TeslaSyncWidgets-macOS`), and iOS = the co-located XCTest condition. **Zero HealthRecommendations errors on either platform.** This matches the sibling disposition exactly. Let me check git status and clean up generated artifacts.
+
+I see the shared environment: another agent is modifying `AIUsageCard.*` files (not mine). I'll commit **only** my `HealthRecommendations.*` files + log — never `git add -A`. The generated `.xcodeproj` is git-ignored (not in status). Let me verify ignores and clean up generated/temp artifacts.
+
+Clean — only my 9 files are staged-to-be. Let me gather exact toolchain versions and final evidence counts for the log.
+
+All evidence gathered. Let me verify the literal gate placeholder-path behavior, then write the comprehensive log.
+
+Now I'll write the comprehensive gate log with all the real evidence.
+
+Log written. Let me re-run the three host gates fresh for final confirmation before committing, then stage only my files.
+
+All host gates green. Now I'll stage **only** my 9 files + the log (explicitly, never `-A`, to avoid the concurrent agent's `AIUsageCard.*` changes) and commit.
+
+All 10 files staged, `AIUsageCard` excluded (count 0). Committing now.
+
+Committed cleanly (`d24166497`, 10 files, 1663 insertions), `AIUsageCard` excluded. Let me do a final verification and clean up temp files.
+
+All todos complete. Let me update the plan file to reflect the final status.
+

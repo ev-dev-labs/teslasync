@@ -1,0 +1,12 @@
+I'll start by understanding the task: porting the web `VehicleHeader.tsx` component to native Apple SwiftUI. First, let me check the environment capabilities and read the web source specification.
+
+Key finding: `xcodebuild` is present but **Xcode is not installed** — only CommandLineTools. Let me verify whether a full Xcode exists and explore the existing Apple app structure to understand conventions.
+
+Critical finding: **Full Xcode IS installed** at `/Applications/Xcode.app` — only the active dir points to CommandLineTools. Let me check if I can use it via `DEVELOPER_DIR` (no sudo needed), and examine existing `feature-views` conventions including any existing VehicleHeader files.
+
+**I am NOT blocked** — Xcode 26.5 works via `DEVELOPER_DIR`, and an iPhone 16 simulator is already booted. The 7-file convention per feature-view is clear. `DriveDetailHeader` is the closest analog (a header for vehicle/drive detail). Let me study it in full and the related infrastructure.
+
+Excellent — the pattern is rich and well-defined. Let me read the remaining DriveDetailHeader files (Views, Previews, Tests, strings) to complete my understanding of the convention.
+
+Now I fully understand the 7-file convention. Let me gather the web spec details (helpers, types, Badge/Button/GlassPanel components) and the native design tokens + shared components I'll need.
+

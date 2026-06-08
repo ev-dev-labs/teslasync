@@ -1,0 +1,100 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Tools are available (xcodebuild, swift, swiftlint, swiftformat, pwsh). Let me read the web source and explore the Apple app structure.
+
+Let me read the web dependencies and explore existing Apple feature-views to learn the conventions.
+
+Found a fully-implemented sibling: `InfrastructureSection`. Let me read all its files as my template, plus the data type and the web sibling source.
+
+Let me read the rest of the InfrastructureSection files and find a query-polling example closer to my use case.
+
+The Infrastructure example is mutation-based. Let me find a query-polling example (closer to my live `useQuery`), read the remaining Infrastructure files, and locate the shared design tokens.
+
+1191 files. Let me locate the shared core (tokens, components, live-state base) and find a clean query-snapshot example like `SecurityStatistics`.
+
+The TSDesign file is chart/motion only. Let me locate the actual generated tokens and the KVList/Card/Badge/Skeleton/error components.
+
+I have `TSKVList`, `TSCard`, `TSCode`. Now let me read the remaining shared components and the generated tokens.
+
+Now let me read the feedback components (states, skeletons) and typography.
+
+Let me read Typography, the Infrastructure Previews/Tests/strings, and a query-based example (`SecurityStatistics`).
+
+Let me read the Infrastructure Tests + Previews, and find a live-query snapshot example to mirror.
+
+I have the full component vocabulary. Now let me find a live-query snapshot example to mirror the model/adapter (DTO → projection with loading/empty/error/stale/offline). Let me inspect `SecurityStatistics`.
+
+`SecurityStatistics` is a 7-file query-snapshot surface. Let me read its native Model, main view, and Adapter, plus its web source, to mirror the single-query DTO pattern.
+
+This is the ideal template. Let me read the rest of `SecurityStatistics` (view, Adapter, Views, Previews, Tests, strings) and the web source.
+
+Excellent template. Let me read the remaining `SecurityStatistics` files plus the Disclosure and Motion (FadeIn) components.
+
+Let me read the SecurityStatistics Previews/Tests/strings, plus the Disclosure and Motion components for the AccordionSection mapping.
+
+I have the full template. Let me check the motion component, button signature, whether a native AccordionSection exists, and the project/build setup.
+
+Let me understand the build setup (xcodegen/project, schemes, test wiring, placeholder checker).
+
+Now let me assess buildability: simulators, the Shared.xcframework dependency, and the placeholder checker.
+
+Key findings: `Shared.xcframework` is absent (needs KMP/Gradle build) and no iPhone 16 simulator. Let me assess the broader toolchain and simulator availability before deciding DONE vs BLOCKED.
+
+Definitive: only Command Line Tools (no full Xcode), no iOS SDK/simulators, no `Shared.xcframework`. So `xcodebuild` build/test is environment-blocked. But `swift`, `swiftlint`, `swiftformat`, `xcodegen` work. Let me test whether a real macOS typecheck is feasible (SwiftUI under CLT) and gauge the `Shared` dependency.
+
+Big news: SwiftUI typechecks under CLT, and feature-views don't import `Shared`. Let me check whether the Components/Design layer is `Shared`-free so I can do a real scoped typecheck of my surface against the actual design system.
+
+The Components/Design layer is `Shared`-free and only uses SDK frameworks — so I can do a real scoped macOS typecheck of my surface against the actual design system. Let me read the lint configs, the placeholder patterns, and the web number formatter before writing.
+
+I now have a complete understanding. Key finding: this is a **Command Line Tools-only** environment (no full Xcode, no iOS SDK/simulators, no `Shared.xcframework`), so the `xcodebuild` gate steps are environment-blocked — but `swift` (macOS typecheck), `swiftlint`, `swiftformat`, `xcodegen`, and the placeholder checker all work, and I can do a real scoped macOS typecheck against the `Shared`-free design system. Let me set up tracking and write the surface, mirroring the `SecurityStatistics` 7-file convention.
+
+Now I'll write the surface files. Starting with the Adapter (projection core) and Model (state holder).
+
+Now the Views file (accordion shell, probe cards, KV, skeleton, banner, error, empty).
+
+Now the main view, Previews, Tests, and strings files.
+
+All 7 files written. Now let me format and verify. First, auto-format my files with swiftformat, then run the scoped macOS typecheck.
+
+swiftformat passed. Now the critical correctness check — a scoped macOS typecheck of my surface against the real (Shared-free) design system.
+
+`#Preview` macro needs full Xcode's plugin (unavailable under CLT). Let me retypecheck without `DEBUG` (excludes all preview blocks) to fully typecheck my surface logic against the real design system.
+
+Errors are in a dependency (`UnitFormatters.swift` needs `UnitPreferences` from outside Components), not my code. Let me find which component files have external deps so I can exclude the unrelated ones from the scoped typecheck.
+
+`UnitPreferences` lives in `SharedFacade` (imports `Shared`), referenced only by `UnitFormatters.swift`, which my surface doesn't use. Let me re-run the typecheck excluding that one file.
+
+Scoped macOS typecheck **passed (EXIT=0)** — my surface is type-correct against the real design system. Now let me syntax-check the Previews/Tests, and run swiftlint + swiftformat lint on my files.
+
+Previews/Tests parse cleanly; swiftformat lint passes (0/6). Now swiftlint --strict on my files.
+
+swiftlint --strict: **0 violations**. Now the placeholder check. Let me verify my files genuinely (direct scan) and run the checker's self-test plus the gate-form invocation.
+
+My files are clean; checker self-test passes. Let me run the actual checker — both the gate-form path and a genuine temp-dir scan of my files.
+
+Both placeholder checks pass (COUNT=0). Now let me run the whole-tree `swiftformat --lint` and `swiftlint --strict` (the exact gate commands) to confirm my files integrate cleanly with the baseline.
+
+Whole-tree `swiftformat --lint` flags a **pre-existing** issue in `ActionBuilder.Previews.swift` (not my file — outside my allowed scope). My 6 files pass. Let me confirm via git status that I only touched my surface, and capture the whole-tree swiftlint baseline.
+
+git status confirms only my 7 files are new. Whole-tree swiftlint shows 1 pre-existing violation somewhere — let me locate it to confirm it's not mine.
+
+The single swiftlint violation is in `LifetimeStatsWidget.Adapter.swift` (dashboard-widgets) — pre-existing, not mine. Both whole-tree lint issues are outside my scope. Let me capture the `xcodebuild` BLOCKED evidence and check the repo's established practice for deferred Xcode verification.
+
+The repo's `macos-pending-verifications.md` documents the exact established convention: surfaces are committed with **all host-runnable gates green** (`swiftc -typecheck`, swiftlint, swiftformat, placeholder), with the full-app `xcodebuild build test` **deferred to the macOS CI acceptance gate** — explicitly "not unfinished work." My situation matches precisely. Let me capture two more pieces of evidence (iOS SDK absence; xcodegen project wiring with my files).
+
+iOS SDK is absent (CLT-only) and `xcodegen generate` succeeded with my files wired into the project (42 references in pbxproj). I have complete evidence. Let me clean up the generated build artifact and confirm it's git-ignored.
+
+Let me check for a sibling feature-view log to match the established format, then write my log.
+
+I now fully understand the established log format and STATUS convention. The sibling precedent ran on a **full-Xcode** machine (real iOS-18/macOS-15 SDK typecheck, xcodebuild exit 65). **My runner is CLT-only** — no Xcode, no iOS SDK, no simulators — so per the prompt's explicit capability clause, the honest terminal state is **STATUS=BLOCKED with platform-capability evidence**, with all host-runnable gates green. Let me write the comprehensive, honest log.
+
+Log written. Let me stage and commit the surface + log.
+
+All 8 files staged cleanly. Now commit.
+
+Committed (`931ef557e`). Let me do a final defensive re-verification of the committed files (scoped typecheck + clean tree).
+
+Final typecheck clean (0 errors) and working tree clean. All work is verified and committed.
+
+All todos complete. Here's my final report.
+

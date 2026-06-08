@@ -1,0 +1,77 @@
+I'll start by assessing the runner's Apple toolchain capability and exploring the relevant source files, since this task explicitly requires me to declare STATUS=BLOCKED if SwiftUI/Swift Charts/MapKit tooling is unavailable.
+
+Key capability finding: **Xcode is NOT installed** (only Command Line Tools), `simctl` is missing, and there's no iOS SDK — so `xcodebuild ... -destination 'platform=iOS Simulator'` cannot run. `swift`, `swiftlint`, and `swiftformat` ARE available. Per the binding capability clause, the full gate will be BLOCKED, but I must still produce the real artifact and run every check I can. Let me explore the web source and the established native architecture thoroughly before deciding.
+
+Excellent — there's an established `feature-views/` directory with ~553 files following a clear multi-file pattern per surface (`.Adapter.swift`, `.Model.swift`, `.Previews.swift`, `.strings`, plus view + tests). I must match this architecture exactly. Let me study a representative existing surface and the web dependencies.
+
+`EventTimeline` is the ideal template (a timeline surface). Let me read its full fileset to replicate the exact architecture, plus the `formatTime` impl and the project.yml build wiring.
+
+The architecture is clear and mature. Let me read the remaining template files (Views/Previews/strings/Tests) and locate the shared P4 core tokens (`TSFadeIn`, `TSSpacing`, `Color.TS`, `Font.TS`, `tsGlassPanel`).
+
+Now the test template plus the shared P4 core token definitions and the web `formatTime`.
+
+Token search came up empty in `Sources/`. Let me locate the shared P4 core token definitions across the whole Apple tree, and check the build wiring in `project.yml`.
+
+`project.yml` is at `apps/apple/project.yml`. Let me read the build wiring and the shared token/component definitions I need to consume.
+
+Now let me read the exact token/component APIs I'll consume, and verify how `.Tests.swift`/`.Previews.swift` files in `feature-views/` are wired into targets.
+
+`Color.TS`/`TSSpacing`/`Font.TS` are generated tokens under `apps/design/generated/apple`. Let me read those plus the remaining shared components, and check how prior surfaces handled a BLOCKED/no-Xcode situation.
+
+The established convention is clear: prior surfaces ran all host-runnable gates, **independently executed the pure logic** via the Swift CLI, and marked xcodebuild as DEFERRED. Critically, one log mentions "app host-typecheck green" — so I must probe whether this toolchain can actually import SwiftUI/Charts/MapKit/XCTest. Let me probe capability and read the remaining token/component APIs.
+
+Decisive capability probe results:
+- **SwiftUI / Charts / MapKit / Observation: importable & typecheckable** against the CommandLineTools macOS SDK (26.5) ✅
+- **XCTest: NOT available** (`no such module 'XCTest'`) ❌
+- **xcodebuild / simctl: unavailable** (no Xcode) ❌
+
+So I can host-typecheck the SwiftUI code and independently execute the pure logic, but cannot run XCTest or the iOS-Simulator/macOS xcodebuild gate. Let me examine how my direct sibling feature-view prompts concluded (DONE-with-deferral vs BLOCKED) and read the remaining component APIs.
+
+I now have the full picture. The runner has **CommandLineTools only** (no Xcode/Simulator/XCTest), but SwiftUI/Charts/MapKit/Observation **do** typecheck against the macOS SDK. Per the prompt's explicit capability clause, the xcodebuild gate is genuinely BLOCKED — but I'll deliver the complete artifact and run every host-runnable check to green (lint, format, placeholder, host-typecheck, and independent logic execution). Let me read the last APIs and confirm the placeholder tool.
+
+`pwsh` IS available, so I can run the real placeholder gate. iOS-simulator SDK is absent (macOS-SDK typecheck only). Let me read the forbidden-pattern list and the script's path-matching so my code stays clean.
+
+`pwsh` is available so the placeholder gate is runnable. I have all APIs. Let me read the lint/format configs to match house style, set up a plan, then write the surface.
+
+I have everything needed. Let me set up tracking and write the complete surface (7 files) matching the established `EventTimeline` architecture exactly.
+
+All 7 files created. Now the verification phase — format, lint, placeholder gate, then independent logic execution. Let me update tracking and run the host-runnable gates.
+
+Format gate clean (0/6 require formatting). Now SwiftLint `--strict` and the placeholder gate (both the literal command and a real scan over the actual files).
+
+SwiftLint `--strict`: **0 violations**. Placeholder gate: **0** (verified both the literal command and a real per-file scan). Now the most important verification — independently **executing** the real shipped Adapter+Model logic (since XCTest can't run here) and **host-typechecking** under Swift 6 strict concurrency.
+
+**Real logic executed green: all 46 checks passed**, and the Adapter+Model **typecheck clean under Swift 6 strict concurrency**. Now host-typecheck the SwiftUI view layer against the macOS SDK. Let me compile my view files together with the shared component/design library they consume.
+
+Components/Design are self-contained (SwiftUI + tokens only). Let me host-typecheck my full view layer against the real shared library on the macOS SDK, with `DEBUG` so previews are included.
+
+The errors are entirely in unrelated component files (`UnitFormatters.swift` needs `UnitPreferences` from the Platform layer) — not my code. Let me narrow to the precise transitive closure my views need for a clean signal.
+
+All support files import only SwiftUI. Let me typecheck my view layer against the precise curated closure (UI + Feedback + Motion + Design), excluding the files that drag external Platform types.
+
+Now the only error is the `#Preview` macro plugin (`PreviewsMacros`), which ships with full Xcode — not a code defect (it also hits the repo's own `Badges.swift`). Typechecking without `-D DEBUG` excludes the `#if DEBUG` preview blocks and validates all shipped code.
+
+Shipped code typechecks clean (`EXIT=0`) against the real shared library under Swift 6 strict concurrency. Let me also validate the preview **bodies** by transforming the `#Preview` macro into plain functions (the macro plugin is the only Xcode-only piece), so nothing is left unverified.
+
+Only `Badges.swift`'s own `#Preview` trips it (a repo file under DEBUG). Let me strip the `#if DEBUG` wrapper from the probe too and typecheck **without** `-D DEBUG`, so the repo previews stay excluded while my preview bodies compile unconditionally.
+
+All preview bodies typecheck clean too. Let me mechanically verify i18n key coverage (every key referenced in code exists in the `.strings` catalog) — no assumptions.
+
+**i18n: perfect coverage** — all 14 referenced keys defined, including the web parity key `driveDetail.inProgress`. Now let me capture the literal xcodebuild gate evidence (the genuine platform block) and assemble the consolidated gate result.
+
+I have complete, honest evidence. The verdict on this CommandLineTools-only runner:
+
+- **LINT_EXIT=0** (swiftlint --strict: 0 violations) · **FORMAT_EXIT=0** · **PLACEHOLDER_EXIT=0**
+- **Real logic executed: 46/46 checks passed** · **Swift 6 strict-concurrency typecheck: 0** · **view-layer + preview-body host-typecheck: 0** · **i18n: 14/14 keys**
+- **IOS_EXIT=1 / MAC_EXIT=1 — genuinely BLOCKED**: `xcodebuild` needs Xcode (only CommandLineTools present), no `iphonesimulator` SDK, no `simctl`, no `XCTest` module.
+
+Per the prompt's explicit capability clause, this is `STATUS=BLOCKED` with platform evidence. Let me write the honest gate log.
+
+Log written. Let me do a final consolidated confirmation of all host-runnable gates, verify only the allowed files changed, clean up temp artifacts, and commit.
+
+All host-runnable gates green; git shows **only the 7 allowed `DriveTimeline.*` files + the log**. Committing now with the prompt's message.
+
+Committed as `bc4b0090` — exactly the 7 `DriveTimeline.*` files + the log (1321 insertions, no other files touched).
+
+Delivered the complete, production-polished native Apple `DriveTimeline` surface and verified everything verifiable on this runner. Committing was appropriate: the artifact passes every host-runnable gate; only the Xcode-bound steps are environmentally blocked (explicitly sanctioned by the prompt's capability clause).
+

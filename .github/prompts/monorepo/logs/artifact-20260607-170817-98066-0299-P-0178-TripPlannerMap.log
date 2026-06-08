@@ -1,0 +1,203 @@
+=== P4 Feature view 0178 TripPlannerMap (Apple) ===
+Run host: Darwin (Apple Silicon). Date: 2026-06-07.
+Toolchain (capability check — REQUIRED by prompt):
+  Xcode 26.5 (Build 17F42) via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+  iOS 26.5 simulator runtime + "iPhone 16" device available (booted)
+  iPhoneSimulator26.5 SDK / MacOSX (macOS 15+) SDK
+  SwiftUI + Swift Charts + MapKit present (verified by isolated compile, below)
+  swiftlint 0.x, swiftformat 0.x, xcodegen, pwsh all present
+  KMP Shared.xcframework assembled via Gradle (:core:assembleSharedXCFramework,
+    BUILD SUCCESSFUL) and staged → apps/apple/Frameworks/Shared.xcframework
+=> Platform capability for SwiftUI/Swift Charts/MapKit + iOS18/macOS15 HIG is
+   AVAILABLE. The surface is NOT blocked on capability.
+
+--------------------------------------------------------------------------------
+SUMMARY (read this first)
+--------------------------------------------------------------------------------
+The TripPlannerMap surface itself is COMPLETE and INDEPENDENTLY VERIFIED GREEN:
+  * swiftformat --lint .......... 0/8 files require formatting   (FORMAT_EXIT=0)
+  * swiftlint --strict .......... 0 violations in 8 files        (LINT_EXIT=0)
+  * placeholder/stub gate ....... PLACEHOLDER_COUNT=0            (PLACEHOLDER_EXIT=0)
+  * isolated type-check ......... 0 errors (all 8 files compile against the REAL
+                                  shared UI layer + Shared.xcframework, iOS + macOS)
+  * isolated unit-test RUN ...... Executed 39 tests, 0 failures (0 unexpected)
+
+The FULL-SUITE gate (`xcodebuild -scheme TeslaSync … build test` and
+`-scheme TeslaSync-macOS … build test`) CANNOT go green in this worktree for
+reasons EXTERNAL to this surface and OUTSIDE the allowed edit scope
+(allowed files = apps/apple/TeslaSync/feature-views/TripPlannerMap.* + this log):
+  * iOS  : the shared app module fails to compile due to 1202 PRE-EXISTING
+           compile errors in 36 committed SIBLING feature-view files (16 other
+           surfaces) — a `JSONValue` / `DashboardWidgetSize` duplicate-type
+           ambiguity in the committed baseline. ZERO of these errors are in any
+           TripPlannerMap file.
+  * macOS: the stock target additionally fails the code-signing/entitlements
+           check (no development certificate on this runner — environment), and,
+           with signing disabled, hits the SAME shared sibling compile errors.
+
+Per Honesty Covenant #1 (No red-as-green) and #8 (No commit on red) this is
+reported as STATUS=BLOCKED with full evidence; it is NOT claimed as DONE, and the
+work is NOT committed while the suite is red. The surface is gate-ready: in a
+clean baseline (siblings fixed) it compiles and passes its tests, as proven below.
+
+--------------------------------------------------------------------------------
+STEP 1 — iOS: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+--------------------------------------------------------------------------------
+preAction "Stage Shared.xcframework" ran clean:
+  ▸ Assembling Shared.xcframework via Gradle…
+  ▸ Staging …/release/Shared.xcframework → apps/apple/Frameworks/Shared.xcframework
+  ✓ Shared.xcframework staged
+App-module compile (TeslaSync target; testing search paths enabled by the test
+action) FAILED. Representative root-cause errors (NOT in this surface):
+  feature-views/FleetApiSection.Models.swift:26: 'JSONValue' is ambiguous for type lookup in this context
+  feature-views/ResultPanel.Tests.swift:26: type 'Any' has no member 'string'
+  Sources/DashboardWidgets/BatteryCellsWidgetModel.swift:32: 'DashboardWidgetSize' is ambiguous for type lookup
+Totals: 1202 compile errors across 36 distinct committed sibling files / 16 surfaces.
+Errors located in any TripPlannerMap.* file: 0
+The only diagnostics emitted for this surface are benign and expected:
+  TripPlannerMap.Tests.swift / .MarkerTests.swift: warning: file is part of module
+  'TeslaSync'; ignoring import   (the established in-target `@testable import`
+  pattern used by all 100+ sibling .Tests.swift files — harmless, ignored)
+** BUILD FAILED **   →   IOS_EXIT=65   (blocked by pre-existing sibling errors)
+
+--------------------------------------------------------------------------------
+STEP 2 — macOS: xcodebuild -scheme TeslaSync-macOS build test
+--------------------------------------------------------------------------------
+Stock invocation FAILED at the signing gate (environment — no dev certificate):
+  error: "TeslaSync-macOS" has entitlements that require signing with a development
+         certificate. Enable development signing in the Signing & Capabilities editor.
+  error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+Errors in any TripPlannerMap.* file: 0
+** BUILD FAILED **   →   MAC_EXIT=65   (blocked by code-signing; environment)
+Corroboration with signing disabled (CODE_SIGNING_ALLOWED=NO) — see STEP 6.
+
+--------------------------------------------------------------------------------
+STEP 3 — swiftlint --strict   (surface deliverable)
+--------------------------------------------------------------------------------
+$ swiftlint lint --strict --no-cache TeslaSync/feature-views/TripPlannerMap.*.swift TeslaSync/feature-views/TripPlannerMap.swift
+Done linting! Found 0 violations, 0 serious in 8 files.
+LINT_EXIT=0
+(Note: the prompt's repo-wide `swiftlint --strict` would also surface the
+pre-existing sibling violations; the deliverable's own files are clean.)
+
+--------------------------------------------------------------------------------
+STEP 4 — swiftformat --lint   (surface deliverable)
+--------------------------------------------------------------------------------
+$ swiftformat --lint  <8 TripPlannerMap files>
+(lint mode - no files will be changed.)
+0/8 files require formatting.
+FORMAT_EXIT=0
+
+--------------------------------------------------------------------------------
+STEP 5 — check-placeholders.ps1 -Path …/feature-views/TripPlannerMap
+--------------------------------------------------------------------------------
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/TripPlannerMap
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+STEP 6 — PER-SURFACE VERIFICATION (isolating the deliverable from the broken siblings)
+--------------------------------------------------------------------------------
+6a. Isolated type-check — all 8 files compiled as part of module `TeslaSync`
+    together with the ENTIRE real shared UI layer (Sources/**, minus the
+    pre-broken Sources/DashboardWidgets), the generated design tokens, and the
+    real Shared.xcframework (import Shared), for the iOS-simulator target:
+      $ xcrun swiftc -sdk iphonesimulator -target arm64-apple-ios18.0-simulator \
+          -F Frameworks/Shared.xcframework/ios-arm64-simulator \
+          -F <platform>/Developer/Library/Frameworks -I <platform>/Developer/usr/lib \
+          -module-name TeslaSync -swift-version 6 -D DEBUG -typecheck \
+          <185 Sources files> <design tokens> <8 TripPlannerMap files>
+      RESULT: TOTAL_ERRORS=0   (TripPlannerMap errors=0)
+    => The surface's SwiftUI View, MapKit map (Map/Annotation/MapPolyline/
+       selection callout), adapter, model, markers, previews AND XCTest files all
+       type-check against the real TSGlassPanel / TSCircleMarker / TSEmptyState /
+       TSErrorDisplay / TSSkeleton / Color.TS / Font.TS / TSTone / TSMaterial, etc.
+
+6b. macOS full-module compile (codegen, not just type-check) of the same scoped
+    set incl. the real types + real SwiftUI View, target arm64-apple-macos15.0:
+      RESULT: 0 Swift compile errors. (A manual loadable-bundle LINK then warns
+      "cannot link directly with 'SwiftUICore' … not an allowed client" — a
+      limitation of hand-linking SwiftUI outside an Xcode app target, NOT a code
+      defect; compilation of all 187 files, incl. all 8 TripPlannerMap files,
+      succeeded with 0 errors.)
+
+6c. Isolated UNIT-TEST RUN — the pure-logic suites (Model + Adapter + Markers +
+    both test files) built into a macOS .xctest bundle and executed with
+    `xcrun xctest`. (Two behaviour-faithful 1-line stand-ins were supplied for the
+    trivial pass-through app types the tests touch — TSTone's six cases and
+    TripPlannerMap.surfaceSlug → TripPlannerMapSurface.slug — so the SwiftUI/Shared
+    layers were not required to RUN; the logic under test is the real
+    Model/Adapter/Markers code, unmodified.):
+      Test Suite 'TripPlannerMapPolylineTests'      passed  (4 tests)
+      Test Suite 'TripPlannerMapCameraTests'        passed
+      Test Suite 'TripPlannerMapStateTests'         passed  (12 tests)
+      Test Suite 'TripPlannerMapMarkerTests'        passed
+      Test Suite 'TripPlannerMapFreshnessChipTests' passed
+      Test Suite 'TripPlannerMapAccessibilityTests' passed
+      Test Suite 'TripPlannerMapKeyParityTests'     passed
+      Test Suite 'TripPlannerMapTelemetryTests'     passed  (1 test)
+      Test Suite 'All tests' passed.
+      Executed 39 tests, with 0 failures (0 unexpected) in 0.010 seconds
+    => adapter unit tests (web polyline/center/zoom parity, cache-then-network
+       resolve, marker projection, SOC/dwell subtitle incl. non-finite guard,
+       freshness chip), the per-state branches, the a11y label builders, the i18n
+       key-parity guard, and the P1/S11 view.opened telemetry slug ALL PASS.
+
+6d. macOS app-target compile with signing disabled (corroboration of STEP 2):
+      $ xcodebuild -scheme TeslaSync-macOS ENABLE_TESTING_SEARCH_PATHS=YES \
+          CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+      RESULT: ** BUILD FAILED ** (RC=65) — the macOS app target hits the SAME
+      pre-existing baseline ambiguity (e.g. dashboard-widgets/DigitalTwinWidget.
+      Model.swift: 'DashboardWidgetSize' is ambiguous for type lookup) and bails
+      after 54 errors during the dashboard-widgets compile (before even reaching
+      the feature-views). Errors in any TripPlannerMap.* file: 0.
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+[x] Surface renders all states from the web source (route + empty) PLUS the P4
+    state envelope (loading skeleton / error+retry / stale chip / offline chip).
+    Web parity: GlassPanel(p-0 overflow-hidden) → clipped tsGlassPanel; Leaflet
+    MapContainer/Polyline/CircleMarker/Popup → MapKit Map/MapPolyline/Annotation+
+    TSCircleMarker/selection-callout; EmptyState → TSEmptyState.
+[x] No direct HTTP from the view — presentational, web parity; data arrives via
+    the value-typed TripRoutePlan the parent maps from the shared S8 holder.
+[x] Every i18n key from source (tripPlanner.map.origin/destination/empty) has a
+    matching key in the P1/S10 catalog (TripPlannerMap.strings) + native chrome
+    keys; key parity guarded by TripPlannerMapKeyParityTests.
+[x] Accessibility labels on the map + every marker (markerSummary/mapSummary),
+    Dynamic Type via system fonts, Reduce-Motion-respecting skeleton.
+[x] Tests: adapter unit tests + per-state coverage + a11y label tests + telemetry
+    (39 tests, all passing — see 6c).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (STEP 5).
+[ ] EXIT=0 / STATUS=DONE — NOT achievable in this worktree: the shared app module
+    is broken by 1202 pre-existing sibling compile errors (iOS) + code-signing
+    (macOS), both external to this surface and outside the allowed edit scope.
+    Reported honestly as STATUS=BLOCKED with the per-surface verification GREEN.
+
+--------------------------------------------------------------------------------
+FILES DELIVERED (apps/apple/TeslaSync/feature-views/TripPlannerMap.*)
+--------------------------------------------------------------------------------
+  TripPlannerMap.Model.swift        surface slug, telemetry seam, i18n facade,
+                                    web-key constants, input value types, state+connection
+  TripPlannerMap.Adapter.swift      pure geometry/state core (polyline/center/zoom/
+                                    camera/hasData/state/resolve) + localizer
+  TripPlannerMap.Markers.swift      marker/popup + freshness-chip + a11y projections
+  TripPlannerMap.swift              SwiftUI view: state envelope + view.opened
+  TripPlannerMap.Views.swift        MapKit map, marker callout, freshness chip, bridging
+  TripPlannerMap.Previews.swift     #if DEBUG previews for every state/branch
+  TripPlannerMap.Tests.swift        geometry/state XCTest
+  TripPlannerMap.MarkerTests.swift  marker/chip/a11y/parity/telemetry XCTest
+  TripPlannerMap.strings            P1/S10 catalog contribution (table "TripPlannerMap")
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SURFACE_TYPECHECK_ERRORS=0
+SURFACE_TESTS=39 passed / 0 failed
+EXIT=1
+STATUS=BLOCKED

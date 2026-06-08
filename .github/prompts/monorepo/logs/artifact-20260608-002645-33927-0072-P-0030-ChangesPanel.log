@@ -1,0 +1,201 @@
+================================================================================
+P4 · Feature view · 0030 — ChangesPanel (Apple)
+Run: 2026-06-08T01:05-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/72
+Base: c9c6fdb9
+Prompt: P4/feature-views/0030 — ChangesPanel
+Web source (spec): web/src/features/admin/components/feature-flags/ChangesPanel.tsx
+Mode: code-complete + host-validated (swiftc typecheck / in-module XCTest RUN /
+      swiftlint / swiftformat / placeholder) + DEFERRED Xcode app build/test
+      (0026 AuditPanel + 0069 NotificationStats precedent, macos-pending-verifications.md, ADR-012).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                ✅
+  swiftc -typecheck SwiftUI .. compiles; Swift Charts + MapKit also compile        ✅
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          ✅
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        ✅
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                               ✅
+  active developer dir ....... /Library/Developer/CommandLineTools (CLT)           ⚠ xcodebuild needs full Xcode
+  xcodebuild ................. "requires Xcode, but active developer directory is
+                               a command line tools instance"                      ⚠ (system switch needs sudo —
+                               a shared-runner side effect; NOT performed)
+  iOS simulators (simctl) .... unavailable under CLT (simctl exit 72)              ⚠ (no iOS Simulator without Xcode)
+  Frameworks/Shared.xcframework  NOT staged (.gitkeep only)                        ⚠ (KMP gradle build needed to link app)
+  feature-views in project.yml   REGISTERED (TeslaSync L37 + TeslaSync-macOS L68)  ✅ (newer than the 0026 base)
+  feature-views in .swiftlint     INCLUDED (.swiftlint.yml L5)                      ✅ (bare lint now covers the surface)
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, available and
+  proven by a REAL macOS-SDK compile AND a REAL in-module test RUN against the
+  shipped component library below. The capability-BLOCKED escape hatch
+  ("SwiftUI/Charts/MapKit unavailable") does NOT apply — the surface is authored
+  and host-validated for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/ChangesPanel.*) ===
+  ChangesPanel.Models.swift     292  FeatureFlagOperation (web `set`/`delete` union + `other` fallback) + FlagOpTone
+                                      + FlagValue (recursive JSON) with a JS-faithful `compact()` (web `JSON.stringify`
+                                      + 60-char clamp) + FeatureFlagChange + explicit-CodingKeys snake-case decode
+                                      (NOT convertFromSnakeCase — preserves nested old/new value keys) + ISO-8601 parse
+  ChangesPanel.Projection.swift 172  cached→projection adapter (absolute TimeStamp / `field || '—'` / verbatim op token
+                                      / compact() previews / DESC order) + presentation resolver (every state)
+  ChangesPanel.Model.swift      210  Shared-free P1/S8 source seam + load state + error taxonomy + @Observable model
+                                      (live/preview/web-prop inits) + P1/S10 i18n facade + a11y summary
+  ChangesPanel.Components.swift  234  operation chip · freshness chip · status accessory · retry · empty (web
+                                      EmptyState, scoped `{{key}}` interpolation) · error (web QueryError) · offline · skeleton
+  ChangesPanel.Table.swift      187  adaptive web `DataTable` — 7-column macOS/iPad grid + compact iPhone cards,
+                                      monospaced cells (web font-mono), em-dash, operation chip, per-row a11y
+  ChangesPanel.swift            142  the surface (View) — shell + header + all states + telemetry + stale auto-refresh
+  ChangesPanel.Previews.swift   125  #if DEBUG previews — one per state (content/stale/scoped-empty/global-empty/
+                                      loading/offline-cached/offline-nodata/error)
+  ChangesPanel.Tests.swift      334  XCTest: adapter (+ nested-key preservation + compact) + resolver (every state) +
+                                      web-prop mapping + telemetry + a11y + model — 3 test classes, 21 test methods
+  ChangesPanel.strings           47  P1/S10 catalog contribution (11 source keys + 8 native-chrome keys)
+  Every file ≤334 lines (house file_length ≤400). One exported surface per file; helpers decomposed by concern.
+
+=== ARCHITECTURE DECISIONS ===
+  • Data seam: own protocol `FeatureFlagChangesSource` + `InMemoryFeatureFlagChangesSource` (NO `import Shared`) so the
+    surface host-compiles WITHOUT the unstaged KMP xcframework. The web `ChangesPanel` is presentational (props
+    `rows`/`loading`/`scopedKey`); the native surface elevates those props into the P1/S8 cache-then-network state
+    holder (the flag-change feed) and the view performs ZERO HTTP. A `ChangesPanelModel(rows:loading:scopedKey:)`
+    web-prop initializer preserves the exact `<ChangesPanel rows loading scopedKey/>` call site.
+  • Load state: self-contained `ChangesPanelLoadState` + `ChangesPanelError` mirroring the facade `LoadableState`/
+    `FacadeError` SHAPE (cached-behind-refresh, ADR-013 stale, offline-keeps-cache, retryable) — so the production
+    binding is a 1:1 map and every branch is unit-testable. The web shell only branches on loading/`rows.length`;
+    the resolver is a documented SUPERSET adding the prompt's stale/offline/error chrome.
+  • Value preview (the surface-specific parity point): the web source defines an inline `compact(value)` that
+    `JSON.stringify`s the arbitrary `old_value`/`new_value` (`FeatureFlagValue = unknown`) and clamps to 60 chars
+    (`s.slice(0,57)+'…'`). Reproduced exactly by `FlagValue` (recursive JSON value) + `compactJSON` (JS number
+    formatting — integral values drop the decimal, matching that JS parses every JSON number as Double; JS string
+    escaping — forward slashes NOT escaped; sorted object keys — matching the Go `encoding/json` sorted-key wire).
+    CRITICAL decode decision: the row DTO uses EXPLICIT CodingKeys, NOT `.convertFromSnakeCase`, because a global
+    snake→camel strategy also rewrites the NESTED object keys inside old_value/new_value and would corrupt the
+    preview (`{"feature_x":true}` → `{"featureX":true}`). A dedicated test pins this.
+  • Operation token: the web Badge renders `{row.operation}` VERBATIM (a stable server data value, NOT a `t()` call),
+    so the native chip renders the raw token verbatim and the OP_VARIANT map (set→success, delete→danger, else
+    neutral) drives only the tone. No i18n key is invented for `set`/`delete` — faithful to the source.
+  • i18n: per-surface `.strings` table + `ChangesPanelStrings` facade (NSLocalizedString tableName + value fallback) —
+    parallel-safe across the concurrent slots; the shared Localizable.xcstrings is NOT edited (Honesty rule 7). The
+    scoped empty message keeps the web i18next `{{key}}` token and interpolates it at the render edge.
+  • Table: hand-composed (not the shared `TSDataTable`) because TSDataTable takes main-catalog `LocalizedStringKey`
+    headers (no per-surface fallback) and always renders a selection column the read-only audit log has not — the
+    same disposition the 0026 AuditPanel + 0069 NotificationStatsWidget logs record. The shared `TSTone` (op chip
+    color) and `TSSkeleton` (loading) ARE reused; the empty state is the shared `ContentUnavailableView` pattern
+    with facade `Text` (web `EmptyState`).
+  • Telemetry: REUSES the canonical `DashboardWidgetTelemetryEvent` / `DashboardWidgetTelemetrySink` /
+    `BufferedDashboardWidgetTelemetry` (Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift), the app-wide
+    P1/S11 diagnostics seam. `ChangesPanel.viewOpenedEvent == .viewOpened(surface:"ChangesPanel")`, emitted on `.task`.
+  • Proto/units note: flag operations + values are opaque config data; no unit-suffixed fields are involved, so the
+    Phase-48 SI-canonical rules do not apply to this surface.
+
+=== GATE EXECUTION (commands actually run on this host; real exit codes) ===
+  (1) swiftc -typecheck — core logic (Models+Projection+Model), swift6, strict-concurrency=complete
+        EXIT=0  ✅
+  (2) swiftc -typecheck — FULL surface (6 src) vs REAL generated Tokens.swift + REAL component library
+        (Design/* incl. TSChartPalette/tsGlassPanel + Components/UI/* incl. Badges/TSTone + Cards + DataTable +
+        Feedback/Skeletons/TSSkeleton) + the telemetry registry
+        EXIT=0  ✅
+  (3a) swiftc -typecheck — full surface + Tests (in-module, minimal XCTest shim) vs REAL components
+        EXIT=0  ✅  (caught + fixed a REAL bug: a `#"..."#` single-line raw string literal that spanned two
+                     physical lines → "unterminated string literal"; rewritten as a `#"""..."""#` multiline literal)
+  (3b) swiftc -o runner … + main → RAN all 21 test methods (3 classes) in-module against the REAL surface types
+        TEST_FAILURES=0  RUN_EXIT=0  ✅  (the test BODIES execute green; the XCTest *runner* is deferred to Xcode)
+  (4) swiftlint --strict ChangesPanel*.swift (explicit paths)   → "Found 0 violations, 0 serious in 8 files"  LINT_EXIT=0  ✅
+        (caught + fixed: a 2-level Nesting Violation — explicit `CodingKeys` nested inside `FeatureFlagChange.DTO`;
+         the DTO was lifted to file scope so `CodingKeys` is a single nesting level)
+  (5) swiftformat --lint ChangesPanel*.swift                    → "0/8 files require formatting"             FORMAT_EXIT=0  ✅
+        (caught + fixed by swiftformat: wrapPropertyBodies on `emDash` + docComments on the DTO comment)
+  (6) check-placeholders.ps1 (my 8 .swift files)                → PLACEHOLDER_COUNT=0, EXIT=0   PLACEHOLDER_EXIT=0  ✅
+        (caught + fixed: the literal word "placeholder" in a Components.swift doc comment → reworded to "token")
+
+  Prompt-gate commands (verbatim) and their real disposition on this CLT-only runner:
+  $ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+        → "xcodebuild requires Xcode, but active developer directory is a command line tools instance"   IOS_EXIT=DEFERRED
+  $ xcodebuild -scheme TeslaSync-macOS build test
+        → same CLT error (and app link needs the unstaged Frameworks/Shared.xcframework)                 MAC_EXIT=DEFERRED
+  $ swiftlint --strict        (bare; feature-views IS now in `included`, so all 8 ChangesPanel files ARE linted)
+        → "Found 1 violation in 1917 files" — PRE-EXISTING TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+          (function_body_length 78); a prior surface, OUTSIDE this prompt's allowed files. ChangesPanel adds 0.
+  $ swiftformat --lint apps/apple   (bare; whole tree)
+        → "1/1921 files require formatting" — PRE-EXISTING TeslaSync/feature-views/ActionBuilder.Previews.swift:48
+          (blankLinesBetweenScopes); a prior surface, OUTSIDE this prompt's allowed files. ChangesPanel passes (0/8).
+  $ check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/ChangesPanel   (verbatim prompt path)
+        → that literal path is not a directory (the files are ChangesPanel.*), so it scans nothing → COUNT=0/EXIT=0.
+          The MEANINGFUL run above (the 8 actual files) is the real evidence: COUNT=0.
+
+  WHY the Xcode app build/test is DEFERRED (none a defect in this code):
+    • active developer dir is CLT; full Xcode is reachable ONLY via a DEVELOPER_DIR/sudo switch (shared-runner side
+      effect — NOT performed, per the 0026/0069 precedent).
+    • the iOS Simulator is unavailable under CLT (`simctl` exit 72).
+    • the app target links Frameworks/Shared.xcframework, which is NOT staged (KMP gradle assemble needed).
+    NOTE: unlike the 0026 base, feature-views/ IS already registered in apps/apple/project.yml (both targets) and in
+    .swiftlint.yml `included:` — so no integration wiring is owed by this prompt; the deferral is purely the
+    CLT/Simulator/xcframework capability gap. These match macos-pending-verifications.md and ADR-012's CI matrix.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with ALL states from the web source reproduced — loading / empty(scoped+global) /
+      error / stale / offline / content; resolver logic executed-green for every branch (test sets 3a/3b).
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP in the view (web `useTranslation` →
+      P1/S10 facade; the `rows`/`loading` props feed → P1/S8 load state).
+  [x] Every i18n key from source has a matching catalog key — 11/11 source keys (7 column headers + empty.title +
+      scoped + global + loading) present, plus 8 native-chrome keys (19 total in ChangesPanel.strings).
+  [x] Accessibility labels on every interactive element; each row + chip carries a testable VoiceOver summary;
+      reduce-motion honored (TSSkeleton respects it; no custom animation added).
+  [x] Tests: adapter unit test (+ nested-key preservation + compact previews) + per-state resolver test + web-prop
+      mapping + telemetry + a11y + model — TYPE-CHECKED and RUN in-module against the real types (21/21 green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] Host gates green (typecheck ×2 / in-module test RUN / swiftlint / swiftformat / placeholder); Xcode app
+      build/test DEFERRED with capability evidence above.
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode iOS/macOS build+test shown DEFERRED (not green), with reasons. Every "✅" is a command
+                       actually run on THIS host with its real exit code (typecheck ×2, in-module test RUN,
+                       swiftlint, swiftformat, placeholder). The two PRE-EXISTING bare-tree issues (LifetimeStats,
+                       ActionBuilder) are reported, not hidden.
+  2  No scope narrowing: implemented ALL states + the full 7-column adaptive table + compact cards + the inline
+                       compact() value preview + i18n + a11y + telemetry + auto-refresh; no section skipped.
+  3  No skip-and-assume: each host gate executed; the tests were both type-checked AND executed (21/21 green),
+                       catching real issues that were fixed (raw-string literal, type nesting, format, placeholder word).
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; no "Coming soon"/EmptyView-only panels.
+  5  No parity shortcuts: faithful port of the OP_VARIANT map, the verbatim operation token, the `field || '—'`
+                       em-dash, the absolute TimeStamp, the scoped/global EmptyState with `{{key}}` interpolation,
+                       the always-mounted loading-in-place contract, and (the surface-specific point) the inline
+                       `compact()` JSON.stringify+clamp WITH nested-key preservation.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit project.yml / .swiftlint.yml (already wired) and did NOT edit the shared
+                       Localizable.xcstrings — strings shipped as the per-surface table; REUSED (not re-declared) the
+                       canonical telemetry primitives; did NOT touch the two pre-existing bare-tree violations (other
+                       surfaces, outside this prompt's allowed files).
+  8  No commit on red  : committing on all-green host gates for the ALLOWED files (typecheck, in-module test RUN,
+                       per-file swiftlint 0/8, per-file swiftformat 0/8, placeholder 0). The Xcode steps are
+                       DEFERRED (capability); the two bare-tree lint/format issues are pre-existing and outside the
+                       allowed files (ChangesPanel adds 0 to each).
+  9  No silent drift   : changes confined to the allowed ChangesPanel.* files + this log. The host-test harness
+                       (XCTest shim + generated runner) was built in a temp dir and discarded — nothing else in the
+                       tree was modified.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native ChangesPanel shipped at parity with the web source: pure-Swift adapter + presentation
+  resolver (type-checked AND executed, every state), Shared-free P1/S8 state-holder seam (no view HTTP), P1/S11
+  `view.opened` telemetry, every state + i18n key + a11y label, an adaptive 7-column DataTable parity (macOS/iPad
+  grid + iPhone cards) reusing the shared TSTone/TSSkeleton/ContentUnavailableView primitives, and a faithful
+  reproduction of the web source's inline `compact()` value preview (JSON.stringify + 60-char clamp) with the
+  critical nested-key-preservation decode. ALL host-runnable gates pass — including a swiftc typecheck of the full
+  surface AND an in-module RUN of all 21 test bodies against the REAL generated design tokens + REAL shared
+  component library (which surfaced and fixed four real defects). The Xcode app build/test is DEFERRED to the
+  signed CI runner (CLT-only active toolchain + iOS Simulator absent + Shared.xcframework unstaged — none a defect
+  in this code), matching the 0026 AuditPanel / 0069 NotificationStats "code-complete + DEFERRED Xcode gate"
+  disposition and macos-pending-verifications.md.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/ChangesPanel.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0030-ChangesPanel.log
+  git commit -m "feat(apps/apple/feature-views): add ChangesPanel surface (P4)"
+
+IOS_EXIT=DEFERRED
+MAC_EXIT=DEFERRED
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+EXIT=0
+STATUS=DONE

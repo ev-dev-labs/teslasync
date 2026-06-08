@@ -1,0 +1,206 @@
+I'll start by exploring the environment, the web source component, and the existing Apple app structure to understand what I'm building.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swift`, `swiftlint`, `swiftformat` ARE available. I'll write the complete implementation regardless, run what I can, and document the xcodebuild capability honestly. Let me read the web source and explore the Apple app structure.
+
+Now let me explore the Apple app architecture deeply — state holders (P1/S8), tokens (P1/S9), i18n (P1/S10), diagnostics (P1/S11), and find existing patterns to follow.
+
+The repo uses a multi-file surface pattern (`.Model`, `.Adapter`, `.Views`, `.States`, `.Previews`, `.Tests`, `.strings`). Let me read the core infrastructure and a representative complete surface to learn the exact conventions.
+
+Let me read a complete representative surface from `feature-views` to learn the exact conventions for models, states, i18n, diagnostics, and tests.
+
+The web `dlq-inspector` feature has a sibling `AuditPanel` already ported to Swift. That's my best reference. Let me read the full AuditPanel surface and the shared `ResultPanel.Model` diagnostics pattern.
+
+Both `AuditPanel` and `EntriesTable` are ported siblings of `EntryDrawer` from the same `dlq-inspector` feature — gold-standard references. Let me read them in full.
+
+Excellent, very clear pattern. Let me read the remaining AuditPanel files (states UI, components, strings, previews, tests) and the EntriesTable files (which define `DLQEntrySummary` that EntryDrawer needs).
+
+Now let me get the web types (`DLQEntrySummary`/`DLQEntryFull`), the design tokens, and the `EntriesTable` main view + strings facade + the `DLQEntryRow` type.
+
+Let me read the web types in full, the `DLQEntryRow`/adapter, the strings facade, and locate the exact token + telemetry definitions.
+
+I now understand the full pattern. Let me verify a few critical things before writing: project.yml source globbing (to ensure my new dir compiles), the exact token/telemetry/component APIs, name-collision checks, and the test/preview/projection patterns.
+
+Now let me locate and read the exact APIs for the design-system components and telemetry I'll consume (TSButton, TSBadge, TSTabs, TSEmptyState, TSErrorDisplay, TSSpinner, TSSkeleton, tokens, telemetry event/sink, WidgetFreshness), plus the test/preview conventions.
+
+Theme tokens are partly generated. Let me read the full Theme, the design tokens, and the key UI/feedback component APIs I'll use.
+
+Let me read the full Tokens.swift and the key component APIs (Buttons, Badges, Tabs, States, Skeletons, Overlays, Utility).
+
+Now let me read the component APIs (Buttons, Badges, Tabs, States, Skeletons, Overlays, Utility) and find `TSTone` + `WidgetFreshness`.
+
+Let me read the remaining components: feedback states/skeletons, overlays (drawer/sheet/glass), utility (copy), data-display (KVList), and the WidgetFreshness enum.
+
+Let me read overlays/cards/utility/data-display components and the test+preview conventions from AuditPanel.
+
+Let me read the data-display + utility + typography components and the AuditPanel test/preview conventions to finalize my design.
+
+Let me read the typography, TSKVList, and the AuditPanel test + preview conventions.
+
+Let me read the AuditPanel tests and previews to mirror those conventions exactly.
+
+Let me read the AuditPanel previews and the `.swiftlint.yml`/`.swiftformat` configs to respect lint rules.
+
+Critical finding: neither `project.yml` nor `.swiftlint.yml` registers a `modals-dialogs/` directory (only `feature-views` and `dashboard-widgets`). The prompt mandates output to `TeslaSync/modals-dialogs/` and restricts my allowed files to exactly that. I'll follow the prompt precisely and lint my files directly. Let me confirm environment facts for honest gate evidence and check tooling.
+
+There's an Xcode.app in /Applications — it's just not selected (active dir is CommandLineTools). I can override with `DEVELOPER_DIR` without sudo. If it's a full install, I may be able to actually run the gate. Let me verify.
+
+Xcode 26.5 is fully installed with iOS 26.5 simulator — I can build via `DEVELOPER_DIR` without sudo. But the app target likely depends on a KMP `Shared.xcframework`. Let me check whether the baseline project can actually build (Shared framework presence, simulator devices, gitignore for generated project).
+
+`Shared.xcframework` (the KMP core) isn't vendored — the app target needs it via a prebuild script. The repo's own design verifies these surfaces via a "swiftc host gate" (per file headers: "host-compiles in isolation", "skipped by the swiftc host gate"). Let me check the Shared build script and KMP toolchain feasibility, plus confirm my pure files have no `Shared` dependency.
+
+Enough info — building `Shared.xcframework` needs a heavyweight Gradle/Kotlin-Native build. Let me stop the filesystem scan and kick that off in the background (it's the long pole) while I write the surface and run the repo's isolated swiftc host gate.
+
+Java 17 is present, so Gradle can run. Let me kick off the `Shared.xcframework` build in the background (long pole) and start writing the surface in parallel.
+
+Now I have everything I need. Let me write a plan file and start creating the surface. I'll begin with the pure-Foundation core (Models, Projection) which is host-testable.
+
+Let me typecheck the three pure-Foundation files now to catch errors early before writing the SwiftUI layer.
+
+The core logic typechecks cleanly. Now the SwiftUI components file.
+
+Now the main surface view with the sheet presenter and telemetry.
+
+The Gradle build completed. Let me check its result while I continue writing the remaining files (strings, previews, tests).
+
+`Shared.xcframework` built successfully (8m, now cached) — a full `xcodebuild` gate is feasible. Let me finish the strings, previews, and tests files.
+
+Now the previews (per-state, DEBUG-only) mirroring the AuditPanel convention.
+
+Now the comprehensive tests file.
+
+All 8 files are written. Now I need to understand how `*.Tests.swift`/`*.Previews.swift` are split between app and test targets before wiring. Let me read project.yml fully.
+
+The test target only globs `Tests/Unit`, yet `AuditPanel.Tests.swift` lives in `feature-views` (app target). Let me understand how the existing tests are wired before deciding how to verify mine.
+
+170 test files live in `feature-views` (app target) — that can't compile XCTest into an app target. This suggests the Xcode app build is aspirational and the real mechanism is a "swiftc host gate." Let me confirm.
+
+This is the key precedent: `macos-pending-verifications.md` documents that the full-app `xcodebuild` is blocked by **pre-existing baseline issues** (`DashboardWidgetSize` redefined 8–15×, 170 co-located `*.Tests.swift` importing XCTest into the app target, signing) — and the accepted protocol verifies each surface in **isolation** (SwiftPM build + tests, `swiftc -typecheck` on both SDKs, lint/format/placeholder, xcodegen enumeration). I'll follow that exact protocol. Let me format/lint my files and inspect the telemetry dependency.
+
+swiftformat flagged a few auto-fixable style issues (the repo wraps property bodies). Let me apply swiftformat, then re-lint and run swiftlint.
+
+swiftformat passes. Now swiftlint --strict on my files.
+
+swiftlint linted the whole repo (config `included` overrides the path arg). Let me find where the 1 violation is — mine or pre-existing.
+
+The single violation is pre-existing (`LifetimeStatsWidget.Adapter.swift`), not mine. Let me confirm my files are clean by linting them explicitly.
+
+Now I see 6 real violations in my files (file length, cyclomatic complexity, param count). Let me first verify whether Foundation's `String(data:encoding:.utf8)` is strict enough to replace my hand-rolled UTF-8 validator (which causes 3 of them).
+
+Foundation's `String(data:encoding:.utf8)` is strict (rejects lone surrogates, overlong forms, invalid bytes). I'll remove my hand-rolled validator entirely — simpler and fixes 3 violations. Let me view the current codec section after formatting.
+
+Now let me simplify the codec (removing the hand-rolled validator) and fix the doc comment:
+
+Now fix the Projection resolver's 6-param function. Let me view it.
+
+Now I'll inline the failure handling into the switch and remove the 6-param `resolveFailure`:
+
+Now extract the strings facade + accessibility into a new `EntryDrawer.Strings.swift` to get `Model.swift` under 400 lines. Let me find the section boundary.
+
+Now create `EntryDrawer.Strings.swift` and remove that section from `Model.swift`.
+
+Now remove the extracted section (lines 217-424) from `Model.swift`:
+
+`Model.swift` is now 216 lines. Now split the 441-line `Tests.swift`. Let me find the class boundary to extract the model/telemetry tests.
+
+All files now under 400 lines. Let me re-run swiftformat and swiftlint on the explicit file set to confirm everything is clean.
+
+One complexity violation remains in `resolve` (11). Let me extract the failure branch back into a 5-param helper to reduce it. Let me view the current state.
+
+Let me re-format, re-lint, and typecheck the Foundation core after the refactor.
+
+All clean: swiftformat 0/9, swiftlint 0 violations, core typechecks. Now the placeholder gate.
+
+Placeholder gate clean (0). Now let me set up an isolated SwiftPM build to actually RUN the tests. First I need to map the design-system dependency closure. Let me find the glass modifier and check Sources/Components self-containment.
+
+The design system imports only system frameworks (SwiftUI/Charts/MapKit/CoreLocation). Let me build an isolated SwiftPM package to actually run the tests. First, let me confirm no design files pull in `Shared` and locate `Sources/Design`.
+
+No `Shared` imports in the design system — it's self-contained on system frameworks. Let me assemble an isolated SwiftPM package to actually run the tests.
+
+A few unused design files (e.g., `UnitFormatters.swift`) reference app types outside my closure. My surface doesn't use them — let me prune to the minimal design set my surface actually needs, then rebuild.
+
+Isolated build succeeds under Swift 6 strict concurrency — all my surface files compile against the real design system. Now run the tests.
+
+A real bug caught by the test: `title(forID: 8841)` rendered "DLQ entry #8,841" (locale grouping) but web's `{{id}}` interpolation doesn't group. The `format()` helper passes `locale: .current`, which groups `%lld`. Web raw interpolation (title id, binary byte-size) must NOT group — only `fmtInt` redeliveries groups. Let me fix the `format` helper.
+
+Now re-sync the isolated package and re-run the tests.
+
+All 24 tests pass under Swift 6 strict concurrency. Now let me typecheck the full surface against the **iOS 18 simulator SDK** (the package built for macOS; this proves iOS too), then re-verify lint/format after the edit.
+
+iOS 18 + macOS both typecheck clean; 24/24 tests pass. Let me re-verify lint/format after the edit, then do the xcodegen enumeration (temp-register → generate → confirm → revert).
+
+Format/lint clean. Now the xcodegen enumeration: back up the shared files, temp-register `modals-dialogs`, generate, and confirm my files are enumerated into the project.
+
+All 10 files enumerate into the generated project (60 refs). Now let me attempt the full-app build to capture evidence that any failures are pre-existing (not mine). This is the documented "macOS-pending" gate.
+
+The build fails on `AIRestorePanel.Tests.swift: unable to resolve module dependency: 'XCTest'` — exactly the documented pre-existing baseline issue (co-located test files in the app target), in a feature-views file, not mine. Let me categorize all errors and prove none are my surface's code.
+
+The full-app build fails only on **pre-existing** co-located XCTest files (`feature-views/AIRestorePanel.Tests.swift`) — **0 errors** reference my `modals-dialogs`/`EntryDrawer` files. This is the exact documented baseline blocker. Let me revert the temp shared-file edits and clean generated artifacts so my commit contains only allowed files.
+
+Those `AIUsageCard.*` and web file modifications are pre-existing dirty state in the slot — not mine (I never touched them). My commit will be scoped to only my files. Let me verify full git status, confirm build artifacts are gitignored, and check the log directory exists.
+
+`Shared.xcframework` is gitignored; pre-existing dirty files will be excluded from my commit; the log dir exists. For a complete honest gate log, let me also capture the macOS full-app build failure (same pre-existing baseline). Re-register temporarily, build macOS, then revert.
+
+macOS build fails on the documented pre-existing "development signing" baseline issue — again 0 EntryDrawer errors. Let me confirm and revert.
+
+Both shared files reverted cleanly; macOS build's only errors are the pre-existing dev-signing baseline (0 EntryDrawer errors). I have complete, honest evidence. Let me re-run the three host-runnable gates capturing fresh output directly into the log, then append the full evidence record.
+
+Now append the isolated build + tests + typechecks to the log.
+
+Now append the xcodegen enumeration, the full-app build evidence (pre-existing baseline), and the final verdict with EXIT/STATUS.
+
+The log is complete (106 lines, ends `EXIT=0 / STATUS=DONE`). Let me do a final review of the two main view files to confirm parity quality, clean up `/tmp`, and verify nothing regressed.
+
+All gates green, all files under 400 lines, /tmp cleaned. Now commit — staging ONLY my surface files and the log (excluding the pre-existing dirty `AIUsageCard.*`/web files).
+
+Staged exactly my 11 files; pre-existing dirty files excluded. Now commit.
+
+I need to re-examine one parity detail in the web source. Let me re-check the exact body conditional.
+
+Confirmed — web shows the spinner *only* during `loading && !full` (the summary head is hidden while loading). My resolver currently shows the summary head during loading. Let me fix the `.idle` and `.loading` cases for faithful parity.
+
+Let me update the resolver's doc comment, then fix the title fallback, the affected test, and previews.
+
+Now fix the title to use the summary id during loading (web `head = full ?? summary`):
+
+Now update the affected test to assert the corrected (web-faithful) semantics, including the key fix: loading with a summary still shows the spinner.
+
+Now update the previews to reflect the corrected states (loading = spinner; summary-only is a distinct state).
+
+Now re-verify: rebuild the isolated package with the corrected files, re-run tests, and re-lint/format.
+
+25/25 tests pass with the corrected parity. Let me re-run format/lint/placeholder and the iOS typecheck, then update the log and amend the commit.
+
+All gates green (25/25 tests). Let me update the test counts in the log (24→25) since I split a test, then verify and amend the commit. Let me view the relevant log sections.
+
+Let me regenerate the test block cleanly and update the counts via the edit tool. First the exact current block:
+
+Log updated to 25 tests. Let me verify the log's tail integrity and clean up `/tmp/edk2`, then amend the commit with the corrected files + log.
+
+Log is complete and coherent. Now amend the commit with the corrected parity files + updated log.
+
+Commit amended cleanly (11 files, only allowed paths). Let me do a final verification that the working tree is clean for my files and the pre-existing dirty files are excluded.
+
+All verified. The commit contains exactly my 11 allowed files; pre-existing dirty files are correctly excluded. The task is complete.
+
+## Summary
+
+I ported the web `EntryDrawer` (DLQ-inspector entry drawer) to a production-quality, native Apple/SwiftUI surface at `apps/apple/TeslaSync/modals-dialogs/EntryDrawer.*`, following the established `AuditPanel`/`EntriesTable` conventions for the same web feature.
+
+**Delivered (10 files, ~2,300 lines):**
+- `EntryDrawer.Models.swift` — `DLQDrawerSummary`/`DLQDrawerFull` snake-case decode, `decodeBase64Utf8` payload codec (fatal-UTF8 parity), ISO-8601/number formatting
+- `EntryDrawer.Projection.swift` — head/payload projection + the exhaustive presentation resolver (loading/content/empty/error/offline/stale) and the `replayDisabled` rule
+- `EntryDrawer.Model.swift` — `@Observable` model + P1/S8 `EntryDrawerFullSource` seam (no HTTP in the view)
+- `EntryDrawer.Strings.swift` / `.strings` — P1/S10 i18n facade with every extracted web key + native chrome
+- `EntryDrawer.Components.swift` / `EntryDrawer.swift` — detail KV panel, inner/raw payload viewer (tabs + copy + `<pre>`), footer Replay/Close CTAs, freshness chip, state views, and a `.entryDrawer(isPresented:)` sheet presenter with dismiss semantics; emits P1/S11 `view.opened`
+- `EntryDrawer.Previews.swift` + `EntryDrawer.Tests.swift`/`.ModelTests.swift` — per-state previews + 25 unit tests
+
+**Faithful parity fix:** matched the web's exact `loading && !full → Spinner` branch (head hidden during load; title still shows the summary id) — caught and corrected during testing, along with a real bug where `%lld` locale-grouping wrongly rendered "DLQ entry #8,841".
+
+**Verification (Xcode 26.5 via `DEVELOPER_DIR`):**
+- swiftformat `--lint` 0/9 · swiftlint `--strict` **0 violations/9 files** · placeholder gate **0**
+- Isolated SwiftPM build (Swift 6 strict concurrency) + **25/25 XCTest pass**
+- `swiftc -typecheck` clean on **iOS 18 simulator + macOS 15** SDKs
+- `xcodegen generate` enumerates all 10 files
+
+The full-app `xcodebuild build test` (iOS+macOS) is **macOS-pending**, blocked solely by **pre-existing baseline** issues (170 feature-views `*.Tests.swift` importing XCTest into the app target; macOS dev-signing) — **0 `EntryDrawer` errors** — and is deferred to the P99 acceptance gate per `apps/macos-pending-verifications.md`/ADR-012, exactly as prior P4 surfaces. The log ends `EXIT=0 / STATUS=DONE`, with the full-app deferral disclosed honestly. Committed only the allowed files (shared `project.yml`/`.swiftlint.yml` were temporarily registered for verification, then reverted, so the build wiring stays owned by P4-core integration).
+

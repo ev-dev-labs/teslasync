@@ -1,0 +1,56 @@
+I'll start by exploring the repository structure, the web source specification, and checking native Apple tooling availability.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed, and `simctl` is unavailable. `swift`, `swiftlint`, `swiftformat` work. Let me explore the existing Apple app structure to understand conventions before deciding on BLOCKED vs. proceeding with what's buildable.
+
+`Sources/Widgets` and `TeslaSyncWidgets` are WidgetKit (home-screen) widgets — not the in-app draggable dashboard panels this prompt targets. Let me find the established conventions: state holders (P1/S8), tokens (P1/S9), i18n (P1/S10), diagnostics (P1/S11), and any sibling dashboard widgets already built.
+
+No Apple dashboard-widget surfaces exist yet — this is the first. The SharedFacade has core primitives but no Energy/Vehicles/Degradation state holders. And critically, `xcodebuild` needs full Xcode (only CLT installed). Let me read the methodology (for BLOCKED/commit policy) and the facade/token/i18n/diagnostics patterns, and verify the macOS SDK ships SwiftUI/Charts so I can produce real compile evidence.
+
+macOS SDK (CLT) ships SwiftUI, Charts, and MapKit `.swiftinterface` files — so I can produce **real `swiftc` compile evidence for macOS** even though `xcodebuild` (full Xcode) and iOS simulators are unavailable. The facade binds to a KMP `Shared` module. Let me read the methodology (BLOCKED/commit policy), design tokens, i18n, diagnostics, and example components to match house style.
+
+The methodology is now unambiguous and binding:
+- **Rule 1 & 3:** toolchain EXIT≠0 or gate can't run (missing SDK/device) → **STATUS=BLOCKED**, never DONE.
+- **Gate rule:** "no macOS runner available for a P4 prompt → BLOCKED."
+- **Rule 8 / commit discipline:** when BLOCKED, commit **ONLY the log file**, never code.
+
+The P4 Apple gate requires full Xcode (`xcodebuild` iOS Simulator + macOS schemes) + simulators. This runner has only Command Line Tools. Let me definitively confirm Xcode/simulator absence, check predecessor statuses, and capture authentic gate-failure evidence.
+
+`/Applications/Xcode.app` **is present** — the active dir is just pointed at CommandLineTools. I can likely override per-command with `DEVELOPER_DIR` (no sudo needed). And `pwsh` is available. Let me verify full Xcode + iOS simulators actually work. This could change the outcome from BLOCKED to runnable.
+
+Full **Xcode 26.5 with an iPhone 16 simulator (iOS 26.5)** works via `DEVELOPER_DIR` override — so the toolchain is NOT the blocker. The real questions now: (1) does the XcodeGen project include the prescribed `apps/apple/TeslaSync/dashboard-widgets/` path, and (2) do the required predecessors exist (dashboard host/registry + Energy/Vehicles/Degradation state holders in `Shared`)? Let me verify.
+
+Decisive structural findings:
+- `project.yml` app targets compile only `Sources/`, `Localization/`, `../design/generated/apple` — **`apps/apple/TeslaSync/dashboard-widgets/` is not a source root**, and I may not edit `project.yml` (outside allowed files → Rule 9).
+- `Frameworks/Shared.xcframework` doesn't exist yet (only `.gitkeep`); the data-binding stores live in the KMP `Shared` core.
+- No in-app **dashboard grid/registry host** exists (only a `.dashboard` nav tab).
+
+Let me verify the KMP `Shared` source for the required Energy/Vehicles/Degradation state holders and check `xcodegen`, to make the predecessor analysis airtight.
+
+The KMP `Shared` core **does** provide `EnergyStore`/`VehiclesStore` + `batteryDegradation` (so I won't falsely claim a data/toolchain block). But the blockers are structural and irreconcilable within the Allowed-Files scope. Let me capture the final airtight evidence: no `TeslaSync/` dir, no `dashboard-widgets` wiring anywhere, and whether the i18n keys exist.
+
+Confirmed: `apps/apple/TeslaSync/` doesn't exist, there's **zero `dashboard-widgets` wiring** anywhere in the Apple project, and `check-placeholders.ps1` exists. The toolchain (Xcode 26.5 + iPhone 16 sim) works and the KMP data stores exist — so the block is **not** a toolchain or data excuse. The block is structural: the prescribed Allowed-Files path isn't a compiled source root and bridging it requires editing the out-of-scope `project.yml`.
+
+Let me produce decisive GATE evidence by generating the project and proving the surface path can't be compiled/tested, and confirm the i18n keys.
+
+Project generated as `apps/apple/TeslaSync.xcodeproj` (a project bundle — **not** the prescribed `apps/apple/TeslaSync/` source dir). Note the `widget.forecast.*` i18n keys did **not** resolve — let me re-verify accurately, prove the surface path is absent from the compiled project, and confirm the generated project is git-ignored (tree stays clean).
+
+Now the BLOCKED verdict is airtight and evidence-backed:
+1. **Surface path not compiled:** generated project has **0** references to `BatteryDegradationForecast`/`dashboard-widgets`; wiring it requires editing out-of-scope `project.yml`.
+2. **i18n keys absent:** `widget.forecast.*`/`widget.mo` are **not** in `Localizable.xcstrings`; adding them needs an out-of-scope edit.
+3. **No dashboard grid/registry host** predecessor exists in the Apple app.
+4. Toolchain (Xcode 26.5 + iPhone 16 sim) and KMP data stores **do** exist — so this is not a false toolchain excuse.
+
+Let me capture one authentic gate attempt (time-boxed) for the log, after a quick look at the scheme preAction.
+
+The gate's preAction builds the KMP `Shared.xcframework` via Gradle — a heavy step. Let me wait for the time-boxed attempt to capture authentic output.
+
+The time-boxed gate attempt hit the 90s limit (exit 124) building the heavy KMP `Shared.xcframework` via Gradle — and even if it finished, it would not exercise my surface (which is un-wired). I have decisive evidence. Let me clean up the generated artifacts, then write the BLOCKED log.
+
+Tree is clean and the canonical log dir is `.github/prompts/monorepo/logs/`. Now I'll write the comprehensive, evidence-backed BLOCKED log.
+
+Now I'll commit **only** the log per the BLOCKED commit discipline (Rule 8), after confirming nothing else is staged.
+
+Only the log is staged (KMP build artifacts are git-ignored). Committing the BLOCKED log.
+
+Done. This prompt's honest terminal state is **STATUS=BLOCKED**, committed per the methodology's BLOCKED discipline (log only). Verified: log footer ends with `EXIT=1` / `STATUS=BLOCKED` (Rule 10), only the log was committed (Rule 8), and the working tree is clean (Rule 9).
+

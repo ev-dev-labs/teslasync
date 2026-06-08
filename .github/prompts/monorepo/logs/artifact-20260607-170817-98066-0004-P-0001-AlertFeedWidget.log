@@ -1,0 +1,111 @@
+=== P4 Dashboard widget 0001 AlertFeedWidget (Apple) ===
+Surface: AlertFeedWidget  | Registry id: alert-feed  | Web source: web/src/features/dashboard/widgets/AlertFeedWidget.tsx
+Run host: Darwin (arm64), local non-CI runner.  Date: 2026-06-07.
+
+--------------------------------------------------------------------------------
+DELIVERABLE (all written, compiled, and — where the runner permits — tested)
+--------------------------------------------------------------------------------
+Source (app target TeslaSync + TeslaSync-macOS; XcodeGen globs `Sources/`):
+  apps/apple/Sources/Widgets/Dashboard/AlertFeed/AlertFeedTypes.swift     (registry metadata, size, severity, entry, AlertRowConvertible + Shared.Alert)
+  apps/apple/Sources/Widgets/Dashboard/AlertFeed/AlertFeedAdapters.swift  (projection, relative-time, drill-through — pure/framework-free)
+  apps/apple/Sources/Widgets/Dashboard/AlertFeed/AlertFeedModel.swift     (DashboardWidgetDiagnostics seam + @Observable AlertFeedModel bound to StateHolderModel)
+  apps/apple/Sources/Widgets/Dashboard/AlertFeed/AlertFeedWidget.swift    (SwiftUI surface: all states, rows, previews)
+Tests (TeslaSyncTests / TeslaSync-macOSTests):
+  apps/apple/Tests/Unit/Widgets/AlertFeedWidgetTests.swift                (adapter: metadata, density, severity, projection, time, drill-through)
+  apps/apple/Tests/Unit/Widgets/AlertFeedWidgetStateTests.swift           (per-state model, accessibility label, diagnostics seam, build-in-every-state)
+
+PATH RECONCILIATION (no silent drift): the prompt's templated output path
+`apps/apple/TeslaSync/dashboard-widgets/AlertFeedWidget.*` is NOT a compiled
+XcodeGen source root in this repo. The compiled root is `apps/apple/Sources/`.
+The surface is therefore placed at `Sources/Widgets/Dashboard/AlertFeed/` (app
+target only; the WidgetKit extension globs only `Sources/Widgets/Shared`). The
+surface was decomposed into 4 cohesive files (the web equivalent is itself 7
+files: WidgetShell, WidgetEventFeed, tokens.normalizeSeverity, alertDrillthrough,
+registry, AlertFeedWidget, useNotifications) to satisfy SwiftLint `file_length`
+(<=400) and the repo's anti-monolith guideline. No other file was modified;
+project.yml untouched (Sources/ + Tests/Unit globbed automatically).
+
+PARITY (web -> native, no shortcuts):
+  - title translation.widget.alertFeed="Alert Feed", empty translation.widget.noAlerts="No alerts yet" (both keys verified present in Localizable.xcstrings)
+  - normalizeSeverity ported verbatim; severity hex -> status design tokens; lucide -> SF Symbols
+  - maxItems wide(cols>=3)=12 / tall(rows>=2)=8 / else 5; subtitle wide?message:severityLabel
+  - reverse-chronological sort; relative time Just now / Nm ago / Nh ago / abs date
+  - drill-through SIGNAL_TO_PAGE + fallback reproduced; exposed via onSelect host callback
+  - registry id alert-feed, default/min 2x4, max 4x40
+  - states rendered: loading(skeleton) / loaded / empty / error(retry) / stale(chip) / offline(chip+cached)
+  - data bound via shared StateHolderModel (P1/S8); NO HTTP in the view; diagnostics view.opened surface=AlertFeedWidget
+
+--------------------------------------------------------------------------------
+CAPABILITY PROBE
+--------------------------------------------------------------------------------
+xcode-select -p .......... /Library/Developer/CommandLineTools   (Xcode not selected)
+/Applications/Xcode.app ... PRESENT -> used DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+xcodebuild -version ...... Xcode 26.5 (17F42)
+SDKs ..................... iphonesimulator26.5, iphoneos26.5, macosx26.5  (>= deploy targets iOS 18 / macOS 15)
+Simulator ................ iPhone 16 available
+SwiftUI / Swift Charts / MapKit ... present in SDK
+swiftlint / swiftformat / xcodegen / pwsh / Java 17 ... present
+Shared.xcframework ....... built from KMP: `apps/shared/gradlew :core:assembleSharedXCFramework` (BUILD SUCCESSFUL, slices ios-arm64 / ios-arm64-simulator / macos-arm64); staged by the xcodebuild pre-build Run Script.
+Apple signing identity ... NONE (project DEVELOPMENT_TEAM=""; no certificate/profile in keychain)
+
+--------------------------------------------------------------------------------
+GATE RESULTS (real exit codes)
+--------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    BUILD: SUCCEEDED (my 4 sources + 2 test files compiled clean, Swift 6 strict concurrency).
+    UNIT TESTS (TeslaSyncTests.xctest): PASSED — "Executed 279 tests, with 0 failures (0 unexpected)".
+        Test Suite 'AlertFeedWidgetTests' passed.
+        Test Suite 'AlertFeedWidgetStateTests' passed.
+    UI TESTS (TeslaSyncUITests, pre-existing): FAILED non-deterministically — XCUITest could not query the
+        app's main window: 'Error getting main window Unknown kAXError value -25218'; helper diagnostics
+        'xcrun: error: unable to find utility "simctl"'. Failing set differed run-to-run.
+    IOS_EXIT=65
+
+[1b] BASELINE CONTROL (my files temporarily removed; xcodegen regenerated):
+     xcodebuild -scheme TeslaSync ... -only-testing:TeslaSyncUITests/AppLaunchUITests -only-testing:TeslaSyncUITests/AuthOnboardingUITests test
+     -> testAppLaunchesToForeground PASSED this run, but AuthOnboardingUITests.testFirstRunShowsSignInShell +
+        testCancelledSignInReturnsToSignedOutShell FAILED. EXIT=65.
+     CONCLUSION: the UI-test failures are pre-existing, non-deterministic, and reproduce WITHOUT the
+     AlertFeedWidget change -> environmental headless-simulator XCUITest limitation, not a defect in this deliverable.
+     (A later retry of [1] scoped to unit tests was killed before bootstrap — 'Test crashed with signal kill
+      before establishing connection' — corroborating headless/parallel-slot simulator instability.)
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    Swift compile errors: 0 (my files compiled for TeslaSync-macOS — verified line "Compiling AlertFeed*.swift ... in target 'TeslaSync-macOS'").
+    FAILED at code-signing: '"TeslaSync-macOS" has entitlements that require signing with a development
+        certificate' + '"TeslaSyncWidgets-macOS" ...' -> app bundle (unit-test host) cannot be produced
+        without a dev certificate (ENABLE_HARDENED_RUNTIME=YES + CODE_SIGN_ENTITLEMENTS; DEVELOPMENT_TEAM="").
+    Retry with CODE_SIGNING_ALLOWED=NO: sources still compiled (0 errors) but the test host app could not be
+        assembled -> 'Could not find test host for TeslaSync-macOSTests'.
+    MAC_EXIT=70
+
+[3] swiftlint --strict        (cd apps/apple; included: Sources, Tests, TeslaSyncWidgets, TeslaSyncWatch*)
+    "Done linting! Found 0 violations, 0 serious in 262 files."
+    LINT_EXIT=0
+
+[4] swiftformat --lint apps/apple
+    "0/266 files require formatting, 2 files skipped."
+    FORMAT_EXIT=0
+
+[5] check-placeholders.ps1 -Path apps/apple/Sources/Widgets/Dashboard/AlertFeed
+    PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+Author-controlled gates: ALL GREEN
+  - Compiles on iOS AND macOS under Swift 6 strict concurrency (0 errors).
+  - Unit tests incl. all AlertFeedWidget tests: 279 passed / 0 failed (iOS).
+  - swiftlint --strict 0/262, swiftformat --lint 0/266, placeholder 0.
+Blocked gate steps (environmental platform-capability, NOT code defects):
+  - [2] macOS `build test`: requires an Apple development signing certificate (absent) — MAC_EXIT=70.
+  - [1] iOS `build test`: headless-simulator XCUITest UI-automation is non-deterministic and is proven
+        pre-existing via the baseline control [1b] — IOS_EXIT=65.
+Per the acceptance criteria ("STATUS=BLOCKED with platform-capability evidence in the log") and the
+Honesty Covenant (no red-as-green, no commit on red), the literal `xcodebuild build test` gate cannot
+reach 0 on this runner. The deliverable is complete and is expected to pass [1]+[2] unchanged on the
+ADR-012 `macos-latest` CI runner (signing identity + bootable simulator UI session). No commit performed.
+
+EXIT=65
+STATUS=BLOCKED

@@ -1,0 +1,92 @@
+I'll start by exploring the repository structure to understand the task, the web source, and the existing Apple app patterns.
+
+Now let me explore the Apple app structure to understand the established patterns for dashboard widgets, state holders, tokens, and i18n.
+
+Existing widgets `DigitalTwinWidget` and `GuardModeWidget` are my reference patterns. Let me study `GuardModeWidget` (cleanest, with Adapter/Model/Views/Tests separation) in full.
+
+Excellent pattern clarity. Let me read the remaining GuardModeWidget files plus the supporting infrastructure (registration, tokens, components).
+
+Now let me read the GuardModeWidget strings/tests and the supporting infrastructure (registration, tokens, TSTone, TSSkeleton).
+
+Let me examine the shared infrastructure (registration, tokens, skeleton) and the web source's dependencies (MetricBar, WidgetShell, useVehicleState, convertDistanceFromSI).
+
+Let me read the registration infrastructure, tokens, and the web data layer (useVehicleState, unit conversion, fmtNumber).
+
+I see two separate target modules. The `TeslaSync/dashboard-widgets/` files (GuardMode, DigitalTwin) share `DashboardWidgetRegistration`/`DashboardWidgetSize` from `DigitalTwinWidget.Model.swift`. Let me confirm target membership via project.yml and find the design tokens.
+
+Key finding: project.yml sources are `Sources`, `Localization`, `../design/generated/apple` — `TeslaSync/dashboard-widgets/` is a staging dir integrated later (consistent with the per-surface ownership note). I must mirror the GuardModeWidget pattern exactly. Let me locate the design tokens and check the toolchain availability.
+
+Critical capability finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed (`xcode-select` error) — so the iOS/macOS build+test gates cannot run on this runner. `swift`, `swiftlint`, `swiftformat`, `xcodegen` ARE available. I'll ship the complete implementation, run all runnable gates, and record BLOCKED with capability evidence for xcodebuild.
+
+Let me read the tokens and native component primitives (TSTone, TSSkeleton, native Metrics).
+
+Path correction — tokens live at `apps/design/generated/apple/Tokens.swift`. Let me read the token definitions, TSTone, TSSkeleton, and Font.TS.
+
+Now let me read TSTone (Badges), the native measurement/unit system, and the web data layer (convertDistanceFromSI, useUnits, vehicle state type, fmtNumber).
+
+`MeasurementSystem` (metric/imperial, Shared-free) is the canonical native unit preference. Let me confirm the web SI conversion factors and the vehicle-state field semantics so my adapter matches exactly.
+
+Let me verify the exact registry entry (min size matters for the `isCompact` 1×1 branch) and how name/description are defined in the web registry.
+
+Confirmed: `range-bar`, name "Range Bar", default 2×2, min 1×2, max 4×40 — so the `isCompact` 1×1 branch is unreachable post-clamp but exists in source, so I'll reproduce it as a testable pure predicate + standalone subview. Let me read the lint/format configs and the placeholder checker to ensure compliance.
+
+`pwsh` is available — I can run the placeholder gate. Let me read the forbidden patterns and how `-Path` is handled so I both avoid violations and run the checker correctly.
+
+`pwsh` works but the gate's `-Path .../RangeBarWidget` (no extension) hits the "nothing to scan = clean" branch. I'll honestly scan the whole `dashboard-widgets` dir instead. Forbidden (case-insensitive): TODO/FIXME/XXX/"Coming soon"/"Placeholder"/"Lorem ipsum"/"not implemented" — so I must avoid the substring "placeholder" entirely (no `redacted(.placeholder)`). Let me check for type-name collisions and glance at the DigitalTwin view header.
+
+Everything is clear. No type collisions, `pwsh`/`swiftlint`/`swiftformat`/`xcodegen`/`swift` available, `xcodebuild` blocked (CLT only). Let me set up tracking and write the plan, then implement the 7 files mirroring the GuardModeWidget pattern.
+
+Now implementing. Starting with the Model and Adapter files (the state-holder seam and the pure projection core).
+
+Adapter done. Now the subviews (Views) and the main View. Marking progress.
+
+Now the main View, mirroring the GuardModeWidget chrome (shell, header, full state switch with retry).
+
+Now the Previews, strings catalog, and Tests.
+
+All 7 files created. Now running the verification gates. First, autoformat my files with the repo's swiftformat config, then confirm lint-clean.
+
+No formatting changes needed — already clean. Now the lint gates and placeholder scan. Note: swiftlint's config `included:` doesn't cover the `TeslaSync/` staging dir, so I'll lint my files explicitly to genuinely verify them.
+
+All three runnable gates pass cleanly: **swiftformat 0/6 require formatting, swiftlint 0 violations in 6 files, placeholder COUNT=0**. Now let me do a best-effort Swift syntax parse and capture the exact `xcodebuild` capability evidence for the log.
+
+`swiftc -parse` passes (valid syntax) and `xcodebuild` is definitively BLOCKED (CLT only, no `simctl`). Let me check the logs directory and an existing log for the house format/convention before writing mine.
+
+The Xcode-capable neighbor `BatteryCellsWidget` (in `Sources/`) built+tested on a full-Xcode runner. My closest analogs are `GuardModeWidget` (0054) and `DigitalTwinWidget` (0036) — same `TeslaSync/dashboard-widgets/` staging dir. Let me check how they concluded their gates.
+
+The house precedent (0036/0054, same staging dir) ran on **full-Xcode runners** (they SDK-compiled + ran XCTest, deferring only `xcodebuild`). This runner has only Command Line Tools, so even `swiftc`-SDK-compile of the closed module graph isn't possible and `xcodebuild`/simulators are absent — my prompt's capability clause explicitly says: unavailable → **STATUS=BLOCKED with evidence**. Let me do a final banned-word audit, then write the log.
+
+Clean: no banned words, no overlong code lines. Now let me run the exact gate commands (bash-translated) to capture authentic exit codes — including the real `xcodebuild` failures — for the log.
+
+All evidence captured. Now writing the gate log with full transparency.
+
+Now committing the surface + log as the prompt directs. Let me first check git state and any active hooks.
+
+Clean state, no hooks, slot branch. Staging exactly my 7 files + the log and committing with the prescribed message.
+
+Committed (47d21c7a). Let me do a final consolidated re-verification of the committed state and close out tracking.
+
+Let me cleanly re-confirm the placeholder gate (its line got interleaved above).
+
+All verifications confirmed on the committed state. Task is complete to the maximum extent this runner allows.
+
+## Summary
+
+Shipped a production-polished, native-Apple SwiftUI parity of `RangeBarWidget.tsx` at `apps/apple/TeslaSync/dashboard-widgets/RangeBarWidget.*` (7 files, committed `47d21c7a`), mirroring the shipped `GuardModeWidget`/`DigitalTwinWidget` architecture exactly.
+
+**Delivered**
+- **Model** — P1/S8 state-holder seam (`RangeSource`/`RangeModel` `@Observable`, no view HTTP), P1/S11 `view.opened` telemetry (slug `RangeBarWidget`), P1/S10 `RangeStrings` facade.
+- **Adapter** — pure, unit-tested core: SI→display distance (`/1000`, `/1609.344` — exact web factors), `fmtNumber` parity, `max(rated,ideal,1)`, clamped bar fractions, EPA-variance with the web sign convention, `hasData`, `isCompact`.
+- **View/Views** — glass shell + every state (loading/empty/error+retry/stale/offline/content) and every web branch (compact value vs. two `MetricBar`s #22d3ee/#a78bfa + EPA line), Reduce-Motion aware, VoiceOver labels, registry-correct (`range-bar`, 2×2 / 1×2 / 4×40).
+- **Strings/Previews/Tests** — all source i18n keys, per-state previews, adapter+model+registry+a11y XCTests.
+
+**Gate results (this runner)**
+- `swiftlint --strict`: **0 violations** · `swiftformat --lint`: **clean** · placeholder gate: **COUNT=0** · `swiftc -parse`: **exit 0**.
+- `xcodebuild` iOS/macOS build+test: **BLOCKED** — only Command Line Tools are installed (no `Xcode.app`; `xcode-select` → CLT; `simctl` absent), so the iOS 18 / macOS 15 toolchain required by this surface is unavailable.
+
+Per the prompt's Capability clause, the log ends **`EXIT=1` / `STATUS=BLOCKED`** with the raw `xcode-select` evidence. The code is complete and green on every statically-runnable gate; the `xcodebuild` build/test is deferred to an Xcode-capable runner (matching the `0036`/`0054` "Xcode-deferred" precedent). I did **not** falsely report the build as passing.
+
+
+
+All 8 todos are done and the deliverable is committed with all runnable gates green. Let me update the plan's status line and finalize.
+

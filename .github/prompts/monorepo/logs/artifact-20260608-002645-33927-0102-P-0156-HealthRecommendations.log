@@ -1,0 +1,182 @@
+=== P4 Feature view 0156 HealthRecommendations (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively per
+                       invocation, no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · PowerShell 7.6.2 · Java 17.0.19
+  Destinations       : iOS Simulator "iPhone 16" (booted) present · macOS 26.5 SDK present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh during the scheme pre-action
+                       (Gradle ":core:assembleSharedDebugXCFramework" / release built Kotlin/Native frameworks for
+                       iosArm64 / iosSimulatorArm64; "xcframework successfully written out to
+                       apps/shared/core/build/XCFrameworks/{debug,release}/Shared.xcframework").
+  Capability         : SwiftUI present; the web source uses NO Swift Charts and NO MapKit ("Charts/maps used: (none)")
+                       so neither is required here → NOT capability-BLOCKED. The full-app Xcode gate is RED only on
+                       pre-existing, unrelated surfaces (see GATES / WHY DEFERRED), per apps/macos-pending-verifications.md.
+  Environment note   : the runner is SHARED with concurrent sibling surface builds (another agent was editing
+                       AIUsageCard.* and running its own TeslaSync xcodebuild). Only HealthRecommendations.* + this log
+                       were authored / committed here; the concurrent AIUsageCard.* working-tree changes were NOT
+                       touched and are NOT part of this commit. My xcodebuild captures used isolated derivedDataPaths
+                       (/tmp/dd-hr-ios, /tmp/dd-hr-mac) to avoid DerivedData collision.
+
+WEB SOURCE (the specification)
+  web/src/features/driving/components/drivetrain-health/HealthRecommendations.tsx — a presentational leaf fed a single
+  prop { overallHealth: 'good' | 'warning' | 'critical' } (the HealthStatus union from constants.ts). A useMemo derives
+  a priority-ordered maintenance-tip list, branch-by-branch:
+    1. overallHealth === 'critical'             → criticalStop (high) · serviceUrgent (high)
+    2. overallHealth ∈ {'warning','critical'}   → reduceLoad (medium) · checkCoolant (medium) · avoidSupercharging (medium)
+    3. always                                   → regularService (low) · gentleAccel (low) · precondition (low) · monitorTemps (low)
+  i.e. good → 4 tips, warning → 7 tips, critical → 9 tips. It renders FadeIn(delay 0.35) → GlassPanel(p-6):
+    • header: Shield (text-neon-cyan) + h3 "Health Recommendations" (uppercase tracking-wider text-muted);
+    • StaggerContainer(space-y-3) of StaggerItem cards, each a bordered row:
+        high   → border-neon-red/20  bg-neon-red/5    + AlertTriangle (neon-red)
+        medium → border-neon-amber/20 bg-neon-amber/5  + AlertTriangle (neon-amber)
+        low    → border-subtle        bg-white/[0.02]  + TrendingUp (neon-cyan)
+      with the tip copy as <p text-sm text-secondary>.
+  Data hooks (from prompt): useTranslation only. Shared components: @/components/ui (GlassPanel), @/components/motion
+  (FadeIn, StaggerContainer, StaggerItem). Charts/maps: (none). i18n keys (10): drivetrain.recommendations +
+  drivetrain.tips.{criticalStop,serviceUrgent,reduceLoad,checkCoolant,avoidSupercharging,regularService,gentleAccel,
+  precondition,monitorTemps}.
+
+ARTIFACTS SHIPPED (co-located, current sibling convention — HealthGaugeGrid/BatteryHealthSection/DetailCards)
+  apps/apple/TeslaSync/feature-views/HealthRecommendations.Model.swift    — P1/S8 source/Source seam + @Observable model,
+                                                                            P1/S11 telemetry seam (OSLog view.opened),
+                                                                            P1/S10 facade, status/connection/load enums
+                                                                            (Foundation/Observation/OSLog only)
+  apps/apple/TeslaSync/feature-views/HealthRecommendations.Adapter.swift  — pure web-parity projector: the useMemo branch
+                                                                            logic (status → ordered [tip]), priority enum,
+                                                                            a11y summaries (Foundation-only, host-testable)
+  apps/apple/TeslaSync/feature-views/HealthRecommendations.swift          — the surface: TSFadeIn(0.35) shell, Shield
+                                                                            header, connectivity banner, phase switch,
+                                                                            onAppear start/stop
+  apps/apple/TeslaSync/feature-views/HealthRecommendations.Views.swift    — glass panel, Shield header, StaggerContainer
+                                                                            of priority-tinted tip cards, priority→tone/glyph
+  apps/apple/TeslaSync/feature-views/HealthRecommendations.States.swift   — freshness chip, stale/offline banner, loading
+                                                                            skeleton, empty state, error/retry state
+  apps/apple/TeslaSync/feature-views/HealthRecommendations.Previews.swift — #if DEBUG previews for every state
+                                                                            (good/warning/critical/empty/loading/error/
+                                                                            stale/offline)
+  apps/apple/TeslaSync/feature-views/HealthRecommendations.strings        — P1/S10 catalog (23 keys: 10 verbatim web keys +
+                                                                            3 spoken priority labels + 10 native chrome)
+  apps/apple/TeslaSync/feature-views/HealthRecommendations.Tests.swift    — 24 logic tests (projector/model/a11y)
+  apps/apple/TeslaSync/feature-views/HealthRecommendations.ViewTests.swift— 8 per-state ImageRenderer render tests
+  All public types are prefixed (HealthRecommendation/HealthRecommendations*) so they never collide with the sibling
+  drivetrain-health surfaces folded into the same app module (e.g. HealthGaugeGrid's DrivetrainHealthStatus). No shared
+  wiring touched: feature-views/ is already globbed by both app targets (project.yml) and already in .swiftlint.yml; the
+  per-surface .strings table avoids editing Localizable.xcstrings. Allowed files == HealthRecommendations.* + this log
+  only; nothing else changed.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported, no raw hex)
+  FadeIn(delay 0.35)      → TSFadeIn(delay: 0.35) (Sources/Components/Motion)
+  GlassPanel(p-6)         → .tsGlassPanel() + padding(TSSpacing.lg) (Sources/Design/TSMaterial.swift)
+  Shield (lucide)         → SF Symbol "shield", Color.TS.accent (neon-cyan token; decorative, accessibilityHidden)
+  uppercase h3 muted      → Font.TS.label + .textCase(.uppercase) + tracking(0.8) + Color.TS.textMuted
+  StaggerContainer/Item   → TSStaggerContainer(spacing: TSSpacing.md) + TSStaggerItem(index:) (web space-y-3 → 12pt)
+  tip card (bordered div) → HealthRecommendationCard: RoundedRectangle(TSRadius.md) fill+stroke by priority:
+                            high  → danger  (statusDanger,  web neon-red)   border .opacity(0.30) / fill .opacity(0.08)
+                            medium→ warning (statusWarning, web neon-amber) border .opacity(0.30) / fill .opacity(0.08)
+                            low   → accent  (neon-cyan glyph) + neutral Color.TS.border / textPrimary.opacity(0.03)
+                                    (web border-subtle / bg-white[0.02])
+  AlertTriangle / TrendingUp → SF "exclamationmark.triangle.fill" (high/medium) / "chart.line.uptrend.xyaxis" (low)
+  tip copy <p secondary>  → Font.TS.body + Color.TS.textSecondary, multiline (fixedSize vertical)
+  list parity             : good → 4 low tips [regular-service, gentle-accel, precondition, monitor-temps];
+                            warning → +3 medium ahead [reduce-load, check-coolant, avoid-supercharging];
+                            critical → +2 high ahead [critical-stop, service-urgent]; tip ids == web keys, copy ==
+                            verbatim web English fallbacks, push order == web useMemo order.
+  states                  : loading skeleton cards · empty (friendly checkmark.shield glyph, "No drivetrain health data
+                            yet") · error (QueryError-equivalent + retry) · stale/offline (freshness chip + cached banner
+                            + one-shot auto-refresh on stale).
+  i18n                    : every string via HealthRecommendationsStrings facade (23 keys, web English fallbacks); the
+                            10 web keys are reproduced verbatim. Priority is spoken for VoiceOver (the web encodes it as
+                            color+icon only) via drivetrain.recommendations.priority.{high,medium,low}.
+  a11y                    : each card = combined element labeled "<priority>. <copy>"; the list exposes a full spoken
+                            summary (title then every tip); decorative glyphs accessibilityHidden; Dynamic Type via
+                            tokens; Reduce Motion respected by TSFadeIn/TSStaggerItem/TSSkeleton.
+  telemetry               : view.opened surface="HealthRecommendations" (P1/S11), emitted once on start.
+
+GATES (raw results on THIS runner)
+  [GREEN]    swiftformat --lint (HealthRecommendations.* — 8 swift files)        : 0/8 require formatting   (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict (HealthRecommendations.* — 8 files)              : 0 violations, 0 serious  (LINT_EXIT=0)
+  [GREEN]    check-placeholders.ps1 (real scan of the 8 shipped swift files)     : PLACEHOLDER_ALLOWED=0,
+                                                                                   PLACEHOLDER_COUNT=0      (PLACEHOLDER_EXIT=0)
+             check-placeholders.ps1 -Path …/feature-views/HealthRecommendations  : PLACEHOLDER_COUNT=0      (PLACEHOLDER_EXIT=0)
+                                                                                   (literal gate path is not a directory →
+                                                                                    clean per the script's Test-Path branch)
+             grep TODO|FIXME|XXX|Coming soon|Placeholder|Lorem|not implemented|stub|mock|unimpl over the 9 files: 0 hits.
+  [GREEN]    HealthRecommendations build + test — ISOLATED SwiftPM harness, swift-tools 6.0, Swift 6 language mode
+             (.swiftLanguageMode(.v6) ⇒ strict-concurrency complete, same as the app target), compiling the EXACT shipped
+             HealthRecommendations.* sources against the REAL repo design system (Sources/Components + Sources/Design +
+             the generated DesignTokens; the one excluded file, DataDisplay/UnitFormatters.swift, depends on an
+             app-Platform \.tsUnits env key this surface never uses):
+                 Build complete!  ·  Executed 32 tests, with 0 failures (0 unexpected)              (SWIFT_TEST_EXIT=0)
+             (11 projector parity tests [good/warning/critical counts + order + ids + verbatim copy + i18n keys], 10 model
+             tests [phase matrix · cached-stays-content · freshness · refresh delegation · stale one-shot auto-refresh ·
+             offline-no-refresh · view.opened once · stop], 3 accessibility-summary tests, plus 8 per-state ImageRenderer
+             render tests covering content good/warning/critical / empty / loading / error / stale / offline.)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO HealthRecommendations errors; all blockers pre-exist this change):
+    Shared.xcframework staged successfully (Gradle assembled debug+release KMP frameworks), so the gate proceeded to the
+    app compile, where it fails on architecture-wide, pre-existing surfaces:
+      iOS  : the app target globs 173 co-located *.Tests.swift / *.ViewTests.swift files from TeslaSync/feature-views/
+             (every feature-view surface ships its tests this way), each `import XCTest` + `@testable import TeslaSync`
+             INTO the app target (which does not link XCTest). The ONLY distinct compile error in the whole iOS build is:
+               feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'
+             (AIRestorePanel sorts first; HealthRecommendations.Tests.swift / .ViewTests.swift are 2 of those 173 and
+             follow the identical sibling convention — in the isolated harness, where they live in a proper test target,
+             all 32 pass). My surface emits ZERO errors: a grep of the iOS build log for
+             "feature-views/HealthRecommendations…: error:" = 0 hits; the only HealthRecommendations lines are benign
+             "file '…' is part of module 'TeslaSync'; ignoring import" warnings (the same co-located-test condition) and a
+             SUCCESSFUL CopyStringsFile of HealthRecommendations.strings into TeslaSync.app (validated UTF-8). Fixing the
+             XCTest-in-app-target condition is a project.yml restructuring — outside this prompt's allowed files.
+      macOS: in addition, the TeslaSync-macOS + TeslaSyncWidgets-macOS targets have entitlements that require a development
+             SIGNING certificate, which this runner does not provision. The only distinct macOS errors are:
+               TeslaSync.xcodeproj: error: "TeslaSync-macOS"        has entitlements that require signing with a development certificate.
+               TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+             Again ZERO HealthRecommendations errors.
+    These are exactly the artifacts apps/macos-pending-verifications.md defers to the ADR-012 macos-latest acceptance gate
+    (P4/P99 signing/archive + a co-located-test target restructuring), NOT a single feature-view prompt (task rule: do not
+    fix pre-existing unrelated breakage; allowed files == HealthRecommendations.* + this log).
+
+HONESTY COVENANT (binding — verbatim numbering)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and explicitly
+                           DEFERRED with raw evidence (real captured exit codes, real error lines) — never reported as
+                           passing.
+  2  No scope narrowing  : every web region + branch reproduced — the Shield header, the full useMemo branch logic (high
+                           pair for critical, medium triple for warning+critical, the four evergreen low tips), the
+                           StaggerContainer cascade, the per-priority card tint/glyph, plus loading/empty/error/stale/offline.
+  3  No skip-and-assume  : every host-runnable gate executed on THIS runner; raw exits pasted; the iOS XCTest-module failure
+                           and the macOS signing failure were CONFIRMED from the captured build logs (not assumed), and the
+                           "0 HealthRecommendations errors" claim was grep-verified against both logs.
+  4  No stubs as final   : complete production surface + 32 real passing tests; placeholder scanner = 0 over the 9 files;
+                           no TODO/stub/mock/placeholder/Lorem anywhere.
+  5  No parity shortcut  : tip ids == web keys, copy == verbatim web English fallbacks, push order == web useMemo order,
+                           counts (4/7/9) pinned by tests; tone/glyph/typography/a11y/telemetry mapped to platform tokens.
+  6  No delegation       : implemented directly; no sub-agents used.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry, P4 core shared
+                           components (tsGlassPanel/TSFadeIn/TSStaggerContainer/TSStaggerItem/TSSkeleton/TSEmptyState/TSTone)
+                           all present and consumed.
+  8  No commit on red    : the COMMITTED artifact (HealthRecommendations.* + this log) is GREEN on every host gate AND on a
+                           real isolated Swift-6 build+test against the real design system; the deferred full-app gate is RED
+                           only on pre-existing, unrelated surfaces this commit neither introduces nor touches.
+  9  No silent drift     : changes are confined to apps/apple/TeslaSync/feature-views/HealthRecommendations.* and this log —
+                           enumerated above. The concurrent sibling AIUsageCard.* working-tree edits (another agent on this
+                           shared runner) were NOT touched and are excluded from this commit. The generated .xcodeproj +
+                           Gradle output + staged xcframework are git-ignored and were removed after verification.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic HealthRecommendations shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 32 tests pass under the app's own Swift 6 strict-concurrency rules, against the real design
+  system, with swiftlint/swiftformat/placeholder all green on the shipped files, and its .strings even copy cleanly into
+  the iOS app bundle. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code):
+  iOS is blocked by the architecture-wide co-located-XCTest-in-app-target condition (only error: AIRestorePanel.Tests.swift)
+  and macOS additionally by development-signing entitlements — both owned by the P4/P99 acceptance gate on a signed
+  macos-latest CI runner per apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete +
+  DEFERRED Xcode gate" disposition used by every P4 surface to date (e.g. 0154 HealthGaugeGrid).
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,134 @@
+=== P4 Shared surface 0154 FormField (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh · Java 17 (OpenJDK)
+  Destinations       : iOS Simulator "iPhone 16" (booted) present · macOS 26.5 SDK present · iOS 26.5 sim SDK present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 30m23s on this contended runner;
+                       release + debug XCFrameworks staged to apps/apple/Frameworks/Shared.xcframework).
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS simulators present → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/components/forms/FormField.tsx — an intentionally tiny, PRESENTATIONAL wrapper:
+    <div space-y-1.5>
+      <label htmlFor={fieldId} text-xs font-medium text-secondary> {label}
+        {required && <span text-rose-300 aria-label="required">*</span>} </label>
+      {children}                                                  // the control slot
+      {error ? <p role="alert" text-xs text-rose-300>{error}</p>
+             : hint ? <p text-xs text-muted>{hint}</p> : null}
+  Hooks: only `useId` (generates the label↔control id). No charts, no maps, no data fetch.
+  Render branches: required-or-not × (error | hint | neither); `error` strictly hides `hint`.
+  i18n key extracted from the documented example: `alerts.signal` → "Signal" (+ the `aria-label="required"` word).
+  Per the prompt's own "States" boilerplate (loading/empty/error/stale/offline): this leaf fetches nothing, so
+  the data-lifecycle chrome is owned by the host form — only the inline validation state lives here (faithfully
+  reproduced). This is the same boundary every presentational P4 leaf (ToolCard, SummaryStatsRow) documents.
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/shared-surfaces/FormField/)
+  FormField.Adapter.swift   — pure core: FormFieldInput→FormFieldResolved projection (error-hides-hint +
+                              whitespace-collapse parity), FormFieldMessage, FormFieldAccessibility, FormFieldSurface.slug
+  FormField.Model.swift     — P1/S8 state-holder (FormFieldModel @Observable) + FormFieldSource seam +
+                              InMemoryFormFieldSource, P1/S11 telemetry seam (FormFieldTelemetry + OSLog sink),
+                              P1/S10 i18n facade (FormFieldStrings, table "FormField")
+  FormField.Views.swift     — label row (+ required asterisk, hidden from VoiceOver, folded into one spoken label)
+                              and the single error/hint/none message row, on shared P1/S9 tokens only
+  FormField.swift           — public generic FormField<Control> surface: binds the model + control slot, view.opened
+                              on appear, reduce-motion-aware message animation, role="alert" announcement on error
+  FormField.Previews.swift  — #if DEBUG previews for every branch (default / required / hint / error-hides-hint /
+                              large Dynamic Type / dark)
+  FormField.strings         — the "FormField" i18n table (alerts.signal, form.field.required)
+  FormField.Tests.swift     — 15 XCTest cases (projection × every branch, accessibility, model lifecycle, telemetry)
+  Necessary shared wiring (same pattern ToolCard/every P4 surface used; enumerated under covenant rule 9):
+    project.yml      — + "TeslaSync/shared-surfaces" to TeslaSync & TeslaSync-macOS sources (excludes **/*.Tests.swift)
+                       and to TeslaSyncTests & TeslaSync-macOSTests sources (includes **/*.Tests.swift)
+    .swiftlint.yml   — + "TeslaSync/shared-surfaces" to included
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  <label> text-[var(--text-secondary)] text-xs font-medium  → Font.TS.label + Color.TS.textSecondary
+  required <span text-rose-300> aria-label="required"       → "*" in Color.TS.statusDanger, hidden from VoiceOver;
+                                                               required state folded into one spoken label ("Signal, required")
+  <p role="alert" text-rose-300>{error}                     → Color.TS.statusDanger + .isStaticText trait +
+                                                               AccessibilityNotification.Announcement on appear
+  <p text-[var(--text-muted)]>{hint}                        → Font.TS.caption + Color.TS.textMuted
+  useId (label↔control id)                                  → caller htmlFor ?? a stable generated id; .accessibilityIdentifier
+  error ? : hint ? : null                                   → FormFieldProjection.resolve (pure, unit-tested)
+  i18n      : label/hint/error are caller-localized props (web parity); the surface-owned "required" word + the
+              documented `alerts.signal` key resolve through the P1/S10 facade — zero English literals in Swift.
+  a11y      : VoiceOver label incl. required suffix · Dynamic Type (token scale + wrap, no truncation) ·
+              reduce-motion honored (TSAnimation) · error announced (role="alert" parity).
+  telemetry : view.opened surface="FormField" via FormFieldModel.start (P1/S11), default OSLog sink.
+
+GATES  (raw exits pasted; executed on THIS runner)
+  [GREEN]    swiftformat --lint  (surface scope)                  : 0/6 files require formatting          -> FORMAT_EXIT=0
+             swiftformat --lint apps/apple  (whole app, FYI)      : 1/1919 require formatting — PRE-EXISTING
+                                                                     feature-views/ActionBuilder.Previews.swift:48
+                                                                     (blankLinesBetweenScopes); NOT a FormField file.
+  [GREEN]    swiftlint --strict  (surface scope, scoped config)   : 0 violations, 0 serious in 6 files    -> LINT_EXIT=0
+             swiftlint --strict  (whole app, FYI)                 : 1 PRE-EXISTING violation —
+                                                                     dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+                                                                     (function_body_length); NOT a FormField file.
+  [GREEN]    check-placeholders.ps1 -Path …/shared-surfaces/FormField : PLACEHOLDER_ALLOWED=0
+                                                                        PLACEHOLDER_COUNT=0                -> PLACEHOLDER_EXIT=0
+  [GREEN]    FormField build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode,
+             strict-concurrency complete = same as the app), module name "TeslaSync" so the shipped
+             FormField.Tests.swift `@testable import TeslaSync` resolves, compiling the EXACT shipped FormField.*
+             sources against the REAL repo design tokens (apps/design/generated/apple/Tokens.swift + Sources/Design/TSDesign.swift):
+                 Build complete!  ·  Executed 15 tests, with 0 failures                                  -> SWIFT_TEST_EXIT=0
+  [GREEN]    Real-SDK typecheck of the shipped sources (incl. Previews, -D DEBUG):
+                 iOS    : swiftc -sdk iphonesimulator -target arm64-apple-ios18.0-simulator  -swift-version 6  -> IOS_TYPECHECK_EXIT=0
+                 macOS  : compiled by the SwiftPM build above (arm64-apple-macos15)                          -> 0
+  [GREEN]    xcodegen generate : project regenerates clean; membership verified —
+                 FormField.{swift,Model,Adapter,Views,Previews}.swift → TeslaSync + TeslaSync-macOS (app)
+                 FormField.Tests.swift                                → TeslaSyncTests + TeslaSync-macOSTests (unit-test)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO FormField errors; every blocker pre-exists this change):
+    iOS  : the app target fails Swift module-dependency scanning on the PRE-EXISTING co-located
+           feature-views/*.Tests.swift — 170 of them import XCTest into the app target. Real error:
+             apps/apple/TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8:
+               error: unable to resolve module dependency: 'XCTest'   (in target 'TeslaSync')
+           (XCTest is not on an app target's framework search path; ENABLE_TESTING_SEARCH_PATHS is unset.)
+           FormField is wired the CORRECT way — its test goes to the unit-test targets, not the app — so it
+           adds ZERO errors. grep of the build log for "FormField|shared-surfaces … error:" = 0 hits.
+    macOS: additionally requires a development SIGNING certificate —
+             '"TeslaSync-macOS" has entitlements that require signing with a development certificate'
+           which this runner does not provision. ZERO FormField errors.
+    These are exactly the artifacts apps/macos-pending-verifications.md defers to the ADR-012 macos-latest CI
+    runner; they are owned by the P4/P99 Apple acceptance gate (signing) + a feature-views test-relocation pass —
+    NOT by a single shared-surface prompt (task rule: do not fix pre-existing unrelated breakage). A
+    pending-verification row was recorded in apps/macos-pending-verifications.md.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65/MAC_EXIT=65) and
+                           explicitly DEFERRED with raw evidence — never reported as passing.
+  2  No scope narrowing  : every web region + branch (label, required asterisk + a11y, control slot, error-hides-hint,
+                           hint, neither, id wiring) reproduced; not reduced.
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; the iOS/macOS failures were RUN and
+                           their causes read from the build logs, not assumed.
+  4  No stubs as final   : complete production surface + 15 real, passing tests; placeholder scanner = 0.
+  5  No parity shortcut  : color/typography/precedence/id/a11y/telemetry all mapped to platform tokens + verified.
+  6  No delegation       : implemented directly; no sub-agents.
+  7  No predecessor bypass: P1/S8 state-holder, P1/S9 tokens, P1/S10 i18n facade, P1/S11 telemetry all present + consumed.
+  8  No commit on red    : the COMMITTED artifact (FormField/* + wiring) is GREEN on every host gate AND on a real
+                           isolated Swift 6 strict-concurrency build+test; the deferred full-app gate is RED only on
+                           pre-existing, unrelated surfaces, which this commit neither introduces nor touches.
+  9  No silent drift     : changes are confined to shared-surfaces/FormField/* (7 files), project.yml, .swiftlint.yml,
+                           one apps/macos-pending-verifications.md row, and this log — all enumerated above.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic FormField shipped at parity with the web source and INDEPENDENTLY VERIFIED:
+  it compiles on the real iOS-18 + macOS-15 SDKs and its 15 tests pass under the app's own Swift 6 strict-concurrency
+  rules, against the real design system, with swiftlint/swiftformat/placeholder all green. The full-app iOS-Simulator
+  + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked by pre-existing co-located
+  feature-views test files importing XCTest into the app target and by macOS development-signing — both owned by the
+  P4/P99 acceptance gate on a signed macos-latest CI runner per apps/macos-pending-verifications.md. This matches the
+  repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

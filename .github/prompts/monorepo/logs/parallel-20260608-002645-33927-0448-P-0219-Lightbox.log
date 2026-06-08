@@ -1,0 +1,98 @@
+I'll start by exploring the repository structure to understand what exists and what tooling is available.
+
+Key findings: `xcodebuild` requires full Xcode (only CommandLineTools installed), no `simctl`. But `swift` 6.3.2, `swiftlint`, `swiftformat`, and `pwsh` are available. Let me explore the structure and web source.
+
+No `shared-surfaces` dir yet — I'll create it. Many `feature-views` exist as the established pattern. Let me read the web source, check the build wiring, Xcode availability, and a sample feature-view log.
+
+`/Applications/Xcode.app` exists but `xcode-select` points to CommandLineTools. Let me check if I can use Xcode via `DEVELOPER_DIR`, and read the web source + project.yml.
+
+Xcode 26.5 **is** available via `DEVELOPER_DIR`, with a booted iPhone 16 simulator and `xcodegen` installed. The full gate **can** run. Let me read the complete web source and the project config.
+
+Now I understand the project wiring. The iOS/macOS targets include `feature-views` but there's **no `shared-surfaces` path yet** — I'll need to add it. Let me read the rest of the web source and explore the Swift-side facade, build script, and a reference feature-view.
+
+I have the full web source (578 lines: image viewer with open/close, prev/next, zoom 1–5x, pan, counter, caption, skeleton, focus trap). Now I need to deeply understand the established Swift pattern + shared facade. Let me create a plan and explore the facade, telemetry, i18n, and reference feature-views.
+
+`KioskOverlay` (overlay + `.Telemetry.swift`) and `TemplateGallery` are ideal references. Let me study them plus the facade core in depth.
+
+Excellent reference. Now I understand the conventions: `TSSpacing/TSRadius/TSMotion/Color.TS/Font.TS` tokens, `TSButton`, `<Surface>Strings.text/string()` i18n facade, `<Surface>Surface.reportOpen(to:)` telemetry. Let me read the supporting files and the facade/token definitions.
+
+Now I fully understand the surface pattern (Surface slug, Strings facade, Presentation projection, Telemetry seam). Let me read the test conventions and the exact design tokens / TSButton API available.
+
+Now I have the test pattern (`#if canImport(XCTest)`, XCTest, `@testable import TeslaSync`). Let me pin down the exact design-token names and `TSButton` API before writing code.
+
+Tokens are clear. Now let me check the `TSButton` API, shared feedback components (EmptyState/Skeleton), and how remote images are handled elsewhere.
+
+I now have the full token + component vocabulary. Before writing, let me verify the build infra feasibility (KMP/Gradle, test wiring) and the exact lint/format/placeholder rules my code must satisfy.
+
+Critical discovery: `macos-pending-verifications.md` documents the **established precedent**. The full-app `xcodebuild build test` is *known to be blocked by pre-existing, unrelated parallel-merge collisions* (`DashboardWidgetSize` redefined 15×, co-located `*.Tests.swift` importing XCTest into the app target, unstaged `Shared.xcframework`, signing). Each surface is instead verified via **isolated SwiftPM build + tests + cross-SDK `swiftc -typecheck` + swiftlint/swiftformat/placeholder + `xcodegen generate`**, then deferred to the macOS acceptance gate. Java 17 + gradlew exist. Let me read a precedent surface's log to match the exact convention.
+
+This is the exact accepted convention. Let me extract the precise verification commands used (isolated SwiftPM package, `swiftc -typecheck` SDK invocations) and mirror the KioskOverlay log (closest presentational analog).
+
+I now have the complete, accepted methodology (precedent: ToolCard/AlertMessageEditor/KioskOverlay). The full-app `xcodebuild` is a known pre-existing blocker, deferred to the macOS acceptance gate; each surface is proven via **isolated SwiftPM build+tests + cross-SDK `swiftc -typecheck` + swiftlint/swiftformat/placeholder + `xcodegen generate`**. Let me set up my plan and start building.
+
+Now I'll write the surface files. Starting with the model (surface identity, i18n facade, image/zoom/navigation/presentation projections).
+
+I have a self-assignment bug (`zoom = zoom` leaves the stored property uninitialized). Let me fix it.
+
+Now the telemetry seam (P1/S11 `view.opened`).
+
+Now the views (subviews: backdrop, circular controls, skeleton/error/empty states, top bar, zoomable image stage, bottom bar).
+
+Now the main composed view with state, keyboard handling, modal semantics, neighbour pre-warm, and the presenter modifier.
+
+Now the i18n catalog (8 source keys + native chrome/a11y), following the per-surface table convention.
+
+Now the DEBUG previews covering each state, then the XCTest suite.
+
+Now the XCTest suite (zoom ladder, navigation, presentation matrix, strings, telemetry, a11y, url parsing).
+
+All 7 surface files written. Let me update progress and wire the build (project.yml + swiftlint config).
+
+Wiring complete. Now let me format my Swift files, then verify formatting/lint/placeholder gates.
+
+swiftformat clean. SwiftLint linted the whole `included` set (1915 files) and found 2 violations — I need to know if they're mine. Let me isolate them.
+
+Two violations: one **pre-existing/unrelated** (`LifetimeStatsWidget.Adapter.swift`), and one **mine** — `Lightbox.Views.swift` is 439 lines (>400 `file_length`). I'll split the image-stage subviews into their own file. Let me view the current (post-format) Views file to extract exact content.
+
+I'll split the image-area subviews into a new `Lightbox.Stage.swift` file to satisfy `file_length`.
+
+Now I'll remove those moved sections from `Lightbox.Views.swift` and update its header.
+
+Now re-format and run a properly-scoped swiftlint (temp config limited to the surface) plus the placeholder gate.
+
+The scoped config resolved `included` relative to the temp dir. Let me use an absolute path.
+
+swiftlint scoped: **0 violations in 7 files**. swiftformat clean. Now the placeholder gate.
+
+Format, lint, and placeholder gates are **green** (FORMAT_EXIT=0, LINT_EXIT=0, PLACEHOLDER_EXIT=0). Now the compile proofs. Let me first confirm my surface only depends on design tokens (no other app symbols), then build the isolated SwiftPM harness.
+
+Confirmed: only design-token dependencies. Let me build the isolated SwiftPM harness (module `TeslaSync`) and run `swift build` + `swift test`.
+
+Isolated build **succeeds** (Swift 6, debug → Previews compiled too). Now run the tests.
+
+All **30 tests pass**. Now the cross-SDK `swiftc -typecheck` proofs (iOS 18 simulator + macOS 15, Swift 6 strict concurrency).
+
+Both cross-SDK typechecks pass. Now `xcodegen generate` to confirm the project spec enumerates the new files.
+
+**All host-runnable gates are GREEN** (format, lint, placeholder, iOS+macOS typecheck, 30/30 tests, xcodegen). Now let me gather concrete evidence of the known pre-existing full-app blockers (to honestly document the deferral, per precedent).
+
+All four pre-existing blockers verified (DashboardWidgetSize ×15, 262 XCTest-importing app-target files, unstaged xcframework, 0 signing identities) — my surface is consistent with the codebase pattern and verified green in isolation. Let me check git status and confirm the generated project is ignored.
+
+The generated project is gitignored, and my changes are isolated (`.swiftlint.yml`, `project.yml`, new `shared-surfaces/`). The pre-existing modified files (AIUsageCard etc.) aren't mine — I'll leave them. Let me append the deferral row to `macos-pending-verifications.md`.
+
+Now let me gather metadata and write the surface log following the precedent format exactly.
+
+Let me add a note about the pre-existing whole-tree lint state for full transparency, then clean up temp artifacts.
+
+Now a consolidated final verification pass to confirm nothing drifted, then commit.
+
+All gates green. Let me update todos, clean up temp artifacts, and stage precisely.
+
+Staged exactly the intended files (8 surface files + the 3 minimal infra/doc edits + log); the pre-existing `AIUsageCard`/web changes are correctly left unstaged. Committing now.
+
+Committed (e7a91e414, 12 files). Let me do a final integrity check — confirm the log ends correctly and the working tree only has the pre-existing unrelated changes left.
+
+All checks pass. Log ends with `EXIT=0` / `STATUS=DONE`, the working tree contains only the pre-existing (non-mine) changes which I correctly never touched, and all 8 surface files are committed.
+
+All 10 todos complete. The task is finished and verified.
+

@@ -1,0 +1,131 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Key findings: `xcodebuild` only has Command Line Tools (no full Xcode), but `swift`, `swiftlint`, `swiftformat` are available. There are already-modified `AIUsageCard.*` files (likely a sibling pattern). Let me read the web source and explore the Apple app structure.
+
+Now I understand the web source. Let me examine the established `AIUsageCard.*` template pattern (the sibling feature-view) and the supporting infrastructure.
+
+Let me read the `AIUsageCard.*` template files (the canonical 7-file pattern) in full.
+
+This is a sophisticated architecture. Let me read the rest of the AIUsageCard template and explore the shared native component library and supporting infrastructure.
+
+There's a native `DataTable.swift` shared component and design tokens. Let me understand the build/module structure and read the key shared components plus a table-based section template.
+
+All of `Sources/`, `TeslaSync/feature-views`, etc. compile into one `TeslaSync` module (Swift 6.0, strict concurrency). Now let me read the test/preview pattern and the shared components I'll reference.
+
+Let me check a few critical things: the test-target mechanism, PowerShell availability, the native shared components I'll use, and git history for the pattern.
+
+`pwsh`, `xcodegen`, and the placeholder script are all available — only full Xcode is missing. The golden pattern (AiUsageCard, latest commit) co-locates `.Tests.swift` and reproduces UI privately using shared design tokens. Let me read the shared design tokens, the native DataTable, and Feedback components to use correct token names.
+
+A shared native `TSDataTable` exists (the documented peer of web `DataTable`). Let me study a sibling "Section" implementation to match local convention, plus the Feedback components and the generated design tokens.
+
+I now understand the convention: reproduce UI privately using shared design tokens + Apple primitives (`ContentUnavailableView`, `ProgressView`), per-surface state-holder seam, co-located tests. Let me read the exact web helper implementations for faithful porting, plus the design tokens and shared facade.
+
+Now I have the exact formatting arithmetic. Let me get `convertEnergyFromSI`, the `ChargingSession` type, the design tokens, and the Feedback/motion shared primitives.
+
+Now I have the data model and tokens. Let me confirm the exact token members, motion primitives, and the navigation pattern for the "View all" link.
+
+I now have the full token set and motion primitives. Let me confirm the navigation route pattern and the stagger API, then I'll start building.
+
+`AppRoute.charging` exists; the convention is the view emits a navigation intent through a seam (host maps it). Let me read the sibling's navigation seam to match the exact pattern.
+
+I have everything needed: data model, formatters, tokens, motion, nav seam (`AppRoute.charging`). Let me read the exact placeholder-check patterns so my code avoids forbidden words, then I'll write a plan and implement.
+
+I now have the exact forbidden patterns (case-insensitive: `todo`, `fixme`, `xxx`, `coming soon`, `placeholder`, `lorem ipsum`, `not implemented`; `.strings` files are not scanned). I'll avoid `.redacted(.placeholder)` and the words `mock`/`stub`. Let me set up tracking and confirm no existing files, then implement.
+
+No existing files and no `.placeholder` redaction usage anywhere — good. Let me probe whether `swiftc` can typecheck SwiftUI/Observation on this CLT-only machine, which would let me genuinely verify my non-test files compile even without full Xcode.
+
+`swiftc -typecheck` works with SwiftUI/Observation/OSLog against the real shared sources (EXIT=0) — so I can genuinely verify compilation even without full Xcode. This is a major win for honest verification. Let me write a brief plan, then implement.
+
+Now let me write the Adapter (pure projection core).
+
+Now the Model (state-holder seam, Strings facade, telemetry, nav seam).
+
+Now the state subviews (loading, empty, error, freshness chip, banner, inline error).
+
+Now the presentational Views (header, adaptive table, rows).
+
+Now the main surface View.
+
+Now the critical verification — let me typecheck the 5 non-test files against the real shared sources (macOS target, Swift 6, strict concurrency).
+
+Core files typecheck clean on macOS (Swift 6, strict concurrency). Let me validate the `#if os(iOS)` branch by attempting an iOS-target typecheck.
+
+No iOS SDK with CLT (expected) — the `#if os(iOS)` branch is the verbatim `TSDataTable` pattern, validated by parity. The macOS path typechecks. Now let me write the Previews, Tests, and strings.
+
+Now the comprehensive unit tests.
+
+Now the i18n catalog.
+
+All 8 files written. Now let me prove the parity arithmetic by compiling my real Adapter+Model into an executable and running the projection (executes the actual code, validates my test expectations).
+
+The slug lives in the main View file (excluded). Let me include the full non-test set + Tokens/Motion in the executable build.
+
+Execution confirms **exact parity**: energy `48.65 kWh`, duration `1h 32m`/`45m`/`2h 10m`/`0m`, cost `$7.83`/`—`/`$11.40`, battery `18% → 80%`/`10%` (single), empty/loading phases, and date `Nov 14, 2023 at 2:13 PM` (my tests use robust substring asserts, so the CLDR `at` separator passes). Now let me run the formatting/lint/placeholder tooling on my files.
+
+swiftformat formatted 4/7 files. Let me verify lint-clean, run swiftlint on my files, check the diff didn't break anything, and re-typecheck.
+
+swiftformat passes. Two swiftlint violations in the Adapter: file length (404>400) and `makeRow` param count (6>5). I'll split the projection into its own file and bundle formatting params into a context struct. Let me view the projection section to extract it.
+
+I'll split the projection into its own file and bundle the formatting params into a context struct. Let me remove the projection from the Adapter and create a dedicated Projection file.
+
+Now re-run the full tooling on all files including the new Projection file.
+
+Both linters pass with 0 violations. Let me re-typecheck (now with the Projection file) and re-run the execution test to confirm the refactor preserved behavior.
+
+Typecheck passes and execution output is identical after the refactor. Now let me syntax-check the test/preview files and run a meaningful placeholder scan on my files.
+
+All checks pass for my files (typecheck, execution, parse, format, lint, placeholder all clean). Only `xcodebuild` is blocked (no Xcode). Let me check the log directory and an existing sibling log to match the expected format.
+
+Let me read a sibling log to match the established format and see how the xcodebuild-blocked situation was handled.
+
+This sibling ran on a machine **with** Xcode and did an **ISOLATED SwiftPM build + test** to actually run the XCTests. Let me read how they structured that harness — I can replicate it with the CLT `swift` toolchain to actually run my tests.
+
+The sanctioned disposition is **STATUS=DONE** via an **isolated SwiftPM build+test** (compiling the real surface against real design tokens, running XCTest), with the full-app `xcodebuild` **DEFERRED** on pre-existing unrelated blockers (unstaged `Shared.xcframework`, `DashboardWidgetSize` 8× redefinition, co-located tests, signing). Let me check whether Xcode is available here, then build the isolated harness to actually run my tests.
+
+Xcode **is** installed at `/Applications/Xcode.app` (just not the active dir) — exactly the sibling's situation. I'll use `DEVELOPER_DIR` non-destructively (no sudo) to access the full toolchain and run an isolated SwiftPM build+test that actually executes my XCTests.
+
+Xcode 26.5 + a booted iPhone 16 simulator are available. Let me build the isolated SwiftPM harness (real surface + real design tokens) and run my actual XCTest suite under the Xcode toolchain.
+
+Now let me run the actual XCTest suite in the isolated package under the Xcode toolchain.
+
+Excellent — everything compiles except one Swift type-inference timeout in the Previews `many(now:)` fixture (a known issue with mixed literal arithmetic in a closure). Let me break it into explicitly-typed locals.
+
+Now reformat/lint the changed Previews file, sync it to the harness, and re-run the test suite.
+
+**All 36 XCTest cases pass** (0 failures) under Xcode 26.5, Swift 6 language mode (strict concurrency complete), against the **real** design tokens. Now let me verify the documented full-app blockers still exist (so I report DEFERRED honestly, not assumed), and attempt the real `xcodebuild` for raw evidence.
+
+All three pre-existing full-app blockers are concretely confirmed (not assumed): `Shared.xcframework` absent, `DashboardWidgetSize` redefined 15×, 171 co-located test files importing XCTest into the app target. Let me run a symbol-collision scan to ensure my public types don't clash elsewhere in the module.
+
+No symbol collisions — my public types are unique in the module. Let me run a final consolidated verification pass capturing exact outputs for the log.
+
+All green: swiftformat 0/8, swiftlint 0 violations, placeholder COUNT=0. Let me capture tool versions and per-file line counts, then write the comprehensive gate log.
+
+Now let me write the comprehensive, honest gate log.
+
+Now let me commit — staging only my files (not the pre-existing AIUsageCard working-tree changes).
+
+Staged set is exactly my 10 files; the pre-existing AIUsageCard changes remain unstaged. Committing now.
+
+Committed cleanly (`d97ef84a4`) with exactly my 10 files. Let me clean up temp artifacts and do a final working-tree check.
+
+All clean — temp artifacts removed, all 9 source files + log committed, no stray files. Every runnable gate is green and the work is independently verified.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`RecentChargesSection`** SwiftUI surface at parity with `web/.../vehicle-detail/RecentChargesSection.tsx`, committed as `d97ef84a4` (10 files, 8 Swift + `.strings` + gate log).
+
+**Architecture** (mirrors the golden `AiUsageCard`/`ActiveSessionsSection` pattern): a pure Foundation **Adapter** + **Projection** (formatters ported verbatim from `numberFormat.ts`/`dateFormat.ts`/`helpers.ts`), a P1/S8 **Model** state-holder seam (`@Observable`, `@MainActor`) with P1/S10 i18n facade, P1/S11 `view.opened` telemetry, and an `AppRoute.charging` navigation seam; private **Views**/**States** reproduced with shared design tokens + Apple primitives (adaptive `Grid` on regular width, stacked cards on compact iPhone, `ContentUnavailableView`).
+
+**All 6 web columns/branches reproduced** plus the full P4 leaf contract — loading, empty, error+retry, content (+inline reload-error), stale (chip+auto-refresh), offline — and all 8 source i18n keys.
+
+**Verification (every runnable gate green on this runner):**
+- `swiftformat --lint` 0/8 · `swiftlint --strict` 0 violations · placeholder scan COUNT=0
+- `swiftc -typecheck` (Swift 6, strict-concurrency, real tokens) EXIT=0
+- **Isolated SwiftPM build + 36 XCTest → 0 failures** under the Xcode 26.5 toolchain (real design system, `#Preview` compiling)
+- Parity cell values verified by actually executing the projection (`48.65 kWh`, `1h 32m`, `$7.83`, `18% → 80%`, …)
+- Symbol-collision scan clean
+
+**Full-app `xcodebuild` is DEFERRED** (not failed by this code) on three concretely-confirmed pre-existing, out-of-scope blockers — unstaged `Shared.xcframework`, `DashboardWidgetSize` redefined 15×, 171 co-located test files importing XCTest into the app target — the same sanctioned disposition as every prior P4 surface, owned by the P99 acceptance gate.
+
+`EXIT=0 · STATUS=DONE`
+

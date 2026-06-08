@@ -1,0 +1,89 @@
+I'll start by exploring the repository structure to understand what exists and what I'm working with.
+
+Swift toolchain, swiftlint, swiftformat are available, but `xcodebuild` requires full Xcode (only Command Line Tools present). Let me explore the existing Apple app structure to understand the build setup and existing patterns.
+
+The web source is a pure presentational component (letter-grade pill). Its core logic lives in `scoreScale.ts`. Let me examine the existing Apple conventions, the target directory, prior shared surfaces, and the build setup.
+
+Key findings: P4 surfaces live under `apps/apple/TeslaSync/<feature>/` using dotted-file conventions (`Name.swift`, `Name.Tests.swift`, `Name.strings`). No `.xcodeproj`/`Package.swift` checked in — project is generated via XcodeGen from `project.yml`, and only Command Line Tools (not full Xcode) are installed. Let me study the core logic to port and the native facades (tokens, i18n, diagnostics).
+
+Important: there's already a simplified `TSScoreBadge` in the atomic component library, but this prompt requires a faithful **shared-surface** port of the letter-grade `ScoreBadge.tsx` (A+/A/B/C/D/F/— with `scoreScale` palette, sizes, and `score.aria` key). I'll build it in the new `shared-surfaces/` dir without touching the atomic one. Let me study the design tokens, diagnostics/telemetry facade, i18n approach, and a representative widget with tests+strings+previews.
+
+Critical constraint: `.swiftlint.yml` `included:` lists `TeslaSync/dashboard-widgets` and `TeslaSync/feature-views` but **not** `TeslaSync/shared-surfaces` — and I may only touch `ScoreBadge.*` + the log. `swiftformat --lint apps/apple` will still check my files. Let me check whether `score.aria` exists in the i18n catalog, and study the telemetry/diagnostics facade plus a representative state-driven widget (BatteryRadialGauge) with its test for the exact `view.opened` + i18n + states pattern.
+
+`score.aria` is absent from the catalog, but I can ship a co-located `ScoreBadge.strings` (matches allowed `ScoreBadge.*`), like the widget `.strings` files. I need to confirm how `project.yml` globs sources (to ensure `shared-surfaces/` compiles) and study the telemetry-seam + i18n-table + test patterns from a sibling surface (ToolCard) and a `.strings`-bearing widget.
+
+Now I understand the architecture precisely. Key facts: `project.yml` explicitly lists `TeslaSync/dashboard-widgets` and `TeslaSync/feature-views` but **not** `shared-surfaces`; i18n uses co-located `.strings` files with a per-surface table via `NSLocalizedString(..., tableName:)` to avoid editing the shared catalog; telemetry uses a per-surface seam (e.g. `ToolCard.Telemetry.swift`). Let me read the p4-apple methodology and the canonical surface file-sets (ToolCard trio + AcDcStatsPanel set) to match conventions exactly.
+
+ToolCard is the ideal template — a presentational shared surface that "owns no data… so loading/error/stale/offline belong to whatever content the caller embeds." This validates the honest treatment of `ScoreBadge` (its only branches are the resolved grade and the `—` no-data sentinel). Let me read ToolCard's Model + Tests, the AcDcStatsPanel strings/previews/tests format, and the design tokens (hex color support, typography, spacing).
+
+The ToolCard test is the perfect template for a presentational surface. Now I need the design tokens — specifically how colors (the grade hex palette) and typography are exposed. Let me inspect the generated Apple design tokens and the `Color.TS`/`Font.TS`/typography definitions.
+
+I now have the full token picture. The web `GRADE_PALETTE` hexes map mostly to semantic tokens (A/A+→`statusSuccess` #10b981, B→`statusInfo`/`accent` #00f0ff, C→`statusWarning` #f59e0b, D→`statusDanger` #ef4444) but F (#b91c1c) and — (#6b7280) have no exact base token, and the palette is a cross-platform grade contract — so I'll reproduce the exact sRGB values (mirroring how `chartCategorical` is literal sRGB in the generated tokens). Let me probe build capabilities and read the placeholder gate + exact strings/test formats.
+
+Great news: `pwsh` is available (placeholder gate runnable), `xcodebuild` is genuinely blocked (no full Xcode), and `swiftc -typecheck` of `import SwiftUI` **succeeds** under CLT. So I can make `ScoreBadge` self-contained (define the grade-color contract in-file, mirroring web's `GRADE_PALETTE`) and verify it via a standalone SwiftPM build+test. Let me read the placeholder patterns and the exact `.strings`/`.Tests` formats.
+
+I have everything needed. Summary of constraints and plan:
+
+- **`xcodebuild` is genuinely BLOCKED** (only Command Line Tools, no full Xcode) → the iOS/macOS build+test gate steps cannot run; I'll record this as platform-capability evidence per the prompt's BLOCKED clause.
+- **Runnable gates:** `swiftformat --lint`, `swiftlint`, `pwsh check-placeholders.ps1`, plus a standalone SwiftPM build+test (SwiftUI typechecks under CLT) as strong additional evidence for the adapter/view/telemetry.
+- **`ScoreBadge` is a pure presentational surface** (like the existing `ToolCard`) — its only web branches are the resolved grade and the `—` no-data sentinel; I reproduce both faithfully and define the grade-color contract in-file (exact web `GRADE_PALETTE` hexes, mirroring how `chartCategorical` is literal sRGB).
+
+Let me set up the todo tracking and create the directory + files.
+
+Now I'll write all the surface files following the established conventions.
+
+All six files created. Now let me update todos and run the verification chain — swiftformat (canonicalize + lint), swiftlint, and the placeholder gate.
+
+swiftformat canonicalized 3 files and now lint is clean. Let me check what changed and run swiftlint on the files.
+
+swiftlint honored the config's `included:` (linting all 1909 files) and reported 1 serious violation. Let me find exactly which file/line.
+
+My files are clean — **0 swiftlint violations**. The single project-wide violation is pre-existing in `LifetimeStatsWidget.Adapter.swift` (unrelated, outside my allowed scope, so I leave it untouched). Now the placeholder gate and the standalone build+test.
+
+Placeholder gate passes (`PLACEHOLDER_COUNT=0`). Now the key substitute for the blocked `xcodebuild`: a standalone SwiftPM build+test of the adapter/view/telemetry under Swift 6 mode, to prove the ported logic compiles and all tests pass.
+
+The standalone build caught a real bug (which would also break the Xcode build): a `public` method's default argument can't reference the `internal` `catalogValue`. Fixing by making it `public`.
+
+`swift test` can't run here because **XCTest ships with Xcode, not Command Line Tools** (same capability family as the blocked `xcodebuild`). Let me confirm the library itself compiles cleanly, then build a plain executable harness (no XCTest) to actually *execute* the adapter assertions as runtime evidence.
+
+Library compiles cleanly under Swift 6 strict concurrency. Now an executable harness to actually *run* the adapter assertions (mirroring the XCTest cases) as runtime evidence.
+
+Harness-only Swift 6 top-level actor-isolation issue (not a surface-code problem). Annotating the harness helpers `@MainActor` and re-running.
+
+All **57 adapter checks pass at runtime** — the ported grade logic, color contract, sizes, accessibility wording, and telemetry slug are verified correct. Let me re-confirm format/lint are still clean after the edit, then write the gate log.
+
+Surface is clean (swiftformat 0/5, swiftlint 0 violations) and the logic is runtime-verified (57/57). Now I'll generate the gate log by **actually executing** each gate step (capturing real exit codes and capability evidence for the Xcode-dependent steps), rather than fabricating results.
+
+swiftformat flags 1/1918 files tree-wide — my 5 are clean (0/5). Let me confirm which pre-existing file it is (to document it's not mine), then finalize the log.
+
+Both project-wide non-zero exits are **pre-existing and unrelated** (`ActionBuilder.Previews.swift` for swiftformat; `LifetimeStatsWidget.Adapter.swift` for swiftlint) — my 5 files are fully clean on both. Let me append the standalone SwiftPM evidence (the substitute for the blocked Xcode build/test) and the final analysis to the log.
+
+Now the final analysis, acceptance checklist, and the mandatory `EXIT`/`STATUS` block.
+
+Log complete, ending with `EXIT=1` / `STATUS=BLOCKED` (covenant rule 10 satisfied). Let me do a final review of the formatted surface files before committing.
+
+Code is polished and correct (swiftformat preserved the idiomatic implicit-return switches). Let me verify the working tree contains only my intended changes before committing.
+
+The 7 modified `AIUsageCard.*` files are **pre-existing working-tree changes** (not mine — I never touched feature-views; my swiftformat run was scoped to `shared-surfaces/`). I'll stage **only** my files + the log (exactly as the prompt's Commit step specifies), leaving the unrelated changes untouched.
+
+Exactly my 6 surface files + the log are staged (no unrelated files). Committing.
+
+Committed. Let me finalize todos and clean up temp artifacts.
+
+Done. The `ScoreBadge` shared surface is implemented, verified to the maximum the runner allows, and committed.
+
+## Summary
+
+Built a production-polished, Apple-idiomatic port of `components/data-display/ScoreBadge.tsx` at `apps/apple/TeslaSync/shared-surfaces/` (6 files):
+
+- **`ScoreBadge.Model.swift`** — faithful port of `lib/scoreScale.ts`: `ScoreGrade` (A+/A/B/C/D/F/—), threshold mapping, `averageGrade`, the cross-platform grade-color contract (exact web `GRADE_PALETTE` hexes), size metrics, and the surface slug + `score.aria` accessibility wording.
+- **`ScoreBadge.swift`** — SwiftUI view, two init styles (score / pre-computed grade), Dynamic Type via `@ScaledMetric`, VoiceOver label, the `—` no-data sentinel as the empty state, `.task` → `view.opened`.
+- **`ScoreBadge.Telemetry.swift`** — P1/S11 diagnostics seam (+ os_log sink).
+- **`.Previews` / `.Tests` / `.strings`** — every render branch previewed; XCTest adapter/a11y/telemetry suite; co-located i18n table.
+
+**Verification (all surface-scoped checks green):**
+- swiftformat `0/5`, swiftlint `0 violations`, placeholder gate `EXIT=0`
+- Standalone SwiftPM build under **Swift 6 strict concurrency** ✅, adapter harness **57/57 checks pass**
+
+**Honest terminal status: `STATUS=BLOCKED`** — the Apple `xcodebuild`/XCTest gate cannot execute on this runner (Command Line Tools only, no full Xcode; XCTest is Xcode-bundled). This is the prompt's explicitly-permitted BLOCKED outcome, with full platform-capability evidence in `…/logs/p4-apple-shared-surfaces-0103-ScoreBadge.log` (ends with `EXIT=1` / `STATUS=BLOCKED`). The two non-zero project-wide lint/format exits are pre-existing, unrelated files outside this prompt's allowed scope. Committed as `aef0206e6` (only `ScoreBadge.*` + log staged; pre-existing `AIUsageCard.*` changes left untouched).
+

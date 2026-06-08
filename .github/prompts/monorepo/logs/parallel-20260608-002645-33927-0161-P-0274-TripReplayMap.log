@@ -1,0 +1,127 @@
+I'll start by exploring the environment and reading the web source that serves as the specification.
+
+Toolchain note: `xcodebuild` requires full Xcode but only Command Line Tools are present. `swift`, `swiftlint`, `swiftformat` are available. Let me examine how existing feature-views are structured and how the project builds.
+
+Let me read the native Maps components (the counterpart to `@/components/maps`) and the AiUsageCard template files.
+
+Now let me study the AiUsageCard template (the canonical 7+ file pattern, just modified by the predecessor) to match conventions exactly.
+
+Let me read the remaining AiUsageCard files (Projection, Views, Chrome, Previews, Tests, AdapterTests, strings) to complete my understanding of the template.
+
+Now let me read the test/preview/strings files plus design tokens, shared feedback components, and the web geo/types the source depends on.
+
+Let me read the view tests, the project config, and locate the design tokens + shared components I'll need.
+
+The feature-views compile into both app targets; tests live alongside. Critical question: how does the predecessor handle verification given full Xcode isn't installed. Let me check the predecessor's log and the verification tooling.
+
+`pwsh` and `xcodegen` are available. Let me read the predecessor's log to learn the accepted verification approach when full Xcode is absent.
+
+The predecessor reveals the sanctioned approach: full Xcode exists at `/Applications/Xcode.app` (override `DEVELOPER_DIR`), the full-app `xcodebuild` gate is DEFERRED on pre-existing blockers, and verification is an **isolated SwiftPM build+test** against the real design system, plus swiftformat/swiftlint/placeholder gates. Let me verify Xcode and locate the design tokens + component signatures.
+
+Xcode 26.5 is available. Now let me read the exact token + component signatures I'll bind to.
+
+Let me read remaining component signatures and check how an existing feature-view binds facade strings into shared feedback components.
+
+I now have all component signatures. Let me check the lint config, placeholder tool params, and existing geo test conventions before writing.
+
+Let me read the rest of the placeholder script to invoke it correctly (per-surface scope), and the existing GeoTests for conventions.
+
+I have everything needed. Let me read the existing GeoTests for conventions, then set up my plan and todo tracking.
+
+I have a complete understanding of the template, components, tokens, and tooling. Let me set up tracking and verify the isolated-build dependency surface.
+
+`Sources/Components` + `Sources/Design` are fully self-contained (only Charts/CoreLocation/Foundation/MapKit/SwiftUI). My isolated harness can compile them. Let me write the plan, then build the files starting with the pure adapter core.
+
+Now I'll build the files. Starting with the pure adapter core (port of `geo.ts` + `TripReplayMap.tsx` helpers).
+
+Now the Model file — the P1/S8 state-holder seam, P1/S10 facade, P1/S11 telemetry, and the resolved view-state value types.
+
+Now the pure projection (mirrors the web `useMemo` computations).
+
+Now the Views file — the MapKit canvas with speed-coloured segments, markers, heading-aware playhead, camera fit, tap-to-seek, plus the stationary banner and empty state.
+
+Now the Chrome file — P4 leaf freshness chip, refresh, connectivity banner, loading skeleton, error retry.
+
+Now the surface entry composing the panel, phase switch, and overlays.
+
+Now the i18n strings catalog (table `TripReplayMap`).
+
+Now the DEBUG previews for each state.
+
+Now the adapter unit tests (geo math + speed bands vs the web).
+
+Now the main test file — projection phases, route geometry, model wiring/telemetry/seek/stale-refresh.
+
+All 10 files created. Let me run the formatting and lint gates on them first (quick, independent of the build), then set up the isolated build.
+
+Only `Views.swift` has long lines. Let me auto-apply swiftformat, then re-lint and run swiftlint.
+
+Format and lint both pass (0 violations). Let me verify swiftformat didn't mangle the wrapped lines in Views.swift.
+
+Both style gates pass. Now let me set up the isolated SwiftPM build+test harness (the sanctioned verification path) using the Xcode toolchain.
+
+Build compiles cleanly except 3 `TSTone` static-let globals flagged under Swift 6 strict concurrency (TSTone isn't Sendable). Converting them to computed properties (not stored globals) fixes it.
+
+TripReplayMap.* now compiles; the only failure is a design-system file I don't use (`DataDisplay/UnitFormatters.swift` needs a `tsUnits` env key defined outside Components). Let me scope the harness to the real files I actually depend on. First, confirm my transitive needs.
+
+`tsUnits` is only used by `UnitFormatters.swift`, which I don't depend on. Let me check whether removing it from the harness breaks any sibling, then rebuild without it.
+
+`UnitFormatters.swift` self-references an external units type and nothing else uses its symbols — safe to drop from the harness. Let me remove it and rebuild+test.
+
+Build complete — all TripReplayMap.* sources (incl. `#Preview` macro) compile against the real design system under Swift 6 strict concurrency. Now the tests.
+
+All 42 tests pass under the Xcode toolchain. Now the placeholder gate — I'll run it honestly against copies of my actual files (the literal gate path scans nothing since it has no extension).
+
+Honest scan caught the word "placeholder" in a Chrome.swift comment. Let me find and reword all forbidden substrings across my files.
+
+Just the one comment. Let me reword it.
+
+Placeholder clean. Let me run a final consolidated gate pass on the exact shipped files (format + lint) and re-verify the harness build+test with the latest bytes.
+
+swiftformat wants a tweak after my comment edit. Let me apply it and confirm.
+
+The unformatted file is Views.swift (edited after the last format). Let me apply to all 9 and re-verify both style gates.
+
+Both style gates green. Let me refresh the harness with the final bytes and re-run build+test to confirm the exact shipped sources pass.
+
+All 42 tests pass on the final shipped bytes. Now let me honestly verify the pre-existing full-app blockers (to document the DEFERRED `xcodebuild` gate with evidence, per the predecessor's disposition).
+
+Blockers confirmed and already documented in `apps/macos-pending-verifications.md` for prior P4 surfaces — the full-app `xcodebuild` gate is owned by the P99 acceptance gate. Let me confirm my 10 files wire into the project via `xcodegen` (fast, honest evidence) without the blocked full build.
+
+All 10 files are wired into the generated Xcode project (60 refs across iOS + macOS targets). Let me check git status to stage only my allowed files.
+
+All 10 files are untracked (new); the `AIUsageCard.*` modifications are pre-existing worktree artifacts from the predecessor merge (out of my scope — I won't touch them). Now let me write the gate log.
+
+Now let me commit only my allowed files (the 10 `TripReplayMap.*` files + the log), leaving the pre-existing `AIUsageCard.*` worktree changes untouched.
+
+Exactly the 10 files + log staged. Committing.
+
+Committed cleanly (11 files, 2033 insertions). Let me finalize todos and clean up temp artifacts.
+
+Task complete. Here's the summary of what was delivered and verified.
+
+## P4 · 0274 — TripReplayMap (Apple) — `STATUS=DONE` / `EXIT=0`
+
+Shipped a production-polished, Apple-idiomatic SwiftUI parity of `web/src/features/trips/components/TripReplayMap.tsx` as **10 files** under `apps/apple/TeslaSync/feature-views/TripReplayMap.*`, committed with the gate log (`a8e979a15`).
+
+**Parity reproduced faithfully (web Leaflet → MapKit):**
+- Speed-coloured route (`MapPolyline` per segment), start/end pins, stationary-GPS anchor + "Route can't be plotted" banner, empty state, layer switcher, fit-bounds camera.
+- Heading-aware playhead tracking `currentIndex`; polyline-tap → nearest-sample → seek via `MapReader`/`MapProxy.convert` (web `onSeekToIndex`); the page stays the single source of truth.
+- `geo.ts` + component helpers ported verbatim (haversine, `(0,0)`/bounds validity, 10 m meaningful-route anchor scan, `firstValidIndex`, `nearestSampleIndex`, `computeHeading`, `speedColor` 30/60/100 thresholds → semantic tokens, not raw hex).
+
+**Architecture:** bound through the P1/S8 state-holder seam (no HTTP in the view), P1/S10 i18n facade (all 3 web keys + chrome, no English literals), P1/S11 `view.opened` telemetry. All 6 states render (loading/empty/error/data+stationary/stale/offline) with Reduce-Motion respect, VoiceOver labels, Dynamic Type.
+
+**Verification (raw exits):**
+- `swiftformat --lint`: 0/9 → **FORMAT_EXIT=0**
+- `swiftlint --strict`: 0 violations in 9 files → **LINT_EXIT=0**
+- `check-placeholders` (real bytes, scoped): COUNT=0 → **PLACEHOLDER_EXIT=0**
+- **Isolated SwiftPM build + 42/42 tests pass** under Swift 6 strict-concurrency via Xcode 26.5, against the real design system incl. `Sources/Components/Maps` → **SWIFT_TEST_EXIT=0**
+- `xcodegen generate` enumerates all 10 files into both iOS + macOS app targets.
+- Full-app `xcodebuild` (iOS/macOS): **DEFERRED** on verified pre-existing, unrelated blockers (unstaged `Shared.xcframework`, `DashboardWidgetSize` ×15, 206 co-located XCTest files, macOS signing) — the established P4 disposition owned by the P99 gate; never reported as green.
+
+Staged only the allowed files; the pre-existing `AIUsageCard.*` worktree changes were left untouched.
+
+
+
+The task is fully complete and verified — all 13 todos done, commit `a8e979a15` is clean, gates green, temp artifacts cleaned up.
+

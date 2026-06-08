@@ -1,0 +1,175 @@
+=== P4 Shared surface 0080 DateGroupedList (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh · Java 17
+  Destinations       : iOS Simulator "iPhone 16" (present, booted) · macOS 15 SDK present
+  Shared.xcframework : assembled + staged on demand by the scheme pre-action
+                       (Scripts/build-shared-xcframework.sh → Gradle :core:assembleShared{Debug,Release}XCFramework
+                       BUILD SUCCESSFUL; "xcframework successfully written out"). The committed Frameworks/ dir
+                       carries only .gitkeep — the binary is a git-ignored, regenerated artifact (macos-pending row 1).
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS SDKs + simulators present → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/components/data-display/DateGroupedList.tsx — a GENERIC, PURELY PRESENTATIONAL container (113 L). It is
+  handed `groups: readonly DateGroupedListGroup<T>[]` plus a `renderItem(item, indexInGroup)` render prop and an
+  optional `itemKey(item, idx)` stable-key extractor. Each group carries:
+    • dateKey       — sortable `YYYY-MM-DD` key, used as the React key.
+    • dateLabel     — pre-formatted visible label ("May 9, 2026"); `font-semibold text-[var(--text-primary)]`.
+    • relativeLabel — optional muted secondary ("3 days ago"); rendered "· {relative}" `text-[var(--text-muted)]`.
+    • summary       — optional ReactNode, right-aligned in the divider row ("2 drives · 6.2 mi"),
+                      `text-xs text-[var(--text-muted)] tabular-nums`.
+    • items         — the rows.
+  Render per group: a `<section aria-labelledby>` → a `<header class="mb-3 flex items-center gap-3">` with the
+  label block, a `flex-1 h-px bg-[var(--glass-border)] opacity-50` rule, and the optional summary; then the items
+  at `space-y-3`, groups separated by `space-y-6`. Per-item key is `itemKey ? itemKey(item, idx) : idx`.
+  Data sources: NONE (pure presentational; no hooks). i18n: NONE — the surface is ANONYMOUS (zero `t()` calls;
+  every visible string is pre-formatted by the caller). Domain aggregation ("2 drives · 6.2 mi") lives on the
+  caller so the component stays free of unit/format logic.
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/shared-surfaces/DateGroupedList.*, the only allowed files + this log)
+  DateGroupedList.Adapter.swift  (213 L) — DateGroupedListGroup<Item> (Identifiable; conditional Equatable/
+                                           Sendable), DateGroupedListConnection (live/stale/offline),
+                                           DateGroupedListInput/Resolved/Phase, the pure DateGroupedListProjection
+                                           (loading/empty/error/data + totalItemCount), DateGroupedListRows.entries
+                                           (the web `itemKey ? itemKey(item, idx) : idx` fallback) +
+                                           DateGroupedListRowEntry, DateGroupedListAccessibility.headerLabel.
+                                           Pure + dependency-free.
+  DateGroupedList.Model.swift    (180 L) — P1/S8 state holder (DateGroupedListModel<Item> + DateGroupedListSource<Item>
+                                           primary-associated-type seam + InMemoryDateGroupedListSource), P1/S11
+                                           telemetry seam (DateGroupedListTelemetry + OSLog default),
+                                           DateGroupedListSurface.slug, P1/S10 facade (DateGroupedListStrings),
+                                           connection axis + one-shot stale auto-refresh.
+  DateGroupedList.swift          (109 L) — the generic surface view DateGroupedList<Item, Row: View>: content
+                                           switch, connectivity banner, view.opened on appear; takes rowContent
+                                           (web renderItem) + itemID (web itemKey, default = index).
+  DateGroupedList.Views.swift    (208 L) — DateGroupedListSection (the divider header: date · relative ──── summary,
+                                           + the keyed rows), the connectivity banner-chip, and the loading /
+                                           empty / error chrome.
+  DateGroupedList.Previews.swift (134 L) — data / empty / loading / error / stale / offline previews over a
+                                           concrete drive-style row item (DEBUG).
+  DateGroupedList.Tests.swift    (298 L) — 24 XCTest cases (group identity/equatable, projection across all
+                                           branches + totalItemCount, row entries incl. default/custom key,
+                                           a11y header, model wiring + telemetry + stale auto-refresh, slug).
+  DateGroupedList.strings        ( 34 L) — per-surface i18n table "DateGroupedList" (native chrome only — the web
+                                           source is anonymous, so there are NO web-parity keys to mirror).
+  NOT touched (parallel-unsafe / integration scope): project.yml + .swiftlint.yml (they carry "Sources",
+  "TeslaSync/dashboard-widgets", "TeslaSync/feature-views" — NOT "TeslaSync/shared-surfaces"; registering the new
+  shared-surfaces source group is an integration step owned by the P4 acceptance/component bundle, OUTSIDE this
+  prompt's allowed-files); the shared Localizable.xcstrings (strings ship per-surface); apps/macos-pending-
+  verifications.md (out of allowed files — referenced, not edited).
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  generic container + renderItem  → generic DateGroupedList<Item, Row: View> + @ViewBuilder rowContent(item, idx)
+  itemKey ? itemKey : idx         → itemID: (Item, Int) -> AnyHashable (default = index) → DateGroupedListRows.entries
+  summary: ReactNode              → pre-formatted String? (same convention the web applies to dateLabel)
+  space-y-3 / space-y-6           → TSSpacing.md (12) / TSSpacing.x2xl (24)
+  text-xs                         → Font.TS.caption ; tabular-nums → .monospacedDigit()
+  --text-primary/secondary/muted  → Color.TS.textPrimary / textSecondary / textMuted
+  flex-1 h-px bg-glass-border/.5  → Rectangle().fill(Color.TS.border.opacity(0.5)).frame(height:1).frame(maxWidth:∞)
+  header gap-2 / gap-3            → TSSpacing.sm / TSSpacing.md
+  FadeIn                          → TSFadeIn ; Skeleton → TSSkeleton ; empty → ContentUnavailableView
+  i18n      : web source is anonymous (0 keys); all native-chrome strings via the P1/S10 facade
+              (DateGroupedListStrings, table "DateGroupedList"); zero English literals in code.
+  a11y      : each group's divider header is one VoiceOver element (date, relative, summary) + isHeader; the rule
+              is decorative; Dynamic Type + Reduce Motion respected via the shared tokens/components.
+  telemetry : view.opened surface="DateGroupedList" via DateGroupedListModel.start (P1/S11), default OSLog sink.
+  states    : loading / empty (web blank-<div> upgraded to a friendly state, never a blank box) / error (retry) /
+              data, plus the P4 leaf freshness axis live / stale (banner-chip + one-shot auto-refresh) / offline
+              (banner-chip; cached groups stay rendered).
+
+GATES
+  [GREEN]    swiftformat --lint apps/apple/TeslaSync/shared-surfaces        : 0/6 files require formatting     (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict (6 surface files, explicit)                 : 0 violations, 0 serious in 6 files (LINT_EXIT=0)
+             swiftlint --strict (whole app, FYI)                            : 1 PRE-EXISTING violation — function_body_length
+                                                                              in TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+                                                                              (NOT a DateGroupedList file; not introduced here;
+                                                                              shared-surfaces is not in the .swiftlint.yml `included`
+                                                                              list — out of allowed-files to change).
+  [GREEN]    check-placeholders.ps1 (real scan of shared-surfaces, swift)   : PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0 (EXIT=0)
+             check-placeholders.ps1 -Path …/shared-surfaces/DateGroupedList : PLACEHOLDER_COUNT=0                 (EXIT=0)
+  [GREEN]    DateGroupedList build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode,
+             strict-concurrency complete = same as the app), compiling the EXACT shipped DateGroupedList.* sources
+             against the REAL repo design-system (apps/design/generated/apple/Tokens.swift + apps/apple/Sources/Design
+             + apps/apple/Sources/Components — every component the surface links, compiled from the real sources;
+             only Components/DataDisplay/UnitFormatters.swift excluded as it alone imports the KMP `Shared`-backed
+             `Units` facade, which the surface never references):
+                 Build complete!  ·  Executed 24 tests, with 0 failures                                     (SWIFT_TEST_EXIT=0)
+  [GREEN]    Real-SDK swiftc -typecheck (Swift 6, strict-concurrency complete, -D DEBUG; same 46-file module):
+                 iOS 18 simulator (arm64-apple-ios18.0-simulator)                                           (IOS_TYPECHECK_EXIT=0)
+                 macOS 15        (arm64-apple-macos15.0)                                                     (MAC_TYPECHECK_EXIT=0)
+             → the surface (incl. #Preview macros) compiles cleanly on BOTH shipping Apple SDKs.
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO DateGroupedList surface errors; all blockers pre-exist this change):
+    registration : "TeslaSync/shared-surfaces" is NOT a project.yml source group (xcodegen-enumerated count of
+                   "shared-surfaces" in the generated project.pbxproj = 0; the registered "feature-views" surfaces
+                   appear, e.g. AcDcStatsPanel ×42). Adding the source group edits project.yml + .swiftlint.yml,
+                   which this prompt's allowed-files forbid — it is an integration step owned by the P4 acceptance
+                   gate / shared-surfaces bundle. So the full-app gate does not compile this surface at all; it
+                   neither passes nor fails on DateGroupedList code.
+    iOS   : the build's only error: lines are 4× `Unable to resolve module dependency: 'XCTest'`, sourced from a
+            PRE-EXISTING co-located app-target test file (feature-views/AIRestorePanel.Tests.swift:18). project.yml
+            routes "TeslaSync/feature-views" + "TeslaSync/dashboard-widgets" into the app target, where 261 co-located
+            *.Tests.swift files `import XCTest` (the module is only available to the XCTest test targets). This is the
+            exact condition ToolCard/0010 + AcDcStatsPanel/0096 + AlertMessageEditor/0180 already recorded. grep of
+            the iOS build log for a DateGroupedList/shared-surfaces "error:" = 0 hits.
+    macOS : the build's only error: lines are `"TeslaSync-macOS" / "TeslaSyncWidgets-macOS" have entitlements that
+            require signing with a development certificate` — the macOS dev-signing condition this runner does not
+            provision. grep of the macOS build log for a DateGroupedList/shared-surfaces "error:" = 0 hits.
+    Both blockers are owned by the P4/P99 Apple acceptance gate (source-group registration + test-target membership
+    + signing/archive) on a macos-latest CI runner per apps/macos-pending-verifications.md — NOT by a single shared-
+    surface prompt (task rule: do not fix pre-existing unrelated breakage; do not edit out-of-allowed-files config).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65/MAC_EXIT=65) and
+                           explicitly DEFERRED with raw evidence + root cause — never reported as passing.
+  2  No scope narrowing  : every web region + branch reproduced — the per-group divider header (date label, the
+                           optional "· relative", the flex-1 rule, the optional tabular-nums summary), the keyed
+                           per-item rows with the index/itemKey fallback, group + item spacing, and the empty render
+                           (web blank-<div> upgraded to a friendly state).
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; both iOS + macOS failures confirmed
+                           and root-caused (co-located XCTest + macOS signing), and the surface's clean compile
+                           proven on both SDKs (swiftc -typecheck) + a Swift 6 build/test — not assumed.
+  4  No stubs as final   : complete production surface + 24 real tests; placeholder scanner = 0; no TODO/stub/mock.
+  5  No parity shortcut  : tints/opacity/typography/spacing/keying/a11y/telemetry/states all mapped to platform
+                           tokens + verified against the real design-system in a Swift 6 build+test and on both SDKs.
+                           The atomic Sources/Components/DataDisplay/Lists.swift `TSDateGroupedList` primitive
+                           (header = a plain TSLabel, no relative/summary/rule) does NOT meet the web header's
+                           composition; per the parity mandate this shared SURFACE reproduces the full web header
+                           directly (the atomic primitive is out of scope here — P4 component bundle owns it).
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics, P4 core all present
+                           and consumed; did NOT self-register project.yml/.swiftlint.yml and did NOT edit the
+                           shared Localizable.xcstrings or macos-pending-verifications.md (all out of allowed-files).
+  8  No commit on red    : the COMMITTED artifact (DateGroupedList.* + this log) is GREEN on every host gate AND on
+                           a real isolated Swift 6 build+test AND on iOS-18 + macOS-15 swiftc -typecheck; the
+                           deferred full-app gate is RED only on pre-existing, unrelated conditions this commit
+                           neither introduces nor touches.
+  9  No silent drift     : changes confined to apps/apple/TeslaSync/shared-surfaces/DateGroupedList.* + this log.
+                           (Pre-existing unrelated dirty files apps/apple/TeslaSync/feature-views/AIUsageCard.* —
+                           already committed as surface 0237 at 90e8f762e and left dirty in this slot — are NOT
+                           touched and NOT committed. The git-ignored xcodegen project + Gradle XCFramework outputs
+                           are build artifacts, not committed; 0 tracked-file drift under apps/shared.)
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic DateGroupedList shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 24 tests pass under the app's own Swift 6 strict-concurrency rules, against the
+  REAL design-system, via the Xcode 26.5 build/test runtime, with swiftformat / swiftlint / placeholder all green
+  on the 7 surface files and the #Preview macros compiling; and the surface type-checks cleanly on BOTH the iOS-18
+  simulator and macOS-15 SDKs. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not
+  failed by this code): it does not compile this surface (the shared-surfaces source group is unregistered —
+  project.yml/.swiftlint.yml are out of this prompt's allowed-files), and it is baseline-RED on the pre-existing
+  co-located-XCTest app-target condition (AIRestorePanel.Tests.swift) and macOS development-signing — both owned by
+  the P4/P99 acceptance gate on a signed macos-latest CI runner per apps/macos-pending-verifications.md. This
+  matches the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date
+  (0010 ToolCard, 0096 AcDcStatsPanel, 0180 AlertMessageEditor, 0231 FSMTimelineChart, 0237 AiUsageCard).
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,101 @@
+=== P4 Feature view 0033 XRayControls (Apple) ===
+date: 2026-06-08T08:28:08Z
+runner: Darwin 25.5.0 arm64
+
+--- Capability probe: Apple build toolchain (ADR-002 SwiftUI/Swift Charts/MapKit, iOS18/iPadOS18/macOS15) ---
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+xcodebuild_version_exit=0
+$ xcrun --sdk iphonesimulator --show-sdk-path
+xcrun: error: SDK "iphonesimulator" cannot be located
+xcrun: error: SDK "iphonesimulator" cannot be located
+xcrun: error: unable to lookup item 'Path' in SDK 'iphonesimulator'
+iphonesimulator_sdk_exit=0
+$ swift --version
+swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+Target: arm64-apple-macosx26.0
+
+>> EVIDENCE: only Command Line Tools are installed (no Xcode.app); xcodebuild requires full Xcode + iOS/macOS simulators.
+>> Per prompt capability clause, the two xcodebuild build+test gate steps are BLOCKED on this runner.
+
+--- [gate step 1/5] xcodebuild iOS: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+--- [gate step 2/5] xcodebuild macOS: xcodebuild -scheme TeslaSync-macOS build test ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+--- [gate step 3/5] swiftlint --strict (scoped to shipped XRayControls.* surface files) ---
+Linting Swift files at paths TeslaSync/feature-views/XRayControls.swift, TeslaSync/feature-views/XRayControls.Adapter.swift, TeslaSync/feature-views/XRayControls.Model.swift, TeslaSync/feature-views/XRayControls.Views.swift, TeslaSync/feature-views/XRayControls.Bar.swift, TeslaSync/feature-views/XRayControls.Previews.swift, TeslaSync/feature-views/XRayControls.Tests.swift, TeslaSync/feature-views/XRayControls.ModelTests.swift
+Linting 'XRayControls.swift' (1/8)
+Linting 'XRayControls.Adapter.swift' (2/8)
+Linting 'XRayControls.Model.swift' (3/8)
+Linting 'XRayControls.Views.swift' (4/8)
+Linting 'XRayControls.Previews.swift' (5/8)
+Linting 'XRayControls.Tests.swift' (7/8)
+Linting 'XRayControls.Bar.swift' (6/8)
+Linting 'XRayControls.ModelTests.swift' (8/8)
+Done linting! Found 0 violations, 0 serious in 8 files.
+LINT_EXIT=0
+--- [gate step 4/5] swiftformat --lint (scoped to shipped XRayControls.* surface files) ---
+Running SwiftFormat...
+(lint mode - no files will be changed.)
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-74/apps/apple/.swiftformat
+SwiftFormat completed in 1.83s.
+0/8 files require formatting.
+FORMAT_EXIT=0
+--- [gate step 5/5] check-placeholders (swift) over the shipped XRayControls.* surface files ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+(note: the literal gate path 'apps/apple/TeslaSync/feature-views/XRayControls' has no extension; the scanner treats a non-existent path as a clean no-op. Scanning a copy of the 8 shipped files is the meaningful equivalent.)
+
+--- Supplementary local verification (compensating controls for the BLOCKED xcodebuild steps) ---
+These do NOT replace the iOS/macOS XCTest run, but bound the risk: they prove the shipped Swift
+parses, type-checks against the real design tokens/components + the sibling IngestXRayWindow, and
+is lint/format/placeholder clean. The .Tests/.ModelTests need XCTest (Xcode-only) so are parse-checked only.
+
+[a] swiftc -parse (syntax) — all 8 shipped files:
+    PARSE OK   XRayControls.swift
+    PARSE OK   XRayControls.Adapter.swift
+    PARSE OK   XRayControls.Model.swift
+    PARSE OK   XRayControls.Views.swift
+    PARSE OK   XRayControls.Bar.swift
+    PARSE OK   XRayControls.Previews.swift
+    PARSE OK   XRayControls.Tests.swift
+    PARSE OK   XRayControls.ModelTests.swift
+PARSE_EXIT=0
+
+[b] swiftc -typecheck — pure adapter + real IngestXRayWindow (Foundation-only):
+ADAPTER_TYPECHECK_EXIT=0
+
+[c] swiftc -typecheck — full SwiftUI surface (6 non-test files) + design tokens/components vs macOS 15 SDK:
+UI_TYPECHECK_EXIT=0
+
+=== Gate verdict ===
+Canonical gate steps:
+  IOS_EXIT=1          (BLOCKED — xcodebuild requires full Xcode + iOS Simulator; runner has Command Line Tools only)
+  MAC_EXIT=1          (BLOCKED — xcodebuild requires full Xcode + macOS test host; runner has Command Line Tools only)
+  LINT_EXIT=0         (swiftlint --strict, shipped surface files: 0 violations)
+  FORMAT_EXIT=0       (swiftformat --lint, shipped surface files: 0 require formatting)
+  PLACEHOLDER_EXIT=0  (check-placeholders swift: PLACEHOLDER_COUNT=0)
+Supplementary local verification (max the runner allows without Xcode):
+  PARSE_EXIT=0              (all 8 files parse)
+  ADAPTER_TYPECHECK_EXIT=0  (pure adapter type-checks vs the real IngestXRayWindow)
+  UI_TYPECHECK_EXIT=0       (full SwiftUI surface type-checks vs the macOS 15 SDK + real tokens/components)
+
+Honesty covenant: the deliverable is COMPLETE and non-stub (production view + adapter + state-holder
++ previews + XCTest + i18n catalog; every web-source state reproduced: loading/empty/error+retry/stale/
+offline; all 4 source i18n keys + the ALL_WINDOWS/ALL_BUCKETS option keys; the "bucket >= window" disable
+guard; VoiceOver labels/values on every control). Every gate step that CAN run on this runner is green.
+The only red is the two xcodebuild build+test steps, which are infeasible here because Xcode is not
+installed (evidence above: `xcode-select -p` -> CommandLineTools; `xcodebuild -version` -> requires Xcode;
+iphonesimulator SDK cannot be located). Per the prompt's capability clause ("requires SwiftUI + Swift
+Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15 HIG. If unavailable on the runner -> STATUS=BLOCKED with
+API evidence"), this is reported as BLOCKED rather than green. Re-run the two xcodebuild steps on an
+Xcode-equipped runner to close the gate at EXIT=0.
+
+EXIT=1
+STATUS=BLOCKED

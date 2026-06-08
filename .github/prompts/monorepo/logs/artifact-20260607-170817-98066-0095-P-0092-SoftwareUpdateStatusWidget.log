@@ -1,0 +1,162 @@
+=== P4 Dashboard widget 0092 SoftwareUpdateStatusWidget (Apple) ===
+Date: 2026-06-07
+Runner: macOS (Darwin, arm64), Xcode 26.5 (17F42) at /Applications/Xcode.app
+        reached via DEVELOPER_DIR (xcode-select default is CommandLineTools).
+Web source spec: web/src/features/dashboard/widgets/SoftwareUpdateStatusWidget.tsx
+Native output:   apps/apple/TeslaSync/dashboard-widgets/SoftwareUpdateStatusWidget.*
+
+----------------------------------------------------------------------
+SUMMARY (read first)
+----------------------------------------------------------------------
+The SoftwareUpdateStatusWidget surface is COMPLETE and INDEPENDENTLY VERIFIED
+GREEN (type-check on iOS 18 + macOS 15 in Swift 6 strict-concurrency mode;
+31/31 unit tests pass; swiftlint --strict 0; swiftformat --lint clean;
+placeholder gate 0).
+
+The holistic `xcodebuild -scheme TeslaSync … build test` gate is RED, but the
+failure is caused 100% by PRE-EXISTING, OUT-OF-SCOPE defects in sibling widgets
++ project wiring — ZERO errors originate from any SoftwareUpdateStatusWidget.*
+file. These files are outside this prompt's allowed-files scope
+(`apps/apple/TeslaSync/dashboard-widgets/SoftwareUpdateStatusWidget.*` + this
+log), so they cannot be fixed here.
+
+Per the Honesty Covenant (1 "No red-as-green", 8 "No commit on red") this run is
+reported STATUS=BLOCKED with full evidence rather than claimed DONE. The blocker
+is NOT a platform-capability gap (Xcode/SwiftUI/Swift Charts/MapKit/iOS 18 are
+all present — I built the KMP Shared.xcframework and ran the real toolchain) and
+NOT this surface's code.
+
+======================================================================
+GATE STEPS (as specified by the prompt) — REAL RESULTS
+======================================================================
+
+--- [1] xcodebuild iOS (scheme TeslaSync, iPhone 16 sim) build test ---
+xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build
+** BUILD FAILED **    IOS_EXIT=65
+Errors that mention any SoftwareUpdateStatusWidget.* file: 0
+Root cause (pre-existing, out-of-scope): every co-located
+`TeslaSync/dashboard-widgets/*.Tests.swift` (9 files: DigitalTwinWidget,
+GuardModeWidget, LifetimeStatsWidget, LivePowerFlowWidget,
+LiveSignalSparklinesWidget, LiveSignalsWidget, LocationFavoritesWidget,
+MediaHistoryWidget — and this surface's own Tests file) is compiled INTO the
+`TeslaSync` application target, because project.yml sources
+`TeslaSync/dashboard-widgets` into the app target with no `*.Tests.swift`
+exclude, while the unit-test target only sources `Tests/Unit`. An application
+target cannot resolve `import XCTest`:
+  DigitalTwinWidget.Tests.swift:17:8: error: unable to resolve module dependency: 'XCTest'
+(first failing file is a SIBLING, not this surface.)
+
+--- [1b] Diagnostic: same iOS build with the 9 co-located *.Tests.swift
+         temporarily excluded (non-destructive; restored afterward) ---
+** BUILD FAILED **    EXIT=65
+Errors: 11 — again ZERO from SoftwareUpdateStatusWidget.*. Pre-existing,
+out-of-scope, repo-wide defects surfaced once the XCTest issue is removed:
+  • Triplicate definition of the shared registry type `DashboardWidgetSize`
+    (=> "'DashboardWidgetSize' is ambiguous for type lookup in this context"):
+       apps/apple/Sources/DashboardWidgets/DrivetrainHealthWidgetModel.swift:10
+       apps/apple/Sources/DashboardWidgets/BatteryCellsWidgetRegistry.swift:13
+       apps/apple/TeslaSync/dashboard-widgets/DigitalTwinWidget.Model.swift:222
+    (This surface correctly does NOT redefine it — it consumes the canonical
+     dashboard-widgets definition, so it adds no duplicate.)
+  • Main-actor isolation errors in a sibling preview:
+       LivePowerFlowWidget.Previews.swift:14/15/16 — "call to main actor-isolated
+       initializer/method in a synchronous nonisolated context".
+=> The app target was already non-compiling independent of the test-file wiring.
+
+--- [2] xcodebuild macOS (scheme TeslaSync-macOS) build test ---
+xcodebuild -scheme TeslaSync-macOS build
+** BUILD FAILED **    MAC_EXIT=65
+Errors that mention any SoftwareUpdateStatusWidget.* file: 0
+Same platform-independent pre-existing root cause as iOS (the ambiguous-type and
+test-in-app-target defects live in plain Swift compiled for both platforms).
+
+--- [3] swiftlint --strict (this surface's 6 .swift files) ---
+Done linting! Found 0 violations, 0 serious in 6 files.    LINT_EXIT=0
+
+--- [4] swiftformat --lint (this surface's 6 .swift files) ---
+0/6 files require formatting.    FORMAT_EXIT=0
+
+--- [5] check-placeholders.ps1 (this surface) ---
+Self-test: SELFTEST_EXIT=0 (gate verified working).
+Scan of the 6 shipped .swift files: PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+(Note: the prompt's literal `-Path …/SoftwareUpdateStatusWidget` bare-prefix is
+ not an existing file/dir, so the script trivially scans nothing; the real scan
+ above was run against the actual shipped files for honest coverage.)
+
+======================================================================
+SUPPLEMENTARY VERIFICATION OF THIS SURFACE (proving the code itself is green)
+======================================================================
+
+--- Capability proof (the prompt's BLOCKED-only-if-capability-absent clause) ---
+Xcode 26.5 present; iOS 26.5 + macOS SDKs present; "iPhone 16" simulator present.
+KMP shared core built + staged for real:
+  apps/shared/gradlew :core:assembleSharedXCFramework  => BUILD SUCCESSFUL (7m10s)
+  staged -> apps/apple/Frameworks/Shared.xcframework
+xcodegen generate => Created TeslaSync.xcodeproj (this surface's 7 files are
+  valid members of the app + the project generates cleanly).
+=> The platform capability is AVAILABLE; this is NOT a capability-BLOCKED case.
+
+--- Type-check of this surface in Swift 6 (strict concurrency = complete),
+    against the REAL design tokens (apps/design/generated/apple/Tokens.swift) +
+    REAL shared components (Components/UI/Badges.swift, Components/Motion/Motion.swift);
+    only the 3 tiny sibling value-types (DashboardWidgetSize/Registration,
+    TSSkeleton) are faithfully shimmed from their canonical single definitions. ---
+  xcrun --sdk macosx       swiftc -typecheck -swift-version 6 -strict-concurrency=complete
+                           -target arm64-apple-macos15.0          => EXIT=0 (clean)
+  xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6 -strict-concurrency=complete
+                           -target arm64-apple-ios18.0-simulator  => EXIT=0 (clean)
+  (Files: SoftwareUpdateStatusWidget.swift/.Model/.Adapter/.Views/.Previews.)
+  One issue found + fixed during this step: `SoftwareUpdateBadge.Visual` was
+  declared `Sendable` while storing a non-Sendable cross-module `TSTone` (a hard
+  error in Swift 6 mode) — `Sendable` removed from the view-descriptor struct.
+
+--- Unit tests executed (Swift 6 mode, real tokens/components) ---
+  SwiftPM `xcrun swift test` of SoftwareUpdateStatusWidget.Tests.swift:
+    Executed 31 tests, with 0 failures.
+  Coverage: status-derivation parity (all 8 web `useMemo` branches incl. install-
+  wins-over-download + zero-pct = available), badge tone/key catalog parity,
+  projection fallbacks (em-dash, trim, empty-update-collapses-to-nil, section
+  visibility), percent/fraction formatters, layout breakpoints, model phase
+  resolution (loading/empty/error/content), `view.opened` telemetry-once + source
+  wiring, registry canonical metadata + size clamp, accessibility summary content.
+
+======================================================================
+PARITY NOTES (web -> native)
+======================================================================
+Registry: id=software-update-status, category=vehicle, default 2x2, min 1x2,
+  max 4x40 (matches registry/vehicle.ts).
+States rendered: loading (skeleton chrome), empty ("No software data"), error
+  (retry), content, plus stale + offline freshness chip/banner (cached value
+  stays visible). Compact (web isCompact = cols<=1 && rows<=1) + Full views.
+updateStatus derivation, StatusBadgeSmall tones, MetricBar progress (download
+  cyan / install purple via shared tokens), ready/up-to-date affordances, and
+  tall-only Est.-time/Scheduled rows all reproduced. Data bound via the P1/S8
+  SoftwareUpdateSource seam (no HTTP in the view). P1/S11 `view.opened` emitted.
+i18n: every web `t()` key present in SoftwareUpdateStatusWidget.strings (P1/S10);
+  no English literals in the Swift views.
+
+======================================================================
+DISPOSITION
+======================================================================
+Deliverable: COMPLETE + independently VERIFIED GREEN on iOS 18 and macOS 15.
+Holistic xcodebuild gate: BLOCKED by pre-existing, out-of-scope defects in
+  sibling widgets + project.yml wiring (triplicate DashboardWidgetSize, sibling
+  preview actor-isolation, co-located *.Tests.swift in the app target). The
+  correct fix locations (project.yml; Sources/DashboardWidgets/*; sibling
+  dashboard-widgets/*; Tests/Unit/DashboardWidgets/ — the pattern already used by
+  DigitalTwinMiniWidgetTests) are all OUTSIDE this prompt's allowed files.
+Per Honesty Covenant rule 8 ("No commit on red") this surface is NOT committed
+  while the holistic gate is red.
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SURFACE_TYPECHECK_IOS_EXIT=0
+SURFACE_TYPECHECK_MACOS_EXIT=0
+SURFACE_UNIT_TESTS=31 passed / 0 failed
+
+EXIT=65
+STATUS=BLOCKED

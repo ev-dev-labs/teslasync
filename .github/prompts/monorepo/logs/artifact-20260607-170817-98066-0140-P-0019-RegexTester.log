@@ -1,0 +1,188 @@
+=== P4 Feature view 0019 RegexTester (Apple) ===
+Date: 2026-06-07
+Host: Darwin (Apple Silicon), Xcode 26.5 (Build 17F42), Swift 6.3.2
+Toolchain probe: DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer (full Xcode present;
+  default xcode-select pointed at CommandLineTools, overridden via DEVELOPER_DIR — no sudo needed).
+  Simulator 'iPhone 16' available. xcodegen, swiftlint, swiftformat, pwsh, java17 present.
+
+Web source (THE spec): web/src/features/admin/components/devtools/tools/RegexTester.tsx
+  Self-contained client-side tool. Only hook = useTranslation (no networked P1/S8 store).
+  Inputs: pattern, flags (g/gi/gm/gim/""), testStr. Derives matches via JS RegExp(pattern, flags):
+  global -> all matches, else first; `if (!m[0]) break` zero-width guard; invalid -> catch -> [].
+  Renders: ToolCard header (icon+title+desc, red), Pattern Input, Flags Select, Test String Textarea,
+  "{n} Matches" Badge, and a per-match list (ordinal Badge, monospaced match, "At Index {i}").
+
+Native output (apps/apple/TeslaSync/feature-views/RegexTester.*):
+  RegexTester.Adapter.swift   — pure Foundation evaluator + projection (RegexEvaluation/RegexPhase) + a11y
+  RegexTester.Model.swift     — P1/S11 telemetry seam (view.opened), @Observable state holder, P1/S10 i18n facade
+  RegexTester.swift           — SwiftUI tool-card surface (surfaceSlug="RegexTester"); renders every branch
+  RegexTester.Views.swift     — subviews: result chip, match list/row, inline idle/no-match/invalid, field chrome
+  RegexTester.Previews.swift  — DEBUG previews for every state
+  RegexTester.strings         — P1/S10 i18n catalog (table "RegexTester")
+  RegexTester.Tests.swift     — XCTest: adapter + model phases + telemetry + a11y
+
+States reproduced (faithful to the web source's actual branches): idle (no input), matches, noMatches
+  (valid pattern, zero matches), invalidPattern (the web `catch` path, surfaced accessibly rather than
+  silently hidden). loading/stale/offline are intentionally NOT fabricated — this is pure local compute
+  with no async Resource<T>; inventing those surfaces would be a parity lie (Honesty Covenant #3/#5).
+
+----------------------------------------------------------------------------------------------------
+PLATFORM CAPABILITY: PASS — KMP Shared.xcframework built on this host
+----------------------------------------------------------------------------------------------------
+$ cd apps/shared && ./gradlew :core:assembleSharedXCFramework
+  > Task :core:assembleSharedReleaseXCFramework
+  xcframework successfully written out to: apps/shared/core/build/XCFrameworks/release/Shared.xcframework
+  BUILD SUCCESSFUL in 6m52s
+  (resolves the apps/macos-pending-verifications.md S3-0001 deferral on this host)
+
+----------------------------------------------------------------------------------------------------
+STEP A — Adapter web-semantics parity proof (standalone swiftc, Foundation-only)
+----------------------------------------------------------------------------------------------------
+$ swiftc -O RegexTester.Adapter.swift proof_main.swift -o proof && ./proof
+  PASS: global \d+ texts | indices [3,9] | phase=.matches | ordinals 1-based
+  PASS: non-global first only         PASS: case-insensitive gi count=3
+  PASS: multiline ^a count=2          PASS: no-multiline ^a count=1
+  PASS: invalid pattern flagged + phase=.invalidPattern
+  PASS: empty pattern -> idle         PASS: empty test string -> idle
+  PASS: zero-width stops after first empty (mirrors web `if (!m[0]) break`)
+  PASS: valid no-match -> .noMatches
+  PASS: count summary "2 Matches"     PASS: match summary "Match 1: 123. At Index 3"
+  ALL_PASS (16/16)  PROOF_EXIT=0
+
+----------------------------------------------------------------------------------------------------
+STEP B — Full surface typecheck against the REAL shared components (isolated from broken siblings)
+----------------------------------------------------------------------------------------------------
+$ xcrun --sdk macosx swiftc -typecheck -swift-version 6 -target arm64-apple-macos15.0 \
+    <design/generated/apple/Tokens.swift> <Sources/Design/*> <Sources/Components/UI/*> \
+    <Sources/Components/Feedback/{States,Banners,Skeletons}.swift> \
+    RegexTester.swift RegexTester.Model.swift RegexTester.Adapter.swift RegexTester.Views.swift
+  TYPECHECK_EXIT=0   (surface is API-correct SwiftUI: TSGlassPanel/TSIconBox/TSSelect/TSTextField/
+                      TSTextArea/TSEmptyState/typography/@Bindable/ViewThatFits all used correctly,
+                      Swift 6 strict concurrency complete)
+
+----------------------------------------------------------------------------------------------------
+STEP C — XCTest suite executed in isolation (SwiftPM, real components, Previews compiled)
+----------------------------------------------------------------------------------------------------
+$ swift test   (package: surface + Previews + real Tokens/Design/Components; @testable import)
+  Test Suite 'RegexTesterAdapterTests'  Executed 11 tests, with 0 failures
+  Test Suite 'RegexTesterModelTests'    Executed  6 tests, with 0 failures
+  Test Suite 'All tests' passed — Executed 17 tests, with 0 failures (0 unexpected)
+  SWIFT_TEST_EXIT=0
+  (adapter: global/first/case-insensitive/multiline/invalid/empty/zero-width/index/ordinal/a11y;
+   model: idle/matches/noMatches/invalid phase resolution, flags recompute, view.opened-once, reset,
+   per-state surface construction. Previews.swift compiled under -DDEBUG.)
+
+----------------------------------------------------------------------------------------------------
+STEP D — swiftformat --lint apps/apple   (gate step: FORMAT)
+----------------------------------------------------------------------------------------------------
+$ swiftformat --lint apple
+  0/547 files require formatting, 3 files skipped.
+  FORMAT_EXIT=0   ✅
+
+----------------------------------------------------------------------------------------------------
+STEP E — swiftlint --strict   (gate step: LINT)
+----------------------------------------------------------------------------------------------------
+$ cd apps/apple && swiftlint --strict
+  Done linting! Found 1 violation, 1 serious in 543 files.
+  LINT_EXIT=2
+  Violations in this surface (TeslaSync/feature-views): 0   ✅  (surface is lint-clean)
+  The single aggregate violation is PRE-EXISTING and OUTSIDE this surface's allowed scope:
+    TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19:
+      Function Body Length Violation (78 > 50) (function_body_length)
+  Evidence it is not mine: `git status` shows feature-views/ (new), project.yml, .swiftlint.yml as my
+  only changes; LifetimeStatsWidget.Adapter.swift is committed sibling code I never touched. It is a
+  different surface ("each has its own prompt" — this prompt's Out-of-Scope), so per the Honesty
+  Covenant it is reported here, not masked or edited.
+
+----------------------------------------------------------------------------------------------------
+STEP F — check-placeholders.ps1   (gate step: PLACEHOLDER)
+----------------------------------------------------------------------------------------------------
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/RegexTester
+  PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0   ✅
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views   (meaningful dir scan)
+  PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   EXIT=0   ✅
+  (no TODO/FIXME/Placeholder/stub/mock/Lorem in shipped code)
+
+----------------------------------------------------------------------------------------------------
+STEP G — xcodebuild build test (iOS)   (gate step: IOS)  — BLOCKED by pre-existing predecessor breakage
+----------------------------------------------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  ** TEST FAILED **   IOS_EXIT=65
+
+  The app target (TeslaSync) does not compile — NOT because of this surface, but because the 39
+  sibling P4 dashboard-widget surfaces under TeslaSync/dashboard-widgets/ each redeclare shared
+  types that are ALSO defined in Sources/DashboardWidgets/. They were authored by parallel prompts
+  and were never co-compiled (see apps/macos-pending-verifications.md — the Apple build was deferred
+  to macos-latest). With a real Xcode now present, co-compiling them surfaces hundreds of duplicate
+  definitions, e.g.:
+    'DashboardWidgetSize' defined 10+ times (Sources/DashboardWidgets/DrivetrainHealthWidgetModel.swift,
+       BatteryCellsWidgetRegistry.swift, TeslaSync/dashboard-widgets/{UptimeMonitor,TelemetryErrors,
+       MQTTStatus,TirePressureHistory,MotorPerformance,DigitalTwin,OdometerCounter,OnboardingChecklist,
+       ...}Widget.*.swift)
+    invalid redeclaration of: DashboardWidgetSize, DashboardWidgetRegistration, DashboardWidgetDescriptor,
+       MotorConnection, MotorLoadStatus, MotorSnapshotInput, ...
+    cascading 'ambiguous for type lookup' + 'cannot infer contextual base' across the widgets.
+
+  Baseline proof this is pre-existing (NOT introduced by this surface): the unmodified project
+  (before adding feature-views) fails the SAME build, first at the even-earlier blocker below.
+
+  Additional pre-existing blocker fixed as necessary scaffolding (see "Scaffolding" section): before
+  this surface, the app target also failed at `unable to resolve module dependency: 'XCTest'` because
+  the 39 co-located *Tests.swift files were members of the app target (an app target cannot link XCTest).
+
+----------------------------------------------------------------------------------------------------
+STEP H — xcodebuild build test (macOS)   (gate step: MAC)  — BLOCKED (environment + same siblings)
+----------------------------------------------------------------------------------------------------
+$ xcodebuild -scheme TeslaSync-macOS build test
+  error: "TeslaSync-macOS"/"TeslaSyncWidgets-macOS" has entitlements that require signing with a
+  development certificate. (no signing identity available in this environment)   MAC_EXIT=65
+$ xcodebuild -scheme TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+  (signing bypassed) -> the SAME pre-existing sibling breakage:
+    360x cannot infer key path type from context
+     60x 'RecentDrivesModel' is ambiguous for type lookup
+     32x 'DashboardWidgetSize' is ambiguous for type lookup
+     ... (all in TeslaSync/dashboard-widgets/* — platform-agnostic, none in feature-views/)
+
+----------------------------------------------------------------------------------------------------
+Scaffolding changes (minimum necessary to realize this surface; a missing P4-core dependency)
+----------------------------------------------------------------------------------------------------
+The prompt's "Depends on: P4 core (... state-holders)" scaffolding is absent in this snapshot, so the
+following minimal, additive infra changes were required for the surface to compile/lint/test at all.
+They alter no sibling SURFACE logic.
+  * apps/apple/project.yml
+      - Registered TeslaSync/feature-views in both app targets (TeslaSync, TeslaSync-macOS),
+        mirroring how TeslaSync/dashboard-widgets is wired.
+      - Excluded *Tests.swift from the app targets (dashboard-widgets + feature-views): co-located
+        XCTest sources belong in the unit-test bundles, not an app target. This UNBLOCKS the prior
+        app-target XCTest-resolution failure for the whole repo (a strict improvement; no surface
+        logic touched). The 39 dashboard-widget tests are simply no longer compiled into the app
+        (their canonical copies already live in Tests/Unit/DashboardWidgets/).
+      - Routed TeslaSync/feature-views/RegexTester.Tests.swift into TeslaSyncTests + TeslaSync-macOSTests.
+  * apps/apple/.swiftlint.yml — added TeslaSync/feature-views to `included`.
+
+----------------------------------------------------------------------------------------------------
+SUMMARY
+----------------------------------------------------------------------------------------------------
+SURFACE (this prompt's deliverable) — COMPLETE and independently verified:
+  Adapter parity proof ............ PASS (16/16)         PROOF_EXIT=0
+  Surface typecheck (real comps) .. PASS                 TYPECHECK_EXIT=0
+  XCTest suite (isolated) ......... PASS (17/17)         SWIFT_TEST_EXIT=0
+  swiftformat --lint .............. PASS (0/547)         FORMAT_EXIT=0
+  swiftlint (feature-views) ....... PASS (0 violations)
+  check-placeholders .............. PASS (COUNT=0)       PLACEHOLDER_EXIT=0
+
+AGGREGATE app-target gate — BLOCKED by pre-existing predecessor breakage (NOT this surface):
+  swiftlint --strict (aggregate) .. LINT_EXIT=2  (1 pre-existing sibling violation: LifetimeStatsWidget)
+  xcodebuild iOS build test ....... IOS_EXIT=65  (dashboard-widgets duplicate type definitions)
+  xcodebuild macOS build test ..... MAC_EXIT=65  (code-signing env + same dashboard-widgets breakage)
+
+The RegexTester surface is production-complete and fully verified in isolation. The shared TeslaSync
+app target cannot be built/tested green here because 39 sibling dashboard-widget surfaces (authored by
+other prompts, explicitly Out-of-Scope) redeclare shared types and were never co-compiled. Fixing them
+is a P4-core/consolidation responsibility, not this surface's, and is forbidden by this prompt's
+Allowed-files + Out-of-Scope constraints. Per the Honesty Covenant (#7 no predecessor bypass, #1/#8/#10
+no red-as-green / no commit on red), the aggregate gate is reported BLOCKED with full evidence rather
+than falsely green.
+
+EXIT=65
+STATUS=BLOCKED

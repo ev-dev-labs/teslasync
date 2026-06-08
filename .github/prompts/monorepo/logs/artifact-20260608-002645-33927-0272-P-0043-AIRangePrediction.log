@@ -1,0 +1,123 @@
+=== P4 Shared surface 0043 AIRangePrediction (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/AIRangePrediction.*
+Web src  : web/src/components/ai/AIRangePrediction.tsx
+Date     : 2026-06-08 (slot-272)
+
+------------------------------------------------------------------------------
+CAPABILITY / ENVIRONMENT
+------------------------------------------------------------------------------
+- SwiftUI / Swift Charts / MapKit available (iOS 18 / macOS 15 SDKs, Xcode 26.5).
+  NOTE: the default toolchain is Command-Line-Tools only; the real Xcode is used
+  via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer.
+- This surface uses NO charts and NO maps (the web source composes neither) — it
+  is pure SwiftUI + Foundation, so the Swift Charts / MapKit capability is N/A.
+- KMP Shared.xcframework built from apps/shared via Gradle (JAVA_HOME=openjdk@17);
+  ios-arm64 / ios-arm64-simulator / macos-arm64 slices staged into Frameworks/.
+
+------------------------------------------------------------------------------
+GATE STEPS (verbatim outcomes)
+------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    Result      : ** BUILD FAILED **   IOS_EXIT=65
+    My surface  : 0 compile errors in apps/apple/TeslaSync/shared-surfaces/AIRangePrediction.*
+    Root cause  : 61 PRE-EXISTING errors, ALL in sibling files merged from OTHER slots —
+                  duplicate symbol `public struct DashboardWidgetSize` defined 10+ times across
+                  TeslaSync/dashboard-widgets/*.swift (+ Sources/DashboardWidgets/*), e.g.
+                    dashboard-widgets/LocationFavoritesWidget.swift:43: 'DashboardWidgetSize' is ambiguous for type lookup
+                    feature-views/LoadingSkeleton.swift:77: ambiguous use of 'string'
+                  These files are committed at HEAD by prior P4 widget prompts (e.g.
+                  8db85ebd5 "feat(apps/apple/dashboard-widgets): add DigitalTwinWidget surface").
+                  They are parallel-merge collisions, unrelated to this surface; the `test`
+                  action cannot run because the shared app target (the test host) fails to build.
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    Result      : ** BUILD FAILED ** / ** TEST FAILED **   MAC_EXIT=65
+    Root cause  : code-signing environment limitation (no development certificate on this runner):
+                    error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+                    error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+                  This is an environment/capability block (not a compile error and not this surface);
+                  the macOS app target additionally shares the same pre-existing DashboardWidgetSize
+                  collisions as the iOS target.
+
+[3] swiftlint --strict            LINT_EXIT=2
+    My surface  : 0 violations in AIRangePrediction.*  (verified: grep of report = 0 matches)
+    Remainder   : pre-existing sibling violations elsewhere in the repo (not this surface).
+
+[4] swiftformat --lint apps/apple FORMAT_EXIT=1
+    My surface  : 0/7 of AIRangePrediction.* require formatting.
+    Remainder   : 1/1920 sibling file requires formatting (not this surface).
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/AIRangePrediction
+    PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0   PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------------------
+ADDITIONAL VERIFICATION OF THIS SURFACE (beyond the blocked aggregate gate)
+------------------------------------------------------------------------------
+[A] Isolation typecheck — AIRangePrediction.{swift,Model,Adapter,Views,Chrome,Previews}
+    compiled with `swiftc -typecheck` (iphonesimulator, ios18.0) against the REAL design
+    system (apps/design/generated/apple/Tokens.swift + Sources/Components/UI/* +
+    Feedback/Skeletons + Motion + Sources/Design/*):  RC=0 (clean).
+    Tests file checked as module TeslaSync with XCTest on the framework path: 0 real errors
+    (only XCTest C-macro "function-like macros not supported" artifacts of -typecheck mode).
+
+[B] Unit tests EXECUTED in a standalone SwiftPM package (Adapter + Model + Tests, host macOS):
+        Test Suite 'All tests' passed.
+        Executed 20 tests, with 0 failures (0 unexpected).
+    Coverage: projection phases (gated/loading/error/ready), the four AiOutputPanel substates
+    (hidden/thinking/text/failed) incl. the error-fallback, the button-disable matrix
+    (canStart × streaming × offline), the empty-hint affordance, the localized parity strings,
+    the model wiring (start pushes initial snapshot, idempotent start, stop cancels),
+    the P1/S11 view.opened telemetry deferred past the off-mode gate (emitted exactly once),
+    the one-shot stale auto-refresh, the train/refresh/cancel forwarding, and the a11y label.
+
+[C] Real app-target membership (generated TeslaSync.xcodeproj):
+      AIRangePrediction.{swift,Model,Adapter,Views,Chrome,Previews}.swift -> TeslaSync, TeslaSync-macOS (app)
+      AIRangePrediction.Tests.swift                                       -> TeslaSyncTests, TeslaSync-macOSTests (run by `test`)
+    In the iOS app build, the 1561-file app module compiled with ZERO errors attributable to
+    this surface (the only errors were the pre-existing sibling DashboardWidgetSize collisions).
+
+------------------------------------------------------------------------------
+DELIVERABLE (parity with web/src/components/ai/AIRangePrediction.tsx)
+------------------------------------------------------------------------------
+Files (apps/apple/TeslaSync/shared-surfaces/):
+  AIRangePrediction.swift          surface entry: withAiFeature gate + freshness chrome + phase switch
+  AIRangePrediction.Model.swift    P1/S8 state-holder seam, P1/S10 i18n facade, P1/S11 telemetry seam, @Observable model, in-memory source
+  AIRangePrediction.Adapter.swift  pure projection core (testable, no SwiftUI): phases + 4 output substates + button-disable logic
+  AIRangePrediction.Views.swift    AIFeatureCard scaffold: Helix badge, "Ask Helix" CTA, output panel, thinking indicator
+  AIRangePrediction.Chrome.swift   P4 leaf: freshness chip, refresh, connectivity banner, loading skeleton, retryable error
+  AIRangePrediction.Previews.swift one #Preview per state (ready/streaming/output/error/empty/loading/context-error/stale/offline/gated)
+  AIRangePrediction.Tests.swift    XCTest: adapter + projection + model + telemetry + a11y (20 tests, all pass)
+  AIRangePrediction.strings        i18n table "AIRangePrediction" (parity + chrome keys)
+
+States reproduced (every one renders — no hidden surface):
+  gated (AI off -> nothing) · loading (skeleton) · empty (no vehicle -> friendly hint + disabled CTA) ·
+  error (retryable) · ready · stream substates hidden/thinking/text/error · stale (chip+banner+auto-refresh) ·
+  offline (chip+banner, CTA disabled, last run retained).
+
+Data sources bound via shared state holder (no HTTP in the view): useTranslation, useAiStream('/ai/ml/range/train').
+i18n: parity keys resolve through the facade — 'Learn per-vehicle range model' (range.aiPredict.title),
+      'Train range model' (range.aiPredict.generateButton), 'Helix' (range.aiPredict.badge) + shared Helix strings.
+Accessibility: VoiceOver labels on the card, badge, CTA (aria "Ask Helix · Train range model"), chip, banner,
+      output (incl. "Helix error: <msg>"), Dynamic Type via tokens, Reduce-Motion-aware dots/skeleton.
+Telemetry: view.opened emitted with slug "AIRangePrediction", deferred until the gate is open.
+
+Build wiring (project.yml + .swiftlint.yml): shared-surfaces source path added to the two app targets
+(with `excludes: ["*Tests.swift"]`) and the surface's tests routed into the unit-test targets
+(`includes: ["*Tests.swift"]`); test files excluded from the app targets (correct test hygiene — this
+also removed a pre-existing class of XCTest-in-app-target build errors). swiftlint `included` extended.
+
+------------------------------------------------------------------------------
+HONESTY STATEMENT
+------------------------------------------------------------------------------
+This surface is complete and correct: it compiles cleanly (isolation + real app target), all 20 unit
+tests pass when executed, and it passes swiftlint --strict, swiftformat --lint, and the placeholder
+gate with ZERO findings in its own files. The aggregate `xcodebuild build test` gate cannot reach
+EXIT=0 for reasons OUTSIDE this surface and outside the allowed file scope:
+  (i)  iOS  — pre-existing duplicate-symbol merge collisions (DashboardWidgetSize ×10+) in sibling
+              dashboard-widget files committed by other slots; and
+  (ii) macOS — a code-signing/entitlements environment limitation (no development certificate).
+No sibling files were edited (fixing them is out of scope and would risk the parallel merge), and no
+result above is overstated.
+
+EXIT=65
+STATUS=BLOCKED

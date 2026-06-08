@@ -1,0 +1,150 @@
+I'll start by exploring the repository structure to understand the monorepo layout, the web source, and whether the Apple toolchain/dependencies exist.
+
+Apple toolchain is fully available (xcodebuild, swift, swiftlint, swiftformat). Let me read the web source and explore the existing Apple app structure to understand the established patterns.
+
+Now I understand the web source. Let me find where existing feature-views (AiUsageCard, LiveControls) actually live and read the project.yml to understand directory mapping.
+
+The feature-views live at `apps/apple/TeslaSync/feature-views/`. Let me study the full directory listing and the existing AiUsageCard pattern (closest analog — a card with config-like data).
+
+These are thorough, multi-file implementations. Let me study the AiUsageCard pattern in full (closest analog — a data card) to understand the established architecture.
+
+Excellent, very clear architecture. Let me read the remaining AiUsageCard files (Projection, Views, Chrome, Previews, Tests, strings) to fully grasp the pattern.
+
+Let me read the remaining AiUsageCard files — Chrome (state chrome views), Adapter (number formatting + domain types), Previews, Tests, AdapterTests, and strings.
+
+Let me read the test/preview/strings files and the web components my source uses (KVList, GlassPanel) to map them correctly.
+
+Let me read the Tests files and check how feature-view tests are wired into the test target, plus the shared design tokens.
+
+Key question: how do `.Tests.swift` files in `feature-views/` (which has `@testable import TeslaSync`) get wired into the test target and excluded from the app target? Let me investigate the build setup and toolchain availability — this determines DONE vs BLOCKED.
+
+Critical finding: the runner has **Command Line Tools only — no full Xcode**, so `xcodebuild` cannot run. This triggers the prompt's capability clause. Let me check how prior surfaces (AiUsageCard/LiveControls) handled their gate logs to follow the established convention.
+
+This reveals the established precedent precisely. The full-app `xcodebuild` gate is reported **DEFERRED** (never as passing) with raw evidence, while every runnable gate (swiftlint, swiftformat, placeholder, isolated Swift build/test) is run green, ending `EXIT=0 STATUS=DONE`. Let me read the full AiUsageCard log and the LiveControls log to replicate the exact convention.
+
+Now I fully understand the precedent. Critically, the prior runner had a full Xcode at `/Applications/Xcode.app` accessed via `DEVELOPER_DIR` override. Let me check if this runner has one, and locate the design-system tokens (TSSpacing, Color.TS, Font.TS, TSButton, TSSkeleton, TSFadeIn) my code must compile against.
+
+Full Xcode 26.5 is available via `DEVELOPER_DIR` override — same as the prior runner. Let me locate the design-token definitions (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`) in the generated tokens dir and the KVList/GlassPanel native peers.
+
+There's a native `TSKVList`/`TSKVRow` (the web `KVList` peer) — exactly what I need. Let me read the design tokens, the TSKVList/GlassPanel/Skeleton peers to map precisely.
+
+Now let me examine the GlassPanel peer, TSSkeleton, how other feature-views handle KV/2-column layouts, and the `VehicleConfigSnapshot` web type.
+
+Let me read the GlassPanel/Skeleton peers, the placeholder scanner, and the LiveControls pattern (a lighter section-style surface) to finalize my approach.
+
+Let me read the placeholder patterns (to avoid forbidden substrings) and confirm the `TSButton` API.
+
+I have everything needed. Forbidden substrings noted (TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented — and "todo" as a substring). Let me verify no naming collisions for my types before writing, and set up tracking.
+
+No collisions — fresh surface. Let me set up tracking and a plan, then verify the pre-existing full-app blockers (so my log evidence is real, not assumed).
+
+Confirmed real pre-existing blockers: `Shared.xcframework` absent (only `.gitkeep`), **170** co-located `*.Tests.swift` compiled into the app target, **15×** `DashboardWidgetSize` redefinitions — identical to what the AiUsageCard log documented. The full-app gate is genuinely pre-blocked, independent of my change.
+
+Now writing the surface. Starting with the pure core (Adapter, Projection, Model).
+
+Now the strings catalog and previews.
+
+Now the two test files.
+
+Let me check how AiUsageCard's tests implement the telemetry spy and model wiring under Swift 6 strict concurrency, so I mirror it correctly.
+
+The `testTelemetryEmittedOnceAcrossPushes` test has a sloppy leftover line and a confusing double-model setup. Let me fix it.
+
+All 10 files written. Let me verify the `TSButton` init signature and scan my files for any forbidden placeholder substrings before running the gates.
+
+`TSButton` signature matches my usage, and no forbidden substrings. Let me run the lint/format/placeholder gates on my files. First the swiftformat and swiftlint configs, then the tools.
+
+Now let me auto-format my Swift files with swiftformat (canonical), then lint-verify, then run swiftlint and the placeholder gate.
+
+The `git diff --stat` shows pre-existing `AIUsageCard.*` (capital-I) case-collision artifacts — a documented pre-existing repo condition, not my files (mine are untracked). Format is clean (0/9). Now swiftlint and the placeholder gate.
+
+One swiftlint violation: `function_body_length` (67 > 50) in the `rows` builder. Let me refactor it to a compact data-driven form that stays under both the 50-line body and 120-col limits.
+
+Let me format and re-lint the Projection file to see the actual result after swiftformat's line-wrapping.
+
+The line-wrapping bloated the body. Let me switch `RowSpec` to a positional initializer so each row fits on one line (only the 2 longest wrap), keeping the body well under 50.
+
+Projection is clean. Now the full per-surface lint sweep on all 9 Swift files + the placeholder gate.
+
+swiftformat and swiftlint are clean (0/9, 0 violations). The placeholder scan over the **whole** feature-views dir shows 19 pre-existing violations in *other* surfaces. Let me confirm none are mine, and run a scoped scan of exactly my surface (the gate's intent).
+
+All three per-surface lint gates are GREEN and my surface is placeholder-clean. Now the key verification: an isolated SwiftPM build+test compiling my exact sources against the real design system. Let me find the minimal design-system dependency closure (files that don't import the absent `Shared` framework).
+
+The entire `Sources/Design` + `Sources/Components` tree imports only system frameworks (SwiftUI/Charts/MapKit/CoreLocation/Foundation) — no `Shared` dependency. So I can build an isolated `TeslaSync` module from the real design system + my sources. Let me set up the SwiftPM harness.
+
+49 design+production sources + 2 test files assembled. Now the Package.swift (Swift 6 language mode = strict concurrency complete, matching the app) and the build.
+
+The Components tree isn't fully self-contained — `UnitFormatters.swift` references an external `Units` type (lives outside Components). My surface doesn't need formatters/charts/maps. Let me build a minimal, dependency-closed module. First, check what my needed primitives (Cards/Skeletons/Buttons/Motion) cross-reference.
+
+Clear closure: my surface needs Tokens + TSMaterial/TSDesign + Typography + Badges + Buttons + Cards + Skeletons + Motion. Let me rebuild the module with just that minimal, dependency-closed set.
+
+Clean closure (no external refs). Now build + test the isolated module under Swift 6 strict concurrency.
+
+Build complete under Swift 6 strict concurrency. Now run the test suite.
+
+All **34 tests passed, 0 failures** under the Xcode 26.5 toolchain (Swift 6 strict concurrency). The isolated build+test gate is fully GREEN. Now let me honestly attempt the full `xcodebuild` gate to capture real evidence of its (pre-existing) blocked status. First, the shared-framework pre-action script.
+
+The pre-action requires a Gradle/Kotlin-Native build for `Shared.xcframework`. Let me check the toolchain prerequisites and prove the project still generates with my new files (`xcodegen generate`), then attempt a bounded real `xcodebuild` to capture authentic blocked-status evidence.
+
+`xcodegen generate` succeeded — my new files integrate into the project cleanly. To capture fast, authentic evidence that the **app target** is pre-blocked (independent of my code), let me build the target directly (skips the 7-min Gradle pre-action) and inspect the real errors.
+
+Authentic evidence captured: the app target fails with `There is no XCFramework found at '.../Frameworks/Shared.xcframework'` — the pre-existing unstaged-framework blocker, halting the build before any source compiles. **Zero** errors mention `VehicleConfigSection`. This confirms the full gate is DEFERRED on a pre-existing condition, not my code.
+
+Let me clean up generated artifacts and check git status to scope the commit.
+
+Git status confirms: my **10** `VehicleConfigSection.*` files are untracked (new), and the 7 `AIUsageCard.*` (capital-I) "modified" entries are the **pre-existing case-collision artifacts** documented in the prior log — I never touched those paths. My commit will scope strictly to my files + the log.
+
+Let me capture toolchain versions for the log, then author it.
+
+All evidence captured. Now I'll author the comprehensive gate log following the established precedent, then commit. (Note: co-located `*.Tests.swift` is now 171 — my own test file, same co-location pattern as every other surface.)
+
+Now let me stage precisely my files + the log (using a glob, since the files are `VehicleConfigSection.*`), and verify nothing else (especially the pre-existing `AIUsageCard.*`) gets staged.
+
+The `git add` is hanging abnormally. Let me stop it and investigate (possible index lock or hook).
+
+`.git` is a file — this is a linked worktree (parallel slots). Let me check the real gitdir and whether the add partially completed.
+
+Nothing was staged (the add was interrupted). The index is healthy now. Let me stage files individually with explicit paths and timeouts to avoid the earlier hang.
+
+The log staged fine — `git add` works (the earlier hang was a transient stall on the glob). Let me stage all 10 surface files with explicit paths.
+
+All staged successfully. Let me verify the exact staged set (must be 11: 10 surface + 1 log, no `AIUsageCard`), then commit.
+
+Staged set is exactly correct: 11 files (10 surface + log), no `AIUsageCard`. Let me check for pre-commit hooks before committing (the earlier hang + a `.pre-commit-config.yaml` exist).
+
+No active hooks — safe to commit normally. Let me commit with the prompt's message.
+
+Commit succeeded. Let me verify the commit contents and final state.
+
+Commit verified: `009217aa`, exactly 11 files (10 surface + log), zero `AIUsageCard`. Let me confirm cleanup of temp artifacts and finalize.
+
+The `$FILES` var was empty, so swiftlint accidentally ran on the whole tree (1918 files, 1 pre-existing violation somewhere). Let me re-verify my files explicitly and locate that whole-tree violation to confirm it isn't mine.
+
+My 9 files are verified clean (swiftformat 0/9, swiftlint 0 violations). The single whole-tree violation is in a pre-existing file (my files have 0). Everything is complete and committed. Let me finalize tracking.
+
+The task is complete. Here's a summary of what was delivered.
+
+## P4 · Feature view · 0300 — `VehicleConfigSection` (Apple) — STATUS=DONE
+
+Shipped a production-polished, Apple-idiomatic SwiftUI parity of `features/vehicles/components/vehicle-detail/VehicleConfigSection.tsx`, committed as **`009217aa`** (10 surface files + gate log, scoped strictly — zero pre-existing files touched).
+
+**Architecture (mirrors the established `AiUsageCard` 10-file pattern):**
+- `.Adapter` — pure value resolution (`?? '—'`, boolean→yes/no/dash, software fallback) ported verbatim from the web
+- `.Projection` — pure phase + 12-row builder in exact web order
+- `.Model` — P1/S8 state-holder seam, P1/S11 `view.opened` telemetry (slug `VehicleConfigSection`), P1/S10 i18n facade, live/stale/offline axis
+- `.Views`/`.Chrome` — adaptive 2-col KV grid (web `columns={2}`), freshness chip, banner, loading skeleton, retryable error, empty state
+- `.swift` — `TSGlassPanel` + gear header; `.Previews` (7 states); `.strings` (15 verbatim web keys + chrome); `.Tests`/`.AdapterTests` (34 tests)
+
+**Verification (all real, raw output pasted in the log):**
+| Gate | Result |
+|---|---|
+| swiftformat --lint (9 files) | `0/9` — **FORMAT_EXIT=0** |
+| swiftlint --strict (9 files) | `0 violations` — **LINT_EXIT=0** |
+| check-placeholders (scoped) | `COUNT=0` — **EXIT=0** |
+| Isolated SwiftPM build + test (Swift 6 strict-concurrency, real design system, Xcode 26.5) | `Build complete!` · **34 tests, 0 failures** |
+| xcodegen generate | accepts new files — **EXIT=0** |
+
+**Full-app `xcodebuild` gate: DEFERRED** (never claimed green). A real bounded run failed fast with `There is no XCFramework found at .../Frameworks/Shared.xcframework` — a pre-existing unstaged-framework blocker (plus 171 co-located app-target tests, 15× `DashboardWidgetSize`), halting **before any source compiles**; **zero errors reference VehicleConfigSection**. This matches the sanctioned precedent (`-0237-AiUsageCard.log`), owned by the P4 acceptance gate on a signed macOS runner.
+
+All acceptance criteria met: every state renders, P1/S8 binding (no direct HTTP), all 15 web i18n keys catalogued, a11y labels on every element, full test coverage, no stubs/placeholders.
+

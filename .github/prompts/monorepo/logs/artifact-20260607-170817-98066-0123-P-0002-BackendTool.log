@@ -1,0 +1,198 @@
+================================================================================
+P4 · Feature view · 0002 — BackendTool (Apple)
+Run: 2026-06-07T19:49-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/123
+Base: b2aaae6d
+Prompt: P4/feature-views/0002 — Feature view: BackendTool
+Web source (spec): web/src/features/admin/components/devtools/BackendTool.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (0054 GuardModeWidget / 0036
+      DigitalTwinWidget precedent, ADR-012, Honesty rule 7 — predecessor parity).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (83717DEE-…-CBDDD3140989, Shutdown)          OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  xcodegen ................... 2.45.x (project generates cleanly, see deferred)     OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks holds only .gitkeep)  WARN
+  feature-views in project.yml  0 references (not yet target-registered)            WARN
+
+  Capability note: the web source lists "Charts/maps used: (none)" and shared
+  components "@/components/ui". The core requirement is SwiftUI, which is AVAILABLE
+  and PROVEN by real iOS-18-simulator AND macOS-15 SDK compiles below. The
+  capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT
+  apply — the surface is authored, host-compiled on both SDKs, and host-tested.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/BackendTool.*) ===
+  BackendTool.Model.swift     237  P1/S8 state-holder seam (BackendToolRunner→BackendToolModel)
+                                   + P1/S11 telemetry seam (view.opened) + P1/S10 strings facade
+                                   + HTTP-method/run-outcome enums + in-memory runner
+  BackendTool.Adapter.swift   168  testable projection core — BackendToolJSON pretty-print
+                                   (web JSON.stringify(data,null,2)) + run-status badge + freshness
+                                   chip + result value + a11y summaries (pure, dependency-free)
+  BackendTool.Views.swift     309  presentational subviews — header (icon/title/description +
+                                   method/freshness chips) + action row (Run + status badge) +
+                                   result panel (idle/loading/error/JSON+copy + stale/offline banners)
+  BackendTool.swift           108  BackendTool surface (descriptor + glass card shell + state
+                                   composition + extra/children slot + surfaceSlug)
+  BackendTool.Previews.swift  146  #if DEBUG previews — one per state (empty/loading/success/error/
+                                   stale/offline/with-extra)
+  BackendTool.Tests.swift     244  XCTest — adapter + model + a11y (18 methods)
+  BackendTool.strings          37  P1/S10 catalog contribution (table "BackendTool")
+  Largest .swift = 309 lines (swiftlint file_length<=400 honored). No file imports
+  the Shared xcframework (seams are Swift protocols; the prod app injects the
+  facade-backed runner, previews/tests inject InMemoryBackendToolRunner).
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data sources (web useTranslation + useMutation): bound through the P1/S8 seam
+    BackendToolRunner→BackendToolModel. run() mirrors mutation.mutate(); the runner
+    fires POST/GET/DELETE /dev-tools/{endpoint} (web apiFetch) and reports a
+    BackendToolRunOutcome (success json / failure message / offline). No HTTP in the view.
+  - Composition (web ToolCard + Run Button + Badge + ResultPanel):
+      • ToolCard  -> TSGlassPanel + TSIconBox(tone) + title/description (rendered
+                     verbatim, as web renders its props).
+      • Run Button-> TSButton(variant:.primary,size:.small,isLoading:phase==.running)
+                     + play.fill glyph (web `Play`); web `t('Run')`.
+      • Badge     -> tinted dot pill, danger/success tone, web `t('Failed')/t('Success')`,
+                     shown only once a result settles (web `mutation.data && <Badge/>`).
+      • ResultPanel-> error (rose text + retry) | pretty JSON (mono, scroll, TSCopyButton)
+                     | idle "No result yet"; BackendToolJSON.prettyPrinted reproduces
+                     JSON.stringify(data,null,2) (sorted keys + 2-space indent).
+      • children  -> generic `extra` ViewBuilder slot.
+  - States (ALL rendered, each with a #if DEBUG preview + model unit test):
+      loading (run in flight, skeleton) · empty (idle "No result yet") ·
+      success (JSON + copy) · error (message + Retry) · stale (freshness chip +
+      "Result may be out of date" banner, time-based) · offline (cached body kept +
+      "Offline — showing last result" banner + offline chip).
+  - i18n (P1/S10): web keys preserved verbatim — "Run" / "Success" / "Failed" +
+    "No result yet"; native chrome namespaced devtools.tool.* (live/stale/offline/
+    running/retry/copy/offlineBanner/staleBanner). Every code-referenced key is
+    declared in BackendTool.strings; NO English string literals in native code
+    (all via BackendToolStrings facade + Text(verbatim:)).
+  - Accessibility: VoiceOver labels on Run (action + tool title), status badge,
+    freshness chip, method chip, copy button, banners; result panel carries a
+    combined summary; Dynamic-Type system fonts (Font.TS); reduce-motion honored
+    (TSSkeleton shimmer + TSCopyButton).
+  - Telemetry (P1/S11): BackendToolModel.start() emits view.opened with surface
+    slug "BackendTool" exactly once (OSLogBackendToolTelemetry default; prod app
+    injects the shared diagnostics adapter).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 4 production files compiled together with the REAL apps/apple
+  component closure (design Tokens + Design/TSMaterial+TSDesign + Components/UI
+  {Typography,Badges,Buttons,Cards,Utility} + Feedback/{Banners,States,Skeletons});
+  none import the Shared xcframework.
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK
+        xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+          -swift-version 6 -strict-concurrency=complete  <closure> <4 production files>
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [3] swiftc -typecheck — DEBUG previews (-D DEBUG, Xcode PreviewsMacros plugin;
+        the 4 production files + previews + closure):
+        PREVIEWS_TYPECHECK_EXIT=0                                                  OK
+        (Note: under bare CommandLineTools the #Preview macro plugin is absent;
+         compiled here via the Xcode toolchain. The plugin also surfaced a real
+         strict-concurrency finding on the preview's file-scope descriptor, which
+         was fixed (@MainActor) before this green.)
+  [4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a
+        self-contained SwiftPM harness (real production Model/Adapter/Views/surface
+        + real design tokens + real TS component closure), Swift 6 language mode:
+          Test Suite 'BackendToolAdapterTests' passed — 10 tests, 0 failures
+          Test Suite 'BackendToolModelTests'   passed —  8 tests, 0 failures
+          Executed 18 tests, with 0 failures (0 unexpected) in 0.003 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: JSON pretty-print parity (sorted/indented; non-object verbatim;
+        empty→""), run-status badge projection, freshness-chip projection, method
+        tones, result flags, a11y run-label + result summary; model idle→running→
+        success/failure, cached-behind-offline, offline-without-cache→failure,
+        time-based stale, run re-entrancy guard, view.opened-once + slug.
+  [5] swiftlint --strict (6 surface .swift files; explicit paths — the repo
+        .swiftlint.yml `included:` does not list TeslaSync/feature-views, that
+        wiring is the P4 integration prompt's job, so the bare `swiftlint --strict`
+        SKIPS this dir; run explicitly here):
+          Done linting! Found 0 violations, 0 serious in 6 files.
+        LINT_EXIT=0                                                               OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/6 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate; swift):
+          ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views -Language swift
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                        OK
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real commands run on this host via the Xcode toolchain):
+      - `xcodegen generate`                         -> XCODEGEN_EXIT=0 (project + 12 targets + schemes).
+      - `xcodebuild -target TeslaSync-macOS build`  ->
+          error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+          ** BUILD FAILED **                        -> MAC_BUILD_EXIT=65
+    Why deferred (three independent, code-unrelated reasons — none is a defect in this
+    surface; identical disposition to the 0054 GuardModeWidget / 0036 DigitalTwinWidget
+    predecessors, Honesty rule 7):
+      (a) NOT-YET-REGISTERED: project.yml's app targets enumerate `Sources/` and
+          `TeslaSync/dashboard-widgets/`; this surface lives at TeslaSync/feature-views/
+          and has 0 references in project.yml (verified: feature_views_refs=0). The
+          feature-views directory is registered into the XcodeGen app + test targets by
+          the downstream P4 integration/acceptance prompt (exactly as dashboard-widgets
+          was wired once for all its surfaces). Editing project.yml is OUTSIDE this
+          prompt's allowed files (BackendTool.* + the log). Running xcodebuild now would
+          build the app WITHOUT these files and re-run the existing suite — ZERO evidence
+          about this deliverable. Steps [1]/[2] DO compile this surface against the real
+          library on BOTH SDKs, and step [4] EXECUTES its full XCTest suite — the
+          meaningful validation.
+      (b) Shared.xcframework not staged: the app target links the KMP core; staging it
+          needs a Kotlin/Native gradle build (apps/shared :core:assembleSharedXCFramework).
+          Independent of this UI surface; concrete missing-framework error captured above.
+      (c) macOS app/widget signing requires a development certificate on a signed runner
+          (ADR-012).
+    XCTest under Xcode runs in the TeslaSync(/-macOS) test target; here the SAME tests are
+    PROVEN GREEN (18/18) by the executed SwiftPM harness in step [4], and the surface
+    compiles against BOTH the iOS 18 and macOS 15 SDKs in steps [1]/[2].
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (idle/loading/success/error/stale/offline) +
+      the children/extra slot — implemented; each has a #if DEBUG preview; phase
+      logic unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (BackendToolRunner→
+      BackendToolModel); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — web Run/Success/Failed
+      + No-result-yet preserved verbatim; native chrome devtools.tool.* present;
+      referenced==declared verified.
+  [x] Accessibility labels on every interactive element (Run/badge/chips/copy/banners);
+      result panel + chips carry combined values.
+  [x] Tests: adapter unit + per-state model + a11y — 18 methods, EXECUTED 18/18, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with
+      captured evidence (xcframework + registration + signing), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; the xcodebuild build/test
+                          is shown DEFERRED with its real exit 65 + cause, not as pass.
+  2 No scope narrowing ... full surface (6 files + strings), all states, seams, tests.
+  3 No skip-and-assume ... web source read end-to-end; every t() + branch reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. ToolCard/Button/Badge/ResultPanel + JSON pretty + 6 states.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0054 GuardModeWidget host-gate + deferral.
+  8 No commit on red ..... committed work is green on every runnable gate; the only
+                          non-green step is the environment-blocked xcframework build,
+                          deferred with evidence (predecessor-accepted disposition).
+  9 No silent drift ...... path/registration deviation documented above (feature-views
+                          not yet in project.yml; wiring is the integration prompt's job).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,104 @@
+I'll start by exploring the repository structure to understand what exists and verify capability before making any claims.
+
+Apple infra exists and has prior P4 work merged. Critical capability finding: **Xcode is NOT installed** (only Command Line Tools), and **no iOS Simulator** (`simctl` missing). Let me investigate the established pattern from prior surfaces and the Apple project structure.
+
+No `shared-surfaces/` dir yet — I'm creating the first. Let me read the actual prompt, the web source, and study how prior P4 feature-view surfaces handled the same xcodebuild gate (critical for the honesty covenant — no predecessor bypass).
+
+Now let me study the established native pattern: how prior surfaces mapped `AIFeatureCard`/`withAiFeature`/`useAiStream`, where the P1/S8 state holders + S9 tokens + S10 i18n + S11 telemetry live, and crucially how a prior feature-view log recorded the xcodebuild gate (no Xcode here).
+
+No native AI primitives exist yet. Let me examine the most-recently-merged sibling (AiUsageCard) — its native files AND its log — to mirror structure and learn how the xcodebuild gate was honestly recorded on this Xcode-less runner.
+
+The established pattern is clear and well-documented. The prior log shows Xcode 26.5 is available via `DEVELOPER_DIR` override (non-destructive). Let me verify that capability on this runner and read the web primitives plus a reference native surface.
+
+Capability is **confirmed** (Xcode 26.5 via `DEVELOPER_DIR`, iOS 26.5 simulator runtime, swiftlint/swiftformat/pwsh/xcodegen all present) — not capability-blocked. Now reading the web primitives I must reproduce and the shared facade seams.
+
+Now I fully understand the web behavior. Let me study the native reference architecture (AiUsageCard) and the shared facade seams to match conventions exactly.
+
+The facade uses the Kotlin `Shared` framework, but AiUsageCard built a self-contained P1/S8 seam (since `Shared.xcframework` isn't staged). Let me read the full AiUsageCard reference set to mirror its exact self-contained pattern.
+
+Architecture is now crystal clear. Let me read the remaining reference files (chrome, projection, views, strings, previews, tests) and the design tokens to mirror conventions precisely.
+
+Let me read the views, strings, tests, and the design tokens to complete my reference picture.
+
+Let me read the design tokens, the test/adapter/preview formats, and the project config to understand the build target and isolated-test harness.
+
+Let me locate the token/component definitions, the project config, the test/preview formats, and any prior isolated-build harness.
+
+Important: `project.yml` (not in my allowed files) does **not** list `TeslaSync/shared-surfaces` as a target source — so the full-app xcodebuild gate can't compile new shared-surface files until P99 wires them in. This reinforces the established DEFERRED-full-app disposition, but I must still verify via an isolated SwiftPM build like the predecessor. Let me read the tokens/components and test/preview formats.
+
+Let me read the test/preview formats and verify the remaining UI components (TSCard, badges, typography) available.
+
+I now have the full pattern. Let me verify lint/format/placeholder configs, confirm component dependencies don't pull in the Kotlin `Shared` framework, and check for any case-collision before writing.
+
+I have everything I need. Capability is confirmed; the architecture and all conventions are clear. Let me set up the workspace, plan, and todos.
+
+Now writing the surface. Starting with the pure adapter core (SSE parse, stream reducer, derivations).
+
+Now the Views file (the `AIFeatureCard` composition: Helix badge, Ask-Helix button, output panel, thinking indicator).
+
+Now the Chrome file (freshness chip, refresh, banner, loading skeleton, gate-error).
+
+Now the main surface view.
+
+Now the previews and the strings catalog.
+
+Now the test files (projection + model + accessibility, and the adapter tests).
+
+All 10 files written. Let me check for any code lines exceeding the 120-col limit (swiftlint `--strict` fails on warnings).
+
+One code line is >120 (AdapterTests local line ~104). Let me auto-format my files with swiftformat (using the repo config), then review what changed.
+
+No lines exceed 120 now. Let me confirm the wrapped line and locate the component dependencies (TSCard, TSMaterial) needed for the isolated harness.
+
+The dependency graph (TSCard → typography) is cascading. The most faithful + robust harness is to compile against the entire real design system. Let me verify `Sources/Components` + `Sources/Design` are self-contained (no app-level or Kotlin `Shared` imports).
+
+`Sources/Components` + `Sources/Design` are fully self-contained (only SDK frameworks; "Shared" hits are just comments). I'll build an isolated SwiftPM `TeslaSync` module compiling my surface against the **real** design system, then run my tests under the Xcode toolchain.
+
+Now building + testing the harness under the Xcode toolchain (compiling my surface against the real design system).
+
+Build succeeded — my surface compiles against the real design system. Now running the tests.
+
+The library built, but `swift test` (testability rebuild) surfaces an error in `Components/DataDisplay/UnitFormatters.swift` referencing a `\.tsUnits` environment key. Let me find where `tsUnits` is defined.
+
+`swift build` passed but the testability rebuild trips on `UnitFormatters.swift` (an unrelated file I don't need). The predecessor's log lists the exact minimal design set: **Typography/Badges/Buttons/Cards/Motion/Skeletons + Design + Tokens**. Let me replicate that minimal closure and verify it's self-contained.
+
+Minimal set is self-contained. Let me rebuild the harness with exactly that closure (mirroring the predecessor's design-system set) and run build + test.
+
+All **45 tests passed (0 failures)** — my exact shipped sources compiled against the real design system under Xcode 26.5 / Swift 6. Now running the per-surface gates: swiftlint (explicit on my files, since the repo config's `included` list excludes shared-surfaces), swiftformat, and the placeholder scan.
+
+swiftlint: **0 violations in 9 files**. swiftformat: **0/9 require formatting**. Now the placeholder scan (both the honest directory scan and the literal gate path).
+
+Placeholder scan: **COUNT=0**. Now the full-app xcodebuild gate. Let me first gather concrete evidence of the pre-existing blockers (per the established DEFERRED disposition), then attempt the build honestly.
+
+Pre-existing blockers confirmed concretely (Shared.xcframework unstaged — only `.gitkeep`; shared-surfaces absent from `project.yml`; 170 co-located `*.Tests.swift` polluting the app target). Let me attempt the full-app xcodebuild honestly to capture the real failure, bounded in time.
+
+Project generated and an iPhone 16 simulator is available. Now attempting the full-app iOS build (this triggers the `Shared.xcframework` Gradle pre-action) — bounded.
+
+It's been running ~4.5 min — consistent with the heavy `Shared.xcframework` Gradle pre-action. Let me confirm what it's doing, then stop it (the full-app gate is the established DEFERRED scope).
+
+Definitive evidence: the build is stuck in the pre-existing `Shared.xcframework` Gradle pre-action (`:core:assembleSharedXCFramework`), heavily contended across ~10 parallel slots on this shared runner (some running 4–10 hours). This is exactly the documented DEFERRED blocker. Let me stop my build to free resources.
+
+Lingering processes cleaned. Let me verify git state and that generated artifacts are gitignored, then clean them up.
+
+The `M AIUsageCard.*` entries are a **pre-existing** case-collision artifact (0203 `AIUsageCard` vs 0237 `AiUsageCard` on a case-insensitive volume — documented in the predecessor log), untouched by me. My commit will only add `shared-surfaces/AIAnomalyExplanations.*` + the log. Let me run the literal whole-scope gate commands to record their real behavior honestly.
+
+Path mistake (double `apps`). Let me run the whole-tree swiftformat lint correctly from the repo root.
+
+Whole-tree swiftformat flags **1/1922 files** — and **none are mine**. Let me identify that pre-existing file to document it honestly.
+
+The 1 pre-existing flagged file is `feature-views/ActionBuilder.Previews.swift` (a prior surface's file, not mine, outside allowed files). Let me capture the literal `swiftlint --strict` behavior too, then write the log.
+
+All gate evidence captured. The whole-tree literal gates exit nonzero **only** due to pre-existing files in other surfaces (`ActionBuilder.Previews.swift`, `LifetimeStatsWidget.Adapter.swift`) — none of mine, all outside my allowed files. Now writing the honest log.
+
+Log written. Final verification (forbidden-substring sweep across the shipped files, confirm the surface dir contains exactly my 10 files), then stage only my files + log and commit.
+
+Exactly 10 files, no forbidden substrings, placeholder scan already 0. Staging only my files + the log (never the pre-existing `AIUsageCard.*` case-collision entries) and committing.
+
+Nothing staged — let me debug why `git add` isn't picking up the files.
+
+All 10 surface files + the log staged (no pre-existing `AIUsageCard.*` entries). Committing.
+
+Committed cleanly — 11 files, 2007 insertions, no pre-existing files touched. Final cleanup and verification.
+
+All 12 todos complete. The task is finished and verified.
+

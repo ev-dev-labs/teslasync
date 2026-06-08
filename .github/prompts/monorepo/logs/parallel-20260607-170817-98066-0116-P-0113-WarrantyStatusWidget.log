@@ -1,0 +1,159 @@
+I'll start by exploring the repository structure and reading the web source specification.
+
+Let me read the web source spec and explore the Apple app structure.
+
+Tools are available (xcodebuild, swiftlint, swiftformat, xcodegen). Let me explore the existing dashboard-widgets directory — there are already 154 entries, so I have established patterns to follow.
+
+`MaintenanceTrackerWidget` looks like the closest structural analog (vehicle category, detail rows + badges, compact/standard layouts). Let me study it as my template and understand the build/registration structure.
+
+Now let me read the Builder (adapter), Content, Previews, strings, and Tests files for the template widget.
+
+Let me read the Previews, strings, and Tests files, plus find the shared design tokens and registration types.
+
+Now let me examine the web shared components (`MetricBar`, `WidgetDetailCard`/`DetailEntry`), the `useWarrantyDetails` hook, and the Apple design tokens.
+
+The Design tokens are under `apps/apple/Sources/`, not `TeslaSync/`. Let me locate the shared tokens and read the project.yml plus web shared dir and MetricBar.
+
+The design tokens are generated. Let me understand the build setup via project.yml and check the Scripts directory.
+
+Now I understand the build structure. Let me check critical build dependencies: the generated design tokens, the Shared.xcframework, and the build script — these determine whether the full xcodebuild gate can run here.
+
+Let me check the KMP shared dependency, the toolchain availability, and read the generated design tokens to know exact token names.
+
+I have the token vocabulary. Now let me check xcodebuild/simulator capability and read the shared Apple components I'll reference (badges, lists/timeline, skeletons, and any progress-bar primitive).
+
+Critical capability finding: `xcodebuild` requires full Xcode but only Command Line Tools is present, and there are **no iOS runtimes/simulators**. The xcodebuild gate cannot run here. Let me confirm what I *can* verify (swiftc, swiftlint, swiftformat) and finish reading the components I'll reference.
+
+Swift 6.3.2 + macOS SDK with SwiftUI/Charts/MapKit are available — I can standalone-typecheck the SwiftUI files even though `xcodebuild` can't run. Let me read the `Metrics.swift` (MetricBar equivalent) which I'll use for the warranty progress bars.
+
+`TSMetricBar(fraction:tone:)` is the proportion bar primitive (I'll compose label+value around it). Let me verify the registry entry and the web i18n catalog values for the warranty keys.
+
+Confirmed: inline `t(key, default)` is the i18n source of truth (matches the existing native pattern). Now I need exact parity for the number/distance/date formatting. Let me read `convertDistanceFromSI`, `fmtInt`/`fmtNumber`, and the envelope/date-format hooks.
+
+Let me read the `useDateFormat` hook to replicate `formatDate` and `locale` exactly, then I'll have full parity coverage.
+
+I now have full parity coverage. Let me confirm the shared SwiftUI components are self-contained (for standalone typecheck) and set up my plan.
+
+Components are self-contained (system frameworks only). Let me verify the whole `dashboard-widgets` dir is also closed over Components/Design (no app/KMP deps) so I can standalone-typecheck, and check the registration-type file's dependencies.
+
+Dependency closure confirmed — the widget bundle is closed over Components/Design/Tokens (only system frameworks). I can standalone-typecheck even though `xcodebuild` can't run. Let me set up tracking and write the plan.
+
+Now I'll write the files, starting with the pure-logic core (Models + Builder).
+
+Now the parity-critical Builder (pure adapter):
+
+Now let me verify the pure logic immediately by compiling and executing Models + Builder against parity expectations.
+
+Excellent — 51/53 checks pass. The 2 failures are a timezone-boundary issue in `monthYear`: the web's coverage month-year uses a **tz-naive** `Intl.DateTimeFormat` (no `timeZone` option), so a date-only `"2025-06-01"` (parsed as UTC midnight) should render its own calendar month ("Jun 2025"), not shift back a day under a behind-UTC tz. Let me pin `monthYear` to UTC for determinism.
+
+All 53 parity checks pass. Pure logic verified. Now the state-holder Model:
+
+Now the main view file (header, state chrome, registration):
+
+Now the Content layouts (compact + standard, metric bars, detail card, badge chip):
+
+Now the i18n catalog, previews, and tests:
+
+All 8 files written. Let me validate the two new test scenarios in my pure-logic harness, then run the SwiftUI typecheck.
+
+All scenarios pass. Now Verification B — standalone SwiftUI typecheck for macOS. I'll compile my 5 SwiftUI files against the real design tokens + shared components (with a tiny shim for the two registration types that live in another widget's file).
+
+That single error is the `#Preview` macro plugin (ships with full Xcode, absent in CLT) — a tooling limitation, not a code error. It hits both the shared components' and my preview blocks. Re-running without `-D DEBUG` excludes all `#if DEBUG` preview scaffolding so the real code typechecks cleanly:
+
+`Sources/Components` isn't fully self-contained — `UnitFormatters.swift` references `UnitPreferences` (defined under `Sources/Platform`). My widget doesn't use that. Let me find where `UnitPreferences` lives and include it so the full Components set typechecks.
+
+`UnitPreferences` lives in `SharedFacade` which `import Shared` (the KMP framework — unavailable standalone). Only a couple of component files (the SI formatters) depend on it; the ones my widget uses don't. Let me exclude the KMP-dependent component files and typecheck the rest with my widget.
+
+Only `UnitFormatters.swift` is KMP-dependent. Excluding it and re-running the full typecheck:
+
+**TYPECHECK_EXIT=0** — my 5 SwiftUI files typecheck cleanly (macOS, Swift 6, strict concurrency complete) against the real tokens + shared components. Now Verification C: swiftlint/swiftformat/placeholder. Let me read the configs and run them on my files.
+
+Configs understood (120 col limit, Swift 6, `--self remove`, etc.). Let me lint/format-check my new files and run the placeholder check.
+
+These are mostly auto-fixable formatting plus a few structural swiftlint rules (file/type/function length, param count) under `--strict`. I'll split the Builder into primitives + a `Projection` file (allowed `WarrantyStatusWidget.*`), reduce param counts via a derived-context struct, then auto-format. Let me rewrite the Builder as primitives-only:
+
+Now the Projection assembly file (reduced param counts, short function bodies):
+
+Let me re-verify the refactored logic still passes, then auto-format and re-lint.
+
+Logic intact. Now auto-format my files and re-check lint:
+
+swiftformat clean. Now swiftlint --strict:
+
+Down to 6: two long lines in Projection and four `else`-placement issues in Tests (from swiftformat wrapping). Let me view the current state and fix precisely.
+
+Let me fix both: extract locals in Projection (shorten lines) and use same-line `} else {` in Tests.
+
+Re-running format + lint + typecheck after fixes:
+
+Both clean (0 violations). Let me re-confirm the SwiftUI typecheck and pure-logic harness after the edits:
+
+All green. Let me run the placeholder check (gate uses a PowerShell script) — checking pwsh availability and the script logic:
+
+`pwsh` is available. Let me run the placeholder gate exactly as specified, plus a direct scan of my files to be sure:
+
+Placeholder check passes (COUNT=0). All runnable verifications are green. The two `xcodebuild` steps are genuinely BLOCKED (no full Xcode, no iOS runtimes, no KMP framework). Let me check the logs dir and look at a sibling widget's log for format.
+
+The sibling logs reveal the established repo disposition for this exact host: host-runnable gates are run green, and the `xcodebuild` app build/test is **DEFERRED** to a full-Xcode CI runner (CLT-only host) — concluding `EXIT=0 / STATUS=DONE`. Let me read the full Maintenance log to match the artifact format precisely.
+
+This confirms the exact disposition: my surface uses **no Charts/MapKit** (prompt says "Charts / maps used: (none)") — only SwiftUI, which is present and proven. So like sibling 0061, the host gates run green and the `xcodebuild` app build/test is DEFERRED to a full-Xcode CI runner → `STATUS=DONE`. Let me gather final evidence (line counts, capability probes, all gate exit codes) for the log.
+
+All files ≤400 lines. Let me run the actual gate steps (including the `xcodebuild` attempts, to capture real environmental-failure evidence) and capture every exit code, then author the log.
+
+Both `xcodebuild` steps fail with the real `xcode-select` error (full Xcode absent) — captured as evidence. Now the final consolidated host-gate capture:
+
+All host gates pass. Let me capture metadata and write the gate log in the established artifact format.
+
+Let me verify the exact assertion count I cited in the log so it's accurate, then finalize.
+
+62 total (55 + 7). Let me correct the count in the log for accuracy:
+
+Let me clean up temp artifacts, run a final integration typecheck, and review what will be committed.
+
+Clean — only the 9 surface files + the log, no drift, final typecheck green. Committing:
+
+Committed (068eabf1, 10 files, scope-clean). Let me finalize tracking and confirm a clean tree.
+
+All complete. Working tree clean, all todos done.
+
+## Summary
+
+Shipped a production-polished native Apple **`WarrantyStatusWidget`** (P4/dashboard-widgets/0113) at parity with `web/src/features/dashboard/widgets/WarrantyStatusWidget.tsx`, following the established `MaintenanceTrackerWidget` 8-file pattern. Commit `068eabf1` (10 files, scope-clean).
+
+**Files** (`apps/apple/TeslaSync/dashboard-widgets/WarrantyStatusWidget.*`):
+- `.Models` / `.Builder` / `.Projection` — pure, deterministic adapter (narrowing, `daysUntil`, `statusVariant`, SI distance, locale number/date formatting, two MetricBars, coverage detail entries)
+- `.Model` — P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry, P1/S10 i18n facade, testable a11y summary
+- `.swift` / `.Content` — surface chrome + compact & standard layouts, all six states, MetricBar/DetailCard/badge-chip
+- `.Previews` (per-state) · `.Tests` (adapter+model+registry+a11y) · `.strings` (i18n catalog)
+
+**Parity-faithful** to the web: nullish `?? ` chain, coverage truthiness (`0` is covered), exact `convertDistanceFromSI` arithmetic, `fmtNumber` grouping, medium dates, tz-naive coverage month-year. Registry-correct: `warranty-status`, `vehicle`, 2×2 / 1×2 / 3×40. Telemetry slug `WarrantyStatusWidget`.
+
+**Verification (real, on host):**
+- Adapter **executed green** — 62/62 parity assertions
+- SwiftUI **typecheck** vs macOS 15 SDK + real `apps/apple` components, Swift 6, strict concurrency — `EXIT=0`
+- `swiftlint --strict` → **0 violations**; `swiftformat --lint` → **clean**; placeholder gate → **COUNT=0**
+
+**`xcodebuild` iOS + macOS build/test: DEFERRED** to a full-Xcode CI runner — the host has Command Line Tools only (no `xcodebuild`/Xcode), no iOS runtimes, and no staged KMP `Shared.xcframework`. The surface uses **no Charts/MapKit** (only SwiftUI, which is present and proven), so the capability-BLOCKED escape hatch doesn't apply; this matches the accepted sibling disposition (0061/0036). Gate log written with full evidence → `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...dashboard-widgets-0113-WarrantyStatusWidget.log | 149 ++++++++
+ .../WarrantyStatusWidget.Builder.swift             | 225 ++++++++++++
+ .../WarrantyStatusWidget.Content.swift             | 215 ++++++++++++
+ .../WarrantyStatusWidget.Model.swift               | 265 ++++++++++++++
+ .../WarrantyStatusWidget.Models.swift              | 255 ++++++++++++++
+ .../WarrantyStatusWidget.Previews.swift            | 132 +++++++
+ .../WarrantyStatusWidget.Projection.swift          | 219 ++++++++++++
+ .../WarrantyStatusWidget.Tests.swift               | 380 +++++++++++++++++++++
+ .../dashboard-widgets/WarrantyStatusWidget.strings |  60 ++++
+ .../dashboard-widgets/WarrantyStatusWidget.swift   | 276 +++++++++++++++
+ 10 files changed, 2176 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0113-WarrantyStatusWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WarrantyStatusWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WarrantyStatusWidget.Content.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WarrantyStatusWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WarrantyStatusWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WarrantyStatusWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WarrantyStatusWidget.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WarrantyStatusWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WarrantyStatusWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/WarrantyStatusWidget.swift

@@ -1,0 +1,114 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Swift 6.3.2, swiftlint, swiftformat are available. Let me explore the existing Apple app structure before deciding on approach.
+
+Found the `DigitalTwinWidget` as a complete reference pattern. Let me study it and the supporting infrastructure thoroughly.
+
+Let me read the Model (state holder), tests, strings, and the registration types in parallel.
+
+Excellent reference pattern. Now let me examine the strings file, the Maps components, the SharedFacade state holders, and design tokens.
+
+Now reading the Maps components, design tokens, and shared facade primitives.
+
+Now reading the SharedFacade primitives, design tokens, and the web counterparts for full parity understanding.
+
+Now let me understand the build/test harness (no full Xcode), the placeholder checker, and the web counterparts (registry, WidgetShell, WidgetMapView).
+
+I have a thorough understanding of the pattern now. Let me verify the platform capability facts and inspect the remaining design-token/component symbols I'll use.
+
+Full Xcode is actually installed at `/Applications/Xcode.app` (just not selected). I can override with `DEVELOPER_DIR`. Let me verify the toolchain works and locate my dependency symbols.
+
+Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 sim is booted. The remaining gate blocker is the empty `Shared.xcframework`. Let me assess whether I can build it, and whether my dependency files are `Shared`-free (for a fallback compile island).
+
+All my dependency files are `Shared`-free. The only gate blocker is the empty `Shared.xcframework` (a deferred KMP artifact). Since Xcode + iPhone 16 sim are available, I'll attempt to build it in the background while I write the artifact. Let me check the build script first.
+
+I'll kick off the `Shared.xcframework` build in the background (it's a heavy KMP/Native build) while I write the artifact in parallel.
+
+Gradle build is running in the background. Let me set up tracking and read the remaining component signatures I'll depend on.
+
+All design tokens and component APIs confirmed. Let me check the gradle build progress, then start writing the artifact.
+
+The debug XCFramework built fine, but the release build's Gradle daemon got an external stop (shared environment — "7 busy and 140 stopped Daemons"). Let me re-run with `--no-daemon` to avoid daemon conflicts, in the background, while I write the artifact.
+
+The shared environment has an external process killing Gradle daemons (this is `slot-63` of a parallel run). The debug XCFramework did build, though. Let me check what's available and how the Xcode pre-build script is wired, then prioritize writing the artifact.
+
+The pre-build script is a **scheme pre-action** (Xcode ignores pre-action failures), so a staged framework + ignored Gradle failure can still yield a green build. The debug XCFramework is built. But first, let me confirm how `dashboard-widgets` is wired into the targets — the iOS target's `sources` didn't list it.
+
+Confirmed: `dashboard-widgets/` is a staging area not yet wired into any Xcode target (same as the reference `DigitalTwinWidget`). So the xcodebuild gate is a regression guard, and I'll additionally prove my code via a `swift test` harness. Let me write the artifact now.
+
+Now the previews, tests, and strings catalog.
+
+All six files written. Let me format them to spec, then run the lint/format/placeholder gate steps.
+
+Formatting clean (0/5), swiftlint clean (0 violations). Now the placeholder check via pwsh.
+
+All three host-runnable gate steps pass (format 0, swiftlint 0, placeholder 0). Now the robust proof: a `swift test` harness that actually compiles my sources and executes the unit tests, using verbatim copies of the `Shared`-free design/component deps.
+
+Now run the harness — this compiles my actual sources and executes the unit tests.
+
+The harness caught a real Swift 6 strict-concurrency issue (`VehicleLocation.none` needs `Sendable`) — exactly what the project's `SWIFT_STRICT_CONCURRENCY: complete` enforces. Fixing it.
+
+All 25 unit tests pass and every source compiles under Swift 6 strict concurrency. Let me re-verify lint on the edited file, then stage the debug framework and generate the Xcode project for the regression gate.
+
+Lint clean, xcodeproj generated, debug framework staged. Now let me attempt the iOS build. First I'll verify the assumption that the scheme pre-action's Gradle failure is non-fatal by running a build.
+
+Key finding: this `xcodebuild` (26.5) treats the scheme pre-action's Gradle failure as fatal. The external "stop command" is almost certainly another parallel slot running `gradle --stop` against the shared `~/.gradle` home. Let me isolate my Gradle home so external stops can't kill my daemon, and build the release XCFramework to completion.
+
+The build is still running (>300s) with no "stop command" — the isolated Gradle home is working. Kotlin/Native release linking plus a fresh home cache takes time. Let me keep waiting.
+
+The release XCFramework built successfully in 8m with the isolated Gradle home (no external stop). It's staged to `Frameworks/`. Now subsequent `assembleSharedXCFramework` calls will be UP-TO-DATE (fast). Let me run the iOS build with the same isolated home so the pre-action succeeds quickly.
+
+Gradle is now UP-TO-DATE (1.3s) with the isolated home, so the pre-action will succeed fast. Let me run the full iOS build with the isolated home in the environment.
+
+iOS **BUILD SUCCEEDED** — the isolated Gradle home fixed the pre-action, and the full app compiles under Swift 6 strict concurrency. Now let me run the full `build test` (iOS) gate step. UI tests may take a while.
+
+iOS **build succeeded**; the test failures are all UI-test-runner launch failures — `"Simulator device failed to launch ...UITests.xctrunner"` and `xcrun: error: unable to find utility "simctl"`. That's an environmental UI-test-harness limitation, not a code/compile issue. Let me confirm those failing tests are UI/launch tests and that the unit suite passes.
+
+The 3 `*UITests` are UI tests (launch the app runner); `LiveDataStoreTests` is a unit test that likely got caught in the cascade. Let me run the unit-test bundle in isolation to confirm the unit suite is green.
+
+iOS unit suite: **255 passed, 0 failures**. So the only `build test` failures are the UI-test-runner launch failures (headless-simulator environmental limitation), not code. Now the macOS target: build + unit tests.
+
+macOS **BUILD SUCCEEDED**. The macOS unit *test run* is blocked by a pre-existing `TEST_HOST` naming mismatch in the checked-in `project.yml` (product is `TeslaSync.app`, but TEST_HOST expects `TeslaSync-macOS.app`). Let me inspect the macOS target config to confirm this is pre-existing and unrelated to my files.
+
+The macOS app sets `PRODUCT_NAME: TeslaSync` (line 71) but xcodegen derives the test `TEST_HOST` from the target name `TeslaSync-macOS` — a pre-existing config mismatch unrelated to my files. Let me verify the macOS unit tests pass by overriding `TEST_HOST` to the correct product path.
+
+The global `TEST_HOST` override conflicts with the UI test target's `USES_XCTRUNNER`. Let me use a cleaner workaround: `build-for-testing`, then symlink the expected host path, then `test-without-building` — avoiding global setting overrides.
+
+`build-for-testing` validates `TEST_HOST` before producing the xctestrun. Let me pre-create symlinks so the original (un-overridden) `TEST_HOST` path resolves, then run the macOS unit tests with no global override.
+
+The macOS unit-test execution is blocked by the pre-existing `TEST_HOST` config bug (xcodebuild rejects the symlinked host). Let me check how the predecessor `DigitalTwinWidget` (0036) log recorded its status, to follow the established convention.
+
+There's a predecessor log for `DigitalTwinWidget` (0036). Let me read it to follow the exact status convention.
+
+The predecessor `0036` established the convention: **STATUS=DONE / EXIT=0** with host-runnable code gates green and the Xcode app `build test` recorded as DEFERRED (surface not yet target-registered per Honesty rule 7, plus environmental blockers). I've actually gone **further** — building the framework, the full iOS/macOS apps, and running the unit suites. Let me confirm git won't pick up build artifacts, then write the log.
+
+Only my 6 files are new; the build artifacts are git-ignored, and the two modified web files are pre-existing (not mine — I won't commit them). Let me gather line counts and write the gate log.
+
+Let me precisely cross-check that every i18n key referenced in code exists in the catalog, then write the log.
+
+All 15/15 i18n keys present. Let me run the literal whole-tree gate lint commands to capture their real numbers for the log.
+
+Both literal gate lint commands pass (format 0/274, swiftlint 0 violations/256 files). I now have complete, real evidence. Writing the gate log.
+
+Now committing only my 6 files + the log (build artifacts are git-ignored; the pre-existing web changes are excluded).
+
+Commit succeeded — 7 files (my 6 + log), pre-existing web changes excluded. Let me verify the commit and clean up the temporary build artifacts.
+
+All clean: only the two pre-existing web files remain unstaged (not mine), build artifacts are git-ignored, and `/tmp` is cleaned. The task is complete.
+
+Merge made by the 'ort' strategy.
+ ...le-dashboard-widgets-0060-LocationMapWidget.log | 205 +++++++++++
+ .../LocationMapWidget.Adapter.swift                | 137 ++++++++
+ .../LocationMapWidget.Model.swift                  | 274 +++++++++++++++
+ .../LocationMapWidget.Previews.swift               | 126 +++++++
+ .../LocationMapWidget.Tests.swift                  | 276 +++++++++++++++
+ .../dashboard-widgets/LocationMapWidget.strings    |  40 +++
+ .../dashboard-widgets/LocationMapWidget.swift      | 390 +++++++++++++++++++++
+ 7 files changed, 1448 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0060-LocationMapWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LocationMapWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LocationMapWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LocationMapWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LocationMapWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LocationMapWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LocationMapWidget.swift

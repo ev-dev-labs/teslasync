@@ -1,0 +1,92 @@
+I'll start by understanding the task: create a native Apple (SwiftUI) version of the `LiveVehicleState` web component. First, let me check platform capabilities and explore the existing structure.
+
+Swift 6.3.2 is present, plus swiftlint/swiftformat, but **`xcodebuild` requires full Xcode and only Command Line Tools is installed**. Let me verify SDK/simulator availability and explore the existing Apple app structure to understand the patterns I must follow.
+
+Key capability findings: **no Xcode (Command Line Tools only), no iOS Simulator SDK, no `simctl`** — but Swift 6.3.2 compiler, macOS SDK, SwiftUI/Charts/MapKit imports, swiftlint, swiftformat, and xcodegen all work. The iOS/macOS `xcodebuild` gate cannot run here. I'll still ship the complete implementation and run every verification I can. Let me study the existing patterns deeply.
+
+Good — there are 3 existing feature-views as templates. `TelemetryErrorsPanel` (a "Panel") is the closest analog. Let me read its full file set plus the shared components and design tokens I'll need.
+
+Excellent template. Now let me read the Previews/Tests/strings for the template, the shared components (Cards, States, Motion, Badges, Skeletons), design tokens, and the Live/Facade infrastructure for stale/offline handling.
+
+`FleetTelemetryHealth` is the template for the live/stale/offline states. Let me read its Model + Views, the design tokens, the shared feedback/motion/card components, the LiveConnection facade, and the web `SecurityEvent` type definition.
+
+Now I have the live/stale/offline pattern. Let me read the design tokens, shared feedback/motion components, the FleetTelemetryHealth Adapter+Tests (for projection/test patterns), and the web `SecurityEvent` type.
+
+`TSDesign.swift` only holds chart/animation tokens. Let me locate the core token definitions (`TSSpacing`, `Color.TS`, `Font.TS`, `TSTone`, `TSIconBox`, `TSSkeleton`, `TSStatusPill`) and read the web `SecurityEvent` type plus the shared feedback/motion components.
+
+Now I have the `SecurityEvent` field set (the 10 tile fields). Let me read the design-token source, plus the shared Badges/Skeletons/States/Motion/Cards components to learn the exact APIs (`TSTone`, `TSStatusPill`, `TSIconBox`, `TSSkeleton`, EmptyState, FadeIn, GlassPanel).
+
+Now the key design tokens file and the remaining shared components (Motion=FadeIn, Cards=GlassPanel, Skeletons), plus the web EmptyState/FadeIn/GlassPanel for parity mapping.
+
+I now have all design tokens and shared components. Let me check a few integration details: the `TSCard`/GlassPanel API, whether Components import the KMP `Shared` framework (affects my ability to type-check), `pwsh`/placeholder-script availability, the FleetTelemetryHealth tests (for connection/snapshot test patterns), and the pending-integration model.
+
+`pwsh` is available and no Components import the KMP `Shared` framework — so I can genuinely type-check Components+Tokens+my new SwiftUI files against the macOS SDK. Let me read the placeholder checker/patterns (my code must pass it), the rest of the FleetHealth tests, and the web GlassPanel/EmptyState/FadeIn for parity.
+
+I have the placeholder rules (avoid "TODO/FIXME/XXX/placeholder/not implemented/Coming soon/mock/stub"). Let me validate my type-check harness approach now (compile the self-contained Components+Design+Tokens against the macOS SDK) and read the web EmptyState + the parity manifest entry in parallel.
+
+The Components aren't fully self-contained (`UnitFormatters.swift` needs `UnitPreferences` from the KMP layer). I'll compile only the clean subset I use. Let me identify clean component files and read the parity manifest entry for LiveVehicleState.
+
+Only `UnitFormatters.swift` is unclean. Let me confirm the clean subset (all Components except that file, + Design + Tokens) type-checks — that's my harness for the view files.
+
+Clean subset compiles (EXIT=0) — that's my view harness. `LiveVehicleState` isn't in the parity manifest (web source is the spec). Let me read `asNonEmptyString`/`cn` for exact parity, then I'll start building.
+
+`asNonEmptyString` confirmed (non-empty string only; bool/number/null → null). I have full parity understanding. Let me read the lint/format configs, then build. Let me set up tracking and the plan.
+
+Critical config insight: like `project.yml`, **`swiftlint`'s `included:` paths don't list `feature-views`** (pending-integration model), and swiftformat checks the whole tree via `--exclude` only. So I must keep code lines ≤120 and run swiftformat on my files. Let me write the plan, then build all 7 files.
+
+Now building the Adapter (pure, testable core).
+
+I introduced an unnecessary `emptyLabelMarker` hack for the two count tiles. Let me fix those to localize their labels directly like every other tile (matching the web exactly).
+
+Now let me type-check the Adapter standalone before moving on.
+
+Expected — `LiveVehicleStateLoadStatus` lives in the Model file (same split as FleetHealth). They compile together. Let me write the Model next.
+
+Now the main view and subviews. Let me write both.
+
+Now the subviews.
+
+Now let me type-check the Adapter+Model+View+Views together against the clean harness.
+
+View layer type-checks clean. Now the Previews and strings files.
+
+Now the comprehensive test suite (adapter parity for all 10 tiles, projection per-state, model wiring/telemetry/stale, accessibility).
+
+All 7 files written. Now the verification pass — swiftformat lint, swiftlint, placeholder check, and XCTest availability, on my files.
+
+Placeholder gate passes (COUNT=0). Two formatting issues + one line-length (123>120). XCTest isn't available with CLT (test type-check needs a shim — I'll handle that). Let me auto-format my files with swiftformat (the ecosystem tool), then re-lint.
+
+swiftformat passes now, but its `conditionalAssignment` rewrite introduced a swiftlint `void_function_in_ternary` violation. Let me inspect that spot.
+
+False-positive conflict between swiftformat (wants if-expression) and swiftlint (flags the ternary branch). I'll refactor `driverSeat` to use a clean `seatLabel` helper (same shape as `boolLabel`, which lint accepts) — clearer and testable.
+
+Let me add a direct `seatLabel` helper test, then re-run format + lint + the harness type-check.
+
+Both swiftformat and swiftlint pass clean (0 violations). Now let me re-type-check the full production set (including Previews with `-D DEBUG`), and validate the test bodies via a minimal XCTest shim (since real XCTest isn't in CLT).
+
+`#Preview` needs Xcode's `PreviewsMacros` plugin (absent in CLT) — affects my previews *and* every shared component's previews equally; previews are DEBUG-only and out of gate scope. Let me confirm the production set (no DEBUG) still type-checks after my edit, and validate the test bodies via an XCTest shim.
+
+Everything type-checks (PROD_EXIT=0, TEST_EXIT=0 via shim). Let me run the gate's whole-tree `swiftlint --strict` and `swiftformat --lint apps/apple` to capture baseline, confirm git status shows only my new files, and re-run the placeholder gate.
+
+Whole-tree `swiftformat --lint` passes (0/659 need formatting). Note: two pre-existing *web* file modifications exist in the tree that I didn't touch — I'll stage only my files for the commit. Now the gate's whole-tree `swiftlint --strict`.
+
+The whole-project lint found 1 violation — but `feature-views` isn't in swiftlint's `included` paths, so it can't be mine (my files lint clean explicitly). Let me confirm which file it is.
+
+Confirmed: the 1 swiftlint violation is **pre-existing** in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (outside my allowed-files scope, unmodified by me). My files lint 0 violations. Now let me generate the gate log with real evidence. First, check the log directory.
+
+Let me check a sibling log to match the established format and see how the same platform constraint was handled.
+
+The sibling log is revealing: that surface ran on a slot **with full Xcode** (it compiled against the iOS-18 simulator SDK and *executed* the XCTest suite via SwiftPM to justify `STATUS=DONE`). My runner has **no Xcode at all** — so I genuinely cannot compile for iOS, execute XCTest, or run `xcodebuild`. Per the prompt's capability clause, that makes my honest terminal state **BLOCKED** (SwiftUI itself is proven on macOS, but the full Apple build/test toolchain is absent). Let me capture authentic evidence and line counts for the log.
+
+All evidence captured (1379 lines across 7 files — a complete implementation, not a stub). Let me run one final consolidated verification to lock in exit codes, then write the log.
+
+All runnable checks green (typecheck 0, shim test typecheck 0, lint 0, format 0, placeholder 0). Now I'll author the honest gate log. Because this runner has no Xcode, the `xcodebuild` build/test, iOS-simulator compile, and XCTest *execution* are genuinely unavailable → `STATUS=BLOCKED` with evidence (SwiftUI itself is proven on the macOS 15 SDK).
+
+Now let me commit only my allowed files (the 7 surface files + the log) — explicitly excluding the two pre-existing unrelated web-file changes already in the tree.
+
+Staged exactly my 8 files; the 2 unrelated web changes remain unstaged. Committing now.
+
+Commit `f17df4ce` landed with exactly the 8 files (1605 insertions). Let me finalize: update tracking, confirm a clean tree, and do a post-commit sanity re-check of the runnable gate.
+
+The task is complete to the maximum extent this runner allows, committed, and honestly documented. Final state verified clean.
+

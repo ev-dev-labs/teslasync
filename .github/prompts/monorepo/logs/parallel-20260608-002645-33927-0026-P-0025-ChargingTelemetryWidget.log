@@ -1,0 +1,122 @@
+I'll start by exploring the environment and understanding the task requirements.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed, and `simctl` is unavailable. `swift`, `swiftlint`, `swiftformat` ARE available. Let me read the web source and explore the existing Apple app structure to match conventions.
+
+Let me explore the target output directory and existing sibling widgets to match conventions exactly.
+
+The output directory already has many sibling widgets following a `<WidgetName>.<Part>.swift` pattern. Let me find the best reference widgets and understand the full file-set convention.
+
+`ChargingTelemetryWidget` doesn't exist yet — I'm creating it (widget 0025). The canonical file-set is: `.swift`, `.Model.swift`, `.Adapter.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`. Let me study the most similar siblings (charging/telemetry with stat-grid + sparkline + empty state).
+
+`WallConnectorWidget` (charging-related, uses Adapter) is the ideal primary template. Let me read its complete file-set.
+
+Excellent template. Now I need to understand the shared infrastructure: design tokens, whether `DashboardWidgetSize`/`registration` types are shared or per-widget, and the shared widget components. Let me investigate.
+
+`DashboardWidgetSize`/`DashboardWidgetRegistration` are redefined per-widget — a self-contained convention I must follow. Let me check the project structure and read the closest analog (`MotorPerformanceWidget`, which has the stat-grid + compact/wide + sparkline pattern) plus design tokens and a Previews/Tests example.
+
+Now I understand the structure well. Let me gather the remaining essentials: design tokens, the native Sparkline equivalent, a Previews + Tests + strings example, and confirm the per-widget registry-type convention.
+
+Confirmed: the registry types are redefined per-widget (pre-existing across all siblings) — a self-contained convention. Since there's no Xcode, the full-target build can't run here, but the pure adapter can be compiled+tested with plain `swift`. Let me read the design tokens, native Sparkline, sub-views, tests, the placeholder script, and the web hook/shell/stat-grid for full parity.
+
+Let me read the design tokens, a Tests example, the native Sparkline, and the web-side hook/shell/stat-grid for exact parity.
+
+Let me read the web data hook/types (to nail the exact data shape and the power/efficiency math), the web shared widgets (StatGrid, Sparkline, WidgetShell), and confirm the native Sparkline + TSSkeleton.
+
+Now let me confirm the number-format semantics, the canonical registry entry, the native Sparkline, `TSSkeleton`, and the web i18n values.
+
+Let me read the Motor freshness chip/components and the placeholder-check script to match those conventions, then I'll have everything to implement.
+
+Let me check the placeholder patterns (to avoid tripping the gate) and the Motor `.Support.swift` (strings `.text()` helper + connection/source/model naming), then I'll write all files.
+
+Let me check the lint/format configs so my code passes `--strict`, then write the implementation.
+
+I have all conventions mapped. Now writing the implementation. Let me set up tracking and create the **Adapter** (pure, Foundation-only — the testable projection core) first.
+
+`pwsh` is available (good — I can run the real gate script). Now writing the **Adapter** (pure projection core).
+
+Now the **Model** (state-holder seam, observable model, registry metadata, i18n facade).
+
+Now the **Views** (presentational subviews: stat grid, charger badge, power sparkline, empty state, freshness chip).
+
+Now the main **`.swift`** surface view (compact / standard / wide composition + all states).
+
+Now the **Previews** (DEBUG-only, every state) and **strings** catalog.
+
+Now the **strings** catalog (P1/S10):
+
+Now the **Tests** file (adapter + model + registry + accessibility coverage).
+
+All 7 files created. Let me update tracking and verify i18n key completeness (every key used in code must exist in the strings catalog).
+
+All i18n keys resolve. Now running **swiftformat --lint** on my files (using the project config).
+
+Minor formatting (inline loop bodies + a few long lines). Let me auto-fix with the project's swiftformat, then re-lint to confirm.
+
+swiftformat passes (0/6 require formatting). Now **swiftlint --strict** on my files.
+
+Two files are 2–5 lines over swiftlint's 400-line limit (enforced as error under `--strict`). Let me trim the verbose header/doc comments in those two files (the style guide favors lean comments anyway).
+
+Now re-run both linters on all 6 files to confirm clean.
+
+Both linters pass with **0 violations**; both files now ≤400 lines. Now the **placeholder check** (the real gate script via pwsh). Let me inspect the script's args first.
+
+The gate's literal `-Path` prefix scans nothing (clean trivially), so for honest evidence I'll scan my actual files via a temp dir, plus grep for forbidden patterns directly.
+
+Placeholder scan passes (COUNT=0). Now the **key correctness check**: compile/typecheck my SwiftUI code as an isolated module (my 5 production files + the design tokens + the shared `TSSkeleton` it depends on), since the full Xcode build can't run here.
+
+SDK has SwiftUI + Charts. Setting up the isolated module typecheck (Swift 6, strict concurrency, macOS 15 target, DEBUG to include previews).
+
+Only errors are the `#Preview` **macro-plugin** missing (ships with Xcode, not CommandLineTools) — not a code error; the compiler even resolved the macro's SwiftUI signature. All my actual code typechecked. Let me confirm by typechecking the production files (excluding the preview-macro file).
+
+The remaining errors are inside the shared `Skeletons.swift` file (it references `TSCard`, another component I didn't pull in) — not my code. Let me provide a minimal `TSSkeleton` shim matching the real signature and typecheck my 4 production files cleanly.
+
+Production code typechecks cleanly under **Swift 6 + strict concurrency (EXIT=0)**. Now let me prove the adapter math by compiling + **running** the real adapter file against an assertion harness (this actually executes the projection logic).
+
+Top-level code must be in `main.swift` when compiling multiple files. Let me rename the harness and rerun.
+
+That's a harness-only strict-concurrency nit (top-level mutable state). The production code already passed Swift 6 strict mode separately; let me build the runnable harness in default language mode.
+
+**All 29 adapter assertions PASS (executed, EXIT=0).** The projection math is verified against the web source. Now let me run the full-tree linters exactly as the gate does, to confirm my files don't regress the whole `apps/apple` tree.
+
+Whole-tree swiftformat found **1 pre-existing violation in a sibling file** (`feature-views/ActionBuilder.Previews.swift`) — not mine, and out of my allowed-files scope. My 6 files are clean. Let me record the whole-tree swiftlint state too.
+
+Let me identify that single whole-tree swiftlint violation to confirm it isn't one of mine.
+
+The single whole-tree swiftlint violation is in `LifetimeStatsWidget.Adapter.swift` — again a **pre-existing sibling file, not mine**. Both whole-tree lint issues are pre-existing and outside my allowed-files scope. My 6 files pass everything.
+
+Now let me generate the authentic gate log (running the real gate commands + my supplementary verifications). First confirm the logs dir.
+
+Now generating the authentic gate log — running the real gate commands plus my supplementary verifications, teeing to the log file.
+
+Log is complete and honest. Let me clean up temp artifacts and review exactly what will be committed.
+
+My 7 widget files + log are untracked and ready. The other modified files (AIUsageCard, web/*) are pre-existing and unrelated — I'll stage **only** my files explicitly. Committing now.
+
+Exactly 8 files staged. Committing with the prescribed message.
+
+Committed cleanly (8 files, +2035). Let me finalize tracking and do a last acceptance cross-check.
+
+All acceptance checks pass. The task is complete.
+
+## Summary
+
+I built the native Apple (SwiftUI) `ChargingTelemetryWidget` dashboard surface at full parity with the web source `features/dashboard/widgets/ChargingTelemetryWidget.tsx`, following the established sibling-widget architecture exactly.
+
+**Delivered 7 files** in `apps/apple/TeslaSync/dashboard-widgets/` + the gate log:
+- **`.Adapter.swift`** — pure projection core (isCharging, AC/DC charger type, efficiency, rolling 30-sample power history, `fmtNumber`/`fmtInt` parity, VoiceOver builders)
+- **`.Model.swift`** — P1/S8 source seam + `@Observable` model, P1/S11 `view.opened` diagnostics, registry metadata, P1/S10 i18n facade
+- **`.Views.swift`** — metric grid, AC/DC badge, emerald power sparkline (Swift Charts), empty state, freshness chip, refresh button
+- **`.swift`** — the surface: compact (1-col) / standard (2-col) / wide (≥4-col) layouts + loading/error/not-charging/charging states
+- **`.Previews.swift`** — 8 per-state previews · **`.Tests.swift`** — adapter+model+registry+a11y XCTests · **`.strings`** — full i18n catalog
+
+**Verification (every check runnable on this runner passed):**
+- `swiftformat --lint`: 0 issues · `swiftlint --strict`: 0 violations (both files ≤400 lines)
+- `check-placeholders`: PLACEHOLDER_COUNT=0
+- `swiftc -typecheck` (Swift 6, `-strict-concurrency=complete`, macOS 15): **0 errors**
+- Adapter projection harness **compiled + executed: 29/29 assertions PASS**
+- All 24 i18n keys resolve; registry parity exact (`charging-telemetry`, 2×2/1×2/4×40); no networking in the view; a11y labels on every element
+
+**Gate status: `STATUS=BLOCKED`** (honest, and explicitly sanctioned by the prompt's acceptance criteria). The two `xcodebuild build test` steps require full Xcode + an iOS Simulator; this runner has CommandLineTools only (`xcode-select -p → /Library/Developer/CommandLineTools`, `xcrun simctl` unavailable). The log at `.github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0025-ChargingTelemetryWidget.log` records the platform-capability evidence plus all passing substitute verifications, and notes two pre-existing whole-tree lint issues in **sibling** surfaces (outside this prompt's allowed files, untouched).
+
+Committed as 8 files (`51902b9`) with the prescribed message and Co-authored-by trailer.
+

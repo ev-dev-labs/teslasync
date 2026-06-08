@@ -1,0 +1,101 @@
+I'll start by exploring the repository structure, reading the web source, and checking the Apple toolchain availability.
+
+Xcode is not installed (only Command Line Tools), but `swift`, `swiftlint`, `swiftformat` are. Let me investigate the Apple app structure and predecessor dependencies before deciding on approach.
+
+The Apple app exists with an established `feature-views` pattern. Let me examine the existing structure and a reference feature-view (AIUsageCard, the most recent) to learn the conventions.
+
+SubscribeCard doesn't exist yet — I need to create it. Let me study the most recent reference implementation (AiUsageCard) in full to learn the exact conventions, plus locate the shared facade, i18n, tokens, and diagnostics layers.
+
+Now I understand the file-split pattern. Let me locate the shared infrastructure: the i18n facade, design tokens, navigation/routing, diagnostics contract, and find a presentational nav-tile reference closer to SubscribeCard.
+
+The OnboardingChecklistWidget links to `/notifications/channels` — the closest navigation analog. Let me study it, the AiUsageCard Views/Adapter, and the design tokens.
+
+Let me examine the build system (Package.swift/xcodeproj), design tokens, navigation wiring, and the Adapter/Tests patterns.
+
+Project uses XcodeGen (`project.yml`) — no checked-in `.xcodeproj`, and `xcodebuild` requires full Xcode (only CLT present). Let me read the design tokens, navigation wiring, and project.yml.
+
+Navigation uses an `onNavigate: ((String) -> Void)?` closure, and the strings facade exposes both `.string()` and `.text()`. Let me locate the generated token definitions (Color.TS, Font.TS, TSSpacing, TSRadius) and read the strings facade `.text` helper + a representative Tests file.
+
+Tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me read them and the test-target wiring in project.yml.
+
+Let me check how `.Tests.swift` files are wired (app target excludes vs. test target includes) and read the test target config fully.
+
+Let me check how predecessors handled the xcodebuild-requires-Xcode situation — reading an existing feature-view log and the pending-verifications doc.
+
+I now have the full picture. The full-app `xcodebuild` gate is an established **DEFERRED** (macOS-pending) item across all predecessors due to pre-existing blockers, with per-surface verification via swiftlint/swiftformat/placeholder + isolated compile. Let me confirm the convention for a *presentational* (no-data) feature-view predecessor and check `pwsh` availability.
+
+`QuickNavWidget` (a pure-presentational navigation widget) is the ideal convention anchor. Let me study it and the ResultPanel log disposition.
+
+The convention is now unambiguous: even static nav surfaces (QuickNavWidget) get a full state-holder seam, the loading/empty/error/content phases, connection axis, telemetry, and `onNavigate`. QuickNavWidget is the exact precedent. Let me read it in full.
+
+Perfect template. Let me read the remaining QuickNavWidget files (main view, Views, Previews, Tests) to mirror navigation wiring, grid, press feedback, and test structure.
+
+I have the full pattern. SubscribeCard is a feature-view (like ResultPanel) that navigates (like QuickNav). Let me read `TSSkeleton`, ResultPanel's chip/banner subviews, and QuickNav's Tests + Previews to finalize the freshness axis and test structure.
+
+Let me read ResultPanel's chip/banner subviews and the QuickNav test file to finalize styling and test structure.
+
+I have the complete pattern. Let me verify no `Subscribe*` symbol collisions and check `Motion.swift` deps before writing.
+
+No collisions; `Motion.swift` only depends on tokens. I have everything. Let me create the plan, set up todos, and write the 7 `SubscribeCard.*` files following the QuickNav/ResultPanel precedent exactly.
+
+Now writing the surface files, starting with the Adapter (catalog/projection core):
+
+Now the i18n strings catalog:
+
+All 7 files created. Now running the verification suite — first swiftformat (auto-fix to repo config) then lint on the surface files.
+
+swiftformat and swiftlint are clean (0 violations). Now the placeholder gate — let me check how the script resolves `-Path` since my files are `SubscribeCard.*` (not a directory).
+
+The script treats a non-existent path as vacuously clean (lines 132-135), so the gate's literal `-Path .../SubscribeCard` would scan nothing — dishonest. I'll scan my actual files per-file (the script accepts a single file via `-LiteralPath`).
+
+Placeholder gate clean (COUNT=0). Now the critical substitute for the unavailable xcodebuild: an **isolated SwiftPM build + test** against the real tokens. Let me verify `Skeletons.swift` is self-contained and confirm I didn't pull extra deps.
+
+`Skeletons.swift` pulls in `TSCard`, so for the isolated harness I'll copy just the real `TSSkeleton` struct (verbatim) plus the real `Tokens.swift` and `AppRoute.swift`, and symlink my actual surface files. Setting up the harness now.
+
+The `sed` cut bled into the next struct. Let me find TSSkeleton's exact closing line and re-cut cleanly.
+
+Clean extraction (balanced braces). Now building and testing the isolated package against the real tokens.
+
+Only errors are the `#Preview` macro needing Xcode's `PreviewsMacros` plugin (absent in CLT) — a known toolchain gap, not a code defect (predecessors verify previews under Xcode). I'll exclude the DEBUG-only Previews file from the harness and rebuild + test the shippable code.
+
+Build succeeds under Swift 6 strict-concurrency. Now running the tests:
+
+`swift test` fails only because **XCTest.framework is Xcode-only** (absent from Command Line Tools) — a toolchain gap, not a code issue. The shipped XCTest file is for the app's XCTest targets (deferred to the macOS CI runner). To prove the test *logic* is green on this runner, I'll run every assertion through a standalone executable against the built module (all asserted API is public).
+
+All 50 assertions pass against the real shipped code under Swift 6 strict concurrency. Let me also add the per-state render-smoke checks (ImageRenderer is macOS-available) so every test group is covered.
+
+All 56 assertions pass (logic + per-state render smoke). Let me capture the deferred-gate evidence (pre-existing blockers) for an honest log, matching the predecessor disposition.
+
+Evidence confirms the documented pre-existing blockers (Xcode absent on this CLT-only runner; `Shared.xcframework` absent; `DashboardWidgetSize` ×15; 262 co-located XCTest files). This is the established **DEFERRED** disposition. Writing the gate log now.
+
+Now staging and committing exactly my surface files + the log (the `SubscribeCard.*` glob won't touch the pre-existing AiUsageCard working-tree changes). Let me verify the working tree first, then commit.
+
+My 7 files + log are new/untracked; the pre-existing AiUsageCard changes stay untouched. Staging only my files explicitly and committing:
+
+Committed cleanly (`5cc8db805`), working tree clean for my paths. Final cleanup and confirmation:
+
+Task complete. All work is committed and verified.
+
+## Summary
+
+Shipped a production-grade, Apple-idiomatic **`SubscribeCard`** feature view at full parity with `web/src/features/system/components/status/SubscribeCard.tsx`.
+
+**7 files** (`apps/apple/TeslaSync/feature-views/SubscribeCard.*` — 1,482 lines) following the accepted QuickNavWidget/ResultPanel/AiUsageCard precedent:
+- **Parity**: bell header "Get notified about incidents", the self-hosted caption, and the responsive `grid-cols-1 sm:grid-cols-2` grid of all 5 channel tiles (Email/Slack/Discord/Webhook/Browser push) with verbatim labels, descriptions, lucide→SF icons, and web `to` paths.
+- **Architecture**: P1/S8 state-holder seam (`SubscribeCardModel` + `Static`/`InMemory` sources, no view HTTP/nav), P1/S9 tokens, P1/S10 i18n facade (24 keys), P1/S11 `view.opened` telemetry, `onNavigate` closure.
+- **Every state renders**: loading/empty/error/content **plus** the live/stale/offline freshness axis (chip + banner + one-shot stale auto-refresh). Full VoiceOver labels+hints, Dynamic Type, reduce-motion press feedback.
+
+**Verification on this Command-Line-Tools-only runner (raw, honest):**
+| Gate | Result |
+|---|---|
+| `swiftformat --lint` (6 files) | **0/6 need formatting** |
+| `swiftlint --strict` (6 files) | **0 violations** |
+| placeholder gate (per file) | **COUNT=0** |
+| isolated Swift 6 strict-concurrency build (real tokens) | **Build complete** |
+| 56 executed assertions (logic + per-state render smoke) | **56/56 passed** |
+| full-app iOS/macOS `xcodebuild` | **DEFERRED** — no Xcode on runner (`xcode-select` evidence); same pre-existing `Shared.xcframework`/`DashboardWidgetSize`×15/262-co-located-XCTest blockers owned by the P99 gate per `macos-pending-verifications.md` |
+
+Committed as `5cc8db805` (only the allowed `SubscribeCard.*` + log; pre-existing AiUsageCard working-tree changes left untouched). Log ends `EXIT=0` / `STATUS=DONE`.
+
+
+

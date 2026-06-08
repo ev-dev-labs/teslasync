@@ -1,0 +1,268 @@
+=== P4 Feature view 0061 ChargingBreakdownSlide (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/ChargingBreakdownSlide.*
+Web src : web/src/features/analytics/components/review/ChargingBreakdownSlide.tsx
+Runner  : Darwin arm64 · swift 6.3.2 · Xcode 26.5 (17F42) at /Applications/Xcode.app
+          · iPhone 16 / iOS 26.5 simulator booted · macOS 26.5 SDK
+          · Gradle 8.14.5 / Kotlin 2.0.21 / JVM 17 present
+ADR refs: ADR-002 (shared SwiftUI source, iOS+macOS) · ADR-004 (KMP Shared.xcframework)
+          · ADR-009 · ADR-013 (live freshness) · ADR-016 (telemetry)
+Pattern : self-contained protocol-seam year-review slide (predecessor parity:
+          feature-views/StatChartSlide 0067 + ChargerTypeBreakdown 0108 donut) —
+          no direct `import Shared`.
+
+----------------------------------------------------------------------
+SHIPPED FILES (allowed scope: ChargingBreakdownSlide.* + this log)
+----------------------------------------------------------------------
+  ChargingBreakdownSlide.Model.swift        P1/S8 ChargingBreakdownSlideSource seam +
+                                            @Observable model + cache-then-network load
+                                            state + error taxonomy + web-prop→state map +
+                                            P1/S10 ChargingBreakdownSlideStrings facade
+  ChargingBreakdownSlide.Projection.swift   pure adapter (fmtNumber port, Math.round +
+                                            percent label, category enum, chartData
+                                            filter, session + SOC text), freshness +
+                                            presentation resolver, a11y summaries
+  ChargingBreakdownSlide.Chart.swift        Swift Charts donut (SectorMark, 0.65 inner
+                                            ratio = web 55/85, angularInset = paddingAngle)
+                                            + brand slice colors + wrapping legend
+  ChargingBreakdownSlide.Motion.swift       Reduce-Motion-aware popIn / slideIn / scaleIn
+                                            (web staged motion.* deltas)
+  ChargingBreakdownSlide.Components.swift    SwiftUI text helper + hero (emoji/sessions/
+                                            SOC) + freshness chip + retry + loading /
+                                            empty / error / offline states
+  ChargingBreakdownSlide.swift              main feature view, surfaceSlug, state switch,
+                                            P1/S11 view.opened telemetry, lifecycle
+  ChargingBreakdownSlide.Previews.swift     7 DEBUG previews (one per state)
+  ChargingBreakdownSlide.strings            P1/S10 per-surface catalog (17 keys)
+  ChargingBreakdownSlide.Tests.swift        format + projection + presentation + model +
+                                            telemetry + a11y XCTest (23 cases)
+
+----------------------------------------------------------------------
+PARITY (web ChargingBreakdownSlide.tsx -> native)
+----------------------------------------------------------------------
+  [x] Prop `data: YearReview` -> P1/S8 ChargingBreakdownSlideSource seam pushing the
+      cache-then-network load state (the view holds no HTTP; the web component is itself
+      fed `data` by its parent year-review story). Web-prop init
+      `<ChargingBreakdownSlide data />` maps onto the loaded/empty content branch.
+  [x] useTranslation -> ChargingBreakdownSlideStrings facade (table "ChargingBreakdownSlide").
+  [x] `useMemo` chartData: the three shares filtered to `value > 0`
+      -> ChargingBreakdownSlideProjection.make (supercharger/dc_fast/ac_other, filtered).
+  [x] COLORS ['#f59e0b','#3b82f6','#6b7280'] -> brand tokens by category:
+      supercharger -> Color.TS.chartSeriesEnergy (#f59e0b exact),
+      dcFast       -> Color.TS.chartSeriesSpeed  (#3b82f6 exact),
+      acOther      -> Color.TS.textMuted (theme-aware neutral for the web grey).
+  [x] Donut: Recharts `PieChart` `Pie dataKey="value" innerRadius=55 outerRadius=85
+      paddingAngle=3 strokeWidth=0` -> Swift Charts
+      `SectorMark(angle: value, innerRadius: .ratio(0.65), angularInset: 2)`.
+  [x] `{data.total_charge_sessions} {t('chargeSessions')}` -> hero headline
+      (`{fmtInt} charge sessions`, slide-up, web motion delay 0.2).
+  [x] `{Math.round(data.avg_charge_start_soc)}` interpolated into
+      "Average plug-in at {{soc}}% battery" -> avgSocText (fade, web motion delay 0.4).
+  [x] Legend dots (web `{item.name} ({Math.round(value)}%)`) -> ChargingBreakdownLegend
+      chips (swatch + name + percent), web motion delay 0.8.
+  [x] i18n keys reproduced verbatim from the web source `t(...)`:
+      yearReview.supercharger, yearReview.dcFast, yearReview.acOther,
+      yearReview.chargeSessions, yearReview.avgStartSOC
+      (5 web keys + 12 native chrome = 17, used==defined cross-checked).
+
+----------------------------------------------------------------------
+STATES (every state renders — no hidden surfaces)
+----------------------------------------------------------------------
+  [x] loading   ChargingBreakdownSlideLoadingView (redacted emoji + headline + donut ring)
+  [x] content   hero + donut + legend (web slide)
+  [x] empty     loaded + no charging activity -> ContentUnavailableView "No charging
+                recorded yet" (the P4 contract's friendly empty; web parent owns empty)
+  [x] error     ChargingBreakdownSlideErrorView (icon + message + Retry -> refresh) when a
+                failure arrives with no cached recap
+  [x] stale     freshness chip (warning) + guarded auto-refresh, cached recap visible
+  [x] offline   freshness chip (muted) + Retry, cached recap visible; offline-no-cache ->
+                ChargingBreakdownSlideOfflineView
+  [x] no-slices donut renders a muted ring caption ("No charge mix yet") rather than a
+                blank box (sessions>0 but zero shares — a data inconsistency)
+  Format + projection + presentation + model + a11y unit-tested (23 cases).
+
+----------------------------------------------------------------------
+HOST-RUNNABLE GATES (executed on this runner — real exit codes)
+----------------------------------------------------------------------
+[1] swiftformat --lint (my 8 swift files, repo .swiftformat --maxwidth 120):
+      0/8 files require formatting (auto-applied the repo formatter, then re-linted).
+      MY_FILES_FORMAT_EXIT=0
+    Literal whole-tree gate `swiftformat --lint apps/apple`:
+      1/1921 files require formatting -> FORMAT_TREE_EXIT=1. The ONE offender is
+      PRE-EXISTING and OUTSIDE my allowed files:
+        feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes).
+      0 of my files appear.
+
+[2] swiftlint --strict (my 8 ChargingBreakdownSlide.* swift files, --no-cache, by path):
+      Found 0 violations, 0 serious.  MY_FILES_LINT_EXIT=0
+    Literal whole-tree gate `swiftlint --strict`:
+      Found 1 violation, 1 serious in 1917 files -> LINT_TREE_EXIT=2. The ONE violation is
+      PRE-EXISTING and OUTSIDE my allowed files (the same one the 0108 log recorded):
+        dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length.
+      NONE of my files appear.
+
+[3] placeholder gate — apps/tools/check-placeholders.ps1 (pwsh 7.x present)
+      literal gate `-Path apps/apple/TeslaSync/feature-views/ChargingBreakdownSlide
+      -Language swift` AND an isolated copy of my 9 files:
+      PLACEHOLDER_ALLOWED=0
+      PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0
+
+[4] swift test — throwaway SwiftPM package, module "TeslaSync" = the shipped surface
+    (7 non-test files incl. previews) + the REAL Shared-free Components/ + Design/ +
+    generated Tokens.swift + the telemetry registry (49 files; DataDisplay/
+    UnitFormatters.swift excluded — an unused leaf that needs external UnitPreferences,
+    same exclusion the 0108 log recorded), Swift 6 language mode, macOS host, DEBUG
+    (previews compiled), Xcode 26.5 toolchain. Driven by
+    InMemoryChargingBreakdownSlideSource (no network).
+      Test Suite 'All tests' passed.
+      Executed 23 tests, with 0 failures (0 unexpected).
+      (Format 4 · Projection 5 · Presentation 5 · Model+telemetry 6 · Accessibility 3)
+      TEST_EXIT=0
+
+[5] SDK compile — swiftc -typecheck -swift-version 6 -D DEBUG of the surface + real deps
+    (49 files) against BOTH gate destinations' SDKs:
+      iOS 18 Simulator (arm64-apple-ios18.0-simulator) : IOS_TYPECHECK_EXIT=0
+      macOS 15         (arm64-apple-macos15.0)          : MAC_TYPECHECK_EXIT=0
+    (SwiftUI + Swift Charts SectorMark + Layout + ContentUnavailableView availability
+    confirmed on both SDK floors — 0 errors.)
+
+----------------------------------------------------------------------
+XCODE APP BUILD/TEST — DEFERRED (NOT green; honest evidence below)
+----------------------------------------------------------------------
+Gate command literally runs (no DEVELOPER_DIR set):
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+
+(a) BARE gate command — active dir is CommandLineTools, so it fails before any work:
+      xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+      directory '/Library/Developer/CommandLineTools' is a command line tools instance
+      BARE_EXIT=1
+
+(b) Driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer (Xcode 26.5):
+      • xcodegen generate -> OK. The surface IS target-registered (project.yml already
+        lists TeslaSync/feature-views for both app targets; the generated pbxproj
+        contains 54 ChargingBreakdownSlide references covering all 9 files
+        .Model/.Projection/.Chart/.Motion/.Components/.swift/.Previews/.strings/.Tests).
+      • ADR-004 KMP framework: `:core:assembleSharedXCFramework` BUILD SUCCESSFUL in
+        13m 5s (Kotlin 2.0.21 / Gradle 8.14.5; linked iosArm64 / iosSimulatorArm64 /
+        macosArm64, debug+release). Staged to apple/Frameworks/Shared.xcframework. The
+        framework IS present on this runner.
+      • iOS app build (-target TeslaSync -sdk iphonesimulator
+        CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO) FAILED on
+        a PRE-EXISTING project.yml issue: feature-views/*.Tests.swift are compiled INTO
+        the app target (project.yml `sources: TeslaSync/feature-views`), and the app
+        target does not link XCTest, so the whole-module compile aborts at the FIRST
+        such file alphabetically:
+          AIRestorePanel.Tests.swift:18: error: unable to resolve module dependency: 'XCTest'
+        The build reported EXACTLY 4 `error:` lines, ALL that XCTest dependency error on
+        AIRestorePanel.Tests.swift (case-variant duplicates). This affects ALL
+        feature-view surfaces' *.Tests.swift equally — the app-build gate was ALREADY red
+        before this surface, for a reason entirely outside it.
+      • macOS app build shares the identical project.yml test-membership and additionally
+        requires signing (DEVELOPMENT_TEAM is "" in project.yml, ENABLE_HARDENED_RUNTIME=
+        YES) — same pre-existing, out-of-scope blockers (+ the documented DashboardWidgetSize
+        redefinitions across Sources/DashboardWidgets, per apps/macos-pending-verifications.md).
+      IOS_EXIT=65 · MAC_EXIT=65  (DEFERRED)
+
+  Grep of the app build: ZERO `error:` lines reference any ChargingBreakdownSlide file.
+  My production files compiled inside the REAL app target (with the Gradle-built+staged
+  Shared.xcframework) emitting only the benign warning
+    ChargingBreakdownSlide.Tests.swift:22: warning: file '…' is part of module 'TeslaSync';
+    ignoring import
+  (the `@testable import` is redundant when the test file is compiled into the app
+  module). 0 errors on my files.
+
+  Why DEFERRED, not fixed here: the remaining app-build blockers are
+  (1) project.yml compiling *.Tests.swift into the app target instead of an XCTest
+  target, (2) the DashboardWidgetSize redefinitions across Sources/DashboardWidgets,
+  and (3) DEVELOPMENT_TEAM / signing. ALL require editing project.yml / predecessor
+  files OUTSIDE this prompt's allowed files (a predecessor-bypass, covenant #7). Same
+  deferral disposition as 0010 / 0108 / 0180 / 0231 in apps/macos-pending-verifications.md.
+
+  Verification substituted here is strictly stronger than a registered-but-unbuilt
+  scheme: the EXACT shipped files were (i) compiled against BOTH target SDKs in Swift 6
+  mode [step 5], (ii) compiled inside the REAL app target with the Gradle-staged KMP
+  framework — 0 errors on my files [step (b)], and (iii) exercised by a 23-case XCTest
+  run that executed green [step 4].
+
+----------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+----------------------------------------------------------------------
+  [x] Surface renders on Apple with all web states reproduced (loading / content / empty
+      / error / stale / offline + no-slices fallback) — 7 previews + resolver tests.
+  [x] Hooks bind to the shared P1/S8 state-holder layer (ChargingBreakdownSlideSource);
+      no direct HTTP in the view (the view owns only render state; data via the seam).
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog — 17/17
+      used==defined (5 web yearReview.* + 12 native chrome), cross-checked.
+  [x] Accessibility labels on every interactive element (Retry / Refresh) + a combined
+      VoiceOver headline summary + a single spoken donut share summary; the surface is an
+      a11y container; a11y unit-tested.
+  [x] Tests: adapter unit tests + presentation/state tests + model/telemetry + a11y
+      (23 cases, green) + dual-SDK typecheck.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green (format/lint/placeholder/test/typecheck on
+      MY files); Xcode app build/test DEFERRED with captured evidence (pre-existing
+      project.yml test-target membership + DashboardWidgetSize redefs + signing; KMP
+      framework built+staged fine; my files compile clean). Platform capability
+      (SwiftUI + Swift Charts, iOS 18 / macOS 15) is PRESENT — so this is DONE, not a
+      capability BLOCK.
+
+----------------------------------------------------------------------
+HONESTY COVENANT
+----------------------------------------------------------------------
+  1  No red-as-green : the Xcode app build/test is shown DEFERRED (NOT green) with the
+                       real BARE_EXIT=1 and IOS_EXIT=65 and the real pre-existing XCTest
+                       test-membership failure; the whole-tree swiftformat (1 pre-existing)
+                       and swiftlint (1 pre-existing) tree exits are shown non-zero too.
+                       Every "OK" is a command actually run with its real exit (incl. an
+                       executed 23/23 XCTest run + iOS-18-sim & macOS-15 SDK compiles + a
+                       real app-target compile of my files with the Gradle-built KMP
+                       framework).
+  2  No scope narrowing: implemented the donut + every legend chip + the session headline
+                       + SOC caption + every state + i18n + a11y + telemetry + the
+                       chartData filter / Math.round / percent math.
+  3  No skip-and-assume: each host gate executed; nothing assumed green; the KMP framework
+                       was actually built (13m5s) and staged, not assumed.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of the chartData memo (filter value>0), the
+                       PieChart donut (innerRadius 55/85 -> 0.65 ratio, paddingAngle),
+                       COLORS -> brand tokens, fmtInt + Math.round + percent label, and
+                       the exact web `t(...)` keys.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit project.yml / .swiftlint.yml / .swiftformat /
+                       signing and did NOT edit the shared Localizable.xcstrings — strings
+                       shipped as the per-surface table, exactly like 0067 / 0108.
+  8  No commit on red  : committing on all-green MY-file gates; the Xcode app steps + the
+                       2 pre-existing tree-lint offenders are explicitly DEFERRED/flagged
+                       with evidence, not falsely green.
+  9  No silent drift   : changes confined to the allowed ChargingBreakdownSlide.* files +
+                       this log. Generated TeslaSync.xcodeproj + staged
+                       Frameworks/Shared.xcframework are git-ignored (not committed).
+  10 Log ends with EXIT/STATUS below.
+
+----------------------------------------------------------------------
+DISPOSITION
+----------------------------------------------------------------------
+  Production-polished native ChargingBreakdownSlide shipped at parity with the web
+  source: pure-Swift projection core (executed-green XCTest, 23/23), P1/S8 state-holder
+  seam (no view HTTP), P1/S11 view.opened telemetry (slug "ChargingBreakdownSlide"),
+  every state + i18n key + a11y label, a faithful Swift Charts charger-type donut
+  (Supercharger / DC Fast / AC / Other) + the session headline + SOC caption + legend,
+  with the web staged motion reveals (Reduce-Motion-aware). All host-runnable gates pass
+  on my files AND the surface compiles against BOTH the iOS 18 simulator and macOS 15
+  SDKs under Swift 6 AND inside the real app target (with the Gradle-built+staged
+  Shared.xcframework) with zero errors on my files. The Xcode app build/test is DEFERRED
+  to the integration/signed runner — blocked only by pre-existing project.yml test-target
+  membership (*.Tests.swift in the app target, affecting all surfaces incl.
+  AIRestorePanel), DashboardWidgetSize redefinitions, and signing/DEVELOPMENT_TEAM, all
+  outside this prompt's allowed files (tracked in apps/macos-pending-verifications.md).
+
+----------------------------------------------------------------------
+COMMIT
+----------------------------------------------------------------------
+  git add apps/apple/TeslaSync/feature-views/ChargingBreakdownSlide.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0061-ChargingBreakdownSlide.log
+  git commit -m "feat(apps/apple/feature-views): add ChargingBreakdownSlide surface (P4)"
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,125 @@
+=== P4 Dashboard widget 0017 ChargeHistoryWidget (Apple) ===
+Generated: 2026-06-07 (local macOS host, Xcode 26.5 / Build 17F42, Swift 6.x)
+Web source (spec): web/src/features/dashboard/widgets/ChargeHistoryWidget.tsx
+Native output:     apps/apple/Sources/Dashboard/Widgets/ChargeHistoryWidget*.swift
+Tests:             apps/apple/Tests/Unit/Dashboard/ChargeHistoryWidgetTests.swift
+i18n:              apps/apple/Localization/Localizable.xcstrings (+13 widget.chargeHistory.* keys)
+
+------------------------------------------------------------------
+PATH / DECOMPOSITION DEVIATIONS (declared)
+------------------------------------------------------------------
+The prompt's templated native path `apps/apple/TeslaSync/dashboard-widgets/` does
+not exist in this repo. The iOS/macOS app targets compile from `apps/apple/Sources/`
+(XcodeGen `project.yml`, sources: [Sources, Localization, ../design/generated/apple]).
+A file under `apps/apple/TeslaSync/` would NOT be compiled into any target. The
+surface was therefore placed in the real build tree, mirroring the web feature path
+`features/dashboard/widgets/`:
+
+  apps/apple/Sources/Dashboard/Widgets/ChargeHistoryProjection.swift   (domain + pure adapter + state)
+  apps/apple/Sources/Dashboard/Widgets/ChargeHistoryWidgetModel.swift  (seams + @Observable model)
+  apps/apple/Sources/Dashboard/Widgets/ChargeHistoryWidget.swift       (SwiftUI surface + previews)
+
+Decomposed into three cohesive files because SwiftLint `--strict` enforces the
+repo's 400-line file_length limit (longest pre-existing file is 390; no file uses
+a disable directive). A single monolith linted at 759 lines. The repo guidance
+explicitly prefers decomposition over monoliths.
+
+Tests live under the test target's source root `apps/apple/Tests/Unit/Dashboard/`
+(required by the "adapter + per-state + a11y" acceptance criterion).
+
+------------------------------------------------------------------
+PARITY SUMMARY (vs web source)
+------------------------------------------------------------------
+- Data: useVehicles (default vehicle id) + recent-10 charging query, bound via an
+  injected ChargeHistoryDataSource seam (P1/S8 state-holder plugs in) — no I/O in the view.
+- Projection: total_energy_added_wh (SI) -> kWh via ChargeEnergyUnit.fromSI, `.reverse()`
+  to oldest->newest, hasChartData == count > 1 (web `chartData.length > 1`); Total/Avg stats.
+- Layout: full 2x4 = Total/Avg + green (#10b981 ~ chartSeriesBattery / palette idx 2)
+  TSAreaChart; compact (cols<=1) = summary only. Registry: id `charge-history`,
+  category `charging`, default 2x4 / min 2x2 / max 4x40 (clamped).
+- States rendered: loading, content, empty ("No charge sessions yet"), error (QueryError
+  equivalent + retry), stale chip + auto-refresh, offline chip + cached value.
+- i18n: all strings via LocalizedStringKey -> Localizable.xcstrings (13 new keys, ar/en/he).
+- a11y: VoiceOver labels/values on panel, stats, chart, refresh; decorative icons hidden;
+  Dynamic Type via Font.TS ramp; reduce-motion honored by shared chart/feedback components.
+- Telemetry: view.opened with slug "ChargeHistoryWidget" via ChargeHistoryDiagnostics seam
+  (fired once on appear).
+
+------------------------------------------------------------------
+GATE RESULTS
+------------------------------------------------------------------
+[swiftformat --lint apps/apple/Sources/Dashboard apps/apple/Tests/Unit/Dashboard]
+  0/4 files require formatting.
+  FORMAT_EXIT=0
+
+[swiftlint --strict (config apps/apple/.swiftlint.yml, whole project)]
+  Done linting! Found 0 violations, 0 serious in 520 files.
+  LINT_EXIT=0
+
+[check-placeholders.ps1 -Path apps/apple/Sources/Dashboard]   PLACEHOLDER_COUNT=0  EXIT=0
+[check-placeholders.ps1 -Path apps/apple/Tests/Unit/Dashboard] PLACEHOLDER_COUNT=0  EXIT=0
+  PLACEHOLDER_EXIT=0
+
+[xcodegen generate]  Created project; ChargeHistory* referenced 24x (iOS+macOS+test targets).  EXIT=0
+
+[standalone macOS typecheck — production code, swift 6 + -strict-concurrency=complete]
+  swiftc -typecheck (Components+Design+Tokens+Dashboard, minus the one Shared-coupled
+  UnitFormatters.swift the widget does not use): 0 errors, 0 warnings.
+
+[native logic harness — the exact XCTest adapter/model/registry/telemetry logic compiled
+ as an executable under swift 6 + complete strict concurrency, linking real SwiftUI + the
+ shared TS component library]
+  32/32 assertions passed -> ALL_LOGIC_CHECKS_PASSED (exit 0)
+
+[KMP Shared.xcframework (gradle :core:assembleSharedXCFramework)]
+  BUILD SUCCESSFUL in 14m 37s -> ios-arm64, ios-arm64-simulator, macos-arm64; staged to Frameworks/.
+
+[xcodebuild -scheme TeslaSync-macOS build (whole app + my widget + Shared.xcframework)]
+  ** BUILD SUCCEEDED **   (MAC app compile+link of all 520 files incl. ChargeHistory*)  EXIT=0
+
+[xcodebuild -scheme TeslaSync -destination 'iPhone 16' ... test  (iOS)]
+  BUILD/compile phase: SUCCEEDED — app + TeslaSyncTests bundle (incl. ChargeHistoryWidgetTests.swift)
+    compiled with 0 errors for the iOS Simulator.
+  RUN phase: FAILED to launch test runner —
+    "xcrun: error: unable to find utility \"simctl\"" + CoreSimulator "(ipc/mig) server died" (Mach -308).
+  IOS_EXIT=65  (test EXECUTION blocked — see capability evidence below; compile = 0)
+
+[xcodebuild -scheme TeslaSync-macOS ... test  (macOS, native, no simulator)]
+  Blocked at build-settings evaluation: "Could not find test host for TeslaSync-macOSTests:
+  TEST_HOST evaluates to .../TeslaSync-macOS.app/Contents/MacOS/TeslaSync-macOS" — a PRE-EXISTING
+  project.yml mismatch (macOS target name `TeslaSync-macOS` vs PRODUCT_NAME `TeslaSync`, product is
+  TeslaSync.app). Overriding TEST_HOST then fails the UI-test target ("USES_XCTRUNNER and TEST_HOST").
+  Not editable (outside allowed files; affects all macOS unit tests repo-wide, not this widget).
+  MAC_EXIT=70  (app build = 0; unit-test host config pre-existing)
+
+------------------------------------------------------------------
+CAPABILITY / PLATFORM EVIDENCE (why test EXECUTION is BLOCKED)
+------------------------------------------------------------------
+1. `xcode-select -p` = /Library/Developer/CommandLineTools (Xcode.app present at
+   /Applications/Xcode.app but not selected). `sudo -n xcode-select -s ...` -> "a password is
+   required" (no non-interactive sudo). xcodebuild's test runner spawns the system /usr/bin/xcrun
+   which resolves the active developer dir via xcode-select (CLT) and cannot find `simctl`,
+   despite DEVELOPER_DIR/PATH being set for the parent. Builds work (they honor DEVELOPER_DIR);
+   the nested simulator launch does not.
+2. Shared single "iPhone 16" simulator under ~10 parallel sibling slots (slot-4/10/12/27/31/37/40/...
+   each running the same KMP+Xcode gate) -> CoreSimulator service repeatedly dies
+   ("(ipc/mig) server died", Mach -308). This is host contention, not a code defect.
+   A private, slot-exclusive device (`simctl create slot20-ios`) reproduced the IDENTICAL
+   failure ("server died" + simctl-not-found), isolating the root cause to (1) above
+   (xcode-select -> CLT), independent of device contention.
+3. This matches the repo's own protocol in apps/macos-pending-verifications.md: code is
+   written + host-runnable gates green; full Kotlin/Native + Xcode artifact/test verification is
+   "deferred to macos-latest CI runners" (one job per runner -> no simulator contention, and CI
+   selects Xcode). All produced evidence here exceeds that bar (real macOS app build + iOS test-bundle
+   compile both SUCCEEDED; logic verified by native harness).
+
+------------------------------------------------------------------
+HONESTY COVENANT COMPLIANCE
+------------------------------------------------------------------
+- No red-as-green: the iOS/macOS test-RUN did not pass and is reported BLOCKED, not DONE.
+- No stubs/scope-narrowing: full production surface + full XCTest suite shipped; every web state,
+  i18n key, a11y label, and telemetry event implemented. Verified by build + native logic harness.
+- No skip-and-assume: every host-runnable gate was executed and its real output recorded.
+
+EXIT=1
+STATUS=BLOCKED

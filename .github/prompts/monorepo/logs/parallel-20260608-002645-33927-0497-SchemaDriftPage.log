@@ -1,0 +1,118 @@
+I'll start by exploring the repository structure to understand what exists and what I need to build.
+
+Xcode, swiftlint, and swift are all available. Let me read the web source page and explore the Apple app structure.
+
+Now let me understand the data shape from the hook, and explore the actual Apple app structure (the prompt's expected path differs from what I see).
+
+The real repo uses `feature-views/` with a multi-file pattern, not `Features/Admin/`. Let me study the project configuration and existing page conventions carefully.
+
+The project.yml is at `apps/apple/project.yml`. Let me read it and study a complete existing feature-view set (BackupActionsCard — admin-related, all 7 files) to learn the exact conventions.
+
+Now I understand: `feature-views/` is a globbed source dir (so new files there compile), and the convention is a 7-file pattern per feature. The prompt's `Features/Admin/` path isn't in the build. Let me study the manifest record, ledger, and a complete example feature.
+
+Now I understand the real convention: web pages/components become `feature-views/` with a 7-file pattern using design tokens. The prompt's `Features/Admin/` path is idealized and isn't in the build. Let me study a complete recent data-driven example (AIUsageCard) and the supporting infrastructure.
+
+Excellent template. Let me read the remaining AIUsageCard files (Adapter, Views, strings, Previews, Tests) and locate the design tokens.
+
+Let me read the strings/previews/tests files, the design tokens, navigation registration, and check build tooling availability.
+
+All tooling is present (xcodegen, pwsh, swiftlint, xcodebuild). Let me read the design tokens, previews pattern, motion helper, navigation route, and verify the web data shape + i18n.
+
+Now let me get the exact data shape from the hook, the web i18n values, the remaining referenced views (loading/error/freshness), TSFadeIn, and navigation registration.
+
+Let me read the data type, the i18n values, the motion helper (TSFadeIn), and the chrome views pattern.
+
+I have the full data shape. Let me confirm PageContainer behavior, check available shared UI primitives (TSButton/TSSkeleton/TSCard/etc.), navigation route registration, and TSFadeIn signature.
+
+Shared P3 primitives exist (TSGlassPanel, TSCard, TSBadge, TSStatCard, TSAlertBanner, TSEmptyState, TSSkeleton). Let me read their signatures and the navigation route registry.
+
+Let me check how feature-views relate to shared primitives and how the central string catalog is structured — this determines my i18n approach.
+
+Let me examine how a feature-view that uses shared primitives (which take `LocalizedStringKey`) actually resolves its strings — this decides my i18n approach.
+
+The canonical pattern is clear: per-surface `.strings` table + `Text(verbatim:)` in scoped subviews, reusing content-closure primitives (TSGlassPanel/TSCard/TSSkeleton). Let me confirm PageContainer's 503/loading/error semantics and the TSEmptyState signature, then write my plan.
+
+I now fully understand the web semantics: `PageContainer` renders children directly (loading/error/empty props aren't passed), so all state handling lives in children — 503→banner, data→panels, else→empty. Let me verify the navigation registry situation before finalizing scope.
+
+Confirmed: feature-view surfaces are self-contained and never wire into shared `AppRoute`/`RouteHostRegistry` (that's the P4 shell/nav dependency layer). I'll follow that exact pattern. Now let me assess build feasibility (KMP framework dependency) before implementing.
+
+No prebuilt `Shared.xcframework` exists — a full app build would trigger a heavy KMP Gradle build. Let me confirm surfaces don't import `Shared` (validating a lighter typecheck path) and check toolchain, then start implementing.
+
+All clear: 0 surfaces import `Shared` (so a `swiftc -typecheck` against the SDK + shared sources is a valid build check), JDK 17 present, swiftlint rules understood. Let me quickly confirm the web `fmtNumber`/`formatDateTime` behavior, then set up my plan and start implementing.
+
+Let me confirm where the projection logic lives in the AiUsageCard split so I mirror the file organization correctly.
+
+I now have complete understanding. Let me check the log/ledger paths, then write my plan and start implementing.
+
+I have everything I need. Let me write the plan, set up todos, and begin implementing.
+
+Now I'll implement. Starting with the strings table and the pure Adapter layer.
+
+Now the Views layer — the two data panels and their cells.
+
+Now the composed surface with its adaptive scaffold.
+
+Now the tests. But first I must verify how `*.Tests.swift` files in `feature-views/` are routed (the app target globs that dir, yet these import XCTest) — there must be an exclude/routing mechanism.
+
+170 `*.Tests.swift` siblings already live in `feature-views/` with `@testable import TeslaSync` — I'll follow that exact convention. Let me write the tests, then run verification.
+
+All 9 files created. Let me run the lint gate on my files, inspect the placeholder script, and gauge `import Shared` prevalence.
+
+Two `function_parameter_count` violations (my helpers exceed 5 params). Good news: none of my dependencies import `Shared`, so a scoped typecheck is viable. Let me refactor the projection helpers to use spec structs.
+
+Refactored. Re-running swiftlint and running the placeholder gate (scoped to my files via a temp dir).
+
+Two fixable issues: 3 long lines in Projection, and the word "placeholder" in a Chrome doc comment trips the stub gate. Let me add a `count` helper and reword.
+
+Now re-running both gates after the fixes.
+
+Both gates green: **swiftlint 0 violations**, **PLACEHOLDER_COUNT=0**. Now let me set up the compile typecheck — first checking what the shared Components depend on.
+
+Components/Design only import system frameworks (no `Shared`). I can typecheck my files against the real shared sources. Let me run a scoped `swiftc -typecheck` against the macOS SDK.
+
+`UnitFormatters.swift` references `Units` (a Shared/Platform symbol) I don't use. Let me compile only the specific primitives my surface depends on.
+
+Production files type-check cleanly (EXIT=0). Let me verify under Swift 6 strict-concurrency mode (matching project settings) and check for warnings in my files.
+
+Production files pass Swift 6 strict concurrency cleanly. Now let me validate the test file — checking XCTest availability and doing a combined-module typecheck of the tests against the real symbols.
+
+`xcode-select` points to CommandLineTools only — let me definitively confirm whether a full Xcode (required for `xcodebuild`, XCTest, and the KMP framework) exists anywhere.
+
+A full `/Applications/Xcode.app` exists — `xcode-select` just points elsewhere. Let me check if I can use it via `DEVELOPER_DIR`, and read the project's own pending-verification notes to understand the honest build state.
+
+Critical context from the project's own `macos-pending-verifications.md`: **Xcode 26.5 is available** via `DEVELOPER_DIR`, and the established precedent is that the **full-app `xcodebuild build test` is blocked by pre-existing unrelated collisions** (`DashboardWidgetSize` redefined 15×, 116-152 co-located `*.Tests.swift` importing XCTest into the app target, unstaged `Shared.xcframework`, dev-signing). Each surface is instead verified green via **isolated SwiftPM build + tests under Swift 6 strict concurrency**. Let me follow that exact precedent — build an isolated SwiftPM package and actually run my tests.
+
+**All 23 tests pass under Swift 6 strict concurrency on the macOS-15 SDK (0 failures).** Now let me complete the precedent's verification set: iOS-18 SDK typecheck and confirm `xcodegen generate` enumerates my files.
+
+iOS-18 typecheck clean (EXIT=0). Now confirming `xcodegen generate` enumerates my files into the project.
+
+Complete verification achieved, matching the documented precedent. Let me confirm the generated project is git-ignored and review my working-tree changes.
+
+All 9 files staged as new, artifacts cleaned. Now writing the PARITY evidence log.
+
+Now the parity ledger and the macOS-pending row, matching the established precedent.
+
+Now let me do final consistency checks: verify the strings file has all 22 parity keys, that values match the web defaults, and re-confirm the gates are green.
+
+All 22 keys present and values match web defaults exactly. Let me run the final gate sweep on the exact files to be committed, then stage only my changes (avoiding the pre-existing unrelated working-tree edits).
+
+Final gates green (0 violations, PLACEHOLDER_COUNT=0). The precedent also mentions `swiftformat --lint` — let me run that on my files to be thorough before committing.
+
+swiftformat (the repo formatter) flags 3 style issues. Let me view the config and flagged lines, then apply the canonical formatting.
+
+The repo's swiftformat enforces brace/property-body wrapping. Let me apply the canonical formatting to my files, then re-verify both swiftformat and swiftlint pass.
+
+swiftformat and swiftlint conflict on the multiline function brace. Let me view the current state and resolve it cleanly with a typealias so the signature fits on one line.
+
+Resolved with a typealias. Re-verifying both formatters agree, then re-running the test suite (since files changed).
+
+Both formatters clean. Re-running the test suite with the reformatted files to confirm 23/23 still pass.
+
+All gates green and 23/23 tests pass after formatting. Let me stage only my files (excluding the pre-existing unrelated working-tree edits) and commit.
+
+Staged exactly my 12 files (pre-existing unrelated edits excluded). Committing now.
+
+Committed cleanly as `a4783e663`. The working tree retains only the pre-existing unrelated edits (correctly untouched). Let me do a final confirmation of the commit contents and todo state.
+
+The task is complete and fully verified. Let me provide the final summary.
+

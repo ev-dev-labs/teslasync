@@ -1,0 +1,107 @@
+=== P4 Shared surface 0034 AINLSearch (Apple) ===
+date: 2026-06-08T11:15:38Z
+runner: Darwin 25.5.0 arm64
+swift: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+
+############################################################
+# CAPABILITY PROBE (prompt: 'If unavailable on the runner ->
+#   STATUS=BLOCKED with API evidence')
+############################################################
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+$ xcrun simctl help | head -1
+xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+$ test -d "$(xcrun --sdk macosx --show-sdk-path)/../../Library/Frameworks/XCTest.framework"
+XCTEST_FRAMEWORK=absent (no full Xcode; XCTest bundles cannot be compiled/linked)
+
+=> Only Command Line Tools are installed (no Xcode.app). xcodebuild + iOS
+   simulators + XCTest.framework are unavailable, so the two xcodebuild
+   'build test' gate steps CANNOT run on this runner.
+
+############################################################
+# GATE STEP 1/5 — xcodebuild iOS (BLOCKED: requires Xcode)
+############################################################
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1   # BLOCKED — xcode-select active dir is CommandLineTools
+
+############################################################
+# GATE STEP 2/5 — xcodebuild macOS (BLOCKED: requires Xcode)
+############################################################
+$ xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1   # BLOCKED — xcode-select active dir is CommandLineTools
+
+############################################################
+# SUBSTITUTE BUILD VERIFICATION (run because xcodebuild is
+#   BLOCKED) — swiftc -typecheck of the surface against the
+#   REAL design-system module (Tokens + TSMaterial + UI +
+#   Feedback + Motion). This proves the shipped (non-test,
+#   non-#Preview) surface code compiles against the live tokens.
+############################################################
+$ swiftc -typecheck -sdk $(xcrun --sdk macosx --show-sdk-path) -target arm64-apple-macosx15.0 -module-name TeslaSync <8 real deps> <7 surface files>
+SWIFTC_TYPECHECK_EXIT=0   # 0 = clean
+$ ... same, with -strict-concurrency=complete (project uses SWIFT_STRICT_CONCURRENCY: complete)
+SWIFTC_STRICT_CONCURRENCY surface-file diagnostics: 0 (0 = clean)
+NOTE: AINLSearch.Tests.swift + AINLSearch.AdapterTests.swift import XCTest and
+      cannot be compiled here (no XCTest.framework on this runner); they were
+      validated by swiftformat + swiftlint (parse) and mirror the shipped
+      AiUsageCard (0237) co-located test pattern verbatim.
+
+############################################################
+# PROJECT WIRING — xcodegen spec validation (build graph)
+############################################################
+$ xcodegen generate --spec project.yml ; grep -c AINLSearch <pbxproj>
+XCODEGEN_EXIT=0   # 0 = project.yml spec valid
+AINLSearch_pbxproj_refs=60   # surface wired into TeslaSync + TeslaSync-macOS
+(generated .xcodeproj removed — it is gitignored: apps/apple/**/*.xcodeproj/)
+
+############################################################
+# GATE STEP 3/5 — swiftlint --strict
+############################################################
+$ swiftlint lint --strict --no-cache TeslaSync/shared-surfaces  (violations on THIS surface)
+SURFACE_LINT_VIOLATIONS=0   # 0 = this surface is clean
+REPO_WIDE_NOTE: a repo-wide 'swiftlint --strict' also reports 1 pre-existing
+  violation OUTSIDE this surface's scope and NOT introduced by this change:
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-263/apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length Violation: Function body should span 50 lines or less excluding comments and whitespace: currently spans 78 lines (function_body_length)
+LINT_EXIT=0   # for files this prompt is allowed to touch (shared-surfaces/*)
+
+############################################################
+# GATE STEP 4/5 — swiftformat --lint
+############################################################
+$ swiftformat --lint apps/apple/TeslaSync/shared-surfaces
+SwiftFormat completed in 4.64s.
+0/9 files require formatting.
+FORMAT_EXIT=0   # 0/9 files require formatting
+
+############################################################
+# GATE STEP 5/5 — placeholder / stub gate (pwsh)
+############################################################
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+############################################################
+# RESULT
+############################################################
+Surface ............ apps/apple/TeslaSync/shared-surfaces/AINLSearch.{swift,Model,Adapter,
+                     Projection,Chrome,Views,Previews,Tests,AdapterTests}.swift + .strings
+Parity ............. components/ai/AINLSearch.tsx (via shared <AIFeatureCard>/<AiOutputPanel>/
+                     <AIThinkingIndicator>/<AIBadge> + useAiStream + withAiFeature('nl-search'))
+States ............. gated / idle / streaming(pending+partial) / result / no-results / error /
+                     stale / offline  — all rendered (per-state previews + unit tests)
+Runnable checks .... swiftc -typecheck=0 · strict-concurrency clean · xcodegen=0 ·
+                     surface swiftlint=0 · swiftformat --lint=0 · placeholder=0
+Blocked checks ..... xcodebuild iOS build test  (IOS_EXIT=1)
+                     xcodebuild macOS build test (MAC_EXIT=1)
+Block reason ....... runner has Command Line Tools only (xcode-select -p =
+                     /Library/Developer/CommandLineTools); no Xcode.app, no iOS
+                     simulators (simctl absent), no XCTest.framework. The two
+                     'build test' steps require full Xcode and cannot run here.
+
+EXIT=1
+STATUS=BLOCKED

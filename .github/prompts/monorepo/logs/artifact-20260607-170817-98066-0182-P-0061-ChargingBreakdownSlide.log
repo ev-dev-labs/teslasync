@@ -1,0 +1,188 @@
+=== P4 Feature view 0061 ChargingBreakdownSlide (Apple) ===
+Surface : ChargingBreakdownSlide
+Web src : web/src/features/analytics/components/review/ChargingBreakdownSlide.tsx
+Native  : apps/apple/TeslaSync/feature-views/ChargingBreakdownSlide.{swift,Adapter,Model,Views,Previews,Tests}.swift + .strings
+Tier    : Feature view (composed feature component below page level)
+ADRs    : ADR-002 (shared SwiftUI source, iOS+macOS) · ADR-004 (KMP Shared.xcframework) · ADR-009 (auth/SSE seams)
+Date    : 2026-06-07
+
+────────────────────────────────────────────────────────────────────────
+RUNNER CAPABILITY PROBE (per prompt "Capability" clause)
+────────────────────────────────────────────────────────────────────────
+The prompt's capability clause: "requires SwiftUI + Swift Charts + MapKit,
+iOS 18 / iPadOS 18 / macOS 15 HIG. If unavailable on the runner → STATUS=BLOCKED
+with API evidence." The iOS/macOS *app build + test* toolchain is unavailable on
+this runner (Command Line Tools only — no full Xcode, no iOS 18 simulator SDK):
+
+  $ xcode-select -p
+  /Library/Developer/CommandLineTools
+
+  $ xcodebuild -version
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+  directory '/Library/Developer/CommandLineTools' is a command line tools instance
+
+  $ xcrun --sdk iphonesimulator --show-sdk-version
+  xcrun: error: SDK "iphonesimulator" cannot be located
+
+  $ xcrun simctl list devices available
+  xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+
+  => `xcodebuild ... build test` (iOS Simulator + macOS) CANNOT run here.
+  => SwiftUI `#Preview` macro (PreviewsMacros plugin) + XCTest execution also
+     require full Xcode and CANNOT run here.
+
+Per the capability clause this is STATUS=BLOCKED. Every gate that CAN run on this
+runner was executed and is GREEN, and the surface is fully implemented, type-checked
+against the real macOS 15 SDK (SwiftUI + Charts) + the real shared component
+library, and runtime-validated. Evidence below.
+
+────────────────────────────────────────────────────────────────────────
+GATE STEP 1 — xcodebuild iOS Simulator build+test       [BLOCKED]
+────────────────────────────────────────────────────────────────────────
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode (Command Line Tools only).
+IOS_EXIT=BLOCKED (no full Xcode / no iphonesimulator SDK / no simctl on runner)
+
+────────────────────────────────────────────────────────────────────────
+GATE STEP 2 — xcodebuild macOS build+test               [BLOCKED]
+────────────────────────────────────────────────────────────────────────
+$ xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode (Command Line Tools only).
+MAC_EXIT=BLOCKED (no full Xcode on runner)
+
+────────────────────────────────────────────────────────────────────────
+GATE STEP 3 — swiftlint --strict                        [GREEN]
+────────────────────────────────────────────────────────────────────────
+$ cd apps/apple && swiftlint lint --strict --config .swiftlint.yml \
+    TeslaSync/feature-views/ChargingBreakdownSlide{,.Adapter,.Model,.Views,.Previews,.Tests}.swift
+  (swiftlint 0.63.3)
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_EXIT=0
+
+────────────────────────────────────────────────────────────────────────
+GATE STEP 4 — swiftformat --lint                        [GREEN]
+────────────────────────────────────────────────────────────────────────
+$ cd apps/apple && swiftformat --lint TeslaSync/feature-views/ChargingBreakdownSlide*.swift
+  (swiftformat 0.61.1, config apps/apple/.swiftformat — maxwidth 120, before-first wrapping)
+0/6 files require formatting.
+FORMAT_EXIT=0
+
+────────────────────────────────────────────────────────────────────────
+GATE STEP 5 — check-placeholders.ps1                    [GREEN]
+────────────────────────────────────────────────────────────────────────
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/ChargingBreakdownSlide
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+  (cross-checked with a real recursive swift scan of the surface dir — 0 matches in
+   any ChargingBreakdownSlide.* file; no TODO/FIXME/stub/mock/placeholder/Lorem.)
+PLACEHOLDER_EXIT=0
+
+────────────────────────────────────────────────────────────────────────
+SUPPLEMENTARY VERIFICATION (host-runnable, beyond the gate script)
+────────────────────────────────────────────────────────────────────────
+[A] XcodeGen project membership — confirms the 7 files compile into BOTH app targets.
+    $ cd apps/apple && xcodegen generate --spec project.yml      → exit 0
+    42 references to ChargingBreakdownSlide.* in the generated project.pbxproj,
+    across the TeslaSync (iOS) and TeslaSync-macOS source build phases:
+      ChargingBreakdownSlide.swift / .Adapter / .Model / .Views / .Previews / .Tests / .strings
+    (generated .xcodeproj is git-ignored and was removed after the check.)
+
+[B] swiftc type-check (Swift 6 language mode, strict concurrency) against the REAL
+    macOS 15 SDK (SwiftUI + Charts) and the REAL shared component + design-token
+    library (Sources/Components + Sources/Design + design/generated/apple/Tokens.swift,
+    minus UnitFormatters.swift which needs the KMP `Shared` xcframework):
+    $ swiftc -typecheck -sdk <MacOSX15.sdk> -target arm64-apple-macos15.0 -swift-version 6 \
+        Tokens.swift <40 component/design files> \
+        ChargingBreakdownSlide.{swift,Adapter,Model,Views}.swift
+    TYPECHECK_EXIT=0   (main view + Adapter + Model + Views all type-check clean)
+    Note: ChargingBreakdownSlide.Adapter.swift also type-checks fully standalone
+    (Foundation-only) → ADAPTER_TYPECHECK_EXIT=0.
+    Note: .Previews.swift / .Tests.swift are excluded ONLY because the `#Preview`
+    macro plugin and `@testable import TeslaSync` (XCTest + Shared.xcframework) need
+    full Xcode — the same capability gap as the xcodebuild steps above.
+
+[C] Runtime behaviour of the pure adapter + i18n formatting (compiled to an arm64
+    macOS executable from ChargingBreakdownSlide.Adapter.swift + a test main):
+    13/13 assertions PASS, RUN_EXIT=0 —
+      • zero-valued categories filtered; survivors reindexed 0,1 (web COLORS[i] parity)
+      • NaN / negative shares excluded like zero
+      • Math.round parity: 62.4→62, 9.6→10; SOC 34.6→35
+      • sessions clamped ≥ 0; clampedSOC 120→100, -1→0, ∞→0
+      • nil input → nil projection
+      • subtitle String(format:"Average plug-in at %d%% battery",35) → "Average plug-in at 35% battery"
+      • headline "248 charge sessions"
+
+────────────────────────────────────────────────────────────────────────
+PARITY NOTES (web source read end-to-end; every branch + t() reproduced)
+────────────────────────────────────────────────────────────────────────
+Web composition → native mapping:
+  🔌 (text-5xl, spring scale-in)        → Text("🔌") 52pt, TSFadeIn, accessibilityHidden
+  {sessions} {chargeSessions}           → ChargingBreakdownStrings.headline(sessions:)
+  t(avgStartSOC,{soc}) (Math.round)     → ChargingBreakdownStrings.avgStartSOC(soc:) (%d%% format)
+  PieChart innerR55/outerR85 (w-56)     → shared TSPieChart (SectorMark .ratio(0.6)), legend suppressed
+  COLORS[i % len] over FILTERED list    → ChargingBreakdownSlice.colorIndex = filtered position → TSChartPalette
+  custom legend (dot + Name (round%))   → CBLegend / CBLegendItem, dot = TSChartPalette.color(at:)
+  framer-motion staggered entrance      → TSFadeIn(delay: 0/.2/.4/.5/.8), Reduce-Motion aware
+i18n keys (parity, P1/S10 facade, web English fallback verbatim):
+  yearReview.supercharger="Supercharger" · yearReview.dcFast="DC Fast"
+  yearReview.acOther="AC / Other" · yearReview.chargeSessions="charge sessions"
+  yearReview.avgStartSOC="Average plug-in at %d%% battery"
+  (all five exist in apps/shared/i18n/catalog/en.json — confirmed.)
+States (all render — P4 contract, no hidden surfaces):
+  loading (skeleton silhouette) · empty (no-charging ContentUnavailableView) ·
+  error (icon+message+Retry, QueryError-equivalent) · content (hero) ·
+  stale/offline (connectivity banner over cached content + Refresh) ·
+  degenerate sessions-but-no-split (muted "Charger mix unavailable" note).
+Seams: P1/S8 ChargingBreakdownSource/Model · P1/S10 ChargingBreakdownStrings ·
+  P1/S11 telemetry view.opened(surface:"ChargingBreakdownSlide") emitted once in start().
+A11y: decorative glyph/donut hidden; hero exposes one combined element with label
+  "Charging breakdown" + value = ChargingBreakdownAccessibility.summary; Retry +
+  banner Refresh buttons carry accessibilityLabel; Dynamic Type via Font.TS ramp;
+  Reduce-Motion honored by TSFadeIn.
+
+────────────────────────────────────────────────────────────────────────
+ACCEPTANCE CRITERIA
+────────────────────────────────────────────────────────────────────────
+  [x] Surface renders on Apple with all states from the web source reproduced
+      (loading/empty/error/content/stale/offline + degenerate split). Type-checked
+      against the real SwiftUI/Charts SDK + shared components (TYPECHECK_EXIT=0).
+  [x] Hooks bind to the shared P1/S8 state-holder layer (ChargingBreakdownSource →
+      ChargingBreakdownModel); no direct HTTP in the view. (Only web hook is
+      useTranslation → P1/S10 facade.)
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog
+      (5 parity keys verified present in apps/shared/i18n/catalog/en.json).
+  [x] Accessibility labels present on every interactive element (Retry, banner Refresh)
+      + combined VoiceOver summary on the hero.
+  [x] Tests authored: adapter unit (13 methods) + per-state/connection model (11
+      methods) + a11y label (3 methods). Adapter+format paths EXECUTED 13/13 via a
+      host runtime harness (RUN_EXIT=0); full XCTest run is BLOCKED (needs Xcode).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — PLACEHOLDER_COUNT=0.
+  [~] xcodebuild build+test (iOS sim + macOS) — BLOCKED (no full Xcode on runner);
+      all other gates GREEN. Surface ready for the integration build host.
+
+────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT
+────────────────────────────────────────────────────────────────────────
+  1 No red-as-green ...... xcodebuild build/test is reported BLOCKED (with its real
+                          cause), never as pass. Green gates are genuinely green.
+  2 No scope narrowing ... full surface: 6 swift files + strings, all states, all
+                          seams (P1/S8/S10/S11), tests; nothing deferred from scope.
+  3 No skip-and-assume ... web source read end-to-end; every t() + render branch
+                          (incl. the filter-then-reindex donut coloring) reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0;
+                          type-checks + runs against real SDK/components.
+  5 No parity shortcuts .. shared TSPieChart + TSFadeIn + TSChartPalette + 6 states +
+                          exact i18n keys + Math.round/SOC clamp parity (runtime-proven).
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  builds on P4 core + P1/S8/S9/S10/S11 + the established
+                          TelemetryErrorsPanel (leaf) + SpeedProfileWidget (6-state) patterns.
+  8 No commit on red ..... every RUNNABLE gate is green; the only non-green step is the
+                          environment-BLOCKED xcodebuild, documented with API evidence.
+                          BLOCKED-on-capability is an acceptance-sanctioned terminal state.
+  9 No silent drift ...... the one deviation (XCTest/#Preview/xcodebuild not executed)
+                          is the runner's missing-Xcode capability gap, disclosed above.
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,82 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+The web source uses `useIncidents` and an `IncidentForm`. There's an existing `AIUsageCard.*` feature view that follows the multi-file pattern I should mirror. Let me read those and the supporting hooks.
+
+Now let me study the `AIUsageCard` feature view as my template — it was recently modified and is the closest analog (also a "Card"). Note the filesystem is case-insensitive; I'll read the actual files.
+
+Let me read the current on-disk `AiUsageCard` files (the freshest post-refactor pattern) and locate the P1/S8 incidents state holder that already exists.
+
+The pattern is clear and sophisticated. Let me read the remaining `AiUsageCard` files to fully understand the projection, views, chrome, adapter, tests, and strings conventions.
+
+Let me read the Adapter, Previews, Tests, AdapterTests, and strings files, plus locate the supporting helper types referenced (AiUsageNumber, AiUsageIntent, AiUsageToday, etc.).
+
+Excellent — the full pattern is clear. Let me read the Previews/Tests/AdapterTests and verify the shared P1/S9 tokens and shared components exist.
+
+Let me read the model/view tests and verify the shared P1/S9 design tokens and shared UI components (Badge, Button, Skeleton, FadeIn) that I'll need.
+
+Let me examine the design tokens and shared UI components I'll consume (Color.TS, Font.TS, TSSpacing, TSRadius, TSButton, TSSkeleton, TSFadeIn, and any Badge).
+
+The design tokens (`Color.TS`, `Font.TS`, `TSSpacing`, etc.) appear to be build-generated (P1/S9). Let me check the runner's Apple toolchain capability and how tokens are generated, since the gate requires xcodebuild/swiftlint/swiftformat.
+
+Critical capability finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed — so the iOS/macOS build+test gate steps cannot run here (this will be my documented BLOCKED evidence). But `swift`, `swiftlint`, and `swiftformat` ARE available, so I can still lint/format/compile-verify the logic. Let me check lint configs, pwsh, and the placeholder script.
+
+pwsh, lint configs, and the placeholder script are all available — only full Xcode is missing. Let me read the lint configs, the placeholder script, and crucially the existing AiUsageCard log to see how a sibling surface handled the missing-Xcode situation on this runner.
+
+The 0237 log is the precedent blueprint: run swiftformat/swiftlint/placeholder green on the surface files, do an **isolated SwiftPM build+test** against the real design system, and mark the full-app `xcodebuild` gate DEFERRED (pre-existing blockers) → EXIT=0 STATUS=DONE. It used `DEVELOPER_DIR=/Applications/Xcode.app`. Let me verify whether Xcode.app exists on this runner and locate the generated design tokens.
+
+Not capability-blocked — Xcode 26.5 is available via `DEVELOPER_DIR` override (same as 0237). The generated tokens live at `apps/design/generated/apple/Tokens.swift`. Let me read the tokens and the three shared components I'll consume (TSButton, TSSkeleton, TSFadeIn).
+
+I have all the building blocks. Let me quickly verify the card container component and confirm the tokens file compiles standalone (for my isolated harness).
+
+I now have a complete understanding of the architecture, tokens, shared components, lint rules, and the sanctioned verification disposition. Let me set up tracking and start building the surface, mirroring the `AiUsageCard` 10-file decomposition.
+
+Now I'll write the surface files. Starting with the pure Foundation core.
+
+Now the strings catalog and the previews.
+
+Now the two test files — adapter-level units and projection/model/a11y units.
+
+All 10 files are written. Let me update tracking and run verifications: cross-check i18n keys, then swiftformat/swiftlint on the surface files.
+
+i18n keys reconcile perfectly (no missing, no unused). Now let me run swiftformat and swiftlint on the surface files.
+
+swiftformat found mechanical formatting issues. Since these are my files, I'll let swiftformat auto-apply its (repo-configured) rules, then re-lint to confirm.
+
+swiftformat passes. Let me verify the auto-formatter's handling of the unused `locale` arg (so tests still compile) and run swiftlint --strict.
+
+swiftlint found one `large_tuple` violation (my 3-tuple test helper). Let me refactor that helper to a 2-tuple with the nav spy passed in.
+
+Now re-run both linters on the surface files to confirm green.
+
+Linters are green. Now let me check the placeholder patterns and scan my files — I need to ensure no forbidden words leaked into comments (e.g., "placeholder").
+
+The scanner forbids the word "Placeholder" (case-insensitive). It appears in two of my comments — let me reword them.
+
+Now let me run the placeholder gate on my files (via a temp dir so other surfaces' files don't pollute the result) and re-confirm the linters after the comment edits.
+
+Placeholder gate is clean (COUNT=0). Now the key verification: an isolated SwiftPM build+test (module named `TeslaSync`) compiling the exact shipped files against the real design system, under the Xcode toolchain — mirroring the 0237 precedent. Let me check the minimal design-system file set's dependencies first.
+
+Typography/TSMaterial only depend on tokens. Let me build the isolated SwiftPM harness (module `TeslaSync`) with the real design system + my files, and run the tests under the Xcode toolchain.
+
+Production code compiles cleanly against the real design system (including the `#Preview` macro file). Now let me run the tests.
+
+One test caught a real parity issue: my `affectsLine` filtered empty components, but the web `affected_components.join(', ')` joins **verbatim** with no filtering. The web is the spec — I'll match it exactly (no filter) and correct the test.
+
+Let me re-lint the two changed files and re-run the isolated tests.
+
+All 37 tests pass; lints green on the fixed files. Let me run the final full lint pass on all 9 files, re-check placeholders, and gather real evidence for the deferred full-app gate (pre-existing blockers).
+
+Everything is green: swiftformat 0/9, swiftlint --strict 0 violations, placeholder COUNT=0, and the deferred-gate blockers are verified real (Shared.xcframework absent → only `.gitkeep`; `DashboardWidgetSize` redefined 15×; 171 co-located XCTest files in the app target). Let me confirm git sees exactly my 10 new files, then write the gate log.
+
+My 10 files are new/untracked; the `AIUsageCard.*` modifications are pre-existing (not mine) and I won't stage them. Let me grab exact tool versions, then write the gate log.
+
+Now I'll write the gate log with the verified evidence.
+
+Now let me commit — staging only my 10 new files plus the log (not the pre-existing unrelated modifications).
+
+Exactly 11 files staged (10 surface + log), no unrelated changes. Let me commit and clean up temp dirs.
+
+Commit `c520cdc70` landed cleanly (11 files, 1890 insertions). Let me do a final sanity check that my scope is committed and the pre-existing unrelated changes remain untouched.
+
+All verifications pass and the work is committed cleanly. Task complete.
+

@@ -1,0 +1,231 @@
+================================================================================
+P4 · Feature view · 0288 — BatteryRangeCharts (Apple)
+Run: 2026-06-08T03:15-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/175
+Prompt: P4/feature-views/0288 — Feature view: BatteryRangeCharts
+Web source (spec): web/src/features/vehicles/components/vehicle-detail/BatteryRangeCharts.tsx
+Mode: code-complete + host-proven (iOS-18 + macOS-15 SDK typechecks, EXECUTED XCTest)
+      + Shared.xcframework STAGED (KMP gradle build) + DEFERRED full Xcode app
+      build/test (blocked by PRE-EXISTING, repo-wide sibling integration gaps —
+      NOT this surface; 0002 BackendTool / 0045 SecurityStatistics precedent,
+      ADR-012, Honesty rule 7 — predecessor parity).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT default) ........ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (83717DEE-70A3-4325-AA61-CBDDD3140989)       OK
+  Swift Charts ............... present in both SDKs (this surface USES it)          OK
+  MapKit ..................... present in both SDKs (this surface uses NEITHER map) OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint 0.63.x                   OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat 0.61.x                 OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host (Xcode toolchain)      OK
+  xcodegen ................... 2.45.4 (project generates cleanly — XCODEGEN_EXIT=0) OK
+  Java / gradlew (KMP) ....... openjdk 17.0.19 + apps/shared/gradlew               OK
+  Shared.xcframework ......... BUILT + STAGED this run (gradle BUILD SUCCESSFUL,
+                               ios-arm64 + ios-arm64-simulator + macos-arm64)       OK
+
+  Capability note: the web source's "Charts/maps used" is `chart:CHART_COLORS[1]`
+  (a Swift Charts surface, no map). The core requirement is SwiftUI + Swift Charts,
+  both AVAILABLE and PROVEN by real iOS-18-simulator AND macOS-15 SDK typechecks
+  below + an EXECUTED XCTest run. The capability-BLOCKED escape hatch
+  (SwiftUI/Charts/MapKit unavailable) does NOT apply — the surface is authored,
+  host-compiled on both SDKs, and host-tested. STATUS=DONE.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/BatteryRangeCharts.*) ===
+  BatteryRangeCharts.Adapter.swift     206  surface slug (P1/S11) + lifecycle/connection/
+                                            phase enums (P1/S8) + battery-health tone
+                                            (web `batteryColor`) + SI→display math
+                                            (web convertDistanceFromSI / fmtNumber /
+                                            formatDate) + input DTOs (state / drive / units)
+  BatteryRangeCharts.Projection.swift  232  pure projection core — battery overview
+                                            (gauge fraction/tone, battery+range value text,
+                                            Current/Remaining bars) + drive trend
+                                            (date label, rounded distance/duration, reversed)
+                                            + per-status phase resolution + a11y summaries
+  BatteryRangeCharts.Model.swift       221  P1/S8 source seam (BatteryRangeChartsSource→
+                                            Model) + P1/S11 telemetry seam (view.opened) +
+                                            P1/S10 strings facade + in-memory source +
+                                            stale auto-refresh
+  BatteryRangeCharts.Views.swift       292  presentational chrome — glass section panel
+                                            (web GlassPanel), battery metric tiles (web inner
+                                            GlassPanel + AnimatedNumber), freshness chip,
+                                            stale/offline banner, loading skeleton, surface
+                                            empty state, error (QueryError), trend empty row
+  BatteryRangeCharts.Chart.swift       267  Swift Charts — radial gauge (web RadialGauge),
+                                            Current/Remaining BarMark (CHART_COLORS[0]),
+                                            distance+duration AreaMark trend (CHART_COLORS[0]
+                                            /[1]) + legend + VoiceOver value
+  BatteryRangeCharts.swift             140  surface — connectivity banner + phase switch +
+                                            adaptive two-column grid (web grid-cols-1
+                                            lg:grid-cols-2), onAppear start / stale refresh
+  BatteryRangeCharts.Previews.swift     91  #if DEBUG previews — content / content-no-drives /
+                                            empty / loading / error / stale / offline
+  BatteryRangeCharts.Tests.swift       349  XCTest — math/conversion + tone + projection +
+                                            model + a11y (23 methods)
+  BatteryRangeCharts.strings            51  P1/S10 catalog contribution (table
+                                            "BatteryRangeCharts", 25 keys)
+  Largest .swift = 349 lines (swiftlint file_length<=400 honored). No file imports
+  the Shared xcframework (seams are Swift protocols; the prod app injects the
+  facade-backed source, previews/tests inject InMemoryBatteryRangeChartsSource).
+
+=== PARITY (web source reproduced end-to-end) ===
+  - Data sources (web useTranslation + useUnits): bound through the P1/S8 seam
+    BatteryRangeChartsSource→Model. The web component takes `state: VehicleState` +
+    `drives: Drive[]?` props and reads `useUnits().unitPrefs.distance`; the native
+    source composes vehicle state + recent drives + the distance unit into one
+    coalesced update. No HTTP in the view.
+  - Composition (web two `GlassPanel` panels, grid-cols-1 lg:grid-cols-2):
+      • Battery Overview -> glass panel w/ Battery icon + title; RadialGauge
+        (web RadialGauge value=battery_level color=batteryColor) -> BatteryRangeGauge
+        tinted by the battery-health tone (status success/warning/danger tokens =
+        canonical equivalents of #10b981/#f59e0b/#ef4444); two tiles (web inner
+        GlassPanel + AnimatedNumber) Battery "%" + Range "<n> <unit>" (0 dp);
+        Current/Remaining BarMark on a fixed 0…100 scale (web Bar, CHART_COLORS[0]).
+      • Drive Distance Trend -> glass panel w/ route icon + title; two overlapping
+        gradient AreaMarks (distance CHART_COLORS[0], duration CHART_COLORS[1]) +
+        stroke lines + legend, OR the empty row (web EmptyState
+        `vehicles.detail.noDriveData`) when there are no drives — mirroring the web
+        `driveChartData.length > 0 ? <AreaChart/> : <EmptyState/>`.
+  - SI → display: BatteryRangeChartsMath.distanceFromSI reproduces the web
+    `lib/unitConversion.ts` meter constants (mi=1609.344, km=1000, ft=0.3048);
+    fmtNumber reproduces `lib/numberFormat.ts` (grouped, half-up, 0 dp); formatDate
+    reproduces `lib/dateFormat.ts` short date ("Apr 4, 2025"). The drive memo
+    rounds distance/duration and reverses to chronological order (web `.reverse()`).
+  - States (ALL rendered, each with a #if DEBUG preview + a model/projection unit
+    test): loading (skeleton) · content (battery panel + trend) · content-no-drives
+    (trend empty row) · empty (resolved no state) · error (retry) · stale (chip +
+    auto-refresh + banner) · offline (chip + banner, cached battery/trend kept).
+  - i18n (P1/S10): web keys preserved verbatim — common.current/remaining/battery/
+    range/distance/duration + vehicles.detail.batteryOverview/driveTrend/noDriveData;
+    native chrome namespaced batteryRange.* (live/stale/offline/banners/loading/empty/
+    error/retry/axis titles/a11y nouns). Every code-referenced key is declared in
+    BatteryRangeCharts.strings (referenced==declared, 25/25 verified); NO English
+    string literals in native code (all via BatteryRangeChartsStrings + Text(verbatim:)).
+  - Accessibility: VoiceOver labels/values on the gauge, metric tiles, bar chart,
+    trend figure, freshness chip, banners, retry; combined elements; Dynamic-Type
+    system fonts (Font.TS); reduce-motion honored (TSSkeleton, TSFadeIn, TSAnimatedNumber).
+  - Telemetry (P1/S11): BatteryRangeChartsModel.start() emits view.opened with surface
+    slug "BatteryRangeCharts" exactly once (OSLog default; prod injects shared adapter).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+  Shipped surface = the 6 production files compiled together with the REAL apps/apple
+  component closure (../design/generated/apple/Tokens.swift + Sources/Design + the
+  whole Sources/Components closure, minus the Shared-coupled UnitFormatters.swift this
+  surface does not use); none import the Shared xcframework.
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK
+        xcrun swiftc -typecheck -sdk <iPhoneSimulator26.5> -target arm64-apple-ios18.0-simulator \
+          -swift-version 6 -strict-concurrency=complete  <closure> <6 production files>
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [3] swiftc -typecheck — DEBUG previews (-D DEBUG, Xcode #Preview macro plugin;
+        the 6 production files + previews + closure):
+        PREVIEWS_TYPECHECK_EXIT=0                                                  OK
+  [4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a
+        self-contained SwiftPM harness (real production Adapter/Projection/Model/
+        Views/Chart/surface + real design tokens + real TS component closure),
+        Swift 6 language mode:
+          Test Suite 'All tests' passed
+          Executed 23 tests, with 0 failures (0 unexpected) in 0.007 seconds
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: safe/non-finite guard, distanceFromSI (km/mi/ft + default),
+        round0, fmtNumber grouping, formatDate "Apr 4, 2025"; tone thresholds
+        (>60/>25/else); projection battery (clamp, fraction, tone, value text, bars),
+        miles conversion, trend reverse+rounding, empty/nil drives; phase matrix;
+        model loading/empty/error/content, cached-stays-content, formatting carry,
+        refresh delegation, stale auto-refresh once/episode, view.opened-once+slug,
+        connection/refreshing/updatedAt; a11y battery + trend summaries + empty.
+  [5] swiftlint --strict (8 surface .swift files; explicit paths — the repo
+        .swiftlint.yml `included:` lists TeslaSync/feature-views):
+          Done linting! Found 0 violations, 0 serious in 8 files.
+        LINT_EXIT=0                                                               OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/8 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate; swift) — scanner sanity-verified
+        (detects an injected TODO=1) then run clean on the surface:
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                        OK
+
+=== GATE — XCODE APP BUILD/TEST (real commands run; DEFERRED on PRE-EXISTING gaps) ===
+    xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Real evidence captured on this host via the Xcode toolchain:
+      - `xcodegen generate`                              -> XCODEGEN_EXIT=0 (12 targets + schemes).
+      - KMP `:core:assembleSharedXCFramework` (gradle)   -> BUILD SUCCESSFUL in 12m56s;
+          Shared.xcframework (ios-arm64 + ios-arm64-simulator + macos-arm64) STAGED to
+          apps/apple/Frameworks/. This RESOLVES the predecessors' primary deferral cause
+          (missing xcframework).
+      - `xcodebuild -scheme TeslaSync-macOS build`       -> MAC_BUILD_EXIT=65, first failure:
+          apps/apple/TeslaSync/feature-views/AIRestorePanel.Tests.swift:18: error: unable to
+          resolve module dependency: 'XCTest'  (a SIBLING surface, not this one).
+      - re-run with EXCLUDED_SOURCE_FILE_NAMES="*Tests.swift" (CLI override, no file edit)
+                                                          -> MAC_BUILD_EXIT=65, 26 failures, ALL
+          pre-existing sibling type-name collisions in the single shared module
+          (whole-module "ambiguous for type lookup": TelemetryErrorsModel/TelemetryErrorRow/
+          TelemetryErrorsSource/TelemetryErrorsTelemetry, DashboardWidgetSize,
+          DrivetrainHealthStatus, DrivetrainTemperatureUnit — duplicate definitions across
+          OTHER feature-view surfaces authored on this in-progress branch).
+          grep "error:" | grep BatteryRangeCharts  ->  0   (ZERO errors in this surface).
+    Why deferred (repo-wide, code-unrelated to this surface; same disposition as 0002 /
+    0045 predecessors, Honesty rule 7):
+      (a) ALL ~345 feature-view *Tests.swift import XCTest but the directory is registered
+          into the APP target's `sources:` with no Tests/Previews partition or
+          EXCLUDED_SOURCE_FILE_NAMES in project.yml; the app target does not link XCTest, so
+          it cannot compile the directory's test files. Splitting them into the XCTest test
+          target is the downstream P4 integration prompt's job.
+      (b) Independent of (a), several OTHER surfaces define duplicate module-level type names
+          that are ambiguous when the whole feature-views directory compiles as one module.
+      (c) macOS app/widget signing requires a development certificate on a signed runner
+          (ADR-012); this run used CODE_SIGNING_ALLOWED=NO.
+      Editing project.yml or other surfaces' files is OUTSIDE this prompt's allowed files
+      (BatteryRangeCharts.* + the log). This surface adds NO collisions (all type names are
+      BatteryRangeCharts*-prefixed/unique — verified) and compiles on BOTH SDKs (steps [1]/[2])
+      with its full XCTest suite EXECUTED green (step [4]).
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/content/empty/error/stale/offline) + the
+      web's recent-drives empty row — implemented; each has a #if DEBUG preview; phase
+      logic unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (BatteryRangeChartsSource→
+      Model); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — web common.*/vehicles.detail.*
+      preserved verbatim; native chrome batteryRange.* present; referenced==declared (25/25).
+  [x] Accessibility labels on every interactive/informative element (gauge/tiles/bars/trend/
+      chip/banners/retry); combined values.
+  [x] Tests: adapter/projection unit + per-state model + a11y — 23 methods, EXECUTED 23/23,
+      exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured
+      real evidence (pre-existing repo-wide XCTest-in-app-target + sibling type collisions +
+      signing), per predecessor parity. xcframework staged this run.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green; the xcodebuild build/test is shown
+                          DEFERRED with its real exit 65 + cause, not as pass.
+  2 No scope narrowing ... full surface (8 files + strings), all states, seams, charts, tests.
+  3 No skip-and-assume ... web source read end-to-end; every t() + conditional reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. gauge+battery tiles+composition bars + distance/duration trend +
+                          empty/stale/offline/error states + batteryColor tone + SI math.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0002/0045 host-gate + xcodebuild deferral; this
+                          run additionally BUILT + STAGED the Shared.xcframework and proved the
+                          app-build failures are 100% pre-existing siblings (0 in this surface).
+  8 No commit on red ..... committed work is green on every runnable gate; the only non-green
+                          step is the pre-existing repo-integration app build, deferred with
+                          evidence (predecessor-accepted disposition).
+  9 No silent drift ...... path/registration deviation documented above (feature-views Tests
+                          not partitioned from the app target; cross-surface type collisions —
+                          both pre-existing and outside this prompt's allowed files).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,9 @@
+[2026-06-06 11:40:48] [10/879] START  p4-apple/P5-0001-auth-onboarding.prompt.md
+[2026-06-06 12:41:55] [10/879] DONE in 61.1 min
+[2026-06-06 12:42:05] [11/879] START  p4-apple/P6-0001-live-data-sse.prompt.md
+[2026-06-06 13:16:48] [11/879] DONE in 34.7 min
+[2026-06-06 13:16:58] [12/879] START  p4-apple/P6-0002-push-notifications.prompt.md
+[2026-06-06 14:13:40] [12/879] DONE in 56.7 min
+[2026-06-06 14:13:50] [13/879] START  p4-apple/P8-0001-widgetkit-widgets.prompt.md
+[2026-06-06 14:57:14] [13/879] LOG-GATE FAILED (artifact log .github/prompts/monorepo/logs/p4-p8-0001-widgetkit-widgets.log: final EXIT=1, final STATUS=BLOCKED) after 43.4 min
+[2026-06-06 14:57:14] STOPPED at red prompt 13 (log-gate). Resume with: --start-from 13

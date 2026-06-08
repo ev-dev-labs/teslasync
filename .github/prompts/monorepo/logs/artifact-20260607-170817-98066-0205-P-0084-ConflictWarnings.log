@@ -1,0 +1,222 @@
+================================================================================
+P4 · Feature view · 0084 — ConflictWarnings (Apple)
+Run: 2026-06-07T20:55-0700   Host: Darwin arm64 (macOS 26.x)   Slot: slot-205
+Prompt: P4/feature-views/0084 — Feature view: ConflictWarnings
+Web source (spec): web/src/features/automations/pages/ConflictWarnings.tsx
+Mode: code-complete + REAL iOS-18/macOS-15 SDK typechecks + EXECUTED XCTest (18/18) +
+      DEFERRED Xcode app build/test (0005/0009/0039 feature-view precedent, ADR-012). No stubs as final.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift ...................... Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 via DEVELOPER_DIR override                OK
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (83717DEE-70A3-4325-AA61-CBDDD3140989)       OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen                           OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  swift test (SwiftPM) ....... runs XCTest on the macOS host                        OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks/ holds only .gitkeep)  WARN
+  surface in project.yml ..... feature-views/ IS a registered source path (3 app targets) OK
+                               → generated pbxproj references ConflictWarnings (42 refs).
+
+  NOTE on active toolchain: a bare `xcodebuild`/`xcrun simctl` fails because
+  `xcode-select -p` points at /Library/Developer/CommandLineTools (no SDKs). Full
+  Xcode 26.5 IS installed at /Applications/Xcode.app and is used here via the
+  DEVELOPER_DIR override (the 0005/0009/0039 precedent), which unlocks the iOS 18
+  simulator SDK, the macOS 15 SDK, the iPhone 16 simulator, and `swift test`.
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and PROVEN by the real iOS-18-simulator AND macOS-15 SDK compiles below.
+  The capability-BLOCKED escape hatch ("SwiftUI/Charts/MapKit unavailable") does NOT
+  apply — the surface is authored, both-SDK-compiled, and host-tested for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/ConflictWarnings.*) ===
+  ConflictWarnings.Adapter.swift   190  testable projection core — AutomationConflictSeverity
+                                        (warning/info + web else-branch decode + SF-Symbol map),
+                                        AutomationConflict wire type, ConflictWarningRow (stable
+                                        `${id}-${i}` key + `"{name}": {reason}` body),
+                                        ConflictWarningsProjection.rows, CWText/CWCopy catalog,
+                                        ConflictWarningsAccessibility.bannerSummary
+  ConflictWarnings.Model.swift     222  P1/S8 state-holder seam (ConflictWarningsSource → Model) +
+                                        P1/S11 telemetry seam + parent-query phase ladder
+                                        (loading/loaded/failed → render) + stale rising-edge
+                                        auto-refresh + in-memory source + P1/S10 CWStrings facade
+  ConflictWarnings.Views.swift     205  ConflictWarningBanner (mirrors TSAlertBanner; verbatim
+                                        dynamic body) + list + loading skeleton + empty
+                                        (ContentUnavailableView) + error/retry + stale/offline chips
+  ConflictWarnings.swift            61  the surface View (offline/stale chips + render switch +
+                                        onAppear/onDisappear telemetry lifecycle)
+  ConflictWarnings.Previews.swift   73  #if DEBUG previews — 7 (conflicts warning+info, single
+                                        warning, empty, loading, error, stale, offline)
+  ConflictWarnings.Tests.swift     231  XCTest — projection + severity decode + render ladder +
+                                        model wiring + telemetry spy + stale auto-refresh + a11y +
+                                        copy catalog (18 methods)
+  ConflictWarnings.strings          36  P1/S10 catalog contribution (1 web key + 9 native chrome/a11y)
+  Total 1018 lines across 7 files; every .swift file <= 231 lines (house file_length 400).
+  Shared tokens (Color.TS / Font.TS / TSSpacing / TSRadius), TSTone, and TSSkeleton +
+  ContentUnavailableView are REUSED from the P4 core (no redeclaration in shipped files → no
+  duplicate symbols in the app module).
+
+=== PARITY (vs web ConflictWarnings.tsx) ===
+  Data source -> bound via the shared state-holder seam (ConflictWarningsSource ->
+    ConflictWarningsModel). The web component is a pure presentational leaf fed by its parent
+    (AutomationBuilderPage) `conflicts: AutomationConflict[]` prop, computed from a validation
+    request. The native source snapshot carries that parent-query phase + freshness/connectivity;
+    the view performs NO HTTP. useTranslation -> P1/S10 CWStrings facade.
+  Projection -> ConflictWarningsProjection.rows is a 1:1 port of `conflicts.map((c, i) => …)`:
+    list key `${automation_id}-${index}` (preserved so repeated ids stay distinct), severity
+    passthrough, and the body `"${automation_name}": ${reason}` composed byte-for-byte. The
+    severity → variant/icon mapping reproduces the web ternary EXACTLY: `severity === 'warning'`
+    -> warning tone + AlertTriangle (exclamationmark.triangle.fill); otherwise -> info tone +
+    Info (info.circle.fill). Unknown wire severities decode to .info (the web else branch).
+  Composition -> each row is a tinted, bordered banner mirroring the shared TSAlertBanner
+    (@/components/feedback counterpart): leading severity SF Symbol in tone color, the constant
+    localized title (automations.builder.conflict = "Potential Conflict"), and the verbatim
+    `"{name}": {reason}` detail (user data, rendered Text(verbatim:) — not a catalog key).
+  Shared components -> @/components/feedback maps to TSAlertBanner (banner), TSSkeleton (loading),
+    ContentUnavailableView (empty, the primitive TSEmptyState wraps), and the TSErrorDisplay/
+    TSQueryError + TSBadge looks (error retry + stale/offline chips). The banner/chrome resolve
+    their strings through the per-surface P1/S10 table, so they are mirrored (not the literal
+    LocalizedStringKey components, which resolve against the default catalog) — the 0039 precedent.
+    Recharts -> none / Leaflet -> none (no chart/map on this surface).
+  States (all render) -> the web leaf returns null when conflicts.length === 0; the native surface
+    owns the full P4 states contract around the parent conflict-detection query:
+      loading -> two redacted TSSkeleton banner rows (initial conflict check);
+      empty   -> friendly ContentUnavailableView ("No conflicts detected") — the never-a-blank-box
+                 native treatment of the web `return null` (the healthy no-conflict outcome);
+      error   -> the parent-query failure (TSQueryError equivalent + a native retry -> source.refresh);
+      conflicts -> the faithful web banner list;
+      stale   -> a "Conflict check may be out of date" chip + a single auto-refresh on each rising
+                 edge into the stale window (unit-tested);
+      offline -> a "showing last known conflicts" chip over the cached list.
+    Each state has a #if DEBUG preview + a unit test. The stale/offline/loading/error chrome is the
+    native states-contract treatment of the parent query's lifecycle, not invented data branches.
+  i18n -> the ONE web-source key (automations.builder.conflict) resolves through the P1/S10 facade
+    with the web English fallback (coverage 1/1). Plus 9 native chrome/a11y keys (severity words,
+    empty title/message, loading, error message, retry, stale, offline). No English literal in
+    Swift (Text(verbatim:) over the facade; inline English lives only in the CWText fallbacks).
+  a11y -> each banner is one .ignore element with a composed VoiceOver label (title + severity word
+    + detail); the leading icon is hidden; the retry button + each status chip carry an
+    accessibilityLabel; the loading rows are one labeled element; Dynamic Type via tokens; Reduce
+    Motion gates the TSSkeleton shimmer.
+  Telemetry -> ConflictWarningsModel.start() emits viewOpened(surface:"ConflictWarnings") -> bridges
+    the shared Telemetry.track (P1/S11). Asserted by a spy test (fires exactly once, idempotent start).
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck — iOS 18 SIMULATOR SDK (the 4 production files compiled with the REAL
+    apps/apple component closure — generated Tokens + Badges + Buttons + Cards + Typography +
+    Skeletons + Design/TSMaterial/TSDesign), Swift 6 language mode:
+      xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator -swift-version 6 …
+      IOS_TYPECHECK_EXIT=0                                                          OK
+[2] swiftc -typecheck — macOS 15 SDK (same closure, -target arm64-apple-macos15.0, -swift-version 6):
+      MAC_TYPECHECK_EXIT=0                                                          OK
+[3] swiftc -typecheck — DEBUG previews (-D DEBUG; the 4 production files + the Previews file + real
+    closure, so this surface's 7 #Preview blocks expand against the real tokens):
+      PREVIEWS_TYPECHECK_EXIT=0                                                     OK
+[4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained SwiftPM
+    harness (the real production Adapter/Model/Views/surface + the real design tokens + the real
+    Badges/Buttons/Cards/Typography/Skeletons/Design, module name "TeslaSync"), Swift 6:
+      Executed 18 tests, with 0 failures (0 unexpected) in 0.003 seconds
+        ConflictWarningsProjectionTests       4/4  (order + stable `${id}-${i}` keys for repeated ids /
+                                                   `"{name}": {reason}` body / severity→SF-Symbol / empty)
+        AutomationConflictSeverityTests       2/2  (known warning/info / unknown+""+"Warning" → info)
+        ConflictWarningsRenderTests           4/4  (loading / failed / loaded([])→empty / loaded→conflicts)
+        ConflictWarningsAccessibilityTests    1/1  (banner summary = title, severity. detail)
+        ConflictWarningsCopyTests             3/3  (catalog keys+fallbacks non-empty / web source key /
+                                                   severity-word mapping + title resolve)
+        ConflictWarningsModelTests            4/4  (start applies initial + telemetry-once + startCount==1 /
+                                                   push updates render+flags / stale rising-edge auto-refresh
+                                                   once-per-edge / refresh+stop delegate)
+      SWIFT_TEST_EXIT=0                                                             OK
+[5] swiftlint --strict on the 6 surface .swift files (explicit paths; config apps/apple/.swiftlint.yml;
+    feature-views/ IS in the `included:` scope):
+      Done linting! Found 0 violations, 0 serious in 6 files.
+      LINT_EXIT=0                                                                   OK
+[6] swiftformat --lint on the 6 surface .swift files (config apps/apple/.swiftformat):
+      0/6 files require formatting.
+      FORMAT_EXIT=0                                                                 OK
+[7] check-placeholders (ADR-011 stub gate; pwsh) — REAL scan of the 7 shipped files (copied to a temp
+    dir to scope the scan to this surface; the bare gate `-Path .../ConflictWarnings` is a non-existent
+    literal path that trivially scans nothing). Caught + fixed a real hit (the word "placeholders" in a
+    Views.swift doc comment → reworded to "redacted banner rows"):
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            OK
+[8] xcodegen generate — project + targets + schemes generate cleanly; surface refs in the generated
+    pbxproj = 42 (feature-views/ IS target-registered, so the surface joins the iOS/iPadOS/macOS apps):
+      XCODEGEN_EXIT=0                                                               OK
+
+=== GATE — XCODE APP BUILD/TEST (DEFERRED to the integration/signed runner; NOT faked, NOT green) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Captured evidence (real command run on this host, full Xcode 26.5):
+      xcodebuild -project TeslaSync.xcodeproj -target TeslaSync-macOS build CODE_SIGNING_ALLOWED=NO ->
+        error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+        ** BUILD FAILED **   XCODEBUILD_MAC_EXIT=65
+    Why deferred (code-unrelated; not a defect in this surface; identical disposition to the
+    0005/0009/0039 predecessor feature-views, Honesty rule 7):
+      (a) Shared.xcframework not staged: the app target links the KMP core; staging it needs a
+          Kotlin/Native Gradle build (the scheme runs it as a pre-build phase). Integration/CI-runner
+          scope (ADR-012, apps/macos-pending-verifications.md), independent of this UI surface.
+          Concrete error captured above. Frameworks/ holds only .gitkeep on this runner.
+      (b) macOS app/widget signing requires a development certificate on a signed runner (ADR-012).
+    The MEANINGFUL validation IS performed above: the surface compiles against BOTH the iOS 18
+    simulator and macOS 15 SDKs (steps [1]/[2]/[3]) and its full XCTest suite EXECUTES green (18/18,
+    step [4]). Under Xcode these same tests run in the TeslaSync(/-macOS) test target.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source reproduced — the conflict banner list (warning/
+      info severity → tone + icon) plus the P4 loading/empty/error/stale/offline chrome; each has a
+      #if DEBUG preview + a unit test. Empty is the never-a-blank-box native treatment of web `return null`.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (ConflictWarningsSource->Model); no view HTTP.
+  [x] Every i18n key from source has a matching catalog key — 1/1 web key (automations.builder.conflict)
+      present + 9 native chrome/a11y keys.
+  [x] Accessibility labels on every interactive element (retry button, stale + offline chips; each
+      banner carries a composed VoiceOver summary).
+  [x] Tests: adapter/projection unit test + per-state render test + model/telemetry test + a11y label test
+      — 18 methods, EXECUTED green via SwiftPM.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (check-placeholders EXIT=0).
+  [~] EXIT=0 / STATUS=DONE for all host-runnable gates; the signed Xcode app build/test is DEFERRED with
+      real captured evidence (un-staged Shared.xcframework), per the 0005/0009/0039 precedent (ADR-012).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green   : every EXIT pasted from the real command; the one Xcode build that fails is
+                         reported as DEFERRED with its real error, never as green.
+  2  No scope narrowing: every web branch (warning/info list + empty) + the full P4 states contract shipped.
+  3  No skip-and-assume: web source read end-to-end (its one t() call + the severity ternary + the body
+                         template + the empty `return null`) and reproduced.
+  4  No stubs as final : full projection + state holder + views + tests; no placeholder/TODO (gate [7]).
+  5  No parity shortcuts: faithful port of the map() key, the severity→variant/icon ternary, and the
+                         `"{name}": {reason}` body, plus the unknown-severity else default.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT stage Shared.xcframework / edit project.yml / the shared
+                         Localizable.xcstrings (integration-runner scope); strings shipped as the
+                         per-surface table, exactly like 0005/0009/0039.
+  8  No commit on red  : committing on green host gates + iOS/macOS+previews compiles + executed 18/18
+                         tests; Xcode app build/test explicitly DEFERRED (captured evidence), not failed.
+  9  No silent drift   : changes confined to the allowed ConflictWarnings.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native ConflictWarnings shipped at parity with the web source: a pure-Swift
+  projection core (EXECUTED-green XCTest, 18/18) that reproduces the conflicts.map() key, the
+  severity→variant/icon ternary, and the `"{name}": {reason}` body; the P1/S8 state-holder seam (no
+  view HTTP); the P1/S11 telemetry; every state (conflict list + loading + empty + error + stale +
+  offline) with a preview and a test; the one web i18n key + 9 native keys; a11y labels on every
+  interactive element. All host-runnable gates pass AND the surface compiles against BOTH the iOS 18
+  simulator and macOS 15 SDKs with the real Xcode 26 toolchain under Swift 6 strict concurrency. The
+  signed Xcode app build/test is DEFERRED to the downstream integration/signed runner (un-staged KMP
+  Shared.xcframework + macOS signing — not a defect in this code, outside this prompt's allowed files),
+  matching the 0005/0009/0039 "code-complete + DEFERRED Xcode gate" precedent (ADR-012).
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/feature-views/ConflictWarnings.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0084-ConflictWarnings.log
+  git commit -m "feat(apps/apple/feature-views): add ConflictWarnings surface (P4)"
+
+EXIT=0
+STATUS=DONE

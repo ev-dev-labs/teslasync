@@ -1,0 +1,148 @@
+=== P4 Feature view 0220 CodeBlock (Apple) ===
+run-utc=2026-06-08T09:00:02Z
+host=Darwin 25.5.0 arm64
+web-source=web/src/features/system/components/chatbot/CodeBlock.tsx
+native-output=apps/apple/TeslaSync/feature-views/CodeBlock.*
+
+--- Runner capability probe (Apple platform toolchain) ---
+xcode-select -p: /Library/Developer/CommandLineTools
+xcodebuild -version: xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+swift: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+swiftlint: 0.63.3
+swiftformat: 0.61.1
+pwsh: PowerShell 7.6.2
+macOS SDK: /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+iOS simulator SDK: xcrun: error: SDK "iphonesimulator" cannot be located
+Frameworks/Shared.xcframework: ABSENT — git-ignored placeholder only; built on demand by apps/apple/Scripts/build-shared-xcframework.sh, which requires the Kotlin/Native (Gradle) toolchain. The app/test targets link it (ADR-004), so they cannot build here regardless of Xcode.
+
+--- Artifacts (this prompt's allowed files) ---
+     163 apps/apple/TeslaSync/feature-views/CodeBlock.Models.swift
+      66 apps/apple/TeslaSync/feature-views/CodeBlock.Adapter.swift
+     272 apps/apple/TeslaSync/feature-views/CodeBlock.Model.swift
+     190 apps/apple/TeslaSync/feature-views/CodeBlock.Views.swift
+     152 apps/apple/TeslaSync/feature-views/CodeBlock.States.swift
+      71 apps/apple/TeslaSync/feature-views/CodeBlock.swift
+     128 apps/apple/TeslaSync/feature-views/CodeBlock.Previews.swift
+     118 apps/apple/TeslaSync/feature-views/CodeBlock.Tests.swift
+     188 apps/apple/TeslaSync/feature-views/CodeBlock.ModelTests.swift
+      43 apps/apple/TeslaSync/feature-views/CodeBlock.strings
+    1391 total
+
+############################################################
+# GATE STEP 1/5 — xcodebuild iOS Simulator build test
+############################################################
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+
+############################################################
+# GATE STEP 2/5 — xcodebuild macOS build test
+############################################################
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+  (supporting evidence) xcrun simctl list devices:
+xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+
+############################################################
+# GATE STEP 3/5 — swiftlint --strict   (scoped to the 0220 surface = this prompt's allowed files)
+############################################################
+Linting 'CodeBlock.Previews.swift' (7/9)
+Linting 'CodeBlock.Tests.swift' (8/9)
+Linting 'CodeBlock.ModelTests.swift' (9/9)
+Done linting! Found 0 violations, 0 serious in 9 files.
+LINT_EXIT=0
+
+############################################################
+# GATE STEP 4/5 — swiftformat --lint   (scoped to the 0220 surface)
+############################################################
+Reading config file at /Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-126/apps/apple/.swiftformat
+SwiftFormat completed in 10.08s.
+0/9 files require formatting.
+FORMAT_EXIT=0
+
+############################################################
+# GATE STEP 5/5 — check-placeholders.ps1
+############################################################
+# (a) literal gate path 'apps/apple/.../CodeBlock' (matches the prompt verbatim):
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+# (b) meaningful recursive scan of the 9 shipped CodeBlock .swift files (temp copy):
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+############################################################
+# SUPPLEMENTARY VERIFICATION (compensating controls for the blocked xcodebuild gate)
+# These do NOT substitute for the xcodebuild build+test gate; they are the strongest
+# checks runnable without Xcode.app, and they all pass.
+############################################################
+# (S1) swiftc -typecheck production sources + generated Tokens.swift
+#      flags mirror project.yml: -swift-version 6 -strict-concurrency=complete, macOS 15 target, real macOS SDK
+TYPECHECK_PROD_EXIT=0   (0 = all production SwiftUI/Foundation code compiles clean)
+
+# (S2) CodeBlock.Previews.swift — the SAME typecheck WITH the Previews file:
+#      the only diagnostics are the #Preview freestanding-macro expansion, whose 'PreviewsMacros'
+#      compiler plugin ships with Xcode.app and is absent from Command Line Tools. Count of OTHER errors:
+PREVIEWS_NON_MACRO_ERRORS=0   (0 = Previews body is valid; only the Xcode-only macro plugin is missing)
+
+# (S3) Test bodies (CodeBlock.Tests.swift + CodeBlock.ModelTests.swift) typecheck against the real
+#      CodeBlock API via a minimal XCTest shim (XCTest.framework ships with Xcode, absent from CLT).
+TYPECHECK_TESTS_EXIT=0   (swiftc -typecheck exit 0; 0 error lines — test bodies match the production API)
+
+############################################################
+# GATE SUMMARY
+############################################################
+#   Step 1  xcodebuild iOS build test ...... IOS_EXIT=1        BLOCKED (capability)
+#   Step 2  xcodebuild macOS build test .... MAC_EXIT=1        BLOCKED (capability)
+#   Step 3  swiftlint --strict ............. LINT_EXIT=0       PASS (0 violations, scoped to allowed files)
+#   Step 4  swiftformat --lint ............. FORMAT_EXIT=0     PASS (0 files require formatting)
+#   Step 5  check-placeholders ............. PLACEHOLDER_EXIT=0 PASS (PLACEHOLDER_COUNT=0)
+#   S1      swiftc typecheck production .... TYPECHECK_PROD_EXIT=0   PASS (Swift 6, strict concurrency, macOS SDK)
+#   S2      Previews non-macro errors ...... PREVIEWS_NON_MACRO_ERRORS=0  PASS (only the Xcode-only #Preview plugin missing)
+#   S3      swiftc typecheck test bodies ... TYPECHECK_TESTS_EXIT=0  PASS (tests match the production API)
+
+############################################################
+# WHY BLOCKED (platform-capability evidence — Honesty Covenant rules 1, 9, 10)
+############################################################
+# The prompt's Capability clause requires SwiftUI + Swift Charts + MapKit on iOS 18 / iPadOS 18 /
+# macOS 15 via xcodebuild, "If unavailable on the runner -> STATUS=BLOCKED with API evidence."
+# This runner has Apple Command Line Tools, NOT Xcode.app:
+#   - `xcode-select -p` = /Library/Developer/CommandLineTools  => `xcodebuild` refuses to run (IOS/MAC_EXIT=1).
+#   - No iOS Simulator runtime (`xcrun simctl` is "not a developer tool"), so the iPhone 16 destination
+#     cannot be resolved.
+#   - The #Preview freestanding macro needs Xcode's `PreviewsMacros` compiler plugin (absent here).
+#   - XCTest.framework ships with Xcode (absent here), so the XCTest bundles cannot be compiled/run.
+#   - Frameworks/Shared.xcframework (the KMP core the app/test targets link, ADR-004) is git-ignored and
+#     is produced by Scripts/build-shared-xcframework.sh, which needs the Kotlin/Native (Gradle) toolchain.
+# All five gaps are platform/toolchain capability, not defects in the shipped CodeBlock code. The
+# strongest checks that DO run on this runner (swiftlint --strict, swiftformat --lint, check-placeholders,
+# and a real Swift-6 strict-concurrency typecheck of every production source + the test bodies against the
+# macOS SDK) all pass with exit 0. No xcodebuild result is claimed green (Covenant rule 1).
+
+############################################################
+# DELIVERABLE — parity with web/src/features/system/components/chatbot/CodeBlock.tsx
+############################################################
+# Composition reproduced: bordered rounded card (TSRadius.sm / Color.TS.surface+border); header with the
+#   uppercased language tag and an icon-only copy button (Color.TS.surfaceGlass); horizontally scrollable
+#   monospaced body; no syntax highlighting (web parity — keeps the chatbot bundle lean).
+# Data/semantics reproduced verbatim: languageLabel = `language?.trim() || 'text'` (CodeBlockContent +
+#   unit test); copy payload = the RAW fenced text (web `<CopyButton text=…>`), routed through an injected
+#   pasteboard seam; body = `children ?? text` rendered verbatim (never inline-parsed / HTML-interpreted).
+# States — every P4 leaf state renders (no hidden surfaces): loading (streaming partial / skeleton card),
+#   data (the faithful card), empty (resolved-but-blank fence, friendly state — never a bare <pre>),
+#   error (web QueryError peer + retry), and the orthogonal stale / offline freshness banner + chip with a
+#   one-shot stale auto-refresh.
+# Architecture: binds through CodeBlockModel (P1/S8 state-holder seam); no networking in the view.
+#   Tokens via P1/S9 (Color.TS / Font.TS / TSSpacing / TSRadius / TSMotion) — no ported Tailwind.
+#   Every string via the P1/S10 facade (CodeBlockStrings table "CodeBlock"); no English literals in Swift.
+#   view.opened emitted once with surface slug "CodeBlock" via the P1/S11 telemetry seam.
+#   Accessibility: VoiceOver labels on the card + copy/retry controls, Dynamic-Type-scaling body font,
+#   Reduce-Motion-respecting copy confirmation.
+# Tests: adapter unit tests (cached CodeBlockContentStatus -> CodeBlockPhase), per-state coverage,
+#   a11y-summary tests, and model-behaviour tests (view.opened once, copy seam, retry, stale auto-refresh,
+#   offline, lifecycle). Previews exercise all 9 states.
+# No TODO / stub / mock / placeholder / Lorem in shipped code (Step 5 verified).
+
+EXIT=1
+STATUS=BLOCKED

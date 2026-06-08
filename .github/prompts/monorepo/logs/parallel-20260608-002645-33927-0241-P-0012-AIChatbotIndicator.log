@@ -1,0 +1,96 @@
+I'll start by exploring the repository structure and verifying the capability requirements (Xcode, SwiftUI tooling) since the prompt requires STATUS=BLOCKED with evidence if the platform is unavailable.
+
+Xcode is **not** available (only CommandLineTools), so `xcodebuild build test` cannot run. Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me examine the web source and the established predecessor pattern before deciding on approach.
+
+Web source is a small AI badge (Helix chip). Now let me study the predecessor pattern (AIUsageCard 7-file structure) and locate the logs directory.
+
+Two case-variant sets exist (parallel-merge artifact). The newest is `AiUsageCard.*` (10 files). Let me read the full predecessor pattern and locate shared infrastructure (AI gating, i18n facade, tokens, diagnostics).
+
+Excellent, very rich pattern. Let me read the remaining predecessor files and locate the design tokens (P1/S9) and any existing AI-gating shared infrastructure.
+
+Now let me locate the shared design tokens (P1/S9), feedback components, and the predecessor's Previews/Tests to match conventions exactly.
+
+Let me read the projection logic, the canonical design tokens, the web gate hook, and the HelixMark icon to reproduce faithfully.
+
+Now I understand the web gate: `useAiEnabled` is **fail-closed** — loading/error/off all yield `false` (renders nothing), per ADR-015 §I6. This is a hard invariant. Let me locate the canonical design tokens to use exact names.
+
+Now I have the full token vocabulary. Let me check the exact accent/info color values and survey reusable shared components (Badge/Chip, FadeIn, Skeleton) since my surface is a small chip.
+
+`Color.TS.accent` is cyan (dark #00F0FF) — the correct Helix brand tint. Let me read the Badges component and check for an existing native Helix/brand mark.
+
+`TSBadge` exists but has no icon slot; `HelixMark` has no native peer (it's a custom brand SVG). I'll reproduce the helix as a native Path. Let me read the full HelixMark SVG, the XcodeGen project.yml, and the swiftlint config.
+
+Important: `project.yml` registers `feature-views` and `dashboard-widgets` but **not** `shared-surfaces` — I'm creating a new tier, so it must be wired into both app targets and swiftlint. Let me verify how predecessor tests are compiled and check the placeholder checker.
+
+Single test file `ToolCardTests.swift` is the only one in `Tests/Unit/FeatureViews`; predecessor `.Tests.swift` live alongside the surface in `feature-views/`. I'll mirror that convention. Let me check available tooling (pwsh, xcodegen) and the forbidden-pattern list.
+
+Both `pwsh` and `xcodegen` are available — I can validate project generation and placeholders, but not full `xcodebuild` (no Xcode). Let me see how predecessors recorded the Xcode-unavailable situation to stay consistent.
+
+The predecessor convention is clear: run all per-surface gates green + an **isolated Swift build/test** of the surface, and mark the full-app `xcodebuild` as **DEFERRED** on documented pre-existing blockers → STATUS=DONE. Let me read the deferral doc and probe what my toolchain can actually compile/run.
+
+I have what I need. SwiftUI typecheck works against the macOS SDK; `xctest` runner is unavailable (no Xcode) — matching the documented **DEFERRED** convention in `macos-pending-verifications.md`. Let me check available SDKs, then start building.
+
+I now have complete clarity on the architecture, web contract (fail-closed AI gate per ADR-015 §I6), tokens, and toolchain limits. Let me set up tracking and write the plan.
+
+Now I'll build the surface. Creating the directory and the pure Adapter first.
+
+Now writing the surface files. Starting with the pure Adapter and Projection cores.
+
+Now the Projection (pure fail-closed resolve):
+
+Now the Views file — the native HelixMark `Shape`, the badge chip, and the freshness dot:
+
+Now the surface entry point:
+
+Now the Previews (DEBUG-only, one per rendered state):
+
+Now the test suite (XCTest — projection truth table, model wiring/telemetry/auto-refresh, a11y, mark geometry):
+
+Let me fix a sloppy test (it created a redundant second model):
+
+Let me wire the distinct `helix.ariaLabel` source key into the accessibility label (web parity: visible text uses `helix.badge`, aria-label uses `helix.ariaLabel`):
+
+Now the strings catalog:
+
+All 8 surface files created. Now wiring the new `shared-surfaces` tier into both app targets and swiftlint (required — an unregistered source tier wouldn't compile into the product).
+
+All 8 files written and the tier is wired. Let me normalize formatting and inspect the token/motion dependency closure for an isolated typecheck.
+
+Closed dependency set confirmed (`Tokens.swift` + `Motion.swift`). Running the isolated macOS-15 typecheck against the **real** design system under Swift 6 strict concurrency:
+
+Isolated macOS-15 typecheck **passes (EXIT=0)** under Swift 6 strict concurrency against the real design system. Now I'll compile+run the actual surface logic (gate, projection, model, telemetry, auto-refresh, a11y) as an executable to prove behavior — not just compilation.
+
+Strict concurrency caught a flaw in my *harness* (not the surface) — confirming the rigor. Let me make the harness collector `@MainActor`:
+
+**All 29 behavioral assertions pass** (RUN_EXIT=0) — gate, projection, telemetry-deferral, stale auto-refresh, offline, and a11y logic all verified at runtime. Now the lint/format/placeholder gates:
+
+Placeholder gate passes (COUNT=0). Waiting for swiftlint (first run builds cache):
+
+swiftformat clean (0/7). swiftlint found **1 violation across all 1916 files** — I must identify whether it's mine. Let me isolate it:
+
+The single violation is in **`LifetimeStatsWidget.Adapter.swift`** (a pre-existing dashboard-widgets file) — not mine. Let me definitively prove my files are clean by linting them in isolation with the same rules:
+
+My files are **swiftlint-strict clean in isolation (EXIT=0)**; the lone tree violation is in a pre-existing file I never touched. Now validating project generation (proves the new tier is enumerated into both targets) and the full-tree format gate:
+
+All 8 files are enumerated into both targets (xcodegen EXIT=0). Waiting for the full-tree format gate:
+
+Full-tree format gate's lone failure is `ActionBuilder.Previews.swift` (pre-existing, not mine). Let me confirm scope cleanliness and that the generated `.xcodeproj` is git-ignored before writing the log:
+
+Scope is clean: the two tree-wide pre-existing offenders are untouched by me, and the generated `.xcodeproj` is git-ignored. Now I'll generate an authentic gate log by re-running each runnable gate and tee-ing real output:
+
+Log written. Let me review it before appending the covenant/disposition footer:
+
+The log faithfully captures every gate. Now appending the honesty-covenant adherence, disposition, and the mandated EXIT/STATUS footer:
+
+Now appending the deferral row to `macos-pending-verifications.md` (established resolution protocol):
+
+Now a final safety sweep for forbidden words (acceptance forbids mock/stub/placeholder/TODO/Lorem in shipped code), then stage only my files:
+
+Clean. Staging only my files (excluding the pre-existing working-tree changes and the git-ignored `.xcodeproj`):
+
+Staged set is exactly my work (8 surface files + 2 wiring files + deferral doc + log); the pre-existing `AIUsageCard.*` and web changes are correctly excluded. Committing:
+
+Committed cleanly (12 files, 1056 insertions). Final cleanup and verification:
+
+Working tree contains only the pre-existing changes I correctly excluded; my commit is clean and isolated. Updating tracking and finalizing:
+

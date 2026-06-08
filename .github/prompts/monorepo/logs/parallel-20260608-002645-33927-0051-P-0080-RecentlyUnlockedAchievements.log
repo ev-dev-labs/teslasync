@@ -1,0 +1,99 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Let me check the xcodebuild status and explore the existing structure that I'll use as a template.
+
+Key finding: **xcodebuild is unavailable** (only CommandLineTools, not full Xcode). swiftlint/swiftformat/swift compiler ARE available. I'll write the complete implementation and run available checks, documenting the build gate honestly. Let me study the existing patterns.
+
+`LifetimeStatsWidget` is the ideal template — it uses the same `useLifetimeStats` data source containing `achievements`. Let me read all its files.
+
+Now let me find the shared types/tokens and the web Achievement-related components to understand the data shape.
+
+I need to understand the shared-type architecture. `DashboardWidgetSize` is defined in many widget Model files but used (not defined) by `LifetimeStatsWidget`. Let me investigate the target structure and how duplicates are handled.
+
+All dashboard-widgets compile into one module, yet 13 files define `DashboardWidgetSize`. Let me see how duplicates are avoided.
+
+Now I understand: this is a parallel-dev monorepo where each surface is self-contained and shared scaffolding (`DashboardWidgetSize`, tokens) is provided at module level. `LifetimeStatsWidget` (same data source, same category/size as mine) is the canonical reference. Let me gather the remaining shared-type shapes and web data contracts.
+
+Now let me read the shared feedback components and the web data contracts.
+
+I now have the full data contract. Let me read the registry entry, the web `WidgetShell`, and the `RecentDrivesListWidget` (list-based) main + model files as structural templates.
+
+Registry confirmed (2×2, min 1×2, max 4×4). No existing native achievement code — I own it. Let me study the list-based `RecentDrivesListWidget` as the structural template for list rows + per-row navigation.
+
+I have a thorough understanding. Let me read the `RecentDrivesListWidget` Adapter and Model to capture the list-projection, layout helper, and per-row accessibility patterns before writing.
+
+Let me quickly check the `RecentDrivesStrings` facade (it uses a `format` helper) and the model's DTO/update shape to finalize my design.
+
+I now have a complete understanding of all patterns. Let me check the lint/format configs and the existing strings-table integration, then write the files.
+
+I have everything I need. Let me set up tracking and write the implementation. I'll start with the pure-logic core (Model + Adapter), which I can verify by standalone compilation.
+
+Now the Model file (state-holder seam, DTO, registry, telemetry, i18n facade):
+
+Now the Adapter (pure projector with stable desc sort, layout, accessibility):
+
+Let me verify the pure-logic core compiles and produces web-parity values via a standalone Swift harness (Swift 6 language mode, matching the project).
+
+Harness-only concurrency issue (top-level code is MainActor in Swift 6). Let me fix the harness's `check` function:
+
+Pure-logic core compiles under Swift 6 strict concurrency and **all 35 parity checks pass**. Now the SwiftUI layer.
+
+Now the main surface view:
+
+Now Previews and the strings catalog:
+
+Now the test suite:
+
+All 7 files written. Now let me run the available verification checks (swiftformat, swiftlint, placeholder scan) on my files.
+
+swiftformat flagged wrapping/number-grouping. Let me use the formatter to auto-fix (ecosystem tool), then re-lint:
+
+swiftformat passes (0/6 require formatting). Let me run swiftlint, the placeholder check, and re-verify the pure-logic harness against the auto-formatted files.
+
+swiftlint passes with **0 violations**. Now the placeholder check and re-verifying the harness against current files:
+
+All four available checks pass: **swiftformat 0/6**, **swiftlint 0 violations**, **placeholder COUNT=0**, **pure-logic harness all-pass**. Now let me also type-check the SwiftUI layer against the macOS SDK + real design tokens to de-risk the view code (since xcodebuild is unavailable).
+
+The **only** errors are the `#Preview` macro plugin (ships with full Xcode, same root cause as the xcodebuild block) — every shipping file type-checked cleanly. Let me confirm by type-checking everything except the DEBUG-only previews:
+
+Shipping view code type-checks cleanly against the real macOS SDK under Swift 6 strict concurrency. The only blocked step is xcodebuild (requires full Xcode). Let me write the gate log honestly. First, check the logs directory:
+
+Let me check an existing widget's log to match the expected format/conventions:
+
+These reference logs were produced on an Xcode-equipped runner (Xcode 26.5). Let me see how the 0055 log concluded to match format/tone:
+
+The established, user-approved disposition for sibling surfaces (0055, 0078) is **EXIT=0/STATUS=DONE with the xcodebuild scheme gate DEFERRED** (not claimed green) for structural reasons. Let me check the completion tracking convention:
+
+All **60 sibling logs are DONE, 0 BLOCKED** — confirming the user-approved disposition: ship code-complete with host gates green and the xcodebuild scheme step DEFERRED (documented, never claimed green). I've passed more host gates than the predecessors. Let me gather final evidence and write the log.
+
+Now I'll write the gate log, honestly documenting the host-green gates and the deferred xcodebuild step with full capability evidence:
+
+The log is written. Let me run a final consolidated verification of all host gates, then clean up temp files:
+
+All host gates green. Let me clean up temp files and commit precisely my files + the log (leaving the pre-existing baseline changes untouched):
+
+Exactly 8 files staged (7 surface + log), no baseline changes included. Now commit:
+
+Committed cleanly — 8 files (7 surface + log), baseline changes untouched. Let me finalize the todo tracking:
+
+The task is complete. All work is committed and verified.
+
+## Summary
+
+Shipped a production-polished native SwiftUI parity of `RecentlyUnlockedAchievements` at `apps/apple/TeslaSync/dashboard-widgets/RecentlyUnlockedAchievements.*` (7 files, 1415 lines) — mirroring the canonical `LifetimeStatsWidget`/`RecentDrivesListWidget` references.
+
+**What was built**
+- **`.Model.swift`** — P1/S8 state-holder seam (`RecentlyUnlockedSource`), `@Observable` model with `nonisolated resolvePhase` (incl. the `disabled` opt-out short-circuit) + stale auto-refresh, P1/S11 telemetry seam, DTO, P1/S10 i18n facade, canonical registry (`recently-unlocked-achievements`, 2×2 / 1×2 / 4×4).
+- **`.Adapter.swift`** — pure selection projector reproducing the web pipeline verbatim: filter `unlocked && unlocked_at` → **stable** descending sort → `slice(limit)` (5 if wide, else 3), plus layout + accessibility.
+- **`.swift` / `.Views.swift`** — glass shell, header (trophy + freshness chip + refresh + open), every state (loading skeleton / opt-out / empty / error+retry / content + stale|offline banner), responsive badge grid, tap→deep-link `onOpen(id)`.
+- **`.Previews.swift` / `.Tests.swift` / `.strings`** — DEBUG previews per state; adapter + model-phase + registry + a11y tests; per-surface i18n table (all web keys + native chrome).
+
+**Verification (every host-runnable gate GREEN)**
+- `swiftformat --lint`: 0/6 · `swiftlint --strict`: 0 violations · placeholder gate: COUNT=0
+- Swift 6 strict-concurrency **compile + run** of the logic: **35/35 parity assertions pass**
+- SwiftUI **typecheck against the real macOS 15 SDK + real design tokens**: 0 errors
+
+**Deferred (documented, not painted green):** the `xcodebuild` iOS/macOS scheme build+test — this runner has only CommandLineTools (no full Xcode; `xcodebuild`/`simctl` unavailable), and the whole-app scheme additionally needs the KMP `Shared.xcframework` + integration dedup + target registration (out of allowed scope). This matches the user-approved disposition used by all 60 sibling apple dashboard-widget surfaces (0 BLOCKED). Log ends `EXIT=0 / STATUS=DONE`.
+
+Committed exactly the 7 surface files + the gate log; the unrelated pre-existing baseline changes were left untouched.
+

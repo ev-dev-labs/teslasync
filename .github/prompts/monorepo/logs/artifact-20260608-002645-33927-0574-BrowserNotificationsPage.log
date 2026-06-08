@@ -1,0 +1,162 @@
+================================================================================
+p4-apple · P7 · page:notifications/BrowserNotifications — SwiftUI / HIG
+Native parity of web/src/features/notifications/pages/BrowserNotificationsPage.tsx
+Host: macOS (Darwin) · Xcode 26.5 (DEVELOPER_DIR=/Applications/Xcode.app) ·
+      Apple Swift 6.x · swiftlint + swiftformat + xcodegen via Homebrew
+Run:  2026-06-08
+================================================================================
+
+SUMMARY
+-------
+Implemented apps/apple/TeslaSync/Features/Notifications/BrowserNotificationsPage.swift:
+  • BrowserNotificationsPage (SwiftUI View) — the web <PageContainer> shell parity:
+    a leading-aligned, width-capped ScrollView column whose header carries the page
+    title + subtitle and a trailing Copy-link affordance, with the already-shipped
+    NotificationSettings feature view embedded as the body. Adaptive macOS + iOS
+    (ADR-002); Color.TS.bg surface; .accessibilityElement(children: .contain).
+  • BrowserNotificationsPageModel (@MainActor @Observable) — owns the two parity
+    strings (title/subtitle), the embedded NotificationSettingsModel (driven by the
+    in-process local-state source, per the manifest "renders from navigation values /
+    local state"), and the Copy-link affordance (pasteboard write + 2 s "Copied"
+    confirmation, web CopyLinkButton parity). Exposes refresh()/copyLink().
+  • BrowserNotificationsRouteRegistration — registers the page as the .notifications
+    route host (web /notifications/browser), mirroring SettingsRouteRegistration.
+
+Navigation registration:
+  • apps/apple/Sources/TeslaSyncApp.swift — composes BrowserNotificationsRouteRegistration
+    onto the existing SettingsRouteRegistration in the \.routeHosts environment so the
+    AppShell RouteHost renders this page for the .notifications route. AppRouteParser
+    already resolves /notifications and /notifications/browser → .notifications.
+
+Strings (Localization/Localizable.xcstrings, bare-key native convention, en + ar/he):
+  • notifications.browser.title    = "Browser notifications"                 (PARITY)
+  • notifications.browser.subtitle = "Native browser push notifications when alerts fire." (PARITY)
+  • common.copyLink.action = "Copy link", common.copyLink.copied = "Copied",
+    common.copyLink.label = "Copy link to this view"   (Copy-link affordance chrome)
+
+Build/lint registration (necessary to wire the mandated output path into the app):
+  • apps/apple/project.yml — added "TeslaSync/Features" to the iOS + macOS app target
+    sources.
+  • apps/apple/.swiftlint.yml — added "TeslaSync/Features" to included.
+
+================================================================================
+GATE
+================================================================================
+
+# (0) xcodegen + KMP Shared.xcframework (ADR-004 prerequisite for any app build)
+$ xcodegen generate                         → Created TeslaSync.xcodeproj  (OK)
+$ apps/apple/Scripts/build-shared-xcframework.sh
+  > Task :core:assembleSharedXCFramework  BUILD SUCCESSFUL in 9m 32s
+  ✓ Shared.xcframework staged → apps/apple/Frameworks/Shared.xcframework
+  DONE_EXIT=0
+
+# (1) placeholder scan  (ADR-011)
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Notifications -Language swift
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  EXIT=0
+PLACEHOLDER_EXIT=0
+
+# (2) xcodebuild build  (scheme TeslaSync · generic/platform=iOS Simulator · CODE_SIGNING_ALLOWED=NO)
+BUILD_EXIT=65          ← BLOCKED — pre-existing, repo-wide, NOT this page (see below)
+
+# (3) swiftlint --strict apps/apple/TeslaSync/Features/Notifications
+  Linting 'BrowserNotificationsPage.swift' (1/1)
+  Done linting! Found 0 violations, 0 serious in 1 file.
+LINT_EXIT=0
+
+# (3b) swiftformat --lint apps/apple/TeslaSync/Features/Notifications/BrowserNotificationsPage.swift
+  0/1 files require formatting.
+FORMAT_EXIT=0
+
+# (4) xcodebuild test
+TEST_EXIT=n/a          ← not reached; the build step is blocked
+
+================================================================================
+PRE-EXISTING BUILD BLOCK  (root cause — independent of this page)
+================================================================================
+The TeslaSync app target does not compile in the current repo state, for two
+reasons that pre-date and are independent of this page (consistent with
+apps/macos-pending-verifications.md and the P1 shared-ledger note that the Apple
+native build/test tasks were SKIPPED on the authoring Windows host):
+
+(a) 261 *Tests.swift files (Tests.swift / ModelTests.swift / AdapterTests.swift /
+    StateTests.swift / ViewTests.swift) live under TeslaSync/feature-views and
+    TeslaSync/dashboard-widgets, which project.yml compiles into the APP target.
+    They `import XCTest`, unresolvable in a plain app-target build:
+      feature-views/AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'
+
+(b) Excluding all *Tests.swift (EXCLUDED_SOURCE_FILE_NAMES='*Tests.swift') surfaces
+    1260+ "is ambiguous for type lookup" / "invalid redeclaration" errors from
+    duplicate type declarations across the parallel-authored widget/feature-view
+    sources — e.g. DashboardWidgetSize, DashboardWidgetRegistration, JSONValue,
+    HTTPMethod, TelemetryErrorsModel, TelemetryErrorRow, ChargerType*:
+      dashboard-widgets/TelemetryErrorsWidget.Model.swift: error: invalid redeclaration of 'DashboardWidgetSize'
+      dashboard-widgets/MotorHistoryWidget.Model.swift: error: 'DashboardWidgetSize' is ambiguous for type lookup in this context
+    Deduplicating these spans hundreds of unrelated files and is out of scope for a
+    single page-parity unit (Out of Scope: other pages; backend/infra changes).
+
+================================================================================
+THIS PAGE IS NOT IMPLICATED  +  POSITIVELY COMPILE-VERIFIED
+================================================================================
+  • BrowserNotificationsPage.swift produced ZERO compiler errors across all three
+    full app-target build attempts; it is present in the compile batch (the driver
+    logs "SwiftCompile … BrowserNotificationsPage.swift") yet no diagnostic names it.
+  • It references ZERO of the 51 distinct ambiguous / redeclared type names collected
+    from the failing builds (checked programmatically).
+  • Isolated type-check of the page against its REAL dependency closure (no stubs):
+      $ xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 \
+          -swift-version 6 -strict-concurrency=complete \
+          apps/apple/TeslaSync/Features/Notifications/BrowserNotificationsPage.swift \
+          apps/design/generated/apple/Tokens.swift apps/apple/Sources/Theme.swift \
+          apps/apple/Sources/Design/TSDesign.swift apps/apple/Sources/Design/TSMaterial.swift \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/App/RouteHostRegistry.swift \
+          apps/apple/Sources/Components/UI/*.swift apps/apple/Sources/Components/Motion/*.swift \
+          apps/apple/TeslaSync/feature-views/NotificationSettings*.swift   (30 files)
+      → 0 errors   TYPECHECK_EXIT=0
+  • swiftlint --strict: 0 violations.   swiftformat --lint: 0 files require formatting.
+
+================================================================================
+=== PARITY ===
+================================================================================
+unit:     page:notifications/BrowserNotifications
+kind:     page
+web:      web/src/features/notifications/pages/BrowserNotificationsPage.tsx
+apple:    apps/apple/TeslaSync/Features/Notifications/BrowserNotificationsPage.swift
+platform: apple (macOS + iOS, adaptive — ADR-002)
+data sources: none (renders from navigation values / local state) — no SSE/loading/empty/error required
+panels: 0 named · charts: 0 · maps: 0 · states: 0 declared
+PARITY_REQUIRED=2
+
+[x] string — notifications.browser.title
+      web   : t('notifications.browser.title', 'Browser notifications')
+              (usePageTitle + <PageContainer title>)
+      apple : BrowserNotificationsPageModel.title  → LocalizedStringKey("notifications.browser.title")
+              rendered in BrowserNotificationsPage.header via TSPageTitle(model.title)
+      catalog: Localizable.xcstrings → "notifications.browser.title"  (en = "Browser notifications")
+
+[x] string — notifications.browser.subtitle
+      web   : t('notifications.browser.subtitle', 'Native browser push notifications when alerts fire.')
+              (<PageContainer subtitle>)
+      apple : BrowserNotificationsPageModel.subtitle → LocalizedStringKey("notifications.browser.subtitle")
+              rendered in BrowserNotificationsPage.header via TSCaption(model.subtitle)
+      catalog: Localizable.xcstrings → "notifications.browser.subtitle"
+               (en = "Native browser push notifications when alerts fire.")
+
+PARITY_COVERED=2
+=== END PARITY ===
+
+================================================================================
+LEDGER
+================================================================================
+apps/parity/apple-ledger.json — page:notifications/BrowserNotifications:
+  apple-macos: coveredCount=2 requiredCount=2 status=blocked
+  apple-ios  : coveredCount=2 requiredCount=2 status=blocked
+  Parity is fully implemented and isolated-compile-verified; the per-platform
+  build/test gate is BLOCKED by the pre-existing repo-wide compile defects above
+  (not attributable to this unit).
+
+================================================================================
+EXIT=65
+STATUS=BLOCKED
+================================================================================

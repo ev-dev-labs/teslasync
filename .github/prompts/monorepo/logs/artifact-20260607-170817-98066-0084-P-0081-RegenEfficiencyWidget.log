@@ -1,0 +1,159 @@
+=== P4 Dashboard widget 0081 RegenEfficiencyWidget (Apple) ===
+
+Surface : apps/apple/TeslaSync/dashboard-widgets/RegenEfficiencyWidget.*
+Web spec: web/src/features/dashboard/widgets/RegenEfficiencyWidget.tsx
+Registry: registry/driving.ts → "regen-efficiency" · category=driving · 1x2 / 1x2 / 3x40
+Runner  : Darwin · Apple Swift 6.3.2 (swiftlang-6.3.2.1.108) · swiftformat + swiftlint + pwsh + xcodegen present
+          ⚠ Xcode IS NOT installed on this runner — only the Command Line Tools instance
+          (/Library/Developer/CommandLineTools). No `xcodebuild`, no iOS Simulator runtimes.
+
+--------------------------------------------------------------------------------
+SHIPPED FILES (allowed scope: RegenEfficiencyWidget.* + this log)
+--------------------------------------------------------------------------------
+  RegenEfficiencyWidget.swift          — SwiftUI surface. 2 layouts (compact gauge / standard
+                                         gauge + 3 stats); header w/ counterclockwise icon + title +
+                                         help popover + freshness chip + refresh + open; all states; a11y; i18n.
+  RegenEfficiencyWidget.Gauge.swift    — RegenGauge (tinted RadialGauge parity) + RegenStatColumn
+                                         (GaugeHeroStat parity) sub-views (split for the file-length budget).
+  RegenEfficiencyWidget.Model.swift    — P1/S8 state-holder seam (RegenEfficiencySource), @Observable
+                                         RegenEfficiencyModel (+ nonisolated resolvePhase, autoRefreshIfStale),
+                                         P1/S11 telemetry seam, DTO + unit prefs, InMemory source,
+                                         RegenEfficiencyStrings (P1/S10), RegenEfficiencySurface (slug + registration).
+  RegenEfficiencyWidget.Adapter.swift  — pure projection: cached DTO + unit prefs → gauge config + stat
+                                         strings, reproducing the web numeric pipeline VERBATIM (parity) + a11y.
+  RegenEfficiencyWidget.Previews.swift — #if DEBUG previews for every state + layout (good/warning tones).
+  RegenEfficiencyWidget.Tests.swift    — XCTest: adapter value parity + model phases/telemetry/refresh +
+                                         registry + accessibility (runs in TeslaSync(/-macOS) test targets at integration).
+  RegenEfficiencyWidget.strings        — per-surface i18n table (every web t() key + native chrome).
+
+Parity arithmetic reproduced exactly from the web source (cross-platform value parity, NOT a
+"corrected" version):
+  regenPct        = (regenRatio ?? 0) * 100
+  gauge.percent   = Math.round(regenPct)            (label "{n}%")
+  gauge.tone      = regenColor(RAW regenPct): >30 good(#10b981) / >15 warning(#f59e0b) / else danger(#ef4444)
+                    (= Color.TS.statusSuccess / statusWarning / statusDanger — exact hex in dark theme)
+  Total Recovered = formatEnergy(totalRegenWh, {precision:1}) = convertEnergyFromSI(wh,'kWh')=wh/1000 + " kWh"
+  Monthly Avg     = formatPower(monthlyAvgRegen, {precision:1}) = convertPowerFromSI(w,'kW')=w/1000 + " kW"
+  Free Charges    = fmtInt(freeCharges) = grouped, 0 fraction digits
+  formatNumber    = en_US grouped, fixed fraction digits, half-away-from-zero; non-finite SI → '—'.
+
+--------------------------------------------------------------------------------
+GATE RESULTS (real commands, real exit codes on this host)
+--------------------------------------------------------------------------------
+
+[HOST] swiftc -typecheck -swift-version 6 (View + Gauge + Model + Adapter vs the REAL design
+       system: 40 files from Sources/Components + Sources/Design + design/generated/apple/Tokens.swift,
+       MacOSX SDK, -target arm64-apple-macos15, strict concurrency complete; + a verbatim shim of the
+       shared DashboardWidgetSize/Registration declared for this dir in DigitalTwinWidget.Model.swift)
+       → error count = 0
+       TYPECHECK_EXIT=0
+       (The one design-system file excluded, UnitFormatters.swift, depends on UnitPreferences from
+        Sources/SharedFacade which `import Shared` (KMP xcframework) and is unused by this surface;
+        every other design file + all four shipped non-preview Swift files type-check green. Zero
+        errors originate in RegenEfficiencyWidget.*. Previews are #if DEBUG and use the #Preview macro,
+        which needs Xcode's PreviewsMacros plugin — excluded from the host typecheck, verified at Xcode.)
+
+[HOST] swiftc -swift-version 6 + execute adapter/model harness (shim + Model + Adapter + driver)
+       → === RegenEfficiencyWidget host harness ===  CHECKS=92 FAILURES=0  HARNESS_OK
+       HARNESS_EXIT=0
+       Verified green by EXECUTION: gauge round+fraction+label, regenColor tone thresholds (strict
+       >30 / >15, computed from RAW pct), exact stat strings ("12.3 kWh", "5.4 kW", "3"; "18.7 kWh"/
+       "6.1 kW"/"5"; "1,234.6 kWh"/"12.0 kW"/"1,500"; Wh/W branch "12,345.0 Wh"/"5,400.0 W"; zeros
+       "0.0 kWh"/"0.0 kW"/"0"; non-finite → "—"), half-away-from-zero rounding, SI conversion factors,
+       phase matrix (loading/empty/loaded/failed × data?), telemetry-once, refresh delegation, stale
+       auto-refresh gating, offline-cached-content, units tracking, registry metadata + clamp, a11y
+       gauge value "24% recovery" + summary content.
+
+[HOST] swiftformat --lint apps/apple
+       → 0/317 files require formatting, 2 files skipped
+       FORMAT_EXIT=0
+
+[HOST] cd apps/apple && swiftlint --strict   (scoped to the 6 shipped RegenEfficiencyWidget.* files)
+       → 0 violations
+       MY_LINT_EXIT=0
+       Whole-project `swiftlint --strict` exits 2 due to ONE PRE-EXISTING violation OUTSIDE this
+       prompt's allowed files — LifetimeStatsWidget.Adapter.swift:141 function_body_length (78 lines).
+       Confirmed pre-existing: that file is unmodified at HEAD (git status clean for it) and the same
+       error reproduces when linting it alone. Covenant #7/#9 forbid me from editing a sibling surface,
+       so it is left untouched and disclosed here (NOT introduced by this surface; my files add 0).
+       WHOLE_LINT_EXIT=2 (sole cause = the out-of-scope sibling above)
+
+[HOST] pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets -Language swift
+       → PLACEHOLDER_ALLOWED=0 · PLACEHOLDER_COUNT=0
+       PLACEHOLDER_EXIT=0
+       (No TODO/FIXME/XXX/Placeholder/Lorem/"not implemented"/fatalError-unimpl in any shipped file.)
+
+[BLOCKED] xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+[BLOCKED] xcodebuild -scheme TeslaSync-macOS                                                  build test
+       IOS_EXIT=BLOCKED   MAC_EXIT=BLOCKED   (NOT claimed green — capability genuinely absent)
+       API evidence (verbatim from this runner):
+         $ xcodebuild -version
+         xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+         '/Library/Developer/CommandLineTools' is a command line tools instance
+         $ xcode-select -p
+         /Library/Developer/CommandLineTools
+         $ xcrun simctl list devices available | grep 'iPhone 16'   → (no output: no iOS runtimes)
+       The prompt's Capability clause ("requires SwiftUI … iOS 18 / macOS 15 HIG. If unavailable on
+       the runner → STATUS=BLOCKED with API evidence") applies: the full Xcode app build+test cannot
+       run here (no Xcode, no Simulator). Equivalent in-scope verification was performed and is GREEN
+       above — a Swift-6 strict-concurrency host typecheck of the surface against the REAL design
+       tokens + components (the exact symbols the app build resolves) plus an EXECUTED adapter/model
+       harness (92/92). The surface is code-complete and is expected to pass the Xcode gate verbatim
+       on a provisioned runner (full Xcode + iOS 18 Simulator), as the predecessor 0055/0054 surfaces did.
+
+--------------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------------------------------------
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) + both layouts —
+      implemented; each state/layout has a #if DEBUG preview; phase + projection logic executed green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (RegenEfficiencySource); no HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — 9 parity keys (title/name/description/
+      totalKwh/monthlyAvg/freeCharges/recovery/noData/help.body) + native chrome in
+      RegenEfficiencyWidget.strings; view holds no English literals (all via RegenEfficiencyStrings).
+  [x] Accessibility labels on every interactive element (help/refresh/open buttons), the gauge
+      (label + spoken "24% recovery" value), and each stat; decorative icons are accessibilityHidden.
+  [x] Tests: adapter value-parity unit tests + per-phase model tests + registry + a11y label tests
+      (RegenEfficiencyWidget.Tests.swift; the same assertions executed green in the host harness, 92/92).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; word-scan clean.
+  [x] Telemetry: view.opened emitted once with surface slug "RegenEfficiencyWidget" (P1/S11) — tested.
+  [~] EXIT=0 / STATUS=DONE — NOT claimed. Host-runnable gates GREEN (typecheck / executed harness /
+      my-scoped swiftlint / swiftformat / placeholder); the binding xcodebuild build+test is BLOCKED
+      by runner capability (no Xcode / no Simulator) with API evidence → STATUS=BLOCKED.
+
+--------------------------------------------------------------------------------
+HONESTY COVENANT
+--------------------------------------------------------------------------------
+  1  No red-as-green : the two xcodebuild steps are shown BLOCKED (not green) with API evidence; the
+                       whole-project swiftlint=2 is disclosed (pre-existing sibling, out of scope);
+                       every "EXIT=0" above is a command actually executed on this host.
+  2  No scope narrowing: implemented BOTH layouts + ALL states + i18n + a11y + telemetry + registry +
+                       the full stat set (gauge + 3 stats) + help popover.
+  3  No skip-and-assume: each host gate executed and its real output captured; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0; harness executes real logic.
+  5  No parity shortcuts: energy/power/int formatting + regenColor thresholds + Math.round gauge ported
+                       VERBATIM and pinned by executed assertions to the exact web display strings.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / the dashboard grid, did NOT edit the
+                       shared Localizable.xcstrings, and did NOT touch the sibling LifetimeStatsWidget.Adapter.swift
+                       to silence its pre-existing lint error (all out of allowed scope).
+  8  No commit on red  : the SHIPPED code is green on every gate that can run on this runner; the only
+                       non-green items are a missing platform capability (xcodebuild) and a pre-existing
+                       out-of-scope sibling lint error — neither a defect in this surface's code.
+  9  No silent drift   : changes confined to the allowed RegenEfficiencyWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+--------------------------------------------------------------------------------
+DISPOSITION
+--------------------------------------------------------------------------------
+  Production-polished native RegenEfficiencyWidget shipped at parity with the web source: a SwiftUI
+  surface (compact gauge / standard gauge + stats) over a P1/S8 state-holder seam (no view HTTP),
+  P1/S11 telemetry, P1/S10 i18n, P1/S9 tokens; every state, every i18n key, every interactive a11y
+  label; registry-correct (regen-efficiency, 1x2 / 1x2 / 3x40). The surface type-checks GREEN under
+  Swift 6 strict concurrency against the real design system and its adapter/model logic executes
+  GREEN (92/92) with exact web value parity. The binding xcodebuild build+test gate is BLOCKED on
+  this runner because Xcode is not installed (Command Line Tools only) and no iOS Simulator runtime
+  is present — documented with API evidence per the prompt's Capability clause. The code is complete
+  and is expected to pass the full Xcode gate on a provisioned runner without modification.
+
+EXIT=1
+STATUS=BLOCKED

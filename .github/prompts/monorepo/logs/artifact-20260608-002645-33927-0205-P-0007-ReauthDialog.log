@@ -1,0 +1,136 @@
+=== P4 Modal / dialog 0007 ReauthDialog (Apple) ===
+Surface: apps/apple/TeslaSync/modals-dialogs/ReauthDialog.*
+Web source (spec): web/src/components/feedback/ReauthDialog.tsx
+Pattern followed: the canonical AiUsageCard multi-file surface (feature-views/AiUsageCard.*).
+Date: 2026-06-08
+
+------------------------------------------------------------------------------
+DELIVERABLE (11 files, all within the allowed `ReauthDialog.*` scope)
+------------------------------------------------------------------------------
+  ReauthDialog.Adapter.swift      pure-Foundation core: DialogMode/Tab/SudoMode enums, CONFIRM
+                                  token, TOTP sanitiser, confirm-match, required-field guard,
+                                  totpTabAvailable rule, mode resolver, coded-error classifier, a11y.
+  ReauthDialog.Model.swift        i18n facade (table "ReauthDialog"), connection axis, telemetry
+                                  seam, ReauthSubmitError, ReauthInput, ReauthFormSpec, ReauthResolved.
+  ReauthDialog.StateHolder.swift  ReauthDialogSource port + @Observable ReauthDialogModel
+                                  (form state + submit/cancel routing + error mapping + telemetry +
+                                  stale auto-refresh) + InMemoryReauthDialogSource.
+  ReauthDialog.Projection.swift   pure input->resolved: empty/error/loading/form(spec) + titles/
+                                  body(token interpolation)/labels/tabs per mode.
+  ReauthDialog.Views.swift        form (scoped tab bar + secure/code/plain field rows + helper +
+                                  inline error + action row), empty state, iOS input traits.
+  ReauthDialog.Chrome.swift       freshness chip, refresh, connectivity banner, loading skeleton,
+                                  error view, `.reauthDialog(model)` sheet host (dismiss semantics).
+  ReauthDialog.swift              top-level surface: header + banner + content states + lifecycle.
+  ReauthDialog.Previews.swift     #Preview for every state (credential·authenticator / credential·
+                                  password-only / confirm / loading / empty / error / stale /
+                                  offline / sheet host).
+  ReauthDialog.Tests.swift        projection phase + content unit tests.
+  ReauthDialog.ModelTests.swift   state-holder tests (wiring, telemetry, reset, fallback, submit
+                                  success + coded-error mapping, validation, cancel guard, refresh).
+  ReauthDialog.AdapterTests.swift adapter tests (sanitise, confirm-match, totpTabAvailable, mode,
+                                  classifier, a11y).
+  ReauthDialog.strings            every web `sudo.*` key 1:1 + native chrome keys.
+
+------------------------------------------------------------------------------
+RUNNER CAPABILITY (probed)
+------------------------------------------------------------------------------
+  xcode-select -p           -> /Library/Developer/CommandLineTools   (full Xcode NOT selected)
+  /Applications/Xcode.app   -> present (Xcode 26.5, build 17F42)      (usable only via DEVELOPER_DIR)
+  iOS SDK                   -> iphonesimulator26.5 (iOS 26.5)         (deploy target 18.0 OK)
+  Simulator                 -> "iPhone 16" present and Booted
+  swiftlint / swiftformat   -> present (/opt/homebrew/bin)
+  pwsh                      -> present (/opt/homebrew/bin/pwsh)
+  java                      -> openjdk 17.0.19 (KMP Gradle build runs)
+
+------------------------------------------------------------------------------
+GATE STEP RESULTS
+------------------------------------------------------------------------------
+[1] swiftformat --lint apps/apple/TeslaSync/modals-dialogs
+    -> SwiftFormat completed. 0/11 files require formatting.
+    FORMAT_EXIT=0
+
+[2] swiftlint --strict (explicit paths: TeslaSync/modals-dialogs/*.swift; the directory is not yet
+    in .swiftlint.yml `included:` — that registration is P4-core infra, see BLOCKERS)
+    -> Done linting! Found 0 violations, 0 serious in 11 files.
+    LINT_EXIT=0
+
+[3] check-placeholders.ps1 -Path apps/apple/TeslaSync/modals-dialogs -Language swift
+    -> PLACEHOLDER_ALLOWED=0
+    -> PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+    (self-test: SELFTEST_EXIT=0)
+
+[4] Runnable logic-core proof (Adapter + Model value types + Projection compiled and EXECUTED
+    against the Xcode 26.5 toolchain; mirrors the XCTest assertions):
+    -> ALL LOGIC-CORE CHECKS PASSED  (38/38: projection phases, credential/confirm form,
+       token interpolation, totpTabAvailable rule, mode resolver, validation/sanitisation,
+       error classification, presentation flags, accessibility)
+    LOGIC_RUN_EXIT=0
+
+[5] Real-SDK type-check of the full SwiftUI surface (8 non-test files) + its shared component
+    closure, swift-version 6, -strict-concurrency=complete -D DEBUG:
+      iphonesimulator26.5  -target arm64-apple-ios18.0-simulator   -> IOS_TYPECHECK_EXIT=0
+      macosx               -target arm64-apple-macos15.0           -> MAC_TYPECHECK_EXIT=0
+    Test files (Tests + ModelTests + AdapterTests) type-checked as one module against the same
+    SDK (XCTest assert macros shimmed locally — a manual-swiftc limitation, not a code defect):
+                                                                    -> TESTS_TYPECHECK_EXIT=0
+
+[6] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    -> BLOCKED.  xcodegen generate succeeded (GEN_EXIT=0) and the KMP `Shared.xcframework`
+       pre-action built successfully ("xcframework successfully written out to .../debug/
+       Shared.xcframework"), proving the toolchain works on this runner. However the generated
+       TeslaSync.xcodeproj contains 0 references to `modals-dialogs`, so the scheme compiles NONE
+       of this surface's files (see BLOCKERS #2). A clean app-target build is additionally blocked
+       by pre-existing out-of-scope staging (BLOCKERS #3). Build halted after the framework stage.
+    IOS_EXIT=(blocked)
+
+[7] xcodebuild -scheme TeslaSync-macOS build test
+    -> BLOCKED for the same structural reasons as [6].
+    MAC_EXIT=(blocked)
+
+------------------------------------------------------------------------------
+BLOCKERS (all are platform/infra/pre-existing — NONE are defects in this surface)
+------------------------------------------------------------------------------
+#1  Developer dir selection: `xcode-select -p` is CommandLineTools. The literal gate `xcodebuild`
+    invocation requires full Xcode to be the selected toolchain (present at /Applications/Xcode.app
+    but reachable here only via DEVELOPER_DIR, since `sudo xcode-select -s` is not available). The
+    verification in steps [4]-[5] was run by pointing DEVELOPER_DIR at the full Xcode.
+
+#2  P4-core dependency unmet in this slot ("Depends on: P4 core"). The new `modals-dialogs`
+    directory is not registered in:
+      - apps/apple/project.yml         (TeslaSync / TeslaSync-macOS app-target `sources:`)
+      - apps/apple/.swiftlint.yml      (`included:`)
+    Both files are OUTSIDE this prompt's allowed-files scope
+    (`apps/apple/TeslaSync/modals-dialogs/ReauthDialog.*` + this log). Registering a brand-new
+    surface directory is infrastructure work owned by the P4-core / modals-dialogs bundle prompt
+    (the same way `feature-views` is already registered for the AiUsageCard surface). Result:
+    `grep -c modals-dialogs TeslaSync.xcodeproj/project.pbxproj` = 0.
+
+#3  Pre-existing staging artifact (out of scope). The TeslaSync app target's `feature-views` source
+    group already contains many `*Tests.swift` files (AcDcStatsPanel.Tests.swift,
+    ActionBuilder.Tests.swift, AiUsageCard.Tests.swift, ...) that `import XCTest` and
+    `@testable import TeslaSync`. A target cannot `@testable import` itself, so these break a clean
+    app-target compile until integration relocates them into the XCTest targets. This is unrelated
+    to this surface and not editable within the allowed-files scope.
+
+------------------------------------------------------------------------------
+VERIFICATION SUMMARY
+------------------------------------------------------------------------------
+  swiftformat ............ PASS (0/11)
+  swiftlint --strict ..... PASS (0 violations, 11 files)
+  placeholder gate ....... PASS (COUNT=0)
+  logic core (executed) .. PASS (38/38)
+  iOS 18 type-check ...... PASS (swift6, strict concurrency)
+  macOS 15 type-check .... PASS (swift6, strict concurrency)
+  test-file type-check ... PASS (one-module, XCTest shimmed)
+  xcodebuild build test .. BLOCKED (platform/infra/pre-existing; deliverable is complete + verified)
+
+The surface reproduces the web source's data, composition, every state (loading / empty / error /
+stale / offline / credential-form{password,authenticator} / confirm-form), all `sudo.*` i18n keys,
+accessibility labels on every interactive element, and the `view.opened` telemetry with slug
+"ReauthDialog". It binds only through the P1/S8 state-holder seam (no direct HTTP from the view).
+No TODO / stub / mock / placeholder / Lorem in shipped code.
+
+EXIT=1
+STATUS=BLOCKED

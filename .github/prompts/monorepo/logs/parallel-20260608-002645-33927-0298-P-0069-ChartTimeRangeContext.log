@@ -1,0 +1,117 @@
+I'll start by exploring the task: reading the web source, checking the Apple project structure, and verifying the build tooling is available.
+
+Key finding: `xcodebuild` requires full Xcode (only Command Line Tools installed), but `swift`, `swiftlint`, `swiftformat`, and `pwsh` are available. Let me read the web source and explore the Apple project structure.
+
+This is a chart-sync **context/store** surface (not visual UI) — it synchronizes chart cursors across charts. It depends on a companion `cursorSync` store. Let me read that and explore the Apple project structure.
+
+Let me read the cursorSync companion store and explore the Apple source layout in depth.
+
+Now let me study the existing generated-surface conventions (`TeslaSync/dashboard-widgets`, `TeslaSync/feature-views`), the build config, and the P1 facades (state-holders, tokens, i18n, diagnostics).
+
+The build uses XcodeGen; `shared-surfaces/` isn't wired in `project.yml` yet. Let me test the Swift toolchain's SDK access and study the facades (state-holders, tokens, i18n, diagnostics) plus the existing charts components and a small exemplar surface.
+
+Critical finding: **SwiftUI + Charts type-check successfully** with the available toolchain (macOS SDK is present), so I can actually compile-verify the code even without full Xcode. Now let me learn the test convention, state sub-views, strings, design tokens, and charts components.
+
+Tests use `XCTest` + `@testable import TeslaSync`, colocated per surface. Let me read the charts interaction component (directly relevant to cursor sync), the design tokens, and the GlassPanel/FadeIn/motion facades.
+
+Now let me confirm token definitions, the lint/format rules, the GlassPanel/FadeIn signatures, and find a chart-bearing exemplar surface to mirror precisely.
+
+Design tokens live in `../design/generated/apple`. Note: swiftformat has `--disable environmentEntry` and `--self remove`. Let me confirm exact token symbols and find existing `EnvironmentKey` usage + a chart-bearing exemplar.
+
+I have all token names confirmed. Let me read the env-key pattern and find a chart hover/selection exemplar to mirror the cursor interaction, then start building.
+
+Existing native charts already reference cursor-sync symbols. Let me see exactly what API they expect — my surface must satisfy them.
+
+These are surface-local abstractions — no collision, no hard contract. Let me study the closest sibling (`ElevationChart`) for the chart-overlay/RuleMark/hover convention, then build.
+
+I now have all conventions. Let me read the placeholder checker (to avoid tripping it), confirm no name collisions, and verify the chart-selection API, then build.
+
+Now I understand all constraints (avoid words: TODO/FIXME/XXX/"Coming soon"/Placeholder/"Lorem ipsum"/"not implemented"). Let me locate the typography/feedback/button components I'll use so my view compiles against real APIs.
+
+Let me read the exact inits for the feedback/button components I'll use, then create the plan and start building.
+
+Let me verify how the authoritative exemplar passes localized strings to TS components (LocalizedStringKey vs facade), then I'll build.
+
+I have everything needed. Let me create the plan, todos, and start writing the surface files.
+
+Now writing the surface. First the store (cursorSync.ts parity):
+
+Now the core context (provider + environment + the 4-hook parity):
+
+Let me type-check the two core files standalone before continuing, to validate the concurrency design:
+
+Core compiles clean under Swift 6 strict concurrency. Now the Model (state-holder seam, telemetry, i18n, demo source):
+
+State sub-views (loading/empty/error/connectivity/freshness — every state renders):
+
+Now the renderable Demo surface with the two synced Swift Charts (the literal cross-chart cursor parity):
+
+Now let me unify one a11y fallback, then write Previews and the i18n strings:
+
+Now the test suite (mirrors the web `.test.tsx` + model/a11y/telemetry coverage):
+
+All 8 files written. Let me auto-format them per the repo config, then run the broad type-check against real dependencies.
+
+swiftformat clean. Now swiftlint --strict on the new files:
+
+swiftlint scanned the whole project (config `included:` overrides path) and found 1 violation. Let me locate it:
+
+My files are clean — the single violation is pre-existing in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (outside my allowed files). Let me confirm it's untouched and run the broad type-check against real dependencies:
+
+git confirms LifetimeStats is untouched (pre-existing violation) and there are pre-existing dirty files I must avoid committing. The dependency `Cards.swift` pulls a deeper closure — I'll isolate my files using the **real** `Tokens.swift` plus minimal component shims matching the real signatures:
+
+All non-test files type-check clean under Swift 6 strict concurrency. Now let me **prove the test logic actually runs correctly** via a runtime harness over the real Store/Context/Model (mirroring the web `.test.tsx` + my XCTest):
+
+Need to move globals into the `@main` type. Let me fix the harness structure:
+
+All 28 runtime checks pass — the ported Store/Context/Model logic is verified against the web suite's contract. Now let me run the placeholder gate and check how `shared-surfaces` is expected to be wired:
+
+Important: swiftlint's `included:` list excludes `shared-surfaces`, so my earlier run may have skipped my files. Let me lint them explicitly with a scoped config mirroring the repo rules:
+
+swiftlint resolves `included` relative to the config location. Let me use an absolute path:
+
+swiftlint found 1 real issue: `chart(syncedSample:)` body exceeds 50 lines. Let me view and refactor it by extracting the chart-content builders:
+
+Let me refactor by extracting chart-content builders to shrink the function body:
+
+Now add the `SyncedCursorChip` view at the end of the file:
+
+Now re-format, re-type-check the refactor, and re-run scoped swiftlint + placeholder:
+
+Everything runnable is green: core typecheck, broad typecheck, runtime harness (28/28), swiftlint (0), swiftformat (0), placeholder (0). The only blocked steps are the iOS/macOS `xcodebuild` (no full Xcode on this runner). Let me generate the gate log with real command outputs:
+
+Now append the compensating verification evidence (compile + runtime) and the final status:
+
+Let me review the complete log to ensure it's coherent and the captured evidence is correct:
+
+The log is honest and complete. Let me update todos, do a final all-green sweep, and verify the file set before committing:
+
+All green. Let me clean up temp artifacts and commit precisely my files (the surface dir + log), avoiding the pre-existing dirty files:
+
+Exactly the 8 surface files + log staged (pre-existing dirty files excluded). Committing:
+
+Committed cleanly (9 files, 1824 insertions). Final confirmation of repo state:
+
+The task is complete. Here's a summary of what was delivered.
+
+## Summary
+
+Built the native Apple (SwiftUI) parity of the web `components/charts/ChartTimeRangeContext.tsx` (+ its `cursorSync.ts` store) — a cross-chart synced-cursor context. Committed as `499faf431` (8 surface files + gate log, 1824 lines).
+
+**Files** (`apps/apple/TeslaSync/shared-surfaces/`):
+- `…Store.swift` — `ChartCursorSyncStore` (`@Observable`, `@MainActor`) + `ChartCursorSyncValue`: the `cursorSync.ts` parity (set/get/clear/reset, **no-op on unchanged**, key isolation).
+- `…swift` — `ChartTimeRangeContext`, `ChartSyncMethod`, Environment injection, `SyncedChartCursor`, and `chartTimeRangeProvider` (inject + unmount-clear) = the `useChartSync`/`useSyncedCursor`/`useSyncedReferenceLineX`/`useCursorSyncPosition` four-hook parity.
+- `…Model.swift` — P1/S8 state-holder seam + in-memory source, P1/S11 `view.opened` telemetry (slug `ChartTimeRangeContext`), P1/S10 i18n facade, phase/connection model.
+- `…Demo.swift` / `…States.swift` — the renderable manifestation: two Swift Charts sharing one `syncId` so hovering either moves a persistent `RuleMark` on both; every state (loading/content/empty/error + stale/offline) renders.
+- `…Previews.swift`, `…Tests.swift`, `…strings`.
+
+**Verification (all green):** Swift 6 strict-concurrency typecheck (core + demo/model/states/previews vs real design tokens), a **28-check runtime harness** mirroring the web suites + colocated XCTest, `swiftlint --strict` (0), `swiftformat --lint` (0), placeholder gate (0).
+
+## Status: BLOCKED (covenant-sanctioned)
+
+`xcodebuild build test` (iOS/macOS) **cannot run** — this runner has only Command Line Tools, no full Xcode/iOS-Simulator. Per the prompt's capability clause, the log ends `EXIT=70 / STATUS=BLOCKED` with API evidence. The surface code is complete and proven correct off-device. The log also documents the one-line `project.yml` + `.swiftlint.yml` wiring the integrator must add at P4-core/acceptance (outside this prompt's allowed-files scope).
+
+
+
+All work is complete and committed; all 11 todos are done. Calling task_complete.
+

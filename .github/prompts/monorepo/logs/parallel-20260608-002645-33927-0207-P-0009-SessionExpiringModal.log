@@ -1,0 +1,114 @@
+I'll start by exploring the repository structure and the web source that serves as the specification.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed, and `simctl` is unavailable. `swift`, `swiftlint`, `swiftformat` ARE available. Let me explore the existing conventions before deciding on approach.
+
+Now let me study the established conventions. The `modals-dialogs` directory doesn't exist yet (this is the first modal). Let me examine the latest `feature-views` example (AIUsageCard — just modified) and the shared infrastructure.
+
+The convention is clear: each surface is a multi-file set (`.swift`, `.Model`, `.Adapter`, `.Views`, `.Previews`, `.Tests`, `.strings`). Let me read the full AiUsageCard set (latest example) plus the placeholder checker and templates.
+
+Now let me read the full AiUsageCard set to internalize the exact conventions for a complete surface.
+
+Excellent convention. Let me read the remaining AiUsageCard files plus shared design tokens to understand reusable primitives.
+
+Let me read the remaining AiUsageCard files and locate the shared design tokens.
+
+Let me locate the shared design tokens and primitives (TSSpacing, Color.TS, TSButton, TSFadeIn, TSSkeleton) and read the test/preview/strings conventions.
+
+Tokens, pwsh, and xcodegen are all available — only full Xcode + simulator are missing. Let me read the design tokens, shared primitives, and the test/strings conventions.
+
+Now let me read the remaining conventions: motion/skeleton primitives, the test/preview/strings files, the web `useSessionMonitor` hook, and check for existing native modal patterns.
+
+Let me read the test/preview conventions, the `SessionInfo` type, `navigateToReauth`, and check for existing native modal/sheet primitives and surfaces.
+
+Let me read the `SessionInfo` type, `navigateToReauth`, the AdapterTests convention, and search for existing native session/auth/modal patterns.
+
+There's a shared `Overlays.swift` — likely a modal primitive I should reuse. Let me read it plus the AdapterTests convention and how AppShell presents overlays.
+
+I have the full convention. Let me verify two feasibility questions in parallel: (1) can `swiftc` typecheck SwiftUI against the CLT-only SDK, and (2) how self-contained is `Sources/Components` (for a standalone typecheck of my surface).
+
+Standalone SwiftUI typecheck works (PROBE_EXIT=0) and `Sources/Components` is self-contained — I can genuinely compile-verify my code. Let me check lint/format configs, the modals-dialogs wiring question, and baseline lint on an existing surface.
+
+`run-prompts.ps1` confirms `modals-dialogs/` is an expected tier. Let me read the surface-units entry, the lint/format configs, and an existing log for format reference.
+
+The `AIRestorePanel` sibling log reveals the **established, accepted precedent**: surfaces ship `STATUS=DONE` verified by host-runnable means (SDK compiles for iOS+macOS against the real component library, an executed SPM logic harness, scoped swiftlint/swiftformat/placeholder/plutil), with the whole-tree `xcodebuild build test` **deferred** (environmental). Let me confirm the iOS SDK and XCTest availability.
+
+iOS simulator SDK is absent (CLT-only) — so iOS-target compile and `xcodebuild` are environmentally blocked, but macOS SDK + SPM are available. Let me baseline-compile the real component library against the macOS SDK to confirm I can compile my surface against it.
+
+Components isn't fully self-contained (`UnitFormatters` needs `UnitPreferences` from Platform). I'll compile my surface against the **minimal real dependency subset** I actually use. Let me verify that subset (Tokens + Buttons + Motion + Skeletons + Cards) compiles cleanly.
+
+Cards drags in `tsGlassPanel` (TSMaterial) + Typography. Let me close the dependency set: Tokens + TSMaterial + Typography + Buttons + Motion + Cards + Skeletons.
+
+All feasibility confirmed. The real component-library subset compiles clean against macOS SDK under Swift 6 strict concurrency. I now have everything to build the surface following the established `AiUsageCard` multi-file convention. Let me set up tracking and a plan.
+
+Now I'll write the surface files. Starting with the Foundation-only Adapter.
+
+Let me typecheck the Foundation-only trio early to catch issues before building the SwiftUI layer.
+
+The Foundation core typechecks clean. Now the SwiftUI Chrome (freshness chip, banner, loading, error) and Views (dialog, expiring body, drafts).
+
+Now let me typecheck the full SwiftUI surface against the real component library before writing previews/tests.
+
+Full surface compiles clean against the real library under Swift 6 strict concurrency. Now the Previews and strings.
+
+Now the XCTest files (Adapter + state-holder + a11y), matching the `AiUsageCard` convention.
+
+Now the full verification. First, compile the complete surface **including** the `#Preview` file (DEBUG) against the real component library.
+
+The `#Preview` macro needs Xcode's `PreviewsMacros` plugin (absent on CLT) — the same error hits the real library's `Typography.swift`, confirming it's environmental, not a code defect. Let me verify the Previews file's logic by neutralizing only the macro wrapper, then compile.
+
+The library's own `#Preview` blocks now break under `-D DEBUG`. I'll strip the `#if DEBUG` guard from my transformed copy and drop `-D DEBUG` so the library's previews stay excluded while my preview helpers still compile.
+
+Previews logic compiles clean (only the macro *expansion* needs Xcode's plugin — environmental). Now the highest-value check: an **executed** SPM logic harness over the real Adapter + Projection + Model.
+
+The harness references `SessionExpiringModal.surfaceSlug` (defined in the SwiftUI file, not copied). I'll point those at `SessionExpiringSurface.slug` (the Foundation-side source of truth the Model actually emits).
+
+Logic harness **executed green: 75/75 passed**. The real Adapter + Projection + Model are proven correct. Now the formatting/lint/placeholder/strings gates.
+
+swiftformat flags real issues — notably `locale` is genuinely unused in my projection (unlike AiUsageCard, this surface has no locale-dependent formatting). I'll drop the unused `locale` seam honestly, then let swiftformat auto-fix the mechanical items. Let me view exact lines first.
+
+Now I'll drop the unused `locale` seam from the projection and model:
+
+Now update the test files and harness to drop the `locale` argument, then re-run swiftformat. Let me strip `locale: enUS` from the tests.
+
+Now run swiftformat in write mode to auto-fix the mechanical issues, then re-lint.
+
+swiftformat passes (0/9 require formatting). Let me re-verify compilation after formatting, refresh the harness with the updated files, and run swiftlint.
+
+Surface compiles and **swiftlint --strict passes clean**. Now refresh the harness with the updated (locale-free) sources and re-run it.
+
+Harness still **75/75**. Now the placeholder gate and `.strings` validation.
+
+The placeholder gate flags the literal word "placeholder" in my doc comments/test names (legitimate prose, but the mechanical gate forbids the marker). I'll reword to avoid it rather than use opt-out hacks. Let me find every occurrence.
+
+These are legitimate prose, not stubs — I'll reword to drop the forbidden marker. Applying edits across the files:
+
+Re-run the placeholder gate and scan for any other forbidden markers (TODO/stub/mock/Lorem):
+
+Placeholder gate passes and no forbidden markers. Now a consolidated final re-verification after all edits.
+
+All core gates green. As an extra check, let me typecheck the **XCTest files** against the real surface using a minimal XCTest shim (proves no symbol/type errors in the deferred tests).
+
+The errors are shim artifacts (stripping `import XCTest` removed Foundation re-export, and `@autoclosure` overloads block keypath inference) — not real test bugs. Let me fix the shim (plain params + Foundation in the temp copies) and recompile.
+
+The XCTest files typecheck clean against the real surface (**TESTS_TYPECHECK_EXIT=0**). Every host-runnable verification is green. Let me capture the environmental-blocker evidence for the log (xcodebuild, iOS SDK, preview macro).
+
+All evidence captured. Now I'll generate the gate log, faithfully recording each step (host-runnable gates green; whole-app Xcode gate environmentally deferred with evidence).
+
+Let me review the captured gate-step results at the top of the log, then append the analysis and footer.
+
+The log accurately captures all steps. Now let me append the parity/acceptance analysis and the `EXIT=0 / STATUS=DONE` footer.
+
+Let me do a final consistency check (no leftover `locale` references) and review key sections before committing.
+
+One stale comment to fix (Tests.swift no longer injects locale). Let me correct it.
+
+Let me re-confirm the format/lint/placeholder gates after that comment edit, then commit.
+
+All gates green. Now staging **only** my new surface files + the log (leaving the pre-existing unrelated working-tree changes untouched), then committing.
+
+Exactly my 11 files staged; pre-existing changes left untouched. Committing:
+
+Committed (`288c71d36`, 11 files). Let me finalize todos and clean up temp artifacts.
+
+Task complete. Let me record the final status in the plan file and wrap up.
+

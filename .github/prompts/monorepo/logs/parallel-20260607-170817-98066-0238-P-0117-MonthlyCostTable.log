@@ -1,0 +1,135 @@
+I'll start by exploring the repository structure, the web source specification, and the existing Apple app architecture.
+
+Now let me explore the Apple app structure and the related types/components.
+
+Let me examine the existing `feature-views` directory and a sibling example to learn the established patterns.
+
+`EntriesTable` is the closest analog. Let me read its full file set to learn the conventions.
+
+Let me read the remaining EntriesTable files (Strings, strings catalog, Previews, Tests) and locate the shared component/token definitions.
+
+Now let me read the Tests file and locate the shared components (`TSDataTable`, `TSColumn`, tokens, `WidgetFreshness`) plus the web formatting helpers I must reproduce.
+
+Let me read the shared `DataTable` component, the web `Currency`/`numberFormat` for exact parity, and locate the design tokens.
+
+Let me find the design tokens, `WidgetFreshness`, the native `GlassPanel`/currency conventions, and the default currency symbol.
+
+Let me locate the generated design token definitions (`Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`).
+
+The design tokens live in `apps/design/generated/apple`. Let me inspect them to confirm the exact available token names.
+
+Now let me check the shared component APIs I'll use (Cards/GlassPanel, States, Skeletons, Buttons) and verify the Apple toolchain availability on this runner.
+
+Key capability finding: `xcodebuild` requires full Xcode but only Command Line Tools are present. `swift`, `swiftlint`, `swiftformat`, `xcodegen` are available. Let me verify component APIs and how sibling charging views format currency, then test whether SwiftUI/Foundation compiles here.
+
+Let me read the proven formatting code in `ChargingSection.Adapter` and the remaining component initializers to match conventions exactly.
+
+Let me verify `WidgetFreshness`, `TSSkeleton` API, how the project wires `.Tests.swift`/`.Previews.swift` in feature-views, and test compiler availability.
+
+I need to understand how `.Tests.swift`/`.Previews.swift` files in `feature-views` get routed to the right target. Let me inspect the full app + macOS targets and any excludes.
+
+Let me check the rest of `project.yml` (test targets) and the `Tests/Unit/FeatureViews` directory to understand test routing.
+
+I have enough architectural understanding. Now let me rigorously verify the platform capability (this determines DONE vs BLOCKED) and confirm what I *can* compile.
+
+`Xcode.app` exists in `/Applications` — it's just not the selected developer dir. I can override with `DEVELOPER_DIR` (no sudo needed). Let me verify it's functional.
+
+Major finding: **Xcode 26.5 is available** via `DEVELOPER_DIR` override, with iOS 26.5 simulator (iPhone 16) and macOS SDK. The full gate is runnable. Let me check the `Shared.xcframework` dependency (KMP) situation, since the app target depends on it.
+
+The full app build needs the KMP `Shared.xcframework` (Gradle/Kotlin-Native, not pre-staged). Let me assess feasibility and read the pending-verifications note.
+
+This matches a known precedent: ToolCard (P-0010) verified the surface via an **isolated SwiftPM build + tests**, with the full-app `xcodebuild` deferred to the macOS CI gate due to pre-existing unrelated collisions. I'll replicate that proven approach. Let me check which shared components are KMP-free so I can build my surface in isolation.
+
+I have everything I need. The runner has **Xcode 26.5 + iPhone 16 sim** (via `DEVELOPER_DIR`), and all shared UI components are KMP-free — so I can verify the surface via an isolated SwiftPM build (the established ToolCard precedent) and lint/format/placeholder, while the full-app `xcodebuild` is the documented macOS-CI deferral (pre-existing `DashboardWidgetSize` 8× collisions). Let me set up tracking and write the plan.
+
+Now I'll create the surface files. Starting with the Foundation-only Adapter, Strings facade, and Model.
+
+Month format is `YYYY-MM`. Now I'll create the Adapter (pure projection/sort/format).
+
+Now the Model (view-state, provider seam, telemetry, freshness):
+
+Now the SwiftUI view — GlassPanel-wrapped, all states, 7-column table:
+
+Now the strings catalog, Previews, and Tests:
+
+Now the comprehensive Tests file:
+
+All 7 surface files created. Now let me set up the isolated SwiftPM verification (the ToolCard precedent). First, confirm which component dirs my surface needs and check for stray imports.
+
+UI/Feedback/Design import only SwiftUI — safe to build in isolation. Now let me set up the isolated SwiftPM package (named `TeslaSync` so `@testable import TeslaSync` resolves) and build+test it with Xcode 26.5.
+
+Excellent — all my surface files compiled. One error is in `FeedbackOverlays.swift` (a copied component my surface doesn't use) referencing `TSMetricBar` from DataDisplay. Let me drop that unused file from the isolated package and rebuild.
+
+Build succeeds under Swift 6 strict concurrency. Now let me run the test suite.
+
+All **28 tests pass** under Swift 6 strict concurrency. Now let me run the gate's formatters on the real repo files — first `swiftformat --lint`, then `swiftlint --strict` scoped to my files.
+
+swiftformat wants auto-fixes (wrapping, redundant returns). I'll run the repo's formatter to apply them, then re-verify build + tests + lint.
+
+Now re-sync the formatted files into the isolated package, rebuild + retest, and run `swiftlint --strict` on my files.
+
+Tests still pass (28/28). Only 1 swiftlint issue: Tests file is 422 lines (>400 limit) after wrapping. Let me view the formatted structure and trim it compactly without losing coverage.
+
+I'll add a compact positional helper and use it for the verbose data, cutting the Tests file under the 400-line limit. Let me view the spots to edit.
+
+Let me compact the test data with a positional helper and dedupe the repeated DTO construction.
+
+Now re-format, re-sync, rebuild+retest, and re-lint:
+
+`bucket` has 7 non-default params (rule max 5). `sampleDTO` passes because its params have defaults (ignored by the rule). Let me switch `bucket` to a single tuple parameter.
+
+Both `large_tuple` (max 2) and `function_parameter_count` (max 5) block the helper — but params *with defaults* are ignored. Let me consolidate to one all-default `sampleDTO` with a compact body, drop `bucket`, and keep data terse. Let me view the current region.
+
+All green for my files: swiftformat clean, 380 lines, **28 tests pass**, **swiftlint --strict 0 violations**. Let me run the placeholder check and inspect its script.
+
+The script recursively scans a directory. The gate's path prefix (`.../MonthlyCostTable`) isn't a real dir, so I'll run it both ways: the exact gate invocation and a real scan of a temp dir holding only my files. First, let me check the swift patterns and grep my files for risky words.
+
+My files contain none of the forbidden tokens. Let me run the placeholder gate — both the exact gate path and a real scan of a temp dir containing only my files.
+
+All surface-level gates are green (build, 28 tests, swiftformat, swiftlint, placeholders). Now let me verify the **pre-existing** full-app blockers cited in the pending-verifications ledger are real and unrelated to my surface.
+
+Confirmed pre-existing, unrelated blockers: `DashboardWidgetSize` is redefined **15×** and **57** co-located `*.Tests.swift` already import XCTest into the app target — exactly the documented macOS-pending deferral. Let me generate the Xcode project and capture **real** evidence that the full-app build blocker is pre-existing (missing KMP `Shared` + redefinitions), not my surface.
+
+The project generated with my files included. Now let me capture real evidence that the full-app build blocker is pre-existing (missing KMP `Shared` module + `DashboardWidgetSize` redefinitions) — building the target directly to fail fast.
+
+Definitive evidence: the full-app build halts immediately on the **missing `Shared.xcframework`** (the KMP/Kotlin-Native artifact deferred to macOS CI) — before any source compiles. Combined with the grep-proven 15× `DashboardWidgetSize` redefinition and 57 pre-existing co-located XCTest files, the full-app build is blocked by pre-existing/unrelated factors. Let me run the whole-tree formatter/linter gate steps for an accurate log.
+
+Whole-tree swiftformat is clean (0/1014). Now whole-tree `swiftlint --strict`:
+
+One pre-existing whole-tree swiftlint violation. Let me confirm it's not in my files:
+
+My 6 files are clean; the single whole-tree lint violation is pre-existing in `LifetimeStatsWidget.Adapter.swift` (not mine). I now have all real data. Let me generate the authentic gate log capturing genuine command outputs.
+
+Now let me append the gate steps (xcodebuild iOS/macOS evidence, swiftlint, swiftformat, placeholder) with real outputs, plus the honest final status.
+
+The log is thorough. Let me fix one numeric consistency (B3: 56 pre-existing excluding my file), then clean up generated artifacts and verify git status.
+
+Working tree is clean — exactly my 7 surface files + the log (the generated `.xcodeproj` and temp dirs are removed). Let me do a final review of the formatted view and adapter to confirm polish, then commit.
+
+Code is clean and idiomatic. Let me update tracking and commit the surface + log.
+
+Committed cleanly. Let me do a final airtight integrity check — rebuild + retest the **committed** files in a fresh isolated package.
+
+Final integrity check confirms the **committed** files build clean and **28/28 tests pass**. Let me finalize tracking.
+
+All work is complete and verified. 
+
+## Summary
+
+Shipped the native Apple `MonthlyCostTable` surface (P4/0117) at parity with `web/src/features/charging/components/cost-analysis/MonthlyCostTable.tsx`, modeled on the established `EntriesTable` feature-view pattern.
+
+**7 files** in `apps/apple/TeslaSync/feature-views/` (committed `c036c29c`):
+- `.Adapter.swift` — Foundation-only DTO/projection/format/sort reproducing `fmtInt`, `fmtWithUnit('kWh',1)`, `Currency` (p2/p3), the `{>=0?'+':''}` signed-savings rule, and the default month/desc stable sort (`localeCompare` for month, numeric for the rest).
+- `.swift` — GlassPanel-wrapped view: chart icon + title + freshness chip + refresh, connectivity banner, and a 7-column `TSDataTable` with web-matched colors (cost→accent, gas→danger, savings→success/danger).
+- `.Model.swift` — provider state-holder seam (P1/S8), `@Observable` model, `view.opened` telemetry (P1/S11), freshness presentation.
+- `.Strings.swift` + `.strings` — P1/S10 i18n facade + catalog (9 web keys + native chrome), zero English literals.
+- `.Previews.swift` / `.Tests.swift` — every state previewed; 28 tests (adapter/sort/format, per-state renderable, telemetry, i18n, a11y).
+
+**Verification (real outputs in the gate log):**
+- Isolated SwiftPM build + **28/28 tests** under Swift 6 strict concurrency (Xcode 26.5) — re-confirmed against the committed files.
+- `swiftlint --strict` **0 violations** (surface); `swiftformat --lint` **clean** (whole-tree 0/1014); placeholder scan **0**.
+
+**Honest status: `STATUS=BLOCKED`** on the full-app `xcodebuild build test` only — blocked by **pre-existing, unrelated** factors (missing KMP `Shared.xcframework`, `DashboardWidgetSize` redeclared 15×, 56 pre-existing co-located XCTest files, macOS signing), deferred to the macOS-latest acceptance gate exactly per the documented ToolCard P-0010 precedent. The surface contributes none of these and is complete + green in isolation. I did not fake an `xcodebuild` pass or modify out-of-scope files.
+
+
+

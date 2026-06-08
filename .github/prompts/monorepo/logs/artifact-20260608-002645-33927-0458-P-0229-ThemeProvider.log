@@ -1,0 +1,140 @@
+=== P4 Shared surface 0229 ThemeProvider (Apple) ===
+Prompt: .github/prompts/monorepo/p4-apple-shared-surfaces/0229-ThemeProvider.prompt.md
+Web source (spec): web/src/components/ui/ThemeProvider.tsx
+Native output: apps/apple/TeslaSync/shared-surfaces/ThemeProvider.*
+Date: 2026-06-08
+
+--------------------------------------------------------------------------------
+RUNNER CAPABILITY PROBE (determines DONE vs BLOCKED per prompt capability note)
+--------------------------------------------------------------------------------
+The prompt's gate requires SwiftUI + Swift Charts + MapKit on iOS 18 / macOS 15 via
+`xcodebuild ... build test`. Capability check on this runner:
+
+$ xcodebuild -version
+  xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+  directory '/Library/Developer/CommandLineTools' is a command line tools instance
+$ xcode-select -p            -> /Library/Developer/CommandLineTools   (NO full Xcode)
+$ ls apps/apple/Frameworks/  -> .gitkeep only  (KMP Shared.xcframework NOT built;
+                                the app targets depend on Frameworks/Shared.xcframework)
+$ ls apps/apple/*.xcodeproj  -> none (xcodegen output is git-ignored, regenerated)
+$ xcrun simctl ... iPhone 16 -> no iOS Simulator runtime present
+$ swift --version            -> Apple Swift 6.3.2 (CLT macOS SDK ships SwiftUI,
+                                Charts, MapKit frameworks) -- usable for typecheck
+$ swiftlint / swiftformat / pwsh / xcodegen -> present
+
+CONCLUSION: The two `xcodebuild ... build test` gate steps CANNOT run on this
+CommandLineTools-only runner (no full Xcode app, no compiled KMP Shared.xcframework,
+no iOS Simulator). This is the prompt's explicit "If unavailable on the runner ->
+STATUS=BLOCKED with API evidence" case. The surface IS fully implemented and every
+verification that CAN run on this runner passes (see below). This is a platform
+block, NOT scope narrowing or a stub.
+
+--------------------------------------------------------------------------------
+IMPLEMENTATION (production surface, no stubs/placeholder/skeleton-only)
+--------------------------------------------------------------------------------
+Parity target: ThemeProvider.tsx is a React context provider whose product value is
+the data exposed through `useTheme` (6 colour themes + 7 display modes + custom
+colours), the resolved `theme`/`mode`, and `setTheme`/`setMode`/`setCustomColors`,
+plus `hexToRGB`, `buildCustomTheme`, the `/settings` load+persist lifecycle, the
+`auto` -> system light/dark resolution, and `applyThemeCSS`.
+
+Files (all <= 400 lines, per repo swiftlint file_length):
+   157  ThemeProvider.Adapter.swift     IDs, RGBA, hexToRGB + CSS colour parse (pure)
+   320  ThemeProvider.Catalog.swift     ColorTheme/ModeTheme + 6-theme/7-mode catalog
+   221  ThemeProvider.Projection.swift  Selection, /settings validation+merge, phase
+   372  ThemeProvider.Model.swift       @Observable state holder, P1/S8 source seam,
+                                        P1/S11 view.opened telemetry, UserDefaults
+                                        seed + write-through persist, stale refresh
+   145  ThemeProvider.swift             surface View (header+freshness+banner+states)
+   250  ThemeProvider.Views.swift       palette swatches + display-mode rows
+   312  ThemeProvider.States.swift      custom-colour editor (ColorPicker), live
+                                        preview, banner, loading/empty/error chrome,
+                                        ThemeProviderScope (useTheme/applyThemeCSS parity)
+    90  ThemeProvider.Previews.swift    #Preview per state: data/loading/error/stale/
+                                        offline/empty + scope
+   356  ThemeProvider.Tests.swift       XCTest: adapter + model + a11y/i18n
+        ThemeProvider.strings           P1/S10 i18n keys (theme + mode names, chrome)
+
+States rendered (every one): loading (skeleton), empty (ContentUnavailableView),
+error (retry), data (full control), stale + offline (freshness chip + banner +
+one-shot auto-refresh on the stale transition). No content is hidden behind null.
+i18n: every string via ThemeProviderStrings facade (no English literals in code).
+a11y: VoiceOver labels + .isSelected traits on every swatch/row/button; Dynamic
+Type via system fonts; reduce-motion respected by shared TSFadeIn.
+Telemetry: view.opened emitted with slug "ThemeProvider" on start().
+
+--------------------------------------------------------------------------------
+GATE STEPS (as written in the prompt)
+--------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'iOS Simulator,iPhone 16' build test
+    -> xcode-select error: requires Xcode (CommandLineTools only)
+    IOS_EXIT=1   STATUS: BLOCKED (no full Xcode / no Shared.xcframework / no Simulator)
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    -> xcode-select error: requires Xcode (CommandLineTools only)
+    MAC_EXIT=1   STATUS: BLOCKED (no full Xcode / no Shared.xcframework)
+
+[3] swiftlint --strict            (gate cwd apps/apple; config .swiftlint.yml)
+    LINT_EXIT=2
+    The configured `included` set (Sources, dashboard-widgets, feature-views, Tests,
+    widgets, watch) currently has ONE PRE-EXISTING violation, unrelated to this surface:
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19:
+      Function Body Length Violation (function_body_length)
+    NOTE: shared-surfaces is not yet in `included` (wiring it in is a separate
+    integration step, out of this prompt's allowed-files scope). Linting the new
+    surface files explicitly with the SAME repo rules:
+      swiftlint --strict (included := TeslaSync/shared-surfaces)
+      -> Done linting! Found 0 violations, 0 serious in 9 files.   (SURFACE CLEAN)
+
+[4] swiftformat --lint apps/apple
+    FORMAT_EXIT=1
+    "1/1922 files require formatting, 2 files skipped" -- the one file is PRE-EXISTING
+    and unrelated to this surface:
+      TeslaSync/feature-views/ActionBuilder.Previews.swift:48:1 (blankLinesBetweenScopes)
+    The new surface files pass:
+      swiftformat --lint apps/apple/TeslaSync/shared-surfaces -> 0/9 require formatting.  (SURFACE CLEAN)
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/ThemeProvider
+    PLACEHOLDER_EXIT=0   (PLACEHOLDER_COUNT=0)
+    Real directory scan (apps/apple/TeslaSync/shared-surfaces):
+      PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0   (SURFACE CLEAN)
+
+--------------------------------------------------------------------------------
+SUBSTITUTE VERIFICATION FOR THE BLOCKED xcodebuild STEPS (run on this runner)
+--------------------------------------------------------------------------------
+Because xcodebuild cannot run, the surface was verified with the available Swift 6
+toolchain against the REAL design tokens + shared component library:
+
+(A) Full-surface type-check (Swift 6 strict concurrency) against the real
+    generated tokens (apps/design/generated/apple/Tokens.swift), TSDesign/TSMaterial,
+    and the real shared components (Cards/Buttons/Badges/Typography/Motion/Skeletons):
+      xcrun swiftc -typecheck -swift-version 6 <Tokens + Design + Components +
+        ThemeProvider.{Adapter,Catalog,Projection,Model}.swift +
+        ThemeProvider.{swift,Views,States,Previews}.swift>
+      -> typecheck-exit=0   (ALL SURFACE FILES TYPE-CHECK CLEAN)
+
+(B) Executed the committed XCTest assertions against the real Adapter + Model logic
+    via a standalone SwiftPM executable harness (XCTest itself is absent from the CLT
+    toolchain, so the same assertions were run through an assert harness):
+      swift run -Xswiftc -enable-testing ThemeVerify
+      -> THEME_VERIFY passed=74 failed=0
+    Coverage: hexToRGB web-value parity, #hex/#rgb/rgba parse + invalid fallback,
+    catalog completeness (6 themes/7 modes ordered, every fixed RGB == hexToRGB),
+    custom-theme RGB derivation, /settings validation + selection merge, projection
+    phases (data/loading/error/empty) and auto -> light/dark, model view.opened-once,
+    first-load settings merge, setTheme/setMode/setCustomColors write-through to both
+    the backend seam and UserDefaults, no-persist-before-first-load, stale auto-refresh
+    fires exactly once, refresh/stop delegation, and UserDefaults seed.
+
+--------------------------------------------------------------------------------
+RESULT
+--------------------------------------------------------------------------------
+Surface implementation: COMPLETE (no stubs, all states, i18n, a11y, telemetry, tests).
+Runnable checks: typecheck=0, logic-tests=74/74, surface swiftlint=0, surface
+swiftformat=0, placeholder=0.
+Blocked: the two `xcodebuild build test` steps (full Xcode + KMP Shared.xcframework +
+iOS Simulator absent on this CommandLineTools runner). Whole-tree swiftlint/swiftformat
+non-zero exits are PRE-EXISTING baseline issues in other files, not this surface.
+
+EXIT=1
+STATUS=BLOCKED

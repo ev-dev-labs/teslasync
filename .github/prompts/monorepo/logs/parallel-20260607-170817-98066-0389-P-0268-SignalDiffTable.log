@@ -1,0 +1,108 @@
+I'll start by exploring the repository structure to understand the web source, the Apple app structure, and the dependencies this task references.
+
+Key finding: `xcode-select -p` points to `/Library/Developer/CommandLineTools`, not a full Xcode. This may block iOS Simulator builds. Let me verify the toolchain capability and read the web source plus existing patterns in parallel.
+
+Critical capability finding confirmed: the runner has **only Command Line Tools, not full Xcode** — `xcodebuild` and `simctl` both error out. The prompt's capability clause says this → `STATUS=BLOCKED with API evidence`. But before concluding, I must (per the Honesty Covenant: no scope narrowing, no skip-and-assume) check whether full Xcode exists anywhere, and how predecessors handled this gate.
+
+Major finding: **full Xcode exists at `/Applications/Xcode.app`** — `xcode-select` just isn't pointed at it. And the predecessor pattern is now clear: produce complete production code, verify with host-runnable gates (real-SDK `swift` typecheck + XCTest for pure logic + swiftlint + swiftformat + placeholder check), and DEFER the full `xcodebuild` app build/test to a P99 signed runner, reporting `EXIT=0 / STATUS=DONE`.
+
+Let me verify whether that Xcode.app is actually usable (it looked suspiciously small), and study the predecessor file conventions.
+
+Full Xcode 26.5 is usable via `DEVELOPER_DIR` override (iOS/macOS 26.5 SDKs — supersets of the iOS 18/macOS 15 minimums). Now I'll study the exact predecessor conventions and locate the native shared-component counterparts. Let me read the immediate predecessor's full file set, the project config, and search for the native equivalents of the shared components this surface uses.
+
+I now have the architecture map. Native shared components live in `apps/apple/Sources/Components/`. Let me read the canonical predecessor file set (MarkdownRenderer) and the native shared-component APIs this surface needs (`SourceLayerBadge`/`SignalSource`, `PinButton`/`HelpTooltip`).
+
+The design system and conventions are now clear. Let me read the remaining critical pieces: the web shared components (`SourceLayerBadge`/`SignalSource`, `useTelemetry` row type, `fmtNumber`), the native `PinButton`/`HelpTooltip` API, and the rest of the canonical predecessor file set plus the design tokens.
+
+Now let me read the exact web type definitions, the `SourceLayerBadge`/`fmtNumber` logic, and locate the native `PinButton`/`DataTable` counterparts plus the design-token definitions.
+
+Now I have the web contract nailed down. Let me read the native `TSDataTable` API (the shared component I'll compose with), the design tokens, and the predecessor's Views/Previews/Tests/strings to lock conventions.
+
+The `TSDataTable` API is clear and I'll compose with it. Now let me locate the design-token definitions and read the predecessor's Views/Previews/Tests/strings to finalize conventions.
+
+Let me read the design tokens, the predecessor's Views/Tests/ModelTests, and the typography component to finalize all conventions.
+
+I now have the full token API. Let me read the predecessor test conventions, the lint/format configs, and the project.yml structure to ensure my files compile and pass the host-runnable gates.
+
+Let me read the full predecessor log to replicate the exact host-runnable verification methodology, and check the test-target wiring in project.yml.
+
+I now have the complete, accepted methodology (132+ predecessors). Key insight: MarkdownRenderer was **self-contained** (Foundation + SwiftUI + DesignTokens only), enabling a clean isolated `swiftc -typecheck`. I'll follow that exact pattern. Let me verify the remaining infra: the test-target wiring in project.yml, xcodegen/xcframework availability, and whether I can run real XCTest on-host with the full Xcode toolchain.
+
+Now the full picture is clear. The real `xcodebuild` gate has **pre-existing infra blockers outside my allowed scope**: `Shared.xcframework` is only a `.gitkeep` (KMP core not staged), and 143 sibling `.Tests.swift` files are swept into the app target via the `feature-views` glob (XCTest-in-app-target). I cannot fix these without touching non-allowed files. This matches the accepted 132-predecessor precedent: do the host-runnable gates for real, defer xcodebuild with evidence.
+
+Let me check the placeholder checker and pwsh, then verify a clean isolated typecheck works before writing all files.
+
+pwsh is available; I'll avoid all forbidden tokens (`TODO`, `Placeholder`, `FIXME`, etc.) in my code. Let me de-risk the typecheck approach with a quick probe using the macOS SDK + DesignTokens before writing all files.
+
+Isolated typecheck against the macOS 15 SDK works cleanly. Let me verify the on-host XCTest harness works with the full Xcode toolchain, then I'll start building.
+
+Both host-runnable verification mechanisms are confirmed working (isolated typecheck + on-host XCTest via SwiftPM). I have everything needed. Let me record the plan and todos, then build the self-contained surface (matching the MarkdownRenderer precedent: Foundation + SwiftUI + DesignTokens only).
+
+Now I'll build the surface. Starting with the Foundation-only value types and pure projection logic (typecheckable headless).
+
+Let me typecheck the two Foundation-only files immediately to catch issues early.
+
+Foundation files are clean. Updating todos and writing the Model (seams + `@Observable` state holder).
+
+The state-holder layer typechecks. Now the SwiftUI rendering layer. I'll decompose into focused files (all `SignalDiffTable.*`, matching the multi-file predecessor precedent). Starting with the atomic native counterparts (source badge, pin button, delta/value cells).
+
+Now the adaptive table grid — the native counterpart of the web `DataTable` (columnar on macOS/iPad, cards on compact iPhone, with selection, sorting, and a bulk bar).
+
+I referenced a few helpers I need to define. Let me add the `text`/`columnLabels` facade helpers, rename the a11y extension, and create the rows/bulk-bar file.
+
+Now the rows + bulk bar file.
+
+Now the content assembly + chrome (legend, help tooltip, connectivity banner, freshness chip).
+
+Now the non-ready states and the entry view.
+
+Now the entry view that ties phases + freshness together.
+
+Now let me typecheck the entire SwiftUI surface together against the macOS 15 SDK (Swift 6, strict concurrency, warnings-as-errors) — the core host gate.
+
+Quick visibility fix: `columnLabels()` is `public` but returns an internal type. It's only used in-module, so make it internal.
+
+`SignalDiffGridWidth` needs module visibility (used across files). Dropping `private`.
+
+Clean on macOS. Now the iOS 18 SDK typecheck (the surface has `#if os(iOS)` branches for size-class adaptation).
+
+Both platforms compile clean. Updating todos and writing the i18n catalog.
+
+Let me verify every i18n key referenced in Swift has a matching entry in the catalog (no missing/extra keys).
+
+Every key matches 1:1 (no missing, no unused). Now the previews covering every state.
+
+Now the tests. Let me check how the predecessor implemented its telemetry spy under strict concurrency before writing mine.
+
+I found a semantic issue in the accessibility wording (and a copy duplication). I'll unify the column labels into `SignalDiffCopy` so the a11y sentence reads correctly and there's a single source of truth. Let me refactor `SignalDiffCopy`, the projection's a11y builder, the facade, and drop the threaded `labels` param.
+
+Now update the facade `copy()` and remove the now-redundant `columnLabels()`/`SignalDiffColumnLabels` threading.
+
+Now update the Grid to use `model.copy` and drop the `SignalDiffColumnLabels` struct/param.
+
+Now update the compact card (Rows), the content view (Views), and the entry to use `model.copy` instead of the removed `labels`.
+
+Re-typecheck both platforms after the refactor.
+
+Let me harden `SignalDiffValue.from` (the JSON-bridging convenience) to be NSNumber-first so JSON bool/number disambiguation is deterministic.
+
+The state-holder + projection compile clean. Now the test suites — pure logic/model first.
+
+Now the view-contract + accessibility test suite.
+
+Now the on-host verification. First, let me check whether the `#Preview` macro typechecks via `swiftc` (the predecessor found it CLI-unavailable), then build the SwiftPM test harness.
+
+`#Preview` typechecks under the full Xcode toolchain (PREVIEW_BUILD_EXIT=0). Now let me build the SwiftPM harness and run the on-host XCTest suite.
+
+All 37 on-host tests pass (28 model/projection + 9 view-contract/a11y). Now the lint + format gates, scoped to my files.
+
+swiftformat found formatting fixes — I'll let the tool apply them (ecosystem tool, safe formatting-only changes), then re-verify.
+
+Format clean (0/12). Now swiftlint --strict on the surface files.
+
+Two swiftlint violations: a 6-param function and a too-long test class. Let me fix both — bundle the legend params into a struct, and split the test class into projection + model suites.
+
+Now split the test file into two suites (projection + model) to satisfy `type_body_length`.
+
+The file exists — let me remove it first, then recreate with the split suites.
+

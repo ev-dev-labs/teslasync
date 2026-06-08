@@ -1,0 +1,110 @@
+I'll start by exploring the repository structure and the web source that serves as the specification, plus check for Apple tooling availability.
+
+Apple app exists with Swift 6.3.2, swiftlint, swiftformat available. Let me read the web source spec and explore the existing Apple structure, and verify xcodebuild status.
+
+Critical finding: **only Command Line Tools are installed — `xcodebuild` requires full Xcode, and `simctl`/iOS simulators are unavailable.** swiftlint, swiftformat, and Swift 6.3.2 compiler ARE available. Per the prompt, missing platform capability → eventual `STATUS=BLOCKED` with evidence — but the covenant forbids stubs, so I must still ship the complete, production-quality surface and run every gate step that CAN run.
+
+Let me deeply understand the existing Apple architecture before writing code.
+
+The app uses a clear per-surface multi-file pattern (`.swift`, `.Adapter.swift`, `.Model.swift`, `.Previews.swift`, `.strings`). Let me study one complete example surface and find any existing filter/date-related ones, plus the shared facade (state holders), design tokens, i18n, and telemetry.
+
+`NotificationFilterBar` is the closest analog — a filter-bar surface with the full companion file set. Let me study it and the core infrastructure (state holders, tokens, i18n, telemetry, shared Button, states) in depth.
+
+Let me read the rest of the NotificationFilterBar companions and core infrastructure to fully internalize the pattern.
+
+Let me read the remaining NotificationFilterBar companions (Views, Controls, Previews, strings, Tests) and the web spec dependencies (DatePresetChips, datePresets lib, useUrlBatch, Button).
+
+Now the web spec dependencies and the design tokens + remaining test files. Let me read these in parallel.
+
+Sources root is `apps/apple/Sources/`. Let me read the design tokens, datePresets web lib, useUrlBatch, Button, and remaining NotificationFilterBar test/preview/strings files.
+
+Now the design tokens, motion/skeleton helpers, and the remaining NotificationFilterBar test/preview/strings files, plus project.yml to understand how files are gathered into the target.
+
+TSDesign.swift only holds palette/animation. Let me locate the core token definitions (TSSpacing, TSRadius, Color.TS, Font.TS, TSFadeIn, TSSkeleton) and read the test files + project.yml.
+
+Token declarations must be in a generated file. Let me locate them and read the adapter test pattern, TSFadeIn/TSSkeleton signatures, and project.yml.
+
+Let me read project.yml (to confirm source globbing) and locate the main-target token definitions.
+
+Key finding: `project.yml` sources list does **not** include `TeslaSync/shared-surfaces` — and I'm restricted to only touching `shared-surfaces/DateRangeFilter.*` + the log. Wiring the new dir into the build is an integration-time concern (like the xcstrings fold), consistent with the established pattern. Let me read the generated design tokens, the placeholder checker, and lint configs.
+
+Let me read the full Tokens.swift (Color.TS / Font.TS members), placeholder patterns, and check pwsh availability.
+
+I now have the full token set, placeholder rules (avoid: TODO/FIXME/XXX/"Coming soon"/Placeholder/"Lorem ipsum"/"not implemented"), and pwsh is available. The prompt requires mapping web `@/components/ui/Button` to a native counterpart — let me read the shared Buttons component and confirm the placeholder matcher's case sensitivity.
+
+Shared `TSButton` maps cleanly to web `Button` (variant primary/ghost, size small). Let me confirm how `.Tests.swift` files in the source dirs are routed (build mechanism) so my log evidence is accurate, then start building.
+
+I have everything I need. Let me set up tracking and the plan, create the directory, then build the surface following the established `NotificationFilterBar` pattern exactly.
+
+Now I'll write the surface files. Starting with the pure Core and Adapter (Foundation-only, fully unit-testable).
+
+Now the Model (state holder) — binding through the source, with web-faithful control intents and `view.opened` telemetry.
+
+Now the SwiftUI view files — main entry, states/Views, and Controls.
+
+Now the Controls — the date-range pill (idiomatic `DatePicker`s), the Apply button mapped to shared `TSButton`, and the preset chips in a wrapping flow layout.
+
+Now the i18n strings catalog, then Previews.
+
+Now the unit tests. First I'll move the pure `DateRangeISOFormat` into the Foundation-only Adapter so it's covered by the standalone test run, then write the test files.
+
+Now the two test files:
+
+All 11 files created. Let me update tracking and begin verification: format, lint, placeholder gate, then a real compile+test of the pure logic and a typecheck of the SwiftUI layer.
+
+swiftformat normalized one file. Let me verify all my files pass `--lint` with the repo config (what the gate uses), then run swiftlint and the placeholder gate.
+
+Three swiftlint violations to fix: a multiple-closures trailing closure (Controls), cyclomatic complexity in the preset switch (Adapter), and a 3-member tuple (Tests). Let me fix all three.
+
+Re-running format + lint after fixes.
+
+Format clean. Now re-run swiftlint --strict.
+
+Two more — the rule also flags a closure *literal* in parens alongside a trailing closure. Let me view the current Controls to fix both `Button` call sites precisely.
+
+Got it — a closure *literal* passed as `action:` alongside a trailing label triggers the rule (a method/property reference does not). Let me switch both to references.
+
+swiftlint + swiftformat both clean. Now the placeholder gate, then the real compile/test verification.
+
+Placeholder gate clean (0 violations). Now the key verification — compile the pure logic and **run the unit tests** in a throwaway SwiftPM package (module named `TeslaSync`, Swift 6 mode), using copies of the real files.
+
+Excellent — the **library module (Core/Adapter/Seams/Model) compiles cleanly under Swift 6 strict-concurrency mode**. The only failure is `no such module 'XCTest'` (CommandLineTools ships no XCTest for SwiftPM — same Xcode-absence limitation). 
+
+To actually *execute* the logic at runtime, I'll add an executable harness that drives the real shipped library through every assertion the XCTest files make.
+
+Confirmed: no XCTest without Xcode. Let me build the runtime harness that drives the real library through all assertions.
+
+Two harness bugs (mine, not the library): a property/method name clash and MainActor-isolation of the counters. Let me fix and re-run.
+
+Top-level vars can't carry `@MainActor`. Let me move the counters into a Sendable class and re-run.
+
+**73/73 runtime assertions GREEN** against the real shipped library code — preset math, selection patches, projection, accessibility, and the full model state-holder all verified at runtime under Swift 6 strict concurrency.
+
+Now the final check: typecheck the SwiftUI view layer against the **real** design tokens. Let me inspect the token-helper dependencies first.
+
+Skeletons.swift transitively needs `TSCard`. Let me check whether `Cards.swift` (and `TSButton`/`Motion`) are token-only so I can typecheck the views against the **real** helper files without a deep dependency chain.
+
+Helper chain grows (Cards→Badges/Typography…). I'll typecheck the views against the **real** Tokens, Motion (TSFadeIn), and Buttons (TSButton), plus a faithful one-line `TSSkeleton` shim to avoid the unrelated `TSCard` chain — covering every token/component API my views touch.
+
+The `#Preview` macro needs Xcode's `PreviewsMacros` plugin (absent without Xcode). Let me typecheck the view layer without the DEBUG-gated previews first, then validate the preview bodies separately.
+
+View layer typechecks clean (exit 0) against the real tokens/components under Swift 6 mode. Now let me validate the **preview bodies** by rewriting `#Preview` macros into plain functions (the macro itself needs Xcode, but the body code can be typechecked).
+
+All checks green: view layer + all 7 preview bodies typecheck against real tokens. Let me now generate the honest gate log by actually running each gate step (capturing the real `xcodebuild` failure as platform evidence) plus the supplementary verification.
+
+Gate captured honestly: `xcodebuild` iOS/macOS = 1 (no Xcode), swiftlint/swiftformat/placeholder = 0. Now let me append the supplementary verification (which *can* run) and integration notes, then finalize.
+
+All supplementary verification GREEN (73/73 runtime assertions, view + preview typechecks, library build). Let me finalize the log with acceptance status, integration notes, and the honest EXIT/STATUS.
+
+Let me verify the xcodebuild error evidence was actually captured in the log, then clean up temp dirs.
+
+Log complete with real evidence; temp dirs cleaned. Let me review final git state and the created files before committing.
+
+I see pre-existing modifications to unrelated `AIUsageCard.*` files (not touched by me — my swiftformat only ran on `shared-surfaces`). Let me confirm they're pre-existing and ensure I stage ONLY my deliverable.
+
+Confirmed pre-existing (AIUsageCard mtime 05:32:44, before my session; an unrelated rename). I'll stage **only** my deliverable + log. Let me commit.
+
+Exactly the 11 surface files + the log staged; the unrelated AIUsageCard changes are excluded. Committing:
+
+All todos complete. The surface is built, verified to the limit of the runner, and committed.
+

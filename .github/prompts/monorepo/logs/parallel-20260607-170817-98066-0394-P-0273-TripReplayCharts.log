@@ -1,0 +1,94 @@
+I'll start by exploring the repository structure to understand the web source and the existing Apple app architecture.
+
+Web source read. Apple toolchain present (xcodebuild, swift, swiftlint). Now let me explore the Apple app structure and the P1 dependency layers.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me verify this thoroughly and study the existing feature-view conventions, since the gate's build/test steps may be blocked.
+
+Critical context: Xcode.app exists but `xcode-select` points to CommandLineTools. The established pattern (per `macos-pending-verifications.md`) uses `DEVELOPER_DIR=/Applications/Xcode.app/...`. There's a direct precedent: **`0231-FSMTimelineChart`** — also a Swift Charts area-chart feature view. Let me study it as my template.
+
+Let me read the entire FSMTimelineChart surface — it's my closest template (Swift Charts area chart, same tier).
+
+Excellent template. Let me read the remaining FSMTimelineChart files to fully understand chart rendering, states, strings, and tests.
+
+Let me read the remaining template files (Previews, strings, tests) and locate the P1/S9 token definitions.
+
+Let me read the UI Tests file and locate the P1/S9 design tokens plus the isolation-build tooling.
+
+Let me locate the actual P1/S9 token definitions (`TSSpacing`, `Color.TS`, `Font.TS`, `TSChartPalette`, `TSFadeIn`, `TSSkeleton`) so I bind to real APIs.
+
+Found the token sources under `Sources/`. Let me read them plus `project.yml` to bind to real token APIs and understand the target layout.
+
+Design tokens live in `apps/design/generated/apple`. Let me read those token definitions and the test-target section of `project.yml`.
+
+Let me read the full token catalog, the Skeleton API, and inspect the `Tests/Unit` layout plus any isolation harness used by prior surfaces.
+
+I now have the full token API. Let me verify the build toolchain capability (Xcode via `DEVELOPER_DIR`, `pwsh`, SwiftPM) and inspect the `Tests/Unit` layout.
+
+Major finding: **Xcode 26.5 is fully usable via `DEVELOPER_DIR`, an iPhone 16 simulator is already booted, and `pwsh` is available.** So I can run the real gate. Let me read a predecessor's log (FSMTimelineChart 0231) to match the exact format and STATUS decision.
+
+I have the complete blueprint. Let me verify the pre-existing full-app blockers still exist in this tree (for an honest log), then set up my plan.
+
+Confirmed: 15× `DashboardWidgetSize` redefinitions, no staged xcframework, 194 co-located test files — the same pre-existing blockers predecessors documented. Notably, `replay.timeline` already appears 6× in the master catalog. Let me verify the exact keys.
+
+All 6 source keys already exist in the master catalog (`translation.replay.timeline.*`). I'll follow the FSM per-surface-table convention. Let me read the lint/format configs to respect `--strict` limits, then write my plan.
+
+I have everything I need. Let me set up tracking and write the plan, then author the 10-file surface following the FSMTimelineChart blueprint.
+
+Now I'll author the surface. Starting with the pure Adapter core (binary-search seek + dual-axis scale), faithfully porting the web logic.
+
+Now the Accessibility/format tail (pure, bundle-free).
+
+Now the Model — the P1/S8 source seam, P1/S10 strings facade, P1/S11 telemetry, and the `@Observable` state holder with seek/scrub/freshness logic.
+
+I spotted a shadowing bug in the in-memory source init (`echoSeeks = echoSeeks` is a no-op). Let me fix it to use `self.`.
+
+Now the Swift Charts dual-axis chart (speed left / power right, playhead, tap-to-seek, tooltip).
+
+Now the chrome views (header/subtitle/chip, banner, loading, empty, error, legend).
+
+Now the composed surface entry view.
+
+Now the P1/S10 strings catalog for the surface.
+
+Now the previews (one per state).
+
+Let me fix the tie-break doc comment (binary search returns the later sample on an exact tie), then write the adapter/format/a11y tests.
+
+Now the model lifecycle tests.
+
+All 10 files authored. Let me run the verification gates — starting with swiftformat (normalize) and swiftlint --strict on the new files.
+
+swiftformat clean. One swiftlint violation: `chartSummary` has 6 params (max 5). Since `speedUnit` is identical to `units.speed`, I'll drop the redundant parameter from both a11y functions and update callers/tests.
+
+Now update the callers (Model, Chart) and the tests to drop the `speedUnit` argument.
+
+Now update the test call sites.
+
+Re-running format + lint to confirm clean.
+
+Format + lint clean. Now the placeholder gate via `pwsh`. Let me check the script's interface and run it.
+
+The script needs a real path. I'll scope the gate precisely to my surface by copying the 9 Swift files into a temp dir and scanning that.
+
+Placeholder gate clean (COUNT=0). Now the strongest gates: real-SDK `swiftc -typecheck` (iOS 18 + macOS 15) and an isolated SwiftPM test run. Let me set up a typecheck harness (real token files + a minimal `TSSkeleton` shim, mirroring the predecessor) and get SDK paths.
+
+Only `TSSkeleton` needs shimming. Let me build the typecheck harness in the session folder and run the macOS-15 typecheck first.
+
+macOS-15 typecheck clean. Now iOS-18 simulator.
+
+Both real-SDK typechecks pass (iOS 18 + macOS 15, Swift 6, strict concurrency). Now the isolated SwiftPM package to actually **run** the tests.
+
+All **43 tests pass** and the full surface (incl. Charts/Views) compiled in SwiftPM. Now `xcodegen generate` to confirm the project enumerates the new files.
+
+xcodegen enumerates all 10 files (60 refs), EXIT=0. Now let me capture honest evidence on the full-app gate. First, let me check the scheme's xcframework pre-action so I can bound the attempt.
+
+The full-app gate's scheme pre-action triggers a Kotlin/Native Gradle XCFramework build (heavy, separately macOS-pending per P1/S3), and the app target has pre-existing duplicate-symbol + co-located-XCTest blockers. This matches the documented predecessor situation. Let me capture concrete, reproducible evidence of these pre-existing blockers (and confirm none originate in my surface).
+
+All four pre-existing blockers confirmed (none originate in my surface). Let me do one consolidated re-run of every host gate to capture final evidence, plus line counts.
+
+Let me re-confirm the swiftlint summary line cleanly, then write the gate log.
+
+swiftlint: 0 violations, EXIT=0. All host gates green. Let me gather header metadata and write the gate log.
+
+Host gates all green and the log is written. Now I'll record the deferred full-app verification in the audit trail (`macos-pending-verifications.md`), as the predecessors did. Let me read the exact 0231 row to insert after it.
+

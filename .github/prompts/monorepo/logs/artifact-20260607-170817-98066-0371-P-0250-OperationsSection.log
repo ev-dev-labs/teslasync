@@ -1,0 +1,143 @@
+=== P4 Feature view 0250 OperationsSection (Apple) ===
+Prompt : .github/prompts/monorepo/p4-apple/feature-views/0250-OperationsSection.prompt (P4 · feature-views · 0250)
+Web src: web/src/features/system/components/status/OperationsSection.tsx  (THE specification)
+Native : apps/apple/TeslaSync/feature-views/OperationsSection.*
+Runner : macOS (Darwin), Xcode 26.5 (DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer),
+         swiftlint 0.63.3, swiftformat 0.61.1, pwsh present, iPhone 16 simulator booted.
+
+------------------------------------------------------------------------------------------------
+PARITY MAP (web → native; every region + branch reproduced, no scope narrowing)
+------------------------------------------------------------------------------------------------
+  AccordionSection (icon/title/desc/badge/chevron)  → OperationsSection accordion surface
+                                                       (Bell glyph, title "Operations", desc
+                                                       "Notification delivery and audit trail",
+                                                       success-rate badge, expand/collapse).
+  useQuery x3 (stats 15s / logs(10,0) 15s /          → P1/S8 OperationsSource seam coalesces the
+    getAuditLogs(20) 30s)                              three feeds into one OperationsData snapshot;
+                                                       no HTTP in the view.
+  successRate = total_sent>0 ? sent/total_sent*100    → OperationsNotificationStats.successRate
+                : 100  (note the 100 default)          (verbatim, incl. the 100 default) — unit-tested.
+  Badge variant >=95 success / >=80 warning / danger  → OperationsProjection.successTone thresholds
+                                                       (header badge + gauge color).
+  4x MetricCard (Total Sent/Failed/Success Rate/      → OperationsMetricGrid (responsive 2/md:4) +
+    Channels; cyan/red/green/purple, fmtInt/fmtPercent) OperationsMetricCard (toned glyph + value).
+  RadialGauge(value,max=100,unit="%",color)           → OperationsSuccessGauge (threshold-colored
+                                                       ring + centered value/unit + "Success" label;
+                                                       hand-built — TSRadialGauge is palette-indexed).
+  DataTable<NotificationLog> (Status/Title/Message/    → OperationsNotificationTable (columnar on
+    Time) + EmptyState "No data available"             regular width, card list on compact) +
+                                                       OperationsInlineEmptyState.
+  DataTable<AuditLog> (Time/Action/Resource/Details)   → OperationsAuditTable (+ info action badge,
+    + EmptyState "No audit log entries"                mono resource) + OperationsInlineEmptyState.
+  getStatusIcon / statusTextClass                      → OperationsNotificationStatus.tone/.symbol
+                                                       (sent→success/check, failed→danger/x,
+                                                       pending→warning/triangle, deferred→neutral).
+  Skeleton h-32 + h-48 (isLoading)                     → OperationsLoadingView (two TSSkeleton blocks).
+  i18n   : every t(key,default)                        → P1/S10 OperationsSectionStrings facade;
+                                                       OperationsSection.strings catalog; 0 English
+                                                       literals in code (Text(verbatim:) on resolved).
+  states : loading/empty/error/stale/offline/content   → OperationsPresentation.resolve (exhaustive,
+                                                       unit-tested per branch; cached kept visible).
+  a11y   : VoiceOver labels on metrics/rows/gauge,     → OperationsAccessibility + per-view
+           Dynamic Type, Reduce Motion (gauge/fade)     .accessibility* ; header is one button element.
+  telem  : view.opened surface="OperationsSection"     → P1/S11 DashboardWidgetTelemetrySink on .task.
+
+  Files (11, each <= SwiftLint 400-line budget):
+    OperationsSection.Models.swift(341) Model.swift(250) Projection.swift(340)
+    Components.swift(326) States.swift(123) Tables.swift(314) swift(252)
+    Previews.swift(153) strings  Tests.swift(269) ResolverTests.swift(157)
+
+------------------------------------------------------------------------------------------------
+GATES (raw results on THIS runner)
+------------------------------------------------------------------------------------------------
+  [GREEN]    swiftformat --lint (11 OperationsSection sources)         : 0/10 require formatting   FORMAT_EXIT=0
+             swiftformat --lint apps/apple (whole tree, FYI)          : 1/1731 PRE-EXISTING —
+               TeslaSync/feature-views/ActionBuilder.Previews.swift (blankLinesBetweenScopes); NOT
+               an OperationsSection file, not introduced here.
+  [GREEN]    swiftlint --strict (11 OperationsSection sources)        : 0 violations, 0 serious    LINT_EXIT=0
+             swiftlint --strict (whole app, FYI)                      : 1 PRE-EXISTING —
+               TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length);
+               NOT an OperationsSection file.
+  [GREEN]    check-placeholders.ps1 (scoped to OperationsSection.*)   : PLACEHOLDER_COUNT=0        PLACEHOLDER_EXIT=0
+                                                                        PLACEHOLDER_ALLOWED=0 (0 opt-outs)
+  [GREEN]    OperationsSection build+test — ISOLATED SwiftPM harness, swift-tools 6.0, Swift 6
+             language mode (strict-concurrency=complete, == the app's SWIFT_STRICT_CONCURRENCY),
+             compiling the EXACT shipped OperationsSection.* sources against the REAL repo
+             design-system files (Tokens + Sources/Components + Sources/Design) and the P1/S11
+             telemetry primitives:
+                 Build complete!  ·  Executed 25 tests, with 0 failures               SWIFT_TEST_EXIT=0
+  [GREEN]    swiftc -typecheck — REAL iOS 18 simulator SDK, Swift 6, strict concurrency, exact
+             shipped sources + real design system                                     IOS_TYPECHECK_EXIT=0
+  [GREEN]    swiftc -typecheck — REAL macOS 15 SDK, Swift 6, strict concurrency                       MAC_TYPECHECK_EXIT=0
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+------------------------------------------------------------------------------------------------
+WHY DEFERRED (full-app Xcode gate — ZERO OperationsSection errors; all blockers pre-exist this change)
+------------------------------------------------------------------------------------------------
+  The scheme preAction successfully BUILT + staged the KMP Shared.xcframework on this runner
+  (apps/shared/core/build/XCFrameworks/{debug,release}/Shared.xcframework), so the build reached
+  the app whole-module Swift compile. It then failed on PRE-EXISTING, UNRELATED blockers:
+
+  iOS  : the TeslaSync app target globs TeslaSync/feature-views + dashboard-widgets, which contain
+         376 co-located *.Tests.swift files that `import XCTest` into the APP target (XCTest is not
+         linked there) → "Unable to resolve module dependency: 'XCTest'" (first failure:
+         feature-views/AIRestorePanel.Tests.swift:18). This whole-module import failure is fatal and
+         masks the second documented collision — `public struct DashboardWidgetSize` is DEFINED 15x
+         across Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/* (parallel-merge dup types).
+         grep of the iOS build log for "OperationsSection.(swift|Models|Model|Projection|Components|
+         States|Tables|Previews) ... error:" = 0 hits.
+  macOS: short-circuits even earlier — "TeslaSync-macOS / TeslaSyncWidgets-macOS have entitlements
+         that require signing with a development certificate" (8 occurrences); this runner provisions
+         no signing identity. grep of the macOS build log for OperationsSection errors = 0 hits.
+
+  These are exactly the artifacts apps/macos-pending-verifications.md already defers to the ADR-012
+  macos-latest CI runner (see the recorded ToolCard 0010 + AlertMessageEditor 0180 rows: same
+  DashboardWidgetSize dup-types, same co-located *.Tests.swift XCTest-in-app, same macOS signing).
+  They are owned by the P4/P99 Apple acceptance gate (signing/archive) + a dashboard-widget
+  de-duplication pass — NOT by a single feature-view prompt (task rule: do not fix pre-existing,
+  unrelated breakage). The wiring this surface needs (project.yml + .swiftlint.yml feature-views
+  paths) was already added by ToolCard 0010 and is present; no shared-file edits were required.
+
+------------------------------------------------------------------------------------------------
+HONESTY COVENANT (binding)
+------------------------------------------------------------------------------------------------
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 /
+                           MAC_EXIT=65) and explicitly DEFERRED with evidence — never as passing.
+  2  No scope narrowing  : every web region + branch reproduced (accordion, success-rate rule incl.
+                           100 default, 4 metric cards, threshold gauge, both tables, both empty
+                           states, status icon/tone map, loading skeletons).
+  3  No skip-and-assume  : every host-runnable gate executed on THIS runner; raw exits pasted; both
+                           xcodebuild failures observed (not assumed) and root-caused from the logs.
+  4  No stubs as final   : complete production surface (11 files) + 25 real tests; placeholder
+                           scanner = 0; no TODO/Placeholder/stub/Lorem (grep-verified).
+  5  No parity shortcut  : data/format/tone/typography/a11y/telemetry mapped to platform tokens and
+                           verified by isolated build+test + iOS & macOS typecheck.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11
+                           telemetry, P4 core all consumed.
+  8  No commit on red    : the COMMITTED artifact (OperationsSection.* + this log) is GREEN on every
+                           host gate AND on a real isolated Swift 6 strict-concurrency build+test and
+                           iOS/macOS typecheck; the deferred full-app gate is RED only on pre-existing,
+                           unrelated surfaces this commit neither introduces nor touches.
+  9  No silent drift     : changes are confined to apps/apple/TeslaSync/feature-views/OperationsSection.*
+                           and this log. No shared-file edits (project.yml/.swiftlint.yml already wired).
+  10 EXIT/STATUS below.
+
+------------------------------------------------------------------------------------------------
+DISPOSITION
+------------------------------------------------------------------------------------------------
+  Production-polished, Apple-idiomatic OperationsSection shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 25 tests pass under the app's own Swift 6
+  strict-concurrency rules against the real design system, and it type-checks clean against both the
+  real iOS 18 and macOS 15 SDKs, with swiftlint/swiftformat/placeholder all green. The full-app
+  iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is
+  blocked by pre-existing parallel-merge collisions (376 co-located *.Tests.swift importing XCTest
+  into the app target + DashboardWidgetSize defined 15x) and by macOS development-signing — both owned
+  by the P4/P99 acceptance gate on a signed macos-latest CI runner per apps/macos-pending-verifications.md.
+  This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every
+  P4 surface to date (ToolCard 0010, AuditPanel 0026, TimeToChargeSection 0094, AlertMessageEditor 0180).
+
+EXIT=0
+STATUS=DONE

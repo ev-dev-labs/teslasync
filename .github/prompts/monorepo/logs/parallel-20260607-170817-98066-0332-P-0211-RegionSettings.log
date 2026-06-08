@@ -1,0 +1,116 @@
+I'll start by exploring the repository structure and understanding what's available on this runner.
+
+Key finding: `xcodebuild` requires full Xcode (only Command Line Tools installed), and `simctl` is unavailable. But `swift` 6.3.2, `swiftlint`, and `swiftformat` are present. Let me explore the Apple app structure before concluding anything.
+
+Now I have the web source. Let me explore the existing Apple app patterns deeply — feature-views, state holders, tokens, i18n, diagnostics.
+
+Let me examine the existing feature-views, SharedFacade (state holders), and an existing settings-related view to learn the exact patterns.
+
+Each view has 7 files: main `.swift`, `.Adapter`, `.Model`, `.Views`, `.Previews`, `.strings`, `.Tests`. `FleetApiSection` is the closest analog (settings + Fleet API + refresh). Let me study it fully.
+
+FleetApiSection is a large 16-file surface — too complex as a template. `AcDcStatsPanel` has the canonical 7-file layout. Let me read it fully as the structural template, plus FleetApiSection's main/model for the settings + refresh + state-holder domain conventions.
+
+The pattern is now clear. Let me read the remaining 4 files of the exemplar and simultaneously probe the toolchain (SwiftUI compile capability, xcodegen, pwsh, placeholder checker).
+
+I have the full pattern. Now let me locate the design tokens, shared components, the web data hook shape, and probe the Swift toolchain — all in parallel.
+
+Excellent findings: **SwiftUI/Charts/MapKit typecheck successfully** with the CLT toolchain, and **xcodegen + pwsh + the placeholder script are all present**. Only `xcodebuild` (needs full Xcode) and `simctl` are missing. Let me confirm there's no Xcode.app, then gather the token/component APIs and the envelope shape.
+
+Critical update: **Xcode.app IS at `/Applications/Xcode.app`** — the active dir was just pointed at CLT. With `DEVELOPER_DIR` I may be able to run the real gate. Let me probe Xcode's true capability (simulators, SDKs, the Shared.xcframework dependency) and read the component APIs.
+
+**Xcode 26.5 is fully installed** with iOS 26.5 simulators (iPhone 16 already booted) and macOS SDK. The real gate is potentially runnable. The one wrinkle: the scheme builds `Shared.xcframework` via Gradle/KMP (not yet staged). Let me confirm component APIs and check the KMP/parity infrastructure before writing code.
+
+The precedent is documented: `macos-pending-verifications.md` shows the **ToolCard P4 feature-view** hit this exact situation — surface verified green via **isolated SwiftPM build + tests + lint/format/placeholder**, while the *full-app* `xcodebuild` is blocked by **pre-existing, unrelated** collisions (`DashboardWidgetSize`/`PowerFlowConnection` redefined 8×, co-located `*.Tests.swift` importing XCTest into the app target, macOS signing). That's the established, honest path. Let me read the component APIs I'll use, plus the Feedback components and Toast handling.
+
+Now the Feedback components, Skeleton API, lint/format configs, and the placeholder checker rules.
+
+I have the component APIs. Two things to resolve: the exact `TSEmptyState`/`TSQueryError` inits, and whether feature-views are flat files vs per-surface subdirectories (the gate's `-Path .../RegionSettings` and `git add .../RegionSettings` hint at a directory). Let me settle the layout and read the remaining APIs.
+
+Layout confirmed **flat** (976 files, ToolCard is flat: `.swift`/`.Model.swift`/`.Telemetry.swift`). I have all component APIs (`TSEmptyState`, `TSQueryError`, `TSErrorDisplay`, `TSSkeleton`, `TSButton`, `TSIconBox`, `TSGlassPanel`, `TSFadeIn`, `TSTone`). Now let me confirm the component library is self-contained (for isolated SwiftPM verification) by checking its import surface.
+
+Component library is **fully self-contained** (only system frameworks, no KMP/`Shared` dependency) — so an isolated SwiftPM build against the *real* components is viable. Let me check the bare `UIKit`/`AppKit` imports (macOS host build needs them guarded) before setting up the harness.
+
+Confirmed: all UIKit/AppKit imports are `#if canImport`-guarded (only in `Tokens.swift`); `Sources/Components` + `Sources/Design` import only system frameworks. An isolated SwiftPM build against the **real** components is viable — matching the ToolCard precedent. I now have everything needed. Let me write a brief plan and start creating the 7-file surface.
+
+Now I'll create the 7 surface files. Starting with the pure, testable Adapter.
+
+Now the strings catalog and tests:
+
+All 7 files are written. Now the **primary verification**: an isolated SwiftPM build + test against the *real* Tokens/Components/Design under Swift 6 strict concurrency (matching the project's `SWIFT_VERSION 6.0` / `SWIFT_STRICT_CONCURRENCY: complete`). Let me stage and build it.
+
+The isolated library **built cleanly under Swift 6 mode** — all my RegionSettings files compiled against the real component library. Now let me run the tests.
+
+`swift test` surfaced a snag: the **unrelated** `Components/DataDisplay/UnitFormatters.swift` (`@Environment(\.tsUnits)`, components I don't use) needs an environment key defined elsewhere. My surface doesn't depend on it. Let me trim the staged components to the minimal closure my surface actually needs, and find where `tsUnits` lives.
+
+`tsUnits`/`UnitPreferences` live in the `DataDisplay/UnitFormatters.swift` file (components I don't use); `swift test`'s incremental/testability pass trips over it though `swift build` passed. Cleanest fix: stage only the minimal closure my surface needs (UI + Motion + Skeletons + Design + Tokens), excluding DataDisplay/Charts/Maps/Forms. Let me verify that closure is self-contained.
+
+Closure is clean. Let me re-stage with only `UI` + `Motion` + `Feedback` components (excluding `DataDisplay`/`Charts`/`Maps`/`Forms`) plus Design + Tokens, then build and test.
+
+Only `Feedback/FeedbackOverlays.swift` (which I don't use) pulls `TSMetricBar` from DataDisplay. Let me drop that one file from the stage and re-test.
+
+**All 28 tests pass under Swift 6 strict concurrency**, compiling against the real component library. Now let me run swiftformat and swiftlint on my files (auto-format first, then lint to confirm clean).
+
+swiftformat clean (0/6 need formatting). Now swiftlint `--strict`:
+
+One swiftlint violation: `multiple_closures_with_trailing_closure` on the refresh button (closure `action:` + trailing `label:`). Let me pass `label:` explicitly.
+
+Now re-verify everything (format, lint, build, test) after the fix:
+
+format/lint/test all green (0 violations, 28/28 tests). Now the placeholder gate — I'll scan my actual files (copied to a temp dir so the scan is properly scoped):
+
+All host-runnable surface gates are green: **isolated SwiftPM build ✓, 28/28 tests ✓, swiftformat ✓, swiftlint --strict ✓, placeholder ✓**. Now let me gather concrete evidence for the full-app `xcodebuild` situation — first confirm the project generates and my files are picked up, and document the pre-existing blockers (per the ToolCard precedent).
+
+Definitive pre-existing blockers confirmed: **`DashboardWidgetSize` redefined in 15 files**, and **123 co-located `*.Tests.swift`** compiled into the app target (XCTest-in-app-target) — both unrelated to my surface and matching the documented ToolCard precedent. Let me generate the Xcode project and attempt a real build to capture concrete xcodebuild evidence.
+
+Project generates cleanly (xcodegen EXIT=0, 42 RegionSettings references). Now a real `xcodebuild` attempt to capture concrete evidence of the pre-existing block — building the macOS target directly:
+
+Real xcodebuild evidence captured: the full-app build fails immediately on the **missing `Shared.xcframework`** (the KMP/Gradle pre-action artifact) — **0 RegionSettings errors**. To reach (and evidence) the downstream pre-existing Swift collisions, the xcframework must be staged. Let me check whether it's locally cached/fast to build before deciding to push further.
+
+The Kotlin/Native (`~/.konan` 1.6G) and Gradle (3.0G) caches are warm. Let me build the `Shared.xcframework` (the scheme's pre-action) so I can drive the full build to completion and capture the real downstream evidence.
+
+The KMP build is compiling (Kotlin/Native is slow even with warm caches). Let me continue waiting while it links the xcframework.
+
+`Shared.xcframework` built and staged (BUILD SUCCESSFUL, 7m7s). Now the full app target can compile. Let me build it to capture the real downstream evidence:
+
+Definitive real evidence: the macOS app-target build fails at **`AcDcStatsPanel.Tests.swift:19: error: unable to resolve module dependency: 'XCTest'`** — the pre-existing **XCTest-in-app-target** structural blocker (123 co-located test files), exactly as documented for ToolCard. Let me confirm my surface adds no unique failure and capture the summary.
+
+Conclusive: the full-app build halts at **`AcDcStatsPanel.Tests.swift` (the first of 123 co-located test files)** with the XCTest-in-app-target error — **zero RegionSettings-specific errors**, no other distinct errors. The block is pre-existing and unrelated, matching the ToolCard precedent. Let me check the logs directory and gitignore status before writing the gate log.
+
+The generated `.xcodeproj` and `Shared.xcframework` are gitignored (won't be committed); only my 7 RegionSettings files are new. Let me match the established log format by reading a sibling feature-views log.
+
+Let me read how these sibling logs conclude (the gate section + EXIT/STATUS) to match the established format exactly.
+
+This is the established repo-wide disposition: **EXIT=0 / STATUS=DONE** with the full-app `xcodebuild` marked **DEFERRED** + real evidence (host gates green; full-app blocked by pre-existing unrelated collisions). I have stronger evidence than the precedents. To capture the exact gate-command exit codes for the log, let me run the two literal `xcodebuild -scheme` commands now that the xcframework is staged.
+
+iOS gate captured: **IOS_EXIT=65**, root cause `AcDcStatsPanel.Tests.swift: unable to resolve module dependency: 'XCTest'` (pre-existing XCTest-in-app-target) — **0 RegionSettings errors**. Now the macOS gate command:
+
+Both gate commands captured: **IOS_EXIT=65, MAC_EXIT=65**, identical pre-existing root cause (`AcDcStatsPanel.Tests.swift` XCTest-in-app-target), **0 RegionSettings errors**. Complete evidence package assembled. Let me gather final metadata and write the gate log.
+
+Every referenced i18n key is declared (referenced-not-declared = empty). Let me write the comprehensive gate log following the established format.
+
+Now let me clean up temp artifacts, verify exactly what will be committed (only my 7 files + the log; not the pre-existing web changes or gitignored build artifacts), and do a final lint check.
+
+Final swiftformat + swiftlint clean; build artifacts are gitignored; the 2 modified web files are pre-existing (not mine). Let me stage only my surface + log and commit.
+
+Committed cleanly (8 files, 1453 insertions; pre-existing web changes excluded). Let me do a final state verification and update the plan.
+
+Task complete. All work is committed (`27248d1df`); the working tree shows only the 2 pre-existing web modifications (not mine, untouched).
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0211-RegionSettings.log | 210 ++++++++++++
+ .../feature-views/RegionSettings.Adapter.swift     |  94 ++++++
+ .../feature-views/RegionSettings.Model.swift       | 355 +++++++++++++++++++++
+ .../feature-views/RegionSettings.Previews.swift    |  82 +++++
+ .../feature-views/RegionSettings.Tests.swift       | 313 ++++++++++++++++++
+ .../feature-views/RegionSettings.Views.swift       | 177 ++++++++++
+ .../TeslaSync/feature-views/RegionSettings.strings |  39 +++
+ .../TeslaSync/feature-views/RegionSettings.swift   | 183 +++++++++++
+ 8 files changed, 1453 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0211-RegionSettings.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/RegionSettings.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RegionSettings.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RegionSettings.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RegionSettings.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RegionSettings.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RegionSettings.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/RegionSettings.swift

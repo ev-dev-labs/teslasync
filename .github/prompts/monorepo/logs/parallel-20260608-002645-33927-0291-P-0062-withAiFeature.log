@@ -1,0 +1,101 @@
+I'll start by exploring the repository structure, locating the web source, and checking the Apple toolchain availability.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. However `swift` (6.3.2), `swiftlint`, and `swiftformat` are available. Let me investigate the existing Apple app structure to understand the build pattern before concluding anything.
+
+Now I understand the web source: `withAiFeature` is an AI-Off Contract HOC (ADR-015) that gates AI feature UI visibility based on `useAiEnabled`. Let me explore the Apple app structure deeply to understand the build system and existing patterns.
+
+Now I understand the build model: XcodeGen → `.xcodeproj` → `xcodebuild`. `xcodebuild` needs full Xcode which isn't installed. Let me explore the native patterns (state holders, i18n, diagnostics, tokens) and the web `useAiEnabled` hook before deciding the approach.
+
+Let me map the AI feature registry, native state holders, diagnostics, and existing shared-surface precedent in parallel.
+
+`web/src/ai/features.ts` is the registry. There's no existing native AI gate. Let me read the registry, the established native feature-view pattern, the diagnostics contract, and placeholder rules.
+
+The `AiUsageCard` is the gold-standard precedent (state holder + projection + telemetry + tests). Now I need the canonical native facades. Let me find the AI settings state-holder, the diagnostics/telemetry contract (P1/S11), and any native AI feature registry.
+
+Excellent — now I fully understand the established seam pattern (P1/S8 source, P1/S10 strings, P1/S11 telemetry), and `AiMode` is a reusable public type in the module. Let me extract the AI registry shape, check for a native registry, the Theme tokens, and critically test whether I can compile/typecheck SwiftUI with the available toolchain.
+
+SwiftUI/Charts/MapKit are in the macOS SDK — I can genuinely typecheck SwiftUI code with `swiftc`, even though full `xcodebuild`/iOS-sim is unavailable. The registry has 58 features; no native registry exists yet. Let me confirm `pwsh` availability, validate a minimal SwiftUI typecheck works, and review the `.strings`/`.Previews` conventions plus where `AiMode` lives.
+
+All green: `pwsh` is available, SwiftUI macOS typecheck works (`PROBE_EXIT=0`), `AiMode` is reusable from the module. Let me read the `AiUsageCard` Model + Projection to mirror the lifecycle/telemetry precisely, and check XCTest availability for test typechecking.
+
+Everything I need is confirmed. Critical capability facts:
+- ✅ `swiftc` can typecheck SwiftUI/Observation against the macOS SDK (real verification of production code)
+- ✅ `swiftlint`, `swiftformat`, `pwsh` (placeholder gate) all available
+- ❌ `xcodebuild` (needs full Xcode) and `XCTest` module are unavailable → the build+test gate is genuinely BLOCKED on this runner
+
+I'll write complete, production-grade code + full XCTest suite, verify everything runnable, and record an honest BLOCKED status with capability evidence for the xcodebuild steps. Let me set up the plan, todos, and directory.
+
+Let me check the lint/format configs and an existing `.strings` convention so my code passes `--strict` cleanly.
+
+All conventions captured (line ≤120, `explicit_init`, `empty_count`, `--self remove`, `@testable` at bottom, `.strings` header style). `AiMode` and the seam pattern are reusable. Now writing the production code, starting with the pure Adapter.
+
+Now the state-holder + telemetry seam (Model), mirroring the `AiUsageModel` lifecycle and telemetry-once contract.
+
+Now the SwiftUI surface itself — the HOC parity (`AiFeatureGate`, the `withAiFeature(...)` free function, the `.aiFeature(...)` modifier, the throwing registry guard, and the displayName parity).
+
+Now the supporting Views file with the marker modifier (native analogue of the `data-ai-feature` / `data-testid` wrapper), and I'll simplify the call site to match.
+
+Let me typecheck the production files now (before previews/tests) using a `swiftc` harness against the macOS SDK, including `AISettings.Adapter.swift` for the reused `AiMode`.
+
+The generic `AiFeatureGate<Content>.surfaceSlug` can't be referenced without type args. I'll hoist the canonical slug to a non-generic type.
+
+Re-running the typecheck after the slug fix.
+
+Production code typechecks (`TYPECHECK_EXIT=0`). One strict-concurrency warning: the global `withAiFeature(...)` function and `.aiFeature(...)` modifier construct main-actor views from a nonisolated context. Since the project uses Swift 6 `complete` concurrency, I'll annotate them `@MainActor`.
+
+Clean — zero warnings under `complete` concurrency. Let me check the preview convention (macro vs `PreviewProvider`) and update todos.
+
+Convention confirmed: `#Preview("name") { … }` macros in a `#if DEBUG` block with a private data enum and a `@MainActor` model helper. Writing the Previews file now.
+
+Typechecking again, now including the previews with `-D DEBUG`.
+
+Those errors are **only** the `#Preview` macro plugin (`PreviewsMacros`) not loading under bare `swiftc` — an Xcode-only macro plugin, not a code defect (the compiler found the macro declaration; it just can't run the external plugin without Xcode). To genuinely verify the preview *view code* typechecks, I'll transform the `#Preview` macros into equivalent `some View` functions in the temp copy and recheck.
+
+Preview view code typechecks cleanly (`EXIT=0`) — the only standalone-`swiftc` gap is the Xcode-only `#Preview` macro plugin, which is expected. Now the comprehensive XCTest suite (mirrors the `AiUsageCard.Tests` patterns; compiles under the Xcode test targets).
+
+XCTest can't be compiled by bare `swiftc`, but I can still verify my test file calls the production API correctly by compiling it against a minimal XCTest shim. This catches any signature/type mismatch in the tests.
+
+Test file typechecks against the production API (`EXIT=0`). Three strict-concurrency warnings remain because two test classes touch main-actor-isolated `View`/`ViewModifier` members without being `@MainActor`. I'll annotate those two classes.
+
+Re-running the tests-against-API typecheck to confirm warnings are gone, and creating the anonymous `.strings` file in parallel.
+
+Tests are clean. Now let me run the real available gate tools. First, auto-format my files with the project's `swiftformat` config (so they comply), then verify with `--lint`, then `swiftlint --strict`.
+
+swiftformat `--lint` is clean (0/6). The `swiftlint` run used the config's `included:` list (which doesn't yet contain `shared-surfaces`), so it linted the whole app — the 1 violation is pre-existing, not mine. Let me lint **only my files** via a temp config that mirrors the project rules, and separately identify the pre-existing violation to confirm it isn't mine.
+
+Confirmed: the 1 pre-existing violation is in `LifetimeStatsWidget.Adapter.swift` (not mine). My temp config's relative `included` path didn't resolve. Let me use an absolute path.
+
+One real violation in my code: swiftlint's `opening_brace` rejects the `{` on its own line after the wrapped conformance list (a swiftformat/swiftlint conflict). The declaration fits in 118 chars on one line — I'll unwrap it so both tools agree.
+
+Re-verifying all three checks after the fix: swiftformat `--lint`, swiftlint `--strict` (my files), and a fresh production typecheck.
+
+All clean: swiftformat `--lint` 0/6, swiftlint `--strict` **0 violations in my 6 files**, production typecheck `EXIT=0`. Now the placeholder gate. The gate uses `-Path apps/apple/TeslaSync/shared-surfaces/withAiFeature` (a prefix, since my files are `withAiFeature.*` directly in `shared-surfaces/`). Let me read how the script resolves `-Path` to choose the correct file layout.
+
+Decisive finding: the script uses `Test-Path -LiteralPath`/`Get-ChildItem -LiteralPath`, so `-Path .../shared-surfaces/withAiFeature` must be a **real directory** — otherwise it scans nothing (vacuous pass) and the commit `git add .../withAiFeature` would fail. The correct layout is a `withAiFeature/` subdirectory. I'll move my files there, then re-verify everything and run the real placeholder gate.
+
+Files relocated. Now running the full verification suite plus the **real gate commands** (including the placeholder check exactly as the gate specifies).
+
+The placeholder gate flagged one line: `withAiFeature.swift:80` contains the literal word "placeholder" in a comment. I need to reword it (and audit all my files for any forbidden words: placeholder/stub/mock/lorem/TODO/FIXME/etc.).
+
+Re-running the placeholder gate and re-confirming format/lint/typecheck after the reword.
+
+Artifact is fully green on every locally-runnable gate: **placeholder EXIT=0, swiftformat --lint 0/6, swiftlint --strict 0 violations, full typecheck EXIT=0**. Now let me capture the capability evidence for the BLOCKED steps (xcodebuild/iOS-sim/XCTest) by actually attempting the gate's build commands and probing the toolchain.
+
+Both xcodebuild steps are genuinely BLOCKED (`IOS_EXIT=1`, `MAC_EXIT=1`): only Command Line Tools installed (no Xcode), and the iOS Simulator SDK "cannot be located". Now let me capture the bare `swiftlint --strict` and `swiftformat --lint apps/apple` exits exactly as the gate runs them (repo-wide), to report them faithfully.
+
+Both repo-wide checks are **pre-existing red** in files outside my allowed scope (`LifetimeStatsWidget.Adapter.swift` for lint; `ActionBuilder.Previews.swift` for format) — not my artifact, and not files I'm permitted to touch. My artifact passes both when scoped. Let me capture host details and write the honest gate log.
+
+Now writing the honest gate log with all captured evidence.
+
+Let me do a final review of the main view file and verify git state before committing.
+
+There are pre-existing modifications to `AIUsageCard.*` files (note: capital "AI" — the same files I viewed as `AiUsageCard` on this case-insensitive filesystem). I never edited them. Let me confirm they're pre-existing and not caused by my work, then commit only my allowed paths.
+
+Confirmed: those `AIUsageCard` changes are a **pre-existing** case-rename/content artifact from the HEAD merge (`P-0237-AiUsageCard`), present before my work and outside my scope. I'll stage **only** my allowed paths and verify nothing else is included.
+
+Staged set is exactly my 7 files + the log; the 7 pre-existing `AIUsageCard` changes remain unstaged. Committing now.
+
+Commit `5ff345bfd` landed with exactly my 7 source files + the log (1272 insertions); pre-existing `AIUsageCard` changes left untouched. Let me run one final verification pass against the committed files and close out the todos.
+
+All final checks pass on the committed files, all todos done, temp files cleaned up. The task is complete.
+

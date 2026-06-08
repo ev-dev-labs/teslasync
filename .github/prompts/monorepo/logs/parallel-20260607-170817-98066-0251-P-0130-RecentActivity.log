@@ -1,0 +1,185 @@
+I'll start by exploring the repository structure and the web source that this native Apple component must reproduce.
+
+Key finding: `xcodebuild` requires full Xcode but only CommandLineTools is installed. However `swift`, `swiftlint`, and `swiftformat` are available. Let me examine how predecessor surfaces (QuickMetrics, SpeedTrendChart) were built and how they handled this.
+
+There's a large existing feature-views directory. Let me study the most recent predecessors (QuickMetrics, SpeedTrendChart) closely since they're the canonical patterns to follow.
+
+The predecessor disposition is clear: `xcodebuild` (iOS/macOS app build/test) is **DEFERRED** since this host has only Command Line Tools, while all other gates (swiftformat, swiftlint, check-placeholders, Swift-6 type-check, runtime drivers) run green. I'll follow this exact pattern. Let me read the predecessor files in full to learn the conventions.
+
+Now let me read the remaining QuickMetrics files and the chart-using SpeedTrendChart predecessor (since RecentActivity needs a Swift Charts area chart and a Timeline).
+
+Now let me study the chart-using predecessor (SpeedTrendChart) for the Swift Charts patterns, plus the QuickMetrics tests and previews.
+
+Let me read the QuickMetrics tests/previews, the shared design tokens, and check for an existing native Timeline component.
+
+Let me locate the shared design tokens (P1/S9), check for an existing native Timeline, and read the full QuickMetrics log to replicate the exact verification approach.
+
+Excellent—the verification approach is now clear. Let me find the shared token chain files, study the existing EventTimeline (closest Timeline analog), and read the web components RecentActivity depends on.
+
+Let me find the actual shared token/component source files by searching for their definitions.
+
+Found the shared chain. Let me read the token definitions, the EventTimeline timeline-rendering pattern, and the web dashboard types.
+
+The EventTimeline is the closest analog (timeline of events). Let me read the design tokens, EventTimeline Model/Adapter, the Motion/Skeleton component APIs, and the web types & helpers.
+
+Let me read the EventTimeline Model/Adapter (closest pattern), the web dashboard types, and the web formatting helpers.
+
+Now let me read the web dashboard types and the formatting helpers RecentActivity depends on, plus confirm the shared `TSEmptyState`/`TSTone`/`TSCard` APIs.
+
+Now let me find the `TSTone` definition and read the web formatting helpers that the adapter must port faithfully.
+
+Let me check the exact distance constants and how `toEfficiencyDisplay`/`distanceUnit`/`efficiencyUnit` are produced by the parent dashboard page, so I model the efficiency conversion faithfully.
+
+`RecentActivity` (the dashboard component) is the spec; it's a pure presentational component. Let me confirm the `Currency` default precision and read the SpeedTrendChart adapter for the chart-point/connection model, then I have everything.
+
+Currency default precision is **2** (not user precision). Let me confirm the test target globs feature-views so my Tests file is compiled.
+
+Let me read the full project.yml to understand how `.Tests.swift`/`.Previews.swift` files in feature-views are wired (excludes/includes).
+
+Let me check the project.yml header for global options/excludes that route `*.Tests.swift` and `*.Previews.swift` correctly.
+
+There's a `Tests/Unit/FeatureViews/` directory. Let me check how it's organized versus the feature-views Tests files.
+
+66 predecessor `.Tests.swift` files live in `feature-views/` — this is the established convention, with xcodebuild deferred. Let me read the lint/format configs and the placeholder checker, then start building.
+
+Let me read the placeholder patterns (to avoid forbidden tokens) and the SpeedTrendChart adapter (chart projection conventions).
+
+I now have a complete understanding of the architecture, conventions, web spec, design tokens, and verification approach. Let me set up a plan and todos, then build.I now have a complete understanding of the architecture, conventions, web spec, and verification approach. Let me set up tracking and write the plan.
+
+I have everything needed. Let me build the surface, starting with the pure projection core.
+
+Adapter done. Now the Model (state-holder seam, telemetry, i18n facade).
+
+Model needs a `displayLocale` for the chart formatting. Let me add it, then build the Charts and Views files.
+
+Now the Views file (panels, feed rows, performance, freshness chip, banner, loading/empty/error states).
+
+Now the composed entry view with responsive layout.
+
+Now the i18n catalog (parity keys + native envelope keys).
+
+Now the previews (per-state) and the tests.
+
+Now the comprehensive XCTest suite.
+
+All files created. Now let me run the host gates — starting with swiftformat and swiftlint.
+
+Mostly mechanical (digit grouping, line wrap, one unused-arg). Let me check the `unusedArguments` location before auto-formatting, since that changes a signature.
+
+The Adapter is 613 lines — over the 400 file_length limit. Let me check all file lengths, then split types into a separate file.
+
+Three files exceed 400 lines. Let me get the authoritative swiftlint violations before restructuring.
+
+Authoritative violations: 3 files over 400 lines, a few long lines, and Previews param count. Let me restructure: split types out of Adapter, split states out of Views, split model tests out of Tests. First, remove the three oversized files to recreate them cleanly.
+
+Now creating the split files. First, the value types.
+
+Now the trimmed Adapter (Format + Projection + Accessibility), with the unused `localize` removed from `performance`.
+
+Update the Model's `performance` call (dropped the unused `localize`):
+
+Now the trimmed Views (panels + rows) and the new States file (chip, banner, loading, empty, error).
+
+Now the States file (freshness chip, banner, loading, empty, error):
+
+Now the split test files. First the adapter/projection tests:
+
+Now the model + accessibility tests:
+
+Now fix the Previews `function_parameter_count` (6→5 params). Let me view and edit the helper signatures.
+
+Now let me normalize formatting (swiftformat in-place), then re-run both linters.
+
+All files now under 400 lines. Let me verify both linters pass clean.
+
+Both linters pass clean (0 violations). Now the placeholder gate — I'll scan my files in a temp dir (meaningful scan, since the flat layout makes the literal `-Path` a no-op) plus a negative control to prove the scanner is live.
+
+Placeholder gate passes (COUNT=0). Negative control to prove the scanner is live:
+
+Placeholder gate verified live (control → COUNT=1). Now the Swift-6 type-check of the production view set against the macOS SDK + shared token chain. Let me locate the shared-chain files and SDK.
+
+All shared-chain files present. Let me run the Swift-6 strict type-check of the production view set against the macOS SDK + shared token chain.
+
+Type-check of the full production view set (incl. Swift Charts) passed (EXIT=0). Now the executed adapter driver — a Foundation-only runtime check of the projection golden vectors.
+
+The entry file must be named `main.swift` for top-level code. Let me rename and recompile.
+
+Swift 6 isolates top-level globals to `@MainActor`; the helper funcs need it too. Let me annotate them.
+
+Adapter driver passed (ALL_ADAPTER_CHECKS_PASS). Now the model/state-holder driver, linked against the full SwiftUI view set + shared token chain.
+
+Top-level vars can't carry an explicit global actor (they're already main-actor isolated). Let me drop the annotation.
+
+The driver caught a genuine bug in my **test expectation** (not the production code): with the sample data, the newest item is the drive `d0` (offset 0), not the charge. The production sort is correct. Let me make the charge genuinely newest so the cross-kind assertion is meaningful, in both the XCTest and the driver.
+
+Let me view the current sampleDrives text after formatting.
+
+Model driver passes with the full SwiftUI link. Let me re-verify both linters after the test edit, and confirm i18n key coverage (every `t()` key in code exists in the catalog).
+
+Linters clean (0/0). Let me do a comprehensive i18n coverage check — extract every key-like literal (including those passed via `labelKey`/`descriptor.key`) and cross-check against the catalog.
+
+Only discrepancy is `battery.100.bolt` — an SF Symbol name, not an i18n key. All 29 real i18n keys (incl. all 13 web parity strings) match 1:1, no orphans. Let me update tracking, clean up temp drivers, and confirm the log directory.
+
+All 11 files present and untracked. Let me capture the platform-capability evidence (why xcodebuild is deferred) for the log, then clean up temp drivers.
+
+All evidence captured, temp files cleaned. Now let me write the verification log.
+
+Now let me do a final pre-commit verification of the exact file set, then commit only my files (avoiding the unrelated pre-existing changes).
+
+Both gates green. Committing only my files + the log (leaving the unrelated pre-existing web changes untouched):
+
+Exactly the 11 files + log staged (no unrelated changes). Committing:
+
+Committed cleanly (681c0bcf8, 12 files). Let me finalize tracking and confirm the working tree only retains the unrelated pre-existing changes.
+
+All work is committed; the only remaining working-tree changes are the two pre-existing unrelated web files, which I correctly left untouched. The task is complete and verified.
+
+All 9 todos complete. 
+
+## Summary
+
+Shipped the native Apple **`RecentActivity`** feature view (P4 · 0130) at parity with `web/src/features/dashboard/components/RecentActivity.tsx`, committed as `681c0bcf8`.
+
+**Delivered** (11 files under `apps/apple/TeslaSync/feature-views/RecentActivity.*`):
+- **Adapter** (pure, Foundation-only projection) + **Types** — the unified newest-first drive+charge feed (8-row cap), reversed end-SoC battery series (`?? 50`), fleet-performance read, and `fmtNumber`/`Currency`/SI/`formatTimeAgo` formatting.
+- **Model** — P1/S8 source seam (no view HTTP), P1/S11 `view.opened` telemetry, P1/S10 i18n facade, stale auto-refresh + offline handling.
+- **Views/States/Charts** — three `GlassPanel`s, a Swift Charts area chart (gradient + % axis + tooltip) for the web `AreaChartWrapper`, responsive layout, and every state (loading/content/empty/error/stale/offline) with reduce-motion + Dynamic Type + VoiceOver.
+- **Previews/Tests/ModelTests/strings** — per-state previews, full XCTest coverage, and the 13-key web parity catalog (+ envelope keys).
+
+**Verification — all host gates green** (raw output in the log):
+- `swiftformat --lint` 0/10 · `swiftlint --strict` 0 violations/10 files
+- `check-placeholders` COUNT=0 (negative control COUNT=1, scanner proven live)
+- Swift-6 strict type-check of the full view set incl. Swift Charts → EXIT=0
+- Two **executed** runtime drivers — adapter (`ALL_ADAPTER_CHECKS_PASS`) and model with full SwiftUI link (`ALL_MODEL_CHECKS_PASS`); the model driver caught one wrong *test* expectation, which I fixed (production sort was correct)
+- i18n coverage 29/29, 0 missing/0 orphan
+
+**Deferred (with evidence):** `xcodebuild` iOS/macOS build/test — this host is Command Line Tools only (no Xcode.app/simulator SDK/simulators), matching the user-approved peer disposition (0105/0092/0071/0055). Log ends `EXIT=0 / STATUS=DONE`. Unrelated pre-existing web changes were left untouched.
+
+The task is fully complete and verified. All work was committed as `681c0bcf8`.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0130-RecentActivity.log | 282 ++++++++++++++++
+ .../feature-views/RecentActivity.Adapter.swift     | 355 +++++++++++++++++++++
+ .../feature-views/RecentActivity.Charts.swift      | 157 +++++++++
+ .../feature-views/RecentActivity.Model.swift       | 272 ++++++++++++++++
+ .../feature-views/RecentActivity.ModelTests.swift  | 206 ++++++++++++
+ .../feature-views/RecentActivity.Previews.swift    | 169 ++++++++++
+ .../feature-views/RecentActivity.States.swift      | 176 ++++++++++
+ .../feature-views/RecentActivity.Tests.swift       | 267 ++++++++++++++++
+ .../feature-views/RecentActivity.Types.swift       | 265 +++++++++++++++
+ .../feature-views/RecentActivity.Views.swift       | 298 +++++++++++++++++
+ .../TeslaSync/feature-views/RecentActivity.strings |  58 ++++
+ .../TeslaSync/feature-views/RecentActivity.swift   |  86 +++++
+ 12 files changed, 2591 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0130-RecentActivity.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentActivity.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentActivity.Charts.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentActivity.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentActivity.ModelTests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentActivity.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentActivity.States.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentActivity.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentActivity.Types.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentActivity.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentActivity.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/RecentActivity.swift

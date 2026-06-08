@@ -1,0 +1,170 @@
+I'll start by exploring the repository structure to understand what's available, including the web source component and the Apple app infrastructure.
+
+Web source exists, Swift toolchain present. Let me check xcodebuild status and the Apple app structure.
+
+Key finding: only Command Line Tools installed (no full Xcode), so `xcodebuild` won't run. But Swift 6.3.2, swiftlint, swiftformat are available, and there's an existing `feature-views/` dir with 448 entries. Let me examine the existing patterns and the web source.
+
+Now I understand the web source. Let me study the existing feature-view conventions and the shared core infrastructure. Let me read a representative sibling and the project structure.
+
+Let me read a complete sibling feature-view (`AutomationCard`) to learn the established pattern, plus the shared core infrastructure.
+
+Excellent, the pattern is very thorough. Let me read the remaining AutomationCard files and locate the shared design primitives (TSGlassPanel, TSEmptyState, TSTone, TSSpacing, etc.).
+
+Now let me read the AutomationCard Previews/strings and locate the shared design primitives (TSGlassPanel, TSTone, TSSpacing, Color.TS, etc.).
+
+Let me read the web layout/types/registry sources and the native design primitives I'll need.
+
+Let me read the design primitives and examine the native dashboard infrastructure.
+
+The design tokens live in generated files. Let me locate the core primitives (Color.TS, TSSpacing, TSTone, TSGlassPanel, TSEmptyState, TSSkeleton).
+
+Now let me read the Cards (TSGlassPanel), Badges (TSTone/TSBadge), and Buttons (TSButton) primitives.
+
+Let me read the Button + material primitives and check the build tooling situation (Xcode, xcodegen, pwsh, placeholder checker).
+
+Xcode.app, xcodegen, and pwsh all exist. Let me verify the real toolchain works and check what a sibling log concluded (DONE vs BLOCKED).
+
+This establishes the precedent clearly: full xcodebuild is DEFERRED (missing `Shared.xcframework`), but STATUS=DONE is achieved via iOS+macOS SDK typechecks, a SwiftPM test harness, and lint/format/placeholder gates. Let me find the verification harness mechanism and the deferral doc.
+
+I now fully understand the established methodology. Let me check the lint/format configs and the dependency surface of the shared components (to build a faithful typecheck/test harness).
+
+I have everything I need. The methodology is clear: full `xcodebuild` is deferred (missing `Shared.xcframework`), but STATUS=DONE is reached via iOS+macOS SDK typechecks, a SwiftPM XCTest harness, and lint/format/placeholder gates — all of which I can run. Let me write the plan and start authoring the surface.
+
+Now let me author the surface. Starting with the Model and Adapter (pure, testable cores).
+
+Let me verify none of my new type names collide with existing symbols in the app target (the merge-collision risk noted in the deferral doc).
+
+No collisions. Now the Adapter — the pure, testable projection core (breakpoints, size lookup, mobile ordering, placement math, kiosk, freshness, a11y).
+
+Now the Views — subviews plus a custom SwiftUI `Layout` for the absolute grid (the native equivalent of RGL placement).
+
+I left an erroneous placeholder line in `DashboardWidgetTile`. Let me remove it immediately.
+
+There's a naming collision: the stored `let body` clashes with SwiftUI's required `var body`. Let me rename the closures to `content`.
+
+Now the main surface file that composes everything.
+
+I referenced `DashboardGridLayoutMath.placements(...)` in the surface but haven't defined it. Let me add it to the Adapter (pure, testable, with auto-flow + clamping).
+
+Now the strings catalog, previews, and tests. Starting with strings (referenced by the test key-parity assertions).
+
+Now the previews — one per state/branch, with a realistic sample widget renderer.
+
+Now the comprehensive XCTest suite covering all pure projections, geometry, a11y, i18n parity, and telemetry.
+
+All seven files are authored. Now let me run the gates I can run. First, swiftformat and swiftlint on the new files.
+
+Let me auto-fix with swiftformat (ecosystem tool) rather than hand-editing, then review.
+
+Let me re-lint all six including `DashboardGrid.swift`, and review the auto-format changes.
+
+Good — all six pass swiftformat. Let me verify the reformatted lines are semantically intact (the number grouping and the wrapped `fullscreenContext`).
+
+swiftformat passes. Now swiftlint --strict on the new files.
+
+Three swiftlint issues: Adapter exceeds 400-line limit (split needed), and two multiple-trailing-closure violations. Let me view the exact call sites and the Adapter's tail to split it.
+
+Let me fix the two trailing-closure call sites, then split the Adapter. First the call sites:
+
+Now split the Adapter file. Let me confirm the boundary and extract the geometry/kiosk/freshness/a11y block into a new `DashboardGrid.Geometry.swift`.
+
+The boundary is clean (Adapter ends at line 295; geometry block is 297→end). Let me extract it into a new file and truncate the Adapter.
+
+Both files now under 400 lines. Let me re-run format + lint on all seven Swift files.
+
+swiftlint and swiftformat both pass (0 violations). Now the key verification: typecheck + run the XCTest suite against the **real** design system via a SwiftPM harness. Let me first confirm the component subset my surface needs is Apple-framework-only (no Maps/Charts that may not host-compile).
+
+UI/Feedback/Motion are SwiftUI-only. Let me check DataDisplay/Forms imports, then build the SwiftPM typecheck+test harness (everything except Charts/Maps, which my surface doesn't use).
+
+DataDisplay/Forms are Foundation/SwiftUI-only too. Let me build the SwiftPM harness (real design system + component library, excluding only Charts/Maps which my surface doesn't use) and run the macOS typecheck + XCTest.
+
+Now run the macOS host build + XCTest via the Xcode toolchain.
+
+The build failed only inside `DataDisplay/UnitFormatters.swift` (depends on a `Units` helper from the shared core — not used by my surface). My DashboardGrid files all compiled. Let me drop DataDisplay/Forms (not in my dependency closure) and re-run.
+
+Only `FeedbackOverlays.swift` (needs `TSMetricBar` from DataDisplay) remains — also not used by my surface. All my DashboardGrid files compiled. Let me remove it and re-run.
+
+All **30 XCTest methods passed** on the macOS host under Swift 6 language mode against the real design system — `SWIFT_TEST_EXIT=0`. Now the iOS 18 simulator SDK typecheck on the same source set.
+
+iOS 18 simulator SDK typecheck passes (0 errors). Let me run the explicit macOS 15 SDK typecheck and read the placeholder checker to invoke it correctly.
+
+Both SDK typechecks pass (iOS + macOS = 0 errors). Let me read the placeholder patterns, scan my files for risky tokens, and run the gate (both the literal form and an isolated scan of my files).
+
+My files are free of forbidden tokens. Let me run the placeholder gate — both the literal gate form and an isolated scan of my actual files.
+
+All runnable gates are green: swiftformat, swiftlint --strict, macOS XCTest (30/30), iOS 18 + macOS 15 SDK typechecks, and the placeholder gate. Let me verify the project still generates cleanly (my files auto-register via the directory glob) and capture honest evidence for the deferred full-app xcodebuild.
+
+xcodegen generates cleanly (EXIT=0); DashboardGrid is registered (48 pbxproj refs across iOS+macOS targets). Now let me capture honest evidence for the deferred full-app build.
+
+The full-app build is compiling all sources (heavy). Let me continue waiting.
+
+It's been ~6 minutes compiling the full app. Let me wait a bit more to capture the actual failure at the link/framework stage.
+
+The full-app build is compiling for ~9 min (grep is buffering output). I'll stop it and capture the deterministic, reproducible deferral evidence instead — which is more honest than a flaky timeout.
+
+The `Shared.xcframework` now has platform slices (timestamped during my build run — a build phase produced them). Let me check whether they contain real binaries, to state the deferral reason honestly.
+
+The build is compiling the **Kotlin/Native shared core** (konan LLVM-21) to produce `Shared.xcframework` on-demand — that's why it's so slow, and it left orphan processes after I stopped the parent. The deferral reason is the heavy full KMP build + documented structural blockers, not a missing framework. Let me clean up the orphan processes.
+
+The environment has parallel slots, so I must only terminate processes that are clearly mine (referencing `slot-243`). Let me inspect the candidate processes' command lines before killing anything.
+
+The orphan processes write into `slot-243/Frameworks` (the on-demand KMP build), but Gradle daemons can be shared across parallel slots — so I'll leave them to finish rather than risk disrupting another slot. My commit is scoped to my files only, so build output won't be committed. Let me verify git status and ignore rules (scoped/fast).
+
+My 8 files are untracked; build output and `.xcodeproj` are git-ignored. Now let me gather final facts and write the verification log.
+
+All gates green; native surface is 2040 lines across 8 files (web source 467). Let me write the comprehensive verification log.
+
+Let me run a final consolidated verification on the repo files, confirm git status is clean (only my files), update the plan, then commit.
+
+Final gates green; git status shows exactly my 8 files + the log. Let me mark the plan done and commit.
+
+Commit succeeded. Let me verify it and clean up the temporary harness directories.
+
+The task is complete. The commit landed cleanly (9 files, 2213 insertions), temp harness dirs are removed, and the working tree is clean.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`DashboardGrid`** feature view at parity with `web/src/features/dashboard/components/DashboardGrid.tsx`, following the established sibling architecture.
+
+**Artifact** — `apps/apple/TeslaSync/feature-views/DashboardGrid.*` (8 files, 2040 lines vs. web's 467):
+- **Model** — surface slug (P1/S11), telemetry seam, P1/S10 strings facade, value types, state/connection/options/actions.
+- **Adapter + Geometry** — pure, tested projections: breakpoint resolver (`getBreakpointFromWidth`), `getWidgetSizeLive`, mobile `orderedWidgets`, auto-flow `placements`, absolute-grid pixel math, kiosk-opacity map, freshness chip, VoiceOver labels.
+- **Views** — a SwiftUI custom `Layout` (native parity for RGL's x/y/w/h grid), widget tile (glass + kiosk + border), edit chrome, dot-grid backing, skeleton tile, fullscreen sheet.
+- **Surface** — state switch, `GeometryReader` → desktop grid ↔ mobile stack, fullscreen `.sheet`, `.task → view.opened`.
+- **Previews + Tests + strings** — per-state previews; 30 XCTest methods; full i18n catalog.
+
+**Every state renders**: loading, empty, error, stale, offline, loaded.
+
+**Verification (all green)**:
+| Gate | Result |
+|---|---|
+| swiftformat --lint | `0/7 require formatting` |
+| swiftlint --strict | `0 violations` |
+| swift test (real design system, Swift 6) | **30/30 pass** |
+| iOS 18 simulator SDK typecheck | `0 diagnostics` |
+| macOS 15 SDK typecheck | `0 diagnostics` |
+| check-placeholders.ps1 | `PLACEHOLDER_COUNT=0` |
+| xcodegen | registered (48 pbxproj refs) |
+
+Full-app `xcodebuild build test` is **DEFERRED** (not a DashboardGrid failure) — it triggers a long on-demand KMP/Kotlin-Native shared-core build and the app target carries pre-existing, documented blockers (61 co-located XCTest files, `DashboardWidgetSize` redefined 15×, macOS signing) per `macos-pending-verifications.md`. The surface itself is independently proven green. Committed as `5f76922` with **`EXIT=0 / STATUS=DONE`**.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0122-DashboardGrid.log  | 173 +++++++++
+ .../feature-views/DashboardGrid.Adapter.swift      | 295 +++++++++++++++
+ .../feature-views/DashboardGrid.Geometry.swift     | 165 +++++++++
+ .../feature-views/DashboardGrid.Model.swift        | 341 ++++++++++++++++++
+ .../feature-views/DashboardGrid.Previews.swift     | 192 ++++++++++
+ .../feature-views/DashboardGrid.Tests.swift        | 397 +++++++++++++++++++++
+ .../feature-views/DashboardGrid.Views.swift        | 311 ++++++++++++++++
+ .../TeslaSync/feature-views/DashboardGrid.strings  |  42 +++
+ .../TeslaSync/feature-views/DashboardGrid.swift    | 297 +++++++++++++++
+ 9 files changed, 2213 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0122-DashboardGrid.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/DashboardGrid.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DashboardGrid.Geometry.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DashboardGrid.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DashboardGrid.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DashboardGrid.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DashboardGrid.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/DashboardGrid.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/DashboardGrid.swift

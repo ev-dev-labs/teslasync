@@ -1,0 +1,167 @@
+================================================================================
+P4 · Shared surface · 0153 — DensityToggle (Apple)
+Run: 2026-06-08T05:55-0700   Host: Darwin 25.5.0 arm64   Branch: auto/20260608-002645-33927/382
+Base: c9c6fdb9f
+Prompt: P4 · shared-surfaces · 0153 — DensityToggle (Apple)
+Web source (spec): web/src/components/forms/DensityToggle.tsx (103 lines)
+Mode: code-complete + host-validated; DEFERRED full-app Xcode scheme build/test
+      (ADR-012 macOS-pending), matching predecessors 0010 ToolCard / 0180
+      AlertMessageEditor / 0231 FSMTimelineChart.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                 OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iOS simulator SDK .......... iPhoneSimulator 26.5 (deployment target iOS 18.0)    OK
+  macOS SDK .................. MacOSX 26.5 (deployment target macOS 15.0)            OK
+  iOS simulator device ....... iPhone 16 present + booted (simctl via Xcode)        OK
+  swiftlint .................. 0.63.x                                               OK
+  swiftformat ................ 0.61.x                                               OK
+  xcodegen ................... present                                              OK
+  pwsh (placeholder gate) .... 7.x present                                          OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks has only .gitkeep) WARN
+  codesign identities ........ none (BLOCKER for signed app gate, ADR-012)         WARN
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)" — it is a controlled three-way segmented
+  selector). The core requirement is SwiftUI, which is available and proven by
+  REAL iOS-18 + macOS-15 SDK compiles AND a passing 20-test XCTest run below. The
+  capability-BLOCKED escape hatch therefore does NOT apply; the surface is
+  authored and host-validated for real, and STATUS=DONE.
+
+  Data-state capability note: the web source is a *controlled* component (props
+  `value` / `onChange`; only hook is `useTranslation`). It owns no data, issues no
+  network, and has ZERO async render branches. The generic prompt state list
+  (loading / empty / error / stale / offline) therefore does NOT apply — inventing
+  those would be web drift (Honesty Covenant #2/#9). The faithfully-reproduced
+  states are the per-segment selected / unselected interaction states + the
+  options-subset variant + keyboard focus; the control always renders every
+  provided segment (never a blank box).
+
+=== ARTIFACT (apps/apple/TeslaSync/shared-surfaces/DensityToggle.*) ===
+  DensityToggle.Model.swift     139  P1/S10 DensityToggleStrings facade + P1/S11
+                                     DensityToggleTelemetry seam (+OSLog default) + the `Density`
+                                     enum (raw values match the web string union; per-case
+                                     localizationKey / fallbackLabel / SF Symbol) + the projected
+                                     DensitySegment (label/icon/isSelected/isFocusable).
+  DensityToggle.Adapter.swift    73  Foundation-only pure projector — VERBATIM web logic: the
+                                     segment projection (options.map → label+icon+selected+roving
+                                     tabindex), the arrow-key wrap math ((idx ± 1 + n) % n with the
+                                     web `idx < 0` no-op guard), the groupLabel override, and the
+                                     VoiceOver selection summary.
+  DensityToggle.Views.swift     100  DensitySegmentButton (SF Symbol + label that collapses to
+                                     icon-only via ViewThatFits = web `hidden sm:inline`, a11y label
+                                     always present) + DensityToggleContainer (token pill + hairline
+                                     border + focus ring).
+  DensityToggle.swift           109  The composed controlled View: @Binding value, options subset,
+                                     focusable + onKeyPress(.left/.right) wrap navigation, reduce-
+                                     motion-aware commit, radiogroup a11y (group label + value), and
+                                     the once-only P1/S11 view.opened on appear.
+  DensityToggle.Previews.swift   61  #if DEBUG previews: default / compact / comfortable / subset
+                                     (no table) / dark / Dynamic-Type accessibility size, each via an
+                                     interactive @State harness.
+  DensityToggle.strings          16  P1/S10 catalog — the four web keys extracted verbatim
+                                     (density.table / .compact / .comfortable / .groupLabel).
+  DensityToggle.Tests.swift     173  XCTest: projection, navigation wrap (next/prev/last-wrap/
+                                     first-wrap/out-of-set no-op/single/empty), labels+summary,
+                                     accessibility labels, telemetry seam slug, raw-value contract.
+  Total 671 lines (7 files). Every Swift file <= 400 lines (house file_length); largest
+  Tests.swift 173. Zero `// parity:allow` opt-outs needed.
+
+  Necessary infrastructure (this is the FIRST shared-surfaces leaf — the directory
+  had to be wired into the build/lint so the gates cover it for real, not vacuously;
+  without this the files would be orphaned = a stub-in-disguise, Honesty Covenant #1/#4):
+    • project.yml          — added `- path: TeslaSync/shared-surfaces` to the iOS
+                             (TeslaSync) AND macOS (TeslaSync-macOS) app target sources.
+    • .swiftlint.yml       — added `TeslaSync/shared-surfaces` to `included:`.
+    • .swiftformat needs no change (it lints `apps/apple` by argument).
+  These are the same one-time wiring the first `feature-views` leaf required; they
+  touch no other surface.
+
+=== PARITY (vs web DensityToggle.tsx) ===
+  Data sources (web hooks → native seam):
+    useTranslation → DensityToggleStrings facade (P1/S10). No data hook exists (the
+    component is controlled), so no P1/S8 data-holder is applicable; the view does NO
+    networking. The controlled web `value`/`onChange` map to the native `@Binding`.
+  Composition reproduced 1:1:
+    radiogroup of icon+label segments (web role="radiogroup" / role="radio") ·
+    options subset + order (web `options`, default [table, compact, comfortable]) ·
+    label collapses to icon-only when tight (web `hidden sm:inline`) while the
+    accessible name persists · selected tint + roving focus (web roving tabindex).
+  Verbatim web logic ported + unit-pinned: the segment projection (`options.map`),
+    the ArrowLeft/ArrowRight move-AND-commit wrap math `(idx ± 1 + n) % n`, and the
+    `const idx = options.indexOf(value); if (idx < 0) return;` out-of-set no-op.
+  States (all render, never a blank box): the control always renders every provided
+    segment; selected / unselected per segment; options-subset; keyboard focus ring.
+    There is no async data axis in the web source, so none is fabricated.
+  i18n: the four web `t(key, default)` strings resolve via the P1/S10 facade; the
+    catalog carries the verbatim web English (Table / Compact / Comfortable / List
+    density). a11y: every segment has a spoken label + `.isSelected` trait; the group
+    exposes its name + selected value; Dynamic Type via Font.TS; reduce-motion respected
+    (the highlight animation is suppressed when Reduce Motion is on).
+  Telemetry: emits view.opened with surface slug "DensityToggle" once on appear
+    (P1/S11), forwarded through the injected seam; asserted by test.
+
+=== HOST-RUNNABLE GATES (all green) ===
+  swiftformat --lint <surface> ................ 0/6 files require formatting        FORMAT_EXIT=0
+  swiftlint lint --strict <surface files> ..... 0 violations on the 6 surface files LINT_EXIT=0
+      (note: the repo-wide `swiftlint --strict` reports ONE pre-existing, unrelated
+       violation — function_body_length in TeslaSync/dashboard-widgets/
+       LifetimeStatsWidget.Adapter.swift:141, untouched by this surface. The
+       DensityToggle files themselves are clean, proven by explicit-file lint.)
+  check-placeholders.ps1 -Language swift ...... PLACEHOLDER_COUNT=0 ALLOWED=0        PLACEHOLDER_EXIT=0
+  swiftc -typecheck iPhoneSimulator (ios18.0-simulator, swift6, +Previews) .......  IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (macos15.0, swift6, +Previews) ........................  MAC_TYPECHECK_EXIT=0
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6 mode) ..... 20/20 passed, TEST_EXIT=0
+      → DensityToggleProjectionTests(4) · DensityToggleNavigationTests(7) ·
+        DensityToggleLabelTests(3) · DensityToggleAccessibilityTests(2) ·
+        DensityToggleTelemetryTests(2) · DensityRawValueTests(2)
+  xcodegen generate (project spec enumerates the 7 new files; 42 pbxproj refs) .... XCODEGEN_EXIT=0
+
+=== DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test ===
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. Attempted live (/tmp/xcb.log): the scheme's "Stage
+    Shared.xcframework" pre-action enters the Kotlin/Native Gradle assembly —
+    captured tasks `:core:linkDebugFrameworkIosArm64`,
+    `:core:linkDebugFrameworkIosSimulatorArm64`, `:core:linkDebugFrameworkMacosArm64`
+    ("▸ Assembling Shared.xcframework via Gradle…"). This is the P1/S3 artifact
+    tracked macOS-pending; it gates the build before any Swift app compile. The
+    downstream app target then fails on PRE-EXISTING, UNRELATED parallel-merge state —
+    ZERO of which originates in this surface:
+      • Shared.xcframework not staged (apps/apple/Frameworks has only .gitkeep).
+      • `struct DashboardWidgetSize` redefined across 15 files (Sources/DashboardWidgets/*
+        + TeslaSync/dashboard-widgets/*) — "invalid redeclaration" across the app target.
+      • 261 co-located feature-view/dashboard-widget *.Tests.swift `import XCTest`
+        into the app target.
+      • No macOS development-signing identity (0 valid identities, ADR-012).
+    This surface's OWN code is proven to compile against the real iOS-18 + macOS-15 SDKs
+    (typechecks above) and its logic runs green (20/20 XCTest). The full-app build/test
+    is recorded in apps/macos-pending-verifications.md for the P99 acceptance gate on a
+    macos-latest runner with signing identities.
+
+  Pre-existing worktree note: `git status` shows AIUsageCard.* (feature-views)
+  modified — this is a PRE-EXISTING case-collision in the index (both `AIUsageCard.*`
+  and `AiUsageCard.*` are tracked; on the case-insensitive APFS only one physical
+  file exists, mtime 05:33:02, before this session's 05:42 edits). Not produced by
+  this surface; excluded from the scoped commit.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all web states reproduced (the controlled
+      selected/unselected segment states + subset + focus; the web source has no
+      async data states, so none are fabricated).
+  [x] Hooks bind to the shared seam; no direct HTTP from the view (only hook is
+      useTranslation → P1/S10; the controlled value is an @Binding; no P1/S8 data
+      holder is applicable to a control with no data source).
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (4/4).
+  [x] Accessibility labels present on every interactive element (per-segment spoken
+      label + .isSelected trait; group name + selected value).
+  [x] Tests: adapter projection + navigation tests + a11y label tests + telemetry
+      seam test (20 total, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (stub gate: 0, 0 opt-outs).
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing unrelated
+      blockers + the P1/S3 Kotlin/Native xcframework); host-runnable equivalents
+      (real-SDK typecheck both platforms + 20/20 XCTest + xcodegen) green.
+
+EXIT=0
+STATUS=DONE

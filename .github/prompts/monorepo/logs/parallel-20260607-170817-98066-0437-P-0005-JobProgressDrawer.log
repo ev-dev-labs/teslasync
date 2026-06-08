@@ -1,0 +1,122 @@
+I'll start by exploring the repository structure, the web source, and the existing Apple app conventions.
+
+Web source read fully. The Apple toolchain has `swift`, `swiftlint`, `swiftformat` but `xcodebuild` requires full Xcode (only CommandLineTools present). Let me explore the existing Apple app structure and the reference patterns.
+
+No `modals-dialogs/` dir yet — I'll create it. There's a `project.yml` (XcodeGen). Let me study the reference template (AIUsageCard.* — the 7-file pattern) and the build config.
+
+Excellent — this gives me the full 7-file pattern. Let me read the remaining reference files, design tokens, the export hook, and check verification tooling.
+
+Let me find the projection/chrome views (referenced but not yet seen), the design tokens, the export hook, and verification tooling.
+
+9 files per surface (incl. Projection + Chrome). Let me read those two plus the design tokens, the web formatters, and the placeholder tooling.
+
+Now let me port the web formatters, find shared components (TSButton/TSSkeleton/TSFadeIn), read lint configs, and test whether `swiftc` can import SwiftUI on this runner.
+
+Let me read the shared component APIs and test the toolchain's SwiftUI compile capability plus pwsh availability.
+
+SwiftUI typechecks against the macOS SDK ✓, `pwsh` available ✓, but the **iphonesimulator SDK is absent** (only `MacOSX.sdk`) — that's the BLOCKED evidence for the iOS gate. Let me probe Observation/XCTest/OSLog and read `formatDate` (the >7d fallback) before writing.
+
+Toolchain confirms: SwiftUI + Observation + OSLog typecheck against the macOS SDK, but **XCTest and the iphonesimulator SDK are absent** in CommandLineTools — concrete BLOCKED evidence for the `xcodebuild` gate. `pwsh` is available for the placeholder check. I have all reference patterns, tokens, shared-component APIs, and web formatters.
+
+Let me write a plan and start creating the surface files.
+
+`swiftc -parse` works without the XCTest module ✓. Now I'll write the surface. Starting with the pure Adapter (formatters, types, status, download path).
+
+Now the Model file: i18n facade, telemetry, connection/presentation enums, state store, feed/input/resolved value types, source seam, and the `@Observable` model.
+
+I mis-named that file. Let me move it to the correct `Model.swift` name.
+
+Now the pure Projection file.
+
+Now the Chrome file (freshness chip, refresh, connectivity banner, loading, error).
+
+Now the Views file (status tone, sections, job row, minimized chip).
+
+I'll make the "processing" spin a manual rotation (robust across SDKs, Reduce-Motion-aware) instead of relying on the newer `.rotate` symbol effect.
+
+Now the main surface View with the header, body, and dismiss semantics.
+
+The private `body` in the extension collides with the `View.body` requirement. Let me rename it.
+
+Now the Previews for each state.
+
+Now the i18n strings catalog.
+
+Now the comprehensive test suite.
+
+All 9 files created. Let me verify them: standalone type-check (macOS SDK) of the non-test sources + tokens + the shared components they use.
+
+The only error is the `#Preview` macro plugin (ships with full Xcode, absent in CommandLineTools) — it hits the reference `Buttons.swift` too, confirming it's a toolchain limitation, not my code. Let me type-check the real code paths without DEBUG previews, then `-parse` the preview/test files separately.
+
+Real code type-checks cleanly (Swift 6, strict concurrency) ✓. Now `-parse` the preview/test files (macro/XCTest unavailable in CLT) and run swiftformat + swiftlint + the placeholder check.
+
+Parse checks pass ✓. swiftformat found style deltas (single-line bodies, trailing commas, line wraps) — house style is multi-line bodies (matching AiUsageCard). Let me auto-format with the ecosystem tool, then re-lint and re-type-check.
+
+swiftformat clean (0/8) ✓. Re-type-check after formatting, and run swiftlint on the new files.
+
+Type-check still clean ✓. swiftlint scanned the whole repo; let me isolate the one violation to my files by linting them explicitly.
+
+3 real violations in my files: `Model.swift` (527 lines) and `Tests.swift` (478) exceed the 400-line limit, and a 3-member tuple in the tests. I'll split each oversized file into two `JobProgressDrawer.*` files (allowed by the glob) and replace the tuple with a small harness struct — matching the codebase's per-file conventions. Let me restructure: move the value types/seams into a new `State.swift`.
+
+Now the slimmed `Model.swift` (telemetry seam, source seam, the `@Observable` model, in-memory source).
+
+Now split the oversized test file and replace the 3‑member tuple with a small harness struct. Remove the old one and recreate two focused test files.
+
+Now the model + accessibility test file with the `Harness` struct (fixes the 3‑member tuple).
+
+All files split. Let me re-run the full local verification: format, lint, type-check, parse.
+
+swiftformat clean (0/10) and swiftlint clean (0 violations) ✓. Now re-type-check the real code (now incl. State.swift) and parse the test files.
+
+Excellent — real code type-checks and all test/preview files parse ✓. Let me strengthen the test verification beyond `-parse`: type-check the **test logic** against my real types by compiling them as one module with a tiny local XCTest shim (XCTest is absent in CLT). This catches wrong method names, labels, or enum cases that `-parse` can't.
+
+The shim pass just needs Foundation (normally pulled in transitively by XCTest). Let me swap `import XCTest` → `import Foundation` in the copies and re-run.
+
+Test logic type-checks against the real types ✓ (strong evidence the assertions are valid). Let me read the placeholder checker and, in parallel, build a tiny native executable from the **pure** files to get real runtime proof the formatters/projection produce the expected strings.
+
+Runtime output matches **every** web-parity expectation exactly (byte units, relative labels, partition, detail lines, download path/URL, a11y, minimized/withdrawn). Now the placeholder gate — first scan my files for forbidden tokens, then run the actual checker via `pwsh`.
+
+Placeholder gate passed. Let me confirm it actually scanned my files (not a vacuous pass) by inspecting the script's path handling and running it against the directory.
+
+The gate's literal `-Path .../JobProgressDrawer` is a path *prefix* — `Test-Path -LiteralPath` treats it as non-existent and returns a clean no-op. For meaningful evidence, let me run the checker against the real directory (so it actually scans my `.swift` files) plus the script self-test.
+
+Meaningful pass: the checker scanned my files (self-test proves it detects real violations) → `PLACEHOLDER_COUNT=0`. Now let me verify i18n key coverage (every web `t()` key must exist in my catalog) programmatically.
+
+The extraction left a trailing quote (and matched non-i18n `t(` like `persist('open')`). Let me fix the extraction and re-check.
+
+All 28 web i18n keys present in the native catalog (MISSING_COUNT=0) ✓. Now I'll generate the honest gate log with real toolchain-capability evidence and all alternative-verification results.
+
+Let me review the complete log to confirm it's honest and well-formed.
+
+The `IOS_EXIT=0`/`MAC_EXIT=0` lines are misleading — that captured the `head` pipe's exit, not `xcodebuild` (which actually failed). Let me correct them for honesty.
+
+Log corrected for honesty. Let me do a final rubber-duck review of the surface View code and confirm git only stages my files (pre-existing unrelated changes must not be committed).
+
+Code reviewed — the `#if os(macOS)` modifier compiles (type-check was 0), and only my new files are untracked. The pre-existing modified files (AIUsageCard.*, web/*) are **not mine** — I'll stage only the surface dir and the log, per the prompt's commit spec.
+
+Staging is correct — only my 11 surface files + the log are staged; the pre-existing unrelated changes remain unstaged. Committing per the prompt's spec.
+
+Committed cleanly — 12 files (11 surface + log), 2483 insertions, pre-existing unrelated changes excluded. Let me finalize the plan and confirm a clean tree for my scope.
+
+The git scope is clean (all committed), 11 surface files present. Let me fix the plan note (the edit needs the path).
+
+Done. Here's the final summary.
+
+## Summary
+
+Shipped the native Apple SwiftUI **`JobProgressDrawer`** surface (P4 · modals-dialogs · 0005) at parity with `web/src/components/feedback/JobProgressDrawer.tsx`, committed as `7ba24acc7` (12 files, 2,483 insertions — only my surface files + the gate log; pre-existing unrelated changes left untouched).
+
+**Artifact** (`apps/apple/TeslaSync/modals-dialogs/JobProgressDrawer.*`): Adapter (pure `formatBytes`/`formatRelative`/status/download ports), State (i18n facade, connection/presentation axes, persistence + feed/input/resolved value types), Projection (pure resolve), Model (`@Observable` state-holder + telemetry + source seam), Views + Chrome (sections, job row, minimized chip, freshness chip, banner, loading, error), the surface View, Previews, two test files, and the `.strings` catalog.
+
+**Parity reproduced**: minimized chip / open panel; loading / empty / error / data; the persisted open-minimized-dismissed presentation with the `dismissed→minimized` auto-promotion; the P4 leaf freshness axis (live/stale/offline chip + banner + one-shot stale auto-refresh); `view.opened` telemetry; VoiceOver labels on every control, Dynamic Type, Reduce-Motion, `.isModal` + macOS Esc-to-minimize. All **28** web `t()` keys ported.
+
+**Verification** (everything runnable on this CommandLineTools-only runner is green):
+- `swiftc -typecheck` of all real sources — macOS 15 SDK, Swift 6 strict concurrency: **0**
+- Test-logic type-check against real types (XCTest shim): **0**
+- Native runtime exec of the pure logic — **21/21 outputs match** the web byte/relative/row/download/a11y strings
+- `swiftlint --strict`: **0 violations** · `swiftformat --lint`: **0** · `check-placeholders`: **0** · i18n missing: **0**
+
+**Gate status: `EXIT=1` / `STATUS=BLOCKED`** — the required `xcodebuild ... build test` (iPhone 16 sim + macOS) cannot run: the active toolchain is `/Library/Developer/CommandLineTools` (no Xcode), the **iphonesimulator SDK is absent**, and the **XCTest module isn't in the CLT SDK**. This is the prompt's sanctioned capability-block path; full evidence + all compensating-check output is in `.github/prompts/monorepo/logs/p4-apple-modals-dialogs-0005-JobProgressDrawer.log`. Re-running the gate verbatim on an Xcode runner is the only remaining step.
+
+
+

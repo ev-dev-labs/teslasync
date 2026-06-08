@@ -1,0 +1,181 @@
+=== P4 Feature view 0156 HealthRecommendations (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/HealthRecommendations.*
+Web src : web/src/features/driving/components/drivetrain-health/HealthRecommendations.tsx
+Runner  : Darwin (Apple Silicon), Swift 6.3.2 (swiftlang-6.3.2), Command Line Tools only
+Honesty : results below are the verbatim outcomes of each command actually run.
+
+────────────────────────────────────────────────────────────────────────
+CAPABILITY PROBE (decides DONE vs BLOCKED per prompt capability clause)
+────────────────────────────────────────────────────────────────────────
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+directory '/Library/Developer/CommandLineTools' is a command line tools instance
+
+$ xcrun simctl list devices | grep -E 'iPhone 16|-- iOS'
+(no output — no iOS simulator runtimes; simulators ship with Xcode.app)
+
+VERDICT: The full Xcode toolchain (xcodebuild + iOS/macOS SDKs + Simulators) is
+NOT installed on this runner — only the Command Line Tools. The Swift compiler,
+SwiftUI / Swift Charts / MapKit headers, swiftlint, swiftformat, pwsh and xcodegen
+ARE present, so the surface was fully implemented and verified as far as the
+toolchain allows; the xcodebuild build+test steps cannot execute here.
+
+────────────────────────────────────────────────────────────────────────
+GATE STEP 1 — iOS build+test
+────────────────────────────────────────────────────────────────────────
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1   (BLOCKED: requires Xcode.app — capability unavailable on runner)
+
+────────────────────────────────────────────────────────────────────────
+GATE STEP 2 — macOS build+test
+────────────────────────────────────────────────────────────────────────
+$ xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1   (BLOCKED: requires Xcode.app — capability unavailable on runner)
+
+────────────────────────────────────────────────────────────────────────
+COMPENSATING COMPILE + RUNTIME VERIFICATION (toolchain-feasible substitutes
+run because the Swift compiler CAN parse SwiftUI/Observation under CLT)
+────────────────────────────────────────────────────────────────────────
+# Probe: SwiftUI + Charts + MapKit + @Observable typecheck under CLT
+$ swiftc -typecheck -sdk $(xcrun --show-sdk-path) <import SwiftUI/Charts/MapKit/Observation>
+PROBE_EXIT=0   (frameworks resolve; only the #Preview macro plugin is Xcode-only)
+
+# Shipped UI code typechecked as module "TeslaSync" against the REAL P1/S9 tokens
+# (Tokens.swift) and P1 shared components (Motion/Badges/Buttons/Skeletons/
+# Typography/Cards/TSMaterial/TSDesign), under Swift 6 + complete concurrency,
+# matching project.yml (SWIFT_VERSION 6.0, SWIFT_STRICT_CONCURRENCY complete):
+$ swiftc -typecheck -module-name TeslaSync -swift-version 6 -target arm64-apple-macosx15.0 \
+    <tokens+shared-components> HealthRecommendations.{swift,Model,Adapter,Views}.swift
+TYPECHECK_SHIPPED_EXIT=0   (View + Model + Adapter + Views compile clean)
+
+# Preview bodies (HealthRecommendations.Previews.swift) — #Preview macro plugin is
+# unavailable under CLT, so each `#Preview("x"){...}` was rewritten to a plain
+# `@MainActor func -> some View` and typechecked against the module:
+TYPECHECK_PREVIEWS_EXIT=0   (all 8 preview state bodies type-correct)
+
+# Runtime execution of the unit-test logic (XCTest is Xcode-only under CLT, so the
+# shipped HealthRecommendations.Tests.swift could not be RUN here; instead the REAL
+# Adapter.swift + Model.swift were compiled into a standalone Swift 6 binary that
+# asserts the exact behaviours the XCTest suite checks):
+$ swiftc -swift-version 6 Adapter.swift Model.swift <runner> -o hrrunner && ./hrrunner
+  ok: good == baseline keys
+  ok: good all low
+  ok: warning keys / warning prefix medium / warning count 7
+  ok: critical keys / critical prefix high / critical count 9
+  ok: baseline suffix + unique keys for good/warning/critical
+  ok: messageKey prefix "drivetrain.tips." / messageFallback non-empty
+  ok: priority a11y fallbacks (High priority / Medium priority / Suggestion)
+  ok: projection loading precedence / error precedence / empty-msg->data
+  ok: empty when grade nil / data when grade good (4)
+  ok: stale+offline require content / gated when no content / fetching passes
+  ok: model data / model 9 recs / telemetry once with slug "HealthRecommendations"
+  ok: startCount 1 / refresh delegates 2 / push updates (loading->data, 7 recs)
+  ok: rowSummary join / rowSummary drop empty
+ALL_LOGIC_CHECKS_PASSED   (36/36)
+LOGIC_RUNNER_EXIT=0
+NOTE: shipped HealthRecommendations.Tests.swift (XCTest) compile+run is BLOCKED by
+the same missing-Xcode capability (no such module 'XCTest' under CLT). It mirrors
+the gate-passing BatteryHealthSection.Tests.swift form 1:1 and lints/parses clean.
+
+────────────────────────────────────────────────────────────────────────
+GATE STEP 3 — swiftlint --strict
+────────────────────────────────────────────────────────────────────────
+# Scoped to the 6 shipped surface files:
+$ swiftlint lint --strict <HealthRecommendations 6 .swift files>
+Done linting! Found 0 violations, 0 serious in 6 files.
+LINT_SURFACE_EXIT=0
+
+# Full gate scope (cd apps/apple && swiftlint --strict), 1231 files:
+Found 1 violation, 1 serious in 1231 files.
+  TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error:
+  Function Body Length Violation (function_body_length)
+LINT_EXIT=2
+NOTE: the single violation is PRE-EXISTING in an unrelated dashboard-widget file,
+outside this prompt's allowed files (HealthRecommendations.*); zero violations in
+this surface. Not fixed (out of scope / not an allowed file).
+
+────────────────────────────────────────────────────────────────────────
+GATE STEP 4 — swiftformat --lint apps/apple
+────────────────────────────────────────────────────────────────────────
+# Scoped to the 6 shipped surface files:
+$ swiftformat --lint <HealthRecommendations 6 .swift files>
+0/6 files require formatting.
+FORMAT_SURFACE_EXIT=0
+
+# Full gate scope (swiftformat --lint apps/apple), 1235 files:
+ActionBuilder.Previews.swift:48:1: error: (blankLinesBetweenScopes) ...
+1/1235 files require formatting, 2 files skipped.
+FORMAT_EXIT=1
+NOTE: the single violation is PRE-EXISTING in an unrelated feature-view file
+(ActionBuilder.Previews.swift), outside this prompt's allowed files; this surface
+formats clean. Not fixed (out of scope / not an allowed file).
+
+────────────────────────────────────────────────────────────────────────
+GATE STEP 5 — check-placeholders.ps1 (this surface)
+────────────────────────────────────────────────────────────────────────
+$ pwsh apps/tools/check-placeholders.ps1 -Path <surface .swift files> -Language swift
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# Cross-check (incl. .strings) for TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/
+# not implemented/stub/mock: NONE_FOUND
+
+────────────────────────────────────────────────────────────────────────
+PROJECT INTEGRATION
+────────────────────────────────────────────────────────────────────────
+$ xcodegen generate
+Created project at .../apps/apple/TeslaSync.xcodeproj   (GEN_EXIT=0, gitignored)
+Target membership (parsed from generated pbxproj): all 6 HealthRecommendations
+.swift files compile into BOTH app targets TeslaSync (iOS) and TeslaSync-macOS,
+exactly like the sibling BatteryHealthSection.* set. .strings folds into the
+per-surface i18n catalog table "HealthRecommendations".
+
+────────────────────────────────────────────────────────────────────────
+ACCEPTANCE CRITERIA
+────────────────────────────────────────────────────────────────────────
+[x] Surface renders all web states reproduced (loading/error/empty/data + stale/
+    offline overlays). Web leaf is presentational; P4 state-holder wraps it exactly
+    as the BatteryHealthSection precedent does. Verified via typecheck + 8 previews.
+[x] Hooks bind via shared P1/S8 state-holder seam (HealthRecommendationsSource ->
+    @Observable HealthRecommendationsModel); no direct HTTP in the view.
+[x] Every i18n key from source present in P1/S10 catalog (HealthRecommendations.
+    strings): drivetrain.recommendations + the 9 drivetrain.tips.* keys, verbatim.
+[x] Accessibility: row summaries (priority + message), header isHeader trait, retry
+    label, decorative glyphs hidden, Dynamic Type fonts, Reduce-Motion via TSFadeIn/
+    TSStagger*. a11y summary builder unit-asserted by the logic runner.
+[x] Tests: adapter builder per grade + projection per state + model wiring/telemetry
+    + a11y label (HealthRecommendations.Tests.swift). Logic executed green via runner
+    (XCTest run itself BLOCKED by missing Xcode — same capability gap).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (placeholder gate = 0).
+[ ] EXIT=0 / STATUS=DONE  -> NOT reachable: xcodebuild build+test requires Xcode.app
+    which is not installed (Command Line Tools only). Reported honestly as BLOCKED
+    with the capability evidence above, per the prompt's capability clause.
+
+────────────────────────────────────────────────────────────────────────
+RESULT
+────────────────────────────────────────────────────────────────────────
+Implementation: COMPLETE and production-polished (no stubs/placeholders/skeleton-
+only). Every toolchain-feasible check is green for this surface: Swift 6 typecheck
+of all shipped UI code, runtime execution of all 36 logic assertions, scoped
+swiftlint --strict = 0, scoped swiftformat --lint = 0, placeholder gate = 0,
+xcodegen integration = 0.
+
+BLOCKED on: xcodebuild iOS+macOS build/test (IOS_EXIT=1, MAC_EXIT=1) — full Xcode
+(SDKs + Simulators) is not available on this runner. The two aggregate lint/format
+nonzero exits (LINT_EXIT=2, FORMAT_EXIT=1) are PRE-EXISTING violations in unrelated
+files outside this prompt's allowed-files scope and are not caused by this surface.
+
+IOS_EXIT=1
+MAC_EXIT=1
+LINT_EXIT=2
+FORMAT_EXIT=1
+PLACEHOLDER_EXIT=0
+EXIT=1
+STATUS=BLOCKED

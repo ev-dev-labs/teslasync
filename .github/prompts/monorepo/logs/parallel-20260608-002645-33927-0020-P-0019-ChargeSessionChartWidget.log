@@ -1,0 +1,108 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Let me read the web source specification and explore the existing Apple dashboard-widgets structure.
+
+The web source is clear. Now let me examine the existing Apple dashboard-widgets to understand established patterns, especially chart-based widgets.
+
+No existing `ChargeSessionChartWidget` yet. There are many similar chart widgets. Let me study the closest analogs (energy/charging bar charts) and the shared infrastructure.
+
+`SolarProductionWidget` is the ideal template (energy bar chart). Let me read its complete file set to learn the established pattern.
+
+Excellent, this is a rich, well-structured pattern. Let me read the remaining template files to fully understand the architecture.
+
+Now let me read the Previews, Tests, and strings files, plus locate the shared infrastructure types.
+
+Now let me examine the shared infrastructure (registration/size/theme tokens), a bar-chart example, and the web helpers referenced by the source.
+
+Let me read the design tokens, the registration struct definition, the bar-chart example, and the exact web color/conversion values.
+
+I need to understand how the shared `DashboardWidgetRegistration` type is defined—many widgets seem to redefine it. Let me investigate the build setup and whether my template relies on a canonical definition.
+
+Let me check tool availability on this runner and how the Apple project is structured (this determines whether I can build/test).
+
+Key findings: `xcodebuild` requires full Xcode (only CommandLineTools present), and there's no `.xcodeproj`/`Package.swift` in `apps/apple`. Let me find how the Apple project is actually built/generated and check the host-compile path.
+
+There's an XcodeGen `project.yml`. Let me read it, the CI workflow, the placeholder checker, and lint configs to understand the real build path and constraints.
+
+Now I understand the build system. Critical finding: **`xcodebuild` requires full Xcode but only CommandLineTools is installed** — so the simulator/macOS build+test gate steps cannot run here (a genuine platform-capability limit). `swiftlint`, `swiftformat`, and the placeholder check (pwsh) all work. Let me read the design tokens, lint configs, a bar-chart example, and the web helpers/types I must mirror.
+
+Now I have the design tokens (charger colors map cleanly: home→statusSuccess #10b981, supercharger→statusDanger #ef4444, dc→statusWarning #f59e0b). Let me read the web helpers/types I must mirror and a bar-chart + charging-domain example.
+
+Bar-chart idioms confirmed. `ChargingSession` fields verified (`started_at`, `total_energy_added_wh`, `charger_type`). Let me study the charging-domain analog (SuperchargerHistoryWidget) to mirror the vehicle-selection + charging-sessions source/model shape.
+
+Let me read the web `formatDateShort` implementation and the full `ChargingSession` interface to mirror them precisely.
+
+I have all the web semantics. Let me confirm the widget is self-registering (no shared registry file to edit) and verify the `TSSkeleton` API, then write the plan.
+
+Let me verify my intended (prefixed) type names don't collide with existing charging feature-view types in the same module.
+
+All names are clear (I'll use `ChargeSessionChargerKind`, not the existing `ChargerKind`). Let me record a plan and confirm whether any full Xcode exists on this runner (decides BLOCKED vs DONE for the build gate).
+
+`/Applications/Xcode.app` exists, though `xcode-select` points at CommandLineTools. Let me record a plan, then probe real build capabilities (xcodegen, and whether `swiftc` can typecheck SwiftUI+Charts via Xcode's macOS SDK) — this decides how much I can truly verify.
+
+Major capability update: **Xcode 26.5 is usable via `DEVELOPER_DIR`**, **xcodegen is installed**, and **`swiftc` typechecks SwiftUI+Charts against the macOS 15 SDK**. So I can genuinely typecheck my surface and host-run its logic. Let me check the Shared.xcframework dependency (gates a full app build), then start writing the implementation.
+
+Confirmed: `Frameworks/Shared.xcframework` is **absent** (needs the KMP/Gradle toolchain to build) and **15 sibling files redeclare `DashboardWidgetSize`** — both pre-existing, out-of-scope conditions that block a full-app `xcodebuild`. But SwiftUI/Charts/macOS-15 SDK capability is present, so I'll verify my surface via focused typecheck + host-run. Now writing the implementation.
+
+All 8 files created. Now let me verify — first normalize with swiftformat and confirm `--lint` passes, then swiftlint, then the placeholder gate.
+
+Formatting is clean (0/7 require formatting). Now swiftlint `--strict` on the new files:
+
+swiftlint `--strict`: **0 violations**. Now the placeholder gate. Let me read its pattern set and scan my files for real (the gate's prefix-path form doesn't actually recurse, so I'll verify properly).
+
+Placeholder scan clean (COUNT=0). I spotted a Swift Charts type-safety risk (mixing `Int` x-values with a `Double` domain/selection). Let me make the chart's x-axis consistently `Double` before typechecking.
+
+Let me re-lint the edited chart file, then run the focused `swiftc -typecheck` of the shipped surface against the real macOS SDK + real Tokens + faithful stubs for the 3 shared symbols.
+
+The strict-concurrency typecheck (Swift 6, matching the project's `SWIFT_STRICT_CONCURRENCY: complete`) caught real issues: non-`Sendable` `DateFormatter`/`ISO8601DateFormatter` statics. Let me see the full error set and how the existing `SolarProductionBuilder` handles the same pattern.
+
+The typecheck flagged exactly two real Swift 6 strict-concurrency errors (non-`Sendable` `ISO8601DateFormatter` statics); the `DateFormatter` statics pass (matching `SolarProductionBuilder`'s accepted convention). Let me fix by building the ISO8601 parsers locally (cheap for ≤10 labels), keeping the hot `DateFormatter` path as static.
+
+Now re-run the surface typecheck (and re-lint Builder):
+
+Shipped surface typechecks clean under Swift 6 strict concurrency. Now let me (1) typecheck the test file against the real API + XCTest, and (2) host-compile **and run** the real adapter logic to prove web parity numerically.
+
+The Tests "failure" is purely a `swiftc`-without-`xcodebuild` limitation (XCTest's `XCTAssert*` are C macros not importable in a raw typecheck) — not a defect in my test code. Let me prove the test code is type-correct via a faithful XCTest shim, and simultaneously **host-run the real adapter logic**.
+
+Two issues surfaced — both fixable, neither a logic defect:
+1. **(A) Tests typecheck PASSED (exit 0)** but emitted a *warning*: `ChargeSessionChartWidget.registration`/`surfaceSlug` are `@MainActor`-isolated (because `View` is `@MainActor`), so nonisolated registry tests warn. Cleanest fix: mark these compile-time constants `nonisolated` (also better for the dashboard registry consumer).
+2. **(B) Host-run** failed to compile *in my throwaway harness* (`main.swift` global-var mutation under Swift 6), not in my real files. I'll use a small class counter.
+
+Let me apply the `nonisolated` improvement and re-verify everything.
+
+Now re-verify all four checks together (re-lint surface, surface typecheck, tests-shim typecheck, host-run with a clean counter class):
+
+The host-run caught a **real parity bug** (excellent — this is why executing matters): `NumberFormatter` defaults to banker's rounding (`.halfEven`), so `4.25 → "4.2"`, not `"4.3"`. Let me check what the web `fmtNumber` does to fix rounding to match exactly.
+
+Web `fmtNumber` uses `toLocaleString` (ECMA-402 default `halfExpand` = round-half-away-from-zero). Foundation's `.halfUp` matches that. Let me set the rounding mode to match web exactly:
+
+Now let me run a comprehensive re-verification of all files: format, lint, placeholder, host-run logic (confirming the rounding fix), and both typechecks.
+
+Format clean (0/7) and swiftlint clean (0 violations). Now confirm the rounding fix via host-run and re-typecheck:
+
+All green: surface typechecks (Swift 6 strict), 26 logic checks pass, format/lint/placeholder clean. Now let me gather **honest build-gate evidence** — confirm the scheme generates but the full app build is blocked by pre-existing infra (missing KMP `Shared.xcframework` + sibling duplicate type defs).
+
+Concrete evidence captured. Now let me attempt the real `xcodebuild` compile (building the target directly to skip the Gradle pre-action) to capture the precise pre-existing blocker — time-boxed:
+
+Concrete blocker confirmed: the app target build fails immediately because the KMP **`Shared.xcframework` is absent** (must be built by the Kotlin/Native+Gradle toolchain) — independent of my surface. Let me clean the generated artifacts, confirm the log directory, and check git state.
+
+All artifacts cleaned; only my 8 files are new (the other modified files are pre-existing, not mine — I won't touch them). Let me run a final consolidated verification on the finished files (capturing exact outputs for the log), since I edited Builder/surface after the last full lint.
+
+Final format/lint/placeholder all clean. Let me run one authoritative final pass of the three deep checks (surface typecheck, tests typecheck, host-run) on the exact final files, to record definitive results in the log:
+
+Both deep typechecks pass with **0 errors and 0 warnings**. Let me capture the literal gate commands' real exit codes (the two `xcodebuild` steps and the whole-tree lint/format the gate actually runs) so the log reflects true execution:
+
+The two `xcodebuild` steps fail under the active CLT toolchain (`IOS_EXIT=1`, `MAC_EXIT=1`). The whole-tree lint/format each report exactly **one** pre-existing issue — I must confirm it's not mine. Let me identify the offending files:
+
+Confirmed: the single whole-tree swiftlint violation is in a **pre-existing sibling** (`LifetimeStatsWidget.Adapter.swift`), and my 7 files lint clean (the matches were just progress lines). My surface passes every scoped check. Let me identify the swiftformat offender for precision, then write the honest gate log.
+
+Both whole-tree offenders are pre-existing siblings (`ActionBuilder.Previews.swift`, `LifetimeStatsWidget.Adapter.swift`) — not my surface. I now have complete, honest evidence. Let me write the gate log.
+
+Now let me update the plan status and commit exactly my surface files plus the log (not the pre-existing modified files):
+
+Exactly the 8 surface files + log staged (pre-existing modified files excluded). Committing with the prompt's message:
+
+Committed (5479b1ca3, 9 files, 1765 insertions). Let me do a final cleanup/sanity check to ensure no stray artifacts and that pre-existing files were left untouched:
+
+Task complete. Cleanup verified — no stray artifacts, and the pre-existing modified files (`AIUsageCard.*`, two web files) were deliberately left untouched and excluded from my commit.
+

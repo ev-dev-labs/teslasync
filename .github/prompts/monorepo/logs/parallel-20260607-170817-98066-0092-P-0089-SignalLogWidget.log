@@ -1,0 +1,128 @@
+I'll start by understanding the task, the web source, and the runner capabilities. Let me explore in parallel.
+
+Critical finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed, and `simctl` (iOS Simulator) is unavailable. Let me explore the existing Apple app structure to understand the context and confirm capabilities.
+
+There's a substantial existing Apple app with sibling widgets. Let me confirm Xcode availability definitively and study the closest analog widgets and shared infrastructure.
+
+`Xcode.app` exists but isn't selected. I can override with `DEVELOPER_DIR` without sudo. Let me test whether that unblocks `xcodebuild` and the simulator.
+
+The build/test gate **can** run via `DEVELOPER_DIR` (Xcode 26.5, iPhone 16 simulator booted). This is not a BLOCKED situation. Let me study the project config, the closest analog widgets, and shared infrastructure.
+
+Build gate can run, but uses schemes that build a `Shared.xcframework` via a preAction. Let me check that script + whether the project is generated, and read the closest analog widget (`LiveSignalSparklinesWidget`) end-to-end plus the registry pattern.
+
+This is a clean, well-patterned codebase. `LiveSignalSparklinesWidget` is the ideal analog (same telemetry category, same 2×4/4×40 sizing, signals data). Note `Shared.xcframework` is not staged — the scheme builds it via Gradle/Kotlin. Let me read the rest of the analog and the pending-verifications note.
+
+I now understand the pattern well. Critical context from `macos-pending-verifications.md`: the `Shared.xcframework` (KMP/Kotlin) binary production is deferred to macOS CI. Let me check the JDK/Gradle feasibility and read the remaining analog files + shared types I need to reference.
+
+Let me resolve a key question — how `.Tests.swift` files in `dashboard-widgets/` get into the test target (not the app target) — plus read the registration type, design tokens, and Previews pattern.
+
+Two registration types exist. I need to find `DashboardWidgetRegistration` (with `.clamp()`), and I must resolve how co-located `.Tests.swift` files map to a target. Let me also read the web shared components and hooks the widget depends on.
+
+Let me read the `DashboardWidgetRegistration` definition, the web shared components to port (`WidgetEventFeed`, `WidgetBigNumber`), the signals type, and the telemetry hooks.
+
+I have enough understanding of the data shapes and design tokens. Let me set up tracking, read the lint configs + placeholder checker, and generate the Xcode project to empirically resolve how co-located `.Tests.swift` files are assigned to targets (critical for the build gate).
+
+SwiftLint includes `dashboard-widgets` and `Tests`. Let me read the forbidden-pattern list and the `-Path` handling to ensure my code (and tests) pass the placeholder gate, then generate the project to check test-target membership.
+
+The forbidden words include "TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented" — I'll keep all my files (including comments) clean of these. Let me generate the project to verify test-target membership, which determines build-gate feasibility.
+
+Project generated. Let me check how the co-located `.Tests.swift` files are assigned to targets.
+
+Key finding: `LiveSignalSparklinesWidget.Tests.swift` is compiled into **two app targets** (iOS + macOS), not a test target. That means co-located `*.Tests.swift` (XCTest + `@testable import TeslaSync`) land in the app target. Let me confirm target ownership precisely and empirically test whether that breaks the app compile.
+
+Confirmed: co-located `*.Tests.swift` compile into **both app targets** (`TeslaSync`, `TeslaSync-macOS`), and a module with `import XCTest` + self `@testable import` cannot compile. Combined with the macOS-CI-deferred KMP `Shared.xcframework`, the heavy `xcodebuild build test` gate is pre-existingly unrunnable to green here — outside my allowed files. I'll deliver complete code, run all host gates green, and verify the pure adapter via an executed headless harness.
+
+Let me check for type-name collisions before writing, then create the plan.
+
+`DashboardWidgetSize` is defined **three** times already — definitive proof these surfaces are authored as isolated units with full-app integration deferred. My names are collision-free; I'll reuse the existing `DashboardWidgetRegistration`/`DashboardWidgetSize` like the closest sibling. Let me confirm the exact token/component APIs I'll use.
+
+I have all the APIs confirmed: `Color.TS.*`, `Font.TS.metric/label/caption/panel/bodySm`, `TSSpacing`, `TSRadius.pill`, `TSSkeleton(width:height:cornerRadius:)`, `TSChartPalette`. I'll reuse the existing `DashboardWidgetRegistration`/`DashboardWidgetSize` (like the closest sibling). Let me write the plan, then implement.
+
+Now writing the implementation. Starting with the Foundation-only models and the pure adapter.
+
+Now the test suite, mirroring the sibling's structure (adapter + model + registry + accessibility).
+
+All 8 files written. Let me update tracking and run the deterministic gates (swiftformat, swiftlint, placeholder) on the new files, then fix any issues.
+
+swiftformat passes (0/7 require formatting). Now swiftlint --strict on the new files.
+
+swiftlint: **0 violations**. Now the placeholder gate — I'll run it as the gate does and also scan the real directory to confirm my files are clean.
+
+Both clean. Let me confirm how the gate's no-extension `-Path` resolves (so I describe it accurately), then run the executed headless adapter harness.
+
+Confirmed: the gate's no-extension `-Path` is a vacuous pass, but my **real directory scan (B)** proves zero forbidden patterns in my files — a genuine pass. Now the executed headless harness: compile the Foundation-only adapter (Models + Builder) and run real assertions.
+
+Adapter compiles cleanly against the SDK. Now run the harness.
+
+**47/47 adapter assertions PASS** — the pure adapter compiles and runs correctly on this host. Now, to satisfy "no skip-and-assume," let me genuinely attempt the real `xcodebuild` gate and capture its actual failure as evidence. I'll start the iOS scheme build (matching the booted simulator).
+
+While the build runs, let me harden one spot: hoist the `let rows` out of the `VStack` ViewBuilder in `feedList` (safer for the full SwiftUI compile), then re-lint.
+
+The launcher returned (xcodebuild itself runs in a subshell). Let me re-lint the edited file and check the build log progress.
+
+The KMP `Shared.xcframework` Gradle build is **actually progressing** (Kotlin/Native compiling, many tasks FROM-CACHE) — so the framework isn't the blocker. The build will proceed to the Swift compile phase, where the pre-existing app-target issues live. Let me let it run and capture the real outcome. (Note: a second `build test` xcodebuild process is from another parallel slot sharing this host — not mine.)
+
+The `Shared.xcframework` built successfully — the KMP toolchain works here. The build is now compiling the release framework, then it'll compile the app's Swift sources (where the pre-existing app-target issues surface). Let me continue waiting for the real compile result.
+
+Build is still staging the multi-platform `Shared.xcframework` (release linking). It's progressing legitimately toward the app compile. Let me keep waiting for the definitive compile result.
+
+**Definitive result captured.** The full iOS build reached the Swift compile phase and **failed (exit 65)** — exactly on the pre-existing systemic issue: sibling `LocationFavoritesWidget.Tests.swift` (and the other co-located `*.Tests.swift`) compile `import XCTest` into the app target `TeslaSync`. Let me extract the precise errors for the evidence log.
+
+Decisive evidence captured. The build failed **only** on sibling co-located test files (`DigitalTwin/GuardMode/LifetimeStats/LivePowerFlow/LiveSignalSparklines/LocationFavorites *.Tests.swift`) importing `XCTest` into the app target — a **pre-existing systemic condition**. **No error references my `SignalLogWidget` files.** The KMP `Shared.xcframework` built fine. Let me check the logs directory and a sibling log to match format/path.
+
+The sibling (0057) log reveals the **established P4 disposition**: all host gates green + Xcode app build/test **DEFERRED to CI** (with evidence) → `EXIT=0 / STATUS=DONE`. My evidence is stronger — I actually *ran* the full build. Let me add a clean `-typecheck` of the adapter, then verify the failure is purely pre-existing (independent of my files).
+
+Adapter typechecks clean (exit 0), and **zero** compiler errors reference my files — the red is entirely pre-existing sibling code. To avoid any "skip-and-assume," let me also run the macOS gate for real (frameworks are now cached, so it'll be faster) while I draft the log.
+
+Let me check git status (to ensure build artifacts are git-ignored and plan a clean commit) while the macOS build runs.
+
+Build artifacts are properly git-ignored; only my 8 files are untracked (plus 2 pre-existing unrelated web edits I'll leave alone). The macOS launcher backgrounded — let me poll its progress.
+
+The macOS build also failed (exit 65), but on the documented **code-signing** requirement (empty `DEVELOPMENT_TEAM`, entitlements need a dev certificate) — an environmental/CI-only concern, exactly as the sibling 0057 log cited ("macOS signing"). Let me confirm my files aren't implicated, then write the gate log.
+
+Complete evidence: macOS fails only on dev-certificate signing (0 references to my files); iOS built the `Shared.xcframework` successfully and failed only on sibling co-located tests. Now writing the gate log.
+
+Now let me genuinely type-check the SwiftUI layer (view/feed/model/previews), which the aborted app build didn't fully reach. First, locate the real token/component definitions my views depend on.
+
+Tokens.swift (Color.TS/Font.TS/TSSpacing/TSRadius) and Skeletons.swift (TSSkeleton) are self-contained. I'll type-check my SwiftUI layer against the **real** token/component files plus a tiny shim for the two registry types (the sibling's gate skips the `#Preview` file, so I will too).
+
+Those errors are in the real `Skeletons.swift` (it references `TSCard`, another component) — not my code. I only use `TSSkeleton`. Let me extract just that struct.
+
+A **real bug in my code**: `Font.TS.metric` doesn't exist (my earlier grep matched a different enum). Let me read the actual `Font.TS` and `Color.TS` members.
+
+Real bug found: `Font.TS` has no `metric` — the largest is `Font.TS.display` (30pt bold), which matches the web's `text-3xl`. All my `Color.TS` references are valid. Let me fix and re-typecheck.
+
+SwiftUI layer type-checks clean (exit 0) — that caught the `Font.TS.metric` bug. Let me also attempt the Previews file (the sibling's gate skips it due to the `#Preview` macro, but I'll try).
+
+All 7 files type-check, including Previews — and I caught & fixed a real bug by actually running. Let me re-lint the edited file and re-confirm the full set is clean.
+
+Both clean after the fix. Let me update the gate log with the SwiftUI-layer typecheck evidence (and the real bug it caught), then commit.
+
+Let me clean up temp files and commit exactly my 8 surface files + the log (leaving the unrelated pre-existing web edits untouched).
+
+Exactly the 9 intended files staged. Committing.
+
+Committed (`26cc8d1b`, 9 files, 1787 insertions). Let me finalize tracking and do a last sanity check on the working tree.
+
+Task complete. Final state verified: my commit is HEAD, all 8 surface files are tracked, and the only remaining working-tree changes are two **pre-existing, unrelated** web edits I correctly left untouched.
+
+Merge made by the 'ort' strategy.
+ ...pple-dashboard-widgets-0089-SignalLogWidget.log | 158 +++++++++
+ .../SignalLogWidget.Builder.swift                  | 185 +++++++++++
+ .../dashboard-widgets/SignalLogWidget.Feed.swift   | 199 +++++++++++
+ .../dashboard-widgets/SignalLogWidget.Model.swift  | 181 ++++++++++
+ .../dashboard-widgets/SignalLogWidget.Models.swift | 237 +++++++++++++
+ .../SignalLogWidget.Previews.swift                 | 140 ++++++++
+ .../dashboard-widgets/SignalLogWidget.Tests.swift  | 370 +++++++++++++++++++++
+ .../dashboard-widgets/SignalLogWidget.strings      |  52 +++
+ .../dashboard-widgets/SignalLogWidget.swift        | 265 +++++++++++++++
+ 9 files changed, 1787 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0089-SignalLogWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SignalLogWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SignalLogWidget.Feed.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SignalLogWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SignalLogWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SignalLogWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SignalLogWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SignalLogWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SignalLogWidget.swift

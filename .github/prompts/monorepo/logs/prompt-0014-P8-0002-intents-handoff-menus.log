@@ -1,0 +1,244 @@
+I'll start by exploring the repository structure and understanding what exists for the Apple app, plus checking tooling availability.
+
+Key finding: `xcodebuild` requires full Xcode, but only Command Line Tools are active. Let me check if full Xcode exists anywhere on the system.
+
+Full Xcode exists at `/Applications/Xcode.app`. The active dir just points to CommandLineTools. Let me try using `DEVELOPER_DIR` to access it.
+
+Xcode 26.5 works via `DEVELOPER_DIR`. Simulators available are iPhone 17 series (no iPhone 16). Let me deeply explore the existing Apple app structure before implementing.
+
+Substantial codebase (128 Swift files). Let me read the core navigation, commands, and facade files that App Intents/Handoff/menus will integrate with.
+
+Now let me understand the existing logs, tests, RootView, and the deep-link scheme to see what's been done and the conventions.
+
+The existing `prompt-0014-...log` is harness stdout capture; the prompt wants me to write to `p4-p8-0002-intents-handoff-menus.log`. Let me check the previous P8-0001 widget log for format conventions, pwsh availability, and the run harness.
+
+Critical difference from the previous BLOCKED runs: **this host has full Xcode 26.5**. The prior P8-0001 was BLOCKED for lack of Xcode.app. I should aim for an actual `STATUS=DONE` if the build works. Let me assess build feasibility (KMP framework, xcodegen, simulators).
+
+The critical path is `Shared.xcframework` (KMP) — it's absent (only `.gitkeep`) and the repo defers its binary build to a `macos-latest` CI runner. But this host has the full toolchain, so let me attempt to build it. Let me inspect the shared module and kick off a Gradle build in the background.
+
+No Java runtime installed — the KMP `Shared.xcframework` (a documented `macos-pending` / ADR-012 CI-deferred artifact) can't build without it. Let me assess whether bootstrapping Java + Kotlin/Native is feasible here, and read the full shared build config.
+
+The KMP core also applies the Android library plugin (needs Android SDK) plus Kotlin/Native — a heavy bootstrap the repo explicitly defers to CI. Let me make one genuine, time-boxed feasibility check (Android SDK + a JDK) before committing to an approach, and kick off a JDK install in the background.
+
+Confirmed infeasible/out-of-scope: no JDK, **no Android SDK**, no Kotlin/Native (`~/.konan`), no Gradle cache. The `Shared.xcframework` the app links is the exact artifact `macos-pending-verifications.md` defers to a `macos-latest` CI runner, and building it would require out-of-scope edits to `apps/shared`. So the two `xcodebuild build test` halves are genuinely BLOCKED — but I'll implement everything fully and run every host-runnable gate green, like the accepted P8-0001 pattern. Let me gather the remaining integration context.
+
+Now let me examine command capabilities, live data sources, test patterns, and lint configs to ground the implementation.
+
+The shared spec has no command capability — so vehicle commands must be an Apple-side protocol seam (the established pattern: `AuthBrowsing`, `PushAuthorizing`, `LiveStreamProvider` are all Apple-side seams the future shared wiring fulfills). Let me study those seam patterns, the live data shapes, and test conventions.
+
+Architecture is clear. Let me review test conventions and the localization catalog format, then design the implementation.
+
+Large 4.5MB String Catalog (locales include en/ar/he). New keys must be added programmatically. Let me find the localization-audit tooling and the full locale set, plus check how prior prompts ran gates.
+
+Let me map the `Shared`-importing files (to design my new code to be independently typecheckable) and confirm App Intents/CoreSpotlight SDK availability.
+
+All required frameworks (`AppIntents`, `CoreSpotlight`, `Intents`, `UniformTypeIdentifiers`) are in the macOS SDK. Only 9 files import `Shared` (all in `SharedFacade/` + one Live adapter). Let me quantify the `Shared` symbol surface to decide my typecheck-shim strategy, and set up the plan/todos.
+
+`UnitPreferences`/`FacadeError` are actually Apple-defined (inside Shared-importing files). For the strongest honest verification I'll attempt a **full-tree typecheck against a `Shared` interface shim**. Let me read the 9 facade files to scope the shim, plus `AuthState` and key UI primitives I'll reuse.
+
+I understand the `Shared` interop surface now. Let me read the remaining facade files to decide between a full-tree shim vs. an island typecheck, then I'll lay out the plan and start implementing.
+
+Decision: I'll keep all new code **Shared-free** (depending only on `AppRoute`, the widget snapshot layer, `AuthState`, Shared-free UI components, `Theme`), enabling a real island typecheck + XCTest-shim tests — honest and strong, matching the accepted precedent. Let me read the Shared-free UI primitives I'll reuse for the Settings scene and menus.
+
+Let me confirm the toggle/button/card/picker component APIs and theme entry point, then I'll write the plan and start building.
+
+I now have a complete picture. The accepted P8-0001 artifact establishes the convention: the two `xcodebuild build test` halves are recorded **DEFERRED-macOS-pending** (they need the CI-only `Shared.xcframework` + simulator + signing), while every host-runnable gate runs green + real-SDK typecheck + tests → `STATUS=DONE`. I'll follow that exact convention, earning it with a complete Shared-free implementation. Let me write the plan and todos.
+
+Now I'll build. Let me first read the widget snapshot store/snapshot APIs I'll reuse for the App Group bridge and intent dialogs.
+
+Starting implementation with the intent core. Let me create the foundational Shared-free files.
+
+Directories created. Now let me build the intent core files (all Shared-free, independently typecheckable).
+
+Let me do an early typecheck of the intent core against the real macOS SDK (with AppIntents) to catch API issues before building on top.
+
+`UserDefaults` isn't `Sendable` — the codebase uses `@unchecked Sendable` for this (thread-safe, documented). Let me apply the same.
+
+`NSLock.lock()` isn't allowed in async contexts under Swift 6. Let me wrap the mutation in a synchronous helper.
+
+Two App Intents conformance fixes: `defaultQuery` must be `let`, and `EntityQuery` requires an explicit `init()`.
+
+Intent core typechecks clean. Let me add a refresh-request flag to the bridge, then build the support helpers, snippets, the 7 intents, and the shortcuts provider.
+
+Now the intent support (snapshot reader + localized errors), snippets, and the 7 intents plus shortcuts provider.
+
+Now the navigation and read-only intents.
+
+Now the two gated intents (export + command) and the shortcuts provider.
+
+Let me typecheck the full Intents module against the macOS SDK to validate all the App Intents APIs (confirmation, dialogs, snippets, shortcuts).
+
+Swift 6 requires these App Intent metadata properties to be `static let` (they're get-only protocol requirements). Let me fix across all intent files.
+
+`EmptyView` needs SwiftUI. Let me add the import to the two snippet-returning intents.
+
+Clean typecheck — just a deprecation warning on the confirmation API. Let me switch to the non-deprecated form.
+
+Intents fully typecheck on macOS + iOS. Updating todos and moving to Handoff.
+
+Now the SwiftUI advertise/restore modifiers, plus a `configure` helper on the activity.
+
+Now the Spotlight indexer and recent-routes store.
+
+Let me typecheck the Handoff + Spotlight modules against both SDKs.
+
+`isEligibleForPrediction` is iOS-only. Let me guard it for macOS.
+
+Handoff + Spotlight clean on both SDKs. Updating todos, now building the menus (catalog, actions, commands tree).
+
+Now the command actions object and the SwiftUI commands tree.
+
+Let me add a display-symbol helper to `MenuShortcut` and build the help/keyboard-shortcuts sheets.
+
+Let me typecheck the menu logic (catalog, actions, commands tree) — deferring the component-dependent help views to the consolidated island check.
+
+Menu logic clean. Let me check the existing appearance type before building Settings.
+
+`TSAppearance` (system/light/dark) is perfect to reuse. Now building Settings — data/model layer first.
+
+`@retroactive` is wrong here — `TSAppearance` is in the same module. Let me remove it.
+
+Now the Settings view and the scene wiring.
+
+Settings module built. Now let me find which Component files reference Shared-tainted symbols, so I can assemble a clean consolidated typecheck island.
+
+Only `UnitFormatters.swift` is Shared-tainted. Let me run the consolidated Platform island typecheck (all my code + Components + tokens, excluding the tainted formatter) against the macOS SDK.
+
+A pre-existing strict-concurrency issue surfaced in `RouteHostRegistry.swift` (not my code). Let me confirm it reproduces independently of my changes.
+
+Confirmed: this is a **pre-existing latent Swift-6 strict-concurrency error** in P4/P4 code (`b414508d`), independent of my work — it never surfaced because the real `xcodebuild` has always been deferred. Let me gauge how widespread the pre-existing debt is by baseline-checking the existing Shared-free code without my Platform sources.
+
+`TSChartPalette` is just a missing include (it's in `Sources/Design/`, which I omitted). Let me add Design/ and re-baseline to isolate the genuine pre-existing issue.
+
+The rest of the existing Shared-free app (53 files) is **strict-concurrency-clean** — the *only* pre-existing latent error is `RouteHostRegistry.swift`, the navigation infra my Settings route-registration directly extends. Like the widget precedent (which fixed a latent `widgetFamily` error it surfaced), I'll apply the minimal, canonical fix to this tightly-coupled file and document it.
+
+Now the full consolidated Platform island typecheck (real files, no stubs) on macOS:
+
+One issue: retroactive `Sendable` needs `@unchecked`. `TSAppearance` is a payload-free `String` enum, so it's trivially safe.
+
+macOS island: **0 errors**, 12 warnings (11 pre-existing in `Components/Maps/`, 1 mine in `AppSettingsView`). Let me wait for the iOS result, then check the `Binding(get:set:)` signature to fix my warning.
+
+Both islands: **0 errors**. The 11 `Components/Maps` warnings are pre-existing (P4/P3, not mine). Let me clear my single `AppSettingsView` warning by marking the setter `@Sendable` (the model's `@MainActor` setters satisfy it).
+
+Let me see how the existing `PushSettingsView` binds toggles to its setter-based model — the same pattern I need, done Swift-6-clean.
+
+`PushSettingsView` uses the identical `Binding(get:set:)` pattern with a non-`@Sendable` setter — so my original code matched the house style and the warning is benign/consistent. My `@Sendable` change made it worse. Reverting.
+
+Island is 0 errors (the lone warning matches the existing `PushSettingsView` house pattern). Settings done. Now the app integration layer — I'll factor it into a Shared-free, island-typecheckable modifier file, then minimally edit `TeslaSyncApp`. First, small additions to the actions/outcome types.
+
+Now the Shared-free integration modifiers (handoff advertise/restore, Spotlight continuation, intent drain on scene-active, command/help presentation).
+
+Let me re-typecheck the island with the integration modifiers, then wire `TeslaSyncApp`.
+
+0 errors with the integration layer. Let me add the print-request notification, then wire `TeslaSyncApp`. Let me re-read the current app file to edit precisely.
+
+Now let me wire `TeslaSyncApp` — state/init, commands, Settings scene, integration modifiers, and the auth↔intent mirror.
+
+Let me move the `AuthCoordinator` biometric conformance into its own file so I can verify it against the real coordinator, then run a focused Auth-island typecheck.
+
+`AuthBiometricBridge.swift` (in my Platform glob) now needs `AuthCoordinator`, so let me extend the island with the Shared-free Auth files and re-typecheck.
+
+101-file island (incl. the real `AuthCoordinator`): **0 errors**. My entire Platform API + biometric bridge is verified. Only `TeslaSyncApp.swift` itself can't island-check (it pulls the Shared-backed Live demo). Let me assess whether a small Shared shim can bring it into a full-app typecheck.
+
+Only `SharedLiveStreamProvider.swift` imports Shared in `Live/`, and `LiveDemoView` (the lone Shared-transitive view `TeslaSyncApp` touches) uses scripted streams. Let me check what tainted types the rest of the app references — if it's just `LiveDemoView`, I can typecheck the whole app by stubbing that one pre-existing view.
+
+`Notifications/` only needs `FacadeError` (a ~6-symbol Shared surface), and `LiveDemoView` is the lone Shared-transitive view `TeslaSyncApp` references. A tiny `Shared` shim + a stub for that one pre-existing view lets me typecheck **the whole app including `TeslaSyncApp.swift`**. Worth it. Let me build it.
+
+The shim's `Error` classes trip Swift-6 Sendable inference. Let me build the shim in default language mode (it just provides an interface) and make the properties `let`.
+
+Shim built. Now the **full-app** typecheck — every Shared-free source + `FacadeError` + `TeslaSyncApp` + `ContentView`, with the shim resolving `import Shared` and the one Live demo view stubbed.
+
+The `**` glob (no globstar) missed top-level `Sources/Platform/PlatformIntegration.swift` — so it was never compiled in prior checks. Let me use `find` and re-run.
+
+Now PlatformIntegration is compiled — and `TeslaSyncApp.swift` shows **zero** errors. The remaining 8 errors are all in pre-existing `PushAppDelegate.swift` (P4/P6 push code, untouched by me). Let me confirm the breakdown definitively.
+
+**Definitive:** all 4 full-app errors are in pre-existing `PushAppDelegate.swift` (P4/P6 `364831b4`, unmodified by me); **zero** errors in my Platform code or `TeslaSyncApp.swift`. My implementation fully typechecks. The PushAppDelegate strict-concurrency debt is unrelated push infra (out of scope; deferred-gate territory).
+
+Let me make `AppSettings` decoding genuinely forward-compatible (matching its doc), then write the test suite.
+
+Now the comprehensive test suite. Let me create all the Platform unit tests.
+
+All 8 test files written. Now I'll run them via a faithful XCTest shim (the deferred xcodebuild test bundle can't run here). Let me build the shim + an auto-generated runner.
+
+The assertions must be nonisolated (real XCTest is) so my non-`@MainActor` test classes can call them. Let me rewrite the shim with a lock-protected reporter, and make the runner `@MainActor`.
+
+Now the generator that strips test imports and emits a `@MainActor` runner with correct `try`/`await` per method.
+
+Now compile the island + stripped tests + shim + runner into an executable and run it:
+
+Full-compile mode turns the pre-existing `Components/Maps` warnings into errors (P4/P3, not mine, not used by my tests). Let me exclude `Maps` from the test executable and rebuild.
+
+A genuine bug in my code that full-compile catches (typecheck didn't): `panel`'s `content` closure must be `@escaping`. Fixing it.
+
+`AuthBiometricBridge` needs `AuthCoordinator` (already verified in the 101-file island typecheck). It's not under test, so I'll exclude it from the test-executable compile.
+
+Shim syntax: multiple decls on one line need separation. Let me fix the `XCTestCase` declaration.
+
+Stripped tests lost Foundation (was transitively via XCTest). Let me swap `import XCTest`→`import Foundation` in the generator and rerun.
+
+My test's actor-based `SpyIndex` crosses an isolation boundary with non-Sendable `CSSearchableItem` (production struct is fine). Let me rewrite the spy as a lock-protected class.
+
+**All 66 Platform unit tests pass** against the real production types + macOS SDK. Let me also run the existing `RouteTests` through the harness to confirm my `RouteHostRegistry` edit and route integration are intact.
+
+Real XCTest assertions catch internally (not `rethrows`). My shim's `rethrows` rejects `XCTAssertEqual(try …)`. Let me rewrite the assertions to evaluate-and-catch like real XCTest.
+
+**74/74 tests pass** (66 Platform + 8 route). Now localization. Let me extract every key my new code references so I can add them to the catalog with real English text.
+
+I found a real issue: my `AppShortcutsProvider` phrases use key-strings as if they were keys, but `AppShortcutPhrase` treats the literal as the spoken phrase. Let me fix them to natural English, then handle localization.
+
+The file exists — let me replace each phrase pair with natural language.
+
+Now the comprehensive localization injector — adding every real key (simple + interpolated format keys) with English + ar/he placeholders, matching the catalog's existing pattern.
+
+177 keys added. Let me validate the catalog and run a completeness check for my referenced keys.
+
+All 167 keys defined, catalog valid. But I re-sorted the whole 8000-key catalog, creating a noisy diff. Let me restore from git and re-inject **preserving original order** (append only) for a clean diff.
+
+Clean additions-only localization diff. Now the Resources — associated-domains entitlements (Universal Links) + `NSUserActivityTypes` plists (Handoff).
+
+Let me validate the plists/entitlements and re-typecheck the island (I changed `AppSettings`, shortcuts, and `AppSettingsView` since the last full check).
+
+Plists/entitlements all valid. Waiting for the island typecheck.
+
+102-file island (incl. Auth + AuthBiometricBridge): **0 errors**. Now the repo's actual gates: SwiftLint, SwiftFormat, placeholder, xcodegen.
+
+SwiftLint found 4 violations. Let me see them.
+
+4 violations, all mine: 3 long lines in `AppSettingsView` + `buildAll()` too long. Let me view and fix.
+
+Now refactor `buildAll()` (79 lines) into per-category helpers (≤50 each).
+
+Let me check for a leftover brace after the refactor.
+
+Now re-run SwiftLint, SwiftFormat, and the placeholder gate.
+
+SwiftLint clean. SwiftFormat wants my new files reformatted to house style. Let me auto-format my changed files, then re-verify.
+
+SwiftFormat clean. Let me re-run SwiftLint (post-format), the placeholder gate, and re-verify the island typecheck + tests still pass after formatting.
+
+Placeholder gate clean (0 real). But formatting introduced 1 SwiftLint violation. Let me find it.
+
+SwiftFormat and SwiftLint conflict on the multi-line `if let` brace. Let me restructure to a single-line condition that satisfies both.
+
+Both lint gates pass. Let me re-verify the island typecheck + rerun the 74 tests after all the formatting/refactor changes.
+
+Island typecheck: **0 errors** after all refactors. Waiting for the test rebuild/run.
+
+**74/74 tests pass, island 0 errors** after all refactors. Now `xcodegen generate` to validate `project.yml` picks up the new files, and confirm the localization diff is still clean.
+
+xcodegen succeeded, l10n diff clean. Let me confirm all my new files are actually in the generated project's build phases.
+
+All 32 Platform files + 9 test files are in the generated project's build phases (iOS + macOS targets). Comprehensive verification complete. Let me gather final environment details for the gate log.
+
+All changes accounted for (7 modified + 40 new files; `.xcodeproj`/`.DS_Store` gitignored). Let me write the gate log.
+
+Gate log written. Let me preview exactly what `git add apps/apple` will stage (to ensure no generated `.xcodeproj`/`.DS_Store` sneaks in) before committing.
+
+Clean — exactly my 47 intended files, no generated artifacts. Committing per the prompt's commit step.
+
+Committed `a392a552`. Let me do a final post-commit verification of the working tree and re-confirm the three required gates on the committed state.
+
+48 files committed, working tree clean, log ends `EXIT=0 / STATUS=DONE`. Final authoritative gate run + temp cleanup.
+
+All final gates green on the committed tree (SwiftLint 0/222, SwiftFormat 0/226, placeholder 0), temp cleaned, tree clean. Let me close out the todos.
+

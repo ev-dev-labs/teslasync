@@ -1,0 +1,161 @@
+I'll start by exploring the environment to understand what's available and read the web source specification.
+
+Key finding: **xcodebuild requires full Xcode but only Command Line Tools are installed**. swift/swiftlint/swiftformat ARE available. Let me investigate whether full Xcode exists anywhere and explore the existing Apple project structure to follow established patterns.
+
+**`/Applications/Xcode.app` exists** — the active dir is just pointing to CommandLineTools. I can likely override with `DEVELOPER_DIR`. Let me test that and explore the established Apple patterns in parallel.
+
+**Capability confirmed available** — Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 simulator is booted. I must NOT declare BLOCKED; I need to build/test for real. The feature-views dir has ~944 files following a multi-file pattern. Let me study a complete exemplar to follow the established architecture exactly.
+
+Each feature-view = 7 files: `.swift` (view), `.Model`, `.Adapter`, `.Views`, `.Previews`, `.strings`, `.Tests`. No existing settings/gas view. Let me read the full AcDcStatsPanel exemplar and locate the shared P1 infrastructure (state holders, tokens, i18n, telemetry).
+
+This is a rigorous, well-established pattern. Let me read the rest of the exemplar (Views, Previews, strings, Tests) and locate the shared design tokens + how the project wires sources.
+
+Now let me read the Adapter + Tests pattern, the project wiring, and locate the shared design tokens/components.
+
+I have the full pattern. Now I need the shared design tokens/components and an exemplar with interactive controls (toggle, picker, action buttons + toast) since GasPriceSettings is interactive. Let me locate these.
+
+Let me read the shared design tokens and the interactive UI components I'll need.
+
+Let me read the core design tokens and interactive components I'll use.
+
+Let me find the generated design tokens (TSSpacing/TSRadius/Color.TS/Font.TS) and read the remaining shared components I'll use.
+
+The Toast here is achievement-specific. Let me find the generated design tokens, the general toast/feedback mechanism, and how interactive feature-views handle mutations. Let me read project.yml and search for an interactive exemplar.
+
+Key insight: **XcodeGen** drives the project (glob-based sources), `.xcodeproj` is git-ignored. But I need to understand how colocated `.Tests.swift` files in `feature-views/` reach the test target. Let me investigate the build wiring.
+
+There's a puzzle: 118 colocated `*.Tests.swift` files with `@testable import TeslaSync` can't compile into the app module. There must be an exclusion mechanism. Let me find ground truth by checking excludes and generating the project.
+
+No excludes, yet 118 colocated `*.Tests.swift` with `@testable import TeslaSync`. I'll generate the project to learn ground truth, and inspect the Shared.xcframework dependency (KMP) which the gate's build depends on.
+
+`Shared.xcframework` isn't present — it's built via Gradle/KMP. This is the gate's heavy dependency. Let me check the KMP toolchain availability and generate the project to resolve the test-target question.
+
+Project generated, Java 17 + gradlew present. Now let me resolve the test-target membership puzzle by inspecting the generated project.
+
+`AcDcStatsPanel.Tests.swift` is a member of the **app targets**, not the test targets — meaning `@testable import TeslaSync` is a self-import. Let me empirically verify whether that even compiles, since it's fundamental to whether the gate can be green.
+
+Let me confirm the self-import compiles by providing XCTest's framework path — this determines gate feasibility.
+
+Confirmed: self-import is a harmless warning (RC=0). The colocated `.Tests.swift` compile into the app host and run via the hosted test bundle — the pattern is coherent and buildable. The long pole is the KMP `Shared.xcframework`. Let me kick that off in the background now while I write code.
+
+While the KMP build runs, let me read the remaining shared components and find an interactive exemplar (mutations + feedback) since GasPriceSettings has toggle/poll/config actions.
+
+Let me read Typography + Banners, find an interactive exemplar's action/feedback modeling, and check the KMP build progress.
+
+The KMP build hit Gradle cache (fast!) and exited. Let me verify the framework staged successfully, and study `AutomationCard` (an interactive toggle exemplar with transient feedback).
+
+The KMP task produced a **debug** xcframework, but the staging script expects **release** (`SRC=.../release/Shared.xcframework`). Staging may have failed. Let me check the full log end and the build output dirs.
+
+The staging script expects `release/` but Gradle produced `debug/`. Let me read the Gradle XCFramework config and run the staging script in the foreground to see the real exit code.
+
+Now it's linking the **release** frameworks — so `assembleSharedXCFramework` does build release (my earlier background run was cut short). Let me wait for staging to complete.
+
+Release link is compiling (slower). I'll let it run and meanwhile study the interactive `AutomationCard` exemplar to nail the action + feedback pattern.
+
+I have a complete grasp of the pattern (read-only `AcDcStatsPanel` + interactive `AutomationCard`). Let me check the release framework build progress, then start writing the surface.
+
+Release framework is linking (will finish shortly in background). I'll start writing now. Let me set up a plan and todos.
+
+Writing the pure foundation first.
+
+Now the Model (seams + observable model with actions).
+
+Now the surface View.
+
+Let me check how peer feature-views render selects/pickers (to follow convention) and verify the framework staged.
+
+Framework staged (SCRIPT_EXIT=0) — subsequent builds will be cached/fast. Peers use `TSSelect` with `LocalizedStringKey(Strings.string(...))`. Now the subviews.
+
+Now Previews and strings.
+
+Now the test suite.
+
+All 7 files written. Let me verify the test's date epoch constant and do a fast syntax-only parse of each new file.
+
+Syntax parses clean. The epoch constant is wrong (should be 1780669800). Let me fix it.
+
+Let me run the formatters/linters on the new files (matching the gate's tools) after checking their configs.
+
+Config noted (maxwidth 120, before-first wrapping, testable-bottom). Let me run both tools on the new files.
+
+swiftformat flags formatting + two force-unwraps in tests. swiftformat can't auto-fix force-unwraps, so I'll fix those manually, then run write-mode for the rest. Let me locate the force-unwraps.
+
+Now run swiftformat in write mode to auto-fix the rest, then re-lint.
+
+swiftformat clean. Now swiftlint --strict on the new files.
+
+One swiftlint issue: Tests file is 411 lines (>400 under --strict). Let me trim the header comment to get under 400.
+
+Need 3 more lines off. Let me merge the two accessibility test methods.
+
+That cuts 4 lines (~399). Let me confirm both linters pass clean on all new files.
+
+Both linters pass on the new files. Now regenerate the Xcode project to include the new files, and prep the gate log path.
+
+Project regenerated with all new files included. Now the long pole — running the iOS gate (build + test). Starting it with output to a log.
+
+IOS_EXIT=65: the app target fails to compile because colocated `*.Tests.swift` files (including the 118 pre-existing ones) `import XCTest`, but the app target lacks XCTest search paths. Let me investigate whether this is pre-existing and how the established pattern is meant to resolve it.
+
+Confirmed pre-existing: the failure references `AcDcStatsPanel.Tests.swift` and dozens of other colocated test files — the app target can't resolve `XCTest`, and `ENABLE_TESTING_SEARCH_PATHS` is absent. Let me research how this is meant to be configured before deciding on a fix.
+
+Critical evidence: `apps/macos-pending-verifications.md` documents this EXACT situation for the peer surface `P-0010-ToolCard` — the full-app build is **blocked by pre-existing, unrelated parallel-merge collisions** (co-located `*.Tests.swift` importing XCTest into the app target, `DashboardWidgetSize` redefined 8×, macOS signing). The established protocol: verify the surface **in isolation** + lint/format/placeholder clean, and defer the full-app build to the acceptance-gate prompt. Let me confirm my surface has zero errors and check the other pre-existing collisions.
+
+Confirmed: **zero errors from my surface** — the only build errors are pre-existing `XCTest`-in-app-target (plus documented `DashboardWidgetSize`/`PowerFlowConnection` redefinition collisions). This is precisely the ToolCard precedent. Following the established protocol, I'll verify my surface in isolation. Let me scope the design-system dependency closure.
+
+My surface produced zero errors; the design system (Components + Design + Tokens) is SwiftUI/system-only (no KMP). I'll verify my surface in isolation per the established protocol. First, typecheck my full surface against the **real** shared components for the iOS simulator target.
+
+The errors are in an unrelated file (`UnitFormatters.swift` needs the external units facade) — not my surface, and not files my surface uses. Let me typecheck the **minimal real closure** my surface actually depends on, against the iOS SDK.
+
+**TYPECHECK_RC=0** — my entire surface compiles cleanly against the **real** shared components for iOS simulator under Swift 6 strict concurrency. Now let me run the test suite via an isolated SwiftPM package.
+
+The whole surface compiled cleanly in the isolated package — and the test build caught one real test bug: comparing `Double?` to an `Int` literal with `accuracy:`. Let me fix it (unwrap + Double).
+
+All **39 tests pass** in isolation (SWIFT_TEST_RC=0), surface compiled against real components. Let me re-lint the edited test file, then run the placeholder check.
+
+swiftformat + swiftlint clean; tests 399 lines. `pwsh` is available. Let me review the placeholder script, then run it as the gate specifies.
+
+The script scans a path recursively. Let me check the patterns file and verify my files contain none of them (including in comments), then run the checker.
+
+My files contain none of the forbidden patterns. Let me run the actual checker (self-test + a real scan of my surface files + the gate's literal command).
+
+Placeholder check passes (COUNT=0). Let me confirm the pre-existing redefinition collisions are genuine (not just references) so my BLOCKED evidence is airtight.
+
+Confirmed: `DashboardWidgetSize` is **defined 15×** and `PowerFlowConnection` 2× across dashboard-widgets (invalid redeclarations) — genuine pre-existing collisions, plus the XCTest-in-app-target issue. My surface introduces none. Now let me run the remaining gate steps (full swiftlint/swiftformat + macOS build) to capture real results for the log.
+
+Both full-repo lint steps fail on **pre-existing files unrelated to my surface** (`LifetimeStatsWidget.Adapter.swift` for swiftlint, `ActionBuilder.Previews.swift` for swiftformat). My files pass. Let me capture accurate exit codes and run the macOS build for the record.
+
+swiftlint real exit=2, **1 pre-existing offender** (`LifetimeStatsWidget.Adapter.swift`), zero GasPriceSettings. Let me start the macOS build (background) to record its exit, and meanwhile verify my commit scope is clean.
+
+Commit scope is clean — only my 7 surface files are untracked (xcodeproj/framework/generated are gitignored). Let me update tracking and check the macOS build progress.
+
+macOS build also failed (MAC_EXIT=65). Let me confirm it's the same pre-existing cause with zero GasPriceSettings errors.
+
+macOS failed with **zero GasPriceSettings errors** — blocked by macOS development-signing (no dev certificate) plus the same app-target compile issues. All gate results gathered. Let me write the comprehensive, honest gate log.
+
+Now let me commit the surface and log per the prompt, staging exactly the intended files.
+
+Exactly the 8 intended files are staged. Committing now.
+
+Committed (8 files, 1830 insertions). Let me clean up scratch artifacts and finalize tracking.
+
+Working tree clean, all todos done. Let me finalize the plan note.
+
+The GasPriceSettings surface is complete, verified, and committed. 
+
+## Summary
+
+Shipped a production-polished SwiftUI parity of `web/src/features/settings/components/GasPriceSettings.tsx` at `apps/apple/TeslaSync/feature-views/GasPriceSettings.*`, following the established 7-file feature-view pattern (Adapter / Model / View / Views / Previews / strings / Tests), committed as `cda3889be`.
+
+**What it delivers**
+- **Data binding via the P1/S8 seam** (`GasPriceSettingsSource`) — no HTTP in the view — mirroring `useGasPriceStatus` + the toggle/interval/poll mutations + `useSettings(gas_unit)`/`useFormatting(currency)`/`useToast`.
+- **Every state renders**: loading (skeleton), empty (controls + friendly hint), error (QueryError peer + retry), data, plus an orthogonal live/stale/offline freshness chip + banner with one-shot auto-refresh on stale.
+- **Full i18n** through the P1/S10 facade (all web `gas.*` keys + native chrome), **accessibility** (VoiceOver labels/values/hints, Dynamic Type, reduce-motion), and the **P1/S11 `view.opened`** telemetry.
+
+**Surface-scoped gates — ALL GREEN**
+- Isolated typecheck of the full surface against the **real** shared components (iOS-sim, Swift 6 strict concurrency): clean.
+- Isolated SwiftPM `swift test`: **39/39 pass**.
+- `swiftlint --strict` + `swiftformat --lint` (the 6 Swift files): clean. Placeholder scan: **COUNT=0**.
+
+**Aggregate full-app gate — `STATUS=BLOCKED` (honest, evidence in the log)**
+The iOS/macOS `xcodebuild build test` (EXIT 65) and whole-repo swiftlint/swiftformat are red **solely from pre-existing, unrelated parallel-merge collisions** — co-located `*.Tests.swift` importing `XCTest` into the app target (118 files), `DashboardWidgetSize`×15 / `PowerFlowConnection`×2 redeclarations, `LifetimeStatsWidget.Adapter.swift` length, `ActionBuilder.Previews.swift` blank line, and macOS dev-signing. **Zero GasPriceSettings errors** in any step. These live outside this prompt's allowed files and match the documented `P-0010-ToolCard` precedent in `apps/macos-pending-verifications.md`, which defers them to `p4-apple/P99-0001-apple-acceptance-gate` (macos-latest). Full breakdown with exit codes is in `.github/prompts/monorepo/logs/p4-apple-feature-views-0206-GasPriceSettings.log`.
+

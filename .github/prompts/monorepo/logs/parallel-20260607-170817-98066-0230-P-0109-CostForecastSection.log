@@ -1,0 +1,128 @@
+I'll start by assessing the environment capabilities and understanding the task. Let me check the Apple toolchain availability and explore the repo structure in parallel.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. Let me verify whether full Xcode exists anywhere and explore the Apple app structure deeply.
+
+Full Xcode **is** at `/Applications/Xcode.app` — I can use `DEVELOPER_DIR` to bypass the CommandLineTools selection without sudo. Let me verify this works and explore the `feature-views` directory.
+
+Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 sim is available — **the gate can actually run**. Now let me read the web source spec and find existing cost-analysis feature views to follow the established pattern.
+
+Now I understand the web spec. It renders: (1) a forecast ComposedChart with confidence band, (2) `<ForecastDetails>` (separate surface, its own prompt), (3) a cost-per-kWh LineChart — each chart with an empty state. Let me study the established native pattern from a complete charting feature view and the shared infrastructure.
+
+Let me read these files individually with the view tool.
+
+This is a well-established, sophisticated pattern. Let me read the web data types and the chart/adapter/strings/test patterns in parallel.
+
+Let me read the exact web data shapes, the Design tokens, and the adapter/previews/strings/tests patterns.
+
+Now let me read the adapter, views, panels, and tests to complete my understanding of the pattern.
+
+I now understand the architecture well. Let me read the test pattern, the project.yml build config, and locate the shared design tokens.
+
+I have a thorough grasp of the pattern. Now I must verify the gate is actually runnable — the big risks are the `Shared.xcframework` KMP dependency and how `.Tests.swift` files map to test targets. Let me investigate build feasibility and locate the design tokens.
+
+Two critical risks confirmed: (1) `Shared.xcframework` is unbuilt (needs a Kotlin/Gradle build), and (2) the 48 `.Tests.swift` files live in the app source path. Let me check KMP build feasibility and definitively determine test-file target membership by generating the project.
+
+Java 17, `pwsh`, and the KMP `apps/shared` project all exist. Let me definitively confirm test-target wiring and then kick off the long-pole KMP framework build in the background.
+
+Let me verify target membership more robustly — self-importing into the app target would be a compile error, so my parser is likely misattributing.
+
+Let me check whether prior feature-view gates actually passed (proving this convention builds green) and check the KMP build progress.
+
+This is the key insight. The prior `ChargingDetailSection` (0053) log ended `EXIT=0/STATUS=DONE` — and documents the **accepted disposition**: the full `xcodebuild build test` is blocked by a *pre-existing* project.yml issue (all 48 `.Tests.swift` files compile into the app target) + signing, both outside the prompt's allowed files. Host-runnable gates + SDK compile + pure-Swift tests are the real verification. I have full Xcode though, so I'll try to go further. Let me read the full precedent log, design tokens, and lint configs while KMP builds.
+
+I now have the exact accepted methodology from the precedent. Let me read the design tokens and chart-palette APIs I'll need, and check KMP build progress.
+
+I have all the token APIs. Let me verify the exact i18n values in the web catalog and check the KMP build progress.
+
+I have everything I need: exact i18n values, the full design-token API, the chart pattern, and the precedent's accepted verification methodology. Let me set up tracking and start writing the surface. KMP builds in the background.
+
+Adapter done. Now the Model (seams + `@Observable` model).
+
+Now the main view file.
+
+Now the presentational subviews (panels, empty state, banner, error, skeleton).
+
+KMP build finished — let me confirm it staged the framework, then continue with the Charts file.
+
+KMP build **succeeded** (7m45s, now cached). Framework is built; I'll stage it before xcodebuild. Now the Swift Charts file.
+
+Now the previews, the i18n catalog, and the tests.
+
+Now the i18n catalog and the tests.
+
+All 8 files written. Now verification. Let me run the host-runnable gates on my files (swiftformat, swiftlint, placeholder) and stage the framework in parallel.
+
+Both flag the same long line in the adapter's accessibility summary. Let me view and fix it.
+
+Let me re-run format/lint, run the placeholder gate, and stage the framework in parallel.
+
+Host gates green on my files: **swiftformat 0/7**, **swiftlint 0 violations**, **placeholder COUNT=0**. Now let me prep the executed-test package — first inspect the design-token files' dependencies.
+
+Framework staged. The design files are SwiftUI-only (no `Shared` dep), but `Skeletons.swift` references `TSCard`. Let me confirm staging and locate `TSCard`'s dependencies to build the executed-test package.
+
+Framework staged ✓. **No `Shared` references anywhere in `Sources/Components` or `Sources/Design`** — they're cleanly Shared-free, so I can build an executed-test SwiftPM with the real design deps. Let me assemble it.
+
+`Skeletons.swift` drags much of the component library, but `TSDesign.swift`/`TSMaterial.swift`/`Tokens.swift` are self-contained. My tests only exercise Adapter+Model logic. Let me verify the two design files are self-contained, then build an executed-test package using the real design tokens + a minimal `TSSkeleton` leaf shim.
+
+`TSDesign.swift` references `TSMotion` (in `Tokens.swift`). Let me build the executed-test SwiftPM package now with the real design tokens + a minimal `TSSkeleton` leaf shim, and run the tests.
+
+**All 29 tests passed** (`SWIFT_TEST_EXIT=0`) — the real Adapter+Model+View+Charts compiled against the real design tokens and executed green. Now the dual-SDK typecheck (iOS 18 sim + macOS 15).
+
+Both SDK typechecks pass (**IOS=0, MAC=0**). Now the real `xcodebuild`. Let me regenerate the project (to register my 8 files), capture the literal-gate behavior, then attempt a real app build.
+
+Bare gate fails on CommandLineTools (`BARE_IOS_EXIT=1`), as expected. Now via full Xcode: first capture the **pre-existing** `*.Tests.swift`-in-app-target blocker (to prove it's not my code), then a clean build excluding test files.
+
+Key finding: on Xcode 26.5 the `@testable import` self-reference is now just a **warning** ("ignoring import"), not the hard error the precedent hit. The build still failed (exit 65) — let me see the actual `error:` lines (cached, fast).
+
+Confirmed: the build dies on `AlertsSection.Tests.swift:20: error: unable to resolve module dependency: 'XCTest'` — the first test file alphabetically. This is the **pre-existing** project.yml condition (all `*.Tests.swift` compile into the app target, which doesn't link XCTest), affecting every surface equally. **Zero errors reference any CostForecastSection production file.**
+
+Now the clean build excluding all test files (a CLI build-setting override, no file edits) — this compiles all production code + links the real framework.
+
+The exclusion missed `FleetApiSection.ModelTests.swift` (different suffix). Let me find every XCTest-importing file in the app source paths and exclude them all.
+
+All test files end in `*Tests.swift`. Let me exclude that pattern and rebuild.
+
+The build now compiles the **entire** app module and fails only on **pre-existing** duplicate-type errors in sibling `dashboard-widgets/*` and `Overview` files (`DashboardWidgetSize`/`OverviewConnection` ambiguous/redeclared) — none in my surface. Let me get a definitive error-source breakdown and confirm zero CostForecastSection errors.
+
+**Zero CostForecastSection errors** across the entire app-module compile; all 111 errors are pre-existing duplicate-declaration issues in sibling `dashboard-widgets`/`Overview` surfaces (outside my allowed files). Let me run the macOS build in the background for parity and verify i18n key coverage.
+
+My grep regex `[a-zA-Z]+` missed multi-line usages and the digit-containing `a11y` key. Let me redo the coverage check properly across all files.
+
+i18n coverage is exact: **15 used == 15 defined**, no missing keys, no dead keys (8 web-parity + 7 native chrome). Let me check the macOS build progress.
+
+macOS build: same disposition — 257 pre-existing errors, **zero CostForecastSection errors**. Now let me run the gate's tree-wide swiftformat/swiftlint to honestly capture their real exit codes and confirm my files aren't implicated.
+
+Tree-wide `swiftformat`: **0/972 require formatting (exit 0)**. Tree-wide `swiftlint`: 1 pre-existing violation. The "7" was just progress lines — let me confirm the actual violation isn't in my files.
+
+Confirmed: the only tree-wide lint violation is the pre-existing `LifetimeStatsWidget.Adapter.swift:141` (a predecessor file); **0 in my files**. All evidence gathered. Let me check git status and line counts, then write the gate log.
+
+All 8 files total 1841 lines; xcodeproj/framework are git-ignored; the 2 modified web files are pre-existing (not mine — same as precedent noted). Now I'll write the gate log.
+
+Log written. Now let me clean up temp artifacts and make the scoped commit (only my 8 files + the log, excluding the pre-existing web edits).
+
+Exactly my 8 files + the log are staged (no pre-existing web edits, no generated artifacts). Committing.
+
+Committed (`65af3484`), with the pre-existing web edits correctly left unstaged. Let me do a final verification of the commit contents.
+
+Commit `65af3484` contains exactly the 9 files; final lint is clean. All work is complete and verified.
+
+Merge made by the 'ort' strategy.
+ ...pple-feature-views-0109-CostForecastSection.log | 306 +++++++++++++++++
+ .../CostForecastSection.Adapter.swift              | 361 ++++++++++++++++++++
+ .../feature-views/CostForecastSection.Charts.swift | 264 +++++++++++++++
+ .../feature-views/CostForecastSection.Model.swift  | 316 +++++++++++++++++
+ .../CostForecastSection.Previews.swift             | 135 ++++++++
+ .../feature-views/CostForecastSection.Tests.swift  | 377 +++++++++++++++++++++
+ .../feature-views/CostForecastSection.Views.swift  | 262 ++++++++++++++
+ .../feature-views/CostForecastSection.strings      |  36 ++
+ .../feature-views/CostForecastSection.swift        |  90 +++++
+ 9 files changed, 2147 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0109-CostForecastSection.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/CostForecastSection.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CostForecastSection.Charts.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CostForecastSection.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CostForecastSection.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CostForecastSection.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CostForecastSection.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/CostForecastSection.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/CostForecastSection.swift

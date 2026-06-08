@@ -1,0 +1,114 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+No full Xcode (only CLT) — the `xcodebuild` gate will be BLOCKED. But Swift, SwiftLint, SwiftFormat, XcodeGen, and pwsh are available. Let me understand the project conventions before implementing.
+
+Critical finding: `project.yml` compiles `TeslaSync/feature-views` (flat), NOT `Features/System/`. Let me find the canonical conventions by examining existing comparable pages and prior completed work.
+
+Now let me study the canonical multi-file convention via a comprehensive reference component, the gate contract, and the navigation system.
+
+Now I understand the canonical pattern. Let me read the remaining reference files and navigation system in parallel.
+
+Let me examine the navigation system and how feature views bind to the real KMP shared core in production.
+
+Let me examine the design tokens, shared P3 components, the KMP shared-core binding, and the remaining reference files.
+
+Let me read the projection/previews/tests formats plus mutation and confirm-dialog reference patterns.
+
+`WebhookChannelsSection` is the ideal reference (states + mutations + confirm alert + form). Let me read its Model and the strings/text facade.
+
+I have a thorough understanding of the conventions. Let me check the app composition root and a couple of final API details before implementing.
+
+There's a `SharedFacade` layer that binds KMP. Let me check whether incidents exist in the shared core and review the facade's loadable/connection patterns.
+
+Incidents don't exist in the KMP core — confirming the established seam pattern (InMemory source + deferred production wiring) is correct, exactly like all 1438 sibling surfaces. Let me check the lint config limits, then implement.
+
+Let me check the placeholder patterns I must avoid and the strings file format, then I'll start implementing.
+
+I now have a complete understanding of the conventions. Let me set up tracking and write a plan.
+
+Now I'll implement the page. Starting with the pure domain Adapter:
+
+Now the pure Projection:
+
+Now the `@Observable` Model:
+
+Now the Views — chrome, states, and the not-found panel (GlassPanel1):
+
+Now the three main panels (header / timeline / append-form = GlassPanel2/3/4):
+
+Now the main page view with state switching and the resolve confirmation:
+
+Now the navigation registration (route value, destination modifier, deep-link parser):
+
+Now the i18n strings table:
+
+Let me verify every string key referenced in Swift exists in the strings table:
+
+Before writing tests, I need to understand how sibling `.Tests.swift` files in `feature-views/` are compiled (since `project.yml` only lists `Tests/Unit` for the test target). Let me investigate.
+
+`Tests/Unit/FeatureViews/` only has one file — siblings keep `.Tests.swift` in `feature-views/` (artifact convention). I'll follow that. Now Previews:
+
+Now the test suites. First the Adapter/Projection/Navigation tests:
+
+Let me fix the clumsy double-optional unwrapping in two tests:
+
+Now the Model test suite:
+
+All 10 files created. Let me run the verification gates — swiftformat, swiftlint, placeholder scan, and line counts.
+
+Auto-fixable formatting. Let me apply swiftformat (write mode) to the new files:
+
+SwiftFormat clean. Now SwiftLint --strict:
+
+SwiftLint --strict: **0 violations**. Now the placeholder gate, scoped to the new files via a temp dir (mirrors the gate exactly):
+
+Placeholder gate clean (COUNT=0). Let me harden one ambiguity and then attempt a real type-check of the SwiftUI-free logic core (Adapter/Seams/States/Projection/Model) against the macOS SDK — these files don't reference design tokens, so they can compile standalone.
+
+The logic core (5 files, including the `@Observable` model + projection + `@MainActor` seams) **type-checks clean against the macOS SDK with Swift 6 strict concurrency**. Now let me attempt the view layer by including the design tokens + P3 components:
+
+The errors are in `Sources/Components/Maps` (unrelated to my page — no maps/charts here), caused by transitive deps. Let me locate `TSChartPalette` and compile against only the component groups my page actually uses:
+
+`TSChartPalette` lives in `Sources/Design` (only used by Maps/Charts, which my page doesn't use). Let me compile against the minimal component set my views actually reference:
+
+Only remaining error is inside `Cards.swift` itself (`.tsGlassPanel` modifier defined elsewhere) — none in my files. Let me find that modifier and include it for a complete view-layer check:
+
+Those errors are all inside `Components/Feedback/States.swift` (which my page doesn't even use). Removing it should yield a clean view-layer compile:
+
+**TOTAL_ERRORS=0** — the entire page (all 10 Swift files' compilable subset) type-checks against the macOS SDK + the real design tokens + real P3 components. Let me run the final consolidated gate and update todos.
+
+All gates green (format 0, lint 0, placeholder 0, typecheck 0). Let me update tracking and inspect the ledger format.
+
+Let me check the existing ledger file structure to match the format for the apple ledger:
+
+All gates that can run are green; `xcodebuild` requires full Xcode (only CommandLineTools present) → BLOCKED. Let me write the honest evidence log:
+
+Let me verify the actual line counts (swiftformat may have changed them) and reconcile the log:
+
+Now the apple ledger (creating it, schema-aligned, honestly reflecting BLOCKED on the un-runnable build/test gate):
+
+Let me validate both ledger JSONs and check git status before committing:
+
+Final pre-commit gate run to capture authoritative output, then I'll commit:
+
+Let me see what that 1 error/match actually is (the prior clean run filtered notes):
+
+That's just a shell brace-expansion artifact (`swift` in the brace became `.swift.swift`). Let me re-run with the correct file list:
+
+All real gates green (format 0, lint 0, placeholder 0, typecheck 0 errors). Now staging and committing:
+
+Committed (6102a3a46, 15 files). Let me finalize tracking and confirm a clean working tree:
+
+Implemented the native SwiftUI/HIG parity of `IncidentTimelinePage` and committed it (`6102a3a46`).
+
+**Delivered** — 13 source files in `apps/apple/TeslaSync/feature-views/` following the established multi-file surface convention (Adapter/Seams/States/Projection/Model/Views/Panels/page/Navigation/Previews/Tests/ModelTests/strings), plus the evidence log and a new `apps/parity/apple-ledger.json`.
+
+**Parity 6/6** — GlassPanel1 (not-found), GlassPanel2 (header), GlassPanel3 (timeline, newest-first), GlassPanel4 (open-only append form); loading + success states. Ports `useIncident`/`useAppendIncidentUpdate`/`usePatchIncident`, `fmtDuration`, the status/severity maps, and the resolve confirm dialog, with freshness/ADR-013, inline write feedback, 40 i18n keys, and full a11y.
+
+**Gates** — placeholder=0, `swiftformat --lint`=0, `swiftlint --strict`=0 violations, and `swiftc -typecheck` of the logic core **and** view layer (against the real design tokens + P3 components) = 0 errors.
+
+**Honest blocker** — `xcodebuild build/test` cannot run: the host has CommandLineTools, not full Xcode. Per the prompt's own directive, the apple triad isn't green, so the log ends `EXIT=2 / STATUS=BLOCKED` and the ledger rows are `blocked` (covered 6/6) rather than `done`. Two reconciliations are documented in the log: files live in `feature-views/` (the path `project.yml`/`.swiftlint.yml` actually compile/lint, not the generator's `Features/System`), and the page binds an `IncidentTimelineSource` seam since incidents don't yet exist in the KMP core (matching all 1438 sibling surfaces).
+
+
+
+The implementation is complete, verified, and committed — all 11 todos done. Let me mark the task complete.
+

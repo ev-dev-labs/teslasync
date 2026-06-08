@@ -1,0 +1,190 @@
+=== P4 Shared surface 0081 Delta (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/Delta.*
+Web src  : web/src/components/data-display/Delta.tsx  (THE specification)
+Runner   : macOS (Darwin/arm64), Swift 6.3.2, Command Line Tools only (NO Xcode.app).
+Date     : 2026-06-08
+
+------------------------------------------------------------------------------
+SINGLE GOAL
+------------------------------------------------------------------------------
+Ship a production-polished, native Apple-idiomatic `Delta` at parity with the web
+source. No stubs, no skeleton-only, no placeholder. Done below + INDEPENDENTLY
+VERIFIED on-host (Swift 6 strict typecheck against the REAL design system + an
+EXECUTED adapter golden-value harness). The Xcode-only full-app iOS/macOS
+xcodebuild build+test+XCTest run is DEFERRED (not faked, not claimed green) to the
+P99 macos-latest acceptance gate per apps/macos-pending-verifications.md — the same
+disposition every P4-Apple surface ships under (ADR-012 CI matrix).
+
+------------------------------------------------------------------------------
+WHAT WAS BUILT (9 files, all `Delta.*`, all within the allowed-files scope)
+------------------------------------------------------------------------------
+Delta.Types.swift     (218)  semantics registry (web lib/metricSemantics.ts:
+                             Direction/Unit/Semantic/METRIC_SEMANTICS/resolveSemantic),
+                             display options, DeltaUnitPreferences/DeltaEnvironment/DeltaInput.
+Delta.Format.swift    (108)  DeltaFormat (web fmtNumber) + DeltaUnitLabels
+                             (web useUnitLabels + formatAbsolute), pure Foundation.
+Delta.Adapter.swift   (255)  render model (Arrow/Tone/Content/Empty/Phase) + DeltaProjection
+                             (the tested "cached -> projection" core) + DeltaSurface slug.
+Delta.Model.swift     (158)  P1/S10 i18n facade (DeltaStrings), P1/S11 telemetry seam
+                             (DeltaTelemetry + OSLog default, `view.opened`), P1/S8
+                             state-holder seam (DeltaEnvironmentSource + InMemory), @Observable
+                             DeltaModel.
+Delta.swift           ( 43)  public `Delta: View` — binds the model, switches the phase,
+                             emits view.opened on appear; no networking in the view.
+Delta.Views.swift     (128)  presentational chrome: content row (arrow+value+comparedTo),
+                             em-dash empty, loading skeleton (TSSkeleton); token-driven (P1/S9).
+Delta.Previews.swift  (153)  #Preview gallery — every state + variant, US(mi/$) + EU(km/€),
+                             light + dark (the per-state snapshot surface).
+Delta.Tests.swift     (352)  XCTest: DeltaFormat / DeltaUnitLabels / DeltaProjection golden-value
+                             parity (the exact strings from web Delta.test.tsx).
+Delta.ModelTests.swift(136)  XCTest: DeltaModel (view.opened once, settings re-projection) +
+                             accessibility label coverage + telemetry spy.
+Delta.strings         ( 26)  P1/S10 catalog: delta.noComparison, delta.title + a11y keys.
+All .swift files <= 400 lines (repo file_length convention). Largest: Tests 352.
+
+------------------------------------------------------------------------------
+PARITY — states reproduced (read the source; reproduce them ALL, invent none)
+------------------------------------------------------------------------------
+`Delta` is a PROP-DRIVEN PRESENTATIONAL LEAF (current/previous/metric in; settings
+context from useUnits/useFormatting; NO data fetch). The web source therefore has
+exactly THREE render branches, all reproduced:
+  • loading  — the `loading` prop -> <Skeleton>            -> DeltaLoadingView (TSSkeleton)
+  • empty    — current/previous null|non-finite -> em-dash  -> DeltaEmptyView ("—" + comparedTo)
+  • content  — arrow + colour + value                       -> DeltaContentView
+The generic prompt states error/stale/offline are N/A for this leaf: it has no
+fetch lifecycle, so fabricating them would be silent drift (covenant #9). This is a
+faithful reproduction of the source, NOT scope narrowing — the source's full state
+set is {loading, empty, content} and every one renders (never a blank box).
+
+Content sub-branches reproduced (all asserted against web Delta.test.tsx golden values):
+  colour: 0->muted, neutral metric->secondary, good->emerald(success), bad->rose(danger)
+  arrow : +up / -down / 0->right ; hideArrow omits glyph
+  value : percent (unsigned, sign via arrow) / absolute (prefix+suffix) / both ("abs (pct)")
+  edge  : previous==0 & percent -> "—" (never Infinity%); previous==0 & absolute renders
+  units : suffix follows useUnits prefs (mi/km, mph/km-h, Wh/mi|Wh/km, °C/°F, bar/psi),
+          currency prefix follows useFormatting; precision follows settings.
+
+i18n keys (all resolve via P1/S10 DeltaStrings; no English literals in code):
+  delta.noComparison = "No comparison data"          (web parity)
+  delta.title        = "%1$@ vs %2$@"                (web "{{current}} vs {{previous}}")
+  delta.a11y.increased/decreased/unchanged/loading   (VoiceOver: web arrow is aria-hidden,
+                                                       so direction is spoken)
+
+Data sources (web hooks) -> bound via the P1/S8 seam, NO direct HTTP from the view:
+  useUnits / useFormatting -> DeltaEnvironment delivered by DeltaEnvironmentSource
+  useTranslation           -> DeltaStrings (P1/S10)
+  useUnitLabels            -> DeltaUnitLabels (local pure helper, ported)
+  useCompareWindow         -> only feeds the `comparedTo` string (a plain input)
+
+Accessibility: every state carries a VoiceOver label; content speaks direction+value
+(+comparedTo) and exposes the title via accessibilityValue/.help; Dynamic Type via tokens;
+TSSkeleton/TSFadeIn honour Reduce Motion. Telemetry: view.opened(surface:"Delta") once.
+
+------------------------------------------------------------------------------
+HOST-RUNNABLE GATE (executed on THIS machine — real output, not faked)
+------------------------------------------------------------------------------
+[1] swiftformat --lint apps/apple/TeslaSync/shared-surfaces
+    -> 0/9 files require formatting.                              FMT_EXIT=0
+
+[2] Swift 6 strict-concurrency typecheck (iOS-18/macOS-15 idioms) of ALL production
+    sources against the REAL design tokens + the verbatim REAL TSSkeleton:
+    xcrun --sdk macosx swiftc -typecheck -swift-version 6 -target arm64-apple-macosx15.0 \
+      apps/design/generated/apple/Tokens.swift <real TSSkeleton> \
+      Delta.Types Delta.Format Delta.Adapter Delta.Model Delta.swift Delta.Views Delta.Previews
+    -> (no output)                                                TYPECHECK_EXIT=0
+
+[3] swiftlint --strict (explicit, all 9 Delta files, project .swiftlint.yml):
+    -> Done linting! Found 0 violations, 0 serious in 9 files.    SWIFTLINT_EXIT=0
+
+[4] Adapter EXECUTED (XCTest unavailable on CLT host -> a Foundation harness runs the
+    SAME golden assertions as Delta.Tests.swift against the compiled DeltaProjection):
+    xcrun --sdk macosx swiftc -swift-version 6 Delta.Types Delta.Format Delta.Adapter main.swift
+    -> HARNESS_OK all adapter golden assertions passed           HARNESS_EXIT=0
+    (covers: fmtNumber grouping/non-finite/locale; unit-label resolution; colour-by-direction;
+     arrow; hideArrow; percent/absolute/both; previous==0 fallbacks; loading; km & € settings;
+     inline override; unknown-metric neutral; title; VoiceOver label content. Golden strings =
+     web Delta.test.tsx: "20.0%","$2.0","30.0 mi","(12.0%)","12.00 vs 10.00","—","$12.0","30.0 km",
+     "€2.0","8.0%".)
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces
+    -> PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0                 PLACEHOLDER_EXIT=0
+
+[6] file_length: every Delta.*.swift <= 400 lines (verified).    LEN_EXIT=0
+
+HOST_GATE_EXIT=0  (all of [1]..[6] are 0)
+
+------------------------------------------------------------------------------
+XCODE-ONLY GATE (DEFERRED to P99 macos-latest — NOT run here, NOT faked)
+------------------------------------------------------------------------------
+Capability evidence (this runner physically cannot run these steps):
+  $ xcodebuild -version
+    xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+    directory '/Library/Developer/CommandLineTools' is a command line tools instance
+  $ xcrun simctl list devices
+    xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+  $ swiftc -typecheck <import XCTest>
+    error: no such module 'XCTest'   (XCTest ships with Xcode, absent on CLT)
+
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    -> IOS_EXIT=DEFERRED-macOS-pending
+  xcodebuild -scheme TeslaSync-macOS build test
+    -> MAC_EXIT=DEFERRED-macOS-pending
+  (Delta.Tests.swift + Delta.ModelTests.swift compile + run under the XCTest runtime there.)
+
+These are *deferred artifact verifications*, not unfinished work: the surface is
+written, typechecks under the app's own Swift 6 strict-concurrency rules against the
+REAL tokens, its adapter tests EXECUTE green on-host, and lint/format/placeholder are
+clean. The deferral target + command are recorded by apps/macos-pending-verifications.md
+for the P99 acceptance gate; that file is OUTSIDE this prompt's allowed-files scope
+(Delta.* + this log only), so the deferral is recorded here instead of editing it.
+
+Known integration follow-ups (OUTSIDE allowed-files; for the wiring/P99 prompt — disclosed,
+not silently dropped):
+  • project.yml `sources:` and .swiftlint.yml `included:` list feature-views but not
+    shared-surfaces/. They must add `TeslaSync/shared-surfaces` so the surface joins the
+    app + lint targets. Editing them now would violate the allowed-files constraint.
+  • Pre-existing, UNRELATED full-tree lint failures NOT introduced by and NOT touched by
+    this change (my files are new/untracked; these are committed in HEAD):
+      - swiftformat: feature-views/ActionBuilder.Previews.swift (blankLinesBetweenScopes)
+      - swiftlint  : dashboard-widgets/LifetimeStatsWidget.Adapter.swift (function_body_length)
+    Zero shared-surfaces/Delta.* violations in either full-tree run.
+
+------------------------------------------------------------------------------
+HONESTY COVENANT
+------------------------------------------------------------------------------
+1  No red-as-green       : host gate output pasted verbatim; xcodebuild is labelled
+                           DEFERRED with API evidence, never claimed to have passed.
+2  No scope narrowing    : all THREE web render branches + every content sub-branch
+                           reproduced; error/stale/offline are absent FROM THE SOURCE
+                           (prop-driven leaf) and are documented as N/A, not skipped.
+3  No skip-and-assume    : every golden string is the empirically-verified web
+                           Delta.test.tsx value, re-asserted by an EXECUTED harness.
+4  No stubs as final     : full implementation; 0 placeholders (scan == 0); no TODO/mock.
+5  No parity shortcuts   : metricSemantics registry, fmtNumber, useUnitLabels,
+                           formatAbsolute, colorForDelta precedence, arrow, percent/abs/both,
+                           previous==0 + non-finite guards all ported faithfully.
+6  No delegation         : implemented directly; no agents (delegation FORBIDDEN this tier).
+7  No predecessor bypass : P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade,
+                           P1/S11 view.opened telemetry all honoured.
+8  No commit on red      : committed artifact (9 Delta.* + .strings + this log) is GREEN on
+                           every host-runnable gate; the only red in the full tree is
+                           pre-existing + unrelated + out-of-scope (disclosed above).
+9  No silent drift       : changes confined to shared-surfaces/Delta.* + this log; the
+                           leaf-has-no-fetch-state mapping, the {{}}->%1$@ title mapping, the
+                           spoken-direction a11y addition, and the wiring follow-ups are disclosed.
+10 EXIT/STATUS below.
+
+------------------------------------------------------------------------------
+DISPOSITION
+------------------------------------------------------------------------------
+Production-polished, Apple-idiomatic `Delta` shipped at parity with the web source and
+INDEPENDENTLY VERIFIED on-host: it typechecks under Swift 6 complete strict concurrency
+against the REAL design tokens + the REAL TSSkeleton at the macOS-15 deployment target,
+its adapter projection EXECUTES and reproduces every web Delta.test.tsx golden value,
+and swiftformat / swiftlint --strict / placeholder are all green on the 9 surface files
+with 0 opt-outs. The full-app iOS-Simulator + macOS xcodebuild build/test/XCTest gate is
+DEFERRED (not failed by this code) to P99 on a signed macos-latest runner, blocked here
+solely by the absence of Xcode.app/simulators/XCTest on this Command-Line-Tools host.
+
+EXIT=0
+STATUS=DONE

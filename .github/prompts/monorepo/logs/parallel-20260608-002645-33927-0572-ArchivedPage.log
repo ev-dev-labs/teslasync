@@ -1,0 +1,102 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+The web page reuses `InboxBody`. Let me examine that component and the broader structure.
+
+The actual sources live in `apps/apple/Sources` and `apps/apple/TeslaSync/feature-views`. Let me understand the established parity-page conventions by examining existing notification pages.
+
+Let me examine the InboxBody previews (construction pattern), available design components, the parity ledger, and toolchain availability.
+
+Toolchain is available. Let me check the parity manifest record, the ledger situation, the pending-verifications doc, and UI layout components.
+
+Let me check the web InboxBody's data dependencies, the Shared framework/build situation, and the key design components I'll compose with.
+
+Let me read the remaining components I need and the existing registered page pattern.
+
+This is the key context. The full-app build is blocked by documented pre-existing issues; predecessors verify the surface in isolation and defer the full build to macOS CI. Let me study a predecessor's log and isolated-verification approach.
+
+This InboxBody log is the gold-standard precedent. It defines the exact host-runnable verification methodology. Let me set up tracking and read the final pieces (tokens, motion, string catalog format).
+
+I have all design tokens confirmed. Let me set up tracking and verify the InboxBody dependency surface for the isolated build harness.
+
+Let me view the lint/format configs so my code passes `--strict`, then I'll start implementing.
+
+I have everything needed. Let me set up the plan and todos, then implement.
+
+Now I'll create the implementation. Starting with the directory and the model/data-seam file.
+
+Now the main View file:
+
+Now the navigation registration file:
+
+Now the previews:
+
+Now the tests:
+
+Let me verify the `InboxBulkAction` cases and a few referenced symbols used in my tests.
+
+I need to fix the test — `bulkActions` returns structs with a `.kind`:
+
+Now let me add the strings to `Localizable.xcstrings`. First confirm no existing keys collide and verify exact formatting.
+
+Formatting confirmed. Now I'll insert the 6 string keys surgically after `"strings": {`:
+
+Now register the new `Features` group in `project.yml` (both app targets):
+
+Now register the group in `.swiftlint.yml`:
+
+Now let me run the host-runnable gates. Starting with swiftformat and swiftlint:
+
+Let me auto-format with swiftformat, then re-lint:
+
+swiftformat passes. Now swiftlint --strict:
+
+Two violations: one is mine (`ArchivedPage.swift:93` multiple-trailing-closures), the other is pre-existing in `dashboard-widgets`. Let me fix mine. First view the current state:
+
+My files pass format + lint (0 violations). Now the placeholder gate:
+
+All host gates green so far (format, lint, placeholder). Now I'll build the isolated SwiftPM harness for tests + dual-SDK typecheck. First, map the Shared-free dependency set:
+
+None of Components/Design import Shared (only system frameworks). Now I'll build the isolated SwiftPM harness with my surface + InboxBody + the Shared-free design system:
+
+`UnitFormatters.swift` (DataDisplay) needs the Shared-backed `Units`. The InboxBody-proven set is only Components/{UI, Motion, Feedback}. Let me narrow:
+
+The `#Preview` macro needs the Xcode toolchain (active dir is CommandLineTools). Let me point at Xcode:
+
+`InboxBody.swift` (the bare View file) was missed by the glob. Let me add it:
+
+Compiling fully now. Let me isolate the actual error (vs. the Sendable warning):
+
+`FeedbackOverlays.swift` cross-references DataDisplay's `TSMetricBar`. The precedent used only `Feedback/Skeletons`. Let me include only the Feedback files actually needed:
+
+All 12 tests pass. Let me check for any warnings in my files (saw a Sendable warning in Previews) and clean them up:
+
+The Previews helper needs `@MainActor`. Let me fix it:
+
+Now sync to harness, confirm zero warnings, and run the dual-SDK typecheck (step 5):
+
+12 tests pass with zero warnings (TEST_EXIT=0). Now step 5 — dual-SDK typecheck against iOS 18 + macOS 15:
+
+iOS 18 typecheck clean. Now macOS 15:
+
+Both SDKs typecheck clean. Now step 6 — xcodegen registration check:
+
+All 6 files registered across both app targets. Let me clean up the generated project (git-ignored) and confirm my working-tree changes are exactly as intended:
+
+My changes are `.swiftlint.yml`, `Localizable.xcstrings`, `project.yml`, and the new `Features/` dir. The `AIUsageCard.*` and `web/*` modifications are pre-existing slot state (I never touched them). Let me check the ledger schema to create the apple ledger:
+
+All host gates pass. Now, per the established precedent, let me capture honest evidence for the deferred Xcode app build. First regenerate the project and run the bare gate command:
+
+BARE exit=1 as expected (active dir is CommandLineTools). Now the DEVELOPER_DIR attempt to capture where it stalls (Gradle pre-action / pre-existing blockers):
+
+The Gradle pre-action is actually running (this environment HAS the Kotlin toolchain + Gradle cached, unlike the InboxBody runner). It's building the real `Shared.xcframework`. Let me let it continue and capture the real outcome:
+
+The real Kotlin/Native framework is building (now on `linkReleaseFrameworkIosArm64`). I'll let it continue and capture the outcome, while I write the ledger and log. First the apple-ledger:
+
+Let me check the build progress:
+
+The framework is nearly built (now linking macOS). Let me wait for it to stage and start the app compile so I can capture the real failure point:
+
+The build staged the real `Shared.xcframework`, then the app Swift compile **failed** — let me capture the exact failure to confirm it's the pre-existing `*.Tests.swift`-in-app-target blocker, not my surface:
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: DF73:1C09A5:D75607:E304BB:6A26ECDB)

@@ -1,0 +1,196 @@
+=== P4 Shared surface 0150 CurrencyInput (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively
+                       per-invocation, no sudo / no `xcode-select -s`, so the shared runner is untouched).
+                       `xcodebuild -version` under the CommandLineTools dir errors ("requires Xcode") — hence the
+                       DEVELOPER_DIR override, the SAME mechanism every prior P4 surface used.
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2
+  Capability         : SwiftUI present; iOS 26.5 / macOS 26.5 SDKs + simulator runtimes installed. This surface
+                       uses NO Swift Charts and NO MapKit (the web source has none either — the prompt's "Charts /
+                       maps used: (none)"), so the iOS 18 / iPadOS 18 / macOS 15 HIG primitives it needs (TextField,
+                       FocusState, the token field chrome) are all available → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification — read end to end)
+  web/src/components/forms/CurrencyInput.tsx (216 lines) + its core web/src/lib/currencyFormat.ts (316 lines).
+  A fully CONTROLLED, currency-aware text field:
+    • Canonical storage = integer micro-units (1 major unit = 1_000_000) to avoid FP round-trip loss across
+      currencies with 0/2/3/4 fractional digits (USD/JPY/BHD/CLF).
+    • Renders `Intl.NumberFormat` currency display (symbol, fixed digits, grouping OFF for the field) + a decorative
+      (aria-hidden) currency-symbol icon; `aria-label` (required `ariaLabel` prop) labels the input.
+    • Parses user text on blur / Enter, accepting: the localized symbol on EITHER side ("$1.50", "1,50 €"), the
+      literal ISO code ("USD 1.50"), locale group separators ("1,234.56" en-US, "1.234,56" de-DE), and accounting
+      parentheses for negatives ("($1.50)" → -1.5); renormalises the visible text to the canonical-rounded form.
+    • Re-syncs the local text buffer from the parent's `valueMicro` ONLY when the field is not focused, so an
+      external change never clobbers in-progress typing (the `focusedRef` guard).
+  Helpers (reproduced verbatim — arithmetic is the contract):
+    valueToMicro(v)   = (v==null||!finite) ? null : Math.round(v*1e6)   (round half toward +∞);
+    microToValue(m)   = (m==null) ? null : m/1e6;
+    formatCurrencyValue(v) = (v==null||!finite) ? "" : Intl currency (digits=clampPrecision, grouping off);
+                        invalid ISO code (RangeError) ⇒ "{CODE} {plain decimal}";
+    currencySymbol    = the localized symbol; invalid code ⇒ the code verbatim;
+    parseCurrencyText = trim → accounting parens → strip symbol + ISO code (case-insensitive) → collapse leading
+                        sign → parseLocaleNumber; blank/non-finite ⇒ null;
+    parseLocaleNumber = strip the locale group separator (incl. NBSP/space), decimal separator → '.';
+    currencyCodeFromSymbol = 21-entry symbol→ISO map, default USD; clampPrecision = null⇒2 else clamp 0..20.
+  Hooks  : (none — pure presentational component; the prompt's "Data sources: none"). The value flows through the
+           parent via props, not a TanStack query.
+  i18n   : the web component takes its accessibility label from the caller (`ariaLabel`); its documented example is
+           the settings "Electricity Cost (per kWh)" field. Per the native no-English-literals rule that example is
+           promoted to a P1/S10 key (table "CurrencyInput") and used as the default label.
+
+ARTIFACTS SHIPPED  (allowed files: apps/apple/TeslaSync/shared-surfaces/CurrencyInput.* + this log)
+  CurrencyInput.Adapter.swift   (296)  — pure Foundation core, the port of currencyFormat.ts: valueToMicro /
+                                  microToValue (Math.round half-up parity via floor(x+0.5), overflow-guarded),
+                                  formatCurrencyValue / formatCurrencyMicro (NumberFormatter .currency, grouping
+                                  off, fixed digits) with the invalid-ISO-code "{CODE} {decimal}" fallback,
+                                  currencySymbol, the 21-entry codeBySymbol map, parseCurrencyText /
+                                  parseCurrencyTextToMicro (accounting parens, symbol either side, ISO code,
+                                  leading-sign collapse), parseLocaleNumber (locale group/decimal separators,
+                                  NBSP/narrow-NBSP/space), clampPrecision, isValidCurrencyCode (modern
+                                  Locale.Currency.isoCurrencies), CurrencyFieldPhase, CurrencyInputAccessibility.
+  CurrencyInput.Model.swift     (239)  — P1/S10 i18n facade (CurrencyInputStrings, table "CurrencyInput"),
+                                  P1/S11 telemetry seam (CurrencyInputTelemetry + OSLog sink, view.opened
+                                  surface="CurrencyInput"), P1/S8 state-holder seam (CurrencyInputBinding —
+                                  onExternalChange in / commit out, the native mirror of the web valueMicro prop +
+                                  onChange — + InMemoryCurrencyBinding), and the @Observable @MainActor
+                                  CurrencyInputModel with the focus-preserving resync + commit/renormalise.
+  CurrencyInput.swift           (53)   — the CurrencyInput surface View: @State model, @FocusState, the editing
+                                  lifecycle wiring (focus⇒beginEditing / blur⇒endEditing/commit), view.opened on
+                                  appear, TSFadeIn (reduce-motion aware).
+  CurrencyInput.Views.swift     (95)   — the field row (leading decorative symbol glyph + the editable amount
+                                  field) inside the token chrome (accent border on focus, dim on disabled); the
+                                  iOS decimal keypad (web inputMode="decimal") via an os(iOS)-guarded modifier.
+  CurrencyInput.Previews.swift  (69)   — #Preview per state: empty / USD value / euro de-DE / yen prec-0 /
+                                  dinar prec-3 / disabled / invalid-code fallback.
+  CurrencyInput.Tests.swift     (366)  — 39 XCTest cases (adapter + model + a11y).
+  CurrencyInput.strings         (22)   — the P1/S10 catalog (electricityCost label, prompt, empty announcement).
+  Native total 1004 Swift LOC across 6 files (+22 strings) vs 532 web spec LOC — the decomposition + 39 tests +
+  i18n expand it well past the 70% floor; nothing elided.
+
+PARITY MAPPING  (web → Apple platform tokens; no Tailwind ported, no raw hex)
+  <Input value icon aria-label>     → CurrencyFieldView: HStack { CurrencySymbolGlyph ; TextField } + token chrome
+  symbol span (aria-hidden)         → CurrencySymbolGlyph .accessibilityHidden(true), Font.TS.bodySm / textMuted
+  Intl currency (grouping off)      → CurrencyFormat.formatCurrencyValue (NumberFormatter .currency, usesGrouping
+                                      false, min=max fraction digits = clampPrecision)
+  invalid code fallback             → "{code} {decimalString}" (web "{CODE} {plain}")
+  Math.round(v*1e6)                 → valueToMicro floor(v*1e6 + 0.5) (half toward +∞, exact JS parity)
+  parse symbol/ISO/parens/sign      → parseCurrencyText (strip both sides, case-insensitive code, ($..) negative,
+                                      leading -/+ collapse) — each unit-asserted
+  locale group/decimal separators   → parseLocaleNumber (NumberFormatter groupingSeparator/decimalSeparator,
+                                      NBSP/narrow-NBSP/space collapse)
+  focusedRef no-clobber resync      → CurrencyInputModel.applyExternal (value always; text only when !isEditing)
+  commit on blur/Enter              → endEditing (blur) + onSubmit→commit (Enter), both renormalise the buffer
+  ariaLabel / disabled props        → model.accessibilityLabel (i18n) / model.isEnabled (.disabled + dim)
+  i18n                              → every string via CurrencyInputStrings (NSLocalizedString table, web literal
+                                      as value: fallback); rendered Text(verbatim:)
+  a11y                              → field carries .accessibilityLabel + .accessibilityValue (entered text or the
+                                      empty announcement); symbol hidden; Dynamic Type via Font.TS; Reduce Motion
+                                      via TSFadeIn; iOS decimal keypad
+  telemetry                         → view.opened surface="CurrencyInput" emitted once on first appear (P1/S11)
+
+STATES (every state present in the web source renders — no hidden surface)
+  empty    → no canonical value → the symbol glyph + the localized prompt (web blank <Input>); never a blank box.
+  value    → a formatted / in-progress amount (USD/EUR/JPY/BHD covered in previews + tests).
+  editing  → focus-preserving: an external value change while typing updates the canonical value but does NOT
+             clobber the buffer (testExternalChangeDoesNotClobberInProgressText).
+  disabled → web `disabled` passthrough → a dimmed, non-editable field.
+  invalid-currency fallback → a non-ISO-4217 code renders "{CODE} {decimal}" (testInvalidCurrency...).
+  N/A (documented, not skipped): loading / error / stale / offline. The web source is a PURE controlled input with
+  NO data source (prompt "Data sources: none — pure presentational component"; "Charts/maps: none"); there is no
+  async fetch to load, fail, go stale, or lose connectivity. These template states have no web-source branch to
+  reproduce, so reproducing them would be inventing UI the spec does not have. The one applicable template state,
+  `empty`, IS implemented as a first-class branch (CurrencyFieldPhase.empty + the empty VoiceOver announcement).
+
+GATES  (raw exits below; per-surface scope)
+  [GREEN] swiftformat --lint (.swiftformat, 6 swift files)        : 0/6 files require formatting       FORMAT_EXIT=0
+  [GREEN] swiftlint --strict (.swiftlint.yml, 6 swift files)      : 0 violations, 0 serious in 6 files  LINT_EXIT=0
+            (interim: currencyCodeFromSymbol's 21-case switch tripped cyclomatic_complexity 22>10 — refactored to a
+             branch-free static [String:String] map; re-lint clean.)
+  [GREEN] check-placeholders.ps1 (-Language swift, shared-surfaces dir) : PLACEHOLDER_ALLOWED=0
+                                                                          PLACEHOLDER_COUNT=0           PLACEHOLDER_EXIT=0
+            (scanner verified LIVE: a planted "// TODO" in a scratch copy of the Adapter was detected COUNT=1/EXIT=1,
+             so the COUNT=0 on the shipped files is a real scan, not a vacuous one. The prompt's literal
+             `-Path .../CurrencyInput` prefix is not an existing path so Test-Path short-circuits to COUNT=0; the
+             meaningful run targets the existing shared-surfaces directory, which recursively scans all 6 files.)
+  [GREEN] ISOLATED build + test — SwiftPM, swift-tools 6.0 (Swift 6 language mode = strict-concurrency complete,
+          same as the app target settings), compiling the EXACT shipped CurrencyInput.* sources (incl. the #Preview
+          macro file) against the REAL repo design-system files (generated apps/design Tokens + Sources/Design
+          TSDesign/TSMaterial + Sources/Components/Motion) under the Xcode 26.5 toolchain (so the real #Preview macro
+          + XCTest are available), module named TeslaSync so `@testable import TeslaSync` resolves:
+              Build complete! (0 warnings, 0 errors) · Executed 39 tests, with 0 failures (0 unexpected)
+                                                                                                  SWIFT_TEST_EXIT=0
+  [GREEN] iOS typecheck — `swiftc -typecheck -target arm64-apple-ios18.0-simulator -sdk iPhoneSimulator26.5
+          -swift-version 6 -strict-concurrency=complete` over the same surface + design files (exercises the
+          os(iOS) decimal-keypad branch the macOS SwiftPM build compiles out):
+              no diagnostics                                                                    IOS_TYPECHECK_EXIT=0
+
+  [DEFERRED] Full-app iOS-Simulator + macOS `xcodebuild -scheme TeslaSync(-macOS) … build test`.
+          NOT run-to-green on this runner because the full app target is blocked by PRE-EXISTING / structural
+          conditions this prompt neither introduced nor is allowed to touch (each VERIFIED here, not assumed):
+            • apps/apple/Frameworks/Shared.xcframework is NOT staged (only .gitkeep, 159 bytes) — the scheme
+              preAction needs the ~7-min Gradle :core:assembleSharedXCFramework (a macOS-pending row for
+              p1-shared/S3 in apps/macos-pending-verifications.md);
+            • `struct DashboardWidgetSize` is redefined 15× across Sources/DashboardWidgets/* +
+              TeslaSync/dashboard-widgets/* (parallel-merge collisions → invalid redeclaration in the app target);
+            • 170 co-located `*.Tests.swift` under TeslaSync/feature-views import XCTest into the app target;
+            • apps/apple/TeslaSync/shared-surfaces is NOT listed in project.yml `sources` (it lists feature-views +
+              dashboard-widgets explicitly), and project.yml is NOT in this prompt's allowed files — so wiring this
+              first shared-surface into the targets is owned by the P4 acceptance gate, exactly like the deferred
+              full-app build. My files are therefore not even in the generated project yet; a full-app failure could
+              not be attributable to CurrencyInput.
+          This is the SAME sanctioned "code-complete + DEFERRED full-app Xcode gate" disposition recorded by every
+          prior P4 surface (see p4-apple-feature-views-0237-AiUsageCard.log) and is owned by
+          p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner. ZERO CurrencyInput errors are
+          attributable to this change — it is GREEN on every runnable per-surface gate above.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED with raw, verified
+                           pre-existing/structural-blocker evidence (gitkeep-only Frameworks, DashboardWidgetSize
+                           15×, 170 co-located tests, shared-surfaces absent from project.yml) — never as passing.
+  2  No scope narrowing  : every web region + branch reproduced — micro-unit storage, grouping-off currency
+                           formatting, the invalid-ISO-code fallback, symbol-either-side / ISO-code / locale-
+                           separator / accounting-parens parsing, the leading-sign collapse, the focus-preserving
+                           resync, the decorative symbol, disabled, and the empty branch; the non-applicable
+                           loading/error/stale/offline template states are explained (no async data source), not
+                           silently dropped.
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; raw exits pasted; the placeholder scanner
+                           was proven live with a planted marker; the deferred-gate blockers were each re-confirmed
+                           by ls/grep (gitkeep 159B, 15× redefinition, 170 tests, project.yml has no shared-surfaces),
+                           not assumed; iOS was typechecked, not presumed from the macOS build.
+  4  No stubs as final   : complete production surface + 39 real tests; placeholder scanner COUNT=0; no
+                           TODO/FIXME/stub/mock/Placeholder/Lorem/not-implemented anywhere in shipped code.
+  5  No parity shortcut  : the micro-unit Math.round, the grouping-off currency string, the "{CODE} {decimal}"
+                           fallback, the symbol/ISO/parens/sign parsing, the locale group/decimal separators, the
+                           21-entry symbol→code map, and the focus-preserving resync are each unit-asserted against
+                           the web expressions (en_US / de_DE / en_GB golden values verified empirically).
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens (Color.TS / Font.TS / TSSpacing / TSRadius /
+                           TSFadeIn), P1/S10 i18n facade, P1/S11 view.opened telemetry, and the established P4
+                           "isolated-build + DEFERRED full-app" disposition all honoured; the pre-existing atomic
+                           TSCurrencyInput (Sources/Components/Forms/Inputs.swift, owned by the component-library
+                           bundle) was left untouched (out of scope).
+  8  No commit on red    : the committed artifact (7 CurrencyInput.* files + this log) is GREEN on swiftformat,
+                           swiftlint --strict, the placeholder scan, a real isolated Swift 6 strict-concurrency
+                           build + 39/39 XCTest, and an iOS-target typecheck; the deferred full-app gate is blocked
+                           only by pre-existing/structural conditions this commit does not touch.
+  9  No silent drift     : changes are confined to shared-surfaces/CurrencyInput.{swift,Adapter,Model,Views,
+                           Previews,Tests}.swift + CurrencyInput.strings and this log; the cyclomatic-complexity
+                           refactor (switch → map) and the shared-surfaces/project.yml wiring deferral are disclosed
+                           above.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic CurrencyInput shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles warning-free and its 39 tests pass under the app's own Swift 6 strict-concurrency rules,
+  against the REAL design system, via the Xcode 26.5 XCTest runtime, and it typechecks for the iOS 18 simulator
+  target; swiftformat / swiftlint --strict / placeholder are all green on the 6 surface files and the #Preview macro
+  compiles. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code) on
+  pre-existing / structural, out-of-allowed-files conditions (unstaged Shared.xcframework, DashboardWidgetSize 15×
+  redefinition, 170 co-located app-target tests, and the not-yet-wired shared-surfaces source group), owned by the
+  P99 acceptance gate on a signed macos-latest runner per apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

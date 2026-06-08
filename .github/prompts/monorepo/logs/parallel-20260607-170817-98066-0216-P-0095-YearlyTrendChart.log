@@ -1,0 +1,145 @@
+I'll start by exploring the repository structure to understand the task context — the web source, the Apple app structure, and whether the toolchain is available.
+
+Toolchain is available. Let me read the web source spec and examine the existing Apple feature-views structure to understand the established patterns.
+
+Critical finding: `xcodebuild` requires full Xcode but only Command Line Tools are active. Let me investigate Xcode availability and how the predecessor (DrivingTab) handled the gate.
+
+Now I understand the established pattern. Full Xcode 26.5 is at `/Applications/Xcode.app` (used via `DEVELOPER_DIR` override). Let me read the full predecessor log and its source files to replicate the proven approach.
+
+Excellent — this is the exact proven methodology (ADR-012 "code-complete + DEFERRED Xcode gate"). Let me read the predecessor's source files to replicate the established structure precisely.
+
+Let me read the remaining DrivingTab files and the shared P4 core types they depend on.
+
+Let me read the Charts, Previews, Tests, strings files, and locate the shared P4 core types they depend on.
+
+Let me read the Tests/Previews files and locate the shared P4 core types (Color.TS, TSChartPalette, UnitPreferences, etc.).
+
+Let me read the shared design tokens, units facade, project config, and the placeholder check script.
+
+Let me read the upstream data helpers, the ChartContainer chrome, and locate all the design token definitions I'll need.
+
+Let me locate all the design token and shared chart helper definitions, and read the ChartContainer chrome plus the parent section.
+
+Let me read the token definitions and the shared chart/motion/skeleton helpers to confirm exact APIs.
+
+The tokens live at `apps/design/generated/apple`. Let me read those plus the shared chart/motion/skeleton helpers.
+
+Let me read the `tsChartAxes` implementation, the `TSChartFormat`/`TSChartGradient` bodies, and the parent section to understand data binding.
+
+Let me read the yearlyTrend computation in the parent to fully capture the data semantics.
+
+Let me check `AREA_DEFAULTS` and `CHART_COLORS` for precise color/line parity, plus the placeholder patterns to avoid tripping the stub gate.
+
+Let me verify the supporting source files are dependency-light (no KMP `Shared` import) so I can compile against them in the harness, and check for any leftover harness.
+
+All supporting files are self-contained (no KMP `Shared` import). Let me read the top of Tokens.swift to confirm conditional-import structure, then write the plan and begin implementation.
+
+I have full understanding of the architecture and the proven gate methodology. Let me set up a plan and todos, then implement.
+
+Now I'll create the surface files. Starting with the Foundation-only Adapter core.
+
+Now the Model with the state-holder seam, telemetry seam, observable model, and i18n facade:
+
+Now the Views chrome — panel, freshness chip, connectivity banner, empty row, loading body, error state:
+
+Now the Swift Charts composed panel and the custom legend:
+
+Now the surface and previews:
+
+Now the i18n strings catalog and the XCTest suite:
+
+All 8 files created. Now let me run the gate. First, the capability probe and auto-format my files to the repo style:
+
+Toolchain confirmed (Xcode 26.5, iOS/macOS SDK 26.5). Let me run swiftlint and swiftformat lint on the files:
+
+swiftlint passes clean. Now swiftformat lint on the whole tree (exact gate command):
+
+swiftformat clean (0/884). Now the placeholder/stub gate:
+
+The 2 hits are pre-existing siblings (not mine). Let me confirm exactly which files, and prove my files are clean:
+
+My files are clean (the 2 hits are pre-existing `InfrastructureSection.*` siblings). Now the SDK typechecks. Let me attempt the iOS simulator typecheck over my surface plus the real supporting token/chart/motion files:
+
+`Skeletons.swift` pulls in `TSCard` (matching the predecessor, which shimmed `TSSkeleton`). Let me check whether `Motion.swift` and `LineCharts.swift` are otherwise clean, then shim only `TSSkeleton`:
+
+`Motion.swift` is clean (TSFadeIn). `ChartModels.swift` is a clean leaf (TSChartFormat/Gradient/Point/Series). Only `tsChartAxes` (in LineCharts, which pulls TSAreaChart/TSElevationProfile) and `TSSkeleton` need shimming. Let me build a throwaway harness with real leaf files + minimal shims:
+
+Strategy clear: real leaf files (Tokens, TSDesign, Motion) + minimal shims for `tsChartAxes`/`TSSkeleton` (whose real files pull unrelated siblings — same approach the predecessor documented). Let me build a self-contained SwiftPM harness for both the SDK typechecks and `swift test`:
+
+Now the shim file and Package.swift:
+
+Now run the iOS 18 simulator SDK typecheck over the full surface + real support + shims:
+
+iOS 18 typecheck passes. Now macOS 15 SDK typecheck:
+
+Both SDK typechecks pass. Now run the full XCTest suite via `swift test`:
+
+The test file wasn't copied (the earlier `set -e` aborted before it). Let me copy it and re-run:
+
+All 16 tests pass. Now step [0] — standalone compile+run of the real Foundation-only Adapter core in isolation:
+
+Top-level code requires the file be named `main.swift`. Let me rename and re-run:
+
+Step [0] passes (21/21 logic checks). Now [7] xcodegen generate and the DEFERRED xcodebuild evidence:
+
+All gate steps pass. The DEFERRED xcodebuild shows the documented infra blocker (missing `Shared.xcframework`, only `.gitkeep`). Let me verify the generated project is git-ignored and run a whole-tree swiftlint for honest disclosure:
+
+Only my 8 files are new; the 2 modified web files pre-existed my session (not mine). The 1 whole-tree lint violation is a pre-existing sibling (`LifetimeStatsWidget`, outside my scope), matching the predecessor. Let me gather line counts and write the gate log:
+
+Now let me write the comprehensive gate log:
+
+Log written. Let me clean up temp artifacts and commit only the allowed files (my 8 surface files + the log):
+
+Exactly the 9 allowed files staged (the 2 pre-existing web modifications are excluded). Now commit:
+
+Commit `c0dc25ba` landed with all 9 files. Final verification:
+
+All work is complete and verified. The task is done.
+
+## Summary
+
+Shipped a production-polished native Apple (SwiftUI + Swift Charts) **YearlyTrendChart** surface at parity with `web/.../charging-curve/YearlyTrendChart.tsx`, following the proven DrivingTab (0056) / ADR-012 precedent.
+
+**8 files committed** (`c0dc25ba`, 1,192 lines of surface code) under `apps/apple/TeslaSync/feature-views/YearlyTrendChart.*`:
+- **Adapter** — Foundation-only core: DTO, load/connection/phase enums, `safe()`/`round1()` web-parity guards, projection, a11y summary
+- **Model** — P1/S8 state-holder seam + P1/S11 telemetry seam + P1/S10 strings facade (no view HTTP)
+- **Views** — `ChartContainer`-style panel (title+subtitle+aria+freshness chip), banner, empty/loading/error states
+- **Chart** — composed Swift Chart: DC-session count bars `[5]@.3` + 10→80% line `[0]` + 20→80% line `[2]`, shared scale + dual axis titles + custom legend
+- **surface / Previews / Tests / strings**
+
+**Parity reproduced**: all 13 source i18n keys (+11 native chrome/a11y), every state (loading/empty/error/stale/offline/content), VoiceOver/Dynamic Type/Reduce-Motion a11y, `view.opened` telemetry.
+
+**Gate — all green (real output)**:
+| Step | Result |
+|---|---|
+| [0] standalone adapter run | 21/21 ✓ |
+| [1] iOS 18 simulator SDK typecheck | EXIT=0 |
+| [2] macOS 15 SDK typecheck (+previews) | EXIT=0 |
+| [3] `swift test` XCTest | 16/16 ✓ |
+| [4] swiftlint --strict (surface) | 0 violations |
+| [5] swiftformat --lint apps/apple | 0/884 |
+| [6] placeholder gate (my files) | COUNT=0 |
+| [7] xcodegen generate | EXIT=0 |
+
+The signed **Xcode app build/test is DEFERRED** with captured evidence (`BUILD FAILED`, exit 65 — un-staged KMP `Shared.xcframework`, only `.gitkeep` present), an integration-runner concern outside this prompt's allowed files. The 1 whole-tree lint hit and 2 placeholder hits are disclosed as pre-existing siblings (`LifetimeStatsWidget`, `InfrastructureSection`). Log ends `EXIT=0 / STATUS=DONE`.
+
+Merge made by the 'ort' strategy.
+ ...4-apple-feature-views-0095-YearlyTrendChart.log | 250 +++++++++++++++++++++
+ .../feature-views/YearlyTrendChart.Adapter.swift   | 200 +++++++++++++++++
+ .../feature-views/YearlyTrendChart.Chart.swift     | 168 ++++++++++++++
+ .../feature-views/YearlyTrendChart.Model.swift     | 207 +++++++++++++++++
+ .../feature-views/YearlyTrendChart.Previews.swift  |  73 ++++++
+ .../feature-views/YearlyTrendChart.Tests.swift     | 223 ++++++++++++++++++
+ .../feature-views/YearlyTrendChart.Views.swift     | 207 +++++++++++++++++
+ .../feature-views/YearlyTrendChart.strings         |  49 ++++
+ .../TeslaSync/feature-views/YearlyTrendChart.swift |  65 ++++++
+ 9 files changed, 1442 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0095-YearlyTrendChart.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/YearlyTrendChart.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/YearlyTrendChart.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/YearlyTrendChart.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/YearlyTrendChart.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/YearlyTrendChart.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/YearlyTrendChart.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/YearlyTrendChart.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/YearlyTrendChart.swift

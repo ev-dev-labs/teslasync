@@ -1,0 +1,136 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Toolchain is available. Let me read the web source spec and explore the existing Apple feature-views structure.
+
+Web source is clear. Now let me study the existing Apple feature-view conventions. Let me look at a representative stats-panel example and the most recent additions.
+
+The pattern is clear and well-established. Let me study the shared tokens, components, the Views/Tests/Previews/strings files, and the project config.
+
+Let me find where the shared `TS*` components and tokens are defined, plus look at the Tests pattern and project config.
+
+Found the shared design system. Let me read the key components and tokens I'll need: Badges, Metrics, Cards, Motion, Design tokens, and Feedback.
+
+Let me read the design tokens and remaining key components (Cards, Motion, States, Typography), and locate the token definitions.
+
+Tokens are generated elsewhere. Let me find the token definitions (TSSpacing, Color.TS, Font.TS, TSRadius, TSMotion).
+
+Tokens are generated at build time. Let me examine the project config, scripts, and how tokens are generated — this is critical for the build gate.
+
+Now I understand the build topology. Let me read the Tests pattern, Typography/States components, the design tokens JSON, and check tooling availability (xcodegen, simulators, pwsh).
+
+xcodegen and pwsh are available. Now the critical question: can the full build run? Let me check how test files are wired, the Shared.xcframework dependency, and whether a prior build cache exists.
+
+Critical finding: `Shared.xcframework` must be built via KMP/Gradle. Let me verify the toolchain availability and test-wiring, and read the pending-verifications doc.
+
+The `macos-pending-verifications.md` doc is decisive: the full-app `xcodebuild` is blocked by **pre-existing, unrelated** issues (duplicate `DashboardWidgetSize`/`PowerFlowConnection`, co-located test files, KMP/signing). The established methodology verifies each surface via an **isolated SwiftPM build + tests + lint/format/placeholder**. Let me confirm the precedent logs and SwiftPM harness used by prior surfaces.
+
+Let me read the precedent logs (ToolCard reference + a recent one) to learn the exact log format, isolated-build harness, and STATUS convention used.
+
+The ToolCard log is the authoritative template: isolated SwiftPM build + tests + lint/format/placeholder are the per-surface gate; full xcodebuild is DEFERRED for pre-existing unrelated reasons. Let me set up tracking and read the remaining specs: web number/temperature helpers, the parent that supplies the props, and the Apple shared formatters.
+
+There's a shared `Units`/`UnitPreferences` SI system. Let me read it and confirm the most-recent surface conventions (DriveOverviewChart Model + a Views snippet), plus check `.swiftlint.yml` scope.
+
+Let me read the shared Units facade to decide the temperature approach, and confirm the DriveOverviewChart surface-identity/projection file structure.
+
+Key insight: `Units`/`UnitFormatters` depend on `import Shared` (KMP), so — like the AcDcStatsPanel/DriveOverviewChart precedents — my surface must be **self-contained** with its own ported formatter (no `Shared` dependency) to compile in the isolated harness. The `.swiftlint.yml` and `project.yml` already include `feature-views`. Let me verify token names and which design-system files are `Shared`-free, and read the remaining components I'll use.
+
+No Components/Design file imports `Shared` directly. Tokens confirmed. Let me read the exact Color.TS/Font.TS members, the typography/button/skeleton/states components, the glass-panel material, and confirm what references the Shared-backed `Units`.
+
+Let me read the button init signature and the shared empty/error state components (the web uses `EmptyState`).
+
+I have a complete understanding of the conventions and all shared components. Let me read the formatting config and update my plan, then start writing the surface.
+
+Config understood. Now I'll write the surface. Starting with the pure, Foundation-only adapter (domain types, ported formatters, a11y helpers).
+
+Now the Model file: telemetry seam (P1/S11), connection axis, input/resolved, pure projection, source seam (P1/S8), in-memory source, observable model, and i18n facade (P1/S10).
+
+Now the presentational subviews (3 panels, shared chrome, loading/error states).
+
+Now the main view with header, freshness chip/banner, and state switch.
+
+Now the previews and the i18n strings catalog.
+
+Now the comprehensive test suite (adapter formatters, projection states, model wiring/telemetry/freshness, a11y).
+
+All 7 files written. Let me run the formatting and lint gates on the new files, plus the placeholder scanner.
+
+swiftformat clean. Now swiftlint --strict on the new files and the placeholder scanner.
+
+Host gates green (format 0, lint 0 violations, placeholder 0). Now I'll build the authoritative isolated SwiftPM harness. Let me verify the last two component deps (Skeletons, Buttons remainder) to assemble a closed, `Shared`-free source set.
+
+Skeletons and Buttons confirmed self-contained. Let me check the top of the generated Tokens.swift (cross-platform color handling) before assembling the harness.
+
+Tokens are cross-platform safe. Now I'll assemble the isolated SwiftPM harness (the authoritative per-surface gate per the ToolCard precedent) — compiling the exact shipped sources against the real design system under Swift 6 strict concurrency, then running the tests.
+
+Harness staged. Let me build it under Swift 6 strict concurrency.
+
+The only errors are the Xcode-only `#Preview` macro plugin (`PreviewsMacros`) being unavailable to plain SwiftPM — not a code defect. All 18 real sources compiled. The fix is to build/test the harness in **release** config (excludes the `#if DEBUG` preview blocks), which is the authoritative compile+test gate. Let me run it.
+
+Release build clean. Now run the test suite in release config.
+
+`XCTest` isn't in the active (CommandLineTools) toolchain. The ToolCard precedent used a full Xcode via `DEVELOPER_DIR`. Let me locate Xcode and retry — a full toolchain should provide both `XCTest` and the `#Preview` macro plugin, enabling a debug build+test including previews.
+
+Found `/Applications/Xcode.app`. Let me point `DEVELOPER_DIR` at it (non-destructively, no `sudo`/`xcode-select -s`) — a full toolchain provides both `XCTest` and the `#Preview` macro plugin, so I can run the **debug** build+test including the previews.
+
+The full Xcode toolchain ran all 32 tests — **31 passed, 1 failed**, and the failure is a wrong *test expectation*, not a code bug. My `getThrottleStyle`/thermal `classify` coerce non-finite→0, but the web `getThrottleStyle` uses raw `<` comparisons (where JS — and Swift — treat `NaN < x` as false, falling through to aggressive/hot). For true parity I should drop the coercion and match the web's exact comparison semantics. Let me fix the adapter and the test expectations.
+
+Fixed. Let me re-copy the changed files into the harness and re-run the full debug test suite (with the Xcode toolchain, so previews + tests both compile).
+
+All **33 tests pass, 0 failures**, and the **previews compiled** (debug build with the Xcode toolchain's `PreviewsMacros` plugin) under Swift 6 strict concurrency. The harness is fully green. Let me re-confirm the host gates on the edited files and characterize the whole-tree gates honestly.
+
+Surface-scoped host gates all green. Now let me run the whole-tree gates exactly as the gate spec does (`swiftformat --lint apps/apple`, `swiftlint --strict`) to verify my files integrate cleanly and to characterize any pre-existing state honestly.
+
+Whole-tree `swiftformat` flags **1 pre-existing** file — `ActionBuilder.Previews.swift` (unrelated; not mine). My 6 files are clean. Let me confirm my working tree only adds my files, and characterize whole-tree `swiftlint` honestly.
+
+Working tree adds **only my 7 files**. Whole-tree `swiftlint` shows **1 pre-existing violation** (not mine). Let me identify it to confirm it's unrelated.
+
+Confirmed: the only whole-tree violations are **pre-existing and unrelated** — `LifetimeStatsWidget.Adapter.swift:141` (the exact one ToolCard documented) and `ActionBuilder.Previews.swift:48`. **Zero** MotorEfficiency violations. Now let me characterize the full-app `xcodebuild` gate honestly (per precedent it's deferred for pre-existing reasons). First, fast evidence: regenerate the project with my files and confirm the pre-existing duplicate-type collisions still exist.
+
+Conclusive pre-existing evidence: `xcodegen` integrated my files (exit 0), but `DashboardWidgetSize` is defined **15×** across dashboard-widget files (the "ambiguous for type lookup" collision) — this alone guarantees the full-app compile fails regardless of my surface. To honor "no skip-and-assume", I'll still execute the real `xcodebuild` gate and capture the raw exit. Let me check the simulator and start the iOS build (it triggers the ~7-min KMP Gradle pre-action).
+
+Capability is present (iPhone 16 booted, Java 17) — so the full build is **not** capability-blocked; any failure is the pre-existing code collisions. Let me run the real iOS `xcodebuild` gate (it triggers the KMP Gradle pre-action, then compiles). I'll run it async and monitor.
+
+The iOS build is running (KMP Gradle pre-action first). Let me monitor its progress while I begin drafting the gate log.
+
+The KMP Gradle build is progressing (many tasks `FROM-CACHE`, linking Kotlin/Native frameworks). Let me wait for it to assemble `Shared.xcframework` and proceed to the Xcode compile.
+
+The KMP Gradle build is working on this runner — it assembled the debug `Shared.xcframework` and is building the release one. So the framework is **not** a blocker here. Next, Xcode will compile the app and hit the pre-existing collisions. Let me keep waiting.
+
+Kotlin/Native release linking (slow by nature) is still in progress. Let me continue waiting.
+
+iOS gate finished: **IOS_EXIT=65**, failing on the pre-existing **`XCTest` co-located in the app target** blocker (the 163 `*.Tests.swift` files, exactly as `macos-pending-verifications.md` documents). Let me confirm there are **zero** MotorEfficiency errors and capture the pre-existing error categories.
+
+**Zero MotorEfficiency errors** — the iOS failure is purely the pre-existing co-located `XCTest`-in-app-target blocker (4×). Now let me run the macOS gate for completeness (Shared.xcframework is now cached, so faster).
+
+While macOS builds, let me update my todos and monitor. I'll write the log once I have `MAC_EXIT`.
+
+macOS gate: **MAC_EXIT=65**, failing on the pre-existing **development-signing** requirement (documented in `macos-pending-verifications.md` + ToolCard precedent). Let me confirm zero MotorEfficiency errors there too, then write the gate log.
+
+All evidence captured: **zero MotorEfficiency errors** in both builds. `Shared.xcframework` built/staged fine (KMP not a blocker); the failures are purely pre-existing (co-located XCTest in app target → iOS; dev-signing → macOS). Let me verify build artifacts are git-ignored so my commit stays clean, then write the log.
+
+Clean — only my 7 files, build artifacts ignored. Now I'll write the gate log.
+
+The log is written. Let me clean up the temp harness, do a final green re-confirmation of the committed files, then commit.
+
+All final gates green and the tree contains only my 7 surface files + the log. Let me commit.
+
+Committed (`5f854b2cd`, 8 files, +1714) with a clean tree. Let me mark the final todo done.
+
+Merge made by the 'ort' strategy.
+ ...-feature-views-0171-MotorEfficiencyInsights.log | 142 ++++++++
+ .../MotorEfficiencyInsights.Adapter.swift          | 231 +++++++++++++
+ .../MotorEfficiencyInsights.Model.swift            | 312 +++++++++++++++++
+ .../MotorEfficiencyInsights.Previews.swift         | 100 ++++++
+ .../MotorEfficiencyInsights.Tests.swift            | 347 +++++++++++++++++++
+ .../MotorEfficiencyInsights.Views.swift            | 384 +++++++++++++++++++++
+ .../feature-views/MotorEfficiencyInsights.strings  |  48 +++
+ .../feature-views/MotorEfficiencyInsights.swift    | 150 ++++++++
+ 8 files changed, 1714 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0171-MotorEfficiencyInsights.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/MotorEfficiencyInsights.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MotorEfficiencyInsights.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MotorEfficiencyInsights.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MotorEfficiencyInsights.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MotorEfficiencyInsights.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/MotorEfficiencyInsights.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/MotorEfficiencyInsights.swift

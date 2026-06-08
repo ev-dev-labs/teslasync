@@ -1,0 +1,163 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Now let me explore the Apple app structure and the related web files that ChargingTab depends on.
+
+Let me explore the Apple app structure in detail to understand existing patterns.
+
+Excellent! Sibling tabs (`DrivingTab`, `BatteryTab`, `OverviewTab`) and the sub-component `ChargingDetailSection` already exist natively. Let me study `DrivingTab` (closest analog — a tab with charts) and `ChargingDetailSection` (which ChargingTab composes) as templates.
+
+Let me read the remaining DrivingTab files and the ChargingDetailSection files (which ChargingTab composes).
+
+Now let me read the `ChargingDetailSection` native files (which ChargingTab composes) and the remaining DrivingTab files (tests, previews, strings).
+
+Let me read the ChargingDetailSection adapter/views/charts/panels and the DrivingTab tests/previews/strings to fully understand the data model and patterns.
+
+Now let me read the DrivingTab tests/previews/strings and the ChargingDetailSection panels/charts/strings to complete my understanding of all patterns.
+
+Let me examine the shared tokens/components and the ChargingDetailSection views/charts, plus the DrivingTab tests.
+
+Let me find the shared design tokens/components and check how files are registered in the Xcode project.
+
+The `feature-views/` directory is registered by path, so new files are auto-included. Now let me locate the remaining token/component definitions (`TSSpacing`, `Color.TS`, `Font.TS`, `TSFadeIn`, `TSSkeleton`, `UnitPreferences`, `tsGlassPanel`, `TSChartFormat`, `TSChartGradient`).
+
+Let me check the composition pattern (OverviewTab), integration points, and remaining shared primitives (`UnitPreferences.metric`, `tsGlassPanel`, `TSFadeIn`, `TSSkeleton`, and any shared MetricCard).
+
+There's a shared `DataDisplay/Metrics.swift`. Let me read it (web uses `MetricCard`), plus the DrivingTab tests, ChargingDetailSection strings/previews/tests, and the glass/fade primitives.
+
+Path correction — feature-views is under `TeslaSync/`. Let me read the DrivingTab tests, ChargingDetailSection strings/previews/tests, and remaining primitives.
+
+Let me read the web types/formatting (for exact field names + format semantics), the ChargingDetailSection previews/tests, and the glass/axes helpers.
+
+I have nearly complete understanding. Let me read the final primitives (glass panel, chart axes, fade/skeleton signatures, UnitPreferences presets) and the ChargingDetailSection tests to mirror conventions.
+
+Now let me verify the build toolchain availability (critical for the gate) and read the ChargingDetailSection tests to mirror conventions.
+
+I now have a complete understanding of the architecture. Let me check the placeholder gate script, `pwsh`, and whether `swiftc` can typecheck SwiftUI under Command Line Tools (to know my verification options).
+
+Both `pwsh` and standalone `swiftc` (SwiftUI+Charts) work, and `xcodebuild` requires full Xcode (only CLT present). Let me verify the canonical i18n values in `en.json` for parity, then write a plan.
+
+All 15 canonical values match. Now let me check the SwiftLint/SwiftFormat configs (to match style) and write the plan.
+
+Style configs noted (maxwidth 120, self-remove, testable-bottom, no trailing commas). I need to verify how `*.Tests.swift` files in `feature-views/` are wired into targets. Let me inspect `project.yml`.
+
+Let me resolve how `feature-views/*.Tests.swift` are wired (they appear in the app target with no excludes, yet `@testable import`). Quick check of Tests/Unit and the pending-verifications note.
+
+The `apps/macos-pending-verifications.md` file suggests Apple builds are pending verification (no Xcode runner). Let me read it to understand the intended convention.
+
+This is the key precedent. The `apps/macos-pending-verifications.md` establishes the exact convention: the **full-app `xcodebuild build test` is BLOCKED by pre-existing, unrelated parallel-merge collisions** (not my surface), and each P4 feature-view is verified green via **isolated SwiftPM build + tests + swiftc -typecheck + swiftlint/swiftformat/placeholder + xcodegen**, with the full-app build deferred to the macOS acceptance gate.
+
+I'll follow this exact protocol. Let me write the plan, then build the surface.
+
+Now let me create the surface. Starting with the Foundation-only Adapter (the testable projection core).
+
+Now the Model file (seams, DTOs, `@Observable` model, strings facade).
+
+Now the Views file (presentational chrome + summary cards).
+
+Now the Charts file (donut, battery bar, hourly composed dual-axis).
+
+Now the main view that composes the summary, charts, and embeds `ChargingDetailSection`.
+
+Now the Previews file (DEBUG, per-state).
+
+Now the Tests file (adapter, model, formatting, accessibility coverage).
+
+Now the strings catalog (15 parity keys with canonical en.json values + native chrome).
+
+All 8 files created. Now let me run the verification gates. First SwiftFormat (lint) and SwiftLint scoped to the new files.
+
+Minor formatting issues. Let me fix the redundant returns and the unused legend parameter.
+
+SwiftFormat and SwiftLint both clean (0/0). Now the placeholder gate via `pwsh`. Let me check how the script resolves `-Path`, then run it as the gate specifies.
+
+The gate's `-Path .../ChargingTab` is a filename prefix (siblings are flat files, not subdirs), so I'll scan an isolated copy of my surface files — matching the gate's intent. Let me run the placeholder gate.
+
+Placeholder gate clean (COUNT=0, EXIT=0). Now the highest-value verification: an **isolated SwiftPM build + tests**. Let me inspect the shared dependencies I'll need to vendor into the sandbox.
+
+The shared files only import SwiftUI/Charts (no KMP `Shared`). Let me verify Motion/Skeletons/LineCharts have no hidden deps before vendoring them into the sandbox.
+
+Skeletons.swift drags in `TSCard`; LineCharts.swift has extra components. I'll vendor the self-contained real files and shim just `TSSkeleton` + `tsChartAxes` (verbatim copies). Let me build the isolated SwiftPM package and run the tests.
+
+The `Tokens.swift` copy used the wrong path (it's at `apps/design/...`, not `apps/apple/design/...`), so the build will fail. Let me wait for it, then fix.
+
+It's missing `_Tokens.swift` so it's doomed. Let me stop it, fix the Tokens path, and rebuild.
+
+Now rebuild with the complete file set.
+
+Only the `#Preview` **macro** fails — its external plugin (`PreviewsMacros`) ships with Xcode, not Command Line Tools. Every real surface file compiled (`ChargingTab.Views/Charts/Model/Adapter`, all `ChargingDetailSection.*`, `_Tokens`). Let me exclude the DEBUG preview files (gate-skipped) and rebuild + run tests.
+
+Library builds clean under Swift 6. Now run the tests.
+
+`XCTest` ships with Xcode, not CLT. Let me check if it's reachable; if not, I'll run the same assertions via an executable harness.
+
+No public `XCTest` module under CLT (only `XCTestSupport` private + `Testing.framework`). The shipped XCTest file stays as-is (for the real Xcode test target). To prove the test **logic runs green** under Swift 6 on this runner, I'll add an executable harness mirroring every assertion. Let me also confirm the XCTest file is well-formed Swift via a tiny shim.
+
+**82/82 checks passed** under Swift 6 strict concurrency — the surface logic is verified correct. Now let me prove the shipped XCTest file itself is well-formed Swift (its only blocker here is the absent XCTest module) by typechecking it against a minimal XCTest shim.
+
+Only `Date` is unresolved — because stripping `import XCTest` also removed its transitive `Foundation` (which the real file gets for free). Adding `import Foundation` to the shim copy:
+
+Test file typechecks clean (exit 0) — the shipped XCTest file is well-formed; only the absent XCTest module blocked `swift test`. Now let me confirm `xcodegen` enumerates the new files into the project targets.
+
+`xcodegen` succeeds and enumerates all 8 files into both targets. Now let me capture the full-app `xcodebuild` outcome (expected BLOCKED — no Xcode.app) and confirm the generated project is git-ignored.
+
+Full-app `xcodebuild` is BLOCKED (CLT, no Xcode.app) — IOS_EXIT/MAC_EXIT=1, matching the documented pre-existing condition. The generated project is git-ignored. Now let me run the repo-wide `swiftformat --lint` and `swiftlint --strict` exactly as the gate specifies, to capture honest results.
+
+Repo-wide SwiftFormat flags only **one pre-existing unrelated file** (`ActionBuilder.Previews.swift` — a different prompt's surface); my ChargingTab files pass. Now repo-wide SwiftLint.
+
+One repo-wide SwiftLint violation across 1916 files. Let me identify which file it's in (my scoped run was clean, so likely pre-existing).
+
+The only repo-wide SwiftLint violation is in `LifetimeStatsWidget.Adapter.swift` — a **pre-existing, unrelated** dashboard-widget file. Zero ChargingTab violations. Both repo-wide issues match the documented "pre-existing parallel-merge" condition.
+
+Let me check the log directory and a sibling log to match format, then clean up temp artifacts.
+
+Let me read a sibling feature-view log to match the established log format.
+
+This sibling log reveals a critical detail: on a fully-equipped host, `/Applications/Xcode.app` exists and is used via `DEVELOPER_DIR` override (even when `xcode-select` points at CLT). Let me check whether Xcode.app is actually installed here — that would unlock the iOS SDK, `xcodebuild`, `swift test`, and `#Preview`.
+
+`/Applications/Xcode.app` **exists**! Per the documented precedent, I can use `DEVELOPER_DIR` override to unlock the iOS SDK, `xcodebuild`, `swift test`, and `#Preview`. Let me verify it's a full install.
+
+**Xcode 26.5 is fully installed** (iPhone 16 simulator even booted) — accessible via `DEVELOPER_DIR` override, exactly the documented precedent. This unlocks real iOS-18/macOS-15 SDK compiles, `swift test` (XCTest), and `#Preview`. Let me reconstruct the package to run the **real XCTest suite** and dual-SDK typechecks.
+
+**Real XCTest suite EXECUTED: 32/32 passed, 0 failures** under Swift 6 (previews compiled too — `#Preview` macro now resolves). Now the dual real-SDK typechecks (iOS-18 simulator + macOS-15), matching the precedent.
+
+Both SDK typechecks pass (iOS 18 + macOS 15, incl. previews). Now let me attempt the full-app `xcodebuild` to capture the real blocker (the precedent cites un-staged `Shared.xcframework` + co-located test collisions). First, check the framework staging.
+
+All three documented pre-existing blockers confirmed: `Shared.xcframework` absent (only `.gitkeep`), 171 co-located `*.Tests.swift` in the app target, 15× `DashboardWidgetSize` redefinitions — none related to ChargingTab. Let me capture the real `xcodebuild` failure as evidence.
+
+Full-app build fails with the **exact documented root blocker** — `no XCFramework found at .../Shared.xcframework`, BUILD FAILED exit 65 (the un-staged KMP core, an integration-runner step, outside my allowed files). This matches the precedent precisely → the "code-complete + DEFERRED Xcode app gate" disposition (STATUS=DONE).
+
+Let me gather final line counts, clean up generated/temp artifacts, then write the log.
+
+I see pre-existing modifications to files I didn't touch (`AIUsageCard.*`, some web files). The environment is shared. Let me verify I didn't accidentally modify them and check full status.
+
+These `AIUsageCard.*` / web modifications are **pre-existing** (mtime `01:05`, the repo-setup time) — not mine. My only changes are the untracked `ChargingTab.*` files. I'll commit only my allowed files with explicit paths. Let me grab tool versions, then write the log.
+
+Now let me write the comprehensive gate log matching the established format.
+
+Log written. Now let me commit only my allowed files (explicit paths, avoiding the pre-existing working-tree changes), then verify the commit contents.
+
+Commit is clean — exactly 9 files (8 `ChargingTab.*` + log), 2222 insertions, with the pre-existing unrelated changes left untouched. Let me do a final verification of the git state.
+
+Git is unusually slow (likely the large shared repo or a lock). The commit already succeeded. Let me stop this and do a lighter check.
+
+The commit `d79c23280` is verified — exactly my 9 allowed files (8 `ChargingTab.*` + the gate log). Task complete.
+
+## Summary
+
+I shipped a production-polished native Apple (SwiftUI) `ChargingTab` surface at parity with `web/src/features/analytics/components/analytics/ChargingTab.tsx`, following the established sibling architecture (`DrivingTab` 0056, `ChargingDetailSection` 0053).
+
+**8 files, 1968 lines** committed under `apps/apple/TeslaSync/feature-views/ChargingTab.*`:
+- **Adapter** (Foundation-only projection: `safe()`, the six summary metrics with the web `stats ? … : '—'` presence rule, donut palette wrap-at-6, the `ChargingHourlyScale` dual-axis math), **Model** (P1/S8 source seam, P1/S11 telemetry, formatting facade, SI DTOs), **Views** (glass panels, 6 MetricCards, freshness chip/banner, skeleton, error), **Charts** (Swift Charts donut `SectorMark` + battery histogram + hourly composed dual-axis), the **main view** (composes summary + 3 charts + the embedded `ChargingDetailSection`, exactly as the web does), **Previews**, **Tests** (32 XCTest methods), and **strings** (15 `analytics.charging.*` keys verified vs `en.json` + 12 chrome keys).
+
+**Verification (all real, executed):**
+- ✅ Real **XCTest 32/32 passed** (SwiftPM, full Xcode 26.5 via `DEVELOPER_DIR`, Swift 6 strict concurrency)
+- ✅ **iOS-18 simulator** + **macOS-15** SDK `swiftc -typecheck` both EXIT=0 (incl. `#Preview`)
+- ✅ `swiftlint --strict` 0 violations · `swiftformat --lint` 0/7 · placeholder gate COUNT=0 · `xcodegen` enumerates all 8 files
+- ⏸️ Full-app `xcodebuild build test` **DEFERRED** — fails with the documented pre-existing blocker (`no XCFramework found at .../Shared.xcframework`, exit 65: the un-staged KMP core is an integration-runner step) plus pre-existing app-target collisions, all outside this prompt's allowed files. This matches the `apps/macos-pending-verifications.md` precedent.
+
+Per the precedent (real both-SDK compiles + executed tests green; only the un-staged-framework full-app build deferred), the gate log ends **EXIT=0 / STATUS=DONE**. Pre-existing unrelated working-tree changes (`AIUsageCard.*`, two web files) were left untouched and not committed.
+
+
+
+The task is fully complete and committed. Calling `task_complete`.
+

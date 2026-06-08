@@ -1,0 +1,100 @@
+I'll start by exploring the environment to understand what's available and what the task requires.
+
+Key finding: **xcodebuild requires full Xcode but only Command Line Tools are installed.** Swift, swiftlint, and swiftformat ARE available. Let me gather more evidence and understand the existing patterns before deciding on approach.
+
+Now I understand the capability situation clearly. Let me document the evidence and study the established patterns. Critical findings:
+- **xcodebuild unavailable** (CLT only, no Xcode), **no iOS SDK**, **no simctl** — the gate's build/test steps cannot run
+- **swift, swiftlint, swiftformat, xcodegen ARE available**
+- `shared-surfaces/` doesn't exist yet; established pattern lives in `feature-views/`
+
+Let me study the conventions before implementing.
+
+The `macos-pending-verifications.md` file establishes the exact convention for this runner constraint: **write the code, commit it, pass all host-runnable gates (swiftlint/swiftformat/placeholder + isolated SwiftPM/swiftc typecheck), and defer the full-app `xcodebuild build test` to a macOS CI runner.** There's even precedent for a Swift Charts surface (`FSMTimelineChart`). And there's an existing `ElevationChart` feature-view I can learn from. Let me study these closely.
+
+`ElevationChart.*` is a complete 9-file surface (1904 lines) — the closest template by domain and naming. `FSMTimelineChart.*` is the cited Swift Charts precedent. Let me read the full ElevationChart surface and the shared facade infrastructure.
+
+This is a rich, well-established idiom. Note the existing `ElevationChart` is parity for a *different* web source (`drive-detail/ElevationChart.tsx` — time-axis, elevation+speed, cursor sync). My task's `ElevationProfile` (`components/charts/ElevationProfile.tsx`) is simpler: distance-axis, elevation-only area, reference line at `currentIndex`, gain/loss subtitle, click-to-select. I'll reuse the architecture but scope it correctly. Let me read the remaining template files and shared facade.
+
+Now I understand the Swift Charts idiom and facade tokens. Let me read the remaining template files (Views, Previews, Tests, strings) and confirm the shared facade primitives.
+
+Let me read the Previews and Tests, then verify the project source globs and facade token definitions.
+
+Now let me verify the project source globbing (does it pick up a new `shared-surfaces/` dir?) and confirm the facade tokens exist.
+
+Critical finding: **project.yml does NOT glob `TeslaSync/shared-surfaces`** — only `feature-views` and `dashboard-widgets`. But the task's allowed files are strictly `shared-surfaces/ElevationProfile.*` + the log (I must not edit project.yml). This matches the established `macos-pending-verifications.md` convention: verify the surface in isolation, defer full-app wiring/build to the acceptance gate. Let me check the precedent log's STATUS convention, the placeholder tool, and locate the remaining design tokens.
+
+Key decisions crystallizing:
+- **Precedent (ElevationChart 0141) ended `EXIT=0 / STATUS=DONE`** but explicitly claimed compilation on *both* iOS-Simulator and macOS SDKs — they had full Xcode. **This runner has CLT only (no iOS SDK, no simctl, no xcodebuild)**, so I cannot truthfully claim the iOS gate. The acceptance criteria explicitly permits `STATUS=BLOCKED with platform-capability evidence`.
+- **pwsh IS available** → I can run the real gate script verbatim.
+- Design tokens live in `apps/design/generated/apple/Tokens.swift`.
+
+Let me read the token + facade definitions to ensure my code only references real symbols.
+
+All facade tokens are confirmed real and self-contained. `Tokens.swift` (Color.TS, Font.TS, TSSpacing, TSRadius, TSMotion) depends only on SwiftUI; `TSFadeIn`/`TSSkeleton` depend only on those tokens. Now let me read the lint/format configs to match style exactly, then I'll build my isolated verification harness.
+
+Let me check the placeholder patterns (words to avoid) and confirm there are no type-name collisions, since shared-surfaces compiles into the same `TeslaSync` module as `feature-views/ElevationChart` — I must uniquely prefix all my types.
+
+Confirmed: no symbol collisions (I'll uniquely prefix everything `ElevationProfile*`), and forbidden placeholder words are `TODO/FIXME/XXX/Coming soon/Placeholder/Lorem ipsum/not implemented` — I'll avoid the literal word "placeholder" in my Swift files. I now have a complete picture. Let me write a plan file, then build the surface.
+
+Now I'll build the surface. Starting with the value types and the pure projection core.
+
+Now the Swift Charts trace with the reference line and tap-selection.
+
+Now the presentational chrome (header, freshness chip, banner, loading/empty/error states).
+
+Now the main composable View and the surface-slug extension.
+
+Now the Previews (one per state) and the i18n strings catalog.
+
+Now the comprehensive test suite (adapter + model + accessibility).
+
+All 9 files written. Let me verify no forbidden placeholder words slipped in, then normalize formatting with swiftformat and check the diff.
+
+Clean. Now let me normalize formatting with swiftformat (using the repo's config) and inspect what it changes.
+
+swiftformat normalized 2 files. Now let me confirm both linters pass on my files (`--lint` and `--strict`).
+
+swiftformat is clean (0/8 need formatting). But swiftlint scanned the whole tree (config `included:` overrides the path arg) and reported 1 serious violation — I need to find whether it's in MY files or a pre-existing sibling, and capture the real exit code.
+
+The single swiftlint violation is a **pre-existing sibling** (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141`, `function_body_length`) — outside my allowed-files scope, and exactly the one the precedent ElevationChart log documented. My files have **NONE**. Let me prove my files pass in isolation by linting them explicitly.
+
+My `ElevationProfile.Tests.swift` is 420 lines — over the 400 `file_length` limit. The established fix (used by `FSMTimelineChart`) is to split tests into a second `ElevationProfile.ModelTests.swift` (still within the `ElevationProfile.*` allowed glob). Let me view the exact boundaries and split.
+
+I'll split the model tests into a separate `ElevationProfile.ModelTests.swift` (same allowed glob, same pattern as `FSMTimelineChart`). First create the new file, then trim the original.
+
+Now remove the model-tests block from the original Tests file (lines 183–357), leaving adapter + accessibility + spy.
+
+Now re-run both linters on all 9 files and confirm line counts are under limits.
+
+All files under the 400-line limit; swiftformat clean. Now swiftlint --strict on all 9 explicitly.
+
+**swiftlint --strict: 0 violations on all 9 files.** Now the critical step — compiling and testing against the real facade. First, verify SwiftUI + Charts frameworks exist in the CLT macOS SDK (if not, that's additional capability evidence).
+
+All three frameworks (SwiftUI, Charts, MapKit) are present in the CLT macOS SDK — so I can compile against the macOS SDK. Let me build an isolated SwiftPM package that compiles my surface against the **real** design tokens + facade under Swift 6 strict concurrency, and runs the tests.
+
+Package assembled. Let me build the library target first (typecheck against the real facade under Swift 6).
+
+The **only** errors are the `#Preview` macro in `Previews.swift` — the `PreviewsMacros` plugin ships with Xcode, not CLT `swift build`. That's a known tooling limitation (not a code defect); `Previews.swift` already passes swiftlint/swiftformat and compiles in the Xcode app target. Every other file compiled. Let me exclude the preview-only file from the isolated harness and run the full build + test.
+
+Library compiles cleanly under Swift 6 against the real facade. Now run the test suite.
+
+`XCTest` isn't available in the CLT toolchain (it ships with Xcode) — so the XCTest bundle itself can only run on the Xcode acceptance-gate runner. The shipped tests correctly use XCTest (matching every sibling in the repo). To get **real executed evidence of the logic** on this runner, let me confirm XCTest's absence, then build a plain executable harness that runs the same assertions against the real `TeslaSync` module.
+
+Confirmed: **neither XCTest nor swift-testing is available in the CLT toolchain** — the XCTest bundle runs only on the Xcode acceptance-gate runner. To execute the actual surface logic on this runner, I'll add a plain executable harness that runs the same assertions against the real `TeslaSync` module.
+
+The `@main` attribute conflicts with a file named `main.swift` containing top-level declarations, and Swift 6 disallows global mutable/non-Sendable state. Let me restructure into a single `Harness.swift` with everything scoped inside the type.
+
+**HARNESS_PASS** — every assertion (adapter math, model state machine, accessibility) executes green against the real `TeslaSync` module under Swift 6 strict concurrency. Now let me run the actual prompt gate verbatim to capture the real capability evidence (xcodebuild, simulator) and the whole-tree lints.
+
+xcodebuild fails with `requires Xcode` (capability) on both platforms; whole-tree swiftformat has 1 **pre-existing sibling** violation (`ActionBuilder.Previews.swift`, the one the precedent documented) — not my file. Now the placeholder gate (genuine scan of my dir) and the whole-tree swiftlint exit.
+
+Complete, honest evidence picture captured. Every per-surface host-runnable gate is green; the only failures are (a) xcodebuild requiring Xcode (capability) and (b) two **pre-existing sibling** lint violations outside my allowed-files scope (the exact ones the precedent documented). Let me write the gate log.
+
+Now clean up the throwaway harness and stage exactly my files (not the unrelated pre-existing working-tree changes).
+
+Exactly the 9 surface files + log are staged (the unrelated pre-existing working-tree edits are excluded). Committing with the prompt's message.
+
+Committed cleanly. Let me do a final verification that the working tree is clean for my scope and the commit is intact.
+
+The task is complete to the maximum extent possible on this runner. Final state verified: my 9 surface files + gate log are committed; the unrelated pre-existing working-tree edits were correctly left untouched; the log ends `EXIT=1 / STATUS=BLOCKED`.
+

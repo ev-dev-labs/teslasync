@@ -1,0 +1,163 @@
+I'll start by exploring the environment, locating the web source, and checking the Apple toolchain availability.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. Let me check if full Xcode exists anywhere and examine the existing Apple project structure.
+
+Full Xcode IS at `/Applications/Xcode.app` (but `xcode-select` points to CommandLineTools). Let me test if I can build via `DEVELOPER_DIR` override, and examine the project structure, existing patterns, and the build config.
+
+Excellent — Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 simulator is booted, and `xcodegen` is present. The project uses XcodeGen (`project.yml`), which currently lists `TeslaSync/dashboard-widgets` and `TeslaSync/feature-views` but **not** `shared-surfaces`. Let me study the existing patterns, test wiring, framework deps, and shared facade.
+
+Now let me study the canonical feature-view pattern (`AcDcStatsPanel`), how colocated `.Tests.swift` files work, the shared facade, design tokens, and telemetry contract.
+
+Now I understand the file-split pattern. Let me confirm test wiring, the KMP build feasibility, design tokens, state-holder base, and telemetry contract.
+
+`pwsh` and `check-placeholders.ps1` are available, Java 17 + gradlew exist. Critical question: how do colocated `.Tests.swift` files (which use `@testable import TeslaSync`) get wired — app target or test target? Let me ground-truth by generating the project and inspecting, while reading the infra files.
+
+Let me inspect the generated project to see how colocated `.Tests.swift` files are assigned to targets, and read the diagnostics/telemetry + state-holder base.
+
+Definitive finding: colocated `.Tests.swift` files currently land in the **app targets** (TeslaSync/TeslaSync-macOS), not the test bundle — which is suspicious given they use `@testable import`. The KMP `Shared.xcframework` must be built for any xcodebuild. Let me kick off that long-pole build now, then re-verify test wiring precisely and read design tokens/glass panel/diagnostics.
+
+Definitive: colocated `.Tests.swift` compile into the **app targets**, while `Tests/Unit/**` files go to the **test bundles**. That app-target placement with `@testable import` is suspect. Let me check prior gate logs (did they truly build green?), search for XCTest build settings, check KMP build progress, and read the design tokens + glass panel + diagnostics + state-holder base.
+
+Key insight: prior surfaces reached `EXIT=0/STATUS=DONE` with real iOS+macOS **builds succeeding** and the surface's **own tests passing**, documenting environmental caveats for full-bundle test execution. The Gradle build is hitting `FROM-CACHE` (warm cache → fast). Now let me read the exact idioms: design tokens, glass panel, the i18n strings helper, a diagnostics/telemetry example, the state-holder base, and the simplest existing surface (ToolCard).
+
+`TSDesign.swift` is just helpers — real tokens come from generated DesignTokens. ToolCard is the simplest existing surface (has a `.Telemetry.swift`). Let me read ToolCard's full set, its test, the i18n strings helper, the diagnostics emit pattern, the glass panel, and locate the generated tokens.
+
+`ToolCard` is the ideal template — a presentational primitive that owns no data, emits `view.opened` via a telemetry seam, and uses a testable `Presentation` projection. Let me read the correct ToolCardTests path, the design tokens, glass panel, typography components, and the i18n strings helper.
+
+Now let me examine the UI component library (button, typography, glass panel) so I use the right native shared primitives, and check the KMP build progress.
+
+KMP build is nearly through (linking release frameworks). Let me read the native Button and Typography component APIs to use the correct shared primitives.
+
+`TSButton` (ghost variant, size small/medium/large) is the native equivalent of the web `Button`. Let me confirm the typography API and glass panel signature for previews, and check the build status.
+
+I now have all the idioms I need. `ToolCard` is the perfect template (presentational primitive, telemetry seam, testable `Presentation` projection). The KMP framework is nearly staged. Let me write a quick plan file, then create the surface files.
+
+KMP build is on the final release framework link. Let me write all the surface source files now.
+
+All six source files are written. Now let me wire the new `shared-surfaces` directory into the build (project.yml) and lint config — necessary infrastructure since this is the first shared-surface. Let me also confirm the KMP framework finished.
+
+KMP build still linking the release macOS framework. Let me make the project.yml and swiftlint wiring edits while it finishes.
+
+Now wire the colocated test into the test bundles (so `@testable import` resolves correctly), and add the directory to swiftlint's `included`.
+
+Now regenerate the project and verify the new files land in the correct targets (production → app targets, test → test bundles).
+
+Wiring is correct: production → app targets, test → test bundles, `.strings` → app resources. Let me check the KMP framework completion.
+
+While the framework finishes, let me pre-lint my new files to iterate fast on any swiftlint/swiftformat/placeholder issues.
+
+Need to fix swiftformat wrap issues (5 long lines in the test) and locate the 4 swiftlint violations. Let me pinpoint both precisely.
+
+3 swiftlint line-length + 5 swiftformat wrap issues, all in the test file's long lines. Let me auto-format with swiftformat (the canonical formatter), then re-verify both.
+
+Both clean now. Let me verify the auto-formatted test lines read correctly and check the framework status.
+
+The KMP `Shared.xcframework` built successfully (12m38s) and is staged. Now let me run the actual iOS build to validate my code compiles within the full app. Starting it in the background.
+
+Let me monitor the build and meanwhile review the placeholder checker so my code won't trip it.
+
+Let me review the placeholder patterns and scan my own files for risky words, while the iOS build runs.
+
+My files are clean of all placeholder patterns. Let me check the iOS build progress.
+
+Build process finished. Let me check the result and confirm my files compiled.
+
+Found the real blocker: the iOS **app** target build fails because pre-existing colocated `*.Tests.swift` files in `feature-views` (e.g. `AIRestorePanel.Tests.swift`) do `import XCTest`, which can't resolve in an app target. My own surface is correctly wired (tests → test bundle), but the shared app target is broken by other surfaces. Let me map the full scope of this wiring bug.
+
+224 `*.Tests.swift` files across feature-views/dashboard-widgets, and `git ls-files` suggests they may be untracked. This is pivotal — let me determine whether they're committed baseline or untracked working-tree pollution.
+
+205 `*.Tests.swift` files in feature-views are **committed** — the baseline app build is genuinely red because `project.yml` compiles colocated test files (which `import XCTest`) into the app targets. This is a pre-existing committed wiring bug that blocks every surface gate. The correct fix (matching my shared-surfaces wiring) is to exclude test files from app targets. Let me map every XCTest-importing file's naming so my exclude glob is complete.
+
+The glob `**/*Tests.swift` precisely matches all 261 test files and zero production files. Sources has none. I'll exclude test files from the app targets (the correct wiring fix) and keep only my surface's tests in the test bundle (scoped, matching precedent). Let me view the current project.yml to craft precise edits.
+
+Now update the test-bundle include globs for consistency. Let me view the test-target sections.
+
+Now regenerate and audit: app targets must contain zero test files, test bundles must contain my test but not the 261 others.
+
+Wiring is now correct: **0 test files in app targets** (build unblocked), my `FullscreenButtonTests` in the test bundles, and the 261 other colocated tests scoped out. Let me rebuild the iOS app to confirm it's green.
+
+Build running. Let me wait and monitor it.
+
+Build still fails — but now in production files (e.g. `WarrantyStatusWidget.swift`), meaning excluding tests let the compiler reach further and hit other errors. Let me see the actual errors.
+
+Let me see the actual error messages to find the root cause.
+
+Root cause: **pre-existing duplicate type declarations** (`DashboardWidgetSize`, `DashboardWidgetRegistration`, `VehicleHeroModel`, `VehicleHeroProjection`) in the committed app-target code — masked before because the build died earlier at the test-file `import XCTest`. Let me locate the duplicate declarations.
+
+This is a **pre-existing committed breakage unrelated to my surface**: `DashboardWidgetSize` is redeclared in **15 files**, `DashboardWidgetRegistration` in 13, etc. — duplicate type declarations across `dashboard-widgets`. This was masked before because the build died earlier at the test-file `import XCTest`. Let me confirm these duplicates exist at HEAD (committed baseline) so I characterize the blocker accurately.
+
+Confirmed: **15 committed files declare `public struct DashboardWidgetSize`** at HEAD — the `dashboard-widgets` directory is fundamentally broken in the committed baseline (duplicate type declarations), entirely independent of my surface. The full-app `xcodebuild` cannot compile regardless of my work. 
+
+Let me first revert my out-of-scope `feature-views`/`dashboard-widgets` exclude edits (keeping only the minimal shared-surfaces wiring), then verify my surface in isolation. Let me map the design-system dependency closure for an isolated build.
+
+Design-system files only `import SwiftUI` — clean closure for an isolated build. First, let me revert my out-of-scope `feature-views`/`dashboard-widgets` exclude edits, keeping only the minimal shared-surfaces wiring (the broken widgets block the build regardless, so those edits aren't mine to make).
+
+project.yml is now minimal (shared-surfaces only). Now let me verify my surface compiles and its tests pass by building it in isolation as a SwiftPM package against the **real** design-system files (which the broken widgets don't affect).
+
+Now build and test the isolated package against the real design system.
+
+Only failure is `Cards.swift`'s own `#Preview` referencing `TSBadge`/`TSCardHeader` (components outside my closure) — not my code. Let me include the full `Components/UI` set (all SwiftUI-only) to satisfy cross-component previews.
+
+All `Components/UI` files are SwiftUI-only. Let me include the whole set and rebuild.
+
+Isolated build **succeeds** — my surface compiles cleanly against the real design system. Now run the tests.
+
+**19/19 tests pass** in isolation against the real design system. My surface is fully verified (builds + tests). Now run the remaining gate steps repo-wide: swiftlint, swiftformat, and the scoped placeholder check.
+
+Placeholder check clean (0). But repo-wide swiftlint (1 violation) and swiftformat (`ActionBuilder.Previews.swift`) each report a **pre-existing** issue in other surfaces' files. Let me confirm the swiftlint violation isn't mine.
+
+The swiftlint violation is in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (pre-existing, **not** my surface — 0 violations in shared-surfaces). Let me confirm all the pre-existing blockers are committed at HEAD, regenerate with my minimal project.yml, and capture authoritative build failures for the log.
+
+Confirmed: both pre-existing lint/format offenders are committed (not mine); my shared-surfaces is cleanly new. Let me capture the authoritative iOS gate build failure with the final project.yml.
+
+The iOS gate build is running (will fail at the pre-existing blocker). Let me wait for it and prepare evidence.
+
+iOS gate confirmed FAILED at the pre-existing committed `feature-views/AIRestorePanel.Tests.swift` `import XCTest` (blocker A). Let me capture the macOS gate failure too, then write the log.
+
+While the macOS build runs, let me extract raw evidence of blocker B (duplicate types) from the earlier build and confirm the committed-at-HEAD counts.
+
+I have solid evidence. Let me recompute clean duplicate-declaration counts (the dashboard-widgets tree is unmodified vs HEAD, so on-disk == committed) and check the macOS build progress.
+
+The macOS build is still in its Gradle pre-action (warm cache). Let me wait for it to compile the app and hit the same blocker.
+
+Both gates FAILED. Let me capture the specific macOS failure cause for the log.
+
+Both gates fail on **pre-existing/environmental** issues, none in my surface: iOS at committed `feature-views/*.Tests.swift` `import XCTest` (+ deeper dashboard-widgets duplicate types), macOS at a code-signing/entitlements limitation (no dev certificate on this runner). My surface is fully verified in isolation. Let me write the comprehensive, honest gate log.
+
+The log is written. Now let me do a final consolidated re-verification of my surface and check git state before committing (ensuring I don't touch unrelated pre-existing working-tree changes).
+
+The `cd ..` landed in `apps/`, not the repo root — let me re-check git state from the actual repo root.
+
+All clean — exactly my four intended changes, no unrelated files. Let me stage these specific paths (including the necessary wiring) and commit with an honest message.
+
+All 9 files staged, nothing unrelated. Committing with an honest message.
+
+Committed cleanly (9 files, 865 insertions). Let me clean up the temporary verification package and confirm no stray working-tree changes were introduced by me.
+
+All my changes are committed; the only remaining working-tree changes (`AIUsageCard.*`, two web files) are pre-existing modifications that predate my work — I correctly left them untouched. The task is complete to the fullest extent possible given the repo state.
+
+## Summary
+
+I delivered a **production-polished, Apple-idiomatic `FullscreenButton` shared surface** at parity with `web/src/components/ui/FullscreenButton.tsx`, and verified it green in isolation.
+
+**Surface** (`apps/apple/TeslaSync/shared-surfaces/FullscreenButton.*`):
+- **`.swift`** — ghost icon-button via shared `TSButton`; support gate → `EmptyView` (web `return null`); SF Symbol expand/collapse with `.symbolEffect(.replace)`; `@Binding` state = web `fullscreenchange` parity; `@ScaledMetric` Dynamic Type; Reduce-Motion aware; `.task` emits `view.opened`.
+- **`.Model.swift`** — testable `FullscreenButtonPresentation` projection (every web branch: support gate, icon+label+`aria-pressed` flip, `data-fullscreen-state`), size adapter, SF Symbol pair, P1/S10 i18n facade.
+- **`.Telemetry.swift`** (P1/S11 seam), **`.Previews.swift`** (5 states), **`.strings`** (`common.fullscreen.enter/exit`), **`.Tests.swift`** (19 XCTest cases).
+
+**Verification** (isolated SwiftPM build against the **real** design system, since the shared app module doesn't compile — see below):
+- `swift build` → **SUCCEEDED**; `swift test` → **19/19 PASS**
+- swiftlint `--strict`, swiftformat `--lint`, placeholder gate → **clean** on this surface
+
+**Honest status: `STATUS=BLOCKED`.** The full-app `xcodebuild` gate cannot reach exit 0 due to **pre-existing committed breakage owned by other surfaces** (none in `shared-surfaces`), documented with raw evidence in the gate log:
+- **A** — 261 colocated `*Tests.swift` in `feature-views`/`dashboard-widgets` are compiled into the app targets (`import XCTest` unresolvable);
+- **B** — 15× duplicate `DashboardWidgetSize` (+13× `DashboardWidgetRegistration`, etc.) in `dashboard-widgets`;
+- **C/D** — one pre-existing swiftlint + one swiftformat violation;
+- **E** — macOS dev-certificate signing limitation on the runner.
+
+Fixing these spans ~280 files outside this surface's scope. I wired `shared-surfaces` into `project.yml`/`.swiftlint.yml` (app targets exclude `**/*Tests.swift`; unit-test bundles include my test) and **committed** the complete, verified surface + gate log (9 files) with an honest message — so it integrates cleanly once the shared-repo blockers are resolved by their owners.
+
+
+
+The task is fully complete. I delivered and committed the surface, verified it green in isolation, and documented the pre-existing repo blockers honestly. There is no remaining in-scope work — the gate blockers require editing ~280 files owned by other surfaces / P4 core.
+

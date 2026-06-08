@@ -1,0 +1,123 @@
+=== P4 Feature view 0051 AchievementBadge (Apple) ===
+when   : 2026-06-08T08:31:01Z
+branch : auto/20260608-002645-33927/78
+head   : c9c6fdb9f
+prompt : p4-apple/feature-views/0051-AchievementBadge  (Delegation FORBIDDEN — implemented directly)
+
+ARTIFACT
+  web source : web/src/features/analytics/components/AchievementBadge.tsx  (THE specification)
+  native out : apps/apple/TeslaSync/feature-views/AchievementBadge.{swift,Model,Adapter,Views,
+               Previews,Tests}.swift + AchievementBadge.strings   (7 files, all inside the allowed glob)
+  composition: Model (P1/S8 state-holder seam + P1/S11 telemetry seam + P1/S10 i18n facade +
+               @Observable model), Adapter (pure projection core + a11y), Views (SwiftUI body + leaf
+               chrome), swift (state-machine view + web-parity convenience init), Previews, Tests, strings.
+
+WEB PARITY (every branch of the source reproduced — no scope narrowing)
+  • unlocked          → gold-tinted container, full-strength icon, "✓ Unlocked" (web t('lifetime.unlocked')).
+  • locked            → neutral glass container, progress ring, 50% grayscale icon, "{pct}%".
+  • isNearComplete    → !unlocked && progress >= 0.8 → gold ring (#eab308 → Color.TS.statusWarning) + pulse.
+  • in-progress ring  → neutral grey (#6b7280 → Color.TS.textMuted); ring renders only when !unlocked.
+  • pct               → Math.round(progress*100); ring arc clamped to 0...1 (pct itself NOT clamped).
+  • 3 sizes           → ring 56/72/96, stroke 3/4/5, icon 20/30/36, gap 4/8/12, name 12/14/16 (web sizeConfig).
+  hexes are mapped to theme-aware design tokens (light/dark/high-contrast) instead of being hardcoded.
+
+LEAF-STATE CONTRACT (prompt "every state MUST render — no hidden surface")
+  loading (skeleton badge) · empty (friendly empty state, never a blank box) · error (retry affordance) ·
+  content (the web badge) · live/stale/offline freshness chip + banner with a one-shot stale auto-refresh.
+  All states are bound through AchievementBadgeModel (P1/S8); the view issues no HTTP. view.opened
+  (slug "AchievementBadge", P1/S11) is emitted once on first presentation.
+
+GATES — runnable on THIS runner (raw results)
+  [swiftlint --strict  (surface)] PASS  — "Found 0 violations, 0 serious in 6 files."        LINT_EXIT=0
+  [swiftformat --lint  (surface)] PASS  — "0/6 files require formatting."                     FORMAT_EXIT=0
+  [check-placeholders  (surface)] PASS  — PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0           PLACEHOLDER_EXIT=0
+                                          (scanner -SelfTest green: SELFTEST_EXIT=0; genuine recursive scan of
+                                           the 7 copied surface files = COUNT=0)
+
+EXTRA VERIFICATION — real, on this runner (beyond the host-runnable gates; not fabricated)
+  The CommandLineTools MacOSX.sdk ships SwiftUI / Observation / Charts / MapKit, so the surface was
+  TYPE-CHECKED against the REAL frameworks + the REAL design system — not merely parsed:
+  [macOS swiftc -typecheck] PASS — the 5 non-test sources + Sources/Design + Sources/Components/{UI,
+     Feedback,Motion} + apps/design/generated/apple/Tokens.swift, compiled for arm64-apple-macos15.0
+     with -swift-version 6 -strict-concurrency=complete → 0 errors, 0 warnings, EXIT=0.
+  [test-body typecheck]     PASS — AchievementBadge.Tests.swift type-checked in-module against the real
+     Model+Adapter via a minimal XCTest shim (Foundation only) → 0 errors, 0 warnings, EXIT=0. This
+     proves all 24 test methods reference the surface API correctly.
+  [Tests.swift -parse]      PASS — syntactically valid (EXIT=0).
+  (Excluded from the type-check set: Components/DataDisplay/UnitFormatters.swift + FeedbackOverlays.swift
+   — they reference app-level types [UnitPreferences / Units / TSMetricBar] outside the design-system leaf
+   and outside this prompt; neither is used by this surface. No AchievementBadge file produced any diagnostic
+   in any attempt.)
+
+GATES — DEFERRED (platform capability absent — NOT failed by this code)
+  [xcodebuild iOS  build test ] DEFERRED  IOS_EXIT=deferred
+  [xcodebuild macOS build test] DEFERRED  MAC_EXIT=deferred
+  Evidence (verbatim):
+    $ xcodebuild -version
+    xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory
+    '/Library/Developer/CommandLineTools' is a command line tools instance
+  The runner has Command Line Tools only — no full Xcode, hence no `xcodebuild`, no iOS Simulator
+  destinations, and no XCTest runtime. The full-app iOS-Simulator + macOS build/test gate is therefore
+  DEFERRED to a signed Xcode CI runner (per apps/macos-pending-verifications.md), matching the sanctioned
+  "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date (e.g. 0008 ResultPanel,
+  0010 ToolCard, 0237 AiUsageCard). The Tests file is co-located in feature-views/ — the established repo
+  convention (171 sibling *.Tests.swift) forced by this prompt's allowed-files glob; full XCTest EXECUTION
+  belongs to that deferred Xcode gate.
+
+WHOLE-TREE GATES (run exactly as written in the prompt; pre-existing out-of-scope findings disclosed)
+  swiftformat --lint apps/apple → "1/1919 files require formatting":
+      TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes)
+      — UNMODIFIED vs HEAD; NOT in this prompt's allowed files; not introduced here.
+  swiftlint --strict (1915 files) → "Found 1 violation, 1 serious":
+      dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length)
+      — UNMODIFIED vs HEAD; NOT in this prompt's allowed files; the SAME pre-existing violation
+        predecessor 0008 ResultPanel documented. This surface is clean under both whole-tree gates.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the xcodebuild iOS/macOS build+test gate is reported DEFERRED with verbatim
+                           `xcodebuild -version` evidence — never as passing. Every PASS above is a real,
+                           re-run command result pasted from this runner.
+  2  No scope narrowing  : every web branch reproduced — unlocked/locked, the >=0.8 near-complete cut-over,
+                           the gold/grey ring, the grayscale 50% locked icon, the round(progress*100) pct,
+                           all three sizes; PLUS the full leaf-state contract (loading/empty/error/content +
+                           live/stale/offline). All states render — no hidden surface.
+  3  No skip-and-assume  : every runnable gate executed here; raw exits pasted; the DEFERRED gate's blocker
+                           was confirmed by running `xcodebuild -version`, not assumed; the two whole-tree
+                           findings were each re-confirmed UNMODIFIED vs HEAD by `git status --porcelain`.
+  4  No stubs as final   : complete production surface + 24 real tests; placeholder scanner COUNT=0; no
+                           TODO/FIXME/stub/mock/Coming-soon/Placeholder/Lorem anywhere in the shipped files.
+  5  No parity shortcut  : the near-complete threshold, the percent rounding, the ring-visibility rule, the
+                           ring-arc clamp, the accent decisions, and the sizeConfig metrics are each
+                           unit-asserted against the exact web expressions.
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 design tokens, P1/S10 i18n facade, P1/S11
+                           view.opened telemetry, and the established P4 "isolated verify + DEFERRED Xcode"
+                           disposition all honoured; no predecessor surface was modified (only 7 new untracked
+                           AchievementBadge.* files).
+  8  No commit on red    : the committed artifact (7 AchievementBadge.* files + this log) is GREEN on every
+                           per-surface gate AND on a real macOS Swift-6 strict-concurrency type-check; the
+                           deferred full-app gate is blocked only by the absent Xcode toolchain, and the two
+                           whole-tree findings are pre-existing siblings this commit does not touch.
+  9  No silent drift     : changes are confined to feature-views/AchievementBadge.{swift,Model,Adapter,Views,
+                           Previews,Tests}.swift + AchievementBadge.strings and this log; the co-located-test
+                           convention and the two pre-existing whole-tree findings are disclosed above.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic AchievementBadge shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED on this runner: it TYPE-CHECKS against the real SwiftUI + Observation frameworks
+  and the real design system under the app's own Swift 6 strict-concurrency rules (macOS 15 target), its 24
+  tests type-check in-module against the real Model+Adapter, and swiftlint / swiftformat / placeholder are
+  all green on the surface. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not
+  failed by this code) because the runner is Command Line Tools only; it is owned by the signed Xcode CI
+  runner per apps/macos-pending-verifications.md. Two pre-existing whole-tree lint/format findings live in
+  unrelated sibling files (ActionBuilder.Previews.swift, LifetimeStatsWidget.Adapter.swift), both UNMODIFIED
+  vs HEAD and outside this prompt's allowed files.
+
+COMMIT
+  git add apps/apple/TeslaSync/feature-views/AchievementBadge.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0051-AchievementBadge.log
+  git commit -m "feat(apps/apple/feature-views): add AchievementBadge surface (P4)"
+
+EXIT=0
+STATUS=DONE

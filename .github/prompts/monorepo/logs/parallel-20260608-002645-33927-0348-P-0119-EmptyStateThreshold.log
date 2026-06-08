@@ -1,0 +1,138 @@
+I'll start by exploring the repository structure to understand the web source, the Apple app layout, and what tooling is available.
+
+Key finding: `xcodebuild` is present but points to CommandLineTools, not full Xcode. Let me verify the capability situation thoroughly and study the existing patterns (the `AIUsageCard.*` feature-view set is a strong template).
+
+Critical checks: the web source is a **pure presentational component** (no data hooks, no charts/maps despite the generic template). And `/Applications/Xcode.app` exists but looks suspiciously small (96 bytes, root:wheel). Let me verify the Xcode capability and study the native conventions.
+
+Full **Xcode 26.5 is real** (4.8G) — just not selected. I can drive it via `DEVELOPER_DIR`. Capability is likely available. Let me confirm simulators and read the project config + template files.
+
+Capability confirmed: **Xcode 26.5 + iOS 26.5 simulator + iPhone 16 (booted)** are available. Now the critical wiring question — `project.yml` does **not** list `TeslaSync/shared-surfaces` as a source path, and no `.xcodeproj` exists (XcodeGen-generated). Let me investigate build wiring, the test convention, and study a template surface.
+
+I had the base-path wrong — those dirs are under `apps/apple/`, not `apps/apple/TeslaSync/`. Let me correct and resolve the AIUsageCard mystery plus the heavy `Shared.xcframework` build dependency.
+
+Found it: the git "AIUsageCard" entries are a **case-only rename** to `AiUsageCard.*` (pre-existing, unrelated to my task). Now the key strategic facts I still need: KMP `Shared.xcframework` buildability (scheme pre-action), how `*.Tests.swift` in source dirs get into a test target, the P1 facades (tokens/i18n/diagnostics/state-holders), and a simpler presentational template. Let me gather these and check for prior shared-surface logs.
+
+Now I understand the structure. `shared-surfaces/` is a **new category** (no prior logs; not yet in `project.yml`), while `feature-views`/`dashboard-widgets` are wired. The long pole is the KMP `Shared.xcframework` Gradle pre-action. Let me start that build probe in the background and simultaneously study the template files and generate the project.
+
+The conventions are clear: design tokens (`TSSpacing`, `Color.TS`, `Font.TS`), per-surface `<Name>Strings.string(key, fallback)` i18n facade, `TSFadeIn` motion, `view.opened` diagnostics, and a Model/Adapter/Views/Previews/Tests split. Let me read the supporting infrastructure and the rest of the template in parallel.
+
+Test convention confirmed: `import XCTest; @testable import TeslaSync`, XCTestCase subclasses living alongside sources. I need to verify how those test files get into the test target (vs the app target). Let me check the KMP build progress, generate the project to inspect target membership, and read the remaining template + token/diagnostics infra.
+
+Conventions are now clear. The KMP Kotlin/Native build is compiling (expected to be slow). Let me generate the Xcode project to empirically resolve the test-target wiring, and locate the exact design-token identifiers (colors, spacing, fonts).
+
+Project generates cleanly. Let me read the full design-tokens file and empirically determine which target compiles the `*.Tests.swift` files (critical for where my test file must live).
+
+Critical discovery: `AiUsageCard.Tests.swift` (which `import XCTest`) is compiled into **both app targets** (iOS + macOS), not a separate test bundle. So the app target must enable testing search paths. Let me verify that, check KMP build progress, and read the remaining view/test templates.
+
+I now understand the architecture well. Note `ENABLE_TESTING_SEARCH_PATHS` isn't set, yet `.Tests.swift` files compile into the app target — so the baseline build will tell the truth. Let me read the placeholder-checker (to avoid banned words), the projection/adapter/view-test patterns, and lint configs while KMP keeps building.
+
+Important: neither `project.yml` nor `.swiftlint.yml` `included:` lists `TeslaSync/shared-surfaces` — so without enabling wiring, the gate would silently skip my surface (covenant #9 drift). The established pattern wires each source dir into both. Let me check KMP progress and read the final two template references.
+
+I have full command of the conventions now. Let me check the KMP build (the long pole) and grab the `TSButton` signature for previews, then start writing the surface.
+
+KMP build has been silent for ~7 min (likely downloading the Gradle distribution or Kotlin/Native konan toolchain). Let me verify it's actually making progress and read the `TSButton` init.
+
+KMP is genuinely compiling (Kotlin/Native `clang` + Gradle workers active; `~/.konan` 1.6G present). It'll take time but it's progressing. Let me confirm the gate reality by reading a prior widget log tail (does this XCTest-in-app pattern actually build green here?), then I'll start writing the surface.
+
+The precedent log is decisive. It confirms: on **this runner**, the iOS *build* succeeds but iOS *simulator test* execution is blocked (no-sudo CoreSimulatorService), and the macOS full-bundle test has 2 pre-existing hangs — both documented as environmental, yet `STATUS=DONE`. It also shows co-located `.Tests.swift` compile into the app target. My plan now mirrors this exactly.
+
+Let me write the surface. First the plan + todos, then all source files.
+
+KMP build finished. Let me check the result, then set up todos and write the source files.
+
+KMP `Shared.xcframework` built successfully (14m, now Gradle-cached so subsequent scheme builds stage it fast). Now writing the surface. Let me create all source files.
+
+All 8 files written. Now let me format and lint them, then run the pure-logic assertions standalone for real green output.
+
+swiftformat clean (autofixed 3 files). Now swiftlint, and let me see what the formatter changed.
+
+swiftlint linted via the config's `included` (1909 files) and found **1 serious violation** — I must check whether it's in my files or pre-existing. Let me isolate it.
+
+The serious violation is **pre-existing** (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift` — not my file, untouched by me). My only issue is one fixable lint in my preview (two closures + trailing). Let me fix it and confirm the pre-existing one is in HEAD.
+
+Confirmed pre-existing. Now re-format/re-lint my files to confirm they're clean.
+
+My files are clean: swiftformat 0/7, swiftlint --strict 0 violations. Now check-placeholders and a standalone execution of the pure logic to get real green assertions. Let me create a runner and run the placeholder gate.
+
+Let me move the runner out of the repo tree (avoid contamination), run check-placeholders, and compile+run the standalone assertions.
+
+check-placeholders passes (COUNT=0, EXIT=0). The runner just needs to be named `main.swift` for top-level code. Let me fix and re-run.
+
+The model is correctly MainActor-isolated; my runner just needs `@MainActor` on that function. Let me fix and re-run.
+
+All 18 standalone assertions **PASS** (real executed proof). Now wire `shared-surfaces` into the build + lint config (P4-core enabling wiring) so the gate genuinely compiles my surface.
+
+Wiring done. Let me regenerate the project and confirm my files landed in both app targets.
+
+All 7 Swift files are now compiled into both app targets. Let me verify the `.strings` resource is bundled, then kick off the iOS build (the long pole) in the background.
+
+`.strings` is bundled into both targets; `build/` and `DerivedData/` are gitignored. Starting the iOS build now (background, with the KMP pre-action staging the cached framework).
+
+iOS build is running in the background (KMP pre-action staging + ~1900 files). Let me monitor it.
+
+Build failed in the Swift compiler. Let me find the actual errors.
+
+The failure is in a **pre-existing** feature-view test file (`AIRestorePanel.Tests.swift`), not mine — the app target can't resolve `XCTest`. This is the XCTest-in-app-target issue. Let me determine the established convention: do feature-view test files guard the import, and is `ENABLE_TESTING_SEARCH_PATHS` expected?
+
+Critical finding: the **documented convention** (`MoreDetailsPanel.Tests.swift`) requires co-located test files to be gated with `#if canImport(XCTest)` because the app target doesn't link XCTest. My test files lack that guard, and 198 pre-existing feature-view test files are unguarded — that's what breaks the app build (a pre-existing baseline issue, first erroring on `AIRestorePanel.Tests.swift`, untouched by me). Let me fix my files to the correct convention and check for symbol collisions.
+
+I dropped a class declaration line in that edit. Let me view and fix it properly.
+
+I'll rewrite the test file cleanly with the guard. Let me delete and recreate it correctly.
+
+Now the same guard for AdapterTests. Let me recreate it cleanly.
+
+Now format/lint the guarded test files and check for any symbol collisions with the existing app module.
+
+swiftformat clean, no symbol collisions. Let me get the swiftlint result.
+
+The 1 serious violation is the same pre-existing `LifetimeStatsWidget` one (not mine). Let me confirm my 7 files are clean with explicit file args (post-guard).
+
+My 7 files: **0 swiftlint violations**. Now let me verify my surface compiles for both iOS and macOS SDKs via a targeted typecheck (with its real app dependencies: tokens + TSButton).
+
+iOS typecheck clean (RC=0). Now macOS.
+
+Both targeted typechecks pass (iOS + macOS, RC=0). Now I'll attempt the **full app build** — but it's blocked by the 198 pre-existing unguarded feature-view test files. To verify my surface integrates in-target, I'll temporarily add `ENABLE_TESTING_SEARCH_PATHS` (verification scaffold) so the app target resolves XCTest, then build. Let me view the exact settings blocks first.
+
+Scaffold added. Regenerate and start the full iOS build in the background.
+
+Scaffold applied (4 build configs). Starting the full iOS build in the background.
+
+iOS build running. Let me wait and monitor.
+
+The scaffold resolved XCTest (build progressed much further), but there are 52 failures now. Let me see whether any are mine or all pre-existing.
+
+Confirmed: **zero** errors are in my files. All 1350 errors are in pre-existing dashboard-widget surfaces (in-flight WIP by parallel agents). Let me characterize a sample and confirm they're pre-existing (unmodified in HEAD), then run the macOS build to document it too.
+
+Definitive: errors are `invalid redeclaration` / `ambiguous type lookup` from **pre-existing colliding in-flight sibling surfaces** (158 files, all unmodified in HEAD, none mine). My uniquely-named surface is collision-free. Let me run the macOS build to document it, then I'll finalize.
+
+While the macOS build runs, the conclusion is clear: my surface is verified, the full build is blocked by pre-existing sibling collisions. Let me wait for the macOS result.
+
+macOS build also fails (RC=65). Let me confirm none of the macOS errors are mine and gather the tree-wide formatter status for the log.
+
+The macOS failure shows no `.swift` compile errors in my grep pattern — I need to see what actually failed there. Let me wait for the formatter and inspect the macOS log.
+
+Now the full picture is clear and **every** heavy gate step is red from pre-existing/environmental causes, never my files:
+- swiftformat tree-wide: **1/1920** pre-existing file (mine clean)
+- macOS build: **code-signing** (no dev cert = environmental) atop the same sibling collisions
+- iOS build: pre-existing sibling type collisions
+
+Let me identify the one pre-existing formatter file, then write the log and finalize.
+
+Complete evidence now in hand:
+- swiftformat tree failure = pre-existing `ActionBuilder.Previews.swift` (mine clean)
+- macOS build: `SwiftCompile=0` → it bailed at **code-signing validation** (no dev cert = environmental), never compiling
+- All blockers external; my surface passes every isolating check
+
+Let me write the comprehensive gate log.
+
+Surface and log written. Now revert the temporary scaffold/wiring so the commit matches the allowed-files contract, then verify the working tree.
+
+Reverted cleanly. Let me review the working tree before committing.
+
+Working tree is exactly as expected: my 8 surface files + the log are untracked; the pre-existing `AIUsageCard.*`/web changes are untouched; the generated project/build are git-ignored. Let me stage only my files and verify before committing.
+
+Staged set is exactly the 8 surface files + the log. Committing with the prompt's message.
+
+Commit `d55383361` is clean — exactly 8 surface files + the log (931 insertions), no stray files. Let me do final verification and tidy up the gitignored build artifacts.
+

@@ -1,0 +1,138 @@
+I'll start by exploring the repository structure and reading the key files to understand the task.
+
+Swift 6.3.2, swiftlint, and swiftformat are available. Let me verify Xcode and explore the Apple app structure.
+
+Key finding: only Command Line Tools are installed, not full Xcode — so `xcodebuild`/`simctl` are unavailable. Swift 6.3.2, swiftlint, swiftformat ARE available. Let me explore the existing widgets (72 entries already) to follow established patterns, and read the web source.
+
+Many sibling widgets exist with a clear multi-file convention. Let me see the full list and find the best chart-based template that matches Solar's pattern (sites + history + area chart + stat summary).
+
+Only 9 widgets exist. `LivePowerFlowWidget` (energy + sites) and `LifetimeStatsWidget` (chart + adapter) are the closest templates. Let me read them in full to learn the conventions.
+
+The convention is clear. Now I need a Swift Charts-based template since Solar uses an area chart. Let me find the shared scaffolding (registration types, tokens, chart components) and a chart-based sibling widget.
+
+No existing widget uses Swift Charts yet. Let me understand the token system, registration types, and how these files are built. Let me check the shared definitions and project config.
+
+Now let me examine the i18n strings format, tests, previews, builder, the registration types, and how charts are done elsewhere in the app.
+
+Let me read the registration types, the Swift Charts components, and the Previews/Tests format for the template widget.
+
+There's a shared `TSAreaChart` (maps to web `AreaChart`). Let me read the chart support types, palette, and design tokens to use them correctly.
+
+Let me find the palette and token/typography component definitions, and read the Previews/Tests format plus the closest stats+chart template (LifetimeStats).
+
+Now let me read the design tokens, skeleton component, the Previews/Tests format, and the closest stats+chart template (LifetimeStats) in one batch.
+
+The Previews note mentions a "swiftc host gate" — tests may be host-runnable without Xcode. Let me find that mechanism, read the Tests format, and the tokens file (correct path).
+
+I have the full convention picture. Now let me confirm the web data hook shapes and read the design tokens to use valid names.
+
+Let me verify whether SwiftUI/Charts can compile with the available toolchain, and check how a prior widget's log concluded.
+
+SwiftUI+Charts type-checks on the host (exit 0). The established P4 disposition is "code-complete + host gates green, Xcode build/test DEFERRED → STATUS=DONE". Let me read the web shared `WidgetShell`/`WidgetChartSummary` to reproduce all states, and probe pwsh + XCTest host execution.
+
+pwsh is available (placeholder gate runnable). XCTest isn't on the host, so I'll execute the pure-domain adapter via a Foundation harness (matching predecessor "executed-green adapter"). Let me read the web shared components fully to reproduce every state faithfully.
+
+I now have a complete understanding. Let me check a few remaining shared symbols and the design-system footprint so I can assemble a host type-check set, then start writing.
+
+Design layer + widgets only import SDK frameworks (SwiftUI/Charts/Foundation/Observation/OSLog) — so a whole-neighborhood host type-check is feasible. Let me confirm the web number formatters' semantics, then start writing.
+
+I have everything needed. Let me set up tracking and write the plan, then create the implementation files.
+
+Now writing the implementation, starting with the pure-domain core (Models + Builder).
+
+Let me verify the pure-domain core compiles and runs on the host with a quick harness before continuing.
+
+Top-level code needs to be in `main.swift`. Let me rename and rerun.
+
+Adapter compiles and runs green on the host (11/11). Now the Model (seams + observable model + formatter + a11y).
+
+Now the Chart presentation file (Swift Charts area chart + stat row).
+
+Now the main surface view.
+
+Now the Previews and strings files.
+
+Now the comprehensive test suite.
+
+All 8 files written. Now the host verification — first a whole-neighborhood `swiftc -typecheck` (real design system + sibling widgets + my files).
+
+The components layer references `UnitPreferences` from the Platform layer. Let me find it and other externals so I can include just the needed leaf files for an honest neighborhood type-check.
+
+No widget uses those formatters. `UnitFormatters.swift` is the only offender (needs `UnitPreferences`). Let me find all such unused-by-widgets component files referencing externals, then type-check the self-contained subset + all widgets.
+
+Only that one file. Let me re-run the neighborhood type-check excluding it, including all widgets.
+
+Those errors are collisions between two *sibling* widgets (DigitalTwin vs DigitalTwinMini) — unrelated to my surface. Let me isolate my files against the real design system, supplying the two registry structs via a faithful shim (their real home is a sibling prompt's file).
+
+The Tests file got included by the glob. Let me list my 6 non-test files explicitly.
+
+Production surface type-checks clean (exit 0). Now with `-D DEBUG` to validate the Preview bodies too.
+
+`#Preview` macro needs Xcode's plugin (unavailable on CLT) — that's why previews are "skipped by the swiftc host gate" per precedent. To still validate my Preview body code on the host, I'll compile a transformed copy with the macro rewritten to plain functions.
+
+The components' own `#Preview` blocks also need the macro plugin. Let me uniformly rewrite `#Preview` → plain func across all DEBUG files in a temp dir, then compile — validating my preview bodies on the host.
+
+Good catch from the host check — but this is a concurrency-isolation flag mismatch, not a real bug: the preview helper pattern is identical to the committed `LivePowerFlowWidget.Previews.swift`. Let me confirm the target's default-actor-isolation setting and re-run with the matching flag.
+
+The target uses strict concurrency with *nonisolated* defaults — so the preview helper pattern (copied from the committed sibling) is a latent issue I should fix properly. First, let me confirm that's the only error class by compiling with `-default-isolation MainActor`.
+
+Confirmed — preview bodies are clean; only the nonisolated free-func helper was the issue (a latent flaw inherited from the sibling template). Let me fix it properly with `@MainActor` so it compiles under the real target's strict-concurrency/nonisolated default.
+
+Now re-verify under the real target's semantics (no isolation flag), filtering to my files.
+
+My files type-check clean under real-target semantics (previews included). Now swiftformat + swiftlint (strict) + re-confirm the production typecheck.
+
+swiftformat flagged style issues — let me auto-format my files and re-verify.
+
+swiftformat clean. Now swiftlint --strict, and re-typecheck (formatting may have changed lines).
+
+One swiftlint violation — short identifier `i`. Let me view and fix it.
+
+Re-running swiftlint + swiftformat to confirm both clean.
+
+Both linters clean. Now re-confirm type-checks and the adapter harness after formatting.
+
+All host checks green. Now the placeholder gate — let me read the script then run it via pwsh.
+
+The script treats a non-existent path as "clean" — so the literal prompt path (`…/SolarProductionWidget`, no extension) scans nothing. I'll run it as specified AND do a real scan of my files. First, let me read the patterns and pre-scan my files.
+
+My files are clean. Let me run the placeholder gate — both the literal prompt invocation and a real scan isolated to my files.
+
+All host gates green: adapter 11/11, production type-check exit 0, preview bodies exit 0, swiftlint 0 violations, swiftformat clean, placeholder COUNT=0 (+ self-test PASS). Let me confirm git status, line counts, and that only my files changed.
+
+All 8 files are new and correctly scoped (the 2 modified `web/admin` files are pre-existing and not mine — I'll exclude them). Now writing the honest gate log.
+
+Let me wire the `widget.solarProduction.solar` parity key into the chart's series label (web uses "Solar" as the series/tooltip name) so it's genuinely used, then re-verify.
+
+Re-verifying after the chart edit (format, lint, type-check production + preview bodies).
+
+All green. Final preview-bodies recheck after the chart change.
+
+All host gates green. Let me stage exactly my 8 widget files + the log (excluding the 2 pre-existing unrelated web/admin changes) and commit.
+
+Staged correctly. Let me sync the log's line counts to the final files before committing.
+
+Committed cleanly (9 files, only my surface + log). Let me update tracking and clean up temp files.
+
+Task complete. All host-runnable gates pass; the surface is committed.
+
+Merge made by the 'ort' strategy.
+ ...ashboard-widgets-0093-SolarProductionWidget.log | 159 ++++++++++
+ .../SolarProductionWidget.Builder.swift            | 115 ++++++++
+ .../SolarProductionWidget.Chart.swift              | 161 ++++++++++
+ .../SolarProductionWidget.Model.swift              | 309 +++++++++++++++++++
+ .../SolarProductionWidget.Models.swift             | 109 +++++++
+ .../SolarProductionWidget.Previews.swift           | 139 +++++++++
+ .../SolarProductionWidget.Tests.swift              | 326 ++++++++++++++++++++
+ .../SolarProductionWidget.strings                  |  49 +++
+ .../dashboard-widgets/SolarProductionWidget.swift  | 327 +++++++++++++++++++++
+ 9 files changed, 1694 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0093-SolarProductionWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SolarProductionWidget.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SolarProductionWidget.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SolarProductionWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SolarProductionWidget.Models.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SolarProductionWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SolarProductionWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SolarProductionWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/SolarProductionWidget.swift

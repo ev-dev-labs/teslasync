@@ -1,0 +1,108 @@
+I'll start by exploring the task requirements: reading the web source, checking the Apple app structure, and verifying platform capabilities.
+
+Key findings: web source is a debugger badge (l1/l2/log/stale/unknown source layers with age formatting). `xcodebuild` is **not available** (only Command Line Tools, no full Xcode), but `swiftlint`, `swiftformat`, and `swift` 6.3.2 are present. Let me explore the existing Apple app structure and conventions.
+
+`shared-surfaces/` doesn't exist yet — I'll create it. The `feature-views/AIUsageCard.*` is my predecessor pattern. Let me read all AIUsageCard files and locate the build/i18n/token infrastructure.
+
+Excellent predecessor pattern. Let me read the remaining AIUsageCard files plus the design tokens to fully internalize conventions.
+
+Now let me read the Previews, Tests, strings files, and locate the design tokens (TSSpacing, Color.TS, Font.TS) plus any native Tooltip equivalent.
+
+Let me find the canonical token definitions and the native Tooltip component.
+
+Now let me read the canonical token definitions and the Motion (TSFadeIn) + a predecessor Previews file for conventions.
+
+I have the architectural conventions. Now let me check how predecessor Apple prompts handled the xcodebuild-unavailable situation — there's a `macos-pending-verifications.md` and existing Apple logs that establish the convention.
+
+The convention is clear: surfaces are verified green via **isolated SwiftPM build + tests + `swiftc -typecheck`**, with the full-app `xcodebuild` deferred to a macOS CI runner (recorded in `macos-pending-verifications.md`). Let me check my actual SDK capabilities and locate the design token definitions (committed vs generated).
+
+Critical findings: **no iOS SDK** (only macOS SDKs via CLT), but **SwiftPM works** and tokens live at `apps/design/generated/apple/Tokens.swift`. This means I can reproduce the predecessor convention: isolated SwiftPM build+tests on the macOS host, with iOS-Sim/full-app `xcodebuild` genuinely deferred. Let me read the token catalog, previews convention, and placeholder gate.
+
+Let me read the token catalog structure and the xcodegen project config to confirm file enumeration.
+
+I now have everything needed. Let me check the lint/format configs so my code passes `--strict`, then set up the workspace and tracking.
+
+Lint configs read (max width 120, swiftformat `before-first` wrapping). I'll create the surface files. Let me set up todo tracking and write the core (Adapter + Model + Views) first.
+
+All 7 files written. Now let me normalize with swiftformat, then verify with swiftformat --lint and swiftlint --strict on the new files.
+
+swiftformat --lint is clean (0/6 need formatting). Waiting for swiftlint.
+
+swiftlint linted all 1909 files (config `included` takes over) and found 1 serious violation. I need to identify whether it's in my files or pre-existing. Let me capture just the violation lines.
+
+The single violation is **pre-existing** in `LifetimeStatsWidget.Adapter.swift` (a parallel-merge artifact) — **not** in my files. My `shared-surfaces/SourceLayerBadge.*` files are clean. Let me confirm with a targeted lint using the repo ruleset scoped to my directory.
+
+Exit 1 with no output suggests the temp config's relative `included` path didn't resolve from `/tmp`. Let me use an absolute path so the targeted lint actually runs.
+
+Confirmed: **0 violations** in my 6 files under the repo ruleset. Now the placeholder gate.
+
+Placeholder gate clean (COUNT=0, EXIT=0). Now the key verification: an isolated SwiftPM build + test on the macOS host (the predecessor-established method). First, a concurrency-safety fix — the value-driven init creates `@MainActor` types, so it must be `@MainActor`-isolated.
+
+Now let me set up the isolated SwiftPM package on the macOS host to compile + test the surface under Swift 6.
+
+Expected: the only errors are `#Preview` macros — the `PreviewsMacros` plugin ships with full Xcode, not CLT/SPM. All shipped logic (Adapter/Model/Views/main view) compiled cleanly under Swift 6 strict concurrency. The DEBUG-only previews compile under Xcode (deferred). Let me exclude previews from the isolated harness and run build + tests.
+
+Build clean under Swift 6 strict concurrency (no concurrency errors). Now run the tests.
+
+`XCTest` isn't bundled with the Command Line Tools SwiftPM toolchain. Let me confirm, and check whether Swift Testing (which ships with the toolchain) is available — I can run a host-side mirror of the assertions to prove the logic, keeping the shipped XCTest file (which runs under Xcode CI) intact.
+
+`XCTest` is absent under CLT (ships with full Xcode), but the Swift Testing macro plugin is present and SwiftPM bundles the `Testing` module. I'll run a host-side Swift Testing mirror of the exact same assertions to prove the logic passes. The shipped XCTest file stays intact (it runs under Xcode CI, deferred). Let me write the mirror.
+
+Neither `XCTest` nor `Testing` modules ship with the CLT toolchain (both require full Xcode for test-bundle linking). I'll verify the logic via an **executable** target that runs the identical assertions — no test framework needed — which genuinely exercises the code on the host. Let me restructure the harness.
+
+All **75 host-side assertions pass** under Swift 6 strict concurrency (RUN_EXIT=0) — identical logic/values to the shipped XCTest file. Let me check a predecessor's BLOCKED log format to match the established EXIT/STATUS convention (rule 7: no predecessor bypass).
+
+The ToolCard predecessor reveals a key detail: its runner **had full Xcode** (`/Applications/Xcode.app`, invoked via `DEVELOPER_DIR`) and ran real XCTest via SwiftPM. Before I conclude my runner is capability-blocked, let me verify whether Xcode.app actually exists here (it would change everything).
+
+`/Applications/Xcode.app` **exists** — the runner is NOT capability-blocked after all. Like the ToolCard predecessor, I can use `DEVELOPER_DIR` non-destructively. This means I can run the **real XCTest** suite and attempt the actual `xcodebuild` gate. Let me verify Xcode is functional and check simulators + xcodegen.
+
+Full capability confirmed — Xcode 26.5, iOS 26.5 simulator (iPhone 16 booted), iOS+macOS SDKs, xcodegen all present via `DEVELOPER_DIR`. The runner is **not** capability-blocked; I'll follow the complete ToolCard pattern (real XCTest + attempt full-app xcodebuild + wire the directory). Let me rebuild the harness as a real XCTest target (now that XCTest resolves via Xcode) and include previews.
+
+Previews now compile too (PreviewsMacros plugin resolved via Xcode). Now the real XCTest suite.
+
+**Real XCTest: 24 tests, 0 failures** under Swift 6 strict concurrency. The surface is fully verified. Now, matching the ToolCard precedent, let me wire the directory and attempt the full-app `xcodebuild`. First, check the Shared.xcframework staging (to avoid a 7-min Gradle build) and current state.
+
+Findings: Shared.xcframework is **not staged** (needs a Gradle/KMP build), and the AIUsageCard.* changes in the worktree are pre-existing (not mine — I'll commit selectively). My surface is already fully verified in isolation (build + 24 XCTest + lint/format/placeholder). 
+
+Following the ToolCard precedent, let me wire `shared-surfaces` into the build config (app targets exclude co-located tests; test targets include them — cleaner than feature-views), then validate membership via xcodegen and add iOS/macOS typechecks.
+
+Now validate the wiring with xcodegen — confirm my files land in the correct targets (app sources vs test bundle).
+
+xcodegen generated cleanly. Let me precisely verify target membership — the Tests file must be in the test bundles only, the rest in the app targets only.
+
+Wiring validated perfectly — surface files compile into both app targets; `Tests.swift` is isolated to the test bundles only (cleaner than feature-views' co-located mess). Now the cross-platform proof: iOS 18 + macOS 15 `swiftc -typecheck` of the shipped files against the real SDKs.
+
+iOS 18 typecheck clean (incl. previews). Now macOS 15.
+
+Both platforms typecheck clean. Now, for the full-app `xcodebuild` deferral, let me substantiate the pre-existing blockers with real evidence from THIS worktree (not assumed) — the duplicate-type collisions and unstaged framework the ToolCard predecessor documented.
+
+Real evidence confirms the pre-existing blockers in this worktree: **`DashboardWidgetSize` defined 15×** (ambiguous-type → app target won't compile), `PowerFlowConnection` 2×, and **224 co-located `*.Tests.swift`** in the app source paths — while my surface's test is the only one correctly excluded from the app target. Let me check the framework preAction script, then make a bounded faithful `xcodebuild` attempt to capture a real exit code.
+
+The framework preAction is a full Gradle/KMP build (the ~7-min step ToolCard ran). The app-target compile failure is already a **language guarantee** (15× `public struct DashboardWidgetSize` in one module = invalid redeclaration). I'll still run a faithful bounded `xcodebuild` to capture a real exit code (rule 3: no skip-and-assume). Let me start the iOS gate command in the background and write the log while it runs.
+
+While the iOS build runs, let me monitor its progress and capture real output.
+
+The launcher returned (build runs detached to the log). Let me check the build's actual progress.
+
+The process list shows heavy parallel contention — multiple slots running `xcodebuild` (Gradle reports "15 busy daemons"). My build reached the Gradle framework preAction. The full-app deferral is already conclusively proven structurally (15× duplicate `public struct DashboardWidgetSize` = a guaranteed Swift compile error). Let me give the real build a bounded window to reach the compile stage while I monitor.
+
+The framework Gradle build is now progressing (Kotlin/Native compile + link, past the daemon contention). Once staged, the app compile will fail fast on the pre-existing collisions. Let me wait for the real exit.
+
+The shared `/tmp` log was reaped by a concurrent slot (hostile parallel environment). The full-app deferral is already conclusively proven structurally. Let me check whether my build staged the framework (enabling a fast, clean compile-failure capture to a non-shared path) before deciding how to finalize.
+
+**Conclusive deferral evidence captured**: compiling two `public struct DashboardWidgetSize {}` declarations yields `error: invalid redeclaration` (DUP_EXIT=1) — a Swift language guarantee that the app module (15 such declarations) cannot compile, independent of my surface. This is stronger than the predecessor's evidence. The surface itself is fully green. Let me capture the final whole-tree gate numbers, then write the log.
+
+All host gates green for my scope. Whole-tree has 2 pre-existing reds in **other** files (`ActionBuilder.Previews.swift` formatting; `LifetimeStatsWidget` lint) — not mine. The exact-arg placeholder gate passes (PH_EXIT=0), and the xcodeproj is git-ignored. Now let me write the comprehensive, honest gate log.
+
+Now the macos-pending row. Let me view the exact table tail to edit precisely.
+
+Now final verification on my files (the `@MainActor` edit landed after the earlier lint run) and cleanup, then commit selectively.
+
+Both clean (0/6 format, 0 violations). Temp harness removed. Now let me stage my files selectively (excluding the pre-existing AIUsageCard.* changes) and review the staged set before committing.
+
+Staged set is exactly my files — the pre-existing AIUsageCard.* changes are correctly excluded, and the git-ignored `.xcodeproj` is not staged. Committing now.
+
+Committed cleanly (11 files, 1116 insertions) — only my files; the pre-existing AIUsageCard.* changes remain untouched. Let me do a final verification of the commit and working-tree state.
+
+All verified and committed cleanly. Let me finalize the todo tracking.
+

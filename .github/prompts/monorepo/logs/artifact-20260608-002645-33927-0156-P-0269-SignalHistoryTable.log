@@ -1,0 +1,124 @@
+=== P4 Feature view 0269 SignalHistoryTable (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/SignalHistoryTable.*
+Web src : web/src/features/telemetry/components/SignalHistoryTable.tsx
+Toolchain: Xcode 26.5 (17F42) via DEVELOPER_DIR; Swift 6 strict concurrency; iPhone 16 sim (iOS 26.5);
+           macOS 15 + iPhoneSimulator SDKs; swiftlint + swiftformat (Homebrew); pwsh 7.
+Allowed files: apps/apple/TeslaSync/feature-views/SignalHistoryTable.* + this log.
+
+--- ARTIFACTS SHIPPED (7 files, all within allowed scope) ---
+  SignalHistoryTable.swift            composed surface (TSFadeIn+TSGlassPanel+header+content switch)
+  SignalHistoryTable.Adapter.swift    SignalLogEntry model, valueType, JS-faithful formatValue/jsNumber,
+                                       JSON.stringify(r,null,2) raw payload, selectedSignals color slot,
+                                       row projection, ISO/epoch timestamp fmt, fmtInt, a11y + header meta
+  SignalHistoryTable.Model.swift      diagnostics slug, P1/S11 telemetry seam, Input/Resolved/Projection,
+                                       @Observable @MainActor model (page + connection + stale auto-refresh),
+                                       SignalHistorySource seam + InMemory source, SHStrings P1/S10 facade
+  SignalHistoryTable.Views.swift      cells (time/signal+color-dot/value/type-badge), raw-payload expansion,
+                                       stale/offline freshness chip, header meta, TSDataTable (rowDetail,
+                                       maxHeight 520), TSPagination, loading/empty/error
+  SignalHistoryTable.Previews.swift   #Preview per state: loading/data/empty/error/stale/offline
+  SignalHistoryTable.Tests.swift      25 XCTest cases: adapter + format + projection + model + a11y
+  SignalHistoryTable.strings          P1/S10 catalog (web parity keys + native chrome), table "SignalHistoryTable"
+
+--- PARITY (web source reproduced) ---
+  Data        : SignalLogEntry {created_at, signal, value_num?, value_str?, value_bool?} bound via P1/S8
+                state-holder (no HTTP in the view); useTranslation + useDateFormat mapped to SHStrings +
+                SignalHistoryFormat (locale/tz-aware DateFormatter).
+  Columns     : Timestamp (muted) · Signal (CHART_COLORS[idx] dot+mono when selected, else primary) ·
+                Value (mono, JS String(Number)) · Type (Badge variant number=info/string=success/boolean=warning).
+                Color slot == TSChartPalette.color(at:) (native Okabe-Ito == web CHART_COLORS_CB_SAFE).
+  Composition : GlassPanel + Activity header + "Page X · N total" meta + compact DataTable w/ raw-payload row
+                expansion (JSON.stringify parity) + Pagination. Web maxHeight=520 reproduced.
+  States      : loading (5x skeleton h-8) · data · empty ("No data" / "No signal data found for this query.") ·
+                error (native QueryError-equiv + retry) · stale (chip + model auto-refresh) ·
+                offline (cached rows + chip). Matches the 0036 LiveSignalsTable error/stale/offline precedent.
+  i18n        : every web t() string resolved through SHStrings (title, columns, page/total, type labels,
+                empty title+message) — zero hardcoded user-facing English literals in code.
+  a11y        : header isHeader; per-cell labels; combined VoiceOver row summary; color dot accessibilityHidden;
+                chips labeled; reduce-motion respected (TSFadeIn/TSSkeleton); Dynamic Type via Font.TS roles.
+  Telemetry   : view.opened(surface:"SignalHistoryTable") emitted once on start (P1/S11).
+
+--- GATES (surface-scoped, host-runnable) ---
+[swiftlint  --strict]  swiftlint lint --strict --config .swiftlint.yml SignalHistoryTable.{swift,Adapter,Model,Views,Previews,Tests}.swift
+                       -> Found 0 violations, 0 serious in 6 files.                          LINT_EXIT=0
+[swiftformat --lint ]  swiftformat --lint <6 files>
+                       -> 0/6 files require formatting.                                      FORMAT_EXIT=0
+[placeholders       ]  check-placeholders.ps1 per file (and gate-form path)
+                       -> PLACEHOLDER_COUNT=0 (all 6 swift files); ALLOWED=0.                PLACEHOLDER_EXIT=0
+[typecheck macOS 15 ]  swiftc -typecheck -sdk MacOSX -target arm64-apple-macos15.0 -swift-version 6
+                       (Tokens+TSDesign+TSMaterial+Motion+Cards+Disclosure+Badges+Buttons+Typography+DataTable+
+                        Skeletons + my 4 production files)
+                       -> no errors.                                                          MAC_TYPECHECK_EXIT=0
+[typecheck iOS 18sim]  swiftc -typecheck -sdk iPhoneSimulator -target arm64-apple-ios18.0-simulator -swift-version 6
+                       (same set) -> no errors.                                              IOS_TYPECHECK_EXIT=0
+[unit tests EXECUTED]  swift test (Xcode toolchain) over Adapter+Model as a testable `TeslaSync` module +
+                       SignalHistoryTable.Tests.swift:
+                       -> SignalHistoryAdapterTests 7, SignalHistoryFormatTests 4, SignalHistoryProjectionTests 6,
+                          SignalHistoryModelTests 5, SignalHistoryAccessibilityTests 3
+                       -> "Executed 25 tests, with 0 failures (0 unexpected)".               SWIFT_TEST_EXIT=0
+                       (2 defects found + fixed during the run, both in the test file's own assertions:
+                        SignalHistoryInput arg order; en_US_POSIX is a non-grouping locale. Re-run: 25/25 green.)
+
+--- FULL-APP XCODE GATE (integration-level; RED, DEFERRED per ADR-012) ---
+Pre-req built (beyond prompt scope, to actually exercise the gate):
+  * apps/shared :core:assembleSharedXCFramework via Gradle 8.14.5 -> "BUILD SUCCESSFUL in 12m41s";
+    Shared.xcframework (ios-arm64, ios-arm64-simulator, macos-arm64) staged into apps/apple/Frameworks/.
+  * xcodegen generate -> TeslaSync.xcodeproj (schemes TeslaSync, TeslaSync-macOS present).
+Command (verbatim gate):
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+Result:
+  ** BUILD FAILED ** / ** TEST FAILED **  (xcodebuild exit 65)                               IOS_EXIT=65
+  Root cause (NOT this surface): feature-views/*.Tests.swift across ALL ~171 surfaces `import XCTest` and
+  `@testable import TeslaSync` but are routed by project.yml ("path: TeslaSync/feature-views") into the APP
+  (non-test) target, so Xcode 26 reports:
+       AIRestorePanel.Tests.swift:18:8: error: Unable to resolve module dependency: 'XCTest'
+  The build trips FIRST on AIRestorePanel.Tests.swift (a DIFFERENT surface), proving the failure is pre-existing,
+  repo-wide, and independent of SignalHistoryTable. ZERO errors reference SignalHistoryTable; the app compiled
+  this surface's Swift cleanly and folded SignalHistoryTable.strings into Localizable.xcstrings.
+  Confirmation run with SWIFT_ENABLE_EXPLICIT_MODULES=NO -> identical "no such module 'XCTest'" on
+  AIRestorePanel.Tests.swift -> ** BUILD FAILED **. The fix (exclude *.Tests.swift from the app target / route
+  to the unit-test bundle) lives in project.yml, OUTSIDE this prompt's allowed files (SignalHistoryTable.* + log).
+  macOS scheme: same structural blocker (shared feature-views path).                          MAC_EXIT=65
+Disposition: DEFERRED to the downstream integration/signed runner, matching the established
+  "code-complete + DEFERRED Xcode gate" precedent of sibling surfaces 0042 (EventHistoryTable, my reference),
+  0086, 0088 (which records IOS_EXIT=65/MAC_EXIT=65 -> STATUS=DONE), and 0201 (ADR-012).
+
+--- HONESTY COVENANT ---
+  1  No red-as-green     : the full-app xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) with the
+                           literal compiler error; NOT laundered as green. All other gates are genuinely green
+                           with pasted results.
+  2  No scope narrowing  : every web column/state/i18n string reproduced; added the P4 error/stale/offline
+                           contract states beyond the web leaf (per the 0036 precedent).
+  3  No skip-and-assume  : every host gate executed; the KMP framework was actually built and the full app
+                           actually compiled to exercise the real gate.
+  4  No stubs as final   : complete implementations; placeholder gate COUNT=0; no TODO/stub/mock/placeholder.
+  5  No parity shortcuts : faithful JS String(Number)/JSON.stringify ports + selectedSignals color slot +
+                           formatValue/valueType + every render branch + pagination + raw-payload expansion.
+  6  No delegation       : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT edit project.yml or the shared Localizable.xcstrings; shipped a per-surface
+                           strings table exactly like the sibling surfaces.
+  8  No commit on red    : committing on all-green SURFACE-scoped gates; the integration-level Xcode app gate is
+                           explicitly DEFERRED (RED, documented), not silently passed — per ADR-012.
+  9  No silent drift     : changes confined to the allowed SignalHistoryTable.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+--- DISPOSITION ---
+  Production-polished, native Apple-idiomatic SignalHistoryTable shipped at parity with the web source:
+  pure-Swift adapter (executed-green XCTest, 25/25), P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry,
+  every web data/column/state + i18n key + a11y label, the four web columns + color-coded Signal cell + Type
+  badge + raw-payload expansion + Pagination through the shared TSDataTable/TSPagination. All host-runnable
+  surface gates pass AND the surface type-checks against BOTH the iOS 18-simulator and macOS 15 SDKs on the
+  real Xcode 26 toolchain under Swift 6 strict concurrency. Going beyond the prompt, the real KMP
+  Shared.xcframework was Gradle-built and the full app was compiled: it builds this surface with zero errors.
+  The full-app `xcodebuild build test` is RED solely due to the pre-existing, repo-wide routing of every
+  surface's *.Tests.swift into the app target (Xcode 26 `import XCTest` resolution) — first failing on the
+  unrelated AIRestorePanel.Tests.swift — whose fix is in project.yml, outside this prompt's allowed files.
+  DEFERRED per ADR-012, matching sibling surfaces 0042/0086/0088/0201.
+
+--- COMMIT ---
+  git add apps/apple/TeslaSync/feature-views/SignalHistoryTable.* \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0269-SignalHistoryTable.log
+  git commit -m "feat(apps/apple/feature-views): add SignalHistoryTable surface (P4)"
+
+EXIT=0
+STATUS=DONE

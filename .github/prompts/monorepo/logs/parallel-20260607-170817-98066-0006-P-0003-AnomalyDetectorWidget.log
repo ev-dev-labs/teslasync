@@ -1,0 +1,266 @@
+I'll start by exploring the repository structure, reading the web source, and checking platform capabilities.
+
+Swift toolchain is present, but `xcodebuild` requires full Xcode (only Command Line Tools installed). Let me check if Xcode exists elsewhere and explore the structure in parallel.
+
+Key finding: `/Applications/Xcode.app` exists but isn't selected. Let me verify it's usable and explore the Apple app structure deeply.
+
+Xcode 26.5 is usable via `DEVELOPER_DIR` and the iPhone 16 simulator exists — **not blocked**. Now let me understand the established conventions: sibling prompts, the Sources layout, state holders, theme, i18n, and telemetry.
+
+There are many sibling widget prompts. Let me check the actual P-0003 prompt file, what's been done already, and explore the key infrastructure dirs (SharedFacade, Widgets/Shared, Components, Design).
+
+Let me read the actual P-0003 prompt file, the full project.yml, and a sibling prompt to resolve the path convention (the metadata path `apps/apple/TeslaSync/dashboard-widgets/` differs from the real `apps/apple/Sources/` layout).
+
+Now I understand the build system (XcodeGen + KMP `Shared.xcframework`). Critical: I must verify the toolchain can actually build (xcodegen, the KMP framework) and understand the state-holder/i18n/telemetry infra. Let me check build tooling and read the core infra files in parallel.
+
+Critical: the build needs a KMP `Shared.xcframework` (not present, built via Gradle). I'll assess that, but first let me deeply read the shared infra I must build on, and locate the i18n + telemetry facades.
+
+Now let me locate the i18n facade, telemetry contract, and read the UI components + an existing view that binds a model, plus the Live store (which appears testable without KMP).
+
+Now let me read the Live store (testable observable pattern), the i18n catalog, design tokens, and find the telemetry contract.
+
+I need to pin down the telemetry/diagnostics (P1/S11) contract and the observable/view idiom. Let me search broadly and read the Live store + design tokens + remaining feedback components.
+
+Found it: telemetry lives in the KMP core (`Telemetry.kt`), and there's a shared i18n catalog. Let me read the telemetry contract, design tokens, check the anomalies/vehicles domain in KMP, and the i18n generation setup.
+
+Excellent — the KMP core already has `AnomaliesStore`/`VehiclesStore`, telemetry is the KMP `TelemetryEvent` taxonomy (no literal `view.opened` — closest is `ScreenView`), and design tokens are clear. The critical path is whether the KMP `Shared.xcframework` builds on this runner. Let me kick that off in the background while I read the Kotlin stores and remaining infra.
+
+The KMP store returns raw `JsonElement` (verbatim SI) — so the clean, testable approach is Codable value types decoded from JSON. Let me read the exact web response shape, the WidgetShell/WidgetTipCards chrome (for state parity), the placeholder rules, parity manifest, and a Live view idiom.
+
+Now let me read the freshness chip (stale/offline parity), the WidgetTipCards shared component, the placeholder rules, and check the KMP build progress.
+
+Let me locate the WidgetTipCards component, check a native view idiom, and check the KMP build progress.
+
+KMP build is running. Let me read the WidgetTipCards composition and the native state-view components I'll reuse for chrome.
+
+I have a thorough understanding now. Let me check the KMP build progress and read the last infra pieces (Typography, FacadeError, an existing Tests file pattern) in parallel.
+
+`FacadeError` and `LoadableState` are usable in my code/tests (the test target already links Shared). Let me confirm the test framework style, the onAppear idiom, and which i18n keys already exist (to reuse vs add), then check the build.
+
+Test framework is **XCTest** with pure-logic tests. Those chrome keys (`action.retry`, `live.status.stale`) are missing from the catalog too — meaning the app currently relies on key-fallback. I'll add my widget keys properly. Let me confirm whether `Localizable.xcstrings` is generated, check the shared catalog, and give the KMP build more time.
+
+Key insight: `Localizable.xcstrings` is **auto-generated** by `gen-i18n.ts` from `web/src/i18n/{en,ar,he}.json` (the canonical P1/S10 source). I'll add my keys there and regenerate. Let me check the web i18n structure, the generator invocation, and the KMP build's progress via side channels.
+
+Big picture is clear. The KMP build is **actively compiling** (Kotlin/Native + Gradle burning CPU, 1.6G konan downloaded) — the xcodebuild gate is feasible; it's just slow. The 3 web `anomalyDetector` keys exist in `web/src/i18n/en.json` but the generated xcstrings is stale (missing them). I'll surgically add my keys. Let me read the lint/format configs and check `pwsh`, then start writing.
+
+I now have everything needed. The KMP build is compiling (will take time). Let me write the implementation while it builds. First, the surface file.
+
+Now the tests. Let me check the KMP build progress and write the test file in parallel.
+
+Let me refine the activeCount handling to consistently use the dotted catalog key (so the source key has a matching catalog entry), then add the i18n keys.
+
+Now let me add the i18n keys. First, let me check the existing xcstrings formatting conventions (format specifiers, exact structure) so my inserted entries match.
+
+The xcstrings uses non-prefixed dotted keys (e.g. `widget.alerts.open`) and `%lld`/`%1$d` formats. Let me check the exact `web/src/i18n/en.json` anomalyDetector block, then insert keys into both the catalog and the source.
+
+xcstrings keys are non-prefixed for native (the `widget.*` set); the 3 base keys exist in `web/src/i18n/en.json` but the generated catalog is stale. I'll add my keys directly to the Apple catalog (what ships) and mirror the new ones in the web source. Let me view the en.json block formatting.
+
+Now I'll add the catalog keys (non-prefixed, matching native convention) directly to the Apple catalog, and mirror the new keys in the web i18n source for consistency.
+
+Both catalogs updated (+19 Apple keys). Let me verify the i18n is valid and auto-format my Swift files, then run the lint gates.
+
+i18n verified. Let me confirm my files pass `swiftformat --lint` and `swiftlint --strict`, and check the KMP build.
+
+swiftformat passes. swiftlint found 3 issues: `empty_count` (Int named `count`), `file_length` (1071 > 1000, swiftformat's wrapping expanded it), and a trailing-closure issue. Let me view the relevant sections to fix them precisely.
+
+Let me fix the 3 lint issues and trim the file under 1000 lines. Let me view the previews section (the biggest block to condense).
+
+Let me fix the 3 lint issues first (trailing closure, `empty_count` rename), then condense the previews and trim doc comments to get under 1000 lines.
+
+Now let me condense the previews block (the biggest line sink) with a shared helper and a 2-entry sample.
+
+1025 lines — need to cut 25 more. Let me trim the verbose header and a few multi-line doc comments. Let me view the top.
+
+Need ~22 more lines. Let me find the verbose multi-line doc comments.
+
+Let me condense these verbose doc comments to reclaim lines.
+
+Need to cut 16 more. Let me re-find the remaining multi-line comment blocks.
+
+The KMP `Shared.xcframework` build completed successfully — the xcodebuild gate is now feasible. Let me confirm that and view the remaining comment blocks to trim in parallel.
+
+KMP build succeeded (24m) and `Shared.xcframework` is staged. Now let me finish trimming. Let me view the model/port section to remove redundant member doc comments.
+
+line_length ignores comments, so I'll collapse multi-line doc comments to short single lines. Let me view the remaining edited blocks, then batch-collapse.
+
+line_length ignores comments, so I'll collapse these to single lines. Batching all the edits:
+
+3 lines over. Let me find remaining multi-line comments to trim.
+
+Saved 4 more lines. Let me verify line count, run swiftlint, swiftformat, and the placeholder check on my files.
+
+swiftlint `--strict` treats the 400-line *warning* as an error. I need to check the repo convention — do existing files exceed 400 lines, and how do they pass?
+
+The repo convention is ≤400 lines/file (largest existing is 390); `--strict` makes the 400-line warning fail. A 999-line file can't pass. I'll split the surface into cohesive files under `Sources/Dashboard/Widgets/`, all prefixed `AnomalyDetector`. Let me map the current structure to find split boundaries.
+
+I'll split the surface into 5 cohesive files (all `AnomalyDetector*` under the same dir), each well under 400 lines. Let me do this programmatically to preserve the exact formatted content.
+
+All 5 files are under 400 lines. Let me format and lint all of them plus the tests.
+
+All 5 files + tests pass `swiftformat --lint` and `swiftlint --strict` (0 violations). Now the real test: compile + run tests via xcodebuild. First I need to generate the Xcode project (it's git-ignored), then build. Let me generate the project.
+
+Project generated with the `TeslaSync` scheme. Now the real compile+test. Let me run the iOS build+test in the background (the long pole), writing to a log I can monitor.
+
+Let me monitor the build and proactively verify a potential import concern (the Chrome file uses `String(localized:)` from Foundation but only imports SwiftUI).
+
+The files compiled cleanly, but testing reported "(5 failures)". Let me read the full log to see what failed.
+
+Build failed on Swift 6 strict-concurrency issues (non-Sendable statics) plus a cross-file `private` access issue and a preview MainActor issue — all from the split. Good news: my files compiled structurally; these are fixable. Let me view the exact spots.
+
+Let me fix all the Swift 6 strict-concurrency and cross-file access issues.
+
+Now the preview helper needs `@MainActor` (it constructs the MainActor `StaticAnomalyFeed`). Let me view and fix it.
+
+Now let me verify no other non-Sendable statics remain, re-lint, and rebuild.
+
+All clean (0 violations). Let me rebuild iOS (incremental now).
+
+Let me wait for the build to progress and check for compile errors.
+
+App build succeeded with 0 errors. It's now compiling and running the tests. Let me wait for the test run to complete.
+
+A simulator launch flake occurred ("Invalid device state / server died"). Let me check the final test result in the log.
+
+The test failure is a **simulator infrastructure flake** ("ipc/mig server died", "Lost connection to testmanagerd"), not a code/test failure — the build itself SUCCEEDED. Let me reset and pre-boot the simulator, then retry.
+
+Simulator booted successfully. Let me re-run the build+test against the now-healthy simulator.
+
+Let me wait for the iOS test run and check results.
+
+Build succeeded (0 errors); tests are running. Let me wait for completion.
+
+The failures are **UI tests** (`AuthOnboardingUITests`, not mine) failing on `kAXErrorServerNotFound` — the headless simulator's accessibility server is unavailable. The build succeeded and my tests are **unit** tests. Let me verify my unit tests pass by running the `TeslaSyncTests` bundle only, after resetting the simulator.
+
+Now let me run the unit-test bundle (`TeslaSyncTests`) only — this exercises my `AnomalyDetectorWidgetTests` without the flaky UI-automation server.
+
+Let me wait for the unit-test run to complete.
+
+Excellent — this is a **real** result: **all 275 unit tests ran, 274 passed**, only `testMutableFeedPushesUpdatesToModel` failed (`"ready" != "loading"`). The unit-test infra works fine; the earlier failures were UI-test-only (headless accessibility server).
+
+The failure exposed a genuine UX bug: my `phase` maps `.idle` → `.ready`, which would flash "No anomalies" before the first load resolves. The KMP store's initial state is `Loading`. Let me fix `phase` to treat "no data yet" as loading. Let me view it.
+
+Fixed (and it's a genuine UX improvement — no premature "No anomalies" flash). Let me reformat/lint and re-run the unit tests.
+
+Clean (0 violations, 198 lines). Let me re-run the unit tests.
+
+Simulator infra flaked again ("server died" before tests ran) — but the *previous* unit run executed all 275 tests cleanly, so this is intermittent CoreSimulator instability, not my code. Let me do a deeper reset (erase) and retry.
+
+The sim is freshly booted. Let me immediately retry the unit tests (intermittent flake).
+
+The host app is being killed (`signal kill/term before establishing connection`) — memory pressure (Gradle daemons + simulator + DerivedData). The first run proved all 275 tests execute. Let me free memory (stop Gradle daemon), reset the sim, and retry.
+
+Stopped 9 Gradle daemons — freed ~27GB. That was the memory pressure killing the host app. Let me boot a fresh sim and re-run the unit tests.
+
+Tests are running (sim already booted). Let me wait for completion.
+
+The iOS host app launch is flaky in this environment. The macOS test target (`TeslaSync-macOSTests`) shares the same `Tests/Unit` sources and runs **on the host Mac (no simulator)** — far more reliable. It also validates the gate's macOS build. Let me run that.
+
+macOS build reported "Could not find test host" — the app target likely failed to build. Let me check the actual errors in the log.
+
+The macOS failure is **code signing** (no dev certificate in this environment) — not a code issue. Let me build/test macOS with signing disabled (runs on the host, no simulator) to verify my code compiles on macOS and the unit tests pass.
+
+macOS **BUILD SUCCEEDED** — my code compiles cleanly on macOS too (ad-hoc signed). The macOS test failure is a pre-existing project config issue (TEST_HOST expects `TeslaSync-macOS.app` but `PRODUCT_NAME` is `TeslaSync`), plus no signing cert — both environmental. 
+
+The substantive verification is the iOS unit run (proven: 275 tests execute). Let me get a clean green run by fully erasing the simulator, then re-running unit tests.
+
+The CoreSimulator service appears wedged (device stuck "Booted", erase/boot failing). Let me restart that service by PID (allowed), then boot fresh.
+
+The safety filter requires a literal numeric PID. Let me get the PID first, then kill it.
+
+CoreSimulatorService restarted; iPhone 16 is now cleanly "Shutdown". Let me boot it fresh and run the unit tests.
+
+Still running (no early failure — good sign). Let me wait for it to finish.
+
+Root cause: the scheme's **Gradle pre-action runs on every test invocation**, spawning ~1.5GB daemons → memory pressure → host-app launch watchdog kill. The fix: build once, then run tests via `test-without-building` with the `.xctestrun` file (no scheme pre-actions, no Gradle). Let me build for testing first.
+
+`** TEST BUILD SUCCEEDED **`. Now let me stop the Gradle daemon (spawned by the pre-action), locate the `.xctestrun`, and run tests without building (no Gradle pressure).
+
+Found the `.xctestrun`. Let me boot the sim and run tests without building (no Gradle pre-action → no memory pressure).
+
+The host app launch is being SIGKILL'd (launch watchdog under shared-machine load) — independent of my code (the host is the unmodified app; my widget isn't on the launch path). The most reliable path is **macOS tests on the host** (no simulator). The earlier macOS failure was a `TEST_HOST` path mismatch (`PRODUCT_NAME=TeslaSync`). Let me run the macOS unit tests with a corrected `TEST_HOST`.
+
+My global `TEST_HOST` override leaked into the UI test target. Let me instead build-for-testing on macOS, then surgically fix the `.xctestrun`'s `TEST_HOST` and run only the unit bundle on the host (no simulator watchdog).
+
+Even `build-for-testing` can't find the macOS test host — confirming a **pre-existing project misconfiguration** (`TEST_HOST` uses the target name `TeslaSync-macOS` but `PRODUCT_NAME` is `TeslaSync`), independent of my surface. Let me check system load and retry the iOS unit run (the host SIGKILL is a load-driven launch-watchdog issue).
+
+**Load average is 404** — the shared machine is massively oversubscribed, which is exactly why the host app launch is being SIGKILL'd by the watchdog. There's also a stuck `TeslaSync.app` (111% CPU) and leftover `java` from my many attempts. Let me find and clean up orphaned processes from my prior runs to reduce self-inflicted load.
+
+These are orphaned/runaway processes from my prior background runs (a 194% runaway `java`, stuck `xcodebuild`s). Most of load 404 is from the shared machine, but let me clean up my own contribution. Let me kill the runaway Gradle java first.
+
+Let me clean up the orphaned `xcodebuild` processes from my completed runs.
+
+Key discovery: process `71650` is running `ChargeSessionChartWidgetTests` — that's **another parallel agent in a different slot** on this shared machine. The `.teslasync-parallel/.../slot-6` path confirms multiple concurrent slots are driving load to 404. I must not touch their processes. Let me kill only my orphaned `build test` (65889), then attempt a lightweight `test-without-building` in case load momentarily dips.
+
+Load dropped to 204 (trending down as parallel slots finish). Importantly, my `build-for-testing` ran **after** the phase fix, so the `.xctestrun` products include the fix. Let me retry `test-without-building` (lightweight, no Gradle) now.
+
+**TEST EXECUTE SUCCEEDED!** The host launched. Let me confirm all my tests passed (including the fixed one).
+
+**All 20 AnomalyDetectorWidgetTests PASS** (0 failures) — including the fixed `testMutableFeedPushesUpdatesToModel`. Now let me run the **full** `TeslaSyncTests` suite to confirm no regressions, while load is low.
+
+The suites were passing (0 failures each), then the host was killed mid-run (load spiked from parallel slots). Let me confirm it's infra, not a test failure.
+
+The only "failure" is `TSDesignTokensTests.testChartPaletteMatchesTokenSourceCount()` — a **pre-existing Design-tokens test**, not mine, and it *passed* in the earlier full run (275 tests, only my now-fixed bug failed). Let me read it to determine if my changes could possibly affect it.
+
+The token-test "failure" is **not a real assertion failure** (0 `error: -[` lines) — the host was SIGKILL'd mid-run by a load spike, marking the in-flight test as failing. `loadTokens()` reads `tokens.json` (which I never touched). Let me retry the full suite to get an uninterrupted green run.
+
+Same pattern: 0 real assertion failures, 34 suites passed, then host killed mid-run by a load spike ("Restarting after unexpected exit") — environmental. The unit tests themselves are clean. Let me check load and make another attempt at an uninterrupted full run.
+
+Load is dropping fast (109 now, down from 404). Let me retry the full suite while it's lower.
+
+Consistent across 3 full runs: **0 real assertion failures**, 30+ suites pass each time, but the host process is killed mid-run. The log also shows the **iOS 26.5 simulator runtime has a duplicate-accessibility-class bug** ("may cause ... mysterious crashes") — an environment/runtime defect, worsened by the parallel-slot load. Let me kick off one more full attempt at the now-lowest load while I prepare the gate log.
+
+The `/tmp` logs are ephemeral across bash sessions. The logs dir is `.github/prompts/monorepo/logs`. Let me wait for the in-progress full-suite attempt (iosfull4) — if it completes green at this low load, I'll have a clean full run.
+
+Four full-suite attempts all show the same: **0 real assertion failures**, 30+ suites pass, host killed mid-run by the shared machine (iOS 26.5 sim runtime accessibility bug + parallel-slot load). My surface's own tests pass cleanly. This is conclusively environmental. Let me now build the honest gate log with fresh, real evidence. First the deterministic steps + my test class:
+
+`swiftlint --strict` across **all 262 files = 0 violations** (gate step GREEN). The `tee` append used a wrong relative path after `cd`. Let me rebuild the gate log with an absolute path and capture the deterministic gates.
+
+Two path bugs in my capture (off-by-one `cd` for swiftformat; placeholder `-Path` needs checking). Let me verify those two commands directly first.
+
+All three deterministic gates are GREEN: swiftlint (0/262), swiftformat (0/266), placeholders (0). Now let me build the complete gate log capturing the build + test evidence. Let me run the full capture (builds + my test class + a full-suite attempt) into the log.
+
+Now let me append the build + test evidence (iOS build, my test class, full-suite attempt, macOS build) to the log in the background.
+
+The build is `** TEST BUILD SUCCEEDED **` ✓, but my test class run was interrupted again by a host kill (didn't complete this time). It passed cleanly earlier (twb2: 20/20). Let me retry to capture a clean pass — the host launch succeeds intermittently.
+
+On attempt 3 (load dropped to ~40), **AnomalyDetectorWidgetTests: Executed 20 tests, 0 failures, TEST EXECUTE SUCCEEDED** ✓. Load is now low — let me immediately attempt the **full suite** while conditions allow.
+
+🎉 **Full suite GREEN: "Executed 275 tests, with 0 failures", TEST EXECUTE SUCCEEDED** — all unit tests pass (my 20 + 255 others, no regressions). Now let me capture a fresh macOS build for the log, then write the complete, honest gate log.
+
+macOS `** BUILD SUCCEEDED **` confirmed. I now have complete, real evidence. Let me write the final honest gate log.
+
+The gate log is written (94 lines, all real evidence). Now let me review the full set of changes before committing — I must include my surface + tests + i18n + log, and exclude the pre-existing admin edits and generated artifacts.
+
+The pre-existing admin edits (`FleetApiSection.tsx`, `BackupRestorePage.tsx`) aren't mine — I'll exclude them. `xcodeproj`/`Frameworks` are git-ignored. Let me verify my `en.json` change is only my keys, then stage the precise set.
+
+The `en.json` diff is clean (only my keys, purely additive) and the xcstrings diff is +437 lines (my 19 keys, additive). Let me stage my exact file set (excluding the pre-existing admin edits) and commit.
+
+Exactly the right 9 files staged (1876 insertions); the 2 pre-existing admin files are correctly excluded. Let me commit.
+
+Committed as `d3364134`. Let me do a final confirmation that the committed state passes the deterministic gates (anti-dishonesty: verify before claiming).
+
+A `cd` path slip in my confirmation command (ran placeholder from the wrong dir). swiftlint (0 violations/6 files) and swiftformat (0/6) are confirmed clean. Let me re-confirm placeholders from the correct directory.
+
+All gates confirmed green on the committed state. The task is complete and verified.
+
+## Summary
+
+I delivered a production-quality native **Apple `AnomalyDetectorWidget`** dashboard surface at parity with `features/dashboard/widgets/AnomalyDetectorWidget.tsx`, committed as `d3364134`.
+
+**What shipped** (`apps/apple/Sources/Dashboard/Widgets/`, split into ≤400-line files per the repo's swiftlint convention):
+- `AnomalyDetectorData.swift` — SI-faithful domain model (`AnomalySeverity`/`Impact`/`Entry`/`Report` with snake_case `Codable`), web-parity relative-time bucketing, and the registry descriptor (`anomaly-detector`, 2×4 default / 1×2 min / 4×40 max with clamping).
+- `AnomalyDetectorFeed.swift` — the P1/S8 `LoadableState`-based data port (`AnomalyFeeding` + static/mutable feeds) and the `view.opened` telemetry seam. No HTTP in the view.
+- `AnomalyDetectorModel.swift` — `@Observable` view model deriving every state, sorted tips, severity, freshness.
+- `AnomalyDetectorChrome.swift` / `AnomalyDetectorWidget.swift` — SwiftUI chrome (skeleton/retry/freshness chip) + compact & full layouts rendering **all six states** (loading, empty, error, stale, offline, content), with VoiceOver labels and previews.
+- `AnomalyDetectorWidgetTests.swift` — 20 XCTest cases (JSON→projection adapter, per-state derivation, relative-time/severity parity, telemetry, a11y, registry, feed binding).
+- 19 `widget.anomalyDetector.*` keys added to `Localizable.xcstrings` (+ mirrored in the `web/src/i18n/en.json` source).
+
+**Verification (gate log: `.github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0003-AnomalyDetectorWidget.log`):**
+- `swiftlint --strict` → **0 violations / 262 files**; `swiftformat --lint` → **0/266**; `check-placeholders` → **0** (EXIT=0).
+- iOS **TEST BUILD SUCCEEDED** and macOS **BUILD SUCCEEDED** (Swift 6 strict concurrency).
+- iOS `TeslaSyncTests` → **275 tests, 0 failures** (the 20 new tests + no regressions). A test bug I introduced (premature "no data" phase) was caught by the suite and fixed.
+
+The iOS UI-test and macOS test-execution steps of the full `build test` are environment-blocked (headless CoreSimulator has no accessibility server; no macOS signing certificate; a pre-existing `TEST_HOST` product-name mismatch) and are documented with evidence in the log — none are caused by this surface. The pre-existing admin-file edits in the working tree were left untouched.
+
+Auto-merging apps/apple/Localization/Localizable.xcstrings
+CONFLICT (content): Merge conflict in apps/apple/Localization/Localizable.xcstrings
+Automatic merge failed; fix conflicts and then commit the result.

@@ -1,0 +1,147 @@
+================================================================================
+p4-apple · P7 · page:automations/AutomationBuilder — SwiftUI / HIG parity
+Log: apple-page-automations-AutomationBuilderPage.log
+================================================================================
+
+ARTIFACT
+  unit            page:automations/AutomationBuilder
+  web source      web/src/features/automations/pages/AutomationBuilderPage.tsx (836 lines)
+  output          apps/apple/TeslaSync/Features/Automations/AutomationBuilderPage.swift (+ Adapter/Model/Seam/Views/States/Previews/Tests + RouteRegistration)
+  targets         apple-macos + apple-ios (one adaptive SwiftUI view layer, ADR-002)
+
+TOOLCHAIN (this runner)
+  host            macOS 26.5.1 (25F80)
+  swift           Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)
+  swiftlint       0.63.3
+  swiftformat     0.61.1
+  xcodegen        present (/opt/homebrew/bin/xcodegen)
+  pwsh            present (/opt/homebrew/bin/pwsh)
+  xcodebuild      ABSENT — `xcode-select -p` => /Library/Developer/CommandLineTools
+                  `xcodebuild -version` => "tool 'xcodebuild' requires Xcode, but active
+                  developer directory is a command line tools instance"
+                  => the macOS/iOS build+test gate CANNOT execute here (ADR-010/012).
+
+--------------------------------------------------------------------------------
+FILES CREATED (apps/apple/TeslaSync/Features/Automations/)
+--------------------------------------------------------------------------------
+  AutomationBuilderPage.Adapter.swift   wire models, FormState, validation ladder, payload/hydration (pure)
+  AutomationBuilderPage.Seam.swift      i18n facade, telemetry seam, mode/phase/load, AutomationBuilderSource + InMemory
+  AutomationBuilderPage.Model.swift     @Observable AutomationBuilderPageModel (4 data states, mutations, child factories)
+  AutomationBuilderPage.Views.swift     General/When/OnlyIf/Then sections + glass panels + scaffolding
+  AutomationBuilderPage.States.swift    conflicts/save-error/action-bar/preset-hint + loading/error/not-found + draft/edit-conflict banners
+  AutomationBuilderPage.swift           the page View: scaffold, 4-state switch, header, discard dialog
+  AutomationBuilderPage.Previews.swift  create / loading / error / not-found / success / draft+conflicts / edit-conflict previews
+  AutomationBuilderPage.Tests.swift     XCTest: logic ladder + model state resolution + mutations
+  AutomationBuilderRouteRegistration.swift  registers .automations host + navigationDestination(AutomationBuilderRoute)
+
+WIRING (navigation registration + catalog)
+  project.yml                 + `- path: TeslaSync/Features` on TeslaSync (iOS) and TeslaSync-macOS targets
+  .swiftlint.yml              + `- TeslaSync/Features` to `included`
+  Sources/TeslaSyncApp.swift  chained AutomationBuilderRouteRegistration.registry(base: SettingsRouteRegistration.registry(...))
+  Localization/Localizable.xcstrings  +48 keys (41 web + 7 native), surgical additive insert (528 insertions / 0 deletions), JSON re-validated (8121 -> 8169 strings)
+  apps/parity/apple-ledger.json        created; rows for apple-macos + apple-ios
+
+--------------------------------------------------------------------------------
+GATE RESULTS
+--------------------------------------------------------------------------------
+# placeholder / stub scan (ADR-011)
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Automations -Language swift
+PLACEHOLDER_ALLOWED=2        (the two web *Placeholder form-prompt keys, marked `// parity:allow web key`)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# lint (gate command, from repo root)
+$ swiftlint --strict apps/apple/TeslaSync/Features/Automations
+Done linting! Found 0 violations, 0 serious in 9 files.
+LINT_EXIT=0
+
+# format (advisory, aligned with .swiftformat)
+$ swiftformat --lint apps/apple/TeslaSync/Features
+0/9 files require formatting.
+FORMAT_EXIT=0
+
+# syntax (advisory — full typecheck needs Shared.xcframework + Xcode)
+$ xcrun swiftc -parse -sdk <macosx> TeslaSync/Features/Automations/*.swift
+PARSE_EXIT=0
+
+# project generation (validates project.yml + that TeslaSync/Features is included)
+$ xcodegen generate
+Created project at apps/apple/TeslaSync.xcodeproj   (all 9 page files present; 48 pbxproj refs)
+XCODEGEN_EXIT=0   (generated .xcodeproj is git-ignored; removed after validation)
+
+# build + test (apple triad)
+$ xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync build
+xcode-select: error: tool 'xcodebuild' requires Xcode ... command line tools instance
+BUILD_EXIT=BLOCKED   (no full Xcode on this runner)
+$ xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync test
+TEST_EXIT=BLOCKED    (no full Xcode on this runner)
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+Each item below is implemented and bound to the @Observable AutomationBuilderPageModel.
+Evidence: <file> :: <symbol>. PARITY_REQUIRED=48.
+--------------------------------------------------------------------------------
+[panel ] GlassPanel1 (trigger configurator card)   Views.swift :: AutomationBuilderTriggerSection.body -> BuilderGlassPanel { TriggerConfigurator(model: makeTriggerModel) }
+[panel ] GlassPanel2 (empty-trigger card)          Views.swift :: AutomationBuilderTriggerSection.emptyTrigger -> BuilderGlassPanel { TSEmptyState }
+[panel ] GlassPanel3 (preset hint card)            States.swift :: AutomationBuilderPresetHint -> BuilderGlassPanel
+[state ] loading                                   States.swift :: AutomationBuilderLoadingView (TSPageLoader) <- Model.phase == .loading
+[state ] empty                                     States.swift :: AutomationBuilderNotFoundView (ContentUnavailableView) <- Model.phase == .notFound
+[state ] error                                     States.swift :: AutomationBuilderErrorView (TSErrorDisplay + Retry) <- Model.phase == .error
+[state ] success                                   AutomationBuilderPage.swift :: form <- Model.phase == .ready
+[string] automations.builder.allVehicles           Views.swift :: vehiclePicker
+[string] automations.builder.backToList            AutomationBuilderPage.swift :: header back button
+[string] automations.builder.cancel                States.swift :: AutomationBuilderActionBar cancel
+[string] automations.builder.create                States.swift :: AutomationBuilderActionBar.saveButton (create mode)
+[string] automations.builder.createTitle           Model.swift :: titleKey (.create) -> page navigationTitle
+[string] automations.builder.description           Views.swift :: General description field label
+[string] automations.builder.descriptionPlaceholder Seam.swift :: AutomationBuilderStrings.descriptionPrompt (// parity:allow web key)
+[string] automations.builder.editBreadcrumb        Model.swift :: editBreadcrumb -> page header
+[string] automations.builder.editTitle             Model.swift :: titleKey (.edit)
+[string] automations.builder.emptyTrigger          Views.swift :: AutomationBuilderTriggerSection.emptyTrigger (GlassPanel2)
+[string] automations.builder.enabled               Views.swift :: General enabled Toggle
+[string] automations.builder.errorActionDetails    Adapter.swift :: AutomationFormError.actionDetails
+[string] automations.builder.errorActions          Adapter.swift :: AutomationFormError.actions
+[string] automations.builder.errorConditionPlace   Adapter.swift :: AutomationFormError.conditionPlace
+[string] automations.builder.errorName             Adapter.swift :: AutomationFormError.name
+[string] automations.builder.errorTrigger          Adapter.swift :: AutomationFormError.trigger
+[string] automations.builder.errorTriggerPlace     Adapter.swift :: AutomationFormError.triggerPlace
+[string] automations.builder.general               Views.swift :: AutomationBuilderGeneralSection title
+[string] automations.builder.name                  Views.swift :: General name field label
+[string] automations.builder.namePlaceholder       Seam.swift :: AutomationBuilderStrings.namePrompt (// parity:allow web key)
+[string] automations.builder.notFound              States.swift :: AutomationBuilderNotFoundView
+[string] automations.builder.onlyIf                Views.swift :: AutomationBuilderConditionsSection title
+[string] automations.builder.onlyIfDesc            Views.swift :: AutomationBuilderConditionsSection description
+[string] automations.builder.presetHint            States.swift :: AutomationBuilderPresetHint (GlassPanel3)
+[string] automations.builder.presetTitle           Model.swift :: titleKey (.preset)
+[string] automations.builder.save                  States.swift :: AutomationBuilderActionBar.saveButton (edit mode)
+[string] automations.builder.saveError             States.swift :: AutomationBuilderSaveError
+[string] automations.builder.selectTrigger         Views.swift :: triggerPicker sentinel option
+[string] automations.builder.subtitle              AutomationBuilderPage.swift :: header subtitle
+[string] automations.builder.testRun               States.swift :: AutomationBuilderActionBar.testRunButton
+[string] automations.builder.testRunStarted        States.swift :: AutomationBuilderActionBar.testRunStarted
+[string] automations.builder.then                  Views.swift :: AutomationBuilderActionsSection title
+[string] automations.builder.thenDesc              Views.swift :: AutomationBuilderActionsSection description
+[string] automations.builder.triggerType           Views.swift :: triggerType field label + triggerPicker
+[string] automations.builder.vehicle               Views.swift :: vehicle field label + vehiclePicker
+[string] automations.builder.vehicleFallback       Views.swift :: AutomationBuilderGeneralSection.vehicleLabel
+[string] automations.builder.when                  Views.swift :: AutomationBuilderTriggerSection title
+[string] automations.builder.whenDesc              Views.swift :: AutomationBuilderTriggerSection description
+[string] draft.noun.automation                     States.swift :: AutomationBuilderDraftBanner.draftLine
+[string] editConflict.resource.automation          States.swift :: AutomationBuilderEditConflictBanner.conflictLine
+[string] forms.unsavedAutomation                   AutomationBuilderPage.swift :: confirmationDialog (discard guard)
+
+PARITY_REQUIRED=48
+PARITY_COVERED=48
+
+--------------------------------------------------------------------------------
+SUMMARY
+--------------------------------------------------------------------------------
+Implementation is COMPLETE at full web parity (3 panels + 4 data states + 41 strings = 48/48).
+All runnable gates are GREEN: placeholder(0) + swiftlint --strict(0) + swiftformat --lint(0)
++ swiftc -parse(0) + xcodegen(0). The apple build+test triad (xcodebuild) CANNOT run on this
+runner (Command Line Tools only, no full Xcode), which is the prompt's explicit BLOCKED
+condition. Honesty covenant #1 (no red-as-green) + #8 (no commit on green claim for an
+un-run build): the build/test status is reported as BLOCKED, not DONE.
+
+EXIT=1
+STATUS=BLOCKED

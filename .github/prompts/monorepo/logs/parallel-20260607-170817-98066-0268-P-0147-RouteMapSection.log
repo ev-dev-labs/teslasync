@@ -1,0 +1,140 @@
+I'll start by exploring the environment to understand the task, the web source, and what Apple tooling/structure exists.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is active. Let me investigate further — check for Xcode installations and look at the most recent predecessor feature-view (SessionListSection) which is my best template.
+
+Full Xcode is installed at `/Applications/Xcode.app` but `xcode-select` points to CommandLineTools. Let me check the predecessor pattern (SessionListSection) and whether I can access the full Xcode toolchain.
+
+Excellent — full Xcode 26.5 IS usable via `DEVELOPER_DIR`, `xcodegen` is installed, and the iPhone 16 simulator is booted. The runner has the capability, so I proceed. Let me study the predecessor patterns (CostHeatmap is the clean 8-file template) and the project config.
+
+The pattern is clear and rich. Let me study the test/preview/strings/grid patterns, the project config, the web types this component depends on, and find any existing MapKit usage plus the shared token definitions.
+
+Now let me locate the shared token definitions, any existing MapKit usage, the project config, and the web types this component depends on.
+
+There's an existing native Maps component library and geo helpers — the counterpart to `@/components/maps` and `@/lib/geo`. Let me study those plus the design tokens and an existing map widget.
+
+Now let me read the web dependencies (constants, types, geo helpers, unit conversion, DriveDetail type) and how speed segments are constructed, plus the i18n keys.
+
+The web `driveDetail` block lacks `lastKnown`/`stationaryRoute*` keys — the source uses `t(key, fallback)` defaults, which I'll mirror in my `.strings`. The project.yml is at `apps/apple/project.yml`. Let me read it and the design tokens.
+
+Now I understand the build structure. Critical question: how do the `.Tests.swift` files in `feature-views/` (compiled into the app target) actually run? Let me check the test target wiring and read the design tokens + feedback components.
+
+The `.Tests.swift` files live in the app-target source dir (compiled with the app, following the established predecessor convention). Let me check the Shared.xcframework staging (potential build blocker), the design tokens, feedback banner, and lint configs.
+
+Key risk: the scheme build runs a Gradle pre-action to build `Shared.xcframework` (no prebuilt copy exists). Predecessors passed the same gate, so the runner supports it. Let me confirm `pwsh` availability and read the exact token/Material/Typography/Banner definitions I'll use.
+
+Let me read the native AlertBanner, an existing Map composition example (LocationMapWidget), and find the FadeIn/motion equivalent.
+
+This `LocationMapWidget` is the ideal MapKit analog (same P4 architecture, Leaflet→MapKit). Let me confirm the remaining token names (`Font.TS.label`, `TSRadius.pill`) and the web default number precision, plus check the `connection.isLive` helper pattern.
+
+All tokens confirmed (web default precision = 2). Let me check for a native motion (FadeIn) component and any snapshot-test infrastructure, then I'll start writing.
+
+I have a complete understanding of the architecture. Let me set up a plan and todos, then build the 8-file surface following the established `CostHeatmap`/`LocationMapWidget` pattern.
+
+Now I'll write the pure adapter (geo port, speed buckets, projection, accessibility summary).
+
+The adapter is in place. Now the model with seams (telemetry, formatting, source, `@Observable` model), legend builder, and strings facade.
+
+Now the MapKit canvas (speed-colored polyline segments, start/end/anchor markers, camera fitting, layer switcher) with the color bridge.
+
+Now the presentational subviews (panel, legend bar, speed legend, empty state, stationary banner, freshness banner, error view, skeleton).
+
+Now the entry view with the `.text` helper and phase switch wrapped in `TSFadeIn`.
+
+Now the previews (sample route data + one preview per state).
+
+Now the comprehensive test suite (adapter, geo, buckets, projection, formatting, legend, accessibility, model phases, per-state).
+
+Now the i18n strings catalog (web-source keys + native chrome).
+
+All 8 files created. Let me run the fast checks first (swiftformat, swiftlint, placeholders) to iterate quickly before the heavy build.
+
+swiftformat flagged formatting. Let me auto-fix with the ecosystem tool, then re-verify.
+
+swiftformat passes. Now swiftlint --strict on the new files, and let me verify the auto-formatted regions stayed correct.
+
+swiftlint passes except `file_length` (400 max) on Adapter (420), Model (411), Tests (444). I'll split these into focused files (allowed by the `RouteMapSection.*` glob, matching the `SessionListSection` multi-file convention). Let me view the exact regions to move.
+
+I'll split out a `RouteMapSection.Geo.swift` (geo port + speed buckets + colors + segment), removing that block from the Adapter.
+
+Now I'll remove that block from the Adapter (lines 112–242) using sed, then verify the boundary is clean.
+
+Adapter is now 289 lines. Now split formatting + legend out of the Model. Let me view the exact boundaries.
+
+Now I'll create `RouteMapSection.Format.swift` with the formatting + legend, and remove that block from the Model.
+
+Model is 306 lines. Now split the Tests file — move the `@MainActor` model tests + the spy double into a `RouteMapSection.ModelTests.swift`. Let me find the boundary.
+
+I'll extract the model-test block exactly and assemble `RouteMapSection.ModelTests.swift`, then trim the Tests file.
+
+All files now under 400 lines. Let me re-run both linters on the full set.
+
+Both linters are clean. Now the placeholder check, log dir, and project regeneration.
+
+Placeholder check passes. Now regenerate the Xcode project so the new files are included.
+
+Project regenerated with all RouteMapSection files included. Before the long build, let me confirm the whole-tree lint/format (as the gate runs them) is clean with my additions.
+
+A whole-tree swiftformat flagged a **pre-existing** violation in `ActionBuilder.Previews.swift` (a sibling surface, not mine). Let me verify it's committed at HEAD and outside my change scope.
+
+Confirmed pre-existing: `ActionBuilder.Previews.swift` (sibling surface, commit 87160b08) has the violation; only my `RouteMapSection.*` files are in my changeset. Let me check the whole-tree swiftlint and see the full scope of pre-existing issues before deciding how to handle the shared gate.
+
+swiftlint whole-tree also reports 1 pre-existing serious violation (across 1183 files). Let me identify exactly which file/rule.
+
+Both whole-tree violations are **pre-existing, committed sibling files** outside my scope (`ActionBuilder.Previews.swift`, `LifetimeStatsWidget.Adapter.swift`) — git shows only my `RouteMapSection.*` files as changed. My 10 files pass both linters cleanly. I won't modify other surfaces. Now let me start the heavyweight iOS build+test (triggers the Gradle Shared.xcframework pre-action).
+
+The iOS build+test is running in the background (it includes the Gradle Shared.xcframework build, full app compile, and test run — several minutes). Let me monitor progress.
+
+Gradle is successfully building the KMP `Shared.xcframework` (Kotlin/Native linking in progress). It's progressing, not failing. Let me continue waiting.
+
+Still in the KMP release-framework link phase (Kotlin/Native is slow). Let me wait longer and confirm the process is healthy.
+
+The build was interrupted during the Gradle phase — and `pgrep` reveals **other parallel slots' xcodebuild processes are running on this shared machine** (`/tmp/dd-264`), causing Gradle contention. Let me read the full result.
+
+The xcodebuild was **interrupted** (not successful) — the shell's exit 0 came from the `tee`/`tail` pipeline, not xcodebuild. This is contention with parallel slots. Let me check for orphaned processes from my run and retry with an isolated DerivedData path.
+
+No competing processes now — the interruption was transient Gradle-daemon contention from a sibling slot. Coast is clear. Let me retry with an isolated DerivedData path (Gradle work from the first run is now cached, so it should progress faster).
+
+Retry running. Let me monitor — the cached Gradle work should let it progress past the framework stage to app compile and tests.
+
+Progress — Gradle succeeded and app compilation ran, but there's a Swift compile error. Let me extract the actual errors.
+
+The error is `XCTest` module resolution failing in the **app target** for a pre-existing sibling test file (`AcDcStatsPanel.Tests.swift`). This suggests feature-view `.Tests.swift` files compile into the app target. Let me verify target membership in the generated project and how tests are wired.
+
+Root cause: 79 pre-existing feature-view `.Tests.swift` files import `XCTest` in the **app target**, but the project lacks `ENABLE_TESTING_SEARCH_PATHS` — so under Xcode 26's explicit modules, XCTest won't resolve. This is a repo-wide pre-existing condition (the build fails on a sibling file before reaching mine). The intended build clearly relies on testing search paths. I'll supply it as a build-time override in my gate command (no repo-file change, staying in scope) and re-run.
+
+Running with the testing-search-paths override (Gradle is now cached). Let me monitor and watch specifically for any errors in my `RouteMapSection.*` files.
+
+The XCTest override worked (no XCTest errors now) and **my RouteMapSection files produced zero errors**. But the app target has pre-existing `'DashboardWidgetSize' is ambiguous` duplicate-definition errors across many **sibling dashboard-widget** files. Let me confirm the full error scope and the duplicate source.
+
+Definitive: the app target has **pre-existing duplicate `DashboardWidgetSize`/`DashboardWidgetRegistration` definitions across ~15 sibling dashboard-widget files** (96 "ambiguous" + redeclaration errors) — a merged-branch integration conflict. **Zero errors are in any RouteMapSection file.** Let me confirm my files were actually compiled (proving they type-check), then run the macOS leg in parallel.
+
+All 10 files compiled, but the diagnostic check found 8 matches in RouteMapSection files. Let me see exactly what they are (errors vs warnings).
+
+All 8 are **benign warnings** — the `@testable import TeslaSync` self-import notice that every sibling `.Tests.swift` produces (they compile into the app module). **My 8 production files compiled with zero diagnostics; my 2 test files only emit that expected warning.** My surface is definitively type-correct.
+
+Let me run the macOS leg in the background (honest second-platform evidence) while I assemble the gate log.
+
+Let me update my plan and capture precise iOS evidence while macOS builds.
+
+Conclusive: **all 110 iOS compile errors are in sibling `dashboard-widgets/` files; zero in `feature-views/`.** The shared app-target build is blocked solely by pre-existing duplicate `DashboardWidgetSize`/`DashboardWidgetRegistration` definitions across ~15 sibling widget surfaces — outside my scope. Let me record findings and check the macOS leg.
+
+The macOS leg also failed. Let me confirm it's the same sibling-only breakage (zero RouteMapSection errors).
+
+The macOS leg fails at **code-signing** (entitlements require a development certificate; `DEVELOPMENT_TEAM` is empty on this runner) — before Swift even compiles. That's a pre-existing environment/signing limitation. 
+
+Full honest picture now established:
+- **RouteMapSection surface: all green** — compiles with zero diagnostics (iOS), scoped swiftlint/swiftformat/placeholder all 0.
+- **Shared gate blocked by pre-existing externals** (all outside my scope): iOS app-target = 110 duplicate-symbol errors in sibling `dashboard-widgets/*`; macOS = signing; whole-tree lint/format = 2 sibling violations.
+
+Per the honesty covenant (no red-as-green), I'll write a truthful gate log. Let me compose it.
+
+Now let me verify exactly what will be committed (only my surface + the log; the `.xcodeproj` is git-ignored) and stage precisely.
+
+Clean — only my 11 files are untracked, `.xcodeproj` is git-ignored, no sibling files touched. My surface is verified green (compiles with zero diagnostics; scoped lint/format/placeholder all pass). I'll commit the surface + the honest BLOCKED gate log (transparent about the pre-existing external blockers; no sibling files modified, no red masked).
+
+All 12 files staged (no sibling files). Now the commit.
+
+Committed as `de11532fc`. Let me clean up temp build artifacts (good citizenship on the shared machine) and finalize.
+
+All work is committed (`de11532fc`), the working tree is clean, and temp artifacts are cleaned up. The task is complete to the maximum extent the environment allows.
+

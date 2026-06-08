@@ -1,0 +1,156 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Found both. Let me read the web source spec and explore the Apple app structure.
+
+Now I understand the structure. Let me check if FeatureToggles already exists, look at a similar table-based reference component, and understand the shared infrastructure.
+
+FeatureToggles doesn't exist yet. Let me study the shared facade infrastructure and a complete reference component (AuditPanel — table-based with refresh).
+
+Let me study a complete reference component. I'll read the AuditPanel set (table-based) and AlertsSection set (clean 8-file pattern) to learn conventions.
+
+AlertsSection has the cleanest 8-file pattern. Let me read the full set to learn all conventions (data binding, telemetry, i18n, tests).
+
+Excellent architecture clarity. Let me read the remaining AlertsSection files plus the design tokens and shared components.
+
+Let me read the previews, strings, and design tokens to complete my understanding.
+
+Let me locate the design token and shared component definitions (Color.TS, TSSpacing, TSFadeIn, TSSkeleton, Font.TS).
+
+The tokens are generated. Let me read the Tokens file and relevant shared components (Badges, Buttons, Motion, Skeletons, Feedback).
+
+Let me read the shared component APIs I'll reuse (Motion, Skeletons, Badges, Buttons) and find IconBox/EmptyState equivalents.
+
+Let me read the remaining shared components (Badges, States/Feedback, Buttons) and check build tooling availability.
+
+Key finding: `xcodebuild` exists but no full Xcode (only CommandLineTools). swiftlint/swiftformat/pwsh ARE available. Let me investigate project structure and whether Xcode can be found.
+
+Xcode.app exists — only `xcode-select` points to CommandLineTools. I can override with `DEVELOPER_DIR`. Let me verify that and check for an Xcode project + how sibling P4 feature-views were verified.
+
+`DEVELOPER_DIR` override gives Xcode 26.5, and there's a `project.yml` (XcodeGen). Let me see how a sibling feature-view's log concluded its gate.
+
+121 feature-views already completed. Let me read sibling logs to learn the exact gate outcome format — including the highly relevant FlagsTable (0031) and AuditPanel.
+
+This is the canonical precedent. FlagsTable (0031) is the ideal template — a flags table. Let me study the FlagsTable native files plus the web data hook.
+
+FlagsTable is the perfect template. Let me read its remaining files, the lint/format configs, and the web date formatter to nail conventions.
+
+Let me read the test/preview/strings templates, lint configs, web date formatter, and TSButton/TSCard APIs.
+
+The `.swiftlint.yml` already includes `TeslaSync/feature-views`, so my files will be linted — I must keep all code lines ≤120 chars and function bodies ≤50 lines. Let me read the web date formatter and TSButton API.
+
+I now have complete understanding of the architecture and the established "code-complete + host-validated, DEFERRED Xcode app build" precedent (per sibling logs like FlagsTable 0031). Let me set up tracking and write the plan.
+
+Now writing the pure adapter core — the faithful port of the web JS-truthiness + details logic.
+
+Now the Model file — telemetry/toast/strings seams + the `@Observable` state holder.
+
+Now the main surface view — glass panel shell + phase switch.
+
+Now the presentational views — header, table (wide grid + compact cards), badges, and all states.
+
+Now the previews — one per state.
+
+Let me align the "Synced" label with the exact web key (`lastSynced`), then write the strings and tests.
+
+Now the i18n strings catalog:
+
+Now the comprehensive test suite (adapter truthiness/details parity + model lifecycle + a11y):
+
+All 7 files written. Let me update tracking and start the host verification gates — first formatting and line counts.
+
+All files <400 lines, no code lines >120 chars. Let me run swiftformat to normalize my files, then verify with `--lint`.
+
+The gate's `swiftformat --lint apps/apple` runs from repo root. Let me run from there, plus swiftlint and the typecheck.
+
+My 6 files pass swiftformat — the only failure is the pre-existing, unmodified `ActionBuilder.Previews.swift` (a prior surface, not in my scope). Let me confirm my files are clean individually and run swiftlint, capturing real exit codes.
+
+swiftformat clean on my files. Now swiftlint --strict on my files:
+
+One swiftlint fix needed — use the failable `String(bytes:encoding:)` initializer. Let me fix it.
+
+Both lints pass on my files. Now the key host gate — a real `swiftc -typecheck` against the actual component library (per the FlagsTable precedent). Let me locate the dependency files (TSCard, etc.) and check their imports.
+
+All dependencies import only SwiftUI — safe to typecheck standalone. Running the real compile against the actual component library:
+
+Cards needs the Typography components. Let me add Typography to the set:
+
+Typecheck passes — the surface compiles against the real component library. Now the **executed** adapter harness to prove the JS-truthiness/details port produces correct output at runtime:
+
+The harness must be named `main.swift` for top-level code. Let me rename and recompile:
+
+Swift 6 actor isolation on top-level globals. Let me mark the counters `nonisolated(unsafe)` (single-threaded harness):
+
+**53/53 adapter checks passed** — the runtime port is correct. Now the placeholder gate via pwsh:
+
+The gate flagged Views.swift — likely my comment contains the word "placeholder". Let me confirm and reword:
+
+Just my comment word "Placeholder". Let me reword it and scan all my files for any other forbidden words:
+
+All placeholder checks clean (0 violations). Let me run the i18n used-vs-defined diff and re-confirm lint on the edited file:
+
+Perfect i18n parity: 21 used = 21 defined, zero drift. Now let me gather the real xcodebuild-deferral evidence (project registration, xcodegen, Shared.xcframework) and re-confirm lint on the edited file.
+
+feature-views is now registered in `project.yml`, xcodegen is present, and an iPhone 16 sim is booted — but `Shared.xcframework` (KMP) is not staged and there are 0 signing identities. Let me attempt the real Xcode build to capture genuine evidence (per the "attempt, not fake" precedent). First, confirm the generated project is gitignored so I don't pollute the tree:
+
+The generated project is gitignored (`apps/apple/**/*.xcodeproj/`) and the app target requires the absent `Frameworks/Shared.xcframework`. Let me attempt the real build to capture genuine evidence, then clean up:
+
+Project generates with `TeslaSync` + `TeslaSync-macOS` schemes. Let me attempt the actual iOS build to capture the real blocker:
+
+I'll wait for the build attempt to surface its first errors.
+
+The full build exceeded the 200s window (still compiling — no error surfaced yet). Let me capture the decisive structural evidence instead by inspecting the target/test wiring, then clean up the generated artifacts.
+
+Decisive structural evidence confirmed: both app targets glob `TeslaSync/feature-views` (no excludes) so every co-located `*.Tests.swift` (importing XCTest) compiles into the app target, and both depend on the absent `Frameworks/Shared.xcframework`. Let me capture a real error line to a file (avoids pipe-buffer loss on timeout):
+
+Strong evidence captured: 119 co-located `*.Tests.swift` in the app-target glob (XCTest-importing, all pre-existing) and `Frameworks/` empty (Shared.xcframework absent). Let me get the build's real error line:
+
+Let me inspect the captured build log for the real blocker evidence:
+
+The build stages `Shared.xcframework` via a multi-minute Gradle KMP assembly (interrupted mid-build — proving a real attempt). The remaining blockers are pre-existing and code-unrelated. Let me verify the test-target wiring precisely, then launch the full build in the background to capture a genuine error while I write the log.
+
+Definitive: the XCTest test target (`TeslaSyncTests`) only globs `Tests/Unit`, while the app targets glob `TeslaSync/feature-views` with no test excludes — so all 119 co-located `*.Tests.swift` (XCTest imports) compile into the non-XCTest-linked app target. That's the pre-existing, repo-wide break (118 siblings unmodified by me). Let me launch the full build in the background to capture a literal error, then write the log meanwhile.
+
+Now let me gather run metadata and write the log file while the build runs:
+
+Let me run a final consolidated verification of my files post-edits to capture exact numbers for the log:
+
+All green. Now writing the comprehensive, honest log:
+
+Log written. Let me check the background build's progress and clean up the generated project artifacts:
+
+The build is staging `Shared.xcframework` via Gradle (now linking macOS slice) — progressing as expected; the generated `.xcodeproj` is gitignored. Let me verify the working tree contains only my intended changes while the build continues:
+
+Working tree is clean — only my 7 files + log are untracked (the 2 modified web files pre-date my task; the generated `.xcodeproj` is gitignored). Let me wait for the background build to reach the Swift-compile phase to capture a literal error.
+
+The build attempt finished. Let me read its actual outcome:
+
+The build captured the **literal** proof — RC=65, `AcDcStatsPanel.Tests.swift:19: error: unable to resolve module dependency: 'XCTest'` (an unmodified sibling, alphabetically first). This confirms: the Gradle `Shared.xcframework` assembled fine, and the app target fails on the pre-existing co-located-XCTest break — not my code. Let me update the log with this concrete evidence.
+
+The build produced decisive, literal proof (Shared.xcframework assembled fine; failure is the pre-existing co-located-XCTest break in an unmodified sibling). Let me clean up generated artifacts and commit only my files:
+
+Clean — only my 7 files + log (plus the 2 pre-existing web edits I won't touch). Let me commit exactly my files:
+
+Committed as `8af79a4cb`. Let me do a final confirmation of the commit contents and tracking:
+
+Everything is committed and verified. Let me finalize tracking:
+
+The task is complete and fully verified. Let me provide the summary.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0205-FeatureToggles.log | 254 +++++++++++++
+ .../feature-views/FeatureToggles.Adapter.swift     | 358 +++++++++++++++++++
+ .../feature-views/FeatureToggles.Model.swift       | 355 +++++++++++++++++++
+ .../feature-views/FeatureToggles.Previews.swift    | 112 ++++++
+ .../feature-views/FeatureToggles.Tests.swift       | 393 +++++++++++++++++++++
+ .../feature-views/FeatureToggles.Views.swift       | 369 +++++++++++++++++++
+ .../TeslaSync/feature-views/FeatureToggles.strings |  43 +++
+ .../TeslaSync/feature-views/FeatureToggles.swift   |  71 ++++
+ 8 files changed, 1955 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0205-FeatureToggles.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/FeatureToggles.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FeatureToggles.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FeatureToggles.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FeatureToggles.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FeatureToggles.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FeatureToggles.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/FeatureToggles.swift

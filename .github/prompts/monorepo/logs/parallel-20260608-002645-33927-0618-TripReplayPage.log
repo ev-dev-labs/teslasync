@@ -1,0 +1,208 @@
+I'll start by exploring the repository structure to understand the task and what already exists.
+
+The actual Swift code lives in `apps/apple/Sources/`. There's a discrepancy with the prompt's stated paths. Let me investigate the real structure thoroughly.
+
+Now I understand—this uses XcodeGen with sources in `Sources/` and `TeslaSync/feature-views/`. Let me investigate the established conventions, parity manifest, ledger, tooling availability, and an existing similar feature view.
+
+Key finding: `xcodebuild` requires full Xcode but only CommandLineTools is active. Let me check for full Xcode and gather the established patterns, ledger, and gate contract.
+
+Full Xcode exists at `/Applications/Xcode.app`. Let me verify it works via `DEVELOPER_DIR`, read the gate contract, and study the established patterns.
+
+Xcode 26.5 works via `DEVELOPER_DIR`. Now let me check the build baseline (xcframework, xcodegen) and study the established feature-view pattern in depth.
+
+Critical: `Frameworks/Shared.xcframework` is missing (only `.gitkeep`). Let me check whether the KMP shared core can be built, and study the facade/component patterns in parallel.
+
+`SharedFacade/Domains` only has `VehicleSettingsModel` — the Drive state holder may not exist. Let me study how existing feature views get data and structure themselves.
+
+No feature view imports `Shared` — Models are self-contained `@Observable` holders. Let me read a complete reference set and check whether the app target depends on the missing xcframework.
+
+The app target's `SharedFacade` imports `Shared` from the missing xcframework. I'll kick off the xcframework build in the background while I study patterns and implement.
+
+Java 17 + Gradle wrapper present. Let me kick off the xcframework build in the background and study the patterns meanwhile.
+
+This is a rich, well-defined pattern. Let me read the remaining reference files: Adapter, Views, States, Projection, strings, Tests, Previews, the chart wrapper, and the design/component libraries.
+
+Let me check the build progress and read the remaining pattern references (Format, Views, States, Previews, Tests, the chart wrapper) plus the component/design libraries.
+
+The xcframework build is compiling Kotlin/Native frameworks — promising. Let me read the component/design APIs I'll consume.
+
+Let me view these files directly to handle the size.
+
+Now the key component APIs — Cards (GlassPanel), States (EmptyState/ErrorDisplay), Metrics (StatCard/MetricCard), MiniCharts (Sparkline), Typography, Skeletons, Playback.
+
+I have the core component APIs. Let me read the chart wrappers, map wrapper, skeletons, playback, motion, plus navigation registration and remaining helper symbols.
+
+`TSElevationProfile`, `TSSparkline`, `TSLineChart`, `TSPlaybackControls`, `TSTimelineScrubber` all exist. Let me read Motion, Maps, navigation/App wiring, skeletons, and confirm helper symbols.
+
+The xcframework is almost staged. Let me read Badges/Buttons APIs, the Maps wrapper, navigation/App wiring, the full project.yml, and check existing `replay.*` strings.
+
+Now let me read the App/navigation wiring, Maps wrapper, Skeletons, check PowerShell availability + placeholder script, and whether `replay.*` strings already exist.
+
+`pwsh` is available; `replay.*` strings need adding. Let me read the navigation system, Maps wrapper, and Skeletons.
+
+Let me read the nav shell/parser, ContentView, the Maps wrapper, and Skeletons to finalize my integration approach.
+
+I now have the full picture. Let me read the remaining convention references (States, Views, Previews, Tests, Format/UnitMath) and the SI unit converters, then check the build.
+
+I have a thorough understanding of the pattern. Let me read the Previews and Tests conventions, then check the build.
+
+I have a complete understanding of the pattern. Let me read the placeholder gate script and check the build status before implementing.
+
+The placeholder gate is clear. Now let me read the web unit-conversion and number-format libs to reproduce values faithfully, then start implementing.
+
+I have everything needed. Let me set up tracking and inspect the xcstrings structure before implementing.
+
+Let me check the lint/format config and set up tracking, then implement.
+
+I now have everything needed. Let me set up tracking and create the feature directory, then implement.
+
+Now let me create the implementation files. Starting with Format (SI unit math):
+
+Now the Projection (pure core):
+
+Let me fix the Model's `subtitle` to pass the localized drive word:
+
+Let me verify the map helper symbols before writing the Views file:
+
+The xcframework is staged. Let me locate `TSMapAnnotation`/`TSGeofence` definitions:
+
+The xcframework is staged. Now the Views file (panels, playback, map, charts):
+
+Now the States file (loading/empty/error):
+
+Now the Navigation file (route + deep-link parser + destination):
+
+Now the main page View:
+
+Now the Previews file:
+
+Now the Tests file:
+
+Let me update tracking and check which component keys already exist in the catalog before adding strings.
+
+The component-library keys aren't in the catalog (a P3 concern; they only affect VoiceOver/empty overlays, not my page's visible content state). I'll add my `replay.*` keys via a minimal splice. Let me add the strings:
+
+The splice worked but used spaced-colon style while the file uses compact style. Let me redo it cleanly to match the file's exact formatting:
+
+Strings added cleanly. Now register the new source path in `project.yml` (both app targets) and `.swiftlint.yml`:
+
+Now auto-format my files with swiftformat and run swiftlint --strict + placeholder scan:
+
+swiftformat clean. Now swiftlint --strict and the placeholder scan:
+
+SwiftLint linted the whole project (config `included` took over). Let me isolate the 9 violations and check if any are in my files:
+
+8 violations are in my files (file-length, large-tuple, function-length, line-length, brace). Let me read the current (post-format) files to refactor precisely:
+
+I'll extract all value types into a new `Types.swift` to fix the file-length violations. Creating it:
+
+Now remove the moved blocks from Model and Projection using marker-based deletion:
+
+Model/Projection/Types now ≤400. Let me re-run swiftlint to get the current precise violations:
+
+Let me view the exact spots to fix in Projection and Views:
+
+Let me fix the Projection: split `summaryStats` and wrap the long line:
+
+Now fix the Views file — replace the freshness 3-tuple with a struct and view the structure to split it:
+
+Now replace the freshness chip's tuple with a struct:
+
+Now split the section views into a new `Sections.swift` file using marker-based extraction:
+
+Now fix the Previews large tuple and clean up Views imports. Let me view the Previews sample data:
+
+Let me replace the 8-member tuple with direct `TripReplayPosition` construction, and fix the Views imports:
+
+Now re-run swiftformat + swiftlint --strict to confirm all violations are resolved:
+
+The 9-param helper trips `function_parameter_count`. Let me inline the `TripReplayPosition` constructors (whose init only counts 2 non-default params):
+
+Let me restructure the Previews via Python to split the long function:
+
+No violations remain in my files. Now let me run the exact gate commands (placeholder scan + swiftlint) from repo root as the prompt specifies:
+
+PLACEHOLDER_EXIT=0 and LINT_EXIT=0 with all 11 files linted. Now let me generate the Xcode project and build:
+
+Project generated with my Trips files included. Now let me build the iOS app (the long pole) — running async:
+
+Build started. Let me monitor the build log:
+
+The xcframework preAction (gradle) is running before compilation. Let me wait for it to progress:
+
+9 minutes with an empty log suggests the gradle preAction may be stuck (SIGTTIN). Let me investigate the process states:
+
+The gradle preAction is contended (waiting ~6 min, shared with another slot). The xcframework is already staged, so let me kill this build and build the target directly (bypassing the preAction) to verify my code compiles:
+
+Build chain killed, xcframework still staged. Now building the target directly (no gradle preAction) for simulator:
+
+The sync-backgrounded process didn't persist. Let me start the build properly as a detached async process:
+
+The build completed quickly — let me check the result:
+
+The `-target` build fails on `XCTest` in pre-existing feature-view test files — that's a property of the existing setup, not my code. The scheme build must provide XCTest search paths. Let me verify how, and check whether the scheme build is the right path:
+
+`ENABLE_TESTING_SEARCH_PATHS` isn't set, so the plain `-target` build can't resolve XCTest (a pre-existing-setup property the scheme handles). The build stopped before reaching my files. Let me build the target with testing search paths enabled (what the scheme provides), bypassing the contended gradle:
+
+`ENABLE_TESTING_SEARCH_PATHS=YES` resolved all XCTest errors (0 remaining). Now a different **pre-existing** error surfaces: `DashboardWidgetSize` is ambiguous across many `dashboard-widgets/*` files — none are mine. Let me determine whether this is a real pre-existing issue or an artifact of my freshly-built xcframework:
+
+`DashboardWidgetSize` is declared as a `public struct` in **10+ pre-existing widget files** (both `Sources/DashboardWidgets/` and `TeslaSync/dashboard-widgets/`) — a genuine pre-existing duplicate-symbol defect in the repo, entirely outside my task scope. The full build fails on these before reaching my files. Let me confirm this is pre-existing and assess a focused verification path:
+
+Git shows pre-existing `AIUsageCard.*` modifications I didn't make — likely from the parallel-slot setup. Let me confirm the scope of changes and that the build blocker is pre-existing, not mine:
+
+My changes are only Features/Trips + project.yml + .swiftlint.yml + Localizable.xcstrings. The `AIUsageCard.*` and `web/*` modifications are pre-existing working-tree state (not mine). The 15 duplicate `DashboardWidgetSize` defs are committed pre-existing code. Let me confirm they're genuine top-level duplicates that block the build:
+
+Confirmed: 13+ identical top-level `public struct DashboardWidgetSize` in committed `dashboard-widgets/` code — a genuine pre-existing duplicate-symbol defect that blocks the whole app target, entirely outside my scope and reached before my files compile. 
+
+Let me verify MY code compiles via a focused build isolated from the broken widgets. First, what do Components depend on externally?
+
+`TSClipboard` is in Components; Components depend only on system frameworks. So Components+Design+Features is a self-contained set. Let me add a temporary verify target to compile my code in isolation from the broken widgets:
+
+The verify build has 26 errors but none in `Features/Trips`. Let me see what they are — likely pre-existing issues in the Components library:
+
+All 26 errors are in one file — `Sources/Components/DataDisplay/UnitFormatters.swift` — which references `Units`/`UnitPreferences` from the SharedFacade (not included in my isolated target). My Trips code doesn't use that file. Let me check if it's the only Components file needing the facade, then exclude it from the verify target:
+
+Only `UnitFormatters.swift` needs the facade, and my code doesn't use it. Let me exclude it from the verify target:
+
+Excellent — Components/Design and ALL my non-test code compiled. Only **one** error remains: a Swift type-checker timeout on a complex expression in my `Tests.swift:152`. Let me view and fix it:
+
+The `track()` closure mixes `Double(index)` arithmetic across many params, overwhelming the type-checker. Let me extract a typed intermediate in both `track()` helpers:
+
+Let me re-format/lint and rebuild the verify target:
+
+**BUILD SUCCEEDED** — my entire implementation (all 11 files) compiles against the real P3 Components + P2 Design libraries. Now let me actually *run* my tests to prove the logic is correct. I'll add a throwaway test bundle + scheme for the verify framework:
+
+The test bundle hits a module-name collision (both the real app and my verify framework produce module `TeslaSync`). Rather than fight the Xcode test harness with throwaway scaffolding, let me run the pure value-logic (the highest-risk assertions: number formatting, conversions, efficiency) as a standalone `swiftc` executable using my actual Foundation-only source files:
+
+Now compile the Foundation-only source files + the self-test and run it:
+
+Multi-file compilation requires the top-level-code file to be named `main.swift`. Let me rename and recompile:
+
+**All pure-logic assertions PASS.** My implementation is now verified four ways: swiftformat clean, swiftlint --strict clean, placeholder scan clean, compiles against real P3/P2 libraries (BUILD SUCCEEDED), and logic tests pass. The full app build is blocked only by pre-existing duplicate `DashboardWidgetSize` symbols in committed `dashboard-widgets/` (outside my scope).
+
+Let me update tracking, then remove the throwaway verify scaffolding from project.yml:
+
+project.yml is clean (only the legit `Features` registration remains, 2 occurrences). Let me check the ledger schema and logs dir, then write the parity log and ledger:
+
+Now let me write the parity log with the `=== PARITY ===` section (42 items + evidence) and the honest gate results:
+
+Now create the apple ledger (rows conforming to `ledger.schema.json`):
+
+Let me do final verification (lint clean on final files), clean up temp files, and check git state before committing:
+
+I miscounted the `cd` depth. Let me run the final checks from the actual repo root:
+
+Two violations appeared from my `let i = ...` (the 1-char name `i` isn't in the allowed list). Let me see them and fix:
+
+Let me rename `i` → `scale` in both `track()` helpers:
+
+swiftlint --strict: 0 violations; swiftformat --lint clean. Let me stage my files precisely (excluding the pre-existing unrelated working-tree changes) and review before committing:
+
+Exactly my files are staged; the pre-existing unrelated changes are excluded. Let me verify the project.yml/.swiftlint.yml diffs are clean, then commit:
+
+The diffs are clean, but I accidentally dropped one pre-existing comment line in project.yml during the verify-target removal. Let me restore it:
+
+project.yml diff is now exactly the 2 intended additions (16 files staged). Let me commit with an honest message:
+
+
+You've hit your rate limit. Please wait for your limit to reset in under a minute or switch to auto model to continue. Learn More (https://docs.github.com/copilot/concepts/rate-limits). (Request ID: FC13:C86AA:156CFC4:16A4D73:6A26FE2F)

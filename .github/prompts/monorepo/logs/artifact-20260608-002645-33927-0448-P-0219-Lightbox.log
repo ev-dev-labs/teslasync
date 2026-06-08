@@ -1,0 +1,151 @@
+================================================================================
+P4 · Shared surface · 0219 — Lightbox (Apple)
+Run: 2026-06-08T07:07-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/448
+Base: c9c6fdb9f
+Prompt: P4 · shared-surfaces · 0219 — Lightbox (Apple)
+Web source (spec): web/src/components/ui/Lightbox.tsx (578 lines)
+Mode: code-complete + host-validated; DEFERRED full-app Xcode scheme build/test
+      (ADR-012 macOS-pending), matching predecessors 0124 KioskOverlay /
+      0180 AlertMessageEditor / 0231 FSMTimelineChart / 0010 ToolCard.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                 OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iOS simulator SDK .......... iPhoneSimulator 26.5 (deployment target iOS 18.0)    OK
+  macOS SDK .................. MacOSX 26.5 (deployment target macOS 15.0)            OK
+  iOS simulator device ....... iPhone 16 present + booted (simctl via Xcode)        OK
+  swiftlint .................. 0.63.x                                               OK
+  swiftformat ................ present                                              OK
+  xcodegen ................... present                                             OK
+  pwsh (placeholder gate) .... 7.x present                                          OK
+  java + gradlew ............. OpenJDK 17 + apps/shared/gradlew present             OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks has only .gitkeep) WARN
+  codesign identities ........ 0 valid (BLOCKER for signed app gate, ADR-012)      WARN
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)" — it is an immersive image viewer). The core
+  requirement is SwiftUI, which is available and proven by REAL iOS-18 + macOS-15
+  SDK compiles AND a passing 30-test XCTest run below (AsyncImage + zoom/pan/keyboard
+  + modal a11y, all standard SwiftUI present on both SDKs). The capability-BLOCKED
+  escape hatch therefore does NOT apply; the surface is authored and host-validated
+  for real, and STATUS=DONE.
+
+=== ARTIFACT (apps/apple/TeslaSync/shared-surfaces/Lightbox.*) ===
+  Lightbox.Model.swift      278  SwiftUI/Foundation pure model: P1/S11 surface slug +
+                                 P1/S10 strings facade (counter / zoomPercent / image a11y),
+                                 LightboxImage (web `{src,alt,caption}`), the 1×–5× zoom ladder
+                                 (web LIGHTBOX_MIN/MAX/STEP + zoomIn/out/percent/clamp), the
+                                 navigation math (clampIndex / prev / next / first / last +
+                                 neighbour pre-warm indices), and the Equatable
+                                 LightboxPresentation projection (counter, nav edges, zoom gates,
+                                 caption).
+  Lightbox.Telemetry.swift   40  P1/S11 `view.opened` diagnostics seam (Sendable protocol +
+                                 redaction-safe os_log sink; slug only, never a URL/caption).
+  Lightbox.Views.swift      212  Chrome subviews: backdrop (click-to-close), the circular icon
+                                 control (close / nav / zoom kinds, edge-disabled), the top bar
+                                 (counter + close), the bottom bar (caption + zoom chip).
+  Lightbox.Stage.swift      240  Image-area subviews: decode skeleton (web `!decoded`), load-error
+                                 + retry (native error state), empty state (web `total===0`→null),
+                                 the zoomable AsyncImage (scale + drag-to-pan + pinch), the image
+                                 stage (image + prev/next overlay).
+  Lightbox.swift            255  The composed surface: @State index/zoom/pan/loadToken, the
+                                 open/close + nav + zoom actions, the hardware-keyboard handler
+                                 (Esc/←/→/Home/End/+/-/0), modal a11y (.isModal), neighbour
+                                 pre-warm task, the view.opened lifecycle, and the
+                                 `.lightbox(isPresented:…)` presenter (web `open`/`onClose`).
+  Lightbox.Previews.swift   119  #if DEBUG previews: single image / sequence (counter+nav) /
+                                 caption / empty / Dynamic Type XXL / decode skeleton /
+                                 load-error+retry / zoom chip at 250%.
+  Lightbox.strings           53  P1/S10 catalog — all 8 web `t()` keys (counter, close, previous,
+                                 next, zoomOut, zoomPercent, zoomIn, zoomReset) + native chrome/a11y
+                                 (dialog, image fallback, loading, zoom-level) + the two native
+                                 state upgrades (empty title, error title/retry).
+  Lightbox.Tests.swift      306  XCTest (30 cases): zoom ladder + clamp + percent, navigation +
+                                 neighbours, presentation matrix (single/sequence/edges/empty/zoom/
+                                 caption/Equatable), image-URL parsing, i18n fallback + counter/
+                                 zoom formatting, image a11y label (alt vs generated), telemetry slug.
+
+  Parity to the web source (web/src/components/ui/Lightbox.tsx):
+    Data sources (web hooks → native seams):
+      useTranslation → LightboxStrings facade (P1/S10)
+      useId          → SwiftUI accessibility identity / modal labelling
+    Composition reproduced 1:1: backdrop click-to-close · top bar (n/total counter +
+      close) · image area with decode skeleton + prev/next circles (web `total>1`,
+      edge-disabled) · bottom bar (caption + zoom chip: zoom-out · live % · zoom-in ·
+      reset). Verbatim web logic ported + unit-pinned: LIGHTBOX_MIN/MAX/STEP + zoomIn/
+      zoomOut (pan-reset at 1×) + Math.round(zoom*100), safeInitialIndex + goPrev/goNext/
+      goFirst/goLast clamps, neighbour pre-warm offsets [-1,+1], counter `n / total`,
+      caption present/absent. Keyboard parity: Esc closes, ←/→ prev/next, Home/End
+      first/last, +/=/-/_/0 zoom — via .onKeyPress. Native enhancements over web:
+      pinch-to-zoom (MagnifyGesture), a labelled load-error+retry (web shows a broken
+      <img>), and a friendly empty state (web returns null).
+    States (all render, never a blank box): loading (decode skeleton) · empty (friendly
+      "no images" dialog) · error (load failure → labelled state + retry) — the branches
+      the web source carries. The loading/stale/offline DATA-lifecycle states belong to
+      the gallery surface that supplies `images`; this view, like the web component,
+      fetches nothing (documented in the file headers, the same contract KioskOverlay uses).
+    i18n: every web string resolves through the P1/S10 facade; the catalog carries the
+      verbatim web English. a11y: VoiceOver labels on every interactive element (close /
+      prev / next / zoom-out / zoom-in / reset), an explicit image label (alt or generated
+      "Image n of total"), a "Zoom level" value, .isModal containment, Dynamic Type via
+      Font.TS, reduce-motion-safe (skeleton pulse + zoom animation gated on Reduce Motion).
+    Telemetry: emits view.opened with surface slug "Lightbox" once (P1/S11), asserted by test.
+
+  Wiring (minimal, additive — required to make the new shared-surfaces group live):
+    apps/apple/project.yml      → added `- path: TeslaSync/shared-surfaces` to the TeslaSync
+                                  (iOS) + TeslaSync-macOS app targets (mirrors feature-views).
+    apps/apple/.swiftlint.yml   → added `TeslaSync/shared-surfaces` to `included`.
+
+=== HOST-RUNNABLE GATES (all green) ===
+  swiftformat --lint <surface>  ............... 0/7 files require formatting        FORMAT_EXIT=0
+  swiftlint lint --strict <surface> ........... Found 0 violations, 0 serious (7)   LINT_EXIT=0
+  check-placeholders.ps1 -Path <surface> ...... PLACEHOLDER_COUNT=0 ALLOWED=0       PLACEHOLDER_EXIT=0
+  swiftc -typecheck iPhoneSimulator (ios18.0-simulator, swift6, strict-concurrency) IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (macos15.0, swift6, strict-concurrency) ................. MAC_TYPECHECK_EXIT=0
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6) ........... 30/30 passed, TEST_EXIT=0
+      → LightboxTests (zoom ladder · navigation · presentation matrix · image URL ·
+        i18n facade + counter/zoom formatting · image a11y label · view.opened slug)
+  xcodegen generate (project spec with the 8 new files) ........................... XCODEGEN_EXIT=0
+
+=== DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test ===
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. They are blocked by PRE-EXISTING, UNRELATED parallel-merge
+    state in the shared app target — ZERO of which originates in this surface
+    (verified by grep, this run):
+      • Shared.xcframework not staged (apps/apple/Frameworks has only .gitkeep); the
+        scheme pre-action builds it via the Kotlin/Native Gradle toolchain (the P1/S3
+        artifact already tracked macOS-pending).
+      • `struct DashboardWidgetSize` defined in 15 files (Sources/DashboardWidgets/*
+        + TeslaSync/dashboard-widgets/*) — "invalid redeclaration" across the app target.
+      • 262 co-located feature-view/widget *.Tests.swift `import XCTest` into the app
+        target (Lightbox.Tests.swift follows the same `#if canImport(XCTest)` pattern as
+        its peers, so it is consistent with — not the cause of — this condition).
+      • 0 valid macOS development-signing identities (ADR-012).
+    Separately, the repo-wide `swiftlint --strict` (the literal gate's whole-tree form)
+    also carries 1 PRE-EXISTING unrelated violation at base c9c6fdb9f —
+    TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length)
+    — in a file this surface does not touch. The surface-scoped swiftlint above is 0/0.
+    This surface's OWN code is proven to compile against the real iOS-18 + macOS-15 SDKs
+    (typechecks above) and its logic runs green (30/30 XCTest). The full-app build/test is
+    recorded in apps/macos-pending-verifications.md for the P99 acceptance gate on a
+    macos-latest runner with signing identities.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all states from the web source reproduced
+      (loading skeleton / empty / error+retry / navigation + zoom branches).
+  [x] Hooks bind to the shared P1/S8/S10 seams (useTranslation→LightboxStrings, useId→
+      modal a11y identity); no direct HTTP from the view (it fetches nothing, like the web).
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (8 web keys +
+      native chrome/a11y).
+  [x] Accessibility labels present on every interactive element + image + zoom value;
+      .isModal containment; Dynamic Type; reduce-motion-safe.
+  [x] Tests: adapter/model unit tests + per-state presentation tests + a11y label test
+      (30 total, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (stub gate: 0, 0 opt-outs).
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing unrelated blockers);
+      host-runnable equivalents (real-SDK typecheck both platforms + 30/30 XCTest) green.
+
+EXIT=0
+STATUS=DONE

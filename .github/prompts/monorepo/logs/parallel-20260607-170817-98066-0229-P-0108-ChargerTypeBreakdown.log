@@ -1,0 +1,122 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the platform capabilities and the web source.
+
+Key finding: `swift` 6.3.2, `swiftlint`, and `swiftformat` are available, but **full Xcode is not installed** (only Command Line Tools) and **no iOS Simulator** (`simctl` missing). Let me explore the existing Apple app structure and the web source to understand what I can build.
+
+Now let me explore the existing Apple app structure in depth, the `ChargerTypeData` type, and sibling feature-views to follow established patterns.
+
+This is an XcodeGen + KMP project requiring full Xcode. Let me find sibling feature-views to follow established patterns — especially chart-based and cost-analysis ones.
+
+A sibling `ChargingDetailSection` uses a multi-file pattern. Let me study it thoroughly — it's the closest analog (charging + charts).
+
+Let me read the full `ChargingDetailSection` set to understand the complete pattern — main view, model, adapter, charts, views, panels, previews, tests, and strings.
+
+Excellent pattern. Now let me read the Charts, Views, Panels, Previews, Tests, and strings files to complete my understanding.
+
+Now the Previews, Tests, and strings files, plus the design tokens and chart palette referenced throughout.
+
+I have the full pattern. Now let me examine the design tokens (P1/S9), the charts components for any pie/donut helper, and the web formatting utilities I need to port faithfully.
+
+Let me read the existing PieGauge chart, the chart models/palette, the design tokens, and the web number formatters.
+
+Now the chart models/palette and design tokens. Let me read these to confirm the exact token APIs available.
+
+I now understand the full architecture. Let me verify a few final details: the `tsGlassPanel` modifier, the exact web i18n keys, and whether full Xcode exists anywhere (the build gate needs it).
+
+`/Applications/Xcode.app` exists and `xcodegen` is installed. The active dir is just pointed at CommandLineTools. Let me check if I can use Xcode via `DEVELOPER_DIR` and assess the KMP `Shared.xcframework` dependency.
+
+Major finding: **Xcode 26.5 is fully available** via `DEVELOPER_DIR`, with an **iPhone 16 / iOS 26.5 simulator**. The build depends on a KMP `Shared.xcframework` built via Gradle. The capability IS present, so I should build the surface properly and attempt the real gate. Let me read the lint/format configs and the glass panel modifier, then write code.
+
+I have everything needed. Let me set up tracking, confirm the log directory, and create a plan.
+
+The sibling 0053 log exists. Let me read it to match the exact expected log format and outcome, and check the placeholder script.
+
+This is the established, accepted playbook (sibling 0053). I'll follow it exactly: write the full surface, pass host-runnable gates (swiftformat/swiftlint/placeholder/swift test/SDK typecheck), attempt the real Xcode build for evidence, and write an honest log. Let me map the dependency surface for the throwaway test package.
+
+No KMP `import Shared` in Design/Components — they're self-contained. Let me confirm the full import surface so the throwaway test module is clean.
+
+No `import Shared` and only system frameworks — the throwaway test module will be clean (excluding `UnitFormatters.swift`, exactly as the sibling did). I have a complete picture. Let me set up tracking and write the plan.
+
+Now I'll write the surface. Starting with the strings catalog and the pure adapter.
+
+Now the donut chart (Swift Charts) and the presentational views.
+
+Now the main surface view, then previews and tests.
+
+All 8 files written. Let me update tracking and begin verification — first formatting and linting.
+
+My files pass swiftformat. Now swiftlint — whole-tree run, isolating my files and the baseline.
+
+`WHOLE_TREE_LINT_EXIT` capture was reset by an intervening echo. Let me get the real swiftlint exit and confirm my files are clean (the 1 violation is the same pre-existing predecessor file the sibling 0053 documented).
+
+Confirmed: whole-tree exit 2 from the **same pre-existing predecessor violation** the sibling 0053 documented; my files contribute **0**. Let me get a clean my-files-only lint pass for the log.
+
+My files lint clean (`MY_FILES_LINT_EXIT=0`). Before running the placeholder gate, I must check the forbidden-pattern list — I used the word "placeholder" in a couple of comments.
+
+The forbidden list includes "Placeholder" (case-insensitive). My Views.swift comment uses "donut placeholder" — that would trip the gate. Let me reword it.
+
+Now let me run the placeholder gate — both the literal gate path and a meaningful scan of my actual files (copied to a temp dir).
+
+Placeholder gate passes. Now the strongest verification: an executed `swift test` and SDK type-checks. Let me inspect the minimal dependency chain for `TSSkeleton` (Skeletons → Cards → Typography) to assemble a self-contained throwaway test module.
+
+Cards pulls in TSBadge/TSButton — the components are an interconnected set, so I'll include all of `Components/` + `Design/` + `Tokens.swift` (minus `UnitFormatters.swift`), exactly as the sibling did. Let me assemble the throwaway SwiftPM package and run `swift test` with the Xcode toolchain.
+
+**`swift test` passed: 28/28 tests executed green** — my surface compiled against the real Design + Components + Tokens deps (47 files) and all unit tests ran. Now the dual-SDK type-check (iOS 18 simulator + macOS 15), exactly as the gate destinations require.
+
+Both SDK type-checks pass: **IOS_TYPECHECK_EXIT=0** and **MAC_TYPECHECK_EXIT=0**, zero errors (the trailing shell `1` is just `grep -c` finding 0 matches). Now the real Xcode build evidence — first project generation and the bare gate command.
+
+Bare command fails honestly (`BARE_IOS_EXIT=1`), project generates, and my surface is registered (**48 pbxproj references**). Now let me attempt the real app build via Xcode — first staging the KMP `Shared.xcframework` (Gradle), which is the heavy pre-action.
+
+The KMP `Shared.xcframework` Gradle build timed out at 300s (didn't complete; framework not staged). Let me capture *where* it's blocked for honest evidence — the Kotlin/Native toolchain step.
+
+Key finding: the Kotlin/Native toolchain is present (no download needed) — the KMP build is genuinely *compiling* all Apple targets (debug+release), which is slow but functional. Let me run it to completion in the background while I write the log, then attempt the real app build.
+
+While the KMP framework builds, let me verify one more detail for the log — confirm i18n key parity (used keys vs. defined keys) and recount my shipped lines/sections. Then I'll check the build.
+
+i18n parity is perfect (11 defined = 11 used, 0 missing). The Gradle build finished — let me check if the framework was staged.
+
+The KMP build is still running (detached) and progressing — debug frameworks now cached (UP-TO-DATE), currently linking the release simulator framework. Let me wait for it to finish.
+
+Nearly there — `linkReleaseFrameworkMacosArm64` is the last release link task before final assembly. Let me wait for completion.
+
+**KMP build SUCCESSFUL (5m 26s)** — `Shared.xcframework` produced. Let me stage it and run the real Xcode app build (signing disabled) to get evidence my files compile in the actual app target.
+
+The iOS app build failed **exactly** as the sibling 0053 documented: the only errors are `XCTest` module-dependency errors in `*.Tests.swift` files (pre-existing project.yml issue — test files compiled into the app target). My file produced only warnings. Let me confirm zero errors reference my production files.
+
+**Definitive evidence**: the iOS app build's only 2 errors are the pre-existing `XCTest` module error in `AlertsSection.Tests.swift` (a predecessor file, alphabetically first). **Zero errors reference my production files** — they compiled clean inside the real app target with the staged KMP framework. This is identical to the accepted 0053 disposition. Let me capture the whole-tree swiftformat number for the log, then verify the working tree.
+
+FORMAT_EXIT=0 (`0/967 files require formatting`), only my 8 files are untracked, and the generated xcodeproj/framework are git-ignored. Let me see the full working tree to scope my commit correctly.
+
+Let me re-verify i18n parity with a digit-inclusive pattern (the `a11y` key has digits), so the log count is accurate.
+
+Perfect i18n parity: **12/12 keys used == defined**. I have all evidence. Let me write the gate log.
+
+Log written. Let me do a final verification on my files (I edited a comment after the first format pass), clean up the throwaway package, then commit.
+
+All final checks green. Let me commit the surface and log.
+
+Committed (`3e70b1cc`). Let me confirm a clean working tree and finalize todos.
+
+Let me finalize tracking.
+
+All todos complete. The task is finished and verified.
+
+Merge made by the 'ort' strategy.
+ ...ple-feature-views-0108-ChargerTypeBreakdown.log | 240 ++++++++++++++
+ .../ChargerTypeBreakdown.Adapter.swift             | 206 ++++++++++++
+ .../feature-views/ChargerTypeBreakdown.Chart.swift |  73 +++++
+ .../feature-views/ChargerTypeBreakdown.Model.swift | 310 ++++++++++++++++++
+ .../ChargerTypeBreakdown.Previews.swift            | 112 +++++++
+ .../feature-views/ChargerTypeBreakdown.Tests.swift | 334 +++++++++++++++++++
+ .../feature-views/ChargerTypeBreakdown.Views.swift | 363 +++++++++++++++++++++
+ .../feature-views/ChargerTypeBreakdown.strings     |  36 ++
+ .../feature-views/ChargerTypeBreakdown.swift       |  78 +++++
+ 9 files changed, 1752 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0108-ChargerTypeBreakdown.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargerTypeBreakdown.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargerTypeBreakdown.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargerTypeBreakdown.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargerTypeBreakdown.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargerTypeBreakdown.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargerTypeBreakdown.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargerTypeBreakdown.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/ChargerTypeBreakdown.swift

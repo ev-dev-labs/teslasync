@@ -1,0 +1,126 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Let me read the web source spec and examine the existing Apple app structure in parallel.
+
+The web source is a pure presentational skeleton. Let me examine the existing native conventions, the placeholder checker, and look for similar presentational/skeleton components.
+
+There's a `LoadingSkeleton` native component — the closest analog. Let me read it thoroughly along with the placeholder patterns.
+
+Let me read all the LoadingSkeleton files — this is my closest model for a presentational skeleton.
+
+Excellent model. Let me read the remaining LoadingSkeleton files to complete my understanding of the pattern.
+
+Now let me read the Tests file and locate the shared primitives (TSSkeleton, TSGlassPanel, TSSpacing, Color.TS) plus how project.yml includes files.
+
+Let me read the shared primitives and check how project.yml includes source files.
+
+Let me locate the design token definitions (TSSpacing, TSRadius, Color.TS) used by the main target.
+
+Now let me check toolchain availability and how the design tokens/test files are wired, plus review a prior surface's log for the expected outcome.
+
+Toolchain is available. The prior precedent (ADR-012) defers the full `xcodebuild` to a signed/KMP runner. Let me confirm the design tokens, the GlassPanel API, and the test-wiring precedent.
+
+Let me read the web `Skeleton` primitive to faithfully reproduce its `rounded` / `rounded-full` semantics.
+
+Now I understand the web Skeleton semantics (`rounded`→capsule, default→small radius). Let me check for type-name collisions and study how the prior surface proved its gates green.
+
+Let me read the full GATE section of the prior log to replicate the exact host-runnable verification commands.
+
+I have a complete picture of the precedent. Let me map the dependency closure needed for an isolated build (`.tsGlassPanel()`, `tsDynamicColor`, etc.) and create a plan file.
+
+Let me map which Source files depend on the KMP `Shared` framework (to exclude from an isolated build) and inspect Cards.swift's deeper deps.
+
+I now have the full dependency closure and design. Let me read the lint/format configs to ensure my code passes `--strict`, then I'll start writing.
+
+Collisions are clear, toolchain is ready, and I understand the precedent. Let me set up tracking and write the plan.
+
+Now I'll write the surface files. Starting with the Model (the host-free spec), Telemetry, and strings.
+
+Now the Views file with the presentational sub-views.
+
+Now the main surface view.
+
+Now the Previews and strings files.
+
+Now the comprehensive test suite.
+
+All 7 files written. Let me mark progress and run the formatter/linter on the surface files.
+
+swiftformat flagged redundant returns. Let me auto-fix with the formatter, then re-verify.
+
+Format passes. Let me verify the auto-fix and run swiftlint --strict.
+
+swiftlint --strict and swiftformat both pass with 0 violations. Let me examine how the placeholder script resolves `-Path` so I run it faithfully.
+
+The literal gate path is vacuous (LiteralPath miss = clean), so like the precedent I'll scan a temp dir holding the real surface files, plus run the self-test. Let me run the placeholder gate genuinely.
+
+Placeholder gate is genuinely clean (COUNT=0) and self-test passes. Now the key proof — isolated SwiftPM build + `swift test`. Let me assemble the package with the real token/design/component closure.
+
+The only build errors are the `#Preview` macro (a SwiftPM/Xcode-toolchain limitation) in copied design-system files. `#Preview` is `#if DEBUG`-gated, so a release build excludes it. Let me enable testability and build/test in release to dodge the macro while still proving logic + tests.
+
+Including the whole Components tree pulled in unrelated files (`UnitFormatters` needs `Units`). Let me trim to a curated minimal closure — only what TSSkeleton/TSGlassPanel actually need — and identify their real dependencies.
+
+Curated closure identified. Let me rebuild the package with only the real dependency set.
+
+ISO_BUILD_EXIT=0 — the surface + curated closure compiles under Swift 6. Now run the tests (release config to avoid the `#Preview` macro).
+
+`swift test -c release` can't find XCTest (release test quirk). I'll run tests in DEBUG instead, which means stripping the `#if DEBUG` `#Preview` blocks from the throwaway closure copies. Let me write a nesting-aware stripper and run a normal debug build + test.
+
+All `#Preview` blocks stripped. Now run a normal debug build + test (XCTest works in debug).
+
+Debug build is clean. Now run the XCTest suite.
+
+`XCTest` module isn't found — likely a developer-dir issue. Let me check the active toolchain.
+
+Active toolchain is CommandLineTools (no XCTest). Full Xcode is present — let me point `DEVELOPER_DIR` at it and re-run the build + tests with the real Xcode toolchain.
+
+All 22 XCTests pass under the real Xcode toolchain. Now the iOS-18 + macOS-15 SDK type-checks on the **real** surface files (including the un-stripped Previews with `#Preview`), matching the precedent's steps [3]/[4].
+
+macOS 15 typecheck (with previews) is clean. Now iOS 18 simulator.
+
+Both SDK type-checks pass with previews. Now let me run the gate's tree-wide `swiftlint --strict` and `swiftformat --lint apps/apple` to capture the real state and confirm my files contribute zero violations.
+
+Tree-wide lint shows 1 pre-existing violation (not in my files). Let me identify it to document honestly, and run the swiftformat gate.
+
+The pre-existing lint violation is in another prompt's `LifetimeStatsWidget.Adapter.swift` (same one the precedent noted) — not mine. My 7 files are clean. Now the swiftformat gate.
+
+Both pre-existing issues are in other prompts' files (`LifetimeStatsWidget`, `ActionBuilder.Previews`) — exactly as the precedent noted. My files are clean. Now let me attempt the full `xcodebuild` gate to capture real exit codes (deferred per ADR-012). First, check prerequisites.
+
+This confirms the documented ADR-012 disposition: `Shared.xcframework` is unstaged (only `.gitkeep`), and 152 co-located `*.Tests.swift` exist — full-app `xcodebuild` is deferred to the signed `macos-latest` acceptance gate. Let me still RUN it to capture real exit codes. First, generate the project.
+
+Project generates cleanly (GEN_EXIT=0). The Shared.xcframework staging needs the KMP/Kotlin-Native toolchain. Let me run the real iOS `xcodebuild` gate (bounded) to capture genuine exit codes.
+
+While that runs, let me check the build progress periodically.
+
+The background launcher returned but xcodebuild itself is still running (log empty — likely in the gradle/Shared staging preAction). Let me wait longer.
+
+It's been ~4min with no output — the gradle/KMP Shared staging preAction is the likely blocker. Let me inspect processes and stop the unbounded build.
+
+Good — the KMP/Kotlin-Native (`.konan`) toolchain IS present and actively building `Shared.xcframework` (konan clang++ at 100% CPU). The build is genuinely progressing. Let me let it run to capture the real exit code.
+
+This is the documented ADR-012 deferral path — the KMP/Kotlin-Native `Shared.xcframework` staging preAction is the gate, and the app-target compile is blocked by the pre-existing 152-file co-located XCTest collision regardless. Let me stop the unbounded scheme build and instead capture deterministic, surface-relevant evidence via a direct app-target compile.
+
+Confirmed — the other xcodebuild processes belong to other parallel slots (different PPIDs); my session's build was stopped. I'll leave those alone. Let me capture deterministic app-target evidence via a direct target compile (skips the gradle preAction), bounded.
+
+The direct build is also buffering with no output (shared, contended host with other slots' xcodebuilds). Let me give it one final bounded check to capture real errors.
+
+The direct build also buffers indefinitely on this shared/contended host. I have authoritative green proof of the surface via both SDK type-checks + 22 passing tests. Let me stop it and capture the final deterministic structural evidence for the deferred xcodebuild.
+
+Structural evidence confirmed (Shared unstaged, 152 co-located tests, 15 Shared imports — all pre-existing; my surface: 0 errors on both SDKs). Cleanup done. Now let me write the gate log.
+
+Let me gather final metrics (line counts, test count) and write the gate log.
+
+Now I'll write the comprehensive, honest gate log.
+
+Log written. Let me do a final green re-confirmation on the actual repo files, then commit only the allowed files.
+
+Both final gates green (0 violations, 0 formatting). Now commit only the allowed files (excluding the pre-existing web changes).
+
+Exactly the 8 allowed files staged (7 surface + log); pre-existing web changes excluded. Committing now.
+
+Committed cleanly as `3d422ab90`. The pre-existing web changes remain untouched. Let me verify the commit contents and finalize.
+
+All 8 allowed files committed, no leftover artifacts. Let me finalize todo tracking.
+
+All todos complete. The task is finished.
+

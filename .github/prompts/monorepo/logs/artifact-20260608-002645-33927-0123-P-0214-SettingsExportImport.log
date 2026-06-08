@@ -1,0 +1,203 @@
+=== P4 Feature view 0214 SettingsExportImport (Apple) ===
+Prompt : .github/prompts/monorepo/.../p4-apple-feature-views-0214-SettingsExportImport.prompt.md
+Surface: apps/apple/TeslaSync/feature-views/SettingsExportImport.{swift,Adapter,Validation,
+         Projections,Seams,Model,Sources,Views,States,Previews,Tests,ModelTests}.swift + .strings
+Web src : web/src/features/settings/components/SettingsExportImport.tsx (the specification)
+Runner  : Darwin arm64. Swift 6.3.2. swiftlint 0.63.3. swiftformat 0.61.1. Date 2026-06-08.
+Severity: per-surface parity. Delegation: FORBIDDEN — authored directly, no sub-agents.
+
+────────────────────────────────────────────────────────────────────────
+RUNNER CAPABILITY (determines DEFERRED vs BLOCKED)
+────────────────────────────────────────────────────────────────────────
+Present  : swift/swiftc 6.3.2, swiftlint, swiftformat, pwsh 7, xcodegen.
+           SwiftUI + Observation + OSLog COMPILE/TYPECHECK under the CLT macOS 15 SDK
+           (probed: swiftc -typecheck -sdk macosx -target arm64-apple-macos15.0 → EXIT=0).
+Absent   : full Xcode.  `xcode-select -p` = /Library/Developer/CommandLineTools
+           → xcodebuild / simctl / iOS-Simulator runtime / the KMP-built Shared.xcframework /
+             the #Preview "PreviewsMacros" plugin / XCTest all ship with Xcode and are absent.
+Determination: NOT capability-BLOCKED. The prompt's BLOCKED escape hatch is "SwiftUI/Charts/
+           MapKit unavailable"; SwiftUI IS available and the surface was COMPILED + TYPECHECKED
+           + EXECUTED below, and this surface uses NO Charts/MapKit (web `charts/maps: none`).
+           The full-app `xcodebuild build test` is environment-DEFERRED with its real captured
+           exit + evidence, per predecessor parity (0050/0086/0088/0201/0241).
+
+════════════════════════════════════════════════════════════════════════
+RUNNABLE GATES — ALL GREEN (in this surface's allowed-files scope)
+════════════════════════════════════════════════════════════════════════
+[GREEN] swiftformat --lint  (12 shipped .swift)       : 0/12 require formatting    FORMAT_EXIT=0
+[GREEN] swiftlint --strict  (12 shipped .swift)       : 0 violations, 0 serious    LINT_EXIT=0
+        - file decomposition keeps every file ≤ 400 lines (swiftlint file_length, --strict):
+          Adapter 284, Model 305, ModelTests 261, Previews 105, Projections 269, Seams 127,
+          Sources 215, States 340, swift 79, Tests 230, Validation 160, Views 230.
+[GREEN] check-placeholders.ps1 (per real shipped file): PLACEHOLDER_ALLOWED=0
+                                                        PLACEHOLDER_COUNT=0         PLACEHOLDER_EXIT=0
+        - literal gate cmd `-Path .../SettingsExportImport` (a prefix, not a real path; the
+          script uses -LiteralPath → no glob) returns COUNT=0/EXIT=0 trivially; the honest
+          per-file scan of all 13 shipped files (-Path <tmp copy> -Language swift) ALSO returns
+          COUNT=0 (the binding result).
+        - grep sanity (TODO|FIXME|XXX|Coming soon|Placeholder|Lorem ipsum|not implemented|
+          fatalError("unimpl|not) across all 13 shipped files incl. .strings : none found.
+[GREEN] SwiftPM executable harness — EXECUTED the surface logic (Adapter + Validation +
+        Projections + Seams + Model + Sources) with the SAME assertions as the shipped XCTest,
+        retargeted to a standalone package (these 6 files are Foundation/Observation/OSLog only):
+            swift build (library + runner)                                   BUILD_EXIT=0
+            swift run SEIRunner  →  RESULT checks=89 failures=0               HARNESS_EXIT=0
+        Coverage executed: the bundle validator (all 8 web `validateSettingsBundle` early-returns
+        + the integer-rendering schemaTooNew message + JSON.parse failure), summarise (total =
+        added+updated, skipped excluded), section-diff rows + `+a ~u =s` chip + the `—` absent
+        case, the export/choose-file/apply button-label projections, the parse-error + toast
+        content (export-success / apply-applied / offline / generic-failure); model export
+        (fetch+save+toast, offline/generic/save failures, re-entrancy), the full ingest pipeline
+        (too-large / read-fail / invalid-JSON / validation-fail / dry-run-fail-inline /
+        success→preview + the in-flight `parsing` state), apply (success→applied+toast, the
+        `sudoCanceled` non-error that keeps the preview, offline/generic toasts that keep the
+        preview, the in-flight `applying` state + re-entrancy guard, the no-pending guard), reset,
+        dismiss, drag, and the P1/S11 view.opened-once telemetry (slug == "SettingsExportImport").
+        NB: XCTest itself is unavailable under CLT (no XCTest.framework / no `xctest` tool — both
+        ship with Xcode); the shipped XCTest files (Tests + ModelTests, 44 methods) run in the
+        app's TeslaSync(/-macOS) test targets under xcodebuild (DEFERRED below). The executable
+        harness runs the identical logic + asserts (89 checks).
+[GREEN] SwiftUI -typecheck PASS A (PRODUCTION, no -D DEBUG) — the 9 production files (main view +
+        Views + States + the 6 logic files) compiled together with the REAL design-system files
+        (apps/design/generated/apple/Tokens.swift + TSMaterial/Buttons/Cards/Badges/Typography/
+        Motion) vs the macOS 15 SDK, target arm64-apple-macos15.0 :        PASS_A_PROD_EXIT=0
+        (16 files; every #if DEBUG block excluded — the true shipped path against the real tokens
+        + real shared components, not a shim.)
+[GREEN] SwiftUI -typecheck PASS B (PREVIEWS, -D DEBUG, macro-free) — the 12 #Preview bodies
+        rewritten to plain @MainActor funcs (the `#Preview` macro needs Xcode's PreviewsMacros
+        plugin — see DEFERRED) + the DEBUG model seams, vs the same real deps :
+                                                                            PASS_B_PREVIEWS_EXIT=0
+        (17 files; proves every per-state preview body is type-correct.)
+[GREEN] xcodegen generate --spec project.yml             :                  XCODEGEN_EXIT=0
+        The 12 .swift + .strings are auto-included by the globbed `TeslaSync/feature-views`
+        source group (no project.yml edit needed): 78 SettingsExportImport references in the
+        generated pbxproj (iOS app + macOS app + both unit-test targets). (Generated .xcodeproj
+        removed afterwards — it is a build artifact, not a deliverable.)
+
+   --- Two real Swift-6 defects the harness + typecheck caught and FIXED (not papered over) ---
+   1. The DEBUG snapshot seams cannot set the model's file-scoped `private(set)` state from a
+      different file → moved the seams into Model.swift (co-located) and extracted the seam types
+      into Seams.swift to keep both files ≤ 400 lines.
+   2. The preview/test fixtures (sampleBundle/sampleResult/…) were `@MainActor`-isolated yet read
+      from nonisolated contexts (Previews' global `let`, the non-@MainActor adapter tests, a
+      default-arg) → marked `nonisolated`, and the `previewModel` main-actor default-arg moved
+      into the body. Both would have failed the real Xcode Swift-6 (strict-concurrency=complete)
+      build; both are now green in PASS A/B + the harness.
+
+════════════════════════════════════════════════════════════════════════
+GATE STEPS NOT GREEN — all environment-DEFERRED or PRE-EXISTING-out-of-scope
+(shown with real exits; NONE is a failure of this surface's code)
+════════════════════════════════════════════════════════════════════════
+[DEFERRED]  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+            stderr: "tool 'xcodebuild' requires Xcode, but active developer directory
+                     '/Library/Developer/CommandLineTools' is a command line tools instance"
+                                                                            IOS_EXIT=1
+[DEFERRED]  xcodebuild -scheme TeslaSync-macOS build test    (same cause)   MAC_EXIT=1
+            → Both DEFERRED, not failed by this code: full Xcode + the iPhone-16 simulator runtime
+              + the KMP-built Shared.xcframework are required and absent on this runner. Same
+              disposition as predecessors 0050/0086/0088/0201/0241. The surface compiles +
+              typechecks against the macOS SDK (PASS A/B) and its logic is EXECUTED green (89/89).
+[PRE-EXISTING / OUT OF SCOPE]  swiftformat --lint .  (whole tree, the gate command)
+            1/1925 files require formatting  →  TeslaSync/feature-views/ActionBuilder.Previews.swift:48
+            (blankLinesBetweenScopes).  NOT this surface; identical to the 0241 finding.
+                                                                            FORMAT_WHOLETREE_EXIT=1
+[PRE-EXISTING / OUT OF SCOPE]  swiftlint --strict   (whole tree, the gate command)
+            1 violation, 1 serious in 1921 files  →
+            TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length.
+            NOT this surface; identical to the 0241 finding. SettingsExportImport appears in ZERO
+            violation lines.                                                LINT_WHOLETREE_EXIT=2
+[PRE-EXISTING / OUT OF SCOPE]  `git status` also shows AIUsageCard.{swift,Adapter,Model,Views,
+            Previews,Tests,strings} as modified (a 0203→0237 AiUsageCard rename in flight). mtime
+            01:36:40 predates this session's first write (01:58); NOT touched by this surface and
+            NOT staged. Only the 13 SettingsExportImport files + this log are committed.
+
+────────────────────────────────────────────────────────────────────────
+PARITY — web SettingsExportImport.tsx → native (every t() + branch reproduced)
+────────────────────────────────────────────────────────────────────────
+Header        : IconBox(Database→externaldrive) + "Backup & Restore" + subtitle.
+Export row    : primary Button — idle "Export JSON"(download glyph) / "Exporting…"(spinner,
+                disabled) → fetch + save → success toast ("Settings exported" / "Saved to your
+                downloads folder."); offline + generic failure toasts (native classification of
+                the web mutation toast).
+Import row    : heading + helper + the stage machine, EVERY state rendered (no hidden surface):
+                • idle      → dashed dropzone + "Drag a JSON bundle here, or" + "Choose a file"
+                              (.fileImporter [.json]) + drag highlight (.dropDestination → web
+                              dragActive).
+                • parsing   → "Reading…" (spinner, disabled).
+                • parseError→ too-large / read-fail / "File is not valid JSON: {detail}" /
+                              the 8 validator messages / preview-failed — red inline box.
+                • preview   → "Previewing {name} ({bytes})" + "{a} added, {u} updated, {s}
+                              unchanged" + per-section diff (`+a ~u =s` / `—`) + Change file +
+                              Cancel + Apply (3-way: "Apply N change(s)" / "Nothing to apply" /
+                              "Applying…", disabled when applying or total==0).
+                • applied   → "Import complete" + diff + Done.
+                The apply step-up (RequireSudo) → `sudoCanceled` kept as a non-error that leaves
+                the dry-run preview visible (web `SudoCanceledError`).
+Toast         : model-held, tone-colored, dismissible, self-clearing (web `useToast`).
+Section labels: General settings / Alert rules / Geofences / Quiet hours.
+SI/units      : N/A — this surface carries no unit-suffixed values.
+
+────────────────────────────────────────────────────────────────────────
+ACCEPTANCE CRITERIA
+────────────────────────────────────────────────────────────────────────
+[x] Surface renders all states from the web source — export idle/busy; import idle(dropzone)/
+    parsing/preview/applied; the 5 parse-error branches; drag-active; apply busy / nothing-to-
+    apply; the success/failure/offline toasts. 12 #if DEBUG previews enumerate them; every branch
+    is projection/model unit-tested AND EXECUTED green (89/89). (This is an action surface with no
+    initial data fetch, so the template's loading/empty/error/stale/offline FETCH states do not
+    exist in the web source; the equivalent surfaces — dropzone idle, inline parse errors, and the
+    offline-classified toast — are all reproduced. Documented here, not silently dropped.)
+[x] Hooks bind through the shared P1/S8 seam — `SettingsBackupGateway` (web useExportSettings +
+    downloadSettingsBundle + useDryRunImport + useApplyImport) + `ImportFileResource` (the web
+    hidden <input>/drag-drop) via `SettingsExportImportModel`; no view HTTP/filesystem. `useToast`
+    → model-held toast. `useId`/`useRef` → the native `.fileImporter` the view owns.
+[x] Every i18n key from source has a catalog key — backup.title/.subtitle, .export.*, .import.*
+    (incl. dropPrompt/previewHeader/summary/applyCount/appliedDetail/done), .section.* preserved
+    verbatim from the web literals; native chrome (validator messages [verbatim web
+    validateSettingsBundle], offline, dismiss, a11y, hints) namespaced; all via the P1/S10 facade
+    (SettingsExportImport.strings). referenced == declared verified by the facade fallback tests.
+[x] Accessibility labels on every interactive element — export button (label+hint+id), choose-file
+    (label+hint+id), dropzone (label+id), apply (label+hint+id), Change file / Cancel / Done
+    (label+id), toast dismiss; section rows/header use combined elements; surface a11y label+id.
+[x] Tests: adapter projections + validator + i18n + a11y (Tests.swift, 22) + model lifecycle
+    (ModelTests.swift, 22) — XCTest, shipped; the same assertions EXECUTED 89/89 via the SwiftPM
+    harness (XCTest targets run under xcodebuild, deferred). Per-state coverage = the 12 previews
+    (PASS B typechecked) + the per-stage model tests.
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0 (per-file) +
+    grep clean. ("mock"-free: the test doubles are named In-Memory / Controllable / Spy.)
+[x] EXIT=0 / STATUS=DONE — every runnable in-scope gate is GREEN (format, lint, placeholder,
+    89/89 executed logic, PASS A production typecheck, PASS B preview typecheck, xcodegen
+    inclusion); the full-app xcodebuild build/test is environment-DEFERRED (real exit +
+    xcode-select evidence), and the only two whole-tree reds are PRE-EXISTING files outside this
+    surface's allowed files. Predecessor parity.
+
+────────────────────────────────────────────────────────────────────────
+HONESTY COVENANT
+────────────────────────────────────────────────────────────────────────
+ 1 No red-as-green ...... xcodebuild (IOS_EXIT=1/MAC_EXIT=1) + the 2 whole-tree lints
+                          (FORMAT_WHOLETREE_EXIT=1 / LINT_WHOLETREE_EXIT=2) are shown with their
+                          REAL exits, labelled DEFERRED / PRE-EXISTING — never as pass.
+ 2 No scope narrowing ... full 13-file surface; every web branch + every listed state reproduced.
+ 3 No skip-and-assume ... web source + useSettingsBackup + settingsImportSchema read end-to-end;
+                          every literal, every ingest early-return, and the onSuccess/onError +
+                          SudoCanceled branches reproduced + tested.
+ 4 No stubs as final .... complete implementation; placeholder gate COUNT=0; 89 assertions executed.
+ 5 No parity shortcuts .. export fetch+save+toast; the full ingest pipeline + local validator;
+                          dry-run preview with per-section diff; 3-way Apply + disabled rule;
+                          sudoCanceled-keeps-preview; offline classification; section labels.
+ 6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+ 7 No predecessor bypass  same disposition as 0050/0086/0088/0201/0241: xcodebuild env-DEFERRED,
+                          runnable gates green, → EXIT=0/STATUS=DONE.
+ 8 No commit on red ..... every gate that pertains to THIS surface's files is green; the reds are
+                          environment (no Xcode) + two untouched pre-existing files. Only the 13
+                          surface files + this log are committed (AIUsageCard pre-existing changes
+                          + the generated .xcodeproj are NOT staged).
+ 9 No silent drift ...... documented: the `#Preview` macro + XCTest run only under Xcode (logic
+                          proven via the macro-free PASS B typecheck + the executable harness);
+                          the web file `<input>`/drag-drop is modelled as an `ImportFileResource`
+                          seam + native `.fileImporter`/`.dropDestination`; this action surface
+                          has no data-fetch loading/empty/stale states (mapped, not faked).
+10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

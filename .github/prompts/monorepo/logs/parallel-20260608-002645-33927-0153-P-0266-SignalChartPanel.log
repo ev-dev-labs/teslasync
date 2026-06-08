@@ -1,0 +1,142 @@
+I'll start by understanding the task: create a native Apple (SwiftUI) version of `SignalChartPanel`. First, let me check the environment capabilities and locate the web source, since the prompt requires Xcode tooling that may not be available.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed. Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me explore the web source and existing Apple app structure to understand patterns before deciding on approach.
+
+Substantial existing structure — 1438 files in feature-views, each surface has `.Adapter.swift`, `.Model.swift`, `.Previews.swift` etc. Let me study the conventions from existing chart-based surfaces and check if SignalChartPanel files already exist.
+
+7 files per surface (`.swift`, `.Views.swift`, `.Model.swift`, `.Adapter.swift`, `.Previews.swift`, `.Tests.swift`, `.strings`). SignalChartPanel doesn't exist. Let me study a complete chart-based reference surface and find signal/live-related siblings to mirror conventions.
+
+`LiveSignalsTable` is the closest domain sibling, and `SpeedTrendChart` is a clean 7-file chart reference. Let me read the full SpeedTrendChart surface to learn conventions.
+
+Excellent — clear 7-file convention. Let me read the remaining reference files, find the design tokens, and critically check whether the macOS SDK (with SwiftUI/Charts/MapKit) is available for type-checking since xcodebuild needs full Xcode.
+
+Critical: the **macOS SDK (via CLT) includes SwiftUI, Charts, and MapKit** — a trivial typecheck passed (exit 0). So I can type-check Swift against the macOS SDK even without full Xcode/`xcodebuild`. Let me locate the design tokens and read the remaining reference files.
+
+Let me read the design token API, the test conventions, and the same-domain `LiveSignalsTable` to model `SignalStat` parity.
+
+Now let me locate the exact design-token API and read the web-side supporting types (`SignalStat`, `SmallMultiplesChart`, `CHART_COLORS`, `useDateFormat`) to port faithfully.
+
+The color/font/spacing tokens aren't in `Sources` — likely generated. Let me find where `Color.TS.accent`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSMotion` are actually defined across the whole tree, and check the project.yml for any codegen.
+
+Design tokens live in `apps/design/generated/apple` (added to the target as `DesignTokens`). Let me read those to get the exact `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius`/`TSMotion` API.
+
+Let me read the full Tokens.swift to get the complete `Color.TS` and `Font.TS` API.
+
+I now have the full token API. Let me study the web grid-mode chart, tooltip, and how parent pages build the `data`/`stats` props so the native port is faithful.
+
+I now fully understand the web component. Let me validate my verification approach by type-checking the **existing** SpeedTrendChart surface against the macOS SDK (with its token/infra deps). This proves the method before I write SignalChartPanel.
+
+Skeletons.swift pulls in `TSCard`. Rather than chase the full graph, let me find the minimal real-infra closure my surface needs. Let me locate `TSCard` and check whether `Sources/Components` + `Sources/Design` + tokens form a self-contained compile unit.
+
+The shared graph is large (pulls in `Units`/`UnitPreferences`). I'll build a minimal harness with only the real infra my surface needs. Let me check `Cards.swift` (defines `TSCard`, needed by `Skeletons.swift`/`TSSkeleton`) for clean deps.
+
+The shared graph is too interconnected to fully compile standalone. I'll verify my surface against the **real** token/motion/palette files plus minimal faithful stubs for leaf components. Let me confirm XCTest availability and the `#Preview` macro behavior standalone, then set up tracking.
+
+`#Preview` works standalone; XCTest isn't in the CLT SDK (so tests run only under xcodebuild — I'll still write them and separately prove adapter logic with a runtime driver). Let me confirm parent prop usage, then set up the plan.
+
+I have everything needed. Let me check the lint/format config to match house style, then set up my plan and todos.
+
+Let me read the exact forbidden placeholder patterns so my shipped code/comments don't trip the gate.
+
+Now I have complete understanding. Let me set up the plan and todos, then build.
+
+Before writing, two critical checks: the web `fmtNumber` precision (for tooltip parity) and whether any of my intended public type names collide in the single-module namespace (e.g., `SignalStat`, `SignalSeries`).
+
+No type collisions — all my names are unique in the module. Let me confirm the web default number precision, then write the Adapter.
+
+No collisions and web precision is 2. Now writing the pure Adapter core.
+
+Now the Model file (state-holder seam, telemetry, i18n facade, in-memory source).
+
+Now the Views file — header (live/historical), freshness chip, banner, overlay dual-axis chart, small-multiples grid, tooltip, legend, loading, empty, error.
+
+Now the main View file and update todos.
+
+Let me type-check the four surface files now against the macOS SDK using a minimal harness (real tokens/motion/palette + a faithful `TSSkeleton` matching its real signature), in Swift 6 strict-concurrency mode to mirror the real build.
+
+One access-level error. Let me make `SignalTooltipEntry` internal (its consumer `SignalChartTooltip` is internal) and re-check.
+
+Surface type-checks clean under Swift 6 strict concurrency. Now the Previews, strings, and Tests files.
+
+Now the i18n strings table.
+
+Now the Tests file (XCTest — runs under xcodebuild; I'll separately prove the adapter logic with an executable driver since XCTest isn't in the CLT SDK).
+
+Now let me verify. First, type-check the Previews (with `-DDEBUG`), then build an executable adapter/model **logic driver** to actually run and prove the parity values (since XCTest can't run without Xcode).
+
+`#Preview` needs Xcode's `PreviewsMacros` plugin (absent from CLT) — an environment limit, not a code defect (every surface uses it). I'll verify the preview **bodies** via a macro-free transform, and build+run a logic driver to prove parity. Let me create the driver.
+
+Now build the driver into an executable and run it to prove the logic.
+
+Those errors are in my driver harness (actor isolation), not the surface. Let me wrap the whole driver in a `@MainActor` context and rebuild.
+
+Nested `mk` doesn't inherit the closure's actor isolation. Let me annotate it `@MainActor` and tidy the `m7` block.
+
+Two driver failures are test-expectation issues: `en_US_POSIX` has no grouping separator (web uses grouping `en-US`). The production `integer()` is correct (groups per locale). Let me fix the locale in the driver and Tests to `en_US`.
+
+`sed` on macOS lacks `\b`, so Tests.swift wasn't updated. Driver passed with en_US though. Let me fix Tests.swift with `perl` and verify.
+
+Tests now use `en_US`. Now run the gate's achievable checks: swiftlint, swiftformat, placeholder scan, and inspect test assertions for a shim-based typecheck.
+
+swiftformat found auto-fixable issues. Let me apply the formatter (ecosystem tool), then re-lint.
+
+swiftformat passes. Now swiftlint --strict on my files, plus rebuild+rerun the driver (formatting changed source).
+
+`--strict` enforces the 400-line `file_length` rule (warnings become errors). I need to split Adapter, Views, and Tests. Let me get exact counts and plan splits matching the repo's multi-file convention.
+
+Confirmed 400-line limit is real (SpeedTrendChart.Adapter is 399). I'll split Adapter, Views, and Tests into cohesive `SignalChartPanel.*` files. Let me view exact boundaries to split cleanly.
+
+Clear boundaries. Let me check the Tests internal MARK boundaries, then perform all splits in one script.
+
+All boundaries confirmed. Let me perform all splits in one script, then re-format.
+
+Sizes all under 400. Let me assemble the files and fix Views.swift access levels so the split files can share the chrome vocabulary.
+
+All files ≤400 lines. Now re-run swiftformat, swiftlint --strict, then rebuild the driver with the new file set.
+
+swiftformat and swiftlint --strict both pass (0 violations). Now rebuild + rerun the logic driver with the new 7-file surface set.
+
+Driver passes with the split files. Now let me verify the **test bodies** compile against the real surface API using XCTest shims (since XCTest isn't in the CLT SDK and `@testable import` can't resolve standalone).
+
+Stripping `import XCTest` removed transitive Foundation. Let me add `import Foundation` to the transformed copies (the shipped files keep `import XCTest` which provides it).
+
+Test bodies type-check. Now verify the Previews **bodies** by transforming the `#Preview` macros into functions (the macro plugin is Xcode-only).
+
+All 10 preview bodies type-check. Now the placeholder gate (pwsh is available) — run exactly as the gate specifies, plus an independent grep of forbidden patterns.
+
+Placeholder gate passes and no forbidden patterns. Critical check: verify `project.yml` wires my new file names (`.AdapterTests`, `.Chart`, `.States`, `.Projection`) into the right targets (test files must go to the test target, not the app target).
+
+I must confirm how `.Tests.swift` files in `feature-views` are kept out of the app target (existing surfaces do this). Let me view the full target specs.
+
+No excludes visible on the app target's `feature-views` path, yet existing surfaces put `.Tests.swift` there. Let me search the whole project.yml for the exclude mechanism and view the test targets.
+
+No excludes anywhere, and test targets use only `Tests/Unit`. I need to understand how existing feature-view `.Tests.swift` files (which `import XCTest` + `@testable import TeslaSync`) are wired. Let me inspect `Tests/Unit` and any build scripts.
+
+`Tests/Unit` is separate; feature-view `.Tests.swift` wiring is a pre-existing project concern (identical for every surface) handled by the gate's Xcode environment — and `project.yml` is outside my allowed files. My file names match established conventions (`.Chart`, `.States` exist; `.ModelTests`↔`.AdapterTests` precedent). Let me set up the gate log and run the real gate commands to capture honest evidence.
+
+The sibling log is revealing: feature-views are **not yet wired into `project.yml`** ("wiring is the integration prompt's job") — confirming my files are in the expected state. The established disposition runs host gates green and captures the xcodebuild step's real evidence. My runner has **no Xcode at all**, so per the prompt's Capability clause this is a BLOCKED condition. Let me capture the real gate-command evidence.
+
+xcodebuild is genuinely unavailable (requires Xcode; no simulators). Now run the whole-project host gates (swiftformat, swiftlint) exactly as the gate specifies to capture honest results.
+
+Whole-tree swiftformat fails only on a **pre-existing** non-mine file (`ActionBuilder.Previews.swift`); my 10 files are clean (proven 0/10). Let me capture the whole-project swiftlint result too.
+
+Whole-project swiftlint found 1 violation. Let me confirm it's not in my surface (my 10 files passed scoped lint with 0).
+
+Both whole-project failures are pre-existing files unrelated to me (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`); my 10 files have **0** violations. Let me gather final stats and write the honest gate log.
+
+All verified: 47 test methods, 10 previews, 23 i18n keys, all files ≤369 lines, my files 0/0 lint/format violations. Let me write the honest gate log.
+
+Let me verify git status (ensure only my files changed), clean temp files, and review the final file set.
+
+There are **pre-existing** unrelated modifications in the tree (AIUsageCard.*, web/* — not touched by me). I'll commit ONLY my SignalChartPanel files + the log. Let me check for git hooks, clean temp, and stage precisely.
+
+No active hooks. Let me stage only my files and commit.
+
+All 12 files staged correctly (11 surface files + log), nothing else. Committing.
+
+Committed cleanly (ab6ba064b, 12 files, 2806 insertions). Let me do a final confirmation that the committed surface still type-checks against the real SDK (temp was cleaned), then finish.
+
+Final type-check passes and all files are committed. Let me close out the todos.
+
+All todos complete. Let me update the plan file to reflect the final status.
+

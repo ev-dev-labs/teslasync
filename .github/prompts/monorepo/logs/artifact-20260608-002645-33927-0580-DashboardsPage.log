@@ -1,0 +1,223 @@
+=== P4 Apple · P7 · page:power-user/Dashboards (SwiftUI / HIG) ===
+
+PREFLIGHT
+  Runner       : macOS 26.5.1 (Darwin arm64, Apple Silicon — Mac Studio)
+  Xcode        : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                 (the active dir is /Library/Developer/CommandLineTools; overridden non-destructively,
+                 no sudo / no xcode-select -s — the SAME mechanism every prior P4 surface used).
+  Toolchain    : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2 · jdk 17.0.19
+  Capability   : SwiftUI present; iOS 18 / macOS 15 HIG primitives all available. This unit uses NO
+                 Charts and NO MapKit (the web source has none either — "Charts (0)", "Maps (0)" in the
+                 prompt), so it is NOT capability-BLOCKED. An Xcode runner IS available → the gate is run,
+                 not auto-BLOCKED.
+
+WEB SOURCE (the specification — read end to end)
+  web/src/features/power-user/pages/DashboardsPage.tsx  (route /power/dashboards). The manual Grafana
+  dashboard-JSON composer. It reads NO API hooks — it is local-state only:
+    • PageTitle  powerDashboards.title  + intro paragraph  powerDashboards.intro.
+    • <AINLDashboardComposer/> — the optional AI drafter, wrapped in withAiFeature: AI-OFF renders the
+      manual baseline, AI-ON is propose-only (onApply → editor). This is a SEPARATE, AI-gated surface
+      (see SCOPE below) — NOT part of this parity unit.
+    • GlassPanel1 — the manual JSON editor: PanelTitle powerDashboards.editor.title, a <Textarea>
+      (value=dashboardJson, placeholder=powerDashboards.editor.placeholder, aria-label=
+      powerDashboards.editor.label, spellCheck=false, rows=12), and a Copy (powerDashboards.editor.copy)
+      / Clear (powerDashboards.editor.clear) action row with a role=status line. handleCopy branches:
+      empty-trim → copyEmpty; no navigator.clipboard → copyUnavailable; writeText ok → copySuccess;
+      catch → copyFailed. The draft persists to localStorage "ai.dashboardComposer.draft".
+    • GlassPanel2 — the curated panel catalog: PanelTitle powerDashboards.panels.title, intro
+      powerDashboards.panels.intro, and a grid of the 6 install-wide CURATED_DASHBOARD_PANELS
+      (name + description) sorted by name (localeCompare). The names mirror the Go
+      AINLDashboardComposerPanelEntry catalog (internal/api/ai_nl_dashboard_composer_handler.go).
+  Manifest unit page:power-user/Dashboards → requiredCount=16 = 2 panels + 0 charts + 0 maps +
+  1 state (success) + 13 strings.
+
+SCOPE  (no scope narrowing — the unit is exactly 16 items)
+  • The page has NO API data sources (manifest "data sources: none — renders from navigation values /
+    local state"). The ONLY declared data state is `success`; there is no network loading/empty/error
+    branch to port. The editor's empty field renders the prompt; the curated catalog is always present.
+  • AINLDashboardComposer is AI-gated and is NOT a manifest unit (a manifest scan for it returns nothing;
+    none of its strings are in this unit's 13). The web renders the manual baseline — exactly this page —
+    when AI is off. It is a separately-tracked surface; reproducing it here would be out-of-scope
+    (prompt "Out of Scope: … components"). The model keeps the `applyDraft` seam so a future native AI
+    drafter lands a draft in the manual editor exactly as on the web. No stub is shipped (ADR-011).
+
+ARTIFACTS SHIPPED
+  Location mapping (no silent drift): the prompt's idealized `apps/apple/TeslaSync/Features/PowerUser/**`
+  + `Localizable.xcstrings` map to the repo's REAL conventions — page code lives under
+  `apps/apple/Sources/Features/PowerUser/` (compiled by project.yml `Sources`, linted by swiftlint
+  `Sources`, exactly like the existing `Sources/Features/Dashboard/`), and per-surface i18n is a
+  `<Surface>.strings` table folded into the master catalog at integration time (the same pattern every
+  feature-view uses). Tests live in `Tests/Unit/PowerUser/` (the TeslaSyncTests target), matching
+  `Sources/Features/Dashboard` → `Tests/Unit/Dashboard` — so this surface adds ZERO co-located
+  `*.Tests.swift` to the app target (it does not worsen the pre-existing app-target XCTest pollution).
+
+  Sources/Features/PowerUser/
+    DashboardsPage.swift               — the page View: ScrollView scaffold (title + intro header, then
+                                         the two panels); adaptive macOS/iOS; init(model:); navigationTitle.
+    DashboardsPage.Model.swift         — DashboardsStrings i18n facade (P1/S10, table "DashboardsPage");
+                                         CuratedDashboardPanel + the 6-entry catalog; DashboardCopyOutcome;
+                                         the DashboardDraftStoring + DashboardClipboardWriting seams with
+                                         UserDefaults / system-pasteboard production impls + in-memory
+                                         fakes; the @MainActor @Observable DashboardsPageModel (P1/S8):
+                                         dashboardJSON (persist-on-edit to "ai.dashboardComposer.draft"),
+                                         statusMessage, canCopy, sorted panels, updateJSON/clear/applyDraft/
+                                         copy (the four web outcomes).
+    DashboardsPage.Views.swift         — DashboardsEditorPanel (GlassPanel1: title, editor, Copy/Clear +
+                                         status), DashboardsJSONEditor (TextEditor + empty-field prompt
+                                         overlay + a11y label, spellcheck/autocap off), DashboardsCatalogPanel
+                                         (GlassPanel2: title, intro, adaptive grid), DashboardsCatalogRow
+                                         (mono panel_name + localized description tile).
+    DashboardsPage.Previews.swift      — #if DEBUG #Preview: empty / with-draft / copied (in-memory seams).
+    PowerUserRouteRegistration.swift   — registers .powerUser → DashboardsPage in the app shell's
+                                         AppRouteHostRegistry (model built on the main-actor app root).
+    DashboardsPage.strings             — the 13 manifest keys (web English values, ported verbatim) + 6
+                                         promoted catalog-description keys so the Swift source holds no prose.
+  Tests/Unit/PowerUser/
+    DashboardsPageTests.swift          — 12 XCTest cases (draft load/persist, clear, applyDraft, the four
+                                         copy outcomes + status strings, canCopy whitespace guard, catalog
+                                         count/sort/descriptions, the 13 i18n fallbacks).
+  Sources/TeslaSyncApp.swift           — (edit) chains PowerUserRouteRegistration.registry(base:
+                                         SettingsRouteRegistration.registry(...)) into \.routeHosts so the
+                                         page is reachable (navigation registration — an allowed file).
+  apps/parity/apple-ledger.json        — (new) per-unit coverage rows for apple-ios + apple-macos
+                                         (adaptive surface, ADR-002), status=done 16/16, schema = ledger.schema.json.
+
+PARITY MAPPING  (web → Apple platform tokens; no Tailwind ported, no raw hex)
+  GlassPanel                  → TSGlassPanel (system material + token border)
+  PageTitle / PanelTitle      → Text(verbatim:) + Font.TS.display / .panel + Color.TS.textPrimary + isHeader
+  intro / panels.intro / body → Text(verbatim:) + Font.TS.body + Color.TS.textSecondary (fixedSize multi-line)
+  <Textarea> + placeholder    → DashboardsJSONEditor: TextEditor (monospaced) + empty-state prompt overlay
+                                (TextEditor has no native prompt) + token field chrome; aria-label →
+                                .accessibilityLabel; spellCheck=false → autocorrectionDisabled +
+                                (iOS) textInputAutocapitalization(.never)
+  Button primary/secondary    → TSButton(variant:.primary/.secondary) (label closure, .disabled(!canCopy))
+  role=status line            → Text(verbatim: statusMessage) + Color.TS.statusWarning (web text-amber-300)
+  curated grid (sm:cols-2)    → LazyVGrid(.adaptive 260); name in font-mono text-cyan-300 → monospaced
+                                Color.TS.accent; description → localized key
+  localStorage draft key      → UserDefaults "ai.dashboardComposer.draft" (same key, parity of intent)
+  navigator.clipboard branch  → DashboardClipboardWriting seam (isAvailable / write→Bool) → 4 outcomes
+  i18n                        → every string via DashboardsStrings (NSLocalizedString table "DashboardsPage",
+                                web literal as the value: fallback)
+  a11y                        → headers tagged; editor labelled; catalog tiles combined; Dynamic Type via
+                                tokens; light/dark/high-contrast via the generated dynamic-color tokens
+
+=== PARITY ===
+PARITY_REQUIRED=16
+  [x] panel  GlassPanel1                              → DashboardsEditorPanel  (DashboardsPage.Views.swift)
+  [x] panel  GlassPanel2                              → DashboardsCatalogPanel (DashboardsPage.Views.swift)
+  [x] state  success                                  → DashboardsPage.body renders editor+catalog from
+                                                         DashboardsPageModel (no API; local-state success)
+  [x] string powerDashboards.title                    → DashboardsStrings.title        (DashboardsPage.swift header + navigationTitle)
+  [x] string powerDashboards.intro                    → DashboardsStrings.intro         (DashboardsPage.swift header)
+  [x] string powerDashboards.editor.title             → DashboardsStrings.editorTitle   (DashboardsEditorPanel)
+  [x] string powerDashboards.editor.placeholder       → DashboardsStrings.editorPrompt  (DashboardsJSONEditor prompt; key resolved 1×, parity:allow)
+  [x] string powerDashboards.editor.label             → DashboardsStrings.editorLabel   (DashboardsJSONEditor .accessibilityLabel)
+  [x] string powerDashboards.editor.copy              → DashboardsStrings.editorCopy     (DashboardsEditorPanel Copy button)
+  [x] string powerDashboards.editor.clear             → DashboardsStrings.editorClear    (DashboardsEditorPanel Clear button)
+  [x] string powerDashboards.editor.copyEmpty         → DashboardsStrings.copyEmpty       (DashboardsPageModel.copy)
+  [x] string powerDashboards.editor.copyUnavailable   → DashboardsStrings.copyUnavailable (DashboardsPageModel.copy)
+  [x] string powerDashboards.editor.copySuccess       → DashboardsStrings.copySuccess     (DashboardsPageModel.copy)
+  [x] string powerDashboards.editor.copyFailed        → DashboardsStrings.copyFailed      (DashboardsPageModel.copy)
+  [x] string powerDashboards.panels.title             → DashboardsStrings.panelsTitle     (DashboardsCatalogPanel)
+  [x] string powerDashboards.panels.intro             → DashboardsStrings.panelsIntro     (DashboardsCatalogPanel)
+PARITY_COVERED=16
+
+STATES (the unit declares one — success — there are no API data sources)
+  success  → the composer renders: title + intro, the editor panel (with the empty-field prompt when
+             blank), and the always-present 6-entry curated catalog. Copy/Clear gate on canCopy; the
+             status line shows the matching copy outcome. No network loading/empty/error branch exists
+             to port (local-state page).
+
+GATES  (raw exits; per-surface scope)
+  [GREEN] swiftformat --lint  (.swiftformat, 7 files)            : 0/7 files require formatting        FORMAT_EXIT=0
+  [GREEN] swiftlint --strict  (.swiftlint.yml, per file)         : 0 violations across the 7 files     LINT_EXIT=0
+  [GREEN] check-placeholders.ps1 -Language swift                 : Sources/Features/PowerUser →
+                                                                   PLACEHOLDER_ALLOWED=1 (the manifest-
+                                                                   mandated key literally named
+                                                                   "…editor.placeholder", opted out with a
+                                                                   reason — the tool's own self-test case),
+                                                                   PLACEHOLDER_COUNT=0 ; Tests/Unit/PowerUser →
+                                                                   ALLOWED=0 COUNT=0                    PLACEHOLDER_EXIT=0
+  [GREEN] ISOLATED build + test — SwiftPM, swift-tools 6.0 (Swift 6 language mode, strict-concurrency
+          complete — the same as the app), library target named "TeslaSync" so the shipped
+          `@testable import TeslaSync` test compiles unchanged, built under the Xcode 26.5 toolchain
+          (real #Preview macro + XCTest), compiling the EXACT shipped surface sources against the REAL
+          repo design-system files (generated apps/design Tokens + Sources/Design TSDesign/TSMaterial +
+          Sources/Components UI Typography/Badges/Buttons/Cards) AND the real app-nav types
+          (Sources/App AppRoute + RouteHostRegistry, so PowerUserRouteRegistration is verified too):
+              Build complete!  ·  Executed 12 tests, with 0 failures (0 unexpected)                    SWIFT_TEST_EXIT=0
+  [GREEN] xcodegen generate                                      : enumerates all 7 files; verified target
+                                                                   membership — surface+registration → app
+                                                                   targets (TeslaSync/-macOS), test →
+                                                                   TeslaSync(/-macOS)Tests, .strings →
+                                                                   the app Resources phase (table "DashboardsPage").
+
+  [DEFERRED] Full-app iOS-Simulator + macOS `xcodebuild -scheme TeslaSync … build/test`.
+          RUN on this runner (DEVELOPER_DIR=Xcode 26.5, CODE_SIGNING_ALLOWED=NO). The scheme pre-action
+          built the KMP Shared.xcframework via Gradle Kotlin/Native (~10 min, first-run konan/LLVM-21
+          compile; 149 MB staged to Frameworks/Shared.xcframework — verified). The build then FAILED
+          XCODEBUILD_EXIT=65 on PRE-EXISTING, unrelated conditions this prompt neither introduced nor is
+          allowed to touch, EACH VERIFIED here (ls/grep), not assumed:
+            • 4/4 build errors are in TeslaSync/feature-views/AIRestorePanel.Tests.swift:18
+              "unable to resolve module dependency: 'XCTest'" — one of 204 co-located *.Tests.swift files
+              under TeslaSync/feature-views that `@testable import TeslaSync` + `import XCTest` INTO the
+              app target (the project.yml config that maps feature-views into the app target; first
+              triggered long before this prompt, e.g. AcDcStatsPanel.Tests.swift).
+            • `struct DashboardWidgetSize` is defined 15× across Sources/DashboardWidgets/* +
+              TeslaSync/dashboard-widgets/* (parallel-merge collisions).
+            • macOS development-signing.
+          ZERO of the 4 errors — and ZERO warnings — are attributable to DashboardsPage / PowerUser:
+              $ grep "error:" fullapp.log | grep -iE "DashboardsPage|PowerUser/"  →  (none)
+          This is the SAME sanctioned "code-complete + DEFERRED full-app Xcode gate" disposition recorded
+          by every prior P4 surface (apps/macos-pending-verifications.md; e.g.
+          p4-apple-feature-views-0237-AiUsageCard.log) and is owned by
+          p4-apple/P99-0001-apple-acceptance-gate on a signed macos-latest runner. A macos-pending row
+          was appended for this unit.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app xcodebuild gate is reported DEFERRED with its raw EXIT=65 and the
+                           verified pre-existing-blocker evidence (4 errors, all AIRestorePanel.Tests.swift
+                           XCTest) — never reported as passing. Every other gate's raw exit is pasted.
+  2  No scope narrowing  : all 16 manifest items implemented and enumerated above (2 panels, the success
+                           state, all 13 strings); every web region of the manual baseline reproduced
+                           (title, intro, editor + placeholder + aria-label + the four copy outcomes +
+                           Copy/Clear, the curated 6-panel catalog sorted by name). The AI-gated composer
+                           is a separate non-manifest surface, disclosed under SCOPE — not silently dropped.
+  3  No skip-and-assume  : every runnable gate executed on THIS runner; the deferred full-app blockers were
+                           re-confirmed by ls/grep (Shared.xcframework now 149 MB staged; DashboardWidgetSize
+                           15×; 204 co-located feature-views tests; the 4 errors isolated to AIRestorePanel).
+  4  No stubs as final   : a complete production page + 12 real tests; placeholder scanner COUNT=0; no
+                           TODO/FIXME/Coming-soon/Placeholder/Lorem/"not implemented" in any .swift.
+  5  No parity shortcut  : the persist-on-edit to the SAME localStorage key, the trimmed-copy + the four
+                           clipboard outcomes, the canCopy whitespace guard, the localeCompare catalog sort,
+                           and every i18n key are each unit-asserted; SI identifiers (distance_m,
+                           energy_used_wh) kept in the catalog descriptions (no legacy units introduced).
+  6  No delegation       : implemented directly; no agents (delegation FORBIDDEN for this tier).
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S10 i18n facade, P2 design tokens, P3 components
+                           (TSGlassPanel/TSButton), P4 shell route-host registry all honoured; the isolated
+                           build links the REAL design-system + nav files, not reimplementations.
+  8  No commit on red    : the committed artifact is GREEN on swiftformat / swiftlint --strict / placeholder
+                           AND on a real isolated Swift 6 strict-concurrency build + 12/12 XCTest; the only
+                           red — the full-app xcodebuild — is pre-existing and unrelated (0 errors in this
+                           surface), and is the P99 acceptance gate's responsibility.
+  9  No silent drift     : changes confined to Sources/Features/PowerUser/* (+ the one-file route chain in
+                           Sources/TeslaSyncApp.swift), Tests/Unit/PowerUser/DashboardsPageTests.swift,
+                           apps/parity/apple-ledger.json, apps/macos-pending-verifications.md, and this log.
+                           The Features/PowerUser↔Sources/Features/PowerUser + Localizable.xcstrings↔per-
+                           surface .strings mappings are disclosed under ARTIFACTS.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic DashboardsPage shipped at parity with the web source (16/16
+  manifest items) and INDEPENDENTLY VERIFIED: it compiles and its 12 tests pass under the app's own
+  Swift 6 strict-concurrency rules, against the REAL design system + nav types, via the Xcode 26.5
+  XCTest runtime, with swiftformat / swiftlint --strict / placeholder all green on the 7 surface files
+  and xcodegen enumerating them into the correct targets. The full-app iOS-Simulator + macOS xcodebuild
+  build/test gate was RUN (Shared.xcframework built + staged) and is DEFERRED — it fails EXIT=65 only on
+  pre-existing, unrelated, out-of-allowed-files blockers (204 co-located feature-views XCTest files in
+  the app target; DashboardWidgetSize 15× redefinition; macOS signing), with ZERO errors in this
+  surface — owned by the P99 acceptance gate on a signed macos-latest runner per
+  apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,213 @@
+===========================================================================
+=== P4 Feature view 0169 GForcePanel (Apple) ===
+===========================================================================
+Prompt : .github/prompts/monorepo/p4-apple/feature-views/P-0169-GForcePanel.prompt.md
+Web src: web/src/features/driving/components/driving-dynamics/GForcePanel.tsx
+Native : apps/apple/TeslaSync/feature-views/GForcePanel.*
+HEAD   : bcea7fa60 (merge(parallel): p4-apple/feature-views/P-0107-ChargingSessionCard.prompt.md)
+Host   : macOS (Darwin arm64) · Swift 6.3.2 (swiftlang-6.3.2.1.108), target
+         arm64-apple-macosx26.0 · swiftlint + swiftformat + pwsh present.
+
+         >>> PLATFORM-CAPABILITY EVIDENCE (this IS a STATUS=BLOCKED case) <<<
+         The active developer dir is the Command Line Tools, NOT a full Xcode:
+           $ xcodebuild -version
+           xcode-select: error: tool 'xcodebuild' requires Xcode, but active
+           developer directory '/Library/Developer/CommandLineTools' is a
+           command line tools instance
+           $ xcrun --find xctest
+           xcrun: error: unable to find utility "xctest", not a developer tool
+         So BOTH the prompt's gate runners — `xcodebuild ... build test` and the
+         XCTest harness (`xctest`) — are UNAVAILABLE on this runner; there is no
+         iOS 18 Simulator either (no CoreSimulator without Xcode). Per the prompt
+         capability clause ("requires SwiftUI + Swift Charts + MapKit, iOS 18 /
+         iPadOS 18 / macOS 15 HIG. If unavailable on the runner → STATUS=BLOCKED
+         with API evidence") this is a capability-blocked runner, NOT a code
+         defect. Every gate step that does NOT require the Xcode app is GREEN
+         below, and the surface + its test bundle were COMPILED and the core
+         projection logic EXECUTED on this host as corroborating proof.
+
+Files shipped (allowed-files: apps/apple/TeslaSync/feature-views/GForcePanel.*):
+  GForcePanel.swift          — SwiftUI surface: TSFadeIn(0.05) → TSGlassPanel
+                               with the "Acceleration G-Force" title + freshness
+                               chip + refresh, switching loading / data / empty /
+                               error; binds GForcePanelModel (P1/S8); no HTTP.
+  GForcePanel.Model.swift    — state-holder seam (DTO / Update / Source proto +
+                               InMemory source), @Observable GForcePanelModel
+                               (phase + freshness + stale auto-refresh), P1/S11
+                               view.opened telemetry seam + os_log sink, P1/S10
+                               i18n facade (GForcePanelStrings, NSLocalizedString
+                               table) + surface slug. Foundation/Observation/OSLog
+                               only — SwiftUI-free, host-testable.
+  GForcePanel.Adapter.swift  — pure projection (GForceProjection): fmtNumber port
+                               (locale, 2 fraction digits, safeNumber non-finite
+                               coercion, "—" em-dash), Math.sqrt combined
+                               magnitude, hasAny / per-channel presence, a11y
+                               phrase builders. Foundation only.
+  GForcePanel.Views.swift    — presentational subviews: per-channel stat card
+                               (label + gauge glyph over value + "g" unit,
+                               TSAnimatedNumber), responsive 3-up readout grid
+                               (web Grid default:1 / sm:3 via ViewThatFits),
+                               freshness chip, connectivity banner, loading
+                               skeleton, empty (ContentUnavailableView), error+retry.
+  GForcePanel.Previews.swift — DEBUG #Preview per state (data / partial / empty /
+                               loading / error / stale / offline).
+  GForcePanel.Tests.swift    — 30 XCTest cases, WRAPPED in #if canImport(XCTest)
+                               (so the project.yml feature-views→app-target sweep
+                               compiles it to NOTHING in the app target; it builds
+                               + runs in the XCTest bundle): format/magnitude/
+                               projector adapter units, model phase matrix +
+                               freshness + refresh + view.opened, a11y phrases,
+                               per-state ImageRenderer view smoke.
+  GForcePanel.strings        — P1/S10 catalog table "GForcePanel": the 5 web keys
+                               verbatim (dynamics.gForce / lateral / longitudinal
+                               / combined / gForceNoData) + native chrome keys.
+
+===========================================================================
+PARITY NOTES (web GForcePanel.tsx → native)
+===========================================================================
+  Data: web useDriveDynamicsLatest(vehicleId, INTERVALS.REALTIME) → the projected
+  DriveDynamicsSnapshot (lateral_acceleration, longitudinal_acceleration, both g,
+  optional+nullable). The native view binds the same snapshot through the shared
+  P1/S8 state-holder seam (GForcePanelSource); the view performs NO networking.
+  Acceleration is a dimensionless g ratio the API already projects, so NO SI unit
+  conversion applies (unit-conversion.instructions.md): values pass through and
+  display with the localized "g" suffix.
+
+  • title      web <h2 text-lg font-semibold>{t('dynamics.gForce','Acceleration
+               G-Force')}</h2> → GForcePanelStrings.text(...) at Font.TS.section
+               (18 semibold), Color.TS.textPrimary, .isHeader. Always shown.
+  • lateral    web lateral = typeof data?.lateral_acceleration === 'number' ? v :
+               null → GForceDynamicsDTO.lateralAcceleration (Double?); presence ==
+               non-nil. StatCard value = fmtNumber(v,2) or "—", unit "g", Gauge.
+  • longitud.  same, longitudinal_acceleration.
+  • combined   web magnitude = (lat!=null && long!=null) ? Math.sqrt(lat²+long²) :
+               null → GForceMath.magnitude; Combined card shows it or "—".
+               VERIFIED at runtime: magnitude(0.3,0.4)=0.5; nil if either missing.
+  • hasAny     web hasAny = lat!=null || long!=null → GForceProjection.hasAny.
+               true → 3-up Grid (default:1, sm:3) → ViewThatFits 3-col HStack
+               (≥~480pt) vs 1-col VStack (compact iPhone). false → EmptyState.
+  • empty      web <EmptyState message={t('dynamics.gForceNoData','No G-force
+               telemetry received yet')}/> → ContentUnavailableView w/ gauge glyph
+               + the localized message — never a blank box.
+  • fmtNumber  web safeNumber(v).toLocaleString(locale,{min/maxFractionDigits:2}).
+               Native NumberFormatter(.decimal, locale, 2 frac). VERIFIED:
+               en 0.42→"0.42", -0.18→"-0.18", 0.3→"0.30", 1234.5→"1,234.50";
+               de 0.42→"0,42"; nil→"—"; NaN/±Inf→"0.00".
+  • FadeIn     web <FadeIn delay={0.05}> → TSFadeIn(delay: 0.05) (reduce-motion safe).
+  • GlassPanel web GlassPanel → TSGlassPanel. StatCard → TSCard + TSAnimatedNumber.
+  • P4 states  the web component itself carries only data/empty; the prompt's P4
+               leaf contract (loading / error / stale / offline) is added on the
+               orthogonal load+connection axis driven by the model: loading
+               skeleton, QueryError-peer retry, stale chip + banner + one-shot
+               auto-refresh, offline chip + banner over the cached readout. (Same
+               disposition as the merged sibling AcDcStatsPanel / DriveDetailHeader.)
+  • i18n       every user-facing string resolves through GForcePanelStrings (P1/S10
+               table) with the web English literal as fallback; zero hardcoded
+               literals in code.
+  • a11y       each card is one element labelled "Lateral, 0.42 g" / "Combined, no
+               reading"; title .isHeader; refresh + retry carry labels; freshness
+               chip combined+labelled; Dynamic Type via system fonts; reduce-motion
+               via TSFadeIn / TSAnimatedNumber.
+  • telemetry  model.start() emits the P1/S11 view.opened event once with surface
+               slug "GForcePanel" (asserted in tests).
+
+===========================================================================
+GATE — host-runnable steps (all green)
+===========================================================================
+--- swiftformat --lint (config apps/apple/.swiftformat) ----------------------
+  GForcePanel.{swift,Model,Adapter,Views,Previews,Tests}.swift
+  0/6 files require formatting.
+  FORMAT_EXIT=0
+
+--- swiftlint --strict (config apps/apple/.swiftlint.yml) --------------------
+  6 shipped .swift files : Done linting! Found 0 violations, 0 serious in 6 files.
+  LINT_EXIT=0
+
+--- check-placeholders.ps1 (pwsh) -------------------------------------------
+  ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/GForcePanel
+  PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+
+--- swiftc -typecheck (Swift 6, strict concurrency) --------------------------
+  (a) Foundation-only core — GForcePanel.Model.swift + GForcePanel.Adapter.swift
+      stand alone:                                          CORE_TYPECHECK_EXIT=0
+  (b) Full SwiftUI surface — GForcePanel.{Model,Adapter,Views,swift} against the
+      REAL design system (../design/generated/apple/Tokens.swift + TSDesign +
+      TSMaterial + Cards + Buttons + Badges + Typography + Motion + Metrics +
+      Skeletons): no GForcePanel errors.                    VIEW_TYPECHECK_EXIT=0
+
+--- SwiftPM compile of the surface + test bundle (proxy for the app build) ---
+  A throwaway SwiftPM package (swift-tools 6.0, macOS 15) with module "TeslaSync"
+  = the 8 shared design-system components + design tokens + the 4 GForcePanel
+  surface files, and a test target = GForcePanel.Tests.swift (@testable import
+  TeslaSync). This compiles the SAME code the Xcode app + test targets would:
+    swift build           → Build complete!  HARNESS_BUILD_DEBUG_EXIT=0
+    swift build -c release → Build complete!  HARNESS_BUILD_RELEASE_EXIT=0
+  i.e. the test bundle and every view type-check against the real module APIs.
+
+--- executed core-logic parity assertions (real run on this host) -----------
+  GForcePanel.Model.swift + GForcePanel.Adapter.swift compiled into a plain
+  executable and RUN (no XCTest harness needed): 27 web-parity assertions over
+  fmtNumber (locale / grouping / non-finite / dash), Math.sqrt magnitude, the
+  projector (hasAny + texts + presence), the resolvePhase matrix, and the a11y
+  phrase builders.
+    ADAPTER_RUNTIME_OK: all 27 parity assertions passed   RUNTIME_EXEC_EXIT=0
+
+===========================================================================
+GATE — full Xcode app build/test (BLOCKED — capability unavailable on runner)
+===========================================================================
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    → xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer
+      directory '/Library/Developer/CommandLineTools' is a command line tools
+      instance
+  IOS_EXIT=non-zero (xcodebuild unavailable — full Xcode + iOS 18 Simulator absent)
+  MAC_EXIT=non-zero (xcodebuild unavailable — full Xcode absent)
+
+  XCTest execution is blocked for the SAME root cause (xctest is an Xcode tool):
+    xcrun --find xctest → unable to find utility "xctest"
+  — so although the test bundle COMPILES (harness above), the 30 cases cannot be
+  EXECUTED on this runner. The pure projection logic that backs them IS executed
+  green via the standalone executable above (27/27).
+
+  This is a runner-capability gap, not a surface defect: GForcePanel contributes
+  ZERO errors to every compile attempted here, and its Tests file is guarded with
+  #if canImport(XCTest) so it adds nothing to the app target either way.
+
+===========================================================================
+ACCEPTANCE
+===========================================================================
+  [x] Surface renders every state from the web source (data 3-up readout + empty)
+      plus the P4 leaf states (loading / error / stale / offline) — all materialize
+      (per-state ImageRenderer smoke tests + DEBUG previews).
+  [x] Hooks bind to the shared P1/S8 state-holder seam (GForcePanelSource); no
+      direct HTTP in the view.
+  [x] Every i18n key from source (dynamics.gForce / lateral / longitudinal /
+      combined / gForceNoData) has a matching key in the P1/S10 catalog
+      (GForcePanel.strings) + native chrome keys.
+  [x] Accessibility labels on every interactive element (refresh + retry labelled,
+      each card combined+labelled, title .isHeader); Dynamic Type + reduce-motion
+      honored.
+  [x] Tests: adapter projection units + model phase/telemetry + a11y + per-state
+      view smoke (30 cases) — bundle compiles against the real module; the core
+      projection is executed green (27/27) on this host.
+  [x] No TODO / stub / mock / Placeholder / Lorem (placeholder gate COUNT=0).
+  [~] EXIT=0 / STATUS=DONE NOT claimed: xcodebuild + xctest require full Xcode,
+      which is absent on this runner (API evidence above) ⇒ STATUS=BLOCKED, the
+      prompt-sanctioned capability outcome. All host-runnable gates are green and
+      the surface + its test bundle compile clean.
+
+===========================================================================
+COMMIT
+===========================================================================
+  git add apps/apple/TeslaSync/feature-views/GForcePanel.swift \
+          apps/apple/TeslaSync/feature-views/GForcePanel.Model.swift \
+          apps/apple/TeslaSync/feature-views/GForcePanel.Adapter.swift \
+          apps/apple/TeslaSync/feature-views/GForcePanel.Views.swift \
+          apps/apple/TeslaSync/feature-views/GForcePanel.Previews.swift \
+          apps/apple/TeslaSync/feature-views/GForcePanel.Tests.swift \
+          apps/apple/TeslaSync/feature-views/GForcePanel.strings \
+          .github/prompts/monorepo/logs/p4-apple-feature-views-0169-GForcePanel.log
+  git commit -m "feat(apps/apple/feature-views): add GForcePanel surface (P4)"
+
+EXIT=1
+STATUS=BLOCKED

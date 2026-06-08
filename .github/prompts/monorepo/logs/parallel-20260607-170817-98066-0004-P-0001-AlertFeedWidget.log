@@ -1,0 +1,187 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Key finding: Xcode is NOT installed (only Command Line Tools), and `simctl` is unavailable. `swift`, `swiftlint`, and `swiftformat` ARE available. Let me explore the Apple app structure before deciding on capability.
+
+The Apple project exists. Let me explore its structure and the web source's dependencies in parallel.
+
+The project uses XcodeGen (`Sources/` is the compiled path, not `TeslaSync/`), and the build requires `Shared.xcframework` + full Xcode. Let me search for an existing dashboard-widget system and the key infrastructure I must bind to.
+
+No existing dashboard-widget framework in the Apple app — this would be the first. Let me examine the state-holder pattern, i18n facade, diagnostics, and state-rendering infrastructure to assess what substrate exists.
+
+Critical findings: `Shared.xcframework` is absent (built from KMP via Gradle), and the KMP core *does* have a `NotificationsStore`. `xcodegen`, `pwsh`, `swiftlint`, `swiftformat` are present, but **full Xcode is not** (only CLT) and **no iOS simulator**. Let me confirm the capability blockers and read the conventions I must follow.
+
+`/Applications/Xcode.app` EXISTS — it's just not selected (`xcode-select` points at CLT). This is the pivotal capability question. Let me probe Xcode via `DEVELOPER_DIR`.
+
+**Xcode 26.5 IS available** via `DEVELOPER_DIR`, with iPhone 16 simulator and iOS/macOS SDKs. The capability exists. Now I must check the `Shared.xcframework` (KMP) build feasibility and the predecessor substrate. Let me update my plan and investigate.
+
+Now I understand the architecture. `Shared.xcframework` builds via Gradle (Java 17 present, Xcode available). Let me kick off that slow KMP build in the background while I read the remaining conventions.
+
+The `Alert` KMP model matches the web `Alert` (id, severity, title, message, createdAt). Let me read the store API, theme, diagnostics, an existing test, and component conventions in parallel.
+
+No native diagnostics (P1/S11) or i18n facade beyond the String Catalog — I'll keep those seams self-contained. Let me read the theme, test conventions, and state-chrome components, and check the KMP build progress.
+
+Tests use **XCTest** with `@testable import TeslaSync`; pure-logic tests are designed to run without exercising KMP. Now let me read `FacadeError`, the generated design tokens, state-chrome components, and check the i18n catalog for the two keys.
+
+"Alert Feed" and "No alerts yet" already exist in the i18n catalog. Let me confirm they're keys, read the typography/spacing tokens, and the state-chrome components.
+
+"Alert Feed"/"No alerts yet" are catalog *values*, not keys. Let me find the real keys, read the state-chrome components, and check build progress.
+
+Real keys are `translation.widget.alertFeed` / `translation.widget.noAlerts`. Let me confirm how existing Swift code resolves catalog keys (bare vs `translation.` prefix) and check build progress.
+
+I now understand the i18n approach (keys exist as `translation.widget.*`; I'll use `String(localized:defaultValue:)` mirroring web's `t(key, default)`). Let me read the card chrome, a relative-time formatter to reuse, and a component-logic test for conventions.
+
+I have enough convention knowledge. Let me check the KMP build progress and create a session plan.
+
+KMP build is nearly done (debug XCFramework built, release linking now — toolchain was cached). Let me read the exact web parity logic (`normalizeSeverity`, `WidgetEventFeed`, drillthrough) and create my plan.
+
+Full parity logic captured. Let me read the complete drill-through routing logic and verify the KMP build finished.
+
+Complete drill-through logic captured. Let me read the native route vocabulary so the row tap maps to a real native route, while the KMP release build finishes.
+
+Native routes are coarser than web drill-through paths, so I'll expose an `onSelect` callback carrying the parity-computed drill-through path (unit-tested). Let me check the logging convention and confirm the KMP build completed.
+
+KMP build still linking release slices. I have everything needed — let me write the plan and start authoring while it finishes.
+
+Let me verify the exact `TSButton`/`TSInlineCallout`/`TSGlassPanel` signatures I'll use, then author the widget.
+
+I have all signatures. Now I'll author the production widget. Let me check the build, then write the file.
+
+Build is linking the remaining slices. Let me author the complete widget now.
+
+Directory needs creating first. Let me create it, and I'll also fix a couple of issues I spotted (broken `canRefresh` helper, safer diagnostics default, retryable-aware error state).
+
+Now let me extract the row's accessibility label into a testable helper, then write the test suite.
+
+Now the comprehensive test suite covering the adapter, all states, accessibility, and diagnostics.
+
+Both files written. Let me check the KMP build status.
+
+Release build is on its final slices. Meanwhile, let me lint/format-check my new files against the repo configs.
+
+Lint configs noted — I must fix 1-char identifiers (`k`/`v`) and let swiftformat enforce wrapping. Let me fix the identifiers, then run swiftformat (write) + swiftlint on the new files.
+
+Two swiftlint violations: the surface file (882 lines post-format) exceeds the 400-line `file_length` rule, and the test class exceeds `type_body_length` (250). The repo's own anti-monolith guideline requires splitting. I'll decompose the surface into cohesive files under a dedicated `AlertFeed/` folder (the web equivalent is itself 7 files) and split the tests. First, let me confirm the KMP build finished.
+
+The KMP build log is **contaminated** — `/tmp/shared-xcframework-build.log` is shared across parallel slots and shows a *slot-10* build. My slot-4 build is still running. I'll switch to a slot-local log later. First, let me do the required source split (independent of the build).
+
+Let me remove the monolith and decompose into cohesive files.
+
+Now let me create the decomposed source files. File 1 — types (metadata, size, severity, entry, conversion seam):
+
+File 2 — pure adapters (projection, relative time, drill-through):
+
+File 3 — diagnostics seam + observable model:
+
+File 4 — the widget view, rows, and previews:
+
+My slot-4 KMP build completed. Let me verify the framework staged correctly, then write the split test files.
+
+Build succeeded but only *assembled* the framework (staging is done by the pre-build script, which xcodebuild runs automatically). Let me verify the release artifact exists in slot-4, then write the test files.
+
+Release XCFramework is ready with all slices. Now the split test files — adapters suite first:
+
+State, accessibility, and diagnostics suite (`@MainActor` for the model):
+
+Now let me format and lint all the new files.
+
+swiftlint --strict: **0 violations** across all 6 files; all under 400 lines. Now let me generate the Xcode project and start the iOS build+test (with `DEVELOPER_DIR`). This is slow, so I'll run it async.
+
+Project generated. Now the iOS build+test (runs the gradle pre-action to stage the framework, then builds+tests). Running async with a slot-local log.
+
+While the iOS build runs, let me verify the gate's repo-wide `swiftformat --lint apps/apple` step passes (independent, fast).
+
+`swiftformat --lint`: clean (0/266). Now the full repo `swiftlint --strict` (gate step 3 lints all included dirs, not just mine):
+
+Both lint gates GREEN (swiftlint 0/262, swiftformat 0/266). Now the placeholder check (gate step 5) against my real AlertFeed directory.
+
+Two placeholder-word hits (lines 232, 247) — my `.redacted(reason: .placeholder)` and "placeholder" comments trip the check. The iOS build also finished. Let me inspect the matched lines and the forbidden-pattern list.
+
+The forbidden token is "Placeholder" (matched case-insensitively, including SwiftUI's `.placeholder`). Let me check for a shared skeleton component to reuse instead of `.redacted`, which is also more DRY.
+
+There's a shared `TSSkeleton` (shimmer + reduce-motion) — I'll reuse it (DRY) which also removes the `.placeholder` token and the comment word.
+
+Now let me re-run the placeholder check, grep all files for forbidden tokens, and read the iOS build result.
+
+Placeholder check now passes (0). But iOS build failed (IOS_EXIT=65). Let me extract the errors from the build log.
+
+Real Swift 6 errors (all in my code, all fixable): static `ISO8601DateFormatter`s aren't concurrency-safe, and `Logger` is ambiguous (`Shared` also exports one). Let me fix both — use the Sendable `ISO8601FormatStyle` for parsing and qualify `os.Logger`.
+
+Let me quickly validate the `ISO8601FormatStyle` parsing standalone (avoids a wasted slow rebuild) and re-check format/lint on the edited files.
+
+Parsing validated. Let me re-format/lint the edited files, then restart the iOS build+test.
+
+Clean. Restarting iOS build+test (incremental now, framework already staged):
+
+iOS build+test running. Let me wait and monitor.
+
+Unit tests **passed** (`TeslaSyncTests.xctest` passed), UI tests now running. Let me confirm my AlertFeed suites ran and passed.
+
+My AlertFeed suites pass. Unit tests all green. Waiting for the UI test phase to finish.
+
+Unit tests passed, but IOS_EXIT=65 — a UI test failed. Let me find which one.
+
+The two failing tests are **pre-existing UI tests** (`AppLaunchUITests`, `AuthOnboardingUITests`) — unrelated to my widget (which isn't wired into app launch/auth). The errors are simulator AX-automation failures (`kAXError -25218 "Error getting main window"`, `simctl` unavailable for diagnostics). Let me read the project's known-limitations doc, then prove the baseline.
+
+Docs confirm the Xcode 26 / Swift 6 baseline. The UI failures are app-launch/auth automation — logically independent of my additive widget. Let me prove this rigorously by running those exact UI tests on the **baseline** (my files temporarily removed).
+
+Baseline ready (my files removed). Now run those exact two UI tests on the baseline:
+
+Decisive: on the **baseline** (no changes), `testAppLaunchesToForeground` now *passes* but the UI run still fails (exit 65) — confirming **non-deterministic environmental flakiness**, not my code. Let me see which baseline tests failed.
+
+**Conclusive proof of environmental flakiness:** on the baseline (my code absent), a *different* set of UI tests failed (`testFirstRunShowsSignInShell`, `testCancelledSignInReturnsToSignedOutShell`) while `testAppLaunchesToForeground` passed — the failing set is non-deterministic. The XCUITest UI-automation suite is environmentally unreliable here, independent of my change. Let me restore my files and run the macOS gate.
+
+Restored. Now the macOS gate (`build test`), run async:
+
+macOS build running. Let me update the plan and monitor.
+
+macOS build failed at **code-signing** (MAC_EXIT=70): entitlements require a development certificate, but `DEVELOPMENT_TEAM` is empty and no signing cert exists in this environment. That's an environmental blocker occurring *after* compilation. Let me confirm my code compiled for macOS, then re-run macOS with signing disabled to prove the code + unit tests are sound.
+
+macOS failed purely at the **signing/entitlements** phase (0 Swift compile errors) — before sources compiled. Let me prove my code compiles and unit-tests pass on macOS by building with signing disabled (unit tests only, isolating the flaky UI suite).
+
+While macOS compiles, let me reflect on the outcome and update the plan. The literal gate has two **environmental** blockers (macOS signing cert; iOS headless UI-automation), while every author-controlled gate is green. Let me record this and monitor.
+
+My code **compiles cleanly on macOS** too (line 3068, 0 errors) — the macOS blocker is solely the unsigned app bundle (hardened-runtime entitlements need a cert), so the unit-test host can't be built. The test *logic* is platform-agnostic and already passes on iOS. Let me capture a clean iOS author-scope result (build + unit tests only, no flaky UI).
+
+iOS unit-only build running. Let me wait for it to confirm a clean author-scope pass.
+
+IOS_UNIT_EXIT=65 for unit-only — unexpected. Let me inspect what failed.
+
+The unit-only run failed on `xcrun: error: unable to find utility "simctl"` — the simulator tooling. Let me check whether my unit tests actually executed/passed before that, and whether the simulator booted.
+
+The repeated simulator runs are now hitting **resource-contention instability** ("Test crashed with signal kill before establishing connection", `simctl` not found) — 0 cases even started. But my **first full iOS run has concrete proof** the unit tests passed. Let me extract that authoritative evidence.
+
+**Authoritative evidence captured**: in the first full iOS run, `TeslaSyncTests.xctest` **passed — 279 tests, 0 failures**, with both `AlertFeedWidgetTests` and `AlertFeedWidgetStateTests` suites passing. The later simulator instability is resource contention, not test failures.
+
+I now have a complete, honest picture. Let me write the canonical gate log.
+
+Gate log written (STATUS=BLOCKED with full platform-capability evidence). Now let me clean up temporary build logs and verify the working-tree state.
+
+Working tree is clean — only my deliverable (4 source files, 2 test files, the gate log) plus the two pre-existing web modifications I didn't touch. Build artifacts are gitignored. Let me do a final verification pass on the exact current files.
+
+All author-controlled gates confirmed green on the final files: **swiftformat 0/6, swiftlint 0 violations, placeholder 0**. Let me finalize the plan.
+
+The deliverable is complete and every author-controlled gate is green. Let me do a final confirmation of the files in place.
+
+I've completed the deliverable. Here's my honest final assessment.
+
+## Summary
+
+I built a production, Apple-idiomatic **`AlertFeedWidget`** dashboard surface at full parity with the web source, then ran the gate. The literal `xcodebuild build test` steps are **BLOCKED by two environmental platform-capability gaps** (the prompt's sanctioned terminal state), while **every author-controlled gate is green**.
+
+**Deliverable** (6 files, decomposed per the repo's anti-monolith / SwiftLint `file_length` rules — the web equivalent is itself 7 files):
+- `Sources/Widgets/Dashboard/AlertFeed/`: `AlertFeedTypes`, `AlertFeedAdapters`, `AlertFeedModel`, `AlertFeedWidget`
+- `Tests/Unit/Widgets/`: `AlertFeedWidgetTests`, `AlertFeedWidgetStateTests`
+
+**Parity reproduced:** `normalizeSeverity`, severity→status-token colors + lucide→SF-Symbol icons, `maxItems` density (12/8/5), wide/tall subtitle rule, reverse-chron sort, relative-time tiers, `SIGNAL_TO_PAGE` drill-through, registry `alert-feed` (2×4…4×40), all six states (loading/loaded/empty/error/stale/offline), bound to the shared `StateHolderModel` (no HTTP in the view), i18n via the real `translation.widget.*` catalog keys, VoiceOver labels + Dynamic Type + reduce-motion, and a `view.opened` telemetry emit.
+
+**Author-controlled gates — ALL GREEN:**
+- Compiles on **iOS and macOS** under Swift 6 strict concurrency (0 errors)
+- `TeslaSyncTests`: **279 passed / 0 failed**, incl. both my suites
+- `swiftlint --strict`: **0 / 262**; `swiftformat --lint`: **0 / 266**; placeholder check: **0**
+
+**Environmental blockers (proven, not code defects):**
+- **macOS** `build test` → `MAC_EXIT=70`: entitlements + hardened runtime require an Apple dev signing certificate (`DEVELOPMENT_TEAM=""`, none in keychain). Sources compiled cleanly; only the signed app/test-host can't be produced.
+- **iOS** `build test` → `IOS_EXIT=65`: headless-simulator XCUITest UI-automation is non-deterministic (`kAXError -25218 "Error getting main window"`). I proved it's pre-existing by running a **baseline control with my files removed** — a *different* set of pre-existing UI tests failed, confirming it's environmental.
+
+Per Honesty Covenant rule 8 ("no commit on red"), I did **not** commit. The complete deliverable sits in the working tree with the evidence log at `.github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0001-AlertFeedWidget.log` (ends `EXIT=65 / STATUS=BLOCKED`). On the ADR-012 `macos-latest` CI runner (signing identity + bootable simulator UI session) the same gate is expected to pass unchanged.
+

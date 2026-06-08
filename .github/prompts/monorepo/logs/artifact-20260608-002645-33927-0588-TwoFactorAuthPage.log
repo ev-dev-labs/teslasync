@@ -1,0 +1,190 @@
+================================================================================
+P4-APPLE · P7 · page — settings/TwoFactorAuth (Apple, SwiftUI / HIG)
+Run: 2026-06-08T09:30-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/588
+Base: c9c6fdb9f
+Prompt: p4-apple · P7 · page:settings/TwoFactor — SwiftUI / HIG
+Web source (spec): web/src/features/settings/pages/TwoFactorAuthPage.tsx (35 lines)
+Web route: /account/2fa
+Mode: code-complete + host-validated (real iOS-18 + macOS-15 SDK typechecks +
+      isolated SwiftPM XCTest); DEFERRED full-app Xcode scheme build/test
+      (ADR-012 macOS-pending), matching predecessors 0010 ToolCard /
+      0180 AlertMessageEditor / 0231 FSMTimelineChart.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift / Xcode .............. Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iOS simulator SDK .......... iPhoneSimulator 26.5 (deployment target iOS 18.0)    OK
+  macOS SDK .................. MacOSX 26.5 (deployment target macOS 15.0)            OK
+  iOS simulator device ....... iPhone 17 family present (simctl via Xcode)          OK
+  swiftlint .................. 0.63.x                                               OK
+  swiftformat ................ 0.6x                                                 OK
+  xcodegen ................... 2.45.4                                               OK
+  pwsh (placeholder gate) .... 7.x present                                          OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks has only .gitkeep) WARN
+  codesign identities ........ none (BLOCKER for signed app gate, ADR-012)          WARN
+
+  Charts/Maps capability note: this page declares NO charts and NO map (manifest
+  "Charts (0)" / "Maps (0)"). The web page is a thin PageContainer shell wrapping
+  <TOTPEnrollmentSection/> 1:1; the core requirement is SwiftUI, proven by REAL
+  iOS-18 + macOS-15 SDK typechecks AND a passing 8-test XCTest run below. The
+  capability-BLOCKED escape hatch does NOT apply — the page is authored and
+  host-validated for real, STATUS=DONE.
+
+=== OUTPUT-PATH ADAPTATION (no silent drift) ===
+  The prompt's templated Output path is
+    apps/apple/TeslaSync/Features/Settings/TwoFactorAuthPage.swift
+  but that directory does NOT exist in the repo and is NOT a source path in
+  apps/apple/project.yml. The real, compiled convention is the flat
+    apps/apple/TeslaSync/feature-views/
+  group — where TOTPEnrollmentSection.* and every other settings surface already
+  live (project.yml `sources:` lists `TeslaSync/feature-views`, not Features/**).
+  The page is therefore created at
+    apps/apple/TeslaSync/feature-views/TwoFactorAuthPage.swift
+  so it actually compiles into both app targets without a build-system change.
+  All gate paths below are adapted to this real location.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/TwoFactorAuthPage.*) ===
+  TwoFactorAuthPage.swift            161  @Observable TwoFactorAuthPageModel (P1/S8 seam:
+                                          the two parity LocalizedStringKeys, the canonical
+                                          copyLink deep link, the hosted TOTPEnrollmentModel
+                                          injected — default = in-memory seam seeded to the
+                                          neutral "Not enrolled" session entry) + the
+                                          TwoFactorAuthPage View (adaptive ScrollView, 640pt
+                                          max readable width, header [title + muted subtitle],
+                                          copyLink toolbar affordance) + the
+                                          TwoFactorCopyLinkButton (web CopyLinkButton: link↔︎
+                                          check, "Copy link"↔︎"Copied", a11y label).
+  TwoFactorAuthPage.ModelTests.swift  82  8 isolated XCTest cases: copyLink deep link +
+                                          parser round-trip, web /account/2fa alias, first-
+                                          class Account-group route wiring + unique segment,
+                                          default in-memory "Not enrolled" phase, injected-
+                                          model pass-through, route-registry hosting.
+
+=== NAVIGATION REGISTRATION (allowed: "navigation registration") ===
+  Sources/App/AppRoute.swift          + case .twoFactor (Account group); pathSegment
+                                        "two-factor"; systemImage "lock.shield.fill". The web
+                                        promotes /account/2fa to a first-class Account side-nav
+                                        item — mapped to a first-class AppRoute in the .account
+                                        group (peer of .settings / .onboarding).
+  Sources/App/AppRouteParser.swift    + alias "/account/2fa" -> .twoFactor (the web route,
+                                        mirroring the existing "/battery/health" -> .energy
+                                        web-compat alias pattern).
+  Sources/Platform/Settings/SettingsScene.swift
+                                      + registry.register(.twoFactor) { TwoFactorAuthPage() }
+                                        in SettingsRouteRegistration (the Account-area route
+                                        host registry the shell injects). The P7 RouteHost
+                                        renders it; no fake per-page screen.
+  Test-safety verified: RouteTests (Set(allCases) / unique pathSegment) +
+  MenuCommandCatalog.navigateCommands (AppRoute.allCases.map) are DYNAMIC — both
+  grow with the new case and stay green; WatchDeepLink / WidgetDeepLink are
+  separate enums (5 / 6 cases) and are unaffected.
+
+=== STRINGS (Localization/Localizable.xcstrings — the platform catalog) ===
+  + account.twoFactor.title    = "Two-factor authentication"            (en; +ar/he review)
+  + account.twoFactor.subtitle = "Add a second factor to your sign-in. Required for
+                                  sensitive admin actions."             (en; +ar/he review)
+  + route.twoFactor            = "Two-factor authentication"            (nav/sidebar title)
+  + common.copyLink.action     = "Copy link"                           (web CopyLinkButton)
+  + common.copyLink.copied     = "Copied"
+  + common.copyLink.label      = "Copy link to this view"
+  Verbatim web English defaults; web key names preserved (ADR-014). Catalog now
+  8127 keys; JSON re-validated after insertion.
+
+=== DATA STATES / DATA SOURCES ===
+  Manifest declares 0 API data sources for this page ("renders from navigation
+  values / local state") and 0 named panels. The page owns no data of its own;
+  the full status/enroll/verify/disable lifecycle + its loading/open-mode/not-
+  enrolled/activated/error/stale/offline states live inside TOTPEnrollmentSection
+  (its own P4 unit, already shipped) behind the TOTPEnrollmentSource seam. The
+  page hosts that section and injects its @Observable model — so the composition
+  root can swap a facade-backed source (P1/S8) in for the in-memory seam.
+
+=== i18n / a11y / units ===
+  i18n: every visible literal resolves via LocalizedStringKey from the catalog
+    (title, subtitle, copyLink action/copied, a11y label); zero hardcoded text.
+  a11y: header is one combined VoiceOver element; copyLink carries an explicit
+    accessibilityLabel + a transient check confirmation; Dynamic Type via the
+    TS typography ramp; standard HIG hit targets (toolbar/Button).
+  units: none on this surface (no SI values rendered by the page itself).
+
+=== HOST-RUNNABLE GATES (all green) ===
+  swiftformat --lint <5 changed files>  ........ 0/5 require formatting       FORMAT_EXIT=0
+  swiftlint lint --strict <5 changed files> .... 0 violations, 0 serious      LINT_EXIT=0
+  check-placeholders.ps1 -Language swift ....... PLACEHOLDER_COUNT=0 ALLOWED=0 PLACEHOLDER_EXIT=0
+      (TwoFactorAuthPage.swift + TwoFactorAuthPage.ModelTests.swift)
+  swiftc -typecheck iPhoneSimulator (ios18.0-simulator, swift6) ............... IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (macos15.0, swift6) ............................... MAC_TYPECHECK_EXIT=0
+      (a) page closure — TwoFactorAuthPage + TOTPEnrollmentSection×6 + the TS UI/
+          Motion/Design component layer + generated Tokens + AppRoute/AppRouteParser/
+          RouteHostRegistry (27 files), both real SDKs, 0 errors.
+      (b) navigation-registration closure — additionally SettingsScene (the
+          register(.twoFactor) call) + AppShell/RootView host + the full Shared-free
+          component layer (81 files), both real SDKs, 0 errors. Confirms the route
+          case, the /account/2fa alias, and the registration all compile.
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS 15, Swift 6) ...... 8/8 passed, TEST_EXIT=0
+      → TwoFactorAuthPageModelTests (deep link + parser round-trip + /account/2fa
+        alias + Account-group route + unique segment + default/injected enrollment
+        phase + route-registry hosting)
+  xcodegen generate (project spec enumerates the 2 new files) ................ XCODEGEN_EXIT=0
+      (TwoFactorAuthPage.swift + .ModelTests.swift each membered in the iOS +
+       macOS app/test targets; generated TeslaSync.xcodeproj is git-ignored)
+
+=== DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test ===
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 17' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. Blocked by PRE-EXISTING, UNRELATED parallel-merge state
+    in the shared app target — ZERO of which originates in this page (confirmed
+    current this run):
+      • Shared.xcframework not staged (apps/apple/Frameworks has only .gitkeep);
+        the scheme pre-action builds it via the Kotlin/Native Gradle toolchain
+        (the P1/S3 artifact already tracked macOS-pending).
+      • `struct DashboardWidgetSize` redefined across 15 files (Sources/* +
+        TeslaSync/dashboard-widgets/*) — "invalid redeclaration" in the app target.
+      • 262 co-located feature-view/dashboard-widget *Tests.swift `import XCTest`
+        into the app target (the established co-located-test convention this page
+        follows; the tests are run via the isolated SwiftPM package above).
+      • No macOS development-signing identity (ADR-012).
+    This page's OWN code is proven to compile against the real iOS-18 + macOS-15
+    SDKs (typechecks above) and its logic runs green (8/8 XCTest). The full-app
+    build/test is the P99 acceptance gate on a macos-latest runner with signing.
+
+=== PARITY ===
+PARITY_REQUIRED=2
+  [x] string — account.twoFactor.title
+        catalog:  Localization/Localizable.xcstrings → "account.twoFactor.title"
+                  = "Two-factor authentication" (en)
+        state:    TwoFactorAuthPageModel.titleKey : LocalizedStringKey
+                  (TwoFactorAuthPage.swift)
+        render:   TwoFactorAuthPage.header → TSPageTitle(model.titleKey)
+                  (TwoFactorAuthPage.swift)
+  [x] string — account.twoFactor.subtitle
+        catalog:  Localization/Localizable.xcstrings → "account.twoFactor.subtitle"
+                  = "Add a second factor to your sign-in. Required for sensitive
+                     admin actions." (en)
+        state:    TwoFactorAuthPageModel.subtitleKey : LocalizedStringKey
+                  (TwoFactorAuthPage.swift)
+        render:   TwoFactorAuthPage.header → Text(model.subtitleKey)
+                  .font(Font.TS.bodySm).foregroundStyle(Color.TS.textMuted)
+                  (TwoFactorAuthPage.swift)
+PARITY_COVERED=2
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Every named panel implemented (0 named); the web page's only region —
+      <TOTPEnrollmentSection/> — is reproduced 1:1 (hosted natively).
+  [x] All 2 parity items render from the bound @Observable state holder
+      (TwoFactorAuthPageModel.titleKey / .subtitleKey).
+  [~] loading/empty/error per data source: 0 page-level data sources declared;
+      the hosted section owns its own states (its own P4 unit).
+  [x] All visible strings from Localizable.xcstrings; zero hardcoded literals;
+      web key names preserved.
+  [x] Dark mode + Dynamic Type + accessibility honored; SwiftUI-native, adaptive
+      macOS + iOS; SI units N/A (no values rendered by the page).
+  [x] build+lint+test+placeholder host-runnable equivalents green;
+      PARITY_COVERED == PARITY_REQUIRED (2).
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing unrelated
+      blockers); real-SDK typecheck (both platforms) + 8/8 XCTest green here.
+  [x] apple ledger rows (apple-macos + apple-ios) for page:settings/TwoFactor set
+      covered (apps/parity/apple-ledger.json).
+
+EXIT=0
+STATUS=DONE

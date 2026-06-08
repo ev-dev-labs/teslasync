@@ -1,0 +1,186 @@
+=== P4 Misc surface 0001 TourLauncher (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively via
+                       the env var, no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2 · Java 17.0.19
+  Destinations       : iOS Simulator "iPhone 17" (present) · macOS 15 SDK present.
+                       NOTE: the literal gate's "iPhone 16" is NOT installed on this runner → substituted the
+                       installed "iPhone 17"; the iOS 18 deployment target is unchanged.
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 11m11s; release XCFramework
+                       staged to apps/apple/Frameworks/Shared.xcframework with ios-arm64, ios-arm64-simulator,
+                       macos-arm64 slices).
+  Capability         : SwiftUI present + used. Swift Charts + MapKit present but NOT required by this surface
+                       (the web source uses no charts/maps — "(none)"). iOS 18 + macOS 15 SDKs + simulators
+                       present → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/features/onboarding/TourLauncher.tsx — a Modal (title "Take a tour") that lists every tour from the
+  registry (lib/tourRegistry.ts → listTours, the 8 tours in TOUR_ORDER: main, vehicles, drives, charging,
+  alerts, automations, settings, debugger). Regions:
+    Modal[title t('tour.launcher.title')] → subtitle t('tour.launcher.subtitle')
+       → <ul> of tours; each <li> = a bordered card:
+            • completion icon box: <Check> (emerald) when isTourCompleted(def.id, def.version), else <PlayCircle>
+            • title t(def.titleKey, def.titleFallback)
+            • "Recommended for this page" chip (<Sparkles> + uppercase) when isRecommendedForRoute(def, pathname)
+            • "Completed" chip (emerald uppercase) when completed
+            • description t(def.descriptionKey, def.descriptionFallback)
+            • action Button (variant primary when recommended else ghost) — label "Replay" when completed else
+              "Start"; aria-label "Replay/Start tour: {{title}}"; on press: close + dispatchTourStart(def.id)
+       → footer: "Reset all tours" (RotateCcw) text button + "Close" (X) Button.
+  Data sources: useTranslation + useLocation only. No HTTP — local registry data + the per-tour completion flags
+  in localStorage (teslasync:tour:v{version}:{id} → 'completed'|'skipped'; list-seen marker; resetAllTours clears
+  every teslasync:tour: key + the legacy single flag). markTourListSeen() fires when the launcher opens.
+  Route match (isRecommendedForRoute): string '/' = exact; other string = exact-or-`value/`-prefix; RegExp = test.
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/misc-surfaces/TourLauncher.*, the only allowed files + this log)
+  TourLauncher.Adapter.swift   (273 L) — TourLauncherSurface.slug; TourCompletionStatus; TourRouteMatch
+                                          (.path/.regex — faithful port of isRecommendedForRoute); TourDefinitionModel;
+                                          TourRegistry (the 8 tours in web order); TourLauncherRow +
+                                          TourLauncherRows projection (per-row completed/recommended); and
+                                          TourLauncherAccessibility (action + row VoiceOver labels). Pure, Foundation-only.
+  TourLauncher.Model.swift     (258 L) — P1/S11 telemetry seam (TourLauncherTelemetry + OSLog default); P1/S10
+                                          facade (TourLauncherStrings, table "TourLauncher"); TourLauncherConnection
+                                          (live/stale/offline); TourLauncherInput; TourLauncherResolved +
+                                          TourLauncherProjection (loading/empty/error/data); TourLauncherSource (P1/S8
+                                          seam); TourLauncherModel (@Observable) — start/stop/refresh/startTour/
+                                          resetAll/requestClose + view.opened-once + stale one-shot auto-refresh.
+  TourLauncher.Stores.swift    (205 L) — TourCompletionStore seam + UserDefaultsTourCompletionStore (web localStorage
+                                          key/version port: completedIDs/mark/resetAll/markListSeen/hasSeenList);
+                                          InMemoryTourLauncherSource (previews/tests); DefaultTourLauncherSource
+                                          (completion store + route provider + start dispatcher → snapshot).
+  TourLauncher.swift           (220 L) — the surface view: modal chrome (title + freshness chip + refresh + close),
+                                          connectivity banner, subtitle, content state switch, reset-all/close footer;
+                                          view.opened on appear; TourLauncherCopy fixed-string helpers.
+  TourLauncher.Views.swift     (335 L) — TourLauncherList + TourRowView (icon box, title, recommended/completed chips,
+                                          description, start/replay action), TourRecommendedChip/TourCompletedChip,
+                                          TourFreshnessChip, TourConnectivityBanner, TourResetButton, and the
+                                          loading / empty / error chrome.
+  TourLauncher.Previews.swift  ( 79 L) — data / root-recommended / empty / loading / error / stale / offline (DEBUG).
+  TourLauncher.Tests.swift     (217 L) — route match, registry order/contents, row projection, projection branches,
+                                          accessibility labels.
+  TourLauncher.ModelTests.swift(293 L) — model wiring + telemetry + list-seen + start/reset/close actions + stale
+                                          one-shot auto-refresh; UserDefaults store key/version semantics;
+                                          DefaultTourLauncherSource projection; test doubles.
+  TourLauncher.strings         ( 59 L) — 36 keys: the 10 web launcher keys + 16 per-tour title/description keys +
+                                          10 native chrome keys (freshness / loading / empty / error / retry).
+  Total shipped Swift: 1880 L across 8 files; 42 XCTest cases.
+
+  NOT touched (parallel-unsafe / integration scope, per the AcDcStatsPanel/0096 + FlagsTable/0031 precedent):
+    • project.yml + .swiftlint.yml + .swiftformat — the new "TeslaSync/misc-surfaces" tier is NOT self-registered
+      here; its target/lint registration is integration-scope (the same way "TeslaSync/feature-views" was
+      pre-registered by infra, not by a per-surface prompt). Self-registering a shared file across parallel slots
+      is unsafe and out of the allowed-files list. Owned by the P4 acceptance gate.
+    • the shared Localizable.xcstrings — strings ship in the per-surface table and fold in at integration time.
+    • the 9 PRE-EXISTING dirty working-tree files (AIUsageCard.* ×7 + 2 web/.tsx) are NOT mine, NOT touched,
+      NOT committed.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  Modal                     → modal-content View (VStack + Color.TS.surface), the WidgetPicker/0134 pattern;
+                              header title + xmark close, footer reset-all + close (web Modal close + footer Close).
+  useTranslation t(k, d)    → TourLauncherStrings facade (NSLocalizedString, table "TourLauncher"); 0 English literals.
+  useLocation().pathname    → TourLauncherInput.pathname (DefaultTourLauncherSource route provider).
+  isRecommendedForRoute     → TourRouteMatch.matches ('/' exact, string exact-or-prefix, regex anchored test) — unit
+                              tested per tour + per-route uniqueness.
+  listTours / TOUR_ORDER    → TourRegistry.ordered (same 8 tours, same order).
+  isTourCompleted/resetAll/ → TourCompletionStore + UserDefaultsTourCompletionStore (web key teslasync:tour:v{v}:{id},
+   markTourListSeen           list-seen marker, legacy flag clear) — unit tested for version scoping + reset.
+  Button(primary|ghost)     → TSButton(.primary|.ghost); Check/PlayCircle/Sparkles/RotateCcw/X → SF Symbols
+                              checkmark / play.circle.fill / sparkles / arrow.counterclockwise / xmark.
+  recommended accent tint   → Color.TS.accent (border .40 + fill .08); completed → Color.TS.statusSuccess; chips are
+                              tinted + bordered capsules (short semantic labels).
+  FadeIn / Skeleton / empty → TSFadeIn / TSSkeleton / ContentUnavailableView; QueryError → error view + Retry (TSButton).
+  a11y                      → per-row combined VoiceOver label (title + recommended/completed state + description) +
+                              explicit action label ("Start/Replay tour: {title}"); decorative glyphs hidden; Dynamic
+                              Type + Reduce Motion via the shared tokens/components.
+  telemetry                 → view.opened surface="TourLauncher" via TourLauncherModel.start (P1/S11), OSLog default.
+  states                    → loading / empty (empty registry) / error (retry) / data, plus the P4 leaf freshness axis
+                              live / stale (chip + banner + one-shot auto-refresh) / offline (chip + banner).
+
+GATES
+  [GREEN]    swiftformat --lint  (misc-surfaces, scoped)            : 0/8 files require formatting           (FORMAT_SCOPED_EXIT=0)
+             swiftformat --lint  .  (whole tree, literal gate)      : 1/1921 require formatting → FORMAT_EXIT=1, but the
+                                                                       single file is PRE-EXISTING
+                                                                       feature-views/ActionBuilder.Previews.swift:48
+                                                                       (blankLinesBetweenScopes) — NOT a misc-surfaces file,
+                                                                       not introduced here. My 8 files: 0 require formatting.
+  [GREEN]    swiftlint --strict  (misc-surfaces, scoped)            : 0 violations, 0 serious in 8 files       (LINT_EXIT=0)
+             swiftlint --strict  (whole app, FYI)                   : 1 PRE-EXISTING violation — function_body_length in
+                                                                       TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+                                                                       (NOT a misc-surfaces file; identical to the
+                                                                       AcDcStatsPanel/0096 baseline note).
+  [GREEN]    check-placeholders.ps1 (real scan of TourLauncher.*)   : PLACEHOLDER_ALLOWED=0 · PLACEHOLDER_COUNT=0  (PLACEHOLDER_EXIT=0)
+  [GREEN]    TourLauncher build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode,
+             strict-concurrency complete = same as the app), compiling the EXACT shipped TourLauncher.* sources
+             against the REAL repo design-system (apps/design/generated/apple/Tokens.swift +
+             apps/apple/Sources/Design + apps/apple/Sources/Components):
+                 Build complete!  ·  Executed 42 tests, with 0 failures                                     (SWIFT_TEST_EXIT=0)
+  [GREEN]    TourLauncher SDK compile — swiftc -typecheck of the EXACT shipped sources (incl. DEBUG previews)
+             against the REAL Apple SDKs:
+                 iOS 18 simulator (arm64-apple-ios18.0-simulator) = 0 errors ; macOS 15 = 0 errors          (SDK_TYPECHECK_EXIT=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 17' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS'                        build test : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO TourLauncher surface errors; all blockers pre-exist this change):
+    Both schemes fail at the SAME single root cause, captured verbatim:
+        apps/apple/TeslaSync/feature-views/AIRestorePanel.Tests.swift:18:8:
+            error: unable to resolve module dependency: 'XCTest'   →  ** BUILD FAILED ** / ** TEST FAILED **
+    project.yml routes "TeslaSync/feature-views" + "TeslaSync/dashboard-widgets" into the APP targets, while the
+    XCTest unit-test targets source only "Tests/Unit". The repo's 170 co-located per-surface *.Tests.swift files
+    (the layout this prompt's allowed-files list mandates) therefore compile INTO the app target, which cannot
+    resolve XCTest. This is BASELINE-RED before this change (a clean baseline build of TeslaSync-macOS at HEAD,
+    with NO TourLauncher files wired in, fails on the identical AIRestorePanel.Tests.swift:18 'XCTest' error —
+    captured) and is the exact condition ToolCard/0010 + FlagsTable/0031 + AcDcStatsPanel/0096 already recorded.
+    This surface's directory ("TeslaSync/misc-surfaces") is not even registered in project.yml (integration scope,
+    see "NOT touched"), so the app build never reaches a TourLauncher file. The SURFACE itself is proven to
+    compile under BOTH shipping SDKs (iOS 18 + macOS 15 swiftc -typecheck = 0 errors) and to build + pass its 42
+    tests in the isolated Swift 6 harness against the real design-system.
+    Owner: the P4 acceptance gate (misc-surfaces target registration + XCTest test-target membership + macOS
+    dev-signing) on a macos-latest CI runner, per apps/macos-pending-verifications.md — NOT a single misc-surface
+    prompt (task rule: do not fix pre-existing unrelated breakage).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and
+                           explicitly DEFERRED with the raw root-cause error pasted — never reported as passing.
+  2  No scope narrowing  : every web region + branch reproduced — the titled modal chrome + subtitle, all 8 tour
+                           rows with the completion icon box, the recommended chip (route-matched) + completed chip,
+                           the per-row Start/Replay action with primary-when-recommended emphasis + aria-label, and
+                           the reset-all / close footer; plus the empty-registry render.
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; both iOS + macOS failures
+                           reproduced AND root-caused to the pre-existing feature-views XCTest-in-app condition,
+                           not assumed. A baseline (no-surface) build was run to prove it is pre-existing.
+  4  No stubs as final   : complete production surface (8 Swift files, 1880 L) + 42 real tests that BUILD and PASS;
+                           placeholder scanner = 0; no TODO/stub/mock/placeholder/Lorem.
+  5  No parity shortcut  : registry + route-match + completion-store + tints/typography + chips + a11y + telemetry +
+                           every state mapped to platform tokens and verified against the real design-system in a
+                           Swift 6 build+test AND a dual-SDK type-check.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: consumes P1/S8 state-holders, P1/S9 tokens, P1/S10 i18n facade, P1/S11 diagnostics, and
+                           the P4 core design-system. Did NOT self-register project.yml/.swiftlint.yml/.swiftformat
+                           (the misc-surfaces tier registration is integration-scope + parallel-unsafe) and did NOT
+                           edit the shared Localizable.xcstrings.
+  8  No commit on red    : the COMMITTED artifact (TourLauncher.* + this log) is GREEN on every gate it owns —
+                           scoped swiftformat (0/8), scoped swiftlint (0/0), placeholders (0), an isolated Swift 6
+                           build + 42-test run, and an iOS 18 + macOS 15 SDK type-check. The DEFERRED full-app gate
+                           is RED only on pre-existing, unrelated conditions this commit neither introduces nor touches.
+  9  No silent drift     : changes confined to apps/apple/TeslaSync/misc-surfaces/TourLauncher.* + this log. The 9
+                           pre-existing dirty files (AIUsageCard.* ×7 + 2 web/.tsx) are NOT touched and NOT committed.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic TourLauncher shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles under BOTH shipping SDKs (iOS 18 simulator + macOS 15, swiftc -typecheck, 0 errors) and
+  its 42 tests BUILD and PASS under the app's own Swift 6 strict-concurrency rules against the real design-system,
+  with swiftlint / swiftformat / placeholder all green on the shipped files. The full-app iOS-Simulator + macOS
+  xcodebuild build/test gate is DEFERRED (not failed by this code): both schemes are BASELINE-RED on the
+  pre-existing co-located-XCTest-in-app-target condition (feature-views/AIRestorePanel.Tests.swift:18 'XCTest'),
+  owned by the P4 acceptance gate (misc-surfaces target registration + XCTest test-target membership + macOS
+  signing) per apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED
+  Xcode gate" disposition used by every prior P4 surface (0010 ToolCard, 0031 FlagsTable, 0096 AcDcStatsPanel).
+
+EXIT=0
+STATUS=DONE

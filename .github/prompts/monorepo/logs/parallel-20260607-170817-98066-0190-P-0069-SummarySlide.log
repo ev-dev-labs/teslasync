@@ -1,0 +1,128 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Key capability finding: `xcodebuild` requires full Xcode but only Command Line Tools is installed, and `simctl` is unavailable. However, `swift`, `swiftlint`, and `swiftformat` ARE available. Let me explore the Apple app structure and read the web source before deciding on approach.
+
+Now I have the web spec. `xcodebuild` is blocked (no full Xcode), but `swift`/`swiftlint`/`swiftformat` work. Let me study existing native feature-views to match conventions, especially any sibling "Slide" surfaces.
+
+No existing SummarySlide. The pattern is a multi-file set per surface (`.swift`, `.Model.swift`, `.Adapter.swift`/`.Projection.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`). Let me find a canonical data-driven view that renders all the required states and binds to state holders.
+
+Rich native architecture exists. Let me understand the shared layers (state holders, tokens, i18n, diagnostics, data-display components) and read a complete representative feature-view set in parallel.
+
+This is a KMP (Kotlin Multiplatform) architecture — the `Shared` framework is Kotlin-built, confirming `xcodebuild` can't run here. I'll still produce full parity code following these exact patterns. Let me read the remaining shared layers and locate the i18n + diagnostics facades.
+
+Let me read a complete exemplar feature-view set (AuditPanel — data-driven with states/telemetry) plus the core shared building blocks I'll reuse.
+
+This is the exact pattern to follow. Let me read the rest of the AuditPanel set and the shared building blocks (tokens, telemetry, strings helper, components).
+
+Excellent pattern clarity. Let me read the telemetry sink, design tokens, components/strings/tests/previews of AuditPanel, plus the DataDisplay (AnimatedNumber) and Motion shared components.
+
+Design tokens didn't match my grep. Let me locate them precisely and read the telemetry sink, DataDisplay (AnimatedNumber), Motion, and the project structure.
+
+Tokens are generated (P1/S9). Let me locate the generated token definitions and the build/module config.
+
+Tokens (P1/S9) and the `Shared` KMP framework are external generated deps, not in-repo — consistent with the documented capability requirement. Let me finish learning the patterns: telemetry sink, AnimatedNumber, Motion, the strings/tests/previews/models format, and the web `YearReview` type.
+
+Now I have motion, AnimatedNumber, and telemetry. Let me read the domain-model/strings/tests/previews patterns and the web `YearReview` type + `useUnits` to model the data faithfully.
+
+Let me read the tests/previews patterns, the web data contracts, and enumerate valid token roles.
+
+Complete pattern understanding achieved. Now the web data contracts and valid token roles.
+
+Let me read the web `useUnits` + `convertDistanceFromSI` and check how native feature views handle unit conversion (Shared facade vs pure).
+
+The native precedent ports `convertDistanceFromSI` as a pure, testable helper with NIST-grade divisors. Let me read one exemplar and enumerate valid token roles to finalize my vocabulary.
+
+The native precedent is clear: pure, testable `convertDistanceFromSI` ports. I have the full token vocabulary. Let me check the build config, linters, and placeholder check so my code conforms exactly.
+
+Now I understand the full build: app targets pull in `DesignTokens` (P1/S9) + stage `Shared.xcframework` (KMP). Let me confirm tooling availability (pwsh, logs dir) and the exact forbidden placeholder patterns before writing code.
+
+`pwsh` works; `xcodebuild` won't (no Xcode). Let me look at an existing feature-view log to mirror the exact format, then start building.
+
+Critical finding from predecessor logs: **full Xcode 26.5 IS installed at `/Applications/Xcode.app`** (driven via `DEVELOPER_DIR`), even though `xcode-select -p` points at CommandLineTools. The established disposition is "code-complete + real iOS-18/macOS-15 SDK typechecks + EXECUTED XCTest via SwiftPM harness + DEFERRED full xcodebuild" → STATUS=DONE. Let me re-probe the real toolchain and locate the DesignTokens package.
+
+Confirmed: Xcode 26.5 (SDKs iphonesimulator26.5 + macosx26.5, iPhone 16 sim present), DesignTokens generated at `apps/design/generated/apple/Tokens.swift`. This matches the predecessor "code-complete + real SDK typecheck + executed XCTest + deferred xcodebuild" disposition. Let me set up my plan/todos and read the remaining compile-closure files.
+
+Deployment targets iOS 18 / macOS 15; tokens compile directly into the app module. The key enabler: surface files never `import Shared` (seams are Swift protocols). Let me map the non-Shared compile closure by checking which support files import Shared.
+
+All support files are Shared-free — I can assemble a clean compile/test closure. Let me read the exact APIs (tokens, material, badges, feedback) I'll compile against.
+
+I have the full token vocabulary. Let me read the glass-panel material modifier and the feedback (states/skeletons) components, then I'll start building.
+
+I now have the complete picture. Let me set up my plan and todo tracking, then build the surface.
+
+Now I'll build the surface. Starting with the pure core (Models + Projection) that tests depend on.
+
+Pure core done. Now the SwiftUI components and the surface view.
+
+Now the main surface view.
+
+Now the i18n catalog, previews, and tests.
+
+Now the test suite.
+
+All 8 files created. Let me format and lint them against the repo config.
+
+swiftformat flagged only `SummarySlide.Projection.swift` (inline property body + some long lines). Let me auto-apply the repo formatting, then re-lint.
+
+swiftformat passes. Let me verify the autofix didn't distort logic and run swiftlint.
+
+swiftformat and swiftlint both pass with 0 issues. Now the real compile + test. Let me map the exact non-Shared closure for the SwiftPM harness and typechecks.
+
+None import Shared. Let me check the telemetry registry file is self-contained, then build the SwiftPM harness.
+
+Telemetry file is self-contained. Let me verify the Components/Design layer is a clean island (no references into Shared-importing facade types), then assemble the harness.
+
+One file (`UnitFormatters.swift`) couples to the Shared-backed `UnitPreferences` — I'll exclude it and curate the closure. Let me verify my candidate closure files are clean, then assemble the harness.
+
+All clean. Project is Swift 6.0 + strict concurrency complete. Let me assemble the SwiftPM harness and execute the tests.
+
+The production sub-files didn't copy (filename pattern bug). Let me fix and build.
+
+Harness builds clean under Swift 6. Now execute the test suite.
+
+All 24 tests pass. Now the real iOS 18 + macOS 15 SDK typechecks of the production surface.
+
+Both SDK typechecks pass. Now the DEBUG previews typecheck (adds `#Preview` macro + per-state previews).
+
+Previews compile under DEBUG. Now the placeholder/stub gate (ADR-011) on the SummarySlide files.
+
+Placeholder gate clean (COUNT=0). Now let me capture honest evidence for the deferred xcodebuild step (the KMP `Shared.xcframework` is unstaged).
+
+feature-views IS registered; the sole blocker is the unstaged KMP `Shared.xcframework`. Let me capture that real failure as honest deferred evidence.
+
+Captured honest deferred evidence: `XCODEGEN_EXIT=0`, then `xcodebuild build` → "no XCFramework at Frameworks/Shared.xcframework" → BUILD FAILED, exit 65 (the only blocker is the unstaged KMP framework; feature-views ARE registered). Let me clean up generated artifacts and verify git status.
+
+Clean — exactly my 8 files. Let me gather line counts and re-confirm the host gates for the log, then write it.
+
+All referenced keys declared (`co2KgSaved` has a digit so it's omitted from that regex list but is present in both). Let me gather header metadata, then write the gate log.
+
+All host gates green; deferred step has honest evidence. Let me write the gate log.
+
+Log written. Let me do a final verification pass on the committed files and commit.
+
+All final gates green. Committing.
+
+Committed (383d4f1e, 9 files). Let me confirm a clean working tree and finalize.
+
+All 12 todos done, working tree clean, commit landed.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0069-SummarySlide.log   | 235 ++++++++++++++
+ .../feature-views/SummarySlide.Components.swift    | 343 +++++++++++++++++++++
+ .../feature-views/SummarySlide.Model.swift         | 199 ++++++++++++
+ .../feature-views/SummarySlide.Models.swift        | 206 +++++++++++++
+ .../feature-views/SummarySlide.Previews.swift      | 102 ++++++
+ .../feature-views/SummarySlide.Projection.swift    | 267 ++++++++++++++++
+ .../feature-views/SummarySlide.Tests.swift         | 335 ++++++++++++++++++++
+ .../TeslaSync/feature-views/SummarySlide.strings   |  42 +++
+ .../TeslaSync/feature-views/SummarySlide.swift     | 124 ++++++++
+ 9 files changed, 1853 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0069-SummarySlide.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummarySlide.Components.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummarySlide.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummarySlide.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummarySlide.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummarySlide.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummarySlide.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummarySlide.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/SummarySlide.swift

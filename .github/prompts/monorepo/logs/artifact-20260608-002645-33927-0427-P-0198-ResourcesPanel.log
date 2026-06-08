@@ -1,0 +1,116 @@
+=== P4 Shared surface 0198 ResourcesPanel (Apple) ===
+date: 2026-06-08T13:45:36Z
+host: Darwin 25.5.0 arm64
+swift: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+
+############################################################
+# SHIPPED FILES (apps/apple/TeslaSync/shared-surfaces/ResourcesPanel.*)
+############################################################
+total 128
+-rw-r--r--@ 1 atulgupta  staff  11924 Jun  8 06:38 ResourcesPanel.Adapter.swift
+-rw-r--r--@ 1 atulgupta  staff   7522 Jun  8 06:36 ResourcesPanel.Chrome.swift
+-rw-r--r--@ 1 atulgupta  staff   7408 Jun  8 06:35 ResourcesPanel.Model.swift
+-rw-r--r--@ 1 atulgupta  staff   3863 Jun  8 06:38 ResourcesPanel.Previews.swift
+-rw-r--r--@ 1 atulgupta  staff   1695 Jun  8 06:37 ResourcesPanel.strings
+-rw-r--r--@ 1 atulgupta  staff   4020 Jun  8 06:36 ResourcesPanel.swift
+-rw-r--r--@ 1 atulgupta  staff  13032 Jun  8 06:38 ResourcesPanel.Tests.swift
+-rw-r--r--@ 1 atulgupta  staff   6729 Jun  8 06:35 ResourcesPanel.Views.swift
+
+############################################################
+# CAPABILITY PROBE (prompt: SwiftUI+SwiftCharts+MapKit, iOS18/iPadOS18/macOS15)
+# 'If unavailable on the runner -> STATUS=BLOCKED with API evidence.'
+############################################################
+--- xcode-select active developer dir ---
+/Library/Developer/CommandLineTools
+--- xcodebuild availability ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+--- iOS SDKs / simulators ---
+showsdks(ios): 0 ; simctl iPhone16: 0
+--- KMP Shared.xcframework (app+test targets depend on it) ---
+ls: apps/apple/Frameworks/Shared.xcframework: No such file or directory
+
+>>> CONCLUSION: full Xcode is ABSENT (CommandLineTools only); no iOS SDK/simulator;
+>>> Frameworks/Shared.xcframework is an empty .gitkeep placeholder. The xcodebuild
+>>> build/test gate steps below CANNOT execute on this runner.
+
+############################################################
+# GATE STEP 1/2 — xcodebuild iOS (scheme TeslaSync, iPhone 16 sim)
+############################################################
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1  (non-zero: xcodebuild requires full Xcode — BLOCKED)
+
+############################################################
+# GATE STEP 2/2 — xcodebuild macOS (scheme TeslaSync-macOS)
+############################################################
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1  (non-zero: xcodebuild requires full Xcode — BLOCKED)
+
+############################################################
+# RUNNABLE LINT/FORMAT/PLACEHOLDER GATES (tools present on runner)
+############################################################
+--- swiftlint --strict scoped to the shipped surface (my files only) ---
+LINT_EXIT(scoped)=0  (0 violations in ResourcesPanel.*)
+
+--- swiftlint --strict repo-wide (as the gate runs it) ---
+/Users/atulgupta/Documents/repos/.teslasync-parallel/20260608-002645-33927/slot-427/apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19: error: Function Body Length Violation: Function body should span 50 lines or less excluding comments and whitespace: currently spans 78 lines (function_body_length)
+NOTE: the single repo-wide violation is PRE-EXISTING in
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift (function_body_length),
+      NOT in this prompt's files and out of this prompt's allowed scope.
+
+--- swiftformat --lint on the shipped surface ---
+SwiftFormat completed in 4.25s.
+0/7 files require formatting.
+FORMAT_EXIT=0
+
+--- check-placeholders.ps1 (ADR-011 definition-of-done) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+############################################################
+# SUPPLEMENTARY VERIFICATION (compensating for the BLOCKED xcodebuild gate)
+# Host swift 6.3.2 can import SwiftUI/Observation for the macОS target, so the
+# surface is typechecked against the REAL design tokens + REAL shared atoms
+# (no stubs), and the pure parity arithmetic + model wiring are RUN at runtime.
+############################################################
+--- (a) swiftc -typecheck: production code + test bodies vs real Tokens/Motion/TSMaterial/
+        Skeletons/Cards/Typography/Buttons (XCTest harness shimmed; #Preview macro is
+        Xcode-only and excluded) ---
+TYPECHECK_EXIT=0
+
+--- (b) runtime: web-parity arithmetic (severity thresholds / bar clamp / aria round /
+        value-cell / row-label / resolve phases / footnote) ---
+ok: blank footnote -> nil
+ok: footnote survives empty
+ALL RUNTIME CHECKS PASSED
+RUNTIME_PARITY_EXIT=0
+
+--- (c) runtime: model wiring (telemetry-once / stale auto-refresh / offline / re-arm /
+        manual refresh / stop / surfaceSlug) ---
+ok: surfaceSlug
+ALL MODEL CHECKS PASSED
+MODEL_RUNTIME_EXIT=0
+
+############################################################
+# ACCEPTANCE CRITERIA
+############################################################
+[x] Surface renders all web states (data + empty) + P4 leaf states (loading/error/stale/offline) — 8 #Previews, per-state.
+[x] Binds via P1/S8 state-holder seam (ResourcesPanelSource/Model); no HTTP in the view (web is presentational).
+[x] Every i18n key resolves via P1/S10 facade; ResourcesPanel.strings catalog present (table 'ResourcesPanel').
+[x] Accessibility labels on every element (row spoken label+value, chip, banner, refresh, retry); pure a11y builder unit-tested.
+[x] Tests: adapter + projection + model + a11y (typecheck PASS against real types; pure logic + model wiring RUN green).
+[x] No TODO/stub/mock/placeholder/Lorem — check-placeholders PLACEHOLDER_COUNT=0.
+[~] xcodebuild iOS+macOS build/test — BLOCKED: full Xcode + Shared.xcframework + iOS SDK/sim absent on runner.
+
+############################################################
+# OUTCOME
+############################################################
+Runnable gates that CAN execute here are GREEN (swiftlint scoped=0, swiftformat=0,
+placeholder=0, standalone typecheck=0, runtime parity+model=0). The mandated
+xcodebuild build/test steps CANNOT run (platform-capability blocker, evidence above),
+so per the prompt's capability clause + Honesty Covenant (#1 no red-as-green, #8 no
+commit on red) this is reported BLOCKED rather than DONE. No commit is made on red.
+
+EXIT=1
+STATUS=BLOCKED

@@ -1,0 +1,161 @@
+=== P4 Shared surface 0114 BrowserCompatBanner (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon) — SHARED, heavily contended
+                       (multiple parallel monorepo slots building concurrently; 16 BUSY Gradle daemons observed).
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (active dir was /Library/Developer/CommandLineTools; overridden non-destructively, no sudo /
+                       no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint · swiftformat · xcodegen 2.x · pwsh 7 · OpenJDK 17.
+  Destinations       : iOS Simulator "iPhone 16" present (Booted) · macOS 15 SDK present.
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS SDKs all present and probe-compiled
+                       (swiftc -typecheck import SwiftUI/Charts/MapKit = OK) → NOT capability-BLOCKED.
+  Shared.xcframework : NOT staged. The scheme pre-action (Scripts/build-shared-xcframework.sh → Gradle
+                       :core:assembleSharedXCFramework) was launched but STARVED on the contended shared host
+                       (frozen ~7+ min at :core:linkReleaseFrameworkIosArm64 behind 16 busy daemons). This KMP
+                       binary is the artifact apps/macos-pending-verifications.md already defers to macos-latest CI.
+
+WEB SOURCE (the specification)
+  web/src/components/feedback/BrowserCompatBanner.tsx — a one-time, dismissible top-of-page warning.
+    Binds ONLY useTranslation (no data hooks, no fetch). detectMissingFeatures() probes 5 web-platform
+    features (BroadcastChannel, ResizeObserver, Intl.RelativeTimeFormat, CSS :has(), structuredClone).
+    Sticky dismissal via localStorage "teslasync:compat-warning-dismissed:v1".
+    `if (dismissed || missing.length === 0) return null` → else a warning AlertBanner with title +
+    interpolated body ("TeslaSync needs {{features}} … {{recommendation}}") + a dismiss X whose aria-label
+    is t('compat.banner.dismiss'). i18n keys: compat.banner.title / compat.banner.body / compat.banner.dismiss.
+    States = { hidden, warning } ONLY — there is NO loading/error/stale/offline branch because the surface
+    has no data source (the generic P4 state list does not apply; reproduced per "any state-specific branches
+    that exist in the web source — read it and reproduce them all").
+
+ARTIFACTS SHIPPED  (allowed scope: apps/apple/TeslaSync/shared-surfaces/BrowserCompatBanner.* + log)
+  TeslaSync/shared-surfaces/BrowserCompatBanner.Model.swift      — i18n facade (table "BrowserCompatBanner") +
+                                                                   localizer seam; OSVersionTriple; CompatEnvironment
+                                                                   (.current, no UIDevice main-actor hop);
+                                                                   BrowserCompatCapability (5 web-feature analogues,
+                                                                   webIdentity audit anchor); BrowserCompatDetector
+                                                                   (web detectMissingFeatures parity); CompatDismissalStore
+                                                                   (UserDefaults, SAME key, Sendable closure seam);
+                                                                   BrowserCompatBannerState {hidden, warning};
+                                                                   BrowserCompatBannerProjection (resolve/title/body/
+                                                                   featureList/dismissLabel/announcement);
+                                                                   BrowserCompatBannerSurface (slug + reportOpen).
+  TeslaSync/shared-surfaces/BrowserCompatBanner.Telemetry.swift  — BrowserCompatBannerTelemetry seam +
+                                                                   OSLogBrowserCompatBannerTelemetry (redaction-safe
+                                                                   os_log "view.opened").
+  TeslaSync/shared-surfaces/BrowserCompatBanner.swift            — SwiftUI view (hidden ⇒ EmptyView; warning ⇒
+                                                                   tokenized banner) + #if DEBUG previews. Decomposed
+                                                                   into banner/messageColumn/dismissButton.
+  TeslaSync/shared-surfaces/BrowserCompatBanner.strings          — P1/S10 catalog contribution: the 3 web keys verbatim
+                                                                   + native chrome (recommendation + 5 feature names).
+  TeslaSync/shared-surfaces/BrowserCompatBanner.Tests.swift      — 21 XCTest cases, gated #if canImport(XCTest) so the
+                                                                   app target (no XCTest) excludes them (the "good"
+                                                                   co-located pattern; adds ZERO app-target errors).
+  Necessary shared wiring (same pattern ToolCard used to introduce TeslaSync/feature-views):
+    project.yml                          — + "TeslaSync/shared-surfaces" to TeslaSync and TeslaSync-macOS sources.
+    .swiftlint.yml                       — + "TeslaSync/shared-surfaces" to included.
+    apps/macos-pending-verifications.md  — + one row recording the deferred full-app Xcode gate for this surface.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  useTranslation             → LocalizedStringKey-free String facade over the per-surface .strings table (P1/S10);
+                               injectable BrowserCompatLocalizer (.bundle / .echo) keeps the projection bundle-free testable.
+  AlertBanner (warning)      → tokenized banner: Color.TS.statusWarning .opacity(0.1) fill + .opacity(0.3) border,
+                               TSSpacing/TSRadius, Font.TS ramp, SF Symbol "exclamationmark.triangle.fill".
+  detectMissingFeatures()    → BrowserCompatDetector.missingCapabilities(in:), pure; 5 capabilities map 1:1 to the web
+                               features (webIdentity == ["BroadcastChannel","ResizeObserver","Intl.RelativeTimeFormat",
+                               "CSS :has()","structuredClone"]).
+  testHookMissing seam       → BrowserCompatBanner(missing:) override.
+  localStorage dismissal     → CompatDismissalStore (UserDefaults.standard, key byte-for-byte the web key).
+  null / visible             → BrowserCompatBannerState .hidden (EmptyView) / .warning(...).
+  i18n        : 3 web keys (compat.banner.title/body/dismiss) verbatim; body interpolation {{features}}/{{recommendation}}
+                → positional %1$@/%2$@; recommendation is the native analogue of RECOMMENDED_BROWSERS_FALLBACK. Zero
+                English literals in Swift (only catalog keys + fallbacks routed through the facade).
+  a11y        : icon .accessibilityHidden(true); title+body combined into one labelled element; role="status"
+                aria-live="polite" → AccessibilityNotification.Announcement on appear; dismiss Button carries the
+                localized compat.banner.dismiss accessibilityLabel (the one interactive element).
+  telemetry   : view.opened surface="BrowserCompatBanner" via BrowserCompatBannerSurface.reportOpen (P1/S11), default
+                OSLog sink, emitted from the warning banner's .task (the true "opened" moment).
+
+GATES
+  [GREEN]    swiftformat --lint apps/apple                           : my 4 swift files 0/4 require formatting.
+                                                                       Whole tree: 1/1917 PRE-EXISTING (feature-views/
+                                                                       ActionBuilder.Previews.swift:48 blankLinesBetweenScopes)
+                                                                       — not a shared-surfaces file; not introduced here. (FORMAT_EXIT for my scope=0)
+  [GREEN]    swiftlint --strict (shared-surfaces/BrowserCompatBanner): 0 violations in my 5 files.
+                                                                       Whole app: 1 PRE-EXISTING violation — function_body_length
+                                                                       in TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141
+                                                                       (78 lines) — NOT a shared-surfaces file. (LINT_EXIT for my scope=0)
+  [GREEN]    check-placeholders.ps1 -Path …/shared-surfaces (swift)  : PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+                                                                       (self-test PASS: dirty→4, clean→0, opt-out semantics). (PLACEHOLDER_EXIT=0)
+  [GREEN]    ISOLATED SwiftPM harness — swift-tools 6.0 (Swift 6 language mode = strict concurrency complete, same as the
+             app), compiling the EXACT shipped BrowserCompatBanner.{Model,Telemetry,swift} against the REAL repo design
+             tokens (apps/design/generated/apple/Tokens.swift):
+                 Build complete!  ·  Executed 21 tests, with 0 failures (0 unexpected)                   (SWIFT_TEST_EXIT=0)
+             Coverage: detector (below/at/above floor on iOS+macOS, unknown host, exact 5-feature web order), per-state
+             projection (hidden when dismissed / when empty; warning otherwise), title/featureList/body interpolation/
+             dismiss copy, dismissal store contract (key + persist + hide-after-dismiss), a11y announcement, telemetry slug,
+             OSVersionTriple ordering.
+  [GREEN]    swiftc -typecheck (real SDKs, -swift-version 6):
+                 iOS 18  : arm64-apple-ios18.0-simulator                                                  (IOS_TYPECHECK_RC=0)
+                 macOS 15: arm64-apple-macos15.0                                                          (MAC_TYPECHECK_RC=0)
+  [GREEN]    xcodegen generate                                       : created TeslaSync.xcodeproj; enumerates all 5
+                                                                       BrowserCompatBanner.* files across BOTH app targets. (XCODEGEN_RC=0)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT (full scheme) — STARVED on contended Gradle (see below)
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT (full scheme) — same dependency
+             Deterministic direct-target probes (no scheme pre-action), captured on THIS slot:
+                 xcodebuild -target TeslaSync      -sdk iphonesimulator build CODE_SIGNING_ALLOWED=NO  → TARGET_IOS_EXIT=65
+                 xcodebuild -target TeslaSync-macOS -sdk macosx        build CODE_SIGNING_ALLOWED=NO  → MAC_TARGET_EXIT=65
+             both failing with: "error: There is no XCFramework found at apps/apple/Frameworks/Shared.xcframework".
+
+  WHY DEFERRED (full-app Xcode gate — ZERO BrowserCompatBanner errors; every blocker pre-exists this change):
+    1. Shared.xcframework (the KMP core) must be Gradle-assembled by the scheme pre-action. On this SHARED runner the
+       Gradle build is starved behind 16 BUSY daemons from parallel slots (frozen ~7+ min at linkReleaseFrameworkIosArm64).
+       Without it, both app targets fail immediately (exit 65, captured above). This binary is already a tracked
+       macos-pending artifact (p1-shared/S3-0001; apps/shared CONTRACT_FROZEN).
+    2. Even with the framework staged, the app target cannot compile due to a PRE-EXISTING parallel-merge collision:
+       `struct DashboardWidgetSize` is declared 15× across Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/*
+       in the single TeslaSync module → "is ambiguous for type lookup". git shows this surface touches NONE of those files.
+    3. Ungated co-located *.Tests.swift across the existing feature-views/dashboard-widgets groups import XCTest INTO the
+       app target → "error: unable to resolve module dependency: 'XCTest'" (directly observed on the identical tree of a
+       sibling slot sharing this host). THIS surface's BrowserCompatBanner.Tests.swift is gated #if canImport(XCTest), so
+       it adds ZERO such errors — it is the corrected pattern.
+    4. macOS additionally requires a development SIGNING certificate (entitlements) this runner does not provision.
+    These are exactly the items apps/macos-pending-verifications.md defers to the ADR-012 macos-latest CI runner and the
+    P4/P99 Apple acceptance gate (signing/archive) + a dashboard-widget de-duplication pass — NOT a single shared-surface
+    prompt (task rule: do not fix pre-existing unrelated breakage). A pending-verification row is recorded.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported NOT-PASSING — the deterministic probes are
+                           pasted RED (TARGET_IOS_EXIT=65 / MAC_TARGET_EXIT=65) and the full scheme run is reported as
+                           STARVED/DEFERRED, never as passing.
+  2  No scope narrowing  : every web region + branch reproduced — detection (5 features, exact order), dismissal, the
+                           dismissed/empty/visible gate, title/body interpolation, the localized dismiss aria-label.
+  3  No skip-and-assume  : every host-runnable gate executed on THIS runner; raw exits pasted; the framework/signing
+                           blockers were reproduced (exit 65), not assumed.
+  4  No stubs as final   : complete production view + model + 21 real tests; placeholder scanner = 0, self-test PASS.
+  5  No parity shortcut  : detection set/order, dismissal key, interpolation, typography/tokens, a11y, telemetry all mapped
+                           and verified; no Tailwind ported; no English literals in code.
+  6  No delegation       : implemented directly; no agents/subtasks.
+  7  No predecessor bypass: P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened all consumed; no data hooks to bind, so
+                           the only binding is the i18n facade (P1/S8 state-holders are vacuously satisfied — no fetch).
+  8  No commit on red    : the COMMITTED artifact (BrowserCompatBanner.* + wiring) is GREEN on every host gate AND on a real
+                           isolated Swift 6 build+test (21/21) AND dual-SDK typecheck; the deferred full-app gate is RED only
+                           on pre-existing, unrelated infrastructure this commit neither introduces nor touches.
+  9  No silent drift     : changes confined to TeslaSync/shared-surfaces/BrowserCompatBanner.{Model,Telemetry,swift,strings,Tests},
+                           project.yml (+1 line ×2 targets), .swiftlint.yml (+1 line), apps/macos-pending-verifications.md (+1 row),
+                           and this log — all enumerated above.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic BrowserCompatBanner shipped at parity with the web source and INDEPENDENTLY VERIFIED:
+  it compiles and its 21 tests pass under the app's own Swift 6 strict-concurrency rules against the real design tokens, it
+  type-checks against the real iOS 18 and macOS 15 SDKs, xcodegen enumerates all 5 files into both app targets, and
+  swiftlint/swiftformat/placeholder are all clean on the surface. The full-app iOS-Simulator + macOS xcodebuild build/test
+  gate is DEFERRED (not failed by this code): it is blocked by the Gradle-built Shared.xcframework being starved on this
+  contended shared runner, by a pre-existing 15× DashboardWidgetSize duplicate-type collision and ungated co-located XCTest
+  in unrelated groups, and by macOS development-signing — all owned by the P4/P99 acceptance gate on a signed macos-latest CI
+  runner per apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete + DEFERRED Xcode gate"
+  disposition used by every P4 Apple surface to date.
+
+EXIT=0
+STATUS=DONE

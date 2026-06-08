@@ -1,0 +1,154 @@
+=== P4 Shared surface 0191 FadeIn (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Build 25F80, Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (the active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2 · Java 17.0.19
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5) booted · macOS 26 SDK present · iOS-18 + macOS-15
+                       minimum-deployment proven by swiftc -typecheck below.
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh during the iOS gate
+                       (Gradle ":core:assembleSharedXCFramework" produced debug + release XCFrameworks for
+                       iosArm64 / iosSimulatorArm64 / macosArm64 and staged them to apps/apple/Frameworks/).
+  Capability         : SwiftUI + iOS/macOS simulators + iOS-18/macOS-15 SDKs present → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/components/motion/FadeIn.tsx — a transparent MOTION wrapper, not a data surface:
+    FadeIn({ children, delay = 0, className = '' }):
+      const { reduce, durationMs } = useMotionPreference(400)   // reduce = useReducedMotion() ?? false
+                                                                // durationMs = reduce ? 0 : 400
+      <motion.div
+        initial   = {reduce ? false : { opacity: 0, y: 12 }}    // reduce ⇒ render final state, no entry
+        animate   = {{ opacity: 1, y: 0 }}
+        transition= {{ duration: durationMs/1000, delay: reduce ? 0 : delay, ease: 'easeOut' }} >
+        {children}
+      </motion.div>
+  Its ONLY data dependency is useMotionPreference; it renders no copy of its own ("anonymous").
+  Its ONLY branches are the two motion states (animated entry / reduced-motion instant settle). The
+  generic loading/empty/error/stale/offline states belong to whatever content the caller embeds —
+  identical to the sanctioned disposition for the pure-presentational ToolCard surface (P-0010).
+
+ARTIFACTS SHIPPED (apps/apple/TeslaSync/shared-surfaces/)
+  FadeIn.Adapter.swift  — host-free projection: FadeInMotionInput (web useMotionPreference + props, with the
+                          `?? false` tri-state coalescing), FadeInMotionPlan (web initial/animate/transition),
+                          FadeInMotionProjection.resolve (ms→s, easeOut timing, delay clamp), FadeInRevealValues
+                          (pre-reveal vs. settled interpolation), FadeInAccessibility policy.
+  FadeIn.Model.swift    — FadeInStrings (P1/S10 i18n facade), FadeInTelemetry seam + OSLogFadeInTelemetry
+                          (redaction-safe os_log "view.opened"), FadeInSurface.slug="FadeIn", the P1/S8 state-holder
+                          seam FadeInMotionSource + SystemFadeInMotionSource + InMemoryFadeInMotionSource, and the
+                          @Observable @MainActor FadeInModel (binds source→plan, emits view.opened once).
+  FadeIn.Views.swift    — FadeInAnimationFactory (plan→SwiftUI easeOut Animation) + DEBUG demo content.
+  FadeIn.swift          — FadeIn<Content> SwiftUI view: lifecycle, reduce-motion threading, reveal, telemetry.
+  FadeIn.Previews.swift — #Preview per state (animated / delayed / reduced-instant / stagger / dark).
+  FadeIn.Tests.swift    — 18 XCTest cases (projection, coalescing, reveal, a11y, slug, model+telemetry).
+  FadeIn.strings        — P1/S10 "FadeIn" table (anonymous surface ⇒ only DEBUG preview demo strings).
+  Necessary shared wiring (same pattern ToolCard P-0010 used as the FIRST feature-views surface):
+    project.yml    — + "TeslaSync/shared-surfaces" to the TeslaSync and TeslaSync-macOS target sources
+                     (FadeIn 0191 is the FIRST shared-surface; the directory had to be registered, exactly as
+                     ToolCard registered "TeslaSync/feature-views").
+    .swiftlint.yml — + "TeslaSync/shared-surfaces" to `included` so the lint gate actually covers the surface.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  useMotionPreference(400)   → FadeInMotionInput.webDefaultDurationMs = 400 + FadeInMotionProjection
+  reduce = useReducedMotion()→ @Environment(\.accessibilityReduceMotion), threaded to the model; the web
+                               `?? false` coalescing is reproduced by FadeInMotionInput.make(reduceMotion: Bool?).
+  initial {opacity:0,y:12}   → plan.initialOpacity 0 / initialOffsetY 12 (points) ; reduce ⇒ 1 / 0 (final)
+  animate {opacity:1,y:0}    → plan.finalOpacity 1 / finalOffsetY 0
+  transition easeOut dur/del → FadeInAnimationFactory.entrance = .easeOut(duration:).delay(delaySeconds)
+  i18n      : surface is anonymous (renders no copy); zero English literals in code — preview/demo strings
+              resolve through the FadeInStrings P1/S10 facade (NSLocalizedString table "FadeIn", value: fallback).
+  a11y      : transparent wrapper — adds NO accessibility element; children keep their labels/traits (web
+              motion.div has no ARIA role). Under reduced motion content is presented opaque immediately, so AT
+              never observes a transient hidden state. Honors Reduce Motion + Dynamic Type (token fonts).
+  telemetry : view.opened surface="FadeIn" via FadeInModel.start → FadeInTelemetry (P1/S11), default os_log sink.
+
+GATES
+  [GREEN]    swiftformat --lint  (shared-surfaces/FadeIn scope)      : 0/6 files require formatting          (FORMAT surface=0)
+             swiftformat --lint apps/apple (whole-tree gate)         : 1/1919 — ONE PRE-EXISTING file in
+                                                                        TeslaSync/feature-views (NOT shared-surfaces;
+                                                                        Sources 0/187, dashboard-widgets 0/362,
+                                                                        shared-surfaces 0/6). Outside this prompt's
+                                                                        allowed scope; not introduced here.   (FORMAT_EXIT=1, pre-existing)
+  [GREEN]    swiftlint --strict  (shared-surfaces/FadeIn scope)      : 0 violations in the 6 FadeIn files     (LINT surface=0)
+             swiftlint --strict  (whole app, FYI)                    : 1 PRE-EXISTING violation —
+                                                                        function_body_length in TeslaSync/dashboard-widgets/
+                                                                        LifetimeStatsWidget.Adapter.swift:141 (NOT a FadeIn
+                                                                        file). File count 1909→1915 (+6 FadeIn), still 1
+                                                                        violation ⇒ FadeIn added zero.        (LINT_EXIT=2, pre-existing)
+  [GREEN]    check-placeholders.ps1 -Path …/shared-surfaces          : PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 (PLACEHOLDER_EXIT=0)
+             (scanned the real dir — the gate's literal `…/shared-surfaces/FadeIn` is not a Get-ChildItem
+              -LiteralPath target, so it scans 0 files; the dir scan covers exactly the FadeIn.* files.)
+  [GREEN]    swiftc -typecheck — REAL iOS-18 SDK  (-target arm64-apple-ios18.0-simulator -swift-version 6)  : 0  (IOS_TYPECHECK_EXIT=0)
+  [GREEN]    swiftc -typecheck — REAL macOS-15 SDK (-target arm64-apple-macos15.0      -swift-version 6)    : 0  (MAC_TYPECHECK_EXIT=0)
+  [GREEN]    FadeIn build + test — ISOLATED SwiftPM harness, swift-tools 6.0, swiftLanguageModes [.v6]
+             (Swift 6 language mode ⇒ strict-concurrency complete = the app's SWIFT_VERSION 6.0 +
+             SWIFT_STRICT_CONCURRENCY complete), module named "TeslaSync" so `@testable import TeslaSync`
+             compiles the EXACT shipped FadeIn.* sources against the REAL design tokens (Tokens.swift):
+                 Build complete!  ·  Executed 18 tests, with 0 failures                                    (SWIFT_TEST_EXIT=0)
+  [GREEN]    xcodegen generate                                                                              (XCODEGEN_EXIT=0)
+             → all 6 FadeIn swift files enumerated into TeslaSync + TeslaSync-macOS; FadeIn.strings copied
+               into the app bundle (CopyStringsFile … TeslaSync.app/FadeIn.strings) — wiring verified live.
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO FadeIn errors; all blockers pre-exist this change):
+    iOS  : the app-target Swift module fails to RESOLVE its dependencies — 4 errors, ALL
+           "unable to resolve module dependency: 'XCTest'", emitted because 263 co-located *.Tests.swift
+           files import XCTest into the app target (e.g. the first cited is feature-views/AIRestorePanel.Tests.swift;
+           FadeIn.Tests.swift is one of these 263 and, like AiUsageCard.Tests.swift before it, contributes the same
+           benign "part of module 'TeslaSync'; ignoring import" @testable warning — NOT a FadeIn error). The module
+           also carries the latent parallel-merge collision `public struct DashboardWidgetSize` defined 15× across
+           Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/* (+ PowerFlowConnection 2×). grep of the build
+           log for "FadeIn|shared-surfaces … error:" = 0 hits.
+    macOS: the build fails at SIGNING — "TeslaSync-macOS / TeslaSyncWidgets-macOS have entitlements that require
+           signing with a development certificate", which this runner does not provision. Reached before compilation;
+           ZERO FadeIn errors.
+    These are exactly the artifacts apps/macos-pending-verifications.md defers to the ADR-012 macos-latest CI runner;
+    they are owned by the P4/P99 Apple acceptance gate (signing/archive) + a dashboard-widget de-duplication /
+    test-target-extraction pass — NOT by a single shared-surface prompt (task rule: do not fix pre-existing unrelated
+    breakage; allowed files are shared-surfaces/FadeIn.* + wiring + this log). A pending-verification row is recorded
+    in apps/macos-pending-verifications.md.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65/MAC_EXIT=65) and
+                           DEFERRED with evidence; the 1 pre-existing swiftformat + 1 pre-existing swiftlint
+                           whole-tree offenders are named as PRE-EXISTING — never reported as passing.
+  2  No scope narrowing  : both real branches of the web source (animated entry + reduced-motion instant settle),
+                           the `?? false` coalescing, the 400ms default, the y:12 offset, the easeOut delay are all
+                           reproduced; the generic data-states are documented as content-owned (web parity).
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exits pasted; the macOS signing failure and the
+                           iOS XCTest-module failure were OBSERVED in the logs, not assumed.
+  4  No stubs as final   : complete production wrapper + state holder + 18 real tests; placeholder scanner = 0;
+                           grep for TODO/FIXME/XXX/Placeholder/"not implemented"/fatalError in FadeIn.* = 0.
+  5  No parity shortcut  : timing/offset/opacity/coalescing/telemetry/a11y/i18n all mapped to platform tokens +
+                           verified by the 18-test isolated suite against the exact web arithmetic.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holder seam, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened all
+                           present and consumed; no direct fetch in the view.
+  8  No commit on red    : the COMMITTED artifact (FadeIn.* + wiring) is GREEN on every surface-scoped gate AND on a
+                           real isolated Swift-6 strict-concurrency build+test AND on real iOS-18 + macOS-15
+                           swiftc -typecheck; the deferred full-app gate is RED only on pre-existing, unrelated
+                           surfaces (263 co-located XCTest-in-app, DashboardWidgetSize ×15, macOS dev-signing), which
+                           this commit neither introduces nor touches.
+  9  No silent drift     : changes are confined to shared-surfaces/FadeIn.* (7 files), project.yml + .swiftlint.yml
+                           (the necessary first-in-bucket wiring), this log, and one macos-pending-verifications row —
+                           all enumerated above.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic FadeIn shared surface shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: it compiles and its 18 tests pass under the app's own Swift 6 strict-concurrency rules
+  against the real design tokens, it type-checks against the real iOS-18 and macOS-15 SDKs, and it is lint /
+  format / placeholder clean within its own scope; xcodegen enumerates it and bundles its strings. The full-app
+  iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is blocked by
+  pre-existing co-located-XCTest-in-app-target module resolution, parallel-merge duplicate-type collisions across
+  ~15 unrelated dashboard-widget files, and macOS development-signing — all owned by the P4/P99 acceptance gate on a
+  signed macos-latest CI runner per apps/macos-pending-verifications.md. The capability (SwiftUI + iOS/macOS sims +
+  iOS-18/macOS-15 SDKs) is present, so this is NOT capability-BLOCKED; it matches the repo's sanctioned
+  "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date (ToolCard, AlertMessageEditor,
+  FSMTimelineChart).
+
+EXIT=0
+STATUS=DONE

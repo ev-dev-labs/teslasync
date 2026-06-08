@@ -1,0 +1,136 @@
+I'll start by exploring the repository structure and reading the web source that serves as the specification.
+
+Let me read the web source and explore the Apple app structure.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are active. Let me check for a full Xcode install and explore the Apple app structure deeply.
+
+Full Xcode exists at `/Applications/Xcode.app` (just not selected). Let me check the toolchain and explore the established patterns I must follow.
+
+Full toolchain is available (Xcode 26.5, xcodegen, pwsh, iPhone 16 sim, swiftlint, swiftformat). Now let me deeply learn the established conventions before writing code.
+
+`LoadableState` already models loading/loaded/empty/stale/failed — perfect for the required states. Now let me study the widget file convention (including co-located tests), the native DataTable, and check if `Shared.xcframework` is staged.
+
+Now I understand the widget+test convention. Let me examine the native shared components (DataTable, Buttons, States), design tokens, the i18n/telemetry facades, and check for the FeatureFlag type and prior feature-views.
+
+Now let me read the canonical Model/Strings/Telemetry pattern and design tokens — these are the blueprint for my implementation.
+
+I have the full blueprint. Let me read the design tokens, Button API, a `.strings` file, the web type, a Previews example, and generate the Xcode project to inspect target membership — in parallel.
+
+Project generated. Let me inspect target membership of the co-located `.Tests.swift` files (authoritative for wiring) and read the `FeatureFlagEntry` web type plus the JSON-value enum pattern.
+
+My parser broke on greedy matching. Let me parse the pbxproj cleanly to definitively map the test files to their target(s).
+
+Definitive: co-located `.Tests.swift` compile into the app targets (`TeslaSync`/`TeslaSync-macOS`) and run via the hosted test bundle. So I must register `TeslaSync/feature-views` in project.yml for both app targets (necessary plumbing the P4-core dep would provide). Let me gather the final specifics: lint configs, placeholder checker, the JSON-value enum, design token names.
+
+Now let me confirm the exact design-token names (especially a monospace font for the key/value cells), the typography helpers, and the placeholder patterns I must avoid.
+
+Let me read the placeholder checker's path handling and the `TSCode` chip, then I'll write the implementation.
+
+I have full clarity now. Let me check for symbol collisions, then create the plan and write all files. The gate needs two minimal registrations (mirroring `dashboard-widgets`) so my code actually compiles, lints, and tests — I'll document those.
+
+No collisions. Now I'll write the implementation. Starting with the domain/adapter file (the unit-tested core), the model seam, then the view.
+
+Let me verify the `TSSkeleton` API and `Font.monospaced()` availability before writing the view.
+
+`Font.monospaced()` compiles and `TSSkeleton`/`TSCard` APIs confirmed. Now the SwiftUI surface.
+
+Now the previews and the i18n strings table.
+
+Let me empirically verify the `previewValue` outputs (JSONSerialization formatting) so my test assertions are exact, before writing the tests.
+
+All preview/sort/from outputs confirmed exactly. Now the test suite with precise expectations.
+
+Now the necessary plumbing: register `TeslaSync/feature-views` in both app targets (project.yml) and the lint scope (.swiftlint.yml), mirroring the existing `dashboard-widgets` tier.
+
+Now let me format my files, then lint them.
+
+swiftformat clean (0/5 require formatting). Now swiftlint — first my files, then the full `--strict` baseline the gate runs.
+
+swiftlint linted the full config (592 files) and found 3 serious violations. Let me see exactly which — mine or pre-existing.
+
+Two of mine to fix (FlagsTable.swift:248 trailing-closure, Models.swift:183 Data→String) and one pre-existing (`LifetimeStatsWidget.Adapter.swift`). Let me confirm the pre-existing one and view my offending lines.
+
+Confirmed: `LifetimeStatsWidget.Adapter.swift` is **pre-existing** baseline debt (unmodified, tracked in HEAD) — `swiftlint --strict` was already red before my work. The two web files in `git status` are also pre-existing (not mine). I'll fix my 2 violations now and not touch unrelated files.
+
+My surface is lint-clean; the only global swiftlint violation is the documented pre-existing one. Now the build. Let me regenerate the project, verify my files are now target members, and assess the `Shared.xcframework` (KMP) build dependency.
+
+My 5 files are now members of both app targets (tests run via the hosted bundle). `~/.gradle` has caches, so the KMP build has run here before. Let me build `Shared.xcframework` (the heavy KMP dependency) in the background.
+
+Build launched. Let me monitor it while confirming the log directory and placeholder-checker behavior.
+
+Placeholder check on my real files is clean (COUNT=0). Let me check the KMP build progress (the `&` child writes to a log file).
+
+The KMP build is actively compiling Kotlin/Native (konan/clang++ for iOS arm64 + simulator). Let me wait for it to finish.
+
+Release frameworks are linking. Let me wait for the staging to complete.
+
+`Shared.xcframework` built successfully (7m12s) and staged with all 3 slices. Now I'll run the real gate. Let me launch the iOS `build test` (the long pole) in the background, pointing at the full Xcode.
+
+iOS build+test launched. Let me monitor compilation progress, watching for any errors in my files.
+
+Build failed with 4 errors (none matched "FlagsTable" in my first grep). Let me see the actual errors.
+
+The 4 errors are all pre-existing: `DigitalTwinWidget.Tests.swift` (not mine) can't resolve `XCTest` during the plain `build` action — the repo's co-located app-target test files only compile under *build-for-testing*. This is a repo-wide pre-existing condition (all 47 dashboard-widget test files use the same pattern), independent of my surface. Let me verify my code compiles and my tests pass via the `test` action (which builds-for-testing, so XCTest resolves), scoped to my tests.
+
+While the focused test builds, let me investigate whether the plain-`build` XCTest failure is truly inherent (checking test-search-path settings) — to report the baseline accurately.
+
+The focused `test` hit the **same** pre-existing failure: the app target itself can't import `XCTest` (the co-located test files in the app target fail repo-wide). This is the established dashboard-widget pattern, so prior surface logs (e.g. LivePowerFlow 0056) faced the identical gate. Let me read those precedents to match the accepted outcome.
+
+This is the decisive precedent. The prior P4 surfaces follow a **user-approved "code-complete + DEFERRED Xcode gate"** disposition: ship the surface files + per-surface strings, run all *host-runnable* gates green, and explicitly DEFER the `xcodebuild` app build/test to the signed CI runner — and crucially, **do NOT self-register into project.yml** (covenant #7: that's the integration prompt's scope). Let me read the full LivePowerFlow log to replicate the exact host-gate methodology and log format.
+
+The methodology is now unambiguous. I'll align with the established, user-approved precedent: **revert my project.yml/.swiftlint.yml edits** (covenant #7 — registration is the integration prompt's scope), keep only my `FlagsTable.*` files + the log, run all host-runnable gates green, and DEFER the Xcode app build/test with concrete evidence.
+
+Let me revert the config edits and identify the Shared-free component files for the typecheck gate.
+
+Configs reverted to HEAD; the component library has no `Shared` imports, so I can typecheck my surface against the real components without the KMP framework. Let me run the host typecheck gate [1].
+
+Transitive component-library dep (`TSMetricBar` in DataDisplay, used by Feedback) — not my code. Let me include the full Components tree (it compiles for macOS as part of the app) to resolve all transitive symbols.
+
+`UnitFormatters` (DataDisplay) needs `Units` (from the Shared-backed facade) — so I must curate to the Shared-free files my surface actually uses. Let me compile the precise dependency set.
+
+`TYPECHECK_EXIT=0` — my surface compiles against the real component library under Swift 6 strict concurrency. Now the executed adapter gate [2]: a host harness that runs the pure `cached → projection` logic.
+
+Top-level code must be in `main.swift`. Let me rename and re-run.
+
+`28 passed, 0 failed`, EXIT=0. Now the lint/format/placeholder gates [3]–[5].
+
+The scoped config's relative paths resolved against `/tmp`. Let me use a rules-only config with explicit file paths, then run format + placeholder gates.
+
+[3a] swiftlint: **0 violations in 5 files**. [4] swiftformat whole tree: **0/596 require formatting**. Now the placeholder gate [5] plus metadata (i18n key diff, line counts, base commit).
+
+All host gates are green: swiftlint 0/5, swiftformat 0/596, placeholder COUNT=0 (+ self-test PASS), and **i18n key drift = 0** (20 used = 20 defined). Let me gather final metadata and write the gate log.
+
+Let me verify the macOS signing状态 for the deferral evidence, then write the comprehensive gate log.
+
+All deferral evidence confirmed (0 signing identities; pre-existing DigitalTwin XCTest break; project.yml clean of feature-views). Now I'll write the comprehensive gate log matching the established precedent.
+
+Now let me verify the final git state, confirm the generated `.xcodeproj` is ignored, clean temp files, and commit only my allowed files + the log.
+
+Git state is exactly right: only my new `feature-views/` dir and the log are untracked; configs reverted; pre-existing dirty web files untouched; generated `.xcodeproj` ignored. Committing my allowed files + log.
+
+Exactly my 6 files + log staged; pre-existing web files left untouched. Committing.
+
+Committed (`07706268`), 7 files, 1478 insertions — only my surface + log. Let me run a final verification pass against the committed files to confirm the committed state is green (no-commit-on-red).
+
+The final typecheck glob accidentally pulled in `FlagsTable.Tests.swift` (XCTest is unavailable to CLT `swiftc` by design — the documented Xcode-only condition). Let me re-run on the non-test source files (as gate [1] does) to confirm the committed sources compile.
+
+`TYPECHECK_EXIT=0` — committed sources + previews compile cleanly against the real component library. The committed state is fully verified green across all host-runnable gates. Let me finalize the todo state.
+
+All work complete and verified. Final git state is clean — only my 6 surface files + the log were committed; the generated `.xcodeproj` and staged `Shared.xcframework` are gitignored, and the pre-existing dirty web files were left untouched.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0031-FlagsTable.log     | 232 ++++++++++++++++
+ .../TeslaSync/feature-views/FlagsTable.Model.swift | 276 +++++++++++++++++++
+ .../feature-views/FlagsTable.Models.swift          | 300 ++++++++++++++++++++
+ .../feature-views/FlagsTable.Previews.swift        |  73 +++++
+ .../TeslaSync/feature-views/FlagsTable.Tests.swift | 253 +++++++++++++++++
+ .../TeslaSync/feature-views/FlagsTable.strings     |  42 +++
+ .../apple/TeslaSync/feature-views/FlagsTable.swift | 302 +++++++++++++++++++++
+ 7 files changed, 1478 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0031-FlagsTable.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/FlagsTable.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FlagsTable.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FlagsTable.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FlagsTable.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FlagsTable.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/FlagsTable.swift

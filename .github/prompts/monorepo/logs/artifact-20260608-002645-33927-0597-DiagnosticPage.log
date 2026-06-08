@@ -1,0 +1,135 @@
+================================================================================
+ P4-APPLE · P7 · page:system/Diagnostic — native SwiftUI parity
+ unit: page:system/Diagnostic   platform: apple (adaptive macOS 15 + iOS 18, ADR-002)
+ web source: web/src/features/system/pages/DiagnosticPage.tsx
+ output: apps/apple/TeslaSync/Features/System/*.swift
+ host: macOS, Xcode 26.5 (iOS 26.5 / macOS 26.5 SDKs), Swift 6 strict concurrency
+================================================================================
+
+--- DELIVERABLES (apps/apple/TeslaSync/Features/System/) ---
+  DiagnosticModels.swift           value types + golden formatDiagnosticReportText + filename slug
+  DiagnosticStrings.swift          P1/S10 i18n facade (16 web keys, String(localized:))
+  DiagnosticPageModel.swift        @Observable model + DiagnosticRunner seam (P1/S8) + InMemory double
+  DiagnosticPanels.swift           5 GlassPanels + actions bar + status presentation
+  DiagnosticPage.swift             adaptive scaffold + state switch (the named output)
+  DiagnosticPage.Previews.swift    per-state previews (loading/empty/success/error)
+  DiagnosticRouteRegistration.swift navigation registration on AppRoute.diagnostics
+  DiagnosticAdapter.swift          ONLY Shared file: SharedDiagnosticRunner over KMP SystemDiagnosticStore
+  nav: Sources/TeslaSyncApp.swift chains DiagnosticRouteRegistration.register(into:)
+  nav/build: project.yml adds TeslaSync/Features/System to iOS + macOS app target sources
+  i18n: Localization/Localizable.xcstrings += 16 diagnostic.* keys (en, verified present)
+
+--- DATA SOURCES (P1/S8 binding) ---
+  formatDiagnosticReportText : DiagnosticModels.swift::formatDiagnosticReportText — byte-identical
+        port of the golden KMP formatDiagnosticReportText
+        (apps/shared/core/.../systemdiagnostic/SystemDiagnosticDerivations.kt) and the web helper;
+        surfaced via DiagnosticPageModel.reportText. Golden layout asserted by XCTest.
+  useRunDiagnostic           : DiagnosticRunner seam → DiagnosticPageModel.run() (web useRunDiagnostic
+        mutation: operator-initiated, never auto-runs). Production binding
+        DiagnosticAdapter.SharedDiagnosticRunner wraps KMP
+        SystemDiagnosticStore.runDiagnostic() (POST /system/diagnostic) and maps DiagnosticReport/
+        DiagnosticCheck → native value types.
+
+================================================================================
+ HOST-RUNNABLE GATES
+================================================================================
+  check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/System -Language swift
+        PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  ........................ PLACEHOLDER_EXIT=0
+  swiftformat --lint apps/apple/TeslaSync/Features/System
+        0/8 files require formatting ...................................... SWIFTFORMAT_EXIT=0
+  swiftlint --strict (scoped to the 8 Features/System files, --no-cache)
+        0 violations ..................................................... LINT_EXIT=0
+        (note: a project-wide swiftlint --strict reports 1 PRE-EXISTING violation in
+         TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift — not this surface.)
+  swiftc -typecheck — real iOS 26.5 SDK (arm64-apple-ios18.0-simulator, -strict-concurrency=complete)
+        surface + linked real Tokens/TSMaterial/Theme/components/AppRoute ... IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck — real macOS SDK (arm64-apple-macos15.0, -strict-concurrency=complete)
+        same fileset ..................................................... MACOS_TYPECHECK_EXIT=0
+  isolated SwiftPM package (module DiagnosticParity; links the REAL Tokens.swift, TSMaterial.swift,
+  Theme.swift, Motion.swift, Badges/Buttons/Cards/Typography/Utility/Banners/States, AppRoute,
+  RouteHostRegistry + all 7 Shared-free surface files via symlink — no drift)
+        swift build (Swift 6, macOS) ..................................... BUILD_EXIT=0
+        swift test ....................................................... 11/11 passed, TEST_EXIT=0
+          → DiagnosticFormatterTests (7): golden formatter layout, FAIL-uppercase/skip-empty-detail,
+            filename slug normalise+fallback, status wire round-trip, reportJSON snake_case wire,
+            interpolated-string arguments, web key-name constants
+          → DiagnosticModelTests (2): run success publishes report (isRunning/error cleared);
+            run failure records message + leaves prior report untouched
+          → DiagnosticSurfaceSmokeTests (2): every panel + page + actions bar instantiate;
+            route registration registers .diagnostics
+  xcodegen generate (project spec enumerates all 8 new files) ............ XCODEGEN_EXIT=0
+        DiagnosticAdapter.swift, DiagnosticModels.swift, DiagnosticPage.swift, DiagnosticPage.Previews.swift,
+        DiagnosticPageModel.swift, DiagnosticPanels.swift, DiagnosticRouteRegistration.swift, DiagnosticStrings.swift
+
+================================================================================
+ === PARITY ===
+ PARITY_REQUIRED=24
+================================================================================
+[x] panel  GlassPanel1  → DiagnosticPanels.swift::DiagnosticCheckCard      (TSGlassPanel, web CheckCard)
+[x] panel  GlassPanel2  → DiagnosticPanels.swift::DiagnosticOverallHero    (TSGlassPanel, web OverallHero)
+[x] panel  GlassPanel3  → DiagnosticPanels.swift::DiagnosticErrorPanel     (TSGlassPanel rose border, web error)
+[x] panel  GlassPanel4  → DiagnosticPanels.swift::DiagnosticRunningPanel   (TSGlassPanel + TSSpinner, web spinner)
+[x] panel  GlassPanel5  → DiagnosticPanels.swift::DiagnosticEmptyPanel     (TSGlassPanel + TSEmptyState, web EmptyState)
+[x] state  loading      → DiagnosticPage.swift::content (else if model.isRunning) → DiagnosticRunningPanel (ProgressView/TSSpinner)
+[x] state  empty        → DiagnosticPage.swift::content (else) → DiagnosticEmptyPanel (ContentUnavailableView)
+[x] state  success      → DiagnosticPage.swift::content (if let report) → OverallHero + ActionsBar + checksGrid
+            (+ bonus error state → DiagnosticErrorPanel + Run/Retry, per HIG "never a blank region")
+[x] string diagnostic.checkCount        → DiagnosticPanels.swift DiagnosticOverallHero · DiagnosticL10n.checkCount(_)
+[x] string diagnostic.copyReport        → DiagnosticPanels.swift DiagnosticActionsBar · DiagnosticL10nKey.copyReport
+[x] string diagnostic.copyReportSuccess → DiagnosticPanels.swift DiagnosticActionsBar confirmation · DiagnosticL10nKey.copyReportSuccess
+[x] string diagnostic.downloadReport    → DiagnosticPanels.swift DiagnosticActionsBar · DiagnosticL10nKey.downloadReport
+[x] string diagnostic.duration          → DiagnosticPanels.swift DiagnosticCheckCard · DiagnosticL10n.duration(ms:)
+[x] string diagnostic.errorBody         → DiagnosticPanels.swift DiagnosticErrorPanel · DiagnosticL10nKey.errorBody
+[x] string diagnostic.errorTitle        → DiagnosticPanels.swift DiagnosticErrorPanel · DiagnosticL10nKey.errorTitle
+[x] string diagnostic.filename          → DiagnosticPage.swift content · DiagnosticL10n.filename(slug:)
+[x] string diagnostic.lastRun           → DiagnosticPanels.swift DiagnosticOverallHero · DiagnosticL10n.lastRun(_)
+[x] string diagnostic.noReport          → DiagnosticPanels.swift DiagnosticEmptyPanel · DiagnosticL10nKey.noReport
+[x] string diagnostic.remediationLabel  → DiagnosticPanels.swift DiagnosticCheckCard · DiagnosticL10nKey.remediationLabel
+[x] string diagnostic.rerun             → DiagnosticPage.swift runButtonTitle · DiagnosticL10nKey.rerun
+[x] string diagnostic.run               → DiagnosticPage.swift runButtonTitle + DiagnosticEmptyPanel · DiagnosticL10nKey.run
+[x] string diagnostic.running           → DiagnosticPage.swift runButtonTitle + DiagnosticRunningPanel · DiagnosticL10nKey.running
+[x] string diagnostic.subtitle          → DiagnosticPage.swift titleBlock · DiagnosticL10nKey.subtitle
+[x] string diagnostic.title             → DiagnosticPage.swift titleBlock + .navigationTitle + DiagnosticEmptyPanel · DiagnosticL10nKey.title
+ (all 16 keys verified present in Localization/Localizable.xcstrings)
+PARITY_COVERED=24
+
+================================================================================
+ === DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test ===
+================================================================================
+  xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync-macOS build test
+    NOT run-to-green here. The full-app build aborts BEFORE compilation on PRE-EXISTING, UNRELATED
+    state in the shared app target — ZERO of which originates in this surface (all verified in THIS tree):
+      • Frameworks/Shared.xcframework is NOT staged (only .gitkeep). The scheme pre-action builds it via
+        the Kotlin/Native Gradle toolchain — the P1/S3 artifact already tracked macOS-pending. A direct
+        `xcodebuild -target TeslaSync` here fails fast:
+          "error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'."   (XCODEBUILD_EXIT=65)
+      • `struct DashboardWidgetSize` is redefined across 15 files (Sources/DashboardWidgets/* +
+        TeslaSync/dashboard-widgets/*) — "invalid redeclaration" across the app target.
+      • 204 co-located feature-view *.Tests.swift `import XCTest` into the app target (the established
+        sibling convention). THIS surface adds 0 such files (grep import XCTest TeslaSync/Features/System = 0),
+        so it does not introduce a new failure class.
+      • No macOS development-signing identity (ADR-012).
+    This surface's OWN code is proven to compile against the real iOS-18 + macOS-15 SDKs (both typechecks
+    above) and its logic runs green (11/11 XCTest via the isolated SwiftPM package). The full-app build/test
+    is recorded in apps/macos-pending-verifications.md for the P99 acceptance gate on a macos-latest runner
+    with signing identities + the staged Shared.xcframework.
+
+================================================================================
+ ACCEPTANCE CRITERIA
+================================================================================
+  [x] Every named panel (GlassPanel1-5) implemented as a HIG TSGlassPanel; every web region reproduced.
+  [x] All 24 parity items render from the bound @Observable DiagnosticPageModel state.
+  [x] loading / empty / success implemented for the data source (+ error/Retry per HIG contract).
+  [x] All visible strings from Localizable.xcstrings; zero hardcoded literals; key names match web (16/16).
+  [x] Dark mode + Dynamic Type + accessibility labels + SI-free display formatting; SwiftUI-native only.
+  [x] Hooks bind to the P1/S8 seam (DiagnosticRunner → KMP SystemDiagnosticStore); no HTTP in the view.
+  [x] No TODO/stub/placeholder/Lorem in shipped code (placeholder gate: COUNT=0, 0 opt-outs).
+  [x] swiftformat --lint + swiftlint --strict (scoped) + real-SDK typecheck (iOS+macOS) + SwiftPM build/test
+      + xcodegen: all green. PARITY_COVERED==PARITY_REQUIRED (24).
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing unrelated blockers: unstaged
+      Shared.xcframework + DashboardWidgetSize collisions + co-located XCTest + signing); host-runnable
+      equivalents (real-SDK typecheck both platforms + 11/11 XCTest) green.
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,124 @@
+I'll start by exploring the repository structure and reading the web source to understand what I need to port.
+
+Now let me explore the Apple app structure to understand the existing patterns and architecture.
+
+Key finding: the project uses **XcodeGen** (`project.yml`), and `TeslaSync/Features/Admin` is **not** currently in the sources list. Let me check tooling availability and study existing patterns.
+
+Apple toolchain is partially present, but `xcode-select` points to **CommandLineTools** (no full Xcode). Let me verify xcodebuild capability and study existing patterns in parallel.
+
+Confirmed: **no full Xcode** (only CommandLineTools), so `xcodebuild build/test` cannot run → gate will be BLOCKED per spec. But I must still produce a complete, non-placeholder implementation and run all gates I *can*. Let me study the existing conventions deeply.
+
+Let me read the core architectural files: navigation, the facade/model pattern, and the canonical component file set.
+
+Now let me study the canonical feature-view pattern (AiUsageCard, recently modified) and find where routes get registered.
+
+The seam-based pattern is clear. Let me complete my understanding: the projection/views/previews/strings/tests files, the web types, and the navigation registration point.
+
+Now let me read the navigation registration mechanism and the design-token + component APIs I'll use.
+
+Let me read the design tokens and the specific components I'll reuse (GlassPanel, Badge, DataTable, StatCard, AlertBanner, EmptyState, Typography, formatters, motion).
+
+Let me read the remaining components I'll use: typography, metrics/StatCard, banners, states, motion, and formatters.
+
+Let me check motion, formatters (formatBytes), any PageContainer equivalent, and how the canonical Views/Previews/Tests files are structured.
+
+Let me read the web byte/number formatters to port exactly, the canonical Views/Tests/Previews structure, and the swiftlint config.
+
+The repo is in a "generated but not yet Xcode-assembled" state (no full Xcode here). Let me check the project's test/build wiring conventions and finish reading the canonical Views/Previews structure.
+
+I have enough on components. Let me resolve the data-source wiring question and the strings catalog format, then look at the canonical Views/Previews.
+
+Let me read the web `PageContainer` to get the loading/error/empty semantics right, then I'll have full parity understanding.
+
+I now have a complete understanding. Let me check the placeholder scanner, the log/ledger locations, and set up my plan.
+
+I have a complete picture. Let me verify the Swift localization API behavior and a couple component signatures before implementing, and set up my plan.
+
+The localization API works perfectly (handles `%` and grouping). Let me read the skeletons and button init, then start implementing.
+
+I have everything needed. Let me set up my plan and todo tracking, then implement.
+
+Now I'll implement. Starting with the pure-Foundation Adapter (formatters, severity, totals) — ported verbatim from the web arithmetic.
+
+Now the Model file (L10n facade, value types, the `@Observable` model, and the source seam):
+
+Now the pure Projection (resolve → phases, stat tiles, table rows):
+
+Now the Views file (subviews for each panel/state). I'll build a parity-faithful read-only adaptive table scoped to this surface (the web table is read-only, no selection), plus the stat tiles, banner, and state views — all token-driven.
+
+Now the main page View that orchestrates the scaffold, phase switch, lifecycle, and refresh:
+
+Now the navigation registration (mirrors `SettingsRouteRegistration`):
+
+Now wire the registration into the app entry point:
+
+Let me use the explicit-init pattern (matching `settingsModel`) to avoid any init-order/concurrency issues:
+
+Now compose the disk-forecast registry with the settings registry:
+
+Now the Previews and Tests. First, previews for every state:
+
+Now comprehensive unit tests for the pure adapter + projection (deterministic, en_US locale):
+
+Now let me add the strings to the catalog. First, update progress tracking, then run a Python script to insert the keys with minimal diff.
+
+Let me verify the exact colon style in the existing catalog to ensure my inserted entries match (JSON whitespace is insignificant, but I want a clean diff).
+
+The original uses `": "` (no space before colon). My insert used `" : "`. Let me revert and re-insert with the matching style:
+
+Catalog updated cleanly. Let me verify the diff is minimal, then register the new source path in `project.yml` and `.swiftlint.yml`.
+
+The catalog diff is clean (352 additions, 0 deletions). Now register the new `TeslaSync/Features` source path in `project.yml` (both app targets) and `.swiftlint.yml`, mirroring how `feature-views` is wired:
+
+Now let me run the gates I can execute. First, type-check the pure-Foundation core (Adapter + Model + Projection) with strict concurrency, matching the project's settings:
+
+Core type-checks cleanly. Now let me validate my **test expectations** are actually correct by building a tiny executable from the real pure code and running the assertions (since I can't run XCTest without Xcode):
+
+The scratch needs to be named `main.swift` for top-level code. Let me fix that:
+
+**ALL_PASS** — every test expectation validated against the real code. Now swiftlint `--strict` on the new files:
+
+SwiftLint linted the whole `included` set (1917 files) and found 1 violation. Let me locate it — is it in my files or pre-existing?
+
+The single violation is **pre-existing** in `dashboard-widgets/LifetimeStatsWidget.Adapter.swift` (unrelated to my work). Let me prove my Admin files are lint-clean in isolation with the same rule set:
+
+My 8 Admin files lint **0 violations** under `--strict`. Now the placeholder scan and `xcodegen generate`:
+
+Placeholder scan: **0 stubs, EXIT=0**. Now validate `project.yml` with `xcodegen generate` (confirms the new path is wired):
+
+`xcodegen generate` succeeded. Let me confirm my files were picked up into the project and that the generated project is git-ignored:
+
+Excellent — all runnable gates pass; `xcodebuild` is confirmed BLOCKED (CommandLineTools only). Let me clean up generated artifacts, check the ledger format convention, and update progress.
+
+The `<platform>-ledger.json` is an array of rows; platforms are `apple-macos`/`apple-ios`. Let me update progress, then write the ledger and the honest PARITY log.
+
+Now the comprehensive, honest PARITY evidence log:
+
+Let me review the SwiftUI Grid usage in Views.swift for idiomatic correctness and fix two redundant modifiers (standalone dividers auto-span; column alignment should be set once on the header):
+
+Let me re-run the isolated swiftlint and verify the TeslaSyncApp wiring:
+
+Let me cross-check every string key referenced in code against the catalog to catch any typo (component-passed keys rely solely on the catalog):
+
+Two flagged keys are regex false positives (digits/concatenation-prefix excluded). Let me verify precisely and check for any dead code:
+
+`loadingA11y` and the severity keys are all present (regex false positives confirmed). But `DiskForecastStrings.severityLabel` is dead code — let me remove it (the badge resolves the label via the catalog key directly):
+
+Now re-verify the core type-checks and lints cleanly after the edits:
+
+Both green. Let me re-run the placeholder gate and get final line counts to keep the log accurate:
+
+Let me update the log with the accurate final line counts:
+
+Let me review the full git status to stage only my files (excluding pre-existing unrelated changes that were already modified before this task):
+
+This confirms my files vs pre-existing unrelated changes (the `AIUsageCard.*` and `web/*` files were already modified before this task). The parity README documents that blocked units are recorded via the ledger "as it lands," so I'll commit my work with an explicit BLOCKED label — staging only my files:
+
+Staged set is exactly my 14 files (excludes pre-existing changes). Now commit with an honest, explicitly-BLOCKED message:
+
+Committed cleanly (14 files, pre-existing changes untouched). Let me do a final review of the edited Grid section and confirm everything is coherent:
+
+All 12 todos complete; the Grid section is correct. Let me do a final confirmation that the working tree is clean of stray artifacts and the commit is in place:
+
+Everything is in place. Let me update the plan file to reflect completion and then summarize.
+

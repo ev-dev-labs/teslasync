@@ -1,0 +1,113 @@
+=== P4 Shared surface 0072 MetricSwitcherChart (Apple) ===
+Prompt: .github/prompts/monorepo/p4-apple/shared-meaningful/P-0072-MetricSwitcherChart.prompt.md
+Web source (spec): web/src/components/charts/MetricSwitcherChart.tsx
+Native output: apps/apple/TeslaSync/shared-surfaces/MetricSwitcherChart.*
+Allowed files: apps/apple/TeslaSync/shared-surfaces/MetricSwitcherChart.* + this log
+Run date: 2026-06-08
+
+-------------------------------------------------------------------------------
+ARTIFACT (complete, no stubs — every state from the web source reproduced)
+-------------------------------------------------------------------------------
+  MetricSwitcherChart.swift              126   surface: header + pill switcher + banner + phase body
+  MetricSwitcherChart.Adapter.swift      327   value types + locale number/date format + a11y + slug
+  MetricSwitcherChart.Projection.swift   252   pure resolve(): active metric, projection, phase rules
+  MetricSwitcherChart.Model.swift        248   i18n facade + telemetry seam + @Observable state holder
+  MetricSwitcherChart.Views.swift        253   pill bar + Swift Charts (bar/area/line) + chart-empty
+  MetricSwitcherChart.Chrome.swift       151   freshness chip + refresh + banner + loading + error
+  MetricSwitcherChart.Previews.swift     148   #Preview per state (bar/area/line/empty/loading/error/stale/offline)
+  MetricSwitcherChart.Tests.swift        224   model + accessibility XCTest
+  MetricSwitcherChart.AdapterTests.swift 272   adapter + projection XCTest
+  MetricSwitcherChart.strings             51   P1/S10 catalog (no English literals in Swift)
+  TOTAL                                 2052
+
+States reproduced: loading (skeleton chart footprint) · empty (web projected.length===0 → friendly
+per-metric message, pills stay visible) · error (P4 leaf retry) · data (bar/area/line per active
+metric) · stale/offline (freshness chip + banner + one-shot auto-refresh on stale).
+Web parity notes: generic getValue resolved at the data-binding boundary (per-metric {date,value}
+series); formatValue/formatTick → MetricSwitcherValueFormat; formatXTick → MetricSwitcherXAxisFormat;
+PillFilterBar/EmptyState reproduced surface-scoped (atoms take LocalizedStringKey, metric labels are
+runtime data). loading/error are the sanctioned P4 leaf states (web is a dumb prop-driven component).
+view.opened telemetry (P1/S11) emitted once with slug "MetricSwitcherChart".
+
+-------------------------------------------------------------------------------
+ENVIRONMENT CAPABILITY (probed)
+-------------------------------------------------------------------------------
+  xcode-select -p .................. /Library/Developer/CommandLineTools  (system default)
+  /Applications/Xcode.app .......... present (Xcode 26.5, Build 17F42)
+  DEVELOPER_DIR override ........... unlocks xcodebuild + simctl (iPhone 16 sim: Booted)
+  xcodegen ......................... /opt/homebrew/bin/xcodegen
+  swift ............................ Apple Swift 6.3.2  (SwiftUI + Charts typecheck OK)
+  swiftlint / swiftformat / pwsh ... present
+=> SwiftUI + Swift Charts capability IS available; the gate's bare `xcodebuild` only failed because
+   the SYSTEM xcode-select points at CommandLineTools (resolvable per-invocation via DEVELOPER_DIR).
+
+-------------------------------------------------------------------------------
+GATE STEP 1/2 — xcodebuild -scheme TeslaSync ... build test
+-------------------------------------------------------------------------------
+xcodegen generate ................. RC=0  (TeslaSync.xcodeproj regenerated; git-ignored)
+project.pbxproj references:
+    MetricSwitcherChart ........... 0    <-- shared-surfaces/ is NOT a source path in project.yml
+    AiUsageCard (control) ......... 60   <-- feature-views/ IS registered (sibling compiles)
+  => The TeslaSync scheme does NOT compile or test this leaf as-is. Registering
+     TeslaSync/shared-surfaces in project.yml is a single P4-core / P99-acceptance-gate task that
+     covers all 235 shared-meaningful surfaces; project.yml is OUTSIDE this prompt's allowed files,
+     so it is intentionally not edited here (Honesty Covenant #2/#7: no scope narrowing, no
+     predecessor bypass).
+Scheme preAction "Stage Shared.xcframework" (Scripts/build-shared-xcframework.sh):
+    Frameworks/Shared.xcframework ... ABSENT (only .gitkeep) — the KMP core is not vendored.
+    Without DEVELOPER_DIR: Gradle :core:linkDebugFrameworkMacosArm64 FAILED —
+        "e: An error occurred during an xcrun execution ... Failed command:
+         /usr/bin/xcrun xcodebuild -version" (Kotlin/Native uses the SYSTEM xcode-select).
+    With DEVELOPER_DIR exported: the Kotlin/Native multi-platform link proceeds (no error) but is a
+        multi-minute build (iosArm64 + iosSimulatorArm64 + macosArm64 + xcframework assembly).
+  => Building Shared.xcframework requires the system-wide active developer dir to be full Xcode
+     (`sudo xcode-select -s`, non-interactive/unavailable here) + the Kotlin/Native toolchain.
+     This is a P0/P1 shared-core + environment-provisioning predecessor concern.
+IOS_EXIT=BLOCKED  (build test not run to completion: leaf not in target + KMP framework provisioning)
+
+-------------------------------------------------------------------------------
+GATE STEP 2/2 — xcodebuild -scheme TeslaSync-macOS build test
+-------------------------------------------------------------------------------
+MAC_EXIT=BLOCKED  (same two predecessor blockers as iOS; shared sources + same KMP preAction)
+
+-------------------------------------------------------------------------------
+INDEPENDENT VERIFICATION ACTUALLY PERFORMED (exercises the EXACT shipped files)
+-------------------------------------------------------------------------------
+Because the whole-app integration gate is blocked on out-of-scope predecessor wiring, the surface was
+verified directly: a throwaway SwiftPM package (/tmp, NOT committed) compiled the EXACT shipped
+MetricSwitcherChart.* sources + the REAL generated design tokens (apps/design/generated/apple/
+Tokens.swift) against REAL SwiftUI + Swift Charts + XCTest, with thin peers only for the P3/P4 shared
+atoms (TSChartPalette/TSChartGradient/TSFadeIn/TSButton/TSSkeleton). Swift 6 language mode, strict
+concurrency = complete (matching project.yml).
+
+  swift test (module TeslaSync) ........... Executed 45 tests, with 0 failures (0 unexpected)
+       MetricSwitcherNumberTests · ValueFormatTests · MetricTests · XAxisTests · AccentTests
+       ActiveTests · ProjectTests · PhaseTests · ResolveTests · ModelTests · AccessibilityTests
+  swiftlint --strict (9 files) ............ Found 0 violations, 0 serious      LINT_EXIT=0
+  swiftformat --lint (9 files) ............ 0/9 files require formatting       FORMAT_EXIT=0
+  check-placeholders.ps1 -Language swift .. PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0
+
+Acceptance criteria:
+  [x] Surface renders all web-source states (+ P4 leaf states) — previews + per-state tests.
+  [x] Hooks bind via shared P1/S8 state-holder seam (MetricSwitcherSource); no direct HTTP in view.
+  [x] Every i18n key resolves through P1/S10 facade; matching key in MetricSwitcherChart.strings.
+  [x] Accessibility labels on every interactive element (pills, refresh, figure value summary).
+  [x] Tests: adapter unit + projection unit + per-state model + a11y label tests (45 total, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (check-placeholders = 0).
+  [ ] Whole-app `xcodebuild build test` EXIT=0 — BLOCKED: leaf not registered in project.yml
+      (P4-core/P99 task, out of allowed files) + KMP Shared.xcframework provisioning (P0/P1).
+
+-------------------------------------------------------------------------------
+CONCLUSION
+-------------------------------------------------------------------------------
+The MetricSwitcherChart shared surface is COMPLETE and GREEN on every verification that actually
+exercises the code (compile against real SwiftUI/Charts, 45 unit tests, swiftlint --strict,
+swiftformat --lint, placeholder scan). The literal whole-app xcodebuild integration gate is BLOCKED
+on two predecessor concerns that are out of this leaf's allowed scope: (1) project.yml does not yet
+list TeslaSync/shared-surfaces as a target source (single P4-core/P99 registration), and (2) the
+KMP Shared.xcframework is not provisioned (P0/P1; requires system full-Xcode + Kotlin/Native). Once a
+runner has the shared-surfaces registration + the staged Shared.xcframework, this surface compiles and
+its tests run unchanged.
+
+EXIT=1
+STATUS=BLOCKED

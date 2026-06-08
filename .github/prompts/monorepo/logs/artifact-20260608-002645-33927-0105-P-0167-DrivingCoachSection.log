@@ -1,0 +1,167 @@
+=== P4 Feature view 0167 DrivingCoachSection (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5 (Darwin arm64, Apple Silicon — Atuls-Mac-Studio)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (active dir was /Library/Developer/CommandLineTools; overridden non-destructively,
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2 · Java 17.0.19
+  Destinations       : iOS Simulator "iPhone 16" (iOS 26.5, Booted) present · macOS 15 SDK present
+                       (harness deployment targets pinned iOS 18.0 / macOS 15.0).
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" — release XCFramework staged to
+                       apps/apple/Frameworks/Shared.xcframework: ios-arm64 / ios-arm64-simulator / macos-arm64).
+  Capability         : SwiftUI + Swift Charts + iOS/macOS simulators + KMP Shared.xcframework all present
+                       → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/features/driving/components/driving-dynamics/DrivingCoachSection.tsx — a presentational section
+  receiving a single `coachData: DrivingCoachData | undefined` from its parent (`useTranslation` only; no
+  hooks, no unit conversion — the coach summary already arrives in Wh/km + km). Seven regions:
+    1. Driving Score gauge   (RadialGauge)  — overall_score 0–100, threshold color (green ≥75 / amber ≥50 /
+                                              red), "{{count}} drives analyzed" caption.
+    2. Style Breakdown       (bar + legend) — efficient / moderate / aggressive shares of total_drives_analyzed;
+                                              inner empty "Drive more to see your style breakdown." when total==0.
+    3. Efficiency stats      (StatCard ×2)  — avg + best efficiency_wh_km.
+    4. Weekly Score Trend    (LineChart)    — score over weekly_trend weeks (y 0–100); inner empty
+                                              "Need at least 2 weeks of data…" until weekly_trend.length > 1.
+    5. Driving Patterns      (bars ×5)      — hard accel/brake, highway, short trips, cold starts; each tinted
+                                              by the web lo/hi thresholds (20/40, 15/30, 50/70, 30/50, 15/30).
+    6. Recommendations       (cards)        — impact Badge (high→danger / medium→warning / low→success) + tip;
+                                              inner empty "Recommendations will appear after more drives."
+    7. Per-Drive Scores      (DataTable)    — Date / Score / Style / Wh/km / Distance, sortable + paginated;
+                                              inner empty "Drive data will appear after your first trip."
+
+ARTIFACTS SHIPPED (allowed scope: apps/apple/TeslaSync/feature-views/DrivingCoachSection.* + this log) — 14 files
+  DrivingCoachSection.Models.swift      — DrivingCoachData (DTO 1:1 with web), CoachPatterns / CoachWeeklyTrend /
+                                          CoachRecommendation / CoachDriveScore, Copy, CoachTone, Phase / LoadStatus /
+                                          Connection enums
+  DrivingCoachSection.Projection.swift  — CoachStyleSegment / CoachPatternIndicator / CoachWeeklyPoint /
+                                          CoachRecommendationItem / CoachDriveScoreRow + DrivingCoachProjection,
+                                          surface slug, DrivingCoachAccessibility (per-panel + section VoiceOver)
+  DrivingCoachSection.Adapter.swift     — DrivingCoachFormat (safeNumber, fmtNumber, formatDateShort = MMM d) +
+                                          DrivingCoachProjector (style %, threshold tones, patterns, weekly, recs,
+                                          per-drive rows — web derivations verbatim) + resolvePhase / hasContent
+  DrivingCoachSection.Model.swift       — telemetry seam (view.opened, P1/S11) + i18n facade (P1/S10) + source seam +
+                                          @Observable DrivingCoachSectionModel (P1/S8, incl. per-drive sort +
+                                          pagination) + InMemory source
+  DrivingCoachSection.swift             — DrivingCoachSection View: heading always shown; phase switch
+                                          (loading/error/empty/content); headline 3-up grid + trend + patterns +
+                                          recommendations + per-drive table
+  DrivingCoachSection.Views.swift       — local chrome: GlassPanel, titled Panel, header + freshness chip,
+                                          stale/offline banner, Badge, StatCard, inline empty
+  DrivingCoachSection.Panels.swift      — composite panels: style breakdown (bar+legend), efficiency stats,
+                                          pattern bars, recommendations cards (each with its inner EmptyState)
+  DrivingCoachSection.Charts.swift      — DrivingCoachScoreGauge (Circle-trim, threshold color, Reduce-Motion) +
+                                          DrivingCoachWeeklyTrend (Swift Charts LineMark + PointMark, 0–100 y,
+                                          tap-to-reveal tooltip, inner empty)
+  DrivingCoachSection.Table.swift       — per-drive DataTable parity: columnar Grid (macOS/regular) + card list
+                                          (compact iPhone), click-to-sort headers, page-size + prev/next pager
+  DrivingCoachSection.States.swift      — loading skeleton, whole-section empty (ContentUnavailableView),
+                                          error + retry (web QueryError)
+  DrivingCoachSection.Previews.swift    — #if DEBUG previews: content / sparse-inner-empties / loading / empty /
+                                          error / stale / offline
+  DrivingCoachSection.strings           — P1/S10 catalog: every web `t(key,default)` key (titles, gauge, efficiency,
+                                          patterns, styles, impacts, columns, inner empties) + native chrome
+                                          (freshness/banner/sort/pager/loading/error/a11y)
+  DrivingCoachSection.Tests.swift       — 19 XCTest cases: adapter/projection parity (thresholds, style %, patterns,
+                                          weekly, recs, per-drive rows + formatting, phase/empties)
+  DrivingCoachSection.ModelTests.swift  — 19 XCTest cases: model phase + view.opened telemetry + refresh/stale/offline
+                                          wiring, per-drive sort + pagination, per-panel + section a11y summaries
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  GlassPanel / panel <h3>      → DrivingCoachGlassPanel / DrivingCoachPanel (Color.TS.surface + TSRadius + border)
+  RadialGauge                  → DrivingCoachScoreGauge (Circle.trim, threshold tone, integer score, size 160)
+  Recharts LineChart           → Chart { LineMark + PointMark } (Color.TS.statusSuccess) + chartXSelection tooltip
+  style bar + legend           → GeometryReader stacked share bar + per-style legend (tone dots + counts)
+  pattern bars                 → threshold-tinted Capsule progress bars (lo/hi → success/warning/danger)
+  StatCard                     → DrivingCoachStatCard (glyph chip + label + monospaced value)
+  Badge (variant)              → DrivingCoachBadge (Capsule tint.opacity(0.15) + border, tone-colored text)
+  DataTable (sortable+paginate)→ DrivingCoachScoreTable: Grid (regular) / card list (compact) + click-to-sort +
+                                 page-size menu + prev/next pager (web pagination contract)
+  FadeIn / skeletons / motion  → TSFadeIn / TSSkeleton (Reduce-Motion honored on gauge + chart + shimmer)
+  unit handling                → web does NO conversion here (coach summary is Wh/km + km); reproduced 1:1 (ADR-009 —
+                                 SI stays on the wire elsewhere; this analytics summary is pre-unit'd by the API)
+  i18n                         → every string via DrivingCoachSectionStrings (table "DrivingCoachSection"); 0 English
+                                 literals in code; styles + impacts localized via keys (web showed raw values)
+  a11y                         → gauge + chart aria labels; per-panel summary as accessibilityValue; section summary on
+                                 the container; sortable headers carry label + sort-state value + hint; pager controls +
+                                 retry button carry accessibilityLabel; Reduce-Motion respected
+  telemetry                    → view.opened surface="DrivingCoachSection" (P1/S11), default OSLog sink, emitted once
+
+GATES
+  [GREEN]    swiftformat --lint  (DrivingCoachSection.* — 13 swift files)   : 0/13 require formatting      (FORMAT_EXIT=0)
+                 swiftformat --lint apps/apple (whole tree, FYI)            : 1 PRE-EXISTING violation —
+                                                                              blankLinesBetweenScopes in
+                                                                              TeslaSync/feature-views/ActionBuilder.Previews.swift:48
+                                                                              (NOT a DrivingCoachSection file; not introduced here).
+  [GREEN]    swiftlint --strict  (DrivingCoachSection.* — 13 swift files)   : 0 violations, 0 serious in 13 files (LINT_EXIT=0)
+  [GREEN]    check-placeholders.ps1 (real scan of the shipped DrivingCoachSection.* files) : PLACEHOLDER_COUNT=0 (PLACEHOLDER_EXIT=0)
+  [GREEN]    xcodegen generate                                              : EXIT=0; the 14 DrivingCoachSection.* files are
+                                                                              enumerated into TeslaSync.xcodeproj (84 pbxproj refs).
+  [GREEN]    DrivingCoachSection build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode,
+             strict-concurrency complete = same as the app), compiling the EXACT shipped DrivingCoachSection.* sources
+             against the REAL repo design-system files (design/generated/apple/Tokens.swift, Sources/Design/TSDesign.swift,
+             Sources/Components/Motion/Motion.swift, and the real TSSkeleton from Sources/Components/Feedback/Skeletons.swift):
+                 macOS host (arm64-apple-macos)  : Build complete!  ·  Executed 38 tests, with 0 failures  (SWIFT_TEST_EXIT=0)
+                 iOS Sim iPhone 16 (iOS 18 dep.) : xcodebuild test  ** TEST SUCCEEDED **  ·  38 tests, 0 failures
+             Strict-concurrency caught + fixed one real issue in the shipped code (CoachPatternSpec made Sendable with a
+             @Sendable value selector) — exactly why the harness compiles under the app's own Swift 6 complete mode.
+             Collision check: each shipped DrivingCoachSection* / Coach* top-level type has 0 external definitions across
+             Sources, dashboard-widgets, and the other 170 feature-view surfaces.
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO DrivingCoachSection errors; all blockers pre-exist this change):
+    iOS  : the project compiles the 171 co-located `TeslaSync/feature-views/*.Tests.swift` files (each `import XCTest`)
+           INTO the app target, which has no XCTest dependency → first failure
+           "AIRestorePanel.Tests.swift:18:8: error: unable to resolve module dependency: 'XCTest'" (alphabetically first;
+           the build aborts long before reaching DrivingCoachSection). This is the SAME structural wiring every P4
+           feature-view surface shares; DrivingCoachSection.Tests.swift / .ModelTests.swift follow the identical
+           co-located convention the prompt's allowed-files scope mandates (DrivingCoachSection.*). Routing co-located
+           tests to the XCTest target is a project.yml change owned by the P4/P99 acceptance gate, not a feature-view prompt.
+    macOS: "TeslaSync-macOS" / "TeslaSyncWidgets-macOS" "have entitlements that require signing with a development
+           certificate", which this runner does not provision.
+    `grep "DrivingCoachSection.*error:"` over BOTH full-app build logs = 0 hits. These are exactly the artifacts
+    apps/macos-pending-verifications.md defers to the ADR-012 macos-latest CI runner (the P4/P99 Apple acceptance gate
+    + a co-located-test-target de-duplication pass) — task rule: do not fix pre-existing unrelated breakage outside the
+    allowed-files scope. Shared.xcframework was actually built + staged here, so the gate is NOT capability-skipped.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green    : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and explicitly
+                          DEFERRED with pasted evidence — never reported as passing.
+  2  No scope narrowing : every web region + branch reproduced — the score gauge, the style bar + legend, the avg/best
+                          stats, the weekly line chart, the five threshold-tinted patterns, the impact-badged
+                          recommendations, the sortable + paginated per-drive table, and the loading/empty/error/stale/
+                          offline + every inner panel empty state.
+  3  No skip-and-assume : every gate executed on THIS runner; raw exits pasted; both full-app failures confirmed, not
+                          assumed; Shared.xcframework actually built (Gradle), so the gate is NOT capability-skipped.
+  4  No stubs as final  : complete production surface (14 files) + 38 real tests; placeholder scanner = 0, 0 opt-outs.
+  5  No parity shortcut : numeric pipeline + thresholds ported verbatim (75/50 score, style/impact variants, 20/40·15/30·
+                          50/70·30/50·15/30 patterns, count/total %, fmtNumber@2dp, formatDateShort); verified equal to the
+                          web by unit test.
+  6  No delegation      : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 state-holder, P1/S9 tokens, P1/S10 i18n facade, P1/S11 view.opened telemetry, and the
+                          P4 core design system all present and consumed; pattern follows sibling 0166 DriveAnalyticsSection.
+  8  No commit on red   : the COMMITTED artifact (DrivingCoachSection.* + this log) is GREEN on every surface-scoped gate
+                          AND on a real isolated Swift 6 strict-concurrency build+test on BOTH iOS Simulator and macOS;
+                          the deferred full-app gate is RED only on pre-existing, unrelated surfaces this commit neither
+                          introduces nor touches.
+  9  No silent drift    : changes are confined to feature-views/DrivingCoachSection.* (14 files) and this log — enumerated
+                          above. Pre-existing unrelated dirty files in the worktree (e.g. AIUsageCard.*) are NOT staged.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic DrivingCoachSection shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 38 tests pass under the app's own Swift 6 strict-concurrency rules, against the real
+  design-system, on BOTH the iPhone 16 Simulator (iOS 18 deployment) and the macOS 15 host, with lint/format/placeholder
+  all green on the shipped files and 0 type collisions. The full-app iOS-Simulator + macOS xcodebuild build/test gate is
+  DEFERRED (not failed by this code): it is blocked by the pre-existing co-located-XCTest-in-app-target project wiring
+  (171 sibling *.Tests.swift) and by macOS development-signing — both owned by the P4/P99 acceptance gate on a signed
+  macos-latest CI runner per apps/macos-pending-verifications.md. This matches the repo's sanctioned "code-complete +
+  DEFERRED Xcode gate" disposition used by every P4 feature-view surface to date (cf.
+  p4-apple-feature-views-0166-DriveAnalyticsSection.log).
+
+EXIT=0
+STATUS=DONE

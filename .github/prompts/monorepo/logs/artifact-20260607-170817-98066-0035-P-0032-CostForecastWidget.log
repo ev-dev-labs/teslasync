@@ -1,0 +1,131 @@
+=== P4 Dashboard widget 0032 CostForecastWidget (Apple) ===
+date: 2026-06-07T17:08-07:00
+host: Darwin (arm64), Apple Swift 6.3.2
+web source: web/src/features/dashboard/widgets/CostForecastWidget.tsx
+registry: cost-forecast (charging) default 2x4 min 1x2 max 4x40
+
+------------------------------------------------------------------
+CAPABILITY GATE (decisive): xcodebuild / iOS+macOS build+test BLOCKED
+------------------------------------------------------------------
+This runner has Apple Command Line Tools only — NOT a full Xcode toolchain —
+so the prompt's `xcodebuild ... build test` gate cannot execute. Per the P4
+binding rules (.github/prompts/monorepo/p4-apple/README.md): "Requires macOS +
+Xcode runners (ADR-010/012) — prompts that can't run their gate are BLOCKED,
+not DONE." The KMP `Shared.xcframework` is likewise not built (needs the
+Kotlin/Native toolchain). API evidence:
+
+$ xcode-select -p
+/Library/Developer/CommandLineTools
+
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+XCODEBUILD_VERSION_EXIT=1
+
+$ xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1   (BLOCKED — toolchain absent, not a merit failure)
+
+$ xcodebuild -scheme TeslaSync-macOS build test
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1   (BLOCKED — toolchain absent, not a merit failure)
+
+$ xcrun simctl list devices
+xcrun: error: unable to find utility "simctl", not a developer tool or in PATH
+SIMCTL_EXIT=72 (BLOCKED — no simulators)
+
+------------------------------------------------------------------
+PLACEMENT (no silent drift)
+------------------------------------------------------------------
+The prompt's templated native path `apps/apple/TeslaSync/dashboard-widgets/` is
+NOT part of the Xcode build — project.yml globs only `Sources/`, `Localization/`,
+and the generated design tokens. Placing code there would be dead, uncompiled.
+P4 binding rule #1 scopes allowed files to `apps/apple/**`. The surface is
+therefore placed in the real, build-included tree, mirroring the dashboard-widgets
+grouping, and split to satisfy SwiftLint's 400-line file_length rule:
+
+  apps/apple/Sources/Dashboard/Widgets/CostForecastWidget.swift          (372)  view surface + adaptive layout + states
+  apps/apple/Sources/Dashboard/Widgets/CostForecastWidgetData.swift      (173)  decoded payload + pure adapter
+  apps/apple/Sources/Dashboard/Widgets/CostForecastWidgetModel.swift     ( 86)  @Observable ChargingStore binding + telemetry seam + formatting
+  apps/apple/Sources/Dashboard/Widgets/CostForecastWidgetPreviews.swift  ( 64)  #Preview states (DEBUG only)
+  apps/apple/Tests/Unit/Widgets/CostForecastWidgetTests.swift            (236)  adapter + per-state + telemetry + a11y-input tests
+
+xcodegen confirms all five files are wired into the iOS app, macOS app, and both
+unit-test targets:
+
+$ xcodegen generate
+Created project at .../apps/apple/TeslaSync.xcodeproj
+XCODEGEN_EXIT=0
+$ grep -c CostForecastWidget TeslaSync.xcodeproj/project.pbxproj
+30
+  CostForecastWidget.swift  CostForecastWidgetData.swift  CostForecastWidgetModel.swift
+  CostForecastWidgetPreviews.swift  CostForecastWidgetTests.swift
+
+------------------------------------------------------------------
+PARITY (web source reproduced)
+------------------------------------------------------------------
+data sources : useVehicles (host-resolved vehicleID), useCostForecast(vehicleId)
+               -> ChargingStore.costForecast feed (Resource<JsonElement>),
+               useFormatting (currency symbol + precision)
+binding      : CostForecastModel (@MainActor @Observable) -> StateHolderModel ->
+               LoadableState<CostForecast> (same shape as VehicleSettingsModel;
+               no direct HTTP from the view)
+layout       : compact (cols<=1) = Next Month + Trend, no chart;
+               standard (cols>=2) = title + trend icon, Next Month / Avg $/kWh /
+               Trend stats, Swift Charts bar chart (historical + forecast, last 6)
+states       : loading (skeletons), empty (No forecast data), error (QueryError +
+               retry), stale (chip + cached), offline (cached + offline chip)
+i18n         : translation.widget.costForecast.{title,noData,nextMonth,trend,
+               avgPerKwh,costLabel} — all 6 already present in the P1/S10 catalog
+               (apps/apple/Localization/Localizable.xcstrings); freshness chips
+               reuse widget.freshness.{stale,offline}; retry reuses common.retry.
+a11y         : VoiceOver labels on stats, chart bars (month + formatted cost),
+               refresh control; Dynamic Type via Font.TS tokens; Reduce Motion via
+               shared skeleton/animation components.
+telemetry    : view-opened signal for surface slug "CostForecastWidget" via the
+               CostForecastTelemetry seam (host maps to TelemetryEvent.ScreenView).
+
+------------------------------------------------------------------
+RUNNABLE GATE STEPS (all PASS)
+------------------------------------------------------------------
+$ swiftlint --strict            (apps/apple, whole tree incl. new files)
+Done linting! Found 0 violations, 0 serious in 261 files.
+LINT_EXIT=0
+
+$ swiftformat --lint apps/apple
+0/265 files require formatting, 2 files skipped.
+FORMAT_EXIT=0
+
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Dashboard -Language swift
+PLACEHOLDER_COUNT=0
+$ ./apps/tools/check-placeholders.ps1 -Path apps/apple/Tests/Unit/Widgets/CostForecastWidgetTests.swift -Language swift
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+------------------------------------------------------------------
+COMPENSATING VERIFICATION (since XCTest host is BLOCKED)
+------------------------------------------------------------------
+$ swiftc -typecheck CostForecastWidgetData.swift        -> TYPECHECK_EXIT=0 (Foundation-only adapter type-checks vs macOS SDK)
+$ swiftc -parse {Widget,Model,Previews}.swift, Tests.swift -> PARSE_OK x4 (syntax valid)
+$ swiftc Data.swift + assertion harness; ./harness       -> ADAPTER_HARNESS_OK all assertions passed; HARNESS_EXIT=0
+  (executes the real adapter at runtime: decode full/partial/missing/invalid,
+   decode-from-feed, buildChartData last-6 + flags + unique ids, trend up/down/
+   empty, formatCurrency grouping/precision/symbol/non-finite — mirrors the XCTest
+   cases that cannot run without the Xcode test host.)
+
+------------------------------------------------------------------
+GATE EXIT CODES
+------------------------------------------------------------------
+IOS_EXIT=1          (BLOCKED: xcodebuild requires full Xcode)
+MAC_EXIT=1          (BLOCKED: xcodebuild requires full Xcode)
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+
+Per the gate rule "EXIT=0 only when every step above is 0", the two xcodebuild
+steps are blocked by an absent platform toolchain (not a merit failure). All
+steps that CAN run on this runner are 0, the implementation is complete and real
+(no stubs/placeholder), is wired into the build graph, and its adapter is proven
+correct at runtime.
+
+EXIT=1
+STATUS=BLOCKED

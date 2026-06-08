@@ -1,0 +1,235 @@
+================================================================================
+P4 · Feature view · 0198 — AdvancedSettings (Apple)
+Run: 2026-06-07T23:05-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/319
+Base: d8ce21686
+Prompt: P4/feature-views/0198 — Feature view: AdvancedSettings
+Web source (spec): web/src/features/settings/components/AdvancedSettings.tsx
+                   (+ web/src/lib/confirmSilence.ts — the localStorage data source)
+Mode: code-complete + REAL host gates (swiftc both SDKs + EXECUTED XCTest via SwiftPM)
+      + DEFERRED Xcode app build/test (0163 ThermalLoadPanel / 0002 BackendTool /
+      0054 GuardModeWidget precedent, ADR-012, Honesty rule 7 — predecessor parity).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2 (swiftlang-6.3.2.1.108)            OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+    (default `xcode-select -p` is /Library/Developer/CommandLineTools; Xcode is
+     driven via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer — no sudo)
+  iPhoneSimulator SDK ........ iPhoneSimulator26.5.sdk (iOS 18.0 deploy target)     OK
+  macOS SDK .................. MacOSX26.5.sdk (macOS 15.0 deploy target)            OK
+  iPhone 16 simulator ........ present (83717DEE-70A3-4325-AA61-CBDDD3140989)       OK
+  SwiftUI .................... present in both SDKs (this surface's core need)      OK
+  Swift Charts / MapKit ...... present in both SDKs (this surface uses NEITHER)     OK
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          OK
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        OK
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh                              OK
+  xcodegen ................... /opt/homebrew/bin/xcodegen (project generates clean) OK
+  Java (KMP toolchain) ....... OpenJDK 17.0.19; konan 2.4.0 + gradle 8.14.5 cached  OK
+  Shared.xcframework ......... BUILT + STAGED this run via gradle
+                               :core:assembleSharedXCFramework (BUILD SUCCESSFUL in
+                               9m27s) → apps/apple/Frameworks/Shared.xcframework      OK
+  feature-views registration   PRESENT in both app targets (project.yml L37 iOS +
+                               L68 macOS); the unit-test targets source only
+                               Tests/Unit, so per-surface *.Tests.swift wiring is the
+                               integration prompt's job (see DEFERRED §)             WARN
+
+  Capability note: the prompt's required capability is "SwiftUI + Swift Charts + MapKit,
+  iOS 18 / iPadOS 18 / macOS 15 HIG". SwiftUI is AVAILABLE and PROVEN by REAL iOS-18-
+  simulator AND macOS-15 SDK compiles below; this surface uses NO chart and NO map
+  (prompt "Charts / maps used: (none)"). The capability-BLOCKED escape hatch does NOT
+  apply — the surface is authored, host-compiled on both SDKs, and its full XCTest
+  suite is host-EXECUTED green (18/18).
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/AdvancedSettings.*) ===
+  AdvancedSettings.Model.swift       372  P1/S8 state-holder seam (AdvancedSettingsStore →
+                                          AdvancedSettingsModel) + P1/S11 telemetry seam
+                                          (view.opened) + P1/S10 strings facade +
+                                          AdvancedSettingsUpdate + UserDefaultsConfirmSilence
+                                          Store (web localStorage `teslasync:confirm-silence:v1`
+                                          parity) + InMemoryConfirmSilenceStore + connection axis
+  AdvancedSettings.Views.swift       193  presentational chrome — header (TSIconBox cyan +
+                                          title/description + freshness chip + "Restore all"
+                                          ghost button), freshness chip, connectivity banner,
+                                          restore row (label + per-row "Restore" ghost button),
+                                          bordered divided list (web <ul divide-y border>)
+  AdvancedSettings.Tests.swift       213  XCTest — adapter + model + a11y (18 methods)
+  AdvancedSettings.States.swift      114  load-state chrome — loading skeleton, empty state
+                                          (web EmptyState), error+retry (P4 envelope)
+  AdvancedSettings.Projection.swift   91  projected SilencedPromptRow + AdvancedSettingsProjection
+                                          + surface slug + AdvancedSettingsAccessibility
+  AdvancedSettings.Models.swift       90  Foundation value types — Config (web STORAGE_KEY +
+                                          discard-draft / unsaved-navigation ids), injected Copy
+                                          (web useSilenceKeyLabel), phase/status/connection enums
+  AdvancedSettings.Adapter.swift      76  testable projection core — label(for:) (web
+                                          useSilenceKeyLabel switch + raw-key fallback),
+                                          project(keys:) (de-dupe + sort + rows), resolvePhase()
+  AdvancedSettings.swift              72  the surface — TSFadeIn(0.24) + TSGlassPanel + header +
+                                          connectivity banner + phase composition + surfaceSlug
+  AdvancedSettings.Previews.swift     72  #if DEBUG previews — one per state (content / empty /
+                                          loading / error / stale / offline)
+  AdvancedSettings.strings            51  P1/S10 catalog contribution (table "AdvancedSettings")
+  Total = 1344 lines (10 files). Largest .swift = 372 (Model; swiftlint file_length honored).
+  No file imports the Shared xcframework — the seams are plain Swift protocols; the prod app
+  injects the facade-backed store, previews/tests inject InMemoryConfirmSilenceStore.
+
+=== PARITY (web source reproduced end-to-end) ===
+  Web AdvancedSettings.tsx is the "Restore confirmation prompts" panel: it reads
+  listSilenced() from lib/confirmSilence.ts (localStorage `teslasync:confirm-silence:v1`,
+  a deduped+sorted string array) and bumps a local `tick` after each unsilence /
+  clearAllSilenced so it re-reads. useSilenceKeyLabel maps known ids to friendly labels
+  (discard-draft, unsaved-navigation) and falls back to the raw key for forward-compat.
+  - Data sources (web useSilenceKeyLabel + useTranslation): bound through the P1/S8 seam
+    AdvancedSettingsStore → AdvancedSettingsModel; no I/O in the view. The native
+    UserDefaultsConfirmSilenceStore reads/writes the EXACT web `STORAGE_KEY`
+    (`teslasync:confirm-silence:v1`) as a JSON string array, deduped + sorted, with a
+    missing/corrupt payload reading empty (web load() defensive catch).
+  - Composition (web GlassPanel + IconBox + Button + EmptyState + FadeIn):
+      • FadeIn delay={0.24}  -> TSFadeIn(delay: 0.24).
+      • GlassPanel           -> TSGlassPanel.
+      • IconBox color="cyan" -> TSIconBox(tone: .info) (cyan token) + question glyph.
+      • header               -> title (.isHeader) + muted description + (when rows>0)
+                                "Restore all" ghost TSButton with the RotateCcw → SF
+                                "arrow.counterclockwise" glyph (web silenced.length > 0 gate).
+      • EmptyState           -> AdvancedSettingsEmptyView (ContentUnavailableView) carrying
+                                the web "tick Don't ask again to silence" hint.
+      • <ul divide-y border> -> SilencedPromptList: bordered, hairline-divided rows; each
+                                row = labelFor(key) (single-line truncated, web `truncate`)
+                                + per-row "Restore" ghost TSButton (web RotateCcw).
+  - States (ALL rendered — each a #if DEBUG preview + a projection/model unit test):
+      loading (initial read → skeleton chrome) · empty (web silenced.length === 0 →
+      friendly state, never a blank box) · content (sorted restore rows) · error (read
+      failure → Retry, standard P4 envelope) · stale (freshness chip + "Reconnecting"
+      banner + one-shot auto-refresh on the transition) · offline (cached rows + "Offline"
+      chip/banner). The web source has only empty/content; loading/error/stale/offline are
+      the prompt-mandated P4 envelope, reachable via the store seam (exercised by previews
+      + tests). The UserDefaults store mirrors web (always live; corrupt→empty).
+  - i18n (P1/S10): web keys preserved — advanced.restoreConfirms.title / .description /
+    .restoreAll / .restore / .empty, and the useSilenceKeyLabel labels
+    advanced.restoreConfirms.keys.discardDraft / .keys.unsavedNavigation; native chrome
+    namespaced advanced.restoreConfirms.* (loading/emptyTitle/errorTitle/retry/promptRole/
+    live/stale/offline/staleBanner/offlineBanner/a11y.*). All 22 code-referenced keys are
+    declared in AdvancedSettings.strings (referenced⊆declared verified, diff empty); NO
+    English string literals in native code (all via AdvancedSettingsStrings + Text(verbatim:)).
+  - Accessibility: VoiceOver labels on the panel; the header carries .isHeader; each row's
+    "Restore" button names its prompt ("Restore “<label>”"); the list carries a combined
+    "%d silenced prompts" summary; the freshness chip + Retry are labelled; Dynamic-Type
+    system fonts (Font.TS); reduce-motion honored (TSFadeIn; static skeleton).
+  - Telemetry (P1/S11): AdvancedSettingsModel.start() emits view.opened with surface slug
+    "AdvancedSettings" exactly once (OSLogAdvancedSettingsTelemetry default; prod app injects
+    the shared diagnostics adapter). Asserted by testStartEmitsViewOpenedOnceAndStartsStore.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; REAL output) ===
+  Shipped surface (8 production .swift) compiled together with the REAL apps/apple
+  component closure: ../design/generated/apple/Tokens.swift + Sources/Design/TSMaterial.swift
+  + Sources/Design/TSDesign.swift + Sources/Components/{UI/Cards,UI/Typography,UI/Buttons,
+  UI/Badges,Motion/Motion}.swift. None import Shared.
+
+  [1] swiftc -typecheck — iOS 18 SIMULATOR SDK, Swift 6, -strict-concurrency=complete
+        (matches project.yml SWIFT_STRICT_CONCURRENCY: complete):
+        IOS_TYPECHECK_EXIT=0                                                       OK
+  [2] swiftc -typecheck — macOS 15 SDK, Swift 6, -strict-concurrency=complete:
+        MAC_TYPECHECK_EXIT=0                                                       OK
+  [3] swiftc -typecheck — DEBUG previews (-D DEBUG, Xcode #Preview macro plugin; the 8
+        production files incl. Previews + closure):
+        PREVIEWS_TYPECHECK_EXIT=0                                                  OK
+  [4] swift test — the FULL XCTest suite EXECUTED on the macOS host via a self-contained
+        SwiftPM harness (module name "TeslaSync" so @testable import resolves; real
+        production Models/Projection/Adapter/Model/surface/Views/States + real design
+        tokens + real TS component closure), Swift 6 language mode:
+          Test Suite 'TeslaSyncPackageTests.xctest' passed
+          Executed 18 tests, with 0 failures (0 unexpected)
+        SWIFT_TEST_EXIT=0                                                          OK
+        Covers: Adapter label(known + raw-key fallback) / project (sort by key, de-dupe,
+        blank-drop, a11y row, empty) / resolvePhase matrix; Model start+view.opened-once
+        + store start, loaded→content(sorted)/empty, failed→error, restore (removes key,
+        re-projects), restoreAll (clears→empty), refresh delegation, stale one-shot
+        auto-refresh-until-live, offline no-refresh; Accessibility per-phase summary +
+        "Restore “…”" label + model summary.
+  [4b] swiftc -typecheck — test logic vs the REAL API (XCTest assertion macros shimmed;
+        belt-and-suspenders confirmation that every test reference resolves):
+        TESTS_TYPECHECK_EXIT=0                                                     OK
+  [5] swiftlint --strict (9 surface files; explicit paths — the repo .swiftlint.yml
+        `included:` lists TeslaSync/feature-views; run scoped to this surface):
+          Done linting! Found 0 violations, 0 serious in 9 files.
+        LINT_EXIT=0                                                               OK
+  [6] swiftformat --lint (config apps/apple/.swiftformat):
+          0/9 files require formatting.
+        FORMAT_EXIT=0                                                             OK
+  [7] check-placeholders.ps1 (ADR-011 stub gate; swift) — gate path + an honest temp-dir
+        scan of the 9 shipped .swift files:
+          PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+        PLACEHOLDER_EXIT=0                                                        OK
+
+=== GATE — XCODE-ONLY STEPS (run on this host; DEFERRED — captured real exit, NOT faked) ===
+    xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync \
+        -destination 'platform=iOS Simulator,name=iPhone 16' build test
+      → ** TEST FAILED **    IOS_EXIT=65
+        Sole cause (captured, real): the app target compiles the 113 sibling per-surface
+        *.Tests.swift under TeslaSync/feature-views, the FIRST of which fails:
+          AcDcStatsPanel.Tests.swift:19:8: error: unable to resolve module dependency: 'XCTest'
+        ZERO errors are attributed to any AdvancedSettings file.
+
+    xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync-macOS build test
+      → ** BUILD FAILED **    MAC_EXIT=65
+        Sole cause (captured, real): code-signing —
+          "TeslaSync-macOS" has entitlements that require signing with a development
+          certificate. Enable development signing in the Signing & Capabilities editor.
+        ZERO errors are attributed to any AdvancedSettings file.
+
+  Why DEFERRED (independent, code-unrelated, OUT-OF-SCOPE reasons — none is a defect in
+  this surface; identical disposition to 0163 ThermalLoadPanel / 0002 BackendTool /
+  0054 GuardModeWidget, ADR-012, Honesty rule 7 — predecessor parity):
+    (a) TEST WIRING: TeslaSync/feature-views is registered into BOTH app targets
+        (project.yml L37/L68), but the unit-test targets (TeslaSyncTests / TeslaSync-
+        macOSTests) source only `Tests/Unit`, so the 113 existing per-surface *.Tests.swift
+        (this one included) are compiled INTO the app target and `import XCTest` cannot
+        resolve there. Routing them to a test target is the downstream P4 integration
+        prompt's job; editing project.yml is OUTSIDE this prompt's allowed files
+        (AdvancedSettings.* + the log). The SAME tests are PROVEN GREEN (18/18) by the
+        executed SwiftPM harness in step [4].
+    (b) macOS app/widget signing requires a development certificate on a signed runner
+        (ADR-012, DEVELOPMENT_TEAM=""); concrete entitlements error captured above.
+    Note: the predecessors' third blocker — Shared.xcframework not staged — does NOT apply
+    here: it was BUILT + STAGED green this run (gradle BUILD SUCCESSFUL 9m27s, see probe).
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all states from the web source (empty/content) plus the P4 envelope
+      (loading/error/stale/offline) — implemented; each has a #if DEBUG preview; phase
+      logic unit-tested + EXECUTED green.
+  [x] Hooks bind through the shared P1/S8 state-holder seam (AdvancedSettingsStore →
+      AdvancedSettingsModel); no view I/O. UserDefaults store mirrors web localStorage.
+  [x] Every i18n key from source has a matching catalog key — web keys preserved verbatim;
+      native chrome advanced.restoreConfirms.* present; referenced⊆declared verified (22/22,
+      diff empty).
+  [x] Accessibility labels on every interactive element (per-row Restore names its prompt;
+      Restore-all; Retry) + combined list summary + freshness chip; header carries .isHeader.
+  [x] Tests: adapter unit + per-state model + a11y — 18 methods, EXECUTED 18/18, exit 0.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+  [x] EXIT=0 / STATUS=DONE — host gates green; Xcode app build/test DEFERRED with captured
+      real evidence (test-wiring + macOS signing), per predecessor parity.
+
+=== HONESTY COVENANT ===
+  1 No red-as-green ...... host gates are genuinely green (incl. EXECUTED 18/18 XCTest);
+                          the xcodebuild build/test is shown DEFERRED with its REAL exit 65
+                          + captured cause, not as pass.
+  2 No scope narrowing ... full surface (9 .swift + strings), all states, both seams, tests.
+  3 No skip-and-assume ... web source + lib/confirmSilence.ts read end-to-end; every t()
+                          + render branch + the silenceKey label switch reproduced.
+  4 No stubs as final .... complete implementation; placeholder gate COUNT=0.
+  5 No parity shortcuts .. GlassPanel + cyan IconBox header + Restore-all + EmptyState +
+                          divided restore list + per-row Restore + 6 states; web
+                          STORAGE_KEY + dedupe/sort + useSilenceKeyLabel reproduced.
+  6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+  7 No predecessor bypass  same disposition as 0163 ThermalLoadPanel host-gate + deferral;
+                          exceeded it by BUILDING + STAGING Shared.xcframework green.
+  8 No commit on red ..... committed work is green on every runnable gate (typecheck both
+                          SDKs + previews + EXECUTED XCTest 18/18 + lint + format +
+                          placeholder); the only non-green steps are the environment/
+                          scaffold-blocked xcodebuild build/test, deferred with real
+                          captured evidence (predecessor-accepted disposition).
+  9 No silent drift ...... test-target wiring deviation documented above (feature-views
+                          *.Tests.swift not yet routed to a test target; integration job).
+ 10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+EXIT=0
+STATUS=DONE

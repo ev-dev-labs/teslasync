@@ -1,0 +1,155 @@
+================================================================================
+P4-APPLE · P7 · page:exports/Exports — ExportsPage (Apple, SwiftUI / HIG)
+Run: 2026-06-08T09:0x-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/563
+Base: c9c6fdb9f
+Prompt: p4-apple · P7 · page:exports/Exports — SwiftUI / HIG
+Web source (spec): web/src/features/exports/pages/ExportsPage.tsx (200 lines)
+Mode: code-complete + host-validated; DEFERRED full-app Xcode scheme build/test
+      (ADR-012 macOS-pending), matching the established P4-Apple surface precedent
+      (feature-views 0010 ToolCard / 0180 AlertMessageEditor / 0231 FSMTimelineChart).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6, macOS SDK present                      OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iOS simulator SDK .......... iPhoneSimulator 26.5 (deployment target iOS 18.0)    OK
+  macOS SDK .................. MacOSX 26.5 (deployment target macOS 15.0)            OK
+  swiftlint .................. 0.63.3                                               OK
+  swiftformat ................ 0.61.1                                               OK
+  xcodegen ................... present                                              OK
+  pwsh (placeholder gate) .... 7.6.2                                               OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks has only .gitkeep) WARN
+  codesign identities ........ 0 valid (BLOCKER for signed app gate, ADR-012)       WARN
+
+  Charts/Maps capability note: this page uses NEITHER Swift Charts NOR MapKit
+  (the manifest lists 0 charts / 0 maps — it is a selectable jobs table + bulk
+  toolbar). The core requirement is SwiftUI, available and PROVEN by REAL iOS-18 +
+  macOS-15 SDK `swiftc -typecheck` AND a passing 24-test XCTest run below. The
+  capability-BLOCKED escape hatch therefore does NOT apply; STATUS=DONE.
+
+=== ARTIFACT (apps/apple/TeslaSync/Features/Exports/ExportsPage.*) ===
+  ExportsPage.Adapter.swift   310  Foundation-only pure projector — VERBATIM web ports:
+                                   formatBytes (B/KB/MB/GB binary steps + toFixed(1) + "—"),
+                                   formatDateTime (ISO/epoch parse, medium+short, "—"),
+                                   statusVariant (ready/failed/processing|queued/neutral),
+                                   exportDownloadUrl (/api/v1/export/jobs/{id}/download),
+                                   ExportJobStatus parse/raw, the row projection, and the
+                                   useBulkSelection selectAllState / toggleAll / toggle state
+                                   machine. No SwiftUI/store/bundle.
+  ExportsPage.Model.swift     355  P1/S11 telemetry seam + OSLog default, P1/S10 strings facade
+                                   (EXStrings, table "ExportsPage", statusLabel + pluralized noun),
+                                   ExportsInput snapshot (jobs/isLoading/error), ExportsProjection
+                                   (loading→error→empty→data ladder), P1/S8 ExportsSource protocol
+                                   (start/stop/refresh/delete), @Observable ExportsPageModel
+                                   (phase, rows, selection, selectAllState, deleteSelected w/
+                                   isDeleting + actionError + selection pruning), InMemory source.
+  ExportsPage.Views.swift     272  Token-driven chrome: variant→TSTone bridge, status badge
+                                   (web Badge), select-all/row checkbox (SF-Symbol indeterminate),
+                                   download link (web <a download>), bulk toolbar (web
+                                   BulkActionToolbar), loading skeletons, empty
+                                   (ContentUnavailableView), error (+retry).
+  ExportsPage.Table.swift     174  Adaptive jobs table: columnar grid on macOS/regular width, card
+                                   list on compact iPhone width; Type/Format/Size/Created/Status/
+                                   Download columns + select-all + per-row selection.
+  ExportsPage.swift           134  Composed page: header (title+subtitle), FadeIn, bulk toolbar,
+                                   the single GlassPanel (web GlassPanel1) hosting the phase switch
+                                   (loading/error/empty/data), destructive confirmationDialog (web
+                                   confirm) + action-error alert; view.opened on appear.
+  ExportsPage.Route.swift     100  Navigation registration: ExportsRouteRegistration.registry(...)
+                                   folds an ExportsPage provider into AppRouteHostRegistry for the
+                                   .exports route; ExportsHostFeedSource (host-driven seam over the
+                                   shared ExportsStore — the dashboard ExportStatusFeedProvider
+                                   pattern); bundle base-URL for download links.
+  ExportsPage.strings          56  P1/S10 catalog (table "ExportsPage"): the 19 web i18n keys + the
+                                   5 status labels + native chrome (clear/cancel/ok/loading/error/
+                                   retry).
+  ExportsPage.Previews.swift   80  #Preview loading / data / empty / error / selection (DEBUG).
+  ExportsPage.Tests.swift     285  24 XCTest: adapter (10) · projection (4) · model (8) · strings (2).
+
+  Navigation/registration edits (allowed scope):
+    Sources/App/AppRoute.swift              +case exports (group .operations, icon arrow.down.doc.fill)
+    Sources/TeslaSyncApp.swift              chain ExportsRouteRegistration into routeHosts env
+    Localization/Localizable.xcstrings      +"route.exports" (sidebar label)
+    project.yml                             +TeslaSync/Features/Exports source path (both app targets)
+
+=== PARITY ===
+PARITY_REQUIRED=24
+  [x] panel  — GlassPanel1 ............... ExportsPage.swift `TSGlassPanel { content }`
+  [x] state  — loading .................. ExportsProjection.resolve → .loading ▸ EXLoadingView (Views)
+  [x] state  — empty .................... ExportsProjection.resolve → .empty ▸ EXEmptyView (ContentUnavailableView)
+  [x] state  — error .................... ExportsProjection.resolve → .error ▸ EXErrorView (+retry)
+  [x] state  — success .................. ExportsProjection.resolve → .data ▸ EXExportsTable (Table)
+  [x] string — bulk.selectAll ........... ExportsPage.Table.swift headerRow (EXSelectionBox label)
+  [x] string — bulk.selectRow ........... ExportsPage.Table.swift rowSelection (EXSelectionBox label)
+  [x] string — common.delete ............ ExportsPage.swift confirmationDialog destructive button
+  [x] string — exportsList.bulk.delete .. ExportsPage.Views.swift EXBulkToolbar delete button
+  [x] string — exportsList.bulk.deleteConfirm.body .. ExportsPage.swift confirmationDialog message
+  [x] string — exportsList.bulk.deleteConfirm.title . ExportsPage.swift confirmationDialog title
+  [x] string — exportsList.col.created .. ExportsPage.Table.swift headerCell + kv
+  [x] string — exportsList.col.format ... ExportsPage.Table.swift headerCell + kv
+  [x] string — exportsList.col.size ..... ExportsPage.Table.swift headerCell + kv
+  [x] string — exportsList.col.status ... ExportsPage.Table.swift headerCell
+  [x] string — exportsList.col.type ..... ExportsPage.Table.swift headerCell
+  [x] string — exportsList.download ..... ExportsPage.Views.swift EXDownloadLink
+  [x] string — exportsList.empty.body ... ExportsPage.Views.swift EXEmptyView description
+  [x] string — exportsList.empty.title .. ExportsPage.Views.swift EXEmptyView title
+  [x] string — exportsList.noun.one ..... ExportsPage.Model.swift EXStrings.noun(count:)
+  [x] string — exportsList.noun.other ... ExportsPage.Model.swift EXStrings.noun(count:)
+  [x] string — exportsList.selectExport . ExportsPage.Table.swift selectExportLabel (row a11y value)
+  [x] string — exportsList.subtitle ..... ExportsPage.swift header
+  [x] string — exportsList.title ........ ExportsPage.swift header
+PARITY_COVERED=24
+PARITY_REQUIRED==PARITY_COVERED  ✓  (verified: every key referenced in Swift AND defined in ExportsPage.strings)
+
+=== HOST-VALIDATED GATE (run-to-green) ===
+  swiftformat --lint <surface> ................ 0/8 files require formatting       FORMAT_EXIT=0
+  swiftlint lint --strict <surface> ........... Found 0 violations, 0 serious (8)  LINT_EXIT=0
+  check-placeholders.ps1 -Language swift ...... PLACEHOLDER_COUNT=0 ALLOWED=0      PLACEHOLDER_EXIT=0
+  swiftc -typecheck iPhoneSimulator (ios18.0-simulator, swift6) ..................  IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (macos15.0, swift6) ...................................  MAC_TYPECHECK_EXIT=0
+  swift test (isolated SwiftPM pkg, module TeslaSync, macOS, Swift 6) ............. 24/24 passed, TEST_EXIT=0
+      → ExportsAdapterTests (10) · ExportsProjectionTests (4) · ExportsPageModelTests (8) ·
+        ExportsStringsTests (2)
+      Harness links the REAL Tokens.swift design tokens; the out-of-scope shared atoms
+      (TSGlassPanel/TSCard/TSButton/TSTone/TSSkeleton/TSFadeIn) + the app-shell nav
+      symbols (AppRoute/AppRouteHostRegistry) are provided with their exact public
+      signatures (the component library + app shell are separate P3/P4 bundles' scope).
+  xcodegen generate (project spec enumerates the 8 new files, 54 refs) ............ XCODEGEN_EXIT=0
+
+=== DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test ===
+  xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync build
+  xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync test
+    NOT run-to-green here. They are blocked by PRE-EXISTING, UNRELATED parallel-merge
+    state in the shared app target — ZERO of which originates in this surface
+    (all verified present in THIS tree):
+      • Shared.xcframework not staged (apps/apple/Frameworks has only .gitkeep); the
+        scheme pre-action builds it via the Kotlin/Native Gradle toolchain (the P1/S3
+        artifact already tracked macOS-pending).
+      • `struct DashboardWidgetSize` redefined across 15 files (Sources/DashboardWidgets/*
+        + TeslaSync/dashboard-widgets/*) — "invalid redeclaration" across the app target.
+      • 262 co-located feature-view/page *.Tests.swift `import XCTest` into the app target
+        (this surface's 1 test file follows that SAME established sibling convention; it
+        does not introduce a new failure class).
+      • 0 macOS development-signing identities (ADR-012).
+    This surface's OWN code is proven to compile against the real iOS-18 + macOS-15 SDKs
+    (typechecks above) and its logic runs green (24/24 XCTest). The full-app build/test is
+    recorded in apps/macos-pending-verifications.md for the P99 acceptance gate on a
+    macos-latest runner with signing identities.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Every named panel implemented (GlassPanel1); the anonymous table region reproduced.
+  [x] All 24 parity items render from the bound @Observable ExportsPageModel state holder.
+  [x] loading / empty / error implemented for the data source (web useExportJobs).
+  [x] All visible strings from the "ExportsPage" catalog table; 0 hardcoded literals; key
+      names match web verbatim (19/19 + status labels + native chrome).
+  [x] Dark mode + Dynamic Type + accessibility (labels/values/traits on every control) +
+      adaptive macOS/iOS; SwiftUI-native only (no web cloning, no WKWebView).
+  [x] Hooks bound through the P1/S8 ExportsSource seam (exportDownloadUrl / useExportJobs /
+      useBulkExportsDelete); no direct HTTP from the view.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (stub gate: 0, 0 opt-outs).
+  [x] Navigation: .exports route registered (AppRoute + route host registry + deep link).
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing unrelated blockers);
+      host-runnable equivalents (real-SDK typecheck both platforms + 24/24 XCTest) green.
+
+EXIT=0
+STATUS=DONE

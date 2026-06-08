@@ -1,0 +1,113 @@
+I'll start by exploring the environment to understand what infrastructure exists and what's available on this runner.
+
+Key finding: `xcodebuild` is **broken** — only Command Line Tools are installed, not full Xcode (no iOS SDK). But `swift`, `swiftlint`, `swiftformat`, and `pwsh` all work. The `apps/apple` tree exists with real structure. Let me explore the established patterns before deciding on approach.
+
+No iOS SDK and no full Xcode (only Command Line Tools with macOS SDKs). `xcodebuild` cannot run. But `swift`, `swiftlint`, `swiftformat`, `xcodegen`, `pwsh` work. There's no `shared-surfaces` dir yet — I must create it. The recently-modified `AIUsageCard.*` set is the canonical template. Let me read it plus the key infra files and web dependencies.
+
+The `macos-pending-verifications.md` reveals the **established precedent**: surfaces are verified green via *isolated SwiftPM build + tests + swiftc -typecheck + swiftlint/swiftformat/placeholder*, while the full-app `xcodebuild` is deferred to macOS CI. This is exactly my situation. Let me read the rest of the template and the web dependencies.
+
+Now I fully understand the web surface. Let me locate the shared design tokens (so my isolated build can compile) and read the rest of the template (Tests, Previews, strings) plus the placeholder/lint configs.
+
+Key finding: `.swiftlint.yml` `included:` lists `feature-views` but **not** `shared-surfaces` — I can't modify that config (out of allowed files), so I'll lint my files by explicit path and document it. Now I must locate the main-app design tokens (TSSpacing/TSRadius/Color.TS/Font.TS) for my isolated build harness.
+
+The token greps came up empty — my patterns were too narrow. Let me search the whole Apple tree for the actual definitions, since AIUsageCard clearly compiles against them.
+
+Tokens live in `TeslaSyncWatchShared/WatchDesignTokens.swift` (shared across targets) and `Sources/Components/Motion/Motion.swift`. Let me read those (to vendor into my isolated build harness) plus the project.yml and any existing build scripts.
+
+Now I have the tokens. Let me read the placeholder patterns (to avoid forbidden words), the project.yml (targets/globs/deployment), and an interactive-surface action seam pattern before writing code.
+
+I now have everything I need: the canonical 7-file surface pattern, exact design tokens, deployment targets (iOS 18 / macOS 15, Swift 6 strict concurrency), placeholder rules (note: the literal word "Placeholder" is itself forbidden), and the precedent for isolated SwiftPM verification. 
+
+Critical environment facts:
+- **No full Xcode / no iOS SDK** → `xcodebuild` gate steps cannot run (BLOCKED, with evidence). macOS SDK + `swift`/`swiftlint`/`swiftformat`/`pwsh` all work.
+- The established precedent (`macos-pending-verifications.md`) verifies surfaces via **isolated SwiftPM build + tests + swiftc typecheck + swiftlint/swiftformat/placeholder**, deferring full-app `xcodebuild` to a macOS CI runner.
+
+Let me set up tracking and the plan.
+
+Let me check the format of prior surface logs so mine matches the house style.
+
+This is the exact sanctioned template — ToolCard shows **EXIT=0/STATUS=DONE is valid** when all host-runnable gates are green + isolated SwiftPM verification passes, with `xcodebuild` DEFERRED and documented. Note: that log was produced on a runner *with* full Xcode (IOS_EXIT=65 = compile failure); mine has no Xcode at all, which I'll document honestly. Let me check whether the real generated tokens compile on macOS (for my isolated harness) and find TSMotion.
+
+Generated `Tokens.swift` is cross-platform (UIKit/AppKit/`#else` branches) — it compiles on macOS. I'll vendor the **real** file into my harness (matching the ToolCard precedent). Let me confirm what it defines and locate `TSMotion`.
+
+The generated `Tokens.swift` provides all of `Color.TS`/`Font.TS`/`TSSpacing`/`TSRadius`/`TSMotion` and is cross-platform — I'll vendor it plus `Motion.swift` into the isolated harness. Let me confirm where `AiUsageProjection` lives (to mirror the Adapter/Model split correctly), then start writing.
+
+AiUsageCard actually has 10 files (Adapter, **Projection**, **Chrome**, AdapterTests, etc.). The `Projection` holds `resolve`, and `Chrome` holds the freshness chip/banner/loading/error chrome I need to mirror. Let me read both to follow the pattern precisely.
+
+Now I see the chrome uses shared components `TSButton` and `TSSkeleton`. Let me locate those (and their transitive deps) to decide what to vendor into the isolated harness.
+
+`TSButton` (Buttons.swift) is token-only. `TSSkeleton` lives in Skeletons.swift but that file also references `TSCard`. Let me resolve the closed dependency set (the ToolCard precedent vendored Tokens/TSMaterial/Cards/Typography) so my isolated harness compiles the exact shipped code against real design-system files.
+
+Let me verify the exact `TSMotion` and `Font.TS` members available (to use the right tokens), then I'll write all files.
+
+All tokens confirmed (`TSMotion.fastDuration`, `Font.TS.caption/bodySm/body`, spacing/radius/colors). Now writing the surface. Starting with the pure core (Adapter, Model, Projection).
+
+Let me remove the unnecessary `_ = locale` discard (Swift doesn't warn on unused params), then write the Views file.
+
+Important catch: swiftformat's `unusedArguments` rule would rewrite the unused `locale` param and fail `--lint`. Since this surface has no locale-dependent formatting, I'll drop `locale` from both the model and projection entirely (cleaner than threading a dead param).
+
+Now the Views file (subviews + chrome).
+
+Let me fix a >120-char line in `VehiclePaintCurrentLabel` (would fail `--strict`), then write the main view.
+
+Now the main view file.
+
+Now the Previews file.
+
+Now the comprehensive Tests file.
+
+Now the i18n strings catalog.
+
+All 8 files written. Now let me set up the isolated SwiftPM harness (Swift 6 / strict concurrency, vendoring the real design-system token + Motion + Button files) to verify the exact shipped sources compile and the tests pass.
+
+The only errors are the `#Preview` macro in the Previews file — its `PreviewsMacros` plugin ships with full Xcode, not Command Line Tools. That's a toolchain limitation, not a code defect. All actual surface logic is fine. I'll exclude the DEBUG-only Previews file from the isolated harness (it compiles in the real Xcode app target) and rebuild.
+
+Now the only error is the `#Preview` inside the *vendored* real `Buttons.swift`. I'll strip that DEBUG-only preview block from the throwaway harness copy (the real file is untouched) and rebuild.
+
+Build complete under Swift 6 strict concurrency. Now run the tests.
+
+`XCTest` isn't bundled with Command Line Tools (it ships with full Xcode). Let me confirm, and check whether the toolchain's `Testing` (swift-testing) framework is available as an alternative to actually *run* the logic on this runner.
+
+Confirmed: `XCTest` is absent from Command Line Tools (ships with Xcode), but the toolchain's **swift-testing** (`Testing.framework`) is present and SwiftPM-supported. I'll run the **same assertions** against the **exact shipped sources** via a swift-testing target — that actually executes the surface logic on this runner. (The shipped file stays XCTest for the app's XCTest targets.)
+
+SwiftPM's test product needs an XCTest host even for swift-testing under CLT. The robust path under Command Line Tools is a plain **executable** that runs the same assertions against the shipped library and exits non-zero on failure — no XCTest/Testing host required. Let me restructure the harness that way.
+
+Swift 6 makes executable top-level code `@MainActor`, so `check` (nonisolated) can't mutate the MainActor-isolated counters. Marking `check` `@MainActor` fixes it.
+
+Local functions don't inherit the closure's `@MainActor` isolation. Let me mark the nested `selectedID` `@MainActor`.
+
+All **119 checks pass, exit 0** — the exact shipped sources compile under Swift 6 strict concurrency and the full logic is verified on this runner. Now the lint/format/placeholder gates. Let me run swiftformat + swiftlint on my files and inspect the placeholder script's `-Path` handling.
+
+Three findings to resolve:
+1. **swiftformat: `0/7 files require formatting` (FORMAT_EXIT=0)** ✓ — my files are format-clean.
+2. **swiftlint** used the config's `included:` list (1909 files, *excluding* my dir) instead of my path arg, so my files weren't actually linted — and the `| tail` masked the real exit. The "1 serious" is pre-existing (not mine). I need a scoped lint of exactly my files.
+3. **placeholder** script treats a non-existent `-Path` as trivially clean, so I must scan the real dir.
+
+Let me lint my files with a scoped config and run the placeholder scan properly.
+
+swiftlint (scoped to my 7 files) found exactly **1 violation**: `VehiclePaintPicker.Tests.swift` is 414 lines (>400 `file_length`, serious under `--strict`). AiUsageCard solved this by splitting adapter tests into a separate `*.AdapterTests.swift`. I'll do the same — move the adapter-layer tests out. Let me view the split boundary.
+
+The adapter-layer tests are lines 22–180. I'll split them into a sibling `VehiclePaintPicker.AdapterTests.swift` (mirroring AiUsageCard's `AdapterTests` split), keeping both files under 400 lines.
+
+Excellent — **swiftformat: 0/8 require formatting** and **swiftlint --strict: 0 violations, 0 serious** across all 8 of my files. Now the placeholder gate plus the full-tree gate commands for honest reporting.
+
+Placeholder gate clean (COUNT=0, EXIT=0) both on the real dir scan and the exact gate path. Now the full-tree gate commands (the actual gate invocations) for honest reporting.
+
+Two pre-existing issues surfaced in the full-tree run — both need to be confirmed as **not mine**. My scoped runs were clean (0/8 format, 0/8 lint). The swiftlint violation is the known pre-existing `LifetimeStatsWidget` one (documented in the ToolCard precedent). Let me identify the 1 swiftformat file.
+
+Confirmed: the swiftformat flag is `ActionBuilder.Previews.swift` (a pre-existing feature-views file, **not mine**, not in my git changes), and the swiftlint violation is the known pre-existing `LifetimeStatsWidget`. My 8 files are clean on every runnable gate. The only non-mine working-tree changes are a prior task's `AIUsageCard.*`/`BackupRestorePage.tsx` — which I will **not** commit.
+
+Now let me capture the actual `xcodebuild` capability evidence for the log.
+
+Capability evidence captured: `xcode-select -p` = Command Line Tools (no Xcode), no iOS SDK, and the exact gate commands return `IOS_EXIT=1`/`MAC_EXIT=1` with the "requires Xcode" error. This is the prompt's explicit **STATUS=BLOCKED with platform-capability evidence** scenario — while the surface itself is complete and green on every runnable gate. Let me gather final stats and write the log.
+
+All checks green; 119/119 verifier pass, exit 0. The native surface is 1581 lines across 9 files (full state modeling + tests) vs the 109-line web source — consistent with every precedent surface, no stubs. Now I'll write the comprehensive, honest log.
+
+Log written. Now let me commit **only** my files + the log (never the prior task's `AIUsageCard.*`/`BackupRestorePage.tsx` changes). I'll stage precisely and verify before committing.
+
+Staging is exactly right — only my 9 files + the log; the prior task's changes are correctly excluded. Committing with the prompt's message.
+
+Committed cleanly — 10 files, 1717 insertions, only my surface + log. Now final cleanup and verification.
+
+Task complete. Final state verified: my work is fully committed, the working tree contains only the unrelated prior-task changes (which I correctly left untouched), no stray files remain in `shared-surfaces`, and the log ends with `EXIT=1` / `STATUS=BLOCKED` per the covenant.
+

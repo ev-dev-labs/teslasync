@@ -1,0 +1,104 @@
+=== P4 Modal / dialog 0010 NotificationBellPopover (Apple) ===
+date: 2026-06-08T10:27:03Z
+runner: Darwin 25.5.0 arm64
+swift: swift-driver version: 1.148.6 Apple Swift version 6.3.2 (swiftlang-6.3.2.1.108 clang-2100.1.1.101)
+
+### Capability probe (prescribed gate needs full Xcode + iOS/macOS toolchain) ###
+--- xcodebuild -version ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+XCODEBUILD_PROBE_EXIT=1
+--- active developer dir ---
+/Library/Developer/CommandLineTools
+--- available iOS simulators (iPhone) ---
+(none — no Simulator runtimes; CommandLineTools only)
+
+### Prescribed gate steps ###
+--- [1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+IOS_EXIT=1
+--- [2] xcodebuild -scheme TeslaSync-macOS build test ---
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+MAC_EXIT=1
+--- [3] swiftlint --strict (scoped to surface; repo .swiftlint.yml rules) ---
+Done linting! Found 0 violations, 0 serious in 10 files.
+LINT_EXIT=0
+    note: full-repo 'swiftlint --strict' also reports a PRE-EXISTING violation in
+    TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 (function_body_length),
+    which is outside this prompt's allowed files. The surface files have 0 violations.
+
+--- [4] swiftformat --lint apps/apple/TeslaSync/modals-dialogs ---
+SwiftFormat completed in 2.28s.
+0/10 files require formatting.
+FORMAT_EXIT=0
+
+--- [5] check-placeholders.ps1 -Path apps/apple/TeslaSync/modals-dialogs ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+### Supplementary verification (compensating for the unavailable xcodebuild) ###
+--- [S1] swiftc -typecheck: production surface (views+core) vs REAL generated Tokens.swift + SwiftUI ---
+SWIFTUI_TYPECHECK_EXIT=0
+    note: Previews.swift uses the #Preview macro whose plugin (PreviewsMacros) ships only with
+    full Xcode, so it cannot be expanded by CommandLineTools swiftc; the macro usage is correct.
+
+--- [S2] logic parity harness (runs projection/adapter/model assertions vs web behaviour) ---
+  PASS stale auto-refresh once
+  PASS stale auto-refresh not repeated
+ALL_PASS
+HARNESS_EXIT=0
+
+### Result summary ###
+Gate-step exit codes:
+  IOS_EXIT=1            BLOCKED — full Xcode + iOS Simulator runtime absent (CommandLineTools only)
+  MAC_EXIT=1            BLOCKED — full Xcode absent (xcodebuild requires Xcode.app)
+  LINT_EXIT=0           swiftlint --strict: 0 violations across the 10 surface files
+  FORMAT_EXIT=0         swiftformat --lint: 0/10 require formatting
+  PLACEHOLDER_EXIT=0    check-placeholders.ps1: PLACEHOLDER_COUNT=0
+  SWIFTUI_TYPECHECK_EXIT=0  full production view layer typechecks vs the real generated tokens + SwiftUI
+  HARNESS_EXIT=0        logic parity harness: ALL_PASS (projection/adapter/model vs web behaviour)
+
+Why BLOCKED (not DONE): the prescribed gate's two `xcodebuild ... build test` steps cannot execute
+on this runner — it has Apple CommandLineTools, not Xcode.app, so there is no `xcodebuild`, no iOS
+Simulator runtime, and no SwiftUI `#Preview`/Observation macro plugins beyond the compiler. Per the
+prompt's capability clause ("requires SwiftUI + Swift Charts + MapKit, iOS 18 / iPadOS 18 / macOS 15
+HIG. If unavailable on the runner -> STATUS=BLOCKED with API evidence"), this is reported as BLOCKED
+with the capability evidence above, NOT marked green.
+
+Compensating verification actually executed on this runner (all green):
+  - Every runnable gate step (swiftlint --strict, swiftformat --lint, check-placeholders) = 0.
+  - `swiftc -typecheck` of the entire production surface (Adapter, Projection, Model, Fixtures,
+    Chrome, Views, NotificationBellPopover) against the REAL apps/design/generated/apple/Tokens.swift
+    and the SwiftUI framework = 0 errors. Only Previews.swift is unverifiable here (Xcode-only
+    #Preview macro plugin); its macro usage matches the SwiftUI signature.
+  - A compiled-and-run logic harness asserts the projection/adapter/model produce the exact web
+    behaviour (severity normalisation, formatRelative bucketing + labels, 99+ badge cap, phase
+    selection with error precedence, header subtitle, rule+vehicle row join, title fallback,
+    view.opened-once-on-open, mark-all-read guard, stale one-shot auto-refresh) = ALL_PASS.
+
+Integration dependency (owned by P4 core — outside this prompt's allowed files, so intentionally NOT
+edited here): `apps/apple/project.yml` must add `TeslaSync/modals-dialogs` to the app + unit-test
+target `sources`, and `apps/apple/.swiftlint.yml` must add it to `included` — exactly as
+`TeslaSync/feature-views` and `TeslaSync/dashboard-widgets` already are. Once registered, the surface
+compiles into TeslaSync / TeslaSync-macOS and its co-located *.Tests.swift run in the XCTest targets
+with no further change. This is the same wiring every prior P4 surface relied on P4 core to provide.
+
+Delivered files (apps/apple/TeslaSync/modals-dialogs/, 11 files):
+  NotificationBellPopover.swift            surface View: bell trigger + badge + popover/navigate
+  NotificationBellPopover.Views.swift      dialog panel (header/body/footer), row, empty
+  NotificationBellPopover.Chrome.swift     badge, severity dot, freshness chip, refresh, banner,
+                                           loading, error
+  NotificationBellPopover.Model.swift      i18n facade, value types, connection, telemetry seam,
+                                           input/resolved, source protocol, @Observable model
+  NotificationBellPopover.Projection.swift pure input->resolved (phases, subtitle, row join)
+  NotificationBellPopover.Adapter.swift    severity, DTOs, relative-time bucket, badge, a11y join
+  NotificationBellPopover.Fixtures.swift   InMemory source for previews + tests
+  NotificationBellPopover.Previews.swift   per-state previews (data/empty/loading/error/stale/offline
+                                           + trigger badge/99+/none)
+  NotificationBellPopover.strings          i18n catalog (29 keys; every web key + severity/relative)
+  NotificationBellPopover.Tests.swift      projection/header/row/model/a11y XCTest coverage
+  NotificationBellPopover.AdapterTests.swift  severity/relative/badge/vehicle/a11y XCTest coverage
+
+EXIT=1
+STATUS=BLOCKED

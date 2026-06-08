@@ -1,0 +1,179 @@
+I'll start by exploring the environment and the web source to understand the task requirements.
+
+Key finding: `xcodebuild` errors because only Command Line Tools are installed (not full Xcode). Let me verify capability thoroughly and read the web source.
+
+Critical: `/Applications/Xcode.app` **exists** but `xcode-select` points to CommandLineTools. Let me check if I can use Xcode via `DEVELOPER_DIR` and explore the existing Apple app structure.
+
+Platform capability is **present**: Xcode 26.5, iOS 26.5 simulator (iPhone 16 booted), macOS SDK, swiftlint, swiftformat, xcodegen. STATUS=BLOCKED is not warranted. Now let me explore the Apple app structure to learn the conventions.
+
+Rich existing convention: each feature-view = multi-file bundle (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`). `pwsh` is available. Let me find the closest analog and check if `LiveMotorStatus` already exists.
+
+No existing `LiveMotorStatus`. Let me study the closest analog (`AcDcStatsPanel` — full file set) and the shared facade/design/i18n layers.
+
+This is the canonical pattern. Let me read the rest of the reference bundle plus the Units facade and design tokens.
+
+Let me examine how units are consumed in feature-views, the design tokens, the web units/format helpers, the MotorSnapshot type, and the project config.
+
+`DrivingTemperatureStats` is the ideal analog (does temp conversion + 6 states, self-contained). Let me study it fully plus the exact web helpers and `MotorSnapshot` type.
+
+Now let me read the exact web helpers, the `MotorSnapshot` type, and the remaining reference files (Views/main/strings/Previews/Tests) plus design tokens.
+
+Let me verify the design tokens, shared components, and build config.
+
+Design tokens live in `apps/design/generated/apple` (the `DesignTokens` group). Feature-views auto-compile from `TeslaSync/feature-views`. Let me confirm token members and the test-target/scheme wiring.
+
+I need to verify how `.Tests.swift` files co-located in `feature-views/` are wired (app target excludes vs test target includes). Let me read the relevant project.yml sections.
+
+Let me check how sibling surfaces recorded their gate results — this reveals the expected verification reality in this environment.
+
+This is exactly the precedent I needed. Let me read how siblings concluded their logs (EXIT/STATUS rationale) and confirm the pre-existing baseline issues.
+
+The sanctioned precedent is clear: ship the 7-file surface, verify in-scope green (scoped swiftlint, swiftformat, placeholder, dual-SDK typecheck, executed harness), run the literal gate capturing real exits, defer whole-tree xcodebuild/lint to documented pre-existing out-of-scope breakage. Let me read the web `InlineMetric`/`Grid` components to map layout faithfully.
+
+I have everything needed. Let me set up tracking and write the plan, then author the 7-file surface bundle.
+
+Now writing the surface. First the SwiftUI-free pure core (Adapter):
+
+Now the Model (seams + observable view-model):
+
+Now the main surface view:
+
+Now the Previews:
+
+Now the strings table:
+
+Let me fix one parity detail in the Adapter (`text()` should em-dash only on nil, matching web `?? '—'`), then write the tests.
+
+All 7 files written. Now let me verify — starting with swiftformat and swiftlint on the new files.
+
+Configs understood (maxwidth 120, line_length err 160 ignoring comments, self-remove, before-first wrapping). Let me lint and format-check the new files.
+
+Two swiftlint issues (file length 421>400; a 7-param helper) and swiftformat wants Tests wrapped. Let me view the relevant Adapter region and fix.
+
+Let me refactor: remove the 7-param helper via a data-driven temperature build, and trim comments to get under 400 lines. First view the header.
+
+Now auto-format all 6 files (write mode) to fix wrapping deterministically, then re-lint:
+
+`large_tuple` (5 members) now flags. Let me view the current function and inline the 9 cells flatly (no tuple/helper), trimming a couple of comments to stay ≤400.
+
+Cleanest fix: inline all 9 cells flatly (no tuple, no helper), then trim comments to stay ≤400. Replacing the function body:
+
+404 — 4 over. Let me trim a few verbose doc comments. Let me view candidate regions.
+
+I'll trim two verbose doc comments to get under 400 (saving ~5 lines):
+
+Now re-run swiftformat and swiftlint to confirm both pass:
+
+Need to split `metricCells` (body >50 lines) and trim 2+ lines. Let me view current state and split into two helpers.
+
+Need to trim 22 lines. Let me view the comment-heavy sections and compress doc comments.
+
+Let me compress doc comments throughout. Batch of edits:
+
+415 — need 15 more. Let me view and compress the lower-section comments.
+
+Let me move `LiveMotorAccessibility` to the Model file and compress a couple comments. View the Adapter tail:
+
+Now add `LiveMotorAccessibility` to the Model file (before the Localization facade section):
+
+Now re-run the full lint + format on all 6 files:
+
+Both green: **swiftformat 0/6, swiftlint 0 violations**, Adapter exactly 400 lines. Now the executed-logic harness over the real Adapter+Model (proving correctness), then dual-SDK typechecks. Let me set up the macOS SDK paths and build the harness.
+
+Both lint gates green. Now the executed-logic harness over the real Adapter+Model. Writing it:
+
+MainActor isolation of top-level globals — annotate `eq` with `@MainActor`:
+
+**Harness EXECUTED 44 assertions, 0 failures** (real Adapter+Model, macOS SDK, Swift 6). Now to typecheck the SwiftUI surface against the real design system. Let me identify the minimal component/token dependency set.
+
+Components/tokens only import SwiftUI (no KMP `Shared`). Let me typecheck the full SwiftUI surface against the real component library — iOS sim SDK first:
+
+Errors are only in an over-included unrelated file (`DataDisplay/UnitFormatters.swift` needs the KMP `Units` facade) — **not my surface**. Let me narrow to the exact components my surface uses:
+
+The remaining errors are in the **dependency's own `#Preview`** (Cards.swift references TSText/TSButton). Let me include the full UI/Motion/Feedback component set (excluding the `Units`-dependent DataDisplay) so all cross-references resolve. First check which UI files pull in `Units`/`Shared`/`Charts`:
+
+None reference `Units`/`Shared`/`Charts`. Including the full UI/Motion/Feedback/Design set should resolve all preview cross-references:
+
+One remaining error is again a **dependency preview** (`FeedbackOverlays` preview needs `TSMetricBar` from DataDisplay). The dep previews are the noise, not my code. Let me typecheck my surface **without** `-D DEBUG` (skips all previews incl. deps') to cleanly verify my main code on both SDKs:
+
+`FeedbackOverlays.swift` genuinely needs `TSMetricBar` (I over-included the Feedback dir). Let me prune to the exact closure. Two runs — main code (no DEBUG, minimal deps) and previews (DEBUG, full UI minus Feedback extras):
+
+The shared component library is tightly interconnected; subsetting keeps missing cross-deps. Let me find exactly which files need the `Units` facade (the only real blocker) and locate the cross-referenced symbols:
+
+Only `DataDisplay/UnitFormatters.swift` needs the `Units`/`Shared` facade. Excluding just that one file gives a self-contained component module. Full dual-SDK typecheck of the complete surface (incl. all previews):
+
+**Both SDKs typecheck CLEAN** for the full surface including all `#Preview` macros against the real design system. Now verify the Tests file compiles against the real surface (strip `@testable` since we compile as one module, link XCTest):
+
+The only errors are `XCTAssert*` global-function resolution (an ad-hoc XCTest-linkage artifact, not my code). Let me confirm there are **no other** errors — i.e., every reference to my API typechecks:
+
+All 290 errors cascade from `XCTAssert*` not resolving (the `.fahrenheit`/`.muted` failures are contextual-type inference off the unresolved assert calls) — none are genuine. Let me fix XCTest resolution by adding the platform swift-library search paths:
+
+The non-XCTAssert errors vanished with the proper `-I` path. Let me wait for the total error count:
+
+**Tests file typechecks 100% clean** (0 errors) against the real surface + XCTest. The earlier errors were purely an XCTest search-path artifact. 
+
+In-scope verification is now fully green. Let me run the placeholder check and verify the pre-existing out-of-scope baseline (so deferrals are honestly attributed, not assumed):
+
+Verified pre-existing baseline: **`DashboardWidgetSize` is defined in 15 unmodified sibling files** (real cross-module ambiguity, out of my allowed scope), **placeholder check = 0**, and **only my 7 files changed** (no drift). Now let me run the actual xcodebuild gate. First check whether `Shared.xcframework` is staged and the build script:
+
+Neither `Shared.xcframework` nor a generated `.xcodeproj` exists yet. The xcodebuild gate needs the KMP framework (Gradle, ~7min per sibling). Let me kick that off in the background while I run the whole-tree lint/format gate steps.
+
+Java 17 present; Gradle build running in background. Now the whole-tree `swiftformat --lint` and `swiftlint --strict` gate steps (capturing real exits) plus verifying the pre-existing lint violation:
+
+Whole-tree `swiftformat --lint` = FORMAT_EXIT=1, but the **only** offender is a pre-existing unmodified sibling (`ActionBuilder.Previews.swift`, not my file). My 6 files pass. Now whole-tree `swiftlint --strict`:
+
+Whole-tree `swiftlint --strict` = LINT_EXIT=2, the **single** violation being the pre-existing unmodified sibling `LifetimeStatsWidget.Adapter.swift:141` (exactly as documented in sibling logs). My 6 files pass. Let me check the Gradle build progress:
+
+The Gradle build was progressing (downloading Kotlin/Native, compiling iOS arm64) but its **daemon was stopped by an external "stop command"** — a shared-environment contention artifact (sibling slots share the Gradle daemon; the env is explicitly non-dedicated). Let me retry with `--no-daemon` to avoid the shared daemon, replicating the script's staging:
+
+Let me run the Gradle assemble directly with `--no-daemon` (immune to the shared-daemon stop), then stage manually:
+
+Gradle (`--no-daemon`) is linking Kotlin/Native — this takes several minutes. Let me wait:
+
+Still linking. Let me continue waiting:
+
+Gradle **BUILD SUCCESSFUL** (9m). Let me stage the framework, then generate the Xcode project:
+
+Project generated; both schemes present. Now the actual iOS gate. To reach the real compile (past the known co-located-XCTest-in-app-target issue), I add `ENABLE_TESTING_SEARCH_PATHS=YES` per sibling precedent. Running async to a log:
+
+Scheme preAction is re-running Gradle (heavy daemon contention: "8 busy and 47 stopped Daemons" from sibling slots) — but tasks are cached. Let me let it proceed through the preAction and into the compile:
+
+The iOS gate failed on `import XCTest` in the **app target** — the pre-existing project.yml structural issue (co-located `*.Tests.swift` from all ~600 surfaces glob into the non-test app target). Let me examine the full log to capture the real exit and confirm my files aren't the cause:
+
+**Zero LiveMotorStatus errors** in the real iOS app-target build. The failure is the pre-existing structural issue — co-located `*.Tests.swift` (first hit: sibling `AcDcStatsPanel.Tests.swift`) `import XCTest` in the non-test app target. Let me run the **literal** gate command (no override) and capture the real exit code:
+
+**IOS_EXIT=65** (literal gate), **0 LiveMotorStatus errors** — confirmed pre-existing co-located-XCTest structural cause. Now the literal macOS gate:
+
+**MAC_EXIT=65**, **0 LiveMotorStatus errors** — failure is pre-existing macOS code-signing (no dev team), out of scope. Both gates confirmed RED only on pre-existing/out-of-scope causes with **zero errors in my surface**. Let me grab representative evidence lines, then write the honest gate log:
+
+All evidence captured. macOS fails purely on entitlement signing (no dev cert) for the macOS targets; iOS on the co-located-XCTest structural issue — both pre-existing, out-of-scope, with 0 errors in my surface. Let me get final line counts and write the honest gate log:
+
+All clean: 7 files (1735 lines), generated artifacts git-ignored, only my files staged. Now writing the honest gate log:
+
+Let me verify the test-case count claim in the log is accurate, then clean up temp files and commit:
+
+Accuracy fix — it's 34 test functions (6 classes), not 38. Correcting the log:
+
+Now clean up temp artifacts and commit the 7 surface files + the log:
+
+Exactly 8 files staged (7 surface + log), nothing else touched. Committing with the conventional message + trailer:
+
+Committed cleanly (`61043250c`, 8 files). Final confirmation that the committed surface still passes the scoped gates, and mark todos done:
+
+Task complete. All in-scope gates green; the surface is committed.
+
+Auto-merging apps/apple/TeslaSync/feature-views/LiveMotorStatus.Adapter.swift
+CONFLICT (add/add): Merge conflict in apps/apple/TeslaSync/feature-views/LiveMotorStatus.Adapter.swift
+Auto-merging apps/apple/TeslaSync/feature-views/LiveMotorStatus.Model.swift
+CONFLICT (add/add): Merge conflict in apps/apple/TeslaSync/feature-views/LiveMotorStatus.Model.swift
+Auto-merging apps/apple/TeslaSync/feature-views/LiveMotorStatus.Previews.swift
+CONFLICT (add/add): Merge conflict in apps/apple/TeslaSync/feature-views/LiveMotorStatus.Previews.swift
+Auto-merging apps/apple/TeslaSync/feature-views/LiveMotorStatus.Tests.swift
+CONFLICT (add/add): Merge conflict in apps/apple/TeslaSync/feature-views/LiveMotorStatus.Tests.swift
+Auto-merging apps/apple/TeslaSync/feature-views/LiveMotorStatus.Views.swift
+CONFLICT (add/add): Merge conflict in apps/apple/TeslaSync/feature-views/LiveMotorStatus.Views.swift
+Auto-merging apps/apple/TeslaSync/feature-views/LiveMotorStatus.strings
+CONFLICT (add/add): Merge conflict in apps/apple/TeslaSync/feature-views/LiveMotorStatus.strings
+Auto-merging apps/apple/TeslaSync/feature-views/LiveMotorStatus.swift
+CONFLICT (add/add): Merge conflict in apps/apple/TeslaSync/feature-views/LiveMotorStatus.swift
+Automatic merge failed; fix conflicts and then commit the result.

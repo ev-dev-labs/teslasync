@@ -1,0 +1,204 @@
+=== P4 Feature view 0266 SignalChartPanel (Apple) ===
+Web source (THE spec): web/src/features/telemetry/components/SignalChartPanel.tsx
+Native output: apps/apple/TeslaSync/feature-views/SignalChartPanel.*
+Date: 2026-06-08
+
+------------------------------------------------------------------------
+RUNNER CAPABILITY FINDING (determines DONE vs BLOCKED)
+------------------------------------------------------------------------
+OS                : macOS (Darwin, arm64)
+Swift             : Apple Swift 6.3.2 (swiftlang-6.3.2)  ........ PRESENT
+swiftlint         : /opt/homebrew/bin/swiftlint  ............... PRESENT
+swiftformat       : /opt/homebrew/bin/swiftformat  ............. PRESENT
+xcodegen          : /opt/homebrew/bin/xcodegen  ............... PRESENT
+macOS SDK (CLT)   : .../CommandLineTools/SDKs/MacOSX.sdk  ...... PRESENT
+  └ SwiftUI.framework / Charts.framework / MapKit.framework .... PRESENT (typecheck OK)
+Xcode (full)      : ABSENT — active dir is CommandLineTools, NOT Xcode.app
+  └ xcodebuild    : ERRORS ("requires Xcode, but active developer directory
+                    '/Library/Developer/CommandLineTools' is a command line tools instance")
+  └ xcrun simctl  : ABSENT ("unable to find utility 'simctl'") — no iOS Simulators
+XCTest.framework  : ABSENT from the CommandLineTools SDK
+
+=> The prompt Capability clause: "requires SwiftUI + Swift Charts + MapKit,
+   iOS 18 / iPadOS 18 / macOS 15 HIG. If unavailable on the runner → STATUS=BLOCKED
+   with API evidence." The SDK frameworks ARE present (and the surface compiles +
+   runs against them, see SUPPLEMENTARY VERIFICATION), but the `xcodebuild build
+   test` toolchain (Xcode app, schemes, iOS Simulators, XCTest runner) is GENUINELY
+   ABSENT. Per the clause, the xcodebuild gate steps are BLOCKED with the evidence
+   captured below. They are NOT reported as passing (Honesty Covenant #1).
+
+   NB: feature-views are not yet wired into apps/apple/project.yml ("wiring is the
+   integration prompt's job", per predecessor logs e.g. 0002-BackendTool). This is
+   the established, documented condition for every P4 feature-view surface; the
+   surface files follow the identical layout/convention as the existing surfaces
+   (SpeedTrendChart.*, FSMTimelineChart.{Chart,ModelTests}.swift, LiveControls.States.swift).
+
+------------------------------------------------------------------------
+GATE STEPS (exact prompt commands; real exit codes)
+------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    → xcode-select: error: tool 'xcodebuild' requires Xcode, ... command line tools instance
+    IOS_EXIT=1            STATUS: BLOCKED (no Xcode/Simulator on runner)
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    → xcode-select: error: tool 'xcodebuild' requires Xcode, ... command line tools instance
+    MAC_EXIT=1            STATUS: BLOCKED (no Xcode on runner)
+
+[3] swiftlint --strict        (whole project, .swiftlint.yml included dirs — 1919 files)
+    → Found 1 violation, 1 serious in 1919 files.
+      The single violation is PRE-EXISTING and NOT in this surface:
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19
+        function_body_length (78 > 50) — out of scope, not a SignalChartPanel file.
+    LINT_EXIT=2 (whole tree)
+    SignalChartPanel-scoped swiftlint --strict (10 files) → 0 violations, 0 serious.  PASS
+
+[4] swiftformat --lint apps/apple   (whole tree — 1923 files)
+    → 1/1923 files require formatting: PRE-EXISTING and NOT in this surface:
+      TeslaSync/feature-views/ActionBuilder.Previews.swift:48 (blankLinesBetweenScopes)
+      — out of scope, not a SignalChartPanel file.
+    FORMAT_EXIT=1 (whole tree)
+    SignalChartPanel-scoped swiftformat --lint (10 files) → 0/10 require formatting.  PASS
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/feature-views/SignalChartPanel
+    → PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0     PASS
+    Independent grep over the 10 shipped .swift files for
+      TODO|FIXME|XXX|Coming soon|Placeholder|Lorem ipsum|not implemented|
+      fatalError("unimpl|not")|// stub  → NONE FOUND.
+
+------------------------------------------------------------------------
+SUPPLEMENTARY VERIFICATION (because xcodebuild is BLOCKED — done to prove the
+surface is correct to the maximum extent the runner allows; not a substitute for
+the Xcode gate, reported separately and honestly)
+------------------------------------------------------------------------
+[A] swiftc -typecheck of the full surface against the REAL macOS 15 SDK
+    (SwiftUI + Charts), Swift 6 + -strict-concurrency=complete, with the real
+    design tokens (apps/design/generated/apple/Tokens.swift), real TSDesign.swift,
+    real Motion.swift, and a faithful TSSkeleton re-decl (exact public signature):
+      Adapter + Projection + Model + Views + Chart + States + SignalChartPanel.swift
+    → TYPECHECK_EXIT=0   (the surface is API-correct against the real frameworks)
+
+[B] Executable adapter+model LOGIC DRIVER (swiftc build → run) exercising the pure
+    projection + the @MainActor state holder with assertions mirroring the tests:
+      useRightAxis / resolveMode / resolvePhase / series-axis / overlay dual-axis
+      normalize+denormalize / domain / grid cells / strideSample / parseTimestamp /
+      integer+number+axisTick formatting / accessibility summaries / model phase
+      transitions (live+historical) / view.opened-once / stale auto-refresh-once /
+      offline-keeps-cache / retry / stop / resolvedTitle.
+    → BUILD_EXIT=0 ; runtime → "DRIVER_OK all adapter+model parity checks passed" ; RUN_EXIT=0
+
+[C] Test-body typecheck: SignalChartPanel.Tests.swift + SignalChartPanel.AdapterTests.swift
+    compiled against the real surface API via a minimal XCTest shim (XCTest is absent
+    from the CLT SDK; the real XCTest target provides it at gate time).
+    → TESTS_TYPECHECK_EXIT=0   (47 test methods type-check against the surface)
+
+[D] Preview-body typecheck: the 10 #Preview bodies transformed to functions and
+    typechecked (the #Preview macro plugin 'PreviewsMacros' ships with Xcode only).
+    → PREVIEW_BODY_TYPECHECK_EXIT=0
+
+------------------------------------------------------------------------
+ARTIFACT INVENTORY (apps/apple/TeslaSync/feature-views/SignalChartPanel.*)
+------------------------------------------------------------------------
+  SignalChartPanel.swift            87  main View; phase switch; lifecycle; a11y
+  SignalChartPanel.Views.swift     227  vocabulary/pulse/header/freshness chip/banner
+  SignalChartPanel.Chart.swift     369  overlay multi-line dual-axis chart + tooltip
+                                        + legend + small-multiples grid (Swift Charts)
+  SignalChartPanel.States.swift    132  loading skeleton / empty (live+historical) / error
+  SignalChartPanel.Model.swift     326  P1/S8 source seam + @Observable model + P1/S10
+                                        i18n facade + P1/S11 telemetry + in-memory source
+  SignalChartPanel.Adapter.swift   296  pure value types (SignalStat/SignalSample/series/
+                                        domains/points/cells/phase/connection)
+  SignalChartPanel.Projection.swift 369 pure projection + formatting + surface slug + a11y
+  SignalChartPanel.Previews.swift  192  10 previews (every state)
+  SignalChartPanel.Tests.swift     311  model + a11y XCTest (20 methods) + telemetry spy
+  SignalChartPanel.AdapterTests.swift 241 pure-core XCTest (27 methods)
+  SignalChartPanel.strings              23 i18n keys (table "SignalChartPanel")
+  (every file ≤ 400 lines — swiftlint file_length under --strict; cohesive split
+   mirrors the repo's multi-file surface convention.)
+
+------------------------------------------------------------------------
+PARITY MAPPING (web source → native; every branch + t() reproduced)
+------------------------------------------------------------------------
+DATA SOURCES (P1/S8 seam — no HTTP in the view):
+  useTranslation  → SignalChartStrings (P1/S10 NSLocalizedString facade, table "SignalChartPanel")
+  useDateFormat   → SignalChartTime.tick/.full (locale-aware axis + tooltip time)
+SHARED COMPONENTS (web → native):
+  @/components/ui (GlassPanel)        → token-driven surface card (Color.TS / TSRadius / TSSpacing)
+  @/components/feedback (Skeleton)    → TSSkeleton loading chrome
+  @/components/motion (FadeIn)        → TSFadeIn
+  @/components/charts (LineChart,     → Swift Charts Chart { LineMark/RuleMark } (overlay)
+    SmallMultiplesChart, Legend,        + LazyVGrid of per-signal mini Charts (grid)
+    ResponsiveContainer, axes)
+  @/components/charts/ChartTooltip    → SignalChartTooltip (crosshair selection annotation)
+CHART (Recharts → Swift Charts): overlay multi-line with AUTO dual-axis
+  (useRightAxis: |max-min||1 ratio > 10 on first two stats; right axis = index 1 only)
+  reproduced via normalize→left-domain plotting + back-mapped trailing axis;
+  grid = small-multiples, one cell per signal with its own y-scale, finite-only points,
+  stride-downsampled to 400 (web maxPointsPerCell). Map: Leaflet → MapKit — N/A (no map).
+STATES (all render; never a blank box):
+  loading   → historical skeleton (web `loading && !isLive`)
+  content   → overlay OR grid per effectiveMode (web 'overlay'/'grid'/'auto', threshold 8)
+  empty     → live "Waiting for signal data…" (pulse) / historical "No data for this time range"
+  error     → QueryError-equivalent with Retry (prompt envelope)
+  stale     → Stale chip + banner + ONE guarded auto-refresh (ADR-013)
+  offline   → Offline chip + banner; cached chart kept; no refetch
+  live mode → red pulsing radio glyph + "{events} events · {points} points", series
+              animation suppressed (web `isAnimationActive={!isLive}`)
+i18n KEYS extracted from source (all resolve through P1/S10; no English literals in code):
+  "Live Signal Stream","Signal Chart","events","points","points loaded",
+  "Waiting for signal data…","No data for this time range","smallMultiples.noData"
+  (+ native envelope: freshness Live/Stale/Offline, banners, axes, loading/empty/error, a11y)
+TELEMETRY (P1/S11): view.opened emitted once with surface slug "SignalChartPanel".
+
+------------------------------------------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------------------------------------------
+[x] Surface renders all web-source states (loading/content overlay+grid/empty
+    live+historical/error) + prompt envelope (stale/offline) — 10 previews, switch in .swift.
+[x] Hooks bind through the shared P1/S8 state-holder layer (SignalChartSource →
+    SignalChartModel); no direct HTTP in the view.
+[x] Every i18n key from source has a matching key in the P1/S10 catalog (.strings, 23 keys).
+[x] Accessibility labels on every element (header/chip/banner/legend/tooltip/chart/
+    grid cells; per-series VoiceOver values; reduce-motion-aware pulse + animation).
+[x] Tests: adapter unit + per-state model + a11y — 47 methods. EXECUTED-equivalent:
+    Xcode XCTest run is BLOCKED (no Xcode); the identical logic was compiled AND RUN
+    via the standalone driver (RUN_EXIT=0) and the 47 test bodies typecheck against
+    the real API (TESTS_TYPECHECK_EXIT=0).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0.
+[ ] xcodebuild build test EXIT=0 — BLOCKED: Xcode/Simulator/XCTest absent on runner
+    (capability evidence above). NOT claimed as passing.
+
+------------------------------------------------------------------------
+HONESTY COVENANT
+------------------------------------------------------------------------
+ 1 No red-as-green ...... xcodebuild build/test is shown BLOCKED with its real exit 1 +
+                          cause; it is NOT reported as passing. Whole-tree lint/format
+                          nonzero codes are shown verbatim with the exact pre-existing
+                          offending files (not this surface).
+ 2 No scope narrowing ... full surface: 10 .swift + strings, all states, both chart
+                          modes, dual-axis, live mode, seams, 47 tests, 10 previews.
+ 3 No skip-and-assume ... web source + SmallMultiplesChart + ChartTooltip + useLiveSignalStream
+                          read end-to-end; every t() + conditional branch reproduced.
+ 4 No stubs as final .... complete implementation; placeholder gate COUNT=0; no forbidden markers.
+ 5 No parity shortcuts .. useRightAxis / effectiveMode / strideSample / dual-axis / live
+                          counters / grid per-cell y-scale all ported and unit-tested.
+ 6 No delegation ........ authored directly (delegation FORBIDDEN; none used).
+ 7 No predecessor bypass  consumes P1/S8 seam + P1/S9 tokens + P1/S10 i18n + P1/S11
+                          diagnostics, identical convention to existing P4 surfaces.
+ 8 No commit on red ..... committed work passes every RUNNABLE gate (surface-scoped
+                          swiftlint 0 / swiftformat 0 / placeholder 0) plus swiftc
+                          typecheck 0 + executed driver OK; the only non-green step is
+                          the environment-absent xcodebuild, declared BLOCKED, not green.
+ 9 No silent drift ...... project.yml feature-views wiring deferred to the integration
+                          prompt (documented condition for all P4 surfaces); a faithful
+                          TSSkeleton re-decl + XCTest shim were used ONLY for isolated
+                          verification and are NOT part of the shipped surface.
+10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+Per-step: IOS_EXIT=1 MAC_EXIT=1 LINT_EXIT=2(pre-existing/other) FORMAT_EXIT=1(pre-existing/other)
+PLACEHOLDER_EXIT=0 | SUPPLEMENTARY: TYPECHECK=0 DRIVER=0 TESTS_TYPECHECK=0 PREVIEW_TYPECHECK=0
+Surface-scoped swiftlint=0 swiftformat=0. Implementation COMPLETE; only the Xcode
+build/test capability is unavailable on this runner.
+
+EXIT=1
+STATUS=BLOCKED

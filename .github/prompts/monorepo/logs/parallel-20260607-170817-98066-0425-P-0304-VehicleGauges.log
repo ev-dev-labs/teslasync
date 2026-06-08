@@ -1,0 +1,6 @@
+I'll start by exploring the repository structure to understand both the web source and the existing Apple app architecture.
+
+Apple toolchain is fully available (xcodebuild, swiftlint, swiftformat, swift 6.3.2). Now let me examine the existing Apple app structure and find reference implementations.
+
+No iOS simulators showed up. Let me verify simulator availability carefully and study the closest reference implementation (`HeroGauges`), plus the build config.
+

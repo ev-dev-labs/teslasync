@@ -1,0 +1,80 @@
+I'll start by exploring the repository structure and understanding what's available — the web source, the Apple app structure, and the native toolchain.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `swift`, `swiftlint`, `swiftformat` ARE available. Let me examine the existing Apple app structure, prior logs, and the web source to understand the established pattern.
+
+Now let me examine how predecessor P4 Apple prompts handled the gate (given `xcodebuild` is unavailable), and study the existing file pattern in detail.
+
+This predecessor log describes a runner WITH full Xcode 26.5 — but my runner only has Command Line Tools. Critically, I must verify what my runner can actually do. Let me check whether SwiftUI/Charts/MapKit are even importable here, and examine the real Apple project structure.
+
+`swiftc -typecheck` appeared to succeed but the exit code was masked by the pipe. Let me robustly verify whether SwiftUI/Charts/MapKit actually compile against the CLT macOS SDK, and inspect the real project structure.
+
+Major finding: **SwiftUI, Charts, and MapKit ARE available** in the CLT macOS SDK and typecheck cleanly. Only `xcodebuild`/iOS-simulator is missing. So I can write and compile real native code. Let me study the project structure and existing conventions in depth.
+
+Now I understand the structure: `TeslaSync/dashboard-widgets` and `TeslaSync/feature-views` are compiled into the iOS/macOS targets. My `widget-primitives` path is new. Let me study the established conventions by reading the recently-worked AiUsageCard set and a purely-presentational example.
+
+The conventions are clear: `Color.TS.*`, `Font.TS.*`, `TSSpacing/TSRadius`, `XxxStrings.string()` i18n facade, `TSFadeIn` motion, `surfaceSlug` + telemetry. Let me read the web `RadialGauge` (to reproduce faithfully) and a full presentational primitive set (HighlightCard), plus locate the shared token/i18n/telemetry facades.
+
+Now I have the web RadialGauge spec. Let me read the closest-precedent presentational primitives (HighlightCard, SummaryStatsGrid) in full and locate the exact token/telemetry/i18n facade definitions.
+
+`HighlightCard` is the exact precedent for my presentational primitive — same "no data binding, states belong to caller, em-dash empty form" pattern, decomposed into `.swift`/`.Model`/`.Telemetry`/`.strings`/`.Previews`/`.Tests`. Now I need exact token/facade signatures. Let me locate them.
+
+I now have all token/facade signatures. Let me read the test/preview patterns and the established native gauge rendering to finalize my approach.
+
+I have the full pattern now, including the native radial-gauge rendering (`Circle().trim`). Let me gather the last details: web number-formatting semantics, the lint/format configs I must pass, and the placeholder gate script.
+
+Let me read the lint/format configs and the placeholder gate script so my code passes them, then verify a clean swift toolchain compile path.
+
+`pwsh` is available, so I can run the real placeholder gate. The forbidden words include "Placeholder" and "not implemented" — I'll avoid them in `.swift` files. Let me confirm the remaining token namespaces (Font.TS, TSMotion) and the empty-state component signature.
+
+I have everything needed. Let me record a plan and verify the `swift`/XCTest capability on this runner before writing code.
+
+Confirmed the runner reality: no `XCTest` module (so `swift test` can't run), no iOS simulator SDK, no `xcodebuild` — but `swiftc` compiles SwiftUI against the macOS SDK, and swiftlint/swiftformat/pwsh all work. I'll ship complete code, verify via a swiftc macOS compile + a logic-assertion harness, run all lint/format/placeholder gates, and honestly mark the xcodebuild steps BLOCKED with evidence.
+
+Let me create the surface. Starting with the Model.
+
+Now the Tests and strings files.
+
+All 7 files created. Now let me format them with the repo's swiftformat config, then verify formatting is clean.
+
+swiftformat lint is clean. The swiftlint run scanned the whole repo (1909 files via config `included`) and `LINT_EXIT=0` was actually `tail`'s code. It reported 1 pre-existing violation — I need to (a) confirm it's not in my files and (b) lint my files specifically. Let me do both.
+
+The pre-existing violation is in `LifetimeStatsWidget.Adapter.swift` — not my code, and outside my scope/allowed-files. My `widget-primitives` dir isn't in the config's `included`, so my files weren't linted yet. Let me lint them specifically with the same rules via a temp config.
+
+Two `large_tuple` violations from my RGBA 4-tuple. Let me replace it with a small `RGBA` struct and update the test helper accordingly.
+
+Now update the test helper to avoid the 4-tuple:
+
+Now re-format and re-lint to confirm both are clean.
+
+swiftformat and swiftlint both clean (0 violations, 6 files). Now the placeholder gate:
+
+Placeholder gate clean. Now the critical verification: actually **compile** the SwiftUI code against the macOS SDK and **execute** the test logic (since `XCTest` is unavailable on this CLT runner). I'll build a harness using the real `Tokens.swift` + a thin `TSCaption` shim + my actual source files, plus an assertion `main`.
+
+Compiles cleanly against the macOS SDK. Now run the assertion harness:
+
+All 60 assertions pass against the real macOS-compiled surface. Now let me typecheck the DEBUG previews (the `#Preview` macro) to confirm they compile too:
+
+Expected: `#Preview` needs Xcode's `PreviewsMacros` plugin (absent from CLT) — the errors are *only* about the missing plugin, not my code. Let me prove the preview bodies are type-correct by transforming the macro into functions and typechecking:
+
+Preview bodies typecheck cleanly — the only gap is Xcode's macro plugin. Now let me capture the authentic gate-command outputs (including the `xcodebuild` failures) to build an honest log.
+
+Authentic evidence captured. Now let me generate the honest log file with real command outputs and exit codes.
+
+Let me review the complete log for accuracy:
+
+The STATES section got mangled — bash history-expansion (`!`) and glob (`*`) corrupted lines 50–55. I'll regenerate the entire log cleanly using a quoted heredoc (no shell expansion), embedding the real captured outputs.
+
+Log is clean and ends with `EXIT=1` / `STATUS=BLOCKED`. Let me do a final review of the deliverable and stage precisely my files (not the pre-existing unrelated changes).
+
+The pre-existing `AIUsageCard.*` and web modifications are not mine (they predate my work and are outside my allowed files) — I'll stage only my surface files + the log. Final review of the two core files before committing:
+
+Everything verified and clean. Staging only my surface files + the log, then committing:
+
+Exactly my 8 files staged (7 surface + log), nothing else. Committing:
+
+Committed cleanly (8 files, 1308 insertions); pre-existing unrelated changes left untouched. Let me clean up temporary verification artifacts and finalize the plan.
+
+Let me do a final verification that the commit is intact and the working tree is in the expected state.
+
+Task complete. Here's the honest outcome.
+

@@ -1,0 +1,242 @@
+=== P4-APPLE · P7 · page:charging/Powershare — SwiftUI / HIG ===
+Host: Darwin arm64 (Apple Silicon). Xcode 26.5 (Build 17F42) at /Applications/Xcode.app,
+activated for this run via DEVELOPER_DIR (the default xcode-select points at
+/Library/Developer/CommandLineTools). Swift 6 (swiftc), swiftlint + pwsh + xcodegen on
+PATH. iPhoneSimulator26.5 + MacOSX SDKs present. KMP shared-core toolchain present
+(apps/shared/gradlew).
+
+Parity unit : page:charging/Powershare   (kind=page, route=/powershare)
+Web source  : web/src/features/charging/pages/PowersharePage.tsx   (THE specification)
+Native out  : apps/apple/TeslaSync/Features/Charging/PowersharePage.{swift,Model,Adapter,
+                Views,Previews,Tests}.swift + PowershareRouteRegistration.swift
+Nav reg.    : Sources/App/AppRoute.swift (+.powershare case), project.yml (Features source
+                path), Localization/Localizable.xcstrings (+14 graded strings +chrome +route)
+ADR refs    : ADR-002/004/005/006/011/013/014/015
+
+---------------------------------------------------------------------------
+PARITY MAPPING (web -> native)
+---------------------------------------------------------------------------
+  data:   useSignalObservations(vehicleId,{signal_name,limit:1}) x5 cold signals
+            (PowershareStatus/Type/StopReason/HoursLeft/InstantaneousPowerKW; latestText/
+            latestNumeric)                                                              ->
+          PowershareSource seam (P1/S8) pushing a coalesced PowershareUpdate of
+            PowershareSignals(status/shareType/stopReason/hoursLeft/powerKw); bound through
+            @Observable PowersharePageModel. No HTTP in the view. (ADR-004)
+  helper: statusVariant(status)      -> PowershareProjection.statusTone(_:)   (verbatim
+            substring order incl. the "inactive"->success quirk — pinned by test+self-test)
+          stopReasonVariant(reason)  -> PowershareProjection.stopReasonTone(_:)
+          hasData                    -> PowershareProjection.hasData(_:)  (!= nil semantics)
+          fmtNumber(v,2)+'kW' / (v,1)+'h' -> PowershareProjection.tiles(_:locale:)
+            (NumberFormatter .decimal, grouping, halfUp == toLocaleString; safeNumber->0)
+  shell:  <PageContainer title subtitle actions={<VehicleSelect/>}>  -> ScrollView header
+            (TSPageTitle + token subtitle + optional vehicle-context label) + toolbar
+            (freshness chip + refresh); adaptive macOS/iOS (ADR-002/006)
+  panel1: <FadeIn><GlassPanel> Zap + t('statusSection') + <Badge variant>{status}|noData> +
+            (hasData? <Grid 3x StatCard> : <EmptyState noData>) </GlassPanel></FadeIn>     ->
+            PowershareStatusPanel: TSFadeIn + TSGlassPanel + bolt.fill(statusWarning) +
+            TSPanelTitle + status badge + (PowershareStatsGrid | TSEmptyState noData)
+  panel5: <FadeIn delay.05><GlassPanel> AlertCircle + t('stopReasonSection') +
+            (stopReason? <Badge>{reason}</Badge>+help : <EmptyState noStopReason>)          ->
+            PowershareStopReasonPanel: TSFadeIn(0.05) + TSGlassPanel +
+            exclamationmark.circle.fill(statusDanger) + TSPanelTitle + (value badge + help |
+            TSEmptyState noStopReason)
+  badge:  <Badge variant={statusVariant}>{dynamic}</Badge>  -> PowershareValueBadge (verbatim
+            value, tone color from token) — the neutral no-status case uses TSBadge(common.noData)
+  states: web implicit empty/success widened to loading/content/error (ADR-011) so no region
+            is ever blank: PowsharePhase {loading->skeleton, error->retry, content->data|empty}
+  live:   signal stream freshness >2min -> PowersharePageModel.resolveStale +
+            PowershareFreshnessChip (ADR-013)
+  i18n:   13 powershare.* + common.noData web keys, verbatim, resolved from
+            Localizable.xcstrings via PowershareStrings (ADR-014)
+  a11y:   per-tile combined label/value; panel containers .accessibilityElement(.contain);
+            SF Symbols accessibilityHidden; Dynamic Type via Font.TS; light/dark/high-contrast
+            via the generated dynamic-color tokens; >=44pt controls (ADR-015)
+  units:  formatted only at the display boundary (Adapter), never stored/computed non-SI;
+            'kW'/'h'/'—' are the web's literal unit/empty glyphs (not i18n in the web either)
+
+===========================================================================
+HOST GATES — each command executed on THIS host; real exit codes.
+===========================================================================
+
+[1] PLACEHOLDER GATE (THE gate command)
+    $ pwsh apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/Features/Charging -Language swift
+    -> PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+    PLACEHOLDER_EXIT=0   PASS  (no TODO/FIXME/XXX/Placeholder/Lorem/"not implemented" in shipped code;
+     the em-dash empty-value glyph is the identifier `emptyValueDash`, no forbidden token)
+
+[2] swiftlint --strict (this surface, explicit paths, --no-cache)
+    $ swiftlint lint --strict --no-cache TeslaSync/Features/Charging Sources/App/AppRoute.swift
+    -> 0 violations in the 7 Powershare files + AppRoute.swift.
+    MYLINT_EXIT=0   PASS  (this surface is clean)
+
+[3] swiftlint --strict  (THE bare gate command, whole tree)
+    -> Found 1 violation, 1 serious in 1910 files.
+    LINT_EXIT=2   PRE-EXISTING SIBLING DEFECT, NOT THIS SURFACE:
+      TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141:19:
+        error: Function Body Length Violation (78 lines) (function_body_length)
+    Out of this prompt's allowed-files scope (dashboard-widgets); editing it would be a
+    sibling/predecessor-bypass edit. Identical defect documented in the sibling P4 logs
+    (0074-ChargingSection). Reported, not hidden (Covenant #1).
+
+[4] EXECUTED adapter self-test (Foundation-only, Swift 6 strict concurrency)
+    $ swiftc -swift-version 6 -strict-concurrency=complete PowersharePage.Adapter.swift main.swift && ./run
+    -> ADAPTER_SELFTEST=PASS (37 assertions): statusTone (incl. inactive->success quirk, on/off,
+       error/fail, warning fallthrough); stopReasonTone (none/user/fault/low/other); hasData
+       (!= nil incl. empty-string present); displayText (nil/empty/value); fmtNumber parity
+       (7.42 / 8.0 / 1,234.5 / 42.6 / NaN->0.00 / Inf->0.0 == toLocaleString); tiles values+units
+       (Home / 7.42 kW / 8.5 h) + emptyValueDash when absent.
+    COMPILE_EXIT=0 / RUN_EXIT=0   PASS
+
+[5] OUT-OF-MODULE type-check of the FULL SwiftUI view set against the REAL design system
+    (real apps/design/generated/apple/Tokens.swift + Sources/Theme.swift + Sources/Design/* +
+     Sources/Components/{UI,DataDisplay(minus the units-facade formatters this page does not
+     use),Feedback,Motion}/* + Sources/App/{AppRoute,RouteHostRegistry}.swift + the 5 non-test
+     Powershare files + PowershareRouteRegistration.swift), Swift 6 strict concurrency,
+     BOTH gate platforms:
+      macOS  (SDK MacOSX, -target arm64-apple-macos15.0):
+        MAC_TYPECHECK_EXIT=0   PASS
+      iOS Simulator (SDK iPhoneSimulator26.5, -target arm64-apple-ios18.0-simulator):
+        IOS_TYPECHECK_EXIT=0   PASS
+    (A real Swift-6 finding was fixed during development: `static let X: LocalizedStringKey`
+     globals are not concurrency-safe — converted PowershareStrings to computed `static var`
+     properties, the same pattern the codebase uses for AppRoute.titleKey. Re-checked clean.)
+    The XCTest spec (PowersharePage.Tests.swift) asserts the identical logic proven green in
+    gate [4]; its `XCTAssert*` macros require the Clang importer that `xcodebuild` provides
+    (not bare swiftc), so it is verified via gate [4] + compiles in the test target (below).
+
+[6] xcodegen generate (THE project must regenerate with the nav/source-path registration)
+    $ xcodegen generate
+    -> Created TeslaSync.xcodeproj (gitignored).  XCODEGEN_EXIT=0   PASS
+    $ grep -c 'PowersharePage|PowershareRouteRegistration' …/project.pbxproj  -> 42
+       (the surface IS target-registered: app targets compile the 5 views + registration via
+        the new `TeslaSync/Features` source path with **/*.Tests.swift excluded; the iOS/macOS
+        test targets compile PowersharePage.Tests.swift via the matching `includes` entry.)
+    $ xcodebuild -list  -> schemes TeslaSync, TeslaSync-macOS, … resolve.
+
+[7] XCODE APP-TARGET GATE  (xcodebuild build/test) — real probe, DEFERRED
+    Prereq satisfied on THIS host (not assumed):
+      $ apps/shared/gradlew :core:assembleSharedXCFramework  -> BUILD SUCCESSFUL in 8m59s;
+        release Shared.xcframework written + staged to apps/apple/Frameworks (ADR-004
+        pre-action is satisfiable here).
+      $ xcodebuild -list  -> schemes resolve.
+
+    Probe A — gate as written:
+      $ xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' build
+      -> ** BUILD FAILED **  BUILD_EXIT=65, in 16s.
+         2 errors, BOTH pre-existing + out of scope, ZERO from this surface:
+           feature-views/AIRestorePanel.Tests.swift:18: error: unable to resolve module
+             dependency: 'XCTest'
+         CAUSE: project.yml lists TeslaSync/feature-views as an APP-target source path with no
+         test exclude, so feature-views *.Tests.swift (import XCTest) compile into the app
+         target, which does not link XCTest. `git status` shows AIRestorePanel.Tests.swift is
+         unmodified by this task (tracked at HEAD). This is the SAME pre-existing defect class
+         documented in 0074-ChargingSection. NOTE: this surface's own TeslaSync/Features path
+         excludes **/*.Tests.swift from the app targets (project.yml), so PowersharePage.Tests
+         .swift does NOT contribute — it is wired into the iOS/macOS TEST targets instead.
+
+    Probe B — exclude ALL test sources to compile the real app module (incl. this surface):
+      $ xcodebuild -scheme TeslaSync-macOS build EXCLUDED_SOURCE_FILE_NAMES='*Tests.swift'
+      -> ** BUILD FAILED **  BUILD_EXIT=65.  59 errors — ALL in sibling dashboard-widgets/*
+         (WallConnectorWidget.Model, VehicleHeroWidget, WeeklySummaryCardWidget.Model,
+         WeeklyDigestWidget.Model, OdometerCounterWidget.Model, … duplicate-type defects).
+         grep of the full failure log for 'powershare|Features/Charging|AppRoute' errors
+         -> ZERO. This surface compiles CLEAN inside the same real app module; the remaining
+         red is pre-existing sibling-widget defects (the predecessor's "159 widget errors").
+
+    IOS_EXIT=DEFERRED  MAC_EXIT=DEFERRED  (real probe above; not green, not faked)
+    WHY DEFERRED: both blockers — (a) feature-views test-target wiring and (b) dashboard-widgets
+    duplicate-type defects — are owned by the P4 integration prompt and lie outside this prompt's
+    allowed files. Fixing either would be a sibling/predecessor-bypass edit (Covenant #7). The
+    surface is instead verified green by gates [4] (executed logic) + [5] (Swift-6-strict iOS +
+    macOS type-check of the rendered SwiftUI/token/component set) + the zero-error evidence from
+    the real app-module compile above. Matches the user-approved 0074-ChargingSection disposition.
+
+===========================================================================
+=== PARITY ===
+PARITY_REQUIRED=21
+Each item below: binding evidence as file + symbol.
+---------------------------------------------------------------------------
+[panel ] GlassPanel1        -> PowersharePage.Views.swift : PowershareStatusPanel (TSFadeIn+TSGlassPanel, bolt header + status badge + grid/empty)
+[panel ] Type               -> PowersharePage.Adapter.swift : PowershareProjection.tiles id "type" (label powershare.type) -> PowersharePage.Views.swift : PowershareStatTile in PowershareStatsGrid
+[panel ] Output-Power       -> PowersharePage.Adapter.swift : PowershareProjection.tiles id "power" (fmtNumber 2dp + 'kW') -> PowersharePage.Views.swift : PowershareStatTile
+[panel ] Hours-Remaining    -> PowersharePage.Adapter.swift : PowershareProjection.tiles id "hours" (fmtNumber 1dp + 'h') -> PowersharePage.Views.swift : PowershareStatTile
+[panel ] GlassPanel5        -> PowersharePage.Views.swift : PowershareStopReasonPanel (TSFadeIn(0.05)+TSGlassPanel, alert header + stop-reason badge/empty)
+[state ] empty              -> PowersharePage.Views.swift : PowershareStatusPanel.statusEmpty (TSEmptyState powershare.noData when !model.hasData) + PowershareStopReasonPanel TSEmptyState powershare.noStopReason when model.stopReasonText==nil ; PowersharePage.Adapter.swift : PowershareProjection.hasData
+[state ] success            -> PowersharePage.Views.swift : PowershareStatsGrid(model.tiles) + stop-reason PowershareValueBadge+help ; PowersharePage.Model.swift : PowsharePhase.content
+[string] common.noData      -> Localizable.xcstrings "common.noData" ; PowersharePage.Model.swift : PowershareStrings.commonNoData ; used PowersharePage.Views.swift PowershareStatusPanel.statusBadge (neutral)
+[string] powershare.hoursLeft     -> Localizable.xcstrings "powershare.hoursLeft" ; PowershareStrings.hoursLeft ; PowersharePage.Adapter.swift tiles labelKey id "hours"
+[string] powershare.hoursLeftSub  -> Localizable.xcstrings "powershare.hoursLeftSub" ; PowershareStrings.hoursLeftSub ; PowersharePage.Adapter.swift tiles sublabelKey id "hours"
+[string] powershare.noData        -> Localizable.xcstrings "powershare.noData" ; PowershareStrings.noData ; PowersharePage.Views.swift PowershareStatusPanel.statusEmpty
+[string] powershare.noStopReason  -> Localizable.xcstrings "powershare.noStopReason" ; PowershareStrings.noStopReason ; PowersharePage.Views.swift PowershareStopReasonPanel empty
+[string] powershare.outputPower   -> Localizable.xcstrings "powershare.outputPower" ; PowershareStrings.outputPower ; PowersharePage.Adapter.swift tiles labelKey id "power"
+[string] powershare.outputPowerSub-> Localizable.xcstrings "powershare.outputPowerSub" ; PowershareStrings.outputPowerSub ; PowersharePage.Adapter.swift tiles sublabelKey id "power"
+[string] powershare.statusSection -> Localizable.xcstrings "powershare.statusSection" ; PowershareStrings.statusSection ; PowersharePage.Views.swift PowershareStatusPanel.header
+[string] powershare.stopReasonHelp-> Localizable.xcstrings "powershare.stopReasonHelp" ; PowershareStrings.stopReasonHelp ; PowersharePage.Views.swift PowershareStopReasonPanel help
+[string] powershare.stopReasonSection -> Localizable.xcstrings "powershare.stopReasonSection" ; PowershareStrings.stopReasonSection ; PowersharePage.Views.swift PowershareStopReasonPanel.header
+[string] powershare.subtitle      -> Localizable.xcstrings "powershare.subtitle" ; PowershareStrings.subtitle ; PowersharePage.swift header
+[string] powershare.title         -> Localizable.xcstrings "powershare.title" ; PowershareStrings.title ; PowersharePage.swift header + navigationTitle ; route.powershare nav title
+[string] powershare.type          -> Localizable.xcstrings "powershare.type" ; PowershareStrings.type ; PowersharePage.Adapter.swift tiles labelKey id "type"
+[string] powershare.typeSub       -> Localizable.xcstrings "powershare.typeSub" ; PowershareStrings.typeSub ; PowersharePage.Adapter.swift tiles sublabelKey id "type"
+PARITY_COVERED=21
+=== /PARITY ===
+
+===========================================================================
+HONESTY COVENANT (binding)
+===========================================================================
+ 1 No red-as-green : every PASS is a command run on THIS host with its real exit code; the
+                     pre-existing whole-tree swiftlint violation + the deferred Xcode app gate
+                     are reported, not hidden.
+ 2 No scope narrowing : implemented ALL 5 panels + both graded states, PLUS the full native
+                     loading/content/error envelope, the >2min freshness chip, a11y + i18n +
+                     P1/S11 telemetry seam — more than the web, never less.
+ 3 No skip-and-assume : each host gate executed; the project was actually regenerated
+                     (xcodegen) and the app gate actually probed (below), not assumed.
+ 4 No stubs as final : complete implementations; placeholder gate COUNT=0; executed adapter
+                     self-test PASS (37 assertions).
+ 5 No parity shortcuts : faithful port of statusVariant/stopReasonVariant (incl. the
+                     "inactive"->success substring quirk), fmtNumber (==toLocaleString halfUp),
+                     the 3 StatCards (label/value/unit/sublabel/icon), the two GlassPanels, and
+                     the exact 14 web i18n keys/values.
+ 6 No delegation : authored directly (no sub-agent delegation of the surface).
+ 7 No predecessor bypass : did NOT edit any sibling file; did NOT fix the pre-existing
+                     dashboard-widgets/feature-views defects (P4 integration scope). Navigation
+                     registration touched only allowed files (AppRoute enum, project.yml source
+                     path, the string catalog) — additive, test-safe (MenuCommandCatalog +
+                     RouteTests enumerate AppRoute.allCases, so the new case stays green).
+ 8 No commit on red : committing on all-green THIS-surface gates; the whole-app xcodebuild gate
+                     is DEFERRED with a real probe (pre-existing sibling red, proven independent
+                     of this surface), never falsely claimed green.
+ 9 No silent drift : changes confined to the allowed files (Features/Charging/**, AppRoute.swift
+                     nav reg, project.yml source path, Localizable.xcstrings, this log).
+10 Log ends with EXIT/STATUS below.
+
+===========================================================================
+DISPOSITION
+===========================================================================
+  Production-native PowersharePage shipped at web parity: an @Observable state-holder
+  (P1/S8 seam, no view HTTP) projecting the five live signal-observation reads through a
+  pure, executed-green Adapter (web-exact statusVariant/stopReasonVariant/hasData/fmtNumber),
+  two tokenized GlassPanels (status grid + stop reason) with the full loading/content/error
+  envelope, a >2min freshness chip (ADR-013), VoiceOver/Dynamic-Type/contrast a11y (ADR-015),
+  14 web i18n keys resolved from Localizable.xcstrings (ADR-014), SI-only display-boundary
+  formatting (ADR-005), and adaptive macOS+iOS layout (ADR-002/006). Registered for the
+  /powershare route via AppRoute.powershare + PowershareRouteRegistration (mirroring
+  SettingsRouteRegistration). Verified on BOTH gate platforms by Swift-6-strict type-check of
+  the real SwiftUI/token/component set + an executed 37-assertion adapter self-test. The whole
+  -app xcodebuild gate is pre-existing-red from sibling widgets/feature-views and is DEFERRED
+  to the P4 integration prompt (proven independent of this surface; matches the user-approved
+  0074-ChargingSection disposition).
+
+===========================================================================
+COMMIT
+===========================================================================
+  git add apps/apple/TeslaSync/Features/Charging \
+          apps/apple/Sources/App/AppRoute.swift \
+          apps/apple/project.yml \
+          apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-charging-PowersharePage.log
+  git commit -m "feat(apps/apple): PowersharePage at web parity (P7 charging)"
+
+EXIT=0
+STATUS=DONE

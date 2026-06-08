@@ -1,0 +1,173 @@
+================================================================================
+P4 · Feature view · 0210 — QuietHoursPanel (Apple)
+Run: 2026-06-08T01:34-0700   Host: Darwin arm64   Branch: auto/20260608-002645-33927/121
+Base: c9c6fdb9f
+Prompt: P4 · feature-views · 0210 — QuietHoursPanel (Apple)
+Web source (spec): web/src/features/settings/components/QuietHoursPanel.tsx (583 lines)
+Mode: code-complete + host-validated; DEFERRED full-app Xcode scheme build/test
+      (ADR-012 macOS-pending), matching predecessors 0231 FSMTimelineChart /
+      0180 AlertMessageEditor / 0010 ToolCard.
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                 OK
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        OK
+  iOS simulator SDK .......... iPhoneSimulator 26.5 (deployment target iOS 18.0)    OK
+  macOS SDK .................. MacOSX 26.5 (deployment target macOS 15.0)            OK
+  iOS simulator device ....... iPhone 16 present + booted (simctl via Xcode)        OK
+  swiftlint .................. present                                              OK
+  swiftformat ................ present                                              OK
+  xcodegen ................... present                                              OK
+  pwsh (placeholder gate) .... present                                             OK
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks has only .gitkeep) WARN
+  codesign identities ........ none (BLOCKER for signed app gate, ADR-012)         WARN
+
+  Capability note: this surface requires only SwiftUI (web "Charts/maps used" lists
+  NONE — it is a settings CRUD list + inline form, no Recharts/Leaflet). The core
+  requirement — SwiftUI on iOS 18 / iPadOS 18 / macOS 15 — is available and PROVEN by
+  REAL iOS-18 + macOS-15 SDK `swiftc -typecheck` AND a passing 44-test XCTest run
+  below. The capability-BLOCKED escape hatch therefore does NOT apply; the surface is
+  authored and host-validated for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/feature-views/QuietHoursPanel.*) ===
+  QuietHoursPanel.Adapter.swift     330  Foundation-only pure core: QuietHoursWindow / Draft /
+                                         SaveRequest / ActionError value types, the verbatim web
+                                         `validateDraft` field-order guard (HH:MM start, HH:MM end,
+                                         end!=start, tz required, 1..127 weekday mask; empty bypass
+                                         allowed) composing the save request, phase resolution, and
+                                         the `summarizeWindow` port.
+  QuietHoursPanel.Catalog.swift      92  Foundation-only catalogs (split for the 400-line house
+                                         budget): QuietHoursSeverity (web SEVERITY_CHOICES order) +
+                                         QuietHoursWeekday (bit positions == models.QuietHoursWeekday*
+                                         Sun=1<<0..Sat=1<<6, allMask 127).
+  QuietHoursPanel.Content.swift     169  Foundation-only tail: P1/S11 surface slug, the IANA timezone
+                                         catalog (web `listTimezones` → TimeZone.knownTimeZoneIdentifiers,
+                                         current ensured), the LOCALIZED `nextWindowChangeLabel` port
+                                         (web baked English; native routes via i18n), VoiceOver builders.
+  QuietHoursPanel.Toast.swift       111  Foundation-only toast projection — the web `useToast`
+                                         success(created/updated/deleted)/error(save/delete + detail).
+  QuietHoursPanel.Seams.swift       197  P1/S11 telemetry seam + P1/S10 strings facade + source
+                                         snapshot + P1/S8 QuietHoursSource protocol (save/delete) +
+                                         InMemory source for previews/tests.
+  QuietHoursPanel.Model.swift       209  @MainActor @Observable QuietHoursPanelModel: project on apply,
+                                         phase + freshness, inline add/edit draft lifecycle, per-row
+                                         delete guard, published toast, stale auto-refresh / offline,
+                                         one-shot view.opened.
+  QuietHoursPanel.swift             113  Composed surface: TSGlassPanel + TSFadeIn + phase switch
+                                         (loading/error/empty/content) + inline form + toast overlay
+                                         + auto-dismiss .task + view.opened lifecycle + a11y summary.
+  QuietHoursPanel.Views.swift       321  Token-driven chrome: header (moon IconBox + title/subtitle +
+                                         Add) + freshness chip + stale/offline banner + action button
+                                         (primary/secondary/danger) + tone pill + toast banner.
+  QuietHoursPanel.Row.swift         147  One window row: enabled/disabled badge + `start → end (tz)`
+                                         summary + next-change + active-weekday chips + bypass-severity
+                                         badges + Edit/Delete (combined-element a11y, actions separate).
+  QuietHoursPanel.Form.swift        297  Inline add/edit form (web `draft` block): enabled toggle,
+                                         native HH:MM DatePickers, IANA timezone menu picker, weekday
+                                         + severity toggle chips (aria-pressed → isSelected), inline
+                                         validation error, Cancel / Create-Update, HH:MM⟷Date bridge.
+  QuietHoursPanel.States.swift      103  loading skeleton / empty (web EmptyState) / error+retry
+                                         (prompt-required; web folds load error into empty).
+  QuietHoursPanel.Previews.swift    134  #if DEBUG previews: content / empty / loading / error / stale
+                                         / offline / form-add / form-edit / toast variants.
+  QuietHoursPanel.strings            83  P1/S10 catalog — the web source keys (quietHours.* +
+                                         toast.quietHours.*) + next-change + native chrome/a11y.
+  QuietHoursPanel.Tests.swift       340  XCTest: adapter (HH:MM, parseMinutes, validate field order,
+                                         create/update request, empty-bypass-allowed, phase, summarize),
+                                         catalog (weekday bits, severity order/map, draft toggles,
+                                         blank/edit), next-change (wrap + non-wrap branches, disabled,
+                                         not-today, malformed), timezone catalog, toast, a11y summaries.
+  QuietHoursPanel.ModelTests.swift  216  XCTest: model lifecycle (view.opened once, content/empty/
+                                         loading/failed phases), stale auto-refresh once + re-arm,
+                                         offline keeps cache, form present/edit/cancel, submit valid
+                                         create+update / invalid inline / failure toast / in-flight,
+                                         delete + toast + in-flight, toast dismiss, refresh+stop.
+  Total 2779 .swift lines (14 .swift + 1 .strings = 15 files). Every .swift file <= 330
+  lines (house file_length 400); largest Adapter.swift 330. Zero `// parity:allow` opt-outs.
+
+=== PARITY (vs web QuietHoursPanel.tsx) ===
+  Data sources (web hooks → native P1/S8 source seam):
+    useQuietHours / useSaveQuietHours / useDeleteQuietHours → QuietHoursSource (start/refresh/
+                                                              save(request)/delete(id)) + QuietHoursUpdate
+    useToast                                               → QuietHoursToast (model-published) + banner
+    useTranslation                                        → QuietHoursStrings facade (P1/S10)
+  Verbatim web logic ported + unit-pinned:
+    validateDraft guard order (startInvalid → endInvalid → endEqual → timezoneRequired →
+      weekdaysRequired; empty bypass passes) → QuietHoursProjection.validate ·
+    SEVERITY_CHOICES [critical,warn,info] + WEEKDAYS Sun=1<<0..Sat=1<<6 / ALL=127 ·
+    makeDraft defaults (enabled, 23:00→07:00, resolved IANA tz, all weekdays, ['critical']) ·
+    summarizeWindow `start → end (tz)` · nextWindowChangeLabel wrap/non-wrap branches ·
+    save id-present → PATCH update / absent → POST create (toast updated vs created) ·
+    delete → toast removed; per-row delete disabled while in flight.
+  Web shared components → native counterparts:
+    GlassPanel → TSGlassPanel · IconBox → TSIconBox · Badge → tone pill · Button → action button ·
+    Toggle → SwiftUI Toggle · Input[type=time] → DatePicker(.hourAndMinute) · Select → Picker(.menu) ·
+    Spinner/EmptyState → TSSkeleton + empty hero · FadeIn → TSFadeIn · Toast → toast banner.
+  States (all render, never a blank box): loading(skeleton) · empty(web "No quiet-hours
+    windows yet…", suppressed while the inline form is open per web `!draft`) · error(+retry,
+    prompt-required) · stale(chip + one auto-refresh) · offline(cached + chip) — a freshness
+    envelope (ADR-013) around the web isLoading/empty/list split.
+  i18n: every web key (quietHours.title/subtitle/addWindow/loading/empty/enabled/disabled/edit/
+    delete/bypassLabel, severity.*, weekday.*, form.*, error.*, toast.quietHours.*) + next-change
+    + native chrome/a11y resolve via the P1/S10 facade; catalog carries the verbatim web English.
+    No English literals in native code. a11y: per-row combined VoiceOver summary + section summary
+    + labeled time pickers / timezone picker / weekday + severity toggles (isSelected) / Add / Edit /
+    Delete / Cancel / Create-Update / toast dismiss; Dynamic Type via Font.TS; reduce-motion-safe.
+  Telemetry: emits view.opened with surface slug "QuietHoursPanel" once (P1/S11), asserted.
+
+=== HOST-RUNNABLE GATES (all green; lint/format scoped to <surface> per predecessor methodology) ===
+  swiftformat --lint <surface> ................ 0/14 require formatting             FORMAT_EXIT=0
+  swiftlint lint --strict <surface> ........... 0 violations, 0 serious            LINT_EXIT=0
+  check-placeholders.ps1 -Language swift ...... PLACEHOLDER_COUNT=0 ALLOWED=0       PLACEHOLDER_EXIT=0
+  swiftc -typecheck iPhoneSimulator (ios18.0-simulator, swift6, -D DEBUG) .......... IOS_TYPECHECK_EXIT=0
+  swiftc -typecheck MacOSX (macos15.0, swift6, -D DEBUG) .......................... MAC_TYPECHECK_EXIT=0
+  swift test (isolated SwiftPM pkg, module QHKit, macOS 15, Swift 6 strict) ........ 44/44 passed, TEST_EXIT=0
+      → QuietHoursProjectionTests (12) · QuietHoursCatalogTests (4) ·
+        QuietHoursNextChangeTests (6) · QuietHoursTimeZonesTests (1) ·
+        QuietHoursToastTests (2) · QuietHoursAccessibilityTests (2) ·
+        QuietHoursPanelModelTests (17)
+      Harness links the REAL design tokens (Tokens.swift) + the REAL Sources/Design +
+      the REAL Sources/Components shared library; the single out-of-scope Units-coupled
+      DataDisplay/UnitFormatters.swift is excluded (that atom belongs to the SharedFacade /
+      P4 component-library scope, not this surface). No shims — real shared primitives.
+  xcodegen generate (project spec enumerates the 15 new files, 90 refs) ............ XCODEGEN_EXIT=0
+
+=== DEFERRED (ADR-012 macOS-pending) — full-app Xcode scheme build/test ===
+  xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+  xcodebuild -scheme TeslaSync-macOS build test
+    NOT run-to-green here. Captured failure (bounded target-level build, this tree):
+      error: There is no XCFramework found at '.../apps/apple/Frameworks/Shared.xcframework'.
+      ** BUILD FAILED **
+    Blocked by PRE-EXISTING, UNRELATED parallel-merge state in the shared app target —
+    ZERO of which originates in this surface (all verified present in THIS tree):
+      • Shared.xcframework not staged (apps/apple/Frameworks has only .gitkeep); the scheme
+        pre-action builds it via the Kotlin/Native Gradle toolchain (the P1/S3 artifact
+        already tracked macOS-pending).
+      • `struct DashboardWidgetSize` redefined across 15 files (Sources/DashboardWidgets/* +
+        TeslaSync/dashboard-widgets/*) — "invalid redeclaration" across the app target.
+      • 263 co-located feature-view/dashboard-widget *.Tests.swift `import XCTest` into the
+        app target (this surface's 2 test files follow that SAME established sibling
+        convention; they do not introduce a new failure class).
+      • No macOS development-signing identity (ADR-012).
+    The literal repo-wide `swiftlint --strict` / `swiftformat --lint apps/apple` gate commands
+    likewise trip on PRE-EXISTING violations in OTHER surfaces outside this surface's allowed
+    files (e.g. TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift function_body_length;
+    TeslaSync/feature-views/ActionBuilder.Previews.swift blankLinesBetweenScopes) — hence the
+    surface-scoped runs above, matching the predecessor logs. This surface's OWN code is proven
+    to compile against the real iOS-18 + macOS-15 SDKs (typechecks above) and its logic runs
+    green (44/44 XCTest). The full-app build/test is recorded in
+    apps/macos-pending-verifications.md for the P99 acceptance gate on a macos-latest runner
+    with signing identities.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders on Apple with all web states reproduced (loading/empty/error/stale/offline).
+  [x] Hooks bind to the shared P1/S8 source seam; no direct HTTP from the view.
+  [x] Every i18n key from source has a matching key in the P1/S10 catalog (web keys + native chrome).
+  [x] Accessibility labels present on every interactive element + per-row + section summaries.
+  [x] Tests: adapter unit tests + per-state model tests + a11y label tests (44 total, green).
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code (stub gate: 0, 0 opt-outs).
+  [~] xcodebuild build test: DEFERRED to P99 macos-latest (pre-existing unrelated blockers);
+      host-runnable equivalents (real-SDK typecheck both platforms + 44/44 XCTest) green.
+
+EXIT=0
+STATUS=DONE

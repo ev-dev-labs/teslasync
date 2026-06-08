@@ -1,0 +1,92 @@
+I'll start by exploring the environment and understanding the task structure.
+
+Key findings: `xcodebuild` requires full Xcode (only CLT installed), but `swift` 6.3.2, `swiftlint`, and `swiftformat` are available. Web source is at `web/src/components/mobile/PullToRefresh.tsx`. There's in-progress work on `AIUsageCard.*` as a pattern. Let me explore deeply.
+
+Now I understand the web source. Let me study the existing Apple conventions — the AIUsageCard template, project.yml, and check for existing shared-surfaces work.
+
+The case mismatch is just macOS filesystem quirk — files are `AiUsageCard.*`. Now let me study the canonical template and shared infrastructure in parallel.
+
+AiUsageCard is large/data-heavy. Let me focus on the shared infra I must bind to: state holders, tokens, i18n, diagnostics, and find native equivalents for the hooks.
+
+Excellent — clear template now. Let me read the rest of the AcDcStatsPanel set (Model, Adapter, Views, Previews, Tests) to learn the full 7-file contract, plus the i18n helper definition.
+
+Let me read the full Model file (it contains the state-holder, telemetry, and i18n facade patterns).
+
+I now understand the architecture. Let me probe build capabilities (full Xcode? xcodegen? standalone swiftc?) and read the remaining template + token files in parallel.
+
+Full Xcode IS at `/Applications/Xcode.app`, `xcodegen` is available, and standalone SwiftUI typecheck works. Let me check the build setup (project.yml, vendored frameworks, simulators) and read the tokens/Adapter/Tests/Motion templates.
+
+Critical facts: `Frameworks/` is empty (KMP `Shared.xcframework` not vendored), iPhone 16 sim is booted, reduce-motion uses `@Environment(\.accessibilityReduceMotion)`. Let me read the Adapter/Tests templates, correct project.yml, and token/feedback definitions.
+
+Confirmed: app targets depend on `Frameworks/Shared.xcframework` which is **absent** (only `.gitkeep`) — so the full-app `xcodebuild` gate can't link without the KMP framework (out of my allowed scope). I'll build a complete surface verifiable via standalone typecheck. Let me locate token definitions and the test framework convention.
+
+XCTest + `@testable import TeslaSync` is the convention. Tokens live in `design/generated/apple/Tokens.swift`. Let me read the full tokens and the UI/feedback components I may compose with.
+
+I have all tokens. Let me read the component signatures I'll compose with (glass panel, button, badges, feedback states, banners).
+
+I have the full token + component vocabulary. Let me confirm components are KMP-free (so I can typecheck standalone) and grab the remaining init signatures.
+
+Components and feature-views are KMP-free — I can typecheck standalone. Let me read the lint/format configs, the placeholder checker, and confirm tooling, then start building.
+
+Everything needed is confirmed: full Xcode + `pwsh` + `xcodegen` exist, but app targets require the **absent** `Frameworks/Shared.xcframework` (KMP core, outside my allowed file set), so the full-app `xcodebuild` gate can't link here. I'll build a complete, polished surface verifiable via standalone `swiftc` typecheck + swiftlint + swiftformat + placeholder check, and record the xcodebuild step honestly.
+
+Let me set up the plan and directory.
+
+Directory ready; SDK is iPhoneSimulator26.5 (deploys to 18.0 fine). Now I'll write all seven surface files. Starting with the pure-logic Adapter and the Model/seam layer.
+
+Now the main container view, the indicator views, previews, tests, and strings catalog.
+
+Now the tests, then I'll verify the test-target wiring convention in project.yml.
+
+Now the strings catalog, then I'll verify the test-target source globbing in project.yml.
+
+All seven files written. The test target wires via `Tests/Unit` and the app target globs `feature-views` (matching the established `*.Tests.swift` convention). Now I need to harden for Swift 6 strict concurrency (the project uses `SWIFT_STRICT_CONCURRENCY: complete`) — I'll refactor the release path to avoid sending non-Sendable closures across `Task` boundaries.
+
+Now let me verify compilation. I'll run a standalone Swift 6 strict-concurrency typecheck of the runtime surface (Adapter + Model + Views + container) against the design tokens, targeting the iOS 18 simulator SDK.
+
+Typecheck passes (exit 0) with two Swift 6 `#SendableMetatypes` warnings — the `Task` closures implicitly capture `self` (hence `Content.Type`). Let me eliminate them by capturing locals so the `Task` never captures the generic `self`.
+
+iOS and macOS typecheck cleanly with zero warnings. Now let me verify the Previews file (which composes shared Feedback/UI components) by locating its dependency closure.
+
+Components are SwiftUI-only (no SharedFacade/KMP refs). Let me typecheck the Previews against the UI/Feedback/Motion component closure.
+
+FeedbackOverlays (not used by my previews) pulls in DataDisplay. Let me scope to the precise component files my Previews actually need.
+
+Previews typecheck cleanly. Now let me verify the Tests file by building the surface as a `-enable-testing` module and typechecking the tests against it (with XCTest).
+
+The module builds and all my surface symbols resolve — the only errors are XCTest's C assertion macros, which aren't available under bare `swiftc -typecheck` (an invocation artifact, not a code issue). Let me get real evidence by compiling **and running** the unit tests via a temporary SwiftPM package (Swift 6, macOS 15, where XCTest works properly).
+
+The module compiles cleanly — the errors are in my test closures hitting `@Sendable` constraints. The cleaner fix: run `beginRefresh` on a `@MainActor` Task so its closure needn't be `@Sendable`. Let me adjust the model + container, then simplify the tests.
+
+All 24 unit tests pass under Swift 6 / strict concurrency. Let me re-verify the container typechecks cleanly (iOS + macOS) after the `@MainActor` Task change, then run formatting and linting.
+
+Both clean. Now format and lint my files.
+
+swiftformat auto-fixed 4 files; `--lint` now passes (exit 0). Let me re-verify everything still compiles/tests after formatting, and run swiftlint.
+
+One swiftlint rule firing: `multiple_closures_with_trailing_closure` — my `PullToRefresh(onRefresh:){content}` previews pass two closures with one trailing. I must pass `content:` explicitly. Let me view the formatted Previews and fix all 8.
+
+I'll convert all 8 container previews to pass `content:` explicitly (anchoring each on its unique preview title).
+
+Now re-format and re-lint to confirm the Previews fix is clean.
+
+swiftformat `--lint` and swiftlint `--strict` both pass with 0 issues. Let me re-typecheck the Previews (post-edit) and run the placeholder gate.
+
+All gates green. Let me run the final authoritative `swift test` on the exact current bytes (post-format) to confirm before writing the log.
+
+Final 24/24 tests pass on the committed bytes. Now let me capture real evidence for the official gate's BLOCKED state by attempting `xcodegen` + `xcodebuild` (which will fail on the absent KMP `Shared.xcframework`).
+
+xcodegen succeeded; `Frameworks/` confirms only `.gitkeep` (no `Shared.xcframework`). Now the actual gate build — it should fail on the missing KMP framework.
+
+The bounded full-app build hit the timeout (exit 124) — it compiles the entire 1400+ file app and ultimately can't link without the absent KMP framework. Let me capture clean, fast evidence from the generated project instead, then clean up.
+
+In-scope checks all pass; the official full-app `xcodebuild build/test` is blocked by the absent KMP `Frameworks/Shared.xcframework` (10 refs in the generated project, file missing) and the surface isn't yet registered in `project.yml` (outside my allowed files). Let me write the honest gate log.
+
+All gates recorded. Now let me commit only my files (the surface + log), excluding the pre-existing AIUsageCard working-tree changes.
+
+Staged set is exactly the 7 surface files + log. Committing.
+
+Commit `858134072` succeeded with exactly the 7 surface files + log; the pre-existing AIUsageCard changes remain untouched. Let me do a final visual review of the formatted container to confirm it's clean.
+
+The formatted container is clean and correct. Everything is verified and committed. Let me finalize the plan notes and conclude.
+

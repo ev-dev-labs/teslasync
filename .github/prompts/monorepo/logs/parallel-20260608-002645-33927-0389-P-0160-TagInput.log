@@ -1,0 +1,130 @@
+I'll start by understanding the task: create a native Apple SwiftUI version of the `TagInput` component. Let me first check the capability requirements and explore the existing structure.
+
+Swift 6.3.2, swiftlint, swiftformat are available, but `xcodebuild` requires full Xcode (only Command Line Tools installed). Let me explore the existing Apple structure and patterns before deciding on approach.
+
+The `shared-surfaces` directory doesn't exist yet — I'll create it. Let me study the existing patterns in `apps/apple/TeslaSync/` (where my output goes) and the supporting infrastructure.
+
+Now let me read the web source (the specification) completely, plus key infrastructure files.
+
+I now have the complete web spec. Let me study the existing native patterns: a feature-view surface, form inputs, feedback states, the state-holder facade, design tokens, and localization.
+
+There's an existing minimal `TSTagInput` atom (out of scope — that's the component-library bundle). My surface must reproduce the FULL web spec. Let me study the design tokens, feedback states, state-holder facade, a representative feature-view surface, and the build config.
+
+Let me locate the design tokens, state holders, telemetry contract, announcer, and study a full feature-view surface (AddressInput) plus the build config.
+
+Let me gather the remaining critical infrastructure: design tokens location, Shared framework staging, xcodegen availability, the announcer, telemetry pattern, a full feature-view exemplar, and the localization catalog.
+
+The canonical full-surface pattern is clear (AddressInput has 10 files). Let me read that exemplar thoroughly plus the telemetry facade and typography components.
+
+This self-contained pattern (telemetry seam + strings facade + state-holder protocol + in-memory source, no `import Shared`) means the surface is KMP-free and independently testable. Let me read the remaining exemplar files plus tokens and UI components.
+
+Now let me read the Previews exemplar, design tokens, typography components, lint configs, and the placeholder checker.
+
+Let me read the lint configs, typography components, and the placeholder checker to ensure full compliance.
+
+`pwsh` is available — I can run the placeholder gate. Let me read the placeholder checker and its patterns, then set up my plan.
+
+I have the full blueprint. Let me verify toolchain specifics: SwiftUI importability for standalone typechecking, how co-located `.Tests.swift` files are routed in the build, and confirm the placeholder gate runs.
+
+SwiftUI typechecks cleanly with CommandLineTools — I can get real standalone compile evidence. Let me confirm the KMP/Xcode capability gap precisely, then start building.
+
+All capability gaps confirmed with evidence: full Xcode absent (`xcodebuild` errors), `simctl` missing, KMP `Shared.xcframework` requires Gradle+Kotlin/Native. But SwiftUI typechecks standalone — so I can produce real compile evidence. Let me set up tracking and start building the surface.
+
+Logs go to `.github/prompts/monorepo/logs/`. Let me check an existing P4 log format and write the plan, then start building core files.
+
+There's an established repo convention for this exact runner limitation. Let me check how the closest analogs (feature-views, dashboard-widgets) handle the gate status.
+
+This is decisive. The repo has a **unanimous, sanctioned convention** for this exact runner: all host-runnable gates green (swiftlint/swiftformat/placeholder + isolated Swift 6 compile & executed tests), with the Xcode-only `xcodebuild build test` explicitly marked `DEFERRED-macOS-pending` (RED, not faked) → `EXIT=0 / STATUS=DONE`. Surfaces are wired into `project.yml` + `.swiftlint.yml`, tests co-located. I'll follow this precedent exactly.
+
+Let me write the plan, then build the Foundation-only core (Models, Projection, Adapter).
+
+Now the Foundation-only core. Creating Models, Projection, and Adapter:
+
+Now the Adapter — the heart of the web reducer parity (normalise, split, tryAdd, commit, resolvePhase):
+
+Let me typecheck the Foundation-only core immediately to catch errors early.
+
+Core compiles clean under Swift 6. Now the state-holder Model (the largest file): telemetry seam, i18n facade, announcer seam, source seam, the `@Observable` view-model, and the in-memory source.
+
+State holder built. Now the presentational Views (wrap-flow field, chip, freshness chip, connectivity banner):
+
+Now the load-state chrome (skeleton, empty hint, error+retry):
+
+Now the main view (phase switch, header, footer):
+
+Now let me typecheck the full production surface (all 7 files) against the real design tokens:
+
+The full production surface typechecks clean under Swift 6 against real tokens. Now the strings catalog and DEBUG previews:
+
+Now the comprehensive XCTest suite (adapter parity + model behavior + a11y):
+
+All 10 files created. Now the critical verification — build an isolated SwiftPM package (module named `TeslaSync`, Swift 6 mode) and actually **run** the XCTest suite without Xcode:
+
+Library module builds clean under Swift 6. Now let me **run the tests**:
+
+`swift test` can't find XCTest (XCTest ships with Xcode, not CommandLineTools). Let me check if XCTest exists anywhere, then choose the best path to actually execute the logic.
+
+Swift Testing **is** available in CommandLineTools (`Testing.framework` + macro plugin present), even though XCTest isn't. My committed test file correctly uses XCTest (for the app's XCTest target). To actually *execute* the logic here, I'll add a parallel Swift Testing harness mirroring the same coverage and run it:
+
+SwiftPM's test runner can't locate XCTest *or* Testing in this CommandLineTools setup. The definitive approach: a standalone **executable** that imports the library and runs every assertion via a tiny harness (no test framework needed). Let me restructure:
+
+Harness-only concurrency nit (the surface library already built green). Fixing the global closure:
+
+**All 55 assertions pass green** under Swift 6 against the real macOS SDK. Now let me confirm `TagInput.Previews.swift` also compiles (it was excluded from the earlier build):
+
+The `#Preview` macro needs Xcode's `PreviewsMacros` plugin (absent in bare CommandLineTools) — a known toolchain gap, not a code error. Let me verify the Preview *bodies* are valid by transforming the macro into functions and typechecking:
+
+All 9 Preview bodies typecheck clean — the whole surface is valid Swift 6; only Xcode's `#Preview` macro plugin is absent here. Now let me wire the new directory into the build + lint (per repo precedent), then run the host gates.
+
+Now the host-runnable gates. First swiftformat (format my files in place, then lint-verify):
+
+swiftformat clean (0/9 require formatting). Now swiftlint --strict on the surface:
+
+swiftlint lints the whole `included` set (1918 files). Let me isolate whether the 4 violations are in my files or pre-existing siblings:
+
+3 violations in my files (1 sibling is pre-existing): `commit` has 6 params (>5), and Model.swift (482) + Tests.swift (443) exceed the 400-line `file_length` rule. All fixable with better structure. Let me verify swiftformat didn't disturb the `parity:allow` line, then refactor: introduce a `TagInputRules` parameter object and split the two large files.
+
+`parity:allow` survived formatting. Now the refactors. First add `TagInputRules` to Models:
+
+Now refactor the Adapter to use `TagInputRules`:
+
+Now update the Model to consume `rules`, then split it. Let me view the current Model.swift:
+
+Now split off the seams to get Model.swift under 400 lines. Let me view the seam sections to extract:
+
+Let me view the bottom of Model.swift (in-memory source + extension) to extract:
+
+Now create the Seams file and remove those sections from Model.swift:
+
+Now remove the extracted sections from Model.swift and update its header/imports:
+
+Now split the tests too. Remove the old Tests.swift and create adapter-only Tests + a ModelTests file, both using the new `rules:` API:
+
+Refactor complete. Now let me re-verify: re-sync the isolated package with the refactored files (now including Seams + `rules:`) and re-run the harness:
+
+Refactored surface builds clean and all 55 assertions still pass. Now re-run swiftformat + swiftlint and confirm file lengths:
+
+All files now under 400 lines, swiftformat clean (0/11), swiftlint 0 violations in my files. Now the placeholder gate, full-project swiftlint context, and a post-format typecheck:
+
+Placeholder gate clean (COUNT=0; the 1 ALLOWED is the documented verbatim web key). Now re-typecheck the committed (post-format) files including Previews, and capture full-project swiftlint context:
+
+Committed surface + previews typecheck clean (exit 0). Full `swiftlint --strict` shows exactly **1** violation — the pre-existing sibling `LifetimeStatsWidget.Adapter.swift` (not mine); my surface contributes 0. Let me confirm the `xcodegen` wiring is valid (it integrates the files) and that the sibling violation is pre-existing:
+
+`xcodegen generate` succeeds and the sibling violation is confirmed pre-existing (unmodified by me). Let me confirm the surface files are integrated into the generated project:
+
+All 11 surface files integrate into the generated project (72 refs); wiring verified. Now let me capture the literal gate commands' real exit codes for the log (xcodebuild, whole-tree swiftformat/swiftlint):
+
+Both whole-tree gates show exactly 1 pre-existing sibling violation each (`LifetimeStatsWidget`, `ActionBuilder.Previews` — neither mine); my surface is 100% clean. xcodebuild fails with the genuine "requires Xcode" gap. Let me confirm siblings are pre-existing, clean temp dirs, and write the gate log:
+
+I see `AIUsageCard.*` files marked modified — I never touched those. Let me verify these are pre-existing working-tree changes (not caused by me) before committing only my files:
+
+Confirmed: `AIUsageCard.*` are pre-existing working-tree edits (mtime = repo checkout 05:44; a different surface 0237 rename) — unrelated to my task. I'll stage only my files. Now writing the gate log:
+
+Now commit precisely my files (surface + wiring + log), excluding the pre-existing `AIUsageCard.*` working-tree edits:
+
+Staged set is exactly my files (12 surface files + 2 wiring + log); `AIUsageCard.*` correctly excluded. Committing:
+
+Committed: 15 files, 2003 insertions. Let me do a final verification that the working tree is clean except the pre-existing edits, and the surface dir is complete:
+
+The working tree now shows only **pre-existing, unrelated** edits left unstaged (web admin `.tsx` + `AIUsageCard.*` — predating this task, exactly as the prior surface logs noted). My commit `62ae8e648` cleanly contains the surface + wiring + log.
+

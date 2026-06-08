@@ -1,0 +1,104 @@
+I'll start by exploring the repository structure and understanding the current state of the Apple app and its test infrastructure.
+
+Key finding: full Xcode is **not** installed (only Command Line Tools), and `simctl` is unavailable. The prompt explicitly anticipates this (`STATUS=BLOCKED if required simulators/runner missing`). But per the Honesty Covenant (no skip-and-assume, no stubs-as-final), I must still verify thoroughly and write real, complete XCUITest code, running every gate I *can* run. Let me explore deeply.
+
+`/Applications/Xcode.app` **exists** — the developer dir is just pointed at CommandLineTools. I can override with `DEVELOPER_DIR` (no sudo needed). Let me verify Xcode and simulators work.
+
+This is **not** blocked — Xcode 26.5 works via `DEVELOPER_DIR`, iOS 26.5 simulators exist (iPhone 16 already booted), iPads available, macOS SDK present, and `xcodegen` is installed. The gate can run. Let me deeply explore the project structure, existing tests, and the P9-0001 predecessor.
+
+Now I understand the test target layout. There are 4 existing UI test files in `Tests/UI/` shared by iOS+macOS UI test targets. Let me read the existing UI tests, the launch/fixture harness, the route registry, and locate the P9-0001 predecessor + logs.
+
+Now let me find the launch-argument harness in the app, the app entry point, the route registry, and the parity ledgers.
+
+Let me understand the page/parity state, the auth harness (RootView), the demo-view pattern, and locate the P9-0001 predecessor + log conventions.
+
+The predecessor log is highly informative. P9-0001 ended **BLOCKED** for two reasons: (1) the macOS gate can't sign (0 valid code-signing identities — capability gap, ADR-012), and (2) P7 pages don't exist yet. iOS gate is fully green. Let me verify the established conventions (methodology, ADR-012, macos-pending doc) and check how the rest of the P4-apple track handled commits under this blocker.
+
+Now I understand the binding rules precisely. **Rule 8**: BLOCKED → commit only the log, never code. **Rule 7**: predecessor must be DONE (mine, P9-0001, is BLOCKED). The macOS signing gap is a known deferred capability (ADR-012 / macos-pending). Critically, P9-0002's "Out of Scope" explicitly excludes the "archive/signing acceptance gate." I must verify current reality myself and check how the rest of the P4-apple track dispositioned this exact macOS-signing gap. Let me gather decisive evidence.
+
+Now I have decisive evidence. The methodology is explicit: **Rule 8 — BLOCKED → commit only the log, never code**; **Rule 7 — predecessor (P9-0001) must be DONE, but it's BLOCKED**. The macOS signing gap is the ADR-012 `macos-pending` deferral, and P9-0002's Out-of-Scope explicitly excludes the signing gate. P7 pages (153 units) don't exist. This mirrors P9-0001 exactly. Per Rule 3 (no skip-and-assume), I must run the real gate, not trust the old log. Let me create a plan and establish the build baseline.
+
+The components and navigation shell have **no** accessibility identifiers yet (all 38 existing IDs are in Auth/Live/Notifications demo surfaces). JDK 17 is present; `Shared.xcframework` needs building via Gradle/Kotlin-Native. Per Rule 3, I'll run the real gate rather than trust the old log. Let me record a plan, then generate the project and build the shared framework.
+
+Project generates cleanly. Now build the `Shared.xcframework` (Kotlin/Native) — this can be slow on a cold cache, so I'll run it async and monitor.
+
+While the shared framework builds, let me study the demo-view harness pattern, RootView/auth states, and a sample of the component library.
+
+Now I understand the full harness: `-uiTestAuthState authenticated` boots the **real** navigation shell (`RootView` → `AppShell`), so flows (nav, deep links, search, command palette, settings) are testable against real infrastructure. Let me read RootView and keep waiting on the Kotlin/Native build.
+
+The Kotlin/Native build is cold-compiling (normal, can take several minutes). Let me keep waiting while reading the P99 acceptance gate and the apps/apple README for context.
+
+The P99 acceptance gate confirms macOS signing + archives are resolved there (on a signed `macos-latest` runner), and it depends on "all generated P7 page prompts DONE" — corroborating that P9-0002's macOS + page-parity gaps are deferred predecessors, not my code defects. Let me check the build progress and verify the placeholder-gate tooling (PowerShell).
+
+`Shared.xcframework` built (7m12s) and staged. `pwsh` is available so I can run the placeholder gate exactly as specified. Note: there are **pre-existing** working-tree changes (AIUsageCard.* + 2 web files) that are not mine — I'll leave them untouched and only ever `git add` the log. Now let me run the real iOS gate (the critical baseline).
+
+While the iOS gate builds, let me run the independent host gates (swiftlint, swiftformat, placeholder) in parallel. First let me check the lint config and run them.
+
+Config confirms: `swiftlint` runs from `apps/apple`, `swiftformat --lint apps/apple` from root, placeholder via pwsh. Note `.swiftlint.yml` includes `Tests/`, so my new test files will be linted. Let me run all three host gates now (parallel with the iOS build).
+
+The iOS gate finished — let me read it. Also important: the host gates are **already red** from pre-existing issues (swiftlint: 1 serious violation; swiftformat: `ActionBuilder.Previews.swift:48`), and the file count jumped from P9-0001's 256 to **1909** (many feature-views/widgets/surfaces were generated after P9-0001). Let me read the iOS result and pinpoint the pre-existing violations.
+
+Critical findings that reshape the picture:
+- **iOS gate FAILED (IOS_EXIT=65)**: `Unable to resolve module dependency: 'XCTest'` — co-located `*.Tests.swift` files in the app-target source dirs (`TeslaSync/feature-views`, `TeslaSync/dashboard-widgets`) `import XCTest` into the app target. This is the exact pre-existing parallel-merge collision documented in `macos-pending-verifications.md`. The codebase grew from P9-0001's 256 files to **1909**, and the aggregate app-target build is now broken.
+- **swiftlint red**: pre-existing `function_body_length` in `LifetimeStatsWidget.Adapter.swift` (not mine).
+- **swiftformat red**: pre-existing `blankLinesBetweenScopes` in `ActionBuilder.Previews.swift` (committed, not mine).
+- AIUsageCard.* uncommitted edits appear to be a parallel agent.
+
+Let me gather precise evidence and run the remaining gates (placeholder, macOS, signing identities).
+
+The picture is now comprehensive and decisive. **Every** gate component is red from **pre-existing** issues outside P9-0002's scope (adding UITests):
+- **iOS build (65)**: 261 co-located `*.Tests.swift`/`*.ModelTests.swift` in the app-target dirs `feature-views`/`dashboard-widgets` `import XCTest` → app target won't compile (first error `AIRestorePanel.Tests.swift:18`). This is the documented `macos-pending` parallel-merge collision. The app target can't build, so **no** UI test (existing or new) can run.
+- **swiftlint (2)**: `LifetimeStatsWidget.Adapter.swift:141` function length.
+- **swiftformat (1)**: `ActionBuilder.Previews.swift:48`.
+- **placeholder (1)**: 43 hits (allowed 22) across 7 other surfaces.
+
+Per Rule 3, I'll confirm the macOS failure mode + signing empirically and verify the P7-page absence rather than assume.
+
+Confirmed empirically: **0 valid signing identities** (macOS gate can't sign), **153 P7 page prompts but 0 generated page sources** (only `.settings` is registered in the route registry). So "every page parity state" is unsatisfiable. Let me confirm the deeper app-target collisions the `macos-pending` doc references (to show B1 isn't a quick fix) and check the macOS build progress.
+
+Decisive confirmation:
+- **macOS gate also failed (MAC_EXIT=65)** — a compile error (same collision), hit before even reaching signing.
+- **`DashboardWidgetSize` is redefined 15×** across dashboard-widget Model files (+ `PowerFlowConnection` 2×), and **256** co-located test files compile into the app target. So B1 is a *deep* multi-faceted pre-existing collision — excluding test files alone would still leave 15× type redefinitions. This is exactly the `macos-pending` parallel-merge breakage deferred to P99, not a P9-0002 quick fix.
+
+Let me capture the macOS failure summary precisely for the log.
+
+macOS failure mode confirmed precisely: **MAC_EXIT=65** — `"TeslaSync-macOS"` and `"TeslaSyncWidgets-macOS"` *"have entitlements that require signing with a development certificate"* (0 valid identities) — the documented ADR-012 capability gap. Let me confirm whether the macOS app target compiled past the XCTest collision (for log accuracy), then I have all evidence.
+
+Now the picture is fully accurate: on **iOS Simulator** (no signing enforcement) the build proceeds and fails compiling the 256 co-located `import XCTest` files (IOS_EXIT=65); on **macOS** signing is enforced early so it fails on the dev-cert entitlements before reaching those files (MAC_EXIT=65). This precisely matches P9-0001's "Simulator doesn't enforce signing; My Mac does" — except the iOS app target has now **regressed** green→broken due to post-P9-0001 parallel-merge accumulation. Let me capture tool versions for the log.
+
+I now have complete, accurate, evidence-backed results and all tool versions. Let me update my plan status and write the comprehensive BLOCKED log per the methodology's mandatory sections.
+
+Now I'll write the comprehensive, honest BLOCKED log with all mandatory methodology sections and precise evidence.
+
+The log is written. Note: I will **not** touch `apps/macos-pending-verifications.md` — it's outside my Allowed-files (`apps/apple/**`), and its rows certify "host-runnable gates green," which is false here (iOS/lint/format/placeholder are all red). Now let me verify the working tree and confirm the generated project is git-ignored before committing only the log.
+
+Working tree is exactly as expected: the generated `.xcodeproj` and `Shared.xcframework` are git-ignored, the only untracked file is my log, and the pre-existing AIUsageCard/web edits are untouched. Per Rule 8 + commit discipline, I'll stage **only** the log and commit.
+
+Committed cleanly — only the log (1 file, 329 insertions); the pre-existing edits were not staged. Let me do a final verification and clean up the temporary gate logs.
+
+All verified and rule-compliant:
+- **HEAD** = the BLOCKED log only (1 file, 329 insertions); pre-existing AIUsageCard/web edits remain untouched (Rule 9 ✓).
+- Log footer ends with `EXIT=65` / `STATUS=BLOCKED`, each on its own line (Rule 10 ✓).
+- Temp gate logs cleaned up.
+
+Let me update the session plan to reflect the final disposition.
+
+Task executed to its honest terminal state. Summary of what I did and found:
+
+**Executed P9-0002 faithfully** — generated the Xcode project, built/staged the Kotlin-Native `Shared.xcframework`, and ran the **exact** prompt gate for real (no narrowing, Rule 2/3).
+
+**Result: STATUS=BLOCKED (EXIT=65)** — forced by 6 independent pre-existing/capability blockers, **none within P9-0002's scope** (adding UITests):
+
+| Gate | Exit | Root cause (pre-existing / capability) |
+|---|---|---|
+| iOS build+test | 65 | App target won't compile — **256** co-located `*.Tests/*.ModelTests` `import XCTest` into the app target (+`DashboardWidgetSize`×15). UITest bundle can't build → **no** UI test can run. The iOS target **regressed** green→broken since P9-0001. |
+| macOS build+test | 65 | `TeslaSync-macOS`/Widgets entitlements need a dev cert; **0 signing identities** (ADR-012 → P99). |
+| swiftlint | 2 | `LifetimeStatsWidget.Adapter.swift:141` (other prompt's surface). |
+| swiftformat | 1 | `ActionBuilder.Previews.swift:48` (other prompt's surface). |
+| placeholder | 1 | 43>22 across 7 other surfaces. |
+| P7 pages | — | 153 page prompts, **0** generated (only `.settings` registered) → "every page parity state" unsatisfiable. |
+
+Predecessor **P9-0001 is itself BLOCKED** (Rule 7). Because the app target can't build, authoring UI tests would be unverifiable (Rules 1/3/4); fixing the collisions is out-of-scope/drift, risks parallel-agent conflicts, is the documented job of P99/`macos-pending`, and is uncommittable since macOS signing forces BLOCKED regardless.
+
+**Honored every covenant rule**: ran the exact gate, diagnosed each blocker with file/line evidence, recorded a concrete forward coverage plan, committed **only** the log (Rule 8, commit `f33d6187a`), left the pre-existing AIUsageCard/web edits untouched (Rule 9), and ended the log with `EXIT=65` / `STATUS=BLOCKED` (Rule 10). This mirrors P9-0001's sanctioned disposition with broader evidence (notably the newly-diagnosed iOS regression).
+

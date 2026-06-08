@@ -1,0 +1,30 @@
+I'll start by exploring the environment and understanding the task requirements. Let me check the runner capabilities and the web source in parallel.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed, and `simctl` is unavailable. However, `swift` 6.3.2, `swiftlint`, `swiftformat`, and `pwsh` ARE available. Before concluding anything about capability, let me study the established patterns — prior feature-views (AiUsageCard, LiveControls) were already merged, so there's a convention to follow.
+
+Excellent — there's a well-established multi-file convention per feature view (`.swift`, `.Model.swift`, `.Adapter.swift`, `.Views.swift`, `.States.swift`, `.Previews.swift`, `.strings`, `.Tests.swift`). Let me study the most-recently-merged gold standard (AiUsageCard, P-0237) and a table/list analog, plus locate shared infrastructure and the ChargingSession model.
+
+The convention is clear. Let me read the complete AiUsageCard set (the gold standard) plus locate the merged `helpers` (durationStr), the native `ChargingSession` model, the state-holder layer, and a table/list analog. Reading several in parallel.
+
+Let me look at the closest table/list analogs and the shared infrastructure. The `struct ChargingSession` appears in many feature-view files — I need to understand if models are namespaced per-view. Reading key files in parallel.
+
+Let me read the prior gate logs (to see how the Xcode-less runner was honestly handled) and the closest table analog plus shared helpers.
+
+The established, sanctioned disposition is now clear: capability is **not** BLOCKED (SwiftUI present, no Charts/MapKit needed), surface-scoped gates run green, an isolated SwiftPM build+XCTest proves the surface, and the full-app `xcodebuild` is DEFERRED on pre-existing repo-wide blockers. Prior runs used a `DEVELOPER_DIR=/Applications/Xcode.app` override. Let me verify what THIS runner actually has, and read the web `durationStr`/`ChargingSession`/`convertEnergyFromSI` specs plus the closest table analog.
+
+This runner has full Xcode 26.5 at `/Applications/Xcode.app` (via `DEVELOPER_DIR`), with an iPhone 16 simulator already booted — so I can run the actual gate. Now let me read the web data/format specs and the closest native table analog (SessionListSection) plus the native units facade and DataTable component.
+
+Now I have the full data contract. Let me read the closest native table analog (SessionListSection core files), the native units facade, the global precision default, and how native surfaces implement a "View all" navigation link.
+
+The pattern is comprehensive. Let me read the remaining gold-standard structural files (Projection, Views, Chrome, Previews) and the native units facade in parallel.
+
+Let me read the data-body Views, Previews, the native units facade, and check the navigation-link pattern, global precision default, and available tokens.
+
+Let me check the remaining specifics: global precision default, available design tokens, native "View all" navigation pattern, the test-file structure, and the placeholder checker.
+
+Let me see the native "View all" navigation pattern (RecentActivity) and the test-file conventions (AiUsageCard tests).
+
+Let me read the "View all" header styling, the adapter-test format, confirm the placeholder checker's trigger words, and whether a native shared DataTable exists.
+
+There's a native shared `DataTable.swift`. Let me check its API (to decide reuse vs. scoped table) and the forbidden placeholder patterns.
+

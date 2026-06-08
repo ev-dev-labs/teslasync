@@ -1,0 +1,144 @@
+I'll start by exploring the repository structure and understanding the task requirements. Let me investigate the web source, the Apple app scaffolding, and available tooling in parallel.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. However, `swift`, `swiftlint`, `swiftformat`, and `pwsh` are available. Prior feature-views (YearlyTrendChart, SessionComparisonChart) have been completed. Let me examine the existing patterns and the web source.
+
+The web source is clear: a 5-card stats bar (Fleet Size, Distance 30d, Energy 30d, Efficiency, Alerts) with two MiniCharts. Now let me study the established native conventions. Let me look at the most recent completed feature-views and a close analog (SummaryStatsRow), plus check if FleetStatsBar files already exist.
+
+The predecessor disposition is clear: `xcodebuild` is environment-blocked (needs full Xcode + xcframework/signing), so prior agents proved correctness via a **SwiftPM harness** (`swift build`/`swift test` against iOS 18 + macOS 15 SDKs) + swiftlint + swiftformat + placeholder check, marking the xcodebuild step DEFERRED with real exit evidence. Let me read the full recent log and the closest template files to learn the exact mechanism.
+
+The SummaryStatsRow log shows an earlier host had full Xcode via `DEVELOPER_DIR`, but the most recent (SessionComparisonChart) used a SwiftPM harness because Xcode.app was missing. Let me probe my exact environment and read the closest template files.
+
+Critical discovery: **`/Applications/Xcode.app` EXISTS** in my environment — `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -version` returns Xcode 26.5. So I have full Xcode; STATUS=DONE is achievable. Let me read the gate mechanism from the most recent run and study the closest template (SummaryStatsRow) plus the shared infrastructure layout.
+
+I now understand the methodology. Let me study the closest structural analog (SummaryStatsRow — a stats row) in full, plus explore the shared infrastructure I'll depend on (Design tokens, Components, SharedFacade seams).
+
+Excellent quality patterns. Let me read the remaining SummaryStatsRow files (Views/Previews/strings/Tests), the YearlyTrendChart chart (sparkline analog), and explore the shared Design tokens + Components.
+
+Now let me study the richest recent pattern (SessionComparisonChart — full 6-state model with freshness/connectivity), the sparkline analog (YearlyTrendChart.Chart), test conventions, and the shared Design/Components infrastructure.
+
+Let me read the remaining SessionComparison files, the sparkline chart analog, and probe the exact Design tokens + Components available.
+
+I have a thorough grasp of the architecture. Let me probe the exact shared tokens/components available and check for existing sparkline/animated-number components, plus read the phase/connection enums.
+
+There are shared `MiniCharts.swift`, `Metrics.swift` (AnimatedNumber), Motion, Skeletons, and `TSDesign.swift` tokens. Let me read these to reuse them correctly (the web source uses GlassPanel, AnimatedNumber, MiniChart, motion).
+
+The shared library is rich: `TSAnimatedNumber` (AnimatedNumber), `TSSparkline`/`TSMiniChart` (MiniChart), `TSCard`. Now let me read the design tokens, motion, and skeleton components to confirm exact names (Font.TS.*, Color.TS.*, TSSpacing, TSRadius, TSChartPalette, TSFadeIn, TSSkeleton).
+
+TSDesign is small. The core tokens (Font.TS, Color.TS, TSSpacing, TSRadius) must live elsewhere. Let me locate their definitions and the motion/skeleton/stagger components.
+
+Full token vocabulary confirmed. The web `StaggerContainer/StaggerItem` map to `TSStaggerContainer/TSStaggerItem`. Now let me read the motion/skeleton/feedback components, lint config, placeholder gate, and the test/preview conventions.
+
+Let me find where the core tokens (Color.TS, Font.TS, TSSpacing, TSRadius, TSMotion, TSTone) and chart primitives are actually defined — critical for building the compile/test harness.
+
+The tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me confirm it and read its public symbol surface.
+
+I now know the dependency foundation. Let me verify the Components/Design tree is self-contained (no Shared xcframework imports) so I can build a SwiftPM harness, and read the test/preview conventions plus the placeholder gate.
+
+Confirmed: `Sources/Components` + `Sources/Design` import only SwiftUI/Charts/MapKit/CoreLocation/Foundation — fully self-contained, so a SwiftPM harness (generated Tokens + Design + Components + surface) will compile. Let me read the test/preview/adapter-enum/strings conventions to mirror.
+
+I have the full native pattern. Now I need the web data contract and unit-conversion semantics. Let me read the dashboard types, where FleetStatsBar is consumed (to port the converters), the unit-conversion instructions, and the 6-state preview/strings conventions.
+
+Let me read the consumer widget (to port the unit converters), the full dashboard types, and the unit-conversion instructions.
+
+Now I understand the data + unit semantics. The widget wraps `FleetStatsBar` in `WidgetShell` providing isFetching/isStale/isError/onRefresh/dataUpdatedAt — confirming the loading/stale/error/offline envelope. Let me read `convertDistanceFromSI` and the unit-conversion instructions to port the math exactly.
+
+Let me read the exact `convertDistanceFromSI` implementation to port it faithfully.
+
+Let me confirm the conversion constants, the web `AnimatedNumber` formatting defaults, and the `MiniChart` rendering.
+
+Let me confirm `fmtNumber` formatting behavior to port it exactly, then I'll have the complete spec.
+
+I have the complete spec. Let me record the plan and seed the task list, then build the surface.
+
+Now I'll build the surface. Starting with the pure projection core (Adapter), which ports the unit conversion + number formatting + card model exactly from the web spec.
+
+Adapter done. Now the Model (state-holder seam + telemetry + i18n facade).
+
+Now the sparkline chart (Swift Charts) and the views (tiles, grid, states, banner).
+
+Now the root surface, the i18n catalog, the previews, and the tests.
+
+Now the comprehensive test suite.
+
+All 8 surface files are created. Now I'll build the verification harness. First, let me assemble a self-contained SwiftPM package (generated tokens + Design + Components + the 5 production surface files + the test target) and validate it compiles on the macOS 15 SDK via the Xcode toolchain.
+
+One shared file — `Components/DataDisplay/UnitFormatters.swift` — references a `Units` facade defined outside the Components/Design closure (the predecessor logs documented excluding exactly this file). My surface doesn't use it. Let me exclude it and rebuild.
+
+Library builds clean on macOS 15. Now let me run the test suite via the harness.
+
+All 25 tests pass on the macOS host (SWIFT_TEST_EXIT=0). Now the dual-SDK typecheck: iOS 18 simulator SDK for the production surface, plus a DEBUG previews typecheck.
+
+iOS 18 typecheck passes. Now the DEBUG previews typecheck (production closure + Previews.swift with `-D DEBUG`, exercising the `#Preview` macro), and an explicit macOS 15 typecheck for the record.
+
+All typechecks pass (iOS 18, macOS 15, DEBUG previews) and 25/25 tests green. Now the lint/format/placeholder gates on the surface files.
+
+Two fixable issues: Adapter is 407 lines (>400) with an over-long `cards` function, and Previews has a number-grouping nit. Let me view the exact spots, then split the Adapter into Adapter+Projection and let swiftformat auto-fix the literals.
+
+The default `numberFormatting` (decimalgrouping 3,6) wants 5-digit literals ungrouped. I'll split the Adapter (types vs. projection) to fix file-length + function-length, and fix the Previews literals. Let me locate the split point.
+
+Line 257 is the clean end of the types section. Let me truncate the Adapter there, create the Projection file (with `cards` refactored into per-card helpers to satisfy function-body-length), and fix the Previews literals.
+
+Added the Projection file. Let me re-sync the harness (including the new Projection.swift + updated Adapter/Previews) and re-run build + tests.
+
+Build + 25 tests green after the split. Now re-run all typechecks and the lint/format/placeholder gates.
+
+All typechecks pass. Now the lint/format/placeholder gates on all 8 surface Swift files.
+
+swiftlint: 0 violations. swiftformat: 0/8 require formatting. Max file 321 lines (all <400). Now the placeholder gate — I'll scan the real surface files (the prompt's no-extension `-Path` resolves vacuously, per predecessor note) plus run the detector self-test.
+
+All gates green: self-test PASS, PLACEHOLDER_COUNT=0. Now let me capture honest evidence for the DEFERRED full-app `xcodebuild` step (the gate command) — confirming the real environment blocker. First, check the Frameworks staging and whether xcodegen output is git-ignored.
+
+Confirmed the real blocker: `Frameworks/` holds only `.gitkeep` (Shared.xcframework not staged), and `*.xcodeproj/` is git-ignored so I can safely generate + attempt the build to capture honest DEFERRED evidence. Let me reproduce the exact failure.
+
+The full-app build is running (likely resolving packages then hitting the framework). Let me wait for it to fail.
+
+I have concrete evidence (Frameworks/ holds only `.gitkeep`). The full `-scheme` build is slow (resolving/compiling many dependent targets). Let me stop it and run a faster targeted build to a log to capture the exact framework error.
+
+The backgrounded build didn't persist (session cleanup). Let me launch it properly detached to a log, then proceed with writing the gate log while it runs.
+
+The detached build is running. While it builds, let me gather final inventory (line counts, key counts) to write the gate log.
+
+Build FAILED as expected. Let me capture the exact framework error and exit code from the log.
+
+Captured the concrete blocker: `error: There is no XCFramework found at '.../Frameworks/Shared.xcframework'` → `** BUILD FAILED **`. Let me re-launch the build detached to capture the exact exit code, and write the gate log meanwhile.
+
+Now let me write the gate log while the build runs.
+
+The second build completed (faster — derived data cached). Let me read the exact exit code and tool versions for the log.
+
+Confirmed: `MAC_BUILD_EXIT=65`, missing `Shared.xcframework`. Tools: swiftlint 0.63.3, swiftformat 0.61.1, pwsh 7.6.2. Now let me write the gate log.
+
+The gate log is written. Let me clean up the generated (git-ignored) xcodeproj and verify the working tree shows only my intended files before committing.
+
+Working tree is clean — only my 9 files + log are new; the two pre-existing `.tsx` modifications are untouched (not mine). Let me stage only my files and commit.
+
+Exactly the 9 surface files + log are staged (pre-existing `.tsx` changes excluded). Committing.
+
+Committed as `4d4863fe`; working tree shows only the two pre-existing `.tsx` files (correctly untouched). Let me do a final confirmation run of the test suite against the committed files and tidy temp artifacts.
+
+All gates green and confirmed on the committed files (25/25 tests, 0 failures). Let me finalize the task tracker.
+
+The FleetStatsBar Apple surface is complete, verified, and committed.
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0123-FleetStatsBar.log  | 237 +++++++++++++++
+ .../feature-views/FleetStatsBar.Adapter.swift      | 257 +++++++++++++++++
+ .../feature-views/FleetStatsBar.Chart.swift        |  53 ++++
+ .../feature-views/FleetStatsBar.Model.swift        | 229 +++++++++++++++
+ .../feature-views/FleetStatsBar.Previews.swift     |  93 ++++++
+ .../feature-views/FleetStatsBar.Projection.swift   | 182 ++++++++++++
+ .../feature-views/FleetStatsBar.Tests.swift        | 321 +++++++++++++++++++++
+ .../feature-views/FleetStatsBar.Views.swift        | 281 ++++++++++++++++++
+ .../TeslaSync/feature-views/FleetStatsBar.strings  |  43 +++
+ .../TeslaSync/feature-views/FleetStatsBar.swift    |  55 ++++
+ 10 files changed, 1751 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0123-FleetStatsBar.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetStatsBar.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetStatsBar.Chart.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetStatsBar.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetStatsBar.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetStatsBar.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetStatsBar.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetStatsBar.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetStatsBar.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/FleetStatsBar.swift

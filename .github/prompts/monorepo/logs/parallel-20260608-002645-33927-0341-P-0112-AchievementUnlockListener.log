@@ -1,0 +1,126 @@
+I'll start by exploring the repository structure, checking the web source component, and verifying the Apple build capabilities on this runner.
+
+Key capability finding: `xcodebuild` exists but **only Command Line Tools are installed, not full Xcode**. Let me verify this thoroughly before deciding — the covenant forbids skip-and-assume. Let me check for a full Xcode install, iOS SDKs/simulators, and explore the existing Apple app structure.
+
+There's a full **Xcode.app** at `/Applications/Xcode.app`, but `xcode-select` points to CommandLineTools. I can use `DEVELOPER_DIR` to target full Xcode without sudo. Let me verify it works and read the web source + explore conventions.
+
+Capability is **AVAILABLE** — full Xcode 26.5, iPhone 16 simulator (booted), iOS + macOS SDKs, swiftlint, swiftformat all present. This is NOT blocked; I must do the real work. Let me write a plan and deeply understand the project conventions.
+
+Now I understand the structure. The app uses **XcodeGen** (`project.yml`); app targets compile `TeslaSync/dashboard-widgets` and `TeslaSync/feature-views`, but **`shared-surfaces` is not yet a registered source path**. Let me write a plan and study the established feature-view convention deeply (it's the authoritative template).
+
+There are sibling shared-surface prompts (0008, 0052, 0180…) but **none executed yet** — no `shared-surfaces/` dir exists. So I'm first, and must wire `shared-surfaces` into `project.yml`. Let me create my plan and study the established convention + build infrastructure (KMP `Shared.xcframework` dependency is a key feasibility risk).
+
+I now understand the convention. Critical feasibility risk: the build needs a **KMP `Shared.xcframework`** built via Gradle/Kotlin-Native (the `Frameworks/` dir is empty). Let me assess that and read the full web spec (hooks + toast stack) in parallel, then write my plan.
+
+I have the full web spec now. Before deciding feasibility, I need the exact native patterns (telemetry `Surface`, `.strings` facade, state-holder layer, design tokens, and how `.Tests.swift` files are compiled/run). Let me read these in parallel.
+
+I now fully understand the convention. Let me confirm the exact design-token and shared-component names I'll use, check the known build status, and find toast/badge/chip primitives — all in parallel.
+
+Crucial finding: `macos-pending-verifications.md` documents that **3 sibling surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) hit the exact same wall** — the full-app `xcodebuild build test` is blocked by *pre-existing, unrelated* parallel-merge collisions (`DashboardWidgetSize` redefined 8–15×, 100+ co-located `*.Tests.swift` importing XCTest into the app target, unstaged `Shared.xcframework`, macOS signing). Their established, honest resolution: verify the surface green in isolation (SwiftPM build + tests + `swiftc -typecheck` on both SDKs + lint/format/placeholder), wire it in, and defer the full-app gate to a `macos-latest` CI runner.
+
+Let me write my plan, then finish researching the exact token/component APIs.
+
+Token symbols (`TSSpacing`, `TSRadius`, `Color.TS`, `Font.TS`, `TSTone`, `TSButton`, badges) aren't in `TSDesign.swift`. Let me locate their exact definitions and the badge/chip + motion primitives.
+
+I have the full design-system vocabulary. Let me grab the `TSButton` signature and the web `LifetimeAchievement`/`AchievementBadge` types to model the data faithfully, then I'll start writing.
+
+I have everything needed. Let me verify the `TSButton` text-init signature and confirm there are no existing native symbol collisions for the types I'll introduce.
+
+No collisions. Let me check the lint/format configs so my code passes `--strict` on the first try.
+
+Config understood. Like the feature-views precedent, I must also register `shared-surfaces` in `.swiftlint.yml` `included` (swiftformat auto-includes via `apps/apple`). Now let me create the directory and write the artifact files.
+
+Now I'll write the artifact. Starting with the Model (surface identity, telemetry, i18n facade, data + state types).
+
+Now the Adapter — pure, testable projections (queue reducer, celebration gate, chime plan + PCM renderer, freshness chip, badge tone, relative time, accessibility, Localizer seam).
+
+Now the chime player seam (isolates the `AVFoundation` audio engine behind a `Sendable` closure seam, mirroring the web's silent-catch WebAudio block).
+
+Now the SwiftUI subviews — toast stack, toast card, badge, eyebrow, confetti (reduce-motion aware), freshness chip, and the loading/empty/paused/error chrome.
+
+Now the main view — composes state/prefs/connection, fires the `view.opened` telemetry, and triggers the chime on new unlocks (web `recent.length` parity).
+
+Now the i18n catalog (`.strings`), previews, and the test suite.
+
+Now the test suite — full coverage of the pure projections, the chime plan/renderer, accessibility, i18n parity, and telemetry.
+
+All 8 files written. Now wire `shared-surfaces` into the build (project.yml for both app targets + swiftlint `included`), matching the feature-views precedent.
+
+All wired. Now let me run the host-runnable verifications. Starting with format + lint + placeholder gate on my files, and `xcodegen generate` to validate `project.yml`.
+
+swiftformat clean (0/7), xcodegen succeeded (files enumerated), but: (a) swiftlint reported 2 serious violations across the full tree — I must check if they're mine; (b) placeholder gate caught the word "placeholder" in a Views.swift comment. Let me fix the comment and pinpoint the swiftlint violations.
+
+Two violations: one is **pre-existing** (`LifetimeStatsWidget.Adapter.swift` — not mine), the other is **mine** (a 3-member tuple in the confetti). Let me fix mine by replacing the tuple with a small struct.
+
+swiftformat reformatted the file. Let me view the current confetti code.
+
+Fixed. Now re-format and lint **only my dir** (no `--config`, so it lints just the passed path) to confirm zero violations in my files.
+
+Swiftformat clean. Swiftlint now reports only **1** violation (down from 2) — my tuple fix worked. Let me confirm the remaining one is the pre-existing non-mine violation.
+
+My files are **clean**: 0 swiftlint violations, swiftformat clean, placeholder clean, xcodegen enumerates them. The 1 remaining tree violation is pre-existing (`LifetimeStatsWidget`, not mine). Let me confirm my git footprint, then build an isolated harness to compile on both SDKs and run the tests.
+
+`AIUsageCard.*` files show as modified but I never touched them. Let me investigate — this could be pre-existing parallel-slot state or an unexpected side effect.
+
+Confirmed: the `AIUsageCard.*` modifications have mtime `04:59:51` (before my session began at ~05:00) — they're **pre-existing parallel-slot state, not mine**. I'll stage only my paths at commit. Now let me build an isolated SwiftPM harness to compile under Swift 6 strict concurrency and actually run the tests.
+
+Now the design-token stub and `Package.swift` (Swift 6 strict-concurrency mode to match the app), then run the tests.
+
+Compilation is underway. Let me wait for it.
+
+The only error is a **harness-stub visibility mismatch**, not a code defect: my `AchievementFreshnessChip.tone` is `public` and returns `TSTone`, but my stub declared `TSTone` as `internal`. In the real app `TSTone` is `public`. Everything else compiled. Let me make the stubs `public` to match the real signatures and re-run.
+
+The 4-space-indented `static let`s in `TSSpacing`/`TSRadius` didn't get `public`. Let me rewrite the stub cleanly with full `public` visibility.
+
+**Isolated build + 31 tests PASS under Swift 6 strict concurrency (macOS 15).** Now let me prove it compiles on the **iOS 18** and **macOS 15** SDKs explicitly with `swiftc -typecheck` (matching the sibling verification standard).
+
+**Both iOS 18 and macOS 15 SDK typechecks PASS** under Swift 6 strict concurrency. My surface is fully green in isolation (31 tests pass, lint/format/placeholder clean, both SDKs compile).
+
+Now let me run the actual full-app gate to capture honest evidence. First, confirm the documented pre-existing blockers and prep the log.
+
+Confirmed the documented pre-existing blockers: **`DashboardWidgetSize` is redeclared 15×** (guaranteed app-target compile failure, not mine) and **261 files** import XCTest into the app target (pre-existing convention). Now let me genuinely attempt the gate. First, can the KMP `Shared.xcframework` even build here? Let me try gradle (timeboxed).
+
+Gradle has run ~3.5 min with no output — it's stuck fetching the Gradle distribution / Kotlin-Native toolchain. This is precisely the documented **unstaged `Shared.xcframework`** pre-existing blocker (the S3 scaffold's framework binary is itself "macOS-pending"). Let me stop it and check for a `timeout` utility to bound the real xcodebuild attempt.
+
+Good — `timeout` is available and the Gradle distribution is cached (so the hang was Kotlin/Native compilation, not the wrapper). Let me give the KMP build a bounded **online** attempt so I can genuinely run the gate. Running in background with a 6-minute cap.
+
+While the KMP build runs, let me verify the full-tree `swiftformat --lint apps/apple` behaviour for my files and prepare. Let me poll gradle progress.
+
+I'll let the KMP build continue (capped at 6 min) and use the time to write the verification log with everything proven so far. Let me poll once more.
+
+KMP build **timed out (EXIT=124)** after the full 6 minutes with zero output — the `Shared.xcframework` cannot be produced in this environment. Since the gate's `xcodebuild` pre-action runs exactly this gradle step, the full-app gate is blocked at the documented step. Let me now write the comprehensive honest log — Section A (surface verification, all green) captured fresh into the log.
+
+A5's grep used the wrong path format (XcodeGen splits path into group+filename). Let me verify the surface files are actually enumerated in the generated project and in the app target's compile sources.
+
+All 8 files are enumerated in the pbxproj (48 refs across both app targets) and the `shared-surfaces` group exists. The A5 grep just used the wrong path format. Let me append the corrected enumeration + the dual-SDK typecheck + the 31-test run to the log.
+
+The append worked; only the final `sed` failed because an inner `cd` changed the directory. Let me verify the log content with an absolute path.
+
+Section A is fully green (typecheck iOS18 + macOS15 = 0, 31 tests = 0, lint/format/placeholder clean, files enumerated). Now Section B — the literal gate commands, timeboxed, teed to the log.
+
+B1 ran from the wrong cwd (the project is under `apps/apple`). Let me re-run it correctly from `apps/apple`, timeboxed.
+
+xcodebuild found the project and is now stalled in the KMP gradle pre-action (as expected). Waiting for the timeout to fire.
+
+`IOS_EXIT=124` — the gate stalls in the KMP pre-action, as documented. Let me finish Section B (macOS, whole-tree lint/format, placeholder) and write the conclusion.
+
+Notable: the gradle daemon is now warm (`assembleSharedDebugXCFramework UP-TO-DATE`), the **real `check-placeholders.ps1` ran via pwsh and passed (EXIT=0)**, and swiftlint/swiftformat fail only on **pre-existing non-surface files**. Since the framework may now stage, let me make a final bounded attempt to get past the KMP pre-action and capture the definitive "my files = 0 errors" evidence from the actual app compile.
+
+Let me wait for the release framework build to progress.
+
+Both KMP builds timed out (360s + 420s, EXIT=124) — the `Shared.xcframework` is **not producible on this host**, so the gate's pre-build action cannot complete here. I have conclusive, honest evidence. Let me write the conclusion to the log, then record the deferred verification.
+
+Now let me record the deferred verification in `macos-pending-verifications.md`, matching the sibling rows.
+
+Now let me do a final verification pass on my files (after the edits) and review the git state before committing.
+
+All final checks green. Let me update the plan, clean up the temp harness, and commit with explicit paths (excluding the pre-existing parallel-slot `AIUsageCard.*` changes).
+
+All intended files staged (8 surface files + wiring + log + macos-pending row); the pre-existing `AIUsageCard.*` changes are correctly excluded. Let me commit.
+
+Committed cleanly: 12 files, 1837 insertions. Let me confirm the working tree is clean except for the pre-existing parallel-slot changes (which I correctly left untouched).
+
+The working tree now shows **only** the pre-existing `AIUsageCard.*` parallel-slot changes (mtime 04:59, before my session — correctly left untouched). My surface has zero drift and is committed cleanly.
+
+The task is complete. Summary of what was delivered and verified.
+

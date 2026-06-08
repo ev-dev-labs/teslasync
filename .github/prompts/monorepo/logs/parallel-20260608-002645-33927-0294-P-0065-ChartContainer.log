@@ -1,0 +1,152 @@
+I'll start by exploring the repository structure and understanding the task requirements.
+
+Key findings: `swift`, `swiftlint`, `swiftformat` are available, but `xcodebuild` requires full Xcode (only Command Line Tools installed). There's an existing Apple app with a recently-modified `AIUsageCard.*` file set I should follow as a pattern. Let me explore the structure.
+
+The `shared-surfaces` directory doesn't exist yet. Let me read the web source and study the existing `AIUsageCard.*` pattern that was recently worked on.
+
+I see the established file pattern. Let me read the rest of the web source and study the recently-modified `AIUsageCard.*` files as my template.
+
+Excellent template. Let me read the rest of the web source and the remaining AIUsageCard files.
+
+Let me read the rest of the web source and remaining AIUsageCard files (Views, Previews, Tests, strings), plus find where `AiUsageProjection` lives.
+
+There are more files than git status showed. Let me see the full AiUsageCard file set and read the remaining views, projection, previews, tests, and strings.
+
+Let me read the Chrome, Projection, Previews, Tests, AdapterTests, and strings files, plus locate the design tokens.
+
+Let me read the Previews, Tests, strings, and AdapterTests files, and locate the shared design tokens/components.
+
+Now let me locate the design tokens (`TSSpacing`, `TSRadius`, `Color.TS`, `Font.TS`) and the shared components I'll reuse.
+
+There's already an atomic `Sources/Components/Charts/ChartContainer.swift` (the component-library version, out of scope). My target is the *shared surface* at `TeslaSync/shared-surfaces/ChartContainer.*`. Let me read the design tokens and the existing atomic chart container to understand the relationship.
+
+The tokens are generated. Let me find the generated token definitions and the key shared components.
+
+The main-app tokens are generated at build time (not committed), confirming the whole module only compiles under Xcode's build phases. Let me read the test harness, the key shared component signatures, and the existing atomic chart container.
+
+I now understand the full pattern. Let me verify the shared component signatures I'll use (TSButton, TSSkeleton, TSFadeIn, States), read the existing atomic chart container, and check the logs dir + placeholder script.
+
+Let me read the existing atomic ChartContainer, the States feedback components, check the i18n key conventions, and verify the toolchain for the gate.
+
+I have the component vocabulary. Now let me read the supporting web sources I need to port faithfully: `i18nDir` (label anchor), `useChartExport`, `useHiddenSeries`, annotation types, and the annotation sub-components.
+
+Let me grab the exact `textAnchorForDir` logic and the annotation sub-component field shapes.
+
+I have everything needed to build faithfully. Let me verify the gate tooling (pwsh, placeholder script, lint/format configs, logs dir) before writing.
+
+pwsh is available. Let me read the lint/format configs and the placeholder script to ensure compliance.
+
+pwsh + the placeholder script + lint/format configs are all runnable. Forbidden words noted (TODO, FIXME, XXX, Placeholder, Lorem ipsum, "not implemented"). Let me probe what the command-line Swift toolchain can compile (SwiftUI? Charts? Observation?) to plan my verification depth.
+
+The CLI Swift toolchain can typecheck SwiftUI + Charts + MapKit + Observation against the macOS SDK. This means I can build a stub harness to typecheck my actual source files — strong verification despite no full Xcode. Let me set up the plan, todos, and directory.
+
+Let me write the plan, then start building the pure Adapter core.
+
+Now I'll write the pure Adapter core (Foundation-only: fallback-table builder, label-anchor resolver, date/number formatting, a11y label builder).
+
+Now the Model file (i18n facade, value types, telemetry seam, input/config/resolved, the `@Observable` state holder, source protocol, in-memory source).
+
+Now the pure Projection that maps input + config + hidden-toggle → resolved view-state.
+
+Marking core files done. Now the Chrome subviews (freshness chip, refresh, banner, loading, empty, error, export menu, fullscreen button).
+
+Now the Views file (category tint, anchor→SwiftUI mapping, marker chip row, accessible fallback table, annotation list footer, add-annotation sheet).
+
+Now the main generic container view that hosts chart content, wires the toolbar, states, a11y, and sheets.
+
+Now the strings catalog (verbatim source keys + native chrome keys).
+
+Now the Previews file, hosting a real Swift Charts `LineMark` chart through the container to prove it's a genuine container (not a stub).
+
+Now the two XCTest files (adapter logic + projection/model/a11y).
+
+All 10 source files are written. Let me start verification — first swiftformat and swiftlint on my files.
+
+Those are all auto-fixable. Let me format my files in place, then re-lint.
+
+swiftformat passes. Now swiftlint on my files, and let me verify the auto-formatted Projection still reads correctly.
+
+swiftlint linted the whole tree (1909 files) and found 1 violation. Let me isolate whether it's in my files by linting only my paths with a clean reporter.
+
+The violation: under `--strict`, the 400-line `file_length` warning becomes an error. My Model is 583 lines. Let me check all file lengths and plan splits.
+
+Only Model.swift exceeds 400. I'll split it into Model + Types + Source files (all `ChartContainer.*`, within allowed scope). Let me view the current structure to extract cleanly.
+
+I'll extract types + source into separate files and slim Model. Let me view the model class body to reproduce it faithfully.
+
+I have all content. Let me create the Types and Source files, then slim the Model.
+
+Now slim the Model file by removing the extracted sections.
+
+Now re-run format + lint on all my files.
+
+All files ≤375 lines, swiftformat clean. Now swiftlint on my files specifically.
+
+swiftlint passes clean on my files. Now the key step: typecheck the real Swift against SwiftUI/Charts using a stub harness for the generated tokens/components. Let me enumerate exactly which external symbols I reference.
+
+I have the exact symbol list. Let me build a stub harness in /tmp and typecheck my real source files against SwiftUI + Charts.
+
+Core sources typecheck clean against SwiftUI. Now add the Previews file (Swift Charts + `#Preview` macros).
+
+The only errors are `#Preview` macro-plugin-not-found — a CommandLineTools limitation (the `PreviewsMacros` plugin ships with full Xcode), not a code error. The preview *bodies* are what matter. Let me transform `#Preview` into plain opaque-return vars to typecheck the bodies.
+
+All 7 preview bodies + 8 core sources typecheck clean against SwiftUI/Charts. Now let me actually **execute** the pure logic (projection + adapter) with real assertions. First, check whether the `@Observable` macro expands in this CLT toolchain.
+
+`@Observable` expands fine here (unlike the Xcode-only Preview plugin). Now let me **compile and run** the pure logic (adapter + projection + model) with real assertions mirroring my XCTests.
+
+That failure is a mistake in my throwaway harness expectation (I reused the formatter-bearing `cols`, so the cells are correctly `"12 kWh"`). The code is right. Let me fix the harness assertion and re-run.
+
+All logic tests pass via real execution. Now run the placeholder gate on my files.
+
+Placeholder gate passes. Now let me capture the xcodebuild capability evidence (the gate's iOS/macOS build+test steps) and check the project layout.
+
+Confirmed BLOCKED capability: the app uses XcodeGen (`project.yml`, no checked-in `.xcodeproj`), and `xcodebuild` errors because only CommandLineTools is installed (no full Xcode / iOS 18 simulator). Let me verify my files get auto-included via the target's source globs (so they build when a proper runner runs the gate).
+
+The `project.yml` lists explicit source paths and does **not** include `TeslaSync/shared-surfaces`. I need to understand how feature-view tests are wired before concluding. Let me read the full target + test membership model.
+
+I need to understand how `.Tests.swift` files inside `feature-views` are membered (app target vs test target), since `shared-surfaces` is a brand-new directory. Let me inspect the project options and test wiring.
+
+Let me settle the build-wiring question definitively by generating the project (xcodegen is available, no Xcode needed) and inspecting target membership for the existing co-located feature-view tests vs my new directory.
+
+Project generates cleanly, and the real design tokens exist at `apps/design/generated/apple`. Let me check target membership for co-located tests and whether my new dir is wired in.
+
+Let me disambiguate — the atomic `Sources/.../ChartContainer.swift` also matches. Let me grep precisely for my new directory and files.
+
+Now it's clear: my `shared-surfaces` files are **not** referenced by `project.yml` (0 occurrences), while `feature-views` tests are (globbed). My files use real token names though — let me confirm every token/component symbol I reference actually exists in the real generated tokens + components.
+
+Every token/component I use exists in the real generated sources. Let me go one better than stubs — typecheck my real files against the **real** `Tokens.swift` + `Buttons.swift` + `Motion.swift` (a small dependency closure).
+
+My real source compiles cleanly against the **real** `Tokens.swift` + `Buttons.swift` + `Motion.swift` — the strongest verification possible without full Xcode. Let me clean up the xcodegen side-effects and check git status.
+
+My code compiles against the real shared design system. The pre-existing `AIUsageCard.*` working-tree changes are not mine and won't be committed (the gate's commit is scoped to `shared-surfaces` + the log). Now let me run the actual gate steps and build the log, starting with the xcodebuild capability evidence.
+
+xcodebuild gates confirmed BLOCKED (only CommandLineTools). Now append the runnable gate steps (lint/format/placeholder) plus my supplementary compile+run evidence to the log.
+
+The `LINT_EXIT_SURFACE=1` is a measurement artifact (it captured `grep`'s exit — no lines matched = clean — not swiftlint's). Let me wait for the running whole-tree commands to finish, then re-measure correctly.
+
+Whole-tree swiftformat flags 1/1924 files (not mine — mine are 0/11). Let me identify that offender, re-measure surface swiftlint correctly, and run whole-tree swiftlint to report honestly.
+
+Confirmed: surface lint is clean (LINT_EXIT_SURFACE=0); the 1 whole-tree format offender is `ActionBuilder.Previews.swift` — pre-existing, outside my allowed files. Let me run whole-tree swiftlint for completeness, then finalize the log.
+
+All clear: my surface passes every runnable gate; the only whole-tree issues (`LifetimeStatsWidget.Adapter.swift`, `ActionBuilder.Previews.swift`) are pre-existing and outside my allowed files. Let me rebuild the log cleanly with accurate results plus my supplementary compile/run evidence.
+
+Now append the supplementary compile+run verification (the strong evidence that compensates for the blocked xcodebuild), the wiring prerequisite, and the final verdict.
+
+S1 shows 1 only because `/tmp/tcheck` was cleared between sessions (the `cd` failed) — a harness artifact, not a code issue (S2 against the *real* tokens passed). Let me rebuild that harness, re-run S1 properly, and correct the log line.
+
+S1 passes (EXIT=0). Let me correct that line in the log.
+
+The log is accurate and complete. Let me do a final quality scan of my files: no hardcoded English `Text("...")` literals, no forbidden words (incl. "mock"/"stub" per acceptance), and confirm the 8 verbatim source i18n keys are present.
+
+All quality checks pass. Let me do a final read of the formatted main view to confirm coherence, then clean up temp artifacts.
+
+Main view reads coherently; a11y labels cover all interactive controls (toolbar Cancel/Add buttons are labeled by their visible `Text`). Let me verify the final file set, update todos, and commit (scoped exactly as the prompt specifies — not the pre-existing AIUsageCard changes).
+
+Staged exactly the 12 surface files + the log (the pre-existing AIUsageCard changes are correctly excluded). Now commit.
+
+Commit succeeded (`7bed0f1dd`), and the pre-existing AIUsageCard changes remain untouched (correctly excluded). Let me finalize the todos and plan.
+
+Let me verify the committed log contains the corrected results and the final verdict.
+
+All 12 surface files + the gate log are committed. The task is complete to the maximum extent possible on this runner.
+

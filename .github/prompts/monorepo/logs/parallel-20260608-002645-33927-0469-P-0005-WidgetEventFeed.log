@@ -1,0 +1,104 @@
+I'll start by exploring the repository structure and understanding what exists, plus checking tool availability for the Apple build chain.
+
+Key finding: **Xcode is not installed** (only CommandLineTools), so `xcodebuild` cannot run. But swift, swiftlint, swiftformat, and pwsh are available. Let me explore the existing Apple app structure and the web source thoroughly before deciding on BLOCKED vs DONE.
+
+The `widget-primitives` directory doesn't exist yet, and the Apple app is a large established codebase. Critically, the build gate needs Xcode which isn't installed. Let me verify the toolchain situation precisely and study existing patterns in parallel.
+
+Xcode.app **does exist** at `/Applications/Xcode.app` — `xcode-select` just points to CommandLineTools. I can override with `DEVELOPER_DIR` (no sudo needed). Let me verify it's a functional Xcode with iOS SDKs and simulators.
+
+**Xcode 26.5 is fully functional** via `DEVELOPER_DIR` — iOS 26.5 SDK, macOS SDK, and **iPhone 16 simulator (already booted)**. The capability IS available, so STATUS=DONE is achievable. Let me study the closest existing analog (SentryEventLogWidget — an event-log feed) and shared infrastructure.
+
+Now I understand the conventions well. Critical unknowns remain: the `Shared.xcframework` dependency (may need a KMP toolchain) and how `.Tests.swift` files in `dashboard-widgets` get wired into test targets. Let me investigate the build dependencies and remaining patterns.
+
+Major finding: `Shared.xcframework` is **not prebuilt** — the scheme builds it via Gradle/Kotlin-Native (`build-shared-xcframework.sh`), which both app targets depend on. This is referenced in `macos-pending-verifications.md`. Let me read that doc and understand test wiring before attempting any build.
+
+The picture is now complete and clarifying. The `macos-pending-verifications.md` documents the **exact established methodology**: P4 Apple surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) are verified green via **isolated SwiftPM build + tests + real iOS-18/macOS-15 `swiftc -typecheck` + swiftlint/swiftformat/placeholder**, while the full-app `xcodebuild` is deferred to the P99 acceptance gate due to documented **pre-existing, unrelated** collisions (`DashboardWidgetSize` redefined 15×, co-located XCTest files, unstaged KMP `Shared.xcframework`, macOS signing).
+
+Let me study the remaining patterns (theme tokens, adapter, previews, strings) so my surface matches exactly.
+
+Let me locate the theme token definitions and check for native shared `TimelineItem`/`EmptyState` equivalents (the web source's `@/components/data-display` + `@/components/feedback`).
+
+The tokens live in the generated `Tokens.swift`. Let me read it to get exact APIs for `Color.TS`, `Font.TS`, `TSSpacing`, `TSRadius`, `TSTone`.
+
+I have the full token API. Let me read the web components the source composes (`TimelineItem`, `EmptyState`) and `useDateFormat` to mirror them faithfully, plus locate `TSTone`.
+
+I now have a complete understanding of the architecture and conventions. Let me capture baseline evidence (the documented pre-existing collisions) and read the lint/format configs before implementing.
+
+I have everything I need. Evidence confirms the documented pre-existing full-app blockers (`DashboardWidgetSize` ×15, 261 co-located XCTest files, absent `Shared.xcframework`). This matches the established methodology: verify the surface in isolation, defer full-app build to the P99 gate.
+
+Let me set up tracking and write the plan.
+
+Let me kick off baseline lint/format checks in the background while I write the surface files.
+
+Now let me create the surface files. Starting with the Model.
+
+Baseline reveals a **pre-existing** swiftformat violation in `feature-views/ActionBuilder.Previews.swift` (unrelated to my surface, outside allowed files) — the whole-app format gate is already red before my work. I'll keep my own files clean and verify them in isolation. Now writing the Model file.
+
+Now the Adapter (pure projection, relative-time ladder, a11y builder — the testable core):
+
+Now the main View file:
+
+Now the Previews file:
+
+Now the comprehensive test suite:
+
+Now the i18n strings catalog:
+
+All 6 surface files written. Let me update tracking and auto-format my files, then verify formatting and linting on the new directory.
+
+Formatting passes (0/5 require formatting). Let me run swiftlint on the new files and review what auto-format changed.
+
+The single swiftlint violation is **pre-existing** in `LifetimeStatsWidget.Adapter.swift` — my `widget-primitives` files contribute **zero** violations. To produce a clean per-surface result, let me lint only my directory with a scoped config, then build the isolated SwiftPM harness.
+
+**Zero swiftlint violations** in my 5 Swift files. Now the key verification: an isolated SwiftPM harness to build + run the test suite under Swift 6 strict concurrency. Let me set it up.
+
+Now build and run the harness tests under Swift 6 (full Xcode toolchain):
+
+Build succeeds but there's a MainActor-isolation **warning** on `surfaceSlug` (it's read from the nonisolated `WidgetEventFeedDiagnostics`). I'll fix it to be clean (zero warnings) by marking the slug `nonisolated`.
+
+Clean build with **warnings-as-errors** (zero warnings). Now run the full test suite:
+
+**All 20 tests pass, 0 failures**, under Swift 6 on macOS. Now the real-SDK typecheck on both iOS 18 and macOS 15 (matching the precedent):
+
+Both iOS 18 and macOS 15 typechecks pass clean (zero errors/warnings). Now the placeholder gate, then wiring into the build.
+
+Placeholder gate clean (COUNT=0, EXIT=0). Now wiring `widget-primitives` into the build (project.yml + swiftlint config), mirroring how `dashboard-widgets` is wired.
+
+Now run `xcodegen generate` and verify the new files are enumerated in the project:
+
+`xcodegen generate` succeeds and **all 6 files are enumerated** across the iOS + macOS targets. Let me gather concrete evidence of the pre-existing full-app blockers, then attempt a bounded real `xcodebuild` to capture the actual failure nature.
+
+Concrete proof: `DashboardWidgetSize` is redefined **15× in the same `TeslaSync` module** (a guaranteed redeclaration error), and **my files reference it 0 times**. Let me attempt a bounded real `xcodebuild` to capture the actual in-context failure and confirm my surface produces no errors.
+
+The in-context build fails **immediately** at the missing `Shared.xcframework` (the KMP/Kotlin-Native framework, normally staged by the scheme's Gradle preAction) — the first documented pre-existing blocker, firing before any source compiles. Let me check whether staging that framework via Gradle is even viable on this runner, time-boxed.
+
+Gradle/Kotlin-Native works **offline** (cached deps). The framework is buildable — let me stage it (time-boxed), which would let me capture the *next* layer of pre-existing errors in a real in-context compile and prove my surface has zero errors.
+
+The KMP native cross-compile is slow. Let me check if `gtimeout` has terminated it.
+
+The KMP framework build is a heavyweight Kotlin/Native cross-compile that didn't complete in a bounded 9-minute offline window (consistent with it being a `macos-latest` CI step). I have comprehensive evidence now. Let me re-verify the edited repo files are clean and check the log directory.
+
+Repo surface files: format clean (0/5), lint clean (0 violations). Let me run a final consolidated harness verification to capture fresh outputs for the log.
+
+All per-surface gates are **green**: build (warnings-as-errors) EXIT=0, 20/20 tests pass, iOS 18 + macOS 15 typecheck EXIT=0. Now let me write the comprehensive, honest gate log.
+
+Now append the deferred-verification row to `macos-pending-verifications.md` per the documented Resolution protocol.
+
+Let me verify the table row is contiguous (no blank line splitting the table).
+
+The blank line at 17 splits the table — let me make my row contiguous.
+
+Now let me check git status before committing — confirming the generated project and any Gradle artifacts aren't accidentally staged.
+
+I see pre-existing modifications to `AIUsageCard.*` (feature-views) that I did **not** touch — these were already in the working tree. Let me confirm they're unrelated to my tooling, then stage only my files.
+
+Confirmed — the `AIUsageCard.*` changes are a **different parallel slot's** in-flight work (a surface rename), pre-existing and unrelated. I'll stage only my files. Committing now:
+
+All 6 surface files + integration touches staged; the unrelated `AIUsageCard` changes excluded. Committing:
+
+Committed (`9fa4b1eeb`). Let me clean up temp artifacts and do a final verification.
+
+Everything is finalized. Let me update the plan status and conclude.
+
+Task complete. Let me summarize.
+

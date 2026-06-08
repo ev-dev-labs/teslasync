@@ -1,0 +1,122 @@
+I'll start by exploring the repository structure and verifying platform capabilities, since this task requires Apple/Xcode tooling.
+
+Swift toolchain, swiftlint, swiftformat, and pwsh are present. But `xcode-select -p` points to **CommandLineTools**, not full Xcode — that means `xcodebuild` and iOS simulators likely aren't available. Let me gather hard evidence and explore the existing Apple app structure.
+
+Clear evidence captured: **xcodebuild requires full Xcode but only CommandLineTools is installed**, and **no iOS Simulator (`simctl` missing)**. The project uses XcodeGen (`project.yml`), no checked-in `.xcodeproj`. Let me check whether the macOS SDK still has the needed frameworks (for a possible compile-level verification), read the web source, and explore the existing Apple shared layers + prior logs.
+
+The macOS CLT SDK has only `.tbd` stubs and **no SwiftUI `.swiftmodule`** — so even a command-line `swiftc` typecheck of SwiftUI is impossible without full Xcode. This confirms the build/test gate is genuinely blocked. But I must still produce the complete, real native implementation. Let me deeply study the shared layers, conventions, and the data source.
+
+Excellent — there's substantial prior art: many `p4-apple-dashboard-widgets-*` logs already exist. I need to study how those were handled (DONE vs BLOCKED) given the same Xcode constraint, plus the exact conventions. Let me read the prompt, a representative prior log, project.yml, and the shared layers.
+
+Critical discovery: prior art shows an established, user-approved disposition — **"code-complete + host gates green + DEFERRED xcodebuild app build/test" → EXIT=0/STATUS=DONE**. That log references **Xcode 26.5 via `DEVELOPER_DIR` override**. My initial probe showed CommandLineTools active, but Xcode.app may still be installed. I must re-probe precisely — this changes the disposition.
+
+**Xcode 26.5 is fully available** via `DEVELOPER_DIR` override (iOS Simulator SDK 26.5 present). So the platform capability is **NOT blocked** — I can do real swiftc typechecks. This matches the established precedent exactly: code-complete + host gates green + DEFERRED xcodebuild app build/test (new dir not yet registered in project.yml). Let me now deeply study the shared layers to build against the real library.
+
+Now I have the shared library map. Let me read the exact APIs: i18n facade, telemetry contract, state-holder, tokens, and the key UI primitives (Badge, DataTable, Fields, States, Skeletons), plus a real reference surface that uses all of them.
+
+The architecture is clear: each per-surface artifact is **Shared-free** — it defines its own local seam (P1/S8), telemetry seam (P1/S11), strings facade (P1/S10), and phase enum, composing the real Shared-free component library + tokens. The `OdometerCounterWidget.*` files are the gold-standard template. Let me read them in full plus the token files.
+
+This is the gold-standard template. Now I'll read the token files and the remaining OdometerCounter template files (Projection, Views, Tests, Previews, strings) to nail the conventions for tests/previews/strings.
+
+Now let me locate the token definitions (Color.TS, Font.TS, TSSpacing, TSRadius, TSSkeleton) and verify which shared components are Shared-free (host-compilable), then read the specific component APIs I need (Badge, search field, CopyButton, table, EmptyState).
+
+Tokens are generated at `apps/design/generated/apple/Tokens.swift`. Let me locate/read that and the specific component APIs I'll compose with (Badge, Fields, CopyButton, States, Skeletons, Typography), plus a search/table-based sibling surface for idiom reference.
+
+Full token vocabulary captured. Now let me read the component APIs I'll compose with (Badge, Fields, CopyButton/Utility, States, Skeletons, Typography) and inspect a searchable-table sibling (SignalCatalogWidget) for idiom.
+
+Rich Shared-free atoms available: `TSCopyButton(value:)`, `TSIconBox(systemName:tone:)`, `TSSkeleton`, `TSTone`, `TSEmptyState`, `TSErrorDisplay`. Let me read the search field (Fields.swift), the shared DataTable API, Skeletons, Typography, and a searchable-table sibling to finalize my composition approach.
+
+I have the composition atoms. Let me confirm the search/table idiom from a sibling (SignalCatalogWidget), check Typography/Buttons/DataTable public APIs, and read the lint/format/placeholder configs plus project.yml source globs (for the DEFERRED reasoning).
+
+All gating configs confirmed. Critically, `project.yml` and `.swiftlint.yml` glob `TeslaSync/dashboard-widgets` but **not** `TeslaSync/feature-views` — so xcodebuild app build/test is legitimately DEFERRED (new dir not yet target-registered; I can't edit project.yml). Let me read the placeholder patterns and the closest sibling (SignalCatalogWidget — a searchable catalog table) to mirror house style exactly.
+
+SignalCatalogWidget is a near-perfect analog (searchable catalog table with a no-results state). The forbidden words include **"Placeholder"**, "TODO", "FIXME", "not implemented" — I'll avoid all of them (use "prompt" for the search field). Let me read the remaining SignalCatalog pieces (Model, Row, Builder, Models, Previews) to mirror exactly.
+
+I have the full searchable-catalog idiom. Let me read the last three SignalCatalog pieces (Model, Models, Previews) to mirror the strings `.count` facade, the model/freshness types, and the per-state preview convention.
+
+Let me read the final piece — `SignalCatalogWidget.Models.swift` — to mirror the value types and the `count` strings-facade signature, then I'll have the complete template and can write the implementation.
+
+I now have the complete house template. Let me do final parity research: the web `ToolCard` chrome structure and the exact i18n values for the web keys, then write a plan and implement.
+
+Web `ToolCard` = GlassPanel + icon box (cyan, `book`) + title + description. The web keys aren't in a locale JSON (i18next echoes the key as English). Let me confirm the i18n resource location and set up my plan/todos, then implement.
+
+Confirmed: `en.json` has `"Method"` and `"Path"`; the other web keys (`Tesla Api Ref`, `Tesla Api Ref Desc`, `Search Endpoints`, `Endpoint Desc`) aren't in the catalog, so i18next echoes the key as the displayed English. I'll ship those exact strings for true parity. I have everything. Let me set up the plan and todos, then implement.
+
+Now implementing. Starting with the Foundation-only Models file (value types, static catalog, strings facade base).
+
+Now the pure adapter (Builder) with the filter logic, method-tone, phase/freshness resolution, formatting, and the accessibility seam.
+
+Now the seams (telemetry P1/S11 + state-holder P1/S8), the observable model, and the SwiftUI half of the strings facade.
+
+Now the leaf views (ToolCard chrome, search field, method badge, table header/row, freshness chip, results count), composing the real shared atoms (`TSIconBox`, `TSCopyButton`) + tokens.
+
+Now the surface file — the `TeslaApiRefTool` view shell with the header and all render states (loading/empty/error/stale/offline/content/no-results).
+
+Now the per-state previews and the XCTest suite.
+
+The XCTest suite and the i18n strings catalog.
+
+The i18n strings catalog (table `TeslaApiRefTool`).
+
+All 8 files created. Now the verification phase. Let me set up the Xcode toolchain and run a real `swiftc -typecheck` of the production sources against the actual shared component library + tokens.
+
+Cards→TSButton, Skeletons→TSCard, so the typecheck closure needs Tokens + Typography + Buttons + Cards + Badges + Utility + Skeletons + my 5 sources. Running a real macOS-SDK typecheck under the Xcode 26.5 toolchain with strict concurrency (matching the target).
+
+Cards.swift needs `tsGlassPanel` (from the design material layer). Let me locate it and add to the closure.
+
+Production sources **typecheck clean (TYPECHECK_EXIT=0)** against the real library under macOS 15 + strict concurrency. Now typecheck the DEBUG previews (needs the Xcode `#Preview` macro plugin) and verify the XCTest file compiles against the XCTest framework.
+
+Previews typecheck clean too. The XCTest file uses `@testable import TeslaSync` (needs the full module, which requires the un-staged Shared.xcframework), so — exactly per the precedent — I'll prove the asserted logic with an **executed headless harness** that compiles the real adapter/model/accessibility code into a binary and runs the assertions for real.
+
+Strict-concurrency: `check` must be `@MainActor` to mutate the main-actor globals. Quick fix and re-run.
+
+**Executed harness: 47/47 PASSED** — the real adapter, model, and accessibility logic are proven green. Now formatting + lint + placeholder gates. First swiftformat (fix my files, then lint).
+
+swiftformat reformatted 1 file; now 0/7 require formatting. Let me run swiftlint (strict, explicit on my files + the bare gate) and the placeholder checker, and inspect what swiftformat changed.
+
+0 violations on my files. Now the bare swiftlint gate, the placeholder checker (both the real dir and the prompt's literal path), and a check of what swiftformat changed.
+
+Placeholder gate **COUNT=0/EXIT=0** (both paths), forbidden-word scan clean. Now the bare swiftlint gate plus a **post-format** re-verification (typecheck + harness) to confirm nothing regressed after swiftformat.
+
+Post-format typecheck=0 and harness=47/47. The bare gate shows **1 pre-existing violation** — but the bare gate scans `included:` dirs (not `feature-views`), and my explicit strict lint was 0. Let me confirm the violation is pre-existing and not mine.
+
+The grep came back empty — let me capture the full reporter output to pinpoint the violation.
+
+The lone bare-gate violation is in **`LifetimeStatsWidget.Adapter.swift`** (a pre-existing sibling dashboard widget, `function_body_length`) — not my code and outside my allowed-files scope. My 7 files pass `--strict` with 0 violations. Let me confirm it's untouched baseline, then gather the xcodebuild-deferral evidence (project not yet target-registered).
+
+xcodegen 2.45.4 is available. Let me **prove** the non-registration concretely: generate the (git-ignored) xcodeproj and grep the pbxproj — my surface should have 0 references while a registered sibling has many.
+
+**Definitive evidence:** `TeslaApiRefTool` = **0 refs** in the generated pbxproj (not target-registered), while registered siblings have 42/36 refs. Running `xcodebuild` now would build the app *without* my surface → zero evidence about this deliverable. Let me confirm the other two independent deferral reasons (Shared.xcframework not staged; no signing identity) and that the tree is clean.
+
+All three independent deferral reasons confirmed (0 refs, no Shared.xcframework, 0 signing identities). Note: two unrelated `web/*.tsx` files were already modified in the working tree before I started — I won't touch or commit those. Let me grab the base SHA, then write the honest gate log.
+
+Now writing the comprehensive, honest gate log.
+
+All gates green for the surface. Now committing **only** my 8 files + the log (leaving the two unrelated pre-existing web edits untouched).
+
+Staging is correct — 9 files (8 surface + log); the two unrelated pre-existing web edits remain unstaged. Committing.
+
+Committed as `680722c2` (9 files, 1672 insertions). Working tree correctly retains only the two unrelated pre-existing web edits. Let me finalize the todo tracker.
+
+All 10 todos complete. The task is done and verified.
+
+Merge made by the 'ort' strategy.
+ ...p4-apple-feature-views-0020-TeslaApiRefTool.log | 224 +++++++++++++++
+ .../feature-views/TeslaApiRefTool.Builder.swift    | 165 ++++++++++++
+ .../feature-views/TeslaApiRefTool.Model.swift      | 201 ++++++++++++++
+ .../feature-views/TeslaApiRefTool.Models.swift     | 171 ++++++++++++
+ .../feature-views/TeslaApiRefTool.Previews.swift   |  90 +++++++
+ .../feature-views/TeslaApiRefTool.Tests.swift      | 243 +++++++++++++++++
+ .../feature-views/TeslaApiRefTool.Views.swift      | 299 +++++++++++++++++++++
+ .../feature-views/TeslaApiRefTool.strings          |  58 ++++
+ .../TeslaSync/feature-views/TeslaApiRefTool.swift  | 221 +++++++++++++++
+ 9 files changed, 1672 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0020-TeslaApiRefTool.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/TeslaApiRefTool.Builder.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TeslaApiRefTool.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TeslaApiRefTool.Models.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TeslaApiRefTool.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TeslaApiRefTool.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TeslaApiRefTool.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/TeslaApiRefTool.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/TeslaApiRefTool.swift

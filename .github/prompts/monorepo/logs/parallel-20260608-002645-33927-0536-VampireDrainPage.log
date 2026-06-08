@@ -1,0 +1,136 @@
+I'll start by exploring the repository structure to understand the web source and the existing Apple app architecture.
+
+Now let me explore the Apple app structure deeply to understand the existing patterns, component library, and an already-implemented reference page.
+
+The actual structure uses `feature-views/` (flat, multi-file per component), not `Features/Battery/`. Let me investigate the real conventions, existing Page implementations, the parity manifest/ledger, and project.yml.
+
+Key finding: there's an existing `VampireDrainWidget` and the repo uses `feature-views/` (flat, multi-file). Let me examine the widget as a reference, the project.yml build config, and the parity README.
+
+Let me check the build config, available toolchain, design tokens, ledger format, and the full manifest record for this unit.
+
+No full Xcode (only CLT) — so `xcodebuild` build/test will be BLOCKED by environment, but `swift`, `swiftlint`, `swiftformat`, `xcodegen` are available. Critically, `project.yml` globs `feature-views/` and `dashboard-widgets/` — **not** `Features/Battery/`. Let me examine the ledger schema, manifest record, localization wiring, nav/router, design tokens, and the sibling widget's remaining files.
+
+Localization uses per-surface `.strings` tables folded into `Localizable.xcstrings`. Nav lives in `Sources/App/`. Now I need the sibling widget's remaining files (test/views/builder/adapter/previews patterns), the design tokens, and the routing files. Let me read these and the full manifest record.
+
+The sibling widget's `.Tests.swift` uses `@testable import TeslaSync`. I need to resolve how test files in source dirs are handled, check the placeholder script + `pwsh`, read the design tokens, the remaining widget files (Builder/Adapter/Previews), and the nav files. Let me batch these.
+
+`pwsh` and the placeholder script are available, so that gate is runnable. The gate lints `apps/apple/TeslaSync/Features/Battery` specifically — so files **must** live there. No full Xcode means build/test are environmentally BLOCKED (the prompt's sanctioned path). Let me read the design tokens, the widget's Builder/Adapter/Previews, nav files, swiftlint config, and check for a charts wrapper.
+
+Tokens live in a single `Tokens.swift`. The widget imports `Charts` directly. Let me read the tokens and discover existing shared components (RadialGauge, GlassPanel, Skeleton, scaffold, freshness, charts) plus the nav files.
+
+Rich shared component library exists under `Sources/Components/` and `Sources/Features/`. Let me map the component APIs (gauge, table, metrics, cards, skeletons, charts) and the navigation/page-scaffold patterns.
+
+No full pages exist yet — this is likely the first Apple page. I have the shared component library mapped. Let me read the exact APIs of the components I'll use (charts, table, cards, metrics, badges, skeletons, states, motion) plus the nav and a KMP-adapter example.
+
+Got the gauge + chart container/models. Now the line/bar chart wrappers, table, cards, badges, metrics, skeletons, states, typography, and live-staleness APIs.
+
+Now the cards, badges, metrics, skeletons, states, motion, typography, and live-connection facade.
+
+I have the component APIs. Let me extract the authoritative manifest record for this unit, read the remaining primitives (skeletons, states, motion, typography), the live-connection facade, the nav trio, and check whether an existing feature-view adapter bridges to the KMP `Shared` framework.
+
+Manifest confirms 9 panels + 3 charts + 3 states + 30 strings = 45. Panels 1-4 are MetricCards; 5-9 are the gauge/line/bar/table/tips GlassPanels. Now the final primitives, live-connection facade, and nav files.
+
+I now have the full component vocabulary. Let me read the navigation files and the live-connection facade to wire the route and a freshness indicator.
+
+Navigation is keyed by top-level `AppRoute`; VampireDrain is a sub-route of `/charging`. Let me read the deep-link parser and app shell to wire a real sub-destination.
+
+The `AppRouteHostRegistry` is the documented P7 page-host mechanism. Let me read the canonical `SettingsRouteRegistration` pattern and the composition root to mirror it correctly.
+
+Navigation uses value/registry hosting; VampireDrain is a sub-route best reached via a `navigationDestination`. Let me check how production sources bridge to the KMP `Shared` framework and read the widget's preview pattern, then I'll plan and implement.
+
+Let me read the shared state-holder facade types (LoadableState, LiveConnection, StateHolderModel) so my model binds idiomatically to the KMP core layer.
+
+I have full context now. Key constraint discovered: the shared TS components take `LocalizedStringKey`, which resolves from the main `Localizable.xcstrings` catalog (an allowed file). Let me inspect that catalog's format and which of my 30 keys already exist, so I add only what's missing.
+
+All 30 keys are missing — I'll add all of them. Let me read the placeholder-scan script (to avoid tripping it) and a sample feature-view main file for header conventions, then start implementing.
+
+The established pattern (AcDcStatsPanel) confirms TS components + glass panels. Since the prompt allows editing `Localizable.xcstrings` and TS components need `LocalizedStringKey`, I'll add the 30 keys to the catalog and use them idiomatically. Let me read the exact placeholder patterns to avoid tripping the scan in my code/comments.
+
+Forbidden words include "Placeholder" (case-insensitive) and "TODO" — I'll avoid them in code/comments. Let me verify a few infra catalog keys the shared components rely on, then I'll write the plan and implement.
+
+The catalog is missing even infra keys (e.g., `action.retry`) — so I'll add my 30 required keys plus the chrome/infra keys my page surfaces. I now have complete context. Let me write the plan and todo list, then implement.
+
+Now implementing. Let me create the directory and the domain models file.
+
+Now let me wire the strings into the catalog. First I'll detect its exact serialization (ASCII-escaped vs raw UTF-8) so my edit produces a minimal, consistent diff.
+
+Catalog is raw UTF-8, 2-space indent, order `sourceLanguage → strings → version`. I'll append my keys to `strings` preserving order/format.
+
+Clean 440-line additions only. Now register the source dir in `project.yml` for both app targets.
+
+I registered `TeslaSync/Features` in both app targets. Critical check: the sibling widget's `.Tests.swift` uses `@testable import TeslaSync` yet lives in an app-target source dir — I must confirm how test files are excluded from the app target so mine compiles the same way.
+
+Confirmed: 224 sibling `.Tests.swift` co-located in app-target dirs — I'll match that convention exactly (build is BLOCKED with/without my files; no Xcode). Now create the ledger, then run all runnable gates.
+
+Placeholder gate PASSES (0). Now swiftlint and swiftformat on the new directory.
+
+Swiftlint linted the whole project (config `included` list) and found 1 serious violation. Let me locate it precisely.
+
+The lone violation is **pre-existing** (`dashboard-widgets/LifetimeStatsWidget.Adapter.swift`), not in my files — swiftlint linted the whole config `included` list. Let me lint only my files (explicit paths) against the repo config to prove they're clean.
+
+My files have 11 lint issues, all in `VampireDrainPage.Views.swift`: file too long (403>400), 3 long lines, and 7 `multiple_closures_with_trailing_closure` from the `TSColumn(comparator:){cell}` pattern. I'll split the file in two and pass `cell:` as a labeled argument. Let me recreate both files.
+
+Now re-lint only my files, run swiftformat lint, and re-run the placeholder scan.
+
+SwiftLint is clean (0). SwiftFormat flags 3 items: `86_400` grouping in Previews and an unused arg in Route. Let me check the `.swiftformat` config, then fix Route's concurrency + unused arg and the number literals.
+
+Config uses default `numberFormatting` (threshold 6) → `86_400` (5 digits) shouldn't group. Let me fix Previews' literals and Route's unused arg + add `@MainActor` to the model-factory closure for Swift 6 concurrency correctness.
+
+Both linters clean (0 violations, 0/9 reformatting). Now syntax-parse each file, validate `project.yml` via xcodegen, and re-run the placeholder scan.
+
+All 9 files parse. One concurrency risk to fix: the no-arg `VampireDrainPage.init()` constructs a `@MainActor` model from a nonisolated `View.init` (Swift 6 strict concurrency). It's unused (all call sites inject a model), so I'll remove it.
+
+Let me remove a redundant no-op modifier on the subtitle (TSText already sets its color), then re-verify the full gate set.
+
+Now validate `project.yml` with xcodegen and re-run the placeholder + lint gates on the final fileset.
+
+xcodegen validates `project.yml` (RC=0). Let me confirm my files are members of the app target in the generated project, that the `.xcodeproj` is git-ignored, and re-run the placeholder scan on the final set.
+
+Files are target members (54 pbxproj refs); `.xcodeproj` is git-ignored; placeholder clean. Now capture the exact `xcodebuild` BLOCKED evidence for an honest log, then clean up the generated project.
+
+Build/test confirmed **BLOCKED** (xcodebuild requires full Xcode; only CLT present) — the prompt-sanctioned path. Let me clean up the generated project and locate the logs directory.
+
+Let me view an existing apple widget log to mirror the `=== PARITY ===` and gate format.
+
+The predecessor log proves they did a real `swiftc -typecheck` against the component closure — stronger than parse. Components/Design don't import `Shared`, so I can typecheck my page against the real components. Let me check their imports first.
+
+Components/Design are SDK-only (no `Shared`). I'll run a real `swiftc -typecheck` of my page against the full component+token closure with strict concurrency — the strong verification the predecessor used.
+
+The only errors are the `#Preview` macro plugin missing under CLT (a toolchain limitation, not a code defect — full Xcode ships that plugin). Let me typecheck my **non-preview** files against the closure to confirm zero real errors.
+
+The shell `&&` swallowed the error list. Let me capture the output to a file and inspect the actual errors, separating my files from the dependency closure.
+
+All 52 errors are in the dependency closure's `UnitFormatters.swift` (it needs `UnitPreferences` from the Shared-backed facade) — a file my page does **not** use. **Zero errors in my files.** Let me exclude the Shared-coupled component files and confirm a fully clean typecheck of the closure I actually use.
+
+**Typecheck EXIT=0 — zero errors** against the real component closure with strict concurrency. Let me check the 4 warnings aren't in my files.
+
+2 warnings are in my `Sessions.swift` — the custom `VampireDrainValuePill` View's synthesized init is MainActor-isolated but called in `TSColumn`'s nonisolated cell closures. The fix is a `nonisolated init`. Let me add it.
+
+Let me re-typecheck and re-lint to confirm zero errors and zero warnings in my files.
+
+Two new errors appeared after the init change, and swiftformat wants a tweak. Let me see them.
+
+The custom-init approach backfired (can't init isolated stored props + redundant). Cleaner fix: make the pill a **nonisolated free function** so it composes inside `TSDataTable`'s nonisolated cell closures. Let me replace the struct and update its 3 call sites.
+
+Now re-run the full local gate: typecheck against the real closure, swiftlint, swiftformat, parse.
+
+Typecheck is clean (0 errors, 0 warnings in my files); swiftlint clean. One file needs a swiftformat tweak — let me find and fix it.
+
+Final comprehensive verification: typecheck, swiftlint, swiftformat, parse-all, placeholder.
+
+All four runnable code gates are GREEN. Let me verify each of the 30 parity strings is actually referenced in my Swift code (not just the catalog), to back the parity claims.
+
+All 30 strings referenced in code and present in the catalog. Now let me write the gate log with the `=== PARITY ===` enumeration. Let me grab the base commit for the header.
+
+Now I'll write the gate log with the full `=== PARITY ===` enumeration (45/45) and honest EXIT/STATUS.
+
+Let me do a final pre-commit check: confirm git status, ensure the generated project is gone, and re-run the placeholder + lint gates once more.
+
+Generated project is gone; only my intended files plus pre-existing (not-mine) AIUsageCard edits are present. Let me stage exactly my files and commit (excluding the unrelated AIUsageCard changes).
+
+All 13 intended files staged (AIUsageCard changes excluded). Now commit.
+
+Committed cleanly (13 files, 2307 insertions; unrelated AIUsageCard changes excluded). Let me update tracking and confirm the final working-tree state.
+
+Task complete. All work is committed and the working tree contains only pre-existing (unrelated) AIUsageCard edits that were present before I started.
+

@@ -1,0 +1,139 @@
+=== P4 Shared surface 0127 MaintenanceBanner (Apple) ===
+Runner: Darwin (arm64). Xcode 26.5 (17F42). Swift 6.3.2.
+Web parity source: web/src/components/feedback/MaintenanceBanner.tsx
+
+------------------------------------------------------------------------------
+SURFACE DELIVERED (allowed scope: apps/apple/TeslaSync/shared-surfaces/MaintenanceBanner.*)
+------------------------------------------------------------------------------
+  MaintenanceBanner.Adapter.swift       pure logic (mode/tone, fingerprint, formatRemaining,
+                                        countdown buckets, ISO parse, a11y) — Foundation only
+  MaintenanceBanner.Projection.swift    pure resolve(input,dismissedKey) -> phase
+  MaintenanceBanner.Model.swift         i18n facade, input snapshot, MaintenanceBannerActive,
+                                        resolved phases, source seam, @Observable model
+  MaintenanceBanner.Seams.swift         telemetry seam (view.opened), dismissal store, in-mem source
+  MaintenanceBanner.Views.swift         active banner: icon tile, title/body, live countdown
+                                        (TimelineView), dismiss
+  MaintenanceBanner.Chrome.swift        P4 leaf chrome: freshness chip, connectivity note,
+                                        loading skeleton bar, error bar
+  MaintenanceBanner.swift               top-level surface View (phase switch + start/stop)
+  MaintenanceBanner.Previews.swift      every state (maintenance/degraded/countdown/ending/ended/
+                                        loading/error/stale/offline/dormant)
+  MaintenanceBanner.Tests.swift         projection + state-holder XCTest
+  MaintenanceBanner.AdapterTests.swift  pure-adapter XCTest
+  MaintenanceBanner.strings             P1/S10 catalog (parity keys + native chrome)
+  (multi-file split mirrors the in-repo AiUsageCard P4 gold-standard pattern)
+
+------------------------------------------------------------------------------
+RUNNER CAPABILITY (per the prompt's capability clause)
+------------------------------------------------------------------------------
+  SwiftUI + Swift Charts + MapKit, iOS 18 / macOS 15 HIG : AVAILABLE.
+    - Xcode 26.5, iphonesimulator26.5 SDK, macosx26.5 SDK, "iPhone 16" simulator present.
+    - KMP Shared.xcframework built locally from apps/shared via Gradle:
+        "BUILD SUCCESSFUL in 23m 41s" -> core/build/XCFrameworks/release/Shared.xcframework
+  => The Apple capability is NOT the blocker. The blockers below are pre-existing,
+     out-of-scope repository-integration conditions.
+
+------------------------------------------------------------------------------
+LITERAL GATE STEPS (executed on this checkout)
+------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    IOS_EXIT=65  (** BUILD FAILED **)
+    The Shared.xcframework linked; the single TeslaSync module then failed to compile.
+    ROOT CAUSE — pre-existing sibling defects (NOT MaintenanceBanner), 22 files, e.g.:
+        dashboard-widgets/*: "'DashboardWidgetSize' is ambiguous for type lookup" (47x),
+                             "invalid redeclaration of 'DashboardWidgetSize'",
+                             "'TelemetryErrors{Telemetry,Source,Model}' is ambiguous"
+        feature-views/AIRestorePanel.Tests.swift: "unable to resolve module dependency: 'XCTest'"
+          (the committed project.yml compiles every *Tests.swift INTO the app target instead of a
+           test bundle — affects ALL surfaces' test files equally).
+    MaintenanceBanner CONTRIBUTION TO THE FAILURE: ZERO.
+        grep 'shared-surfaces/MaintenanceBanner.*error:' build log  => 0
+        grep -i 'maintenance' <all error: lines>                    => 0
+        Isolated in-module compile (sibling dup-defs aside, test files routed out of the app
+        target) produced ZERO diagnostics from the 10 surface files.
+
+[2] xcodebuild -scheme TeslaSync-macOS build test
+    MAC_EXIT: not independently executed.
+    Rationale (transparent, not an assumption of success): the iOS and macOS app targets share
+    the IDENTICAL source module (project.yml: both consume Sources + TeslaSync/feature-views +
+    TeslaSync/dashboard-widgets + shared-surfaces; ADR-002 "one SwiftUI source group"), so the
+    macOS build inherits the SAME pre-existing sibling blockers as [1]. MaintenanceBanner's
+    macOS-specific compilation was instead proven directly:
+        swiftc -typecheck -sdk macosx -target arm64-apple-macos15.0 -swift-version 6
+        (Views/Chrome/swift/Previews + Adapter/Projection/Model/Seams) vs the REAL design tokens
+        => RC=0 (clean).
+
+[3] swiftlint --strict
+    LINT_EXIT=2.
+    Pre-existing sibling violation (NOT MaintenanceBanner):
+        dashboard-widgets/LifetimeStatsWidget.Adapter.swift:141 function_body_length (78 > 50).
+    MaintenanceBanner: swiftlint --strict over the 10 surface files => 0 violations (clean).
+
+[4] swiftformat --lint apps/apple
+    FORMAT_EXIT=1.  "1/1923 files require formatting" — pre-existing sibling (NOT MaintenanceBanner):
+        feature-views/ActionBuilder.Previews.swift.
+    MaintenanceBanner: swiftformat --lint over the surface => 0/10 require formatting (clean).
+
+[5] check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces -Language swift
+    PLACEHOLDER_EXIT=0.  PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0.
+    No TODO / FIXME / stub / placeholder / Lorem / "not implemented" in shipped code.
+
+------------------------------------------------------------------------------
+INDEPENDENT VERIFICATION OF THE SURFACE (real toolchain, this runner)
+------------------------------------------------------------------------------
+  [PASS] swiftformat --lint (10 surface files) ............... 0/10 require formatting
+  [PASS] swiftlint --strict (10 surface files) .............. 0 violations
+  [PASS] check-placeholders (swift) ......................... COUNT=0 EXIT=0
+  [PASS] swiftc -swift-version 6 -strict-concurrency=complete COMPILE + RUN of the
+         Adapter/Projection/Model/Seams logic with 50+ web-parity assertions => ALL PASS:
+           formatRemaining "Hh MMm"/"Mm SSs"/"Ss" + floor + zero-pad + negative clamp;
+           countdown endsIn(>1000ms)/endingNow(>-1000ms)/ended thresholds;
+           fingerprint "u:{updatedAt}" | "s:{mode}|{message}|{until}";
+           lenient ISO parse; mode "?? ok" fallback;
+           projection dormant/loading/error/active(maintenance|degraded) + body trim-vs-default;
+           dismissal gate + new-fingerprint re-surface + stale-dismissal reset;
+           view.opened deferred past dormant, emitted once;
+           stale one-shot auto-refresh, offline none, live re-arm.
+  [PASS] swiftc -typecheck of the SwiftUI layer vs the REAL design tokens
+         (apps/design/generated/apple/Tokens.swift), macOS 15 SDK => RC=0
+  [PASS] in-module iOS xcodebuild compile vs the REAL Shared.xcframework + REAL shared component
+         library (TSButton/TSSkeleton/Color.TS/Font.TS/TSSpacing/TSRadius) => 0 errors in the
+         surface (a name-collision with the sibling MaintenanceTrackerWidget's bare `Maintenance*`
+         types was found and FIXED by uniquely prefixing every surface type `MaintenanceBanner*`).
+
+------------------------------------------------------------------------------
+PARITY SUMMARY (web -> native)
+------------------------------------------------------------------------------
+  data    useSystemHealth(mode/maintenance_message/maintenance_until/maintenance_updated_at)
+          bound via the P1/S8 state-holder seam — no HTTP in the view.
+  render  dormant (web return null) / maintenance (amber, wrench, role=alert) /
+          degraded (sky, alert-triangle, role=status); live countdown endsIn/endingNow/ended;
+          per-snapshot dismissal fingerprint (sessionStorage -> process-lifetime store).
+  i18n    serviceMode.banner.{maintenanceTitle,degradedTitle,defaultMaintenance,defaultDegraded,
+          endsIn,endingNow,ended} + common.dismiss — every web source key present in the P1/S10
+          table; no English literals in Swift.
+  P4 leaf loading / error(+retry) / stale / offline (freshness chip + connectivity note +
+          one-shot auto-refresh); view.opened telemetry slug "MaintenanceBanner" (P1/S11).
+  a11y    VoiceOver banner label (title+body+countdown), labelled dismiss/retry, Dynamic Type
+          tokens, reduce-motion via shared primitives.
+
+------------------------------------------------------------------------------
+BLOCK CLASSIFICATION
+------------------------------------------------------------------------------
+  The surface is COMPLETE and passes every applicable per-surface check. The literal gate cannot
+  reach EXIT=0 on THIS checkout for reasons entirely OUTSIDE this prompt's allowed-files scope
+  (apps/apple/TeslaSync/shared-surfaces/MaintenanceBanner.* + this log):
+    (a) integration wiring of TeslaSync/shared-surfaces into project.yml (app targets) and
+        .swiftlint.yml (included) is owned by the P4 core/integration prompt and is absent here;
+        (verified locally with a TEMPORARY, reverted wiring purely to run the compiler.)
+    (b) pre-existing duplicate-definition / lint / format defects in sibling surfaces
+        (dashboard-widgets/*, feature-views/ActionBuilder.Previews, LifetimeStatsWidget) owned by
+        their own prompts;
+    (c) the monorepo compiles *Tests.swift into the app target (XCTest unresolved) instead of a
+        test bundle.
+  None of (a)-(c) is caused by, or fixable within, MaintenanceBanner. With the (a) wiring present
+  and siblings (b)/(c) resolved, the evidence above shows this surface compiles, lints, formats,
+  and unit-verifies clean.
+
+EXIT=1
+STATUS=BLOCKED

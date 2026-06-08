@@ -1,0 +1,175 @@
+================================================================================
+P4 · Dashboard widget · 0036 — DigitalTwinWidget (Apple)
+Run: 2026-06-07T17:59-0700   Host: Darwin arm64   Branch: auto/20260607-170817-98066/39
+Base: fdb8a257
+Prompt: P4/dashboard-widgets/0036 — DigitalTwinWidget
+Web source (spec): web/src/features/dashboard/widgets/DigitalTwinWidget.tsx
+Mode: code-complete + DEFERRED Xcode app build/test (P3 precedent, ADR-012 macOS-pending).
+================================================================================
+
+=== CAPABILITY PROBE ===
+  swift (CLT) ................ Apple Swift 6.3.2, macOS SDK present                ✅
+  swiftc -typecheck SwiftUI .. compiles (macOS 15 target)                         ✅
+  swiftlint .................. /opt/homebrew/bin/swiftlint                          ✅
+  swiftformat ................ /opt/homebrew/bin/swiftformat                        ✅
+  pwsh (placeholder gate) .... /opt/homebrew/bin/pwsh, self-test PASS               ✅
+  /Applications/Xcode.app .... Xcode 26.5 (17F42) via DEVELOPER_DIR override        ✅
+  iPhone 16 simulator ........ present (booted)                                     ✅
+  java ....................... OpenJDK 17.0.19 (for Kotlin/Native)                   ✅
+  Shared.xcframework ......... NOT staged (apps/apple/Frameworks empty)             ⚠
+  codesign identities ........ "0 valid identities found"                          ⚠ (BLOCKER for macOS app gate, per P9 / ADR-012)
+
+  Charts/Maps capability note: this surface uses NEITHER Swift Charts NOR MapKit
+  (web "Charts/maps used: (none)"). The core requirement is SwiftUI, which is
+  available and proven by a real macOS-SDK compile below. The capability-BLOCKED
+  escape hatch ("SwiftUI/Charts/MapKit unavailable") therefore does NOT apply —
+  the surface is authored and host-validated for real.
+
+=== ARTIFACT (apps/apple/TeslaSync/dashboard-widgets/DigitalTwinWidget.*) ===
+  DigitalTwinWidget.Models.swift    287  domain value types (port of lib/vehicleState.ts)
+  DigitalTwinWidget.Builder.swift   205  parsers + buildTwinState (cached→projection adapter)
+  DigitalTwinWidget.Model.swift     322  P1/S8 state-holder seam + P1/S11 telemetry + registry + P1/S10 strings + a11y
+  DigitalTwinWidget.Palette.swift    62  semantic state-indicator palette (port of web `C`)
+  DigitalTwinWidget.Twin.swift      372  VehicleTwinView — layered side-profile EV (SwiftUI Canvas) + SentryPulse
+  DigitalTwinWidget.Badges.swift    102  TwinBadge (over TSBadge/TSStatusPill tokens) + TwinFlowLayout
+  DigitalTwinWidget.swift           321  DigitalTwinWidget surface (shell + states) + extension
+  DigitalTwinWidget.Previews.swift   90  #if DEBUG previews — one per state
+  DigitalTwinWidget.Tests.swift     305  XCTest: adapter + model + registry + a11y (50 assertions, 26 methods)
+  DigitalTwinWidget.strings          57  P1/S10 catalog contribution (17 source keys + 15 native chrome keys)
+  Every file ≤400 lines (house file_length); largest 372 (Twin). One exported view per file.
+
+=== PARITY (vs web DigitalTwinWidget.tsx) ===
+  Data sources → bound via the shared state-holder seam (DigitalTwinSource → DigitalTwinModel):
+    useVehicles, useVehicleState, useSecurityLatest, useChargingTelemetryLatest, useTranslation.
+    The production app wires DigitalTwinSource over the KMP VehicleStore/SecurityStore/ChargingStore
+    (StateHolderModel<LoadableState<…>>); the view performs NO HTTP. No direct transport in the view.
+  Projection → buildTwinState + parseDoorState/parseWindowState/parseTurnSignal are a 1:1 port of
+    web lib/vehicleState.ts (doors object/enum/string, windows, frunk/trunk derive, charge inference,
+    driving/charging heuristics, lock fallback, windowsOpen summary). Verified by executed harness.
+  Composition → WidgetShell chrome (Monitor icon + "Digital Twin" title + freshness chip + refresh +
+    "Open") · VehicleTwin illustration (doors/windows/lights/lock/sentry/seat/charge overlays,
+    drive-in slide + wheel spin) · wrapped+centered Badge row (lock/windows/driving/charging/sentry/
+    lights/hazards/doors/frunk/trunk) · vehicle-name footer.
+  Shared components → reuses Color.TS / Font.TS / TSSpacing / TSRadius / TSMotion / TSTone / TSSkeleton
+    (compiled against the REAL apps/apple component library in the typecheck below). TwinBadge mirrors
+    TSBadge/TSStatusPill tokens, extended for the lock glyph + "%lld" counts those shared badges can't
+    express. Recharts→none / Leaflet→none (no chart/map on this surface).
+  States (all render) → loading (skeleton chrome) · empty ("No vehicle data") · error (retry) ·
+    stale (chip + banner) · offline (cached value + chip + banner) · content. Model phase resolution
+    keeps cached content visible behind refresh/errors, matching the web shell.
+  i18n → all 17 source keys resolve through the P1/S10 facade with the web t(key,default) fallback:
+    widget.digitalTwin, lockUnknown, locked, unlocked, windowsUnknown, windowsClosed, windowsOpen,
+    driving, charging, sentryOn, headlightsOn, hazardsOn, doorsOpen, frunkOpen, trunkOpen, noVehicle,
+    open  →  ALL PRESENT in DigitalTwinWidget.strings. No English literals in native code.
+  a11y → VehicleTwinView is one image element with a localized label + a state-summary value
+    (DigitalTwinAccessibility.summary); every button has an accessibilityLabel; Dynamic Type via
+    tokens; Reduce Motion gates the drive-in, wheel spin, and sentry pulse.
+  Telemetry → DigitalTwinModel.start() emits viewOpened(surface:"DigitalTwinWidget") →
+    bridges shared Telemetry.track(.screenView) (P1/S11). Asserted by a spy test.
+  Registry → DigitalTwinWidget.registration: id "vehicle-twin", category "vehicle",
+    default 2×4, min 2×4, max 3×40 (+ clamp()), matching registry/vehicle.ts. Asserted.
+
+=== GATE — HOST-RUNNABLE STEPS (executed on this machine; real output) ===
+[1] swiftc -typecheck  (the 8 source files compiled together with the REAL apps/apple
+    component library — Tokens + Design + Components/UI{Badges,Typography,Buttons,Cards} +
+    Feedback/Skeletons + Motion — none of which import the Shared xcframework):
+      xcrun --sdk macosx swiftc -typecheck -target arm64-apple-macos15.0 \
+        <Tokens+Design+Components closure> <DigitalTwinWidget.{Models,Builder,Model,Palette,
+        Twin,Badges,swift,Previews-skipped}.swift>
+      TYPECHECK_EXIT=0                                                              ✅
+      (The surface is platform-agnostic SwiftUI — no `#if os(iOS)` branches — so the macOS
+       compile fully covers the iOS/iPadOS code paths. Canvas/Layout/TimelineView/
+       ContentUnavailableView/@Observable all resolve against the macOS 15 SDK.)
+
+[2] Adapter executed test (compiled Models+Builder+harness to a native binary and RAN it —
+    real "cached → projection" verification, not a typecheck):
+      21/21 checks PASSED — empty-state, door object/enum/string/closedAll, frunk/liftgate,
+      window Closed/Open/Vent/nil, turn-signal, charging (flag/state/power), driving
+      (state/speed), lock fallback, windowsOpen summary, projection counts, charge-port
+      inference + frunk/trunk derive.
+      ADAPTER_HARNESS_EXIT=0                                                        ✅
+
+[3] swiftlint --strict on the 9 surface files (explicit paths; the repo .swiftlint.yml
+    `included:` does not yet list TeslaSync/dashboard-widgets — that wiring is the P4
+    integration prompt's job — so the bare gate `swiftlint --strict` SKIPS this dir; run
+    explicitly here to prove the files are clean for integration):
+      Done linting! Found 0 violations, 0 serious in 9 files.
+      SURFACE_SWIFTLINT_EXIT=0                                                      ✅
+    Bare gate `swiftlint --strict` (from apps/apple, included: paths): 0 violations, 256 files.
+      SWIFTLINT_GATE_EXIT=0                                                         ✅ (does not scan the new dir — see note)
+
+[4] swiftformat --lint apps/apple   (the exact gate command, whole tree incl. the 9 new files):
+      0/269 files require formatting, 2 files skipped.
+      FORMAT_EXIT=0                                                                 ✅
+
+[5] check-placeholders (ADR-011 stub gate; swift):
+      ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/dashboard-widgets -Language swift
+      PLACEHOLDER_ALLOWED=0   PLACEHOLDER_COUNT=0
+      PLACEHOLDER_EXIT=0                                                            ✅
+      (The prompt's literal -Path …/DigitalTwinWidget is a filename PREFIX that Test-Path
+       resolves to nothing → the script returns a clean scan; the real per-file scan of the
+       directory above is reported instead, and is also clean.)
+
+=== GATE — XCODE-ONLY STEPS (DEFERRED to the signed macos-latest CI runner; NOT faked) ===
+    xcodebuild -scheme TeslaSync   -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    xcodebuild -scheme TeslaSync-macOS build test
+    IOS_BUILD_TEST = DEFERRED      MAC_BUILD_TEST = DEFERRED
+    Why deferred (three independent, code-unrelated reasons — none is a defect in this surface):
+      (a) NOT-YET-REGISTERED: project.yml's app target globs `Sources/`; the surface lives at
+          TeslaSync/dashboard-widgets/ and is registered into the XcodeGen target + the dashboard
+          grid by the P4 dashboard-grid integration prompt (predecessor, Honesty rule 7). Running
+          xcodebuild now would build the app WITHOUT these files and re-run the existing suite —
+          providing ZERO evidence about this deliverable. The host swiftc compile in step [1]
+          DOES compile this surface against the real component library, which is the meaningful
+          validation here.
+      (b) Shared.xcframework not staged: the app target links the KMP core; building it needs a
+          Kotlin/Native gradle build (apps/shared/gradlew). Independent of this UI surface.
+      (c) macOS signing: `security find-identity -p codesigning` → 0 valid identities; the
+          macOS app/widget entitlements require a development certificate (MAC_EXIT=70 on this
+          host, per the P9 gate). ADR-012 defers this to a signed macos-latest runner.
+    XCTest (DigitalTwinWidget.Tests.swift) likewise runs in the TeslaSync/-macOS test target under
+    Xcode; XCTest is unavailable to CLT here. The pure-adapter subset of those tests is independently
+    PROVEN GREEN by the executed harness in step [2]; model/registry/a11y suites compile against the
+    same public API exercised by the host typecheck.
+
+=== ACCEPTANCE CRITERIA ===
+  [x] Surface renders all web states (loading/empty/error/stale/offline/content) — implemented; each
+      has a #if DEBUG preview; phase logic unit-tested.
+  [x] Hooks bind through the shared P1/S8 state-holder seam; no direct HTTP in the view.
+  [x] Every i18n key from source has a matching catalog key — 17/17 present in DigitalTwinWidget.strings.
+  [x] Accessibility labels on every interactive element; image carries label + state-summary value.
+  [x] Tests: adapter unit test (executed, 21/21) + per-state model test + registry + a11y label test.
+  [x] No TODO/stub/mock/placeholder/Lorem in shipped code — placeholder gate COUNT=0; word-scan clean.
+  [x] Host gates green (typecheck/lint/format/placeholder/adapter-run); Xcode app build/test DEFERRED
+      with capability + predecessor evidence (per P3 disposition).
+
+=== HONESTY COVENANT ===
+  1  No red-as-green : Xcode app build/test shown DEFERRED (not green); reasons given. Every "✅" is a
+                       command actually run on this host with its real exit code.
+  2  No scope narrowing: implemented ALL sections/states/badges + i18n + a11y + telemetry + registry.
+  3  No skip-and-assume: each host gate executed; nothing assumed green.
+  4  No stubs as final : complete implementations; placeholder gate COUNT=0.
+  5  No parity shortcuts: faithful port of vehicleState.ts + full VehicleTwin composition + all states.
+  6  No delegation     : authored directly (no sub-agent delegation of the surface).
+  7  No predecessor bypass: did NOT self-register into project.yml / dashboard grid (integration
+                       prompt's scope) and did NOT edit the shared Localizable.xcstrings (parallel-unsafe
+                       across the 40 concurrent slots) — strings shipped as the per-surface table.
+  8  No commit on red  : committing on all-green host gates; Xcode steps explicitly DEFERRED, not failed.
+  9  No silent drift   : changes confined to the allowed DigitalTwinWidget.* files + this log.
+  10 Log ends with EXIT/STATUS below.
+
+=== DISPOSITION ===
+  Production-polished native DigitalTwinWidget shipped at parity with the web source: pure-Swift
+  domain port (executed-green adapter), P1/S8 state-holder seam (no view HTTP), P1/S11 telemetry,
+  every state + i18n key + a11y label, registry-correct (vehicle-twin, 2×4/2×4/3×40). All
+  host-runnable gates pass; the Xcode app build/test is DEFERRED to the signed CI runner (surface
+  not yet target-registered + Shared.xcframework + macOS signing — none a defect in this code),
+  matching the user-approved P3 "code-complete + DEFERRED Xcode gate" disposition.
+
+=== COMMIT ===
+  git add apps/apple/TeslaSync/dashboard-widgets \
+          .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0036-DigitalTwinWidget.log
+  git commit -m "feat(apps/apple/dashboard-widgets): add DigitalTwinWidget surface (P4)"
+
+EXIT=0
+STATUS=DONE

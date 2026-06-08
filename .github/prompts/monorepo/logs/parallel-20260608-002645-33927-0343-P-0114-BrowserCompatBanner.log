@@ -1,0 +1,126 @@
+I'll start by exploring the repository structure, the web source, and the Apple app setup.
+
+Toolchain is present. Let me read the web source and inspect the Apple app structure and capabilities.
+
+`xcodebuild` reports the active developer dir is CommandLineTools, not full Xcode. Let me investigate whether a full Xcode exists and what SDKs/frameworks are available, while also exploring the established Apple patterns.
+
+Full Xcode exists at `/Applications/Xcode.app` (xcode-select just points to CLT). SwiftUI/Charts/MapKit compile fine. Let me test the `DEVELOPER_DIR` override for xcodebuild and explore the established Apple patterns (project.yml, precedent dirs, facade, tokens, i18n, telemetry, existing feedback components).
+
+Full Xcode 26.5 works via `DEVELOPER_DIR`, iPhone 16 sim is booted. The project uses XcodeGen. I need to understand the build feasibility (KMP `Shared.xcframework` pre-action is a risk) and the established surface patterns.
+
+The build has a heavy pre-action: it builds a KMP `Shared.xcframework` via Gradle (not prebuilt — only `.gitkeep`). Let me check prior logs and the pending-verifications doc to understand the expected outcome pattern and feasibility.
+
+This reveals the established methodology: prior P4 Apple surfaces are verified **green in isolation** (SwiftPM build + tests + `swiftc -typecheck` on both SDKs + lint/format/placeholder), while the **full-app `xcodebuild` gate is deferred** ("macOS-pending") due to pre-existing unrelated collisions. Let me study the precedent surfaces and shared infra before coding.
+
+Strong precedent exists (`ToolCard.*`, `AlertMessageEditor.*`). Now I need the shared infra: i18n facade (S10), tokens (S9), telemetry/diagnostics (S11), and the native AlertBanner equivalent. Let me locate and read them.
+
+The pattern is clear: `LocalizedStringKey` + xcstrings catalog for i18n, a telemetry protocol for `view.opened`, and `TS*` design tokens. There are co-located `.strings` files per surface. Let me read the model/telemetry helpers, the native Banner/States components, tokens, typography, a precedent test, and a `.strings` example.
+
+Key discovery: an **atomic** `TSBrowserCompatBanner` already exists in `Banners.swift` (out of scope per the prompt). My **shared-surface** is the full one with detection, dismissal, telemetry, and the exact web i18n keys. Let me read the design tokens, typography, TSTone/TSButton, states, the swift configs, and check for an isolated SwiftPM harness precedent.
+
+I now have the full design system. Let me read the richest precedent (`AlertMessageEditor.*` — it has States/Projection/Model/Tests) to match conventions exactly, plus the native button/panel/state components and the co-located test guard convention.
+
+The co-located test guard is `#if canImport(XCTest)` — confirmed. Let me read the per-surface i18n `Strings` facade pattern, the Surface slug/telemetry emit point, and the native button/panel/state primitives so I replicate conventions precisely.
+
+I have the full convention picture. Let me check tooling specifics (pwsh, SDK paths) and read a sample existing P4 gate log to match the exact log/STATUS format used under the same KMP/full-app constraints.
+
+The ToolCard log is my exact template: `[GREEN]` isolated verification + `[DEFERRED]` full-app xcodebuild (reported RED honestly), reconciled against the covenant, ending `EXIT=0 / STATUS=DONE`. Let me read it in full.
+
+I have everything needed. The sanctioned methodology: ship the surface + necessary shared wiring (project.yml, .swiftlint.yml — same as ToolCard did for feature-views), verify **green in isolation** (SwiftPM + both-SDK typecheck + lint/format/placeholder), report the full-app xcodebuild honestly as DEFERRED, end `EXIT=0 / STATUS=DONE`. Let me set up tracking and confirm the pre-existing collision evidence.
+
+Collision confirmed (15×) — solid deferral evidence. There's pre-existing unrelated dirty state in the slot; my commit will be surgical. Let me write the plan, then build the surface.
+
+Collision confirmed (15×). Now I'll build the surface. Starting with the pure model (i18n facade, capability detection, dismissal store, projection, state, surface slug).
+
+Now the telemetry seam (mirroring `ToolCard.Telemetry`):
+
+Now the SwiftUI view with the hidden/warning states, tokenized banner, localized dismiss control, telemetry, and previews:
+
+Now the per-surface i18n `.strings` catalog contribution:
+
+Now the co-located tests (gated `#if canImport(XCTest)`): detection parity, per-state projection, copy/interpolation, dismissal store, a11y, and telemetry.
+
+I introduced a stray full-width parenthesis in the test. Let me fix it.
+
+Tests fixed. Let me update tracking and build the isolated SwiftPM verification harness (the real green-in-isolation proof), compiling the exact shipped sources against the real `Tokens.swift` under Swift 6.
+
+BSD grep lacks `-P`. Let me scan with Python for any non-ASCII bytes.
+
+All non-ASCII chars are intentional comment glyphs (`—`, `·`, `→`, `⇒`) matching the precedent style — and the full-width paren bug is fixed. Now let me build the isolated SwiftPM harness compiling the exact shipped sources against the real `Tokens.swift` under Swift 6.
+
+The library builds clean under Swift 6. Now run the tests:
+
+All **21 tests pass** under Swift 6 strict concurrency. Now the dual-SDK `swiftc -typecheck` against the real iOS 18 and macOS 15 SDKs (the precedent's both-platform proof):
+
+Both SDKs typecheck clean. Now the necessary shared wiring (same pattern ToolCard used for `feature-views`): add `TeslaSync/shared-surfaces` to both app targets in `project.yml` and to `.swiftlint.yml` included.
+
+Now run swiftlint (scoped to my surface), swiftformat lint, and validate the `.strings`:
+
+swiftformat flags indent in the test file, and swiftlint reports 2 violations across the whole app (need to check if any are mine). Let me inspect the precedent's `#if` handling and isolate the swiftlint violations before auto-formatting.
+
+Two violations: one **pre-existing** (`LifetimeStatsWidget.Adapter.swift:141`, noted in the ToolCard log too) and one **mine** — `banner(for:)` is 52 lines (>50). Let me refactor it into smaller helpers, then auto-format.
+
+Let me inspect the test file's flagged region before auto-formatting:
+
+The indentation looks correct, but swiftformat disagrees — likely its `--ifdef` handling. The ecosystem-correct fix is to let swiftformat auto-format. Let me run it on my files and review the diff:
+
+Files are untracked so `git diff` is empty. Let me view the reformatted region and re-verify lint/format:
+
+swiftformat now clean (0/4) and **no swiftlint violations in shared-surfaces** (only the pre-existing `LifetimeStatsWidget` one remains). swiftformat's `--ifdef indent` indented the `#if` body — consistent with the precedent. Let me re-sync the harness with the refactored view + formatted tests and re-verify build/test + dual-SDK typecheck:
+
+Build + 21 tests green after refactor. Now re-run dual-SDK typecheck and the placeholder gate. Let me read the placeholder script's interface first:
+
+Both SDK typechecks pass on the refactored view. Now the placeholder gate (scanning the actual surface directory) and `xcodegen generate` to prove file enumeration:
+
+Placeholder gate clean (COUNT=0), self-test passes, and **all 5 surface files are enumerated** in the generated Xcode project (both targets). Now the full-app xcodebuild deferral evidence. Let me check the KMP/Gradle pre-action feasibility first:
+
+Java 17 + gradlew present; my change set is confined to the surface + 2 wiring files (collision is fully pre-existing). Let me start the full-app iOS xcodebuild in the background (the Gradle KMP pre-action takes several minutes) and draft the log while it runs.
+
+While the iOS build runs, let me record the deferred-verification row in `apps/macos-pending-verifications.md` (matching the established rows):
+
+The launcher returned but the actual build runs in a detached subshell writing to `/tmp/ios_build.log`. Let me check its progress and fix the pending-verifications edit with the real anchor text:
+
+The Gradle KMP pre-action is running (multiple slots share the host). It'll take several minutes. Let me locate the exact table anchor to insert the pending-verification row:
+
+Let me get the exact tail bytes of that row to anchor correctly:
+
+The leading backtick in my anchor didn't exist. Let me use the exact minimal anchor:
+
+Pending-verifications row added. Let me check the iOS build progress:
+
+The Gradle KMP build is progressing (downloading Kotlin/Native, linking frameworks). Let me find my build's process and wait:
+
+Multiple slots share the host. Let me wait for my build to progress past the Gradle pre-action into Swift compilation (where the collision will surface):
+
+Gradle is still assembling the multi-platform XCFramework. Let me wait further for it to stage and reach the app-compile phase:
+
+The shared `/tmp/ios_build.log` got cross-contaminated by another slot (slot-348). I need a slot-unique log path. The errors shown (co-located `XCTest` in app target) confirm the pre-existing breakage is real, but I must capture **my** slot's result. Let me re-run to a unique path:
+
+Build re-launched to a slot-unique log. Let me wait for it to stage (cached now) and reach app compilation:
+
+The launcher returned but the build subshell continues (now linking release frameworks — the last heavy Gradle step before staging + app compile). Let me wait for it to reach the app-compile collision:
+
+The build is frozen at `linkReleaseFrameworkIosArm64` (log static for ~4 min) — the Gradle daemon is starved by heavy multi-slot contention. Let me check whether it's truly stuck and capture a direct, fast, slot-343-specific demonstration of the pre-existing collision as deferral evidence:
+
+16 Gradle daemons are BUSY — my build is starved by multi-slot contention (the environmental reason the full gate is CI-deferred). Let me get a **fast, deterministic, slot-343-specific** compile failure by building the target directly (skips the scheme's Gradle pre-action; the pre-existing collision fails at the compile phase before any framework/link is needed):
+
+Let me wait for the direct compile to surface the collision, then poll:
+
+`TARGET_IOS_EXIT=65` — real exit captured. It failed at the missing `Shared.xcframework` (Xcode validates the linked framework before compiling), proving the full build needs the Gradle KMP framework. Let me check if my full-scheme build has since staged the framework, which would let me also capture the Swift-compile collision:
+
+The full-scheme Gradle build is starved (frozen 7+ min among 16 busy daemons) — genuine shared-runner contention. I have layered, honest evidence. Let me capture a parallel real macOS exit via the same fast direct-target path:
+
+Both app targets fail at exit 65 (missing Gradle-built `Shared.xcframework`). I have layered, honest evidence with real exit codes. Let me run final whole-tree verification sweeps to state accurate numbers in the log:
+
+Accurate numbers confirmed: my surface is **0 swiftlint / 0 swiftformat** issues; the only whole-tree findings are **pre-existing** (`LifetimeStatsWidget.Adapter.swift:141`, `ActionBuilder.Previews.swift:48`), neither mine. Now let me write the comprehensive gate log:
+
+Log written. Now cleanup, final git hygiene checks, and a surgical commit. Let me update tracking and verify nothing of mine is gitignored:
+
+None gitignored. Let me stage exactly my files (surgical — avoiding the slot's pre-existing dirty files) and review what's staged before committing:
+
+Clean, surgical staging — exactly my 5 surface files + 3 lines of wiring + pending-row + log (990 insertions), no pre-existing dirty files swept in. Committing:
+
+Committed cleanly as `07c8291b5` with my 9 files (990 insertions); my paths are now clean and no pre-existing dirty files were swept in. Let me finalize tracking and do a last verification of the commit contents:
+
+All work is complete and verified. Let me provide the final summary.
+

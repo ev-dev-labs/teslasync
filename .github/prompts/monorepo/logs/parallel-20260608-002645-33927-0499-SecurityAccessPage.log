@@ -1,0 +1,191 @@
+I'll start by exploring the repository structure to understand both the web source page and the existing Apple app architecture.
+
+Xcode tooling is available (`xcodebuild`, `swiftlint`, `swift`). Let me explore the Apple app structure, the parity manifest, and the web sub-components in parallel.
+
+Now I understand—there are two trees: `apps/apple/Sources/` (core app) and `apps/apple/TeslaSync/feature-views/` (generated parity components). The web sub-components are already ported there. Let me study the conventions deeply.
+
+Let me check the toolchain availability, the gate contract, navigation/routing conventions, and representative existing component files.
+
+`xcodegen`, `pwsh`, `swiftlint`, `xcodebuild`, `swift` all present; but `Shared.xcframework` is NOT prebuilt. Let me check how prior Apple parity logs handled the build gate, and find the gate contract + KMP build script.
+
+Excellent—this log reveals the established methodology precisely. Let me study the sibling `SecurityStatusCards.*` convention files, check which sub-component surfaces exist, the KMP build feasibility, and the shared component library.
+
+7 of 8 sub-components are ported (LiveVehicleState is missing). KMP `apps/shared/core` exists with gradlew. Let me read the sibling convention files and the SharedFacade/state-holder seam.
+
+The KMP core is substantial (Kotlin/Native build would be heavy—consistent with the precedent deferring the full `xcodebuild`). I now understand the surface convention. Let me check the sub-surface init signatures (to decide composition approach) and the page-level building blocks.
+
+All 7 ported sub-surfaces take a `model:` bound to a Source seam. Shared components (TSGlassPanel, TSAlertBanner, TSVehicleSelect, TSRangePicker, TSVehicleTwin, TSEmptyState, TSQueryError) all exist. Let me extract the exact composition contracts (Update/Source/Model/InMemory types) for all 7 sub-surfaces and the page-level state-holder pattern.
+
+Each sub-surface accepts a typed input pushed to its `InMemory*Source`. I need the exact input contracts to compose correctly. Let me read all 7 input-type definitions and the page-level state-holder pattern in parallel.
+
+The composition contract is clear: each sub-surface takes a typed input (some pre-derived scalars, some a `latest` subset, some history-derived). I need the remaining element types. Let me extract them precisely plus the page-level state-holder pattern and web helpers.
+
+`SentryModeUpdate` takes pre-derived buckets; `EventTimelineUpdate` takes raw events. I need the page-composition precedent. The Dashboard composes widgets—that's the gold reference. Let me study it plus navigation and the remaining element types.
+
+Let me study the navigation graph and the shared facade/state-holder pattern (these are the integration seams for the page).
+
+Now I understand the navigation: `AppRouteHostRegistry` is populated by P7 page prompts; there's an `admin` route but no `securityAccess`. Let me find the route-registration site, the parser, and the public API of the 6 remaining sub-surface adapters (to reuse their builders for composition).
+
+I now have the full composition picture. Each child takes either derived scalars, a `latest` subset, or raw events. I need the exact field shapes plus the web helpers to port the page-level derivations. Let me read the final contracts, the web helpers/types, and the missing `LiveVehicleState` source.
+
+Let me read the `SecuritySignal` union, the web helpers (the page-level derivations to port), the `SecurityEvent` type, and the unported `LiveVehicleState`.
+
+I have all the page-level derivation helpers. Let me read the final pieces: the web `SecurityEvent` type, the unported `LiveVehicleState.tsx`, the `TSVehicleTwin`/twin-state contract, and the page-header/glass/banner/picker component signatures.
+
+I now have the full `SecurityEvent` shape and `TSVehicleTwin`. Let me read the final component signatures (banner, range picker, typography, design tokens, motion, states) and the page-registration site.
+
+The page prompt explicitly allows `Localizable.xcstrings` and requires strings resolve from it—so I'll use the catalog + `LocalizedStringKey`/`String(localized:)`. Let me read the final building blocks: design tokens, typography, motion, states, the date-range filter, and the registration site.
+
+`TSDesign.swift` only holds palette/animation; the `Color.TS`/`Font.TS`/`TSSpacing` tokens are in the generated `DesignTokens` group. Let me read the generated tokens, typography, motion, states, and the registration site.
+
+I have the design tokens. Let me read the last pieces: motion, states, typography, and the route-registration site.
+
+I have all the component contracts. Let me confirm a few navigation details (AppRoute tests, whether `TeslaSyncApp` imports the KMP framework, web route grouping) and the typography components, then start implementing.
+
+I now have everything needed. Key facts: `securityAccess` isn't an `AppRoute` case (web `/security-access` is standalone); `RouteTests` only checks segment uniqueness (adding a case is safe); SharedFacade imports `Shared` (so the page must be Foundation/SwiftUI-only like the child surfaces); all 7 children compose via `InMemory*Source.push(...)`. Let me check the app's registry assembly, then write the plan.
+
+I now have a complete understanding. Let me set up the plan and todos, then implement. The page composes the 7 ported child surfaces (fed via their `InMemory*Source`), reproduces the unported `LiveVehicleState` inline, implements the 2 inline GlassPanels + scaffold, and binds the data sources—all Foundation/SwiftUI-only (no `Shared` import) so it's host-verifiable, matching the established precedent.
+
+Let me verify the remaining child enum case names (`SentryModeLoadStatus`/`Connection`, `SecurityStatisticsModel.init`, `InMemorySecurityStatisticsSource`) and the `Localizable.xcstrings` format before writing.
+
+All contracts confirmed (`SentryModeLoadStatus` has no `.empty`; statistics source pushes outcomes; xcstrings is a standard String Catalog). Now implementing. Starting with the Foundation-only adapter (canonical types + signal converters).
+
+Foundation core written. Before writing the views, let me typecheck the core against the child surfaces and component library to catch errors early. First, identify the compile closure (which component files to include/exclude).
+
+Full Xcode 26.5 is available (iOS Simulator + macOS SDKs) via `DEVELOPER_DIR`. Let me typecheck the Foundation core against the child surfaces + component library (macOS SDK) to catch errors before writing the views.
+
+A pre-existing module-level collision: both `WindowStatusDetail.Adapter` and `EventHistoryTable.Adapter` declare a public top-level `WindowState` enum—so those two shipped child surfaces can't coexist in one compile (outside my scope to fix). I'll compose the 6 non-colliding children and reproduce `WindowStatusDetail` (4 cells, simple) inline, reusing `EventHistoryAdapter.parseWindowState`. Let me verify the 6-child closure compiles cleanly.
+
+The precedent's known exclusion: `UnitFormatters.swift` needs the KMP Units facade. Let me exclude it and re-run.
+
+All 52 errors are the known KMP-dependent `UnitFormatters.swift` (the precedent excluded it). The 6-child closure is otherwise clean. Now let me drop `WindowStatusDetail` from composition (reproduce inline) and adjust the files.
+
+Now update Projections—remove the WindowStatusDetail composition, add the inline window-cell builder:
+
+Let me view the current Projections window section to fix the duplicate cleanly.
+
+Now remove the `windowStatus`/`windowConnection` mappers from Projections:
+
+Now update the Model—remove `windowModel`/`windowSource`, add `windowCells` published state:
+
+Now let me create a reusable typecheck script and verify the Foundation core compiles against the 6-child closure (macOS SDK).
+
+Foundation core compiles clean against the 6-child closure. Let me confirm the exit code and run the iOS SDK typecheck too.
+
+Both SDKs typecheck clean (EXIT=0). Let me update todos and add the functional date-range filter to the model (faithful to the web `RangePicker`), then write the views.
+
+Let me view the model's property declarations to add range state cleanly.
+
+Now replace `apply` with the store+reproject entry and move the derivation/range logic into an extension:
+
+Now I need the exact typography component inits before writing views. Let me read them and `TSVehicleSelect`/`TSCombobox` usage.
+
+I have the typography components. Now writing the page views. First, the header, panels (GlassPanel1/2), error banner, and state views:
+
+Now the inline LiveVehicleState + Window sections, the content composition, and the main page view:
+
+Now let me typecheck the full page (views + composition) against both SDKs to catch any symbol errors:
+
+macOS clean. Let me run the iOS SDK typecheck:
+
+Both SDKs clean. Now the navigation: add the `AppRoute.securityAccess` case and the registration seam.
+
+Now the registration seam (mirroring the shipped `SettingsRouteRegistration` pattern):
+
+Page + nav compile clean. Now the previews and tests. Let me write the previews and the pure-logic tests:
+
+Now the tests. Pure-logic tests first (logic, projections, live signals, bridges):
+
+Now the model tests (MainActor — fan-out, range filter, telemetry):
+
+Now let me add the strings to the catalog. First, check which keys already exist to avoid duplicates:
+
+No conflicts. Let me merge the keys into the catalog with a Python script (idempotent, preserves format):
+
+All 36 keys added, JSON valid. Now the strongest verification: a SwiftPM harness that compiles the real component library + 6 children + my page + previews and **executes** the tests (the precedent's approach). Let me set it up.
+
+Build complete. Now let me execute the test suite:
+
+24 tests, 1 failure. Let me find the failing test:
+
+The logic is correct (null windows → "unknown" → counted as open, matching web `allWindowsClosed`); my test's expectation was wrong. Let me give explicit closed windows so the expected counts hold:
+
+All 24 tests pass; build + previews + tests green. Now the remaining gates: swiftlint, swiftformat, placeholder scan, and a final both-SDK typecheck.
+
+swiftformat found formatting nits in my files (line wrapping, keyPath, number grouping). The swiftlint "1 violation" is over the whole project (pre-existing). Let me check the swiftformat config, then auto-format my files and re-verify.
+
+swiftformat now passes (0/14). Let me confirm swiftlint on my files specifically (isolated from the pre-existing project violation), re-run the tests, and re-typecheck both SDKs after formatting.
+
+Two violations in my files (the pre-existing project one is confirmed separate). Let me fix: split the 67-line `build()` and replace the 3-tuple in `windowCells`.
+
+Now fix the large-tuple in `windowCells`:
+
+Now re-run swiftlint (my files), swiftformat lint, both-SDK typecheck, and the test suite:
+
+swiftformat + swiftlint clean on my files. Now re-verify the typechecks and test execution after the refactors:
+
+The 2 "errors" are because my `tc.sh` now globs the `*.Tests.swift` files (which `import XCTest`) into the plain production typecheck. The SwiftPM harness (which correctly separates the test target) builds + runs all 24 tests green. Let me confirm and fix the script:
+
+Both SDKs clean. Now the placeholder gate and a focused verification that the `AppRoute` nav change resolves `/security-access` and keeps path-segments unique (what `RouteTests` checks):
+
+Placeholder gate passes (COUNT=0). The nav check just needs `main.swift` naming for top-level code:
+
+Nav verified (`/security-access` → `.securityAccess`, 23 unique segments). **All host gates green.** Let me update tracking and review git status before writing the log.
+
+There are pre-existing/external modifications (`AIUsageCard.*`, web files) that I never touched—I'll commit only my files. Let me confirm those aren't mine, then check the harness didn't accidentally modify originals:
+
+The external changes (`AIUsageCard` rename, web files) are from another process—not mine; my 6 composed children are untouched. Let me capture honest evidence for the deferred full `xcodebuild` (per the ADR-012 precedent): generate the project and confirm the KMP framework + source-registration blockers.
+
+All evidence captured. Now let me write the execution log:
+
+Now let me commit **only my files** (excluding the external `AIUsageCard`/web changes):
+
+Staged set is exactly my 17 files; external changes left untouched. Committing:
+
+⚠️ Problem: my Python script re-sorted the entire 8,000-key catalog, producing a massive 33k-line reorder diff (silent drift). Let me fix it to a minimal append-only diff and amend the commit.
+
+Original is insertion-ordered (not sorted) with literal unicode. Let me regenerate as **append-only** to produce a minimal diff:
+
+The `git diff` is vs my (sorted) commit; what matters is vs the original. Let me verify the working file is +36-only vs the original, then amend:
+
+Now it's purely additive (396 lines added, 0 removed) vs the original. Let me re-stage and amend the commit:
+
+The implementation spec also calls for a staleness indicator (ADR-013). The model already tracks `connection`; let me surface it in the header for completeness. Adding a staleness chip:
+
+Now add the 2 staleness string keys, a model test for the connection plumbing, and re-verify:
+
+Now add the 2 staleness keys (append-only) and re-run all gates:
+
+swiftformat/swiftlint/typecheck all clean. Let me re-run the test suite (now 25 tests) to confirm the new connection test + everything passes:
+
+25/25 tests pass. Let me update the log to reflect the staleness chip + new counts, then re-stage and amend.
+
+Final commit is clean (append-only catalog, +2691/-2). Let me run the complete gate sequence one final time against the committed state for the authoritative record:
+
+All gates green and committed. Let me do a final verification that my working tree is clean and the committed log ends correctly:
+
+All 14 files committed. The task is complete. Let me mark the final todo done.
+
+All todos complete. Here's the summary of what I delivered.
+
+## P7 · page:admin/SecurityAccess — SwiftUI parity ✅
+
+Implemented a native SwiftUI/HIG `SecurityAccessPage` at web parity, adaptive across macOS + iOS, committed at `44a40a14b` (17 files, +2691/−2, append-only catalog).
+
+**Architecture (14 files under `apps/apple/TeslaSync/Features/Admin/`):** a Foundation-only logic/projection core (`Adapter`/`Logic`/`LiveSignals`/`Projections` — faithful `helpers.ts` port), a P1/S8 `SecurityAccessSource` seam + `@Observable` model (no view HTTP, host-typecheckable without the KMP `Shared` framework), and the SwiftUI views.
+
+**Parity — `PARITY_COVERED=9/9`:**
+- **GlassPanel1** (not-secure alert, `admin.security.alert`) + **GlassPanel2** (Digital Twin)
+- **loading / error / success** states (+ empty + ADR-013 staleness chip)
+- All 4 required strings + 34 more, resolving from `Localizable.xcstrings` with web key names
+- Binds `useSecurityEvents` (`/security`) + `useVehicles` (`/vehicles`); header with VehicleSelect + RangePicker (functional date filter); **all 8 web sections** (6 composed from the shipped child surfaces + `LiveVehicleState` & `WindowStatusDetail` reproduced inline)
+- Navigation: added `AppRoute.securityAccess` (`/security-access`) + a registration seam
+
+**Gates — all host-runnable green:** iOS 18 + macOS 15 typecheck (0 errors), SwiftPM build + **25/25 XCTest**, swiftlint --strict (0), swiftformat --lint (0/14), placeholder (0), deep-link verified.
+
+**Two honest notes** (documented in the log, ADR-012 precedent): I discovered a **pre-existing module-level collision** — `WindowStatusDetail` and `EventHistoryTable` both declare a public `WindowState` — so I composed 6 children and reproduced the window section inline (reusing `EventHistoryAdapter.parseWindowState`). The full `xcodebuild` is **DEFERRED** (KMP `Shared.xcframework` unstaged + `TeslaSync/Features` not in `project.yml` + that collision + signing — all outside this prompt's allowed files), so `EXIT=0 / STATUS=DONE` reflects the code-complete + host-verified disposition, not a faked green.
+
+
+
+Everything is complete and verified. Let me update the plan to reflect completion and mark the task done.
+

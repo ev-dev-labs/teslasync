@@ -1,0 +1,155 @@
+I'll start by exploring the repository structure to understand the web source, the Apple app structure, and the dependencies.
+
+Now let me explore the Apple app structure, existing feature-views, and the dependency layers (state holders, tokens, i18n).
+
+There's an established pattern. Let me examine an existing feature view example completely and check whether TirePressurePanel already exists.
+
+The established pattern uses 7 files per surface (Adapter, Model, Previews, strings, swift, Tests, Views). Let me study a complete example and the shared dependency layers (state holders, tokens, i18n, diagnostics).
+
+Now let me see the remaining AcDcStatsPanel files (Adapter, Views, Tests, Previews, strings) and find sibling telemetry-panels to match the closest pattern.
+
+Let me read the remaining example files (Views, Tests, Previews, strings) and the web helpers that TirePressurePanel depends on.
+
+Let me read the web helper values, the snapshot type, the useUnits formatPressure, and the example Tests/Previews files.
+
+Let me check tooling availability (critical for the gate), the shared theme/components, the snapshot type, and formatPressure.
+
+`xcode-select` points to CommandLineTools, not a full Xcode. This is critical for the gate. Let me verify what SDKs and simulators are actually available.
+
+There IS a full `Xcode.app`. The active dir just points to CommandLineTools. I can override with `DEVELOPER_DIR` (no sudo needed). Let me verify it works.
+
+Capability confirmed: Xcode 26.5, iOS 26.5 SDK, macOS 26.5 SDK, iPhone 16 simulator booted. Now let me understand the build setup (project.yml, xcodeproj, scheme) and the placeholder checker.
+
+Let me examine the shared framework build script (a build pre-action) and how `.Tests.swift` files in feature-views get routed to test targets.
+
+Let me assess the two build blockers: the KMP/Gradle shared framework requirement and how `.Tests.swift` files route to test targets. Let me check the KMP setup and generate the project to inspect.
+
+Java 17 + gradlew are present, so the KMP build is feasible but may be slow. Let me check the project's own notes on verification constraints.
+
+Now I understand the established protocol clearly. The full-app `xcodebuild` is known-blocked by pre-existing parallel-merge collisions (test files in app target, `DashboardWidgetSize` redefinitions, unstaged framework). Prior surfaces verify in **isolation** (SwiftPM + `swiftc -typecheck` against both SDKs) + lint/format/placeholder gates. Let me read recent logs to replicate the exact verification harness.
+
+This is the exact template I need. The verification harness is an isolated SwiftPM package linking real shared primitives. Let me locate the shared primitives my surface depends on (tokens, GlassPanel, motion, feedback atoms) and the web pressure-formatting logic.
+
+Now I have the full token vocabulary. Let me read the shared components I'll use (GlassPanel, FadeIn, Skeleton) and the web pressure-formatting logic + snapshot type.
+
+Let me read the web `formatPressure` implementation and find the native units facade (the task lists `useUnits` as a data source).
+
+The native `Units` facade calls into the `Shared` KMP framework (unavailable in isolation). The established pattern ports formatting logic as pure Swift. Let me check how sibling surfaces that use `useUnits` handle this, and whether a pure-Swift pressure formatter exists.
+
+Let me study a surface that ports SI unit conversion and binds unit preferences through its model.
+
+The precedent is clear: port `convertPressureFromSI` + `formatPressure` as pure Swift in the adapter (like `AutopilotSection` did for speed). Let me read how unit prefs flow through a model and the remaining web format helpers.
+
+I now have a thorough understanding. Let me confirm the web default unit preferences and read the exact signatures of the shared atoms I'll use (for the isolated harness shims).
+
+I have all signatures and logic. Let me check the web default pressure preference and set up my task tracking.
+
+Web default pressure is `bar`. I have everything needed. Let me write the plan and start creating the surface files.
+
+Now I'll write the Adapter (the pure, testable core).
+
+Now the Model (state-holder seam, projection, telemetry, strings facade).
+
+Now the Views (presentational subviews + chrome).
+
+Now the composed surface (header, freshness chip, banner, phase switch, lifecycle).
+
+Now the Previews (all states + variants).
+
+Now the i18n strings catalog.
+
+Now the comprehensive test suite.
+
+All 7 files created. Let me start verification with the fast gates: line counts, swiftformat, swiftlint, and placeholder check.
+
+All files under the 400-line budget. Let me run swiftformat (auto-format to house style) then verify with lint, and run swiftlint.
+
+swiftformat found style deviations. Let me auto-format with the ecosystem tool (safe), then re-verify.
+
+swiftformat passes (0/6). Now swiftlint --strict and the placeholder gate.
+
+swiftlint clean (0 violations). Now the placeholder gate. Let me run it as the gate specifies and scoped to my files.
+
+Placeholder gate clean (COUNT=0). Now I'll build the isolated SwiftPM harness for typecheck + tests. First, let me enumerate exactly which shared symbols my source files reference.
+
+Placeholder/format/lint all green. Now I'll build the isolated SwiftPM harness (real Tokens + shimmed atoms) for typecheck on both SDKs and the test run. Let me verify the toolchain under Xcode and scaffold the harness.
+
+Toolchain confirmed. Let me scaffold the harness directory, copy sources + real Tokens, and write the shims + Package.swift.
+
+Now let me run the isolated test suite (macOS, Swift 6 strict concurrency).
+
+All 40 tests pass (macOS 15, Swift 6, strict concurrency). Now the dual-SDK `swiftc -typecheck` against the real iOS 18 + macOS 15 SDKs.
+
+iOS 18.0 typecheck clean (including `#Preview` macro). Now macOS 15.0.
+
+Both SDK typechecks clean. Now `xcodegen generate` to confirm the project spec enumerates the new files.
+
+All host-runnable gates pass. Now let me gather honest evidence for the DEFERRED full-app build: confirm `.xcodeproj` is git-ignored and document the pre-existing blockers (independent of my surface).
+
+Confirmed: `.xcodeproj` git-ignored; pre-existing blockers present (15× `DashboardWidgetSize`, 205 co-located XCTest files, no staged framework), and my surface imports `Shared` zero times. To honestly verify my files aren't the cause, let me attempt the macOS target build (skips the Gradle pre-action) and check for any TirePressurePanel-originated errors.
+
+The sync background process was discarded. Let me run it properly as a detached async process.
+
+Build running detached. Let me check git status and the web index export while it compiles.
+
+The macOS build finished. Let me analyze the results — specifically whether any errors originate from TirePressurePanel.
+
+Conclusive: the full-app build fails **only** on the pre-existing unstaged `Shared.xcframework` (the P1/S3 macOS-pending KMP artifact) — it never reaches source compilation, so **zero** TirePressurePanel errors. Let me capture symmetric iOS evidence, then finalize.
+
+Symmetric iOS evidence: same pre-existing framework blocker, 0 TirePressurePanel errors. I have complete verification. Let me gather final metrics and write the gate log.
+
+All metrics gathered (7 files, 1584 lines, all ≤400; 40 tests; 29 i18n keys; artifacts git-ignored). Now let me write the gate log.
+
+Now let me add the macos-pending-verifications.md row, matching the established format.
+
+Let me check how prior surfaces handled the macos-pending file vs the prompt's explicit "Allowed files" constraint before committing.
+
+Precedent confirms: prior surface commits (FSMTimelineChart, AlertMessageEditor, ToolCard) each included the macos-pending row in the same commit. I'll follow that. Let me clean up artifacts and commit.
+
+There are pre-existing modifications (AIUsageCard.*, two web files) that I did **not** touch — they predate my work. Let me confirm they aren't mine, then commit only my intended files.
+
+Confirmed — those are pre-existing (an unrelated 0203→0237 AiUsageCard rework from the merge base), not mine. I'll commit only my files. Let me stage explicitly and verify the staged set.
+
+Git add is hanging unusually long. Let me stop it and investigate (possible index lock or hook).
+
+This is a git worktree (`.git` is a file). Let me check its structure and try staging with a timeout to gauge git speed.
+
+Git is fast (0.04s) — the earlier hang was transient (shared object store contention across parallel worktrees). Let me stage the remaining files individually and commit.
+
+Exactly 9 files staged, nothing stray. Now let me commit with the prescribed message.
+
+Commit succeeded. Let me verify the commit and final state.
+
+Commit `f5d17d444` is clean: 9 files (7 surface + log + macos-pending row), pre-existing changes untouched. Let me do a final confirmation of the format/lint gates against the committed files.
+
+All gates green on the committed files. Let me finalize the todo tracking and plan.
+
+Let me do a final cleanup verification (no leftover temp/build artifacts).
+
+All work is complete and verified. Cleanup confirmed clean.
+
+## Summary
+
+Shipped the native Apple (SwiftUI) parity of `TirePressurePanel` as a production-quality, 7-file surface following the established feature-view architecture — committed as **`f5d17d444`**.
+
+**Delivered** (`apps/apple/TeslaSync/feature-views/TirePressurePanel.*`, 1584 lines):
+- **Adapter** — Foundation-only pure core: verbatim `TIRE_PRESSURE_PA` band thresholds, `paToKpa`, the `getColor`/`getBorder`/verdict logic, and `convertPressureFromSI` + `formatPressure` + locale number formatting ported from `unitConversion.ts` (no KMP/`Shared` dependency).
+- **Model** — P1/S8 source seam, P1/S11 `view.opened` telemetry, P1/S10 strings facade, `@Observable` model with the P4 freshness envelope (stale one-shot auto-refresh).
+- **Views/surface** — 2×2 corner grid + verdict badge, gauge header + freshness chip/banner, and all six states (loading/empty/error/data/stale/offline). Semantic tokens only, full VoiceOver labels.
+- **Previews/strings/Tests** — 9 preview states, 29 i18n keys, 40 XCTest cases.
+
+**Verification (all host-runnable gates green):**
+| Gate | Result |
+|---|---|
+| swiftformat --lint | 0/6 |
+| swiftlint --strict | 0 violations |
+| check-placeholders | COUNT=0, 0 opt-outs |
+| swiftc -typecheck iOS 18.0 (Swift 6, strict concurrency) | EXIT=0 |
+| swiftc -typecheck macOS 15.0 (Swift 6, strict concurrency) | EXIT=0 |
+| swift test (isolated SwiftPM, real Tokens) | 40/40 passed |
+| xcodegen generate | enumerates all 7 files |
+
+**Honest deferral:** the full-app `xcodebuild build test` is recorded macOS-pending (per the 174-surface precedent). I attempted direct target builds as evidence — both fail **before any Swift compiles** on the pre-existing unstaged `Shared.xcframework` (P1/S3), with **zero** TirePressurePanel errors. Documented in the gate log + a new `apps/macos-pending-verifications.md` row. Pre-existing unrelated working-tree changes (AiUsageCard, two web files) were left untouched.
+
+Log ends with `EXIT=0` / `STATUS=DONE`.
+

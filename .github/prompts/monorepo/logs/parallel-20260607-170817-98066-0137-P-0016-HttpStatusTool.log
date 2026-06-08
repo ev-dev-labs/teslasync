@@ -1,0 +1,123 @@
+I'll start by exploring the repository structure and the web source that I need to reproduce natively.
+
+Toolchain is present. Let me read the web source and check xcodebuild more carefully.
+
+Web source is a searchable HTTP-status-code table. Key finding: **only Command Line Tools are installed, not full Xcode** — so `xcodebuild -scheme` cannot run. Let me study the established predecessor patterns (P4 core, S8 state-holders, S9 tokens, S10 i18n, S11 diagnostics) before writing code. This is critical for parity.
+
+Predecessor uses a 7-file pattern per surface. Let me read the full UptimeMonitorWidget set plus its log to learn the exact architecture (S8 state-holders, S9 tokens, S10 i18n, S11 diagnostics).
+
+Excellent — clear architecture. Let me read the remaining predecessor files, the shared tokens, the web components I must reproduce, and the predecessor log.
+
+Now let me read the predecessor log (to see how the build gate/STATUS was handled), the strings file, the shared tokens location, and the web components I must reproduce.
+
+I now fully understand the predecessor's disposition: **code-complete + host-validated (swiftc typecheck + executed adapter harness + swiftlint + swiftformat + placeholder + i18n) with DEFERRED Xcode-only steps, STATUS=DONE**, since SwiftUI is available (no Charts/MapKit needed). I'll follow this exact precedent.
+
+Now let me gather parity details: the web components, HTTP_CODES constants, and the token definitions.
+
+The pattern is crystal clear. Let me confirm the exact token names and survey reusable native shared components before authoring.
+
+All tokens confirmed (including `statusInfo` for the `info` badge variant). Let me check the host-validation harness approach the predecessor used, the placeholder gate script, and pwsh availability.
+
+All tooling present. Let me inspect the placeholder gate patterns (to avoid tripping it) and peek at the shared Badges/Cards/Fields/DataTable for token usage parity, then I'll author.
+
+Let me confirm the DataTable default page size and sort behavior for faithful pagination parity, then I'll author.
+
+Default page size is **25** (so all 19 codes fit on one page). Let me check whether these natural-language i18n keys (`Http Status`, `Status Code`, etc.) have real translation values in the web locale catalog, so my native fallbacks match.
+
+Keys render verbatim (not in en.json) — so native fallbacks = the exact phrases. I have full parity understanding. Let me read the lint configs and shared Badges/Fields to mirror conventions exactly, then author.
+
+I have everything needed. Let me set up the plan and todos, then author the surface.
+
+Now authoring the Foundation-only adapter (the executable core):
+
+Now the Model (state-holder seam + telemetry + observable model):
+
+Now the presentational components (subviews over shared tokens):
+
+Now the main surface view composing the ToolCard shell and all states:
+
+Now the previews and the test suite:
+
+Now the i18n catalog. Let me first cross-check every key referenced in code so the catalog is complete.
+
+Complete key set captured (30 keys: 6 parity + 24 native, incl. `searchA11y`). Writing the catalog:
+
+All 7 files authored. Now running host gates — starting with the swiftc typecheck against the real component library closure (the key compile validation):
+
+Typecheck and strings lint both pass. Now the **executed** adapter harness (proves catalog→projection actually runs, not just typechecks):
+
+Harness-only Swift 6 actor isolation issue (not a Projection issue). Fixing the harness helpers:
+
+Adapter harness: **55/55 checks PASS, EXIT=0**. Now formatting + lint + placeholder gates:
+
+Format lint clean (0/6) and swiftlint strict clean (0 violations). Let me re-typecheck post-format and run the placeholder gate + whole-tree format lint.
+
+Re-typecheck post-format clean. Now the placeholder gate, whole-tree format lint, and an independent forbidden-word scan:
+
+The placeholder gate caught the literal word "placeholder" in a doc comment (referencing the web prop). The dir-scan (b) is the meaningful one (the exact prompt path is vacuous since no file is named exactly `HttpStatusTool`). Let me reword that comment to drop the forbidden token, then re-verify.
+
+Placeholder gate clean and word scan clean. Now the whole-tree gate commands (honest broad check) plus the i18n key cross-check:
+
+i18n cross-check: **MISSING_KEYS=0**. (The 2 "unused" are a regex false-positive — `Status Text`/`Status Desc` are used via `columnTitle("…")`.) Whole-tree format gate: 0/534. Now the whole-tree swiftlint strict gate (heavier):
+
+One violation in the whole tree. My 6 files linted clean individually, so it's elsewhere — let me confirm exactly where:
+
+Confirmed: the lone whole-tree violation is the **pre-existing sibling** `LifetimeStatsWidget.Adapter.swift:141` (same one the predecessor 0104 reported) — not my code, outside my allowed-files scope. Let me confirm git state before writing the log.
+
+Clean scope: only my new `feature-views/` files; the two web files were pre-modified before I started (not mine), and I never touched the sibling with the pre-existing lint violation. Let me gather line counts and write the gate log.
+
+All files ≤400 lines. Now writing the honest gate log:
+
+Log written. Now staging **only** my files + the log (leaving the pre-existing web edits untouched) and committing:
+
+Exactly my 8 files staged (the pre-existing web edits correctly excluded). Committing:
+
+Committed as `a9484e06`. Let me clean up the temporary harness and do a final verification of the committed surface.
+
+All verification complete. Cleaned up the temp harness; the commit contains exactly the 8 intended files (7 surface + log), and the two pre-existing web edits were correctly left unstaged.
+
+## Summary
+
+Shipped a production-polished, native Apple/SwiftUI **`HttpStatusTool`** feature view at parity with `web/src/features/admin/components/devtools/tools/HttpStatusTool.tsx` — the first surface in the new `apps/apple/TeslaSync/feature-views/` directory. Committed as `a9484e06`.
+
+**7 files (1758 LOC, each ≤400 lines), following the sibling 7-file architecture:**
+- `.Projection.swift` — Foundation-only adapter: verbatim port of the 19-row `HTTP_CODES` catalog, the `filtered` useMemo (incl. the untrimmed-lowercase nuance), the Badge-variant tone map, sortable-`code` + pagination, P1/S10 i18n facade, testable a11y.
+- `.Model.swift` — P1/S8 state-holder seam (`HttpStatusSource` + Static/InMemory) + P1/S11 telemetry + `@Observable` model (search/sort/page → projection).
+- `.Components.swift` / `.swift` — `TSGlassPanel`/`TSIconBox` ToolCard shell, search field, sortable header, rows, pagination bar, freshness chip; every state (loading/empty/error/content + in-table search-empty + stale/offline).
+- `.Previews.swift`, `.Tests.swift` (~90 assertions), `.strings` (30 keys).
+
+**Host gates — all green (real output):**
+| Gate | Result |
+|---|---|
+| `swiftc -typecheck` (surface + real component lib) | `EXIT=0` |
+| EXECUTED adapter harness | `55/55, EXIT=0` |
+| `swiftlint --strict` (6 surface files) | `0 violations` |
+| `swiftformat --lint` (whole tree) | `0/534` |
+| placeholder gate + self-test | `COUNT=0, PASS` |
+| i18n (`plutil` + key cross-check) | `OK, MISSING=0` |
+
+**Honest disposition:** `xcodebuild` iOS/macOS build+test are **DEFERRED** — the runner has only CommandLineTools, not full Xcode (real probe: `xcodebuild -version` errors). The surface uses **no Swift Charts/MapKit**, only SwiftUI (proven to compile against the macOS 15 SDK), so the capability-BLOCKED escape does not apply. This matches the user-approved predecessor (0104) precedent. The bare `swiftlint` whole-tree gate's single violation is a **pre-existing sibling** (`LifetimeStatsWidget.Adapter.swift:141`), untouched and out of scope.
+
+```
+EXIT=0
+STATUS=DONE
+```
+
+Merge made by the 'ort' strategy.
+ .../p4-apple-feature-views-0016-HttpStatusTool.log | 232 ++++++++++++
+ .../feature-views/HttpStatusTool.Components.swift  | 289 +++++++++++++++
+ .../feature-views/HttpStatusTool.Model.swift       | 313 ++++++++++++++++
+ .../feature-views/HttpStatusTool.Previews.swift    |  92 +++++
+ .../feature-views/HttpStatusTool.Projection.swift  | 366 +++++++++++++++++++
+ .../feature-views/HttpStatusTool.Tests.swift       | 396 +++++++++++++++++++++
+ .../TeslaSync/feature-views/HttpStatusTool.strings |  62 ++++
+ .../TeslaSync/feature-views/HttpStatusTool.swift   | 240 +++++++++++++
+ 8 files changed, 1990 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0016-HttpStatusTool.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/HttpStatusTool.Components.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HttpStatusTool.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HttpStatusTool.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HttpStatusTool.Projection.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HttpStatusTool.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/HttpStatusTool.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/HttpStatusTool.swift

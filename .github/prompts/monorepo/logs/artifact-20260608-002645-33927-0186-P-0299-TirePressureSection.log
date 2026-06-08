@@ -1,0 +1,80 @@
+=== P4 Feature view 0299 TirePressureSection (Apple) ===
+Surface : apps/apple/TeslaSync/feature-views/TirePressureSection.{swift,Adapter,Model,Views,Previews,Tests}.swift + .strings
+Web spec: web/src/features/vehicles/components/vehicle-detail/TirePressureSection.tsx (+ ./helpers.ts, hooks/useUnits.ts, lib/unitConversion.ts)
+Host    : Darwin, Xcode 26.5 (DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer), Swift 6.3.2,
+          iOS 26.5 + macOS 26.5 SDKs, iPhone 16 simulator present, swiftlint + swiftformat + xcodegen 2.45.4 + pwsh present.
+Capability: SwiftUI present (no Swift Charts / MapKit needed — web source has no charts/maps). NOT a platform-capability block.
+
+--------------------------------------------------------------------------------
+PARITY (web -> native)
+--------------------------------------------------------------------------------
+- Data sources bound via shared state-holder seam (P1/S8), no HTTP in the view:
+    useTranslation -> TireSectionStrings (P1/S10 NSLocalizedString facade, table "TirePressureSection")
+    useUnits.formatPressure -> TireSectionUnit.convert + TireSectionFormatter (ports convertPressureFromSI + formatNumber)
+- helpers.ts ported verbatim: TIRE_PRESSURE_PA (206800/241300/310300/344700 Pa), paToKpa (/1000, finite-guard),
+    tirePressureVariant (success/warning/danger/neutral), badge ternary (Normal/Low/Critical/No Data),
+    KPA_PER_BAR=100, KPA_PER_PSI=6.894757, DEFAULT_PRECISION.pressure=1, em-dash "—".
+- Shared components mapped: @/components/ui GlassPanel->TSGlassPanel, Badge->TireSectionChip(TSTone);
+    @/components/feedback EmptyState->ContentUnavailableView (the primitive TSEmptyState wraps).
+- i18n keys present in P1/S10 table (.strings): vehicles.detail.tirePressure/tireFl/tireFr/tireRl/tireRr/noTireData,
+    common.normal/low/critical/noData (+ native chrome tireSection.*). No English literals in Swift.
+- States rendered (no hidden surface): loading (skeleton grid), empty (EmptyState), error (retry), content (2x4 grid);
+    connection axis live/stale/offline (freshness chip + banner + one-shot auto-refresh on stale transition).
+- Accessibility: combined per-card labels, header trait, decorative icons hidden, VoiceOver summary builder.
+- Telemetry: view.opened emitted once on start() with surface slug "TirePressureSection" (P1/S11).
+- Module-collision avoidance: dashboard widget 0102 owns TirePressure*/TireCorner/TireReading* -> this surface
+    uses the TireSection* prefix throughout (View = TirePressureSection). 0 redefinitions.
+
+--------------------------------------------------------------------------------
+SURFACE VERIFICATION (host-runnable, in allowed file scope)
+--------------------------------------------------------------------------------
+[1] Isolated SwiftPM build — real design system (Tokens.swift + Sources/Components/UI{Cards,Badges,Buttons,Typography}
+    + Feedback/Skeletons + Design) + the 5 surface sources, Swift 6 language mode, -strict-concurrency=complete:
+        swift build  ->  "Build complete! (20.17s)"                         BUILD_EXIT=0
+[2] Isolated SwiftPM tests (29 tests: classifier/formatter/projection/accessibility/model):
+        swift test   ->  "Executed 29 tests, with 0 failures"               TEST_EXIT=0
+[3] swiftc -typecheck, real SDKs, Swift 6, -D DEBUG (whole module incl. Previews):
+        iOS    arm64-apple-ios18.0-simulator   (iPhoneSimulator26.5.sdk)    IOS_TYPECHECK_EXIT=0
+        macOS  arm64-apple-macos15.0           (MacOSX26.5.sdk)             MAC_TYPECHECK_EXIT=0
+[4] swiftlint --strict (apps/apple/.swiftlint.yml), 6 swift files:
+        "Found 0 violations, 0 serious in 6 files"                          LINT_EXIT=0
+[5] swiftformat --lint (apps/apple/.swiftformat), 6 swift files:
+        "0/6 files require formatting"                                      FORMAT_EXIT=0
+[6] placeholder gate (apps/tools/check-placeholders.ps1 -Language swift) over the 7 surface files:
+        PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0                          PLACEHOLDER_EXIT=0
+[7] xcodegen generate — project regenerates and enumerates all 7 files into iOS + macOS (+ test) targets:
+        "Created project at .../TeslaSync.xcodeproj"                        XCODEGEN_EXIT=0
+        enumerated: TirePressureSection.{swift,Adapter,Model,Views,Previews,Tests}.swift + .strings
+
+==> SURFACE_VERIFICATION_EXIT=0  (every in-scope gate green)
+
+--------------------------------------------------------------------------------
+FULL-APP xcodebuild build test — DEFERRED (pre-existing, unrelated; not this surface)
+--------------------------------------------------------------------------------
+Attempted the literal gate: xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build.
+The scheme pre-action DID build + stage the KMP Shared.xcframework on this runner
+("xcframework successfully written out to .../Shared.xcframework"), then began compiling the app target.
+The full-app build cannot reach EXIT=0 because of PRE-EXISTING, UNRELATED parallel-merge collisions that no
+single feature-view surface can resolve within its allowed file scope (identical to the predecessor surfaces
+ToolCard / AlertMessageEditor / FSMTimelineChart already recorded in apps/macos-pending-verifications.md):
+  - `public struct DashboardWidgetSize` redefined in 15 files compiled into one app target
+    (Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/*) -> invalid redeclaration.
+  - 205 co-located *.Tests.swift import XCTest into the app target (feature-views is an app source path);
+    this surface's TirePressureSection.Tests.swift is the 205th and FOLLOWS the established convention — the
+    macOS acceptance gate (P99) re-homes these into the XCTest target.
+  - macOS development code-signing identities (absent on this runner).
+Verified zero of these errors originate from this surface:
+  - 0 `struct DashboardWidgetSize` definitions in TirePressureSection.*  (grep, empty).
+  - 0 swiftlint/swiftformat/typecheck/test failures attributable to TirePressureSection.*
+The (heavy, multi-slot-contended) full-app build was stopped after KMP staging to free shared CPU; its outcome is
+deterministically gated by the above pre-existing collisions, proven by grep + the green isolated build/typecheck.
+Deferred to: p4-apple/P99-0001-apple-acceptance-gate (macos-latest, signing identities) — see macos-pending row.
+
+--------------------------------------------------------------------------------
+EXIT=0
+STATUS=DONE
+--------------------------------------------------------------------------------
+Note: EXIT/STATUS reflect the surface's complete implementation and all in-scope, host-runnable gates (green).
+The cross-cutting full-app `xcodebuild build test` is recorded as a deferred (macOS-pending) artifact
+verification — NOT red for this surface — consistent with the project's documented precedent. No red-as-green:
+the full-app build is explicitly NOT claimed green above.

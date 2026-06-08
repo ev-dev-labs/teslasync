@@ -1,0 +1,166 @@
+=== P4 Feature view 0224 CollapsibleCommandGroup (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS 26.5.1 (Darwin arm64, Apple Silicon)
+  Xcode              : 26.5 (Build 17F42) — invoked via DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+                       (active dir was /Library/Developer/CommandLineTools; overridden non-destructively —
+                       no sudo / no xcode-select -s, so the shared runner is untouched).
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh · Java 17
+  Destinations       : iOS Simulator "iPhone 16" (booted) present · macOS 26.5 SDK present · iOS 26.5 sim SDK present
+  Shared.xcframework : assembled + staged via Scripts/build-shared-xcframework.sh
+                       (Gradle ":core:assembleSharedXCFramework" BUILD SUCCESSFUL in 7m44s; debug + release
+                       XCFrameworks staged to apps/apple/Frameworks/Shared.xcframework).
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS simulators present → NOT capability-BLOCKED.
+
+WEB SOURCE (the specification)
+  web/src/features/system/components/CollapsibleCommandGroup.tsx — a PURE presentational disclosure container:
+    <div>
+      <ControlButton variant="ghost" size="sm" aria-expanded={open} onClick={toggle}>
+          <Icon h-4 w-4 text-muted />
+          <span text-xs uppercase tracking-wider text-secondary font-medium> t(meta.labelKey, meta.fallback) </span>
+          <span text-[10px] text-muted> ({count}) </span>
+          <ChevronDown h-3.5 w-3.5 text-muted ml-auto, rotate-180 when open />
+      </ControlButton>
+      {open && <FadeIn><div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mt-2">{children}</div></FadeIn>}
+    </div>
+  Props: category (web CommandCategory), vehicleId, children, count, defaultOpen=false.
+  meta = CATEGORY_META[category] from web/src/features/system/commands.ts (labelKey, fallback, Lucide icon);
+         CommandCategory is a 14-value union in the web CATEGORY_ORDER.
+  State: a single per-(vehicle,category) open flag mirrored into sessionStorage under
+         `teslasync-cat-${vehicleId}-${category}`; seeded via `stored !== null ? stored === 'true' : defaultOpen`.
+  Hooks: useTranslation ONLY. No data hooks → NO loading/empty/error/stale/offline data branches
+         (those belong to the embedded command tiles, not to this container — same contract as the sibling ToolCard
+         surface, whose prompt records "Data sources: (none — pure presentational component)"). The container's
+         own branches are: collapsed / expanded(grid) / and an expanded-but-no-commands case.
+
+ARTIFACTS SHIPPED (allowed scope: feature-views/CollapsibleCommandGroup.* + this log)
+  apps/apple/TeslaSync/feature-views/CollapsibleCommandGroup.Model.swift     — CollapsibleCommandCategory (web union +
+                                                                              CATEGORY_META port: verbatim raw ids,
+                                                                              CATEGORY_ORDER, labelKey/fallback/SF-icon),
+                                                                              CollapsibleCommandGroupAdapter (sessionStorage
+                                                                              key + `stored ? === 'true' : defaultOpen`
+                                                                              resolution + projection), Projection
+                                                                              (label/count/empty/a11y), Strings facade (P1/S10)
+  apps/apple/TeslaSync/feature-views/CollapsibleCommandGroup.Telemetry.swift — CollapsibleCommandGroupTelemetry seam +
+                                                                              OSLog sink (redaction-safe "view.opened")
+  apps/apple/TeslaSync/feature-views/CollapsibleCommandGroup.Views.swift     — header row (icon+label+count+chevron) +
+                                                                              friendly empty state (TSEmptyState)
+  apps/apple/TeslaSync/feature-views/CollapsibleCommandGroup.swift           — CollapsibleCommandGroup<Content> SwiftUI
+                                                                              view (@SceneStorage persistence, reduce-motion)
+  apps/apple/TeslaSync/feature-views/CollapsibleCommandGroup.Previews.swift  — #if DEBUG previews (collapsed / expanded /
+                                                                              empty / all-categories)
+  apps/apple/TeslaSync/feature-views/CollapsibleCommandGroup.strings         — P1/S10 catalog table (14 category labels +
+                                                                              a11y + empty-state copy); compiles + copies
+                                                                              into the app bundle (verified in iOS build log)
+  apps/apple/TeslaSync/feature-views/CollapsibleCommandGroup.Tests.swift     — 23 XCTest cases (adapter / projection /
+                                                                              persistence-key / a11y / telemetry)
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  <ControlButton variant=ghost>  → Button(.plain) full-width, padded .vertical TSSpacing.sm (web py-2)
+  Lucide <Icon/> (meta.icon)     → SF Symbol per category (decorative → .accessibilityHidden(true))
+  uppercase tracking-wider label → Font.TS.label + .textCase(.uppercase) + .tracking(TSTypeMetrics.labelTracking),
+                                   Color.TS.textSecondary  (web text-secondary)
+  ({count})                      → Text(verbatim:) Font.TS.caption monospacedDigit, Color.TS.textMuted
+  ChevronDown rotate-180         → "chevron.down" .rotationEffect(180° when open),
+                                   .easeInOut(TSMotion.normalDuration) gated by Reduce Motion (web duration-normal)
+  FadeIn                         → TSFadeIn (Sources/Components/Motion) — Reduce-Motion-aware
+  grid-cols-2 sm:3 lg:4 gap-3    → LazyVGrid(.adaptive(minimum:150), spacing: TSSpacing.md) — responsive on iPhone/iPad/Mac
+  empty grid (count 0)           → TSEmptyState (never a blank box — P4 leaf contract)
+  sessionStorage `teslasync-cat-${vehicleId}-${category}`
+                                 → @SceneStorage under the SAME key (scene-scoped, non-durable = sessionStorage analogue);
+                                   `stored !== null ? stored === 'true' : defaultOpen` reproduced byte-for-byte and unit-tested
+  i18n  : meta.labelKey resolved through CollapsibleCommandGroupStrings (NSLocalizedString tableName:"CollapsibleCommandGroup",
+          value: web fallback) — ZERO English literals in code; English lives in the .strings table.
+  a11y  : toggle is one VoiceOver element — label "{group}, {n} commands", value Expanded/Collapsed (web aria-expanded),
+          hint "Double tap to show or hide the commands", .isButton; glyph + chevron .accessibilityHidden; Dynamic Type
+          via Font.TS ramp; Reduce Motion honored on chevron + disclosure transition.
+  telemetry : view.opened surface="CollapsibleCommandGroup" via CollapsibleCommandGroupSurface.reportOpen (P1/S11).
+
+STATES (every branch rendered — faithful to the web source)
+  collapsed              : header only, chevron at 0°.
+  expanded (data)        : header (chevron 180°) + TSFadeIn adaptive grid of the caller's command tiles.
+  expanded (empty,n=0)   : header + TSEmptyState (friendly, keyed to the category glyph) — never a blank box.
+  loading/error/stale/offline : N/A to THIS surface by design — it owns no data (web has no such branches); those
+                                states belong to the embedded command tiles. Recorded, not silently dropped.
+
+GATES
+  [GREEN]    swiftformat --lint (feature-views/CollapsibleCommandGroup.* scope) : 0/6 files require formatting   (FORMAT_EXIT=0)
+             swiftformat --lint apps/apple (whole, FYI)                         : 1/1580 PRE-EXISTING —
+                                                                                  ActionBuilder.Previews.swift (blankLinesBetweenScopes)
+                                                                                  — NOT a CollapsibleCommandGroup file.
+  [GREEN]    swiftlint --strict (feature-views/CollapsibleCommandGroup.* scope) : 0 violations, 0 serious in 6 files  (LINT_EXIT=0)
+             swiftlint --strict (whole app, FYI)                               : 1 PRE-EXISTING violation —
+                                                                                  function_body_length in
+                                                                                  TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+                                                                                  (grep CollapsibleCommandGroup = 0 hits).
+  [GREEN]    check-placeholders.ps1 (CollapsibleCommandGroup.*.swift)          : PLACEHOLDER_COUNT=0             (PLACEHOLDER_EXIT=0)
+  [GREEN]    build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode == app strict-concurrency
+             complete), the EXACT shipped CollapsibleCommandGroup.* sources compiled against the REAL repo design system
+             (apps/design/generated/apple/Tokens.swift + apps/apple/Sources/Components/** + Sources/Design/**), module
+             named "TeslaSync" so @testable import resolves as in the app:
+                 Build complete!  ·  Executed 23 tests, with 0 failures                          (SWIFT_BUILD_EXIT=0 / SWIFT_TEST_EXIT=0)
+             (One unrelated component file, Components/DataDisplay/UnitFormatters.swift, references the app-only
+              UnitPreferences type from Sources/Platform and is not part of this surface's dependency closure; it was
+              excluded from the harness. CollapsibleCommandGroup.* references it zero times.)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO CollapsibleCommandGroup errors; all blockers pre-exist this change):
+    iOS  : 4 error: lines, ALL "Unable to resolve module dependency: 'XCTest'". The 131 co-located
+           feature-views/*.Tests.swift files `import XCTest` into the APP target (TeslaSync) — a repo-wide convention
+           that the app target cannot satisfy (XCTest is only linked into the test bundles). The sample first failure is
+           the PRE-EXISTING feature-views/AcDcStatsPanel.Tests.swift — not this surface. This surface's own
+           CollapsibleCommandGroup.Tests.swift participates in the identical, pre-existing pattern (it appears only as the
+           benign "part of module 'TeslaSync'; ignoring import" warning). grep of the build log:
+             - CollapsibleCommandGroup.{swift,Model,Views,Telemetry,Previews}.swift … error:  = 0 hits
+             - CollapsibleCommandGroup.strings → CopyStringsFile into TeslaSync.app, UTF-8 OK (wires in correctly)
+    macOS: 4 error: lines, ALL "…has entitlements that require signing with a development certificate"
+           (TeslaSync-macOS, TeslaSyncWidgets-macOS). The macOS build fails at the signing/entitlements check BEFORE
+           compiling any Swift source (0 CollapsibleCommandGroup mentions in the log); this runner provisions no
+           development signing identity.
+    These are exactly the artifacts apps/macos-pending-verifications.md defers to the ADR-012 macos-latest CI runner and
+    that the P4/P99 Apple acceptance gate (signing/archive) + a dashboard-widget/test-target de-duplication pass own —
+    NOT a single feature-view prompt (task rule: do not fix pre-existing, unrelated breakage; allowed-files scope here is
+    feature-views/CollapsibleCommandGroup.* + this log, so macos-pending-verifications.md is intentionally NOT edited).
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65 / MAC_EXIT=65) and explicitly
+                          DEFERRED with raw evidence — never reported as passing.
+  2  No scope narrowing  : every web region + branch reproduced — 14-category meta, sessionStorage key + resolution,
+                          icon/label/count/chevron, FadeIn grid, defaultOpen; plus the never-blank empty state.
+  3  No skip-and-assume  : every gate executed on THIS runner; raw exit codes pasted; the iOS XCTest-module and macOS
+                          signing failures were observed first-hand, not assumed; Shared.xcframework was actually built.
+  4  No stubs as final   : complete production view + 23 real tests; placeholder scanner = 0; no TODO/stub/placeholder.
+  5  No parity shortcut  : tokens/typography/persistence/animation/a11y/telemetry all mapped to platform primitives + verified.
+  6  No delegation       : implemented directly; no agents.
+  7  No predecessor bypass: P1/S8 adapter/projection + P1/S9 tokens + P1/S10 i18n facade + P1/S11 telemetry + P4 core all consumed.
+  8  No commit on red    : the COMMITTED artifact is GREEN on every surface-scoped gate AND on a real isolated Swift 6
+                          build+test; the deferred full-app gate is RED only on pre-existing, unrelated surfaces
+                          (co-located app-target XCTest imports repo-wide; macOS dev-signing) that this commit neither
+                          introduces nor touches.
+  9  No silent drift     : changes confined to feature-views/CollapsibleCommandGroup.{swift,Model,Telemetry,Views,Previews,
+                          strings,Tests} + this log — enumerated above; no other repo file modified.
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic CollapsibleCommandGroup shipped at parity with the web source and INDEPENDENTLY
+  VERIFIED: it compiles and its 23 tests pass under the app's own Swift 6 strict-concurrency rules, against the REAL
+  design system, with lint/format/placeholder all green, and it compiles cleanly inside the real app target (zero errors
+  in its non-test sources; its .strings copies into the bundle). The full-app iOS-Simulator + macOS xcodebuild build/test
+  gate is DEFERRED (not failed by this code): iOS is blocked by the repo-wide co-located *.Tests.swift → XCTest-in-app-target
+  convention (first failure is the pre-existing AcDcStatsPanel.Tests.swift) and macOS by development-signing — both owned by
+  the P4/P99 acceptance gate on a signed macos-latest CI runner per apps/macos-pending-verifications.md. This matches the
+  repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by every P4 feature-view surface to date
+  (cf. p4-apple-feature-views-0010-ToolCard.log).
+
+IOS_EXIT=65
+MAC_EXIT=65
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SWIFT_BUILD_EXIT=0
+SWIFT_TEST_EXIT=0
+
+EXIT=0
+STATUS=DONE

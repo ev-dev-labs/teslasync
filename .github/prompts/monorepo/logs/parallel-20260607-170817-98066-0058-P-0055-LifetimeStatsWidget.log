@@ -1,0 +1,112 @@
+I'll start by exploring the codebase to understand the web source specification and the existing Apple app structure.
+
+Toolchain is available (xcodebuild, swift 6.3.2, swiftlint, swiftformat). Let me check simulators and explore the Apple app structure.
+
+There's an existing `DigitalTwinWidget` as a reference pattern. Note `simctl` isn't found — let me verify the Xcode situation and study the existing widget structure.
+
+Only Command Line Tools is active, but `Xcode.app` exists at `/Applications`. Let me check if I can use it via `DEVELOPER_DIR`, and study the supporting files of the reference widget in parallel.
+
+Xcode 26.5 is available via `DEVELOPER_DIR`, and an `iPhone 16` simulator is booted — I **can** run the gate. Now let me study the remaining reference files, the build system, and shared tokens/components.
+
+Now I understand the file set. The project uses XcodeGen (`project.yml`). Let me examine the build config, design tokens, and shared facade infrastructure.
+
+Key insight: `dashboard-widgets/` is a staging directory **not** wired into `project.yml` (sources are `Sources`, `Localization`, `../design/generated/apple`). These are parallel-developed surfaces integrated later. Let me confirm the build wiring, lint configs, and precedent from the DigitalTwin gate log.
+
+I have the precedent: prompt 0036 shipped to the same staging dir with a "code-complete + host gates green, Xcode build/test DEFERRED" disposition (surface not yet registered in `project.yml` — that's the integration prompt's scope). Let me verify shared symbols exist and check for duplicate-type risks before designing my files.
+
+`DashboardWidgetSize`/`DashboardWidgetRegistration` exist only in DigitalTwin's staging file — I must **not** redefine them (duplicate-symbol risk). `TSAnimatedNumber` is the native `AnimatedNumber`. Let me locate the design tokens and read the shared component APIs I'll use.
+
+Now let me find the design token definitions and read the Feedback components and Design tokens.
+
+Now let me read the design tokens and the Badges/Skeletons components to confirm the exact APIs I'll reference.
+
+`TSStatGridSkeleton` is perfect for the loading state. Let me read the Badges (for `TSTone`) and locate the generated color tokens to confirm exact names.
+
+Design tokens live in `apps/design/generated/apple/Tokens.swift`. Now I need to trace the **exact** numeric logic from the web source so my native adapter reproduces identical values. Let me read the tokens and all the web lib/hook dependencies.
+
+Tokens confirmed. Now let me read the exact conversion/format/units/widget-shared logic from the web source so the native adapter reproduces identical values and the view matches `WidgetShell`/`WidgetStatGrid` composition.
+
+Now the critical conversion math and the widget-shared composition. Let me read them all.
+
+I now see the web's distance pipeline (`km × 0.621371` then `convertDistanceFromSI`) — I'll reproduce it **verbatim** for parity. Let me read `WidgetShell`, `WidgetStatGrid`, widget `types.ts`, plus `useFormatting`/`useUnits` to finish the spec.
+
+Let me read `useFormatting` (formatCurrency) and `useUnits` (distance pref) to finish reproducing the exact formatting, then check the i18n catalog convention and the registry source.
+
+Currency is just `symbol + fmtNumber(amount, precision)` (default `$`, precision 2) — not Intl currency style. Let me confirm the registry's exact i18n keys/metadata and the default distance pref.
+
+I have the full spec. Let me confirm the lint/format configs (must pass `--strict`), the web `AnimatedNumber` default, and check for any Swift symbol collisions before writing.
+
+Key insight: `swiftlint`'s `included:` paths exclude `TeslaSync/dashboard-widgets`, but `swiftformat --lint apps/apple` **does** cover my files — so I'll auto-format them. `AnimatedNumber` defaults to 0 decimals. Let me check `pwsh`/`xcodegen` availability and the placeholder patterns, then start building.
+
+`pwsh` and `xcodegen` are both available. Let me read the placeholder checker to understand its scan/exit semantics, then I'll write the plan and files.
+
+I have a complete spec. Let me set up tracking and write the plan, then build the files.
+
+Now I'll author the files, starting with the state-holder Model and the pure projection Adapter.
+
+Now the SwiftUI surface view with all states, plus the `Strings.text` SwiftUI helper.
+
+Now the Previews and the i18n strings table.
+
+Now the test suite. Let me first verify my exact expected formatted values with a quick computation so the assertions are correct.
+
+Values confirmed. Now the test suite.
+
+All six files created. Now let me auto-format them with the repo's swiftformat config, then verify with `--lint`.
+
+swiftformat clean (0/274 require formatting). Now swiftlint `--strict`.
+
+swiftlint `--strict`: 0 violations. Now the most important real verification — compile and **execute** the pure-logic (Adapter + Model) on the host to prove the parity arithmetic, phase resolution, clamp, and a11y are green.
+
+Real Swift 6 concurrency finding: `resolvePhase` is `@MainActor`-isolated (class-level), so the non-isolated `LifetimeStatsPhaseTests` in my shipped tests would fail to compile at CI. It's a pure function — I'll mark it `nonisolated`. Fixing the shipped Model and the harness.
+
+Host harness is **green: 59 checks, 0 failures** under Swift 6 strict concurrency — parity arithmetic, phase logic, telemetry, auto-refresh, registry, and a11y all verified. Now let me go further and type-check the **SwiftUI view** itself against stubbed design tokens to catch any API misuse before integration.Host harness compiles under **Swift 6 strict concurrency** and runs **green: 59 checks, 0 failures** — validating the exact web parity arithmetic, formatting, phase logic, state-holder wiring, registry, and a11y. Let me re-lint after the Model edit, and probe whether a curated type-check of the SwiftUI View is feasible.
+
+swiftformat clean (0/14). Crucially, `Sources/Components` + `Sources/Design` import only SDK frameworks (no KMP `Shared`) — so a curated type-check of my SwiftUI View is feasible. Let me attempt it: compile my files + the design system as one module under Swift 6.
+
+The curated type-check surfaced two real issues to fix (plus SDK/macro noise from using the CLT SDK). Let me see all errors grouped by file.
+
+The **View file type-checks completely clean** against the real design system — zero errors. The only real issue is the `lifetimePreviewModel` helper needing `@MainActor` (the rest is just the `#Preview` macro plugin missing from the CLT SDK). Let me fix the helper and re-run with the proper Xcode SDK.
+
+Macro errors are gone (Xcode SDK loaded the plugin). All 52 remaining errors are in **`Sources/Components/DataDisplay/UnitFormatters.swift`** referencing `UnitPreferences`/`TSUnitsKey` — types from a Sources dir I didn't include, not my code. Let me confirm my files are clean and locate those types to complete a fully-green type-check.
+
+**Zero errors in my files.** The only failing file is `UnitFormatters.swift`, which `import Shared` (the KMP xcframework) — unrelated to my View, which doesn't use it. Excluding that one Shared-coupled file should yield a fully green type-check.
+
+**Type-check fully green (EXIT=0)** — the SwiftUI View, Previews, Model, and Adapter all compile under Swift 6 strict concurrency against the real design system. Now the placeholder gate.
+
+The directory scan caught the word "Placeholder" in a **comment** in my Previews file (line 6) — forbidden even in comments. Let me reword it and re-scan.
+
+COUNT=0, clean. Now let me run a final consolidated verification on the current file state (harness, type-check, format, lint, placeholder) to capture authoritative results for the log.
+
+All five host-runnable gates are green. Now let me capture the Apple toolchain capability evidence for the log (the full app build/test is deferred per the established disposition — my surface isn't registered in `project.yml`, which is out of allowed-file scope, and it needs the KMP `Shared.xcframework` + signing).
+
+All evidence gathered. Now let me write the gate log, then commit.
+
+Let me make one layout robustness improvement — wrap the connectivity banner + content in an explicit container so they stack unambiguously — then re-verify.
+
+Type-check shows **0 errors** (the chain stopped only because `grep -c` exits non-zero when it counts zero matches). Let me re-run the format and lint gates cleanly.
+
+All gates green after the edit. Let me verify git state to ensure I commit only my allowed files (not the pre-existing unrelated web changes), and do a final coherence check of the View.
+
+Git is clean: my 6 files + log are untracked; the two pre-existing `M` web files are unrelated and I'll leave them unstaged. Staging only my files and committing.
+
+Committed (`b7fffb07`) — 6 surface files + log, 1,584 insertions; the unrelated pre-existing web changes left untouched. Let me clean up temp artifacts and finalize.
+
+All work complete and verified. Task finished.
+
+Merge made by the 'ort' strategy.
+ ...-dashboard-widgets-0055-LifetimeStatsWidget.log | 138 ++++++++
+ .../LifetimeStatsWidget.Adapter.swift              | 253 ++++++++++++++
+ .../LifetimeStatsWidget.Model.swift                | 333 ++++++++++++++++++
+ .../LifetimeStatsWidget.Previews.swift             | 143 ++++++++
+ .../LifetimeStatsWidget.Tests.swift                | 284 +++++++++++++++
+ .../dashboard-widgets/LifetimeStatsWidget.strings  |  49 +++
+ .../dashboard-widgets/LifetimeStatsWidget.swift    | 384 +++++++++++++++++++++
+ 7 files changed, 1584 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-dashboard-widgets-0055-LifetimeStatsWidget.log
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Model.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.strings
+ create mode 100644 apps/apple/TeslaSync/dashboard-widgets/LifetimeStatsWidget.swift

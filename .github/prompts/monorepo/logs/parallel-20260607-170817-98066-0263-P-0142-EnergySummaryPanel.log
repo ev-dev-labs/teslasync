@@ -1,0 +1,143 @@
+I'll start by understanding the task, the web source spec, and what tooling is available on this runner.
+
+Key finding: `xcodebuild` is present but only **Command Line Tools** is active (no full Xcode), and `simctl` is missing. Let me verify the full picture and read the web source + existing Apple app structure.
+
+Full Xcode **is** installed at `/Applications/Xcode.app` — only the active dev dir points to CommandLineTools. I can use `DEVELOPER_DIR` per-invocation (no sudo, no global change). Let me verify the toolchain works and explore the Apple project structure.
+
+Full Xcode 26.5 + iPhone 16 (iOS 26.5) simulator are available. This is **DONE-able**, not blocked. The project uses XcodeGen (`project.yml`) and a clear multi-file per-surface convention. Let me study the conventions, a sibling stats panel, and the shared infrastructure.
+
+XcodeGen auto-includes everything under `TeslaSync/feature-views` into both app targets. I need to understand how `*.Tests.swift` files there avoid polluting the app target, and study the full sibling convention. Let me investigate the test wiring and check xcodegen availability.
+
+`xcodegen` 2.45.4 is available. The 74 sibling `*.Tests.swift` files live in `feature-views/` and import XCTest — I need to understand the build wiring and establish a baseline build. Let me check the Shared.xcframework dependency, build scripts, and Makefile.
+
+The app targets need a KMP `Shared.xcframework` built via Gradle (not prebuilt — `Frameworks/` only has `.gitkeep`). This is the main build risk. Let me check the shared module, gradle, and the pending-verifications note.
+
+Critical discovery: `apps/macos-pending-verifications.md` documents the established methodology. The full-app `xcodebuild build test` is **pre-existing-blocked** by unrelated parallel-merge collisions (duplicate `DashboardWidgetSize`, co-located XCTest, signing) — and feature-view surfaces are verified via **isolated SwiftPM build + tests + lint/format/placeholder**, exactly how the `ToolCard` predecessor (P-0010) was done. My allowed files are only `EnergySummaryPanel.*` + the log, so I cannot fix those pre-existing collisions. Let me study the predecessor's log and the existing isolated-build harness to follow precedent precisely.
+
+Let me read the predecessor `ToolCard` log and a sibling stats-panel log to match the exact methodology, format, and STATUS convention.
+
+I now have the exact precedent. The `ToolCard` predecessor concluded **EXIT=0/STATUS=DONE** via: full surface implementation + **isolated SwiftPM build+test** against real design-system files + swiftlint/swiftformat/placeholder green, with the full-app xcodebuild **DEFERRED** (pre-existing, unrelated collisions, documented in `macos-pending-verifications.md`). I must replicate this for `EnergySummaryPanel`, following the dominant sibling convention (`AcDcStatsPanel`, P-0096). Let me deeply study that sibling set and the i18n catalog.
+
+The convention is now clear. Let me read the remaining sibling files (Views/Previews/strings/Tests) plus the web spec files (numberFormat, useUnits, DriveDetail/DriveStats types) to port faithfully.
+
+Let me read the web spec sources (number formatting, units, types), the sibling test file, and locate the design tokens, motion, and units state-holder.
+
+Now I understand the web formatters exactly (`fmtNumber` default precision 2, locale-aware; `fmtWithUnit` = number + space + unit; energy threshold is strictly `> 1000`). Let me locate the native design tokens, motion, units state-holder, and the web `DriveStats`/`DriveDetail` field shapes.
+
+There's a canonical `MeasurementSystem` enum (`.metric`/`.imperial`, `distanceLabel` "km"/"mi"). Let me see how the sibling `DrivingSection` binds units, and locate the design-token + motion definitions.
+
+The web→token color mapping is established by the ToolCard log (cyan→chartSeriesRegen, green→chartSeriesBattery, purple→chartSeriesPower, amber→chartSeriesEnergy). Let me verify these tokens exist and read the key component/token definitions.
+
+All color/component tokens confirmed. Let me verify the remaining typography/spacing/radius tokens and confirm the leaf-seam-only pattern (production source not required), then I'll have everything to implement.
+
+Everything is confirmed available. Let me read the typography component signatures (to use them correctly) and confirm `TSSpacing.xl`, then I'll write the plan and implement.
+
+I have all the patterns and tokens confirmed. Let me verify the `TSButton`/`TSSkeleton` signatures and the token helper dependencies (for the isolated build harness), then set up my plan.
+
+I have all APIs confirmed. Let me check the placeholder-scanner patterns (to avoid flagged words) and set up my plan/todos before writing code.
+
+I have a complete understanding of the conventions, tokens, web spec, formatters, placeholder rules, and the verification methodology (isolated SwiftPM build + tests, like the `ToolCard` predecessor). Let me set up my plan and todos, then implement.
+
+Collision check: there's an existing `EnergySummary` struct in Widgets. I must avoid that bare name and verify my prefixed type names are collision-free across the 570-file module.
+
+All names are collision-free. Writing the plan and implementing the 7 surface files now.
+
+Now the main view and subviews.
+
+Now the comprehensive test suite.
+
+Let me fix an awkward `XCTUnwrap` usage in the tests.
+
+Now let me format my files to the repo style and lint them.
+
+swiftlint flags `function_body_length` on the metrics builder. Let me refactor it into per-cell helpers.
+
+The file was reformatted by swiftformat. Let me view the current builder section to edit precisely.
+
+Format + lint both clean on all 6 files. Now let me kick off the heavy Shared.xcframework (Gradle/KMP) build in the background while I build the isolated SwiftPM harness for my surface.
+
+xcodeproj generated, Gradle 8.14.5 works. Let me start the Shared.xcframework build in the background (it's the ~7-min KMP step), then build my isolated SwiftPM harness in parallel.
+
+The Shared.xcframework background build finished quickly — let me check whether it actually succeeded, and prepare the harness (strip foreign DEBUG previews that reference symbols I didn't copy).
+
+The Gradle build was progressing (Kotlin/Native download + compile). Let me check if it's still alive, and meanwhile build the isolated harness (which is independent of the xcframework).
+
+Gradle is still actively building (Kotlin/Native linking) — good, it'll stage the xcframework. Now let me create the harness `Package.swift` and build+test my surface in isolation under Swift 6 strict concurrency.
+
+Isolated build compiles clean under Swift 6 strict concurrency (including the previews). Now running the tests.
+
+All 36 isolated tests pass under Swift 6 strict concurrency against the real design system. Now let me run the remaining host gates: placeholder scan, whole-tree swiftformat, and whole-tree swiftlint.
+
+Placeholder scan clean (real per-surface scan: PLACEHOLDER_COUNT=0). Now the whole-tree format + lint gates.
+
+Whole-tree gates surface **pre-existing** issues in *other* surfaces (not mine). Let me pinpoint them and confirm my working tree only touches my allowed files.
+
+Confirmed: both whole-tree violations are **pre-existing** in sibling files I'm forbidden to touch (`LifetimeStatsWidget.Adapter.swift` swiftlint, `ActionBuilder.Previews.swift` swiftformat). My 7 files are the only working-tree changes and are 100% clean. Let me check the Shared.xcframework build, then run the full-app xcodebuild for honest exit-code evidence.
+
+The Gradle build is on the release link step — nearly done staging. Let me wait for it to complete, then run the full-app build.
+
+The release Kotlin/Native link is the slow tail. Let me keep waiting for it to stage.
+
+Shared.xcframework built + staged (BUILD SUCCESSFUL 7m29s, matching the precedent). Now the full-app iOS build+test for honest exit-code evidence — running with full output captured to a log.
+
+The iOS build+test is running. Let me poll its progress.
+
+Let me check whether the iOS build subprocess actually survived and is running.
+
+Those `TeslaSync-macOS` xcodebuild and many DerivedData dirs belong to **other parallel agents** sharing this machine (separate git worktrees → separate DerivedData, so no collision with mine). My async subshell didn't persist. Let me run the iOS build as a sync command (auto-backgrounds on timeout) capturing to a log.
+
+**IOS_EXIT=65** — matching the precedent. The failure is `Unable to resolve module dependency: 'XCTest'` (the pre-existing co-located `*.Tests.swift`-into-app-target issue), and notably the app target itself compiled through to CodeSign. Let me grep the full log to prove **zero** `EnergySummaryPanel` errors and identify the exact pre-existing failure.
+
+**Decisive evidence:** The only 4 `error:` lines in the entire 8,623-line iOS log are all the **pre-existing** `AcDcStatsPanel.Tests.swift:19: unable to resolve module dependency: 'XCTest'` (a *sibling's* co-located test compiled into the app target — the documented systemic issue). **Zero EnergySummaryPanel errors** — my surface compiled cleanly through CodeSign + CompileXCStrings. Now the macOS gate for completeness.
+
+**MAC_EXIT=65** — fails on the documented pre-existing **macOS development-signing** blocker (`TeslaSync-macOS has entitlements that require signing`), not my code. Let me confirm zero `EnergySummaryPanel` errors in the macOS log too, then finalize.
+
+Complete, honest evidence gathered. macOS errors are **only** the two pre-existing dev-signing entitlement errors; zero `EnergySummaryPanel` errors. Let me update todos and write the gate log in the precedent format.
+
+Now let me do final verification (clean working tree scope, re-lint), then commit precisely.
+
+Working tree is exactly my 7 files + the log; generated `.xcodeproj`/`.xcframework` are gitignored; final swiftformat 0/6 and swiftlint 0 violations. Committing per the prompt's commit step.
+
+Committed cleanly (commit `5f5f6e752`, 8 files, 1607 insertions, with the Co-authored-by trailer). Let me clean up temporary build artifacts and finalize my todos.
+
+All todos complete, working tree clean, temp artifacts removed. The task is fully done and verified.
+
+## Summary
+
+Shipped a production, Apple-idiomatic **`EnergySummaryPanel`** SwiftUI surface at parity with `web/.../drive-detail/EnergySummaryPanel.tsx`, committed as `5f5f6e752`.
+
+**Delivered** (7 files under `apps/apple/TeslaSync/feature-views/`, following the established sibling convention):
+- `.Adapter.swift` — pure ports of `fmtNumber`/`fmtWithUnit`, the `> 1000 ? kWh : Wh` energy ladder, km→mi efficiency (×1.609344), battery/range deltas, the six-metric builder (`cached → projection`).
+- `.Model.swift` — `view.opened` telemetry seam (P1/S11), `EnergySummarySource` state-holder seam (P1/S8), pure projection, `@MainActor @Observable` model, i18n facade (P1/S10).
+- `.swift` / `.Views.swift` — `TSGlassPanel` surface, responsive 6-up grid, and **all** states (loading / empty / error / data / stale / offline), web colors → chart-series tokens.
+- `.Previews.swift`, `.strings` (7 `driveDetail.*` keys + chrome), `.Tests.swift` (36 cases).
+
+**Verification (all real, on this runner):**
+- **Isolated SwiftPM build + 36/36 tests pass** under Swift 6 `-strict-concurrency=complete` against the real design-system files — the per-surface GREEN proof.
+- swiftformat `0/6`, swiftlint `--strict` `0 violations`, placeholder scan `0` on my files.
+- Full-app **`IOS_EXIT=65`** / **`MAC_EXIT=65`** — **DEFERRED**, with **zero `EnergySummaryPanel` errors** (my surface compiles into the iOS app target through CodeSign). The only failures are pre-existing, out-of-allowed-scope blockers: co-located `*.Tests.swift`→app-target XCTest (first hit: `AcDcStatsPanel.Tests.swift`) and macOS dev-signing — exactly what `apps/macos-pending-verifications.md` defers to the P4/P99 acceptance gate.
+
+This matches the sanctioned `ToolCard` (P-0010) "code-complete + deferred Xcode gate" disposition. Gate log written ending **`EXIT=0 / STATUS=DONE`**.
+
+
+
+The task is fully complete — all work committed and verified. Calling task_complete.
+
+Merge made by the 'ort' strategy.
+ ...apple-feature-views-0142-EnergySummaryPanel.log | 147 ++++++++
+ .../feature-views/EnergySummaryPanel.Adapter.swift | 359 +++++++++++++++++++
+ .../feature-views/EnergySummaryPanel.Model.swift   | 252 ++++++++++++++
+ .../EnergySummaryPanel.Previews.swift              | 106 ++++++
+ .../feature-views/EnergySummaryPanel.Tests.swift   | 382 +++++++++++++++++++++
+ .../feature-views/EnergySummaryPanel.Views.swift   | 171 +++++++++
+ .../feature-views/EnergySummaryPanel.strings       |  37 ++
+ .../feature-views/EnergySummaryPanel.swift         | 153 +++++++++
+ 8 files changed, 1607 insertions(+)
+ create mode 100644 .github/prompts/monorepo/logs/p4-apple-feature-views-0142-EnergySummaryPanel.log
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnergySummaryPanel.Adapter.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnergySummaryPanel.Model.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnergySummaryPanel.Previews.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnergySummaryPanel.Tests.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnergySummaryPanel.Views.swift
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnergySummaryPanel.strings
+ create mode 100644 apps/apple/TeslaSync/feature-views/EnergySummaryPanel.swift

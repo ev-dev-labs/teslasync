@@ -1,0 +1,178 @@
+I'll start by exploring the task requirements: reading the web source, checking the Apple app structure, and verifying runner capabilities.
+
+Xcode is not installed (only Command Line Tools), and `simctl` is unavailable. Swift 6.3.2, swiftlint, and swiftformat ARE available. Let me explore the existing Apple app structure deeply to understand patterns before writing code, and read the web source fully.
+
+I now understand the web source. There's a dedicated `apps/apple/TeslaSync/feature-views/` directory (the prescribed output location). Let me examine existing feature-views, state holders, tokens, i18n, and shared components to match established patterns.
+
+The `feature-views` dir has 1438 files — each view is a multi-file bundle (`.Adapter`, `.Model`, `.Previews`, `.strings`, plus the view). Let me study one complete example end-to-end and find existing maintenance/admin state holders.
+
+Now I understand the bundle pattern. There's a `MaintenanceTrackerWidget` already (dashboard-widget, different surface). No existing admin/maintenance state holder. Let me read a complete feature-view bundle as my template, plus the SharedFacade core.
+
+Excellent template. Let me read the remaining bundle files (Views, Previews, Tests, strings), the design tokens, and key UI components. I also need an example with mutation/toast behavior since this card is interactive.
+
+Let me read the Previews, strings, design tokens, and the key UI components I'll need (Cards/GlassPanel, Buttons, Fields, Badges, Feedback States).
+
+Let me read the remaining components (Fields, Badges, Typography, Feedback), find token definitions and build files, and check if SwiftUI compiles with the CLT toolchain.
+
+SwiftUI type-checks under CLT (exit 0) — I can verify code locally even without Xcode. The project uses XcodeGen (`project.yml`). Let me find the design token definitions, read the typography/feedback components, and the project config.
+
+Design tokens (`Color.TS`, `TSSpacing`, etc.) appear generated. Let me locate their definition and understand the project config and how `.strings`/feature-views are wired.
+
+Now I understand the build: tokens live in `../design/generated/apple`, sources include `TeslaSync/feature-views`. The xcodebuild gate needs Xcode (unavailable) but I can typecheck with swiftc. Let me examine the generated tokens, the test organization, the Feedback/Motion components, and find an interactive (mutation+toast) feature view to model the form behavior.
+
+Tokens are in `design/generated/apple/Tokens.swift`. This card is interactive (mutation + toast + form), unlike the read-only AcDcStatsPanel. Let me study an interactive admin feature-view to model the mutation/toast/form pattern, and read the Feedback/Motion/States components.
+
+`BackupActionsCard` is the ideal interactive model (toast + mutation + admin). Let me read its full bundle to model the mutation/toast/action seam pattern.
+
+This is the exact interactive pattern I need. Let me read the rest of the BackupActionsCard bundle (Adapter, Views, Tests, strings, Previews) and find how `useDateFormat` is handled natively.
+
+I have the full interactive pattern. Let me read the BackupActionsCard tests/strings/previews, the web `useAdmin` hook for exact data shapes, and check for a native date-format facade.
+
+Let me read the exact web types, the `useDateFormat` semantics, a native `formatDateTime` port for style, and confirm how co-located test files are wired (excludes).
+
+I now have a complete understanding. Let me set up tracking and write the plan, then build the 7-file bundle modeled on `BackupActionsCard` (interactive sibling, same web `status/` dir) + `AcDcStatsPanel` (leaf-state contract).
+
+All confirmed: logs dir exists, `MaintenanceUpdateInput` is `{mode, message?, until?}`. Now writing the bundle. Starting with the pure Adapter core.
+
+Adapter done. Now the Model (seams, projection, view-model, sources, strings facade).
+
+Model done. Now the Views. The scheduling form + active/clear are interactive, so I'll have the model's `schedule`/`clear` return success so the view can close/reset the form. Let me write Views, then patch those two signatures to return `Bool`.
+
+Now I'll patch the Model's `schedule`/`clear`/`submit` to return `Bool` so the form can close/reset on success.
+
+Now switch the child views from `@Bindable` to `let` (no `$` bindings needed — `@Observable` tracking works via plain `let`), then write the composed surface.
+
+Now let me extract every i18n key + fallback used across the bundle to build an accurate strings file.
+
+Two keys span multiple lines (`idle.description`, `defaultMessage`). Let me get the complete key list robustly.
+
+34 keys. Now writing the strings catalog file.
+
+Now the Previews (every state) and Tests.
+
+Now the comprehensive test suite.
+
+All 7 files written. Now verification. SwiftUI type-checks under CLT, so I'll do a scoped module typecheck of my files plus their Shared-free dependencies (the component library + tokens). First, recon the component library's imports to define a closed compile set.
+
+Closed, Shared-free set confirmed. Running a scoped module typecheck of my production files + the component library + tokens against the macOS SDK (with `-D DEBUG` to also verify previews).
+
+The only failure is the `#Preview` macro plugin missing from CLT (a known toolchain limitation affecting *every* file with `#Preview`, e.g. `Typography.swift` — not my code). Let me typecheck the shipped (non-DEBUG) code cleanly, which is what matters for correctness.
+
+All 52 errors are in `Sources/Components/DataDisplay/UnitFormatters.swift` (references `UnitPreferences`/`Units` defined outside my compile set) — **zero errors in my files**, and I don't use that component. Let me locate the missing symbols to close the set, confirming they're Shared-free.
+
+The missing symbols live in `SharedFacade/Units+Facade.swift` which `import Shared` (unavailable). I don't use units at all. Let me find exactly which component files reference those Shared-backed symbols and exclude only those from the verification set.
+
+Only `UnitFormatters.swift` touches the Shared-backed units. I'll compile a curated closed set = tokens + the exact components my surface uses + my 4 production files. Let me verify Skeletons/Motion are clean and run it.
+
+Production code typechecks **clean: 0 errors, 0 warnings** against the real component library + tokens (Swift 6, macOS 15 SDK). Now let me validate the Previews bodies and DEBUG seams by transforming `#Preview` macros into functions (CLT lacks the preview macro plugin) and compiling against the real APIs.
+
+Previews + DEBUG seams compile clean (11 previews validated). Now I'll semantically verify the **Tests** by compiling them against my real Adapter/Model/Views with a minimal XCTest shim (CLT's base SDK lacks XCTest.framework).
+
+Just a shim gap (`XCTAssertNotEqual` missing from my stub). Adding it and re-running.
+
+All my code type-checks clean: **production 0/0, previews 0, tests 0**. Now the lint/format/placeholder gates. Let me locate configs and tooling.
+
+All tooling present. Let me review the lint/format configs, then run swiftformat, swiftlint, and the placeholder check on my files.
+
+swiftformat wants formatting fixes (mostly auto-fixable wrap/indent), plus a few long string lines and test force-unwraps I must fix manually (since swiftlint `--strict` upgrades the 120-col warning to an error). Let me inspect the specific lines.
+
+Two manual fixes needed (swiftformat can't fix these): split the long `idle.description` string, and remove test force-unwraps. Then swiftformat auto-fixes the rest.
+
+Let me also de-force-unwrap the `utc` test global, then run swiftformat in write mode to auto-fix the remaining wrap/indent issues.
+
+swiftformat passes. Now swiftlint `--strict` on my files.
+
+`file_length` (>400) flags 4 files. The repo convention is to split into more `ScheduledMaintenanceCard.*` files (like `AlertCard.Drillthrough`, `ActiveSessionsSection.Actions/.Seams`). Let me confirm the rule config and check how large existing bundles split.
+
+`WidgetPicker.Catalog.swift` is 1210 lines yet the gate passes — so long files use inline disables. Let me check the established convention.
+
+The convention is to **split** files ≤400 lines (only 1 of 1438 files uses a disable). I'll split into additional `ScheduledMaintenanceCard.*` files (matching `.Actions`/`.Seams`/`.ModelTests` precedents). Let me find clean split boundaries.
+
+Clean boundaries identified. Let me view exact boundary lines and the Tests structure to split precisely.
+
+Boundaries confirmed. Let me verify the Tests globals and projection-class end before splitting with a precise script.
+
+Now I'll split the 3 oversized files into additional `ScheduledMaintenanceCard.*` files (matching the repo's `.Actions`/`.ModelTests` precedent) and trim the Adapter, using a precise Python script.
+
+All files ≤400 except Adapter (401, one over). Let me trim its header comment.
+
+Adapter is at 400 (the limit). Let me trim the parity note for safety margin, then re-run all verification on the full 9-file bundle.
+
+Now re-running all checks on the full 9-file bundle. First swiftformat (write+lint) and swiftlint `--strict`.
+
+swiftformat **0/9** and swiftlint `--strict` **0 violations**. Now re-verify compilation of the split bundle: production + tests (shim) in one run, and previews (macro transform) in another.
+
+That's a harness artifact — my strip removed ModelTests' own `private` globals, making it reference Tests.swift's file-private ones. In the real (separate-file) build each file keeps its own `private` globals (no conflict). Let me fix the harness and re-run.
+
+Run A (production + both test files) passes: **0 errors**. Now Run B — previews (macro-transformed) against the split production files.
+
+All compile checks pass: **Run A 0 errors, Run B 0 errors (11 previews), swiftformat 0/9, swiftlint 0 violations**. Now the placeholder check. Let me inspect the script's `-Path` handling, then run it via pwsh.
+
+The script treats a non-existent path as a vacuous clean pass — so the gate's literal command scans nothing. Per the honesty covenant I'll run a **meaningful** scan against my actual files (copied into a temp subtree), plus the literal command. First, a direct grep for forbidden markers.
+
+No forbidden markers. Now running the actual placeholder gate via pwsh — both the literal gate path and a meaningful scan of my files copied into a temp subtree.
+
+Placeholder gate passes (`PLACEHOLDER_COUNT=0`). All runnable gates are green. Now let me capture the platform-capability evidence (why xcodebuild can't run) for an honest log.
+
+`/Applications/Xcode.app` exists — `xcode-select` is just pointed at CLT. I can use `DEVELOPER_DIR` to access Xcode without sudo. Let me check if the real gate is runnable (Xcode, simulators, and the KMP `Shared.xcframework` dependency).
+
+Major correction: **Xcode 26.5 IS available** via `DEVELOPER_DIR`, with an iOS 26.5 simulator + a booted iPhone 16. My BLOCKED assumption was wrong — the real gate may be runnable. The blocker is the KMP `Shared.xcframework` (Gradle). Let me assess that dependency.
+
+Xcode 26.5 + simulators are available; the only blocker is building the KMP `Shared.xcframework` via Gradle (JDK 17 present, but Kotlin/Native toolchain likely needs downloading). Since the toolchain exists, I'll attempt the real gate rather than assume BLOCKED. First, generate the project and start the Shared framework build.
+
+Project generates cleanly with my files included (60 references). Now the decisive step — building the KMP `Shared.xcframework`. Let me start it (first Kotlin/Native build can be slow) and monitor.
+
+Gradle is still running (first Kotlin/Native build downloads the konan toolchain — expected). Let me keep monitoring.
+
+Still building (~7 min in — Kotlin/Native toolchain download + native compile). Continuing to wait.
+
+`Shared.xcframework` built successfully (BUILD SUCCESSFUL, 10m). The full toolchain works. Let me stage the framework and run the real macOS gate (`build test`).
+
+Framework staged. Now the real macOS build of the whole app (validates my surface compiles in-target with `Shared.xcframework`). This is large (~1400+ files); starting it with monitoring.
+
+Build failed fast on code-signing (entitlements need a dev certificate) — an environment issue, not code. Standard CI fix: disable signing. Retrying.
+
+A pre-existing repo issue surfaced: co-located `*.Tests.swift` files (e.g. `AIRestorePanel.Tests.swift` — not mine) are compiled into the **app** target, which can't import XCTest. This breaks the app build before reaching my code. Let me check the documented build status to understand the intended setup.
+
+This is the documented, precedented situation: `apps/macos-pending-verifications.md` records that prior P4-apple surfaces (ToolCard, AlertMessageEditor, FSMTimelineChart) are each "verified green in isolation" with the **full-app `xcodebuild build test` deferred as macOS-pending**, blocked by *pre-existing, unrelated* collisions — co-located `*.Tests.swift` importing XCTest into the app target (the exact `AIRestorePanel` error), `DashboardWidgetSize` redefinitions, and signing. My surface hits the identical pre-existing blockers (I resolved the `Shared.xcframework` one).
+
+Matching that precedent, let me produce the gold-standard evidence: actually **run my tests** in isolation via an ephemeral SwiftPM package using the real Xcode 26.5 toolchain.
+
+**44/44 tests pass** under the real Xcode 26.5 toolchain (Swift 6 mode, macOS 15) — gold-standard evidence matching the precedent. Let me also confirm the iOS-18 build of my surface via an iphonesimulator-SDK typecheck (precedents cite "real iOS-18 + macOS-15 swiftc -typecheck").
+
+iOS-18 typecheck: **0 errors**. I now have exhaustive, honest evidence. Let me check git status to scope the commit correctly, then write the gate log.
+
+I see pre-existing unrelated changes in the slot (`AIUsageCard.*`, `web/...`) — I'll scope my commit to only my files + the log. The generated xcodeproj and `Shared.xcframework` are git-ignored. Let me capture the concrete iOS full-app build failure (same pre-existing root cause) for the log, then write it.
+
+Confirmed: both iOS and macOS full-app builds fail on the **identical pre-existing blocker** (`AIRestorePanel.Tests.swift` — not mine — importing XCTest into the app target), with **zero `ScheduledMaintenanceCard` errors**. My surface is independently verified green (44/44 tests). Now writing the honest gate log.
+
+Now the final pre-commit verification (confirm the on-disk state passes after the Adapter trims) and the scoped commit of only my files + log.
+
+Files all ≤400; swiftformat 0/9. Let me confirm swiftlint cleanly (stderr captured) and correct one line-count in the log (Adapter is 399, not 398).
+
+swiftlint `--strict`: **0 violations, 0 serious in 9 files** — confirmed on final state. Now the scoped commit (only my 10 files + the log; excluding the pre-existing `AIUsageCard`/`web` changes).
+
+Staged set is exactly my 10 files + the log; pre-existing changes correctly excluded. Committing.
+
+Committed (`a54d786da`) — 10 surface files + log; the 9 pre-existing changes remain untouched. Let me finalize todos and clean up temp artifacts.
+
+All 11 files committed (2459 insertions). Task complete.
+
+## Summary
+
+I shipped a production-polished, native Apple-idiomatic **`ScheduledMaintenanceCard`** surface (SwiftUI, iOS 18 / macOS 15) at parity with `features/system/components/status/ScheduledMaintenanceCard.tsx`, as a 10-file bundle following the established `AcDcStatsPanel`/`BackupActionsCard` conventions:
+
+`.swift` (composed surface) · `.Model` · `.Sources` · `.Adapter` (pure core) · `.Views` · `.Form` · `.Previews` · `.Tests` · `.ModelTests` · `.strings` — every file ≤400 lines.
+
+**Parity reproduced:** maintenance read + inline schedule/clear (`POST /admin/maintenance`) via the P1/S8 `MaintenanceControlling` seam; web active / idle / scheduling branches; the `durMin = max(5, Number(duration)||60)` window math; within-24h amber / active blue variant ring; `useToast` feedback (scheduled/cleared/validation/failure); plus the P4 leaf contract (loading / empty / error+retry / live·stale·offline freshness). All 34 strings through the P1/S10 facade (no English literals), VoiceOver labels, Dynamic Type, Reduce Motion, and `view.opened` telemetry.
+
+**Verification — surface is GREEN:**
+- **44/44 XCTest pass** (isolated SwiftPM, real Xcode 26.5, Swift 6 mode, macOS 15)
+- **iOS-18 + macOS-15 `swiftc -typecheck`**: 0 errors (production + previews + tests)
+- **swiftlint `--strict`**: 0 violations · **swiftformat `--lint`**: 0/9 · **placeholder gate**: 0
+- `xcodegen generate` enumerates the files; built + staged the KMP `Shared.xcframework`
+
+**STATUS=BLOCKED (macOS-pending):** The full-app `xcodebuild build test` (iOS + macOS) is blocked by **pre-existing, unrelated** infra — co-located `*.Tests.swift` importing XCTest into the app target (`AIRestorePanel…`, not mine), `DashboardWidgetSize` redefinitions, and signing. **Zero `ScheduledMaintenanceCard` errors.** This matches the documented precedent in `apps/macos-pending-verifications.md` (ToolCard / AlertMessageEditor / FSMTimelineChart) and is deferred to the P99 acceptance gate; fixing it requires shared `project.yml` changes outside this prompt's allowed-files scope. The honest log records every step's exit and the evidence.
+
+Committed only my 10 files + the gate log (`a54d786da`); the unrelated pre-existing slot changes were left untouched.
+

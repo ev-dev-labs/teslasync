@@ -1,0 +1,86 @@
+I'll start by exploring the environment and understanding the task requirements.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed; `simctl` is unavailable. However, `swift` 6.3.2, `swiftlint`, and `swiftformat` are all available. Let me study the web source and the existing feature-view pattern before deciding on status.
+
+The web source is a Fleet Battery Status panel: takes `vehicles[]`, fetches each vehicle's state via `useQuery` (30s refetch), renders battery bars per vehicle. Now let me study the freshest template (AiUsageCard) end-to-end to learn the established native pattern.
+
+This is a mature, well-architected pattern. Let me read the rest of the AiUsageCard set and locate the shared infrastructure (tokens, GlassPanel, state holders).
+
+Now let me read the test/preview/strings files and locate the shared token/component infrastructure.
+
+Shared tokens live outside feature-views (P4 core / P1 tokens). Let me locate them and read the remaining test files.
+
+Now let me read the shared token/component definitions and the web helpers (`batteryColor`, `useUnits.formatDistance`) that BatteryComparison depends on.
+
+Path correction — shared sources are under `apps/apple/Sources`. Let me read the tokens, the project config, and find the native units/panel peers.
+
+Let me read the theme tokens, glass/material peer, units facade, and the COLOR constants. These are the key dependencies for BatteryComparison.
+
+Now I understand the units facade. Let me see how existing feature-views inject unit preferences into their pure projection (so I keep the adapter testable), plus the glass/material peer and the web `useUnits` contract.
+
+The DrivingTab pattern confirms the approach: keep a **local, pure units converter** (mirroring `web/src/lib/unitConversion.ts`) so the projection is testable without the KMP runtime, and use `.tsGlassPanel()` for the web `GlassPanel`. Let me read the exact web `formatDistance`, the Vehicle/VehicleState types, and the shared component APIs.
+
+I now have full parity detail on `formatDistance` and the data types. Let me confirm the exact APIs of the shared components and the color tokens before writing, plus the project/scheme setup.
+
+Color tokens are in the generated design package. Let me read them and confirm the test target wiring and `TSButton` init.
+
+The test target sources point to `Tests/Unit`, but the `*.Tests.swift` files live in `feature-views` (an app-target path). Let me read the full project.yml to understand how test files are wired (excludes/globs).
+
+Let me check the test wiring, the placeholder tool, the lint configs, and a prior surface's log to follow precedent exactly.
+
+`pwsh` and the placeholder script are available. Let me read the precedent logs (AiUsageCard 0237 — the file I'm templating from, and BatteryLevelChart 0097 — closest analog) to follow the established status/format.
+
+Critical insight — the precedent log shows Xcode IS installed at `/Applications/Xcode.app`; they override `DEVELOPER_DIR` non-destructively. Let me read the full precedent log and verify Xcode availability.
+
+Xcode is available via `DEVELOPER_DIR` override. Let me verify the toolchain and read the gate section of the precedent log.
+
+Let me read the full gate/verification methodology from the precedent log.
+
+This is the key: the sanctioned disposition is **isolated SwiftPM build+test** of the shipped sources against the real design system (full-app xcodebuild DEFERRED on pre-existing, unrelated blockers), plus swiftlint/swiftformat/placeholder — reaching EXIT=0/STATUS=DONE. Xcode 26.5, simulators, xcodegen, pwsh all confirmed present.
+
+Let me read the token definitions so my code compiles against the real APIs.
+
+Complete token API confirmed. Now let me read the three shared components my surface uses (`TSButton`, `TSSkeleton`, `TSFadeIn`) to confirm their APIs and isolate their dependencies for the harness.
+
+`TSFadeIn`/`TSSkeleton`/`TSButton` depend only on the generated tokens — no `Shared` coupling. Let me confirm `Buttons.swift` is self-contained and verify no `Shared` imports in my harness file set.
+
+All harness files are SwiftUI-only and token-bound — no `Shared` coupling. Let me read the lint/format configs to satisfy them, then start building.
+
+I have everything needed. Xcode 26.5 + simulators + xcodegen + pwsh are present; the design tokens and shared components are self-contained (no `Shared` coupling). Let me set up tracking and write the plan.
+
+Now I'll write the surface files, starting with the pure Adapter core.
+
+Let me refactor the long string lines in Chrome into computed properties to satisfy the 120-col limit cleanly.
+
+I spotted an arithmetic error in one assertion (miles vs km). Let me fix it.
+
+All 10 files written. Let me check for over-length code lines and run swiftformat/swiftlint on the new files.
+
+No over-length lines; all files within budget. Let me canonicalize with swiftformat, then verify lint.
+
+swiftformat (0/9) and swiftlint --strict (0 violations) both green. Now the placeholder gate — let me read the script's parameters first.
+
+The script scans a real path recursively. Let me read the forbidden patterns and check my files against them, then run the gate on my actual files via a temp dir.
+
+None of my files contain forbidden patterns (only benign "skeleton"/"TSSkeleton"). Let me run the real placeholder scan on my actual files via a temp dir.
+
+Placeholder gate green (self-test PASS, my files COUNT=0). Now the key step — the isolated SwiftPM build+test. Let me first confirm `Skeletons.swift` and `Buttons.swift` are fully self-contained.
+
+`Skeletons.swift` references `TSCard` (from `Cards.swift`), so the harness needs the same self-contained design-system core the precedent used. Let me locate that set and confirm all are `Shared`-free.
+
+All 8 design-system core files are SwiftUI-only (no `Shared` coupling). Let me build the isolated SwiftPM harness, compiling the exact shipped sources + real design system + tests.
+
+The library builds clean under Swift 6 strict-concurrency. Now let me run the tests.
+
+All **29 tests pass**, 0 failures, under Swift 6 strict concurrency with the real design system. Now let me verify (not assume) the pre-existing full-app blockers so the DEFERRED disposition is evidence-based.
+
+Blockers confirmed (Shared.xcframework = only `.gitkeep`; DashboardWidgetSize ×15; 206 co-located test files). Every runnable gate is green. Let me write the log.
+
+Log written. Let me do a final verification pass on the shipped files, confirm the file set, and clean up the harness.
+
+All green: swiftformat 0/9, swiftlint 0 violations, 10 files shipped. Let me clean up temp artifacts and commit only my files (not the pre-existing AiUsageCard changes).
+
+Only my 10 new files + the log are mine; the `AIUsageCard.*` modifications are pre-existing (not my work). Let me stage exactly my files and commit.
+
+All verifications pass and the commit is clean (11 files; no pre-existing `AIUsageCard` changes included). Let me finalize the tracking.
+

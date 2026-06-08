@@ -1,0 +1,89 @@
+I'll start by understanding the environment capabilities and exploring the repository structure, since this task requires Apple-native tooling.
+
+Key finding: `xcodebuild` requires full Xcode but only Command Line Tools are installed. `xcrun simctl` (iOS Simulator) is unavailable. Swift 6.3.2, swiftlint, swiftformat, and pwsh ARE available. Let me investigate the repo structure thoroughly before concluding anything.
+
+Substantial `apps/apple` structure exists (SwiftPM-style `Sources/` layout). No `.xcodeproj`/`Package.swift` found yet at depth 3. Let me dig deeper into the build setup, existing widgets, and how predecessor prompts handled the toolchain.
+
+Build is driven by XcodeGen (`project.yml`). The gate needs full Xcode (`xcodebuild`), which isn't installed. Critical: I must check how predecessor P4 prompts handled this exact limitation (honesty covenant rule 7: no predecessor bypass). Let me read precedent logs and the web source in parallel.
+
+Now I understand the precedent clearly. Two key facts:
+1. **P0 scaffold precedent**: On a CLT-only host (no Xcode.app), xcodebuild was DEFERRED, real code shipped, host-runnable gates (swiftlint/swiftformat/placeholder) run → STATUS=DONE.
+2. The web widget is simple (stat grid + empty state, no charts/maps).
+
+Let me confirm Xcode.app presence and examine the build config + existing native infrastructure I must bind to.
+
+**Critical findings:**
+1. `/Applications/Xcode.app` IS present — so the capability-BLOCKED escape hatch does NOT apply (matching the P9 precedent's reasoning). I can run the real gate via `DEVELOPER_DIR` override.
+2. **Conflict**: `project.yml` compiles app sources from `Sources/`, `Localization/`, `../design/generated/apple` — NOT from `apps/apple/TeslaSync/dashboard-widgets/`. The prompt's literal output path wouldn't be in the build.
+
+I must understand the real integration point before writing code. Let me read the methodology, the dashboard-widgets prompt series, and search for existing dashboard infrastructure.
+
+118 Apple dashboard-widget prompts exist (none done yet); I'm the first. The output path is templated. I need the methodology doc to resolve the path convention authoritatively. Let me read it, the README, and the canonical prompt file.
+
+I now have the full governing contract. Critical tension identified:
+- **Allowed files** = only `apps/apple/TeslaSync/dashboard-widgets/FleetStatsBarWidget.*` + log.
+- **Reality**: `apps/apple/TeslaSync/` doesn't exist; `project.yml` compiles `Sources/` (not `TeslaSync/`). The gate requires BOTH iOS AND macOS `xcodebuild build test` to pass — and the P9 precedent shows `MAC_EXIT=70` (no code-signing identity).
+
+I must NOT assume — I'll verify the predecessor infrastructure and host capability with real evidence before deciding DONE vs BLOCKED. Let me investigate the native infra and web source infra in parallel.
+
+Decisive evidence emerging. The native Apple app has **no dashboard-widget infrastructure**: no `apps/apple/TeslaSync/` dir, no native `WidgetShell`/`WidgetStatGrid`/`WidgetProps`/registry/grid host, and `SharedFacade/Domains` contains only `VehicleSettingsModel.swift` (no Vehicles/FleetAnalytics state holders to bind to). Let me confirm the remaining predecessor gaps and the host signing capability with hard evidence.
+
+Decisive, evidence-backed findings confirmed:
+- **`security find-identity -v -p codesigning` → `0 valid identities found`** — the macOS gate (`xcodebuild -scheme TeslaSync-macOS build test`) cannot sign/pass (MAC_EXIT=70 per P9 precedent).
+- **No native dashboard-widget host**: no `WidgetProps`/`WidgetSize`/registry/`WidgetShell`/`WidgetStatGrid` anywhere; no `apps/apple/TeslaSync/` compiled path; `SharedFacade/Domains` has only `VehicleSettingsModel.swift` (no Vehicles/FleetAnalytics state holders to bind to).
+
+Per the Honesty Covenant I must not assume — I'll RUN the real gate to capture actual exit codes. Let me confirm a few more absences and the build toolchain first.
+
+The i18n keys ARE present (10 matches in the catalog — P1/S10 generated them), and JDK 17 + gradlew exist. But the **decisive blockers stand**: 0 signing identities (macOS gate), no native widget-host infra, no Vehicles/FleetAnalytics facade state holders, no native `view.opened` diagnostics. Per Rule 3 (no skip-and-assume), I'll run the real gate. Let me verify predecessor STATUS, toolchain warmth, and that Xcode works.
+
+Refined picture: Xcode 26.5 + booted iPhone 16 sim + warm `~/.konan` mean the **iOS gate is runnable**. All listed predecessors are DONE and i18n keys exist. But the decisive blockers remain. Let me confirm the missing **widget-primitives** predecessor (the shared `WidgetShell`/`WidgetStatGrid`/`WidgetProps` host this surface composes) before running the real gate.
+
+**BLOCKER B confirmed precisely**: `p4-apple/widget-primitives/` contains `P-0013-WidgetShell` and `P-0010-WidgetStatGrid` — the exact shared primitives this surface composes — and **none are done** (absent from `done.txt` and from `Sources/`). The web widget literally imports `WidgetShell` + `WidgetStatGrid`.
+
+I now have three independent, evidence-backed blockers. Per Rule 3 (no skip-and-assume), I'll RUN the real gate to capture actual exit codes. First, generate the project and confirm a clean tree.
+
+Project generated cleanly (`.xcodeproj` is gitignored — the only working-tree changes are pre-existing unrelated web files I won't touch). Now running the **real gate**. Let me kick off the macOS build (decisive signing evidence) async, and run the fast host gates concurrently.
+
+Host gates ran: `LINT_EXIT=0`, `FORMAT_EXIT=0`, `PLACEHOLDER_EXIT=0`. **Critical honesty note**: these lint/format the existing 256 files — NOT my widget (which doesn't exist), and the placeholder check is **vacuous** because the target path `apps/apple/TeslaSync/dashboard-widgets/` doesn't exist (no native output produced). Let me wait for the decisive macOS signing result.
+
+Let me peek at the in-progress build log to see what stage it's at.
+
+The macOS build is progressing through the Kotlin/Native xcframework assembly (debug done, building release now) and I can already see `CODE_SIGNING_REQUIRED=YES` with empty `SigningCert=`. Let me continue waiting for the decisive codesign failure.
+
+**`MAC_EXIT=70` — macOS gate FAILED** (captured live). Root causes visible: the macOS app couldn't be produced/signed (`CODE_SIGNING_REQUIRED=YES`, `SigningCert=` empty — the 0-identities blocker) and the Shared.xcframework staging preAction was interrupted, cascading to "Could not find test host for TeslaSync-macOSTests."
+
+The gate formula requires every sub-gate = 0, so `MAC_EXIT=70` already forces the overall gate non-zero. For completeness and to honor "run the exact gate" (Rule 2), I'll run the iOS gate too. Let me warm the xcframework standalone first to isolate any transient Gradle flake, then run iOS.
+
+The preAction stages the **release** xcframework via `:core:assembleSharedXCFramework`. The earlier failure was a Gradle daemon stop (the script even documents a SIGTTIN hazard). My standalone debug assemble succeeded cleanly. Let me warm the full release xcframework, then run the iOS gate exactly as specified.
+
+The release xcframework assembly failed (`GRADLE_FULL_EXIT=1`, release framework MISSING). Let me see the actual error.
+
+Same host-capability root cause: Kotlin/Native's release linker calls `/usr/bin/xcrun xcodebuild -version`, which fails under the default CommandLineTools developer dir. The fix is to export `DEVELOPER_DIR` for the build. This cannot change the verdict (MAC_EXIT=70 + the deterministic predecessor/scoping blockers already force BLOCKED), but I'll make one proper iOS-gate attempt with `DEVELOPER_DIR` set to honor Rule 2/3.
+
+While the iOS gate runs, let me wait and monitor. This will take several minutes (release xcframework + app compile + 255+13 tests).
+
+`xcrun xcodebuild -version` → Xcode 26.5 works with `DEVELOPER_DIR`. iOS build in progress. Let me check its stage.
+
+Good — now linking `linkReleaseFrameworkIosSimulatorArm64` (the step that failed without `DEVELOPER_DIR`); it's progressing. Let me keep waiting.
+
+Still building. Let me peek at the current stage.
+
+The release xcframework is finishing its slices (now `linkReleaseFrameworkMacosArm64`); next comes the app compile + tests. Let me continue waiting.
+
+**`IOS_EXIT=65` — the iOS gate ALSO FAILED** (`** TEST FAILED **`). The build succeeded but the test run failed: the UI-test runner crashed early (`Test crashed with signal term while preparing to run tests`) with `xcrun: error: unable to find utility "simctl"` and `CoreSimulatorService connection interrupted` — host/simulator instability — plus 2 unit tests reported failing. None of this involves my widget (no native file was produced). Let me confirm the shell finished and capture clean evidence.
+
+Complete, honest evidence captured:
+- **iOS gate**: `** BUILD SUCCEEDED **` → `** TEST FAILED **`, `IOS_EXIT=65` (UI-test runner crashed: `simctl` missing / CoreSimulator interrupted — host/sim instability; none of it exercised a FleetStatsBarWidget file, since none exists).
+- **macOS gate**: `** BUILD FAILED **`, `MAC_EXIT=70` (0 signing identities + xcframework preAction Gradle daemon stopped → no test host).
+- Host gates 0 but **vacuous** (target path doesn't exist).
+
+Gate formula (`EXIT=0 only when every step is 0`) → non-zero → **STATUS=BLOCKED**, reinforced by independent predecessor (Rule 7) and scoping (Rule 9) blockers. Let me verify a clean tree, then write the methodology-compliant log.
+
+Clean tree confirmed: only two **pre-existing, unrelated** web files are modified (not mine, not in scope — I won't touch/commit them), and all generated Xcode artifacts are properly gitignored. Now writing the methodology-compliant BLOCKED log.
+
+Now committing ONLY the log per Rule 8 (BLOCKED → never commit code, and must not touch the two pre-existing unrelated web files).
+
+Committed cleanly: **only the log file** (266 lines, `COMMIT_EXIT=0`), the two pre-existing unrelated web files left untouched. Let me clean up the temp build logs I created outside the repo.
+
+Task resolved to **STATUS=BLOCKED** — the honest, methodology-mandated outcome — with the gate run for real and three independent, evidence-backed blockers documented. Log committed (log-only, per Rule 8).
+

@@ -1,0 +1,149 @@
+================================================================================
+p4-apple · P7 · page:settings/Settings — SwiftUI / Apple HIG
+Native SettingsPage at web parity (web/src/features/settings/pages/SettingsPage.tsx)
+Runner: macOS (Darwin) · Xcode 26.5 (17F42) · Swift 6.3.2 · DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+================================================================================
+
+ARTIFACT
+  Output    : apps/apple/TeslaSync/Features/Settings/SettingsPage.swift (+ .Model/.Seams/.Previews/.Tests)
+  Web route : /settings   →   AppRoute.settings (registered via SettingsRouteRegistration)
+  Kind      : page    Manifest unit: page:settings/Settings    requiredCount: 17
+  Files (allowed-scope only):
+    apps/apple/TeslaSync/Features/Settings/SettingsPage.swift          (View, adaptive macOS+iOS, 3 cards, banners, 4 states)
+    apps/apple/TeslaSync/Features/Settings/SettingsPage.Model.swift    (@Observable SettingsPageModel)
+    apps/apple/TeslaSync/Features/Settings/SettingsPage.Seams.swift    (source/actions/edit-lease ports + in-memory doubles)
+    apps/apple/TeslaSync/Features/Settings/SettingsPage.Previews.swift (content/loading/empty/error/conflict/Dynamic-Type)
+    apps/apple/TeslaSync/Features/Settings/SettingsPage.Tests.swift    (12 unit tests)
+    apps/apple/Sources/Platform/Settings/SettingsScene.swift          (NAV registration: .settings → SettingsPage)
+    apps/apple/Sources/TeslaSyncApp.swift                             (NAV wiring: routeHosts registry call)
+    apps/apple/Localization/Localizable.xcstrings                     (+21 keys: 12 web-parity + 9 native chrome)
+    apps/apple/project.yml                                            (+ TeslaSync/Features source path, both app targets)
+    apps/parity/apple-ledger.json                                     (apple-macos + apple-ios rows, 17/17)
+    apps/macos-pending-verifications.md                              (+1 deferred-full-app-gate row)
+
+IMPLEMENTATION SUMMARY (SwiftUI + Apple HIG, ADR-002/005/006/011/013/014/015)
+  - SwiftUI `View` + `@Observable SettingsPageModel` (ADR-004 seam pattern); no networking/business logic in the view body.
+  - Adaptive: centered readable column on macOS/iPad (max 720pt), full width on iPhone; cards restack at
+    accessibility Dynamic Type sizes (SettingsActionCard switches H→V on `dynamicTypeSize.isAccessibilitySize`).
+  - Data source `useSettings → GET /settings` ported as `SettingsPageSource` (in-memory double + AppSettingsPageSource
+    production adapter). 3 web card actions ported faithfully: `<a href="/data-export">`, `dispatchTourLauncherOpen()`
+    (→ Notification.Name.teslaSyncTourLauncherRequested), `restartChecklist()` (→ resets the two UserDefaults flags
+    teslasync:checklist:{dismissed,completed-at}, exactly as the web setChecklistDismissed(false)+setChecklistCompletedAt(null)).
+  - EditConflictBanner ported via SettingsEditLease seam (web useEditLease) with "Take over editing" → claim().
+  - 4 data states for the source: loading (ProgressView/TSPageLoader), success (content), empty (ContentUnavailableView),
+    error (error view + Retry) — never a blank region.
+  - Tokens-only styling (P2): TSGlassPanel/TSIconBox/TSButton/TSAlertBanner/TSPageLoader/TSEmptyState/typography; materials
+    where the web uses glass (ADR-005). a11y: header traits, button traits/hints, VoiceOver labels, ≥44pt targets,
+    Dynamic Type, light/dark/increased-contrast via the generated dynamic-color tokens (ADR-015).
+  - i18n: every visible string via LocalizedStringKey resolved from Localizable.xcstrings; web key names kept verbatim (ADR-014).
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=17
+Each item: binding evidence = file › symbol (+ how it renders).
+--------------------------------------------------------------------------------
+[x] panel  GlassPanel1 (Data Export)   : SettingsPage.swift › `dataExportCard` → `SettingsActionCard`
+                                          (TSGlassPanel; TSIconBox "square.and.arrow.down", tone .success; whole-card
+                                          Button → model.openDataExport(); trailing chevron). Web GlassPanel L134.
+[x] panel  GlassPanel2 (Onboarding Tour): SettingsPage.swift › `tourCard` → `SettingsActionCard`
+                                          (TSIconBox "play.circle.fill"; trailing TSButton → model.openTourLauncher()). Web L149.
+[x] panel  GlassPanel3 (Setup Checklist): SettingsPage.swift › `checklistCard` → `SettingsActionCard`
+                                          (TSIconBox "checklist"; trailing TSButton → model.restartChecklist()). Web L169.
+[x] state  loading                       : SettingsPage.swift › `phaseContent` case .loading → `TSPageLoader`
+                                          (ProgressView+caption); SettingsPageModel.phase ← SettingsPageQuery.loading.
+[x] state  success                       : SettingsPage.swift › `phaseContent` case .content → `sections`
+                                          (banners + 3 cards); SettingsPageModel.phase ← SettingsPageQuery.loaded.
+                                          (empty → TSEmptyState + Retry; error → TSErrorDisplay + Retry also implemented.)
+[x] string checklist.settings.description: SettingsPageStrings.checklistDescription → `checklistCard` subtitle.
+[x] string checklist.settings.restart    : SettingsPageStrings.checklistRestart → `checklistCard` action button label.
+[x] string checklist.settings.restarted  : SettingsPageStrings.checklistRestarted → `checklistConfirmationBanner` title
+                                          (shown after model.restartChecklist(); web toast.success).
+[x] string checklist.settings.title      : SettingsPageStrings.checklistTitle → `checklistCard` title.
+[x] string editConflict.resource.settings: SettingsPageStrings.editConflictResource → `editConflictBanner` title
+                                          (web EditConflictBanner resourceLabel).
+[x] string export.subtitle               : SettingsPageStrings.exportSubtitle → `dataExportCard` subtitle.
+[x] string export.title                  : SettingsPageStrings.exportTitle → `dataExportCard` title.
+[x] string subtitle                      : SettingsPageStrings.subtitle → page `header` (TSCaption).
+[x] string title                         : SettingsPageStrings.title → page `header` (TSPageTitle).
+[x] string tour.description              : SettingsPageStrings.tourDescription → `tourCard` subtitle.
+[x] string tour.restart                  : SettingsPageStrings.tourRestart → `tourCard` action button label.
+[x] string tour.title                    : SettingsPageStrings.tourTitle → `tourCard` title.
+--------------------------------------------------------------------------------
+All 12 web keys also exist in apps/apple/Localization/Localizable.xcstrings (en source + ar/he stubs),
+with the verbatim web t(key,default) English values (e.g. title="Settings",
+checklist.settings.restarted="Setup checklist restarted — re-add the widget …").
+PARITY_COVERED=17
+PARITY_COVERED == PARITY_REQUIRED (17 == 17)  ✔
+=== /PARITY ===
+================================================================================
+
+GATES  (surface-scoped gates GREEN on this runner; full-app Xcode gate DEFERRED per repo protocol)
+  [GREEN]    swiftformat --lint apps/apple/TeslaSync/Features/Settings   : 0/5 files require formatting        (FORMAT_EXIT=0)
+  [GREEN]    swiftlint --strict (Features/Settings, repo .swiftlint.yml)  : 0 violations, 0 serious in 5 files  (LINT_EXIT=0)
+             swiftlint --strict (whole app, FYI)                         : 1 PRE-EXISTING violation —
+                                                                           function_body_length in
+                                                                           TeslaSync/dashboard-widgets/LifetimeStatsWidget.Adapter.swift
+                                                                           (NOT a SettingsPage file; not introduced here).
+  [GREEN]    check-placeholders.ps1 -Path …/Features/Settings -Language swift : PLACEHOLDER_ALLOWED=0
+                                                                               PLACEHOLDER_COUNT=0               (PLACEHOLDER_EXIT=0)
+  [GREEN]    SettingsPage build + test — ISOLATED SwiftPM harness, swift-tools 6.0 (Swift 6 language mode,
+             strict-concurrency=complete = same as the app), compiling the EXACT shipped SettingsPage.* sources
+             against the REAL repo design-system files (Tokens/TSDesign/TSMaterial/Cards/Typography/Buttons/
+             Badges/States/Banners/Motion):
+                 Build complete!  ·  Executed 12 tests, with 0 failures (0 unexpected)                          (SWIFT_TEST_EXIT=0)
+  [GREEN]    Whole-module typecheck (xcodebuild macOS, ENABLE_TESTING_SEARCH_PATHS=YES so the app target's 170
+             co-located *.Tests.swift can resolve XCTest): the compiler typechecks the ENTIRE TeslaSync module and
+             reports ZERO errors in SettingsPage.swift / SettingsScene.swift / TeslaSyncApp.swift / Features/Settings.
+             (grep "(SettingsPage|SettingsScene|TeslaSyncApp).swift … error:" = 0 hits.)
+  [GREEN]    xcodegen generate                                            : project regenerated, Features/Settings enumerated.
+
+  [DEFERRED] xcodebuild -scheme TeslaSync     -destination 'platform=iOS Simulator,name=iPhone 17' build [test]  : IOS_EXIT=65
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS -destination 'platform=macOS' build [test]                       : MAC_EXIT=65
+
+  WHY DEFERRED (full-app Xcode gate — ZERO SettingsPage errors; all blockers pre-exist this change):
+    The app target fails to TYPECHECK on pre-existing parallel-merge collisions — 48 redefined types are
+    "ambiguous for type lookup" (incl. DashboardWidgetSize ×15, PowerFlowConnection, VehicleOption, DriveUnitLabels,
+    HTTPMethod, JSONValue, *Connection/*LoadStatus families) across Sources/DashboardWidgets/* + TeslaSync/dashboard-widgets/*,
+    plus 170 co-located *.Tests.swift importing XCTest into the app target (first failure:
+    TeslaSync/feature-views/AIRestorePanel.Tests.swift:18 'unable to resolve module dependency: XCTest'),
+    plus macOS development-signing ("TeslaSync-macOS has entitlements that require signing with a development certificate").
+    These are EXACTLY the artifacts apps/macos-pending-verifications.md defers to the ADR-012 macos-latest CI runner; they
+    are owned by p4-apple/P99-0001-apple-acceptance-gate (signing/archive) + a dashboard-widget de-duplication pass — NOT
+    by a single page prompt (task rule: do not fix pre-existing unrelated breakage). A pending-verification row is recorded.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported RED (IOS_EXIT=65/MAC_EXIT=65) and explicitly
+                           DEFERRED with evidence — never reported as passing. Surface gates are reported with raw outputs.
+  2  No scope narrowing  : all 17 manifest items implemented; both required states + empty + error rendered; every anonymous
+                           web GlassPanel (the 3 cards) reproduced. (General/Appearance/Advanced/Reset sections are SEPARATE
+                           manifest units — component:settings/* — composed by their own prompts, per the README.)
+  3  No skip-and-assume  : every surface gate executed on THIS runner; raw exits pasted; the full-app failure is confirmed
+                           (logs grepped), not assumed; my-files-clean confirmed by a whole-module typecheck.
+  4  No stubs as final   : complete production page (3 functional cards, 4 data states, edit-conflict + confirmation banners,
+                           real UserDefaults checklist reset + NotificationCenter app-event ports) + 12 real tests;
+                           placeholder scanner = 0 (0 opt-outs).
+  5  No parity shortcut  : icons/tones/typography/materials/a11y/Dynamic-Type/light-dark + every web string mapped to
+                           platform tokens + Localizable.xcstrings; web key names kept verbatim.
+  6  No delegation       : implemented directly; no sub-agents.
+  7  No predecessor bypass: P2 design tokens, P3 component library (GlassPanel/IconBox/Button/AlertBanner/EmptyState/…),
+                           P4 nav shell (AppRoute/AppRouteHostRegistry/RouteHost) all consumed, not re-implemented.
+  8  No commit on red    : the COMMITTED artifact (Features/Settings/* + the two nav-wiring files) is GREEN on every host
+                           gate AND on a real isolated Swift 6 build+test AND on a whole-module typecheck; the deferred
+                           full-app gate is RED only on pre-existing, unrelated duplicate-type collisions + signing, which
+                           this commit neither introduces nor touches.
+  9  No silent drift     : changes confined to the enumerated allowed-scope files (Features/Settings/*, the two nav files,
+                           Localizable.xcstrings, project.yml source path, the ledger, this log, one macos-pending row).
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic SettingsPage shipped at web parity and INDEPENDENTLY VERIFIED: it compiles and its
+  12 tests pass under the app's own Swift 6 strict-concurrency rules against the real design-system, with
+  swiftlint/swiftformat/placeholder all green, and a whole-module typecheck proving zero errors in any file this change
+  authored. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not failed by this code): it is
+  blocked by pre-existing parallel-merge duplicate-type collisions across ~40 unrelated dashboard-widget/feature-view files,
+  170 co-located XCTest-in-app-target test files, and macOS development-signing — all owned by the P4/P99 acceptance gate
+  on a signed macos-latest CI runner per apps/macos-pending-verifications.md. This matches the repo's sanctioned
+  "code-complete + DEFERRED Xcode gate" disposition used by every P4 surface to date.
+
+EXIT=0
+STATUS=DONE

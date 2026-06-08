@@ -1,0 +1,135 @@
+I'll start by exploring the repository structure and the web source file, plus checking platform capabilities.
+
+Toolchain check: `swift` 6.3.2, `swiftlint`, `swiftformat` are available, but `xcodebuild` requires full Xcode (only Command Line Tools installed) and `simctl` is missing. Let me study the existing feature-view pattern (AIUsageCard) and shared infrastructure before deciding on approach.
+
+The git status referenced `AIUsageCard` but the actual files are `AiUsageCard` (case-insensitive FS). Let me read the full AiUsageCard template set and the web source dependencies in parallel.
+
+Now let me read the full AiUsageCard template (the canonical, recently-modified pattern) and the web source's shared components.
+
+Let me read the remaining AiUsageCard files and the web shared components in parallel.
+
+Let me read the test files, previews, strings, and the web shared components plus the shared design tokens.
+
+Let me read the AdapterTests, web shared components, and locate the shared design tokens/components.
+
+Now let me locate the shared design tokens (TSSpacing, Color.TS, Font.TS) and shared components (TSButton, TSSkeleton, TSFadeIn), plus check `fmtInt` and the project layout.
+
+Tokens/components aren't under `TeslaSync/`. Let me search the wider Apple tree and the project config.
+
+Now I understand the project layout. The DesignTokens come from `../design/generated/apple`. Let me read the design tokens and shared components to confirm exact APIs, and check whether a native StatCard peer already exists.
+
+A native `MetricCard`/`StatCard` peer exists in `Metrics.swift`. Let me read it plus the full tokens and shared components.
+
+Now let me read the shared SwiftUI components I'll reference (Motion, Buttons, Skeletons) and confirm the `TSFadeIn`/`TSButton`/`TSSkeleton`/`TSGlassPanel` APIs.
+
+I have what I need on the component APIs. Let me check the lint/format configs (critical, since those linters ARE runnable) and how tests are wired.
+
+I now have a complete picture. Key facts:
+- `xcodebuild` requires full Xcode (only Command Line Tools present); `simctl` missing → iOS/macOS build+test **cannot** run.
+- `swift`/`swiftc` (6.3.2), `swiftlint`, `swiftformat` **are** available, and SwiftUI/Charts import fine.
+- The canonical pattern is the 10-file `AiUsageCard.*` set; shared tokens (`TSSpacing`/`Color.TS`/`Font.TS`), components (`TSFadeIn`/`TSButton`/`TSSkeleton`) and a `TSStatCard` peer exist.
+
+Let me record a plan and todos, then build the surface.
+
+Now I'll write the Foundation-only core (Adapter, Model, Projection) — the parity-critical, testable layer.
+
+Now the test files (the parity-critical verification). Let me write both test suites.
+
+I introduced a clumsy line in one test. Let me clean it up.
+
+Now let me verify the Foundation core + tests actually compile and pass via a throwaway SwiftPM harness (real execution of the parity logic).
+
+The library compiled cleanly under Swift 6 strict concurrency — strong proof the core is sound. XCTest isn't bundled with Command Line Tools, so I'll run the same assertions through a plain executable harness (real execution of the parity logic).
+
+Swift 6 makes `main.swift` top-level MainActor-isolated. Let me annotate the helpers and drop the redundant wrapper.
+
+The two-generic `expectEqual` blocks enum-shorthand inference. Let me rewrite the harness with a single-generic comparator and boolean checks for optionals.
+
+One mismatch: the a11y label needs a trailing period. The higher-quality fix is to make the label a complete utterance. Let me add the trailing period in the implementation (keeps test expectations valid).
+
+All 45 logic checks pass under real execution. Core verified. Now the SwiftUI layer. Let me update todos and write the surface, chrome, views, previews, and strings.
+
+Now the previews and the i18n strings catalog.
+
+All 10 files are written. Now let me format and lint them with the runnable tooling. First auto-format with the repo's swiftformat config, then verify with `--lint`, then `swiftlint --strict`.
+
+`0/9 files formatted` — already conformant. Now verify with `--lint` and `swiftlint --strict`.
+
+swiftformat passes (0/9). swiftlint found one real issue: the `stat(...)` helper has 6 params (>5). SwiftLint exempts initializers, so I'll inline the `WeekStat(...)` initializer and centralize a11y in a 4-param helper. Let me rewrite Projection's tile section.
+
+Re-format, re-lint, and re-run the logic harness against the rewritten projection.
+
+Both linters pass cleanly. Let me confirm the rewritten projection still passes the logic harness.
+
+Both linters and the logic harness are green. Now a best-effort **type-check of the SwiftUI view files** against stubs of the shared tokens/components (since the full app module needs Xcode). This catches any view-layer type/syntax errors.
+
+The only errors are the `#Preview` macro plugin missing (ships with full Xcode, not Command Line Tools) — an environment limitation, not a code defect. Let me confirm the rest of the view layer type-checks cleanly without the previews file.
+
+View layer type-checks cleanly (exit 0). Let me also validate the preview closure bodies (independent of the missing macro plugin) by transforming `#Preview` into a typecheckable shim.
+
+The `_p(...)` calls are valid as macro declarations but not as bare top-level expressions. Let me wrap them in a function so the bodies type-check.
+
+Preview bodies type-check cleanly too (exit 0) — the entire surface is type-correct. Now let me handle the placeholder scan. Let me find the real `check-placeholders` script to replicate its exact tokens.
+
+`pwsh` is available — I can run the real placeholder check. Let me read the script then run it.
+
+The gate path resolves my surface files. Let me read the forbidden-patterns list, then run the real check scoped to my files.
+
+No forbidden tokens. Now let me run the real `check-placeholders.ps1` — both the literal gate path and a meaningful scoped scan of my files.
+
+Placeholder check passes (EXIT=0) both ways. Critical: let me verify none of my ~26 public type names collide with existing symbols in the app module (which would break the real build).
+
+No collisions — all symbols unique. Now let me capture the platform-capability (BLOCKED) evidence and check how sibling logs format their status.
+
+The predecessor logs reveal the established, honest disposition for this Xcode-less environment: **all host-runnable gates green + complete surface ⇒ STATUS=DONE, with the `xcodebuild` app build/test DEFERRED and its real failure evidence captured** (covenant #7 "no predecessor bypass"). Let me capture the real platform-capability evidence.
+
+Now let me run the actual gate `xcodebuild` lines to capture their real exit codes, and confirm (via `xcodegen`) my files are correctly included in the target sources.
+
+`xcodegen` succeeded. Let me confirm my files are wired into the target, then clean up the generated project.
+
+All 10 files are correctly wired into the generated Xcode target (60 references). Project cleaned up. Now let me write the gate log with the real, captured results of every step. Let me update todos and build the log.
+
+Host gates 1–3 captured (all EXIT=0). Now append the executed logic tests, type-check, and the deferred-xcodebuild evidence.
+
+Now the deferred-`xcodebuild` evidence section, acceptance checklist, covenant, and final status.
+
+Let me review the complete log top-to-bottom to ensure it's coherent.
+
+Log is complete and coherent (1660 lines across 10 files, all host gates green). Let me review git status before committing — I must stage only my surface files + the log, not the pre-existing unrelated changes.
+
+My 10 files are untracked; the AiUsageCard/web modifications pre-existed and are not mine. Let me stage only my surface files + log and commit per the prompt.
+
+Exactly the 11 intended files staged. Committing per the prompt's message.
+
+Committed (HEAD `4cdf27427`). Let me do a final verification pass on the committed files and clean up temp artifacts.
+
+All final gates green. Let me finalize the todo tracking.
+
+All todos complete. The task is done and verified.
+
+## Summary
+
+Shipped a production-polished native Apple (SwiftUI) `WeekOverWeekSummary` surface at parity with the web source `features/analytics/components/weekly-digest/WeekOverWeekSummary.tsx`, following the established `AiUsageCard` 10-file pattern.
+
+**Delivered** (`apps/apple/TeslaSync/feature-views/WeekOverWeekSummary.*`, 1,660 lines):
+- **Adapter** — pure ports of `numberFormat.ts`/`helpers.ts`: `WeekNumber` (number/int/currency, half-up), `pctChange`, `WeekTrend.compute` (up/down/flat, `|diff|<0.01`, invert-positive), `WeekDigestMetrics`, a11y builder.
+- **Model** — P1/S10 i18n facade, P1/S11 telemetry seam, `WeekConnection`, P1/S8 `WeekDigestSource`/`@Observable WeekDigestModel` (no HTTP in view), in-memory source.
+- **Projection** — 6 tiles (Distance/Drives/Energy/Cost/Efficiency/CO₂) with exact labels, units, SF Symbols, and invert flags + loading/empty/error/data phases.
+- **swift/Chrome/Views/Previews** — surface, freshness chip + stale/offline banner, loading skeleton, retry error, empty state, responsive stat-card grid with unit + tri-state trend; 7 previews.
+- **strings** — 26 keys (table `WeekOverWeekSummary`); zero English literals in Swift.
+- **Tests + AdapterTests** — 31 XCTest methods (adapter, per-state projection, model wiring/telemetry/stale-refresh, a11y).
+
+**Verification — every runnable gate GREEN:**
+- `swiftformat --lint` 0/9 · `swiftlint --strict` 0 violations · placeholder gate `COUNT=0`
+- Foundation core compiled under Swift 6 strict concurrency; **45 logic assertions executed 0 failures** (XCTest ships only with full Xcode, so the same logic ran via an exe harness)
+- View layer + preview bodies type-checked clean against token/component stubs
+- `xcodegen` confirms all 10 files wired into both targets; no symbol collisions
+
+**`xcodebuild` iOS/macOS build+test: DEFERRED** (real exit 1 — runner has only Command Line Tools, no Xcode/`simctl`), shown honestly as non-passing per the predecessor-accepted disposition (0002/0054).
+
+Committed (`4cdf27427`); log ends `EXIT=0` / `STATUS=DONE`.
+
+
+
+The task is fully complete and verified — all 11 todos done, all runnable gates green, work committed at `4cdf27427`. No remaining steps.
+

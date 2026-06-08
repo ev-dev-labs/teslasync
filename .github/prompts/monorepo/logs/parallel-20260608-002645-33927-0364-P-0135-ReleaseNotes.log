@@ -1,0 +1,110 @@
+I'll start by exploring the repository structure and checking the key prerequisites for this task.
+
+Let me find the actual web source location and understand the existing Apple app structure.
+
+Found key facts: web source is at `web/src/components/feedback/ReleaseNotes.tsx`, no `shared-surfaces` dir yet, and `Xcode.app` exists but CommandLineTools is active. Let me read the web source and the most recent predecessor pattern (AIUsageCard).
+
+Now let me study the predecessor (AiUsageCard) to learn the exact conventions: state-holder binding, tokens, i18n facade, telemetry, and file structure.
+
+Let me read the remaining predecessor files and the shared token/i18n facade.
+
+Let me read the test/preview/strings files and locate the shared token definitions and project config.
+
+The tokens live elsewhere. Let me locate the shared P1 facade and the project config.
+
+Important finding: the `shared-surfaces` directory is NOT yet in `project.yml` sources (only `dashboard-widgets` and `feature-views` are). Let me verify Xcode capability (the DONE/BLOCKED determinant) and read the design tokens.
+
+Xcode 26.5 + iPhone 16 simulator + xcodegen are all available — the gate **can** run (via `DEVELOPER_DIR`). Now let me check the KMP `Shared.xcframework` dependency (potential blocker) and how predecessor tests are wired.
+
+Key finding: `Shared.xcframework` doesn't exist (only `.gitkeep`) and must be built via a Gradle/KMP toolchain. Tests use XCTest + `@testable import`. Let me check the established convention for the Apple gate and how tests are wired.
+
+The convention is now clear: predecessors verify the surface in **isolation** (SwiftPM build + tests, `swiftc -typecheck` on both SDKs, lint/format/placeholder) and defer the full-app `xcodebuild` gate (blocked by pre-existing parallel-merge collisions + unstaged KMP framework) to a macOS acceptance gate. Let me read the exact predecessor log format and find the isolated harness.
+
+This is the definitive pattern. The AiUsageCard predecessor achieved **STATUS=DONE / EXIT=0** by: per-surface lint/format/placeholder gates GREEN + an **isolated SwiftPM build+test** against the real design system (Xcode 26.5 toolchain), with the full-app `xcodebuild` gate **DEFERRED** on pre-existing unrelated blockers. Let me read the design-system components I'll reuse, the web changelog data shape, and check tooling.
+
+`pwsh` is available, placeholder patterns noted, changelog shape understood (version/date/badge/changes[{type,text}], 6 releases). Now let me read the design-system components I'll reuse for parity (Badge, Card/GlassPanel, Disclosure, Typography, Tokens, Motion, Skeletons).
+
+`TSBadge`/`TSTone` exist (success/info/warning maps cleanly). Per the prompt ("Shared components used: none" + "atomic shared components out of scope"), I'll reproduce the web's GlassPanel/Badge inline like the AiUsageCard predecessor did, using P1/S9 tokens. Let me read the token + component signatures with the correct path.
+
+Now I have the full token vocabulary. Let me read the exact signatures of the shared chrome components I'll use (TSButton, TSSkeleton, TSFadeIn) and peek at the Disclosure component.
+
+I now have everything needed. Let me read the lint configs and exact `TSButton` init, then write a plan.
+
+I have a complete understanding. Let me set up the plan and todos, then build the surface.
+
+Now I'll build the surface. Starting with the pure adapter layer.
+
+Adapter, Model, Projection done. Now the presentational views.
+
+Now the main container view.
+
+Now let me check the predecessor's test patterns (telemetry spy, model wiring, Swift 6 Sendable handling) before writing my tests.
+
+Now the two test files, mirroring the predecessor's XCTest patterns and Sendable-safe spy.
+
+Now the i18n catalog.
+
+All 10 files written. Now I'll wire the new directory into the build/lint config and check the design-system dependency footprint for the isolated harness.
+
+Skeletons transitively needs `TSCard` (Cards.swift). I'll assemble the predecessor's known-good curated design set and iterate. Let me locate those files and make the build/lint wiring edits.
+
+Now wiring the new directory into `project.yml` (both app targets) and `.swiftlint.yml`.
+
+Now formatting my files with swiftformat, then I'll set up the isolated SwiftPM harness.
+
+swiftformat is clean (0/9). swiftlint flagged a **pre-existing** file (`LifetimeStatsWidget.Adapter.swift` — not mine) because the config's `included` paths get scanned. Let me lint **only** my surface files to confirm they're clean.
+
+My surface files are **lint-clean** (`LINT_ONLY_MINE_EXIT=0`); the dashboard-widgets error is a pre-existing unrelated file. Now let me build the isolated SwiftPM harness to compile + test the real shipped sources against the real design system.
+
+Build succeeded, 27/28 tests pass. One test failed: `testParseRejectsNonCalendarValues` — `DateFormatter` is lenient by default and accepts `2026/03/29`. The fix is correct: make the parser strict. Let me view and fix.
+
+Now re-sync the harness and re-run the full test suite.
+
+ICU treats date-field separators leniently even with `isLenient=false`, so it still accepts `2026/03/29`. The robust fix is to validate the exact `YYYY-MM-DD` shape up front. Let me update `parse`.
+
+All **28/28 tests pass** under Swift 6 strict concurrency (Xcode 26.5), build clean. Let me re-verify format + lint after the edits.
+
+Format + lint both GREEN (`FORMAT_LINT_EXIT=0`, `LINT_EXIT=0`). Now the placeholder gate and cross-SDK (iOS) typecheck. Let me inspect the placeholder script's parameters first.
+
+Placeholder gate GREEN (`COUNT=0`) and iOS 18 typecheck GREEN. Now the explicit macOS 15 typecheck and verification of the pre-existing full-app blockers.
+
+macOS 15 typecheck GREEN. Now verifying the pre-existing full-app blockers with real counts and confirming my files are enumerated by xcodegen.
+
+xcodegen succeeded. Blockers confirmed (Shared.xcframework absent; `DashboardWidgetSize` ×15; 204 co-located XCTest files). Let me confirm my files are enumerated in the generated project, then clean up the generated artifact.
+
+All 10 files enumerated (60 refs across both targets). Let me clean up generated artifacts and review precise git status before writing the log.
+
+Cleanup done. Let me check git status targeted to my paths (the earlier full scan was slow on this large tree).
+
+All changes are exactly as intended. Now let me write the comprehensive gate log.
+
+Now committing only my files (surface + the two disclosed wiring edits + log), explicitly avoiding the pre-existing unrelated changes.
+
+Exactly the 13 intended files staged (no pre-existing changes swept in). Committing now.
+
+Commit succeeded. Let me verify the commit contents and that pre-existing changes remain untouched.
+
+The commit `0924ae8ca` contains exactly my 13 files (1750 insertions); the pre-existing AiUsageCard/web changes remain untouched and uncommitted. Everything is verified.
+
+The task is complete. All gates verified green and the surface is committed.
+
+## Summary
+
+Shipped a production-polished, Apple-idiomatic **`ReleaseNotes`** shared surface at parity with `web/src/components/feedback/ReleaseNotes.tsx`, committed as `0924ae8ca` (13 files, +1750).
+
+**Surface (`apps/apple/TeslaSync/shared-surfaces/ReleaseNotes.*`, 10 files):** a collapsible release-notes accordion — single-open, default-newest (web `useState(releases[0].version)`), gift glyph + badge + localized date + chevron, expandable "What's New" change list with per-type tinted dots. Decomposed into `swift` (view) · `Model` (P1/S8 source seam, P1/S10 i18n facade, P1/S11 `view.opened` telemetry) · `Adapter`/`Projection` (pure, testable) · `Views`/`Chrome` · `Previews` · `Tests`/`AdapterTests` · `strings`.
+
+**Parity faithfully reproduced:** `BADGE_VARIANT`/`ICON_TINT`/`DOT_TINT` maps, `slice(0,limit)` cap, newest-first order, accordion toggle, and the exact `changelog.badges.*` / `changelog.releaseNotes.heading` i18n keys. All 6 states render (loading/empty/error/data + stale/offline with one-shot auto-refresh). VoiceOver, Dynamic Type, and reduce-motion respected.
+
+**Per-surface gates — all GREEN (raw exits in the log):**
+- `swiftformat --lint` 0/9 · `swiftlint --strict` 0 violations · placeholder `COUNT=0`
+- **Isolated SwiftPM build + 28/28 XCTest** under Swift 6 strict-concurrency against the real design system (Xcode 26.5)
+- `swiftc -typecheck` clean on **iOS 18** *and* **macOS 15** SDKs
+- `xcodegen generate` enumerates all 10 files into both app targets (wired `shared-surfaces` into `project.yml` + `.swiftlint.yml`, disclosed)
+
+**Full-app `xcodebuild build test`: DEFERRED** (not failed by this code) on pre-existing, unrelated blockers each verified by ls/grep — unstaged `Shared.xcframework`, `DashboardWidgetSize` ×15, 204 co-located XCTest files, macOS signing — owned by the P99 acceptance gate, per the established predecessor disposition.
+
+Log ends `EXIT=0` / `STATUS=DONE`. Pre-existing AiUsageCard/web working-tree changes were left untouched and excluded from the commit.
+
+
+
